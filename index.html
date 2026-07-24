@@ -1156,10 +1156,27 @@ function nachten(){
       const goed = C[i]<35 && (maanWeging[i]*mn.ill < 0.2);
       if(goed){ if(run===0) bs=i; run++; if(run>br){br=run;bstart=bs;} } else run=0;
     }
+    /* Het venster is de langste periode van minstens twee uur waarin de bewolking
+       onder de 35 procent blijft en de maan geen roet in het eten gooit. Dat is iets
+       anders dan een heldere nacht: de score ernaast gaat over het gemiddelde van de
+       hele nacht, dit gaat over het beste moment erbinnen. Het woord "helder" stond
+       daarom naast een score van 1,5 en las als een tegenspraak.
+
+       Is er geen venster, dan is de reden minstens zo nuttig als het feit zelf. Een
+       nacht met 23 procent bewolking en toch niets bruikbaars klinkt kapot totdat je
+       weet dat de maan de hele nacht op staat. Daarom apart nagaan welke van de twee
+       voorwaarden het venster tegenhoudt. */
     let venster=null;
     if(br>=2&&bstart>=0){
       const eind = (bstart+br<TT.length) ? TT[bstart+br].slice(11,16) : hhmm(sr2);
-      venster="helder "+TT[bstart].slice(11,16)+"\u2013"+eind;
+      venster="beste zicht van "+TT[bstart].slice(11,16)+" tot "+eind;
+    }else{
+      const langsteRun=test=>{let r=0,b=0;for(let i=0;i<C.length;i++){ if(test(i)){r++;if(r>b)b=r;} else r=0; } return b;};
+      const wolkOk=langsteRun(i=>C[i]<35)>=2;               // zonder de maan was er een venster geweest
+      const maanOk=langsteRun(i=>maanWeging[i]*mn.ill<0.2)>=2;  // zonder de wolken was er een venster geweest
+      venster = wolkOk ? "geen venster, te veel maanlicht"
+              : maanOk ? "geen venster, te bewolkt"
+              : "geen venster, te bewolkt en te veel maanlicht";
     }
 
     // maantijden voor deze nacht
@@ -1176,7 +1193,7 @@ function nachten(){
       <div class="score" style="color:${kleur}">${nl(sc)}</div>
       <div class="sbar"><i style="width:${sc*10}%;background:${kleur}"></i></div>
       <div class="nmeta">${Math.round(cw)}% bewolking</div>
-      <div class="nmeta wide">${venster||"geen venster"}${maanTekst?" · "+maanTekst:""}</div></div>`;
+      <div class="nmeta wide">${venster}${maanTekst?" · "+maanTekst:""}</div></div>`;
   }
   const kopN=`<div class="row night kop">
       <div class="dname">Nacht</div><div class="score">Score 0-10</div><div class="sbar"></div>

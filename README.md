@@ -86,6 +86,7 @@ Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeel
 * de dagnaam in de zevendagentabel houdt afstand tot het weericoon, op elke schermbreedte
 * de tooltip blijft op elk uur binnen de tekening en elke regel past erin
 * de weeromschrijving spreekt s nachts niet over zon
+* het nachtvenster belooft geen heldere hemel die het niet meet, en zegt waarom er geen venster is
 * elke kolom van de zevendagentabel past zijn inhoud, van 320 tot 430 px breed
 * elke serverfunctie is CommonJS, want ESM zonder "type": "module" faalt op Node 18 en 20
 

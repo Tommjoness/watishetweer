@@ -191,7 +191,7 @@ groep("Nachtzicht");
   const score=t=>parseFloat(String(t).replace(",","."));
   check("heldere nacht geeft een hoge score",score(rh[0][1])>7,rh[0][1]);
   check("bewolkte nacht geeft een lage score",score(rb[0][1])<1,rb[0][1]);
-  check("heldere nacht krijgt een waarneemvenster",/helder \d\d:\d\d/.test(rh[0][2]),rh[0][2]);
+  check("heldere nacht krijgt een waarneemvenster",/beste zicht van \d\d:\d\d tot \d\d:\d\d/.test(rh[0][2]),rh[0][2]);
   check("bewolkte nacht krijgt geen venster",/geen venster/.test(rb[0][2]),rb[0][2]);
   check("maantijden staan er altijd bij",/maan \d\d:\d\d/.test(rh[0][2])&&/maan \d\d:\d\d/.test(rb[0][2]));
 }
@@ -691,6 +691,53 @@ groep("Dag en nacht");
   const maantje=/M16\.5 13\.6|maantje/.test(bak.nowicon.innerHTML)||/moon|maan/i.test(bak.nowicon.innerHTML);
   check("bij een nachtomschrijving hoort ook een nachticoon",
     maantje||!/zonnig/i.test(cond));
+}
+
+/* 10i. het nachtvenster moet zeggen wat het is, en een reden geven als het er niet is */
+groep("Nachtvenster");
+{
+  const bronN=require("fs").readFileSync(require("path").join(__dirname,"index.html"),"utf8");
+  const regels=[];
+  // een helder gat midden in een verder bewolkte nacht, plus de twee uitersten
+  for(const [naam,opt] of [["heldere nacht",{cc:()=>3}],
+                           ["zwaar bewolkt",{cc:()=>92}],
+                           ["gat in de bewolking",{cc:(u)=>(u>=1&&u<=3)?18:88}],
+                           ["licht bewolkt",{cc:()=>25}]]){
+    const {api,bak}=laadKern(390);
+    Object.assign(api.S,{d:bouw(opt),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.nachten();
+    const t=norm(bak.nights.innerHTML).replace(/<[^>]+>/g," ").replace(/\s+/g," ");
+    // de hele metaregel uitlezen, niet alleen wat al op de nieuwe vorm lijkt:
+    // anders ziet de test een teruggedraaide formulering simpelweg niet staan
+    (bak.nights.innerHTML.match(/class="nmeta wide">([^<]*)</g)||[])
+      .map(m=>m.replace(/^class="nmeta wide">/,"").replace(/<$/,""))
+      .map(r=>norm(r).split("\u00b7")[0].trim())
+      .filter(r=>r&&!/^Waarneemvenster/.test(r))   // de kolomkop is geen nachtregel
+      .forEach(r=>regels.push([naam,r]));
+  }
+  check("er staat bij elke nacht een venstertekst",regels.length>0,String(regels.length));
+
+  /* Het venster dekt hooguit 35 procent bewolking. De app noemt dat elders
+     "Overwegend zonnig" en reserveert "onbewolkt" voor onder de 15 procent.
+     Het venster mag dus geen woord gebruiken dat een schonere hemel belooft
+     dan het meet; daar kwam de tegenspraak met een score van 1,5 vandaan. */
+  const teSterk=regels.filter(([,r])=>/\bhelder|\bonbewolkt|\bwolkenloos/i.test(r));
+  check("het venster belooft geen heldere hemel die het niet meet",teSterk.length===0,
+    teSterk.map(([n,r])=>n+": "+r).join(" | "));
+
+  const zonderReden=regels.filter(([,r])=>/^geen venster$/.test(r));
+  check("geen venster gaat altijd samen met een reden",zonderReden.length===0,
+    zonderReden.map(([n,r])=>n+": "+r).join(" | "));
+
+  const metVenster=regels.filter(([,r])=>/^beste zicht/.test(r));
+  check("een venster noemt een begin- en eindtijd",
+    metVenster.length>0 && metVenster.every(([,r])=>/van \d\d:\d\d tot \d\d:\d\d/.test(r))
+    && regels.every(([,r])=>/^(beste zicht|geen venster)/.test(r)),
+    (metVenster[0]||["",""])[1]);
+
+  // de reden moet uit de code komen, niet uit een vast zinnetje
+  check("de code onderscheidt maanlicht van bewolking als oorzaak",
+    /te veel maanlicht/.test(bronN) && /te bewolkt/.test(bronN));
 }
 
 console.log("\n"+goed+" geslaagd, "+fout+" mislukt");
