@@ -413,7 +413,12 @@ const BFTNAAM=["windstil","zwakke wind","zwakke wind","matige wind","matige wind
 const INK="var(--ink)",INK45="var(--ink-45)",INK25="var(--ink-25)",RULE="var(--rule)",
       RULES="var(--rule-soft)",NIGHT="var(--night)",TEAL="var(--teal)",CARMINE="var(--carmine)",SHEET="var(--sheet)";
 
-const txt=c=>(CODES[c]||["Onbekend","wolk"])[0];
+// 's Nachts staat er geen zon aan de hemel. Het icoon hield daar al rekening mee,
+// de omschrijving niet, dus om tien voor tien 's avonds stond er "Overwegend zonnig"
+// naast een maantje. Alleen de codes met zon erin hebben een nachtvorm nodig.
+const CODESNACHT={0:"Onbewolkt",1:"Overwegend helder",2:"Half bewolkt"};
+const txt=(c,isDag)=>(isDag===false&&CODESNACHT[c]!==undefined)
+  ? CODESNACHT[c] : (CODES[c]||["Onbekend","wolk"])[0];
 const fam=c=>(CODES[c]||["Onbekend","wolk"])[1];
 const mins=s=>parseInt(s.slice(11,13),10)*60+parseInt(s.slice(14,16),10);
 const hhmm=s=>s.slice(11,16);
@@ -612,7 +617,7 @@ function tekenAlles(){
   document.getElementById("place").textContent=S.label;
   document.title=S.label+" · Weerbriefing";
   document.getElementById("t").textContent=Math.round(c.temperature_2m);
-  document.getElementById("cond").textContent=txt(c.weather_code);
+  document.getElementById("cond").textContent=txt(c.weather_code,c.is_day!==0);
   document.getElementById("feels").textContent="Gevoelstemperatuur "+Math.round(c.apparent_temperature)
     +"°C, dauwpunt "+Math.round(h.dew_point_2m[S.i0])+"°C";
   document.getElementById("nowicon").innerHTML=icon(c.weather_code,c.is_day===1,46);
@@ -951,7 +956,7 @@ function etmaal(start,n){
   svg.setAttribute("aria-label",
     "Verloop van "+TI[0].slice(11,16)+" tot "+TI[TI.length-1].slice(11,16)
     +", temperatuur tussen "+mn+" en "+mx+" graden, hoogste neerslagkans "+Math.max.apply(null,P)+" procent.");
-  S.geo={x:x,y:y,pl:pl,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,TI:TI,WD:WD,W:W,M:M};
+  S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,M:M};
   scrubKoppel();
 
   const dg=S.dag;
@@ -984,18 +989,25 @@ function scrubKoppel(){
     let i=Math.round(((ev.clientX-r.left)*sc-G.pl)/G.cw);
     i=clamp(i,0,G.n-1);
     const X=G.x(i),Y=G.y(G.T[i]);
-    const bw=G.M?178:210,links=X>(G.W*0.62),bx=links?X-bw-10:X+10,by=G.pt-6;
+    /* De doos sloeg om naar links bij een vast percentage van de breedte. Op de
+       telefoon lag dat op 62 procent, terwijl de doos daar al 43 px buiten beeld
+       liep en door de rand van de tekening werd afgesneden. Nu slaat hij om zodra
+       hij rechts niet meer past, en daarna klemt hij hoe dan ook binnen de randen. */
+    const bw=G.M?200:224;
+    let bx = (X+10+bw <= G.W-G.pr) ? X+10 : X-bw-10;
+    bx = clamp(bx, 2, G.W-bw-2);
+    const by=G.pt-6;
     let n=0;
     const rij=(l,v,c)=>{n++;const yy=by+22+n*17;
       return `<text x="${bx+15}" y="${yy}" fill="${INK45}" font-family="Instrument Sans,sans-serif" font-size="11">${l}</text>`
            +`<text x="${bx+bw-15}" y="${yy}" text-anchor="end" fill="${c||INK}" font-family="DM Mono,monospace" font-size="11.5">${v}</text>`;};
-    const kop=`<text x="${bx+15}" y="${by+18}" fill="${INK}" font-family="Bodoni Moda,serif" font-size="15">${G.TI[i].slice(11,16)} · ${txt(G.D[i])}</text>`;
-    const body=rij("temperatuur",Math.round(G.T[i])+" °C")
-      +rij("voelt als",Math.round(G.A[i])+" °C")
-      +rij("neerslagkans",G.P[i]+" %",TEAL)
+    const kop=`<text x="${bx+15}" y="${by+18}" fill="${INK}" font-family="Bodoni Moda,serif" font-size="15">${G.TI[i].slice(11,16)} · ${txt(G.D[i],G.ND?G.ND[i]!==0:true)}</text>`;
+    const body=rij("temperatuur",Math.round(G.T[i])+"°C")
+      +rij("voelt als",Math.round(G.A[i])+"°C")
+      +rij("neerslagkans",G.P[i]+"%",TEAL)
       +rij("wind",Math.round(G.W_[i])+" km/u "+DIRS[Math.round((G.WD[i]||0)/22.5)%16]+", "+bft(G.W_[i])+" Bft")
       +rij("windstoten",Math.round(G.G[i])+" km/u")
-      +rij("bewolking",G.C[i]+" %");
+      +rij("bewolking",G.C[i]+"%");
     g.innerHTML=
       `<line x1="${X}" y1="${G.pt}" x2="${X}" y2="${G.pt+G.ih}" stroke="${INK}" stroke-width="1"/>
        <circle cx="${X}" cy="${Y}" r="3.4" fill="${SHEET}" stroke="${INK}" stroke-width="1.4"/>
@@ -1457,7 +1469,7 @@ function chips(){
 /* ---------- meeschuivende balk ---------- */
 function minibarBij(){
   document.getElementById("miniplaats").textContent=S.label;
-  document.getElementById("minitemp").textContent=Math.round(S.d.current.temperature_2m)+"°C, "+txt(S.d.current.weather_code).toLowerCase();
+  document.getElementById("minitemp").textContent=Math.round(S.d.current.temperature_2m)+"°C, "+txt(S.d.current.weather_code,S.d.current.is_day!==0).toLowerCase();
 }
 (function(){
   const hero=document.querySelector(".hero"),bar=document.getElementById("minibar");

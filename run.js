@@ -608,5 +608,90 @@ groep("Kolombreedtes");
   check("geen enkele schermbreedte wordt te krap",krap.length===0,krap[0]);
 }
 
+
+/* Tekstbreedte uit de fontbestanden, beschikbaar voor alle groepen hieronder. */
+const _maten=JSON.parse(require("fs").readFileSync(require("path").join(__dirname,"lettermaten.json"),"utf8"));
+const _breed=(t,px,fam)=>[...t].reduce((s,c)=>s+(_maten[fam][c]!==undefined?_maten[fam][c]:0.5),0)*px;
+const breedSans=(t,px)=>_breed(t,px,"sans")+[...t].length*0.01*px;
+const breedMono=(t,px)=>_breed(t,px,"mono");
+
+/* 10g. de tooltip moet binnen de tekening blijven en zijn regels moeten passen */
+groep("Tooltip");
+{
+  const fsT=require("fs"), pathT=require("path");
+  const wisMarge=15, tussen=4;
+
+  /* De plaatsingsregel uit index.html zelf halen. Rekende deze test hem na, dan bleef
+     hij groen ook als de app iets heel anders deed, en dat is precies hoe de vorige
+     versie ongemerkt 43 px buiten beeld kon lopen. */
+  const bron=fsT.readFileSync(pathT.join(__dirname,"index.html"),"utf8");
+  const blok=(bron.match(/const bw=G\.M\?(\d+):(\d+);[\s\S]{0,400}?const by=/)||
+              bron.match(/const bw=G\.M\?(\d+):(\d+)[\s\S]{0,200}?by=G\.pt-6;/));
+  check("de tooltipbreedte staat in de code",!!blok,"regel niet gevonden");
+  const bwM=blok?parseFloat(blok[1]):0, bwD=blok?parseFloat(blok[2]):0;
+  const regel=blok?blok[0]:"";
+
+  check("de doos slaat om op basis van de werkelijke ruimte, niet op een vast percentage",
+    /G\.W\s*-\s*G\.pr/.test(regel) && !/G\.W\s*\*\s*0?\.\d+/.test(regel), regel.replace(/\s+/g," ").slice(0,120));
+  check("de doos wordt hoe dan ook binnen de randen geklemd",
+    /clamp\(\s*bx/.test(regel), regel.replace(/\s+/g," ").slice(0,120));
+
+  for(const [naam,br,bw] of [["telefoon",390,bwM],["desktop",1280,bwD]]){
+    const {api}=laadKern(br);
+    Object.assign(api.S,{d:bouw({}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.etmaal(14,24);
+    const G=api.S.geo;
+    check(naam+": de grafiek geeft zijn rechtermarge door",typeof G.pr==="number",String(G.pr));
+    check(naam+": de grafiek geeft dag en nacht door",Array.isArray(G.ND));
+
+    const buiten=[];
+    for(let i=0;i<G.n;i++){
+      const X=G.x(i);
+      let bx=(X+10+bw<=G.W-G.pr)?X+10:X-bw-10;
+      bx=Math.max(2,Math.min(bx,G.W-bw-2));
+      if(bx<0||bx+bw>G.W) buiten.push("uur "+i+" op x "+X.toFixed(0)+" geeft doos "+bx.toFixed(0)+" tot "+(bx+bw).toFixed(0));
+    }
+    check(naam+": de tooltip blijft op elke plek binnen de tekening",buiten.length===0,buiten[0]);
+
+    // en de doos moet de breedste regel kunnen bevatten
+    const ergste=[["temperatuur","-40°C"],["voelt als","-52°C"],["neerslagkans","100%"],
+                  ["wind","119 km/u NNW, 12 Bft"],["windstoten","162 km/u"],["bewolking","100%"]];
+    const teKrap=ergste.filter(([l,v])=>
+      breedSans(l,11)+breedMono(v,11.5)+tussen > bw-2*wisMarge);
+    check(naam+": elke tooltipregel past in de doos ("+bw+" px)",teKrap.length===0,
+      teKrap.map(([l,v])=>"\""+l+" "+v+"\" vraagt "
+        +(breedSans(l,11)+breedMono(v,11.5)).toFixed(0)+" px van de "+(bw-2*wisMarge)+" px").join(", "));
+  }
+
+  // de waarden mogen geen spatie voor hun eenheid hebben, dat kost breedte en
+  // wijkt af van de rest van de app
+  check("de tooltip schrijft eenheden zonder losse spatie",
+    !/\+" °C"|\+" %"/.test(bron), (bron.match(/\+" °C"|\+" %"/)||[""])[0]);
+}
+
+/* 10h. 's nachts hoort er geen zon in de omschrijving te staan */
+groep("Dag en nacht");
+{
+  const {api,bak}=laadKern(390);
+  const d=bouw({});
+  d.current.is_day=0; d.current.weather_code=1;   // overwegend onbewolkt, maar 's nachts
+  Object.assign(api.S,{d:d,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+  api.tekenAlles();
+  const cond=norm(bak.cond.textContent);
+  check("de omschrijving spreekt 's nachts niet over zon",!/zonnig|zon\b/i.test(cond),cond);
+  check("de omschrijving zegt 's nachts helder",/helder/i.test(cond),cond);
+
+  const d2=bouw({}); d2.current.is_day=1; d2.current.weather_code=1;
+  const {api:a2,bak:b2}=laadKern(390);
+  Object.assign(a2.S,{d:d2,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+  a2.tekenAlles();
+  check("overdag blijft het gewoon zonnig",/zonnig/i.test(norm(b2.cond.textContent)),b2.cond.textContent);
+
+  // het icoon deed dit al goed, dus de twee moeten het nu eens zijn
+  const maantje=/M16\.5 13\.6|maantje/.test(bak.nowicon.innerHTML)||/moon|maan/i.test(bak.nowicon.innerHTML);
+  check("bij een nachtomschrijving hoort ook een nachticoon",
+    maantje||!/zonnig/i.test(cond));
+}
+
 console.log("\n"+goed+" geslaagd, "+fout+" mislukt");
 process.exit(fout?1:0);

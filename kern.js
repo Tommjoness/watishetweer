@@ -17,7 +17,7 @@ const NODIG = ["S", "opOnder", "maan", "bft", "BFTNAAM", "nl",
                "meters", "briefing", "nowcast", "etmaal", "dagen", "nachten"];
 
 // Handig om bij de hand te hebben, maar niet fataal als het er niet is.
-const EXTRA = ["load", "chips", "controle", "lucht", "stempel", "icon", "hhmm", "kompas",
+const EXTRA = ["tekenAlles", "load", "chips", "controle", "lucht", "stempel", "icon", "hhmm", "kompas",
                "piek", "restkans", "daglengte", "inNederland", "nbsp", "esc", "clamp",
                "mins", "naarLokaal", "radarTeken", "knmiVerwachting", "R",
                "CODES", "DIRSVOL", "DAGEN", "BFT", "THEMAS", "ls"];
