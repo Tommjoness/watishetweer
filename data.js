@@ -27,10 +27,23 @@ function bouw(o){
     precipitation_probability:PP,precipitation:PR,weather_code:WC,cloud_cover:CC,wind_speed_10m:WS,
     wind_direction_10m:WD,wind_gusts_10m:WG,uv_index:UV,pressure_msl:PM,is_day:ISD};
   if(o.zicht!==null) hourly.visibility=VIS;
+  // Het huidige weer hoort bij hetzelfde moment als de uurreeks, anders kan de app
+  // in de test niets tegenstrijdigs opleveren en toetsen we een situatie die
+  // in het echt nooit voorkomt. 14:00 op de eerste hele dag is index 24+14.
+  const NU=24+14;
   const d={timezone:"Europe/Amsterdam", utc_offset_seconds:7200,
-    current:{time:"2026-07-22T14:00",temperature_2m:18,apparent_temperature:17,relative_humidity_2m:75,
-      is_day:o.nacht?0:1,precipitation:o.nu||0,weather_code:o.wcNu||3,cloud_cover:o.ccNu===undefined?40:o.ccNu,
-      pressure_msl:1020,wind_speed_10m:o.wsNu||14,wind_direction_10m:315,wind_gusts_10m:26},
+    current:{time:"2026-07-22T14:00",
+      temperature_2m:o.tempNu===undefined?T[NU]:o.tempNu,
+      apparent_temperature:(o.tempNu===undefined?T[NU]:o.tempNu)-1,
+      relative_humidity_2m:o.rh||RH[NU],
+      is_day:o.nacht?0:ISD[NU],
+      precipitation:o.nu===undefined?PR[NU]:o.nu,
+      weather_code:o.wcNu===undefined?WC[NU]:o.wcNu,
+      cloud_cover:o.ccNu===undefined?CC[NU]:o.ccNu,
+      pressure_msl:PM[NU],
+      wind_speed_10m:o.wsNu===undefined?WS[NU]:o.wsNu,
+      wind_direction_10m:WD[NU],
+      wind_gusts_10m:WG[NU]},
     hourly:hourly,
     daily:{time:dt,weather_code:wcm,temperature_2m_max:tmax,temperature_2m_min:tmin,sunrise:sr,sunset:ss,
       precipitation_probability_max:ppm,precipitation_sum:psum,uv_index_max:uvm,

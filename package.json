@@ -4,7 +4,7 @@
   "description": "Weersverwachting met etmaalbalk, radar, nachtzicht en verificatie van de eigen verwachting.",
   "private": true,
   "scripts": {
-    "test": "node test/run.js"
+    "test": "node run.js"
   },
   "license": "MIT"
 }

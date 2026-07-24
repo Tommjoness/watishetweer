@@ -262,7 +262,7 @@ groep("Eenheden");
     a4.S.i0=a4.S.d.hourly.time.findIndex(t=>t.slice(0,13)===a4.S.d.current.time.slice(0,13));
     a4.meters();a4.briefing();
   }
-  const html=require("fs").readFileSync(require("path").join(__dirname,"..","index.html"),"utf8");
+  const html=require("fs").readFileSync(require("path").join(__dirname,"index.html"),"utf8");
   check("er is een functie die getal en eenheid aan elkaar houdt",/const nbsp=/.test(html));
   check("de onderschriften lopen via die functie",(html.match(/zetTekst\(/g)||[]).length>=8);
   for(const bron of ["Open-Meteo","RainViewer","CARTO","OpenStreetMap"])
@@ -294,7 +294,7 @@ groep("Zonstijden");
 groep("Opmaak");
 {
   const fs2=require("fs"),path2=require("path");
-  const html=fs2.readFileSync(path2.join(__dirname,"..","index.html"),"utf8");
+  const html=fs2.readFileSync(path2.join(__dirname,"index.html"),"utf8");
   const css=html.slice(html.indexOf("<style>"),html.indexOf("</style>"));
   const gebruikt=[...new Set([...css.matchAll(/var\((--[\w-]+)\)/g)].map(m=>m[1]))];
   const gedefinieerd=new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map(m=>m[1]));
@@ -388,7 +388,7 @@ for(const [naam,br] of [["telefoon",390],["desktop",1280]]){
 groep("Serverroutes");
 {
   const fs3=require("fs"),path3=require("path");
-  const wortel=path3.join(__dirname,"..");
+  const wortel=path3.join(__dirname);
   const html=fs3.readFileSync(path3.join(wortel,"index.html"),"utf8");
   const gevraagd=[...new Set([...html.matchAll(/["'`]\/api\/([\w-]+)/g)].map(m=>m[1]))];
   check("de app vraagt minstens een eigen route op",gevraagd.length>0);
@@ -406,7 +406,7 @@ groep("Serverroutes");
 groep("Locatie");
 {
   const fs4=require("fs"),path4=require("path");
-  const html=fs4.readFileSync(path4.join(__dirname,"..","index.html"),"utf8");
+  const html=fs4.readFileSync(path4.join(__dirname,"index.html"),"utf8");
   const aanroepen=[...html.matchAll(/getCurrentPosition\(([\s\S]*?)\);/g)].map(m=>m[1]);
   check("de app vraagt de locatie op",aanroepen.length>0);
   check("de eerste poging vraagt om hoge nauwkeurigheid",
@@ -414,6 +414,33 @@ groep("Locatie");
   check("er staat een tijdslimiet op het locatieverzoek",/timeout:\s*\d+/.test(html));
   check("een onnauwkeurige positie wordt gemeld",/coords\.accuracy|nauw>/.test(html));
   check("een geweigerde locatie krijgt een eigen melding",/code===1/.test(html));
+}
+
+/* 10e. briefing en windmeter moeten dezelfde wind ook hetzelfde noemen */
+groep("Windbenaming");
+{
+  // per Beaufort de laagste snelheid die er net in valt, plus wat marge
+  const perKracht=[[0,0],[1,3],[2,9],[3,16],[4,24],[5,34],[6,44],[7,56],[8,68],[9,82],[10,96],[11,110],[12,125]];
+  const scheef=[];
+  for(const [bftVerwacht,kmu] of perKracht){
+    const {api,bak}=laadKern(1280);
+    Object.assign(api.S,{d:bouw({ws:kmu,wsNu:kmu,wg:()=>kmu}),i0:14,op:Date.now(),
+      lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.meters();api.briefing();
+    const brf=bak.brief.innerHTML.replace(/<[^>]+>/g,"");
+    const meter=bak.windsub.textContent;
+    const naam=api.BFTNAAM[api.bft(kmu)];
+    // de stam zonder verbuiging: "zwakke wind" -> "zwak", "stormachtige wind" -> "stormachtig"
+    const kern=naam.replace(/ wind$/,"").replace(/e$/,"").replace(/(.)\1$/,"$1");
+    // loopt de wind in de loop van de dag op of af, dan noemt de briefing met opzet
+    // alleen de Beaufortwaarde en geen naam; daar valt niets te vergelijken
+    const noemtNaam=!/neemt (toe|af) tot/.test(brf);
+    if(noemtNaam && !brf.toLowerCase().includes(kern.toLowerCase()))
+      scheef.push(kmu+" km/u ("+api.bft(kmu)+" Bft): meter zegt \""+naam+"\", briefing zegt \""
+        +(brf.match(/De wind [^.,(]*|Er staat [^.,(]*/)||[""])[0].trim()+"\"");
+    check(kmu+" km/u wordt in de meter "+naam+" genoemd",meter.toLowerCase().includes(kern.toLowerCase()),meter);
+  }
+  check("de briefing gebruikt geen andere windbenaming dan de meter",scheef.length===0,scheef.join("  |  "));
 }
 
 console.log("\n"+goed+" geslaagd, "+fout+" mislukt");

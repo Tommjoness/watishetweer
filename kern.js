@@ -9,7 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-const BRON = path.join(__dirname, "..", "index.html");
+const BRON = path.join(__dirname, "index.html");
 
 // Wat de tests uit de app moeten kunnen aanroepen. Ontbreekt er iets, dan is een
 // functie hernoemd of verdwenen en moet de test dat melden, niet stilletjes overslaan.

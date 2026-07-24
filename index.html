@@ -765,8 +765,14 @@ function briefing(){
   let hoek=Math.abs(((rPiek-rNu+540)%360)-180);
   const draait = rPiek!=null && hoek>45;
   const draaiTekst = draait ? ", draaiend naar het "+kompas(rPiek) : "";
+  // Vanaf 9 Bft bestaat er geen bijvoeglijke vorm die klopt: de meter zegt dan
+  // "storm" of "zware storm" en "De wind blijft stormachtig" noemt dezelfde wind
+  // een graad zwakker. Boven de 8 stapt de zin daarom over op de naam zelf.
+  const zwaar = bm>=9;
+  const staatEr = bm===9 ? "Er staat storm" : "Er staat een "+BFTNAAM[bm];
   let zin3 = bm>bnu ? "De wind komt uit het "+richtingNu+draaiTekst+" en neemt toe tot "+bm+" Bft"
            : bm<bnu ? "De wind komt uit het "+richtingNu+draaiTekst+" en neemt af tot "+bm+" Bft"
+           : zwaar   ? staatEr+" uit het "+richtingNu+" ("+bm+" Bft)"+draaiTekst
            : "De wind blijft "+BFTBIJV[bm]+" uit het "+richtingNu+" ("+bm+" Bft)"+draaiTekst;
   zin3 += (wi>i+1) ? ", rond "+hhmm(h.time[wi])+" is de wind het sterkst" : "";
   zin3 += gmax>=60 ? ", met stoten tot "+Math.round(gmax)+" km/u." : ".";
