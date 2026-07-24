@@ -443,5 +443,52 @@ groep("Windbenaming");
   check("de briefing gebruikt geen andere windbenaming dan de meter",scheef.length===0,scheef.join("  |  "));
 }
 
+/* 10f. geen komma tussen twee volledige hoofdzinnen */
+groep("Zinsbouw");
+{
+  // Een komma mag geen twee zinnen aan elkaar plakken die allebei op zichzelf kunnen staan.
+  // Dit zijn de constructies waar dat eerder misging, elk met een eigen naam zodat een
+  // terugval meteen te herleiden is.
+  const splitsingen=[
+    ["het warmste moment als losse zin",/,\s*het warmste moment is/],
+    ["nu is het als losse zin",/,\s*nu is het \d/],
+    ["vannacht koelt het af als losse zin",/,\s*vannacht koelt het af/],
+    ["dat is als losse zin",/,\s*dat is (laag|matig|hoog|zeer hoog|extreem)/],
+    ["de UV-index als losse zin",/,\s*de UV-index/],
+    ["wolken vanaf zonder verbinding",/,\s*wolken vanaf/]
+  ];
+  const opties=[
+    {temp:(u)=>u<20?14+u*0.6:20},
+    {temp:(u)=>u<14?22-Math.abs(u-13):16},
+    {temp:(u)=>24-Math.max(0,(u-14))*0.7},
+    {temp:()=>17},
+    {cc:()=>98,ccNu:98},
+    {spreiding:0.6,cc:()=>100},
+    {pp:(u)=>u===18?80:5,pr:(u)=>u===18?2:0,som:2},
+    {nu:0.6,pp:(u)=>u<17?85:5,pr:(u)=>u<17?0.6:0,som:3}
+  ];
+  const velden=["brief","windsub","gustsub","precsub","popsub","humsub","pressub","cloudsub","vissub","nctext"];
+  const gevonden=[];
+  for(const opt of opties){
+    const {api,bak}=laadKern(390);
+    Object.assign(api.S,{d:bouw(opt),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.meters();api.briefing();api.nowcast();
+    for(const k of velden){
+      const e=bak[k]; if(!e) continue;
+      const t=norm(e.innerHTML||e.textContent||"").replace(/<[^>]+>/g,"");
+      for(const [naam,re] of splitsingen)
+        if(re.test(t)) gevonden.push(naam+"  ->  "+t.trim());
+    }
+  }
+  check("geen komma tussen twee hoofdzinnen",gevonden.length===0,gevonden[0]);
+
+  // schijnnauwkeurigheid: een verschil in hele graden hoort geen decimaal te krijgen
+  const {api:a5,bak:b5}=laadKern(390);
+  Object.assign(a5.S,{d:bouw({}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+  a5.meters();
+  check("het dauwpuntverschil staat in hele graden",
+    !/\d,\d graden lager/.test(norm(b5.humsub.textContent)),b5.humsub.textContent);
+}
+
 console.log("\n"+goed+" geslaagd, "+fout+" mislukt");
 process.exit(fout?1:0);

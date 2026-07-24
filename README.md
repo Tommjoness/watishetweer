@@ -71,7 +71,7 @@ testdata niet overschrijft.
 Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeeld
 `laadKern(390)`. Zonder waarde gaat hij uit van 1280.
 
-128 controles, onder meer:
+130 controles, onder meer:
 
 * zonstijden tegen bekende referenties en de maanfase tegen bekende nieuwe en volle maan
 * briefingzinnen in zes weersituaties, plus randgevallen als poolzomer en ontbrekende data
@@ -81,6 +81,7 @@ Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeel
 * elke `/api/`-route die de app opvraagt heeft ook echt een bestand in `api/`
 * de locatiebepaling vraagt om gps en niet om de grove meting
 * de briefing en de windmeter noemen dezelfde wind ook hetzelfde, van 0 tot 12 Bft
+* geen komma die twee volledige hoofdzinnen aan elkaar plakt
 * elke serverfunctie is CommonJS, want ESM zonder "type": "module" faalt op Node 18 en 20
 
 Zakt een test met de melding dat een naam niet meer in `index.html` staat, dan is

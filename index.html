@@ -670,7 +670,7 @@ function meters(){
   const basis=Math.round(sp*125/50)*50;
   zetTekst("humsub", sp<2
     ? "Nog "+nl(sp)+" graden tot verzadiging, dus kans op mist."
-    : "Het dauwpunt ligt "+nl(sp)+" graden lager, wolken vanaf ongeveer "+basis+" meter.");
+    : "Het dauwpunt ligt "+Math.round(sp)+" graden lager, dus wolken vanaf ongeveer "+basis+" meter.");
 
   set("pres",Math.round(c.pressure_msl)+"<s>hPa</s>");
   const p3=h.pressure_msl[i-3],dp=(p3!=null)?c.pressure_msl-p3:null;
@@ -686,7 +686,7 @@ function meters(){
   const uvOordeel=v=>v<3?"laag":v<6?"matig":v<8?"hoog":v<11?"zeer hoog":"extreem";
   zetTekst("cloudsub", bew+(
     (!pu||pu.v<0.5) ? ", nauwelijks UV vandaag."
-    : ", de UV-index "+(pu.t>nu?"piekt":"piekte")+" rond "+hhmm(pu.t)+" op "+nl(pu.v)+", dat is "+uvOordeel(pu.v)+"."));
+    : ". De UV-index "+(pu.t>nu?"piekt":"piekte")+" rond "+hhmm(pu.t)+" op "+nl(pu.v)+" en dat is "+uvOordeel(pu.v)+"."));
 
   const v=h.visibility?h.visibility[i]:null;
   set("vis",v==null?"–":(v>=10000?"10+":nl(v/1000))+"<s>km</s>");
@@ -741,13 +741,13 @@ function briefing(){
   const dagPiek=piek("temperature_2m",0);
   let zin2;
   if(top>i+1&&tv>c.temperature_2m+0.5){
-    zin2="Het wordt maximaal "+Math.round(tv)+" graden, het warmste moment is rond "+hhmm(h.time[top])
-        +", vannacht koelt het af naar "+tmin+" graden.";
+    zin2="Het wordt maximaal "+Math.round(tv)+" graden, met het warmste moment rond "+hhmm(h.time[top])
+        +". Vannacht koelt het af naar "+tmin+" graden.";
   }else if(dagPiek&&dagPiek.t<c.time&&Math.round(dagPiek.v)>nutemp){
-    zin2="Het was het warmst rond "+hhmm(dagPiek.t)+" met "+Math.round(dagPiek.v)+" graden, nu is het "+nutemp
+    zin2="Het was het warmst rond "+hhmm(dagPiek.t)+" met "+Math.round(dagPiek.v)+" graden. Nu is het "+nutemp
         +" graden en vannacht koelt het af naar "+tmin+" graden.";
   }else if(tmin<nutemp-1){
-    zin2="Warmer dan "+nutemp+" graden wordt het niet meer, vannacht koelt het af naar "+tmin+" graden.";
+    zin2="Warmer dan "+nutemp+" graden wordt het niet meer. Vannacht koelt het af naar "+tmin+" graden.";
   }else{
     zin2="De temperatuur blijft rond "+nutemp+" graden hangen, ook vannacht.";
   }
