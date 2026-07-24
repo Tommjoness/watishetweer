@@ -15,6 +15,7 @@ De service worker en het installeren als app werken alleen via https.
     icon-*.png                pictogrammen
     *.woff2                   Bodoni Moda, Instrument Sans en DM Mono, lokaal gehost
     run.js kern.js data.js   de testsuite, draait alleen lokaal
+    lettermaten.json          letterbreedtes uit de woff2-bestanden, voor de kolomtest
     api/plaatsnaam.js         omgekeerd zoeken bij Mijn locatie, Nominatim met terugval
     api/radarverwachting.js   tijdstappen van de KNMI-neerslagverwachting
     api/waarschuwingen.js     serverless functie voor de MeteoAlarm-feed
@@ -71,7 +72,7 @@ testdata niet overschrijft.
 Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeeld
 `laadKern(390)`. Zonder waarde gaat hij uit van 1280.
 
-130 controles, onder meer:
+142 controles, onder meer:
 
 * zonstijden tegen bekende referenties en de maanfase tegen bekende nieuwe en volle maan
 * briefingzinnen in zes weersituaties, plus randgevallen als poolzomer en ontbrekende data
@@ -82,10 +83,17 @@ Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeel
 * de locatiebepaling vraagt om gps en niet om de grove meting
 * de briefing en de windmeter noemen dezelfde wind ook hetzelfde, van 0 tot 12 Bft
 * geen komma die twee volledige hoofdzinnen aan elkaar plakt
+* de dagnaam in de zevendagentabel houdt afstand tot het weericoon, op elke schermbreedte
+* elke kolom van de zevendagentabel past zijn inhoud, van 320 tot 430 px breed
 * elke serverfunctie is CommonJS, want ESM zonder "type": "module" faalt op Node 18 en 20
 
 Zakt een test met de melding dat een naam niet meer in `index.html` staat, dan is
 een functie hernoemd. Pas dan `NODIG` in `kern.js` aan of herstel de naam.
+
+`lettermaten.json` bevat de letterbreedtes die uit de woff2-bestanden zijn gelezen.
+Daarmee kan de suite uitrekenen hoe breed een label als "donderdag 30" werkelijk
+wordt en of de kolom daar ruimte voor heeft. Vervang je een lettertype, dan moet
+dat bestand opnieuw gegenereerd worden met fontTools.
 
 ## Cache verversen
 

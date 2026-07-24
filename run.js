@@ -455,7 +455,10 @@ groep("Zinsbouw");
     ["vannacht koelt het af als losse zin",/,\s*vannacht koelt het af/],
     ["dat is als losse zin",/,\s*dat is (laag|matig|hoog|zeer hoog|extreem)/],
     ["de UV-index als losse zin",/,\s*de UV-index/],
-    ["wolken vanaf zonder verbinding",/,\s*wolken vanaf/]
+    ["wolken vanaf zonder verbinding",/,\s*wolken vanaf/],
+    ["de sterkste wind als losse zin",/,\s*rond \d\d:\d\d is de wind/],
+    // vangnet: een komma gevolgd door een onderwerp met een persoonsvorm erachter
+    ["komma gevolgd door een nieuwe hoofdzin",/,\s*(het|de wind|er|dat|dit|we|je)\s+(is|was|wordt|blijft|komt|regent|koelt|piekt|piekte|neemt|staat|ligt|valt|viel)\b/]
   ];
   const opties=[
     {temp:(u)=>u<20?14+u*0.6:20},
@@ -480,6 +483,22 @@ groep("Zinsbouw");
         if(re.test(t)) gevonden.push(naam+"  ->  "+t.trim());
     }
   }
+
+  // De wind die pas later op de dag piekt levert een eigen zinsvariant op. Zonder dit
+  // geval blijft die tekst ongetoetst, want in de standaardgegevens is de wind constant.
+  for(const stoten of [26,92]){
+    const {api,bak}=laadKern(390);
+    const d=bouw({wg:()=>stoten});
+    const i=d.hourly.time.findIndex(t=>t.slice(0,13)===d.current.time.slice(0,13));
+    d.hourly.wind_speed_10m=d.hourly.wind_speed_10m.map((v,k)=>k===i+8?42:8);
+    d.current.wind_speed_10m=8;
+    Object.assign(api.S,{d:d,i0:i,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.meters();api.briefing();
+    const t=norm(bak.brief.innerHTML).replace(/<[^>]+>/g,"");
+    check("de wind piekt later, en dat wordt vermeld",/sterkst rond \d\d:\d\d/.test(t),t);
+    for(const [naam,re] of splitsingen)
+      if(re.test(t)) gevonden.push(naam+"  ->  "+t.trim());
+  }
   check("geen komma tussen twee hoofdzinnen",gevonden.length===0,gevonden[0]);
 
   // schijnnauwkeurigheid: een verschil in hele graden hoort geen decimaal te krijgen
@@ -488,6 +507,105 @@ groep("Zinsbouw");
   a5.meters();
   check("het dauwpuntverschil staat in hele graden",
     !/\d,\d graden lager/.test(norm(b5.humsub.textContent)),b5.humsub.textContent);
+}
+
+/* 10g. de kolommen van de zevendagentabel moeten hun inhoud aankunnen */
+groep("Kolombreedtes");
+{
+  const fs5=require("fs"),path5=require("path");
+  const wortel=path5.join(__dirname);
+  const html=fs5.readFileSync(path5.join(wortel,"index.html"),"utf8");
+  const maten=JSON.parse(fs5.readFileSync(path5.join(wortel,"lettermaten.json"),"utf8"));
+  // Breedte van een stuk tekst, gemeten uit de fontbestanden zelf.
+  // De letterafstand telt mee: .dname heeft letter-spacing:.01em en dat is bij twaalf
+  // tekens al anderhalve pixel. Die anderhalve pixel was precies het verschil tussen
+  // "past net" en "raakt het icoon".
+  const LS=0.01;
+  const breed=(t,px,fam)=>
+    [...t].reduce((s,c)=>s+(maten[fam][c]!==undefined?maten[fam][c]:0.5),0)*px + [...t].length*LS*px;
+
+  const DAGENVOL=["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+  const DAGENKORT=["zo","ma","di","wo","do","vr","za"];
+
+  // Welke schrijfwijze op de telefoon zichtbaar is, bepaalt de opmaak en niet de aanname
+  // van deze test. Staat .dlang op display:none, dan is de korte vorm leidend.
+  const langVerborgen=/\.dlang\{display:none\}/.test(html);
+  const namen=(langVerborgen?DAGENKORT:DAGENVOL).map(d=>d+" 30").concat(["vandaag","morgen"]);
+  let langste="",langstePx=0;
+  for(const t of namen){
+    const w2=breed(t,12.5,"sans");
+    if(w2>langstePx){langstePx=w2;langste=t;}
+  }
+
+  // Er staan twee blokken met dezelfde mediaquery in de opmaak, en de bureaubladregel
+  // staat daar nog voor. Daarom vanaf het laatste voorkomen zoeken, anders leest de
+  // test de indeling van het bureaublad in plaats van die van de telefoon.
+  const vanaf=(query,re)=>{
+    const p=html.lastIndexOf(query);
+    if(p<0) return null;
+    const m=html.slice(p).match(re);
+    return m?m[1]:null;
+  };
+  const mobiel=vanaf("@media(max-width:900px)",/\.day\{grid-template-columns:([^;}]+)/);
+  const smal  =vanaf("@media(max-width:370px)",/\.day\{grid-template-columns:([^;}]+)/);
+  const gapM  =vanaf("@media(max-width:900px)",/\.day\{[^}]*gap:(\d+)px/);
+  check("de dagtabel heeft een mobiele indeling",!!mobiel&&!!gapM,String(mobiel));
+  check("er is een indeling voor smalle schermen",!!smal,String(smal));
+
+  const ontleed=s=>String(s).trim().split(/\s+/).map(k=>/^\d+px$/.test(k)?parseFloat(k):"fr");
+  const gap=parseFloat(gapM);
+
+  // de naamkolom is een vaste maat, die moet het langste label gewoon bevatten
+  const kolM=ontleed(mobiel);
+  check("de naamkolom past het langste daglabel ("+langste+", "+langstePx.toFixed(1)+" px)",
+    kolM[0]>=langstePx, "kolom is "+kolM[0]+" px");
+
+  /* Passen is niet genoeg: het gaat om de witruimte die je ziet.
+     Die bestaat uit wat er in de kolom overblijft, plus de tussenruimte, min de
+     overhang van het icoon. Het icoon wordt op 22 px getekend; staat het in een
+     smallere kolom, dan steekt het aan weerszijden uit, en wel precies aan de kant
+     van de tekst. Dat was de tweede helft van de botsing. */
+  const ICOON=22;
+  const icoonKol=kolM[1];
+  check("de icoonkolom is minstens zo breed als het icoon zelf ("+ICOON+" px)",
+    icoonKol>=ICOON, "kolom is "+icoonKol+" px, het icoon steekt "+((ICOON-icoonKol)/2).toFixed(1)+" px uit");
+
+  const overhang=Math.max(0,(ICOON-icoonKol)/2);
+  const wit=l=>(kolM[0]-breed(l,12.5,"sans"))+gap-overhang;
+  const krapLabels=namen.filter(l=>wit(l)<6);
+  check("elk daglabel houdt minstens 6 px vrij tot het icoon",krapLabels.length===0,
+    krapLabels.map(l=>"\""+l+"\" houdt "+wit(l).toFixed(1)+" px over").join(", "));
+
+  /* En de spatiëring moet ook consistent voelen. Een vaste kolom op maat van het
+     langste label geeft het kortste label een gat; wordt dat verschil te groot,
+     dan oogt de tabel rommelig ook al botst er niets. */
+  const witten=namen.map(wit);
+  const verschil=Math.max(...witten)-Math.min(...witten);
+  check("het verschil in witruimte tussen kort en lang label blijft onder 30 px",
+    verschil<30, "verschil is "+verschil.toFixed(1)+" px");
+
+  // valt een lettertype weg, dan mag een bredere vervanger nooit over het icoon lopen
+  check("de dagnaam kapt af in plaats van door te lopen",
+    /\.dname\{[^}]*overflow:hidden/.test(html)&&/\.dname\{[^}]*text-overflow:ellipsis/.test(html));
+
+  // en de temperatuurkolommen moeten ook bij vorst leesbaar blijven
+  const tempNodig=breed("-10°",14,"mono");
+  const kansNodig=breed("100%",12.5,"mono");
+  const buiten=24+40+2;   // marge van de pagina, rand en binnenruimte van het vel
+  const krap=[];
+  for(const vp of [320,360,375,390,430]){
+    const kol = vp<=370 ? ontleed(smal) : kolM;
+    const g   = gap;
+    const vast= kol.filter(k=>k!=="fr").reduce((a,b)=>a+b,0);
+    const frs = kol.filter(k=>k==="fr").length;
+    const per = (vp-buiten-vast-g*(kol.length-1))/frs;
+    if(per<tempNodig) krap.push(vp+"px: temperatuurkolom "+per.toFixed(1)+" px, nodig "+tempNodig.toFixed(1));
+    check(vp+"px: de temperatuurkolommen blijven leesbaar",per>=tempNodig,
+      "elke kolom "+per.toFixed(1)+" px");
+  }
+  check("de kanskolom past 100%",kolM[kolM.length-1]>=kansNodig,
+    "kolom is "+kolM[kolM.length-1]+" px, nodig "+kansNodig.toFixed(1));
+  check("geen enkele schermbreedte wordt te krap",krap.length===0,krap[0]);
 }
 
 console.log("\n"+goed+" geslaagd, "+fout+" mislukt");

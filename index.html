@@ -179,10 +179,12 @@
   .row{display:grid;align-items:center;border-bottom:1px solid var(--rule-soft);padding:11px 0}
   .row:last-child{border-bottom:none}
   .day{grid-template-columns:106px 26px 1fr 72px 54px 128px 46px 52px;gap:14px;cursor:pointer}
+  .dkort{display:none}
   .day:hover{background:#FAFBFA}
   .day.on{box-shadow:inset 2px 0 0 var(--carmine)}
   .day.on .dname{font-weight:500}
-  .dname{font-size:14.5px;letter-spacing:.01em;white-space:nowrap}
+  .dname{font-size:14.5px;letter-spacing:.01em;white-space:nowrap;
+    min-width:0;overflow:hidden;text-overflow:ellipsis}
   .row.kop{border-bottom:1px solid var(--ink);padding:13px 0 8px;cursor:default}
   .row.kop:hover{background:none}
   .row.kop .dmin,.row.kop .dmax,.row.kop .drain,.row.kop .dwind,.row.kop .nmeta,.row.kop .score{text-align:center}
@@ -237,8 +239,17 @@
     .stat:nth-child(2n){border-right:none;padding-right:0}
     .stat:not(:nth-child(4n+1)){padding-left:0}
     .stat:nth-child(2n){padding-left:22px}
-    .day{grid-template-columns:72px 20px 58px 1fr 1fr 44px;gap:7px}
+    /* Op de telefoon de korte dagnaam. "donderdag 30" is 83 px in Instrument Sans op
+       12,5 px inclusief letterafstand, gemeten uit het fontbestand zelf, en dat vulde de
+       kolom van 84 px vrijwel helemaal. Daardoor stond de zaterdag met 1 px tegen het
+       icoon terwijl "vandaag" er 34 px vanaf bleef. Met "do 30" is de langste waarde
+       "vandaag" met 50 px, dus 56 px geeft overal dezelfde rust.
+       De icoonkolom was 20 px terwijl het icoon 22 px tekent, dus dat stak er
+       aan weerszijden een pixel uit, precies aan de kant van de tekst. */
+    .day{grid-template-columns:56px 22px 56px 1fr 1fr 40px;gap:6px}
     .dname{font-size:12.5px}
+    .dlang{display:none}
+    .dkort{display:inline}
     .dcond{display:none}
     .bar{display:none}
     .night{grid-template-columns:70px 40px minmax(20px,1fr) max-content;gap:4px 9px}
@@ -263,6 +274,13 @@
     .tools button{flex:1 1 0;border-top:none;justify-content:center}
     .tools button+button{border-left:none}
     .results{top:37px}
+  }
+  @media(max-width:370px){
+    /* Op dit soort schermen blijft er na de naamkolom te weinig over voor de
+       temperaturen: een waarde als -10 graden past er dan niet meer in. De wind
+       is in deze tabel de minst dringende kolom, dus die valt hier weg. */
+    .day{grid-template-columns:56px 22px 1fr 1fr 40px}
+    .dwind{display:none}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -774,7 +792,9 @@ function briefing(){
            : bm<bnu ? "De wind komt uit het "+richtingNu+draaiTekst+" en neemt af tot "+bm+" Bft"
            : zwaar   ? staatEr+" uit het "+richtingNu+" ("+bm+" Bft)"+draaiTekst
            : "De wind blijft "+BFTBIJV[bm]+" uit het "+richtingNu+" ("+bm+" Bft)"+draaiTekst;
-  zin3 += (wi>i+1) ? ", rond "+hhmm(h.time[wi])+" is de wind het sterkst" : "";
+  // "..., rond 05:00 is de wind het sterkst" was een tweede hoofdzin achter een komma.
+  // Als bijstelling zonder werkwoord loopt hij door in dezelfde zin.
+  zin3 += (wi>i+1) ? ", het sterkst rond "+hhmm(h.time[wi]) : "";
   zin3 += gmax>=60 ? ", met stoten tot "+Math.round(gmax)+" km/u." : ".";
 
   document.getElementById("brief").innerHTML=nbsp(zin1+" "+zin2+" "+zin3);
@@ -1044,7 +1064,11 @@ function dagen(){
   let out="";
   day.time.forEach((t,i)=>{
     const dt=new Date(t+"T12:00:00");
-    const nm=i===0?"vandaag":i===1?"morgen":DAGENVOL[dt.getDay()]+" "+dt.getDate();
+    // Twee schrijfwijzen naast elkaar in de DOM, zodat de opmaak kiest welke past
+    // en er niets opnieuw getekend hoeft te worden als het scherm draait.
+    const lang=i===0?"vandaag":i===1?"morgen":DAGENVOL[dt.getDay()]+" "+dt.getDate();
+    const kort=i===0?"vandaag":i===1?"morgen":DAGEN[dt.getDay()]+" "+dt.getDate();
+    const nm='<span class="dlang">'+lang+'</span><span class="dkort">'+kort+'</span>';
     const l=day.temperature_2m_min[i],hh=day.temperature_2m_max[i];
     out+=`<div class="row day${S.dag===i?" on":""}" data-i="${i}" role="button" tabindex="0">
       <div class="dname">${nm}</div><div class="dico">${icon(day.weather_code[i],true,22)}</div>
