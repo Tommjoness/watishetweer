@@ -1,7 +1,6 @@
-WIJZIGINGEN v51
+WIJZIGINGEN v52
 
 Alleen de gewijzigde bestanden, in de juiste mapstructuur.
-Uploaden wat je hier ziet. Niets verwijderen.
 
   hoofdmap:   index.html  sw.js  run.js  kern.js  README.md
   in api/:    waarschuwingen.js
@@ -14,5 +13,4 @@ GITHUB
   5. Commit
 
 NA HET UITROLLEN
-  App helemaal afsluiten en opnieuw openen (cache v51).
-  Console hoort schoon te zijn: de fout "Failed to fetch at sw.js" is weg.
+  App helemaal afsluiten en opnieuw openen (cache v52).

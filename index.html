@@ -89,9 +89,8 @@
   .tools button{white-space:nowrap}
   .tools button+button{border-left:none}
   #stamp{font-family:var(--mono);font-size:11px;color:var(--ink-45);font-variant-numeric:tabular-nums}
-  /* Alleen zichtbaar als de plaats in een andere tijd zit dan jij. */
-  #lokaal{display:block;font-family:var(--mono);font-size:11px;color:var(--carmine);
-    font-variant-numeric:tabular-nums;margin-top:2px}
+  #plaatstijd{font-family:var(--mono);font-size:.42em;color:var(--ink-45);
+    font-variant-numeric:tabular-nums;margin-left:.5em;vertical-align:.35em;letter-spacing:0}
   #stamp.oud{color:var(--carmine)}
   .results{position:absolute;top:36px;left:0;right:0;z-index:30;background:var(--sheet);
     border:1px solid var(--ink);max-height:250px;overflow:auto;display:none;text-align:left}
@@ -330,7 +329,7 @@
   <div class="mast">
     <div>
       <h1>Weerbriefing</h1>
-      <div id="place">&nbsp;</div>
+      <div id="place">&nbsp;<span id="plaatstijd"></span></div>
     </div>
     <div class="mastright">
       <div class="tools">
@@ -341,7 +340,6 @@
         <div class="results" id="res" role="listbox"></div>
       </div>
       <span id="stamp" aria-live="polite"></span>
-      <span id="lokaal" aria-live="polite"></span>
     </div>
   </div>
 
@@ -409,9 +407,6 @@
     <h2><span>Nachtzicht</span><span class="r" id="moonlab"></span></h2>
     <div id="nights"></div>
 
-    <h2 id="kopcontrole" style="display:none"><span>Hoe goed was de verwachting</span>
-      <span class="r">eigen verwachting van de dag ervoor, naast de analyse achteraf</span></h2>
-    <div id="controle"></div>
 
     <h2><span>Luchtkwaliteit en pollen</span></h2>
     <div class="stats" id="aq"></div>
@@ -655,7 +650,17 @@ function tekenAlles(){
   let i=h.time.findIndex(t=>t.slice(0,13)===c.time.slice(0,13));
   S.i0=i<0?0:i;
 
-  document.getElementById("place").textContent=S.label;
+  /* De tijd hoort bij de plaats: alle uren in deze app staan in de tijd daar,
+     dus zonder klok weet je niet waar "beste zicht van 01:00 tot 03:00" op slaat.
+     Ook in Nederland, want dan is meteen duidelijk dat het de tijd van de plaats is. */
+  {
+    const eigen=-new Date().getTimezoneOffset()*60;
+    const daar=d.utc_offset_seconds;
+    const nuDaar=new Date(Date.now()+((daar==null?eigen:daar)-eigen)*1000);
+    const klok=String(nuDaar.getHours()).padStart(2,"0")+":"+String(nuDaar.getMinutes()).padStart(2,"0");
+    document.getElementById("place").innerHTML=
+      esc(S.label)+'<span id="plaatstijd">'+klok+'</span>';
+  }
   document.title=S.label+" · Weerbriefing";
   document.getElementById("t").textContent=Math.round(c.temperature_2m);
   document.getElementById("cond").textContent=txt(c.weather_code,c.is_day!==0);
@@ -663,25 +668,6 @@ function tekenAlles(){
     +"°C, dauwpunt "+Math.round(h.dew_point_2m[S.i0])+"°C";
   document.getElementById("nowicon").innerHTML=icon(c.weather_code,c.is_day===1,46);
   document.getElementById("coords").textContent=S.lat.toFixed(3)+", "+S.lon.toFixed(3)+" · "+d.timezone;
-  /* Alle tijden in de app staan al in de tijd van de plaats zelf. Zonder klok is
-     dat verwarrend zodra je ergens anders kijkt: "beste zicht van 01:00 tot 03:00"
-     zegt weinig als je niet weet hoe laat het daar nu is. */
-  const lok=document.getElementById("lokaal");
-  if(lok){
-    const eigen=-new Date().getTimezoneOffset()*60;
-    const daar=d.utc_offset_seconds;
-    if(daar!=null&&daar!==eigen){
-      const nuDaar=new Date(Date.now()+(daar-eigen)*1000);
-      const uu=String(nuDaar.getHours()).padStart(2,"0")+":"+String(nuDaar.getMinutes()).padStart(2,"0");
-      /* Niet elk verschil is een heel aantal uren: Nepal zit op 5:45 en India op
-         5:30. Afronden op een decimaal maakte daar 5,8 uur van, wat gewoon fout is.
-         Bij een halve of kwartier hoort de opsomming in uren en minuten. */
-      const sec=Math.abs(daar-eigen), uur=Math.floor(sec/3600), min=Math.round(sec%3600/60);
-      const hoeveel = min ? uur+" uur en "+min+" minuten" : uur+(uur===1?" uur":" uur");
-      lok.textContent="daar is het "+uu+", "+hoeveel+" "+(daar>eigen?"later":"vroeger");
-      lok.style.display="";
-    } else lok.style.display="none";
-  }
 
   let startIdx=S.i0;
   if(S.dag!=null){
@@ -691,7 +677,7 @@ function tekenAlles(){
   themaToepassen();
   minibarBij();
   waarschuwingen();
-  logBij();controle();
+  logBij();
   meters();briefing();etmaal(startIdx,S.bereik);nowcast();dagen();nachten();lucht();stempel();
 }
 function set(id,html){document.getElementById(id).innerHTML=nbsp(html);}
@@ -935,10 +921,10 @@ function etmaal(start,n){
     }
   });
 
-  let nu="";
+  let nu="",nuX=null;
   const inu=TI.indexOf(S.d.current.time.slice(0,13)+":00");
   if(inu>=0){
-    const xn=x(inu);
+    const xn=x(inu); nuX=xn;
     nu=`<line x1="${xn}" y1="${by-2}" x2="${xn}" y2="${pb+6}" stroke="${CARMINE}" stroke-width="1"/>
         <text x="${xn+4}" y="${by+bh+13}" fill="${CARMINE}" font-family="DM Mono,monospace" font-size="${F.nu}">nu</text>`;
   }
@@ -1006,6 +992,13 @@ function etmaal(start,n){
     let cx=x(i);
     if(cx-bw/2 < pl-2) cx=pl-2+bw/2;
     if(cx+bw/2 > W-pr) cx=W-pr-bw/2;
+    /* De rode nu-lijn loopt van boven naar beneden door de tekening. Het eerste
+       cijfer stond er precies overheen, want dat hoort bij hetzelfde uur. Ligt
+       het label op die lijn, dan schuift het er net naast. */
+    if(nuX!=null && Math.abs(cx-nuX) < bw/2+5){
+      const naarRechts = nuX + bw/2 + 6 + bw/2 <= W-pr;
+      cx = naarRechts ? nuX + bw/2 + 6 : nuX - bw/2 - 6;
+    }
     const botst=gezet.some(g=>Math.abs(g.cx-cx)<(g.bw+bw)/2+5 && Math.abs(g.cy-cy)<F.temp+3);
     if(botst) return;
     gezet.push({cx:cx,cy:cy,bw:bw});
@@ -1372,40 +1365,6 @@ function logBij(){
     log[sleutel]=perPlaats; ls.set(KEY_LOG,log);
   }
 }
-async function controle(){
-  const kop=document.getElementById("kopcontrole"),el=document.getElementById("controle");
-  kop.style.display="none"; el.innerHTML="";
-  const log=ls.get(KEY_LOG,{})[S.lat.toFixed(2)+","+S.lon.toFixed(2)];
-  if(!log||!Object.keys(log).length) return;
-  let gemeten;
-  try{
-    gemeten=await j("https://api.open-meteo.com/v1/forecast?latitude="+S.lat+"&longitude="+S.lon
-      +"&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&past_days=7&forecast_days=1&timezone=auto");
-  }catch(e){ return; }
-  const m={};
-  gemeten.daily.time.forEach((t,i)=>m[t]={max:gemeten.daily.temperature_2m_max[i],
-    min:gemeten.daily.temperature_2m_min[i],mm:gemeten.daily.precipitation_sum[i]});
-  const vandaag=S.d.daily.time[0];
-  const rijen=Object.keys(log).filter(dt=>dt<vandaag&&m[dt]).sort().reverse().slice(0,5);
-  if(!rijen.length) return;
-  kop.style.display="flex";
-  /* De getallen worden afgerond getoond maar het verschil werd uit de ruwe
-     waarden berekend. Je zag 23 en 25 staan met daarnaast +1,5. Nu rekent het
-     verschil met dezelfde afgeronde getallen die je leest. */
-  const verschil=(v,g)=>{ const d2=Math.round(g)-Math.round(v); return (d2>0?"+":"")+d2; };
-  el.innerHTML=`<div class="row ctrl kop"><div class="dname">Dag</div><div>Voorspeld</div>
-      <div>Analyse achteraf</div><div class="nmeta">Verschil</div></div>`+
-    rijen.map(dt=>{
-      const v=log[dt],g=m[dt];
-      const dm=Math.abs(g.max-v.max);
-      const kleur=dm<=1?TEAL:dm<=2.5?INK:CARMINE;
-      return `<div class="row ctrl">
-        <div class="dname">${new Date(dt+"T12:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short"})}</div>
-        <div class="mono">${Math.round(v.max)}° / ${Math.round(v.min)}° · ${nl(v.mm)} mm</div>
-        <div class="mono">${Math.round(g.max)}° / ${Math.round(g.min)}° · ${nl(g.mm)} mm</div>
-        <div class="nmeta" style="color:${kleur}">${verschil(v.max,g.max)}° op de max</div></div>`;
-    }).join("");
-}
 
 /* ---------- neerslagradar ---------- */
 const R={laag:"radar",radarFrames:[],satFrames:[],frames:[],i:0,speelt:false,timer:null,host:"",geladen:{},pogingen:0,gelukt:0,verwacht:0,terug:false,wms:null,knmiMelding:""};
@@ -1506,7 +1465,7 @@ async function radarLaden(){
     R.host=d.host||"https://tilecache.rainviewer.com";
     const verleden=(d.radar&&d.radar.past?d.radar.past:[]).slice(-8).map(f=>({time:f.time,path:f.path,toekomst:false}));
     const straks=(d.radar&&d.radar.nowcast?d.radar.nowcast:[]).map(f=>({time:f.time,path:f.path,toekomst:true}));
-    R.radarFrames=verleden.concat(straks);
+    R.radarFrames=opTijd(verleden.concat(straks));
     /* Radar is een mozaiek van grondstations en dekt lang niet de hele wereld.
        De infraroodsatelliet van RainViewer wel. Die toont wolkentoppen en geen
        neerslag, dus het is geen vervanging maar een opvulling; daarom een knop
@@ -1515,7 +1474,9 @@ async function radarLaden(){
       .slice(-10).map(f=>({time:f.time,path:f.path,toekomst:false,sat:true}));
     R.frames=R.radarFrames;
     if(!straks.length) await knmiVerwachting(verleden);
-    if(R.satFrames.length) R.radarFrames=R.frames;   // knmiVerwachting kan R.frames aanvullen
+    // knmiVerwachting vult R.frames aan; die aanvulling hoort ook in radarFrames
+    // te zitten, anders raakt de vooruitblik kwijt zodra je van laag wisselt
+    R.radarFrames=R.frames;
     const kn=document.getElementById("rlaag");
     if(kn) kn.style.display=R.satFrames.length?"":"none";
     // de gratis laag levert niet altijd satellietbeelden; dan hoort de bronregel
@@ -1571,6 +1532,13 @@ document.getElementById("rspeel").addEventListener("click",()=>{
 });
 
 // De gratis laag van RainViewer geeft geen verwachting. Voor Nederland vult het KNMI dat gat.
+/** Zet beelden op volgorde van tijd en houdt per tijdstip er maar een over. */
+function opTijd(lijst){
+  const perTijd=new Map();
+  for(const f of lijst) if(f&&isFinite(f.time)) perTijd.set(f.time,f);
+  return [...perTijd.values()].sort((a,b)=>a.time-b.time);
+}
+
 async function knmiVerwachting(verleden){
   R.wms=null; R.knmiMelding="";
   if(!inNederland(S.lat,S.lon)) return;
@@ -1597,7 +1565,11 @@ async function knmiVerwachting(verleden){
     return;
   }
   R.wms=w;
-  R.frames=R.frames.concat(stappen);
+  /* Twee bronnen achter elkaar plakken kan een reeks opleveren die heen en weer
+     springt in de tijd; op de schuif zag je 20:10, dan 19:10, dan 20:20. Sorteren
+     op tijdstip en dubbele momenten weggooien maakt dat onmogelijk, ongeacht via
+     welke weg de reeks gevuld is. */
+  R.frames=opTijd(R.frames.concat(stappen));
   document.getElementById("rschuif").max=R.frames.length-1;
 }
 

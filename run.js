@@ -1047,9 +1047,49 @@ groep("Live bevindingen");
       labels.length+" labels waarvan "+zelfde+" keer 19 graden: "+labels.join(" "));
   }
 
-  // 7. het verschil moet uit dezelfde getallen komen die je leest
-  check("de verificatie rondt het verschil net zo af als de getallen",
-    /Math\.round\(g\)-Math\.round\(v\)/.test(bronL));
+  // 7. het verificatieblok is er op verzoek uit
+  check("het verificatieblok is verwijderd",
+    !/id="controle"/.test(bronL) && !/Hoe goed was de verwachting/.test(bronL));
+
+  /* 7b. radarbeelden moeten op tijd staan. Twee bronnen achter elkaar plakken gaf
+     een schuif die van 20:10 naar 19:10 en dan naar 20:20 sprong. */
+  {
+    const bronF=new Function("return "+(bronL.match(/function opTijd\(lijst\)\{[\s\S]*?\n\}/)||["null"])[0])();
+    check("er is een functie die beelden op tijd zet",typeof bronF==="function");
+    if(typeof bronF==="function"){
+      const rommel=[{time:300},{time:100},{time:200},{time:100},{time:400}];
+      const uit=bronF(rommel);
+      const tijden=uit.map(f=>f.time);
+      check("de reeks loopt oplopend in de tijd",
+        tijden.every((t,i)=>i===0||t>tijden[i-1]),tijden.join(", "));
+      check("dubbele tijdstippen vallen weg",tijden.length===4,tijden.join(", "));
+      check("een lege of kapotte invoer geeft geen fout",
+        bronF([]).length===0 && bronF([null,{time:NaN},{time:5}]).length===1);
+    }
+    check("de samengevoegde reeks wordt gesorteerd",/opTijd\(R\.frames\.concat/.test(bronL));
+    check("de radarreeks zelf wordt ook gesorteerd",/opTijd\(verleden\.concat/.test(bronL));
+    check("de vooruitblik blijft bij het wisselen van laag",
+      /R\.radarFrames=R\.frames;/.test(bronL) && !/if\(R\.satFrames\.length\) R\.radarFrames/.test(bronL));
+  }
+
+  /* 7c. het cijfer mag niet op de rode nu-lijn vallen */
+  {
+    const {api:aN,bak:bN}=laadKern(390);
+    // het huidige uur staat in de testdata op index 38, alleen daar tekent de nu-lijn
+    Object.assign(aN.S,{d:bouw({}),i0:38,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    aN.etmaal(38,24);
+    const h=bN.chart.innerHTML;
+    const lijn=h.match(/<line x1="([\d.]+)"[^>]*stroke="var\(--carmine\)"/);
+    check("de nu-lijn staat in de tekening",!!lijn,"lijn niet gevonden");
+    if(lijn){
+      const xn=parseFloat(lijn[1]);
+      const labels=[...h.matchAll(/<text x="([\d.-]+)" y="[\d.-]+"[^<]*?font-family="Bodoni Moda,serif" font-size="([\d.]+)">(-?\d+)°</g)]
+        .map(m=>({x:parseFloat(m[1]),b:(m[3].length+1)*parseFloat(m[2])*0.58}));
+      const opDeLijn=labels.filter(l=>Math.abs(l.x-xn)<l.b/2+2);
+      check("geen temperatuurcijfer valt over de nu-lijn",opDeLijn.length===0,
+        opDeLijn.map(l=>"label op x "+l.x.toFixed(0)+", lijn op "+xn.toFixed(0)).join(", "));
+    }
+  }
 
   // 8. satelliet alleen crediteren als er beelden zijn
   check("de bronregel noemt satelliet niet standaard",
@@ -1059,23 +1099,30 @@ groep("Live bevindingen");
   check("de brede tegel spant alleen op smalle schermen",
     /@media\(max-width:900px\)\{ \.stat\.breed\{grid-column:1 \/ -1\} \}/.test(bronL));
 
-  // 10. lokale tijd bij een andere tijdzone
-  for(const [naam,off,verw] of [["Tokio",32400,/\d\d:\d\d, 9 uur later/],
-                                ["New York",-14400,/4 uur vroeger/],
-                                ["Nepal",20700,/5 uur en 45 minuten later/]]){
+  /* 10. de klok van de plaats staat naast de plaatsnaam, altijd, ook in Nederland.
+     Alle uren in de app staan in de tijd van die plaats, dus zonder klok weet je
+     niet waar een venster van 01:00 tot 03:00 op slaat. */
+  for(const [naam,off] of [["Tokio",32400],["New York",-14400],["Nepal",20700],["thuis",7200]]){
     const {api:a7,bak:b7}=laadKern(390);
     const d7=bouw({}); d7.utc_offset_seconds=off;
-    Object.assign(a7.S,{d:d7,i0:14,op:Date.now(),lat:1,lon:1,label:"X",dag:null,bereik:24});
+    Object.assign(a7.S,{d:d7,i0:14,op:Date.now(),lat:1,lon:1,label:"Testplaats",dag:null,bereik:24});
     a7.tekenAlles();
-    check(naam+": de lokale tijd staat erbij",verw.test(b7.lokaal.textContent),b7.lokaal.textContent);
+    const h=b7.place.innerHTML;
+    check(naam+": de plaatsnaam heeft een klok",/<span id="plaatstijd">\d\d:\d\d<\/span>/.test(h),h);
+    check(naam+": de plaatsnaam zelf blijft staan",/Testplaats/.test(h),h);
   }
-  // en een half uur verschil mag niet als decimaal verschijnen
-  const {api:a8,bak:b8}=laadKern(390);
-  const d8=bouw({}); d8.utc_offset_seconds=19800;
-  Object.assign(a8.S,{d:d8,i0:14,op:Date.now(),lat:1,lon:1,label:"X",dag:null,bereik:24});
-  a8.tekenAlles();
-  check("een halve tijdzone wordt niet als komma-uur getoond",
-    !/[\d],[\d] uur/.test(b8.lokaal.textContent),b8.lokaal.textContent);
+  // de klok moet de tijd van de plaats tonen, niet die van de kijker
+  {
+    const {api:aT,bak:bT}=laadKern(390);
+    const dT=bouw({}); dT.utc_offset_seconds=32400;              // Tokio
+    Object.assign(aT.S,{d:dT,i0:14,op:Date.now(),lat:1,lon:1,label:"T",dag:null,bereik:24});
+    aT.tekenAlles();
+    const uur=parseInt((bT.place.innerHTML.match(/>(\d\d):\d\d</)||[0,-1])[1],10);
+    const eigen=new Date().getUTCHours();
+    check("de klok volgt de tijdzone van de plaats",uur===(eigen+9)%24,
+      "plaats "+uur+", UTC "+eigen);
+  }
+  check("het oude tijdsverschil-element is weg",!/id="lokaal"/.test(bronL));
 }
 
 console.log("\n"+goed+" geslaagd, "+fout+" mislukt");
