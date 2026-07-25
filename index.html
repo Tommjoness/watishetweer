@@ -70,6 +70,8 @@
     #minibar.aan{display:flex}
     #miniplaats{font-family:var(--serif);font-size:17px}
     #minitemp{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums}
+    #minitijd{font-family:var(--mono);font-size:12px;color:var(--ink-45);
+      font-variant-numeric:tabular-nums;margin-right:auto;padding-left:.6em}
   }
   .mast{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s3);flex-wrap:wrap}
   .mast h1{font-family:var(--serif);font-weight:400;font-size:15px;letter-spacing:.02em;margin:0;color:var(--ink-45)}
@@ -324,7 +326,7 @@
 <body>
 <div class="sheet">
 
-  <div id="minibar"><span id="miniplaats"></span><span id="minitemp"></span></div>
+  <div id="minibar"><span id="miniplaats"></span><span id="minitijd"></span><span id="minitemp"></span></div>
 
   <div class="mast">
     <div>
@@ -446,6 +448,12 @@ const DAGENVOL=["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","z
 const BFT=[1,6,12,20,29,39,50,62,75,89,103,117];
 const BFTNAAM=["windstil","zwakke wind","zwakke wind","matige wind","matige wind","vrij krachtige wind",
   "krachtige wind","harde wind","stormachtige wind","storm","zware storm","zeer zware storm","orkaan"];
+/* De stijl van de KNMI-neerslaglaag. Volgens de GetCapabilities van
+   radar_forecast_2.0 bestaan er drie: radar/nearest (de standaard, rode schaal),
+   rainrate-blue-to-purple/nearest en rainrate-blue-to-purple/shaded. De blauwe
+   sluit aan op de kleuren van RainViewer, zodat de radar niet van kleur omslaat
+   op het moment dat je van het verleden naar de verwachting schuift. */
+const KNMI_STIJL="rainrate-blue-to-purple/nearest";
 const INK="var(--ink)",INK45="var(--ink-45)",INK25="var(--ink-25)",RULE="var(--rule)",
       RULES="var(--rule-soft)",NIGHT="var(--night)",TEAL="var(--teal)",CARMINE="var(--carmine)",SHEET="var(--sheet)";
 
@@ -482,9 +490,21 @@ function icon(code,isDay,size){
   const halfz=`<circle cx="8.6" cy="8" r="3.1" ${o}/>`+[200,245,290,335].map(a=>{const d=a*Math.PI/180;
     return `<line x1="${(8.6+4.5*Math.cos(d)).toFixed(2)}" y1="${(8+4.5*Math.sin(d)).toFixed(2)}" x2="${(8.6+6.3*Math.cos(d)).toFixed(2)}" y2="${(8+6.3*Math.sin(d)).toFixed(2)}" ${o}/>`;}).join("");
   const halfm=`<path d="M11.4 8.6A4 4 0 0 1 6.7 3.9a4.2 4.2 0 1 0 4.7 4.7z" ${o}/>`;
+  /* Zon en wolk zijn allebei lijnwerk zonder vulling, dus de onderkant van de zon
+     liep dwars door de wolk heen. De wolk dekt nu af wat erachter ligt, met een
+     masker in plaats van een vulling: zo werkt het op elke achtergrond, ook in
+     donkere modus en op de rode nachtstand. */
+  const dek=(achter,voor)=>{
+    const id="mk"+(icon.teller=(icon.teller||0)+1);
+    const stempel=voor.replace(/fill="none"/g,'fill="black"')
+                      .replace(/stroke="currentColor"/g,'stroke="black"')
+                      .replace(/stroke-width="1.15"/g,'stroke-width="2.6"');
+    return `<defs><mask id="${id}"><rect width="24" height="24" fill="white"/>${stempel}</mask></defs>`
+      +`<g mask="url(#${id})">${achter}</g>${voor}`;
+  };
   let b;
   if(f==="zon") b=isDay?zon:maantje;
-  else if(f==="halfbewolkt") b=(isDay?halfz:halfm)+wolkhoog;
+  else if(f==="halfbewolkt") b=dek(isDay?halfz:halfm, wolkhoog);
   else if(f==="wolk") b=wolk;
   else if(f==="mist") b=mist;
   else if(f==="regen") b=wolkhoog+druppels;
@@ -494,6 +514,15 @@ function icon(code,isDay,size){
   else b=wolkhoog+bliksem;
   return `<svg class="ico" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${b}</svg>`;
 }
+/** De klok van de plaats zelf. Alle uren in de app staan in die tijd, dus deze
+    hoort daarbij en niet de tijd van degene die kijkt. */
+function plaatsKlok(){
+  const eigen=-new Date().getTimezoneOffset()*60;
+  const daar=(S.d&&S.d.utc_offset_seconds!=null)?S.d.utc_offset_seconds:eigen;
+  const t=new Date(Date.now()+(daar-eigen)*1000);
+  return String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0");
+}
+
 function pijl(deg,size){
   const s=size||12;
   return `<svg viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true" style="vertical-align:baseline">
@@ -653,14 +682,8 @@ function tekenAlles(){
   /* De tijd hoort bij de plaats: alle uren in deze app staan in de tijd daar,
      dus zonder klok weet je niet waar "beste zicht van 01:00 tot 03:00" op slaat.
      Ook in Nederland, want dan is meteen duidelijk dat het de tijd van de plaats is. */
-  {
-    const eigen=-new Date().getTimezoneOffset()*60;
-    const daar=d.utc_offset_seconds;
-    const nuDaar=new Date(Date.now()+((daar==null?eigen:daar)-eigen)*1000);
-    const klok=String(nuDaar.getHours()).padStart(2,"0")+":"+String(nuDaar.getMinutes()).padStart(2,"0");
-    document.getElementById("place").innerHTML=
-      esc(S.label)+'<span id="plaatstijd">'+klok+'</span>';
-  }
+  document.getElementById("place").innerHTML=
+    esc(S.label)+'<span id="plaatstijd">'+plaatsKlok()+'</span>';
   document.title=S.label+" · Weerbriefing";
   document.getElementById("t").textContent=Math.round(c.temperature_2m);
   document.getElementById("cond").textContent=txt(c.weather_code,c.is_day!==0);
@@ -1437,7 +1460,13 @@ function radarTeken(){
   if(f.knmi&&R.wms){
     const bbox=[mercX(ox),mercY(oy+H),mercX(ox+W),mercY(oy)].map(v=>v.toFixed(1)).join(",");
     const url=R.wms.basis+"&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS="+encodeURIComponent(R.wms.laag)
-      +"&STYLES=&CRS=EPSG:3857&BBOX="+bbox+"&WIDTH="+W+"&HEIGHT="+H
+      /* Zonder stijl pakt de server zijn eerste, en dat is radar/nearest met een
+         rode schaal. Het verleden komt van RainViewer in blauw, dus sloeg de kleur
+         om zodra je de toekomst in schoof. De laag biedt volgens zijn eigen
+         GetCapabilities ook rainrate-blue-to-purple, en die sluit wel aan.
+         De drie beschikbare stijlen zijn radar/nearest,
+         rainrate-blue-to-purple/nearest en rainrate-blue-to-purple/shaded. */
+      +"&STYLES="+encodeURIComponent(KNMI_STIJL)+"&CRS=EPSG:3857&BBOX="+bbox+"&WIDTH="+W+"&HEIGHT="+H
       +"&FORMAT=image/png&TRANSPARENT=TRUE&TIME="+encodeURIComponent(f.tijd);
     tegel(url,im=>{ if(im){ctx.globalAlpha=0.85;ctx.drawImage(im,0,0,W,H);ctx.globalAlpha=1;} markeer(ctx,W,H); });
   }
@@ -1623,6 +1652,9 @@ function chips(){
 function minibarBij(){
   document.getElementById("miniplaats").textContent=S.label;
   document.getElementById("minitemp").textContent=Math.round(S.d.current.temperature_2m)+"°C, "+txt(S.d.current.weather_code,S.d.current.is_day!==0).toLowerCase();
+  // dezelfde klok als naast de plaatsnaam, zodat hij bij het scrollen blijft staan
+  const mt=document.getElementById("minitijd");
+  if(mt) mt.textContent=plaatsKlok();
 }
 (function(){
   const hero=document.querySelector(".hero"),bar=document.getElementById("minibar");

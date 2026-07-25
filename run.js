@@ -1072,6 +1072,24 @@ groep("Live bevindingen");
       /R\.radarFrames=R\.frames;/.test(bronL) && !/if\(R\.satFrames\.length\) R\.radarFrames/.test(bronL));
   }
 
+
+  /* 7d. de KNMI-laag moet dezelfde kleurtaal spreken als RainViewer */
+  {
+    const stijl=(bronL.match(/const KNMI_STIJL="([^"]+)"/)||[])[1];
+    check("er staat een expliciete stijl voor de KNMI-laag",!!stijl,"KNMI_STIJL ontbreekt");
+    /* De laag biedt volgens zijn eigen GetCapabilities radar/nearest,
+       rainrate-blue-to-purple/nearest en rainrate-blue-to-purple/shaded.
+       De eerste is de standaard en tekent rood; die valt af. */
+    const geldig=["radar/nearest","rainrate-blue-to-purple/nearest","rainrate-blue-to-purple/shaded"];
+    check("de stijl bestaat op de server",geldig.includes(stijl),String(stijl));
+    check("de stijl is de blauwe, niet de rode standaard",
+      /^rainrate-blue-to-purple/.test(String(stijl)),String(stijl));
+    check("de stijl wordt ook echt meegestuurd",
+      /&STYLES="\+encodeURIComponent\(KNMI_STIJL\)/.test(bronL));
+    check("de kaartaanvraag gebruikt een projectie die de laag ondersteunt",
+      /CRS=EPSG:3857/.test(bronL));
+  }
+
   /* 7c. het cijfer mag niet op de rode nu-lijn vallen */
   {
     const {api:aN,bak:bN}=laadKern(390);
@@ -1123,6 +1141,50 @@ groep("Live bevindingen");
       "plaats "+uur+", UTC "+eigen);
   }
   check("het oude tijdsverschil-element is weg",!/id="lokaal"/.test(bronL));
+}
+
+/* 10n. icoonoverlap en de meelopende klok */
+groep("Iconen en balk");
+{
+  const fsI=require("fs"), pathI=require("path");
+  const bronI=fsI.readFileSync(pathI.join(__dirname,"index.html"),"utf8");
+  const {api}=laadKern(390);
+
+  /* Zon en wolk zijn allebei lijnwerk zonder vulling. Zonder afdekking liep de
+     onderrand van de zon dwars door de wolk. */
+  for(const [naam,dag] of [["overdag",true],["s nachts",false]]){
+    const h=api.icon(2,dag,24);
+    check("halfbewolkt "+naam+": de wolk dekt af wat erachter ligt",
+      /<mask id="mk\d+">/.test(h) && /<g mask="url\(#mk\d+\)">/.test(h),h.slice(0,90));
+  }
+  // twee iconen op een pagina mogen nooit hetzelfde masker delen
+  const ids=[api.icon(2,true,24),api.icon(2,false,24),api.icon(2,true,18)]
+    .map(h=>(h.match(/mask id="(mk\d+)"/)||[])[1]);
+  check("elk icoon krijgt een eigen masker-id",new Set(ids).size===ids.length,ids.join(", "));
+
+  // waar niets achter de wolk ligt hoort ook geen masker te staan
+  for(const [naam,code] of [["onweer",95],["regen",61],["sneeuw",71],["mist",45],["bewolkt",3],["onbewolkt",0]]){
+    check(naam+" heeft geen masker nodig",!/<mask/.test(api.icon(code,true,24)));
+  }
+
+  // het masker moet dikker zijn dan de lijn zelf, anders blijft er een randje staan
+  const m=api.icon(2,true,24).match(/<mask[\s\S]*?stroke-width="([\d.]+)"/);
+  check("het masker is ruimer dan de lijndikte",!!m&&parseFloat(m[1])>1.15,m?m[1]:"niet gevonden");
+
+  /* de klok hoort ook zichtbaar te blijven als je scrollt */
+  check("de meelopende balk heeft een klok",/id="minitijd"/.test(bronI));
+  check("beide klokken komen uit dezelfde functie",
+    (bronI.match(/plaatsKlok\(\)/g)||[]).length>=3);
+  {
+    const {api:a2,bak:b2}=laadKern(390);
+    const d2=bouw({}); d2.utc_offset_seconds=32400;      // Tokio
+    Object.assign(a2.S,{d:d2,i0:14,op:Date.now(),lat:1,lon:1,label:"T",dag:null,bereik:24});
+    a2.tekenAlles(); a2.stempel();
+    const kop=(b2.place.innerHTML.match(/>(\d\d:\d\d)</)||[])[1];
+    const balk=b2.minitijd.textContent;
+    check("de klok in de balk is gelijk aan die naast de plaatsnaam",kop===balk,
+      "kop "+kop+", balk "+balk);
+  }
 }
 
 console.log("\n"+goed+" geslaagd, "+fout+" mislukt");
