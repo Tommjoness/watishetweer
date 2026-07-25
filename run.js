@@ -981,7 +981,7 @@ groep("Nadruk en kaart");
     /<b>"\+Math\.round\(tv\)\+" graden<\/b>/.test(bronN2)||/<b>"\+nutemp\+" graden<\/b>/.test(bronN2));
 
   /* de kaart onder de radar was zo ver weggedrukt dat grenzen verdwenen */
-  const alfa=bronN2.match(/globalAlpha=donker\?([\d.]+):([\d.]+);ctx\.drawImage\(im,px,py\)/);
+  const alfa=bronN2.match(/globalAlpha=donker\?([\d.]+):([\d.]+)/);
   check("de radarkaart heeft een leesbare doorzichtigheid",
     !!alfa && parseFloat(alfa[2])>=0.9 && parseFloat(alfa[1])>=0.7,
     alfa?("donker "+alfa[1]+", licht "+alfa[2]):"regel niet gevonden");
@@ -1173,6 +1173,24 @@ groep("Iconen en balk");
   check("het masker is ruimer dan de lijndikte",!!m&&parseFloat(m[1])>1.15,m?m[1]:"niet gevonden");
 
 
+
+
+  /* Bij het afspelen flikkerde de neerslag: het doek werd gewist voordat de tegels
+     binnen waren. Het wissen hoort na het laden te komen, niet ervoor. */
+  {
+    const teken=bronI.slice(bronI.indexOf("async function radarTeken"),bronI.indexOf("function markeer"));
+    check("de tekenfunctie wacht op de beelden",/await Promise\.all/.test(teken));
+    const naLaden=teken.indexOf("await Promise.all")<teken.indexOf("ctx.clearRect");
+    check("het doek wordt pas gewist als de beelden binnen zijn",naLaden,
+      "clearRect staat nog voor het laden");
+    check("een oudere ophaalronde mag niet meer tekenen",
+      /ronde!==radarRonde\)\s*return/.test(teken),"geen bescherming tegen twee rondes tegelijk");
+    check("het volgende beeld wordt alvast opgehaald",
+      /R\.frames\[\(R\.i\+1\)%R\.frames\.length\]/.test(teken));
+    // de tijd mag niet meewachten, anders loopt het bijschrift achter
+    check("het tijdstip verschijnt zonder te wachten",
+      teken.indexOf("radartijd")<teken.indexOf("await Promise.all"));
+  }
 
   /* Er staat een globale regel svg,canvas{display:block}. Elke SVG die middenin
      een tekstregel staat moet die overrulen, anders breekt de regel eromheen.

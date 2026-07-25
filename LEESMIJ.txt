@@ -1,4 +1,4 @@
-WIJZIGINGEN v55
+WIJZIGINGEN v56
 
   hoofdmap:   index.html  sw.js  run.js  kern.js  README.md
   in api/:    waarschuwingen.js
@@ -11,4 +11,4 @@ GITHUB
   5. Commit
 
 NA HET UITROLLEN
-  App helemaal afsluiten en opnieuw openen (cache v55).
+  App helemaal afsluiten en opnieuw openen (cache v56).

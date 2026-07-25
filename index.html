@@ -1431,6 +1431,9 @@ function wereldXY(lat,lon,z){
   const y=(0.5-Math.log((1+s2)/(1-s2))/(4*Math.PI))*n;
   return {x:x,y:y};
 }
+/** Zelfde als tegel, maar als belofte, zodat een heel beeld in een keer klaar kan staan. */
+function tegelBelofte(url){ return new Promise(k=>tegel(url,k)); }
+
 function tegel(url,klaar){
   if(R.geladen[url]){klaar(R.geladen[url]);return;}
   // geheugen begrenzen, anders groeit de cache bij een tabblad dat uren openstaat
@@ -1441,9 +1444,20 @@ function tegel(url,klaar){
   im.onerror=()=>klaar(null);
   im.src=url;
 }
-function radarTeken(){
+/* Bij het afspelen flikkerde de neerslag. De oorzaak: clearRect wiste het doek
+   meteen, terwijl de tegels er pas 70 tot 330 ms later waren. In dat gat stond de
+   kaart zonder buien, en bij het volgende beeld weer. Nu wordt eerst alles wat dit
+   beeld nodig heeft opgehaald, en pas als het binnen is wordt er gewist en getekend.
+   Zo blijft het vorige beeld staan tot het nieuwe compleet is.
+
+   De teller vangt de wedloop af: sleep je snel aan de schuif, dan lopen er meerdere
+   ophaalrondes tegelijk en mag alleen de laatste nog tekenen. */
+let radarRonde=0;
+
+async function radarTeken(){
   const c=document.getElementById("radar");
   if(!c||!R.frames.length||S.lat==null) return;
+  const ronde=++radarRonde;
   const ctx=c.getContext("2d");
   const W=c.width,H=c.height;
   const mid=wereldXY(S.lat,S.lon,ZOOM);
@@ -1451,53 +1465,62 @@ function radarTeken(){
   const donker=document.documentElement.getAttribute("data-thema")!=="licht";
   const stijl=donker?"dark_nolabels":"light_nolabels";
   const f=R.frames[R.i];
-  ctx.clearRect(0,0,W,H);
-  R.pogingen=0;R.gelukt=0;
-  const tx0=Math.floor(ox/TEGEL), tx1=Math.floor((ox+W)/TEGEL);
-  const ty0=Math.floor(oy/TEGEL), ty1=Math.floor((oy+H)/TEGEL);
-  R.verwacht=(tx1-tx0+1)*(ty1-ty0+1);
-  const max=Math.pow(2,ZOOM);
-  for(let tx=tx0;tx<=tx1;tx++) for(let ty=ty0;ty<=ty1;ty++){
-    if(ty<0||ty>=max) continue;
-    const X=((tx%max)+max)%max;
-    const px=tx*TEGEL-ox, py=ty*TEGEL-oy;
-    tegel(`https://basemaps.cartocdn.com/${stijl}/${ZOOM}/${X}/${ty}.png`,im=>{
-      /* De kaart werd op 75 procent getekend en in het donker zelfs op 55. Daardoor
-         verdwenen de landsgrenzen en provinciegrenzen, precies waar je op oriënteert.
-         De neerslaglaag ligt er met 85 procent overheen, dus de kaart mag steviger
-         zonder dat de bui minder goed leesbaar wordt. */
-      if(im){ctx.globalAlpha=donker?0.78:0.94;ctx.drawImage(im,px,py);ctx.globalAlpha=1;}
-      if(f.knmi) return;   // de verwachting komt als één beeld, niet als tegels
-      tegel(`${R.host}${f.path}/${TEGEL}/${ZOOM}/${X}/${ty}/${f.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`,rm=>{
-        R.pogingen++;
-        if(rm){R.gelukt++;ctx.globalAlpha=0.85;ctx.drawImage(rm,px,py);ctx.globalAlpha=1;}
-        markeer(ctx,W,H);
-        // komt er van dit beeld geen enkele tegel binnen, dan bestaat het nog niet
-        if(R.pogingen>=R.verwacht&&R.gelukt===0&&R.i>0&&!R.terug){
-          R.terug=true; R.i--; document.getElementById("rschuif").value=R.i; radarTeken();
-        }
-      });
-    });
-  }
-  if(f.knmi&&R.wms){
-    const bbox=[mercX(ox),mercY(oy+H),mercX(ox+W),mercY(oy)].map(v=>v.toFixed(1)).join(",");
-    const url=R.wms.basis+"&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS="+encodeURIComponent(R.wms.laag)
-      /* Zonder stijl pakt de server zijn eerste, en dat is radar/nearest met een
-         rode schaal. Het verleden komt van RainViewer in blauw, dus sloeg de kleur
-         om zodra je de toekomst in schoof. De laag biedt volgens zijn eigen
-         GetCapabilities ook rainrate-blue-to-purple, en die sluit wel aan.
-         De drie beschikbare stijlen zijn radar/nearest,
-         rainrate-blue-to-purple/nearest en rainrate-blue-to-purple/shaded. */
-      +"&STYLES="+encodeURIComponent(KNMI_STIJL)+"&CRS=EPSG:3857&BBOX="+bbox+"&WIDTH="+W+"&HEIGHT="+H
-      +"&FORMAT=image/png&TRANSPARENT=TRUE&TIME="+encodeURIComponent(f.tijd);
-    tegel(url,im=>{ if(im){ctx.globalAlpha=0.85;ctx.drawImage(im,0,0,W,H);ctx.globalAlpha=1;} markeer(ctx,W,H); });
-  }
-  clearTimeout(R.kruis);
-  R.kruis=setTimeout(()=>markeer(ctx,W,H),350);   // kruisje bovenop, ook als een tegel traag binnenkomt
+
+  // de tijd mag meteen mee, die hoeft niet op beelden te wachten
   const el2=document.getElementById("radartijd");
   el2.className=f.toekomst?"straks":"";
   el2.innerHTML=naarLokaal(f.time*1000)+(f.toekomst?"<small>verwachting</small>":"");
+
+  const tx0=Math.floor(ox/TEGEL), tx1=Math.floor((ox+W)/TEGEL);
+  const ty0=Math.floor(oy/TEGEL), ty1=Math.floor((oy+H)/TEGEL);
+  const max=Math.pow(2,ZOOM);
+
+  const vakken=[];
+  for(let tx=tx0;tx<=tx1;tx++) for(let ty=ty0;ty<=ty1;ty++){
+    if(ty<0||ty>=max) continue;
+    const X=((tx%max)+max)%max;
+    vakken.push({X:X,ty:ty,px:tx*TEGEL-ox,py:ty*TEGEL-oy});
+  }
+
+  const kaarten=vakken.map(v=>tegelBelofte(`https://basemaps.cartocdn.com/${stijl}/${ZOOM}/${v.X}/${v.ty}.png`));
+  const neerslag=f.knmi ? [] : vakken.map(v=>
+    tegelBelofte(`${R.host}${f.path}/${TEGEL}/${ZOOM}/${v.X}/${v.ty}/${f.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`));
+
+  let heel=null;
+  if(f.knmi&&R.wms){
+    const bbox=[mercX(ox),mercY(oy+H),mercX(ox+W),mercY(oy)].map(v=>v.toFixed(1)).join(",");
+    /* Zonder stijl pakt de server zijn eerste, en dat is radar/nearest met een rode
+       schaal. Het verleden komt van RainViewer in blauw, dus sloeg de kleur om zodra
+       je de toekomst in schoof. De laag biedt volgens zijn eigen GetCapabilities ook
+       rainrate-blue-to-purple, en die sluit wel aan. De drie beschikbare stijlen zijn
+       radar/nearest, rainrate-blue-to-purple/nearest en rainrate-blue-to-purple/shaded. */
+    heel=tegelBelofte(R.wms.basis+"&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS="+encodeURIComponent(R.wms.laag)
+      +"&STYLES="+encodeURIComponent(KNMI_STIJL)+"&CRS=EPSG:3857&BBOX="+bbox+"&WIDTH="+W+"&HEIGHT="+H
+      +"&FORMAT=image/png&TRANSPARENT=TRUE&TIME="+encodeURIComponent(f.tijd));
+  }
+
+  const [kb,nb,hb]=await Promise.all([Promise.all(kaarten),Promise.all(neerslag),heel]);
+  if(ronde!==radarRonde) return;      // ondertussen is er een nieuwer beeld gevraagd
+
+  ctx.clearRect(0,0,W,H);
+  kb.forEach((im,k)=>{ if(im){ctx.globalAlpha=donker?0.78:0.94;ctx.drawImage(im,vakken[k].px,vakken[k].py);ctx.globalAlpha=1;} });
+  nb.forEach((im,k)=>{ if(im){ctx.globalAlpha=0.85;ctx.drawImage(im,vakken[k].px,vakken[k].py);ctx.globalAlpha=1;} });
+  if(hb){ctx.globalAlpha=0.85;ctx.drawImage(hb,0,0,W,H);ctx.globalAlpha=1;}
+  markeer(ctx,W,H);
+
+  // beeld bestaat nog niet: geen enkele tegel kwam binnen, dus een stap terug
+  if(!f.knmi && nb.length && nb.every(im=>!im) && R.i>0 && !R.terug){
+    R.terug=true; R.i--; document.getElementById("rschuif").value=R.i; radarTeken();
+    return;
+  }
+
+  /* Het volgende beeld alvast ophalen. Tegen de tijd dat de lus verspringt staat
+     het in de cache en tekent het meteen, dus zonder haperen. */
+  const volg=R.frames[(R.i+1)%R.frames.length];
+  if(volg&&!volg.knmi&&R.host) vakken.forEach(v=>
+    tegel(`${R.host}${volg.path}/${TEGEL}/${ZOOM}/${v.X}/${v.ty}/${volg.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`,()=>{}));
 }
+
 function markeer(ctx,W,H){
   ctx.save();
   ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--carmine").trim()||"#A02036";

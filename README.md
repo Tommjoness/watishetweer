@@ -116,6 +116,7 @@ Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeel
 * de klok van de plaats staat naast de plaatsnaam
 * radarbeelden staan altijd op volgorde van tijd, ongeacht uit welke bron ze komen
 * de wolk in een samengesteld icoon dekt af wat erachter ligt, op elke achtergrond
+* de radar wist het doek pas als de beelden binnen zijn, dus zonder flikkeren
 * de KNMI-laag gebruikt de blauwe schaal, zodat de kleur niet omslaat bij de verwachting
 * elke kolom van de zevendagentabel past zijn inhoud, van 320 tot 430 px breed
 * elke serverfunctie is CommonJS, want ESM zonder "type": "module" faalt op Node 18 en 20
