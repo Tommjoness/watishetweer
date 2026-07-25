@@ -89,6 +89,9 @@
   .tools button{white-space:nowrap}
   .tools button+button{border-left:none}
   #stamp{font-family:var(--mono);font-size:11px;color:var(--ink-45);font-variant-numeric:tabular-nums}
+  /* Alleen zichtbaar als de plaats in een andere tijd zit dan jij. */
+  #lokaal{display:block;font-family:var(--mono);font-size:11px;color:var(--carmine);
+    font-variant-numeric:tabular-nums;margin-top:2px}
   #stamp.oud{color:var(--carmine)}
   .results{position:absolute;top:36px;left:0;right:0;z-index:30;background:var(--sheet);
     border:1px solid var(--ink);max-height:250px;overflow:auto;display:none;text-align:left}
@@ -132,7 +135,11 @@
   #aq .sval{justify-content:center}
   /* Negen tegels in een raster van vier of twee laat de laatste alleen achter.
      Die krijgt daarom de volle breedte, wat meteen ruimte geeft aan de tekst. */
-  .stat.breed{grid-column:1 / -1;border-right:none}
+  .stat.breed{border-right:none}
+  /* Met vier kolommen wordt een tegel over de volle breedte een lege band. Op de
+     telefoon met twee kolommen blijft hij anders alleen achter, en daar vult hij
+     de rij juist netjes op. */
+  @media(max-width:900px){ .stat.breed{grid-column:1 / -1} }
   .stat{padding:var(--s2) 22px 18px 0;border-bottom:1px solid var(--rule);border-right:1px solid var(--rule)}
   .stat:nth-child(4n){border-right:none;padding-right:0}
   .stat:not(:nth-child(4n+1)){padding-left:22px}
@@ -218,8 +225,15 @@
   .score{font-family:var(--mono);font-weight:500;font-size:18px;font-variant-numeric:tabular-nums;text-align:center}
   .sbar{height:1px;background:var(--rule);position:relative}
   .sbar i{position:absolute;top:-1px;height:3px}
+  /* Zonder dit brak de regel na de punt en bleef die los aan het eind hangen.
+     Nu verhuist het hele maandeel als een blok naar de volgende regel. */
+  .maangroep{white-space:nowrap}
   .maanbij{margin-right:4px}
   .maanbij svg{vertical-align:-2px}
+  /* Gecentreerd stonden 100% en 44% niet onder elkaar. Het getal krijgt nu een
+     vaste breedte en staat rechts uitgelijnd, zodat alle procenttekens en het
+     woord erna op dezelfde plek beginnen. */
+  .perc{display:inline-block;min-width:3.4em;text-align:right}
   .nmeta{font-size:12.5px;color:var(--ink-45);text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
 
   .msg{padding:var(--s2) 0;color:var(--ink-45);border-top:1px solid var(--rule);margin-top:var(--s3)}
@@ -327,6 +341,7 @@
         <div class="results" id="res" role="listbox"></div>
       </div>
       <span id="stamp" aria-live="polite"></span>
+      <span id="lokaal" aria-live="polite"></span>
     </div>
   </div>
 
@@ -403,7 +418,7 @@
 
     <footer>
       <span>Weer: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>, ECMWF en DWD, CAMS.
-        Radar en satelliet: <a href="https://www.rainviewer.com" target="_blank" rel="noopener">RainViewer</a><span id="bronknmi"></span>.
+        Radar<span id="bronsat"></span>: <a href="https://www.rainviewer.com" target="_blank" rel="noopener">RainViewer</a><span id="bronknmi"></span>.
         Radardekking volgt de nationale radarnetwerken en is niet overal ter wereld beschikbaar.
         Kaart: <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a> en
         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>.</span>
@@ -648,6 +663,25 @@ function tekenAlles(){
     +"°C, dauwpunt "+Math.round(h.dew_point_2m[S.i0])+"°C";
   document.getElementById("nowicon").innerHTML=icon(c.weather_code,c.is_day===1,46);
   document.getElementById("coords").textContent=S.lat.toFixed(3)+", "+S.lon.toFixed(3)+" · "+d.timezone;
+  /* Alle tijden in de app staan al in de tijd van de plaats zelf. Zonder klok is
+     dat verwarrend zodra je ergens anders kijkt: "beste zicht van 01:00 tot 03:00"
+     zegt weinig als je niet weet hoe laat het daar nu is. */
+  const lok=document.getElementById("lokaal");
+  if(lok){
+    const eigen=-new Date().getTimezoneOffset()*60;
+    const daar=d.utc_offset_seconds;
+    if(daar!=null&&daar!==eigen){
+      const nuDaar=new Date(Date.now()+(daar-eigen)*1000);
+      const uu=String(nuDaar.getHours()).padStart(2,"0")+":"+String(nuDaar.getMinutes()).padStart(2,"0");
+      /* Niet elk verschil is een heel aantal uren: Nepal zit op 5:45 en India op
+         5:30. Afronden op een decimaal maakte daar 5,8 uur van, wat gewoon fout is.
+         Bij een halve of kwartier hoort de opsomming in uren en minuten. */
+      const sec=Math.abs(daar-eigen), uur=Math.floor(sec/3600), min=Math.round(sec%3600/60);
+      const hoeveel = min ? uur+" uur en "+min+" minuten" : uur+(uur===1?" uur":" uur");
+      lok.textContent="daar is het "+uu+", "+hoeveel+" "+(daar>eigen?"later":"vroeger");
+      lok.style.display="";
+    } else lok.style.display="none";
+  }
 
   let startIdx=S.i0;
   if(S.dag!=null){
@@ -930,9 +964,13 @@ function etmaal(start,n){
      Daarom eerst de echte pieken en dalen, dan het hoogste en laagste punt van
      de reeks, en pas daarna de vaste stap als opvulling. Wat niet past valt weg. */
   const soort=new Array(T.length).fill(0);            // 1 is piek, -1 is dal
+  /* Zonder drempel telt een rimpeling van een tiende graad al als piek. Op een
+     vlakke nacht leverde dat vijf keer 19 graden achter elkaar op. Een top hoort
+     zich minimaal een halve graad van zijn buren te onderscheiden. */
+  const PROMINENT=0.5;
   for(let i=1;i<T.length-1;i++){
-    if(T[i]>=T[i-1]&&T[i]>T[i+1]) soort[i]=1;
-    if(T[i]<=T[i-1]&&T[i]<T[i+1]) soort[i]=-1;
+    if(T[i]>=T[i-1]&&T[i]>T[i+1]&&T[i]-Math.min(T[i-1],T[i+1])>=PROMINENT) soort[i]=1;
+    if(T[i]<=T[i-1]&&T[i]<T[i+1]&&Math.max(T[i-1],T[i+1])-T[i]>=PROMINENT) soort[i]=-1;
   }
   if(T.length>1){
     soort[0]=T[0]>=T[1]?1:-1;
@@ -940,9 +978,19 @@ function etmaal(start,n){
   }
   const iMax=T.indexOf(Math.max.apply(null,T)), iMin=T.indexOf(Math.min.apply(null,T));
 
+  /* De vaste stap is bedoeld als opvulling waar geen piek of dal ligt. Op een
+     vlakke lijn herhaalde hij eindeloos hetzelfde getal: negen keer 19 graden
+     achter elkaar. Een opvullabel dat dezelfde waarde toont als het vorige voegt
+     niets toe en valt nu weg. Pieken en dalen blijven altijd staan, ook als ze
+     toevallig hetzelfde cijfer hebben. */
   const kandidaten=[];
+  let vorigeStap=null;
   for(let i=0;i<T.length;i++){
-    const rang = (i===iMax||i===iMin) ? 3 : soort[i]!==0 ? 2 : (i%stap===0) ? 1 : 0;
+    let rang = (i===iMax||i===iMin) ? 3 : soort[i]!==0 ? 2 : 0;
+    if(rang){ vorigeStap=Math.round(T[i]); }
+    else if(i%stap===0 && (vorigeStap===null || Math.round(T[i])!==vorigeStap)){
+      rang=1; vorigeStap=Math.round(T[i]);
+    }
     if(rang) kandidaten.push({i:i,rang:rang});
   }
   kandidaten.sort((a,b)=>b.rang-a.rang||a.i-b.i);
@@ -1074,7 +1122,14 @@ function nowcast(){
                      <line x1="${x+3}" y1="${base-hh}" x2="${x+cw-3}" y2="${base-hh}" stroke="${TEAL}" stroke-width="1.2"/>`;
     out+=`<line x1="${x}" y1="${base}" x2="${x}" y2="${base+4}" stroke="${RULE}"/>`;
     if(k%2===0) out+=`<text x="${x+cw/2}" y="${base+18}" text-anchor="middle" fill="${INK45}" font-family="DM Mono,monospace" font-size="${M?10:10.5}">${t.slice(11,16)}</text>`;
-    if(P[k]>0) out+=`<text x="${x+cw/2}" y="${base-hh-6}" text-anchor="middle" fill="${TEAL}" font-family="DM Mono,monospace" font-size="${M?9.5:10}">${nl(P[k])}</text>`;
+    if(P[k]>0){
+      /* Het cijfer stond altijd zes pixels boven de balk. Bij een flinke bui raakt
+         de balk de bovenrand en verdween het getal buiten de tekening. Past het er
+         niet boven, dan gaat het in de balk zelf staan. */
+      const boven = base-hh-6, past = boven >= 11;
+      out+=`<text x="${x+cw/2}" y="${past?boven:base-hh+11}" text-anchor="middle" fill="${TEAL}"
+        font-family="DM Mono,monospace" font-size="${M?9.5:10}">${nl(P[k])}</text>`;
+    }
   });
   el.innerHTML=out;
   const eerste=P.findIndex(v=>v>=0.1),som=P.reduce((a,b)=>a+b,0);
@@ -1232,9 +1287,9 @@ function nachten(){
       <div class="dname">${lbl}</div>
       <div class="score" style="color:${kleur}">${nl(sc)}</div>
       <div class="sbar"><i style="width:${sc*10}%;background:${kleur}"></i></div>
-      <div class="nmeta">${Math.round(cw)}% bewolking</div>
+      <div class="nmeta"><span class="perc">${Math.round(cw)}%</span> bewolking</div>
       <div class="nmeta wide">${venster}${maanTekst
-        ? ` · <span class="maanbij" title="${esc(maanTitel)}">${maanIcoon}</span>${maanTekst}`
+        ? ` <span class="maangroep">· <span class="maanbij" title="${esc(maanTitel)}">${maanIcoon}</span>${maanTekst}</span>`
         : ""}</div></div>`;
   }
   const kopN=`<div class="row night kop">
@@ -1281,6 +1336,10 @@ function lucht(){
     if(i<0)i=0;
     const soorten=[["grass_pollen","gras"],["birch_pollen","berk"],["alder_pollen","els"],
       ["mugwort_pollen","bijvoet"],["ragweed_pollen","ambrosia"],["olive_pollen","olijf"]];
+    /* Alle soorten null betekent dat CAMS hier niets levert, niet dat er geen
+       pollen is. In Bergen stond daardoor "Geen noemenswaardige concentraties"
+       terwijl er simpelweg niet gemeten wordt. */
+    const gemeten=soorten.some(([k])=>h[k]&&h[k][i]!=null);
     const lijst=soorten.map(([k,n])=>({n:n,v:h[k]?h[k][i]:null})).filter(o=>o.v!=null&&o.v>0)
       .sort((a,b)=>b.v-a.v).slice(0,2);
     if(lijst.length){
@@ -1289,7 +1348,8 @@ function lucht(){
         out+=`<div class="stat"><div class="eyebrow">Pollen ${o.n}</div>
           <div class="sval" style="color:${k}">${Math.round(o.v)}<s>korrels/m³</s></div><div class="ssub">${t}</div></div>`;});
     }else{
-      out+='<div class="stat"><div class="eyebrow">Pollen</div><div class="sval">–</div><div class="ssub">Geen noemenswaardige concentraties</div></div>';
+      out+='<div class="stat"><div class="eyebrow">Pollen</div><div class="sval">–</div><div class="ssub">'
+         +(gemeten?"Geen noemenswaardige concentraties":"Geen pollendata voor deze locatie")+'</div></div>';
     }
   }
   el.innerHTML=out;
@@ -1329,7 +1389,10 @@ async function controle(){
   const rijen=Object.keys(log).filter(dt=>dt<vandaag&&m[dt]).sort().reverse().slice(0,5);
   if(!rijen.length) return;
   kop.style.display="flex";
-  const verschil=(v,g)=>{ const d2=g-v; return (d2>0?"+":"")+nl(d2); };
+  /* De getallen worden afgerond getoond maar het verschil werd uit de ruwe
+     waarden berekend. Je zag 23 en 25 staan met daarnaast +1,5. Nu rekent het
+     verschil met dezelfde afgeronde getallen die je leest. */
+  const verschil=(v,g)=>{ const d2=Math.round(g)-Math.round(v); return (d2>0?"+":"")+d2; };
   el.innerHTML=`<div class="row ctrl kop"><div class="dname">Dag</div><div>Voorspeld</div>
       <div>Analyse achteraf</div><div class="nmeta">Verschil</div></div>`+
     rijen.map(dt=>{
@@ -1455,6 +1518,10 @@ async function radarLaden(){
     if(R.satFrames.length) R.radarFrames=R.frames;   // knmiVerwachting kan R.frames aanvullen
     const kn=document.getElementById("rlaag");
     if(kn) kn.style.display=R.satFrames.length?"":"none";
+    // de gratis laag levert niet altijd satellietbeelden; dan hoort de bronregel
+    // er ook niet over te spreken
+    const bs=document.getElementById("bronsat");
+    if(bs) bs.textContent=R.satFrames.length?" en satelliet":"";
     if(!R.frames.length){mld.textContent="Geen radarbeelden beschikbaar.";return;}
     R.i=Math.max(0,verleden.length-1); R.terug=false;
     // KNMI alleen noemen als zijn beelden ook echt in de reeks zitten

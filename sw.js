@@ -1,4 +1,4 @@
-const CACHE = "weerbriefing-v50";
+const CACHE = "weerbriefing-v51";
 const SHELL = [
   "./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png",
   "./bodoni-moda-latin-400-normal.woff2",
@@ -42,16 +42,29 @@ self.addEventListener("fetch", e => {
         const copy = r.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
         return r;
-      }).catch(() => caches.match(e.request).then(hit => hit || caches.match("./index.html")))
+      }).catch(() => caches.match(e.request)
+          .then(hit => hit || caches.match("./index.html"))
+          // komt ook daar niets uit, dan een leesbare melding in plaats van een
+          // lege belofte, want respondWith(undefined) is opnieuw een netwerkfout
+          .then(hit => hit || new Response(
+            "<!doctype html><meta charset=utf-8><title>Geen verbinding</title>"
+            + "<p style=\"font:16px system-ui;padding:2rem\">Geen verbinding en niets in de cache. "
+            + "Probeer het opnieuw zodra je weer online bent.",
+            { headers: { "Content-Type": "text/html; charset=utf-8" } })))
     );
     return;
   }
 
+  /* Zonder vangnet werd een mislukte ophaalpoging een onafgevangen belofte, en
+     dan geeft respondWith een netwerkfout terug in plaats van door te vallen naar
+     de browser. Dat leverde "Failed to fetch at sw.js" op in de console. */
   e.respondWith(
-    caches.match(e.request).then(hit => hit || fetch(e.request).then(r => {
-      const copy = r.clone();
-      caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-      return r;
-    }))
+    caches.match(e.request)
+      .then(hit => hit || fetch(e.request).then(r => {
+        const copy = r.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+        return r;
+      }))
+      .catch(() => caches.match(e.request).then(hit => hit || Response.error()))
   );
 });

@@ -89,7 +89,7 @@ testdata niet overschrijft.
 Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeeld
 `laadKern(390)`. Zonder waarde gaat hij uit van 1280.
 
-224 controles, onder meer:
+240 controles, onder meer:
 
 * zonstijden tegen bekende referenties en de maanfase tegen bekende nieuwe en volle maan
 * briefingzinnen in zes weersituaties, plus randgevallen als poolzomer en ontbrekende data
@@ -111,6 +111,9 @@ Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeel
 * de kop van de dagtabel vult evenveel kolommen als de gegevens eronder, op elke breedte
 * elke nacht toont zijn eigen maanfase als schijfje naast de maantijden
 * de briefing legt nadruk op de uitkomst, en nooit op meer dan een kwart van de tekst
+* de service worker laat geen onafgevangen belofte ontsnappen
+* ontbrekende pollendata wordt niet als "geen pollen" gepresenteerd
+* de lokale tijd van de bezochte plaats staat erbij, ook bij halve tijdzones
 * elke kolom van de zevendagentabel past zijn inhoud, van 320 tot 430 px breed
 * elke serverfunctie is CommonJS, want ESM zonder "type": "module" faalt op Node 18 en 20
 

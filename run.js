@@ -989,5 +989,94 @@ groep("Nadruk en kaart");
     !!alfa && 0.85>=parseFloat(alfa[2])-0.1, "neerslag 0.85 tegen kaart "+(alfa?alfa[2]:"?"));
 }
 
+/* 10m. bevindingen uit de eerste live versie */
+groep("Live bevindingen");
+{
+  const fsL=require("fs"), pathL=require("path");
+  const bronL=fsL.readFileSync(pathL.join(__dirname,"index.html"),"utf8");
+  const bronSW=fsL.readFileSync(pathL.join(__dirname,"sw.js"),"utf8");
+
+  // 1. de service worker mag geen onafgevangen belofte laten ontsnappen
+  const takken=(bronSW.match(/e\.respondWith\(/g)||[]).length;
+  const vangnetten=(bronSW.match(/\.catch\(/g)||[]).length;
+  check("elke tak van de service worker heeft een vangnet",vangnetten>=takken,
+    takken+" keer respondWith tegen "+vangnetten+" keer catch");
+  check("een mislukte navigatie geeft een leesbare melding",
+    /Geen verbinding en niets in de cache/.test(bronSW));
+
+  // 2. het cijfer boven een hoge balk viel buiten de tekening
+  const {api,bak}=laadKern(1280);
+  const nat=bouw({}); 
+  nat.minutely_15={time:[],precipitation:[]};
+  for(let k=0;k<16;k++){
+    nat.minutely_15.time.push("2026-07-22T"+String(14+Math.floor(k/4)).padStart(2,"0")+":"+String((k%4)*15).padStart(2,"0"));
+    nat.minutely_15.precipitation.push(k<8?4.8:0.3);   // stevige bui, balk raakt de bovenrand
+  }
+  Object.assign(api.S,{d:nat,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+  api.nowcast();
+  const svg=bak.nc.innerHTML;
+  const yWaarden=[...svg.matchAll(/<text[^>]*y="([\d.-]+)"[^>]*>[\d,]+<\/text>/g)].map(m=>parseFloat(m[1]));
+  const buiten=yWaarden.filter(y=>y<8);
+  check("geen enkel neerslagcijfer valt boven de tekening uit",buiten.length===0,
+    "y-waarden "+buiten.join(", "));
+
+  // 3. leeg is niet hetzelfde als laag
+  check("zonder pollendata zegt de app dat, in plaats van geen concentraties",
+    /Geen pollendata voor deze locatie/.test(bronL));
+  check("de app kijkt of er uberhaupt gemeten is",/const gemeten=soorten\.some/.test(bronL));
+
+  // 4. het bewolkingspercentage moet uitlijnen
+  check("het percentage staat in een vak met vaste breedte",
+    /\.perc\{display:inline-block;min-width:[\d.]+em;text-align:right\}/.test(bronL));
+  check("het percentage gebruikt dat vak ook",/<span class="perc">/.test(bronL));
+
+  // 5. het scheidingsteken mag niet los aan het regeleinde blijven
+  check("het maandeel breekt als geheel af",
+    /\.maangroep\{white-space:nowrap\}/.test(bronL) && /class="maangroep">·/.test(bronL));
+
+  // 6. een vlakke lijn hoort niet vol labels te staan
+  {
+    const {api:a6,bak:b6}=laadKern(1280);
+    // nacht met rimpelingen van een tiende graad rond 19 graden
+    const vlak=(u)=>19+((u%3)-1)*0.1;
+    Object.assign(a6.S,{d:bouw({temp:vlak}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    a6.etmaal(14,24);
+    const labels=[...b6.chart.innerHTML.matchAll(/font-family="Bodoni Moda,serif" font-size="[\d.]+">(-?\d+)°</g)].map(m=>m[1]);
+    const zelfde=labels.filter(v=>v==="19").length;
+    check("een rimpeling van een tiende graad telt niet als piek",zelfde<=4,
+      labels.length+" labels waarvan "+zelfde+" keer 19 graden: "+labels.join(" "));
+  }
+
+  // 7. het verschil moet uit dezelfde getallen komen die je leest
+  check("de verificatie rondt het verschil net zo af als de getallen",
+    /Math\.round\(g\)-Math\.round\(v\)/.test(bronL));
+
+  // 8. satelliet alleen crediteren als er beelden zijn
+  check("de bronregel noemt satelliet niet standaard",
+    !/Radar en satelliet: <a/.test(bronL) && /id="bronsat"/.test(bronL));
+
+  // 9. de brede tegel alleen waar hij de rij vult
+  check("de brede tegel spant alleen op smalle schermen",
+    /@media\(max-width:900px\)\{ \.stat\.breed\{grid-column:1 \/ -1\} \}/.test(bronL));
+
+  // 10. lokale tijd bij een andere tijdzone
+  for(const [naam,off,verw] of [["Tokio",32400,/\d\d:\d\d, 9 uur later/],
+                                ["New York",-14400,/4 uur vroeger/],
+                                ["Nepal",20700,/5 uur en 45 minuten later/]]){
+    const {api:a7,bak:b7}=laadKern(390);
+    const d7=bouw({}); d7.utc_offset_seconds=off;
+    Object.assign(a7.S,{d:d7,i0:14,op:Date.now(),lat:1,lon:1,label:"X",dag:null,bereik:24});
+    a7.tekenAlles();
+    check(naam+": de lokale tijd staat erbij",verw.test(b7.lokaal.textContent),b7.lokaal.textContent);
+  }
+  // en een half uur verschil mag niet als decimaal verschijnen
+  const {api:a8,bak:b8}=laadKern(390);
+  const d8=bouw({}); d8.utc_offset_seconds=19800;
+  Object.assign(a8.S,{d:d8,i0:14,op:Date.now(),lat:1,lon:1,label:"X",dag:null,bereik:24});
+  a8.tekenAlles();
+  check("een halve tijdzone wordt niet als komma-uur getoond",
+    !/[\d],[\d] uur/.test(b8.lokaal.textContent),b8.lokaal.textContent);
+}
+
 console.log("\n"+goed+" geslaagd, "+fout+" mislukt");
 process.exit(fout?1:0);
