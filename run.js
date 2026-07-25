@@ -1173,6 +1173,25 @@ groep("Iconen en balk");
   check("het masker is ruimer dan de lijndikte",!!m&&parseFloat(m[1])>1.15,m?m[1]:"niet gevonden");
 
 
+
+  /* Er staat een globale regel svg,canvas{display:block}. Elke SVG die middenin
+     een tekstregel staat moet die overrulen, anders breekt de regel eromheen.
+     Zet je vertical-align op een SVG, dan bedoel je hem inline: dat is precies
+     het signaal waar deze controle op let. */
+  {
+    const globaalBlok=/svg,canvas\{display:block/.test(bronI);
+    check("de globale regel zet svg op block",globaalBlok);
+    const regels=[...bronI.matchAll(/([.#][\w-]+ svg)\{([^}]*)\}/g)];
+    const scheef=regels.filter(([,sel,decl])=>
+      /vertical-align/.test(decl) && !/display:inline/.test(decl));
+    check("elke inline geplaatste SVG overruled de blokregel",scheef.length===0,
+      scheef.map(m=>m[1]+" mist display:inline-block").join(", "));
+    check("het maanschijfje staat inline",
+      /\.maanbij svg\{display:inline-block/.test(bronI));
+    check("de windpijl staat inline",
+      /\.dwind svg\{display:inline-block/.test(bronI));
+  }
+
   /* het kleurschema van de radar moet als een benoemde keuze in de code staan */
   {
     const m=bronI.match(/const RV_SCHEMA=(\d);/);

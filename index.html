@@ -230,7 +230,11 @@
      Nu verhuist het hele maandeel als een blok naar de volgende regel. */
   .maangroep{white-space:nowrap}
   .maanbij{margin-right:4px}
-  .maanbij svg{vertical-align:-2px}
+  /* Verderop staat svg,canvas{display:block}. Zonder deze uitzondering werd het
+     maanschijfje een blok en brak de regel eromheen, waardoor de punt ervoor los
+     aan het eind van de vorige regel bleef staan. De windpijl heeft dezelfde
+     uitzondering, vandaar dat die het wel deed. */
+  .maanbij svg{display:inline-block;vertical-align:-2px}
   /* Gecentreerd stonden 100% en 44% niet onder elkaar. Het getal krijgt nu een
      vaste breedte en staat rechts uitgelijnd, zodat alle procenttekens en het
      woord erna op dezelfde plek beginnen. */
