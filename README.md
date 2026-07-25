@@ -18,7 +18,7 @@ De service worker en het installeren als app werken alleen via https.
     lettermaten.json          letterbreedtes uit de woff2-bestanden, voor de kolomtest
     api/plaatsnaam.js         omgekeerd zoeken bij Mijn locatie, Nominatim met terugval
     api/radarverwachting.js   tijdstappen van de KNMI-neerslagverwachting
-    api/waarschuwingen.js     serverless functie voor de MeteoAlarm-feed
+    api/waarschuwingen.js     kiest de waarschuwingsbron op basis van de locatie
 
 In `api/` horen precies drie bestanden, niet meer en niet minder. Vercel maakt
 van elk bestand in die map een publieke serverfunctie, dus er mag niets anders
@@ -37,15 +37,23 @@ wordt stilzwijgend een 404 en de app valt terug op zijn noodoplossing.
 | luchtkwaliteit en pollen | air-quality-api.open-meteo.com | CAMS, pollen alleen in Europa |
 | plaatsnamen | geocoding-api.open-meteo.com | |
 | omgekeerd zoeken | api.bigdatacloud.net | bij Mijn locatie |
-| radar | api.rainviewer.com | beelden per tien minuten |
+| radar en satelliet | api.rainviewer.com | radar per tien minuten, infrarood als opvulling |
 | kaartondergrond | basemaps.cartocdn.com | |
-| waarschuwingen | feeds.meteoalarm.org | via de eigen serverless functie |
+| waarschuwingen VS | api.weather.gov | exact op coordinaat |
+| waarschuwingen Europa | feeds.meteoalarm.org | per land, gefilterd op gebied |
 
 Zon- en maanstand worden lokaal berekend, niet opgehaald.
 
-De gratis laag van RainViewer levert alleen gemeten radarbeelden. De sleutel
-`nowcast` staat wel in de JSON maar blijft leeg, want vooruitberekende beelden
-zijn een betaalde functie.
+De code leest `radar.nowcast` uit de JSON en gebruikt die als vooruitblik.
+Blijft die leeg, dan valt hij binnen Nederland terug op het KNMI. Of de gratis
+laag die sleutel altijd vult is niet met zekerheid vastgesteld; de terugval
+vangt beide gevallen af.
+
+Radar is een mozaiek van nationale grondstations en dekt lang niet de hele
+wereld. Waar niets staat is er geen onderscheid tussen "geen regen" en "geen
+radar", dus dat wordt niet geraden. In plaats daarvan is er een knop naar de
+infraroodsatelliet uit dezelfde JSON. Die dekt wel de hele wereld maar toont
+wolkentoppen en geen neerslag, en dat staat er ook bij.
 
 Voor Nederland wordt dat gat gevuld met de neerslagverwachting van het KNMI,
 tot twee uur vooruit per vijf minuten. Die komt binnen als kaartbeeld via WMS.
@@ -54,6 +62,15 @@ tijdstappen beschikbaar zijn, omdat het KNMI geen CORS-headers meegeeft. De
 kaartbeelden zelf haalt de browser rechtstreeks op, want voor het tekenen van
 een afbeelding is geen CORS nodig. Buiten Nederland valt dit weg en zie je
 alleen gemeten beelden.
+
+Waarschuwingen komen van de National Weather Service in de Verenigde Staten en
+van MeteoAlarm in Europa, gekozen op basis van de coordinaten. Elke waarschuwing
+draagt zijn eigen gebied mee als polygoon of cirkel; die wordt tegen het punt
+gehouden zodat een bui in de Pyreneeen niet boven Parijs verschijnt. Levert de
+bron geen gebied, dan blijft de waarschuwing staan met de vermelding dat hij
+voor een groter gebied geldt. Daarbuiten is er geen betrouwbare bron, dus dan
+komt er niets. Een wereldwijde aggregator bestaat nog niet: de Alert Hub van de
+WMO is er wel maar publiceert nog geen gevulde feedlijst.
 
 Bronvermelding is een voorwaarde bij RainViewer, CARTO en OpenStreetMap en
 staat in de voettekst van de app. Laat die staan.
@@ -72,7 +89,7 @@ testdata niet overschrijft.
 Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeeld
 `laadKern(390)`. Zonder waarde gaat hij uit van 1280.
 
-142 controles, onder meer:
+224 controles, onder meer:
 
 * zonstijden tegen bekende referenties en de maanfase tegen bekende nieuwe en volle maan
 * briefingzinnen in zes weersituaties, plus randgevallen als poolzomer en ontbrekende data
@@ -87,6 +104,13 @@ Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeel
 * de tooltip blijft op elk uur binnen de tekening en elke regel past erin
 * de weeromschrijving spreekt s nachts niet over zon
 * het nachtvenster belooft geen heldere hemel die het niet meet, en zegt waarom er geen venster is
+* buiten Europa geen Europese luchtindex en geen bewering over pollen
+* de waarschuwingsbron wordt gekozen op coordinaten, nooit meer blind Nederland
+* een waarschuwing met een gebied elders in het land wordt niet getoond
+* de satellietlaag is te kiezen waar radar geen dekking heeft, met vermelding wat je ziet
+* de kop van de dagtabel vult evenveel kolommen als de gegevens eronder, op elke breedte
+* elke nacht toont zijn eigen maanfase als schijfje naast de maantijden
+* de briefing legt nadruk op de uitkomst, en nooit op meer dan een kwart van de tekst
 * elke kolom van de zevendagentabel past zijn inhoud, van 320 tot 430 px breed
 * elke serverfunctie is CommonJS, want ESM zonder "type": "module" faalt op Node 18 en 20
 

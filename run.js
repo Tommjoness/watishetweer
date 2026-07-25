@@ -186,7 +186,11 @@ groep("Nachtzicht");
 {
   const helder=brief({cc:(u)=>u<6||u>20?8:60});
   const bewolkt=brief({cc:()=>100});
-  const rij=h2=>[...h2.matchAll(/class="score"[^>]*>([^<]*)<[\s\S]*?class="nmeta wide">([^<]*)/g)].filter(m=>/^\d/.test(m[1]));
+  // de hele cel pakken en daarna tags strippen: sinds er een maanschijfje in staat
+  // zou een regex die op de eerste < stopt de tekst halverwege afkappen
+  const rij=h2=>[...h2.matchAll(/class="score"[^>]*>([^<]*)<[\s\S]*?class="nmeta wide">([\s\S]*?)<\/div>/g)]
+    .filter(m=>/^\d/.test(m[1]))
+    .map(m=>[m[0],m[1],m[2].replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim()]);
   const rh=rij(helder.bak.nights.innerHTML), rb=rij(bewolkt.bak.nights.innerHTML);
   const score=t=>parseFloat(String(t).replace(",","."));
   check("heldere nacht geeft een hoge score",score(rh[0][1])>7,rh[0][1]);
@@ -194,6 +198,33 @@ groep("Nachtzicht");
   check("heldere nacht krijgt een waarneemvenster",/beste zicht van \d\d:\d\d tot \d\d:\d\d/.test(rh[0][2]),rh[0][2]);
   check("bewolkte nacht krijgt geen venster",/geen venster/.test(rb[0][2]),rb[0][2]);
   check("maantijden staan er altijd bij",/maan \d\d:\d\d/.test(rh[0][2])&&/maan \d\d:\d\d/.test(rb[0][2]));
+
+  /* maanschijfje per nacht */
+  {
+    const {api,bak}=laadKern(390);
+    Object.assign(api.S,{d:bouw({}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.nachten();
+    const html=bak.nights.innerHTML;
+    const nachtrijen=html.split('class="row night"').slice(1).filter(r=>/class="score"/.test(r));
+    const metSchijf=nachtrijen.filter(r=>/class="maanbij"/.test(r));
+    check("elke nacht krijgt een maanschijfje",
+      nachtrijen.length>0 && metSchijf.length===nachtrijen.length,
+      metSchijf.length+" van de "+nachtrijen.length);
+    check("het schijfje is een tekening en geen letterteken",
+      /class="maanbij"[^>]*>\s*<svg/.test(html));
+    check("het schijfje staat bij de maantijden, niet vooraan",
+      /·\s*<span class="maanbij"/.test(html));
+    check("het schijfje heeft een omschrijving voor wie het niet ziet",
+      /title="[^"]*procent verlicht"/.test(html));
+    // het cijfer moet blijven staan: een schijfje leest snel, een percentage niet
+    check("de maantijden blijven naast het schijfje staan",
+      nachtrijen.every(r=>/maan \d\d:\d\d/.test(r.replace(/<[^>]+>/g,""))));
+    // de fase moet per nacht verschillen, anders is het een vast plaatje
+    const vormen=new Set(nachtrijen.map(r=>(r.match(/<path d="([^"]*)"/)||["",""])[1]));
+    check("de fase verschilt per nacht",vormen.size>1,vormen.size+" verschillende vormen");
+  }
+
+
 }
 
 /* 8b. teksten noemen altijd een waarde en waar het kan een tijdstip */
@@ -738,6 +769,224 @@ groep("Nachtvenster");
   // de reden moet uit de code komen, niet uit een vast zinnetje
   check("de code onderscheidt maanlicht van bewolking als oorzaak",
     /te veel maanlicht/.test(bronN) && /te bewolkt/.test(bronN));
+}
+
+/* 10j. buiten Europa mag de app geen Europese gegevens suggereren */
+groep("Wereldwijd");
+{
+  const fsW=require("fs"), pathW=require("path");
+  const bronW=fsW.readFileSync(pathW.join(__dirname,"index.html"),"utf8");
+  const bronA=fsW.readFileSync(pathW.join(__dirname,"api","waarschuwingen.js"),"utf8");
+
+  // Almere binnen Europa, Tokio en Sao Paulo erbuiten
+  const plekken=[["Almere",52.35,5.26,true],["Tokio",35.68,139.69,false],
+                 ["Sao Paulo",-23.55,-46.63,false],["New York",40.71,-74.01,false]];
+  for(const [naam,la,lo,europees] of plekken){
+    const {api,bak}=laadKern(390);
+    const d=bouw({});
+    // het luchtblok krijgt wat de API buiten Europa werkelijk teruggeeft: niets
+    const lucht={current:{european_aqi: europees?31:null, us_aqi:42, pm2_5:5.9, pm10:9},
+      hourly:{time:d.hourly.time.slice(0,24),
+        grass_pollen:new Array(24).fill(europees?12:null),
+        birch_pollen:new Array(24).fill(null), alder_pollen:new Array(24).fill(null),
+        mugwort_pollen:new Array(24).fill(null), ragweed_pollen:new Array(24).fill(null),
+        olive_pollen:new Array(24).fill(null)}};
+    Object.assign(api.S,{d:d,air:lucht,i0:14,op:Date.now(),lat:la,lon:lo,label:naam,dag:null,bereik:24});
+    api.lucht();
+    const t=norm(bak.aq.innerHTML).replace(/<[^>]+>/g," ").replace(/\s+/g," ");
+
+    if(europees){
+      check(naam+": binnen Europa staat de Europese index",/Europese AQI/.test(t),t.slice(0,90));
+    }else{
+      check(naam+": buiten Europa geen Europese index",!/Europese AQI/.test(t),t.slice(0,90));
+      check(naam+": buiten Europa wel een index met waarde",/Amerikaanse AQI/.test(t)&&/\b42\b/.test(t),t.slice(0,90));
+      check(naam+": buiten Europa geen bewering over pollenconcentraties",
+        !/noemenswaardige/.test(t),t.slice(0,140));
+      check(naam+": buiten Europa staat dat pollen alleen in Europa bestaat",
+        /Alleen beschikbaar in Europa/.test(t),t.slice(0,140));
+    }
+  }
+
+  // de waarschuwingsfunctie mag niet meer blind Nederland pakken
+  check("de waarschuwingsbron kijkt naar de coordinaten",
+    /req\.query[\s\S]{0,200}lat/.test(bronA) && /inNWS/.test(bronA),"lat wordt niet gelezen");
+  check("er staat geen vaste Nederlandse feed meer in de code",
+    !/feeds-netherlands/.test(bronA),"feeds-netherlands staat er nog in");
+  check("zonder bekende bron komt er een lege lijst terug",
+    /dekking: false/.test(bronA)||/dekking:false/.test(bronA));
+  check("de VS gaat naar de National Weather Service",/api\.weather\.gov/.test(bronA));
+  check("Europa gaat naar MeteoAlarm per land",/feeds-" \+ slug/.test(bronA));
+  check("de NWS-aanroep stuurt een User-Agent mee",/User-Agent/.test(bronA));
+
+
+  /* gebiedsfiltering: een waarschuwing met een polygoon elders hoort weg te vallen */
+  {
+    const stuk=bronA.slice(bronA.indexOf("function inPolygoon"),bronA.indexOf("/* ---------- land bepalen"));
+    let raaktPunt=null;
+    try{ raaktPunt=new Function(stuk+"; return raaktPunt;")(); }catch(e){}
+    check("de filterfuncties zijn los uitvoerbaar",typeof raaktPunt==="function");
+    if(typeof raaktPunt==="function"){
+      const nl="53.5,3.4 53.5,7.2 50.7,7.2 50.7,3.4";
+      const gev=[
+        ["punt binnen de polygoon",52.35,5.26,{area:[{polygon:[nl]}]},true],
+        ["punt buiten de polygoon",48.86,2.35,{area:[{polygon:[nl]}]},false],
+        ["punt aan de andere kant van de wereld",35.68,139.69,{area:[{polygon:[nl]}]},false],
+        ["binnen een cirkel",52.35,5.26,{area:[{circle:["52.35,5.26 50"]}]},true],
+        ["buiten een cirkel",50.0,5.26,{area:[{circle:["52.35,5.26 50"]}]},false],
+        ["zonder gebied blijft hij staan",52.35,5.26,{area:[{areaDesc:"land"}]},null],
+        ["onleesbaar gebied gooit niets weg",52.35,5.26,{area:[{polygon:["rommel"]}]},null]
+      ];
+      const mis=gev.filter(([,la,lo,info,verw])=>raaktPunt(info,la,lo)!==verw);
+      check("het gebied van een waarschuwing wordt tegen het punt gehouden",mis.length===0,
+        mis.map(g=>g[0]).join(", "));
+    }
+    check("waarschuwingen zonder gebied worden gemarkeerd",/landelijk: raak === null/.test(bronA));
+    // de uitkomst van de filtering moet ook echt toegepast worden
+    check("een waarschuwing buiten het punt wordt overgeslagen",
+      /raak === false\)\s*continue/.test(bronA),"de continue op raak===false ontbreekt");
+    check("de app zegt het als een waarschuwing voor een groter gebied geldt",
+      /Geldt voor een groter gebied/.test(bronW));
+  }
+
+
+  /* satelliet als opvulling waar radar geen dekking heeft */
+  {
+    check("de satellietreeks wordt uit de API gelezen",/satellite[\s\S]{0,40}infrared/.test(bronW));
+    check("radar en satelliet worden apart bewaard",
+      /radarFrames/.test(bronW)&&/satFrames/.test(bronW));
+    check("er is een knop om te wisselen",/id="rlaag"/.test(bronW));
+    check("de knop verdwijnt als er geen satellietbeelden zijn",
+      /rlaag[\s\S]{0,120}display=R\.satFrames\.length/.test(bronW));
+    // de satelliettegel heeft een ander kleurschema dan de radartegel
+    check("de satelliettegel gebruikt zijn eigen kleurschema",
+      /f\.sat\?"0\/0_0":"2\/1_1"/.test(bronW),"kleurschema wordt niet omgeschakeld");
+    check("de app zegt dat satelliet wolken toont en geen neerslag",
+      /wolkentoppen, niet de neerslag/.test(bronW));
+    check("RainViewer wordt vermeld zoals de voorwaarden vragen",
+      /rainviewer\.com/.test(bronW)&&/RainViewer<\/a>/.test(bronW));
+  }
+
+  // KNMI mag alleen in de bronregel staan als hij ook gebruikt is
+  check("de bronregel noemt KNMI niet standaard",
+    !/verwachting <a href="https:\/\/dataplatform\.knmi\.nl/.test(bronW));
+  check("de bronregel is eerlijk over de radardekking",/Radardekking volgt/.test(bronW));
+}
+
+/* 10k. neerslaghoeveelheid, UV-tegel en de uitlijning van de kop */
+groep("Dagtabel en tegels");
+{
+  const fsD=require("fs"), pathD=require("path");
+  const bronD=fsD.readFileSync(pathD.join(__dirname,"index.html"),"utf8");
+
+  const {api,bak}=laadKern(390);
+  Object.assign(api.S,{d:bouw({som:3.2,pr:(u)=>u<12?0.3:0}),i0:14,op:Date.now(),
+    lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+  api.dagen(); api.meters();
+
+  const rijen=bak.days.innerHTML;
+  check("de kanskolom toont ook hoeveel er valt",/<small>[\d,]+ mm<\/small>/.test(rijen),
+    (rijen.match(/class="drain">[^<]*(<small>[^<]*<\/small>)?/)||[""])[0]);
+  check("de hoeveelheid blijft weg als het droog is",
+    !/<small>0,0 mm<\/small>/.test(rijen));
+  // op het bureaublad staat het al in de kolom Verwachting, dus daar verborgen
+  check("de hoeveelheid verschijnt alleen op de telefoon",
+    /\.drain small\{display:none/.test(bronD) && /\.drain small\{display:block\}/.test(bronD));
+
+  check("de UV-index heeft een eigen tegel",/id="uv"/.test(bronD)&&/id="uvsub"/.test(bronD));
+  // set() schrijft innerHTML omdat de eenheid in een <s> staat
+  const uvWaarde=(bak.uv.innerHTML||bak.uv.textContent||"").replace(/<[^>]+>/g,"").trim();
+  check("de UV-tegel wordt gevuld",uvWaarde!=="--"&&uvWaarde!=="",
+    JSON.stringify(uvWaarde)+" / "+JSON.stringify(bak.uvsub.textContent));
+  check("UV staat niet meer in de bewolkingszin",!/UV/i.test(bak.cloudsub.textContent),
+    bak.cloudsub.textContent);
+  check("de negende tegel krijgt de volle breedte",/\.stat\.breed\{grid-column:1 \/ -1/.test(bronD));
+
+  /* De kop moet evenveel cellen vullen als de gegevensrij eronder, anders schuift
+     hij op. Dat verschilt per schermbreedte omdat er kolommen wegvallen. */
+  /* Een media-regel opzoeken met een vaste afstand ging mis: @media(max-width:900px)
+     komt twee keer voor en de eerste bevat de dagtabel niet. Daarom het blok
+     echt uitknippen op zijn accolades. */
+  const mediaBlok=(vraag)=>{
+    const start=bronD.lastIndexOf(vraag);
+    if(start<0) return "";
+    let i=bronD.indexOf("{",start), diep=0, j=i;
+    for(;j<bronD.length;j++){
+      if(bronD[j]==="{") diep++;
+      else if(bronD[j]==="}"){ diep--; if(!diep) break; }
+    }
+    return bronD.slice(i+1,j);
+  };
+  const blok900=mediaBlok("@media(max-width:900px)");
+  const blok370=mediaBlok("@media(max-width:370px)");
+  const zichtbaar=(breed)=>{
+    // welke cellen de kop overhoudt bij deze breedte
+    let cel=["dname","dico","dcond","dwind","dmin","bar","dmax","drain"];
+    if(breed<=900) cel=cel.filter(c=>c!=="dcond"&&c!=="bar");
+    if(breed<=900) cel=cel.filter(c=>c!=="dico");        // kop verbergt het icoonvak
+    if(breed<=370){ cel=cel.filter(c=>c!=="dwind"); cel.splice(1,0,"dico"); }
+    return cel;
+  };
+  const spanBreed=/\.row\.kop \.dwind\{grid-column:2 \/ 4\}/.test(bronD);
+  check("de kop overspant icoon en wind waar die naast elkaar staan",spanBreed);
+  check("onder 370px komt het icoonvak in de kop terug",
+    /\.row\.kop \.dico\{display:block\}/.test(blok370),
+    "zonder dit schuift de hele kop een kolom op");
+
+  const tel=(blok)=>{const m=blok.match(/\.day\{grid-template-columns:([^};]+)/);
+    return m?m[1].trim().split(/\s+/).length:0;};
+  const kolBreed=tel(blok900), kolSmal=tel(blok370);
+  // de kop laat dwind over twee kolommen lopen, dus telt hij als twee cellen
+  check("kop en gegevens vullen evenveel kolommen op de telefoon",
+    zichtbaar(390).length+1===kolBreed,
+    zichtbaar(390).join(",")+" plus de overspanning tegen "+kolBreed+" kolommen");
+  check("kop en gegevens vullen evenveel kolommen op een smal scherm",
+    zichtbaar(360).length===kolSmal, zichtbaar(360).join(",")+" tegen "+kolSmal+" kolommen");
+}
+
+/* 10l. vetgedrukt in de briefing en het contrast van de radarkaart */
+groep("Nadruk en kaart");
+{
+  const bronN2=require("fs").readFileSync(require("path").join(__dirname,"index.html"),"utf8");
+  const gevallen=[
+    ["droog",{pp:()=>4,pr:()=>0,som:0}],
+    ["bui later",{pp:(u)=>u===18?80:5,pr:(u)=>u===18?2:0,som:2}],
+    ["het regent nu",{nu:0.6,pp:(u)=>u<17?85:5,pr:(u)=>u<17?0.6:0,som:3}],
+    ["warmste geweest",{temp:(u)=>u<14?22-Math.abs(u-13):16}],
+    ["storm",{ws:88,wsNu:88,wg:()=>119}],
+    ["vriezen",{temp:(u)=>+(-7+3*Math.sin(u/24*6.28)).toFixed(1)}]
+  ];
+  const teveel=[], geenNadruk=[], teLang=[];
+  for(const [naam,opt] of gevallen){
+    const {api,bak}=laadKern(390);
+    Object.assign(api.S,{d:bouw(opt),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.meters(); api.briefing();
+    const h=norm(bak.brief.innerHTML);
+    const plat=h.replace(/<[^>]+>/g,"");
+    const vet=(h.match(/<b>([\s\S]*?)<\/b>/g)||[]).map(x=>x.replace(/<[^>]+>/g,""));
+    const aandeel=vet.join("").length/Math.max(1,plat.length);
+    if(!vet.length) geenNadruk.push(naam);
+    /* Nadruk werkt alleen als hij schaars is. Boven ongeveer een kwart van de tekst
+       valt het effect weg en leest de hele alinea als een kop. */
+    if(aandeel>0.25) teveel.push(naam+": "+Math.round(aandeel*100)+"%");
+    // en een vet stuk hoort een feit te zijn, geen halve zin
+    vet.filter(v=>v.trim().split(/\s+/).length>3).forEach(v=>teLang.push(naam+': "'+v+'"'));
+  }
+  check("elke briefing legt ergens nadruk",geenNadruk.length===0,geenNadruk.join(", "));
+  check("vet blijft onder een kwart van de tekst",teveel.length===0,teveel.join(", "));
+  check("een vet stuk is een feit en geen halve zin",teLang.length===0,teLang.join(" | "));
+  check("de uitkomst is vet, niet alleen het tijdstip",
+    /blijft het <b>droog<\/b>/.test(bronN2));
+  check("de maximumtemperatuur krijgt nadruk",
+    /<b>"\+Math\.round\(tv\)\+" graden<\/b>/.test(bronN2)||/<b>"\+nutemp\+" graden<\/b>/.test(bronN2));
+
+  /* de kaart onder de radar was zo ver weggedrukt dat grenzen verdwenen */
+  const alfa=bronN2.match(/globalAlpha=donker\?([\d.]+):([\d.]+);ctx\.drawImage\(im,px,py\)/);
+  check("de radarkaart heeft een leesbare doorzichtigheid",
+    !!alfa && parseFloat(alfa[2])>=0.9 && parseFloat(alfa[1])>=0.7,
+    alfa?("donker "+alfa[1]+", licht "+alfa[2]):"regel niet gevonden");
+  // de neerslaglaag moet er nog wel bovenop leesbaar blijven
+  check("de neerslaglaag blijft sterker dan de kaart",
+    !!alfa && 0.85>=parseFloat(alfa[2])-0.1, "neerslag 0.85 tegen kaart "+(alfa?alfa[2]:"?"));
 }
 
 console.log("\n"+goed+" geslaagd, "+fout+" mislukt");

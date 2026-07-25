@@ -130,6 +130,9 @@
   #aq{border-top:none;margin-top:0}
   #aq .stat{text-align:center;padding-left:14px;padding-right:14px}
   #aq .sval{justify-content:center}
+  /* Negen tegels in een raster van vier of twee laat de laatste alleen achter.
+     Die krijgt daarom de volle breedte, wat meteen ruimte geeft aan de tekst. */
+  .stat.breed{grid-column:1 / -1;border-right:none}
   .stat{padding:var(--s2) 22px 18px 0;border-bottom:1px solid var(--rule);border-right:1px solid var(--rule)}
   .stat:nth-child(4n){border-right:none;padding-right:0}
   .stat:not(:nth-child(4n+1)){padding-left:22px}
@@ -165,8 +168,11 @@
   #radartijd.straks{color:var(--carmine)}
   #radartijd.straks small{color:var(--carmine)}
   .mid{text-align:center}
-  .radarbalk{display:flex;align-items:center;gap:12px;margin-top:10px}
+  .radarbalk{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
   .radarbalk button{min-width:96px}
+  /* op een smal scherm passen twee knoppen en een schuif niet op een regel,
+     dus krijgt de schuif zijn eigen regel over de volle breedte */
+  @media(max-width:430px){ .radarbalk input[type=range]{flex:1 0 100%;order:3} }
   input[type=range]{flex:1;accent-color:var(--ink);height:20px;background:transparent}
   #radartijd{font-variant-numeric:tabular-nums}
 
@@ -197,6 +203,10 @@
   .dwind{font-family:var(--mono);font-size:12.5px;color:var(--ink-45);white-space:nowrap;text-align:center}
   .dwind svg{display:inline-block;vertical-align:-1px}
   .drain{font-family:var(--mono);font-size:12.5px;color:var(--teal);text-align:center;font-variant-numeric:tabular-nums}
+  /* Op het bureaublad staat de hoeveelheid al in de kolom Verwachting, dus daar
+     zou dit dubbelop zijn. Op de telefoon valt die kolom weg en is dit de enige
+     plek waar je ziet hoeveel er valt, niet alleen hoe waarschijnlijk het is. */
+  .drain small{display:none;font-size:10.5px;color:var(--ink-45);line-height:1.3}
   .bar{height:1px;background:var(--rule);position:relative}
   .bar i{position:absolute;top:-1px;height:3px;background:var(--ink)}
   .ico{color:var(--ink-70)}
@@ -208,6 +218,8 @@
   .score{font-family:var(--mono);font-weight:500;font-size:18px;font-variant-numeric:tabular-nums;text-align:center}
   .sbar{height:1px;background:var(--rule);position:relative}
   .sbar i{position:absolute;top:-1px;height:3px}
+  .maanbij{margin-right:4px}
+  .maanbij svg{vertical-align:-2px}
   .nmeta{font-size:12.5px;color:var(--ink-45);text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
 
   .msg{padding:var(--s2) 0;color:var(--ink-45);border-top:1px solid var(--rule);margin-top:var(--s3)}
@@ -246,7 +258,13 @@
        "vandaag" met 50 px, dus 56 px geeft overal dezelfde rust.
        De icoonkolom was 20 px terwijl het icoon 22 px tekent, dus dat stak er
        aan weerszijden een pixel uit, precies aan de kant van de tekst. */
-    .day{grid-template-columns:56px 22px 56px 1fr 1fr 40px;gap:6px}
+    .day{grid-template-columns:56px 22px 56px 1fr 1fr 48px;gap:6px}
+    .drain small{display:block}
+    /* De kop "Wind max" stond alleen boven de windkracht, terwijl het weericoon
+       er visueel bij hoort: op de telefoon valt de kolom Verwachting weg, dus
+       icoon en wind vormen samen een groep. De kop hoort daar overheen. */
+    .row.kop .dico{display:none}
+    .row.kop .dwind{grid-column:2 / 4}
     .dname{font-size:12.5px}
     .dlang{display:none}
     .dkort{display:inline}
@@ -279,7 +297,12 @@
     /* Op dit soort schermen blijft er na de naamkolom te weinig over voor de
        temperaturen: een waarde als -10 graden past er dan niet meer in. De wind
        is in deze tabel de minst dringende kolom, dus die valt hier weg. */
-    .day{grid-template-columns:56px 22px 1fr 1fr 40px}
+    .day{grid-template-columns:56px 22px 1fr 1fr 48px}
+    /* Hier valt de windkolom helemaal weg, dus is er niets om overheen te spannen
+       en moet het lege icoonvakje in de kop juist terugkomen. Zonder dit schuift
+       de hele kop een kolom op ten opzichte van de gegevens eronder. */
+    .row.kop .dwind{grid-column:auto}
+    .row.kop .dico{display:block}
     .dwind{display:none}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -336,6 +359,7 @@
       <div class="stat"><div class="eyebrow">Luchtdruk</div><div class="sval" id="pres">--</div><div class="ssub" id="pressub">&nbsp;</div></div>
       <div class="stat"><div class="eyebrow">Bewolking</div><div class="sval" id="cloud">--</div><div class="ssub" id="cloudsub">&nbsp;</div></div>
       <div class="stat"><div class="eyebrow">Zicht</div><div class="sval" id="vis">--</div><div class="ssub" id="vissub">&nbsp;</div></div>
+      <div class="stat breed"><div class="eyebrow">UV-index</div><div class="sval" id="uv">--</div><div class="ssub" id="uvsub">&nbsp;</div></div>
     </div>
 
     <h2><span id="chartlab">Het etmaal</span>
@@ -354,6 +378,7 @@
       <div id="radartijd"></div>
       <div class="radarbalk">
         <button id="rspeel" title="Afspelen of pauzeren">Speel af</button>
+        <button id="rlaag" title="Wissel tussen radar en satelliet">Satelliet</button>
         <input type="range" id="rschuif" min="0" max="0" value="0" step="1" aria-label="Tijdstip van het radarbeeld">
       </div>
       <div class="ssub mid" id="radarmelding"></div>
@@ -378,7 +403,8 @@
 
     <footer>
       <span>Weer: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>, ECMWF en DWD, CAMS.
-        Radar: <a href="https://www.rainviewer.com" target="_blank" rel="noopener">RainViewer</a>, verwachting <a href="https://dataplatform.knmi.nl" target="_blank" rel="noopener">KNMI</a>.
+        Radar en satelliet: <a href="https://www.rainviewer.com" target="_blank" rel="noopener">RainViewer</a><span id="bronknmi"></span>.
+        Radardekking volgt de nationale radarnetwerken en is niet overal ter wereld beschikbaar.
         Kaart: <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a> en
         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>.</span>
       <span class="mono" id="coords"></span>
@@ -573,7 +599,7 @@ async function load(lat,lon,label,stil){
     +"precipitation_probability,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,"
     +"wind_gusts_10m,uv_index,pressure_msl,is_day";
   const a="https://air-quality-api.open-meteo.com/v1/air-quality?latitude="+lat+"&longitude="+lon
-    +"&current=european_aqi,pm2_5,pm10&hourly=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,"
+    +"&current=european_aqi,us_aqi,pm2_5,pm10&hourly=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,"
     +"ragweed_pollen,olive_pollen&forecast_days=1&timezone=auto";
 
   try{
@@ -707,9 +733,14 @@ function meters(){
             : cc>=15?"Overwegend zonnig":"Vrijwel onbewolkt";
   const pu=piek("uv_index",0);
   const uvOordeel=v=>v<3?"laag":v<6?"matig":v<8?"hoog":v<11?"zeer hoog":"extreem";
-  zetTekst("cloudsub", bew+(
-    (!pu||pu.v<0.5) ? ", nauwelijks UV vandaag."
-    : ". De UV-index "+(pu.t>nu?"piekt":"piekte")+" rond "+hhmm(pu.t)+" op "+nl(pu.v)+" en dat is "+uvOordeel(pu.v)+"."));
+  zetTekst("cloudsub", bew+".");
+  /* De UV-index zat ingeklemd achter de bewolkingszin en werd daar makkelijk
+     over het hoofd gezien. Als eigen tegel krijgt hij zijn eigen waarde en
+     kan het oordeel erbij zonder de bewolkingszin te verlengen. */
+  set("uv", (!pu||pu.v<0.5) ? "–" : nl(pu.v));
+  zetTekst("uvsub", (!pu||pu.v<0.5)
+    ? "Nauwelijks UV vandaag."
+    : "Piek"+(pu.t>nu?"t":"te")+" rond "+hhmm(pu.t)+", dat is "+uvOordeel(pu.v)+".");
 
   const v=h.visibility?h.visibility[i]:null;
   set("vis",v==null?"–":(v>=10000?"10+":nl(v/1000))+"<s>km</s>");
@@ -746,12 +777,12 @@ function briefing(){
     const kans=h.precipitation_probability[eerste]??0;
     const tot = stop>0 ? " tot "+hhmm(h.time[stop]) : " tot minstens "+hhmm(h.time[eind-1]);
     zin1 = kans>=30
-      ? "Het blijft droog tot <b>"+hhmm(h.time[eerste])+"</b>, daarna is er "+kans+"% kans op "+wat+tot+"."
+      ? "Het blijft droog tot <b>"+hhmm(h.time[eerste])+"</b>, daarna is er <b>"+kans+"%</b> kans op "+wat+tot+"."
       : "Het blijft droog tot <b>"+hhmm(h.time[eerste])+"</b>, daarna valt er wat "+wat+tot+".";
   }else if(kmax>0&&kv>=25){
-    zin1 = "Het blijft grotendeels droog, alleen rond <b>"+hhmm(h.time[kmax])+"</b> is er "+kv+"% kans op een bui.";
+    zin1 = "Het blijft grotendeels droog, alleen rond <b>"+hhmm(h.time[kmax])+"</b> is er <b>"+kv+"%</b> kans op een bui.";
   }else{
-    zin1 = "De komende <b>twaalf uur</b> blijft het droog.";
+    zin1 = "De komende <b>twaalf uur</b> blijft het <b>droog</b>.";
   }
 
   // temperatuur
@@ -764,11 +795,11 @@ function briefing(){
   const dagPiek=piek("temperature_2m",0);
   let zin2;
   if(top>i+1&&tv>c.temperature_2m+0.5){
-    zin2="Het wordt maximaal "+Math.round(tv)+" graden, met het warmste moment rond "+hhmm(h.time[top])
-        +". Vannacht koelt het af naar "+tmin+" graden.";
+    zin2="Het wordt maximaal <b>"+Math.round(tv)+" graden</b>, met het warmste moment rond "+hhmm(h.time[top])
+        +". Vannacht koelt het af naar <b>"+tmin+" graden</b>.";
   }else if(dagPiek&&dagPiek.t<c.time&&Math.round(dagPiek.v)>nutemp){
-    zin2="Het was het warmst rond "+hhmm(dagPiek.t)+" met "+Math.round(dagPiek.v)+" graden. Nu is het "+nutemp
-        +" graden en vannacht koelt het af naar "+tmin+" graden.";
+    zin2="Het was het warmst rond "+hhmm(dagPiek.t)+" met <b>"+Math.round(dagPiek.v)+" graden</b>. Nu is het "+nutemp
+        +" graden en vannacht koelt het af naar <b>"+tmin+" graden</b>.";
   }else if(tmin<nutemp-1){
     zin2="Warmer dan "+nutemp+" graden wordt het niet meer. Vannacht koelt het af naar "+tmin+" graden.";
   }else{
@@ -792,9 +823,9 @@ function briefing(){
   // "storm" of "zware storm" en "De wind blijft stormachtig" noemt dezelfde wind
   // een graad zwakker. Boven de 8 stapt de zin daarom over op de naam zelf.
   const zwaar = bm>=9;
-  const staatEr = bm===9 ? "Er staat storm" : "Er staat een "+BFTNAAM[bm];
-  let zin3 = bm>bnu ? "De wind komt uit het "+richtingNu+draaiTekst+" en neemt toe tot "+bm+" Bft"
-           : bm<bnu ? "De wind komt uit het "+richtingNu+draaiTekst+" en neemt af tot "+bm+" Bft"
+  const staatEr = bm===9 ? "Er staat <b>storm</b>" : "Er staat een <b>"+BFTNAAM[bm]+"</b>";
+  let zin3 = bm>bnu ? "De wind komt uit het "+richtingNu+draaiTekst+" en neemt toe tot <b>"+bm+" Bft</b>"
+           : bm<bnu ? "De wind komt uit het "+richtingNu+draaiTekst+" en neemt af tot <b>"+bm+" Bft</b>"
            : zwaar   ? staatEr+" uit het "+richtingNu+" ("+bm+" Bft)"+draaiTekst
            : "De wind blijft "+BFTBIJV[bm]+" uit het "+richtingNu+" ("+bm+" Bft)"+draaiTekst;
   // "..., rond 05:00 is de wind het sterkst" was een tweede hoofdzin achter een komma.
@@ -1089,7 +1120,8 @@ function dagen(){
       <div class="dmin">${Math.round(l)}°</div>
       <div class="bar"><i style="left:${(l-lo)/sp*100}%;width:${Math.max(3,(hh-l)/sp*100)}%"></i></div>
       <div class="dmax">${Math.round(hh)}°</div>
-      <div class="drain">${i===0?restkans():(day.precipitation_probability_max[i]??0)}%</div></div>`;
+      <div class="drain">${i===0?restkans():(day.precipitation_probability_max[i]??0)}%${
+        day.precipitation_sum[i]>0.5?`<small>${nl(day.precipitation_sum[i])} mm</small>`:""}</div></div>`;
   });
   const kop=`<div class="row day kop">
       <div class="dname">Dag</div><div class="dico"></div><div class="dcond">Verwachting</div>
@@ -1185,6 +1217,14 @@ function nachten(){
     if(mt.op!=null&&mt.onder!=null) maanTekst="maan "+naarLokaal(mt.op)+"\u2013"+naarLokaal(mt.onder);
     else if(mt.op!=null) maanTekst="maan op "+naarLokaal(mt.op);
     else if(mt.onder!=null) maanTekst="maan onder "+naarLokaal(mt.onder);
+    /* De fase staat al per nacht in mn, dus het schijfje kost niets extra's aan
+       rekenwerk of gegevens. Het staat vlak voor de maantijden omdat het daarbij
+       hoort, en niet los voorop waar het bij de score zou lijken te horen. Het
+       cijfer erachter blijft staan: een schijfje leest snel, maar 63 procent
+       verlicht lees je er niet aan af. */
+    const maanIcoon=maanschijf(mn.ill,mn.fase,13);
+    const maanTitel=maan(new Date(naarUTC(ss.slice(0,10)+"T23:30"))).naam
+      +", "+Math.round(mn.ill*100)+" procent verlicht";
 
     const kleur=sc>=7?TEAL:sc>=4?INK:INK25;
     const lbl=d===0?"vannacht":DAGEN[new Date(ss.slice(0,10)+"T12:00:00").getDay()]+" op "+DAGEN[new Date(sr2.slice(0,10)+"T12:00:00").getDay()];
@@ -1193,7 +1233,9 @@ function nachten(){
       <div class="score" style="color:${kleur}">${nl(sc)}</div>
       <div class="sbar"><i style="width:${sc*10}%;background:${kleur}"></i></div>
       <div class="nmeta">${Math.round(cw)}% bewolking</div>
-      <div class="nmeta wide">${venster}${maanTekst?" · "+maanTekst:""}</div></div>`;
+      <div class="nmeta wide">${venster}${maanTekst
+        ? ` · <span class="maanbij" title="${esc(maanTitel)}">${maanIcoon}</span>${maanTekst}`
+        : ""}</div></div>`;
   }
   const kopN=`<div class="row night kop">
       <div class="dname">Nacht</div><div class="score">Score 0-10</div><div class="sbar"></div>
@@ -1209,17 +1251,32 @@ function lucht(){
   if(!S.air||!S.air.current){
     el.innerHTML='<div class="stat"><div class="ssub">Luchtkwaliteit is voor deze locatie niet beschikbaar.</div></div>';return;
   }
-  const c=S.air.current,aqi=c.european_aqi;
-  const band=v=>v==null?["onbekend",INK45]:v<=20?["goed",TEAL]:v<=40?["redelijk",TEAL]:v<=60?["matig",INK]
-    :v<=80?["slecht",CARMINE]:v<=100?["zeer slecht",CARMINE]:["extreem slecht",CARMINE];
+  /* european_aqi komt uit het Europese CAMS-model en is elders leeg. Daarbuiten
+     de Amerikaanse index tonen, die uit het wereldwijde model komt. Beide hebben
+     een eigen schaal, dus het label en de indeling moeten meeschakelen. */
+  const c=S.air.current;
+  const euro = inEuropa(S.lat,S.lon) && c.european_aqi!=null;
+  const aqi = euro ? c.european_aqi : c.us_aqi;
+  const naamIndex = euro ? "Europese AQI" : "Amerikaanse AQI";
+  const band = euro
+    ? v=>v==null?["onbekend",INK45]:v<=20?["goed",TEAL]:v<=40?["redelijk",TEAL]:v<=60?["matig",INK]
+      :v<=80?["slecht",CARMINE]:v<=100?["zeer slecht",CARMINE]:["extreem slecht",CARMINE]
+    : v=>v==null?["onbekend",INK45]:v<=50?["goed",TEAL]:v<=100?["redelijk",TEAL]:v<=150?["matig",INK]
+      :v<=200?["slecht",CARMINE]:v<=300?["zeer slecht",CARMINE]:["extreem slecht",CARMINE];
   const [nm,kl]=band(aqi);
-  let out=`<div class="stat"><div class="eyebrow">Europese AQI</div>
+  let out=`<div class="stat"><div class="eyebrow">${naamIndex}</div>
       <div class="sval" style="color:${kl}">${aqi==null?"–":Math.round(aqi)}</div><div class="ssub">${nm}</div></div>
     <div class="stat"><div class="eyebrow">Fijnstof PM2,5</div>
       <div class="sval">${nl(c.pm2_5)}<s>µg/m³</s></div>
       <div class="ssub">PM10 ${c.pm10==null?"–":Math.round(c.pm10)} µg/m³</div></div>`;
+  /* Pollen komt alleen uit het Europese CAMS-model. Buiten Europa zijn alle
+     soorten null en meldde de app "Geen noemenswaardige concentraties". Dat is
+     een bewering over de lucht terwijl er simpelweg niet gemeten wordt. */
   const h=S.air.hourly;
-  if(h&&h.time){
+  if(!inEuropa(S.lat,S.lon)){
+    out+='<div class="stat"><div class="eyebrow">Pollen</div><div class="sval">–</div>'
+       +'<div class="ssub">Alleen beschikbaar in Europa</div></div>';
+  }else if(h&&h.time){
     let i=h.time.findIndex(t=>t.slice(0,13)===S.d.current.time.slice(0,13));
     if(i<0)i=0;
     const soorten=[["grass_pollen","gras"],["birch_pollen","berk"],["alder_pollen","els"],
@@ -1288,12 +1345,17 @@ async function controle(){
 }
 
 /* ---------- neerslagradar ---------- */
-const R={frames:[],i:0,speelt:false,timer:null,host:"",geladen:{},pogingen:0,gelukt:0,verwacht:0,terug:false,wms:null,knmiMelding:""};
+const R={laag:"radar",radarFrames:[],satFrames:[],frames:[],i:0,speelt:false,timer:null,host:"",geladen:{},pogingen:0,gelukt:0,verwacht:0,terug:false,wms:null,knmiMelding:""};
 const TEGEL=256, ZOOM=7;
 const R_AARDE=6378137, HALFRONDE=Math.PI*R_AARDE;
 const wereldGrootte=()=>TEGEL*Math.pow(2,ZOOM);
 const mercX=px=>px/wereldGrootte()*2*HALFRONDE-HALFRONDE;
 const mercY=py=>HALFRONDE-py/wereldGrootte()*2*HALFRONDE;
+// Het CAMS-model voor Europa bepaalt waar european_aqi en de pollensoorten
+// bestaan. Buiten dit kader komen die velden leeg terug. Ruim genomen, want
+// aan de rand is de index nog geldig en een gemiste tegel is erger dan een
+// tegel die toch leeg blijkt.
+const inEuropa=(lat,lon)=>lat>29.5&&lat<71.5&&lon>-25&&lon<45;
 const inNederland=(lat,lon)=>lat>50.4&&lat<53.9&&lon>2.8&&lon<7.6;
 function wereldXY(lat,lon,z){
   const n=Math.pow(2,z)*TEGEL;
@@ -1333,9 +1395,13 @@ function radarTeken(){
     const X=((tx%max)+max)%max;
     const px=tx*TEGEL-ox, py=ty*TEGEL-oy;
     tegel(`https://basemaps.cartocdn.com/${stijl}/${ZOOM}/${X}/${ty}.png`,im=>{
-      if(im){ctx.globalAlpha=donker?0.55:0.75;ctx.drawImage(im,px,py);ctx.globalAlpha=1;}
+      /* De kaart werd op 75 procent getekend en in het donker zelfs op 55. Daardoor
+         verdwenen de landsgrenzen en provinciegrenzen, precies waar je op oriënteert.
+         De neerslaglaag ligt er met 85 procent overheen, dus de kaart mag steviger
+         zonder dat de bui minder goed leesbaar wordt. */
+      if(im){ctx.globalAlpha=donker?0.78:0.94;ctx.drawImage(im,px,py);ctx.globalAlpha=1;}
       if(f.knmi) return;   // de verwachting komt als één beeld, niet als tegels
-      tegel(`${R.host}${f.path}/${TEGEL}/${ZOOM}/${X}/${ty}/2/1_1.png`,rm=>{
+      tegel(`${R.host}${f.path}/${TEGEL}/${ZOOM}/${X}/${ty}/${f.sat?"0/0_0":"2/1_1"}.png`,rm=>{
         R.pogingen++;
         if(rm){R.gelukt++;ctx.globalAlpha=0.85;ctx.drawImage(rm,px,py);ctx.globalAlpha=1;}
         markeer(ctx,W,H);
@@ -1377,10 +1443,23 @@ async function radarLaden(){
     R.host=d.host||"https://tilecache.rainviewer.com";
     const verleden=(d.radar&&d.radar.past?d.radar.past:[]).slice(-8).map(f=>({time:f.time,path:f.path,toekomst:false}));
     const straks=(d.radar&&d.radar.nowcast?d.radar.nowcast:[]).map(f=>({time:f.time,path:f.path,toekomst:true}));
-    R.frames=verleden.concat(straks);
+    R.radarFrames=verleden.concat(straks);
+    /* Radar is een mozaiek van grondstations en dekt lang niet de hele wereld.
+       De infraroodsatelliet van RainViewer wel. Die toont wolkentoppen en geen
+       neerslag, dus het is geen vervanging maar een opvulling; daarom een knop
+       en geen stille terugval. */
+    R.satFrames=(d.satellite&&d.satellite.infrared?d.satellite.infrared:[])
+      .slice(-10).map(f=>({time:f.time,path:f.path,toekomst:false,sat:true}));
+    R.frames=R.radarFrames;
     if(!straks.length) await knmiVerwachting(verleden);
+    if(R.satFrames.length) R.radarFrames=R.frames;   // knmiVerwachting kan R.frames aanvullen
+    const kn=document.getElementById("rlaag");
+    if(kn) kn.style.display=R.satFrames.length?"":"none";
     if(!R.frames.length){mld.textContent="Geen radarbeelden beschikbaar.";return;}
     R.i=Math.max(0,verleden.length-1); R.terug=false;
+    // KNMI alleen noemen als zijn beelden ook echt in de reeks zitten
+    const bk=document.getElementById("bronknmi");
+    if(bk) bk.textContent = R.frames.some(f=>f.knmi) ? ", verwachting KNMI" : "";
     const sch=document.getElementById("rschuif");
     sch.max=R.frames.length-1; sch.value=R.i;
     const nieuwste=verleden.length?verleden[verleden.length-1].time*1000:0;
@@ -1396,6 +1475,22 @@ async function radarLaden(){
     document.querySelector(".radarbalk").style.display="none";
   }
 }
+document.getElementById("rlaag").addEventListener("click",()=>{
+  if(!R.satFrames.length) return;
+  const naarSat = R.laag==="radar";
+  R.laag = naarSat ? "satelliet" : "radar";
+  R.frames = naarSat ? R.satFrames : R.radarFrames;
+  document.getElementById("rlaag").textContent = naarSat ? "Radar" : "Satelliet";
+  clearInterval(R.timer); R.speelt=false; document.getElementById("rspeel").textContent="Speel af";
+  R.i = R.frames.length-1;
+  const sch=document.getElementById("rschuif");
+  sch.max=R.frames.length-1; sch.value=R.i;
+  const ml=document.getElementById("radarmelding");
+  ml.textContent = naarSat
+    ? "Infraroodsatelliet: dit toont wolkentoppen, niet de neerslag zelf."
+    : "";
+  radarTeken();
+});
 document.getElementById("rschuif").addEventListener("input",e=>{R.i=+e.target.value;radarTeken();});
 document.getElementById("rspeel").addEventListener("click",()=>{
   const b=document.getElementById("rspeel");
@@ -1447,7 +1542,9 @@ async function waarschuwingen(){
     const d=await j("/api/waarschuwingen?lat="+S.lat+"&lon="+S.lon);
     if(!d||!d.lijst||!d.lijst.length) return;
     el.innerHTML=d.lijst.slice(0,3).map(w=>
-      `<div class="waarsch"><h3>${esc(w.titel)}</h3><p>${esc(w.tekst||"")}${w.tot?" Geldig tot "+esc(w.tot)+".":""}</p></div>`
+      // landelijk betekent: de bron leverde geen gebied mee, dus we weten niet
+      // of dit precies hier geldt. Dat hoort de lezer te weten.
+      `<div class="waarsch"><h3>${esc(w.titel)}</h3><p>${esc(w.tekst||"")}${w.tot?" Geldig tot "+esc(w.tot)+".":""}${w.landelijk?" Geldt voor een groter gebied, niet per se voor deze plaats.":""}</p></div>`
     ).join("");
   }catch(e){ /* geen functie of geen verbinding: blok blijft leeg */ }
 }
