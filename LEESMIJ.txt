@@ -1,4 +1,4 @@
-WIJZIGINGEN v53
+WIJZIGINGEN v54
 
   hoofdmap:   index.html  sw.js  run.js  kern.js  README.md
   in api/:    waarschuwingen.js
@@ -11,4 +11,8 @@ GITHUB
   5. Commit
 
 NA HET UITROLLEN
-  App helemaal afsluiten en opnieuw openen (cache v53).
+  App helemaal afsluiten en opnieuw openen (cache v54).
+
+TERUGDRAAIEN KLEURSCHEMA
+  Bevalt het nieuwe radarschema niet, zoek in index.html naar
+  RV_SCHEMA en zet het getal terug van 8 naar 2.

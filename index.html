@@ -454,6 +454,24 @@ const BFTNAAM=["windstil","zwakke wind","zwakke wind","matige wind","matige wind
    sluit aan op de kleuren van RainViewer, zodat de radar niet van kleur omslaat
    op het moment dat je van het verleden naar de verwachting schuift. */
 const KNMI_STIJL="rainrate-blue-to-purple/nearest";
+
+/* Kleurschema van RainViewer, gekozen om zo dicht mogelijk bij de KNMI-schaal te
+   blijven. Uit de kleurtabel van RainViewer, vergeleken per dBZ:
+
+     dBZ  neerslag        schema 2 Universal Blue   schema 8 Dark Sky
+      20  lichte regen    cyaan                     blauw
+      30  matige regen    blauw                     paars
+      35  matige regen    geel                      rood
+      45  zware regen     rood                      geel
+
+   Het KNMI loopt van blauw naar paars. Schema 2 bleef tot 34 dBZ blauw en sprong
+   daarna ineens naar geel, wat het grootste verschil gaf bij matige regen: precies
+   het weer dat je hier het vaakst ziet. Schema 8 is bij die intensiteit paars en
+   sluit daar dus op aan.
+
+   De keerzijde: schema 8 is aan de lichte kant een stuk doorzichtiger, dus
+   motregen valt minder op. Wil je terug, zet dit getal weer op 2. */
+const RV_SCHEMA=8;
 const INK="var(--ink)",INK45="var(--ink-45)",INK25="var(--ink-25)",RULE="var(--rule)",
       RULES="var(--rule-soft)",NIGHT="var(--night)",TEAL="var(--teal)",CARMINE="var(--carmine)",SHEET="var(--sheet)";
 
@@ -1446,7 +1464,7 @@ function radarTeken(){
          zonder dat de bui minder goed leesbaar wordt. */
       if(im){ctx.globalAlpha=donker?0.78:0.94;ctx.drawImage(im,px,py);ctx.globalAlpha=1;}
       if(f.knmi) return;   // de verwachting komt als één beeld, niet als tegels
-      tegel(`${R.host}${f.path}/${TEGEL}/${ZOOM}/${X}/${ty}/${f.sat?"0/0_0":"2/1_1"}.png`,rm=>{
+      tegel(`${R.host}${f.path}/${TEGEL}/${ZOOM}/${X}/${ty}/${f.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`,rm=>{
         R.pogingen++;
         if(rm){R.gelukt++;ctx.globalAlpha=0.85;ctx.drawImage(rm,px,py);ctx.globalAlpha=1;}
         markeer(ctx,W,H);

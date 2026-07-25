@@ -858,8 +858,9 @@ groep("Wereldwijd");
     check("de knop verdwijnt als er geen satellietbeelden zijn",
       /rlaag[\s\S]{0,120}display=R\.satFrames\.length/.test(bronW));
     // de satelliettegel heeft een ander kleurschema dan de radartegel
+    // radar en satelliet hebben elk hun eigen kleurschema in dezelfde URL
     check("de satelliettegel gebruikt zijn eigen kleurschema",
-      /f\.sat\?"0\/0_0":"2\/1_1"/.test(bronW),"kleurschema wordt niet omgeschakeld");
+      /f\.sat\?"0\/0_0":RV_SCHEMA/.test(bronW),"kleurschema wordt niet omgeschakeld");
     check("de app zegt dat satelliet wolken toont en geen neerslag",
       /wolkentoppen, niet de neerslag/.test(bronW));
     check("RainViewer wordt vermeld zoals de voorwaarden vragen",
@@ -1170,6 +1171,21 @@ groep("Iconen en balk");
   // het masker moet dikker zijn dan de lijn zelf, anders blijft er een randje staan
   const m=api.icon(2,true,24).match(/<mask[\s\S]*?stroke-width="([\d.]+)"/);
   check("het masker is ruimer dan de lijndikte",!!m&&parseFloat(m[1])>1.15,m?m[1]:"niet gevonden");
+
+
+  /* het kleurschema van de radar moet als een benoemde keuze in de code staan */
+  {
+    const m=bronI.match(/const RV_SCHEMA=(\d);/);
+    check("het kleurschema staat als benoemde constante in de code",!!m,"RV_SCHEMA niet gevonden");
+    if(m){
+      const nr=parseInt(m[1],10);
+      check("het kleurschema is een bestaand nummer",nr>=0&&nr<=8,String(nr));
+      check("de tegel-URL gebruikt die constante",
+        /RV_SCHEMA\+"\/1_1"/.test(bronI),"de URL heeft nog een vast cijfer");
+      // de satelliet heeft een eigen schema en mag niet meeschakelen
+      check("de satelliettegel houdt zijn eigen schema",/f\.sat\?"0\/0_0"/.test(bronI));
+    }
+  }
 
   /* de klok hoort ook zichtbaar te blijven als je scrollt */
   check("de meelopende balk heeft een klok",/id="minitijd"/.test(bronI));
