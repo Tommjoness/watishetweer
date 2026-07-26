@@ -849,23 +849,53 @@ groep("Wereldwijd");
   }
 
 
-  /* satelliet als opvulling waar radar geen dekking heeft */
+  /* De satellietlaag is eruit: de gratis laag van RainViewer levert geen
+     satellite.infrared, dus de knop verscheen nooit. Beter geen dode code. */
   {
-    check("de satellietreeks wordt uit de API gelezen",/satellite[\s\S]{0,40}infrared/.test(bronW));
-    check("radar en satelliet worden apart bewaard",
-      /radarFrames/.test(bronW)&&/satFrames/.test(bronW));
-    check("er is een knop om te wisselen",/id="rlaag"/.test(bronW));
-    check("de knop verdwijnt als er geen satellietbeelden zijn",
-      /rlaag[\s\S]{0,120}display=R\.satFrames\.length/.test(bronW));
-    // de satelliettegel heeft een ander kleurschema dan de radartegel
-    // radar en satelliet hebben elk hun eigen kleurschema in dezelfde URL
-    check("de satelliettegel gebruikt zijn eigen kleurschema",
-      /f\.sat\?"0\/0_0":RV_SCHEMA/.test(bronW),"kleurschema wordt niet omgeschakeld");
-    check("de app zegt dat satelliet wolken toont en geen neerslag",
-      /wolkentoppen, niet de neerslag/.test(bronW));
+    check("de satellietknop is opgeruimd",!/id="rlaag"/.test(bronW));
+    check("de bronregel belooft geen satelliet",!/Radar en satelliet: <a/.test(bronW));
     check("RainViewer wordt vermeld zoals de voorwaarden vragen",
       /rainviewer\.com/.test(bronW)&&/RainViewer<\/a>/.test(bronW));
+    /* Buiten Nederland is er geen vooruitblik. De schuif eindigt dan bij nu en dat
+       hoort erbij te staan, anders lijkt het alsof er iets stuk is. */
+    check("de app meldt het als er geen vooruitblik is",
+      /vooruitblik is hier niet beschikbaar/.test(bronW));
+    check("die melding hangt af van de reeks, niet van een vaste tekst",
+      /!R\.frames\.some\(fr=>fr\.toekomst\)/.test(bronW));
   }
+
+  /* De radar kon niet zoomen of verschuiven. Bij een vaste zoom 7 zie je aan de
+     evenaar bijna twee keer zoveel grond als in Noord-Noorwegen, en een bui net
+     buiten beeld kon je niet opzoeken. */
+  {
+    check("de zoom staat in de toestand en niet als vaste waarde",
+      /zoom:7/.test(bronW) && !/const TEGEL=256, ZOOM=7/.test(bronW));
+    check("er zijn grenzen aan de zoom",/ZMIN=\d+, ZMAX=\d+/.test(bronW));
+    check("er zijn knoppen voor in, uit en centreren",
+      /id="rin"/.test(bronW)&&/id="ruit"/.test(bronW)&&/id="rmidden"/.test(bronW));
+    check("de knoppen gaan uit aan de grenzen",/disabled=R\.zoom>=ZMAX/.test(bronW));
+    check("slepen werkt met muis en vinger",
+      /pointerdown/.test(bronW)&&/setPointerCapture/.test(bronW));
+    check("de pagina scrollt niet mee tijdens het slepen",/#radar\{[^}]*touch-action:none/.test(bronW));
+    check("het kruisje schuift mee met de kaart",/markeer\(ctx,W,H,R\.dx,R\.dy\)/.test(bronW));
+    const zoomfn=bronW.slice(bronW.indexOf("function radarZoom"),bronW.indexOf("function zoomKnoppen"));
+    check("de verschuiving schaalt mee bij het zoomen",
+      /Math\.pow\(2,nieuw-R\.zoom\)/.test(zoomfn) && /R\.dx\*=factor/.test(zoomfn));
+    const klem=(z,stap)=>Math.max(4,Math.min(z+stap,10));
+    const raar=[[4,-1,4],[10,1,10],[7,1,8],[7,-1,6],[4,-5,4],[10,5,10]]
+      .filter(([z,st,verw])=>klem(z,st)!==verw);
+    check("zoomen blijft binnen de grenzen",raar.length===0,JSON.stringify(raar));
+  }
+
+  /* De briefing blijft staan als het netwerk wegvalt. Dat zat er al in, maar er
+     stond geen enkele controle op, dus kon het ongemerkt sneuvelen. */
+  {
+    check("de laatste briefing wordt bewaard",/ls\.set\(KEY_D,\{d:S\.d/.test(bronW));
+    check("bij een mislukte poging komt die terug",
+      /const oud=ls\.get\(KEY_D,null\)/.test(bronW) && /S\.d=oud\.d/.test(bronW));
+    check("er staat bij van wanneer die is",/laatste briefing van/.test(bronW));
+  }
+
 
   // KNMI mag alleen in de bronregel staan als hij ook gebruikt is
   check("de bronregel noemt KNMI niet standaard",

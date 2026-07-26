@@ -107,7 +107,7 @@ Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeel
 * buiten Europa geen Europese luchtindex en geen bewering over pollen
 * de waarschuwingsbron wordt gekozen op coordinaten, nooit meer blind Nederland
 * een waarschuwing met een gebied elders in het land wordt niet getoond
-* de satellietlaag is te kiezen waar radar geen dekking heeft, met vermelding wat je ziet
+
 * de kop van de dagtabel vult evenveel kolommen als de gegevens eronder, op elke breedte
 * elke nacht toont zijn eigen maanfase als schijfje naast de maantijden
 * de briefing legt nadruk op de uitkomst, en nooit op meer dan een kwart van de tekst
@@ -117,6 +117,7 @@ Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeel
 * radarbeelden staan altijd op volgorde van tijd, ongeacht uit welke bron ze komen
 * de wolk in een samengesteld icoon dekt af wat erachter ligt, op elke achtergrond
 * de radar wist het doek pas als de beelden binnen zijn, dus zonder flikkeren
+* de radar kan zoomen en verschuiven, en meldt het als er geen vooruitblik is
 * de KNMI-laag gebruikt de blauwe schaal, zodat de kleur niet omslaat bij de verwachting
 * elke kolom van de zevendagentabel past zijn inhoud, van 320 tot 430 px breed
 * elke serverfunctie is CommonJS, want ESM zonder "type": "module" faalt op Node 18 en 20

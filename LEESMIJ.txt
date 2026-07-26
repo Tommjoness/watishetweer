@@ -1,4 +1,4 @@
-WIJZIGINGEN v56
+WIJZIGINGEN v57
 
   hoofdmap:   index.html  sw.js  run.js  kern.js  README.md
   in api/:    waarschuwingen.js
@@ -11,4 +11,9 @@ GITHUB
   5. Commit
 
 NA HET UITROLLEN
-  App helemaal afsluiten en opnieuw openen (cache v56).
+  App helemaal afsluiten en opnieuw openen (cache v57).
+
+NIEUW OP DE RADAR
+  Knoppen - en + zoomen, Centreer zet hem terug op je locatie.
+  Slepen met muis of vinger verplaatst de kaart.
+  Dubbelklikken zoomt in.

@@ -178,6 +178,10 @@
   .mid{text-align:center}
   .radarbalk{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
   .radarbalk button{min-width:96px}
+  /* de zoomknoppen zijn tekens en geen woorden, dus die mogen smal blijven */
+  .radarbalk button#rin,.radarbalk button#ruit{min-width:44px;font-family:var(--mono);font-size:17px}
+  #radar{cursor:grab;touch-action:none}
+  #radar.sleept{cursor:grabbing}
   /* op een smal scherm passen twee knoppen en een schuif niet op een regel,
      dus krijgt de schuif zijn eigen regel over de volle breedte */
   @media(max-width:430px){ .radarbalk input[type=range]{flex:1 0 100%;order:3} }
@@ -397,7 +401,9 @@
       <div id="radartijd"></div>
       <div class="radarbalk">
         <button id="rspeel" title="Afspelen of pauzeren">Speel af</button>
-        <button id="rlaag" title="Wissel tussen radar en satelliet">Satelliet</button>
+        <button id="ruit" title="Uitzoomen" aria-label="Uitzoomen">&minus;</button>
+        <button id="rin" title="Inzoomen" aria-label="Inzoomen">+</button>
+        <button id="rmidden" title="Terug naar je locatie">Centreer</button>
         <input type="range" id="rschuif" min="0" max="0" value="0" step="1" aria-label="Tijdstip van het radarbeeld">
       </div>
       <div class="ssub mid" id="radarmelding"></div>
@@ -1412,10 +1418,14 @@ function logBij(){
 }
 
 /* ---------- neerslagradar ---------- */
-const R={laag:"radar",radarFrames:[],satFrames:[],frames:[],i:0,speelt:false,timer:null,host:"",geladen:{},pogingen:0,gelukt:0,verwacht:0,terug:false,wms:null,knmiMelding:""};
-const TEGEL=256, ZOOM=7;
+/* Zoom en verschuiving horen bij de kaart, niet bij de app: wissel je van plaats,
+   dan gaan ze terug naar de standaard, want dan wil je weer je eigen omgeving zien. */
+const R={laag:"radar",radarFrames:[],satFrames:[],frames:[],i:0,speelt:false,timer:null,
+  host:"",geladen:{},pogingen:0,gelukt:0,verwacht:0,terug:false,wms:null,knmiMelding:"",
+  zoom:7,dx:0,dy:0};
+const TEGEL=256, ZSTANDAARD=7, ZMIN=4, ZMAX=10;
 const R_AARDE=6378137, HALFRONDE=Math.PI*R_AARDE;
-const wereldGrootte=()=>TEGEL*Math.pow(2,ZOOM);
+const wereldGrootte=()=>TEGEL*Math.pow(2,R.zoom);
 const mercX=px=>px/wereldGrootte()*2*HALFRONDE-HALFRONDE;
 const mercY=py=>HALFRONDE-py/wereldGrootte()*2*HALFRONDE;
 // Het CAMS-model voor Europa bepaalt waar european_aqi en de pollensoorten
@@ -1460,8 +1470,10 @@ async function radarTeken(){
   const ronde=++radarRonde;
   const ctx=c.getContext("2d");
   const W=c.width,H=c.height;
-  const mid=wereldXY(S.lat,S.lon,ZOOM);
-  const ox=mid.x-W/2, oy=mid.y-H/2;
+  const Z=R.zoom;
+  const mid=wereldXY(S.lat,S.lon,Z);
+  // dx en dy verschuiven de kaart; het kruisje blijft op de echte locatie staan
+  const ox=mid.x-W/2-R.dx, oy=mid.y-H/2-R.dy;
   const donker=document.documentElement.getAttribute("data-thema")!=="licht";
   const stijl=donker?"dark_nolabels":"light_nolabels";
   const f=R.frames[R.i];
@@ -1473,7 +1485,7 @@ async function radarTeken(){
 
   const tx0=Math.floor(ox/TEGEL), tx1=Math.floor((ox+W)/TEGEL);
   const ty0=Math.floor(oy/TEGEL), ty1=Math.floor((oy+H)/TEGEL);
-  const max=Math.pow(2,ZOOM);
+  const max=Math.pow(2,Z);
 
   const vakken=[];
   for(let tx=tx0;tx<=tx1;tx++) for(let ty=ty0;ty<=ty1;ty++){
@@ -1482,9 +1494,9 @@ async function radarTeken(){
     vakken.push({X:X,ty:ty,px:tx*TEGEL-ox,py:ty*TEGEL-oy});
   }
 
-  const kaarten=vakken.map(v=>tegelBelofte(`https://basemaps.cartocdn.com/${stijl}/${ZOOM}/${v.X}/${v.ty}.png`));
+  const kaarten=vakken.map(v=>tegelBelofte(`https://basemaps.cartocdn.com/${stijl}/${Z}/${v.X}/${v.ty}.png`));
   const neerslag=f.knmi ? [] : vakken.map(v=>
-    tegelBelofte(`${R.host}${f.path}/${TEGEL}/${ZOOM}/${v.X}/${v.ty}/${f.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`));
+    tegelBelofte(`${R.host}${f.path}/${TEGEL}/${Z}/${v.X}/${v.ty}/${f.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`));
 
   let heel=null;
   if(f.knmi&&R.wms){
@@ -1506,7 +1518,7 @@ async function radarTeken(){
   kb.forEach((im,k)=>{ if(im){ctx.globalAlpha=donker?0.78:0.94;ctx.drawImage(im,vakken[k].px,vakken[k].py);ctx.globalAlpha=1;} });
   nb.forEach((im,k)=>{ if(im){ctx.globalAlpha=0.85;ctx.drawImage(im,vakken[k].px,vakken[k].py);ctx.globalAlpha=1;} });
   if(hb){ctx.globalAlpha=0.85;ctx.drawImage(hb,0,0,W,H);ctx.globalAlpha=1;}
-  markeer(ctx,W,H);
+  markeer(ctx,W,H,R.dx,R.dy);
 
   // beeld bestaat nog niet: geen enkele tegel kwam binnen, dus een stap terug
   if(!f.knmi && nb.length && nb.every(im=>!im) && R.i>0 && !R.terug){
@@ -1518,11 +1530,13 @@ async function radarTeken(){
      het in de cache en tekent het meteen, dus zonder haperen. */
   const volg=R.frames[(R.i+1)%R.frames.length];
   if(volg&&!volg.knmi&&R.host) vakken.forEach(v=>
-    tegel(`${R.host}${volg.path}/${TEGEL}/${ZOOM}/${v.X}/${v.ty}/${volg.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`,()=>{}));
+    tegel(`${R.host}${volg.path}/${TEGEL}/${Z}/${v.X}/${v.ty}/${volg.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`,()=>{}));
 }
 
-function markeer(ctx,W,H){
+function markeer(ctx,W,H,dx,dy){
   ctx.save();
+  // sleep je de kaart weg, dan schuift het kruisje mee zodat het op je plaats blijft
+  ctx.translate(dx||0,dy||0);
   ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--carmine").trim()||"#A02036";
   ctx.lineWidth=1.5;
   ctx.beginPath();ctx.arc(W/2,H/2,7,0,Math.PI*2);ctx.stroke();
@@ -1544,19 +1558,26 @@ async function radarLaden(){
        De infraroodsatelliet van RainViewer wel. Die toont wolkentoppen en geen
        neerslag, dus het is geen vervanging maar een opvulling; daarom een knop
        en geen stille terugval. */
-    R.satFrames=(d.satellite&&d.satellite.infrared?d.satellite.infrared:[])
-      .slice(-10).map(f=>({time:f.time,path:f.path,toekomst:false,sat:true}));
+    /* De gratis laag van RainViewer levert geen satellietbeelden: satellite.infrared
+       komt leeg terug. De knop die daarop wachtte is eruit, want die verscheen nooit. */
+    R.satFrames=[];
     R.frames=R.radarFrames;
     if(!straks.length) await knmiVerwachting(verleden);
     // knmiVerwachting vult R.frames aan; die aanvulling hoort ook in radarFrames
     // te zitten, anders raakt de vooruitblik kwijt zodra je van laag wisselt
     R.radarFrames=R.frames;
-    const kn=document.getElementById("rlaag");
-    if(kn) kn.style.display=R.satFrames.length?"":"none";
-    // de gratis laag levert niet altijd satellietbeelden; dan hoort de bronregel
-    // er ook niet over te spreken
     const bs=document.getElementById("bronsat");
-    if(bs) bs.textContent=R.satFrames.length?" en satelliet":"";
+    if(bs) bs.textContent="";
+    zoomKnoppen();
+
+    /* Buiten Nederland is er geen vooruitblik: RainViewer geeft die niet in de
+       gratis laag en het KNMI dekt alleen dit land en de directe omgeving. De
+       schuif eindigt dan gewoon bij nu, zonder dat je weet waarom. */
+    const ml=document.getElementById("radarmelding");
+    if(ml&&!R.frames.some(fr=>fr.toekomst))
+      ml.textContent=inNederland(S.lat,S.lon)
+        ? "Er is nu geen vooruitblik beschikbaar."
+        : "Alleen gemeten beelden: een vooruitblik is hier niet beschikbaar.";
     if(!R.frames.length){mld.textContent="Geen radarbeelden beschikbaar.";return;}
     R.i=Math.max(0,verleden.length-1); R.terug=false;
     // KNMI alleen noemen als zijn beelden ook echt in de reeks zitten
@@ -1577,22 +1598,66 @@ async function radarLaden(){
     document.querySelector(".radarbalk").style.display="none";
   }
 }
-document.getElementById("rlaag").addEventListener("click",()=>{
-  if(!R.satFrames.length) return;
-  const naarSat = R.laag==="radar";
-  R.laag = naarSat ? "satelliet" : "radar";
-  R.frames = naarSat ? R.satFrames : R.radarFrames;
-  document.getElementById("rlaag").textContent = naarSat ? "Radar" : "Satelliet";
-  clearInterval(R.timer); R.speelt=false; document.getElementById("rspeel").textContent="Speel af";
-  R.i = R.frames.length-1;
-  const sch=document.getElementById("rschuif");
-  sch.max=R.frames.length-1; sch.value=R.i;
-  const ml=document.getElementById("radarmelding");
-  ml.textContent = naarSat
-    ? "Infraroodsatelliet: dit toont wolkentoppen, niet de neerslag zelf."
-    : "";
+/* ---------- kaart bedienen ---------- */
+
+/** Zoomt in of uit rond het midden van het beeld, zodat wat je bekijkt blijft staan. */
+function radarZoom(stap){
+  const nieuw=clamp(R.zoom+stap,ZMIN,ZMAX);
+  if(nieuw===R.zoom) return;
+  // de verschuiving is in pixels van het huidige zoomniveau, dus die schaalt mee
+  const factor=Math.pow(2,nieuw-R.zoom);
+  R.dx*=factor; R.dy*=factor;
+  R.zoom=nieuw;
+  zoomKnoppen();
   radarTeken();
+}
+
+function zoomKnoppen(){
+  const in_=document.getElementById("rin"), uit=document.getElementById("ruit"),
+        mid=document.getElementById("rmidden");
+  if(in_) in_.disabled=R.zoom>=ZMAX;
+  if(uit) uit.disabled=R.zoom<=ZMIN;
+  // centreren heeft alleen zin als er iets te centreren valt
+  if(mid) mid.disabled=(R.dx===0&&R.dy===0&&R.zoom===ZSTANDAARD);
+}
+
+document.getElementById("rin").addEventListener("click",()=>radarZoom(1));
+document.getElementById("ruit").addEventListener("click",()=>radarZoom(-1));
+document.getElementById("rmidden").addEventListener("click",()=>{
+  R.zoom=ZSTANDAARD; R.dx=0; R.dy=0; zoomKnoppen(); radarTeken();
 });
+
+/* Slepen met muis of vinger. Pointer events dekken beide, en met setPointerCapture
+   blijft het slepen doorlopen als je buiten de kaart raakt. touch-action:none op
+   het doek voorkomt dat de pagina meescrollt terwijl je de kaart verplaatst. */
+(function(){
+  const c=document.getElementById("radar");
+  if(!c) return;
+  let bezig=false,vx=0,vy=0,verplaatst=0;
+  c.addEventListener("pointerdown",e=>{
+    bezig=true; verplaatst=0; vx=e.clientX; vy=e.clientY;
+    c.classList.add("sleept"); c.setPointerCapture(e.pointerId);
+  });
+  c.addEventListener("pointermove",e=>{
+    if(!bezig) return;
+    // het doek is 640 breed maar wordt op schermbreedte getekend, dus omrekenen
+    const schaal=c.width/c.getBoundingClientRect().width;
+    const ax=(e.clientX-vx)*schaal, ay=(e.clientY-vy)*schaal;
+    vx=e.clientX; vy=e.clientY;
+    verplaatst+=Math.abs(ax)+Math.abs(ay);
+    R.dx+=ax; R.dy+=ay;
+    zoomKnoppen(); radarTeken();
+  });
+  const stop=e=>{
+    if(!bezig) return;
+    bezig=false; c.classList.remove("sleept");
+    try{ c.releasePointerCapture(e.pointerId); }catch(_){}
+  };
+  c.addEventListener("pointerup",stop);
+  c.addEventListener("pointercancel",stop);
+  c.addEventListener("dblclick",()=>radarZoom(1));
+})();
+
 document.getElementById("rschuif").addEventListener("input",e=>{R.i=+e.target.value;radarTeken();});
 document.getElementById("rspeel").addEventListener("click",()=>{
   const b=document.getElementById("rspeel");
