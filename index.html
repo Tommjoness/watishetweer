@@ -232,6 +232,9 @@
   .sbar i{position:absolute;top:-1px;height:3px}
   /* Zonder dit brak de regel na de punt en bleef die los aan het eind hangen.
      Nu verhuist het hele maandeel als een blok naar de volgende regel. */
+  /* planeten en bovenlucht staan onder de venstertekst, iets ingetogener */
+  .night .nplaneten{color:var(--teal)}
+  .night .nlucht{font-size:11.5px}
   .maangroep{white-space:nowrap}
   .maanbij{margin-right:4px}
   /* Verderop staat svg,canvas{display:block}. Zonder deze uitzondering werd het
@@ -661,6 +664,12 @@ async function load(lat,lon,label,stil){
   const f=basis+"&minutely_15=precipitation&past_hours=24"
     +"&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,precipitation_probability,"
     +"precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,"
+    /* Voor waarnemen telt niet alleen of de hemel open is. De straalstroom rond
+       250 hPa, zo'n tien kilometer hoog, bepaalt hoe rustig het beeld staat. Bij
+       harde wind daarboven trilt een planeet ook onder een wolkenloze hemel. De
+       vochtigheid rond 700 hPa zegt iets over de doorzicht: vochtige lucht dooft
+       zwakke objecten. Beide zijn wereldwijd beschikbaar. */
+    +"wind_speed_250hPa,relative_humidity_700hPa,"
     +"uv_index,pressure_msl,is_day";
   const fmin=basis+"&past_hours=24&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,"
     +"precipitation_probability,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,"
@@ -1321,6 +1330,43 @@ function nachten(){
        hoort, en niet los voorop waar het bij de score zou lijken te horen. Het
        cijfer erachter blijft staan: een schijfje leest snel, maar 63 procent
        verlicht lees je er niet aan af. */
+    /* Seeing uit de straalstroom rond 250 hPa. De schaal volgt wat waarnemers
+       hanteren: onder 20 km/u staat het beeld rustig, boven 90 trilt alles.
+       Doorzicht uit de vochtigheid rond 700 hPa: vochtige lucht dooft zwakke
+       objecten, ook als er geen wolk te zien is. Ontbreekt de bovenlucht, dan
+       blijft het veld gewoon leeg in plaats van een verzonnen waarde. */
+    const bovenlucht=(veld)=>{
+      const reeks=h[veld];
+      if(!reeks) return null;
+      const w=[];
+      for(let i=a2;i<=b2&&i<reeks.length;i++) if(reeks[i]!=null) w.push(reeks[i]);
+      return w.length ? w.reduce((a,b)=>a+b,0)/w.length : null;
+    };
+    const jet=bovenlucht("wind_speed_250hPa");
+    const vocht=bovenlucht("relative_humidity_700hPa");
+    const seeingWoord = jet==null ? null
+      : jet<20 ? "rustig" : jet<45 ? "redelijk rustig" : jet<90 ? "onrustig" : "zeer onrustig";
+    const zichtWoord = vocht==null ? null
+      : vocht<40 ? "helder" : vocht<65 ? "redelijk helder" : vocht<85 ? "waterig" : "zeer waterig";
+
+    /* Welke planeten deze nacht boven de horizon komen, en hoe hoog ze dan staan.
+       Alleen wat er werkelijk toe doet: onder de tien graden zit je in de nevel
+       aan de horizon en heb je er met een kijker niets aan. De berekening loopt
+       over de donkere uren van deze nacht, per half uur. */
+    const zichtbaar=[];
+    if(isFinite(S.lat)&&isFinite(S.lon)){
+      const start=naarUTC(ss.slice(0,16)), eind=naarUTC(sr2.slice(0,16));
+      for(const pn of ["Mercurius","Venus","Mars","Jupiter","Saturnus"]){
+        let top=-90, topT=null;
+        for(let t=start;t<=eind;t+=1800000){
+          const st=planeet(pn,new Date(t),S.lat,S.lon);
+          if(st.hoogte>top){top=st.hoogte;topT=t;}
+        }
+        if(top>=10) zichtbaar.push({naam:pn,hoogte:top,wanneer:topT});
+      }
+      zichtbaar.sort((a,b)=>b.hoogte-a.hoogte);
+    }
+
     const maanIcoon=maanschijf(mn.ill,mn.fase,13);
     const maanTitel=maan(new Date(naarUTC(ss.slice(0,10)+"T23:30"))).naam
       +", "+Math.round(mn.ill*100)+" procent verlicht";
@@ -1332,6 +1378,11 @@ function nachten(){
       <div class="score" style="color:${kleur}">${nl(sc)}</div>
       <div class="sbar"><i style="width:${sc*10}%;background:${kleur}"></i></div>
       <div class="nmeta"><span class="perc">${Math.round(cw)}%</span> bewolking</div>
+      ${zichtbaar.length?`<div class="nmeta wide nplaneten">${
+        zichtbaar.map(p=>p.naam+" tot "+Math.round(p.hoogte)+"\u00b0 rond "+naarLokaal(p.wanneer)).join(" \u00b7 ")}</div>`:""}
+      ${(seeingWoord||zichtWoord)?`<div class="nmeta wide nlucht">${
+        [seeingWoord?"beeld "+seeingWoord+(jet!=null?" ("+Math.round(jet)+" km/u op 10 km)":""):"",
+         zichtWoord?"lucht "+zichtWoord:""].filter(Boolean).join(" \u00b7 ")}</div>`:""}
       <div class="nmeta wide">${venster}${maanTekst
         ? ` <span class="maangroep">· <span class="maanbij" title="${esc(maanTitel)}">${maanIcoon}</span>${maanTekst}</span>`
         : ""}</div></div>`;
@@ -1725,6 +1776,152 @@ async function waarschuwingen(){
       `<div class="waarsch"><h3>${esc(w.titel)}</h3><p>${esc(w.tekst||"")}${w.tot?" Geldig tot "+esc(w.tot)+".":""}${w.landelijk?" Geldt voor een groter gebied, niet per se voor deze plaats.":""}</p></div>`
     ).join("");
   }catch(e){ /* geen functie of geen verbinding: blok blijft leeg */ }
+}
+
+/* Standen van de vijf planeten die met het blote oog of een kleine kijker te zien
+   zijn. Methode van Paul Schlyter: baanelementen die lineair met de tijd lopen,
+   plus de storingen van Jupiter en Saturnus, die anders tot bijna een graad
+   afwijking geven. Ruim nauwkeurig genoeg voor de enige vraag hier: staat het
+   boven de horizon en hoe hoog.
+
+   Werkt op elke breedtegraad. De sterrentijd komt uit de lengtegraad, dus de
+   berekening kent geen tijdzone en geen halfrond. */
+
+const PRAD = Math.PI / 180;
+const psin = g => Math.sin(g * PRAD), pcos = g => Math.cos(g * PRAD);
+const ptan = g => Math.tan(g * PRAD);
+const prev = g => ((g % 360) + 360) % 360;
+
+/** Dagnummer sinds 31 december 1999 00:00 UT, met de tijd als breuk erbij. */
+function dagNummer(datum) { /* Schlyter telt vanaf 30 december 1999 00:00 UT: zijn eigen formule geeft d=1
+     voor 1 januari 2000 middernacht. In unixtijd is dat 10956 dagen. */
+  return (datum.getTime() / 86400000) - 10956; }
+
+/* N knoop, i helling, w perihelium, a halve lange as, e excentriciteit,
+   M middelbare anomalie. Elk paar is [waarde op d=0, verandering per dag]. */
+const BANEN = {
+  Mercurius: { N:[48.3313, 3.24587e-5], i:[7.0047, 5.00e-8], w:[29.1241, 1.01444e-5],
+               a:[0.387098, 0], e:[0.205635, 5.59e-10], M:[168.6562, 4.0923344368] },
+  Venus:     { N:[76.6799, 2.46590e-5], i:[3.3946, 2.75e-8], w:[54.8910, 1.38374e-5],
+               a:[0.723330, 0], e:[0.006773, -1.302e-9], M:[48.0052, 1.6021302244] },
+  Mars:      { N:[49.5574, 2.11081e-5], i:[1.8497, -1.78e-8], w:[286.5016, 2.92961e-5],
+               a:[1.523688, 0], e:[0.093405, 2.516e-9], M:[18.6021, 0.5240207766] },
+  Jupiter:   { N:[100.4542, 2.76854e-5], i:[1.3030, -1.557e-7], w:[273.8777, 1.64505e-5],
+               a:[5.20256, 0], e:[0.048498, 4.469e-9], M:[19.8950, 0.0830853001] },
+  Saturnus:  { N:[113.6634, 2.38980e-5], i:[2.4886, -1.081e-7], w:[339.3939, 2.97661e-5],
+               a:[9.55475, 0], e:[0.055546, -9.499e-9], M:[316.9670, 0.0334442282] }
+};
+
+const el = (paar, d) => paar[0] + paar[1] * d;
+
+/** Lost de vergelijking van Kepler op. Mercurius is te excentrisch voor een enkele stap. */
+function excentrischeAnomalie(M, e) {
+  let E = M + (180 / Math.PI) * e * psin(M) * (1 + e * pcos(M));
+  for (let k = 0; k < 20; k++) {
+    const dE = (E - (180 / Math.PI) * e * psin(E) - M) / (1 - e * pcos(E));
+    E -= dE;
+    if (Math.abs(dE) < 1e-10) break;
+  }
+  return E;
+}
+
+/** Geocentrische stand van de zon, ook nodig om de planeten om te rekenen. */
+function zonStandPlaneet(d) {
+  const w = 282.9404 + 4.70935e-5 * d;
+  const e = 0.016709 - 1.151e-9 * d;
+  const M = prev(356.0470 + 0.9856002585 * d);
+  const E = M + (180 / Math.PI) * e * psin(M) * (1 + e * pcos(M));
+  const xv = pcos(E) - e, yv = Math.sqrt(1 - e * e) * psin(E);
+  const r = Math.sqrt(xv * xv + yv * yv);
+  const lon = prev(Math.atan2(yv, xv) / PRAD + w);
+  return { x: r * pcos(lon), y: r * psin(lon), r: r, lon: lon, M: M, w: w };
+}
+
+/* De storingen die er werkelijk toe doen. Zonder deze loopt Saturnus tot bijna
+   een graad uit de pas en Jupiter een halve. */
+function storing(naam, d) {
+  const Mj = prev(el(BANEN.Jupiter.M, d));
+  const Ms = prev(el(BANEN.Saturnus.M, d));
+  let dLon = 0, dLat = 0;
+  if (naam === "Jupiter") {
+    dLon = -0.332 * psin(2*Mj - 5*Ms - 67.6)
+         - 0.056 * psin(2*Mj - 2*Ms + 21)
+         + 0.042 * psin(3*Mj - 5*Ms + 21)
+         - 0.036 * psin(Mj - 2*Ms)
+         + 0.022 * pcos(Mj - Ms)
+         + 0.023 * psin(2*Mj - 3*Ms + 52)
+         - 0.016 * psin(Mj - 5*Ms - 69);
+  } else if (naam === "Saturnus") {
+    dLon = 0.812 * psin(2*Mj - 5*Ms - 67.6)
+         - 0.229 * pcos(2*Mj - 4*Ms - 2)
+         + 0.119 * psin(Mj - 2*Ms - 3)
+         + 0.046 * psin(2*Mj - 6*Ms - 69)
+         + 0.014 * psin(Mj - 3*Ms + 32);
+    dLat = -0.020 * pcos(2*Mj - 4*Ms - 2)
+         + 0.018 * psin(2*Mj - 6*Ms - 49);
+  }
+  return { dLon: dLon, dLat: dLat };
+}
+
+/**
+ * Stand van een planeet gezien vanaf een plek op aarde.
+ * @param {string} naam   Mercurius, Venus, Mars, Jupiter of Saturnus
+ * @param {Date}   datum  moment in UT
+ * @param {number} lat    breedtegraad, positief noord
+ * @param {number} lon    lengtegraad, positief oost
+ * @returns {{hoogte:number,azimut:number,ra:number,dec:number,afstand:number}} in graden
+ */
+function planeet(naam, datum, lat, lon) {
+  const baan = BANEN[naam];
+  if (!baan) throw new Error("onbekende planeet: " + naam);
+  const d = dagNummer(datum);
+
+  const N = el(baan.N, d), i = el(baan.i, d), w = el(baan.w, d);
+  const a = el(baan.a, d), e = el(baan.e, d), M = prev(el(baan.M, d));
+  const E = excentrischeAnomalie(M, e);
+  const xv = a * (pcos(E) - e);
+  const yv = a * Math.sqrt(1 - e * e) * psin(E);
+  const r0 = Math.sqrt(xv * xv + yv * yv);
+  const v = prev(Math.atan2(yv, xv) / PRAD);
+  const vw = v + w;
+
+  const xh0 = r0 * (pcos(N) * pcos(vw) - psin(N) * psin(vw) * pcos(i));
+  const yh0 = r0 * (psin(N) * pcos(vw) + pcos(N) * psin(vw) * pcos(i));
+  const zh0 = r0 * psin(vw) * psin(i);
+
+  // via ecliptische lengte en breedte, zodat de storing erbij opgeteld kan worden
+  const st = storing(naam, d);
+  const lonH = prev(Math.atan2(yh0, xh0) / PRAD + st.dLon);
+  const latH = Math.atan2(zh0, Math.sqrt(xh0 * xh0 + yh0 * yh0)) / PRAD + st.dLat;
+
+  const xh = r0 * pcos(lonH) * pcos(latH);
+  const yh = r0 * psin(lonH) * pcos(latH);
+  const zh = r0 * psin(latH);
+
+  // geocentrisch: de stand van de aarde is die van de zon, omgekeerd
+  const zon = zonStandPlaneet(d);
+  const xg = xh + zon.x, yg = yh + zon.y, zg = zh;
+
+  const ecl = 23.4393 - 3.563e-7 * d;
+  const xe = xg;
+  const ye = yg * pcos(ecl) - zg * psin(ecl);
+  const ze = yg * psin(ecl) + zg * pcos(ecl);
+
+  const ra = prev(Math.atan2(ye, xe) / PRAD);
+  const dec = Math.atan2(ze, Math.sqrt(xe * xe + ye * ye)) / PRAD;
+
+  /* Sterrentijd uit de lengtegraad. Hier zit de wereldwijde geldigheid: geen
+     tijdzone en geen halfrond, alleen de stand van de aarde tegenover de sterren. */
+  const uur = ((d % 1) + 1) % 1 * 24;
+  const gmst0 = prev(zon.M + zon.w + 180);
+  const lst = prev(gmst0 + uur * 15 + lon);
+  const ha = prev(lst - ra);
+
+  const hoogte = Math.asin(psin(dec) * psin(lat) + pcos(dec) * pcos(lat) * pcos(ha)) / PRAD;
+  const azimut = prev(Math.atan2(psin(ha), pcos(ha) * psin(lat) - ptan(dec) * pcos(lat)) / PRAD + 180);
+
+  return { hoogte: hoogte, azimut: azimut, ra: ra, dec: dec,
+           afstand: Math.sqrt(xg * xg + yg * yg + zg * zg) };
 }
 
 /* ---------- plaatsen ---------- */

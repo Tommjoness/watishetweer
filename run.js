@@ -1270,5 +1270,94 @@ groep("Iconen en balk");
   }
 }
 
+/* 10o. planeetstanden en bovenlucht */
+groep("Planeten en bovenlucht");
+{
+  const fsP=require("fs"), pathP=require("path");
+  const bronP=fsP.readFileSync(pathP.join(__dirname,"index.html"),"utf8");
+  const {api}=laadKern(390);
+
+  /* De standen zijn getoetst tegen pyephem, een echte efemeride. Het bestand
+     efemeride.json bevat 90 gecontroleerde standen over twaalf plaatsen van 78
+     noord tot 55 zuid en vijf jaar. Zonder zo'n toets is "het lijkt te kloppen"
+     geen uitspraak: een fout van anderhalve dag in het nulpunt gaf eerder een
+     azimut die 180 graden verkeerd stond en zag er in de app nog plausibel uit. */
+  const ref=JSON.parse(fsP.readFileSync(pathP.join(__dirname,"efemeride.json"),"utf8"));
+  let ergstH=0, ergstA=0, ergste="", nietEindig=0;
+  for(const rr of ref){
+    const p=api.planeet(rr.planeet,new Date(rr.datum),rr.lat,rr.lon);
+    if(!p||!isFinite(p.hoogte)||!isFinite(p.azimut)){nietEindig++;continue;}
+    const dh=Math.abs(p.hoogte-rr.hoogte);
+    let da=Math.abs(p.azimut-rr.azimut); if(da>180) da=360-da;
+    if(dh>ergstH){ergstH=dh;ergste=rr.plaats+" "+rr.planeet+" "+rr.datum.slice(0,10);}
+    if(Math.abs(rr.hoogte)<85&&da>ergstA) ergstA=da;
+  }
+  check("elke stand levert een eindig getal op",nietEindig===0,nietEindig+" niet-eindig");
+  check("de hoogte klopt binnen een tiende graad ("+ref.length+" standen)",ergstH<0.1,
+    "grootste afwijking "+ergstH.toFixed(3)+" bij "+ergste);
+  check("het azimut klopt binnen een tiende graad",ergstA<0.1,
+    "grootste afwijking "+ergstA.toFixed(3));
+
+  // het nulpunt van het dagnummer is de fout die eerder alles omgooide
+  check("het dagnummer klopt met Schlyters eigen formule",
+    api.dagNummer(new Date("2000-01-01T00:00:00Z"))===1 &&
+    api.dagNummer(new Date("2026-07-27T00:00:00Z"))===9705,
+    String(api.dagNummer(new Date("2000-01-01T00:00:00Z"))));
+
+  // en het moet werken op het zuidelijk halfrond en aan de evenaar
+  for(const [plaats,la,lo] of [["Sydney",-33.87,151.21],["Nairobi",-1.29,36.82],
+                               ["Ushuaia",-54.8,-68.3],["Longyearbyen",78.22,15.65]]){
+    const p=api.planeet("Jupiter",new Date("2026-07-27T22:00:00Z"),la,lo);
+    check(plaats+": de stand is bruikbaar",
+      isFinite(p.hoogte)&&p.hoogte>=-90&&p.hoogte<=90&&p.azimut>=0&&p.azimut<360,
+      JSON.stringify(p));
+  }
+  check("een onbekende planeet geeft een duidelijke fout",(()=>{
+    try{ api.planeet("Pluto",new Date(),52,5); return false; }catch(e){ return /onbekende planeet/.test(e.message); }
+  })());
+
+  /* alleen planeten die er werkelijk toe doen */
+  {
+    const {api:a3,bak:b3}=laadKern(390);
+    Object.assign(a3.S,{d:bouw({cc:()=>5}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    a3.nachten();
+    const platte=b3.nights.innerHTML.replace(/<svg[\s\S]*?<\/svg>/g,"").replace(/<[^>]+>/g,"|");
+    const hoogtes=[...platte.matchAll(/(?:Mercurius|Venus|Mars|Jupiter|Saturnus) tot (\d+)\u00b0/g)]
+      .map(m=>parseInt(m[1],10));
+    check("er staan planeten bij een heldere nacht",hoogtes.length>0,String(hoogtes.length));
+    check("niets onder de tien graden, daar zit je in de horizonnevel",
+      hoogtes.every(v=>v>=10),hoogtes.join(", "));
+    // per nacht sorteren, niet over alle nachten heen: elke rij begint opnieuw
+    const perNacht=(b3.nights.innerHTML.match(/class="nmeta wide nplaneten">[^<]*/g)||[])
+      .map(rij=>[...rij.matchAll(/tot (\d+)\u00b0/g)].map(m=>parseInt(m[1],10)));
+    check("de hoogste staat per nacht vooraan",
+      perNacht.length>0 && perNacht.every(rij=>rij.every((v,i)=>i===0||v<=rij[i-1])),
+      perNacht.map(r2=>r2.join(">")).join(" | "));
+  }
+
+  /* bovenlucht: seeing en doorzicht */
+  {
+    const {api:a4,bak:b4}=laadKern(390);
+    const d4=bouw({}); const nn=d4.hourly.time.length;
+    d4.hourly.wind_speed_250hPa=Array.from({length:nn},()=>120);
+    d4.hourly.relative_humidity_700hPa=Array.from({length:nn},()=>95);
+    Object.assign(a4.S,{d:d4,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    a4.nachten();
+    const t4=b4.nights.innerHTML;
+    check("harde straalstroom heet zeer onrustig",/beeld zeer onrustig/.test(t4));
+    check("vochtige bovenlucht heet zeer waterig",/lucht zeer waterig/.test(t4));
+    check("de windsnelheid staat erbij",/\(\d+ km\/u op 10 km\)/.test(t4));
+
+    // ontbreekt de bovenlucht, dan hoort er niets te staan in plaats van een gok
+    const {api:a5,bak:b5}=laadKern(390);
+    Object.assign(a5.S,{d:bouw({}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    a5.nachten();
+    check("zonder bovenlucht wordt er niets verzonnen",!/nlucht/.test(b5.nights.innerHTML));
+  }
+
+  check("de bovenlucht wordt bij de API opgevraagd",
+    /wind_speed_250hPa/.test(bronP) && /relative_humidity_700hPa/.test(bronP));
+}
+
 console.log("\n"+goed+" geslaagd, "+fout+" mislukt");
 process.exit(fout?1:0);

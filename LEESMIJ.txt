@@ -1,19 +1,20 @@
-WIJZIGINGEN v57
+WIJZIGINGEN v58
 
   hoofdmap:   index.html  sw.js  run.js  kern.js  README.md
+              efemeride.json  (NIEUW, alleen voor npm test)
   in api/:    waarschuwingen.js
 
 GITHUB
   1. Ga naar de HOOFDMAP van je repo
   2. Add file -> Upload files
-  3. Sleep de vijf losse bestanden erin
+  3. Sleep de zes losse bestanden erin
   4. Sleep daarnaast de MAP api in zijn geheel mee
   5. Commit
 
 NA HET UITROLLEN
-  App helemaal afsluiten en opnieuw openen (cache v57).
+  App helemaal afsluiten en opnieuw openen (cache v58).
 
-NIEUW OP DE RADAR
-  Knoppen - en + zoomen, Centreer zet hem terug op je locatie.
-  Slepen met muis of vinger verplaatst de kaart.
-  Dubbelklikken zoomt in.
+NIEUW
+  Nachtzicht toont nu per nacht welke planeten boven tien graden komen,
+  hoe hoog en rond welk tijdstip. Daaronder seeing en doorzicht uit de
+  bovenlucht. Ontbreken die gegevens, dan blijft de regel gewoon weg.
