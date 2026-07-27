@@ -1502,5 +1502,62 @@ groep("Grafiek en hints");
   }
 }
 
+/* 10r. de laklaag: schuifbalk, uitlijning, selectielijn en voettekst */
+groep("Opmaak en uitlijning");
+{
+  const fsL2=require("fs"), pathL2=require("path");
+  const css=fsL2.readFileSync(pathL2.join(__dirname,"index.html"),"utf8");
+
+  /* De schuifbalk. accent-color laat elke browser zijn eigen vorm tekenen, dus die
+     moet weg en de baan en knop tekenen we zelf. De pseudo-elementen horen in losse
+     regels: kent een browser er een niet, dan gooit hij de hele regel weg. */
+  // op de declaratie letten en niet op het woord: het staat ook in het commentaar
+  check("de browser tekent de schuif niet meer zelf",
+    /input\[type=range\]\{[^}]*appearance:none/.test(css) && !/accent-color\s*:/.test(css));
+  for(const p of ["-webkit-slider-runnable-track","-moz-range-track",
+                  "-webkit-slider-thumb","-moz-range-thumb"]){
+    check("er is opmaak voor "+p,new RegExp("::"+p.replace(/-/g,"\\-")+"\\{").test(css));
+  }
+  {
+    // geen enkele regel mag twee leveranciers combineren
+    const gemengd=[...css.matchAll(/([^{}]*)\{[^}]*\}/g)]
+      .map(m=>m[1])
+      .filter(sel=>/-webkit-slider|-moz-range/.test(sel) && /-webkit-/.test(sel) && /-moz-/.test(sel));
+    check("webkit en moz staan in losse regels",gemengd.length===0,gemengd.join(" | "));
+  }
+  check("de knop staat halverwege de baan",/margin-top:-5\.5px/.test(css));
+  check("wie beweging uitzet krijgt geen overgang",
+    /prefers-reduced-motion[\s\S]{0,200}slider-thumb[\s\S]{0,120}transition:none/.test(css));
+  check("de schuif blijft met het toetsenbord te zien",
+    /input\[type=range\]:focus-visible\{[^}]*outline/.test(css));
+
+  /* De rode selectielijn zat tegen de tekst aan. */
+  check("de geselecteerde dag heeft ruimte naast de lijn",
+    /\.day\{[^}]*padding-left:\d+px/.test(css) && /\.day\.on\{box-shadow:inset [3-9]px/.test(css));
+  check("de rij schuift niet op door die ruimte",/\.day\{[^}]*margin-left:-\d+px/.test(css));
+
+  /* De voettekst: elke bron op een eigen regel. */
+  check("de voettekst staat onder elkaar",/footer\{[^}]*flex-direction:column/.test(css));
+  const bronnen=(css.match(/<span class="bron"/g)||[]).length;
+  check("elke bron heeft een eigen regel",bronnen>=4,bronnen+" regels");
+  check("de bronnen staan niet meer als een lopend blok",
+    !/Weer: <a[\s\S]{0,400}Kaart: <a/.test(css));
+  // en de verplichte vermeldingen moeten er nog wel staan
+  for(const bron of ["open-meteo.com","rainviewer.com","carto.com","openstreetmap.org"]){
+    check(bron+" wordt nog vermeld",css.includes(bron));
+  }
+
+  /* Nachtzicht: de metaregels lijnen uit met de score, niet met de linkerrand. */
+  check("de metaregels beginnen bij de score",
+    /\.night \.nmeta\.wide\{display:block;grid-column:2 \/ -1/.test(css));
+  {
+    const {api,bak}=laadKern(390);
+    Object.assign(api.S,{d:bouw({}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.nachten();
+    const rijen=(bak.nights.innerHTML.match(/class="nmeta wide"/g)||[]).length;
+    check("er staan metaregels in de nachten",rijen>0,String(rijen));
+  }
+}
+
 console.log("\n"+goed+" geslaagd, "+fout+" mislukt");
 process.exit(fout?1:0);

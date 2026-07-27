@@ -188,7 +188,36 @@
   /* op een smal scherm passen twee knoppen en een schuif niet op een regel,
      dus krijgt de schuif zijn eigen regel over de volle breedte */
   @media(max-width:430px){ .radarbalk input[type=range]{flex:1 0 100%;order:3} }
-  input[type=range]{flex:1;accent-color:var(--ink);height:20px;background:transparent}
+  /* accent-color laat elke browser zijn eigen vorm tekenen: Safari een dikke pil,
+     Firefox een andere. Met appearance:none tekenen we de baan en de knop zelf,
+     zodat alle drie hetzelfde tonen. De pseudo-elementen kunnen niet in een
+     gezamenlijke regel staan: kent een browser er een niet, dan gooit hij de hele
+     regel weg. Daarom staan ze los. */
+  input[type=range]{flex:1;height:22px;background:transparent;
+    -webkit-appearance:none;appearance:none;cursor:pointer}
+  input[type=range]:focus{outline:none}
+  input[type=range]:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+
+  input[type=range]::-webkit-slider-runnable-track{
+    height:2px;background:var(--rule);border:none;border-radius:0}
+  input[type=range]::-moz-range-track{
+    height:2px;background:var(--rule);border:none;border-radius:0}
+  /* het deel links van de knop, alleen Firefox kan dit van zichzelf */
+  input[type=range]::-moz-range-progress{height:2px;background:var(--ink)}
+
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:13px;height:13px;border-radius:50%;
+    background:var(--sheet);border:1.5px solid var(--ink);
+    /* de knop staat halverwege de baan: (2 - 13) / 2 */
+    margin-top:-5.5px;transition:transform .12s}
+  input[type=range]::-moz-range-thumb{
+    width:13px;height:13px;border-radius:50%;box-sizing:border-box;
+    background:var(--sheet);border:1.5px solid var(--ink);transition:transform .12s}
+  input[type=range]:active::-webkit-slider-thumb{transform:scale(1.25)}
+  input[type=range]:active::-moz-range-thumb{transform:scale(1.25)}
+  @media (prefers-reduced-motion:reduce){
+    input[type=range]::-webkit-slider-thumb,input[type=range]::-moz-range-thumb{transition:none}
+  }
   #radartijd{font-variant-numeric:tabular-nums}
 
   /* waarschuwingen */
@@ -202,7 +231,11 @@
   .day{grid-template-columns:106px 26px 1fr 72px 54px 128px 46px 52px;gap:14px;cursor:pointer}
   .dkort{display:none}
   .day:hover{background:#FAFBFA}
-  .day.on{box-shadow:inset 2px 0 0 var(--carmine)}
+  /* De lijn zat tegen de dagnaam aan omdat de rij links geen ruimte had. Nu een
+     streep met lucht ernaast, en de rij schuift niet op want de opvulling vervangt
+     wat er eerst niet was. */
+  .day{padding-left:10px;margin-left:-10px}
+  .day.on{box-shadow:inset 3px 0 0 var(--carmine)}
   .day.on .dname{font-weight:500}
   .dname{font-size:14.5px;letter-spacing:.01em;white-space:nowrap;
     min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -228,6 +261,9 @@
   .dico{display:flex;justify-content:center}
 
   .night{grid-template-columns:104px 52px minmax(40px,1fr) 104px max-content;gap:16px}
+  /* Op het bureaublad staan de metaregels in de laatste kolom naast de score; die
+     lijnen nu uit met de kolom erboven in plaats van rechts weg te lopen. */
+  .night .nmeta.wide{text-align:left}
   .ctrl{grid-template-columns:120px 1fr 1fr max-content;gap:14px}
   .ctrl .mono{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink-70);text-align:center}
   .score{font-family:var(--mono);font-weight:500;font-size:18px;font-variant-numeric:tabular-nums;text-align:center}
@@ -255,8 +291,12 @@
   .msg.err{color:var(--carmine);border-color:var(--carmine)}
   footer a{color:inherit;text-decoration:none;box-shadow:inset 0 -1px 0 var(--rule)}
   footer a:hover{color:var(--ink);box-shadow:inset 0 -1px 0 var(--ink)}
-  footer{margin-top:var(--s3);padding-top:0;display:flex;
-         justify-content:space-between;flex-wrap:wrap;gap:6px 18px;font-size:11.5px;color:var(--ink-25);line-height:1.6}
+  /* De bronnen stonden als een lopend tekstblok naast de coordinaten. Onder elkaar
+     is elke bron los te lezen en te klikken, wat op een aanraakscherm ook scheelt. */
+  footer{margin-top:var(--s3);padding-top:0;display:flex;flex-direction:column;
+         gap:3px;font-size:11.5px;color:var(--ink-25);line-height:1.6}
+  footer .bron{display:block}
+  footer .bron b{font-weight:500;color:var(--ink-45)}
   footer .mono{font-size:11.5px}
   svg,canvas{display:block;touch-action:pan-y;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -300,7 +340,10 @@
     .dcond{display:none}
     .bar{display:none}
     .night{grid-template-columns:70px 40px minmax(20px,1fr) max-content;gap:4px 9px}
-    .night .nmeta.wide{display:block;grid-column:1 / -1;text-align:left;white-space:normal;
+    /* Deze regels hoorden bij de score, maar begonnen tegen de linkerrand en dus
+       onder de dagnaam. Nu starten ze op dezelfde kolom als de score, zodat de
+       naam links vrij blijft staan en de tekst een duidelijke aanloop heeft. */
+    .night .nmeta.wide{display:block;grid-column:2 / -1;text-align:left;white-space:normal;
       font-size:11.5px;color:var(--ink-45);margin-top:2px}
     .row.night.kop .nmeta.wide{display:none}
     .ctrl{grid-template-columns:74px 1fr 1fr;gap:8px}
@@ -432,12 +475,11 @@
     <div class="stats" id="aq"></div>
 
     <footer>
-      <span>Weer: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>, ECMWF en DWD, CAMS.
-        Radar<span id="bronsat"></span>: <a href="https://www.rainviewer.com" target="_blank" rel="noopener">RainViewer</a><span id="bronknmi"></span>.
-        Radardekking volgt de nationale radarnetwerken en is niet overal ter wereld beschikbaar.
-        Kaart: <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a> en
-        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>.</span>
-      <span class="mono" id="coords"></span>
+      <span class="bron"><b>Weer</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>, ECMWF en DWD, CAMS</span>
+      <span class="bron"><b>Radar<span id="bronsat"></span></b> <a href="https://www.rainviewer.com" target="_blank" rel="noopener">RainViewer</a><span id="bronknmi"></span></span>
+      <span class="bron"><b>Kaart</b> <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a> en <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>
+      <span class="bron">Radardekking volgt de nationale radarnetwerken en is niet overal ter wereld beschikbaar.</span>
+      <span class="mono bron" id="coords"></span>
     </footer>
   </div>
 </div>

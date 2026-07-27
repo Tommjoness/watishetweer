@@ -1,4 +1,4 @@
-WIJZIGINGEN v60  (groep 2 van 3: grafiek en tooltip)
+WIJZIGINGEN v61  (groep 3 van 3: opmaak en uitlijning)
 
   hoofdmap:   index.html  sw.js  run.js  kern.js  README.md  efemeride.json
   in api/:    waarschuwingen.js
@@ -11,4 +11,6 @@ GITHUB
   5. Commit
 
 NA HET UITROLLEN
-  App helemaal afsluiten en opnieuw openen (cache v60).
+  App helemaal afsluiten en opnieuw openen (cache v61).
+  Kijk de schuifbalk onder de radar na in Safari en Firefox: die is
+  volledig zelf getekend en zou er overal hetzelfde uit moeten zien.
