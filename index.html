@@ -454,6 +454,10 @@ const DIRSVOL=["noorden","noordnoordoosten","noordoosten","oostnoordoosten","oos
   "zuidoosten","zuidzuidoosten","zuiden","zuidzuidwesten","zuidwesten","westzuidwesten","westen",
   "westnoordwesten","noordwesten","noordnoordwesten"];
 const kompas=d=>DIRSVOL[Math.round(d/22.5)%16];
+/* Zestien vakken van 22,5 graden. Math.round pakt vanzelf het dichtstbijzijnde vak,
+   dus 348,75 tot 11,25 wordt N, en de modulo vangt de overgang bij 360 op. */
+const DIRSKORT=["N","NNO","NO","ONO","O","OZO","ZO","ZZO","Z","ZZW","ZW","WZW","W","WNW","NW","NNW"];
+const kompasKort=d=>DIRSKORT[((Math.round(d/22.5)%16)+16)%16];
 const BFTBIJV=["windstil","zwak","zwak","matig","matig","vrij krachtig","krachtig","hard",
   "stormachtig","stormachtig","zeer stormachtig","zeer stormachtig","orkaanachtig"];
 const DAGEN=["zo","ma","di","wo","do","vr","za"];
@@ -660,6 +664,14 @@ async function load(lat,lon,label,stil){
     +"weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m"
     +"&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,"
     +"precipitation_sum,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant"
+    /* timezone=auto en niet een vaste zone: alle uren in deze app horen bij de
+       plaats die je bekijkt, dus een vaste Europe/Amsterdam zou in Tokio elk uur
+       acht plaatsen verschuiven.
+
+       models blijft weg, wat neerkomt op best_match. Open-Meteo kiest dan zelf het
+       fijnste model dat voor die plek bestaat: boven Nederland is dat KNMI Harmonie
+       op 2 km, elders ICON of GFS. Een vast model afdwingen zoals ecmwf_ifs04 ruilt
+       die 2 km in voor tientallen kilometers en maakt juist windstoten grover. */
     +"&forecast_days=7&timezone=auto&wind_speed_unit=kmh";
   const f=basis+"&minutely_15=precipitation&past_hours=24"
     +"&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,precipitation_probability,"
@@ -759,7 +771,11 @@ function meters(){
   const c=S.d.current,h=S.d.hourly,i=S.i0,day=S.d.daily,nu=c.time;
 
   const b=bft(c.wind_speed_10m);
-  set("wind",Math.round(c.wind_speed_10m)+"<s>km/u</s> "+pijl(c.wind_direction_10m));
+  /* De richting stond alleen als woord in de zin eronder. Als afkorting naast het
+     getal lees je hem in een oogopslag. kompasKort deelt de cirkel in zestien vakken
+     van 22,5 graden, dus 348,75 tot 11,25 is N. */
+  set("wind",Math.round(c.wind_speed_10m)+"<s>km/u</s> <s>"+kompasKort(c.wind_direction_10m)+"</s> "
+    +pijl(c.wind_direction_10m));
   zetTekst("windsub", b===0
     ? "Vrijwel windstil."
     : BFTNAAM[b].charAt(0).toUpperCase()+BFTNAAM[b].slice(1)+" uit het "+kompas(c.wind_direction_10m)+" ("+b+" Bft).");
@@ -779,19 +795,19 @@ function meters(){
   }
   const pnNog=piek("precipitation",0,true), pnAl=piek("precipitation",0);
   if(som<0.05){
-    zetTekst("precsub", "Vandaag blijft het droog.");
+    zetTekst("precsub", dagDeel().woord+" blijft het droog.");
   }else if(restMm>=0.1){
-    zetTekst("precsub", "Vandaag nog "+nl(restMm)+" mm verwacht"
+    zetTekst("precsub", dagDeel().woord+" nog "+nl(restMm)+" mm verwacht"
       +((pnNog&&pnNog.v>=0.1)?", het meeste rond "+hhmm(pnNog.t)+".":"."));
   }else{
-    zetTekst("precsub", "Vandaag viel er "+nl(som)+" mm"
+    zetTekst("precsub", "Er viel "+nl(som)+" mm"
       +((pnAl&&pnAl.v>=0.1)?", het meeste rond "+hhmm(pnAl.t)+".":" in totaal."));
   }
 
   set("pop",(h.precipitation_probability[i+1]??0)+"<s>%</s>");
   const pp=piek("precipitation_probability",0,true);
   zetTekst("popsub", (!pp||pp.v<20)
-    ? "Vandaag nauwelijks kans op neerslag."
+    ? dagDeel().woord+" nauwelijks kans op neerslag."
     : "De grootste kans is "+Math.round(pp.v)+"%, rond "+hhmm(pp.t)+".");
 
   set("hum",c.relative_humidity_2m+"<s>%</s>");
@@ -828,6 +844,21 @@ function meters(){
     : v<1000 ? "Slecht zicht, minder dan een kilometer."
     : v<4000 ? "Beperkt zicht."
     : v<10000 ? "Redelijk zicht." : "Goed zicht, meer dan tien kilometer.");
+}
+
+/** Het uur bij de plaats zelf, dus niet de klok van degene die kijkt. */
+function uurTerPlaatse(){
+  const t=S.d&&S.d.current&&S.d.current.time;
+  return t ? parseInt(String(t).slice(11,13),10) : new Date().getHours();
+}
+
+/* "Vandaag blijft het droog" om 23:53 klopt niet meer: er is nauwelijks vandaag
+   over. Vanaf de avond verschuift het woord mee met de klok van de plaats. */
+function dagDeel(){
+  const u=uurTerPlaatse();
+  if(u>=23||u<5) return {woord:"Vannacht", klein:"vannacht", laat:true};
+  if(u>=18)      return {woord:"Vanavond", klein:"vanavond", laat:true};
+  return {woord:"Vandaag", klein:"vandaag", laat:false};
 }
 
 /* ---------- briefingregel ---------- */
@@ -1217,8 +1248,13 @@ function dagen(){
     const dt=new Date(t+"T12:00:00");
     // Twee schrijfwijzen naast elkaar in de DOM, zodat de opmaak kiest welke past
     // en er niets opnieuw getekend hoeft te worden als het scherm draait.
-    const lang=i===0?"vandaag":i===1?"morgen":DAGENVOL[dt.getDay()]+" "+dt.getDate();
-    const kort=i===0?"vandaag":i===1?"morgen":DAGEN[dt.getDay()]+" "+dt.getDate();
+    /* dt komt uit day.time[i], een echte datum uit de API. getDate() rolt dus
+       vanzelf over maandgrenzen en schrikkeljaren; er wordt nergens een dag
+       opgeteld. Ook vandaag en morgen krijgen hun datum, zodat je in de tabel
+       ziet welke dag je aanklikt. */
+    const nr=dt.getDate();
+    const lang=i===0?"vandaag "+nr:i===1?"morgen "+nr:DAGENVOL[dt.getDay()]+" "+nr;
+    const kort=i===0?"vandaag "+nr:i===1?"morgen "+nr:DAGEN[dt.getDay()]+" "+nr;
     const nm='<span class="dlang">'+lang+'</span><span class="dkort">'+kort+'</span>';
     const l=day.temperature_2m_min[i],hh=day.temperature_2m_max[i];
     out+=`<div class="row day${S.dag===i?" on":""}" data-i="${i}" role="button" tabindex="0">

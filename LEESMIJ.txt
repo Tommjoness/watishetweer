@@ -1,7 +1,6 @@
-WIJZIGINGEN v58
+WIJZIGINGEN v59  (groep 1 van 3: data, API en utilities)
 
-  hoofdmap:   index.html  sw.js  run.js  kern.js  README.md
-              efemeride.json  (NIEUW, alleen voor npm test)
+  hoofdmap:   index.html  sw.js  run.js  kern.js  README.md  efemeride.json
   in api/:    waarschuwingen.js
 
 GITHUB
@@ -12,9 +11,4 @@ GITHUB
   5. Commit
 
 NA HET UITROLLEN
-  App helemaal afsluiten en opnieuw openen (cache v58).
-
-NIEUW
-  Nachtzicht toont nu per nacht welke planeten boven tien graden komen,
-  hoe hoog en rond welk tijdstip. Daaronder seeing en doorzicht uit de
-  bovenlucht. Ontbreken die gegevens, dan blijft de regel gewoon weg.
+  App helemaal afsluiten en opnieuw openen (cache v59).

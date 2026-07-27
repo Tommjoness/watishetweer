@@ -234,7 +234,7 @@ groep("Volledigheid van de teksten");
   const t=bak.brief.innerHTML.replace(/<[^>]+>/g,"");
   check("warmste moment in het verleden krijgt tijd en temperatuur",/warmst rond \d\d:\d\d met \d+ graden/.test(t),t);
   const nat=brief({pr:(u)=>u<12?0.4:0,pp:(u)=>u<12?70:5,som:2.4}).bak;
-  check("neerslag die al gevallen is heet 'viel'",/viel er/.test(nat.precsub.textContent),nat.precsub.textContent);
+  check("neerslag die al gevallen is heet 'viel'",/\bviel\b/.test(nat.precsub.textContent),nat.precsub.textContent);
   const komt=brief({pr:(u)=>u===20?1.5:0,pp:(u)=>u===20?70:5,som:1.5}).bak;
   check("neerslag die nog komt heet 'verwacht'",/nog .* verwacht/.test(komt.precsub.textContent),komt.precsub.textContent);
   const alle=["windsub","gustsub","precsub","popsub","humsub","pressub","cloudsub","vissub"].map(k=>bak[k].textContent);
@@ -1357,6 +1357,69 @@ groep("Planeten en bovenlucht");
 
   check("de bovenlucht wordt bij de API opgevraagd",
     /wind_speed_250hPa/.test(bronP) && /relative_humidity_700hPa/.test(bronP));
+}
+
+/* 10p. dagdeel, datums, windrichting en de modelkeuze */
+groep("Tijd, datum en richting");
+{
+  const fsT2=require("fs"), pathT2=require("path");
+  const bronT=fsT2.readFileSync(pathT2.join(__dirname,"index.html"),"utf8");
+
+  /* De tijdzone moet bij de plaats horen. Een vaste Europe/Amsterdam zou elk uur
+     in Tokio acht plaatsen verschuiven, en dat raakt ook het waarneemvenster. */
+  check("de tijdzone volgt de plaats",/timezone=auto/.test(bronT));
+  check("er wordt geen vaste tijdzone afgedwongen",!/timezone=Europe/.test(bronT));
+  /* Geen vast model: best_match kiest per plek het fijnste dat bestaat, boven
+     Nederland KNMI Harmonie op 2 km. Een globaal model afdwingen maakt juist de
+     windstoten grover. */
+  check("er wordt geen grof model afgedwongen",!/models=ecmwf_ifs04/.test(bronT));
+
+  /* Laat op de avond klopt "vandaag" niet meer. */
+  for(const [uur,verw] of [[9,"Vandaag"],[17,"Vandaag"],[18,"Vanavond"],[22,"Vanavond"],
+                           [23,"Vannacht"],[2,"Vannacht"],[5,"Vandaag"]]){
+    const {api:a,bak:b}=laadKern(390);
+    const d=bouw({pp:()=>4,pr:()=>0,som:0});
+    d.current.time="2026-07-22T"+String(uur).padStart(2,"0")+":00";
+    Object.assign(a.S,{d:d,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    a.meters();
+    check("om "+String(uur).padStart(2,"0")+":00 heet het "+verw,
+      a.dagDeel().woord===verw,a.dagDeel().woord);
+    if(uur===23) check("om 23:00 staat er niet meer vandaag in de neerslagtegel",
+      !/Vandaag/.test(b.precsub.textContent),b.precsub.textContent);
+  }
+
+  /* Datums achter vandaag en morgen, uit echte Date-objecten zodat maandgrenzen
+     en schrikkeljaren vanzelf goed gaan. */
+  {
+    const {api:a,bak:b}=laadKern(1280);
+    Object.assign(a.S,{d:bouw({}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    a.dagen();
+    const namen=[...b.days.innerHTML.matchAll(/class="dlang">([^<]*)</g)].map(m=>m[1]);
+    check("vandaag en morgen hebben een datum",
+      /^vandaag \d+$/.test(namen[0]||"")&&/^morgen \d+$/.test(namen[1]||""),namen.slice(0,2).join(" | "));
+    check("er wordt niet met een opgeteld dagnummer gerekend",
+      !/getDate\(\)\s*\+\s*1/.test(bronT));
+    // maandovergangen en schrikkeljaren via het echte Date-object
+    const scherp=[["2026-01-31",1],["2026-02-28",1],["2028-02-28",29],["2026-12-31",1],["2028-02-29",1]]
+      .filter(([datum,verw])=>{
+        const d2=new Date(datum+"T12:00:00Z"); d2.setUTCDate(d2.getUTCDate()+1);
+        return d2.getUTCDate()!==verw;
+      });
+    check("maandgrenzen en schrikkeljaren rollen goed door",scherp.length===0,JSON.stringify(scherp));
+  }
+
+  /* Windrichting: zestien vakken van 22,5 graden, ook bij negatieve of te grote invoer. */
+  {
+    const {api}=laadKern(390);
+    const paren=[[0,"N"],[11.24,"N"],[11.26,"NNO"],[22.5,"NNO"],[45,"NO"],[180,"Z"],
+                 [270,"W"],[337.5,"NNW"],[348.75,"N"],[359,"N"],[-10,"N"],[720,"N"]];
+    const mis=paren.filter(([g,v])=>api.kompasKort(g)!==v);
+    check("de windrichting klopt op elk vak",mis.length===0,
+      mis.map(([g,v])=>g+" gaf "+api.kompasKort(g)+" in plaats van "+v).join(", "));
+    let leeg=0; for(let g=-720;g<1080;g+=0.5) if(!api.kompasKort(g)) leeg++;
+    check("geen enkele invoer levert een lege richting",leeg===0,leeg+" keer leeg");
+    check("de richting staat naast de snelheid",/kompasKort\(c\.wind_direction_10m\)/.test(bronT));
+  }
 }
 
 console.log("\n"+goed+" geslaagd, "+fout+" mislukt");
