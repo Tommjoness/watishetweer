@@ -122,6 +122,7 @@ Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeel
 * seeing en doorzicht uit de bovenlucht op 250 en 700 hPa
 * teksten schuiven mee met de klok: vandaag, vanavond, vannacht
 * windrichting als afkorting naast de snelheid, en datums achter vandaag en morgen
+* de grafiek valt niet uit op een natte dag en breekt de lijn bij ontbrekende waarden
 * de KNMI-laag gebruikt de blauwe schaal, zodat de kleur niet omslaat bij de verwachting
 * elke kolom van de zevendagentabel past zijn inhoud, van 320 tot 430 px breed
 * elke serverfunctie is CommonJS, want ESM zonder "type": "module" faalt op Node 18 en 20

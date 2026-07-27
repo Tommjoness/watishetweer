@@ -656,11 +656,14 @@ groep("Tooltip");
      hij groen ook als de app iets heel anders deed, en dat is precies hoe de vorige
      versie ongemerkt 43 px buiten beeld kon lopen. */
   const bron=fsT.readFileSync(pathT.join(__dirname,"index.html"),"utf8");
-  const blok=(bron.match(/const bw=G\.M\?(\d+):(\d+);[\s\S]{0,400}?const by=/)||
-              bron.match(/const bw=G\.M\?(\d+):(\d+)[\s\S]{0,200}?by=G\.pt-6;/));
-  check("de tooltipbreedte staat in de code",!!blok,"regel niet gevonden");
-  const bwM=blok?parseFloat(blok[1]):0, bwD=blok?parseFloat(blok[2]):0;
-  const regel=blok?blok[0]:"";
+  /* Niet zoeken binnen een vast aantal tekens: een regel commentaar erbij schoof
+     de match eerder al buiten bereik en dan zakt de test op zichzelf. De hele
+     plaatsingsfunctie uitknippen is bestand tegen elke wijziging eromheen. */
+  const i0=bron.indexOf("const toon=ev=>{");
+  const regel=i0<0 ? "" : bron.slice(i0, bron.indexOf("let n=0;", i0));
+  const maten=regel.match(/const bw=G\.M\?(\d+):(\d+)/);
+  check("de tooltipbreedte staat in de code",!!maten,"regel niet gevonden");
+  const bwM=maten?parseFloat(maten[1]):0, bwD=maten?parseFloat(maten[2]):0;
 
   check("de doos slaat om op basis van de werkelijke ruimte, niet op een vast percentage",
     /G\.W\s*-\s*G\.pr/.test(regel) && !/G\.W\s*\*\s*0?\.\d+/.test(regel), regel.replace(/\s+/g," ").slice(0,120));
@@ -1419,6 +1422,83 @@ groep("Tijd, datum en richting");
     let leeg=0; for(let g=-720;g<1080;g+=0.5) if(!api.kompasKort(g)) leeg++;
     check("geen enkele invoer levert een lege richting",leeg===0,leeg+" keer leeg");
     check("de richting staat naast de snelheid",/kompasKort\(c\.wind_direction_10m\)/.test(bronT));
+  }
+}
+
+/* 10q. grafiek: lege waarden, staaflabels en gebruikshints */
+groep("Grafiek en hints");
+{
+  const fsG=require("fs"), pathG=require("path");
+  const bronG=fsG.readFileSync(pathG.join(__dirname,"index.html"),"utf8");
+
+  /* MM werd gebruikt maar nergens aangemaakt. Een verwijzing naar een niet-bestaande
+     naam werpt een fout, dus de hele grafiek viel uit zodra er een staaf getekend
+     werd. Alleen zichtbaar op een natte dag, en de testdata was droog. */
+  {
+    const {api,bak}=laadKern(1280);
+    Object.assign(api.S,{d:bouw({pr:(u)=>u%3===0?2.4:0,pp:(u)=>u%3===0?80:5,som:9}),
+      i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    let stuk=null;
+    try{ api.etmaal(14,24); }catch(e){ stuk=e.message; }
+    check("een natte dag laat de grafiek niet uitvallen",stuk===null,stuk);
+    check("er staan staven bij neerslag",/<rect/.test(bak.chart.innerHTML));
+    check("de hoeveelheid staat met eenheid bij de staaf",
+      /">[\d,]+ mm</.test(bak.chart.innerHTML),
+      (bak.chart.innerHTML.match(/font-size="9">[^<]*/)||["niets"])[0]);
+  }
+
+  /* Bij smalle kolommen hoort het label te wijken in plaats van te overlappen. */
+  for(const [naam,br,ber,verwacht] of [["desktop 24 uur",1280,24,true],
+                                       ["telefoon week",390,168,false]]){
+    const {api,bak}=laadKern(br);
+    Object.assign(api.S,{d:bouw({pr:(u)=>u%3===0?2.4:0,pp:(u)=>u%3===0?80:5,som:9}),
+      i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:ber});
+    api.etmaal(14,ber);
+    // alleen de staaflabels tellen: die zijn teal en staan in de mono-letter.
+    // De aslabels zijn ook mono, dus zonder de kleur erbij tel je die mee.
+    const heeft=/fill="var\(--teal\)"[\s\S]{0,80}?font-size="[89](\.5)?">[\d,]+/.test(bak.chart.innerHTML);
+    check(naam+": staaflabel "+(verwacht?"staat er":"wijkt"),heeft===verwacht,String(heeft));
+  }
+  check("de labelbreedte volgt uit de tekst, niet uit een vast getal",
+    /breed\(vol\)<=cw\*0?\.\d+/.test(bronG));
+
+  /* Een gat in de reeks werd stilzwijgend nul graden, want y(null) rekent null als
+     nul. De lijn dook dan naar de bodem en suggereerde een vorstnacht. */
+  {
+    const {api,bak}=laadKern(1280);
+    const d=bouw({}); [3,4,5,11,12].forEach(k=>{d.hourly.temperature_2m[14+k]=null;});
+    Object.assign(api.S,{d:d,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.etmaal(14,24);
+    const h=bak.chart.innerHTML;
+    check("de lijn breekt bij een gat in plaats van door te lopen",
+      (h.match(/<polyline/g)||[]).length===3,
+      (h.match(/<polyline/g)||[]).length+" lijnstukken");
+    check("er komt geen NaN in de tekening",!/NaN/.test(h));
+    const punten=(h.match(/points="([^"]*)"/g)||[]).join(" ");
+    check("geen enkel punt staat op een lege waarde",!/,\s*(null|undefined)/.test(punten));
+  }
+  {
+    // en een reeks zonder enkele waarde mag niet omvallen
+    const {api,bak}=laadKern(1280);
+    const d=bouw({}); d.hourly.temperature_2m=d.hourly.temperature_2m.map(()=>null);
+    Object.assign(api.S,{d:d,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    let stuk=null; try{ api.etmaal(14,24); }catch(e){ stuk=e.message; }
+    check("een reeks zonder cijfers geeft geen fout",stuk===null,stuk);
+    check("en tekent dan ook niets",bak.chart.innerHTML==="",bak.chart.innerHTML.slice(0,60));
+  }
+
+  /* Twee aanwijzingen, en de eerste past zich aan het apparaat aan. */
+  check("er staat een aanwijzing boven de zevendagentabel",
+    /Klik op een dag om die verwachting/.test(bronG));
+  check("er is een aanwijzing bij de grafiek",/id="charthint"/.test(bronG));
+  check("die tekst hangt af van aanraking, niet van de schermbreedte",
+    /ontouchstart|maxTouchPoints/.test(bronG) && /Houd je vinger/.test(bronG) && /Beweeg over de grafiek/.test(bronG));
+  {
+    const {api,bak}=laadKern(390);
+    Object.assign(api.S,{d:bouw({}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.etmaal(14,24);
+    check("de aanwijzing wordt ook echt gevuld",/details van een uur/.test(bak.charthint.textContent),
+      bak.charthint.textContent);
   }
 }
 

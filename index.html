@@ -178,6 +178,9 @@
   .mid{text-align:center}
   .radarbalk{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
   .radarbalk button{min-width:96px}
+  /* Aanwijzingen mogen er zijn zonder de aandacht te trekken: ze horen op te
+     vallen als je zoekt, en te verdwijnen zodra je de app kent. */
+  .hint{font-size:12px;color:var(--ink-45);margin:-2px 0 10px;font-style:italic}
   /* de zoomknoppen zijn tekens en geen woorden, dus die mogen smal blijven */
   .radarbalk button#rin,.radarbalk button#ruit{min-width:44px;font-family:var(--mono);font-size:17px}
   #radar{cursor:grab;touch-action:none}
@@ -394,6 +397,7 @@
         <button id="back" style="display:none">Terug naar nu</button>
       </span></h2>
     <div class="dagmod">
+      <p class="hint" id="charthint"></p>
       <svg id="chart" viewBox="0 0 900 296" width="100%" role="img"
            aria-label="Dag- en nachtverloop met temperatuur, spreiding en neerslagkans"></svg>
     </div>
@@ -417,6 +421,7 @@
     <svg id="nc" viewBox="0 0 900 60" width="100%" role="img" aria-label="Neerslag per kwartier"></svg>
 
     <h2><span>Zeven dagen</span></h2>
+    <p class="hint">Klik op een dag om die verwachting in de grafiek te laden.</p>
     <div id="days"></div>
 
     <h2><span>Nachtzicht</span><span class="r" id="moonlab"></span></h2>
@@ -949,11 +954,21 @@ function briefing(){
 
 /* ---------- etmaal: dagbalk plus temperatuurcurve op dezelfde schaal ---------- */
 function etmaal(start,n){
-  const h=S.d.hourly,T=[],A=[],P=[],L=[],W_=[],G=[],C=[],D=[],TI=[],ND=[],WD=[];
+  /* MM werd verderop gebruikt maar nergens aangemaakt. Een verwijzing naar een
+     niet-bestaande naam is geen undefined maar een fout, dus zodra er een staaf
+     getekend werd viel de hele grafiek uit. Alleen zichtbaar op een natte dag. */
+  const h=S.d.hourly,T=[],A=[],P=[],MM=[],L=[],W_=[],G=[],C=[],D=[],TI=[],ND=[],WD=[];
   for(let k=0;k<n;k++){
     const i=start+k;if(i>=h.time.length)break;
-    TI.push(h.time[i]);T.push(h.temperature_2m[i]);A.push(h.apparent_temperature[i]);
-    P.push(h.precipitation_probability[i]??0);L.push(h.time[i].slice(11,13));
+    /* Een ontbrekende waarde is null, en daar rekent niets mee: Math.min geeft NaN,
+       de lijn wordt een lege string en de labellus zet cijfers op NaN. Ze blijven
+       dus null en elke stap eronder slaat ze over, in plaats van er een nul van te
+       maken die een vorstnacht suggereert. */
+    TI.push(h.time[i]);
+    T.push(h.temperature_2m[i]==null?null:h.temperature_2m[i]);
+    A.push(h.apparent_temperature[i]==null?null:h.apparent_temperature[i]);
+    P.push(h.precipitation_probability[i]??0);MM.push(h.precipitation[i]??0);
+    L.push(h.time[i].slice(11,13));
     W_.push(h.wind_speed_10m[i]);G.push(h.wind_gusts_10m[i]);C.push(h.cloud_cover[i]);
     D.push(h.weather_code[i]);ND.push(h.is_day[i]);WD.push(h.wind_direction_10m[i]);
   }
@@ -965,7 +980,9 @@ function etmaal(start,n){
   const F={zon:M?10:10.5, nu:M?10:10, temp:M?12.5:15, uur:M?11:10.5, pre:M?10:9.5, grid:M?9.5:10.5};
   const stap = n<=24 ? 3 : n<=48 ? 6 : (M?18:12);
 
-  let mn=Math.min(...T),mx=Math.max(...T);
+  const Tgeldig=T.filter(v=>v!=null&&isFinite(v));
+  if(!Tgeldig.length){ el.innerHTML=""; return; }   // niets te tekenen zonder cijfers
+  let mn=Math.min(...Tgeldig),mx=Math.max(...Tgeldig);
   mn=Math.floor(mn-1);mx=Math.ceil(mx+1);
   const span=(mx-mn)||1;
   const cw=iw/(T.length-1);
@@ -1025,7 +1042,29 @@ function etmaal(start,n){
     if(P[i]>0){
       const hgt=ih*0.42*(P[i]/100);
       bars+=`<rect x="${x(i)-cw*0.3}" y="${pb-hgt}" width="${cw*0.6}" height="${hgt}" fill="${TEAL}" fill-opacity=".16"/>`;
+      /* De hoeveelheid bij de staaf. Een kans van 80 procent zegt niets over of
+         het een spatje of een plensbui wordt. Alleen tonen als er ruimte is: een
+         getal als 2,4 vraagt ongeveer 22 px en bij een week zijn de kolommen
+         maar een paar pixels breed. Dan valt het weg in plaats van te overlappen. */
+      const mm=MM[i];
+      /* Een kaal getal boven een staaf zegt niet wat het is. De eenheid erbij zodra
+         de kolom breed genoeg is; wordt het krapper dan alleen het getal, en bij een
+         week vervalt het helemaal in plaats van over de buren te lopen. */
+      if(mm!=null&&mm>=0.1&&hgt>=9){
+        /* De ruimte volgt uit de tekst zelf, niet uit een vast getal: "12,5 mm" is
+           breder dan "2 mm", en een kolom is bij 24 uur ruim en bij een week smal.
+           Past de eenheid niet, dan alleen het cijfer; past dat ook niet, dan niets. */
+        const fs = M?8.5:9, breed = t2 => t2.length*fs*0.6;
+        const vol = nl(mm)+" mm", kaal = nl(mm);
+        const tekst = breed(vol)<=cw*0.92 ? vol : breed(kaal)<=cw*0.92 ? kaal : null;
+        if(tekst)
+        bars+=`<text x="${x(i)}" y="${pb-hgt-3}" text-anchor="middle" fill="${TEAL}"
+          font-family="DM Mono,monospace" font-size="${fs}">${tekst}</text>`;
+      }
     }
+    /* y(null) rekent null als nul, dus een gat in de reeks trok de lijn naar nul
+       graden en suggereerde een vorstnacht. Een gat hoort de lijn te onderbreken. */
+    if(v==null||!isFinite(v)){ pts.push(null); return; }
     pts.push(x(i)+","+y(v));
     // bij een week loopt de as per dag, daarbinnen per paar uur
     const toonAs = n>48 ? L[i]==="12" : (i%stap===0);
@@ -1040,12 +1079,18 @@ function etmaal(start,n){
      het warmste moment van de dag geen cijfer krijgt en een lager punt wel.
      Daarom eerst de echte pieken en dalen, dan het hoogste en laagste punt van
      de reeks, en pas daarna de vaste stap als opvulling. Wat niet past valt weg. */
+  /* Een gat in de reeks: Open-Meteo geeft null zodra een model niet ver genoeg
+     reikt. Zonder afvangen wordt elk verschil met dat gat NaN, en dan is elke
+     vergelijking false: geen piek, geen dal, geen enkel label. Rond een gat
+     hoort simpelweg geen piek gemarkeerd te worden. */
+  const geldig=k=>k>=0&&k<T.length&&T[k]!=null&&isFinite(T[k]);
   const soort=new Array(T.length).fill(0);            // 1 is piek, -1 is dal
   /* Zonder drempel telt een rimpeling van een tiende graad al als piek. Op een
      vlakke nacht leverde dat vijf keer 19 graden achter elkaar op. Een top hoort
      zich minimaal een halve graad van zijn buren te onderscheiden. */
   const PROMINENT=0.5;
   for(let i=1;i<T.length-1;i++){
+    if(!geldig(i-1)||!geldig(i)||!geldig(i+1)) continue;
     if(T[i]>=T[i-1]&&T[i]>T[i+1]&&T[i]-Math.min(T[i-1],T[i+1])>=PROMINENT) soort[i]=1;
     if(T[i]<=T[i-1]&&T[i]<T[i+1]&&Math.max(T[i-1],T[i+1])-T[i]>=PROMINENT) soort[i]=-1;
   }
@@ -1111,7 +1156,14 @@ function etmaal(start,n){
   svg.setAttribute("viewBox","0 0 "+W+" "+H);
   svg.innerHTML=
    `${balk}${gitter}${bars}
-    <polyline points="${pts.join(" ")}" fill="none" stroke="${INK}" stroke-width="${M?1.2:1.4}" stroke-linejoin="round"/>
+    ${(()=>{ // de reeks opknippen bij elk gat en elk stuk apart tekenen
+      const stukken=[[]];
+      for(const p of pts){ if(p===null){ if(stukken[stukken.length-1].length) stukken.push([]); }
+                           else stukken[stukken.length-1].push(p); }
+      return stukken.filter(st=>st.length>1).map(st=>
+        `<polyline points="${st.join(" ")}" fill="none" stroke="${INK}" stroke-width="${M?1.2:1.4}" stroke-linejoin="round"/>`
+      ).join("");
+    })()}
     ${dots}${labs}${ticks}${nu}
     <g id="scrub" style="display:none"></g>
     <rect id="hit" x="${pl-cw/2}" y="${pt-14}" width="${iw+cw}" height="${ih+20}" fill="transparent" style="cursor:crosshair"/>`;
@@ -1120,7 +1172,7 @@ function etmaal(start,n){
     "Verloop van "+TI[0].slice(11,16)+" tot "+TI[TI.length-1].slice(11,16)
     +", temperatuur tussen "+mn+" en "+mx+" graden, hoogste neerslagkans "+Math.max.apply(null,P)+" procent.");
   S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,M:M};
-  scrubKoppel();
+  scrubKoppel(); chartHint();
 
   const dg=S.dag;
   document.getElementById("chartlab").textContent = dg==null ? (S.bereik===24?"De komende 24 uur":S.bereik===48?"De komende 48 uur":"De komende zeven dagen")
@@ -1143,11 +1195,24 @@ function daglengte(i){
   return Math.floor(l/60)+" uur en "+(l%60)+" minuten daglicht";
 }
 
+/* Een aanraakscherm vraagt om andere woorden dan een muis: "houd je vinger" slaat
+   nergens op met een muis, en andersom. Het gaat om de aanwezigheid van aanraking,
+   niet om de schermbreedte, want een laptop met touch kan allebei. */
+function chartHint(){
+  const el2=document.getElementById("charthint");
+  if(!el2) return;
+  const raak=(typeof window!=="undefined")&&(("ontouchstart" in window)||navigator.maxTouchPoints>0);
+  el2.textContent=raak
+    ? "Houd je vinger op de grafiek voor de details van een uur."
+    : "Beweeg over de grafiek voor de details van een uur.";
+}
+
 function scrubKoppel(){
   const svg=document.getElementById("chart"),hit=document.getElementById("hit"),g=document.getElementById("scrub");
   if(!hit) return;
   const toon=ev=>{
     const r=svg.getBoundingClientRect(),sc=(S.geo.W||900)/r.width;
+    if(!S.geo) return;
     const G=S.geo;
     let i=Math.round(((ev.clientX-r.left)*sc-G.pl)/G.cw);
     i=clamp(i,0,G.n-1);
@@ -1159,7 +1224,17 @@ function scrubKoppel(){
     const bw=G.M?200:224;
     let bx = (X+10+bw <= G.W-G.pr) ? X+10 : X-bw-10;
     bx = clamp(bx, 2, G.W-bw-2);
-    const by=G.pt-6;
+    /* Op een aanraakscherm zit je vinger op het punt dat je aanwijst, en de doos
+       stond altijd bovenaan. Raak je de bovenkant van de grafiek aan, dan dek je
+       precies af wat je wilt lezen. Bij aanraking gaat de doos daarom naar de
+       andere helft dan waar je vinger zit. Met een muis blijft hij bovenaan,
+       want een muisaanwijzer dekt niets af. */
+    const bh=28+6*17+10;
+    const raak = ev.pointerType && ev.pointerType!=="mouse";
+    const yv = ev.clientY!=null ? (ev.clientY-r.top)*sc : Y;
+    let by = raak ? (yv < G.pt+G.ih/2 ? G.pt+G.ih-bh+6 : G.pt-6) : G.pt-6;
+    // en hoe dan ook binnen de tekening blijven, ook als de doos hoger is dan het vak
+    by = clamp(by, 2, Math.max(2, G.H0-bh-2));
     let n=0;
     const rij=(l,v,c)=>{n++;const yy=by+22+n*17;
       return `<text x="${bx+15}" y="${yy}" fill="${INK45}" font-family="Instrument Sans,sans-serif" font-size="11">${l}</text>`

@@ -1,4 +1,4 @@
-WIJZIGINGEN v59  (groep 1 van 3: data, API en utilities)
+WIJZIGINGEN v60  (groep 2 van 3: grafiek en tooltip)
 
   hoofdmap:   index.html  sw.js  run.js  kern.js  README.md  efemeride.json
   in api/:    waarschuwingen.js
@@ -11,4 +11,4 @@ GITHUB
   5. Commit
 
 NA HET UITROLLEN
-  App helemaal afsluiten en opnieuw openen (cache v59).
+  App helemaal afsluiten en opnieuw openen (cache v60).
