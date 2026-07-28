@@ -49,6 +49,16 @@
     --accent-rain:#3B8FA3;
     --accent-night:#142C4C;
     --accent-sun:#F2CE63;
+    /* v68: zeer lichte oppervlaktetinten voor een beperkt aantal desktop-
+       modules (zie de dashboardlaag onderaan de CSS). Geen eigen thema-
+       overrides: dit zijn transparante rgba-lagen op de eigen accentkleur,
+       dus ze passen zich vanzelf aan bij elk thema zonder er zelf op te
+       hoeven reageren. */
+    --surface-info:rgba(8,124,131,0.055);
+    --surface-rain:rgba(59,143,163,0.065);
+    --surface-night:rgba(20,44,76,0.055);
+    --surface-sun:rgba(242,206,99,0.11);
+    --surface-active:rgba(165,29,61,0.045);
     --serif:'Bodoni Moda',Georgia,'Times New Roman',serif;
     --sans:'Instrument Sans',ui-sans-serif,system-ui,-apple-system,sans-serif;
     --mono:'DM Mono',ui-monospace,'SFMono-Regular',monospace;
@@ -418,6 +428,117 @@
     .dwind{display:none}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+  /* ========== v68: dashboardlaag ==========
+     Alles hierboven (inclusief de mobiele media query's tot 900px) is
+     ongewijzigd: de huidige mobiele ervaring blijft exact zoals hij was.
+     Deze laag voegt alleen tabletgedrag (900-1099px) en een echt desktop-
+     dashboard (vanaf 1100px) toe, via dezelfde platte DOM: dashrow is een
+     minimale wrapper die tot 1100px display:contents is (dus functioneel
+     onzichtbaar, geen enkel effect op mobiel/tablet) en pas vanaf 1100px een
+     grid wordt. Geen enkel element is verplaatst, verdubbeld of van id
+     veranderd; er is precies één #chart, één #radar, één #days, één #nights,
+     zoals daarvoor. */
+  .dashrow{display:contents}
+
+  /* v68-herstel, punt 3: modulekleur werkt nu op elke breedte, niet meer
+     uitsluitend binnen de desktop-mediaquery. Dit zijn basisregels (geen
+     mediaquery): een dunne (2px) bovenlijn plus een zeer lichte tint op de
+     bestaande, altijd aanwezige containers zelf (.radar, #nights, #aq, de
+     UV- en zonurentegel), zonder nieuwe padding of marge toe te voegen. De
+     mobiele full-bleed-truc van #radar/#chart (negatieve marge op het
+     canvas/svg-element zelf, binnen de mobiele mediaquery hierboven) wordt
+     hierdoor niet geraakt: die zit op een kind-element, niet op deze
+     achtergrond. Desktop-specifieke padding/grid staat verderop, alleen
+     binnen de 1100px-mediaquery. */
+  .radar{border-top:2px solid var(--accent-rain);background:var(--surface-rain)}
+  #nights{border-top:2px solid var(--accent-night);background:var(--surface-night)}
+  #aq{background:var(--surface-info);border-top:2px solid var(--accent-info)}
+  .stat.breed{border-top:2px solid var(--accent-sun)}
+  .stat.zon{border-top:2px solid var(--accent-sun)}
+
+  /* tablet 900-1099px: dezelfde tweekoloms metriektegels als mobiel al had
+     onder 900px, in plaats van de standaard vier kolommen. Header, grafiek/
+     radar en dagen/nachtzicht blijven in dit bereik vanzelf gestapeld, want
+     de desktopgrids hieronder activeren pas vanaf 1100px. */
+  @media(min-width:900px) and (max-width:1099px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .stat:nth-child(4n){border-right:1px solid var(--rule);padding-right:22px}
+    .stat:nth-child(2n){border-right:none;padding-right:0}
+    .stat:not(:nth-child(4n+1)){padding-left:0}
+    .stat:nth-child(2n){padding-left:22px}
+    .stat.breed{grid-column:1 / -1}
+  }
+
+  @media(min-width:1100px){
+    .sheet{max-width:min(1440px,100%);padding:48px 56px 40px}
+
+    .dashrow-hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);gap:var(--s4);align-items:start}
+    .dashrow-hero .stats{margin-top:0;border-top:none}
+    /* v68-herstel, punt 1: de metriekentabel rechts van de hero kreeg eerder
+       gewoon de standaard vier kolommen, in een kolom die maar ~45% van het
+       dashboard breed is. Hier expliciet terug naar het al beproefde
+       tweekoloms patroon (hetzelfde als de tabletlaag hierboven), met
+       minmax(0,1fr) en min-width:0 op elk blok zodat niets een tegel breder
+       dwingt dan zijn kolom, ook niet bij lange labels/toelichtingen. */
+    .dashrow-hero .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .dashrow-hero .stat{min-width:0}
+    .dashrow-hero .stat:nth-child(4n){border-right:1px solid var(--rule);padding-right:22px}
+    .dashrow-hero .stat:nth-child(2n){border-right:none;padding-right:0}
+    .dashrow-hero .stat:not(:nth-child(4n+1)){padding-left:0}
+    .dashrow-hero .stat:nth-child(2n){padding-left:22px}
+    .dashrow-hero .stat.breed{grid-column:1 / -1}
+
+    .dashrow-chart{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,0.85fr);gap:var(--s4);align-items:start}
+    /* v68-herstel, punt 2: Zeven dagen en Nachtzicht blijven bewust gestapeld,
+       op alle breedtes, ook boven 1360px. .night's laatste kolom is
+       standaard max-content en de venstertekst + maantijden daarin lopen via
+       de algemene .nmeta-regel op white-space:nowrap: die kolom meet zich dus
+       altijd op de volledige, ongewrapte tekstbreedte van de langste
+       zichtvenstertekst (bijvoorbeeld "Geen geschikt zichtvenster: te
+       bewolkt en te veel maanlicht"). In een halve dashboardkolom van
+       ruwweg 600-650px is dat niet veilig na te bootsen zonder de interne
+       Nachtzicht-rij ingrijpend te herbouwen (venstertekst en maantijden in
+       hun eigen, apart wrappende deelkolommen zetten) - iets wat met deze
+       scope en zonder visuele controle in een echte browser niet
+       verantwoord te verifiëren is. Zeven dagen zelf zou wel veilig
+       zij-aan-zij kunnen (de risicovolle kolom daar heeft al een eigen
+       ellipsis-afhandeling), maar dat apart naast Nachtzicht laten staan zou
+       een asymmetrisch, verwarrend dashboard opleveren. Daarom blijven beide
+       samen gestapeld: leesbaarheid en robuustheid gaan voor het maximaal
+       vullen van de breedte. */
+
+    /* typografie iets ruimer op een groter scherm, met clamp() zodat 1100px
+       en 1920px niet hetzelfde aanvoelen zonder dat er een extra breakpoint
+       nodig is; de mobiele schaal (onder 900px) blijft volledig ongemoeid */
+    #place{font-size:clamp(44px,4vw,58px)}
+    .mast h1{font-size:16px}
+    #t{font-size:clamp(96px,9vw,124px)}
+    .sval{font-size:clamp(23px,1.7vw,30px)}
+    .eyebrow{font-size:12px}
+
+    /* bediening: minder krap, met een bruikbare hoogte van rond de 40px */
+    input[type=text]{width:240px;padding:10px 14px;font-size:15px;min-height:40px;box-sizing:border-box}
+    .tools button{padding:10px 16px;font-size:11px;min-height:40px}
+
+    /* de radar blijft zijn eigen intrinsieke beeldverhouding houden (640:470,
+       ongewijzigd), maar krijgt op desktop een bovengrens zodat hij in een
+       brede rechterkolom niet buitensporig hoog wordt */
+    .radar{max-width:100%;padding:var(--s2) var(--s2) 4px}
+    #radar{aspect-ratio:640/470;width:auto;height:auto;max-width:100%;max-height:540px;margin:0 auto;display:block}
+
+    /* de kleur zelf (border-top/background) staat nu in de basisregels
+       hierboven, geldig op elke breedte; hier alleen nog de desktop-only
+       padding die bij de bredere kolomindeling hoort */
+    #nights{padding:var(--s2) var(--s2) 4px}
+    #aq{padding:var(--s2)}
+  }
+
+  @media(min-width:1500px){
+    /* dashboardbreedte groeit niet mee met het scherm; alleen de buitenmarge
+       krijgt iets meer lucht, zoals gevraagd voor grote schermen */
+    .sheet{padding-left:64px;padding-right:64px}
+  }
 </style>
 </head>
 <body>
@@ -451,6 +572,11 @@
     <p class="brief" id="brief"></p>
     <div id="waarschuwingen"></div>
 
+    <!-- v68: dashrow is een minimale layoutwrapper (display:contents tot 1100px,
+         dus op mobiel/tablet functioneel onzichtbaar en zonder enig effect op de
+         DOM-volgorde). Vanaf 1100px wordt hij een tweekoloms grid. Geen van de
+         kinderen is verplaatst, verdubbeld of van id veranderd. -->
+    <div class="dashrow dashrow-hero">
     <div class="hero">
       <div class="tempblok">
         <span id="t" class="num">--</span><span class="deg">°C</span>
@@ -473,7 +599,10 @@
       <div class="stat"><div class="eyebrow">Zicht</div><div class="sval" id="vis">--</div><div class="ssub" id="vissub">&nbsp;</div></div>
       <div class="stat breed"><div class="eyebrow">UV-index</div><div class="sval" id="uv">--</div><div class="ssub" id="uvsub">&nbsp;</div></div>
     </div>
+    </div>
 
+    <div class="dashrow dashrow-chart">
+    <div class="dashcol">
     <h2><span id="chartlab">Het etmaal</span>
       <span class="r">
         <span id="suntimes"></span>
@@ -484,7 +613,9 @@
       <svg id="chart" viewBox="0 0 900 296" width="100%" role="img"
            aria-label="Dag- en nachtverloop met temperatuur, spreiding en neerslagkans"></svg>
     </div>
+    </div>
 
+    <div class="dashcol">
     <h2><span>Neerslagradar</span></h2>
     <div class="radar">
       <canvas id="radar" width="640" height="470" aria-label="Neerslagradar rond je locatie"></canvas>
@@ -498,17 +629,25 @@
       </div>
       <div class="ssub mid" id="radarmelding"></div>
     </div>
+    </div>
+    </div>
 
     <h2><span>Neerslag komende twee uur</span></h2>
     <div id="nctext"></div>
     <svg id="nc" viewBox="0 0 900 60" width="100%" role="img" aria-label="Neerslag per kwartier"></svg>
 
+    <div class="dashrow dashrow-days">
+    <div class="dashcol">
     <h2><span>Zeven dagen</span></h2>
     <p class="hint">Klik op een dag om die verwachting in de grafiek te laden.</p>
     <div id="days"></div>
+    </div>
 
+    <div class="dashcol">
     <h2><span>Nachtzicht</span><span class="r" id="moonlab"></span></h2>
     <div id="nights"></div>
+    </div>
+    </div>
 
 
     <h2><span>Luchtkwaliteit en pollen</span></h2>
@@ -1801,12 +1940,12 @@ function zonurenTegel(){
   const idx=day&&day.time?day.time.indexOf(plaatsVandaag()):-1;
   const sec=idx>=0&&day.sunshine_duration?day.sunshine_duration[idx]:null;
   if(sec==null||!Number.isFinite(sec)||sec<0){
-    return `<div class="stat"><div class="eyebrow">Zonuren</div>
+    return `<div class="stat zon"><div class="eyebrow">Zonuren</div>
       <div class="sval">–</div><div class="ssub">Zonuren niet beschikbaar</div></div>`;
   }
   const uur=sec/3600;
   const woord = uur<2 ? "Weinig zon vandaag" : uur<=7 ? "Een aantal zonuren vandaag" : "Vandaag redelijk wat zon";
-  return `<div class="stat"><div class="eyebrow">Zonuren</div>
+  return `<div class="stat zon"><div class="eyebrow">Zonuren</div>
       <div class="sval">${nl(uur)}<s>uur</s></div><div class="ssub">${woord}</div></div>`;
 }
 

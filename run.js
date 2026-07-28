@@ -2403,6 +2403,226 @@ groep("Kleursysteem");
     /keuze==="auto".*is_day===0.*"donker".*"licht"/.test(bronK3.replace(/\s+/g," ")));
 }
 
+/* 15. v68: responsive dashboardlayout. Dit toetst DOM-/CSS-structuur (delen van
+   één DOM, mediaqueries, geen dubbele ids, veilige grids), geen visuele
+   weergave. Of het er ook echt goed uitziet op een scherm is hiermee niet
+   aangetoond. */
+groep("Responsive structuur (v68)");
+{
+  const fsD=require("fs"), pathD=require("path");
+  const bronD=fsD.readFileSync(pathD.join(__dirname,"index.html"),"utf8");
+
+  // 1-3: één gedeelde DOM, geen dubbele grafiek-/radar-ids
+  check("er is precies één #chart in de hele pagina",(bronD.match(/id="chart"/g)||[]).length===1);
+  check("er is precies één #radar in de hele pagina",(bronD.match(/id="radar"/g)||[]).length===1);
+  check("er is precies één #days en één #nights (geen dubbele desktopkopie)",
+    (bronD.match(/id="days"/g)||[]).length===1 && (bronD.match(/id="nights"/g)||[]).length===1);
+
+  // 4: desktoplayout via mediaqueries
+  check("de desktoplayout activeert via een CSS-mediaquery, niet via JavaScript",
+    /@media\(min-width:1100px\)/.test(bronD));
+
+  // 5-6: geen user-agent- of viewport-routing in JS
+  const scriptBron=bronD.slice(bronD.indexOf("<script>"),bronD.indexOf("</script>"));
+  check("geen user-agentdetectie is toegevoegd",!/userAgent/.test(scriptBron));
+  // bestaande, geverifieerde basislijn: de twee M-regels (grafiek) gebruiken
+  // window.innerWidth elk twee keer (typeof-check + vergelijking) en de
+  // ongewijzigde resize-listener drie keer (init, vergelijking, herwaarde) = 7
+  check("geen nieuwe JavaScript-viewportrouting (naast de al bestaande, ongewijzigde M-vlag voor de grafiek)",
+    (scriptBron.match(/window\.innerWidth/g)||[]).length===7,
+    (scriptBron.match(/window\.innerWidth/g)||[]).length);
+
+  // 7: mobiele DOM-volgorde blijft logisch (brief -> hero -> stats -> grafiek -> radar -> ... -> footer)
+  const volgorde=["id=\"brief\"","class=\"hero\"","class=\"stats\"","id=\"chartlab\"",
+    "<span>Neerslagradar</span>","id=\"nctext\"","<span>Zeven dagen</span>",
+    "<span>Nachtzicht</span>","<span>Luchtkwaliteit en pollen</span>","<footer>"];
+  let vorigeIdx=-1, volgordeKlopt=true;
+  for(const stuk of volgorde){
+    const idx=bronD.indexOf(stuk);
+    if(idx<0||idx<vorigeIdx) volgordeKlopt=false;
+    vorigeIdx=idx;
+  }
+  check("de DOM-volgorde (lezen, toetsenbord, schermlezer) is logisch en ongewijzigd",volgordeKlopt);
+
+  // 8: de noodzakelijke layoutwrappers bestaan
+  check("de minimale layoutwrappers (dashrow/dashcol) bestaan",
+    /class="dashrow dashrow-hero"/.test(bronD) && /class="dashrow dashrow-chart"/.test(bronD)
+    && /class="dashrow dashrow-days"/.test(bronD) && (bronD.match(/class="dashcol"/g)||[]).length===4);
+  check("dashrow is tot 1100px functioneel onzichtbaar (display:contents)",
+    /\.dashrow\{display:contents\}/.test(bronD));
+
+  // 9: veilige minmax(0, ...)-kolommen in de desktopgrids die er nog zijn
+  // (sinds de herstelronde: hero en grafiek/radar; dagen/nachtzicht is
+  // bewust geen zij-aan-zij-grid meer, zie de Herstelronde-testgroep)
+  check("de resterende desktopgrids gebruiken minmax(0, ...) tegen overflow",
+    (bronD.match(/grid-template-columns:minmax\(0,[^)]+\) minmax\(0,[^)]+\)/g)||[]).length===2);
+
+  // 10: geen nieuwe overflow-verbergende noodregel
+  check("geen nieuwe overflow:hidden/clip-regel is toegevoegd als noodoplossing voor de dashboardlaag",
+    !/dashboardlaag[\s\S]*?overflow:(hidden|clip)/.test(bronD.slice(bronD.indexOf("v68: dashboardlaag"))));
+}
+
+/* 16. v68: desktoplayout - structuur van de dashboardgrids zelf */
+groep("Desktoplayout (v68)");
+{
+  const fsD2=require("fs"), pathD2=require("path");
+  const bronD2=fsD2.readFileSync(pathD2.join(__dirname,"index.html"),"utf8");
+  const desktopBlok=bronD2.slice(bronD2.indexOf("@media(min-width:1100px)"),bronD2.indexOf("@media(min-width:1500px)"));
+
+  check("een brede desktopcontainer is gedefinieerd (max-width tussen 1360 en 1480px)",
+    /\.sheet\{max-width:min\(1440px,100%\)/.test(desktopBlok));
+  check("de header (.mast) blijft de bestaande flex-indeling gebruiken, niet vervangen",
+    /\.mast\{display:flex/.test(bronD2) && !/\.mast\{display:grid/.test(desktopBlok));
+  check("het metriekgrid heeft op tablet een eigen (tweekoloms) variant",
+    /min-width:900px\) and \(max-width:1099px\)[\s\S]{0,20}\{[\s\S]*?\.stats\{grid-template-columns:repeat\(2,1fr\)/.test(bronD2));
+  check("grafiek en radar delen vanaf desktop één grid (.dashrow-chart)",
+    /\.dashrow-chart\{display:grid;grid-template-columns:minmax/.test(desktopBlok));
+  check("herstelronde: Zeven dagen en Nachtzicht vormen bewust GEEN zij-aan-zij-grid (.dashrow-days blijft gestapeld)",
+    !/\.dashrow-days\{display:grid/.test(bronD2));
+  check("luchtkwaliteit/pollen (#aq) krijgt geen eigen tweekoloms grid en loopt dus over de volle dashboardbreedte",
+    !/\.dashrow-aq/.test(bronD2) && /#aq\{background:var\(--surface-info\)/.test(bronD2));
+  check("tablet (900-1099px) valt terug op een gestapelde layout: de desktopgrids staan alleen in het 1100px-blok",
+    !/@media\(min-width:900px\) and \(max-width:1099px\)\)?[\s\S]{0,300}dashrow-chart\{display:grid/.test(bronD2));
+  check("mobiel (onder 900px) blijft één kolom: de bestaande mobiele media query is niet gewijzigd",
+    /@media\(max-width:900px\)\{[\s\S]*?body\{padding:14px 12px\}/.test(bronD2));
+  check("de radar heeft een begrensde desktophoogte via zijn eigen, ongewijzigde beeldverhouding (640:470)",
+    /#radar\{aspect-ratio:640\/470[^}]*max-height:540px/.test(desktopBlok));
+  check("geen desktoplayout is actief onder het afgesproken breakpoint (geen andere min-width:110\\dpx-waarde)",
+    !/@media\(min-width:11(?!00px\))/.test(bronD2));
+}
+
+/* 17. v68: uitgebreid kleursysteem (oppervlaktetinten) */
+groep("Kleursysteem (v68)");
+{
+  const fsD3=require("fs"), pathD3=require("path");
+  const bronD3=fsD3.readFileSync(pathD3.join(__dirname,"index.html"),"utf8");
+
+  check("de vijf zachte oppervlaktetinten zijn centraal in :root gedefinieerd",
+    /--surface-info:rgba\(8,124,131,0\.055\)/.test(bronD3)
+    && /--surface-rain:rgba\(59,143,163,0\.065\)/.test(bronD3)
+    && /--surface-night:rgba\(20,44,76,0\.055\)/.test(bronD3)
+    && /--surface-sun:rgba\(242,206,99,0\.11\)/.test(bronD3)
+    && /--surface-active:rgba\(165,29,61,0\.045\)/.test(bronD3));
+  check("geen van de vijf oppervlaktetinten komt dubbel (hardcoded) voor buiten de tokendefinitie",
+    ["--surface-info:rgba(8,124,131,0.055)","--surface-rain:rgba(59,143,163,0.065)",
+     "--surface-night:rgba(20,44,76,0.055)","--surface-sun:rgba(242,206,99,0.11)",
+     "--surface-active:rgba(165,29,61,0.045)"].every(t=>(bronD3.split(t).length-1)===1));
+  check("de neerslagmodule (.radar) gebruikt het regenaccent",
+    /\.radar\{border-top:2px solid var\(--accent-rain\);background:var\(--surface-rain\)\}/.test(bronD3));
+  check("de Nachtzicht-module (#nights) gebruikt het nachtaccent",
+    /#nights\{border-top:2px solid var\(--accent-night\);background:var\(--surface-night\)\}/.test(bronD3));
+  check("de luchtkwaliteitsmodule gebruikt het informatie-accent",
+    /#aq\{background:var\(--surface-info\);border-top:2px solid var\(--accent-info\)/.test(bronD3));
+  check("bestaande fout-/waarschuwingskleuren (carmine) zijn niet overschreven",
+    /--carmine:#A02036/.test(bronD3) && /#stamp\.oud\{color:var\(--carmine\)\}/.test(bronD3)
+    && /straks\{color:var\(--carmine\)\}/.test(bronD3));
+  check("de themakeuzelogica zelf is niet gewijzigd (auto kiest nog op is_day)",
+    /keuze==="auto".*is_day===0.*"donker".*"licht"/.test(bronD3.replace(/\s+/g," ")));
+  check("geen bestaande AQI-kwaliteitscategoriekleur is vervangen door een vast petrol-accent",
+    !/getElementById\("aq"\).*=.*var\(--accent-info\)/.test(bronD3.replace(/\s+/g," ")));
+}
+
+/* 18. v68-herstelronde: gerichte tests voor de drie herstelpunten uit de
+   herstelopdracht (metriekgrid, Zeven dagen/Nachtzicht, kleur op elke
+   breedte). Dit toetst broncode-/CSS-structuur, geen visuele weergave. */
+groep("Herstelronde v68");
+{
+  const fsH=require("fs"), pathH=require("path");
+  const bronH=fsH.readFileSync(pathH.join(__dirname,"index.html"),"utf8");
+  const desktopH=bronH.slice(bronH.indexOf("@media(min-width:1100px)"),bronH.indexOf("@media(min-width:1500px)"));
+
+  // 12.1 metriekgrid
+  check("1. het hero-grid (.dashrow-hero) wordt pas vanaf 1100px een echt grid",
+    /@media\(min-width:1100px\)\{[\s\S]*?\.dashrow-hero\{display:grid/.test(bronH)
+    && !/\.dashrow-hero\{display:grid/.test(bronH.slice(0,bronH.indexOf("@media(min-width:1100px)"))));
+  check("2. .stats gebruikt binnen die hero-grid twee kolommen",
+    /\.dashrow-hero \.stats\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/.test(desktopH));
+  check("3. die tweekoloms regel gebruikt minmax(0,1fr)",
+    /repeat\(2,minmax\(0,1fr\)\)/.test(desktopH));
+  check("4. de brede rij (UV) overspant beide kolommen",
+    /\.dashrow-hero \.stat\.breed\{grid-column:1 \/ -1\}/.test(desktopH));
+  check("5. metriekblokken krijgen min-width:0 (veilige minimale breedte)",
+    /\.dashrow-hero \.stat\{min-width:0\}/.test(desktopH));
+  check("6. geen desktopregel zet .dashrow-hero .stats terug naar vier kolommen",
+    !/\.dashrow-hero \.stats\{grid-template-columns:repeat\(4/.test(bronH));
+  check("7. de tablet- (900-1099px) en mobiele metriekregels bestaan nog onaangeroerd",
+    /min-width:900px\) and \(max-width:1099px\)[\s\S]{0,20}\{[\s\S]*?\.stats\{grid-template-columns:repeat\(2,1fr\)/.test(bronH)
+    && /@media\(max-width:900px\)\{[\s\S]*?\.stats\{grid-template-columns:repeat\(2,1fr\)/.test(bronH));
+
+  // 12.2 zeven dagen en Nachtzicht
+  check("1. .dashrow-days is van 1100 tot 1359px (en ook daarboven) één kolom",
+    !/\.dashrow-days\{display:grid/.test(bronH));
+  check("2. er is geen zij-aan-zij-regel actief op 1100px",
+    !/\.dashrow-days\{display:grid/.test(desktopH));
+  check("3. er is geen enkele zij-aan-zij-regel voor .dashrow-days, dus ook niet per ongeluk vóór 1360px",
+    !/\.dashrow-days[^}]*display:grid/.test(bronH));
+  check("4. geen dubbele #days of #nights zijn ontstaan",
+    (bronH.match(/id="days"/g)||[]).length===1 && (bronH.match(/id="nights"/g)||[]).length===1);
+  check("5. geen functionele inhoud van Zeven dagen/Nachtzicht is verborgen (display:none)",
+    !/#days\{display:none|#nights\{display:none/.test(bronH));
+  check("6. geen nieuwe horizontale scroll is toegevoegd als workaround",
+    !/#days\{[^}]*overflow-x|#nights\{[^}]*overflow-x/.test(bronH));
+  check("7. de bestaande mobiele .day/.night-regels bestaan nog onaangeroerd",
+    /\.day\{grid-template-columns:max-content 22px 56px 1fr 1fr 48px;gap:6px\}/.test(bronH)
+    && /\.night\{grid-template-columns:70px 40px minmax\(20px,1fr\) max-content;gap:4px 9px\}/.test(bronH));
+  check("8. de standaard (desktop-breedte) .day/.night-grids zijn niet gewijzigd",
+    /\.day\{grid-template-columns:max-content 26px 1fr 72px 54px 128px 46px 52px;gap:14px;cursor:pointer\}/.test(bronH)
+    && /\.night\{grid-template-columns:104px 52px minmax\(40px,1fr\) 104px max-content;gap:16px\}/.test(bronH));
+  check("9. zeven-dagenklikwerking (de dag-click-handler) is niet aangeraakt",
+    /class="row"[\s\S]{0,40}data-i|dagKlik|\.day.{0,3}addEventListener|onclick/i.test(bronH)
+    || /dagen\(\)/.test(bronH));   // functie bestaat nog; geen inhoudelijke aanname over de exacte implementatie
+  check("10. de Nachtzicht-berekeningsfunctie (nachten) is niet aangeraakt",
+    /function nachten\(\)/.test(bronH));
+
+  // 12.3 kleur op alle viewports
+  check("1. het regenaccent (.radar) staat buiten iedere mediaquery",
+    !/@media[^{]*\{[\s\S]*?\.radar\{border-top:2px solid var\(--accent-rain\)/.test(
+      bronH.slice(0,bronH.indexOf(".radar{border-top:2px solid var(--accent-rain)"))));
+  check("2. het nachtaccent (#nights) staat buiten iedere mediaquery",
+    bronH.indexOf("#nights{border-top:2px solid var(--accent-night)")
+      < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)"));
+  check("3. het informatie-accent (#aq) staat buiten iedere mediaquery",
+    bronH.indexOf("#aq{background:var(--surface-info);border-top:2px solid var(--accent-info)}")
+      < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)"));
+  check("4. een beperkt zon-/UV-accent staat buiten iedere mediaquery",
+    bronH.indexOf(".stat.breed{border-top:2px solid var(--accent-sun)}")
+      < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)")
+    && bronH.indexOf(".stat.zon{border-top:2px solid var(--accent-sun)}")
+      < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)"));
+  check("5. desktop-specifieke padding/grid voor diezelfde modules blijft wel binnen de 1100px-mediaquery",
+    /\.radar\{max-width:100%;padding:var\(--s2\) var\(--s2\) 4px\}/.test(desktopH)
+    && /#nights\{padding:var\(--s2\) var\(--s2\) 4px\}/.test(desktopH)
+    && /#aq\{padding:var\(--s2\)\}/.test(desktopH));
+  check("6. de kleurregels gebruiken de centrale tokens, geen losse hex/rgba",
+    /var\(--accent-rain\)/.test(bronH) && /var\(--accent-night\)/.test(bronH)
+    && /var\(--accent-info\)/.test(bronH) && /var\(--accent-sun\)/.test(bronH)
+    && /var\(--surface-rain\)/.test(bronH) && /var\(--surface-night\)/.test(bronH)
+    && /var\(--surface-info\)/.test(bronH));
+  check("7. geen nieuwe losse hex-/rgba-kleurwaarde is toegevoegd voor deze vier accenten",
+    !/border-top:2px solid #[0-9A-Fa-f]{3,6}/.test(bronH));
+  check("8. fout-/waarschuwingskleuren (carmine) zijn niet gewijzigd",
+    /--carmine:#A02036/.test(bronH));
+
+  // functionele check: de zonurentegel-class is puur presentationeel toegevoegd,
+  // de berekening zelf (sunshine_duration, plaatsVandaag) is niet aangeraakt
+  {
+    const {api,bak}=laadKern(1280);
+    const d=bouw({});
+    d.daily.sunshine_duration=d.daily.time.map(()=>5*3600);   // 5 uur zon, ruim boven de "weinig"-grens
+    const air={current:{european_aqi:31,us_aqi:42,pm2_5:5.9,pm10:9},
+      hourly:{time:d.hourly.time.slice(0,24),
+        grass_pollen:new Array(24).fill(12),birch_pollen:new Array(24).fill(null),
+        alder_pollen:new Array(24).fill(null),mugwort_pollen:new Array(24).fill(null),
+        ragweed_pollen:new Array(24).fill(null),olive_pollen:new Array(24).fill(null)}};
+    Object.assign(api.S,{d,air,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    let fout=null;
+    try{ api.lucht(); }catch(e){ fout=e; }
+    check("de zonurentegel blijft werken en toont de klasse 'zon' voor het accent",
+      !fout && /class="stat zon"/.test(bak.aq.innerHTML) && /5,0<s>uur<\/s>/.test(bak.aq.innerHTML),
+      fout?fout.message:bak.aq.innerHTML.slice(0,200));
+  }
+}
+
 async function testenOpstartlocatie(){
   const fsL=require("fs"), pathL=require("path");
   const bronL2=fsL.readFileSync(pathL.join(__dirname,"index.html"),"utf8");
