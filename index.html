@@ -828,8 +828,7 @@ function tekenAlles(){
   document.title=S.label+" · Weerbriefing";
   document.getElementById("t").textContent=Math.round(c.temperature_2m);
   document.getElementById("cond").textContent=txt(c.weather_code,c.is_day!==0);
-  document.getElementById("feels").textContent="Gevoelstemperatuur "+Math.round(c.apparent_temperature)
-    +"°C, dauwpunt "+Math.round(h.dew_point_2m[S.i0])+"°C";
+  document.getElementById("feels").textContent="Gevoelstemperatuur "+Math.round(c.apparent_temperature)+"°C";
   document.getElementById("nowicon").innerHTML=icon(c.weather_code,c.is_day===1,46);
   document.getElementById("coords").textContent=S.lat.toFixed(3)+", "+S.lon.toFixed(3)+" · "+d.timezone;
 
@@ -888,48 +887,24 @@ function meters(){
   const vandaagIdx=day.time.indexOf(plaatsVandaag());
   const som=vandaagIdx>=0?day.precipitation_sum[vandaagIdx]:null;
 
-  if(som==null||!isFinite(som)){
-    zetTekst("precsub","Totale neerslag van vandaag niet beschikbaar");
-  }else if(vandaagIdx!==0){
-    /* De uurreeks (h.time/h.precipitation) dekt doorgaans alleen de eerstvolgende
-       dagen vanaf het moment van ophalen; is de gevonden dag daar niet het eerste
-       element, dan is er geen betrouwbare uur-voor-uur-opsplitsing beschikbaar
-       om "al gevallen" van "nog te verwachten" te onderscheiden. Dan blijft
-       alleen de dagsom over, met de eerlijke framing dat dat de prognose voor
-       de hele dag is. */
-    zetTekst("precsub", som<0.05
-      ? "Vandaag blijft het droog."
-      : "Voor vandaag wordt in totaal "+nl(som)+" mm neerslag verwacht");
-  }else{
-    let restMm=0;
-    for(let k=0;k<h.time.length;k++){
-      if(h.time[k].slice(0,10)!==day.time[vandaagIdx]||h.time[k]<=nu) continue;
-      restMm+=h.precipitation[k]||0;
-    }
-    if(som<0.05){
-      zetTekst("precsub", "Vandaag blijft het droog.");
-    }else if(restMm>=0.05){
-      /* Er zit nog een niet te verwaarlozen hoeveelheid toekomstige neerslag in de
-         dagsom. "Viel er" zou dat verleden tijd maken terwijl het nog moet komen,
-         dus dit is altijd de "wordt verwacht"-formulering met de volledige dagsom. */
-      const pnNog=piek("precipitation",0,true);
-      zetTekst("precsub", "Voor vandaag wordt in totaal "+nl(som)+" mm neerslag verwacht"
-        +((pnNog&&pnNog.v>=0.1)?", het meeste rond "+hhmm(pnNog.t)+".":"."));
-    }else{
-      /* Vrijwel niets van de dagsom is nog toekomstig (restMm ligt onder de
-         weergavedrempel van 0,05 mm), dus de dagsom is voor de lezer in de
-         praktijk gelijk aan wat er tot nu toe gevallen is. */
-      const pnAl=piek("precipitation",0);
-      zetTekst("precsub", "Vandaag viel er tot nu toe "+nl(som)+" mm"
-        +((pnAl&&pnAl.v>=0.1)?", het meeste rond "+hhmm(pnAl.t)+".":"."));
-    }
-  }
+  /* De subtekst is altijd de volledige dagprognose, ook als die nul is: 0,0 mm
+     is geldige data en geen reden om een andere zin ("blijft het droog") te
+     gebruiken dan bij elke andere waarde. Zo blijft de tegel een prognose voor
+     de hele kalenderdag, en geen mengvorm van "al gevallen" en "nog te komen". */
+  zetTekst("precsub", (som==null||!isFinite(som))
+    ? "Totale neerslag van vandaag niet beschikbaar"
+    : "Voor vandaag wordt in totaal "+nl(som)+" mm neerslag verwacht.");
 
-  set("pop",(h.precipitation_probability[i+1]??0)+"<s>%</s>");
-  const pp=piek("precipitation_probability",0,true);
-  zetTekst("popsub", (!pp||pp.v<20)
-    ? dagDeel().woord+" nauwelijks kans op neerslag."
-    : "De grootste kans is "+Math.round(pp.v)+"%, rond "+hhmm(pp.t)+".");
+  /* De tegel toont de kans voor precies het eerstvolgende uur (i+1). De subtekst
+     zocht eerder met piek() naar de grootste kans verderop in de toekomst en
+     gebruikte dagDeel().woord ("Vandaag"/"Vanavond"/"Vannacht"): dat is een
+     bredere conclusie dan wat de tegel zelf laat zien. Nu leest de subtekst
+     exact dezelfde waarde als de kop, dus komend uur en niets breder. */
+  const popKomendUur=h.precipitation_probability[i+1]??0;
+  set("pop",popKomendUur+"<s>%</s>");
+  zetTekst("popsub", popKomendUur<20
+    ? "Komend uur is de neerslagkans zeer klein."
+    : "Komend uur is de neerslagkans "+Math.round(popKomendUur)+"%.");
 
   /* Deze tegel toont uitsluitend het percentage en een contextzin op basis
      daarvan. Het dauwpunt (mistkans, wolkenbasis) is verwijderd uit dit veld;
@@ -1313,20 +1288,21 @@ function etmaal(start,n){
   }
   const iMax=T.indexOf(Math.max.apply(null,T)), iMin=T.indexOf(Math.min.apply(null,T));
 
-  /* Elk zichtbaar drie-uursinterval krijgt een cijfer, zonder uitzondering: een
-     label wordt nooit stilzwijgend overgeslagen omdat het tegen een ander label
-     aan zou botsen. Pieken en dalen blijven als bonus benadrukt (rang 3 en 2),
-     maar de kern is rang 1: elke i waar i%stap===0, altijd. Botst een positie
-     toch met wat al staat, dan schuift het label naar een volgende, verder weg
-     gelegen laag boven of onder de lijn, in plaats van te verdwijnen. */
+  /* Uitsluitend de zichtbare drie-uursintervallen krijgen een cijfer: elke i waar
+     i%stap===0, nooit meer en nooit minder. Eerder kregen losse pieken, dalen en
+     het dag-minimum/-maximum er een bonuslabel bij, ook als die niet op zo'n
+     interval vielen. Op de telefoon stond dan bijvoorbeeld 28° twee keer na
+     elkaar: een keer als drie-uurslabel, een keer als los pieklabel ernaast.
+     Valt een piek, dal of extreem toevallig samen met een drie-uursmoment, dan
+     bepaalt dat nog wel de rang (3 en 2) voor de botsingsvolgorde hieronder en
+     voor de kant (boven/onder) waarnaar het label uitwijkt; dat voegt geen extra
+     label toe, het geeft alleen voorrang aan wat er toch al stond. */
   const kandKaart=new Map();
   for(let i=0;i<T.length;i++){
     if(!geldig(i)) continue;                      // geen cijfer zonder geldige waarde
-    let rang=0;
-    if(i===iMax||i===iMin) rang=3;
-    else if(soort[i]!==0) rang=2;
-    else if(i%stap===0) rang=1;
-    if(rang) kandKaart.set(i,rang);
+    if(i%stap!==0) continue;                       // alleen echte drie-uursmomenten
+    const rang=(i===iMax||i===iMin)?3:soort[i]!==0?2:1;
+    kandKaart.set(i,rang);
   }
   const kandidaten=[...kandKaart.entries()].map(([i,rang])=>({i,rang}))
     .sort((a,b)=>b.rang-a.rang||a.i-b.i);
@@ -1405,7 +1381,7 @@ function etmaal(start,n){
   svg.setAttribute("aria-label",
     "Verloop van "+TI[0].slice(11,16)+" tot "+TI[TI.length-1].slice(11,16)
     +", temperatuur tussen "+mn+" en "+mx+" graden, hoogste neerslagkans "+Math.max.apply(null,P)+" procent.");
-  S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,M:M};
+  S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,H:H,M:M};
   scrubKoppel(); chartHint();
 
   const dg=S.dag;
@@ -1475,7 +1451,16 @@ function scrubKoppel(){
     const yv = ev.clientY!=null ? (ev.clientY-r.top)*sc : Y;
     let by = raak ? (yv < G.pt+G.ih/2 ? G.pt+G.ih-bh+6 : G.pt-6) : G.pt-6;
     // en hoe dan ook binnen de tekening blijven, ook als de doos hoger is dan het vak
-    by = clamp(by, 2, Math.max(2, G.H0-bh-2));
+    by = clamp(by, 2, Math.max(2, G.H-bh-2));
+    /* Elke coördinaat die de doos daadwerkelijk gebruikt om te tekenen moet een
+       eindig getal zijn. G.H ontbrak hier eerder in S.geo, dus G.H0 (dat nooit
+       bestond) leverde undefined, undefined-bh-2 werd NaN, en Safari tekende een
+       rechthoek zonder bruikbare breedte of hoogte: een grote lege witte vlek.
+       Nu wordt de hele doos verborgen zodra ook maar een van deze waarden niet
+       bruikbaar is, in plaats van iets onleesbaars te tonen. */
+    if(![X,Y,bx,by,bw,bh,G.W,G.H].every(Number.isFinite)){
+      g.style.display="none"; return;
+    }
     let n=0;
     const rij=(l,v,c)=>{n++;const yy=by+22+n*17;
       return `<text x="${bx+15}" y="${yy}" fill="${INK45}" font-family="Instrument Sans,sans-serif" font-size="11">${l}</text>`
@@ -1702,17 +1687,17 @@ function nachten(){
     // maantijden voor deze nacht
     const mt=opOnder("maan",naarUTC(ss.slice(0,10)+"T12:00"),S.lat,S.lon);
     let maanTekst="";
-    if(mt.op!=null&&mt.onder!=null) maanTekst="maan "+naarLokaal(mt.op)+"\u2013"+naarLokaal(mt.onder);
-    else if(mt.op!=null) maanTekst="maan op "+naarLokaal(mt.op);
-    else if(mt.onder!=null) maanTekst="maan onder "+naarLokaal(mt.onder);
-    /* De fase staat al per nacht in mn, dus het schijfje kost niets extra's aan
+    if(mt.op!=null&&mt.onder!=null) maanTekst="maanopkomst "+naarLokaal(mt.op)+" \u00b7 maanondergang "+naarLokaal(mt.onder);
+    else if(mt.op!=null) maanTekst="maanopkomst "+naarLokaal(mt.op);
+    else if(mt.onder!=null) maanTekst="maanondergang "+naarLokaal(mt.onder);
+    /* De fase staat al per nacht in mn, dus het symbool kost niets extra's aan
        rekenwerk of gegevens. Het staat vlak voor de maantijden omdat het daarbij
        hoort, en niet los voorop waar het bij de score zou lijken te horen. Het
-       cijfer erachter blijft staan: een schijfje leest snel, maar 63 procent
+       cijfer erachter blijft staan: een symbool leest snel, maar 63 procent
        verlicht lees je er niet aan af. */
-    /* Punt 11 vraagt hier het tekstsymbool, niet de getekende schijf: dat blijft
-       bestaan voor de kop boven de tabel ("wassende maan, N procent verlicht"),
-       waar maanschijf() nog wel gebruikt wordt. */
+    /* Punt 11 vraagt hier het tekstsymbool, niet de getekende schijf. De kop
+       boven de tabel gebruikt inmiddels hetzelfde Unicode-symbool (maanUnicode),
+       dus dit is nu overal dezelfde bron voor de maanfase. */
     const maanIcoon=maanUnicode(mn.fase);
     const maanTitel=maan(new Date(naarUTC(ss.slice(0,10)+"T23:30"))).naam
       +", "+Math.round(mn.ill*100)+" procent verlicht";
@@ -1725,7 +1710,7 @@ function nachten(){
       <div class="sbar"><i style="width:${sc*10}%;background:${kleur}"></i></div>
       <div class="nmeta"><span class="perc">${Math.round(cw)}%</span> bewolking</div>
       <div class="nmeta wide">${venster}${maanTekst
-        ? ` <span class="maangroep">· <span class="maanbij" title="${esc(maanTitel)}">${maanIcoon}</span>${maanTekst}</span>`
+        ? ` <span class="maangroep"><span class="maanbij" title="${esc(maanTitel)}">${maanIcoon}</span> ${maanTekst}</span>`
         : ""}</div></div>`;
   }
   const kopN=`<div class="row night kop">
@@ -1733,7 +1718,11 @@ function nachten(){
       <div class="nmeta">Bewolking</div><div class="nmeta wide">Waarneemvenster en maan</div></div>`;
   document.getElementById("nights").innerHTML=(out?kopN+out:"")||'<div class="msg">Geen nachtdata beschikbaar.</div>';
   const m=maan(new Date());
-  document.getElementById("moonlab").innerHTML=maanschijf(m.ill,m.fase)+"<span>"+m.naam+", "+Math.round(m.ill*100)+" procent verlicht</span>";
+  /* maanschijf() tekende bij volle maan (fase 0,5) twee bogen die elkaar bijna
+     precies opheffen: rx valt dan samen met r, en het resultaat is een vrijwel
+     lege vlakte in plaats van een gevulde schijf, zichtbaar als een zwarte stip.
+     De kop gebruikt daarom dezelfde Unicode-maanfase als de nachtrijen. */
+  document.getElementById("moonlab").innerHTML=maanUnicode(m.fase)+"<span>"+m.naam+", "+Math.round(m.ill*100)+" procent verlicht</span>";
 }
 
 /* ---------- luchtkwaliteit ---------- */

@@ -196,7 +196,7 @@ groep("Tabellen");
   const {bak}=brief({});
   check("zeven dagen heeft een kopregel",/class="row day kop"/.test(bak.days.innerHTML));
   check("zeven dagen heeft zeven rijen",(bak.days.innerHTML.match(/class="row day"/g)||[]).length===7);
-  check("nachtzicht toont maantijden",/maan op|maan onder|maan /.test(bak.nights.innerHTML));
+  check("nachtzicht toont maantijden",/maanopkomst|maanondergang/.test(bak.nights.innerHTML));
 }
 
 /* 7c. nachtzicht reageert op bewolking en op de stand van de maan */
@@ -215,7 +215,8 @@ groep("Nachtzicht");
   check("bewolkte nacht geeft een lage score",score(rb[0][1])<1,rb[0][1]);
   check("heldere nacht krijgt een waarneemvenster",/beste zicht van \d\d:\d\d tot \d\d:\d\d/.test(rh[0][2]),rh[0][2]);
   check("bewolkte nacht krijgt geen venster",/Geen geschikt zichtvenster/.test(rb[0][2]),rb[0][2]);
-  check("maantijden staan er altijd bij",/maan \d\d:\d\d/.test(rh[0][2])&&/maan \d\d:\d\d/.test(rb[0][2]));
+  check("maantijden staan er altijd bij",
+    /maanopkomst \d\d:\d\d|maanondergang \d\d:\d\d/.test(rh[0][2])&&/maanopkomst \d\d:\d\d|maanondergang \d\d:\d\d/.test(rb[0][2]));
 
   /* maanfase per nacht: sinds punt 11 een Unicode-symbool in deze tabel, geen
      getekende schijf meer (die blijft bestaan bij de kop boven de tabel). */
@@ -232,12 +233,12 @@ groep("Nachtzicht");
       metSymbool.length+" van de "+nachtrijen.length);
     check("het is een Unicode-tekstsymbool en geen getekende schijf",
       !/class="maanbij"[^>]*>\s*<svg/.test(html) && SYMBOLEN.some(s=>html.includes(s)));
-    check("het symbool staat bij de maantijden, niet vooraan",
-      /·\s*<span class="maanbij"/.test(html));
+    check("het symbool staat direct bij de maantijden, zonder losse bullet ervoor",
+      /<span class="maangroep"><span class="maanbij"/.test(html) && !/·\s*<span class="maanbij"/.test(html));
     check("het symbool heeft een omschrijving voor wie het niet ziet",
       /title="[^"]*procent verlicht"/.test(html));
     check("de maantijden blijven naast het symbool staan",
-      nachtrijen.every(r=>/maan \d\d:\d\d/.test(r.replace(/<[^>]+>/g,""))));
+      nachtrijen.every(r=>/maanopkomst \d\d:\d\d|maanondergang \d\d:\d\d/.test(r.replace(/<[^>]+>/g,""))));
     // de fase moet per nacht kunnen verschillen; met acht discrete stappen over
     // een korte reeks nachten is dat niet gegarandeerd meer dan een enkele stap,
     // dus dit toetst alleen dat het geen vast, hardgecodeerd symbool is
@@ -257,7 +258,9 @@ groep("Volledigheid van de teksten");
   const t=bak.brief.innerHTML.replace(/<[^>]+>/g,"");
   check("warmste moment in het verleden krijgt tijd en temperatuur",/warmst rond \d\d:\d\d met \d+ graden/.test(t),t);
   const nat=brief({pr:(u)=>u<12?0.4:0,pp:(u)=>u<12?70:5,som:2.4}).bak;
-  check("neerslag die al gevallen is heet 'viel'",/\bviel\b/.test(nat.precsub.textContent),nat.precsub.textContent);
+  check("neerslag die al gevallen is gebruikt ook de dagsomformulering, niet 'viel'",
+    /in totaal 2,4 mm neerslag verwacht/.test(nat.precsub.textContent) && !/\bviel\b/.test(nat.precsub.textContent),
+    nat.precsub.textContent);
   const komt=brief({pr:(u)=>u===20?1.5:0,pp:(u)=>u===20?70:5,som:1.5}).bak;
   check("neerslag die nog komt heet 'verwacht' en niet 'viel'",
     /in totaal .* verwacht/.test(komt.precsub.textContent) && !/\bviel\b/.test(komt.precsub.textContent),
@@ -391,12 +394,26 @@ for(const [naam,br,opties] of [
   const reeks=api.S.d.hourly.temperature_2m.slice(api.S.i0,api.S.i0+24);
   const hoog=Math.round(Math.max.apply(null,reeks)), laag=Math.round(Math.min.apply(null,reeks));
   const waarden=lab.map(l=>l.v);
+  // elk scenario in deze lus rendert precies 24 uur (api.etmaal(i0,24)), dus in de
+  // app geldt stap = n<=24 ? 3 : ...  → hier altijd 3
+  const stapTest=3;
 
   check(naam+": er staan cijfers bij de lijn",lab.length>0,"geen enkel label gevonden");
-  check(naam+": de hoogste temperatuur krijgt een label",waarden.includes(hoog),
-    "hoogste is "+hoog+"°, gelabeld zijn "+waarden.join(", "));
-  check(naam+": de laagste temperatuur krijgt een label",waarden.includes(laag),
-    "laagste is "+laag+"°, gelabeld zijn "+waarden.join(", "));
+  /* Sinds correctieronde punt 2 krijgt uitsluitend elke i met i%stap===0 een
+     label; pieken, dalen en het dag-extreem voegen geen label meer toe als ze
+     daar niet toevallig mee samenvallen. Dat direct natoetsen in plaats van
+     alleen "het hoogste getal staat erbij", want dat laatste hoeft sinds deze
+     correctie niet meer waar te zijn. */
+  const idxStap=[];
+  for(let k=0;k<reeks.length;k++) if(k%stapTest===0 && reeks[k]!=null && isFinite(reeks[k])) idxStap.push(k);
+  check(naam+": precies de drie-uursindices krijgen een label, niet meer en niet minder",
+    lab.length===idxStap.length,
+    "verwacht "+idxStap.length+" labels (om de "+stapTest+" uur), kreeg "+lab.length);
+  const verwachteWaarden=idxStap.map(k=>Math.round(reeks[k])).sort((a,b)=>a-b);
+  const gekregenWaarden=[...waarden].sort((a,b)=>a-b);
+  check(naam+": de gelabelde waarden komen overeen met de drie-uurswaarden",
+    JSON.stringify(verwachteWaarden)===JSON.stringify(gekregenWaarden),
+    "verwacht "+verwachteWaarden.join(",")+" kreeg "+gekregenWaarden.join(","));
 
   const uitBeeld=lab.filter(l=>l.x-l.b/2<-1||l.x+l.b/2>vb[2]+1||l.y-l.hg<0||l.y>vb[3]);
   check(naam+": geen label valt buiten de tekening",uitBeeld.length===0,
@@ -413,6 +430,62 @@ for(const [naam,br,opties] of [
   // het cijfer moet een rand in de velkleur hebben, anders loopt de lijn er dwars doorheen
   const metRand=(h.match(/paint-order="stroke"/g)||[]).length;
   check(naam+": elk cijfer dekt de lijn af",metRand>=lab.length,metRand+" van "+lab.length);
+}
+
+/* 10a2. tooltip-scrub: een echt pointerevent simuleren op #hit (kern.js kan
+   addEventListener-handlers nu daadwerkelijk opslaan en afvuren), en de
+   finite-geometrie-guard toetsen die de lege witte doos voorkwam. De
+   oorspronkelijke fout: S.geo miste H, scrubKoppel() las G.H0 (dat nooit
+   bestond), en by werd daardoor NaN. */
+groep("Tooltip-scrub");
+{
+  const {api,bak}=laadKern(1280);
+  Object.assign(api.S,{d:bouw({}),op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+  api.S.i0=api.S.d.hourly.time.findIndex(t=>t.slice(0,13)===api.S.d.current.time.slice(0,13));
+  api.etmaal(api.S.i0,24);
+
+  const raak=(x,y,type)=>bak.hit.dispatchEvent({type:type||"pointermove",clientX:x,clientY:y,pointerType:"mouse"});
+
+  // geldige aanraking middenin de tekening
+  raak(450,100);
+  check("#scrub bevat daadwerkelijk tekst na een gesimuleerd pointermove",
+    bak.scrub.style.display==="block" && /temperatuur/.test(bak.scrub.innerHTML) && /\d/.test(bak.scrub.innerHTML),
+    bak.scrub.style.display+" / "+bak.scrub.innerHTML.slice(0,80));
+
+  // letterlijk zoeken naar de tokens die een niet-eindig getal in de opmaak achterlaat;
+  // een attribuutgerichte regex struikelde hier eerder over "font-family=..." omdat
+  // "y=" toevallig aan het eind van "family" past
+  check("geen enkel getekend attribuut in de tooltip bevat NaN, undefined of null",
+    !/NaN|undefined|null/.test(bak.scrub.innerHTML),bak.scrub.innerHTML.slice(0,160));
+
+  const rectM=bak.scrub.innerHTML.match(/<rect x="([\d.-]+)" y="([\d.-]+)" width="([\d.-]+)" height="([\d.-]+)"/);
+  const vb=bak.chart.getAttribute("viewBox").split(" ").map(Number);
+  check("de tooltiprechthoek valt volledig binnen de viewBox",
+    !!rectM && +rectM[1]>=0 && +rectM[2]>=0 && +rectM[1]+ +rectM[3]<=vb[2] && +rectM[2]+ +rectM[4]<=vb[3],
+    rectM?rectM[0]+" in viewBox "+vb.join(" "):"geen rect gevonden");
+
+  raak(450,100,"pointerleave");
+  check("de tooltip verdwijnt weer (hier via pointerleave getoetst)",bak.scrub.style.display==="none");
+
+  // de doos weer geldig tonen, en dan precies de oorspronkelijke fout nabootsen:
+  // S.geo mist H, dus de vroegere G.H0-uitdrukking zou NaN opleveren
+  raak(450,100);
+  check("nulmeting: de doos staat er na een nieuwe aanraking weer",bak.scrub.style.display==="block");
+  delete api.S.geo.H;
+  raak(450,100);
+  /* display:none is hier de doorslaggevende toets: de guard geeft direct terug
+     zonder nieuwe opmaak te bouwen, dus de oude (nu verborgen) inhoud kan nog in
+     de DOM-node staan. Dat is geen bug: display:none betekent dat er niets meer
+     getekend wordt, ongeacht wat er nog in de node hangt. */
+  check("ontbrekende hoogte in S.geo (de oorspronkelijke bug) verbergt de tooltip volledig",
+    bak.scrub.style.display==="none",bak.scrub.style.display);
+
+  const fsT=require("fs"), pathT=require("path");
+  const bronScrub=fsT.readFileSync(pathT.join(__dirname,"index.html"),"utf8");
+  check("S.geo neemt H expliciet op (de eigenlijke correctie)",
+    /S\.geo=\{[^}]*\bH:H\b/.test(bronScrub));
+  check("scrubKoppel leest G.H, niet het nooit-bestaande G.H0",
+    /G\.H-bh-2/.test(bronScrub) && !/G\.H0-bh/.test(bronScrub));
 }
 
 /* 10b. de waarden langs de as mogen de grafiek niet raken */
@@ -1097,8 +1170,8 @@ groep("Live bevindingen");
   check("het percentage gebruikt dat vak ook",/<span class="perc">/.test(bronL));
 
   // 5. het scheidingsteken mag niet los aan het regeleinde blijven
-  check("het maandeel breekt als geheel af",
-    /\.maangroep\{white-space:nowrap\}/.test(bronL) && /class="maangroep">·/.test(bronL));
+  check("het maandeel breekt als geheel af, zonder losse tekens aan het regeleinde",
+    /\.maangroep\{white-space:nowrap\}/.test(bronL) && /class="maangroep"><span class="maanbij"/.test(bronL));
 
   // 6. een vlakke lijn krijgt nu op elk drie-uursinterval een cijfer (punt 4 van
   //    de twaalfpuntsopdracht eist dit expliciet, ook als de waarde herhaalt);
@@ -1369,12 +1442,11 @@ groep("Tijd, datum en richting");
     a.meters();
     check("om "+String(uur).padStart(2,"0")+":00 heet het "+verw,
       a.dagDeel().woord===verw,a.dagDeel().woord);
-    // De oude aanname hier was dat precsub meeschuift met dagDeel() (dus "Vannacht
-    // blijft het droog" om 23:00). Punt 7 van de twaalfpuntsopdracht schrijft voor
-    // deze tegel nu letterlijk "Vandaag viel er..." / "Vandaag blijft het droog."
-    // voor, ongeacht het tijdstip; dat is een bewuste, met opzet niet-tijdgevoelige
-    // formulering en vervangt deze eerdere aanname. Zie de "Neerslagtegel"-groep
-    // verderop voor de controles die daar wel bij horen.
+    // precsub gebruikt sinds de correctieronde altijd dezelfde dagsomformulering
+    // ("Voor vandaag wordt in totaal X mm neerslag verwacht.", ook bij 0,0 mm),
+    // ongeacht dagDeel() of of de neerslag al gevallen is. dagDeel() zelf blijft
+    // wel bestaan voor de briefing en de andere teksten die de klok volgen. Zie
+    // de "Neerslagtegel"-groep verderop voor de controles die bij precsub horen.
   }
 
   /* Datums achter vandaag en morgen, uit echte Date-objecten zodat maandgrenzen
@@ -1624,7 +1696,10 @@ groep("Header op een regel");
     smalLang.condBreedte < breed("overwegend zonnig",15,"serif"));
 }
 
-/* 10t. neerslagtegel: exacte formulering, juiste dag, 0mm is geldig */
+/* 10t. neerslagtegel: exacte formulering, juiste dag, 0mm is geldig.
+   Correctieronde punt 3: de subtekst is nu altijd de volledige dagsom, ongeacht
+   of de neerslag al gevallen is of nog moet komen, en ook bij 0,0 mm. Geen
+   "viel er tot nu toe" en geen "blijft het droog" meer. */
 groep("Neerslagtegel");
 {
   const KLOK=new Date("2026-07-22T12:00:00Z");   // 14:00 lokaal, past bij bouw()'s fixture
@@ -1637,22 +1712,22 @@ groep("Neerslagtegel");
     return norm(bak.precsub.textContent);
   }
 
-  // uitsluitend al gevallen neerslag: vrijwel niets komt er nog bij vandaag
+  // uitsluitend al gevallen neerslag: krijgt nu dezelfde formulering als toekomstige
   const alGevallen=metPrec({pr:(u)=>u<14?0.3:0,pp:(u)=>u<14?70:5,som:2.4});
-  check("uitsluitend al gevallen neerslag heet 'viel er tot nu toe'",
-    /^Vandaag viel er tot nu toe 2,4 mm/.test(alGevallen),alGevallen);
-  check("die formulering gebruikt nooit 'verwacht'",!/verwacht/.test(alGevallen),alGevallen);
+  check("al gevallen neerslag gebruikt ook de dagsomformulering, niet 'viel er tot nu toe'",
+    /^Voor vandaag wordt in totaal 2,4 mm neerslag verwacht\.$/.test(alGevallen)
+    && !/\bviel\b/.test(alGevallen), alGevallen);
 
   // een prognose die nog grotendeels moet komen
   const nogKomend=metPrec({pr:(u)=>u===20?1.5:0,pp:(u)=>u===20?70:5,som:1.5});
   check("een prognose met toekomstige neerslag heet 'wordt in totaal verwacht'",
-    /^Voor vandaag wordt in totaal 1,5 mm neerslag verwacht/.test(nogKomend),nogKomend);
+    /^Voor vandaag wordt in totaal 1,5 mm neerslag verwacht\.$/.test(nogKomend),nogKomend);
   check("die formulering gebruikt nooit 'viel'",!/\bviel\b/.test(nogKomend),nogKomend);
 
-  // 0,0 mm is geldige data en geen ontbrekende waarde
+  // 0,0 mm is geldige data: dezelfde formulering, geen "blijft het droog" meer
   const droog=metPrec({pp:()=>4,pr:()=>0,som:0});
-  check("0,0 mm droog blijft 'Vandaag blijft het droog', geen 'niet beschikbaar'",
-    /^Vandaag blijft het droog\.$/.test(droog),droog);
+  check("0,0 mm gebruikt dezelfde dagsomformulering, geen 'blijft het droog' en geen 'niet beschikbaar'",
+    /^Voor vandaag wordt in totaal 0,0 mm neerslag verwacht\.$/.test(droog),droog);
 
   // ontbrekende of ongeldige dagsom
   const {api:aM,bak:bM}=laadKern(1280);
@@ -1681,6 +1756,36 @@ groep("Neerslagtegel");
     check("een verschoven dagreeks levert nog steeds de juiste dagsom",
       /1,2 mm/.test(norm(bO.precsub.textContent)),bO.precsub.textContent);
   }
+}
+
+/* 10t2. neerslagkans komend uur: de subtekst gebruikt exact hetzelfde tijdvenster
+   als de tegel zelf (h.precipitation_probability[i+1]), niet een bredere
+   dagdeel- of piekconclusie (correctieronde punt 4). */
+groep("Neerslagkans komend uur");
+{
+  const KLOK=new Date("2026-07-22T12:00:00Z");
+  function metPop(opties){
+    const {api,bak}=laadKern(1280);
+    Object.assign(api.S,{d:bouw(opties),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,
+      klokOverride:KLOK});
+    api.meters();
+    // .textContent werkt niet betrouwbaar in deze lichtgewicht DOM-mock zodra de
+    // waarde via innerHTML is gezet (zoals set() doet); innerHTML zelf wel.
+    return {pop:norm(bak.pop.innerHTML).replace(/<[^>]+>/g,""),sub:norm(bak.popsub.textContent)};
+  }
+  // i0=14, dus i+1=15 is precies het uur dat de tegel toont. De piek van 90%
+  // ligt bewust later (uur 20), zodat deze test aantoont dat de subtekst zich
+  // niet baseert op die latere piek maar uitsluitend op uur 15.
+  const laag=metPop({pp:(u)=>u===20?90:5});
+  check("lage kans komend uur meldt 'zeer klein', ook als er verderop een piek van 90% zit",
+    /^Komend uur is de neerslagkans zeer klein\.$/.test(laag.sub),laag.sub);
+  check("de subtekst noemt geen dagdeel en geen 'grootste kans'",
+    !/Vandaag|Vanavond|Vannacht|grootste kans/.test(laag.sub),laag.sub);
+
+  const hoog=metPop({pp:(u)=>u===15?77:5});
+  check("hoge kans komend uur noemt het percentage van dat uur",
+    /^Komend uur is de neerslagkans 77%\.$/.test(hoog.sub),hoog.sub);
+  check("de kop en de subtekst tonen hetzelfde percentage",hoog.pop.startsWith("77"),hoog.pop);
 }
 
 /* 10u. briefing en radartekst delen dezelfde conclusie over de komende twee uur */
@@ -1840,13 +1945,25 @@ groep("Luchtvochtigheid zonder dauwpunt");
   check("een waarde buiten 0-100 geldt als ongeldig",
     norm(bH2.humsub.textContent)==="Luchtvochtigheid niet beschikbaar",norm(bH2.humsub.textContent));
 
-  // dew_point_2m mag niet overal verdwenen zijn: #feels en de nachtzichtberekening
-  // gebruiken het veld nog, dus die aanroepen moeten intact blijven
-  check("dew_point_2m blijft bestaan voor de gevoelstemperatuur-regel",
-    /h\.dew_point_2m\[S\.i0\]/.test(bronV));
+  // dew_point_2m mag niet overal verdwenen zijn: de nachtzichtberekening gebruikt
+  // het veld nog, dus die aanroep moet intact blijven. De zichtbare regel onder
+  // de grote temperatuur toont het dauwpunt zelf niet meer (punt 6).
+  check("de gevoelstemperatuurregel leest dew_point_2m niet meer uit voor S.i0",
+    !/h\.dew_point_2m\[S\.i0\]/.test(bronV));
   check("dew_point_2m blijft bestaan voor de nachtzichtberekening",
     /dew_point_2m\[i\]/.test(bronV));
   check("de API-parameter dew_point_2m is niet verwijderd",/hourly=[^"]*dew_point_2m/.test(bronV));
+
+  {
+    const {api:aF,bak:bF}=laadKern(390);
+    Object.assign(aF.S,{d:bouw({}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    aF.tekenAlles();
+    const feelsTekst=norm(bF.feels.textContent);
+    check("dauwpunt staat nergens meer zichtbaar onder de temperatuur",
+      !/dauwpunt/i.test(feelsTekst),feelsTekst);
+    check("de gevoelstemperatuur zelf blijft wel zichtbaar",
+      /^Gevoelstemperatuur -?\d+°C$/.test(feelsTekst),feelsTekst);
+  }
 }
 
 /* 10x. nachtzicht vereenvoudigd: geen planeten meer, Unicode-maanfase, specifieke reden */
@@ -1902,9 +2019,14 @@ groep("Nachtzicht vereenvoudigd");
     /Geen geschikt zichtvenster: te bewolkt/.test(bronN2) &&
     /Geen geschikt zichtvenster: te bewolkt en te veel maanlicht/.test(bronN2));
 
-  // maanschijf() (de getekende SVG) blijft bestaan voor de kop boven de tabel
-  check("de getekende maanschijf blijft bestaan voor de kop boven de tabel",
-    /function maanschijf\(/.test(bronN2) && /maanschijf\(m\.ill,m\.fase\)/.test(bronN2));
+  /* maanschijf() tekende bij volle maan (fase 0,5) een pad waarvan de twee bogen
+     elkaar vrijwel opheffen (rx valt dan samen met r): het resultaat was een
+     bijna lege vlakte, zichtbaar als een zwarte stip in plaats van een gevulde
+     schijf. De kop boven de tabel gebruikt daarom nu dezelfde Unicode-fase als
+     de nachtrijen; maanUnicode(0,5) is hierboven al bevestigd op 🌕 uit te komen. */
+  check("de kop boven de tabel gebruikt maanUnicode(), niet meer de getekende maanschijf()",
+    /moonlab"\)\.innerHTML=maanUnicode\(m\.fase\)/.test(bronN2)
+    && !/moonlab"\)\.innerHTML=maanschijf\(/.test(bronN2));
 }
 
 /* 10y. zonuren op de plek van fijnstof, juiste dagindex, exacte drempels */

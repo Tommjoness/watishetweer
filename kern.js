@@ -109,9 +109,21 @@ function maakElement(id, doc) {
     getAttribute(n) { return Object.prototype.hasOwnProperty.call(this._attr, n) ? this._attr[n] : null; },
     removeAttribute(n) { delete this._attr[n]; },
     hasAttribute(n) { return Object.prototype.hasOwnProperty.call(this._attr, n); },
-    addEventListener() {},
-    removeEventListener() {},
-    dispatchEvent() { return true; },
+    _handlers: {},
+    /* Eerder waren dit no-ops: een test kon nooit een echt pointerevent laten
+       afgaan op een addEventListener-handler uit de app. Nu worden handlers per
+       type bewaard en kan dispatchEvent ze daadwerkelijk aanroepen, zodat een
+       regressietest voor bijvoorbeeld de scrub-tooltip een echte pointermove
+       kan simuleren in plaats van alleen de broncode te doorzoeken. */
+    addEventListener(type, fn) { (this._handlers[type] = this._handlers[type] || []).push(fn); },
+    removeEventListener(type, fn) {
+      if (this._handlers[type]) this._handlers[type] = this._handlers[type].filter(h => h !== fn);
+    },
+    dispatchEvent(ev) {
+      const type = ev && ev.type;
+      (this._handlers[type] || []).forEach(fn => fn(ev));
+      return true;
+    },
     click() {},
     focus() {},
     blur() {},
