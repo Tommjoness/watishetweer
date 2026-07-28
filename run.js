@@ -2165,5 +2165,182 @@ groep("Live plaatsklok");
   check("de klok-timer staat los van etmaal()/de nu-lijn",!/etmaal\(/.test(klokTimerBron));
 }
 
-console.log("\n"+goed+" geslaagd, "+fout+" mislukt");
-process.exit(fout?1:0);
+/* 11. opstartlocatie: prioriteit A/B/C/D, de herbruikbare locatieNu()-procedure,
+   racebescherming en het afstandscriterium. Async, dus in een eigen functie die
+   de rest van het script (de afsluitende telling) netjes afwacht. */
+async function testenOpstartlocatie(){
+  const fsL=require("fs"), pathL=require("path");
+  const bronL2=fsL.readFileSync(pathL.join(__dirname,"index.html"),"utf8");
+  const wacht=async(n)=>{ for(let i=0;i<(n||10);i++) await new Promise(r=>setImmediate(r)); };
+
+  groep("Opstartlocatie");
+
+  // bronchecks: geen hardcoded Almere-fallback, en de sleutel die kern.js
+  // vooraf in localStorage zet komt echt overeen met KEY_P in de app
+  check("geen enkele Almere-coördinaat staat nog als fallback in de broncode",
+    !/52\.3508.{0,40}5\.2647|5\.2647.{0,40}52\.3508/s.test(bronL2));
+  check("KEY_P in de app is nog steeds \"weerbriefing.plaats\" (kern.js zet dit vooraf onder diezelfde naam)",
+    /const KEY_P="weerbriefing\.plaats"/.test(bronL2));
+
+  // 1. geldige gedeelde URL-locatie
+  {
+    let geoTellers=0;
+    const {api,fetchStaat,localStorage}=laadKern(1280,{
+      zoek:"?lat=52.0116&lon=4.3571&plaats=Delft",
+      geo:()=>{geoTellers++;},
+      opgeslagen:{lat:1,lon:1,label:"Oud"}
+    });
+    await wacht();
+    check("1. de URL-locatie wordt geladen",
+      api.S.lat===52.0116&&api.S.lon===4.3571&&api.S.label==="Delft",
+      api.S.lat+"/"+api.S.lon+"/"+api.S.label);
+    check("1. GPS wordt niet gestart",geoTellers===0,geoTellers);
+    check("1. de opgeslagen locatie wordt niet geladen, de URL wint",api.S.label!=="Oud",api.S.label);
+    const opgeslagenNa=JSON.parse(localStorage.getItem("weerbriefing.plaats")||"null");
+    check("1. de gedeelde locatie overschrijft de persoonlijke laatst gebruikte locatie niet",
+      opgeslagenNa&&opgeslagenNa.label==="Oud",JSON.stringify(opgeslagenNa));
+  }
+
+  // 2. url met hier=1
+  {
+    let geoTellers=0;
+    const geo=(gelukt)=>{ geoTellers++; gelukt({coords:{latitude:52.5,longitude:5.5,accuracy:15}}); };
+    const fetchMock=async(url)=>{
+      if(String(url).includes("/api/plaatsnaam")) return {ok:true,json:async()=>({naam:"Testplaats"})};
+      return {ok:false,status:500,json:async()=>({})};
+    };
+    const {api}=laadKern(1280,{zoek:"?hier=1",geo,fetch:fetchMock});
+    await wacht();
+    check("2. GPS wordt precies één keer gestart via hier=1",geoTellers===1,geoTellers);
+    check("2. dezelfde herbruikbare procedure levert de gevonden plaats op",
+      api.S.label==="Testplaats",api.S.label);
+  }
+
+  // 3. terugkerende gebruiker, nieuwe locatie op meer dan 1 km
+  {
+    const opgeslagen={lat:52.0907,lon:5.1214,label:"Utrecht"};
+    let geoTellers=0;
+    const geo=(gelukt)=>{ geoTellers++; gelukt({coords:{latitude:52.3676,longitude:4.9041,accuracy:15}}); }; // Amsterdam
+    const fetchMock=async(url)=>{
+      if(String(url).includes("/api/plaatsnaam")) return {ok:true,json:async()=>({naam:"Amsterdam"})};
+      return {ok:false,status:500,json:async()=>({})};
+    };
+    const {api}=laadKern(1280,{opgeslagen,geo,fetch:fetchMock});
+    // synchroon, vóór enige microtaak: load() voor de opgeslagen locatie wordt
+    // niet afgewacht, dus S.label hoort meteen "Utrecht" te zijn
+    check("3. de opgeslagen locatie wordt direct geladen",api.S.label==="Utrecht",api.S.label);
+    await wacht(3);
+    check("3. GPS wordt daarna automatisch gestart",geoTellers===1,geoTellers);
+    await wacht(6);
+    check("3. een gevonden locatie op meer dan 1 km veroorzaakt een gerichte tweede load()",
+      api.S.label==="Amsterdam",api.S.label);
+  }
+  {
+    // GPS-fout laat de opgeslagen locatie intact
+    const opgeslagen={lat:52.0907,lon:5.1214,label:"Utrecht"};
+    const geo=(gelukt,mislukt)=>{ mislukt({code:2}); };
+    const {api}=laadKern(1280,{opgeslagen,geo});
+    await wacht(4);
+    check("3. een GPS-fout laat de opgeslagen locatie intact",api.S.label==="Utrecht",api.S.label);
+  }
+
+  // 4. vrijwel dezelfde locatie: geen onnodige tweede volledige fetch
+  {
+    const opgeslagen={lat:52.0907,lon:5.1214,label:"Utrecht"};
+    const geo=(gelukt)=>{ gelukt({coords:{latitude:52.0950,longitude:5.1214,accuracy:15}}); }; // ~0,5 km verderop
+    const {api,fetchStaat}=laadKern(1280,{opgeslagen,geo});
+    await wacht(3);
+    const tellerNaOpgeslagen=fetchStaat.teller;
+    await wacht(6);
+    check("4. een positie binnen ~1 km veroorzaakt geen nieuwe volledige fetch",
+      fetchStaat.teller===tellerNaOpgeslagen,tellerNaOpgeslagen+" -> "+fetchStaat.teller);
+    check("4. de geladen plaatsnaam blijft die van de opgeslagen locatie",api.S.label==="Utrecht",api.S.label);
+  }
+
+  // 5. eerste bezoek: geen url, geen opgeslagen locatie
+  {
+    let geoTellers=0;
+    const geo=(gelukt,mislukt)=>{ geoTellers++; mislukt({code:1}); };
+    const {api,bak}=laadKern(1280,{geo});
+    await wacht();
+    check("5. zonder URL en zonder opgeslagen locatie wordt GPS automatisch gestart",geoTellers===1,geoTellers);
+    check("5. Almere (of enige andere gegokte plaats) wordt nergens geladen",api.S.lat==null,api.S.lat);
+    check("5. bij weigering verschijnt een doorzoekbare foutstatus, geen weerdata",
+      api.S.d==null && /locatie/i.test(bak.state.textContent),bak.state.textContent);
+    check("5. het zoekveld blijft beschikbaar",bak.q!=null);
+  }
+
+  // 6. race-condition: handmatige keuze wint van een trage gps-aanvraag
+  {
+    let bewaard=null;
+    const geo=(gelukt,mislukt)=>{ bewaard={gelukt,mislukt}; };   // bewust niet meteen reageren
+    const {api,bak}=laadKern(1280,{geo});
+    await wacht(2);
+    check("6. de gps-aanvraag staat klaar maar heeft nog niet gereageerd",api.S.lat==null);
+
+    bak.res.dispatchEvent({type:"click",target:{closest:sel=>sel==="div[data-lat]"
+      ?{dataset:{lat:"51.9225",lon:"4.47917",nm:"Rotterdam"}}:null}});
+    await wacht(3);
+    check("6. de handmatige keuze wordt direct geladen",api.S.label==="Rotterdam",api.S.label);
+
+    bewaard.gelukt({coords:{latitude:52.09,longitude:5.12,accuracy:10}});
+    await wacht(6);
+    check("6. een later binnenkomend gps-resultaat overschrijft de handmatige keuze niet",
+      api.S.label==="Rotterdam",api.S.label);
+  }
+
+  // 7. dubbele aanvraag: automatisch en een snelle klik op de knop
+  {
+    let geoTellers=0;
+    const geo=()=>{ geoTellers++; };   // reageert bewust nooit
+    const {api}=laadKern(1280,{geo});
+    await wacht(2);
+    const tweede=await api.locatieNu("knop");
+    check("7. een snelle klik terwijl de automatische aanvraag nog loopt start geen tweede gps-aanvraag",
+      geoTellers===1,geoTellers);
+    check("7. die klik krijgt een stille no-op terug",tweede===false,tweede);
+  }
+
+  // 8. weigering: binnen dezelfde sessie niet automatisch opnieuw
+  {
+    let geoTellers=0;
+    const geo=(gelukt,mislukt)=>{ geoTellers++; mislukt({code:1}); };
+    const opgeslagen={lat:52.0907,lon:5.1214,label:"Utrecht"};
+    const {api}=laadKern(1280,{opgeslagen,geo});
+    await wacht(4);
+    check("8. eerste weigering wordt geregistreerd",geoTellers===1,geoTellers);
+    const opnieuw=await api.locatieNu("auto-terugkerend");
+    check("8. na een expliciete weigering vraagt de achtergrondprocedure niet opnieuw",
+      geoTellers===1&&opnieuw===false,geoTellers+" / "+opnieuw);
+    await api.locatieNu("knop");
+    check("8. een bewuste klik op de knop mag zelf wel een nieuwe poging doen",geoTellers===2,geoTellers);
+  }
+
+  // 9. geen geolocation-ondersteuning
+  {
+    const {api,bak}=laadKern(1280,{geoOntbreekt:true});
+    await wacht(4);
+    check("9. geen geolocation-ondersteuning geeft een duidelijke melding, geen crash",
+      /locatie/i.test(bak.state.textContent),bak.state.textContent);
+    check("9. zoeken blijft bruikbaar",bak.q!=null);
+  }
+
+  // 10. geen regressie
+  {
+    const {api:aP}=laadKern(1280,{zoek:"?lat=50&lon=4&plaats=X"});
+    await wacht();
+    check("10. de url-prioriteit blijft correct",aP.S.lat===50&&aP.S.lon===4);
+    check("10. de live klok (v65) staat nog gewoon in tekenAlles(), onaangeroerd",
+      /klokTimerStart\(\);\s*\n}/.test(bronL2));
+    check("10. nuTimerStart (de nu-lijn) staat er ook nog onaangeroerd naast",
+      /nuTimerStart\(\);\s*\n\s*klokTimerStart\(\);/.test(bronL2));
+  }
+}
+
+testenOpstartlocatie().then(()=>{
+  console.log("\n"+goed+" geslaagd, "+fout+" mislukt");
+  process.exit(fout?1:0);
+}).catch(e=>{
+  console.error("Onverwachte fout in de opstartlocatie-tests:",e);
+  process.exit(1);
+});

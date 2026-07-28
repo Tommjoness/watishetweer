@@ -18,7 +18,7 @@ const NODIG = ["S", "opOnder", "maan", "bft", "BFTNAAM", "nl",
 
 // Handig om bij de hand te hebben, maar niet fataal als het er niet is.
 const EXTRA = ["plaatsNu", "plaatsNuIndex", "plaatsKlok", "nuTimerStart", "clearNuTimer",
-               "klokTimerStart", "clearKlokTimer", "klokBijwerken", "kompasKort", "dagDeel", "maanUnicode", "tekenAlles", "load", "chips", "controle", "lucht", "stempel", "icon", "hhmm", "kompas",
+               "klokTimerStart", "clearKlokTimer", "klokBijwerken", "locatieNu", "afstandKm", "kompasKort", "dagDeel", "maanUnicode", "tekenAlles", "load", "chips", "controle", "lucht", "stempel", "icon", "hhmm", "kompas",
                "piek", "restkans", "daglengte", "inNederland", "nbsp", "esc", "clamp",
                "mins", "naarLokaal", "radarTeken", "knmiVerwachting", "R",
                "CODES", "DIRSVOL", "DAGEN", "BFT", "THEMAS", "ls"];
@@ -205,9 +205,16 @@ let idsGecached = null;
 /**
  * Draait index.html in een lege omgeving en geeft de functies terug.
  * @param {number} breedte  schermbreedte in px, bepaalt of de app de telefoonopmaak kiest
+ * @param {object} [opties]
+ * @param {string} [opties.zoek]            location.search, bv. "?lat=52.1&lon=4.3&plaats=Delft" of "?hier=1"
+ * @param {object|null} [opties.opgeslagen] vooraf in localStorage onder KEY_P gezet, bv. {lat,lon,label}
+ * @param {function} [opties.geo]           vervangt getCurrentPosition(gelukt,mislukt,opties) volledig
+ * @param {string} [opties.permissieStatus] "granted"|"denied"|"prompt"; ontbreekt = geen Permissions API (Safari/iOS)
+ * @param {function} [opties.fetch]         vervangt fetch(url); standaard blijft alles onbeantwoord hangen
  * @returns {{api:object, bak:object, venster:object}}
  */
-function laadKern(breedte) {
+function laadKern(breedte, opties) {
+  opties = opties || {};
   if (!idsGecached) idsGecached = idsUitHtml();
   const { doc, bak } = maakDocument(idsGecached);
 
@@ -216,8 +223,13 @@ function laadKern(breedte) {
   // openstaande belofte houdt node niet in leven, een timer zou dat wel doen.
   // De teller staat een test toe te bevestigen dat een actie geen fetch
   // veroorzaakt, zonder dat dat afhangt van wat er ooit mee zou resolven.
+  // Een test kan dit met opties.fetch vervangen (bv. voor reverse geocoding of
+  // een load()-aanroep die wél moet resolven); de teller blijft dan meelopen.
   const fetchStaat = { teller: 0 };
   const nooit = () => { fetchStaat.teller++; return new Promise(() => {}); };
+  const fetchImpl = opties.fetch
+    ? (...a) => { fetchStaat.teller++; return opties.fetch(...a); }
+    : nooit;
 
   /* Nagebootste timers: geen echte klok, maar een handmatig te verzetten teller.
      Eerder deden setTimeout/setInterval hier niets en verdwenen ze meteen; dat
@@ -266,21 +278,23 @@ function laadKern(breedte) {
     document: doc,
     window: venster,
     self: venster,
-    navigator: {
+    navigator: Object.assign({
       userAgent: "Weerbriefing-test",
       language: "nl-NL",
       onLine: true,
-      geolocation: {
-        getCurrentPosition(_ok, mis) { if (mis) mis({ code: 2, message: "geen locatie in de test" }); },
+      geolocation: opties.geoOntbreekt ? undefined : {
+        getCurrentPosition: opties.geo || ((_ok, mis) => { if (mis) mis({ code: 2, message: "geen locatie in de test" }); }),
         watchPosition() { return 0; },
         clearWatch() {}
       }
       // serviceWorker staat er bewust niet in, dan slaat de app het registreren over
-    },
-    location: { href: "https://test.local/", search: "", pathname: "/", origin: "https://test.local", hash: "" },
+    }, opties.permissieStatus !== undefined ? {
+      permissions: { query: async () => ({ state: opties.permissieStatus }) }
+    } : {}),
+    location: { href: "https://test.local/" + (opties.zoek || ""), search: opties.zoek || "", pathname: "/", origin: "https://test.local", hash: "" },
     localStorage: maakOpslag(),
     sessionStorage: maakOpslag(),
-    fetch: nooit,
+    fetch: fetchImpl,
     // tijdgestuurde dingen: geen echte klok, zie avancerenTimers hierboven
     setTimeout: (fn, ms) => _timerPlannen(fn, ms, null),
     clearTimeout: id => { timers.delete(id); },
@@ -298,6 +312,13 @@ function laadKern(breedte) {
   zand.top = venster;
   zand.parent = venster;
 
+  // vooraf in localStorage zetten: KEY_P ("weerbriefing.plaats") is een vaste
+  // sleutel in de app zelf, dus rechtstreeks zo genoemd om geen kopie van die
+  // naam hier te hoeven onderhouden
+  if (opties.opgeslagen !== undefined && opties.opgeslagen !== null) {
+    zand.localStorage.setItem("weerbriefing.plaats", JSON.stringify(opties.opgeslagen));
+  }
+
   vm.createContext(zand);
   try {
     vm.runInContext(appBron(), zand, { filename: "index.html", timeout: 20000 });
@@ -314,7 +335,7 @@ function laadKern(breedte) {
       + ". Pas NODIG in test/kern.js aan, of herstel de naam in de app.");
   }
 
-  return { api, bak, venster, avancerenTimers, fetchStaat, doc, timerAantal: () => timers.size };
+  return { api, bak, venster, avancerenTimers, fetchStaat, doc, timerAantal: () => timers.size, localStorage: zand.localStorage };
 }
 
 module.exports = { laadKern };

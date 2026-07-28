@@ -750,7 +750,11 @@ async function j(url){const r=await fetch(url);if(!r.ok)throw new Error("status 
 
 /* ---------- ophalen ---------- */
 let laadTeller=0;
-async function load(lat,lon,label,stil){
+/* opslaan=false is uitsluitend voor een gedeelde URL-locatie: die moet wel
+   zichtbaar laden, maar hoort niet de persoonlijke laatst gebruikte plaats te
+   overschrijven van iemand die toevallig andermans link opent. */
+async function load(lat,lon,label,stil,opslaan){
+  if(opslaan===undefined) opslaan=true;
   const mijnBeurt=++laadTeller;
   const st=document.getElementById("state");
   if(!stil){st.style.display="block";st.className="msg";st.textContent="Gegevens ophalen.";}
@@ -790,7 +794,7 @@ async function load(lat,lon,label,stil){
     S.d=vol;
     S.air=ra.status==="fulfilled"?ra.value:null;
     S.op=Date.now(); if(!stil) S.dag=null;
-    ls.set(KEY_P,{lat:S.lat,lon:S.lon,label:label});
+    if(opslaan) ls.set(KEY_P,{lat:S.lat,lon:S.lon,label:label});
     ls.set(KEY_D,{d:S.d,air:S.air,label:label,lat:S.lat,lon:S.lon,op:S.op});
     tekenAlles();
     radarLaden();
@@ -2321,6 +2325,7 @@ q.addEventListener("input",()=>{
 res.addEventListener("click",e=>{
   const el=e.target.closest("div[data-lat]");if(!el)return;
   res.classList.remove("on");q.value=el.dataset.nm;
+  gpsGeneratie++;   // een handmatige keuze wint altijd van een nog lopende gps-aanvraag
   load(el.dataset.lat,el.dataset.lon,el.dataset.nm);
 });
 document.addEventListener("click",e=>{if(!e.target.closest(".tools"))res.classList.remove("on");});
@@ -2333,63 +2338,183 @@ document.getElementById("ververs").addEventListener("click",async()=>{
   b.disabled=false;b.textContent=oud;
 });
 
-document.getElementById("here").addEventListener("click",()=>{
-  const st=document.getElementById("state");
-  if(!navigator.geolocation){st.style.display="block";st.className="msg err";st.textContent="Deze browser deelt geen locatie.";return;}
-  st.style.display="block";st.className="msg";st.textContent="Locatie bepalen.";
+/* ---------- actuele locatie ---------- */
+/* Haversine: de aarde is een bol, dus twee breedtegraden zijn overal ~111 km
+   uit elkaar maar twee lengtegraden krimpen richting de polen. Rechtstreeks
+   in graden vergelijken zou dichter bij de evenaar te streng zijn en verder
+   ervandaan te soepel. */
+function afstandKm(lat1,lon1,lat2,lon2){
+  const R=6371,naarRad=d=>d*Math.PI/180;
+  const dLat=naarRad(lat2-lat1),dLon=naarRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2+Math.cos(naarRad(lat1))*Math.cos(naarRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
 
-  const gelukt=async p=>{
-    const la=p.coords.latitude,lo=p.coords.longitude;
-    const nauw=p.coords.accuracy;          // straal in meters waar de telefoon zeker van is
-    let nm=null;
-    try{
-      const g=await j("/api/plaatsnaam?lat="+la.toFixed(4)+"&lon="+lo.toFixed(4));
-      nm=g&&g.naam||null;
-    }catch(e){}
-    if(!nm){
+/* Eén herbruikbare procedure voor drie aanroepers: de knop "Mijn locatie", de
+   URL-parameter hier, en de automatische achtergrondcontrole voor nieuwe en
+   terugkerende bezoekers. Eerder stond deze logica alleen in de click-handler
+   van de knop; bij hier werd die knop met .click() nagebootst, wat niet op
+   zijn resultaat kon wachten en geen eigen foutafhandeling per aanroeper toeliet.
+
+   gpsGeneratie is het token tegen dubbele of verlopen aanvragen: elke aanroep
+   die daadwerkelijk start pakt zijn eigen nummer en controleert vlak vóór het
+   aanroepen van load() of dat nummer nog steeds het nieuwste is. Een
+   handmatige zoekkeuze verhoogt gpsGeneratie ook (zie de click-handler van
+   res verderop), dus een trage gps-callback die daarna alsnog binnenkomt
+   herkent zichzelf als verouderd en doet niets meer. gpsBezig zorgt dat een
+   automatische aanvraag en een klik op de knop nooit tegelijk lopen: wie
+   later komt, vindt de boot al vertrokken en is een stille no-op. */
+let gpsGeneratie=0, gpsBezig=false, gpsGeweigerd=false;
+
+/**
+ * modus bepaalt alleen de zichtbare kant: welke meldingen wel of niet komen.
+ * De onderliggende gps-then-grover-dan-reverse-geocoding-procedure is voor
+ * alle vier vormen identiek.
+ *   "knop"             - de knop zelf: altijd volledige meldingen
+ *   "hier"              - url-parameter hier: hetzelfde als de knop
+ *   "auto-leeg"          - eerste bezoek zonder eerdere locatie: bij falen een
+ *                         duidelijke, doorzoekbare status, nooit Almere
+ *   "auto-terugkerend"   - er staat al een geladen locatie: bij falen alleen
+ *                         een korte, niet-blokkerende melding; bij een positie
+ *                         binnen ~1 km geen nieuwe volledige laadactie
+ */
+async function locatieNu(modus){
+  modus=modus||"knop";
+  if(gpsBezig) return false;                                  // al een procedure actief: niet dubbel starten
+  if(modus.indexOf("auto")===0){
+    if(gpsGeweigerd) return false;                              // na een expliciete weigering niet vanzelf opnieuw
+    if(navigator.permissions&&navigator.permissions.query){
       try{
-        const g=await j("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude="+la+"&longitude="+lo+"&localityLanguage=nl");
-        nm=g.city||g.locality||g.principalSubdivision||null;
+        const stat=await navigator.permissions.query({name:"geolocation"});
+        if(stat.state==="denied"){ gpsGeweigerd=true; return false; }
+      }catch(e){ /* Permissions API ontbreekt of geeft een fout: gewoon doorgaan,
+                    getCurrentPosition regelt geweigerde toestemming zelf ook */ }
+    }
+  }
+  const st=document.getElementById("state");
+  if(!navigator.geolocation){
+    if(modus!=="auto-terugkerend"){
+      st.style.display="block";st.className="msg err";st.textContent="Deze browser deelt geen locatie.";
+    }
+    return false;
+  }
+  gpsBezig=true;
+  const mijnGen=++gpsGeneratie;
+  if(modus!=="auto-terugkerend"){
+    st.style.display="block";st.className="msg";st.textContent="Locatie bepalen.";
+  }
+
+  return new Promise(resolve=>{
+    const klaar=ok=>{ gpsBezig=false; resolve(ok); };
+
+    const gelukt=async p=>{
+      if(mijnGen!==gpsGeneratie){ klaar(false); return; }        // ondertussen iets nieuwers gekozen
+      const la=p.coords.latitude,lo=p.coords.longitude;
+      const nauw=p.coords.accuracy;          // straal in meters waar de telefoon zeker van is
+      let nm=null;
+      try{
+        const g=await j("/api/plaatsnaam?lat="+la.toFixed(4)+"&lon="+lo.toFixed(4));
+        nm=g&&g.naam||null;
       }catch(e){}
-    }
-    if(!nm) nm="Huidige locatie";
-    q.value=nm;
-    await load(la,lo,nm);
-    // load wist de melding, dus de waarschuwing komt er daarna pas op
-    if(isFinite(nauw)&&nauw>2500){
-      st.style.display="block";st.className="msg";
-      st.textContent="Deze positie is op ongeveer "+(nauw>=10000?Math.round(nauw/1000)+" kilometer":Math.round(nauw/100)*100+" meter")
-        +" nauwkeurig, dus mogelijk niet je eigen plaats. Zet precieze locatie aan voor je browser, of zoek de plaats hierboven.";
-    }
-  };
+      if(!nm){
+        try{
+          const g=await j("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude="+la+"&longitude="+lo+"&localityLanguage=nl");
+          nm=g.city||g.locality||g.principalSubdivision||null;
+        }catch(e){}
+      }
+      if(!nm) nm="Huidige locatie";
+      if(mijnGen!==gpsGeneratie){ klaar(false); return; }        // tijdens het naamzoeken iets nieuwers gekozen
 
-  const mislukt=e=>{
-    st.style.display="block";st.className="msg err";
-    st.textContent = e&&e.code===1 ? "Locatie geweigerd. Zoek hierboven een plaats."
-      : e&&e.code===3 ? "Het bepalen van de locatie duurde te lang. Probeer opnieuw of zoek hierboven een plaats."
-      : "Locatie niet beschikbaar. Zoek hierboven een plaats.";
-  };
+      if(modus==="auto-terugkerend"&&S.lat!=null&&afstandKm(S.lat,S.lon,la,lo)<=1){
+        // vrijwel dezelfde plek: geen nieuwe volledige laadactie, alleen de
+        // nauwkeurigere coördinaten bijwerken en opslaan
+        S.lat=la;S.lon=lo;
+        ls.set(KEY_P,{lat:S.lat,lon:S.lon,label:S.label});
+        klaar(true);
+        return;
+      }
 
-  // Zonder enableHighAccuracy pakt een telefoon alleen het zendmast- en wifinetwerk
-  // en dat levert een positie op van kilometers breed. Een laptop komt daar vaak
-  // toevallig wel goed uit omdat het vaste wifipunt bekend is. Vandaar eerst gps,
-  // en pas als dat niet lukt terugvallen op de grove methode.
-  navigator.geolocation.getCurrentPosition(gelukt,e=>{
-    if(e&&e.code===1){mislukt(e);return;}   // geweigerd, opnieuw proberen heeft geen zin
-    st.textContent="Gps geeft niets terug, grovere meting proberen.";
-    navigator.geolocation.getCurrentPosition(gelukt,mislukt,{enableHighAccuracy:false,timeout:8000,maximumAge:60000});
-  },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
-});
+      q.value=nm;
+      await load(la,lo,nm);
+      if(mijnGen!==gpsGeneratie){ klaar(false); return; }
+      // load wist de melding, dus de waarschuwing komt er daarna pas op
+      if(isFinite(nauw)&&nauw>2500&&modus!=="auto-terugkerend"){
+        st.style.display="block";st.className="msg";
+        st.textContent="Deze positie is op ongeveer "+(nauw>=10000?Math.round(nauw/1000)+" kilometer":Math.round(nauw/100)*100+" meter")
+          +" nauwkeurig, dus mogelijk niet je eigen plaats. Zet precieze locatie aan voor je browser, of zoek de plaats hierboven.";
+      }
+      klaar(true);
+    };
+
+    const mislukt=e=>{
+      if(mijnGen!==gpsGeneratie){ klaar(false); return; }
+      if(e&&e.code===1) gpsGeweigerd=true;
+      if(modus==="auto-terugkerend"){
+        // de al geladen locatie blijft gewoon staan; alleen een korte, niet-
+        // blokkerende melding, de rest van de app is al zichtbaar
+        st.style.display="block";st.className="msg";
+        st.textContent="Kon je actuele locatie niet bevestigen; de laatst gebruikte plaats blijft staan.";
+        klaar(false);
+        return;
+      }
+      st.style.display="block";st.className="msg err";
+      st.textContent = e&&e.code===1 ? "Locatie geweigerd. Zoek hierboven een plaats."
+        : e&&e.code===3 ? "Het bepalen van de locatie duurde te lang. Probeer opnieuw of zoek hierboven een plaats."
+        : "Locatie niet beschikbaar. Zoek hierboven een plaats.";
+      klaar(false);
+    };
+
+    // Zonder enableHighAccuracy pakt een telefoon alleen het zendmast- en wifinetwerk
+    // en dat levert een positie op van kilometers breed. Een laptop komt daar vaak
+    // toevallig wel goed uit omdat het vaste wifipunt bekend is. Vandaar eerst gps,
+    // en pas als dat niet lukt terugvallen op de grove methode.
+    navigator.geolocation.getCurrentPosition(gelukt,e=>{
+      if(e&&e.code===1){mislukt(e);return;}   // geweigerd, opnieuw proberen heeft geen zin
+      if(modus!=="auto-terugkerend") st.textContent="Gps geeft niets terug, grovere meting proberen.";
+      navigator.geolocation.getCurrentPosition(gelukt,mislukt,{enableHighAccuracy:false,timeout:8000,maximumAge:60000});
+    },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+  });
+}
+
+document.getElementById("here").addEventListener("click",()=>{ locatieNu("knop"); });
 
 /* ---------- start ---------- */
 (function(){
   const p=new URLSearchParams(location.search);
-  if(p.get("hier")){document.getElementById("here").click();return;}
+
+  // A. een gedeelde link is altijd leidend: geen gps, en niet als persoonlijke
+  //    laatst gebruikte locatie opslaan
   const la=parseFloat(p.get("lat")),lo=parseFloat(p.get("lon"));
-  if(!isNaN(la)&&!isNaN(lo)){const nm=p.get("plaats")||"Gedeelde locatie";q.value=nm;load(la,lo,nm);return;}
+  if(!isNaN(la)&&!isNaN(lo)){
+    const nm=p.get("plaats")||"Gedeelde locatie";
+    q.value=nm;
+    load(la,lo,nm,false,false);
+    return;
+  }
+
+  // B. hier=1 in de url: dezelfde procedure als de knop, direct bij het laden
+  if(p.get("hier")){ locatieNu("hier"); return; }
+
+  // C. terugkerende gebruiker: de opgeslagen plaats laadt meteen, en
+  //    tegelijkertijd loopt de actuele locatie op de achtergrond mee
   const v=ls.get(KEY_P,null);
-  if(v&&v.lat!=null){q.value=v.label;load(v.lat,v.lon,v.label);return;}
-  q.value="Almere";load(52.3508,5.2647,"Almere");
+  if(v&&v.lat!=null){
+    q.value=v.label;
+    load(v.lat,v.lon,v.label);
+    locatieNu("auto-terugkerend");
+    return;
+  }
+
+  // D. eerste bezoek zonder enige bekende locatie: automatisch gps, nooit
+  //    Almere of een andere gegokte plaats als daar niets uit komt
+  const st0=document.getElementById("state");
+  st0.style.display="block";st0.className="msg";st0.textContent="Locatie bepalen.";
+  locatieNu("auto-leeg").then(ok=>{
+    if(!ok){
+      st0.style.display="block";st0.className="msg err";
+      st0.textContent="Kon je locatie niet bepalen. Zoek hierboven een plaats, of probeer straks opnieuw op \u201cMijn locatie\u201d.";
+    }
+  });
 })();
 
 // bij draaien of vergroten opnieuw tekenen, want de grafiek heeft een eigen maat per schermbreedte
