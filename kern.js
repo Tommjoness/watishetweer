@@ -57,7 +57,11 @@ function maakStijl() {
 }
 
 function maakKlassen(el) {
-  const set = new Set();
+  // Bij een vers maakElement()-element is className altijd "", dus dit verandert
+  // niets voor bestaande tests. Bij een via parseFragment geparst element staat
+  // className al vóór dit moment gezet (uit het class-attribuut), en zonder deze
+  // seed begint classList.contains() dan ten onrechte bij een lege verzameling.
+  const set = new Set((el.className || "").split(/\s+/).filter(Boolean));
   return {
     add: (...k) => { k.forEach(x => set.add(x)); el.className = [...set].join(" "); },
     remove: (...k) => { k.forEach(x => set.delete(x)); el.className = [...set].join(" "); },
@@ -87,12 +91,93 @@ function maakTekenvlak() {
   });
 }
 
+/* Zeer beperkte HTML-fragmentparser, uitsluitend voor de eenvoudige, ondiepe
+   markup die deze app zelf via innerHTML genereert (spans/divs met class, id
+   en data-*-attributen, geen self-closing tags, geen commentaar, geen
+   <script>). Geen poging tot een volledige HTML-parser: hij hoeft alleen
+   chips(), waarschuwingen() en vergelijkbare eenvoudige lijstjes te kunnen
+   naspelen zodat click/keydown-handlers die de app zelf via
+   querySelectorAll(...) koppelt, ook daadwerkelijk op iets aangrijpen. */
+function parseFragment(html, doc) {
+  const root = { children: [], tagName: "#fragment", _tekst: "" };
+  const stack = [root];
+  const re = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:\s+[a-zA-Z_:][-a-zA-Z0-9_:.]*(?:\s*=\s*(?:"[^"]*"|'[^']*'))?)*)\s*(\/?)>|([^<]+)/g;
+  const attrRe = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*("([^"]*)"|'([^']*)'))?/g;
+  let m;
+  while ((m = re.exec(String(html)))) {
+    if (m[5] !== undefined) { stack[stack.length - 1]._tekst += m[5]; continue; }
+    const sluit = m[1] === "/", tag = m[2].toLowerCase(), attrsRaw = m[3] || "", zelfsluitend = m[4] === "/";
+    if (sluit) {
+      for (let i = stack.length - 1; i > 0; i--) if (stack[i].tagName.toLowerCase() === tag) { stack.length = i; break; }
+      continue;
+    }
+    const attrs = {};
+    attrRe.lastIndex = 0;
+    let am;
+    while ((am = attrRe.exec(attrsRaw))) {
+      attrs[am[1]] = am[3] !== undefined ? am[3] : (am[4] !== undefined ? am[4] : "");
+    }
+    const kind = maakElement(attrs.id || "", doc);
+    kind.tagName = tag.toUpperCase();
+    kind.className = attrs["class"] || "";
+    kind.classList = maakKlassen(kind);
+    kind._attr = attrs;
+    Object.keys(attrs).forEach(k => {
+      if (k.indexOf("data-") === 0) kind.dataset[k.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = attrs[k];
+    });
+    kind._tekst = "";
+    kind._parent = stack[stack.length - 1];
+    stack[stack.length - 1].children.push(kind);
+    if (!zelfsluitend) stack.push(kind);
+  }
+  const zetText = node => {
+    node.children.forEach(zetText);
+    node.textContent = (node._tekst || "") + node.children.map(k => k.textContent).join("");
+  };
+  zetText(root);
+  return root.children;
+}
+
+// komt overeen met bv. "div.chip[data-i]", ".x", "#chipadd", "[data-lat]"
+function matchtSelector(el, sel) {
+  const stuk = /^([a-zA-Z][a-zA-Z0-9-]*)?((?:\.[-\w]+)*)((?:#[-\w]+)?)((?:\[[^\]]+\])*)$/.exec(sel.trim());
+  if (!stuk) return false;
+  const [, tag, klassen, id, attrs] = stuk;
+  if (tag && el.tagName.toLowerCase() !== tag.toLowerCase()) return false;
+  if (klassen) {
+    const nodig = klassen.split(".").filter(Boolean);
+    const heeft = (el.className || "").split(/\s+/).filter(Boolean);
+    if (!nodig.every(k => heeft.includes(k))) return false;
+  }
+  if (id && el.id !== id.slice(1)) return false;
+  if (attrs) {
+    const paren = attrs.match(/\[[^\]]+\]/g) || [];
+    for (const p of paren) {
+      const inhoud = p.slice(1, -1);
+      const gelijk = inhoud.match(/^([-\w]+)="([^"]*)"$/) || inhoud.match(/^([-\w]+)='([^']*)'$/);
+      if (gelijk) { if ((el._attr || {})[gelijk[1]] !== gelijk[2]) return false; }
+      else { if (!Object.prototype.hasOwnProperty.call(el._attr || {}, inhoud)) return false; }
+    }
+  }
+  return true;
+}
+function alleAfstammelingen(el) {
+  const uit = [];
+  (el.children || []).forEach(k => { uit.push(k); uit.push(...alleAfstammelingen(k)); });
+  return uit;
+}
+function bevatNode(el, zoek) {
+  if (!el || !zoek) return false;
+  for (const k of (el.children || [])) { if (k === zoek || bevatNode(k, zoek)) return true; }
+  return false;
+}
+
 function maakElement(id, doc) {
+  let _html = "";
   const el = {
     id: id || "",
     tagName: "DIV",
     textContent: "",
-    innerHTML: "",
     innerText: "",
     value: "",
     className: "",
@@ -137,10 +222,24 @@ function maakElement(id, doc) {
     getContext() { return maakTekenvlak(); },
     getBoundingClientRect() { return { x: 0, y: 0, top: 0, left: 0, right: 900, bottom: 300, width: 900, height: 300 }; },
     closest() { return null; },
-    querySelector(sel) { return doc.querySelector(sel); },
-    querySelectorAll() { return []; },
-    contains() { return false; }
+    /* querySelector(All) en contains() werken nu echt, tegen de laatst gezette
+       innerHTML geparsed met parseFragment. innerHTML zelf blijft voor de rest
+       van de tests een gewone string: de getter geeft precies terug wat er is
+       gezet, dus elke bestaande regex-check op .innerHTML blijft ongewijzigd
+       werken. Alleen wie nu ook querySelector(All) gebruikt, krijgt er iets
+       bruikbaars voor terug. */
+    querySelectorAll(sel) { return alleAfstammelingen(this).filter(k => matchtSelector(k, sel)); },
+    querySelector(sel) { return alleAfstammelingen(this).find(k => matchtSelector(k, sel)) || null; },
+    contains(node) { return node === this || bevatNode(this, node); }
   };
+  Object.defineProperty(el, "innerHTML", {
+    get() { return _html; },
+    set(v) {
+      _html = v;
+      try { this.children = parseFragment(v, doc); } catch (e) { this.children = []; }
+    },
+    enumerable: true
+  });
   el.classList = maakKlassen(el);
   return el;
 }

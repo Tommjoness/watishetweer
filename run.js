@@ -2168,6 +2168,241 @@ groep("Live plaatsklok");
 /* 11. opstartlocatie: prioriteit A/B/C/D, de herbruikbare locatieNu()-procedure,
    racebescherming en het afstandscriterium. Async, dus in een eigen functie die
    de rest van het script (de afsluitende telling) netjes afwacht. */
+/* 12. v67: structuur van 'Bewaarde plaatsen' - kop en chips gescheiden,
+   opslag/selectie/verwijderlogica ongewijzigd. Let op: dit toetst DOM- en
+   opslagstructuur, geen visuele weergave. Of het er ook goed uitziet op een
+   scherm is hiermee niet aangetoond. */
+groep("Bewaarde plaatsen (structuur)");
+{
+  const fsC=require("fs"), pathC=require("path");
+  const bronC=fsC.readFileSync(pathC.join(__dirname,"index.html"),"utf8");
+  const KL="weerbriefing.lijst";
+
+  check("de kop staat in een eigen kolom-item, niet meer tussen de chips in dezelfde rij",
+    /\.chips\{display:flex;flex-direction:column/.test(bronC));
+  check("de chips staan in een eigen flex-wrap-container (.chiprij)",
+    /\.chiprij\{display:flex;gap:8px;flex-wrap:wrap/.test(bronC));
+  check("lange plaatsnamen mogen wrappen zonder buiten de chip te lopen",
+    /\.chip\{[^}]*max-width:100%[^}]*overflow-wrap:anywhere/.test(bronC));
+  check("de verwijderknop krimpt niet mee als de naam wrapt",
+    /\.chip \.x\{[^}]*flex-shrink:0/.test(bronC));
+
+  // één opgeslagen plaats
+  {
+    const {api,bak}=laadKern(390);
+    api.ls.set(KL,[{lat:52.35,lon:5.26,label:"Almere"}]);
+    Object.assign(api.S,{lat:10,lon:10,label:"Elders"});
+    api.chips();
+    const kop=bak.chips.querySelector(".chipskop"), rij=bak.chips.querySelector(".chiprij");
+    check("de kop en chipcontainer zijn afzonderlijke elementen",!!kop&&!!rij&&kop!==rij);
+    check("de kop staat buiten de lijst met chips",!!kop&&!rij.contains(kop));
+    check("één opgeslagen plaats: de chiprij bevat precies één chip",
+      rij&&rij.querySelectorAll(".chip[data-i]").length===1);
+    const chip0=rij.querySelector('.chip[data-i="0"]');
+    check("iedere opgeslagen plaats bevat een verwijderknop",!!chip0&&!!chip0.querySelector(".x"));
+  }
+
+  // meerdere opgeslagen plaatsen: volgorde en actieve chip
+  {
+    const lijst=[{lat:52.35,lon:5.26,label:"Almere"},{lat:52.34,lon:4.97,label:"Diemen"},
+      {lat:51.99,lon:5.09,label:"Vianen"},{lat:7.29,lon:80.63,label:"Kandy"}];
+    const {api,bak}=laadKern(390);
+    api.ls.set(KL,lijst);
+    Object.assign(api.S,{lat:52.34,lon:4.97,label:"Diemen"});   // exact de tweede plaats
+    api.chips();
+    const rij=bak.chips.querySelector(".chiprij");
+    const chipEls=rij.querySelectorAll(".chip[data-i]").sort((a,b)=>+a.dataset.i-+b.dataset.i);
+    check("meerdere opgeslagen plaatsen werken (chiprij bevat alle vier)",chipEls.length===4);
+    check("alle opgeslagen plaatsen worden in de oorspronkelijke volgorde gerenderd",
+      chipEls.map(c=>c.textContent.replace("×","")).join("|")===lijst.map(p=>p.label).join("|"),
+      chipEls.map(c=>c.textContent).join("|"));
+    check("de actieve chip behoudt de bestaande actieve class",
+      chipEls[1].classList.contains("on") && !chipEls[0].classList.contains("on"));
+    check("de chiprij toont geen bewaarknop als de huidige plaats al in de lijst staat",
+      bak.chips.querySelector("#chipadd")==null);
+  }
+
+  // verwijderen
+  {
+    const {api,bak}=laadKern(390);
+    api.ls.set(KL,[{lat:1,lon:1,label:"Een"},{lat:2,lon:2,label:"Twee"}]);
+    Object.assign(api.S,{lat:99,lon:99,label:"Elders"});
+    api.chips();
+    const x0=bak.chips.querySelector('.chip[data-i="0"]').querySelector(".x");
+    x0.dispatchEvent({type:"click",target:x0,stopPropagation(){}});
+    const na=api.ls.get(KL,[]);
+    check("verwijderen blijft functioneel werken",na.length===1&&na[0].label==="Twee",JSON.stringify(na));
+  }
+
+  // selecteren
+  {
+    const {api,bak}=laadKern(390);
+    api.ls.set(KL,[{lat:52.35,lon:5.26,label:"Almere"}]);
+    Object.assign(api.S,{lat:99,lon:99,label:"Elders"});
+    api.chips();
+    const chip0=bak.chips.querySelector('.chip[data-i="0"]');
+    chip0.dispatchEvent({type:"click",target:chip0});
+    check("selecteren blijft functioneel werken",api.S.lat===52.35&&api.S.lon===5.26,
+      api.S.lat+"/"+api.S.lon);
+  }
+
+  // bestaande keyboardbediening
+  {
+    const {api,bak}=laadKern(390);
+    api.ls.set(KL,[{lat:52.35,lon:5.26,label:"Almere"}]);
+    Object.assign(api.S,{lat:99,lon:99,label:"Elders"});
+    api.chips();
+    const chip0=bak.chips.querySelector('.chip[data-i="0"]');
+    let geblokkeerd=false;
+    chip0.dispatchEvent({type:"keydown",key:"Enter",target:chip0,preventDefault(){geblokkeerd=true;}});
+    check("bestaande keyboardbediening (Enter) blijft behouden",geblokkeerd&&api.S.lat===52.35);
+  }
+
+  // zonder opgeslagen plaatsen
+  {
+    const {api,bak}=laadKern(390);
+    api.ls.set(KL,[]);
+    Object.assign(api.S,{lat:null,lon:null,label:null});
+    api.chips();
+    check("zonder opgeslagen plaatsen en zonder actuele locatie blijft #chips leeg",
+      bak.chips.innerHTML==="",bak.chips.innerHTML);
+  }
+  {
+    const {api,bak}=laadKern(390);
+    api.ls.set(KL,[]);
+    Object.assign(api.S,{lat:52.35,lon:5.26,label:"Almere"});
+    api.chips();
+    check("zonder opgeslagen plaatsen verschijnt geen lege kop",bak.chips.querySelector(".chipskop")==null);
+    const add=bak.chips.querySelector("#chipadd");
+    check("zonder opgeslagen plaatsen blijft de bewaaractie beschikbaar",!!add);
+    // de app zelf koppelt de handler via document.getElementById("chipadd"),
+    // dus bak.chipadd (dezelfde referentie als de app gebruikt), niet het los
+    // geparste span-element uit chips.innerHTML
+    bak.chipadd.dispatchEvent({type:"click",target:bak.chipadd});
+    check("de bewaaractie blijft werken",api.ls.get(KL,[]).length===1);
+  }
+
+  // veilige HTML bij een lange/onveilige plaatsnaam
+  {
+    const rare='<img src=x onerror=alert(1)>Zeer Lange Plaatsnaam Die Best Wel Lang Kan Zijn';
+    const {api,bak}=laadKern(390);
+    api.ls.set(KL,[{lat:1,lon:1,label:rare}]);
+    Object.assign(api.S,{lat:99,lon:99,label:"Elders"});
+    api.chips();
+    check("een langere/onveilige plaatsnaam veroorzaakt geen onveilige HTML-structuur",
+      !/<img/.test(bak.chips.innerHTML)&&/&lt;img/.test(bak.chips.innerHTML),
+      bak.chips.innerHTML.slice(0,140));
+  }
+}
+
+/* 13. v67: nachtzone in de grafiek - navy in plaats van grijs, deterministische
+   sterren, bestaande segmentberekening en laagvolgorde ongewijzigd. Dit toetst
+   SVG-structuur, geen visuele weergave. */
+groep("Nachtzone in de grafiek");
+{
+  const fsN=require("fs"), pathN=require("path");
+  const bronN=fsN.readFileSync(pathN.join(__dirname,"index.html"),"utf8");
+
+  check("de segmentdetectie (s0/nacht-boundary) is bit voor bit ongewijzigd",
+    /let s0=-1;\s*\n\s*for\(let k=0;k<=ND\.length;k\+\+\)\{\s*\n\s*const nacht=k<ND\.length&&ND\[k\]===0;\s*\n\s*if\(nacht&&s0<0\) s0=k;\s*\n\s*if\(\(!nacht\|\|k===ND\.length\)&&s0>=0\)\{\s*\n\s*const x1=x\(s0\)-cw\/2,x2=x\(k-1\)\+cw\/2;/.test(bronN));
+  check("de nachtzone gebruikt de centrale --accent-night-variabele, geen losse hex",
+    /NIGHT="var\(--accent-night\)"/.test(bronN) && /fill="\$\{NIGHT\}"/.test(bronN));
+  check("de sterren gebruiken de centrale --accent-sun-variabele",
+    /STER="var\(--accent-sun\)"/.test(bronN) && /fill="\$\{STER\}"/.test(bronN));
+  check("geen Math.random in de sterrenpositionering: dezelfde plek bij elke render",
+    !/Math\.random/.test(bronN.slice(bronN.indexOf("sterretjes"),bronN.indexOf("sterretjes")+700)));
+  check("de sterren staan in een aria-hidden, pointer-events-loze groep",
+    /<g aria-hidden="true" pointer-events="none">\$\{sterren\}<\/g>/.test(bronN));
+  check("balk (nachtvlak + sterren) komt vóór grid, spreiding, curve, labels, nu-lijn en tooltip in de SVG",
+    /svg\.innerHTML=\s*\n\s*`\$\{balk\}\$\{gitter\}\$\{bars\}/.test(bronN)
+    && bronN.indexOf("${balk}")<bronN.indexOf('id="scrub"')
+    && bronN.indexOf("${balk}")<bronN.indexOf('id="hit"'));
+  check("de tooltipstructuur (#scrub) bestaat nog",/<g id="scrub"/.test(bronN));
+  check("het hitvlak (#hit) bestaat nog",/id="hit"/.test(bronN));
+  check("de rode Nu-lijn (CARMINE, tekst \"nu\") bestaat nog",
+    /fill="\$\{CARMINE\}"[^>]*>nu<\/text>/.test(bronN));
+  check("geen specifieke plaatsnaam, landcode of tijdzone is aan de balk-/sterrenlogica toegevoegd",
+    !/Almere|Diemen|Vianen|Kandy|Nederland|Sri Lanka|Amsterdam|Colombo/.test(
+      bronN.slice(bronN.indexOf("/* dagbalk */"),bronN.indexOf("const gitter"))));
+
+  // functioneel: sterren alleen bij nacht, generiek voor allerlei offsets
+  const scenario=(naam,isDay,utcOffset)=>{
+    const {api,bak}=laadKern(1280);
+    const d=bouw({});
+    d.hourly.is_day=d.hourly.time.map((_,i)=>isDay(i));
+    d.utc_offset_seconds=utcOffset;
+    Object.assign(api.S,{d,i0:14,op:Date.now(),lat:12.3,lon:45.6,label:"T",dag:null,bereik:24});
+    let fout=null;
+    try{ api.etmaal(api.S.i0,24); }catch(e){ fout=e; }
+    return {bak,fout};
+  };
+
+  {
+    const {bak,fout}=scenario("volledig overdag",()=>1,7200);
+    check("volledig dag-bereik geeft geen enkel sterretje",
+      !fout && (bak.chart.innerHTML.match(/<circle[^>]*opacity="0\.(85|55)"/g)||[]).length===0,
+      fout);
+  }
+  {
+    const {bak,fout}=scenario("een nachtsegment in het midden",i=>(i>=8&&i<16)?0:1,-18000);   // negatieve UTC-offset
+    check("een nachtsegment levert wel sterretjes op",
+      !fout && (bak.chart.innerHTML.match(/<circle[^>]*opacity="0\.(85|55)"/g)||[]).length>0,fout);
+    check("de sterren zitten in een aria-hidden/pointer-events-loze groep",
+      !fout && /<g aria-hidden="true" pointer-events="none">/.test(bak.chart.innerHTML));
+  }
+  // generieke offsetscenario's: positief heel, negatief heel, half uur, kwartier,
+  // grafiek die met nacht begint, grafiek die met dag begint, meerdere nachten
+  const offsetScenarios=[
+    ["positieve hele UTC-offset",i=>(i<6||i>=22)?0:1,19800],
+    ["negatieve hele UTC-offset",i=>(i<6||i>=22)?0:1,-14400],
+    ["halve-uur-offset",i=>(i<6||i>=22)?0:1,-16200],
+    ["kwartier-offset",i=>(i<6||i>=22)?0:1,20700],
+    ["grafiek die tijdens de nacht begint",i=>i<10?0:1,3600],
+    ["grafiek die tijdens de dag begint",i=>i<10?1:0,3600],
+    ["meerdere afzonderlijke nachtsegmenten",i=>(i%8<3)?0:1,0],
+    ["lokaal etmaal wijkt af van de tijdzone van de tester",i=>(i<6)?0:1,50400]
+  ];
+  for(const [naam,isDay,off] of offsetScenarios){
+    const {fout}=scenario(naam,isDay,off);
+    check("generiek, dezelfde productiecode: "+naam,!fout,fout&&fout.message);
+  }
+
+  // ontbrekende/ongeldige dag/nachtdata mag niet crashen
+  {
+    const {api}=laadKern(1280);
+    const d=bouw({});
+    d.hourly.is_day=d.hourly.time.map(()=>undefined);
+    Object.assign(api.S,{d,i0:14,op:Date.now(),lat:1,lon:1,label:"T",dag:null,bereik:24});
+    let fout=null;
+    try{ api.etmaal(api.S.i0,24); }catch(e){ fout=e; }
+    check("ontbrekende dag/nachtdata (allemaal undefined) veroorzaakt geen crash",!fout,fout&&fout.message);
+  }
+}
+
+/* 14. v67: centraal kleursysteem */
+groep("Kleursysteem");
+{
+  const fsK3=require("fs"), pathK3=require("path");
+  const bronK3=fsK3.readFileSync(pathK3.join(__dirname,"index.html"),"utf8");
+
+  check("de nieuwe accentvariabelen zijn centraal in :root gedefinieerd",
+    /--text-primary:/.test(bronK3) && /--text-secondary:/.test(bronK3) && /--border-subtle:/.test(bronK3)
+    && /--accent-active:#A51D3D/.test(bronK3) && /--accent-info:/.test(bronK3)
+    && /--accent-rain:#3B8FA3/.test(bronK3) && /--accent-night:#142C4C/.test(bronK3)
+    && /--accent-sun:#F2CE63/.test(bronK3));
+  check("tekst/border/info harmoniseren met bestaande tokens in plaats van een dubbel systeem",
+    /--text-primary:var\(--ink\)/.test(bronK3) && /--text-secondary:var\(--ink-45\)/.test(bronK3)
+    && /--border-subtle:var\(--rule\)/.test(bronK3) && /--accent-info:var\(--teal\)/.test(bronK3));
+  check("#142C4C en #F2CE63 komen ieder precies één keer als hardcoded hex voor (alleen in de tokendefinitie)",
+    (bronK3.match(/#142C4C/g)||[]).length===1 && (bronK3.match(/#F2CE63/g)||[]).length===1);
+  check("actieve chips gebruiken het actieve accent",/\.chip\.on\{[^}]*var\(--accent-active\)/.test(bronK3));
+  check("bestaande waarschuwing- en foutkleuren (carmine) zijn niet overschreven",
+    /--carmine:#A02036/.test(bronK3) && /html\[data-thema="donker"\][^}]*--carmine:#E4707E/.test(bronK3)
+    && /html\[data-thema="rood"\][^}]*--carmine:#F06A5A/.test(bronK3));
+  check("de themakeuzelogica zelf is niet gewijzigd (auto kiest nog op is_day)",
+    /keuze==="auto".*is_day===0.*"donker".*"licht"/.test(bronK3.replace(/\s+/g," ")));
+}
+
 async function testenOpstartlocatie(){
   const fsL=require("fs"), pathL=require("path");
   const bronL2=fsL.readFileSync(pathL.join(__dirname,"index.html"),"utf8");

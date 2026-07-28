@@ -32,6 +32,23 @@
     --night:#E6EAE7;
     --teal:#0E6E75;
     --carmine:#A02036;
+    /* Beperkt, semantisch kleursysteem (v67). Tekst, border en info sluiten
+       bewust aan op de bestaande --ink/--rule/--teal hierboven in plaats van
+       een tweede, parallelle kleurenset te introduceren: dezelfde waarde,
+       alleen onder een naam die zegt waarvóór hij bedoeld is. accent-active
+       (#A51D3D) is de expliciet gevraagde bordeaux voor de bewaarde-plaatsen-
+       chip en wijkt bewust iets af van het bestaande --carmine, dat zijn eigen
+       betekenis (fouten, verouderde data) elders behoudt. Nacht en regen
+       hebben geen bestaand equivalent en zijn dus ook nieuw, en blijven expres
+       constant in ieder thema (zie de toelichting bij de grafiek). */
+    --text-primary:var(--ink);
+    --text-secondary:var(--ink-45);
+    --border-subtle:var(--rule);
+    --accent-active:#A51D3D;
+    --accent-info:var(--teal);
+    --accent-rain:#3B8FA3;
+    --accent-night:#142C4C;
+    --accent-sun:#F2CE63;
     --serif:'Bodoni Moda',Georgia,'Times New Roman',serif;
     --sans:'Instrument Sans',ui-sans-serif,system-ui,-apple-system,sans-serif;
     --mono:'DM Mono',ui-monospace,'SFMono-Regular',monospace;
@@ -113,15 +130,24 @@
   .results div:last-child{border-bottom:none}
   .results div:hover{background:var(--paper)}
 
-  .chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:var(--s2) 0 0}
-  .chips .kop{font-family:var(--sans);font-weight:500;font-size:10.5px;letter-spacing:.14em;
-              text-transform:uppercase;color:var(--ink-25);margin-right:4px}
+  /* v67: de kop stond eerder als los span-element tussen de chips in dezelfde
+     flex-wrap-rij, dus kon op smalle schermen op dezelfde regel als de eerste
+     chip belanden waarna de rest onrustig omklapte. #chips is nu een kolom met
+     twee eigen kinderen: de kop (altijd een eigen, volle-breedte regel) en
+     .chiprij (de eigenlijke flex-wrap-rij met de chips). Opslag, selectie en
+     verwijderlogica in chips() zijn hierdoor niet geraakt, alleen de opbouw
+     van de HTML. */
+  .chips{display:flex;flex-direction:column;gap:8px;margin:var(--s2) 0 0}
+  .chips .chipskop{display:block;width:100%;font-family:var(--sans);font-weight:500;font-size:10.5px;
+              letter-spacing:.14em;text-transform:uppercase;color:var(--text-secondary)}
+  .chiprij{display:flex;gap:8px;flex-wrap:wrap;align-items:center;max-width:100%}
   .chip{display:inline-flex;align-items:center;gap:9px;font-size:13.5px;color:var(--ink-70);
-        cursor:pointer;padding:5px 11px;border:1px solid var(--rule);background:var(--sheet)}
+        cursor:pointer;padding:5px 11px;border:1px solid var(--border-subtle);background:var(--sheet);
+        max-width:100%;overflow-wrap:anywhere}
   .chip:hover{border-color:var(--ink);color:var(--ink)}
-  .chip.on{border-color:var(--ink);color:var(--ink);font-weight:500;box-shadow:inset 0 -2px 0 var(--carmine)}
-  .chip .x{color:var(--ink-25);font-size:15px;line-height:1;margin:-2px -4px -2px 0;padding:0 3px}
-  .chip .x:hover{color:var(--carmine)}
+  .chip.on{border-color:var(--accent-active);color:var(--ink);font-weight:500;box-shadow:inset 0 -2px 0 var(--accent-active)}
+  .chip .x{color:var(--ink-25);font-size:15px;line-height:1;margin:-2px -4px -2px 0;padding:0 3px;flex-shrink:0}
+  .chip .x:hover,.chip .x:focus-visible{color:var(--accent-active)}
   .chip.add{color:var(--ink-45);border-style:dashed}
   .chip.add:hover{border-style:solid}
 
@@ -551,7 +577,7 @@ const KNMI_STIJL="rainrate-blue-to-purple/nearest";
    motregen valt minder op. Wil je terug, zet dit getal weer op 2. */
 const RV_SCHEMA=8;
 const INK="var(--ink)",INK45="var(--ink-45)",INK25="var(--ink-25)",RULE="var(--rule)",
-      RULES="var(--rule-soft)",NIGHT="var(--night)",TEAL="var(--teal)",CARMINE="var(--carmine)",SHEET="var(--sheet)";
+      RULES="var(--rule-soft)",NIGHT="var(--accent-night)",STER="var(--accent-sun)",TEAL="var(--teal)",CARMINE="var(--carmine)",SHEET="var(--sheet)";
 
 // 's Nachts staat er geen zon aan de hemel. Het icoon hield daar al rekening mee,
 // de omschrijving niet, dus om tien voor tien 's avonds stond er "Overwegend zonnig"
@@ -1208,15 +1234,23 @@ function etmaal(start,n){
     if(nacht&&s0<0) s0=k;
     if((!nacht||k===ND.length)&&s0>=0){
       const x1=x(s0)-cw/2,x2=x(k-1)+cw/2;
-      balk+=`<rect x="${x1}" y="${by}" width="${x2-x1}" height="${bh}" fill="${NIGHT}"/>`;
-      // sterretjes, op vaste plekken zodat ze niet dansen bij elke hertekening
+      // navy in plaats van het vorige neutrale grijs (v67); 0.92 in plaats van
+      // vol dekkend, zodat de kleur duidelijk blauw blijft zonder een hard blok
+      // te worden. Er ligt niets van de curve/regen/Nu-lijn onder deze balk, die
+      // leven verderop in hun eigen, lagere strook van de grafiek.
+      balk+=`<rect x="${x1}" y="${by}" width="${x2-x1}" height="${bh}" fill="${NIGHT}" opacity="0.92"/>`;
+      // sterretjes, op vaste plekken zodat ze niet dansen bij elke hertekening.
+      // Decoratief: aria-hidden en pointer-events:none, zodat ze nooit een
+      // pointerevent van de tooltip of het hitvlak onderscheppen.
       const breedte=x2-x1, aantal=Math.max(3,Math.round(breedte/26));
+      let sterren="";
       for(let q=0;q<aantal;q++){
         const fx=x1+breedte*((q*0.6180339887)%1);
         const fy=by+3+((q*7)%(bh-6));
         const r2=(q%3===0)?0.9:0.6;
-        balk+=`<circle cx="${fx.toFixed(1)}" cy="${fy.toFixed(1)}" r="${r2}" fill="${INK45}" opacity="${q%3===0?0.75:0.45}"/>`;
+        sterren+=`<circle cx="${fx.toFixed(1)}" cy="${fy.toFixed(1)}" r="${r2}" fill="${STER}" opacity="${q%3===0?0.85:0.55}"/>`;
       }
+      balk+=`<g aria-hidden="true" pointer-events="none">${sterren}</g>`;
       s0=-1;
     }
   }
@@ -2200,10 +2234,16 @@ function maanUnicode(fase){
 function chips(){
   const lijst=ls.get(KEY_L,[]);
   const zelfde=p=>Math.abs(p.lat-S.lat)<0.02&&Math.abs(p.lon-S.lon)<0.02;
-  let out=lijst.map((p,i)=>`<span class="chip${zelfde(p)?" on":""}" data-i="${i}" role="button" tabindex="0" title="Toon het weer voor ${esc(p.label)}">${esc(p.label)}<span class="x" data-x="${i}" title="Verwijderen">×</span></span>`).join("");
-  if(!lijst.some(zelfde)&&S.lat!=null) out+=`<span class="chip add" id="chipadd" role="button" tabindex="0" title="Voeg deze plaats toe aan je lijst">+ ${esc(S.label)} bewaren</span>`;
+  let rij=lijst.map((p,i)=>`<span class="chip${zelfde(p)?" on":""}" data-i="${i}" role="button" tabindex="0" title="Toon het weer voor ${esc(p.label)}">${esc(p.label)}<span class="x" data-x="${i}" title="Verwijderen">×</span></span>`).join("");
+  if(!lijst.some(zelfde)&&S.lat!=null) rij+=`<span class="chip add" id="chipadd" role="button" tabindex="0" title="Voeg deze plaats toe aan je lijst">+ ${esc(S.label)} bewaren</span>`;
   const c=document.getElementById("chips");
-  c.innerHTML=(lijst.length?'<span class="kop">Bewaarde plaatsen</span>':"")+out;
+  /* v67: kop en chiprij zijn twee losse elementen in plaats van één platte
+     rij spans, zodat de kop nooit meer op dezelfde regel als een chip kan
+     belanden (zie de toelichting bij .chips hierboven). De kop verschijnt
+     alleen als er ook daadwerkelijk bewaarde plaatsen zijn; zonder lijst en
+     zonder de bewaaractie blijft #chips helemaal leeg. */
+  c.innerHTML=(lijst.length?'<span class="chipskop">Bewaarde plaatsen</span>':"")
+    +(rij?'<div class="chiprij">'+rij+'</div>':"");
   c.querySelectorAll(".chip[data-i]").forEach(el=>{
     const ga=e=>{
       if(e.target.dataset&&e.target.dataset.x!=null) return;
