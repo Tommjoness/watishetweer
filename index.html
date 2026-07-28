@@ -843,6 +843,7 @@ function tekenAlles(){
   logBij();
   meters();briefing();etmaal(startIdx,S.bereik);nowcast();dagen();nachten();lucht();stempel();
   nuTimerStart();
+  klokTimerStart();
 }
 function set(id,html){document.getElementById(id).innerHTML=nbsp(html);}
 function zetTekst(id,tekst){document.getElementById(id).textContent=nbsp(tekst);}
@@ -1131,6 +1132,32 @@ function nuTimerStart(){
   const t=plaatsNu();
   const totVolgende=60000-(t.getSeconds()*1000+t.getMilliseconds());
   nuUitlijnTimer=setTimeout(()=>{ tik(); nuMinuutTimer=setInterval(tik,60000); }, totVolgende);
+}
+
+/* Losstaande klok voor #plaatstijd (naast de grote plaatsnaam) en #minitijd (in
+   de sticky header). Beide werden alleen gezet bij een volledige render, dus
+   bleven ze op het moment van de laatste herTekening staan en liepen achter
+   zodra er een minuut verstreek zonder dat er iets anders herlaadde. Dit raakt
+   uitsluitend die twee tekstnodes: geen fetch, geen etmaal()/tekenAlles(), en
+   dus ook geen effect op de nu-lijn, grafiek, radar, zoom of tooltip. Zelfde
+   uitlijn-op-de-minuut-truc als nuTimerStart() hierboven, maar met een eigen
+   paar timers zodat de twee mechanismen nooit op elkaars klok hoeven te wachten. */
+let klokMinuutTimer=null, klokUitlijnTimer=null;
+function klokBijwerken(){
+  const tijd=plaatsKlok();
+  const pt=document.getElementById("plaatstijd"); if(pt) pt.textContent=tijd;
+  const mt=document.getElementById("minitijd"); if(mt) mt.textContent=tijd;
+}
+function clearKlokTimer(){
+  if(klokUitlijnTimer!=null){ clearTimeout(klokUitlijnTimer); klokUitlijnTimer=null; }
+  if(klokMinuutTimer!=null){ clearInterval(klokMinuutTimer); klokMinuutTimer=null; }
+}
+function klokTimerStart(){
+  clearKlokTimer();
+  klokBijwerken();
+  const t=plaatsNu();
+  const totVolgende=60000-(t.getSeconds()*1000+t.getMilliseconds());
+  klokUitlijnTimer=setTimeout(()=>{ klokBijwerken(); klokMinuutTimer=setInterval(klokBijwerken,60000); }, totVolgende);
 }
 
 function etmaal(start,n){
@@ -2258,7 +2285,13 @@ function stempel(){
 setInterval(stempel,30000);
 setInterval(()=>{ if(document.visibilityState==="visible"&&S.lat!=null&&Date.now()-S.op>600000) load(S.lat,S.lon,S.label,true); },60000);
 document.addEventListener("visibilitychange",()=>{
-  if(document.visibilityState==="visible"&&S.lat!=null&&Date.now()-S.op>300000) load(S.lat,S.lon,S.label,true);
+  if(document.visibilityState==="visible"){
+    // eerst de klok corrigeren: geen fetch, alleen #plaatstijd/#minitijd en de
+    // minuutuitlijning opnieuw zetten, want een achtergrondtabblad kan de
+    // timers van klokTimerStart() laten driften of laten pauzeren
+    klokTimerStart();
+    if(S.lat!=null&&Date.now()-S.op>300000) load(S.lat,S.lon,S.label,true);
+  }
 });
 
 function urlBij(){

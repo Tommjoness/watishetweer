@@ -17,7 +17,8 @@ const NODIG = ["S", "opOnder", "maan", "bft", "BFTNAAM", "nl",
                "meters", "briefing", "nowcast", "etmaal", "dagen", "nachten"];
 
 // Handig om bij de hand te hebben, maar niet fataal als het er niet is.
-const EXTRA = ["plaatsNu", "plaatsNuIndex", "plaatsKlok", "nuTimerStart", "clearNuTimer", "kompasKort", "dagDeel", "maanUnicode", "tekenAlles", "load", "chips", "controle", "lucht", "stempel", "icon", "hhmm", "kompas",
+const EXTRA = ["plaatsNu", "plaatsNuIndex", "plaatsKlok", "nuTimerStart", "clearNuTimer",
+               "klokTimerStart", "clearKlokTimer", "klokBijwerken", "kompasKort", "dagDeel", "maanUnicode", "tekenAlles", "load", "chips", "controle", "lucht", "stempel", "icon", "hhmm", "kompas",
                "piek", "restkans", "daglengte", "inNederland", "nbsp", "esc", "clamp",
                "mins", "naarLokaal", "radarTeken", "knmiVerwachting", "R",
                "CODES", "DIRSVOL", "DAGEN", "BFT", "THEMAS", "ls"];
@@ -146,11 +147,19 @@ function maakElement(id, doc) {
 
 function maakDocument(idsVooraf) {
   const bak = Object.create(null);
+  const _handlers = {};
   const doc = {
     title: "",
     visibilityState: "visible",
-    addEventListener() {},
-    removeEventListener() {},
+    addEventListener(type, fn) { (_handlers[type] = _handlers[type] || []).push(fn); },
+    removeEventListener(type, fn) {
+      if (_handlers[type]) _handlers[type] = _handlers[type].filter(h => h !== fn);
+    },
+    dispatchEvent(ev) {
+      const type = ev && ev.type;
+      (_handlers[type] || []).forEach(fn => fn(ev));
+      return true;
+    },
     createElement(tag) { const e = maakElement("", doc); e.tagName = String(tag).toUpperCase(); return e; },
     getElementById(id) {
       if (!bak[id]) bak[id] = maakElement(id, doc);
@@ -205,7 +214,43 @@ function laadKern(breedte) {
   // Netwerk hangt bewust: elke ophaalpoging blijft open staan, dus de app komt
   // nooit voorbij zijn eigen laadstap en overschrijft de testdata niet. Een
   // openstaande belofte houdt node niet in leven, een timer zou dat wel doen.
-  const nooit = () => new Promise(() => {});
+  // De teller staat een test toe te bevestigen dat een actie geen fetch
+  // veroorzaakt, zonder dat dat afhangt van wat er ooit mee zou resolven.
+  const fetchStaat = { teller: 0 };
+  const nooit = () => { fetchStaat.teller++; return new Promise(() => {}); };
+
+  /* Nagebootste timers: geen echte klok, maar een handmatig te verzetten teller.
+     Eerder deden setTimeout/setInterval hier niets en verdwenen ze meteen; dat
+     werkte zolang een test toch elke functie zelf aanriep, maar een regressie
+     als "na een minuut werkt de klok bij" is daarmee niet na te spelen. Nu
+     bewaart elke oproep zijn functie en resterende tijd, en verzet
+     avancerenTimers(ms) de klok in stapjes zodat ook een interval dat binnen
+     die periode meerdere keren zou aflopen, ook echt meerdere keren vuurt. */
+  let volgendTimerId = 1;
+  const timers = new Map();
+  function _timerPlannen(fn, ms, periode) {
+    const id = volgendTimerId++;
+    timers.set(id, { fn, resterend: Number(ms) || 0, periode: periode || null });
+    return id;
+  }
+  function avancerenTimers(ms) {
+    let over = Number(ms) || 0;
+    while (over > 0) {
+      let volgende = null;
+      for (const t of timers.values()) if (volgende === null || t.resterend < volgende) volgende = t.resterend;
+      if (volgende === null || volgende > over) {
+        for (const t of timers.values()) t.resterend -= over;
+        break;
+      }
+      for (const t of timers.values()) t.resterend -= volgende;
+      over -= volgende;
+      const klaar = [...timers.entries()].filter(([, t]) => t.resterend <= 0);
+      for (const [id, t] of klaar) {
+        if (t.periode) t.resterend = t.periode; else timers.delete(id);
+        t.fn();
+      }
+    }
+  }
 
   const venster = {
     innerWidth: breedte || 1280,
@@ -236,11 +281,11 @@ function laadKern(breedte) {
     localStorage: maakOpslag(),
     sessionStorage: maakOpslag(),
     fetch: nooit,
-    // tijdgestuurde dingen doen in een test niets: de tests roepen elke functie zelf aan
-    setTimeout: () => 0,
-    clearTimeout: () => {},
-    setInterval: () => 0,
-    clearInterval: () => {},
+    // tijdgestuurde dingen: geen echte klok, zie avancerenTimers hierboven
+    setTimeout: (fn, ms) => _timerPlannen(fn, ms, null),
+    clearTimeout: id => { timers.delete(id); },
+    setInterval: (fn, ms) => _timerPlannen(fn, ms, Number(ms) || 0),
+    clearInterval: id => { timers.delete(id); },
     requestAnimationFrame: () => 0,
     cancelAnimationFrame: () => {},
     queueMicrotask: fn => Promise.resolve().then(fn),
@@ -269,7 +314,7 @@ function laadKern(breedte) {
       + ". Pas NODIG in test/kern.js aan, of herstel de naam in de app.");
   }
 
-  return { api, bak, venster };
+  return { api, bak, venster, avancerenTimers, fetchStaat, doc, timerAantal: () => timers.size };
 }
 
 module.exports = { laadKern };

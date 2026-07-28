@@ -2085,5 +2085,85 @@ groep("Zonuren in plaats van fijnstof");
     /day&&day\.time\?day\.time\.indexOf\(plaatsVandaag\(\)\)/.test(bronZon));
 }
 
+/* 10zz. live plaatsklok: #plaatstijd en #minitijd werken zelfstandig iedere
+   minuut bij, zonder fetch en zonder de rest van de app opnieuw te tekenen. */
+groep("Live plaatsklok");
+{
+  const fsK2=require("fs"), pathK2=require("path");
+  const bronK2=fsK2.readFileSync(pathK2.join(__dirname,"index.html"),"utf8");
+
+  // 30 seconden vóór de minuutwisseling: een voorspelbaar uitlijnmoment
+  const START=new Date("2026-07-22T09:12:30.000Z");
+  const {api,bak,avancerenTimers,fetchStaat,doc,timerAantal}=laadKern(1280);
+  Object.assign(api.S,{d:bouw({}),op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,
+    klokOverride:START});
+  api.tekenAlles();
+
+  // tijd en timers samen laten opschuiven: avancerenTimers alleen laat de
+  // timers afgaan, maar leest zelf niets van de klok; S.klokOverride is wat
+  // plaatsKlok() daadwerkelijk teruggeeft
+  const verstrijk=ms=>{ api.S.klokOverride=new Date(api.S.klokOverride.getTime()+ms); avancerenTimers(ms); };
+
+  // 1. beide elementen tonen bij initialisatie dezelfde, juiste tijd
+  const t1=api.plaatsKlok();
+  check("#plaatstijd en #minitijd tonen bij initialisatie dezelfde juiste tijd",
+    bak.plaatstijd.textContent===t1 && bak.minitijd.textContent===t1,
+    bak.plaatstijd.textContent+" / "+bak.minitijd.textContent+" (verwacht "+t1+")");
+
+  // 2. een minuut verder: beide waarden veranderen mee, uitgelijnd op de grens
+  const tellerVoor=fetchStaat.teller;
+  verstrijk(60000);
+  const t2=api.plaatsKlok();
+  check("na het verstrijken van een minuut veranderen beide klokken mee",
+    t2!==t1 && bak.plaatstijd.textContent===t2 && bak.minitijd.textContent===t2,
+    "was "+t1+", nu plaatstijd="+bak.plaatstijd.textContent+" minitijd="+bak.minitijd.textContent+" (verwacht "+t2+")");
+
+  // 3. dat kostte geen enkele fetch
+  check("de klokupdate haalt geen nieuwe weerdata op",fetchStaat.teller===tellerVoor,
+    tellerVoor+" -> "+fetchStaat.teller);
+
+  // 4. herinitialisatie (zoals bij een nieuwe locatie) mag geen tweede,
+  //    gelijktijdig lopende timer achterlaten: het aantal actieve timers moet
+  //    na drie keer opnieuw tekenen gelijk blijven, niet oplopen
+  const na1=timerAantal();
+  api.tekenAlles();
+  api.tekenAlles();
+  const na3=timerAantal();
+  check("drie keer opnieuw tekenen laat het aantal actieve timers niet oplopen",
+    na3===na1,na1+" -> "+na3+" na twee extra herinitialisaties");
+
+  // en na precies een minuut nog altijd maar één stap verder, niet twee of drie
+  const t3=api.plaatsKlok();
+  verstrijk(60000);
+  const t4=api.plaatsKlok();
+  check("na herinitialisatie plus een minuut precies een stap verder, geen dubbele tik",
+    bak.plaatstijd.textContent===t4 && bak.minitijd.textContent===t4 && t4!==t3,
+    bak.plaatstijd.textContent+" / "+bak.minitijd.textContent+" (verwacht "+t4+")");
+
+  // 5. de pagina komt terug uit de achtergrond: de klok herstelt zichzelf
+  //    direct, zonder daarvoor te hoeven wachten op de eerstvolgende minuuttik
+  //    en zonder een fetch (de data is met opzet niet oud genoeg om dat te
+  //    veroorzaken: S.op staat op de echte Date.now() van zonet)
+  api.S.klokOverride=new Date(api.S.klokOverride.getTime()+5*60000+17000); // 5 min 17 sec, met opzet niet op een grens
+  doc.visibilityState="hidden";
+  doc.dispatchEvent({type:"visibilitychange"});
+  doc.visibilityState="visible";
+  const tellerVoor2=fetchStaat.teller;
+  doc.dispatchEvent({type:"visibilitychange"});
+  const t5=api.plaatsKlok();
+  check("zichtbaar worden na achtergrondgebruik herstelt de klok direct",
+    bak.plaatstijd.textContent===t5 && bak.minitijd.textContent===t5,
+    bak.plaatstijd.textContent+" / "+bak.minitijd.textContent+" (verwacht "+t5+")");
+  check("dat herstel gebeurt zonder fetch",fetchStaat.teller===tellerVoor2,
+    tellerVoor2+" -> "+fetchStaat.teller);
+
+  // de bron zelf: geen weerdata-aanroep in de klokfuncties, en scheiding van de nu-lijn
+  check("klokBijwerken/klokTimerStart doen geen eigen dataverzoek",
+    !/function klokBijwerken[\s\S]{0,300}?fetch/.test(bronK2)
+    && !/function klokTimerStart[\s\S]{0,600}?fetch/.test(bronK2));
+  const klokTimerBron=bronK2.slice(bronK2.indexOf("function klokTimerStart"),bronK2.indexOf("function etmaal"));
+  check("de klok-timer staat los van etmaal()/de nu-lijn",!/etmaal\(/.test(klokTimerBron));
+}
+
 console.log("\n"+goed+" geslaagd, "+fout+" mislukt");
 process.exit(fout?1:0);
