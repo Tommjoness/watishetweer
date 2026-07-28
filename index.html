@@ -407,6 +407,14 @@
     .mast{gap:14px}
     .mastright{align-items:stretch;text-align:left;width:100%;min-width:0}
     .tools button{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+    /* v69: de radarbediening voelde als een groot, licht blok met veel loze
+       ruimte. Minder marge rond tijd/status en tussen de knoppen, maar de
+       knoppen zelf blijven minimaal ~43px hoog: compacter groeperen, niet
+       kleiner maken dan een vinger raakt. Functie, labels en volgorde van de
+       bediening zelf zijn hier niet aangeraakt. */
+    #radartijd{margin:8px 0 6px}
+    .radarbalk{gap:8px;margin-top:6px}
+    .radarbalk button{min-height:43px;box-sizing:border-box}
   }
   @media(max-width:430px){
     .tools{flex-wrap:wrap}
@@ -452,7 +460,18 @@
      achtergrond. Desktop-specifieke padding/grid staat verderop, alleen
      binnen de 1100px-mediaquery. */
   .radar{border-top:2px solid var(--accent-rain);background:var(--surface-rain)}
-  #nights{border-top:2px solid var(--accent-night);background:var(--surface-night)}
+  /* v69: eerder stond de kleur alleen op #nights (de rijen), terwijl de
+     sectiekop "Nachtzicht" met de maansamenvatting een aparte, niet-gekleurde
+     buur was: dat gaf een zichtbaar gat tussen kop en inhoud. .mod-night is
+     dezelfde .dashcol-wrapper die kop én rijen al samen bevat (aanwezig op
+     elke breedte, niet alleen desktop), dus de kleur draagt nu die wrapper in
+     plaats van het kind.
+     De grafiekmodule kreeg in een eerdere ronde per abuis dezelfde behandeling
+     (.mod-chart, een regenblauwe achtergrond over de hele module); dat was een
+     verkeerde interpretatie en is teruggedraaid. De grafiekmodule zelf blijft
+     wit/editorial; alleen de nachturen bínnen de grafiek zelf krijgen een
+     subtiele achtergrond, zie de nachtvlak-toevoeging in etmaal(). */
+  .mod-night{background:var(--surface-night);border-top:2px solid var(--accent-night);padding-bottom:var(--s2)}
   #aq{background:var(--surface-info);border-top:2px solid var(--accent-info)}
   .stat.breed{border-top:2px solid var(--accent-sun)}
   .stat.zon{border-top:2px solid var(--accent-sun)}
@@ -529,8 +548,8 @@
 
     /* de kleur zelf (border-top/background) staat nu in de basisregels
        hierboven, geldig op elke breedte; hier alleen nog de desktop-only
-       padding die bij de bredere kolomindeling hoort */
-    #nights{padding:var(--s2) var(--s2) 4px}
+       horizontale inzet die bij de bredere kolomindeling hoort */
+    .mod-night{padding:0 var(--s2) var(--s2)}
     #aq{padding:var(--s2)}
   }
 
@@ -643,7 +662,7 @@
     <div id="days"></div>
     </div>
 
-    <div class="dashcol">
+    <div class="dashcol mod-night">
     <h2><span>Nachtzicht</span><span class="r" id="moonlab"></span></h2>
     <div id="nights"></div>
     </div>
@@ -1367,6 +1386,16 @@ function etmaal(start,n){
 
   /* dagbalk */
   let balk=`<rect x="${pl-cw/2}" y="${by}" width="${iw+cw}" height="${bh}" fill="none" stroke="${RULE}" stroke-width="1"/>`;
+  /* v69-herstel: de smalle donkerblauwe dagbalk bovenaan bleef bestaan, maar
+     "de achtergrond vult niet" bleek te gaan over het grote plotvlak zelf: de
+     nachturen daar waren nergens gemarkeerd, alleen de dunne strook erboven.
+     nachtvlak is een losse laag, per nachtsegment precies zo breed als de
+     bestaande balk-rects (dezelfde x1/x2), maar dan van pt tot pb (de volledige
+     plothoogte) en met een zeer lage opacity: duidelijk aanwezig, maar de
+     temperatuurcurve, cijfers, rasterlijnen en regen erboven blijven leesbaar.
+     Hij wordt hieronder vóór gitter/bars/curve/labels/nu-lijn/tooltip in de
+     uiteindelijke SVG gezet. */
+  let nachtvlak="";
   let s0=-1;
   for(let k=0;k<=ND.length;k++){
     const nacht=k<ND.length&&ND[k]===0;
@@ -1378,6 +1407,8 @@ function etmaal(start,n){
       // te worden. Er ligt niets van de curve/regen/Nu-lijn onder deze balk, die
       // leven verderop in hun eigen, lagere strook van de grafiek.
       balk+=`<rect x="${x1}" y="${by}" width="${x2-x1}" height="${bh}" fill="${NIGHT}" opacity="0.92"/>`;
+      // hetzelfde nachtsegment, nu als subtiel vlak over de volle plothoogte
+      nachtvlak+=`<rect x="${x1}" y="${pt}" width="${x2-x1}" height="${ih}" fill="${NIGHT}" opacity="0.06"/>`;
       // sterretjes, op vaste plekken zodat ze niet dansen bij elke hertekening.
       // Decoratief: aria-hidden en pointer-events:none, zodat ze nooit een
       // pointerevent van de tooltip of het hitvlak onderscheppen.
@@ -1569,7 +1600,7 @@ function etmaal(start,n){
   const svg=document.getElementById("chart");
   svg.setAttribute("viewBox","0 0 "+W+" "+H);
   svg.innerHTML=
-   `${balk}${gitter}${bars}
+   `${balk}${nachtvlak}${gitter}${bars}
     ${(()=>{ // de reeks opknippen bij elk gat en elk stuk apart tekenen
       const stukken=[[]];
       for(const p of pts){ if(p===null){ if(stukken[stukken.length-1].length) stukken.push([]); }
@@ -1592,9 +1623,13 @@ function etmaal(start,n){
   document.getElementById("chartlab").textContent = dg==null ? (S.bereik===24?"De komende 24 uur":S.bereik===48?"De komende 48 uur":"De komende zeven dagen")
     : new Date(S.d.daily.time[dg]+"T12:00:00").toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long"})+", per uur";
   const di=dg==null?0:dg;
-  const voorvoegsel = dg==null ? "vandaag: " : "";
+  /* v69: eerder kreeg alleen de standaardweergave (dg==null) een "vandaag: "-
+     voorvoegsel voor zonsopkomst; bij een gekozen dag stond er niets. Dat
+     verschil in regellengte gaf een ongelijk typografisch ritme naast de
+     grafiek. Nu is de regel bij elke weergave hetzelfde: geen voorvoegsel,
+     de datum staat al in de kop (#chartlab) hierboven. */
   document.getElementById("suntimes").innerHTML=(day.sunrise[di]&&day.sunset[di])
-    ? "<span>"+voorvoegsel+"zonsopkomst "+hhmm(day.sunrise[di])+"</span>"
+    ? "<span>zonsopkomst "+hhmm(day.sunrise[di])+"</span>"
      +"<span>zonsondergang "+hhmm(day.sunset[di])+"</span>"
      +"<span>"+daglengte(di)+"</span>"
     : "<span>"+daglengte(di)+"</span>";
@@ -1642,7 +1677,16 @@ function scrubKoppel(){
        telefoon lag dat op 62 procent, terwijl de doos daar al 43 px buiten beeld
        liep en door de rand van de tekening werd afgesneden. Nu slaat hij om zodra
        hij rechts niet meer past, en daarna klemt hij hoe dan ook binnen de randen. */
-    const bw=G.M?200:224;
+    /* v69: op mobiel was de doos zo groot dat hij een aanzienlijk deel van de
+       curve en omliggende informatie bedekte. Deze vier maten (breedte,
+       regelhoogte, lettergrootte, binnenmarge) zijn op mobiel kleiner; welke
+       zes velden getoond worden, hoe de positie/omslag/klemming werkt en de
+       geldigheidscontrole hieronder zijn allemaal ongewijzigd. Op desktop
+       blijven alle maten precies zoals ze waren. */
+    const bw=G.M?192:224;
+    const rijH=G.M?15:17;
+    const inzet=G.M?10:15;
+    const fLabel=11, fWaarde=11.5, fKop=G.M?14:15;
     let bx = (X+10+bw <= G.W-G.pr) ? X+10 : X-bw-10;
     bx = clamp(bx, 2, G.W-bw-2);
     /* Op een aanraakscherm zit je vinger op het punt dat je aanwijst, en de doos
@@ -1650,7 +1694,7 @@ function scrubKoppel(){
        precies af wat je wilt lezen. Bij aanraking gaat de doos daarom naar de
        andere helft dan waar je vinger zit. Met een muis blijft hij bovenaan,
        want een muisaanwijzer dekt niets af. */
-    const bh=28+6*17+10;
+    const bh=(G.M?20:28)+6*rijH+(G.M?6:10);
     const raak = ev.pointerType && ev.pointerType!=="mouse";
     const yv = ev.clientY!=null ? (ev.clientY-r.top)*sc : Y;
     let by = raak ? (yv < G.pt+G.ih/2 ? G.pt+G.ih-bh+6 : G.pt-6) : G.pt-6;
@@ -1666,10 +1710,10 @@ function scrubKoppel(){
       g.style.display="none"; return;
     }
     let n=0;
-    const rij=(l,v,c)=>{n++;const yy=by+22+n*17;
-      return `<text x="${bx+15}" y="${yy}" fill="${INK45}" font-family="Instrument Sans,sans-serif" font-size="11">${l}</text>`
-           +`<text x="${bx+bw-15}" y="${yy}" text-anchor="end" fill="${c||INK}" font-family="DM Mono,monospace" font-size="11.5">${v}</text>`;};
-    const kop=`<text x="${bx+15}" y="${by+18}" fill="${INK}" font-family="Bodoni Moda,serif" font-size="15">${G.TI[i].slice(11,16)}${G.D&&G.D[i]!=null?" · "+txt(G.D[i],G.ND?G.ND[i]!==0:true):""}</text>`;
+    const rij=(l,v,c)=>{n++;const yy=by+(G.M?17:22)+n*rijH;
+      return `<text x="${bx+inzet}" y="${yy}" fill="${INK45}" font-family="Instrument Sans,sans-serif" font-size="${fLabel}">${l}</text>`
+           +`<text x="${bx+bw-inzet}" y="${yy}" text-anchor="end" fill="${c||INK}" font-family="DM Mono,monospace" font-size="${fWaarde}">${v}</text>`;};
+    const kop=`<text x="${bx+inzet}" y="${by+(G.M?14:18)}" fill="${INK}" font-family="Bodoni Moda,serif" font-size="${fKop}">${G.TI[i].slice(11,16)}${G.D&&G.D[i]!=null?" · "+txt(G.D[i],G.ND?G.ND[i]!==0:true):""}</text>`;
     /* Elk veld apart uitlezen, met een streepje voor wat ontbreekt. Zo kan een
        los gat in de reeks (bijvoorbeeld alleen de windstoten missen) nooit
        "NaN km/u" of "undefined%" in de doos laten staan. */
@@ -1681,11 +1725,12 @@ function scrubKoppel(){
       +rij("wind",heel(G.W_&&G.W_[i])?Math.round(G.W_[i])+" km/u "+DIRS[Math.round((G.WD[i]||0)/22.5)%16]+", "+bft(G.W_[i])+" Bft":"–")
       +rij("windstoten",heel(G.G&&G.G[i])?Math.round(G.G[i])+" km/u":"–")
       +rij("bewolking",(heel(G.C&&G.C[i])?G.C[i]:"–")+"%");
+    const sepY=by+(G.M?19:28);
     g.innerHTML=
       `<line x1="${X}" y1="${G.pt}" x2="${X}" y2="${G.pt+G.ih}" stroke="${INK}" stroke-width="1"/>
        <circle cx="${X}" cy="${Y}" r="3.4" fill="${SHEET}" stroke="${INK}" stroke-width="1.4"/>
-       <rect x="${bx}" y="${by}" width="${bw}" height="${20+6*17+14}" fill="${SHEET}" stroke="${INK}" stroke-width="1"/>
-       ${kop}<line x1="${bx}" y1="${by+28}" x2="${bx+bw}" y2="${by+28}" stroke="${RULE}"/>${body}`;
+       <rect x="${bx}" y="${by}" width="${bw}" height="${bh-4}" fill="${SHEET}" stroke="${INK}" stroke-width="1"/>
+       ${kop}<line x1="${bx}" y1="${sepY}" x2="${bx+bw}" y2="${sepY}" stroke="${RULE}"/>${body}`;
     g.style.display="block";
   };
   hit.addEventListener("pointermove",toon);
@@ -1786,8 +1831,14 @@ function dagen(){
        opgeteld. Ook vandaag en morgen krijgen hun datum, zodat je in de tabel
        ziet welke dag je aanklikt. */
     const nr=dt.getDate();
-    const lang=i===0?"vandaag "+nr:i===1?"morgen "+nr:DAGENVOL[dt.getDay()]+" "+nr;
-    const kort=i===0?"vandaag "+nr:i===1?"morgen "+nr:DAGEN[dt.getDay()]+" "+nr;
+    /* v69: "vandaag"/"morgen" gaven de eerste twee rijen een ander, langer
+       woordbeeld dan de rest ("do 30"), wat bij de dagkiezer (die de grafiek
+       vult) een ongelijk typografisch ritme gaf. Alle dagen, ook vandaag en
+       morgen, gebruiken nu hetzelfde compacte dag+datumpatroon; welke dag
+       "vandaag" is blijft nog steeds af te lezen aan de datum zelf en aan de
+       actieve rij (S.dag). */
+    const lang=DAGENVOL[dt.getDay()]+" "+nr;
+    const kort=DAGEN[dt.getDay()]+" "+nr;
     const nm='<span class="dlang">'+lang+'</span><span class="dkort">'+kort+'</span>';
     const l=day.temperature_2m_min[i],hh=day.temperature_2m_max[i];
     out+=`<div class="row day${S.dag===i?" on":""}" data-i="${i}" role="button" tabindex="0">

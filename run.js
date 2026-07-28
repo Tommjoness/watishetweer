@@ -755,7 +755,6 @@ const breedMono=(t,px)=>_breed(t,px,"mono");
 groep("Tooltip");
 {
   const fsT=require("fs"), pathT=require("path");
-  const wisMarge=15, tussen=4;
 
   /* De plaatsingsregel uit index.html zelf halen. Rekende deze test hem na, dan bleef
      hij groen ook als de app iets heel anders deed, en dat is precies hoe de vorige
@@ -769,13 +768,23 @@ groep("Tooltip");
   const maten=regel.match(/const bw=G\.M\?(\d+):(\d+)/);
   check("de tooltipbreedte staat in de code",!!maten,"regel niet gevonden");
   const bwM=maten?parseFloat(maten[1]):0, bwD=maten?parseFloat(maten[2]):0;
+  // v69: mobiel en desktop hebben ieder hun eigen binnenmarge en lettergrootte;
+  // die per viewport uit de bron lezen in plaats van een vaste oude aanname,
+  // anders test dit tegen maten die de app niet meer gebruikt
+  const inzetM_=regel.match(/const inzet=G\.M\?(\d+):(\d+)/);
+  const inzetM=inzetM_?parseFloat(inzetM_[1]):15, inzetD=inzetM_?parseFloat(inzetM_[2]):15;
+  const fontenM_=regel.match(/const fLabel=([\d.]+), fWaarde=([\d.]+)/);
+  const fLabelM=fontenM_?parseFloat(fontenM_[1]):11, fLabelD=fLabelM;
+  const fWaardeM=fontenM_?parseFloat(fontenM_[2]):11.5, fWaardeD=fWaardeM;
+  const tussen=4;
 
   check("de doos slaat om op basis van de werkelijke ruimte, niet op een vast percentage",
     /G\.W\s*-\s*G\.pr/.test(regel) && !/G\.W\s*\*\s*0?\.\d+/.test(regel), regel.replace(/\s+/g," ").slice(0,120));
   check("de doos wordt hoe dan ook binnen de randen geklemd",
     /clamp\(\s*bx/.test(regel), regel.replace(/\s+/g," ").slice(0,120));
 
-  for(const [naam,br,bw] of [["telefoon",390,bwM],["desktop",1280,bwD]]){
+  for(const [naam,br,bw,inzet,fLabel,fWaarde] of
+      [["telefoon",390,bwM,inzetM,fLabelM,fWaardeM],["desktop",1280,bwD,inzetD,fLabelD,fWaardeD]]){
     const {api}=laadKern(br);
     Object.assign(api.S,{d:bouw({}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
     api.etmaal(14,24);
@@ -796,10 +805,10 @@ groep("Tooltip");
     const ergste=[["temperatuur","-40°C"],["voelt als","-52°C"],["neerslagkans","100%"],
                   ["wind","119 km/u NNW, 12 Bft"],["windstoten","162 km/u"],["bewolking","100%"]];
     const teKrap=ergste.filter(([l,v])=>
-      breedSans(l,11)+breedMono(v,11.5)+tussen > bw-2*wisMarge);
+      breedSans(l,fLabel)+breedMono(v,fWaarde)+tussen > bw-2*inzet);
     check(naam+": elke tooltipregel past in de doos ("+bw+" px)",teKrap.length===0,
       teKrap.map(([l,v])=>"\""+l+" "+v+"\" vraagt "
-        +(breedSans(l,11)+breedMono(v,11.5)).toFixed(0)+" px van de "+(bw-2*wisMarge)+" px").join(", "));
+        +(breedSans(l,fLabel)+breedMono(v,fWaarde)).toFixed(0)+" px van de "+(bw-2*inzet)+" px").join(", "));
   }
 
   // de waarden mogen geen spatie voor hun eenheid hebben, dat kost breedte en
@@ -1449,15 +1458,23 @@ groep("Tijd, datum en richting");
     // de "Neerslagtegel"-groep verderop voor de controles die bij precsub horen.
   }
 
-  /* Datums achter vandaag en morgen, uit echte Date-objecten zodat maandgrenzen
-     en schrikkeljaren vanzelf goed gaan. */
+  /* v69: vandaag en morgen kregen eerder de woorden "vandaag"/"morgen" in
+     plaats van een dag+datumpatroon; dat gaf bij de dagkiezer (die de
+     grafiek vult) een ongelijk typografisch ritme. Nu gebruiken alle dagen,
+     ook vandaag en morgen, hetzelfde compacte patroon. De datum zelf komt
+     nog steeds uit echte Date-objecten, zodat maandgrenzen en
+     schrikkeljaren vanzelf goed gaan. */
   {
     const {api:a,bak:b}=laadKern(1280);
     Object.assign(a.S,{d:bouw({}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
     a.dagen();
     const namen=[...b.days.innerHTML.matchAll(/class="dlang">([^<]*)</g)].map(m=>m[1]);
-    check("vandaag en morgen hebben een datum",
-      /^vandaag \d+$/.test(namen[0]||"")&&/^morgen \d+$/.test(namen[1]||""),namen.slice(0,2).join(" | "));
+    check("vandaag en morgen tonen geen 'vandaag'/'morgen' meer bij de grafiek",
+      !/vandaag/i.test(namen[0]||"") && !/morgen/i.test(namen[1]||""),
+      namen.slice(0,2).join(" | "));
+    check("vandaag en morgen hebben, als alle andere dagen, een dagnaam en een datum",
+      /^[a-zA-Z]+ \d+$/.test(namen[0]||"")&&/^[a-zA-Z]+ \d+$/.test(namen[1]||""),
+      namen.slice(0,2).join(" | "));
     check("er wordt niet met een opgeteld dagnummer gerekend",
       !/getDate\(\)\s*\+\s*1/.test(bronT));
     // maandovergangen en schrikkeljaren via het echte Date-object
@@ -2313,8 +2330,8 @@ groep("Nachtzone in de grafiek");
     !/Math\.random/.test(bronN.slice(bronN.indexOf("sterretjes"),bronN.indexOf("sterretjes")+700)));
   check("de sterren staan in een aria-hidden, pointer-events-loze groep",
     /<g aria-hidden="true" pointer-events="none">\$\{sterren\}<\/g>/.test(bronN));
-  check("balk (nachtvlak + sterren) komt vóór grid, spreiding, curve, labels, nu-lijn en tooltip in de SVG",
-    /svg\.innerHTML=\s*\n\s*`\$\{balk\}\$\{gitter\}\$\{bars\}/.test(bronN)
+  check("balk+nachtvlak (dagbalk, sterren, nachtvlak) komt vóór grid, spreiding, curve, labels, nu-lijn en tooltip in de SVG",
+    /svg\.innerHTML=\s*\n\s*`\$\{balk\}\$\{nachtvlak\}\$\{gitter\}\$\{bars\}/.test(bronN)
     && bronN.indexOf("${balk}")<bronN.indexOf('id="scrub"')
     && bronN.indexOf("${balk}")<bronN.indexOf('id="hit"'));
   check("de tooltipstructuur (#scrub) bestaat nog",/<g id="scrub"/.test(bronN));
@@ -2444,10 +2461,12 @@ groep("Responsive structuur (v68)");
   }
   check("de DOM-volgorde (lezen, toetsenbord, schermlezer) is logisch en ongewijzigd",volgordeKlopt);
 
-  // 8: de noodzakelijke layoutwrappers bestaan
+  // 8: de noodzakelijke layoutwrappers bestaan (twee van de vier dashcols
+  // hebben sinds v69 ook een mod-*-class voor de volledig gevulde
+  // achtergrond, dus op het prefix tellen i.p.v. de exacte class-string)
   check("de minimale layoutwrappers (dashrow/dashcol) bestaan",
     /class="dashrow dashrow-hero"/.test(bronD) && /class="dashrow dashrow-chart"/.test(bronD)
-    && /class="dashrow dashrow-days"/.test(bronD) && (bronD.match(/class="dashcol"/g)||[]).length===4);
+    && /class="dashrow dashrow-days"/.test(bronD) && (bronD.match(/class="dashcol/g)||[]).length===4);
   check("dashrow is tot 1100px functioneel onzichtbaar (display:contents)",
     /\.dashrow\{display:contents\}/.test(bronD));
 
@@ -2509,8 +2528,8 @@ groep("Kleursysteem (v68)");
      "--surface-active:rgba(165,29,61,0.045)"].every(t=>(bronD3.split(t).length-1)===1));
   check("de neerslagmodule (.radar) gebruikt het regenaccent",
     /\.radar\{border-top:2px solid var\(--accent-rain\);background:var\(--surface-rain\)\}/.test(bronD3));
-  check("de Nachtzicht-module (#nights) gebruikt het nachtaccent",
-    /#nights\{border-top:2px solid var\(--accent-night\);background:var\(--surface-night\)\}/.test(bronD3));
+  check("de Nachtzicht-module (.mod-night, kop + rijen samen) gebruikt het nachtaccent",
+    /\.mod-night\{background:var\(--surface-night\);border-top:2px solid var\(--accent-night\)/.test(bronD3));
   check("de luchtkwaliteitsmodule gebruikt het informatie-accent",
     /#aq\{background:var\(--surface-info\);border-top:2px solid var\(--accent-info\)/.test(bronD3));
   check("bestaande fout-/waarschuwingskleuren (carmine) zijn niet overschreven",
@@ -2578,8 +2597,10 @@ groep("Herstelronde v68");
   check("1. het regenaccent (.radar) staat buiten iedere mediaquery",
     !/@media[^{]*\{[\s\S]*?\.radar\{border-top:2px solid var\(--accent-rain\)/.test(
       bronH.slice(0,bronH.indexOf(".radar{border-top:2px solid var(--accent-rain)"))));
-  check("2. het nachtaccent (#nights) staat buiten iedere mediaquery",
-    bronH.indexOf("#nights{border-top:2px solid var(--accent-night)")
+  check("2. het nachtaccent (.mod-night) staat buiten iedere mediaquery",
+    bronH.indexOf(".mod-night{background:var(--surface-night);border-top:2px solid var(--accent-night)")
+      >= 0
+    && bronH.indexOf(".mod-night{background:var(--surface-night);border-top:2px solid var(--accent-night)")
       < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)"));
   check("3. het informatie-accent (#aq) staat buiten iedere mediaquery",
     bronH.indexOf("#aq{background:var(--surface-info);border-top:2px solid var(--accent-info)}")
@@ -2591,7 +2612,7 @@ groep("Herstelronde v68");
       < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)"));
   check("5. desktop-specifieke padding/grid voor diezelfde modules blijft wel binnen de 1100px-mediaquery",
     /\.radar\{max-width:100%;padding:var\(--s2\) var\(--s2\) 4px\}/.test(desktopH)
-    && /#nights\{padding:var\(--s2\) var\(--s2\) 4px\}/.test(desktopH)
+    && /\.mod-night\{padding:0 var\(--s2\) var\(--s2\)\}/.test(desktopH)
     && /#aq\{padding:var\(--s2\)\}/.test(desktopH));
   check("6. de kleurregels gebruiken de centrale tokens, geen losse hex/rgba",
     /var\(--accent-rain\)/.test(bronH) && /var\(--accent-night\)/.test(bronH)
@@ -2620,6 +2641,161 @@ groep("Herstelronde v68");
     check("de zonurentegel blijft werken en toont de klasse 'zon' voor het accent",
       !fout && /class="stat zon"/.test(bak.aq.innerHTML) && /5,0<s>uur<\/s>/.test(bak.aq.innerHTML),
       fout?fout.message:bak.aq.innerHTML.slice(0,200));
+  }
+}
+
+/* 19. v69-polishronde: grafieklabels, Nachtzicht-/grafiekachtergrond, mobiele
+   tooltip en radarbediening. Dit toetst broncode-/DOM-structuur en
+   functioneel gedrag, geen visuele weergave. */
+groep("v69 polishronde");
+{
+  const fsP=require("fs"), pathP=require("path");
+  const bronP=fsP.readFileSync(pathP.join(__dirname,"index.html"),"utf8");
+
+  // 14.1 grafieklabels
+  {
+    const {api,bak}=laadKern(1280);
+    Object.assign(api.S,{d:bouw({}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.dagen();
+    const namen=[...bak.days.innerHTML.matchAll(/class="dlang">([^<]*)</g)].map(m=>m[1]);
+    api.tekenAlles();
+    check("1. de grafiekcontext (dagkiezer) gebruikt niet meer letterlijk 'vandaag'",
+      !/vandaag/i.test(namen[0]||""),namen[0]);
+    check("2. de grafiekcontext gebruikt niet meer letterlijk 'morgen'",
+      !/morgen/i.test(namen[1]||""),namen[1]);
+    check("3. overige dagen gebruiken hetzelfde compacte dag+datumpatroon als vandaag/morgen",
+      namen.every(n=>/^[a-zA-Z]+ \d+$/.test(n)),namen.join(" | "));
+    check("4. de datumweergave blijft generiek (komt uit day.time, geen vaste tekst)",
+      /DAGENVOL\[dt\.getDay\(\)\]\+" "\+nr/.test(bronP) && /DAGEN\[dt\.getDay\(\)\]\+" "\+nr/.test(bronP));
+    check("5. geen hardcoded kalenderdatum is toegevoegd in dagen()",
+      !/20\d\d-\d\d-\d\d/.test(bronP.slice(bronP.indexOf("function dagen()"),bronP.indexOf("function dagen()")+1500)));
+    check("6. normale briefingteksten (dagDeel) zijn niet globaal aangepast: 'Vandaag' bestaat daar nog gewoon",
+      /woord:"Vandaag", klein:"vandaag"/.test(bronP));
+    check("de suntimes-regel gebruikt geen 'vandaag:'-voorvoegsel meer (gelijk ritme in elke weergave)",
+      !/const voorvoegsel/.test(bronP) && !/\+voorvoegsel\+/.test(bronP));
+  }
+
+  // 14.2 Nachtzicht-achtergrond
+  {
+    check("1. één outer wrapper (.mod-night) bevat titel, maansamenvatting én rijen",
+      /<div class="dashcol mod-night">\s*\n\s*<h2><span>Nachtzicht<\/span><span class="r" id="moonlab">/.test(bronP));
+    check("2. de achtergrond staat op die outer wrapper",
+      /\.mod-night\{background:var\(--surface-night\);border-top:2px solid var\(--accent-night\)/.test(bronP));
+    check("3. #nights zelf krijgt geen eigen, aparte achtergrond (geen dubbele/afwijkende vlakken)",
+      !/#nights\{[^}]*background/.test(bronP));
+    check("4. de achtergrondregel staat buiten desktop-only mediaqueries",
+      bronP.indexOf(".mod-night{background:var(--surface-night)")
+        < bronP.indexOf("@media(min-width:900px) and (max-width:1099px)"));
+    check("6. geen overflow:hidden wordt gebruikt om inhoud af te knippen bij Nachtzicht",
+      !/#nights\{[^}]*overflow:hidden|\.mod-night\{[^}]*overflow:hidden/.test(bronP));
+    check("7. geen dubbele #nights is ontstaan",(bronP.match(/id="nights"/g)||[]).length===1);
+
+    // 5: de module bevat nog steeds alle bestaande inhoud (functioneel)
+    const {api,bak}=laadKern(1280);
+    const d=bouw({});
+    Object.assign(api.S,{d,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.nachten();
+    check("5. Nachtzicht bevat nog alle bestaande inhoud (score, bewolking, venster, maan)",
+      /bewolking/.test(bak.nights.innerHTML) && /maanbij/.test(bak.nights.innerHTML));
+  }
+
+  // 14.3 grafiekachtergrond (herzien: geen module-brede kleur, wel een
+  // subtiel nachtvlak exact binnen elk nachtsegment van het plotgebied zelf)
+  {
+    check("1. .mod-chart bestaat niet meer als class of CSS-regel",
+      !/class="dashcol mod-chart"/.test(bronP) && !/\.mod-chart\{/.test(bronP));
+    check("2. de buitenste grafiekmodule gebruikt geen --surface-rain",
+      !/\.mod-chart\{background:var\(--surface-rain\)/.test(bronP));
+    check("de grafiek-dashcol is weer de gewone, ongekleurde wrapper",
+      /<div class="dashcol">\s*\n\s*<h2><span id="chartlab">Het etmaal<\/span>/.test(bronP));
+    check("8. geen dubbele #chart is ontstaan",(bronP.match(/id="chart"/g)||[]).length===1);
+    check("5. het nachtvlak wordt vóór grid, curve en labels gerenderd (bron-volgorde)",
+      /\$\{balk\}\$\{nachtvlak\}\$\{gitter\}\$\{bars\}/.test(bronP));
+    check("het nachtvlak gebruikt het bestaande nachtaccent (NIGHT), geen nieuwe kleur",
+      /nachtvlak\+=`<rect[^`]*fill="\$\{NIGHT\}"/.test(bronP));
+    check("het nachtvlak heeft een lage, rustige opacity (0.045-0.075)",
+      (()=>{ const m=bronP.match(/nachtvlak\+=`<rect[^`]*opacity="([\d.]+)"/); return !!m && +m[1]>=0.045 && +m[1]<=0.075; })());
+
+    const {api,bak}=laadKern(1280);
+    const d=bouw({});
+    d.hourly.is_day=d.hourly.time.map((_,i)=>(i>=32&&i<40)?0:1);   // een nachtblok in het zichtbare bereik
+    Object.assign(api.S,{d,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.etmaal(14,24);
+    const svgHtml=bak.chart.innerHTML;
+    // 3+4: elk nachtsegment levert een nachtvlak-rect met y=pt/height=ih en
+    // dezelfde x1/x2 als het bijbehorende balk-rect (de dagbalk-strook)
+    const balkRects=[...svgHtml.matchAll(/<rect x="([\d.-]+)" y="\d+(?:\.\d+)?" width="([\d.-]+)" height="\d+(?:\.\d+)?" fill="var\(--accent-night\)" opacity="0\.92"\/>/g)];
+    const vlakRects=[...svgHtml.matchAll(/<rect x="([\d.-]+)" y="(\d+(?:\.\d+)?)" width="([\d.-]+)" height="(\d+(?:\.\d+)?)" fill="var\(--accent-night\)" opacity="0\.06"\/>/g)];
+    check("3+4. ieder nachtsegment levert precies één nachtvlak-rect op, met dezelfde x1/x2 als de bestaande nachtstrook",
+      balkRects.length>0 && balkRects.length===vlakRects.length
+      && balkRects.every((b,idx)=>vlakRects[idx][1]===b[1] && vlakRects[idx][3]===b[2]),
+      "balkrects="+balkRects.length+" vlakrects="+vlakRects.length);
+    // y=pt en height=ih: hetzelfde pt/ih dat de rest van het plot ook gebruikt,
+    // dus vergelijken met de y-positie van de gridlijnen/tooltiplijn zelf
+    check("het nachtvlak loopt van pt tot pb (dezelfde hoogte als het temperatuurplot)",
+      vlakRects.length>0 && vlakRects.every(v=>+v[4]>50));   // ih is altijd een aanzienlijke plothoogte, niet de smalle dagbalk (bh)
+
+    check("4. de grafiek en de instructietekst blijven aanwezig",
+      bak.chart.innerHTML.length>0 && /vinger/i.test(bak.charthint.textContent));
+    check("5. de nachtaanduiding blijft gekoppeld aan de werkelijke nachturen (ND), niet aangepast",
+      /const nacht=k<ND\.length&&ND\[k\]===0;/.test(bronP));
+    check("6. daguren krijgen geen nachtvlak (evenveel balk- als vlak-rects, geen enkele extra)",
+      balkRects.length===vlakRects.length);
+    check("7. de sterren blijven aanwezig",
+      (bak.chart.innerHTML.match(/<circle[^>]*opacity="0\.(85|55)"/g)||[]).length>0);
+    check("8. de rode Nu-lijn blijft aanwezig",
+      /fill="\$\{CARMINE\}"[^>]*>nu<\/text>/.test(bronP));
+
+    // volledig dag-bereik: geen enkel nachtvlak-rect
+    const {bak:bakDag}=(()=>{
+      const {api:a2,bak:b2}=laadKern(1280);
+      const d2=bouw({}); d2.hourly.is_day=d2.hourly.time.map(()=>1);
+      Object.assign(a2.S,{d:d2,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+      a2.etmaal(14,24);
+      return {bak:b2};
+    })();
+    check("volledig dag-bereik geeft geen enkel nachtvlak-rect",
+      !/opacity="0\.06"/.test(bakDag.chart.innerHTML));
+  }
+
+  // 14.4 tooltip
+  {
+    const {api,bak}=laadKern(390);
+    Object.assign(api.S,{d:bouw({}),op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.S.i0=api.S.d.hourly.time.findIndex(t=>t.slice(0,13)===api.S.d.current.time.slice(0,13));
+    api.etmaal(api.S.i0,24);
+    bak.hit.dispatchEvent({type:"pointermove",clientX:180,clientY:100,pointerType:"mouse"});
+    const html=bak.scrub.innerHTML;
+    check("1. alle bestaande tooltipvelden blijven aanwezig (mobiel)",
+      /temperatuur/.test(html) && /voelt als/.test(html) && /neerslagkans/.test(html)
+      && />wind</.test(html) && /windstoten/.test(html) && /bewolking/.test(html));
+    check("2. de mobiele maximale breedte is begrensd, maar niet te klein voor comfortabele leesbaarheid (186-192px)",
+      (()=>{ const m=bronP.match(/const bw=G\.M\?(\d+):224;/); return !!m && +m[1]>=186 && +m[1]<=192; })());
+    check("10. mobiele tooltiptekst is niet kleiner dan 11px (labels/waarden)",
+      /const fLabel=11, fWaarde=11\.5/.test(bronP));
+    check("de regelhoogte is niet kleiner dan 15px op mobiel",
+      /const rijH=G\.M\?15:17;/.test(bronP));
+    check("3. de doos wordt hoe dan ook binnen de randen geklemd (kan niet standaard buiten de grafiek vallen)",
+      /bx = clamp\(bx, 2, G\.W-bw-2\);/.test(bronP));
+    check("4. productiedata/tooltipberekeningen (G.x/G.y, de finite-guard) zijn ongewijzigd",
+      /const X=G\.x\(i\),Y=G\.y\(G\.T\[i\]\);/.test(bronP)
+      && /\[X,Y,bx,by,bw,bh,G\.W,G\.H\]\.every\(Number\.isFinite\)/.test(bronP));
+    check("5. geen inhoud wordt via CSS verborgen (display:none op een tooltipveld)",
+      !/#scrub \w+\{display:none/.test(bronP));
+  }
+
+  // 14.5 radarbediening
+  {
+    check("1. alle bestaande knoppen blijven bestaan",
+      /id="rspeel"/.test(bronP) && /id="ruit"/.test(bronP) && /id="rin"/.test(bronP)
+      && /id="rmidden"/.test(bronP));
+    check("2. de slider blijft bestaan",/id="rschuif"/.test(bronP));
+    check("3. speel/pauzelogica is niet aangeraakt (rspeel-handler bestaat nog ongewijzigd)",
+      /getElementById\("rspeel"\)/.test(bronP));
+    check("4. zoomlogica (radarZoom) is niet aangeraakt",/function radarZoom\(stap\)\{/.test(bronP));
+    check("5. centreerlogica (rmidden) is niet aangeraakt",/getElementById\("rmidden"\)/.test(bronP));
+    check("6. de mobiele bedieningshoogte is bruikbaar (minimaal ~43px)",
+      /\.radarbalk button\{min-height:43px/.test(bronP));
   }
 }
 
