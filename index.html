@@ -65,13 +65,25 @@
   /* masthead */
   #minibar{display:none}
   @media(max-width:900px){
+    /* De rij mag nooit naar een tweede regel breken. Tijd en temperatuur krijgen
+       flex-shrink:0 en worden dus nooit aangeraakt. De omschrijving heeft verreweg
+       de grootste shrink-factor en levert daarom als eerste ruimte in, tot aan
+       ellipsis toe. Pas als zelfs dat niet genoeg is, mag de plaatsnaam zelf
+       inkorten: die heeft een kleine, niet-nul shrink-factor als laatste redmiddel,
+       met de volledige naam nog altijd beschikbaar via het title-attribuut. */
     #minibar{position:sticky;top:0;z-index:25;background:var(--sheet);border-bottom:1px solid var(--rule);
-      margin:-24px -20px 0;padding:9px 20px;display:none;justify-content:space-between;align-items:baseline;gap:12px}
+      margin:-24px -20px 0;padding:9px 20px;display:none;flex-wrap:nowrap;white-space:nowrap;
+      align-items:baseline;gap:10px;overflow:hidden}
     #minibar.aan{display:flex}
-    #miniplaats{font-family:var(--serif);font-size:17px}
-    #minitemp{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums}
+    #miniplaats{font-family:var(--serif);font-size:17px;
+      flex:0 1 auto;flex-shrink:1;min-width:2.5em;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
     #minitijd{font-family:var(--mono);font-size:12px;color:var(--ink-45);
-      font-variant-numeric:tabular-nums;margin-right:auto;padding-left:.6em}
+      font-variant-numeric:tabular-nums;flex:0 0 auto;white-space:nowrap}
+    #minitemp{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums;
+      flex:0 0 auto;white-space:nowrap;margin-left:auto;padding-left:.4em}
+    #minicond{font-family:var(--serif);font-size:15px;color:var(--ink-45);
+      flex:1 1 0;flex-shrink:9999;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+    @media(max-width:340px){ #minibar{gap:6px;padding:9px 14px;margin:-24px -14px 0} }
   }
   .mast{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s3);flex-wrap:wrap}
   .mast h1{font-family:var(--serif);font-weight:400;font-size:15px;letter-spacing:.02em;margin:0;color:var(--ink-45)}
@@ -228,7 +240,7 @@
   /* tabellen */
   .row{display:grid;align-items:center;border-bottom:1px solid var(--rule-soft);padding:11px 0}
   .row:last-child{border-bottom:none}
-  .day{grid-template-columns:106px 26px 1fr 72px 54px 128px 46px 52px;gap:14px;cursor:pointer}
+  .day{grid-template-columns:max-content 26px 1fr 72px 54px 128px 46px 52px;gap:14px;cursor:pointer}
   .dkort{display:none}
   .day:hover{background:#FAFBFA}
   /* De lijn zat tegen de dagnaam aan omdat de rij links geen ruimte had. Nu een
@@ -237,8 +249,12 @@
   .day{padding-left:10px;margin-left:-10px}
   .day.on{box-shadow:inset 3px 0 0 var(--carmine)}
   .day.on .dname{font-weight:500}
-  .dname{font-size:14.5px;letter-spacing:.01em;white-space:nowrap;
-    min-width:0;overflow:hidden;text-overflow:ellipsis}
+  /* Eerder stond hier een ellipsis-vangnet voor als een lettertype niet laadde.
+     De kolom is nu max-content: de browser meet zelf de werkelijk gerenderde
+     tekst en de kolom past zich daarop aan, dus er hoeft nooit iets afgekapt te
+     worden. white-space:nowrap blijft nodig, anders breekt "donderdag 30" op de
+     spatie naar een tweede regel binnen de cel. */
+  .dname{font-size:14.5px;letter-spacing:.01em;white-space:nowrap}
   .row.kop{border-bottom:1px solid var(--ink);padding:13px 0 8px;cursor:default}
   .row.kop:hover{background:none}
   .row.kop .dmin,.row.kop .dmax,.row.kop .drain,.row.kop .dwind,.row.kop .nmeta,.row.kop .score{text-align:center}
@@ -271,9 +287,6 @@
   .sbar i{position:absolute;top:-1px;height:3px}
   /* Zonder dit brak de regel na de punt en bleef die los aan het eind hangen.
      Nu verhuist het hele maandeel als een blok naar de volgende regel. */
-  /* planeten en bovenlucht staan onder de venstertekst, iets ingetogener */
-  .night .nplaneten{color:var(--teal)}
-  .night .nlucht{font-size:11.5px}
   .maangroep{white-space:nowrap}
   .maanbij{margin-right:4px}
   /* Verderop staat svg,canvas{display:block}. Zonder deze uitzondering werd het
@@ -298,6 +311,7 @@
   footer .bron{display:block}
   footer .bron b{font-weight:500;color:var(--ink-45)}
   footer .mono{font-size:11.5px}
+  #hit{touch-action:pan-y}
   svg,canvas{display:block;touch-action:pan-y;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   #chart,#nc,#radar{-webkit-tap-highlight-color:transparent}
@@ -327,7 +341,7 @@
        "vandaag" met 50 px, dus 56 px geeft overal dezelfde rust.
        De icoonkolom was 20 px terwijl het icoon 22 px tekent, dus dat stak er
        aan weerszijden een pixel uit, precies aan de kant van de tekst. */
-    .day{grid-template-columns:56px 22px 56px 1fr 1fr 48px;gap:6px}
+    .day{grid-template-columns:max-content 22px 56px 1fr 1fr 48px;gap:6px}
     .drain small{display:block}
     /* De kop "Wind max" stond alleen boven de windkracht, terwijl het weericoon
        er visueel bij hoort: op de telefoon valt de kolom Verwachting weg, dus
@@ -369,7 +383,7 @@
     /* Op dit soort schermen blijft er na de naamkolom te weinig over voor de
        temperaturen: een waarde als -10 graden past er dan niet meer in. De wind
        is in deze tabel de minst dringende kolom, dus die valt hier weg. */
-    .day{grid-template-columns:56px 22px 1fr 1fr 48px}
+    .day{grid-template-columns:max-content 22px 1fr 1fr 48px}
     /* Hier valt de windkolom helemaal weg, dus is er niets om overheen te spannen
        en moet het lege icoonvakje in de kop juist terugkomen. Zonder dit schuift
        de hele kop een kolom op ten opzichte van de gegevens eronder. */
@@ -383,7 +397,7 @@
 <body>
 <div class="sheet">
 
-  <div id="minibar"><span id="miniplaats"></span><span id="minitijd"></span><span id="minitemp"></span></div>
+  <div id="minibar"><span id="miniplaats"></span><span id="minitijd"></span><span id="minitemp"></span><span id="minicond"></span></div>
 
   <div class="mast">
     <div>
@@ -598,10 +612,46 @@ function icon(code,isDay,size){
 }
 /** De klok van de plaats zelf. Alle uren in de app staan in die tijd, dus deze
     hoort daarbij en niet de tijd van degene die kijkt. */
-function plaatsKlok(){
+/** Het huidige moment bij de plaats, als Date-object. Dezelfde truc als
+    plaatsKlok(): de klok van de browser na tijdsverschuiving geeft via
+    getHours/getMinutes/getDate de klok van de plaats terug, niet die van
+    de kijker. */
+/** De lokale kalenderdag bij de plaats, als "YYYY-MM-DD". Gebruikt dezelfde
+    verschoven-klok-truc als plaatsNu(), dus geen new Date().toISOString() dat
+    rond een daggrens de datum van de verkeerde tijdzone kan pakken. */
+function plaatsVandaag(){
+  const t=plaatsNu();
+  return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
+}
+
+function plaatsNu(){
   const eigen=-new Date().getTimezoneOffset()*60;
   const daar=(S.d&&S.d.utc_offset_seconds!=null)?S.d.utc_offset_seconds:eigen;
-  const t=new Date(Date.now()+(daar-eigen)*1000);
+  // S.klokOverride is alleen voor de testsuite, zodat "nu" op een vaste datum kan
+  // worden gezet; in de app zelf staat dit altijd op null en telt de echte klok.
+  // duck-typing in plaats van instanceof: de testsuite draait de app in een eigen
+  // vm-realm met zijn eigen Date-klasse, dus een Date die van buiten wordt
+  // meegegeven faalt altijd op instanceof Date binnen die sandbox
+  const basis=(S.klokOverride&&typeof S.klokOverride.getTime==="function")?S.klokOverride.getTime():Date.now();
+  return new Date(basis+(daar-eigen)*1000);
+}
+
+/** Positie van "nu" in de uurreeks TI, als fractionele index inclusief minuten.
+    TI-items hebben de vorm "YYYY-MM-DDTHH:00", precies het hele uur; het uur
+    waarin dit moment valt wordt opgezocht en de minuten tellen als breuk van
+    dat uur erbij. Geeft null als het moment buiten de reeks valt. */
+function plaatsNuIndex(TI){
+  if(!TI||!TI.length) return null;
+  const t=plaatsNu();
+  const sleutel=t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"
+    +String(t.getDate()).padStart(2,"0")+"T"+String(t.getHours()).padStart(2,"0")+":00";
+  const idx=TI.indexOf(sleutel);
+  if(idx<0) return null;
+  return idx + t.getMinutes()/60;
+}
+
+function plaatsKlok(){
+  const t=plaatsNu();
   return String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0");
 }
 
@@ -710,7 +760,8 @@ async function load(lat,lon,label,stil){
     +"&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,precipitation,"
     +"weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m"
     +"&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,"
-    +"precipitation_sum,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant"
+    +"precipitation_sum,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,"
+    +"sunshine_duration"
     /* timezone=auto en niet een vaste zone: alle uren in deze app horen bij de
        plaats die je bekijkt, dus een vaste Europe/Amsterdam zou in Tokio elk uur
        acht plaatsen verschuiven.
@@ -723,18 +774,12 @@ async function load(lat,lon,label,stil){
   const f=basis+"&minutely_15=precipitation&past_hours=24"
     +"&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,precipitation_probability,"
     +"precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,"
-    /* Voor waarnemen telt niet alleen of de hemel open is. De straalstroom rond
-       250 hPa, zo'n tien kilometer hoog, bepaalt hoe rustig het beeld staat. Bij
-       harde wind daarboven trilt een planeet ook onder een wolkenloze hemel. De
-       vochtigheid rond 700 hPa zegt iets over de doorzicht: vochtige lucht dooft
-       zwakke objecten. Beide zijn wereldwijd beschikbaar. */
-    +"wind_speed_250hPa,relative_humidity_700hPa,"
     +"uv_index,pressure_msl,is_day";
   const fmin=basis+"&past_hours=24&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,"
     +"precipitation_probability,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,"
     +"wind_gusts_10m,uv_index,pressure_msl,is_day";
   const a="https://air-quality-api.open-meteo.com/v1/air-quality?latitude="+lat+"&longitude="+lon
-    +"&current=european_aqi,us_aqi,pm2_5,pm10&hourly=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,"
+    +"&current=european_aqi,us_aqi&hourly=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,"
     +"ragweed_pollen,olive_pollen&forecast_days=1&timezone=auto";
 
   try{
@@ -798,6 +843,7 @@ function tekenAlles(){
   waarschuwingen();
   logBij();
   meters();briefing();etmaal(startIdx,S.bereik);nowcast();dagen();nachten();lucht();stempel();
+  nuTimerStart();
 }
 function set(id,html){document.getElementById(id).innerHTML=nbsp(html);}
 function zetTekst(id,tekst){document.getElementById(id).textContent=nbsp(tekst);}
@@ -834,21 +880,49 @@ function meters(){
     : "De zwaarste stoot was "+Math.round(pg.v)+" km/u rond "+hhmm(pg.t)+".");
 
   set("prec",nl(c.precipitation)+"<s>mm</s>");
-  const som=day.precipitation_sum[0];
-  let restMm=0;
-  for(let k=0;k<h.time.length;k++){
-    if(h.time[k].slice(0,10)!==day.time[0]||h.time[k]<=nu) continue;
-    restMm+=h.precipitation[k]||0;
-  }
-  const pnNog=piek("precipitation",0,true), pnAl=piek("precipitation",0);
-  if(som<0.05){
-    zetTekst("precsub", dagDeel().woord+" blijft het droog.");
-  }else if(restMm>=0.1){
-    zetTekst("precsub", dagDeel().woord+" nog "+nl(restMm)+" mm verwacht"
-      +((pnNog&&pnNog.v>=0.1)?", het meeste rond "+hhmm(pnNog.t)+".":"."));
+  /* Niet blind index 0: dat is Open-Meteo's eigen "vandaag" op het moment van
+     ophalen, en bij een verouderde, uit de cache teruggevallen briefing (zie de
+     foutafhandeling in load()) kan dat een andere dag zijn dan de kalenderdag
+     van nu. De lokale datum bij de plaats wordt daarom expliciet tegen
+     day.time gelegd. */
+  const vandaagIdx=day.time.indexOf(plaatsVandaag());
+  const som=vandaagIdx>=0?day.precipitation_sum[vandaagIdx]:null;
+
+  if(som==null||!isFinite(som)){
+    zetTekst("precsub","Totale neerslag van vandaag niet beschikbaar");
+  }else if(vandaagIdx!==0){
+    /* De uurreeks (h.time/h.precipitation) dekt doorgaans alleen de eerstvolgende
+       dagen vanaf het moment van ophalen; is de gevonden dag daar niet het eerste
+       element, dan is er geen betrouwbare uur-voor-uur-opsplitsing beschikbaar
+       om "al gevallen" van "nog te verwachten" te onderscheiden. Dan blijft
+       alleen de dagsom over, met de eerlijke framing dat dat de prognose voor
+       de hele dag is. */
+    zetTekst("precsub", som<0.05
+      ? "Vandaag blijft het droog."
+      : "Voor vandaag wordt in totaal "+nl(som)+" mm neerslag verwacht");
   }else{
-    zetTekst("precsub", "Er viel "+nl(som)+" mm"
-      +((pnAl&&pnAl.v>=0.1)?", het meeste rond "+hhmm(pnAl.t)+".":" in totaal."));
+    let restMm=0;
+    for(let k=0;k<h.time.length;k++){
+      if(h.time[k].slice(0,10)!==day.time[vandaagIdx]||h.time[k]<=nu) continue;
+      restMm+=h.precipitation[k]||0;
+    }
+    if(som<0.05){
+      zetTekst("precsub", "Vandaag blijft het droog.");
+    }else if(restMm>=0.05){
+      /* Er zit nog een niet te verwaarlozen hoeveelheid toekomstige neerslag in de
+         dagsom. "Viel er" zou dat verleden tijd maken terwijl het nog moet komen,
+         dus dit is altijd de "wordt verwacht"-formulering met de volledige dagsom. */
+      const pnNog=piek("precipitation",0,true);
+      zetTekst("precsub", "Voor vandaag wordt in totaal "+nl(som)+" mm neerslag verwacht"
+        +((pnNog&&pnNog.v>=0.1)?", het meeste rond "+hhmm(pnNog.t)+".":"."));
+    }else{
+      /* Vrijwel niets van de dagsom is nog toekomstig (restMm ligt onder de
+         weergavedrempel van 0,05 mm), dus de dagsom is voor de lezer in de
+         praktijk gelijk aan wat er tot nu toe gevallen is. */
+      const pnAl=piek("precipitation",0);
+      zetTekst("precsub", "Vandaag viel er tot nu toe "+nl(som)+" mm"
+        +((pnAl&&pnAl.v>=0.1)?", het meeste rond "+hhmm(pnAl.t)+".":"."));
+    }
   }
 
   set("pop",(h.precipitation_probability[i+1]??0)+"<s>%</s>");
@@ -857,12 +931,20 @@ function meters(){
     ? dagDeel().woord+" nauwelijks kans op neerslag."
     : "De grootste kans is "+Math.round(pp.v)+"%, rond "+hhmm(pp.t)+".");
 
-  set("hum",c.relative_humidity_2m+"<s>%</s>");
-  const dew=h.dew_point_2m[i]??c.temperature_2m, sp=c.temperature_2m-dew;
-  const basis=Math.round(sp*125/50)*50;
-  zetTekst("humsub", sp<2
-    ? "Nog "+nl(sp)+" graden tot verzadiging, dus kans op mist."
-    : "Het dauwpunt ligt "+Math.round(sp)+" graden lager, dus wolken vanaf ongeveer "+basis+" meter.");
+  /* Deze tegel toont uitsluitend het percentage en een contextzin op basis
+     daarvan. Het dauwpunt (mistkans, wolkenbasis) is verwijderd uit dit veld;
+     dew_point_2m zelf blijft bestaan, want #feels en de nachtzicht-berekening
+     verderop gebruiken dat veld nog wel. */
+  const vocht=c.relative_humidity_2m;
+  if(!Number.isFinite(vocht)||vocht<0||vocht>100){
+    set("hum","--");
+    zetTekst("humsub","Luchtvochtigheid niet beschikbaar");
+  }else{
+    set("hum",vocht+"<s>%</s>");
+    zetTekst("humsub", vocht<40 ? "De lucht is vrij droog."
+      : vocht<=60 ? "Comfortabele luchtvochtigheid."
+      : "De lucht is vochtig.");
+  }
 
   set("pres",Math.round(c.pressure_msl)+"<s>hPa</s>");
   const p3=h.pressure_msl[i-3],dp=(p3!=null)?c.pressure_msl-p3:null;
@@ -909,38 +991,96 @@ function dagDeel(){
 }
 
 /* ---------- briefingregel ---------- */
+/* Een centrale drempel: overal waar "het regent" of "het blijft droog" wordt
+   bepaald voor de korte termijn, geldt dezelfde grens. Zonder dit kon de ene
+   plek een kans gebruiken en de andere een hoeveelheid, met als gevolg dat de
+   briefing en de radartekst een andere conclusie trokken over hetzelfde uur. */
+const NEERSLAG_DREMPEL_MM = 0.1;
+
+/**
+ * De conclusie over de komende twee uur, gedeeld door de briefing en de tekst
+ * onder de radar. Beide lazen tot nu toe onafhankelijk van elkaar: de briefing
+ * uit het uurlijkse S.d.hourly over een venster van twaalf uur, de radartekst
+ * uit S.d.minutely_15 over exact twee uur. Dat kon nooit met elkaar botsen zolang
+ * de een over twee uur ging en de ander over twaalf, maar zodra beide over "de
+ * komende twee uur" spreken, moeten ze wel dezelfde databron en dezelfde
+ * drempel gebruiken, anders trekt de een "droog" en de ander "nat" over
+ * hetzelfde moment.
+ *
+ * Bron bij voorkeur minutely_15 (kwartierdata, dekt de volle twee uur fijnmazig).
+ * Is die er niet of te kort, dan eenmalig terugvallen op de eerstvolgende twee
+ * uurvakken in S.d.hourly. Is ook dat er niet, dan genoeg:false: er hoort dan
+ * geen stellige droogmelding gemaakt te worden.
+ */
+function kortetermijn(){
+  const nu=S.d.current.time;
+  const eindMs=naarUTC(nu.slice(0,16))+2*3600000;
+  const m=S.d.minutely_15;
+  if(m&&m.time&&m.time.length){
+    let i=m.time.findIndex(t=>t>=nu.slice(0,16));
+    if(i<0) i=0;
+    const T=[],P=[];
+    for(let k=i;k<m.time.length;k++){
+      if(naarUTC(m.time[k])>=eindMs) break;
+      T.push(m.time[k]); P.push(m.precipitation[k]??0);
+    }
+    // minstens een uur aan kwartierdata (vier stappen) is genoeg voor een conclusie;
+    // minder dan dat is te weinig om "de komende twee uur" over te durven zeggen
+    if(T.length>=4){
+      const eersteNatIdx=P.findIndex(v=>v>=NEERSLAG_DREMPEL_MM);
+      return { begin:nu, eind:T[T.length-1], bron:"minutely_15", genoeg:true,
+        droog:eersteNatIdx<0, hoeveelheid:P.reduce((a,b)=>a+b,0),
+        tijden:T, waarden:P, eersteNatIdx:eersteNatIdx };
+    }
+  }
+  // terugval: de eerstvolgende twee uurvakken in de uurreeks
+  const h=S.d.hourly, i0=S.i0;
+  if(h&&h.time&&i0!=null&&h.time.length>i0+2){
+    const p1=h.precipitation[i0+1]??0, p2=h.precipitation[i0+2]??0;
+    const k1=h.precipitation_probability[i0+1]??0, k2=h.precipitation_probability[i0+2]??0;
+    const droog=p1<NEERSLAG_DREMPEL_MM&&p2<NEERSLAG_DREMPEL_MM&&k1<40&&k2<40;
+    return { begin:nu, eind:h.time[i0+2], bron:"hourly", genoeg:true,
+      droog:droog, hoeveelheid:p1+p2, kans:Math.max(k1,k2) };
+  }
+  return { begin:nu, eind:null, bron:null, genoeg:false, droog:null };
+}
+
 function briefing(){
   const h=S.d.hourly,i=S.i0,day=S.d.daily,c=S.d.current;
   const eind=Math.min(i+13,h.time.length);
-  const droogUur=k=>(h.precipitation_probability[k]??0)<40&&(h.precipitation[k]??0)<0.1;
 
-  // eerste natte uur en het einde daarvan
-  let eerste=-1;
-  for(let k=i+1;k<eind;k++){ if((h.precipitation_probability[k]??0)>=50||(h.precipitation[k]??0)>=0.3){eerste=k;break;} }
-  // hoogste kans in hetzelfde venster, ook als die onder de drempel blijft
-  let kmax=-1,kv=0;
-  for(let k=i+1;k<eind;k++){ const v=h.precipitation_probability[k]??0; if(v>kv){kv=v;kmax=k;} }
-
+  /* Zin 1 gaat nu over exact hetzelfde venster als de tekst onder de radar: de
+     komende twee uur, uit dezelfde gedeelde helper. Wat daarna nog kan gebeuren
+     deze dag komt er als losse, apart gemarkeerde zin achteraan, met de eigen
+     dagelijkse kans als bron, nooit vermengd met de conclusie over de eerste
+     twee uur. */
+  const kt=kortetermijn();
   let zin1;
-  if(c.precipitation>0.05){
-    let stop=-1;
-    for(let k=i+1;k<eind;k++){ if(droogUur(k)){stop=k;break;} }
-    zin1 = stop>0 ? "Het regent nu, rond <b>"+hhmm(h.time[stop])+"</b> wordt het droog."
-                  : "Het regent nu en dat houdt de komende twaalf uur aan.";
-  }else if(eerste>0){
-    let stop=-1;
-    for(let k=eerste+1;k<eind;k++){ if(droogUur(k)){stop=k;break;} }
-    const soort=fam(h.weather_code[eerste]);
-    const wat=(soort==="regen"||soort==="sneeuw"||soort==="onweer")?txt(h.weather_code[eerste]).toLowerCase():"neerslag";
-    const kans=h.precipitation_probability[eerste]??0;
-    const tot = stop>0 ? " tot "+hhmm(h.time[stop]) : " tot minstens "+hhmm(h.time[eind-1]);
-    zin1 = kans>=30
-      ? "Het blijft droog tot <b>"+hhmm(h.time[eerste])+"</b>, daarna is er <b>"+kans+"%</b> kans op "+wat+tot+"."
-      : "Het blijft droog tot <b>"+hhmm(h.time[eerste])+"</b>, daarna valt er wat "+wat+tot+".";
-  }else if(kmax>0&&kv>=25){
-    zin1 = "Het blijft grotendeels droog, alleen rond <b>"+hhmm(h.time[kmax])+"</b> is er <b>"+kv+"%</b> kans op een bui.";
+  if(!kt.genoeg){
+    // te weinig data voor een stellige uitspraak: geen "blijft droog" beweren
+    zin1 = "Voor de komende twee uur is er niet genoeg data voor een betrouwbare inschatting.";
+  }else if(!kt.droog){
+    const tijden=kt.tijden||[kt.begin,kt.eind];
+    const eersteT = kt.bron==="minutely_15" ? tijden[kt.eersteNatIdx] : h.time[i+1];
+    const stopIdx = kt.bron==="minutely_15"
+      ? (kt.waarden||[]).findIndex((v,k)=>k>kt.eersteNatIdx&&v<NEERSLAG_DREMPEL_MM) : -1;
+    if(c.precipitation>0.05){
+      zin1 = stopIdx>0 ? "Het regent nu, rond <b>"+hhmm(tijden[stopIdx])+"</b> wordt het droog."
+                        : "Het regent nu en dat houdt de komende twee uur aan.";
+    }else{
+      const soort=fam(c.weather_code);
+      const wat=(soort==="regen"||soort==="sneeuw"||soort==="onweer")?txt(c.weather_code).toLowerCase():"neerslag";
+      zin1 = "Het blijft droog tot <b>"+hhmm(eersteT)+"</b>, daarna valt er wat "+wat+" in de komende twee uur.";
+    }
   }else{
-    zin1 = "De komende <b>twaalf uur</b> blijft het <b>droog</b>.";
+    zin1 = "De komende <b>twee uur</b> blijft het <b>droog</b>.";
+    /* Later vandaag kan er alsnog neerslag komen, ook als de eerste twee uur droog
+       blijven. Dat gebruikt bewust de dagelijkse maximumkans, niet het venster van
+       de komende twee uur: dat zijn twee verschillende, allebei geldige tijdvakken. */
+    const dagKans=day.precipitation_probability_max&&day.precipitation_probability_max[0];
+    if(dagKans!=null&&isFinite(dagKans)&&dagKans>=25){
+      zin1 += " Later vandaag is de neerslagkans <b>"+Math.round(dagKans)+"%</b>.";
+    }
   }
 
   // temperatuur
@@ -995,7 +1135,31 @@ function briefing(){
 }
 
 /* ---------- etmaal: dagbalk plus temperatuurcurve op dezelfde schaal ---------- */
+
+/* Timer die de nu-lijn elke minuut bijwerkt, zonder de weerdata opnieuw op te
+   halen: hij tekent etmaal() gewoon opnieuw met dezelfde start en bereik als de
+   vorige keer. clearNuTimer() ruimt beide op, zodat een nieuwe locatie nooit een
+   tweede, gelijktijdig lopende timer achterlaat. */
+let nuMinuutTimer=null, nuUitlijnTimer=null;
+function clearNuTimer(){
+  if(nuUitlijnTimer!=null){ clearTimeout(nuUitlijnTimer); nuUitlijnTimer=null; }
+  if(nuMinuutTimer!=null){ clearInterval(nuMinuutTimer); nuMinuutTimer=null; }
+}
+function nuTimerStart(){
+  clearNuTimer();
+  const tik=()=>{
+    if(S.chartStart==null||S.chartBereik==null) return;
+    etmaal(S.chartStart,S.chartBereik);
+  };
+  // de eerste tik lijnt uit op de eerstvolgende volle minuut, zodat de klok
+  // niet langzaam wegdrift van de werkelijke minuutwisseling
+  const t=plaatsNu();
+  const totVolgende=60000-(t.getSeconds()*1000+t.getMilliseconds());
+  nuUitlijnTimer=setTimeout(()=>{ tik(); nuMinuutTimer=setInterval(tik,60000); }, totVolgende);
+}
+
 function etmaal(start,n){
+  S.chartStart=start; S.chartBereik=n;
   /* MM werd verderop gebruikt maar nergens aangemaakt. Een verwijzing naar een
      niet-bestaande naam is geen undefined maar een fout, dus zodra er een staaf
      getekend werd viel de hele grafiek uit. Alleen zichtbaar op een natte dag. */
@@ -1023,7 +1187,7 @@ function etmaal(start,n){
   const stap = n<=24 ? 3 : n<=48 ? 6 : (M?18:12);
 
   const Tgeldig=T.filter(v=>v!=null&&isFinite(v));
-  if(!Tgeldig.length){ el.innerHTML=""; return; }   // niets te tekenen zonder cijfers
+  if(!Tgeldig.length){ const elLeeg=document.getElementById("chart"); elLeeg.innerHTML=""; return; }   // niets te tekenen zonder cijfers
   let mn=Math.min(...Tgeldig),mx=Math.max(...Tgeldig);
   mn=Math.floor(mn-1);mx=Math.ceil(mx+1);
   const span=(mx-mn)||1;
@@ -1072,11 +1236,18 @@ function etmaal(start,n){
   });
 
   let nu="",nuX=null;
-  const inu=TI.indexOf(S.d.current.time.slice(0,13)+":00");
-  if(inu>=0){
-    const xn=x(inu); nuX=xn;
-    nu=`<line x1="${xn}" y1="${by-2}" x2="${xn}" y2="${pb+6}" stroke="${CARMINE}" stroke-width="1"/>
-        <text x="${xn+4}" y="${by+bh+13}" fill="${CARMINE}" font-family="DM Mono,monospace" font-size="${F.nu}">nu</text>`;
+  {
+    /* De lijn stond altijd op het volledige uur, dus om 16:38 stond hij op 16:00.
+       De positie komt nu uit het werkelijke moment bij de plaats: het hele uur
+       plus het minutendeel als breuk van een uur, in dezelfde lineaire x()-schaal
+       als de rest van de grafiek. plaatsMinuutFractie() gebruikt de tijd die de
+       weer-API voor die plaats teruggeeft, niet de klok van de browser. */
+    const nuIdx = plaatsNuIndex(TI);
+    if(nuIdx!=null && nuIdx>=0 && nuIdx<=TI.length-1 && isFinite(nuIdx)){
+      const xn=x(nuIdx); nuX=xn;
+      nu=`<line x1="${xn}" y1="${by-2}" x2="${xn}" y2="${pb+6}" stroke="${CARMINE}" stroke-width="1"/>
+          <text x="${xn+4}" y="${by+bh+13}" fill="${CARMINE}" font-family="DM Mono,monospace" font-size="${F.nu}">nu</text>`;
+    }
   }
 
   let bars="",pts=[],dots="",labs="",ticks="";
@@ -1142,31 +1313,29 @@ function etmaal(start,n){
   }
   const iMax=T.indexOf(Math.max.apply(null,T)), iMin=T.indexOf(Math.min.apply(null,T));
 
-  /* De vaste stap is bedoeld als opvulling waar geen piek of dal ligt. Op een
-     vlakke lijn herhaalde hij eindeloos hetzelfde getal: negen keer 19 graden
-     achter elkaar. Een opvullabel dat dezelfde waarde toont als het vorige voegt
-     niets toe en valt nu weg. Pieken en dalen blijven altijd staan, ook als ze
-     toevallig hetzelfde cijfer hebben. */
-  const kandidaten=[];
-  let vorigeStap=null;
+  /* Elk zichtbaar drie-uursinterval krijgt een cijfer, zonder uitzondering: een
+     label wordt nooit stilzwijgend overgeslagen omdat het tegen een ander label
+     aan zou botsen. Pieken en dalen blijven als bonus benadrukt (rang 3 en 2),
+     maar de kern is rang 1: elke i waar i%stap===0, altijd. Botst een positie
+     toch met wat al staat, dan schuift het label naar een volgende, verder weg
+     gelegen laag boven of onder de lijn, in plaats van te verdwijnen. */
+  const kandKaart=new Map();
   for(let i=0;i<T.length;i++){
-    let rang = (i===iMax||i===iMin) ? 3 : soort[i]!==0 ? 2 : 0;
-    if(rang){ vorigeStap=Math.round(T[i]); }
-    else if(i%stap===0 && (vorigeStap===null || Math.round(T[i])!==vorigeStap)){
-      rang=1; vorigeStap=Math.round(T[i]);
-    }
-    if(rang) kandidaten.push({i:i,rang:rang});
+    if(!geldig(i)) continue;                      // geen cijfer zonder geldige waarde
+    let rang=0;
+    if(i===iMax||i===iMin) rang=3;
+    else if(soort[i]!==0) rang=2;
+    else if(i%stap===0) rang=1;
+    if(rang) kandKaart.set(i,rang);
   }
-  kandidaten.sort((a,b)=>b.rang-a.rang||a.i-b.i);
+  const kandidaten=[...kandKaart.entries()].map(([i,rang])=>({i,rang}))
+    .sort((a,b)=>b.rang-a.rang||a.i-b.i);
 
   const labelBreed=v=>String(Math.round(v)).length*F.temp*0.58+F.temp*0.40;
   const gezet=[];
+  const MAXLAAG=5;   // meer dan genoeg lagen om zelfs een dichte 3-uursreeks te schikken
   kandidaten.forEach(k=>{
     const i=k.i, v=T[i], bw=labelBreed(v);
-    let boven = soort[i]!==-1;
-    let cy = boven ? y(v)-(M?13:14) : y(v)+(M?18:20);
-    if(boven && cy-F.temp<by+bh+6){ boven=false; cy=y(v)+(M?18:20); }
-    if(!boven && cy>pb-3){ boven=true; cy=y(v)-(M?13:14); }
     let cx=x(i);
     if(cx-bw/2 < pl-2) cx=pl-2+bw/2;
     if(cx+bw/2 > W-pr) cx=W-pr-bw/2;
@@ -1177,8 +1346,31 @@ function etmaal(start,n){
       const naarRechts = nuX + bw/2 + 6 + bw/2 <= W-pr;
       cx = naarRechts ? nuX + bw/2 + 6 : nuX - bw/2 - 6;
     }
-    const botst=gezet.some(g=>Math.abs(g.cx-cx)<(g.bw+bw)/2+5 && Math.abs(g.cy-cy)<F.temp+3);
-    if(botst) return;
+    const stapHoogte=F.temp*1.35;
+    const eersteBoven = soort[i]!==-1;
+    let cy=null, laag=0, boven=eersteBoven;
+    for(laag=0; laag<MAXLAAG; laag++){
+      const afstandBoven=(M?13:14)+laag*stapHoogte, afstandOnder=(M?18:20)+laag*stapHoogte;
+      const kandBoven=y(v)-afstandBoven, kandOnder=y(v)+afstandOnder;
+      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val<=pb-3;
+      // eerst de kant proberen die bij deze piek/dal hoort, dan de andere kant,
+      // dan een laag verder weg; net zo lang tot er geen botsing meer is
+      const opties=[[kandBoven,true],[kandOnder,false]];
+      if(!eersteBoven) opties.reverse();
+      let gevonden=false;
+      for(const [val,bv] of opties){
+        if(!past(val,bv)) continue;
+        const botst=gezet.some(g=>Math.abs(g.cx-cx)<(g.bw+bw)/2+5 && Math.abs(g.cy-val)<F.temp+3);
+        if(!botst){ cy=val; boven=bv; gevonden=true; break; }
+      }
+      if(gevonden) break;
+    }
+    if(cy===null){
+      // alle lagen botsten alsnog: dan toch de dichtstbijzijnde plek nemen in
+      // plaats van het cijfer te laten verdwijnen
+      cy = eersteBoven ? y(v)-(M?13:14) : y(v)+(M?18:20);
+      cy = Math.min(Math.max(cy,by+bh+6+F.temp), pb-3);
+    }
     gezet.push({cx:cx,cy:cy,bw:bw});
     dots+=`<circle cx="${x(i)}" cy="${y(v)}" r="${M?1.9:2.2}" fill="${INK}"/>`;
     // de rand in de kleur van het vel snijdt de lijn weg achter het cijfer
@@ -1243,21 +1435,28 @@ function daglengte(i){
 function chartHint(){
   const el2=document.getElementById("charthint");
   if(!el2) return;
-  const raak=(typeof window!=="undefined")&&(("ontouchstart" in window)||navigator.maxTouchPoints>0);
-  el2.textContent=raak
-    ? "Houd je vinger op de grafiek voor de details van een uur."
-    : "Beweeg over de grafiek voor de details van een uur.";
+  // een vaste tekst, ongeacht muis- of touchbediening
+  el2.textContent="Houd je vinger op de grafiek voor meer informatie";
 }
 
 function scrubKoppel(){
   const svg=document.getElementById("chart"),hit=document.getElementById("hit"),g=document.getElementById("scrub");
   if(!hit) return;
   const toon=ev=>{
-    const r=svg.getBoundingClientRect(),sc=(S.geo.W||900)/r.width;
-    if(!S.geo) return;
+    /* Zonder geldige index, temperatuur of tijdstip komt er geen doos, punt.
+       Eerder werd S.geo.W gelezen voordat de check op S.geo zelf gebeurde: een
+       aanraking voor de eerste tekening (S.geo nog undefined) wierp daardoor een
+       TypeError halverwege de handler. Dat liet #scrub in een onbepaalde staat
+       staan, soms zichtbaar met niets erin: precies het lege witte vlak. */
+    if(!S.geo){ g.style.display="none"; return; }
     const G=S.geo;
+    if(!G.n||!isFinite(G.n)||G.n<1){ g.style.display="none"; return; }
+    const r=svg.getBoundingClientRect(), sc=(G.W||900)/r.width;
     let i=Math.round(((ev.clientX-r.left)*sc-G.pl)/G.cw);
     i=clamp(i,0,G.n-1);
+    if(!Number.isFinite(i)||!G.T||!Number.isFinite(G.T[i])||!G.TI||!G.TI[i]){
+      g.style.display="none"; return;
+    }
     const X=G.x(i),Y=G.y(G.T[i]);
     /* De doos sloeg om naar links bij een vast percentage van de breedte. Op de
        telefoon lag dat op 62 procent, terwijl de doos daar al 43 px buiten beeld
@@ -1281,13 +1480,18 @@ function scrubKoppel(){
     const rij=(l,v,c)=>{n++;const yy=by+22+n*17;
       return `<text x="${bx+15}" y="${yy}" fill="${INK45}" font-family="Instrument Sans,sans-serif" font-size="11">${l}</text>`
            +`<text x="${bx+bw-15}" y="${yy}" text-anchor="end" fill="${c||INK}" font-family="DM Mono,monospace" font-size="11.5">${v}</text>`;};
-    const kop=`<text x="${bx+15}" y="${by+18}" fill="${INK}" font-family="Bodoni Moda,serif" font-size="15">${G.TI[i].slice(11,16)} · ${txt(G.D[i],G.ND?G.ND[i]!==0:true)}</text>`;
-    const body=rij("temperatuur",Math.round(G.T[i])+"°C")
-      +rij("voelt als",Math.round(G.A[i])+"°C")
-      +rij("neerslagkans",G.P[i]+"%",TEAL)
-      +rij("wind",Math.round(G.W_[i])+" km/u "+DIRS[Math.round((G.WD[i]||0)/22.5)%16]+", "+bft(G.W_[i])+" Bft")
-      +rij("windstoten",Math.round(G.G[i])+" km/u")
-      +rij("bewolking",G.C[i]+"%");
+    const kop=`<text x="${bx+15}" y="${by+18}" fill="${INK}" font-family="Bodoni Moda,serif" font-size="15">${G.TI[i].slice(11,16)}${G.D&&G.D[i]!=null?" · "+txt(G.D[i],G.ND?G.ND[i]!==0:true):""}</text>`;
+    /* Elk veld apart uitlezen, met een streepje voor wat ontbreekt. Zo kan een
+       los gat in de reeks (bijvoorbeeld alleen de windstoten missen) nooit
+       "NaN km/u" of "undefined%" in de doos laten staan. */
+    const heel=v=>v!=null&&isFinite(v);
+    const num=(v,dec)=>heel(v)?(dec?nl(v):Math.round(v)):"–";
+    const body=rij("temperatuur",num(G.T?G.T[i]:null)+"°C")
+      +rij("voelt als",num(G.A?G.A[i]:null)+"°C")
+      +rij("neerslagkans",(heel(G.P&&G.P[i])?G.P[i]:"–")+"%",TEAL)
+      +rij("wind",heel(G.W_&&G.W_[i])?Math.round(G.W_[i])+" km/u "+DIRS[Math.round((G.WD[i]||0)/22.5)%16]+", "+bft(G.W_[i])+" Bft":"–")
+      +rij("windstoten",heel(G.G&&G.G[i])?Math.round(G.G[i])+" km/u":"–")
+      +rij("bewolking",(heel(G.C&&G.C[i])?G.C[i]:"–")+"%");
     g.innerHTML=
       `<line x1="${X}" y1="${G.pt}" x2="${X}" y2="${G.pt+G.ih}" stroke="${INK}" stroke-width="1"/>
        <circle cx="${X}" cy="${Y}" r="3.4" fill="${SHEET}" stroke="${INK}" stroke-width="1.4"/>
@@ -1305,8 +1509,23 @@ function scrubKoppel(){
 
 /* ---------- kwartierneerslag ---------- */
 function nowcast(){
+  /* De conclusie ("droog" of "nat", en tot wanneer) komt nu uit kortetermijn(),
+     dezelfde functie als de briefing gebruikt. Zo kunnen deze twee teksten nooit
+     meer iets anders beweren over hetzelfde moment. De staafjes zelf blijven een
+     eigen tekening: die heeft de fijnmazige kwartierdata nodig om iets te kunnen
+     laten zien, en dat is een tekenkwestie, geen interpretatiekwestie. */
+  const kt=kortetermijn();
   const m=S.d.minutely_15,el=document.getElementById("nc"),tx=document.getElementById("nctext");
-  if(!m||!m.time){el.style.display="none";tx.textContent="Kwartierdata is voor deze locatie niet beschikbaar.";return;}
+  if(!m||!m.time){
+    el.style.display="none";
+    // geen kwartierstaven te tonen, maar met de terugval op de uurreeks is er
+    // vaak nog wel een eerlijke zin mogelijk in plaats van alleen "niet beschikbaar"
+    tx.textContent = !kt.genoeg
+      ? "Kwartierdata is voor deze locatie niet beschikbaar."
+      : kt.droog ? "De komende twee uur blijft het droog."
+      : "De komende twee uur valt er neerslag.";
+    return;
+  }
   el.style.display="block";
   let i=m.time.findIndex(t=>t>=S.d.current.time.slice(0,16));
   if(i<0)i=0;
@@ -1333,17 +1552,25 @@ function nowcast(){
     }
   });
   el.innerHTML=out;
-  const eerste=P.findIndex(v=>v>=0.1),som=P.reduce((a,b)=>a+b,0);
-  el.style.display=som<0.05?"none":"block";
-  if(P[0]>=0.1){
-    const stop=P.findIndex((v,k)=>k>0&&v<0.1);
-    tx.textContent = nbsp(stop>0
-      ? "Er valt nu neerslag. Rond "+T[stop].slice(11,16)+" wordt het droog."
-      : "Er valt nu neerslag en dat blijft de komende twee uur zo.");
-  }else if(eerste>0){
-    tx.textContent=nbsp("Het is nu droog. Vanaf ongeveer "+T[eerste].slice(11,16)+" begint de neerslag, in totaal "+nl(som)+" mm.");
-  }else{
+  const som=P.reduce((a,b)=>a+b,0);
+  el.style.display=som<0.05&&kt.droog!==false?"none":"block";
+  /* De tekst leunt op kt.droog / kt.eersteNatIdx, dus dezelfde conclusie als de
+     briefing. De tijden T en waarden P blijven puur voor de precieze klok- en
+     mm-details binnen die conclusie, niet voor de conclusie zelf. */
+  if(kt.genoeg&&!kt.droog&&kt.bron==="minutely_15"){
+    const stop=P.findIndex((v,k)=>k>kt.eersteNatIdx&&v<NEERSLAG_DREMPEL_MM);
+    tx.textContent = nbsp(kt.eersteNatIdx===0
+      ? (stop>0 ? "Er valt nu neerslag. Rond "+T[stop].slice(11,16)+" wordt het droog."
+                : "Er valt nu neerslag en dat blijft de komende twee uur zo.")
+      : "Het is nu droog. Vanaf ongeveer "+T[kt.eersteNatIdx].slice(11,16)+" begint de neerslag, in totaal "+nl(som)+" mm.");
+  }else if(kt.genoeg&&kt.droog){
     tx.textContent="De komende twee uur blijft het droog.";
+  }else if(!kt.genoeg){
+    tx.textContent="Voor de komende twee uur is er niet genoeg data voor een betrouwbare inschatting.";
+  }else{
+    // kt.genoeg maar via de terugval (bron:"hourly") terwijl m wel bestond: een
+    // rand die zich in de praktijk niet voordoet, maar zonder gok een neutrale zin
+    tx.textContent = kt.droog ? "De komende twee uur blijft het droog." : "De komende twee uur valt er neerslag.";
   }
 }
 
@@ -1467,9 +1694,9 @@ function nachten(){
       const langsteRun=test=>{let r=0,b=0;for(let i=0;i<C.length;i++){ if(test(i)){r++;if(r>b)b=r;} else r=0; } return b;};
       const wolkOk=langsteRun(i=>C[i]<35)>=2;               // zonder de maan was er een venster geweest
       const maanOk=langsteRun(i=>maanWeging[i]*mn.ill<0.2)>=2;  // zonder de wolken was er een venster geweest
-      venster = wolkOk ? "geen venster, te veel maanlicht"
-              : maanOk ? "geen venster, te bewolkt"
-              : "geen venster, te bewolkt en te veel maanlicht";
+      venster = wolkOk ? "Geen geschikt zichtvenster: te veel maanlicht"
+              : maanOk ? "Geen geschikt zichtvenster: te bewolkt"
+              : "Geen geschikt zichtvenster: te bewolkt en te veel maanlicht";
     }
 
     // maantijden voor deze nacht
@@ -1483,44 +1710,10 @@ function nachten(){
        hoort, en niet los voorop waar het bij de score zou lijken te horen. Het
        cijfer erachter blijft staan: een schijfje leest snel, maar 63 procent
        verlicht lees je er niet aan af. */
-    /* Seeing uit de straalstroom rond 250 hPa. De schaal volgt wat waarnemers
-       hanteren: onder 20 km/u staat het beeld rustig, boven 90 trilt alles.
-       Doorzicht uit de vochtigheid rond 700 hPa: vochtige lucht dooft zwakke
-       objecten, ook als er geen wolk te zien is. Ontbreekt de bovenlucht, dan
-       blijft het veld gewoon leeg in plaats van een verzonnen waarde. */
-    const bovenlucht=(veld)=>{
-      const reeks=h[veld];
-      if(!reeks) return null;
-      const w=[];
-      for(let i=a2;i<=b2&&i<reeks.length;i++) if(reeks[i]!=null) w.push(reeks[i]);
-      return w.length ? w.reduce((a,b)=>a+b,0)/w.length : null;
-    };
-    const jet=bovenlucht("wind_speed_250hPa");
-    const vocht=bovenlucht("relative_humidity_700hPa");
-    const seeingWoord = jet==null ? null
-      : jet<20 ? "rustig" : jet<45 ? "redelijk rustig" : jet<90 ? "onrustig" : "zeer onrustig";
-    const zichtWoord = vocht==null ? null
-      : vocht<40 ? "helder" : vocht<65 ? "redelijk helder" : vocht<85 ? "waterig" : "zeer waterig";
-
-    /* Welke planeten deze nacht boven de horizon komen, en hoe hoog ze dan staan.
-       Alleen wat er werkelijk toe doet: onder de tien graden zit je in de nevel
-       aan de horizon en heb je er met een kijker niets aan. De berekening loopt
-       over de donkere uren van deze nacht, per half uur. */
-    const zichtbaar=[];
-    if(isFinite(S.lat)&&isFinite(S.lon)){
-      const start=naarUTC(ss.slice(0,16)), eind=naarUTC(sr2.slice(0,16));
-      for(const pn of ["Mercurius","Venus","Mars","Jupiter","Saturnus"]){
-        let top=-90, topT=null;
-        for(let t=start;t<=eind;t+=1800000){
-          const st=planeet(pn,new Date(t),S.lat,S.lon);
-          if(st.hoogte>top){top=st.hoogte;topT=t;}
-        }
-        if(top>=10) zichtbaar.push({naam:pn,hoogte:top,wanneer:topT});
-      }
-      zichtbaar.sort((a,b)=>b.hoogte-a.hoogte);
-    }
-
-    const maanIcoon=maanschijf(mn.ill,mn.fase,13);
+    /* Punt 11 vraagt hier het tekstsymbool, niet de getekende schijf: dat blijft
+       bestaan voor de kop boven de tabel ("wassende maan, N procent verlicht"),
+       waar maanschijf() nog wel gebruikt wordt. */
+    const maanIcoon=maanUnicode(mn.fase);
     const maanTitel=maan(new Date(naarUTC(ss.slice(0,10)+"T23:30"))).naam
       +", "+Math.round(mn.ill*100)+" procent verlicht";
 
@@ -1531,11 +1724,6 @@ function nachten(){
       <div class="score" style="color:${kleur}">${nl(sc)}</div>
       <div class="sbar"><i style="width:${sc*10}%;background:${kleur}"></i></div>
       <div class="nmeta"><span class="perc">${Math.round(cw)}%</span> bewolking</div>
-      ${zichtbaar.length?`<div class="nmeta wide nplaneten">${
-        zichtbaar.map(p=>p.naam+" tot "+Math.round(p.hoogte)+"\u00b0 rond "+naarLokaal(p.wanneer)).join(" \u00b7 ")}</div>`:""}
-      ${(seeingWoord||zichtWoord)?`<div class="nmeta wide nlucht">${
-        [seeingWoord?"beeld "+seeingWoord+(jet!=null?" ("+Math.round(jet)+" km/u op 10 km)":""):"",
-         zichtWoord?"lucht "+zichtWoord:""].filter(Boolean).join(" \u00b7 ")}</div>`:""}
       <div class="nmeta wide">${venster}${maanTekst
         ? ` <span class="maangroep">· <span class="maanbij" title="${esc(maanTitel)}">${maanIcoon}</span>${maanTekst}</span>`
         : ""}</div></div>`;
@@ -1549,6 +1737,25 @@ function nachten(){
 }
 
 /* ---------- luchtkwaliteit ---------- */
+/** De zonurentegel op de plek waar eerder fijnstof PM2,5 stond. Dezelfde
+    aanpak als de neerslagtegel van punt 7: de lokale kalenderdag bij de plaats
+    wordt tegen day.time gelegd, nooit blind index 0. De waarde komt in seconden
+    binnen en wordt gedeeld door 3600 voor uren; alleen de weergave rondt af op
+    een decimaal, de drempeltoetsen rekenen met de onafgeronde waarde. */
+function zonurenTegel(){
+  const day=S.d&&S.d.daily;
+  const idx=day&&day.time?day.time.indexOf(plaatsVandaag()):-1;
+  const sec=idx>=0&&day.sunshine_duration?day.sunshine_duration[idx]:null;
+  if(sec==null||!Number.isFinite(sec)||sec<0){
+    return `<div class="stat"><div class="eyebrow">Zonuren</div>
+      <div class="sval">–</div><div class="ssub">Zonuren niet beschikbaar</div></div>`;
+  }
+  const uur=sec/3600;
+  const woord = uur<2 ? "Weinig zon vandaag" : uur<=7 ? "Een aantal zonuren vandaag" : "Vandaag redelijk wat zon";
+  return `<div class="stat"><div class="eyebrow">Zonuren</div>
+      <div class="sval">${nl(uur)}<s>uur</s></div><div class="ssub">${woord}</div></div>`;
+}
+
 function lucht(){
   const el=document.getElementById("aq");
   if(!S.air||!S.air.current){
@@ -1569,9 +1776,7 @@ function lucht(){
   const [nm,kl]=band(aqi);
   let out=`<div class="stat"><div class="eyebrow">${naamIndex}</div>
       <div class="sval" style="color:${kl}">${aqi==null?"–":Math.round(aqi)}</div><div class="ssub">${nm}</div></div>
-    <div class="stat"><div class="eyebrow">Fijnstof PM2,5</div>
-      <div class="sval">${nl(c.pm2_5)}<s>µg/m³</s></div>
-      <div class="ssub">PM10 ${c.pm10==null?"–":Math.round(c.pm10)} µg/m³</div></div>`;
+    ${zonurenTegel()}`;
   /* Pollen komt alleen uit het Europese CAMS-model. Buiten Europa zijn alle
      soorten null en meldde de app "Geen noemenswaardige concentraties". Dat is
      een bewering over de lucht terwijl er simpelweg niet gemeten wordt. */
@@ -1627,7 +1832,32 @@ function logBij(){
 const R={laag:"radar",radarFrames:[],satFrames:[],frames:[],i:0,speelt:false,timer:null,
   host:"",geladen:{},pogingen:0,gelukt:0,verwacht:0,terug:false,wms:null,knmiMelding:"",
   zoom:7,dx:0,dy:0};
-const TEGEL=256, ZSTANDAARD=7, ZMIN=4, ZMAX=10;
+/* Deze kaart is handgetekend op canvas, geen Leaflet, dus er is geen maxNativeZoom
+   om aan te draaien. Het equivalent hier is: de tegelaanvraag zelf nooit boven het
+   daadwerkelijk ondersteunde niveau laten komen, maar de gebruiker er wel voorbij
+   laten kijken door de laatst geldige tegel client-side op te schalen.
+
+   Twee tegelbronnen delen deze kaart:
+     CARTO (basiskaart)         - eigen documentatie: "we support from 0 to 20
+                                   zoom levels in OSM tiling system"
+                                   (github.com/CartoDB/basemap-styles)
+     RainViewer (radar/satelliet) - eigen documentatie: "Maximum zoom level is 7"
+                                   (rainviewer.com/api/weather-maps-api.html)
+   De KNMI-laag is WMS met een expliciete BBOX/WIDTH/HEIGHT, geen tegelpiramide,
+   en kent dus geen vergelijkbaar zoomplafond.
+
+   ZTEGELMAX=7 is de daadwerkelijke aanvraaggrens: geen tegel-URL vraagt ooit een
+   hoger niveau op, want dat zou bij RainViewer een grijze fouttegel opleveren.
+   ZMAX ligt daarboven en is het niveau waarop de zoom-in-knop pas uitgaat. Tussen
+   die twee grenzen in wordt er niets nieuws opgehaald: radarTeken() vraagt de
+   tegel op ZTEGELMAX aan en tekent hem groter, met een factor 2^(R.zoom-ZTEGELMAX),
+   om het verschil te overbruggen. Zo blijft elke aanvraag geldig en kan de
+   gebruiker toch doorzoomen. Eerder in dit project stond hier zonder onderbouwing
+   ZMAX=10 als aanvraaggrens; dat getal was gegokt. Daarna is de aanvraaggrens
+   hard op 7 gezet, maar dat beperkte ook hoever de gebruiker mocht kijken.
+   Aanvraag en weergave staan nu los van elkaar: 7 voor wat wordt opgehaald,
+   9 voor wat wordt getoond. */
+const TEGEL=256, ZSTANDAARD=7, ZMIN=4, ZMAX=9, ZTEGELMAX=7;
 const R_AARDE=6378137, HALFRONDE=Math.PI*R_AARDE;
 const wereldGrootte=()=>TEGEL*Math.pow(2,R.zoom);
 const mercX=px=>px/wereldGrootte()*2*HALFRONDE-HALFRONDE;
@@ -1674,8 +1904,11 @@ async function radarTeken(){
   const ronde=++radarRonde;
   const ctx=c.getContext("2d");
   const W=c.width,H=c.height;
-  const Z=R.zoom;
-  const mid=wereldXY(S.lat,S.lon,Z);
+  const Zv=R.zoom;                         // visueel niveau: bepaalt positie en weergavegrootte
+  const Zt=Math.min(Zv,ZTEGELMAX);         // aanvraagniveau: nooit hoger dan wat de bron aankan
+  const schaal=Math.pow(2,Zv-Zt);          // 1 tot en met ZTEGELMAX, groter erboven
+  const TS=TEGEL*schaal;                   // effectieve tegelgrootte op het scherm bij dit niveau
+  const mid=wereldXY(S.lat,S.lon,Zv);
   // dx en dy verschuiven de kaart; het kruisje blijft op de echte locatie staan
   const ox=mid.x-W/2-R.dx, oy=mid.y-H/2-R.dy;
   const donker=document.documentElement.getAttribute("data-thema")!=="licht";
@@ -1687,20 +1920,20 @@ async function radarTeken(){
   el2.className=f.toekomst?"straks":"";
   el2.innerHTML=naarLokaal(f.time*1000)+(f.toekomst?"<small>verwachting</small>":"");
 
-  const tx0=Math.floor(ox/TEGEL), tx1=Math.floor((ox+W)/TEGEL);
-  const ty0=Math.floor(oy/TEGEL), ty1=Math.floor((oy+H)/TEGEL);
-  const max=Math.pow(2,Z);
+  const tx0=Math.floor(ox/TS), tx1=Math.floor((ox+W)/TS);
+  const ty0=Math.floor(oy/TS), ty1=Math.floor((oy+H)/TS);
+  const max=Math.pow(2,Zt);
 
   const vakken=[];
   for(let tx=tx0;tx<=tx1;tx++) for(let ty=ty0;ty<=ty1;ty++){
     if(ty<0||ty>=max) continue;
     const X=((tx%max)+max)%max;
-    vakken.push({X:X,ty:ty,px:tx*TEGEL-ox,py:ty*TEGEL-oy});
+    vakken.push({X:X,ty:ty,px:tx*TS-ox,py:ty*TS-oy});
   }
 
-  const kaarten=vakken.map(v=>tegelBelofte(`https://basemaps.cartocdn.com/${stijl}/${Z}/${v.X}/${v.ty}.png`));
+  const kaarten=vakken.map(v=>tegelBelofte(`https://basemaps.cartocdn.com/${stijl}/${Zt}/${v.X}/${v.ty}.png`));
   const neerslag=f.knmi ? [] : vakken.map(v=>
-    tegelBelofte(`${R.host}${f.path}/${TEGEL}/${Z}/${v.X}/${v.ty}/${f.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`));
+    tegelBelofte(`${R.host}${f.path}/${TEGEL}/${Zt}/${v.X}/${v.ty}/${f.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`));
 
   let heel=null;
   if(f.knmi&&R.wms){
@@ -1719,8 +1952,8 @@ async function radarTeken(){
   if(ronde!==radarRonde) return;      // ondertussen is er een nieuwer beeld gevraagd
 
   ctx.clearRect(0,0,W,H);
-  kb.forEach((im,k)=>{ if(im){ctx.globalAlpha=donker?0.78:0.94;ctx.drawImage(im,vakken[k].px,vakken[k].py);ctx.globalAlpha=1;} });
-  nb.forEach((im,k)=>{ if(im){ctx.globalAlpha=0.85;ctx.drawImage(im,vakken[k].px,vakken[k].py);ctx.globalAlpha=1;} });
+  kb.forEach((im,k)=>{ if(im){ctx.globalAlpha=donker?0.78:0.94;ctx.drawImage(im,vakken[k].px,vakken[k].py,TS,TS);ctx.globalAlpha=1;} });
+  nb.forEach((im,k)=>{ if(im){ctx.globalAlpha=0.85;ctx.drawImage(im,vakken[k].px,vakken[k].py,TS,TS);ctx.globalAlpha=1;} });
   if(hb){ctx.globalAlpha=0.85;ctx.drawImage(hb,0,0,W,H);ctx.globalAlpha=1;}
   markeer(ctx,W,H,R.dx,R.dy);
 
@@ -1931,150 +2164,16 @@ async function waarschuwingen(){
   }catch(e){ /* geen functie of geen verbinding: blok blijft leeg */ }
 }
 
-/* Standen van de vijf planeten die met het blote oog of een kleine kijker te zien
-   zijn. Methode van Paul Schlyter: baanelementen die lineair met de tijd lopen,
-   plus de storingen van Jupiter en Saturnus, die anders tot bijna een graad
-   afwijking geven. Ruim nauwkeurig genoeg voor de enige vraag hier: staat het
-   boven de horizon en hoe hoog.
-
-   Werkt op elke breedtegraad. De sterrentijd komt uit de lengtegraad, dus de
-   berekening kent geen tijdzone en geen halfrond. */
-
-const PRAD = Math.PI / 180;
-const psin = g => Math.sin(g * PRAD), pcos = g => Math.cos(g * PRAD);
-const ptan = g => Math.tan(g * PRAD);
-const prev = g => ((g % 360) + 360) % 360;
-
-/** Dagnummer sinds 31 december 1999 00:00 UT, met de tijd als breuk erbij. */
-function dagNummer(datum) { /* Schlyter telt vanaf 30 december 1999 00:00 UT: zijn eigen formule geeft d=1
-     voor 1 januari 2000 middernacht. In unixtijd is dat 10956 dagen. */
-  return (datum.getTime() / 86400000) - 10956; }
-
-/* N knoop, i helling, w perihelium, a halve lange as, e excentriciteit,
-   M middelbare anomalie. Elk paar is [waarde op d=0, verandering per dag]. */
-const BANEN = {
-  Mercurius: { N:[48.3313, 3.24587e-5], i:[7.0047, 5.00e-8], w:[29.1241, 1.01444e-5],
-               a:[0.387098, 0], e:[0.205635, 5.59e-10], M:[168.6562, 4.0923344368] },
-  Venus:     { N:[76.6799, 2.46590e-5], i:[3.3946, 2.75e-8], w:[54.8910, 1.38374e-5],
-               a:[0.723330, 0], e:[0.006773, -1.302e-9], M:[48.0052, 1.6021302244] },
-  Mars:      { N:[49.5574, 2.11081e-5], i:[1.8497, -1.78e-8], w:[286.5016, 2.92961e-5],
-               a:[1.523688, 0], e:[0.093405, 2.516e-9], M:[18.6021, 0.5240207766] },
-  Jupiter:   { N:[100.4542, 2.76854e-5], i:[1.3030, -1.557e-7], w:[273.8777, 1.64505e-5],
-               a:[5.20256, 0], e:[0.048498, 4.469e-9], M:[19.8950, 0.0830853001] },
-  Saturnus:  { N:[113.6634, 2.38980e-5], i:[2.4886, -1.081e-7], w:[339.3939, 2.97661e-5],
-               a:[9.55475, 0], e:[0.055546, -9.499e-9], M:[316.9670, 0.0334442282] }
-};
-
-const el = (paar, d) => paar[0] + paar[1] * d;
-
-/** Lost de vergelijking van Kepler op. Mercurius is te excentrisch voor een enkele stap. */
-function excentrischeAnomalie(M, e) {
-  let E = M + (180 / Math.PI) * e * psin(M) * (1 + e * pcos(M));
-  for (let k = 0; k < 20; k++) {
-    const dE = (E - (180 / Math.PI) * e * psin(E) - M) / (1 - e * pcos(E));
-    E -= dE;
-    if (Math.abs(dE) < 1e-10) break;
-  }
-  return E;
-}
-
-/** Geocentrische stand van de zon, ook nodig om de planeten om te rekenen. */
-function zonStandPlaneet(d) {
-  const w = 282.9404 + 4.70935e-5 * d;
-  const e = 0.016709 - 1.151e-9 * d;
-  const M = prev(356.0470 + 0.9856002585 * d);
-  const E = M + (180 / Math.PI) * e * psin(M) * (1 + e * pcos(M));
-  const xv = pcos(E) - e, yv = Math.sqrt(1 - e * e) * psin(E);
-  const r = Math.sqrt(xv * xv + yv * yv);
-  const lon = prev(Math.atan2(yv, xv) / PRAD + w);
-  return { x: r * pcos(lon), y: r * psin(lon), r: r, lon: lon, M: M, w: w };
-}
-
-/* De storingen die er werkelijk toe doen. Zonder deze loopt Saturnus tot bijna
-   een graad uit de pas en Jupiter een halve. */
-function storing(naam, d) {
-  const Mj = prev(el(BANEN.Jupiter.M, d));
-  const Ms = prev(el(BANEN.Saturnus.M, d));
-  let dLon = 0, dLat = 0;
-  if (naam === "Jupiter") {
-    dLon = -0.332 * psin(2*Mj - 5*Ms - 67.6)
-         - 0.056 * psin(2*Mj - 2*Ms + 21)
-         + 0.042 * psin(3*Mj - 5*Ms + 21)
-         - 0.036 * psin(Mj - 2*Ms)
-         + 0.022 * pcos(Mj - Ms)
-         + 0.023 * psin(2*Mj - 3*Ms + 52)
-         - 0.016 * psin(Mj - 5*Ms - 69);
-  } else if (naam === "Saturnus") {
-    dLon = 0.812 * psin(2*Mj - 5*Ms - 67.6)
-         - 0.229 * pcos(2*Mj - 4*Ms - 2)
-         + 0.119 * psin(Mj - 2*Ms - 3)
-         + 0.046 * psin(2*Mj - 6*Ms - 69)
-         + 0.014 * psin(Mj - 3*Ms + 32);
-    dLat = -0.020 * pcos(2*Mj - 4*Ms - 2)
-         + 0.018 * psin(2*Mj - 6*Ms - 49);
-  }
-  return { dLon: dLon, dLat: dLat };
-}
-
-/**
- * Stand van een planeet gezien vanaf een plek op aarde.
- * @param {string} naam   Mercurius, Venus, Mars, Jupiter of Saturnus
- * @param {Date}   datum  moment in UT
- * @param {number} lat    breedtegraad, positief noord
- * @param {number} lon    lengtegraad, positief oost
- * @returns {{hoogte:number,azimut:number,ra:number,dec:number,afstand:number}} in graden
- */
-function planeet(naam, datum, lat, lon) {
-  const baan = BANEN[naam];
-  if (!baan) throw new Error("onbekende planeet: " + naam);
-  const d = dagNummer(datum);
-
-  const N = el(baan.N, d), i = el(baan.i, d), w = el(baan.w, d);
-  const a = el(baan.a, d), e = el(baan.e, d), M = prev(el(baan.M, d));
-  const E = excentrischeAnomalie(M, e);
-  const xv = a * (pcos(E) - e);
-  const yv = a * Math.sqrt(1 - e * e) * psin(E);
-  const r0 = Math.sqrt(xv * xv + yv * yv);
-  const v = prev(Math.atan2(yv, xv) / PRAD);
-  const vw = v + w;
-
-  const xh0 = r0 * (pcos(N) * pcos(vw) - psin(N) * psin(vw) * pcos(i));
-  const yh0 = r0 * (psin(N) * pcos(vw) + pcos(N) * psin(vw) * pcos(i));
-  const zh0 = r0 * psin(vw) * psin(i);
-
-  // via ecliptische lengte en breedte, zodat de storing erbij opgeteld kan worden
-  const st = storing(naam, d);
-  const lonH = prev(Math.atan2(yh0, xh0) / PRAD + st.dLon);
-  const latH = Math.atan2(zh0, Math.sqrt(xh0 * xh0 + yh0 * yh0)) / PRAD + st.dLat;
-
-  const xh = r0 * pcos(lonH) * pcos(latH);
-  const yh = r0 * psin(lonH) * pcos(latH);
-  const zh = r0 * psin(latH);
-
-  // geocentrisch: de stand van de aarde is die van de zon, omgekeerd
-  const zon = zonStandPlaneet(d);
-  const xg = xh + zon.x, yg = yh + zon.y, zg = zh;
-
-  const ecl = 23.4393 - 3.563e-7 * d;
-  const xe = xg;
-  const ye = yg * pcos(ecl) - zg * psin(ecl);
-  const ze = yg * psin(ecl) + zg * pcos(ecl);
-
-  const ra = prev(Math.atan2(ye, xe) / PRAD);
-  const dec = Math.atan2(ze, Math.sqrt(xe * xe + ye * ye)) / PRAD;
-
-  /* Sterrentijd uit de lengtegraad. Hier zit de wereldwijde geldigheid: geen
-     tijdzone en geen halfrond, alleen de stand van de aarde tegenover de sterren. */
-  const uur = ((d % 1) + 1) % 1 * 24;
-  const gmst0 = prev(zon.M + zon.w + 180);
-  const lst = prev(gmst0 + uur * 15 + lon);
-  const ha = prev(lst - ra);
-
-  const hoogte = Math.asin(psin(dec) * psin(lat) + pcos(dec) * pcos(lat) * pcos(ha)) / PRAD;
-  const azimut = prev(Math.atan2(psin(ha), pcos(ha) * psin(lat) - ptan(dec) * pcos(lat)) / PRAD + 180);
-
-  return { hoogte: hoogte, azimut: azimut, ra: ra, dec: dec,
-           afstand: Math.sqrt(xg * xg + yg * yg + zg * zg) };
+/** Vertaalt een maanfase (0,0 tot 1,0, waarbij 1,0 hetzelfde is als 0,0) naar het
+    dichtstbijzijnde van de acht standaard Unicode-maansymbolen. Voor de nachtzicht-
+    tabel: die vraagt een tekstsymbool, geen getekende schijf. De getekende schijf
+    van maanschijf() blijft daarnaast bestaan voor de kop boven de tabel. */
+function maanUnicode(fase){
+  const SYMBOLEN=["\u{1F311}","\u{1F312}","\u{1F313}","\u{1F314}","\u{1F315}","\u{1F316}","\u{1F317}","\u{1F318}"];
+  if(fase==null||!Number.isFinite(fase)||fase<0||fase>1) return "\u2013";
+  const f=fase>=1?0:fase;                      // 1,0 telt als 0,0
+  const idx=Math.round(f*8)%8;                 // loopt na 7 terug naar 0
+  return SYMBOLEN[idx];
 }
 
 /* ---------- plaatsen ---------- */
@@ -2110,8 +2209,22 @@ function chips(){
 
 /* ---------- meeschuivende balk ---------- */
 function minibarBij(){
-  document.getElementById("miniplaats").textContent=S.label;
-  document.getElementById("minitemp").textContent=Math.round(S.d.current.temperature_2m)+"°C, "+txt(S.d.current.weather_code,S.d.current.is_day!==0).toLowerCase();
+  /* Vier losse velden in vaste volgorde: plaats, tijd, temperatuur, omschrijving.
+     Tijd en temperatuur staan nooit ter discussie en krijgen daarom hun eigen
+     veld met flex-shrink:0. De omschrijving is het enige veld dat mag inkorten,
+     dus die staat apart van het temperatuurgetal in plaats van er met een komma
+     aan vast te zitten zoals eerder. */
+  const pl=document.getElementById("miniplaats");
+  pl.textContent=S.label;
+  // altijd de volledige naam beschikbaar, ook als de tekst zelf wordt afgekapt
+  pl.title=S.label; pl.setAttribute("aria-label",S.label);
+
+  document.getElementById("minitemp").textContent=Math.round(S.d.current.temperature_2m)+"°C";
+  const cond=document.getElementById("minicond");
+  if(cond){
+    const tekst=txt(S.d.current.weather_code,S.d.current.is_day!==0).toLowerCase();
+    cond.textContent=tekst; cond.title=tekst;
+  }
   // dezelfde klok als naast de plaatsnaam, zodat hij bij het scrollen blijft staan
   const mt=document.getElementById("minitijd");
   if(mt) mt.textContent=plaatsKlok();

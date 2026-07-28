@@ -89,7 +89,7 @@ testdata niet overschrijft.
 Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeeld
 `laadKern(390)`. Zonder waarde gaat hij uit van 1280.
 
-260 controles, onder meer:
+432 controles, onder meer:
 
 * zonstijden tegen bekende referenties en de maanfase tegen bekende nieuwe en volle maan
 * briefingzinnen in zes weersituaties, plus randgevallen als poolzomer en ontbrekende data
@@ -118,8 +118,8 @@ Geef een breedte mee aan `laadKern` om de telefoonopmaak te toetsen, bijvoorbeel
 * de wolk in een samengesteld icoon dekt af wat erachter ligt, op elke achtergrond
 * de radar wist het doek pas als de beelden binnen zijn, dus zonder flikkeren
 * de radar kan zoomen en verschuiven, en meldt het als er geen vooruitblik is
-* planeetstanden, getoetst tegen een echte efemeride over twaalf plaatsen wereldwijd
-* seeing en doorzicht uit de bovenlucht op 250 en 700 hPa
+* voorbij het aanvraagmaximum van de tegelbron (z=7) wordt de laatst geldige tegel
+  client-side opgeschaald, zodat de gebruiker toch verder kan inzoomen
 * teksten schuiven mee met de klok: vandaag, vanavond, vannacht
 * windrichting als afkorting naast de snelheid, en datums achter vandaag en morgen
 * de grafiek valt niet uit op een natte dag en breekt de lijn bij ontbrekende waarden
