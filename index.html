@@ -49,16 +49,12 @@
     --accent-rain:#3B8FA3;
     --accent-night:#142C4C;
     --accent-sun:#F2CE63;
-    /* v68: zeer lichte oppervlaktetinten voor een beperkt aantal desktop-
-       modules (zie de dashboardlaag onderaan de CSS). Geen eigen thema-
-       overrides: dit zijn transparante rgba-lagen op de eigen accentkleur,
-       dus ze passen zich vanzelf aan bij elk thema zonder er zelf op te
-       hoeven reageren. */
-    --surface-info:rgba(8,124,131,0.055);
-    --surface-rain:rgba(59,143,163,0.065);
-    --surface-night:rgba(20,44,76,0.055);
-    --surface-sun:rgba(242,206,99,0.11);
-    --surface-active:rgba(165,29,61,0.045);
+    /* v70: de --surface-*-tokens (zeer lichte oppervlaktetinten achter hele
+       modules) zijn verwijderd. Ze bleken visueel niet gewenst: modules horen
+       op de gewone thema-achtergrond te rusten, kleur is voorbehouden aan
+       echte datavisualisatie en dunne accentlijnen. De --accent-*-tokens
+       hierboven blijven wel bestaan: die kleuren nog steeds lijnen, tekst en
+       de smalle dag-/nachtindicator. */
     --serif:'Bodoni Moda',Georgia,'Times New Roman',serif;
     --sans:'Instrument Sans',ui-sans-serif,system-ui,-apple-system,sans-serif;
     --mono:'DM Mono',ui-monospace,'SFMono-Regular',monospace;
@@ -215,7 +211,7 @@
 
   /* radar */
   .radar{margin-top:var(--s2)}
-  #radar{width:100%;height:auto;display:block;border:1px solid var(--rule);background:var(--rule-soft)}
+  #radar{width:100%;height:auto;display:block;border:1px solid var(--rule);background:var(--sheet)}
   #suntimes{display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
   #radartijd{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:center;
     font-size:21px;letter-spacing:.04em;margin:14px 0 10px;line-height:1.2}
@@ -229,13 +225,20 @@
   /* Aanwijzingen mogen er zijn zonder de aandacht te trekken: ze horen op te
      vallen als je zoekt, en te verdwijnen zodra je de app kent. */
   .hint{font-size:12px;color:var(--ink-45);margin:-2px 0 10px;font-style:italic}
-  /* de zoomknoppen zijn tekens en geen woorden, dus die mogen smal blijven */
-  .radarbalk button#rin,.radarbalk button#ruit{min-width:44px;font-family:var(--mono);font-size:17px}
-  #radar{cursor:grab;touch-action:none}
-  #radar.sleept{cursor:grabbing}
-  /* op een smal scherm passen twee knoppen en een schuif niet op een regel,
-     dus krijgt de schuif zijn eigen regel over de volle breedte */
-  @media(max-width:430px){ .radarbalk input[type=range]{flex:1 0 100%;order:3} }
+  /* v70, punt 8: uitsluitend de hint bij Zeven dagen stond te dicht tegen de
+     horizontale lijn onder de sectiekop. De gedeelde .hint-regel hierboven
+     (ook gebruikt door #charthint bij de grafiek) blijft ongewijzigd; alleen
+     hier een kleine, positieve top-marge in plaats van de -2px die de tekst
+     juist omhoog trok. */
+  #dagenhint{margin-top:8px}
+  /* v70: geen cursor:grab/touch-action:none meer, de radar is statisch en
+     valt terug op de algemene svg,canvas-regel hieronder (touch-action:pan-y,
+     normale cursor), zodat verticaal vegen over de kaart de pagina scrolt.
+     De zoomknoppen (#rin/#ruit) en de centreerknop (#rmidden) zijn samen met
+     hun bediening verwijderd; met alleen nog Speel af/Pauze en de schuif is
+     er ruim voldoende breedte om naast elkaar te blijven staan, ook op een
+     smal scherm, dus de eerdere geforceerde eigen regel voor de schuif is
+     niet meer nodig. */
   /* accent-color laat elke browser zijn eigen vorm tekenen: Safari een dikke pil,
      Firefox een andere. Met appearance:none tekenen we de baan en de knop zelf,
      zodat alle drie hetzelfde tonen. De pseudo-elementen kunnen niet in een
@@ -449,30 +452,16 @@
      zoals daarvoor. */
   .dashrow{display:contents}
 
-  /* v68-herstel, punt 3: modulekleur werkt nu op elke breedte, niet meer
-     uitsluitend binnen de desktop-mediaquery. Dit zijn basisregels (geen
-     mediaquery): een dunne (2px) bovenlijn plus een zeer lichte tint op de
-     bestaande, altijd aanwezige containers zelf (.radar, #nights, #aq, de
-     UV- en zonurentegel), zonder nieuwe padding of marge toe te voegen. De
-     mobiele full-bleed-truc van #radar/#chart (negatieve marge op het
-     canvas/svg-element zelf, binnen de mobiele mediaquery hierboven) wordt
-     hierdoor niet geraakt: die zit op een kind-element, niet op deze
-     achtergrond. Desktop-specifieke padding/grid staat verderop, alleen
-     binnen de 1100px-mediaquery. */
-  .radar{border-top:2px solid var(--accent-rain);background:var(--surface-rain)}
-  /* v69: eerder stond de kleur alleen op #nights (de rijen), terwijl de
-     sectiekop "Nachtzicht" met de maansamenvatting een aparte, niet-gekleurde
-     buur was: dat gaf een zichtbaar gat tussen kop en inhoud. .mod-night is
-     dezelfde .dashcol-wrapper die kop én rijen al samen bevat (aanwezig op
-     elke breedte, niet alleen desktop), dus de kleur draagt nu die wrapper in
-     plaats van het kind.
-     De grafiekmodule kreeg in een eerdere ronde per abuis dezelfde behandeling
-     (.mod-chart, een regenblauwe achtergrond over de hele module); dat was een
-     verkeerde interpretatie en is teruggedraaid. De grafiekmodule zelf blijft
-     wit/editorial; alleen de nachturen bínnen de grafiek zelf krijgen een
-     subtiele achtergrond, zie de nachtvlak-toevoeging in etmaal(). */
-  .mod-night{background:var(--surface-night);border-top:2px solid var(--accent-night);padding-bottom:var(--s2)}
-  #aq{background:var(--surface-info);border-top:2px solid var(--accent-info)}
+  /* v70: alle gekleurde moduleachtergronden (v67-v69) zijn verwijderd. Elke
+     inhoudsmodule rust weer op de gewone thema-achtergrond (--sheet/--paper),
+     in elk thema. Alleen een dunne (2px) accentlijn blijft over waar dat al
+     bestond: die is datavisualisatie/sectieaccent, geen paneltint. .mod-night
+     bestond uitsluitend om die accentlijn én een achtergrondtint samen over
+     kop + rijen te laten lopen; zonder die tint is de wrapper niet meer nodig
+     en is #nights weer een gewone .dashcol met de accentlijn direct erop. */
+  .radar{border-top:2px solid var(--accent-rain)}
+  #nights{border-top:2px solid var(--accent-night)}
+  #aq{border-top:2px solid var(--accent-info)}
   .stat.breed{border-top:2px solid var(--accent-sun)}
   .stat.zon{border-top:2px solid var(--accent-sun)}
 
@@ -546,10 +535,9 @@
     .radar{max-width:100%;padding:var(--s2) var(--s2) 4px}
     #radar{aspect-ratio:640/470;width:auto;height:auto;max-width:100%;max-height:540px;margin:0 auto;display:block}
 
-    /* de kleur zelf (border-top/background) staat nu in de basisregels
-       hierboven, geldig op elke breedte; hier alleen nog de desktop-only
-       horizontale inzet die bij de bredere kolomindeling hoort */
-    .mod-night{padding:0 var(--s2) var(--s2)}
+    /* de accentlijn zelf staat nu in de basisregels hierboven, geldig op
+       elke breedte; hier alleen nog desktop-only spacing die bij de bredere
+       kolomindeling hoort */
     #aq{padding:var(--s2)}
   }
 
@@ -641,9 +629,6 @@
       <div id="radartijd"></div>
       <div class="radarbalk">
         <button id="rspeel" title="Afspelen of pauzeren">Speel af</button>
-        <button id="ruit" title="Uitzoomen" aria-label="Uitzoomen">&minus;</button>
-        <button id="rin" title="Inzoomen" aria-label="Inzoomen">+</button>
-        <button id="rmidden" title="Terug naar je locatie">Centreer</button>
         <input type="range" id="rschuif" min="0" max="0" value="0" step="1" aria-label="Tijdstip van het radarbeeld">
       </div>
       <div class="ssub mid" id="radarmelding"></div>
@@ -658,11 +643,11 @@
     <div class="dashrow dashrow-days">
     <div class="dashcol">
     <h2><span>Zeven dagen</span></h2>
-    <p class="hint">Klik op een dag om die verwachting in de grafiek te laden.</p>
+    <p class="hint" id="dagenhint">Klik op een dag om die verwachting in de grafiek te laden.</p>
     <div id="days"></div>
     </div>
 
-    <div class="dashcol mod-night">
+    <div class="dashcol">
     <h2><span>Nachtzicht</span><span class="r" id="moonlab"></span></h2>
     <div id="nights"></div>
     </div>
@@ -1386,55 +1371,91 @@ function etmaal(start,n){
 
   /* dagbalk */
   let balk=`<rect x="${pl-cw/2}" y="${by}" width="${iw+cw}" height="${bh}" fill="none" stroke="${RULE}" stroke-width="1"/>`;
-  /* v69-herstel: de smalle donkerblauwe dagbalk bovenaan bleef bestaan, maar
-     "de achtergrond vult niet" bleek te gaan over het grote plotvlak zelf: de
-     nachturen daar waren nergens gemarkeerd, alleen de dunne strook erboven.
-     nachtvlak is een losse laag, per nachtsegment precies zo breed als de
-     bestaande balk-rects (dezelfde x1/x2), maar dan van pt tot pb (de volledige
-     plothoogte) en met een zeer lage opacity: duidelijk aanwezig, maar de
-     temperatuurcurve, cijfers, rasterlijnen en regen erboven blijven leesbaar.
-     Hij wordt hieronder vóór gitter/bars/curve/labels/nu-lijn/tooltip in de
-     uiteindelijke SVG gezet. */
-  let nachtvlak="";
-  let s0=-1;
-  for(let k=0;k<=ND.length;k++){
-    const nacht=k<ND.length&&ND[k]===0;
-    if(nacht&&s0<0) s0=k;
-    if((!nacht||k===ND.length)&&s0>=0){
-      const x1=x(s0)-cw/2,x2=x(k-1)+cw/2;
-      // navy in plaats van het vorige neutrale grijs (v67); 0.92 in plaats van
-      // vol dekkend, zodat de kleur duidelijk blauw blijft zonder een hard blok
-      // te worden. Er ligt niets van de curve/regen/Nu-lijn onder deze balk, die
-      // leven verderop in hun eigen, lagere strook van de grafiek.
-      balk+=`<rect x="${x1}" y="${by}" width="${x2-x1}" height="${bh}" fill="${NIGHT}" opacity="0.92"/>`;
-      // hetzelfde nachtsegment, nu als subtiel vlak over de volle plothoogte
-      nachtvlak+=`<rect x="${x1}" y="${pt}" width="${x2-x1}" height="${ih}" fill="${NIGHT}" opacity="0.06"/>`;
-      // sterretjes, op vaste plekken zodat ze niet dansen bij elke hertekening.
-      // Decoratief: aria-hidden en pointer-events:none, zodat ze nooit een
-      // pointerevent van de tooltip of het hitvlak onderscheppen.
-      const breedte=x2-x1, aantal=Math.max(3,Math.round(breedte/26));
-      let sterren="";
-      for(let q=0;q<aantal;q++){
-        const fx=x1+breedte*((q*0.6180339887)%1);
-        const fy=by+3+((q*7)%(bh-6));
-        const r2=(q%3===0)?0.9:0.6;
-        sterren+=`<circle cx="${fx.toFixed(1)}" cy="${fy.toFixed(1)}" r="${r2}" fill="${STER}" opacity="${q%3===0?0.85:0.55}"/>`;
-      }
-      balk+=`<g aria-hidden="true" pointer-events="none">${sterren}</g>`;
-      s0=-1;
+  const day=S.d.daily;
+  /* v70: de smalle nachtindicator moet exact op de minuut van zonsondergang/
+     -opkomst beginnen en eindigen, niet afgerond op een heel uur zoals
+     hourly.is_day dat gaf (om 21:26 met zonsondergang om 21:37 stond de
+     indicator al vanaf 21:00 aan). fractIndex() zoekt het hele uur van een
+     exacte lokale tijd (bv. "2026-07-29T21:37") op in TI en telt de minuten
+     er als breuk bovenop: 21:37 wordt 21+37/60. Geen new Date(): TI/day zijn
+     al lokale tijdstrings van de gekozen plaats, en het apparaat kan in een
+     andere tijdzone staan dan die plaats. */
+  const fractIndex=tijdstip=>{
+    if(!tijdstip) return null;
+    const idx=TI.indexOf(tijdstip.slice(0,13)+":00");
+    if(idx<0) return null;
+    const minuten=+tijdstip.slice(14,16);
+    return Number.isFinite(minuten) ? idx+minuten/60 : null;
+  };
+  // alle zonsondergangen/-opkomsten uit de dagreeks, met hun exacte
+  // fractionele positie in de zichtbare grafiek (null = buiten beeld)
+  const overgangen=[];
+  if(day&&Array.isArray(day.sunset)&&Array.isArray(day.sunrise)){
+    for(let d=0;d<day.time.length;d++){
+      const fo=fractIndex(day.sunset[d]);
+      if(fo!=null) overgangen.push({idx:fo,tijd:day.sunset[d],op:false});
+      const fr=fractIndex(day.sunrise[d]);
+      if(fr!=null) overgangen.push({idx:fr,tijd:day.sunrise[d],op:true});
     }
   }
-  const grens=[];
-  for(let k=1;k<ND.length;k++){ if(ND[k]!==ND[k-1]) grens.push({i:k,op:ND[k]===1}); }
-  const day=S.d.daily;
-  grens.forEach(g=>{
-    const dagStr=TI[g.i].slice(0,10),di2=day.time.indexOf(dagStr);
-    let tijd=null;
-    if(di2>=0) tijd=g.op?day.sunrise[di2]:day.sunset[di2];
-    const xx=x(g.i)-cw/2;
+  overgangen.sort((a,b)=>a.idx-b.idx);
+  // nachtsegmenten: elke zonsondergang sluit met de eerstvolgende zonsopkomst
+  const segmenten=[];
+  for(let i=0;i<overgangen.length;i++){
+    if(!overgangen[i].op){
+      const volgende=overgangen[i+1];
+      if(volgende&&volgende.op) segmenten.push([overgangen[i].idx,volgende.idx]);
+    }
+  }
+  const laatsteI=ND.length-1;
+  /* Begint de zichtbare reeks al in de nacht (geen zichtbare zonsondergang
+     ervoor, maar het bestaande is_day[0]===0 bevestigt het), dan begint het
+     eerste segment bij index 0 in plaats van een verzonnen tijd. Bij een
+     aantoonbare poolnacht (is_day overal 0, geen enkele zonsopkomst zichtbaar)
+     is de hele zichtbare reeks nacht. */
+  if(ND[0]===0 && !segmenten.some(s=>s[0]<=0)){
+    const eersteOp=overgangen.find(o=>o.op);
+    if(eersteOp) segmenten.unshift([0,eersteOp.idx]);
+    else if(ND.every(v=>v===0)) segmenten.push([0,laatsteI]);
+  }
+  // Eindigt de zichtbare reeks nog in de nacht (geen zichtbare zonsopkomst
+  // erna, maar is_day[laatste]===0 bevestigt het), dan loopt het laatste
+  // segment door tot het einde in plaats van een verzonnen tijd.
+  if(ND[laatsteI]===0 && !segmenten.some(s=>s[1]>=laatsteI)){
+    const laatsteOnder=[...overgangen].reverse().find(o=>!o.op);
+    if(laatsteOnder) segmenten.push([laatsteOnder.idx,laatsteI]);
+  }
+
+  segmenten.forEach(([f1,f2])=>{
+    const x1=x(Math.max(0,f1)), x2=x(Math.min(laatsteI,f2));
+    if(x2<=x1) return;
+    // navy in plaats van het vorige neutrale grijs (v67); 0.92 in plaats van
+    // vol dekkend, zodat de kleur duidelijk blauw blijft zonder een hard blok
+    // te worden. Er ligt niets van de curve/regen/Nu-lijn onder deze balk, die
+    // leven verderop in hun eigen, lagere strook van de grafiek.
+    balk+=`<rect x="${x1}" y="${by}" width="${x2-x1}" height="${bh}" fill="${NIGHT}" opacity="0.92"/>`;
+    // sterretjes, op vaste plekken zodat ze niet dansen bij elke hertekening.
+    // Decoratief: aria-hidden en pointer-events:none, zodat ze nooit een
+    // pointerevent van de tooltip of het hitvlak onderscheppen.
+    const breedte=x2-x1, aantal=Math.max(3,Math.round(breedte/26));
+    let sterren="";
+    for(let q=0;q<aantal;q++){
+      const fx=x1+breedte*((q*0.6180339887)%1);
+      const fy=by+3+((q*7)%(bh-6));
+      const r2=(q%3===0)?0.9:0.6;
+      sterren+=`<circle cx="${fx.toFixed(1)}" cy="${fy.toFixed(1)}" r="${r2}" fill="${STER}" opacity="${q%3===0?0.85:0.55}"/>`;
+    }
+    balk+=`<g aria-hidden="true" pointer-events="none">${sterren}</g>`;
+  });
+
+  // overgangslijn + label bij elke zichtbare zonsopkomst/-ondergang zelf, op
+  // exact dezelfde fractionele positie als het vlak hierboven (niet bij de
+  // kunstmatige randen die zijn toegevoegd voor "begint/eindigt al in de nacht")
+  overgangen.filter(g=>g.idx>=0&&g.idx<=laatsteI).forEach(g=>{
+    const xx=x(g.idx);
     balk+=`<line x1="${xx}" y1="${by-5}" x2="${xx}" y2="${by+bh+4}" stroke="${INK}" stroke-width="1"/>`;
-    if(tijd&&n<=48){
-      const tekst=(g.op?"op ":"onder ")+hhmm(tijd);
+    if(n<=48){
+      const tekst=(g.op?"op ":"onder ")+hhmm(g.tijd);
       const breed=tekst.length*F.zon*0.62;
       // past het label niet aan de gekozen kant, dan klapt het naar de andere kant
       let anker=g.op?"start":"end", tx=xx+(g.op?4:-4);
@@ -1600,7 +1621,7 @@ function etmaal(start,n){
   const svg=document.getElementById("chart");
   svg.setAttribute("viewBox","0 0 "+W+" "+H);
   svg.innerHTML=
-   `${balk}${nachtvlak}${gitter}${bars}
+   `${balk}${gitter}${bars}
     ${(()=>{ // de reeks opknippen bij elk gat en elk stuk apart tekenen
       const stukken=[[]];
       for(const p of pts){ if(p===null){ if(stukken[stukken.length-1].length) stukken.push([]); }
@@ -2092,16 +2113,15 @@ const R={laag:"radar",radarFrames:[],satFrames:[],frames:[],i:0,speelt:false,tim
 
    ZTEGELMAX=7 is de daadwerkelijke aanvraaggrens: geen tegel-URL vraagt ooit een
    hoger niveau op, want dat zou bij RainViewer een grijze fouttegel opleveren.
-   ZMAX ligt daarboven en is het niveau waarop de zoom-in-knop pas uitgaat. Tussen
-   die twee grenzen in wordt er niets nieuws opgehaald: radarTeken() vraagt de
-   tegel op ZTEGELMAX aan en tekent hem groter, met een factor 2^(R.zoom-ZTEGELMAX),
-   om het verschil te overbruggen. Zo blijft elke aanvraag geldig en kan de
-   gebruiker toch doorzoomen. Eerder in dit project stond hier zonder onderbouwing
-   ZMAX=10 als aanvraaggrens; dat getal was gegokt. Daarna is de aanvraaggrens
-   hard op 7 gezet, maar dat beperkte ook hoever de gebruiker mocht kijken.
-   Aanvraag en weergave staan nu los van elkaar: 7 voor wat wordt opgehaald,
-   9 voor wat wordt getoond. */
-const TEGEL=256, ZSTANDAARD=7, ZMIN=4, ZMAX=9, ZTEGELMAX=7;
+   radarTeken() vraagt daarom altijd de tegel op ZTEGELMAX aan.
+
+   v70: de radar is volledig statisch geworden (geen slepen, geen in-/uitzoomen
+   meer). R.zoom staat daardoor altijd vast op ZSTANDAARD; er is geen apart
+   zoombereik (het vroegere ZMIN/ZMAX) meer nodig, dus dat is verwijderd. Zt
+   hieronder komt met een vaste R.zoom altijd op hetzelfde niveau uit; de
+   client-side-opschaalroute (voor het geval R.zoom ooit weer boven ZTEGELMAX
+   zou komen) is bewust intact gelaten, want radarTeken() zelf is ongewijzigd. */
+const TEGEL=256, ZSTANDAARD=7, ZTEGELMAX=7;
 const R_AARDE=6378137, HALFRONDE=Math.PI*R_AARDE;
 const wereldGrootte=()=>TEGEL*Math.pow(2,R.zoom);
 const mercX=px=>px/wereldGrootte()*2*HALFRONDE-HALFRONDE;
@@ -2211,7 +2231,7 @@ async function radarTeken(){
      het in de cache en tekent het meteen, dus zonder haperen. */
   const volg=R.frames[(R.i+1)%R.frames.length];
   if(volg&&!volg.knmi&&R.host) vakken.forEach(v=>
-    tegel(`${R.host}${volg.path}/${TEGEL}/${Z}/${v.X}/${v.ty}/${volg.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`,()=>{}));
+    tegel(`${R.host}${volg.path}/${TEGEL}/${Zt}/${v.X}/${v.ty}/${volg.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`,()=>{}));
 }
 
 function markeer(ctx,W,H,dx,dy){
@@ -2249,7 +2269,6 @@ async function radarLaden(){
     R.radarFrames=R.frames;
     const bs=document.getElementById("bronsat");
     if(bs) bs.textContent="";
-    zoomKnoppen();
 
     /* Buiten Nederland is er geen vooruitblik: RainViewer geeft die niet in de
        gratis laag en het KNMI dekt alleen dit land en de directe omgeving. De
@@ -2279,65 +2298,12 @@ async function radarLaden(){
     document.querySelector(".radarbalk").style.display="none";
   }
 }
-/* ---------- kaart bedienen ---------- */
-
-/** Zoomt in of uit rond het midden van het beeld, zodat wat je bekijkt blijft staan. */
-function radarZoom(stap){
-  const nieuw=clamp(R.zoom+stap,ZMIN,ZMAX);
-  if(nieuw===R.zoom) return;
-  // de verschuiving is in pixels van het huidige zoomniveau, dus die schaalt mee
-  const factor=Math.pow(2,nieuw-R.zoom);
-  R.dx*=factor; R.dy*=factor;
-  R.zoom=nieuw;
-  zoomKnoppen();
-  radarTeken();
-}
-
-function zoomKnoppen(){
-  const in_=document.getElementById("rin"), uit=document.getElementById("ruit"),
-        mid=document.getElementById("rmidden");
-  if(in_) in_.disabled=R.zoom>=ZMAX;
-  if(uit) uit.disabled=R.zoom<=ZMIN;
-  // centreren heeft alleen zin als er iets te centreren valt
-  if(mid) mid.disabled=(R.dx===0&&R.dy===0&&R.zoom===ZSTANDAARD);
-}
-
-document.getElementById("rin").addEventListener("click",()=>radarZoom(1));
-document.getElementById("ruit").addEventListener("click",()=>radarZoom(-1));
-document.getElementById("rmidden").addEventListener("click",()=>{
-  R.zoom=ZSTANDAARD; R.dx=0; R.dy=0; zoomKnoppen(); radarTeken();
-});
-
-/* Slepen met muis of vinger. Pointer events dekken beide, en met setPointerCapture
-   blijft het slepen doorlopen als je buiten de kaart raakt. touch-action:none op
-   het doek voorkomt dat de pagina meescrollt terwijl je de kaart verplaatst. */
-(function(){
-  const c=document.getElementById("radar");
-  if(!c) return;
-  let bezig=false,vx=0,vy=0,verplaatst=0;
-  c.addEventListener("pointerdown",e=>{
-    bezig=true; verplaatst=0; vx=e.clientX; vy=e.clientY;
-    c.classList.add("sleept"); c.setPointerCapture(e.pointerId);
-  });
-  c.addEventListener("pointermove",e=>{
-    if(!bezig) return;
-    // het doek is 640 breed maar wordt op schermbreedte getekend, dus omrekenen
-    const schaal=c.width/c.getBoundingClientRect().width;
-    const ax=(e.clientX-vx)*schaal, ay=(e.clientY-vy)*schaal;
-    vx=e.clientX; vy=e.clientY;
-    verplaatst+=Math.abs(ax)+Math.abs(ay);
-    R.dx+=ax; R.dy+=ay;
-    zoomKnoppen(); radarTeken();
-  });
-  const stop=e=>{
-    if(!bezig) return;
-    bezig=false; c.classList.remove("sleept");
-    try{ c.releasePointerCapture(e.pointerId); }catch(_){}
-  };
-  c.addEventListener("pointerup",stop);
-  c.addEventListener("pointercancel",stop);
-  c.addEventListener("dblclick",()=>radarZoom(1));
-})();
+/* ---------- kaart bedienen ----------
+   v70: de radar is volledig statisch. Slepen, in-/uitzoomen, dubbelklikzoom
+   en de bijbehorende knoppen (#rin/#ruit/#rmidden) zijn verwijderd; R.zoom
+   staat altijd vast op ZSTANDAARD en R.dx/R.dy blijven altijd 0. De radar
+   tekent zich alleen nog opnieuw bij een nieuwe locatie, een nieuw frame of
+   het afspelen van de tijdlijn. */
 
 document.getElementById("rschuif").addEventListener("input",e=>{R.i=+e.target.value;radarTeken();});
 document.getElementById("rspeel").addEventListener("click",()=>{

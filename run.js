@@ -981,27 +981,39 @@ groep("Wereldwijd");
       /!R\.frames\.some\(fr=>fr\.toekomst\)/.test(bronW));
   }
 
-  /* De radar kon niet zoomen of verschuiven. Bij een vaste zoom 7 zie je aan de
-     evenaar bijna twee keer zoveel grond als in Noord-Noorwegen, en een bui net
-     buiten beeld kon je niet opzoeken. */
+  /* v70: de radar is bewust weer volledig statisch gemaakt (geen slepen,
+     geen in-/uitzoomen meer). Deze groep toetste eerder het tegenovergestelde
+     (dat die bediening bestond); nu toetst hij juist de afwezigheid ervan. */
   {
-    check("de zoom staat in de toestand en niet als vaste waarde",
-      /zoom:7/.test(bronW) && !/const TEGEL=256, ZOOM=7/.test(bronW));
-    check("er zijn grenzen aan de zoom",/ZMIN=\d+, ZMAX=\d+/.test(bronW));
-    check("er zijn knoppen voor in, uit en centreren",
-      /id="rin"/.test(bronW)&&/id="ruit"/.test(bronW)&&/id="rmidden"/.test(bronW));
-    check("de knoppen gaan uit aan de grenzen",/disabled=R\.zoom>=ZMAX/.test(bronW));
-    check("slepen werkt met muis en vinger",
-      /pointerdown/.test(bronW)&&/setPointerCapture/.test(bronW));
-    check("de pagina scrollt niet mee tijdens het slepen",/#radar\{[^}]*touch-action:none/.test(bronW));
-    check("het kruisje schuift mee met de kaart",/markeer\(ctx,W,H,R\.dx,R\.dy\)/.test(bronW));
-    const zoomfn=bronW.slice(bronW.indexOf("function radarZoom"),bronW.indexOf("function zoomKnoppen"));
-    check("de verschuiving schaalt mee bij het zoomen",
-      /Math\.pow\(2,nieuw-R\.zoom\)/.test(zoomfn) && /R\.dx\*=factor/.test(zoomfn));
-    const klem=(z,stap)=>Math.max(4,Math.min(z+stap,9));
-    const raar=[[4,-1,4],[9,1,9],[7,1,8],[7,-1,6],[4,-5,4],[9,5,9]]
-      .filter(([z,st,verw])=>klem(z,st)!==verw);
-    check("zoomen blijft binnen de grenzen",raar.length===0,JSON.stringify(raar));
+    check("de zoomtoestand staat nog vast op ZSTANDAARD (7), niet los instelbaar",
+      /zoom:7/.test(bronW) && /const TEGEL=256, ZSTANDAARD=7, ZTEGELMAX=7;/.test(bronW));
+    check("er zijn geen ZMIN/ZMAX meer: geen apart zoombereik nodig zonder zoomknoppen",
+      !/\bconst\s+ZMIN\b/.test(bronW) && !/\bconst\s+ZMAX\b/.test(bronW)
+      && !/ZMIN=\d/.test(bronW) && !/ZMAX=\d/.test(bronW));
+    check("de zoom- en centreerknoppen (#rin/#ruit/#rmidden) bestaan niet meer",
+      !/id="rin"/.test(bronW) && !/id="ruit"/.test(bronW) && !/id="rmidden"/.test(bronW));
+    check("radarZoom() en zoomKnoppen() bestaan niet meer",
+      !/function radarZoom/.test(bronW) && !/function zoomKnoppen/.test(bronW));
+    check("er is geen pointerdrag-bediening meer op de radar",
+      !/setPointerCapture/.test(bronW) && !/releasePointerCapture/.test(bronW)
+      && !/c\.addEventListener\("pointerdown"/.test(bronW));
+    check("er is geen dubbelklikzoom meer",!/addEventListener\("dblclick"/.test(bronW));
+    check("R.dx en R.dy worden nergens meer gemuteerd (alleen nog gelezen)",
+      !/R\.dx\s*[+*]?=/.test(bronW) && !/R\.dy\s*[+*]?=/.test(bronW));
+    check("de radar blokkeert verticaal vegen niet meer (geen touch-action:none op #radar)",
+      !/#radar\{[^}]*touch-action:none/.test(bronW));
+    check("het kruisje blijft precies in het midden (R.dx/R.dy blijven altijd 0)",
+      /markeer\(ctx,W,H,R\.dx,R\.dy\)/.test(bronW));
+  }
+
+  /* Afspelen, tijd en schuif blijven de enige bediening; die functie zelf is
+     door deze ronde niet aangeraakt. */
+  {
+    check("afspelen/pauzeren bestaat nog",/id="rspeel"/.test(bronW) && /R\.speelt/.test(bronW));
+    check("de tijdschuif bestaat nog",/id="rschuif"/.test(bronW));
+    check("de stale-responsebeveiliging (radarRonde) is niet aangeraakt",
+      /let radarRonde=0;/.test(bronW) && /const ronde=\+\+radarRonde;/.test(bronW)
+      && /if\(ronde!==radarRonde\) return;/.test(bronW));
   }
 
   /* De briefing blijft staan als het netwerk wegvalt. Dat zat er al in, maar er
@@ -1872,29 +1884,28 @@ groep("Briefing en radar afgestemd");
     !/komende twee uur blijft het droog/.test(norm(bX.nctext.textContent)),norm(bX.nctext.textContent));
 }
 
-/* 10v. radar-zoom: de aanvraag blijft binnen wat de tegelbron ondersteunt, de
-   weergave mag daar voorbij door de laatst geldige tegel op te schalen */
+/* 10v. radar-zoom: sinds v70 is de radar statisch (geen zoomknoppen meer), dus
+   R.zoom staat altijd vast op ZSTANDAARD. De aanvraaggrens (ZTEGELMAX) en de
+   client-side-opschaalmechaniek in radarTeken() zelf zijn ongewijzigd en
+   blijven relevant als een toekomstige zoomstand ooit weer instelbaar wordt. */
 groep("Radar zoomgrens");
 {
   const fsZ=require("fs"), pathZ=require("path");
   const bronZ=fsZ.readFileSync(pathZ.join(__dirname,"index.html"),"utf8");
-  const m=bronZ.match(/const TEGEL=256, ZSTANDAARD=(\d+), ZMIN=(\d+), ZMAX=(\d+), ZTEGELMAX=(\d+);/);
-  check("de zoomconstanten staan er nog in de verwachte vorm",!!m,"regel niet gevonden");
+  const m=bronZ.match(/const TEGEL=256, ZSTANDAARD=(\d+), ZTEGELMAX=(\d+);/);
+  check("de zoomconstanten staan er nog in de verwachte vorm (zonder ZMIN/ZMAX)",!!m,"regel niet gevonden");
   if(m){
-    const zst=+m[1], zmin=+m[2], zmax=+m[3], ztmax=+m[4];
+    const zst=+m[1], ztmax=+m[2];
     /* RainViewer documenteert zelf "Maximum zoom level is 7" voor zijn tegel-URL's
-       (rainviewer.com/api/weather-maps-api.html). CARTO ondersteunt tot z=20
-       (github.com/CartoDB/basemap-styles), dus die is hier niet de beperkende
-       factor. Het laagste van de twee bepaalt ZTEGELMAX, de aanvraaggrens. ZMAX
-       mag daarboven liggen: dat is puur weergave, client-side opgeschaald. */
+       (rainviewer.com/api/weather-maps-api.html). */
     check("het aanvraagmaximum overschrijdt RainViewer's gedocumenteerde grens niet (7)",
       ztmax<=7,"ZTEGELMAX is "+ztmax);
-    check("het weergavemaximum beperkt de gebruiker niet tot het aanvraagmaximum",
-      zmax>ztmax,"ZMAX ("+zmax+") is niet groter dan ZTEGELMAX ("+ztmax+")");
-    check("het zoomminimum is niet groter dan het maximum",zmin<zmax,zmin+" / "+zmax);
-    check("de standaardzoom valt binnen het toegestane bereik",
-      zst>=zmin&&zst<=zmax,zst+" buiten ["+zmin+","+zmax+"]");
+    check("de standaardzoom valt niet boven het aanvraagmaximum",
+      zst<=ztmax,zst+" boven "+ztmax);
   }
+  check("er zijn geen ZMIN/ZMAX meer (geen apart zoombereik zonder zoomknoppen)",
+    !/\bconst\s+ZMIN\b/.test(bronZ) && !/\bconst\s+ZMAX\b/.test(bronZ)
+    && !/ZMIN=\d/.test(bronZ) && !/ZMAX=\d/.test(bronZ));
   // deze grens is uit de documentatie afgeleid, niet uit het niets: dat moet ook
   // in de code zelf terug te lezen zijn voor wie hem later aanpast
   check("de reden voor de grens staat als toelichting in de code",
@@ -1920,6 +1931,24 @@ groep("Radar zoomgrens");
                                         : (p.Zt!==7||p.schaal!==Math.pow(2,p.z-7)));
     check("de opschalingsfactor klopt op elk niveau, ook voorbij het aanvraagmaximum",
       fout.length===0,JSON.stringify(fout));
+  }
+
+  /* v70-herstel: de prefetch van het volgende radarframe gebruikte een losse,
+     nergens gedefinieerde variabele Z (in plaats van de al berekende, geldige
+     tegelzoom Zt), wat op elke prefetch-aanroep een ReferenceError gaf. Deze
+     test faalt zowel wanneer ${Z} nog ergens voor een radar-tegel-URL wordt
+     gebruikt, als wanneer de zoomvariabele (Zt) niet binnen radarTeken() zelf
+     bestaat. */
+  {
+    const radarTekenBron=bronZ.slice(bronZ.indexOf("async function radarTeken"),
+      bronZ.indexOf("function markeer"));
+    check("radarTeken() definieert zelf een geldige tegelzoomvariabele (Zt)",
+      /const Zt=Math\.min\(Zv,ZTEGELMAX\);/.test(radarTekenBron));
+    check("geen enkele radar-tegel-URL gebruikt nog de niet-bestaande variabele Z",
+      !/\$\{Z\}/.test(radarTekenBron));
+    check("de prefetch van het volgende frame gebruikt Zt, niet Z",
+      /volg\.path\}\/\$\{TEGEL\}\/\$\{Zt\}\//.test(radarTekenBron));
+    check("repositorybreed: geen losse ${Z} meer voor tegel-URL's",!/\$\{Z\}/.test(bronZ));
   }
 }
 
@@ -2320,8 +2349,6 @@ groep("Nachtzone in de grafiek");
   const fsN=require("fs"), pathN=require("path");
   const bronN=fsN.readFileSync(pathN.join(__dirname,"index.html"),"utf8");
 
-  check("de segmentdetectie (s0/nacht-boundary) is bit voor bit ongewijzigd",
-    /let s0=-1;\s*\n\s*for\(let k=0;k<=ND\.length;k\+\+\)\{\s*\n\s*const nacht=k<ND\.length&&ND\[k\]===0;\s*\n\s*if\(nacht&&s0<0\) s0=k;\s*\n\s*if\(\(!nacht\|\|k===ND\.length\)&&s0>=0\)\{\s*\n\s*const x1=x\(s0\)-cw\/2,x2=x\(k-1\)\+cw\/2;/.test(bronN));
   check("de nachtzone gebruikt de centrale --accent-night-variabele, geen losse hex",
     /NIGHT="var\(--accent-night\)"/.test(bronN) && /fill="\$\{NIGHT\}"/.test(bronN));
   check("de sterren gebruiken de centrale --accent-sun-variabele",
@@ -2330,69 +2357,175 @@ groep("Nachtzone in de grafiek");
     !/Math\.random/.test(bronN.slice(bronN.indexOf("sterretjes"),bronN.indexOf("sterretjes")+700)));
   check("de sterren staan in een aria-hidden, pointer-events-loze groep",
     /<g aria-hidden="true" pointer-events="none">\$\{sterren\}<\/g>/.test(bronN));
-  check("balk+nachtvlak (dagbalk, sterren, nachtvlak) komt vóór grid, spreiding, curve, labels, nu-lijn en tooltip in de SVG",
-    /svg\.innerHTML=\s*\n\s*`\$\{balk\}\$\{nachtvlak\}\$\{gitter\}\$\{bars\}/.test(bronN)
+  check("balk (dagbalk + sterren) komt vóór grid, spreiding, curve, labels, nu-lijn en tooltip in de SVG",
+    /svg\.innerHTML=\s*\n\s*`\$\{balk\}\$\{gitter\}\$\{bars\}/.test(bronN)
     && bronN.indexOf("${balk}")<bronN.indexOf('id="scrub"')
     && bronN.indexOf("${balk}")<bronN.indexOf('id="hit"'));
+  check("er is geen groot nachtvlak meer over het temperatuurplot (nachtvlak bestaat niet)",
+    !/nachtvlak/.test(bronN));
   check("de tooltipstructuur (#scrub) bestaat nog",/<g id="scrub"/.test(bronN));
   check("het hitvlak (#hit) bestaat nog",/id="hit"/.test(bronN));
   check("de rode Nu-lijn (CARMINE, tekst \"nu\") bestaat nog",
     /fill="\$\{CARMINE\}"[^>]*>nu<\/text>/.test(bronN));
-  check("geen specifieke plaatsnaam, landcode of tijdzone is aan de balk-/sterrenlogica toegevoegd",
+  check("geen specifieke plaatsnaam, landcode of tijdzone is aan de balklogica toegevoegd",
     !/Almere|Diemen|Vianen|Kandy|Nederland|Sri Lanka|Amsterdam|Colombo/.test(
       bronN.slice(bronN.indexOf("/* dagbalk */"),bronN.indexOf("const gitter"))));
+  check("hourly.is_day bepaalt de overgang niet meer rechtstreeks (geen ND[k]===0-segmentdetectie meer)",
+    !/const nacht=k<ND\.length&&ND\[k\]===0;/.test(bronN));
+  check("fractIndex() (de nieuwe positionering) gebruikt geen new Date()",
+    !/new Date/.test(bronN.slice(bronN.indexOf("const fractIndex"),bronN.indexOf('let nu="",nuX=null;'))));
 
-  // functioneel: sterren alleen bij nacht, generiek voor allerlei offsets
-  const scenario=(naam,isDay,utcOffset)=>{
+  /* v70: functionele tests op basis van exacte daily.sunset/sunrise, met een
+     bijpassende is_day (nodig voor de randgevallen: begint/eindigt de reeks
+     al in de nacht). Volledig generiek: geen enkel scenario hardcodet een
+     plaats, land of tijdzone; alleen lat/lon/utc_offset_seconds als
+     willekeurige testwaarden. */
+  const scenario=(naam,opties)=>{
     const {api,bak}=laadKern(1280);
     const d=bouw({});
-    d.hourly.is_day=d.hourly.time.map((_,i)=>isDay(i));
-    d.utc_offset_seconds=utcOffset;
-    Object.assign(api.S,{d,i0:14,op:Date.now(),lat:12.3,lon:45.6,label:"T",dag:null,bereik:24});
+    if(opties.isDay) d.hourly.is_day=d.hourly.time.map((_,i)=>opties.isDay(i));
+    if(opties.utcOffset!=null) d.utc_offset_seconds=opties.utcOffset;
+    if(opties.zon) opties.zon.forEach(([di,onder,op])=>{
+      if(onder!==undefined) d.daily.sunset[di]=onder;
+      if(op!==undefined) d.daily.sunrise[di]=op;
+    });
+    Object.assign(api.S,{d,i0:opties.i0??14,op:Date.now(),lat:12.3,lon:45.6,label:"T",dag:null,bereik:opties.bereik??24});
     let fout=null;
-    try{ api.etmaal(api.S.i0,24); }catch(e){ fout=e; }
-    return {bak,fout};
+    try{ api.etmaal(api.S.i0,opties.bereik??24); }catch(e){ fout=e; }
+    return {bak,fout,d};
   };
+  const nachtRects=svg=>[...svg.matchAll(/<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)" height="[\d.]+" fill="var\(--accent-night\)" opacity="0\.92"\/>/g)];
+  const sterren=svg=>(svg.match(/<circle[^>]*opacity="0\.(85|55)"/g)||[]);
+
+  // hierboven kon de exacte kalenderdatum niet los van de fixture worden
+  // ingevuld; de kernpositionering wordt daarom rechtstreeks getoetst met de
+  // echte datums uit een verse bouw({})-fixture
+  {
+    const {api,bak}=laadKern(1280);
+    const d=bouw({});
+    const dagStr=d.daily.time[0];
+    const morgenStr=d.daily.time[1];
+    d.daily.sunset[0]=dagStr+"T21:37";
+    d.daily.sunrise[1]=morgenStr+"T05:54";
+    d.hourly.is_day=d.hourly.time.map(t=>{
+      const u=+t.slice(11,13), dag=t.slice(0,10);
+      if(dag===dagStr) return u<=21?1:0;
+      if(dag===morgenStr) return u<6?0:1;
+      return 1;
+    });
+    // i0 op 21:00 dezelfde dag (index 24+21=45 in de volledige hourly-reeks)
+    const i0=d.hourly.time.indexOf(dagStr+"T21:00");
+    Object.assign(api.S,{d,i0,op:Date.now(),lat:12.3,lon:45.6,label:"T",dag:null,bereik:24});
+    api.etmaal(i0,24);
+    const svg=bak.chart.innerHTML;
+    const rects=nachtRects(svg);
+    check("1. sunset 21:37 geeft precies één nachtsegment",rects.length===1,rects.length);
+    if(rects.length){
+      // fractionele positie van 21:37 (index 0 + 37/60) vs. van heel uur 21:00
+      const x0=+rects[0][1];
+      const x0Verwacht=44+((900-44-20)/23)*(0+37/60);       // desktop: pl=44, iw=836, cw=iw/23
+      const x0Uur=44;                                        // waar hij zou staan bij afronding op 21:00
+      check("2. de indicator begint niet om het hele uur (21:00), maar op de fractionele minuut",
+        Math.abs(x0-x0Uur)>5,x0);
+      check("de fractionele startpositie klopt (binnen 1px van de berekende waarde)",
+        Math.abs(x0-x0Verwacht)<1,x0+" vs verwacht "+x0Verwacht.toFixed(2));
+    }
+    check("label 'onder 21:37' staat op de bron",/>onder 21:37</.test(svg));
+    check("3. sunrise 05:54 eindigt niet om 05:00 of 06:00",/>op 05:54</.test(svg));
+    {
+      // v70-herstel: de vorige versie van deze check testte (!!m)!==undefined,
+      // en een boolean is nooit undefined -- dus hij was altijd waar, ook als
+      // de match faalde. Nu een echte numerieke vergelijking: de x-positie
+      // van het nachtvlak-rect (begin en eind) tegen de dichtstbijzijnde
+      // overgangslijn, met een tolerantie van 0,1px, apart voor zonsondergang
+      // en zonsopkomst.
+      const lijnen=[...svg.matchAll(/<line x1="([\d.]+)" y1="[\d.-]+" x2="\1"[^>]*stroke="var\(--ink\)"/g)].map(m=>+m[1]);
+      check("er zijn minstens twee overgangslijnen (zonsondergang en zonsopkomst)",lijnen.length>=2,lijnen.length);
+      const x0=rects.length?+rects[0][1]:null;                       // begin van het nachtvlak (zonsondergang)
+      const x1=rects.length?+rects[0][1]+ +rects[0][2]:null;          // eind van het nachtvlak (zonsopkomst)
+      const dichtsteBij=doel=>lijnen.length?lijnen.reduce((b,l)=>Math.abs(l-doel)<Math.abs(b-doel)?l:b,lijnen[0]):null;
+      const startLijn=x0!=null?dichtsteBij(x0):null;
+      const eindLijn=x1!=null?dichtsteBij(x1):null;
+      check("4. de overgangslijn bij zonsondergang (21:37) staat exact (<0,1px) op het begin van het nachtvlak",
+        startLijn!=null && Math.abs(startLijn-x0)<0.1, startLijn+" vs "+x0);
+      check("4b. de overgangslijn bij zonsopkomst (05:54) staat exact (<0,1px) op het einde van het nachtvlak",
+        eindLijn!=null && Math.abs(eindLijn-x1)<0.1, eindLijn+" vs "+x1);
+      // aantoonbaar onderscheidend: schuif een grens kunstmatig 1px op en
+      // bevestig dat de tolerantie dat terecht afkeurt (anders zou de check
+      // hierboven net zo min informatief zijn als de vorige)
+      check("4c. de vergelijking is echt onderscheidend: 1px kunstmatige verschuiving op de startgrens faalt de tolerantie",
+        startLijn!=null && !(Math.abs(startLijn-(x0+1))<0.1));
+      check("4d. de vergelijking is echt onderscheidend: 1px kunstmatige verschuiving op de eindgrens faalt de tolerantie",
+        eindLijn!=null && !(Math.abs(eindLijn-(x1+1))<0.1));
+    }
+    check("5. het huidige moment (21:26) staat vóór de zonsondergang (21:37)",21+26/60<21+37/60);
+    check("6. de lokale tijdstrings worden zonder browser-tijdzoneverschuiving verwerkt (fractIndex gebruikt geen new Date())",
+      !/new Date/.test(bronN.slice(bronN.indexOf("const fractIndex"),bronN.indexOf('let nu="",nuX=null;'))));
+    check("7. geen hardcoded locatie of tijdzone in dit mechanisme",
+      !/lat===|lon===|Almere|Amsterdam/.test(bronN.slice(bronN.indexOf("const fractIndex"),bronN.indexOf("const gitter"))));
+  }
 
   {
-    const {bak,fout}=scenario("volledig overdag",()=>1,7200);
-    check("volledig dag-bereik geeft geen enkel sterretje",
-      !fout && (bak.chart.innerHTML.match(/<circle[^>]*opacity="0\.(85|55)"/g)||[]).length===0,
-      fout);
+    const {bak,fout}=scenario("volledig dag (geen zonsondergang/-opkomst in beeld)",{
+      isDay:()=>1, zon:[[0,null,null],[1,null,null]]
+    });
+    check("volledig dag-bereik geeft geen enkel nachtsegment en geen sterren",
+      !fout && nachtRects(bak.chart.innerHTML).length===0 && sterren(bak.chart.innerHTML).length===0,fout);
   }
   {
-    const {bak,fout}=scenario("een nachtsegment in het midden",i=>(i>=8&&i<16)?0:1,-18000);   // negatieve UTC-offset
-    check("een nachtsegment levert wel sterretjes op",
-      !fout && (bak.chart.innerHTML.match(/<circle[^>]*opacity="0\.(85|55)"/g)||[]).length>0,fout);
-    check("de sterren zitten in een aria-hidden/pointer-events-loze groep",
-      !fout && /<g aria-hidden="true" pointer-events="none">/.test(bak.chart.innerHTML));
+    const {bak,fout}=scenario("aantoonbare poolnacht (is_day overal 0, geen zichtbare zonsopkomst)",{
+      isDay:()=>0, zon:[[0,null,null],[1,null,null]]
+    });
+    check("poolnacht: de hele zichtbare reeks is nacht, geen verzonnen overgang",
+      !fout && nachtRects(bak.chart.innerHTML).length===1,fout);
   }
-  // generieke offsetscenario's: positief heel, negatief heel, half uur, kwartier,
-  // grafiek die met nacht begint, grafiek die met dag begint, meerdere nachten
+  {
+    const {bak,fout}=scenario("ontbrekende zonstijden, gemengde is_day: geen verzonnen overgang",{
+      isDay:i=>i<12?0:1, zon:[[0,null,null],[1,null,null]]
+    });
+    check("onvolledige data in het midden van de reeks veroorzaakt geen crash en geen geraden overgang",
+      !fout,fout&&fout.message);
+  }
+  // generieke offsetscenario's: nog steeds geen crash bij diverse UTC-offsets
   const offsetScenarios=[
-    ["positieve hele UTC-offset",i=>(i<6||i>=22)?0:1,19800],
-    ["negatieve hele UTC-offset",i=>(i<6||i>=22)?0:1,-14400],
-    ["halve-uur-offset",i=>(i<6||i>=22)?0:1,-16200],
-    ["kwartier-offset",i=>(i<6||i>=22)?0:1,20700],
-    ["grafiek die tijdens de nacht begint",i=>i<10?0:1,3600],
-    ["grafiek die tijdens de dag begint",i=>i<10?1:0,3600],
-    ["meerdere afzonderlijke nachtsegmenten",i=>(i%8<3)?0:1,0],
-    ["lokaal etmaal wijkt af van de tijdzone van de tester",i=>(i<6)?0:1,50400]
+    ["positieve hele UTC-offset",19800],["negatieve hele UTC-offset",-14400],
+    ["halve-uur-offset",-16200],["kwartier-offset",20700],
+    ["lokaal etmaal wijkt af van de tijdzone van de tester",50400]
   ];
-  for(const [naam,isDay,off] of offsetScenarios){
-    const {fout}=scenario(naam,isDay,off);
+  for(const [naam,off] of offsetScenarios){
+    const {fout}=scenario(naam,{utcOffset:off});
     check("generiek, dezelfde productiecode: "+naam,!fout,fout&&fout.message);
   }
-
-  // ontbrekende/ongeldige dag/nachtdata mag niet crashen
   {
+    // meerdaagse weergave (48 uur): meerdere nachtsegmenten mogelijk
+    const {bak,fout}=scenario("meerdaagse weergave (48 uur)",{bereik:48});
+    check("een 48-uursweergave crasht niet en blijft consistent",!fout,fout&&fout.message);
+  }
+  {
+    // segment dat aan de rand van de zichtbare grafiek wordt afgeknipt
+    const {api,bak}=laadKern(1280);
+    const d=bouw({});
+    const dagStr=d.daily.time[0];
+    d.daily.sunset[0]=dagStr+"T02:00";     // vóór het zichtbare bereik
+    d.hourly.is_day=d.hourly.time.map(t=>+t.slice(11,13)<6?0:1);
+    const i0=d.hourly.time.indexOf(dagStr+"T04:00");
+    Object.assign(api.S,{d,i0,op:Date.now(),lat:1,lon:1,label:"T",dag:null,bereik:24});
+    let fout=null;
+    try{ api.etmaal(i0,24); }catch(e){ fout=e; }
+    check("een segment dat al vóór het zichtbare bereik begint, wordt veilig afgeknipt (geen negatieve breedte, geen crash)",
+      !fout,fout&&fout.message);
+  }
+  {
+    // ontbrekende/ongeldige dag/nachtdata mag niet crashen
     const {api}=laadKern(1280);
     const d=bouw({});
     d.hourly.is_day=d.hourly.time.map(()=>undefined);
+    d.daily.sunset=d.daily.sunset.map(()=>null);
+    d.daily.sunrise=d.daily.sunrise.map(()=>null);
     Object.assign(api.S,{d,i0:14,op:Date.now(),lat:1,lon:1,label:"T",dag:null,bereik:24});
     let fout=null;
     try{ api.etmaal(api.S.i0,24); }catch(e){ fout=e; }
-    check("ontbrekende dag/nachtdata (allemaal undefined) veroorzaakt geen crash",!fout,fout&&fout.message);
+    check("ontbrekende dag/nachtdata (allemaal undefined/null) veroorzaakt geen crash",!fout,fout&&fout.message);
   }
 }
 
@@ -2402,7 +2535,7 @@ groep("Kleursysteem");
   const fsK3=require("fs"), pathK3=require("path");
   const bronK3=fsK3.readFileSync(pathK3.join(__dirname,"index.html"),"utf8");
 
-  check("de nieuwe accentvariabelen zijn centraal in :root gedefinieerd",
+  check("de accentvariabelen (lijnen/tekst/datavisualisatie) staan nog centraal in :root",
     /--text-primary:/.test(bronK3) && /--text-secondary:/.test(bronK3) && /--border-subtle:/.test(bronK3)
     && /--accent-active:#A51D3D/.test(bronK3) && /--accent-info:/.test(bronK3)
     && /--accent-rain:#3B8FA3/.test(bronK3) && /--accent-night:#142C4C/.test(bronK3)
@@ -2418,6 +2551,30 @@ groep("Kleursysteem");
     && /html\[data-thema="rood"\][^}]*--carmine:#F06A5A/.test(bronK3));
   check("de themakeuzelogica zelf is niet gewijzigd (auto kiest nog op is_day)",
     /keuze==="auto".*is_day===0.*"donker".*"licht"/.test(bronK3.replace(/\s+/g," ")));
+  /* v70: alle --surface-*-tokens (module-achtergrondtinten) zijn verwijderd;
+     ze werden nergens anders meer gebruikt zodra de laatste drie
+     achtergrondregels (.radar/#nights/#aq) eruit gingen. */
+  check("de vijf --surface-*-tokens bestaan niet meer",
+    !/--surface-info:/.test(bronK3) && !/--surface-rain:/.test(bronK3)
+    && !/--surface-night:/.test(bronK3) && !/--surface-sun:/.test(bronK3)
+    && !/--surface-active:/.test(bronK3));
+  check("geen enkele module heeft nog een gekleurde achtergrondvulling (background:var(--surface-...))",
+    !/background:var\(--surface-/.test(bronK3));
+  check(".radar en #aq behouden alleen hun dunne accentlijn (border-top), geen background meer",
+    /\.radar\{border-top:2px solid var\(--accent-rain\)\}/.test(bronK3)
+    && /#aq\{border-top:2px solid var\(--accent-info\)\}/.test(bronK3)
+    && !/\.radar\{[^}]*background/.test(bronK3) && !/#aq\{[^}]*background/.test(bronK3));
+  check("basisachtergronden (--paper, --sheet) bestaan nog onaangeroerd",
+    /--paper:#F4F5F3/.test(bronK3) && /--sheet:#FFFFFF/.test(bronK3));
+  check("donker en rood thema hebben geen hardcoded witte achtergrond gekregen",
+    !/html\[data-thema="donker"\][^}]*--sheet:#FFFFFF/.test(bronK3)
+    && !/html\[data-thema="rood"\][^}]*--sheet:#FFFFFF/.test(bronK3));
+  // v70-herstel: de canvasfallback van #radar (zichtbaar zolang er nog geen
+  // tegel is getekend) gebruikte een gekleurde rule-soft-tint; die volgt nu
+  // gewoon de normale, thema-afhankelijke sheet-achtergrond, in elk thema.
+  check("#radar's canvasfallback volgt de normale sheet-achtergrond, geen gekleurde tint",
+    /#radar\{[^}]*background:var\(--sheet\)\}/.test(bronK3)
+    && !/#radar\{[^}]*background:var\(--rule-soft\)/.test(bronK3));
 }
 
 /* 15. v68: responsive dashboardlayout. Dit toetst DOM-/CSS-structuur (delen van
@@ -2499,7 +2656,7 @@ groep("Desktoplayout (v68)");
   check("herstelronde: Zeven dagen en Nachtzicht vormen bewust GEEN zij-aan-zij-grid (.dashrow-days blijft gestapeld)",
     !/\.dashrow-days\{display:grid/.test(bronD2));
   check("luchtkwaliteit/pollen (#aq) krijgt geen eigen tweekoloms grid en loopt dus over de volle dashboardbreedte",
-    !/\.dashrow-aq/.test(bronD2) && /#aq\{background:var\(--surface-info\)/.test(bronD2));
+    !/\.dashrow-aq/.test(bronD2) && /#aq\{border-top:2px solid var\(--accent-info\)\}/.test(bronD2));
   check("tablet (900-1099px) valt terug op een gestapelde layout: de desktopgrids staan alleen in het 1100px-blok",
     !/@media\(min-width:900px\) and \(max-width:1099px\)\)?[\s\S]{0,300}dashrow-chart\{display:grid/.test(bronD2));
   check("mobiel (onder 900px) blijft één kolom: de bestaande mobiele media query is niet gewijzigd",
@@ -2510,36 +2667,12 @@ groep("Desktoplayout (v68)");
     !/@media\(min-width:11(?!00px\))/.test(bronD2));
 }
 
-/* 17. v68: uitgebreid kleursysteem (oppervlaktetinten) */
-groep("Kleursysteem (v68)");
-{
-  const fsD3=require("fs"), pathD3=require("path");
-  const bronD3=fsD3.readFileSync(pathD3.join(__dirname,"index.html"),"utf8");
+/* v70: de eerdere "Kleursysteem (v68)"-testgroep dwong de --surface-*-
+   oppervlaktetinten af die deze ronde bewust heeft verwijderd (zie de
+   herstelopdracht: "verwijder tests die alleen de verwijderde verkeerde
+   implementatie afdwingen"). De vervangende afwezigheidscontroles staan in
+   de bijgewerkte "Kleursysteem"-groep verderop in dit bestand. */
 
-  check("de vijf zachte oppervlaktetinten zijn centraal in :root gedefinieerd",
-    /--surface-info:rgba\(8,124,131,0\.055\)/.test(bronD3)
-    && /--surface-rain:rgba\(59,143,163,0\.065\)/.test(bronD3)
-    && /--surface-night:rgba\(20,44,76,0\.055\)/.test(bronD3)
-    && /--surface-sun:rgba\(242,206,99,0\.11\)/.test(bronD3)
-    && /--surface-active:rgba\(165,29,61,0\.045\)/.test(bronD3));
-  check("geen van de vijf oppervlaktetinten komt dubbel (hardcoded) voor buiten de tokendefinitie",
-    ["--surface-info:rgba(8,124,131,0.055)","--surface-rain:rgba(59,143,163,0.065)",
-     "--surface-night:rgba(20,44,76,0.055)","--surface-sun:rgba(242,206,99,0.11)",
-     "--surface-active:rgba(165,29,61,0.045)"].every(t=>(bronD3.split(t).length-1)===1));
-  check("de neerslagmodule (.radar) gebruikt het regenaccent",
-    /\.radar\{border-top:2px solid var\(--accent-rain\);background:var\(--surface-rain\)\}/.test(bronD3));
-  check("de Nachtzicht-module (.mod-night, kop + rijen samen) gebruikt het nachtaccent",
-    /\.mod-night\{background:var\(--surface-night\);border-top:2px solid var\(--accent-night\)/.test(bronD3));
-  check("de luchtkwaliteitsmodule gebruikt het informatie-accent",
-    /#aq\{background:var\(--surface-info\);border-top:2px solid var\(--accent-info\)/.test(bronD3));
-  check("bestaande fout-/waarschuwingskleuren (carmine) zijn niet overschreven",
-    /--carmine:#A02036/.test(bronD3) && /#stamp\.oud\{color:var\(--carmine\)\}/.test(bronD3)
-    && /straks\{color:var\(--carmine\)\}/.test(bronD3));
-  check("de themakeuzelogica zelf is niet gewijzigd (auto kiest nog op is_day)",
-    /keuze==="auto".*is_day===0.*"donker".*"licht"/.test(bronD3.replace(/\s+/g," ")));
-  check("geen bestaande AQI-kwaliteitscategoriekleur is vervangen door een vast petrol-accent",
-    !/getElementById\("aq"\).*=.*var\(--accent-info\)/.test(bronD3.replace(/\s+/g," ")));
-}
 
 /* 18. v68-herstelronde: gerichte tests voor de drie herstelpunten uit de
    herstelopdracht (metriekgrid, Zeven dagen/Nachtzicht, kleur op elke
@@ -2597,28 +2730,26 @@ groep("Herstelronde v68");
   check("1. het regenaccent (.radar) staat buiten iedere mediaquery",
     !/@media[^{]*\{[\s\S]*?\.radar\{border-top:2px solid var\(--accent-rain\)/.test(
       bronH.slice(0,bronH.indexOf(".radar{border-top:2px solid var(--accent-rain)"))));
-  check("2. het nachtaccent (.mod-night) staat buiten iedere mediaquery",
-    bronH.indexOf(".mod-night{background:var(--surface-night);border-top:2px solid var(--accent-night)")
-      >= 0
-    && bronH.indexOf(".mod-night{background:var(--surface-night);border-top:2px solid var(--accent-night)")
+  check("2. het nachtaccent (#nights) staat buiten iedere mediaquery",
+    bronH.indexOf("#nights{border-top:2px solid var(--accent-night)}")>=0
+    && bronH.indexOf("#nights{border-top:2px solid var(--accent-night)}")
       < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)"));
   check("3. het informatie-accent (#aq) staat buiten iedere mediaquery",
-    bronH.indexOf("#aq{background:var(--surface-info);border-top:2px solid var(--accent-info)}")
+    bronH.indexOf("#aq{border-top:2px solid var(--accent-info)}")>=0
+    && bronH.indexOf("#aq{border-top:2px solid var(--accent-info)}")
       < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)"));
   check("4. een beperkt zon-/UV-accent staat buiten iedere mediaquery",
     bronH.indexOf(".stat.breed{border-top:2px solid var(--accent-sun)}")
       < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)")
     && bronH.indexOf(".stat.zon{border-top:2px solid var(--accent-sun)}")
       < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)"));
-  check("5. desktop-specifieke padding/grid voor diezelfde modules blijft wel binnen de 1100px-mediaquery",
+  check("5. desktop-specifieke padding voor de resterende modules blijft binnen de 1100px-mediaquery",
     /\.radar\{max-width:100%;padding:var\(--s2\) var\(--s2\) 4px\}/.test(desktopH)
-    && /\.mod-night\{padding:0 var\(--s2\) var\(--s2\)\}/.test(desktopH)
     && /#aq\{padding:var\(--s2\)\}/.test(desktopH));
-  check("6. de kleurregels gebruiken de centrale tokens, geen losse hex/rgba",
+  check("6. de kleurregels gebruiken de centrale accenttokens, geen losse hex/rgba, en geen surface-tints meer",
     /var\(--accent-rain\)/.test(bronH) && /var\(--accent-night\)/.test(bronH)
     && /var\(--accent-info\)/.test(bronH) && /var\(--accent-sun\)/.test(bronH)
-    && /var\(--surface-rain\)/.test(bronH) && /var\(--surface-night\)/.test(bronH)
-    && /var\(--surface-info\)/.test(bronH));
+    && !/var\(--surface-/.test(bronH));
   check("7. geen nieuwe losse hex-/rgba-kleurwaarde is toegevoegd voor deze vier accenten",
     !/border-top:2px solid #[0-9A-Fa-f]{3,6}/.test(bronH));
   check("8. fout-/waarschuwingskleuren (carmine) zijn niet gewijzigd",
@@ -2635,7 +2766,12 @@ groep("Herstelronde v68");
         grass_pollen:new Array(24).fill(12),birch_pollen:new Array(24).fill(null),
         alder_pollen:new Array(24).fill(null),mugwort_pollen:new Array(24).fill(null),
         ragweed_pollen:new Array(24).fill(null),olive_pollen:new Array(24).fill(null)}};
-    Object.assign(api.S,{d,air,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    // klokOverride vastzetten binnen de gefixeerde testdatums: plaatsVandaag()
+    // gebruikt anders de echte wandklok, die inmiddels voorbij het bereik van
+    // bouw()'s vaste datums (2026-07-22 t/m 2026-07-28) kan zijn gelopen. Dit
+    // is een pre-existing, aan deze ronde ongerelateerd fixture-detail.
+    Object.assign(api.S,{d,air,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,
+      klokOverride:new Date(d.daily.time[0]+"T14:00:00Z")});
     let fout=null;
     try{ api.lucht(); }catch(e){ fout=e; }
     check("de zonurentegel blijft werken en toont de klasse 'zon' voor het accent",
@@ -2675,19 +2811,21 @@ groep("v69 polishronde");
       !/const voorvoegsel/.test(bronP) && !/\+voorvoegsel\+/.test(bronP));
   }
 
-  // 14.2 Nachtzicht-achtergrond
+  // 14.2 Nachtzicht (v70: geen gekleurde achtergrond meer, mod-night is
+  // volledig verwijderd; alleen de dunne accentlijn op #nights zelf blijft)
   {
-    check("1. één outer wrapper (.mod-night) bevat titel, maansamenvatting én rijen",
-      /<div class="dashcol mod-night">\s*\n\s*<h2><span>Nachtzicht<\/span><span class="r" id="moonlab">/.test(bronP));
-    check("2. de achtergrond staat op die outer wrapper",
-      /\.mod-night\{background:var\(--surface-night\);border-top:2px solid var\(--accent-night\)/.test(bronP));
-    check("3. #nights zelf krijgt geen eigen, aparte achtergrond (geen dubbele/afwijkende vlakken)",
-      !/#nights\{[^}]*background/.test(bronP));
-    check("4. de achtergrondregel staat buiten desktop-only mediaqueries",
-      bronP.indexOf(".mod-night{background:var(--surface-night)")
+    check("1. .mod-night bestaat niet meer (Nachtzicht is weer een gewone .dashcol)",
+      !/class="dashcol mod-night"/.test(bronP) && !/\.mod-night\{/.test(bronP));
+    check("Nachtzicht-kop en -rijen staan weer in een gewone, ongekleurde wrapper",
+      /<div class="dashcol">\s*\n\s*<h2><span>Nachtzicht<\/span><span class="r" id="moonlab">/.test(bronP));
+    check("2. #nights heeft geen background meer, alleen nog de dunne accentlijn",
+      /#nights\{border-top:2px solid var\(--accent-night\)\}/.test(bronP)
+      && !/#nights\{[^}]*background/.test(bronP));
+    check("4. de accentlijn staat buiten desktop-only mediaqueries",
+      bronP.indexOf("#nights{border-top:2px solid var(--accent-night)}")
         < bronP.indexOf("@media(min-width:900px) and (max-width:1099px)"));
     check("6. geen overflow:hidden wordt gebruikt om inhoud af te knippen bij Nachtzicht",
-      !/#nights\{[^}]*overflow:hidden|\.mod-night\{[^}]*overflow:hidden/.test(bronP));
+      !/#nights\{[^}]*overflow:hidden/.test(bronP));
     check("7. geen dubbele #nights is ontstaan",(bronP.match(/id="nights"/g)||[]).length===1);
 
     // 5: de module bevat nog steeds alle bestaande inhoud (functioneel)
@@ -2699,8 +2837,9 @@ groep("v69 polishronde");
       /bewolking/.test(bak.nights.innerHTML) && /maanbij/.test(bak.nights.innerHTML));
   }
 
-  // 14.3 grafiekachtergrond (herzien: geen module-brede kleur, wel een
-  // subtiel nachtvlak exact binnen elk nachtsegment van het plotgebied zelf)
+  // 14.3 grafiekmodule blijft ongekleurd (mod-chart bestaat niet, is nooit
+  // teruggekomen); de nachtvlak-specifieke controles staan nu in de
+  // uitgebreide "Nachtzone in de grafiek"-groep hierboven
   {
     check("1. .mod-chart bestaat niet meer als class of CSS-regel",
       !/class="dashcol mod-chart"/.test(bronP) && !/\.mod-chart\{/.test(bronP));
@@ -2709,53 +2848,25 @@ groep("v69 polishronde");
     check("de grafiek-dashcol is weer de gewone, ongekleurde wrapper",
       /<div class="dashcol">\s*\n\s*<h2><span id="chartlab">Het etmaal<\/span>/.test(bronP));
     check("8. geen dubbele #chart is ontstaan",(bronP.match(/id="chart"/g)||[]).length===1);
-    check("5. het nachtvlak wordt vóór grid, curve en labels gerenderd (bron-volgorde)",
-      /\$\{balk\}\$\{nachtvlak\}\$\{gitter\}\$\{bars\}/.test(bronP));
-    check("het nachtvlak gebruikt het bestaande nachtaccent (NIGHT), geen nieuwe kleur",
-      /nachtvlak\+=`<rect[^`]*fill="\$\{NIGHT\}"/.test(bronP));
-    check("het nachtvlak heeft een lage, rustige opacity (0.045-0.075)",
-      (()=>{ const m=bronP.match(/nachtvlak\+=`<rect[^`]*opacity="([\d.]+)"/); return !!m && +m[1]>=0.045 && +m[1]<=0.075; })());
 
     const {api,bak}=laadKern(1280);
     const d=bouw({});
-    d.hourly.is_day=d.hourly.time.map((_,i)=>(i>=32&&i<40)?0:1);   // een nachtblok in het zichtbare bereik
-    Object.assign(api.S,{d,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
-    api.etmaal(14,24);
-    const svgHtml=bak.chart.innerHTML;
-    // 3+4: elk nachtsegment levert een nachtvlak-rect met y=pt/height=ih en
-    // dezelfde x1/x2 als het bijbehorende balk-rect (de dagbalk-strook)
-    const balkRects=[...svgHtml.matchAll(/<rect x="([\d.-]+)" y="\d+(?:\.\d+)?" width="([\d.-]+)" height="\d+(?:\.\d+)?" fill="var\(--accent-night\)" opacity="0\.92"\/>/g)];
-    const vlakRects=[...svgHtml.matchAll(/<rect x="([\d.-]+)" y="(\d+(?:\.\d+)?)" width="([\d.-]+)" height="(\d+(?:\.\d+)?)" fill="var\(--accent-night\)" opacity="0\.06"\/>/g)];
-    check("3+4. ieder nachtsegment levert precies één nachtvlak-rect op, met dezelfde x1/x2 als de bestaande nachtstrook",
-      balkRects.length>0 && balkRects.length===vlakRects.length
-      && balkRects.every((b,idx)=>vlakRects[idx][1]===b[1] && vlakRects[idx][3]===b[2]),
-      "balkrects="+balkRects.length+" vlakrects="+vlakRects.length);
-    // y=pt en height=ih: hetzelfde pt/ih dat de rest van het plot ook gebruikt,
-    // dus vergelijken met de y-positie van de gridlijnen/tooltiplijn zelf
-    check("het nachtvlak loopt van pt tot pb (dezelfde hoogte als het temperatuurplot)",
-      vlakRects.length>0 && vlakRects.every(v=>+v[4]>50));   // ih is altijd een aanzienlijke plothoogte, niet de smalle dagbalk (bh)
-
+    // venster binnen "2026-07-22" zelf (00:00-23:00), zodat het samenvalt met
+    // de standaard sunset/sunrise (21:46/05:44) uit de fixture; nacht aan
+    // beide randen van de dag, dag ertussenin
+    d.hourly.is_day=d.hourly.time.map(t=>{
+      const u=+t.slice(11,13);
+      return (u>=6&&u<21)?1:0;
+    });
+    const i0=d.hourly.time.indexOf("2026-07-22T00:00");
+    Object.assign(api.S,{d,i0,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    api.etmaal(i0,24);
     check("4. de grafiek en de instructietekst blijven aanwezig",
       bak.chart.innerHTML.length>0 && /vinger/i.test(bak.charthint.textContent));
-    check("5. de nachtaanduiding blijft gekoppeld aan de werkelijke nachturen (ND), niet aangepast",
-      /const nacht=k<ND\.length&&ND\[k\]===0;/.test(bronP));
-    check("6. daguren krijgen geen nachtvlak (evenveel balk- als vlak-rects, geen enkele extra)",
-      balkRects.length===vlakRects.length);
     check("7. de sterren blijven aanwezig",
       (bak.chart.innerHTML.match(/<circle[^>]*opacity="0\.(85|55)"/g)||[]).length>0);
     check("8. de rode Nu-lijn blijft aanwezig",
       /fill="\$\{CARMINE\}"[^>]*>nu<\/text>/.test(bronP));
-
-    // volledig dag-bereik: geen enkel nachtvlak-rect
-    const {bak:bakDag}=(()=>{
-      const {api:a2,bak:b2}=laadKern(1280);
-      const d2=bouw({}); d2.hourly.is_day=d2.hourly.time.map(()=>1);
-      Object.assign(a2.S,{d:d2,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
-      a2.etmaal(14,24);
-      return {bak:b2};
-    })();
-    check("volledig dag-bereik geeft geen enkel nachtvlak-rect",
-      !/opacity="0\.06"/.test(bakDag.chart.innerHTML));
   }
 
   // 14.4 tooltip
@@ -2784,16 +2895,18 @@ groep("v69 polishronde");
       !/#scrub \w+\{display:none/.test(bronP));
   }
 
-  // 14.5 radarbediening
+  // 14.5 radarbediening (v70: #ruit/#rin/#rmidden en hun functies zijn
+  // bewust verwijderd, zie de "Radar bedienen"-groep hierboven voor de
+  // volledige toetsing daarvan; hier alleen wat blijft)
   {
-    check("1. alle bestaande knoppen blijven bestaan",
-      /id="rspeel"/.test(bronP) && /id="ruit"/.test(bronP) && /id="rin"/.test(bronP)
-      && /id="rmidden"/.test(bronP));
+    check("1. afspelen en de slider blijven bestaan; de zoom-/centreerknoppen bestaan bewust niet meer",
+      /id="rspeel"/.test(bronP) && /id="rschuif"/.test(bronP)
+      && !/id="ruit"/.test(bronP) && !/id="rin"/.test(bronP) && !/id="rmidden"/.test(bronP));
     check("2. de slider blijft bestaan",/id="rschuif"/.test(bronP));
     check("3. speel/pauzelogica is niet aangeraakt (rspeel-handler bestaat nog ongewijzigd)",
       /getElementById\("rspeel"\)/.test(bronP));
-    check("4. zoomlogica (radarZoom) is niet aangeraakt",/function radarZoom\(stap\)\{/.test(bronP));
-    check("5. centreerlogica (rmidden) is niet aangeraakt",/getElementById\("rmidden"\)/.test(bronP));
+    check("4. zoomlogica (radarZoom) bestaat bewust niet meer",!/function radarZoom/.test(bronP));
+    check("5. centreerlogica (#rmidden) bestaat bewust niet meer",!/id="rmidden"/.test(bronP));
     check("6. de mobiele bedieningshoogte is bruikbaar (minimaal ~43px)",
       /\.radarbalk button\{min-height:43px/.test(bronP));
   }
