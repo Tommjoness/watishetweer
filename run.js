@@ -363,13 +363,18 @@ groep("Opmaak");
   const inJs=[...new Set([...jsDeel.matchAll(/var\((--[\w-]+)\)/g)].map(m=>m[1]))];
   const missendJs=inJs.filter(v=>!gedefinieerd.has(v));
   check("elke variabele die de tekencode gebruikt bestaat ook",missendJs.length===0,missendJs.join(", "));
-  const moetCentraal=[".dwind",".dmin,.dmax",".drain",".score",".nmeta","#aq .stat"];
+  const moetCentraal=[".dwind",".dmin,.dmax",".score",".nmeta","#aq .stat"];
   const nietCentraal=moetCentraal.filter(sel=>{
     const re2=new RegExp(sel.replace(/[.#*]/g,"\\$&")+"\\{([^}]*)\\}");
     const m2=css.match(re2);
     return !m2||!/text-align:center/.test(m2[1]);
   });
-  check("alle getalkolommen staan gecentreerd",nietCentraal.length===0,nietCentraal.join(", "));
+  check("alle overige getalkolommen staan gecentreerd",nietCentraal.length===0,nietCentraal.join(", "));
+  // v70-correctie: de kanskolom (.drain) lijnt nu consequent rechts uit, zowel
+  // in de data-rijen als in de kop, zodat percentages van wisselende breedte
+  // (bv. "8%" naast "100%") niet meer heen en weer springen
+  check(".drain (de kanskolom) lijnt rechts uit, in zowel de data-rijen als de kop",
+    /\.drain\{[^}]*text-align:right/.test(css) && /\.row\.kop \.drain\{text-align:right\}/.test(css));
 }
 
 /* 10. temperatuurlabels: de piek moet altijd een cijfer krijgen en niets mag botsen */
@@ -639,6 +644,26 @@ groep("Zinsbouw");
 }
 
 /* 10g. de kolommen van de zevendagentabel moeten hun inhoud aankunnen */
+/* v70-herstel: binnen @media(max-width:900px) stonden drie //-commentaarregels
+   direct vóór de mobiele .day-regel. CSS kent geen //-commentaar; zo'n regel
+   maakt de erop volgende selector ongeldig voor de browser, die de hele regel
+   dan negeert. Deze groep toetst zowel de algemene afwezigheid van //-syntax
+   in het volledige <style>-blok als de concrete, nog altijd geldige inhoud
+   van de mobiele .day-regel zelf. */
+groep("Geldige CSS-syntax in het style-blok");
+{
+  const fsS=require("fs"), pathS=require("path");
+  const bronS=fsS.readFileSync(pathS.join(__dirname,"index.html"),"utf8");
+  const styleBlok=bronS.slice(bronS.indexOf("<style>"),bronS.indexOf("</style>"));
+  const ongeldig=styleBlok.split("\n").filter(regel=>/^\s*\/\//.test(regel));
+  check("het <style>-blok bevat nergens meer een regel die begint met // (ongeldige CSS-commentaarsyntax)",
+    ongeldig.length===0,ongeldig.join(" | "));
+  check("de mobiele .day-regel (max-width:900px) gebruikt nog exact de vaste 40px-dagkolom",
+    /@media\(max-width:900px\)\{[\s\S]*?\.day\{grid-template-columns:40px 22px 56px 1fr 1fr 48px;gap:6px\}/.test(styleBlok));
+  check("de regel voor max-width:370px blijft intact (eigen vaste 40px-dagkolom, windkolom valt daar weg)",
+    /@media\(max-width:370px\)\{[\s\S]*?\.day\{grid-template-columns:40px 22px 1fr 1fr 48px\}/.test(styleBlok));
+}
+
 groep("Kolombreedtes");
 {
   const fs5=require("fs"),path5=require("path");
@@ -659,7 +684,10 @@ groep("Kolombreedtes");
   // Welke schrijfwijze op de telefoon zichtbaar is, bepaalt de opmaak en niet de aanname
   // van deze test. Staat .dlang op display:none, dan is de korte vorm leidend.
   const langVerborgen=/\.dlang\{display:none\}/.test(html);
-  const namen=(langVerborgen?DAGENKORT:DAGENVOL).map(d=>d+" 30").concat(["vandaag","morgen"]);
+  // "vandaag"/"morgen" zijn sinds v69 geen mogelijke .dname-inhoud meer (dagen()
+  // gebruikt nu altijd dagnaam+datum, ook voor vandaag/morgen zelf), dus die
+  // hoeven niet langer als kandidaat meegewogen te worden voor de kolombreedte
+  const namen=(langVerborgen?DAGENKORT:DAGENVOL).map(d=>d+" 30");
   let langste="",langstePx=0;
   for(const t of namen){
     const w2=breed(t,12.5,"sans");
@@ -684,21 +712,26 @@ groep("Kolombreedtes");
   const ontleed=s=>String(s).trim().split(/\s+/).map(k=>/^\d+px$/.test(k)?parseFloat(k):"fr");
   const gap=parseFloat(gapM);
 
-  /* max-content: de browser meet zelf de werkelijk gerenderde tekst en past de
-     kolom daarop aan, dus een vaste pixelbreedte hoeft niet meer gecontroleerd
-     te worden op "past het erin". Wat wel telt: dat de kolom ook echt op
-     max-content staat, dat er geen ellipsis-vangnet meer actief is dat tekst
-     zou afkappen, en dat de overige kolommen er samen met een realistische
+  /* v70-correctie: de naamkolom stond op max-content, maar iedere .row.day is
+     een eigen, onafhankelijke grid (losse broer-en-zus-divs, geen gedeelde
+     container). Daardoor mat elke rij zijn éigen dagnaam en verschilde de
+     kolombreedte per rij: wiebelige uitlijning zodra "maandag 27" naast
+     "wo 29" stond. Nu een vaste pixelbreedte, hetzelfde voor alle rijen. Wat
+     nog wel telt: dat die vaste breedte ook echt breed genoeg is voor de
+     langste realistische naam, en dat de overige kolommen er samen met die
      naamkolom niet toch buiten het scherm van 320 px vallen. */
   // kolM blijft nodig voor de andere, ongewijzigde kolommen verderop (kans, temperatuur)
   const kolM=ontleed(mobiel);
 
-  check("de naamkolom past zich aan de inhoud aan (max-content)",
-    /^max-content$/.test(String(mobiel).trim().split(/\s+/)[0]),
+  check("de naamkolom heeft nu een vaste breedte, geen max-content meer (dat verschilde per rij)",
+    /^\d+px$/.test(String(mobiel).trim().split(/\s+/)[0]),
     "eerste kolom is '"+String(mobiel).trim().split(/\s+/)[0]+"'");
-  check("dezelfde aanpak geldt op een smal scherm",
-    /^max-content$/.test(String(smal).trim().split(/\s+/)[0]),
+  check("dezelfde vaste breedte-aanpak geldt op een smal scherm",
+    /^\d+px$/.test(String(smal).trim().split(/\s+/)[0]),
     "eerste kolom is '"+String(smal).trim().split(/\s+/)[0]+"'");
+  check("de vaste naamkolom is breed genoeg voor de langste realistische dagnaam (mobiel, 12,5px)",
+    typeof kolM[0]==="number" && kolM[0]>=langstePx,
+    "kolom "+kolM[0]+"px, langste nodige tekst '"+langste+"' is "+langstePx.toFixed(1)+"px");
 
   const ICOON=22;
   const kolSmal=ontleed(smal);
@@ -709,19 +742,23 @@ groep("Kolombreedtes");
     !/\.dname\{[^}]*overflow:hidden/.test(html) && !/\.dname\{[^}]*text-overflow:ellipsis/.test(html));
   check("de dagnaam breekt niet middenin een woord",/\.dname\{[^}]*white-space:nowrap/.test(html));
 
-  /* Met een echte, gemeten breedte voor de naamkolom (het enige stuk dat de
-     browser zelf pas tijdens het renderen bepaalt) simuleren wat er op 320 px
-     gebeurt: passen de vaste kolommen er samen met die naam nog naast elkaar? */
+  /* Met de daadwerkelijk gedeclareerde vaste naamkolombreedte (kolSmal[0])
+     simuleren wat er op 320 px gebeurt: past de rij, en is die vaste breedte
+     ook echt genoeg voor de langste naam die er ooit in hoeft te passen? */
   {
     const smalNamen=langVerborgen?DAGENKORT:DAGENVOL;
-    const langsteSmal=Math.max(...smalNamen.map(d=>breed(d+" 30",12.5,"sans")),breed("vandaag",12.5,"sans"));
+    const langsteSmal=Math.max(...smalNamen.map(d=>breed(d+" 30",12.5,"sans")));
+    check("de vaste naamkolom (smal scherm) is breed genoeg voor de langste naam die er echt kan staan",
+      typeof kolSmal[0]==="number" && kolSmal[0]>=langsteSmal,
+      "kolom "+kolSmal[0]+"px tegen "+langsteSmal.toFixed(1)+"px nodig");
+    const naamKolom=typeof kolSmal[0]==="number"?kolSmal[0]:langsteSmal;
     const vasteKolommen=kolSmal.slice(1).reduce((s2,v)=>s2+(v==="fr"?40:v),0);   // 1fr voorzichtig op 40px geschat
     const gapSmal=parseFloat(vanaf("@media(max-width:370px)",/\.day\{[^}]*gap:(\d+)px/))||gap;
-    const totaal=langsteSmal+vasteKolommen+gapSmal*(kolSmal.length-1);
+    const totaal=naamKolom+vasteKolommen+gapSmal*(kolSmal.length-1);
     const beschikbaar=320-2*20;   // sheet-padding van 20px aan weerszijden
-    check("de rij past op 320 px met de langste naam die er echt kan staan",
+    check("de rij past op 320 px met de vaste naamkolom",
       totaal<=beschikbaar,
-      "rij "+totaal.toFixed(0)+" px tegen "+beschikbaar+" px beschikbaar (naam alleen: "+langsteSmal.toFixed(0)+" px)");
+      "rij "+totaal.toFixed(0)+" px tegen "+beschikbaar+" px beschikbaar (naamkolom: "+naamKolom+" px)");
   }
 
   // en de temperatuurkolommen moeten ook bij vorst leesbaar blijven
@@ -2560,10 +2597,33 @@ groep("Kleursysteem");
     && !/--surface-active:/.test(bronK3));
   check("geen enkele module heeft nog een gekleurde achtergrondvulling (background:var(--surface-...))",
     !/background:var\(--surface-/.test(bronK3));
-  check(".radar en #aq behouden alleen hun dunne accentlijn (border-top), geen background meer",
-    /\.radar\{border-top:2px solid var\(--accent-rain\)\}/.test(bronK3)
-    && /#aq\{border-top:2px solid var\(--accent-info\)\}/.test(bronK3)
-    && !/\.radar\{[^}]*background/.test(bronK3) && !/#aq\{[^}]*background/.test(bronK3));
+  check("#aq behoudt alleen zijn dunne accentlijn (border-top), geen background meer",
+    /#aq\{border-top:2px solid var\(--accent-info\)\}/.test(bronK3)
+    && !/#aq\{[^}]*background/.test(bronK3));
+  // v70-correctie: de radar had eerder óók een dunne accentlijn (border-top),
+  // maar die oogde als een overbodig decoratief streepje boven een verder
+  // neutrale module en is hier bewust weggehaald; .radar heeft nu geen
+  // border-top en geen background meer, alleen zijn bestaande rand (border)
+  check(".radar heeft geen accentlijn en geen background meer (bewust verwijderd)",
+    !/\.radar\{[^}]*border-top/.test(bronK3) && !/\.radar\{[^}]*background/.test(bronK3));
+  /* v70-herstel: naast de cyaanlijn (border-top op .radar, al verwijderd)
+     tekende de algemene h2-regel ook nog een zwarte border-bottom onder de
+     titel "Neerslagradar". Uitsluitend die ene kop krijgt nu een gerichte
+     uitzondering via #radartitel; de algemene h2-regel zelf is niet gewijzigd,
+     dus elke andere sectiekop (Het etmaal, Nachtzicht, Zeven dagen,
+     Luchtkwaliteit) behoudt zijn eigen zwarte lijn. */
+  check("#radartitel bestaat op de Neerslagradar-kop",
+    /<h2 id="radartitel"><span>Neerslagradar<\/span><\/h2>/.test(bronK3));
+  check("#radartitel heeft expliciet geen border-bottom",
+    /#radartitel\{border-bottom:none\}/.test(bronK3));
+  check("de algemene h2-regel zelf is niet aangepast: border-bottom blijft daar gewoon bestaan",
+    /h2\{font-family:var\(--sans\)[^}]*border-bottom:1px solid var\(--ink\)/.test(bronK3));
+  check("andere sectiekoppen (Nachtzicht, Zeven dagen) hebben geen eigen uitzondering gekregen",
+    !/<h2 id="[^"]*"><span>Nachtzicht<\/span>/.test(bronK3)
+    && !/<h2 id="[^"]*"><span>Zeven dagen<\/span>/.test(bronK3));
+  check("de radar krijgt geen nieuwe achtergrond, accentlijn of decoratief streepje (alleen border-bottom:none)",
+    !/#radartitel\{[^}]*background/.test(bronK3) && !/#radartitel\{[^}]*border-top/.test(bronK3)
+    && (bronK3.match(/#radartitel\{[^}]*\}/g)||[]).length===1);
   check("basisachtergronden (--paper, --sheet) bestaan nog onaangeroerd",
     /--paper:#F4F5F3/.test(bronK3) && /--sheet:#FFFFFF/.test(bronK3));
   check("donker en rood thema hebben geen hardcoded witte achtergrond gekregen",
@@ -2714,12 +2774,14 @@ groep("Herstelronde v68");
     !/#days\{display:none|#nights\{display:none/.test(bronH));
   check("6. geen nieuwe horizontale scroll is toegevoegd als workaround",
     !/#days\{[^}]*overflow-x|#nights\{[^}]*overflow-x/.test(bronH));
-  check("7. de bestaande mobiele .day/.night-regels bestaan nog onaangeroerd",
-    /\.day\{grid-template-columns:max-content 22px 56px 1fr 1fr 48px;gap:6px\}/.test(bronH)
-    && /\.night\{grid-template-columns:70px 40px minmax\(20px,1fr\) max-content;gap:4px 9px\}/.test(bronH));
-  check("8. de standaard (desktop-breedte) .day/.night-grids zijn niet gewijzigd",
-    /\.day\{grid-template-columns:max-content 26px 1fr 72px 54px 128px 46px 52px;gap:14px;cursor:pointer\}/.test(bronH)
-    && /\.night\{grid-template-columns:104px 52px minmax\(40px,1fr\) 104px max-content;gap:16px\}/.test(bronH));
+  check("7. de mobiele .night-regel bestaat nog onaangeroerd (niet in deze ronde gewijzigd)",
+    /\.night\{grid-template-columns:70px 40px minmax\(20px,1fr\) max-content;gap:4px 9px\}/.test(bronH));
+  check("7b. de mobiele .day-regel gebruikt sinds de v70-kolomcorrectie een vaste naamkolom (40px), geen max-content meer",
+    /\.day\{grid-template-columns:40px 22px 56px 1fr 1fr 48px;gap:6px\}/.test(bronH));
+  check("8. de standaard (desktop-breedte) .night-grid is niet gewijzigd",
+    /\.night\{grid-template-columns:104px 52px minmax\(40px,1fr\) 104px max-content;gap:16px\}/.test(bronH));
+  check("8b. de standaard (desktop-breedte) .day-grid gebruikt sinds de v70-kolomcorrectie een vaste naamkolom (100px), geen max-content meer",
+    /\.day\{grid-template-columns:100px 26px 1fr 72px 54px 128px 46px 52px;gap:14px;cursor:pointer\}/.test(bronH));
   check("9. zeven-dagenklikwerking (de dag-click-handler) is niet aangeraakt",
     /class="row"[\s\S]{0,40}data-i|dagKlik|\.day.{0,3}addEventListener|onclick/i.test(bronH)
     || /dagen\(\)/.test(bronH));   // functie bestaat nog; geen inhoudelijke aanname over de exacte implementatie
@@ -2747,7 +2809,7 @@ groep("Herstelronde v68");
     /\.radar\{max-width:100%;padding:var\(--s2\) var\(--s2\) 4px\}/.test(desktopH)
     && /#aq\{padding:var\(--s2\)\}/.test(desktopH));
   check("6. de kleurregels gebruiken de centrale accenttokens, geen losse hex/rgba, en geen surface-tints meer",
-    /var\(--accent-rain\)/.test(bronH) && /var\(--accent-night\)/.test(bronH)
+    /var\(--accent-night\)/.test(bronH)
     && /var\(--accent-info\)/.test(bronH) && /var\(--accent-sun\)/.test(bronH)
     && !/var\(--surface-/.test(bronH));
   check("7. geen nieuwe losse hex-/rgba-kleurwaarde is toegevoegd voor deze vier accenten",

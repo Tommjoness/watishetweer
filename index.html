@@ -279,7 +279,7 @@
   /* tabellen */
   .row{display:grid;align-items:center;border-bottom:1px solid var(--rule-soft);padding:11px 0}
   .row:last-child{border-bottom:none}
-  .day{grid-template-columns:max-content 26px 1fr 72px 54px 128px 46px 52px;gap:14px;cursor:pointer}
+  .day{grid-template-columns:100px 26px 1fr 72px 54px 128px 46px 52px;gap:14px;cursor:pointer}
   .dkort{display:none}
   .day:hover{background:#FAFBFA}
   /* De lijn zat tegen de dagnaam aan omdat de rij links geen ruimte had. Nu een
@@ -288,15 +288,20 @@
   .day{padding-left:10px;margin-left:-10px}
   .day.on{box-shadow:inset 3px 0 0 var(--carmine)}
   .day.on .dname{font-weight:500}
-  /* Eerder stond hier een ellipsis-vangnet voor als een lettertype niet laadde.
-     De kolom is nu max-content: de browser meet zelf de werkelijk gerenderde
-     tekst en de kolom past zich daarop aan, dus er hoeft nooit iets afgekapt te
-     worden. white-space:nowrap blijft nodig, anders breekt "donderdag 30" op de
-     spatie naar een tweede regel binnen de cel. */
+  /* De dagkolom stond op max-content. Dat werkt alleen betrouwbaar binnen één
+     gedeeld grid, maar iedere .row.day hier is een eigen, onafhankelijke grid
+     (het zijn losse broer-en-zus-divs, geen gezamenlijke container): elke rij
+     mat dus alleen zijn éigen dagnaam en de kolombreedte verschilde per rij,
+     zichtbaar als wiebelige uitlijning zodra "maandag 27" naast "wo 29" of
+     "donderdag 30" stond. Een vaste breedte (100px, ruim genoeg voor het
+     langste geval "donderdag 30") maakt alle rijen identiek, ongeacht welke
+     dagnaam er staat. white-space:nowrap blijft nodig binnen die vaste
+     breedte, anders breekt de tekst op de spatie naar een tweede regel. */
   .dname{font-size:14.5px;letter-spacing:.01em;white-space:nowrap}
   .row.kop{border-bottom:1px solid var(--ink);padding:13px 0 8px;cursor:default}
   .row.kop:hover{background:none}
-  .row.kop .dmin,.row.kop .dmax,.row.kop .drain,.row.kop .dwind,.row.kop .nmeta,.row.kop .score{text-align:center}
+  .row.kop .dmin,.row.kop .dmax,.row.kop .dwind,.row.kop .nmeta,.row.kop .score{text-align:center}
+  .row.kop .drain{text-align:right}
   .row.kop>*{font-family:var(--sans)!important;font-weight:500!important;font-size:9.5px!important;
     letter-spacing:.12em;text-transform:uppercase;color:var(--ink-25)!important;white-space:nowrap}
   .row.kop .bar,.row.kop .sbar{background:none}
@@ -305,7 +310,10 @@
   .dmin{color:var(--ink-45);text-align:center}
   .dwind{font-family:var(--mono);font-size:12.5px;color:var(--ink-45);white-space:nowrap;text-align:center}
   .dwind svg{display:inline-block;vertical-align:-1px}
-  .drain{font-family:var(--mono);font-size:12.5px;color:var(--teal);text-align:center;font-variant-numeric:tabular-nums}
+  /* De kanskolom lijnt consequent rechts uit (zowel de kop hierboven als de
+     percentages en de mm-toelichting hieronder), zodat cijfers van wisselende
+     breedte (bv. "8%" naast "100%") niet meer heen en weer springen. */
+  .drain{font-family:var(--mono);font-size:12.5px;color:var(--teal);text-align:right;font-variant-numeric:tabular-nums}
   /* Op het bureaublad staat de hoeveelheid al in de kolom Verwachting, dus daar
      zou dit dubbelop zijn. Op de telefoon valt die kolom weg en is dit de enige
      plek waar je ziet hoeveel er valt, niet alleen hoe waarschijnlijk het is. */
@@ -380,7 +388,12 @@
        "vandaag" met 50 px, dus 56 px geeft overal dezelfde rust.
        De icoonkolom was 20 px terwijl het icoon 22 px tekent, dus dat stak er
        aan weerszijden een pixel uit, precies aan de kant van de tekst. */
-    .day{grid-template-columns:max-content 22px 56px 1fr 1fr 48px;gap:6px}
+    /*
+      dagkolom ook hier een vaste breedte (40px, ruim genoeg voor "ma 30"),
+      zelfde reden als bij de desktopregel hierboven: max-content varieert
+      per rij omdat iedere .row.day zijn eigen, onafhankelijke grid is
+    */
+    .day{grid-template-columns:40px 22px 56px 1fr 1fr 48px;gap:6px}
     .drain small{display:block}
     /* De kop "Wind max" stond alleen boven de windkracht, terwijl het weericoon
        er visueel bij hoort: op de telefoon valt de kolom Verwachting weg, dus
@@ -430,7 +443,7 @@
     /* Op dit soort schermen blijft er na de naamkolom te weinig over voor de
        temperaturen: een waarde als -10 graden past er dan niet meer in. De wind
        is in deze tabel de minst dringende kolom, dus die valt hier weg. */
-    .day{grid-template-columns:max-content 22px 1fr 1fr 48px}
+    .day{grid-template-columns:40px 22px 1fr 1fr 48px}
     /* Hier valt de windkolom helemaal weg, dus is er niets om overheen te spannen
        en moet het lege icoonvakje in de kop juist terugkomen. Zonder dit schuift
        de hele kop een kolom op ten opzichte van de gegevens eronder. */
@@ -454,16 +467,27 @@
 
   /* v70: alle gekleurde moduleachtergronden (v67-v69) zijn verwijderd. Elke
      inhoudsmodule rust weer op de gewone thema-achtergrond (--sheet/--paper),
-     in elk thema. Alleen een dunne (2px) accentlijn blijft over waar dat al
-     bestond: die is datavisualisatie/sectieaccent, geen paneltint. .mod-night
-     bestond uitsluitend om die accentlijn én een achtergrondtint samen over
-     kop + rijen te laten lopen; zonder die tint is de wrapper niet meer nodig
-     en is #nights weer een gewone .dashcol met de accentlijn direct erop. */
-  .radar{border-top:2px solid var(--accent-rain)}
+     in elk thema. .mod-night bestond uitsluitend om een accentlijn én een
+     achtergrondtint samen over kop + rijen te laten lopen; zonder die tint is
+     de wrapper niet meer nodig en is #nights weer een gewone .dashcol met de
+     accentlijn direct erop.
+     v70-correctie: de radar- en zonuren-accentlijn oogden als een onnodig
+     decoratief streepje boven een verder neutrale module en zijn hier
+     bewust weggehaald; #nights/#aq/UV (.stat.breed) zijn hierbij niet
+     aangeraakt, want die zijn in deze ronde niet gevraagd. */
   #nights{border-top:2px solid var(--accent-night)}
   #aq{border-top:2px solid var(--accent-info)}
   .stat.breed{border-top:2px solid var(--accent-sun)}
-  .stat.zon{border-top:2px solid var(--accent-sun)}
+  /* v70-herstel: de cyaanlijn boven .radar is al weg, maar de algemene h2-regel
+     (hierboven, border-bottom:1px solid var(--ink)) tekende onder de titel
+     "Neerslagradar" nog een eigen zwarte lijn. De opdracht bedoelde met "de
+     lijnen onder Neerslagradar" beide lijnen. Uitsluitend deze ene kop krijgt
+     een gerichte uitzondering via zijn eigen id; de algemene h2-regel zelf
+     blijft ongewijzigd, dus elke andere sectiekop (Het etmaal, Nachtzicht,
+     Zeven dagen, Luchtkwaliteit) behoudt gewoon zijn eigen zwarte lijn. Geen
+     nieuwe achtergrond, accentlijn of decoratief streepje toegevoegd: de
+     radar heeft na deze regel simpelweg geen enkele lijn meer onder de kop. */
+  #radartitel{border-bottom:none}
 
   /* tablet 900-1099px: dezelfde tweekoloms metriektegels als mobiel al had
      onder 900px, in plaats van de standaard vier kolommen. Header, grafiek/
@@ -623,7 +647,7 @@
     </div>
 
     <div class="dashcol">
-    <h2><span>Neerslagradar</span></h2>
+    <h2 id="radartitel"><span>Neerslagradar</span></h2>
     <div class="radar">
       <canvas id="radar" width="640" height="470" aria-label="Neerslagradar rond je locatie"></canvas>
       <div id="radartijd"></div>
