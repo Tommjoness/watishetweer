@@ -1,10 +1,11 @@
 {
   "name": "weerbriefing",
-  "version": "1.0.0",
-  "description": "Weersverwachting met etmaalbalk, kwartierneerslag, luchtkwaliteit, pollen en nachtzicht.",
+  "version": "1.1.2",
+  "description": "Weersverwachting met centrale interpretatielaag, etmaalbalk, kwartierneerslag, luchtkwaliteit, pollen en nachtzicht.",
   "private": true,
   "scripts": {
-    "test": "node run.js"
+    "test": "node interpretatie-engine.test.js && node run.js",
+    "build": "node interpretatie-engine.test.js && node run.js && node build-weather.js"
   },
   "license": "MIT"
 }
