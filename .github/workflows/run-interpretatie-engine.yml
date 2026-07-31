@@ -1,4 +1,4 @@
-name: Diagnoseer interpretatie-engine
+name: Voer interpretatie-engine volledig uit
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  diagnose:
+  apply:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,9 +17,10 @@ jobs:
           ref: agent/interpretatie-engine
           fetch-depth: 0
 
-      - name: Voer stappen uit en leg de eerste echte fout vast
+      - name: Voer alle volledige shellblokken uit
         shell: bash
         run: |
+          rm -f INTERPRETATIE_DIAGNOSE.txt
           python3 - <<'PY'
           from pathlib import Path
           import subprocess
@@ -31,32 +32,22 @@ jobs:
               if bron[i].startswith('        run: |'):
                   i+=1
                   regels=[]
-                  while i<len(bron) and (bron[i].startswith('          ') or bron[i].strip()==''):
-                      regels.append(bron[i][10:] if bron[i].startswith('          ') else '')
+                  while i<len(bron) and not bron[i].startswith('      - name:') and not bron[i].startswith('      - uses:'):
+                      regel=bron[i][10:] if bron[i].startswith('          ') else bron[i]
+                      regels.append(regel)
                       i+=1
-                  blokken.append('\n'.join(regels)+'\n')
+                  blokken.append('\n'.join(regels).rstrip()+'\n')
                   continue
               i+=1
-          log=[]
-          try:
-              if len(blokken)!=5: raise RuntimeError(f'verwacht 5 uitvoerstappen, gevonden {len(blokken)}')
-              for nr,tekst in enumerate(blokken,1):
-                  pad=Path(f'/tmp/interpretatie-stap-{nr}.sh')
-                  pad.write_text('set -euo pipefail\n'+tekst)
-                  r=subprocess.run(['bash',str(pad)],text=True,capture_output=True)
-                  log.append(f'===== STAP {nr} exit {r.returncode} =====\nSTDOUT:\n{r.stdout}\nSTDERR:\n{r.stderr}\n')
-                  if r.returncode!=0: raise RuntimeError(f'stap {nr} faalde')
-          except Exception as e:
-              Path('INTERPRETATIE_DIAGNOSE.txt').write_text(str(e)+'\n\n'+'\n'.join(log))
-              subprocess.run(['git','config','user.name','WeatherNow Agent'],check=True)
-              subprocess.run(['git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com'],check=True)
-              subprocess.run(['git','add','INTERPRETATIE_DIAGNOSE.txt'],check=True)
-              subprocess.run(['git','commit','-m','Leg interpretatie-enginefout vast'],check=True)
-              subprocess.run(['git','push','origin','HEAD:agent/interpretatie-engine'],check=True)
-              raise
+          if len(blokken)!=5:
+              raise SystemExit(f'verwacht 5 uitvoerstappen, gevonden {len(blokken)}')
+          for nr,tekst in enumerate(blokken,1):
+              pad=Path(f'/tmp/interpretatie-stap-{nr}.sh')
+              pad.write_text('set -euo pipefail\n'+tekst)
+              subprocess.run(['bash',str(pad)],check=True)
           PY
 
-      - name: Verwijder tijdelijke diagnose-uitvoerder
+      - name: Verwijder tijdelijke uitvoerder
         if: always()
         shell: bash
         run: |
