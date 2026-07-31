@@ -64,3 +64,5 @@ jobs:
           git rm .github/workflows/run-final-weather-audit.yml
           git commit -m "[skip ci] Verwijder tijdelijke WeatherNow-eindcontrole"
           git push origin main
+
+# Deze regel activeert de eerste echte run zonder [skip ci].
