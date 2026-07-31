@@ -1,0 +1,61 @@
+name: Voer interpretatie-engine gecontroleerd uit
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/interpretatie-engine
+          fetch-depth: 0
+
+      - name: Voer de klaargezette gecontroleerde stappen uit
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          bron=Path('.github/workflows/apply-interpretatie-engine.yml').read_text().splitlines()
+          blokken=[]
+          i=0
+          while i<len(bron):
+              if bron[i].startswith('        run: |'):
+                  i+=1
+                  regels=[]
+                  while i<len(bron) and (bron[i].startswith('          ') or bron[i].strip()==''):
+                      regels.append(bron[i][10:] if bron[i].startswith('          ') else '')
+                      i+=1
+                  blokken.append('\n'.join(regels)+'\n')
+                  continue
+              i+=1
+          if len(blokken)!=5:
+              raise SystemExit(f'verwacht 5 uitvoerstappen, gevonden {len(blokken)}')
+          for nr,tekst in enumerate(blokken,1):
+              pad=Path(f'/tmp/interpretatie-stap-{nr}.sh')
+              pad.write_text('set -euo pipefail\n'+tekst)
+              subprocess.run(['bash',str(pad)],check=True)
+          PY
+
+      - name: Verwijder tijdelijke uitvoerder van main
+        if: always()
+        shell: bash
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+          rm -f .github/workflows/run-interpretatie-engine.yml
+          git config user.name "WeatherNow Agent"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Verwijder tijdelijke interpretatie-uitvoerder"
+            git push origin main
+          fi
