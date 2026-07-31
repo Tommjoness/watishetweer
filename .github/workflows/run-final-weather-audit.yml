@@ -24,14 +24,26 @@ jobs:
           node-version: 22
 
       - name: Pas gecontroleerde correcties toe
-        run: python .github/final-audit.py
-
-      - name: Controleer alle handgeschreven code en data
+        id: patch
         shell: bash
         run: |
-          set -euo pipefail
-          while IFS= read -r -d '' f; do node --check "$f"; done < <(find . -type f -name '*.js' -not -path './.git/*' -not -path './.github/*' -print0)
-          python - <<'PY'
+          set +e
+          python .github/final-audit.py > /tmp/patch.log 2>&1
+          code=$?
+          cat /tmp/patch.log
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Controleer alle handgeschreven code en data
+        id: tests
+        if: steps.patch.outputs.code == '0'
+        shell: bash
+        run: |
+          set +e
+          (
+            set -euo pipefail
+            while IFS= read -r -d '' f; do node --check "$f"; done < <(find . -type f -name '*.js' -not -path './.git/*' -not -path './.github/*' -print0)
+            python - <<'PY'
           from pathlib import Path
           import json, re
           html=Path('index.html').read_text()
@@ -40,29 +52,61 @@ jobs:
           for f in ['package.json','manifest.json','lettermaten.json']:
               json.loads(Path(f).read_text())
           PY
-          node --check /tmp/index-inline.js
-          node run.js | tee /tmp/weathernow-tests.log
-          ! grep -q 'FOUT' /tmp/weathernow-tests.log
+            node --check /tmp/index-inline.js
+            node run.js
+          ) > /tmp/tests.log 2>&1
+          code=$?
+          cat /tmp/tests.log
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
 
-      - name: Publiceer uitsluitend de gecontroleerde previewbranch
+      - name: Publiceer de gecontroleerde previewbranch
+        if: steps.patch.outputs.code == '0' && steps.tests.outputs.code == '0'
         shell: bash
         run: |
           set -euo pipefail
-          rm -f .github/final-audit.py .github/workflows/final-code-audit.yml
+          rm -f .github/final-audit.py .github/workflows/final-code-audit.yml AUDIT_RESULT.txt
           git config user.name "WeatherNow Agent"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "Rond WeatherNow af na volledige codecontrole"
           git push origin HEAD:agent/extrema-radar-status
 
-      - name: Ruim de tijdelijke workflow op main op
+      - name: Publiceer exacte diagnose bij een fout
+        if: steps.patch.outputs.code != '0' || steps.tests.outputs.code != '0'
         shell: bash
         run: |
           set -euo pipefail
+          patchcode='${{ steps.patch.outputs.code }}'
+          testcode='${{ steps.tests.outputs.code }}'
+          git reset --hard HEAD
+          {
+            echo "WeatherNow eindcontrole mislukt"
+            echo "patch exit: ${patchcode:-niet uitgevoerd}"
+            echo "tests exit: ${testcode:-niet uitgevoerd}"
+            echo
+            echo "--- patch ---"
+            cat /tmp/patch.log 2>/dev/null || true
+            echo
+            echo "--- tests ---"
+            cat /tmp/tests.log 2>/dev/null || true
+          } > AUDIT_RESULT.txt
+          git config user.name "WeatherNow Agent"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AUDIT_RESULT.txt
+          git commit -m "Leg fout uit volledige WeatherNow-codecontrole vast"
+          git push origin HEAD:agent/extrema-radar-status
+
+      - name: Ruim de tijdelijke workflow op main op
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git reset --hard HEAD
           git fetch origin main
           git checkout main
           git rm .github/workflows/run-final-weather-audit.yml
+          git config user.name "WeatherNow Agent"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "[skip ci] Verwijder tijdelijke WeatherNow-eindcontrole"
           git push origin main
-
-# Deze regel activeert de eerste echte run zonder [skip ci].
