@@ -72,7 +72,7 @@ function brief(opties,breedte){
   check("droog etmaal meldt droog",/blijft het droog/.test(droog),droog);
 
   /* Punt 8: zin 1 gaat nu over de komende twee uur, dezelfde termijn en bron als
-     de radartekst (kortetermijn()). Neerslag verderop vandaag komt er als losse,
+     de neerslagtekst (kortetermijn()). Neerslag verderop vandaag komt er als losse,
      apart herkenbare zin achteraan, met de dagelijkse kans als bron. */
   const buiBinnen2u=brief({pr:(u)=>u===15?2:0,pp:(u)=>u===15?80:5});
   check("neerslag binnen de eerste twee uur gaat over die twee uur, niet over twaalf",
@@ -167,6 +167,42 @@ for(const [naam,n,br] of [["24 uur op de desktop",24,1280],["48 uur op de deskto
   let botsing=0;
   for(let i=1;i<as.length;i++) if(as[i].x-as[i-1].x<(as[i].b+as[i-1].b)/2) botsing++;
   check(naam+": aslabels overlappen niet",botsing===0,botsing+" botsingen bij "+as.length+" labels");
+}
+
+/* 7c. redundante temperatuurcijfers en daglichttijden op mobiel */
+groep("Rustige grafiek en daglichttijden");
+{
+  const {api,bak}=laadKern(390);
+  const waarden={
+    "0:14":22.0,"0:15":22.2,"0:16":23.0,"0:17":22.2,"0:18":21.0,
+    "0:19":20.0,"0:20":19.0,"0:21":18.0,"0:22":17.0,"0:23":16.5,
+    "1:0":16.0,"1:1":15.7,"1:2":15.3,"1:3":15.0,"1:4":14.7,
+    "1:5":14.4,"1:6":14.0,"1:7":15.0,"1:8":16.0,"1:9":17.0,
+    "1:10":18.0,"1:11":19.0,"1:12":20.0,"1:13":21.0
+  };
+  const d=bouw({temp:(u,dag)=>waarden[dag+":"+u] ?? (dag===0?18:20)});
+  d.current.time="2026-07-22T14:39";
+  d.current.temperature_2m=22;
+  Object.assign(api.S,{d:d,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+  api.S.i0=d.hourly.time.findIndex(t=>t.slice(0,13)===d.current.time.slice(0,13));
+  api.etmaal(api.S.i0,24);
+  const labels=[...bak.chart.innerHTML.matchAll(/<text x="([\d.]+)" y="([\d.]+)" text-anchor="middle" fill="[^"]+"[^>]*font-family="Bodoni Moda,serif" font-size="[\d.]+">(-?\d+)°<\/text>/g)]
+    .map(m=>({x:+m[1],y:+m[2],v:+m[3]}));
+  const redundant=[];
+  for(let i=0;i<labels.length;i++) for(let j=i+1;j<labels.length;j++){
+    const a=labels[i],b=labels[j];
+    if(Math.abs(a.x-b.x)<48 && a.v===b.v) redundant.push(a.v+"°/"+b.v+"°");
+  }
+  check("mobiel toont geen vrijwel gelijke temperatuurcijfers vlak naast elkaar",
+    redundant.length===0,redundant.join(", "));
+  check("belangrijke piek en dal blijven wel gelabeld",
+    labels.some(x=>x.v===23)&&labels.some(x=>x.v===14),labels.map(x=>x.v).join(","));
+  check("daglichttijden blijven drie afzonderlijke onderdelen",
+    (bak.suntimes.innerHTML.match(/<span>/g)||[]).length===3,bak.suntimes.innerHTML);
+
+  const fs=require("fs"), bron=fs.readFileSync(require("path").join(__dirname,"index.html"),"utf8");
+  check("daglichttijden hebben op mobiel ieder een eigen regel",
+    /#suntimes\{display:grid;grid-template-columns:1fr;gap:2px/.test(bron));
 }
 
 /* 7d. labels boven de dagbalk mogen nooit buiten de tekening vallen */
@@ -324,7 +360,7 @@ groep("Eenheden");
   const html=require("fs").readFileSync(require("path").join(__dirname,"index.html"),"utf8");
   check("er is een functie die getal en eenheid aan elkaar houdt",/const nbsp=/.test(html));
   check("de onderschriften lopen via die functie",(html.match(/zetTekst\(/g)||[]).length>=8);
-  for(const bron of ["Open-Meteo","RainViewer","CARTO","OpenStreetMap"])
+  for(const bron of ["Open-Meteo"])
     check("voettekst vermeldt "+bron,html.includes(bron));
   // niets mag horizontaal buiten beeld vallen
   const stijl=html.slice(html.indexOf("<style>"),html.indexOf("</style>"));
@@ -404,21 +440,34 @@ for(const [naam,br,opties] of [
   const stapTest=3;
 
   check(naam+": er staan cijfers bij de lijn",lab.length>0,"geen enkel label gevonden");
-  /* Sinds correctieronde punt 2 krijgt uitsluitend elke i met i%stap===0 een
-     label; pieken, dalen en het dag-extreem voegen geen label meer toe als ze
-     daar niet toevallig mee samenvallen. Dat direct natoetsen in plaats van
-     alleen "het hoogste getal staat erbij", want dat laatste hoeft sinds deze
-     correctie niet meer waar te zijn. */
+  /* v71: labels volgen nu een prioriteitsvolgorde (huidig punt > globaal
+     max/min > lokale pieken/dalen > het drie-uursraster) in plaats van
+     uitsluitend i%stap===0. Het aantal labels kan dus hoger liggen dan het
+     aantal drie-uursmomenten (een piek/dal ernaast telt nu ook mee), maar
+     nooit hoger dan het totaal van alle toegestane candidate-indices samen:
+     raster + globaal max/min + PROMINENT-lokale extremen + het huidige punt.
+     De precieze prioriteits- en botsingslogica met voorspelbare, gecontroleerde
+     data staat in de nieuwe groep "Grafieklabel-prioriteit" verderop. */
   const idxStap=[];
   for(let k=0;k<reeks.length;k++) if(k%stapTest===0 && reeks[k]!=null && isFinite(reeks[k])) idxStap.push(k);
-  check(naam+": precies de drie-uursindices krijgen een label, niet meer en niet minder",
-    lab.length===idxStap.length,
-    "verwacht "+idxStap.length+" labels (om de "+stapTest+" uur), kreeg "+lab.length);
-  const verwachteWaarden=idxStap.map(k=>Math.round(reeks[k])).sort((a,b)=>a-b);
-  const gekregenWaarden=[...waarden].sort((a,b)=>a-b);
-  check(naam+": de gelabelde waarden komen overeen met de drie-uurswaarden",
-    JSON.stringify(verwachteWaarden)===JSON.stringify(gekregenWaarden),
-    "verwacht "+verwachteWaarden.join(",")+" kreeg "+gekregenWaarden.join(","));
+  const soortScen=new Array(reeks.length).fill(0);
+  for(let k=1;k<reeks.length-1;k++){
+    const a=reeks[k-1],bb=reeks[k],c=reeks[k+1];
+    if(a==null||bb==null||c==null||!isFinite(a)||!isFinite(bb)||!isFinite(c)) continue;
+    if(bb>=a&&bb>c&&bb-Math.min(a,c)>=0.5) soortScen[k]=1;
+    if(bb<=a&&bb<c&&Math.max(a,c)-bb>=0.5) soortScen[k]=-1;
+  }
+  const geldigScen=reeks.map(v=>v!=null&&isFinite(v));
+  const alleToegestaan=new Set(idxStap);
+  reeks.forEach((v,k)=>{ if(geldigScen[k]&&soortScen[k]!==0) alleToegestaan.add(k); });
+  if(geldigScen[0]){
+    const geldigeWaarden=reeks.filter((_,k)=>geldigScen[k]);
+    alleToegestaan.add(reeks.indexOf(Math.max.apply(null,geldigeWaarden)));
+    alleToegestaan.add(reeks.indexOf(Math.min.apply(null,geldigeWaarden)));
+  }
+  check(naam+": nooit meer labels dan er toegestane candidate-indices zijn (raster + extremen samen)",
+    lab.length<=alleToegestaan.size+1,   // +1 marge voor het huidige-punt-candidate, dat niet in reeks-index zit maar in TI
+    lab.length+" labels tegen ten hoogste "+(alleToegestaan.size+1)+" toegestane indices");
 
   const uitBeeld=lab.filter(l=>l.x-l.b/2<-1||l.x+l.b/2>vb[2]+1||l.y-l.hg<0||l.y>vb[3]);
   check(naam+": geen label valt buiten de tekening",uitBeeld.length===0,
@@ -442,7 +491,204 @@ for(const [naam,br,opties] of [
    finite-geometrie-guard toetsen die de lege witte doos voorkwam. De
    oorspronkelijke fout: S.geo miste H, scrubKoppel() las G.H0 (dat nooit
    bestond), en by werd daardoor NaN. */
-groep("Tooltip-scrub");
+/* v71: probleem B - een scherpe lokale piek rond 09:00-10:00 kreeg geen
+   label omdat de oude selectie uitsluitend i%stap===0 toestond. Deze groep
+   toetst de nieuwe prioriteitsvolgorde (huidig punt > globaal max/min >
+   lokale extremen > het drie-uursraster) met gecontroleerde, voorspelbare
+   synthetische reeksen, zodat elk gedrag exact is na te rekenen. */
+groep("Grafieklabel-prioriteit");
+{
+  // helper: bouwt een 24-uursreeks vanaf i0=0 (uur 0 van dag -1 in de
+  // bouw()-fixture, altijd "vandaag" voor plaatsNuIndex), tekent de grafiek
+  // en geeft de gerenderde labels terug als {i,v,x,y}, met i herleid uit x
+  const labelsVoor=(reeks,opties)=>{
+    const {api,bak}=laadKern((opties&&opties.breed)||1280);
+    const d=bouw({});
+    d.hourly.temperature_2m=d.hourly.time.map((_,k)=>k<reeks.length?reeks[k]:reeks[reeks.length-1]);
+    let klokOverride=null;
+    if(opties&&opties.klokUur!=null){
+      // een geldig "huidig punt" simuleren op een vast uur diezelfde dag.
+      // plaatsNu() telt (plaats-offset - eigen-offset) op bij de meegegeven
+      // klokOverride; dat verschil hier vooraf compenseren zodat het
+      // resultaat precies op opties.klokUur in TI landt, ongeacht de
+      // tijdzone van de omgeving waarin de test draait.
+      const dagStr=d.hourly.time[0].slice(0,10);
+      const eigenOffset=-new Date().getTimezoneOffset()*60;
+      const daarOffset=d.utc_offset_seconds!=null?d.utc_offset_seconds:eigenOffset;
+      const verschil=daarOffset-eigenOffset;
+      klokOverride=new Date(Date.parse(dagStr+"T"+String(opties.klokUur).padStart(2,"0")+":00:00Z")-verschil*1000);
+    }
+    Object.assign(api.S,{d,i0:0,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,klokOverride,
+      bereik:(opties&&opties.bereik)||24});
+    api.etmaal(0,(opties&&opties.bereik)||24);
+    const svg=bak.chart.innerHTML;
+    const vb=bak.chart.getAttribute("viewBox").split(" ").map(Number);
+    const M=((opties&&opties.breed)||1280)<760;
+    const pl=M?34:44, pr=M?10:20, iw=vb[2]-pl-pr, cw=iw/(reeks.length-1);
+    const x=k=>pl+cw*k;
+    const labs=[...svg.matchAll(/<text x="(-?[\d.]+)" y="(-?[\d.]+)"[^<]*?font-family="Bodoni Moda,serif" font-size="([\d.]+)">(-?\d+)°</g)]
+      .map(m=>{
+        const xx=+m[1];
+        // dichtstbijzijnde i herleiden uit de bekende lineaire x-schaal
+        let i=Math.round((xx-pl)/cw); i=Math.max(0,Math.min(reeks.length-1,i));
+        return {i,x:xx,y:+m[2],v:+m[4]};
+      });
+    return {labs,svg,vb,api,bak};
+  };
+
+  // 1: een scherpe lokale piek krijgt een label
+  {
+    const reeks=[10,10,10,12,17,12,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
+    const {labs}=labelsVoor(reeks);
+    check("1. een scherpe lokale piek (index 4, niet op het drie-uursraster) krijgt een label",
+      labs.some(l=>l.i===4), labs.map(l=>l.i+":"+l.v).join(","));
+  }
+  // 2: een scherpe lokale bodem krijgt een label
+  {
+    const reeks=[10,10,10,10,8,3,8,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
+    const {labs}=labelsVoor(reeks);
+    check("2. een scherpe lokale bodem (index 5, niet op het drie-uursraster) krijgt een label",
+      labs.some(l=>l.i===5), labs.map(l=>l.i+":"+l.v).join(","));
+  }
+  // 3+4: globaal maximum en minimum krijgen altijd een label
+  {
+    const reeks=[10,10,9,9,20,9,9,10,10,10,10,-4,10,10,10,10,10,10,10,10,10,10,10,10];
+    const {labs}=labelsVoor(reeks);
+    check("3. het globale maximum krijgt een label",labs.some(l=>l.v===20));
+    check("4. het globale minimum krijgt een label",labs.some(l=>l.v===-4));
+  }
+  // 5: het actuele punt behoudt zijn prioriteit (blijft altijd gelabeld,
+  // ook wanneer het niet op het raster valt en geen lokaal extreem is)
+  {
+    const reeks=[10,11,12,13,14,15,16,17,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
+    // uur 8 (index 8): monotoon oplopend tot dan, dus geen lokaal extreem,
+    // en 8%3!==0, dus ook niet op het raster; alleen "huidig punt" kan dit labelen
+    const {labs}=labelsVoor(reeks,{klokUur:8});
+    check("5. het actuele punt (index 8, geen raster/extreem) krijgt een label puur op basis van zijn prioriteit",
+      labs.some(l=>l.i===8), labs.map(l=>l.i+":"+l.v).join(","));
+  }
+  // 6: een kleine fluctuatie van 0,1°C veroorzaakt niet automatisch een extra label
+  {
+    // een echte piek (index 10) en een echt dal (index 16) elders in de reeks,
+    // zodat de 0,1°C-bult bij index 4 aantoonbaar niet het globale maximum of
+    // minimum is (dat zou terecht altijd een label krijgen, ongeacht de
+    // PROMINENT-drempel) en dus puur de drempel zelf test
+    const reeks=[10,10,10,10,10.1,10,10,10,10,10,15,10,10,10,10,10,5,10,10,10,10,10,10,10];
+    const {labs}=labelsVoor(reeks);
+    check("6. een fluctuatie van 0,1°C (index 4, onder de PROMINENT-drempel, buiten het raster, niet het globale extreem) krijgt geen eigen label",
+      !labs.some(l=>l.i===4), labs.map(l=>l.i+":"+l.v).join(","));
+  }
+  // 7+8: een duidelijk lokaal maximum blijft behouden wanneer een regulier
+  // label te dichtbij staat; dat regulier label wijkt dan
+  {
+    // piek op index 4, vlak naast het rasterpunt index 3 (3%3===0): op een
+    // smal scherm (390px) staan die twee dicht genoeg bij elkaar om te botsen
+    const reeks=[10,10,10,10.6,17,10.6,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
+    const {labs}=labelsVoor(reeks,{breed:390});
+    check("7. het duidelijke lokale maximum (index 4) blijft behouden, ook naast een regulier rasterlabel",
+      labs.some(l=>l.i===4));
+    check("8. het botsende, lager geprioriteerde rasterlabel (index 3) is verplaatst of verdwenen: geen enkele botsing in de uiteindelijke plaatsing",
+      (()=>{ for(let a=0;a<labs.length;a++) for(let b=a+1;b<labs.length;b++){
+               const p=labs[a],r=labs[b];
+               if(Math.abs(p.x-r.x)<14 && Math.abs(p.y-r.y)<12) return false;
+             }
+             return true; })());
+  }
+  // 8b: expliciete regressietest, precies zoals gevraagd: een scherpe piek
+  // bewust tussen twee vaste drie-uursmomenten (i=3 en i=6, dus op i=4 of 5),
+  // met genoeg even hoge kandidaten eromheen om ALLE botsingslagen te vullen.
+  // Zonder de evictie hierboven zou dit ofwel het label van de piek missen,
+  // ofwel het over een ander label heen laten vallen.
+  {
+    const reeks=new Array(24).fill(10);
+    reeks[3]=10; reeks[4]=20; reeks[5]=10;                 // de piek, tussen i=3 en i=6 in
+    reeks[9]=10; reeks[12]=10; reeks[15]=10; reeks[18]=10; reeks[21]=10;  // vult de lagen
+    const {labs}=labelsVoor(reeks,{breed:390});
+    check("8b. regressie: een scherpe piek bewust tussen twee drie-uursmomenten (i=4, niet i%3===0) krijgt aantoonbaar een label, ook onder zware botsingsdruk",
+      labs.some(l=>l.i===4 && l.v===20), labs.map(l=>l.i+":"+l.v).join(","));
+    check("8c. diezelfde plaatsing bevat geen enkele overlap (elk ander label bleef leesbaar of week netjes)",
+      (()=>{ for(let a=0;a<labs.length;a++) for(let b=a+1;b<labs.length;b++){
+               const p=labs[a],r=labs[b];
+               if(Math.abs(p.x-r.x)<14 && Math.abs(p.y-r.y)<12) return false;
+             }
+             return true; })(),labs.map(l=>l.i+":"+l.v).join(","));
+    const {labs:labsD}=labelsVoor(reeks,{breed:1280});
+    check("8d. dezelfde regressie op desktopbreedte",
+      labsD.some(l=>l.i===4 && l.v===20));
+  }
+  // 9: labels overlappen niet op 390px breedte (algemene regressie, drukke reeks)
+  {
+    const reeks=[8,9,11,9,12,8,13,9,14,8,15,9,16,8,17,9,18,8,19,9,20,8,21,9];
+    const {labs}=labelsVoor(reeks,{breed:390});
+    let botst=false;
+    for(let a=0;a<labs.length;a++) for(let b=a+1;b<labs.length;b++){
+      const p=labs[a],r=labs[b];
+      if(Math.abs(p.x-r.x)<14 && Math.abs(p.y-r.y)<12) botst=true;
+    }
+    check("9. labels overlappen niet op 390px breedte, ook bij een drukke, grillige reeks",!botst);
+  }
+  // 10: labels vallen niet buiten het SVG-viewBox
+  {
+    const reeks=[8,9,11,9,12,8,13,9,14,8,15,9,16,8,17,9,18,8,19,9,20,8,21,9];
+    const {labs,vb}=labelsVoor(reeks,{breed:390});
+    check("10. geen enkel label valt buiten het SVG-viewBox",
+      labs.every(l=>l.x>=0&&l.x<=vb[2]&&l.y>=0&&l.y<=vb[3]));
+  }
+  // 11+12+13: labels werken bij 24, 48 uur en 7 dagen
+  for(const bereik of [24,48,168]){
+    const reeks=new Array(Math.max(24,bereik)).fill(10).map((v,k)=>10+3*Math.sin(k/5));
+    const {labs,api}=labelsVoor(reeks,{bereik});
+    check("11-13. labels werken bij "+bereik+" uur (er staat minstens één label)",labs.length>0);
+  }
+  // 14: vlakke temperatuurreeksen veroorzaken geen reeks dubbele labels
+  {
+    const reeks=new Array(24).fill(9);
+    const {labs}=labelsVoor(reeks);
+    const idxSet=new Set(labs.map(l=>l.i));
+    check("14. een volkomen vlakke reeks geeft geen dubbele labels op dezelfde i",
+      idxSet.size===labs.length,labs.map(l=>l.i).join(","));
+  }
+  // 15: dubbele temperatuurwaarden krijgen niet onnodig meerdere labels op
+  // vrijwel dezelfde positie (twee losse, ver uit elkaar liggende pieken met
+  // toevallig dezelfde waarde mogen elk hun eigen label houden, maar nooit
+  // twee labels die elkaar overlappen)
+  {
+    const reeks=[10,10,10,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,15,10,10,10,10];
+    const {labs}=labelsVoor(reeks,{breed:390});
+    let botst=false;
+    for(let a=0;a<labs.length;a++) for(let b=a+1;b<labs.length;b++){
+      const p=labs[a],r=labs[b];
+      if(Math.abs(p.x-r.x)<14 && Math.abs(p.y-r.y)<12) botst=true;
+    }
+    check("15. twee gelijke pieken (beide 15°, ver uit elkaar) botsen niet en verliezen geen van beide hun label",
+      !botst && labs.filter(l=>l.v===15).length===2);
+  }
+  // 16: de tooltip blijft alle waarden tonen, ongeacht welke vaste labels
+  // zichtbaar zijn (de tooltip leest rechtstreeks uit S.geo, niet uit de
+  // labelselectie)
+  {
+    const reeks=[10,10,10,10.6,17,10.6,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
+    const {bak}=labelsVoor(reeks,{breed:390});
+    bak.hit.dispatchEvent({type:"pointermove",clientX:180,clientY:100,pointerType:"mouse"});
+    check("16. de tooltip blijft alle velden tonen, onafhankelijk van de vaste labelselectie",
+      /temperatuur/.test(bak.scrub.innerHTML) && /neerslagkans/.test(bak.scrub.innerHTML));
+  }
+
+  // regressiereeks die overeenkomt met het gerapporteerde scenario: eerst
+  // dalend, dan een duidelijke stijging, één scherpe lokale top, dan een
+  // scherpe daling. Geen enkel hardcoded tijdstip uit een screenshot: dit is
+  // een generieke vorm, niet gekoppeld aan 09:00 specifiek.
+  {
+    const reeks=[16,15,14,13,12,19,12,11,10.5,10,9.5,9,8.5,8,7.5,7,6.5,6,5.5,5,4.5,4,3.5,3];
+    const {labs}=labelsVoor(reeks);
+    const piekIdx=reeks.indexOf(19);
+    check("regressiereeks: de scherpe lokale top na de daling en vóór de nieuwe daling krijgt aantoonbaar een label",
+      labs.some(l=>l.i===piekIdx && l.v===19),
+      "piek op index "+piekIdx+", gevonden labels: "+labs.map(l=>l.i+":"+l.v).join(","));
+  }
+}
+
+
 {
   const {api,bak}=laadKern(1280);
   Object.assign(api.S,{d:bouw({}),op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
@@ -1002,57 +1248,6 @@ groep("Wereldwijd");
       /Geldt voor een groter gebied/.test(bronW));
   }
 
-
-  /* De satellietlaag is eruit: de gratis laag van RainViewer levert geen
-     satellite.infrared, dus de knop verscheen nooit. Beter geen dode code. */
-  {
-    check("de satellietknop is opgeruimd",!/id="rlaag"/.test(bronW));
-    check("de bronregel belooft geen satelliet",!/Radar en satelliet: <a/.test(bronW));
-    check("RainViewer wordt vermeld zoals de voorwaarden vragen",
-      /rainviewer\.com/.test(bronW)&&/RainViewer<\/a>/.test(bronW));
-    /* Buiten Nederland is er geen vooruitblik. De schuif eindigt dan bij nu en dat
-       hoort erbij te staan, anders lijkt het alsof er iets stuk is. */
-    check("de app meldt het als er geen vooruitblik is",
-      /vooruitblik is hier niet beschikbaar/.test(bronW));
-    check("die melding hangt af van de reeks, niet van een vaste tekst",
-      /!R\.frames\.some\(fr=>fr\.toekomst\)/.test(bronW));
-  }
-
-  /* v70: de radar is bewust weer volledig statisch gemaakt (geen slepen,
-     geen in-/uitzoomen meer). Deze groep toetste eerder het tegenovergestelde
-     (dat die bediening bestond); nu toetst hij juist de afwezigheid ervan. */
-  {
-    check("de zoomtoestand staat nog vast op ZSTANDAARD (7), niet los instelbaar",
-      /zoom:7/.test(bronW) && /const TEGEL=256, ZSTANDAARD=7, ZTEGELMAX=7;/.test(bronW));
-    check("er zijn geen ZMIN/ZMAX meer: geen apart zoombereik nodig zonder zoomknoppen",
-      !/\bconst\s+ZMIN\b/.test(bronW) && !/\bconst\s+ZMAX\b/.test(bronW)
-      && !/ZMIN=\d/.test(bronW) && !/ZMAX=\d/.test(bronW));
-    check("de zoom- en centreerknoppen (#rin/#ruit/#rmidden) bestaan niet meer",
-      !/id="rin"/.test(bronW) && !/id="ruit"/.test(bronW) && !/id="rmidden"/.test(bronW));
-    check("radarZoom() en zoomKnoppen() bestaan niet meer",
-      !/function radarZoom/.test(bronW) && !/function zoomKnoppen/.test(bronW));
-    check("er is geen pointerdrag-bediening meer op de radar",
-      !/setPointerCapture/.test(bronW) && !/releasePointerCapture/.test(bronW)
-      && !/c\.addEventListener\("pointerdown"/.test(bronW));
-    check("er is geen dubbelklikzoom meer",!/addEventListener\("dblclick"/.test(bronW));
-    check("R.dx en R.dy worden nergens meer gemuteerd (alleen nog gelezen)",
-      !/R\.dx\s*[+*]?=/.test(bronW) && !/R\.dy\s*[+*]?=/.test(bronW));
-    check("de radar blokkeert verticaal vegen niet meer (geen touch-action:none op #radar)",
-      !/#radar\{[^}]*touch-action:none/.test(bronW));
-    check("het kruisje blijft precies in het midden (R.dx/R.dy blijven altijd 0)",
-      /markeer\(ctx,W,H,R\.dx,R\.dy\)/.test(bronW));
-  }
-
-  /* Afspelen, tijd en schuif blijven de enige bediening; die functie zelf is
-     door deze ronde niet aangeraakt. */
-  {
-    check("afspelen/pauzeren bestaat nog",/id="rspeel"/.test(bronW) && /R\.speelt/.test(bronW));
-    check("de tijdschuif bestaat nog",/id="rschuif"/.test(bronW));
-    check("de stale-responsebeveiliging (radarRonde) is niet aangeraakt",
-      /let radarRonde=0;/.test(bronW) && /const ronde=\+\+radarRonde;/.test(bronW)
-      && /if\(ronde!==radarRonde\) return;/.test(bronW));
-  }
-
   /* De briefing blijft staan als het netwerk wegvalt. Dat zat er al in, maar er
      stond geen enkele controle op, dus kon het ongemerkt sneuvelen. */
   {
@@ -1061,12 +1256,6 @@ groep("Wereldwijd");
       /const oud=ls\.get\(KEY_D,null\)/.test(bronW) && /S\.d=oud\.d/.test(bronW));
     check("er staat bij van wanneer die is",/laatste briefing van/.test(bronW));
   }
-
-
-  // KNMI mag alleen in de bronregel staan als hij ook gebruikt is
-  check("de bronregel noemt KNMI niet standaard",
-    !/verwachting <a href="https:\/\/dataplatform\.knmi\.nl/.test(bronW));
-  check("de bronregel is eerlijk over de radardekking",/Radardekking volgt/.test(bronW));
 }
 
 /* 10k. neerslaghoeveelheid, UV-tegel en de uitlijning van de kop */
@@ -1140,8 +1329,8 @@ groep("Dagtabel en tegels");
     zichtbaar(360).length===kolSmal, zichtbaar(360).join(",")+" tegen "+kolSmal+" kolommen");
 }
 
-/* 10l. vetgedrukt in de briefing en het contrast van de radarkaart */
-groep("Nadruk en kaart");
+/* 10l. vetgedrukt in de briefing */
+groep("Nadruk");
 {
   const bronN2=require("fs").readFileSync(require("path").join(__dirname,"index.html"),"utf8");
   const gevallen=[
@@ -1175,15 +1364,6 @@ groep("Nadruk en kaart");
     /blijft het <b>droog<\/b>/.test(bronN2));
   check("de maximumtemperatuur krijgt nadruk",
     /<b>"\+Math\.round\(tv\)\+" graden<\/b>/.test(bronN2)||/<b>"\+nutemp\+" graden<\/b>/.test(bronN2));
-
-  /* de kaart onder de radar was zo ver weggedrukt dat grenzen verdwenen */
-  const alfa=bronN2.match(/globalAlpha=donker\?([\d.]+):([\d.]+)/);
-  check("de radarkaart heeft een leesbare doorzichtigheid",
-    !!alfa && parseFloat(alfa[2])>=0.9 && parseFloat(alfa[1])>=0.7,
-    alfa?("donker "+alfa[1]+", licht "+alfa[2]):"regel niet gevonden");
-  // de neerslaglaag moet er nog wel bovenop leesbaar blijven
-  check("de neerslaglaag blijft sterker dan de kaart",
-    !!alfa && 0.85>=parseFloat(alfa[2])-0.1, "neerslag 0.85 tegen kaart "+(alfa?alfa[2]:"?"));
 }
 
 /* 10m. bevindingen uit de eerste live versie */
@@ -1261,45 +1441,6 @@ groep("Live bevindingen");
   check("het verificatieblok is verwijderd",
     !/id="controle"/.test(bronL) && !/Hoe goed was de verwachting/.test(bronL));
 
-  /* 7b. radarbeelden moeten op tijd staan. Twee bronnen achter elkaar plakken gaf
-     een schuif die van 20:10 naar 19:10 en dan naar 20:20 sprong. */
-  {
-    const bronF=new Function("return "+(bronL.match(/function opTijd\(lijst\)\{[\s\S]*?\n\}/)||["null"])[0])();
-    check("er is een functie die beelden op tijd zet",typeof bronF==="function");
-    if(typeof bronF==="function"){
-      const rommel=[{time:300},{time:100},{time:200},{time:100},{time:400}];
-      const uit=bronF(rommel);
-      const tijden=uit.map(f=>f.time);
-      check("de reeks loopt oplopend in de tijd",
-        tijden.every((t,i)=>i===0||t>tijden[i-1]),tijden.join(", "));
-      check("dubbele tijdstippen vallen weg",tijden.length===4,tijden.join(", "));
-      check("een lege of kapotte invoer geeft geen fout",
-        bronF([]).length===0 && bronF([null,{time:NaN},{time:5}]).length===1);
-    }
-    check("de samengevoegde reeks wordt gesorteerd",/opTijd\(R\.frames\.concat/.test(bronL));
-    check("de radarreeks zelf wordt ook gesorteerd",/opTijd\(verleden\.concat/.test(bronL));
-    check("de vooruitblik blijft bij het wisselen van laag",
-      /R\.radarFrames=R\.frames;/.test(bronL) && !/if\(R\.satFrames\.length\) R\.radarFrames/.test(bronL));
-  }
-
-
-  /* 7d. de KNMI-laag moet dezelfde kleurtaal spreken als RainViewer */
-  {
-    const stijl=(bronL.match(/const KNMI_STIJL="([^"]+)"/)||[])[1];
-    check("er staat een expliciete stijl voor de KNMI-laag",!!stijl,"KNMI_STIJL ontbreekt");
-    /* De laag biedt volgens zijn eigen GetCapabilities radar/nearest,
-       rainrate-blue-to-purple/nearest en rainrate-blue-to-purple/shaded.
-       De eerste is de standaard en tekent rood; die valt af. */
-    const geldig=["radar/nearest","rainrate-blue-to-purple/nearest","rainrate-blue-to-purple/shaded"];
-    check("de stijl bestaat op de server",geldig.includes(stijl),String(stijl));
-    check("de stijl is de blauwe, niet de rode standaard",
-      /^rainrate-blue-to-purple/.test(String(stijl)),String(stijl));
-    check("de stijl wordt ook echt meegestuurd",
-      /&STYLES="\+encodeURIComponent\(KNMI_STIJL\)/.test(bronL));
-    check("de kaartaanvraag gebruikt een projectie die de laag ondersteunt",
-      /CRS=EPSG:3857/.test(bronL));
-  }
-
   /* 7c. het cijfer mag niet op de rode nu-lijn vallen */
   {
     const {api:aN,bak:bN}=laadKern(390);
@@ -1320,10 +1461,6 @@ groep("Live bevindingen");
         opDeLijn.map(l=>"label op x "+l.x.toFixed(0)+", lijn op "+xn.toFixed(0)).join(", "));
     }
   }
-
-  // 8. satelliet alleen crediteren als er beelden zijn
-  check("de bronregel noemt satelliet niet standaard",
-    !/Radar en satelliet: <a/.test(bronL) && /id="bronsat"/.test(bronL));
 
   // 9. de brede tegel alleen waar hij de rij vult
   check("de brede tegel spant alleen op smalle schermen",
@@ -1383,26 +1520,6 @@ groep("Iconen en balk");
   const m=api.icon(2,true,24).match(/<mask[\s\S]*?stroke-width="([\d.]+)"/);
   check("het masker is ruimer dan de lijndikte",!!m&&parseFloat(m[1])>1.15,m?m[1]:"niet gevonden");
 
-
-
-
-  /* Bij het afspelen flikkerde de neerslag: het doek werd gewist voordat de tegels
-     binnen waren. Het wissen hoort na het laden te komen, niet ervoor. */
-  {
-    const teken=bronI.slice(bronI.indexOf("async function radarTeken"),bronI.indexOf("function markeer"));
-    check("de tekenfunctie wacht op de beelden",/await Promise\.all/.test(teken));
-    const naLaden=teken.indexOf("await Promise.all")<teken.indexOf("ctx.clearRect");
-    check("het doek wordt pas gewist als de beelden binnen zijn",naLaden,
-      "clearRect staat nog voor het laden");
-    check("een oudere ophaalronde mag niet meer tekenen",
-      /ronde!==radarRonde\)\s*return/.test(teken),"geen bescherming tegen twee rondes tegelijk");
-    check("het volgende beeld wordt alvast opgehaald",
-      /R\.frames\[\(R\.i\+1\)%R\.frames\.length\]/.test(teken));
-    // de tijd mag niet meewachten, anders loopt het bijschrift achter
-    check("het tijdstip verschijnt zonder te wachten",
-      teken.indexOf("radartijd")<teken.indexOf("await Promise.all"));
-  }
-
   /* Er staat een globale regel svg,canvas{display:block}. Elke SVG die middenin
      een tekstregel staat moet die overrulen, anders breekt de regel eromheen.
      Zet je vertical-align op een SVG, dan bedoel je hem inline: dat is precies
@@ -1419,20 +1536,6 @@ groep("Iconen en balk");
       /\.maanbij svg\{display:inline-block/.test(bronI));
     check("de windpijl staat inline",
       /\.dwind svg\{display:inline-block/.test(bronI));
-  }
-
-  /* het kleurschema van de radar moet als een benoemde keuze in de code staan */
-  {
-    const m=bronI.match(/const RV_SCHEMA=(\d);/);
-    check("het kleurschema staat als benoemde constante in de code",!!m,"RV_SCHEMA niet gevonden");
-    if(m){
-      const nr=parseInt(m[1],10);
-      check("het kleurschema is een bestaand nummer",nr>=0&&nr<=8,String(nr));
-      check("de tegel-URL gebruikt die constante",
-        /RV_SCHEMA\+"\/1_1"/.test(bronI),"de URL heeft nog een vast cijfer");
-      // de satelliet heeft een eigen schema en mag niet meeschakelen
-      check("de satelliettegel houdt zijn eigen schema",/f\.sat\?"0\/0_0"/.test(bronI));
-    }
   }
 
   /* de klok hoort ook zichtbaar te blijven als je scrollt */
@@ -1629,34 +1732,11 @@ groep("Grafiek en hints");
   }
 }
 
-/* 10r. de laklaag: schuifbalk, uitlijning, selectielijn en voettekst */
+/* 10r. de laklaag: uitlijning, selectielijn en voettekst */
 groep("Opmaak en uitlijning");
 {
   const fsL2=require("fs"), pathL2=require("path");
   const css=fsL2.readFileSync(pathL2.join(__dirname,"index.html"),"utf8");
-
-  /* De schuifbalk. accent-color laat elke browser zijn eigen vorm tekenen, dus die
-     moet weg en de baan en knop tekenen we zelf. De pseudo-elementen horen in losse
-     regels: kent een browser er een niet, dan gooit hij de hele regel weg. */
-  // op de declaratie letten en niet op het woord: het staat ook in het commentaar
-  check("de browser tekent de schuif niet meer zelf",
-    /input\[type=range\]\{[^}]*appearance:none/.test(css) && !/accent-color\s*:/.test(css));
-  for(const p of ["-webkit-slider-runnable-track","-moz-range-track",
-                  "-webkit-slider-thumb","-moz-range-thumb"]){
-    check("er is opmaak voor "+p,new RegExp("::"+p.replace(/-/g,"\\-")+"\\{").test(css));
-  }
-  {
-    // geen enkele regel mag twee leveranciers combineren
-    const gemengd=[...css.matchAll(/([^{}]*)\{[^}]*\}/g)]
-      .map(m=>m[1])
-      .filter(sel=>/-webkit-slider|-moz-range/.test(sel) && /-webkit-/.test(sel) && /-moz-/.test(sel));
-    check("webkit en moz staan in losse regels",gemengd.length===0,gemengd.join(" | "));
-  }
-  check("de knop staat halverwege de baan",/margin-top:-5\.5px/.test(css));
-  check("wie beweging uitzet krijgt geen overgang",
-    /prefers-reduced-motion[\s\S]{0,200}slider-thumb[\s\S]{0,120}transition:none/.test(css));
-  check("de schuif blijft met het toetsenbord te zien",
-    /input\[type=range\]:focus-visible\{[^}]*outline/.test(css));
 
   /* De rode selectielijn zat tegen de tekst aan. */
   check("de geselecteerde dag heeft ruimte naast de lijn",
@@ -1666,11 +1746,11 @@ groep("Opmaak en uitlijning");
   /* De voettekst: elke bron op een eigen regel. */
   check("de voettekst staat onder elkaar",/footer\{[^}]*flex-direction:column/.test(css));
   const bronnen=(css.match(/<span class="bron"/g)||[]).length;
-  check("elke bron heeft een eigen regel",bronnen>=4,bronnen+" regels");
+  check("elke bron heeft een eigen regel",bronnen>=1,bronnen+" regels");
   check("de bronnen staan niet meer als een lopend blok",
     !/Weer: <a[\s\S]{0,400}Kaart: <a/.test(css));
   // en de verplichte vermeldingen moeten er nog wel staan
-  for(const bron of ["open-meteo.com","rainviewer.com","carto.com","openstreetmap.org"]){
+  for(const bron of ["open-meteo.com"]){
     check(bron+" wordt nog vermeld",css.includes(bron));
   }
 
@@ -1854,8 +1934,8 @@ groep("Neerslagkans komend uur");
   check("de kop en de subtekst tonen hetzelfde percentage",hoog.pop.startsWith("77"),hoog.pop);
 }
 
-/* 10u. briefing en radartekst delen dezelfde conclusie over de komende twee uur */
-groep("Briefing en radar afgestemd");
+/* 10u. briefing en neerslagtekst delen dezelfde conclusie over de komende twee uur */
+groep("Briefing en neerslagtekst afgestemd");
 {
   const fsK=require("fs"), pathK=require("path");
   const bronK=fsK.readFileSync(pathK.join(__dirname,"index.html"),"utf8");
@@ -1865,7 +1945,7 @@ groep("Briefing en radar afgestemd");
     /const NEERSLAG_DREMPEL_MM\s*=\s*0\.1/.test(bronK));
   check("de briefing gebruikt kortetermijn()",
     /kt\s*=\s*kortetermijn\(\)/.test(bronK.slice(bronK.indexOf("function briefing"))));
-  check("de radartekst gebruikt kortetermijn()",
+  check("de neerslagtekst gebruikt kortetermijn()",
     /const kt=kortetermijn\(\);/.test(bronK.slice(bronK.indexOf("function nowcast"))));
 
   function samen(opties){
@@ -1873,19 +1953,19 @@ groep("Briefing en radar afgestemd");
     Object.assign(api.S,{d:bouw(opties),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,
       klokOverride:KLOK});
     api.meters();api.briefing();api.nowcast();
-    return { briefing:norm(bak.brief.innerHTML).replace(/<[^>]+>/g,""), radar:norm(bak.nctext.textContent) };
+    return { briefing:norm(bak.brief.innerHTML).replace(/<[^>]+>/g,""), neerslagtekst:norm(bak.nctext.textContent) };
   }
 
   // droog scenario: allebei "droog", geen van beide "regent" of "neerslag"
   const d1=samen({pp:()=>5,pr:()=>0,som:0});
   check("droog: de briefing zegt droog",/komende twee uur.*droog/.test(d1.briefing),d1.briefing);
-  check("droog: de radartekst zegt droog",/komende twee uur blijft het droog/.test(d1.radar),d1.radar);
+  check("droog: de neerslagtekst zegt droog",/komende twee uur blijft het droog/.test(d1.neerslagtekst),d1.neerslagtekst);
 
   // nat scenario binnen de eerste twee uur: geen van beide mag "droog" beweren
   const n1=samen({pr:(u)=>u===15?2:0,pp:(u)=>u===15?80:5});
   check("nat: de briefing beweert geen droogte",!/komende twee uur.*blijft het.*droog/.test(n1.briefing),n1.briefing);
-  check("nat: de radartekst beweert geen droogte",!/komende twee uur blijft het droog/.test(n1.radar),n1.radar);
-  check("nat: beide noemen neerslag",/neerslag/.test(n1.briefing)&&/neerslag/.test(n1.radar));
+  check("nat: de neerslagtekst beweert geen droogte",!/komende twee uur blijft het droog/.test(n1.neerslagtekst),n1.neerslagtekst);
+  check("nat: beide noemen neerslag",/neerslag/.test(n1.briefing)&&/neerslag/.test(n1.neerslagtekst));
 
   // het regent nu: allebei "regent nu"
   const r1=samen({nu:0.6,pp:(u)=>u<17?85:5,pr:(u)=>u<17?0.6:0,som:3});
@@ -1900,10 +1980,10 @@ groep("Briefing en radar afgestemd");
     const opt = regen<0 ? {pp:()=>5,pr:()=>0} : {pr:(u)=>u===regen?0.3+seed*0.05:0,pp:(u)=>u===regen?60:5};
     const s=samen(opt);
     const briefDroog=/komende twee uur.*blijft het.*droog/.test(s.briefing)||/komende <b>twee uur<\/b> blijft het <b>droog/.test(s.briefing);
-    const radarDroog=/komende twee uur blijft het droog/.test(s.radar);
-    if(briefDroog!==radarDroog) tegenstrijdig.push("seed "+seed+": briefing droog="+briefDroog+", radar droog="+radarDroog);
+    const tekstDroog=/komende twee uur blijft het droog/.test(s.neerslagtekst);
+    if(briefDroog!==tekstDroog) tegenstrijdig.push("seed "+seed+": briefing droog="+briefDroog+", neerslagtekst droog="+tekstDroog);
   }
-  check("over een reeks patronen komen briefing en radar nooit tot een andere conclusie",
+  check("over een reeks patronen komen briefing en neerslagtekst nooit tot een andere conclusie",
     tegenstrijdig.length===0, tegenstrijdig.join(" | "));
 
   // onvoldoende data: geen stellige droogmelding in beide
@@ -1917,76 +1997,8 @@ groep("Briefing en radar afgestemd");
   check("onvoldoende data: geen stellige droogmelding in de briefing",
     !/komende twee uur.*blijft het.*droog/.test(briefX)
     && !/komende <b>twee uur<\/b> blijft het <b>droog/.test(bX.brief.innerHTML),briefX);
-  check("onvoldoende data: ook de radartekst blijft terughoudend",
+  check("onvoldoende data: ook de neerslagtekst blijft terughoudend",
     !/komende twee uur blijft het droog/.test(norm(bX.nctext.textContent)),norm(bX.nctext.textContent));
-}
-
-/* 10v. radar-zoom: sinds v70 is de radar statisch (geen zoomknoppen meer), dus
-   R.zoom staat altijd vast op ZSTANDAARD. De aanvraaggrens (ZTEGELMAX) en de
-   client-side-opschaalmechaniek in radarTeken() zelf zijn ongewijzigd en
-   blijven relevant als een toekomstige zoomstand ooit weer instelbaar wordt. */
-groep("Radar zoomgrens");
-{
-  const fsZ=require("fs"), pathZ=require("path");
-  const bronZ=fsZ.readFileSync(pathZ.join(__dirname,"index.html"),"utf8");
-  const m=bronZ.match(/const TEGEL=256, ZSTANDAARD=(\d+), ZTEGELMAX=(\d+);/);
-  check("de zoomconstanten staan er nog in de verwachte vorm (zonder ZMIN/ZMAX)",!!m,"regel niet gevonden");
-  if(m){
-    const zst=+m[1], ztmax=+m[2];
-    /* RainViewer documenteert zelf "Maximum zoom level is 7" voor zijn tegel-URL's
-       (rainviewer.com/api/weather-maps-api.html). */
-    check("het aanvraagmaximum overschrijdt RainViewer's gedocumenteerde grens niet (7)",
-      ztmax<=7,"ZTEGELMAX is "+ztmax);
-    check("de standaardzoom valt niet boven het aanvraagmaximum",
-      zst<=ztmax,zst+" boven "+ztmax);
-  }
-  check("er zijn geen ZMIN/ZMAX meer (geen apart zoombereik zonder zoomknoppen)",
-    !/\bconst\s+ZMIN\b/.test(bronZ) && !/\bconst\s+ZMAX\b/.test(bronZ)
-    && !/ZMIN=\d/.test(bronZ) && !/ZMAX=\d/.test(bronZ));
-  // deze grens is uit de documentatie afgeleid, niet uit het niets: dat moet ook
-  // in de code zelf terug te lezen zijn voor wie hem later aanpast
-  check("de reden voor de grens staat als toelichting in de code",
-    /Maximum zoom level is 7/.test(bronZ) && /rainviewer\.com/.test(bronZ),
-    "de RainViewer-bronvermelding bij ZTEGELMAX ontbreekt");
-  // devicePixelRatio mag de tegelaanvraag niet ongemerkt naar een hoger niveau duwen
-  check("devicePixelRatio stuurt de tegelaanvraag niet aan",
-    !/devicePixelRatio/.test(bronZ.slice(bronZ.indexOf("function radarTeken"),bronZ.indexOf("function markeer"))));
-  // de tegel-URL gebruikt het begrensde aanvraagniveau Zt, niet het visuele niveau Zv
-  check("de tegel-URL gebruikt het begrensde aanvraagniveau, niet het visuele niveau",
-    /const Zt=Math\.min\(Zv,ZTEGELMAX\);/.test(bronZ)
-    && /cartocdn\.com\/\$\{stijl\}\/\$\{Zt\}/.test(bronZ)
-    && !/cartocdn\.com\/\$\{stijl\}\/\$\{Zv\}/.test(bronZ));
-  // boven het aanvraagmaximum wordt er niets hogers opgehaald, alleen groter getekend
-  check("boven het aanvraagmaximum wordt de laatst geldige tegel opgeschaald, niet opnieuw aangevraagd",
-    /const schaal=Math\.pow\(2,Zv-Zt\);/.test(bronZ)
-    && /drawImage\(im,vakken\[k\]\.px,vakken\[k\]\.py,TS,TS\)/.test(bronZ));
-  {
-    // de opschaling doorrekenen zoals de app hem toepast, los van de brontekst
-    const Zt=z=>Math.min(z,7);
-    const proef=[4,7,8,9].map(z=>({z,Zt:Zt(z),schaal:Math.pow(2,z-Zt(z))}));
-    const fout=proef.filter(p=>p.z<=7 ? (p.Zt!==p.z||p.schaal!==1)
-                                        : (p.Zt!==7||p.schaal!==Math.pow(2,p.z-7)));
-    check("de opschalingsfactor klopt op elk niveau, ook voorbij het aanvraagmaximum",
-      fout.length===0,JSON.stringify(fout));
-  }
-
-  /* v70-herstel: de prefetch van het volgende radarframe gebruikte een losse,
-     nergens gedefinieerde variabele Z (in plaats van de al berekende, geldige
-     tegelzoom Zt), wat op elke prefetch-aanroep een ReferenceError gaf. Deze
-     test faalt zowel wanneer ${Z} nog ergens voor een radar-tegel-URL wordt
-     gebruikt, als wanneer de zoomvariabele (Zt) niet binnen radarTeken() zelf
-     bestaat. */
-  {
-    const radarTekenBron=bronZ.slice(bronZ.indexOf("async function radarTeken"),
-      bronZ.indexOf("function markeer"));
-    check("radarTeken() definieert zelf een geldige tegelzoomvariabele (Zt)",
-      /const Zt=Math\.min\(Zv,ZTEGELMAX\);/.test(radarTekenBron));
-    check("geen enkele radar-tegel-URL gebruikt nog de niet-bestaande variabele Z",
-      !/\$\{Z\}/.test(radarTekenBron));
-    check("de prefetch van het volgende frame gebruikt Zt, niet Z",
-      /volg\.path\}\/\$\{TEGEL\}\/\$\{Zt\}\//.test(radarTekenBron));
-    check("repositorybreed: geen losse ${Z} meer voor tegel-URL's",!/\$\{Z\}/.test(bronZ));
-  }
 }
 
 /* 10w. luchtvochtigheidstegel zonder dauwpunt */
@@ -2575,7 +2587,7 @@ groep("Kleursysteem");
   check("de accentvariabelen (lijnen/tekst/datavisualisatie) staan nog centraal in :root",
     /--text-primary:/.test(bronK3) && /--text-secondary:/.test(bronK3) && /--border-subtle:/.test(bronK3)
     && /--accent-active:#A51D3D/.test(bronK3) && /--accent-info:/.test(bronK3)
-    && /--accent-rain:#3B8FA3/.test(bronK3) && /--accent-night:#142C4C/.test(bronK3)
+    && /--accent-night:#142C4C/.test(bronK3)
     && /--accent-sun:#F2CE63/.test(bronK3));
   check("tekst/border/info harmoniseren met bestaande tokens in plaats van een dubbel systeem",
     /--text-primary:var\(--ink\)/.test(bronK3) && /--text-secondary:var\(--ink-45\)/.test(bronK3)
@@ -2589,8 +2601,7 @@ groep("Kleursysteem");
   check("de themakeuzelogica zelf is niet gewijzigd (auto kiest nog op is_day)",
     /keuze==="auto".*is_day===0.*"donker".*"licht"/.test(bronK3.replace(/\s+/g," ")));
   /* v70: alle --surface-*-tokens (module-achtergrondtinten) zijn verwijderd;
-     ze werden nergens anders meer gebruikt zodra de laatste drie
-     achtergrondregels (.radar/#nights/#aq) eruit gingen. */
+     ze werden nergens anders meer gebruikt zodra de laatste moduleachtergronden eruit gingen. */
   check("de vijf --surface-*-tokens bestaan niet meer",
     !/--surface-info:/.test(bronK3) && !/--surface-rain:/.test(bronK3)
     && !/--surface-night:/.test(bronK3) && !/--surface-sun:/.test(bronK3)
@@ -2600,41 +2611,12 @@ groep("Kleursysteem");
   check("#aq behoudt alleen zijn dunne accentlijn (border-top), geen background meer",
     /#aq\{border-top:2px solid var\(--accent-info\)\}/.test(bronK3)
     && !/#aq\{[^}]*background/.test(bronK3));
-  // v70-correctie: de radar had eerder óók een dunne accentlijn (border-top),
-  // maar die oogde als een overbodig decoratief streepje boven een verder
-  // neutrale module en is hier bewust weggehaald; .radar heeft nu geen
-  // border-top en geen background meer, alleen zijn bestaande rand (border)
-  check(".radar heeft geen accentlijn en geen background meer (bewust verwijderd)",
-    !/\.radar\{[^}]*border-top/.test(bronK3) && !/\.radar\{[^}]*background/.test(bronK3));
-  /* v70-herstel: naast de cyaanlijn (border-top op .radar, al verwijderd)
-     tekende de algemene h2-regel ook nog een zwarte border-bottom onder de
-     titel "Neerslagradar". Uitsluitend die ene kop krijgt nu een gerichte
-     uitzondering via #radartitel; de algemene h2-regel zelf is niet gewijzigd,
-     dus elke andere sectiekop (Het etmaal, Nachtzicht, Zeven dagen,
-     Luchtkwaliteit) behoudt zijn eigen zwarte lijn. */
-  check("#radartitel bestaat op de Neerslagradar-kop",
-    /<h2 id="radartitel"><span>Neerslagradar<\/span><\/h2>/.test(bronK3));
-  check("#radartitel heeft expliciet geen border-bottom",
-    /#radartitel\{border-bottom:none\}/.test(bronK3));
-  check("de algemene h2-regel zelf is niet aangepast: border-bottom blijft daar gewoon bestaan",
-    /h2\{font-family:var\(--sans\)[^}]*border-bottom:1px solid var\(--ink\)/.test(bronK3));
-  check("andere sectiekoppen (Nachtzicht, Zeven dagen) hebben geen eigen uitzondering gekregen",
-    !/<h2 id="[^"]*"><span>Nachtzicht<\/span>/.test(bronK3)
-    && !/<h2 id="[^"]*"><span>Zeven dagen<\/span>/.test(bronK3));
-  check("de radar krijgt geen nieuwe achtergrond, accentlijn of decoratief streepje (alleen border-bottom:none)",
-    !/#radartitel\{[^}]*background/.test(bronK3) && !/#radartitel\{[^}]*border-top/.test(bronK3)
-    && (bronK3.match(/#radartitel\{[^}]*\}/g)||[]).length===1);
+
   check("basisachtergronden (--paper, --sheet) bestaan nog onaangeroerd",
     /--paper:#F4F5F3/.test(bronK3) && /--sheet:#FFFFFF/.test(bronK3));
   check("donker en rood thema hebben geen hardcoded witte achtergrond gekregen",
     !/html\[data-thema="donker"\][^}]*--sheet:#FFFFFF/.test(bronK3)
     && !/html\[data-thema="rood"\][^}]*--sheet:#FFFFFF/.test(bronK3));
-  // v70-herstel: de canvasfallback van #radar (zichtbaar zolang er nog geen
-  // tegel is getekend) gebruikte een gekleurde rule-soft-tint; die volgt nu
-  // gewoon de normale, thema-afhankelijke sheet-achtergrond, in elk thema.
-  check("#radar's canvasfallback volgt de normale sheet-achtergrond, geen gekleurde tint",
-    /#radar\{[^}]*background:var\(--sheet\)\}/.test(bronK3)
-    && !/#radar\{[^}]*background:var\(--rule-soft\)/.test(bronK3));
 }
 
 /* 15. v68: responsive dashboardlayout. Dit toetst DOM-/CSS-structuur (delen van
@@ -2646,9 +2628,9 @@ groep("Responsive structuur (v68)");
   const fsD=require("fs"), pathD=require("path");
   const bronD=fsD.readFileSync(pathD.join(__dirname,"index.html"),"utf8");
 
-  // 1-3: één gedeelde DOM, geen dubbele grafiek-/radar-ids
+  // 1-3: één gedeelde DOM, geen dubbele ids en geen verwijderde radar
   check("er is precies één #chart in de hele pagina",(bronD.match(/id="chart"/g)||[]).length===1);
-  check("er is precies één #radar in de hele pagina",(bronD.match(/id="radar"/g)||[]).length===1);
+  check("de verwijderde radar komt nergens meer in de DOM voor",(bronD.match(/id="radar"/g)||[]).length===0);
   check("er is precies één #days en één #nights (geen dubbele desktopkopie)",
     (bronD.match(/id="days"/g)||[]).length===1 && (bronD.match(/id="nights"/g)||[]).length===1);
 
@@ -2666,9 +2648,9 @@ groep("Responsive structuur (v68)");
     (scriptBron.match(/window\.innerWidth/g)||[]).length===7,
     (scriptBron.match(/window\.innerWidth/g)||[]).length);
 
-  // 7: mobiele DOM-volgorde blijft logisch (brief -> hero -> stats -> grafiek -> radar -> ... -> footer)
+  // 7: mobiele DOM-volgorde blijft logisch (brief -> hero -> stats -> grafiek -> neerslagtekst -> ... -> footer)
   const volgorde=["id=\"brief\"","class=\"hero\"","class=\"stats\"","id=\"chartlab\"",
-    "<span>Neerslagradar</span>","id=\"nctext\"","<span>Zeven dagen</span>",
+    "id=\"nctext\"","<span>Zeven dagen</span>",
     "<span>Nachtzicht</span>","<span>Luchtkwaliteit en pollen</span>","<footer>"];
   let vorigeIdx=-1, volgordeKlopt=true;
   for(const stuk of volgorde){
@@ -2683,15 +2665,14 @@ groep("Responsive structuur (v68)");
   // achtergrond, dus op het prefix tellen i.p.v. de exacte class-string)
   check("de minimale layoutwrappers (dashrow/dashcol) bestaan",
     /class="dashrow dashrow-hero"/.test(bronD) && /class="dashrow dashrow-chart"/.test(bronD)
-    && /class="dashrow dashrow-days"/.test(bronD) && (bronD.match(/class="dashcol/g)||[]).length===4);
+    && /class="dashrow dashrow-days"/.test(bronD) && (bronD.match(/class="dashcol/g)||[]).length===3);
   check("dashrow is tot 1100px functioneel onzichtbaar (display:contents)",
     /\.dashrow\{display:contents\}/.test(bronD));
 
-  // 9: veilige minmax(0, ...)-kolommen in de desktopgrids die er nog zijn
-  // (sinds de herstelronde: hero en grafiek/radar; dagen/nachtzicht is
-  // bewust geen zij-aan-zij-grid meer, zie de Herstelronde-testgroep)
+  // 9: veilige minmax(0, ...)-kolommen in het resterende desktopgrid.
+  // De grafiek gebruikt na de radarverwijdering de volle breedte; dagen/nachtzicht blijft gestapeld.
   check("de resterende desktopgrids gebruiken minmax(0, ...) tegen overflow",
-    (bronD.match(/grid-template-columns:minmax\(0,[^)]+\) minmax\(0,[^)]+\)/g)||[]).length===2);
+    (bronD.match(/grid-template-columns:minmax\(0,[^)]+\) minmax\(0,[^)]+\)/g)||[]).length===1);
 
   // 10: geen nieuwe overflow-verbergende noodregel
   check("geen nieuwe overflow:hidden/clip-regel is toegevoegd als noodoplossing voor de dashboardlaag",
@@ -2711,8 +2692,8 @@ groep("Desktoplayout (v68)");
     /\.mast\{display:flex/.test(bronD2) && !/\.mast\{display:grid/.test(desktopBlok));
   check("het metriekgrid heeft op tablet een eigen (tweekoloms) variant",
     /min-width:900px\) and \(max-width:1099px\)[\s\S]{0,20}\{[\s\S]*?\.stats\{grid-template-columns:repeat\(2,1fr\)/.test(bronD2));
-  check("grafiek en radar delen vanaf desktop één grid (.dashrow-chart)",
-    /\.dashrow-chart\{display:grid;grid-template-columns:minmax/.test(desktopBlok));
+  check("de grafiek gebruikt na verwijdering van de radar de volle desktopbreedte",
+    /\.dashrow-chart\{display:block\}/.test(desktopBlok));
   check("herstelronde: Zeven dagen en Nachtzicht vormen bewust GEEN zij-aan-zij-grid (.dashrow-days blijft gestapeld)",
     !/\.dashrow-days\{display:grid/.test(bronD2));
   check("luchtkwaliteit/pollen (#aq) krijgt geen eigen tweekoloms grid en loopt dus over de volle dashboardbreedte",
@@ -2721,8 +2702,6 @@ groep("Desktoplayout (v68)");
     !/@media\(min-width:900px\) and \(max-width:1099px\)\)?[\s\S]{0,300}dashrow-chart\{display:grid/.test(bronD2));
   check("mobiel (onder 900px) blijft één kolom: de bestaande mobiele media query is niet gewijzigd",
     /@media\(max-width:900px\)\{[\s\S]*?body\{padding:14px 12px\}/.test(bronD2));
-  check("de radar heeft een begrensde desktophoogte via zijn eigen, ongewijzigde beeldverhouding (640:470)",
-    /#radar\{aspect-ratio:640\/470[^}]*max-height:540px/.test(desktopBlok));
   check("geen desktoplayout is actief onder het afgesproken breakpoint (geen andere min-width:110\\dpx-waarde)",
     !/@media\(min-width:11(?!00px\))/.test(bronD2));
 }
@@ -2789,9 +2768,6 @@ groep("Herstelronde v68");
     /function nachten\(\)/.test(bronH));
 
   // 12.3 kleur op alle viewports
-  check("1. het regenaccent (.radar) staat buiten iedere mediaquery",
-    !/@media[^{]*\{[\s\S]*?\.radar\{border-top:2px solid var\(--accent-rain\)/.test(
-      bronH.slice(0,bronH.indexOf(".radar{border-top:2px solid var(--accent-rain)"))));
   check("2. het nachtaccent (#nights) staat buiten iedere mediaquery",
     bronH.indexOf("#nights{border-top:2px solid var(--accent-night)}")>=0
     && bronH.indexOf("#nights{border-top:2px solid var(--accent-night)}")
@@ -2805,14 +2781,13 @@ groep("Herstelronde v68");
       < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)")
     && bronH.indexOf(".stat.zon{border-top:2px solid var(--accent-sun)}")
       < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)"));
-  check("5. desktop-specifieke padding voor de resterende modules blijft binnen de 1100px-mediaquery",
-    /\.radar\{max-width:100%;padding:var\(--s2\) var\(--s2\) 4px\}/.test(desktopH)
-    && /#aq\{padding:var\(--s2\)\}/.test(desktopH));
+  check("5. desktop-specifieke padding voor luchtkwaliteit blijft binnen de 1100px-mediaquery",
+    /#aq\{padding:var\(--s2\)\}/.test(desktopH));
   check("6. de kleurregels gebruiken de centrale accenttokens, geen losse hex/rgba, en geen surface-tints meer",
     /var\(--accent-night\)/.test(bronH)
     && /var\(--accent-info\)/.test(bronH) && /var\(--accent-sun\)/.test(bronH)
     && !/var\(--surface-/.test(bronH));
-  check("7. geen nieuwe losse hex-/rgba-kleurwaarde is toegevoegd voor deze vier accenten",
+  check("7. geen nieuwe losse hex-/rgba-kleurwaarde is toegevoegd voor de resterende accenten",
     !/border-top:2px solid #[0-9A-Fa-f]{3,6}/.test(bronH));
   check("8. fout-/waarschuwingskleuren (carmine) zijn niet gewijzigd",
     /--carmine:#A02036/.test(bronH));
@@ -2842,8 +2817,8 @@ groep("Herstelronde v68");
   }
 }
 
-/* 19. v69-polishronde: grafieklabels, Nachtzicht-/grafiekachtergrond, mobiele
-   tooltip en radarbediening. Dit toetst broncode-/DOM-structuur en
+/* 19. v69-polishronde: grafieklabels, Nachtzicht-/grafiekachtergrond en mobiele
+   tooltip. Dit toetst broncode-/DOM-structuur en
    functioneel gedrag, geen visuele weergave. */
 groep("v69 polishronde");
 {
@@ -2956,22 +2931,65 @@ groep("v69 polishronde");
     check("5. geen inhoud wordt via CSS verborgen (display:none op een tooltipveld)",
       !/#scrub \w+\{display:none/.test(bronP));
   }
+}
 
-  // 14.5 radarbediening (v70: #ruit/#rin/#rmidden en hun functies zijn
-  // bewust verwijderd, zie de "Radar bedienen"-groep hierboven voor de
-  // volledige toetsing daarvan; hier alleen wat blijft)
-  {
-    check("1. afspelen en de slider blijven bestaan; de zoom-/centreerknoppen bestaan bewust niet meer",
-      /id="rspeel"/.test(bronP) && /id="rschuif"/.test(bronP)
-      && !/id="ruit"/.test(bronP) && !/id="rin"/.test(bronP) && !/id="rmidden"/.test(bronP));
-    check("2. de slider blijft bestaan",/id="rschuif"/.test(bronP));
-    check("3. speel/pauzelogica is niet aangeraakt (rspeel-handler bestaat nog ongewijzigd)",
-      /getElementById\("rspeel"\)/.test(bronP));
-    check("4. zoomlogica (radarZoom) bestaat bewust niet meer",!/function radarZoom/.test(bronP));
-    check("5. centreerlogica (#rmidden) bestaat bewust niet meer",!/id="rmidden"/.test(bronP));
-    check("6. de mobiele bedieningshoogte is bruikbaar (minimaal ~43px)",
-      /\.radarbalk button\{min-height:43px/.test(bronP));
-  }
+/* Radar is op verzoek volledig verwijderd; de aparte twee-uursneerslagtekst blijft bestaan. */
+groep("Radar verwijderd en bronbestanden consistent");
+{
+  const fsR=require("fs"), pathR=require("path");
+  const lees=f=>fsR.readFileSync(pathR.join(__dirname,f),"utf8");
+  const bronR=lees("index.html");
+  check("de radarinterface is uit de DOM verwijderd",
+    !/Neerslagradar|id="radar"|id="rspeel"|id="rschuif"|id="radartijd"|id="radarmelding"/.test(bronR));
+  check("de radarlogica en externe radarbronnen zijn uit alle runtimebestanden verwijderd",(()=>{
+    const bestanden=["index.html","package.json","manifest.json","sw.js","kern.js","data.js","api/plaatsnaam.js","api/waarschuwingen.js"];
+    return bestanden.every(f=>!/radarverwachting|rainviewer|cartocdn|neerslagradar/i.test(lees(f)));
+  })());
+  check("de verwijderde radar-API bestaat niet meer",!fsR.existsSync(pathR.join(__dirname,"api/radarverwachting.js")));
+  check("de aparte verwachting voor de komende twee uur blijft bestaan",
+    /Neerslag komende twee uur/.test(bronR) && /id="nctext"/.test(bronR) && /id="nc"/.test(bronR));
+  check("de serviceworker gebruikt een nieuwe cache na de structurele wijziging",
+    /weerbriefing-v72/.test(lees("sw.js")));
+}
+
+/* Statische eindcontrole over alle handgeschreven runtimebronbestanden. */
+groep("Volledige broncontrole");
+{
+  const fs=require("fs"), path=require("path");
+  const root=__dirname, html=fs.readFileSync(path.join(root,"index.html"),"utf8");
+  const markup=html.split("<script",1)[0];
+  const ids=[...markup.matchAll(/\sid="([^"]+)"/g)].map(m=>m[1]);
+  check("HTML bevat geen dubbele id-attributen",new Set(ids).size===ids.length,
+    ids.filter((x,i)=>ids.indexOf(x)!==i).join(", "));
+
+  const luisterIds=[...html.matchAll(/document\.getElementById\("([^"]+)"\)\.addEventListener/g)].map(m=>m[1]);
+  const ontbrekend=[...new Set(luisterIds)].filter(id=>!ids.includes(id));
+  check("elke direct gekoppelde eventlistener heeft een bestaand element",ontbrekend.length===0,ontbrekend.join(", "));
+
+  const lokaal=[
+    ...[...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(m=>m[1]),
+    ...[...html.matchAll(/url\('([^']+)'\)/g)].map(m=>m[1])
+  ].filter(u=>! /^(?:https?:|data:|#)/.test(u)).map(u=>u.split(/[?#]/)[0]);
+  const mist=[...new Set(lokaal)].filter(u=>u && !fs.existsSync(path.join(root,u.replace(/^\.\//,""))));
+  check("alle lokaal verwezen assets bestaan",mist.length===0,mist.join(", "));
+
+  const apiPaden=[...html.matchAll(/"\/api\/([a-z0-9-]+)/g)].map(m=>m[1]);
+  const apiMist=[...new Set(apiPaden)].filter(n=>!fs.existsSync(path.join(root,"api",n+".js")));
+  check("iedere aangeroepen interne API heeft een bronbestand",apiMist.length===0,apiMist.join(", "));
+
+  const jsonBestanden=["package.json","manifest.json","lettermaten.json"];
+  let jsonFout="";
+  try{jsonBestanden.forEach(f=>JSON.parse(fs.readFileSync(path.join(root,f),"utf8")));}catch(e){jsonFout=e.message;}
+  check("alle JSON-bestanden zijn geldig",!jsonFout,jsonFout);
+
+  const handgeschreven=["index.html","sw.js","kern.js","data.js","api/plaatsnaam.js","api/waarschuwingen.js"];
+  const markeringen=[];
+  handgeschreven.forEach(f=>{
+    const t=fs.readFileSync(path.join(root,f),"utf8");
+    if(/\b(?:TODO|FIXME|HACK)\b/.test(t)) markeringen.push(f);
+    if(/http:\/\//.test(t)) markeringen.push(f+":onveilig-http");
+  });
+  check("geen open TODO/FIXME/HACK of onveilig HTTP in runtimecode",markeringen.length===0,markeringen.join(", "));
 }
 
 async function testenOpstartlocatie(){

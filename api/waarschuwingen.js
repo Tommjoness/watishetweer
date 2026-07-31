@@ -225,8 +225,10 @@ async function viaMeteoAlarm(slug, lat, lon) {
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "s-maxage=600, stale-while-revalidate=1800");
 
-  const lat = parseFloat(req.query && req.query.lat);
-  const lon = parseFloat(req.query && req.query.lon);
+  const q = req.query || {};
+  const leesCoord = v => v == null || String(v).trim() === "" ? NaN : Number(v);
+  const lat = leesCoord(q.lat);
+  const lon = leesCoord(q.lon);
   // Zonder geldige coordinaten kan er geen bron gekozen worden. Dan liever niets
   // dan terugvallen op een willekeurig land.
   if (!isFinite(lat) || !isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180)

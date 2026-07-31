@@ -1,7 +1,7 @@
 {
   "name": "weerbriefing",
   "version": "1.0.0",
-  "description": "Weersverwachting met etmaalbalk, radar, nachtzicht en verificatie van de eigen verwachting.",
+  "description": "Weersverwachting met etmaalbalk, kwartierneerslag, luchtkwaliteit, pollen en nachtzicht.",
   "private": true,
   "scripts": {
     "test": "node run.js"

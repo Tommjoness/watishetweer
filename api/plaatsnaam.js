@@ -6,7 +6,7 @@ async function viaNominatim(lat, lon) {
   const url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2"
     + "&lat=" + lat + "&lon=" + lon + "&zoom=12&accept-language=nl";
   const r = await fetch(url, {
-    headers: { "User-Agent": "Weerbriefing/1.0 (persoonlijke weer-app)", "Accept": "application/json" },
+    headers: { "User-Agent": "Weerbriefing/1.0 (github.com/Tommjoness/weathernow)", "Accept": "application/json" },
     signal: AbortSignal.timeout(6000)
   });
   if (!r.ok) throw new Error("nominatim status " + r.status);
@@ -27,7 +27,9 @@ async function viaBigDataCloud(lat, lon) {
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=604800");
 
-  const lat = parseFloat(req.query.lat), lon = parseFloat(req.query.lon);
+  const q = req.query || {};
+  const leesCoord = v => v == null || String(v).trim() === "" ? NaN : Number(v);
+  const lat = leesCoord(q.lat), lon = leesCoord(q.lon);
   if (!isFinite(lat) || !isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
     return res.status(400).json({ naam: null, reden: "ongeldige coordinaten" });
   }

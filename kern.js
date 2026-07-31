@@ -19,8 +19,8 @@ const NODIG = ["S", "opOnder", "maan", "bft", "BFTNAAM", "nl",
 // Handig om bij de hand te hebben, maar niet fataal als het er niet is.
 const EXTRA = ["plaatsNu", "plaatsNuIndex", "plaatsKlok", "nuTimerStart", "clearNuTimer",
                "klokTimerStart", "clearKlokTimer", "klokBijwerken", "locatieNu", "afstandKm", "kompasKort", "dagDeel", "maanUnicode", "tekenAlles", "load", "chips", "controle", "lucht", "stempel", "icon", "hhmm", "kompas",
-               "piek", "restkans", "daglengte", "inNederland", "nbsp", "esc", "clamp",
-               "mins", "naarLokaal", "radarTeken", "knmiVerwachting", "R",
+               "piek", "restkans", "daglengte", "nbsp", "esc", "clamp",
+               "mins", "naarLokaal",
                "CODES", "DIRSVOL", "DAGEN", "BFT", "THEMAS", "ls"];
 
 /* ---------- de app-code uit index.html halen ---------- */
@@ -76,8 +76,8 @@ function maakKlassen(el) {
 }
 
 function maakTekenvlak() {
-  // de radar wordt in de tests niet getekend, maar een ontbrekende methode mag
-  // nooit de reden zijn dat een test omvalt
+  // canvasmethoden worden in de tests slechts beperkt gebruikt; een ontbrekende
+  // methode mag nooit de reden zijn dat een inhoudelijke test omvalt
   return new Proxy({}, {
     get(o, k) {
       if (k === "measureText") return t => ({ width: String(t).length * 6 });
@@ -184,8 +184,8 @@ function maakElement(id, doc) {
     checked: false,
     disabled: false,
     selectedIndex: 0,
-    width: 640,
-    height: 470,
+    width: 900,
+    height: 296,
     min: "0", max: "0", step: "1",
     dataset: {},
     children: [],
