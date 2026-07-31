@@ -1,0 +1,176 @@
+name: Verwijder WeatherNow-radar gecontroleerd
+
+on:
+  push:
+    branches:
+      - agent/extrema-radar-status
+    paths:
+      - .github/workflows/remove-radar.yml
+
+permissions:
+  contents: write
+
+jobs:
+  remove-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/extrema-radar-status
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verwijder radar uit app en tests
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          # ---------- index.html ----------
+          p=Path('index.html')
+          s=p.read_text()
+
+          s=s.replace(" img-src 'self' data: https://tilecache.rainviewer.com https://basemaps.cartocdn.com https://anonymous.api.dataplatform.knmi.nl; connect-src 'self' https://api.rainviewer.com", " img-src 'self' data:; connect-src 'self'")
+          s=s.replace('    --accent-rain:#3B8FA3;\n','')
+          s=re.sub(r'\n  /\* radar \*/\n.*?  \.radarbalk button\{min-width:96px\}\n', '\n', s, count=1, flags=re.S)
+          s=re.sub(r'\n  /\* v70: geen cursor:grab/touch-action:none meer, de radar is statisch en.*?  #radartijd\{font-variant-numeric:tabular-nums\}\n', '\n', s, count=1, flags=re.S)
+          s=s.replace('#chart,#nc,#radar{-webkit-tap-highlight-color:transparent}', '#chart,#nc{-webkit-tap-highlight-color:transparent}')
+          s=s.replace('#chart,#nc,#radar{width:calc(100% + 34px);margin-left:-17px}', '#chart,#nc{width:calc(100% + 34px);margin-left:-17px}')
+          s=re.sub(r'\n    /\* v69: de radarbediening voelde als een groot, licht blok.*?    \.radarbalk button\{min-height:43px;box-sizing:border-box\}\n', '\n', s, count=1, flags=re.S)
+          s=s.replace('er is precies één #chart, één #radar, één #days, één #nights,\n     zoals daarvoor.', 'er is precies één #chart, één #days en één #nights, zoals daarvoor.')
+          s=re.sub(r'\n     v70-correctie: de radar- en zonuren-accentlijn.*?     aangeraakt, want die zijn in deze ronde niet gevraagd\. \*/', '\n     De overige accentlijnen blijven beperkt tot modules waar ze inhoudelijk iets aanduiden. */', s, count=1, flags=re.S)
+          s=re.sub(r'\n  /\* v70-herstel: de cyaanlijn boven \.radar is al weg.*?  #radartitel\{border-bottom:none\}\n', '\n', s, count=1, flags=re.S)
+          s=s.replace('Header, grafiek/\n     radar en dagen/nachtzicht blijven in dit bereik vanzelf gestapeld, want', 'Header, grafiek en dagen/nachtzicht blijven in dit bereik vanzelf gestapeld, want')
+          s=re.sub(r'    \.dashrow-chart\{display:grid;grid-template-columns:minmax\(0,1\.15fr\) minmax\(0,0\.85fr\);gap:var\(--s4\);align-items:start\}', '    .dashrow-chart{display:block}', s, count=1)
+          s=re.sub(r'\n    /\* de radar blijft zijn eigen intrinsieke beeldverhouding houden.*?    #radar\{aspect-ratio:640/470;width:auto;height:auto;max-width:100%;max-height:540px;margin:0 auto;display:block\}\n', '\n', s, count=1, flags=re.S)
+
+          radar_ui='''
+
+              <div class="dashcol">
+              <h2 id="radartitel"><span>Neerslagradar</span></h2>
+              <div class="radar">
+                <canvas id="radar" width="640" height="470" aria-label="Neerslagradar rond je locatie"></canvas>
+                <div id="radartijd"></div>
+                <div class="radarbalk">
+                  <button id="rspeel" title="Afspelen of pauzeren">Speel af</button>
+                  <input type="range" id="rschuif" min="0" max="0" value="0" step="1" aria-label="Tijdstip van het radarbeeld">
+                </div>
+                <div class="ssub mid" id="radarmelding"></div>
+              </div>
+              </div>'''
+          if radar_ui not in s:
+              raise SystemExit('radar UI block niet gevonden')
+          s=s.replace(radar_ui,'',1)
+          s=re.sub(r'\n      <span class="bron"><b>Radar.*?Radardekking volgt de nationale radarnetwerken en is niet overal ter wereld beschikbaar\.</span>', '', s, count=1, flags=re.S)
+          s=re.sub(r'/\* v71-correctie: de constante KNMI_STIJL.*?const RV_SCHEMA=8;\n', 'const inEuropa=(lat,lon)=>lat>29.5&&lat<71.5&&lon>-25&&lon<45;\n', s, count=1, flags=re.S)
+          s=s.replace('    radarLaden();\n','')
+          s=re.sub(r'\n/\* ---------- neerslagradar ---------- \*/.*?\n/\* ---------- officiele waarschuwingen ---------- \*/', '\n/* ---------- officiele waarschuwingen ---------- */', s, count=1, flags=re.S)
+          s=s.replace('  if(R.frames.length) radarTeken();   // de kaartondergrond wisselt mee\n','')
+          s=s.replace('de briefing en de radartekst', 'de briefing en de neerslagtekst')
+          s=s.replace('onder de radar', 'bij de neerslagverwachting')
+          s=s.replace('radartekst', 'neerslagtekst')
+          s=s.replace('grafiek, radar, zoom of tooltip', 'grafiek of tooltip')
+          p.write_text(s)
+
+          # ---------- kern.js ----------
+          p=Path('kern.js')
+          s=p.read_text()
+          s=s.replace('"piek", "restkans", "daglengte", "inNederland", "nbsp", "esc", "clamp",\n               "mins", "naarLokaal", "radarTeken", "knmiVerwachting", "opTijd", "R",', '"piek", "restkans", "daglengte", "nbsp", "esc", "clamp",\n               "mins", "naarLokaal",')
+          p.write_text(s)
+
+          # ---------- run.js ----------
+          p=Path('run.js')
+          s=p.read_text()
+          s=s.replace('for(const bron of ["Open-Meteo","RainViewer","CARTO","OpenStreetMap"])', 'for(const bron of ["Open-Meteo"])')
+          s=re.sub(r'\n\s*/\* De satellietlaag is eruit:.*?\n\s*/\* De briefing blijft staan', '\n\n  /* De briefing blijft staan', s, count=1, flags=re.S)
+          s=re.sub(r'\n\s*// KNMI mag alleen in de bronregel staan als hij ook gebruikt is.*?check\("de bronregel is eerlijk over de radardekking",/Radardekking volgt/\.test\(bronW\)\);', '', s, count=1, flags=re.S)
+          s=s.replace('/* 10l. vetgedrukt in de briefing en het contrast van de radarkaart */\ngroep("Nadruk en kaart");', '/* 10l. vetgedrukt in de briefing */\ngroep("Nadruk");')
+          s=re.sub(r'\n\s*/\* de kaart onder de radar was zo ver weggedrukt.*?\n\s*check\("de neerslaglaag blijft sterker dan de kaart",.*?\);', '', s, count=1, flags=re.S)
+          s=re.sub(r'\n\s*/\* 7b\. radarbeelden moeten op tijd staan\..*?\n\s*/\* 7c\. het cijfer mag niet op de rode nu-lijn vallen \*/', '\n\n  /* 7c. het cijfer mag niet op de rode nu-lijn vallen */', s, count=1, flags=re.S)
+          s=re.sub(r'\n\s*// 8\. satelliet alleen crediteren als er beelden zijn\n\s*check\("de bronregel noemt satelliet niet standaard",.*?\);', '', s, count=1, flags=re.S)
+          s=re.sub(r'\n\s*/\* Bij het afspelen flikkerde de neerslag:.*?\n\s*/\* Er staat een globale regel svg,canvas', '\n\n  /* Er staat een globale regel svg,canvas', s, count=1, flags=re.S)
+          s=re.sub(r'\n\s*/\* het kleurschema van de radar moet als een benoemde keuze in de code staan \*/.*?\n\s*/\* de klok hoort ook zichtbaar te blijven als je scrollt \*/', '\n\n  /* de klok hoort ook zichtbaar te blijven als je scrollt */', s, count=1, flags=re.S)
+          s=s.replace('/* 10r. de laklaag: schuifbalk, uitlijning, selectielijn en voettekst */', '/* 10r. de laklaag: uitlijning, selectielijn en voettekst */')
+          s=re.sub(r'\n\s*/\* De schuifbalk\. accent-color.*?\n\s*/\* De rode selectielijn zat tegen de tekst aan\. \*/', '\n\n  /* De rode selectielijn zat tegen de tekst aan. */', s, count=1, flags=re.S)
+          s=s.replace('check("elke bron heeft een eigen regel",bronnen>=4,bronnen+" regels");', 'check("elke bron heeft een eigen regel",bronnen>=1,bronnen+" regels");')
+          s=s.replace('for(const bron of ["open-meteo.com","rainviewer.com","carto.com","openstreetmap.org"])', 'for(const bron of ["open-meteo.com"])')
+          s=s.replace('groep("Briefing en radar afgestemd");','groep("Briefing en neerslagtekst afgestemd");')
+          s=s.replace('de radartekst','de neerslagtekst').replace('radar droog=','neerslagtekst droog=')
+          s=s.replace('briefing en radar nooit','briefing en neerslagtekst nooit')
+          s=re.sub(r'/\* 10v\. radar-zoom:.*?(?=/\* 10w\. luchtvochtigheidstegel zonder dauwpunt \*/)', '', s, count=1, flags=re.S)
+          s=s.replace('    && /--accent-rain:#3B8FA3/.test(bronK3) && /--accent-night:#142C4C/.test(bronK3)', '    && /--accent-night:#142C4C/.test(bronK3)')
+          s=s.replace('ze werden nergens anders meer gebruikt zodra de laatste drie\n     achtergrondregels (.radar/#nights/#aq) eruit gingen.', 'ze werden nergens anders meer gebruikt zodra de laatste moduleachtergronden eruit gingen.')
+          s=re.sub(r'\n\s*// v70-correctie: de radar had eerder.*?(?=\n\s*check\("basisachtergronden)', '\n', s, count=1, flags=re.S)
+          s=re.sub(r'\n\s*// v70-herstel: de canvasfallback van #radar.*?\n\s*check\("#radar\'s canvasfallback volgt de normale sheet-achtergrond, geen gekleurde tint",.*?\);', '', s, count=1, flags=re.S)
+          s=s.replace('// 1-3: één gedeelde DOM, geen dubbele grafiek-/radar-ids', '// 1-3: één gedeelde DOM, geen dubbele ids en geen verwijderde radar')
+          s=s.replace('check("er is precies één #radar in de hele pagina",(bronD.match(/id="radar"/g)||[]).length===1);', 'check("de verwijderde radar komt nergens meer in de DOM voor",(bronD.match(/id="radar"/g)||[]).length===0);')
+          s=s.replace('"<span>Neerslagradar</span>","id=\\"nctext\\"","<span>Zeven dagen</span>"', '"id=\\"nctext\\"","<span>Zeven dagen</span>"')
+          s=s.replace('(bronD.match(/class="dashcol/g)||[]).length===4', '(bronD.match(/class="dashcol/g)||[]).length===3')
+          s=s.replace('// 9: veilige minmax(0, ...)-kolommen in de desktopgrids die er nog zijn\n  // (sinds de herstelronde: hero en grafiek/radar; dagen/nachtzicht is\n  // bewust geen zij-aan-zij-grid meer, zie de Herstelronde-testgroep)', '// 9: veilige minmax(0, ...)-kolommen in het resterende desktopgrid.\n  // De grafiek gebruikt na de radarverwijdering de volle breedte; dagen/nachtzicht blijft gestapeld.')
+          s=s.replace('(bronD.match(/grid-template-columns:minmax\\(0,[^)]+\\) minmax\\(0,[^)]+\\)/g)||[]).length===2', '(bronD.match(/grid-template-columns:minmax\\(0,[^)]+\\) minmax\\(0,[^)]+\\)/g)||[]).length===1')
+          s=s.replace('// 7: mobiele DOM-volgorde blijft logisch (brief -> hero -> stats -> grafiek -> radar -> ... -> footer)', '// 7: mobiele DOM-volgorde blijft logisch (brief -> hero -> stats -> grafiek -> neerslagtekst -> ... -> footer)')
+          s=s.replace('check("grafiek en radar delen vanaf desktop één grid (.dashrow-chart)",\n    /\\.dashrow-chart\\{display:grid;grid-template-columns:minmax/.test(desktopBlok));', 'check("de grafiek gebruikt na verwijdering van de radar de volle desktopbreedte",\n    /\\.dashrow-chart\\{display:block\\}/.test(desktopBlok));')
+          s=re.sub(r'\n\s*check\("de radar heeft een begrensde desktophoogte.*?\);', '', s, count=1, flags=re.S)
+          s=re.sub(r'\n\s*check\("1\. het regenaccent \(\.radar\) staat buiten iedere mediaquery",.*?\);', '', s, count=1, flags=re.S)
+          s=s.replace('check("5. desktop-specifieke padding voor de resterende modules blijft binnen de 1100px-mediaquery",\n    /\\.radar\\{max-width:100%;padding:var\\(--s2\\) var\\(--s2\\) 4px\\}/.test(desktopH)\n    && /#aq\\{padding:var\\(--s2\\)\\}/.test(desktopH));', 'check("5. desktop-specifieke padding voor luchtkwaliteit blijft binnen de 1100px-mediaquery",\n    /#aq\\{padding:var\\(--s2\\)\\}/.test(desktopH));')
+          s=s.replace('deze vier accenten','de resterende accenten').replace('voor deze vier accenten','voor deze accenten')
+          s=s.replace('/* 19. v69-polishronde: grafieklabels, Nachtzicht-/grafiekachtergrond, mobiele\n   tooltip en radarbediening.', '/* 19. v69-polishronde: grafieklabels, Nachtzicht-/grafiekachtergrond en mobiele\n   tooltip.')
+          s=re.sub(r'\n\s*// 14\.5 radarbediening.*?\n\s*\}\n\nasync function testenOpstartlocatie', '\n}\n\nasync function testenOpstartlocatie', s, count=1, flags=re.S)
+          s=re.sub(r'\n\s*// v71-correctie, functionele test: knmiVerwachting\(\).*?\n\s*\}\n(?=\})', '\n', s, count=1, flags=re.S)
+          s=s.replace('/* 10u. briefing en radartekst delen dezelfde conclusie over de komende twee uur */','/* 10u. briefing en neerslagtekst delen dezelfde conclusie over de komende twee uur */')
+          s=s.replace('radar:norm(bak.nctext.textContent)', 'neerslagtekst:norm(bak.nctext.textContent)')
+          s=s.replace('.radar)', '.neerslagtekst)').replace('.radar,', '.neerslagtekst,').replace('s.radar', 's.neerslagtekst')
+          s=s.replace('const radarDroog=', 'const tekstDroog=').replace('briefDroog!==radarDroog','briefDroog!==tekstDroog').replace('+radarDroog','+tekstDroog')
+
+          marker='\nasync function testenOpstartlocatie(){'
+          new='''
+          /* Radar is op verzoek volledig verwijderd; de aparte twee-uursneerslagtekst blijft bestaan. */
+          groep("Radar verwijderd");
+          {
+            const fsR=require("fs"), pathR=require("path");
+            const bronR=fsR.readFileSync(pathR.join(__dirname,"index.html"),"utf8");
+            check("de radarinterface is uit de DOM verwijderd",
+              !/Neerslagradar|id="radar"|id="rspeel"|id="rschuif"|id="radartijd"|id="radarmelding"/.test(bronR));
+            check("de radarlogica en externe radarbronnen zijn verwijderd",
+              !/radarLaden|radarTeken|api\\.rainviewer|tilecache\\.rainviewer|basemaps\\.cartocdn|radarverwachting/.test(bronR));
+            check("de aparte verwachting voor de komende twee uur blijft bestaan",
+              /Neerslag komende twee uur/.test(bronR) && /id="nctext"/.test(bronR) && /id="nc"/.test(bronR));
+          }
+          '''
+          if marker not in s:
+              raise SystemExit('startup marker niet gevonden')
+          s=s.replace(marker,new+marker,1)
+          p.write_text(s)
+
+          Path('api/radarverwachting.js').unlink(missing_ok=True)
+
+      - name: Controleer syntax en volledige testset
+        run: |
+          node --check kern.js
+          node --check run.js
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path('index.html').read_text()
+          js='\n'.join(re.findall(r'<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)</script>',html))
+          Path('/tmp/index-inline.js').write_text(js)
+          assert 'Neerslagradar' not in html
+          assert 'id="radar"' not in html
+          assert 'radarLaden' not in html
+          assert 'radarverwachting' not in html
+          assert 'Neerslag komende twee uur' in html
+          PY
+          node --check /tmp/index-inline.js
+          node run.js
+
+      - name: Leg gecontroleerde wijziging vast
+        run: |
+          rm -f .github/workflows/remove-radar.yml
+          git config user.name "WeatherNow Agent"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Verwijder neerslagradar uit WeatherNow"
+          git push origin HEAD:agent/extrema-radar-status
