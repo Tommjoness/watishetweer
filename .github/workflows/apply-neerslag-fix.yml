@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   fix:
-    if: github.event.head_commit.message == 'Start gecontroleerde neerslagconsistentie-fix'
+    if: github.event.head_commit.message == 'Activeer gecontroleerde neerslagconsistentie-fix'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -132,7 +132,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));''',
         run: |
           git fetch origin main
           git checkout -B main origin/main
-          rm .github/workflows/apply-neerslag-fix.yml
+          rm -f .github/workflows/apply-neerslag-fix.yml .github/neerslag-fix-trigger
           git add -A
           git commit -m "Verwijder tijdelijke neerslagfix-workflow"
           git push origin main
