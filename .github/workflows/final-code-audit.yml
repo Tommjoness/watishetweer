@@ -1,0 +1,312 @@
+name: Volledige WeatherNow-codecontrole
+
+on:
+  push:
+    branches:
+      - agent/extrema-radar-status
+    paths:
+      - .github/workflows/final-code-audit.yml
+
+permissions:
+  contents: write
+
+jobs:
+  audit-fix-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/extrema-radar-status
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Herstel zichtbare fouten en ruim aangetroffen codeproblemen op
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+          import re
+
+          def vervang(tekst, oud, nieuw, label, aantal=1):
+              n = tekst.count(oud)
+              if n != aantal:
+                  raise SystemExit(f"{label}: verwacht {aantal} overeenkomst(en), gevonden {n}")
+              return tekst.replace(oud, nieuw, aantal)
+
+          # ---------- index.html ----------
+          p = Path("index.html")
+          s = p.read_text()
+
+          oud = '''  h2 .r{font-family:var(--mono);letter-spacing:0;text-transform:none;font-size:11.5px;color:var(--ink-45);
+                display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap}
+          h2 button{padding:4px 9px;font-size:9.5px}'''
+          nieuw = '''  h2 .r{font-family:var(--mono);letter-spacing:0;text-transform:none;font-size:11.5px;color:var(--ink-45);
+                display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap}
+          #suntimes{display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap}
+          #suntimes span{white-space:nowrap}
+          h2 button{padding:4px 9px;font-size:9.5px}'''
+          s = vervang(s, oud, nieuw, "basisopmaak daglichttijden")
+
+          s = vervang(
+              s,
+              '    #suntimes{align-items:flex-start;text-align:left}',
+              '    #suntimes{display:grid;grid-template-columns:1fr;gap:2px;align-items:start;text-align:left}',
+              "mobiele opmaak daglichttijden"
+          )
+
+          oud = '''  const kandidaten=[...kandKaart.entries()].map(([i,rang])=>({i,rang}))
+            .sort((a,b)=>b.rang-a.rang||a.i-b.i);
+
+          const labelBreed=v=>String(Math.round(v)).length*F.temp*0.58+F.temp*0.40;'''
+          nieuw = '''  const kandidatenRuw=[...kandKaart.entries()].map(([i,rang])=>({i,rang}))
+            .sort((a,b)=>b.rang-a.rang||a.i-b.i);
+          /* Een gewoon rasterlabel voegt weinig toe als vlak ernaast al een
+             belangrijker label met dezelfde of vrijwel dezelfde afgeronde
+             temperatuur staat. Op een telefoon gaf dat bijvoorbeeld tweemaal
+             22° bij het actuele punt en 14°/15° rond hetzelfde dal. Alleen het
+             lage-prioriteitsraster wijkt; actuele punten en echte extrema
+             blijven altijd behouden. */
+          const kandidaten=kandidatenRuw.filter((k,pos)=>{
+            if(k.rang!==1) return true;
+            const afgerond=Math.round(T[k.i]);
+            return !kandidatenRuw.slice(0,pos).some(g=>
+              g.rang>1 &&
+              Math.abs(g.i-k.i)*cw<Math.max(48,cw*2.2) &&
+              Math.abs(Math.round(T[g.i])-afgerond)<=1);
+          });
+
+          const labelBreed=v=>String(Math.round(v)).length*F.temp*0.58+F.temp*0.40;'''
+          s = vervang(s, oud, nieuw, "filter voor redundante temperatuurlabels")
+
+          oud = '''  document.getElementById("suntimes").innerHTML=(day.sunrise[di]&&day.sunset[di])
+            ? "<span>zonsopkomst "+hhmm(day.sunrise[di])+"</span>"
+             +"<span>zonsondergang "+hhmm(day.sunset[di])+"</span>"
+             +"<span>"+daglengte(di)+"</span>"
+            : "<span>"+daglengte(di)+"</span>";'''
+          nieuw = '''  document.getElementById("suntimes").innerHTML=(day.sunrise[di]&&day.sunset[di])
+            ? "<span>zonsopkomst "+hhmm(day.sunrise[di])+"</span> "
+             +"<span>zonsondergang "+hhmm(day.sunset[di])+"</span> "
+             +"<span>"+daglengte(di)+"</span>"
+            : "<span>"+daglengte(di)+"</span>";'''
+          s = vervang(s, oud, nieuw, "fallbackspaties tussen daglichttijden")
+          p.write_text(s)
+
+          # ---------- run.js: regressies en volledige broncontrole ----------
+          p = Path("run.js")
+          s = p.read_text()
+          marker = '''/* 7d. labels boven de dagbalk mogen nooit buiten de tekening vallen */'''
+          invoeging = r'''/* 7c. redundante temperatuurcijfers en daglichttijden op mobiel */
+          groep("Rustige grafiek en daglichttijden");
+          {
+            const {api,bak}=laadKern(390);
+            const waarden={
+              "0:14":22.0,"0:15":22.2,"0:16":23.0,"0:17":22.2,"0:18":21.0,
+              "0:19":20.0,"0:20":19.0,"0:21":18.0,"0:22":17.0,"0:23":16.5,
+              "1:0":16.0,"1:1":15.7,"1:2":15.3,"1:3":15.0,"1:4":14.7,
+              "1:5":14.4,"1:6":14.0,"1:7":15.0,"1:8":16.0,"1:9":17.0,
+              "1:10":18.0,"1:11":19.0,"1:12":20.0,"1:13":21.0
+            };
+            const d=bouw({temp:(u,dag)=>waarden[dag+":"+u] ?? (dag===0?18:20)});
+            d.current.time="2026-07-22T14:39";
+            d.current.temperature_2m=22;
+            Object.assign(api.S,{d:d,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+            api.S.i0=d.hourly.time.findIndex(t=>t.slice(0,13)===d.current.time.slice(0,13));
+            api.etmaal(api.S.i0,24);
+            const labels=[...bak.chart.innerHTML.matchAll(/<text x="([\d.]+)" y="([\d.]+)" text-anchor="middle" fill="[^"]+"[^>]*font-family="Bodoni Moda,serif" font-size="[\d.]+">(-?\d+)°<\/text>/g)]
+              .map(m=>({x:+m[1],y:+m[2],v:+m[3]}));
+            const redundant=[];
+            for(let i=0;i<labels.length;i++) for(let j=i+1;j<labels.length;j++){
+              const a=labels[i],b=labels[j];
+              if(Math.abs(a.x-b.x)<48 && Math.abs(a.v-b.v)<=1) redundant.push(a.v+"°/"+b.v+"°");
+            }
+            check("mobiel toont geen vrijwel gelijke temperatuurcijfers vlak naast elkaar",
+              redundant.length===0,redundant.join(", "));
+            check("belangrijke piek en dal blijven wel gelabeld",
+              labels.some(x=>x.v===23)&&labels.some(x=>x.v===14),labels.map(x=>x.v).join(","));
+            check("daglichttijden blijven drie afzonderlijke onderdelen",
+              (bak.suntimes.innerHTML.match(/<span>/g)||[]).length===3,bak.suntimes.innerHTML);
+
+            const fs=require("fs"), bron=fs.readFileSync(require("path").join(__dirname,"index.html"),"utf8");
+            check("daglichttijden hebben op mobiel ieder een eigen regel",
+              /#suntimes\{display:grid;grid-template-columns:1fr;gap:2px/.test(bron));
+          }
+
+          ''' + marker
+          if marker not in s:
+              raise SystemExit("invoegpunt grafiekregressies niet gevonden")
+          s = s.replace(marker, invoeging, 1)
+
+          oud = '''/* Radar is op verzoek volledig verwijderd; de aparte twee-uursneerslagtekst blijft bestaan. */
+          groep("Radar verwijderd");
+          {
+            const fsR=require("fs"), pathR=require("path");
+            const bronR=fsR.readFileSync(pathR.join(__dirname,"index.html"),"utf8");
+            check("de radarinterface is uit de DOM verwijderd",
+              !/Neerslagradar|id="radar"|id="rspeel"|id="rschuif"|id="radartijd"|id="radarmelding"/.test(bronR));
+            check("de radarlogica en externe radarbronnen zijn verwijderd",
+              !/radarLaden|radarTeken|api\\.rainviewer|tilecache\\.rainviewer|basemaps\\.cartocdn|radarverwachting/.test(bronR));
+            check("de aparte verwachting voor de komende twee uur blijft bestaan",
+              /Neerslag komende twee uur/.test(bronR) && /id="nctext"/.test(bronR) && /id="nc"/.test(bronR));
+          }'''
+          nieuw = '''/* Radar is op verzoek volledig verwijderd; de aparte twee-uursneerslagtekst blijft bestaan. */
+          groep("Radar verwijderd en bronbestanden consistent");
+          {
+            const fsR=require("fs"), pathR=require("path");
+            const lees=f=>fsR.readFileSync(pathR.join(__dirname,f),"utf8");
+            const bronR=lees("index.html");
+            check("de radarinterface is uit de DOM verwijderd",
+              !/Neerslagradar|id="radar"|id="rspeel"|id="rschuif"|id="radartijd"|id="radarmelding"/.test(bronR));
+            check("de radarlogica en externe radarbronnen zijn uit alle runtimebestanden verwijderd",(()=>{
+              const bestanden=["index.html","package.json","manifest.json","sw.js","kern.js","data.js","api/plaatsnaam.js","api/waarschuwingen.js"];
+              return bestanden.every(f=>!/radarverwachting|rainviewer|cartocdn|neerslagradar/i.test(lees(f)));
+            })());
+            check("de verwijderde radar-API bestaat niet meer",!fsR.existsSync(pathR.join(__dirname,"api/radarverwachting.js")));
+            check("de aparte verwachting voor de komende twee uur blijft bestaan",
+              /Neerslag komende twee uur/.test(bronR) && /id="nctext"/.test(bronR) && /id="nc"/.test(bronR));
+            check("de serviceworker gebruikt een nieuwe cache na de structurele wijziging",
+              /weerbriefing-v72/.test(lees("sw.js")));
+          }'''
+          s = vervang(s, oud, nieuw, "uitgebreide runtimeconsistentietest")
+
+          marker = '''async function testenOpstartlocatie(){'''
+          broncontrole = r'''/* Statische eindcontrole over alle handgeschreven runtimebronbestanden. */
+          groep("Volledige broncontrole");
+          {
+            const fs=require("fs"), path=require("path");
+            const root=__dirname, html=fs.readFileSync(path.join(root,"index.html"),"utf8");
+            const ids=[...html.matchAll(/\sid="([^"]+)"/g)].map(m=>m[1]);
+            check("HTML bevat geen dubbele id-attributen",new Set(ids).size===ids.length,
+              ids.filter((x,i)=>ids.indexOf(x)!==i).join(", "));
+
+            const luisterIds=[...html.matchAll(/document\.getElementById\("([^"]+)"\)\.addEventListener/g)].map(m=>m[1]);
+            const ontbrekend=[...new Set(luisterIds)].filter(id=>!ids.includes(id));
+            check("elke direct gekoppelde eventlistener heeft een bestaand element",ontbrekend.length===0,ontbrekend.join(", "));
+
+            const lokaal=[
+              ...[...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(m=>m[1]),
+              ...[...html.matchAll(/url\('([^']+)'\)/g)].map(m=>m[1])
+            ].filter(u=>! /^(?:https?:|data:|#)/.test(u)).map(u=>u.split(/[?#]/)[0]);
+            const mist=[...new Set(lokaal)].filter(u=>u && !fs.existsSync(path.join(root,u.replace(/^\.\//,""))));
+            check("alle lokaal verwezen assets bestaan",mist.length===0,mist.join(", "));
+
+            const apiPaden=[...html.matchAll(/"\/api\/([a-z0-9-]+)/g)].map(m=>m[1]);
+            const apiMist=[...new Set(apiPaden)].filter(n=>!fs.existsSync(path.join(root,"api",n+".js")));
+            check("iedere aangeroepen interne API heeft een bronbestand",apiMist.length===0,apiMist.join(", "));
+
+            const jsonBestanden=["package.json","manifest.json","lettermaten.json"];
+            let jsonFout="";
+            try{jsonBestanden.forEach(f=>JSON.parse(fs.readFileSync(path.join(root,f),"utf8")));}catch(e){jsonFout=e.message;}
+            check("alle JSON-bestanden zijn geldig",!jsonFout,jsonFout);
+
+            const handgeschreven=["index.html","sw.js","kern.js","data.js","api/plaatsnaam.js","api/waarschuwingen.js"];
+            const markeringen=[];
+            handgeschreven.forEach(f=>{
+              const t=fs.readFileSync(path.join(root,f),"utf8");
+              if(/\b(?:TODO|FIXME|HACK)\b/.test(t)) markeringen.push(f);
+              if(/http:\/\//.test(t)) markeringen.push(f+":onveilig-http");
+            });
+            check("geen open TODO/FIXME/HACK of onveilig HTTP in runtimecode",markeringen.length===0,markeringen.join(", "));
+          }
+
+          ''' + marker
+          if marker not in s:
+              raise SystemExit("invoegpunt volledige broncontrole niet gevonden")
+          s = s.replace(marker, broncontrole, 1)
+          p.write_text(s)
+
+          # ---------- package.json ----------
+          p = Path("package.json")
+          package = json.loads(p.read_text())
+          package["description"] = "Weersverwachting met etmaalbalk, kwartierneerslag, luchtkwaliteit, pollen en nachtzicht."
+          p.write_text(json.dumps(package, ensure_ascii=False, indent=2) + "\n")
+
+          # ---------- service worker ----------
+          p = Path("sw.js")
+          s = p.read_text()
+          s = vervang(s, 'const CACHE = "weerbriefing-v71";', 'const CACHE = "weerbriefing-v72";', "cacheversie")
+          s = vervang(
+              s,
+              '  if (/open-meteo\\.com$|bigdatacloud\\.net$|rainviewer\\.com$|cartocdn\\.com$/.test(url.hostname)) return;',
+              '  if (/open-meteo\\.com$|bigdatacloud\\.net$/.test(url.hostname)) return;',
+              "verwijderde radardomeinen uit serviceworker"
+          )
+          s = vervang(s, '  if (url.pathname.startsWith("/api/")) return;   // waarschuwingen altijd vers',
+                         '  if (url.pathname.startsWith("/api/")) return;   // serverfuncties altijd vers',
+                         "algemene API-cachetoelichting")
+          p.write_text(s)
+
+          # ---------- testharnas ----------
+          p = Path("kern.js")
+          s = p.read_text()
+          s = vervang(s,
+              '  // de radar wordt in de tests niet getekend, maar een ontbrekende methode mag\n  // nooit de reden zijn dat een test omvalt',
+              '  // canvasmethoden worden in de tests slechts beperkt gebruikt; een ontbrekende\n  // methode mag nooit de reden zijn dat een inhoudelijke test omvalt',
+              "verouderde radaropmerking in testharnas")
+          s = vervang(s, '    width: 640,\n    height: 470,', '    width: 900,\n    height: 296,', "canvasafmetingen testharnas")
+          p.write_text(s)
+
+          # ---------- testdata: geldige nulwaarden behouden ----------
+          p = Path("data.js")
+          s = p.read_text()
+          s = vervang(s,
+              '  // de app vraagt 24 uur historie op, dus die zit hier ook in\n  // de app vraagt 24 uur historie op, dus het uurblok begint een dag eerder dan het dagblok',
+              '  // De app vraagt 24 uur historie op; het uurblok begint daarom een dag eerder dan het dagblok.',
+              "dubbele testdatacomment")
+          s = vervang(s, 'RH.push(o.rh||75);', 'RH.push(o.rh??75);', "nul luchtvochtigheid in testdata")
+          s = vervang(s, 't-(o.spreiding||5)', 't-(o.spreiding??5)', "nul spreiding in testdata")
+          s = vervang(s, 'WS.push(o.ws||14);', 'WS.push(o.ws??14);', "windstilte in testdata")
+          s = vervang(s, 'relative_humidity_2m:o.rh||RH[NU],', 'relative_humidity_2m:o.rh??RH[NU],', "nul huidige luchtvochtigheid in testdata")
+          p.write_text(s)
+
+          # ---------- API-invoer strikt valideren ----------
+          p = Path("api/plaatsnaam.js")
+          s = p.read_text()
+          s = vervang(s,
+              'headers: { "User-Agent": "Weerbriefing/1.0 (persoonlijke weer-app)", "Accept": "application/json" },',
+              'headers: { "User-Agent": "Weerbriefing/1.0 (github.com/Tommjoness/weathernow)", "Accept": "application/json" },',
+              "herleidbare Nominatim User-Agent")
+          s = vervang(s,
+              '  const lat = parseFloat(req.query.lat), lon = parseFloat(req.query.lon);',
+              '  const q = req.query || {};\n  const leesCoord = v => v == null || String(v).trim() === "" ? NaN : Number(v);\n  const lat = leesCoord(q.lat), lon = leesCoord(q.lon);',
+              "strikte coordinaatvalidatie plaatsnaam")
+          p.write_text(s)
+
+          p = Path("api/waarschuwingen.js")
+          s = p.read_text()
+          s = vervang(s,
+              '  const lat = parseFloat(req.query && req.query.lat);\n  const lon = parseFloat(req.query && req.query.lon);',
+              '  const q = req.query || {};\n  const leesCoord = v => v == null || String(v).trim() === "" ? NaN : Number(v);\n  const lat = leesCoord(q.lat);\n  const lon = leesCoord(q.lon);',
+              "strikte coordinaatvalidatie waarschuwingen")
+          p.write_text(s)
+
+      - name: Controleer syntax, JSON en volledige testset
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' f; do node --check "$f"; done < <(find . -type f -name '*.js' -not -path './.git/*' -not -path './.github/*' -print0)
+          python - <<'PY'
+          from pathlib import Path
+          import json, re
+          html=Path('index.html').read_text()
+          js='\n'.join(re.findall(r'<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)</script>',html))
+          Path('/tmp/index-inline.js').write_text(js)
+          for f in ['package.json','manifest.json','lettermaten.json']:
+              json.loads(Path(f).read_text())
+          PY
+          node --check /tmp/index-inline.js
+          node run.js | tee /tmp/weathernow-tests.log
+          ! grep -q 'FOUT' /tmp/weathernow-tests.log
+
+      - name: Leg gecontroleerde eindversie vast
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/final-code-audit.yml
+          git config user.name "WeatherNow Agent"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Rond WeatherNow af na volledige codecontrole"
+          git push origin HEAD:agent/extrema-radar-status
