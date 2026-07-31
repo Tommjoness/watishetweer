@@ -1,0 +1,36 @@
+name: Voer centrale weerinterpretatie uit
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  implementatie:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/interpretatie-engine
+          fetch-depth: 0
+
+      - name: Implementeer en test
+        run: python3 run_staged.py
+
+      - name: Ruim tijdelijke uitvoerder op
+        if: always()
+        shell: bash
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+          rm -f .github/workflows/run-weather-interpretation.yml .github/weather-interpretation-trigger
+          git config user.name "WeatherNow Agent"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Verwijder tijdelijke weerinterpretatie-uitvoerder"
+            git push origin main
+          fi
