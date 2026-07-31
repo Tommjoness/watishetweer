@@ -1,0 +1,414 @@
+name: Bouw centrale weerinterpretatie
+
+on:
+  push:
+    branches:
+      - agent/interpretatie-engine
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/interpretatie-engine
+          fetch-depth: 0
+
+      - name: Maak centrale interpretatie-engine
+        shell: bash
+        run: |
+          cat > interpretatie.js <<'EOF'
+          (function(root,factory){
+            const api=factory();
+            if(typeof module==="object"&&module.exports) module.exports=api;
+            if(root) root.WeerInterpretatie=api;
+          })(typeof globalThis!=="undefined"?globalThis:this,function(){
+            "use strict";
+            const CONFIG=Object.freeze({meetbaarMm:0.1,actueelMm:0.05,kansZeerKleinMax:19,kansKleinMax:39,kansMogelijkMax:69,volledigeDekking:0.9,minimaleDekking:0.5});
+            const WMO_FAMILIE=Object.freeze({0:"helder",1:"helder",2:"halfbewolkt",3:"bewolkt",45:"mist",48:"ijzel",51:"regen",53:"regen",55:"regen",56:"ijzel",57:"ijzel",61:"regen",63:"regen",65:"regen",66:"ijzel",67:"ijzel",71:"sneeuw",73:"sneeuw",75:"sneeuw",77:"sneeuw",80:"regen",81:"regen",82:"regen",85:"sneeuw",86:"sneeuw",95:"onweer",96:"onweer",99:"onweer"});
+            const FAMILIE_TEKST=Object.freeze({helder:"helder",halfbewolkt:"half bewolkt",bewolkt:"bewolkt",mist:"mistig",regen:"regenachtig",sneeuw:"sneeuwachtig",ijzel:"kans op gladheid",onweer:"onweersachtig",onbekend:"wisselvallig"});
+            const FAMILIE_ERNS=Object.freeze({helder:0,halfbewolkt:1,bewolkt:2,mist:3,regen:4,sneeuw:5,ijzel:6,onweer:7,onbekend:0});
+            const getal=v=>v!=null&&Number.isFinite(Number(v))?Number(v):null;
+            const begrens=(v,a,b)=>Math.max(a,Math.min(b,v));
+            function minuut(t){
+              if(t==null)return null;
+              if(typeof t==="number"&&Number.isFinite(t))return Math.floor(t/60);
+              const s=String(t).trim();if(!s)return null;
+              const iso=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s)?s.slice(0,16)+":00Z":s;
+              const ms=Date.parse(iso);return Number.isFinite(ms)?Math.floor(ms/60000):null;
+            }
+            function klok(v){
+              if(v==null)return "–";
+              if(typeof v==="string"&&v.length>=16)return v.slice(11,16);
+              const d=new Date(v*60000);return String(d.getUTCHours()).padStart(2,"0")+":"+String(d.getUTCMinutes()).padStart(2,"0");
+            }
+            function vorigeKlok(t,stap){const m=minuut(t);return m==null?"–":klok(m-(stap||60));}
+            function intervalLabel(t,stap){return vorigeKlok(t,stap)+"–"+klok(t);}
+            function overlap(a0,a1,b0,b1){return Math.max(0,Math.min(a1,b1)-Math.max(a0,b0));}
+            function dekking(intervalen,start,eind){
+              const stukken=intervalen.map(x=>[Math.max(start,x.van),Math.min(eind,x.tot)]).filter(x=>x[1]>x[0]).sort((a,b)=>a[0]-b[0]);
+              if(!stukken.length)return 0;
+              let totaal=0,van=stukken[0][0],tot=stukken[0][1];
+              for(let i=1;i<stukken.length;i++){const [a,b]=stukken[i];if(a<=tot)tot=Math.max(tot,b);else{totaal+=tot-van;van=a;tot=b;}}
+              totaal+=tot-van;return begrens(totaal/Math.max(1,eind-start),0,1);
+            }
+            function bouwIntervalen(reeks,stap,velden){
+              const times=reeks&&Array.isArray(reeks.time)?reeks.time:[],uit=[];let vorig=null,monotoon=true;
+              for(let i=0;i<times.length;i++){
+                const tot=minuut(times[i]);if(tot==null)continue;if(vorig!=null&&tot<=vorig)monotoon=false;vorig=tot;
+                const o={i,tijd:times[i],van:tot-stap,tot};for(const veld of velden||[])o[veld]=getal(reeks[veld]&&reeks[veld][i]);uit.push(o);
+              }
+              uit.monotoon=monotoon;return uit;
+            }
+            function somGewogen(intervalen,veld,start,eind){let som=0,heeft=false;for(const x of intervalen){const ov=overlap(x.van,x.tot,start,eind);if(!ov||x[veld]==null)continue;heeft=true;som+=x[veld]*(ov/Math.max(1,x.tot-x.van));}return heeft?Math.max(0,som):null;}
+            function maxInVenster(intervalen,veld,start,eind){let max=null,waar=null;for(const x of intervalen){if(!overlap(x.van,x.tot,start,eind)||x[veld]==null)continue;if(max==null||x[veld]>max){max=x[veld];waar=x;}}return{waarde:max,interval:waar};}
+            function eersteMeetbaar(intervalen,veld,start,eind,drempel){for(const x of intervalen)if(overlap(x.van,x.tot,start,eind)&&x[veld]!=null&&x[veld]>=drempel)return x;return null;}
+            function laatsteMeetbaar(intervalen,veld,start,eind,drempel){let laatst=null;for(const x of intervalen)if(overlap(x.van,x.tot,start,eind)&&x[veld]!=null&&x[veld]>=drempel)laatst=x;return laatst;}
+            function kansNiveau(kans){if(kans==null)return"onbekend";if(kans<=0)return"geen";if(kans<=CONFIG.kansZeerKleinMax)return"zeer_klein";if(kans<=CONFIG.kansKleinMax)return"klein";if(kans<=CONFIG.kansMogelijkMax)return"mogelijk";return"groot";}
+            function mmTekst(mm){if(mm==null)return"niet beschikbaar";if(mm>0&&mm<0.1)return"<0,1 mm";return mm.toFixed(1).replace(".",",")+" mm";}
+            function kansTekst(kans){return kans==null?"niet beschikbaar":Math.round(kans)+"%";}
+            function analyseNeerslag(data,startT,duurMinuten){
+              data=data||{};const duur=Math.max(15,Number(duurMinuten)||120),start=minuut(startT!=null?startT:data.current&&data.current.time);
+              if(start==null)return{status:"onvoldoende_data",genoeg:false,duurMinuten:duur,reden:"ongeldig starttijdstip"};
+              const eind=start+duur,m=bouwIntervalen(data.minutely_15,15,["precipitation","rain","showers","snowfall","weather_code"]),h=bouwIntervalen(data.hourly,60,["precipitation_probability","precipitation","rain","showers","snowfall","weather_code"]);
+              const mDekking=dekking(m,start,eind),hDekking=dekking(h,start,eind),mGeldig=m.monotoon!==false&&mDekking>=CONFIG.minimaleDekking,hGeldig=h.monotoon!==false&&hDekking>=CONFIG.minimaleDekking;
+              const bronHoeveelheid=(mGeldig&&mDekking>=hDekking)?"minutely_15":hGeldig?"hourly":mGeldig?"minutely_15":null,bronReeks=bronHoeveelheid==="minutely_15"?m:bronHoeveelheid==="hourly"?h:[];
+              const hoeveelheid=bronHoeveelheid?somGewogen(bronReeks,"precipitation",start,eind):null,kansInfo=maxInVenster(h,"precipitation_probability",start,eind),kans=hGeldig?kansInfo.waarde:null;
+              const eerste=bronHoeveelheid?eersteMeetbaar(bronReeks,"precipitation",start,eind,CONFIG.meetbaarMm):null,laatste=bronHoeveelheid?laatsteMeetbaar(bronReeks,"precipitation",start,eind,CONFIG.meetbaarMm):null;
+              const huidige=getal(data.current&&data.current.precipitation),huidigCode=getal(data.current&&data.current.weather_code),huidigeFamilie=WMO_FAMILIE[huidigCode]||"onbekend",regentNu=huidige!=null&&huidige>CONFIG.actueelMm&&["regen","sneeuw","ijzel","onweer"].includes(huidigeFamilie);
+              const hoeveelheidDekking=bronHoeveelheid==="minutely_15"?mDekking:bronHoeveelheid==="hourly"?hDekking:0,genoeg=(hoeveelheidDekking>=CONFIG.volledigeDekking)||(hDekking>=CONFIG.volledigeDekking),niveau=kansNiveau(kans);
+              let status;if(!genoeg)status="onvoldoende_data";else if(regentNu)status="neerslag_nu";else if(hoeveelheid!=null&&hoeveelheid>=CONFIG.meetbaarMm)status="neerslag_verwacht";else if(hoeveelheid!=null&&hoeveelheid>0)status="spoor_berekend";else if(niveau==="groot")status="grote_kans_geen_hoeveelheid";else if(niveau==="mogelijk")status="mogelijk";else if(niveau==="klein")status="kleine_kans";else if(niveau==="zeer_klein")status="zeer_kleine_kans";else if(niveau==="geen"&&hoeveelheid===0)status="geen_neerslag";else status="onvoldoende_data";
+              const conflict=(kans!=null&&hoeveelheid!=null)&&((kans>=70&&hoeveelheid<CONFIG.meetbaarMm)||(kans<20&&hoeveelheid>=CONFIG.meetbaarMm));
+              let zekerheid="hoog";if(!genoeg||m.monotoon===false||h.monotoon===false)zekerheid="laag";else if(conflict||hoeveelheidDekking<CONFIG.volledigeDekking||hDekking<CONFIG.volledigeDekking)zekerheid="middel";
+              let type="neerslag",typeCode=null;const typeBron=eerste||kansInfo.interval;if(typeBron){typeCode=typeBron.weather_code;const fam=WMO_FAMILIE[typeCode]||"onbekend";type=fam==="sneeuw"?"sneeuw":fam==="ijzel"?"gladde neerslag":fam==="onweer"?"onweersbuien":fam==="regen"?"regen":"neerslag";}
+              return{status,genoeg,zekerheid,conflict,start,eind,duurMinuten:duur,startTijd:klok(start),eindTijd:klok(eind),maximaleKans:kans,kansInterval:kansInfo.interval,hoeveelheid,hoeveelheidBron:bronHoeveelheid,dekking:{minutely_15:mDekking,hourly:hDekking,hoeveelheid:hoeveelheidDekking},eerste,laatste,type,typeCode,regentNu,bronkwaliteit:{minutelyMonotoon:m.monotoon!==false,hourlyMonotoon:h.monotoon!==false},intervals:{minutely_15:m,hourly:h}};
+            }
+            function beschrijfNeerslag(a,opties){
+              opties=opties||{};const termijn=opties.termijn||("de komende "+(a.duurMinuten===60?"uur":a.duurMinuten===120?"twee uur":a.duurMinuten+" minuten")),kans="Maximale kans: "+kansTekst(a.maximaleKans)+".",mm="Verwachte hoeveelheid: "+mmTekst(a.hoeveelheid)+".";
+              if(!a||!a.genoeg||a.status==="onvoldoende_data")return"Voor "+termijn+" is er niet genoeg aansluitende data voor een betrouwbare neerslaginschatting.";
+              if(a.conflict)return"De neerslagsignalen spreken elkaar gedeeltelijk tegen. "+kans+" "+mm;
+              if(a.status==="neerslag_nu"){const stop=a.laatste?" Naar verwachting neemt de neerslag rond "+klok(a.laatste.tot)+" af.":"";return"Er valt nu "+a.type+"."+stop+" "+kans+" "+mm;}
+              if(a.status==="neerslag_verwacht"){const begin=a.eerste?" De eerste meetbare neerslag wordt rond "+klok(Math.max(a.start,a.eerste.van))+" verwacht.":"";return"Binnen "+termijn+" wordt "+a.type+" verwacht."+begin+" "+kans+" "+mm;}
+              if(a.status==="spoor_berekend")return"Voor "+termijn+" wordt hooguit een zeer kleine hoeveelheid neerslag berekend. "+kans+" "+mm;
+              if(a.status==="grote_kans_geen_hoeveelheid")return"Voor "+termijn+" is de kans op neerslag groot, maar het hoofdmodel berekent geen meetbare hoeveelheid. "+kans+" "+mm;
+              if(a.status==="mogelijk")return"Voor "+termijn+" is neerslag mogelijk. "+kans+" "+mm;
+              if(a.status==="kleine_kans")return"Voor "+termijn+" is de kans op neerslag klein. "+kans+" "+mm;
+              if(a.status==="zeer_kleine_kans")return"Voor "+termijn+" is de kans op neerslag zeer klein. "+kans+" "+mm;
+              if(a.status==="geen_neerslag")return"Voor "+termijn+" wordt geen neerslag verwacht. "+kans+" "+mm;
+              return"Voor "+termijn+" is de neerslagverwachting onzeker. "+kans+" "+mm;
+            }
+            function analyseDag(data,datum,vanafT){
+              data=data||{};const h=data.hourly||{},times=Array.isArray(h.time)?h.time:[],vanaf=minuut(vanafT),families=new Map(),codes=new Map();let maxKans=null,maxKansTijd=null,hoeveelheid=0,heeftHoeveelheid=false;const uren=[];
+              for(let i=0;i<times.length;i++){if(String(times[i]).slice(0,10)!==datum)continue;const eind=minuut(times[i]);if(eind==null||(vanaf!=null&&eind<=vanaf))continue;const code=getal(h.weather_code&&h.weather_code[i]),fam=WMO_FAMILIE[code]||"onbekend";families.set(fam,(families.get(fam)||0)+1);if(code!=null)codes.set(code,(codes.get(code)||0)+1);const p=getal(h.precipitation_probability&&h.precipitation_probability[i]);if(p!=null&&(maxKans==null||p>maxKans)){maxKans=p;maxKansTijd=times[i];}const mm=getal(h.precipitation&&h.precipitation[i]);if(mm!=null){hoeveelheid+=mm;heeftHoeveelheid=true;}uren.push({tijd:times[i],code,familie:fam,kans:p,hoeveelheid:mm});}
+              const gesorteerd=[...families.entries()].sort((a,b)=>b[1]-a[1]||FAMILIE_ERNS[b[0]]-FAMILIE_ERNS[a[0]]),primair=gesorteerd[0]?gesorteerd[0][0]:"onbekend",gevaar=[...families.keys()].sort((a,b)=>FAMILIE_ERNS[b]-FAMILIE_ERNS[a])[0]||primair,secundair=gevaar!==primair&&FAMILIE_ERNS[gevaar]>=4?gevaar:null,codePrimair=[...codes.entries()].filter(([c])=>(WMO_FAMILIE[c]||"onbekend")===primair).sort((a,b)=>b[1]-a[1])[0];
+              let omschrijving=primair==="onbekend"?"Weerbeeld niet beschikbaar":"Overwegend "+FAMILIE_TEKST[primair];if(secundair)omschrijving+=", met later mogelijk "+(secundair==="regen"?"regen":secundair==="sneeuw"?"sneeuw":secundair==="ijzel"?"gladde neerslag":"onweer");
+              return{datum,uren,primair,secundair,icoonCode:codePrimair?codePrimair[0]:null,omschrijving,maximaleKans:maxKans,maxKansTijd,hoeveelheid:heeftHoeveelheid?hoeveelheid:null};
+            }
+            function aqiCategorie(stelsel,waarde){const v=getal(waarde);if(v==null)return{tekst:"onbekend",ernst:"onbekend"};if(stelsel==="eu"){if(v<=20)return{tekst:"goed",ernst:"goed"};if(v<=40)return{tekst:"redelijk",ernst:"redelijk"};if(v<=60)return{tekst:"matig",ernst:"matig"};if(v<=80)return{tekst:"slecht",ernst:"slecht"};if(v<=100)return{tekst:"zeer slecht",ernst:"zeer_slecht"};return{tekst:"extreem slecht",ernst:"extreem"};}if(v<=50)return{tekst:"goed",ernst:"goed"};if(v<=100)return{tekst:"redelijk",ernst:"redelijk"};if(v<=150)return{tekst:"ongezond voor gevoelige groepen",ernst:"matig"};if(v<=200)return{tekst:"ongezond",ernst:"slecht"};if(v<=300)return{tekst:"zeer ongezond",ernst:"zeer_slecht"};return{tekst:"gevaarlijk",ernst:"extreem"};}
+            function normaliseerWaarschuwingen(lijst,nuMs){const nu=Number.isFinite(nuMs)?nuMs:Date.now(),rang={rood:3,oranje:2,geel:1},gezien=new Set(),uit=[];for(const w of Array.isArray(lijst)?lijst:[]){const eind=w&&w.tot?Date.parse(w.tot):null;if(Number.isFinite(eind)&&eind<nu)continue;const sleutel=String((w&&w.titel)||"").trim().toLowerCase()+"|"+String((w&&w.gebied)||"").trim().toLowerCase();if(!sleutel.replace("|","")||gezien.has(sleutel))continue;gezien.add(sleutel);uit.push(w);}return uit.sort((a,b)=>(rang[b.niveau]||0)-(rang[a.niveau]||0)||(Date.parse(a.van||0)||0)-(Date.parse(b.van||0)||0));}
+            return{CONFIG,WMO_FAMILIE,minuut,klok,vorigeKlok,intervalLabel,kansNiveau,mmTekst,kansTekst,analyseNeerslag,beschrijfNeerslag,analyseDag,aqiCategorie,normaliseerWaarschuwingen};
+          });
+          EOF
+
+      - name: Sluit alle zichtbare uitgangen op dezelfde interpretatie aan
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('index.html'); s=p.read_text()
+          def once(old,new,name):
+              global s
+              n=s.count(old)
+              if n!=1: raise SystemExit(f'{name}: verwacht 1, gevonden {n}')
+              s=s.replace(old,new,1)
+          def sub(pattern,repl,name,flags=re.S):
+              global s
+              s2,n=re.subn(pattern,repl,s,count=1,flags=flags)
+              if n!=1: raise SystemExit(f'{name}: verwacht 1, gevonden {n}')
+              s=s2
+
+          once('<script>\n"use strict";','<script src="./interpretatie.js"></script>\n<script>\n"use strict";','engine laden')
+          once('<div class="stat"><div class="eyebrow">Neerslag afgelopen uur</div><div class="sval" id="prec">--</div><div class="ssub" id="precsub">&nbsp;</div></div>',
+               '<div class="stat"><div class="eyebrow">Neerslag afgelopen kwartier</div><div class="sval" id="prec">--</div><div class="ssub" id="precsub">&nbsp;</div></div>','actueel interval')
+          once('<div class="stat"><div class="eyebrow">Neerslagkans komend uur</div><div class="sval" id="pop">--</div><div class="ssub" id="popsub">&nbsp;</div></div>',
+               '<div class="stat"><div class="eyebrow">Hoogste neerslagkans komend uur</div><div class="sval" id="pop">--</div><div class="ssub" id="popsub">&nbsp;</div></div>','kanslabel')
+          once('<h2><span>Nachtzicht</span><span class="r" id="moonlab"></span></h2>',
+               '<h2><span>Nachtzicht · indicatief</span><span class="r" id="moonlab"></span></h2>','nachtlabel')
+          once('<span class="bron"><b>Weer</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>, ECMWF en DWD, CAMS</span>',
+               '<span class="bron"><b>Weer</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo Best Match</a> en CAMS</span>','bronvermelding')
+          once('const INK="var(--ink)",INK45="var(--ink-45)",INK25="var(--ink-25)",RULE="var(--rule)",\n      RULES="var(--rule-soft)",NIGHT="var(--accent-night)",STER="var(--accent-sun)",TEAL="var(--teal)",CARMINE="var(--carmine)",SHEET="var(--sheet)";',
+               'const INK="var(--ink)",INK45="var(--ink-45)",INK25="var(--ink-25)",RULE="var(--rule)",\n      RULES="var(--rule-soft)",NIGHT="var(--accent-night)",STER="var(--accent-sun)",TEAL="var(--teal)",CARMINE="var(--carmine)",SHEET="var(--sheet)";\nconst WI=WeerInterpretatie;','engine alias')
+          once('const S={lat:null,lon:null,label:"",d:null,air:null,i0:0,dag:null,op:0,geo:null,bereik:24};',
+               'const S={lat:null,lon:null,label:"",d:null,air:null,i0:0,dag:null,op:0,geo:null,bereik:24,waarschuwingen:[]};','warning state')
+          once('+"&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,precipitation,"\n    +"weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m"',
+               '+"&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,precipitation,rain,showers,snowfall,"\n    +"weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m"','current neerslagtypen')
+          once('+"precipitation_sum,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,"\n    +"sunshine_duration"',
+               '+"precipitation_sum,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,"\n    +"sunshine_duration,daylight_duration"','daglichtduur')
+          once('const f=basis+"&minutely_15=precipitation&past_hours=24"\n    +"&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,precipitation_probability,"\n    +"precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,"',
+               'const f=basis+"&minutely_15=precipitation,rain,showers,snowfall,weather_code&forecast_minutely_15=16&past_hours=24"\n    +"&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,precipitation_probability,"\n    +"precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,"','volledige neerslagrequest')
+          once('+"precipitation_probability,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,"',
+               '+"precipitation_probability,precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,"','fallback neerslagtypen')
+          once('S.d=vol;\n    S.air=ra.status==="fulfilled"?ra.value:null;',
+               'S.d=vol;\n    S.air=ra.status==="fulfilled"?ra.value:null;\n    S.waarschuwingen=[];','oude waarschuwingen wissen')
+          once('S.d=oud.d;S.air=oud.air;S.label=oud.label;S.lat=oud.lat;S.lon=oud.lon;S.op=oud.op;',
+               'S.d=oud.d;S.air=oud.air;S.label=oud.label;S.lat=oud.lat;S.lon=oud.lon;S.op=oud.op;S.waarschuwingen=[];','cache waarschuwingen wissen')
+
+          sub(r'function kortetermijn\(\)\{[\s\S]*?\n\}\n\nfunction briefing\(\)\{',
+              '''function neerslagVenster(minuten){
+  return WI.analyseNeerslag({current:S.d.current,hourly:S.d.hourly,minutely_15:S.d.minutely_15},S.d.current.time,minuten);
+}
+function kortetermijn(){ return neerslagVenster(120); }
+
+function briefing(){''','kortetermijn vervangen')
+
+          sub(r'  /\* De tegel toont de kans voor precies het eerstvolgende uur[\s\S]*?\n  zetTekst\("popsub", popKomendUur<20[\s\S]*?\);',
+              '''  /* Kans en hoeveelheid komen uit exact hetzelfde komende-uurvenster
+     als de rest van de app. Geen i+1-aanname meer midden in een uur. */
+  const uurN=neerslagVenster(60);
+  set("pop",uurN.maximaleKans==null?"–":Math.round(uurN.maximaleKans)+"<s>%</s>");
+  zetTekst("popsub",WI.beschrijfNeerslag(uurN,{termijn:"het komende uur"}));''','uurtegel')
+
+          sub(r'  const kt=kortetermijn\(\);\n  let zin1;[\s\S]*?\n  \}\n\n  // temperatuur',
+              '''  const kt=kortetermijn();
+  let zin1=WI.beschrijfNeerslag(kt,{termijn:"de komende twee uur"});
+  const rest=restkans();
+  if(rest!=null&&rest>=20&&(kt.maximaleKans==null||rest>kt.maximaleKans))
+    zin1 += " Later vandaag is de hoogste resterende neerslagkans "+rest+"%.";
+  if(S.waarschuwingen&&S.waarschuwingen.length){
+    const w=S.waarschuwingen[0];
+    zin1="Officiële "+(w.niveau||"weer")+" waarschuwing: "+esc(w.titel)+". "+zin1;
+  }
+
+  // temperatuur''','briefing neerslagblok')
+
+          once('    P.push(h.precipitation_probability[i]??0);MM.push(h.precipitation[i]??0);',
+               '''    /* Uurwaarden gelden voor het voorafgaande uur. Een interval dat
+       bij de actuele weergave al volledig voorbij is, is geen toekomstsignaal. */
+    const intervalEind=WI.minuut(h.time[i]),nuMin=WI.minuut(S.d.current.time);
+    const verlopen=S.dag==null&&intervalEind!=null&&nuMin!=null&&intervalEind<=nuMin;
+    P.push(verlopen?null:(h.precipitation_probability[i]??null));
+    MM.push(verlopen?null:(h.precipitation[i]??null));''','verlopen grafiekinterval')
+          once('      if(P[i]>0) ticks+=`<text x="${x(i)}" y="${pb+(M?35:37)}" text-anchor="middle" fill="${TEAL}" font-family="DM Mono,monospace" font-size="${F.pre}">${P[i]}%</text>`;',
+               '      if((P[i]??0)>=40||(MM[i]??0)>=0.1) ticks+=`<text x="${x(i)}" y="${pb+(M?35:37)}" text-anchor="middle" fill="${TEAL}" font-family="DM Mono,monospace" font-size="${F.pre}">${P[i]}%</text>`;','grafiekkanslabels')
+          once('+rij("neerslagkans",(heel(G.P&&G.P[i])?G.P[i]:"–")+"%",TEAL)',
+               '+rij(heel(G.P&&G.P[i])?"kans "+WI.intervalLabel(G.TI[i],60):"neerslagkans",heel(G.P&&G.P[i])?G.P[i]+"%":"–",TEAL)','tooltip tijdvak')
+          once('+", temperatuur tussen "+mn+" en "+mx+" graden, hoogste neerslagkans "+Math.max.apply(null,P)+" procent.");',
+               '+", temperatuur tussen "+mn+" en "+mx+" graden, hoogste neerslagkans "+(P.filter(Number.isFinite).length?Math.max.apply(null,P.filter(Number.isFinite)):"niet beschikbaar")+" procent.");','aria kans')
+
+          sub(r'/\* ---------- kwartierneerslag ---------- \*/\nfunction nowcast\(\)\{[\s\S]*?\n\}\n\n/\* ---------- zeven dagen ---------- \*/',
+              '''/* ---------- kwartierneerslag ---------- */
+function nowcast(){
+  const kt=kortetermijn(),el=document.getElementById("nc"),tx=document.getElementById("nctext");
+  tx.textContent=nbsp(WI.beschrijfNeerslag(kt,{termijn:"de komende twee uur"}));
+  const I=(kt.intervals&&kt.intervals.minutely_15?kt.intervals.minutely_15:[])
+    .filter(x=>x.van<kt.eind&&x.tot>kt.start).slice(0,8);
+  if(!I.length){el.style.display="none";return;}
+  const M=(typeof window!=="undefined"&&window.innerWidth)?window.innerWidth<760:false;
+  const P=I.map(x=>x.precipitation==null?0:x.precipitation),mx=Math.max(0.5,...P),W=M?380:900,pl=M?26:44,pr=M?8:20,iw=W-pl-pr,base=40,hmax=M?30:32,cw=iw/I.length;
+  el.setAttribute("viewBox","0 0 "+W+" "+(M?62:60));
+  let out=`<line x1="${pl}" y1="${base}" x2="${W-pr}" y2="${base}" stroke="${RULE}"/>`;
+  I.forEach((it,k)=>{
+    const x=pl+k*cw,v=P[k],hh=hmax*(v/mx);
+    if(v>0) out+=`<rect x="${x+3}" y="${base-hh}" width="${cw-6}" height="${hh}" fill="${TEAL}" fill-opacity=".2"/><line x1="${x+3}" y1="${base-hh}" x2="${x+cw-3}" y2="${base-hh}" stroke="${TEAL}" stroke-width="1.2"/>`;
+    out+=`<line x1="${x}" y1="${base}" x2="${x}" y2="${base+4}" stroke="${RULE}"/>`;
+    if(k%2===0) out+=`<text x="${x+cw/2}" y="${base+18}" text-anchor="middle" fill="${INK45}" font-family="DM Mono,monospace" font-size="${M?10:10.5}">${WI.klok(it.van)}</text>`;
+    if(v>0){const boven=base-hh-6,past=boven>=11;out+=`<text x="${x+cw/2}" y="${past?boven:base-hh+11}" text-anchor="middle" fill="${TEAL}" font-family="DM Mono,monospace" font-size="${M?9.5:10}">${WI.mmTekst(v).replace(" mm","")}</text>`;}
+  });
+  el.innerHTML=out;
+  el.setAttribute("aria-label","Neerslag per kwartier van "+WI.klok(I[0].van)+" tot "+WI.klok(I[I.length-1].tot)+". "+tx.textContent);
+  el.style.display=P.some(v=>v>0)?"block":"none";
+}
+
+/* ---------- zeven dagen ---------- */''','nowcast centraal')
+
+          sub(r'function restkans\(\)\{[\s\S]*?\n\}\nfunction dagen\(\)\{[\s\S]*?\n\}\n\ndocument.getElementById\("back"\)',
+              '''function restkans(){
+  const h=S.d.hourly,dag=plaatsVandaag(),nu=S.d.current.time;
+  let m=null;
+  for(let k=0;k<h.time.length;k++){
+    if(h.time[k].slice(0,10)!==dag||WI.minuut(h.time[k])<=WI.minuut(nu)) continue;
+    const v=h.precipitation_probability[k];if(v!=null&&isFinite(v))m=m==null?v:Math.max(m,v);
+  }
+  return m==null?null:Math.round(m);
+}
+function dagen(){
+  const day=S.d.daily,lo=Math.min(...day.temperature_2m_min),hi=Math.max(...day.temperature_2m_max),sp=(hi-lo)||1;
+  let out="";
+  day.time.forEach((t,i)=>{
+    const dt=new Date(t+"T12:00:00"),nr=dt.getDate(),lang=DAGENVOL[dt.getDay()]+" "+nr,kort=DAGEN[dt.getDay()]+" "+nr,nm='<span class="dlang">'+lang+'</span><span class="dkort">'+kort+'</span>';
+    const l=day.temperature_2m_min[i],hh=day.temperature_2m_max[i],a=WI.analyseDag(S.d,t,i===0?S.d.current.time:null),code=a.icoonCode==null?day.weather_code[i]:a.icoonCode;
+    const kans=i===0?restkans():(a.maximaleKans==null?(day.precipitation_probability_max[i]??null):Math.round(a.maximaleKans)),som=day.precipitation_sum[i];
+    out+=`<div class="row day${S.dag===i?" on":""}" data-i="${i}" role="button" tabindex="0">
+      <div class="dname">${nm}</div><div class="dico">${icon(code,true,22)}</div>
+      <div class="dcond">${a.omschrijving}${som>0?", "+WI.mmTekst(som):""}</div>
+      <div class="dwind">${bft(day.wind_speed_10m_max[i]||0)} Bft ${pijl(day.wind_direction_10m_dominant?day.wind_direction_10m_dominant[i]:0,11)}</div>
+      <div class="dmin">${Math.round(l)}°</div><div class="bar"><i style="left:${(l-lo)/sp*100}%;width:${Math.max(3,(hh-l)/sp*100)}%"></i></div><div class="dmax">${Math.round(hh)}°</div>
+      <div class="drain">${kans==null?"–":kans+"%"}${som>0?`<small>${WI.mmTekst(som)}</small>`:""}</div></div>`;
+  });
+  const kop=`<div class="row day kop"><div class="dname">Dag</div><div class="dico"></div><div class="dcond">Verwachting</div><div class="dwind">Wind max</div><div class="dmin">Min</div><div class="bar"></div><div class="dmax">Max</div><div class="drain">Hoogste kans</div></div>`;
+  const c=document.getElementById("days");c.innerHTML=kop+out;
+  c.querySelectorAll(".day:not(.kop)").forEach(el=>{
+    const kies=()=>{const i=+el.dataset.i;S.dag=i;let st=S.d.hourly.time.findIndex(t=>t.slice(0,10)===S.d.daily.time[i]);if(st<0)st=S.i0;etmaal(st,24);dagen();document.getElementById("chart").scrollIntoView({behavior:"smooth",block:"center"});};
+    el.addEventListener("click",kies);el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();kies();}});
+  });
+}
+
+document.getElementById("back")''','daginterpretatie')
+
+          sub(r'function daglengte\(i\)\{[\s\S]*?\n\}',
+              '''function daglengte(i){
+  const sr=S.d.daily.sunrise[i],ss=S.d.daily.sunset[i],sec=S.d.daily.daylight_duration&&S.d.daily.daylight_duration[i];
+  if(!sr||!ss){
+    if(sec!=null&&sec>=23.5*3600) return "24 uur daglicht · pooldag";
+    if(sec!=null&&sec<=0.5*3600) return "geen daglicht · poolnacht";
+    return "zonsopkomst of zonsondergang niet beschikbaar";
+  }
+  const l=mins(ss)-mins(sr);if(l<=0)return "geen daglicht";return Math.floor(l/60)+" uur en "+(l%60)+" minuten daglicht";
+}''','pooldag nacht')
+
+          once('<div class="dname">Nacht</div><div class="score">Score 0-10</div>',
+               '<div class="dname">Nacht</div><div class="score">Indicatieve score 0-10</div>','nacht score label')
+
+          sub(r'  const band = euro[\s\S]*?\n  const \[nm,kl\]=band\(aqi\);',
+              '''  const cat=WI.aqiCategorie(euro?"eu":"us",aqi);
+  const nm=cat.tekst,kl=(cat.ernst==="goed"||cat.ernst==="redelijk")?TEAL:(cat.ernst==="matig"?INK:(cat.ernst==="onbekend"?INK45:CARMINE));''','aqi categorieën')
+          sub(r'    if\(lijst.length\)\{\n      const niv=v=>[\s\S]*?\n          <div class="sval" style="color:\$\{k\}">\$\{Math.round\(o.v\)\}<s>korrels/m³</s></div><div class="ssub">\$\{t\}</div></div>`;\}\);',
+              '''    if(lijst.length){
+      lijst.forEach(o=>{
+        out+=`<div class="stat"><div class="eyebrow">Pollen ${o.n}</div>
+          <div class="sval">${Math.round(o.v)}<s>korrels/m³</s></div><div class="ssub">Gemodelleerde concentratie; gevoeligheid verschilt per pollensoort.</div></div>`;});''','pollen neutraal')
+
+          sub(r'async function waarschuwingen\(\)\{[\s\S]*?\n\}',
+              '''async function waarschuwingen(){
+  const el=document.getElementById("waarschuwingen"),lat=S.lat,lon=S.lon;el.innerHTML="";
+  try{
+    const d=await j("/api/waarschuwingen?lat="+lat+"&lon="+lon);
+    if(lat!==S.lat||lon!==S.lon)return;
+    const lijst=WI.normaliseerWaarschuwingen(d&&d.lijst?d.lijst:[]);
+    S.waarschuwingen=lijst;briefing();
+    if(!lijst.length)return;
+    el.innerHTML=lijst.slice(0,3).map(w=>`<div class="waarsch"><h3>${esc(w.titel)}</h3><p>${esc(w.tekst||"")}${w.tot?" Geldig tot "+esc(w.tot)+".":""}${w.landelijk?" Geldt voor een groter gebied, niet per se voor deze plaats.":""}</p></div>`).join("");
+  }catch(e){S.waarschuwingen=[];}
+}''','waarschuwingen prioriteit')
+          once('el.textContent=(m<1?"zojuist bijgewerkt":m===1?"bijgewerkt om "+hhmm(S.d.current.time)+", 1 minuut geleden":"bijgewerkt om "+hhmm(S.d.current.time)+", "+m+" minuten geleden");',
+               'el.textContent=(m<1?"gegevens zojuist opgehaald":m===1?"gegevens 1 minuut geleden opgehaald":"gegevens "+m+" minuten geleden opgehaald");','stempel semantiek')
+
+          p.write_text(s)
+
+          p=Path('kern.js'); s=p.read_text()
+          old='    Image: function Image() { return maakElement("", doc); },\n    // meldingen uit de app zelf horen niet in de testuitvoer, echte fouten wel'
+          new='    Image: function Image() { return maakElement("", doc); },\n    WeerInterpretatie: require("./interpretatie.js"),\n    // meldingen uit de app zelf horen niet in de testuitvoer, echte fouten wel'
+          if s.count(old)!=1: raise SystemExit('kern injectie')
+          s=s.replace(old,new,1)
+          s=s.replace('"piek", "restkans", "daglengte", "nbsp", "esc", "clamp",','"piek", "restkans", "neerslagVenster", "daglengte", "nbsp", "esc", "clamp",',1)
+          p.write_text(s)
+
+          p=Path('data.js'); s=p.read_text()
+          old='''  if(!o.geenKwartier) d.minutely_15={time:["2026-07-22T14:00","2026-07-22T14:15"],precipitation:[0,0]};'''
+          new='''  if(!o.geenKwartier){
+    const mt=[],mp=[],mr=[],ms=[],mw=[];
+    for(let q=1;q<=8;q++){
+      const totaal=14*60+q*15,uur=Math.floor(totaal/60),min=totaal%60;
+      mt.push("2026-07-22T"+String(uur).padStart(2,"0")+":"+String(min).padStart(2,"0"));
+      const uurEind=Math.ceil(totaal/60),v=o.pr15?o.pr15(q):(o.pr?o.pr(uurEind,0)/4:0);
+      mp.push(v);mr.push(v);ms.push(0);mw.push(o.wc?o.wc(uurEind,0):3);
+    }
+    d.minutely_15={time:mt,precipitation:mp,rain:mr,showers:mp.map(()=>0),snowfall:ms,weather_code:mw};
+  }'''
+          if s.count(old)!=1: raise SystemExit('data kwartierfixture')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('sw.js'); s=p.read_text()
+          s=s.replace('const CACHE = "weerbriefing-v72";','const CACHE = "weerbriefing-v73";',1)
+          s=s.replace('"./", "./index.html", "./manifest.json",','"./", "./index.html", "./interpretatie.js", "./manifest.json",',1)
+          p.write_text(s)
+          PY
+
+      - name: Werk tests bij en voeg invarianten toe
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('run.js'); s=p.read_text()
+          s=s.replace('check("droog etmaal meldt droog",/blijft het droog/.test(droog),droog);','check("droog etmaal meldt geen neerslag verwacht",/geen neerslag verwacht/.test(droog),droog);',1)
+          s=re.sub(r'check\("blijft het twee uur droog maar is er verderop wel kans, dan komt dat als losse zin",[\s\S]*?laterVandaag\.tekst\+"  \(dagKans="\+dagKans\+"\)"\);',
+                   'check("de briefing gebruikt voor later vandaag alleen de resterende kans",/hoogste resterende neerslagkans/.test(laterVandaag.tekst),laterVandaag.tekst);',s,count=1)
+          s=s.replace('/Het regent nu en dat houdt de komende twee uur aan/.test(regent)','/Er valt nu/.test(regent)',1)
+          s=s.replace('^Komend uur is de neerslagkans zeer klein\\.$','^Voor het komende uur is de kans op neerslag zeer klein\\.',1)
+          s=s.replace('^Komend uur is de neerslagkans 77%\\.$','^Voor het komende uur is de kans op neerslag groot',1)
+          s=s.replace('/komende twee uur.*droog/.test(d1.briefing)','/geen neerslag verwacht/.test(d1.briefing)',1)
+          s=s.replace('/komende twee uur blijft het droog/.test(d1.neerslagtekst)','/geen neerslag verwacht/.test(d1.neerslagtekst)',1)
+          s=s.replace('!/komende twee uur.*blijft het.*droog/.test(n1.briefing)','!/geen neerslag verwacht/.test(n1.briefing)',1)
+          s=s.replace('!/komende twee uur blijft het droog/.test(n1.neerslagtekst)','!/geen neerslag verwacht/.test(n1.neerslagtekst)',1)
+          s=s.replace('const briefDroog=/komende twee uur.*blijft het.*droog/.test(s.briefing)||/komende <b>twee uur<\\/b> blijft het <b>droog/.test(s.briefing);','const briefDroog=/geen neerslag verwacht/.test(s.briefing);',1)
+          s=s.replace('const tekstDroog=/komende twee uur blijft het droog/.test(s.neerslagtekst);','const tekstDroog=/geen neerslag verwacht/.test(s.neerslagtekst);',1)
+          s=s.replace('!/komende twee uur.*blijft het.*droog/.test(briefX)\n    && !/komende <b>twee uur<\\/b> blijft het <b>droog/.test(bX.brief.innerHTML)','!/geen neerslag verwacht/.test(briefX)',1)
+          s=s.replace('!/komende twee uur blijft het droog/.test(norm(bX.nctext.textContent))','!/geen neerslag verwacht/.test(norm(bX.nctext.textContent))',1)
+          s=s.replace('/const NEERSLAG_DREMPEL_MM\\s*=\\s*0\\.1/.test(bronK)','/const WI=WeerInterpretatie/.test(bronK)',1)
+          s=s.replace('"er is een centrale drempel voor korte-termijnneerslag"','"de app gebruikt de centrale interpretatie-engine"',1)
+          s=s.replace('/kt\\s*=\\s*kortetermijn\\(\\)/.test(bronK.slice(bronK.indexOf("function briefing")))','/WI\\.beschrijfNeerslag\\(kt/.test(bronK.slice(bronK.indexOf("function briefing")))',1)
+          s=s.replace('/const kt=kortetermijn\\(\\);/.test(bronK.slice(bronK.indexOf("function nowcast")))','/WI\\.beschrijfNeerslag\\(kt/.test(bronK.slice(bronK.indexOf("function nowcast")))',1)
+
+          extra=r'''
+
+/* Centrale interpretatie-engine: eigenschappen die voor alle combinaties moeten gelden. */
+groep("Centrale weerinterpretatie");
+{
+  const WI=require("./interpretatie.js");
+  const basis=(kans,mm,opt)=>{
+    opt=opt||{};
+    const hourly={time:["2026-07-31T19:00","2026-07-31T20:00","2026-07-31T21:00","2026-07-31T22:00"],
+      precipitation_probability:[23,kans,kans,kans],precipitation:[0,0,0,0],weather_code:[3,3,3,3]};
+    const time=[],precipitation=[],weather_code=[];
+    for(let q=1;q<=8;q++){const totaal=19*60+q*15,h=Math.floor(totaal/60),m=totaal%60;time.push(`2026-07-31T${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`);precipitation.push(q===3?mm:0);weather_code.push(opt.code||3);}
+    return {current:{time:"2026-07-31T19:00",precipitation:opt.nu||0,weather_code:opt.code||3},hourly,minutely_15:{time,precipitation,weather_code}};
+  };
+  const tekst=(k,m,o)=>{const a=WI.analyseNeerslag(basis(k,m,o),"2026-07-31T19:00",120);return[a,WI.beschrijfNeerslag(a,{termijn:"de komende twee uur"})];};
+  let [a,t]=tekst(4,0);
+  check("4 procent en 0,0 mm wordt zeer kleine kans, nooit absoluut droog",a.status==="zeer_kleine_kans"&&/zeer klein/.test(t)&&!/blijft het droog/.test(t),t);
+  [a,t]=tekst(0,0);check("alleen exact 0 procent en 0,0 mm geeft geen neerslag verwacht",a.status==="geen_neerslag"&&/geen neerslag verwacht/.test(t),t);
+  [a,t]=tekst(4,0.04);check("een positieve hoeveelheid onder 0,1 mm wordt niet afgerond naar nul",a.status==="spoor_berekend"&&/<0,1 mm/.test(t),t);
+  [a,t]=tekst(75,0);check("hoge kans zonder hoeveelheid wordt als onzeker signaal uitgelegd",a.status==="grote_kans_geen_hoeveelheid"&&/geen meetbare hoeveelheid/.test(t),t);
+  [a,t]=tekst(60,0.3,{code:61});check("meetbare hoeveelheid wint van een algemene droogformulering",a.status==="neerslag_verwacht"&&/wordt regen verwacht/.test(t),t);
+  const niveaus=[0,4,25,50,80].map(k=>WI.analyseNeerslag(basis(k,0),"2026-07-31T19:00",120).status);
+  check("een hogere kans leidt nooit tot een drogere categorie",JSON.stringify(niveaus)===JSON.stringify(["geen_neerslag","zeer_kleine_kans","kleine_kans","mogelijk","grote_kans_geen_hoeveelheid"]),niveaus.join(","));
+  const kort=basis(4,0);kort.minutely_15.time=kort.minutely_15.time.slice(0,4);kort.minutely_15.precipitation=kort.minutely_15.precipitation.slice(0,4);kort.minutely_15.weather_code=kort.minutely_15.weather_code.slice(0,4);kort.hourly.time=kort.hourly.time.slice(0,2);kort.hourly.precipitation_probability=kort.hourly.precipitation_probability.slice(0,2);kort.hourly.precipitation=kort.hourly.precipitation.slice(0,2);kort.hourly.weather_code=kort.hourly.weather_code.slice(0,2);
+  a=WI.analyseNeerslag(kort,"2026-07-31T19:00",120);check("één uur data mag geen stellige uitspraak over twee uur opleveren",!a.genoeg&&a.status==="onvoldoende_data",JSON.stringify(a.dekking));
+  check("Amerikaanse AQI 101-150 heet ongezond voor gevoelige groepen",WI.aqiCategorie("us",120).tekst==="ongezond voor gevoelige groepen");
+  const waars=WI.normaliseerWaarschuwingen([{titel:"Geel",gebied:"A",niveau:"geel"},{titel:"Rood",gebied:"B",niveau:"rood"},{titel:"Rood",gebied:"B",niveau:"rood"}],0);
+  check("waarschuwingen worden ontdubbeld en op ernst gesorteerd",waars.length===2&&waars[0].niveau==="rood",JSON.stringify(waars));
+  check("uurkansen krijgen een expliciet voorafgaand tijdvak",WI.intervalLabel("2026-07-31T20:00",60)==="19:00–20:00");
+}
+'''
+          marker='\nasync function testenOpstartlocatie(){'
+          if marker not in s: raise SystemExit('test marker ontbreekt')
+          s=s.replace(marker,extra+marker,1)
+          p.write_text(s)
+          PY
+
+      - name: Controleer syntax en volledige suite
+        shell: bash
+        run: |
+          node --check interpretatie.js
+          node --check kern.js
+          node --check data.js
+          node --check run.js
+          node --check api/waarschuwingen.js
+          node run.js | tee /tmp/test-resultaat.txt
+          ! grep -q 'FOUT' /tmp/test-resultaat.txt
+
+      - name: Ruim workflow op en commit gecontroleerde implementatie
+        shell: bash
+        run: |
+          rm -f .github/workflows/apply-interpretatie-engine.yml
+          git config user.name "WeatherNow Agent"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Centraliseer weerinterpretatie en voorkom gemixte signalen"
+          git push origin HEAD:agent/interpretatie-engine
