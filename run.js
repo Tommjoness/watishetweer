@@ -169,6 +169,42 @@ for(const [naam,n,br] of [["24 uur op de desktop",24,1280],["48 uur op de deskto
   check(naam+": aslabels overlappen niet",botsing===0,botsing+" botsingen bij "+as.length+" labels");
 }
 
+/* 7c. redundante temperatuurcijfers en daglichttijden op mobiel */
+groep("Rustige grafiek en daglichttijden");
+{
+  const {api,bak}=laadKern(390);
+  const waarden={
+    "0:14":22.0,"0:15":22.2,"0:16":23.0,"0:17":22.2,"0:18":21.0,
+    "0:19":20.0,"0:20":19.0,"0:21":18.0,"0:22":17.0,"0:23":16.5,
+    "1:0":16.0,"1:1":15.7,"1:2":15.3,"1:3":15.0,"1:4":14.7,
+    "1:5":14.4,"1:6":14.0,"1:7":15.0,"1:8":16.0,"1:9":17.0,
+    "1:10":18.0,"1:11":19.0,"1:12":20.0,"1:13":21.0
+  };
+  const d=bouw({temp:(u,dag)=>waarden[dag+":"+u] ?? (dag===0?18:20)});
+  d.current.time="2026-07-22T14:39";
+  d.current.temperature_2m=22;
+  Object.assign(api.S,{d:d,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+  api.S.i0=d.hourly.time.findIndex(t=>t.slice(0,13)===d.current.time.slice(0,13));
+  api.etmaal(api.S.i0,24);
+  const labels=[...bak.chart.innerHTML.matchAll(/<text x="([\d.]+)" y="([\d.]+)" text-anchor="middle" fill="[^"]+"[^>]*font-family="Bodoni Moda,serif" font-size="[\d.]+">(-?\d+)°<\/text>/g)]
+    .map(m=>({x:+m[1],y:+m[2],v:+m[3]}));
+  const redundant=[];
+  for(let i=0;i<labels.length;i++) for(let j=i+1;j<labels.length;j++){
+    const a=labels[i],b=labels[j];
+    if(Math.abs(a.x-b.x)<48 && a.v===b.v) redundant.push(a.v+"°/"+b.v+"°");
+  }
+  check("mobiel toont geen vrijwel gelijke temperatuurcijfers vlak naast elkaar",
+    redundant.length===0,redundant.join(", "));
+  check("belangrijke piek en dal blijven wel gelabeld",
+    labels.some(x=>x.v===23)&&labels.some(x=>x.v===14),labels.map(x=>x.v).join(","));
+  check("daglichttijden blijven drie afzonderlijke onderdelen",
+    (bak.suntimes.innerHTML.match(/<span>/g)||[]).length===3,bak.suntimes.innerHTML);
+
+  const fs=require("fs"), bron=fs.readFileSync(require("path").join(__dirname,"index.html"),"utf8");
+  check("daglichttijden hebben op mobiel ieder een eigen regel",
+    /#suntimes\{display:grid;grid-template-columns:1fr;gap:2px/.test(bron));
+}
+
 /* 7d. labels boven de dagbalk mogen nooit buiten de tekening vallen */
 groep("Zonlabels");
 for(const [naam,uur,br] of [["vlak voor zonsondergang","20:00",390],["vlak voor zonsopkomst","04:00",390],
@@ -2898,16 +2934,62 @@ groep("v69 polishronde");
 }
 
 /* Radar is op verzoek volledig verwijderd; de aparte twee-uursneerslagtekst blijft bestaan. */
-groep("Radar verwijderd");
+groep("Radar verwijderd en bronbestanden consistent");
 {
   const fsR=require("fs"), pathR=require("path");
-  const bronR=fsR.readFileSync(pathR.join(__dirname,"index.html"),"utf8");
+  const lees=f=>fsR.readFileSync(pathR.join(__dirname,f),"utf8");
+  const bronR=lees("index.html");
   check("de radarinterface is uit de DOM verwijderd",
     !/Neerslagradar|id="radar"|id="rspeel"|id="rschuif"|id="radartijd"|id="radarmelding"/.test(bronR));
-  check("de radarlogica en externe radarbronnen zijn verwijderd",
-    !/radarLaden|radarTeken|api\.rainviewer|tilecache\.rainviewer|basemaps\.cartocdn|radarverwachting/.test(bronR));
+  check("de radarlogica en externe radarbronnen zijn uit alle runtimebestanden verwijderd",(()=>{
+    const bestanden=["index.html","package.json","manifest.json","sw.js","kern.js","data.js","api/plaatsnaam.js","api/waarschuwingen.js"];
+    return bestanden.every(f=>!/radarverwachting|rainviewer|cartocdn|neerslagradar/i.test(lees(f)));
+  })());
+  check("de verwijderde radar-API bestaat niet meer",!fsR.existsSync(pathR.join(__dirname,"api/radarverwachting.js")));
   check("de aparte verwachting voor de komende twee uur blijft bestaan",
     /Neerslag komende twee uur/.test(bronR) && /id="nctext"/.test(bronR) && /id="nc"/.test(bronR));
+  check("de serviceworker gebruikt een nieuwe cache na de structurele wijziging",
+    /weerbriefing-v72/.test(lees("sw.js")));
+}
+
+/* Statische eindcontrole over alle handgeschreven runtimebronbestanden. */
+groep("Volledige broncontrole");
+{
+  const fs=require("fs"), path=require("path");
+  const root=__dirname, html=fs.readFileSync(path.join(root,"index.html"),"utf8");
+  const markup=html.split("<script",1)[0];
+  const ids=[...markup.matchAll(/\sid="([^"]+)"/g)].map(m=>m[1]);
+  check("HTML bevat geen dubbele id-attributen",new Set(ids).size===ids.length,
+    ids.filter((x,i)=>ids.indexOf(x)!==i).join(", "));
+
+  const luisterIds=[...html.matchAll(/document\.getElementById\("([^"]+)"\)\.addEventListener/g)].map(m=>m[1]);
+  const ontbrekend=[...new Set(luisterIds)].filter(id=>!ids.includes(id));
+  check("elke direct gekoppelde eventlistener heeft een bestaand element",ontbrekend.length===0,ontbrekend.join(", "));
+
+  const lokaal=[
+    ...[...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(m=>m[1]),
+    ...[...html.matchAll(/url\('([^']+)'\)/g)].map(m=>m[1])
+  ].filter(u=>! /^(?:https?:|data:|#)/.test(u)).map(u=>u.split(/[?#]/)[0]);
+  const mist=[...new Set(lokaal)].filter(u=>u && !fs.existsSync(path.join(root,u.replace(/^\.\//,""))));
+  check("alle lokaal verwezen assets bestaan",mist.length===0,mist.join(", "));
+
+  const apiPaden=[...html.matchAll(/"\/api\/([a-z0-9-]+)/g)].map(m=>m[1]);
+  const apiMist=[...new Set(apiPaden)].filter(n=>!fs.existsSync(path.join(root,"api",n+".js")));
+  check("iedere aangeroepen interne API heeft een bronbestand",apiMist.length===0,apiMist.join(", "));
+
+  const jsonBestanden=["package.json","manifest.json","lettermaten.json"];
+  let jsonFout="";
+  try{jsonBestanden.forEach(f=>JSON.parse(fs.readFileSync(path.join(root,f),"utf8")));}catch(e){jsonFout=e.message;}
+  check("alle JSON-bestanden zijn geldig",!jsonFout,jsonFout);
+
+  const handgeschreven=["index.html","sw.js","kern.js","data.js","api/plaatsnaam.js","api/waarschuwingen.js"];
+  const markeringen=[];
+  handgeschreven.forEach(f=>{
+    const t=fs.readFileSync(path.join(root,f),"utf8");
+    if(/\b(?:TODO|FIXME|HACK)\b/.test(t)) markeringen.push(f);
+    if(/http:\/\//.test(t)) markeringen.push(f+":onveilig-http");
+  });
+  check("geen open TODO/FIXME/HACK of onveilig HTTP in runtimecode",markeringen.length===0,markeringen.join(", "));
 }
 
 async function testenOpstartlocatie(){

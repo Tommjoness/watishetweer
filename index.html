@@ -199,6 +199,8 @@
   h2 .r #moonlab{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
   h2 .r{font-family:var(--mono);letter-spacing:0;text-transform:none;font-size:11.5px;color:var(--ink-45);
         display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap}
+  #suntimes{display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap}
+  #suntimes span{white-space:nowrap}
   h2 button{padding:4px 9px;font-size:9.5px}
   .bereik{display:inline-flex}
   .bereik button+button{border-left:none}
@@ -315,7 +317,7 @@
     .sheet{padding:24px 20px 24px}
     :root{--s2:14px; --s3:20px; --s4:30px}
     .brief{font-size:17.5px;line-height:1.5}
-    #suntimes{align-items:flex-start;text-align:left}
+    #suntimes{display:grid;grid-template-columns:1fr;gap:2px;align-items:start;text-align:left}
     #place{font-size:34px}
     #t{font-size:86px}
     .hero{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"temp temp" "ico info";
@@ -1471,8 +1473,22 @@ function etmaal(start,n){
     if(!geldig(i)||i%stap!==0) continue;
     if(!kandKaart.has(i)) kandKaart.set(i,1);
   }
-  const kandidaten=[...kandKaart.entries()].map(([i,rang])=>({i,rang}))
+  const kandidatenRuw=[...kandKaart.entries()].map(([i,rang])=>({i,rang}))
     .sort((a,b)=>b.rang-a.rang||a.i-b.i);
+  /* Een gewoon rasterlabel voegt weinig toe als vlak ernaast al een
+     belangrijker label met dezelfde of vrijwel dezelfde afgeronde
+     temperatuur staat. Op een telefoon gaf dat bijvoorbeeld tweemaal
+     22° bij het actuele punt en 14°/15° rond hetzelfde dal. Alleen het
+     lage-prioriteitsraster wijkt; actuele punten en echte extrema
+     blijven altijd behouden. */
+  const kandidaten=kandidatenRuw.filter((k,pos)=>{
+    if(k.rang!==1) return true;
+    const afgerond=Math.round(T[k.i]);
+    return !kandidatenRuw.slice(0,pos).some(g=>
+      g.rang>1 &&
+      Math.abs(g.i-k.i)*cw<Math.max(48,cw*2.2) &&
+      Math.abs(Math.round(T[g.i])-afgerond)<=1);
+  });
 
   const labelBreed=v=>String(Math.round(v)).length*F.temp*0.58+F.temp*0.40;
   const gezet=[];
@@ -1597,8 +1613,8 @@ function etmaal(start,n){
      grafiek. Nu is de regel bij elke weergave hetzelfde: geen voorvoegsel,
      de datum staat al in de kop (#chartlab) hierboven. */
   document.getElementById("suntimes").innerHTML=(day.sunrise[di]&&day.sunset[di])
-    ? "<span>zonsopkomst "+hhmm(day.sunrise[di])+"</span>"
-     +"<span>zonsondergang "+hhmm(day.sunset[di])+"</span>"
+    ? "<span>zonsopkomst "+hhmm(day.sunrise[di])+"</span> "
+     +"<span>zonsondergang "+hhmm(day.sunset[di])+"</span> "
      +"<span>"+daglengte(di)+"</span>"
     : "<span>"+daglengte(di)+"</span>";
   document.getElementById("back").style.display=dg==null?"none":"inline-block";
