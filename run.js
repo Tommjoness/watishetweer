@@ -72,7 +72,7 @@ function brief(opties,breedte){
   check("droog etmaal meldt droog",/blijft het droog/.test(droog),droog);
 
   /* Punt 8: zin 1 gaat nu over de komende twee uur, dezelfde termijn en bron als
-     de radartekst (kortetermijn()). Neerslag verderop vandaag komt er als losse,
+     de neerslagtekst (kortetermijn()). Neerslag verderop vandaag komt er als losse,
      apart herkenbare zin achteraan, met de dagelijkse kans als bron. */
   const buiBinnen2u=brief({pr:(u)=>u===15?2:0,pp:(u)=>u===15?80:5});
   check("neerslag binnen de eerste twee uur gaat over die twee uur, niet over twaalf",
@@ -324,7 +324,7 @@ groep("Eenheden");
   const html=require("fs").readFileSync(require("path").join(__dirname,"index.html"),"utf8");
   check("er is een functie die getal en eenheid aan elkaar houdt",/const nbsp=/.test(html));
   check("de onderschriften lopen via die functie",(html.match(/zetTekst\(/g)||[]).length>=8);
-  for(const bron of ["Open-Meteo","RainViewer","CARTO","OpenStreetMap"])
+  for(const bron of ["Open-Meteo"])
     check("voettekst vermeldt "+bron,html.includes(bron));
   // niets mag horizontaal buiten beeld vallen
   const stijl=html.slice(html.indexOf("<style>"),html.indexOf("</style>"));
@@ -1212,57 +1212,6 @@ groep("Wereldwijd");
       /Geldt voor een groter gebied/.test(bronW));
   }
 
-
-  /* De satellietlaag is eruit: de gratis laag van RainViewer levert geen
-     satellite.infrared, dus de knop verscheen nooit. Beter geen dode code. */
-  {
-    check("de satellietknop is opgeruimd",!/id="rlaag"/.test(bronW));
-    check("de bronregel belooft geen satelliet",!/Radar en satelliet: <a/.test(bronW));
-    check("RainViewer wordt vermeld zoals de voorwaarden vragen",
-      /rainviewer\.com/.test(bronW)&&/RainViewer<\/a>/.test(bronW));
-    /* Buiten Nederland is er geen vooruitblik. De schuif eindigt dan bij nu en dat
-       hoort erbij te staan, anders lijkt het alsof er iets stuk is. */
-    check("de app meldt het als er geen vooruitblik is",
-      /vooruitblik is hier niet beschikbaar/.test(bronW));
-    check("die melding hangt af van de reeks, niet van een vaste tekst",
-      /!R\.frames\.some\(fr=>fr\.toekomst\)/.test(bronW));
-  }
-
-  /* v70: de radar is bewust weer volledig statisch gemaakt (geen slepen,
-     geen in-/uitzoomen meer). Deze groep toetste eerder het tegenovergestelde
-     (dat die bediening bestond); nu toetst hij juist de afwezigheid ervan. */
-  {
-    check("de zoomtoestand staat nog vast op ZSTANDAARD (7), niet los instelbaar",
-      /zoom:7/.test(bronW) && /const TEGEL=256, ZSTANDAARD=7, ZTEGELMAX=7;/.test(bronW));
-    check("er zijn geen ZMIN/ZMAX meer: geen apart zoombereik nodig zonder zoomknoppen",
-      !/\bconst\s+ZMIN\b/.test(bronW) && !/\bconst\s+ZMAX\b/.test(bronW)
-      && !/ZMIN=\d/.test(bronW) && !/ZMAX=\d/.test(bronW));
-    check("de zoom- en centreerknoppen (#rin/#ruit/#rmidden) bestaan niet meer",
-      !/id="rin"/.test(bronW) && !/id="ruit"/.test(bronW) && !/id="rmidden"/.test(bronW));
-    check("radarZoom() en zoomKnoppen() bestaan niet meer",
-      !/function radarZoom/.test(bronW) && !/function zoomKnoppen/.test(bronW));
-    check("er is geen pointerdrag-bediening meer op de radar",
-      !/setPointerCapture/.test(bronW) && !/releasePointerCapture/.test(bronW)
-      && !/c\.addEventListener\("pointerdown"/.test(bronW));
-    check("er is geen dubbelklikzoom meer",!/addEventListener\("dblclick"/.test(bronW));
-    check("R.dx en R.dy worden nergens meer gemuteerd (alleen nog gelezen)",
-      !/R\.dx\s*[+*]?=/.test(bronW) && !/R\.dy\s*[+*]?=/.test(bronW));
-    check("de radar blokkeert verticaal vegen niet meer (geen touch-action:none op #radar)",
-      !/#radar\{[^}]*touch-action:none/.test(bronW));
-    check("het kruisje blijft precies in het midden (R.dx/R.dy blijven altijd 0)",
-      /markeer\(ctx,W,H,R\.dx,R\.dy\)/.test(bronW));
-  }
-
-  /* Afspelen, tijd en schuif blijven de enige bediening; die functie zelf is
-     door deze ronde niet aangeraakt. */
-  {
-    check("afspelen/pauzeren bestaat nog",/id="rspeel"/.test(bronW) && /R\.speelt/.test(bronW));
-    check("de tijdschuif bestaat nog",/id="rschuif"/.test(bronW));
-    check("de stale-responsebeveiliging (radarRonde) is niet aangeraakt",
-      /let radarRonde=0;/.test(bronW) && /const ronde=\+\+radarRonde;/.test(bronW)
-      && /if\(ronde!==radarRonde\) return;/.test(bronW));
-  }
-
   /* De briefing blijft staan als het netwerk wegvalt. Dat zat er al in, maar er
      stond geen enkele controle op, dus kon het ongemerkt sneuvelen. */
   {
@@ -1271,12 +1220,6 @@ groep("Wereldwijd");
       /const oud=ls\.get\(KEY_D,null\)/.test(bronW) && /S\.d=oud\.d/.test(bronW));
     check("er staat bij van wanneer die is",/laatste briefing van/.test(bronW));
   }
-
-
-  // KNMI mag alleen in de bronregel staan als hij ook gebruikt is
-  check("de bronregel noemt KNMI niet standaard",
-    !/verwachting <a href="https:\/\/dataplatform\.knmi\.nl/.test(bronW));
-  check("de bronregel is eerlijk over de radardekking",/Radardekking volgt/.test(bronW));
 }
 
 /* 10k. neerslaghoeveelheid, UV-tegel en de uitlijning van de kop */
@@ -1350,8 +1293,8 @@ groep("Dagtabel en tegels");
     zichtbaar(360).length===kolSmal, zichtbaar(360).join(",")+" tegen "+kolSmal+" kolommen");
 }
 
-/* 10l. vetgedrukt in de briefing en het contrast van de radarkaart */
-groep("Nadruk en kaart");
+/* 10l. vetgedrukt in de briefing */
+groep("Nadruk");
 {
   const bronN2=require("fs").readFileSync(require("path").join(__dirname,"index.html"),"utf8");
   const gevallen=[
@@ -1385,15 +1328,6 @@ groep("Nadruk en kaart");
     /blijft het <b>droog<\/b>/.test(bronN2));
   check("de maximumtemperatuur krijgt nadruk",
     /<b>"\+Math\.round\(tv\)\+" graden<\/b>/.test(bronN2)||/<b>"\+nutemp\+" graden<\/b>/.test(bronN2));
-
-  /* de kaart onder de radar was zo ver weggedrukt dat grenzen verdwenen */
-  const alfa=bronN2.match(/globalAlpha=donker\?([\d.]+):([\d.]+)/);
-  check("de radarkaart heeft een leesbare doorzichtigheid",
-    !!alfa && parseFloat(alfa[2])>=0.9 && parseFloat(alfa[1])>=0.7,
-    alfa?("donker "+alfa[1]+", licht "+alfa[2]):"regel niet gevonden");
-  // de neerslaglaag moet er nog wel bovenop leesbaar blijven
-  check("de neerslaglaag blijft sterker dan de kaart",
-    !!alfa && 0.85>=parseFloat(alfa[2])-0.1, "neerslag 0.85 tegen kaart "+(alfa?alfa[2]:"?"));
 }
 
 /* 10m. bevindingen uit de eerste live versie */
@@ -1471,33 +1405,6 @@ groep("Live bevindingen");
   check("het verificatieblok is verwijderd",
     !/id="controle"/.test(bronL) && !/Hoe goed was de verwachting/.test(bronL));
 
-  /* 7b. radarbeelden moeten op tijd staan. Twee bronnen achter elkaar plakken gaf
-     een schuif die van 20:10 naar 19:10 en dan naar 20:20 sprong. */
-  {
-    const bronF=new Function("return "+(bronL.match(/function opTijd\(lijst\)\{[\s\S]*?\n\}/)||["null"])[0])();
-    check("er is een functie die beelden op tijd zet",typeof bronF==="function");
-    if(typeof bronF==="function"){
-      const rommel=[{time:300},{time:100},{time:200},{time:100},{time:400}];
-      const uit=bronF(rommel);
-      const tijden=uit.map(f=>f.time);
-      check("de reeks loopt oplopend in de tijd",
-        tijden.every((t,i)=>i===0||t>tijden[i-1]),tijden.join(", "));
-      check("dubbele tijdstippen vallen weg",tijden.length===4,tijden.join(", "));
-      check("een lege of kapotte invoer geeft geen fout",
-        bronF([]).length===0 && bronF([null,{time:NaN},{time:5}]).length===1);
-    }
-    check("de radarreeks zelf (verleden+RainViewer-nowcast) wordt gesorteerd",/opTijd\(verleden\.concat/.test(bronL));
-    /* v71-correctie: RainViewer-meetbeelden en KNMI-verwachtingsbeelden zijn
-       niet langer tot één doorlopende afspeelreeks gemengd (zie de
-       toegewijde groep "Radar: RainViewer en KNMI niet meer gemengd"
-       verderop voor de volledige toetsing daarvan). */
-    check("knmiVerwachting() voegt geen stappen meer toe aan R.frames (geen menging meer)",
-      !/R\.frames=opTijd\(R\.frames\.concat/.test(bronL));
-  }
-
-
-
-
   /* 7c. het cijfer mag niet op de rode nu-lijn vallen */
   {
     const {api:aN,bak:bN}=laadKern(390);
@@ -1518,10 +1425,6 @@ groep("Live bevindingen");
         opDeLijn.map(l=>"label op x "+l.x.toFixed(0)+", lijn op "+xn.toFixed(0)).join(", "));
     }
   }
-
-  // 8. satelliet alleen crediteren als er beelden zijn
-  check("de bronregel noemt satelliet niet standaard",
-    !/Radar en satelliet: <a/.test(bronL) && /id="bronsat"/.test(bronL));
 
   // 9. de brede tegel alleen waar hij de rij vult
   check("de brede tegel spant alleen op smalle schermen",
@@ -1581,26 +1484,6 @@ groep("Iconen en balk");
   const m=api.icon(2,true,24).match(/<mask[\s\S]*?stroke-width="([\d.]+)"/);
   check("het masker is ruimer dan de lijndikte",!!m&&parseFloat(m[1])>1.15,m?m[1]:"niet gevonden");
 
-
-
-
-  /* Bij het afspelen flikkerde de neerslag: het doek werd gewist voordat de tegels
-     binnen waren. Het wissen hoort na het laden te komen, niet ervoor. */
-  {
-    const teken=bronI.slice(bronI.indexOf("async function radarTeken"),bronI.indexOf("function markeer"));
-    check("de tekenfunctie wacht op de beelden",/await Promise\.all/.test(teken));
-    const naLaden=teken.indexOf("await Promise.all")<teken.indexOf("ctx.clearRect");
-    check("het doek wordt pas gewist als de beelden binnen zijn",naLaden,
-      "clearRect staat nog voor het laden");
-    check("een oudere ophaalronde mag niet meer tekenen",
-      /ronde!==radarRonde\)\s*return/.test(teken),"geen bescherming tegen twee rondes tegelijk");
-    check("het volgende beeld wordt alvast opgehaald",
-      /R\.frames\[\(R\.i\+1\)%R\.frames\.length\]/.test(teken));
-    // de tijd mag niet meewachten, anders loopt het bijschrift achter
-    check("het tijdstip verschijnt zonder te wachten",
-      teken.indexOf("radartijd")<teken.indexOf("await Promise.all"));
-  }
-
   /* Er staat een globale regel svg,canvas{display:block}. Elke SVG die middenin
      een tekstregel staat moet die overrulen, anders breekt de regel eromheen.
      Zet je vertical-align op een SVG, dan bedoel je hem inline: dat is precies
@@ -1617,20 +1500,6 @@ groep("Iconen en balk");
       /\.maanbij svg\{display:inline-block/.test(bronI));
     check("de windpijl staat inline",
       /\.dwind svg\{display:inline-block/.test(bronI));
-  }
-
-  /* het kleurschema van de radar moet als een benoemde keuze in de code staan */
-  {
-    const m=bronI.match(/const RV_SCHEMA=(\d);/);
-    check("het kleurschema staat als benoemde constante in de code",!!m,"RV_SCHEMA niet gevonden");
-    if(m){
-      const nr=parseInt(m[1],10);
-      check("het kleurschema is een bestaand nummer",nr>=0&&nr<=8,String(nr));
-      check("de tegel-URL gebruikt die constante",
-        /RV_SCHEMA\+"\/1_1"/.test(bronI),"de URL heeft nog een vast cijfer");
-      // de satelliet heeft een eigen schema en mag niet meeschakelen
-      check("de satelliettegel houdt zijn eigen schema",/f\.sat\?"0\/0_0"/.test(bronI));
-    }
   }
 
   /* de klok hoort ook zichtbaar te blijven als je scrollt */
@@ -1827,34 +1696,11 @@ groep("Grafiek en hints");
   }
 }
 
-/* 10r. de laklaag: schuifbalk, uitlijning, selectielijn en voettekst */
+/* 10r. de laklaag: uitlijning, selectielijn en voettekst */
 groep("Opmaak en uitlijning");
 {
   const fsL2=require("fs"), pathL2=require("path");
   const css=fsL2.readFileSync(pathL2.join(__dirname,"index.html"),"utf8");
-
-  /* De schuifbalk. accent-color laat elke browser zijn eigen vorm tekenen, dus die
-     moet weg en de baan en knop tekenen we zelf. De pseudo-elementen horen in losse
-     regels: kent een browser er een niet, dan gooit hij de hele regel weg. */
-  // op de declaratie letten en niet op het woord: het staat ook in het commentaar
-  check("de browser tekent de schuif niet meer zelf",
-    /input\[type=range\]\{[^}]*appearance:none/.test(css) && !/accent-color\s*:/.test(css));
-  for(const p of ["-webkit-slider-runnable-track","-moz-range-track",
-                  "-webkit-slider-thumb","-moz-range-thumb"]){
-    check("er is opmaak voor "+p,new RegExp("::"+p.replace(/-/g,"\\-")+"\\{").test(css));
-  }
-  {
-    // geen enkele regel mag twee leveranciers combineren
-    const gemengd=[...css.matchAll(/([^{}]*)\{[^}]*\}/g)]
-      .map(m=>m[1])
-      .filter(sel=>/-webkit-slider|-moz-range/.test(sel) && /-webkit-/.test(sel) && /-moz-/.test(sel));
-    check("webkit en moz staan in losse regels",gemengd.length===0,gemengd.join(" | "));
-  }
-  check("de knop staat halverwege de baan",/margin-top:-5\.5px/.test(css));
-  check("wie beweging uitzet krijgt geen overgang",
-    /prefers-reduced-motion[\s\S]{0,200}slider-thumb[\s\S]{0,120}transition:none/.test(css));
-  check("de schuif blijft met het toetsenbord te zien",
-    /input\[type=range\]:focus-visible\{[^}]*outline/.test(css));
 
   /* De rode selectielijn zat tegen de tekst aan. */
   check("de geselecteerde dag heeft ruimte naast de lijn",
@@ -1864,11 +1710,11 @@ groep("Opmaak en uitlijning");
   /* De voettekst: elke bron op een eigen regel. */
   check("de voettekst staat onder elkaar",/footer\{[^}]*flex-direction:column/.test(css));
   const bronnen=(css.match(/<span class="bron"/g)||[]).length;
-  check("elke bron heeft een eigen regel",bronnen>=4,bronnen+" regels");
+  check("elke bron heeft een eigen regel",bronnen>=1,bronnen+" regels");
   check("de bronnen staan niet meer als een lopend blok",
     !/Weer: <a[\s\S]{0,400}Kaart: <a/.test(css));
   // en de verplichte vermeldingen moeten er nog wel staan
-  for(const bron of ["open-meteo.com","rainviewer.com","carto.com","openstreetmap.org"]){
+  for(const bron of ["open-meteo.com"]){
     check(bron+" wordt nog vermeld",css.includes(bron));
   }
 
@@ -2052,8 +1898,8 @@ groep("Neerslagkans komend uur");
   check("de kop en de subtekst tonen hetzelfde percentage",hoog.pop.startsWith("77"),hoog.pop);
 }
 
-/* 10u. briefing en radartekst delen dezelfde conclusie over de komende twee uur */
-groep("Briefing en radar afgestemd");
+/* 10u. briefing en neerslagtekst delen dezelfde conclusie over de komende twee uur */
+groep("Briefing en neerslagtekst afgestemd");
 {
   const fsK=require("fs"), pathK=require("path");
   const bronK=fsK.readFileSync(pathK.join(__dirname,"index.html"),"utf8");
@@ -2063,7 +1909,7 @@ groep("Briefing en radar afgestemd");
     /const NEERSLAG_DREMPEL_MM\s*=\s*0\.1/.test(bronK));
   check("de briefing gebruikt kortetermijn()",
     /kt\s*=\s*kortetermijn\(\)/.test(bronK.slice(bronK.indexOf("function briefing"))));
-  check("de radartekst gebruikt kortetermijn()",
+  check("de neerslagtekst gebruikt kortetermijn()",
     /const kt=kortetermijn\(\);/.test(bronK.slice(bronK.indexOf("function nowcast"))));
 
   function samen(opties){
@@ -2071,19 +1917,19 @@ groep("Briefing en radar afgestemd");
     Object.assign(api.S,{d:bouw(opties),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,
       klokOverride:KLOK});
     api.meters();api.briefing();api.nowcast();
-    return { briefing:norm(bak.brief.innerHTML).replace(/<[^>]+>/g,""), radar:norm(bak.nctext.textContent) };
+    return { briefing:norm(bak.brief.innerHTML).replace(/<[^>]+>/g,""), neerslagtekst:norm(bak.nctext.textContent) };
   }
 
   // droog scenario: allebei "droog", geen van beide "regent" of "neerslag"
   const d1=samen({pp:()=>5,pr:()=>0,som:0});
   check("droog: de briefing zegt droog",/komende twee uur.*droog/.test(d1.briefing),d1.briefing);
-  check("droog: de radartekst zegt droog",/komende twee uur blijft het droog/.test(d1.radar),d1.radar);
+  check("droog: de neerslagtekst zegt droog",/komende twee uur blijft het droog/.test(d1.neerslagtekst),d1.neerslagtekst);
 
   // nat scenario binnen de eerste twee uur: geen van beide mag "droog" beweren
   const n1=samen({pr:(u)=>u===15?2:0,pp:(u)=>u===15?80:5});
   check("nat: de briefing beweert geen droogte",!/komende twee uur.*blijft het.*droog/.test(n1.briefing),n1.briefing);
-  check("nat: de radartekst beweert geen droogte",!/komende twee uur blijft het droog/.test(n1.radar),n1.radar);
-  check("nat: beide noemen neerslag",/neerslag/.test(n1.briefing)&&/neerslag/.test(n1.radar));
+  check("nat: de neerslagtekst beweert geen droogte",!/komende twee uur blijft het droog/.test(n1.neerslagtekst),n1.neerslagtekst);
+  check("nat: beide noemen neerslag",/neerslag/.test(n1.briefing)&&/neerslag/.test(n1.neerslagtekst));
 
   // het regent nu: allebei "regent nu"
   const r1=samen({nu:0.6,pp:(u)=>u<17?85:5,pr:(u)=>u<17?0.6:0,som:3});
@@ -2098,10 +1944,10 @@ groep("Briefing en radar afgestemd");
     const opt = regen<0 ? {pp:()=>5,pr:()=>0} : {pr:(u)=>u===regen?0.3+seed*0.05:0,pp:(u)=>u===regen?60:5};
     const s=samen(opt);
     const briefDroog=/komende twee uur.*blijft het.*droog/.test(s.briefing)||/komende <b>twee uur<\/b> blijft het <b>droog/.test(s.briefing);
-    const radarDroog=/komende twee uur blijft het droog/.test(s.radar);
-    if(briefDroog!==radarDroog) tegenstrijdig.push("seed "+seed+": briefing droog="+briefDroog+", radar droog="+radarDroog);
+    const tekstDroog=/komende twee uur blijft het droog/.test(s.neerslagtekst);
+    if(briefDroog!==tekstDroog) tegenstrijdig.push("seed "+seed+": briefing droog="+briefDroog+", neerslagtekst droog="+tekstDroog);
   }
-  check("over een reeks patronen komen briefing en radar nooit tot een andere conclusie",
+  check("over een reeks patronen komen briefing en neerslagtekst nooit tot een andere conclusie",
     tegenstrijdig.length===0, tegenstrijdig.join(" | "));
 
   // onvoldoende data: geen stellige droogmelding in beide
@@ -2115,203 +1961,8 @@ groep("Briefing en radar afgestemd");
   check("onvoldoende data: geen stellige droogmelding in de briefing",
     !/komende twee uur.*blijft het.*droog/.test(briefX)
     && !/komende <b>twee uur<\/b> blijft het <b>droog/.test(bX.brief.innerHTML),briefX);
-  check("onvoldoende data: ook de radartekst blijft terughoudend",
+  check("onvoldoende data: ook de neerslagtekst blijft terughoudend",
     !/komende twee uur blijft het droog/.test(norm(bX.nctext.textContent)),norm(bX.nctext.textContent));
-}
-
-/* 10v. radar-zoom: sinds v70 is de radar statisch (geen zoomknoppen meer), dus
-   R.zoom staat altijd vast op ZSTANDAARD. De aanvraaggrens (ZTEGELMAX) en de
-   client-side-opschaalmechaniek in radarTeken() zelf zijn ongewijzigd en
-   blijven relevant als een toekomstige zoomstand ooit weer instelbaar wordt. */
-groep("Radar zoomgrens");
-{
-  const fsZ=require("fs"), pathZ=require("path");
-  const bronZ=fsZ.readFileSync(pathZ.join(__dirname,"index.html"),"utf8");
-  const m=bronZ.match(/const TEGEL=256, ZSTANDAARD=(\d+), ZTEGELMAX=(\d+);/);
-  check("de zoomconstanten staan er nog in de verwachte vorm (zonder ZMIN/ZMAX)",!!m,"regel niet gevonden");
-  if(m){
-    const zst=+m[1], ztmax=+m[2];
-    /* RainViewer documenteert zelf "Maximum zoom level is 7" voor zijn tegel-URL's
-       (rainviewer.com/api/weather-maps-api.html). */
-    check("het aanvraagmaximum overschrijdt RainViewer's gedocumenteerde grens niet (7)",
-      ztmax<=7,"ZTEGELMAX is "+ztmax);
-    check("de standaardzoom valt niet boven het aanvraagmaximum",
-      zst<=ztmax,zst+" boven "+ztmax);
-  }
-  check("er zijn geen ZMIN/ZMAX meer (geen apart zoombereik zonder zoomknoppen)",
-    !/\bconst\s+ZMIN\b/.test(bronZ) && !/\bconst\s+ZMAX\b/.test(bronZ)
-    && !/ZMIN=\d/.test(bronZ) && !/ZMAX=\d/.test(bronZ));
-  // deze grens is uit de documentatie afgeleid, niet uit het niets: dat moet ook
-  // in de code zelf terug te lezen zijn voor wie hem later aanpast
-  check("de reden voor de grens staat als toelichting in de code",
-    /Maximum zoom level is 7/.test(bronZ) && /rainviewer\.com/.test(bronZ),
-    "de RainViewer-bronvermelding bij ZTEGELMAX ontbreekt");
-  // devicePixelRatio mag de tegelaanvraag niet ongemerkt naar een hoger niveau duwen
-  check("devicePixelRatio stuurt de tegelaanvraag niet aan",
-    !/devicePixelRatio/.test(bronZ.slice(bronZ.indexOf("function radarTeken"),bronZ.indexOf("function markeer"))));
-  // de tegel-URL gebruikt het begrensde aanvraagniveau Zt, niet het visuele niveau Zv
-  check("de tegel-URL gebruikt het begrensde aanvraagniveau, niet het visuele niveau",
-    /const Zt=Math\.min\(Zv,ZTEGELMAX\);/.test(bronZ)
-    && /cartocdn\.com\/\$\{stijl\}\/\$\{Zt\}/.test(bronZ)
-    && !/cartocdn\.com\/\$\{stijl\}\/\$\{Zv\}/.test(bronZ));
-  // boven het aanvraagmaximum wordt er niets hogers opgehaald, alleen groter getekend
-  check("boven het aanvraagmaximum wordt de laatst geldige tegel opgeschaald, niet opnieuw aangevraagd",
-    /const schaal=Math\.pow\(2,Zv-Zt\);/.test(bronZ)
-    && /drawImage\(im,vakken\[k\]\.px,vakken\[k\]\.py,TS,TS\)/.test(bronZ));
-  {
-    // de opschaling doorrekenen zoals de app hem toepast, los van de brontekst
-    const Zt=z=>Math.min(z,7);
-    const proef=[4,7,8,9].map(z=>({z,Zt:Zt(z),schaal:Math.pow(2,z-Zt(z))}));
-    const fout=proef.filter(p=>p.z<=7 ? (p.Zt!==p.z||p.schaal!==1)
-                                        : (p.Zt!==7||p.schaal!==Math.pow(2,p.z-7)));
-    check("de opschalingsfactor klopt op elk niveau, ook voorbij het aanvraagmaximum",
-      fout.length===0,JSON.stringify(fout));
-  }
-
-  /* v70-herstel: de prefetch van het volgende radarframe gebruikte een losse,
-     nergens gedefinieerde variabele Z (in plaats van de al berekende, geldige
-     tegelzoom Zt), wat op elke prefetch-aanroep een ReferenceError gaf. Deze
-     test faalt zowel wanneer ${Z} nog ergens voor een radar-tegel-URL wordt
-     gebruikt, als wanneer de zoomvariabele (Zt) niet binnen radarTeken() zelf
-     bestaat. */
-  {
-    const radarTekenBron=bronZ.slice(bronZ.indexOf("async function radarTeken"),
-      bronZ.indexOf("function markeer"));
-    check("radarTeken() definieert zelf een geldige tegelzoomvariabele (Zt)",
-      /const Zt=Math\.min\(Zv,ZTEGELMAX\);/.test(radarTekenBron));
-    check("geen enkele radar-tegel-URL gebruikt nog de niet-bestaande variabele Z",
-      !/\$\{Z\}/.test(radarTekenBron));
-    check("de prefetch van het volgende frame gebruikt Zt, niet Z",
-      /volg\.path\}\/\$\{TEGEL\}\/\$\{Zt\}\//.test(radarTekenBron));
-    check("repositorybreed: geen losse ${Z} meer voor tegel-URL's",!/\$\{Z\}/.test(bronZ));
-  }
-}
-
-/* v71: probleem A - het radarbeeld leek te verspringen bij de overgang van
-   actueel naar verwachting. Grondig bronOnderzoek (zie het eindverslag)
-   toonde aan dat W/H/Zv/Zt/mid/ox/oy in radarTeken() vóór het uitlezen van
-   f=R.frames[R.i] worden berekend en dus voor ELK frame identiek zijn: er is
-   geen geometrische/projectie-bug. Deze groep legt dat objectief vast als
-   regressiebescherming, samen met de al bestaande sortering/dedup (opTijd),
-   stale-responsebeveiliging (radarRonde) en de ongewijzigde bediening. */
-groep("Radarframes: volgorde, projectie en stale-responsebeveiliging");
-{
-  const fsR=require("fs"), pathR=require("path");
-  const bronR=fsR.readFileSync(pathR.join(__dirname,"index.html"),"utf8");
-  const radarTekenBron2=bronR.slice(bronR.indexOf("async function radarTeken"),bronR.indexOf("function markeer"));
-
-  // 1+2+3: opTijd() sorteert chronologisch en dedupliceert; actuele frames
-  // (toekomst:false) staan vóór verwachtingsframes (toekomst:true) zodra ze
-  // op tijd gesorteerd zijn, want een verwachting ligt per definitie na nu
-  const {api}=laadKern(1280);
-  const test=[
-    {time:300,toekomst:false},{time:100,toekomst:false},{time:200,toekomst:false},
-    {time:500,toekomst:true},{time:400,toekomst:true},{time:300,toekomst:true},   // dubbele tijd 300: verwachting overschrijft het actuele duplicaat
-  ];
-  const gesorteerd=api.opTijd(test);
-  check("1. opTijd() sorteert frames chronologisch",
-    gesorteerd.every((f,i)=>i===0||f.time>=gesorteerd[i-1].time),
-    gesorteerd.map(f=>f.time).join(","));
-  check("1b. opTijd() dedupliceert op tijdstip (per tijdstip blijft er één over)",
-    new Set(gesorteerd.map(f=>f.time)).size===gesorteerd.length);
-  check("2. actuele frames staan vóór verwachtingsframes zodra correct gesorteerd",
-    (()=>{ const idx=gesorteerd.findIndex(f=>f.toekomst);
-           return idx<0||gesorteerd.slice(0,idx).every(f=>!f.toekomst); })());
-  check("3. de eerste toekomstige timestamp wordt herkend als verwachting (f.toekomst, gebruikt voor het VERWACHTING-label)",
-    /f\.toekomst\?"straks":""/.test(bronR) && /f\.toekomst\?"<small>verwachting<\/small>"/.test(bronR));
-
-  // 4+6: W/H/mid/ox/oy worden één keer per radarTeken()-aanroep berekend,
-  // vóór f=R.frames[R.i] wordt gelezen -- dus onafhankelijk van welk frame
-  // getoond wordt. Dat is precies wat een projectiesprong tussen frames
-  // structureel onmogelijk maakt.
-  check("4+6. kaartuitsnede/projectie (W,H,Zv,Zt,mid,ox,oy) wordt berekend vóórdat het frame zelf wordt gelezen (f=R.frames[R.i] komt pas erna)",
-    (()=>{ const iOx=radarTekenBron2.indexOf("const ox=mid.x-W/2-R.dx");
-           const iF=radarTekenBron2.indexOf("const f=R.frames[R.i];");
-           return iOx>=0 && iF>=0 && iOx<iF; })());
-  check("4b. de basiskaart (kaarten/vakken) wordt uit stijl/Zt/vakken opgebouwd, niet uit het frame f",
-    /const kaarten=vakken\.map\(v=>tegelBelofte\(`https:\/\/basemaps\.cartocdn\.com\/\$\{stijl\}\/\$\{Zt\}\/\$\{v\.X\}\/\$\{v\.ty\}\.png`\)\);/.test(radarTekenBron2));
-  check("5. een framewisseling verandert R.zoom/R.dx/R.dy niet (die worden nergens in radarTeken() of de afspeeltimer gemuteerd)",
-    !/R\.zoom\s*=/.test(radarTekenBron2) && !/R\.dx\s*[+=]/.test(radarTekenBron2) && !/R\.dy\s*[+=]/.test(radarTekenBron2)
-    && !/R\.zoom\s*=|R\.dx\s*[+=]|R\.dy\s*[+=]/.test(bronR.slice(bronR.indexOf('"rspeel"'),bronR.indexOf("function opTijd"))));
-
-  // 7+8: stale-responsebeveiliging (radarRonde) bestaat en wordt gecontroleerd
-  // vóórdat er iets getekend wordt
-  check("7+8. een oude laadronde wordt genegeerd vóórdat er iets getekend wordt (ronde!==radarRonde direct na Promise.all, vóór clearRect)",
-    (()=>{ const iChk=radarTekenBron2.indexOf("if(ronde!==radarRonde) return;");
-           const iClear=radarTekenBron2.indexOf("ctx.clearRect");
-           return iChk>=0 && iClear>=0 && iChk<iClear; })());
-  check("de laadronde-teller (radarRonde) wordt bij iedere aanroep van radarTeken() verhoogd, ook via de slider en de afspeeltimer",
-    /let radarRonde=0;/.test(bronR) && /const ronde=\+\+radarRonde;/.test(bronR));
-
-  // 9: al eerder getest (herstelronde), hier nogmaals bevestigd binnen deze groep
-  check("9. prefetch gebruikt dezelfde geldige tegelzoom (Zt) als de zichtbare render",
-    /volg\.path\}\/\$\{TEGEL\}\/\$\{Zt\}\//.test(radarTekenBron2));
-
-  // 10: frame-index en timestamp blijven gekoppeld via hetzelfde object in R.frames[R.i]
-  check("10. frame-index en timestamp blijven gekoppeld (R.frames[R.i] is één object met .time/.path/.toekomst samen)",
-    /const f=R\.frames\[R\.i\];/.test(radarTekenBron2));
-
-  // 11: slider en autoplay-timer roepen dezelfde radarTeken() aan, die zijn
-  // eigen radarRonde bijhoudt; een trage, oudere aanroep verliest dus altijd
-  // van een latere, of die nu van de slider of de timer komt
-  check("11. de slider en de afspeeltimer gebruiken beide dezelfde radarTeken(), dus dezelfde stale-responsebeveiliging",
-    /rschuif"\)\.addEventListener\("input",e=>\{R\.i=\+e\.target\.value;radarTeken\(\);\}\)/.test(bronR)
-    && /R\.i=\(R\.i\+1\)%R\.frames\.length;[\s\S]{0,80}radarTeken\(\);/.test(bronR));
-
-  // 12: v71-correctie: de overgang actueel->verwachting binnen R.frames is nu
-  // altijd RainViewer->RainViewer (KNMI-WMS zit niet meer in de animatie),
-  // dus er is nog maar één rendertraject en dus geen aparte canvastransformatie
-  // mogelijk voor "de verwachting" -- dat kan hier niet meer misgaan
-  check("12. geen KNMI-WMS-laag meer in de animatie: mercX/mercY/wereldGrootte (alleen nodig voor die laag) bestaan niet meer",
-    !/\bmercX\(/.test(radarTekenBron2) && !/\bmercY\(/.test(radarTekenBron2) && !/wereldGrootte\(/.test(bronR));
-  check("12b. neerslag-tegels gebruiken voor ieder frame dezelfde vakken/Zt-opbouw (geen aparte WMS-tak meer)",
-    /const neerslag=vakken\.map\(v=>\s*\n\s*tegelBelofte\(`\$\{R\.host\}\$\{f\.path\}/.test(radarTekenBron2)
-    && !/f\.knmi/.test(radarTekenBron2));
-
-  // 13: geen nieuwe timer/interval toegevoegd. Er bestaan al vijf setInterval-
-  // aanroepen in de app (nu-lijn, live klok, radar-afspeeltimer, stempel, en
-  // de periodieke stale-databuffercontrole) - stuk voor stuk al vóór deze
-  // ronde aanwezig en hier niet aangeraakt. De radar-afspeeltimer zelf moet
-  // er precies één keer staan.
-  check("13. de radar-afspeeltimer bestaat precies één keer, geen nieuwe timer toegevoegd",
-    (radarTekenBron2.match(/setInterval\(/g)||[]).length===0
-    && (bronR.match(/R\.timer=setInterval\(/g)||[]).length===1);
-
-  // 14: bestaande afspeel-, pauze- en sliderfunctionaliteit blijft bestaan
-  check("14. afspelen/pauzeren en de slider bestaan nog, ongewijzigd",
-    /id="rspeel"/.test(bronR) && /id="rschuif"/.test(bronR) && /R\.speelt/.test(bronR));
-}
-
-/* v71-correctie: RainViewer-meetbeelden en KNMI-verwachtingsbeelden werden
-   tot nu toe in één doorlopende R.frames-reeks geplakt zodra RainViewer zelf
-   geen nowcast leverde. Twee verschillende bronnen (andere data, ander
-   rendertraject) in dezelfde animatie liet de neerslaginhoud zichtbaar
-   verspringen bij die bronovergang. Deze groep legt vast dat die menging
-   structureel weg is: de radaranimatie speelt alleen nog de samenhangende
-   RainViewer-reeks; KNMI-data wordt uitsluitend nog gebruikt voor de
-   statustekst over de vooruitblik. */
-groep("Radar: RainViewer en KNMI niet meer gemengd");
-{
-  const fsM=require("fs"), pathM=require("path");
-  const bronM=fsM.readFileSync(pathM.join(__dirname,"index.html"),"utf8");
-  const knmiFn=bronM.slice(bronM.indexOf("async function knmiVerwachting"),bronM.indexOf("/* ---------- officiele waarschuwingen"));
-
-  check("knmiVerwachting() muteert R.frames nergens meer",!/R\.frames\s*=/.test(knmiFn));
-  check("knmiVerwachting() muteert R.wms nergens meer (die laag bestaat niet meer)",!/R\.wms\s*=/.test(knmiFn));
-  check("er is geen KNMI-frame (f.knmi) meer mogelijk: dat veld wordt nergens meer gezet",
-    !/knmi:true/.test(bronM));
-  check("de serverfunctie /api/radarverwachting wordt nog gewoon aangeroepen (ongewijzigd)",
-    /j\("\/api\/radarverwachting"\)/.test(knmiFn));
-  check("de tekstuele vooruitblik 'Neerslag komende twee uur' gebruikt een eigen, andere bron (minutely_15) en is hier niet aangeraakt",
-    /S\.d\.minutely_15/.test(bronM));
-  check("geen lege/misleidende KNMI-knop meer: #bronknmi wordt altijd leeggemaakt, nooit meer met 'verwachting KNMI' gevuld",
-    /getElementById\("bronknmi"\);\s*\n\s*if\(bk\) bk\.textContent="";/.test(bronM)
-    && !/verwachting KNMI/.test(bronM));
-  check("radarLaden() voegt geen KNMI-stappen meer toe aan R.radarFrames",
-    !/R\.radarFrames=R\.frames;\s*\n\s*const bs/.test(bronM));
-  // de functionele test (knmiVerwachting() echt aanroepen met een gemockte
-  // serverrespons) staat, omdat die asynchroon is, verderop bij de overige
-  // async tests in testenOpstartlocatie()
 }
 
 /* 10w. luchtvochtigheidstegel zonder dauwpunt */
@@ -2900,7 +2551,7 @@ groep("Kleursysteem");
   check("de accentvariabelen (lijnen/tekst/datavisualisatie) staan nog centraal in :root",
     /--text-primary:/.test(bronK3) && /--text-secondary:/.test(bronK3) && /--border-subtle:/.test(bronK3)
     && /--accent-active:#A51D3D/.test(bronK3) && /--accent-info:/.test(bronK3)
-    && /--accent-rain:#3B8FA3/.test(bronK3) && /--accent-night:#142C4C/.test(bronK3)
+    && /--accent-night:#142C4C/.test(bronK3)
     && /--accent-sun:#F2CE63/.test(bronK3));
   check("tekst/border/info harmoniseren met bestaande tokens in plaats van een dubbel systeem",
     /--text-primary:var\(--ink\)/.test(bronK3) && /--text-secondary:var\(--ink-45\)/.test(bronK3)
@@ -2914,8 +2565,7 @@ groep("Kleursysteem");
   check("de themakeuzelogica zelf is niet gewijzigd (auto kiest nog op is_day)",
     /keuze==="auto".*is_day===0.*"donker".*"licht"/.test(bronK3.replace(/\s+/g," ")));
   /* v70: alle --surface-*-tokens (module-achtergrondtinten) zijn verwijderd;
-     ze werden nergens anders meer gebruikt zodra de laatste drie
-     achtergrondregels (.radar/#nights/#aq) eruit gingen. */
+     ze werden nergens anders meer gebruikt zodra de laatste moduleachtergronden eruit gingen. */
   check("de vijf --surface-*-tokens bestaan niet meer",
     !/--surface-info:/.test(bronK3) && !/--surface-rain:/.test(bronK3)
     && !/--surface-night:/.test(bronK3) && !/--surface-sun:/.test(bronK3)
@@ -2925,41 +2575,12 @@ groep("Kleursysteem");
   check("#aq behoudt alleen zijn dunne accentlijn (border-top), geen background meer",
     /#aq\{border-top:2px solid var\(--accent-info\)\}/.test(bronK3)
     && !/#aq\{[^}]*background/.test(bronK3));
-  // v70-correctie: de radar had eerder óók een dunne accentlijn (border-top),
-  // maar die oogde als een overbodig decoratief streepje boven een verder
-  // neutrale module en is hier bewust weggehaald; .radar heeft nu geen
-  // border-top en geen background meer, alleen zijn bestaande rand (border)
-  check(".radar heeft geen accentlijn en geen background meer (bewust verwijderd)",
-    !/\.radar\{[^}]*border-top/.test(bronK3) && !/\.radar\{[^}]*background/.test(bronK3));
-  /* v70-herstel: naast de cyaanlijn (border-top op .radar, al verwijderd)
-     tekende de algemene h2-regel ook nog een zwarte border-bottom onder de
-     titel "Neerslagradar". Uitsluitend die ene kop krijgt nu een gerichte
-     uitzondering via #radartitel; de algemene h2-regel zelf is niet gewijzigd,
-     dus elke andere sectiekop (Het etmaal, Nachtzicht, Zeven dagen,
-     Luchtkwaliteit) behoudt zijn eigen zwarte lijn. */
-  check("#radartitel bestaat op de Neerslagradar-kop",
-    /<h2 id="radartitel"><span>Neerslagradar<\/span><\/h2>/.test(bronK3));
-  check("#radartitel heeft expliciet geen border-bottom",
-    /#radartitel\{border-bottom:none\}/.test(bronK3));
-  check("de algemene h2-regel zelf is niet aangepast: border-bottom blijft daar gewoon bestaan",
-    /h2\{font-family:var\(--sans\)[^}]*border-bottom:1px solid var\(--ink\)/.test(bronK3));
-  check("andere sectiekoppen (Nachtzicht, Zeven dagen) hebben geen eigen uitzondering gekregen",
-    !/<h2 id="[^"]*"><span>Nachtzicht<\/span>/.test(bronK3)
-    && !/<h2 id="[^"]*"><span>Zeven dagen<\/span>/.test(bronK3));
-  check("de radar krijgt geen nieuwe achtergrond, accentlijn of decoratief streepje (alleen border-bottom:none)",
-    !/#radartitel\{[^}]*background/.test(bronK3) && !/#radartitel\{[^}]*border-top/.test(bronK3)
-    && (bronK3.match(/#radartitel\{[^}]*\}/g)||[]).length===1);
+
   check("basisachtergronden (--paper, --sheet) bestaan nog onaangeroerd",
     /--paper:#F4F5F3/.test(bronK3) && /--sheet:#FFFFFF/.test(bronK3));
   check("donker en rood thema hebben geen hardcoded witte achtergrond gekregen",
     !/html\[data-thema="donker"\][^}]*--sheet:#FFFFFF/.test(bronK3)
     && !/html\[data-thema="rood"\][^}]*--sheet:#FFFFFF/.test(bronK3));
-  // v70-herstel: de canvasfallback van #radar (zichtbaar zolang er nog geen
-  // tegel is getekend) gebruikte een gekleurde rule-soft-tint; die volgt nu
-  // gewoon de normale, thema-afhankelijke sheet-achtergrond, in elk thema.
-  check("#radar's canvasfallback volgt de normale sheet-achtergrond, geen gekleurde tint",
-    /#radar\{[^}]*background:var\(--sheet\)\}/.test(bronK3)
-    && !/#radar\{[^}]*background:var\(--rule-soft\)/.test(bronK3));
 }
 
 /* 15. v68: responsive dashboardlayout. Dit toetst DOM-/CSS-structuur (delen van
@@ -2971,9 +2592,9 @@ groep("Responsive structuur (v68)");
   const fsD=require("fs"), pathD=require("path");
   const bronD=fsD.readFileSync(pathD.join(__dirname,"index.html"),"utf8");
 
-  // 1-3: één gedeelde DOM, geen dubbele grafiek-/radar-ids
+  // 1-3: één gedeelde DOM, geen dubbele ids en geen verwijderde radar
   check("er is precies één #chart in de hele pagina",(bronD.match(/id="chart"/g)||[]).length===1);
-  check("er is precies één #radar in de hele pagina",(bronD.match(/id="radar"/g)||[]).length===1);
+  check("de verwijderde radar komt nergens meer in de DOM voor",(bronD.match(/id="radar"/g)||[]).length===0);
   check("er is precies één #days en één #nights (geen dubbele desktopkopie)",
     (bronD.match(/id="days"/g)||[]).length===1 && (bronD.match(/id="nights"/g)||[]).length===1);
 
@@ -2991,9 +2612,9 @@ groep("Responsive structuur (v68)");
     (scriptBron.match(/window\.innerWidth/g)||[]).length===7,
     (scriptBron.match(/window\.innerWidth/g)||[]).length);
 
-  // 7: mobiele DOM-volgorde blijft logisch (brief -> hero -> stats -> grafiek -> radar -> ... -> footer)
+  // 7: mobiele DOM-volgorde blijft logisch (brief -> hero -> stats -> grafiek -> neerslagtekst -> ... -> footer)
   const volgorde=["id=\"brief\"","class=\"hero\"","class=\"stats\"","id=\"chartlab\"",
-    "<span>Neerslagradar</span>","id=\"nctext\"","<span>Zeven dagen</span>",
+    "id=\"nctext\"","<span>Zeven dagen</span>",
     "<span>Nachtzicht</span>","<span>Luchtkwaliteit en pollen</span>","<footer>"];
   let vorigeIdx=-1, volgordeKlopt=true;
   for(const stuk of volgorde){
@@ -3008,15 +2629,14 @@ groep("Responsive structuur (v68)");
   // achtergrond, dus op het prefix tellen i.p.v. de exacte class-string)
   check("de minimale layoutwrappers (dashrow/dashcol) bestaan",
     /class="dashrow dashrow-hero"/.test(bronD) && /class="dashrow dashrow-chart"/.test(bronD)
-    && /class="dashrow dashrow-days"/.test(bronD) && (bronD.match(/class="dashcol/g)||[]).length===4);
+    && /class="dashrow dashrow-days"/.test(bronD) && (bronD.match(/class="dashcol/g)||[]).length===3);
   check("dashrow is tot 1100px functioneel onzichtbaar (display:contents)",
     /\.dashrow\{display:contents\}/.test(bronD));
 
-  // 9: veilige minmax(0, ...)-kolommen in de desktopgrids die er nog zijn
-  // (sinds de herstelronde: hero en grafiek/radar; dagen/nachtzicht is
-  // bewust geen zij-aan-zij-grid meer, zie de Herstelronde-testgroep)
+  // 9: veilige minmax(0, ...)-kolommen in het resterende desktopgrid.
+  // De grafiek gebruikt na de radarverwijdering de volle breedte; dagen/nachtzicht blijft gestapeld.
   check("de resterende desktopgrids gebruiken minmax(0, ...) tegen overflow",
-    (bronD.match(/grid-template-columns:minmax\(0,[^)]+\) minmax\(0,[^)]+\)/g)||[]).length===2);
+    (bronD.match(/grid-template-columns:minmax\(0,[^)]+\) minmax\(0,[^)]+\)/g)||[]).length===1);
 
   // 10: geen nieuwe overflow-verbergende noodregel
   check("geen nieuwe overflow:hidden/clip-regel is toegevoegd als noodoplossing voor de dashboardlaag",
@@ -3036,8 +2656,8 @@ groep("Desktoplayout (v68)");
     /\.mast\{display:flex/.test(bronD2) && !/\.mast\{display:grid/.test(desktopBlok));
   check("het metriekgrid heeft op tablet een eigen (tweekoloms) variant",
     /min-width:900px\) and \(max-width:1099px\)[\s\S]{0,20}\{[\s\S]*?\.stats\{grid-template-columns:repeat\(2,1fr\)/.test(bronD2));
-  check("grafiek en radar delen vanaf desktop één grid (.dashrow-chart)",
-    /\.dashrow-chart\{display:grid;grid-template-columns:minmax/.test(desktopBlok));
+  check("de grafiek gebruikt na verwijdering van de radar de volle desktopbreedte",
+    /\.dashrow-chart\{display:block\}/.test(desktopBlok));
   check("herstelronde: Zeven dagen en Nachtzicht vormen bewust GEEN zij-aan-zij-grid (.dashrow-days blijft gestapeld)",
     !/\.dashrow-days\{display:grid/.test(bronD2));
   check("luchtkwaliteit/pollen (#aq) krijgt geen eigen tweekoloms grid en loopt dus over de volle dashboardbreedte",
@@ -3046,8 +2666,6 @@ groep("Desktoplayout (v68)");
     !/@media\(min-width:900px\) and \(max-width:1099px\)\)?[\s\S]{0,300}dashrow-chart\{display:grid/.test(bronD2));
   check("mobiel (onder 900px) blijft één kolom: de bestaande mobiele media query is niet gewijzigd",
     /@media\(max-width:900px\)\{[\s\S]*?body\{padding:14px 12px\}/.test(bronD2));
-  check("de radar heeft een begrensde desktophoogte via zijn eigen, ongewijzigde beeldverhouding (640:470)",
-    /#radar\{aspect-ratio:640\/470[^}]*max-height:540px/.test(desktopBlok));
   check("geen desktoplayout is actief onder het afgesproken breakpoint (geen andere min-width:110\\dpx-waarde)",
     !/@media\(min-width:11(?!00px\))/.test(bronD2));
 }
@@ -3114,9 +2732,6 @@ groep("Herstelronde v68");
     /function nachten\(\)/.test(bronH));
 
   // 12.3 kleur op alle viewports
-  check("1. het regenaccent (.radar) staat buiten iedere mediaquery",
-    !/@media[^{]*\{[\s\S]*?\.radar\{border-top:2px solid var\(--accent-rain\)/.test(
-      bronH.slice(0,bronH.indexOf(".radar{border-top:2px solid var(--accent-rain)"))));
   check("2. het nachtaccent (#nights) staat buiten iedere mediaquery",
     bronH.indexOf("#nights{border-top:2px solid var(--accent-night)}")>=0
     && bronH.indexOf("#nights{border-top:2px solid var(--accent-night)}")
@@ -3130,14 +2745,13 @@ groep("Herstelronde v68");
       < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)")
     && bronH.indexOf(".stat.zon{border-top:2px solid var(--accent-sun)}")
       < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)"));
-  check("5. desktop-specifieke padding voor de resterende modules blijft binnen de 1100px-mediaquery",
-    /\.radar\{max-width:100%;padding:var\(--s2\) var\(--s2\) 4px\}/.test(desktopH)
-    && /#aq\{padding:var\(--s2\)\}/.test(desktopH));
+  check("5. desktop-specifieke padding voor luchtkwaliteit blijft binnen de 1100px-mediaquery",
+    /#aq\{padding:var\(--s2\)\}/.test(desktopH));
   check("6. de kleurregels gebruiken de centrale accenttokens, geen losse hex/rgba, en geen surface-tints meer",
     /var\(--accent-night\)/.test(bronH)
     && /var\(--accent-info\)/.test(bronH) && /var\(--accent-sun\)/.test(bronH)
     && !/var\(--surface-/.test(bronH));
-  check("7. geen nieuwe losse hex-/rgba-kleurwaarde is toegevoegd voor deze vier accenten",
+  check("7. geen nieuwe losse hex-/rgba-kleurwaarde is toegevoegd voor de resterende accenten",
     !/border-top:2px solid #[0-9A-Fa-f]{3,6}/.test(bronH));
   check("8. fout-/waarschuwingskleuren (carmine) zijn niet gewijzigd",
     /--carmine:#A02036/.test(bronH));
@@ -3167,8 +2781,8 @@ groep("Herstelronde v68");
   }
 }
 
-/* 19. v69-polishronde: grafieklabels, Nachtzicht-/grafiekachtergrond, mobiele
-   tooltip en radarbediening. Dit toetst broncode-/DOM-structuur en
+/* 19. v69-polishronde: grafieklabels, Nachtzicht-/grafiekachtergrond en mobiele
+   tooltip. Dit toetst broncode-/DOM-structuur en
    functioneel gedrag, geen visuele weergave. */
 groep("v69 polishronde");
 {
@@ -3281,22 +2895,19 @@ groep("v69 polishronde");
     check("5. geen inhoud wordt via CSS verborgen (display:none op een tooltipveld)",
       !/#scrub \w+\{display:none/.test(bronP));
   }
+}
 
-  // 14.5 radarbediening (v70: #ruit/#rin/#rmidden en hun functies zijn
-  // bewust verwijderd, zie de "Radar bedienen"-groep hierboven voor de
-  // volledige toetsing daarvan; hier alleen wat blijft)
-  {
-    check("1. afspelen en de slider blijven bestaan; de zoom-/centreerknoppen bestaan bewust niet meer",
-      /id="rspeel"/.test(bronP) && /id="rschuif"/.test(bronP)
-      && !/id="ruit"/.test(bronP) && !/id="rin"/.test(bronP) && !/id="rmidden"/.test(bronP));
-    check("2. de slider blijft bestaan",/id="rschuif"/.test(bronP));
-    check("3. speel/pauzelogica is niet aangeraakt (rspeel-handler bestaat nog ongewijzigd)",
-      /getElementById\("rspeel"\)/.test(bronP));
-    check("4. zoomlogica (radarZoom) bestaat bewust niet meer",!/function radarZoom/.test(bronP));
-    check("5. centreerlogica (#rmidden) bestaat bewust niet meer",!/id="rmidden"/.test(bronP));
-    check("6. de mobiele bedieningshoogte is bruikbaar (minimaal ~43px)",
-      /\.radarbalk button\{min-height:43px/.test(bronP));
-  }
+/* Radar is op verzoek volledig verwijderd; de aparte twee-uursneerslagtekst blijft bestaan. */
+groep("Radar verwijderd");
+{
+  const fsR=require("fs"), pathR=require("path");
+  const bronR=fsR.readFileSync(pathR.join(__dirname,"index.html"),"utf8");
+  check("de radarinterface is uit de DOM verwijderd",
+    !/Neerslagradar|id="radar"|id="rspeel"|id="rschuif"|id="radartijd"|id="radarmelding"/.test(bronR));
+  check("de radarlogica en externe radarbronnen zijn verwijderd",
+    !/radarLaden|radarTeken|api\.rainviewer|tilecache\.rainviewer|basemaps\.cartocdn|radarverwachting/.test(bronR));
+  check("de aparte verwachting voor de komende twee uur blijft bestaan",
+    /Neerslag komende twee uur/.test(bronR) && /id="nctext"/.test(bronR) && /id="nc"/.test(bronR));
 }
 
 async function testenOpstartlocatie(){
@@ -3465,34 +3076,6 @@ async function testenOpstartlocatie(){
       /klokTimerStart\(\);\s*\n}/.test(bronL2));
     check("10. nuTimerStart (de nu-lijn) staat er ook nog onaangeroerd naast",
       /nuTimerStart\(\);\s*\n\s*klokTimerStart\(\);/.test(bronL2));
-  }
-
-  // v71-correctie, functionele test: knmiVerwachting() echt aanroepen met een
-  // gemockte serverrespons die wél geldige, toekomstige verwachtingstijden
-  // teruggeeft, en bevestigen dat R.frames (de animatie) daardoor niet
-  // verandert -- alleen R.knmiMelding (de statustekst) mag reageren.
-  {
-    const {api:aK}=laadKern(1280,{
-      fetch: async (url)=>{
-        if(String(url).includes("/api/radarverwachting")){
-          const t1=new Date(Date.now()+5*60000).toISOString();
-          const t2=new Date(Date.now()+10*60000).toISOString();
-          return {ok:true,json:async()=>({
-            basis:"https://voorbeeld.knmi.nl/wms?", laag:"radar_forecast_2.0",
-            tijden:[t1,t2], ouderdomMin:5
-          })};
-        }
-        return {ok:false,status:404,json:async()=>({})};
-      }
-    });
-    Object.assign(aK.S,{lat:52.35,lon:5.26,label:"T"});     // ergens in Nederland
-    aK.R.frames=[{time:1000,path:"/v2/radar/x",toekomst:false}];
-    const voorFrames=JSON.stringify(aK.R.frames);
-    await aK.knmiVerwachting([{time:1000,toekomst:false}]);
-    check("v71: R.frames is byte voor byte ongewijzigd na knmiVerwachting(), ook met geldige serverdata",
-      JSON.stringify(aK.R.frames)===voorFrames,JSON.stringify(aK.R.frames));
-    check("v71: R.knmiMelding blijft leeg wanneer de server geldige, toekomstige tijden teruggeeft",
-      aK.R.knmiMelding==="",aK.R.knmiMelding);
   }
 }
 
