@@ -2,6 +2,10 @@ from pathlib import Path
 import subprocess
 
 
+RUNNER = Path(__file__)
+EIGEN_BRON = RUNNER.read_text()
+
+
 def lees_blokken():
     bron = Path('.github/workflows/apply-interpretatie-engine.yml').read_text().splitlines()
     blokken = []
@@ -20,6 +24,8 @@ def lees_blokken():
 
 
 def commit_diagnose(tekst):
+    if not RUNNER.exists():
+        RUNNER.write_text(EIGEN_BRON)
     Path('INTERPRETATIE_DIAGNOSE.txt').write_text(tekst)
     subprocess.run(['git', 'config', 'user.name', 'WeatherNow Agent'], check=True)
     subprocess.run(['git', 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'], check=True)
@@ -38,7 +44,7 @@ def main():
     log = []
     for nr, tekst in enumerate(blokken, 1):
         if nr == 5:
-            Path('run_staged.py').unlink(missing_ok=True)
+            RUNNER.unlink(missing_ok=True)
         pad = Path(f'/tmp/interpretatie-stap-{nr}.sh')
         pad.write_text('set -euo pipefail\n' + tekst)
         resultaat = subprocess.run(['bash', str(pad)], text=True, capture_output=True)
@@ -47,8 +53,6 @@ def main():
             f'STDOUT:\n{resultaat.stdout}\nSTDERR:\n{resultaat.stderr}\n'
         )
         if resultaat.returncode != 0:
-            if nr == 5:
-                Path('run_staged.py').write_text(Path(__file__).read_text() if Path(__file__).exists() else '# herstelbestand ontbreekt\n')
             commit_diagnose(f'Stap {nr} faalde.\n\n' + '\n'.join(log))
             raise SystemExit(resultaat.returncode)
 
