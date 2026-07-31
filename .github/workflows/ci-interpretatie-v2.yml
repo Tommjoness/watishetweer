@@ -1,0 +1,33 @@
+name: Test definitieve interpretatie-engine
+
+on:
+  push:
+    branches:
+      - agent/interpretatie-engine-v2
+    paths-ignore:
+      - CI_GESLAAGD.txt
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Leg geslaagde controle vast
+        shell: bash
+        run: |
+          printf 'Volledige test en build geslaagd voor %s\n' "$GITHUB_SHA" > CI_GESLAAGD.txt
+          git config user.name "WeatherNow CI"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CI_GESLAAGD.txt
+          git commit -m "[skip ci] Bevestig geslaagde interpretatiecontrole"
+          git push
