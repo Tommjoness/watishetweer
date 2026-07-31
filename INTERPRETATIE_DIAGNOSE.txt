@@ -1,0 +1,18 @@
+stap 2 faalde
+
+===== STAP 1 exit 0 =====
+STDOUT:
+
+STDERR:
+
+
+===== STAP 2 exit 1 =====
+STDOUT:
+
+STDERR:
+/tmp/interpretatie-stap-2.sh: line 45: warning: here-document at line 2 delimited by end-of-file (wanted `PY')
+  File "<stdin>", line 43
+    '''function neerslagVenster(minuten){
+    ^
+SyntaxError: unterminated triple-quoted string literal (detected at line 43)
+
