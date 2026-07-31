@@ -85,10 +85,10 @@ vervangEenmalig(
    momentwaarden blijven wel staan; alleen de intervalwaarden worden leeggemaakt. */
 vervangEenmalig(
   "    P.push(h.precipitation_probability[i]??0);MM.push(h.precipitation[i]??0);",
-  "    const intervalVerlopen=S.dag==null&&globalThis.WeatherNowInterpretatie\\n"
-    +"      &&globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(h.time[i])<=globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(S.d.current.time);\\n"
-    +"    P.push(intervalVerlopen?null:(h.precipitation_probability[i]??null));\\n"
-    +"    MM.push(intervalVerlopen?null:(h.precipitation[i]??null));",
+`    const intervalVerlopen=S.dag==null&&globalThis.WeatherNowInterpretatie
+      &&globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(h.time[i])<=globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(S.d.current.time);
+    P.push(intervalVerlopen?null:(h.precipitation_probability[i]??null));
+    MM.push(intervalVerlopen?null:(h.precipitation[i]??null));`,
   "verlopen grafiekintervallen"
 );
 
