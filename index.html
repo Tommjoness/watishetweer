@@ -719,12 +719,11 @@ const DAGENVOL=["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","z
 const BFT=[1,6,12,20,29,39,50,62,75,89,103,117];
 const BFTNAAM=["windstil","zwakke wind","zwakke wind","matige wind","matige wind","vrij krachtige wind",
   "krachtige wind","harde wind","stormachtige wind","storm","zware storm","zeer zware storm","orkaan"];
-/* De stijl van de KNMI-neerslaglaag. Volgens de GetCapabilities van
-   radar_forecast_2.0 bestaan er drie: radar/nearest (de standaard, rode schaal),
-   rainrate-blue-to-purple/nearest en rainrate-blue-to-purple/shaded. De blauwe
-   sluit aan op de kleuren van RainViewer, zodat de radar niet van kleur omslaat
-   op het moment dat je van het verleden naar de verwachting schuift. */
-const KNMI_STIJL="rainrate-blue-to-purple/nearest";
+/* v71-correctie: de constante KNMI_STIJL (met toelichting over de drie
+   beschikbare WMS-stijlen van de KNMI-neerslaglaag) is hier verwijderd. Die
+   diende uitsluitend de KNMI-WMS-verwachtingslaag in de radaranimatie, en
+   die bestaat niet meer: RainViewer en KNMI worden niet langer in één
+   doorlopende afspeelreeks gemengd. */
 
 /* Kleurschema van RainViewer, gekozen om zo dicht mogelijk bij de KNMI-schaal te
    blijven. Uit de kleurtabel van RainViewer, vergeleken per dBZ:
@@ -1568,21 +1567,29 @@ function etmaal(start,n){
   }
   const iMax=T.indexOf(Math.max.apply(null,T)), iMin=T.indexOf(Math.min.apply(null,T));
 
-  /* Uitsluitend de zichtbare drie-uursintervallen krijgen een cijfer: elke i waar
-     i%stap===0, nooit meer en nooit minder. Eerder kregen losse pieken, dalen en
-     het dag-minimum/-maximum er een bonuslabel bij, ook als die niet op zo'n
-     interval vielen. Op de telefoon stond dan bijvoorbeeld 28° twee keer na
-     elkaar: een keer als drie-uurslabel, een keer als los pieklabel ernaast.
-     Valt een piek, dal of extreem toevallig samen met een drie-uursmoment, dan
-     bepaalt dat nog wel de rang (3 en 2) voor de botsingsvolgorde hieronder en
-     voor de kant (boven/onder) waarnaar het label uitwijkt; dat voegt geen extra
-     label toe, het geeft alleen voorrang aan wat er toch al stond. */
+  /* v71: relevante lokale pieken/dalen bleven eerder zonder cijfer wanneer ze
+     niet toevallig op een i%stap===0-moment vielen (elke i op het vaste
+     drie-uursraster, ongeacht de werkelijke vorm van de curve). Nu krijgen
+     het huidige punt, het globale maximum/minimum en elke duidelijke lokale
+     piek/dal (soort[i]!==0, al PROMINENT-gefilterd) altijd een candidate,
+     onafhankelijk van het raster. Het raster zelf blijft bestaan als laagste
+     prioriteit: die punten vullen de rustige tussenruimte, maar wijken als
+     eerste als de ruimte krap wordt (zie de botsingsafhandeling hieronder). */
   const kandKaart=new Map();
+  const zet=(i,rang)=>{ if(geldig(i)) kandKaart.set(i,Math.max(kandKaart.get(i)||0,rang)); };
+  // 1: het huidige punt (afgeleid uit nuX, dat al eerder uit dezelfde
+  // fractionele plaatsNuIndex(TI) is berekend; geen tweede berekening nodig)
+  if(nuX!=null) zet(Math.round((nuX-pl)/cw),4);
+  // 2+3: het globale maximum en minimum binnen het zichtbare bereik
+  zet(iMax,3); zet(iMin,3);
+  // 4+5: elke duidelijke lokale piek/dal (de PROMINENT-drempel hierboven
+  // filtert al ruis van enkele tienden van een graad weg)
+  for(let i=0;i<T.length;i++) if(soort[i]!==0) zet(i,2);
+  // 6: reguliere, gelijkmatig verdeelde referentiepunten (het bestaande
+  // drie-uursraster), alleen waar nog geen belangrijker punt staat
   for(let i=0;i<T.length;i++){
-    if(!geldig(i)) continue;                      // geen cijfer zonder geldige waarde
-    if(i%stap!==0) continue;                       // alleen echte drie-uursmomenten
-    const rang=(i===iMax||i===iMin)?3:soort[i]!==0?2:1;
-    kandKaart.set(i,rang);
+    if(!geldig(i)||i%stap!==0) continue;
+    if(!kandKaart.has(i)) kandKaart.set(i,1);
   }
   const kandidaten=[...kandKaart.entries()].map(([i,rang])=>({i,rang}))
     .sort((a,b)=>b.rang-a.rang||a.i-b.i);
@@ -1590,6 +1597,33 @@ function etmaal(start,n){
   const labelBreed=v=>String(Math.round(v)).length*F.temp*0.58+F.temp*0.40;
   const gezet=[];
   const MAXLAAG=5;   // meer dan genoeg lagen om zelfs een dichte 3-uursreeks te schikken
+  /* Botst een kandidaat op cx op elke laag, dan gaf de oude code een piek/dal
+     alsnog een geforceerde positie zonder te kijken of daar al iets anders
+     stond: twee cijfers konden zo exact over elkaar heen belanden, en dan is
+     het net zo onleesbaar als geen label. Nu volgt de escalatie precies de
+     gevraagde volgorde: eerst boven/onder proberen (hieronder, per laag),
+     dan een kleine horizontale verschuiving, en pas als laatste redmiddel een
+     botsend, lager geprioriteerd label actief verwijderen. Een kandidaat met
+     rang 2 of hoger (een echte piek, dal, of het huidige/globale extreem)
+     verliest het nooit stilzwijgend van een regulier rasterlabel (rang 1). */
+  const probeerLagen=(cx,v,eersteBoven,minRang)=>{
+    for(let laag=0; laag<MAXLAAG; laag++){
+      const stapHoogte=F.temp*1.35;
+      const afstandBoven=(M?13:14)+laag*stapHoogte, afstandOnder=(M?18:20)+laag*stapHoogte;
+      const kandBoven=y(v)-afstandBoven, kandOnder=y(v)+afstandOnder;
+      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val<=pb-3;
+      const opties=[[kandBoven,true],[kandOnder,false]];
+      if(!eersteBoven) opties.reverse();
+      for(const [val,bv] of opties){
+        if(!past(val,bv)) continue;
+        const botsers=gezet.filter(g=>Math.abs(g.cx-cx)<(g.bw+labelBreed(v))/2+5 && Math.abs(g.cy-val)<F.temp+3);
+        if(botsers.length===0) return {cy:val,boven:bv,verwijderd:[]};
+        // alleen overnemen als elk botsend label een strikt lagere rang heeft
+        if(minRang!=null && botsers.every(g=>g.rang<minRang)) return {cy:val,boven:bv,verwijderd:botsers};
+      }
+    }
+    return null;
+  };
   kandidaten.forEach(k=>{
     const i=k.i, v=T[i], bw=labelBreed(v);
     let cx=x(i);
@@ -1602,37 +1636,46 @@ function etmaal(start,n){
       const naarRechts = nuX + bw/2 + 6 + bw/2 <= W-pr;
       cx = naarRechts ? nuX + bw/2 + 6 : nuX - bw/2 - 6;
     }
-    const stapHoogte=F.temp*1.35;
     const eersteBoven = soort[i]!==-1;
-    let cy=null, laag=0, boven=eersteBoven;
-    for(laag=0; laag<MAXLAAG; laag++){
-      const afstandBoven=(M?13:14)+laag*stapHoogte, afstandOnder=(M?18:20)+laag*stapHoogte;
-      const kandBoven=y(v)-afstandBoven, kandOnder=y(v)+afstandOnder;
-      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val<=pb-3;
-      // eerst de kant proberen die bij deze piek/dal hoort, dan de andere kant,
-      // dan een laag verder weg; net zo lang tot er geen botsing meer is
-      const opties=[[kandBoven,true],[kandOnder,false]];
-      if(!eersteBoven) opties.reverse();
-      let gevonden=false;
-      for(const [val,bv] of opties){
-        if(!past(val,bv)) continue;
-        const botst=gezet.some(g=>Math.abs(g.cx-cx)<(g.bw+bw)/2+5 && Math.abs(g.cy-val)<F.temp+3);
-        if(!botst){ cy=val; boven=bv; gevonden=true; break; }
+    let cy=null, boven=eersteBoven, verwijderd=[];
+    // stap 1: normale lagen op de eigen positie, geen enkel label wijkt hier nog
+    let poging=probeerLagen(cx,v,eersteBoven,null);
+    if(poging){ cy=poging.cy; boven=poging.boven; }
+    // stap 2: een kleine horizontale verschuiving proberen (alleen zinvol voor
+    // een piek/dal die zelf al met voorrang mag schuiven, en alleen als er nog
+    // ruimte binnen de grafiekranden is)
+    if(cy===null && k.rang>=2){
+      for(const rcx of [cx+bw/2+6, cx-bw/2-6]){
+        if(rcx-bw/2<pl-2 || rcx+bw/2>W-pr) continue;
+        poging=probeerLagen(rcx,v,eersteBoven,null);
+        if(poging){ cx=rcx; cy=poging.cy; boven=poging.boven; break; }
       }
-      if(gevonden) break;
     }
+    // stap 3: laatste redmiddel. Een regulier rasterlabel (rang 1) vervalt
+    // gewoon; een piek/dal (rang 2+) mag een botsend, lager geprioriteerd
+    // label actief verwijderen om zelf een plek te krijgen.
     if(cy===null){
-      // alle lagen botsten alsnog: dan toch de dichtstbijzijnde plek nemen in
-      // plaats van het cijfer te laten verdwijnen
-      cy = eersteBoven ? y(v)-(M?13:14) : y(v)+(M?18:20);
-      cy = Math.min(Math.max(cy,by+bh+6+F.temp), pb-3);
+      if(k.rang<=1) return;
+      poging=probeerLagen(cx,v,eersteBoven,k.rang);
+      if(poging){ cy=poging.cy; boven=poging.boven; verwijderd=poging.verwijderd; }
+      else{
+        // zelfs na eviction geen laag vrij (zeldzaam): forceer de
+        // dichtstbijzijnde plek, zodat het label nooit stilzwijgend verdwijnt
+        cy = eersteBoven ? y(v)-(M?13:14) : y(v)+(M?18:20);
+        cy = Math.min(Math.max(cy,by+bh+6+F.temp), pb-3);
+      }
     }
-    gezet.push({cx:cx,cy:cy,bw:bw});
-    dots+=`<circle cx="${x(i)}" cy="${y(v)}" r="${M?1.9:2.2}" fill="${INK}"/>`;
+    verwijderd.forEach(g=>{ const idx=gezet.indexOf(g); if(idx>=0) gezet.splice(idx,1); });
+    gezet.push({i:i,v:v,cx:cx,cy:cy,bw:bw,rang:k.rang});
+  });
+  // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:
+  // een label dat onderweg is verwijderd (evictie) laat dan ook geen puntje na
+  gezet.sort((a,b)=>a.i-b.i).forEach(g=>{
+    dots+=`<circle cx="${x(g.i)}" cy="${y(g.v)}" r="${M?1.9:2.2}" fill="${INK}"/>`;
     // de rand in de kleur van het vel snijdt de lijn weg achter het cijfer
-    labs+=`<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" fill="${INK}"
+    labs+=`<text x="${g.cx.toFixed(1)}" y="${g.cy.toFixed(1)}" text-anchor="middle" fill="${INK}"
       stroke="${SHEET}" stroke-width="${M?3:3.4}" paint-order="stroke" stroke-linejoin="round"
-      font-family="Bodoni Moda,serif" font-size="${F.temp}">${Math.round(v)}°</text>`;
+      font-family="Bodoni Moda,serif" font-size="${F.temp}">${Math.round(g.v)}°</text>`;
   });
 
   /* De aswaarde stond op x=0 en liep daardoor op een smal scherm onder de eerste
@@ -2118,7 +2161,7 @@ function logBij(){
 /* ---------- neerslagradar ---------- */
 /* Zoom en verschuiving horen bij de kaart, niet bij de app: wissel je van plaats,
    dan gaan ze terug naar de standaard, want dan wil je weer je eigen omgeving zien. */
-const R={laag:"radar",radarFrames:[],satFrames:[],frames:[],i:0,speelt:false,timer:null,
+const R={laag:"radar",radarFrames:[],satFrames:[],frames:[],i:0,speelt:false,timer:null,afspeelBezig:false,
   host:"",geladen:{},pogingen:0,gelukt:0,verwacht:0,terug:false,wms:null,knmiMelding:"",
   zoom:7,dx:0,dy:0};
 /* Deze kaart is handgetekend op canvas, geen Leaflet, dus er is geen maxNativeZoom
@@ -2146,10 +2189,10 @@ const R={laag:"radar",radarFrames:[],satFrames:[],frames:[],i:0,speelt:false,tim
    client-side-opschaalroute (voor het geval R.zoom ooit weer boven ZTEGELMAX
    zou komen) is bewust intact gelaten, want radarTeken() zelf is ongewijzigd. */
 const TEGEL=256, ZSTANDAARD=7, ZTEGELMAX=7;
-const R_AARDE=6378137, HALFRONDE=Math.PI*R_AARDE;
-const wereldGrootte=()=>TEGEL*Math.pow(2,R.zoom);
-const mercX=px=>px/wereldGrootte()*2*HALFRONDE-HALFRONDE;
-const mercY=py=>HALFRONDE-py/wereldGrootte()*2*HALFRONDE;
+/* v71-correctie: mercX/mercY/wereldGrootte/R_AARDE/HALFRONDE zijn hier
+   verwijderd. Die bestonden uitsluitend om de EPSG:3857-BBOX voor de KNMI-
+   WMS-verwachtingslaag te berekenen; nu die laag niet meer in de
+   radaranimatie zit, was deze rekenketen dode code geworden. */
 // Het CAMS-model voor Europa bepaalt waar european_aqi en de pollensoorten
 // bestaan. Buiten dit kader komen die velden leeg terug. Ruim genomen, want
 // aan de rand is de index nog geldig en een gemiste tegel is erger dan een
@@ -2220,33 +2263,19 @@ async function radarTeken(){
   }
 
   const kaarten=vakken.map(v=>tegelBelofte(`https://basemaps.cartocdn.com/${stijl}/${Zt}/${v.X}/${v.ty}.png`));
-  const neerslag=f.knmi ? [] : vakken.map(v=>
+  const neerslag=vakken.map(v=>
     tegelBelofte(`${R.host}${f.path}/${TEGEL}/${Zt}/${v.X}/${v.ty}/${f.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`));
 
-  let heel=null;
-  if(f.knmi&&R.wms){
-    const bbox=[mercX(ox),mercY(oy+H),mercX(ox+W),mercY(oy)].map(v=>v.toFixed(1)).join(",");
-    /* Zonder stijl pakt de server zijn eerste, en dat is radar/nearest met een rode
-       schaal. Het verleden komt van RainViewer in blauw, dus sloeg de kleur om zodra
-       je de toekomst in schoof. De laag biedt volgens zijn eigen GetCapabilities ook
-       rainrate-blue-to-purple, en die sluit wel aan. De drie beschikbare stijlen zijn
-       radar/nearest, rainrate-blue-to-purple/nearest en rainrate-blue-to-purple/shaded. */
-    heel=tegelBelofte(R.wms.basis+"&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS="+encodeURIComponent(R.wms.laag)
-      +"&STYLES="+encodeURIComponent(KNMI_STIJL)+"&CRS=EPSG:3857&BBOX="+bbox+"&WIDTH="+W+"&HEIGHT="+H
-      +"&FORMAT=image/png&TRANSPARENT=TRUE&TIME="+encodeURIComponent(f.tijd));
-  }
-
-  const [kb,nb,hb]=await Promise.all([Promise.all(kaarten),Promise.all(neerslag),heel]);
+  const [kb,nb]=await Promise.all([Promise.all(kaarten),Promise.all(neerslag)]);
   if(ronde!==radarRonde) return;      // ondertussen is er een nieuwer beeld gevraagd
 
   ctx.clearRect(0,0,W,H);
   kb.forEach((im,k)=>{ if(im){ctx.globalAlpha=donker?0.78:0.94;ctx.drawImage(im,vakken[k].px,vakken[k].py,TS,TS);ctx.globalAlpha=1;} });
   nb.forEach((im,k)=>{ if(im){ctx.globalAlpha=0.85;ctx.drawImage(im,vakken[k].px,vakken[k].py,TS,TS);ctx.globalAlpha=1;} });
-  if(hb){ctx.globalAlpha=0.85;ctx.drawImage(hb,0,0,W,H);ctx.globalAlpha=1;}
   markeer(ctx,W,H,R.dx,R.dy);
 
   // beeld bestaat nog niet: geen enkele tegel kwam binnen, dus een stap terug
-  if(!f.knmi && nb.length && nb.every(im=>!im) && R.i>0 && !R.terug){
+  if(nb.length && nb.every(im=>!im) && R.i>0 && !R.terug){
     R.terug=true; R.i--; document.getElementById("rschuif").value=R.i; radarTeken();
     return;
   }
@@ -2254,7 +2283,7 @@ async function radarTeken(){
   /* Het volgende beeld alvast ophalen. Tegen de tijd dat de lus verspringt staat
      het in de cache en tekent het meteen, dus zonder haperen. */
   const volg=R.frames[(R.i+1)%R.frames.length];
-  if(volg&&!volg.knmi&&R.host) vakken.forEach(v=>
+  if(volg&&R.host) vakken.forEach(v=>
     tegel(`${R.host}${volg.path}/${TEGEL}/${Zt}/${v.X}/${v.ty}/${volg.sat?"0/0_0":RV_SCHEMA+"/1_1"}.png`,()=>{}));
 }
 
@@ -2288,30 +2317,33 @@ async function radarLaden(){
     R.satFrames=[];
     R.frames=R.radarFrames;
     if(!straks.length) await knmiVerwachting(verleden);
-    // knmiVerwachting vult R.frames aan; die aanvulling hoort ook in radarFrames
-    // te zitten, anders raakt de vooruitblik kwijt zodra je van laag wisselt
-    R.radarFrames=R.frames;
     const bs=document.getElementById("bronsat");
     if(bs) bs.textContent="";
 
     /* Buiten Nederland is er geen vooruitblik: RainViewer geeft die niet in de
        gratis laag en het KNMI dekt alleen dit land en de directe omgeving. De
-       schuif eindigt dan gewoon bij nu, zonder dat je weet waarom. */
-    const ml=document.getElementById("radarmelding");
-    if(ml&&!R.frames.some(fr=>fr.toekomst))
-      ml.textContent=inNederland(S.lat,S.lon)
-        ? "Er is nu geen vooruitblik beschikbaar."
-        : "Alleen gemeten beelden: een vooruitblik is hier niet beschikbaar.";
+       schuif eindigt dan gewoon bij nu, zonder dat je weet waarom.
+       v71-correctie: de radaranimatie speelt alleen nog de samenhangende
+       RainViewer-reeks (meetbeelden plus een eventuele eigen RainViewer-
+       nowcast); knmiVerwachting() hierboven vult R.frames niet meer aan.
+       Levert RainViewer zelf geen nowcast, dan eindigt de radar dus bij het
+       nieuwste gemeten beeld, en die melding hoort daar gewoon bij. */
+    const geenVooruitblik=!R.frames.some(fr=>fr.toekomst)
+      ? (inNederland(S.lat,S.lon)
+          ? "Afspelen toont de laatste metingen; er is nu geen kaartverwachting beschikbaar."
+          : "Afspelen toont alleen gemeten beelden; een vooruitblik is hier niet beschikbaar.")
+      : "";
     if(!R.frames.length){mld.textContent="Geen radarbeelden beschikbaar.";return;}
     R.i=Math.max(0,verleden.length-1); R.terug=false;
-    // KNMI alleen noemen als zijn beelden ook echt in de reeks zitten
+    // KNMI-beelden zitten nooit meer in de animatie, dus hier valt niets meer te noemen
     const bk=document.getElementById("bronknmi");
-    if(bk) bk.textContent = R.frames.some(f=>f.knmi) ? ", verwachting KNMI" : "";
+    if(bk) bk.textContent="";
     const sch=document.getElementById("rschuif");
     sch.max=R.frames.length-1; sch.value=R.i;
     const nieuwste=verleden.length?verleden[verleden.length-1].time*1000:0;
     const oud=Math.round((Date.now()-nieuwste)/60000);
     const regels=[];
+    if(geenVooruitblik) regels.push(geenVooruitblik);
     if(oud>25) regels.push("Het nieuwste radarbeeld is "+oud+" minuten oud.");
     if(R.knmiMelding) regels.push(R.knmiMelding);
     mld.textContent=regels.join(" ");
@@ -2332,13 +2364,28 @@ async function radarLaden(){
 document.getElementById("rschuif").addEventListener("input",e=>{R.i=+e.target.value;radarTeken();});
 document.getElementById("rspeel").addEventListener("click",()=>{
   const b=document.getElementById("rspeel");
-  if(R.speelt){clearInterval(R.timer);R.speelt=false;b.textContent="Speel af";return;}
+  if(R.speelt){clearInterval(R.timer);R.timer=null;R.speelt=false;R.afspeelBezig=false;b.textContent="Speel af";return;}
+  if(R.frames.length<2) return;
   R.speelt=true;b.textContent="Pauzeer";
-  R.timer=setInterval(()=>{
-    R.i=(R.i+1)%R.frames.length;
-    document.getElementById("rschuif").value=R.i;
-    radarTeken();
-  },550);
+
+  /* Op een telefoon kan een compleet radarbeeld langer dan 550 ms laden. De oude
+     interval vroeg dan alweer het volgende frame aan; radarRonde verklaarde het
+     vorige verzoek verouderd voordat het ooit getekend werd. Daardoor veranderde
+     de tijdlijn intern wel, maar bleef op het scherm steeds hetzelfde beeld staan.
+     Eén afspeelstap mag nu eerst volledig tekenen voordat de volgende begint. */
+  const stap=async()=>{
+    if(!R.speelt||R.afspeelBezig||!R.frames.length) return;
+    R.afspeelBezig=true;
+    try{
+      R.i=(R.i+1)%R.frames.length;
+      document.getElementById("rschuif").value=R.i;
+      await radarTeken();
+    }finally{
+      R.afspeelBezig=false;
+    }
+  };
+  stap();
+  R.timer=setInterval(stap,650);
 });
 
 // De gratis laag van RainViewer geeft geen verwachting. Voor Nederland vult het KNMI dat gat.
@@ -2350,7 +2397,7 @@ function opTijd(lijst){
 }
 
 async function knmiVerwachting(verleden){
-  R.wms=null; R.knmiMelding="";
+  R.knmiMelding="";
   if(!inNederland(S.lat,S.lon)) return;
   let w;
   try{ w=await j("/api/radarverwachting"); }
@@ -2363,24 +2410,28 @@ async function knmiVerwachting(verleden){
   const laatste=verleden.length?verleden[verleden.length-1].time*1000:nu;
   const stappen=w.tijden
     .map(t=>({tijd:t,ms:Date.parse(t)}))
-    .filter(o=>isFinite(o.ms)&&o.ms>laatste&&o.ms<=nu+2*3600000)
-    .sort((a,b)=>a.ms-b.ms)
-    .map(o=>({time:Math.round(o.ms/1000),tijd:o.tijd,knmi:true,toekomst:true}));
+    .filter(o=>isFinite(o.ms)&&o.ms>laatste&&o.ms<=nu+2*3600000);
+  /* v71-correctie: RainViewer-meetbeelden en KNMI-verwachtingsbeelden zijn
+     twee verschillende bronnen (andere data, ander rendertraject: losse
+     tegels tegenover één WMS-plaatje). Ze in dezelfde afspeelreeks plakken
+     liet de neerslaginhoud zichtbaar verspringen zodra de animatie van de
+     ene naar de andere bron overging. R.frames/R.wms blijven daarom
+     onaangeroerd: de radaranimatie speelt alleen nog de samenhangende
+     RainViewer-reeks (meetbeelden plus een eventuele eigen RainViewer-
+     nowcast). Levert RainViewer zelf geen nowcast, dan eindigt de radar bij
+     het nieuwste gemeten beeld. Deze functie roept de bestaande
+     serverfunctie nog gewoon aan (ongewijzigd) en gebruikt het resultaat
+     uitsluitend om te melden of en hoe actueel een KNMI-vooruitblik is; de
+     tekstuele "Neerslag komende twee uur" hiernaast komt uit een andere,
+     eigen databron (S.d.minutely_15) en is door deze functie nooit geraakt
+     geweest. */
   if(!stappen.length){
     // het KNMI heeft wel data, maar niets dat verder reikt dan het laatste meetbeeld
     R.knmiMelding = w.ouderdomMin!=null && w.ouderdomMin>30
       ? "De vooruitblik van het KNMI loopt achter, het nieuwste beeld daar is "
         +(w.ouderdomMin>2880?Math.round(w.ouderdomMin/1440)+" dagen":Math.round(w.ouderdomMin/60)+" uur")+" oud."
       : "Op dit moment geen vooruitblik beschikbaar.";
-    return;
   }
-  R.wms=w;
-  /* Twee bronnen achter elkaar plakken kan een reeks opleveren die heen en weer
-     springt in de tijd; op de schuif zag je 20:10, dan 19:10, dan 20:20. Sorteren
-     op tijdstip en dubbele momenten weggooien maakt dat onmogelijk, ongeacht via
-     welke weg de reeks gevuld is. */
-  R.frames=opTijd(R.frames.concat(stappen));
-  document.getElementById("rschuif").max=R.frames.length-1;
 }
 
 /* ---------- officiele waarschuwingen ---------- */

@@ -404,21 +404,34 @@ for(const [naam,br,opties] of [
   const stapTest=3;
 
   check(naam+": er staan cijfers bij de lijn",lab.length>0,"geen enkel label gevonden");
-  /* Sinds correctieronde punt 2 krijgt uitsluitend elke i met i%stap===0 een
-     label; pieken, dalen en het dag-extreem voegen geen label meer toe als ze
-     daar niet toevallig mee samenvallen. Dat direct natoetsen in plaats van
-     alleen "het hoogste getal staat erbij", want dat laatste hoeft sinds deze
-     correctie niet meer waar te zijn. */
+  /* v71: labels volgen nu een prioriteitsvolgorde (huidig punt > globaal
+     max/min > lokale pieken/dalen > het drie-uursraster) in plaats van
+     uitsluitend i%stap===0. Het aantal labels kan dus hoger liggen dan het
+     aantal drie-uursmomenten (een piek/dal ernaast telt nu ook mee), maar
+     nooit hoger dan het totaal van alle toegestane candidate-indices samen:
+     raster + globaal max/min + PROMINENT-lokale extremen + het huidige punt.
+     De precieze prioriteits- en botsingslogica met voorspelbare, gecontroleerde
+     data staat in de nieuwe groep "Grafieklabel-prioriteit" verderop. */
   const idxStap=[];
   for(let k=0;k<reeks.length;k++) if(k%stapTest===0 && reeks[k]!=null && isFinite(reeks[k])) idxStap.push(k);
-  check(naam+": precies de drie-uursindices krijgen een label, niet meer en niet minder",
-    lab.length===idxStap.length,
-    "verwacht "+idxStap.length+" labels (om de "+stapTest+" uur), kreeg "+lab.length);
-  const verwachteWaarden=idxStap.map(k=>Math.round(reeks[k])).sort((a,b)=>a-b);
-  const gekregenWaarden=[...waarden].sort((a,b)=>a-b);
-  check(naam+": de gelabelde waarden komen overeen met de drie-uurswaarden",
-    JSON.stringify(verwachteWaarden)===JSON.stringify(gekregenWaarden),
-    "verwacht "+verwachteWaarden.join(",")+" kreeg "+gekregenWaarden.join(","));
+  const soortScen=new Array(reeks.length).fill(0);
+  for(let k=1;k<reeks.length-1;k++){
+    const a=reeks[k-1],bb=reeks[k],c=reeks[k+1];
+    if(a==null||bb==null||c==null||!isFinite(a)||!isFinite(bb)||!isFinite(c)) continue;
+    if(bb>=a&&bb>c&&bb-Math.min(a,c)>=0.5) soortScen[k]=1;
+    if(bb<=a&&bb<c&&Math.max(a,c)-bb>=0.5) soortScen[k]=-1;
+  }
+  const geldigScen=reeks.map(v=>v!=null&&isFinite(v));
+  const alleToegestaan=new Set(idxStap);
+  reeks.forEach((v,k)=>{ if(geldigScen[k]&&soortScen[k]!==0) alleToegestaan.add(k); });
+  if(geldigScen[0]){
+    const geldigeWaarden=reeks.filter((_,k)=>geldigScen[k]);
+    alleToegestaan.add(reeks.indexOf(Math.max.apply(null,geldigeWaarden)));
+    alleToegestaan.add(reeks.indexOf(Math.min.apply(null,geldigeWaarden)));
+  }
+  check(naam+": nooit meer labels dan er toegestane candidate-indices zijn (raster + extremen samen)",
+    lab.length<=alleToegestaan.size+1,   // +1 marge voor het huidige-punt-candidate, dat niet in reeks-index zit maar in TI
+    lab.length+" labels tegen ten hoogste "+(alleToegestaan.size+1)+" toegestane indices");
 
   const uitBeeld=lab.filter(l=>l.x-l.b/2<-1||l.x+l.b/2>vb[2]+1||l.y-l.hg<0||l.y>vb[3]);
   check(naam+": geen label valt buiten de tekening",uitBeeld.length===0,
@@ -442,7 +455,204 @@ for(const [naam,br,opties] of [
    finite-geometrie-guard toetsen die de lege witte doos voorkwam. De
    oorspronkelijke fout: S.geo miste H, scrubKoppel() las G.H0 (dat nooit
    bestond), en by werd daardoor NaN. */
-groep("Tooltip-scrub");
+/* v71: probleem B - een scherpe lokale piek rond 09:00-10:00 kreeg geen
+   label omdat de oude selectie uitsluitend i%stap===0 toestond. Deze groep
+   toetst de nieuwe prioriteitsvolgorde (huidig punt > globaal max/min >
+   lokale extremen > het drie-uursraster) met gecontroleerde, voorspelbare
+   synthetische reeksen, zodat elk gedrag exact is na te rekenen. */
+groep("Grafieklabel-prioriteit");
+{
+  // helper: bouwt een 24-uursreeks vanaf i0=0 (uur 0 van dag -1 in de
+  // bouw()-fixture, altijd "vandaag" voor plaatsNuIndex), tekent de grafiek
+  // en geeft de gerenderde labels terug als {i,v,x,y}, met i herleid uit x
+  const labelsVoor=(reeks,opties)=>{
+    const {api,bak}=laadKern((opties&&opties.breed)||1280);
+    const d=bouw({});
+    d.hourly.temperature_2m=d.hourly.time.map((_,k)=>k<reeks.length?reeks[k]:reeks[reeks.length-1]);
+    let klokOverride=null;
+    if(opties&&opties.klokUur!=null){
+      // een geldig "huidig punt" simuleren op een vast uur diezelfde dag.
+      // plaatsNu() telt (plaats-offset - eigen-offset) op bij de meegegeven
+      // klokOverride; dat verschil hier vooraf compenseren zodat het
+      // resultaat precies op opties.klokUur in TI landt, ongeacht de
+      // tijdzone van de omgeving waarin de test draait.
+      const dagStr=d.hourly.time[0].slice(0,10);
+      const eigenOffset=-new Date().getTimezoneOffset()*60;
+      const daarOffset=d.utc_offset_seconds!=null?d.utc_offset_seconds:eigenOffset;
+      const verschil=daarOffset-eigenOffset;
+      klokOverride=new Date(Date.parse(dagStr+"T"+String(opties.klokUur).padStart(2,"0")+":00:00Z")-verschil*1000);
+    }
+    Object.assign(api.S,{d,i0:0,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,klokOverride,
+      bereik:(opties&&opties.bereik)||24});
+    api.etmaal(0,(opties&&opties.bereik)||24);
+    const svg=bak.chart.innerHTML;
+    const vb=bak.chart.getAttribute("viewBox").split(" ").map(Number);
+    const M=((opties&&opties.breed)||1280)<760;
+    const pl=M?34:44, pr=M?10:20, iw=vb[2]-pl-pr, cw=iw/(reeks.length-1);
+    const x=k=>pl+cw*k;
+    const labs=[...svg.matchAll(/<text x="(-?[\d.]+)" y="(-?[\d.]+)"[^<]*?font-family="Bodoni Moda,serif" font-size="([\d.]+)">(-?\d+)°</g)]
+      .map(m=>{
+        const xx=+m[1];
+        // dichtstbijzijnde i herleiden uit de bekende lineaire x-schaal
+        let i=Math.round((xx-pl)/cw); i=Math.max(0,Math.min(reeks.length-1,i));
+        return {i,x:xx,y:+m[2],v:+m[4]};
+      });
+    return {labs,svg,vb,api,bak};
+  };
+
+  // 1: een scherpe lokale piek krijgt een label
+  {
+    const reeks=[10,10,10,12,17,12,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
+    const {labs}=labelsVoor(reeks);
+    check("1. een scherpe lokale piek (index 4, niet op het drie-uursraster) krijgt een label",
+      labs.some(l=>l.i===4), labs.map(l=>l.i+":"+l.v).join(","));
+  }
+  // 2: een scherpe lokale bodem krijgt een label
+  {
+    const reeks=[10,10,10,10,8,3,8,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
+    const {labs}=labelsVoor(reeks);
+    check("2. een scherpe lokale bodem (index 5, niet op het drie-uursraster) krijgt een label",
+      labs.some(l=>l.i===5), labs.map(l=>l.i+":"+l.v).join(","));
+  }
+  // 3+4: globaal maximum en minimum krijgen altijd een label
+  {
+    const reeks=[10,10,9,9,20,9,9,10,10,10,10,-4,10,10,10,10,10,10,10,10,10,10,10,10];
+    const {labs}=labelsVoor(reeks);
+    check("3. het globale maximum krijgt een label",labs.some(l=>l.v===20));
+    check("4. het globale minimum krijgt een label",labs.some(l=>l.v===-4));
+  }
+  // 5: het actuele punt behoudt zijn prioriteit (blijft altijd gelabeld,
+  // ook wanneer het niet op het raster valt en geen lokaal extreem is)
+  {
+    const reeks=[10,11,12,13,14,15,16,17,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
+    // uur 8 (index 8): monotoon oplopend tot dan, dus geen lokaal extreem,
+    // en 8%3!==0, dus ook niet op het raster; alleen "huidig punt" kan dit labelen
+    const {labs}=labelsVoor(reeks,{klokUur:8});
+    check("5. het actuele punt (index 8, geen raster/extreem) krijgt een label puur op basis van zijn prioriteit",
+      labs.some(l=>l.i===8), labs.map(l=>l.i+":"+l.v).join(","));
+  }
+  // 6: een kleine fluctuatie van 0,1°C veroorzaakt niet automatisch een extra label
+  {
+    // een echte piek (index 10) en een echt dal (index 16) elders in de reeks,
+    // zodat de 0,1°C-bult bij index 4 aantoonbaar niet het globale maximum of
+    // minimum is (dat zou terecht altijd een label krijgen, ongeacht de
+    // PROMINENT-drempel) en dus puur de drempel zelf test
+    const reeks=[10,10,10,10,10.1,10,10,10,10,10,15,10,10,10,10,10,5,10,10,10,10,10,10,10];
+    const {labs}=labelsVoor(reeks);
+    check("6. een fluctuatie van 0,1°C (index 4, onder de PROMINENT-drempel, buiten het raster, niet het globale extreem) krijgt geen eigen label",
+      !labs.some(l=>l.i===4), labs.map(l=>l.i+":"+l.v).join(","));
+  }
+  // 7+8: een duidelijk lokaal maximum blijft behouden wanneer een regulier
+  // label te dichtbij staat; dat regulier label wijkt dan
+  {
+    // piek op index 4, vlak naast het rasterpunt index 3 (3%3===0): op een
+    // smal scherm (390px) staan die twee dicht genoeg bij elkaar om te botsen
+    const reeks=[10,10,10,10.6,17,10.6,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
+    const {labs}=labelsVoor(reeks,{breed:390});
+    check("7. het duidelijke lokale maximum (index 4) blijft behouden, ook naast een regulier rasterlabel",
+      labs.some(l=>l.i===4));
+    check("8. het botsende, lager geprioriteerde rasterlabel (index 3) is verplaatst of verdwenen: geen enkele botsing in de uiteindelijke plaatsing",
+      (()=>{ for(let a=0;a<labs.length;a++) for(let b=a+1;b<labs.length;b++){
+               const p=labs[a],r=labs[b];
+               if(Math.abs(p.x-r.x)<14 && Math.abs(p.y-r.y)<12) return false;
+             }
+             return true; })());
+  }
+  // 8b: expliciete regressietest, precies zoals gevraagd: een scherpe piek
+  // bewust tussen twee vaste drie-uursmomenten (i=3 en i=6, dus op i=4 of 5),
+  // met genoeg even hoge kandidaten eromheen om ALLE botsingslagen te vullen.
+  // Zonder de evictie hierboven zou dit ofwel het label van de piek missen,
+  // ofwel het over een ander label heen laten vallen.
+  {
+    const reeks=new Array(24).fill(10);
+    reeks[3]=10; reeks[4]=20; reeks[5]=10;                 // de piek, tussen i=3 en i=6 in
+    reeks[9]=10; reeks[12]=10; reeks[15]=10; reeks[18]=10; reeks[21]=10;  // vult de lagen
+    const {labs}=labelsVoor(reeks,{breed:390});
+    check("8b. regressie: een scherpe piek bewust tussen twee drie-uursmomenten (i=4, niet i%3===0) krijgt aantoonbaar een label, ook onder zware botsingsdruk",
+      labs.some(l=>l.i===4 && l.v===20), labs.map(l=>l.i+":"+l.v).join(","));
+    check("8c. diezelfde plaatsing bevat geen enkele overlap (elk ander label bleef leesbaar of week netjes)",
+      (()=>{ for(let a=0;a<labs.length;a++) for(let b=a+1;b<labs.length;b++){
+               const p=labs[a],r=labs[b];
+               if(Math.abs(p.x-r.x)<14 && Math.abs(p.y-r.y)<12) return false;
+             }
+             return true; })(),labs.map(l=>l.i+":"+l.v).join(","));
+    const {labs:labsD}=labelsVoor(reeks,{breed:1280});
+    check("8d. dezelfde regressie op desktopbreedte",
+      labsD.some(l=>l.i===4 && l.v===20));
+  }
+  // 9: labels overlappen niet op 390px breedte (algemene regressie, drukke reeks)
+  {
+    const reeks=[8,9,11,9,12,8,13,9,14,8,15,9,16,8,17,9,18,8,19,9,20,8,21,9];
+    const {labs}=labelsVoor(reeks,{breed:390});
+    let botst=false;
+    for(let a=0;a<labs.length;a++) for(let b=a+1;b<labs.length;b++){
+      const p=labs[a],r=labs[b];
+      if(Math.abs(p.x-r.x)<14 && Math.abs(p.y-r.y)<12) botst=true;
+    }
+    check("9. labels overlappen niet op 390px breedte, ook bij een drukke, grillige reeks",!botst);
+  }
+  // 10: labels vallen niet buiten het SVG-viewBox
+  {
+    const reeks=[8,9,11,9,12,8,13,9,14,8,15,9,16,8,17,9,18,8,19,9,20,8,21,9];
+    const {labs,vb}=labelsVoor(reeks,{breed:390});
+    check("10. geen enkel label valt buiten het SVG-viewBox",
+      labs.every(l=>l.x>=0&&l.x<=vb[2]&&l.y>=0&&l.y<=vb[3]));
+  }
+  // 11+12+13: labels werken bij 24, 48 uur en 7 dagen
+  for(const bereik of [24,48,168]){
+    const reeks=new Array(Math.max(24,bereik)).fill(10).map((v,k)=>10+3*Math.sin(k/5));
+    const {labs,api}=labelsVoor(reeks,{bereik});
+    check("11-13. labels werken bij "+bereik+" uur (er staat minstens één label)",labs.length>0);
+  }
+  // 14: vlakke temperatuurreeksen veroorzaken geen reeks dubbele labels
+  {
+    const reeks=new Array(24).fill(9);
+    const {labs}=labelsVoor(reeks);
+    const idxSet=new Set(labs.map(l=>l.i));
+    check("14. een volkomen vlakke reeks geeft geen dubbele labels op dezelfde i",
+      idxSet.size===labs.length,labs.map(l=>l.i).join(","));
+  }
+  // 15: dubbele temperatuurwaarden krijgen niet onnodig meerdere labels op
+  // vrijwel dezelfde positie (twee losse, ver uit elkaar liggende pieken met
+  // toevallig dezelfde waarde mogen elk hun eigen label houden, maar nooit
+  // twee labels die elkaar overlappen)
+  {
+    const reeks=[10,10,10,15,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,15,10,10,10,10];
+    const {labs}=labelsVoor(reeks,{breed:390});
+    let botst=false;
+    for(let a=0;a<labs.length;a++) for(let b=a+1;b<labs.length;b++){
+      const p=labs[a],r=labs[b];
+      if(Math.abs(p.x-r.x)<14 && Math.abs(p.y-r.y)<12) botst=true;
+    }
+    check("15. twee gelijke pieken (beide 15°, ver uit elkaar) botsen niet en verliezen geen van beide hun label",
+      !botst && labs.filter(l=>l.v===15).length===2);
+  }
+  // 16: de tooltip blijft alle waarden tonen, ongeacht welke vaste labels
+  // zichtbaar zijn (de tooltip leest rechtstreeks uit S.geo, niet uit de
+  // labelselectie)
+  {
+    const reeks=[10,10,10,10.6,17,10.6,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
+    const {bak}=labelsVoor(reeks,{breed:390});
+    bak.hit.dispatchEvent({type:"pointermove",clientX:180,clientY:100,pointerType:"mouse"});
+    check("16. de tooltip blijft alle velden tonen, onafhankelijk van de vaste labelselectie",
+      /temperatuur/.test(bak.scrub.innerHTML) && /neerslagkans/.test(bak.scrub.innerHTML));
+  }
+
+  // regressiereeks die overeenkomt met het gerapporteerde scenario: eerst
+  // dalend, dan een duidelijke stijging, één scherpe lokale top, dan een
+  // scherpe daling. Geen enkel hardcoded tijdstip uit een screenshot: dit is
+  // een generieke vorm, niet gekoppeld aan 09:00 specifiek.
+  {
+    const reeks=[16,15,14,13,12,19,12,11,10.5,10,9.5,9,8.5,8,7.5,7,6.5,6,5.5,5,4.5,4,3.5,3];
+    const {labs}=labelsVoor(reeks);
+    const piekIdx=reeks.indexOf(19);
+    check("regressiereeks: de scherpe lokale top na de daling en vóór de nieuwe daling krijgt aantoonbaar een label",
+      labs.some(l=>l.i===piekIdx && l.v===19),
+      "piek op index "+piekIdx+", gevonden labels: "+labs.map(l=>l.i+":"+l.v).join(","));
+  }
+}
+
+
 {
   const {api,bak}=laadKern(1280);
   Object.assign(api.S,{d:bouw({}),op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
@@ -1276,29 +1486,17 @@ groep("Live bevindingen");
       check("een lege of kapotte invoer geeft geen fout",
         bronF([]).length===0 && bronF([null,{time:NaN},{time:5}]).length===1);
     }
-    check("de samengevoegde reeks wordt gesorteerd",/opTijd\(R\.frames\.concat/.test(bronL));
-    check("de radarreeks zelf wordt ook gesorteerd",/opTijd\(verleden\.concat/.test(bronL));
-    check("de vooruitblik blijft bij het wisselen van laag",
-      /R\.radarFrames=R\.frames;/.test(bronL) && !/if\(R\.satFrames\.length\) R\.radarFrames/.test(bronL));
+    check("de radarreeks zelf (verleden+RainViewer-nowcast) wordt gesorteerd",/opTijd\(verleden\.concat/.test(bronL));
+    /* v71-correctie: RainViewer-meetbeelden en KNMI-verwachtingsbeelden zijn
+       niet langer tot één doorlopende afspeelreeks gemengd (zie de
+       toegewijde groep "Radar: RainViewer en KNMI niet meer gemengd"
+       verderop voor de volledige toetsing daarvan). */
+    check("knmiVerwachting() voegt geen stappen meer toe aan R.frames (geen menging meer)",
+      !/R\.frames=opTijd\(R\.frames\.concat/.test(bronL));
   }
 
 
-  /* 7d. de KNMI-laag moet dezelfde kleurtaal spreken als RainViewer */
-  {
-    const stijl=(bronL.match(/const KNMI_STIJL="([^"]+)"/)||[])[1];
-    check("er staat een expliciete stijl voor de KNMI-laag",!!stijl,"KNMI_STIJL ontbreekt");
-    /* De laag biedt volgens zijn eigen GetCapabilities radar/nearest,
-       rainrate-blue-to-purple/nearest en rainrate-blue-to-purple/shaded.
-       De eerste is de standaard en tekent rood; die valt af. */
-    const geldig=["radar/nearest","rainrate-blue-to-purple/nearest","rainrate-blue-to-purple/shaded"];
-    check("de stijl bestaat op de server",geldig.includes(stijl),String(stijl));
-    check("de stijl is de blauwe, niet de rode standaard",
-      /^rainrate-blue-to-purple/.test(String(stijl)),String(stijl));
-    check("de stijl wordt ook echt meegestuurd",
-      /&STYLES="\+encodeURIComponent\(KNMI_STIJL\)/.test(bronL));
-    check("de kaartaanvraag gebruikt een projectie die de laag ondersteunt",
-      /CRS=EPSG:3857/.test(bronL));
-  }
+
 
   /* 7c. het cijfer mag niet op de rode nu-lijn vallen */
   {
@@ -1987,6 +2185,133 @@ groep("Radar zoomgrens");
       /volg\.path\}\/\$\{TEGEL\}\/\$\{Zt\}\//.test(radarTekenBron));
     check("repositorybreed: geen losse ${Z} meer voor tegel-URL's",!/\$\{Z\}/.test(bronZ));
   }
+}
+
+/* v71: probleem A - het radarbeeld leek te verspringen bij de overgang van
+   actueel naar verwachting. Grondig bronOnderzoek (zie het eindverslag)
+   toonde aan dat W/H/Zv/Zt/mid/ox/oy in radarTeken() vóór het uitlezen van
+   f=R.frames[R.i] worden berekend en dus voor ELK frame identiek zijn: er is
+   geen geometrische/projectie-bug. Deze groep legt dat objectief vast als
+   regressiebescherming, samen met de al bestaande sortering/dedup (opTijd),
+   stale-responsebeveiliging (radarRonde) en de ongewijzigde bediening. */
+groep("Radarframes: volgorde, projectie en stale-responsebeveiliging");
+{
+  const fsR=require("fs"), pathR=require("path");
+  const bronR=fsR.readFileSync(pathR.join(__dirname,"index.html"),"utf8");
+  const radarTekenBron2=bronR.slice(bronR.indexOf("async function radarTeken"),bronR.indexOf("function markeer"));
+
+  // 1+2+3: opTijd() sorteert chronologisch en dedupliceert; actuele frames
+  // (toekomst:false) staan vóór verwachtingsframes (toekomst:true) zodra ze
+  // op tijd gesorteerd zijn, want een verwachting ligt per definitie na nu
+  const {api}=laadKern(1280);
+  const test=[
+    {time:300,toekomst:false},{time:100,toekomst:false},{time:200,toekomst:false},
+    {time:500,toekomst:true},{time:400,toekomst:true},{time:300,toekomst:true},   // dubbele tijd 300: verwachting overschrijft het actuele duplicaat
+  ];
+  const gesorteerd=api.opTijd(test);
+  check("1. opTijd() sorteert frames chronologisch",
+    gesorteerd.every((f,i)=>i===0||f.time>=gesorteerd[i-1].time),
+    gesorteerd.map(f=>f.time).join(","));
+  check("1b. opTijd() dedupliceert op tijdstip (per tijdstip blijft er één over)",
+    new Set(gesorteerd.map(f=>f.time)).size===gesorteerd.length);
+  check("2. actuele frames staan vóór verwachtingsframes zodra correct gesorteerd",
+    (()=>{ const idx=gesorteerd.findIndex(f=>f.toekomst);
+           return idx<0||gesorteerd.slice(0,idx).every(f=>!f.toekomst); })());
+  check("3. de eerste toekomstige timestamp wordt herkend als verwachting (f.toekomst, gebruikt voor het VERWACHTING-label)",
+    /f\.toekomst\?"straks":""/.test(bronR) && /f\.toekomst\?"<small>verwachting<\/small>"/.test(bronR));
+
+  // 4+6: W/H/mid/ox/oy worden één keer per radarTeken()-aanroep berekend,
+  // vóór f=R.frames[R.i] wordt gelezen -- dus onafhankelijk van welk frame
+  // getoond wordt. Dat is precies wat een projectiesprong tussen frames
+  // structureel onmogelijk maakt.
+  check("4+6. kaartuitsnede/projectie (W,H,Zv,Zt,mid,ox,oy) wordt berekend vóórdat het frame zelf wordt gelezen (f=R.frames[R.i] komt pas erna)",
+    (()=>{ const iOx=radarTekenBron2.indexOf("const ox=mid.x-W/2-R.dx");
+           const iF=radarTekenBron2.indexOf("const f=R.frames[R.i];");
+           return iOx>=0 && iF>=0 && iOx<iF; })());
+  check("4b. de basiskaart (kaarten/vakken) wordt uit stijl/Zt/vakken opgebouwd, niet uit het frame f",
+    /const kaarten=vakken\.map\(v=>tegelBelofte\(`https:\/\/basemaps\.cartocdn\.com\/\$\{stijl\}\/\$\{Zt\}\/\$\{v\.X\}\/\$\{v\.ty\}\.png`\)\);/.test(radarTekenBron2));
+  check("5. een framewisseling verandert R.zoom/R.dx/R.dy niet (die worden nergens in radarTeken() of de afspeeltimer gemuteerd)",
+    !/R\.zoom\s*=/.test(radarTekenBron2) && !/R\.dx\s*[+=]/.test(radarTekenBron2) && !/R\.dy\s*[+=]/.test(radarTekenBron2)
+    && !/R\.zoom\s*=|R\.dx\s*[+=]|R\.dy\s*[+=]/.test(bronR.slice(bronR.indexOf('"rspeel"'),bronR.indexOf("function opTijd"))));
+
+  // 7+8: stale-responsebeveiliging (radarRonde) bestaat en wordt gecontroleerd
+  // vóórdat er iets getekend wordt
+  check("7+8. een oude laadronde wordt genegeerd vóórdat er iets getekend wordt (ronde!==radarRonde direct na Promise.all, vóór clearRect)",
+    (()=>{ const iChk=radarTekenBron2.indexOf("if(ronde!==radarRonde) return;");
+           const iClear=radarTekenBron2.indexOf("ctx.clearRect");
+           return iChk>=0 && iClear>=0 && iChk<iClear; })());
+  check("de laadronde-teller (radarRonde) wordt bij iedere aanroep van radarTeken() verhoogd, ook via de slider en de afspeeltimer",
+    /let radarRonde=0;/.test(bronR) && /const ronde=\+\+radarRonde;/.test(bronR));
+
+  // 9: al eerder getest (herstelronde), hier nogmaals bevestigd binnen deze groep
+  check("9. prefetch gebruikt dezelfde geldige tegelzoom (Zt) als de zichtbare render",
+    /volg\.path\}\/\$\{TEGEL\}\/\$\{Zt\}\//.test(radarTekenBron2));
+
+  // 10: frame-index en timestamp blijven gekoppeld via hetzelfde object in R.frames[R.i]
+  check("10. frame-index en timestamp blijven gekoppeld (R.frames[R.i] is één object met .time/.path/.toekomst samen)",
+    /const f=R\.frames\[R\.i\];/.test(radarTekenBron2));
+
+  // 11: slider en autoplay-timer roepen dezelfde radarTeken() aan, die zijn
+  // eigen radarRonde bijhoudt; een trage, oudere aanroep verliest dus altijd
+  // van een latere, of die nu van de slider of de timer komt
+  check("11. de slider en de afspeeltimer gebruiken beide dezelfde radarTeken(), dus dezelfde stale-responsebeveiliging",
+    /rschuif"\)\.addEventListener\("input",e=>\{R\.i=\+e\.target\.value;radarTeken\(\);\}\)/.test(bronR)
+    && /R\.i=\(R\.i\+1\)%R\.frames\.length;[\s\S]{0,80}radarTeken\(\);/.test(bronR));
+
+  // 12: v71-correctie: de overgang actueel->verwachting binnen R.frames is nu
+  // altijd RainViewer->RainViewer (KNMI-WMS zit niet meer in de animatie),
+  // dus er is nog maar één rendertraject en dus geen aparte canvastransformatie
+  // mogelijk voor "de verwachting" -- dat kan hier niet meer misgaan
+  check("12. geen KNMI-WMS-laag meer in de animatie: mercX/mercY/wereldGrootte (alleen nodig voor die laag) bestaan niet meer",
+    !/\bmercX\(/.test(radarTekenBron2) && !/\bmercY\(/.test(radarTekenBron2) && !/wereldGrootte\(/.test(bronR));
+  check("12b. neerslag-tegels gebruiken voor ieder frame dezelfde vakken/Zt-opbouw (geen aparte WMS-tak meer)",
+    /const neerslag=vakken\.map\(v=>\s*\n\s*tegelBelofte\(`\$\{R\.host\}\$\{f\.path\}/.test(radarTekenBron2)
+    && !/f\.knmi/.test(radarTekenBron2));
+
+  // 13: geen nieuwe timer/interval toegevoegd. Er bestaan al vijf setInterval-
+  // aanroepen in de app (nu-lijn, live klok, radar-afspeeltimer, stempel, en
+  // de periodieke stale-databuffercontrole) - stuk voor stuk al vóór deze
+  // ronde aanwezig en hier niet aangeraakt. De radar-afspeeltimer zelf moet
+  // er precies één keer staan.
+  check("13. de radar-afspeeltimer bestaat precies één keer, geen nieuwe timer toegevoegd",
+    (radarTekenBron2.match(/setInterval\(/g)||[]).length===0
+    && (bronR.match(/R\.timer=setInterval\(/g)||[]).length===1);
+
+  // 14: bestaande afspeel-, pauze- en sliderfunctionaliteit blijft bestaan
+  check("14. afspelen/pauzeren en de slider bestaan nog, ongewijzigd",
+    /id="rspeel"/.test(bronR) && /id="rschuif"/.test(bronR) && /R\.speelt/.test(bronR));
+}
+
+/* v71-correctie: RainViewer-meetbeelden en KNMI-verwachtingsbeelden werden
+   tot nu toe in één doorlopende R.frames-reeks geplakt zodra RainViewer zelf
+   geen nowcast leverde. Twee verschillende bronnen (andere data, ander
+   rendertraject) in dezelfde animatie liet de neerslaginhoud zichtbaar
+   verspringen bij die bronovergang. Deze groep legt vast dat die menging
+   structureel weg is: de radaranimatie speelt alleen nog de samenhangende
+   RainViewer-reeks; KNMI-data wordt uitsluitend nog gebruikt voor de
+   statustekst over de vooruitblik. */
+groep("Radar: RainViewer en KNMI niet meer gemengd");
+{
+  const fsM=require("fs"), pathM=require("path");
+  const bronM=fsM.readFileSync(pathM.join(__dirname,"index.html"),"utf8");
+  const knmiFn=bronM.slice(bronM.indexOf("async function knmiVerwachting"),bronM.indexOf("/* ---------- officiele waarschuwingen"));
+
+  check("knmiVerwachting() muteert R.frames nergens meer",!/R\.frames\s*=/.test(knmiFn));
+  check("knmiVerwachting() muteert R.wms nergens meer (die laag bestaat niet meer)",!/R\.wms\s*=/.test(knmiFn));
+  check("er is geen KNMI-frame (f.knmi) meer mogelijk: dat veld wordt nergens meer gezet",
+    !/knmi:true/.test(bronM));
+  check("de serverfunctie /api/radarverwachting wordt nog gewoon aangeroepen (ongewijzigd)",
+    /j\("\/api\/radarverwachting"\)/.test(knmiFn));
+  check("de tekstuele vooruitblik 'Neerslag komende twee uur' gebruikt een eigen, andere bron (minutely_15) en is hier niet aangeraakt",
+    /S\.d\.minutely_15/.test(bronM));
+  check("geen lege/misleidende KNMI-knop meer: #bronknmi wordt altijd leeggemaakt, nooit meer met 'verwachting KNMI' gevuld",
+    /getElementById\("bronknmi"\);\s*\n\s*if\(bk\) bk\.textContent="";/.test(bronM)
+    && !/verwachting KNMI/.test(bronM));
+  check("radarLaden() voegt geen KNMI-stappen meer toe aan R.radarFrames",
+    !/R\.radarFrames=R\.frames;\s*\n\s*const bs/.test(bronM));
+  // de functionele test (knmiVerwachting() echt aanroepen met een gemockte
+  // serverrespons) staat, omdat die asynchroon is, verderop bij de overige
+  // async tests in testenOpstartlocatie()
 }
 
 /* 10w. luchtvochtigheidstegel zonder dauwpunt */
@@ -3140,6 +3465,34 @@ async function testenOpstartlocatie(){
       /klokTimerStart\(\);\s*\n}/.test(bronL2));
     check("10. nuTimerStart (de nu-lijn) staat er ook nog onaangeroerd naast",
       /nuTimerStart\(\);\s*\n\s*klokTimerStart\(\);/.test(bronL2));
+  }
+
+  // v71-correctie, functionele test: knmiVerwachting() echt aanroepen met een
+  // gemockte serverrespons die wél geldige, toekomstige verwachtingstijden
+  // teruggeeft, en bevestigen dat R.frames (de animatie) daardoor niet
+  // verandert -- alleen R.knmiMelding (de statustekst) mag reageren.
+  {
+    const {api:aK}=laadKern(1280,{
+      fetch: async (url)=>{
+        if(String(url).includes("/api/radarverwachting")){
+          const t1=new Date(Date.now()+5*60000).toISOString();
+          const t2=new Date(Date.now()+10*60000).toISOString();
+          return {ok:true,json:async()=>({
+            basis:"https://voorbeeld.knmi.nl/wms?", laag:"radar_forecast_2.0",
+            tijden:[t1,t2], ouderdomMin:5
+          })};
+        }
+        return {ok:false,status:404,json:async()=>({})};
+      }
+    });
+    Object.assign(aK.S,{lat:52.35,lon:5.26,label:"T"});     // ergens in Nederland
+    aK.R.frames=[{time:1000,path:"/v2/radar/x",toekomst:false}];
+    const voorFrames=JSON.stringify(aK.R.frames);
+    await aK.knmiVerwachting([{time:1000,toekomst:false}]);
+    check("v71: R.frames is byte voor byte ongewijzigd na knmiVerwachting(), ook met geldige serverdata",
+      JSON.stringify(aK.R.frames)===voorFrames,JSON.stringify(aK.R.frames));
+    check("v71: R.knmiMelding blijft leeg wanneer de server geldige, toekomstige tijden teruggeeft",
+      aK.R.knmiMelding==="",aK.R.knmiMelding);
   }
 }
 

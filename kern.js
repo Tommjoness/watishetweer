@@ -20,7 +20,7 @@ const NODIG = ["S", "opOnder", "maan", "bft", "BFTNAAM", "nl",
 const EXTRA = ["plaatsNu", "plaatsNuIndex", "plaatsKlok", "nuTimerStart", "clearNuTimer",
                "klokTimerStart", "clearKlokTimer", "klokBijwerken", "locatieNu", "afstandKm", "kompasKort", "dagDeel", "maanUnicode", "tekenAlles", "load", "chips", "controle", "lucht", "stempel", "icon", "hhmm", "kompas",
                "piek", "restkans", "daglengte", "inNederland", "nbsp", "esc", "clamp",
-               "mins", "naarLokaal", "radarTeken", "knmiVerwachting", "R",
+               "mins", "naarLokaal", "radarTeken", "knmiVerwachting", "opTijd", "R",
                "CODES", "DIRSVOL", "DAGEN", "BFT", "THEMAS", "ls"];
 
 /* ---------- de app-code uit index.html halen ---------- */
