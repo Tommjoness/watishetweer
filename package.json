@@ -1,6 +1,6 @@
 {
   "name": "weerbriefing",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Weersverwachting met centrale interpretatielaag, etmaalbalk, kwartierneerslag, luchtkwaliteit, pollen en nachtzicht.",
   "private": true,
   "scripts": {
