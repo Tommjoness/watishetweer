@@ -35,6 +35,12 @@ const enginePad=path.join(ROOT,"interpretatie-engine.js");
 let html=fs.readFileSync(indexPad,"utf8");
 const engine=fs.readFileSync(enginePad,"utf8");
 
+function vervangEenmalig(zoek,vervang,label){
+  const aantal=html.split(zoek).length-1;
+  if(aantal!==1) throw new Error(label+": verwacht precies één bronmatch, gevonden "+aantal+".");
+  html=html.replace(zoek,vervang);
+}
+
 const startMarker="/* ---------- start ---------- */";
 if((html.match(/\/\* ---------- start ---------- \*\//g)||[]).length!==1){
   throw new Error("Startmarker ontbreekt of komt meer dan eenmaal voor; interpretatie-engine niet ingevoegd.");
@@ -44,37 +50,73 @@ if(html.includes("CENTRALE INTERPRETATIE-ENGINE")){
 }
 
 /* Verrijk uitsluitend de gegevens die de centrale interpretatie nodig heeft.
-   De bestaande velden en Best Match-modelkeuze blijven ongewijzigd. */
-html=html.replace(
-  "current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,precipitation,"
-  +"\n    +\"weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m\"",
-  "current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,precipitation,"
-  +"\n    +\"rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m\""
+   Iedere vervanging is strikt: een gewijzigde bronstructuur mag nooit ongemerkt
+   een half toegepaste interpretatielaag opleveren. */
+vervangEenmalig(
+  '+"weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m"',
+  '+"rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m"',
+  "actuele neerslagtypen"
 );
-html=html.replace(
+vervangEenmalig(
   "&minutely_15=precipitation&past_hours=24",
-  "&minutely_15=precipitation,rain,showers,snowfall,weather_code&forecast_minutely_15=16&past_minutely_15=4&past_hours=24"
+  "&minutely_15=precipitation,rain,showers,snowfall,weather_code&forecast_minutely_15=16&past_minutely_15=4&past_hours=24",
+  "kwartierneerslag"
 );
-html=html.replace(
+vervangEenmalig(
   "precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,",
-  "precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,"
+  "precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,",
+  "uur-neerslagtypen"
 );
-html=html.replace(
+vervangEenmalig(
   "precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,",
-  "precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,"
+  "precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,",
+  "fallback-neerslagtypen"
 );
 
-html=html.replace("<div class=\"eyebrow\">Neerslag afgelopen uur</div><div class=\"sval\" id=\"prec\">",
-                  "<div class=\"eyebrow\">Neerslag recent</div><div class=\"sval\" id=\"prec\">");
-html=html.replace("+rij(\"neerslagkans\",(heel(G.P&&G.P[i])?G.P[i]:\"–\")+\"%\",TEAL)",
-                  "+rij(\"kans uur tot\",(heel(G.P&&G.P[i])?G.P[i]:\"–\")+\"%\",TEAL)");
-html=html.replace(
-  "<span class=\"bron\"><b>Weer</b> <a href=\"https://open-meteo.com\" target=\"_blank\" rel=\"noopener\">Open-Meteo</a>, ECMWF en DWD, CAMS</span>",
-  "<span class=\"bron\"><b>Weer</b> <a href=\"https://open-meteo.com\" target=\"_blank\" rel=\"noopener\">Open-Meteo Best Match</a> · <b>Luchtkwaliteit</b> CAMS</span>"
+vervangEenmalig(
+  '<div class="eyebrow">Neerslag afgelopen uur</div><div class="sval" id="prec">',
+  '<div class="eyebrow">Neerslag recent</div><div class="sval" id="prec">',
+  "recente-neerslaglabel"
 );
+
+/* Uurwaarden voor neerslag en kans gelden voor het voorafgaande uur. Het punt
+   met tijd 19:00 is om 19:00 dus volledig verlopen en mag in een toekomstgrafiek
+   geen balk, percentage of tooltipwaarde meer opleveren. Temperatuur en andere
+   momentwaarden blijven wel staan; alleen de intervalwaarden worden leeggemaakt. */
+vervangEenmalig(
+  "    P.push(h.precipitation_probability[i]??0);MM.push(h.precipitation[i]??0);",
+  "    const intervalVerlopen=S.dag==null&&globalThis.WeatherNowInterpretatie\\n"
+    +"      &&globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(h.time[i])<=globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(S.d.current.time);\\n"
+    +"    P.push(intervalVerlopen?null:(h.precipitation_probability[i]??null));\\n"
+    +"    MM.push(intervalVerlopen?null:(h.precipitation[i]??null));",
+  "verlopen grafiekintervallen"
+);
+
+/* De tooltip noemt het volledige geldigheidsvak, niet alleen een los einduur. */
+vervangEenmalig(
+  '+rij("neerslagkans",(heel(G.P&&G.P[i])?G.P[i]:"–")+"%",TEAL)',
+  '+rij(heel(G.P&&G.P[i])?"kans "+weatherNowUurvak(G.TI[i]):"neerslagkans",(heel(G.P&&G.P[i])?G.P[i]:"–")+"%",TEAL)',
+  "tooltip-neerslagtijdvak"
+);
+
+vervangEenmalig(
+  '<span class="bron"><b>Weer</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>, ECMWF en DWD, CAMS</span>',
+  '<span class="bron"><b>Weer</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo Best Match</a> · <b>Luchtkwaliteit</b> CAMS</span>',
+  "bronvermelding"
+);
+
+const intervalHelper=`
+function weatherNowUurvak(tijd){
+  const api=globalThis.WeatherNowInterpretatie;
+  const eind=api&&api.lokaalNaarMinuten(tijd);
+  const begin=eind==null?null:api.minutenNaarLokaal(eind-60);
+  return begin?begin.slice(11,16)+"–"+String(tijd).slice(11,16):"voorafgaand uur";
+}
+`;
 
 html=html.replace(startMarker,
-  "/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */\n"+engine+"\n/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */\n\n"+startMarker);
+  "/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */\n"+engine+intervalHelper
+  +"\n/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */\n\n"+startMarker);
 
 /* Compileer ieder inline scriptblok. Dit voert niets uit, maar blokkeert een
    deployment bij een syntaxisfout in de bestaande code of de invoeging. */
@@ -85,14 +127,16 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:inline
 if(!html.includes("WeatherNowInterpretatie")) throw new Error("Interpretatie-engine ontbreekt na build.");
 if(!html.includes("forecast_minutely_15=16")) throw new Error("Uitgebreide kwartierdata ontbreekt na build.");
 if(!html.includes("waarden links van ‘nu’ zijn voorbij")) throw new Error("Grafiekcontext ontbreekt na build.");
+if(!html.includes("intervalVerlopen")) throw new Error("Verlopen neerslagintervallen worden niet uit de grafiek gefilterd.");
+if(!html.includes("weatherNowUurvak")) throw new Error("Exact tooltip-tijdvak ontbreekt.");
 
 fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 
 const swPad=path.join(OUT,"sw.js");
 if(fs.existsSync(swPad)){
   let sw=fs.readFileSync(swPad,"utf8");
-  sw=sw.replace(/weerbriefing-v\d+/g,"weerbriefing-v73");
+  sw=sw.replace(/weerbriefing-v\d+/g,"weerbriefing-v74");
   fs.writeFileSync(swPad,sw,"utf8");
 }
 
-console.log("WeatherNow-build geslaagd: centrale interpretatie-engine ingevoegd en syntactisch gecontroleerd.");
+console.log("WeatherNow-build geslaagd: centrale interpretatie-engine en intervalveilige grafiek ingevoegd.");
