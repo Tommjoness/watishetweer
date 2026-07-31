@@ -53,7 +53,7 @@ jobs:
         run: |
           git fetch origin main
           git checkout -B main origin/main
-          rm -f .github/workflows/run-interpretatie-engine.yml
+          rm -f .github/workflows/run-interpretatie-engine.yml .github/interpretatie-trigger
           git config user.name "WeatherNow Agent"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
