@@ -24,7 +24,9 @@ jobs:
         with:
           node-version: 20
       - name: Apply focused corrections
-        run: node tools/apply-weather-copy-fix.js
+        run: |
+          node tools/apply-weather-copy-fix.js
+          node tools/fix-weather-copy-test.js
       - name: Run full tests
         run: npm test
       - name: Run production build
