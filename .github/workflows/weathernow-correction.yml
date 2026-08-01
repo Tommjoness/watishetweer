@@ -1,0 +1,39 @@
+name: WeatherNow correction validation
+
+on:
+  push:
+    branches:
+      - fix/precipitation-copy-chart-density
+
+permissions:
+  contents: write
+
+jobs:
+  apply-test:
+    if: ${{ !contains(github.event.head_commit.message, 'Fix precipitation copy and chart density') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/precipitation-copy-chart-density
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Apply focused corrections
+        run: node tools/apply-weather-copy-fix.js
+      - name: Run full tests
+        run: npm test
+      - name: Run production build
+        run: npm run build
+      - name: Commit validated corrections
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add interpretatie-engine.js interpretatie-engine.test.js index.html run.js build-weather.js
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Fix precipitation copy and chart density"
+          git push origin HEAD:fix/precipitation-copy-chart-density
