@@ -95,7 +95,7 @@ vervangEenmalig(
 /* De tooltip noemt het volledige geldigheidsvak, niet alleen een los einduur. */
 vervangEenmalig(
   '+rij("neerslagkans",(heel(G.P&&G.P[i])?G.P[i]:"–")+"%",TEAL)',
-  '+rij(heel(G.P&&G.P[i])?"kans "+weatherNowUurvak(G.TI[i]):"neerslagkans",(heel(G.P&&G.P[i])?G.P[i]:"–")+"%",TEAL)',
+  '+rij(heel(G.P&&G.P[i])&&G.P[i]>0?"kans "+weatherNowUurvak(G.TI[i]):"neerslag",heel(G.P&&G.P[i])&&G.P[i]>0?G.P[i]+"%":"geen neerslag verwacht",TEAL)',
   "tooltip-neerslagtijdvak"
 );
 
@@ -129,6 +129,9 @@ if(!html.includes("forecast_minutely_15=16")) throw new Error("Uitgebreide kwart
 if(!html.includes("waarden links van ‘nu’ zijn voorbij")) throw new Error("Grafiekcontext ontbreekt na build.");
 if(!html.includes("intervalVerlopen")) throw new Error("Verlopen neerslagintervallen worden niet uit de grafiek gefilterd.");
 if(!html.includes("weatherNowUurvak")) throw new Error("Exact tooltip-tijdvak ontbreekt.");
+if(!html.includes('"geen neerslag verwacht"')) throw new Error("Droge tooltip gebruikt nog een nulpercentage.");
+if(!html.includes('kort.droog')) throw new Error("Droge neerslagweergaven zijn niet centraal afgevangen.");
+if(!html.includes('maximumLabels=M?')) throw new Error("Harde limiet voor temperatuurlabels ontbreekt.");
 
 fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 

@@ -1481,7 +1481,7 @@ function etmaal(start,n){
      22° bij het actuele punt en 14°/15° rond hetzelfde dal. Alleen het
      lage-prioriteitsraster wijkt; actuele punten en echte extrema
      blijven altijd behouden. */
-  const kandidaten=kandidatenRuw.filter((k,pos)=>{
+  let kandidaten=kandidatenRuw.filter((k,pos)=>{
     if(k.rang!==1) return true;
     const afgerond=Math.round(T[k.i]);
     return !kandidatenRuw.slice(0,pos).some(g=>
@@ -1489,10 +1489,26 @@ function etmaal(start,n){
       Math.abs(g.i-k.i)*cw<Math.max(48,cw*2.2) &&
       Math.abs(Math.round(T[g.i])-afgerond)<=1);
   });
+  /* Informatiedichtheid volgt de beschikbare schermruimte. Op een telefoon zijn
+     vijf temperatuurcijfers binnen 24 uur het maximum; bij langere bereiken
+     wordt dat nog lager. Een label dat te dicht bij een belangrijker label ligt
+     vervalt. De curve en tooltip blijven alle uurwaarden bevatten. */
+  const maximumLabels=M?(n<=24?5:n<=48?4:3):(n<=24?9:n<=48?8:7);
+  const minimumAfstand=M?(n<=24?48:n<=48?62:78):42;
+  const gekozen=[];
+  for(const k of kandidaten){
+    if(gekozen.length>=maximumLabels) break;
+    const teDicht=gekozen.some(g=>
+      Math.abs(g.i-k.i)*cw<minimumAfstand
+      && Math.abs(Math.round(T[g.i])-Math.round(T[k.i]))<=2);
+    if(teDicht) continue;
+    gekozen.push(k);
+  }
+  kandidaten=gekozen;
 
   const labelBreed=v=>String(Math.round(v)).length*F.temp*0.58+F.temp*0.40;
   const gezet=[];
-  const MAXLAAG=5;   // meer dan genoeg lagen om zelfs een dichte 3-uursreeks te schikken
+  const MAXLAAG=M?2:3; // beperkte lagen: liever één cijfer minder dan een visuele stapel
   /* Botst een kandidaat op cx op elke laag, dan gaf de oude code een piek/dal
      alsnog een geforceerde positie zonder te kijken of daar al iets anders
      stond: twee cijfers konden zo exact over elkaar heen belanden, en dan is
@@ -1555,10 +1571,9 @@ function etmaal(start,n){
       poging=probeerLagen(cx,v,eersteBoven,k.rang);
       if(poging){ cy=poging.cy; boven=poging.boven; verwijderd=poging.verwijderd; }
       else{
-        // zelfs na eviction geen laag vrij (zeldzaam): forceer de
-        // dichtstbijzijnde plek, zodat het label nooit stilzwijgend verdwijnt
-        cy = eersteBoven ? y(v)-(M?13:14) : y(v)+(M?18:20);
-        cy = Math.min(Math.max(cy,by+bh+6+F.temp), pb-3);
+        // Geen veilige plek betekent geen label. De volledige waarde blijft
+        // beschikbaar via de curve en tooltip; leesbaarheid gaat hier voor.
+        return;
       }
     }
     verwijderd.forEach(g=>{ const idx=gezet.indexOf(g); if(idx>=0) gezet.splice(idx,1); });
