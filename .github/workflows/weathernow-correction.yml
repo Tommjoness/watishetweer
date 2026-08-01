@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  apply-test:
+  validate-and-clean:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,28 +19,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Apply focused corrections
+      - name: Confirm committed correction
         run: |
-          if grep -q "function neerslagKorteWeergave" interpretatie-engine.js; then
-            echo "Validated corrections are already committed."
-          else
-            node tools/apply-weather-copy-fix.js
-            node tools/fix-weather-copy-test.js
-            node tools/fix-chart-density-regressions.js
-            node tools/fix-chart-overlap-test.js
-          fi
+          grep -q "function neerslagKorteWeergave" interpretatie-engine.js
+          grep -q "maximumLabels=M?" index.html
       - name: Run full tests
         run: npm test
       - name: Run production build
         run: npm run build
-      - name: Commit validated corrections
+      - name: Remove temporary correction tooling
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add interpretatie-engine.js interpretatie-engine.test.js index.html run.js build-weather.js
-          if git diff --cached --quiet; then
-            echo "No changes to commit."
-            exit 0
-          fi
-          git commit -m "Fix precipitation copy and chart density"
+          git rm .github/workflows/weathernow-correction.yml \
+            tools/apply-weather-copy-fix.js \
+            tools/fix-weather-copy-test.js \
+            tools/fix-chart-density-regressions.js \
+            tools/fix-chart-overlap-test.js
+          git commit -m "Remove temporary WeatherNow correction tooling"
           git push origin HEAD:fix/precipitation-copy-chart-density
