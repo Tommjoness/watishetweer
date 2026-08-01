@@ -28,6 +28,7 @@ jobs:
           node tools/apply-weather-copy-fix.js
           node tools/fix-weather-copy-test.js
           node tools/fix-chart-density-regressions.js
+          node tools/fix-chart-overlap-test.js
       - name: Run full tests
         run: npm test
       - name: Run production build
