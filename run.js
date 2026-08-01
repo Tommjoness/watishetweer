@@ -205,6 +205,32 @@ groep("Rustige grafiek en daglichttijden");
     /#suntimes\{display:grid;grid-template-columns:1fr;gap:2px/.test(bron));
 }
 
+/* 7c2. Ook een extreem onrustige temperatuurreeks blijft op mobiel rustig. */
+groep("Harde limiet temperatuurlabels");
+for(const bereik of [24,48,168]){
+  const {api,bak}=laadKern(390);
+  const d=bouw({temp:(u,dag)=>12+((u+dag*3)%2?9:-5)+(u%5===0?4:0)});
+  Object.assign(api.S,{d:d,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:bereik});
+  api.S.i0=d.hourly.time.findIndex(t=>t.slice(0,13)===d.current.time.slice(0,13));
+  api.etmaal(api.S.i0,bereik);
+  const labels=[...bak.chart.innerHTML.matchAll(/<text x="([\d.]+)" y="([\d.]+)" text-anchor="middle" fill="[^"]+"[^>]*font-family="Bodoni Moda,serif" font-size="([\d.]+)">(-?\d+)°<\/text>/g)]
+    .map(m=>({x:+m[1],y:+m[2],fs:+m[3],v:+m[4]})).sort((a,b)=>a.x-b.x);
+  const limiet=bereik<=24?5:bereik<=48?4:3;
+  check(bereik+" uur mobiel: niet meer dan "+limiet+" temperatuurcijfers",
+    labels.length<=limiet,labels.length+" labels: "+labels.map(x=>x.v).join(","));
+  const botsingen=[];
+  for(let i=0;i<labels.length;i++) for(let j=i+1;j<labels.length;j++){
+    const a=labels[i],b=labels[j];
+    const breedA=(String(a.v).length+1)*a.fs*0.58+a.fs*0.40;
+    const breedB=(String(b.v).length+1)*b.fs*0.58+b.fs*0.40;
+    if(Math.abs(a.x-b.x)<(breedA+breedB)/2+4 && Math.abs(a.y-b.y)<Math.max(a.fs,b.fs)+4){
+      botsingen.push(a.v+"°/"+b.v+"°");
+    }
+  }
+  check(bereik+" uur mobiel: temperatuurcijfers overlappen niet",
+    botsingen.length===0,botsingen.join(", "));
+}
+
 /* 7d. labels boven de dagbalk mogen nooit buiten de tekening vallen */
 groep("Zonlabels");
 for(const [naam,uur,br] of [["vlak voor zonsondergang","20:00",390],["vlak voor zonsopkomst","04:00",390],
@@ -1427,8 +1453,8 @@ groep("Live bevindingen");
        niet op het raster vallen; met deze cyclische testreeks van 18,9/19,0/19,1
        vallen alle rasterpunten toevallig op dezelfde fase, dus de twee uitersten
        liggen daar altijd net naast. Tien labels is dus de juiste uitkomst. */
-    check("op een vlakke 24-uursreeks staat er op elk drie-uursinterval een label",
-      posities.length>=8&&posities.length<=10,posities.length+" labels: "+posities.map(p=>p.v).join(" "));
+    check("op een vlakke 24-uursreeks blijft het aantal labels rustig en informatief",
+      posities.length>=3&&posities.length<=9,posities.length+" labels: "+posities.map(p=>p.v).join(" "));
     const dubbel=[];
     for(let a=0;a<posities.length;a++) for(let b2=a+1;b2<posities.length;b2++){
       const p=posities[a],q=posities[b2];

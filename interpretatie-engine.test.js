@@ -5,6 +5,8 @@ const {
   analyseerNeerslagData,
   analyseerDagData,
   neerslagZin,
+  neerslagKorteWeergave,
+  dagHoeveelheidZin,
   hoeveelheidTekst,
   statusRang
 }=require("./interpretatie-engine.js");
@@ -74,15 +76,19 @@ test("verlopen 23% telt niet mee voor de komende twee uur",()=>{
 test("optie 1 wordt exact en zonder absolute droogclaim gevormd",()=>{
   const a=analyseerNeerslagData(basis(),120);
   assert.equal(neerslagZin(a),
-    "De komende twee uur is de kans op neerslag zeer klein. Maximale kans: 4%. Verwachte hoeveelheid: 0,0 mm.");
+    "De kans op neerslag in de komende twee uur is zeer klein (maximaal 4%).");
   assert(!/blijft.*droog/i.test(neerslagZin(a)));
 });
 
-test("0% en 0,0 mm wordt verwachting, geen garantie",()=>{
-  const d=basis({kans:Array(9).fill(0)});
-  const zin=neerslagZin(analyseerNeerslagData(d,120));
-  assert(/wordt geen neerslag verwacht/.test(zin));
-  assert(!/blijft.*droog/i.test(zin));
+test("droge verwachting noemt nergens 0% of 0,0 mm",()=>{
+  for(const duur of [60,120,180,360]){
+    const d=basis({kans:Array(9).fill(0)});
+    const a=analyseerNeerslagData(d,duur);
+    const zin=neerslagZin(a),kort=neerslagKorteWeergave(a);
+    assert(/wordt geen neerslag verwacht/.test(zin),zin);
+    assert(!/0%|0,0 mm/.test(zin+" "+kort.hoofd+" "+kort.detail),zin);
+    assert.equal(kort.hoofd,"Droog");
+  }
 });
 
 test("om 19:47 omvat komend uur beide overlappende uurvakken",()=>{
@@ -105,13 +111,15 @@ test("positieve hoeveelheid onder 0,1 mm wordt niet als 0,0 verborgen",()=>{
   assert(/<0,1 mm/.test(neerslagZin(a)));
 });
 
-test("grote kans zonder hoeveelheid wordt als modelverschil benoemd",()=>{
+test("grote kans zonder hoeveelheid wordt begrijpelijk uitgelegd",()=>{
   const d=basis();
   d.hourly.precipitation_probability[3]=80;
   d.hourly.precipitation_probability[4]=75;
-  const a=analyseerNeerslagData(d,120);
+  const a=analyseerNeerslagData(d,120),zin=neerslagZin(a);
   assert.equal(a.status,"GROTE_KANS_ZONDER_HOEVEELHEID");
-  assert(/hoeveelheidsmodel berekent geen meetbare neerslag/.test(neerslagZin(a)));
+  assert(/kans op neerslag.*groot/.test(zin),zin);
+  assert(/hooguit enkele druppels/.test(zin),zin);
+  assert(!/0,0 mm/.test(zin),zin);
 });
 
 test("meetbare sneeuw gebruikt toekomstig neerslagtype",()=>{
@@ -191,6 +199,24 @@ test("meetbare hoeveelheid is nooit droger dan alleen kans",()=>{
   const d1=basis(); d1.minutely_15.precipitation[5]=0.12;
   const r1=statusRang(analyseerNeerslagData(d1,120).status);
   assert(r1>r0);
+});
+
+test("alle kans-zonder-hoeveelheidstakken leggen het signaal uit zonder 0,0 mm",()=>{
+  const kansen=[1,19,20,39,40,69,70,100];
+  for(const kans of kansen){
+    const d=basis();
+    d.hourly.precipitation_probability[3]=kans;
+    d.hourly.precipitation_probability[4]=kans;
+    const a=analyseerNeerslagData(d,120),zin=neerslagZin(a);
+    assert(!/0,0 mm/.test(zin),kans+"%: "+zin);
+    assert(!/Maximale kans: 0%/.test(zin),kans+"%: "+zin);
+  }
+});
+
+test("daghoeveelheid gebruikt taal in plaats van droge nul",()=>{
+  assert.equal(dagHoeveelheidZin(0),"Voor vandaag wordt geen neerslag verwacht.");
+  assert.equal(dagHoeveelheidZin(0.04),"Voor vandaag worden hooguit enkele druppels verwacht.");
+  assert(!/0,0 mm/.test(dagHoeveelheidZin(0)));
 });
 
 if(process.exitCode){

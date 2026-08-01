@@ -234,38 +234,65 @@ function analyseerNeerslagData(data,duurMin,nuOverride){
   };
 }
 
+function neerslagKorteWeergave(analyse){
+  const a=analyse||{};
+  if(!a.genoeg) return {hoofd:"–",detail:"",droog:false};
+  const kans=a.kans===null?null:Math.round(Math.max(0,Math.min(100,a.kans)));
+  if(a.status==="GEEN_KANS") return {hoofd:"Droog",detail:"",droog:true};
+  if(a.status==="ZEER_KLEINE_KANS") return {hoofd:kans===null?"Zeer klein":kans+"%",detail:"zeer kleine kans",droog:false};
+  if(a.status==="KLEINE_KANS") return {hoofd:kans===null?"Kleine kans":kans+"%",detail:"kleine kans",droog:false};
+  if(a.status==="MOGELIJKE_NEERSLAG") return {hoofd:kans===null?"Mogelijk":kans+"%",detail:"hooguit enkele druppels",droog:false};
+  if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return {hoofd:kans===null?"Grote kans":kans+"%",detail:"hooguit enkele druppels",droog:false};
+  if(a.status==="SPOORHOEVEELHEID") return {hoofd:kans&&kans>0?kans+"%":"Druppels",detail:hoeveelheidTekst(a.hoeveelheid),droog:false};
+  return {
+    hoofd:kans===null?"Neerslag":kans+"%",
+    detail:getal(a.hoeveelheid)>0?hoeveelheidTekst(a.hoeveelheid):"",
+    droog:false
+  };
+}
+
+function dagHoeveelheidZin(mm){
+  const v=getal(mm);
+  if(v===null) return "De totale neerslagverwachting voor vandaag is niet beschikbaar.";
+  if(v<=INTERPRETATIE_CONFIG.spoorMm) return "Voor vandaag wordt geen neerslag verwacht.";
+  if(v<INTERPRETATIE_CONFIG.meetbaarMm) return "Voor vandaag worden hooguit enkele druppels verwacht.";
+  return "Voor vandaag wordt "+hoeveelheidTekst(v)+" neerslag verwacht.";
+}
+
 function neerslagZin(analyse){
   const a=analyse||{};
   const venster=vensterNaam(a.duurMin||120);
   if(!a.genoeg){
     return "Voor "+venster+" ontbreken voldoende consistente gegevens voor een betrouwbare inschatting.";
   }
-  const kans="Maximale kans: "+kansTekst(a.kans)+".";
-  const hoeveelheid="Verwachte hoeveelheid: "+hoeveelheidTekst(a.hoeveelheid)+".";
-  if(a.status==="NEERSLAG_NU"){
-    return "Volgens het weermodel valt er nu "+a.soort+". "+kans+" "+hoeveelheid;
-  }
-  if(a.status==="NEERSLAG_VERWACHT"){
-    const start=a.eersteTijd?", vanaf ongeveer "+a.eersteTijd:"";
-    return "In "+venster+" wordt "+a.soort+" verwacht"+start+". "+kans+" "+hoeveelheid;
-  }
-  if(a.status==="SPOORHOEVEELHEID"){
-    return "In "+venster+" is een zeer kleine hoeveelheid "+a.soort+" mogelijk. "+kans+" "+hoeveelheid;
-  }
-  if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID"){
-    return "De kans op neerslag is groot, maar het hoeveelheidsmodel berekent geen meetbare neerslag. "+kans+" "+hoeveelheid;
-  }
-  if(a.status==="MOGELIJKE_NEERSLAG"){
-    return "In "+venster+" is neerslag mogelijk. "+kans+" "+hoeveelheid;
-  }
-  if(a.status==="KLEINE_KANS"){
-    return "In "+venster+" is de kans op neerslag klein. "+kans+" "+hoeveelheid;
+  const kans=a.kans===null?null:Math.round(Math.max(0,Math.min(100,a.kans)));
+  const kansTussen=kans===null?"":" (maximaal "+kans+"%)";
+  if(a.status==="GEEN_KANS"){
+    return "Voor "+venster+" wordt geen neerslag verwacht.";
   }
   if(a.status==="ZEER_KLEINE_KANS"){
-    return (a.duurMin===120?"De komende twee uur":a.duurMin===60?"Het komende uur":"In "+venster)
-      +" is de kans op neerslag zeer klein. "+kans+" "+hoeveelheid;
+    return "De kans op neerslag in "+venster+" is zeer klein"+kansTussen+".";
   }
-  return "Voor "+venster+" wordt geen neerslag verwacht. "+kans+" "+hoeveelheid;
+  if(a.status==="KLEINE_KANS"){
+    return "Er is een kleine kans op neerslag in "+venster+kansTussen+". De meeste berekeningen blijven droog.";
+  }
+  if(a.status==="MOGELIJKE_NEERSLAG"){
+    return "Neerslag is mogelijk in "+venster+kansTussen+", maar waarschijnlijk gaat het om hooguit enkele druppels.";
+  }
+  if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID"){
+    return "De kans op neerslag in "+venster+" is groot"+kansTussen+", maar waarschijnlijk gaat het om hooguit enkele druppels.";
+  }
+  if(a.status==="SPOORHOEVEELHEID"){
+    return "In "+venster+" zijn hooguit enkele druppels mogelijk. Verwachte hoeveelheid: "+hoeveelheidTekst(a.hoeveelheid)+".";
+  }
+  if(a.status==="NEERSLAG_NU"){
+    const totaal=getal(a.hoeveelheid)>=INTERPRETATIE_CONFIG.spoorMm
+      ?" Verwachte hoeveelheid in "+venster+": "+hoeveelheidTekst(a.hoeveelheid)+".":"";
+    return "Volgens het weermodel valt er nu "+a.soort+"."+totaal+(kans===null?"":" Maximale kans: "+kans+"%.");
+  }
+  const start=a.eersteTijd?", vanaf ongeveer "+a.eersteTijd:"";
+  return "In "+venster+" wordt "+a.soort+" verwacht"+start+". Verwachte hoeveelheid: "
+    +hoeveelheidTekst(a.hoeveelheid)+"."+(kans===null?"":" Maximale kans: "+kans+"%.");
 }
 
 function modeCode(codes){
@@ -325,6 +352,8 @@ const publiekeApi={
   neerslagSoortUitCode,
   analyseerNeerslagData,
   analyseerDagData,
+  neerslagKorteWeergave,
+  dagHoeveelheidZin,
   neerslagZin,
   statusRang
 };
@@ -374,24 +403,24 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
   if(origineel.meters){
     meters=function(){
       origineel.meters();
-      const uur=analyse(60);
-      if(uur.genoeg){
-        set("pop",(uur.kans===null?"–":uur.kans)+"<s>%</s>");
-        zetTekst("popsub",neerslagZin(uur));
-      }else{
-        set("pop","–");
-        zetTekst("popsub",neerslagZin(uur));
-      }
+      const uur=analyse(60),kort=neerslagKorteWeergave(uur);
+      if(!uur.genoeg) set("pop","–");
+      else if(kort.droog) set("pop","Geen");
+      else if(uur.kans!==null) set("pop",uur.kans+"<s>%</s>");
+      else set("pop",kort.hoofd);
+      zetTekst("popsub",neerslagZin(uur));
       zetEyebrow("prec","Neerslag recent");
       const c=S.d.current||{};
       const intervalMin=Math.max(1,Math.round((getal(c.interval)||900)/60));
       const recent=getal(c.precipitation);
-      set("prec",recent===null?"–":(recent>0&&recent<0.1?"<0,1":nl(recent))+"<s>mm</s>");
+      set("prec",recent===null?"–":recent<=INTERPRETATIE_CONFIG.spoorMm?"Geen":(recent<0.1?"<0,1":nl(recent))+"<s>mm</s>");
       const dag=S.d.daily||{},idx=dag.time?dag.time.indexOf(plaatsVandaag()):-1;
       const dagsom=idx>=0&&dag.precipitation_sum?getal(dag.precipitation_sum[idx]):null;
       zetTekst("precsub",recent===null
         ? "Recente neerslag is niet beschikbaar."
-        : "Modelwaarde over de afgelopen "+intervalMin+" minuten. Voor vandaag wordt "+hoeveelheidTekst(dagsom)+" verwacht.");
+        : (recent<=INTERPRETATIE_CONFIG.spoorMm
+          ? "Geen neerslag gemeten in de afgelopen "+intervalMin+" minuten. "
+          : "Modelwaarde over de afgelopen "+intervalMin+" minuten. ")+dagHoeveelheidZin(dagsom));
     };
   }
 
@@ -440,11 +469,19 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
         const cond=rij.querySelector(".dcond"),kans=rij.querySelector(".drain"),icoon=rij.querySelector(".dico");
         if(cond) cond.textContent=dagSamenvatting(a);
         if(kans){
-          kans.innerHTML=(a.genoeg&&a.kans!==null?a.kans:"–")+"%"
-            +(a.genoeg?"<small>"+hoeveelheidTekst(a.hoeveelheid)+"</small>":"");
-          kans.title=a.genoeg&&a.kansTijdvak
-            ? "Hoogste resterende kans in het uur "+a.kansTijdvak.begin+"–"+a.kansTijdvak.eind
-            : "Geen betrouwbare kans beschikbaar";
+          const kort=neerslagKorteWeergave(a);
+          if(!a.genoeg){
+            kans.innerHTML="–";
+            kans.title="Geen betrouwbare kans beschikbaar";
+          }else if(kort.droog){
+            kans.innerHTML="Droog";
+            kans.title="Geen neerslag verwacht";
+          }else{
+            kans.innerHTML=kort.hoofd+(kort.detail?"<small>"+kort.detail+"</small>":"");
+            kans.title=a.kansTijdvak
+              ? "Hoogste resterende kans in het uur "+a.kansTijdvak.begin+"–"+a.kansTijdvak.eind
+              : neerslagZin(a);
+          }
         }
         if(icoon&&a.genoeg&&a.code!==null&&typeof icon==="function") icoon.innerHTML=icon(a.code,true,22);
       });
