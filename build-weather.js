@@ -99,6 +99,34 @@ vervangEenmalig(
   "tooltip-neerslagtijdvak"
 );
 
+/* De temperatuurzin bovenaan en de standaardgrafiek moeten hetzelfde venster
+   gebruiken. De grafiek start bij S.i0 en toont 24 uur; de briefing keek nog
+   maar twaalf uur vooruit, waardoor een middagpiek buiten beeld van de tekst viel. */
+vervangEenmalig(
+  "  const eind=Math.min(i+13,h.time.length);",
+  "  const eind=Math.min(i+24,h.time.length);",
+  "briefing gebruikt dezelfde 24 uur als de grafiek"
+);
+
+/* Op mobiel waren vijf temperatuurcijfers te weinig voor een etmaal. Acht labels
+   geven ongeveer één waarde per drie uur, terwijl de bestaande botsingscontrole
+   nog steeds elk label afzonderlijk op veilige afstand en hoogte plaatst. */
+vervangEenmalig(
+  "  const maximumLabels=M?(n<=24?5:n<=48?4:3):(n<=24?9:n<=48?8:7);",
+  "  const maximumLabels=M?(n<=24?8:n<=48?6:4):(n<=24?9:n<=48?8:7);",
+  "mobiele dichtheid temperatuurlabels"
+);
+vervangEenmalig(
+  "  const minimumAfstand=M?(n<=24?48:n<=48?62:78):42;",
+  "  const minimumAfstand=M?(n<=24?34:n<=48?48:68):42;",
+  "mobiele afstand temperatuurlabels"
+);
+vervangEenmalig(
+  "  const MAXLAAG=M?2:3; // beperkte lagen: liever één cijfer minder dan een visuele stapel",
+  "  const MAXLAAG=3; // drie veilige hoogtelagen op ieder scherm; botsende labels worden nog steeds geweigerd",
+  "veilige hoogtelagen temperatuurlabels"
+);
+
 vervangEenmalig(
   '<span class="bron"><b>Weer</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>, ECMWF en DWD, CAMS</span>',
   '<span class="bron"><b>Weer</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo Best Match</a> · <b>Luchtkwaliteit</b> CAMS</span>',
@@ -132,14 +160,18 @@ if(!html.includes("weatherNowUurvak")) throw new Error("Exact tooltip-tijdvak on
 if(!html.includes('"geen neerslag verwacht"')) throw new Error("Droge tooltip gebruikt nog een nulpercentage.");
 if(!html.includes('kort.droog')) throw new Error("Droge neerslagweergaven zijn niet centraal afgevangen.");
 if(!html.includes('maximumLabels=M?')) throw new Error("Harde limiet voor temperatuurlabels ontbreekt.");
+if(!html.includes("const eind=Math.min(i+24,h.time.length);")) throw new Error("Briefing gebruikt niet hetzelfde 24-uursvenster als de grafiek.");
+if(!html.includes("n<=24?8:n<=48?6:4")) throw new Error("Mobiele grafiek toont nog te weinig temperatuurlabels.");
+if(!html.includes("n<=24?34:n<=48?48:68")) throw new Error("Mobiele labelafstand is niet op de hogere informatiedichtheid afgestemd.");
+if(!html.includes("const MAXLAAG=3;")) throw new Error("Drie veilige labelhoogtes ontbreken.");
 
 fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 
 const swPad=path.join(OUT,"sw.js");
 if(fs.existsSync(swPad)){
   let sw=fs.readFileSync(swPad,"utf8");
-  sw=sw.replace(/weerbriefing-v\d+/g,"weerbriefing-v74");
+  sw=sw.replace(/weerbriefing-v\d+/g,"weerbriefing-v75");
   fs.writeFileSync(swPad,sw,"utf8");
 }
 
-console.log("WeatherNow-build geslaagd: centrale interpretatie-engine en intervalveilige grafiek ingevoegd.");
+console.log("WeatherNow-build geslaagd: briefing en grafiek gebruiken hetzelfde etmaal en de mobiele grafiek toont meer veilige temperatuurwaarden.");
