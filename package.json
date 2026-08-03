@@ -4,8 +4,8 @@
   "description": "Weersverwachting met centrale interpretatielaag, etmaalbalk, kwartierneerslag, luchtkwaliteit, pollen en nachtzicht.",
   "private": true,
   "scripts": {
-    "test": "node interpretatie-engine.test.js && node build-weather.js && node run-built-matrix.js && node run.js",
-    "build": "node interpretatie-engine.test.js && node build-weather.js && node run-built-matrix.js && node run.js"
+    "test": "node interpretatie-engine.test.js && node build-weather.js && node audit-regressions.test.js && node run-built-matrix.js && node run.js",
+    "build": "node interpretatie-engine.test.js && node build-weather.js && node audit-regressions.test.js && node run-built-matrix.js && node run.js"
   },
   "license": "MIT"
 }
