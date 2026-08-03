@@ -3,14 +3,19 @@
 const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
+const crypto=require("crypto");
 
 const ROOT=__dirname;
 const OUT=path.join(ROOT,"public");
 const NIET_PUBLICEREN=new Set([
   ".git",".github","api","node_modules","public",
   "build-weather.js","interpretatie-engine.js","interpretatie-engine.test.js",
-  "run.js","kern.js","data.js","package.json","package-lock.json","vercel.json"
+  "run.js","run-built-matrix.js","kern.js","data.js","package.json","package-lock.json","vercel.json"
 ]);
+
+function isInternBestand(naam){
+  return NIET_PUBLICEREN.has(naam)||naam.endsWith(".test.js");
+}
 
 function kopieer(bron,doel){
   const stat=fs.statSync(bron);
@@ -26,19 +31,25 @@ function kopieer(bron,doel){
 fs.rmSync(OUT,{recursive:true,force:true});
 fs.mkdirSync(OUT,{recursive:true});
 for(const naam of fs.readdirSync(ROOT)){
-  if(NIET_PUBLICEREN.has(naam)) continue;
+  if(isInternBestand(naam)) continue;
   kopieer(path.join(ROOT,naam),path.join(OUT,naam));
 }
 
 const indexPad=path.join(ROOT,"index.html");
 const enginePad=path.join(ROOT,"interpretatie-engine.js");
 let html=fs.readFileSync(indexPad,"utf8");
-const engine=fs.readFileSync(enginePad,"utf8");
+let engine=fs.readFileSync(enginePad,"utf8");
 
 function vervangEenmalig(zoek,vervang,label){
   const aantal=html.split(zoek).length-1;
   if(aantal!==1) throw new Error(label+": verwacht precies één bronmatch, gevonden "+aantal+".");
   html=html.replace(zoek,vervang);
+}
+
+function vervangEngineEenmalig(zoek,vervang,label){
+  const aantal=engine.split(zoek).length-1;
+  if(aantal!==1) throw new Error(label+": verwacht precies één engine-match, gevonden "+aantal+".");
+  engine=engine.replace(zoek,vervang);
 }
 
 const startMarker="/* ---------- start ---------- */";
@@ -133,6 +144,42 @@ vervangEenmalig(
   "bronvermelding"
 );
 
+/* Een waarschuwing van de vorige plaats mag nooit kort in een nieuwe briefing
+   blijven staan. Ook het verschil tussen 'geen waarschuwingen' en 'geen dekking'
+   wordt zichtbaar gemaakt; stil falen is bij veiligheidsinformatie onjuist. */
+vervangEngineEenmalig(
+`  waarschuwingen=async function(){
+    const el=document.getElementById("waarschuwingen");
+    el.innerHTML="";
+    try{
+      const d=await j("/api/waarschuwingen?lat="+S.lat+"&lon="+S.lon);`,
+`  waarschuwingen=async function(){
+    S.actieveWaarschuwingen=[];
+    const el=document.getElementById("waarschuwingen");
+    el.innerHTML="";
+    try{
+      const d=await j("/api/waarschuwingen?lat="+S.lat+"&lon="+S.lon);
+      if(!d || d.dekking!==true){
+        const bronStuk=d&&d.reden==="bron onbereikbaar"
+          ? "konden niet worden gecontroleerd"
+          : "zijn voor deze locatie niet beschikbaar";
+        el.innerHTML='<div class="msg">Officiële weerwaarschuwingen '+bronStuk+'.</div>';
+        if(S.d&&typeof briefing==="function") briefing();
+        return;
+      }`,
+  "waarschuwingen resetten en dekking tonen"
+);
+vervangEngineEenmalig(
+`    }catch(e){
+      S.actieveWaarschuwingen=[];
+    }`,
+`    }catch(e){
+      S.actieveWaarschuwingen=[];
+      el.innerHTML='<div class="msg">Officiële weerwaarschuwingen konden niet worden gecontroleerd.</div>';
+    }`,
+  "waarschuwingfout zichtbaar maken"
+);
+
 const intervalHelper=`
 function weatherNowUurvak(tijd){
   const api=globalThis.WeatherNowInterpretatie;
@@ -164,14 +211,26 @@ if(!html.includes("const eind=Math.min(i+24,h.time.length);")) throw new Error("
 if(!html.includes("n<=24?8:n<=48?6:4")) throw new Error("Mobiele grafiek toont nog te weinig temperatuurlabels.");
 if(!html.includes("n<=24?34:n<=48?48:68")) throw new Error("Mobiele labelafstand is niet op de hogere informatiedichtheid afgestemd.");
 if(!html.includes("const MAXLAAG=3;")) throw new Error("Drie veilige labelhoogtes ontbreken.");
+if(!html.includes("S.actieveWaarschuwingen=[];")) throw new Error("Waarschuwingen van een vorige locatie worden niet direct gewist.");
+if(!html.includes("Officiële weerwaarschuwingen konden niet worden gecontroleerd.")) throw new Error("Ontbrekende waarschuwingdekking blijft stil.");
 
 fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 
+/* De cacheversie volgt de werkelijk gebouwde app. Een handmatig vast nummer kan
+   na een volgende wijziging gelijk blijven, waardoor cache-first assets oud
+   blijven. Dezelfde build levert steeds dezelfde hash; gewijzigde code levert
+   automatisch een nieuwe cache op. */
+const cacheVersie="weerbriefing-"+crypto.createHash("sha256").update(html).digest("hex").slice(0,12);
 const swPad=path.join(OUT,"sw.js");
 if(fs.existsSync(swPad)){
   let sw=fs.readFileSync(swPad,"utf8");
-  sw=sw.replace(/weerbriefing-v\d+/g,"weerbriefing-v75");
+  sw=sw.replace(/weerbriefing-v\d+/g,cacheVersie);
+  if(!sw.includes(cacheVersie)) throw new Error("Dynamische serviceworker-cacheversie is niet toegepast.");
   fs.writeFileSync(swPad,sw,"utf8");
 }
 
-console.log("WeatherNow-build geslaagd: briefing en grafiek gebruiken hetzelfde etmaal en de mobiele grafiek toont meer veilige temperatuurwaarden.");
+for(const naam of fs.readdirSync(OUT)){
+  if(isInternBestand(naam)) throw new Error("Intern bestand is ten onrechte publiek gebouwd: "+naam);
+}
+
+console.log("WeatherNow-build geslaagd: productiecode gevalideerd, interne tests niet gepubliceerd en cacheversie "+cacheVersie+" toegepast.");
