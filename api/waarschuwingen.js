@@ -194,6 +194,7 @@ function uitAtom(xml) {
     const s = (e.match(/<summary[^>]*>([\s\S]*?)<\/summary>/) || [])[1];
     if (!t) continue;
     lijst.push({
+      landelijk: true, // Atom bevat geen betrouwbaar polygoon: dit altijd expliciet melden
       titel: t.replace(/<[^>]+>/g, "").trim(),
       tekst: (s || "").replace(/<[^>]+>/g, "").trim().slice(0, 300),
       niveau: /rood|red/i.test(t) ? "rood" : /oranje|orange/i.test(t) ? "oranje" : "geel",
@@ -240,7 +241,7 @@ module.exports = async function handler(req, res) {
         bron: "National Weather Service", dekking: true, lijst: await viaNWS(lat, lon)
       });
     } catch (e) {
-      return res.status(200).json({ bron: "National Weather Service", dekking: true, lijst: [], reden: "bron onbereikbaar" });
+      return res.status(200).json({ bron: "National Weather Service", dekking: false, lijst: [], reden: "bron onbereikbaar" });
     }
   }
 
@@ -249,7 +250,7 @@ module.exports = async function handler(req, res) {
   if (slug) {
     const uit = await viaMeteoAlarm(slug, lat, lon);
     if (uit) return res.status(200).json({ bron: "MeteoAlarm " + slug, dekking: true, lijst: uit.lijst });
-    return res.status(200).json({ bron: "MeteoAlarm " + slug, dekking: true, lijst: [], reden: "bron onbereikbaar" });
+    return res.status(200).json({ bron: "MeteoAlarm " + slug, dekking: false, lijst: [], reden: "bron onbereikbaar" });
   }
 
   return res.status(200).json({
