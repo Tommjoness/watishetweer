@@ -1597,8 +1597,17 @@ function etmaal(start,n){
        cijfer stond er precies overheen, want dat hoort bij hetzelfde uur. Ligt
        het label op die lijn, dan schuift het er net naast. */
     if(nuX!=null && Math.abs(cx-nuX) < bw/2+5){
-      const naarRechts = nuX + bw/2 + 6 + bw/2 <= W-pr;
-      cx = naarRechts ? nuX + bw/2 + 6 : nuX - bw/2 - 6;
+      const links=nuX-bw/2-7, rechts=nuX+bw/2+7;
+      const pastLinks=links-bw/2>=2, pastRechts=rechts+bw/2<=W-2;
+      /* Twee opeenvolgende uurpunten kunnen allebei vlak bij de fractionele
+         nu-lijn liggen. Ze allemaal naar rechts sturen zette bijvoorbeeld
+         21° en 19° vrijwel onder elkaar. Het punt vóór 'nu' gaat daarom bij
+         voorkeur links en het punt erna rechts; alleen als die kant buiten
+         het volledige SVG valt wordt naar de andere kant uitgeweken. */
+      const voorkeurRechts=x(i)>=nuX;
+      cx=voorkeurRechts
+        ? (pastRechts?rechts:pastLinks?links:cx)
+        : (pastLinks?links:pastRechts?rechts:cx);
     }
     const eersteBoven = soort[i]!==-1;
     let cy=null, boven=eersteBoven, verwijderd=[];
@@ -1828,32 +1837,54 @@ function nowcast(){
     return;
   }
   el.style.display="block";
-  let i=m.time.findIndex(t=>t>=S.d.current.time.slice(0,16));
-  if(i<0)i=0;
   const T=[],P=[];
-  for(let k=0;k<8;k++){const q=i+k;if(q>=m.time.length)break;T.push(m.time[q]);P.push(m.precipitation[q]??0);}
+  const api=globalThis.WeatherNowInterpretatie;
+  const analyse=api&&typeof api.analyseerNeerslagData==="function"
+    ? api.analyseerNeerslagData(S.d,120) : null;
+  if(analyse&&analyse.bronHoeveelheid==="kwartierdata"&&Array.isArray(analyse.minutelyItems)){
+    /* De centrale analyse kent de geldigheidsvensters: een waarde met tijd
+       23:00 is de som over 22:45–23:00. Daardoor wordt het kwartier dat op
+       'nu' eindigt niet als toekomst getekend en blijft het laatste kwartier
+       van het volledige twee-uursvenster juist wel behouden. */
+    analyse.minutelyItems.forEach(item=>{
+      T.push(item.tijd);
+      P.push(item.precipitation==null?null:item.precipitation);
+    });
+  }else if(!analyse){
+    // De bronversie zonder ingevoegde interpretatie-engine gebruikt dezelfde
+    // intervalregel als veilige terugval: uitsluitend (nu, nu+2 uur].
+    const nuMs=naarUTC(S.d.current.time.slice(0,16)), eindMs=nuMs+2*3600000;
+    for(let q=0;q<m.time.length;q++){
+      const tijdMs=naarUTC(m.time[q]);
+      if(tijdMs<=nuMs) continue;
+      if(tijdMs>eindMs) break;
+      T.push(m.time[q]);
+      P.push(m.precipitation[q]==null?null:m.precipitation[q]);
+    }
+  }
+  if(!T.length){el.style.display="none";return;}
   const M=(typeof window!=="undefined"&&window.innerWidth)?window.innerWidth<760:false;
   const mx=Math.max(0.5,...P),W=M?380:900,pl=M?26:44,pr=M?8:20,iw=W-pl-pr,
         base=M?40:40,hmax=M?30:32,cw=iw/T.length;
   el.setAttribute("viewBox","0 0 "+W+" "+(M?62:60));
   let out=`<line x1="${pl}" y1="${base}" x2="${W-pr}" y2="${base}" stroke="${RULE}"/>`;
   T.forEach((t,k)=>{
-    const x=pl+k*cw,hh=hmax*(P[k]/mx);
-    if(P[k]>0) out+=`<rect x="${x+3}" y="${base-hh}" width="${cw-6}" height="${hh}" fill="${TEAL}" fill-opacity=".2"/>
+    const waarde=P[k]==null?0:P[k],x=pl+k*cw,hh=hmax*(waarde/mx);
+    if(waarde>0) out+=`<rect x="${x+3}" y="${base-hh}" width="${cw-6}" height="${hh}" fill="${TEAL}" fill-opacity=".2"/>
                      <line x1="${x+3}" y1="${base-hh}" x2="${x+cw-3}" y2="${base-hh}" stroke="${TEAL}" stroke-width="1.2"/>`;
     out+=`<line x1="${x}" y1="${base}" x2="${x}" y2="${base+4}" stroke="${RULE}"/>`;
     if(k%2===0) out+=`<text x="${x+cw/2}" y="${base+18}" text-anchor="middle" fill="${INK45}" font-family="DM Mono,monospace" font-size="${M?10:10.5}">${t.slice(11,16)}</text>`;
-    if(P[k]>0){
+    if(waarde>0){
       /* Het cijfer stond altijd zes pixels boven de balk. Bij een flinke bui raakt
          de balk de bovenrand en verdween het getal buiten de tekening. Past het er
          niet boven, dan gaat het in de balk zelf staan. */
       const boven = base-hh-6, past = boven >= 11;
       out+=`<text x="${x+cw/2}" y="${past?boven:base-hh+11}" text-anchor="middle" fill="${TEAL}"
-        font-family="DM Mono,monospace" font-size="${M?9.5:10}">${nl(P[k])}</text>`;
+        font-family="DM Mono,monospace" font-size="${M?9.5:10}">${nl(waarde)}</text>`;
     }
   });
   el.innerHTML=out;
-  const som=P.reduce((a,b)=>a+b,0);
+  const som=P.reduce((a,b)=>a+(b==null?0:b),0);
   el.style.display=som<0.05&&kt.droog!==false?"none":"block";
   /* De tekst leunt op kt.droog / kt.eersteNatIdx, dus dezelfde conclusie als de
      briefing. De tijden T en waarden P blijven puur voor de precieze klok- en

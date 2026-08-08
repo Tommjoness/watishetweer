@@ -454,7 +454,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       tx.textContent=nbsp(neerslagZin(a));
       if(grafiek){
         grafiek.setAttribute("aria-label",neerslagZin(a)+" Kwartierwaarden zijn sommen over het voorafgaande kwartier.");
-        if(a.genoeg) grafiek.style.display=a.hoeveelheid>0?"block":"none";
+        if(a.genoeg) grafiek.style.display=a.bronHoeveelheid==="kwartierdata"&&a.hoeveelheid>0?"block":"none";
       }
     };
   }

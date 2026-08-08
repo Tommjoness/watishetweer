@@ -312,6 +312,63 @@ for(const duur of [60,120,360]){
   }
 }
 
+/* 5b. Productie-integratie: bovenste samenvatting, onderste tekst en de
+   kwartiergrafiek moeten exact hetzelfde open tijdvenster (nu, nu+2 uur]
+   gebruiken. De forse bui die om 14:45 eindigde is bewust verleden; alleen
+   het laatste toekomstige kwartier om 16:45 bevat 0,4 mm. */
+{
+  const ctx=omgeving({breedte:390});
+  const d=ctx.d,h=d.hourly;
+  const i=h.time.indexOf("2026-07-22T14:00");
+  d.current.time="2026-07-22T14:45";
+  d.current.precipitation=0;
+  d.current.weather_code=3;
+  ctx.api.S.i0=i;
+  zetPlaatsKlok(ctx.api,d.utc_offset_seconds,d.current.time);
+
+  h.precipitation_probability.fill(0);
+  h.precipitation.fill(0);
+  h.weather_code.fill(3);
+  for(const q of [i+1,i+2,i+3]){
+    h.precipitation_probability[q]=80;
+    h.weather_code[q]=61;
+  }
+
+  const tijden=tijdreeks("2026-07-22T14:30",15,10,0);
+  const waarden=tijden.map((_,k)=>k===1?5:k===9?0.4:0);
+  d.minutely_15={
+    time:tijden,
+    precipitation:waarden,
+    rain:waarden.map((v,k)=>k===9?v:0),
+    showers:Array(10).fill(0),
+    snowfall:Array(10).fill(0),
+    weather_code:tijden.map((_,k)=>k===9?61:3)
+  };
+
+  const analyse=analyseerNeerslagData(d,120);
+  const verwacht=neerslagZin(analyse);
+  check("laatste kwartier: centrale analyse heeft volledige twee-uursdekking",
+    analyse.genoeg&&analyse.hoeveelheidDekking===1&&analyse.kansDekking===1,
+    JSON.stringify({genoeg:analyse.genoeg,hoeveelheidDekking:analyse.hoeveelheidDekking,kansDekking:analyse.kansDekking}));
+  check("laatste kwartier: analyse begint na nu en eindigt exact twee uur later",
+    analyse.minutelyItems[0]&&analyse.minutelyItems[0].tijd==="2026-07-22T15:00"&&
+    analyse.minutelyItems.at(-1)&&analyse.minutelyItems.at(-1).tijd==="2026-07-22T16:45",
+    analyse.minutelyItems.map(x=>x.tijd).join(", "));
+
+  ctx.api.briefing();
+  ctx.api.nowcast();
+  const boven=zonderTags(ctx.bak.brief.innerHTML);
+  const onder=schoon(ctx.bak.nctext.textContent).trim();
+  check("laatste kwartier: samenvatting bovenaan gebruikt de centrale neerslagzin",
+    boven.startsWith(verwacht),boven);
+  check("laatste kwartier: neerslagtekst onderaan is exact dezelfde centrale zin",
+    onder===verwacht,onder+" | verwacht: "+verwacht);
+  check("laatste kwartier: grafiek tekent 0,4 mm om 16:45",
+    />0,4<\/text>/.test(ctx.bak.nc.innerHTML)&&/16:/.test(ctx.bak.nc.innerHTML),ctx.bak.nc.innerHTML);
+  check("laatste kwartier: grafiek tekent de verstreken 5 mm niet",
+    !/>5<\/text>/.test(ctx.bak.nc.innerHTML),ctx.bak.nc.innerHTML);
+}
+
 /* 6. Temperatuur, wind, zicht en vocht aan de fysieke en weergaveranden. */
 for(const temp of [-90,-60,-30,-1,0,1,20,45,60]){
   try{

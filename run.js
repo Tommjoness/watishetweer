@@ -1491,6 +1491,26 @@ groep("Live bevindingen");
   check("geen enkel neerslagcijfer valt boven de tekening uit",buiten.length===0,
     "y-waarden "+buiten.join(", "));
 
+  /* Een kwartierwaarde is de som over het voorafgaande kwartier. Een waarde
+     die exact op 'nu' eindigt is dus verleden; de waarde exact twee uur later
+     hoort nog wel bij het gevraagde venster. */
+  {
+    const {api:aK,bak:bK}=laadKern(390);
+    const dK=bouw({});
+    dK.current.time="2026-07-22T14:45";
+    dK.minutely_15={time:[],precipitation:[]};
+    const start=Date.UTC(2026,6,22,14,30);
+    for(let k=0;k<10;k++){
+      dK.minutely_15.time.push(new Date(start+k*15*60000).toISOString().slice(0,16));
+      dK.minutely_15.precipitation.push(k===1?5:k===9?0.4:0);
+    }
+    Object.assign(aK.S,{d:dK,i0:38,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+    aK.nowcast();
+    const kwartieren=bK.nc.innerHTML;
+    check("neerslaggrafiek neemt het laatste toekomstige kwartier mee",/>0,4<\/text>/.test(kwartieren),kwartieren);
+    check("neerslaggrafiek telt het zojuist verstreken kwartier niet als toekomst",!/>5<\/text>/.test(kwartieren),kwartieren);
+  }
+
   // 3. leeg is niet hetzelfde als laag
   check("zonder pollendata zegt de app dat, in plaats van geen concentraties",
     /Geen pollendata voor deze locatie/.test(bronL));
@@ -1553,6 +1573,38 @@ groep("Live bevindingen");
       const opDeLijn=labels.filter(l=>Math.abs(l.x-xn)<l.b/2+2);
       check("geen temperatuurcijfer valt over de nu-lijn",opDeLijn.length===0,
         opDeLijn.map(l=>"label op x "+l.x.toFixed(0)+", lijn op "+xn.toFixed(0)).join(", "));
+    }
+  }
+
+  /* 7d. Bij een fractionele nu-lijn kunnen zowel het vorige als het volgende
+     uurpunt binnen de uitwijkzone vallen. Dit is het concrete mobiele geval
+     uit Almere: 21° vlak voor de lijn en 19° vlak erna. Beide cijfers moeten
+     zichtbaar blijven en aan hun eigen kant van de lijn terechtkomen. */
+  {
+    const {api:aB,bak:bB}=laadKern(390);
+    const dB=bouw({});
+    const iB=dB.hourly.time.indexOf("2026-07-22T14:00");
+    dB.current.time="2026-07-22T14:45";
+    dB.current.temperature_2m=21;
+    dB.hourly.temperature_2m[iB]=21;
+    dB.hourly.temperature_2m[iB+1]=19;
+    Object.assign(aB.S,{d:dB,i0:iB,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,
+      klokOverride:new Date("2026-07-22T12:45:00Z")});
+    aB.etmaal(iB,24);
+    const h=bB.chart.innerHTML;
+    const lijn=h.match(/<line x1="([\d.]+)"[^>]*stroke="var\(--carmine\)"/);
+    const indices=[...h.matchAll(/data-temp-index="(\d+)"/g)].map(m=>+m[1]);
+    const labels=[...h.matchAll(/<text x="([\d.-]+)" y="[\d.-]+"[^<]*?font-family="Bodoni Moda,serif" font-size="([\d.]+)">(-?\d+)°/g)]
+      .map(m=>({x:+m[1],fs:+m[2],waarde:+m[3]}));
+    const perIndex=new Map(indices.map((idx,k)=>[idx,labels[k]]));
+    const voor=perIndex.get(0),na=perIndex.get(1),xn=lijn?+lijn[1]:NaN;
+    const rand=(l,kant)=>l.x+kant*(String(l.waarde).length*l.fs*.58+l.fs*.40)/2;
+    check("21° en 19° rond de nu-lijn blijven allebei zichtbaar",!!voor&&!!na,
+      "indices "+indices.join(", ")+"; waarden "+labels.map(l=>l.waarde).join(", "));
+    if(voor&&na&&lijn){
+      check("21° staat links en 19° rechts van de nu-lijn",
+        rand(voor,1)<xn-1 && rand(na,-1)>xn+1,
+        "21° eindigt "+rand(voor,1).toFixed(1)+", lijn "+xn.toFixed(1)+", 19° begint "+rand(na,-1).toFixed(1));
     }
   }
 
