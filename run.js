@@ -1579,7 +1579,7 @@ groep("Live bevindingen");
   /* 7d. Bij een fractionele nu-lijn kunnen zowel het vorige als het volgende
      uurpunt binnen de uitwijkzone vallen. Dit is het concrete mobiele geval
      uit Almere: 21° vlak voor de lijn en 19° vlak erna. Beide cijfers moeten
-     zichtbaar blijven en aan hun eigen kant van de lijn terechtkomen. */
+     zichtbaar blijven, zonder de nu-lijn, elkaar of de y-as te raken. */
   {
     const {api:aB,bak:bB}=laadKern(390);
     const dB=bouw({});
@@ -1594,17 +1594,26 @@ groep("Live bevindingen");
     const h=bB.chart.innerHTML;
     const lijn=h.match(/<line x1="([\d.]+)"[^>]*stroke="var\(--carmine\)"/);
     const indices=[...h.matchAll(/data-temp-index="(\d+)"/g)].map(m=>+m[1]);
-    const labels=[...h.matchAll(/<text x="([\d.-]+)" y="[\d.-]+"[^<]*?font-family="Bodoni Moda,serif" font-size="([\d.]+)">(-?\d+)°/g)]
-      .map(m=>({x:+m[1],fs:+m[2],waarde:+m[3]}));
+    const labels=[...h.matchAll(/<text x="([\d.-]+)" y="([\d.-]+)"[^<]*?font-family="Bodoni Moda,serif" font-size="([\d.]+)">(-?\d+)°/g)]
+      .map(m=>({x:+m[1],y:+m[2],fs:+m[3],waarde:+m[4]}));
     const perIndex=new Map(indices.map((idx,k)=>[idx,labels[k]]));
     const voor=perIndex.get(0),na=perIndex.get(1),xn=lijn?+lijn[1]:NaN;
     const rand=(l,kant)=>l.x+kant*(String(l.waarde).length*l.fs*.58+l.fs*.40)/2;
     check("21° en 19° rond de nu-lijn blijven allebei zichtbaar",!!voor&&!!na,
       "indices "+indices.join(", ")+"; waarden "+labels.map(l=>l.waarde).join(", "));
     if(voor&&na&&lijn){
-      check("21° staat links en 19° rechts van de nu-lijn",
-        rand(voor,1)<xn-1 && rand(na,-1)>xn+1,
-        "21° eindigt "+rand(voor,1).toFixed(1)+", lijn "+xn.toFixed(1)+", 19° begint "+rand(na,-1).toFixed(1));
+      const vrijVanLijn=l=>rand(l,1)<xn-1||rand(l,-1)>xn+1;
+      const horizontaal=Math.min(rand(voor,1),rand(na,1))-Math.max(rand(voor,-1),rand(na,-1));
+      const verticaal=Math.abs(voor.y-na.y);
+      check("21° en 19° vallen niet over de nu-lijn",vrijVanLijn(voor)&&vrijVanLijn(na),
+        "lijn "+xn.toFixed(1)+", vakken "+rand(voor,-1).toFixed(1)+"–"+rand(voor,1).toFixed(1)
+        +" en "+rand(na,-1).toFixed(1)+"–"+rand(na,1).toFixed(1));
+      check("21° en 19° botsen ook onderling niet",
+        horizontaal<=-4||verticaal>=Math.max(voor.fs,na.fs)+3,
+        "horizontale overlap "+horizontaal.toFixed(1)+", verticale afstand "+verticaal.toFixed(1));
+      check("geen temperatuurcijfer schuift in de ruimte van de y-as",
+        labels.every(l=>rand(l,-1)>=32),
+        labels.filter(l=>rand(l,-1)<32).map(l=>l.waarde+"° begint op "+rand(l,-1).toFixed(1)).join(", "));
     }
   }
 
@@ -1888,6 +1897,9 @@ groep("Opmaak en uitlijning");
   check("de geselecteerde dag heeft ruimte naast de lijn",
     /\.day\{[^}]*padding-left:\d+px/.test(css) && /\.day\.on\{box-shadow:inset [3-9]px/.test(css));
   check("de rij schuift niet op door die ruimte",/\.day\{[^}]*margin-left:-\d+px/.test(css));
+  check("een weekrij kan op iOS scrollen zonder witte aanraakstatus",
+    /\.day\{[^}]*touch-action:pan-y;[^}]*-webkit-tap-highlight-color:transparent/.test(css)
+      && /@media\(hover:hover\) and \(pointer:fine\)\{\.day:hover\{background:#FAFBFA\}\}/.test(css));
 
   /* De voettekst: elke bron op een eigen regel. */
   check("de voettekst staat onder elkaar",/footer\{[^}]*flex-direction:column/.test(css));

@@ -141,6 +141,9 @@ if(!html.includes("const eind=Math.min(i+24,h.time.length);")) throw new Error("
 if(!html.includes("kandidaten=n<=24?kandidatenRuw")) throw new Error("Drie-uursmarkeringen worden binnen een etmaal nog gefilterd.");
 if(!html.includes("const MAXLAAG=M&&n<=24?4:3;")) throw new Error("Extra veilige labelhoogtes voor mobiel ontbreken.");
 if(!html.includes("#minibar{position:fixed")) throw new Error("Mobiele minibalk kan nog een scroll-layoutlus veroorzaken.");
+if(!html.includes("pastLinks=links-bw/2>=pl-2")) throw new Error("Temperatuurlabel kan nog in de ruimte van de y-as schuiven.");
+if(!html.includes("@media(hover:hover) and (pointer:fine){.day:hover")) throw new Error("Weekrij-hover is nog actief tijdens aanraken.");
+if(!html.includes("-webkit-tap-highlight-color:transparent")) throw new Error("Witte iOS-aanraakmarkering is niet uitgeschakeld.");
 if(!html.includes("S.actieveWaarschuwingen=[];")) throw new Error("Waarschuwingen van een vorige locatie worden niet direct gewist.");
 if(!html.includes("Officiële weerwaarschuwingen konden niet worden gecontroleerd.")) throw new Error("Ontbrekende waarschuwingdekking blijft stil.");
 if(!html.includes("mijnBeurt!==waarschuwingTeller")) throw new Error("Verouderde waarschuwingaanvragen worden niet geweigerd.");

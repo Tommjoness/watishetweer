@@ -234,8 +234,12 @@
   .row{display:grid;align-items:center;border-bottom:1px solid var(--rule-soft);padding:11px 0}
   .row:last-child{border-bottom:none}
   .day{grid-template-columns:100px 26px 1fr 72px 54px 128px 46px 52px;gap:14px;cursor:pointer}
+  .day{touch-action:pan-y;-webkit-tap-highlight-color:transparent}
   .dkort{display:none}
-  .day:hover{background:#FAFBFA}
+  /* iOS houdt :hover tijdens een aanraak-/scrollgebaar soms vast. De lichte
+     desktop-hover werd daardoor een volledig witte rij totdat de vinger werd
+     losgelaten. Alleen apparaten met een echte fijne aanwijzer krijgen hover. */
+  @media(hover:hover) and (pointer:fine){.day:hover{background:#FAFBFA}}
   /* De lijn zat tegen de dagnaam aan omdat de rij links geen ruimte had. Nu een
      streep met lucht ernaast, en de rij schuift niet op want de opvulling vervangt
      wat er eerst niet was. */
@@ -1598,12 +1602,15 @@ function etmaal(start,n){
        het label op die lijn, dan schuift het er net naast. */
     if(nuX!=null && Math.abs(cx-nuX) < bw/2+5){
       const links=nuX-bw/2-7, rechts=nuX+bw/2+7;
-      const pastLinks=links-bw/2>=2, pastRechts=rechts+bw/2<=W-2;
+      /* Links van het plot staan de vaste y-aswaarden. De vorige controle keek
+         alleen naar de SVG-rand, waardoor 21° in de ruimte van het 22°-aslabel
+         kon belanden. Uitwijken mag nu uitsluitend binnen het plotgebied. */
+      const pastLinks=links-bw/2>=pl-2, pastRechts=rechts+bw/2<=W-pr;
       /* Twee opeenvolgende uurpunten kunnen allebei vlak bij de fractionele
          nu-lijn liggen. Ze allemaal naar rechts sturen zette bijvoorbeeld
          21° en 19° vrijwel onder elkaar. Het punt vóór 'nu' gaat daarom bij
          voorkeur links en het punt erna rechts; alleen als die kant buiten
-         het volledige SVG valt wordt naar de andere kant uitgeweken. */
+         het vrije plotgebied valt wordt naar de andere kant uitgeweken. */
       const voorkeurRechts=x(i)>=nuX;
       cx=voorkeurRechts
         ? (pastRechts?rechts:pastLinks?links:cx)
