@@ -292,7 +292,7 @@ for(const bereik of [24,48,168]){
     const a=labels[i],b=labels[j];
     const breedA=String(a.v).length*a.fs*0.58+a.fs*0.40;
     const breedB=String(b.v).length*b.fs*0.58+b.fs*0.40;
-    if(Math.abs(a.x-b.x)<(breedA+breedB)/2+4 && Math.abs(a.y-b.y)<Math.max(a.fs,b.fs)+4){
+    if(Math.abs(a.x-b.x)<(breedA+breedB)/2+4 && Math.abs(a.y-b.y)<Math.max(a.fs,b.fs)*2+3){
       botsingen.push(a.v+"°/"+b.v+"°");
     }
   }
@@ -537,7 +537,7 @@ for(const [naam,br,opties] of [
 
   const h=bak.chart.innerHTML, vb=bak.chart.getAttribute("viewBox").split(" ").map(Number);
   const lab=[...h.matchAll(/<text x="(-?[\d.]+)" y="(-?[\d.]+)"[^<]*?font-family="Bodoni Moda,serif" font-size="([\d.]+)">(-?\d+)°</g)]
-    .map(m=>({x:+m[1],y:+m[2],hg:+m[3],b:(m[4].length+1)*(+m[3])*0.58,v:+m[4]}));
+    .map(m=>({x:+m[1],y:+m[2],hg:(+m[3])*2,b:(m[4].length+1)*(+m[3])*0.58,v:+m[4]}));
   const reeks=api.S.d.hourly.temperature_2m.slice(api.S.i0,api.S.i0+24);
   const hoog=Math.round(Math.max.apply(null,reeks)), laag=Math.round(Math.min.apply(null,reeks));
   const waarden=lab.map(l=>l.v);
@@ -758,6 +758,21 @@ groep("Grafieklabel-prioriteit");
       if(Math.abs(p.x-r.x)<14 && Math.abs(p.y-r.y)<12) botst=true;
     }
     check("9. labels overlappen niet op 390px breedte, ook bij een drukke, grillige reeks",!botst);
+  }
+  // 9b: de eerste twee labels stonden door het uitwijken rond de nu-lijn
+  // vrijwel op dezelfde x-positie. Bodoni's werkelijke tekstbox is ongeveer
+  // tweemaal de SVG-font-size, dus een baselineverschil van circa 25 px is
+  // nog steeds een zichtbare botsing en moet door de plaatser worden vermeden.
+  {
+    const reeks=[17,16,15,14,13,13,13,15,20,26,28,29,30,30,29,28,27,27,26,25,24,23,22,21];
+    const {labs}=labelsVoor(reeks,{breed:390,klokUur:0});
+    let botst=false;
+    for(let a=0;a<labs.length;a++) for(let b=a+1;b<labs.length;b++){
+      const p=labs[a],r=labs[b];
+      if(Math.abs(p.x-r.x)<18 && Math.abs(p.y-r.y)<28) botst=true;
+    }
+    check("9b. labels direct naast de nu-lijn houden ook met de werkelijke Bodoni-hoogte afstand",!botst,
+      labs.map(l=>l.i+":"+l.v+"@"+l.x+","+l.y).join("; "));
   }
   // 10: labels vallen niet buiten het SVG-viewBox
   {
@@ -1965,8 +1980,8 @@ groep("Opmaak en uitlijning");
     /\.day\{[^}]*padding-left:\d+px/.test(css) && /\.day\.on\{box-shadow:inset [3-9]px/.test(css));
   check("de rij schuift niet op door die ruimte",/\.day\{[^}]*margin-left:-\d+px/.test(css));
   check("een weekrij kan op iOS scrollen zonder witte aanraakstatus",
-    /\.day\{[^}]*touch-action:pan-y;[^}]*-webkit-tap-highlight-color:transparent/.test(css)
-      && /@media\(hover:hover\) and \(pointer:fine\)\{\.day:hover\{background:#FAFBFA\}\}/.test(css));
+    /\.day\{[^}]*touch-action:pan-y;[^}]*-webkit-tap-highlight-color:transparent;[^}]*user-select:none/.test(css)
+      && /@media\(hover:hover\) and \(pointer:fine\)\{\.day:hover\{background:var\(--rule-soft\)\}\}/.test(css));
 
   /* De voettekst: elke bron op een eigen regel. */
   check("de voettekst staat onder elkaar",/footer\{[^}]*flex-direction:column/.test(css));

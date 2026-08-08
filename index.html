@@ -234,12 +234,12 @@
   .row{display:grid;align-items:center;border-bottom:1px solid var(--rule-soft);padding:11px 0}
   .row:last-child{border-bottom:none}
   .day{grid-template-columns:100px 26px 1fr 72px 54px 128px 46px 52px;gap:14px;cursor:pointer}
-  .day{touch-action:pan-y;-webkit-tap-highlight-color:transparent}
+  .day{touch-action:pan-y;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
   .dkort{display:none}
   /* iOS houdt :hover tijdens een aanraak-/scrollgebaar soms vast. De lichte
      desktop-hover werd daardoor een volledig witte rij totdat de vinger werd
      losgelaten. Alleen apparaten met een echte fijne aanwijzer krijgen hover. */
-  @media(hover:hover) and (pointer:fine){.day:hover{background:#FAFBFA}}
+  @media(hover:hover) and (pointer:fine){.day:hover{background:var(--rule-soft)}}
   /* De lijn zat tegen de dagnaam aan omdat de rij links geen ruimte had. Nu een
      streep met lucht ernaast, en de rij schuift niet op want de opvulling vervangt
      wat er eerst niet was. */
@@ -1634,6 +1634,12 @@ function etmaal(start,n){
   kandidaten=gekozen;
 
   const labelBreed=v=>String(Math.round(v)).length*F.temp*0.58+F.temp*0.40;
+  /* Bodoni heeft in de browser een werkelijke tekstbox van ongeveer tweemaal
+     de opgegeven SVG-font-size. Alleen met `F.temp` rekenen liet daarom twee
+     labels met verschillende baselines toch zichtbaar over elkaar vallen
+     (bijvoorbeeld 17° en 16° direct naast de nu-lijn). Houd bij de plaatsing
+     dezelfde hoogte aan als de browser werkelijk reserveert. */
+  const labelHoogte=F.temp*2;
   const gezet=[];
   const MAXLAAG=M&&n<=24?4:3;
   /* Botst een kandidaat op cx op elke laag, dan gaf de oude code een piek/dal
@@ -1647,7 +1653,7 @@ function etmaal(start,n){
      verliest het nooit stilzwijgend van een regulier rasterlabel (rang 1). */
   const probeerLagen=(cx,v,eersteBoven,minRang)=>{
     for(let laag=0; laag<MAXLAAG; laag++){
-      const stapHoogte=F.temp*1.35;
+      const stapHoogte=labelHoogte+4;
       const afstandBoven=(M?13:14)+laag*stapHoogte, afstandOnder=(M?18:20)+laag*stapHoogte;
       const kandBoven=y(v)-afstandBoven, kandOnder=y(v)+afstandOnder;
       const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val<=pb-3;
@@ -1655,7 +1661,7 @@ function etmaal(start,n){
       if(!eersteBoven) opties.reverse();
       for(const [val,bv] of opties){
         if(!past(val,bv)) continue;
-        const botsers=gezet.filter(g=>Math.abs(g.cx-cx)<(g.bw+labelBreed(v))/2+5 && Math.abs(g.cy-val)<F.temp+3);
+        const botsers=gezet.filter(g=>Math.abs(g.cx-cx)<(g.bw+labelBreed(v))/2+5 && Math.abs(g.cy-val)<labelHoogte+3);
         if(botsers.length===0) return {cy:val,boven:bv,verwijderd:[]};
         // alleen overnemen als elk botsend label een strikt lagere rang heeft
         if(minRang!=null && botsers.every(g=>g.rang<minRang)) return {cy:val,boven:bv,verwijderd:botsers};
