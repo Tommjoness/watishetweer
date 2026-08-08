@@ -1117,7 +1117,20 @@ function kortetermijn(){
 
 function briefing(){
   const h=S.d.hourly,i=S.i0,day=S.d.daily,c=S.d.current;
-  const eind=Math.min(i+13,h.time.length);
+  // De briefing hoort bij dezelfde 24 uur als de standaardgrafiek. Een venster
+  // van twaalf uur sloeg laat op de avond een groot deel van morgen over.
+  const eind=Math.min(i+24,h.time.length);
+
+  const dagVoorvoegsel=t=>{
+    const datum=String(t||"").slice(0,10),vandaag=String(c.time||"").slice(0,10);
+    if(!datum||!vandaag||datum===vandaag) return "";
+    const delen=s=>s.split("-").map(Number);
+    const a=delen(vandaag),b=delen(datum);
+    const verschil=Math.round((Date.UTC(b[0],b[1]-1,b[2])-Date.UTC(a[0],a[1]-1,a[2]))/86400000);
+    if(verschil===1) return "morgen ";
+    const namen=["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+    return "op "+namen[new Date(Date.UTC(b[0],b[1]-1,b[2])).getUTCDay()]+" ";
+  };
 
   /* Zin 1 gaat nu over exact hetzelfde venster als de tekst bij de neerslagverwachting: de
      komende twee uur, uit dezelfde gedeelde helper. Wat daarna nog kan gebeuren
@@ -1180,7 +1193,7 @@ function briefing(){
       zin2="Temperatuurgegevens zijn momenteel niet beschikbaar.";
     }
   }else if(top!==null&&top>i+1&&tv>huidige+0.5){
-    zin2="Het wordt maximaal <b>"+Math.round(tv)+" graden</b>, met het warmste moment rond "+hhmm(h.time[top])
+    zin2="Het wordt maximaal <b>"+Math.round(tv)+" graden</b>, met het warmste moment "+dagVoorvoegsel(h.time[top])+"rond "+hhmm(h.time[top])
         +"."+nachtZin;
   }else if(dagPiek&&dagPiek.t<c.time&&Math.round(dagPiek.v)>nutemp){
     zin2="Het was het warmst rond "+hhmm(dagPiek.t)+" met <b>"+Math.round(dagPiek.v)+" graden</b>. Nu is het "+nutemp
@@ -1217,7 +1230,7 @@ function briefing(){
            : "De wind blijft "+BFTBIJV[bm]+" uit het "+richtingNu+" ("+bm+" Bft)"+draaiTekst;
   // "..., rond 05:00 is de wind het sterkst" was een tweede hoofdzin achter een komma.
   // Als bijstelling zonder werkwoord loopt hij door in dezelfde zin.
-  zin3 += (wi>i+1) ? ", het sterkst rond "+hhmm(h.time[wi]) : "";
+  zin3 += (wi>i+1) ? ", "+dagVoorvoegsel(h.time[wi])+"het sterkst rond "+hhmm(h.time[wi]) : "";
   zin3 += gmax>=60 ? ", met stoten tot "+Math.round(gmax)+" km/u." : ".";
 
   document.getElementById("brief").innerHTML=nbsp(zin1+" "+zin2+" "+zin3);
@@ -1656,7 +1669,21 @@ function etmaal(start,n){
   const dg=S.dag;
   document.getElementById("chartlab").textContent = dg==null ? (S.bereik===24?"De komende 24 uur":S.bereik===48?"De komende 48 uur":"De komende zeven dagen")
     : new Date(S.d.daily.time[dg]+"T12:00:00").toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long"})+", per uur";
-  const di=dg==null?0:dg;
+  let di=dg==null?0:dg;
+  /* In de standaardweergave tonen we na zonsondergang het eerstvolgende
+     daglichtvenster. Anders stond onder "De komende 24 uur" een zonsopkomst én
+     zonsondergang die allebei al voorbij waren. Een bewust gekozen dag blijft
+     vanzelfsprekend exact die dag tonen. */
+  if(dg==null&&day&&Array.isArray(day.time)){
+    const huidigeDatum=String((S.d.current&&S.d.current.time)||"").slice(0,10);
+    const huidigeIndex=day.time.indexOf(huidigeDatum);
+    if(huidigeIndex>=0){
+      di=huidigeIndex;
+      const onder=day.sunset&&day.sunset[di];
+      const huidigMs=naarUTC(S.d.current.time);
+      if(onder&&naarUTC(onder)<=huidigMs&&di+1<day.time.length) di++;
+    }
+  }
   /* v69: eerder kreeg alleen de standaardweergave (dg==null) een "vandaag: "-
      voorvoegsel voor zonsopkomst; bij een gekozen dag stond er niets. Dat
      verschil in regellengte gaf een ongelijk typografisch ritme naast de

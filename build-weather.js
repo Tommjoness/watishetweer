@@ -104,15 +104,6 @@ vervangEenmalig(
   "tooltip-neerslagtijdvak"
 );
 
-/* De temperatuurzin bovenaan en de standaardgrafiek moeten hetzelfde venster
-   gebruiken. De grafiek start bij S.i0 en toont 24 uur; de briefing keek nog
-   maar twaalf uur vooruit, waardoor een middagpiek buiten beeld van de tekst viel. */
-vervangEenmalig(
-  "  const eind=Math.min(i+13,h.time.length);",
-  "  const eind=Math.min(i+24,h.time.length);",
-  "briefing gebruikt dezelfde 24 uur als de grafiek"
-);
-
 /* Op mobiel waren vijf temperatuurcijfers te weinig voor een etmaal. Acht labels
    geven ongeveer één waarde per drie uur, terwijl de bestaande botsingscontrole
    nog steeds elk label afzonderlijk op veilige afstand en hoogte plaatst. */

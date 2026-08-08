@@ -93,6 +93,35 @@ function brief(opties,breedte){
   check("geen punt als decimaalteken in de briefing",!/\d\.\d/.test(buiBinnen2u.tekst),buiBinnen2u.tekst);
 }
 
+/* 4b. Laat op de avond moeten tijden na middernacht expliciet als morgen
+   herkenbaar zijn. De zonregel onder de 24-uursgrafiek hoort dan eveneens bij
+   het eerstvolgende daglichtvenster, niet bij de al verstreken dag. */
+groep("Datumbewuste avondbriefing");
+{
+  const {api,bak}=laadKern(390);
+  const d=bouw({temp:(u,dag)=>dag===1&&u===17?31:(dag===0&&u===22?21:18),
+    ws:9,wg:(u,dag)=>dag===1&&u===17?44:14});
+  d.current.time="2026-07-22T22:25";
+  d.current.temperature_2m=21;
+  d.current.wind_speed_10m=9;
+  d.hourly.wind_speed_10m=d.hourly.time.map(t=>t==="2026-07-23T17:00"?24:9);
+  d.daily.sunrise[1]="2026-07-23T05:55";
+  d.daily.sunset[1]="2026-07-23T21:30";
+  const i=d.hourly.time.findIndex(t=>t==="2026-07-22T22:00");
+  Object.assign(api.S,{d,i0:i,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,
+    klokOverride:new Date("2026-07-22T20:25:00Z")});
+  api.briefing();
+  api.etmaal(i,24);
+  const tekst=bak.brief.innerHTML.replace(/<[^>]+>/g,"").replace(/\u00a0/g," ");
+  check("een temperatuurpiek na middernacht heet expliciet morgen",
+    /warmste moment morgen rond 17:00/.test(tekst),tekst);
+  check("een windpiek na middernacht heet expliciet morgen",
+    /morgen het sterkst rond 17:00/.test(tekst),tekst);
+  check("na zonsondergang toont de 24-uursgrafiek de volgende daglichtperiode",
+    /zonsopkomst 05:55/.test(bak.suntimes.innerHTML)
+      &&/zonsondergang 21:30/.test(bak.suntimes.innerHTML),bak.suntimes.innerHTML);
+}
+
 /* 5. metersteksten */
 groep("Meters");
 {
@@ -316,8 +345,15 @@ groep("Nachtzicht");
 /* 8b. teksten noemen altijd een waarde en waar het kan een tijdstip */
 groep("Volledigheid van de teksten");
 {
-  const {bak}=brief({temp:(u)=>u<14?22-Math.abs(u-13):16});   // piek lag om 13:00, dus in het verleden
-  const t=bak.brief.innerHTML.replace(/<[^>]+>/g,"");
+  const {api,bak}=laadKern(390);
+  const d=bouw({temp:(u,dag)=>dag===0&&u===13?22:16});
+  d.current.time="2026-07-22T14:00";
+  d.current.temperature_2m=16;
+  const i=d.hourly.time.findIndex(t=>t==="2026-07-22T14:00");
+  Object.assign(api.S,{d,i0:i,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,
+    klokOverride:new Date("2026-07-22T12:00:00Z")});
+  api.briefing();
+  const t=norm(bak.brief.innerHTML).replace(/<[^>]+>/g,"");
   check("warmste moment in het verleden krijgt tijd en temperatuur",/warmst rond \d\d:\d\d met \d+ graden/.test(t),t);
   const nat=brief({pr:(u)=>u<12?0.4:0,pp:(u)=>u<12?70:5,som:2.4}).bak;
   check("neerslag die al gevallen is gebruikt ook de dagsomformulering, niet 'viel'",
