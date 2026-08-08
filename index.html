@@ -716,6 +716,30 @@ function plaatsVandaag(){
   return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
 }
 
+/* Eén bron voor woorden als vandaag, morgen en op maandag. De vergelijking
+   gebeurt op kale kalenderdatums in de tijdzone van de plaats. Daardoor kan
+   een verwachting na middernacht nooit eerst als een tijdloze claim worden
+   getoond en pas verderop in de zin alsnog het woord "morgen" krijgen. */
+function dagVerschil(tijd){
+  const doel=String(tijd||"").slice(0,10);
+  const bronDatum=String(S.d&&S.d.current&&S.d.current.time||"").slice(0,10);
+  const basis=/^\d{4}-\d{2}-\d{2}$/.test(bronDatum)?bronDatum:plaatsVandaag();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(doel)||!/^\d{4}-\d{2}-\d{2}$/.test(basis)) return null;
+  const utc=s=>{const p=s.split("-").map(Number);return Date.UTC(p[0],p[1]-1,p[2]);};
+  return Math.round((utc(doel)-utc(basis))/86400000);
+}
+function dagAanduiding(tijd,hoofdzin){
+  const verschil=dagVerschil(tijd),klein=hoofdzin!==true;
+  if(verschil===0) return klein?"vandaag":"Vandaag";
+  if(verschil===1) return klein?"morgen":"Morgen";
+  if(verschil===-1) return klein?"gisteren":"Gisteren";
+  const datum=String(tijd||"").slice(0,10),p=datum.split("-").map(Number);
+  if(p.length!==3||p.some(v=>!Number.isFinite(v))) return klein?"op een later moment":"Op een later moment";
+  const namen=["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+  const tekst="op "+namen[new Date(Date.UTC(p[0],p[1]-1,p[2])).getUTCDay()];
+  return klein?tekst:tekst.charAt(0).toUpperCase()+tekst.slice(1);
+}
+
 function plaatsNu(){
   const eigen=-new Date().getTimezoneOffset()*60;
   const daar=(S.d&&S.d.utc_offset_seconds!=null)?S.d.utc_offset_seconds:eigen;
@@ -956,7 +980,10 @@ function set(id,html){document.getElementById(id).innerHTML=nbsp(html);}
 function zetTekst(id,tekst){document.getElementById(id).textContent=nbsp(tekst);}
 
 function piek(veld,dagIndex,vanafNu){
-  const h=S.d.hourly,dag=S.d.daily.time[dagIndex||0],nu=S.d.current.time;
+  const h=S.d.hourly,dagen=S.d.daily.time||[],nu=S.d.current.time;
+  const gekozen=dagIndex==null?dagen.indexOf(String(nu||"").slice(0,10)):dagIndex;
+  const dag=gekozen>=0?dagen[gekozen]:null;
+  if(!dag) return null;
   let bv=-Infinity,bt=null;
   for(let i=0;i<h.time.length;i++){
     if(h.time[i].slice(0,10)!==dag) continue;
@@ -970,7 +997,8 @@ function piek(veld,dagIndex,vanafNu){
 function meters(){
   const c=S.d.current,h=S.d.hourly,i=S.i0,day=S.d.daily,nu=c.time;
 
-  const windsnelheid=eindigGetal(c.wind_speed_10m),windrichting=eindigGetal(c.wind_direction_10m);
+  const windRuw=eindigGetal(c.wind_speed_10m);
+  const windsnelheid=windRuw!==null&&windRuw>=0?windRuw:null,windrichting=eindigGetal(c.wind_direction_10m);
   const b=windsnelheid===null?null:bft(windsnelheid);
   /* De richting stond alleen als woord in de zin eronder. Als afkorting naast het
      getal lees je hem in een oogopslag. kompasKort deelt de cirkel in zestien vakken
@@ -987,14 +1015,16 @@ function meters(){
         +(richtingVol?" uit het "+richtingVol:"")+" ("+b+" Bft)."+(richtingVol?"":" Windrichting niet beschikbaar."));
   }
 
-  const windstoot=eindigGetal(c.wind_gusts_10m);
+  const windstootRuw=eindigGetal(c.wind_gusts_10m);
+  const windstoot=windstootRuw!==null&&windstootRuw>=0?windstootRuw:null;
   set("gust",windstoot===null?"–":Math.round(windstoot)+"<s>km/u</s>");
-  const pg=piek("wind_gusts_10m",0);
+  const pgRuw=piek("wind_gusts_10m"),pg=pgRuw&&pgRuw.v>=0?pgRuw:null;
   zetTekst("gustsub", !pg ? "Geen uurgegevens beschikbaar."
-    : pg.t>nu ? "Toppen tot "+Math.round(pg.v)+" km/u rond "+hhmm(pg.t)+"."
-    : "De zwaarste stoot was "+Math.round(pg.v)+" km/u rond "+hhmm(pg.t)+".");
+    : pg.t>nu ? dagAanduiding(pg.t,true)+" rond "+hhmm(pg.t)+" worden windstoten tot "+Math.round(pg.v)+" km/u verwacht."
+    : dagAanduiding(pg.t,true)+" was de zwaarste windstoot "+Math.round(pg.v)+" km/u rond "+hhmm(pg.t)+".");
 
-  set("prec",nl(c.precipitation)+"<s>mm</s>");
+  const recenteNeerslag=eindigGetal(c.precipitation);
+  set("prec",recenteNeerslag===null||recenteNeerslag<0?"–":nl(recenteNeerslag)+"<s>mm</s>");
   /* Niet blind index 0: dat is Open-Meteo's eigen "vandaag" op het moment van
      ophalen, en bij een verouderde, uit de cache teruggevallen briefing (zie de
      foutafhandeling in load()) kan dat een andere dag zijn dan de kalenderdag
@@ -1007,8 +1037,8 @@ function meters(){
      is geldige data en geen reden om een andere zin ("blijft het droog") te
      gebruiken dan bij elke andere waarde. Zo blijft de tegel een prognose voor
      de hele kalenderdag, en geen mengvorm van "al gevallen" en "nog te komen". */
-  zetTekst("precsub", (som==null||!isFinite(som))
-    ? "Totale neerslag van vandaag niet beschikbaar"
+  zetTekst("precsub", (som==null||!isFinite(som)||som<0)
+    ? "Totale neerslag van vandaag niet beschikbaar."
     : "Voor vandaag wordt in totaal "+nl(som)+" mm neerslag verwacht.");
 
   /* De tegel toont de kans voor precies het eerstvolgende uur (i+1). De subtekst
@@ -1016,10 +1046,12 @@ function meters(){
      gebruikte dagDeel().woord ("Vandaag"/"Vanavond"/"Vannacht"): dat is een
      bredere conclusie dan wat de tegel zelf laat zien. Nu leest de subtekst
      exact dezelfde waarde als de kop, dus komend uur en niets breder. */
-  const popKomendUur=h.precipitation_probability[i+1]??0;
-  set("pop",popKomendUur+"<s>%</s>");
-  zetTekst("popsub", popKomendUur<20
-    ? "Komend uur is de neerslagkans zeer klein."
+  const popRuw=eindigGetal(h.precipitation_probability&&h.precipitation_probability[i+1]);
+  const popKomendUur=popRuw===null?null:clamp(popRuw,0,100);
+  set("pop",popKomendUur===null?"–":Math.round(popKomendUur)+"<s>%</s>");
+  zetTekst("popsub", popKomendUur===null
+    ? "Neerslagkans voor het komende uur niet beschikbaar."
+    : popKomendUur<20 ? "Komend uur is de neerslagkans zeer klein."
     : "Komend uur is de neerslagkans "+Math.round(popKomendUur)+"%.");
 
   /* Deze tegel toont uitsluitend het percentage en een contextzin op basis
@@ -1029,7 +1061,7 @@ function meters(){
   const vocht=c.relative_humidity_2m;
   if(!Number.isFinite(vocht)||vocht<0||vocht>100){
     set("hum","--");
-    zetTekst("humsub","Luchtvochtigheid niet beschikbaar");
+    zetTekst("humsub","Luchtvochtigheid niet beschikbaar.");
   }else{
     set("hum",vocht+"<s>%</s>");
     zetTekst("humsub", vocht<40 ? "De lucht is vrij droog."
@@ -1037,9 +1069,11 @@ function meters(){
       : "De lucht is vochtig.");
   }
 
-  const luchtdruk=eindigGetal(c.pressure_msl);
+  const drukRuw=eindigGetal(c.pressure_msl);
+  const luchtdruk=drukRuw!==null&&drukRuw>0?drukRuw:null;
   set("pres",luchtdruk===null?"–":Math.round(luchtdruk)+"<s>hPa</s>");
-  const p3=eindigGetal(h.pressure_msl&&h.pressure_msl[i-3]);
+  const p3Ruw=eindigGetal(h.pressure_msl&&h.pressure_msl[i-3]);
+  const p3=p3Ruw!==null&&p3Ruw>0?p3Ruw:null;
   const dp=(p3!==null&&luchtdruk!==null)?luchtdruk-p3:null;
   zetTekst("pressub", dp==null ? "Geen tendens beschikbaar."
     : Math.abs(dp)<0.15 ? "In drie uur nauwelijks veranderd."
@@ -1050,7 +1084,7 @@ function meters(){
   set("cloud",geldigeBewolking?Math.round(cc)+"<s>%</s>":"–");
   const bew = !geldigeBewolking?null:cc>=95?"Vrijwel geheel bewolkt":cc>=70?"Zwaar bewolkt":cc>=40?"Half bewolkt"
             : cc>=15?"Overwegend zonnig":"Vrijwel onbewolkt";
-  const pu=piek("uv_index",0);
+  const puRuw=piek("uv_index"),pu=puRuw&&puRuw.v>=0?puRuw:null;
   const uvOordeel=v=>v<3?"laag":v<6?"matig":v<8?"hoog":v<11?"zeer hoog":"extreem";
   zetTekst("cloudsub", bew?bew+".":"Bewolking niet beschikbaar.");
   /* De UV-index zat ingeklemd achter de bewolkingszin en werd daar makkelijk
@@ -1059,11 +1093,14 @@ function meters(){
   set("uv", (!pu||pu.v<0.5) ? "–" : nl(pu.v));
   zetTekst("uvsub", (!pu||pu.v<0.5)
     ? "Nauwelijks UV vandaag."
-    : "Piek"+(pu.t>nu?"t":"te")+" rond "+hhmm(pu.t)+", dat is "+uvOordeel(pu.v)+".");
+    : pu.t>nu
+      ? "De UV-index piekt vandaag rond "+hhmm(pu.t)+" en is dan "+uvOordeel(pu.v)+"."
+      : "De UV-index piekte vandaag rond "+hhmm(pu.t)+" en was toen "+uvOordeel(pu.v)+".");
 
-  const v=h.visibility?h.visibility[i]:null;
-  set("vis",v==null?"–":(v>=10000?"10+":nl(v/1000))+"<s>km</s>");
-  zetTekst("vissub", v==null ? "Niet beschikbaar."
+  const zichtRuw=eindigGetal(h.visibility&&h.visibility[i]);
+  const v=zichtRuw!==null&&zichtRuw>=0?zichtRuw:null;
+  set("vis",v===null?"–":(v>=10000?"10+":nl(v/1000))+"<s>km</s>");
+  zetTekst("vissub", v===null ? "Niet beschikbaar."
     : v<1000 ? "Slecht zicht, minder dan een kilometer."
     : v<4000 ? "Beperkt zicht."
     : v<10000 ? "Redelijk zicht." : "Goed zicht, meer dan tien kilometer.");
@@ -1149,17 +1186,6 @@ function briefing(){
   // van twaalf uur sloeg laat op de avond een groot deel van morgen over.
   const eind=Math.min(i+24,h.time.length);
 
-  const dagVoorvoegsel=t=>{
-    const datum=String(t||"").slice(0,10),vandaag=String(c.time||"").slice(0,10);
-    if(!datum||!vandaag||datum===vandaag) return "";
-    const delen=s=>s.split("-").map(Number);
-    const a=delen(vandaag),b=delen(datum);
-    const verschil=Math.round((Date.UTC(b[0],b[1]-1,b[2])-Date.UTC(a[0],a[1]-1,a[2]))/86400000);
-    if(verschil===1) return "morgen ";
-    const namen=["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
-    return "op "+namen[new Date(Date.UTC(b[0],b[1]-1,b[2])).getUTCDay()]+" ";
-  };
-
   /* Zin 1 gaat nu over exact hetzelfde venster als de tekst bij de neerslagverwachting: de
      komende twee uur, uit dezelfde gedeelde helper. Wat daarna nog kan gebeuren
      deze dag komt er als losse, apart gemarkeerde zin achteraan, met de eigen
@@ -1185,11 +1211,17 @@ function briefing(){
     }
   }else{
     zin1 = "De komende <b>twee uur</b> blijft het <b>droog</b>.";
-    /* Later vandaag kan er alsnog neerslag komen, ook als de eerste twee uur droog
-       blijven. Dat gebruikt bewust de dagelijkse maximumkans, niet het venster van
-       de komende twee uur: dat zijn twee verschillende, allebei geldige tijdvakken. */
-    const dagKans=day.precipitation_probability_max&&day.precipitation_probability_max[0];
-    if(dagKans!=null&&isFinite(dagKans)&&dagKans>=25){
+    /* Alleen nog niet verstreken uurvakken ná het twee-uursvenster mogen de zin
+       "later vandaag" veroorzaken. Het dagelijkse maximum bevat ook uren uit de
+       ochtend en kon om 23:00 dus een oude kans opnieuw als toekomst presenteren. */
+    const na=kt.eind||h.time[Math.min(i+2,h.time.length-1)],vandaag=String(c.time||"").slice(0,10);
+    let dagKans=null;
+    for(let k=0;k<h.time.length;k++){
+      if(h.time[k].slice(0,10)!==vandaag||h.time[k]<=na) continue;
+      const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[k]);
+      if(kans!==null) dagKans=Math.max(dagKans===null?0:dagKans,clamp(kans,0,100));
+    }
+    if(dagKans!==null&&dagKans>=25){
       zin1 += " Later vandaag is de neerslagkans <b>"+Math.round(dagKans)+"%</b>.";
     }
   }
@@ -1200,78 +1232,85 @@ function briefing(){
     const v=eindigGetal(h.temperature_2m[k]);
     if(v!==null&&(tv===null||v>tv)){tv=v;top=k;}
   }
-  const minima=[];
-  for(let k=i;k<Math.min(i+20,h.time.length);k++){
+  /* "Vannacht" mag alleen de eerstvolgende aaneengesloten nacht bedoelen.
+     Het minimum van een blind 20-uursvenster kon bij een koude middag morgen
+     horen en toch als nachttemperatuur worden aangekondigd. */
+  const nachtWaarden=[];
+  let nachtBegonnen=false;
+  for(let k=i;k<eind;k++){
+    const isDag=eindigGetal(h.is_day&&h.is_day[k]);
+    if(!nachtBegonnen){
+      if(isDag!==0) continue;
+      nachtBegonnen=true;
+    }else if(isDag===1){
+      break;
+    }
+    if(isDag!==0) continue;
     const v=eindigGetal(h.temperature_2m[k]);
-    if(v!==null) minima.push(v);
+    if(v!==null) nachtWaarden.push(v);
   }
-  const dagMinimum=eindigGetal(day.temperature_2m_min&&day.temperature_2m_min[0]);
-  const tmin=rondGetal(minima.length?Math.min(...minima):dagMinimum);
+  const tmin=rondGetal(nachtWaarden.length?Math.min(...nachtWaarden):null);
   const huidige=eindigGetal(c.temperature_2m),nutemp=rondGetal(huidige);
-  const dagPiek=piek("temperature_2m",0);
+  const dagPiek=piek("temperature_2m");
   let zin2;
   const nachtZin=tmin===null?"":" Vannacht koelt het af naar <b>"+tmin+" graden</b>.";
   if(huidige===null){
     if(tv!==null&&top!==null){
-      zin2="De actuele temperatuur is niet beschikbaar. De komende 24 uur wordt maximaal <b>"
-        +Math.round(tv)+" graden</b> verwacht, rond "+hhmm(h.time[top])+"."+nachtZin;
+      zin2="De actuele temperatuur is niet beschikbaar. "+dagAanduiding(h.time[top],true)
+        +" wordt het maximaal <b>"+Math.round(tv)+" graden</b>, met het warmste moment rond "
+        +hhmm(h.time[top])+"."+nachtZin;
     }else if(tmin!==null){
       zin2="De actuele temperatuur is niet beschikbaar. Vannacht wordt ongeveer <b>"+tmin+" graden</b> verwacht.";
     }else{
       zin2="Temperatuurgegevens zijn momenteel niet beschikbaar.";
     }
-  }else if(top!==null&&top>i+1&&tv>huidige+0.5){
-    zin2="Het wordt maximaal <b>"+Math.round(tv)+" graden</b>, met het warmste moment "+dagVoorvoegsel(h.time[top])+"rond "+hhmm(h.time[top])
-        +"."+nachtZin;
+  }else if(top!==null&&top>i&&tv>huidige+0.5){
+    zin2=dagAanduiding(h.time[top],true)+" wordt het maximaal <b>"+Math.round(tv)
+        +" graden</b>, met het warmste moment rond "+hhmm(h.time[top])+"."+nachtZin;
   }else if(dagPiek&&dagPiek.t<c.time&&Math.round(dagPiek.v)>nutemp){
-    zin2="Het was het warmst rond "+hhmm(dagPiek.t)+" met <b>"+Math.round(dagPiek.v)+" graden</b>. Nu is het "+nutemp
+    zin2=dagAanduiding(dagPiek.t,true)+" was het rond "+hhmm(dagPiek.t)+" het warmst met <b>"+Math.round(dagPiek.v)+" graden</b>. Nu is het "+nutemp
         +" graden."+nachtZin;
   }else if(tmin!==null&&tmin<nutemp-1){
-    zin2="Warmer dan "+nutemp+" graden wordt het niet meer. Vannacht koelt het af naar "+tmin+" graden.";
+    zin2="De komende 24 uur wordt het niet warmer dan "+nutemp+" graden. Vannacht koelt het af naar "+tmin+" graden.";
   }else if(tmin===null){
-    zin2="De temperatuur blijft rond "+nutemp+" graden hangen. De nachttemperatuur is niet beschikbaar.";
+    zin2="De komende uren blijft de temperatuur rond "+nutemp+" graden. De nachttemperatuur is niet beschikbaar.";
   }else{
-    zin2="De temperatuur blijft rond "+nutemp+" graden hangen, ook vannacht.";
+    zin2="De komende uren blijft de temperatuur rond "+nutemp+" graden, ook vannacht.";
   }
 
   // wind
   let wmax=null,wi=null,gmax=null;
   for(let k=i;k<eind;k++){
-    const w=eindigGetal(h.wind_speed_10m&&h.wind_speed_10m[k]);
-    const g=eindigGetal(h.wind_gusts_10m&&h.wind_gusts_10m[k]);
+    const wRuw=eindigGetal(h.wind_speed_10m&&h.wind_speed_10m[k]);
+    const gRuw=eindigGetal(h.wind_gusts_10m&&h.wind_gusts_10m[k]);
+    const w=wRuw!==null&&wRuw>=0?wRuw:null,g=gRuw!==null&&gRuw>=0?gRuw:null;
     if(w!==null&&(wmax===null||w>wmax)){wmax=w;wi=k;}
     if(g!==null&&(gmax===null||g>gmax)) gmax=g;
   }
-  const huidigWind=eindigGetal(c.wind_speed_10m);
   let zin3;
   if(wmax===null||wi===null){
     zin3="Windgegevens zijn momenteel niet beschikbaar.";
   }else{
-    const bm=bft(wmax),bnu=huidigWind===null?null:bft(huidigWind);
+    const bm=bft(wmax);
     const rNu=eindigGetal(c.wind_direction_10m),rPiek=eindigGetal(h.wind_direction_10m&&h.wind_direction_10m[wi]);
     const richtingNu=kompas(rNu),richtingPiek=kompas(rPiek);
     // draait de wind meer dan twee kompaspunten, dan is dat het vermelden waard
     const hoek=rNu===null||rPiek===null?null:Math.abs(((rPiek-rNu+540)%360)-180);
     const draait=hoek!==null&&hoek>45;
-    const draaiTekst=draait&&richtingPiek?", draaiend naar het "+richtingPiek:"";
+    const draaiTekst=draait&&richtingPiek?" en draait naar het "+richtingPiek:"";
     const bronTekst=richtingNu?" uit het "+richtingNu:"";
-    // Vanaf 9 Bft bestaat er geen bijvoeglijke vorm die klopt: de meter zegt dan
-    // "storm" of "zware storm" en "De wind blijft stormachtig" noemt dezelfde wind
-    // een graad zwakker. Boven de 8 stapt de zin daarom over op de naam zelf.
-    const zwaar=bm>=9;
-    const staatEr=bm===9?"Er staat <b>storm</b>":"Er staat een <b>"+BFTNAAM[bm]+"</b>";
-    zin3 = bnu===null ? "De wind bereikt maximaal <b>"+bm+" Bft</b>"+bronTekst+draaiTekst
-         : bm>bnu ? "De wind"+(richtingNu?" komt"+bronTekst+draaiTekst+" en":"")+" neemt toe tot <b>"+bm+" Bft</b>"
-         : bm<bnu ? "De wind"+(richtingNu?" komt"+bronTekst+draaiTekst+" en":"")+" neemt af tot <b>"+bm+" Bft</b>"
-         : zwaar   ? staatEr+bronTekst+" ("+bm+" Bft)"+draaiTekst
-         : "De wind blijft "+BFTBIJV[bm]+bronTekst+" ("+bm+" Bft)"+draaiTekst;
-    // Als bijstelling zonder werkwoord loopt de piektijd door in dezelfde zin.
-    zin3 += (wi>i+1) ? ", "+dagVoorvoegsel(h.time[wi])+"het sterkst rond "+hhmm(h.time[wi]) : "";
-    zin3 += gmax!==null&&gmax>=60 ? ", met stoten tot "+Math.round(gmax)+" km/u." : ".";
-    if(!richtingNu) zin3+=" De windrichting is niet beschikbaar.";
+    zin3=richtingNu?"De wind komt"+bronTekst+draaiTekst+".":"De windrichting is niet beschikbaar.";
+    const moment=wi>i+1
+      ? dagAanduiding(h.time[wi],true)+" rond "+hhmm(h.time[wi])
+      : "De komende 24 uur";
+    zin3+=" "+moment+" is de wind op zijn sterkst met <b>"+bm+" Bft</b> ("+BFTNAAM[bm]+")";
+    zin3+=gmax!==null&&gmax>=60?"; windstoten kunnen "+Math.round(gmax)+" km/u bereiken.":".";
   }
 
-  document.getElementById("brief").innerHTML=nbsp(zin1+" "+zin2+" "+zin3);
+  /* De interpretatielaag vervangt uitsluitend de neerslagzin. Een structurele
+     scheiding is betrouwbaarder dan zoeken naar de eerste woorden van zin 2;
+     die woorden veranderen juist wanneer de dag explicieter wordt gemaakt. */
+  document.getElementById("brief").innerHTML=nbsp(zin1+"<!--brief-rest--> "+zin2+" "+zin3);
 }
 
 /* ---------- etmaal: dagbalk plus temperatuurcurve op dezelfde schaal ---------- */
@@ -1339,7 +1378,10 @@ function etmaal(start,n){
     TI.push(h.time[i]);
     T.push(h.temperature_2m[i]==null?null:h.temperature_2m[i]);
     A.push(h.apparent_temperature[i]==null?null:h.apparent_temperature[i]);
-    P.push(h.precipitation_probability[i]??0);MM.push(h.precipitation[i]??0);
+    const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[i]);
+    const hoeveelheid=eindigGetal(h.precipitation&&h.precipitation[i]);
+    P.push(kans===null||kans<0?null:clamp(kans,0,100));
+    MM.push(hoeveelheid===null||hoeveelheid<0?null:hoeveelheid);
     L.push(h.time[i].slice(11,13));
     W_.push(h.wind_speed_10m[i]);G.push(h.wind_gusts_10m[i]);C.push(h.cloud_cover[i]);
     D.push(h.weather_code[i]);ND.push(h.is_day[i]);WD.push(h.wind_direction_10m[i]);
@@ -1711,9 +1753,13 @@ function etmaal(start,n){
     <g id="scrub" style="display:none"></g>
     <rect id="hit" x="${pl-cw/2}" y="${pt-14}" width="${iw+cw}" height="${ih+20}" fill="transparent" style="cursor:crosshair"/>`;
 
+  const geldigeKansen=P.filter(v=>Number.isFinite(v));
+  const kansVoorlezer=geldigeKansen.length
+    ? "hoogste neerslagkans "+Math.max(...geldigeKansen)+" procent"
+    : "neerslagkans niet beschikbaar";
   svg.setAttribute("aria-label",
     "Verloop van "+TI[0].slice(11,16)+" tot "+TI[TI.length-1].slice(11,16)
-    +", temperatuur tussen "+mn+" en "+mx+" graden, hoogste neerslagkans "+Math.max.apply(null,P)+" procent.");
+    +", temperatuur tussen "+mn+" en "+mx+" graden, "+kansVoorlezer+".");
   S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,H:H,M:M};
   scrubKoppel(); chartHint();
 
@@ -1740,8 +1786,9 @@ function etmaal(start,n){
      verschil in regellengte gaf een ongelijk typografisch ritme naast de
      grafiek. Nu is de regel bij elke weergave hetzelfde: geen voorvoegsel,
      de datum staat al in de kop (#chartlab) hierboven. */
+  const zonDag=dg==null&&day.time&&day.time[di]?dagAanduiding(day.time[di],false):"";
   document.getElementById("suntimes").innerHTML=(day.sunrise[di]&&day.sunset[di])
-    ? "<span>zonsopkomst "+hhmm(day.sunrise[di])+"</span> "
+    ? "<span>"+(zonDag?zonDag+" · ":"")+"zonsopkomst "+hhmm(day.sunrise[di])+"</span> "
      +"<span>zonsondergang "+hhmm(day.sunset[di])+"</span> "
      +"<span>"+daglengte(di)+"</span>"
     : "<span>"+daglengte(di)+"</span>";
@@ -1831,10 +1878,14 @@ function scrubKoppel(){
        "NaN km/u" of "undefined%" in de doos laten staan. */
     const heel=v=>v!=null&&isFinite(v);
     const num=(v,dec)=>heel(v)?(dec?nl(v):Math.round(v)):"–";
+    const windSnel=heel(G.W_&&G.W_[i])?Math.round(G.W_[i]):null;
+    const windRichting=heel(G.WD&&G.WD[i])?kompasKort(G.WD[i]):null;
+    const windTekst=windSnel===null?"–":windSnel+" km/u"+(windRichting?" "+windRichting:"")
+      +", "+bft(G.W_[i])+" Bft";
     const body=rij("temperatuur",num(G.T?G.T[i]:null)+"°C")
       +rij("voelt als",num(G.A?G.A[i]:null)+"°C")
       +rij("neerslagkans",(heel(G.P&&G.P[i])?G.P[i]:"–")+"%",TEAL)
-      +rij("wind",heel(G.W_&&G.W_[i])?Math.round(G.W_[i])+" km/u "+DIRS[Math.round((G.WD[i]||0)/22.5)%16]+", "+bft(G.W_[i])+" Bft":"–")
+      +rij("wind",windTekst)
       +rij("windstoten",heel(G.G&&G.G[i])?Math.round(G.G[i])+" km/u":"–")
       +rij("bewolking",(heel(G.C&&G.C[i])?G.C[i]:"–")+"%");
     const sepY=by+(G.M?19:28);
@@ -1944,13 +1995,14 @@ function nowcast(){
 
 /* ---------- zeven dagen ---------- */
 function restkans(){
-  const h=S.d.hourly,dag=S.d.daily.time[0],nu=S.d.current.time;
-  let m=0;
+  const h=S.d.hourly,nu=S.d.current.time,dag=String(nu||"").slice(0,10);
+  let m=null;
   for(let k=0;k<h.time.length;k++){
     if(h.time[k].slice(0,10)!==dag||h.time[k]<=nu) continue;
-    m=Math.max(m,h.precipitation_probability[k]??0);
+    const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[k]);
+    if(kans!==null) m=Math.max(m===null?0:m,clamp(kans,0,100));
   }
-  return Math.round(m);
+  return m===null?null:Math.round(m);
 }
 function dagen(){
   const day=S.d.daily;
@@ -1979,18 +2031,26 @@ function dagen(){
     const kort=DAGEN[dt.getDay()]+" "+nr;
     const nm='<span class="dlang">'+lang+'</span><span class="dkort">'+kort+'</span>';
     const l=eindigGetal(day.temperature_2m_min[i]),hh=eindigGetal(day.temperature_2m_max[i]);
+    const codeRuw=eindigGetal(day.weather_code&&day.weather_code[i]);
+    const code=codeRuw!==null&&Object.prototype.hasOwnProperty.call(CODES,codeRuw)?codeRuw:null;
+    const windRuw=eindigGetal(day.wind_speed_10m_max&&day.wind_speed_10m_max[i]);
+    const wind=windRuw!==null&&windRuw>=0?windRuw:null;
+    const richting=eindigGetal(day.wind_direction_10m_dominant&&day.wind_direction_10m_dominant[i]);
+    const somRuw=eindigGetal(day.precipitation_sum&&day.precipitation_sum[i]);
+    const som=somRuw!==null&&somRuw>=0?somRuw:null;
+    const kans=eindigGetal(day.precipitation_probability_max&&day.precipitation_probability_max[i]);
     const balk=l===null||hh===null
       ?""
       :`<i style="left:${(l-lo)/sp*100}%;width:${Math.max(3,(hh-l)/sp*100)}%"></i>`;
     out+=`<div class="row day${S.dag===i?" on":""}" data-i="${i}" role="button" tabindex="0">
-      <div class="dname">${nm}</div><div class="dico">${icon(day.weather_code[i],true,22)}</div>
-      <div class="dcond">${txt(day.weather_code[i])}${day.precipitation_sum[i]>0.5?", "+nl(day.precipitation_sum[i])+" mm":""}</div>
-      <div class="dwind">${bft(day.wind_speed_10m_max[i]||0)} Bft ${pijl(day.wind_direction_10m_dominant?day.wind_direction_10m_dominant[i]:0,11)}</div>
+      <div class="dname">${nm}</div><div class="dico">${code===null?"":icon(code,true,22)}</div>
+      <div class="dcond">${code===null?"Verwachting niet beschikbaar":txt(code)}${som!==null&&som>0.5?", "+nl(som)+" mm":""}</div>
+      <div class="dwind">${wind===null?"–":bft(wind)+" Bft"}${wind!==null&&richting!==null?" "+pijl(richting,11):""}</div>
       <div class="dmin">${l===null?"–":Math.round(l)+"°"}</div>
       <div class="bar">${balk}</div>
       <div class="dmax">${hh===null?"–":Math.round(hh)+"°"}</div>
-      <div class="drain">${i===0?restkans():(day.precipitation_probability_max[i]??0)}%${
-        day.precipitation_sum[i]>0.5?`<small>${nl(day.precipitation_sum[i])} mm</small>`:""}</div></div>`;
+      <div class="drain">${kans===null?"–":Math.round(clamp(kans,0,100))+"%"}${
+        som!==null&&som>0.5?`<small>${nl(som)} mm</small>`:""}</div></div>`;
   });
   const kop=`<div class="row day kop">
       <div class="dname">Dag</div><div class="dico"></div><div class="dcond">Verwachting</div>

@@ -82,7 +82,7 @@ function brief(opties,breedte){
     !/\d+% kans/.test(buiBinnen2u.tekst.split(".")[0]),buiBinnen2u.tekst);
 
   const laterVandaag=brief({pp:(u)=>u===20?37:5,pr:()=>0,som:0});
-  const dagKans=Math.round(laterVandaag.api.S.d.daily.precipitation_probability_max[0]);
+  const dagKans=37;
   check("blijft het twee uur droog maar is er verderop wel kans, dan komt dat als losse zin",
     new RegExp("De komende twee uur blijft het droog\\. Later vandaag is de neerslagkans "+dagKans+"%")
       .test(laterVandaag.tekst),
@@ -99,27 +99,53 @@ function brief(opties,breedte){
 groep("Datumbewuste avondbriefing");
 {
   const {api,bak}=laadKern(390);
-  const d=bouw({temp:(u,dag)=>dag===1&&u===17?31:(dag===0&&u===22?21:18),
+  const d=bouw({temp:(u,dag)=>dag===1&&u===10?5:dag===1&&u===17?31:(dag===0&&u===23?21:18),
     ws:9,wg:(u,dag)=>dag===1&&u===17?44:14});
-  d.current.time="2026-07-22T22:25";
+  d.current.time="2026-07-22T23:21";
   d.current.temperature_2m=21;
   d.current.wind_speed_10m=9;
   d.hourly.wind_speed_10m=d.hourly.time.map(t=>t==="2026-07-23T17:00"?24:9);
+  d.hourly.precipitation_probability=d.hourly.time.map(t=>t==="2026-07-22T20:00"?90:0);
+  d.hourly.precipitation=d.hourly.time.map(()=>0);
   d.daily.sunrise[1]="2026-07-23T05:55";
   d.daily.sunset[1]="2026-07-23T21:30";
-  const i=d.hourly.time.findIndex(t=>t==="2026-07-22T22:00");
+  const i=d.hourly.time.findIndex(t=>t==="2026-07-22T23:00");
   Object.assign(api.S,{d,i0:i,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,
-    klokOverride:new Date("2026-07-22T20:25:00Z")});
+    klokOverride:new Date("2026-07-22T21:21:00Z")});
   api.briefing();
   api.etmaal(i,24);
   const tekst=bak.brief.innerHTML.replace(/<[^>]+>/g,"").replace(/\u00a0/g," ");
-  check("een temperatuurpiek na middernacht heet expliciet morgen",
-    /warmste moment morgen rond 17:00/.test(tekst),tekst);
+  check("een temperatuurpiek na middernacht begint expliciet met morgen",
+    /Morgen wordt het maximaal 31 graden, met het warmste moment rond 17:00/.test(tekst),tekst);
+  check("de dag hoort direct bij de maximumclaim, niet pas bij de toelichting",
+    !/Het wordt maximaal 31 graden[^.]*morgen/.test(tekst),tekst);
+  check("een lage temperatuur overdag morgen wordt niet als minimum van vannacht verkocht",
+    /Vannacht koelt het af naar 18 graden/.test(tekst)&&!/Vannacht[^.]*5 graden/.test(tekst),tekst);
+  check("een hoge neerslagkans van eerder vandaag heet 's avonds niet later vandaag",
+    !/Later vandaag/.test(tekst),tekst);
   check("een windpiek na middernacht heet expliciet morgen",
-    /morgen het sterkst rond 17:00/.test(tekst),tekst);
+    /Morgen rond 17:00 is de wind op zijn sterkst/.test(tekst),tekst);
   check("na zonsondergang toont de 24-uursgrafiek de volgende daglichtperiode",
-    /zonsopkomst 05:55/.test(bak.suntimes.innerHTML)
+    /morgen · zonsopkomst 05:55/.test(bak.suntimes.innerHTML)
       &&/zonsondergang 21:30/.test(bak.suntimes.innerHTML),bak.suntimes.innerHTML);
+}
+
+/* Dezelfde hoofdzin moet overdag juist expliciet vandaag zeggen. Dit voorkomt
+   dat de oplossing voor de avond alleen een hardgecodeerd "morgen" wordt. */
+{
+  const {api,bak}=laadKern(390);
+  const d=bouw({temp:(u,dag)=>dag===0&&u===15?30:18});
+  d.current.time="2026-07-22T09:10";
+  d.current.temperature_2m=18;
+  const i=d.hourly.time.findIndex(t=>t==="2026-07-22T09:00");
+  Object.assign(api.S,{d,i0:i,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,
+    klokOverride:new Date("2026-07-22T07:10:00Z")});
+  api.briefing();api.etmaal(i,24);
+  const tekst=bak.brief.innerHTML.replace(/<[^>]+>/g,"").replace(/\u00a0/g," ");
+  check("een maximum later op dezelfde dag begint expliciet met vandaag",
+    /Vandaag wordt het maximaal 30 graden/.test(tekst),tekst);
+  check("de daglichtregel zegt overdag expliciet vandaag",
+    /vandaag · zonsopkomst/.test(bak.suntimes.innerHTML),bak.suntimes.innerHTML);
 }
 
 /* 5. metersteksten */
@@ -150,7 +176,7 @@ groep("Meters");
   Object.assign(a3.S,{d:d3,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,i0:i3});
   a3.meters();a3.briefing();
   const t3=b3.brief.innerHTML.replace(/<[^>]+>/g,"");
-  check("draaiende wind wordt als draaiing benoemd",/draaiend naar het zuidzuidwesten/.test(t3),t3);
+  check("draaiende wind wordt als draaiing benoemd",/draait naar het zuidzuidwesten/.test(t3),t3);
   check("draaiende wind begint bij de huidige richting",uitZin(t3)==="noordwesten",uitZin(t3));
 }
 
@@ -164,6 +190,17 @@ groep("Randgevallen");
     try{ brief(opties); }catch(e){ ok=false; mld=e.message; }
     check(naam+" loopt niet vast",ok,mld);
   }
+
+  const {api,bak}=laadKern(390);
+  const d=bouw({});
+  const i=d.hourly.time.findIndex(t=>t.slice(0,13)===d.current.time.slice(0,13));
+  d.current.wind_speed_10m=-4;d.current.wind_gusts_10m=-8;d.current.pressure_msl=-1;
+  d.hourly.visibility[i]=-200;
+  Object.assign(api.S,{d,i0:i,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+  api.meters();
+  check("negatieve fysiek ongeldige meterwaarden worden als ontbrekend behandeld",
+    [bak.wind,bak.gust,bak.pres,bak.vis].every(el=>/–/.test(el.innerHTML||el.textContent)),
+    [bak.wind,bak.gust,bak.pres,bak.vis].map(el=>el.innerHTML||el.textContent).join(" / "));
 }
 
 /* 7. grafiek blijft binnen zijn kader */
@@ -357,7 +394,8 @@ groep("Volledigheid van de teksten");
     klokOverride:new Date("2026-07-22T12:00:00Z")});
   api.briefing();
   const t=norm(bak.brief.innerHTML).replace(/<[^>]+>/g,"");
-  check("warmste moment in het verleden krijgt tijd en temperatuur",/warmst rond \d\d:\d\d met \d+ graden/.test(t),t);
+  check("warmste moment in het verleden krijgt dag, tijd en temperatuur",
+    /Vandaag was het rond \d\d:\d\d het warmst met \d+ graden/.test(t),t);
   const nat=brief({pr:(u)=>u<12?0.4:0,pp:(u)=>u<12?70:5,som:2.4}).bak;
   check("neerslag die al gevallen is gebruikt ook de dagsomformulering, niet 'viel'",
     /in totaal 2,4 mm neerslag verwacht/.test(nat.precsub.textContent) && !/\bviel\b/.test(nat.precsub.textContent),
@@ -969,7 +1007,7 @@ groep("Zinsbouw");
     Object.assign(api.S,{d:d,i0:i,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
     api.meters();api.briefing();
     const t=norm(bak.brief.innerHTML).replace(/<[^>]+>/g,"");
-    check("de wind piekt later, en dat wordt vermeld",/sterkst rond \d\d:\d\d/.test(t),t);
+    check("de wind piekt later, en dat wordt vermeld",/rond \d\d:\d\d is de wind op zijn sterkst/.test(t),t);
     for(const [naam,re] of splitsingen)
       if(re.test(t)) gevonden.push(naam+"  ->  "+t.trim());
   }
@@ -1192,6 +1230,17 @@ groep("Tooltip");
   // wijkt af van de rest van de app
   check("de tooltip schrijft eenheden zonder losse spatie",
     !/\+" °C"|\+" %"/.test(bron), (bron.match(/\+" °C"|\+" %"/)||[""])[0]);
+  check("een ontbrekende windrichting wordt in de tooltip niet als noord verzonnen",
+    !/G\.WD\[i\]\|\|0/.test(bron)&&/const windRichting=heel\(G\.WD&&G\.WD\[i\]\)/.test(bron));
+
+  const {api:aKans,bak:bKans}=laadKern(390);
+  const dKans=bouw({});
+  dKans.hourly.precipitation_probability.fill(null);
+  Object.assign(aKans.S,{d:dKans,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+  aKans.etmaal(14,24);
+  check("de grafiek noemt ontbrekende neerslagkansen niet 0% voor schermlezers",
+    /neerslagkans niet beschikbaar/.test(bKans.chart.getAttribute("aria-label")||""),
+    bKans.chart.getAttribute("aria-label"));
 }
 
 /* 10h. 's nachts hoort er geen zon in de omschrijving te staan */
@@ -1364,6 +1413,9 @@ groep("Dagtabel en tegels");
   api.dagen(); api.meters();
 
   const rijen=bak.days.innerHTML;
+  check("de kop van de weektabel behoudt zijn betekenis",
+    /class="dcond">Verwachting<\/div>/.test(rijen)&&/class="drain">Kans<\/div>/.test(rijen),
+    rijen.slice(0,500));
   check("de kanskolom toont ook hoeveel er valt",/<small>[\d,]+ mm<\/small>/.test(rijen),
     (rijen.match(/class="drain">[^<]*(<small>[^<]*<\/small>)?/)||[""])[0]);
   check("de hoeveelheid blijft weg als het droog is",
@@ -1371,6 +1423,21 @@ groep("Dagtabel en tegels");
   // op het bureaublad staat het al in de kolom Verwachting, dus daar verborgen
   check("de hoeveelheid verschijnt alleen op de telefoon",
     /\.drain small\{display:none/.test(bronD) && /\.drain small\{display:block\}/.test(bronD));
+
+  const {api:apiLeeg,bak:bakLeeg}=laadKern(390);
+  const leeg=bouw({});
+  for(const veld of ["weather_code","wind_speed_10m_max","wind_direction_10m_dominant",
+    "precipitation_probability_max","precipitation_sum"]){
+    leeg.daily[veld][0]=null;
+  }
+  Object.assign(apiLeeg.S,{d:leeg,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
+  apiLeeg.dagen();
+  const eersteLegeRij=(bakLeeg.days.innerHTML.split('<div class="row day"')[1]||"");
+  check("ontbrekende daggegevens worden niet als nul, noord of droog verzonnen",
+    /Verwachting niet beschikbaar/.test(eersteLegeRij)
+      &&!/\b0\s*Bft\b|Droog|NaN|undefined/.test(eersteLegeRij),eersteLegeRij);
+  check("ontbrekende wind en neerslagkans krijgen een streepje",
+    (eersteLegeRij.match(/>–<\/div>/g)||[]).length>=2,eersteLegeRij);
 
   check("de UV-index heeft een eigen tegel",/id="uv"/.test(bronD)&&/id="uvsub"/.test(bronD));
   // set() schrijft innerHTML omdat de eenheid in een <s> staat
@@ -2041,7 +2108,7 @@ groep("Neerslagtegel");
   Object.assign(aM.S,{d:dM,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,klokOverride:KLOK});
   aM.meters();
   check("ontbrekende dagsom geeft de nette foutmelding",
-    bM.precsub.textContent==="Totale neerslag van vandaag niet beschikbaar",bM.precsub.textContent);
+    bM.precsub.textContent==="Totale neerslag van vandaag niet beschikbaar.",bM.precsub.textContent);
 
   // de dag wordt via de datum opgezocht, niet blind index 0
   check("de code zoekt de dag via plaatsVandaag(), niet blind day.time[0]",
@@ -2057,9 +2124,19 @@ groep("Neerslagtegel");
     dO.daily.precipitation_sum=[0,...dO.daily.precipitation_sum.slice(0,6)];
     Object.assign(aO.S,{d:dO,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,klokOverride:KLOK});
     aO.meters();
-    check("een verschoven dagreeks levert nog steeds de juiste dagsom",
+  check("een verschoven dagreeks levert nog steeds de juiste dagsom",
       /1,2 mm/.test(norm(bO.precsub.textContent)),bO.precsub.textContent);
   }
+
+  const {api:aN,bak:bN}=laadKern(390);
+  const dN=bouw({});
+  dN.current.precipitation=-1;
+  Object.assign(aN.S,{d:dN,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,klokOverride:KLOK});
+  aN.meters();
+  check("een negatieve actuele neerslagwaarde wordt niet als echte meting getoond",
+    /–/.test(bN.prec.innerHTML||bN.prec.textContent)
+      &&!/-1|NaN|undefined/.test((bN.prec.innerHTML||bN.prec.textContent)+" "+bN.precsub.textContent),
+    (bN.prec.innerHTML||bN.prec.textContent)+" / "+bN.precsub.textContent);
 }
 
 /* 10t2. neerslagkans komend uur: de subtekst gebruikt exact hetzelfde tijdvenster
@@ -2090,6 +2167,17 @@ groep("Neerslagkans komend uur");
   check("hoge kans komend uur noemt het percentage van dat uur",
     /^Komend uur is de neerslagkans 77%\.$/.test(hoog.sub),hoog.sub);
   check("de kop en de subtekst tonen hetzelfde percentage",hoog.pop.startsWith("77"),hoog.pop);
+
+  const {api:aGeen,bak:bGeen}=laadKern(390);
+  const dGeen=bouw({}),iGeen=14;
+  dGeen.hourly.precipitation_probability[iGeen+1]=null;
+  Object.assign(aGeen.S,{d:dGeen,i0:iGeen,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,
+    klokOverride:KLOK});
+  aGeen.meters();
+  check("ontbrekende kans voor het komende uur wordt niet stilletjes 0%",
+    /–/.test(bGeen.pop.innerHTML)
+      &&/niet beschikbaar/.test(norm(bGeen.popsub.textContent)),
+    bGeen.pop.innerHTML+" / "+bGeen.popsub.textContent);
 }
 
 /* 10u. briefing en neerslagtekst delen dezelfde conclusie over de komende twee uur */
@@ -2191,14 +2279,14 @@ groep("Luchtvochtigheid zonder dauwpunt");
   Object.assign(aH.S,{d:dH,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
   aH.meters();
   check("ontbrekende luchtvochtigheid geeft de nette foutmelding",
-    norm(bH.humsub.textContent)==="Luchtvochtigheid niet beschikbaar",norm(bH.humsub.textContent));
+    norm(bH.humsub.textContent)==="Luchtvochtigheid niet beschikbaar.",norm(bH.humsub.textContent));
 
   const {api:aH2,bak:bH2}=laadKern(1280);
   const dH2=bouw({}); dH2.current.relative_humidity_2m=140;   // buiten 0-100
   Object.assign(aH2.S,{d:dH2,i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
   aH2.meters();
   check("een waarde buiten 0-100 geldt als ongeldig",
-    norm(bH2.humsub.textContent)==="Luchtvochtigheid niet beschikbaar",norm(bH2.humsub.textContent));
+    norm(bH2.humsub.textContent)==="Luchtvochtigheid niet beschikbaar.",norm(bH2.humsub.textContent));
 
   // dew_point_2m mag niet overal verdwenen zijn: de nachtzichtberekening gebruikt
   // het veld nog, dus die aanroep moet intact blijven. De zichtbare regel onder

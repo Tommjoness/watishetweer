@@ -89,11 +89,16 @@ vervangEenmalig(
    geen balk, percentage of tooltipwaarde meer opleveren. Temperatuur en andere
    momentwaarden blijven wel staan; alleen de intervalwaarden worden leeggemaakt. */
 vervangEenmalig(
-  "    P.push(h.precipitation_probability[i]??0);MM.push(h.precipitation[i]??0);",
-`    const intervalVerlopen=S.dag==null&&globalThis.WeatherNowInterpretatie
+`    const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[i]);
+    const hoeveelheid=eindigGetal(h.precipitation&&h.precipitation[i]);
+    P.push(kans===null||kans<0?null:clamp(kans,0,100));
+    MM.push(hoeveelheid===null||hoeveelheid<0?null:hoeveelheid);`,
+`    const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[i]);
+    const hoeveelheid=eindigGetal(h.precipitation&&h.precipitation[i]);
+    const intervalVerlopen=S.dag==null&&globalThis.WeatherNowInterpretatie
       &&globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(h.time[i])<=globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(S.d.current.time);
-    P.push(intervalVerlopen?null:(h.precipitation_probability[i]??null));
-    MM.push(intervalVerlopen?null:(h.precipitation[i]??null));`,
+    P.push(intervalVerlopen||kans===null||kans<0?null:clamp(kans,0,100));
+    MM.push(intervalVerlopen||hoeveelheid===null||hoeveelheid<0?null:hoeveelheid);`,
   "verlopen grafiekintervallen"
 );
 
@@ -148,6 +153,10 @@ if(!html.includes("S.actieveWaarschuwingen=[];")) throw new Error("Waarschuwinge
 if(!html.includes("Officiële weerwaarschuwingen konden niet worden gecontroleerd.")) throw new Error("Ontbrekende waarschuwingdekking blijft stil.");
 if(!html.includes("mijnBeurt!==waarschuwingTeller")) throw new Error("Verouderde waarschuwingaanvragen worden niet geweigerd.");
 if(!html.includes("const rondGetal=")) throw new Error("Null-veilige temperatuurweergave ontbreekt.");
+if(!html.includes('const scheiding="<!--brief-rest-->"')) throw new Error("Briefinglagen kunnen de tijdgebonden samenvatting niet veilig scheiden.");
+if(!html.includes('classList.contains("kop")')) throw new Error("Weekinterpretatie kan de semantische tabelkop nog overschrijven.");
+if(!html.includes('dagAanduiding(h.time[top],true)+" wordt het maximaal')) throw new Error("Temperatuurmaximum mist een voorafgaande dagaanduiding.");
+if(!html.includes('zonDag+" · "')) throw new Error("Zonmomenten missen een expliciete dag bij de 24-uursweergave.");
 
 fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 

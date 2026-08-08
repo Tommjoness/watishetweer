@@ -423,10 +423,10 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       zetEyebrow("prec","Neerslag recent");
       const c=S.d.current||{};
       const intervalMin=Math.max(1,Math.round((getal(c.interval)||900)/60));
-      const recent=getal(c.precipitation);
+      const recent=veldGetal(c.precipitation,"precipitation");
       set("prec",recent===null?"–":recent<=INTERPRETATIE_CONFIG.spoorMm?"Geen":(recent<0.1?"<0,1":nl(recent))+"<s>mm</s>");
       const dag=S.d.daily||{},idx=dag.time?dag.time.indexOf(plaatsVandaag()):-1;
-      const dagsom=idx>=0&&dag.precipitation_sum?getal(dag.precipitation_sum[idx]):null;
+      const dagsom=idx>=0&&dag.precipitation_sum?veldGetal(dag.precipitation_sum[idx],"precipitation_sum"):null;
       zetTekst("precsub",recent===null
         ? "Recente neerslag is niet beschikbaar."
         : (recent<=INTERPRETATIE_CONFIG.spoorMm
@@ -440,14 +440,8 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       origineel.briefing();
       const el=document.getElementById("brief");
       const bestaand=el.innerHTML;
-      const markers=["Het wordt maximaal","Het was het warmst","Warmer dan","De temperatuur blijft",
-        "De actuele temperatuur is niet beschikbaar","Temperatuurgegevens zijn momenteel niet beschikbaar"];
-      let idx=-1;
-      for(const marker of markers){
-        const i=bestaand.indexOf(marker);
-        if(i>=0&&(idx<0||i<idx)) idx=i;
-      }
-      const rest=idx>=0?bestaand.slice(idx):bestaand;
+      const scheiding="<!--brief-rest-->",idx=bestaand.indexOf(scheiding);
+      const rest=idx>=0?bestaand.slice(idx+scheiding.length):bestaand;
       const twee=analyse(120);
       let voor=esc(neerslagZin(twee));
       const waars=S.actieveWaarschuwingen||[];
@@ -477,6 +471,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       origineel.dagen();
       const rijen=document.querySelectorAll("#days .row.day");
       rijen.forEach(rij=>{
+        if(rij.classList&&rij.classList.contains("kop")) return;
         const i=Number(rij.dataset.i),a=analyseerDagData(S.d,i);
         const cond=rij.querySelector(".dcond"),kans=rij.querySelector(".drain"),icoon=rij.querySelector(".dico");
         if(cond) cond.textContent=dagSamenvatting(a);
