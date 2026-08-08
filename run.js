@@ -534,15 +534,20 @@ groep("Grafieklabel-prioriteit");
     let klokOverride=null;
     if(opties&&opties.klokUur!=null){
       // een geldig "huidig punt" simuleren op een vast uur diezelfde dag.
-      // plaatsNu() telt (plaats-offset - eigen-offset) op bij de meegegeven
-      // klokOverride; dat verschil hier vooraf compenseren zodat het
-      // resultaat precies op opties.klokUur in TI landt, ongeacht de
-      // tijdzone van de omgeving waarin de test draait.
+      // Compenseer zowel de plaats-offset als een eventuele zomer-/wintertijd
+      // van het testproces, zodat deze test lokaal en in UTC-CI hetzelfde uur
+      // aanwijst.
       const dagStr=d.hourly.time[0].slice(0,10);
-      const eigenOffset=-new Date().getTimezoneOffset()*60;
-      const daarOffset=d.utc_offset_seconds!=null?d.utc_offset_seconds:eigenOffset;
-      const verschil=daarOffset-eigenOffset;
-      klokOverride=new Date(Date.parse(dagStr+"T"+String(opties.klokUur).padStart(2,"0")+":00:00Z")-verschil*1000);
+      const doel=Date.parse(dagStr+"T"+String(opties.klokUur).padStart(2,"0")+":00:00Z");
+      const eigenNu=-new Date().getTimezoneOffset()*60;
+      const daarOffset=d.utc_offset_seconds!=null?d.utc_offset_seconds:eigenNu;
+      let basis=doel-daarOffset*1000;
+      for(let poging=0;poging<2;poging++){
+        const verschoven=basis+(daarOffset-eigenNu)*1000;
+        const eigenOpDoelmoment=-new Date(verschoven).getTimezoneOffset()*60;
+        basis=doel-(daarOffset-eigenNu+eigenOpDoelmoment)*1000;
+      }
+      klokOverride=new Date(basis);
     }
     Object.assign(api.S,{d,i0:0,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,klokOverride,
       bereik:(opties&&opties.bereik)||24});
@@ -2032,8 +2037,10 @@ groep("Luchtvochtigheid zonder dauwpunt");
 {
   const fsV=require("fs"), pathV=require("path");
   const bronV=fsV.readFileSync(pathV.join(__dirname,"index.html"),"utf8");
-  const humBlok=bronV.slice(bronV.indexOf("const vocht=c.relative_humidity_2m"),
-                             bronV.indexOf("const luchtdrukIdx")||bronV.indexOf("set(\"pres\""));
+  const humStart=bronV.indexOf("const vocht=c.relative_humidity_2m");
+  const humEind=[bronV.indexOf("const luchtdrukIdx",humStart),bronV.indexOf("set(\"pres\"",humStart)]
+    .filter(i=>i>humStart).sort((a,b)=>a-b)[0];
+  const humBlok=bronV.slice(humStart,humEind);
   check("het dauwpunt staat niet meer in de luchtvochtigheidszin",
     !/dauwpunt|verzadiging|wolken vanaf/.test(humBlok),humBlok);
 
@@ -3173,6 +3180,67 @@ async function testenOpstartlocatie(){
     check("9. geen geolocation-ondersteuning geeft een duidelijke melding, geen crash",
       /locatie/i.test(bak.state.textContent),bak.state.textContent);
     check("9. zoeken blijft bruikbaar",bak.q!=null);
+  }
+
+  // 9b. een trage waarschuwing van de vorige plaats mag nooit terugschrijven
+  {
+    const aanvragen=[];
+    const fetchMock=url=>new Promise(resolve=>aanvragen.push({url:String(url),resolve}));
+    const {api,bak}=laadKern(1280,{geoOntbreekt:true,fetch:fetchMock});
+    Object.assign(api.S,{d:bouw({}),lat:52.09,lon:5.12,label:"Utrecht",i0:14,dag:null,
+      actieveWaarschuwingen:[{titel:"Oude melding"}]});
+    bak.waarschuwingen.innerHTML="<div>Oude melding</div>";
+
+    const oud=api.waarschuwingen();
+    check("9b. een nieuwe aanvraag wist de waarschuwing van de vorige plaats direct",
+      api.S.actieveWaarschuwingen.length===0&&bak.waarschuwingen.innerHTML==="");
+    api.S.lat=51.92;api.S.lon=4.48;api.S.label="Rotterdam";
+    const nieuw=api.waarschuwingen();
+    check("9b. beide waarschuwingaanvragen gebruiken hun eigen coordinaten",
+      aanvragen.length===2&&/52\.09/.test(aanvragen[0].url)&&/51\.92/.test(aanvragen[1].url),
+      aanvragen.map(x=>x.url).join(" | "));
+
+    const antwoord=titel=>({ok:true,json:async()=>({dekking:true,lijst:[{
+      titel,tekst:"Test",niveau:"geel",van:"2099-01-01T00:00:00Z",tot:"2099-01-01T01:00:00Z"
+    }]})});
+    aanvragen[1].resolve(antwoord("Rotterdam-waarschuwing"));
+    await wacht(3);
+    aanvragen[0].resolve(antwoord("Utrecht-waarschuwing"));
+    await Promise.all([oud,nieuw]);
+    check("9b. het late antwoord van de vorige plaats wordt genegeerd",
+      api.S.actieveWaarschuwingen.length===1
+      &&api.S.actieveWaarschuwingen[0].titel==="Rotterdam-waarschuwing"
+      &&/Rotterdam-waarschuwing/.test(bak.waarschuwingen.innerHTML)
+      &&!/Utrecht-waarschuwing/.test(bak.waarschuwingen.innerHTML),
+      bak.waarschuwingen.innerHTML);
+  }
+
+  // 9c. ontbrekende temperatuurdata blijft zichtbaar ontbrekend en wordt nooit 0 °C
+  {
+    const {api,bak}=laadKern(1280,{geoOntbreekt:true});
+    const d=bouw({});
+    d.current.temperature_2m=null;
+    d.current.apparent_temperature=null;
+    d.hourly.temperature_2m=d.hourly.temperature_2m.map(()=>null);
+    d.hourly.apparent_temperature=d.hourly.apparent_temperature.map(()=>null);
+    d.daily.temperature_2m_min=d.daily.temperature_2m_min.map(()=>null);
+    d.daily.temperature_2m_max=d.daily.temperature_2m_max.map(()=>null);
+    Object.assign(api.S,{d,lat:52.35,lon:5.26,label:"Test",dag:null,bereik:24,op:Date.now()});
+    api.S.i0=d.hourly.time.findIndex(t=>t.slice(0,13)===d.current.time.slice(0,13));
+    let foutmelding=null;
+    try{api.tekenAlles();}catch(e){foutmelding=e.message;}
+    check("9c. een volledig ontbrekende temperatuurreeks laat de app niet vastlopen",foutmelding===null,foutmelding);
+    const temperatuurUitvoer=[bak.t.textContent,bak.feels.textContent,bak.minitemp.textContent,
+      bak.brief.innerHTML,bak.days.innerHTML,bak.nights.innerHTML].join(" ");
+    check("9c. ontbrekende temperatuur wordt met een streep of uitleg getoond",
+      bak.t.textContent==="–"&&bak.minitemp.textContent==="–"
+      &&/niet beschikbaar/.test(bak.feels.textContent)
+      &&/Temperatuurgegevens zijn momenteel niet beschikbaar/.test(bak.brief.innerHTML),
+      temperatuurUitvoer.slice(0,300));
+    check("9c. ontbrekende temperatuur wordt nergens kunstmatig 0 graden",
+      !/(^|[^\d-])0(?:°C|°| graden)/.test(temperatuurUitvoer),temperatuurUitvoer.slice(0,300));
+    check("9c. de dagtabel tekent geen temperatuurband zonder minimum en maximum",
+      !/<div class="bar"><i/.test(bak.days.innerHTML),bak.days.innerHTML.slice(0,300));
   }
 
   // 10. geen regressie

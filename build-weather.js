@@ -46,12 +46,6 @@ function vervangEenmalig(zoek,vervang,label){
   html=html.replace(zoek,vervang);
 }
 
-function vervangEngineEenmalig(zoek,vervang,label){
-  const aantal=engine.split(zoek).length-1;
-  if(aantal!==1) throw new Error(label+": verwacht precies één engine-match, gevonden "+aantal+".");
-  engine=engine.replace(zoek,vervang);
-}
-
 const startMarker="/* ---------- start ---------- */";
 if((html.match(/\/\* ---------- start ---------- \*\//g)||[]).length!==1){
   throw new Error("Startmarker ontbreekt of komt meer dan eenmaal voor; interpretatie-engine niet ingevoegd.");
@@ -144,42 +138,6 @@ vervangEenmalig(
   "bronvermelding"
 );
 
-/* Een waarschuwing van de vorige plaats mag nooit kort in een nieuwe briefing
-   blijven staan. Ook het verschil tussen 'geen waarschuwingen' en 'geen dekking'
-   wordt zichtbaar gemaakt; stil falen is bij veiligheidsinformatie onjuist. */
-vervangEngineEenmalig(
-`  waarschuwingen=async function(){
-    const el=document.getElementById("waarschuwingen");
-    el.innerHTML="";
-    try{
-      const d=await j("/api/waarschuwingen?lat="+S.lat+"&lon="+S.lon);`,
-`  waarschuwingen=async function(){
-    S.actieveWaarschuwingen=[];
-    const el=document.getElementById("waarschuwingen");
-    el.innerHTML="";
-    try{
-      const d=await j("/api/waarschuwingen?lat="+S.lat+"&lon="+S.lon);
-      if(!d || d.dekking!==true){
-        const bronStuk=d&&d.reden==="bron onbereikbaar"
-          ? "konden niet worden gecontroleerd"
-          : "zijn voor deze locatie niet beschikbaar";
-        el.innerHTML='<div class="msg">Officiële weerwaarschuwingen '+bronStuk+'.</div>';
-        if(S.d&&typeof briefing==="function") briefing();
-        return;
-      }`,
-  "waarschuwingen resetten en dekking tonen"
-);
-vervangEngineEenmalig(
-`    }catch(e){
-      S.actieveWaarschuwingen=[];
-    }`,
-`    }catch(e){
-      S.actieveWaarschuwingen=[];
-      el.innerHTML='<div class="msg">Officiële weerwaarschuwingen konden niet worden gecontroleerd.</div>';
-    }`,
-  "waarschuwingfout zichtbaar maken"
-);
-
 const intervalHelper=`
 function weatherNowUurvak(tijd){
   const api=globalThis.WeatherNowInterpretatie;
@@ -213,6 +171,8 @@ if(!html.includes("n<=24?34:n<=48?48:68")) throw new Error("Mobiele labelafstand
 if(!html.includes("const MAXLAAG=3;")) throw new Error("Drie veilige labelhoogtes ontbreken.");
 if(!html.includes("S.actieveWaarschuwingen=[];")) throw new Error("Waarschuwingen van een vorige locatie worden niet direct gewist.");
 if(!html.includes("Officiële weerwaarschuwingen konden niet worden gecontroleerd.")) throw new Error("Ontbrekende waarschuwingdekking blijft stil.");
+if(!html.includes("mijnBeurt!==waarschuwingTeller")) throw new Error("Verouderde waarschuwingaanvragen worden niet geweigerd.");
+if(!html.includes("const rondGetal=")) throw new Error("Null-veilige temperatuurweergave ontbreekt.");
 
 fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 

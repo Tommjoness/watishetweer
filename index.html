@@ -642,6 +642,10 @@ const esc=t=>String(t==null?"":t).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;
 const EENHEDEN="km/u|mm|hPa|Bft|graden|graad|meter|procent|korrels|µg|uur|minuten|minuut|%";
 const nbsp=t=>String(t).replace(new RegExp("(\\d)\\s("+EENHEDEN+")","g"),"$1\u00a0$2");
 const nl=(v,d)=>(v==null?"–":Number(v).toFixed(d==null?1:d).replace(".",","));
+/* null wordt door Number en Math.round als nul behandeld. Weerdata met een gat
+   mag daardoor nooit rechtstreeks een reken- of formatteringsfunctie in. */
+const eindigGetal=v=>v===null||v===undefined||v===""||!Number.isFinite(Number(v))?null:Number(v);
+const rondGetal=v=>{const n=eindigGetal(v);return n===null?null:Math.round(n);};
 function bft(k){let n=0;for(let i=0;i<BFT.length;i++) if(k>=BFT[i]) n=i+1;return n;}
 
 /* ---------- haarlijn-iconen ---------- */
@@ -815,7 +819,7 @@ function maan(d){
 }
 
 /* ---------- state ---------- */
-const S={lat:null,lon:null,label:"",d:null,air:null,i0:0,dag:null,op:0,geo:null,bereik:24};
+const S={lat:null,lon:null,label:"",d:null,air:null,i0:0,dag:null,op:0,geo:null,bereik:24,actieveWaarschuwingen:[]};
 const KEY_P="weerbriefing.plaats",KEY_D="weerbriefing.data",KEY_L="weerbriefing.lijst";
 const ls={
   get(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f;}catch(e){return f;}},
@@ -824,16 +828,24 @@ const ls={
 async function j(url){const r=await fetch(url);if(!r.ok)throw new Error("status "+r.status);return r.json();}
 
 /* ---------- ophalen ---------- */
-let laadTeller=0;
+let laadTeller=0,waarschuwingTeller=0;
 /* opslaan=false is uitsluitend voor een gedeelde URL-locatie: die moet wel
    zichtbaar laden, maar hoort niet de persoonlijke laatst gebruikte plaats te
    overschrijven van iemand die toevallig andermans link opent. */
 async function load(lat,lon,label,stil,opslaan){
   if(opslaan===undefined) opslaan=true;
   const mijnBeurt=++laadTeller;
+  const nieuweLat=Number(lat),nieuweLon=Number(lon);
+  if(S.lat!==nieuweLat||S.lon!==nieuweLon){
+    // Maak iedere lopende waarschuwingaanvraag ongeldig zodra de plaats wijzigt.
+    waarschuwingTeller++;
+    S.actieveWaarschuwingen=[];
+    const waarschuwingEl=document.getElementById("waarschuwingen");
+    if(waarschuwingEl) waarschuwingEl.innerHTML="";
+  }
   const st=document.getElementById("state");
   if(!stil){st.style.display="block";st.className="msg";st.textContent="Gegevens ophalen.";}
-  S.lat=+lat;S.lon=+lon;S.label=label;
+  S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;
 
   const basis="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon
     +"&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,precipitation,"
@@ -904,9 +916,13 @@ function tekenAlles(){
   document.getElementById("place").innerHTML=
     esc(S.label)+'<span id="plaatstijd">'+plaatsKlok()+'</span>';
   document.title=S.label+" · Weerbriefing";
-  document.getElementById("t").textContent=Math.round(c.temperature_2m);
+  const huidigeTemperatuur=rondGetal(c.temperature_2m);
+  const gevoelstemperatuur=rondGetal(c.apparent_temperature);
+  document.getElementById("t").textContent=huidigeTemperatuur===null?"–":huidigeTemperatuur;
   document.getElementById("cond").textContent=txt(c.weather_code,c.is_day!==0);
-  document.getElementById("feels").textContent="Gevoelstemperatuur "+Math.round(c.apparent_temperature)+"°C";
+  document.getElementById("feels").textContent=gevoelstemperatuur===null
+    ?"Gevoelstemperatuur niet beschikbaar"
+    :"Gevoelstemperatuur "+gevoelstemperatuur+"°C";
   document.getElementById("nowicon").innerHTML=icon(c.weather_code,c.is_day===1,46);
   document.getElementById("coords").textContent=S.lat.toFixed(3)+", "+S.lon.toFixed(3)+" · "+d.timezone;
 
@@ -1137,23 +1153,42 @@ function briefing(){
     }
   }
 
-  // temperatuur
-  let top=i,tv=-99;
-  for(let k=i;k<eind;k++){ if(h.temperature_2m[k]>tv){tv=h.temperature_2m[k];top=k;} }
-  let tmin=Infinity;
-  for(let k=i;k<Math.min(i+20,h.time.length);k++){ if(h.temperature_2m[k]<tmin) tmin=h.temperature_2m[k]; }
-  tmin=Math.round(isFinite(tmin)?tmin:day.temperature_2m_min[0]);
-  const nutemp=Math.round(c.temperature_2m);
+  // temperatuur: alleen echte getallen tellen mee; null mag nooit 0 °C worden.
+  let top=null,tv=null;
+  for(let k=i;k<eind;k++){
+    const v=eindigGetal(h.temperature_2m[k]);
+    if(v!==null&&(tv===null||v>tv)){tv=v;top=k;}
+  }
+  const minima=[];
+  for(let k=i;k<Math.min(i+20,h.time.length);k++){
+    const v=eindigGetal(h.temperature_2m[k]);
+    if(v!==null) minima.push(v);
+  }
+  const dagMinimum=eindigGetal(day.temperature_2m_min&&day.temperature_2m_min[0]);
+  const tmin=rondGetal(minima.length?Math.min(...minima):dagMinimum);
+  const huidige=eindigGetal(c.temperature_2m),nutemp=rondGetal(huidige);
   const dagPiek=piek("temperature_2m",0);
   let zin2;
-  if(top>i+1&&tv>c.temperature_2m+0.5){
+  const nachtZin=tmin===null?"":" Vannacht koelt het af naar <b>"+tmin+" graden</b>.";
+  if(huidige===null){
+    if(tv!==null&&top!==null){
+      zin2="De actuele temperatuur is niet beschikbaar. De komende 24 uur wordt maximaal <b>"
+        +Math.round(tv)+" graden</b> verwacht, rond "+hhmm(h.time[top])+"."+nachtZin;
+    }else if(tmin!==null){
+      zin2="De actuele temperatuur is niet beschikbaar. Vannacht wordt ongeveer <b>"+tmin+" graden</b> verwacht.";
+    }else{
+      zin2="Temperatuurgegevens zijn momenteel niet beschikbaar.";
+    }
+  }else if(top!==null&&top>i+1&&tv>huidige+0.5){
     zin2="Het wordt maximaal <b>"+Math.round(tv)+" graden</b>, met het warmste moment rond "+hhmm(h.time[top])
-        +". Vannacht koelt het af naar <b>"+tmin+" graden</b>.";
+        +"."+nachtZin;
   }else if(dagPiek&&dagPiek.t<c.time&&Math.round(dagPiek.v)>nutemp){
     zin2="Het was het warmst rond "+hhmm(dagPiek.t)+" met <b>"+Math.round(dagPiek.v)+" graden</b>. Nu is het "+nutemp
-        +" graden en vannacht koelt het af naar <b>"+tmin+" graden</b>.";
-  }else if(tmin<nutemp-1){
+        +" graden."+nachtZin;
+  }else if(tmin!==null&&tmin<nutemp-1){
     zin2="Warmer dan "+nutemp+" graden wordt het niet meer. Vannacht koelt het af naar "+tmin+" graden.";
+  }else if(tmin===null){
+    zin2="De temperatuur blijft rond "+nutemp+" graden hangen. De nachttemperatuur is niet beschikbaar.";
   }else{
     zin2="De temperatuur blijft rond "+nutemp+" graden hangen, ook vannacht.";
   }
@@ -1819,7 +1854,11 @@ function restkans(){
 }
 function dagen(){
   const day=S.d.daily;
-  const lo=Math.min(...day.temperature_2m_min),hi=Math.max(...day.temperature_2m_max),sp=(hi-lo)||1;
+  const temperatuurWaarden=[...(day.temperature_2m_min||[]),...(day.temperature_2m_max||[])]
+    .map(eindigGetal).filter(v=>v!==null);
+  const lo=temperatuurWaarden.length?Math.min(...temperatuurWaarden):0;
+  const hi=temperatuurWaarden.length?Math.max(...temperatuurWaarden):1;
+  const sp=(hi-lo)||1;
   let out="";
   day.time.forEach((t,i)=>{
     const dt=new Date(t+"T12:00:00");
@@ -1839,14 +1878,17 @@ function dagen(){
     const lang=DAGENVOL[dt.getDay()]+" "+nr;
     const kort=DAGEN[dt.getDay()]+" "+nr;
     const nm='<span class="dlang">'+lang+'</span><span class="dkort">'+kort+'</span>';
-    const l=day.temperature_2m_min[i],hh=day.temperature_2m_max[i];
+    const l=eindigGetal(day.temperature_2m_min[i]),hh=eindigGetal(day.temperature_2m_max[i]);
+    const balk=l===null||hh===null
+      ?""
+      :`<i style="left:${(l-lo)/sp*100}%;width:${Math.max(3,(hh-l)/sp*100)}%"></i>`;
     out+=`<div class="row day${S.dag===i?" on":""}" data-i="${i}" role="button" tabindex="0">
       <div class="dname">${nm}</div><div class="dico">${icon(day.weather_code[i],true,22)}</div>
       <div class="dcond">${txt(day.weather_code[i])}${day.precipitation_sum[i]>0.5?", "+nl(day.precipitation_sum[i])+" mm":""}</div>
       <div class="dwind">${bft(day.wind_speed_10m_max[i]||0)} Bft ${pijl(day.wind_direction_10m_dominant?day.wind_direction_10m_dominant[i]:0,11)}</div>
-      <div class="dmin">${Math.round(l)}°</div>
-      <div class="bar"><i style="left:${(l-lo)/sp*100}%;width:${Math.max(3,(hh-l)/sp*100)}%"></i></div>
-      <div class="dmax">${Math.round(hh)}°</div>
+      <div class="dmin">${l===null?"–":Math.round(l)+"°"}</div>
+      <div class="bar">${balk}</div>
+      <div class="dmax">${hh===null?"–":Math.round(hh)+"°"}</div>
       <div class="drain">${i===0?restkans():(day.precipitation_probability_max[i]??0)}%${
         day.precipitation_sum[i]>0.5?`<small>${nl(day.precipitation_sum[i])} mm</small>`:""}</div></div>`;
   });
@@ -1888,11 +1930,15 @@ function nachten(){
     for(let i=a2;i<=b2;i++){
       if(h.cloud_cover[i]==null) continue;
       C.push(h.cloud_cover[i]);HU.push(h.relative_humidity_2m[i]);
-      SP.push(h.temperature_2m[i]-h.dew_point_2m[i]);GU.push(h.wind_gusts_10m[i]);TT.push(h.time[i]);
+      const temperatuur=eindigGetal(h.temperature_2m[i]),dauwpunt=eindigGetal(h.dew_point_2m[i]);
+      if(temperatuur!==null&&dauwpunt!==null) SP.push(temperatuur-dauwpunt);
+      const windstoot=eindigGetal(h.wind_gusts_10m[i]);
+      if(windstoot!==null) GU.push(windstoot);
+      TT.push(h.time[i]);
     }
     if(!C.length) continue;
     const gem=v=>v.reduce((x,y)=>x+y,0)/v.length;
-    const cw=gem(C),hu=gem(HU),spd=Math.min(...SP),gu=Math.max(...GU);
+    const cw=gem(C),hu=gem(HU),spd=SP.length?Math.min(...SP):null,gu=GU.length?Math.max(...GU):null;
     const mn=maan(new Date(naarUTC(ss.slice(0,10)+"T23:30")));
 
     // maan boven of onder de horizon per uur
@@ -1904,8 +1950,8 @@ function nachten(){
 
     let sc=(1-cw/100)*10;
     if(hu>93) sc-=1.5;
-    if(spd<1.5) sc-=1;
-    if(gu>45) sc-=1;
+    if(spd!==null&&spd<1.5) sc-=1;
+    if(gu!==null&&gu>45) sc-=1;
     sc-=2.2*mn.ill*maanDeel*(1-cw/140);          // maan telt alleen mee als hij ook echt op is
     sc=clamp(sc,0,10);
 
@@ -2071,17 +2117,43 @@ function logBij(){
 
 /* ---------- officiele waarschuwingen ---------- */
 async function waarschuwingen(){
+  const mijnBeurt=++waarschuwingTeller;
+  const lat=S.lat,lon=S.lon;
   const el=document.getElementById("waarschuwingen");
+  S.actieveWaarschuwingen=[];
   el.innerHTML="";
   try{
-    const d=await j("/api/waarschuwingen?lat="+S.lat+"&lon="+S.lon);
-    if(!d||!d.lijst||!d.lijst.length) return;
-    el.innerHTML=d.lijst.slice(0,3).map(w=>
-      // landelijk betekent: de bron leverde geen gebied mee, dus we weten niet
-      // of dit precies hier geldt. Dat hoort de lezer te weten.
-      `<div class="waarsch"><h3>${esc(w.titel)}</h3><p>${esc(w.tekst||"")}${w.tot?" Geldig tot "+esc(w.tot)+".":""}${w.landelijk?" Geldt voor een groter gebied, niet per se voor deze plaats.":""}</p></div>`
-    ).join("");
-  }catch(e){ /* geen functie of geen verbinding: blok blijft leeg */ }
+    const d=await j("/api/waarschuwingen?lat="+lat+"&lon="+lon);
+    if(mijnBeurt!==waarschuwingTeller||S.lat!==lat||S.lon!==lon) return;
+    if(!d||d.dekking!==true){
+      const bronStuk=d&&d.reden==="bron onbereikbaar"
+        ?"konden niet worden gecontroleerd"
+        :"zijn voor deze locatie niet beschikbaar";
+      el.innerHTML='<div class="msg">Officiële weerwaarschuwingen '+bronStuk+'.</div>';
+      if(S.d&&typeof briefing==="function") briefing();
+      return;
+    }
+    const nu=Date.now(),rang={rood:3,oranje:2,geel:1},uniek=new Map();
+    for(const w of (Array.isArray(d.lijst)?d.lijst:[])){
+      const einde=w.tot?Date.parse(w.tot):NaN;
+      if(Number.isFinite(einde)&&einde<nu) continue;
+      const sleutel=[w.titel||"",w.tot||"",w.gebied||""].join("|").toLowerCase();
+      if(!uniek.has(sleutel)) uniek.set(sleutel,w);
+    }
+    const lijst=[...uniek.values()].sort((a,b)=>(rang[b.niveau]||0)-(rang[a.niveau]||0)
+      ||((Date.parse(a.van)||Infinity)-(Date.parse(b.van)||Infinity)));
+    S.actieveWaarschuwingen=lijst;
+    el.innerHTML=lijst.slice(0,3).map(w=>
+      `<div class="waarsch"><h3>${esc(w.titel)}</h3><p>${esc(w.tekst||"")}`
+      +(w.tot?" Geldig tot "+esc(w.tot)+".":"")
+      +(w.landelijk?" Geldt voor een groter gebied, niet per se voor deze plaats.":"")
+      +`</p></div>`).join("");
+  }catch(e){
+    if(mijnBeurt!==waarschuwingTeller||S.lat!==lat||S.lon!==lon) return;
+    S.actieveWaarschuwingen=[];
+    el.innerHTML='<div class="msg">Officiële weerwaarschuwingen konden niet worden gecontroleerd.</div>';
+  }
+  if(S.d&&typeof briefing==="function") briefing();
 }
 
 /** Vertaalt een maanfase (0,0 tot 1,0, waarbij 1,0 hetzelfde is als 0,0) naar het
@@ -2145,7 +2217,8 @@ function minibarBij(){
   // altijd de volledige naam beschikbaar, ook als de tekst zelf wordt afgekapt
   pl.title=S.label; pl.setAttribute("aria-label",S.label);
 
-  document.getElementById("minitemp").textContent=Math.round(S.d.current.temperature_2m)+"°C";
+  const temperatuur=rondGetal(S.d.current.temperature_2m);
+  document.getElementById("minitemp").textContent=temperatuur===null?"–":temperatuur+"°C";
   const cond=document.getElementById("minicond");
   if(cond){
     const tekst=txt(S.d.current.weather_code,S.d.current.is_day!==0).toLowerCase();

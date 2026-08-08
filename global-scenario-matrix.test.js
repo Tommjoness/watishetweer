@@ -37,8 +37,18 @@ function isoLokaalNaarMs(lokaal){
 }
 
 function zetPlaatsKlok(api,offsetSeconden,lokaal){
-  const eigen=-new Date().getTimezoneOffset()*60;
-  const basis=isoLokaalNaarMs(lokaal)-(offsetSeconden-eigen)*1000;
+  /* De app verschuift vanaf de actuele browsertijd en gebruikt daarbij de
+     huidige browser-offset. Bij een historische testdatum kan getHours() door
+     zomer-/wintertijd echter een andere browser-offset toepassen. Los dat in de
+     fixture op, zodat de matrix onafhankelijk blijft van land en TZ van CI. */
+  const doel=isoLokaalNaarMs(lokaal);
+  const eigenNu=-new Date().getTimezoneOffset()*60;
+  let basis=doel-offsetSeconden*1000;
+  for(let i=0;i<2;i++){
+    const verschoven=basis+(offsetSeconden-eigenNu)*1000;
+    const eigenOpDoelmoment=-new Date(verschoven).getTimezoneOffset()*60;
+    basis=doel-(offsetSeconden-eigenNu+eigenOpDoelmoment)*1000;
+  }
   api.S.klokOverride=new Date(basis);
 }
 

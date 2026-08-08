@@ -371,7 +371,6 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
     nowcast:typeof nowcast==="function"?nowcast:null,
     dagen:typeof dagen==="function"?dagen:null,
     lucht:typeof lucht==="function"?lucht:null,
-    waarschuwingen:typeof waarschuwingen==="function"?waarschuwingen:null,
     etmaal:typeof etmaal==="function"?etmaal:null,
     chartHint:typeof chartHint==="function"?chartHint:null,
     daglengte:typeof daglengte==="function"?daglengte:null,
@@ -527,33 +526,6 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       });
     };
   }
-
-  waarschuwingen=async function(){
-    const el=document.getElementById("waarschuwingen");
-    el.innerHTML="";
-    try{
-      const d=await j("/api/waarschuwingen?lat="+S.lat+"&lon="+S.lon);
-      const nu=Date.now(),rang={rood:3,oranje:2,geel:1};
-      const uniek=new Map();
-      for(const w of (d&&Array.isArray(d.lijst)?d.lijst:[])){
-        const einde=w.tot?Date.parse(w.tot):NaN;
-        if(Number.isFinite(einde)&&einde<nu) continue;
-        const sleutel=[w.titel||"",w.tot||"",w.gebied||""].join("|").toLowerCase();
-        if(!uniek.has(sleutel)) uniek.set(sleutel,w);
-      }
-      const lijst=[...uniek.values()].sort((a,b)=>(rang[b.niveau]||0)-(rang[a.niveau]||0)
-        ||((Date.parse(a.van)||Infinity)-(Date.parse(b.van)||Infinity)));
-      S.actieveWaarschuwingen=lijst;
-      el.innerHTML=lijst.slice(0,3).map(w=>
-        `<div class="waarsch"><h3>${esc(w.titel)}</h3><p>${esc(w.tekst||"")}`
-        +(w.tot?" Geldig tot "+esc(w.tot)+".":"")
-        +(w.landelijk?" Geldt voor een groter gebied, niet per se voor deze plaats.":"")
-        +`</p></div>`).join("");
-    }catch(e){
-      S.actieveWaarschuwingen=[];
-    }
-    if(S.d&&typeof briefing==="function") briefing();
-  };
 
   daglengte=function(i){
     const sr=S.d.daily.sunrise[i],ss=S.d.daily.sunset[i];

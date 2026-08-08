@@ -28,8 +28,10 @@ ok(!/weerbriefing-v\d+/.test(sw),"geen handmatig vast cacheversienummer in produ
 
 const gebouwd=fs.readFileSync(path.join(PUBLIC,"index.html"),"utf8");
 ok(gebouwd.includes("S.actieveWaarschuwingen=[];"),"waarschuwingen van een vorige locatie worden direct gewist");
+ok(gebouwd.includes("mijnBeurt!==waarschuwingTeller"),"een verouderd waarschuwingantwoord kan de nieuwe plaats niet overschrijven");
 ok(gebouwd.includes("Officiële weerwaarschuwingen konden niet worden gecontroleerd."),"onbereikbare waarschuwingbron blijft niet stil");
 ok(gebouwd.includes("zijn voor deze locatie niet beschikbaar"),"ontbrekende werelddekking wordt eerlijk gemeld");
+ok(gebouwd.includes("const rondGetal="),"temperatuurweergaven blokkeren null als kunstmatige nul");
 
 const vercel=JSON.parse(fs.readFileSync(path.join(ROOT,"vercel.json"),"utf8"));
 const headers=(vercel.headers&&vercel.headers[0]&&vercel.headers[0].headers)||[];
