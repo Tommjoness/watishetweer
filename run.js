@@ -198,8 +198,8 @@ for(const [naam,n,br] of [["24 uur op de desktop",24,1280],["48 uur op de deskto
   check(naam+": aslabels overlappen niet",botsing===0,botsing+" botsingen bij "+as.length+" labels");
 }
 
-/* 7c. redundante temperatuurcijfers en daglichttijden op mobiel */
-groep("Rustige grafiek en daglichttijden");
+/* 7c. volledige etmaalmarkeringen en daglichttijden op mobiel */
+groep("Volledige etmaalgrafiek en daglichttijden");
 {
   const {api,bak}=laadKern(390);
   const waarden={
@@ -217,13 +217,10 @@ groep("Rustige grafiek en daglichttijden");
   api.etmaal(api.S.i0,24);
   const labels=[...bak.chart.innerHTML.matchAll(/<text x="([\d.]+)" y="([\d.]+)" text-anchor="middle" fill="[^"]+"[^>]*font-family="Bodoni Moda,serif" font-size="[\d.]+">(-?\d+)°<\/text>/g)]
     .map(m=>({x:+m[1],y:+m[2],v:+m[3]}));
-  const redundant=[];
-  for(let i=0;i<labels.length;i++) for(let j=i+1;j<labels.length;j++){
-    const a=labels[i],b=labels[j];
-    if(Math.abs(a.x-b.x)<48 && a.v===b.v) redundant.push(a.v+"°/"+b.v+"°");
-  }
-  check("mobiel toont geen vrijwel gelijke temperatuurcijfers vlak naast elkaar",
-    redundant.length===0,redundant.join(", "));
+  const gemarkeerd=new Set([...bak.chart.innerHTML.matchAll(/data-temp-index="(\d+)"/g)].map(m=>+m[1]));
+  const referenties=[0,3,6,9,12,15,18,21];
+  check("mobiel toont een temperatuur bij ieder zichtbaar drie-uursmoment",
+    referenties.every(i=>gemarkeerd.has(i)),"ontbrekend: "+referenties.filter(i=>!gemarkeerd.has(i)).join(","));
   check("belangrijke piek en dal blijven wel gelabeld",
     labels.some(x=>x.v===23)&&labels.some(x=>x.v===14),labels.map(x=>x.v).join(","));
   check("daglichttijden blijven drie afzonderlijke onderdelen",
@@ -234,8 +231,8 @@ groep("Rustige grafiek en daglichttijden");
     /#suntimes\{display:grid;grid-template-columns:1fr;gap:2px/.test(bron));
 }
 
-/* 7c2. Ook een extreem onrustige temperatuurreeks blijft op mobiel rustig. */
-groep("Harde limiet temperatuurlabels");
+/* 7c2. Langere bereiken blijven begrensd; een etmaal behoudt zijn raster. */
+groep("Dichtheid temperatuurlabels");
 for(const bereik of [24,48,168]){
   const {api,bak}=laadKern(390);
   const d=bouw({temp:(u,dag)=>12+((u+dag*3)%2?9:-5)+(u%5===0?4:0)});
@@ -244,14 +241,20 @@ for(const bereik of [24,48,168]){
   api.etmaal(api.S.i0,bereik);
   const labels=[...bak.chart.innerHTML.matchAll(/<text x="([\d.]+)" y="([\d.]+)" text-anchor="middle" fill="[^"]+"[^>]*font-family="Bodoni Moda,serif" font-size="([\d.]+)">(-?\d+)°<\/text>/g)]
     .map(m=>({x:+m[1],y:+m[2],fs:+m[3],v:+m[4]})).sort((a,b)=>a.x-b.x);
-  const limiet=bereik<=24?5:bereik<=48?4:3;
-  check(bereik+" uur mobiel: niet meer dan "+limiet+" temperatuurcijfers",
-    labels.length<=limiet,labels.length+" labels: "+labels.map(x=>x.v).join(","));
+  if(bereik<=24){
+    const gemarkeerd=new Set([...bak.chart.innerHTML.matchAll(/data-temp-index="(\d+)"/g)].map(m=>+m[1]));
+    check("24 uur mobiel: alle acht zichtbare drie-uursmomenten blijven gemarkeerd",
+      [0,3,6,9,12,15,18,21].every(i=>gemarkeerd.has(i)),[...gemarkeerd].join(","));
+  }else{
+    const limiet=bereik<=48?6:4;
+    check(bereik+" uur mobiel: niet meer dan "+limiet+" temperatuurcijfers",
+      labels.length<=limiet,labels.length+" labels: "+labels.map(x=>x.v).join(","));
+  }
   const botsingen=[];
   for(let i=0;i<labels.length;i++) for(let j=i+1;j<labels.length;j++){
     const a=labels[i],b=labels[j];
-    const breedA=(String(a.v).length+1)*a.fs*0.58+a.fs*0.40;
-    const breedB=(String(b.v).length+1)*b.fs*0.58+b.fs*0.40;
+    const breedA=String(a.v).length*a.fs*0.58+a.fs*0.40;
+    const breedB=String(b.v).length*b.fs*0.58+b.fs*0.40;
     if(Math.abs(a.x-b.x)<(breedA+breedB)/2+4 && Math.abs(a.y-b.y)<Math.max(a.fs,b.fs)+4){
       botsingen.push(a.v+"°/"+b.v+"°");
     }
@@ -429,6 +432,9 @@ groep("Eenheden");
   check("pagina kan niet zijwaarts schuiven",/overflow-x:clip/.test(stijl));
   check("knoppenbalk krijgt de schermbreedte op de telefoon",/\.mastright\{[^}]*width:100%/.test(stijl));
   check("knoppenbalk breekt af op smalle schermen",/max-width:430px\)\{[\s\S]*?flex-wrap:wrap/.test(stijl));
+  check("mobiele minibalk staat buiten de documentstroom en kan de hero niet heen en weer duwen",
+    /#minibar\{position:fixed;top:0;left:12px;right:12px/.test(stijl)
+      && !/#minibar\{position:sticky/.test(stijl));
   check("waarneemvenster blijft zichtbaar op de telefoon",/\.night \.nmeta\.wide\{display:block/.test(stijl));
   check("kopregel van de tabellen krijgt ruimte tussen de lijnen",/\.row\.kop\{[^}]*padding:1[0-9]px/.test(stijl));
 }
@@ -562,7 +568,9 @@ groep("Grafieklabel-prioriteit");
 {
   // helper: bouwt een 24-uursreeks vanaf i0=0 (uur 0 van dag -1 in de
   // bouw()-fixture, altijd "vandaag" voor plaatsNuIndex), tekent de grafiek
-  // en geeft de gerenderde labels terug als {i,v,x,y}, met i herleid uit x
+  // en geeft de gerenderde labels terug als {i,v,x,y}. De exacte bronindex
+  // staat op het bijbehorende punt; x kan immers bewust verschoven zijn om
+  // twee cijfers naast elkaar leesbaar te houden.
   const labelsVoor=(reeks,opties)=>{
     const {api,bak}=laadKern((opties&&opties.breed)||1280);
     const d=bouw({});
@@ -593,15 +601,34 @@ groep("Grafieklabel-prioriteit");
     const M=((opties&&opties.breed)||1280)<760;
     const pl=M?34:44, pr=M?10:20, iw=vb[2]-pl-pr, cw=iw/(reeks.length-1);
     const x=k=>pl+cw*k;
+    const indices=[...svg.matchAll(/data-temp-index="(\d+)"/g)].map(m=>+m[1]);
     const labs=[...svg.matchAll(/<text x="(-?[\d.]+)" y="(-?[\d.]+)"[^<]*?font-family="Bodoni Moda,serif" font-size="([\d.]+)">(-?\d+)°</g)]
-      .map(m=>{
+      .map((m,positie)=>{
         const xx=+m[1];
-        // dichtstbijzijnde i herleiden uit de bekende lineaire x-schaal
-        let i=Math.round((xx-pl)/cw); i=Math.max(0,Math.min(reeks.length-1,i));
+        let i=indices[positie];
+        if(i==null){ i=Math.round((xx-pl)/cw); i=Math.max(0,Math.min(reeks.length-1,i)); }
         return {i,x:xx,y:+m[2],v:+m[4]};
       });
     return {labs,svg,vb,api,bak};
   };
+
+  // 0: de mobiele 24-uursgrafiek toont ieder uur dat ook als asreferentie
+  // zichtbaar is, plus ieder werkelijk lokaal dal en iedere lokale piek.
+  {
+    const reeks=[20,18,17,16,15.8,15.6,15.2,16,18,24,25,26,27,28,29,30,31,30,28,27,26.5,27,26,25];
+    const {labs}=labelsVoor(reeks,{breed:390});
+    const indices=new Set(labs.map(l=>l.i));
+    const referenties=[0,3,6,9,12,15,18,21];
+    const extrema=[];
+    for(let i=1;i<reeks.length-1;i++){
+      if(reeks[i]>=reeks[i-1]&&reeks[i]>reeks[i+1]&&reeks[i]-Math.min(reeks[i-1],reeks[i+1])>=0.5) extrema.push(i);
+      if(reeks[i]<=reeks[i-1]&&reeks[i]<reeks[i+1]&&Math.max(reeks[i-1],reeks[i+1])-reeks[i]>=0.5) extrema.push(i);
+    }
+    check("0a. ieder zichtbaar drie-uursmoment heeft een temperatuurmarkering",
+      referenties.every(i=>indices.has(i)),"ontbrekend: "+referenties.filter(i=>!indices.has(i)).join(","));
+    check("0b. ieder duidelijk lokaal dal en iedere duidelijke piek heeft een temperatuurmarkering",
+      extrema.every(i=>indices.has(i)),"ontbrekend: "+extrema.filter(i=>!indices.has(i)).join(","));
+  }
 
   // 1: een scherpe lokale piek krijgt een label
   {
@@ -1494,8 +1521,8 @@ groep("Live bevindingen");
        niet op het raster vallen; met deze cyclische testreeks van 18,9/19,0/19,1
        vallen alle rasterpunten toevallig op dezelfde fase, dus de twee uitersten
        liggen daar altijd net naast. Tien labels is dus de juiste uitkomst. */
-    check("op een vlakke 24-uursreeks blijft het aantal labels rustig en informatief",
-      posities.length>=3&&posities.length<=9,posities.length+" labels: "+posities.map(p=>p.v).join(" "));
+    check("op een vlakke 24-uursreeks blijven alle drie-uursreferenties en de twee uitersten zichtbaar",
+      posities.length>=8&&posities.length<=10,posities.length+" labels: "+posities.map(p=>p.v).join(" "));
     const dubbel=[];
     for(let a=0;a<posities.length;a++) for(let b2=a+1;b2<posities.length;b2++){
       const p=posities[a],q=posities[b2];

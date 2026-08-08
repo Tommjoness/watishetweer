@@ -93,8 +93,13 @@
        ellipsis toe. Pas als zelfs dat niet genoeg is, mag de plaatsnaam zelf
        inkorten: die heeft een kleine, niet-nul shrink-factor als laatste redmiddel,
        met de volledige naam nog altijd beschikbaar via het title-attribuut. */
-    #minibar{position:sticky;top:0;z-index:25;background:var(--sheet);border-bottom:1px solid var(--rule);
-      margin:-24px -20px 0;padding:9px 20px;display:none;flex-wrap:nowrap;white-space:nowrap;
+    /* De balk staat bewust fixed en dus buiten de documentstroom. Met sticky
+       veranderde display:none -> flex de paginahoogte precies op het moment
+       dat de hero de viewport verliet. Chrome kon daardoor de hero meteen
+       weer zichtbaar verklaren en de balk bleef tijdens scrollen aan/uit
+       schakelen: de gemelde verticale tril-/bevrieslus. */
+    #minibar{position:fixed;top:0;left:12px;right:12px;z-index:25;background:var(--sheet);border-bottom:1px solid var(--rule);
+      margin:0;padding:9px 20px;display:none;flex-wrap:nowrap;white-space:nowrap;
       align-items:baseline;gap:10px;overflow:hidden}
     #minibar.aan{display:flex}
     #miniplaats{font-family:var(--serif);font-size:17px;
@@ -105,7 +110,7 @@
       flex:0 0 auto;white-space:nowrap;margin-left:auto;padding-left:.4em}
     #minicond{font-family:var(--serif);font-size:15px;color:var(--ink-45);
       flex:1 1 0;flex-shrink:9999;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-    @media(max-width:340px){ #minibar{gap:6px;padding:9px 14px;margin:-24px -14px 0} }
+    @media(max-width:340px){ #minibar{gap:6px;padding:9px 14px} }
   }
   .mast{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s3);flex-wrap:wrap}
   .mast h1{font-family:var(--serif);font-weight:400;font-size:15px;letter-spacing:.02em;margin:0;color:var(--ink-45)}
@@ -1523,13 +1528,12 @@ function etmaal(start,n){
   }
   const kandidatenRuw=[...kandKaart.entries()].map(([i,rang])=>({i,rang}))
     .sort((a,b)=>b.rang-a.rang||a.i-b.i);
-  /* Een gewoon rasterlabel voegt weinig toe als vlak ernaast al een
-     belangrijker label met dezelfde of vrijwel dezelfde afgeronde
-     temperatuur staat. Op een telefoon gaf dat bijvoorbeeld tweemaal
-     22° bij het actuele punt en 14°/15° rond hetzelfde dal. Alleen het
-     lage-prioriteitsraster wijkt; actuele punten en echte extrema
-     blijven altijd behouden. */
-  let kandidaten=kandidatenRuw.filter((k,pos)=>{
+  /* Binnen een etmaal hoort elk tijdstip dat onder de grafiek op het vaste
+     drie-uursraster staat ook een temperatuurcijfer te krijgen. Daarom wordt
+     daar niets meer weggefilterd wegens een vergelijkbare waarde vlakbij.
+     Alleen in de veel dichtere 48-uurs- en weekweergaven mag zo'n redundant
+     rasterpunt nog wijken; actuele punten en echte extrema blijven behouden. */
+  let kandidaten=n<=24?kandidatenRuw:kandidatenRuw.filter((k,pos)=>{
     if(k.rang!==1) return true;
     const afgerond=Math.round(T[k.i]);
     return !kandidatenRuw.slice(0,pos).some(g=>
@@ -1537,16 +1541,16 @@ function etmaal(start,n){
       Math.abs(g.i-k.i)*cw<Math.max(48,cw*2.2) &&
       Math.abs(Math.round(T[g.i])-afgerond)<=1);
   });
-  /* Informatiedichtheid volgt de beschikbare schermruimte. Op een telefoon zijn
-     vijf temperatuurcijfers binnen 24 uur het maximum; bij langere bereiken
-     wordt dat nog lager. Een label dat te dicht bij een belangrijker label ligt
-     vervalt. De curve en tooltip blijven alle uurwaarden bevatten. */
-  const maximumLabels=M?(n<=24?5:n<=48?4:3):(n<=24?9:n<=48?8:7);
-  const minimumAfstand=M?(n<=24?48:n<=48?62:78):42;
+  /* Een etmaal heeft geen kunstmatige bovengrens: de acht zichtbare
+     drie-uursmomenten en alle duidelijke lokale pieken/dalen moeten een
+     cijfer kunnen houden. Langere bereiken blijven begrensd, omdat daar de
+     horizontale ruimte per uur veel kleiner is. */
+  const maximumLabels=n<=24?kandidaten.length:(M?(n<=48?6:4):(n<=48?8:7));
+  const minimumAfstand=M?(n<=48?48:68):42;
   const gekozen=[];
   for(const k of kandidaten){
     if(gekozen.length>=maximumLabels) break;
-    const teDicht=gekozen.some(g=>
+    const teDicht=n>24&&gekozen.some(g=>
       Math.abs(g.i-k.i)*cw<minimumAfstand
       && Math.abs(Math.round(T[g.i])-Math.round(T[k.i]))<=2);
     if(teDicht) continue;
@@ -1556,7 +1560,7 @@ function etmaal(start,n){
 
   const labelBreed=v=>String(Math.round(v)).length*F.temp*0.58+F.temp*0.40;
   const gezet=[];
-  const MAXLAAG=M?2:3; // beperkte lagen: liever één cijfer minder dan een visuele stapel
+  const MAXLAAG=M&&n<=24?4:3;
   /* Botst een kandidaat op cx op elke laag, dan gaf de oude code een piek/dal
      alsnog een geforceerde positie zonder te kijken of daar al iets anders
      stond: twee cijfers konden zo exact over elkaar heen belanden, en dan is
@@ -1601,11 +1605,13 @@ function etmaal(start,n){
     // stap 1: normale lagen op de eigen positie, geen enkel label wijkt hier nog
     let poging=probeerLagen(cx,v,eersteBoven,null);
     if(poging){ cy=poging.cy; boven=poging.boven; }
-    // stap 2: een kleine horizontale verschuiving proberen (alleen zinvol voor
-    // een piek/dal die zelf al met voorrang mag schuiven, en alleen als er nog
-    // ruimte binnen de grafiekranden is)
-    if(cy===null && k.rang>=2){
-      for(const rcx of [cx+bw/2+6, cx-bw/2-6]){
+    // stap 2: een kleine horizontale verschuiving proberen. Binnen 24 uur
+    // geldt dit ook voor rasterpunten, want ieder zichtbaar drie-uursmoment
+    // hoort zijn temperatuur te behouden. Extra posities voorkomen dat een
+    // lokaal extreem vlak naast zo'n rasterpunt één van beide wegdrukt.
+    if(cy===null && (k.rang>=2||n<=24)){
+      const schuif=bw/2+6;
+      for(const rcx of [cx+schuif,cx-schuif,cx+2*schuif,cx-2*schuif]){
         if(rcx-bw/2<pl-2 || rcx+bw/2>W-pr) continue;
         poging=probeerLagen(rcx,v,eersteBoven,null);
         if(poging){ cx=rcx; cy=poging.cy; boven=poging.boven; break; }
@@ -1630,7 +1636,7 @@ function etmaal(start,n){
   // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:
   // een label dat onderweg is verwijderd (evictie) laat dan ook geen puntje na
   gezet.sort((a,b)=>a.i-b.i).forEach(g=>{
-    dots+=`<circle cx="${x(g.i)}" cy="${y(g.v)}" r="${M?1.9:2.2}" fill="${INK}"/>`;
+    dots+=`<circle cx="${x(g.i)}" cy="${y(g.v)}" r="${M?1.9:2.2}" fill="${INK}" data-temp-index="${g.i}"/>`;
     // de rand in de kleur van het vel snijdt de lijn weg achter het cijfer
     labs+=`<text x="${g.cx.toFixed(1)}" y="${g.cy.toFixed(1)}" text-anchor="middle" fill="${INK}"
       stroke="${SHEET}" stroke-width="${M?3:3.4}" paint-order="stroke" stroke-linejoin="round"

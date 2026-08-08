@@ -104,25 +104,6 @@ vervangEenmalig(
   "tooltip-neerslagtijdvak"
 );
 
-/* Op mobiel waren vijf temperatuurcijfers te weinig voor een etmaal. Acht labels
-   geven ongeveer één waarde per drie uur, terwijl de bestaande botsingscontrole
-   nog steeds elk label afzonderlijk op veilige afstand en hoogte plaatst. */
-vervangEenmalig(
-  "  const maximumLabels=M?(n<=24?5:n<=48?4:3):(n<=24?9:n<=48?8:7);",
-  "  const maximumLabels=M?(n<=24?8:n<=48?6:4):(n<=24?9:n<=48?8:7);",
-  "mobiele dichtheid temperatuurlabels"
-);
-vervangEenmalig(
-  "  const minimumAfstand=M?(n<=24?48:n<=48?62:78):42;",
-  "  const minimumAfstand=M?(n<=24?34:n<=48?48:68):42;",
-  "mobiele afstand temperatuurlabels"
-);
-vervangEenmalig(
-  "  const MAXLAAG=M?2:3; // beperkte lagen: liever één cijfer minder dan een visuele stapel",
-  "  const MAXLAAG=3; // drie veilige hoogtelagen op ieder scherm; botsende labels worden nog steeds geweigerd",
-  "veilige hoogtelagen temperatuurlabels"
-);
-
 vervangEenmalig(
   '<span class="bron"><b>Weer</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>, ECMWF en DWD, CAMS</span>',
   '<span class="bron"><b>Weer</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo Best Match</a> · <b>Luchtkwaliteit</b> CAMS</span>',
@@ -155,11 +136,11 @@ if(!html.includes("intervalVerlopen")) throw new Error("Verlopen neerslaginterva
 if(!html.includes("weatherNowUurvak")) throw new Error("Exact tooltip-tijdvak ontbreekt.");
 if(!html.includes('"geen neerslag verwacht"')) throw new Error("Droge tooltip gebruikt nog een nulpercentage.");
 if(!html.includes('kort.droog')) throw new Error("Droge neerslagweergaven zijn niet centraal afgevangen.");
-if(!html.includes('maximumLabels=M?')) throw new Error("Harde limiet voor temperatuurlabels ontbreekt.");
+if(!html.includes('maximumLabels=n<=24?kandidaten.length')) throw new Error("Etmaalgrafiek kan nog temperatuurmarkeringen wegkappen.");
 if(!html.includes("const eind=Math.min(i+24,h.time.length);")) throw new Error("Briefing gebruikt niet hetzelfde 24-uursvenster als de grafiek.");
-if(!html.includes("n<=24?8:n<=48?6:4")) throw new Error("Mobiele grafiek toont nog te weinig temperatuurlabels.");
-if(!html.includes("n<=24?34:n<=48?48:68")) throw new Error("Mobiele labelafstand is niet op de hogere informatiedichtheid afgestemd.");
-if(!html.includes("const MAXLAAG=3;")) throw new Error("Drie veilige labelhoogtes ontbreken.");
+if(!html.includes("kandidaten=n<=24?kandidatenRuw")) throw new Error("Drie-uursmarkeringen worden binnen een etmaal nog gefilterd.");
+if(!html.includes("const MAXLAAG=M&&n<=24?4:3;")) throw new Error("Extra veilige labelhoogtes voor mobiel ontbreken.");
+if(!html.includes("#minibar{position:fixed")) throw new Error("Mobiele minibalk kan nog een scroll-layoutlus veroorzaken.");
 if(!html.includes("S.actieveWaarschuwingen=[];")) throw new Error("Waarschuwingen van een vorige locatie worden niet direct gewist.");
 if(!html.includes("Officiële weerwaarschuwingen konden niet worden gecontroleerd.")) throw new Error("Ontbrekende waarschuwingdekking blijft stil.");
 if(!html.includes("mijnBeurt!==waarschuwingTeller")) throw new Error("Verouderde waarschuwingaanvragen worden niet geweigerd.");

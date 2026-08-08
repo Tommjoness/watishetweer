@@ -240,7 +240,8 @@ for(const breedte of [320,390,430,760,900,1100,1440]){
       const labels=temperatuurLabels(ctx.bak.chart.innerHTML);
       const botsing=labelsBotsen(labels);
       check(breedte+"px "+naam+": temperatuurcijfers botsen niet",!botsing,botsing?JSON.stringify(botsing):"");
-      check(breedte+"px "+naam+": labelaantal blijft begrensd",labels.length<=((breedte<760)?8:9),"labels "+labels.length);
+      check(breedte+"px "+naam+": alle acht drie-uursreferenties blijven zichtbaar en ieder uur krijgt hoogstens één cijfer",
+        labels.length>=8&&labels.length<=24,"labels "+labels.length);
       check(breedte+"px "+naam+": grafiek bevat geen NaN",!/NaN|undefined/.test(ctx.bak.chart.innerHTML),ctx.bak.chart.innerHTML.slice(0,120));
     }catch(e){
       check(breedte+"px "+naam+": grafiek loopt niet vast",false,e.message);
@@ -258,7 +259,7 @@ for(const breedte of [320,390,430,760,900,1100,1440]){
   ctx.d.current.temperature_2m=10;
   ctx.api.etmaal(i,24);
   const labels=temperatuurLabels(ctx.bak.chart.innerHTML);
-  check("mobiele 24-uursgrafiek toont bij voldoende ruimte acht temperatuurcijfers",labels.length===8,"gevonden "+labels.length+": "+labels.map(x=>x.waarde).join(","));
+  check("mobiele 24-uursgrafiek toont minimaal alle acht drie-uursreferenties",labels.length>=8,"gevonden "+labels.length+": "+labels.map(x=>x.waarde).join(","));
 }
 
 /* 5. Neerslagmatrix: alle kans- en hoeveelheidsdrempels, meerdere termijnen. */
