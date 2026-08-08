@@ -621,11 +621,15 @@ const DIRS=["N","NNO","NO","ONO","O","OZO","ZO","ZZO","Z","ZZW","ZW","WZW","W","
 const DIRSVOL=["noorden","noordnoordoosten","noordoosten","oostnoordoosten","oosten","oostzuidoosten",
   "zuidoosten","zuidzuidoosten","zuiden","zuidzuidwesten","zuidwesten","westzuidwesten","westen",
   "westnoordwesten","noordwesten","noordnoordwesten"];
-const kompas=d=>DIRSVOL[Math.round(d/22.5)%16];
+const richtingIndex=d=>{
+  if(d===null||d===undefined||d===""||!Number.isFinite(Number(d))) return null;
+  return ((Math.round(Number(d)/22.5)%16)+16)%16;
+};
+const kompas=d=>{const i=richtingIndex(d);return i===null?null:DIRSVOL[i];};
 /* Zestien vakken van 22,5 graden. Math.round pakt vanzelf het dichtstbijzijnde vak,
    dus 348,75 tot 11,25 wordt N, en de modulo vangt de overgang bij 360 op. */
 const DIRSKORT=["N","NNO","NO","ONO","O","OZO","ZO","ZZO","Z","ZZW","ZW","WZW","W","WNW","NW","NNW"];
-const kompasKort=d=>DIRSKORT[((Math.round(d/22.5)%16)+16)%16];
+const kompasKort=d=>{const i=richtingIndex(d);return i===null?null:DIRSKORT[i];};
 const BFTBIJV=["windstil","zwak","zwak","matig","matig","vrij krachtig","krachtig","hard",
   "stormachtig","stormachtig","zeer stormachtig","zeer stormachtig","orkaanachtig"];
 const DAGEN=["zo","ma","di","wo","do","vr","za"];
@@ -957,8 +961,8 @@ function piek(veld,dagIndex,vanafNu){
   for(let i=0;i<h.time.length;i++){
     if(h.time[i].slice(0,10)!==dag) continue;
     if(vanafNu&&h.time[i]<=nu) continue;
-    const v=h[veld]?h[veld][i]:null;
-    if(v==null) continue;
+    const v=eindigGetal(h[veld]?h[veld][i]:null);
+    if(v===null) continue;
     if(v>bv){bv=v;bt=h.time[i];}
   }
   return bt?{v:bv,t:bt}:null;
@@ -966,17 +970,25 @@ function piek(veld,dagIndex,vanafNu){
 function meters(){
   const c=S.d.current,h=S.d.hourly,i=S.i0,day=S.d.daily,nu=c.time;
 
-  const b=bft(c.wind_speed_10m);
+  const windsnelheid=eindigGetal(c.wind_speed_10m),windrichting=eindigGetal(c.wind_direction_10m);
+  const b=windsnelheid===null?null:bft(windsnelheid);
   /* De richting stond alleen als woord in de zin eronder. Als afkorting naast het
      getal lees je hem in een oogopslag. kompasKort deelt de cirkel in zestien vakken
      van 22,5 graden, dus 348,75 tot 11,25 is N. */
-  set("wind",Math.round(c.wind_speed_10m)+"<s>km/u</s> <s>"+kompasKort(c.wind_direction_10m)+"</s> "
-    +pijl(c.wind_direction_10m));
-  zetTekst("windsub", b===0
-    ? "Vrijwel windstil."
-    : BFTNAAM[b].charAt(0).toUpperCase()+BFTNAAM[b].slice(1)+" uit het "+kompas(c.wind_direction_10m)+" ("+b+" Bft).");
+  if(windsnelheid===null){
+    set("wind","–");
+    zetTekst("windsub","Windsnelheid niet beschikbaar.");
+  }else{
+    const richtingKort=kompasKort(windrichting),richtingVol=kompas(windrichting);
+    set("wind",Math.round(windsnelheid)+"<s>km/u</s>"+(richtingKort?" <s>"+richtingKort+"</s> "+pijl(windrichting):""));
+    zetTekst("windsub", b===0
+      ? "Vrijwel windstil."
+      : BFTNAAM[b].charAt(0).toUpperCase()+BFTNAAM[b].slice(1)
+        +(richtingVol?" uit het "+richtingVol:"")+" ("+b+" Bft)."+(richtingVol?"":" Windrichting niet beschikbaar."));
+  }
 
-  set("gust",Math.round(c.wind_gusts_10m)+"<s>km/u</s>");
+  const windstoot=eindigGetal(c.wind_gusts_10m);
+  set("gust",windstoot===null?"–":Math.round(windstoot)+"<s>km/u</s>");
   const pg=piek("wind_gusts_10m",0);
   zetTekst("gustsub", !pg ? "Geen uurgegevens beschikbaar."
     : pg.t>nu ? "Toppen tot "+Math.round(pg.v)+" km/u rond "+hhmm(pg.t)+"."
@@ -1025,19 +1037,22 @@ function meters(){
       : "De lucht is vochtig.");
   }
 
-  set("pres",Math.round(c.pressure_msl)+"<s>hPa</s>");
-  const p3=h.pressure_msl[i-3],dp=(p3!=null)?c.pressure_msl-p3:null;
+  const luchtdruk=eindigGetal(c.pressure_msl);
+  set("pres",luchtdruk===null?"–":Math.round(luchtdruk)+"<s>hPa</s>");
+  const p3=eindigGetal(h.pressure_msl&&h.pressure_msl[i-3]);
+  const dp=(p3!==null&&luchtdruk!==null)?luchtdruk-p3:null;
   zetTekst("pressub", dp==null ? "Geen tendens beschikbaar."
     : Math.abs(dp)<0.15 ? "In drie uur nauwelijks veranderd."
     : "In drie uur "+nl(Math.abs(dp))+" hPa "+(dp>0?"gestegen":"gedaald")+".");
 
-  set("cloud",c.cloud_cover+"<s>%</s>");
-  const cc=c.cloud_cover;
-  const bew = cc>=95?"Vrijwel geheel bewolkt":cc>=70?"Zwaar bewolkt":cc>=40?"Half bewolkt"
+  const cc=eindigGetal(c.cloud_cover);
+  const geldigeBewolking=cc!==null&&cc>=0&&cc<=100;
+  set("cloud",geldigeBewolking?Math.round(cc)+"<s>%</s>":"–");
+  const bew = !geldigeBewolking?null:cc>=95?"Vrijwel geheel bewolkt":cc>=70?"Zwaar bewolkt":cc>=40?"Half bewolkt"
             : cc>=15?"Overwegend zonnig":"Vrijwel onbewolkt";
   const pu=piek("uv_index",0);
   const uvOordeel=v=>v<3?"laag":v<6?"matig":v<8?"hoog":v<11?"zeer hoog":"extreem";
-  zetTekst("cloudsub", bew+".");
+  zetTekst("cloudsub", bew?bew+".":"Bewolking niet beschikbaar.");
   /* De UV-index zat ingeklemd achter de bewolkingszin en werd daar makkelijk
      over het hoofd gezien. Als eigen tegel krijgt hij zijn eigen waarde en
      kan het oordeel erbij zonder de bewolkingszin te verlengen. */
@@ -1095,13 +1110,15 @@ function kortetermijn(){
   const nu=S.d.current.time;
   const eindMs=naarUTC(nu.slice(0,16))+2*3600000;
   const m=S.d.minutely_15;
-  if(m&&m.time&&m.time.length){
+  if(m&&Array.isArray(m.time)&&Array.isArray(m.precipitation)&&m.time.length){
     let i=m.time.findIndex(t=>t>=nu.slice(0,16));
     if(i<0) i=0;
     const T=[],P=[];
     for(let k=i;k<m.time.length;k++){
       if(naarUTC(m.time[k])>=eindMs) break;
-      T.push(m.time[k]); P.push(m.precipitation[k]??0);
+      const waarde=eindigGetal(m.precipitation[k]);
+      if(waarde===null||waarde<0){T.length=0;P.length=0;break;}
+      T.push(m.time[k]); P.push(waarde);
     }
     // minstens een uur aan kwartierdata (vier stappen) is genoeg voor een conclusie;
     // minder dan dat is te weinig om "de komende twee uur" over te durven zeggen
@@ -1114,9 +1131,11 @@ function kortetermijn(){
   }
   // terugval: de eerstvolgende twee uurvakken in de uurreeks
   const h=S.d.hourly, i0=S.i0;
-  if(h&&h.time&&i0!=null&&h.time.length>i0+2){
-    const p1=h.precipitation[i0+1]??0, p2=h.precipitation[i0+2]??0;
-    const k1=h.precipitation_probability[i0+1]??0, k2=h.precipitation_probability[i0+2]??0;
+  if(h&&Array.isArray(h.time)&&Array.isArray(h.precipitation)
+    &&Array.isArray(h.precipitation_probability)&&i0!=null&&h.time.length>i0+2){
+    const p1=eindigGetal(h.precipitation[i0+1]),p2=eindigGetal(h.precipitation[i0+2]);
+    const k1=eindigGetal(h.precipitation_probability[i0+1]),k2=eindigGetal(h.precipitation_probability[i0+2]);
+    if(p1===null||p2===null||p1<0||p2<0||k1===null||k2===null) return { begin:nu, eind:null, bron:null, genoeg:false, droog:null };
     const droog=p1<NEERSLAG_DREMPEL_MM&&p2<NEERSLAG_DREMPEL_MM&&k1<40&&k2<40;
     return { begin:nu, eind:h.time[i0+2], bron:"hourly", genoeg:true,
       droog:droog, hoeveelheid:p1+p2, kans:Math.max(k1,k2) };
@@ -1216,31 +1235,41 @@ function briefing(){
   }
 
   // wind
-  let wmax=-1,wi=i,gmax=0,gi=i;
+  let wmax=null,wi=null,gmax=null;
   for(let k=i;k<eind;k++){
-    if((h.wind_speed_10m[k]||0)>wmax){wmax=h.wind_speed_10m[k];wi=k;}
-    if((h.wind_gusts_10m[k]||0)>gmax){gmax=h.wind_gusts_10m[k];gi=k;}
+    const w=eindigGetal(h.wind_speed_10m&&h.wind_speed_10m[k]);
+    const g=eindigGetal(h.wind_gusts_10m&&h.wind_gusts_10m[k]);
+    if(w!==null&&(wmax===null||w>wmax)){wmax=w;wi=k;}
+    if(g!==null&&(gmax===null||g>gmax)) gmax=g;
   }
-  const bm=bft(wmax),bnu=bft(c.wind_speed_10m);
-  const rNu=c.wind_direction_10m, rPiek=h.wind_direction_10m[wi];
-  const richtingNu=kompas(rNu);
-  // draait de wind meer dan twee kompaspunten, dan is dat het vermelden waard
-  let hoek=Math.abs(((rPiek-rNu+540)%360)-180);
-  const draait = rPiek!=null && hoek>45;
-  const draaiTekst = draait ? ", draaiend naar het "+kompas(rPiek) : "";
-  // Vanaf 9 Bft bestaat er geen bijvoeglijke vorm die klopt: de meter zegt dan
-  // "storm" of "zware storm" en "De wind blijft stormachtig" noemt dezelfde wind
-  // een graad zwakker. Boven de 8 stapt de zin daarom over op de naam zelf.
-  const zwaar = bm>=9;
-  const staatEr = bm===9 ? "Er staat <b>storm</b>" : "Er staat een <b>"+BFTNAAM[bm]+"</b>";
-  let zin3 = bm>bnu ? "De wind komt uit het "+richtingNu+draaiTekst+" en neemt toe tot <b>"+bm+" Bft</b>"
-           : bm<bnu ? "De wind komt uit het "+richtingNu+draaiTekst+" en neemt af tot <b>"+bm+" Bft</b>"
-           : zwaar   ? staatEr+" uit het "+richtingNu+" ("+bm+" Bft)"+draaiTekst
-           : "De wind blijft "+BFTBIJV[bm]+" uit het "+richtingNu+" ("+bm+" Bft)"+draaiTekst;
-  // "..., rond 05:00 is de wind het sterkst" was een tweede hoofdzin achter een komma.
-  // Als bijstelling zonder werkwoord loopt hij door in dezelfde zin.
-  zin3 += (wi>i+1) ? ", "+dagVoorvoegsel(h.time[wi])+"het sterkst rond "+hhmm(h.time[wi]) : "";
-  zin3 += gmax>=60 ? ", met stoten tot "+Math.round(gmax)+" km/u." : ".";
+  const huidigWind=eindigGetal(c.wind_speed_10m);
+  let zin3;
+  if(wmax===null||wi===null){
+    zin3="Windgegevens zijn momenteel niet beschikbaar.";
+  }else{
+    const bm=bft(wmax),bnu=huidigWind===null?null:bft(huidigWind);
+    const rNu=eindigGetal(c.wind_direction_10m),rPiek=eindigGetal(h.wind_direction_10m&&h.wind_direction_10m[wi]);
+    const richtingNu=kompas(rNu),richtingPiek=kompas(rPiek);
+    // draait de wind meer dan twee kompaspunten, dan is dat het vermelden waard
+    const hoek=rNu===null||rPiek===null?null:Math.abs(((rPiek-rNu+540)%360)-180);
+    const draait=hoek!==null&&hoek>45;
+    const draaiTekst=draait&&richtingPiek?", draaiend naar het "+richtingPiek:"";
+    const bronTekst=richtingNu?" uit het "+richtingNu:"";
+    // Vanaf 9 Bft bestaat er geen bijvoeglijke vorm die klopt: de meter zegt dan
+    // "storm" of "zware storm" en "De wind blijft stormachtig" noemt dezelfde wind
+    // een graad zwakker. Boven de 8 stapt de zin daarom over op de naam zelf.
+    const zwaar=bm>=9;
+    const staatEr=bm===9?"Er staat <b>storm</b>":"Er staat een <b>"+BFTNAAM[bm]+"</b>";
+    zin3 = bnu===null ? "De wind bereikt maximaal <b>"+bm+" Bft</b>"+bronTekst+draaiTekst
+         : bm>bnu ? "De wind"+(richtingNu?" komt"+bronTekst+draaiTekst+" en":"")+" neemt toe tot <b>"+bm+" Bft</b>"
+         : bm<bnu ? "De wind"+(richtingNu?" komt"+bronTekst+draaiTekst+" en":"")+" neemt af tot <b>"+bm+" Bft</b>"
+         : zwaar   ? staatEr+bronTekst+" ("+bm+" Bft)"+draaiTekst
+         : "De wind blijft "+BFTBIJV[bm]+bronTekst+" ("+bm+" Bft)"+draaiTekst;
+    // Als bijstelling zonder werkwoord loopt de piektijd door in dezelfde zin.
+    zin3 += (wi>i+1) ? ", "+dagVoorvoegsel(h.time[wi])+"het sterkst rond "+hhmm(h.time[wi]) : "";
+    zin3 += gmax!==null&&gmax>=60 ? ", met stoten tot "+Math.round(gmax)+" km/u." : ".";
+    if(!richtingNu) zin3+=" De windrichting is niet beschikbaar.";
+  }
 
   document.getElementById("brief").innerHTML=nbsp(zin1+" "+zin2+" "+zin3);
 }
@@ -1999,8 +2028,11 @@ function nachten(){
     if(a2==null||b2==null||b2<=a2) continue;
     const C=[],HU=[],SP=[],GU=[],TT=[];
     for(let i=a2;i<=b2;i++){
-      if(h.cloud_cover[i]==null) continue;
-      C.push(h.cloud_cover[i]);HU.push(h.relative_humidity_2m[i]);
+      const bewolking=eindigGetal(h.cloud_cover&&h.cloud_cover[i]);
+      if(bewolking===null||bewolking<0||bewolking>100) continue;
+      C.push(bewolking);
+      const vocht=eindigGetal(h.relative_humidity_2m&&h.relative_humidity_2m[i]);
+      if(vocht!==null&&vocht>=0&&vocht<=100) HU.push(vocht);
       const temperatuur=eindigGetal(h.temperature_2m[i]),dauwpunt=eindigGetal(h.dew_point_2m[i]);
       if(temperatuur!==null&&dauwpunt!==null) SP.push(temperatuur-dauwpunt);
       const windstoot=eindigGetal(h.wind_gusts_10m[i]);
@@ -2009,7 +2041,7 @@ function nachten(){
     }
     if(!C.length) continue;
     const gem=v=>v.reduce((x,y)=>x+y,0)/v.length;
-    const cw=gem(C),hu=gem(HU),spd=SP.length?Math.min(...SP):null,gu=GU.length?Math.max(...GU):null;
+    const cw=gem(C),hu=HU.length?gem(HU):null,spd=SP.length?Math.min(...SP):null,gu=GU.length?Math.max(...GU):null;
     const mn=maan(new Date(naarUTC(ss.slice(0,10)+"T23:30")));
 
     // maan boven of onder de horizon per uur
@@ -2020,7 +2052,7 @@ function nachten(){
     const maanDeel=maanWeging.reduce((a,b)=>a+b,0)/maanWeging.length;
 
     let sc=(1-cw/100)*10;
-    if(hu>93) sc-=1.5;
+    if(hu!==null&&hu>93) sc-=1.5;
     if(spd!==null&&spd<1.5) sc-=1;
     if(gu!==null&&gu>45) sc-=1;
     sc-=2.2*mn.ill*maanDeel*(1-cw/140);          // maan telt alleen mee als hij ook echt op is

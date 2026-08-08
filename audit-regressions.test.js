@@ -93,6 +93,42 @@ async function roepWaarschuwingen(query,fetchImpl){
   ok(meteo.body&&meteo.body.lijst&&meteo.body.lijst[0]&&meteo.body.lijst[0].landelijk===true,
     "Atom-waarschuwing zonder gebied wordt expliciet als breder gebied gemarkeerd");
 
+  const atomEntiteiten="<?xml version=\"1.0\"?><feed><entry><title><![CDATA[Wind &amp; regen]]></title>"
+    +"<summary>Kans op hagel &lt; lokaal &gt; &#33;</summary></entry></feed>";
+  const meteoTekst=await roepWaarschuwingen(
+    {lat:"52.3676",lon:"4.9041"},
+    async url=>String(url).includes("bigdatacloud")
+      ? {ok:true,json:async()=>({countryCode:"NL"})}
+      : {ok:true,text:async()=>atomEntiteiten}
+  );
+  ok(meteoTekst.body.lijst[0].titel==="Wind & regen","Atom-titels decoderen XML-entiteiten en CDATA");
+  ok(meteoTekst.body.lijst[0].tekst==="Kans op hagel < lokaal > !","Atom-omschrijvingen decoderen XML-entiteiten");
+
+  async function landFeed(code,lat,lon){
+    const urls=[];
+    const antwoord=await roepWaarschuwingen({lat:String(lat),lon:String(lon)},async url=>{
+      urls.push(String(url));
+      if(String(url).includes("bigdatacloud")) return {ok:true,json:async()=>({countryCode:code})};
+      if(String(url).includes("/api/v1/")) return {ok:false,status:404};
+      return {ok:true,text:async()=>atom};
+    });
+    return {antwoord,urls};
+  }
+  const andorra=await landFeed("AD",42.5063,1.5218);
+  ok(andorra.urls.some(u=>u.includes("meteoalarm-legacy-atom-andorra"))&&andorra.antwoord.body.dekking===true,
+    "Andorra gebruikt de officiële MeteoAlarm-feed");
+  const macedonie=await landFeed("MK",41.9981,21.4254);
+  ok(macedonie.urls.some(u=>u.includes("meteoalarm-legacy-atom-republic-of-north-macedonia"))&&macedonie.antwoord.body.dekking===true,
+    "Noord-Macedonië gebruikt de actuele officiële feedslug");
+
+  const rood=await roepWaarschuwingen(
+    {lat:"52.3676",lon:"4.9041"},
+    async url=>String(url).includes("bigdatacloud")
+      ? {ok:true,json:async()=>({countryCode:"NL"})}
+      : {ok:true,text:async()=>JSON.stringify({warnings:[{title:"Extreem weer",level:4}]})}
+  );
+  ok(rood.body.lijst[0].niveau==="rood","MeteoAlarm-niveau 4 wordt als rood geïnterpreteerd");
+
   console.log("Code-auditregressies: "+geslaagd+" controles geslaagd.");
 })().catch(err=>{
   console.error(err&&err.stack||err);

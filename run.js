@@ -1803,7 +1803,7 @@ groep("Tijd, datum en richting");
       mis.map(([g,v])=>g+" gaf "+api.kompasKort(g)+" in plaats van "+v).join(", "));
     let leeg=0; for(let g=-720;g<1080;g+=0.5) if(!api.kompasKort(g)) leeg++;
     check("geen enkele invoer levert een lege richting",leeg===0,leeg+" keer leeg");
-    check("de richting staat naast de snelheid",/kompasKort\(c\.wind_direction_10m\)/.test(bronT));
+    check("de richting staat naast de snelheid",/richtingKort=kompasKort\(windrichting\)/.test(bronT));
   }
 }
 

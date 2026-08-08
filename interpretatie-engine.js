@@ -33,6 +33,14 @@ function getal(v){
   return v!==null && v!==undefined && v!=="" && Number.isFinite(Number(v)) ? Number(v) : null;
 }
 
+function veldGetal(veld,v){
+  const n=getal(v);
+  if(n===null) return null;
+  if(veld==="precipitation_probability") return Math.max(0,Math.min(100,n));
+  if(["precipitation","rain","showers","snowfall"].includes(veld)) return n<0?null:n;
+  return n;
+}
+
 function lokaalNaarMinuten(tijd){
   const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(tijd||""));
   if(!m) return null;
@@ -101,14 +109,17 @@ function leesReeks(reeks,stapMin,startMin,eindMin,velden){
   for(let i=0;i<tijden.length;i++){
     const eind=lokaalNaarMinuten(tijden[i]);
     if(eind===null) continue;
-    if(gezien.has(eind)){ dubbeleTijd=true; continue; }
-    gezien.add(eind);
     const begin=eind-stapMin;
     const overlap=overlapMinuten(begin,eind,startMin,eindMin);
     if(overlap<=0) continue;
+    // Alleen een dubbele lokale tijd die het onderzochte venster werkelijk
+    // raakt is dubbelzinnig. Een klokomslag in oude of latere brondata mag een
+    // actuele conclusie niet onnodig ongeldig maken.
+    if(gezien.has(eind)){ dubbeleTijd=true; continue; }
+    gezien.add(eind);
     const item={i,begin,eind,overlap,fractie:overlap/stapMin,tijd:tijden[i]};
     for(const veld of velden){
-      item[veld]=getal(reeks[veld]&&reeks[veld][i]);
+      item[veld]=veldGetal(veld,reeks[veld]&&reeks[veld][i]);
     }
     uit.push(item);
   }
@@ -202,7 +213,8 @@ function analyseerNeerslagData(data,duurMin,nuOverride){
   const genoeg=!dubbeleTijd && hoeveelheidDekking>=INTERPRETATIE_CONFIG.minimaleDekking
     && kans.dekking>=INTERPRETATIE_CONFIG.minimaleDekking;
 
-  const currentHoeveelheid=getal(current.precipitation)||0;
+  const currentRuw=getal(current.precipitation);
+  const currentHoeveelheid=currentRuw!==null&&currentRuw>=0?currentRuw:0;
   const currentWet=currentHoeveelheid>=0.05 && isNeerslagCode(current.weather_code);
   const soort=kiesNeerslagSoort(minLees.items,uurLees.items);
   const status=bepaalStatus(kans.max,hoeveelheid,currentWet,genoeg);
@@ -428,7 +440,8 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       origineel.briefing();
       const el=document.getElementById("brief");
       const bestaand=el.innerHTML;
-      const markers=["Het wordt maximaal","Het was het warmst","Warmer dan","De temperatuur blijft"];
+      const markers=["Het wordt maximaal","Het was het warmst","Warmer dan","De temperatuur blijft",
+        "De actuele temperatuur is niet beschikbaar","Temperatuurgegevens zijn momenteel niet beschikbaar"];
       let idx=-1;
       for(const marker of markers){
         const i=bestaand.indexOf(marker);
@@ -507,7 +520,8 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
     lucht=function(){
       origineel.lucht();
       if(!S.air||!S.air.current) return;
-      const c=S.air.current,eu=getal(c.european_aqi),us=getal(c.us_aqi),euro=eu!==null;
+      const c=S.air.current,eu=getal(c.european_aqi),us=getal(c.us_aqi);
+      const euro=typeof inEuropa==="function"&&inEuropa(S.lat,S.lon)&&eu!==null;
       const waarde=euro?eu:us;
       const eerste=document.querySelector("#aq .stat");
       if(eerste&&waarde!==null){

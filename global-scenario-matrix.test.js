@@ -475,6 +475,49 @@ for(const [naam,lokaal,offset] of [
   }catch(e){check("zonder kwartierdata loopt de app niet vast",false,e.message);}
 }
 
+{
+  const ctx=omgeving();
+  const c=ctx.d.current,h=ctx.d.hourly;
+  for(const veld of ["wind_speed_10m","wind_direction_10m","wind_gusts_10m","pressure_msl","cloud_cover"]){
+    c[veld]=null;
+    if(Array.isArray(h[veld])) h[veld].fill(null);
+  }
+  try{
+    ctx.api.meters();
+    ctx.api.briefing();
+    const inhoud=[ctx.bak.wind.innerHTML,ctx.bak.gust.innerHTML,ctx.bak.pres.innerHTML,
+      ctx.bak.cloud.innerHTML,ctx.bak.brief.innerHTML].join(" ");
+    check("ontbrekende wind, druk en bewolking worden niet als nul verzonnen",
+      !/\b0\s*(?:km\/u|hPa|%)/.test(zonderTags(inhoud))&&!/NaN|undefined|null/.test(inhoud),zonderTags(inhoud));
+    check("ontbrekende wind krijgt een expliciete uitleg",
+      /Windgegevens zijn momenteel niet beschikbaar/.test(zonderTags(ctx.bak.brief.innerHTML)),zonderTags(ctx.bak.brief.innerHTML));
+  }catch(e){check("ontbrekende wind, druk en bewolking lopen niet vast",false,e.message);}
+}
+
+{
+  const ctx=omgeving();
+  ctx.d.current.temperature_2m=null;
+  ctx.d.hourly.temperature_2m.fill(null);
+  try{
+    ctx.api.briefing();
+    const tekst=zonderTags(ctx.bak.brief.innerHTML);
+    const neerslagOpeningen=(tekst.match(/kans op neerslag|neerslag verwacht|gegevens om de neerslagkans/gi)||[]).length;
+    check("ontbrekende temperatuur dupliceert de centrale neerslagconclusie niet",neerslagOpeningen===1,tekst);
+  }catch(e){check("ontbrekende temperatuur laat de briefing niet vastlopen",false,e.message);}
+}
+
+{
+  const ctx=omgeving();
+  delete ctx.d.minutely_15.precipitation;
+  delete ctx.d.hourly.precipitation;
+  try{
+    ctx.api.briefing();ctx.api.nowcast();
+    const tekst=zonderTags(ctx.bak.brief.innerHTML+" "+ctx.bak.nctext.textContent);
+    check("ontbrekende neerslagreeksen geven geen stellige droge nulconclusie",
+      /onvoldoende|ontbreken voldoende consistente gegevens/i.test(tekst)&&!/NaN|undefined|null/.test(tekst),tekst);
+  }catch(e){check("ontbrekende neerslagreeksen lopen niet vast",false,e.message);}
+}
+
 if(mislukt){
   console.error("\nWereldwijde scenario-matrix: "+mislukt+" van "+(geslaagd+mislukt)+" controles mislukt.");
   fouten.slice(0,40).forEach(f=>console.error("FOUT "+f));

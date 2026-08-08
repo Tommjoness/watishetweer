@@ -168,6 +168,28 @@ test("dubbele lokale tijd rond klokomslag verlaagt zekerheid",()=>{
   assert(/klokomslag/.test(a.reden));
 });
 
+test("dubbele lokale tijd buiten het onderzochte venster verlaagt de zekerheid niet",()=>{
+  const d=basis();
+  // Beide intervallen eindigen ruim voor het venster 19:00-21:00. Een
+  // klokomslag in oude data mag een actuele conclusie niet ongeldig maken.
+  d.hourly.time[1]=d.hourly.time[0];
+  const a=analyseerNeerslagData(d,120);
+  assert.equal(a.genoeg,true);
+  assert.equal(a.reden,null);
+});
+
+test("ongeldige negatieve neerslag en kansen worden begrensd",()=>{
+  const d=basis();
+  d.minutely_15.precipitation.fill(-2);
+  d.hourly.precipitation.fill(-3);
+  d.hourly.precipitation_probability.fill(180);
+  const a=analyseerNeerslagData(d,120);
+  assert.equal(a.hoeveelheid,0);
+  assert.equal(a.kans,100);
+  assert.equal(a.genoeg,false);
+  assert.equal(a.status,"ONVOLDOENDE_DATA");
+});
+
 test("daganalyse van vandaag sluit verlopen dagpiek uit",()=>{
   const d=basis();
   d.hourly.precipitation_probability[2]=94; // uur tot 19:00, precies verlopen
