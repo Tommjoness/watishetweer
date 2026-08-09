@@ -1,0 +1,120 @@
+UTC 2026-08-09T18:10:35Z
+DNS:
+138.22.100.87   STREAM feeds.meteoalarm.org
+138.22.100.87   DGRAM  
+138.22.100.87   RAW    
+
+===== Atom WeatherNow UA =====
+curl_exit=0
+http=406
+time_total=0.763772
+content_type=text/html; charset=utf-8
+remote_ip=138.22.100.87
+effective_url=https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands
+--- response headers ---
+HTTP/1.1 406 Not Acceptable
+cache-control: max-age=0, private, must-revalidate
+content-length: 14
+content-type: text/html; charset=utf-8
+date: Sun, 09 Aug 2026 18:10:36 GMT
+server: Cowboy
+x-request-id: GMo1gnsUcUI1vjcF0Hih
+
+--- first 800 bytes ---
+Not Acceptable
+
+===== Atom browser UA =====
+curl_exit=0
+http=200
+time_total=0.587835
+content_type=application/atom+xml; charset=utf-8
+remote_ip=138.22.100.87
+effective_url=https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands
+--- response headers ---
+HTTP/1.1 200 OK
+cache-control: max-age=0, private, must-revalidate
+content-length: 990
+content-type: application/atom+xml; charset=utf-8
+cross-origin-window-policy: deny
+date: Sun, 09 Aug 2026 18:10:36 GMT
+server: Cowboy
+x-content-type-options: nosniff
+x-download-options: noopen
+x-frame-options: SAMEORIGIN
+x-permitted-cross-domain-policies: none
+x-request-id: GMo1gps6GKH5AiwGtGCB
+x-xss-protection: 1; mode=block
+
+--- first 800 bytes ---
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2">
+  <link rel="hub" href="https://pubsubhubbub.appspot.com/"/>
+  <link type="application/atom+xml" rel="self" href="https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands"/>
+  <link type="text/html" rel="alternate" href="https://meteoalarm.org"/>
+  <rights>Copyright © 2026 MeteoAlarm.Org. Licensed under terms equivalent to CC BY 4.0, with additional requirements for redistributing outlined in our Terms and Conditions.</rights>
+  <generator>MeteoAlarm Producer Server</generator>
+  <logo>https://feeds.meteoalarm.org/images/logo.svg</logo>
+  <author>
+    <name>meteoalarm.org</name>
+    <uri>https://meteoalarm.org</uri>
+    <email>meteoalarm@geosphere
+
+===== JSON compatibility WeatherNow UA =====
+curl_exit=0
+http=200
+time_total=4.303273
+content_type=application/json; charset=utf-8
+remote_ip=138.22.100.87
+effective_url=https://feeds.meteoalarm.org/api/v1/warnings/feeds-netherlands
+--- response headers ---
+HTTP/1.1 200 OK
+cache-control: max-age=0, private, must-revalidate
+content-length: 1147122
+content-type: application/json; charset=utf-8
+date: Sun, 09 Aug 2026 18:10:38 GMT
+server: Cowboy
+x-request-id: GMo1grl1K4lrEBwE-vhC
+
+--- first 800 bytes ---
+{"warnings":[{"alert":{"identifier":"2.49.0.0.528.0.NL.260804003743.0_TX_DR_C","incidents":"Update","info":[{"area":[{"areaDesc":"Drenthe","geocode":[{"value":"NL018","valueName":"EMMA_ID"}]}],"category":["Met"],"certainty":"Likely","contact":"procesbewaker@knmi.nl","description":"Waarschuwingen ingetrokken.","effective":"2026-08-04T00:37:43+02:00","event":"Minor high-temperature warning","expires":"2026-08-05T00:00:00+02:00","headline":"Hitte - Geen waarschuwingen voor Drenthe - Nederland","language":"nl-NL","onset":"2026-08-04T00:00:00+02:00","parameter":[{"value":"5; high-temperature","valueName":"awareness_type"},{"value":"1; green; Minor","valueName":"awareness_level"}],"responseType":["None"],"senderName":"KNMI Koninklijk Nederlands Meteorologisch Instituut","severity":"Minor","urgen
+
+===== Feed index WeatherNow UA =====
+curl_exit=0
+http=200
+time_total=0.944272
+content_type=text/html; charset=utf-8
+remote_ip=138.22.100.87
+effective_url=https://feeds.meteoalarm.org/
+--- response headers ---
+HTTP/1.1 200 OK
+cache-control: max-age=0, private, must-revalidate
+content-length: 53315
+content-type: text/html; charset=utf-8
+cross-origin-window-policy: deny
+date: Sun, 09 Aug 2026 18:10:41 GMT
+server: Cowboy
+x-content-type-options: nosniff
+x-download-options: noopen
+x-frame-options: SAMEORIGIN
+x-permitted-cross-domain-policies: none
+x-request-id: GMo1g8fEcATNxe4F7u2i
+x-xss-protection: 1; mode=block
+set-cookie: _feeds_key=SFMyNTY.g3QAAAABbQAAAAtfY3NyZl90b2tlbm0AAAAYdmNPazdLaGNUUkhhX2w1eVpGb0QwYU03.-mV87kpKBdnEmAt8di4DSCTXSYPo1uxZO2G28GvgI_Y; path=/; HttpOnly
+
+--- first 800 bytes ---
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Feeds | MeteoAlarm Feeds</title>
+    <link rel="stylesheet" href="/assets/app.css"/>
+    <script defer phx-track-static type="text/javascript" src="/assets/app.js"></script>
+<meta content="DhoEJ1ACUQIdOBEOOAZRP2p-WwMHNikFxyKLgI9aIjYogjdF084G7Wd2" name="csrf-token">
+    <script defer data-domain="feeds.meteoalarm.org" src="https://analytics.meteoalarm.org/js/plausible.js"></script>
+  </head>
+  <body>
+    <header class="sticky top-0 bg-white shadow-lg z-50">
+      <div class="flex items-center justify-between border-b border-grey-l3 py-6 text-sm px-6">
+        <div class="flex it
