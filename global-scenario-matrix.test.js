@@ -37,8 +37,18 @@ function isoLokaalNaarMs(lokaal){
 }
 
 function zetPlaatsKlok(api,offsetSeconden,lokaal){
-  const eigen=-new Date().getTimezoneOffset()*60;
-  const basis=isoLokaalNaarMs(lokaal)-(offsetSeconden-eigen)*1000;
+  /* De app verschuift vanaf de actuele browsertijd en gebruikt daarbij de
+     huidige browser-offset. Bij een historische testdatum kan getHours() door
+     zomer-/wintertijd echter een andere browser-offset toepassen. Los dat in de
+     fixture op, zodat de matrix onafhankelijk blijft van land en TZ van CI. */
+  const doel=isoLokaalNaarMs(lokaal);
+  const eigenNu=-new Date().getTimezoneOffset()*60;
+  let basis=doel-offsetSeconden*1000;
+  for(let i=0;i<2;i++){
+    const verschoven=basis+(offsetSeconden-eigenNu)*1000;
+    const eigenOpDoelmoment=-new Date(verschoven).getTimezoneOffset()*60;
+    basis=doel-(offsetSeconden-eigenNu+eigenOpDoelmoment)*1000;
+  }
   api.S.klokOverride=new Date(basis);
 }
 
@@ -230,7 +240,8 @@ for(const breedte of [320,390,430,760,900,1100,1440]){
       const labels=temperatuurLabels(ctx.bak.chart.innerHTML);
       const botsing=labelsBotsen(labels);
       check(breedte+"px "+naam+": temperatuurcijfers botsen niet",!botsing,botsing?JSON.stringify(botsing):"");
-      check(breedte+"px "+naam+": labelaantal blijft begrensd",labels.length<=((breedte<760)?8:9),"labels "+labels.length);
+      check(breedte+"px "+naam+": alle acht drie-uursreferenties blijven zichtbaar en ieder uur krijgt hoogstens één cijfer",
+        labels.length>=8&&labels.length<=24,"labels "+labels.length);
       check(breedte+"px "+naam+": grafiek bevat geen NaN",!/NaN|undefined/.test(ctx.bak.chart.innerHTML),ctx.bak.chart.innerHTML.slice(0,120));
     }catch(e){
       check(breedte+"px "+naam+": grafiek loopt niet vast",false,e.message);
@@ -248,7 +259,7 @@ for(const breedte of [320,390,430,760,900,1100,1440]){
   ctx.d.current.temperature_2m=10;
   ctx.api.etmaal(i,24);
   const labels=temperatuurLabels(ctx.bak.chart.innerHTML);
-  check("mobiele 24-uursgrafiek toont bij voldoende ruimte acht temperatuurcijfers",labels.length===8,"gevonden "+labels.length+": "+labels.map(x=>x.waarde).join(","));
+  check("mobiele 24-uursgrafiek toont minimaal alle acht drie-uursreferenties",labels.length>=8,"gevonden "+labels.length+": "+labels.map(x=>x.waarde).join(","));
 }
 
 /* 5. Neerslagmatrix: alle kans- en hoeveelheidsdrempels, meerdere termijnen. */
@@ -299,6 +310,63 @@ for(const duur of [60,120,360]){
       vorige=rang;
     }
   }
+}
+
+/* 5b. Productie-integratie: bovenste samenvatting, onderste tekst en de
+   kwartiergrafiek moeten exact hetzelfde open tijdvenster (nu, nu+2 uur]
+   gebruiken. De forse bui die om 14:45 eindigde is bewust verleden; alleen
+   het laatste toekomstige kwartier om 16:45 bevat 0,4 mm. */
+{
+  const ctx=omgeving({breedte:390});
+  const d=ctx.d,h=d.hourly;
+  const i=h.time.indexOf("2026-07-22T14:00");
+  d.current.time="2026-07-22T14:45";
+  d.current.precipitation=0;
+  d.current.weather_code=3;
+  ctx.api.S.i0=i;
+  zetPlaatsKlok(ctx.api,d.utc_offset_seconds,d.current.time);
+
+  h.precipitation_probability.fill(0);
+  h.precipitation.fill(0);
+  h.weather_code.fill(3);
+  for(const q of [i+1,i+2,i+3]){
+    h.precipitation_probability[q]=80;
+    h.weather_code[q]=61;
+  }
+
+  const tijden=tijdreeks("2026-07-22T14:30",15,10,0);
+  const waarden=tijden.map((_,k)=>k===1?5:k===9?0.4:0);
+  d.minutely_15={
+    time:tijden,
+    precipitation:waarden,
+    rain:waarden.map((v,k)=>k===9?v:0),
+    showers:Array(10).fill(0),
+    snowfall:Array(10).fill(0),
+    weather_code:tijden.map((_,k)=>k===9?61:3)
+  };
+
+  const analyse=analyseerNeerslagData(d,120);
+  const verwacht=neerslagZin(analyse);
+  check("laatste kwartier: centrale analyse heeft volledige twee-uursdekking",
+    analyse.genoeg&&analyse.hoeveelheidDekking===1&&analyse.kansDekking===1,
+    JSON.stringify({genoeg:analyse.genoeg,hoeveelheidDekking:analyse.hoeveelheidDekking,kansDekking:analyse.kansDekking}));
+  check("laatste kwartier: analyse begint na nu en eindigt exact twee uur later",
+    analyse.minutelyItems[0]&&analyse.minutelyItems[0].tijd==="2026-07-22T15:00"&&
+    analyse.minutelyItems.at(-1)&&analyse.minutelyItems.at(-1).tijd==="2026-07-22T16:45",
+    analyse.minutelyItems.map(x=>x.tijd).join(", "));
+
+  ctx.api.briefing();
+  ctx.api.nowcast();
+  const boven=zonderTags(ctx.bak.brief.innerHTML);
+  const onder=schoon(ctx.bak.nctext.textContent).trim();
+  check("laatste kwartier: samenvatting bovenaan gebruikt de centrale neerslagzin",
+    boven.startsWith(verwacht),boven);
+  check("laatste kwartier: neerslagtekst onderaan is exact dezelfde centrale zin",
+    onder===verwacht,onder+" | verwacht: "+verwacht);
+  check("laatste kwartier: grafiek tekent 0,4 mm om 16:45",
+    />0,4<\/text>/.test(ctx.bak.nc.innerHTML)&&/16:/.test(ctx.bak.nc.innerHTML),ctx.bak.nc.innerHTML);
+  check("laatste kwartier: grafiek tekent de verstreken 5 mm niet",
+    !/>5<\/text>/.test(ctx.bak.nc.innerHTML),ctx.bak.nc.innerHTML);
 }
 
 /* 6. Temperatuur, wind, zicht en vocht aan de fysieke en weergaveranden. */
@@ -405,6 +473,49 @@ for(const [naam,lokaal,offset] of [
     ctx.api.briefing();ctx.api.nowcast();ctx.api.etmaal(ctx.api.S.i0,24);
     check("zonder kwartierdata blijft een eerlijke uurdata-fallback werken",!/NaN|undefined/.test(ctx.bak.brief.innerHTML+ctx.bak.nctext.textContent));
   }catch(e){check("zonder kwartierdata loopt de app niet vast",false,e.message);}
+}
+
+{
+  const ctx=omgeving();
+  const c=ctx.d.current,h=ctx.d.hourly;
+  for(const veld of ["wind_speed_10m","wind_direction_10m","wind_gusts_10m","pressure_msl","cloud_cover"]){
+    c[veld]=null;
+    if(Array.isArray(h[veld])) h[veld].fill(null);
+  }
+  try{
+    ctx.api.meters();
+    ctx.api.briefing();
+    const inhoud=[ctx.bak.wind.innerHTML,ctx.bak.gust.innerHTML,ctx.bak.pres.innerHTML,
+      ctx.bak.cloud.innerHTML,ctx.bak.brief.innerHTML].join(" ");
+    check("ontbrekende wind, druk en bewolking worden niet als nul verzonnen",
+      !/\b0\s*(?:km\/u|hPa|%)/.test(zonderTags(inhoud))&&!/NaN|undefined|null/.test(inhoud),zonderTags(inhoud));
+    check("ontbrekende wind krijgt een expliciete uitleg",
+      /Windgegevens zijn momenteel niet beschikbaar/.test(zonderTags(ctx.bak.brief.innerHTML)),zonderTags(ctx.bak.brief.innerHTML));
+  }catch(e){check("ontbrekende wind, druk en bewolking lopen niet vast",false,e.message);}
+}
+
+{
+  const ctx=omgeving();
+  ctx.d.current.temperature_2m=null;
+  ctx.d.hourly.temperature_2m.fill(null);
+  try{
+    ctx.api.briefing();
+    const tekst=zonderTags(ctx.bak.brief.innerHTML);
+    const neerslagOpeningen=(tekst.match(/kans op neerslag|neerslag verwacht|gegevens om de neerslagkans/gi)||[]).length;
+    check("ontbrekende temperatuur dupliceert de centrale neerslagconclusie niet",neerslagOpeningen===1,tekst);
+  }catch(e){check("ontbrekende temperatuur laat de briefing niet vastlopen",false,e.message);}
+}
+
+{
+  const ctx=omgeving();
+  delete ctx.d.minutely_15.precipitation;
+  delete ctx.d.hourly.precipitation;
+  try{
+    ctx.api.briefing();ctx.api.nowcast();
+    const tekst=zonderTags(ctx.bak.brief.innerHTML+" "+ctx.bak.nctext.textContent);
+    check("ontbrekende neerslagreeksen geven geen stellige droge nulconclusie",
+      /onvoldoende|ontbreken voldoende consistente gegevens/i.test(tekst)&&!/NaN|undefined|null/.test(tekst),tekst);
+  }catch(e){check("ontbrekende neerslagreeksen lopen niet vast",false,e.message);}
 }
 
 if(mislukt){

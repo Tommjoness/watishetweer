@@ -14,7 +14,10 @@
 //
 // Liever niets tonen dan iets tonen dat ergens anders geldt.
 
-const NIVEAU = { 1: "geel", 2: "oranje", 3: "rood",
+// MeteoAlarm awareness_level: 1 groen, 2 geel, 3 oranje, 4 rood.
+// Niveau 1 is geen waarschuwing; als het toch in een bron verschijnt tonen we
+// het terughoudend als geel in plaats van een zwaardere kleur te verzinnen.
+const NIVEAU = { 1: "geel", 2: "geel", 3: "oranje", 4: "rood",
   Minor: "geel", Moderate: "geel", Severe: "oranje", Extreme: "rood" };
 
 /* ---------- gebied afbakenen ----------
@@ -90,11 +93,11 @@ function raaktPunt(info, lat, lon) {
 // De landen waarvoor MeteoAlarm een feed publiceert, op ISO 3166-1 alfa-2.
 // De naam is de slug die in de feed-URL gaat.
 const METEOALARM = {
-  AT:"austria", BE:"belgium", BA:"bosnia-herzegovina", BG:"bulgaria", HR:"croatia",
+  AD:"andorra", AT:"austria", BE:"belgium", BA:"bosnia-herzegovina", BG:"bulgaria", HR:"croatia",
   CY:"cyprus", CZ:"czechia", DK:"denmark", EE:"estonia", FI:"finland", FR:"france",
   DE:"germany", GR:"greece", HU:"hungary", IS:"iceland", IE:"ireland", IL:"israel",
   IT:"italy", LV:"latvia", LT:"lithuania", LU:"luxembourg", MT:"malta", MD:"moldova",
-  ME:"montenegro", NL:"netherlands", MK:"north-macedonia", NO:"norway", PL:"poland",
+  ME:"montenegro", NL:"netherlands", MK:"republic-of-north-macedonia", NO:"norway", PL:"poland",
   PT:"portugal", RO:"romania", RS:"serbia", SK:"slovakia", SI:"slovenia", ES:"spain",
   SE:"sweden", CH:"switzerland", UA:"ukraine", GB:"united-kingdom"
 };
@@ -188,14 +191,21 @@ function uitCap(json, lat, lon) {
 }
 
 function uitAtom(xml) {
+  const xmlTekst = waarde => String(waarde || "")
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(parseInt(n, 10)))
+    .replace(/&(amp|lt|gt|quot|apos);/g, (_, n) => ({amp:"&",lt:"<",gt:">",quot:'"',apos:"'"}[n]));
   const lijst = [];
   for (const e of xml.split("<entry").slice(1)) {
     const t = (e.match(/<title[^>]*>([\s\S]*?)<\/title>/) || [])[1];
     const s = (e.match(/<summary[^>]*>([\s\S]*?)<\/summary>/) || [])[1];
     if (!t) continue;
     lijst.push({
-      titel: t.replace(/<[^>]+>/g, "").trim(),
-      tekst: (s || "").replace(/<[^>]+>/g, "").trim().slice(0, 300),
+      landelijk: true, // Atom bevat geen betrouwbaar polygoon: dit altijd expliciet melden
+      titel: xmlTekst(t).trim(),
+      tekst: xmlTekst(s).replace(/\s+/g, " ").trim().slice(0, 300),
       niveau: /rood|red/i.test(t) ? "rood" : /oranje|orange/i.test(t) ? "oranje" : "geel",
       van: null, tot: null, gebied: null
     });
@@ -240,7 +250,7 @@ module.exports = async function handler(req, res) {
         bron: "National Weather Service", dekking: true, lijst: await viaNWS(lat, lon)
       });
     } catch (e) {
-      return res.status(200).json({ bron: "National Weather Service", dekking: true, lijst: [], reden: "bron onbereikbaar" });
+      return res.status(200).json({ bron: "National Weather Service", dekking: false, lijst: [], reden: "bron onbereikbaar" });
     }
   }
 
@@ -249,7 +259,7 @@ module.exports = async function handler(req, res) {
   if (slug) {
     const uit = await viaMeteoAlarm(slug, lat, lon);
     if (uit) return res.status(200).json({ bron: "MeteoAlarm " + slug, dekking: true, lijst: uit.lijst });
-    return res.status(200).json({ bron: "MeteoAlarm " + slug, dekking: true, lijst: [], reden: "bron onbereikbaar" });
+    return res.status(200).json({ bron: "MeteoAlarm " + slug, dekking: false, lijst: [], reden: "bron onbereikbaar" });
   }
 
   return res.status(200).json({

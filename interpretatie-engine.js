@@ -33,6 +33,14 @@ function getal(v){
   return v!==null && v!==undefined && v!=="" && Number.isFinite(Number(v)) ? Number(v) : null;
 }
 
+function veldGetal(veld,v){
+  const n=getal(v);
+  if(n===null) return null;
+  if(veld==="precipitation_probability") return Math.max(0,Math.min(100,n));
+  if(["precipitation","rain","showers","snowfall"].includes(veld)) return n<0?null:n;
+  return n;
+}
+
 function lokaalNaarMinuten(tijd){
   const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(tijd||""));
   if(!m) return null;
@@ -101,14 +109,17 @@ function leesReeks(reeks,stapMin,startMin,eindMin,velden){
   for(let i=0;i<tijden.length;i++){
     const eind=lokaalNaarMinuten(tijden[i]);
     if(eind===null) continue;
-    if(gezien.has(eind)){ dubbeleTijd=true; continue; }
-    gezien.add(eind);
     const begin=eind-stapMin;
     const overlap=overlapMinuten(begin,eind,startMin,eindMin);
     if(overlap<=0) continue;
+    // Alleen een dubbele lokale tijd die het onderzochte venster werkelijk
+    // raakt is dubbelzinnig. Een klokomslag in oude of latere brondata mag een
+    // actuele conclusie niet onnodig ongeldig maken.
+    if(gezien.has(eind)){ dubbeleTijd=true; continue; }
+    gezien.add(eind);
     const item={i,begin,eind,overlap,fractie:overlap/stapMin,tijd:tijden[i]};
     for(const veld of velden){
-      item[veld]=getal(reeks[veld]&&reeks[veld][i]);
+      item[veld]=veldGetal(veld,reeks[veld]&&reeks[veld][i]);
     }
     uit.push(item);
   }
@@ -202,7 +213,8 @@ function analyseerNeerslagData(data,duurMin,nuOverride){
   const genoeg=!dubbeleTijd && hoeveelheidDekking>=INTERPRETATIE_CONFIG.minimaleDekking
     && kans.dekking>=INTERPRETATIE_CONFIG.minimaleDekking;
 
-  const currentHoeveelheid=getal(current.precipitation)||0;
+  const currentRuw=getal(current.precipitation);
+  const currentHoeveelheid=currentRuw!==null&&currentRuw>=0?currentRuw:0;
   const currentWet=currentHoeveelheid>=0.05 && isNeerslagCode(current.weather_code);
   const soort=kiesNeerslagSoort(minLees.items,uurLees.items);
   const status=bepaalStatus(kans.max,hoeveelheid,currentWet,genoeg);
@@ -371,7 +383,6 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
     nowcast:typeof nowcast==="function"?nowcast:null,
     dagen:typeof dagen==="function"?dagen:null,
     lucht:typeof lucht==="function"?lucht:null,
-    waarschuwingen:typeof waarschuwingen==="function"?waarschuwingen:null,
     etmaal:typeof etmaal==="function"?etmaal:null,
     chartHint:typeof chartHint==="function"?chartHint:null,
     daglengte:typeof daglengte==="function"?daglengte:null,
@@ -412,10 +423,10 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       zetEyebrow("prec","Neerslag recent");
       const c=S.d.current||{};
       const intervalMin=Math.max(1,Math.round((getal(c.interval)||900)/60));
-      const recent=getal(c.precipitation);
+      const recent=veldGetal(c.precipitation,"precipitation");
       set("prec",recent===null?"–":recent<=INTERPRETATIE_CONFIG.spoorMm?"Geen":(recent<0.1?"<0,1":nl(recent))+"<s>mm</s>");
       const dag=S.d.daily||{},idx=dag.time?dag.time.indexOf(plaatsVandaag()):-1;
-      const dagsom=idx>=0&&dag.precipitation_sum?getal(dag.precipitation_sum[idx]):null;
+      const dagsom=idx>=0&&dag.precipitation_sum?veldGetal(dag.precipitation_sum[idx],"precipitation_sum"):null;
       zetTekst("precsub",recent===null
         ? "Recente neerslag is niet beschikbaar."
         : (recent<=INTERPRETATIE_CONFIG.spoorMm
@@ -429,13 +440,8 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       origineel.briefing();
       const el=document.getElementById("brief");
       const bestaand=el.innerHTML;
-      const markers=["Het wordt maximaal","Het was het warmst","Warmer dan","De temperatuur blijft"];
-      let idx=-1;
-      for(const marker of markers){
-        const i=bestaand.indexOf(marker);
-        if(i>=0&&(idx<0||i<idx)) idx=i;
-      }
-      const rest=idx>=0?bestaand.slice(idx):bestaand;
+      const scheiding="<!--brief-rest-->",idx=bestaand.indexOf(scheiding);
+      const rest=idx>=0?bestaand.slice(idx+scheiding.length):bestaand;
       const twee=analyse(120);
       let voor=esc(neerslagZin(twee));
       const waars=S.actieveWaarschuwingen||[];
@@ -455,7 +461,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       tx.textContent=nbsp(neerslagZin(a));
       if(grafiek){
         grafiek.setAttribute("aria-label",neerslagZin(a)+" Kwartierwaarden zijn sommen over het voorafgaande kwartier.");
-        if(a.genoeg) grafiek.style.display=a.hoeveelheid>0?"block":"none";
+        if(a.genoeg) grafiek.style.display=a.bronHoeveelheid==="kwartierdata"&&a.hoeveelheid>0?"block":"none";
       }
     };
   }
@@ -465,6 +471,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       origineel.dagen();
       const rijen=document.querySelectorAll("#days .row.day");
       rijen.forEach(rij=>{
+        if(rij.classList&&rij.classList.contains("kop")) return;
         const i=Number(rij.dataset.i),a=analyseerDagData(S.d,i);
         const cond=rij.querySelector(".dcond"),kans=rij.querySelector(".drain"),icoon=rij.querySelector(".dico");
         if(cond) cond.textContent=dagSamenvatting(a);
@@ -508,7 +515,8 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
     lucht=function(){
       origineel.lucht();
       if(!S.air||!S.air.current) return;
-      const c=S.air.current,eu=getal(c.european_aqi),us=getal(c.us_aqi),euro=eu!==null;
+      const c=S.air.current,eu=getal(c.european_aqi),us=getal(c.us_aqi);
+      const euro=typeof inEuropa==="function"&&inEuropa(S.lat,S.lon)&&eu!==null;
       const waarde=euro?eu:us;
       const eerste=document.querySelector("#aq .stat");
       if(eerste&&waarde!==null){
@@ -527,33 +535,6 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       });
     };
   }
-
-  waarschuwingen=async function(){
-    const el=document.getElementById("waarschuwingen");
-    el.innerHTML="";
-    try{
-      const d=await j("/api/waarschuwingen?lat="+S.lat+"&lon="+S.lon);
-      const nu=Date.now(),rang={rood:3,oranje:2,geel:1};
-      const uniek=new Map();
-      for(const w of (d&&Array.isArray(d.lijst)?d.lijst:[])){
-        const einde=w.tot?Date.parse(w.tot):NaN;
-        if(Number.isFinite(einde)&&einde<nu) continue;
-        const sleutel=[w.titel||"",w.tot||"",w.gebied||""].join("|").toLowerCase();
-        if(!uniek.has(sleutel)) uniek.set(sleutel,w);
-      }
-      const lijst=[...uniek.values()].sort((a,b)=>(rang[b.niveau]||0)-(rang[a.niveau]||0)
-        ||((Date.parse(a.van)||Infinity)-(Date.parse(b.van)||Infinity)));
-      S.actieveWaarschuwingen=lijst;
-      el.innerHTML=lijst.slice(0,3).map(w=>
-        `<div class="waarsch"><h3>${esc(w.titel)}</h3><p>${esc(w.tekst||"")}`
-        +(w.tot?" Geldig tot "+esc(w.tot)+".":"")
-        +(w.landelijk?" Geldt voor een groter gebied, niet per se voor deze plaats.":"")
-        +`</p></div>`).join("");
-    }catch(e){
-      S.actieveWaarschuwingen=[];
-    }
-    if(S.d&&typeof briefing==="function") briefing();
-  };
 
   daglengte=function(i){
     const sr=S.d.daily.sunrise[i],ss=S.d.daily.sunset[i];

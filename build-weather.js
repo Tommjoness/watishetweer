@@ -3,14 +3,19 @@
 const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
+const crypto=require("crypto");
 
 const ROOT=__dirname;
 const OUT=path.join(ROOT,"public");
 const NIET_PUBLICEREN=new Set([
   ".git",".github","api","node_modules","public",
   "build-weather.js","interpretatie-engine.js","interpretatie-engine.test.js",
-  "run.js","kern.js","data.js","package.json","package-lock.json","vercel.json"
+  "run.js","run-built-matrix.js","kern.js","data.js","package.json","package-lock.json","vercel.json"
 ]);
+
+function isInternBestand(naam){
+  return NIET_PUBLICEREN.has(naam)||naam.endsWith(".test.js");
+}
 
 function kopieer(bron,doel){
   const stat=fs.statSync(bron);
@@ -26,14 +31,14 @@ function kopieer(bron,doel){
 fs.rmSync(OUT,{recursive:true,force:true});
 fs.mkdirSync(OUT,{recursive:true});
 for(const naam of fs.readdirSync(ROOT)){
-  if(NIET_PUBLICEREN.has(naam)) continue;
+  if(isInternBestand(naam)) continue;
   kopieer(path.join(ROOT,naam),path.join(OUT,naam));
 }
 
 const indexPad=path.join(ROOT,"index.html");
 const enginePad=path.join(ROOT,"interpretatie-engine.js");
 let html=fs.readFileSync(indexPad,"utf8");
-const engine=fs.readFileSync(enginePad,"utf8");
+let engine=fs.readFileSync(enginePad,"utf8");
 
 function vervangEenmalig(zoek,vervang,label){
   const aantal=html.split(zoek).length-1;
@@ -84,11 +89,16 @@ vervangEenmalig(
    geen balk, percentage of tooltipwaarde meer opleveren. Temperatuur en andere
    momentwaarden blijven wel staan; alleen de intervalwaarden worden leeggemaakt. */
 vervangEenmalig(
-  "    P.push(h.precipitation_probability[i]??0);MM.push(h.precipitation[i]??0);",
-`    const intervalVerlopen=S.dag==null&&globalThis.WeatherNowInterpretatie
+`    const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[i]);
+    const hoeveelheid=eindigGetal(h.precipitation&&h.precipitation[i]);
+    P.push(kans===null||kans<0?null:clamp(kans,0,100));
+    MM.push(hoeveelheid===null||hoeveelheid<0?null:hoeveelheid);`,
+`    const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[i]);
+    const hoeveelheid=eindigGetal(h.precipitation&&h.precipitation[i]);
+    const intervalVerlopen=S.dag==null&&globalThis.WeatherNowInterpretatie
       &&globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(h.time[i])<=globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(S.d.current.time);
-    P.push(intervalVerlopen?null:(h.precipitation_probability[i]??null));
-    MM.push(intervalVerlopen?null:(h.precipitation[i]??null));`,
+    P.push(intervalVerlopen||kans===null||kans<0?null:clamp(kans,0,100));
+    MM.push(intervalVerlopen||hoeveelheid===null||hoeveelheid<0?null:hoeveelheid);`,
   "verlopen grafiekintervallen"
 );
 
@@ -97,34 +107,6 @@ vervangEenmalig(
   '+rij("neerslagkans",(heel(G.P&&G.P[i])?G.P[i]:"–")+"%",TEAL)',
   '+rij(heel(G.P&&G.P[i])&&G.P[i]>0?"kans "+weatherNowUurvak(G.TI[i]):"neerslag",heel(G.P&&G.P[i])&&G.P[i]>0?G.P[i]+"%":"geen neerslag verwacht",TEAL)',
   "tooltip-neerslagtijdvak"
-);
-
-/* De temperatuurzin bovenaan en de standaardgrafiek moeten hetzelfde venster
-   gebruiken. De grafiek start bij S.i0 en toont 24 uur; de briefing keek nog
-   maar twaalf uur vooruit, waardoor een middagpiek buiten beeld van de tekst viel. */
-vervangEenmalig(
-  "  const eind=Math.min(i+13,h.time.length);",
-  "  const eind=Math.min(i+24,h.time.length);",
-  "briefing gebruikt dezelfde 24 uur als de grafiek"
-);
-
-/* Op mobiel waren vijf temperatuurcijfers te weinig voor een etmaal. Acht labels
-   geven ongeveer één waarde per drie uur, terwijl de bestaande botsingscontrole
-   nog steeds elk label afzonderlijk op veilige afstand en hoogte plaatst. */
-vervangEenmalig(
-  "  const maximumLabels=M?(n<=24?5:n<=48?4:3):(n<=24?9:n<=48?8:7);",
-  "  const maximumLabels=M?(n<=24?8:n<=48?6:4):(n<=24?9:n<=48?8:7);",
-  "mobiele dichtheid temperatuurlabels"
-);
-vervangEenmalig(
-  "  const minimumAfstand=M?(n<=24?48:n<=48?62:78):42;",
-  "  const minimumAfstand=M?(n<=24?34:n<=48?48:68):42;",
-  "mobiele afstand temperatuurlabels"
-);
-vervangEenmalig(
-  "  const MAXLAAG=M?2:3; // beperkte lagen: liever één cijfer minder dan een visuele stapel",
-  "  const MAXLAAG=3; // drie veilige hoogtelagen op ieder scherm; botsende labels worden nog steeds geweigerd",
-  "veilige hoogtelagen temperatuurlabels"
 );
 
 vervangEenmalig(
@@ -159,19 +141,40 @@ if(!html.includes("intervalVerlopen")) throw new Error("Verlopen neerslaginterva
 if(!html.includes("weatherNowUurvak")) throw new Error("Exact tooltip-tijdvak ontbreekt.");
 if(!html.includes('"geen neerslag verwacht"')) throw new Error("Droge tooltip gebruikt nog een nulpercentage.");
 if(!html.includes('kort.droog')) throw new Error("Droge neerslagweergaven zijn niet centraal afgevangen.");
-if(!html.includes('maximumLabels=M?')) throw new Error("Harde limiet voor temperatuurlabels ontbreekt.");
+if(!html.includes('maximumLabels=n<=24?kandidaten.length')) throw new Error("Etmaalgrafiek kan nog temperatuurmarkeringen wegkappen.");
 if(!html.includes("const eind=Math.min(i+24,h.time.length);")) throw new Error("Briefing gebruikt niet hetzelfde 24-uursvenster als de grafiek.");
-if(!html.includes("n<=24?8:n<=48?6:4")) throw new Error("Mobiele grafiek toont nog te weinig temperatuurlabels.");
-if(!html.includes("n<=24?34:n<=48?48:68")) throw new Error("Mobiele labelafstand is niet op de hogere informatiedichtheid afgestemd.");
-if(!html.includes("const MAXLAAG=3;")) throw new Error("Drie veilige labelhoogtes ontbreken.");
+if(!html.includes("kandidaten=n<=24?kandidatenRuw")) throw new Error("Drie-uursmarkeringen worden binnen een etmaal nog gefilterd.");
+if(!html.includes("const MAXLAAG=M&&n<=24?4:3;")) throw new Error("Extra veilige labelhoogtes voor mobiel ontbreken.");
+if(!html.includes("#minibar{position:fixed")) throw new Error("Mobiele minibalk kan nog een scroll-layoutlus veroorzaken.");
+if(!html.includes("pastLinks=links-bw/2>=pl-2")) throw new Error("Temperatuurlabel kan nog in de ruimte van de y-as schuiven.");
+if(!html.includes("@media(hover:hover) and (pointer:fine){.day:hover")) throw new Error("Weekrij-hover is nog actief tijdens aanraken.");
+if(!html.includes("-webkit-tap-highlight-color:transparent")) throw new Error("Witte iOS-aanraakmarkering is niet uitgeschakeld.");
+if(!html.includes("S.actieveWaarschuwingen=[];")) throw new Error("Waarschuwingen van een vorige locatie worden niet direct gewist.");
+if(!html.includes("Officiële weerwaarschuwingen konden niet worden gecontroleerd.")) throw new Error("Ontbrekende waarschuwingdekking blijft stil.");
+if(!html.includes("mijnBeurt!==waarschuwingTeller")) throw new Error("Verouderde waarschuwingaanvragen worden niet geweigerd.");
+if(!html.includes("const rondGetal=")) throw new Error("Null-veilige temperatuurweergave ontbreekt.");
+if(!html.includes('const scheiding="<!--brief-rest-->"')) throw new Error("Briefinglagen kunnen de tijdgebonden samenvatting niet veilig scheiden.");
+if(!html.includes('classList.contains("kop")')) throw new Error("Weekinterpretatie kan de semantische tabelkop nog overschrijven.");
+if(!html.includes('dagAanduiding(h.time[top],true)+" wordt het maximaal')) throw new Error("Temperatuurmaximum mist een voorafgaande dagaanduiding.");
+if(!html.includes('zonDag+" · "')) throw new Error("Zonmomenten missen een expliciete dag bij de 24-uursweergave.");
 
 fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 
+/* De cacheversie volgt de werkelijk gebouwde app. Een handmatig vast nummer kan
+   na een volgende wijziging gelijk blijven, waardoor cache-first assets oud
+   blijven. Dezelfde build levert steeds dezelfde hash; gewijzigde code levert
+   automatisch een nieuwe cache op. */
+const cacheVersie="weerbriefing-"+crypto.createHash("sha256").update(html).digest("hex").slice(0,12);
 const swPad=path.join(OUT,"sw.js");
 if(fs.existsSync(swPad)){
   let sw=fs.readFileSync(swPad,"utf8");
-  sw=sw.replace(/weerbriefing-v\d+/g,"weerbriefing-v75");
+  sw=sw.replace(/weerbriefing-v\d+/g,cacheVersie);
+  if(!sw.includes(cacheVersie)) throw new Error("Dynamische serviceworker-cacheversie is niet toegepast.");
   fs.writeFileSync(swPad,sw,"utf8");
 }
 
-console.log("WeatherNow-build geslaagd: briefing en grafiek gebruiken hetzelfde etmaal en de mobiele grafiek toont meer veilige temperatuurwaarden.");
+for(const naam of fs.readdirSync(OUT)){
+  if(isInternBestand(naam)) throw new Error("Intern bestand is ten onrechte publiek gebouwd: "+naam);
+}
+
+console.log("WeatherNow-build geslaagd: productiecode gevalideerd, interne tests niet gepubliceerd en cacheversie "+cacheVersie+" toegepast.");

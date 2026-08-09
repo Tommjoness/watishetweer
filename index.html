@@ -93,8 +93,13 @@
        ellipsis toe. Pas als zelfs dat niet genoeg is, mag de plaatsnaam zelf
        inkorten: die heeft een kleine, niet-nul shrink-factor als laatste redmiddel,
        met de volledige naam nog altijd beschikbaar via het title-attribuut. */
-    #minibar{position:sticky;top:0;z-index:25;background:var(--sheet);border-bottom:1px solid var(--rule);
-      margin:-24px -20px 0;padding:9px 20px;display:none;flex-wrap:nowrap;white-space:nowrap;
+    /* De balk staat bewust fixed en dus buiten de documentstroom. Met sticky
+       veranderde display:none -> flex de paginahoogte precies op het moment
+       dat de hero de viewport verliet. Chrome kon daardoor de hero meteen
+       weer zichtbaar verklaren en de balk bleef tijdens scrollen aan/uit
+       schakelen: de gemelde verticale tril-/bevrieslus. */
+    #minibar{position:fixed;top:0;left:12px;right:12px;z-index:25;background:var(--sheet);border-bottom:1px solid var(--rule);
+      margin:0;padding:9px 20px;display:none;flex-wrap:nowrap;white-space:nowrap;
       align-items:baseline;gap:10px;overflow:hidden}
     #minibar.aan{display:flex}
     #miniplaats{font-family:var(--serif);font-size:17px;
@@ -105,7 +110,7 @@
       flex:0 0 auto;white-space:nowrap;margin-left:auto;padding-left:.4em}
     #minicond{font-family:var(--serif);font-size:15px;color:var(--ink-45);
       flex:1 1 0;flex-shrink:9999;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-    @media(max-width:340px){ #minibar{gap:6px;padding:9px 14px;margin:-24px -14px 0} }
+    @media(max-width:340px){ #minibar{gap:6px;padding:9px 14px} }
   }
   .mast{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s3);flex-wrap:wrap}
   .mast h1{font-family:var(--serif);font-weight:400;font-size:15px;letter-spacing:.02em;margin:0;color:var(--ink-45)}
@@ -229,8 +234,12 @@
   .row{display:grid;align-items:center;border-bottom:1px solid var(--rule-soft);padding:11px 0}
   .row:last-child{border-bottom:none}
   .day{grid-template-columns:100px 26px 1fr 72px 54px 128px 46px 52px;gap:14px;cursor:pointer}
+  .day{touch-action:pan-y;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
   .dkort{display:none}
-  .day:hover{background:#FAFBFA}
+  /* iOS houdt :hover tijdens een aanraak-/scrollgebaar soms vast. De lichte
+     desktop-hover werd daardoor een volledig witte rij totdat de vinger werd
+     losgelaten. Alleen apparaten met een echte fijne aanwijzer krijgen hover. */
+  @media(hover:hover) and (pointer:fine){.day:hover{background:var(--rule-soft)}}
   /* De lijn zat tegen de dagnaam aan omdat de rij links geen ruimte had. Nu een
      streep met lucht ernaast, en de rij schuift niet op want de opvulling vervangt
      wat er eerst niet was. */
@@ -612,11 +621,15 @@ const DIRS=["N","NNO","NO","ONO","O","OZO","ZO","ZZO","Z","ZZW","ZW","WZW","W","
 const DIRSVOL=["noorden","noordnoordoosten","noordoosten","oostnoordoosten","oosten","oostzuidoosten",
   "zuidoosten","zuidzuidoosten","zuiden","zuidzuidwesten","zuidwesten","westzuidwesten","westen",
   "westnoordwesten","noordwesten","noordnoordwesten"];
-const kompas=d=>DIRSVOL[Math.round(d/22.5)%16];
+const richtingIndex=d=>{
+  if(d===null||d===undefined||d===""||!Number.isFinite(Number(d))) return null;
+  return ((Math.round(Number(d)/22.5)%16)+16)%16;
+};
+const kompas=d=>{const i=richtingIndex(d);return i===null?null:DIRSVOL[i];};
 /* Zestien vakken van 22,5 graden. Math.round pakt vanzelf het dichtstbijzijnde vak,
    dus 348,75 tot 11,25 wordt N, en de modulo vangt de overgang bij 360 op. */
 const DIRSKORT=["N","NNO","NO","ONO","O","OZO","ZO","ZZO","Z","ZZW","ZW","WZW","W","WNW","NW","NNW"];
-const kompasKort=d=>DIRSKORT[((Math.round(d/22.5)%16)+16)%16];
+const kompasKort=d=>{const i=richtingIndex(d);return i===null?null:DIRSKORT[i];};
 const BFTBIJV=["windstil","zwak","zwak","matig","matig","vrij krachtig","krachtig","hard",
   "stormachtig","stormachtig","zeer stormachtig","zeer stormachtig","orkaanachtig"];
 const DAGEN=["zo","ma","di","wo","do","vr","za"];
@@ -642,6 +655,10 @@ const esc=t=>String(t==null?"":t).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;
 const EENHEDEN="km/u|mm|hPa|Bft|graden|graad|meter|procent|korrels|µg|uur|minuten|minuut|%";
 const nbsp=t=>String(t).replace(new RegExp("(\\d)\\s("+EENHEDEN+")","g"),"$1\u00a0$2");
 const nl=(v,d)=>(v==null?"–":Number(v).toFixed(d==null?1:d).replace(".",","));
+/* null wordt door Number en Math.round als nul behandeld. Weerdata met een gat
+   mag daardoor nooit rechtstreeks een reken- of formatteringsfunctie in. */
+const eindigGetal=v=>v===null||v===undefined||v===""||!Number.isFinite(Number(v))?null:Number(v);
+const rondGetal=v=>{const n=eindigGetal(v);return n===null?null:Math.round(n);};
 function bft(k){let n=0;for(let i=0;i<BFT.length;i++) if(k>=BFT[i]) n=i+1;return n;}
 
 /* ---------- haarlijn-iconen ---------- */
@@ -697,6 +714,30 @@ function icon(code,isDay,size){
 function plaatsVandaag(){
   const t=plaatsNu();
   return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
+}
+
+/* Eén bron voor woorden als vandaag, morgen en op maandag. De vergelijking
+   gebeurt op kale kalenderdatums in de tijdzone van de plaats. Daardoor kan
+   een verwachting na middernacht nooit eerst als een tijdloze claim worden
+   getoond en pas verderop in de zin alsnog het woord "morgen" krijgen. */
+function dagVerschil(tijd){
+  const doel=String(tijd||"").slice(0,10);
+  const bronDatum=String(S.d&&S.d.current&&S.d.current.time||"").slice(0,10);
+  const basis=/^\d{4}-\d{2}-\d{2}$/.test(bronDatum)?bronDatum:plaatsVandaag();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(doel)||!/^\d{4}-\d{2}-\d{2}$/.test(basis)) return null;
+  const utc=s=>{const p=s.split("-").map(Number);return Date.UTC(p[0],p[1]-1,p[2]);};
+  return Math.round((utc(doel)-utc(basis))/86400000);
+}
+function dagAanduiding(tijd,hoofdzin){
+  const verschil=dagVerschil(tijd),klein=hoofdzin!==true;
+  if(verschil===0) return klein?"vandaag":"Vandaag";
+  if(verschil===1) return klein?"morgen":"Morgen";
+  if(verschil===-1) return klein?"gisteren":"Gisteren";
+  const datum=String(tijd||"").slice(0,10),p=datum.split("-").map(Number);
+  if(p.length!==3||p.some(v=>!Number.isFinite(v))) return klein?"op een later moment":"Op een later moment";
+  const namen=["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+  const tekst="op "+namen[new Date(Date.UTC(p[0],p[1]-1,p[2])).getUTCDay()];
+  return klein?tekst:tekst.charAt(0).toUpperCase()+tekst.slice(1);
 }
 
 function plaatsNu(){
@@ -815,7 +856,7 @@ function maan(d){
 }
 
 /* ---------- state ---------- */
-const S={lat:null,lon:null,label:"",d:null,air:null,i0:0,dag:null,op:0,geo:null,bereik:24};
+const S={lat:null,lon:null,label:"",d:null,air:null,i0:0,dag:null,op:0,geo:null,bereik:24,actieveWaarschuwingen:[]};
 const KEY_P="weerbriefing.plaats",KEY_D="weerbriefing.data",KEY_L="weerbriefing.lijst";
 const ls={
   get(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f;}catch(e){return f;}},
@@ -824,16 +865,24 @@ const ls={
 async function j(url){const r=await fetch(url);if(!r.ok)throw new Error("status "+r.status);return r.json();}
 
 /* ---------- ophalen ---------- */
-let laadTeller=0;
+let laadTeller=0,waarschuwingTeller=0;
 /* opslaan=false is uitsluitend voor een gedeelde URL-locatie: die moet wel
    zichtbaar laden, maar hoort niet de persoonlijke laatst gebruikte plaats te
    overschrijven van iemand die toevallig andermans link opent. */
 async function load(lat,lon,label,stil,opslaan){
   if(opslaan===undefined) opslaan=true;
   const mijnBeurt=++laadTeller;
+  const nieuweLat=Number(lat),nieuweLon=Number(lon);
+  if(S.lat!==nieuweLat||S.lon!==nieuweLon){
+    // Maak iedere lopende waarschuwingaanvraag ongeldig zodra de plaats wijzigt.
+    waarschuwingTeller++;
+    S.actieveWaarschuwingen=[];
+    const waarschuwingEl=document.getElementById("waarschuwingen");
+    if(waarschuwingEl) waarschuwingEl.innerHTML="";
+  }
   const st=document.getElementById("state");
   if(!stil){st.style.display="block";st.className="msg";st.textContent="Gegevens ophalen.";}
-  S.lat=+lat;S.lon=+lon;S.label=label;
+  S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;
 
   const basis="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon
     +"&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,precipitation,"
@@ -904,9 +953,13 @@ function tekenAlles(){
   document.getElementById("place").innerHTML=
     esc(S.label)+'<span id="plaatstijd">'+plaatsKlok()+'</span>';
   document.title=S.label+" · Weerbriefing";
-  document.getElementById("t").textContent=Math.round(c.temperature_2m);
+  const huidigeTemperatuur=rondGetal(c.temperature_2m);
+  const gevoelstemperatuur=rondGetal(c.apparent_temperature);
+  document.getElementById("t").textContent=huidigeTemperatuur===null?"–":huidigeTemperatuur;
   document.getElementById("cond").textContent=txt(c.weather_code,c.is_day!==0);
-  document.getElementById("feels").textContent="Gevoelstemperatuur "+Math.round(c.apparent_temperature)+"°C";
+  document.getElementById("feels").textContent=gevoelstemperatuur===null
+    ?"Gevoelstemperatuur niet beschikbaar"
+    :"Gevoelstemperatuur "+gevoelstemperatuur+"°C";
   document.getElementById("nowicon").innerHTML=icon(c.weather_code,c.is_day===1,46);
   document.getElementById("coords").textContent=S.lat.toFixed(3)+", "+S.lon.toFixed(3)+" · "+d.timezone;
 
@@ -927,13 +980,16 @@ function set(id,html){document.getElementById(id).innerHTML=nbsp(html);}
 function zetTekst(id,tekst){document.getElementById(id).textContent=nbsp(tekst);}
 
 function piek(veld,dagIndex,vanafNu){
-  const h=S.d.hourly,dag=S.d.daily.time[dagIndex||0],nu=S.d.current.time;
+  const h=S.d.hourly,dagen=S.d.daily.time||[],nu=S.d.current.time;
+  const gekozen=dagIndex==null?dagen.indexOf(String(nu||"").slice(0,10)):dagIndex;
+  const dag=gekozen>=0?dagen[gekozen]:null;
+  if(!dag) return null;
   let bv=-Infinity,bt=null;
   for(let i=0;i<h.time.length;i++){
     if(h.time[i].slice(0,10)!==dag) continue;
     if(vanafNu&&h.time[i]<=nu) continue;
-    const v=h[veld]?h[veld][i]:null;
-    if(v==null) continue;
+    const v=eindigGetal(h[veld]?h[veld][i]:null);
+    if(v===null) continue;
     if(v>bv){bv=v;bt=h.time[i];}
   }
   return bt?{v:bv,t:bt}:null;
@@ -941,23 +997,34 @@ function piek(veld,dagIndex,vanafNu){
 function meters(){
   const c=S.d.current,h=S.d.hourly,i=S.i0,day=S.d.daily,nu=c.time;
 
-  const b=bft(c.wind_speed_10m);
+  const windRuw=eindigGetal(c.wind_speed_10m);
+  const windsnelheid=windRuw!==null&&windRuw>=0?windRuw:null,windrichting=eindigGetal(c.wind_direction_10m);
+  const b=windsnelheid===null?null:bft(windsnelheid);
   /* De richting stond alleen als woord in de zin eronder. Als afkorting naast het
      getal lees je hem in een oogopslag. kompasKort deelt de cirkel in zestien vakken
      van 22,5 graden, dus 348,75 tot 11,25 is N. */
-  set("wind",Math.round(c.wind_speed_10m)+"<s>km/u</s> <s>"+kompasKort(c.wind_direction_10m)+"</s> "
-    +pijl(c.wind_direction_10m));
-  zetTekst("windsub", b===0
-    ? "Vrijwel windstil."
-    : BFTNAAM[b].charAt(0).toUpperCase()+BFTNAAM[b].slice(1)+" uit het "+kompas(c.wind_direction_10m)+" ("+b+" Bft).");
+  if(windsnelheid===null){
+    set("wind","–");
+    zetTekst("windsub","Windsnelheid niet beschikbaar.");
+  }else{
+    const richtingKort=kompasKort(windrichting),richtingVol=kompas(windrichting);
+    set("wind",Math.round(windsnelheid)+"<s>km/u</s>"+(richtingKort?" <s>"+richtingKort+"</s> "+pijl(windrichting):""));
+    zetTekst("windsub", b===0
+      ? "Vrijwel windstil."
+      : BFTNAAM[b].charAt(0).toUpperCase()+BFTNAAM[b].slice(1)
+        +(richtingVol?" uit het "+richtingVol:"")+" ("+b+" Bft)."+(richtingVol?"":" Windrichting niet beschikbaar."));
+  }
 
-  set("gust",Math.round(c.wind_gusts_10m)+"<s>km/u</s>");
-  const pg=piek("wind_gusts_10m",0);
+  const windstootRuw=eindigGetal(c.wind_gusts_10m);
+  const windstoot=windstootRuw!==null&&windstootRuw>=0?windstootRuw:null;
+  set("gust",windstoot===null?"–":Math.round(windstoot)+"<s>km/u</s>");
+  const pgRuw=piek("wind_gusts_10m"),pg=pgRuw&&pgRuw.v>=0?pgRuw:null;
   zetTekst("gustsub", !pg ? "Geen uurgegevens beschikbaar."
-    : pg.t>nu ? "Toppen tot "+Math.round(pg.v)+" km/u rond "+hhmm(pg.t)+"."
-    : "De zwaarste stoot was "+Math.round(pg.v)+" km/u rond "+hhmm(pg.t)+".");
+    : pg.t>nu ? dagAanduiding(pg.t,true)+" rond "+hhmm(pg.t)+" worden windstoten tot "+Math.round(pg.v)+" km/u verwacht."
+    : dagAanduiding(pg.t,true)+" was de zwaarste windstoot "+Math.round(pg.v)+" km/u rond "+hhmm(pg.t)+".");
 
-  set("prec",nl(c.precipitation)+"<s>mm</s>");
+  const recenteNeerslag=eindigGetal(c.precipitation);
+  set("prec",recenteNeerslag===null||recenteNeerslag<0?"–":nl(recenteNeerslag)+"<s>mm</s>");
   /* Niet blind index 0: dat is Open-Meteo's eigen "vandaag" op het moment van
      ophalen, en bij een verouderde, uit de cache teruggevallen briefing (zie de
      foutafhandeling in load()) kan dat een andere dag zijn dan de kalenderdag
@@ -970,8 +1037,8 @@ function meters(){
      is geldige data en geen reden om een andere zin ("blijft het droog") te
      gebruiken dan bij elke andere waarde. Zo blijft de tegel een prognose voor
      de hele kalenderdag, en geen mengvorm van "al gevallen" en "nog te komen". */
-  zetTekst("precsub", (som==null||!isFinite(som))
-    ? "Totale neerslag van vandaag niet beschikbaar"
+  zetTekst("precsub", (som==null||!isFinite(som)||som<0)
+    ? "Totale neerslag van vandaag niet beschikbaar."
     : "Voor vandaag wordt in totaal "+nl(som)+" mm neerslag verwacht.");
 
   /* De tegel toont de kans voor precies het eerstvolgende uur (i+1). De subtekst
@@ -979,10 +1046,12 @@ function meters(){
      gebruikte dagDeel().woord ("Vandaag"/"Vanavond"/"Vannacht"): dat is een
      bredere conclusie dan wat de tegel zelf laat zien. Nu leest de subtekst
      exact dezelfde waarde als de kop, dus komend uur en niets breder. */
-  const popKomendUur=h.precipitation_probability[i+1]??0;
-  set("pop",popKomendUur+"<s>%</s>");
-  zetTekst("popsub", popKomendUur<20
-    ? "Komend uur is de neerslagkans zeer klein."
+  const popRuw=eindigGetal(h.precipitation_probability&&h.precipitation_probability[i+1]);
+  const popKomendUur=popRuw===null?null:clamp(popRuw,0,100);
+  set("pop",popKomendUur===null?"–":Math.round(popKomendUur)+"<s>%</s>");
+  zetTekst("popsub", popKomendUur===null
+    ? "Neerslagkans voor het komende uur niet beschikbaar."
+    : popKomendUur<20 ? "Komend uur is de neerslagkans zeer klein."
     : "Komend uur is de neerslagkans "+Math.round(popKomendUur)+"%.");
 
   /* Deze tegel toont uitsluitend het percentage en een contextzin op basis
@@ -992,7 +1061,7 @@ function meters(){
   const vocht=c.relative_humidity_2m;
   if(!Number.isFinite(vocht)||vocht<0||vocht>100){
     set("hum","--");
-    zetTekst("humsub","Luchtvochtigheid niet beschikbaar");
+    zetTekst("humsub","Luchtvochtigheid niet beschikbaar.");
   }else{
     set("hum",vocht+"<s>%</s>");
     zetTekst("humsub", vocht<40 ? "De lucht is vrij droog."
@@ -1000,30 +1069,38 @@ function meters(){
       : "De lucht is vochtig.");
   }
 
-  set("pres",Math.round(c.pressure_msl)+"<s>hPa</s>");
-  const p3=h.pressure_msl[i-3],dp=(p3!=null)?c.pressure_msl-p3:null;
+  const drukRuw=eindigGetal(c.pressure_msl);
+  const luchtdruk=drukRuw!==null&&drukRuw>0?drukRuw:null;
+  set("pres",luchtdruk===null?"–":Math.round(luchtdruk)+"<s>hPa</s>");
+  const p3Ruw=eindigGetal(h.pressure_msl&&h.pressure_msl[i-3]);
+  const p3=p3Ruw!==null&&p3Ruw>0?p3Ruw:null;
+  const dp=(p3!==null&&luchtdruk!==null)?luchtdruk-p3:null;
   zetTekst("pressub", dp==null ? "Geen tendens beschikbaar."
     : Math.abs(dp)<0.15 ? "In drie uur nauwelijks veranderd."
     : "In drie uur "+nl(Math.abs(dp))+" hPa "+(dp>0?"gestegen":"gedaald")+".");
 
-  set("cloud",c.cloud_cover+"<s>%</s>");
-  const cc=c.cloud_cover;
-  const bew = cc>=95?"Vrijwel geheel bewolkt":cc>=70?"Zwaar bewolkt":cc>=40?"Half bewolkt"
+  const cc=eindigGetal(c.cloud_cover);
+  const geldigeBewolking=cc!==null&&cc>=0&&cc<=100;
+  set("cloud",geldigeBewolking?Math.round(cc)+"<s>%</s>":"–");
+  const bew = !geldigeBewolking?null:cc>=95?"Vrijwel geheel bewolkt":cc>=70?"Zwaar bewolkt":cc>=40?"Half bewolkt"
             : cc>=15?"Overwegend zonnig":"Vrijwel onbewolkt";
-  const pu=piek("uv_index",0);
+  const puRuw=piek("uv_index"),pu=puRuw&&puRuw.v>=0?puRuw:null;
   const uvOordeel=v=>v<3?"laag":v<6?"matig":v<8?"hoog":v<11?"zeer hoog":"extreem";
-  zetTekst("cloudsub", bew+".");
+  zetTekst("cloudsub", bew?bew+".":"Bewolking niet beschikbaar.");
   /* De UV-index zat ingeklemd achter de bewolkingszin en werd daar makkelijk
      over het hoofd gezien. Als eigen tegel krijgt hij zijn eigen waarde en
      kan het oordeel erbij zonder de bewolkingszin te verlengen. */
   set("uv", (!pu||pu.v<0.5) ? "–" : nl(pu.v));
   zetTekst("uvsub", (!pu||pu.v<0.5)
     ? "Nauwelijks UV vandaag."
-    : "Piek"+(pu.t>nu?"t":"te")+" rond "+hhmm(pu.t)+", dat is "+uvOordeel(pu.v)+".");
+    : pu.t>nu
+      ? "De UV-index piekt vandaag rond "+hhmm(pu.t)+" en is dan "+uvOordeel(pu.v)+"."
+      : "De UV-index piekte vandaag rond "+hhmm(pu.t)+" en was toen "+uvOordeel(pu.v)+".");
 
-  const v=h.visibility?h.visibility[i]:null;
-  set("vis",v==null?"–":(v>=10000?"10+":nl(v/1000))+"<s>km</s>");
-  zetTekst("vissub", v==null ? "Niet beschikbaar."
+  const zichtRuw=eindigGetal(h.visibility&&h.visibility[i]);
+  const v=zichtRuw!==null&&zichtRuw>=0?zichtRuw:null;
+  set("vis",v===null?"–":(v>=10000?"10+":nl(v/1000))+"<s>km</s>");
+  zetTekst("vissub", v===null ? "Niet beschikbaar."
     : v<1000 ? "Slecht zicht, minder dan een kilometer."
     : v<4000 ? "Beperkt zicht."
     : v<10000 ? "Redelijk zicht." : "Goed zicht, meer dan tien kilometer.");
@@ -1070,13 +1147,15 @@ function kortetermijn(){
   const nu=S.d.current.time;
   const eindMs=naarUTC(nu.slice(0,16))+2*3600000;
   const m=S.d.minutely_15;
-  if(m&&m.time&&m.time.length){
+  if(m&&Array.isArray(m.time)&&Array.isArray(m.precipitation)&&m.time.length){
     let i=m.time.findIndex(t=>t>=nu.slice(0,16));
     if(i<0) i=0;
     const T=[],P=[];
     for(let k=i;k<m.time.length;k++){
       if(naarUTC(m.time[k])>=eindMs) break;
-      T.push(m.time[k]); P.push(m.precipitation[k]??0);
+      const waarde=eindigGetal(m.precipitation[k]);
+      if(waarde===null||waarde<0){T.length=0;P.length=0;break;}
+      T.push(m.time[k]); P.push(waarde);
     }
     // minstens een uur aan kwartierdata (vier stappen) is genoeg voor een conclusie;
     // minder dan dat is te weinig om "de komende twee uur" over te durven zeggen
@@ -1089,9 +1168,11 @@ function kortetermijn(){
   }
   // terugval: de eerstvolgende twee uurvakken in de uurreeks
   const h=S.d.hourly, i0=S.i0;
-  if(h&&h.time&&i0!=null&&h.time.length>i0+2){
-    const p1=h.precipitation[i0+1]??0, p2=h.precipitation[i0+2]??0;
-    const k1=h.precipitation_probability[i0+1]??0, k2=h.precipitation_probability[i0+2]??0;
+  if(h&&Array.isArray(h.time)&&Array.isArray(h.precipitation)
+    &&Array.isArray(h.precipitation_probability)&&i0!=null&&h.time.length>i0+2){
+    const p1=eindigGetal(h.precipitation[i0+1]),p2=eindigGetal(h.precipitation[i0+2]);
+    const k1=eindigGetal(h.precipitation_probability[i0+1]),k2=eindigGetal(h.precipitation_probability[i0+2]);
+    if(p1===null||p2===null||p1<0||p2<0||k1===null||k2===null) return { begin:nu, eind:null, bron:null, genoeg:false, droog:null };
     const droog=p1<NEERSLAG_DREMPEL_MM&&p2<NEERSLAG_DREMPEL_MM&&k1<40&&k2<40;
     return { begin:nu, eind:h.time[i0+2], bron:"hourly", genoeg:true,
       droog:droog, hoeveelheid:p1+p2, kans:Math.max(k1,k2) };
@@ -1101,7 +1182,9 @@ function kortetermijn(){
 
 function briefing(){
   const h=S.d.hourly,i=S.i0,day=S.d.daily,c=S.d.current;
-  const eind=Math.min(i+13,h.time.length);
+  // De briefing hoort bij dezelfde 24 uur als de standaardgrafiek. Een venster
+  // van twaalf uur sloeg laat op de avond een groot deel van morgen over.
+  const eind=Math.min(i+24,h.time.length);
 
   /* Zin 1 gaat nu over exact hetzelfde venster als de tekst bij de neerslagverwachting: de
      komende twee uur, uit dezelfde gedeelde helper. Wat daarna nog kan gebeuren
@@ -1128,64 +1211,106 @@ function briefing(){
     }
   }else{
     zin1 = "De komende <b>twee uur</b> blijft het <b>droog</b>.";
-    /* Later vandaag kan er alsnog neerslag komen, ook als de eerste twee uur droog
-       blijven. Dat gebruikt bewust de dagelijkse maximumkans, niet het venster van
-       de komende twee uur: dat zijn twee verschillende, allebei geldige tijdvakken. */
-    const dagKans=day.precipitation_probability_max&&day.precipitation_probability_max[0];
-    if(dagKans!=null&&isFinite(dagKans)&&dagKans>=25){
+    /* Alleen nog niet verstreken uurvakken ná het twee-uursvenster mogen de zin
+       "later vandaag" veroorzaken. Het dagelijkse maximum bevat ook uren uit de
+       ochtend en kon om 23:00 dus een oude kans opnieuw als toekomst presenteren. */
+    const na=kt.eind||h.time[Math.min(i+2,h.time.length-1)],vandaag=String(c.time||"").slice(0,10);
+    let dagKans=null;
+    for(let k=0;k<h.time.length;k++){
+      if(h.time[k].slice(0,10)!==vandaag||h.time[k]<=na) continue;
+      const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[k]);
+      if(kans!==null) dagKans=Math.max(dagKans===null?0:dagKans,clamp(kans,0,100));
+    }
+    if(dagKans!==null&&dagKans>=25){
       zin1 += " Later vandaag is de neerslagkans <b>"+Math.round(dagKans)+"%</b>.";
     }
   }
 
-  // temperatuur
-  let top=i,tv=-99;
-  for(let k=i;k<eind;k++){ if(h.temperature_2m[k]>tv){tv=h.temperature_2m[k];top=k;} }
-  let tmin=Infinity;
-  for(let k=i;k<Math.min(i+20,h.time.length);k++){ if(h.temperature_2m[k]<tmin) tmin=h.temperature_2m[k]; }
-  tmin=Math.round(isFinite(tmin)?tmin:day.temperature_2m_min[0]);
-  const nutemp=Math.round(c.temperature_2m);
-  const dagPiek=piek("temperature_2m",0);
+  // temperatuur: alleen echte getallen tellen mee; null mag nooit 0 °C worden.
+  let top=null,tv=null;
+  for(let k=i;k<eind;k++){
+    const v=eindigGetal(h.temperature_2m[k]);
+    if(v!==null&&(tv===null||v>tv)){tv=v;top=k;}
+  }
+  /* "Vannacht" mag alleen de eerstvolgende aaneengesloten nacht bedoelen.
+     Het minimum van een blind 20-uursvenster kon bij een koude middag morgen
+     horen en toch als nachttemperatuur worden aangekondigd. */
+  const nachtWaarden=[];
+  let nachtBegonnen=false;
+  for(let k=i;k<eind;k++){
+    const isDag=eindigGetal(h.is_day&&h.is_day[k]);
+    if(!nachtBegonnen){
+      if(isDag!==0) continue;
+      nachtBegonnen=true;
+    }else if(isDag===1){
+      break;
+    }
+    if(isDag!==0) continue;
+    const v=eindigGetal(h.temperature_2m[k]);
+    if(v!==null) nachtWaarden.push(v);
+  }
+  const tmin=rondGetal(nachtWaarden.length?Math.min(...nachtWaarden):null);
+  const huidige=eindigGetal(c.temperature_2m),nutemp=rondGetal(huidige);
+  const dagPiek=piek("temperature_2m");
   let zin2;
-  if(top>i+1&&tv>c.temperature_2m+0.5){
-    zin2="Het wordt maximaal <b>"+Math.round(tv)+" graden</b>, met het warmste moment rond "+hhmm(h.time[top])
-        +". Vannacht koelt het af naar <b>"+tmin+" graden</b>.";
+  const nachtZin=tmin===null?"":" Vannacht koelt het af naar <b>"+tmin+" graden</b>.";
+  if(huidige===null){
+    if(tv!==null&&top!==null){
+      zin2="De actuele temperatuur is niet beschikbaar. "+dagAanduiding(h.time[top],true)
+        +" wordt het maximaal <b>"+Math.round(tv)+" graden</b>, met het warmste moment rond "
+        +hhmm(h.time[top])+"."+nachtZin;
+    }else if(tmin!==null){
+      zin2="De actuele temperatuur is niet beschikbaar. Vannacht wordt ongeveer <b>"+tmin+" graden</b> verwacht.";
+    }else{
+      zin2="Temperatuurgegevens zijn momenteel niet beschikbaar.";
+    }
+  }else if(top!==null&&top>i&&tv>huidige+0.5){
+    zin2=dagAanduiding(h.time[top],true)+" wordt het maximaal <b>"+Math.round(tv)
+        +" graden</b>, met het warmste moment rond "+hhmm(h.time[top])+"."+nachtZin;
   }else if(dagPiek&&dagPiek.t<c.time&&Math.round(dagPiek.v)>nutemp){
-    zin2="Het was het warmst rond "+hhmm(dagPiek.t)+" met <b>"+Math.round(dagPiek.v)+" graden</b>. Nu is het "+nutemp
-        +" graden en vannacht koelt het af naar <b>"+tmin+" graden</b>.";
-  }else if(tmin<nutemp-1){
-    zin2="Warmer dan "+nutemp+" graden wordt het niet meer. Vannacht koelt het af naar "+tmin+" graden.";
+    zin2=dagAanduiding(dagPiek.t,true)+" was het rond "+hhmm(dagPiek.t)+" het warmst met <b>"+Math.round(dagPiek.v)+" graden</b>. Nu is het "+nutemp
+        +" graden."+nachtZin;
+  }else if(tmin!==null&&tmin<nutemp-1){
+    zin2="De komende 24 uur wordt het niet warmer dan "+nutemp+" graden. Vannacht koelt het af naar "+tmin+" graden.";
+  }else if(tmin===null){
+    zin2="De komende uren blijft de temperatuur rond "+nutemp+" graden. De nachttemperatuur is niet beschikbaar.";
   }else{
-    zin2="De temperatuur blijft rond "+nutemp+" graden hangen, ook vannacht.";
+    zin2="De komende uren blijft de temperatuur rond "+nutemp+" graden, ook vannacht.";
   }
 
   // wind
-  let wmax=-1,wi=i,gmax=0,gi=i;
+  let wmax=null,wi=null,gmax=null;
   for(let k=i;k<eind;k++){
-    if((h.wind_speed_10m[k]||0)>wmax){wmax=h.wind_speed_10m[k];wi=k;}
-    if((h.wind_gusts_10m[k]||0)>gmax){gmax=h.wind_gusts_10m[k];gi=k;}
+    const wRuw=eindigGetal(h.wind_speed_10m&&h.wind_speed_10m[k]);
+    const gRuw=eindigGetal(h.wind_gusts_10m&&h.wind_gusts_10m[k]);
+    const w=wRuw!==null&&wRuw>=0?wRuw:null,g=gRuw!==null&&gRuw>=0?gRuw:null;
+    if(w!==null&&(wmax===null||w>wmax)){wmax=w;wi=k;}
+    if(g!==null&&(gmax===null||g>gmax)) gmax=g;
   }
-  const bm=bft(wmax),bnu=bft(c.wind_speed_10m);
-  const rNu=c.wind_direction_10m, rPiek=h.wind_direction_10m[wi];
-  const richtingNu=kompas(rNu);
-  // draait de wind meer dan twee kompaspunten, dan is dat het vermelden waard
-  let hoek=Math.abs(((rPiek-rNu+540)%360)-180);
-  const draait = rPiek!=null && hoek>45;
-  const draaiTekst = draait ? ", draaiend naar het "+kompas(rPiek) : "";
-  // Vanaf 9 Bft bestaat er geen bijvoeglijke vorm die klopt: de meter zegt dan
-  // "storm" of "zware storm" en "De wind blijft stormachtig" noemt dezelfde wind
-  // een graad zwakker. Boven de 8 stapt de zin daarom over op de naam zelf.
-  const zwaar = bm>=9;
-  const staatEr = bm===9 ? "Er staat <b>storm</b>" : "Er staat een <b>"+BFTNAAM[bm]+"</b>";
-  let zin3 = bm>bnu ? "De wind komt uit het "+richtingNu+draaiTekst+" en neemt toe tot <b>"+bm+" Bft</b>"
-           : bm<bnu ? "De wind komt uit het "+richtingNu+draaiTekst+" en neemt af tot <b>"+bm+" Bft</b>"
-           : zwaar   ? staatEr+" uit het "+richtingNu+" ("+bm+" Bft)"+draaiTekst
-           : "De wind blijft "+BFTBIJV[bm]+" uit het "+richtingNu+" ("+bm+" Bft)"+draaiTekst;
-  // "..., rond 05:00 is de wind het sterkst" was een tweede hoofdzin achter een komma.
-  // Als bijstelling zonder werkwoord loopt hij door in dezelfde zin.
-  zin3 += (wi>i+1) ? ", het sterkst rond "+hhmm(h.time[wi]) : "";
-  zin3 += gmax>=60 ? ", met stoten tot "+Math.round(gmax)+" km/u." : ".";
+  let zin3;
+  if(wmax===null||wi===null){
+    zin3="Windgegevens zijn momenteel niet beschikbaar.";
+  }else{
+    const bm=bft(wmax);
+    const rNu=eindigGetal(c.wind_direction_10m),rPiek=eindigGetal(h.wind_direction_10m&&h.wind_direction_10m[wi]);
+    const richtingNu=kompas(rNu),richtingPiek=kompas(rPiek);
+    // draait de wind meer dan twee kompaspunten, dan is dat het vermelden waard
+    const hoek=rNu===null||rPiek===null?null:Math.abs(((rPiek-rNu+540)%360)-180);
+    const draait=hoek!==null&&hoek>45;
+    const draaiTekst=draait&&richtingPiek?" en draait naar het "+richtingPiek:"";
+    const bronTekst=richtingNu?" uit het "+richtingNu:"";
+    zin3=richtingNu?"De wind komt"+bronTekst+draaiTekst+".":"De windrichting is niet beschikbaar.";
+    const moment=wi>i+1
+      ? dagAanduiding(h.time[wi],true)+" rond "+hhmm(h.time[wi])
+      : "De komende 24 uur";
+    zin3+=" "+moment+" is de wind op zijn sterkst met <b>"+bm+" Bft</b> ("+BFTNAAM[bm]+")";
+    zin3+=gmax!==null&&gmax>=60?"; windstoten kunnen "+Math.round(gmax)+" km/u bereiken.":".";
+  }
 
-  document.getElementById("brief").innerHTML=nbsp(zin1+" "+zin2+" "+zin3);
+  /* De interpretatielaag vervangt uitsluitend de neerslagzin. Een structurele
+     scheiding is betrouwbaarder dan zoeken naar de eerste woorden van zin 2;
+     die woorden veranderen juist wanneer de dag explicieter wordt gemaakt. */
+  document.getElementById("brief").innerHTML=nbsp(zin1+"<!--brief-rest--> "+zin2+" "+zin3);
 }
 
 /* ---------- etmaal: dagbalk plus temperatuurcurve op dezelfde schaal ---------- */
@@ -1253,7 +1378,10 @@ function etmaal(start,n){
     TI.push(h.time[i]);
     T.push(h.temperature_2m[i]==null?null:h.temperature_2m[i]);
     A.push(h.apparent_temperature[i]==null?null:h.apparent_temperature[i]);
-    P.push(h.precipitation_probability[i]??0);MM.push(h.precipitation[i]??0);
+    const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[i]);
+    const hoeveelheid=eindigGetal(h.precipitation&&h.precipitation[i]);
+    P.push(kans===null||kans<0?null:clamp(kans,0,100));
+    MM.push(hoeveelheid===null||hoeveelheid<0?null:hoeveelheid);
     L.push(h.time[i].slice(11,13));
     W_.push(h.wind_speed_10m[i]);G.push(h.wind_gusts_10m[i]);C.push(h.cloud_cover[i]);
     D.push(h.weather_code[i]);ND.push(h.is_day[i]);WD.push(h.wind_direction_10m[i]);
@@ -1475,13 +1603,12 @@ function etmaal(start,n){
   }
   const kandidatenRuw=[...kandKaart.entries()].map(([i,rang])=>({i,rang}))
     .sort((a,b)=>b.rang-a.rang||a.i-b.i);
-  /* Een gewoon rasterlabel voegt weinig toe als vlak ernaast al een
-     belangrijker label met dezelfde of vrijwel dezelfde afgeronde
-     temperatuur staat. Op een telefoon gaf dat bijvoorbeeld tweemaal
-     22° bij het actuele punt en 14°/15° rond hetzelfde dal. Alleen het
-     lage-prioriteitsraster wijkt; actuele punten en echte extrema
-     blijven altijd behouden. */
-  let kandidaten=kandidatenRuw.filter((k,pos)=>{
+  /* Binnen een etmaal hoort elk tijdstip dat onder de grafiek op het vaste
+     drie-uursraster staat ook een temperatuurcijfer te krijgen. Daarom wordt
+     daar niets meer weggefilterd wegens een vergelijkbare waarde vlakbij.
+     Alleen in de veel dichtere 48-uurs- en weekweergaven mag zo'n redundant
+     rasterpunt nog wijken; actuele punten en echte extrema blijven behouden. */
+  let kandidaten=n<=24?kandidatenRuw:kandidatenRuw.filter((k,pos)=>{
     if(k.rang!==1) return true;
     const afgerond=Math.round(T[k.i]);
     return !kandidatenRuw.slice(0,pos).some(g=>
@@ -1489,16 +1616,16 @@ function etmaal(start,n){
       Math.abs(g.i-k.i)*cw<Math.max(48,cw*2.2) &&
       Math.abs(Math.round(T[g.i])-afgerond)<=1);
   });
-  /* Informatiedichtheid volgt de beschikbare schermruimte. Op een telefoon zijn
-     vijf temperatuurcijfers binnen 24 uur het maximum; bij langere bereiken
-     wordt dat nog lager. Een label dat te dicht bij een belangrijker label ligt
-     vervalt. De curve en tooltip blijven alle uurwaarden bevatten. */
-  const maximumLabels=M?(n<=24?5:n<=48?4:3):(n<=24?9:n<=48?8:7);
-  const minimumAfstand=M?(n<=24?48:n<=48?62:78):42;
+  /* Een etmaal heeft geen kunstmatige bovengrens: de acht zichtbare
+     drie-uursmomenten en alle duidelijke lokale pieken/dalen moeten een
+     cijfer kunnen houden. Langere bereiken blijven begrensd, omdat daar de
+     horizontale ruimte per uur veel kleiner is. */
+  const maximumLabels=n<=24?kandidaten.length:(M?(n<=48?6:4):(n<=48?8:7));
+  const minimumAfstand=M?(n<=48?48:68):42;
   const gekozen=[];
   for(const k of kandidaten){
     if(gekozen.length>=maximumLabels) break;
-    const teDicht=gekozen.some(g=>
+    const teDicht=n>24&&gekozen.some(g=>
       Math.abs(g.i-k.i)*cw<minimumAfstand
       && Math.abs(Math.round(T[g.i])-Math.round(T[k.i]))<=2);
     if(teDicht) continue;
@@ -1507,8 +1634,14 @@ function etmaal(start,n){
   kandidaten=gekozen;
 
   const labelBreed=v=>String(Math.round(v)).length*F.temp*0.58+F.temp*0.40;
+  /* Bodoni heeft in de browser een werkelijke tekstbox van ongeveer tweemaal
+     de opgegeven SVG-font-size. Alleen met `F.temp` rekenen liet daarom twee
+     labels met verschillende baselines toch zichtbaar over elkaar vallen
+     (bijvoorbeeld 17° en 16° direct naast de nu-lijn). Houd bij de plaatsing
+     dezelfde hoogte aan als de browser werkelijk reserveert. */
+  const labelHoogte=F.temp*2;
   const gezet=[];
-  const MAXLAAG=M?2:3; // beperkte lagen: liever één cijfer minder dan een visuele stapel
+  const MAXLAAG=M&&n<=24?4:3;
   /* Botst een kandidaat op cx op elke laag, dan gaf de oude code een piek/dal
      alsnog een geforceerde positie zonder te kijken of daar al iets anders
      stond: twee cijfers konden zo exact over elkaar heen belanden, en dan is
@@ -1520,7 +1653,7 @@ function etmaal(start,n){
      verliest het nooit stilzwijgend van een regulier rasterlabel (rang 1). */
   const probeerLagen=(cx,v,eersteBoven,minRang)=>{
     for(let laag=0; laag<MAXLAAG; laag++){
-      const stapHoogte=F.temp*1.35;
+      const stapHoogte=labelHoogte+4;
       const afstandBoven=(M?13:14)+laag*stapHoogte, afstandOnder=(M?18:20)+laag*stapHoogte;
       const kandBoven=y(v)-afstandBoven, kandOnder=y(v)+afstandOnder;
       const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val<=pb-3;
@@ -1528,7 +1661,7 @@ function etmaal(start,n){
       if(!eersteBoven) opties.reverse();
       for(const [val,bv] of opties){
         if(!past(val,bv)) continue;
-        const botsers=gezet.filter(g=>Math.abs(g.cx-cx)<(g.bw+labelBreed(v))/2+5 && Math.abs(g.cy-val)<F.temp+3);
+        const botsers=gezet.filter(g=>Math.abs(g.cx-cx)<(g.bw+labelBreed(v))/2+5 && Math.abs(g.cy-val)<labelHoogte+3);
         if(botsers.length===0) return {cy:val,boven:bv,verwijderd:[]};
         // alleen overnemen als elk botsend label een strikt lagere rang heeft
         if(minRang!=null && botsers.every(g=>g.rang<minRang)) return {cy:val,boven:bv,verwijderd:botsers};
@@ -1545,19 +1678,33 @@ function etmaal(start,n){
        cijfer stond er precies overheen, want dat hoort bij hetzelfde uur. Ligt
        het label op die lijn, dan schuift het er net naast. */
     if(nuX!=null && Math.abs(cx-nuX) < bw/2+5){
-      const naarRechts = nuX + bw/2 + 6 + bw/2 <= W-pr;
-      cx = naarRechts ? nuX + bw/2 + 6 : nuX - bw/2 - 6;
+      const links=nuX-bw/2-7, rechts=nuX+bw/2+7;
+      /* Links van het plot staan de vaste y-aswaarden. De vorige controle keek
+         alleen naar de SVG-rand, waardoor 21° in de ruimte van het 22°-aslabel
+         kon belanden. Uitwijken mag nu uitsluitend binnen het plotgebied. */
+      const pastLinks=links-bw/2>=pl-2, pastRechts=rechts+bw/2<=W-pr;
+      /* Twee opeenvolgende uurpunten kunnen allebei vlak bij de fractionele
+         nu-lijn liggen. Ze allemaal naar rechts sturen zette bijvoorbeeld
+         21° en 19° vrijwel onder elkaar. Het punt vóór 'nu' gaat daarom bij
+         voorkeur links en het punt erna rechts; alleen als die kant buiten
+         het vrije plotgebied valt wordt naar de andere kant uitgeweken. */
+      const voorkeurRechts=x(i)>=nuX;
+      cx=voorkeurRechts
+        ? (pastRechts?rechts:pastLinks?links:cx)
+        : (pastLinks?links:pastRechts?rechts:cx);
     }
     const eersteBoven = soort[i]!==-1;
     let cy=null, boven=eersteBoven, verwijderd=[];
     // stap 1: normale lagen op de eigen positie, geen enkel label wijkt hier nog
     let poging=probeerLagen(cx,v,eersteBoven,null);
     if(poging){ cy=poging.cy; boven=poging.boven; }
-    // stap 2: een kleine horizontale verschuiving proberen (alleen zinvol voor
-    // een piek/dal die zelf al met voorrang mag schuiven, en alleen als er nog
-    // ruimte binnen de grafiekranden is)
-    if(cy===null && k.rang>=2){
-      for(const rcx of [cx+bw/2+6, cx-bw/2-6]){
+    // stap 2: een kleine horizontale verschuiving proberen. Binnen 24 uur
+    // geldt dit ook voor rasterpunten, want ieder zichtbaar drie-uursmoment
+    // hoort zijn temperatuur te behouden. Extra posities voorkomen dat een
+    // lokaal extreem vlak naast zo'n rasterpunt één van beide wegdrukt.
+    if(cy===null && (k.rang>=2||n<=24)){
+      const schuif=bw/2+6;
+      for(const rcx of [cx+schuif,cx-schuif,cx+2*schuif,cx-2*schuif]){
         if(rcx-bw/2<pl-2 || rcx+bw/2>W-pr) continue;
         poging=probeerLagen(rcx,v,eersteBoven,null);
         if(poging){ cx=rcx; cy=poging.cy; boven=poging.boven; break; }
@@ -1582,7 +1729,7 @@ function etmaal(start,n){
   // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:
   // een label dat onderweg is verwijderd (evictie) laat dan ook geen puntje na
   gezet.sort((a,b)=>a.i-b.i).forEach(g=>{
-    dots+=`<circle cx="${x(g.i)}" cy="${y(g.v)}" r="${M?1.9:2.2}" fill="${INK}"/>`;
+    dots+=`<circle cx="${x(g.i)}" cy="${y(g.v)}" r="${M?1.9:2.2}" fill="${INK}" data-temp-index="${g.i}"/>`;
     // de rand in de kleur van het vel snijdt de lijn weg achter het cijfer
     labs+=`<text x="${g.cx.toFixed(1)}" y="${g.cy.toFixed(1)}" text-anchor="middle" fill="${INK}"
       stroke="${SHEET}" stroke-width="${M?3:3.4}" paint-order="stroke" stroke-linejoin="round"
@@ -1612,23 +1759,42 @@ function etmaal(start,n){
     <g id="scrub" style="display:none"></g>
     <rect id="hit" x="${pl-cw/2}" y="${pt-14}" width="${iw+cw}" height="${ih+20}" fill="transparent" style="cursor:crosshair"/>`;
 
+  const geldigeKansen=P.filter(v=>Number.isFinite(v));
+  const kansVoorlezer=geldigeKansen.length
+    ? "hoogste neerslagkans "+Math.max(...geldigeKansen)+" procent"
+    : "neerslagkans niet beschikbaar";
   svg.setAttribute("aria-label",
     "Verloop van "+TI[0].slice(11,16)+" tot "+TI[TI.length-1].slice(11,16)
-    +", temperatuur tussen "+mn+" en "+mx+" graden, hoogste neerslagkans "+Math.max.apply(null,P)+" procent.");
+    +", temperatuur tussen "+mn+" en "+mx+" graden, "+kansVoorlezer+".");
   S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,H:H,M:M};
   scrubKoppel(); chartHint();
 
   const dg=S.dag;
   document.getElementById("chartlab").textContent = dg==null ? (S.bereik===24?"De komende 24 uur":S.bereik===48?"De komende 48 uur":"De komende zeven dagen")
     : new Date(S.d.daily.time[dg]+"T12:00:00").toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long"})+", per uur";
-  const di=dg==null?0:dg;
+  let di=dg==null?0:dg;
+  /* In de standaardweergave tonen we na zonsondergang het eerstvolgende
+     daglichtvenster. Anders stond onder "De komende 24 uur" een zonsopkomst én
+     zonsondergang die allebei al voorbij waren. Een bewust gekozen dag blijft
+     vanzelfsprekend exact die dag tonen. */
+  if(dg==null&&day&&Array.isArray(day.time)){
+    const huidigeDatum=String((S.d.current&&S.d.current.time)||"").slice(0,10);
+    const huidigeIndex=day.time.indexOf(huidigeDatum);
+    if(huidigeIndex>=0){
+      di=huidigeIndex;
+      const onder=day.sunset&&day.sunset[di];
+      const huidigMs=naarUTC(S.d.current.time);
+      if(onder&&naarUTC(onder)<=huidigMs&&di+1<day.time.length) di++;
+    }
+  }
   /* v69: eerder kreeg alleen de standaardweergave (dg==null) een "vandaag: "-
      voorvoegsel voor zonsopkomst; bij een gekozen dag stond er niets. Dat
      verschil in regellengte gaf een ongelijk typografisch ritme naast de
      grafiek. Nu is de regel bij elke weergave hetzelfde: geen voorvoegsel,
      de datum staat al in de kop (#chartlab) hierboven. */
+  const zonDag=dg==null&&day.time&&day.time[di]?dagAanduiding(day.time[di],false):"";
   document.getElementById("suntimes").innerHTML=(day.sunrise[di]&&day.sunset[di])
-    ? "<span>zonsopkomst "+hhmm(day.sunrise[di])+"</span> "
+    ? "<span>"+(zonDag?zonDag+" · ":"")+"zonsopkomst "+hhmm(day.sunrise[di])+"</span> "
      +"<span>zonsondergang "+hhmm(day.sunset[di])+"</span> "
      +"<span>"+daglengte(di)+"</span>"
     : "<span>"+daglengte(di)+"</span>";
@@ -1718,10 +1884,14 @@ function scrubKoppel(){
        "NaN km/u" of "undefined%" in de doos laten staan. */
     const heel=v=>v!=null&&isFinite(v);
     const num=(v,dec)=>heel(v)?(dec?nl(v):Math.round(v)):"–";
+    const windSnel=heel(G.W_&&G.W_[i])?Math.round(G.W_[i]):null;
+    const windRichting=heel(G.WD&&G.WD[i])?kompasKort(G.WD[i]):null;
+    const windTekst=windSnel===null?"–":windSnel+" km/u"+(windRichting?" "+windRichting:"")
+      +", "+bft(G.W_[i])+" Bft";
     const body=rij("temperatuur",num(G.T?G.T[i]:null)+"°C")
       +rij("voelt als",num(G.A?G.A[i]:null)+"°C")
       +rij("neerslagkans",(heel(G.P&&G.P[i])?G.P[i]:"–")+"%",TEAL)
-      +rij("wind",heel(G.W_&&G.W_[i])?Math.round(G.W_[i])+" km/u "+DIRS[Math.round((G.WD[i]||0)/22.5)%16]+", "+bft(G.W_[i])+" Bft":"–")
+      +rij("wind",windTekst)
       +rij("windstoten",heel(G.G&&G.G[i])?Math.round(G.G[i])+" km/u":"–")
       +rij("bewolking",(heel(G.C&&G.C[i])?G.C[i]:"–")+"%");
     const sepY=by+(G.M?19:28);
@@ -1760,32 +1930,54 @@ function nowcast(){
     return;
   }
   el.style.display="block";
-  let i=m.time.findIndex(t=>t>=S.d.current.time.slice(0,16));
-  if(i<0)i=0;
   const T=[],P=[];
-  for(let k=0;k<8;k++){const q=i+k;if(q>=m.time.length)break;T.push(m.time[q]);P.push(m.precipitation[q]??0);}
+  const api=globalThis.WeatherNowInterpretatie;
+  const analyse=api&&typeof api.analyseerNeerslagData==="function"
+    ? api.analyseerNeerslagData(S.d,120) : null;
+  if(analyse&&analyse.bronHoeveelheid==="kwartierdata"&&Array.isArray(analyse.minutelyItems)){
+    /* De centrale analyse kent de geldigheidsvensters: een waarde met tijd
+       23:00 is de som over 22:45–23:00. Daardoor wordt het kwartier dat op
+       'nu' eindigt niet als toekomst getekend en blijft het laatste kwartier
+       van het volledige twee-uursvenster juist wel behouden. */
+    analyse.minutelyItems.forEach(item=>{
+      T.push(item.tijd);
+      P.push(item.precipitation==null?null:item.precipitation);
+    });
+  }else if(!analyse){
+    // De bronversie zonder ingevoegde interpretatie-engine gebruikt dezelfde
+    // intervalregel als veilige terugval: uitsluitend (nu, nu+2 uur].
+    const nuMs=naarUTC(S.d.current.time.slice(0,16)), eindMs=nuMs+2*3600000;
+    for(let q=0;q<m.time.length;q++){
+      const tijdMs=naarUTC(m.time[q]);
+      if(tijdMs<=nuMs) continue;
+      if(tijdMs>eindMs) break;
+      T.push(m.time[q]);
+      P.push(m.precipitation[q]==null?null:m.precipitation[q]);
+    }
+  }
+  if(!T.length){el.style.display="none";return;}
   const M=(typeof window!=="undefined"&&window.innerWidth)?window.innerWidth<760:false;
   const mx=Math.max(0.5,...P),W=M?380:900,pl=M?26:44,pr=M?8:20,iw=W-pl-pr,
         base=M?40:40,hmax=M?30:32,cw=iw/T.length;
   el.setAttribute("viewBox","0 0 "+W+" "+(M?62:60));
   let out=`<line x1="${pl}" y1="${base}" x2="${W-pr}" y2="${base}" stroke="${RULE}"/>`;
   T.forEach((t,k)=>{
-    const x=pl+k*cw,hh=hmax*(P[k]/mx);
-    if(P[k]>0) out+=`<rect x="${x+3}" y="${base-hh}" width="${cw-6}" height="${hh}" fill="${TEAL}" fill-opacity=".2"/>
+    const waarde=P[k]==null?0:P[k],x=pl+k*cw,hh=hmax*(waarde/mx);
+    if(waarde>0) out+=`<rect x="${x+3}" y="${base-hh}" width="${cw-6}" height="${hh}" fill="${TEAL}" fill-opacity=".2"/>
                      <line x1="${x+3}" y1="${base-hh}" x2="${x+cw-3}" y2="${base-hh}" stroke="${TEAL}" stroke-width="1.2"/>`;
     out+=`<line x1="${x}" y1="${base}" x2="${x}" y2="${base+4}" stroke="${RULE}"/>`;
     if(k%2===0) out+=`<text x="${x+cw/2}" y="${base+18}" text-anchor="middle" fill="${INK45}" font-family="DM Mono,monospace" font-size="${M?10:10.5}">${t.slice(11,16)}</text>`;
-    if(P[k]>0){
+    if(waarde>0){
       /* Het cijfer stond altijd zes pixels boven de balk. Bij een flinke bui raakt
          de balk de bovenrand en verdween het getal buiten de tekening. Past het er
          niet boven, dan gaat het in de balk zelf staan. */
       const boven = base-hh-6, past = boven >= 11;
       out+=`<text x="${x+cw/2}" y="${past?boven:base-hh+11}" text-anchor="middle" fill="${TEAL}"
-        font-family="DM Mono,monospace" font-size="${M?9.5:10}">${nl(P[k])}</text>`;
+        font-family="DM Mono,monospace" font-size="${M?9.5:10}">${nl(waarde)}</text>`;
     }
   });
   el.innerHTML=out;
-  const som=P.reduce((a,b)=>a+b,0);
+  const som=P.reduce((a,b)=>a+(b==null?0:b),0);
   el.style.display=som<0.05&&kt.droog!==false?"none":"block";
   /* De tekst leunt op kt.droog / kt.eersteNatIdx, dus dezelfde conclusie als de
      briefing. De tijden T en waarden P blijven puur voor de precieze klok- en
@@ -1809,17 +2001,22 @@ function nowcast(){
 
 /* ---------- zeven dagen ---------- */
 function restkans(){
-  const h=S.d.hourly,dag=S.d.daily.time[0],nu=S.d.current.time;
-  let m=0;
+  const h=S.d.hourly,nu=S.d.current.time,dag=String(nu||"").slice(0,10);
+  let m=null;
   for(let k=0;k<h.time.length;k++){
     if(h.time[k].slice(0,10)!==dag||h.time[k]<=nu) continue;
-    m=Math.max(m,h.precipitation_probability[k]??0);
+    const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[k]);
+    if(kans!==null) m=Math.max(m===null?0:m,clamp(kans,0,100));
   }
-  return Math.round(m);
+  return m===null?null:Math.round(m);
 }
 function dagen(){
   const day=S.d.daily;
-  const lo=Math.min(...day.temperature_2m_min),hi=Math.max(...day.temperature_2m_max),sp=(hi-lo)||1;
+  const temperatuurWaarden=[...(day.temperature_2m_min||[]),...(day.temperature_2m_max||[])]
+    .map(eindigGetal).filter(v=>v!==null);
+  const lo=temperatuurWaarden.length?Math.min(...temperatuurWaarden):0;
+  const hi=temperatuurWaarden.length?Math.max(...temperatuurWaarden):1;
+  const sp=(hi-lo)||1;
   let out="";
   day.time.forEach((t,i)=>{
     const dt=new Date(t+"T12:00:00");
@@ -1839,16 +2036,27 @@ function dagen(){
     const lang=DAGENVOL[dt.getDay()]+" "+nr;
     const kort=DAGEN[dt.getDay()]+" "+nr;
     const nm='<span class="dlang">'+lang+'</span><span class="dkort">'+kort+'</span>';
-    const l=day.temperature_2m_min[i],hh=day.temperature_2m_max[i];
+    const l=eindigGetal(day.temperature_2m_min[i]),hh=eindigGetal(day.temperature_2m_max[i]);
+    const codeRuw=eindigGetal(day.weather_code&&day.weather_code[i]);
+    const code=codeRuw!==null&&Object.prototype.hasOwnProperty.call(CODES,codeRuw)?codeRuw:null;
+    const windRuw=eindigGetal(day.wind_speed_10m_max&&day.wind_speed_10m_max[i]);
+    const wind=windRuw!==null&&windRuw>=0?windRuw:null;
+    const richting=eindigGetal(day.wind_direction_10m_dominant&&day.wind_direction_10m_dominant[i]);
+    const somRuw=eindigGetal(day.precipitation_sum&&day.precipitation_sum[i]);
+    const som=somRuw!==null&&somRuw>=0?somRuw:null;
+    const kans=eindigGetal(day.precipitation_probability_max&&day.precipitation_probability_max[i]);
+    const balk=l===null||hh===null
+      ?""
+      :`<i style="left:${(l-lo)/sp*100}%;width:${Math.max(3,(hh-l)/sp*100)}%"></i>`;
     out+=`<div class="row day${S.dag===i?" on":""}" data-i="${i}" role="button" tabindex="0">
-      <div class="dname">${nm}</div><div class="dico">${icon(day.weather_code[i],true,22)}</div>
-      <div class="dcond">${txt(day.weather_code[i])}${day.precipitation_sum[i]>0.5?", "+nl(day.precipitation_sum[i])+" mm":""}</div>
-      <div class="dwind">${bft(day.wind_speed_10m_max[i]||0)} Bft ${pijl(day.wind_direction_10m_dominant?day.wind_direction_10m_dominant[i]:0,11)}</div>
-      <div class="dmin">${Math.round(l)}°</div>
-      <div class="bar"><i style="left:${(l-lo)/sp*100}%;width:${Math.max(3,(hh-l)/sp*100)}%"></i></div>
-      <div class="dmax">${Math.round(hh)}°</div>
-      <div class="drain">${i===0?restkans():(day.precipitation_probability_max[i]??0)}%${
-        day.precipitation_sum[i]>0.5?`<small>${nl(day.precipitation_sum[i])} mm</small>`:""}</div></div>`;
+      <div class="dname">${nm}</div><div class="dico">${code===null?"":icon(code,true,22)}</div>
+      <div class="dcond">${code===null?"Verwachting niet beschikbaar":txt(code)}${som!==null&&som>0.5?", "+nl(som)+" mm":""}</div>
+      <div class="dwind">${wind===null?"–":bft(wind)+" Bft"}${wind!==null&&richting!==null?" "+pijl(richting,11):""}</div>
+      <div class="dmin">${l===null?"–":Math.round(l)+"°"}</div>
+      <div class="bar">${balk}</div>
+      <div class="dmax">${hh===null?"–":Math.round(hh)+"°"}</div>
+      <div class="drain">${kans===null?"–":Math.round(clamp(kans,0,100))+"%"}${
+        som!==null&&som>0.5?`<small>${nl(som)} mm</small>`:""}</div></div>`;
   });
   const kop=`<div class="row day kop">
       <div class="dname">Dag</div><div class="dico"></div><div class="dcond">Verwachting</div>
@@ -1886,13 +2094,20 @@ function nachten(){
     if(a2==null||b2==null||b2<=a2) continue;
     const C=[],HU=[],SP=[],GU=[],TT=[];
     for(let i=a2;i<=b2;i++){
-      if(h.cloud_cover[i]==null) continue;
-      C.push(h.cloud_cover[i]);HU.push(h.relative_humidity_2m[i]);
-      SP.push(h.temperature_2m[i]-h.dew_point_2m[i]);GU.push(h.wind_gusts_10m[i]);TT.push(h.time[i]);
+      const bewolking=eindigGetal(h.cloud_cover&&h.cloud_cover[i]);
+      if(bewolking===null||bewolking<0||bewolking>100) continue;
+      C.push(bewolking);
+      const vocht=eindigGetal(h.relative_humidity_2m&&h.relative_humidity_2m[i]);
+      if(vocht!==null&&vocht>=0&&vocht<=100) HU.push(vocht);
+      const temperatuur=eindigGetal(h.temperature_2m[i]),dauwpunt=eindigGetal(h.dew_point_2m[i]);
+      if(temperatuur!==null&&dauwpunt!==null) SP.push(temperatuur-dauwpunt);
+      const windstoot=eindigGetal(h.wind_gusts_10m[i]);
+      if(windstoot!==null) GU.push(windstoot);
+      TT.push(h.time[i]);
     }
     if(!C.length) continue;
     const gem=v=>v.reduce((x,y)=>x+y,0)/v.length;
-    const cw=gem(C),hu=gem(HU),spd=Math.min(...SP),gu=Math.max(...GU);
+    const cw=gem(C),hu=HU.length?gem(HU):null,spd=SP.length?Math.min(...SP):null,gu=GU.length?Math.max(...GU):null;
     const mn=maan(new Date(naarUTC(ss.slice(0,10)+"T23:30")));
 
     // maan boven of onder de horizon per uur
@@ -1903,9 +2118,9 @@ function nachten(){
     const maanDeel=maanWeging.reduce((a,b)=>a+b,0)/maanWeging.length;
 
     let sc=(1-cw/100)*10;
-    if(hu>93) sc-=1.5;
-    if(spd<1.5) sc-=1;
-    if(gu>45) sc-=1;
+    if(hu!==null&&hu>93) sc-=1.5;
+    if(spd!==null&&spd<1.5) sc-=1;
+    if(gu!==null&&gu>45) sc-=1;
     sc-=2.2*mn.ill*maanDeel*(1-cw/140);          // maan telt alleen mee als hij ook echt op is
     sc=clamp(sc,0,10);
 
@@ -2071,17 +2286,43 @@ function logBij(){
 
 /* ---------- officiele waarschuwingen ---------- */
 async function waarschuwingen(){
+  const mijnBeurt=++waarschuwingTeller;
+  const lat=S.lat,lon=S.lon;
   const el=document.getElementById("waarschuwingen");
+  S.actieveWaarschuwingen=[];
   el.innerHTML="";
   try{
-    const d=await j("/api/waarschuwingen?lat="+S.lat+"&lon="+S.lon);
-    if(!d||!d.lijst||!d.lijst.length) return;
-    el.innerHTML=d.lijst.slice(0,3).map(w=>
-      // landelijk betekent: de bron leverde geen gebied mee, dus we weten niet
-      // of dit precies hier geldt. Dat hoort de lezer te weten.
-      `<div class="waarsch"><h3>${esc(w.titel)}</h3><p>${esc(w.tekst||"")}${w.tot?" Geldig tot "+esc(w.tot)+".":""}${w.landelijk?" Geldt voor een groter gebied, niet per se voor deze plaats.":""}</p></div>`
-    ).join("");
-  }catch(e){ /* geen functie of geen verbinding: blok blijft leeg */ }
+    const d=await j("/api/waarschuwingen?lat="+lat+"&lon="+lon);
+    if(mijnBeurt!==waarschuwingTeller||S.lat!==lat||S.lon!==lon) return;
+    if(!d||d.dekking!==true){
+      const bronStuk=d&&d.reden==="bron onbereikbaar"
+        ?"konden niet worden gecontroleerd"
+        :"zijn voor deze locatie niet beschikbaar";
+      el.innerHTML='<div class="msg">Officiële weerwaarschuwingen '+bronStuk+'.</div>';
+      if(S.d&&typeof briefing==="function") briefing();
+      return;
+    }
+    const nu=Date.now(),rang={rood:3,oranje:2,geel:1},uniek=new Map();
+    for(const w of (Array.isArray(d.lijst)?d.lijst:[])){
+      const einde=w.tot?Date.parse(w.tot):NaN;
+      if(Number.isFinite(einde)&&einde<nu) continue;
+      const sleutel=[w.titel||"",w.tot||"",w.gebied||""].join("|").toLowerCase();
+      if(!uniek.has(sleutel)) uniek.set(sleutel,w);
+    }
+    const lijst=[...uniek.values()].sort((a,b)=>(rang[b.niveau]||0)-(rang[a.niveau]||0)
+      ||((Date.parse(a.van)||Infinity)-(Date.parse(b.van)||Infinity)));
+    S.actieveWaarschuwingen=lijst;
+    el.innerHTML=lijst.slice(0,3).map(w=>
+      `<div class="waarsch"><h3>${esc(w.titel)}</h3><p>${esc(w.tekst||"")}`
+      +(w.tot?" Geldig tot "+esc(w.tot)+".":"")
+      +(w.landelijk?" Geldt voor een groter gebied, niet per se voor deze plaats.":"")
+      +`</p></div>`).join("");
+  }catch(e){
+    if(mijnBeurt!==waarschuwingTeller||S.lat!==lat||S.lon!==lon) return;
+    S.actieveWaarschuwingen=[];
+    el.innerHTML='<div class="msg">Officiële weerwaarschuwingen konden niet worden gecontroleerd.</div>';
+  }
+  if(S.d&&typeof briefing==="function") briefing();
 }
 
 /** Vertaalt een maanfase (0,0 tot 1,0, waarbij 1,0 hetzelfde is als 0,0) naar het
@@ -2145,7 +2386,8 @@ function minibarBij(){
   // altijd de volledige naam beschikbaar, ook als de tekst zelf wordt afgekapt
   pl.title=S.label; pl.setAttribute("aria-label",S.label);
 
-  document.getElementById("minitemp").textContent=Math.round(S.d.current.temperature_2m)+"°C";
+  const temperatuur=rondGetal(S.d.current.temperature_2m);
+  document.getElementById("minitemp").textContent=temperatuur===null?"–":temperatuur+"°C";
   const cond=document.getElementById("minicond");
   if(cond){
     const tekst=txt(S.d.current.weather_code,S.d.current.is_day!==0).toLowerCase();
