@@ -26,3 +26,5 @@ jobs:
           npx playwright install --with-deps chromium webkit
       - name: Echte browsers — mobiel en desktop
         run: node browser-playwright.test.js
+      - name: Consumentenpolish — iPhone-randgeval in Chromium en WebKit
+        run: node browser-consumer-polish.test.js
