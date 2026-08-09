@@ -1,0 +1,10 @@
+"use strict";
+const fs=require("fs"),path=require("path");
+const p=path.join(__dirname,"browser-playwright.test.js");
+let s=fs.readFileSync(p,"utf8");
+const oud='assert.ok(resultaat.brief&&resultaat.days>=7,naam+" "+modus+": kerninhoud ontbreekt);';
+const nieuw='assert.ok(resultaat.brief&&resultaat.days>=7,naam+" "+modus+": kerninhoud ontbreekt");';
+if(!s.includes(oud))throw new Error("malformed browserassert niet gevonden");
+s=s.replace(oud,nieuw);
+fs.writeFileSync(p,s);
+console.log("Browserregressie-syntax hersteld.");
