@@ -1,0 +1,55 @@
+name: MeteoAlarm network diagnostics
+
+on:
+  push:
+    branches:
+      - agent/meteoalarm-network-diagnostics
+    paths:
+      - .github/workflows/meteoalarm-network-diagnostics.yml
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Probe MeteoAlarm endpoints
+        shell: bash
+        run: |
+          set +e
+          OUT=meteoalarm-network-diagnostics.txt
+          : > "$OUT"
+          echo "UTC $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$OUT"
+          echo "DNS:" >> "$OUT"
+          getent ahosts feeds.meteoalarm.org >> "$OUT" 2>&1
+          probe() {
+            label="$1"; url="$2"; accept="$3"; ua="$4"
+            h=$(mktemp); b=$(mktemp)
+            echo >> "$OUT"
+            echo "===== $label =====" >> "$OUT"
+            curl -L -sS --max-time 12 -A "$ua" -H "Accept: $accept" -D "$h" -o "$b" \
+              -w 'curl_exit=%{exitcode}\nhttp=%{http_code}\ntime_total=%{time_total}\ncontent_type=%{content_type}\nremote_ip=%{remote_ip}\neffective_url=%{url_effective}\n' \
+              "$url" >> "$OUT" 2>&1
+            echo "--- response headers ---" >> "$OUT"
+            tail -n 40 "$h" >> "$OUT" 2>&1
+            echo "--- first 800 bytes ---" >> "$OUT"
+            head -c 800 "$b" >> "$OUT" 2>&1
+            echo >> "$OUT"
+            rm -f "$h" "$b"
+          }
+          UA='WatIsHetWeer/1.0 (watishetweer.nl; contact via github.com/Tommjoness/weathernow)'
+          BUA='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/140 Safari/537.36'
+          probe 'Atom WeatherNow UA' 'https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands' 'application/atom+xml, application/xml, text/xml' "$UA"
+          probe 'Atom browser UA' 'https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands' '*/*' "$BUA"
+          probe 'JSON compatibility WeatherNow UA' 'https://feeds.meteoalarm.org/api/v1/warnings/feeds-netherlands' 'application/json' "$UA"
+          probe 'Feed index WeatherNow UA' 'https://feeds.meteoalarm.org/' 'text/html,*/*' "$UA"
+      - name: Commit diagnostics
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add meteoalarm-network-diagnostics.txt
+          git commit -m "Leg MeteoAlarm-netwerkdiagnose vast"
+          git push origin HEAD:agent/meteoalarm-network-diagnostics
