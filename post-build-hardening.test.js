@@ -33,12 +33,46 @@ vervangExact(
 );
 
 /* Woorden als vandaag en morgen horen bij de actuele kalenderdag van de gekozen
-   locatie, niet bij het tijdstip waarop de laatste weerrespons is opgehaald. Zo
-   slaat een open tabblad om 00:00 lokale tijd direct correct om. */
+   locatie, niet bij het tijdstip waarop de laatste weerrespons is opgehaald. */
 vervangExact(
   'const basis=/^\\d{4}-\\d{2}-\\d{2}$/.test(bronDatum)?bronDatum:plaatsVandaag();',
   'const basis=plaatsVandaag();',
   "lokale daggrens"
+);
+
+/* Correcte semantiek alleen is niet genoeg: als een tabblad rond 00:00 open
+   blijft, moet de briefing ook daadwerkelijk opnieuw worden opgebouwd. De klok
+   tikt al iedere minuut exact op de minuutgrens. Hij bewaakt nu tevens de lokale
+   kalenderdag van dezelfde gekozen locatie en start bij een dagwisseling direct
+   een stille fetch. Een locatiewissel zelf telt niet als dagwisseling; anders zou
+   Amsterdam -> Tokio onnodig een tweede fetch starten. opslaan=false voorkomt
+   bovendien dat een gedeelde URL-locatie door deze technische refresh ineens de
+   persoonlijke laatst gebruikte locatie wordt. */
+vervangExact(
+`let klokMinuutTimer=null, klokUitlijnTimer=null;
+function klokBijwerken(){
+  const tijd=plaatsKlok();
+  const pt=document.getElementById("plaatstijd"); if(pt) pt.textContent=tijd;
+  const mt=document.getElementById("minitijd"); if(mt) mt.textContent=tijd;
+}`,
+`let klokMinuutTimer=null, klokUitlijnTimer=null, klokKalenderdag=null, klokPlaatsSleutel=null;
+function klokBijwerken(){
+  const tijd=plaatsKlok(),dag=plaatsVandaag();
+  const pt=document.getElementById("plaatstijd"); if(pt) pt.textContent=tijd;
+  const mt=document.getElementById("minitijd"); if(mt) mt.textContent=tijd;
+  const plaatsSleutel=String(S.lat)+","+String(S.lon);
+  if(klokPlaatsSleutel!==plaatsSleutel){
+    klokPlaatsSleutel=plaatsSleutel;
+    klokKalenderdag=dag;
+    return;
+  }
+  if(klokKalenderdag===null){klokKalenderdag=dag;return;}
+  if(dag!==klokKalenderdag){
+    klokKalenderdag=dag;
+    if(S.lat!=null&&S.d) load(S.lat,S.lon,S.label,true,false);
+  }
+}`,
+  "live lokale dagwisseling"
 );
 
 /* Ontbrekende UV-data is onbekend, niet hetzelfde als een gemeten lage UV-index. */
@@ -72,4 +106,4 @@ if(fs.existsSync(swPad)){
   fs.writeFileSync(swPad,sw,"utf8");
 }
 
-console.log("Productie-hardening toegepast: neerslag, lokale daggrens en ontbrekende UV-data gecorrigeerd.");
+console.log("Productie-hardening toegepast: neerslag, lokale daggrens/live dagwisseling en ontbrekende UV-data gecorrigeerd.");
