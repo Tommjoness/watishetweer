@@ -1437,7 +1437,7 @@ groep("Dagtabel en tegels");
   check("de hoeveelheid blijft weg als het droog is",
     !/<small>0,0 mm<\/small>/.test(rijen));
   // op het bureaublad staat het al in de kolom Verwachting, dus daar verborgen
-  check("de hoeveelheid verschijnt alleen op de telefoon",
+  check("de mobiele kanskolom blijft compact zonder tweede hoeveelheidregel",
     /\.drain small\{display:none/.test(bronD) && !/\.drain small\{display:block\}/.test(bronD));
 
   const {api:apiLeeg,bak:bakLeeg}=laadKern(390);
@@ -1793,7 +1793,7 @@ groep("Iconen en balk");
 }
 
 /* 10o. het nachtzicht toont uitsluitend wat de opdracht toestaat: score, bewolking,
-   Beste periodetijdvak, maan op, maan onder en maanfase. Seeing en doorzicht
+   beste zichtperiode, maan op, maan onder en maanfase. Seeing en doorzicht
    uit de bovenlucht (250/700 hPa) zijn eruit, net als eerder de planeetstanden
    (punt 11, zie de efemeride-context bij groep "Nachtzicht vereenvoudigd"). */
 groep("Nachtzicht bevat geen bovenlucht meer");
@@ -1813,7 +1813,8 @@ groep("Nachtzicht bevat geen bovenlucht meer");
   a4.nachten();
   const t4=b4.nights.innerHTML;
   check("bewolking staat er nog",/bewolking/.test(t4));
-  check("het modelvenster staat er nog",/Beste periode van|Geen goed zichtvenster/.test(t4));
+  check("nachtzicht toont een beste periode of expliciete reden",
+    /Beste periode \d\d:\d\d–\d\d:\d\d/.test(t4)||/Geen goed zichtvenster/.test(t4));
 }
 
 /* 10p. dagdeel, datums, windrichting en de modelkeuze */
@@ -2369,7 +2370,7 @@ groep("Nachtzicht vereenvoudigd");
     Object.assign(aV.S,{d:bouw(opt),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
     aV.nachten();
     const t=norm(bV.nights.innerHTML).replace(/<[^>]+>/g," ");
-    check("de reden '"+verw+"' staat er nog achter de dubbele punt",
+    check("de reden '"+verw+"' wordt natuurlijk benoemd",
       new RegExp("Geen goed zichtvenster door "+verw).test(t),
       (t.match(/Geen goed zichtvenster[^\u00b7]*/)||["niet gevonden"])[0]);
   }
