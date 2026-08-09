@@ -1,0 +1,39 @@
+name: Senior fix verification
+on:
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Build canonical migrated source
+        run: |
+          node scripts/apply-senior-fix-7.js
+          node scripts/patch-senior-runtime.js
+          node scripts/patch-senior-test-spec.js
+          node scripts/export-senior-fix-artifacts.js
+      - name: Non-browser regression suite
+        run: node scripts/run-migration-verification.js
+      - name: Install real browsers
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium webkit
+      - name: Chromium and WebKit smoke
+        run: node browser-playwright.test.js
+      - name: Upload canonical source
+        uses: actions/upload-artifact@v4
+        with:
+          name: canonical-weather-source
+          path: migration-artifacts/
+          if-no-files-found: error
+          retention-days: 3
