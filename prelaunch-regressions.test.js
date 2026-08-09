@@ -14,9 +14,11 @@ ok(index.includes("coordOpslag")&&index.includes('S.lat.toFixed(3)')&&index.incl
 ok(waars.includes("i.ends || i.expires || null"),"NWS gebruikt gebeurteniseinde vóór CAP-berichtverval");
 ok(waars.includes("American Samoa")&&waars.includes("-14.6"),"American Samoa valt binnen NWS-dekking");
 ok(waars.includes("waarschuwingTekst")&&!waars.includes("trim().slice(0, 300)"),"waarschuwingstekst breekt niet meer hard op 300 tekens af");
+ok(waars.includes("meteoalarm-legacy-atom-")&&!waars.includes("api/v1/warnings/feeds-"),"MeteoAlarm gebruikt direct de onderhouden publieke Atom-feed");
 ok(index.includes("waarschuwingGeldigTot")&&!index.includes('" Geldig tot "+esc(w.tot)'),"waarschuwingstijd wordt lokaal en menselijk geformatteerd");
 ok(index.includes("kan Open-Meteo uurdata interpoleren"),"kwartiergrafiek benoemt mogelijke interpolatie");
-ok(plaats.indexOf("[viaBigDataCloud, viaNominatim]")>=0,"Nominatim is alleen fallback voor reverse-geocoding");
+ok(!plaats.includes("api.bigdatacloud.net")&&!waars.includes("api.bigdatacloud.net")&&index.includes("api.bigdatacloud.net/data/reverse-geocode-client"),"gratis BigDataCloud reverse-geocoding draait uitsluitend client-side");
+ok(index.includes("data-land=")&&index.includes("&land=")&&index.includes("land:S.land"),"landcode reist mee met zoeken, opslag, delen en waarschuwingen");
 ok(index.includes("© OpenStreetMap-bijdragers")&&index.includes("MeteoAlarm")&&index.includes("National Weather Service"),"relevante databronnen zijn zichtbaar geattribueerd");
 ok(index.includes('type="button" class="x"')&&index.includes('aria-label="Verwijder'),"verwijderen van bewaarde plaats is keyboard- en screenreaderbereikbaar");
 ok(build.includes("CACHE_BRONNEN")&&build.includes('"manifest.json"')&&build.includes('"icon-192.png"')&&build.includes('instrument-sans-latin-600-normal.woff2'),"cachehash omvat de volledige app-shell");
@@ -30,8 +32,12 @@ async function roep(moduleNaam,query,fetchImpl){const oud=global.fetch,p=require
   ok((ny.body.lijst[0].tekst.length<=701&&!/\w$/.test(ny.body.lijst[0].tekst.slice(-1)))||ny.body.lijst[0].tekst.endsWith("."),"lange waarschuwing wordt op nette grens ingekort");
   let asUrl="";const as=await roep("./lib/waarschuwingen.cjs",{lat:"-14.2756",lon:"-170.7020"},async url=>{asUrl=String(url);return{ok:true,json:async()=>({features:[]})};});
   ok(as.body.bron==="National Weather Service"&&as.body.dekking===true&&asUrl.includes("api.weather.gov/alerts/active?point="),"American Samoa gebruikt de NWS-puntroute");
-  const urls=[];const pl=await roep("./lib/plaatsnaam.cjs",{lat:"52.35",lon:"5.26"},async url=>{urls.push(String(url));return{ok:true,json:async()=>({city:"Almere"})};});
-  ok(pl.body.naam==="Almere"&&urls.length===1&&urls[0].includes("bigdatacloud"),"BigDataCloud voorkomt normale Nominatim-aanroep");
+  const urls=[];const pl=await roep("./lib/plaatsnaam.cjs",{lat:"52.35",lon:"5.26"},async url=>{urls.push(String(url));return{ok:true,json:async()=>({address:{city:"Almere",country_code:"nl"}})};});
+  ok(pl.body.naam==="Almere"&&pl.body.land==="NL"&&urls.length===1&&urls[0].includes("nominatim")&&!urls[0].includes("bigdatacloud"),"serverfallback gebruikt alleen Nominatim en bewaart landcode");
+  const warnUrls=[];const eu=await roep("./lib/waarschuwingen.cjs",{lat:"52.35",lon:"5.26",land:"NL"},async url=>{warnUrls.push(String(url));return{ok:true,text:async()=>"<?xml version=\"1.0\"?><feed xmlns=\"http://www.w3.org/2005/Atom\"></feed>"};});
+  ok(eu.body.dekking===true&&eu.body.land==="NL"&&warnUrls.length===1&&warnUrls[0].includes("feeds.meteoalarm.org")&&!warnUrls.some(u=>u.includes("nominatim")||u.includes("bigdatacloud")),"meegegeven landcode voorkomt reverse-geocoding voor MeteoAlarm");
+  const oudUrls=[];const oud=await roep("./lib/waarschuwingen.cjs",{lat:"52.35",lon:"5.26"},async url=>{oudUrls.push(String(url));if(String(url).includes("nominatim"))return{ok:true,json:async()=>({address:{country_code:"nl"}})};return{ok:true,text:async()=>"<?xml version=\"1.0\"?><feed xmlns=\"http://www.w3.org/2005/Atom\"></feed>"};});
+  ok(oud.body.land==="NL"&&oudUrls.some(u=>u.includes("nominatim"))&&oudUrls.some(u=>u.includes("feeds.meteoalarm.org"))&&!oudUrls.some(u=>u.includes("bigdatacloud")),"oude locatie zonder landcode migreert via eenmalige Nominatim-fallback");
   const manifestPad=path.join(R,"manifest.json"),origineel=fs.readFileSync(manifestPad,"utf8"),swPad=path.join(R,"public","sw.js");
   const cache=()=>{const m=/const CACHE = "([^"]+)";/.exec(fs.readFileSync(swPad,"utf8"));return m&&m[1];};
   const voor=cache();
