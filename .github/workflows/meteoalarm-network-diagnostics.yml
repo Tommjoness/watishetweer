@@ -33,15 +33,15 @@ jobs:
               "$url" >> "$OUT" 2>&1
             echo "--- response headers ---" >> "$OUT"
             tail -n 40 "$h" >> "$OUT" 2>&1
-            echo "--- first 800 bytes ---" >> "$OUT"
-            head -c 800 "$b" >> "$OUT" 2>&1
+            echo "--- first 300 bytes ---" >> "$OUT"
+            head -c 300 "$b" >> "$OUT" 2>&1
             echo >> "$OUT"
             rm -f "$h" "$b"
           }
           UA='WatIsHetWeer/1.0 (watishetweer.nl; contact via github.com/Tommjoness/weathernow)'
           BUA='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/140 Safari/537.36'
-          probe 'Atom WeatherNow UA' 'https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands' 'application/atom+xml, application/xml, text/xml' "$UA"
-          probe 'Atom browser UA' 'https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands' '*/*' "$BUA"
+          probe 'Atom WeatherNow UA specific Accept' 'https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands' 'application/atom+xml, application/xml, text/xml' "$UA"
+          probe 'Atom WeatherNow UA wildcard Accept' 'https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands' '*/*' "$UA"
+          probe 'Atom browser UA wildcard Accept' 'https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands' '*/*' "$BUA"
           probe 'JSON compatibility WeatherNow UA' 'https://feeds.meteoalarm.org/api/v1/warnings/feeds-netherlands' 'application/json' "$UA"
-          probe 'Feed index WeatherNow UA' 'https://feeds.meteoalarm.org/' 'text/html,*/*' "$UA"
           cat "$OUT"
