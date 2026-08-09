@@ -34,7 +34,7 @@ const vereist=[
   "const eind=Math.min(i+25,h.time.length);","const punten=S.dag==null&&n===24?25:n;",
   "hoeveelheid onzeker","daily.weather_code&&daily.weather_code[dagIndex]","117.000001",
   "c.visibility!=null?c.visibility","weatherNowUurWaardeOp(\"pressure_msl\"","zoekGeneratie",
-  "klokKalenderdag","Neerslagkans binnenkort","item.precipitation*item.fractie",
+  "klokKalenderdag","Komend uur","item.precipitation*item.fractie",
   "luchtBelofte","niveauIsOfficieel===false"
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);

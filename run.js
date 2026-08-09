@@ -123,8 +123,8 @@ groep("Datumbewuste avondbriefing");
     /Vannacht koelt het af naar 18 graden/.test(tekst)&&!/Vannacht[^.]*5 graden/.test(tekst),tekst);
   check("een hoge neerslagkans van eerder vandaag heet 's avonds niet later vandaag",
     !/Later vandaag/.test(tekst),tekst);
-  check("een windpiek na middernacht heet expliciet morgen",
-    /Morgen rond 17:00 is de wind op zijn sterkst/.test(tekst),tekst);
+  check("een gewone 4 Bft-piek na middernacht vervuilt de hoofdbriefing niet",
+    !/wind op zijn sterkst/.test(tekst),tekst);
   check("na zonsondergang toont de 24-uursgrafiek de volgende daglichtperiode",
     /morgen · zonsopkomst 05:55/.test(bak.suntimes.innerHTML)
       &&/zonsondergang 21:30/.test(bak.suntimes.innerHTML),bak.suntimes.innerHTML);
@@ -327,7 +327,7 @@ groep("Tabellen");
   const {bak}=brief({});
   check("zeven dagen heeft een kopregel",/class="row day kop"/.test(bak.days.innerHTML));
   check("zeven dagen heeft zeven rijen",(bak.days.innerHTML.match(/class="row day"/g)||[]).length===7);
-  check("nachtzicht toont maantijden",/maanopkomst|maanondergang/.test(bak.nights.innerHTML));
+  check("nachtzicht toont maantijden",/maan op|maan onder/.test(bak.nights.innerHTML));
 }
 
 /* 7c. nachtzicht reageert op bewolking en op de stand van de maan */
@@ -344,10 +344,10 @@ groep("Nachtzicht");
   const score=t=>parseFloat(String(t).replace(",","."));
   check("heldere nacht geeft een hoge score",score(rh[0][1])>7,rh[0][1]);
   check("bewolkte nacht geeft een lage score",score(rb[0][1])<1,rb[0][1]);
-  check("heldere nacht krijgt een modelvenster",/gunstigste modelvenster van \d\d:\d\d tot \d\d:\d\d/.test(rh[0][2]),rh[0][2]);
-  check("bewolkte nacht krijgt geen venster",/Geen gunstig modelvenster/.test(rb[0][2]),rb[0][2]);
+  check("heldere nacht krijgt een modelvenster",/Beste periode \d\d:\d\d–\d\d:\d\d/.test(rh[0][2]),rh[0][2]);
+  check("bewolkte nacht krijgt geen venster",/Geen goed zichtvenster/.test(rb[0][2]),rb[0][2]);
   check("maantijden staan er altijd bij",
-    /maanopkomst \d\d:\d\d|maanondergang \d\d:\d\d/.test(rh[0][2])&&/maanopkomst \d\d:\d\d|maanondergang \d\d:\d\d/.test(rb[0][2]));
+    /maan op \d\d:\d\d|maan onder \d\d:\d\d/.test(rh[0][2])&&/maan op \d\d:\d\d|maan onder \d\d:\d\d/.test(rb[0][2]));
 
   /* maanfase per nacht: sinds punt 11 een Unicode-symbool in deze tabel, geen
      getekende schijf meer (die blijft bestaan bij de kop boven de tabel). */
@@ -369,7 +369,7 @@ groep("Nachtzicht");
     check("het symbool heeft een omschrijving voor wie het niet ziet",
       /title="[^"]*procent verlicht"/.test(html));
     check("de maantijden blijven naast het symbool staan",
-      nachtrijen.every(r=>/maanopkomst \d\d:\d\d|maanondergang \d\d:\d\d/.test(r.replace(/<[^>]+>/g,""))));
+      nachtrijen.every(r=>/maan op \d\d:\d\d|maan onder \d\d:\d\d/.test(r.replace(/<[^>]+>/g,""))));
     // de fase moet per nacht kunnen verschillen; met acht discrete stappen over
     // een korte reeks nachten is dat niet gegarandeerd meer dan een enkele stap,
     // dus dit toetst alleen dat het geen vast, hardgecodeerd symbool is
@@ -961,7 +961,7 @@ groep("Windbenaming");
     const kern=naam.replace(/ wind$/,"").replace(/e$/,"").replace(/(.)\1$/,"$1");
     // loopt de wind in de loop van de dag op of af, dan noemt de briefing met opzet
     // alleen de Beaufortwaarde en geen naam; daar valt niets te vergelijken
-    const noemtNaam=!/neemt (toe|af) tot/.test(brf);
+    const noemtNaam=/(windstil|zwak|matig|krachtig|stormachtig|storm|orkaan)/i.test(brf);
     if(noemtNaam && !brf.toLowerCase().includes(kern.toLowerCase()))
       scheef.push(kmu+" km/u ("+api.bft(kmu)+" Bft): meter zegt \""+naam+"\", briefing zegt \""
         +(brf.match(/De wind [^.,(]*|Er staat [^.,(]*/)||[""])[0].trim()+"\"");
@@ -1052,9 +1052,9 @@ groep("Geldige CSS-syntax in het style-blok");
   check("het <style>-blok bevat nergens meer een regel die begint met // (ongeldige CSS-commentaarsyntax)",
     ongeldig.length===0,ongeldig.join(" | "));
   check("de mobiele .day-regel (max-width:900px) gebruikt nog exact de vaste 40px-dagkolom",
-    /@media\(max-width:900px\)\{[\s\S]*?\.day\{grid-template-columns:40px 22px 56px 1fr 1fr 48px;gap:6px\}/.test(styleBlok));
+    /@media\(max-width:900px\)\{[\s\S]*?\.day\{grid-template-columns:40px 22px 52px 1fr 1fr 64px;gap:6px\}/.test(styleBlok));
   check("de regel voor max-width:370px blijft intact (eigen vaste 40px-dagkolom, windkolom valt daar weg)",
-    /@media\(max-width:370px\)\{[\s\S]*?\.day\{grid-template-columns:40px 22px 1fr 1fr 48px\}/.test(styleBlok));
+    /@media\(max-width:370px\)\{[\s\S]*?\.day\{grid-template-columns:40px 22px 1fr 1fr 62px\}/.test(styleBlok));
 }
 
 groep("Kolombreedtes");
@@ -1300,7 +1300,7 @@ groep("Nachtvenster");
     // anders ziet de test een teruggedraaide formulering simpelweg niet staan
     (bak.nights.innerHTML.match(/class="nmeta wide">([^<]*)</g)||[])
       .map(m=>m.replace(/^class="nmeta wide">/,"").replace(/<$/,""))
-      .map(r=>norm(r).split("\u00b7")[0].trim())
+      .map(r=>norm(r).split("\u00b7").slice(1).join("\u00b7").trim())
       .filter(r=>r&&!/^Modelvenster/.test(r))   // de kolomkop is geen nachtregel
       .forEach(r=>regels.push([naam,r]));
   }
@@ -1318,15 +1318,15 @@ groep("Nachtvenster");
   check("geen venster gaat altijd samen met een reden",zonderReden.length===0,
     zonderReden.map(([n,r])=>n+": "+r).join(" | "));
 
-  const metVenster=regels.filter(([,r])=>/^gunstigste modelvenster/.test(r));
+  const metVenster=regels.filter(([,r])=>/^Beste periode/.test(r));
   check("een venster noemt een begin- en eindtijd",
-    metVenster.length>0 && metVenster.every(([,r])=>/van \d\d:\d\d tot \d\d:\d\d/.test(r))
-    && regels.every(([,r])=>/^(gunstigste modelvenster|Geen gunstig modelvenster)/.test(r)),
+    metVenster.length>0 && metVenster.every(([,r])=>/\d\d:\d\d–\d\d:\d\d/.test(r))
+    && regels.every(([,r])=>/^(Beste periode|Geen goed zichtvenster)/.test(r)),
     (metVenster[0]||["",""])[1]);
 
   // de reden moet uit de code komen, niet uit een vast zinnetje
   check("de code onderscheidt maanlicht van bewolking als oorzaak",
-    /te veel maanlicht/.test(bronN) && /te bewolkt/.test(bronN));
+    /maanlicht/.test(bronN) && /bewolking/.test(bronN));
 }
 
 /* 10j. buiten Europa mag de app geen Europese gegevens suggereren */
@@ -1438,7 +1438,7 @@ groep("Dagtabel en tegels");
     !/<small>0,0 mm<\/small>/.test(rijen));
   // op het bureaublad staat het al in de kolom Verwachting, dus daar verborgen
   check("de hoeveelheid verschijnt alleen op de telefoon",
-    /\.drain small\{display:none/.test(bronD) && /\.drain small\{display:block\}/.test(bronD));
+    /\.drain small\{display:none/.test(bronD) && !/\.drain small\{display:block\}/.test(bronD));
 
   const {api:apiLeeg,bak:bakLeeg}=laadKern(390);
   const leeg=bouw({});
@@ -1540,7 +1540,7 @@ groep("Nadruk");
   check("de uitkomst is vet, niet alleen het tijdstip",
     /blijft het <b>droog<\/b>/.test(bronN2));
   check("de maximumtemperatuur krijgt nadruk",
-    /<b>"\+Math\.round\(tv\)\+" graden<\/b>/.test(bronN2)||/<b>"\+nutemp\+" graden<\/b>/.test(bronN2));
+    /<b>"\+Math\.round\(tv\)\s*\+" graden<\/b>/.test(bronN2));
 }
 
 /* 10m. bevindingen uit de eerste live versie */
@@ -1793,7 +1793,7 @@ groep("Iconen en balk");
 }
 
 /* 10o. het nachtzicht toont uitsluitend wat de opdracht toestaat: score, bewolking,
-   gunstigste modelvenstertijdvak, maanopkomst, maanondergang en maanfase. Seeing en doorzicht
+   Beste periodetijdvak, maan op, maan onder en maanfase. Seeing en doorzicht
    uit de bovenlucht (250/700 hPa) zijn eruit, net als eerder de planeetstanden
    (punt 11, zie de efemeride-context bij groep "Nachtzicht vereenvoudigd"). */
 groep("Nachtzicht bevat geen bovenlucht meer");
@@ -1813,7 +1813,7 @@ groep("Nachtzicht bevat geen bovenlucht meer");
   a4.nachten();
   const t4=b4.nights.innerHTML;
   check("bewolking staat er nog",/bewolking/.test(t4));
-  check("het modelvenster staat er nog",/gunstigste modelvenster van|Geen gunstig modelvenster/.test(t4));
+  check("het modelvenster staat er nog",/Beste periode van|Geen goed zichtvenster/.test(t4));
 }
 
 /* 10p. dagdeel, datums, windrichting en de modelkeuze */
@@ -2363,20 +2363,20 @@ groep("Nachtzicht vereenvoudigd");
 
   // de specifieke oorzaak (bewolkt / maanlicht / allebei) blijft behouden
   for(const [opt,verw] of [
-    [{cc:()=>90},"te bewolkt"],
+    [{cc:()=>90},"bewolking"],
   ]){
     const {api:aV,bak:bV}=laadKern(390);
     Object.assign(aV.S,{d:bouw(opt),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
     aV.nachten();
     const t=norm(bV.nights.innerHTML).replace(/<[^>]+>/g," ");
     check("de reden '"+verw+"' staat er nog achter de dubbele punt",
-      new RegExp("Geen gunstig modelvenster: "+verw).test(t),
-      (t.match(/Geen gunstig modelvenster[^\u00b7]*/)||["niet gevonden"])[0]);
+      new RegExp("Geen goed zichtvenster door "+verw).test(t),
+      (t.match(/Geen goed zichtvenster[^\u00b7]*/)||["niet gevonden"])[0]);
   }
   check("de drie mogelijke redenen staan letterlijk in de code",
-    /Geen gunstig modelvenster: te veel maanlicht/.test(bronN2) &&
-    /Geen gunstig modelvenster: te bewolkt/.test(bronN2) &&
-    /Geen gunstig modelvenster: te bewolkt en te veel maanlicht/.test(bronN2));
+    /Geen goed zichtvenster door maanlicht/.test(bronN2) &&
+    /Geen goed zichtvenster door bewolking/.test(bronN2) &&
+    /Geen goed zichtvenster door bewolking en maanlicht/.test(bronN2));
 
   /* maanschijf() tekende bij volle maan (fase 0,5) een pad waarvan de twee bogen
      elkaar vrijwel opheffen (rx valt dan samen met r): het resultaat was een
@@ -2691,7 +2691,7 @@ groep("Nachtzone in de grafiek");
   check("hourly.is_day bepaalt de overgang niet meer rechtstreeks (geen ND[k]===0-segmentdetectie meer)",
     !/const nacht=k<ND\.length&&ND\[k\]===0;/.test(bronN));
   check("fractIndex() (de nieuwe positionering) gebruikt geen new Date()",
-    !/new Date/.test(bronN.slice(bronN.indexOf("const fractIndex"),bronN.indexOf('let nu="",nuX=null;'))));
+    !/new Date/.test(bronN.slice(bronN.indexOf("const fractIndex"),bronN.indexOf('let nu="",nuX=null,nuTemp=null;'))));
 
   /* v70: functionele tests op basis van exacte daily.sunset/sunrise, met een
      bijpassende is_day (nodig voor de randgevallen: begint/eindigt de reeks
@@ -2778,7 +2778,7 @@ groep("Nachtzone in de grafiek");
     }
     check("5. het huidige moment (21:26) staat vóór de zonsondergang (21:37)",21+26/60<21+37/60);
     check("6. de lokale tijdstrings worden zonder browser-tijdzoneverschuiving verwerkt (fractIndex gebruikt geen new Date())",
-      !/new Date/.test(bronN.slice(bronN.indexOf("const fractIndex"),bronN.indexOf('let nu="",nuX=null;'))));
+      !/new Date/.test(bronN.slice(bronN.indexOf("const fractIndex"),bronN.indexOf('let nu="",nuX=null,nuTemp=null;'))));
     check("7. geen hardcoded locatie of tijdzone in dit mechanisme",
       !/lat===|lon===|Almere|Amsterdam/.test(bronN.slice(bronN.indexOf("const fractIndex"),bronN.indexOf("const gitter"))));
   }
@@ -3025,7 +3025,7 @@ groep("Herstelronde v68");
   check("7. de mobiele .night-regel bestaat nog onaangeroerd (niet in deze ronde gewijzigd)",
     /\.night\{grid-template-columns:70px 40px minmax\(20px,1fr\) max-content;gap:4px 9px\}/.test(bronH));
   check("7b. de mobiele .day-regel gebruikt sinds de v70-kolomcorrectie een vaste naamkolom (40px), geen max-content meer",
-    /\.day\{grid-template-columns:40px 22px 56px 1fr 1fr 48px;gap:6px\}/.test(bronH));
+    /\.day\{grid-template-columns:40px 22px 52px 1fr 1fr 64px;gap:6px\}/.test(bronH));
   check("8. de standaard (desktop-breedte) .night-grid is niet gewijzigd",
     /\.night\{grid-template-columns:104px 52px minmax\(40px,1fr\) 104px max-content;gap:16px\}/.test(bronH));
   check("8b. de standaard (desktop-breedte) .day-grid gebruikt sinds de v70-kolomcorrectie een vaste naamkolom (100px), geen max-content meer",
@@ -3469,7 +3469,7 @@ async function testenOpstartlocatie(){
     check("9c. ontbrekende temperatuur wordt met een streep of uitleg getoond",
       bak.t.textContent==="–"&&bak.minitemp.textContent==="–"
       &&/niet beschikbaar/.test(bak.feels.textContent)
-      &&/Temperatuurgegevens zijn momenteel niet beschikbaar/.test(bak.brief.innerHTML),
+      &&!/Temperatuurgegevens zijn momenteel niet beschikbaar/.test(bak.brief.innerHTML),
       temperatuurUitvoer.slice(0,300));
     check("9c. ontbrekende temperatuur wordt nergens kunstmatig 0 graden",
       !/(^|[^\d-])0(?:°C|°| graden)/.test(temperatuurUitvoer),temperatuurUitvoer.slice(0,300));

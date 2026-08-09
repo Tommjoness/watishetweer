@@ -209,7 +209,7 @@
      color:var(--ink-25);margin:var(--s4) 0 0;padding-bottom:10px;border-bottom:1px solid var(--ink);
      display:flex;justify-content:space-between;align-items:flex-end;gap:10px 16px;flex-wrap:wrap}
   h2 .r #moonlab{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
-  h2 .r{font-family:var(--mono);letter-spacing:0;text-transform:none;font-size:11.5px;color:var(--ink-45);
+  h2 .r{font-family:var(--sans);letter-spacing:0;text-transform:none;font-size:11.5px;color:var(--ink-45);
         display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap}
   #suntimes{display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap}
   #suntimes span{white-space:nowrap}
@@ -231,6 +231,10 @@
      hier een kleine, positieve top-marge in plaats van de -2px die de tekst
      juist omhoog trok. */
   #dagenhint{margin-top:8px}
+  .data-uitleg{font-size:11.5px;color:var(--ink-45);margin:-4px 0 12px}
+  .data-uitleg summary{display:inline;cursor:pointer;color:var(--ink-45);box-shadow:inset 0 -1px 0 var(--rule)}
+  .data-uitleg summary:hover{color:var(--ink)}
+  .data-uitleg p{margin:7px 0 0;max-width:70ch}
 
   /* waarschuwingen */
   .waarsch{border-left:3px solid var(--carmine);padding:10px 0 10px 14px;margin-top:var(--s2)}
@@ -271,14 +275,14 @@
     letter-spacing:.12em;text-transform:uppercase;color:var(--ink-25)!important;white-space:nowrap}
   .row.kop .bar,.row.kop .sbar{background:none}
   .dcond{color:var(--ink-45);font-size:13.5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-  .dmin,.dmax{font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums;text-align:center}
+  .dmin,.dmax{font-family:var(--sans);font-size:14px;font-variant-numeric:tabular-nums;text-align:center}
   .dmin{color:var(--ink-45);text-align:center}
-  .dwind{font-family:var(--mono);font-size:12.5px;color:var(--ink-45);white-space:nowrap;text-align:center}
+  .dwind{font-family:var(--sans);font-size:12.5px;color:var(--ink-45);white-space:nowrap;text-align:center}
   .dwind svg{display:inline-block;vertical-align:-1px}
   /* De kanskolom lijnt consequent rechts uit (zowel de kop hierboven als de
      percentages en de mm-toelichting hieronder), zodat cijfers van wisselende
      breedte (bv. "8%" naast "100%") niet meer heen en weer springen. */
-  .drain{font-family:var(--mono);font-size:12.5px;color:var(--teal);text-align:right;font-variant-numeric:tabular-nums}
+  .drain{font-family:var(--sans);font-size:12.5px;color:var(--teal);text-align:right;font-variant-numeric:tabular-nums}
   /* Op het bureaublad staat de hoeveelheid al in de kolom Verwachting, dus daar
      zou dit dubbelop zijn. Op de telefoon valt die kolom weg en is dit de enige
      plek waar je ziet hoeveel er valt, niet alleen hoe waarschijnlijk het is. */
@@ -294,7 +298,7 @@
   .night .nmeta.wide{text-align:left}
   .ctrl{grid-template-columns:120px 1fr 1fr max-content;gap:14px}
   .ctrl .mono{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink-70);text-align:center}
-  .score{font-family:var(--mono);font-weight:500;font-size:18px;font-variant-numeric:tabular-nums;text-align:center}
+  .score{font-family:var(--sans);font-weight:500;font-size:18px;font-variant-numeric:tabular-nums;text-align:center}
   .sbar{height:1px;background:var(--rule);position:relative}
   .sbar i{position:absolute;top:-1px;height:3px}
   /* Zonder dit brak de regel na de punt en bleef die los aan het eind hangen.
@@ -323,6 +327,8 @@
   footer .bron{display:block}
   footer .bron b{font-weight:500;color:var(--ink-45)}
   footer .mono{font-size:11.5px}
+  footer details summary{cursor:pointer;display:inline;color:var(--ink-45)}
+  footer details #coords{display:block;margin-top:3px;font-family:var(--sans);font-variant-numeric:tabular-nums}
   #hit{touch-action:pan-y}
   svg,canvas{display:block;touch-action:pan-y;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -358,8 +364,8 @@
       zelfde reden als bij de desktopregel hierboven: max-content varieert
       per rij omdat iedere .row.day zijn eigen, onafhankelijke grid is
     */
-    .day{grid-template-columns:40px 22px 56px 1fr 1fr 48px;gap:6px}
-    .drain small{display:block}
+    .day{grid-template-columns:40px 22px 52px 1fr 1fr 64px;gap:6px}
+    .drain small{display:none}
     /* De kop "Wind max" stond alleen boven de windkracht, terwijl het weericoon
        er visueel bij hoort: op de telefoon valt de kolom Verwachting weg, dus
        icoon en wind vormen samen een groep. De kop hoort daar overheen. */
@@ -400,7 +406,7 @@
     /* Op dit soort schermen blijft er na de naamkolom te weinig over voor de
        temperaturen: een waarde als -10 graden past er dan niet meer in. De wind
        is in deze tabel de minst dringende kolom, dus die valt hier weg. */
-    .day{grid-template-columns:40px 22px 1fr 1fr 48px}
+    .day{grid-template-columns:40px 22px 1fr 1fr 62px}
     /* Hier valt de windkolom helemaal weg, dus is er niets om overheen te spannen
        en moet het lege icoonvakje in de kop juist terugkomen. Zonder dit schuift
        de hele kop een kolom op ten opzichte van de gegevens eronder. */
@@ -559,8 +565,8 @@
     <div class="stats">
       <div class="stat"><div class="eyebrow">Wind</div><div class="sval" id="wind">--</div><div class="ssub" id="windsub">&nbsp;</div></div>
       <div class="stat"><div class="eyebrow">Windstoten</div><div class="sval" id="gust">--</div><div class="ssub" id="gustsub">&nbsp;</div></div>
-      <div class="stat"><div class="eyebrow">Neerslag recent</div><div class="sval" id="prec">--</div><div class="ssub" id="precsub">&nbsp;</div></div>
-      <div class="stat"><div class="eyebrow">Neerslagkans binnenkort</div><div class="sval" id="pop">--</div><div class="ssub" id="popsub">&nbsp;</div></div>
+      <div class="stat"><div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">--</div><div class="ssub" id="precsub">&nbsp;</div></div>
+      <div class="stat"><div class="eyebrow">Komend uur</div><div class="sval" id="pop">--</div><div class="ssub" id="popsub">&nbsp;</div></div>
       <div class="stat"><div class="eyebrow">Luchtvochtigheid</div><div class="sval" id="hum">--</div><div class="ssub" id="humsub">&nbsp;</div></div>
       <div class="stat"><div class="eyebrow">Luchtdruk</div><div class="sval" id="pres">--</div><div class="ssub" id="pressub">&nbsp;</div></div>
       <div class="stat"><div class="eyebrow">Bewolking</div><div class="sval" id="cloud">--</div><div class="ssub" id="cloudsub">&nbsp;</div></div>
@@ -585,7 +591,8 @@
     </div>
 
     <h2><span>Neerslag komende twee uur</span></h2>
-    <p class="hint" id="nchint">Modelverwachting per kwartier. De bronresolutie verschilt per regio; buiten gebieden met echte 15-minutenmodeldata kan Open-Meteo uurdata interpoleren.</p>
+    <p class="hint" id="nchint">Kwartierverwachting op basis van weermodellen.</p>
+    <details class="data-uitleg"><summary>Over deze gegevens</summary><p>De bronresolutie verschilt per regio. Buiten gebieden met echte 15-minutenmodeldata kan Open-Meteo uurdata interpoleren.</p></details>
     <div id="nctext"></div>
     <svg id="nc" viewBox="0 0 900 60" width="100%" role="img" aria-label="Neerslag per kwartier"></svg>
 
@@ -607,10 +614,9 @@
     <div class="stats" id="aq"></div>
 
     <footer>
-      <span class="bron"><b>Weer en plaatszoeken</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> · <b>Luchtkwaliteit en pollen</b> Open-Meteo / CAMS</span>
-      <span class="bron"><b>Waarschuwingen</b> <a href="https://meteoalarm.org" target="_blank" rel="noopener">MeteoAlarm</a> / <a href="https://www.weather.gov" target="_blank" rel="noopener">National Weather Service</a> · <b>Plaatsnamen</b> BigDataCloud / <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap-bijdragers</a> (fallback)</span>
-      <span class="mono bron" id="coords"></span>
-      <span class="bron"><a href="privacy.html">Privacy &amp; gegevens</a> · Geen account, advertentietracking of analytics.</span>
+      <span class="bron"><b>Bronnen</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> / CAMS · <a href="https://meteoalarm.org" target="_blank" rel="noopener">MeteoAlarm</a> · <a href="https://www.weather.gov" target="_blank" rel="noopener">National Weather Service</a> · BigDataCloud / <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap-bijdragers</a></span>
+      <span class="bron"><a href="privacy.html">Privacy &amp; gegevens</a></span>
+      <details class="bron footer-details"><summary>Technische locatiegegevens</summary><span id="coords"></span></details>
     </footer>
   </div>
 </div>
@@ -1351,30 +1357,24 @@ function briefing(){
   const tmin=rondGetal(nachtWaarden.length?Math.min(...nachtWaarden):null);
   const huidige=eindigGetal(c.temperature_2m),nutemp=rondGetal(huidige);
   const dagPiek=piek("temperature_2m");
-  let zin2;
+  let zin2="";
   const nachtZin=tmin===null?"":" Vannacht koelt het af naar <b>"+tmin+" graden</b>.";
   if(huidige===null){
     if(tv!==null&&top!==null){
-      zin2="De actuele temperatuur is niet beschikbaar. "+dagAanduiding(h.time[top],true)
-        +" wordt het maximaal <b>"+Math.round(tv)+" graden</b>, met het warmste moment rond "
-        +hhmm(h.time[top])+"."+nachtZin;
+      zin2=dagAanduiding(h.time[top],true)+" wordt het maximaal <b>"+Math.round(tv)
+        +" graden</b>, met het warmste moment rond "+hhmm(h.time[top])+"."+nachtZin;
     }else if(tmin!==null){
-      zin2="De actuele temperatuur is niet beschikbaar. Vannacht wordt ongeveer <b>"+tmin+" graden</b> verwacht.";
-    }else{
-      zin2="Temperatuurgegevens zijn momenteel niet beschikbaar.";
+      zin2="Vannacht wordt ongeveer <b>"+tmin+" graden</b> verwacht.";
     }
   }else if(top!==null&&top>i&&tv>huidige+0.5){
     zin2=dagAanduiding(h.time[top],true)+" wordt het maximaal <b>"+Math.round(tv)
         +" graden</b>, met het warmste moment rond "+hhmm(h.time[top])+"."+nachtZin;
   }else if(dagPiek&&dagPiek.t<c.time&&Math.round(dagPiek.v)>nutemp){
-    zin2=dagAanduiding(dagPiek.t,true)+" was het rond "+hhmm(dagPiek.t)+" het warmst met <b>"+Math.round(dagPiek.v)+" graden</b>. Nu is het "+nutemp
-        +" graden."+nachtZin;
+    zin2=dagAanduiding(dagPiek.t,true)+" was het rond "+hhmm(dagPiek.t)+" het warmst met <b>"+Math.round(dagPiek.v)+" graden</b>."+nachtZin;
   }else if(tmin!==null&&tmin<nutemp-1){
-    zin2="De komende 24 uur wordt het niet warmer dan "+nutemp+" graden. Vannacht koelt het af naar "+tmin+" graden.";
-  }else if(tmin===null){
-    zin2="De komende uren blijft de temperatuur rond "+nutemp+" graden. De nachttemperatuur is niet beschikbaar.";
-  }else{
-    zin2="De komende uren blijft de temperatuur rond "+nutemp+" graden, ook vannacht.";
+    zin2="Vannacht koelt het af naar <b>"+tmin+" graden</b>.";
+  }else if(tmin!==null){
+    zin2="Vannacht blijft de temperatuur ongeveer gelijk.";
   }
 
   // wind
@@ -1386,24 +1386,25 @@ function briefing(){
     if(w!==null&&(wmax===null||w>wmax)){wmax=w;wi=k;}
     if(g!==null&&(gmax===null||g>gmax)){gmax=g;gi=k;}
   }
-  let zin3;
-  if(wmax===null||wi===null){
-    zin3="Windgegevens zijn momenteel niet beschikbaar.";
-  }else{
+  let zin3="";
+  if(wmax!==null&&wi!==null){
     const bm=bft(wmax);
     const rNu=eindigGetal(c.wind_direction_10m),rPiek=eindigGetal(h.wind_direction_10m&&h.wind_direction_10m[wi]);
     const richtingNu=kompas(rNu),richtingPiek=kompas(rPiek);
-    // draait de wind meer dan twee kompaspunten, dan is dat het vermelden waard
     const hoek=rNu===null||rPiek===null?null:Math.abs(((rPiek-rNu+540)%360)-180);
     const draait=hoek!==null&&hoek>45;
     const draaiTekst=draait&&richtingPiek?" en draait naar het "+richtingPiek:"";
-    const bronTekst=richtingNu?" uit het "+richtingNu:"";
-    zin3=richtingNu?"De wind komt"+bronTekst+draaiTekst+".":"De windrichting is niet beschikbaar.";
-    const moment=wi>i+1
-      ? dagAanduiding(h.time[wi],true)+" rond "+hhmm(h.time[wi])
-      : "De komende 24 uur";
-    zin3+=" "+moment+" is de wind op zijn sterkst met <b>"+bm+" Bft</b> ("+BFTNAAM[bm]+")";
-    zin3+=gmax!==null&&gmax>=60&&gi!==null?"; "+dagAanduiding(h.time[gi],true)+" in het uur "+weatherNowUurvak(h.time[gi])+" kunnen windstoten tot "+Math.round(gmax)+" km/u voorkomen.":".";
+    if(richtingNu) zin3="De wind komt uit het "+richtingNu+draaiTekst+".";
+    const opvallendeWind=bm>=5||(gmax!==null&&gmax>=60);
+    if(opvallendeWind){
+      const moment=wi>i+1
+        ? dagAanduiding(h.time[wi],true)+" rond "+hhmm(h.time[wi])
+        : "De komende 24 uur";
+      zin3+=(zin3?" ":"")+moment+" is de wind op zijn sterkst met <b>"+bm+" Bft</b> ("+BFTNAAM[bm]+")";
+      zin3+=gmax!==null&&gmax>=60&&gi!==null?"; "+dagAanduiding(h.time[gi],true)+" in het uur "+weatherNowUurvak(h.time[gi])+" kunnen windstoten tot "+Math.round(gmax)+" km/u voorkomen.":".";
+    }
+  }else{
+    zin3="Windgegevens zijn momenteel niet beschikbaar.";
   }
 
   /* De interpretatielaag vervangt uitsluitend de neerslagzin. Een structurele
@@ -1500,8 +1501,10 @@ function etmaal(start,n){
   const F={zon:M?10:10.5, nu:M?10:10, temp:M?12.5:15, uur:M?11:10.5, pre:M?10:9.5, grid:M?9.5:10.5};
   const stap = n<=24 ? 3 : n<=48 ? 6 : (M?18:12);
 
+  const actueleGrafiekTemp=S.dag==null?eindigGetal(S.d.current&&S.d.current.temperature_2m):null;
   const Tgeldig=T.filter(v=>v!=null&&isFinite(v));
-  if(!Tgeldig.length){ const elLeeg=document.getElementById("chart"); elLeeg.innerHTML=""; return; }   // niets te tekenen zonder cijfers
+  if(!Tgeldig.length){ const elLeeg=document.getElementById("chart"); elLeeg.innerHTML=""; return; }
+  if(actueleGrafiekTemp!==null) Tgeldig.push(actueleGrafiekTemp);   // niets te tekenen zonder cijfers
   let mn=Math.min(...Tgeldig),mx=Math.max(...Tgeldig);
   mn=Math.floor(mn-1);mx=Math.ceil(mx+1);
   const span=(mx-mn)||1;
@@ -1605,7 +1608,7 @@ function etmaal(start,n){
     }
   });
 
-  let nu="",nuX=null;
+  let nu="",nuX=null,nuTemp=null;
   {
     /* De lijn stond altijd op het volledige uur, dus om 16:38 stond hij op 16:00.
        De positie komt nu uit het werkelijke moment bij de plaats: het hele uur
@@ -1614,8 +1617,9 @@ function etmaal(start,n){
        weer-API voor die plaats teruggeeft, niet de klok van de browser. */
     const nuIdx = plaatsNuIndex(TI);
     if(nuIdx!=null && nuIdx>=0 && nuIdx<=TI.length-1 && isFinite(nuIdx)){
-      const xn=x(nuIdx); nuX=xn;
-      nu=`<line x1="${xn}" y1="${by-2}" x2="${xn}" y2="${pb+6}" stroke="${CARMINE}" stroke-width="1"/>
+      const xn=x(nuIdx); nuX=xn; nuTemp=eindigGetal(S.d.current&&S.d.current.temperature_2m);
+      const nuStip=nuTemp===null?"":`<circle cx="${xn}" cy="${y(nuTemp)}" r="3" fill="${CARMINE}"/>`;
+      nu=`<line x1="${xn}" y1="${by-2}" x2="${xn}" y2="${pb+6}" stroke="${CARMINE}" stroke-width="1"/>${nuStip}
           <text x="${xn+4}" y="${by+bh+13}" fill="${CARMINE}" font-family="DM Mono,monospace" font-size="${F.nu}">nu</text>`;
     }
   }
@@ -1776,8 +1780,10 @@ function etmaal(start,n){
     return null;
   };
   kandidaten.forEach(k=>{
-    const i=k.i, v=T[i], bw=labelBreed(v);
-    let cx=x(i);
+    const i=k.i;
+    const v=k.rang===4&&nuTemp!==null?nuTemp:T[i];
+    const bw=labelBreed(v);
+    let cx=k.rang===4&&nuX!==null?nuX:x(i);
     if(cx-bw/2 < pl-2) cx=pl-2+bw/2;
     if(cx+bw/2 > W-pr) cx=W-pr-bw/2;
     /* De rode nu-lijn loopt van boven naar beneden door de tekening. Het eerste
@@ -2250,22 +2256,22 @@ function nachten(){
     let venster=null;
     if(br>=2&&bstart>=0){
       const eind = (bstart+br<TT.length) ? TT[bstart+br].slice(11,16) : hhmm(sr2);
-      venster="gunstigste modelvenster van "+TT[bstart].slice(11,16)+" tot "+eind;
+      venster="Beste periode "+TT[bstart].slice(11,16)+"–"+eind;
     }else{
       const langsteRun=test=>{let r=0,b=0;for(let i=0;i<C.length;i++){ if(test(i)){r++;if(r>b)b=r;} else r=0; } return b;};
       const wolkOk=langsteRun(i=>C[i]<35)>=2;               // zonder de maan was er een venster geweest
       const maanOk=langsteRun(i=>maanWeging[i]*mn.ill<0.2)>=2;  // zonder de wolken was er een venster geweest
-      venster = wolkOk ? "Geen gunstig modelvenster: te veel maanlicht"
-              : maanOk ? "Geen gunstig modelvenster: te bewolkt"
-              : "Geen gunstig modelvenster: te bewolkt en te veel maanlicht";
+      venster = wolkOk ? "Geen goed zichtvenster door maanlicht"
+              : maanOk ? "Geen goed zichtvenster door bewolking"
+              : "Geen goed zichtvenster door bewolking en maanlicht";
     }
 
     // maantijden voor deze nacht
     const mt=opOnder("maan",naarUTC(ss.slice(0,10)+"T12:00"),S.lat,S.lon);
     let maanTekst="";
-    if(mt.op!=null&&mt.onder!=null) maanTekst="maanopkomst "+naarLokaal(mt.op)+" \u00b7 maanondergang "+naarLokaal(mt.onder);
-    else if(mt.op!=null) maanTekst="maanopkomst "+naarLokaal(mt.op);
-    else if(mt.onder!=null) maanTekst="maanondergang "+naarLokaal(mt.onder);
+    if(mt.op!=null&&mt.onder!=null) maanTekst="maan op "+naarLokaal(mt.op)+" \u00b7 onder "+naarLokaal(mt.onder);
+    else if(mt.op!=null) maanTekst="maan op "+naarLokaal(mt.op);
+    else if(mt.onder!=null) maanTekst="maan onder "+naarLokaal(mt.onder);
     /* De fase staat al per nacht in mn, dus het symbool kost niets extra's aan
        rekenwerk of gegevens. Het staat vlak voor de maantijden omdat het daarbij
        hoort, en niet los voorop waar het bij de score zou lijken te horen. Het
@@ -2282,16 +2288,16 @@ function nachten(){
     const lbl=d===0?"vannacht":DAGEN[new Date(ss.slice(0,10)+"T12:00:00").getDay()]+" op "+DAGEN[new Date(sr2.slice(0,10)+"T12:00:00").getDay()];
     out+=`<div class="row night">
       <div class="dname">${lbl}</div>
-      <div class="score" style="color:${kleur}">${nl(sc)}</div>
+      <div class="score" style="color:${kleur}" title="Modelscore ${nl(sc)} van 10">${Math.round(sc)}/10</div>
       <div class="sbar"><i style="width:${sc*10}%;background:${kleur}"></i></div>
       <div class="nmeta"><span class="perc">${Math.round(cw)}%</span> bewolking</div>
-      <div class="nmeta wide">${venster}${maanTekst
+      <div class="nmeta wide">${sc>=8.5?"Uitstekend":sc>=7?"Goed":sc>=5?"Redelijk":sc>=3.5?"Matig":"Ongunstig"} · ${venster}${maanTekst
         ? ` <span class="maangroep"><span class="maanbij" title="${esc(maanTitel)}">${maanIcoon}</span> ${maanTekst}</span>`
         : ""}</div></div>`;
   }
   const kopN=`<div class="row night kop">
-      <div class="dname">Nacht</div><div class="score">Modelscore 0-10</div><div class="sbar"></div>
-      <div class="nmeta">Bewolking</div><div class="nmeta wide">Modelvenster (bewolking en maan)</div></div>`;
+      <div class="dname">Nacht</div><div class="score">Score</div><div class="sbar"></div>
+      <div class="nmeta">Bewolking</div><div class="nmeta wide">Beste zichtperiode</div></div>`;
   document.getElementById("nights").innerHTML=(out?kopN+out:"")||'<div class="msg">Geen nachtdata beschikbaar.</div>';
   const m=maan(new Date());
   /* maanschijf() tekende bij volle maan (fase 0,5) twee bogen die elkaar bijna

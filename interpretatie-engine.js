@@ -423,22 +423,20 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       origineel.meters();
       const uur=analyse(60),kort=neerslagKorteWeergave(uur);
       if(!uur.genoeg) set("pop","–");
-      else if(kort.droog) set("pop","Geen");
+      else if(kort.droog) set("pop","Droog");
       else if(uur.kans!==null) set("pop",uur.kans+"<s>%</s>");
       else set("pop",kort.hoofd);
       zetTekst("popsub",neerslagZin(uur));
-      zetEyebrow("prec","Neerslag recent");
+      zetEyebrow("prec","Afgelopen 15 minuten");
       const c=S.d.current||{};
       const intervalMin=Math.max(1,Math.round((getal(c.interval)||900)/60));
       const recent=veldGetal("precipitation",c.precipitation);
-      set("prec",recent===null?"–":recent<=INTERPRETATIE_CONFIG.spoorMm?"Geen":(recent<0.1?"<0,1":nl(recent))+"<s>mm</s>");
-      const dag=S.d.daily||{},idx=dag.time?dag.time.indexOf(plaatsVandaag()):-1;
-      const dagsom=idx>=0&&dag.precipitation_sum?veldGetal("precipitation",dag.precipitation_sum[idx]):null;
+      set("prec",recent===null?"–":recent<=INTERPRETATIE_CONFIG.spoorMm?"Droog":(recent<0.1?"<0,1":nl(recent))+"<s>mm</s>");
       zetTekst("precsub",recent===null
         ? "Recente neerslag is niet beschikbaar."
-        : (recent<=INTERPRETATIE_CONFIG.spoorMm
-          ? "Volgens het model viel geen neerslag in de afgelopen "+intervalMin+" minuten. "
-          : "Modelwaarde over de afgelopen "+intervalMin+" minuten. ")+dagHoeveelheidZin(dagsom));
+        : recent<=INTERPRETATIE_CONFIG.spoorMm
+          ? "Geen neerslag gemodelleerd in de afgelopen "+intervalMin+" minuten."
+          : "Modelwaarde over de afgelopen "+intervalMin+" minuten.");
     };
   }
 
@@ -582,7 +580,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       if(d.timezone) meta.push(d.timezone);
       const coords=document.getElementById("coords");
       if(coords) coords.textContent=meta.join(" · ");
-      zetEyebrow("prec","Neerslag recent");
+      zetEyebrow("prec","Afgelopen 15 minuten");
     };
   }
 }
