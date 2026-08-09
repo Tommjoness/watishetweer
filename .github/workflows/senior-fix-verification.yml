@@ -20,17 +20,9 @@ jobs:
       - name: Pas eenmalige pre-launch hardening toe
         run: |
           if [ -f scripts/prelaunch-hardening-12.js ]; then
-            python - <<'PY'
-          from pathlib import Path
-          p=Path("scripts/prelaunch-hardening-12.js")
-          s=p.read_text()
-          oud='`      tot: i.ends || i.expires || null,`);'
-          nieuw='`      tot: i.ends || i.expires || null,`,2);'
-          assert s.count(oud)==1, f"CAP migratiefragment verwacht 1x, vond {s.count(oud)}"
-          p.write_text(s.replace(oud,nieuw))
-          PY
+            node scripts/fix-prelaunch-migration.js
             node scripts/prelaunch-hardening-12.js
-            rm scripts/prelaunch-hardening-12.js
+            rm scripts/fix-prelaunch-migration.js scripts/prelaunch-hardening-12.js
           fi
       - name: Volledige niet-browser suite
         run: npm run build
@@ -57,7 +49,7 @@ jobs:
             prelaunch-regressions.test.js \
             privacy.html \
             package.json
-          git add -u -- scripts/prelaunch-hardening-12.js
+          git add -u -- scripts/fix-prelaunch-migration.js scripts/prelaunch-hardening-12.js
           git status --short
           if git diff --cached --quiet; then
             echo "Geen productwijzigingen om vast te leggen."
