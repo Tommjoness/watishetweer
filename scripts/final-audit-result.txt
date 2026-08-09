@@ -1,0 +1,56 @@
+===== provider-migratie =====
+Provider-policy fix toegepast.
+EXIT=0
+===== MeteoAlarm-feed =====
+MeteoAlarm-feed hardening toegepast.
+EXIT=0
+===== npm-test =====
+
+> watishetweer@1.2.0 test
+> node interpretatie-engine.test.js && node build-weather.js && node audit-regressions.test.js && node prelaunch-regressions.test.js && node senior-7-regressions.test.js && node run-built-regressions.test.js && node run-built-matrix.js && node run-api-source-compat.test.js && node browser-production.test.js
+
+OK  verlopen 23% telt niet mee voor de komende twee uur
+OK  optie 1 wordt exact en zonder absolute droogclaim gevormd
+OK  droge verwachting noemt nergens 0% of 0,0 mm
+OK  om 19:47 omvat komend uur beide overlappende uurvakken
+OK  positieve hoeveelheid onder 0,1 mm wordt niet als 0,0 verborgen
+OK  grote kans zonder hoeveelheid wordt begrijpelijk uitgelegd
+OK  meetbare sneeuw gebruikt toekomstig neerslagtype
+OK  recente neerslag is alleen 'nu' bij passende actuele weercode
+OK  onvoldoende tijdsdekking geeft geen stellige uitspraak
+OK  ontbrekende kans wordt niet stilletjes nul
+OK  dubbele lokale tijd rond klokomslag verlaagt zekerheid
+OK  dubbele lokale tijd buiten het onderzochte venster verlaagt de zekerheid niet
+OK  ongeldige negatieve neerslag en kansen worden begrensd
+OK  daganalyse van vandaag sluit verlopen dagpiek uit
+OK  meer kans leidt nooit tot een drogere status
+OK  meetbare hoeveelheid is nooit droger dan alleen kans
+OK  alle kans-zonder-hoeveelheidstakken leggen het signaal uit zonder 0,0 mm
+OK  daghoeveelheid gebruikt taal in plaats van droge nul
+
+Interpretatie-engine: 18 scenario's geslaagd.
+WeatherNow-build geslaagd: canonieke bron, deterministische assemblage, cache watishetweer-677c0aca3453.
+OK  geen interne test- of bouwbestanden in public
+OK  serviceworker-cache volgt de gebouwde inhoudshash
+OK  geen handmatig vast cacheversienummer in productie
+OK  waarschuwingen van een vorige locatie worden direct gewist
+OK  een verouderd waarschuwingantwoord kan de nieuwe plaats niet overschrijven
+OK  onbereikbare waarschuwingbron blijft niet stil
+OK  ontbrekende werelddekking wordt eerlijk gemeld
+OK  temperatuurweergaven blokkeren null als kunstmatige nul
+OK  centrale neerslaglaag bewaart de rest van de briefing structureel
+OK  weekinterpretatie slaat de tabelkop over
+OK  maximumtemperatuur noemt de dag vóór de claim
+OK  zonmomenten noemen in de 24-uursweergave expliciet de dag
+OK  nosniff-header staat aan
+OK  framing is geblokkeerd
+OK  locatiebevoegdheid is tot de eigen site beperkt
+OK  waarschuwingroute blijft technisch beschikbaar bij bronstoring
+OK  NWS-storing wordt niet als geldige lege dekking gemeld
+OK  NWS-storing heeft een expliciete reden
+AssertionError [ERR_ASSERTION]: MeteoAlarm-test doorloopt land- en waarschuwingbron
+    at ok (/home/runner/work/weathernow/weathernow/audit-regressions.test.js:12:10)
+    at /home/runner/work/weathernow/weathernow/audit-regressions.test.js:95:3
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+EXIT=1
+FINAL_STATUS=1
