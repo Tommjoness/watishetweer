@@ -36,7 +36,14 @@ jobs:
           p.write_text(s)
           PY
       - name: Pas eenmalige UX-polish toe
-        run: node .github/ux-mobile-polish.mjs
+        run: |
+          node .github/ux-mobile-polish.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('senior-7-regressions.test.js')
+          s=p.read_text().replace('index.includes("Neerslagkans binnenkort")&&engine.includes("de komende circa 60 minuten")','index.includes("Komend uur")&&engine.includes("de komende circa 60 minuten")')
+          p.write_text(s)
+          PY
       - name: Volledige regressies en productiebuild
         run: npm test
       - name: Installeer Chromium en WebKit
@@ -49,7 +56,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html interpretatie-engine.js build-weather.js prelaunch-regressions.test.js
+          git add index.html interpretatie-engine.js build-weather.js prelaunch-regressions.test.js senior-7-regressions.test.js
           git diff --cached --quiet && { echo "Geen productwijzigingen om vast te leggen"; exit 1; }
           git commit -m "Polijst mobiele consumenten-UX"
           git push origin HEAD:agent/mobile-ux-final-polish
