@@ -29,26 +29,26 @@ jobs:
           if [ "$code" -ne 0 ]; then
             grep -q "browserasserties consumer polish" /tmp/consumer-migration.log || exit "$code"
           fi
-          node finish-final-consumer-polish.cjs
           node finish-final-consumer-polish-v2.cjs
           node finish-final-consumer-polish-v3.cjs
           node finish-final-consumer-polish-v4.cjs
           node finish-final-consumer-polish-v5.cjs
           node finish-final-consumer-polish-v6.cjs
-          node finish-final-consumer-polish-v8.cjs
       - name: Full source and production suite
         run: npm test
       - name: Install real browsers
         run: |
           npm install --no-save playwright@latest
           npx playwright install --with-deps chromium webkit
-      - name: Chromium and WebKit mobile plus desktop
+      - name: Existing Chromium and WebKit quality gate
         run: node browser-playwright.test.js
+      - name: Dedicated final consumer polish gate
+        run: node browser-consumer-polish.test.js
       - name: Commit exact tested product files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html interpretatie-engine.js prelaunch-regressions.test.js browser-playwright.test.js audit-regressions.test.js built-production-regressions.test.js global-scenario-matrix-v2.test.js run.js
+          git add index.html interpretatie-engine.js prelaunch-regressions.test.js audit-regressions.test.js built-production-regressions.test.js global-scenario-matrix-v2.test.js run.js
           git diff --cached --exit-code && exit 1 || true
           git commit -m "Polijst consumenteninterface definitief [consumer-polish-done]"
           git push origin HEAD:agent/final-consumer-polish
