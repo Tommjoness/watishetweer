@@ -462,7 +462,7 @@
        standaard max-content en de venstertekst + maantijden daarin lopen via
        de algemene .nmeta-regel op white-space:nowrap: die kolom meet zich dus
        altijd op de volledige, ongewrapte tekstbreedte van de langste
-       zichtvenstertekst (bijvoorbeeld "Geen geschikt zichtvenster: te
+       zichtvenstertekst (bijvoorbeeld "Geen gunstig modelvenster: te
        bewolkt en te veel maanlicht"). In een halve dashboardkolom van
        ruwweg 600-650px is dat niet veilig na te bootsen zonder de interne
        Nachtzicht-rij ingrijpend te herbouwen (venstertekst en maantijden in
@@ -552,8 +552,8 @@
     <div class="stats">
       <div class="stat"><div class="eyebrow">Wind</div><div class="sval" id="wind">--</div><div class="ssub" id="windsub">&nbsp;</div></div>
       <div class="stat"><div class="eyebrow">Windstoten</div><div class="sval" id="gust">--</div><div class="ssub" id="gustsub">&nbsp;</div></div>
-      <div class="stat"><div class="eyebrow">Neerslag afgelopen uur</div><div class="sval" id="prec">--</div><div class="ssub" id="precsub">&nbsp;</div></div>
-      <div class="stat"><div class="eyebrow">Neerslagkans komend uur</div><div class="sval" id="pop">--</div><div class="ssub" id="popsub">&nbsp;</div></div>
+      <div class="stat"><div class="eyebrow">Neerslag recent</div><div class="sval" id="prec">--</div><div class="ssub" id="precsub">&nbsp;</div></div>
+      <div class="stat"><div class="eyebrow">Neerslagkans binnenkort</div><div class="sval" id="pop">--</div><div class="ssub" id="popsub">&nbsp;</div></div>
       <div class="stat"><div class="eyebrow">Luchtvochtigheid</div><div class="sval" id="hum">--</div><div class="ssub" id="humsub">&nbsp;</div></div>
       <div class="stat"><div class="eyebrow">Luchtdruk</div><div class="sval" id="pres">--</div><div class="ssub" id="pressub">&nbsp;</div></div>
       <div class="stat"><div class="eyebrow">Bewolking</div><div class="sval" id="cloud">--</div><div class="ssub" id="cloudsub">&nbsp;</div></div>
@@ -599,7 +599,7 @@
     <div class="stats" id="aq"></div>
 
     <footer>
-      <span class="bron"><b>Weer</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>, ECMWF en DWD, CAMS</span>
+      <span class="bron"><b>Weer</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo Best Match</a> · <b>Luchtkwaliteit</b> CAMS</span>
       <span class="mono bron" id="coords"></span>
     </footer>
   </div>
@@ -634,7 +634,7 @@ const BFTBIJV=["windstil","zwak","zwak","matig","matig","vrij krachtig","krachti
   "stormachtig","stormachtig","zeer stormachtig","zeer stormachtig","orkaanachtig"];
 const DAGEN=["zo","ma","di","wo","do","vr","za"];
 const DAGENVOL=["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
-const BFT=[1,6,12,20,29,39,50,62,75,89,103,117];
+const BFT=[1,6,12,20,29,39,50,62,75,89,103,117.000001];
 const BFTNAAM=["windstil","zwakke wind","zwakke wind","matige wind","matige wind","vrij krachtige wind",
   "krachtige wind","harde wind","stormachtige wind","storm","zware storm","zeer zware storm","orkaan"];
 const inEuropa=(lat,lon)=>lat>29.5&&lat<71.5&&lon>-25&&lon<45;
@@ -711,9 +711,30 @@ function icon(code,isDay,size){
 /** De lokale kalenderdag bij de plaats, als "YYYY-MM-DD". Gebruikt dezelfde
     verschoven-klok-truc als plaatsNu(), dus geen new Date().toISOString() dat
     rond een daggrens de datum van de verkeerde tijdzone kan pakken. */
+function plaatsTijdDelen(){
+  if(S.klokOverride&&typeof S.klokOverride.getTime==="function"){
+    const eigen=-new Date().getTimezoneOffset()*60;
+    const daar=(S.d&&S.d.utc_offset_seconds!=null)?S.d.utc_offset_seconds:eigen;
+    const t=new Date(S.klokOverride.getTime()+(daar-eigen)*1000);
+    return {year:t.getFullYear(),month:t.getMonth()+1,day:t.getDate(),hour:t.getHours(),minute:t.getMinutes(),second:t.getSeconds()};
+  }
+  const basis=(S.klokInstantOverride&&typeof S.klokInstantOverride.getTime==="function")?S.klokInstantOverride.getTime():Date.now();
+  const tz=S.d&&S.d.timezone;
+  if(tz&&typeof Intl!=="undefined"&&Intl.DateTimeFormat){
+    try{
+      const delen=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(new Date(basis));
+      const p={}; delen.forEach(x=>{if(x.type!=="literal")p[x.type]=Number(x.value);});
+      if([p.year,p.month,p.day,p.hour,p.minute,p.second].every(Number.isFinite))return p;
+    }catch(e){}
+  }
+  const eigen=-new Date(basis).getTimezoneOffset()*60;
+  const daar=(S.d&&S.d.utc_offset_seconds!=null)?S.d.utc_offset_seconds:eigen;
+  const t=new Date(basis+(daar-eigen)*1000);
+  return {year:t.getFullYear(),month:t.getMonth()+1,day:t.getDate(),hour:t.getHours(),minute:t.getMinutes(),second:t.getSeconds()};
+}
 function plaatsVandaag(){
-  const t=plaatsNu();
-  return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
+  const p=plaatsTijdDelen();
+  return p.year+"-"+String(p.month).padStart(2,"0")+"-"+String(p.day).padStart(2,"0");
 }
 
 /* Eén bron voor woorden als vandaag, morgen en op maandag. De vergelijking
@@ -723,7 +744,7 @@ function plaatsVandaag(){
 function dagVerschil(tijd){
   const doel=String(tijd||"").slice(0,10);
   const bronDatum=String(S.d&&S.d.current&&S.d.current.time||"").slice(0,10);
-  const basis=/^\d{4}-\d{2}-\d{2}$/.test(bronDatum)?bronDatum:plaatsVandaag();
+  const basis=plaatsVandaag();
   if(!/^\d{4}-\d{2}-\d{2}$/.test(doel)||!/^\d{4}-\d{2}-\d{2}$/.test(basis)) return null;
   const utc=s=>{const p=s.split("-").map(Number);return Date.UTC(p[0],p[1]-1,p[2]);};
   return Math.round((utc(doel)-utc(basis))/86400000);
@@ -741,15 +762,8 @@ function dagAanduiding(tijd,hoofdzin){
 }
 
 function plaatsNu(){
-  const eigen=-new Date().getTimezoneOffset()*60;
-  const daar=(S.d&&S.d.utc_offset_seconds!=null)?S.d.utc_offset_seconds:eigen;
-  // S.klokOverride is alleen voor de testsuite, zodat "nu" op een vaste datum kan
-  // worden gezet; in de app zelf staat dit altijd op null en telt de echte klok.
-  // duck-typing in plaats van instanceof: de testsuite draait de app in een eigen
-  // vm-realm met zijn eigen Date-klasse, dus een Date die van buiten wordt
-  // meegegeven faalt altijd op instanceof Date binnen die sandbox
-  const basis=(S.klokOverride&&typeof S.klokOverride.getTime==="function")?S.klokOverride.getTime():Date.now();
-  return new Date(basis+(daar-eigen)*1000);
+  const p=plaatsTijdDelen();
+  return new Date(p.year,p.month-1,p.day,p.hour,p.minute,p.second,0);
 }
 
 /** Positie van "nu" in de uurreeks TI, als fractionele index inclusief minuten.
@@ -767,8 +781,8 @@ function plaatsNuIndex(TI){
 }
 
 function plaatsKlok(){
-  const t=plaatsNu();
-  return String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0");
+  const p=plaatsTijdDelen();
+  return String(p.hour).padStart(2,"0")+":"+String(p.minute).padStart(2,"0");
 }
 
 function pijl(deg,size){
@@ -836,11 +850,39 @@ function opOnder(welk,startUTC,lat,lon){
   return {op:op,onder:onder};
 }
 // lokale tijdstring naar UTC-milliseconden, met de offset die de API meegeeft
+function weatherNowZoneDelen(ms,tz){
+  try{
+    const delen=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(new Date(ms));
+    const p={}; delen.forEach(x=>{if(x.type!=="literal")p[x.type]=Number(x.value);});
+    return [p.year,p.month,p.day,p.hour,p.minute,p.second].every(Number.isFinite)?p:null;
+  }catch(e){return null;}
+}
+function weatherNowZoneOffset(ms,tz){
+  const p=weatherNowZoneDelen(ms,tz); if(!p)return null;
+  return Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second)-Math.floor(ms/1000)*1000;
+}
 function naarUTC(lokaal){
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(lokaal||""));
+  if(!m)return NaN;
+  const doel=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]);
+  const tz=S.d&&S.d.timezone;
+  if(tz&&typeof Intl!=="undefined"&&Intl.DateTimeFormat){
+    let gok=doel;
+    for(let i=0;i<4;i++){
+      const off=weatherNowZoneOffset(gok,tz); if(off===null)break;
+      const nieuw=doel-off; if(Math.abs(nieuw-gok)<1000){gok=nieuw;break;} gok=nieuw;
+    }
+    return gok;
+  }
   const off=(S.d&&S.d.utc_offset_seconds!=null?S.d.utc_offset_seconds:0)*1000;
-  return Date.parse(lokaal+":00Z")-off;
+  return doel-off;
 }
 function naarLokaal(msUTC){
+  const tz=S.d&&S.d.timezone;
+  if(tz&&typeof Intl!=="undefined"&&Intl.DateTimeFormat){
+    const p=weatherNowZoneDelen(msUTC,tz);
+    if(p)return String(p.hour).padStart(2,"0")+":"+String(p.minute).padStart(2,"0");
+  }
   const off=(S.d&&S.d.utc_offset_seconds!=null?S.d.utc_offset_seconds:0)*1000;
   return new Date(msUTC+off).toISOString().slice(11,16);
 }
@@ -862,10 +904,25 @@ const ls={
   get(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f;}catch(e){return f;}},
   set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 };
-async function j(url){const r=await fetch(url);if(!r.ok)throw new Error("status "+r.status);return r.json();}
+async function j(url,opt){
+  opt=opt||{};
+  const controller=new AbortController(),extern=opt.signal||null;
+  let timer=null;
+  const onAbort=()=>{if(timer!==null){clearTimeout(timer);timer=null;}controller.abort();};
+  if(extern){if(extern.aborted)controller.abort();else extern.addEventListener("abort",onAbort,{once:true});}
+  timer=setTimeout(()=>controller.abort(),Number.isFinite(opt.timeoutMs)?opt.timeoutMs:10000);
+  try{
+    const r=await fetch(url,{signal:controller.signal});
+    if(!r.ok)throw new Error("status "+r.status);
+    return await r.json();
+  }finally{
+    if(timer!==null) clearTimeout(timer);
+    if(extern)extern.removeEventListener("abort",onAbort);
+  }
+}
 
 /* ---------- ophalen ---------- */
-let laadTeller=0,waarschuwingTeller=0;
+let laadTeller=0,waarschuwingTeller=0,actieveWeerController=null,actieveLuchtController=null,actieveWaarschuwingController=null;
 /* opslaan=false is uitsluitend voor een gedeelde URL-locatie: die moet wel
    zichtbaar laden, maar hoort niet de persoonlijke laatst gebruikte plaats te
    overschrijven van iemand die toevallig andermans link opent. */
@@ -886,7 +943,7 @@ async function load(lat,lon,label,stil,opslaan){
 
   const basis="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon
     +"&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,precipitation,"
-    +"weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m"
+    +"rain,showers,snowfall,visibility,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m"
     +"&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,"
     +"precipitation_sum,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,"
     +"sunshine_duration"
@@ -899,31 +956,45 @@ async function load(lat,lon,label,stil,opslaan){
        op 2 km, elders ICON of GFS. Een vast model afdwingen zoals ecmwf_ifs04 ruilt
        die 2 km in voor tientallen kilometers en maakt juist windstoten grover. */
     +"&forecast_days=7&timezone=auto&wind_speed_unit=kmh";
-  const f=basis+"&minutely_15=precipitation&past_hours=24"
+  const f=basis+"&minutely_15=precipitation,rain,showers,snowfall,weather_code&forecast_minutely_15=16&past_minutely_15=4&past_hours=24"
     +"&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,precipitation_probability,"
-    +"precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,"
+    +"precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,"
     +"uv_index,pressure_msl,is_day";
   const fmin=basis+"&past_hours=24&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,"
-    +"precipitation_probability,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,"
+    +"precipitation_probability,precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,"
     +"wind_gusts_10m,uv_index,pressure_msl,is_day";
   const a="https://air-quality-api.open-meteo.com/v1/air-quality?latitude="+lat+"&longitude="+lon
     +"&current=european_aqi,us_aqi&hourly=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,"
     +"ragweed_pollen,olive_pollen&forecast_days=1&timezone=auto";
 
+  if(actieveWeerController) actieveWeerController.abort();
+  if(actieveLuchtController) actieveLuchtController.abort();
+  const weerController=new AbortController(),luchtController=new AbortController();
+  actieveWeerController=weerController;actieveLuchtController=luchtController;
+  const luchtBelofte=j(a,{timeoutMs:7000,signal:luchtController.signal})
+    .then(value=>({ok:true,value}),()=>({ok:false,value:null}));
   try{
-    const [rf,ra]=await Promise.allSettled([j(f),j(a)]);
-    let vol=rf.status==="fulfilled"?rf.value:null;
-    if(!vol) vol=await j(fmin);
+    let vol=null;
+    try{vol=await j(f,{timeoutMs:10000,signal:weerController.signal});}
+    catch(e){
+      if(mijnBeurt!==laadTeller) return;
+      vol=await j(fmin,{timeoutMs:10000,signal:weerController.signal});
+    }
     if(mijnBeurt!==laadTeller) return;   // er is inmiddels een nieuwere plaats gekozen
-    S.d=vol;
-    S.air=ra.status==="fulfilled"?ra.value:null;
+    S.d=vol;S.air=null;
     S.op=Date.now(); if(!stil) S.dag=null;
     if(opslaan) ls.set(KEY_P,{lat:S.lat,lon:S.lon,label:label});
-    ls.set(KEY_D,{d:S.d,air:S.air,label:label,lat:S.lat,lon:S.lon,op:S.op});
+    ls.set(KEY_D,{d:S.d,air:null,label:label,lat:S.lat,lon:S.lon,op:S.op});
     tekenAlles();
     st.style.display="none";
     document.getElementById("app").style.display="block";
     urlBij();
+    luchtBelofte.then(result=>{
+      if(mijnBeurt!==laadTeller||S.d!==vol) return;
+      S.air=result.ok?result.value:null;
+      ls.set(KEY_D,{d:S.d,air:S.air,label:S.label,lat:S.lat,lon:S.lon,op:S.op});
+      lucht();
+    });
   }catch(err){
     if(mijnBeurt!==laadTeller) return;
     const oud=ls.get(KEY_D,null);
@@ -948,7 +1019,7 @@ function tekenAlles(){
   S.i0=i<0?0:i;
 
   /* De tijd hoort bij de plaats: alle uren in deze app staan in de tijd daar,
-     dus zonder klok weet je niet waar "beste zicht van 01:00 tot 03:00" op slaat.
+     dus zonder klok weet je niet waar "gunstigste modelvenster van 01:00 tot 03:00" op slaat.
      Ook in Nederland, want dan is meteen duidelijk dat het de tijd van de plaats is. */
   document.getElementById("place").innerHTML=
     esc(S.label)+'<span id="plaatstijd">'+plaatsKlok()+'</span>';
@@ -1020,8 +1091,8 @@ function meters(){
   set("gust",windstoot===null?"–":Math.round(windstoot)+"<s>km/u</s>");
   const pgRuw=piek("wind_gusts_10m"),pg=pgRuw&&pgRuw.v>=0?pgRuw:null;
   zetTekst("gustsub", !pg ? "Geen uurgegevens beschikbaar."
-    : pg.t>nu ? dagAanduiding(pg.t,true)+" rond "+hhmm(pg.t)+" worden windstoten tot "+Math.round(pg.v)+" km/u verwacht."
-    : dagAanduiding(pg.t,true)+" was de zwaarste windstoot "+Math.round(pg.v)+" km/u rond "+hhmm(pg.t)+".");
+    : pg.t>nu ? dagAanduiding(pg.t,true)+" in het uur "+weatherNowUurvak(pg.t)+" worden windstoten tot "+Math.round(pg.v)+" km/u verwacht."
+    : dagAanduiding(pg.t,true)+" viel de zwaarste windstoot in het uur "+weatherNowUurvak(pg.t)+" en bereikte die "+Math.round(pg.v)+" km/u.");
 
   const recenteNeerslag=eindigGetal(c.precipitation);
   set("prec",recenteNeerslag===null||recenteNeerslag<0?"–":nl(recenteNeerslag)+"<s>mm</s>");
@@ -1072,12 +1143,12 @@ function meters(){
   const drukRuw=eindigGetal(c.pressure_msl);
   const luchtdruk=drukRuw!==null&&drukRuw>0?drukRuw:null;
   set("pres",luchtdruk===null?"–":Math.round(luchtdruk)+"<s>hPa</s>");
-  const p3Ruw=eindigGetal(h.pressure_msl&&h.pressure_msl[i-3]);
+  const p3Ruw=weatherNowUurWaardeOp("pressure_msl",weatherNowMinutenNu()-180);
   const p3=p3Ruw!==null&&p3Ruw>0?p3Ruw:null;
   const dp=(p3!==null&&luchtdruk!==null)?luchtdruk-p3:null;
   zetTekst("pressub", dp==null ? "Geen tendens beschikbaar."
-    : Math.abs(dp)<0.15 ? "In drie uur nauwelijks veranderd."
-    : "In drie uur "+nl(Math.abs(dp))+" hPa "+(dp>0?"gestegen":"gedaald")+".");
+    : Math.abs(dp)<0.15 ? "In de afgelopen drie uur nauwelijks veranderd."
+    : "In de afgelopen drie uur "+nl(Math.abs(dp))+" hPa "+(dp>0?"gestegen":"gedaald")+".");
 
   const cc=eindigGetal(c.cloud_cover);
   const geldigeBewolking=cc!==null&&cc>=0&&cc<=100;
@@ -1091,13 +1162,15 @@ function meters(){
      over het hoofd gezien. Als eigen tegel krijgt hij zijn eigen waarde en
      kan het oordeel erbij zonder de bewolkingszin te verlengen. */
   set("uv", (!pu||pu.v<0.5) ? "–" : nl(pu.v));
-  zetTekst("uvsub", (!pu||pu.v<0.5)
-    ? "Nauwelijks UV vandaag."
-    : pu.t>nu
-      ? "De UV-index piekt vandaag rond "+hhmm(pu.t)+" en is dan "+uvOordeel(pu.v)+"."
-      : "De UV-index piekte vandaag rond "+hhmm(pu.t)+" en was toen "+uvOordeel(pu.v)+".");
+  zetTekst("uvsub", !pu
+    ? "UV-gegevens voor vandaag niet beschikbaar."
+    : pu.v<0.5
+      ? "Nauwelijks UV vandaag."
+      : pu.t>nu
+        ? "De UV-index piekt vandaag rond "+hhmm(pu.t)+" en is dan "+uvOordeel(pu.v)+"."
+        : "De UV-index piekte vandaag rond "+hhmm(pu.t)+" en was toen "+uvOordeel(pu.v)+".");
 
-  const zichtRuw=eindigGetal(h.visibility&&h.visibility[i]);
+  const zichtRuw=eindigGetal(c.visibility!=null?c.visibility:(h.visibility&&h.visibility[i]));
   const v=zichtRuw!==null&&zichtRuw>=0?zichtRuw:null;
   set("vis",v===null?"–":(v>=10000?"10+":nl(v/1000))+"<s>km</s>");
   zetTekst("vissub", v===null ? "Niet beschikbaar."
@@ -1184,7 +1257,7 @@ function briefing(){
   const h=S.d.hourly,i=S.i0,day=S.d.daily,c=S.d.current;
   // De briefing hoort bij dezelfde 24 uur als de standaardgrafiek. Een venster
   // van twaalf uur sloeg laat op de avond een groot deel van morgen over.
-  const eind=Math.min(i+24,h.time.length);
+  const eind=Math.min(i+25,h.time.length);
 
   /* Zin 1 gaat nu over exact hetzelfde venster als de tekst bij de neerslagverwachting: de
      komende twee uur, uit dezelfde gedeelde helper. Wat daarna nog kan gebeuren
@@ -1279,13 +1352,13 @@ function briefing(){
   }
 
   // wind
-  let wmax=null,wi=null,gmax=null;
+  let wmax=null,wi=null,gmax=null,gi=null;
   for(let k=i;k<eind;k++){
     const wRuw=eindigGetal(h.wind_speed_10m&&h.wind_speed_10m[k]);
     const gRuw=eindigGetal(h.wind_gusts_10m&&h.wind_gusts_10m[k]);
     const w=wRuw!==null&&wRuw>=0?wRuw:null,g=gRuw!==null&&gRuw>=0?gRuw:null;
     if(w!==null&&(wmax===null||w>wmax)){wmax=w;wi=k;}
-    if(g!==null&&(gmax===null||g>gmax)) gmax=g;
+    if(g!==null&&(gmax===null||g>gmax)){gmax=g;gi=k;}
   }
   let zin3;
   if(wmax===null||wi===null){
@@ -1304,7 +1377,7 @@ function briefing(){
       ? dagAanduiding(h.time[wi],true)+" rond "+hhmm(h.time[wi])
       : "De komende 24 uur";
     zin3+=" "+moment+" is de wind op zijn sterkst met <b>"+bm+" Bft</b> ("+BFTNAAM[bm]+")";
-    zin3+=gmax!==null&&gmax>=60?"; windstoten kunnen "+Math.round(gmax)+" km/u bereiken.":".";
+    zin3+=gmax!==null&&gmax>=60&&gi!==null?"; "+dagAanduiding(h.time[gi],true)+" in het uur "+weatherNowUurvak(h.time[gi])+" kunnen windstoten tot "+Math.round(gmax)+" km/u voorkomen.":".";
   }
 
   /* De interpretatielaag vervangt uitsluitend de neerslagzin. Een structurele
@@ -1345,11 +1418,15 @@ function nuTimerStart(){
    dus ook geen effect op de nu-lijn, grafiek of tooltip. Zelfde
    uitlijn-op-de-minuut-truc als nuTimerStart() hierboven, maar met een eigen
    paar timers zodat de twee mechanismen nooit op elkaars klok hoeven te wachten. */
-let klokMinuutTimer=null, klokUitlijnTimer=null;
+let klokMinuutTimer=null, klokUitlijnTimer=null, klokKalenderdag=null, klokPlaatsSleutel=null;
 function klokBijwerken(){
-  const tijd=plaatsKlok();
+  const tijd=plaatsKlok(),dag=plaatsVandaag();
   const pt=document.getElementById("plaatstijd"); if(pt) pt.textContent=tijd;
   const mt=document.getElementById("minitijd"); if(mt) mt.textContent=tijd;
+  const plaatsSleutel=String(S.lat)+","+String(S.lon);
+  if(klokPlaatsSleutel!==plaatsSleutel){klokPlaatsSleutel=plaatsSleutel;klokKalenderdag=dag;return;}
+  if(klokKalenderdag===null){klokKalenderdag=dag;return;}
+  if(dag!==klokKalenderdag){klokKalenderdag=dag;if(S.lat!=null&&S.d)load(S.lat,S.lon,S.label,true,false);}
 }
 function clearKlokTimer(){
   if(klokUitlijnTimer!=null){ clearTimeout(klokUitlijnTimer); klokUitlijnTimer=null; }
@@ -1369,7 +1446,8 @@ function etmaal(start,n){
      niet-bestaande naam is geen undefined maar een fout, dus zodra er een staaf
      getekend werd viel de hele grafiek uit. Alleen zichtbaar op een natte dag. */
   const h=S.d.hourly,T=[],A=[],P=[],MM=[],L=[],W_=[],G=[],C=[],D=[],TI=[],ND=[],WD=[];
-  for(let k=0;k<n;k++){
+  const punten=S.dag==null&&n===24?25:n;
+  for(let k=0;k<punten;k++){
     const i=start+k;if(i>=h.time.length)break;
     /* Een ontbrekende waarde is null, en daar rekent niets mee: Math.min geeft NaN,
        de lijn wordt een lege string en de labellus zet cijfers op NaN. Ze blijven
@@ -1380,8 +1458,10 @@ function etmaal(start,n){
     A.push(h.apparent_temperature[i]==null?null:h.apparent_temperature[i]);
     const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[i]);
     const hoeveelheid=eindigGetal(h.precipitation&&h.precipitation[i]);
-    P.push(kans===null||kans<0?null:clamp(kans,0,100));
-    MM.push(hoeveelheid===null||hoeveelheid<0?null:hoeveelheid);
+    const intervalVerlopen=S.dag==null&&globalThis.WeatherNowInterpretatie
+      &&globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(h.time[i])<=globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(weatherNowActueleLokaleTijd());
+    P.push(intervalVerlopen||kans===null||kans<0?null:clamp(kans,0,100));
+    MM.push(intervalVerlopen||hoeveelheid===null||hoeveelheid<0?null:hoeveelheid);
     L.push(h.time[i].slice(11,13));
     W_.push(h.wind_speed_10m[i]);G.push(h.wind_gusts_10m[i]);C.push(h.cloud_cover[i]);
     D.push(h.weather_code[i]);ND.push(h.is_day[i]);WD.push(h.wind_direction_10m[i]);
@@ -1533,7 +1613,7 @@ function etmaal(start,n){
            Past de eenheid niet, dan alleen het cijfer; past dat ook niet, dan niets. */
         const fs = M?8.5:9, breed = t2 => t2.length*fs*0.6;
         const vol = nl(mm)+" mm", kaal = nl(mm);
-        const tekst = breed(vol)<=cw*0.92 ? vol : breed(kaal)<=cw*0.92 ? kaal : null;
+        const tekst = breed(vol)<=cw*0.98 ? vol : breed(kaal)<=cw*0.92 ? kaal : null;
         if(tekst)
         bars+=`<text x="${x(i)}" y="${pb-hgt-3}" text-anchor="middle" fill="${TEAL}"
           font-family="DM Mono,monospace" font-size="${fs}">${tekst}</text>`;
@@ -1575,7 +1655,7 @@ function etmaal(start,n){
     soort[0]=T[0]>=T[1]?1:-1;
     soort[T.length-1]=T[T.length-1]>=T[T.length-2]?1:-1;
   }
-  const iMax=T.indexOf(Math.max.apply(null,T)), iMin=T.indexOf(Math.min.apply(null,T));
+  const geldigeIdx=T.map((v,i)=>geldig(i)?i:null).filter(i=>i!==null); const iMax=geldigeIdx.reduce((a,b)=>T[b]>T[a]?b:a), iMin=geldigeIdx.reduce((a,b)=>T[b]<T[a]?b:a);
 
   /* v71: relevante lokale pieken/dalen bleven eerder zonder cijfer wanneer ze
      niet toevallig op een i%stap===0-moment vielen (elke i op het vaste
@@ -1890,7 +1970,7 @@ function scrubKoppel(){
       +", "+bft(G.W_[i])+" Bft";
     const body=rij("temperatuur",num(G.T?G.T[i]:null)+"°C")
       +rij("voelt als",num(G.A?G.A[i]:null)+"°C")
-      +rij("neerslagkans",(heel(G.P&&G.P[i])?G.P[i]:"–")+"%",TEAL)
+      +rij(heel(G.P&&G.P[i])&&G.P[i]>0?"kans "+weatherNowUurvak(G.TI[i]):"neerslag",heel(G.P&&G.P[i])&&G.P[i]>0?G.P[i]+"%":"geen neerslag verwacht",TEAL)
       +rij("wind",windTekst)
       +rij("windstoten",heel(G.G&&G.G[i])?Math.round(G.G[i])+" km/u":"–")
       +rij("bewolking",(heel(G.C&&G.C[i])?G.C[i]:"–")+"%");
@@ -1933,7 +2013,7 @@ function nowcast(){
   const T=[],P=[];
   const api=globalThis.WeatherNowInterpretatie;
   const analyse=api&&typeof api.analyseerNeerslagData==="function"
-    ? api.analyseerNeerslagData(S.d,120) : null;
+    ? api.analyseerNeerslagData(S.d,120,weatherNowActueleLokaleTijd()) : null;
   if(analyse&&analyse.bronHoeveelheid==="kwartierdata"&&Array.isArray(analyse.minutelyItems)){
     /* De centrale analyse kent de geldigheidsvensters: een waarde met tijd
        23:00 is de som over 22:45–23:00. Daardoor wordt het kwartier dat op
@@ -1941,7 +2021,7 @@ function nowcast(){
        van het volledige twee-uursvenster juist wel behouden. */
     analyse.minutelyItems.forEach(item=>{
       T.push(item.tijd);
-      P.push(item.precipitation==null?null:item.precipitation);
+      P.push(item.precipitation==null?null:item.precipitation*item.fractie);
     });
   }else if(!analyse){
     // De bronversie zonder ingevoegde interpretatie-engine gebruikt dezelfde
@@ -2090,8 +2170,9 @@ function nachten(){
   for(let d=0;d<6;d++){
     const ss=day.sunset[d],sr2=day.sunrise[d+1];
     if(!ss||!sr2) break;
-    const a2=idx[ss.slice(0,13)+":00"],b2=idx[sr2.slice(0,13)+":00"];
-    if(a2==null||b2==null||b2<=a2) continue;
+    const a2=h.time.findIndex(t=>t>=ss);
+    let b2=-1; for(let z=h.time.length-1;z>=0;z--){if(h.time[z]<=sr2){b2=z;break;}}
+    if(a2<0||b2<0||b2<=a2) continue;
     const C=[],HU=[],SP=[],GU=[],TT=[];
     for(let i=a2;i<=b2;i++){
       const bewolking=eindigGetal(h.cloud_cover&&h.cloud_cover[i]);
@@ -2143,14 +2224,14 @@ function nachten(){
     let venster=null;
     if(br>=2&&bstart>=0){
       const eind = (bstart+br<TT.length) ? TT[bstart+br].slice(11,16) : hhmm(sr2);
-      venster="beste zicht van "+TT[bstart].slice(11,16)+" tot "+eind;
+      venster="gunstigste modelvenster van "+TT[bstart].slice(11,16)+" tot "+eind;
     }else{
       const langsteRun=test=>{let r=0,b=0;for(let i=0;i<C.length;i++){ if(test(i)){r++;if(r>b)b=r;} else r=0; } return b;};
       const wolkOk=langsteRun(i=>C[i]<35)>=2;               // zonder de maan was er een venster geweest
       const maanOk=langsteRun(i=>maanWeging[i]*mn.ill<0.2)>=2;  // zonder de wolken was er een venster geweest
-      venster = wolkOk ? "Geen geschikt zichtvenster: te veel maanlicht"
-              : maanOk ? "Geen geschikt zichtvenster: te bewolkt"
-              : "Geen geschikt zichtvenster: te bewolkt en te veel maanlicht";
+      venster = wolkOk ? "Geen gunstig modelvenster: te veel maanlicht"
+              : maanOk ? "Geen gunstig modelvenster: te bewolkt"
+              : "Geen gunstig modelvenster: te bewolkt en te veel maanlicht";
     }
 
     // maantijden voor deze nacht
@@ -2183,8 +2264,8 @@ function nachten(){
         : ""}</div></div>`;
   }
   const kopN=`<div class="row night kop">
-      <div class="dname">Nacht</div><div class="score">Score 0-10</div><div class="sbar"></div>
-      <div class="nmeta">Bewolking</div><div class="nmeta wide">Waarneemvenster en maan</div></div>`;
+      <div class="dname">Nacht</div><div class="score">Modelscore 0-10</div><div class="sbar"></div>
+      <div class="nmeta">Bewolking</div><div class="nmeta wide">Modelvenster (bewolking en maan)</div></div>`;
   document.getElementById("nights").innerHTML=(out?kopN+out:"")||'<div class="msg">Geen nachtdata beschikbaar.</div>';
   const m=maan(new Date());
   /* maanschijf() tekende bij volle maan (fase 0,5) twee bogen die elkaar bijna
@@ -2287,12 +2368,15 @@ function logBij(){
 /* ---------- officiele waarschuwingen ---------- */
 async function waarschuwingen(){
   const mijnBeurt=++waarschuwingTeller;
+  if(actieveWaarschuwingController) actieveWaarschuwingController.abort();
+  const waarschuwingController=new AbortController();
+  actieveWaarschuwingController=waarschuwingController;
   const lat=S.lat,lon=S.lon;
   const el=document.getElementById("waarschuwingen");
   S.actieveWaarschuwingen=[];
   el.innerHTML="";
   try{
-    const d=await j("/api/waarschuwingen?lat="+lat+"&lon="+lon);
+    const d=await j("/api/waarschuwingen?lat="+lat+"&lon="+lon,{timeoutMs:7000,signal:waarschuwingController.signal});
     if(mijnBeurt!==waarschuwingTeller||S.lat!==lat||S.lon!==lon) return;
     if(!d||d.dekking!==true){
       const bronStuk=d&&d.reden==="bron onbereikbaar"
@@ -2456,26 +2540,41 @@ function urlBij(){
 
 /* ---------- zoeken ---------- */
 const q=document.getElementById("q"),res=document.getElementById("res");
-let timer=null;
+let timer=null,zoekGeneratie=0,zoekIndex=-1;
+const zoekOpties=()=>Array.from(res.querySelectorAll("div[data-lat]"));
+function zoekMarkeer(n){
+  const opties=zoekOpties();if(!opties.length){zoekIndex=-1;q.removeAttribute("aria-activedescendant");return;}
+  zoekIndex=Math.max(0,Math.min(n,opties.length-1));
+  opties.forEach((el,i)=>el.setAttribute("aria-selected",i===zoekIndex?"true":"false"));
+  q.setAttribute("aria-activedescendant",opties[zoekIndex].id);
+}
+function zoekKies(el){
+  if(!el)return;
+  ++zoekGeneratie;clearTimeout(timer);res.classList.remove("on");q.setAttribute("aria-expanded","false");q.removeAttribute("aria-activedescendant");
+  q.value=el.dataset.nm;zoekIndex=-1;gpsGeneratie++;load(el.dataset.lat,el.dataset.lon,el.dataset.nm);
+}
 q.addEventListener("input",()=>{
-  clearTimeout(timer);const v=q.value.trim();
+  clearTimeout(timer);const generatie=++zoekGeneratie,v=q.value.trim();zoekIndex=-1;q.removeAttribute("aria-activedescendant");
   if(v.length<2){res.classList.remove("on");q.setAttribute("aria-expanded","false");return;}
   timer=setTimeout(async()=>{
     try{
       const d=await j("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(v)+"&count=6&language=nl&format=json");
-      if(!d.results){res.innerHTML="<div>Niets gevonden</div>";res.classList.add("on");return;}
-      res.innerHTML=d.results.map(r=>`<div role="option" data-lat="${r.latitude}" data-lon="${r.longitude}" data-nm="${esc(r.name)}">${esc(r.name)}<span style="color:${INK45}"> · ${esc(r.admin1||"")} ${esc(r.country_code||"")}</span></div>`).join("");
-      res.classList.add("on");
-    }catch(e){res.innerHTML="<div>Zoeken mislukt</div>";res.classList.add("on");}
+      if(generatie!==zoekGeneratie)return;
+      const resultaten=Array.isArray(d.results)?d.results:[];
+      res.innerHTML=resultaten.length?resultaten.map((r,i)=>`<div id="zoekopt-${i}" role="option" aria-selected="false" data-lat="${r.latitude}" data-lon="${r.longitude}" data-nm="${esc(r.name)}">${esc(r.name)}<span style="color:${INK45}"> · ${esc(r.admin1||"")} ${esc(r.country_code||"")}</span></div>`).join(""):"<div>Niets gevonden</div>";
+      res.classList.add("on");q.setAttribute("aria-expanded","true");
+    }catch(e){if(generatie!==zoekGeneratie)return;res.innerHTML="<div>Zoeken mislukt</div>";res.classList.add("on");q.setAttribute("aria-expanded","true");}
   },320);
 });
-res.addEventListener("click",e=>{
-  const el=e.target.closest("div[data-lat]");if(!el)return;
-  res.classList.remove("on");q.value=el.dataset.nm;
-  gpsGeneratie++;   // een handmatige keuze wint altijd van een nog lopende gps-aanvraag
-  load(el.dataset.lat,el.dataset.lon,el.dataset.nm);
+q.addEventListener("keydown",e=>{
+  const opties=zoekOpties();
+  if(e.key==="ArrowDown"&&opties.length){e.preventDefault();zoekMarkeer(zoekIndex<0?0:zoekIndex+1);}
+  else if(e.key==="ArrowUp"&&opties.length){e.preventDefault();zoekMarkeer(zoekIndex<0?opties.length-1:zoekIndex-1);}
+  else if(e.key==="Enter"&&zoekIndex>=0){e.preventDefault();zoekKies(opties[zoekIndex]);}
+  else if(e.key==="Escape"){res.classList.remove("on");q.setAttribute("aria-expanded","false");q.removeAttribute("aria-activedescendant");zoekIndex=-1;}
 });
-document.addEventListener("click",e=>{if(!e.target.closest(".tools"))res.classList.remove("on");});
+res.addEventListener("click",e=>zoekKies(e.target.closest("div[data-lat]")));
+document.addEventListener("click",e=>{if(!e.target.closest(".tools")){res.classList.remove("on");q.setAttribute("aria-expanded","false");}});
 
 document.getElementById("ververs").addEventListener("click",async()=>{
   if(S.lat==null) return;
@@ -2624,6 +2723,39 @@ async function locatieNu(modus){
 }
 
 document.getElementById("here").addEventListener("click",()=>{ locatieNu("knop"); });
+
+function weatherNowUurvak(tijd){
+  const api=globalThis.WeatherNowInterpretatie;
+  const eind=api&&api.lokaalNaarMinuten(tijd);
+  const begin=eind==null?null:api.minutenNaarLokaal(eind-60);
+  return begin?begin.slice(11,16)+"–"+String(tijd).slice(11,16):"voorafgaand uur";
+}
+function weatherNowActueleLokaleTijd(){
+  const p=typeof plaatsTijdDelen==="function"?plaatsTijdDelen():null;
+  if(p&&[p.year,p.month,p.day,p.hour,p.minute].every(Number.isFinite)){
+    return p.year+"-"+String(p.month).padStart(2,"0")+"-"+String(p.day).padStart(2,"0")+"T"+String(p.hour).padStart(2,"0")+":"+String(p.minute).padStart(2,"0");
+  }
+  return S.d&&S.d.current&&S.d.current.time?String(S.d.current.time).slice(0,16):null;
+}
+function weatherNowMinutenNu(){
+  const api=globalThis.WeatherNowInterpretatie;
+  return api&&api.lokaalNaarMinuten(weatherNowActueleLokaleTijd());
+}
+function weatherNowUurWaardeOp(veld,doelMin){
+  const api=globalThis.WeatherNowInterpretatie,h=S.d&&S.d.hourly;
+  if(!api||!h||!Array.isArray(h.time)||!Array.isArray(h[veld])||!Number.isFinite(doelMin)) return null;
+  let links=null,rechts=null;
+  for(let i=0;i<h.time.length;i++){
+    const m=api.lokaalNaarMinuten(h.time[i]),v=eindigGetal(h[veld][i]);
+    if(m===null||v===null) continue;
+    if(m===doelMin) return v;
+    if(m<doelMin && (!links||m>links.m)) links={m,v};
+    if(m>doelMin && (!rechts||m<rechts.m)) rechts={m,v};
+  }
+  if(!links||!rechts||rechts.m-links.m>120) return null;
+  const f=(doelMin-links.m)/(rechts.m-links.m);
+  return links.v+(rechts.v-links.v)*f;
+}
 
 /* ---------- start ---------- */
 (function(){

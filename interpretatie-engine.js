@@ -95,7 +95,7 @@ function kansTekst(kans){
 }
 
 function vensterNaam(duurMin){
-  if(duurMin===60) return "het komende uur";
+  if(duurMin===60) return "de komende circa 60 minuten";
   if(duurMin===120) return "de komende twee uur";
   if(duurMin%60===0) return "de komende "+(duurMin/60)+" uur";
   return "de komende "+duurMin+" minuten";
@@ -253,8 +253,8 @@ function neerslagKorteWeergave(analyse){
   if(a.status==="GEEN_KANS") return {hoofd:"Droog",detail:"",droog:true};
   if(a.status==="ZEER_KLEINE_KANS") return {hoofd:kans===null?"Zeer klein":kans+"%",detail:"zeer kleine kans",droog:false};
   if(a.status==="KLEINE_KANS") return {hoofd:kans===null?"Kleine kans":kans+"%",detail:"kleine kans",droog:false};
-  if(a.status==="MOGELIJKE_NEERSLAG") return {hoofd:kans===null?"Mogelijk":kans+"%",detail:"hooguit enkele druppels",droog:false};
-  if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return {hoofd:kans===null?"Grote kans":kans+"%",detail:"hooguit enkele druppels",droog:false};
+  if(a.status==="MOGELIJKE_NEERSLAG") return {hoofd:kans===null?"Mogelijk":kans+"%",detail:"hoeveelheid onzeker",droog:false};
+  if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return {hoofd:kans===null?"Grote kans":kans+"%",detail:"hoeveelheid onzeker",droog:false};
   if(a.status==="SPOORHOEVEELHEID") return {hoofd:kans&&kans>0?kans+"%":"Druppels",detail:hoeveelheidTekst(a.hoeveelheid),droog:false};
   return {
     hoofd:kans===null?"Neerslag":kans+"%",
@@ -271,6 +271,12 @@ function dagHoeveelheidZin(mm){
   return "Voor vandaag wordt "+hoeveelheidTekst(v)+" neerslag verwacht.";
 }
 
+function weatherNowVoorzichtigeTijd(tijd,bron){
+  if(!tijd||bron!=="kwartierdata")return tijd;
+  const m=/^(\d{2}):(\d{2})$/.exec(tijd); if(!m)return tijd;
+  let totaal=(+m[1])*60+(+m[2]); totaal=Math.round(totaal/30)*30; totaal=((totaal%1440)+1440)%1440;
+  return String(Math.floor(totaal/60)).padStart(2,"0")+":"+String(totaal%60).padStart(2,"0");
+}
 function neerslagZin(analyse){
   const a=analyse||{};
   const venster=vensterNaam(a.duurMin||120);
@@ -289,10 +295,10 @@ function neerslagZin(analyse){
     return "Er is een kleine kans op neerslag in "+venster+kansTussen+". De meeste berekeningen blijven droog.";
   }
   if(a.status==="MOGELIJKE_NEERSLAG"){
-    return "Neerslag is mogelijk in "+venster+kansTussen+", maar waarschijnlijk gaat het om hooguit enkele druppels.";
+    return "Neerslag is mogelijk in "+venster+kansTussen+", maar de verwachte hoeveelheid is onzeker.";
   }
   if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID"){
-    return "De kans op neerslag in "+venster+" is groot"+kansTussen+", maar waarschijnlijk gaat het om hooguit enkele druppels.";
+    return "De kans op neerslag in "+venster+" is groot"+kansTussen+", terwijl het model tegelijk geen meetbare hoeveelheid berekent. De verwachting is daardoor onzeker.";
   }
   if(a.status==="SPOORHOEVEELHEID"){
     return "In "+venster+" zijn hooguit enkele druppels mogelijk. Verwachte hoeveelheid: "+hoeveelheidTekst(a.hoeveelheid)+".";
@@ -302,7 +308,7 @@ function neerslagZin(analyse){
       ?" Verwachte hoeveelheid in "+venster+": "+hoeveelheidTekst(a.hoeveelheid)+".":"";
     return "Volgens het weermodel valt er nu "+a.soort+"."+totaal+(kans===null?"":" Maximale kans: "+kans+"%.");
   }
-  const start=a.eersteTijd?", vanaf ongeveer "+a.eersteTijd:"";
+  const tekstTijd=weatherNowVoorzichtigeTijd(a.eersteTijd,a.bronHoeveelheid); const start=tekstTijd?", rond "+tekstTijd:"";
   return "In "+venster+" wordt "+a.soort+" verwacht"+start+". Verwachte hoeveelheid: "
     +hoeveelheidTekst(a.hoeveelheid)+"."+(kans===null?"":" Maximale kans: "+kans+"%.");
 }
@@ -335,7 +341,8 @@ function analyseerDagData(data,dagIndex,nuOverride){
   const som=somMetDekking(uur.items,"precipitation",duur);
   const kans=maxMetDekking(uur.items,"precipitation_probability",duur);
   const codes=uur.items.filter(x=>x.weather_code!==null).map(x=>x.weather_code);
-  const code=modeCode(codes);
+  const dagCode=veldGetal("weather_code",daily.weather_code&&daily.weather_code[dagIndex]);
+  const code=dagCode!==null?dagCode:modeCode(codes);
   const eerste=eersteNeerslagMoment([],uur.items);
   const genoeg=!uur.dubbeleTijd && som.dekking>=0.75 && kans.dekking>=0.75;
   const hoeveelheid=som.som;
@@ -390,7 +397,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
     stempel:typeof stempel==="function"?stempel:null
   };
 
-  const analyse=duur=>analyseerNeerslagData(S.d,duur);
+  const analyse=duur=>analyseerNeerslagData(S.d,duur,weatherNowActueleLokaleTijd());
 
   function zetEyebrow(id,tekst){
     const el=document.getElementById(id);
@@ -402,9 +409,9 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
   function dagSamenvatting(a){
     if(!a||!a.genoeg) return "Onvoldoende consistente gegevens";
     const basis=(typeof txt==="function"&&a.code!==null)?txt(a.code,true):"Verwachting";
-    if(a.status==="NEERSLAG_VERWACHT") return basis+"; "+a.soort+(a.eersteTijd?" vanaf ongeveer "+a.eersteTijd:"");
+    if(a.status==="NEERSLAG_VERWACHT") {const t=weatherNowVoorzichtigeTijd(a.eersteTijd,a.bronHoeveelheid);return basis+"; "+a.soort+(t?" rond "+t:"");}
     if(a.status==="SPOORHOEVEELHEID") return basis+"; zeer kleine hoeveelheid "+a.soort+" mogelijk";
-    if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return basis+"; grote neerslagkans, geen meetbare hoeveelheid";
+    if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return basis+"; grote neerslagkans, hoeveelheid onzeker";
     if(a.status==="MOGELIJKE_NEERSLAG") return basis+"; neerslag mogelijk";
     if(a.status==="KLEINE_KANS") return basis+"; kleine neerslagkans";
     if(a.status==="ZEER_KLEINE_KANS") return basis+"; zeer kleine neerslagkans";
@@ -423,14 +430,14 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       zetEyebrow("prec","Neerslag recent");
       const c=S.d.current||{};
       const intervalMin=Math.max(1,Math.round((getal(c.interval)||900)/60));
-      const recent=veldGetal(c.precipitation,"precipitation");
+      const recent=veldGetal("precipitation",c.precipitation);
       set("prec",recent===null?"–":recent<=INTERPRETATIE_CONFIG.spoorMm?"Geen":(recent<0.1?"<0,1":nl(recent))+"<s>mm</s>");
       const dag=S.d.daily||{},idx=dag.time?dag.time.indexOf(plaatsVandaag()):-1;
-      const dagsom=idx>=0&&dag.precipitation_sum?veldGetal(dag.precipitation_sum[idx],"precipitation_sum"):null;
+      const dagsom=idx>=0&&dag.precipitation_sum?veldGetal("precipitation",dag.precipitation_sum[idx]):null;
       zetTekst("precsub",recent===null
         ? "Recente neerslag is niet beschikbaar."
         : (recent<=INTERPRETATIE_CONFIG.spoorMm
-          ? "Geen neerslag gemeten in de afgelopen "+intervalMin+" minuten. "
+          ? "Volgens het model viel geen neerslag in de afgelopen "+intervalMin+" minuten. "
           : "Modelwaarde over de afgelopen "+intervalMin+" minuten. ")+dagHoeveelheidZin(dagsom));
     };
   }
@@ -447,7 +454,10 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       const waars=S.actieveWaarschuwingen||[];
       if(waars.length){
         const w=waars[0];
-        voor="<b>Officiële "+esc(w.niveau||"weer")+" waarschuwing:</b> "+esc(w.titel)+". "+voor
+        const waarschKop=w.niveauIsOfficieel===false
+          ?"Officiële weerwaarschuwing"
+          :"Officiële "+esc(w.niveau||"weer")+" waarschuwing";
+        voor="<b>"+waarschKop+":</b> "+esc(w.titel)+". "+voor
           +" De officiële waarschuwing heeft voorrang op de modelverwachting.";
       }
       el.innerHTML=nbsp(voor+" "+rest);
@@ -460,7 +470,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       const a=analyse(120),tx=document.getElementById("nctext"),grafiek=document.getElementById("nc");
       tx.textContent=nbsp(neerslagZin(a));
       if(grafiek){
-        grafiek.setAttribute("aria-label",neerslagZin(a)+" Kwartierwaarden zijn sommen over het voorafgaande kwartier.");
+        grafiek.setAttribute("aria-label",neerslagZin(a)+" Kwartierwaarden zijn sommen over het voorafgaande kwartier en kunnen afhankelijk van de locatie uit uurdata zijn geïnterpoleerd.");
         if(a.genoeg) grafiek.style.display=a.bronHoeveelheid==="kwartierdata"&&a.hoeveelheid>0?"block":"none";
       }
     };

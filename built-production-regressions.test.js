@@ -72,6 +72,6 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  const html=fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8");ok(/zoekGeneratie/.test(html)&&/generatie!==zoekGeneratie/.test(html),"oude zoekresponses kunnen nieuwere resultaten niet overschrijven");ok(/ArrowDown/.test(html)&&/ArrowUp/.test(html)&&/aria-activedescendant/.test(html)&&/aria-selected/.test(html),"zoeken ondersteunt toetsenbord en actieve optie");
 }
 {
- const pkg=JSON.parse(fs.readFileSync(path.join(__dirname,"package.json"),"utf8")),build=fs.readFileSync(path.join(__dirname,"build-weather.js"),"utf8");ok(!String(pkg.scripts.build).includes("post-build-hardening"),"productiecode wordt niet meer door een post-build-test herschreven");ok(/require\("\.\/productie-hardening-v2\.js"\)/.test(build)&&/html=pasToe\(html\)/.test(build),"senior-hardening is onderdeel van één expliciete buildcompiler");
+ const pkg=JSON.parse(fs.readFileSync(path.join(__dirname,"package.json"),"utf8")),build=fs.readFileSync(path.join(__dirname,"build-weather.js"),"utf8");ok(!String(pkg.scripts.build).includes("post-build-hardening"),"productiecode wordt niet meer door een post-build-test herschreven");ok(!/productie-hardening/.test(build)&&!/html=pasToe\(html\)/.test(build),"productsemantiek staat in canonieke bron en niet in build-hardening");
 }
 console.log("Gebouwde senior productie-regressies: "+geslaagd+" controles geslaagd.");

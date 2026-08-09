@@ -118,7 +118,7 @@ test("grote kans zonder hoeveelheid wordt begrijpelijk uitgelegd",()=>{
   const a=analyseerNeerslagData(d,120),zin=neerslagZin(a);
   assert.equal(a.status,"GROTE_KANS_ZONDER_HOEVEELHEID");
   assert(/kans op neerslag.*groot/.test(zin),zin);
-  assert(/hooguit enkele druppels/.test(zin),zin);
+  assert(/geen meetbare hoeveelheid.*onzeker/.test(zin),zin);
   assert(!/0,0 mm/.test(zin),zin);
 });
 
