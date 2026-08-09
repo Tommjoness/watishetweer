@@ -34,6 +34,7 @@ jobs:
           node finish-final-consumer-polish-v3.cjs
           node finish-final-consumer-polish-v4.cjs
           node finish-final-consumer-polish-v5.cjs
+          node finish-final-consumer-polish-v6.cjs
       - name: Full source and production suite
         run: npm test
       - name: Install real browsers
@@ -46,7 +47,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html interpretatie-engine.js prelaunch-regressions.test.js browser-playwright.test.js audit-regressions.test.js built-production-regressions.test.js global-scenario-matrix-v2.test.js
+          git add index.html interpretatie-engine.js prelaunch-regressions.test.js browser-playwright.test.js audit-regressions.test.js built-production-regressions.test.js global-scenario-matrix-v2.test.js run.js
           git diff --cached --exit-code && exit 1 || true
           git commit -m "Polijst consumenteninterface definitief [consumer-polish-done]"
           git push origin HEAD:agent/final-consumer-polish
