@@ -21,6 +21,16 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
+      - name: Herstel letterlijke testexpressies in eenmalige migratie
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/ux-mobile-polish.mjs')
+          s=p.read_text()
+          s=s.replace('index.includes("${Math.round(sc)}/10")', 'index.includes("\\${Math.round(sc)}/10")')
+          s=s.replace('ok(!index.includes("Nu is het ")+!index.includes("De actuele temperatuur is niet beschikbaar.")>0,', 'ok(!index.includes("Nu is het ")&&!index.includes("De actuele temperatuur is niet beschikbaar."),')
+          p.write_text(s)
+          PY
       - name: Pas eenmalige UX-polish toe
         run: node .github/ux-mobile-polish.mjs
       - name: Volledige regressies en productiebuild
