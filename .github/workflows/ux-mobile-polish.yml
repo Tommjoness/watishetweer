@@ -1,0 +1,38 @@
+name: Tijdelijke mobiele UX-polish
+on:
+  push:
+    branches:
+      - agent/mobile-ux-final-polish
+permissions:
+  contents: write
+jobs:
+  polish:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/mobile-ux-final-polish
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Pas eenmalige UX-polish toe
+        run: node .github/ux-mobile-polish.mjs
+      - name: Volledige regressies en productiebuild
+        run: npm test
+      - name: Installeer Chromium en WebKit
+        run: |
+          npm install --no-save --package-lock=false playwright@latest
+          npx playwright install --with-deps chromium webkit
+      - name: Echte browsers — mobiel en desktop
+        run: node browser-playwright.test.js
+      - name: Leg exact geteste productcode vast
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html interpretatie-engine.js build-weather.js prelaunch-regressions.test.js
+          git diff --cached --quiet && { echo "Geen productwijzigingen om vast te leggen"; exit 1; }
+          git commit -m "Polijst mobiele consumenten-UX"
+          git push origin HEAD:agent/mobile-ux-final-polish
