@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
-      - name: Herstel letterlijke testexpressies in eenmalige migratie
+      - name: Herstel testharnas van eenmalige migratie
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -29,6 +29,10 @@ jobs:
           s=p.read_text()
           s=s.replace('index.includes("${Math.round(sc)}/10")', 'index.includes("\\${Math.round(sc)}/10")')
           s=s.replace('ok(!index.includes("Nu is het ")+!index.includes("De actuele temperatuur is niet beschikbaar.")>0,', 'ok(!index.includes("Nu is het ")&&!index.includes("De actuele temperatuur is niet beschikbaar."),')
+          marker="let tests=lees('prelaunch-regressions.test.js');"
+          toevoeg="""\ntests=tests.replace('const index=lees(\"index.html\"),waars=', 'const index=lees(\"index.html\"),engine=lees(\"interpretatie-engine.js\"),waars=');"""
+          if toevoeg.strip() not in s:
+              s=s.replace(marker,marker+toevoeg)
           p.write_text(s)
           PY
       - name: Pas eenmalige UX-polish toe
