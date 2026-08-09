@@ -4,13 +4,13 @@ const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
 const crypto=require("crypto");
-const {pasToe}=require("./productie-hardening.js");
+const {pasToe}=require("./productie-hardening-v2.js");
 
 const ROOT=__dirname;
 const OUT=path.join(ROOT,"public");
 const NIET_PUBLICEREN=new Set([
   ".git",".github","api","node_modules","public",
-  "build-weather.js","productie-hardening.js","interpretatie-engine.js","interpretatie-engine.test.js",
+  "build-weather.js","productie-hardening.js","productie-hardening-v2.js","interpretatie-engine.js","interpretatie-engine.test.js",
   "run.js","run-built-matrix.js","kern.js","data.js","package.json","package-lock.json","vercel.json"
 ]);
 
@@ -55,9 +55,6 @@ if(html.includes("CENTRALE INTERPRETATIE-ENGINE")){
   throw new Error("Bron-index bevat de interpretatie-engine al; build zou dubbel invoegen.");
 }
 
-/* Verrijk uitsluitend de gegevens die de centrale interpretatie nodig heeft.
-   Iedere vervanging is strikt: een gewijzigde bronstructuur mag nooit ongemerkt
-   een half toegepaste interpretatielaag opleveren. */
 vervangEenmalig(
   '+"weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m"',
   '+"rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m"',
@@ -85,7 +82,6 @@ vervangEenmalig(
   "recente-neerslaglabel"
 );
 
-/* Uurwaarden voor neerslag en kans gelden voor het voorafgaande uur. */
 vervangEenmalig(
 `    const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[i]);
     const hoeveelheid=eindigGetal(h.precipitation&&h.precipitation[i]);
@@ -100,7 +96,6 @@ vervangEenmalig(
   "verlopen grafiekintervallen"
 );
 
-/* De tooltip noemt het volledige geldigheidsvak, niet alleen een los einduur. */
 vervangEenmalig(
   '+rij("neerslagkans",(heel(G.P&&G.P[i])?G.P[i]:"–")+"%",TEAL)',
   '+rij(heel(G.P&&G.P[i])&&G.P[i]>0?"kans "+weatherNowUurvak(G.TI[i]):"neerslag",heel(G.P&&G.P[i])&&G.P[i]>0?G.P[i]+"%":"geen neerslag verwacht",TEAL)',
@@ -152,12 +147,8 @@ html=html.replace(startMarker,
   "/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */\n"+engine+intervalHelper
   +"\n/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */\n\n"+startMarker);
 
-/* Alle seniorcorrecties horen bij dezelfde compilerstap. Er is bewust geen
-   apart '*test.js'-bestand meer dat ná de build productiecode herschrijft. */
 html=pasToe(html);
 
-/* Compileer ieder inline scriptblok. Dit voert niets uit, maar blokkeert een
-   deployment bij een syntaxisfout in de bestaande code of de invoeging. */
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length) throw new Error("Geen inline scriptblok gevonden in de gebouwde index.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:inline-"+(i+1)}));
@@ -207,8 +198,6 @@ if(!html.includes('zonDag+" · "')) throw new Error("Zonmomenten missen een expl
 
 fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 
-/* Cacheversie volgt exact de uiteindelijke productie-HTML, dus ook de
-   senior-hardening hierboven. */
 const cacheVersie="weerbriefing-"+crypto.createHash("sha256").update(html).digest("hex").slice(0,12);
 const swPad=path.join(OUT,"sw.js");
 if(fs.existsSync(swPad)){
