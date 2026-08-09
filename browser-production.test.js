@@ -102,18 +102,16 @@ html=html.replace("</body>",reporter+"</body>");
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"weathernow-browser-"));
 const fixture=path.join(dir,"index.html");fs.writeFileSync(fixture,html);
 const url="file://"+fixture+"?lat=52.3500&lon=5.2600&plaats=Browsertest";
-const r=spawnSync(browser,[
-  "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",
-  "--window-size=390,844","--virtual-time-budget=3000","--dump-dom",url
-],{encoding:"utf8",maxBuffer:16*1024*1024});
-fs.rmSync(dir,{recursive:true,force:true});
-
-if(r.status!==0){console.error("FOUT echte browsertest: browser exit "+r.status+"\n"+(r.stderr||"").slice(-2000));process.exit(1);}
-const dom=r.stdout||"";
-const waarde=naam=>{const m=new RegExp('data-'+naam+'="([^"]*)"').exec(dom);return m&&m[1];};
-const resultaat=waarde("browser-test-result");
-if(resultaat!=="ok"){
-  console.error("FOUT echte browsertest: resultaat="+resultaat+", labels="+waarde("browser-labels")+", botsingen="+waarde("browser-botsingen")+", buiten="+waarde("browser-buiten")+", scrub="+waarde("browser-scrub")+", exception="+waarde("browser-exception"));
-  process.exit(1);
+function voerBrowserUit(maat,naam){
+  const r=spawnSync(browser,[
+    "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",
+    "--window-size="+maat,"--virtual-time-budget=3000","--dump-dom",url
+  ],{encoding:"utf8",maxBuffer:16*1024*1024});
+  if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
+  const dom=r.stdout||"";
+  const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
+  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", botsingen="+waarde("browser-botsingen")+", buiten="+waarde("browser-buiten")+", scrub="+waarde("browser-scrub")+", exception="+waarde("browser-exception"));
+  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" labels, 0 botsingen, tooltip binnen beeld.");
 }
-console.log("Echte browserproductietest geslaagd: "+waarde("browser-labels")+" temperatuurlabels, 0 botsingen, tooltip binnen beeld.");
+try{voerBrowserUit("390,844","mobiel Chromium");voerBrowserUit("1440,1000","desktop Chromium");}
+finally{fs.rmSync(dir,{recursive:true,force:true});}

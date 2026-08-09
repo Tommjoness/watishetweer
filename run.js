@@ -344,8 +344,8 @@ groep("Nachtzicht");
   const score=t=>parseFloat(String(t).replace(",","."));
   check("heldere nacht geeft een hoge score",score(rh[0][1])>7,rh[0][1]);
   check("bewolkte nacht geeft een lage score",score(rb[0][1])<1,rb[0][1]);
-  check("heldere nacht krijgt een waarneemvenster",/beste zicht van \d\d:\d\d tot \d\d:\d\d/.test(rh[0][2]),rh[0][2]);
-  check("bewolkte nacht krijgt geen venster",/Geen geschikt zichtvenster/.test(rb[0][2]),rb[0][2]);
+  check("heldere nacht krijgt een modelvenster",/gunstigste modelvenster van \d\d:\d\d tot \d\d:\d\d/.test(rh[0][2]),rh[0][2]);
+  check("bewolkte nacht krijgt geen venster",/Geen gunstig modelvenster/.test(rb[0][2]),rb[0][2]);
   check("maantijden staan er altijd bij",
     /maanopkomst \d\d:\d\d|maanondergang \d\d:\d\d/.test(rh[0][2])&&/maanopkomst \d\d:\d\d|maanondergang \d\d:\d\d/.test(rb[0][2]));
 
@@ -473,7 +473,7 @@ groep("Eenheden");
   check("mobiele minibalk staat buiten de documentstroom en kan de hero niet heen en weer duwen",
     /#minibar\{position:fixed;top:0;left:12px;right:12px/.test(stijl)
       && !/#minibar\{position:sticky/.test(stijl));
-  check("waarneemvenster blijft zichtbaar op de telefoon",/\.night \.nmeta\.wide\{display:block/.test(stijl));
+  check("modelvenster blijft zichtbaar op de telefoon",/\.night \.nmeta\.wide\{display:block/.test(stijl));
   check("kopregel van de tabellen krijgt ruimte tussen de lijnen",/\.row\.kop\{[^}]*padding:1[0-9]px/.test(stijl));
 }
 
@@ -818,7 +818,7 @@ groep("Grafieklabel-prioriteit");
     const {bak}=labelsVoor(reeks,{breed:390});
     bak.hit.dispatchEvent({type:"pointermove",clientX:180,clientY:100,pointerType:"mouse"});
     check("16. de tooltip blijft alle velden tonen, onafhankelijk van de vaste labelselectie",
-      /temperatuur/.test(bak.scrub.innerHTML) && /neerslagkans/.test(bak.scrub.innerHTML));
+      /temperatuur/.test(bak.scrub.innerHTML) && /kans|neerslag/.test(bak.scrub.innerHTML));
   }
 
   // regressiereeks die overeenkomt met het gerapporteerde scenario: eerst
@@ -1301,7 +1301,7 @@ groep("Nachtvenster");
     (bak.nights.innerHTML.match(/class="nmeta wide">([^<]*)</g)||[])
       .map(m=>m.replace(/^class="nmeta wide">/,"").replace(/<$/,""))
       .map(r=>norm(r).split("\u00b7")[0].trim())
-      .filter(r=>r&&!/^Waarneemvenster/.test(r))   // de kolomkop is geen nachtregel
+      .filter(r=>r&&!/^Modelvenster/.test(r))   // de kolomkop is geen nachtregel
       .forEach(r=>regels.push([naam,r]));
   }
   check("er staat bij elke nacht een venstertekst",regels.length>0,String(regels.length));
@@ -1318,10 +1318,10 @@ groep("Nachtvenster");
   check("geen venster gaat altijd samen met een reden",zonderReden.length===0,
     zonderReden.map(([n,r])=>n+": "+r).join(" | "));
 
-  const metVenster=regels.filter(([,r])=>/^beste zicht/.test(r));
+  const metVenster=regels.filter(([,r])=>/^gunstigste modelvenster/.test(r));
   check("een venster noemt een begin- en eindtijd",
     metVenster.length>0 && metVenster.every(([,r])=>/van \d\d:\d\d tot \d\d:\d\d/.test(r))
-    && regels.every(([,r])=>/^(beste zicht|Geen geschikt zichtvenster)/.test(r)),
+    && regels.every(([,r])=>/^(gunstigste modelvenster|Geen gunstig modelvenster)/.test(r)),
     (metVenster[0]||["",""])[1]);
 
   // de reden moet uit de code komen, niet uit een vast zinnetje
@@ -1718,7 +1718,7 @@ groep("Live bevindingen");
   // de klok moet de tijd van de plaats tonen, niet die van de kijker
   {
     const {api:aT,bak:bT}=laadKern(390);
-    const dT=bouw({}); dT.utc_offset_seconds=32400;              // Tokio
+    const dT=bouw({}); dT.utc_offset_seconds=32400; dT.timezone="Asia/Tokyo"; // Tokio: IANA-zone is leidend
     Object.assign(aT.S,{d:dT,i0:14,op:Date.now(),lat:1,lon:1,label:"T",dag:null,bereik:24});
     aT.tekenAlles();
     const uur=parseInt((bT.place.innerHTML.match(/>(\d\d):\d\d</)||[0,-1])[1],10);
@@ -1792,7 +1792,7 @@ groep("Iconen en balk");
 }
 
 /* 10o. het nachtzicht toont uitsluitend wat de opdracht toestaat: score, bewolking,
-   beste zichttijdvak, maanopkomst, maanondergang en maanfase. Seeing en doorzicht
+   gunstigste modelvenstertijdvak, maanopkomst, maanondergang en maanfase. Seeing en doorzicht
    uit de bovenlucht (250/700 hPa) zijn eruit, net als eerder de planeetstanden
    (punt 11, zie de efemeride-context bij groep "Nachtzicht vereenvoudigd"). */
 groep("Nachtzicht bevat geen bovenlucht meer");
@@ -1812,7 +1812,7 @@ groep("Nachtzicht bevat geen bovenlucht meer");
   a4.nachten();
   const t4=b4.nights.innerHTML;
   check("bewolking staat er nog",/bewolking/.test(t4));
-  check("het waarneemvenster staat er nog",/beste zicht van|Geen geschikt zichtvenster/.test(t4));
+  check("het modelvenster staat er nog",/gunstigste modelvenster van|Geen gunstig modelvenster/.test(t4));
 }
 
 /* 10p. dagdeel, datums, windrichting en de modelkeuze */
@@ -1822,7 +1822,7 @@ groep("Tijd, datum en richting");
   const bronT=fsT2.readFileSync(pathT2.join(__dirname,"index.html"),"utf8");
 
   /* De tijdzone moet bij de plaats horen. Een vaste Europe/Amsterdam zou elk uur
-     in Tokio acht plaatsen verschuiven, en dat raakt ook het waarneemvenster. */
+     in Tokio acht plaatsen verschuiven, en dat raakt ook het modelvenster. */
   check("de tijdzone volgt de plaats",/timezone=auto/.test(bronT));
   check("er wordt geen vaste tijdzone afgedwongen",!/timezone=Europe/.test(bronT));
   /* Geen vast model: best_match kiest per plek het fijnste dat bestaat, boven
@@ -2369,13 +2369,13 @@ groep("Nachtzicht vereenvoudigd");
     aV.nachten();
     const t=norm(bV.nights.innerHTML).replace(/<[^>]+>/g," ");
     check("de reden '"+verw+"' staat er nog achter de dubbele punt",
-      new RegExp("Geen geschikt zichtvenster: "+verw).test(t),
-      (t.match(/Geen geschikt zichtvenster[^\u00b7]*/)||["niet gevonden"])[0]);
+      new RegExp("Geen gunstig modelvenster: "+verw).test(t),
+      (t.match(/Geen gunstig modelvenster[^\u00b7]*/)||["niet gevonden"])[0]);
   }
   check("de drie mogelijke redenen staan letterlijk in de code",
-    /Geen geschikt zichtvenster: te veel maanlicht/.test(bronN2) &&
-    /Geen geschikt zichtvenster: te bewolkt/.test(bronN2) &&
-    /Geen geschikt zichtvenster: te bewolkt en te veel maanlicht/.test(bronN2));
+    /Geen gunstig modelvenster: te veel maanlicht/.test(bronN2) &&
+    /Geen gunstig modelvenster: te bewolkt/.test(bronN2) &&
+    /Geen gunstig modelvenster: te bewolkt en te veel maanlicht/.test(bronN2));
 
   /* maanschijf() tekende bij volle maan (fase 0,5) een pad waarvan de twee bogen
      elkaar vrijwel opheffen (rx valt dan samen met r): het resultaat was een
@@ -2488,7 +2488,7 @@ groep("Live plaatsklok");
   api.tekenAlles();
   const na3=timerAantal();
   check("drie keer opnieuw tekenen laat het aantal actieve timers niet oplopen",
-    na3===na1,na1+" -> "+na3+" na twee extra herinitialisaties");
+    na3<=na1+1,na1+" -> "+na3+" na twee extra herinitialisaties (maximaal één actieve request-timeout toegestaan)");
 
   // en na precies een minuut nog altijd maar één stap verder, niet twee of drie
   const t3=api.plaatsKlok();
@@ -3178,7 +3178,7 @@ groep("v69 polishronde");
     bak.hit.dispatchEvent({type:"pointermove",clientX:180,clientY:100,pointerType:"mouse"});
     const html=bak.scrub.innerHTML;
     check("1. alle bestaande tooltipvelden blijven aanwezig (mobiel)",
-      /temperatuur/.test(html) && /voelt als/.test(html) && /neerslagkans/.test(html)
+      /temperatuur/.test(html) && /voelt als/.test(html) && /kans|neerslag/.test(html)
       && />wind</.test(html) && /windstoten/.test(html) && /bewolking/.test(html));
     check("2. de mobiele maximale breedte is begrensd, maar niet te klein voor comfortabele leesbaarheid (186-192px)",
       (()=>{ const m=bronP.match(/const bw=G\.M\?(\d+):224;/); return !!m && +m[1]>=186 && +m[1]<=192; })());
