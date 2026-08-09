@@ -1,0 +1,45 @@
+name: MeteoAlarm measured fix
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Pas gemeten MeteoAlarm-fix toe
+        run: node scripts/apply-meteoalarm-measured-fix.js
+      - name: Volledige regressiesuite
+        run: npm test
+      - name: Volledige productiebuild
+        run: npm run build
+      - name: Installeer Chromium en WebKit
+        run: |
+          npm install --no-save --package-lock=false playwright@latest
+          npx playwright install --with-deps chromium webkit
+      - name: Echte browsers — mobiel en desktop
+        run: node browser-playwright.test.js
+      - name: Leg exact geteste wijzigingen vast
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- lib/waarschuwingen.cjs prelaunch-regressions.test.js
+          if git diff --cached --quiet; then
+            echo "Geen productwijzigingen om vast te leggen."
+            exit 0
+          fi
+          git commit -m "Gebruik gemeten MeteoAlarm-headers en timeouts"
+          git push origin HEAD:agent/meteoalarm-measured-fix
