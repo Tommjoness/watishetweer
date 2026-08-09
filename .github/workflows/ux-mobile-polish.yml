@@ -40,6 +40,14 @@ jobs:
           node .github/ux-mobile-polish.mjs
           python3 - <<'PY'
           from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          oud='''    }\n  }\n\n  /* De interpretatielaag vervangt uitsluitend de neerslagzin.'''
+          nieuw='''    }\n  }else{\n    zin3="Windgegevens zijn niet beschikbaar.";\n  }\n\n  /* De interpretatielaag vervangt uitsluitend de neerslagzin.'''
+          if oud not in s:
+              raise SystemExit('windfallback-invoegpunt niet gevonden')
+          p.write_text(s.replace(oud,nieuw,1))
+
           p=Path('senior-7-regressions.test.js')
           s=p.read_text().replace('index.includes("Neerslagkans binnenkort")&&engine.includes("de komende circa 60 minuten")','index.includes("Komend uur")&&engine.includes("de komende circa 60 minuten")')
           p.write_text(s)
