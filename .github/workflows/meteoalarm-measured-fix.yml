@@ -1,12 +1,9 @@
 name: MeteoAlarm measured fix
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/meteoalarm-measured-fix
-    paths:
-      - scripts/apply-meteoalarm-measured-fix.js
-      - .github/workflows/meteoalarm-measured-fix.yml
+      - main
 
 permissions:
   contents: write
