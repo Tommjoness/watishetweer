@@ -1,0 +1,11 @@
+"use strict";
+const fs=require("fs"),path=require("path");
+const p=path.resolve(__dirname,"..","interpretatie-engine.test.js");
+let s=fs.readFileSync(p,"utf8");
+const oud='  assert(/hooguit enkele druppels/.test(zin),zin);';
+const nieuw='  assert(/geen meetbare hoeveelheid.*onzeker/.test(zin),zin);';
+const n=s.split(oud).length-1;
+if(n!==1)throw new Error("Verwacht exact één oude druppelclaim in de testspecificatie, gevonden "+n);
+s=s.replace(oud,nieuw);
+fs.writeFileSync(p,s,"utf8");
+console.log("Oude neerslagtestspecificatie gecorrigeerd naar onzeker modelsignaal.");
