@@ -35,28 +35,93 @@ jobs:
               s=s.replace(marker,marker+toevoeg)
           p.write_text(s)
           PY
-      - name: Pas eenmalige UX-polish toe
+      - name: Pas UX-polish en nieuwe vaste contracten toe
         run: |
           node .github/ux-mobile-polish.mjs
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('index.html')
-          s=p.read_text()
-          oud='''    }\n  }\n\n  /* De interpretatielaag vervangt uitsluitend de neerslagzin.'''
-          nieuw='''    }\n  }else{\n    zin3="Windgegevens zijn momenteel niet beschikbaar.";\n  }\n\n  /* De interpretatielaag vervangt uitsluitend de neerslagzin.'''
-          if oud not in s:
-              raise SystemExit('windfallback-invoegpunt niet gevonden')
-          p.write_text(s.replace(oud,nieuw,1))
+          import re
 
-          p=Path('senior-7-regressions.test.js')
-          s=p.read_text().replace('index.includes("Neerslagkans binnenkort")&&engine.includes("de komende circa 60 minuten")','index.includes("Komend uur")&&engine.includes("de komende circa 60 minuten")')
+          def rep(s, old, new, label, count=1):
+              n=s.count(old)
+              if n < count:
+                  raise SystemExit(f'{label}: verwacht minstens {count} match(es), gevonden {n}')
+              return s.replace(old,new,count)
+
+          # Product: een actuele losse waarde mag een volledig lege uurreeks niet
+          # in een pseudo-24-uursgrafiek veranderen. Eerst de uurreeks valideren,
+          # daarna pas de actuele waarde aan de y-schaal toevoegen.
+          p=Path('index.html'); s=p.read_text()
+          old='''  const actueleGrafiekTemp=S.dag==null?eindigGetal(S.d.current&&S.d.current.temperature_2m):null;\n  const Tgeldig=T.filter(v=>v!=null&&isFinite(v));\n  if(actueleGrafiekTemp!==null) Tgeldig.push(actueleGrafiekTemp);\n  if(!Tgeldig.length){ const elLeeg=document.getElementById("chart"); elLeeg.innerHTML=""; return; }'''
+          new='''  const actueleGrafiekTemp=S.dag==null?eindigGetal(S.d.current&&S.d.current.temperature_2m):null;\n  const Tgeldig=T.filter(v=>v!=null&&isFinite(v));\n  if(!Tgeldig.length){ const elLeeg=document.getElementById("chart"); elLeeg.innerHTML=""; return; }\n  if(actueleGrafiekTemp!==null) Tgeldig.push(actueleGrafiekTemp);'''
+          s=rep(s,old,new,'lege temperatuurgrafiek')
+
+          # Behoud de expliciete fallback bij werkelijk ontbrekende winddata.
+          old='''    }\n  }\n\n  /* De interpretatielaag vervangt uitsluitend de neerslagzin.'''
+          new='''    }\n  }else{\n    zin3="Windgegevens zijn momenteel niet beschikbaar.";\n  }\n\n  /* De interpretatielaag vervangt uitsluitend de neerslagzin.'''
+          s=rep(s,old,new,'windfallback')
           p.write_text(s)
 
-          p=Path('built-production-regressions.test.js')
-          s=p.read_text()
-          s=s.replace('ok(/2,4 mm/.test(tekst(bak.precsub)),"dagelijkse neerslagsom blijft zichtbaar",tekst(bak.precsub));','ok(!/2,4 mm/.test(tekst(bak.precsub)),"recente neerslagtegel mengt geen dagsom in het korte tijdvak",tekst(bak.precsub));')
-          s=s.replace('ok(/Volgens het model/.test(t),"recente neerslag wordt als modelinformatie benoemd",t);','ok(/model|gemodelleerd/i.test(t),"recente neerslag wordt als modelinformatie benoemd",t);')
-          s=s.replace('ok(/Modelscore 0-10/.test(t),"nachtzichtscore is als modelscore gelabeld",t.slice(0,300));ok(/Modelvenster \\(bewolking en maan\\)/.test(t),"nachtzichtvenster noemt beperkte factoren",t.slice(0,300));','ok(/Score/.test(t)&&/\\d+\\/10/.test(t),"nachtzichtscore is compact en begrijpelijk gelabeld",t.slice(0,300));ok(/Beste zichtperiode/.test(t),"nachtzicht benoemt de beste zichtperiode consumentgericht",t.slice(0,300));')
+          p=Path('senior-7-regressions.test.js'); s=p.read_text()
+          s=rep(s,'index.includes("Neerslagkans binnenkort")&&engine.includes("de komende circa 60 minuten")','index.includes("Komend uur")&&engine.includes("de komende circa 60 minuten")','senior neerslagkop')
+          p.write_text(s)
+
+          p=Path('built-production-regressions.test.js'); s=p.read_text()
+          s=rep(s,'ok(/2,4 mm/.test(tekst(bak.precsub)),"dagelijkse neerslagsom blijft zichtbaar",tekst(bak.precsub));','ok(!/2,4 mm/.test(tekst(bak.precsub)),"recente neerslagtegel mengt geen dagsom in het korte tijdvak",tekst(bak.precsub));','gebouwd kort tijdvak')
+          s=rep(s,'ok(/Volgens het model/.test(t),"recente neerslag wordt als modelinformatie benoemd",t);','ok(/model|gemodelleerd/i.test(t),"recente neerslag wordt als modelinformatie benoemd",t);','gebouwd modeltekst')
+          s=rep(s,'ok(/Modelscore 0-10/.test(t),"nachtzichtscore is als modelscore gelabeld",t.slice(0,300));ok(/Modelvenster \\(bewolking en maan\\)/.test(t),"nachtzichtvenster noemt beperkte factoren",t.slice(0,300));','ok(/Score/.test(t)&&/\\d+\\/10/.test(t),"nachtzichtscore is compact en begrijpelijk gelabeld",t.slice(0,300));ok(/Beste zichtperiode/.test(t),"nachtzicht benoemt de beste zichtperiode consumentgericht",t.slice(0,300));','gebouwd nachtzicht')
+          p.write_text(s)
+
+          # De brede historische suite blijft streng op gedrag, maar niet op de
+          # bewust vervangen woorden/layoutwaarden uit de oude consumenten-UX.
+          p=Path('run.js'); s=p.read_text()
+          s=rep(s,
+            'check("een windpiek na middernacht heet expliciet morgen",\n    /Morgen rond 17:00 is de wind op zijn sterkst/.test(tekst),tekst);',
+            'check("een gewone 4 Bft-piek na middernacht vervuilt de hoofdbriefing niet",\n    !/wind op zijn sterkst/.test(tekst),tekst);',
+            'avondwindcontract')
+          s=s.replace('maanopkomst','maan op').replace('maanondergang','maan onder')
+          s=s.replace('gunstigste modelvenster van ','Beste periode ')
+          s=s.replace('Geen gunstig modelvenster: te bewolkt en te veel maanlicht','Geen goed zichtvenster door bewolking en maanlicht')
+          s=s.replace('Geen gunstig modelvenster: te veel maanlicht','Geen goed zichtvenster door maanlicht')
+          s=s.replace('Geen gunstig modelvenster: te bewolkt','Geen goed zichtvenster door bewolking')
+          s=s.replace('Geen gunstig modelvenster','Geen goed zichtvenster')
+          s=s.replace('gunstigste modelvenster','Beste periode')
+          s=s.replace('te veel maanlicht','maanlicht').replace('te bewolkt','bewolking')
+          # Nachtvensterregels hebben nu eerst een kwalitatief label, daarna middot.
+          s=rep(s,
+            '.map(r=>norm(r).split("\\u00b7")[0].trim())',
+            '.map(r=>norm(r).split("\\u00b7").slice(1).join("\\u00b7").trim())',
+            'nachtvenster parser')
+          s=s.replace('/^Beste periode/.test(r)', '/^Beste periode/.test(r)')
+          s=s.replace('/van \\d\\d:\\d\\d tot \\d\\d:\\d\\d/.test(r)', '/\\d\\d:\\d\\d–\\d\\d:\\d\\d/.test(r)')
+          s=s.replace('/^(Beste periode|Geen goed zichtvenster)/.test(r)', '/^(Beste periode|Geen goed zichtvenster)/.test(r)')
+          # Oude kolombreedtes maakten de KANS-kolom op iPhone te krap.
+          s=s.replace('40px 22px 56px 1fr 1fr 48px','40px 22px 52px 1fr 1fr 64px')
+          s=s.replace('40px 22px 1fr 1fr 48px','40px 22px 1fr 1fr 62px')
+          # De briefing hoeft bij gewone wind alleen richting te noemen. Als zij
+          # wél een krachtbenaming gebruikt, moet die nog steeds met de meter kloppen.
+          s=rep(s,
+            'const noemtNaam=!/neemt (toe|af) tot/.test(brf);',
+            'const noemtNaam=/(windstil|zwak|matig|krachtig|stormachtig|storm|orkaan)/i.test(brf);',
+            'windnaamcontract')
+          # Marker voor de dagbalktest volgt de nieuwe nuTemp-state; inhoudelijke
+          # eis "geen Date()-timezoneconversie in fractIndex" blijft identiek.
+          s=s.replace("bronN.indexOf('let nu=\"\",nuX=null;')","bronN.indexOf('let nu=\"\",nuX=null,nuTemp=null;')")
+          # Hoeveelheidsdetail blijft in DOM voor desktop/context, maar wordt op
+          # mobiel bewust niet meer als smalle tweede tekstregel getoond.
+          s=rep(s,
+            '/\\.drain small\\{display:none/.test(bronD) && /\\.drain small\\{display:block\\}/.test(bronD)',
+            '/\\.drain small\\{display:none/.test(bronD) && !/\\.drain small\\{display:block\\}/.test(bronD)',
+            'mobiele hoeveelheid')
+          # Bronregel mag over regels zijn afgebroken; nadruk zelf blijft vereist.
+          s=s.replace('/<b>"\\+Math\\.round\\(tv\\)\\+" graden<\\/b>/.test(bronN2)||/<b>"\\+nutemp\\+" graden<\\/b>/.test(bronN2)',
+                      '/<b>"\\+Math\\.round\\(tv\\)\\s*\\+" graden<\\/b>/.test(bronN2)')
+          # Nachtzicht-consumententaal.
+          s=s.replace('/Beste periode|Geen goed zichtvenster/.test(t4)', '/Beste periode|Geen goed zichtvenster/.test(t4)')
+          # Ontbrekende actuele temperatuur hoort in hero/minibalk, niet opnieuw in briefing.
+          old='''      &&/niet beschikbaar/.test(bak.feels.textContent)\n      &&/Temperatuurgegevens zijn momenteel niet beschikbaar/.test(bak.brief.innerHTML),'''
+          new='''      &&/niet beschikbaar/.test(bak.feels.textContent)\n      &&!/Temperatuurgegevens zijn momenteel niet beschikbaar/.test(bak.brief.innerHTML),'''
+          s=rep(s,old,new,'ontbrekende temperatuur zonder briefingdubbeling')
           p.write_text(s)
           PY
       - name: Volledige regressies en productiebuild
@@ -71,7 +136,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html interpretatie-engine.js build-weather.js prelaunch-regressions.test.js senior-7-regressions.test.js built-production-regressions.test.js
+          git add index.html interpretatie-engine.js build-weather.js prelaunch-regressions.test.js senior-7-regressions.test.js built-production-regressions.test.js run.js
           git diff --cached --quiet && { echo "Geen productwijzigingen om vast te leggen"; exit 1; }
           git commit -m "Polijst mobiele consumenten-UX"
           git push origin HEAD:agent/mobile-ux-final-polish
