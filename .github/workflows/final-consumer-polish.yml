@@ -2,11 +2,13 @@ name: Final consumer polish migration
 on:
   push:
     branches: [agent/final-consumer-polish]
+  pull_request:
+    branches: [main]
 permissions:
   contents: write
 jobs:
   migrate-test-commit:
-    if: ${{ !contains(github.event.head_commit.message, '[consumer-polish-done]') }}
+    if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[consumer-polish-done]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
