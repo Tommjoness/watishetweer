@@ -15,7 +15,14 @@ ok(index.includes("Afgelopen 15 minuten")&&index.includes("Komend uur")&&engine.
 ok(index.includes("Kwartierverwachting op basis van weermodellen.")&&index.includes("<summary>Over deze gegevens</summary>"),"technische kwartieruitleg is ingeklapt beschikbaar");
 ok(index.includes("${Math.round(sc)}/10")&&index.includes("Beste periode ")&&index.includes("Beste zichtperiode"),"nachtzicht toont afgeronde score en kortere consumententaal");
 ok(index.includes("Technische locatiegegevens")&&index.includes("footer-details")&&!index.includes("Geen account, advertentietracking of analytics."),"footer houdt techniek uit de hoofdweergave");
-ok(index.includes("nuTemp=eindigGetal(S.d.current&&S.d.current.temperature_2m)")&&index.includes("k.rang===4&&nuTemp!==null?nuTemp:T[i]"),"nu-label in grafiek gebruikt actuele temperatuur");
+ok(index.includes('const nuLabel=nuTemp===null?"nu":"nu "+Math.round(nuTemp)+"°"')&&index.includes("kandKaart.delete(idx)"),"grafiek toont één expliciete actuele temperatuur en onderdrukt nabije uurlabels");
+ok(index.includes('UV-piek vandaag')&&index.includes('Math.round(Math.max(0,pu.v))'),"UV-tegel presenteert dagpiek zonder actuele schijnwaarde");
+ok(index.includes('Math.abs(dp)<1 ? "Vrijwel stabiel."'),"kleine luchtdrukschommeling wordt consumentgericht als stabiel samengevat");
+ok(index.includes('huidigeBft>=3')&&index.includes('richtingRelevant'),"zwakke wind krijgt geen irrelevante richtingsdraai in de briefing");
+ok(index.includes("#suntimes .zondag")&&index.includes("Zonsopkomst ")&&index.includes("Zonsondergang ")&&index.includes("zon op ")&&index.includes("zon onder "),"zonsinformatie heeft een eigen daghiërarchie en expliciete grafieklabels");
+ok(index.includes('--teal:#A7AEAB')&&!index.includes('--teal:#63C9BF')&&index.includes('#aq{border-top:1px solid var(--rule)}'),"normale informatie gebruikt een rustig neutraal accent in plaats van fel blauwgroen");
+ok(engine.includes('briefingNeerslagZin')&&engine.includes('Geen neerslag verwacht.')&&engine.includes('? "Geen neerslag."'),"briefing en neerslagtegels gebruiken korte consumententaal zonder dubbele technische uitleg");
+ok(!engine.includes('sub.textContent="Gemodelleerde concentratie"'),"pollen houdt een begrijpelijk kwalitatief oordeel");
 ok(!index.includes('locatieNu("auto-terugkerend");')&&!index.includes('locatieNu("auto-leeg").then'),"gps start niet automatisch bij openen");
 ok(index.includes("coordOpslag")&&index.includes('S.lat.toFixed(3)')&&index.includes('S.lon.toFixed(3)'),"blijvende/deelbare locatieprecisie is beperkt tot drie decimalen");
 ok(waars.includes("i.ends || i.expires || null"),"NWS gebruikt gebeurteniseinde vóór CAP-berichtverval");
