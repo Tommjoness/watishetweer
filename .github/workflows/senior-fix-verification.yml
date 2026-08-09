@@ -25,3 +25,19 @@ jobs:
           npx playwright install --with-deps chromium webkit
       - name: Echte browsers — mobiel en desktop
         run: node browser-playwright.test.js
+      - name: Productiecache zonder authenticatie
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://weathernow-ashy-six.vercel.app/api/waarschuwingen?lat=52.35&lon=5.26'
+          h1=$(mktemp)
+          h2=$(mktemp)
+          curl -fsS -D "$h1" -o /tmp/weather-cache-1.json "$url"
+          sleep 2
+          curl -fsS -D "$h2" -o /tmp/weather-cache-2.json "$url"
+          echo 'Eerste request:'
+          grep -iE '^(x-vercel-cache|x-vercel-id|age):' "$h1" || true
+          echo 'Tweede request:'
+          grep -iE '^(x-vercel-cache|x-vercel-id|age):' "$h2" || true
+          cmp /tmp/weather-cache-1.json /tmp/weather-cache-2.json
+          grep -qi '^x-vercel-cache: HIT' "$h2"
