@@ -6,7 +6,7 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   diagnose:
@@ -44,10 +44,4 @@ jobs:
           probe 'Atom browser UA' 'https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands' '*/*' "$BUA"
           probe 'JSON compatibility WeatherNow UA' 'https://feeds.meteoalarm.org/api/v1/warnings/feeds-netherlands' 'application/json' "$UA"
           probe 'Feed index WeatherNow UA' 'https://feeds.meteoalarm.org/' 'text/html,*/*' "$UA"
-      - name: Commit diagnostics
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add meteoalarm-network-diagnostics.txt
-          git commit -m "Leg MeteoAlarm-netwerkdiagnose vast"
-          git push origin HEAD:agent/meteoalarm-network-diagnostics
+          cat "$OUT"
