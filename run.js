@@ -1373,7 +1373,8 @@ groep("Wereldwijd");
   check("zonder bekende bron komt er een lege lijst terug",
     /dekking: false/.test(bronA)||/dekking:false/.test(bronA));
   check("de VS gaat naar de National Weather Service",/api\.weather\.gov/.test(bronA));
-  check("Europa gaat naar MeteoAlarm per land",/feeds-" \+ slug/.test(bronA));
+  check("Europa gaat rechtstreeks naar de onderhouden MeteoAlarm Atom-feed per land",
+    /meteoalarm-legacy-atom-" \+ slug/.test(bronA));
   check("de NWS-aanroep stuurt een User-Agent mee",/User-Agent/.test(bronA));
 
 

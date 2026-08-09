@@ -83,16 +83,10 @@ async function roepWaarschuwingen(query,fetchImpl){
   const atom="<?xml version=\"1.0\"?><feed><entry><title>Code geel</title><summary>Landelijke waarschuwing</summary></entry></feed>";
   let aanroep=0;
   const meteo=await roepWaarschuwingen(
-    {lat:"52.3676",lon:"4.9041"},
-    async url=>{
-      aanroep++;
-      if(String(url).includes("bigdatacloud")){
-        return {ok:true,json:async()=>({countryCode:"NL"})};
-      }
-      return {ok:true,text:async()=>atom};
-    }
+    {lat:"52.3676",lon:"4.9041",land:"NL"},
+    async url=>{aanroep++;return {ok:true,text:async()=>atom};}
   );
-  ok(aanroep>=2,"MeteoAlarm-test doorloopt land- en waarschuwingbron");
+  ok(aanroep===1,"MeteoAlarm gebruikt met bekende landcode direct één officiële Atom-feed");
   ok(meteo.body&&meteo.body.dekking===true,"beschikbare MeteoAlarm-feed houdt dekking waar");
   ok(meteo.body&&meteo.body.lijst&&meteo.body.lijst[0]&&meteo.body.lijst[0].landelijk===true,
     "Atom-waarschuwing zonder gebied wordt expliciet als breder gebied gemarkeerd");
@@ -100,20 +94,16 @@ async function roepWaarschuwingen(query,fetchImpl){
   const atomEntiteiten="<?xml version=\"1.0\"?><feed><entry><title><![CDATA[Wind &amp; regen]]></title>"
     +"<summary>Kans op hagel &lt; lokaal &gt; &#33;</summary></entry></feed>";
   const meteoTekst=await roepWaarschuwingen(
-    {lat:"52.3676",lon:"4.9041"},
-    async url=>String(url).includes("bigdatacloud")
-      ? {ok:true,json:async()=>({countryCode:"NL"})}
-      : {ok:true,text:async()=>atomEntiteiten}
+    {lat:"52.3676",lon:"4.9041",land:"NL"},
+    async()=>({ok:true,text:async()=>atomEntiteiten})
   );
   ok(meteoTekst.body.lijst[0].titel==="Wind & regen","Atom-titels decoderen XML-entiteiten en CDATA");
   ok(meteoTekst.body.lijst[0].tekst==="Kans op hagel < lokaal > !","Atom-omschrijvingen decoderen XML-entiteiten");
 
   async function landFeed(code,lat,lon){
     const urls=[];
-    const antwoord=await roepWaarschuwingen({lat:String(lat),lon:String(lon)},async url=>{
+    const antwoord=await roepWaarschuwingen({lat:String(lat),lon:String(lon),land:code},async url=>{
       urls.push(String(url));
-      if(String(url).includes("bigdatacloud")) return {ok:true,json:async()=>({countryCode:code})};
-      if(String(url).includes("/api/v1/")) return {ok:false,status:404};
       return {ok:true,text:async()=>atom};
     });
     return {antwoord,urls};
@@ -125,13 +115,12 @@ async function roepWaarschuwingen(query,fetchImpl){
   ok(macedonie.urls.some(u=>u.includes("meteoalarm-legacy-atom-republic-of-north-macedonia"))&&macedonie.antwoord.body.dekking===true,
     "Noord-Macedonië gebruikt de actuele officiële feedslug");
 
+  const roodAtom="<?xml version=\"1.0\"?><feed><entry><title>Code rood: Extreem weer</title><summary>Gevaarlijk weer</summary></entry></feed>";
   const rood=await roepWaarschuwingen(
-    {lat:"52.3676",lon:"4.9041"},
-    async url=>String(url).includes("bigdatacloud")
-      ? {ok:true,json:async()=>({countryCode:"NL"})}
-      : {ok:true,text:async()=>JSON.stringify({warnings:[{title:"Extreem weer",level:4}]})}
+    {lat:"52.3676",lon:"4.9041",land:"NL"},
+    async()=>({ok:true,text:async()=>roodAtom})
   );
-  ok(rood.body.lijst[0].niveau==="rood","MeteoAlarm-niveau 4 wordt als rood geïnterpreteerd");
+  ok(rood.body.lijst[0].niveau==="rood","MeteoAlarm Atom-titel met rood wordt als rood geïnterpreteerd");
 
   console.log("Code-auditregressies: "+geslaagd+" controles geslaagd.");
 })().catch(err=>{
