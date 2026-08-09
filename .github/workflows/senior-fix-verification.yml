@@ -50,7 +50,6 @@ jobs:
         run: |
           set -e
           rm -rf migration-artifacts
-          rm -f package-lock.json
           rm -f scripts/apply-senior-fix-7.js
           rm -f scripts/patch-senior-runtime.js
           rm -f scripts/patch-senior-test-spec.js
@@ -58,7 +57,6 @@ jobs:
           rm -f scripts/export-senior-fix-artifacts.js
           rm -f scripts/run-migration-verification.js
           rmdir scripts 2>/dev/null || true
-          rm -f .github/workflows/apply-senior-fix-7.yml
           cat > package.json <<'JSON'
           {
             "name": "weerbriefing",
@@ -72,50 +70,35 @@ jobs:
             "license": "MIT"
           }
           JSON
-          cat > .github/workflows/senior-fix-verification.yml <<'YAML'
-          name: WeatherNow quality
-          on:
-            pull_request:
-              branches:
-                - main
-            push:
-              branches:
-                - main
-          permissions:
-            contents: read
-          jobs:
-            quality:
-              runs-on: ubuntu-latest
-              timeout-minutes: 25
-              steps:
-                - uses: actions/checkout@v4
-                - uses: actions/setup-node@v4
-                  with:
-                    node-version: 24
-                - name: Volledige niet-browser suite
-                  run: npm run build
-                - name: Installeer Chromium en WebKit
-                  run: |
-                    npm install --no-save playwright@1.55.0
-                    npx playwright install --with-deps chromium webkit
-                - name: Echte browsers — mobiel en desktop
-                  run: node browser-playwright.test.js
-          YAML
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git config core.autocrlf false
           git config core.safecrlf false
-          echo "STAGE: start"
-          git add -A
-          echo "STAGE: klaar"
+          git add -A -- \
+            api/plaatsnaam.mjs \
+            api/waarschuwingen.mjs \
+            browser-playwright.test.js \
+            browser-production.test.js \
+            build-weather.js \
+            built-production-regressions.test.js \
+            index.html \
+            interpretatie-engine.js \
+            interpretatie-engine.test.js \
+            lib/waarschuwingen.cjs \
+            package.json \
+            productie-hardening-v2.js \
+            run.js \
+            senior-7-regressions.test.js \
+            scripts/apply-senior-fix-7.js \
+            scripts/export-senior-fix-artifacts.js \
+            scripts/patch-browser-harness.js \
+            scripts/patch-senior-runtime.js \
+            scripts/patch-senior-test-spec.js \
+            scripts/run-migration-verification.js
           git status --short
           if git diff --cached --quiet; then
             echo "Geen canonieke wijzigingen om vast te leggen."
             exit 0
           fi
-          echo "COMMIT: start"
           git commit -m "Maak zeven senior-fixes canoniek"
-          echo "COMMIT: klaar"
-          echo "PUSH: start"
           git push origin HEAD:${{ github.head_ref }}
-          echo "PUSH: klaar"
