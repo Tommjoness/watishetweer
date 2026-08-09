@@ -57,7 +57,7 @@ function nepResponse(){
 
 async function roepWaarschuwingen(query,fetchImpl){
   const oud=global.fetch;
-  const modulePad=require.resolve("./api/waarschuwingen.js");
+  const modulePad=require.resolve("./lib/waarschuwingen.cjs");
   delete require.cache[modulePad];
   global.fetch=fetchImpl;
   try{
