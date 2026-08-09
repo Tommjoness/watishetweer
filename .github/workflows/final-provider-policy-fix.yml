@@ -7,6 +7,7 @@ on:
     paths:
       - scripts/apply-final-provider-policy.js
       - scripts/apply-final-warning-feed.js
+      - scripts/apply-final-test-contracts.js
       - .github/workflows/final-provider-policy-fix.yml
 
 permissions:
@@ -42,6 +43,7 @@ jobs:
           status=0
           runcheck "provider-migratie" node scripts/apply-final-provider-policy.js || status=$?
           if [ "$status" -eq 0 ]; then runcheck "MeteoAlarm-feed" node scripts/apply-final-warning-feed.js || status=$?; fi
+          if [ "$status" -eq 0 ]; then runcheck "testcontracten" node scripts/apply-final-test-contracts.js || status=$?; fi
           if [ "$status" -eq 0 ]; then runcheck "npm-test" npm test || status=$?; fi
           if [ "$status" -eq 0 ]; then runcheck "npm-build" npm run build || status=$?; fi
           if [ "$status" -eq 0 ]; then runcheck "playwright-install" npm install --no-save --package-lock=false playwright@latest || status=$?; fi
@@ -53,7 +55,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- "$RESULT"
           if [ "$status" -eq 0 ]; then
-            git add -- index.html lib/plaatsnaam.cjs lib/waarschuwingen.cjs privacy.html prelaunch-regressions.test.js
+            git add -- index.html lib/plaatsnaam.cjs lib/waarschuwingen.cjs privacy.html prelaunch-regressions.test.js audit-regressions.test.js
             git commit -m "Herstel providers en waarschuwingenfeeds"
           else
             git commit -m "Leg mislukte providercontrole vast"
