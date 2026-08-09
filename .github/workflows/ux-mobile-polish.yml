@@ -43,7 +43,7 @@ jobs:
           p=Path('index.html')
           s=p.read_text()
           oud='''    }\n  }\n\n  /* De interpretatielaag vervangt uitsluitend de neerslagzin.'''
-          nieuw='''    }\n  }else{\n    zin3="Windgegevens zijn niet beschikbaar.";\n  }\n\n  /* De interpretatielaag vervangt uitsluitend de neerslagzin.'''
+          nieuw='''    }\n  }else{\n    zin3="Windgegevens zijn momenteel niet beschikbaar.";\n  }\n\n  /* De interpretatielaag vervangt uitsluitend de neerslagzin.'''
           if oud not in s:
               raise SystemExit('windfallback-invoegpunt niet gevonden')
           p.write_text(s.replace(oud,nieuw,1))
