@@ -13,9 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
+          node-version: 24
       - name: Build canonical migrated source
         run: |
           node scripts/apply-senior-fix-7.js
