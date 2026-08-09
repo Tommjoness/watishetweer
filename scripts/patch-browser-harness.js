@@ -1,0 +1,11 @@
+"use strict";
+const fs=require("fs"),path=require("path");
+const p=path.resolve(__dirname,"..","browser-playwright.test.js");
+let s=fs.readFileSync(p,"utf8");
+const oud='const f=path.join(__dirname,"public",p.replace(/^//,""));';
+const nieuw='const rel=p.startsWith("/")?p.slice(1):p;const f=path.join(__dirname,"public",rel);';
+const n=s.split(oud).length-1;
+if(n!==1)throw new Error("Playwright-harnas: verwacht precies één ongeldige padregel, gevonden "+n);
+s=s.replace(oud,nieuw);
+fs.writeFileSync(p,s,"utf8");
+console.log("Playwright-testharnas syntactisch hersteld zonder regex-escaping.");
