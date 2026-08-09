@@ -11,7 +11,7 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
 {
  const {api,bak}=laadKern(390),d=bouw({nu:0.6,som:2.4});d.current.interval=900;zetBasis(api,d);api.meters();
  ok(/0,6/.test(norm(bak.prec.innerHTML)),"actuele neerslag blijft zichtbaar",norm(bak.prec.innerHTML));
- ok(/2,4 mm/.test(tekst(bak.precsub)),"dagelijkse neerslagsom blijft zichtbaar",tekst(bak.precsub));
+ ok(!/2,4 mm/.test(tekst(bak.precsub)),"recente neerslagtegel mengt geen dagsom in het korte tijdvak",tekst(bak.precsub));
  ok(!/niet beschikbaar/i.test(tekst(bak.precsub)),"geldige neerslag wordt niet als ontbrekend gemeld",tekst(bak.precsub));
 }
 {
@@ -51,7 +51,7 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  ok(/rond 14:00/.test(t),"kwartieronset wordt als afgerond tijdvak gecommuniceerd",t);ok(!/14:15/.test(t),"kwartierdata wordt niet als exact kwartier-onset geclaimd",t);
 }
 {
- const {api,bak}=laadKern(390),d=bouw({nu:0,som:0});d.current.interval=900;zetBasis(api,d);api.meters();const t=tekst(bak.precsub);ok(/Volgens het model/.test(t),"recente neerslag wordt als modelinformatie benoemd",t);ok(!/gemeten/i.test(t),"recente modeldata wordt niet als meting gepresenteerd",t);
+ const {api,bak}=laadKern(390),d=bouw({nu:0,som:0});d.current.interval=900;zetBasis(api,d);api.meters();const t=tekst(bak.precsub);ok(/model|gemodelleerd/i.test(t),"recente neerslag wordt als modelinformatie benoemd",t);ok(!/gemeten/i.test(t),"recente modeldata wordt niet als meting gepresenteerd",t);
 }
 {
  const {api,bak}=laadKern(390),d=bouw({zicht:20000});d.current.visibility=1234;zetBasis(api,d);api.meters();ok(/1,2/.test(norm(bak.vis.innerHTML)),"actueel zicht gebruikt current visibility",norm(bak.vis.innerHTML));
@@ -63,7 +63,7 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  const {api,bak}=laadKern(390),d=bouw({wg:(u,dag)=>dag===0&&u===18?72:25});zetBasis(api,d);api.meters();const t=tekst(bak.gustsub);ok(/uur 17:00–18:00/.test(t),"windstootpiek wordt als voorafgaand uurvak getoond",t);ok(!/rond 18:00/.test(t),"windstootpiek wordt niet als exact tijdstip geclaimd",t);
 }
 {
- const {api,bak}=laadKern(390),d=bouw({});zetBasis(api,d);api.nachten();const t=tekst(bak.nights);ok(/Modelscore 0-10/.test(t),"nachtzichtscore is als modelscore gelabeld",t.slice(0,300));ok(/Modelvenster \(bewolking en maan\)/.test(t),"nachtzichtvenster noemt beperkte factoren",t.slice(0,300));
+ const {api,bak}=laadKern(390),d=bouw({});zetBasis(api,d);api.nachten();const t=tekst(bak.nights);ok(/Score/.test(t)&&/\d+\/10/.test(t),"nachtzichtscore is compact en begrijpelijk gelabeld",t.slice(0,300));ok(/Beste zichtperiode/.test(t),"nachtzicht benoemt de beste zichtperiode consumentgericht",t.slice(0,300));
 }
 {
  const {api,bak}=laadKern(390),d=bouw({temp:(u,dag)=>10+u/10}),i=zetBasis(api,d);d.hourly.temperature_2m[i+5]=null;api.etmaal(i,24);ok(!/>0°<\/text>/.test(bak.chart.innerHTML),"null wordt niet als kunstmatig 0°C-extreem gelabeld",bak.chart.innerHTML.slice(0,200));

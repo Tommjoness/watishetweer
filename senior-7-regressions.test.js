@@ -9,7 +9,7 @@ ok(engine.includes("hoeveelheid onzeker")&&index.includes("117.000001"),"eerdere
 ok(index.includes("luchtBelofte")&&!index.includes("Promise.allSettled([j(f),j(a)])"),"luchtkwaliteit blokkeert kernweer niet meer");
 ok(index.includes("item.precipitation*item.fractie"),"gedeeltelijk verstreken kwartier wordt proportioneel verwerkt");
 ok(index.includes("analyseerNeerslagData(S.d,120,weatherNowActueleLokaleTijd())"),"nowcast start op echte lokale minuut");
-ok(index.includes("Neerslagkans binnenkort")&&engine.includes("de komende circa 60 minuten"),"uurkans vermijdt schijnprecisie");
+ok(index.includes("Komend uur")&&engine.includes("de komende circa 60 minuten"),"uurkans vermijdt schijnprecisie");
 ok(waars.includes("niveauIsOfficieel: false")&&waars.includes("niveauIsOfficieel: true"),"NWS-kleur wordt onderscheiden van officiële MeteoAlarm-kleur");
 ok(engine.includes('w.niveauIsOfficieel===false'),"briefing noemt NWS-kleur niet officieel");
 (async()=>{
