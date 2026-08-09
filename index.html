@@ -30,7 +30,7 @@
     --rule:#DCE1DE;
     --rule-soft:#EDEFED;
     --night:#E6EAE7;
-    --teal:#0E6E75;
+    --teal:#65716C;
     --carmine:#A02036;
     /* Beperkt, semantisch kleursysteem (v67). Tekst, border en info sluiten
        bewust aan op de bestaande --ink/--rule/--teal hierboven in plaats van
@@ -47,7 +47,7 @@
     --accent-active:#A51D3D;
     --accent-info:var(--teal);
     --accent-night:#142C4C;
-    --accent-sun:#F2CE63;
+    --accent-sun:var(--rule);
     /* v70: de --surface-*-tokens (zeer lichte oppervlaktetinten achter hele
        modules) zijn verwijderd. Ze bleken visueel niet gewenst: modules horen
        op de gewone thema-achtergrond te rusten, kleur is voorbehouden aan
@@ -62,7 +62,7 @@
   html[data-thema="donker"]{
     --paper:#0A0A0A; --sheet:#141414; --ink:#EDEDED; --ink-70:#B8B8B8; --ink-45:#999999;
     --ink-25:#8A8A8A; --rule:#2A2A2A; --rule-soft:#1E1E1E; --night:#1C1C1C;
-    --teal:#63C9BF; --carmine:#E4707E;
+    --teal:#A7AEAB; --carmine:#E4707E;
   }
   html[data-thema="rood"]{
     --paper:#080202; --sheet:#0D0303; --ink:#D24A3C; --ink-70:#B23E32; --ink-45:#97352B;
@@ -211,8 +211,9 @@
   h2 .r #moonlab{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
   h2 .r{font-family:var(--sans);letter-spacing:0;text-transform:none;font-size:11.5px;color:var(--ink-45);
         display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap}
-  #suntimes{display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap}
+  #suntimes{display:grid;grid-template-columns:repeat(3,max-content);gap:2px 18px;align-items:center;text-align:left}
   #suntimes span{white-space:nowrap}
+  #suntimes .zondag{grid-column:1 / -1;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-25);font-weight:500}
   h2 button{padding:4px 9px;font-size:9.5px}
   .bereik{display:inline-flex}
   .bereik button+button{border-left:none}
@@ -296,6 +297,8 @@
   /* Op het bureaublad staan de metaregels in de laatste kolom naast de score; die
      lijnen nu uit met de kolom erboven in plaats van rechts weg te lopen. */
   .night .nmeta.wide{text-align:left}
+  .nachtadvies,.nachtmaan{display:block}
+  .nachtmaan{margin-top:2px;color:var(--ink-25);white-space:nowrap}
   .ctrl{grid-template-columns:120px 1fr 1fr max-content;gap:14px}
   .ctrl .mono{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink-70);text-align:center}
   .score{font-family:var(--sans);font-weight:500;font-size:18px;font-variant-numeric:tabular-nums;text-align:center}
@@ -434,9 +437,9 @@
      de wrapper niet meer nodig en is #nights weer een gewone .dashcol met de
      accentlijn direct erop.
      De overige accentlijnen blijven beperkt tot modules waar ze inhoudelijk iets aanduiden. */
-  #nights{border-top:2px solid var(--accent-night)}
-  #aq{border-top:2px solid var(--accent-info)}
-  .stat.breed{border-top:2px solid var(--accent-sun)}
+  #nights{border-top:1px solid var(--rule)}
+  #aq{border-top:1px solid var(--rule)}
+  .stat.breed{border-top:1px solid var(--rule)}
 
   /* tablet 900-1099px: dezelfde tweekoloms metriektegels als mobiel al had
      onder 900px, in plaats van de standaard vier kolommen. Header, grafiek en dagen/nachtzicht blijven in dit bereik vanzelf gestapeld, want
@@ -571,7 +574,7 @@
       <div class="stat"><div class="eyebrow">Luchtdruk</div><div class="sval" id="pres">--</div><div class="ssub" id="pressub">&nbsp;</div></div>
       <div class="stat"><div class="eyebrow">Bewolking</div><div class="sval" id="cloud">--</div><div class="ssub" id="cloudsub">&nbsp;</div></div>
       <div class="stat"><div class="eyebrow">Zicht</div><div class="sval" id="vis">--</div><div class="ssub" id="vissub">&nbsp;</div></div>
-      <div class="stat breed"><div class="eyebrow">UV-index</div><div class="sval" id="uv">--</div><div class="ssub" id="uvsub">&nbsp;</div></div>
+      <div class="stat breed"><div class="eyebrow">UV-piek vandaag</div><div class="sval" id="uv">--</div><div class="ssub" id="uvsub">&nbsp;</div></div>
     </div>
     </div>
 
@@ -1123,8 +1126,8 @@ function meters(){
   set("gust",windstoot===null?"–":Math.round(windstoot)+"<s>km/u</s>");
   const pgRuw=piek("wind_gusts_10m"),pg=pgRuw&&pgRuw.v>=0?pgRuw:null;
   zetTekst("gustsub", !pg ? "Geen uurgegevens beschikbaar."
-    : pg.t>nu ? dagAanduiding(pg.t,true)+" in het uur "+weatherNowUurvak(pg.t)+" worden windstoten tot "+Math.round(pg.v)+" km/u verwacht."
-    : dagAanduiding(pg.t,true)+" viel de zwaarste windstoot in het uur "+weatherNowUurvak(pg.t)+" en bereikte die "+Math.round(pg.v)+" km/u.");
+    : pg.t>nu ? dagAanduiding(pg.t,true)+" tot "+Math.round(pg.v)+" km/u tussen "+weatherNowUurvak(pg.t).replace("–"," en ")+"."
+    : dagAanduiding(pg.t,true)+" maximaal "+Math.round(pg.v)+" km/u tussen "+weatherNowUurvak(pg.t).replace("–"," en ")+".");
 
   const recenteNeerslag=eindigGetal(c.precipitation);
   set("prec",recenteNeerslag===null||recenteNeerslag<0?"–":nl(recenteNeerslag)+"<s>mm</s>");
@@ -1179,7 +1182,8 @@ function meters(){
   const p3=p3Ruw!==null&&p3Ruw>0?p3Ruw:null;
   const dp=(p3!==null&&luchtdruk!==null)?luchtdruk-p3:null;
   zetTekst("pressub", dp==null ? "Geen tendens beschikbaar."
-    : Math.abs(dp)<0.15 ? "In de afgelopen drie uur nauwelijks veranderd."
+    : Math.abs(dp)<1 ? "Vrijwel stabiel."
+    : Math.abs(dp)<2 ? "Licht "+(dp>0?"gestegen":"gedaald")+" in de afgelopen drie uur."
     : "In de afgelopen drie uur "+nl(Math.abs(dp))+" hPa "+(dp>0?"gestegen":"gedaald")+".");
 
   const cc=eindigGetal(c.cloud_cover);
@@ -1193,14 +1197,12 @@ function meters(){
   /* De UV-index zat ingeklemd achter de bewolkingszin en werd daar makkelijk
      over het hoofd gezien. Als eigen tegel krijgt hij zijn eigen waarde en
      kan het oordeel erbij zonder de bewolkingszin te verlengen. */
-  set("uv", (!pu||pu.v<0.5) ? "–" : nl(pu.v));
+  set("uv", !pu ? "–" : Math.round(Math.max(0,pu.v)));
   zetTekst("uvsub", !pu
     ? "UV-gegevens voor vandaag niet beschikbaar."
     : pu.v<0.5
       ? "Nauwelijks UV vandaag."
-      : pu.t>nu
-        ? "De UV-index piekt vandaag rond "+hhmm(pu.t)+" en is dan "+uvOordeel(pu.v)+"."
-        : "De UV-index piekte vandaag rond "+hhmm(pu.t)+" en was toen "+uvOordeel(pu.v)+".");
+      : "Rond "+hhmm(pu.t)+" · "+uvOordeel(pu.v)+".");
 
   const zichtRuw=eindigGetal(c.visibility!=null?c.visibility:(h.visibility&&h.visibility[i]));
   const v=zichtRuw!==null&&zichtRuw>=0?zichtRuw:null;
@@ -1392,10 +1394,12 @@ function briefing(){
     const rNu=eindigGetal(c.wind_direction_10m),rPiek=eindigGetal(h.wind_direction_10m&&h.wind_direction_10m[wi]);
     const richtingNu=kompas(rNu),richtingPiek=kompas(rPiek);
     const hoek=rNu===null||rPiek===null?null:Math.abs(((rPiek-rNu+540)%360)-180);
-    const draait=hoek!==null&&hoek>45;
-    const draaiTekst=draait&&richtingPiek?" en draait naar het "+richtingPiek:"";
-    if(richtingNu) zin3="De wind komt uit het "+richtingNu+draaiTekst+".";
     const opvallendeWind=bm>=5||(gmax!==null&&gmax>=60);
+    const huidigeWind=eindigGetal(c.wind_speed_10m),huidigeBft=huidigeWind===null?null:bft(Math.max(0,huidigeWind));
+    const richtingRelevant=(huidigeBft!==null&&huidigeBft>=3)||opvallendeWind;
+    const draait=richtingRelevant&&hoek!==null&&hoek>45&&bm>=3;
+    const draaiTekst=draait&&richtingPiek?" en draait naar het "+richtingPiek:"";
+    if(richtingRelevant&&richtingNu) zin3="De wind komt uit het "+richtingNu+draaiTekst+".";
     if(opvallendeWind){
       const moment=wi>i+1
         ? dagAanduiding(h.time[wi],true)+" rond "+hhmm(h.time[wi])
@@ -1597,7 +1601,7 @@ function etmaal(start,n){
     const xx=x(g.idx);
     balk+=`<line x1="${xx}" y1="${by-5}" x2="${xx}" y2="${by+bh+4}" stroke="${INK}" stroke-width="1"/>`;
     if(n<=48){
-      const tekst=(g.op?"op ":"onder ")+hhmm(g.tijd);
+      const tekst=(g.op?"zon op ":"zon onder ")+hhmm(g.tijd);
       const breed=tekst.length*F.zon*0.62;
       // past het label niet aan de gekozen kant, dan klapt het naar de andere kant
       let anker=g.op?"start":"end", tx=xx+(g.op?4:-4);
@@ -1619,8 +1623,10 @@ function etmaal(start,n){
     if(nuIdx!=null && nuIdx>=0 && nuIdx<=TI.length-1 && isFinite(nuIdx)){
       const xn=x(nuIdx); nuX=xn; nuTemp=eindigGetal(S.d.current&&S.d.current.temperature_2m);
       const nuStip=nuTemp===null?"":`<circle cx="${xn}" cy="${y(nuTemp)}" r="3" fill="${CARMINE}"/>`;
+      const nuLabelY=nuTemp===null?by+bh+13:clamp(y(nuTemp)-10,pt+F.temp,pb-4);
+      const nuLabel=nuTemp===null?"nu":"nu "+Math.round(nuTemp)+"°";
       nu=`<line x1="${xn}" y1="${by-2}" x2="${xn}" y2="${pb+6}" stroke="${CARMINE}" stroke-width="1"/>${nuStip}
-          <text x="${xn+4}" y="${by+bh+13}" fill="${CARMINE}" font-family="DM Mono,monospace" font-size="${F.nu}">nu</text>`;
+          <text x="${xn+8}" y="${nuLabelY}" fill="${CARMINE}" font-family="DM Mono,monospace" font-size="${F.nu}">${nuLabel}</text>`;
     }
   }
 
@@ -1697,10 +1703,10 @@ function etmaal(start,n){
      eerste als de ruimte krap wordt (zie de botsingsafhandeling hieronder). */
   const kandKaart=new Map();
   const zet=(i,rang)=>{ if(geldig(i)) kandKaart.set(i,Math.max(kandKaart.get(i)||0,rang)); };
-  // 1: het huidige punt (afgeleid uit nuX, dat al eerder uit dezelfde
-  // fractionele plaatsNuIndex(TI) is berekend; geen tweede berekening nodig)
-  if(nuX!=null) zet(Math.round((nuX-pl)/cw),4);
-  // 2+3: het globale maximum en minimum binnen het zichtbare bereik
+  // Het actuele punt krijgt hierboven een eigen rood "nu 25°"-label. Reguliere
+  // modeluurpunten vlak ernaast worden hieronder onderdrukt om dubbele actuele
+  // temperaturen te voorkomen.
+  // Het globale maximum en minimum binnen het zichtbare bereik
   zet(iMax,3); zet(iMin,3);
   // 4+5: elke duidelijke lokale piek/dal (de PROMINENT-drempel hierboven
   // filtert al ruis van enkele tienden van een graad weg)
@@ -1710,6 +1716,11 @@ function etmaal(start,n){
   for(let i=0;i<T.length;i++){
     if(!geldig(i)||i%stap!==0) continue;
     if(!kandKaart.has(i)) kandKaart.set(i,1);
+  }
+  if(nuX!=null){
+    for(const [idx] of [...kandKaart.entries()]){
+      if(Math.abs(x(idx)-nuX)<cw*1.05) kandKaart.delete(idx);
+    }
   }
   const kandidatenRuw=[...kandKaart.entries()].map(([i,rang])=>({i,rang}))
     .sort((a,b)=>b.rang-a.rang||a.i-b.i);
@@ -1781,9 +1792,9 @@ function etmaal(start,n){
   };
   kandidaten.forEach(k=>{
     const i=k.i;
-    const v=k.rang===4&&nuTemp!==null?nuTemp:T[i];
+    const v=T[i];
     const bw=labelBreed(v);
-    let cx=k.rang===4&&nuX!==null?nuX:x(i);
+    let cx=x(i);
     if(cx-bw/2 < pl-2) cx=pl-2+bw/2;
     if(cx+bw/2 > W-pr) cx=W-pr-bw/2;
     /* De rode nu-lijn loopt van boven naar beneden door de tekening. Het eerste
@@ -1904,12 +1915,13 @@ function etmaal(start,n){
      verschil in regellengte gaf een ongelijk typografisch ritme naast de
      grafiek. Nu is de regel bij elke weergave hetzelfde: geen voorvoegsel,
      de datum staat al in de kop (#chartlab) hierboven. */
-  const zonDag=dg==null&&day.time&&day.time[di]?dagAanduiding(day.time[di],false):"";
+  const zonDag=dg==null&&day.time&&day.time[di]?dagAanduiding(day.time[di],true):"";
   document.getElementById("suntimes").innerHTML=(day.sunrise[di]&&day.sunset[di])
-    ? "<span>"+(zonDag?zonDag+" · ":"")+"zonsopkomst "+hhmm(day.sunrise[di])+"</span> "
-     +"<span>zonsondergang "+hhmm(day.sunset[di])+"</span> "
+    ? (zonDag?"<span class=\"zondag\">"+zonDag+"</span>":"")
+     +"<span>Zonsopkomst "+hhmm(day.sunrise[di])+"</span>"
+     +"<span>Zonsondergang "+hhmm(day.sunset[di])+"</span>"
      +"<span>"+daglengte(di)+"</span>"
-    : "<span>"+daglengte(di)+"</span>";
+    : (zonDag?"<span class=\"zondag\">"+zonDag+"</span>":"")+"<span>"+daglengte(di)+"</span>";
   document.getElementById("back").style.display=dg==null?"none":"inline-block";
 }
 
@@ -1928,7 +1940,7 @@ function chartHint(){
   const el2=document.getElementById("charthint");
   if(!el2) return;
   // een vaste tekst, ongeacht muis- of touchbediening
-  el2.textContent="Houd je vinger op de grafiek voor meer informatie";
+  el2.textContent="Houd de grafiek vast voor details.";
 }
 
 function scrubKoppel(){
@@ -2291,8 +2303,8 @@ function nachten(){
       <div class="score" style="color:${kleur}" title="Modelscore ${nl(sc)} van 10">${Math.round(sc)}/10</div>
       <div class="sbar"><i style="width:${sc*10}%;background:${kleur}"></i></div>
       <div class="nmeta"><span class="perc">${Math.round(cw)}%</span> bewolking</div>
-      <div class="nmeta wide">${sc>=8.5?"Uitstekend":sc>=7?"Goed":sc>=5?"Redelijk":sc>=3.5?"Matig":"Ongunstig"} · ${venster}${maanTekst
-        ? ` <span class="maangroep"><span class="maanbij" title="${esc(maanTitel)}">${maanIcoon}</span> ${maanTekst}</span>`
+      <div class="nmeta wide"><span class="nachtadvies">${sc>=8.5?"Uitstekend":sc>=7?"Goed":sc>=5?"Redelijk":sc>=3.5?"Matig":"Ongunstig"} · ${venster}</span>${maanTekst
+        ? `<span class="nachtmaan"><span class="maanbij" title="${esc(maanTitel)}">${maanIcoon}</span> ${maanTekst.charAt(0).toUpperCase()+maanTekst.slice(1)}</span>`
         : ""}</div></div>`;
   }
   const kopN=`<div class="row night kop">
