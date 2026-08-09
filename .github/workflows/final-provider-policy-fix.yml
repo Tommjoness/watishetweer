@@ -1,0 +1,45 @@
+name: Final provider policy fix
+
+on:
+  push:
+    branches:
+      - agent/final-audit-provider-policy
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Pas provider-policy fix toe
+        run: node scripts/apply-final-provider-policy.js
+      - name: Volledige regressiesuite
+        run: npm test
+      - name: Volledige productiebuild
+        run: npm run build
+      - name: Installeer Chromium en WebKit
+        run: |
+          npm install --no-save --package-lock=false playwright@latest
+          npx playwright install --with-deps chromium webkit
+      - name: Echte browsers — mobiel en desktop
+        run: node browser-playwright.test.js
+      - name: Leg exact geteste productwijzigingen vast
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- index.html lib/plaatsnaam.cjs lib/waarschuwingen.cjs privacy.html prelaunch-regressions.test.js
+          if git diff --cached --quiet; then
+            echo "Geen productwijzigingen om vast te leggen."
+            exit 0
+          fi
+          git commit -m "Herstel providergebruik volgens beleid"
+          git push origin HEAD:agent/final-audit-provider-policy
