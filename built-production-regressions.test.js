@@ -34,7 +34,7 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
 {
  const {api,bak}=laadKern(390),d=bouw({pp:()=>80,pr:()=>0,nu:0,som:0});d.minutely_15={time:[],precipitation:[],rain:[],showers:[],snowfall:[],weather_code:[]};const start=Date.UTC(2026,6,22,14,0);
  for(let k=1;k<=12;k++){d.minutely_15.time.push(new Date(start+k*15*60000).toISOString().slice(0,16));d.minutely_15.precipitation.push(0);d.minutely_15.rain.push(0);d.minutely_15.showers.push(0);d.minutely_15.snowfall.push(0);d.minutely_15.weather_code.push(3);}zetBasis(api,d);api.briefing();const t=tekst(bak.brief);
- ok(/verwachting is daardoor onzeker|hoeveelheid is onzeker/i.test(t),"hoge kans zonder hoeveelheid krijgt onzekerheidszin",t);ok(!/hooguit enkele druppels/i.test(t),"hoge kans zonder hoeveelheid verzint geen druppelhoeveelheid",t);
+ ok(/verwachting is daardoor onzeker|hoeveelheid (?:is )?onzeker/i.test(t),"hoge kans zonder hoeveelheid krijgt onzekerheidszin",t);ok(!/hooguit enkele druppels/i.test(t),"hoge kans zonder hoeveelheid verzint geen druppelhoeveelheid",t);
 }
 {
  const {api,bak}=laadKern(390),d=bouw({wc:()=>3});d.daily.weather_code[0]=95;zetBasis(api,d);api.dagen();const t=tekst(bak.days);ok(/Onweer/i.test(t),"zwaarste dagconditie blijft zichtbaar in weektabel",t.slice(0,300));
@@ -51,7 +51,7 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  ok(/rond 14:00/.test(t),"kwartieronset wordt als afgerond tijdvak gecommuniceerd",t);ok(!/14:15/.test(t),"kwartierdata wordt niet als exact kwartier-onset geclaimd",t);
 }
 {
- const {api,bak}=laadKern(390),d=bouw({nu:0,som:0});d.current.interval=900;zetBasis(api,d);api.meters();const t=tekst(bak.precsub);ok(/model|gemodelleerd/i.test(t),"recente neerslag wordt als modelinformatie benoemd",t);ok(!/gemeten/i.test(t),"recente modeldata wordt niet als meting gepresenteerd",t);
+ const {api,bak}=laadKern(390),d=bouw({nu:0,som:0});d.current.interval=900;zetBasis(api,d);api.meters();const t=tekst(bak.precsub);ok(/^Geen neerslag.$/.test(t),"droge recente neerslag gebruikt korte consumententaal",t);ok(!/gemeten|gemodelleerd|model/i.test(t),"droge tegel toont geen technische bronterminologie",t);
 }
 {
  const {api,bak}=laadKern(390),d=bouw({zicht:20000});d.current.visibility=1234;zetBasis(api,d);api.meters();ok(/1,2/.test(norm(bak.vis.innerHTML)),"actueel zicht gebruikt current visibility",norm(bak.vis.innerHTML));
@@ -60,7 +60,7 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  const {api,bak}=laadKern(390),d=bouw({}),i=zetBasis(api,d);d.current.pressure_msl=1010;d.hourly.pressure_msl[i-3]=1000;d.hourly.pressure_msl[i-2]=1004;api.S.klokOverride=new Date("2026-07-22T12:30:00Z");api.meters();const t=tekst(bak.pressub);ok(/8,0 hPa gestegen/.test(t),"druktrend interpoleert naar exact drie uur geleden",t);ok(/afgelopen drie uur/.test(t),"druktrend benoemt het werkelijke venster",t);
 }
 {
- const {api,bak}=laadKern(390),d=bouw({wg:(u,dag)=>dag===0&&u===18?72:25});zetBasis(api,d);api.meters();const t=tekst(bak.gustsub);ok(/uur 17:00–18:00/.test(t),"windstootpiek wordt als voorafgaand uurvak getoond",t);ok(!/rond 18:00/.test(t),"windstootpiek wordt niet als exact tijdstip geclaimd",t);
+ const {api,bak}=laadKern(390),d=bouw({wg:(u,dag)=>dag===0&&u===18?72:25});zetBasis(api,d);api.meters();const t=tekst(bak.gustsub);ok(/tussen 17:00 en 18:00/.test(t),"windstootpiek wordt als begrijpelijk uurvak getoond",t);ok(!/rond 18:00/.test(t),"windstootpiek wordt niet als exact tijdstip geclaimd",t);
 }
 {
  const {api,bak}=laadKern(390),d=bouw({});zetBasis(api,d);api.nachten();const t=tekst(bak.nights);ok(/Score/.test(t)&&/\d+\/10/.test(t),"nachtzichtscore is compact en begrijpelijk gelabeld",t.slice(0,300));ok(/Beste zichtperiode/.test(t),"nachtzicht benoemt de beste zichtperiode consumentgericht",t.slice(0,300));

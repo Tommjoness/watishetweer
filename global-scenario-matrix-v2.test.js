@@ -66,5 +66,16 @@ vervangExact(
   "kwartierverwachting"
 );
 
+
+/* De consumentenbriefing vat een droge/zeer kleine kans nu kort samen. De
+   oorspronkelijke matrix telde alleen drie langere formuleringen en zag een
+   correcte "blijft waarschijnlijk droog"-zin daardoor als nul conclusies.
+   De invariant blijft hetzelfde: precies één neerslagconclusie. */
+vervangExact(
+`    const neerslagOpeningen=(tekst.match(/kans op neerslag|neerslag verwacht|gegevens om de neerslagkans/gi)||[]).length;`,
+`    const neerslagOpeningen=(tekst.match(/kans op neerslag|neerslag verwacht|gegevens om de neerslagkans|blijft (?:het )?(?:waarschijnlijk )?droog/gi)||[]).length;`,
+  "korte droge briefing in matrix"
+);
+
 const uitvoer=new Function("require","module","exports","__filename","__dirname",bron);
 uitvoer(require,module,exports,pad,__dirname);

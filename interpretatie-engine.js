@@ -406,6 +406,16 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
     if(kop) kop.textContent=tekst;
   }
 
+  function briefingNeerslagZin(a){
+    if(!a||!a.genoeg) return "Voor de komende twee uur ontbreken voldoende gegevens.";
+    if(a.status==="GEEN_KANS") return "De komende twee uur blijft het droog.";
+    if(a.status==="ZEER_KLEINE_KANS") return "De komende twee uur blijft het waarschijnlijk droog.";
+    if(a.status==="KLEINE_KANS") return "De komende twee uur is er een kleine kans op neerslag.";
+    if(a.status==="MOGELIJKE_NEERSLAG") return "In de komende twee uur is neerslag mogelijk.";
+    if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return "De komende twee uur is de neerslagkans groot, maar de hoeveelheid onzeker.";
+    return neerslagZin(a);
+  }
+
   function dagSamenvatting(a){
     if(!a||!a.genoeg) return "Onvoldoende consistente gegevens";
     const basis=(typeof txt==="function"&&a.code!==null)?txt(a.code,true):"Verwachting";
@@ -426,7 +436,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       else if(kort.droog) set("pop","Droog");
       else if(uur.kans!==null) set("pop",uur.kans+"<s>%</s>");
       else set("pop",kort.hoofd);
-      zetTekst("popsub",neerslagZin(uur));
+      zetTekst("popsub",!uur.genoeg?"Neerslagkans niet beschikbaar.":kort.droog?"Geen neerslag verwacht.":neerslagZin(uur));
       zetEyebrow("prec","Afgelopen 15 minuten");
       const c=S.d.current||{};
       const intervalMin=Math.max(1,Math.round((getal(c.interval)||900)/60));
@@ -435,8 +445,8 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       zetTekst("precsub",recent===null
         ? "Recente neerslag is niet beschikbaar."
         : recent<=INTERPRETATIE_CONFIG.spoorMm
-          ? "Geen neerslag gemodelleerd in de afgelopen "+intervalMin+" minuten."
-          : "Modelwaarde over de afgelopen "+intervalMin+" minuten.");
+          ? "Geen neerslag."
+          : "Neerslag in de afgelopen "+intervalMin+" minuten.");
     };
   }
 
@@ -448,7 +458,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       const scheiding="<!--brief-rest-->",idx=bestaand.indexOf(scheiding);
       const rest=idx>=0?bestaand.slice(idx+scheiding.length):bestaand;
       const twee=analyse(120);
-      let voor=esc(neerslagZin(twee));
+      let voor=esc(briefingNeerslagZin(twee));
       const waars=S.actieveWaarschuwingen||[];
       if(waars.length){
         const w=waars[0];
@@ -516,7 +526,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
 
   chartHint=function(){
     const el=document.getElementById("charthint");
-    if(el) el.textContent="Houd je vinger op de grafiek voor details. Een neerslagpercentage hoort bij het uur dat eindigt op het getoonde tijdstip; waarden links van ‘nu’ zijn voorbij.";
+    if(el) el.textContent="Houd de grafiek vast voor details.";
   };
 
   if(origineel.lucht){
@@ -537,10 +547,6 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
         if(val) val.textContent=Math.round(waarde);
         if(sub) sub.textContent=oordeel;
       }
-      document.querySelectorAll("#aq .stat").forEach(stat=>{
-        const kop=stat.querySelector(".eyebrow"),sub=stat.querySelector(".ssub");
-        if(kop&&sub&&/^Pollen\s/.test(kop.textContent)) sub.textContent="Gemodelleerde concentratie";
-      });
     };
   }
 

@@ -35,7 +35,7 @@ ok(gebouwd.includes("const rondGetal="),"temperatuurweergaven blokkeren null als
 ok(gebouwd.includes('const scheiding="<!--brief-rest-->"'),"centrale neerslaglaag bewaart de rest van de briefing structureel");
 ok(gebouwd.includes('classList.contains("kop")'),"weekinterpretatie slaat de tabelkop over");
 ok(gebouwd.includes('dagAanduiding(h.time[top],true)+" wordt het maximaal'),"maximumtemperatuur noemt de dag vóór de claim");
-ok(gebouwd.includes('zonDag+" · "'),"zonmomenten noemen in de 24-uursweergave expliciet de dag");
+ok(gebouwd.includes("#suntimes .zondag")&&gebouwd.includes("Zonsopkomst ")&&gebouwd.includes("Zonsondergang "),"zonmomenten tonen de dag als eigen hiërarchische kop boven op- en ondergang");
 
 const vercel=JSON.parse(fs.readFileSync(path.join(ROOT,"vercel.json"),"utf8"));
 const headers=(vercel.headers&&vercel.headers[0]&&vercel.headers[0].headers)||[];

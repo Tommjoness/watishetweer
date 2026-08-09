@@ -126,8 +126,9 @@ groep("Datumbewuste avondbriefing");
   check("een gewone 4 Bft-piek na middernacht vervuilt de hoofdbriefing niet",
     !/wind op zijn sterkst/.test(tekst),tekst);
   check("na zonsondergang toont de 24-uursgrafiek de volgende daglichtperiode",
-    /morgen · zonsopkomst 05:55/.test(bak.suntimes.innerHTML)
-      &&/zonsondergang 21:30/.test(bak.suntimes.innerHTML),bak.suntimes.innerHTML);
+    /class="zondag">Morgen<\/span>/.test(bak.suntimes.innerHTML)
+      &&/Zonsopkomst 05:55/.test(bak.suntimes.innerHTML)
+      &&/Zonsondergang 21:30/.test(bak.suntimes.innerHTML),bak.suntimes.innerHTML);
 }
 
 /* Dezelfde hoofdzin moet overdag juist expliciet vandaag zeggen. Dit voorkomt
@@ -145,7 +146,8 @@ groep("Datumbewuste avondbriefing");
   check("een maximum later op dezelfde dag begint expliciet met vandaag",
     /Vandaag wordt het maximaal 30 graden/.test(tekst),tekst);
   check("de daglichtregel zegt overdag expliciet vandaag",
-    /vandaag · zonsopkomst/.test(bak.suntimes.innerHTML),bak.suntimes.innerHTML);
+    /class="zondag">Vandaag<\/span>/.test(bak.suntimes.innerHTML)
+      &&/Zonsopkomst/.test(bak.suntimes.innerHTML),bak.suntimes.innerHTML);
 }
 
 /* 5. metersteksten */
@@ -327,7 +329,7 @@ groep("Tabellen");
   const {bak}=brief({});
   check("zeven dagen heeft een kopregel",/class="row day kop"/.test(bak.days.innerHTML));
   check("zeven dagen heeft zeven rijen",(bak.days.innerHTML.match(/class="row day"/g)||[]).length===7);
-  check("nachtzicht toont maantijden",/maan op|maan onder/.test(bak.nights.innerHTML));
+  check("nachtzicht toont maantijden",/maan op|maan onder/i.test(bak.nights.innerHTML));
 }
 
 /* 7c. nachtzicht reageert op bewolking en op de stand van de maan */
@@ -347,7 +349,7 @@ groep("Nachtzicht");
   check("heldere nacht krijgt een modelvenster",/Beste periode \d\d:\d\d–\d\d:\d\d/.test(rh[0][2]),rh[0][2]);
   check("bewolkte nacht krijgt geen venster",/Geen goed zichtvenster/.test(rb[0][2]),rb[0][2]);
   check("maantijden staan er altijd bij",
-    /maan op \d\d:\d\d|maan onder \d\d:\d\d/.test(rh[0][2])&&/maan op \d\d:\d\d|maan onder \d\d:\d\d/.test(rb[0][2]));
+    /maan op \d\d:\d\d|maan onder \d\d:\d\d/i.test(rh[0][2])&&/maan op \d\d:\d\d|maan onder \d\d:\d\d/i.test(rb[0][2]));
 
   /* maanfase per nacht: sinds punt 11 een Unicode-symbool in deze tabel, geen
      getekende schijf meer (die blijft bestaan bij de kop boven de tabel). */
@@ -365,11 +367,11 @@ groep("Nachtzicht");
     check("het is een Unicode-tekstsymbool en geen getekende schijf",
       !/class="maanbij"[^>]*>\s*<svg/.test(html) && SYMBOLEN.some(s=>html.includes(s)));
     check("het symbool staat direct bij de maantijden, zonder losse bullet ervoor",
-      /<span class="maangroep"><span class="maanbij"/.test(html) && !/·\s*<span class="maanbij"/.test(html));
+      /<span class="nachtmaan"><span class="maanbij"/.test(html) && !/·\s*<span class="maanbij"/.test(html));
     check("het symbool heeft een omschrijving voor wie het niet ziet",
       /title="[^"]*procent verlicht"/.test(html));
     check("de maantijden blijven naast het symbool staan",
-      nachtrijen.every(r=>/maan op \d\d:\d\d|maan onder \d\d:\d\d/.test(r.replace(/<[^>]+>/g,""))));
+      nachtrijen.every(r=>/maan op \d\d:\d\d|maan onder \d\d:\d\d/i.test(r.replace(/<[^>]+>/g,""))));
     // de fase moet per nacht kunnen verschillen; met acht discrete stappen over
     // een korte reeks nachten is dat niet gegarandeerd meer dan een enkele stap,
     // dus dit toetst alleen dat het geen vast, hardgecodeerd symbool is
@@ -486,8 +488,8 @@ groep("Zonstijden");
   api.etmaal(api.S.i0,24);
   const regels=[...bak.suntimes.innerHTML.matchAll(/<span>([^<]*)<\/span>/g)].map(m=>m[1]);
   check("drie losse regels",regels.length===3,regels.join(" | "));
-  check("eerste regel is de opkomst",/zonsopkomst \d\d:\d\d/.test(regels[0]),regels[0]);
-  check("tweede regel is de ondergang",/zonsondergang \d\d:\d\d/.test(regels[1]),regels[1]);
+  check("eerste regel is de opkomst",/zonsopkomst \d\d:\d\d/i.test(regels[0]),regels[0]);
+  check("tweede regel is de ondergang",/zonsondergang \d\d:\d\d/i.test(regels[1]),regels[1]);
   check("derde regel is de daglengte",/daglicht/.test(regels[2]),regels[2]);
 }
 
@@ -695,9 +697,10 @@ groep("Grafieklabel-prioriteit");
     const reeks=[10,11,12,13,14,15,16,17,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10];
     // uur 8 (index 8): monotoon oplopend tot dan, dus geen lokaal extreem,
     // en 8%3!==0, dus ook niet op het raster; alleen "huidig punt" kan dit labelen
-    const {labs}=labelsVoor(reeks,{klokUur:8});
-    check("5. het actuele punt (index 8, geen raster/extreem) krijgt een label puur op basis van zijn prioriteit",
-      labs.some(l=>l.i===8), labs.map(l=>l.i+":"+l.v).join(","));
+    const {labs,svg}=labelsVoor(reeks,{klokUur:8});
+    check("5. het actuele punt krijgt precies één expliciet rood nu-label in plaats van een tweede modeluurlabel",
+      !labs.some(l=>l.i===8) && />nu -?\d+°<\/text>/.test(svg),
+      labs.map(l=>l.i+":"+l.v).join(",")+" | "+(svg.match(/>nu [^<]+<\/text>/)||["geen nu-label"])[0]);
   }
   // 6: een kleine fluctuatie van 0,1°C veroorzaakt niet automatisch een extra label
   {
@@ -1298,10 +1301,9 @@ groep("Nachtvenster");
     const t=norm(bak.nights.innerHTML).replace(/<[^>]+>/g," ").replace(/\s+/g," ");
     // de hele metaregel uitlezen, niet alleen wat al op de nieuwe vorm lijkt:
     // anders ziet de test een teruggedraaide formulering simpelweg niet staan
-    (bak.nights.innerHTML.match(/class="nmeta wide">([^<]*)</g)||[])
-      .map(m=>m.replace(/^class="nmeta wide">/,"").replace(/<$/,""))
-      .map(r=>norm(r).split("\u00b7").slice(1).join("\u00b7").trim())
-      .filter(r=>r&&!/^Modelvenster/.test(r))   // de kolomkop is geen nachtregel
+    [...bak.nights.innerHTML.matchAll(/<span class="nachtadvies">([^<]+)<\/span>/g)]
+      .map(m=>norm(m[1]).split("\u00b7").slice(1).join("\u00b7").trim())
+      .filter(Boolean)
       .forEach(r=>regels.push([naam,r]));
   }
   check("er staat bij elke nacht een venstertekst",regels.length>0,String(regels.length));
@@ -1606,7 +1608,7 @@ groep("Live bevindingen");
 
   // 5. het scheidingsteken mag niet los aan het regeleinde blijven
   check("het maandeel breekt als geheel af, zonder losse tekens aan het regeleinde",
-    /\.maangroep\{white-space:nowrap\}/.test(bronL) && /class="maangroep"><span class="maanbij"/.test(bronL));
+    /\.nachtmaan\{[^}]*white-space:nowrap/.test(bronL) && /class="nachtmaan"><span class="maanbij"/.test(bronL));
 
   // 6. een vlakke lijn krijgt nu op elk drie-uursinterval een cijfer (punt 4 van
   //    de twaalfpuntsopdracht eist dit expliciet, ook als de waarde herhaalt);
@@ -1679,25 +1681,14 @@ groep("Live bevindingen");
     const indices=[...h.matchAll(/data-temp-index="(\d+)"/g)].map(m=>+m[1]);
     const labels=[...h.matchAll(/<text x="([\d.-]+)" y="([\d.-]+)"[^<]*?font-family="Bodoni Moda,serif" font-size="([\d.]+)">(-?\d+)°/g)]
       .map(m=>({x:+m[1],y:+m[2],fs:+m[3],waarde:+m[4]}));
-    const perIndex=new Map(indices.map((idx,k)=>[idx,labels[k]]));
-    const voor=perIndex.get(0),na=perIndex.get(1),xn=lijn?+lijn[1]:NaN;
     const rand=(l,kant)=>l.x+kant*(String(l.waarde).length*l.fs*.58+l.fs*.40)/2;
-    check("21° en 19° rond de nu-lijn blijven allebei zichtbaar",!!voor&&!!na,
-      "indices "+indices.join(", ")+"; waarden "+labels.map(l=>l.waarde).join(", "));
-    if(voor&&na&&lijn){
-      const vrijVanLijn=l=>rand(l,1)<xn-1||rand(l,-1)>xn+1;
-      const horizontaal=Math.min(rand(voor,1),rand(na,1))-Math.max(rand(voor,-1),rand(na,-1));
-      const verticaal=Math.abs(voor.y-na.y);
-      check("21° en 19° vallen niet over de nu-lijn",vrijVanLijn(voor)&&vrijVanLijn(na),
-        "lijn "+xn.toFixed(1)+", vakken "+rand(voor,-1).toFixed(1)+"–"+rand(voor,1).toFixed(1)
-        +" en "+rand(na,-1).toFixed(1)+"–"+rand(na,1).toFixed(1));
-      check("21° en 19° botsen ook onderling niet",
-        horizontaal<=-4||verticaal>=Math.max(voor.fs,na.fs)+3,
-        "horizontale overlap "+horizontaal.toFixed(1)+", verticale afstand "+verticaal.toFixed(1));
-      check("geen temperatuurcijfer schuift in de ruimte van de y-as",
-        labels.every(l=>rand(l,-1)>=32),
-        labels.filter(l=>rand(l,-1)<32).map(l=>l.waarde+"° begint op "+rand(l,-1).toFixed(1)).join(", "));
-    }
+    const nabijeIndices=indices.filter(idx=>idx===0||idx===1);
+    check("rond de nu-lijn staat alleen de actuele temperatuur en geen concurrerend modeluurlabel",
+      />nu 21°<\/text>/.test(h)&&nabijeIndices.length===0,
+      "indices "+indices.join(", ")+"; nu="+(h.match(/>nu [^<]+<\/text>/)||["ontbreekt"])[0]);
+    check("de overblijvende temperatuurcijfers blijven uit de ruimte van de y-as",
+      labels.every(l=>rand(l,-1)>=32),
+      labels.filter(l=>rand(l,-1)<32).map(l=>l.waarde+"° begint op "+rand(l,-1).toFixed(1)).join(", "));
   }
 
   // 9. de brede tegel alleen waar hij de rij vult
@@ -1966,7 +1957,7 @@ groep("Grafiek en hints");
     Object.assign(api.S,{d:bouw({}),i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
     api.etmaal(14,24);
     check("de aanwijzing bevat exact de gevraagde tekst",
-      bak.charthint.textContent==="Houd je vinger op de grafiek voor meer informatie",
+      bak.charthint.textContent==="Houd de grafiek vast voor details.",
       bak.charthint.textContent);
   }
 }
@@ -2685,7 +2676,7 @@ groep("Nachtzone in de grafiek");
   check("de tooltipstructuur (#scrub) bestaat nog",/<g id="scrub"/.test(bronN));
   check("het hitvlak (#hit) bestaat nog",/id="hit"/.test(bronN));
   check("de rode Nu-lijn (CARMINE, tekst \"nu\") bestaat nog",
-    /fill="\$\{CARMINE\}"[^>]*>nu<\/text>/.test(bronN));
+    /const nuLabel=nuTemp===null\?"nu":"nu "\+Math\.round\(nuTemp\)\+"°"/.test(bronN) && /fill="\$\{CARMINE\}"/.test(bronN));
   check("geen specifieke plaatsnaam, landcode of tijdzone is aan de balklogica toegevoegd",
     !/Almere|Diemen|Vianen|Kandy|Nederland|Sri Lanka|Amsterdam|Colombo/.test(
       bronN.slice(bronN.indexOf("/* dagbalk */"),bronN.indexOf("const gitter"))));
@@ -2749,8 +2740,8 @@ groep("Nachtzone in de grafiek");
       check("de fractionele startpositie klopt (binnen 1px van de berekende waarde)",
         Math.abs(x0-x0Verwacht)<1,x0+" vs verwacht "+x0Verwacht.toFixed(2));
     }
-    check("label 'onder 21:37' staat op de bron",/>onder 21:37</.test(svg));
-    check("3. sunrise 05:54 eindigt niet om 05:00 of 06:00",/>op 05:54</.test(svg));
+    check("label 'zon onder 21:37' staat op de bron",/>zon onder 21:37</.test(svg));
+    check("3. sunrise 05:54 eindigt niet om 05:00 of 06:00",/>zon op 05:54</.test(svg));
     {
       // v70-herstel: de vorige versie van deze check testte (!!m)!==undefined,
       // en een boolean is nooit undefined -- dus hij was altijd waar, ook als
@@ -2858,12 +2849,13 @@ groep("Kleursysteem");
     /--text-primary:/.test(bronK3) && /--text-secondary:/.test(bronK3) && /--border-subtle:/.test(bronK3)
     && /--accent-active:#A51D3D/.test(bronK3) && /--accent-info:/.test(bronK3)
     && /--accent-night:#142C4C/.test(bronK3)
-    && /--accent-sun:#F2CE63/.test(bronK3));
+    && /--accent-sun:var\(--rule\)/.test(bronK3));
   check("tekst/border/info harmoniseren met bestaande tokens in plaats van een dubbel systeem",
     /--text-primary:var\(--ink\)/.test(bronK3) && /--text-secondary:var\(--ink-45\)/.test(bronK3)
     && /--border-subtle:var\(--rule\)/.test(bronK3) && /--accent-info:var\(--teal\)/.test(bronK3));
-  check("#142C4C en #F2CE63 komen ieder precies één keer als hardcoded hex voor (alleen in de tokendefinitie)",
-    (bronK3.match(/#142C4C/g)||[]).length===1 && (bronK3.match(/#F2CE63/g)||[]).length===1);
+  check("nachtkleur blijft centraal en het oude felle UV-geel is volledig verwijderd",
+    (bronK3.match(/#142C4C/g)||[]).length===1 && (bronK3.match(/#F2CE63/g)||[]).length===0
+      && /--teal:#65716C/.test(bronK3) && /--teal:#A7AEAB/.test(bronK3));
   check("actieve chips gebruiken het actieve accent",/\.chip\.on\{[^}]*var\(--accent-active\)/.test(bronK3));
   check("bestaande waarschuwing- en foutkleuren (carmine) zijn niet overschreven",
     /--carmine:#A02036/.test(bronK3) && /html\[data-thema="donker"\][^}]*--carmine:#E4707E/.test(bronK3)
@@ -2878,8 +2870,8 @@ groep("Kleursysteem");
     && !/--surface-active:/.test(bronK3));
   check("geen enkele module heeft nog een gekleurde achtergrondvulling (background:var(--surface-...))",
     !/background:var\(--surface-/.test(bronK3));
-  check("#aq behoudt alleen zijn dunne accentlijn (border-top), geen background meer",
-    /#aq\{border-top:2px solid var\(--accent-info\)\}/.test(bronK3)
+  check("#aq gebruikt alleen een dunne neutrale scheidingslijn, geen background",
+    /#aq\{border-top:1px solid var\(--rule\)\}/.test(bronK3)
     && !/#aq\{[^}]*background/.test(bronK3));
 
   check("basisachtergronden (--paper, --sheet) bestaan nog onaangeroerd",
@@ -2967,7 +2959,7 @@ groep("Desktoplayout (v68)");
   check("herstelronde: Zeven dagen en Nachtzicht vormen bewust GEEN zij-aan-zij-grid (.dashrow-days blijft gestapeld)",
     !/\.dashrow-days\{display:grid/.test(bronD2));
   check("luchtkwaliteit/pollen (#aq) krijgt geen eigen tweekoloms grid en loopt dus over de volle dashboardbreedte",
-    !/\.dashrow-aq/.test(bronD2) && /#aq\{border-top:2px solid var\(--accent-info\)\}/.test(bronD2));
+    !/\.dashrow-aq/.test(bronD2) && /#aq\{border-top:1px solid var\(--rule\)\}/.test(bronD2));
   check("tablet (900-1099px) valt terug op een gestapelde layout: de desktopgrids staan alleen in het 1100px-blok",
     !/@media\(min-width:900px\) and \(max-width:1099px\)\)?[\s\S]{0,300}dashrow-chart\{display:grid/.test(bronD2));
   check("mobiel (onder 900px) blijft één kolom: de bestaande mobiele media query is niet gewijzigd",
@@ -3039,12 +3031,12 @@ groep("Herstelronde v68");
 
   // 12.3 kleur op alle viewports
   check("2. het nachtaccent (#nights) staat buiten iedere mediaquery",
-    bronH.indexOf("#nights{border-top:2px solid var(--accent-night)}")>=0
-    && bronH.indexOf("#nights{border-top:2px solid var(--accent-night)}")
+    bronH.indexOf("#nights{border-top:1px solid var(--rule)}")>=0
+    && bronH.indexOf("#nights{border-top:1px solid var(--rule)}")
       < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)"));
   check("3. het informatie-accent (#aq) staat buiten iedere mediaquery",
-    bronH.indexOf("#aq{border-top:2px solid var(--accent-info)}")>=0
-    && bronH.indexOf("#aq{border-top:2px solid var(--accent-info)}")
+    bronH.indexOf("#aq{border-top:1px solid var(--rule)}")>=0
+    && bronH.indexOf("#aq{border-top:1px solid var(--rule)}")
       < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)"));
   check("4. een beperkt zon-/UV-accent staat buiten iedere mediaquery",
     bronH.indexOf(".stat.breed{border-top:2px solid var(--accent-sun)}")
@@ -3053,9 +3045,10 @@ groep("Herstelronde v68");
       < bronH.indexOf("@media(min-width:900px) and (max-width:1099px)"));
   check("5. desktop-specifieke padding voor luchtkwaliteit blijft binnen de 1100px-mediaquery",
     /#aq\{padding:var\(--s2\)\}/.test(desktopH));
-  check("6. de kleurregels gebruiken de centrale accenttokens, geen losse hex/rgba, en geen surface-tints meer",
-    /var\(--accent-night\)/.test(bronH)
-    && /var\(--accent-info\)/.test(bronH) && /var\(--accent-sun\)/.test(bronH)
+  check("6. normale secties gebruiken het centrale neutrale regeltoken, zonder surface-tints of losse kleurvlakken",
+    /#nights\{border-top:1px solid var\(--rule\)\}/.test(bronH)
+    && /#aq\{border-top:1px solid var\(--rule\)\}/.test(bronH)
+    && /\.stat\.breed\{border-top:1px solid var\(--rule\)\}/.test(bronH)
     && !/var\(--surface-/.test(bronH));
   check("7. geen nieuwe losse hex-/rgba-kleurwaarde is toegevoegd voor de resterende accenten",
     !/border-top:2px solid #[0-9A-Fa-f]{3,6}/.test(bronH));
@@ -3125,11 +3118,11 @@ groep("v69 polishronde");
       !/class="dashcol mod-night"/.test(bronP) && !/\.mod-night\{/.test(bronP));
     check("Nachtzicht-kop en -rijen staan weer in een gewone, ongekleurde wrapper",
       /<div class="dashcol">\s*\n\s*<h2><span>Nachtzicht<\/span><span class="r" id="moonlab">/.test(bronP));
-    check("2. #nights heeft geen background meer, alleen nog de dunne accentlijn",
-      /#nights\{border-top:2px solid var\(--accent-night\)\}/.test(bronP)
+    check("2. #nights heeft geen background meer, alleen nog een dunne neutrale scheidingslijn",
+      /#nights\{border-top:1px solid var\(--rule\)\}/.test(bronP)
       && !/#nights\{[^}]*background/.test(bronP));
-    check("4. de accentlijn staat buiten desktop-only mediaqueries",
-      bronP.indexOf("#nights{border-top:2px solid var(--accent-night)}")
+    check("4. de neutrale scheidingslijn staat buiten desktop-only mediaqueries",
+      bronP.indexOf("#nights{border-top:1px solid var(--rule)}")
         < bronP.indexOf("@media(min-width:900px) and (max-width:1099px)"));
     check("6. geen overflow:hidden wordt gebruikt om inhoud af te knippen bij Nachtzicht",
       !/#nights\{[^}]*overflow:hidden/.test(bronP));
@@ -3169,11 +3162,11 @@ groep("v69 polishronde");
     Object.assign(api.S,{d,i0,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24});
     api.etmaal(i0,24);
     check("4. de grafiek en de instructietekst blijven aanwezig",
-      bak.chart.innerHTML.length>0 && /vinger/i.test(bak.charthint.textContent));
+      bak.chart.innerHTML.length>0 && bak.charthint.textContent==="Houd de grafiek vast voor details.");
     check("7. de sterren blijven aanwezig",
       (bak.chart.innerHTML.match(/<circle[^>]*opacity="0\.(85|55)"/g)||[]).length>0);
     check("8. de rode Nu-lijn blijft aanwezig",
-      /fill="\$\{CARMINE\}"[^>]*>nu<\/text>/.test(bronP));
+      /const nuLabel=nuTemp===null\?"nu":"nu "\+Math\.round\(nuTemp\)\+"°"/.test(bronP) && /fill="\$\{CARMINE\}"/.test(bronP));
   }
 
   // 14.4 tooltip
