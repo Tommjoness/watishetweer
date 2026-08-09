@@ -1,0 +1,52 @@
+name: Tijdelijke UX-diffcleanup
+on:
+  push:
+    branches:
+      - agent/mobile-ux-final-polish
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/mobile-ux-final-polish
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Werk alleen onderhoudstekst en testomschrijving bij
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text()
+          old='''  /* Op het bureaublad staat de hoeveelheid al in de kolom Verwachting, dus daar\n     zou dit dubbelop zijn. Op de telefoon valt die kolom weg en is dit de enige\n     plek waar je ziet hoeveel er valt, niet alleen hoe waarschijnlijk het is. */'''
+          new='''  /* De kanskolom blijft op mobiel bewust compact. De extra detailregel blijft\n     alleen als semantische fallback in de DOM; de uitgebreide verwachting staat\n     elders in de rij of in de dagdetails en wordt hier niet dubbel getoond. */'''
+          if old not in s: raise SystemExit('oude kanskolomcomment niet gevonden')
+          s=s.replace(old,new,1)
+          s=s.replace('if(actueleGrafiekTemp!==null) Tgeldig.push(actueleGrafiekTemp);   // niets te tekenen zonder cijfers','if(actueleGrafiekTemp!==null) Tgeldig.push(actueleGrafiekTemp);',1)
+          p.write_text(s)
+
+          p=Path('run.js'); s=p.read_text()
+          old='''  check("het modelvenster staat er nog",/Beste periode van|Geen goed zichtvenster/.test(t4));'''
+          new='''  check("nachtzicht toont een beste periode of expliciete reden",\n    /Beste periode \\d\\d:\\d\\d–\\d\\d:\\d\\d/.test(t4)||/Geen goed zichtvenster/.test(t4));'''
+          if old not in s: raise SystemExit('oude nachtzichtcontract niet gevonden')
+          s=s.replace(old,new,1)
+          s=s.replace('check("de hoeveelheid verschijnt alleen op de telefoon",','check("de mobiele kanskolom blijft compact zonder tweede hoeveelheidregel",',1)
+          s=s.replace('check("de reden \'"+verw+"\' staat er nog achter de dubbele punt",','check("de reden \'"+verw+"\' wordt natuurlijk benoemd",',1)
+          s=s.replace('/* 10o. het nachtzicht toont uitsluitend wat de opdracht toestaat: score, bewolking,\n   Beste periodetijdvak, maan op, maan onder en maanfase.', '/* 10o. het nachtzicht toont uitsluitend wat de opdracht toestaat: score, bewolking,\n   beste zichtperiode, maan op, maan onder en maanfase.',1)
+          p.write_text(s)
+          PY
+      - name: Verifieer volledige niet-browsersuite
+        run: npm test
+      - name: Leg onderhoudsopschoning vast
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html run.js
+          git diff --cached --quiet && { echo "Geen wijzigingen"; exit 1; }
+          git commit -m "Scherp UX-regressiecontracten en comments aan"
+          git push origin HEAD:agent/mobile-ux-final-polish
