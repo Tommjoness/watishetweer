@@ -3,7 +3,7 @@ const fs=require("fs"),path=require("path");
 const p=path.join(__dirname,"audit-regressions.test.js");
 let s=fs.readFileSync(p,"utf8");
 const oud='ok(gebouwd.includes(\'zonDag+" · "\'),"zonmomenten noemen in de 24-uursweergave expliciet de dag");';
-const nieuw='ok(gebouwd.includes(\'class="zondag"\')&&gebouwd.includes(\'Zonsopkomst \')&&gebouwd.includes(\'Zonsondergang \'),"zonmomenten tonen de dag als eigen hiërarchische kop boven op- en ondergang");';
+const nieuw='ok(gebouwd.includes("#suntimes .zondag")&&gebouwd.includes("Zonsopkomst ")&&gebouwd.includes("Zonsondergang "),"zonmomenten tonen de dag als eigen hiërarchische kop boven op- en ondergang");';
 if(!s.includes(oud))throw new Error("oude zonhiërarchie-regressie niet gevonden");
 s=s.replace(oud,nieuw);
 fs.writeFileSync(p,s);
