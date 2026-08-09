@@ -5,7 +5,8 @@ fs.rmSync(OUT,{recursive:true,force:true});
 const bestanden=[
   "index.html","interpretatie-engine.js","build-weather.js","api/plaatsnaam.mjs","api/waarschuwingen.mjs",
   "lib/waarschuwingen.cjs","browser-production.test.js","senior-7-regressions.test.js","browser-playwright.test.js",
-  "package.json",".github/workflows/quality.yml"
+  "interpretatie-engine.test.js","built-production-regressions.test.js","run.js","package.json",
+  ".github/workflows/quality.yml"
 ];
 for(const p of bestanden){
   const bron=path.join(ROOT,p);if(!fs.existsSync(bron))throw new Error("Ontbreekt na migratie: "+p);
