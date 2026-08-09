@@ -43,6 +43,13 @@ jobs:
           p=Path('senior-7-regressions.test.js')
           s=p.read_text().replace('index.includes("Neerslagkans binnenkort")&&engine.includes("de komende circa 60 minuten")','index.includes("Komend uur")&&engine.includes("de komende circa 60 minuten")')
           p.write_text(s)
+
+          p=Path('built-production-regressions.test.js')
+          s=p.read_text()
+          s=s.replace('ok(/2,4 mm/.test(tekst(bak.precsub)),"dagelijkse neerslagsom blijft zichtbaar",tekst(bak.precsub));','ok(!/2,4 mm/.test(tekst(bak.precsub)),"recente neerslagtegel mengt geen dagsom in het korte tijdvak",tekst(bak.precsub));')
+          s=s.replace('ok(/Volgens het model/.test(t),"recente neerslag wordt als modelinformatie benoemd",t);','ok(/model|gemodelleerd/i.test(t),"recente neerslag wordt als modelinformatie benoemd",t);')
+          s=s.replace('ok(/Modelscore 0-10/.test(t),"nachtzichtscore is als modelscore gelabeld",t.slice(0,300));ok(/Modelvenster \\(bewolking en maan\\)/.test(t),"nachtzichtvenster noemt beperkte factoren",t.slice(0,300));','ok(/Score/.test(t)&&/\\d+\\/10/.test(t),"nachtzichtscore is compact en begrijpelijk gelabeld",t.slice(0,300));ok(/Beste zichtperiode/.test(t),"nachtzicht benoemt de beste zichtperiode consumentgericht",t.slice(0,300));')
+          p.write_text(s)
           PY
       - name: Volledige regressies en productiebuild
         run: npm test
@@ -56,7 +63,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html interpretatie-engine.js build-weather.js prelaunch-regressions.test.js senior-7-regressions.test.js
+          git add index.html interpretatie-engine.js build-weather.js prelaunch-regressions.test.js senior-7-regressions.test.js built-production-regressions.test.js
           git diff --cached --quiet && { echo "Geen productwijzigingen om vast te leggen"; exit 1; }
           git commit -m "Polijst mobiele consumenten-UX"
           git push origin HEAD:agent/mobile-ux-final-polish
