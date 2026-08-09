@@ -20,6 +20,15 @@ jobs:
       - name: Pas eenmalige pre-launch hardening toe
         run: |
           if [ -f scripts/prelaunch-hardening-12.js ]; then
+            python - <<'PY'
+          from pathlib import Path
+          p=Path("scripts/prelaunch-hardening-12.js")
+          s=p.read_text()
+          oud='`      tot: i.ends || i.expires || null,`);'
+          nieuw='`      tot: i.ends || i.expires || null,`,2);'
+          assert s.count(oud)==1, f"CAP migratiefragment verwacht 1x, vond {s.count(oud)}"
+          p.write_text(s.replace(oud,nieuw))
+          PY
             node scripts/prelaunch-hardening-12.js
             rm scripts/prelaunch-hardening-12.js
           fi
