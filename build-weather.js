@@ -4,12 +4,13 @@ const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
 const crypto=require("crypto");
+const {pasToe}=require("./productie-hardening-v2.js");
 
 const ROOT=__dirname;
 const OUT=path.join(ROOT,"public");
 const NIET_PUBLICEREN=new Set([
   ".git",".github","api","node_modules","public",
-  "build-weather.js","interpretatie-engine.js","interpretatie-engine.test.js",
+  "build-weather.js","productie-hardening.js","productie-hardening-v2.js","interpretatie-engine.js","interpretatie-engine.test.js",
   "run.js","run-built-matrix.js","kern.js","data.js","package.json","package-lock.json","vercel.json"
 ]);
 
@@ -38,7 +39,7 @@ for(const naam of fs.readdirSync(ROOT)){
 const indexPad=path.join(ROOT,"index.html");
 const enginePad=path.join(ROOT,"interpretatie-engine.js");
 let html=fs.readFileSync(indexPad,"utf8");
-let engine=fs.readFileSync(enginePad,"utf8");
+const engine=fs.readFileSync(enginePad,"utf8");
 
 function vervangEenmalig(zoek,vervang,label){
   const aantal=html.split(zoek).length-1;
@@ -54,9 +55,6 @@ if(html.includes("CENTRALE INTERPRETATIE-ENGINE")){
   throw new Error("Bron-index bevat de interpretatie-engine al; build zou dubbel invoegen.");
 }
 
-/* Verrijk uitsluitend de gegevens die de centrale interpretatie nodig heeft.
-   Iedere vervanging is strikt: een gewijzigde bronstructuur mag nooit ongemerkt
-   een half toegepaste interpretatielaag opleveren. */
 vervangEenmalig(
   '+"weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m"',
   '+"rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m"',
@@ -84,10 +82,6 @@ vervangEenmalig(
   "recente-neerslaglabel"
 );
 
-/* Uurwaarden voor neerslag en kans gelden voor het voorafgaande uur. Het punt
-   met tijd 19:00 is om 19:00 dus volledig verlopen en mag in een toekomstgrafiek
-   geen balk, percentage of tooltipwaarde meer opleveren. Temperatuur en andere
-   momentwaarden blijven wel staan; alleen de intervalwaarden worden leeggemaakt. */
 vervangEenmalig(
 `    const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[i]);
     const hoeveelheid=eindigGetal(h.precipitation&&h.precipitation[i]);
@@ -102,7 +96,6 @@ vervangEenmalig(
   "verlopen grafiekintervallen"
 );
 
-/* De tooltip noemt het volledige geldigheidsvak, niet alleen een los einduur. */
 vervangEenmalig(
   '+rij("neerslagkans",(heel(G.P&&G.P[i])?G.P[i]:"–")+"%",TEAL)',
   '+rij(heel(G.P&&G.P[i])&&G.P[i]>0?"kans "+weatherNowUurvak(G.TI[i]):"neerslag",heel(G.P&&G.P[i])&&G.P[i]>0?G.P[i]+"%":"geen neerslag verwacht",TEAL)',
@@ -122,27 +115,72 @@ function weatherNowUurvak(tijd){
   const begin=eind==null?null:api.minutenNaarLokaal(eind-60);
   return begin?begin.slice(11,16)+"–"+String(tijd).slice(11,16):"voorafgaand uur";
 }
+function weatherNowActueleLokaleTijd(){
+  const p=typeof plaatsTijdDelen==="function"?plaatsTijdDelen():null;
+  if(p&&[p.year,p.month,p.day,p.hour,p.minute].every(Number.isFinite)){
+    return p.year+"-"+String(p.month).padStart(2,"0")+"-"+String(p.day).padStart(2,"0")+"T"+String(p.hour).padStart(2,"0")+":"+String(p.minute).padStart(2,"0");
+  }
+  return S.d&&S.d.current&&S.d.current.time?String(S.d.current.time).slice(0,16):null;
+}
+function weatherNowMinutenNu(){
+  const api=globalThis.WeatherNowInterpretatie;
+  return api&&api.lokaalNaarMinuten(weatherNowActueleLokaleTijd());
+}
+function weatherNowUurWaardeOp(veld,doelMin){
+  const api=globalThis.WeatherNowInterpretatie,h=S.d&&S.d.hourly;
+  if(!api||!h||!Array.isArray(h.time)||!Array.isArray(h[veld])||!Number.isFinite(doelMin)) return null;
+  let links=null,rechts=null;
+  for(let i=0;i<h.time.length;i++){
+    const m=api.lokaalNaarMinuten(h.time[i]),v=eindigGetal(h[veld][i]);
+    if(m===null||v===null) continue;
+    if(m===doelMin) return v;
+    if(m<doelMin && (!links||m>links.m)) links={m,v};
+    if(m>doelMin && (!rechts||m<rechts.m)) rechts={m,v};
+  }
+  if(!links||!rechts||rechts.m-links.m>120) return null;
+  const f=(doelMin-links.m)/(rechts.m-links.m);
+  return links.v+(rechts.v-links.v)*f;
+}
 `;
 
 html=html.replace(startMarker,
   "/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */\n"+engine+intervalHelper
   +"\n/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */\n\n"+startMarker);
 
-/* Compileer ieder inline scriptblok. Dit voert niets uit, maar blokkeert een
-   deployment bij een syntaxisfout in de bestaande code of de invoeging. */
+html=pasToe(html);
+
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length) throw new Error("Geen inline scriptblok gevonden in de gebouwde index.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:inline-"+(i+1)}));
 
-if(!html.includes("WeatherNowInterpretatie")) throw new Error("Interpretatie-engine ontbreekt na build.");
-if(!html.includes("forecast_minutely_15=16")) throw new Error("Uitgebreide kwartierdata ontbreekt na build.");
-if(!html.includes("waarden links van ‘nu’ zijn voorbij")) throw new Error("Grafiekcontext ontbreekt na build.");
-if(!html.includes("intervalVerlopen")) throw new Error("Verlopen neerslagintervallen worden niet uit de grafiek gefilterd.");
-if(!html.includes("weatherNowUurvak")) throw new Error("Exact tooltip-tijdvak ontbreekt.");
+const vereist=[
+  ["WeatherNowInterpretatie","interpretatie-engine"],
+  ["forecast_minutely_15=16","uitgebreide kwartierdata"],
+  ["waarden links van ‘nu’ zijn voorbij","grafiekcontext"],
+  ["intervalVerlopen","verlopen neerslagintervallen"],
+  ["weatherNowUurvak","exact tooltip-tijdvak"],
+  ["weatherNowActueleLokaleTijd","werkelijke lokale minuut"],
+  ["plaatsTijdDelen","IANA plaatsklok"],
+  ["weatherNowZoneOffset","DST-veilige tijdconversie"],
+  ["const eind=Math.min(i+25,h.time.length);","volledig 24-uursvenster"],
+  ["const punten=S.dag==null&&n===24?25:n;","25 momentpunten voor 24 uur"],
+  ["hoeveelheid onzeker","onzekere neerslaghoeveelheid"],
+  ["daily.weather_code&&daily.weather_code[dagIndex]","zwaarste dagconditie"],
+  ["Volgens het model viel geen neerslag","modeltaal recente neerslag"],
+  ["117.000001","juiste Beaufortgrens"],
+  ["c.visibility!=null?c.visibility","actueel zicht"],
+  ["weatherNowUurWaardeOp(\"pressure_msl\"","exacte druktrend"],
+  ["gunstigste modelvenster","eerlijke nachtzichtclaim"],
+  ["const geldigeIdx=T.map","null-veilige extrema"],
+  ["zoekGeneratie","zoekracebeveiliging"],
+  ["aria-activedescendant","zoektoetsenbord"],
+  ["klokKalenderdag","middernachtrefresh"],
+  ["UV-gegevens voor vandaag niet beschikbaar","ontbrekende UV-data"]
+];
+for(const [zoek,label] of vereist) if(!html.includes(zoek)) throw new Error("Ontbreekt na build: "+label+".");
 if(!html.includes('"geen neerslag verwacht"')) throw new Error("Droge tooltip gebruikt nog een nulpercentage.");
 if(!html.includes('kort.droog')) throw new Error("Droge neerslagweergaven zijn niet centraal afgevangen.");
 if(!html.includes('maximumLabels=n<=24?kandidaten.length')) throw new Error("Etmaalgrafiek kan nog temperatuurmarkeringen wegkappen.");
-if(!html.includes("const eind=Math.min(i+24,h.time.length);")) throw new Error("Briefing gebruikt niet hetzelfde 24-uursvenster als de grafiek.");
 if(!html.includes("kandidaten=n<=24?kandidatenRuw")) throw new Error("Drie-uursmarkeringen worden binnen een etmaal nog gefilterd.");
 if(!html.includes("const MAXLAAG=M&&n<=24?4:3;")) throw new Error("Extra veilige labelhoogtes voor mobiel ontbreken.");
 if(!html.includes("#minibar{position:fixed")) throw new Error("Mobiele minibalk kan nog een scroll-layoutlus veroorzaken.");
@@ -160,15 +198,11 @@ if(!html.includes('zonDag+" · "')) throw new Error("Zonmomenten missen een expl
 
 fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 
-/* De cacheversie volgt de werkelijk gebouwde app. Een handmatig vast nummer kan
-   na een volgende wijziging gelijk blijven, waardoor cache-first assets oud
-   blijven. Dezelfde build levert steeds dezelfde hash; gewijzigde code levert
-   automatisch een nieuwe cache op. */
 const cacheVersie="weerbriefing-"+crypto.createHash("sha256").update(html).digest("hex").slice(0,12);
 const swPad=path.join(OUT,"sw.js");
 if(fs.existsSync(swPad)){
   let sw=fs.readFileSync(swPad,"utf8");
-  sw=sw.replace(/weerbriefing-v\d+/g,cacheVersie);
+  sw=sw.replace(/weerbriefing-(?:v\d+|[0-9a-f]{12})/g,cacheVersie);
   if(!sw.includes(cacheVersie)) throw new Error("Dynamische serviceworker-cacheversie is niet toegepast.");
   fs.writeFileSync(swPad,sw,"utf8");
 }
@@ -177,4 +211,4 @@ for(const naam of fs.readdirSync(OUT)){
   if(isInternBestand(naam)) throw new Error("Intern bestand is ten onrechte publiek gebouwd: "+naam);
 }
 
-console.log("WeatherNow-build geslaagd: productiecode gevalideerd, interne tests niet gepubliceerd en cacheversie "+cacheVersie+" toegepast.");
+console.log("WeatherNow-build geslaagd: één productiecompiler, senior-hardening toegepast en cacheversie "+cacheVersie+" gevalideerd.");
