@@ -19,8 +19,9 @@ jobs:
           node scripts/apply-senior-fix-7.js
           node scripts/patch-senior-runtime.js
           node scripts/patch-senior-test-spec.js
+          node scripts/patch-browser-harness.js
           node scripts/export-senior-fix-artifacts.js
-      - name: Non-browser regression suite
+      - name: Non-browser regression suite and browser syntax
         run: node scripts/run-migration-verification.js
       - name: Install real browsers
         run: |
