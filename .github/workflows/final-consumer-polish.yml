@@ -1,20 +1,18 @@
 name: Final consumer polish migration
 on:
   push:
-    branches: [agent/final-consumer-polish]
-  pull_request:
-    branches: [main]
+    branches: [agent/final-consumer-polish-source]
 permissions:
   contents: write
 jobs:
   migrate-test-commit:
-    if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[consumer-polish-done]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[consumer-polish-done]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: agent/final-consumer-polish
+          ref: agent/final-consumer-polish-source
           fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
@@ -44,11 +42,11 @@ jobs:
         run: node browser-playwright.test.js
       - name: Dedicated final consumer polish gate
         run: node browser-consumer-polish.test.js
-      - name: Commit exact tested product files
+      - name: Commit exact tested product files to frozen output
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html interpretatie-engine.js prelaunch-regressions.test.js audit-regressions.test.js built-production-regressions.test.js global-scenario-matrix-v2.test.js run.js
           git diff --cached --exit-code && exit 1 || true
           git commit -m "Polijst consumenteninterface definitief [consumer-polish-done]"
-          git push origin HEAD:agent/final-consumer-polish
+          git push origin HEAD:agent/final-consumer-polish-tested
