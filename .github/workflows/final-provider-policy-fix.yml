@@ -22,6 +22,8 @@ jobs:
           package-manager-cache: false
       - name: Pas provider-policy fix toe
         run: node scripts/apply-final-provider-policy.js
+      - name: Hard MeteoAlarm-feed uit
+        run: node scripts/apply-final-warning-feed.js
       - name: Volledige regressiesuite
         run: npm test
       - name: Volledige productiebuild
@@ -41,5 +43,5 @@ jobs:
             echo "Geen productwijzigingen om vast te leggen."
             exit 0
           fi
-          git commit -m "Herstel providergebruik volgens beleid"
+          git commit -m "Herstel providers en waarschuwingenfeeds"
           git push origin HEAD:agent/final-audit-provider-policy
