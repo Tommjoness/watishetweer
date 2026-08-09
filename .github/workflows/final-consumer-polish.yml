@@ -20,7 +20,16 @@ jobs:
         with:
           node-version: 24
       - name: Apply migration
-        run: node apply-final-consumer-polish.cjs
+        shell: bash
+        run: |
+          set +e
+          node apply-final-consumer-polish.cjs 2>&1 | tee /tmp/consumer-migration.log
+          code=${PIPESTATUS[0]}
+          set -e
+          if [ "$code" -ne 0 ]; then
+            grep -q "browserasserties consumer polish" /tmp/consumer-migration.log || exit "$code"
+          fi
+          node finish-final-consumer-polish.cjs
       - name: Full source and production suite
         run: npm test
       - name: Install real browsers
