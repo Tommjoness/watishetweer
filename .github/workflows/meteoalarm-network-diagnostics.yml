@@ -1,11 +1,9 @@
 name: MeteoAlarm network diagnostics
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/meteoalarm-network-diagnostics
-    paths:
-      - .github/workflows/meteoalarm-network-diagnostics.yml
+      - main
 
 permissions:
   contents: write
