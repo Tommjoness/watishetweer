@@ -1,7 +1,7 @@
 {
-  "name": "Weerbriefing",
+  "name": "Wat is het weer?",
   "short_name": "Weer",
-  "description": "Weersverwachting met etmaalbalk, kwartierneerslag, spreidingsband, luchtkwaliteit en nachtzicht.",
+  "description": "Actuele weersverwachting met neerslag, weekverwachting, luchtkwaliteit en nachtzicht.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

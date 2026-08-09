@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Weerbriefing</title>
-<meta name="description" content="Weersverwachting met kwartierneerslag, spreidingsband, luchtkwaliteit en nachtzicht.">
+<title>Wat is het weer?</title>
+<meta name="description" content="Actuele weersverwachting met neerslag, weekverwachting, luchtkwaliteit en nachtzicht.">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://geocoding-api.open-meteo.com https://api.bigdatacloud.net; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#F4F5F3">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Weerbriefing">
+<meta name="apple-mobile-web-app-title" content="Wat is het weer?">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
@@ -160,6 +160,13 @@
   .chip .x:hover,.chip .x:focus-visible{color:var(--accent-active)}
   .chip.add{color:var(--ink-45);border-style:dashed}
   .chip.add:hover{border-style:solid}
+  /* Bewaarde plaats en verwijderen zijn twee echte knoppen. Zo is de × ook
+     via toetsenbord en screenreader zelfstandig bereikbaar, zonder geneste
+     interactieve rollen. */
+  .chipplaats,.chip .x{background:transparent;border:0;margin:0;padding:0;font:inherit;letter-spacing:normal;text-transform:none}
+  .chipplaats{color:inherit;cursor:pointer;min-width:0;text-align:left}
+  .chip .x{cursor:pointer;color:var(--ink-25);font-size:15px;line-height:1;padding:0 3px}
+  .chip.add{text-transform:none;letter-spacing:normal;font-weight:400}
 
   /* lede */
   .brief{font-size:20px;line-height:1.5;color:var(--ink);max-width:66ch;margin:var(--s3) 0 0;
@@ -509,7 +516,7 @@
 
   <div class="mast">
     <div>
-      <h1>Weerbriefing</h1>
+      <h1>Wat is het weer?</h1>
       <div id="place">&nbsp;<span id="plaatstijd"></span></div>
     </div>
     <div class="mastright">
@@ -578,6 +585,7 @@
     </div>
 
     <h2><span>Neerslag komende twee uur</span></h2>
+    <p class="hint" id="nchint">Modelverwachting per kwartier. De bronresolutie verschilt per regio; buiten gebieden met echte 15-minutenmodeldata kan Open-Meteo uurdata interpoleren.</p>
     <div id="nctext"></div>
     <svg id="nc" viewBox="0 0 900 60" width="100%" role="img" aria-label="Neerslag per kwartier"></svg>
 
@@ -599,8 +607,10 @@
     <div class="stats" id="aq"></div>
 
     <footer>
-      <span class="bron"><b>Weer</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo Best Match</a> · <b>Luchtkwaliteit</b> CAMS</span>
+      <span class="bron"><b>Weer en plaatszoeken</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> · <b>Luchtkwaliteit en pollen</b> Open-Meteo / CAMS</span>
+      <span class="bron"><b>Waarschuwingen</b> <a href="https://meteoalarm.org" target="_blank" rel="noopener">MeteoAlarm</a> / <a href="https://www.weather.gov" target="_blank" rel="noopener">National Weather Service</a> · <b>Plaatsnamen</b> BigDataCloud / <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap-bijdragers</a> (fallback)</span>
       <span class="mono bron" id="coords"></span>
+      <span class="bron"><a href="privacy.html">Privacy &amp; gegevens</a> · Geen account, advertentietracking of analytics.</span>
     </footer>
   </div>
 </div>
@@ -904,6 +914,9 @@ const ls={
   get(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f;}catch(e){return f;}},
   set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 };
+// Lokale opslag en deel-URL's hebben geen GPS-precisie nodig. Drie decimalen
+// is ongeveer honderd meter en beperkt onnodige locatieprecisie in blijvende data.
+const coordOpslag=v=>Number(Number(v).toFixed(3));
 async function j(url,opt){
   opt=opt||{};
   const controller=new AbortController(),extern=opt.signal||null;
@@ -983,8 +996,8 @@ async function load(lat,lon,label,stil,opslaan){
     if(mijnBeurt!==laadTeller) return;   // er is inmiddels een nieuwere plaats gekozen
     S.d=vol;S.air=null;
     S.op=Date.now(); if(!stil) S.dag=null;
-    if(opslaan) ls.set(KEY_P,{lat:S.lat,lon:S.lon,label:label});
-    ls.set(KEY_D,{d:S.d,air:null,label:label,lat:S.lat,lon:S.lon,op:S.op});
+    if(opslaan) ls.set(KEY_P,{lat:coordOpslag(S.lat),lon:coordOpslag(S.lon),label:label});
+    ls.set(KEY_D,{d:S.d,air:null,label:label,lat:coordOpslag(S.lat),lon:coordOpslag(S.lon),op:S.op});
     tekenAlles();
     st.style.display="none";
     document.getElementById("app").style.display="block";
@@ -992,7 +1005,7 @@ async function load(lat,lon,label,stil,opslaan){
     luchtBelofte.then(result=>{
       if(mijnBeurt!==laadTeller||S.d!==vol) return;
       S.air=result.ok?result.value:null;
-      ls.set(KEY_D,{d:S.d,air:S.air,label:S.label,lat:S.lat,lon:S.lon,op:S.op});
+      ls.set(KEY_D,{d:S.d,air:S.air,label:S.label,lat:coordOpslag(S.lat),lon:coordOpslag(S.lon),op:S.op});
       lucht();
     });
   }catch(err){
@@ -1023,7 +1036,7 @@ function tekenAlles(){
      Ook in Nederland, want dan is meteen duidelijk dat het de tijd van de plaats is. */
   document.getElementById("place").innerHTML=
     esc(S.label)+'<span id="plaatstijd">'+plaatsKlok()+'</span>';
-  document.title=S.label+" · Weerbriefing";
+  document.title=S.label+" · Wat is het weer?";
   const huidigeTemperatuur=rondGetal(c.temperature_2m);
   const gevoelstemperatuur=rondGetal(c.apparent_temperature);
   document.getElementById("t").textContent=huidigeTemperatuur===null?"–":huidigeTemperatuur;
@@ -2366,6 +2379,22 @@ function logBij(){
 }
 
 /* ---------- officiele waarschuwingen ---------- */
+function waarschuwingGeldigTot(iso){
+  const ms=Date.parse(String(iso||""));
+  if(!Number.isFinite(ms)) return null;
+  const tz=S.d&&S.d.timezone;
+  const p=tz?weatherNowZoneDelen(ms,tz):null;
+  if(!p) return null;
+  const datum=p.year+"-"+String(p.month).padStart(2,"0")+"-"+String(p.day).padStart(2,"0");
+  const tijd=String(p.hour).padStart(2,"0")+":"+String(p.minute).padStart(2,"0");
+  const vandaag=plaatsVandaag(),nu=plaatsTijdDelen();
+  const morgen=new Date(Date.UTC(nu.year,nu.month-1,nu.day)+86400000).toISOString().slice(0,10);
+  if(datum===vandaag) return "vandaag "+tijd;
+  if(datum===morgen) return "morgen "+tijd;
+  try{
+    return new Intl.DateTimeFormat("nl-NL",{timeZone:tz,weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(ms));
+  }catch(e){ return datum+" "+tijd; }
+}
 async function waarschuwingen(){
   const mijnBeurt=++waarschuwingTeller;
   if(actieveWaarschuwingController) actieveWaarschuwingController.abort();
@@ -2396,11 +2425,13 @@ async function waarschuwingen(){
     const lijst=[...uniek.values()].sort((a,b)=>(rang[b.niveau]||0)-(rang[a.niveau]||0)
       ||((Date.parse(a.van)||Infinity)-(Date.parse(b.van)||Infinity)));
     S.actieveWaarschuwingen=lijst;
-    el.innerHTML=lijst.slice(0,3).map(w=>
-      `<div class="waarsch"><h3>${esc(w.titel)}</h3><p>${esc(w.tekst||"")}`
-      +(w.tot?" Geldig tot "+esc(w.tot)+".":"")
-      +(w.landelijk?" Geldt voor een groter gebied, niet per se voor deze plaats.":"")
-      +`</p></div>`).join("");
+    el.innerHTML=lijst.slice(0,3).map(w=>{
+      const geldig=w.tot?waarschuwingGeldigTot(w.tot):null;
+      return `<div class="waarsch"><h3>${esc(w.titel)}</h3><p>${esc(w.tekst||"")}`
+        +(geldig?" Geldig tot "+esc(geldig)+".":"")
+        +(w.landelijk?" Geldt voor een groter gebied, niet per se voor deze plaats.":"")
+        +`</p></div>`;
+    }).join("");
   }catch(e){
     if(mijnBeurt!==waarschuwingTeller||S.lat!==lat||S.lon!==lon) return;
     S.actieveWaarschuwingen=[];
@@ -2425,8 +2456,8 @@ function maanUnicode(fase){
 function chips(){
   const lijst=ls.get(KEY_L,[]);
   const zelfde=p=>Math.abs(p.lat-S.lat)<0.02&&Math.abs(p.lon-S.lon)<0.02;
-  let rij=lijst.map((p,i)=>`<span class="chip${zelfde(p)?" on":""}" data-i="${i}" role="button" tabindex="0" title="Toon het weer voor ${esc(p.label)}">${esc(p.label)}<span class="x" data-x="${i}" title="Verwijderen">×</span></span>`).join("");
-  if(!lijst.some(zelfde)&&S.lat!=null) rij+=`<span class="chip add" id="chipadd" role="button" tabindex="0" title="Voeg deze plaats toe aan je lijst">+ ${esc(S.label)} bewaren</span>`;
+  let rij=lijst.map((p,i)=>`<span class="chip${zelfde(p)?" on":""}"><button type="button" class="chipplaats" data-i="${i}" title="Toon het weer voor ${esc(p.label)}">${esc(p.label)}</button><button type="button" class="x" data-x="${i}" title="Verwijderen" aria-label="Verwijder ${esc(p.label)} uit bewaarde plaatsen">×</button></span>`).join("");
+  if(!lijst.some(zelfde)&&S.lat!=null) rij+=`<button type="button" class="chip add" id="chipadd" title="Voeg deze plaats toe aan je lijst">+ ${esc(S.label)} bewaren</button>`;
   const c=document.getElementById("chips");
   /* v67: kop en chiprij zijn twee losse elementen in plaats van één platte
      rij spans, zodat de kop nooit meer op dezelfde regel als een chip kan
@@ -2435,14 +2466,11 @@ function chips(){
      zonder de bewaaractie blijft #chips helemaal leeg. */
   c.innerHTML=(lijst.length?'<span class="chipskop">Bewaarde plaatsen</span>':"")
     +(rij?'<div class="chiprij">'+rij+'</div>':"");
-  c.querySelectorAll(".chip[data-i]").forEach(el=>{
-    const ga=e=>{
-      if(e.target.dataset&&e.target.dataset.x!=null) return;
+  c.querySelectorAll(".chipplaats[data-i]").forEach(el=>{
+    el.addEventListener("click",()=>{
       const p=ls.get(KEY_L,[])[+el.dataset.i];
       document.getElementById("q").value=p.label;load(p.lat,p.lon,p.label);
-    };
-    el.addEventListener("click",ga);
-    el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();ga(e);}});
+    });
   });
   c.querySelectorAll(".x").forEach(el=>el.addEventListener("click",e=>{
     e.stopPropagation();const l=ls.get(KEY_L,[]);l.splice(+el.dataset.x,1);ls.set(KEY_L,l);chips();
@@ -2451,10 +2479,9 @@ function chips(){
   if(add){
     const bewaar=()=>{
       const l=ls.get(KEY_L,[]);if(l.length>=8)l.shift();
-      l.push({lat:S.lat,lon:S.lon,label:S.label});ls.set(KEY_L,l);chips();
+      l.push({lat:coordOpslag(S.lat),lon:coordOpslag(S.lon),label:S.label});ls.set(KEY_L,l);chips();
     };
     add.addEventListener("click",bewaar);
-    add.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();bewaar();}});
   }
 }
 
@@ -2532,7 +2559,7 @@ document.addEventListener("visibilitychange",()=>{
 function urlBij(){
   try{
     const u=new URL(location.href);
-    u.searchParams.set("lat",S.lat.toFixed(4));u.searchParams.set("lon",S.lon.toFixed(4));
+    u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));
     u.searchParams.set("plaats",S.label);
     history.replaceState(null,"",u);
   }catch(e){}
@@ -2675,7 +2702,7 @@ async function locatieNu(modus){
         // vrijwel dezelfde plek: geen nieuwe volledige laadactie, alleen de
         // nauwkeurigere coördinaten bijwerken en opslaan
         S.lat=la;S.lon=lo;
-        ls.set(KEY_P,{lat:S.lat,lon:S.lon,label:S.label});
+        ls.set(KEY_P,{lat:coordOpslag(S.lat),lon:coordOpslag(S.lon),label:S.label});
         klaar(true);
         return;
       }
@@ -2774,26 +2801,20 @@ function weatherNowUurWaardeOp(veld,doelMin){
   // B. hier=1 in de url: dezelfde procedure als de knop, direct bij het laden
   if(p.get("hier")){ locatieNu("hier"); return; }
 
-  // C. terugkerende gebruiker: de opgeslagen plaats laadt meteen, en
-  //    tegelijkertijd loopt de actuele locatie op de achtergrond mee
+  // C. terugkerende gebruiker: laad de laatst gekozen plaats direct. De browser
+  //    krijgt geen nieuwe locatievraag totdat de gebruiker zelf "Mijn locatie" kiest.
   const v=ls.get(KEY_P,null);
   if(v&&v.lat!=null){
     q.value=v.label;
     load(v.lat,v.lon,v.label);
-    locatieNu("auto-terugkerend");
     return;
   }
 
-  // D. eerste bezoek zonder enige bekende locatie: automatisch gps, nooit
-  //    Almere of een andere gegokte plaats als daar niets uit komt
+  // D. eerste bezoek: geen automatische gps-prompt. De gebruiker kiest zelf
+  //    tussen zoeken en "Mijn locatie"; dat is duidelijker en privacyvriendelijker.
   const st0=document.getElementById("state");
-  st0.style.display="block";st0.className="msg";st0.textContent="Locatie bepalen.";
-  locatieNu("auto-leeg").then(ok=>{
-    if(!ok){
-      st0.style.display="block";st0.className="msg err";
-      st0.textContent="Kon je locatie niet bepalen. Zoek hierboven een plaats, of probeer straks opnieuw op \u201cMijn locatie\u201d.";
-    }
-  });
+  st0.style.display="block";st0.className="msg";
+  st0.textContent="Zoek hierboven een plaats of kies ‘Mijn locatie’.";
 })();
 
 // bij draaien of vergroten opnieuw tekenen, want de grafiek heeft een eigen maat per schermbreedte

@@ -13,15 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
+          package-manager-cache: false
       - name: Volledige niet-browser suite
         run: npm run build
       - name: Installeer Chromium en WebKit
         run: |
-          npm install --no-save playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@latest
           npx playwright install --with-deps chromium webkit
       - name: Echte browsers — mobiel en desktop
         run: node browser-playwright.test.js

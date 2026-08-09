@@ -1,4 +1,4 @@
-const CACHE = "weerbriefing-v72";
+const CACHE = "watishetweer-v1";
 const SHELL = [
   "./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png",
   "./bodoni-moda-latin-400-normal.woff2",

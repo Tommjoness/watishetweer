@@ -39,10 +39,22 @@ const vereist=[
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);
 fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
-const versie="weerbriefing-"+crypto.createHash("sha256").update(html).digest("hex").slice(0,12);
+const CACHE_BRONNEN=[
+  "index.html","manifest.json","icon-192.png","icon-512.png","icon-maskable-512.png",
+  "bodoni-moda-latin-400-normal.woff2","bodoni-moda-latin-500-normal.woff2",
+  "instrument-sans-latin-400-normal.woff2","instrument-sans-latin-500-normal.woff2",
+  "instrument-sans-latin-600-normal.woff2","dm-mono-latin-400-normal.woff2","dm-mono-latin-500-normal.woff2"
+];
+const cacheHash=crypto.createHash("sha256");
+for(const naam of CACHE_BRONNEN){
+  const p=path.join(OUT,naam);
+  if(!fs.existsSync(p)) throw new Error("App-shellbestand ontbreekt voor cachehash: "+naam);
+  cacheHash.update(naam+"\0");cacheHash.update(fs.readFileSync(p));cacheHash.update("\0");
+}
+const versie="watishetweer-"+cacheHash.digest("hex").slice(0,12);
 const swp=path.join(OUT,"sw.js");
 if(fs.existsSync(swp)){
-  let sw=fs.readFileSync(swp,"utf8").replace(/weerbriefing-(?:v\d+|[0-9a-f]{12})/g,versie);
+  let sw=fs.readFileSync(swp,"utf8").replace(/(?:weerbriefing|watishetweer)-(?:v\d+|[0-9a-f]{12})/g,versie);
   if(!sw.includes(versie))throw new Error("Serviceworker-cacheversie niet toegepast.");
   fs.writeFileSync(swp,sw,"utf8");
 }
