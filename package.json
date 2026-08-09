@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "test": "node interpretatie-engine.test.js && node build-weather.js && node audit-regressions.test.js && node run-built-regressions.test.js && node run-built-matrix.js && node run-api-source-compat.test.js && node browser-production.test.js",
-    "build": "node interpretatie-engine.test.js && node build-weather.js && node audit-regressions.test.js && node run-built-regressions.test.js && node run-built-matrix.js && node run-api-source-compat.test.js"
+    "build": "node scripts/apply-senior-fix-7.js && node scripts/export-senior-fix-artifacts.js && npm test"
   },
   "license": "MIT"
 }
