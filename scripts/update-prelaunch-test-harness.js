@@ -19,5 +19,8 @@ vervang(
 vervang(
 `    const chip0=bak.chips.querySelector('.chip[data-i="0"]');\n    chip0.dispatchEvent({type:"click",target:chip0});`,
 `    const chip0=bak.chips.querySelector('.chipplaats[data-i="0"]');\n    chip0.dispatchEvent({type:"click",target:chip0});`);
+vervang(
+`  // bestaande keyboardbediening\n  {\n    const {api,bak}=laadKern(390);\n    api.ls.set(KL,[{lat:52.35,lon:5.26,label:"Almere"}]);\n    Object.assign(api.S,{lat:99,lon:99,label:"Elders"});\n    api.chips();\n    const chip0=bak.chips.querySelector('.chip[data-i="0"]');\n    let geblokkeerd=false;\n    chip0.dispatchEvent({type:"keydown",key:"Enter",target:chip0,preventDefault(){geblokkeerd=true;}});\n    check("bestaande keyboardbediening (Enter) blijft behouden",geblokkeerd&&api.S.lat===52.35);\n  }`,
+`  // keyboardbediening is nu native browsergedrag: een echte button activeert met\n  // Enter/Spatie zonder een eigen keydown-handler. De kliksemantiek is hierboven\n  // functioneel getoetst; hier bewaken we de toegankelijke elementsemantiek.\n  {\n    const {api,bak}=laadKern(390);\n    api.ls.set(KL,[{lat:52.35,lon:5.26,label:"Almere"}]);\n    Object.assign(api.S,{lat:99,lon:99,label:"Elders"});\n    api.chips();\n    const chip0=bak.chips.querySelector('.chipplaats[data-i="0"]');\n    const x0=bak.chips.querySelector('.x[data-x="0"]');\n    check("keyboardbediening gebruikt native knopsemantiek",\n      !!chip0&&chip0.tagName==="BUTTON"&&!!x0&&x0.tagName==="BUTTON");\n  }`);
 fs.writeFileSync(p,s,"utf8");
 console.log("Compatibiliteitstest voor bewaarde plaatsen bijgewerkt naar native knoppen.");
