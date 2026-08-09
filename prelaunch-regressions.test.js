@@ -2,7 +2,10 @@
 const assert=require("assert"),fs=require("fs"),path=require("path"),cp=require("child_process");
 const R=__dirname,lees=p=>fs.readFileSync(path.join(R,p),"utf8");let n=0;
 const ok=(c,m)=>{assert.ok(c,m);n++;console.log("OK  "+m);};
-const index=lees("index.html"),waars=lees("lib/waarschuwingen.cjs"),plaats=lees("lib/plaatsnaam.cjs"),build=lees("build-weather.js"),workflow=lees(".github/workflows/senior-fix-verification.yml");
+const index=lees("index.html"),waars=lees("lib/waarschuwingen.cjs"),plaats=lees("lib/plaatsnaam.cjs"),build=lees("build-weather.js");
+const workflowDir=path.join(R,".github","workflows");
+const workflowBestanden=fs.readdirSync(workflowDir).filter(f=>/\.ya?ml$/i.test(f));
+const workflows=workflowBestanden.map(f=>lees(path.join(".github","workflows",f))).join("\n");
 const manifest=JSON.parse(lees("manifest.json"));
 ok(index.includes("Wat is het weer?")&&manifest.name==="Wat is het weer?","publieke merknaam is consequent Nederlands");
 ok(index.includes("privacy.html")&&fs.existsSync(path.join(R,"privacy.html")),"privacy-informatie is direct bereikbaar");
@@ -17,7 +20,7 @@ ok(plaats.indexOf("[viaBigDataCloud, viaNominatim]")>=0,"Nominatim is alleen fal
 ok(index.includes("© OpenStreetMap-bijdragers")&&index.includes("MeteoAlarm")&&index.includes("National Weather Service"),"relevante databronnen zijn zichtbaar geattribueerd");
 ok(index.includes('type="button" class="x"')&&index.includes('aria-label="Verwijder'),"verwijderen van bewaarde plaats is keyboard- en screenreaderbereikbaar");
 ok(build.includes("CACHE_BRONNEN")&&build.includes('"manifest.json"')&&build.includes('"icon-192.png"')&&build.includes('instrument-sans-latin-600-normal.woff2'),"cachehash omvat de volledige app-shell");
-ok(workflow.includes("actions/checkout@v6")&&workflow.includes("actions/setup-node@v6")&&workflow.includes("playwright@latest"),"CI gebruikt actuele Node-24 Actions en actuele Playwright");
+ok(!/actions\/(?:checkout|setup-node)@v[1-5]\b/.test(workflows)&&workflows.includes("actions/checkout@v6")&&workflows.includes("actions/setup-node@v6")&&workflows.includes("node-version: 24")&&workflows.includes("playwright@latest"),"alle vaste CI-workflows gebruiken actuele Node-24 Actions; browserverificatie gebruikt actuele Playwright");
 function nepRes(){return{statusCode:200,headers:{},body:null,setHeader(k,v){this.headers[String(k).toLowerCase()]=v;},status(c){this.statusCode=c;return this;},json(b){this.body=b;return this;}};}
 async function roep(moduleNaam,query,fetchImpl){const oud=global.fetch,p=require.resolve(moduleNaam);delete require.cache[p];global.fetch=fetchImpl;try{const h=require(p),r=nepRes();await h({query},r);return r;}finally{global.fetch=oud;delete require.cache[p];}}
 (async()=>{
