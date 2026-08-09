@@ -12,7 +12,7 @@ const correct=[
 'assert.ok(/^nu -?\\d+°$/.test(resultaat.nuTeksten[0]),naam+" "+modus+": nu-label bevat actuele temperatuur");',
 'assert.ok(resultaat.sunDag,naam+" "+modus+": daglabel boven zonsinformatie ontbreekt");',
 'assert.equal(resultaat.uvKop,"UV-piek vandaag",naam+" "+modus+": UV-hiërarchie");',
-'assert.equal(resultaat.hint,"Houd de grafiek vast voor details.",naam+" "+modus+": grafiekhint is te technisch);',
+'assert.equal(resultaat.hint,"Houd de grafiek vast voor details.",naam+" "+modus+": grafiekhint is te technisch");',
 ''
 ].join('');
 s=s.slice(0,a)+correct+s.slice(b);
