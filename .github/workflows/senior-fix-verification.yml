@@ -1,38 +1,112 @@
-name: Senior fix verification
+name: WeatherNow senior quality
 on:
   pull_request:
     branches:
       - main
 permissions:
-  contents: read
+  contents: write
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Build canonical migrated source
+      - name: Detecteer eenmalige migratie
+        id: migration
+        shell: bash
+        run: |
+          if [ -f scripts/apply-senior-fix-7.js ]; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Bouw canonieke bron uit bewezen productie
+        if: steps.migration.outputs.needed == 'true'
         run: |
           node scripts/apply-senior-fix-7.js
           node scripts/patch-senior-runtime.js
           node scripts/patch-senior-test-spec.js
           node scripts/patch-browser-harness.js
-          node scripts/export-senior-fix-artifacts.js
-      - name: Non-browser regression suite and browser syntax
+      - name: Niet-browser regressies
+        if: steps.migration.outputs.needed == 'true'
         run: node scripts/run-migration-verification.js
-      - name: Install real browsers
+      - name: Definitieve niet-browser regressies
+        if: steps.migration.outputs.needed != 'true'
+        run: npm run build
+      - name: Installeer echte browsers
         run: |
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium webkit
-      - name: Chromium and WebKit smoke
+      - name: Chromium en WebKit — mobiel en desktop
         run: node browser-playwright.test.js
-      - name: Upload canonical source
-        uses: actions/upload-artifact@v4
-        with:
-          name: canonical-weather-source
-          path: migration-artifacts/
-          if-no-files-found: error
-          retention-days: 3
+      - name: Leg exact geteste bron permanent vast
+        if: steps.migration.outputs.needed == 'true'
+        shell: bash
+        run: |
+          rm -rf migration-artifacts
+          rm -f package-lock.json
+          rm -f scripts/apply-senior-fix-7.js
+          rm -f scripts/patch-senior-runtime.js
+          rm -f scripts/patch-senior-test-spec.js
+          rm -f scripts/patch-browser-harness.js
+          rm -f scripts/export-senior-fix-artifacts.js
+          rm -f scripts/run-migration-verification.js
+          rmdir scripts 2>/dev/null || true
+          rm -f .github/workflows/apply-senior-fix-7.yml
+          cat > package.json <<'JSON'
+          {
+            "name": "weerbriefing",
+            "version": "1.2.0",
+            "description": "Weersverwachting met centrale interpretatielaag, etmaalbalk, kwartierneerslag, luchtkwaliteit, pollen en nachtzicht.",
+            "private": true,
+            "scripts": {
+              "test": "node interpretatie-engine.test.js && node build-weather.js && node audit-regressions.test.js && node senior-7-regressions.test.js && node run-built-regressions.test.js && node run-built-matrix.js && node run-api-source-compat.test.js && node browser-production.test.js",
+              "build": "node interpretatie-engine.test.js && node build-weather.js && node audit-regressions.test.js && node senior-7-regressions.test.js && node run-built-regressions.test.js && node run-built-matrix.js && node run-api-source-compat.test.js"
+            },
+            "license": "MIT"
+          }
+          JSON
+          cat > .github/workflows/senior-fix-verification.yml <<'YAML'
+          name: WeatherNow quality
+          on:
+            pull_request:
+              branches:
+                - main
+            push:
+              branches:
+                - main
+          permissions:
+            contents: read
+          jobs:
+            quality:
+              runs-on: ubuntu-latest
+              timeout-minutes: 25
+              steps:
+                - uses: actions/checkout@v4
+                - uses: actions/setup-node@v4
+                  with:
+                    node-version: 24
+                - name: Volledige niet-browser suite
+                  run: npm run build
+                - name: Installeer Chromium en WebKit
+                  run: |
+                    npm install --no-save playwright@1.55.0
+                    npx playwright install --with-deps chromium webkit
+                - name: Echte browsers — mobiel en desktop
+                  run: node browser-playwright.test.js
+          YAML
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "Geen canonieke wijzigingen om vast te leggen."
+            exit 0
+          fi
+          git commit -m "Maak zeven senior-fixes canoniek"
+          git push origin HEAD:${{ github.head_ref }}
