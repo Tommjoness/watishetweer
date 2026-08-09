@@ -15,4 +15,6 @@ for(const bestand of tests){
   console.log("\n=== "+bestand+" ===");
   execFileSync(process.execPath,[path.join(ROOT,bestand)],{cwd:ROOT,stdio:"inherit"});
 }
-console.log("\nMigratiepreview: alle niet-browsercontroles geslaagd. Echte Chromium/WebKit blijft een permanente CI-poort.");
+console.log("\n=== browser-playwright.test.js syntax ===");
+execFileSync(process.execPath,["--check",path.join(ROOT,"browser-playwright.test.js")],{cwd:ROOT,stdio:"inherit"});
+console.log("\nMigratiepreview: alle niet-browsercontroles en browsersyntax geslaagd. Echte Chromium/WebKit blijft de laatste CI-poort.");
