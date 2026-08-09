@@ -1,0 +1,10 @@
+"use strict";
+const fs=require("fs"),path=require("path");
+const p=path.join(__dirname,"..","run.js");
+let s=fs.readFileSync(p,"utf8");
+const oud='  check("Europa gaat naar MeteoAlarm per land",/feeds-" \\+ slug/.test(bronA));';
+const nieuw='  check("Europa gaat rechtstreeks naar de onderhouden MeteoAlarm Atom-feed per land",\\n    /meteoalarm-legacy-atom-" \\+ slug/.test(bronA));';
+const n=s.split(oud).length-1;
+if(n===1)s=s.replace(oud,nieuw);else if(!s.includes(nieuw))throw new Error("brede MeteoAlarm-contracttest: verwacht 1 match, gevonden "+n);
+fs.writeFileSync(p,s,"utf8");
+console.log("Brede MeteoAlarm-contracttest bijgewerkt.");
