@@ -1,0 +1,13 @@
+"use strict";
+const fs=require("fs"),path=require("path");
+const p=path.join(__dirname,"browser-playwright.test.js");
+let s=fs.readFileSync(p,"utf8");
+const oudReturn='return {labels:labels.length,bots,over:document.documentElement.scrollWidth-window.innerWidth,brief:(document.getElementById("brief")||{}).textContent||"",days:document.querySelectorAll("#days .row.day:not(.kop)").length};';
+const nieuwReturn='const nuTeksten=[...chart.querySelectorAll("text")].filter(el=>/^nu(?:\\s-?\\d+°)?$/.test((el.textContent||"").trim()));const sun=document.getElementById("suntimes");return {labels:labels.length,bots,over:document.documentElement.scrollWidth-window.innerWidth,brief:(document.getElementById("brief")||{}).textContent||"",days:document.querySelectorAll("#days .row.day:not(.kop)").length,nuTeksten:nuTeksten.map(x=>x.textContent.trim()),sunDag:sun&&sun.querySelector(".zondag")?sun.querySelector(".zondag").textContent.trim():"",uvKop:(document.getElementById("uv")&&document.getElementById("uv").parentElement.querySelector(".eyebrow")||{}).textContent||"",hint:(document.getElementById("charthint")||{}).textContent||""};';
+if(!s.includes(oudReturn))throw new Error("browser resultaatblok niet gevonden");
+s=s.replace(oudReturn,nieuwReturn);
+const re=/assert\.ok\(resultaat\.brief&&resultaat\.days>=7,naam\+" "\+modus\+": kerninhoud ontbreekt"\);/;
+if(!re.test(s))throw new Error("browser kernassert niet gevonden");
+s=s.replace(re,'assert.ok(resultaat.brief&&resultaat.days>=7,naam+" "+modus+": kerninhoud ontbreekt");assert.equal(resultaat.nuTeksten.length,1,naam+" "+modus+": exact één nu-label verwacht");assert.ok(/^nu -?\\d+°$/.test(resultaat.nuTeksten[0]),naam+" "+modus+": nu-label bevat actuele temperatuur");assert.ok(resultaat.sunDag,naam+" "+modus+": daglabel boven zonsinformatie ontbreekt");assert.equal(resultaat.uvKop,"UV-piek vandaag",naam+" "+modus+": UV-hiërarchie");assert.equal(resultaat.hint,"Houd de grafiek vast voor details.",naam+" "+modus+": grafiekhint is te technisch);');
+fs.writeFileSync(p,s);
+console.log("Browserregressies voor consumentenpolish toegepast.");
