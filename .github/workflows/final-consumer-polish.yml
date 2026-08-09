@@ -35,6 +35,7 @@ jobs:
           node finish-final-consumer-polish-v4.cjs
           node finish-final-consumer-polish-v5.cjs
           node finish-final-consumer-polish-v6.cjs
+          node finish-final-consumer-polish-v7.cjs
       - name: Full source and production suite
         run: npm test
       - name: Install real browsers
