@@ -2555,9 +2555,11 @@ groep("Bewaarde plaatsen (structuur)");
     check("de kop en chipcontainer zijn afzonderlijke elementen",!!kop&&!!rij&&kop!==rij);
     check("de kop staat buiten de lijst met chips",!!kop&&!rij.contains(kop));
     check("één opgeslagen plaats: de chiprij bevat precies één chip",
-      rij&&rij.querySelectorAll(".chip[data-i]").length===1);
-    const chip0=rij.querySelector('.chip[data-i="0"]');
-    check("iedere opgeslagen plaats bevat een verwijderknop",!!chip0&&!!chip0.querySelector(".x"));
+      rij&&rij.querySelectorAll(".chipplaats[data-i]").length===1);
+    const plaats0=rij.querySelector('.chipplaats[data-i="0"]');
+    const x0=rij.querySelector('.x[data-x="0"]');
+    check("iedere opgeslagen plaats bevat een verwijderknop",!!plaats0&&!!x0);
+    check("plaats en verwijderen zijn echte knoppen",plaats0&&plaats0.tagName==="BUTTON"&&x0&&x0.tagName==="BUTTON");
   }
 
   // meerdere opgeslagen plaatsen: volgorde en actieve chip
@@ -2569,11 +2571,12 @@ groep("Bewaarde plaatsen (structuur)");
     Object.assign(api.S,{lat:52.34,lon:4.97,label:"Diemen"});   // exact de tweede plaats
     api.chips();
     const rij=bak.chips.querySelector(".chiprij");
-    const chipEls=rij.querySelectorAll(".chip[data-i]").sort((a,b)=>+a.dataset.i-+b.dataset.i);
-    check("meerdere opgeslagen plaatsen werken (chiprij bevat alle vier)",chipEls.length===4);
+    const plaatsEls=rij.querySelectorAll(".chipplaats[data-i]").sort((a,b)=>+a.dataset.i-+b.dataset.i);
+    const chipEls=rij.querySelectorAll(".chip").filter(c=>c.querySelector(".chipplaats[data-i]"));
+    check("meerdere opgeslagen plaatsen werken (chiprij bevat alle vier)",plaatsEls.length===4&&chipEls.length===4);
     check("alle opgeslagen plaatsen worden in de oorspronkelijke volgorde gerenderd",
-      chipEls.map(c=>c.textContent.replace("×","")).join("|")===lijst.map(p=>p.label).join("|"),
-      chipEls.map(c=>c.textContent).join("|"));
+      plaatsEls.map(c=>c.textContent).join("|")===lijst.map(p=>p.label).join("|"),
+      plaatsEls.map(c=>c.textContent).join("|"));
     check("de actieve chip behoudt de bestaande actieve class",
       chipEls[1].classList.contains("on") && !chipEls[0].classList.contains("on"));
     check("de chiprij toont geen bewaarknop als de huidige plaats al in de lijst staat",
@@ -2586,7 +2589,7 @@ groep("Bewaarde plaatsen (structuur)");
     api.ls.set(KL,[{lat:1,lon:1,label:"Een"},{lat:2,lon:2,label:"Twee"}]);
     Object.assign(api.S,{lat:99,lon:99,label:"Elders"});
     api.chips();
-    const x0=bak.chips.querySelector('.chip[data-i="0"]').querySelector(".x");
+    const x0=bak.chips.querySelector('.x[data-x="0"]');
     x0.dispatchEvent({type:"click",target:x0,stopPropagation(){}});
     const na=api.ls.get(KL,[]);
     check("verwijderen blijft functioneel werken",na.length===1&&na[0].label==="Twee",JSON.stringify(na));
@@ -2598,22 +2601,24 @@ groep("Bewaarde plaatsen (structuur)");
     api.ls.set(KL,[{lat:52.35,lon:5.26,label:"Almere"}]);
     Object.assign(api.S,{lat:99,lon:99,label:"Elders"});
     api.chips();
-    const chip0=bak.chips.querySelector('.chip[data-i="0"]');
+    const chip0=bak.chips.querySelector('.chipplaats[data-i="0"]');
     chip0.dispatchEvent({type:"click",target:chip0});
     check("selecteren blijft functioneel werken",api.S.lat===52.35&&api.S.lon===5.26,
       api.S.lat+"/"+api.S.lon);
   }
 
-  // bestaande keyboardbediening
+  // keyboardbediening is nu native browsergedrag: een echte button activeert met
+  // Enter/Spatie zonder een eigen keydown-handler. De kliksemantiek is hierboven
+  // functioneel getoetst; hier bewaken we de toegankelijke elementsemantiek.
   {
     const {api,bak}=laadKern(390);
     api.ls.set(KL,[{lat:52.35,lon:5.26,label:"Almere"}]);
     Object.assign(api.S,{lat:99,lon:99,label:"Elders"});
     api.chips();
-    const chip0=bak.chips.querySelector('.chip[data-i="0"]');
-    let geblokkeerd=false;
-    chip0.dispatchEvent({type:"keydown",key:"Enter",target:chip0,preventDefault(){geblokkeerd=true;}});
-    check("bestaande keyboardbediening (Enter) blijft behouden",geblokkeerd&&api.S.lat===52.35);
+    const chip0=bak.chips.querySelector('.chipplaats[data-i="0"]');
+    const x0=bak.chips.querySelector('.x[data-x="0"]');
+    check("keyboardbediening gebruikt native knopsemantiek",
+      !!chip0&&chip0.tagName==="BUTTON"&&!!x0&&x0.tagName==="BUTTON");
   }
 
   // zonder opgeslagen plaatsen
@@ -3211,8 +3216,8 @@ groep("Radar verwijderd en bronbestanden consistent");
   check("de verwijderde radar-API bestaat niet meer",!fsR.existsSync(pathR.join(__dirname,"api/radarverwachting.js")));
   check("de aparte verwachting voor de komende twee uur blijft bestaan",
     /Neerslag komende twee uur/.test(bronR) && /id="nctext"/.test(bronR) && /id="nc"/.test(bronR));
-  check("de serviceworker gebruikt een nieuwe cache na de structurele wijziging",
-    /weerbriefing-v72/.test(lees("sw.js")));
+  check("de serviceworker gebruikt een inhoudsafhankelijke cache na structurele wijzigingen",
+    /watishetweer-[0-9a-f]{12}/.test(lees("public/sw.js")) && /CACHE_BRONNEN/.test(lees("build-weather.js")));
 }
 
 /* Statische eindcontrole over alle handgeschreven runtimebronbestanden. */
@@ -3303,111 +3308,109 @@ async function testenOpstartlocatie(){
       api.S.label==="Testplaats",api.S.label);
   }
 
-  // 3. terugkerende gebruiker, nieuwe locatie op meer dan 1 km
+  // 3. terugkerende gebruiker: opgeslagen plaats direct, zonder stille GPS-prompt
   {
     const opgeslagen={lat:52.0907,lon:5.1214,label:"Utrecht"};
     let geoTellers=0;
-    const geo=(gelukt)=>{ geoTellers++; gelukt({coords:{latitude:52.3676,longitude:4.9041,accuracy:15}}); }; // Amsterdam
+    const geo=()=>{ geoTellers++; };
+    const {api,fetchStaat}=laadKern(1280,{opgeslagen,geo});
+    check("3. de opgeslagen locatie wordt direct geladen",api.S.label==="Utrecht",api.S.label);
+    const tellerNaStart=fetchStaat.teller;
+    await wacht(8);
+    check("3. terugkerende gebruiker krijgt geen automatische GPS-aanvraag",geoTellers===0,geoTellers);
+    check("3. zonder expliciete locatiekeuze blijft de opgeslagen plaats actief",
+      api.S.label==="Utrecht"&&fetchStaat.teller===tellerNaStart,api.S.label+" / "+fetchStaat.teller);
+  }
+
+  // 4. expliciete keuze Mijn locatie mag de opgeslagen plaats wél vervangen
+  {
+    const opgeslagen={lat:52.0907,lon:5.1214,label:"Utrecht"};
+    let geoTellers=0;
+    const geo=(gelukt)=>{ geoTellers++; gelukt({coords:{latitude:52.3676,longitude:4.9041,accuracy:15}}); };
     const fetchMock=async(url)=>{
       if(String(url).includes("/api/plaatsnaam")) return {ok:true,json:async()=>({naam:"Amsterdam"})};
       return {ok:false,status:500,json:async()=>({})};
     };
     const {api}=laadKern(1280,{opgeslagen,geo,fetch:fetchMock});
-    // synchroon, vóór enige microtaak: load() voor de opgeslagen locatie wordt
-    // niet afgewacht, dus S.label hoort meteen "Utrecht" te zijn
-    check("3. de opgeslagen locatie wordt direct geladen",api.S.label==="Utrecht",api.S.label);
     await wacht(3);
-    check("3. GPS wordt daarna automatisch gestart",geoTellers===1,geoTellers);
-    await wacht(6);
-    check("3. een gevonden locatie op meer dan 1 km veroorzaakt een gerichte tweede load()",
-      api.S.label==="Amsterdam",api.S.label);
-  }
-  {
-    // GPS-fout laat de opgeslagen locatie intact
-    const opgeslagen={lat:52.0907,lon:5.1214,label:"Utrecht"};
-    const geo=(gelukt,mislukt)=>{ mislukt({code:2}); };
-    const {api}=laadKern(1280,{opgeslagen,geo});
+    const gelukt=await api.locatieNu("knop");
     await wacht(4);
-    check("3. een GPS-fout laat de opgeslagen locatie intact",api.S.label==="Utrecht",api.S.label);
+    check("4. Mijn locatie start na een bewuste keuze precies één GPS-aanvraag",geoTellers===1,geoTellers);
+    check("4. een gevonden andere locatie wordt na die keuze geladen",
+      gelukt===true&&api.S.label==="Amsterdam",api.S.label+" / "+gelukt);
   }
 
-  // 4. vrijwel dezelfde locatie: geen onnodige tweede volledige fetch
-  {
-    const opgeslagen={lat:52.0907,lon:5.1214,label:"Utrecht"};
-    const geo=(gelukt)=>{ gelukt({coords:{latitude:52.0950,longitude:5.1214,accuracy:15}}); }; // ~0,5 km verderop
-    const {api,fetchStaat}=laadKern(1280,{opgeslagen,geo});
-    await wacht(3);
-    const tellerNaOpgeslagen=fetchStaat.teller;
-    await wacht(6);
-    check("4. een positie binnen ~1 km veroorzaakt geen nieuwe volledige fetch",
-      fetchStaat.teller===tellerNaOpgeslagen,tellerNaOpgeslagen+" -> "+fetchStaat.teller);
-    check("4. de geladen plaatsnaam blijft die van de opgeslagen locatie",api.S.label==="Utrecht",api.S.label);
-  }
-
-  // 5. eerste bezoek: geen url, geen opgeslagen locatie
+  // 5. eerste bezoek: geen url, geen opgeslagen locatie, geen automatische prompt
   {
     let geoTellers=0;
-    const geo=(gelukt,mislukt)=>{ geoTellers++; mislukt({code:1}); };
+    const geo=()=>{ geoTellers++; };
     const {api,bak}=laadKern(1280,{geo});
     await wacht();
-    check("5. zonder URL en zonder opgeslagen locatie wordt GPS automatisch gestart",geoTellers===1,geoTellers);
+    check("5. eerste bezoek start geen GPS zonder gebruikersactie",geoTellers===0,geoTellers);
     check("5. Almere (of enige andere gegokte plaats) wordt nergens geladen",api.S.lat==null,api.S.lat);
-    check("5. bij weigering verschijnt een doorzoekbare foutstatus, geen weerdata",
-      api.S.d==null && /locatie/i.test(bak.state.textContent),bak.state.textContent);
+    check("5. de status biedt zoeken of Mijn locatie aan",
+      /zoek/i.test(bak.state.textContent)&&/mijn locatie/i.test(bak.state.textContent),bak.state.textContent);
     check("5. het zoekveld blijft beschikbaar",bak.q!=null);
   }
 
-  // 6. race-condition: handmatige keuze wint van een trage gps-aanvraag
+  // 6. race-condition: na expliciete GPS-keuze wint een latere handmatige zoekkeuze
   {
     let bewaard=null;
-    const geo=(gelukt,mislukt)=>{ bewaard={gelukt,mislukt}; };   // bewust niet meteen reageren
+    const geo=(gelukt,mislukt)=>{ bewaard={gelukt,mislukt}; };
     const {api,bak}=laadKern(1280,{geo});
+    const gpsBelofte=api.locatieNu("knop");
     await wacht(2);
-    check("6. de gps-aanvraag staat klaar maar heeft nog niet gereageerd",api.S.lat==null);
-
+    check("6. de expliciete GPS-aanvraag staat klaar maar heeft nog niet gereageerd",!!bewaard&&api.S.lat==null);
     bak.res.dispatchEvent({type:"click",target:{closest:sel=>sel==="div[data-lat]"
       ?{dataset:{lat:"51.9225",lon:"4.47917",nm:"Rotterdam"}}:null}});
     await wacht(3);
     check("6. de handmatige keuze wordt direct geladen",api.S.label==="Rotterdam",api.S.label);
-
     bewaard.gelukt({coords:{latitude:52.09,longitude:5.12,accuracy:10}});
-    await wacht(6);
+    await gpsBelofte;
+    await wacht(4);
     check("6. een later binnenkomend gps-resultaat overschrijft de handmatige keuze niet",
       api.S.label==="Rotterdam",api.S.label);
   }
 
-  // 7. dubbele aanvraag: automatisch en een snelle klik op de knop
+  // 7. dubbele expliciete aanvraag wordt gededupliceerd
   {
-    let geoTellers=0;
-    const geo=()=>{ geoTellers++; };   // reageert bewust nooit
+    let geoTellers=0,bewaard=null;
+    const geo=(gelukt,mislukt)=>{ geoTellers++; bewaard={gelukt,mislukt}; };
     const {api}=laadKern(1280,{geo});
+    const eerste=api.locatieNu("knop");
     await wacht(2);
     const tweede=await api.locatieNu("knop");
-    check("7. een snelle klik terwijl de automatische aanvraag nog loopt start geen tweede gps-aanvraag",
-      geoTellers===1,geoTellers);
-    check("7. die klik krijgt een stille no-op terug",tweede===false,tweede);
+    check("7. een tweede klik terwijl GPS al loopt start geen tweede aanvraag",geoTellers===1,geoTellers);
+    check("7. die tweede klik krijgt een stille no-op terug",tweede===false,tweede);
+    bewaard.mislukt({code:1});
+    await eerste;
   }
 
-  // 8. weigering: binnen dezelfde sessie niet automatisch opnieuw
+  // 8. na weigering geen stille achtergrondherhaling; bewuste klik mag opnieuw
   {
     let geoTellers=0;
     const geo=(gelukt,mislukt)=>{ geoTellers++; mislukt({code:1}); };
     const opgeslagen={lat:52.0907,lon:5.1214,label:"Utrecht"};
     const {api}=laadKern(1280,{opgeslagen,geo});
-    await wacht(4);
-    check("8. eerste weigering wordt geregistreerd",geoTellers===1,geoTellers);
+    await wacht(3);
+    check("8. opgeslagen plaats veroorzaakt zelf geen locatieprompt",geoTellers===0,geoTellers);
+    await api.locatieNu("knop");
+    check("8. eerste bewuste weigering wordt geregistreerd",geoTellers===1,geoTellers);
     const opnieuw=await api.locatieNu("auto-terugkerend");
-    check("8. na een expliciete weigering vraagt de achtergrondprocedure niet opnieuw",
+    check("8. na weigering vraagt een achtergrondmodus niet alsnog opnieuw",
       geoTellers===1&&opnieuw===false,geoTellers+" / "+opnieuw);
     await api.locatieNu("knop");
-    check("8. een bewuste klik op de knop mag zelf wel een nieuwe poging doen",geoTellers===2,geoTellers);
+    check("8. een nieuwe bewuste klik mag wel opnieuw toestemming proberen",geoTellers===2,geoTellers);
   }
 
-  // 9. geen geolocation-ondersteuning
+  // 9. geen geolocation-ondersteuning: start blijft rustig, expliciete actie meldt het
   {
     const {api,bak}=laadKern(1280,{geoOntbreekt:true});
-    await wacht(4);
-    check("9. geen geolocation-ondersteuning geeft een duidelijke melding, geen crash",
+    await wacht(3);
+    check("9. zonder gebruikersactie verschijnt alleen de neutrale startkeuze",
+      /zoek/i.test(bak.state.textContent)&&/mijn locatie/i.test(bak.state.textContent),bak.state.textContent);
+    await api.locatieNu("knop");
+    check("9. expliciete locatiekeuze zonder browserondersteuning geeft een duidelijke melding",
       /locatie/i.test(bak.state.textContent),bak.state.textContent);
     check("9. zoeken blijft bruikbaar",bak.q!=null);
   }

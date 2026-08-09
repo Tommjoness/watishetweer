@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy & gegevens · Wat is het weer?</title>
+<meta name="robots" content="index,follow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<style>body{margin:0;background:#f4f5f3;color:#12211c;font:16px/1.65 system-ui,-apple-system,sans-serif;padding:32px 20px}.kaart{max-width:760px;margin:auto;background:#fff;border:1px solid #dce1de;padding:32px}h1{font:400 36px/1.15 Georgia,serif;margin:0 0 24px}h2{font-size:17px;margin-top:28px}a{color:inherit}button{background:transparent;border:1px solid #41514b;padding:10px 14px;cursor:pointer;font:inherit}.klein{color:#65716c;font-size:14px}#wisstatus{margin-left:10px}</style>
+</head>
+<body><main class="kaart">
+<p><a href="./">← Terug naar het weer</a></p>
+<h1>Privacy & gegevens</h1>
+<p>Wat is het weer? heeft geen account, advertentietracking of analytics. De app gebruikt alleen gegevens die nodig zijn om het weer voor een gekozen plaats te tonen.</p>
+<h2>Je locatie</h2>
+<p>Je browser vraagt pas om je actuele locatie nadat je zelf op <b>Mijn locatie</b> kiest. De coördinaten worden gebruikt voor weerdata, een plaatsnaam en — waar beschikbaar — officiële weerwaarschuwingen. In lokale opslag en in de deel-URL wordt de positie afgerond op drie decimalen (ongeveer honderd meter); tijdens de actuele aanvraag kan de browser nauwkeuriger coördinaten gebruiken.</p>
+<h2>Externe diensten</h2>
+<p>Voor weer, luchtkwaliteit, pollen en plaatszoeken gebruikt de app Open-Meteo. Voor reverse-geocoding gebruikt de server primair BigDataCloud en alleen als fallback OpenStreetMap Nominatim. Officiële waarschuwingen komen, afhankelijk van de locatie, van MeteoAlarm of de Amerikaanse National Weather Service. Deze aanbieders en de hostingprovider kunnen bij een aanvraag technische gegevens zoals IP-adres en aangevraagde locatie verwerken volgens hun eigen voorwaarden.</p>
+<h2>Wat je browser bewaart</h2>
+<p>De laatst gekozen plaats, bewaarde plaatsen, thema-instelling en een recente weersnapshot worden lokaal in je browser opgeslagen zodat de app sneller en ook bij een korte storing bruikbaar blijft. Er is geen eigen gebruikersdatabase waarin deze voorkeuren aan een account worden gekoppeld.</p>
+<h2>Zelf wissen</h2>
+<p><button id="wis" type="button">Wis lokale gegevens</button><span id="wisstatus" role="status" aria-live="polite"></span></p>
+<p class="klein">Dit wist de lokaal opgeslagen plaatsen, instellingen en weersnapshot van deze site. Je kunt sitegegevens ook via de instellingen van je browser verwijderen.</p>
+<h2>Bronnen en contact</h2>
+<p>Bronvermelding staat ook onderaan de weerpagina. Voor vragen over deze app of gegevensverwerking kun je contact opnemen via de <a href="https://github.com/Tommjoness/weathernow">GitHub-repository</a>.</p>
+</main>
+<script>document.getElementById("wis").addEventListener("click",()=>{try{localStorage.clear();document.getElementById("wisstatus").textContent=" Lokale gegevens gewist.";}catch(e){document.getElementById("wisstatus").textContent=" Wissen lukte niet; gebruik de browserinstellingen.";}});</script>
+</body></html>
