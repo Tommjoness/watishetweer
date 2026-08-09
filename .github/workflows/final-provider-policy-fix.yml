@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - agent/final-audit-provider-policy
+    paths:
+      - scripts/apply-final-provider-policy.js
+      - scripts/apply-final-warning-feed.js
+      - .github/workflows/final-provider-policy-fix.yml
 
 permissions:
   contents: write
@@ -20,28 +24,38 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
-      - name: Pas provider-policy fix toe
-        run: node scripts/apply-final-provider-policy.js
-      - name: Hard MeteoAlarm-feed uit
-        run: node scripts/apply-final-warning-feed.js
-      - name: Volledige regressiesuite
-        run: npm test
-      - name: Volledige productiebuild
-        run: npm run build
-      - name: Installeer Chromium en WebKit
+      - name: Pas toe, test volledig en leg resultaat vast
+        shell: bash
         run: |
-          npm install --no-save --package-lock=false playwright@latest
-          npx playwright install --with-deps chromium webkit
-      - name: Echte browsers — mobiel en desktop
-        run: node browser-playwright.test.js
-      - name: Leg exact geteste productwijzigingen vast
-        run: |
+          set +e
+          RESULT=scripts/final-audit-result.txt
+          : > "$RESULT"
+          runcheck() {
+            echo "===== $1 =====" >> "$RESULT"
+            shift
+            "$@" >> "$RESULT" 2>&1
+            code=$?
+            echo "EXIT=$code" >> "$RESULT"
+            return $code
+          }
+
+          status=0
+          runcheck "provider-migratie" node scripts/apply-final-provider-policy.js || status=$?
+          if [ "$status" -eq 0 ]; then runcheck "MeteoAlarm-feed" node scripts/apply-final-warning-feed.js || status=$?; fi
+          if [ "$status" -eq 0 ]; then runcheck "npm-test" npm test || status=$?; fi
+          if [ "$status" -eq 0 ]; then runcheck "npm-build" npm run build || status=$?; fi
+          if [ "$status" -eq 0 ]; then runcheck "playwright-install" npm install --no-save --package-lock=false playwright@latest || status=$?; fi
+          if [ "$status" -eq 0 ]; then runcheck "browser-install" npx playwright install --with-deps chromium webkit || status=$?; fi
+          if [ "$status" -eq 0 ]; then runcheck "browser-tests" node browser-playwright.test.js || status=$?; fi
+          echo "FINAL_STATUS=$status" >> "$RESULT"
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- index.html lib/plaatsnaam.cjs lib/waarschuwingen.cjs privacy.html prelaunch-regressions.test.js
-          if git diff --cached --quiet; then
-            echo "Geen productwijzigingen om vast te leggen."
-            exit 0
+          git add -- "$RESULT"
+          if [ "$status" -eq 0 ]; then
+            git add -- index.html lib/plaatsnaam.cjs lib/waarschuwingen.cjs privacy.html prelaunch-regressions.test.js
+            git commit -m "Herstel providers en waarschuwingenfeeds"
+          else
+            git commit -m "Leg mislukte providercontrole vast"
           fi
-          git commit -m "Herstel providers en waarschuwingenfeeds"
           git push origin HEAD:agent/final-audit-provider-policy
