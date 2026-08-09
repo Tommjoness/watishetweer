@@ -1,0 +1,37 @@
+name: Final consumer polish migration
+on:
+  push:
+    branches: [agent/final-consumer-polish]
+permissions:
+  contents: write
+jobs:
+  migrate-test-commit:
+    if: ${{ !contains(github.event.head_commit.message, '[consumer-polish-done]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/final-consumer-polish
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Apply migration
+        run: node apply-final-consumer-polish.cjs
+      - name: Full source and production suite
+        run: npm test
+      - name: Install real browsers
+        run: |
+          npm install --no-save playwright@latest
+          npx playwright install --with-deps chromium webkit
+      - name: Chromium and WebKit mobile plus desktop
+        run: node browser-playwright.test.js
+      - name: Commit exact tested product files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html interpretatie-engine.js prelaunch-regressions.test.js browser-playwright.test.js
+          git diff --cached --exit-code && exit 1 || true
+          git commit -m "Polijst consumenteninterface definitief [consumer-polish-done]"
+          git push origin HEAD:agent/final-consumer-polish
