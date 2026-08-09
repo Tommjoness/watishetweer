@@ -22,7 +22,8 @@ jobs:
           if [ -f scripts/prelaunch-hardening-12.js ]; then
             node scripts/fix-prelaunch-migration.js
             node scripts/prelaunch-hardening-12.js
-            rm scripts/fix-prelaunch-migration.js scripts/prelaunch-hardening-12.js
+            node scripts/update-prelaunch-test-harness.js
+            rm scripts/fix-prelaunch-migration.js scripts/prelaunch-hardening-12.js scripts/update-prelaunch-test-harness.js
           fi
       - name: Volledige niet-browser suite
         run: npm run build
@@ -48,8 +49,9 @@ jobs:
             audit-regressions.test.js \
             prelaunch-regressions.test.js \
             privacy.html \
-            package.json
-          git add -u -- scripts/fix-prelaunch-migration.js scripts/prelaunch-hardening-12.js
+            package.json \
+            run.js
+          git add -u -- scripts/fix-prelaunch-migration.js scripts/prelaunch-hardening-12.js scripts/update-prelaunch-test-harness.js
           git status --short
           if git diff --cached --quiet; then
             echo "Geen productwijzigingen om vast te leggen."
