@@ -92,13 +92,14 @@ setTimeout(()=>{
        liggen; de pure helpertest bewaakt afzonderlijk welke richting gekozen wordt. */
     const nuLabel=[...chart.querySelectorAll('text')].find(el=>/^nu\\s+-?\\d+°$/i.test((el.textContent||'').trim()));
     const nuPunt=[...chart.querySelectorAll('circle')].find(el=>String(el.getAttribute('fill')||'')==='var(--carmine)'&&Math.abs(Number(el.getAttribute('r'))-3)<0.2);
-    let nuRustig=false,nuAfstand=null;
+    let nuRustig=false,nuAfstand=null,nuBotst=null,nuHalo=null;
     if(nuLabel&&nuPunt){
       const ny=Number(nuLabel.getAttribute('y')),cy=Number(nuPunt.getAttribute('cy'));
       const nr=nuLabel.getBoundingClientRect();
-      const botst=labels.some(el=>{const r=el.getBoundingClientRect();return nr.width&&r.width&&nr.left<r.right&&nr.right>r.left&&nr.top<r.bottom&&nr.bottom>r.top;});
+      nuBotst=labels.some(el=>{const r=el.getBoundingClientRect();return nr.width&&r.width&&nr.left<r.right&&nr.right>r.left&&nr.top<r.bottom&&nr.bottom>r.top;});
       nuAfstand=Number.isFinite(ny)&&Number.isFinite(cy)?Math.abs(ny-cy):null;
-      nuRustig=nuAfstand!==null&&nuAfstand>=12&&!botst&&nuLabel.getAttribute('paint-order')==='stroke';
+      nuHalo=nuLabel.getAttribute('paint-order')==='stroke';
+      nuRustig=nuAfstand!==null&&nuAfstand>=12&&!nuBotst&&nuHalo;
     }
 
     const hit=document.getElementById('hit'),scrub=document.getElementById('scrub');
@@ -142,6 +143,8 @@ setTimeout(()=>{
     document.body.dataset.browserBuiten=String(buiten);
     document.body.dataset.browserNu=String(nuRustig);
     document.body.dataset.browserNuAfstand=String(nuAfstand);
+    document.body.dataset.browserNuBotst=String(nuBotst);
+    document.body.dataset.browserNuHalo=String(nuHalo);
     document.body.dataset.browserScrub=String(scrubOk);
     document.body.dataset.browserScrubKort=String(scrubKort);
     document.body.dataset.browserKans=String(kansCompact);
@@ -165,7 +168,7 @@ function voerBrowserUit(maat,naam){
   if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"";
   const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
-  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", kans="+waarde("browser-kans")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", night="+waarde("browser-night")+", exception="+waarde("browser-exception"));
+  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", kans="+waarde("browser-kans")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", night="+waarde("browser-night")+", exception="+waarde("browser-exception"));
   console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" labels, rustige nu-markering, compact kanstijdvak, tooltip en live klok correct.");
 }
 try{voerBrowserUit("390,844","mobiel Chromium");voerBrowserUit("1440,1000","desktop Chromium");}
