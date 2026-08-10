@@ -2,18 +2,23 @@
    Deze laag is uitsluitend presentatie: geen weerdata of interpretatie. */
 
 @media(min-width:1100px){
-  /* De oude 55/45-verdeling met 2 x 5 meetblokken liet onder de temperatuur
-     een groot leeg vlak achter. Rechts krijgt nu genoeg breedte voor 3 x 3;
-     links blijft ruim genoeg voor de grote temperatuur en conditie. */
+  /* Rechts blijft het compacte 3 x 3-raster. De oude desktoplaag bevatte nog
+     :nth-child(2n)/(4n)-regels uit de eerdere tweekolomsopzet; :nth-child(n)
+     reset die met gelijke specificiteit voordat het nieuwe 3-kolomspatroon
+     wordt toegepast. Daardoor lopen borders, padding en tekst weer gelijk. */
   .dashrow-hero{
     grid-template-columns:minmax(0,.62fr) minmax(0,1fr);
     gap:32px;
     align-items:start;
   }
+  .dashrow-hero > .hero{
+    margin-top:38px;
+  }
   .dashrow-hero .stats{
     grid-template-columns:repeat(3,minmax(0,1fr));
+    grid-auto-rows:1fr;
   }
-  .dashrow-hero .stat{
+  .dashrow-hero .stat:nth-child(n){
     min-width:0;
     padding:14px 16px 15px;
     border-right:1px solid var(--rule);
@@ -23,7 +28,23 @@
   .dashrow-hero .stat:nth-child(3n){border-right:none;padding-right:0}
   .dashrow-hero .stat.breed{grid-column:auto;border-top:none}
   .dashrow-hero .sval{font-size:clamp(22px,1.5vw,28px)}
-  .dashrow-hero .ssub{font-size:12px;line-height:1.35}
+  .dashrow-hero .ssub{
+    font-size:12px;
+    line-height:1.4;
+    overflow-wrap:break-word;
+    word-break:normal;
+  }
+
+  /* Iedere Nachtzicht-rij is een zelfstandig grid. max-content liet de laatste
+     kolom daardoor per rij een andere breedte aannemen. Vaste rechterkolommen
+     zorgen dat scorebalk, bewolking en uitleg van boven tot onder uitlijnen. */
+  .row.night{
+    grid-template-columns:104px 52px minmax(80px,1fr) 116px 218px;
+    gap:16px;
+  }
+  .row.night > .nmeta:not(.wide){text-align:right}
+  .row.night.kop > .nmeta:not(.wide){text-align:right}
+  .row.night > .nmeta.wide{width:218px;max-width:218px;text-align:left}
 }
 
 /* Nachtzicht leest rustiger als oordeel, beste periode en context ieder hun
@@ -33,3 +54,9 @@
 .nachtadvies{font-weight:500;color:var(--ink-70)}
 .nachtvenster{margin-top:1px}
 .nachtmaan{margin-top:2px;color:var(--ink-25);white-space:normal}
+
+/* De sectiekop zegt al dat dit over de komende twee uur gaat. De technische
+   zin over kwartierverwachting/weermodellen voegde geen beslisinformatie toe;
+   bronresolutie blijft beschikbaar onder 'Over deze gegevens'. */
+#nchint{display:none}
+#nchint + .data-uitleg{margin-top:8px}
