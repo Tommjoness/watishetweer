@@ -1,0 +1,45 @@
+/* Gerichte fysieke-iPhone-polish, 10-08-2026. */
+
+/* De ronde drager blijft licht; de v2-SVG tekent alleen de schaduwzijde.
+   Zo zijn nieuwe maan, volle maan en beide sikkels ook op 14 px verschillend. */
+.maan-fase-svg-v2{
+  color:var(--ink-70);
+  overflow:hidden;
+}
+
+/* Bronattributie blijft volledig zichtbaar, maar elk broncluster mag als eigen
+   eenheid wrappen. Geen losse middendot meer aan een regeleinde. */
+footer .bron-bronnen{
+  max-width:none;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:3px 11px;
+}
+footer .bron-bronnen .bronlabel{
+  font-weight:500;
+  color:var(--ink-45);
+}
+footer .bron-bronnen .bronitem{
+  display:inline-block;
+  white-space:normal;
+}
+
+@media(max-width:900px){
+  footer .bron-bronnen{
+    row-gap:4px;
+    column-gap:10px;
+  }
+  footer .bron-bronnen .bronlabel{
+    flex:0 0 100%;
+    margin-bottom:1px;
+    font-size:10px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+
+  /* Houd de kortere consumentenkop daadwerkelijk op één regel in de tegel. */
+  #prec + .ssub{}
+  #prec{min-width:0}
+  #prec ~ .ssub{min-width:0}
+}
