@@ -1,7 +1,73 @@
 /* Gerichte live-polish na controle van de echte desktopproductie.
    Deze laag is uitsluitend presentatie: geen weerdata of interpretatie. */
 
+/* Mobiel had al een compacte weerbalk zodra het actuele weer uit beeld scrolde.
+   Tablet en desktop hielden die context niet vast, terwijl dezelfde
+   IntersectionObserver ook daar gewoon actief is. Vanaf 901px krijgt dezelfde
+   minibar daarom een desktop/tablet-opmaak die exact de breedte van het vel volgt.
+   Er komt geen tweede navigatiesysteem bij: plaats, lokale tijd, temperatuur en
+   toestand zijn dezelfde vier bestaande velden als op de telefoon. */
+@media(min-width:901px){
+  #minibar{
+    position:fixed;
+    top:0;
+    left:50%;
+    right:auto;
+    transform:translateX(-50%);
+    z-index:25;
+    width:min(calc(100% - 44px),1440px);
+    background:var(--sheet);
+    border-left:1px solid var(--rule);
+    border-right:1px solid var(--rule);
+    border-bottom:1px solid var(--rule);
+    margin:0;
+    padding:9px 48px;
+    display:none;
+    flex-wrap:nowrap;
+    white-space:nowrap;
+    align-items:baseline;
+    gap:12px;
+    overflow:hidden;
+  }
+  #minibar.aan{display:flex}
+  #miniplaats{
+    font-family:var(--serif);
+    font-size:18px;
+    flex:0 1 auto;
+    min-width:2.5em;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+  }
+  #minitijd{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--ink-45);
+    font-variant-numeric:tabular-nums;
+    flex:0 0 auto;
+  }
+  #minitemp{
+    font-family:var(--mono);
+    font-size:15px;
+    font-variant-numeric:tabular-nums;
+    flex:0 0 auto;
+    margin-left:auto;
+  }
+  #minicond{
+    font-family:var(--serif);
+    font-size:15px;
+    color:var(--ink-45);
+    flex:0 1 auto;
+    min-width:0;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+  }
+}
+
 @media(min-width:1100px){
+  #minibar{padding-left:56px;padding-right:56px}
+
   /* Rechts blijft het compacte 3 x 3-raster. De oude desktoplaag bevatte nog
      :nth-child(2n)/(4n)-regels uit de eerdere tweekolomsopzet; :nth-child(n)
      reset die met gelijke specificiteit voordat het nieuwe 3-kolomspatroon
@@ -11,8 +77,14 @@
     gap:32px;
     align-items:start;
   }
+  /* Het actuele weerblok was veel lager dan het 3 x 3-raster en hing bovenaan,
+     waardoor onder de temperatuur een groot leeg vlak ontstond. Geen extra
+     informatie dupliceren: het bestaande blok wordt verticaal gecentreerd in
+     dezelfde gridrij. Zo blijft boven en onder ongeveer evenveel ademruimte. */
   .dashrow-hero > .hero{
-    margin-top:38px;
+    margin-top:0;
+    margin-bottom:0;
+    align-self:center;
   }
   .dashrow-hero .stats{
     grid-template-columns:repeat(3,minmax(0,1fr));
@@ -45,6 +117,10 @@
   .row.night > .nmeta:not(.wide){text-align:right}
   .row.night.kop > .nmeta:not(.wide){text-align:right}
   .row.night > .nmeta.wide{width:218px;max-width:218px;text-align:left}
+}
+
+@media(min-width:1500px){
+  #minibar{padding-left:64px;padding-right:64px}
 }
 
 /* Nachtzicht leest rustiger als oordeel, beste periode en context ieder hun
