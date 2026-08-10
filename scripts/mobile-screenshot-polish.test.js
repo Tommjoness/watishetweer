@@ -25,4 +25,10 @@ for(const svg of [nieuw,vol,eerste,laatste]){
   assert(!/[🌑🌒🌓🌔🌕🌖🌗🌘]/u.test(svg));
 }
 
-console.log("Mobiele screenshot-polish: maanfase-regressies geslaagd.");
+assert.equal(p.pollenEenheid(1),"korrel/m³","één zichtbare korrel gebruikt enkelvoud");
+assert.equal(p.pollenEenheid(1.4),"korrel/m³","een naar 1 afgeronde waarde gebruikt enkelvoud");
+assert.equal(p.pollenEenheid(1.5),"korrels/m³","een naar 2 afgeronde waarde gebruikt meervoud");
+assert.equal(p.pollenEenheid(0),"korrels/m³","nul gebruikt meervoud");
+assert.equal(p.pollenEenheid(4),"korrels/m³","meerdere korrels gebruiken meervoud");
+
+console.log("Mobiele screenshot-polish: maanfase- en pollenregressies geslaagd.");
