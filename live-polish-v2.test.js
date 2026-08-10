@@ -44,14 +44,17 @@ test("actuele weerblok staat op desktop verticaal in balans met meetraster",()=>
   assert(css.includes("align-self:center"));
 });
 
-test("productiebundel bevat interactiepolish, desktopbalk en secondentimer",()=>{
+test("productiebundel bevat interactiepolish, desktopbalk en robuuste scrollcontrole",()=>{
   const html=fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8");
   assert(html.includes("LIVE INTERACTIEPOLISH"));
   assert(html.includes("WeatherNowPolishV2"));
   assert(html.includes("setInterval(liveKlokTik,1000)"));
   assert(html.includes("tooltipWaardeKort"));
   assert(html.includes("#minibar.aan{display:flex}"));
-  assert(html.includes('bar.classList.toggle("aan",!e.isIntersecting&&e.boundingClientRect.top<0)'));
+  assert(html.includes('bar.classList.toggle("aan",Number.isFinite(r.bottom)&&r.bottom<=0)'));
+  assert(html.includes('window.addEventListener("scroll",plan,{passive:true})'));
+  assert(html.includes('new IntersectionObserver(plan,{threshold:0}).observe(hero)'));
+  assert(html.includes("requestAnimationFrame"));
 });
 
 if(process.exitCode) console.error("\nLive-polish v2: minstens één regressie mislukt.");
