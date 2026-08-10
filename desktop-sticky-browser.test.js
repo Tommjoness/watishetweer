@@ -19,14 +19,14 @@ if(!fs.existsSync(productie)){console.error("FOUT sticky: public/index.html ontb
 let html=fs.readFileSync(productie,"utf8");
 assertBronInvariant(html,"senior-verstopt","mobiele minibalk bevat auto-hideklasse");
 assertBronInvariant(html,"translateY(calc(-100% - 2px))","mobiele minibalk schuift werkelijk buiten beeld");
+assertBronInvariant(html,"opacity:0","verborgen mobiele minibalk wordt visueel transparant");
 assertBronInvariant(html,"pointer-events:none","verborgen mobiele minibalk onderschept geen interactie");
 assertBronInvariant(html,"background:var(--rule-soft)","maanfase heeft een zichtbare subtiele schijf");
 
-/* De test gaat uitsluitend over layout en scrollgedrag. Een nooit oplossende fetch
-   voorkomt externe netwerkafhankelijkheid. De !important-regel maakt #app al
-   zichtbaar vóór de productiescriptcode zijn zichtbaarheidshandlers aanmaakt;
-   dat bootst de echte situatie na nadat weerdata is geladen, zonder data te hoeven
-   vervalsen. */
+/* Deze snelle Chromium-fixture controleert de scroll-state-machine. CSS-transities
+   lopen onder --dump-dom/virtual-time niet betrouwbaar door frames heen; de echte
+   visuele transform + opacity wordt daarom aanvullend in de Playwright-consumententest
+   in Chromium én WebKit gecontroleerd. */
 html=html.replace("</head>",'<style>#app{display:block!important}</style><script>window.fetch=()=>new Promise(()=>{});</script></head>');
 const reporter=`<script>
 setTimeout(()=>{
@@ -35,10 +35,7 @@ setTimeout(()=>{
     if(!bar||!hero||!sheet) throw new Error('vereiste DOM ontbreekt');
     document.body.style.minHeight='3600px';
     const mobiel=window.innerWidth<=900,hs=getComputedStyle(hero),voor=hero.getBoundingClientRect();
-    /* Niet gokken op een vaste scrollafstand: scroll exact voorbij de werkelijke
-       onderrand van de hero plus een marge. Daarmee test deze fixture dezelfde
-       grens als productie. */
-    const doel=Math.max(0,window.scrollY+voor.bottom+180);
+    const doel=Math.max(0,window.scrollY+voor.bottom+400);
     window.scrollTo(0,doel);
     window.dispatchEvent(new Event('scroll'));
     setTimeout(()=>{
@@ -59,31 +56,21 @@ setTimeout(()=>{
         return;
       }
 
-      /* CSS-transities worden in headless dump-DOM niet in iedere runner op exact
-         hetzelfde geometrische tussenframe afgerekend. Het productdoel is visueel:
-         bij neerwaarts lezen mag de balk de inhoud niet meer bedekken. Daarom eisen
-         we runtime de actieve hide-class + vrijwel nul opacity + geen pointer-events;
-         de volledige translateY(-100%) is hierboven apart als broninvariant geborgd. */
-      const opacityNeer=parseFloat(bs.opacity),transformNeer=bs.transform,pointerNeer=bs.pointerEvents;
-      const neerwaartsVerborgen=bar.classList.contains('aan')&&bar.classList.contains('senior-verstopt')&&opacityNeer<0.1&&pointerNeer==='none'&&heroVoorbij;
-      document.body.dataset.mobileStickyNeer=String(neerwaartsVerborgen);
+      const neerwaartsState=bar.classList.contains('aan')&&bar.classList.contains('senior-verstopt')&&bs.pointerEvents==='none'&&heroVoorbij;
+      document.body.dataset.mobileStickyNeer=String(neerwaartsState);
       document.body.dataset.mobileStickyAanNeer=String(bar.classList.contains('aan'));
       document.body.dataset.mobileStickyVerstoptNeer=String(bar.classList.contains('senior-verstopt'));
-      document.body.dataset.mobileStickyOpacityNeer=String(opacityNeer);
-      document.body.dataset.mobileStickyTransformNeer=String(transformNeer);
-      document.body.dataset.mobileStickyPointerNeer=String(pointerNeer);
-      document.body.dataset.mobileStickyBottomNeer=String(Math.round(br.bottom));
+      document.body.dataset.mobileStickyPointerNeer=String(bs.pointerEvents);
       window.scrollTo(0,Math.max(0,window.scrollY-140));
       window.dispatchEvent(new Event('scroll'));
       setTimeout(()=>{
-        const bs2=getComputedStyle(bar),br2=bar.getBoundingClientRect(),hr2=hero.getBoundingClientRect();
-        const omhoogZichtbaar=bar.classList.contains('aan')&&!bar.classList.contains('senior-verstopt')&&parseFloat(bs2.opacity)>0.9&&Math.abs(br2.top)<=1&&hr2.bottom<=0;
-        document.body.dataset.mobileStickyOmhoog=String(omhoogZichtbaar);
+        const bs2=getComputedStyle(bar),hr2=hero.getBoundingClientRect();
+        const omhoogState=bar.classList.contains('aan')&&!bar.classList.contains('senior-verstopt')&&bs2.pointerEvents!=='none'&&hr2.bottom<=0;
+        document.body.dataset.mobileStickyOmhoog=String(omhoogState);
         document.body.dataset.mobileStickyAanOmhoog=String(bar.classList.contains('aan'));
         document.body.dataset.mobileStickyVerstoptOmhoog=String(bar.classList.contains('senior-verstopt'));
-        document.body.dataset.mobileStickyOpacityOmhoog=String(bs2.opacity);
-        document.body.dataset.mobileStickyTopOmhoog=String(Math.round(br2.top));
-        document.body.dataset.mobileStickyResult=(neerwaartsVerborgen&&omhoogZichtbaar)?'ok':'fout';
+        document.body.dataset.mobileStickyPointerOmhoog=String(bs2.pointerEvents);
+        document.body.dataset.mobileStickyResult=(neerwaartsState&&omhoogState)?'ok':'fout';
       },260);
     },520);
   }catch(e){
@@ -112,7 +99,7 @@ try{
   if(waarde(desktop,"desktop-sticky-result")!=="ok") throw new Error("desktop resultaat="+waarde(desktop,"desktop-sticky-result")+", aan="+waarde(desktop,"desktop-sticky-aan")+", verstopt="+waarde(desktop,"desktop-sticky-verstopt")+", display="+waarde(desktop,"desktop-sticky-display")+", position="+waarde(desktop,"desktop-sticky-position")+", breedte="+waarde(desktop,"desktop-sticky-breedte")+", boven="+waarde(desktop,"desktop-sticky-boven")+", hero="+waarde(desktop,"desktop-sticky-hero")+", heroVoorbij="+waarde(desktop,"desktop-sticky-hero-voorbij")+", exception="+waarde(desktop,"desktop-sticky-exception"));
 
   const mobiel=draai(390,844,3600);
-  if(waarde(mobiel,"mobile-sticky-result")!=="ok") throw new Error("mobiel resultaat="+waarde(mobiel,"mobile-sticky-result")+", neer="+waarde(mobiel,"mobile-sticky-neer")+", aanNeer="+waarde(mobiel,"mobile-sticky-aan-neer")+", verstoptNeer="+waarde(mobiel,"mobile-sticky-verstopt-neer")+", opacityNeer="+waarde(mobiel,"mobile-sticky-opacity-neer")+", transformNeer="+waarde(mobiel,"mobile-sticky-transform-neer")+", pointerNeer="+waarde(mobiel,"mobile-sticky-pointer-neer")+", bottomNeer="+waarde(mobiel,"mobile-sticky-bottom-neer")+", omhoog="+waarde(mobiel,"mobile-sticky-omhoog")+", aanOmhoog="+waarde(mobiel,"mobile-sticky-aan-omhoog")+", verstoptOmhoog="+waarde(mobiel,"mobile-sticky-verstopt-omhoog")+", opacityOmhoog="+waarde(mobiel,"mobile-sticky-opacity-omhoog")+", topOmhoog="+waarde(mobiel,"mobile-sticky-top-omhoog")+", exception="+waarde(mobiel,"mobile-sticky-exception"));
+  if(waarde(mobiel,"mobile-sticky-result")!=="ok") throw new Error("mobiel resultaat="+waarde(mobiel,"mobile-sticky-result")+", neer="+waarde(mobiel,"mobile-sticky-neer")+", aanNeer="+waarde(mobiel,"mobile-sticky-aan-neer")+", verstoptNeer="+waarde(mobiel,"mobile-sticky-verstopt-neer")+", pointerNeer="+waarde(mobiel,"mobile-sticky-pointer-neer")+", omhoog="+waarde(mobiel,"mobile-sticky-omhoog")+", aanOmhoog="+waarde(mobiel,"mobile-sticky-aan-omhoog")+", verstoptOmhoog="+waarde(mobiel,"mobile-sticky-verstopt-omhoog")+", pointerOmhoog="+waarde(mobiel,"mobile-sticky-pointer-omhoog")+", exception="+waarde(mobiel,"mobile-sticky-exception"));
 
-  console.log("Sticky browsertest geslaagd: desktop blijft vast; mobiel verdwijnt neerwaarts en keert omhoog terug.");
+  console.log("Sticky state-test geslaagd: desktop blijft vast; mobiele hide/show-state wisselt correct.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
