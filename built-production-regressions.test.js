@@ -46,9 +46,15 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  ok(api.S.geo&&api.S.geo.n===25,"komende 24 uur beslaat 25 grenspunten","n="+(api.S.geo&&api.S.geo.n));
  api.S.dag=0;
  const dagStart=d.hourly.time.findIndex(t=>t.slice(0,10)===d.daily.time[0]);
+ d.hourly.precipitation_probability[dagStart]=99;
+ d.hourly.precipitation_probability[dagStart+24]=88;
+ d.hourly.precipitation[dagStart]=9;
+ d.hourly.precipitation[dagStart+24]=8;
  api.etmaal(dagStart,24);
  ok(api.S.geo&&api.S.geo.n===25,"gekozen kalenderdag beslaat 00:00 tot volgende 00:00 met 25 grenspunten","n="+(api.S.geo&&api.S.geo.n));
  ok(api.S.geo&&api.S.geo.TI[0].endsWith("T00:00")&&api.S.geo.TI[24].endsWith("T00:00")&&api.S.geo.TI[0].slice(0,10)!==api.S.geo.TI[24].slice(0,10),"kalenderdag bevat de rechtergrens van de volgende dag",(api.S.geo&&api.S.geo.TI||[]).join(","));
+ ok(api.S.geo&&api.S.geo.P[0]===null,"00:00 links neemt het neerslaginterval van de vorige dag niet mee","P0="+(api.S.geo&&api.S.geo.P[0]));
+ ok(api.S.geo&&api.S.geo.P[24]===88,"volgende 00:00 bewaart het laatste interval 23:00–00:00 van de gekozen dag","P24="+(api.S.geo&&api.S.geo.P[24]));
 }
 {
  const {api}=laadKern(390),d=bouw({});d.timezone="Europe/Amsterdam";d.utc_offset_seconds=7200;zetBasis(api,d);api.S.klokOverride=null;api.S.klokInstantOverride=new Date("2026-10-25T02:30:00Z");ok(api.plaatsKlok()==="03:30","plaatsklok volgt wintertijd via IANA-zone ondanks stale +02 offset",api.plaatsKlok());
