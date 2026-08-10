@@ -18,9 +18,13 @@ for(const vereist of [
   "pollenEenheid",
   "grid-template-columns:62px 58px minmax(0,1fr) 76px",
   "bron-bronnen",
-  "MOBILE SCREENSHOT POLISH 20260810B"
+  "MOBILE SCREENSHOT POLISH 20260810B",
+  "WeatherNowQ1",
+  "q1-dag-mm",
+  "weerbriefing.plaatscache.q1",
+  "CHECKPOINT 25 Q1"
 ]){
-  if(!html.includes(vereist))throw new Error("Definitieve mobiele productie-invariant ontbreekt: "+vereist);
+  if(!html.includes(vereist))throw new Error("Definitieve productie-invariant ontbreekt: "+vereist);
 }
 
 const CACHE_BRONNEN=[
@@ -41,4 +45,4 @@ const m=/const CACHE = "([^"]+)";/.exec(sw);
 if(!m)throw new Error("Serviceworker-cache-id ontbreekt in definitieve artifact.");
 if(m[1]!==verwacht)throw new Error("Serviceworker-cache hoort bij een andere artifact: "+m[1]+" versus "+verwacht);
 
-console.log("Definitieve mobiele productie-artifact geverifieerd: "+verwacht+".");
+console.log("Definitieve checkpoint-25 artifact geverifieerd: "+verwacht+".");
