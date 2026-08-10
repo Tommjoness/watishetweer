@@ -1,9 +1,6 @@
 /* Brug tussen de finale polish en de bestaande UV-consumentensemantiek.
-   De lokale uvOordeel-functie uit meters() is niet globaal zichtbaar. Deze laag
-   gebruikt exact dezelfde grenzen op exact dezelfde ZICHTBARE, afgeronde waarde,
-   zodat bijvoorbeeld 5,9 -> 6 zowel als getal als 'hoog' wordt gepresenteerd.
-   Tijdsvorm wordt in een aparte gecontroleerde ronde aangepast zodra de
-   browserverwachting daarvoor expliciet is bijgewerkt. */
+   Het zichtbare afgeronde getal bepaalt ook de categorie. Daarnaast benoemt de
+   tekst nu eerlijk of de dagpiek nog komt of al voorbij is. */
 (function(root){
 "use strict";
 function getal(v){return v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;}
@@ -13,7 +10,15 @@ function uvOordeel(v){
   return n<3?"laag":n<6?"matig":n<8?"hoog":n<11?"zeer hoog":"extreem";
 }
 function uvOordeelVoorBron(v){const n=zichtbareUv(v);return n===null?"":uvOordeel(n);}
-const api={zichtbareUv,uvOordeel,uvOordeelVoorBron};
+function uvTekst(piekTijd,bronWaarde,nuTijd){
+  const zichtbaar=zichtbareUv(bronWaarde);
+  if(zichtbaar===null||!piekTijd)return "";
+  if(zichtbaar<1)return "Nauwelijks UV vandaag.";
+  const tijd=String(piekTijd).slice(11,16);
+  const voorbij=String(piekTijd).slice(0,16)<=String(nuTijd||"").slice(0,16);
+  return (voorbij?"Piekte rond ":"Piek rond ")+tijd+" · "+uvOordeel(zichtbaar)+".";
+}
+const api={zichtbareUv,uvOordeel,uvOordeelVoorBron,uvTekst};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowUvBridge=api;
 if(typeof document==="undefined"||typeof S==="undefined"||typeof meters!=="function")return;
@@ -22,10 +27,9 @@ meters=function(){
   basisMeters();
   const pu=typeof piek==="function"?piek("uv_index"):null;
   const uvsub=document.getElementById("uvsub");
-  if(!pu||!uvsub||!Number.isFinite(Number(pu.v))||Number(pu.v)<0)return;
-  const zichtbaar=zichtbareUv(pu.v);
-  if(zichtbaar===null)return;
-  if(zichtbaar<1){uvsub.textContent="Nauwelijks UV vandaag.";return;}
-  uvsub.textContent="Rond "+String(pu.t||"").slice(11,16)+" · "+uvOordeel(zichtbaar)+".";
+  if(!pu||!uvsub)return;
+  const nu=typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():(S.d&&S.d.current&&S.d.current.time);
+  const tekst=uvTekst(pu.t,pu.v,nu);
+  if(tekst)uvsub.textContent=tekst;
 };
 })(typeof globalThis!=="undefined"?globalThis:this);
