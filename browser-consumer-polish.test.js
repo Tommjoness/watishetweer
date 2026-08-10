@@ -170,6 +170,7 @@ async function controleer(page, naam, modus) {
     const maanSvgs = maanGebied.reduce((n, el) => n + el.querySelectorAll(".maan-fase-svg").length, 0);
     const faseSvg = document.querySelector(".maan-fase-svg");
     const faseOutline = faseSvg ? faseSvg.querySelector('path + circle, circle[fill="currentColor"] + circle') : null;
+    const faseStyle = faseSvg ? getComputedStyle(faseSvg) : null;
     const dagTeksten = [...document.querySelectorAll("#days .row.day:not(.kop) .dcond")].map(el => (el.textContent || "").trim());
     const merk = document.querySelector(".mast h1");
     const windKop = document.querySelector("#days .row.kop .dwind");
@@ -202,6 +203,8 @@ async function controleer(page, naam, modus) {
       maanSvgs,
       maanOutlineDisplay: faseOutline ? getComputedStyle(faseOutline).display : null,
       maanBreedte: faseSvg ? faseSvg.getBoundingClientRect().width : 0,
+      maanAchtergrond: faseStyle ? faseStyle.backgroundColor : "",
+      maanRandRadius: faseStyle ? faseStyle.borderRadius : "",
       dagTeksten,
       merkTekst: merk ? merk.textContent.trim() : "",
       merkGrootte: merk ? parseFloat(getComputedStyle(merk).fontSize) : 0,
@@ -259,7 +262,10 @@ async function controleer(page, naam, modus) {
   assert.ok(resultaat.maanSvgs >= resultaat.nachtMaan + 1, `${naam} ${modus}: maanfase gebruikt monochrome inline-SVG in kop en nachtrijen`);
   assert.ok(!/[🌑🌒🌓🌔🌕🌖🌗🌘]/u.test(resultaat.maanTekst), `${naam} ${modus}: geen platformkleurige maanemoji blijft zichtbaar`);
   assert.ok(resultaat.maanBreedte >= 13, `${naam} ${modus}: maanfase blijft op klein scherm herkenbaar`);
-  if (resultaat.maanOutlineDisplay !== null) assert.equal(resultaat.maanOutlineDisplay, "none", `${naam} ${modus}: buitenste cirkel verdringt de zichtbare maanfase niet`);
+  assert.notEqual(resultaat.maanAchtergrond, "rgba(0, 0, 0, 0)", `${naam} ${modus}: maanfase heeft een zichtbare schijf en leest niet als los haakje`);
+  assert.notEqual(resultaat.maanAchtergrond, "transparent", `${naam} ${modus}: maanfase-achtergrond is niet transparant`);
+  assert.ok(parseFloat(resultaat.maanRandRadius) > 0, `${naam} ${modus}: maanfase heeft ronde schijfvorm`);
+  if (resultaat.maanOutlineDisplay !== null) assert.equal(resultaat.maanOutlineDisplay, "none", `${naam} ${modus}: buitenste SVG-cirkel verdringt de zichtbare maanfase niet`);
 
   // De fixture heeft voor vandaag een niet-neerslagbeeld uit de resterende uurdata,
   // maar voor toekomstige dagen bewust een dagelijkse regencode. Alleen het droge
@@ -275,6 +281,38 @@ async function controleer(page, naam, modus) {
     assert.ok(resultaat.knopHoogte <= 36, `${naam} ${modus}: locatiebediening blijft compact`);
     assert.equal(resultaat.popSubDisplay, "none", `${naam} ${modus}: derde neerslagzin wordt niet dubbel getoond`);
     assert.ok(resultaat.footerGrootte >= 10.5 && resultaat.footerGrootte <= 11.5, `${naam} ${modus}: bronfooter is compact maar leesbaar`);
+
+    // Echte animatie-engine: de mobiele fixed balk verdwijnt tijdens neerwaarts
+    // lezen volledig uit beeld en komt bij omhoog scrollen terug, terwijl de hero
+    // nog steeds voorbij is. Dit voorkomt het afsnijden van sectiekoppen/content.
+    await page.evaluate(() => {
+      const hero = document.querySelector(".hero");
+      const doel = Math.max(0, window.scrollY + hero.getBoundingClientRect().bottom + 400);
+      window.scrollTo(0, doel);
+      window.dispatchEvent(new Event("scroll"));
+    });
+    await page.waitForTimeout(360);
+    const neer = await page.evaluate(() => {
+      const bar = document.getElementById("minibar"), hero = document.querySelector(".hero"), s = getComputedStyle(bar), r = bar.getBoundingClientRect();
+      return {aan:bar.classList.contains("aan"),verstopt:bar.classList.contains("senior-verstopt"),opacity:parseFloat(s.opacity),pointer:s.pointerEvents,bottom:r.bottom,transform:s.transform,heroBottom:hero.getBoundingClientRect().bottom};
+    });
+    assert.ok(neer.aan && neer.verstopt, `${naam} ${modus}: minibalk krijgt neerwaarts de verborgen state`);
+    assert.ok(neer.opacity < 0.1, `${naam} ${modus}: verborgen minibalk is na transitie visueel transparant`);
+    assert.equal(neer.pointer, "none", `${naam} ${modus}: verborgen minibalk onderschept geen aanrakingen`);
+    assert.ok(neer.bottom <= 2, `${naam} ${modus}: verborgen minibalk ligt fysiek buiten het viewport`);
+    assert.notEqual(neer.transform, "none", `${naam} ${modus}: verborgen minibalk gebruikt een echte transform`);
+    assert.ok(neer.heroBottom < 0, `${naam} ${modus}: minibalktest vindt plaats nadat hero voorbij is`);
+
+    await page.evaluate(() => { window.scrollBy(0, -140); window.dispatchEvent(new Event("scroll")); });
+    await page.waitForTimeout(360);
+    const omhoog = await page.evaluate(() => {
+      const bar = document.getElementById("minibar"), hero = document.querySelector(".hero"), s = getComputedStyle(bar), r = bar.getBoundingClientRect();
+      return {aan:bar.classList.contains("aan"),verstopt:bar.classList.contains("senior-verstopt"),opacity:parseFloat(s.opacity),top:r.top,heroBottom:hero.getBoundingClientRect().bottom};
+    });
+    assert.ok(omhoog.aan && !omhoog.verstopt, `${naam} ${modus}: minibalk keert bij omhoog scrollen terug`);
+    assert.ok(omhoog.opacity > 0.9, `${naam} ${modus}: teruggekeerde minibalk is zichtbaar`);
+    assert.ok(Math.abs(omhoog.top) <= 1, `${naam} ${modus}: teruggekeerde minibalk staat weer bovenaan`);
+    assert.ok(omhoog.heroBottom < 0, `${naam} ${modus}: balk keert terug zonder dat hero opnieuw zichtbaar hoeft te zijn`);
   }
 
   assert.equal(resultaat.pollenSub, "laag", `${naam} ${modus}: pollen geeft kwalitatieve betekenis`);
