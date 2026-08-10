@@ -68,6 +68,15 @@ async function controleer(type,naam){
       dagMm:[...document.querySelectorAll("#days .q1-dag-mm")].map(x=>x.textContent.trim()),
       over:document.documentElement.scrollWidth-window.innerWidth
     }));
+    const diagnose=await page.evaluate(()=>({
+      polishApi:!!window.WeatherNowMobileScreenshotPolish,
+      q1Api:!!window.WeatherNowQ1,
+      precClass:document.getElementById("prec")?.className||"",
+      precParentClass:document.getElementById("prec")?.parentElement?.className||"",
+      precHeading:document.getElementById("prec")?.parentElement?.querySelector(".eyebrow")?.textContent.trim()||"",
+      bodyHasPolishMarker:document.documentElement.innerHTML.includes("MOBILE SCREENSHOT POLISH 20260810B")
+    }));
+    console.log("DIAG "+naam+" "+JSON.stringify({basis,diagnose}));
     assert.equal(basis.recent,"Afgelopen kwartier",naam+": kwartierkop zonder current.interval");
     assert.ok(basis.dagMm.length>=1,naam+": minstens één neerslagdag toont mm");
     assert.ok(!basis.dagMm.includes("0,0 mm"),naam+": droge dagen tonen geen 0,0 mm");
@@ -93,7 +102,7 @@ async function controleer(type,naam){
     const na=await page.evaluate(()=>WeatherNowQ1Performance.lastNetworkMs);
     assert.ok(na>=650,naam+": test bevestigt dat de netwerkrefresh werkelijk vertraagd was en cache dus verschil maakte");
 
-    // Exact dezelfde geocodingvraag wordt binnen de tab hergebruikt.
+    // Exact dezelfde geocodingvraag wordt binnen dezelfde tab hergebruikt.
     const geoHits=await page.evaluate(async()=>{
       const u="https://geocoding-api.open-meteo.com/v1/search?name=Am&count=6&language=nl&format=json";
       await j(u);await j(u);return WeatherNowQ1Performance.geocodeCacheHits;
