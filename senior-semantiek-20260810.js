@@ -96,8 +96,19 @@ function zonInfoRijen(daily,nuLokaal,geselecteerdIndex,daglengteFn,labelFn){
 
   const nu=String(nuLokaal||"");
   if(!sunrise[i]&&!sunset[i]) return [rij(i,[daglicht(i)])];
-  if(sunrise[i]&&nu<sunrise[i]) return [rij(i,[op(i),onder(i),daglicht(i)])];
-  if(sunset[i]&&nu<sunset[i]){
+  if(sunrise[i]&&!sunset[i]){
+    return [rij(i,nu<sunrise[i]?[op(i),daglicht(i)]:[daglicht(i)])];
+  }
+  if(!sunrise[i]&&sunset[i]){
+    if(nu<sunset[i]){
+      const uit=[rij(i,[onder(i),daglicht(i)])];
+      if(i+1<tijden.length&&sunrise[i+1])uit.push(rij(i+1,[op(i+1)]));
+      return uit;
+    }
+    return i+1<tijden.length?[rij(i+1,[op(i+1),onder(i+1),daglicht(i+1)])]:[rij(i,[daglicht(i)])];
+  }
+  if(nu<sunrise[i]) return [rij(i,[op(i),onder(i),daglicht(i)])];
+  if(nu<sunset[i]){
     const uit=[rij(i,[onder(i),daglicht(i)])];
     if(i+1<tijden.length&&sunrise[i+1]) uit.push(rij(i+1,[op(i+1)]));
     return uit;
@@ -188,7 +199,7 @@ briefing=function(){
 function renderZonInfo(){
   const el=document.getElementById("suntimes"); if(!el||!S.d||!S.d.daily)return;
   const nu=weatherNowActueleLokaleTijd(),geselecteerd=Number.isInteger(S.dag)?S.dag:null;
-  const rijen=zonInfoRijen(S.d.daily,nu,geselecteerd,daglengte,i=>dagAanduiding(S.d.daily.time[i],true));
+  const rijen=zonInfoRijen(S.d.daily,nu,geselecteerd,daglengte,datum=>dagAanduiding(datum,true));
   el.classList.add("senior-zoninfo");
   el.innerHTML=rijen.map(r=>'<span class="zonregel"><span class="zondag">'+escapeHtml(r.label)+'</span>'
     +r.items.map(x=>'<span>'+escapeHtml(x)+'</span>').join("")+'</span>').join("");
