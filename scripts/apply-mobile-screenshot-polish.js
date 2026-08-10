@@ -8,25 +8,36 @@ const crypto=require("crypto");
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
 const htmlPad=path.join(OUT,"index.html");
-const css=fs.readFileSync(path.join(__dirname,"mobile-screenshot-polish.css"),"utf8");
-const js=fs.readFileSync(path.join(__dirname,"mobile-screenshot-polish.js"),"utf8");
+const mobileCss=fs.readFileSync(path.join(__dirname,"mobile-screenshot-polish.css"),"utf8");
+const q1Css=fs.readFileSync(path.join(__dirname,"q1-precip-performance.css"),"utf8");
+const mobileJs=fs.readFileSync(path.join(__dirname,"mobile-screenshot-polish.js"),"utf8");
+const q1Js=fs.readFileSync(path.join(__dirname,"q1-precip-performance.js"),"utf8");
 let html=fs.readFileSync(htmlPad,"utf8");
 
 const CSS_MARK="/* ===== MOBILE SCREENSHOT POLISH 20260810B CSS ===== */";
+const Q1_CSS_MARK="/* ===== CHECKPOINT 25 Q1 CSS ===== */";
 const JS_MARK="/* ===== MOBILE SCREENSHOT POLISH 20260810B ===== */";
+const Q1_JS_MARK="/* ===== CHECKPOINT 25 Q1 ===== */";
 const START="/* ---------- start ---------- */";
-if(html.includes(CSS_MARK)||html.includes(JS_MARK))throw new Error("Mobiele screenshot-polish is al geïnjecteerd.");
+if(html.includes(CSS_MARK)||html.includes(JS_MARK)||html.includes(Q1_CSS_MARK)||html.includes(Q1_JS_MARK))throw new Error("Post-build polish is al geïnjecteerd.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor mobiele polish.");
 if((html.split(START).length-1)!==1)throw new Error("Startmarker ontbreekt of is dubbel voor mobiele polish.");
 
-html=html.replace("</style>","\n"+CSS_MARK+"\n"+css+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B CSS ===== */\n</style>");
-html=html.replace(START,JS_MARK+"\n"+js+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B ===== */\n\n"+START);
+html=html.replace("</style>",
+  "\n"+CSS_MARK+"\n"+mobileCss+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B CSS ===== */\n"
+  +Q1_CSS_MARK+"\n"+q1Css+"\n/* ===== EINDE CHECKPOINT 25 Q1 CSS ===== */\n</style>");
+html=html.replace(START,
+  JS_MARK+"\n"+mobileJs+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B ===== */\n\n"
+  +Q1_JS_MARK+"\n"+q1Js+"\n/* ===== EINDE CHECKPOINT 25 Q1 ===== */\n\n"+START);
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline script na mobiele polish.");
-scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:mobile-polish-"+(i+1)}));
-for(const vereist of ["WeatherNowMobileScreenshotPolish","maan-fase-svg-v2","Afgelopen kwartier","bron-bronnen"]){
-  if(!html.includes(vereist))throw new Error("Mobiele polish-invariant ontbreekt: "+vereist);
+scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:postbuild-"+(i+1)}));
+for(const vereist of [
+  "WeatherNowMobileScreenshotPolish","maan-fase-svg-v2","Afgelopen kwartier","bron-bronnen",
+  "WeatherNowQ1","q1-dag-mm","weerbriefing.plaatscache.q1","neerslagkans"
+]){
+  if(!html.includes(vereist))throw new Error("Post-build invariant ontbreekt: "+vereist);
 }
 fs.writeFileSync(htmlPad,html,"utf8");
 
@@ -54,4 +65,4 @@ sw=sw.replace(/watishetweer-[0-9a-f]{12}/g,versie);
 if(!sw.includes(versie))throw new Error("Nieuwe mobiele cachehash niet toegepast.");
 fs.writeFileSync(swPad,sw,"utf8");
 
-console.log("Mobiele screenshot-polish geïnjecteerd; cache "+versie+".");
+console.log("Mobiele polish + checkpoint 25% geïnjecteerd; cache "+versie+".");
