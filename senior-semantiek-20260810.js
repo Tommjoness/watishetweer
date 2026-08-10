@@ -174,6 +174,15 @@ function maanFaseSvg(fase,size){
   return '<svg class="maan-fase-svg" viewBox="0 0 24 24" width="'+s+'" height="'+s+'" aria-hidden="true" focusable="false">'+vorm+o+'</svg>';
 }
 
+function maanSymboolNaarSvgInHtml(html,size){
+  const bron=String(html==null?"":html);
+  const symbool=MAAN_SYMBOLEN.find(s=>bron.includes(s));
+  if(!symbool)return bron;
+  const fase=maanFaseUitSymbool(symbool),svg=maanFaseSvg(fase,size);
+  if(!svg)return bron;
+  return bron.replace(symbool+"\uFE0F",svg).replace(symbool+"\uFE0E",svg).replace(symbool,svg);
+}
+
 function zonInfoRijen(daily,nuLokaal,geselecteerdIndex,daglengteFn,labelFn){
   daily=daily||{}; const tijden=Array.isArray(daily.time)?daily.time:[];
   const sunrise=Array.isArray(daily.sunrise)?daily.sunrise:[],sunset=Array.isArray(daily.sunset)?daily.sunset:[];
@@ -226,7 +235,7 @@ const api={
   briefingHistorieSemantiek,nachtLabelVarianten,nachtAdviesMetHorizon,nachtVensterMetHorizon,
   daglichtGrammatica,nachtOordeelGetoond,neerslagWeerCode,uvOordeelGetoond,bewolkingOordeelGetoond,
   aqiOordeelGetoond,pollenOordeelGetoond,zichtOordeelGetoond,zonurenOordeelGetoond,
-  maanFaseUitSymbool,maanFaseSvg,zonInfoRijen,tooltipCompactMaten
+  maanFaseUitSymbool,maanFaseSvg,maanSymboolNaarSvgInHtml,zonInfoRijen,tooltipCompactMaten
 };
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowSeniorRonde20260810=api;
@@ -260,17 +269,10 @@ dagen=function(){
 
 function vervangMaanSymbolen(){
   document.querySelectorAll("#nights .maanbij").forEach(el=>{
-    const fase=maanFaseUitSymbool(el.textContent);
-    if(fase!==null)el.innerHTML=maanFaseSvg(fase,11);
+    el.innerHTML=maanSymboolNaarSvgInHtml(el.innerHTML||el.textContent,11);
   });
   const lab=document.getElementById("moonlab");
-  if(lab){
-    let fase=null;
-    for(const node of [...lab.childNodes]){
-      if(node.nodeType===3){const f=maanFaseUitSymbool(node.textContent);if(f!==null){fase=f;node.remove();break;}}
-    }
-    if(fase!==null)lab.insertAdjacentHTML("afterbegin",maanFaseSvg(fase,12));
-  }
+  if(lab)lab.innerHTML=maanSymboolNaarSvgInHtml(lab.innerHTML||lab.textContent,12);
 }
 
 /* Nachtzicht: zichtbare score, oordeel en kleur gebruiken exact dezelfde afgeronde
