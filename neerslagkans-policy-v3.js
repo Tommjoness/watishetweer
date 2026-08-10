@@ -101,7 +101,7 @@ function komendUurTekst(a){
 }
 
 function briefingZin(a){
-  if(!a||!a.genoeg) return "Voor de komende twee uur ontbreken voldoende gegevens.";
+  if(!a||!a.genoeg) return "Onvoldoende gegevens voor een betrouwbare neerslaginschatting in de komende twee uur.";
   if(a.currentWet||a.status==="NEERSLAG_NU") return "Er valt nu "+typeNeerslag(a)+".";
   if(tegenstrijdigDroogSignaal(a)) return "De neerslagverwachting voor de komende twee uur is onzeker.";
   const niveau=kansNiveau(a.kans);
@@ -111,7 +111,7 @@ function briefingZin(a){
   if(niveau==="MOGELIJK") return "In de komende twee uur is neerslag mogelijk.";
   if(niveau==="GROOT") return "De komende twee uur is er een grote kans op neerslag"+(geenMeetbareHoeveelheid(a)?", maar de hoeveelheid is onzeker.":".");
   if(niveau==="ZEER_GROOT") return "De komende twee uur is de kans op neerslag zeer groot"+(geenMeetbareHoeveelheid(a)?", maar de hoeveelheid is onzeker.":".");
-  return "Voor de komende twee uur ontbreken voldoende gegevens.";
+  return "Onvoldoende gegevens voor een betrouwbare neerslaginschatting in de komende twee uur.";
 }
 
 function dagKansSamenvatting(a,basis){
