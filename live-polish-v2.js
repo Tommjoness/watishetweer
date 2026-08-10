@@ -111,10 +111,12 @@ function ontdubbelTemperatuurlabels(svg){
   }
 }
 
-/* Het rode "nu 22°" stond op dezelfde bovenste labelzone als het eerstvolgende
-   zwarte modelcijfer. Daardoor vormden rood 22° en zwart 23° één rommelig cluster
-   rond de rode lijn. De rode meting krijgt een eigen zone onder de stip, plus
-   een dunne achtergrondhalo zodat de curve er nooit doorheen leest. */
+/* Het rode "nu 22°" is belangrijker dan een nabij zwart modeluurlabel. Een
+   vaste verschuiving bleek nog te kunnen botsen als een zwart cijfer toevallig
+   precies op die nieuwe plek stond. Daarom worden meerdere veilige posities
+   werkelijk in de browser gemeten: eerst de voorkeurskant, dan de andere kant,
+   daarna iets verder boven/onder. Alleen als geen enkele plek vrij is, mag het
+   rode actuele label het botsende zwarte modelcijfer verdringen. */
 function positioneerNuLabel(svg){
   if(!svg||!S.geo) return;
   const tekst=[...svg.querySelectorAll("text")].find(el=>/^nu\s+-?\d+°$/i.test(String(el.textContent||"").trim()));
@@ -125,18 +127,62 @@ function positioneerNuLabel(svg){
   const px=eindig(punt.getAttribute("cx")),py=eindig(punt.getAttribute("cy"));
   const top=eindig(S.geo.pt),bottom=top===null||!Number.isFinite(S.geo.ih)?null:top+S.geo.ih;
   const pos=nuLabelPositie(py,top,bottom,!!S.geo.M);
-  if(px===null||!pos) return;
-  let breed=54;
-  try{const b=tekst.getComputedTextLength();if(Number.isFinite(b)&&b>0)breed=b;}catch(e){}
-  const rechts=Number.isFinite(S.geo.W)&&Number.isFinite(S.geo.pr)?S.geo.W-S.geo.pr:null;
-  const naarRechts=rechts===null||px+8+breed<=rechts;
-  tekst.setAttribute("x",String(px+(naarRechts?8:-8)));
-  tekst.setAttribute("y",String(pos.y));
-  tekst.setAttribute("text-anchor",naarRechts?"start":"end");
+  if(px===null||py===null||top===null||bottom===null||!pos) return;
+
   tekst.setAttribute("stroke",SHEET);
   tekst.setAttribute("stroke-width",S.geo.M?"2.5":"3");
   tekst.setAttribute("paint-order","stroke");
   tekst.setAttribute("stroke-linejoin","round");
+
+  let breed=54;
+  try{const b=tekst.getComputedTextLength();if(Number.isFinite(b)&&b>0)breed=b;}catch(e){}
+  const links=Number.isFinite(S.geo.pl)?S.geo.pl:2;
+  const rechts=Number.isFinite(S.geo.W)&&Number.isFinite(S.geo.pr)?S.geo.W-S.geo.pr:null;
+  const gewoneLabels=[...svg.querySelectorAll("text")].filter(el=>{
+    if(el===tekst) return false;
+    const ff=String(el.getAttribute("font-family")||"");
+    return ff.includes("Bodoni Moda")&&/^-?\d+°$/.test(String(el.textContent||"").trim());
+  });
+  const raakt=(a,b,marge)=>a.width&&b.width
+    &&a.left<b.right+marge&&a.right>b.left-marge
+    &&a.top<b.bottom+marge&&a.bottom>b.top-marge;
+  const botsers=()=>{
+    const r=tekst.getBoundingClientRect();
+    return gewoneLabels.filter(el=>raakt(r,el.getBoundingClientRect(),2));
+  };
+  const plaats=(naarRechts,y,afstand)=>{
+    const x=px+(naarRechts?afstand:-afstand);
+    if(naarRechts){if(rechts!==null&&x+breed>rechts) return null;}
+    else if(x-breed<links) return null;
+    if(y<top+8||y>bottom-4) return null;
+    tekst.setAttribute("x",String(x));
+    tekst.setAttribute("y",String(y));
+    tekst.setAttribute("text-anchor",naarRechts?"start":"end");
+    return botsers();
+  };
+
+  const pastRechts=rechts===null||px+8+breed<=rechts;
+  const voorkeur=pastRechts;
+  const yVerderOnder=py+(S.geo.M?28:30);
+  const yVerderBoven=py-(S.geo.M?22:24);
+  const yOpties=[pos.y];
+  if(yVerderOnder<=bottom-6&&!yOpties.some(y=>Math.abs(y-yVerderOnder)<1)) yOpties.push(yVerderOnder);
+  if(yVerderBoven>=top+10&&!yOpties.some(y=>Math.abs(y-yVerderBoven)<1)) yOpties.push(yVerderBoven);
+  const kanten=[voorkeur,!voorkeur];
+  let beste=null;
+  for(const y of yOpties){
+    for(const kant of kanten){
+      for(const afstand of [8,16]){
+        const b=plaats(kant,y,afstand);
+        if(b===null) continue;
+        if(!b.length) return;
+        if(!beste||b.length<beste.botsers.length) beste={kant,y,afstand,botsers:b};
+      }
+    }
+  }
+  if(!beste) return;
+  const laatste=plaats(beste.kant,beste.y,beste.afstand);
+  if(laatste) laatste.forEach(el=>el.remove());
 }
 
 const basisEtmaalPolishV2=etmaal;
