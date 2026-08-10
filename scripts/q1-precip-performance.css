@@ -1,0 +1,13 @@
+/* Checkpoint 25%: extra neerslaghoeveelheid zonder nieuwe tabelkolom. */
+#days .drain .q1-dag-mm{
+  display:block;
+  margin-top:2px;
+  font-family:var(--mono);
+  font-size:10px;
+  line-height:1.2;
+  color:var(--ink-45);
+  white-space:nowrap;
+}
+@media(max-width:900px){
+  #days .drain .q1-dag-mm{font-size:9.5px;margin-top:1px}
+}
