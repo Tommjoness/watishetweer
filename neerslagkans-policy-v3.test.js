@@ -1,6 +1,6 @@
 "use strict";
 const assert=require("assert");
-const {kansNiveau,kansZin,komendUurTekst,briefingZin,dagKansSamenvatting}=require("./neerslagkans-policy-v3.js");
+const {kansNiveau,kansHoofd,kansZin,komendUurTekst,briefingZin,dagKansSamenvatting}=require("./neerslagkans-policy-v3.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 
 const grenzen=[
@@ -17,7 +17,15 @@ test("hoeveelheid maakt een lage kans nooit stellig",()=>{
   assert(/kleine kans/i.test(zin),zin);
   assert(!/wordt .*verwacht/i.test(zin),zin);
   assert(/Als er neerslag valt/.test(zin),zin);
+  assert.equal(kansHoofd(a),"20%");
   assert.equal(komendUurTekst(a),"Kleine kans op neerslag het komende uur.");
+});
+
+test("nul kans met meetbare hoeveelheid wordt niet als Droog voorgesteld",()=>{
+  const a={genoeg:true,kans:0,hoeveelheid:0.8,soort:"regen"};
+  assert.equal(kansHoofd(a),"Onzeker");
+  assert(/spreken elkaar tegen/.test(kansZin(a,"de komende twee uur")));
+  assert(/onzeker/.test(briefingZin(a)));
 });
 
 test("30, 70 en 90 procent krijgen zichtbaar verschillende zekerheid",()=>{
