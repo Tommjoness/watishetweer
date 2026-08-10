@@ -45,8 +45,9 @@ vervangProductregel(PRODUCT_CONFIG.KALENDERDAG_PUNTEN_BRON,PRODUCT_CONFIG.KALEND
    IntersectionObserver. Dat is zuinig, maar browsers mogen zo'n callback rond
    layoutwisselingen uitstellen. Productie krijgt daarom één gedeelde
    zichtbaarheidstest op de echte onderrand van de hero, aangeroepen door de
-   observer én door passieve scroll/resize-events. requestAnimationFrame zorgt
-   dat meerdere events in hetzelfde frame nooit meerdere layoutmetingen doen. */
+   observer én door passieve scroll/resize-events. Een maximaal eens per 16 ms
+   lopende timer coalescet snelle scroll-events zonder afhankelijkheid van de
+   render-scheduler van de browser. */
 const MINIBAR_BRON=`(function(){
   const hero=document.querySelector(".hero"),bar=document.getElementById("minibar");
   if(!hero||!("IntersectionObserver" in window)) return;
@@ -57,16 +58,15 @@ const MINIBAR_BRON=`(function(){
 const MINIBAR_PRODUCTIE=`(function(){
   const hero=document.querySelector(".hero"),bar=document.getElementById("minibar");
   if(!hero||!bar) return;
-  let frame=null;
+  let timer=null;
   const zet=()=>{
-    frame=null;
+    timer=null;
     const r=hero.getBoundingClientRect();
     bar.classList.toggle("aan",Number.isFinite(r.bottom)&&r.bottom<=0);
   };
   const plan=()=>{
-    if(frame!==null) return;
-    const raf=window.requestAnimationFrame||function(fn){return setTimeout(fn,16);};
-    frame=raf(zet);
+    if(timer!==null) return;
+    timer=setTimeout(zet,16);
   };
   if("IntersectionObserver" in window)new IntersectionObserver(plan,{threshold:0}).observe(hero);
   window.addEventListener("scroll",plan,{passive:true});
@@ -95,7 +95,7 @@ const vereist=[
   "klokKalenderdag","Komend uur","item.precipitation*item.fractie",
   "luchtBelofte","plaatsSpecifiek!==false","nachtzichtScore","grafiekNeerslagVerschuiving",
   "grid-template-columns:repeat(3,minmax(0,1fr))","setInterval(liveKlokTik,1000)","tooltipWaardeKort","temperatuurLabelsBotsen",
-  "window.addEventListener(\"scroll\",plan,{passive:true})","r.bottom<=0","requestAnimationFrame",
+  "window.addEventListener(\"scroll\",plan,{passive:true})","r.bottom<=0","timer=setTimeout(zet,16)",
   "load(52.3676,4.9041,\"Amsterdam\",false,true,\"NL\")"
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);
