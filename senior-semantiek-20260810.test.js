@@ -50,6 +50,9 @@ assert.equal(s.nachtVensterMetHorizon("Beste periode 22:00–07:00",5),"Waarschi
 for(const [score,oordeel] of [[0,"Ongunstig"],[3,"Ongunstig"],[4,"Matig"],[5,"Redelijk"],[6,"Redelijk"],[7,"Goed"],[8,"Goed"],[9,"Uitstekend"],[10,"Uitstekend"]]){
   assert.equal(s.nachtOordeelGetoond(score),oordeel,"zichtscore "+score);
 }
+assert.equal(s.nachtBalkPercentageGetoond(6.4),60);
+assert.equal(s.nachtBalkPercentageGetoond(6.6),70);
+assert.equal(s.nachtBalkPercentageGetoond(10.4),100);
 for(const [uv,oordeel] of [[2,"laag"],[3,"matig"],[5,"matig"],[6,"hoog"],[7,"hoog"],[8,"zeer hoog"],[10,"zeer hoog"],[11,"extreem"]]){
   assert.equal(s.uvOordeelGetoond(uv),oordeel,"UV "+uv);
 }
@@ -76,7 +79,8 @@ assert.equal(s.zichtOordeelGetoond(1.0,false),"Beperkt zicht.");
 assert.equal(s.zichtOordeelGetoond(3.9,false),"Beperkt zicht.");
 assert.equal(s.zichtOordeelGetoond(4.0,false),"Redelijk zicht.");
 assert.equal(s.zichtOordeelGetoond(9.9,false),"Redelijk zicht.");
-assert.equal(s.zichtOordeelGetoond(10,true),"Goed zicht, meer dan tien kilometer.");
+assert.equal(s.zichtOordeelGetoond(10,false),"Goed zicht, ongeveer tien kilometer.");
+assert.equal(s.zichtOordeelGetoond(10,true),"Goed zicht, tien kilometer of meer.");
 assert.equal(s.zonurenOordeelGetoond(1.9),"Weinig zon vandaag");
 assert.equal(s.zonurenOordeelGetoond(2.0),"Een aantal zonuren vandaag");
 assert.equal(s.zonurenOordeelGetoond(7.0),"Een aantal zonuren vandaag");
