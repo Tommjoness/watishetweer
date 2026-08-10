@@ -18,6 +18,12 @@ for(let i=0;i<d.hourly.time.length;i++){
 const air={current:{european_aqi:30,us_aqi:40},hourly:{time:[d.current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[2],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}};
 
 let html=fs.readFileSync(path.join(__dirname,"public/index.html"),"utf8");
+const artifactDiagnose={
+  oud:html.includes('<div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">'),
+  nieuw:html.includes('<div class="eyebrow">Afgelopen kwartier</div><div class="sval" id="prec">'),
+  polish:html.includes("MOBILE SCREENSHOT POLISH 20260810B"),
+  q1:html.includes("CHECKPOINT 25 Q1")
+};
 const stub=`<script>
 window.__q1ForecastDelay=0;
 window.fetch=async function(url){
@@ -68,15 +74,25 @@ async function controleer(type,naam){
       dagMm:[...document.querySelectorAll("#days .q1-dag-mm")].map(x=>x.textContent.trim()),
       over:document.documentElement.scrollWidth-window.innerWidth
     }));
-    const diagnose=await page.evaluate(()=>({
-      polishApi:!!window.WeatherNowMobileScreenshotPolish,
-      q1Api:!!window.WeatherNowQ1,
-      precClass:document.getElementById("prec")?.className||"",
-      precParentClass:document.getElementById("prec")?.parentElement?.className||"",
-      precHeading:document.getElementById("prec")?.parentElement?.querySelector(".eyebrow")?.textContent.trim()||"",
-      bodyHasPolishMarker:document.documentElement.innerHTML.includes("MOBILE SCREENSHOT POLISH 20260810B")
-    }));
-    console.log("DIAG "+naam+" "+JSON.stringify({basis,diagnose}));
+    const diagnose=await page.evaluate(()=>{
+      const kop=()=>document.getElementById("prec")?.parentElement?.querySelector(".eyebrow")?.textContent.trim()||"";
+      const voor=kop(),metersBron=String(meters),tekenBron=String(tekenAlles);
+      let metersFout="";
+      try{meters();}catch(e){metersFout=String(e&&e.stack||e);}
+      return {
+        polishApi:!!window.WeatherNowMobileScreenshotPolish,
+        q1Api:!!window.WeatherNowQ1,
+        precClass:document.getElementById("prec")?.className||"",
+        precParentClass:document.getElementById("prec")?.parentElement?.className||"",
+        precHeadingVoor:voor,
+        precHeadingNaMeters:kop(),
+        metersWrapped:metersBron.includes("compactRecentLabel"),
+        tekenWrapped:tekenBron.includes("compactRecentLabel"),
+        metersFout,
+        bodyHasPolishMarker:document.documentElement.innerHTML.includes("MOBILE SCREENSHOT POLISH 20260810B")
+      };
+    });
+    console.log("DIAG "+naam+" "+JSON.stringify({artifact:artifactDiagnose,basis,diagnose,fouten}));
     assert.equal(basis.recent,"Afgelopen kwartier",naam+": kwartierkop zonder current.interval");
     assert.ok(basis.dagMm.length>=1,naam+": minstens één neerslagdag toont mm");
     assert.ok(!basis.dagMm.includes("0,0 mm"),naam+": droge dagen tonen geen 0,0 mm");
