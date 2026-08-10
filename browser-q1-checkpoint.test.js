@@ -26,7 +26,7 @@ window.fetch=async function(url){
   const payload=u.includes('/api/waarschuwingen')?${JSON.stringify({bron:"test",dekking:true,lijst:[],land:"NL"})}
     :u.includes('air-quality-api.open-meteo.com')?${JSON.stringify(air)}
     :u.includes('geocoding-api.open-meteo.com')?${JSON.stringify({results:[{name:"Amsterdam",latitude:52.37,longitude:4.90,admin1:"Noord-Holland",country_code:"NL"}]})}
-    :u.includes('/api/plaatsnaam')?${JSON.stringify({naam:"Browsertest",land:"NL",bron:"test"})}
+    :u.includes('/api/plaatsnaam')?${JSON.stringify({naam:"Browsertest",land:"NL",bron:"test"})
     :${JSON.stringify(d)};
   return {ok:true,status:200,json:async()=>payload,text:async()=>JSON.stringify(payload)};
 };
@@ -83,6 +83,11 @@ async function controleer(type,naam){
     assert.ok(basis.over<=2,naam+": geen horizontale overflow");
 
     const nat=await tooltip(page,"17:00"),droog=await tooltip(page,"19:00"),nul=await tooltip(page,"20:00");
+    const tipBron=await page.evaluate(()=>["17:00","19:00","20:00"].map(t=>{
+      const i=S.geo.TI.findIndex(x=>String(x).slice(11,16)===t);
+      return {t,i,kans:i>=0&&S.geo.P?S.geo.P[i]:null,mm:i>=0&&S.geo.Q1MM?S.geo.Q1MM[i]:null,x:i>=0?S.geo.x(i):null,W:S.geo.W,cw:S.geo.cw,pl:S.geo.pl};
+    }));
+    console.log("TOOLTIP "+naam+" "+JSON.stringify({nat,droog,nul,tipBron}));
     assert.ok(nat.includes("neerslagkans")&&nat.includes("65% · 1,4 mm"),naam+": nat uur toont kans + mm");
     assert.ok(droog.includes("neerslagkans")&&droog.includes("25%"),naam+": 0 mm behoudt echte 25%-kans");
     assert.ok(!droog.some(t=>/mm/.test(t)),naam+": 0 mm krijgt geen mm-regel");
