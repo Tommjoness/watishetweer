@@ -102,7 +102,7 @@ setTimeout(()=>{
     }
 
     const hit=document.getElementById('hit'),scrub=document.getElementById('scrub');
-    let scrubOk=true,scrubKort=true,neerslagkansVast=false,scrubDebug='';
+    let scrubOk=true,scrubKort=true,neerslagkansVast=false,scrubDebug='',tooltipCompact=true,tooltipW=null;
     if(hit&&scrub){
       const r=hit.getBoundingClientRect();
       const kandidaten=[];
@@ -126,6 +126,9 @@ setTimeout(()=>{
       const s=scrub.getBoundingClientRect();
       if(scrub.style.display!=='none'&&s.width>0) scrubOk=s.left>=svgBox.left-2&&s.right<=svgBox.right+2&&s.top>=svgBox.top-2&&s.bottom<=svgBox.bottom+2;
       scrubKort=!/geen neerslag verwacht/i.test(scrubDebug);
+      const tooltipRect=scrub.querySelector('rect');
+      tooltipW=tooltipRect?Number(tooltipRect.getAttribute('width')):null;
+      tooltipCompact=Number.isFinite(tooltipW)&&(window.innerWidth>=1100?(tooltipW>=200&&tooltipW<=203):(tooltipW>=190&&tooltipW<=194));
     }
     const klok=((document.getElementById('plaatstijd')||{}).textContent||'').trim();
     const klokOk=/^\\d{2}:\\d{2}:\\d{2}$/.test(klok);
@@ -139,26 +142,31 @@ setTimeout(()=>{
       nightAligned=nightWide.slice(1).every(el=>{const r=el.getBoundingClientRect();return Math.abs(r.left-r0.left)<=1&&Math.abs(r.width-r0.width)<=1;});
     }
 
-    const chartKop=document.querySelector('.chartkop'),sun=document.getElementById('suntimes'),vandaag=sun&&sun.querySelector('.zondag');
+    const chartKop=document.querySelector('.chartkop'),sun=document.getElementById('suntimes');
     const uv=document.querySelector('.dashrow-hero .stat.breed');
-    let mobileKopOk=true,uvOk=true,vandaagOk=false;
-    if(vandaag){
-      const stijl=getComputedStyle(vandaag);
-      vandaagOk=stijl.textAlign==='center'&&parseFloat(stijl.fontSize)>=11;
+    const zonRijen=sun?[...sun.querySelectorAll('.zonregel')]:[];
+    let mobileKopOk=true,uvOk=true,zonSemantiekOk=false;
+    if(sun&&zonRijen.length){
+      zonSemantiekOk=sun.scrollWidth<=sun.clientWidth+1&&zonRijen.every(rij=>{
+        const dag=rij.querySelector('.zondag'),items=[...rij.children].filter(el=>!el.classList.contains('zondag'));
+        const stijl=dag&&getComputedStyle(dag);
+        return !!(dag&&dag.textContent.trim()&&items.length>=1&&stijl&&parseFloat(stijl.fontSize)>=10);
+      });
     }
     if(!desktop){
       const kopStijl=chartKop&&getComputedStyle(chartKop),sunStijl=sun&&getComputedStyle(sun),uvStijl=uv&&getComputedStyle(uv);
+      const kopCols=kopStijl?kopStijl.gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length:0;
       const sunCols=sunStijl?sunStijl.gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length:0;
       const uvCols=uvStijl?uvStijl.gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length:0;
       const kopBreed=chartKop&&chartKop.getBoundingClientRect().width,sunBreed=sun&&sun.getBoundingClientRect().width;
-      mobileKopOk=!!(chartKop&&sun&&kopStijl&&kopStijl.display==='grid'&&sunCols===2&&Math.abs(kopBreed-sunBreed)<=2);
+      mobileKopOk=!!(chartKop&&sun&&kopStijl&&kopStijl.display==='grid'&&kopCols===1&&sunCols===1&&Math.abs(kopBreed-sunBreed)<=2&&sun.scrollWidth<=sun.clientWidth+1);
       uvOk=!!(uv&&uvStijl&&uvStijl.display==='grid'&&uvCols===3);
     }
 
     const brief=(document.getElementById('brief')||{}).textContent||'';
     const dagen=document.querySelectorAll('#days .row.day:not(.kop)').length;
     const gridOk=desktop?cols===3:cols===2;
-    document.body.dataset.browserTestResult=(brief&&dagen>=7&&labels.length>=5&&botsingen===0&&dubbelNabij===0&&buiten===0&&lossePunten===0&&nuRustig&&scrubOk&&scrubKort&&neerslagkansVast&&klokOk&&gridOk&&!statOverflow&&nightAligned&&mobileKopOk&&uvOk&&vandaagOk)?'ok':'fout';
+    document.body.dataset.browserTestResult=(brief&&dagen>=7&&labels.length>=5&&botsingen===0&&dubbelNabij===0&&buiten===0&&lossePunten===0&&nuRustig&&scrubOk&&scrubKort&&neerslagkansVast&&tooltipCompact&&klokOk&&gridOk&&!statOverflow&&nightAligned&&mobileKopOk&&uvOk&&zonSemantiekOk)?'ok':'fout';
     document.body.dataset.browserLabels=String(labels.length);
     document.body.dataset.browserPunten=String(tempPunten.length);
     document.body.dataset.browserLossePunten=String(lossePunten);
@@ -173,13 +181,15 @@ setTimeout(()=>{
     document.body.dataset.browserScrubKort=String(scrubKort);
     document.body.dataset.browserKans=String(neerslagkansVast);
     document.body.dataset.browserScrubDebug=scrubDebug;
+    document.body.dataset.browserTooltip=String(tooltipCompact);
+    document.body.dataset.browserTooltipW=String(tooltipW);
     document.body.dataset.browserKlok=String(klokOk);
     document.body.dataset.browserGrid=String(gridOk);
     document.body.dataset.browserOverflow=String(statOverflow);
     document.body.dataset.browserNight=String(nightAligned);
     document.body.dataset.browserMobileKop=String(mobileKopOk);
     document.body.dataset.browserUv=String(uvOk);
-    document.body.dataset.browserVandaag=String(vandaagOk);
+    document.body.dataset.browserZon=String(zonSemantiekOk);
   }catch(e){document.body.dataset.browserTestResult='exception';document.body.dataset.browserException=String(e&&e.message||e);}
 },1100);
 </script>`;
@@ -196,8 +206,8 @@ function voerBrowserUit(maat,naam){
   if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"";
   const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
-  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", punten="+waarde("browser-punten")+", lossePunten="+waarde("browser-losse-punten")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", neerslagkans="+waarde("browser-kans")+", scrubTekst="+waarde("browser-scrub-debug")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", night="+waarde("browser-night")+", mobileKop="+waarde("browser-mobile-kop")+", uv="+waarde("browser-uv")+", vandaag="+waarde("browser-vandaag")+", exception="+waarde("browser-exception"));
-  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" temperatuurmarkeringen zonder losse stippen, rustige nu-markering, compacte grafiekkop, vast neerslagkanslabel, tooltip en live klok correct.");
+  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", punten="+waarde("browser-punten")+", lossePunten="+waarde("browser-losse-punten")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", neerslagkans="+waarde("browser-kans")+", scrubTekst="+waarde("browser-scrub-debug")+", tooltip="+waarde("browser-tooltip")+", tooltipW="+waarde("browser-tooltip-w")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", night="+waarde("browser-night")+", mobileKop="+waarde("browser-mobile-kop")+", uv="+waarde("browser-uv")+", zon="+waarde("browser-zon")+", exception="+waarde("browser-exception"));
+  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" temperatuurmarkeringen zonder losse stippen, rustige nu-markering, daggebonden zoninformatie, compacte tooltip, vast neerslagkanslabel en live klok correct.");
 }
 try{voerBrowserUit("390,844","mobiel Chromium");voerBrowserUit("1440,1000","desktop Chromium");}
 finally{fs.rmSync(dir,{recursive:true,force:true});}

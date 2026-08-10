@@ -1,0 +1,76 @@
+/* Gerichte seniorronde: geen redesign, alleen semantische zonregels,
+   leesbaarheid en horizonlabels. Wordt na live-polish.css geladen. */
+
+/* Zoninformatie hoort bij concrete kalenderdagen. Iedere regel heeft daarom
+   één dagaanduiding en alleen de astronomische momenten die bij die dag horen. */
+#suntimes.senior-zoninfo{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:3px;
+  align-items:center;
+  text-align:left;
+}
+#suntimes.senior-zoninfo .zonregel{
+  display:flex;
+  align-items:baseline;
+  justify-content:flex-end;
+  gap:3px 14px;
+  flex-wrap:wrap;
+}
+#suntimes.senior-zoninfo .zonregel .zondag{
+  grid-column:auto;
+  justify-self:auto;
+  flex:0 0 auto;
+  min-width:62px;
+  margin:0;
+  text-align:right;
+  font-size:10.5px;
+  letter-spacing:.10em;
+  color:var(--ink-45);
+}
+#suntimes.senior-zoninfo .zonregel > span:not(.zondag){font-size:11.5px}
+
+.nachtlabel-kort{display:none}
+
+@media(max-width:900px){
+  .chartkop #suntimes.senior-zoninfo{
+    width:100%;
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    gap:4px;
+    justify-items:stretch;
+    text-align:left;
+  }
+  .chartkop #suntimes.senior-zoninfo .zonregel{
+    width:100%;
+    justify-content:center;
+    gap:3px 9px;
+    line-height:1.45;
+  }
+  .chartkop #suntimes.senior-zoninfo .zonregel .zondag{
+    min-width:48px;
+    flex-basis:auto;
+    text-align:right;
+    font-size:10.5px;
+    margin:0;
+  }
+  .chartkop #suntimes.senior-zoninfo .zonregel > span:not(.zondag){font-size:11.5px}
+
+  .nachtlabel-lang{display:none}
+  .nachtlabel-kort{display:inline}
+  .row.night .nmeta.wide{font-size:12px;line-height:1.45}
+  .row.night .nachtmaan{color:var(--ink-45)}
+  .row.kop>*{font-size:10px!important}
+  .data-uitleg{font-size:12px;line-height:1.5}
+
+  /* Attribution blijft zichtbaar; alleen iets rustiger en beter leesbaar.
+     Geen uitklapper: de bronvoorwaarden vragen zichtbare bronvermelding. */
+  footer{gap:2px;font-size:12px;line-height:1.55}
+  footer .mono{font-size:12px}
+}
+
+@media(max-width:360px){
+  .chartkop #suntimes.senior-zoninfo .zonregel{gap:2px 7px}
+  .chartkop #suntimes.senior-zoninfo .zonregel .zondag{min-width:44px;font-size:10px}
+  .chartkop #suntimes.senior-zoninfo .zonregel > span:not(.zondag){font-size:11px}
+}

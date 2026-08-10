@@ -143,6 +143,10 @@ async function controleer(page, naam, modus) {
       }
     }
     const sun = document.getElementById("suntimes");
+    const sunRijen = sun ? [...sun.querySelectorAll(".zonregel")].map(rij => ({
+      dag: ((rij.querySelector(".zondag") || {}).textContent || "").trim(),
+      tekst: (rij.textContent || "").replace(/\s+/g, " ").trim()
+    })) : [];
     const uv = document.getElementById("uv");
     const pollen = [...document.querySelectorAll("#aq .stat")]
       .find(el => /^Pollen gras$/.test((el.querySelector(".eyebrow") || {}).textContent || ""));
@@ -152,8 +156,10 @@ async function controleer(page, naam, modus) {
       labels: gewoneTemperaturen.length,
       bots,
       overflow: document.documentElement.scrollWidth - window.innerWidth,
-      sunDag: sun && sun.querySelector(".zondag") ? sun.querySelector(".zondag").textContent.trim() : "",
+      sunDag: sunRijen[0] ? sunRijen[0].dag : "",
       sunTekst: sun ? sun.textContent.replace(/\s+/g, " ").trim() : "",
+      sunRijen,
+      sunOverflow: sun ? sun.scrollWidth - sun.clientWidth : 0,
       hint: (document.getElementById("charthint") || {}).textContent || "",
       briefing: (document.getElementById("brief") || {}).textContent || "",
       uvKop: uv && uv.parentElement ? (uv.parentElement.querySelector(".eyebrow") || {}).textContent || "" : "",
@@ -174,9 +180,15 @@ async function controleer(page, naam, modus) {
   assert.equal(resultaat.bots, 0, `${naam} ${modus}: temperatuurlabels botsen`);
   assert.ok(resultaat.overflow <= 2, `${naam} ${modus}: horizontale overflow`);
 
-  assert.equal(resultaat.sunDag, "Morgen", `${naam} ${modus}: Morgen staat als eigen zonskop`);
-  assert.ok(/Zonsopkomst 06:13/.test(resultaat.sunTekst), `${naam} ${modus}: zonsopkomst onder dagkop`);
-  assert.ok(/Zonsondergang 21:30/.test(resultaat.sunTekst), `${naam} ${modus}: zonsondergang onder dagkop`);
+  // 21:53 is na de zonsondergang van 21:30. De kop boven de grafiek mag dan
+  // geen reeds verstreken zonsopkomst van vandaag meer naast toekomstige tijden
+  // zetten: hij schakelt naar één duidelijk daggebonden blok voor morgen.
+  assert.equal(resultaat.sunRijen.length, 1, `${naam} ${modus}: één relevante astronomische dag na zonsondergang`);
+  assert.equal(resultaat.sunDag, "Morgen", `${naam} ${modus}: morgen staat als eigen zonskop`);
+  assert.ok(/zon op 06:13/i.test(resultaat.sunTekst), `${naam} ${modus}: exacte zonsopkomst van morgen blijft zichtbaar`);
+  assert.ok(/zon onder 21:30/i.test(resultaat.sunTekst), `${naam} ${modus}: exacte zonsondergang van morgen blijft zichtbaar`);
+  assert.ok(!/Vandaag/i.test(resultaat.sunTekst), `${naam} ${modus}: geen verstreken vandaag-momenten na zonsondergang`);
+  assert.ok(resultaat.sunOverflow <= 1, `${naam} ${modus}: zoninformatie heeft geen horizontale overflow`);
   assert.equal(resultaat.hint, "Houd de grafiek vast voor details.", `${naam} ${modus}: korte grafiekhint`);
 
   assert.ok(!/wind komt|draait naar/i.test(resultaat.briefing), `${naam} ${modus}: 1 Bft krijgt geen briefing over richtingsdraai`);
