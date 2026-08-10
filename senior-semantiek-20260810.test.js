@@ -136,6 +136,14 @@ assert.deepEqual(s.zonInfoRijen(alleenOnder,"2026-07-25T20:00",null,()=>"23 uur 
 
 assert.deepEqual(s.tooltipCompactMaten(224,136),{breedte:201.6,hoogte:122.4,inzet:12,rijHoogte:15});
 
+const bron=fs.readFileSync(pad.join(__dirname,"senior-semantiek-20260810.js"),"utf8");
+assert(bron.includes('nachtOordeelGetoond(zichtbaar)'),"Nachtzicht-oordeel is aan de zichtbare score gekoppeld");
+assert(bron.includes('balk.style.width=nachtBalkPercentageGetoond(zichtbaar)+"%"'),"Nachtzicht-balk is aan de zichtbare score gekoppeld");
+assert(bron.includes('neerslagWeerCode(a.code)?beleid.dagKansSamenvatting(a,basis):basis'),"droge/bewolkte dagteksten dupliceren de neerslagkolom niet");
+assert(bron.includes('uvOordeelGetoond(zichtbaar)'),"UV-oordeel gebruikt de zichtbare afgeronde waarde");
+assert(bron.includes('maanSymboolNaarSvgInHtml(lab.innerHTML||lab.textContent,12)'),"maankop gebruikt de DOM-onafhankelijke SVG-vervanging");
+assert(!bron.includes('lab.childNodes'),"maanvervanging leunt niet op iterable childNodes");
+
 const css=fs.readFileSync(pad.join(__dirname,"senior-semantiek-20260810.css"),"utf8");
 assert(css.includes(".nachtlabel-kort"));
 assert(css.includes("font-size:12px"));
