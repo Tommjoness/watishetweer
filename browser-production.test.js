@@ -52,9 +52,14 @@ d.minutely_15={time:[],precipitation:[],rain:[],showers:[],snowfall:[],weather_c
   }
 }
 const air={current:{european_aqi:22,us_aqi:45},hourly:{time:[d.current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[4],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}};
+/* De fixture moet werkelijk in zijn eigen huidige modeluur staan. Anders schuift
+   een later uitgevoerde CI-run vanzelf weken voorbij deze vaste testdata en zijn
+   zowel de nu-lijn als alle toekomstige kanswaarden terecht verlopen. */
+const testNow=Date.parse(d.current.time+"Z")-(Number(d.utc_offset_seconds)||0)*1000+30*60000;
 
 let html=fs.readFileSync(productie,"utf8");
 const stub=`<script>
+Date.now=()=>${testNow};
 window.fetch=async function(url){
   const u=String(url);
   const payload=u.includes('/api/waarschuwingen')?${JSON.stringify({bron:"test",dekking:true,lijst:[]})}
