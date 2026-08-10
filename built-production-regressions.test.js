@@ -91,7 +91,7 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  const {api,bak}=laadKern(390),d=bouw({temp:(u,dag)=>10+u/10}),i=zetBasis(api,d);d.hourly.temperature_2m[i+5]=null;api.etmaal(i,24);ok(!/>0°<\/text>/.test(bak.chart.innerHTML),"null wordt niet als kunstmatig 0°C-extreem gelabeld",bak.chart.innerHTML.slice(0,200));
 }
 {
- const {api,bak}=laadKern(390);api.S.d=bouw({});api.S.i0=0;api.S.zoekToken=1;api.zoeken("A");api.S.zoekToken=2;api.zoeken("AB");ok(true,"oude zoekresponses kunnen nieuwere resultaten niet overschrijven");ok(/ArrowDown/.test(fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8"))&&/aria-activedescendant/.test(fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8")),"zoeken ondersteunt toetsenbord en actieve optie");
+ const html=fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8");ok(/zoekGeneratie/.test(html)&&/generatie!==zoekGeneratie/.test(html),"oude zoekresponses kunnen nieuwere resultaten niet overschrijven");ok(/ArrowDown/.test(html)&&/ArrowUp/.test(html)&&/aria-activedescendant/.test(html)&&/aria-selected/.test(html),"zoeken ondersteunt toetsenbord en actieve optie");
 }
 {
  const pkg=JSON.parse(fs.readFileSync(path.join(__dirname,"package.json"),"utf8")),build=fs.readFileSync(path.join(__dirname,"build-weather.js"),"utf8"),config=fs.readFileSync(path.join(__dirname,"product-config.js"),"utf8");
