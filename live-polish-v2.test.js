@@ -70,12 +70,12 @@ test("UV-piek gebruikt op mobiel de brede rij horizontaal",()=>{
   assert(css.includes(".dashrow-hero .stat.breed .ssub{grid-column:3"));
 });
 
-test("Vandaag staat als grotere gecentreerde kop boven de zoninformatie",()=>{
-  const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
-  assert(css.includes("#suntimes .zondag{"));
-  assert(css.includes("justify-self:stretch"));
-  assert(css.includes("text-align:center"));
-  assert(css.includes("font-size:11.5px"));
+test("zoninformatie krijgt in de eindlaag concrete daggebonden regels",()=>{
+  const css=fs.readFileSync(path.join(__dirname,"senior-semantiek-20260810.css"),"utf8");
+  assert(css.includes("#suntimes.senior-zoninfo"));
+  assert(css.includes(".zonregel"));
+  assert(css.includes("grid-template-columns:minmax(0,1fr)"));
+  assert(css.includes("text-align:right"));
 });
 
 test("tablet en desktop houden compacte weercontext vast tijdens scrollen",()=>{
@@ -112,6 +112,8 @@ test("productiebundel bevat interactiepolish, desktopbalk en robuuste scrollcont
   assert(html.includes('window.addEventListener("scroll",plan,{passive:true})'));
   assert(html.includes('new IntersectionObserver(plan,{threshold:0}).observe(hero)'));
   assert(html.includes("timer=setTimeout(zet,16)"));
+  assert(html.includes("SENIOR SEMANTIEK 20260810"));
+  assert(html.includes("senior-zoninfo"));
 });
 
 if(process.exitCode) console.error("\nLive-polish v2: minstens één regressie mislukt.");
