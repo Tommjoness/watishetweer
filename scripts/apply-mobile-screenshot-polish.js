@@ -19,9 +19,18 @@ const Q1_CSS_MARK="/* ===== CHECKPOINT 25 Q1 CSS ===== */";
 const JS_MARK="/* ===== MOBILE SCREENSHOT POLISH 20260810B ===== */";
 const Q1_JS_MARK="/* ===== CHECKPOINT 25 Q1 ===== */";
 const START="/* ---------- start ---------- */";
+const RECENT_OLD='<div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">';
+const RECENT_NEW='<div class="eyebrow">Afgelopen kwartier</div><div class="sval" id="prec">';
 if(html.includes(CSS_MARK)||html.includes(JS_MARK)||html.includes(Q1_CSS_MARK)||html.includes(Q1_JS_MARK))throw new Error("Post-build polish is al geïnjecteerd.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor mobiele polish.");
 if((html.split(START).length-1)!==1)throw new Error("Startmarker ontbreekt of is dubbel voor mobiele polish.");
+if((html.split(RECENT_OLD).length-1)!==1)throw new Error("Statische kwartierkop ontbreekt of is dubbel in de bronartifact.");
+
+/* Maak de gebruikerszichtbare kop onderdeel van de definitieve HTML-artifact zelf.
+   De runtimecorrectie in mobile-screenshot-polish.js blijft bewust bestaan als
+   vangnet voor eventuele dynamische hertekening, maar de eerste render is hier
+   niet meer van afhankelijk. */
+html=html.replace(RECENT_OLD,RECENT_NEW);
 
 html=html.replace("</style>",
   "\n"+CSS_MARK+"\n"+mobileCss+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B CSS ===== */\n"
@@ -39,6 +48,7 @@ for(const vereist of [
 ]){
   if(!html.includes(vereist))throw new Error("Post-build invariant ontbreekt: "+vereist);
 }
+if(html.includes(RECENT_OLD))throw new Error("Oude statische kwartierkop staat nog in de productieartifact.");
 fs.writeFileSync(htmlPad,html,"utf8");
 
 /* build-weather.js maakt de serviceworker-cacheversie vóór deze gerichte laag.
