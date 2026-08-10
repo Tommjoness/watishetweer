@@ -1,0 +1,78 @@
+"use strict";
+const assert=require("assert"),fs=require("fs"),path=require("path");
+const {analyseerNeerslagData,analyseerDagData,neerslagZin}=require("./interpretatie-engine.js");
+const {nachtzichtScore,grafiekNeerslagVerschuiving}=require("./senior-correctness-v2.js");
+let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
+const uren=(datum,start,aantal)=>Array.from({length:aantal},(_,i)=>new Date(Date.UTC(+datum.slice(0,4),+datum.slice(5,7)-1,+datum.slice(8,10),start+i)).toISOString().slice(0,16));
+function basis(){
+  const ht=uren("2026-07-31",19,6);
+  const mt=Array.from({length:8},(_,i)=>new Date(Date.UTC(2026,6,31,19,15*(i+1))).toISOString().slice(0,16));
+  return {current:{time:"2026-07-31T19:00",precipitation:0,weather_code:3},hourly:{time:ht,precipitation:Array(6).fill(0),precipitation_probability:Array(6).fill(4),weather_code:Array(6).fill(3),rain:Array(6).fill(0),showers:Array(6).fill(0),snowfall:Array(6).fill(0)},minutely_15:{time:mt,precipitation:Array(8).fill(0),weather_code:Array(8).fill(3),rain:Array(8).fill(0),showers:Array(8).fill(0),snowfall:Array(8).fill(0)},daily:{time:["2026-07-31","2026-08-01"],weather_code:[3,3]}};
+}
+
+test("punt 4: actuele regen blijft regen als later sneeuw volgt",()=>{
+  const d=basis();d.current.precipitation=0.2;d.current.weather_code=61;
+  d.minutely_15.precipitation.fill(0.2);d.minutely_15.weather_code.fill(73);
+  d.hourly.precipitation_probability.fill(80);
+  const a=analyseerNeerslagData(d,120);
+  assert.equal(a.status,"NEERSLAG_NU");assert.equal(a.soort,"regen");assert(/valt er nu regen/.test(neerslagZin(a)),neerslagZin(a));
+});
+
+test("punt 5: verstreken onweer bepaalt het resterende weerbeeld van vandaag niet",()=>{
+  const d=basis();d.daily.weather_code[0]=95;d.current.time="2026-07-31T19:00";
+  d.hourly.weather_code=[95,0,1,1,0,0];d.hourly.precipitation.fill(0);d.hourly.precipitation_probability.fill(0);
+  const a=analyseerDagData(d,0,"2026-07-31T19:00");
+  assert(a.genoeg,"daganalyse hoort voldoende dekking te hebben");assert.notEqual(a.code,95);assert([0,1].includes(a.code),"resterende code "+a.code);
+});
+
+test("punt 7: overlappende uurkans wordt als modeluurmaximum benoemd",()=>{
+  const d=basis();d.current.time="2026-07-31T19:47";d.hourly.precipitation_probability[1]=4;d.hourly.precipitation_probability[2]=12;
+  const a=analyseerNeerslagData(d,60,"2026-07-31T19:47"),zin=neerslagZin(a);
+  assert.equal(a.kans,12);assert(/hoogste modelkans in de overlappende uurvakken/.test(zin),zin);
+});
+
+test("punt 8: twee verstreken uren over Amsterdamse voorjaarssprong eindigen om 04:30",()=>{
+  const d={timezone:"Europe/Amsterdam",utc_offset_seconds:7200,current:{time:"2026-03-29T01:30",precipitation:0,weather_code:3},hourly:{time:["2026-03-29T01:00","2026-03-29T03:00","2026-03-29T04:00","2026-03-29T05:00"],precipitation:[0,0,0,0],precipitation_probability:[0,0,0,0],weather_code:[3,3,3,3],rain:[0,0,0,0],showers:[0,0,0,0],snowfall:[0,0,0,0]},minutely_15:{time:[],precipitation:[]}};
+  const a=analyseerNeerslagData(d,120,"2026-03-29T01:30");assert.equal(a.eind,"04:30",JSON.stringify(a));
+});
+
+test("punt 8: dubbel lokaal uur rond najaarsomslag verlaagt zekerheid",()=>{
+  const d={timezone:"Europe/Amsterdam",utc_offset_seconds:3600,current:{time:"2026-10-25T01:30",precipitation:0,weather_code:3},hourly:{time:["2026-10-25T02:00","2026-10-25T02:00","2026-10-25T03:00","2026-10-25T04:00"],precipitation:[0,0,0,0],precipitation_probability:[0,0,0,0],weather_code:[3,3,3,3],rain:[0,0,0,0],showers:[0,0,0,0],snowfall:[0,0,0,0]},minutely_15:{time:[],precipitation:[]}};
+  const a=analyseerNeerslagData(d,120,"2026-10-25T01:30");assert.equal(a.genoeg,false);
+});
+
+test("punt 2: honderd meter zicht kan nooit Goed opleveren",()=>{
+  const r=[0,1,2,3].map(i=>({ms:i*3600000,cloud:0,visibility:100,precip:0,code:0,humidity:100,spread:0,gust:5,moon:0}));
+  const a=nachtzichtScore(r);assert(a.genoeg);assert(a.score<=1.5,"score "+a.score);
+});
+
+test("punt 2: langdurige mist en neerslag begrenzen Nachtzicht hard",()=>{
+  const r=[0,1,2,3].map(i=>({ms:i*3600000,cloud:5,visibility:900,precip:0.3,code:61,humidity:98,spread:0.5,gust:5,moon:0}));
+  const a=nachtzichtScore(r);assert(a.score<=1.5,"score "+a.score);assert.equal(a.beste,null);
+});
+
+test("punt 2/3: ontbrekende uren vormen nooit een vals aaneengesloten zichtvenster",()=>{
+  const r=[{ms:0,cloud:0,visibility:20000,precip:0,code:0,moon:0},{ms:3*3600000,cloud:0,visibility:20000,precip:0,code:0,moon:0}];
+  const a=nachtzichtScore(r);assert.equal(a.beste,null);
+});
+
+test("punt 6: uurneerslag wordt een halve kolom naar het voorafgaande uur verschoven",()=>{
+  assert.equal(grafiekNeerslagVerschuiving(100),-50);assert.equal(grafiekNeerslagVerschuiving(42),-21);
+});
+
+test("punt 9: nachtelijke bewolkingsomschrijving heeft expliciete heldere nachtvorm",()=>{
+  const engine=fs.readFileSync(path.join(__dirname,"interpretatie-engine.js"),"utf8");assert(engine.includes('"Overwegend helder."'));
+});
+
+test("punt 1: landbrede waarschuwing mag briefing niet overrulen",()=>{
+  const engine=fs.readFileSync(path.join(__dirname,"interpretatie-engine.js"),"utf8");const waars=fs.readFileSync(path.join(__dirname,"lib/waarschuwingen.cjs"),"utf8");
+  assert(engine.includes('filter(w=>w&&w.plaatsSpecifiek!==false)'));assert(waars.includes("plaatsSpecifiek: false"));
+});
+
+test("punt 10: productsemantiek en correctheidslaag zijn expliciet geconfigureerd",()=>{
+  const build=fs.readFileSync(path.join(__dirname,"build-weather.js"),"utf8"),cfg=require("./product-config.js");
+  assert(build.includes('require("./product-config.js")'));assert(build.includes("SENIOR CORRECTHEIDSLAAG"));assert.equal(cfg.defaultLocation.naam,"Amsterdam");
+});
+
+if(process.exitCode) console.error("\nSenior-correctheidsronde: minstens één regressie mislukt.");
+else console.log("\nSenior-correctheidsronde: "+n+" regressies geslaagd.");

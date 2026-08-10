@@ -4,10 +4,11 @@ const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
 const crypto=require("crypto");
+const PRODUCT_CONFIG=require("./product-config.js");
 const ROOT=__dirname,OUT=path.join(ROOT,"public");
 const NIET_PUBLICEREN=new Set([
   ".git",".github","api","lib","node_modules","public","scripts",
-  "build-weather.js","interpretatie-engine.js","interpretatie-engine.test.js",
+  "build-weather.js","interpretatie-engine.js","interpretatie-engine.test.js","senior-correctness-v2.js","product-config.js",
   "run.js","run-built-matrix.js","kern.js","data.js","package.json","package-lock.json","vercel.json"
 ]);
 function intern(n){return NIET_PUBLICEREN.has(n)||n.endsWith(".test.js");}
@@ -22,40 +23,34 @@ fs.rmSync(OUT,{recursive:true,force:true});fs.mkdirSync(OUT,{recursive:true});
 for(const n of fs.readdirSync(ROOT)){if(!intern(n))kopieer(path.join(ROOT,n),path.join(OUT,n));}
 let html=fs.readFileSync(path.join(ROOT,"index.html"),"utf8");
 const engine=fs.readFileSync(path.join(ROOT,"interpretatie-engine.js"),"utf8");
+const correctness=fs.readFileSync(path.join(ROOT,"senior-correctness-v2.js"),"utf8");
 const start="/* ---------- start ---------- */";
 if((html.match(/\/\* ---------- start ---------- \*\//g)||[]).length!==1)throw new Error("Startmarker ontbreekt of is dubbel.");
-if(html.includes("CENTRALE INTERPRETATIE-ENGINE"))throw new Error("Bron-index bevat de engine al.");
+if(html.includes("CENTRALE INTERPRETATIE-ENGINE")||html.includes("SENIOR CORRECTHEIDSLAAG"))throw new Error("Bron-index bevat een buildlaag al.");
 
-/* De bron-index blijft leesbaar als zelfstandig ontwikkelbestand, terwijl de
-   productie-build hier één expliciete productstandaard toepast. Een gedeelde
-   link, ?hier=1 en een eerder gekozen plaats staan allemaal vóór dit eerste-
-   bezoekblok en behouden dus hun bestaande prioriteit. Alleen wanneer geen van
-   die drie bestaat, start de publieke site in Amsterdam zonder gps-prompt. */
-const eersteBezoekBron=`  // D. eerste bezoek: geen automatische gps-prompt. De gebruiker kiest zelf
-  //    tussen zoeken en "Mijn locatie"; dat is duidelijker en privacyvriendelijker.
-  const st0=document.getElementById("state");
-  st0.style.display="block";st0.className="msg";
-  st0.textContent="Zoek hierboven een plaats of kies ‘Mijn locatie’.";`;
-const eersteBezoekAmsterdam=`  // D. eerste bezoek: Amsterdam is de neutrale standaardlocatie. Er wordt
-  //    geen gps-toestemming gevraagd; zodra iemand zelf een plaats kiest, wordt
-  //    die keuze normaal als laatst gebruikte plaats onthouden.
-  q.value="Amsterdam";
-  load(52.3676,4.9041,"Amsterdam",false,true,"NL");`;
-const aantalEersteBezoek=html.split(eersteBezoekBron).length-1;
-if(aantalEersteBezoek!==1)throw new Error("Eerste-bezoekblok ontbreekt of is dubbel: "+aantalEersteBezoek+" keer gevonden.");
-html=html.replace(eersteBezoekBron,eersteBezoekAmsterdam);
+/* Alle bewuste verschillen tussen ontwikkeltemplate en productie staan in
+   product-config.js. De build bevat zelf geen duplicaat van die semantiek. */
+function vervangProductregel(bron,productie,label){
+  const aantal=html.split(bron).length-1;
+  if(aantal!==1)throw new Error(label+" ontbreekt of is dubbel: "+aantal+" keer gevonden.");
+  html=html.replace(bron,productie);
+}
+vervangProductregel(PRODUCT_CONFIG.EERSTE_BEZOEK_BRON,PRODUCT_CONFIG.EERSTE_BEZOEK_PRODUCTIE,"Eerste-bezoekblok");
+vervangProductregel(PRODUCT_CONFIG.KALENDERDAG_PUNTEN_BRON,PRODUCT_CONFIG.KALENDERDAG_PUNTEN_PRODUCTIE,"24-uursgrensregel");
 
-html=html.replace(start,"/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */\n"+engine+"\n/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */\n\n"+start);
+html=html.replace(start,
+  "/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */\n"+engine+"\n/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */\n\n"
+  +"/* ===== SENIOR CORRECTHEIDSLAAG ===== */\n"+correctness+"\n/* ===== EINDE SENIOR CORRECTHEIDSLAAG ===== */\n\n"+start);
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline script gevonden.");
 scripts.forEach((s,i)=>new vm.Script(s,{filename:"public/index.html:inline-"+(i+1)}));
 const vereist=[
-  "WeatherNowInterpretatie","weatherNowActueleLokaleTijd","plaatsTijdDelen","weatherNowZoneOffset",
-  "const eind=Math.min(i+25,h.time.length);","const punten=S.dag==null&&n===24?25:n;",
+  "WeatherNowInterpretatie","WeatherNowCorrectnessV2","weatherNowActueleLokaleTijd","plaatsTijdDelen","weatherNowZoneOffset",
+  "const eind=Math.min(i+25,h.time.length);","const punten=n===24?25:n;",
   "hoeveelheid onzeker","daily.weather_code&&daily.weather_code[dagIndex]","117.000001",
   "c.visibility!=null?c.visibility","weatherNowUurWaardeOp(\"pressure_msl\"","zoekGeneratie",
   "klokKalenderdag","Komend uur","item.precipitation*item.fractie",
-  "luchtBelofte","niveauIsOfficieel===false",
+  "luchtBelofte","plaatsSpecifiek!==false","nachtzichtScore","grafiekNeerslagVerschuiving",
   "load(52.3676,4.9041,\"Amsterdam\",false,true,\"NL\")"
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);
@@ -80,4 +75,4 @@ if(fs.existsSync(swp)){
   fs.writeFileSync(swp,sw,"utf8");
 }
 for(const n of fs.readdirSync(OUT))if(intern(n))throw new Error("Intern bestand publiek gebouwd: "+n);
-console.log("WeatherNow-build geslaagd: canonieke bron, deterministische assemblage, cache "+versie+".");
+console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, centrale interpretatie, correctheidslaag en cache "+versie+".");

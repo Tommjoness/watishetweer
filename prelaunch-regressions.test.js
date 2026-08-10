@@ -28,8 +28,9 @@ ok(index.includes("coordOpslag")&&index.includes('S.lat.toFixed(3)')&&index.incl
 ok(waars.includes("i.ends || i.expires || null"),"NWS gebruikt gebeurteniseinde vóór CAP-berichtverval");
 ok(waars.includes("American Samoa")&&waars.includes("-14.6"),"American Samoa valt binnen NWS-dekking");
 ok(waars.includes("waarschuwingTekst")&&!waars.includes("trim().slice(0, 300)"),"waarschuwingstekst breekt niet meer hard op 300 tekens af");
-ok(waars.includes("meteoalarm-legacy-atom-")&&waars.includes("api/v1/warnings/feeds-")&&waars.indexOf("meteoalarm-legacy-atom-")<waars.indexOf("api/v1/warnings/feeds-"),"MeteoAlarm gebruikt Atom eerst en heeft alleen daarna een compatibiliteitsfallback");
-ok(waars.includes('haal(atom, "*/*", 1500)')&&waars.includes('haal(compat, "application/json", 4500)')&&waars.includes("timeoutMs = 6000"),"MeteoAlarm gebruikt gemeten Accept- en timeoutinstellingen binnen de clienttimeout");
+ok(waars.includes("meteoalarm-legacy-atom-")&&waars.includes("api/v1/warnings/feeds-")&&waars.indexOf("api/v1/warnings/feeds-")<waars.indexOf("meteoalarm-legacy-atom-"),"MeteoAlarm probeert locatie-filterbare compatibiliteitsdata vóór de landbrede Atom-fallback");
+ok(waars.includes('haal(compat, "application/json", 4000)')&&waars.includes('haal(atom, "*/*", 1800)')&&waars.includes("timeoutMs = 6000"),"MeteoAlarm houdt compatibiliteits- en Atom-fallback samen binnen de clienttimeout");
+ok(waars.includes("plaatsSpecifiek: false")&&waars.includes('scope: "land"'),"landbrede Atom-waarschuwingen worden expliciet als niet plaats-specifiek gemarkeerd");
 ok(index.includes("waarschuwingGeldigTot")&&!index.includes('" Geldig tot "+esc(w.tot)'),"waarschuwingstijd wordt lokaal en menselijk geformatteerd");
 ok(index.includes("kan Open-Meteo uurdata interpoleren"),"kwartiergrafiek benoemt mogelijke interpolatie");
 ok(!plaats.includes("api.bigdatacloud.net")&&!waars.includes("api.bigdatacloud.net")&&index.includes("api.bigdatacloud.net/data/reverse-geocode-client"),"gratis BigDataCloud reverse-geocoding draait uitsluitend client-side");
@@ -44,22 +45,47 @@ async function roep(moduleNaam,query,fetchImpl){const oud=global.fetch,p=require
   const lang="Dit is een volledige eerste zin met belangrijke veiligheidsinformatie. "+"waarschuwing ".repeat(90)+"einde";
   const ny=await roep("./lib/waarschuwingen.cjs",{lat:"40.7128",lon:"-74.0060"},async url=>({ok:true,json:async()=>({features:[{properties:{event:"Heat Advisory",description:lang,severity:"Moderate",onset:"2026-08-09T10:00:00-04:00",expires:"2026-08-09T11:00:00-04:00",ends:"2026-08-09T19:00:00-04:00",areaDesc:"New York"}}]})}));
   ok(ny.body.lijst[0].tot==="2026-08-09T19:00:00-04:00","live NWS-adapter bewaart ends als geldigheid");
+  ok(ny.body.lijst[0].plaatsSpecifiek===true,"NWS-puntroute wordt als plaats-specifiek gemarkeerd");
   ok((ny.body.lijst[0].tekst.length<=701&&!/\w$/.test(ny.body.lijst[0].tekst.slice(-1)))||ny.body.lijst[0].tekst.endsWith("."),"lange waarschuwing wordt op nette grens ingekort");
   let asUrl="";const as=await roep("./lib/waarschuwingen.cjs",{lat:"-14.2756",lon:"-170.7020"},async url=>{asUrl=String(url);return{ok:true,json:async()=>({features:[]})};});
   ok(as.body.bron==="National Weather Service"&&as.body.dekking===true&&asUrl.includes("api.weather.gov/alerts/active?point="),"American Samoa gebruikt de NWS-puntroute");
   const urls=[];const pl=await roep("./lib/plaatsnaam.cjs",{lat:"52.35",lon:"5.26"},async url=>{urls.push(String(url));return{ok:true,json:async()=>({address:{city:"Almere",country_code:"nl"}})};});
   ok(pl.body.naam==="Almere"&&pl.body.land==="NL"&&urls.length===1&&urls[0].includes("nominatim")&&!urls[0].includes("bigdatacloud"),"serverfallback gebruikt alleen Nominatim en bewaart landcode");
-  const warnUrls=[];let atomAccept=null;const eu=await roep("./lib/waarschuwingen.cjs",{lat:"52.35",lon:"5.26",land:"NL"},async (url,opt)=>{warnUrls.push(String(url));if(String(url).includes("meteoalarm-legacy-atom-"))atomAccept=opt&&opt.headers&&opt.headers.Accept;return{ok:true,text:async()=>"<?xml version=\"1.0\"?><feed xmlns=\"http://www.w3.org/2005/Atom\"></feed>"};});
-  ok(eu.body.dekking===true&&eu.body.land==="NL"&&warnUrls.length===1&&warnUrls[0].includes("feeds.meteoalarm.org")&&!warnUrls.some(u=>u.includes("nominatim")||u.includes("bigdatacloud")),"meegegeven landcode voorkomt reverse-geocoding voor MeteoAlarm");
-  ok(atomAccept==="*/*","MeteoAlarm Atom-aanroep gebruikt wildcard Accept om 406 te voorkomen");
-  const fbUrls=[];const fb=await roep("./lib/waarschuwingen.cjs",{lat:"52.35",lon:"5.26",land:"NL"},async url=>{
-    fbUrls.push(String(url));
-    if(String(url).includes("meteoalarm-legacy-atom-")) throw new Error("atom test failure");
+
+  const compatUrls=[];
+  const eu=await roep("./lib/waarschuwingen.cjs",{lat:"52.35",lon:"5.26",land:"NL"},async url=>{
+    compatUrls.push(String(url));
     return{ok:true,text:async()=>JSON.stringify({warnings:[]})};
   });
-  ok(fb.body.dekking===true&&fb.body.land==="NL"&&fbUrls.length===2&&fbUrls[0].includes("meteoalarm-legacy-atom-")&&fbUrls[1].includes("api/v1/warnings/feeds-"),"MeteoAlarm valt bij Atom-runtimefout begrensd terug op compatibiliteitsfeed");
-  const oudUrls=[];const oud=await roep("./lib/waarschuwingen.cjs",{lat:"52.35",lon:"5.26"},async url=>{oudUrls.push(String(url));if(String(url).includes("nominatim"))return{ok:true,json:async()=>({address:{country_code:"nl"}})};return{ok:true,text:async()=>"<?xml version=\"1.0\"?><feed xmlns=\"http://www.w3.org/2005/Atom\"></feed>"};});
-  ok(oud.body.land==="NL"&&oudUrls.some(u=>u.includes("nominatim"))&&oudUrls.some(u=>u.includes("feeds.meteoalarm.org"))&&!oudUrls.some(u=>u.includes("bigdatacloud")),"oude locatie zonder landcode migreert via eenmalige Nominatim-fallback");
+  ok(eu.body.dekking===true&&eu.body.land==="NL"&&eu.body.plaatsSpecifiek===true&&compatUrls.length===1&&compatUrls[0].includes("api/v1/warnings/feeds-netherlands"),"meegegeven landcode gebruikt eerst de locatie-filterbare MeteoAlarm-compatibiliteitsfeed");
+  ok(!compatUrls.some(u=>u.includes("nominatim")||u.includes("bigdatacloud")),"meegegeven landcode voorkomt reverse-geocoding voor MeteoAlarm");
+
+  const fbUrls=[];let atomAccept=null;
+  const fb=await roep("./lib/waarschuwingen.cjs",{lat:"52.35",lon:"5.26",land:"NL"},async (url,opt)=>{
+    fbUrls.push(String(url));
+    if(String(url).includes("api/v1/warnings/feeds-")) throw new Error("compat test failure");
+    atomAccept=opt&&opt.headers&&opt.headers.Accept;
+    return{ok:true,text:async()=>"<?xml version=\"1.0\"?><feed xmlns=\"http://www.w3.org/2005/Atom\"><entry><title>Code geel</title><summary>Landbrede waarschuwing</summary></entry></feed>"};
+  });
+  ok(fb.body.dekking===true&&fb.body.land==="NL"&&fbUrls.length===2&&fbUrls[0].includes("api/v1/warnings/feeds-")&&fbUrls[1].includes("meteoalarm-legacy-atom-"),"MeteoAlarm valt na compatibiliteitsfout begrensd terug op Atom");
+  ok(atomAccept==="*/*","MeteoAlarm Atom-aanroep gebruikt wildcard Accept om 406 te voorkomen");
+  ok(fb.body.plaatsSpecifiek===false&&fb.body.lijst[0].plaatsSpecifiek===false&&fb.body.lijst[0].landelijk===true,"Atom-fallback blijft expliciet landbreed en niet plaats-specifiek");
+
+  const gebied=await roep("./lib/waarschuwingen.cjs",{lat:"52.35",lon:"5.26",land:"NL"},async url=>({
+    ok:true,text:async()=>JSON.stringify({warnings:[
+      {event:"Binnen",severity:"Moderate",area:[{polygon:"52.0,5.0 52.0,5.5 52.6,5.5 52.6,5.0"}]},
+      {event:"Buiten",severity:"Moderate",area:[{polygon:"50.0,3.0 50.0,3.5 50.5,3.5 50.5,3.0"}]}
+    ]})
+  }));
+  ok(gebied.body.lijst.length===1&&gebied.body.lijst[0].titel==="Binnen"&&gebied.body.lijst[0].plaatsSpecifiek===true,"CAP-geometrie filtert waarschuwingen buiten de gekozen plaats weg");
+
+  const oudUrls=[];const oud=await roep("./lib/waarschuwingen.cjs",{lat:"52.35",lon:"5.26"},async url=>{
+    oudUrls.push(String(url));
+    if(String(url).includes("nominatim"))return{ok:true,json:async()=>({address:{country_code:"nl"}})};
+    return{ok:true,text:async()=>JSON.stringify({warnings:[]})};
+  });
+  ok(oud.body.land==="NL"&&oudUrls.some(u=>u.includes("nominatim"))&&oudUrls.some(u=>u.includes("api/v1/warnings/feeds-"))&&!oudUrls.some(u=>u.includes("bigdatacloud")),"oude locatie zonder landcode migreert via eenmalige Nominatim-fallback");
+
   const manifestPad=path.join(R,"manifest.json"),origineel=fs.readFileSync(manifestPad,"utf8"),swPad=path.join(R,"public","sw.js");
   const cache=()=>{const m=/const CACHE = "([^"]+)";/.exec(fs.readFileSync(swPad,"utf8"));return m&&m[1];};
   const voor=cache();
