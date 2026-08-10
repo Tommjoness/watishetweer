@@ -109,6 +109,17 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
     if(!r||!r.length) return "geen aaneengesloten gunstig modelvenster";
     return "geen goed zichtvenster door "+r.join(r.length>1?" en ":"");
   }
+  function maanInfo(segment){
+    try{
+      const h=S.d.hourly,datum=String(h.time[segment.begin]||"").slice(0,10);
+      const basis=naarUTC(datum+"T12:00"),mt=opOnder("maan",basis,S.lat,S.lon),mn=maan(new Date(naarUTC(datum+"T23:30")));
+      let tijden="";
+      if(mt.op!=null&&mt.onder!=null) tijden="maan op "+naarLokaal(mt.op)+" · onder "+naarLokaal(mt.onder);
+      else if(mt.op!=null) tijden="maan op "+naarLokaal(mt.op);
+      else if(mt.onder!=null) tijden="maan onder "+naarLokaal(mt.onder);
+      return {icoon:maanUnicode(mn.fase),titel:mn.naam+", "+Math.round(mn.ill*100)+" procent verlicht",tijden};
+    }catch(e){return {icoon:"",titel:"",tijden:""};}
+  }
 
   nachten=function(){
     const h=S.d.hourly||{},nuMs=naarUTC(weatherNowActueleLokaleTijd()),stukken=segmenten().filter(s=>s.eind>=S.i0).slice(0,6);
@@ -122,7 +133,7 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
         const r=uurRij(i); if(r.ms>=nuMs) rijen.push(r);
       }
       if(!rijen.length) continue;
-      const a=nachtzichtScore(rijen),eerste=rijen[0],laatste=rijen[rijen.length-1];
+      const a=nachtzichtScore(rijen),eerste=rijen[0],laatste=rijen[rijen.length-1],mi=maanInfo(s);
       const lbl=actueel?"vannacht":labelDag(eerste.tijd)+" op "+labelDag(laatste.tijd);
       let advies,venster;
       if(!a.genoeg){advies="Onvoldoende data";venster="Geen betrouwbare zichtscore";}
@@ -139,10 +150,11 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
       const kleur=!a.genoeg?INK25:a.score>=7?TEAL:a.score>=4?INK:INK25;
       const bew=a.genoeg&&Number.isFinite(a.gemBewolking)?Math.round(a.gemBewolking)+"%":"–";
       const zicht=a.genoeg&&Number.isFinite(a.gemZicht)?(a.gemZicht>=10000?"10+ km":nl(a.gemZicht/1000)+" km"):"onbekend";
+      const maanTekst=mi.tijden?` · <span class="maanbij" title="${esc(mi.titel)}">${mi.icoon}</span> ${esc(mi.tijden)}`:"";
       out+=`<div class="row night"><div class="dname">${lbl}</div><div class="score" style="color:${kleur}" title="Zichtscore op basis van resterende nacht">${score}</div>`
         +`<div class="sbar"><i style="width:${breed}%;background:${kleur}"></i></div>`
         +`<div class="nmeta"><span class="perc">${bew}</span> bewolking</div>`
-        +`<div class="nmeta wide"><span class="nachtadvies">${advies} · ${venster}</span><span class="nachtmaan">Gemiddeld zicht ${zicht}</span></div></div>`;
+        +`<div class="nmeta wide"><span class="nachtadvies">${advies} · ${venster}</span><span class="nachtmaan">Gemiddeld zicht ${zicht}${maanTekst}</span></div></div>`;
     }
     const kop=`<div class="row night kop"><div class="dname">Nacht</div><div class="score">Score</div><div class="sbar"></div><div class="nmeta">Bewolking</div><div class="nmeta wide">Beste zichtperiode</div></div>`;
     document.getElementById("nights").innerHTML=out?kop+out:'<div class="msg">Geen nachtdata beschikbaar.</div>';
