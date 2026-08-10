@@ -1,5 +1,5 @@
 /* Gerichte polish op basis van de fysieke iPhone-screenshots van 10-08-2026.
-   Alleen presentatie: maanfase, compacte recente-neerslagkop en bronfooter. */
+   Alleen presentatie: maanfase, compacte recente-neerslagkop, pollen-eenheid en bronfooter. */
 (function(root){
 "use strict";
 
@@ -74,6 +74,24 @@ function compactRecentLabel(){
   if(kop)kop.textContent="Afgelopen kwartier";
 }
 
+/* De weergegeven pollenwaarde wordt afgerond vóór hij de gebruiker bereikt.
+   De eenheid volgt daarom dat zichtbare getal: 1 korrel/m³, alle andere waarden
+   korrels/m³. Zo staat er op een fysieke iPhone nooit meer '1 korrels/m³'. */
+function pollenEenheid(waarde){
+  const v=getal(waarde);
+  return v!==null&&Math.round(v)===1?"korrel/m³":"korrels/m³";
+}
+function corrigeerPollenEenheden(){
+  document.querySelectorAll("#aq .stat").forEach(stat=>{
+    const kop=stat.querySelector(".eyebrow"),waarde=stat.querySelector(".sval"),eenheid=waarde&&waarde.querySelector("s");
+    if(!kop||!/^Pollen\s+/i.test((kop.textContent||"").trim())||!waarde||!eenheid)return;
+    const eerste=waarde.firstChild&&waarde.firstChild.nodeType===3?waarde.firstChild.nodeValue:"";
+    const zichtbaar=getal(String(eerste||"").trim());
+    if(zichtbaar===null)return;
+    eenheid.textContent=pollenEenheid(zichtbaar);
+  });
+}
+
 /* De bronregel was inhoudelijk correct maar werd op iPhone één lange reeks van
    links, middendots en tekst. We behouden exact dezelfde links/attributie en
    groeperen ze alleen in vier betekenisvolle, wrappende items. */
@@ -93,7 +111,7 @@ function structureerBronnen(){
   return true;
 }
 
-const api={maanFaseUitBeschrijving,maanFaseSvgV2};
+const api={maanFaseUitBeschrijving,maanFaseSvgV2,pollenEenheid};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileScreenshotPolish=api;
 
@@ -111,6 +129,12 @@ const basisMeters=meters;
 meters=function(){
   basisMeters();
   compactRecentLabel();
+};
+
+const basisLucht=lucht;
+lucht=function(){
+  basisLucht();
+  corrigeerPollenEenheden();
 };
 
 })(typeof globalThis!=="undefined"?globalThis:this);

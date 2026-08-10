@@ -15,6 +15,8 @@ for(const vereist of [
   "WeatherNowMobileScreenshotPolish",
   "maan-fase-svg-v2",
   "Afgelopen kwartier",
+  "pollenEenheid",
+  "grid-template-columns:62px 58px minmax(0,1fr) 76px",
   "bron-bronnen",
   "MOBILE SCREENSHOT POLISH 20260810B"
 ]){
