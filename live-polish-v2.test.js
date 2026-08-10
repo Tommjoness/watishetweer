@@ -8,11 +8,12 @@ test("live klok toont uren minuten en seconden",()=>{
   assert.equal(klokTekstMetSeconden({hour:0,minute:0,second:0}),"00:00:00");
 });
 
-test("tooltip gebruikt compacte consumententekst zonder verlies van tijdvak",()=>{
+test("tooltip houdt links altijd hetzelfde label voor neerslagkans",()=>{
   assert.equal(tooltipWaardeKort("geen neerslag verwacht"),"droog");
   assert.equal(tooltipWaardeKort("Geen neerslag verwacht."),"droog");
-  assert.equal(tooltipWaardeKort("kans 15:00–16:00"),"kans 15–16u");
-  assert.equal(tooltipWaardeKort("kans 18:00-19:00"),"kans 18–19u");
+  assert.equal(tooltipWaardeKort("kans 15:00–16:00"),"neerslagkans");
+  assert.equal(tooltipWaardeKort("kans 18:00-19:00"),"neerslagkans");
+  assert.equal(tooltipWaardeKort("kans 15–16u"),"neerslagkans");
   assert.equal(tooltipWaardeKort("27%"),"27%");
 });
 
@@ -41,7 +42,7 @@ test("desktopgrid reset oude twee- en vierkolomsselectors expliciet",()=>{
   const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
   assert(css.includes(".dashrow-hero .stat:nth-child(n)"));
   assert(css.includes("grid-auto-rows:1fr"));
-  assert(css.includes("#nchint{display:none}"));
+  assert(css.includes("#nchint{display:none"));
   assert(css.includes("grid-template-columns:104px 52px minmax(80px,1fr) 116px 218px"));
 });
 
@@ -67,6 +68,7 @@ test("productiebundel bevat interactiepolish, desktopbalk en robuuste scrollcont
   assert(html.includes("WeatherNowPolishV2"));
   assert(html.includes("setInterval(liveKlokTik,1000)"));
   assert(html.includes("tooltipWaardeKort"));
+  assert(html.includes("neerslagkans"));
   assert(html.includes("nuLabelPositie"));
   assert(html.includes("nuLabelConcurreert"));
   assert(html.includes("positioneerNuLabel"));
