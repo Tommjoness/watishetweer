@@ -140,26 +140,9 @@ const interpretatie=root.WeatherNowInterpretatie;
 if(!interpretatie||typeof interpretatie.analyseerNeerslagData!=="function") return;
 const analyse=duur=>interpretatie.analyseerNeerslagData(S.d,duur,weatherNowActueleLokaleTijd());
 
-/* Vervangt alleen de reeds gerenderde neerslagzin in de briefing. Eventuele
-   officiële waarschuwing en de overige briefingtekst blijven exact behouden. */
-function oudeBriefingZin(a){
-  if(!a||!a.genoeg) return "Voor de komende twee uur ontbreken voldoende gegevens.";
-  if(a.status==="GEEN_KANS") return "De komende twee uur blijft het droog.";
-  if(a.status==="ZEER_KLEINE_KANS") return "De komende twee uur blijft het waarschijnlijk droog.";
-  if(a.status==="KLEINE_KANS") return "De komende twee uur is er een kleine kans op neerslag.";
-  if(a.status==="MOGELIJKE_NEERSLAG") return "In de komende twee uur is neerslag mogelijk.";
-  if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return "De komende twee uur is de neerslagkans groot, maar de hoeveelheid onzeker.";
-  return interpretatie.neerslagZin(a);
-}
-function escapeRegExp(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
-function vervangTekst(el,oud,nieuw){
-  if(!el||!oud||oud===nieuw) return;
-  const patroon=String(oud).trim().split(/\s+/).map(escapeRegExp).join("(?:\\s|&nbsp;|&#160;)+");
-  const re=new RegExp(patroon);
-  const html=String(el.innerHTML||"");
-  if(re.test(html)) el.innerHTML=html.replace(re,nieuw);
-}
-
+/* De centrale briefingrenderer vraagt rechtstreeks briefingZin() op via de
+   expliciete buildhaak. Deze laag hoeft de gerenderde briefing dus niet meer
+   achteraf te doorzoeken of te herschrijven. */
 const basisMeters=meters;
 meters=function(){
   basisMeters();
@@ -175,13 +158,6 @@ nowcast=function(){
   const a=analyse(120),tx=document.getElementById("nctext"),grafiek=document.getElementById("nc"),zin=kansZin(a,"de komende twee uur");
   if(tx) tx.textContent=zin;
   if(grafiek) grafiek.setAttribute("aria-label",zin+" Kwartierwaarden zijn sommen over het voorafgaande kwartier en kunnen afhankelijk van de locatie uit uurdata zijn geïnterpoleerd.");
-};
-
-const basisBriefing=briefing;
-briefing=function(){
-  basisBriefing();
-  const a=analyse(120),el=document.getElementById("brief");
-  vervangTekst(el,oudeBriefingZin(a),briefingZin(a));
 };
 
 const basisDagen=dagen;
