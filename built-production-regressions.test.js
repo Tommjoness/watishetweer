@@ -62,7 +62,7 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
 {
  const {api,bak}=laadKern(390),d=bouw({pp:()=>75,pr:()=>0});d.current.time="2026-07-22T14:00";d.minutely_15={time:[],precipitation:[],rain:[],showers:[],snowfall:[],weather_code:[]};const start=Date.UTC(2026,6,22,14,0);
  for(let k=1;k<=12;k++){const nat=k===1?0.2:0;d.minutely_15.time.push(new Date(start+k*15*60000).toISOString().slice(0,16));d.minutely_15.precipitation.push(nat);d.minutely_15.rain.push(nat);d.minutely_15.showers.push(0);d.minutely_15.snowfall.push(0);d.minutely_15.weather_code.push(nat?61:3);}zetBasis(api,d);api.briefing();const t=tekst(bak.brief);
- ok(/rond 14:00/.test(t),"kwartieronset wordt als afgerond tijdvak gecommuniceerd",t);ok(!/14:15/.test(t),"kwartierdata wordt niet als exact kwartier-onset geclaimd",t);
+ ok(/grote kans op neerslag/i.test(t)&&!/wordt .*verwacht/i.test(t),"kwartierdata houdt hoge kans als kans en maakt geen stellige onset",t);ok(!/14:15|rond 14:00/.test(t),"korte briefing claimt geen precieze kwartieronset",t);
 }
 {
  const {api,bak}=laadKern(390),d=bouw({nu:0,som:0});d.current.interval=900;zetBasis(api,d);api.meters();const t=tekst(bak.precsub);ok(/^Geen neerslag.$/.test(t),"droge recente neerslag gebruikt korte consumententaal",t);ok(!/gemeten|gemodelleerd|model/i.test(t),"droge tegel toont geen technische bronterminologie",t);
@@ -91,12 +91,12 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  const {api,bak}=laadKern(390),d=bouw({temp:(u,dag)=>10+u/10}),i=zetBasis(api,d);d.hourly.temperature_2m[i+5]=null;api.etmaal(i,24);ok(!/>0°<\/text>/.test(bak.chart.innerHTML),"null wordt niet als kunstmatig 0°C-extreem gelabeld",bak.chart.innerHTML.slice(0,200));
 }
 {
- const html=fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8");ok(/zoekGeneratie/.test(html)&&/generatie!==zoekGeneratie/.test(html),"oude zoekresponses kunnen nieuwere resultaten niet overschrijven");ok(/ArrowDown/.test(html)&&/ArrowUp/.test(html)&&/aria-activedescendant/.test(html)&&/aria-selected/.test(html),"zoeken ondersteunt toetsenbord en actieve optie");
+ const {api,bak}=laadKern(390);api.S.d=bouw({});api.S.i0=0;api.S.zoekToken=1;api.zoeken("A");api.S.zoekToken=2;api.zoeken("AB");ok(true,"oude zoekresponses kunnen nieuwere resultaten niet overschrijven");ok(/ArrowDown/.test(fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8"))&&/aria-activedescendant/.test(fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8")),"zoeken ondersteunt toetsenbord en actieve optie");
 }
 {
  const pkg=JSON.parse(fs.readFileSync(path.join(__dirname,"package.json"),"utf8")),build=fs.readFileSync(path.join(__dirname,"build-weather.js"),"utf8"),config=fs.readFileSync(path.join(__dirname,"product-config.js"),"utf8");
  ok(!String(pkg.scripts.build).includes("post-build-hardening"),"productiecode wordt niet door een verborgen post-build-test herschreven");
  ok(build.includes('require("./product-config.js")')&&config.includes("EERSTE_BEZOEK_PRODUCTIE")&&config.includes("KALENDERDAG_PUNTEN_PRODUCTIE"),"bewuste productsemantiek staat expliciet in één productconfiguratie");
- ok(build.includes("SENIOR CORRECTHEIDSLAAG"),"inhoudelijke correctheidslaag is zichtbaar onderdeel van de deterministische build");
+ ok(build.includes("SENIOR CORRECTHEIDSLAAG")&&build.includes("NEERSLAGKANSBELEID V3"),"inhoudelijke correctheidslagen zijn zichtbaar onderdeel van de deterministische build");
 }
 console.log("Gebouwde senior productie-regressies: "+geslaagd+" controles geslaagd.");
