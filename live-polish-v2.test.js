@@ -28,12 +28,30 @@ test("desktopgrid reset oude twee- en vierkolomsselectors expliciet",()=>{
   assert(css.includes("grid-template-columns:104px 52px minmax(80px,1fr) 116px 218px"));
 });
 
-test("productiebundel bevat interactiepolish en secondentimer",()=>{
+test("tablet en desktop houden compacte weercontext vast tijdens scrollen",()=>{
+  const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
+  assert(css.includes("@media(min-width:901px)"));
+  assert(css.includes("#minibar.aan{display:flex}"));
+  assert(css.includes("position:fixed"));
+  assert(css.includes("transform:translateX(-50%)"));
+  assert(css.includes("width:min(calc(100% - 44px),1440px)"));
+});
+
+test("actuele weerblok staat op desktop verticaal in balans met meetraster",()=>{
+  const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
+  assert(css.includes(".dashrow-hero > .hero"));
+  assert(css.includes("margin-top:0"));
+  assert(css.includes("align-self:center"));
+});
+
+test("productiebundel bevat interactiepolish, desktopbalk en secondentimer",()=>{
   const html=fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8");
   assert(html.includes("LIVE INTERACTIEPOLISH"));
   assert(html.includes("WeatherNowPolishV2"));
   assert(html.includes("setInterval(liveKlokTik,1000)"));
   assert(html.includes("tooltipWaardeKort"));
+  assert(html.includes("#minibar.aan{display:flex}"));
+  assert(html.includes('bar.classList.toggle("aan",!e.isIntersecting&&e.boundingClientRect.top<0)'));
 });
 
 if(process.exitCode) console.error("\nLive-polish v2: minstens één regressie mislukt.");
