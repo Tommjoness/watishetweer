@@ -7,6 +7,8 @@ const num=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(
 const clampNum=(v,a,b)=>Math.max(a,Math.min(b,v));
 const natCode=code=>{code=Number(code);return code>=51&&code<=99;};
 const mistCode=code=>Number(code)===45||Number(code)===48;
+const hoofdletter=t=>{t=String(t||"");return t?t.charAt(0).toUpperCase()+t.slice(1):t;};
+const kleineStart=t=>{t=String(t||"");return t?t.charAt(0).toLowerCase()+t.slice(1):t;};
 
 function nachtzichtScore(rijen){
   const alle=Array.isArray(rijen)?rijen:[];
@@ -64,7 +66,64 @@ function grafiekNeerslagVerschuiving(cw){
   const n=num(cw); return n===null?0:-n/2;
 }
 
-const api={nachtzichtScore,grafiekNeerslagVerschuiving};
+/* Een dagcode kan bijvoorbeeld "Lichte motregen" zijn terwijl de kans slechts
+   12 procent is. Een berekende hoeveelheid mag dan niet van een kleine kans een
+   stellige gebeurtenis maken. De kans bepaalt daarom de modaliteit van de zin;
+   de WMO-code bepaalt alleen welk type neerslag genoemd wordt. */
+function dagKansSamenvatting(a,basis){
+  if(!a||!a.genoeg) return "Onvoldoende consistente gegevens";
+  basis=String(basis||"Verwachting");
+  const kans=num(a.kans),soort=String(a.soort||"neerslag");
+  const type=basis.toLowerCase().includes(soort.toLowerCase())?basis:hoofdletter(soort);
+  const tijd=a.eersteTijd?" rond "+a.eersteTijd:"";
+  if(a.status==="NEERSLAG_VERWACHT"){
+    if(kans!==null&&kans<=19) return "Zeer kleine kans op "+kleineStart(type)+tijd;
+    if(kans!==null&&kans<=39) return "Kleine kans op "+kleineStart(type)+tijd;
+    if(kans!==null&&kans<=69) return hoofdletter(type)+" mogelijk"+tijd;
+    const zelfde=basis.toLowerCase().includes(soort.toLowerCase());
+    return basis+(zelfde?"":"; "+soort)+tijd;
+  }
+  if(a.status==="SPOORHOEVEELHEID") return basis+"; zeer kleine hoeveelheid "+soort+" mogelijk";
+  if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return basis+"; grote neerslagkans, hoeveelheid onzeker";
+  if(a.status==="MOGELIJKE_NEERSLAG") return basis+"; neerslag mogelijk";
+  if(a.status==="KLEINE_KANS") return basis+"; kleine neerslagkans";
+  if(a.status==="ZEER_KLEINE_KANS") return basis+"; zeer kleine neerslagkans";
+  return basis;
+}
+
+/* De waarde 27% staat al groot boven deze tekst. De toelichting eronder moet de
+   gebruiker helpen, niet de bronberekening herhalen met termen als modeluur en
+   overlappende uurvakken. De technische uitleg blijft elders beschikbaar. */
+function komendUurTekst(a){
+  if(!a||!a.genoeg) return "Neerslagkans niet beschikbaar.";
+  const kans=num(a.kans),soort=String(a.soort||"neerslag");
+  if(a.status==="GEEN_KANS") return "Geen neerslag verwacht.";
+  if(a.status==="ZEER_KLEINE_KANS") return "Zeer kleine kans op neerslag het komende uur.";
+  if(a.status==="KLEINE_KANS") return "Kleine kans op neerslag het komende uur.";
+  if(a.status==="MOGELIJKE_NEERSLAG") return "Neerslag is mogelijk het komende uur.";
+  if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return "Grote kans op neerslag; hoeveelheid onzeker.";
+  if(a.status==="SPOORHOEVEELHEID") return "Enkele druppels mogelijk het komende uur.";
+  if(a.status==="NEERSLAG_NU") return "Er valt nu "+soort+".";
+  if(a.status==="NEERSLAG_VERWACHT"){
+    if(kans!==null&&kans<=39) return "Kleine kans op neerslag het komende uur.";
+    if(kans!==null&&kans<=69) return hoofdletter(soort)+" is mogelijk het komende uur.";
+    return hoofdletter(soort)+" wordt het komende uur verwacht.";
+  }
+  return "Neerslagverwachting beschikbaar.";
+}
+
+/* Alleen maanopkomst/-ondergang binnen het werkelijk beoordeelde nachtvenster
+   is relevant. Een ondergang om 20:29 hoort niet in een rij die pas om 21:16
+   begint. */
+function maanEventsBinnenVenster(op,onder,startMs,eindMs){
+  if(!Number.isFinite(startMs)||!Number.isFinite(eindMs)||eindMs<=startMs) return [];
+  const uit=[];
+  if(Number.isFinite(op)&&op>=startMs&&op<=eindMs) uit.push({type:"op",ms:op});
+  if(Number.isFinite(onder)&&onder>=startMs&&onder<=eindMs) uit.push({type:"onder",ms:onder});
+  return uit.sort((a,b)=>a.ms-b.ms);
+}
+
+const api={nachtzichtScore,grafiekNeerslagVerschuiving,dagKansSamenvatting,komendUurTekst,maanEventsBinnenVenster};
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowCorrectnessV2=api;
 
@@ -106,17 +165,35 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
     const d=new Date(String(t).slice(0,10)+"T12:00:00");return DAGEN[d.getDay()];
   }
   function redenTekst(r){
-    if(!r||!r.length) return "geen aaneengesloten gunstig modelvenster";
-    return "geen goed zichtvenster door "+r.join(r.length>1?" en ":"");
+    if(!r||!r.length) return "Geen aaneengesloten gunstig modelvenster";
+    return "Geen goed zichtvenster door "+r.join(r.length>1?" en ":"");
   }
-  function maanInfo(segment){
+  function nachtGrenzen(segment,vanafMs){
+    const h=S.d.hourly||{},day=S.d.daily||{};
+    const eerste=h.time&&h.time[segment.begin],laatste=h.time&&h.time[segment.eind];
+    let start=naarUTC(eerste),eind=naarUTC(laatste)+3600000;
+    if(!Number.isFinite(start)||!Number.isFinite(eind)) return null;
+    const zonOnder=(day.sunset||[]).map(t=>naarUTC(t)).filter(Number.isFinite)
+      .filter(ms=>ms>=start-12*3600000&&ms<=start+3600000).sort((a,b)=>b-a)[0];
+    const zonOp=(day.sunrise||[]).map(t=>naarUTC(t)).filter(Number.isFinite)
+      .filter(ms=>ms>=eind-2*3600000&&ms<=eind+4*3600000).sort((a,b)=>a-b)[0];
+    if(Number.isFinite(zonOnder)) start=zonOnder;
+    if(Number.isFinite(zonOp)) eind=zonOp;
+    if(Number.isFinite(vanafMs)) start=Math.max(start,vanafMs);
+    return eind>start?{start,eind}:null;
+  }
+  function maanInfo(segment,vanafMs){
     try{
-      const h=S.d.hourly,datum=String(h.time[segment.begin]||"").slice(0,10);
-      const basis=naarUTC(datum+"T12:00"),mt=opOnder("maan",basis,S.lat,S.lon),mn=maan(new Date(naarUTC(datum+"T23:30")));
+      const grens=nachtGrenzen(segment,vanafMs);if(!grens)return {icoon:"",titel:"",tijden:""};
+      const mt=opOnder("maan",grens.start-6*3600000,S.lat,S.lon);
+      const events=maanEventsBinnenVenster(mt.op,mt.onder,grens.start,grens.eind);
+      const midden=(grens.start+grens.eind)/2,mn=maan(new Date(midden));
       let tijden="";
-      if(mt.op!=null&&mt.onder!=null) tijden="maan op "+naarLokaal(mt.op)+" · onder "+naarLokaal(mt.onder);
-      else if(mt.op!=null) tijden="maan op "+naarLokaal(mt.op);
-      else if(mt.onder!=null) tijden="maan onder "+naarLokaal(mt.onder);
+      if(events.length){
+        tijden=events.map(e=>e.type==="op"?"maan op "+naarLokaal(e.ms):"maan onder "+naarLokaal(e.ms)).join(" · ");
+      }else{
+        tijden=maanHoogte(midden,S.lat,S.lon)>0?"maan blijft boven de horizon":"maan blijft onder de horizon";
+      }
       return {icoon:maanUnicode(mn.fase),titel:mn.naam+", "+Math.round(mn.ill*100)+" procent verlicht",tijden};
     }catch(e){return {icoon:"",titel:"",tijden:""};}
   }
@@ -133,7 +210,7 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
         const r=uurRij(i); if(r.ms>=nuMs) rijen.push(r);
       }
       if(!rijen.length) continue;
-      const a=nachtzichtScore(rijen),eerste=rijen[0],laatste=rijen[rijen.length-1],mi=maanInfo(s);
+      const a=nachtzichtScore(rijen),eerste=rijen[0],laatste=rijen[rijen.length-1],mi=maanInfo(s,actueel?nuMs:null);
       const lbl=actueel?"vannacht":labelDag(eerste.tijd)+" op "+labelDag(laatste.tijd);
       let advies,venster;
       if(!a.genoeg){advies="Onvoldoende data";venster="Geen betrouwbare zichtscore";}
@@ -154,12 +231,41 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
       out+=`<div class="row night"><div class="dname">${lbl}</div><div class="score" style="color:${kleur}" title="Zichtscore op basis van resterende nacht">${score}</div>`
         +`<div class="sbar"><i style="width:${breed}%;background:${kleur}"></i></div>`
         +`<div class="nmeta"><span class="perc">${bew}</span> bewolking</div>`
-        +`<div class="nmeta wide"><span class="nachtadvies">${advies} · ${venster}</span><span class="nachtmaan">Gemiddeld zicht ${zicht}${maanTekst}</span></div></div>`;
+        +`<div class="nmeta wide"><span class="nachtadvies">${advies}</span><span class="nachtvenster">${venster}</span><span class="nachtmaan">Zicht ${zicht}${maanTekst}</span></div></div>`;
     }
     const kop=`<div class="row night kop"><div class="dname">Nacht</div><div class="score">Score</div><div class="sbar"></div><div class="nmeta">Bewolking</div><div class="nmeta wide">Beste zichtperiode</div></div>`;
     document.getElementById("nights").innerHTML=out?kop+out:'<div class="msg">Geen nachtdata beschikbaar.</div>';
     const m=maan(new Date());
     document.getElementById("moonlab").innerHTML=maanUnicode(m.fase)+"<span>"+m.naam+", "+Math.round(m.ill*100)+" procent verlicht</span>";
+  };
+
+  /* De centrale engine houdt de volledige bronuitleg beschikbaar. In de kleine
+     tegel tonen we alleen de consumentenzin; het percentage zelf staat al erboven. */
+  const basisMetersPolish=meters;
+  meters=function(){
+    basisMetersPolish();
+    const interpretatie=root.WeatherNowInterpretatie;
+    if(!interpretatie||typeof interpretatie.analyseerNeerslagData!=="function") return;
+    const a=interpretatie.analyseerNeerslagData(S.d,60,weatherNowActueleLokaleTijd());
+    zetTekst("popsub",komendUurTekst(a));
+  };
+
+  /* De daganalyse zelf blijft canoniek in de interpretatie-engine. Alleen de
+     formulering van een berekende hoeveelheid bij een lage kans wordt hier
+     begrensd, zodat 12% nooit als een zekere motregenbui wordt gepresenteerd. */
+  const basisDagenPolish=dagen;
+  dagen=function(){
+    basisDagenPolish();
+    const interpretatie=root.WeatherNowInterpretatie;
+    if(!interpretatie||typeof interpretatie.analyseerDagData!=="function") return;
+    document.querySelectorAll("#days .row.day").forEach(rij=>{
+      if(rij.classList&&rij.classList.contains("kop")) return;
+      const i=Number(rij.dataset.i),a=interpretatie.analyseerDagData(S.d,i,weatherNowActueleLokaleTijd());
+      const cond=rij.querySelector(".dcond");
+      if(!cond) return;
+      const basis=a&&a.code!==null&&typeof txt==="function"?txt(a.code,true):"Verwachting";
+      cond.textContent=dagKansSamenvatting(a,basis);
+    });
   };
 
   const basisEtmaal=etmaal;

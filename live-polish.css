@@ -1,0 +1,35 @@
+/* Gerichte live-polish na controle van de echte desktopproductie.
+   Deze laag is uitsluitend presentatie: geen weerdata of interpretatie. */
+
+@media(min-width:1100px){
+  /* De oude 55/45-verdeling met 2 x 5 meetblokken liet onder de temperatuur
+     een groot leeg vlak achter. Rechts krijgt nu genoeg breedte voor 3 x 3;
+     links blijft ruim genoeg voor de grote temperatuur en conditie. */
+  .dashrow-hero{
+    grid-template-columns:minmax(0,.62fr) minmax(0,1fr);
+    gap:32px;
+    align-items:start;
+  }
+  .dashrow-hero .stats{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+  .dashrow-hero .stat{
+    min-width:0;
+    padding:14px 16px 15px;
+    border-right:1px solid var(--rule);
+    border-top:none;
+  }
+  .dashrow-hero .stat:nth-child(3n+1){padding-left:0}
+  .dashrow-hero .stat:nth-child(3n){border-right:none;padding-right:0}
+  .dashrow-hero .stat.breed{grid-column:auto;border-top:none}
+  .dashrow-hero .sval{font-size:clamp(22px,1.5vw,28px)}
+  .dashrow-hero .ssub{font-size:12px;line-height:1.35}
+}
+
+/* Nachtzicht leest rustiger als oordeel, beste periode en context ieder hun
+   eigen regel hebben. Op mobiel mag de bestaande brede metakolom gewoon
+   blijven wrappen. */
+.nachtadvies,.nachtvenster,.nachtmaan{display:block}
+.nachtadvies{font-weight:500;color:var(--ink-70)}
+.nachtvenster{margin-top:1px}
+.nachtmaan{margin-top:2px;color:var(--ink-25);white-space:normal}
