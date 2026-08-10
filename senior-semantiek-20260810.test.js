@@ -90,6 +90,13 @@ const maanSvg=s.maanFaseSvg(7/8,11);
 assert(maanSvg.includes("<svg"));
 assert(maanSvg.includes("currentColor"));
 assert(!/[🌑🌒🌓🌔🌕🌖🌗🌘]/u.test(maanSvg));
+const maanHtml=s.maanSymboolNaarSvgInHtml('🌘<span>afnemende sikkel</span>',12);
+assert(maanHtml.startsWith('<svg'));
+assert(maanHtml.includes('<span>afnemende sikkel</span>'));
+assert(!/[🌑🌒🌓🌔🌕🌖🌗🌘]/u.test(maanHtml));
+const maanHtmlVs=s.maanSymboolNaarSvgInHtml('🌘\uFE0F tekst',12);
+assert(!maanHtmlVs.includes('\uFE0F'));
+assert(!/[🌑🌒🌓🌔🌕🌖🌗🌘]/u.test(maanHtmlVs));
 
 const daily={
   time:["2026-08-10","2026-08-11","2026-08-12"],
