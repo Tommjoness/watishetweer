@@ -151,10 +151,13 @@ function oudeBriefingZin(a){
   if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return "De komende twee uur is de neerslagkans groot, maar de hoeveelheid onzeker.";
   return interpretatie.neerslagZin(a);
 }
+function escapeRegExp(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
 function vervangTekst(el,oud,nieuw){
   if(!el||!oud||oud===nieuw) return;
+  const patroon=String(oud).trim().split(/\s+/).map(escapeRegExp).join("(?:\\s|&nbsp;|&#160;)+");
+  const re=new RegExp(patroon);
   const html=String(el.innerHTML||"");
-  if(html.includes(oud)) el.innerHTML=html.replace(oud,nieuw);
+  if(re.test(html)) el.innerHTML=html.replace(re,nieuw);
 }
 
 const basisMeters=meters;
