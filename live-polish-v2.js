@@ -27,6 +27,26 @@ function temperatuurLabelsBotsen(a,b,maxDx){
   return Math.abs(ax-bx)<=lim&&Math.abs(ay-by)<=34;
 }
 
+/* Een temperatuurcijfer kan door botsingspolish horizontaal verschoven zijn.
+   Om bij het verwijderen toch precies het bijbehorende zwarte datapunt mee weg
+   te halen, zoeken we alleen tussen punten met dezelfde afgeronde temperatuur
+   en kiezen we daarvan het dichtstbijzijnde x-punt binnen een veilige marge. */
+function temperatuurPuntIndex(label,punten,temperaturen,maxDx){
+  if(!label||!Array.isArray(punten)||!Array.isArray(temperaturen)) return null;
+  const m=/^(-?\d+)°$/.exec(String(label.text||"").trim());
+  const lx=eindig(label.x),lim=eindig(maxDx);
+  if(!m||lx===null||lim===null||lim<0) return null;
+  const doel=Number(m[1]);
+  let beste=null,besteAfstand=Infinity;
+  for(const punt of punten){
+    const i=Number(punt&&punt.i),x=eindig(punt&&punt.x),t=Number.isInteger(i)?eindig(temperaturen[i]):null;
+    if(!Number.isInteger(i)||x===null||t===null||Math.round(t)!==doel) continue;
+    const afstand=Math.abs(x-lx);
+    if(afstand<besteAfstand){beste=i;besteAfstand=afstand;}
+  }
+  return beste!==null&&besteAfstand<=lim?beste:null;
+}
+
 /* Het rode nu-label hoort visueel bij de rode stip, niet bij de zwarte
    temperatuurcijfers van de modelcurve. Normaal staat het daarom duidelijk
    onder de stip. Alleen dicht bij de onderrand wijkt het naar boven uit. */
@@ -52,11 +72,17 @@ function nuLabelConcurreert(punt,label,cw,mobiel){
   return Math.abs(lx-px)<=dx&&Math.abs(ly-py)<=dy;
 }
 
-const api={klokTekstMetSeconden,tooltipWaardeKort,temperatuurLabelsBotsen,nuLabelPositie,nuLabelConcurreert};
+const api={klokTekstMetSeconden,tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert};
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowPolishV2=api;
 
 if(typeof document==="undefined"||typeof S==="undefined") return;
+
+/* Geef alleen de grafiekkop een eigen class. Zo kan de responsive polish deze
+   sectie compact ordenen zonder alle andere h2-koppen met een .r-blok te raken. */
+const zoninfo=document.getElementById("suntimes");
+const grafiekKop=zoninfo&&zoninfo.closest?zoninfo.closest("h2"):null;
+if(grafiekKop) grafiekKop.classList.add("chartkop");
 
 /* De klok is puur presentatie. Elke seconde worden alleen de twee klokteksten
    bijgewerkt. De bestaande dagwisselcontrole blijft via klokBijwerken() actief;
@@ -104,9 +130,27 @@ scrubKoppel=function(){
   hit.addEventListener("pointerdown",maakKort);
 };
 
+function verwijderTemperatuurMarkering(svg,el){
+  if(!svg||!el) return;
+  const cw=S.geo&&Number.isFinite(S.geo.cw)?S.geo.cw:36;
+  const punten=[...svg.querySelectorAll("circle[data-temp-index]")].map(p=>({
+    el:p,i:Number(p.getAttribute("data-temp-index")),x:eindig(p.getAttribute("cx"))
+  }));
+  const i=temperatuurPuntIndex(
+    {text:String(el.textContent||"").trim(),x:eindig(el.getAttribute("x"))},
+    punten,S.geo&&Array.isArray(S.geo.T)?S.geo.T:[],Math.max(72,cw*2.5)
+  );
+  if(i!==null){
+    const punt=punten.find(p=>p.i===i);
+    if(punt&&punt.el) punt.el.remove();
+  }
+  el.remove();
+}
+
 /* Twee opeenvolgende uren met dezelfde afgeronde temperatuur kunnen beide als
-   relevant label uit de bestaande grafiek komen. De lijn en punten blijven
-   onaangetast; alleen een visueel dubbel label vlak naast zijn tweeling vervalt. */
+   relevant label uit de bestaande grafiek komen. Als zo'n dubbel cijfer vervalt,
+   verdwijnt ook zijn zwarte datapunt; een losse stip zonder label suggereert
+   anders betekenis terwijl de bijbehorende tekst bewust is weggehaald. */
 function ontdubbelTemperatuurlabels(svg){
   if(!svg) return;
   const cw=S.geo&&Number.isFinite(S.geo.cw)?S.geo.cw:36;
@@ -117,15 +161,15 @@ function ontdubbelTemperatuurlabels(svg){
   }).map(el=>({el,text:el.textContent.trim(),x:eindig(el.getAttribute("x")),y:eindig(el.getAttribute("y"))}))
     .filter(x=>x.x!==null&&x.y!==null).sort((a,b)=>a.x-b.x);
   for(const lab of labels){
-    if(gehouden.some(v=>temperatuurLabelsBotsen(v,lab,maxDx))) lab.el.remove();
+    if(gehouden.some(v=>temperatuurLabelsBotsen(v,lab,maxDx))) verwijderTemperatuurMarkering(svg,lab.el);
     else gehouden.push(lab);
   }
 }
 
 /* Het rode "nu 22°" is de actuele meting en krijgt daarom voorrang boven een
-   zwart modeluurlabel in zijn directe omgeving. De selectie gebeurt op de
-   expliciete SVG-coördinaten en is dus niet afhankelijk van font-/painttiming
-   van de browser. Daarna krijgt het actuele label een eigen positie en halo. */
+   zwart modeluurcijfer in zijn directe omgeving. Ook hier verdwijnen cijfer en
+   bijbehorend zwart punt als één visuele markering. Daarna krijgt het actuele
+   label een eigen positie en halo. */
 function positioneerNuLabel(svg){
   if(!svg||!S.geo) return;
   const tekst=[...svg.querySelectorAll("text")].find(el=>/^nu\s+-?\d+°$/i.test(String(el.textContent||"").trim()));
@@ -145,7 +189,7 @@ function positioneerNuLabel(svg){
   });
   gewoneLabels.forEach(el=>{
     const label={x:eindig(el.getAttribute("x")),y:eindig(el.getAttribute("y"))};
-    if(nuLabelConcurreert({x:px,y:py},label,S.geo.cw,!!S.geo.M)) el.remove();
+    if(nuLabelConcurreert({x:px,y:py},label,S.geo.cw,!!S.geo.M)) verwijderTemperatuurMarkering(svg,el);
   });
 
   tekst.setAttribute("stroke",SHEET);
