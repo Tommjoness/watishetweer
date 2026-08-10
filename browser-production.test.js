@@ -87,9 +87,6 @@ setTimeout(()=>{
     const svgBox=chart.getBoundingClientRect();
     const buiten=labels.filter(el=>{const r=el.getBoundingClientRect();return r.left<svgBox.left-1||r.right>svgBox.right+1||r.top<svgBox.top-1||r.bottom>svgBox.bottom+1;}).length;
 
-    /* De rode actuele meting moet een eigen visuele zone hebben. Afhankelijk van
-       de hoogte van de temperatuur mag die veilige plek onder of boven de stip
-       liggen; de pure helpertest bewaakt afzonderlijk welke richting gekozen wordt. */
     const nuLabel=[...chart.querySelectorAll('text')].find(el=>/^nu\\s+-?\\d+°$/i.test((el.textContent||'').trim()));
     const nuPunt=[...chart.querySelectorAll('circle')].find(el=>String(el.getAttribute('fill')||'')==='var(--carmine)'&&Math.abs(Number(el.getAttribute('r'))-3)<0.2);
     let nuRustig=false,nuAfstand=null,nuBotst=null,nuHalo=null;
@@ -103,24 +100,30 @@ setTimeout(()=>{
     }
 
     const hit=document.getElementById('hit'),scrub=document.getElementById('scrub');
-    let scrubOk=true,scrubKort=true,kansCompact=true;
+    let scrubOk=true,scrubKort=true,neerslagkansVast=false,scrubDebug='';
     if(hit&&scrub){
       const r=hit.getBoundingClientRect();
-      /* Kies bewust een uur met neerslagkans >0. Zo bewaakt de browsertest exact
-         de gemelde lange labelvorm, in plaats van toevallig een droge regel. */
-      let clientX=r.left+r.width*0.72;
+      const kandidaten=[];
       try{
-        const idx=S.geo&&Array.isArray(S.geo.P)?S.geo.P.findIndex(v=>Number(v)>0):-1;
-        if(idx>=0&&S.geo&&typeof S.geo.x==='function'&&Number.isFinite(S.geo.W)){
-          clientX=svgBox.left+(S.geo.x(idx)/S.geo.W)*svgBox.width;
-        }
+        if(S.geo&&Array.isArray(S.geo.P)) S.geo.P.forEach((v,i)=>{if(Number(v)>0) kandidaten.push(i);});
       }catch(e){}
-      hit.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,clientX:clientX,clientY:r.top+r.height*0.3,pointerType:'touch'}));
+      if(!kandidaten.length) kandidaten.push(Math.max(0,Math.floor((S.geo&&S.geo.n||1)/2)));
+      for(const idx of kandidaten){
+        let clientX=r.left+r.width*0.5;
+        try{
+          if(S.geo&&typeof S.geo.x==='function'&&Number.isFinite(S.geo.W)) clientX=svgBox.left+(S.geo.x(idx)/S.geo.W)*svgBox.width;
+        }catch(e){}
+        hit.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,clientX:clientX,clientY:r.top+r.height*0.3,pointerType:'touch'}));
+        const teksten=[...scrub.querySelectorAll('text')].map(el=>(el.textContent||'').trim()).filter(Boolean);
+        scrubDebug=teksten.join('|');
+        const oudLabel=teksten.some(t=>/^kans\\s+\\d{2}(?::00)?[–-]\\d{2}/i.test(t));
+        const vastLabel=teksten.some(t=>t.toLowerCase()==='neerslagkans');
+        const percentage=teksten.some(t=>/^\\d+\\s*%$/.test(t));
+        if(vastLabel&&percentage&&!oudLabel){neerslagkansVast=true;break;}
+      }
       const s=scrub.getBoundingClientRect();
       if(scrub.style.display!=='none'&&s.width>0) scrubOk=s.left>=svgBox.left-2&&s.right<=svgBox.right+2&&s.top>=svgBox.top-2&&s.bottom<=svgBox.bottom+2;
-      const scrubTekst=scrub.textContent||'';
-      scrubKort=!/geen neerslag verwacht/i.test(scrubTekst);
-      kansCompact=!/kans\\s+\\d{2}:00[–-]\\d{2}:00/i.test(scrubTekst)&&/kans\\s+\\d{2}–\\d{2}u/i.test(scrubTekst);
+      scrubKort=!/geen neerslag verwacht/i.test(scrubDebug);
     }
     const klok=((document.getElementById('plaatstijd')||{}).textContent||'').trim();
     const klokOk=/^\\d{2}:\\d{2}:\\d{2}$/.test(klok);
@@ -136,7 +139,7 @@ setTimeout(()=>{
     const brief=(document.getElementById('brief')||{}).textContent||'';
     const dagen=document.querySelectorAll('#days .row.day:not(.kop)').length;
     const gridOk=desktop?cols===3:cols===2;
-    document.body.dataset.browserTestResult=(brief&&dagen>=7&&labels.length>=5&&botsingen===0&&dubbelNabij===0&&buiten===0&&nuRustig&&scrubOk&&scrubKort&&kansCompact&&klokOk&&gridOk&&!statOverflow&&nightAligned)?'ok':'fout';
+    document.body.dataset.browserTestResult=(brief&&dagen>=7&&labels.length>=5&&botsingen===0&&dubbelNabij===0&&buiten===0&&nuRustig&&scrubOk&&scrubKort&&neerslagkansVast&&klokOk&&gridOk&&!statOverflow&&nightAligned)?'ok':'fout';
     document.body.dataset.browserLabels=String(labels.length);
     document.body.dataset.browserBotsingen=String(botsingen);
     document.body.dataset.browserDubbel=String(dubbelNabij);
@@ -147,7 +150,8 @@ setTimeout(()=>{
     document.body.dataset.browserNuHalo=String(nuHalo);
     document.body.dataset.browserScrub=String(scrubOk);
     document.body.dataset.browserScrubKort=String(scrubKort);
-    document.body.dataset.browserKans=String(kansCompact);
+    document.body.dataset.browserKans=String(neerslagkansVast);
+    document.body.dataset.browserScrubDebug=scrubDebug;
     document.body.dataset.browserKlok=String(klokOk);
     document.body.dataset.browserGrid=String(gridOk);
     document.body.dataset.browserOverflow=String(statOverflow);
@@ -168,8 +172,8 @@ function voerBrowserUit(maat,naam){
   if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"";
   const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
-  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", kans="+waarde("browser-kans")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", night="+waarde("browser-night")+", exception="+waarde("browser-exception"));
-  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" labels, rustige nu-markering, compact kanstijdvak, tooltip en live klok correct.");
+  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", neerslagkans="+waarde("browser-kans")+", scrubTekst="+waarde("browser-scrub-debug")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", night="+waarde("browser-night")+", exception="+waarde("browser-exception"));
+  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" labels, rustige nu-markering, vast neerslagkanslabel, tooltip en live klok correct.");
 }
 try{voerBrowserUit("390,844","mobiel Chromium");voerBrowserUit("1440,1000","desktop Chromium");}
 finally{fs.rmSync(dir,{recursive:true,force:true});}

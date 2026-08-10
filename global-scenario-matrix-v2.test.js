@@ -66,6 +66,22 @@ vervangExact(
   "kwartierverwachting"
 );
 
+/* De oude matrix eiste dat briefing en detailblok letterlijk dezelfde centrale
+   enginezin gebruikten. Productie heeft nu bewust twee niveaus: boven een korte
+   consumentensamenvatting, onder detail. In deze 80%-fixture moeten beide wel
+   dezelfde zekerheid (grote kans) communiceren; de 0,4 mm mag alleen
+   conditioneel worden genoemd en nergens mag 'regen wordt verwacht' staan. */
+vervangExact(
+`  check("laatste kwartier: samenvatting bovenaan gebruikt de centrale neerslagzin",
+    boven.startsWith(verwacht),boven);
+  check("laatste kwartier: neerslagtekst onderaan is exact dezelfde centrale zin",
+    onder===verwacht,onder+" | verwacht: "+verwacht);`,
+`  check("laatste kwartier: korte briefing gebruikt dezelfde grote-kanscategorie",
+    /grote kans op neerslag/i.test(boven)&&!/regen wordt verwacht/i.test(boven),boven);
+  check("laatste kwartier: detail houdt grote kans en hoeveelheid conditioneel",
+    /grote kans op regen/i.test(onder)&&/0,4 mm/.test(onder)&&/als er neerslag valt/i.test(onder)&&!/regen wordt verwacht/i.test(onder),onder);`,
+  "kansbeleid laatste kwartier"
+);
 
 /* De consumentenbriefing vat een droge/zeer kleine kans nu kort samen. De
    oorspronkelijke matrix telde alleen drie langere formuleringen en zag een
