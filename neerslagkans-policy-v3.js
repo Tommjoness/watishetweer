@@ -40,6 +40,11 @@ function hoeveelheidConditioneel(a){
   return " Als er neerslag valt, berekent het model ongeveer "+hoeveelheidTekst(mm)+".";
 }
 
+function geenMeetbareHoeveelheid(a){
+  const mm=num(a&&a.hoeveelheid);
+  return mm===null||mm<=0.005;
+}
+
 function typeNeerslag(a){
   const soort=String(a&&a.soort||"neerslag").trim();
   return soort||"neerslag";
@@ -52,7 +57,10 @@ function kansZin(a,venster,opties){
   if(a.currentWet||a.status==="NEERSLAG_NU") return "Er valt nu "+soort+".";
   if(niveau==="ONBEKEND") return "Neerslagkans niet beschikbaar.";
   const pct=Math.round(clamp(k));
-  const detail=opties.kort?"":hoeveelheidConditioneel(a);
+  const hoeveelheidDetail=opties.kort?"":hoeveelheidConditioneel(a);
+  const hogeKansZonderHoeveelheid=!opties.kort&&(niveau==="GROOT"||niveau==="ZEER_GROOT")&&geenMeetbareHoeveelheid(a)
+    ?" De verwachte hoeveelheid is onzeker.":"";
+  const detail=hoeveelheidDetail||hogeKansZonderHoeveelheid;
   if(niveau==="DROOG"){
     const mm=num(a.hoeveelheid);
     if(mm!==null&&mm>=0.1) return "De neerslagverwachting is onzeker; de modelgegevens spreken elkaar tegen.";
@@ -86,8 +94,8 @@ function briefingZin(a){
   if(niveau==="ZEER_KLEIN") return "De komende twee uur blijft het waarschijnlijk droog.";
   if(niveau==="KLEIN") return "De komende twee uur is er een kleine kans op neerslag.";
   if(niveau==="MOGELIJK") return "In de komende twee uur is neerslag mogelijk.";
-  if(niveau==="GROOT") return "De komende twee uur is er een grote kans op neerslag.";
-  if(niveau==="ZEER_GROOT") return "De komende twee uur is de kans op neerslag zeer groot.";
+  if(niveau==="GROOT") return "De komende twee uur is er een grote kans op neerslag"+(geenMeetbareHoeveelheid(a)?", maar de hoeveelheid is onzeker.":".");
+  if(niveau==="ZEER_GROOT") return "De komende twee uur is de kans op neerslag zeer groot"+(geenMeetbareHoeveelheid(a)?", maar de hoeveelheid is onzeker.":".");
   return "Voor de komende twee uur ontbreken voldoende gegevens.";
 }
 
