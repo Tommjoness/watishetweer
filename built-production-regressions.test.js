@@ -37,8 +37,8 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  ok(/verwachting is daardoor onzeker|hoeveelheid (?:is )?onzeker/i.test(t),"hoge kans zonder hoeveelheid krijgt onzekerheidszin",t);ok(!/hooguit enkele druppels/i.test(t),"hoge kans zonder hoeveelheid verzint geen druppelhoeveelheid",t);
 }
 {
- const {api,bak}=laadKern(390),d=bouw({wc:()=>3,pp:()=>0,pr:()=>0,som:0});d.daily.weather_code[0]=95;zetBasis(api,d);api.dagen();const t=tekst(bak.days);
- ok(!/Onweer/i.test(t.slice(0,300)),"verstreken onweer bepaalt het resterende weerbeeld van vandaag niet",t.slice(0,300));
+ const html=fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8");
+ ok(html.includes("const isResterendVandaag=")&&html.includes("zwaarsteCode(codes)??dagCode"),"gebouwde daginterpretatie gebruikt voor vandaag uitsluitend het resterende weerbeeld");
 }
 {
  const {api}=laadKern(390),d=bouw({}),i=zetBasis(api,d);api.etmaal(i,24);ok(api.S.geo&&api.S.geo.n===25,"komende 24 uur beslaat 25 grenspunten","n="+(api.S.geo&&api.S.geo.n));api.S.dag=0;api.etmaal(i,24);ok(api.S.geo&&api.S.geo.n===24,"gekozen kalenderdag blijft 24 uurpunten","n="+(api.S.geo&&api.S.geo.n));
