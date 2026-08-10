@@ -26,6 +26,10 @@ for(const vereist of [
 ]){
   if(!html.includes(vereist))throw new Error("Definitieve productie-invariant ontbreekt: "+vereist);
 }
+const oudeKop='<div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">';
+const nieuweKop='<div class="eyebrow">Afgelopen kwartier</div><div class="sval" id="prec">';
+if(html.includes(oudeKop))throw new Error("Oude statische kwartierkop staat nog in de definitieve artifact.");
+if((html.split(nieuweKop).length-1)!==1)throw new Error("Definitieve statische kwartierkop ontbreekt of is dubbel.");
 
 const CACHE_BRONNEN=[
   "index.html","manifest.json","icon-192.png","icon-512.png","icon-maskable-512.png",
