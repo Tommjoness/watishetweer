@@ -1,7 +1,7 @@
 "use strict";
 const assert=require("assert"),fs=require("fs"),path=require("path");
 const {analyseerNeerslagData,analyseerDagData,neerslagZin}=require("./interpretatie-engine.js");
-const {nachtzichtScore,grafiekNeerslagVerschuiving}=require("./senior-correctness-v2.js");
+const {nachtzichtScore,grafiekNeerslagVerschuiving,dagKansSamenvatting,komendUurTekst,maanEventsBinnenVenster}=require("./senior-correctness-v2.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 const uren=(datum,start,aantal)=>Array.from({length:aantal},(_,i)=>new Date(Date.UTC(+datum.slice(0,4),+datum.slice(5,7)-1,+datum.slice(8,10),start+i)).toISOString().slice(0,16));
 function basis(){
@@ -25,7 +25,7 @@ test("punt 5: verstreken onweer bepaalt het resterende weerbeeld van vandaag nie
   assert(a.genoeg,"daganalyse hoort voldoende dekking te hebben");assert.notEqual(a.code,95);assert([0,1].includes(a.code),"resterende code "+a.code);
 });
 
-test("punt 7: overlappende uurkans wordt als modeluurmaximum benoemd",()=>{
+test("punt 7: overlappende uurkans wordt als modeluurmaximum benoemd in detailuitleg",()=>{
   const d=basis();d.current.time="2026-07-31T19:47";d.hourly.precipitation_probability[1]=4;d.hourly.precipitation_probability[2]=12;
   const a=analyseerNeerslagData(d,60,"2026-07-31T19:47"),zin=neerslagZin(a);
   assert.equal(a.kans,12);assert(/hoogste modelkans in de overlappende uurvakken/.test(zin),zin);
@@ -65,13 +65,41 @@ test("punt 9: nachtelijke bewolkingsomschrijving heeft expliciete heldere nachtv
 });
 
 test("punt 1: landbrede waarschuwing mag briefing niet overrulen",()=>{
-  const engine=fs.readFileSync(path.join(__dirname,"interpretatie-engine.js"),"utf8");const waars=fs.readFileSync(path.join(__dirname,"lib/waarschuwingen.cjs"),"utf8");
+  const engine=fs.readFileSync(path.join(__dirname,"interpretatie-engine.js"),"utf8"),waars=fs.readFileSync(path.join(__dirname,"lib/waarschuwingen.cjs"),"utf8");
   assert(engine.includes('filter(w=>w&&w.plaatsSpecifiek!==false)'));assert(waars.includes("plaatsSpecifiek: false"));
 });
 
 test("punt 10: productsemantiek en correctheidslaag zijn expliciet geconfigureerd",()=>{
   const build=fs.readFileSync(path.join(__dirname,"build-weather.js"),"utf8"),cfg=require("./product-config.js");
   assert(build.includes('require("./product-config.js")'));assert(build.includes("SENIOR CORRECTHEIDSLAAG"));assert.equal(cfg.defaultLocation.naam,"Amsterdam");
+});
+
+test("live polish: lage dagkans wordt nooit als zekere motregen geformuleerd",()=>{
+  const basisA={genoeg:true,status:"NEERSLAG_VERWACHT",soort:"motregen",eersteTijd:"20:00"};
+  assert.equal(dagKansSamenvatting({...basisA,kans:12},"Lichte motregen"),"Zeer kleine kans op lichte motregen rond 20:00");
+  assert.equal(dagKansSamenvatting({...basisA,kans:22},"Lichte motregen"),"Kleine kans op lichte motregen rond 20:00");
+  assert.equal(dagKansSamenvatting({...basisA,kans:50},"Lichte motregen"),"Lichte motregen mogelijk rond 20:00");
+  assert.equal(dagKansSamenvatting({...basisA,kans:80},"Lichte motregen"),"Lichte motregen rond 20:00");
+});
+
+test("live polish: komend-uurtegel bevat geen bronjargon",()=>{
+  const tekst=komendUurTekst({genoeg:true,status:"KLEINE_KANS",kans:27,soort:"regen"});
+  assert.equal(tekst,"Kleine kans op neerslag het komende uur.");
+  assert(!/model|overlapp|uurvak/i.test(tekst),tekst);
+});
+
+test("live polish: alleen maan-events binnen de nacht blijven over",()=>{
+  const start=1000,eind=5000;
+  assert.deepEqual(maanEventsBinnenVenster(3000,500,start,eind),[{type:"op",ms:3000}]);
+  assert.deepEqual(maanEventsBinnenVenster(6000,2000,start,eind),[{type:"onder",ms:2000}]);
+});
+
+test("live polish: desktop gebruikt 3 x 3 meetblokken en Nachtzicht drie rustige regels",()=>{
+  const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8"),correct=fs.readFileSync(path.join(__dirname,"senior-correctness-v2.js"),"utf8");
+  assert(css.includes("grid-template-columns:repeat(3,minmax(0,1fr))"));
+  assert(css.includes("min-width:1100px"));
+  assert(correct.includes('class="nachtvenster"'));
+  assert(!correct.includes("Gemiddeld zicht"));
 });
 
 if(process.exitCode) console.error("\nSenior-correctheidsronde: minstens één regressie mislukt.");
