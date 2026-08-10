@@ -72,30 +72,51 @@ setTimeout(()=>{
   try{
     const chart=document.getElementById('chart');
     const labels=[...chart.querySelectorAll('text')].filter(el=>/^-?\\d+°$/.test((el.textContent||'').trim())&&String(el.getAttribute('font-family')||'').includes('Bodoni'));
-    let botsingen=0;
+    let botsingen=0,dubbelNabij=0;
     for(let i=0;i<labels.length;i++)for(let j=i+1;j<labels.length;j++){
       const a=labels[i].getBoundingClientRect(),b=labels[j].getBoundingClientRect();
       if(a.width&&b.width&&a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top)botsingen++;
+      const ac=(a.left+a.right)/2,bc=(b.left+b.right)/2,ay=(a.top+a.bottom)/2,by=(b.top+b.bottom)/2;
+      if(labels[i].textContent.trim()===labels[j].textContent.trim()&&Math.abs(ac-bc)<55&&Math.abs(ay-by)<38)dubbelNabij++;
     }
     const svgBox=chart.getBoundingClientRect();
     const buiten=labels.filter(el=>{const r=el.getBoundingClientRect();return r.left<svgBox.left-1||r.right>svgBox.right+1||r.top<svgBox.top-1||r.bottom>svgBox.bottom+1;}).length;
     const hit=document.getElementById('hit'),scrub=document.getElementById('scrub');
-    let scrubOk=true;
+    let scrubOk=true,scrubKort=true;
     if(hit&&scrub){
       const r=hit.getBoundingClientRect();
       hit.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,clientX:r.left+r.width*0.72,clientY:r.top+r.height*0.3,pointerType:'touch'}));
       const s=scrub.getBoundingClientRect();
       if(scrub.style.display!=='none'&&s.width>0) scrubOk=s.left>=svgBox.left-2&&s.right<=svgBox.right+2&&s.top>=svgBox.top-2&&s.bottom<=svgBox.bottom+2;
+      scrubKort=!/geen neerslag verwacht/i.test(scrub.textContent||'');
+    }
+    const klok=((document.getElementById('plaatstijd')||{}).textContent||'').trim();
+    const klokOk=/^\\d{2}:\\d{2}:\\d{2}$/.test(klok);
+    const desktop=window.innerWidth>=1100,stats=document.querySelector('.dashrow-hero .stats');
+    const cols=stats?getComputedStyle(stats).gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length:0;
+    const statOverflow=desktop&&stats?[...stats.querySelectorAll('.stat')].some(el=>el.scrollWidth>el.clientWidth+1):false;
+    const nightWide=[...document.querySelectorAll('#nights .row.night .nmeta.wide')];
+    let nightAligned=true;
+    if(desktop&&nightWide.length>1){
+      const r0=nightWide[0].getBoundingClientRect();
+      nightAligned=nightWide.slice(1).every(el=>{const r=el.getBoundingClientRect();return Math.abs(r.left-r0.left)<=1&&Math.abs(r.width-r0.width)<=1;});
     }
     const brief=(document.getElementById('brief')||{}).textContent||'';
     const dagen=document.querySelectorAll('#days .row.day:not(.kop)').length;
-    document.body.dataset.browserTestResult=(brief&&dagen>=7&&labels.length>=5&&botsingen===0&&buiten===0&&scrubOk)?'ok':'fout';
+    const gridOk=desktop?cols===3:cols===2;
+    document.body.dataset.browserTestResult=(brief&&dagen>=7&&labels.length>=5&&botsingen===0&&dubbelNabij===0&&buiten===0&&scrubOk&&scrubKort&&klokOk&&gridOk&&!statOverflow&&nightAligned)?'ok':'fout';
     document.body.dataset.browserLabels=String(labels.length);
     document.body.dataset.browserBotsingen=String(botsingen);
+    document.body.dataset.browserDubbel=String(dubbelNabij);
     document.body.dataset.browserBuiten=String(buiten);
     document.body.dataset.browserScrub=String(scrubOk);
+    document.body.dataset.browserScrubKort=String(scrubKort);
+    document.body.dataset.browserKlok=String(klokOk);
+    document.body.dataset.browserGrid=String(gridOk);
+    document.body.dataset.browserOverflow=String(statOverflow);
+    document.body.dataset.browserNight=String(nightAligned);
   }catch(e){document.body.dataset.browserTestResult='exception';document.body.dataset.browserException=String(e&&e.message||e);}
-},900);
+},1100);
 </script>`;
 html=html.replace("</body>",reporter+"</body>");
 
@@ -105,13 +126,13 @@ const url="file://"+fixture+"?lat=52.3500&lon=5.2600&plaats=Browsertest";
 function voerBrowserUit(maat,naam){
   const r=spawnSync(browser,[
     "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",
-    "--window-size="+maat,"--virtual-time-budget=3000","--dump-dom",url
+    "--window-size="+maat,"--virtual-time-budget=3500","--dump-dom",url
   ],{encoding:"utf8",maxBuffer:16*1024*1024});
   if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"";
   const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
-  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", botsingen="+waarde("browser-botsingen")+", buiten="+waarde("browser-buiten")+", scrub="+waarde("browser-scrub")+", exception="+waarde("browser-exception"));
-  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" labels, 0 botsingen, tooltip binnen beeld.");
+  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", night="+waarde("browser-night")+", exception="+waarde("browser-exception"));
+  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" labels, geen dubbele/botsende labels, tooltip en live klok correct.");
 }
 try{voerBrowserUit("390,844","mobiel Chromium");voerBrowserUit("1440,1000","desktop Chromium");}
 finally{fs.rmSync(dir,{recursive:true,force:true});}
