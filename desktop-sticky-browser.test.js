@@ -18,15 +18,16 @@ const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie)){console.error("FOUT desktop-sticky: public/index.html ontbreekt.");process.exit(1);}
 let html=fs.readFileSync(productie,"utf8");
 /* De test gaat uitsluitend over layout en scrollgedrag. Een nooit oplossende fetch
-   voorkomt externe netwerkafhankelijkheid; de verborgen app wordt hieronder zelf
-   zichtbaar gemaakt zodat de echte IntersectionObserver op de echte hero werkt. */
-html=html.replace("</head>",'<script>window.fetch=()=>new Promise(()=>{});</script></head>');
+   voorkomt externe netwerkafhankelijkheid. De !important-regel maakt #app al
+   zichtbaar vóór de productiescriptcode de bestaande IntersectionObserver aanmaakt;
+   dat bootst de echte situatie na nadat weerdata is geladen, zonder data te hoeven
+   vervalsen of de observer achteraf opnieuw te registreren. */
+html=html.replace("</head>",'<style>#app{display:block!important}</style><script>window.fetch=()=>new Promise(()=>{});</script></head>');
 const reporter=`<script>
 setTimeout(()=>{
   try{
-    const app=document.getElementById('app'),bar=document.getElementById('minibar'),hero=document.querySelector('.hero'),sheet=document.querySelector('.sheet');
-    if(!app||!bar||!hero||!sheet) throw new Error('vereiste DOM ontbreekt');
-    app.style.display='block';
+    const bar=document.getElementById('minibar'),hero=document.querySelector('.hero'),sheet=document.querySelector('.sheet');
+    if(!bar||!hero||!sheet) throw new Error('vereiste DOM ontbreekt');
     document.body.style.minHeight='3200px';
     const hs=getComputedStyle(hero);
     window.scrollTo(0,900);
@@ -43,9 +44,9 @@ setTimeout(()=>{
       document.body.dataset.desktopStickyBreedte=String(breedteOk);
       document.body.dataset.desktopStickyBoven=String(bovenOk);
       document.body.dataset.desktopStickyHero=String(heroOk);
-    },350);
+    },500);
   }catch(e){document.body.dataset.desktopStickyResult='exception';document.body.dataset.desktopStickyException=String(e&&e.message||e);}
-},100);
+},150);
 </script>`;
 html=html.replace("</body>",reporter+"</body>");
 
@@ -53,7 +54,7 @@ const dir=fs.mkdtempSync(path.join(os.tmpdir(),"weathernow-sticky-"));
 const fixture=path.join(dir,"index.html");fs.writeFileSync(fixture,html);
 const url="file://"+fixture;
 try{
-  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1440,1000","--virtual-time-budget=2200","--dump-dom",url],{encoding:"utf8",maxBuffer:16*1024*1024});
+  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1440,1000","--virtual-time-budget=2600","--dump-dom",url],{encoding:"utf8",maxBuffer:16*1024*1024});
   if(r.status!==0)throw new Error("browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"",waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(waarde("desktop-sticky-result")!=="ok") throw new Error("resultaat="+waarde("desktop-sticky-result")+", aan="+waarde("desktop-sticky-aan")+", display="+waarde("desktop-sticky-display")+", position="+waarde("desktop-sticky-position")+", breedte="+waarde("desktop-sticky-breedte")+", boven="+waarde("desktop-sticky-boven")+", hero="+waarde("desktop-sticky-hero")+", exception="+waarde("desktop-sticky-exception"));
