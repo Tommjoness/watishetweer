@@ -129,14 +129,8 @@ function oudeBriefingZin(a){
 }
 function vervangTekst(el,oud,nieuw){
   if(!el||!oud||oud===nieuw) return;
-  const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
-  let node;
-  while((node=walker.nextNode())){
-    if(String(node.nodeValue||"").includes(oud)){
-      node.nodeValue=node.nodeValue.replace(oud,nieuw);
-      return;
-    }
-  }
+  const html=String(el.innerHTML||"");
+  if(html.includes(oud)) el.innerHTML=html.replace(oud,nieuw);
 }
 
 const basisMeters=meters;
