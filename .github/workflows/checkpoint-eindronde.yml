@@ -20,6 +20,6 @@ jobs:
       - name: Installeer echte browsers
         run: npx playwright install --with-deps chromium webkit
       - name: Bouw definitieve artifact
-        run: npm run build && npm run postbuild
+        run: npm run build
       - name: Checkpoint 25% in Chromium en WebKit
         run: node browser-q1-checkpoint.test.js
