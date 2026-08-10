@@ -23,6 +23,8 @@ for(const vereist of [
   "tooltipNeerslag",
   "weerbriefing.plaatscache.v1",
   "FINAL CONSUMER POLISH 27",
+  "WeatherNowUvBridge",
+  "FINAL UV BRIDGE",
   "WeatherNowMoonV3",
   "maan-fase-svg-v3",
   "MOON PHASE V3"
