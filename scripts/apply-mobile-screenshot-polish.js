@@ -8,25 +8,40 @@ const crypto=require("crypto");
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
 const htmlPad=path.join(OUT,"index.html");
-const css=fs.readFileSync(path.join(__dirname,"mobile-screenshot-polish.css"),"utf8");
-const js=fs.readFileSync(path.join(__dirname,"mobile-screenshot-polish.js"),"utf8");
+const mobileCss=fs.readFileSync(path.join(__dirname,"mobile-screenshot-polish.css"),"utf8");
+const finalCss=fs.readFileSync(path.join(__dirname,"final-27-polish.css"),"utf8");
+const mobileJs=fs.readFileSync(path.join(__dirname,"mobile-screenshot-polish.js"),"utf8");
+const finalJs=fs.readFileSync(path.join(__dirname,"final-27-polish.js"),"utf8");
+const moonJs=fs.readFileSync(path.join(__dirname,"moon-v3-final.js"),"utf8");
 let html=fs.readFileSync(htmlPad,"utf8");
 
 const CSS_MARK="/* ===== MOBILE SCREENSHOT POLISH 20260810B CSS ===== */";
+const FINAL_CSS_MARK="/* ===== FINAL CONSUMER POLISH 27 CSS ===== */";
 const JS_MARK="/* ===== MOBILE SCREENSHOT POLISH 20260810B ===== */";
+const FINAL_JS_MARK="/* ===== FINAL CONSUMER POLISH 27 ===== */";
+const MOON_JS_MARK="/* ===== MOON PHASE V3 ===== */";
 const START="/* ---------- start ---------- */";
-if(html.includes(CSS_MARK)||html.includes(JS_MARK))throw new Error("Mobiele screenshot-polish is al geïnjecteerd.");
+if(html.includes(CSS_MARK)||html.includes(JS_MARK)||html.includes(FINAL_CSS_MARK)||html.includes(FINAL_JS_MARK)||html.includes(MOON_JS_MARK))throw new Error("Definitieve post-build polish is al geïnjecteerd.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor mobiele polish.");
 if((html.split(START).length-1)!==1)throw new Error("Startmarker ontbreekt of is dubbel voor mobiele polish.");
 
-html=html.replace("</style>","\n"+CSS_MARK+"\n"+css+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B CSS ===== */\n</style>");
-html=html.replace(START,JS_MARK+"\n"+js+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B ===== */\n\n"+START);
+html=html.replace("</style>",
+  "\n"+CSS_MARK+"\n"+mobileCss+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B CSS ===== */\n"
+  +FINAL_CSS_MARK+"\n"+finalCss+"\n/* ===== EINDE FINAL CONSUMER POLISH 27 CSS ===== */\n</style>");
+html=html.replace(START,
+  JS_MARK+"\n"+mobileJs+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B ===== */\n\n"
+  +FINAL_JS_MARK+"\n"+finalJs+"\n/* ===== EINDE FINAL CONSUMER POLISH 27 ===== */\n\n"
+  +MOON_JS_MARK+"\n"+moonJs+"\n/* ===== EINDE MOON PHASE V3 ===== */\n\n"+START);
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline script na mobiele polish.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:mobile-polish-"+(i+1)}));
-for(const vereist of ["WeatherNowMobileScreenshotPolish","maan-fase-svg-v2","Afgelopen kwartier","bron-bronnen"]){
-  if(!html.includes(vereist))throw new Error("Mobiele polish-invariant ontbreekt: "+vereist);
+for(const vereist of [
+  "WeatherNowMobileScreenshotPolish","Afgelopen kwartier","bron-bronnen",
+  "WeatherNowFinale27","dag-mm","tooltipNeerslag","weerbriefing.plaatscache.v1",
+  "WeatherNowMoonV3","maan-fase-svg-v3"
+]){
+  if(!html.includes(vereist))throw new Error("Definitieve polish-invariant ontbreekt: "+vereist);
 }
 fs.writeFileSync(htmlPad,html,"utf8");
 
@@ -54,4 +69,4 @@ sw=sw.replace(/watishetweer-[0-9a-f]{12}/g,versie);
 if(!sw.includes(versie))throw new Error("Nieuwe mobiele cachehash niet toegepast.");
 fs.writeFileSync(swPad,sw,"utf8");
 
-console.log("Mobiele screenshot-polish geïnjecteerd; cache "+versie+".");
+console.log("Definitieve consumentenpolish geïnjecteerd; cache "+versie+".");
