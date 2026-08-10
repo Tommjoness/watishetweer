@@ -164,7 +164,21 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
 
   const basisEtmaal=etmaal;
   etmaal=function(start,n){
-    basisEtmaal(start,n);
+    /* Bij een bewust gekozen kalenderdag is de neerslagwaarde met tijd 00:00
+       de som/kans van 23:00–00:00 van de vorige dag. Die ligt volledig buiten
+       het gekozen dagvenster en moet dus niet links van de grafiek verschijnen.
+       De waarde op de volgende 00:00 blijft juist wel staan: die hoort bij het
+       laatste uur 23:00–00:00 van de gekozen dag. */
+    const gekozenDag=S.dag!=null&&n===24,h=S.d&&S.d.hourly||{};
+    let oudeKans,oudeMm,hadKans=false,hadMm=false;
+    if(gekozenDag&&Number.isInteger(start)&&start>=0){
+      if(Array.isArray(h.precipitation_probability)&&start<h.precipitation_probability.length){hadKans=true;oudeKans=h.precipitation_probability[start];h.precipitation_probability[start]=null;}
+      if(Array.isArray(h.precipitation)&&start<h.precipitation.length){hadMm=true;oudeMm=h.precipitation[start];h.precipitation[start]=null;}
+    }
+    try{basisEtmaal(start,n);}finally{
+      if(hadKans)h.precipitation_probability[start]=oudeKans;
+      if(hadMm)h.precipitation[start]=oudeMm;
+    }
     const svg=document.getElementById("chart"),g=S.geo;
     if(!svg||!g||!Number.isFinite(g.cw)) return;
     const dx=grafiekNeerslagVerschuiving(g.cw);
