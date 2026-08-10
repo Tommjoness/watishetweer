@@ -86,6 +86,9 @@ function nachtOordeelGetoond(score){
   const n=Math.max(0,Math.min(10,Math.round(s)));
   return n>=9?"Uitstekend":n>=7?"Goed":n>=5?"Redelijk":n>=4?"Matig":"Ongunstig";
 }
+function nachtBalkPercentageGetoond(score){
+  const s=num(score); return s===null?0:Math.max(0,Math.min(10,Math.round(s)))*10;
+}
 
 function neerslagWeerCode(code){
   const c=num(code); return c!==null&&c>=51&&c<=99;
@@ -136,12 +139,12 @@ function pollenOordeelGetoond(waarde){
 }
 
 function zichtOordeelGetoond(kilometer,plus){
-  const km=num(kilometer); if(plus===true)return "Goed zicht, meer dan tien kilometer.";
+  const km=num(kilometer); if(plus===true)return "Goed zicht, tien kilometer of meer.";
   if(km===null)return "Niet beschikbaar.";
   if(km<1)return "Slecht zicht, minder dan een kilometer.";
   if(km<4)return "Beperkt zicht.";
   if(km<10)return "Redelijk zicht.";
-  return "Goed zicht, meer dan tien kilometer.";
+  return "Goed zicht, ongeveer tien kilometer.";
 }
 
 function zonurenOordeelGetoond(uren){
@@ -233,7 +236,7 @@ function tooltipCompactMaten(breedte,hoogte){
 const api={
   datumDagenVerschil,hhmm,dagdeelVanTijd,forecastMomentZinsdeel,vervangExactForecastMoment,
   briefingHistorieSemantiek,nachtLabelVarianten,nachtAdviesMetHorizon,nachtVensterMetHorizon,
-  daglichtGrammatica,nachtOordeelGetoond,neerslagWeerCode,uvOordeelGetoond,bewolkingOordeelGetoond,
+  daglichtGrammatica,nachtOordeelGetoond,nachtBalkPercentageGetoond,neerslagWeerCode,uvOordeelGetoond,bewolkingOordeelGetoond,
   aqiOordeelGetoond,pollenOordeelGetoond,zichtOordeelGetoond,zonurenOordeelGetoond,
   maanFaseUitSymbool,maanFaseSvg,maanSymboolNaarSvgInHtml,zonInfoRijen,tooltipCompactMaten
 };
@@ -296,7 +299,7 @@ nachten=function(){
       if(zichtbaar!==null){
         const kleur=zichtbaar>=7?TEAL:zichtbaar>=4?INK:INK25;
         score.style.color=kleur;
-        const balk=rij.querySelector(".sbar i");if(balk)balk.style.background=kleur;
+        const balk=rij.querySelector(".sbar i");if(balk){balk.style.background=kleur;balk.style.width=nachtBalkPercentageGetoond(zichtbaar)+"%";}
       }
     }
     if(bew){const p=bew.querySelector(".perc");if(p)bew.innerHTML='<span class="perc">'+escapeHtml(p.textContent)+'</span>';}
