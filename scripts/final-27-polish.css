@@ -23,15 +23,16 @@
   white-space:nowrap;
 }
 
-/* De v3-maan tekent de schijf zelf. De oude ronde CSS-drager zou daar opnieuw
-   een 'stip in een cirkel' van maken en wordt daarom voor v3 expliciet uitgezet. */
+/* V3 tekent de zichtbare maanschijf en schaduw zelf. De container gebruikt alleen
+   dezelfde pagina-achtergrond en ronde begrenzing als neutrale drager; daardoor
+   blijft de echte sikkel leidend en ontstaat geen tweede zichtbare buitenring. */
 .maan-fase-svg.maan-fase-svg-v3{
   width:16px;
   height:16px;
   padding:0;
   border:0;
-  border-radius:0;
-  background:transparent;
+  border-radius:50%;
+  background:var(--paper);
   overflow:visible;
 }
 .maan-fase-svg-v3 .maan-licht{
