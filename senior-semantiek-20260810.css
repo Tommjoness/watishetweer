@@ -142,16 +142,18 @@ footer .bron:first-child{max-width:72ch}
   .nachtlabel-lang{display:none}
   .nachtlabel-kort{display:inline}
 
-  /* Vier echte kolommen: nacht | score | balk | bewolking. De scorekolom is
-     breed genoeg voor 10/10, zodat het getal nooit meer de grid-gap opeet en
-     tegen een 100%-balk aan komt te liggen. */
+  /* Vier echte kolommen: nacht | score | balk | bewolking. De laatste kolom is
+     bewust breed genoeg voor de volledige mobiele kop 'BEWOLKING'; de oude
+     42px-kolom liet die kop buiten de Nachtzicht-rij uitsteken. De scorekolom
+     houdt tegelijk minimaal 8px lucht vóór de balk. */
   .row.night{
-    grid-template-columns:62px 58px minmax(0,1fr) 42px;
-    gap:4px 10px;
+    grid-template-columns:62px 58px minmax(0,1fr) 76px;
+    gap:4px 8px;
   }
   .row.night .score{text-align:left;font-size:17px;line-height:1.25}
   .row.night .sbar{min-width:0;margin-left:1px}
-  .row.night > .nmeta:not(.wide){text-align:right}
+  .row.night > .nmeta:not(.wide){min-width:0;text-align:right}
+  .row.night.kop > .nmeta:not(.wide){justify-self:end;white-space:nowrap}
   .row.night .nmeta.wide{
     grid-column:2 / -1;
     margin-top:0;
@@ -204,5 +206,5 @@ footer .bron:first-child{max-width:72ch}
   .chartkop #suntimes.senior-zoninfo .zonregel{gap:2px 7px}
   .chartkop #suntimes.senior-zoninfo .zonregel .zondag{min-width:44px;font-size:10px}
   .chartkop #suntimes.senior-zoninfo .zonregel > span:not(.zondag){font-size:11px}
-  .row.night{grid-template-columns:56px 56px minmax(0,1fr) 39px;gap:4px 8px}
+  .row.night{grid-template-columns:56px 56px minmax(0,1fr) 72px;gap:4px 6px}
 }
