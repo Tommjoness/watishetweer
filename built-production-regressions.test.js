@@ -37,7 +37,8 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  ok(/verwachting is daardoor onzeker|hoeveelheid (?:is )?onzeker/i.test(t),"hoge kans zonder hoeveelheid krijgt onzekerheidszin",t);ok(!/hooguit enkele druppels/i.test(t),"hoge kans zonder hoeveelheid verzint geen druppelhoeveelheid",t);
 }
 {
- const {api,bak}=laadKern(390),d=bouw({wc:()=>3});d.daily.weather_code[0]=95;zetBasis(api,d);api.dagen();const t=tekst(bak.days);ok(/Onweer/i.test(t),"zwaarste dagconditie blijft zichtbaar in weektabel",t.slice(0,300));
+ const {api,bak}=laadKern(390),d=bouw({wc:()=>3,pp:()=>0,pr:()=>0,som:0});d.daily.weather_code[0]=95;zetBasis(api,d);api.dagen();const t=tekst(bak.days);
+ ok(!/Onweer/i.test(t.slice(0,300)),"verstreken onweer bepaalt het resterende weerbeeld van vandaag niet",t.slice(0,300));
 }
 {
  const {api}=laadKern(390),d=bouw({}),i=zetBasis(api,d);api.etmaal(i,24);ok(api.S.geo&&api.S.geo.n===25,"komende 24 uur beslaat 25 grenspunten","n="+(api.S.geo&&api.S.geo.n));api.S.dag=0;api.etmaal(i,24);ok(api.S.geo&&api.S.geo.n===24,"gekozen kalenderdag blijft 24 uurpunten","n="+(api.S.geo&&api.S.geo.n));
@@ -63,7 +64,15 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  const {api,bak}=laadKern(390),d=bouw({wg:(u,dag)=>dag===0&&u===18?72:25});zetBasis(api,d);api.meters();const t=tekst(bak.gustsub);ok(/tussen 17:00 en 18:00/.test(t),"windstootpiek wordt als begrijpelijk uurvak getoond",t);ok(!/rond 18:00/.test(t),"windstootpiek wordt niet als exact tijdstip geclaimd",t);
 }
 {
- const {api,bak}=laadKern(390),d=bouw({});zetBasis(api,d);api.nachten();const t=tekst(bak.nights);ok(/Score/.test(t)&&/\d+\/10/.test(t),"nachtzichtscore is compact en begrijpelijk gelabeld",t.slice(0,300));ok(/Beste zichtperiode/.test(t),"nachtzicht benoemt de beste zichtperiode consumentgericht",t.slice(0,300));
+ const {api,bak}=laadKern(390),d=bouw({zicht:20000});d.current.visibility=20000;zetBasis(api,d);api.nachten();const t=tekst(bak.nights);ok(/Score/.test(t)&&/\d+\/10/.test(t),"nachtzichtscore is compact en begrijpelijk gelabeld",t.slice(0,300));ok(/Beste zichtperiode/.test(t),"nachtzicht benoemt de beste zichtperiode consumentgericht",t.slice(0,300));
+}
+{
+ const {api,bak}=laadKern(390),d=bouw({zicht:100,cc:()=>0,rh:100,spreiding:0,pr:()=>0,wc:()=>3});
+ d.current.time="2026-07-23T00:30";d.current.is_day=0;d.current.visibility=100;d.current.cloud_cover=0;d.current.relative_humidity_2m=100;d.current.precipitation=0;d.current.weather_code=3;
+ const i=zetBasis(api,d);api.S.i0=i;api.S.klokOverride=null;api.S.klokInstantOverride=new Date("2026-07-22T22:30:00Z");api.nachten();const t=tekst(bak.nights);
+ ok(/vannacht/i.test(t),"na middernacht blijft de lopende nacht de eerste Nachtzicht-rij",t.slice(0,400));
+ ok(/Ongunstig/.test(t)&&!/Goed ·/.test(t),"100 meter zicht kan in productie niet als Goed worden beoordeeld",t.slice(0,400));
+ ok(/Gemiddeld zicht 0,1 km/.test(t),"Nachtzicht laat slecht zicht expliciet in de beoordeling terugkomen",t.slice(0,400));
 }
 {
  const {api,bak}=laadKern(390),d=bouw({temp:(u,dag)=>10+u/10}),i=zetBasis(api,d);d.hourly.temperature_2m[i+5]=null;api.etmaal(i,24);ok(!/>0°<\/text>/.test(bak.chart.innerHTML),"null wordt niet als kunstmatig 0°C-extreem gelabeld",bak.chart.innerHTML.slice(0,200));
@@ -72,6 +81,9 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  const html=fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8");ok(/zoekGeneratie/.test(html)&&/generatie!==zoekGeneratie/.test(html),"oude zoekresponses kunnen nieuwere resultaten niet overschrijven");ok(/ArrowDown/.test(html)&&/ArrowUp/.test(html)&&/aria-activedescendant/.test(html)&&/aria-selected/.test(html),"zoeken ondersteunt toetsenbord en actieve optie");
 }
 {
- const pkg=JSON.parse(fs.readFileSync(path.join(__dirname,"package.json"),"utf8")),build=fs.readFileSync(path.join(__dirname,"build-weather.js"),"utf8");ok(!String(pkg.scripts.build).includes("post-build-hardening"),"productiecode wordt niet meer door een post-build-test herschreven");ok(!/productie-hardening/.test(build)&&!/html=pasToe\(html\)/.test(build),"productsemantiek staat in canonieke bron en niet in build-hardening");
+ const pkg=JSON.parse(fs.readFileSync(path.join(__dirname,"package.json"),"utf8")),build=fs.readFileSync(path.join(__dirname,"build-weather.js"),"utf8"),config=fs.readFileSync(path.join(__dirname,"product-config.js"),"utf8");
+ ok(!String(pkg.scripts.build).includes("post-build-hardening"),"productiecode wordt niet door een verborgen post-build-test herschreven");
+ ok(build.includes('require("./product-config.js")')&&config.includes("EERSTE_BEZOEK_PRODUCTIE"),"bewuste productsemantiek staat expliciet in één productconfiguratie");
+ ok(build.includes("SENIOR CORRECTHEIDSLAAG"),"inhoudelijke correctheidslaag is zichtbaar onderdeel van de deterministische build");
 }
 console.log("Gebouwde senior productie-regressies: "+geslaagd+" controles geslaagd.");
