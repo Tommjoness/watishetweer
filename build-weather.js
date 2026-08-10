@@ -63,7 +63,12 @@ vervangProductregel(PRODUCT_CONFIG.KALENDERDAG_PUNTEN_BRON,PRODUCT_CONFIG.KALEND
    zichtbaarheidstest op de echte onderrand van de hero, aangeroepen door de
    observer én door passieve scroll/resize-events. Een maximaal eens per 16 ms
    lopende timer coalescet snelle scroll-events zonder afhankelijkheid van de
-   render-scheduler van de browser. */
+   render-scheduler van de browser.
+
+   Op mobiel verdwijnt de fixed balk bovendien bij duidelijk neerwaarts scrollen
+   en komt hij terug zodra de gebruiker weer omhoog navigeert. Daarmee blijft de
+   context beschikbaar zonder tijdens het lezen de bovenste inhoudsregel af te
+   dekken. Desktop behoudt de bestaande vaste balk exact zoals hij was. */
 const MINIBAR_BRON=`(function(){
   const hero=document.querySelector(".hero"),bar=document.getElementById("minibar");
   if(!hero||!("IntersectionObserver" in window)) return;
@@ -74,11 +79,27 @@ const MINIBAR_BRON=`(function(){
 const MINIBAR_PRODUCTIE=`(function(){
   const hero=document.querySelector(".hero"),bar=document.getElementById("minibar");
   if(!hero||!bar) return;
-  let timer=null;
+  let timer=null,richtingY=Math.max(0,window.scrollY||0);
+  const mobiel=()=>window.matchMedia&&window.matchMedia("(max-width:900px)").matches;
+  const pasRichtingToe=()=>{
+    if(!mobiel()){
+      bar.classList.remove("senior-verstopt");
+      richtingY=Math.max(0,window.scrollY||0);
+      return;
+    }
+    const y=Math.max(0,window.scrollY||0),verschil=y-richtingY;
+    if(Math.abs(verschil)<10) return;
+    if(bar.classList.contains("aan"))bar.classList.toggle("senior-verstopt",verschil>0);
+    else bar.classList.remove("senior-verstopt");
+    richtingY=y;
+  };
   const zet=()=>{
     timer=null;
     const r=hero.getBoundingClientRect();
-    bar.classList.toggle("aan",Number.isFinite(r.bottom)&&r.bottom<=0);
+    const aan=Number.isFinite(r.bottom)&&r.bottom<=0;
+    bar.classList.toggle("aan",aan);
+    if(!aan)bar.classList.remove("senior-verstopt");
+    pasRichtingToe();
   };
   const plan=()=>{
     if(timer!==null) return;
@@ -118,7 +139,7 @@ const vereist=[
   "k<=9","k<=29","k<=69","k<=89","Zeer grote kans op neerslag",
   "grid-template-columns:repeat(3,minmax(0,1fr))","setInterval(liveKlokTik,1000)","tooltipWaardeKort","temperatuurLabelsBotsen","neerslagkans",
   "forecastMomentZinsdeel","Globale indicatie:","kop.textContent=\"Neerslag\"","senior-zoninfo","tooltipCompactMaten",
-  "window.addEventListener(\"scroll\",plan,{passive:true})","r.bottom<=0","timer=setTimeout(zet,16)",
+  "window.addEventListener(\"scroll\",plan,{passive:true})","r.bottom<=0","timer=setTimeout(zet,16)","senior-verstopt","verschil>0","(max-width:900px)",
   "load(52.3676,4.9041,\"Amsterdam\",false,true,\"NL\")"
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);
