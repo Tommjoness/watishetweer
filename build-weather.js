@@ -28,11 +28,15 @@ const start="/* ---------- start ---------- */";
 if((html.match(/\/\* ---------- start ---------- \*\//g)||[]).length!==1)throw new Error("Startmarker ontbreekt of is dubbel.");
 if(html.includes("CENTRALE INTERPRETATIE-ENGINE")||html.includes("SENIOR CORRECTHEIDSLAAG"))throw new Error("Bron-index bevat een buildlaag al.");
 
-/* Het enige bewuste verschil tussen ontwikkeltemplate en productie staat in
-   product-config.js. De build zelf bevat geen duplicaat van deze semantiek. */
-const aantalEersteBezoek=html.split(PRODUCT_CONFIG.EERSTE_BEZOEK_BRON).length-1;
-if(aantalEersteBezoek!==1)throw new Error("Eerste-bezoekblok ontbreekt of is dubbel: "+aantalEersteBezoek+" keer gevonden.");
-html=html.replace(PRODUCT_CONFIG.EERSTE_BEZOEK_BRON,PRODUCT_CONFIG.EERSTE_BEZOEK_PRODUCTIE);
+/* Alle bewuste verschillen tussen ontwikkeltemplate en productie staan in
+   product-config.js. De build bevat zelf geen duplicaat van die semantiek. */
+function vervangProductregel(bron,productie,label){
+  const aantal=html.split(bron).length-1;
+  if(aantal!==1)throw new Error(label+" ontbreekt of is dubbel: "+aantal+" keer gevonden.");
+  html=html.replace(bron,productie);
+}
+vervangProductregel(PRODUCT_CONFIG.EERSTE_BEZOEK_BRON,PRODUCT_CONFIG.EERSTE_BEZOEK_PRODUCTIE,"Eerste-bezoekblok");
+vervangProductregel(PRODUCT_CONFIG.KALENDERDAG_PUNTEN_BRON,PRODUCT_CONFIG.KALENDERDAG_PUNTEN_PRODUCTIE,"24-uursgrensregel");
 
 html=html.replace(start,
   "/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */\n"+engine+"\n/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */\n\n"
@@ -42,7 +46,7 @@ if(!scripts.length)throw new Error("Geen inline script gevonden.");
 scripts.forEach((s,i)=>new vm.Script(s,{filename:"public/index.html:inline-"+(i+1)}));
 const vereist=[
   "WeatherNowInterpretatie","WeatherNowCorrectnessV2","weatherNowActueleLokaleTijd","plaatsTijdDelen","weatherNowZoneOffset",
-  "const eind=Math.min(i+25,h.time.length);","const punten=S.dag==null&&n===24?25:n;",
+  "const eind=Math.min(i+25,h.time.length);","const punten=n===24?25:n;",
   "hoeveelheid onzeker","daily.weather_code&&daily.weather_code[dagIndex]","117.000001",
   "c.visibility!=null?c.visibility","weatherNowUurWaardeOp(\"pressure_msl\"","zoekGeneratie",
   "klokKalenderdag","Komend uur","item.precipitation*item.fractie",
