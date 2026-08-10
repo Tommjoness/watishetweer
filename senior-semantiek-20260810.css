@@ -52,19 +52,30 @@
 
 .nachtlabel-kort{display:none}
 
-/* De gegenereerde maanfase bevat voor nauwkeurigheid een buitenste cirkel. Op
-   kleine schermen domineerde die cirkel de dunne sikkel, waardoor de maan op een
-   leeg bolletje leek. Zodra er een echte fasevorm aanwezig is, laten we alleen
-   die vorm zien. De tekst ernaast bevat het exacte verlichte percentage. */
+/* Een losse gevulde sikkel zonder schijf leest op een telefoon al snel als een
+   haakje. De precieze fasevorm blijft intact, maar krijgt nu een zeer subtiele
+   ronde schijf erachter. Zo blijft hij monochroom én herkenbaar als maan. De
+   buitenste SVG-lijn blijft verborgen zodat die niet opnieuw als lege cirkel
+   domineert. */
 .maan-fase-svg{
   display:inline-block;
   vertical-align:-2px;
-  width:15px;
-  height:15px;
+  width:16px;
+  height:16px;
   flex:0 0 auto;
+  padding:1px;
+  border:1px solid var(--rule);
+  border-radius:50%;
+  background:var(--rule-soft);
 }
 .maan-fase-svg path + circle,
 .maan-fase-svg circle[fill="currentColor"] + circle{display:none}
+#moonlab{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  white-space:nowrap;
+}
 
 /* De footer blijft volledig zichtbaar voor bronattributie, maar leest als
    productfooter in plaats van als technisch tekstblok. */
@@ -85,6 +96,25 @@ footer .bron:first-child{max-width:72ch}
   .chips{margin-top:10px;gap:6px}
   .chip{padding:4px 9px;font-size:12.5px}
   .brief{margin-top:16px;padding-top:18px}
+
+  /* De mobiele contextbalk blijft fixed om de eerdere sticky/tril-regressie niet
+     terug te brengen, maar is compacter en schuift buiten beeld wanneer de
+     gebruiker naar beneden leest. Bij omhoog scrollen komt hij terug. */
+  #minibar{
+    padding:6px 16px;
+    gap:8px;
+    transition:transform .16s ease,opacity .16s ease;
+    will-change:transform;
+  }
+  #miniplaats{font-size:15px}
+  #minitijd{font-size:10.5px}
+  #minitemp{font-size:13.5px}
+  #minicond{font-size:13.5px}
+  #minibar.senior-verstopt{
+    transform:translateY(calc(-100% - 2px));
+    opacity:0;
+    pointer-events:none;
+  }
 
   .chartkop #suntimes.senior-zoninfo{
     width:100%;
@@ -137,7 +167,7 @@ footer .bron:first-child{max-width:72ch}
   .row.night .nachtvenster,
   .row.night .nachtmaan{font-size:11.5px;line-height:1.4}
   .row.night .nachtmaan{color:var(--ink-45)}
-  .row.night .maan-fase-svg{width:13px;height:13px;vertical-align:-2px}
+  .row.night .maan-fase-svg{width:14px;height:14px;vertical-align:-2px}
   .row.night.kop .score{text-align:left}
   .row.kop>*{font-size:10px!important}
 
