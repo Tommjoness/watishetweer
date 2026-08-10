@@ -13,14 +13,21 @@ if(!fs.existsSync(htmlPad)||!fs.existsSync(swPad))throw new Error("Definitieve p
 const html=fs.readFileSync(htmlPad,"utf8");
 for(const vereist of [
   "WeatherNowMobileScreenshotPolish",
-  "maan-fase-svg-v2",
   "Afgelopen kwartier",
   "pollenEenheid",
   "grid-template-columns:62px 58px minmax(0,1fr) 76px",
   "bron-bronnen",
-  "MOBILE SCREENSHOT POLISH 20260810B"
+  "MOBILE SCREENSHOT POLISH 20260810B",
+  "WeatherNowFinale27",
+  "dag-mm",
+  "tooltipNeerslag",
+  "weerbriefing.plaatscache.v1",
+  "FINAL CONSUMER POLISH 27",
+  "WeatherNowMoonV3",
+  "maan-fase-svg-v3",
+  "MOON PHASE V3"
 ]){
-  if(!html.includes(vereist))throw new Error("Definitieve mobiele productie-invariant ontbreekt: "+vereist);
+  if(!html.includes(vereist))throw new Error("Definitieve productie-invariant ontbreekt: "+vereist);
 }
 
 const CACHE_BRONNEN=[
@@ -41,4 +48,4 @@ const m=/const CACHE = "([^"]+)";/.exec(sw);
 if(!m)throw new Error("Serviceworker-cache-id ontbreekt in definitieve artifact.");
 if(m[1]!==verwacht)throw new Error("Serviceworker-cache hoort bij een andere artifact: "+m[1]+" versus "+verwacht);
 
-console.log("Definitieve mobiele productie-artifact geverifieerd: "+verwacht+".");
+console.log("Definitieve consumentenartifact geverifieerd: "+verwacht+".");
