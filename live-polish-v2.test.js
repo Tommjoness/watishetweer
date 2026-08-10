@@ -87,6 +87,13 @@ test("tablet en desktop houden compacte weercontext vast tijdens scrollen",()=>{
   assert(css.includes("width:min(calc(100% - 44px),1440px)"));
 });
 
+test("mobiele weercontext verbergt zich neerwaarts zonder sticky-regressie",()=>{
+  const css=fs.readFileSync(path.join(__dirname,"senior-semantiek-20260810.css"),"utf8");
+  assert(css.includes("#minibar.senior-verstopt"));
+  assert(css.includes("translateY(calc(-100% - 2px))"));
+  assert(css.includes("pointer-events:none"));
+});
+
 test("actuele weerblok staat op desktop verticaal in balans met meetraster",()=>{
   const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
   assert(css.includes(".dashrow-hero > .hero"));
@@ -94,7 +101,7 @@ test("actuele weerblok staat op desktop verticaal in balans met meetraster",()=>
   assert(css.includes("align-self:center"));
 });
 
-test("productiebundel bevat interactiepolish, desktopbalk en robuuste scrollcontrole",()=>{
+test("productiebundel bevat interactiepolish, desktopbalk en richtinggevoelige mobiele scrollcontrole",()=>{
   const html=fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8");
   assert(html.includes("LIVE INTERACTIEPOLISH"));
   assert(html.includes("WeatherNowPolishV2"));
@@ -108,10 +115,13 @@ test("productiebundel bevat interactiepolish, desktopbalk en robuuste scrollcont
   assert(html.includes("positioneerNuLabel"));
   assert(html.includes('grafiekKop.classList.add("chartkop")'));
   assert(html.includes("#minibar.aan{display:flex}"));
-  assert(html.includes('bar.classList.toggle("aan",Number.isFinite(r.bottom)&&r.bottom<=0)'));
+  assert(html.includes("const aan=Number.isFinite(r.bottom)&&r.bottom<=0"));
+  assert(html.includes('bar.classList.toggle("aan",aan)'));
   assert(html.includes('window.addEventListener("scroll",plan,{passive:true})'));
   assert(html.includes('new IntersectionObserver(plan,{threshold:0}).observe(hero)'));
   assert(html.includes("timer=setTimeout(zet,16)"));
+  assert(html.includes('window.matchMedia("(max-width:900px)")'));
+  assert(html.includes('bar.classList.toggle("senior-verstopt",verschil>0)'));
   assert(html.includes("SENIOR SEMANTIEK 20260810"));
   assert(html.includes("senior-zoninfo"));
 });
