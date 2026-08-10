@@ -119,6 +119,10 @@ root.WeatherNowMobileScreenshotPolish=api;
 if(typeof document==="undefined"||typeof S==="undefined")return;
 
 structureerBronnen();
+/* De post-buildlaag wordt pas na de canonieke applicatiescriptcode geïnjecteerd.
+   De eerste meters-render kan daardoor al hebben plaatsgevonden voordat de wrapper
+   hieronder bestaat. Corrigeer de statische kop dus ook één keer meteen. */
+compactRecentLabel();
 
 const basisNachten=nachten;
 nachten=function(){
