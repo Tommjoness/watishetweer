@@ -81,14 +81,39 @@ setTimeout(()=>{
     }
     const svgBox=chart.getBoundingClientRect();
     const buiten=labels.filter(el=>{const r=el.getBoundingClientRect();return r.left<svgBox.left-1||r.right>svgBox.right+1||r.top<svgBox.top-1||r.bottom>svgBox.bottom+1;}).length;
+
+    /* De rode actuele meting moet een eigen visuele zone hebben. In deze fixture
+       ligt het huidige punt ruim boven de onderrand, dus het nu-label hoort onder
+       de rode stip te staan en mag geen zwart temperatuurcijfer overlappen. */
+    const nuLabel=[...chart.querySelectorAll('text')].find(el=>/^nu\\s+-?\\d+°$/i.test((el.textContent||'').trim()));
+    const nuPunt=[...chart.querySelectorAll('circle')].find(el=>String(el.getAttribute('fill')||'')==='var(--carmine)'&&Math.abs(Number(el.getAttribute('r'))-3)<0.2);
+    let nuRustig=false;
+    if(nuLabel&&nuPunt){
+      const ny=Number(nuLabel.getAttribute('y')),cy=Number(nuPunt.getAttribute('cy'));
+      const nr=nuLabel.getBoundingClientRect();
+      const botst=labels.some(el=>{const r=el.getBoundingClientRect();return nr.width&&r.width&&nr.left<r.right&&nr.right>r.left&&nr.top<r.bottom&&nr.bottom>r.top;});
+      nuRustig=Number.isFinite(ny)&&Number.isFinite(cy)&&ny>=cy+14&&!botst&&nuLabel.getAttribute('paint-order')==='stroke';
+    }
+
     const hit=document.getElementById('hit'),scrub=document.getElementById('scrub');
-    let scrubOk=true,scrubKort=true;
+    let scrubOk=true,scrubKort=true,kansCompact=true;
     if(hit&&scrub){
       const r=hit.getBoundingClientRect();
-      hit.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,clientX:r.left+r.width*0.72,clientY:r.top+r.height*0.3,pointerType:'touch'}));
+      /* Kies bewust een uur met neerslagkans >0. Zo bewaakt de browsertest exact
+         de gemelde lange labelvorm, in plaats van toevallig een droge regel. */
+      let clientX=r.left+r.width*0.72;
+      try{
+        const idx=S.geo&&Array.isArray(S.geo.P)?S.geo.P.findIndex(v=>Number(v)>0):-1;
+        if(idx>=0&&S.geo&&typeof S.geo.x==='function'&&Number.isFinite(S.geo.W)){
+          clientX=svgBox.left+(S.geo.x(idx)/S.geo.W)*svgBox.width;
+        }
+      }catch(e){}
+      hit.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,clientX:clientX,clientY:r.top+r.height*0.3,pointerType:'touch'}));
       const s=scrub.getBoundingClientRect();
       if(scrub.style.display!=='none'&&s.width>0) scrubOk=s.left>=svgBox.left-2&&s.right<=svgBox.right+2&&s.top>=svgBox.top-2&&s.bottom<=svgBox.bottom+2;
-      scrubKort=!/geen neerslag verwacht/i.test(scrub.textContent||'');
+      const scrubTekst=scrub.textContent||'';
+      scrubKort=!/geen neerslag verwacht/i.test(scrubTekst);
+      kansCompact=!/kans\\s+\\d{2}:00[–-]\\d{2}:00/i.test(scrubTekst)&&/kans\\s+\\d{2}–\\d{2}u/i.test(scrubTekst);
     }
     const klok=((document.getElementById('plaatstijd')||{}).textContent||'').trim();
     const klokOk=/^\\d{2}:\\d{2}:\\d{2}$/.test(klok);
@@ -104,13 +129,15 @@ setTimeout(()=>{
     const brief=(document.getElementById('brief')||{}).textContent||'';
     const dagen=document.querySelectorAll('#days .row.day:not(.kop)').length;
     const gridOk=desktop?cols===3:cols===2;
-    document.body.dataset.browserTestResult=(brief&&dagen>=7&&labels.length>=5&&botsingen===0&&dubbelNabij===0&&buiten===0&&scrubOk&&scrubKort&&klokOk&&gridOk&&!statOverflow&&nightAligned)?'ok':'fout';
+    document.body.dataset.browserTestResult=(brief&&dagen>=7&&labels.length>=5&&botsingen===0&&dubbelNabij===0&&buiten===0&&nuRustig&&scrubOk&&scrubKort&&kansCompact&&klokOk&&gridOk&&!statOverflow&&nightAligned)?'ok':'fout';
     document.body.dataset.browserLabels=String(labels.length);
     document.body.dataset.browserBotsingen=String(botsingen);
     document.body.dataset.browserDubbel=String(dubbelNabij);
     document.body.dataset.browserBuiten=String(buiten);
+    document.body.dataset.browserNu=String(nuRustig);
     document.body.dataset.browserScrub=String(scrubOk);
     document.body.dataset.browserScrubKort=String(scrubKort);
+    document.body.dataset.browserKans=String(kansCompact);
     document.body.dataset.browserKlok=String(klokOk);
     document.body.dataset.browserGrid=String(gridOk);
     document.body.dataset.browserOverflow=String(statOverflow);
@@ -131,8 +158,8 @@ function voerBrowserUit(maat,naam){
   if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"";
   const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
-  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", night="+waarde("browser-night")+", exception="+waarde("browser-exception"));
-  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" labels, geen dubbele/botsende labels, tooltip en live klok correct.");
+  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", kans="+waarde("browser-kans")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", night="+waarde("browser-night")+", exception="+waarde("browser-exception"));
+  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" labels, rustige nu-markering, compact kanstijdvak, tooltip en live klok correct.");
 }
 try{voerBrowserUit("390,844","mobiel Chromium");voerBrowserUit("1440,1000","desktop Chromium");}
 finally{fs.rmSync(dir,{recursive:true,force:true});}
