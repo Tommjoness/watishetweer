@@ -18,7 +18,7 @@ function ok(voorwaarde,naam){
 const publiekeBestanden=fs.readdirSync(PUBLIC);
 const internPubliek=publiekeBestanden.filter(naam=>
   naam.endsWith(".test.js") ||
-  ["run.js","run-built-matrix.js","kern.js","data.js","build-weather.js","interpretatie-engine.js"].includes(naam)
+  ["run.js","run-built-matrix.js","kern.js","data.js","build-weather.js","interpretatie-engine.js","senior-correctness-v2.js","product-config.js"].includes(naam)
 );
 ok(internPubliek.length===0,"geen interne test- of bouwbestanden in public");
 
@@ -81,13 +81,15 @@ async function roepWaarschuwingen(query,fetchImpl){
   ok(nws.body&&nws.body.reden==="bron onbereikbaar","NWS-storing heeft een expliciete reden");
 
   const atom="<?xml version=\"1.0\"?><feed><entry><title>Code geel</title><summary>Landelijke waarschuwing</summary></entry></feed>";
-  let aanroep=0;
+  const urls=[];
   const meteo=await roepWaarschuwingen(
     {lat:"52.3676",lon:"4.9041",land:"NL"},
-    async url=>{aanroep++;return {ok:true,text:async()=>atom};}
+    async url=>{urls.push(String(url));return {ok:true,text:async()=>atom};}
   );
-  ok(aanroep===1,"MeteoAlarm gebruikt met bekende landcode direct één officiële Atom-feed");
-  ok(meteo.body&&meteo.body.dekking===true,"beschikbare MeteoAlarm-feed houdt dekking waar");
+  ok(urls.length===2&&urls[0].includes("api/v1/warnings/feeds-netherlands")&&urls[1].includes("meteoalarm-legacy-atom-netherlands"),
+    "MeteoAlarm probeert eerst locatie-filterbare compatibiliteitsdata en daarna pas de landbrede Atom-fallback");
+  ok(meteo.body&&meteo.body.dekking===true,"beschikbare MeteoAlarm-fallback houdt dekking waar");
+  ok(meteo.body&&meteo.body.plaatsSpecifiek===false,"landbrede Atom-fallback wordt niet als plaats-specifiek voorgesteld");
   ok(meteo.body&&meteo.body.lijst&&meteo.body.lijst[0]&&meteo.body.lijst[0].landelijk===true,
     "Atom-waarschuwing zonder gebied wordt expliciet als breder gebied gemarkeerd");
 
@@ -101,18 +103,18 @@ async function roepWaarschuwingen(query,fetchImpl){
   ok(meteoTekst.body.lijst[0].tekst==="Kans op hagel < lokaal > !","Atom-omschrijvingen decoderen XML-entiteiten");
 
   async function landFeed(code,lat,lon){
-    const urls=[];
+    const feedUrls=[];
     const antwoord=await roepWaarschuwingen({lat:String(lat),lon:String(lon),land:code},async url=>{
-      urls.push(String(url));
+      feedUrls.push(String(url));
       return {ok:true,text:async()=>atom};
     });
-    return {antwoord,urls};
+    return {antwoord,urls:feedUrls};
   }
   const andorra=await landFeed("AD",42.5063,1.5218);
-  ok(andorra.urls.some(u=>u.includes("meteoalarm-legacy-atom-andorra"))&&andorra.antwoord.body.dekking===true,
-    "Andorra gebruikt de officiële MeteoAlarm-feed");
+  ok(andorra.urls[0].includes("api/v1/warnings/feeds-andorra")&&andorra.urls.some(u=>u.includes("meteoalarm-legacy-atom-andorra"))&&andorra.antwoord.body.dekking===true,
+    "Andorra gebruikt de juiste MeteoAlarm-slug in compatibiliteits- en Atom-route");
   const macedonie=await landFeed("MK",41.9981,21.4254);
-  ok(macedonie.urls.some(u=>u.includes("meteoalarm-legacy-atom-republic-of-north-macedonia"))&&macedonie.antwoord.body.dekking===true,
+  ok(macedonie.urls[0].includes("api/v1/warnings/feeds-republic-of-north-macedonia")&&macedonie.urls.some(u=>u.includes("meteoalarm-legacy-atom-republic-of-north-macedonia"))&&macedonie.antwoord.body.dekking===true,
     "Noord-Macedonië gebruikt de actuele officiële feedslug");
 
   const roodAtom="<?xml version=\"1.0\"?><feed><entry><title>Code rood: Extreem weer</title><summary>Gevaarlijk weer</summary></entry></feed>";
