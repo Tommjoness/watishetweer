@@ -14,12 +14,10 @@ function klokTekstMetSeconden(delen){
 function tooltipWaardeKort(waarde){
   const t=String(waarde==null?"":waarde).trim();
   if(/^geen neerslag verwacht\.?$/i.test(t)) return "droog";
-  /* In de tooltip stond links bijvoorbeeld "kans 15:00–16:00". Dat is
-     inhoudelijk correct, maar zo breed dat de labelkolom tegen de waarde aan
-     liep. Uurdata eindigt altijd op een heel uur, dus dezelfde informatie kan
-     zonder betekenisverlies als "kans 15–16u" worden getoond. */
-  const tijdvak=/^kans\s+(\d{2}):00[–-](\d{2}):00$/i.exec(t);
-  return tijdvak?"kans "+tijdvak[1]+"–"+tijdvak[2]+"u":t;
+  /* Het tijdstip staat al in de kop van de tooltip. De linker kolom houdt
+     daarom één stabiel label; alleen het percentage rechts verandert. */
+  if(/^kans(?:\s+\d{2}:00[–-]\d{2}:00|\s+\d{2}–\d{2}u)?$/i.test(t)) return "neerslagkans";
+  return t;
 }
 
 function temperatuurLabelsBotsen(a,b,maxDx){
