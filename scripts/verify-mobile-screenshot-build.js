@@ -23,6 +23,8 @@ for(const vereist of [
   "tooltipNeerslag",
   "weerbriefing.plaatscache.v1",
   "FINAL CONSUMER POLISH 27",
+  "WeatherNowFinalCopy",
+  "FINAL DUTCH COPY",
   "WeatherNowUvBridge",
   "FINAL UV BRIDGE",
   "WeatherNowMoonV3",
