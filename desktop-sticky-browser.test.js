@@ -19,9 +19,9 @@ if(!fs.existsSync(productie)){console.error("FOUT desktop-sticky: public/index.h
 let html=fs.readFileSync(productie,"utf8");
 /* De test gaat uitsluitend over layout en scrollgedrag. Een nooit oplossende fetch
    voorkomt externe netwerkafhankelijkheid. De !important-regel maakt #app al
-   zichtbaar vóór de productiescriptcode de bestaande IntersectionObserver aanmaakt;
+   zichtbaar vóór de productiescriptcode zijn zichtbaarheidshandlers aanmaakt;
    dat bootst de echte situatie na nadat weerdata is geladen, zonder data te hoeven
-   vervalsen of de observer achteraf opnieuw te registreren. */
+   vervalsen. */
 html=html.replace("</head>",'<style>#app{display:block!important}</style><script>window.fetch=()=>new Promise(()=>{});</script></head>');
 const reporter=`<script>
 setTimeout(()=>{
@@ -31,6 +31,10 @@ setTimeout(()=>{
     document.body.style.minHeight='3200px';
     const hs=getComputedStyle(hero);
     window.scrollTo(0,900);
+    /* Headless Chromium mag onder virtual time een native scroll-notificatie
+       samenvoegen. Deze echte DOM-scroll event raakt dezelfde productielistener
+       als een muiswiel/touchpad en maakt de regressie deterministisch. */
+    window.dispatchEvent(new Event('scroll'));
     setTimeout(()=>{
       const bs=getComputedStyle(bar),br=bar.getBoundingClientRect(),sr=sheet.getBoundingClientRect();
       const breedteOk=Math.abs(br.width-sr.width)<=2;
