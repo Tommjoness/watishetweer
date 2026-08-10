@@ -229,7 +229,14 @@ async function controleer(page, naam, modus) {
   }
   assert.ok(resultaat.maanSvgs >= resultaat.nachtMaan + 1, `${naam} ${modus}: maanfase gebruikt monochrome inline-SVG in kop en nachtrijen`);
   assert.ok(!/[🌑🌒🌓🌔🌕🌖🌗🌘]/u.test(resultaat.maanTekst), `${naam} ${modus}: geen platformkleurige maanemoji blijft zichtbaar`);
-  assert.ok(resultaat.dagTeksten.every(t => !/neerslagkans/i.test(t)), `${naam} ${modus}: droge weerbeelden dupliceren de aparte neerslagkolom niet`);
+
+  // De fixture heeft voor vandaag een niet-neerslagbeeld uit de resterende uurdata,
+  // maar voor toekomstige dagen bewust een dagelijkse regencode. Alleen het droge
+  // weerbeeld mag de aparte neerslagkolom niet dupliceren; een echte regendag moet
+  // zijn kansduiding juist behouden.
+  assert.ok(resultaat.dagTeksten.length >= 2, `${naam} ${modus}: weektabel bevat meerdere dagen`);
+  assert.ok(!/neerslagkans/i.test(resultaat.dagTeksten[0]), `${naam} ${modus}: niet-neerslagbeeld dupliceert de aparte neerslagkolom niet`);
+  assert.ok(resultaat.dagTeksten.slice(1).some(t => /neerslagkans|kans op/i.test(t)), `${naam} ${modus}: echt neerslagweerbeeld behoudt kansduiding`);
 
   assert.equal(resultaat.pollenSub, "laag", `${naam} ${modus}: pollen geeft kwalitatieve betekenis`);
   assert.deepEqual(fouten, [], `${naam} ${modus}: console/page errors: ${fouten.join(" | ")}`);
