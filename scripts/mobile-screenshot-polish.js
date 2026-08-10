@@ -67,9 +67,10 @@ function verbeterMaanfasen(){
 }
 
 function compactRecentLabel(){
-  const c=typeof S!=="undefined"&&S.d&&S.d.current?S.d.current:null;
-  const interval=getal(c&&c.interval);
-  if(interval!==900)return;
+  /* Deze tegel beschrijft functioneel altijd het laatste kwartier. De oude
+     correctie hing ten onrechte af van current.interval===900; dat veld kan in
+     een geldige API-respons ontbreken terwijl de kwartierdata zelf wel aanwezig
+     is. Daardoor kon de fysieke iPhone alsnog 'Afgelopen 15 minuten' tonen. */
   const waarde=document.getElementById("prec"),stat=waarde&&waarde.parentElement,kop=stat&&stat.querySelector(".eyebrow");
   if(kop)kop.textContent="Afgelopen kwartier";
 }
