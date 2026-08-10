@@ -27,4 +27,15 @@ jobs:
       - name: Echte browsers — mobiel en desktop
         run: node browser-playwright.test.js
       - name: Consumentenpolish — iPhone-randgeval in Chromium en WebKit
-        run: node browser-consumer-polish.test.js
+        id: iphone
+        shell: bash
+        run: |
+          set -o pipefail
+          node browser-consumer-polish.test.js 2>&1 | tee browser-consumer-debug.log
+      - name: Bewaar tijdelijk iPhone-foutlog
+        if: failure() && steps.iphone.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-consumer-debug
+          path: browser-consumer-debug.log
+          retention-days: 1
