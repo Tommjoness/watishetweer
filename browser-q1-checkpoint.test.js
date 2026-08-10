@@ -92,8 +92,9 @@ async function controleer(type,naam){
         bodyHasPolishMarker:document.documentElement.innerHTML.includes("MOBILE SCREENSHOT POLISH 20260810B")
       };
     });
-    console.log("DIAG "+naam+" "+JSON.stringify({artifact:artifactDiagnose,basis,diagnose,fouten}));
-    assert.equal(basis.recent,"Afgelopen kwartier",naam+": kwartierkop zonder current.interval");
+    const kwartaalDiag=JSON.stringify({artifact:artifactDiagnose,basis,diagnose,fouten});
+    console.log("DIAG "+naam+" "+kwartaalDiag);
+    assert.equal(basis.recent,"Afgelopen kwartier",naam+": kwartierkop zonder current.interval | DIAG="+kwartaalDiag);
     assert.ok(basis.dagMm.length>=1,naam+": minstens één neerslagdag toont mm");
     assert.ok(!basis.dagMm.includes("0,0 mm"),naam+": droge dagen tonen geen 0,0 mm");
     assert.ok(basis.over<=2,naam+": geen horizontale overflow");
