@@ -1,6 +1,6 @@
 "use strict";
 const assert=require("assert"),fs=require("fs"),path=require("path");
-const {klokTekstMetSeconden,tooltipWaardeKort,temperatuurLabelsBotsen,nuLabelPositie,nuLabelConcurreert}=require("./live-polish-v2.js");
+const {klokTekstMetSeconden,tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert}=require("./live-polish-v2.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 
 test("live klok toont uren minuten en seconden",()=>{
@@ -15,6 +15,15 @@ test("tooltip houdt links altijd hetzelfde label voor neerslagkans",()=>{
   assert.equal(tooltipWaardeKort("kans 18:00-19:00"),"neerslagkans");
   assert.equal(tooltipWaardeKort("kans 15–16u"),"neerslagkans");
   assert.equal(tooltipWaardeKort("27%"),"27%");
+});
+
+test("verwijderd temperatuurcijfer koppelt aan het juiste zwarte datapunt",()=>{
+  const punten=[{i:3,x:100},{i:4,x:140},{i:5,x:180}];
+  const temperaturen=[0,0,0,16.2,16.4,17.1];
+  assert.equal(temperatuurPuntIndex({text:"16°",x:136},punten,temperaturen,72),4);
+  assert.equal(temperatuurPuntIndex({text:"17°",x:178},punten,temperaturen,72),5);
+  assert.equal(temperatuurPuntIndex({text:"15°",x:136},punten,temperaturen,72),null);
+  assert.equal(temperatuurPuntIndex({text:"16°",x:260},punten,temperaturen,72),null);
 });
 
 test("nu-label krijgt duidelijk een eigen zone onder de rode stip",()=>{
@@ -46,6 +55,29 @@ test("desktopgrid reset oude twee- en vierkolomsselectors expliciet",()=>{
   assert(css.includes("grid-template-columns:104px 52px minmax(80px,1fr) 116px 218px"));
 });
 
+test("mobiele grafiekkop benut volle breedte zonder lege rechterkolom",()=>{
+  const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
+  assert(css.includes(".chartkop{"));
+  assert(css.includes("grid-template-columns:repeat(2,minmax(0,1fr))"));
+  assert(css.includes(".chartkop #suntimes span:last-child{grid-column:1 / -1}"));
+  assert(css.includes("margin-top:18px"));
+});
+
+test("UV-piek gebruikt op mobiel de brede rij horizontaal",()=>{
+  const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
+  assert(css.includes(".dashrow-hero .stat.breed{"));
+  assert(css.includes("grid-template-columns:auto auto minmax(0,1fr)"));
+  assert(css.includes(".dashrow-hero .stat.breed .ssub{grid-column:3"));
+});
+
+test("Vandaag staat als grotere gecentreerde kop boven de zoninformatie",()=>{
+  const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
+  assert(css.includes("#suntimes .zondag{"));
+  assert(css.includes("justify-self:stretch"));
+  assert(css.includes("text-align:center"));
+  assert(css.includes("font-size:11.5px"));
+});
+
 test("tablet en desktop houden compacte weercontext vast tijdens scrollen",()=>{
   const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
   assert(css.includes("@media(min-width:901px)"));
@@ -69,9 +101,12 @@ test("productiebundel bevat interactiepolish, desktopbalk en robuuste scrollcont
   assert(html.includes("setInterval(liveKlokTik,1000)"));
   assert(html.includes("tooltipWaardeKort"));
   assert(html.includes("neerslagkans"));
+  assert(html.includes("temperatuurPuntIndex"));
+  assert(html.includes("verwijderTemperatuurMarkering"));
   assert(html.includes("nuLabelPositie"));
   assert(html.includes("nuLabelConcurreert"));
   assert(html.includes("positioneerNuLabel"));
+  assert(html.includes('grafiekKop.classList.add("chartkop")'));
   assert(html.includes("#minibar.aan{display:flex}"));
   assert(html.includes('bar.classList.toggle("aan",Number.isFinite(r.bottom)&&r.bottom<=0)'));
   assert(html.includes('window.addEventListener("scroll",plan,{passive:true})'));
