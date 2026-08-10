@@ -1,5 +1,25 @@
 /* Gerichte seniorronde: geen redesign, alleen semantische zonregels,
-   leesbaarheid en horizonlabels. Wordt na live-polish.css geladen. */
+   leesbaarheid, horizonlabels en laatste pitch-polish. Wordt na live-polish.css geladen. */
+
+/* De productnaam was visueel bijna een bijschrift boven de plaatsnaam. Het blijft
+   bewust subtieler dan de locatie, maar krijgt genoeg gewicht om als merknaam te
+   worden herkend in plaats van als eyebrow. */
+.mast h1{
+  font-size:20px;
+  line-height:1.15;
+  letter-spacing:.01em;
+  color:var(--ink-70);
+}
+
+/* De bediening blijft volledig beschikbaar, maar hoeft niet dezelfde visuele
+   nadruk te krijgen als het weer zelf. */
+.tools button{color:var(--ink-45);border-color:var(--rule)}
+#thema{font-size:0}
+#thema::after{
+  content:"Weergave";
+  font-size:10.5px;
+  letter-spacing:.10em;
+}
 
 /* Zoninformatie hoort bij concrete kalenderdagen. Iedere regel heeft daarom
    één dagaanduiding en alleen de astronomische momenten die bij die dag horen. */
@@ -32,7 +52,40 @@
 
 .nachtlabel-kort{display:none}
 
+/* De gegenereerde maanfase bevat voor nauwkeurigheid een buitenste cirkel. Op
+   kleine schermen domineerde die cirkel de dunne sikkel, waardoor de maan op een
+   leeg bolletje leek. Zodra er een echte fasevorm aanwezig is, laten we alleen
+   die vorm zien. De tekst ernaast bevat het exacte verlichte percentage. */
+.maan-fase-svg{
+  display:inline-block;
+  vertical-align:-2px;
+  width:15px;
+  height:15px;
+  flex:0 0 auto;
+}
+.maan-fase-svg path + circle,
+.maan-fase-svg circle[fill="currentColor"] + circle{display:none}
+
+/* De footer blijft volledig zichtbaar voor bronattributie, maar leest als
+   productfooter in plaats van als technisch tekstblok. */
+footer{
+  border-top:1px solid var(--rule-soft);
+  padding-top:13px;
+  line-height:1.5;
+}
+footer .bron:first-child{max-width:72ch}
+
 @media(max-width:900px){
+  .mast h1{font-size:21px;line-height:1.1}
+  .mast{gap:10px}
+  .mastright{gap:4px}
+  .tools button{min-height:34px;padding:6px 8px}
+  .tools input[type=text]{min-height:36px;padding-top:7px;padding-bottom:7px}
+  #stamp{font-size:10.5px;line-height:1.35}
+  .chips{margin-top:10px;gap:6px}
+  .chip{padding:4px 9px;font-size:12.5px}
+  .brief{margin-top:16px;padding-top:18px}
+
   .chartkop #suntimes.senior-zoninfo{
     width:100%;
     display:grid;
@@ -58,19 +111,68 @@
 
   .nachtlabel-lang{display:none}
   .nachtlabel-kort{display:inline}
-  .row.night .nmeta.wide{font-size:12px;line-height:1.45}
+
+  /* Vier echte kolommen: nacht | score | balk | bewolking. De scorekolom is
+     breed genoeg voor 10/10, zodat het getal nooit meer de grid-gap opeet en
+     tegen een 100%-balk aan komt te liggen. */
+  .row.night{
+    grid-template-columns:62px 58px minmax(0,1fr) 42px;
+    gap:4px 10px;
+  }
+  .row.night .score{text-align:left;font-size:17px;line-height:1.25}
+  .row.night .sbar{min-width:0;margin-left:1px}
+  .row.night > .nmeta:not(.wide){text-align:right}
+  .row.night .nmeta.wide{
+    grid-column:2 / -1;
+    margin-top:0;
+    font-size:11.5px;
+    line-height:1.4;
+  }
+  .row.night .nachtadvies{
+    font-size:12.5px;
+    line-height:1.35;
+    margin-bottom:2px;
+    color:var(--ink-70);
+  }
+  .row.night .nachtvenster,
+  .row.night .nachtmaan{font-size:11.5px;line-height:1.4}
   .row.night .nachtmaan{color:var(--ink-45)}
+  .row.night .maan-fase-svg{width:13px;height:13px;vertical-align:-2px}
+  .row.night.kop .score{text-align:left}
   .row.kop>*{font-size:10px!important}
+
+  /* Op mobiel is uit de waarde zelf duidelijk dat 3 Bft wind betreft. Een tweede
+     'max' naast temperatuur-max maakte de kop onnodig ambigu. */
+  #days .row.kop .dwind{font-size:0!important}
+  #days .row.kop .dwind::after{
+    content:"Wind";
+    font-size:10px;
+    letter-spacing:.12em;
+  }
+
+  /* De briefing en de aparte twee-uurssectie geven de context al. In de tegel
+     volstaat daarom de actuele numerieke kans; de derde vrijwel identieke zin
+     maakte het eerste scherm onnodig repetitief. */
+  #popsub{display:none}
+  #nctext{font-size:15.5px;line-height:1.45}
+
   .data-uitleg{font-size:12px;line-height:1.5}
 
-  /* Attribution blijft zichtbaar; alleen iets rustiger en beter leesbaar.
-     Geen uitklapper: de bronvoorwaarden vragen zichtbare bronvermelding. */
-  footer{gap:2px;font-size:12px;line-height:1.55}
-  footer .mono{font-size:12px}
+  /* Attribution blijft zichtbaar; alleen rustiger en compacter. */
+  footer{
+    gap:3px;
+    font-size:11px;
+    line-height:1.48;
+    margin-top:20px;
+    padding-top:12px;
+  }
+  footer .mono{font-size:11px}
 }
 
 @media(max-width:360px){
+  .mast h1{font-size:20px}
   .chartkop #suntimes.senior-zoninfo .zonregel{gap:2px 7px}
   .chartkop #suntimes.senior-zoninfo .zonregel .zondag{min-width:44px;font-size:10px}
   .chartkop #suntimes.senior-zoninfo .zonregel > span:not(.zondag){font-size:11px}
+  .row.night{grid-template-columns:56px 56px minmax(0,1fr) 39px;gap:4px 8px}
 }
