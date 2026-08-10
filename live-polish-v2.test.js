@@ -1,6 +1,6 @@
 "use strict";
 const assert=require("assert"),fs=require("fs"),path=require("path");
-const {klokTekstMetSeconden,tooltipWaardeKort,temperatuurLabelsBotsen}=require("./live-polish-v2.js");
+const {klokTekstMetSeconden,tooltipWaardeKort,temperatuurLabelsBotsen,nuLabelPositie,nuLabelConcurreert}=require("./live-polish-v2.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 
 test("live klok toont uren minuten en seconden",()=>{
@@ -8,10 +8,27 @@ test("live klok toont uren minuten en seconden",()=>{
   assert.equal(klokTekstMetSeconden({hour:0,minute:0,second:0}),"00:00:00");
 });
 
-test("tooltip gebruikt compact droog in plaats van overlappende lange tekst",()=>{
+test("tooltip gebruikt compacte consumententekst zonder verlies van tijdvak",()=>{
   assert.equal(tooltipWaardeKort("geen neerslag verwacht"),"droog");
   assert.equal(tooltipWaardeKort("Geen neerslag verwacht."),"droog");
+  assert.equal(tooltipWaardeKort("kans 15:00–16:00"),"kans 15–16u");
+  assert.equal(tooltipWaardeKort("kans 18:00-19:00"),"kans 18–19u");
   assert.equal(tooltipWaardeKort("27%"),"27%");
+});
+
+test("nu-label krijgt duidelijk een eigen zone onder de rode stip",()=>{
+  assert.deepEqual(nuLabelPositie(100,50,200,false),{y:130,onder:true});
+  assert.deepEqual(nuLabelPositie(100,50,200,true),{y:128,onder:true});
+  assert.deepEqual(nuLabelPositie(190,50,200,false),{y:166,onder:false});
+  assert.equal(nuLabelPositie(null,50,200,false),null);
+});
+
+test("zwart modelcijfer in directe nu-zone concurreert met actuele meting",()=>{
+  assert(nuLabelConcurreert({x:100,y:100},{x:150,y:120},36,false));
+  assert(nuLabelConcurreert({x:100,y:100},{x:148,y:130},14,true));
+  assert(!nuLabelConcurreert({x:100,y:100},{x:180,y:120},36,false));
+  assert(!nuLabelConcurreert({x:100,y:100},{x:145,y:170},36,false));
+  assert(!nuLabelConcurreert({x:null,y:100},{x:120,y:120},36,false));
 });
 
 test("gelijke temperatuurlabels vlak naast elkaar worden als visueel dubbel gezien",()=>{
@@ -50,6 +67,9 @@ test("productiebundel bevat interactiepolish, desktopbalk en robuuste scrollcont
   assert(html.includes("WeatherNowPolishV2"));
   assert(html.includes("setInterval(liveKlokTik,1000)"));
   assert(html.includes("tooltipWaardeKort"));
+  assert(html.includes("nuLabelPositie"));
+  assert(html.includes("nuLabelConcurreert"));
+  assert(html.includes("positioneerNuLabel"));
   assert(html.includes("#minibar.aan{display:flex}"));
   assert(html.includes('bar.classList.toggle("aan",Number.isFinite(r.bottom)&&r.bottom<=0)'));
   assert(html.includes('window.addEventListener("scroll",plan,{passive:true})'));
