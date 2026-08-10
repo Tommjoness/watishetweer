@@ -51,6 +51,8 @@ for (let i = 0; i < d.hourly.time.length; i++) {
   if (d.hourly.time[i].slice(0, 10) === "2026-07-22" && (uur === "18" || uur === "19")) {
     d.hourly.pressure_msl[i] = 1012.6;
   }
+  // 5,9 wordt zichtbaar 6. De zichtbare categorie moet daarom óók die 6 volgen:
+  // UV 6 is hoog, niet het verborgen-decimaal-oordeel 'matig'.
   if (d.hourly.time[i].slice(0, 10) === "2026-07-22" && uur === "15") {
     d.hourly.uv_index[i] = 5.9;
   }
@@ -150,6 +152,16 @@ async function controleer(page, naam, modus) {
     const uv = document.getElementById("uv");
     const pollen = [...document.querySelectorAll("#aq .stat")]
       .find(el => /^Pollen gras$/.test((el.querySelector(".eyebrow") || {}).textContent || ""));
+    const nachtRijen = [...document.querySelectorAll("#nights .row.night:not(.kop)")].map(rij => ({
+      score: ((rij.querySelector(".score") || {}).textContent || "").trim(),
+      advies: ((rij.querySelector(".nachtadvies") || {}).textContent || "").trim(),
+      bewolking: ((rij.querySelector(".nmeta:not(.wide)") || {}).textContent || "").replace(/\s+/g, " ").trim(),
+      balk: parseFloat(((rij.querySelector(".sbar i") || {}).style || {}).width || "0")
+    }));
+    const maanGebied = [document.getElementById("moonlab"), document.getElementById("nights")].filter(Boolean);
+    const maanTekst = maanGebied.map(el => el.textContent || "").join(" ");
+    const maanSvgs = maanGebied.reduce((n, el) => n + el.querySelectorAll(".maan-fase-svg").length, 0);
+    const dagTeksten = [...document.querySelectorAll("#days .row.day:not(.kop) .dcond")].map(el => (el.textContent || "").trim());
     return {
       heroTemp: (document.getElementById("t") || {}).textContent || "",
       nuTeksten,
@@ -170,6 +182,10 @@ async function controleer(page, naam, modus) {
       recentSub: (document.getElementById("precsub") || {}).textContent || "",
       nachtAdvies: document.querySelectorAll("#nights .nachtadvies").length,
       nachtMaan: document.querySelectorAll("#nights .nachtmaan").length,
+      nachtRijen,
+      maanTekst,
+      maanSvgs,
+      dagTeksten,
       pollenSub: pollen && pollen.querySelector(".ssub") ? pollen.querySelector(".ssub").textContent.trim() : ""
     };
   });
@@ -195,11 +211,26 @@ async function controleer(page, naam, modus) {
   assert.ok(!/het is nu\s+-?\d+/i.test(resultaat.briefing), `${naam} ${modus}: briefing herhaalt actuele temperatuur niet`);
   assert.equal(resultaat.uvKop, "UV-piek vandaag", `${naam} ${modus}: UV is expliciet dagpiek`);
   assert.equal(resultaat.uvWaarde, "6", `${naam} ${modus}: UV-piek is consumentgericht afgerond`);
-  assert.ok(/Rond 15:00 · matig\./.test(resultaat.uvSub), `${naam} ${modus}: UV-piektijd en oordeel`);
+  assert.ok(/Rond 15:00 · hoog\./.test(resultaat.uvSub), `${naam} ${modus}: zichtbaar UV-getal en oordeel gebruiken dezelfde grens`);
   assert.equal(resultaat.drukSub, "Vrijwel stabiel.", `${naam} ${modus}: minieme luchtdrukverandering zonder schijnprecisie`);
   assert.equal(resultaat.recent, "Droog", `${naam} ${modus}: recente droge tegel`);
   assert.equal(resultaat.recentSub, "Geen neerslag.", `${naam} ${modus}: recente droge tegel is kort`);
+
   assert.ok(resultaat.nachtAdvies > 0 && resultaat.nachtMaan > 0, `${naam} ${modus}: Nachtzicht heeft rustige aparte advies- en maanregels`);
+  assert.ok(resultaat.nachtRijen.length > 0, `${naam} ${modus}: Nachtzicht heeft beoordeelde nachten`);
+  for (const rij of resultaat.nachtRijen) {
+    const m = /^(\d+)\/10$/.exec(rij.score);
+    if (!m) continue;
+    const score = Number(m[1]);
+    const oordeel = score >= 9 ? "uitstekend" : score >= 7 ? "goed" : score >= 5 ? "redelijk" : score >= 4 ? "matig" : "ongunstig";
+    assert.ok(rij.advies.toLowerCase().includes(oordeel), `${naam} ${modus}: ${rij.score} en Nachtzicht-oordeel zijn consistent`);
+    assert.equal(rij.balk, score * 10, `${naam} ${modus}: ${rij.score} en Nachtzicht-balk zijn consistent`);
+    assert.match(rij.bewolking, /^\d+%$/, `${naam} ${modus}: Bewolking-kolom herhaalt het woord niet per rij`);
+  }
+  assert.ok(resultaat.maanSvgs >= resultaat.nachtMaan + 1, `${naam} ${modus}: maanfase gebruikt monochrome inline-SVG in kop en nachtrijen`);
+  assert.ok(!/[🌑🌒🌓🌔🌕🌖🌗🌘]/u.test(resultaat.maanTekst), `${naam} ${modus}: geen platformkleurige maanemoji blijft zichtbaar`);
+  assert.ok(resultaat.dagTeksten.every(t => !/neerslagkans/i.test(t)), `${naam} ${modus}: droge weerbeelden dupliceren de aparte neerslagkolom niet`);
+
   assert.equal(resultaat.pollenSub, "laag", `${naam} ${modus}: pollen geeft kwalitatieve betekenis`);
   assert.deepEqual(fouten, [], `${naam} ${modus}: console/page errors: ${fouten.join(" | ")}`);
 }
