@@ -54,7 +54,7 @@ test("productiebundel bevat interactiepolish, desktopbalk en robuuste scrollcont
   assert(html.includes('bar.classList.toggle("aan",Number.isFinite(r.bottom)&&r.bottom<=0)'));
   assert(html.includes('window.addEventListener("scroll",plan,{passive:true})'));
   assert(html.includes('new IntersectionObserver(plan,{threshold:0}).observe(hero)'));
-  assert(html.includes("requestAnimationFrame"));
+  assert(html.includes("timer=setTimeout(zet,16)"));
 });
 
 if(process.exitCode) console.error("\nLive-polish v2: minstens één regressie mislukt.");
