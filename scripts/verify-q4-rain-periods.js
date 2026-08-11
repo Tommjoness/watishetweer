@@ -42,15 +42,18 @@ ok(hintTekstPos>hintOwnerPos&&hintTekstPos<q4RuntimePos,"Q4 grafiekhint-owner be
 ok(html.includes('<p class="hint" id="dagenhint">Kies een dag om die verwachting in de grafiek te bekijken.</p>'),"zichtbare daghint is invoermethode-neutraal");
 ok(html.includes('<div class="eyebrow">Windstoten nu</div>'),"actuele windstootwaarde is ondubbelzinnig gelabeld");
 
-/* Alleen de afgebakende senior-correctheidslaag bezit de uiteindelijke dagtekst.
-   Een identieke helpertekst kan elders in de geassembleerde artifact bestaan als
-   bron-/compatibiliteitslaag; die mag niet bepalen of de productowner correct is. */
-const corrStart="/* ===== SENIOR CORRECTHEIDSLAAG ===== */",corrEind="/* ===== EINDE SENIOR CORRECTHEIDSLAAG ===== */";
-const cs=html.indexOf(corrStart),ce=html.indexOf(corrEind,cs+corrStart.length);
-ok(cs>=0&&ce>cs,"senior-correctheidslaag is eenduidig afgebakend");
-const corr=html.slice(cs,ce);
-ok(!corr.includes('const tijd=a.eersteTijd?" rond "+a.eersteTijd:"";'),"productowner toont geen bronminuut als schijnprecies dagmoment");
-ok(corr.includes('uur<6?" in de nacht":uur<12?" in de ochtend":uur<18?" in de middag":" in de avond"'),"productowner gebruikt natuurlijke dagdelen");
+/* Dag-neerslagtaal heeft één bron-eigenaar: NEERSLAGKANSBELEID V3. Q4 mag de
+   senior-correctheidslaag niet meer tekstueel repareren. We controleren daarom
+   direct de ingebedde policy die dagen() uiteindelijk voedt; browser-Q4 bewijst
+   daarna dat een echte 12:25-fixture geen minuutprecisie in de DOM oplevert. */
+const policyStart="/* ===== NEERSLAGKANSBELEID V3 ===== */",policyEind="/* ===== EINDE NEERSLAGKANSBELEID V3 ===== */";
+const ps=html.indexOf(policyStart),pe=html.indexOf(policyEind,ps+policyStart.length);
+ok(ps>=0&&pe>ps,"neerslagkansbeleid V3 is eenduidig afgebakend");
+const policy=html.slice(ps,pe);
+ok(policy.includes("function dagMomentZinsdeel(tijd)"),"dag-neerslagpolicy bezit de dagdeelhelper");
+ok(policy.includes("const tijd=dagMomentZinsdeel(a.eersteTijd);"),"dag-neerslagsamenvatting gebruikt de canonieke dagdeelhelper");
+ok(!policy.includes('const tijd=a.eersteTijd?" rond "+a.eersteTijd:"";'),"canonieke dag-neerslagpolicy bevat geen schijnpreciese kloktijd meer");
+ok(policy.includes('if(uur<5)return " in de nacht";')&&policy.includes('if(uur<8)return " in de vroege ochtend";')&&policy.includes('if(uur<12)return " in de ochtend";')&&policy.includes('if(uur<18)return " in de middag";'),"dagdelen hebben expliciete en testbare grenzen");
 
 ok(html.includes("minmax(140px,.72fr) 92px minmax(260px,1fr)"),"Nachtzicht geeft desktopuitleg meer ruimte dan de scorebalk");
 ok(/const CACHE = "watishetweer-[0-9a-f]{12}";/.test(fs.readFileSync(path.join(__dirname,"..","public","sw.js"),"utf8")),"serviceworker houdt inhoudsgebonden Q4-cachehash");
