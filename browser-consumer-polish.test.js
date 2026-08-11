@@ -247,7 +247,7 @@ async function controleer(page, naam, modus) {
   assert.ok(/zon onder 21:30/i.test(resultaat.sunTekst), `${naam} ${modus}: exacte zonsondergang van morgen blijft zichtbaar`);
   assert.ok(!/Vandaag/i.test(resultaat.sunTekst), `${naam} ${modus}: geen verstreken vandaag-momenten na zonsondergang`);
   assert.ok(resultaat.sunOverflow <= 1, `${naam} ${modus}: zoninformatie heeft geen horizontale overflow`);
-  assert.equal(resultaat.hint, "Houd de grafiek vast voor details.", `${naam} ${modus}: korte grafiekhint`);
+  assert.equal(resultaat.hint, "Selecteer een punt in de grafiek voor details.", `${naam} ${modus}: input-neutrale grafiekhint`);
 
   assert.ok(!/wind komt|draait naar/i.test(resultaat.briefing), `${naam} ${modus}: 1 Bft krijgt geen briefing over richtingsdraai`);
   assert.ok(!/het is nu\s+-?\d+/i.test(resultaat.briefing), `${naam} ${modus}: briefing herhaalt actuele temperatuur niet`);
