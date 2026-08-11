@@ -68,13 +68,8 @@ async function controleer(type,naam,breedte){
     const base=`http://127.0.0.1:${server.address().port}/`;
     const url=base+"?lat=52.350&lon=5.260&plaats=Q4%20test&land=NL";
     await page.goto(url,{waitUntil:"load"});
-    /* S is een globale lexical binding uit het klassieke script, niet een
-       property op window. Wachten op window.S kan daarom nooit slagen. */
     await page.waitForFunction(()=>typeof S!=="undefined"&&S.d&&S.d.current&&S.d.current.time==="2026-07-22T14:00",null,{timeout:10000});
 
-    /* Start de gecontroleerde beoordeling pas nadat exact onze URL-locatie en
-       fixture actief zijn. Daarmee kan een eerste-bezoek/startup-pad nooit de
-       Q4-uitkomst beïnvloeden. */
     await page.evaluate(()=>{
       S.dag=null;S.bereik=24;
       etmaal(S.i0,24);
@@ -125,52 +120,59 @@ async function controleer(type,naam,breedte){
     assert(!r.dagteksten.some(t=>/rond \d{1,2}:\d{2}/.test(t)),naam+" "+breedte+": dagregels suggereren geen minuutprecisie");
     assert(r.h>296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets en samenvatting");
 
-    const interactie=await page.evaluate(()=>{
-      const svg=document.getElementById("chart"),hit=document.getElementById("hit"),scrub=document.getElementById("scrub"),g=S.geo;
+    const coords=await page.evaluate(()=>{
+      const svg=document.getElementById("chart"),hit=document.getElementById("hit"),g=S.geo;
       const i=g.TI.findIndex(t=>String(t).endsWith("T17:00"));
       if(i<0)return {fout:"GEEN_INDEX",ti:g.TI};
       const box=svg.getBoundingClientRect(),hitBox=hit.getBoundingClientRect();
-      const clientX=box.left+(g.x(i)/g.W)*box.width;
-      const clientY=hitBox.top+hitBox.height*.35;
       const bron=Number.isInteger(S.chartStart)?S.chartStart+i:null;
-      const lees=()=>({
-        display:scrub.style.display,
-        groepTekst:(scrub.textContent||"").replace(/\s+/g," ").trim(),
-        teksten:[...scrub.querySelectorAll("text")].map(el=>(el.textContent||"").trim()).filter(Boolean),
-        aria:scrub.getAttribute("aria-label")||"",
-        textNodes:scrub.querySelectorAll("text").length,
-        html:scrub.innerHTML.slice(0,1200)
-      });
-      const diagnose={
+      return {
         i,ti:g.TI[i],bron,
         bronTijd:bron===null?null:S.d.hourly.time[bron],
         raw:bron===null?null:S.d.hourly.precipitation[bron],
         q1mm:Array.isArray(g.Q1MM)?g.Q1MM[i]:"GEEN_Q1MM",
         mm:Array.isArray(g.MM)?g.MM[i]:"GEEN_MM",
         zelfdeArray:g.Q1MM===g.MM,
-        clientX,clientY,svgWidth:box.width,hitWidth:hitBox.width,
-        voor:lees()
+        clientX:box.left+(g.x(i)/g.W)*box.width,
+        clientY:hitBox.top+hitBox.height*.35,
+        svgWidth:box.width,hitWidth:hitBox.width
       };
-      hit.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,clientX,clientY,pointerType:"mouse"}));
-      diagnose.mouse=lees();
-      hit.dispatchEvent(new PointerEvent("pointerleave",{bubbles:false,clientX,clientY,pointerType:"mouse"}));
-      diagnose.naLeave=lees();
-      hit.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,clientX,clientY,pointerType:"touch"}));
-      diagnose.touch=lees();
-      return diagnose;
     });
-    const mouseTekst=(interactie.mouse&&interactie.mouse.teksten)||[];
-    const touchTekst=(interactie.touch&&interactie.touch.teksten)||[];
+    assert(!coords.fout,naam+" "+breedte+": 17:00-interactiepunt bestaat; diagnose="+JSON.stringify(coords));
+
+    const leesScrub=()=>page.evaluate(()=>{
+      const scrub=document.getElementById("scrub");
+      return {
+        display:scrub.style.display,
+        groepTekst:(scrub.textContent||"").replace(/\s+/g," ").trim(),
+        teksten:[...scrub.querySelectorAll("text")].map(el=>(el.textContent||"").trim()).filter(Boolean),
+        aria:scrub.getAttribute("aria-label")||""
+      };
+    });
+
+    let interactie;
     if(breedte<760){
-      assert(touchTekst.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": touch op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify(interactie)+"; pageerrors="+JSON.stringify(fouten));
-      assert(/Neerslagkans\s+86%/.test((interactie.touch&&interactie.touch.groepTekst)||""),naam+" "+breedte+": volledige kansinformatie blijft via touch beschikbaar");
-      assert.equal(interactie.touch.display,"block",naam+" "+breedte+": touch maakt tooltip zichtbaar");
+      await page.evaluate(({clientX,clientY})=>{
+        const hit=document.getElementById("hit");
+        hit.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,clientX,clientY,pointerType:"touch"}));
+      },coords);
+      interactie=await leesScrub();
+      assert(interactie.teksten.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": touch op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify({coords,interactie})+"; pageerrors="+JSON.stringify(fouten));
+      assert(/Neerslagkans\s+86%/.test(interactie.groepTekst),naam+" "+breedte+": volledige kansinformatie blijft via touch beschikbaar");
+      assert.equal(interactie.display,"block",naam+" "+breedte+": touch maakt tooltip zichtbaar");
     }else{
-      assert(mouseTekst.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": muishover op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify(interactie)+"; pageerrors="+JSON.stringify(fouten));
-      assert(/Neerslagkans\s+86%/.test((interactie.mouse&&interactie.mouse.groepTekst)||""),naam+" "+breedte+": volledige kansinformatie blijft via muishover beschikbaar");
-      assert.equal(interactie.mouse.display,"block",naam+" "+breedte+": muishover maakt tooltip zichtbaar");
+      /* Gebruik hier de echte Playwright-muisroute. Een handmatig geconstrueerde
+         PointerEvent is geen betrouwbare simulatie van browser-hit-testing en
+         pointer/mouse-eventcompatibiliteit; deze test moet juist bewijzen wat een
+         gebruiker met een echte muis krijgt. */
+      await page.mouse.move(coords.clientX,coords.clientY);
+      await page.waitForTimeout(30);
+      interactie=await leesScrub();
+      assert(interactie.teksten.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": echte muishover op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify({coords,interactie})+"; pageerrors="+JSON.stringify(fouten));
+      assert(/Neerslagkans\s+86%/.test(interactie.groepTekst),naam+" "+breedte+": volledige kansinformatie blijft via echte muishover beschikbaar");
+      assert.equal(interactie.display,"block",naam+" "+breedte+": echte muishover maakt tooltip zichtbaar");
     }
-    assert.equal(interactie.zelfdeArray,true,naam+" "+breedte+": interactie leest dezelfde mm-array als regenstrip");
+    assert.equal(coords.zelfdeArray,true,naam+" "+breedte+": interactie leest dezelfde mm-array als regenstrip");
 
     const droog=await page.evaluate(()=>{
       S.d.hourly.precipitation=S.d.hourly.precipitation.map(()=>0);
