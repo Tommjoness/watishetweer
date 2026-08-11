@@ -31,11 +31,15 @@ self.addEventListener("activate", e => {
       .then(() => self.clients.claim())
       /* Een fetch van de vorige worker kan precies tijdens activate nog met zijn
          bestaande Cache-handle afronden. Chromium kan de verwijderde cachenaam
-         daardoor kort opnieuw zichtbaar maken. Houd de nieuwe worker pas voor
-         geactiveerd nadat zo'n late write een tweede keer is opgeruimd. */
+         daardoor kort opnieuw zichtbaar maken. Een oudere worker mag tijdens
+         deze wachttijd echter nooit de cache van een al installerende opvolger
+         verwijderen. Alleen de nieuwste generatie doet daarom de late sweep. */
       .then(() => new Promise(resolve => setTimeout(resolve, 150)))
-      .then(() => caches.keys())
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => {
+        if (self.registration.installing || self.registration.waiting) return;
+        return caches.keys()
+          .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))));
+      })
   );
 });
 
