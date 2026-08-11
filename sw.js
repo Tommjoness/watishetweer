@@ -9,17 +9,33 @@ const SHELL = [
   "./dm-mono-latin-400-normal.woff2",
   "./dm-mono-latin-500-normal.woff2"
               ];
+const SHELL_VERPLICHT = new Set(["./","./index.html"]);
 
-/* De app-shell is volledig versioned en wordt uitsluitend tijdens install
-   opgebouwd. Een oude worker schrijft daarna nooit meer naar zijn eigen cache.
-   Daardoor kan een verwijderde generatiecache tijdens een update niet opnieuw
-   met nieuwe runtime-inhoud worden gevuld. */
+/* Een nieuwe worker kan zijn installrequests uitvoeren terwijl de vorige worker
+   dezelfde client/origin nog controleert. Een gewone c.add('./index.html') kan
+   daardoor via de oude cache-first fetchhandler oude HTML terugkrijgen. Vraag de
+   shell daarom met een generatiegebonden query op; die bestaat nooit in een oude
+   cache. Sla de response daarna bewust onder de canonieke, queryloze sleutel van
+   de nieuwe CACHE op. Root en index zijn verplicht: zonder die twee activeert de
+   nieuwe worker niet met een onvolledige/offline-onbruikbare shell. */
+async function cacheerShellBestand(cache,u){
+  const canoniek=new URL(u,self.location.href);
+  const vers=new URL(canoniek.href);
+  vers.searchParams.set("__sw_install",CACHE);
+  try{
+    const r=await fetch(new Request(vers.href,{cache:"reload"}));
+    if(!r.ok)throw new Error("shell fetch "+r.status+" voor "+canoniek.pathname);
+    await cache.put(new Request(canoniek.href),r);
+  }catch(err){
+    if(SHELL_VERPLICHT.has(u))throw err;
+  }
+}
+
 self.addEventListener("install", e => {
   e.waitUntil(
-    caches.open(CACHE).then(c =>
-      // per bestand, zodat één ontbrekend bestand de hele installatie niet sloopt
-      Promise.all(SHELL.map(u => c.add(u).catch(() => {})))
-    ).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then(c => Promise.all(SHELL.map(u => cacheerShellBestand(c,u))))
+      .then(() => self.skipWaiting())
   );
 });
 
