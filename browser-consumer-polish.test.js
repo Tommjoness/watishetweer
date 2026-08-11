@@ -169,8 +169,8 @@ async function controleer(page, naam, modus) {
     const maanTekst = maanGebied.map(el => el.textContent || "").join(" ");
     const maanSvgs = maanGebied.reduce((n, el) => n + el.querySelectorAll(".maan-fase-svg").length, 0);
     const faseSvg = document.querySelector(".maan-fase-svg");
-    const faseOutline = faseSvg ? faseSvg.querySelector('path + circle, circle[fill="currentColor"] + circle') : null;
-    const faseStyle = faseSvg ? getComputedStyle(faseSvg) : null;
+    const faseSchaduw = faseSvg ? faseSvg.querySelector(".maan-schaduw") : null;
+    const faseSchaduwStyle = faseSchaduw ? getComputedStyle(faseSchaduw) : null;
     const dagTeksten = [...document.querySelectorAll("#days .row.day:not(.kop) .dcond")].map(el => (el.textContent || "").trim());
     const merk = document.querySelector(".mast h1");
     const windKop = document.querySelector("#days .row.kop .dwind");
@@ -211,10 +211,11 @@ async function controleer(page, naam, modus) {
       nachtRijen,
       maanTekst,
       maanSvgs,
-      maanOutlineDisplay: faseOutline ? getComputedStyle(faseOutline).display : null,
       maanBreedte: faseSvg ? faseSvg.getBoundingClientRect().width : 0,
-      maanAchtergrond: faseStyle ? faseStyle.backgroundColor : "",
-      maanRandRadius: faseStyle ? faseStyle.borderRadius : "",
+      maanSchaduw: !!faseSchaduw,
+      maanSchaduwVulling: faseSchaduwStyle ? faseSchaduwStyle.fill : "",
+      maanSchaduwLijn: faseSchaduwStyle ? faseSchaduwStyle.stroke : "",
+      maanSchaduwStraal: faseSchaduw ? faseSchaduw.getAttribute("r") : "",
       dagTeksten,
       merkTekst: merk ? merk.textContent.trim() : "",
       merkGrootte: merk ? parseFloat(getComputedStyle(merk).fontSize) : 0,
@@ -275,10 +276,11 @@ async function controleer(page, naam, modus) {
   assert.ok(resultaat.maanSvgs >= resultaat.nachtMaan + 1, `${naam} ${modus}: maanfase gebruikt monochrome inline-SVG in kop en nachtrijen`);
   assert.ok(!/[🌑🌒🌓🌔🌕🌖🌗🌘]/u.test(resultaat.maanTekst), `${naam} ${modus}: geen platformkleurige maanemoji blijft zichtbaar`);
   assert.ok(resultaat.maanBreedte >= 13, `${naam} ${modus}: maanfase blijft op klein scherm herkenbaar`);
-  assert.notEqual(resultaat.maanAchtergrond, "rgba(0, 0, 0, 0)", `${naam} ${modus}: maanfase heeft een zichtbare schijf en leest niet als los haakje`);
-  assert.notEqual(resultaat.maanAchtergrond, "transparent", `${naam} ${modus}: maanfase-achtergrond is niet transparant`);
-  assert.ok(parseFloat(resultaat.maanRandRadius) > 0, `${naam} ${modus}: maanfase heeft ronde schijfvorm`);
-  if (resultaat.maanOutlineDisplay !== null) assert.equal(resultaat.maanOutlineDisplay, "none", `${naam} ${modus}: buitenste SVG-cirkel verdringt de zichtbare maanfase niet`);
+  assert.equal(resultaat.maanSchaduw, true, `${naam} ${modus}: maanfase heeft een fysieke ronde basisschijf`);
+  assert.notEqual(resultaat.maanSchaduwVulling, "none", `${naam} ${modus}: onverlichte maanschijf heeft een zichtbare themavulling`);
+  assert.notEqual(resultaat.maanSchaduwVulling, "rgba(0, 0, 0, 0)", `${naam} ${modus}: maanfase leest niet als los haakje`);
+  assert.notEqual(resultaat.maanSchaduwLijn, "none", `${naam} ${modus}: schijfrand blijft in ieder thema herkenbaar`);
+  assert.ok(parseFloat(resultaat.maanSchaduwStraal) >= 8, `${naam} ${modus}: fysieke maanschijf blijft groot genoeg`);
 
   // De fixture heeft voor vandaag een niet-neerslagbeeld uit de resterende uurdata,
   // maar voor toekomstige dagen bewust een dagelijkse regencode. Alleen het droge
