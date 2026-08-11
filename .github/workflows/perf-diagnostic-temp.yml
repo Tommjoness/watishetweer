@@ -1,0 +1,67 @@
+name: Tijdelijke WeatherNow performance-diagnose
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Vergelijk Open-Meteo requestvormen
+        shell: bash
+        run: |
+          node <<'NODE'
+          const current=["temperature_2m","apparent_temperature","relative_humidity_2m","is_day","precipitation","rain","showers","snowfall","visibility","weather_code","cloud_cover","pressure_msl","wind_speed_10m","wind_direction_10m","wind_gusts_10m"];
+          const daily=["weather_code","temperature_2m_max","temperature_2m_min","sunrise","sunset","precipitation_probability_max","precipitation_sum","uv_index_max","wind_speed_10m_max","wind_gusts_10m_max","wind_direction_10m_dominant","sunshine_duration"];
+          const hourly=["temperature_2m","apparent_temperature","relative_humidity_2m","dew_point_2m","precipitation_probability","precipitation","rain","showers","snowfall","weather_code","cloud_cover","wind_speed_10m","wind_direction_10m","wind_gusts_10m","visibility","uv_index","pressure_msl","is_day"];
+          const minutely=["precipitation","rain","showers","snowfall","weather_code"];
+          const places=[
+            ["Reykjavik",64.135,-21.895],
+            ["Bogota",4.610,-74.082]
+          ];
+          function url(lat,lon,variant){
+            const p=new URLSearchParams({latitude:String(lat),longitude:String(lon),timezone:"auto",wind_speed_unit:"kmh"});
+            p.set("current",current.join(","));
+            if(variant!=="current"){
+              p.set("daily",daily.join(","));p.set("forecast_days","7");
+              p.set("hourly",hourly.join(","));p.set("past_hours","24");
+            }
+            if(variant==="full"||variant==="30h15"){
+              p.set("minutely_15",minutely.join(","));p.set("forecast_minutely_15","16");p.set("past_minutely_15","4");
+            }
+            if(variant==="30h15"||variant==="30h")p.set("forecast_hours","30");
+            return "https://api.open-meteo.com/v1/forecast?"+p;
+          }
+          async function once(name,lat,lon,variant){
+            const t=performance.now();
+            const r=await fetch(url(lat,lon,variant),{headers:{"user-agent":"weathernow-performance-diagnostic/1"}});
+            const text=await r.text();
+            const ms=performance.now()-t;
+            if(!r.ok)throw new Error(`${name} ${variant}: ${r.status} ${text.slice(0,200)}`);
+            const d=JSON.parse(text);
+            return {ms:+ms.toFixed(1),bytes:Buffer.byteLength(text),hourly:d.hourly?.time?.length||0,daily:d.daily?.time?.length||0,min15:d.minutely_15?.time?.length||0};
+          }
+          const variants=["full","no15","30h15","30h","current"];
+          for(const [name,lat,lon] of places){
+            console.log(`\n=== ${name} ===`);
+            const all={};
+            for(let round=1;round<=4;round++){
+              // roteer om vaste volgorde/cachewarmte niet één variant cadeau te doen
+              const order=variants.slice(round-1).concat(variants.slice(0,round-1));
+              for(const variant of order){
+                const x=await once(name,lat,lon,variant);
+                (all[variant]??=[]).push(x);
+                console.log(JSON.stringify({round,variant,...x}));
+              }
+            }
+            for(const variant of variants){
+              const xs=all[variant].slice().sort((a,b)=>a.ms-b.ms);
+              const med=(xs[1].ms+xs[2].ms)/2;
+              const bytes=Math.round(all[variant].reduce((s,x)=>s+x.bytes,0)/all[variant].length);
+              const sample=all[variant][0];
+              console.log("SUMMARY",JSON.stringify({variant,medianMs:+med.toFixed(1),avgBytes:bytes,hourly:sample.hourly,daily:sample.daily,min15:sample.min15}));
+            }
+          }
+          NODE
