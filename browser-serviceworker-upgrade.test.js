@@ -17,6 +17,10 @@ const swBasis=fs.readFileSync(swPad,"utf8");
 const cacheMatch=/const CACHE = "([^"]+)";/.exec(swBasis);
 if(!cacheMatch)throw new Error("Definitieve serviceworker-cache-id ontbreekt.");
 const cacheNieuw=cacheMatch[1];
+const drainMatch=/setTimeout\(resolve,\s*(\d+)\)/.exec(swBasis);
+if(!drainMatch)throw new Error("Uitlooptijd van de definitieve serviceworker ontbreekt.");
+const activateDrainMs=Number(drainMatch[1]);
+if(!Number.isFinite(activateDrainMs)||activateDrainMs<100||activateDrainMs>2000)throw new Error("Ongeldige serviceworker-uitlooptijd.");
 const cacheOud="watishetweer-deadbeef0000";
 if(cacheNieuw===cacheOud)throw new Error("Testcache botst met definitieve cache-id.");
 
@@ -165,8 +169,11 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
       return versie==="new";
     },{nieuw:cacheNieuw,oud:cacheOud},{timeout:15000});
 
-    /* Geef eventuele late writes van de oude worker bewust tijd om zichtbaar te worden. */
-    await page.waitForTimeout(350);
+    /* Chromium meldt registration.active soms al als 'activated' terwijl de
+       activate-waitUntil nog wordt afgehandeld. Wacht daarom op de uitlooptijd
+       uit de echte worker plus een apart stabiliteitsvenster: zo toetsen we de
+       definitieve toestand en blijft een herlevende oude cache aantoonbaar. */
+    await page.waitForTimeout(activateDrainMs+350);
     const diag=await page.evaluate(()=>{
       clearInterval(window.__swDiagTimer);
       return window.__swDiag||[];
