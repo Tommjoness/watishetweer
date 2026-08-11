@@ -7,6 +7,9 @@ const html=fs.readFileSync(path.join(__dirname,"..","public","index.html"),"utf8
 let n=0;const ok=(v,m)=>{assert.ok(v,m);n++;console.log("OK  "+m);};
 
 ok(html.includes("/* ===== Q4 REGENPERIODEN 20260811 ===== */"),"Q4-laag staat in definitieve artifact");
+const q4RuntimePos=html.indexOf("const q4BasisEtmaal=etmaal;");
+const startupPos=html.indexOf("/* ---------- start ---------- */");
+ok(q4RuntimePos>=0&&startupPos>q4RuntimePos,"Q4-runtime is actief vóór de algemene startup-router");
 ok(html.includes("if(i===0)return null;"),"eerste neerslaginterval buiten grafiekvenster telt niet mee");
 ok(html.includes("waarde!==null&&waarde>=0.1"),"regenperiode begint pas bij meetbare 0,1 mm");
 ok(html.includes("lopend={van:i-1,tot:i"),"hoeveelheid op eindtijd wordt aan voorafgaand uurvak gekoppeld");
