@@ -35,14 +35,15 @@ self.addEventListener("fetch", e => {
   if (url.pathname.startsWith("/api/")) return;   // serverfuncties altijd vers
   if (url.origin !== location.origin) return;
 
+  /* De versiecache is bewust write-once: alleen install() vult hem. Een oude
+     worker kan daardoor na activate nooit via een late fetch zijn verwijderde
+     cache opnieuw aanmaken. Dat houdt iedere offline app-shell bovendien
+     versiezuiver: geen nieuwe HTML in een oude assetcache of andersom. */
+
   // app-shell: netwerk eerst voor index.html zodat updates direct doorkomen
   if (e.request.mode === "navigate" || url.pathname.endsWith("index.html")) {
     e.respondWith(
-      fetch(e.request).then(r => {
-        const copy = r.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-        return r;
-      }).catch(() => caches.match(e.request)
+      fetch(e.request).catch(() => caches.match(e.request)
           .then(hit => hit || caches.match("./index.html"))
           // komt ook daar niets uit, dan een leesbare melding in plaats van een
           // lege belofte, want respondWith(undefined) is opnieuw een netwerkfout
@@ -60,11 +61,7 @@ self.addEventListener("fetch", e => {
      de browser. Dat leverde "Failed to fetch at sw.js" op in de console. */
   e.respondWith(
     caches.match(e.request)
-      .then(hit => hit || fetch(e.request).then(r => {
-        const copy = r.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-        return r;
-      }))
+      .then(hit => hit || fetch(e.request))
       .catch(() => caches.match(e.request).then(hit => hit || Response.error()))
   );
 });
