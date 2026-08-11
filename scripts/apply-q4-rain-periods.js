@@ -43,7 +43,7 @@ vervangBinnen(
 );
 vervangExact('el2.textContent="Houd de grafiek vast voor details.";','el2.textContent="Selecteer een punt in de grafiek voor details.";',"neutrale grafiekhint");
 vervangExact('Klik op een dag om die verwachting in de grafiek te laden.','Kies een dag om die verwachting in de grafiek te bekijken.',"neutrale daghint");
-vervangExact('<span>Windstoten</span>','<span>Windstoten nu</span>',"ondubbelzinnige windstootkop");
+vervangExact('<div class="eyebrow">Windstoten</div>','<div class="eyebrow">Windstoten nu</div>',"ondubbelzinnige windstootkop");
 
 /* De Q4-wrapper moet vóór de eerste load actief zijn, zodat ook de allereerste
    grafiek dezelfde intervalregels gebruikt. */
