@@ -36,11 +36,16 @@ const SENIOR_NACHT_START='const basisNachten=nachten;\nnachten=function(){';
 const SENIOR_NACHT_END='\n\n/* Verstreken uurwaarden zijn forecast/modelwaarden';
 const SENIOR_NACHT_SIGNATURE='const basisNachten=nachten;\nnachten=function(){\n  basisNachten();\n  const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")]';
 
-/* Checkpoint 50: de mobiele grafiek wordt iets lager zonder horizontale schaal,
-   lettergrootte of inhoud weg te nemen. De y-ruimte blijft ruim genoeg voor de
-   bestaande collision-lagen; browsertests op 320–430 px bewaken dat expliciet. */
+/* Checkpoint 50: de mobiele grafiek blijft compacter dan de oorspronkelijke
+   292px, maar niet ten koste van labelruimte. Daarnaast worden twee bronregels
+   in de canonieke renderer exact aangescherpt: temperatuurlabels mogen niet in
+   de x-aszone zakken en het tijdlabel direct onder de rode nu-lijn vervalt. */
 const GRAFIEK_MOBIEL_OUD='  const W=M?380:900, H=M?292:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?20:22, bh=M?11:16;\n  const pt=M?72:76, ih=M?166:160, pb=pt+ih;';
-const GRAFIEK_MOBIEL_NIEUW='  const W=M?380:900, H=M?276:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?20:22, bh=M?11:16;\n  const pt=M?68:76, ih=M?152:160, pb=pt+ih;';
+const GRAFIEK_MOBIEL_NIEUW='  const W=M?380:900, H=M?284:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?20:22, bh=M?11:16;\n  const pt=M?70:76, ih=M?158:160, pb=pt+ih;';
+const GRAFIEK_LABEL_PAST_OUD='      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val<=pb-3;';
+const GRAFIEK_LABEL_PAST_NIEUW='      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val+labelHoogte/2+4<=pb;';
+const GRAFIEK_TICK_OUD='    if(toonAs){\n      ticks+=';
+const GRAFIEK_TICK_NIEUW='    if(toonAs){\n      const tijdLabelVrij=nuX==null||Math.abs(x(i)-nuX)>Math.max(18,F.uur*2.2);\n      if(tijdLabelVrij) ticks+=';
 
 if(html.includes(CSS_MARK)||html.includes(JS_MARK)||html.includes(Q1_CSS_MARK)||html.includes(Q1_JS_MARK))throw new Error("Post-build polish is al geïnjecteerd.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor mobiele polish.");
@@ -51,6 +56,8 @@ if((html.split(ENGINE_RECENT_START).length-1)!==1||(html.split(ENGINE_RECENT_END
 if((html.split(SENIOR_NACHT_START).length-1)!==1||(html.split(SENIOR_NACHT_END).length-1)!==1)throw new Error("Senior Nachtzicht-wrapper ontbreekt of is dubbel vóór consolidatie.");
 if((html.split(SENIOR_NACHT_SIGNATURE).length-1)!==1)throw new Error("Specifieke senior Nachtzicht-wrapper ontbreekt of is dubbel vóór consolidatie.");
 if((html.split(GRAFIEK_MOBIEL_OUD).length-1)!==1)throw new Error("Canonieke mobiele grafiekmaten ontbreken of zijn dubbel.");
+if((html.split(GRAFIEK_LABEL_PAST_OUD).length-1)!==1)throw new Error("Canonieke grafiek-labelgrens ontbreekt of is dubbel.");
+if((html.split(GRAFIEK_TICK_OUD).length-1)!==1)throw new Error("Canonieke grafiek-tickrenderer ontbreekt of is dubbel.");
 
 /* Productbeslissing checkpoint 25: de terugblik op recente neerslag bestaat niet
    meer in de definitieve runtime. De twee op dit assemblagemoment aantoonbare
@@ -83,8 +90,12 @@ html=html.slice(0,seniorNachtStart)
   +'/* Nachtzicht-presentatie geconsolideerd in WeatherNowMobileScreenshotPolish. */'
   +html.slice(seniorNachtEind);
 
-/* Mobiele grafiek compacter, zonder de desktopgeometrie te veranderen. */
+/* Grafiek: echt compacter, maar met een gereserveerde x-aszone. Het tijdlabel
+   op het huidige uur is redundant naast `nu 21°` en wordt alleen daar onderdrukt;
+   overige tijdlabels, temperatuurpunten en data blijven intact. */
 html=html.replace(GRAFIEK_MOBIEL_OUD,GRAFIEK_MOBIEL_NIEUW);
+html=html.replace(GRAFIEK_LABEL_PAST_OUD,GRAFIEK_LABEL_PAST_NIEUW);
+html=html.replace(GRAFIEK_TICK_OUD,GRAFIEK_TICK_NIEUW);
 
 html=html.replace("</style>",
   "\n"+CSS_MARK+"\n"+mobileCss+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B CSS ===== */\n"
@@ -101,7 +112,8 @@ for(const vereist of [
   "WeatherNowMobileScreenshotPolish","maan-fase-svg-v2","Temperatuurtrend","bron-bronnen",
   "WeatherNowQ1","q1-dag-mm","weerbriefing.plaatscache.q1","neerslagkans",
   "temperatuurTrend","q1-pop-hidden","Beste modeluren","verbeterNachtzicht",
-  "H=M?276:296","pt=M?68:76, ih=M?152:160"
+  "H=M?284:296","pt=M?70:76, ih=M?158:160","tijdLabelVrij=nuX==null",
+  "val+labelHoogte/2+4<=pb"
 ]){
   if(!html.includes(vereist))throw new Error("Post-build invariant ontbreekt: "+vereist);
 }
