@@ -45,11 +45,15 @@ vervangExact('el2.textContent="Houd de grafiek vast voor details.";','el2.textCo
 vervangExact('Klik op een dag om die verwachting in de grafiek te laden.','Kies een dag om die verwachting in de grafiek te bekijken.',"neutrale daghint");
 vervangExact('<div class="eyebrow">Windstoten</div>','<div class="eyebrow">Windstoten nu</div>',"ondubbelzinnige windstootkop");
 
-/* De Q4-wrapper moet vóór de eerste load actief zijn, zodat ook de allereerste
-   grafiek dezelfde intervalregels gebruikt. */
-const START='load(52.3676,4.9041,"Amsterdam",false,true,"NL")';
+/* Q4 moet voor ELKE startup-route actief zijn: gedeelde URL, laatst gebruikte
+   plaats, opgeslagen keuze en eerste bezoek. De eerdere implementatie hing de
+   runtime vóór de Amsterdam-call uit alleen het eerste-bezoekpad. Daardoor kon
+   een gedeelde URL de hele Q4-wrapper overslaan. Alle eerdere buildlagen zijn op
+   dit assemblagemoment al vóór START geïnjecteerd, dus Q4 hoort direct daarna en
+   vóór de startup-router zelf. */
+const START="/* ---------- start ---------- */";
 const startAantal=html.split(START).length-1;
-if(startAantal!==1)throw new Error("Initiële load-anker ontbreekt of is dubbel: "+startAantal);
+if(startAantal!==1)throw new Error("Algemene startmarker ontbreekt of is dubbel: "+startAantal);
 html=html.replace(START,runtime+"\n"+START);
 
 /* Desktop Nachtzicht: minder loze scorebalk, meer ruimte voor de uitleg. Mobiel
