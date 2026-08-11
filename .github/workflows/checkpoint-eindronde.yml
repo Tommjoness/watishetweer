@@ -22,6 +22,4 @@ jobs:
       - name: Bouw definitieve artifact
         run: npm run build
       - name: Checkpoint 25% in Chromium en WebKit
-        run: |
-          node -e 'const fs=require("fs"),p="browser-q1-checkpoint.test.js";let s=fs.readFileSync(p,"utf8");const n="assert.ok(Number.isFinite(snel.paint)&&snel.paint<150,naam+\": gecachte paint is gemeten en <150 ms\");";if(!s.includes(n))throw new Error("cachepaint-assertie niet gevonden");s=s.replace(n,"console.log(\"CACHEPERF \"+naam+\" \"+JSON.stringify(snel));\n    "+n);const m="    // Cacheprestatie: eerst een tweede plaats laden, daarna terug naar de reeds\n";if(!s.includes(m))throw new Error("cacheblok niet gevonden");const d="    const deel=await page.evaluate(()=>{const uit={};const meet=(n,fn)=>{const t=performance.now();fn();uit[n]=performance.now()-t;};meet(\"meters\",()=>meters());meet(\"briefing\",()=>briefing());meet(\"etmaal\",()=>etmaal(S.i0,S.bereik));meet(\"nowcast\",()=>nowcast());meet(\"dagen\",()=>dagen());meet(\"nachten\",()=>nachten());meet(\"lucht\",()=>lucht());return uit;});\n    console.log(\"DEELPERF \"+naam+\" \"+JSON.stringify(deel));\n\n";s=s.replace(m,d+m);fs.writeFileSync(p,s);'
-          node browser-q1-checkpoint.test.js
+        run: node browser-q1-checkpoint.test.js
