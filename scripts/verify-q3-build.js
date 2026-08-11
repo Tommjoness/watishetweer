@@ -20,6 +20,7 @@ exactEen('if(n===100)return "Geheel bewolkt";','100%-bewolkingsregel');
 exactEen('UV-gegevens voor vandaag worden bijgewerkt.','stale-dag UV-bescherming');
 exactEen('Piek was rond ','verstreken UV-piekformulering');
 exactEen('Piek rond ','toekomstige UV-piekformulering');
+exactEen('const pUv=typeof plaatsTijdDelen','UV gebruikt live plaatsklok');
 
 for(const vereist of [
   "slashed-zero",
@@ -58,4 +59,4 @@ for(const naam of CACHE_BRONNEN){
 const verwacht="watishetweer-"+hash.digest("hex").slice(0,12);
 if(!sw.includes(verwacht))throw new Error("Serviceworker-cachehash volgt checkpoint-75 artifact niet: verwacht "+verwacht+".");
 
-console.log("Checkpoint-75 artifact geverifieerd: geen nieuwe runtime-owner, lokale tijdankers, zon/pollen, slashed zero, cloud 100% en UV-tijdsemantiek; cache "+verwacht+".");
+console.log("Checkpoint-75 artifact geverifieerd: geen nieuwe runtime-owner, live lokale tijdankers, zon/pollen, slashed zero, cloud 100% en UV-tijdsemantiek; cache "+verwacht+".");
