@@ -91,6 +91,8 @@ async function controleer(type,naam,breedte){
         teksten,
         kansGecentreerd:kansLabels.every(el=>{const v=Number((el.textContent||"").replace("%","")),x=Number(el.getAttribute("x"));return g.P.some((p,i)=>Number(p)===v&&Math.abs(g.x(i)-x)<0.15);}),
         mmUitgelijnd:g.MM.every((mm,i)=>{if(i===0||mm==null)return true;const bron=S.chartStart+i;return Number.isInteger(bron)&&S.d.hourly.time[bron]===g.TI[i]&&Math.abs(Number(S.d.hourly.precipitation[bron])-Number(mm))<1e-9;}),
+        mmZelfdeArray:g.MM===g.Q1MM,
+        regenPointerEvents:regen.getAttribute("pointer-events"),
         hint:(document.getElementById("charthint")||{}).textContent||"",
         daghint:(document.getElementById("dagenhint")||{}).textContent||"",
         windkop:[...document.querySelectorAll(".stat .eyebrow")].map(x=>x.textContent.trim()).find(x=>/^Windstoten/.test(x))||"",
@@ -107,13 +109,15 @@ async function controleer(type,naam,breedte){
     assert(r.teksten[1].includes("Meeste regen 16:00–17:00")&&r.teksten[1].includes("0,4 mm"),naam+" "+breedte+": piekuur klopt: "+r.teksten.join(" | "));
     assert.equal(r.kansGecentreerd,true,naam+" "+breedte+": procentlabels horen bij hun eigen tijdstip");
     assert.equal(r.mmUitgelijnd,true,naam+" "+breedte+": strip gebruikt exact dezelfde uurwaarden als de grafiekbron");
+    assert.equal(r.mmZelfdeArray,true,naam+" "+breedte+": tooltip en regenstrip delen letterlijk dezelfde mm-array");
+    assert.equal(r.regenPointerEvents,"none",naam+" "+breedte+": regenlaag kan muis/touch niet onderscheppen");
     assert.equal(r.hint,"Selecteer een punt in de grafiek voor details.",naam+" "+breedte+": actieve grafiekhint is input-neutraal");
     assert.equal(r.daghint,"Kies een dag om die verwachting in de grafiek te bekijken.",naam+" "+breedte+": daghint is input-neutraal");
     assert.equal(r.windkop,"Windstoten nu",naam+" "+breedte+": windstootkop is ondubbelzinnig");
     assert(!r.dagteksten.some(t=>/rond \d{1,2}:\d{2}/.test(t)),naam+" "+breedte+": dagregels suggereren geen minuutprecisie");
     assert(r.h>296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets en samenvatting");
 
-    const hover=await page.evaluate(()=>{
+    const interactie=await page.evaluate(()=>{
       const svg=document.getElementById("chart"),hit=document.getElementById("hit"),scrub=document.getElementById("scrub"),g=S.geo;
       const i=g.TI.findIndex(t=>String(t).endsWith("T17:00"));
       if(i<0)return {fout:"GEEN_INDEX",ti:g.TI};
@@ -121,20 +125,39 @@ async function controleer(type,naam,breedte){
       const clientX=box.left+(g.x(i)/g.W)*box.width;
       const clientY=hitBox.top+hitBox.height*.35;
       const bron=Number.isInteger(S.chartStart)?S.chartStart+i:null;
-      const voor={
+      const lees=()=>({
+        display:scrub.style.display,
+        groepTekst:(scrub.textContent||"").replace(/\s+/g," ").trim(),
+        teksten:[...scrub.querySelectorAll("text")].map(el=>(el.textContent||"").trim()).filter(Boolean),
+        aria:scrub.getAttribute("aria-label")||"",
+        textNodes:scrub.querySelectorAll("text").length,
+        html:scrub.innerHTML.slice(0,1200)
+      });
+      const diagnose={
         i,ti:g.TI[i],bron,
         bronTijd:bron===null?null:S.d.hourly.time[bron],
         raw:bron===null?null:S.d.hourly.precipitation[bron],
         q1mm:Array.isArray(g.Q1MM)?g.Q1MM[i]:"GEEN_Q1MM",
         mm:Array.isArray(g.MM)?g.MM[i]:"GEEN_MM",
-        display:scrub.style.display,
-        tekst:scrub.textContent.replace(/\s+/g," ").trim(),
-        clientX,clientY,svgWidth:box.width,hitWidth:hitBox.width
+        zelfdeArray:g.Q1MM===g.MM,
+        clientX,clientY,svgWidth:box.width,hitWidth:hitBox.width,
+        voor:lees()
       };
-      const dispatched=hit.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,clientX,clientY,pointerType:"mouse"}));
-      return {...voor,dispatched,displayNa:scrub.style.display,tekstNa:scrub.textContent.replace(/\s+/g," ").trim()};
+      hit.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,clientX,clientY,pointerType:"mouse"}));
+      diagnose.mouse=lees();
+      hit.dispatchEvent(new PointerEvent("pointerleave",{bubbles:false,clientX,clientY,pointerType:"mouse"}));
+      diagnose.naLeave=lees();
+      hit.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,clientX,clientY,pointerType:"touch"}));
+      diagnose.touch=lees();
+      return diagnose;
     });
-    assert(/0,4\s*mm/.test(hover.tekstNa||""),naam+" "+breedte+": hover op 17:00 moet dezelfde 0,4 mm tonen; diagnose="+JSON.stringify(hover)+"; pageerrors="+JSON.stringify(fouten));
+    const mouseTekst=(interactie.mouse&&interactie.mouse.teksten)||[];
+    const touchTekst=(interactie.touch&&interactie.touch.teksten)||[];
+    assert(mouseTekst.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": muishover op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify(interactie)+"; pageerrors="+JSON.stringify(fouten));
+    assert(touchTekst.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": touch op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify(interactie)+"; pageerrors="+JSON.stringify(fouten));
+    assert.equal(interactie.mouse.display,"block",naam+" "+breedte+": muishover maakt tooltip zichtbaar");
+    assert.equal(interactie.touch.display,"block",naam+" "+breedte+": touch maakt tooltip zichtbaar");
+    assert.equal(interactie.zelfdeArray,true,naam+" "+breedte+": interactie leest dezelfde mm-array als regenstrip");
 
     const droog=await page.evaluate(()=>{
       S.d.hourly.precipitation=S.d.hourly.precipitation.map(()=>0);
@@ -143,12 +166,14 @@ async function controleer(type,naam,breedte){
       return {
         groep:!!svg.querySelector('g[data-q4-rain-periods]'),
         staven:[...svg.querySelectorAll("rect")].filter(el=>el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".16").length,
-        kansen:[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).length
+        kansen:[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).length,
+        zelfdeArray:S.geo&&S.geo.MM===S.geo.Q1MM
       };
     });
     assert.equal(droog.groep,false,naam+" "+breedte+": 0 mm verzint geen regenperiode");
     assert.equal(droog.staven,0,naam+" "+breedte+": oude staven komen niet terug");
     assert(droog.kansen>0,naam+" "+breedte+": kansinformatie blijft staan wanneer hoeveelheid nul is");
+    assert.equal(droog.zelfdeArray,true,naam+" "+breedte+": ook droog houdt één gedeelde mm-array");
     assert.deepEqual(fouten,[],naam+" "+breedte+": geen pageerrors");
     console.log("Q4-browser OK: "+naam+" "+breedte+"px; "+r.teksten.join(" | "));
   }finally{
