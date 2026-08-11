@@ -2368,7 +2368,10 @@ function zonurenTegel(){
 function lucht(){
   const el=document.getElementById("aq");
   if(!S.air||!S.air.current){
-    el.innerHTML='<div class="stat"><div class="ssub">Luchtkwaliteit is voor deze locatie niet beschikbaar.</div></div>';return;
+    el.innerHTML='<div class="stat"><div class="ssub">Luchtkwaliteit is voor deze locatie niet beschikbaar.</div></div>';
+    el.classList.remove("aq-cols-1","aq-cols-2","aq-cols-3","aq-cols-4");
+    el.classList.add("aq-cols-1");
+    return;
   }
   /* european_aqi komt uit het Europese CAMS-model en is elders leeg. Daarbuiten
      de Amerikaanse index tonen, die uit het wereldwijde model komt. Beide hebben
