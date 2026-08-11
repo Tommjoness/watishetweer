@@ -25,20 +25,36 @@ const LEGACY_RECENT_START='  const recenteNeerslag=eindigGetal(c.precipitation);
 const LEGACY_RECENT_END='  /* De tegel toont de kans voor precies het eerstvolgende uur (i+1). De subtekst';
 const ENGINE_RECENT_START='      zetEyebrow("prec","Afgelopen 15 minuten");\n      const c=S.d.current||{};';
 const ENGINE_RECENT_END='      // Bewolkingswoorden zijn tijdsafhankelijk.';
+
+/* Checkpoint 50: Nachtzicht had na de canonieke renderer twee opeenvolgende
+   presentatie-wrappers: de seniorlaag en daarna mobiele screenshot-polish.
+   Dat is precies het soort patch-op-patch dat we niet willen behouden. De
+   senior-wrapper wordt daarom op assemblagetijd verwijderd; zijn pure helpers
+   blijven staan. De mobiele polish hieronder is daarna de ENIGE presentatie-
+   owner bovenop de canonieke nachtbewerking. */
+const SENIOR_NACHT_START='const basisNachten=nachten;\nnachten=function(){';
+const SENIOR_NACHT_END='\n\n/* Verstreken uurwaarden zijn forecast/modelwaarden';
+
+/* Checkpoint 50: de mobiele grafiek wordt iets lager zonder horizontale schaal,
+   lettergrootte of inhoud weg te nemen. De y-ruimte blijft ruim genoeg voor de
+   bestaande collision-lagen; browsertests op 320–430 px bewaken dat expliciet. */
+const GRAFIEK_MOBIEL_OUD='  const W=M?380:900, H=M?292:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?20:22, bh=M?11:16;\n  const pt=M?72:76, ih=M?166:160, pb=pt+ih;';
+const GRAFIEK_MOBIEL_NIEUW='  const W=M?380:900, H=M?276:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?20:22, bh=M?11:16;\n  const pt=M?68:76, ih=M?152:160, pb=pt+ih;';
+
 if(html.includes(CSS_MARK)||html.includes(JS_MARK)||html.includes(Q1_CSS_MARK)||html.includes(Q1_JS_MARK))throw new Error("Post-build polish is al geïnjecteerd.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor mobiele polish.");
 if((html.split(START).length-1)!==1)throw new Error("Startmarker ontbreekt of is dubbel voor mobiele polish.");
 if((html.split(RECENT_OLD).length-1)!==1)throw new Error("Legacy recente-neerslagtegel ontbreekt of is dubbel in de bronartifact.");
 if((html.split(LEGACY_RECENT_START).length-1)!==1||(html.split(LEGACY_RECENT_END).length-1)!==1)throw new Error("Legacy recente-neerslaglogica ontbreekt of is dubbel in de bronartifact.");
 if((html.split(ENGINE_RECENT_START).length-1)!==1||(html.split(ENGINE_RECENT_END).length-1)!==1)throw new Error("Interpretatie-engine recente-neerslaglogica ontbreekt of is dubbel in de bronartifact.");
+if((html.split(SENIOR_NACHT_START).length-1)!==1||(html.split(SENIOR_NACHT_END).length-1)!==1)throw new Error("Senior Nachtzicht-wrapper ontbreekt of is dubbel vóór consolidatie.");
+if((html.split(GRAFIEK_MOBIEL_OUD).length-1)!==1)throw new Error("Canonieke mobiele grafiekmaten ontbreken of zijn dubbel.");
 
 /* Productbeslissing checkpoint 25: de terugblik op recente neerslag bestaat niet
    meer in de definitieve runtime. De twee op dit assemblagemoment aantoonbare
    historische eigenaars van dezelfde tegel — de canonieke meters() en de
    browserintegratie van de centrale interpretatie-engine — worden volledig
-   verwijderd vóór Q1 wordt geïnjecteerd. Dit is bewust geen runtime-wrapper:
-   de eindartifact faalt hieronder hard als oude kwartiertekst of een oude
-   zetEyebrow-eigenaar toch nog aanwezig is. */
+   verwijderd vóór Q1 wordt geïnjecteerd. */
 html=html.replace(RECENT_OLD,TREND_NEW);
 const legacyStart=html.indexOf(LEGACY_RECENT_START),legacyEind=html.indexOf(LEGACY_RECENT_END,legacyStart);
 if(legacyStart<0||legacyEind<=legacyStart)throw new Error("Legacy recente-neerslaglogica kon niet veilig worden afgebakend.");
@@ -56,6 +72,18 @@ const engineKop='      zetEyebrow("prec","Afgelopen 15 minuten");';
 if((html.split(engineKop).length-1)!==1)throw new Error("Interpretatie-engine tekenAlles-kop ontbreekt of is dubbel.");
 html=html.replace(engineKop,'      /* #prec-kop is exclusief van temperatuurtrend. */');
 
+/* Nachtzicht-owner consolideren vóór de uiteindelijke mobiele laag wordt
+   geïnjecteerd. Alleen de runtime-wrapper verdwijnt; de pure seniorhelpers en
+   overige seniorcorrecties blijven exact staan. */
+const seniorNachtStart=html.indexOf(SENIOR_NACHT_START),seniorNachtEind=html.indexOf(SENIOR_NACHT_END,seniorNachtStart);
+if(seniorNachtStart<0||seniorNachtEind<=seniorNachtStart)throw new Error("Senior Nachtzicht-wrapper kon niet veilig worden afgebakend.");
+html=html.slice(0,seniorNachtStart)
+  +'/* Nachtzicht-presentatie geconsolideerd in WeatherNowMobileScreenshotPolish. */'
+  +html.slice(seniorNachtEind);
+
+/* Mobiele grafiek compacter, zonder de desktopgeometrie te veranderen. */
+html=html.replace(GRAFIEK_MOBIEL_OUD,GRAFIEK_MOBIEL_NIEUW);
+
 html=html.replace("</style>",
   "\n"+CSS_MARK+"\n"+mobileCss+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B CSS ===== */\n"
   +Q1_CSS_MARK+"\n"+q1Css+"\n/* ===== EINDE CHECKPOINT 25 Q1 CSS ===== */\n</style>");
@@ -70,12 +98,15 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:postbu
 for(const vereist of [
   "WeatherNowMobileScreenshotPolish","maan-fase-svg-v2","Temperatuurtrend","bron-bronnen",
   "WeatherNowQ1","q1-dag-mm","weerbriefing.plaatscache.q1","neerslagkans",
-  "temperatuurTrend","q1-pop-hidden"
+  "temperatuurTrend","q1-pop-hidden","Beste modeluren","verbeterNachtzicht",
+  "H=M?276:296","pt=M?68:76, ih=M?152:160"
 ]){
   if(!html.includes(vereist))throw new Error("Post-build invariant ontbreekt: "+vereist);
 }
 if(html.includes("Afgelopen 15 minuten")||html.includes("Afgelopen kwartier"))throw new Error("Verwijderde recente-neerslagfunctie staat nog in de productieartifact.");
 if(html.includes(LEGACY_RECENT_START)||html.includes('zetEyebrow("prec"'))throw new Error("Een oude eigenaar van #prec staat nog in de productieartifact.");
+if(html.includes(SENIOR_NACHT_START))throw new Error("Patch-op-patch: oude senior Nachtzicht-wrapper staat nog in de productieartifact.");
+if((html.split('const basisNachten=nachten;').length-1)!==1)throw new Error("Nachtzicht moet exact één presentatie-wrapper hebben na consolidatie.");
 fs.writeFileSync(htmlPad,html,"utf8");
 
 /* build-weather.js maakt de serviceworker-cacheversie vóór deze gerichte laag.
@@ -102,4 +133,4 @@ sw=sw.replace(/watishetweer-[0-9a-f]{12}/g,versie);
 if(!sw.includes(versie))throw new Error("Nieuwe mobiele cachehash niet toegepast.");
 fs.writeFileSync(swPad,sw,"utf8");
 
-console.log("Mobiele polish + checkpoint 25% geïnjecteerd; oude recente-neerslagowners verwijderd; cache "+versie+".");
+console.log("Mobiele polish + checkpoint 50% geïnjecteerd; Nachtzicht-owner geconsolideerd; cache "+versie+".");
