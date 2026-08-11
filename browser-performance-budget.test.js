@@ -4,7 +4,7 @@ const fs=require("fs");
 const path=require("path");
 const http=require("http");
 const assert=require("assert");
-const {chromium}=require("playwright");
+const {chromium,webkit}=require("playwright");
 const {bouw}=require("./data.js");
 
 /* Dit is bewust geen API-benchmark. Externe netwerklatentie wisselt per regio en
@@ -12,7 +12,7 @@ const {bouw}=require("./data.js");
    budget voor onze eigen cold-load + volledige synchrone productrender, met de
    forecastresponse lokaal en onmiddellijk beschikbaar. Daarmee vangen we precies
    de meersecondenfreeze die door herhaalde tijdzoneconversies werd veroorzaakt. */
-const BUDGET_MS=1000;
+const BUDGETTEN={Chromium:1000,WebKit:1500};
 const RONDEN=3;
 
 function isoPlus(iso,uren){
@@ -100,10 +100,8 @@ const server=http.createServer((req,res)=>{
 
 const mediaan=waarden=>waarden.slice().sort((a,b)=>a-b)[Math.floor(waarden.length/2)];
 
-(async()=>{
-  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
-  const browser=await chromium.launch({headless:true});
-  const metingen=[];
+async function meetBrowser(type,naam){
+  const browser=await type.launch({headless:true}),metingen=[];
   try{
     for(let ronde=0;ronde<RONDEN;ronde++){
       const context=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:"block"});
@@ -120,19 +118,30 @@ const mediaan=waarden=>waarden.slice().sort((a,b)=>a-b)[Math.floor(waarden.lengt
           nachten:document.querySelectorAll("#nights .row.night:not(.kop)").length,
           tekst:document.body.innerText
         }));
-        assert.equal(resultaat.urls.length,1,`ronde ${ronde+1}: cold load doet exact één gezonde hoofdforecastaanvraag`);
+        assert.equal(resultaat.urls.length,1,`${naam} ronde ${ronde+1}: cold load doet exact één gezonde hoofdforecastaanvraag`);
         const forecastUrl=new URL(resultaat.urls[0]);
-        assert.equal(forecastUrl.searchParams.get("forecast_hours"),"170",`ronde ${ronde+1}: hoofdforecast heeft veilige 170-uurs weekhorizon`);
-        assert.equal(forecastUrl.searchParams.get("past_hours"),"24",`ronde ${ronde+1}: 24 uur historie blijft beschikbaar`);
-        assert.equal(resultaat.dagen,7,`ronde ${ronde+1}: volledige zevendaagse tabel is al gerenderd binnen het budget`);
-        assert(resultaat.nachten>=1,`ronde ${ronde+1}: Nachtzicht is al gerenderd binnen het budget`);
-        assert(!/NaN|undefined|\[object Object\]/.test(resultaat.tekst),`ronde ${ronde+1}: geen technische waarden tijdens snelle cold load`);
-        assert.deepEqual(fouten,[],`ronde ${ronde+1}: geen runtime-/consolefouten`);
+        assert.equal(forecastUrl.searchParams.get("forecast_hours"),"170",`${naam} ronde ${ronde+1}: hoofdforecast heeft veilige 170-uurs weekhorizon`);
+        assert.equal(forecastUrl.searchParams.get("past_hours"),"24",`${naam} ronde ${ronde+1}: 24 uur historie blijft beschikbaar`);
+        assert.equal(resultaat.dagen,7,`${naam} ronde ${ronde+1}: volledige zevendaagse tabel is al gerenderd binnen het budget`);
+        assert(resultaat.nachten>=1,`${naam} ronde ${ronde+1}: Nachtzicht is al gerenderd binnen het budget`);
+        assert(!/NaN|undefined|\[object Object\]/.test(resultaat.tekst),`${naam} ronde ${ronde+1}: geen technische waarden tijdens snelle cold load`);
+        assert.deepEqual(fouten,[],`${naam} ronde ${ronde+1}: geen runtime-/consolefouten`);
         metingen.push(resultaat.elapsed);
       }finally{await context.close();}
     }
-    const m=mediaan(metingen);
-    assert(m<BUDGET_MS,`cold-load renderbudget overschreden: mediaan ${m.toFixed(1)} ms, budget < ${BUDGET_MS} ms; runs ${metingen.map(x=>x.toFixed(1)).join(", ")} ms`);
-    console.log(`Browser-performancebudget geslaagd: mediaan ${m.toFixed(1)} ms (< ${BUDGET_MS} ms), runs ${metingen.map(x=>x.toFixed(1)).join(", ")} ms; volledige 7-daagse en Nachtzicht aanwezig.`);
-  }finally{await browser.close();server.close();}
+    const m=mediaan(metingen),budget=BUDGETTEN[naam];
+    assert(m<budget,`${naam} cold-load renderbudget overschreden: mediaan ${m.toFixed(1)} ms, budget < ${budget} ms; runs ${metingen.map(x=>x.toFixed(1)).join(", ")} ms`);
+    console.log(`${naam} performancebudget geslaagd: mediaan ${m.toFixed(1)} ms (< ${budget} ms), runs ${metingen.map(x=>x.toFixed(1)).join(", ")} ms.`);
+    return {naam,mediaan:m,budget};
+  }finally{await browser.close();}
+}
+
+(async()=>{
+  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
+  try{
+    const resultaten=[];
+    resultaten.push(await meetBrowser(chromium,"Chromium"));
+    resultaten.push(await meetBrowser(webkit,"WebKit"));
+    console.log("Browser-performancebudget geslaagd in beide engines; volledige 7-daagse en Nachtzicht aanwezig.",resultaten.map(x=>`${x.naam} ${x.mediaan.toFixed(1)} ms`).join("; "));
+  }finally{server.close();}
 })().catch(err=>{console.error(err);server.close();process.exit(1);});
