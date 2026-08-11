@@ -73,31 +73,34 @@ function q4TekenRegenperioden(svg,g,perioden){
     return;
   }
 
+  /* Iedere aaneengesloten periode houdt zijn eigen bracket op de werkelijke
+     uurpositie. De tekst wordt bewust NIET per bracket herhaald: op een buiige
+     dag zou dat zes of meer regels kunnen opleveren. Eén totaalsom en één
+     zwaarste uurvak zijn de informatie die de gebruiker daadwerkelijk vroeg. */
   const pb=g.pt+g.ih,y=pb+48,regel=g.M?14:16;
-  const compact=g.n>49,regels=compact?1:perioden.length;
-  const nieuwH=Math.max(basisH,y+18+regels*regel+8);
+  const nieuwH=Math.max(basisH,y+17+regel+17+8);
   svg.setAttribute("viewBox","0 0 "+g.W+" "+nieuwH);g.H=nieuwH;
 
   let inhoud="";
-  perioden.forEach((p,idx)=>{
+  perioden.forEach(p=>{
     const x1=g.x(p.van),x2=g.x(p.tot);
     inhoud+='<line x1="'+x1+'" y1="'+y+'" x2="'+x2+'" y2="'+y+'" stroke="'+TEAL+'" stroke-width="3" stroke-linecap="square"/>'
       +'<line x1="'+x1+'" y1="'+(y-4)+'" x2="'+x1+'" y2="'+(y+4)+'" stroke="'+TEAL+'" stroke-width="1"/>'
       +'<line x1="'+x2+'" y1="'+(y-4)+'" x2="'+x2+'" y2="'+(y+4)+'" stroke="'+TEAL+'" stroke-width="1"/>';
-    if(!compact){
-      const van=q4Tijd(g.TI[p.van]),tot=q4Tijd(g.TI[p.tot]);
-      const pv=q4Tijd(g.TI[p.piek-1]),pt=q4Tijd(g.TI[p.piek]);
-      const tekst=van+"–"+tot+" · "+q4Mm(p.som)+" mm · meest "+pv+"–"+pt+": "+q4Mm(p.piekMm)+" mm";
-      inhoud+='<text x="'+g.pl+'" y="'+(y+17+idx*regel)+'" fill="'+INK45+'" font-family="DM Mono,monospace" font-size="'+(g.M?9.3:10.2)+'">'+tekst+'</text>';
-    }
   });
-  if(compact){
-    const totaal=perioden.reduce((som,p)=>som+p.som,0);
-    let piek=perioden[0];for(const p of perioden)if(p.piekMm>piek.piekMm)piek=p;
-    const dag=q4DagKort(g.TI[piek.piek]),pv=q4Tijd(g.TI[piek.piek-1]),pt=q4Tijd(g.TI[piek.piek]);
-    const tekst=perioden.length+" neerslagperiode"+(perioden.length===1?"":"n")+" · totaal "+q4Mm(totaal)+" mm · meest "+dag+" "+pv+"–"+pt+": "+q4Mm(piek.piekMm)+" mm";
-    inhoud+='<text x="'+g.pl+'" y="'+(y+17)+'" fill="'+INK45+'" font-family="DM Mono,monospace" font-size="'+(g.M?9.1:10)+'">'+tekst+'</text>';
-  }
+
+  const totaal=perioden.reduce((som,p)=>som+p.som,0);
+  let piek=perioden[0];for(const p of perioden)if(p.piekMm>piek.piekMm)piek=p;
+  const één=perioden.length===1,eerste=perioden[0];
+  const periodeTekst=één
+    ? q4Tijd(g.TI[eerste.van])+"–"+q4Tijd(g.TI[eerste.tot])+" · totaal "+q4Mm(totaal)+" mm"
+    : perioden.length+" regenperiodes · totaal "+q4Mm(totaal)+" mm";
+  const dag=g.n>49?q4DagKort(g.TI[piek.piek])+" ":"";
+  const piekTekst="Meeste regen "+dag+q4Tijd(g.TI[piek.piek-1])+"–"+q4Tijd(g.TI[piek.piek])+" · "+q4Mm(piek.piekMm)+" mm";
+  const font=g.M?9.3:10.2;
+  inhoud+='<text data-q4-rain-summary="total" x="'+g.pl+'" y="'+(y+17)+'" fill="'+INK45+'" font-family="DM Mono,monospace" font-size="'+font+'">'+periodeTekst+'</text>';
+  inhoud+='<text data-q4-rain-summary="peak" x="'+g.pl+'" y="'+(y+17+regel)+'" fill="'+INK45+'" font-family="DM Mono,monospace" font-size="'+font+'">'+piekTekst+'</text>';
+
   const groep=document.createElementNS("http://www.w3.org/2000/svg","g");
   groep.setAttribute("data-q4-rain-periods","1");groep.setAttribute("aria-label","Neerslagperioden");groep.innerHTML=inhoud;
   const scrub=svg.querySelector("#scrub");svg.insertBefore(groep,scrub||null);
