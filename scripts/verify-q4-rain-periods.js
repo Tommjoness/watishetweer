@@ -17,6 +17,9 @@ ok(html.includes("g.MM=mm;"),"regenstrook en interactie delen één uitgelijnde 
 ok(html.includes("lopend.som+=waarde"),"periodetotaal is som van dezelfde uurintervallen");
 ok(html.includes("waarde>lopend.piekMm"),"zwaarste uurvak komt uit dezelfde periodegegevens");
 ok(html.includes('data-q4-rain-periods'),"regenperioden hebben een eigen herkenbare SVG-laag");
+ok(html.includes('document.createElementNS(Q4_SVG_NS,"line")'),"regenbrackets worden als echte SVG-lijnen opgebouwd");
+ok(html.includes('document.createElementNS(Q4_SVG_NS,"text")'),"regensamenvatting wordt als echte SVG-tekst opgebouwd");
+ok(!html.includes("groep.innerHTML=inhoud"),"Q4 gebruikt geen fragiele SVG-innerHTML-injectie meer");
 ok(html.includes('el.getAttribute("fill-opacity")===".16"')&&html.includes("el.remove();"),"oude losse neerslagstaven worden na render verwijderd");
 ok(html.includes("millimeter neerslag$/.test")&&html.includes("el.remove();"),"oude losse mm-labels worden na render verwijderd");
 ok(html.includes('^\\d+%$')&&html.includes("x+g.cw/2"),"neerslagkanslabels worden terug op hun eigen tijdstip gecentreerd");
