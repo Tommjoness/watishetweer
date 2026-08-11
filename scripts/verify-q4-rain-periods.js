@@ -22,8 +22,17 @@ ok(html.includes("Kies een dag om die verwachting in de grafiek te bekijken."),"
 ok(!html.includes("Houd de grafiek vast voor details."),"oude touchspecifieke grafiekhint is weg");
 ok(!html.includes("Klik op een dag om die verwachting in de grafiek te laden."),"oude muisspecifieke daghint is weg");
 ok(html.includes("<span>Windstoten nu</span>"),"actuele windstootwaarde is ondubbelzinnig gelabeld");
-ok(!html.includes('const tijd=a.eersteTijd?" rond "+a.eersteTijd:"";'),"dagverwachting toont geen bronminuut als schijnprecies moment");
-ok(html.includes('uur<6?" in de nacht":uur<12?" in de ochtend":uur<18?" in de middag":" in de avond"'),"dagverwachting gebruikt natuurlijke dagdelen");
+
+/* Alleen de afgebakende senior-correctheidslaag bezit de uiteindelijke dagtekst.
+   Een identieke helpertekst kan elders in de geassembleerde artifact bestaan als
+   bron-/compatibiliteitslaag; die mag niet bepalen of de productowner correct is. */
+const corrStart="/* ===== SENIOR CORRECTHEIDSLAAG ===== */",corrEind="/* ===== EINDE SENIOR CORRECTHEIDSLAAG ===== */";
+const cs=html.indexOf(corrStart),ce=html.indexOf(corrEind,cs+corrStart.length);
+ok(cs>=0&&ce>cs,"senior-correctheidslaag is eenduidig afgebakend");
+const corr=html.slice(cs,ce);
+ok(!corr.includes('const tijd=a.eersteTijd?" rond "+a.eersteTijd:"";'),"productowner toont geen bronminuut als schijnprecies dagmoment");
+ok(corr.includes('uur<6?" in de nacht":uur<12?" in de ochtend":uur<18?" in de middag":" in de avond"'),"productowner gebruikt natuurlijke dagdelen");
+
 ok(html.includes("minmax(140px,.72fr) 92px minmax(260px,1fr)"),"Nachtzicht geeft desktopuitleg meer ruimte dan de scorebalk");
 ok(/const CACHE = "watishetweer-[0-9a-f]{12}";/.test(fs.readFileSync(path.join(__dirname,"..","public","sw.js"),"utf8")),"serviceworker houdt inhoudsgebonden Q4-cachehash");
 
