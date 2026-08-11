@@ -34,6 +34,7 @@ const ENGINE_RECENT_END='      // Bewolkingswoorden zijn tijdsafhankelijk.';
    owner bovenop de canonieke nachtbewerking. */
 const SENIOR_NACHT_START='const basisNachten=nachten;\nnachten=function(){';
 const SENIOR_NACHT_END='\n\n/* Verstreken uurwaarden zijn forecast/modelwaarden';
+const SENIOR_NACHT_SIGNATURE='const basisNachten=nachten;\nnachten=function(){\n  basisNachten();\n  const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")]';
 
 /* Checkpoint 50: de mobiele grafiek wordt iets lager zonder horizontale schaal,
    lettergrootte of inhoud weg te nemen. De y-ruimte blijft ruim genoeg voor de
@@ -48,6 +49,7 @@ if((html.split(RECENT_OLD).length-1)!==1)throw new Error("Legacy recente-neersla
 if((html.split(LEGACY_RECENT_START).length-1)!==1||(html.split(LEGACY_RECENT_END).length-1)!==1)throw new Error("Legacy recente-neerslaglogica ontbreekt of is dubbel in de bronartifact.");
 if((html.split(ENGINE_RECENT_START).length-1)!==1||(html.split(ENGINE_RECENT_END).length-1)!==1)throw new Error("Interpretatie-engine recente-neerslaglogica ontbreekt of is dubbel in de bronartifact.");
 if((html.split(SENIOR_NACHT_START).length-1)!==1||(html.split(SENIOR_NACHT_END).length-1)!==1)throw new Error("Senior Nachtzicht-wrapper ontbreekt of is dubbel vóór consolidatie.");
+if((html.split(SENIOR_NACHT_SIGNATURE).length-1)!==1)throw new Error("Specifieke senior Nachtzicht-wrapper ontbreekt of is dubbel vóór consolidatie.");
 if((html.split(GRAFIEK_MOBIEL_OUD).length-1)!==1)throw new Error("Canonieke mobiele grafiekmaten ontbreken of zijn dubbel.");
 
 /* Productbeslissing checkpoint 25: de terugblik op recente neerslag bestaat niet
@@ -105,7 +107,7 @@ for(const vereist of [
 }
 if(html.includes("Afgelopen 15 minuten")||html.includes("Afgelopen kwartier"))throw new Error("Verwijderde recente-neerslagfunctie staat nog in de productieartifact.");
 if(html.includes(LEGACY_RECENT_START)||html.includes('zetEyebrow("prec"'))throw new Error("Een oude eigenaar van #prec staat nog in de productieartifact.");
-if(html.includes(SENIOR_NACHT_START))throw new Error("Patch-op-patch: oude senior Nachtzicht-wrapper staat nog in de productieartifact.");
+if(html.includes(SENIOR_NACHT_SIGNATURE))throw new Error("Patch-op-patch: specifieke oude senior Nachtzicht-wrapper staat nog in de productieartifact.");
 if((html.split('const basisNachten=nachten;').length-1)!==1)throw new Error("Nachtzicht moet exact één presentatie-wrapper hebben na consolidatie.");
 fs.writeFileSync(htmlPad,html,"utf8");
 
