@@ -113,7 +113,7 @@ async function controleer(type,naam,breedte){
     assert.equal(r.mmUitgelijnd,true,naam+" "+breedte+": strip gebruikt exact dezelfde uurwaarden als de grafiekbron");
     assert.equal(r.mmZelfdeArray,true,naam+" "+breedte+": tooltip en regenstrip delen letterlijk dezelfde mm-array");
     assert.equal(r.regenPointerEvents,"none",naam+" "+breedte+": regenlaag kan muis/touch niet onderscheppen");
-    assert.equal(r.hint,"Selecteer een punt in de grafiek voor details.",naam+" "+breedte+": actieve grafiekhint is input-neutraal");
+    assert.equal(r.hint,"Selecteer een punt in de grafiek voor details.",naam+" "+breedte+": actieve grafiekhint is input-neutraal; kreeg "+JSON.stringify(r.hint));
     assert.equal(r.daghint,"Kies een dag om die verwachting in de grafiek te bekijken.",naam+" "+breedte+": daghint is input-neutraal");
     assert.equal(r.windkop,"Windstoten nu",naam+" "+breedte+": windstootkop is ondubbelzinnig");
     assert(!r.dagteksten.some(t=>/rond \d{1,2}:\d{2}/.test(t)),naam+" "+breedte+": dagregels suggereren geen minuutprecisie");
