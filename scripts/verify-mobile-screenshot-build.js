@@ -21,13 +21,19 @@ for(const vereist of [
   "q1-pop-hidden",
   "klokBijwerken=function(){basisKlokBijwerken();if(S.d)renderTemperatuurTrend();}",
   "pollenEenheid",
-  "grid-template-columns:62px 58px minmax(0,1fr) 76px",
+  "grid-template-columns:56px 46px minmax(32px,1fr) 64px",
+  "grid-template-columns:52px 43px minmax(28px,1fr) 60px",
   "bron-bronnen",
   "MOBILE SCREENSHOT POLISH 20260810B",
   "WeatherNowQ1",
   "q1-dag-mm",
   "weerbriefing.plaatscache.q1",
-  "CHECKPOINT 25 Q1"
+  "CHECKPOINT 25 Q1",
+  "verbeterNachtzicht",
+  "Beste modeluren",
+  "H=M?276:296",
+  "pt=M?68:76, ih=M?152:160",
+  "Nachtzicht-presentatie geconsolideerd in WeatherNowMobileScreenshotPolish"
 ]){
   if(!html.includes(vereist))throw new Error("Definitieve productie-invariant ontbreekt: "+vereist);
 }
@@ -38,6 +44,15 @@ if(html.includes(oude15)||html.includes(oudeKwartier))throw new Error("Verwijder
 if((html.split(trend).length-1)!==1)throw new Error("Definitieve temperatuurtrendtegel ontbreekt of is dubbel.");
 if(html.includes("const recenteNeerslag=eindigGetal(c.precipitation)"))throw new Error("Legacy recente-neerslagberekening staat nog in de definitieve artifact.");
 if(html.includes("compactRecentLabel"))throw new Error("Legacy kwartier-wrapper staat nog in de definitieve artifact.");
+
+/* Checkpoint 50: precies één runtime-wrapper mag Nachtzicht na de canonieke
+   renderer presenteren. De oude senior-wrapper is op assemblagetijd verwijderd;
+   WeatherNowMobileScreenshotPolish is de enige resterende eigenaar. */
+const nachtOwners=html.split("const basisNachten=nachten;").length-1;
+if(nachtOwners!==1)throw new Error("Nachtzicht heeft "+nachtOwners+" presentatie-owners; exact één vereist.");
+if(html.includes('const basisNachten=nachten;\nnachten=function(){\n  basisNachten();\n  const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")]')){
+  throw new Error("Oude senior Nachtzicht-wrapper staat nog in de definitieve artifact.");
+}
 
 const CACHE_BRONNEN=[
   "index.html","manifest.json","icon-192.png","icon-512.png","icon-maskable-512.png",
@@ -57,4 +72,4 @@ const m=/const CACHE = "([^"]+)";/.exec(sw);
 if(!m)throw new Error("Serviceworker-cache-id ontbreekt in definitieve artifact.");
 if(m[1]!==verwacht)throw new Error("Serviceworker-cache hoort bij een andere artifact: "+m[1]+" versus "+verwacht);
 
-console.log("Definitieve checkpoint-25 artifact geverifieerd: "+verwacht+".");
+console.log("Definitieve checkpoint-50 artifact geverifieerd: één Nachtzicht-owner, compacte mobiele grafiek en cache "+verwacht+".");
