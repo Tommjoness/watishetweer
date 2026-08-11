@@ -69,6 +69,7 @@ async function controleer(type,naam,breedte){
       const oudeMm=[...svg.querySelectorAll("text")].filter(el=>/ millimeter neerslag$/.test(el.getAttribute("aria-label")||"")).length;
       const regen=svg.querySelector('g[data-q4-rain-periods]');
       const teksten=regen?[...regen.querySelectorAll("text")].map(el=>(el.textContent||"").trim()):[];
+      const brackets=regen?regen.querySelectorAll("line").length:0;
       const kansLabels=[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim()));
       const kansGecentreerd=kansLabels.every(el=>{
         const waarde=Number((el.textContent||"").replace("%","")),x=Number(el.getAttribute("x"));
@@ -80,7 +81,7 @@ async function controleer(type,naam,breedte){
         return Number.isInteger(bron)&&S.d.hourly.time[bron]===g.TI[i]&&Math.abs(Number(S.d.hourly.precipitation[bron])-Number(mm))<1e-9;
       });
       return {
-        oudeStaven,oudeMm,teksten,kansGecentreerd,mmUitgelijnd,
+        oudeStaven,oudeMm,teksten,brackets,kansGecentreerd,mmUitgelijnd,
         hint:(document.getElementById("charthint")||{}).textContent||"",
         daghint:(document.getElementById("dagenhint")||{}).textContent||"",
         windkop:[...document.querySelectorAll(".stat .eyebrow")].map(x=>x.textContent.trim()).find(x=>/^Windstoten/.test(x))||"",
@@ -90,16 +91,17 @@ async function controleer(type,naam,breedte){
     });
     assert.equal(resultaat.oudeStaven,0,naam+" "+breedte+": losse hoeveelheidstaven moeten weg zijn");
     assert.equal(resultaat.oudeMm,0,naam+" "+breedte+": losse mm-labels moeten weg zijn");
-    assert.equal(resultaat.teksten.length,2,naam+" "+breedte+": twee gescheiden regenperioden moeten twee samenvattingen geven");
-    assert(resultaat.teksten.some(t=>t.includes("15:00–18:00")&&t.includes("0,7 mm")&&t.includes("16:00–17:00: 0,4 mm")),naam+" "+breedte+": eerste periode moet start/einde, totaal en piekuur tonen: "+resultaat.teksten.join(" | "));
-    assert(resultaat.teksten.some(t=>t.includes("20:00–22:00")&&t.includes("0,5 mm")),naam+" "+breedte+": tweede periode moet afzonderlijk blijven");
+    assert.equal(resultaat.brackets,6,naam+" "+breedte+": twee gescheiden regenperioden moeten twee afzonderlijke brackets met eindkapjes geven");
+    assert.equal(resultaat.teksten.length,2,naam+" "+breedte+": wisselvallig weer moet compact in twee samenvattingsregels blijven");
+    assert(resultaat.teksten[0].includes("2 regenperiodes")&&resultaat.teksten[0].includes("totaal 1,2 mm"),naam+" "+breedte+": eerste samenvattingsregel moet aantal perioden en totale hoeveelheid tonen: "+resultaat.teksten.join(" | "));
+    assert(resultaat.teksten[1].includes("Meeste regen 16:00–17:00")&&resultaat.teksten[1].includes("0,4 mm"),naam+" "+breedte+": tweede regel moet het zwaarste uurvak uit dezelfde bronreeks tonen: "+resultaat.teksten.join(" | "));
     assert.equal(resultaat.kansGecentreerd,true,naam+" "+breedte+": procentlabels moeten bij hun eigen tijdstip staan");
     assert.equal(resultaat.mmUitgelijnd,true,naam+" "+breedte+": regenstrook moet exact dezelfde uurlijkse bronwaarden gebruiken");
     assert.equal(resultaat.hint,"Selecteer een punt in de grafiek voor details.",naam+" "+breedte+": actieve chartHint()-owner moet invoermethode-neutraal zijn");
     assert.equal(resultaat.daghint,"Kies een dag om die verwachting in de grafiek te bekijken.",naam+" "+breedte+": daghint moet invoermethode-neutraal zijn");
     assert.equal(resultaat.windkop,"Windstoten nu",naam+" "+breedte+": actuele windstootkop moet ondubbelzinnig zijn");
     assert(!resultaat.dagteksten.some(t=>/rond \d{1,2}:\d{2}/.test(t)),naam+" "+breedte+": dagregels mogen geen minuutprecisie suggereren");
-    assert(resultaat.h>296,naam+" "+breedte+": natte grafiek moet ruimte voor de regenperioden reserveren");
+    assert(resultaat.h>296,naam+" "+breedte+": natte grafiek moet ruimte voor brackets en twee samenvattingsregels reserveren");
 
     /* Hover exact op het interval dat om 17:00 eindigt. De tooltip moet dezelfde
        0,4 mm tonen als de periodepiek; anders zouden strip en interactie opnieuw
