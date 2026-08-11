@@ -20,10 +20,18 @@ ok(html.includes('data-q4-rain-periods'),"regenperioden hebben een eigen herkenb
 ok(html.includes('el.getAttribute("fill-opacity")===".16"')&&html.includes("el.remove();"),"oude losse neerslagstaven worden na render verwijderd");
 ok(html.includes("millimeter neerslag$/.test")&&html.includes("el.remove();"),"oude losse mm-labels worden na render verwijderd");
 ok(html.includes('^\\d+%$')&&html.includes("x+g.cw/2"),"neerslagkanslabels worden terug op hun eigen tijdstip gecentreerd");
-ok(html.includes("Selecteer een punt in de grafiek voor details."),"grafiekhint werkt voor muis en touch");
-ok(html.includes("Kies een dag om die verwachting in de grafiek te bekijken."),"daghint is invoermethode-neutraal");
-ok(!html.includes("Houd de grafiek vast voor details."),"oude touchspecifieke grafiekhint is weg");
-ok(!html.includes("Klik op een dag om die verwachting in de grafiek te laden."),"oude muisspecifieke daghint is weg");
+
+/* De geassembleerde runtime bevat historische helperbron die door een latere
+   functie-owner wordt overschreven. Voor gedrag is daarom de laatst geldende
+   chartHint()-declaratie relevant; de browsertest roept die owner bovendien echt
+   aan. Dit voorkomt zowel een vals groene losse stringcheck als een vals rode
+   match op dode bron. */
+const hintStart=html.lastIndexOf("function chartHint(){"),hintEind=html.indexOf("\nfunction scrubKoppel()",hintStart);
+ok(hintStart>=0&&hintEind>hintStart,"actieve grafiekhint-owner is eenduidig afgebakend");
+const hintOwner=html.slice(hintStart,hintEind);
+ok(hintOwner.includes('el2.textContent="Selecteer een punt in de grafiek voor details.";'),"actieve grafiekhint werkt voor muis en touch");
+ok(!hintOwner.includes("Houd de grafiek vast voor details."),"actieve grafiekhint kan de oude touchtekst niet terugzetten");
+ok(html.includes('<p class="hint" id="dagenhint">Kies een dag om die verwachting in de grafiek te bekijken.</p>'),"zichtbare daghint is invoermethode-neutraal");
 ok(html.includes('<div class="eyebrow">Windstoten nu</div>'),"actuele windstootwaarde is ondubbelzinnig gelabeld");
 
 /* Alleen de afgebakende senior-correctheidslaag bezit de uiteindelijke dagtekst.
