@@ -116,6 +116,11 @@ function bewolkingscodeUitPercentage(waarde){
   return v>=70?3:v>=40?2:v>=15?1:0;
 }
 
+function bewolkingMagActueelWeerOverschrijven(code){
+  const c=num(code);
+  return c!==null&&c>=0&&c<=3;
+}
+
 function actueleBewolkingsomschrijving(code,waarde,isDag,fallback){
   const c=num(code);
   if(c===null||c<0||c>3)return String(fallback||"");
@@ -249,7 +254,7 @@ const api={
   datumDagenVerschil,hhmm,dagdeelVanTijd,forecastMomentZinsdeel,vervangExactForecastMoment,
   briefingHistorieSemantiek,nachtLabelVarianten,nachtAdviesMetHorizon,nachtVensterMetHorizon,
   daglichtGrammatica,nachtOordeelGetoond,nachtBalkPercentageGetoond,neerslagWeerCode,uvOordeelGetoond,bewolkingOordeelGetoond,
-  bewolkingscodeUitPercentage,actueleBewolkingsomschrijving,
+  bewolkingscodeUitPercentage,bewolkingMagActueelWeerOverschrijven,actueleBewolkingsomschrijving,
   aqiOordeelGetoond,pollenOordeelGetoond,zichtOordeelGetoond,zonurenOordeelGetoond,
   maanFaseUitSymbool,maanFaseSvg,maanSymboolNaarSvgInHtml,zonInfoRijen,tooltipCompactMaten
 };
@@ -338,11 +343,12 @@ meters=function(){
       if(sub)sub.textContent=bf===0?"Vrijwel windstil.":BFTNAAM[bf].charAt(0).toUpperCase()+BFTNAAM[bf].slice(1)+(richtingVol?" uit het "+richtingVol:"")+" ("+bf+" Bft)."+(richtingVol?"":" Windrichting niet beschikbaar.");
     }
 
-    const cc=num(c.cloud_cover),cloudSub=document.getElementById("cloudsub");
+    const cc=num(c.cloud_cover),huidigeCode=num(c.weather_code),cloudSub=document.getElementById("cloudsub");
     if(cloudSub&&cc!==null&&cc>=0&&cc<=100){
       const oordeel=bewolkingOordeelGetoond(cc,c.is_day!==0);if(oordeel)cloudSub.textContent=oordeel+".";
-      const omschrijving=actueleBewolkingsomschrijving(c.weather_code,cc,c.is_day!==0,typeof txt==="function"?txt(c.weather_code,c.is_day!==0):"");
-      if(omschrijving){
+      const alleenBewolking=bewolkingMagActueelWeerOverschrijven(huidigeCode);
+      const omschrijving=actueleBewolkingsomschrijving(huidigeCode,cc,c.is_day!==0,typeof txt==="function"?txt(huidigeCode,c.is_day!==0):"");
+      if(omschrijving&&alleenBewolking){
         const conditie=document.getElementById("cond"),mini=document.getElementById("minicond");
         if(conditie)conditie.textContent=omschrijving;
         if(mini){mini.textContent=omschrijving.toLowerCase();mini.title=omschrijving.toLowerCase();}

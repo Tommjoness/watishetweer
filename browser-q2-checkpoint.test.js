@@ -95,7 +95,7 @@ const server=http.createServer((req,res)=>{
 });
 
 function oordeelUitAdvies(tekst){
-  return String(tekst||"").replace(/^Voorlopige indicatie:\s*/i,"").replace(/^Globale indicatie:\s*/i,"").split(" · ")[0].trim();
+  return String(tekst||"").replace(/^Voorlopig\s+/i,"").replace(/^Later in de week:\s*/i,"").split(" · ")[0].trim();
 }
 function oordeelVoorScore(n){return n>=9?"Uitstekend":n>=7?"Goed":n>=5?"Redelijk":n>=4?"Matig":"Ongunstig";}
 
@@ -184,7 +184,7 @@ async function controleer(page,naam,breedte){
 
   const mobiel=breedte<760;
   assert.equal(r.viewBox.w,mobiel?380:900,`${naam} ${breedte}px: grafiekbreedte blijft canoniek`);
-  assert.equal(r.viewBox.h,mobiel?284:296,`${naam} ${breedte}px: mobiele grafiek is compacter zonder labelruimte op te offeren`);
+  assert.equal(r.viewBox.h,mobiel?250:296,`${naam} ${breedte}px: mobiele grafiek is compacter zonder labelruimte op te offeren`);
   assert.deepEqual(r.nu,["nu 21°"],`${naam} ${breedte}px: exact één actuele temperatuur in grafiek`);
   assert.ok(r.tempLabels>=6,`${naam} ${breedte}px: voldoende zichtbare temperatuurreferenties`);
   assert.deepEqual(r.tempBuiten,[],`${naam} ${breedte}px: temperatuurcijfers blijven binnen grafiek`);

@@ -593,7 +593,17 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       let voor=esc(briefingNeerslagZin(twee));
       const later=laterVandaagNeerslag(S.d,twee);
       if(later&&later.kans>=25){
-        voor+=" Later vandaag loopt de neerslagkans op tot <b>"+later.kans+"%</b>.";
+        const korteKans=getal(twee.kans);
+        const blijftHoog=twee.currentWet||(korteKans!==null&&later.kans<=Math.round(korteKans)+5);
+        if(blijftHoog){
+          voor+=later.kans>=90
+            ?" Ook later vandaag blijft de neerslagkans zeer groot."
+            :later.kans>=70
+              ?" Ook later vandaag blijft de neerslagkans groot."
+              :" Ook later vandaag blijft neerslag mogelijk.";
+        }else{
+          voor+=" Later vandaag loopt de neerslagkans op tot <b>"+later.kans+"%</b>.";
+        }
       }else if(later&&(twee.status==="GEEN_KANS"||twee.status==="ZEER_KLEINE_KANS")){
         voor+=" Ook later vandaag blijft neerslag onwaarschijnlijk.";
       }

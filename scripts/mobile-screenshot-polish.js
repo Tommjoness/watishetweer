@@ -88,7 +88,7 @@ function nachtLabelVarianten(label){
 function nachtAdviesMetHorizon(advies,horizonDagen){
   const t=String(advies||"").trim(),h=getal(horizonDagen);if(!t||h===null||h<3)return t;
   const klein=t.charAt(0).toLowerCase()+t.slice(1);
-  return h>=5?"Globale indicatie: "+klein:"Voorlopige indicatie: "+klein;
+  return h>=5?"Later in de week: "+klein:"Voorlopig "+klein;
 }
 function dagdeelVanUur(tijd){
   const m=/^(\d{2}):(\d{2})$/.exec(String(tijd||""));if(!m)return null;
@@ -111,19 +111,20 @@ function tijdVanMinuut(min){
    uitsluitend de daadwerkelijk gunstige modeluren en trekt één uur van dat
    kunstmatige eindpunt af. Voor verre nachten verdwijnen exacte kloktijden weer
    naar dagdelen, zodat de tekst niet preciezer oogt dan de forecast-horizon. */
-function corrigeerNachtVensterBron(tekst,horizonDagen){
-  const t=String(tekst||"").trim(),h=getal(horizonDagen);
+function corrigeerNachtVensterBron(tekst,horizonDagen,score){
+  const t=String(tekst||"").trim(),h=getal(horizonDagen),s=getal(score),relatief=s!==null&&s<4;
   const m=/^Beste periode\s+(\d{2}:\d{2})[–-](\d{2}:\d{2})$/i.exec(t);
   if(!m)return t;
   const eind=minuutVanTijd(m[2]);if(eind===null)return t;
   const werkelijkEind=tijdVanMinuut(eind-60),start=m[1];
   if(h!==null&&h>=3){
     const a=dagdeelVanUur(start),b=dagdeelVanUur(werkelijkEind);
-    if(!a||!b)return h>=5?"Globale indicatie voor het gunstigste zicht":"Voorlopige indicatie voor het gunstigste zicht";
+    if(!a||!b)return relatief?"Relatief gunstigste zicht":"Gunstigste zicht";
     const deel=a===b?"in de "+a:"van de "+a+" tot de "+b;
+    if(relatief)return "Relatief gunstigste zicht "+deel;
     return h>=5?"Waarschijnlijk gunstigste zicht "+deel:"Gunstigste zicht "+deel;
   }
-  return "Beste modeluren "+start+"–"+werkelijkEind;
+  return (relatief?"Relatief gunstigste modeluren ":"Beste modeluren ")+start+"–"+werkelijkEind;
 }
 
 /* Eén eigenaar voor de zichtbare Nachtzicht-rijen. De canonieke berekening blijft
@@ -150,7 +151,7 @@ function verbeterNachtzicht(){
     if(advies){
       const delen=String(advies.textContent||"").split(/\s+·\s+/),venster=delen.length>1?delen.slice(1).join(" · "):"";
       const oordeel=zichtbaar===null?(delen[0]||advies.textContent):nachtOordeelGetoond(zichtbaar);
-      const hoofd=nachtAdviesMetHorizon(oordeel,h),detail=venster?corrigeerNachtVensterBron(venster,h):"";
+      const hoofd=nachtAdviesMetHorizon(oordeel,h),detail=venster?corrigeerNachtVensterBron(venster,h,zichtbaar):"";
       advies.textContent=detail?hoofd+" · "+detail:hoofd;
     }
     if(bew){

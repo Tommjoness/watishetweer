@@ -37,15 +37,17 @@ assert.equal(p.nachtBalkPercentageGetoond(6.4),60);
 assert.equal(p.nachtBalkPercentageGetoond(6.6),70);
 assert.deepEqual(p.nachtLabelVarianten("ma op di"),{lang:"ma op di",kort:"ma–di"});
 assert.equal(p.nachtAdviesMetHorizon("Goed",2),"Goed");
-assert.equal(p.nachtAdviesMetHorizon("Goed",3),"Voorlopige indicatie: goed");
-assert.equal(p.nachtAdviesMetHorizon("Goed",5),"Globale indicatie: goed");
+assert.equal(p.nachtAdviesMetHorizon("Goed",3),"Voorlopig goed");
+assert.equal(p.nachtAdviesMetHorizon("Goed",5),"Later in de week: goed");
 
 /* Open-Meteo hourly cloud_cover is een puntwaarde op het genoemde uur. De oude
    renderer maakte van goede punten om 22:00 en 23:00 ten onrechte een venster
    tot 00:00. Checkpoint 50 mag alleen de werkelijk goede modeluren claimen. */
 assert.equal(p.corrigeerNachtVensterBron("Beste periode 22:00–00:00",0),"Beste modeluren 22:00–23:00");
+assert.equal(p.corrigeerNachtVensterBron("Beste periode 22:00–00:00",0,3),"Relatief gunstigste modeluren 22:00–23:00");
 assert.equal(p.corrigeerNachtVensterBron("Beste periode 23:00–02:00",1),"Beste modeluren 23:00–01:00");
 assert.equal(p.corrigeerNachtVensterBron("Beste periode 22:00–00:00",3),"Gunstigste zicht in de avond");
+assert.equal(p.corrigeerNachtVensterBron("Beste periode 22:00–00:00",3,3),"Relatief gunstigste zicht in de avond");
 assert.equal(p.corrigeerNachtVensterBron("Beste periode 23:00–02:00",5),"Waarschijnlijk gunstigste zicht van de avond tot de nacht");
 assert.equal(p.corrigeerNachtVensterBron("Geen goed zichtvenster door bewolking",0),"Geen goed zichtvenster door bewolking");
 

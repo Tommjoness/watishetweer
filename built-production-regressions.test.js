@@ -34,6 +34,11 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  ok(/Later vandaag loopt de neerslagkans op tot 65%/.test(t),"productiebriefing verbergt een latere neerslagpiek niet",t);
 }
 {
+ const {api,bak}=laadKern(390),d=bouw({pp:()=>100,pr:()=>1,nu:1,som:12});zetBasis(api,d);api.briefing();const t=tekst(bak.brief);
+ ok(/Ook later vandaag blijft de neerslagkans zeer groot/.test(t),"een al maximale actuele neerslagkans wordt niet nogmaals als stijging beschreven",t);
+ ok(!/loopt de neerslagkans op tot 100%/.test(t),"100 procent nu kan later niet meer oplopen tot 100 procent",t);
+}
+{
  const {api,bak}=laadKern(390),d=bouw({temp:(u,dag)=>dag===1&&u===22?38:dag===1&&u===14?35:29});
  d.current.time="2026-07-22T19:00";d.current.temperature_2m=29;d.daily.temperature_2m_max[1]=38;
  const i=d.hourly.time.indexOf("2026-07-22T19:00");Object.assign(api.S,{d,i0:i,op:Date.now(),lat:40.42,lon:-3.70,label:"Madrid",dag:null,bereik:24,klokOverride:new Date("2026-07-22T17:05:00Z"),klokInstantOverride:null});

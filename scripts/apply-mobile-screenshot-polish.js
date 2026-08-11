@@ -41,7 +41,7 @@ const SENIOR_NACHT_SIGNATURE='const basisNachten=nachten;\nnachten=function(){\n
    in de canonieke renderer exact aangescherpt: temperatuurlabels mogen niet in
    de x-aszone zakken en het tijdlabel direct onder de rode nu-lijn vervalt. */
 const GRAFIEK_MOBIEL_OUD='  const W=M?380:900, H=M?292:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?20:22, bh=M?11:16;\n  const pt=M?72:76, ih=M?166:160, pb=pt+ih;';
-const GRAFIEK_MOBIEL_NIEUW='  const W=M?380:900, H=M?284:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?20:22, bh=M?11:16;\n  const pt=M?70:76, ih=M?158:160, pb=pt+ih;';
+const GRAFIEK_MOBIEL_NIEUW='  const W=M?380:900, H=M?250:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?18:22, bh=M?10:16;\n  const pt=M?59:76, ih=M?145:160, pb=pt+ih;';
 const GRAFIEK_LABEL_PAST_OUD='      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val<=pb-3;';
 const GRAFIEK_LABEL_PAST_NIEUW='      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val+labelHoogte/2+4<=pb;';
 const GRAFIEK_TICK_OUD='    if(toonAs){\n      ticks+=';
@@ -145,7 +145,7 @@ for(const vereist of [
   "WeatherNowMobileScreenshotPolish","maan-fase-svg-v2","Temperatuur komende 3 uur","bron-bronnen",
   "WeatherNowQ1","q1-dag-mm","weerbriefing.plaatscache.q1","neerslagkans",
   "temperatuurTrend","q1-pop-hidden","Beste modeluren","verbeterNachtzicht",
-  "H=M?284:296","pt=M?70:76, ih=M?158:160","tijdLabelVrij=nuX==null",
+  "H=M?250:296","pt=M?59:76, ih=M?145:160","tijdLabelVrij=nuX==null",
   "val+labelHoogte/2+4<=pb","ruimBotsendeAslabelsOp","getBBox()"
 ]){
   if(!html.includes(vereist))throw new Error("Post-build invariant ontbreekt: "+vereist);

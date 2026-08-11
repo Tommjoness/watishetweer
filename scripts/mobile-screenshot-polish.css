@@ -40,6 +40,10 @@ footer .bron-bronnen .bronitem{
 }
 
 @media(max-width:900px){
+  /* De neerslagtegel heeft net als de andere tegels een korte duiding. Zonder
+     die regel leek een natte waarde onaf en was 'Droog' onnodig bot. */
+  #popsub{display:block}
+
   /* Nachtzicht blijft vier duidelijke kolommen houden, maar gebruikt minder
      vaste breedte. Bewolking krijgt nog steeds genoeg ruimte voor de volledige
      kop; score en balk behouden de bestaande harde 8 px visuele scheiding. */
