@@ -1,6 +1,8 @@
 /* Checkpoint 25% van de 27-punten-eindronde.
-   Alleen: neerslagkans + hoeveelheid en sneller terugkeren naar recent bekeken plaatsen.
-   Kans en hoeveelheid blijven twee onafhankelijke bronvelden; 0 mm forceert nooit 0%. */
+   Scope: temperatuurtrend komende drie uur, conditionele korte-termijnneerslag,
+   kans + hoeveelheid zonder semantische vermenging, en meetbare laadoptimalisatie.
+   Geen temperatuurinterpolatie: het dichtstbijzijnde echte uurlijkse modelpunt
+   rond nu + drie verstreken uren wordt gebruikt. */
 (function(root){
 "use strict";
 
@@ -10,6 +12,8 @@ const MM_MEETBAAR=0.1;
 const CACHE_KEY="weerbriefing.plaatscache.q1";
 const CACHE_MAX=3;
 const CACHE_VERS_MS=10*60*1000;
+const TREND_UREN=3;
+const TREND_MAX_AFWIJKING_MIN=45;
 
 function mmTekst(v){
   const n=getal(v);
@@ -25,11 +29,14 @@ function tooltipNeerslag(kans,mm){
   return {kans:kansTekst,hoeveelheid,waarde:kansTekst+(hoeveelheid?" · "+hoeveelheid:"")};
 }
 
-function dagNeerslagPresentatie(analyse,kansHoofdFn,hoeveelheidFn){
-  const a=analyse||{};
-  const hoofd=typeof kansHoofdFn==="function"?String(kansHoofdFn(a)||"–"):"–";
-  const mm=getal(a.hoeveelheid);
-  const hoeveelheid=a.genoeg&&mm!==null&&mm>=MM_MEETBAAR
+/* Voor de zevendaagse zichtbare neerslagkolom worden de twee officiële daily
+   velden naast elkaar gehouden: probability_max voor de kans en precipitation_sum
+   voor de hoeveelheid. Een afgeronde 0,0 mm verandert de bronkans nooit. */
+function dagNeerslagPresentatie(kans,dagMm,kansHoofdFn,hoeveelheidFn){
+  const k=getal(kans),mm=getal(dagMm),genoeg=k!==null||mm!==null;
+  const a={genoeg,kans:k,hoeveelheid:mm};
+  const hoofd=typeof kansHoofdFn==="function"?String(kansHoofdFn(a)||"–"):(k===null?"–":Math.round(clamp(k,0,100))+"%");
+  const hoeveelheid=mm!==null&&mm>=MM_MEETBAAR
     ? (typeof hoeveelheidFn==="function"?hoeveelheidFn(mm):mmTekst(mm)) : "";
   return {hoofd,hoeveelheid};
 }
@@ -50,7 +57,101 @@ function cacheSnoei(obj){
     .slice(0,CACHE_MAX));
 }
 
-const api={mmTekst,tooltipNeerslag,dagNeerslagPresentatie,cacheSleutel,cacheIsVers,cacheSnoei,MM_MEETBAAR,CACHE_VERS_MS};
+function parseLokaleTijd(tijd){
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(tijd||""));
+  return m?{jaar:+m[1],maand:+m[2],dag:+m[3],uur:+m[4],minuut:+m[5]}:null;
+}
+function zoneDelen(ms,tijdzone){
+  if(!tijdzone||typeof Intl==="undefined"||!Intl.DateTimeFormat)return null;
+  try{
+    const delen=new Intl.DateTimeFormat("en-CA",{timeZone:tijdzone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(new Date(ms));
+    const p={};delen.forEach(x=>{if(x.type!=="literal")p[x.type]=Number(x.value);});
+    return [p.year,p.month,p.day,p.hour,p.minute,p.second].every(Number.isFinite)?p:null;
+  }catch(e){return null;}
+}
+function zoneOffset(ms,tijdzone){
+  const p=zoneDelen(ms,tijdzone);if(!p)return null;
+  return Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second)-Math.floor(ms/1000)*1000;
+}
+function zelfdeLokaleTijd(p,d){
+  return !!p&&!!d&&p.year===d.jaar&&p.month===d.maand&&p.day===d.dag&&p.hour===d.uur&&p.minute===d.minuut;
+}
+
+/* Een lokale kloktekst kan tijdens de najaarsomslag twee echte instants hebben.
+   Daarom verzamelen we alle offsets die rond die datum in de IANA-zone gelden en
+   accepteren uitsluitend kandidaten die terugformatteren naar exact dezelfde
+   lokale kloktekst. Zo wordt 02:00 (zomertijd) niet verward met 02:00 (wintertijd).
+   Niet-bestaande tijden tijdens de voorjaarssprong leveren geen kandidaat op. */
+function lokaleInstantKandidaten(tijd,tijdzone,utcOffsetSeconden){
+  const p=parseLokaleTijd(tijd);if(!p)return [];
+  const lokaalNaief=Date.UTC(p.jaar,p.maand-1,p.dag,p.uur,p.minuut);
+  if(tijdzone&&typeof Intl!=="undefined"&&Intl.DateTimeFormat){
+    const offsets=new Set();
+    for(let h=-48;h<=48;h+=6){
+      const off=zoneOffset(lokaalNaief+h*3600000,tijdzone);
+      if(Number.isFinite(off))offsets.add(off);
+    }
+    const kandidaten=[];
+    offsets.forEach(off=>{
+      const ms=lokaalNaief-off;
+      if(zelfdeLokaleTijd(zoneDelen(ms,tijdzone),p))kandidaten.push(ms);
+    });
+    const uniek=[...new Set(kandidaten)].sort((a,b)=>a-b);
+    if(uniek.length)return uniek;
+  }
+  const off=getal(utcOffsetSeconden);
+  return [lokaalNaief-(off===null?0:off*1000)];
+}
+
+/* De uurreeks staat in forecastvolgorde. Bij een dubbel lokaal uur kiezen we
+   voor het eerste voorkomen de vroegste kandidaat en voor het tweede de volgende
+   kandidaat, waardoor de resulterende instants strikt oplopen. */
+function uurInstants(tijden,tijdzone,utcOffsetSeconden){
+  const uit=[],reeks=Array.isArray(tijden)?tijden:[];
+  let vorige=-Infinity;
+  for(const tijd of reeks){
+    const kandidaten=lokaleInstantKandidaten(tijd,tijdzone,utcOffsetSeconden);
+    let gekozen=kandidaten.find(ms=>ms>vorige+1000);
+    if(!Number.isFinite(gekozen)){uit.push(null);continue;}
+    uit.push(gekozen);vorige=gekozen;
+  }
+  return uit;
+}
+
+function temperatuurTrend(data,nuInstantMs){
+  const d=data||{},h=d.hourly||{},c=d.current||{};
+  const vanRuw=getal(c.temperature_2m),nu=getal(nuInstantMs);
+  if(vanRuw===null||nu===null||!Array.isArray(h.time)||!Array.isArray(h.temperature_2m))return {genoeg:false};
+  const instants=uurInstants(h.time,d.timezone,d.utc_offset_seconds),doel=nu+TREND_UREN*3600000;
+  let beste=null;
+  for(let i=0;i<instants.length;i++){
+    const ms=instants[i],temp=getal(h.temperature_2m[i]);
+    if(!Number.isFinite(ms)||temp===null||ms<nu)continue;
+    const verschil=Math.abs(ms-doel);
+    if(!beste||verschil<beste.verschil||(verschil===beste.verschil&&ms>beste.ms))beste={i,ms,temp,verschil};
+  }
+  if(!beste||beste.verschil>TREND_MAX_AFWIJKING_MIN*60000)return {genoeg:false};
+  const van=Math.round(vanRuw),naar=Math.round(beste.temp);
+  return {
+    genoeg:true,van,naar,
+    richting:naar>van?"stijgt":naar<van?"daalt":"gelijk",
+    doelMs:doel,puntMs:beste.ms,puntTijd:h.time[beste.i],
+    afwijkingMin:Math.round(beste.verschil/60000)
+  };
+}
+
+function neerslagTegelRelevant(analyse){
+  const a=analyse||{},k=getal(a.kans),mm=getal(a.hoeveelheid);
+  if(a.currentWet||a.status==="NEERSLAG_NU")return true;
+  if(!a.genoeg)return false;
+  return (k!==null&&k>=30)||(mm!==null&&mm>=MM_MEETBAAR);
+}
+
+const api={
+  mmTekst,tooltipNeerslag,dagNeerslagPresentatie,cacheSleutel,cacheIsVers,cacheSnoei,
+  parseLokaleTijd,lokaleInstantKandidaten,uurInstants,temperatuurTrend,neerslagTegelRelevant,
+  MM_MEETBAAR,CACHE_VERS_MS,TREND_UREN,TREND_MAX_AFWIJKING_MIN
+};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowQ1=api;
 
@@ -58,6 +159,7 @@ if(typeof document==="undefined"||typeof S==="undefined")return;
 
 const perf=root.WeatherNowQ1Performance={cacheHits:0,geocodeCacheHits:0,lastCachePaintMs:null,lastNetworkMs:null};
 const nuMs=()=>root.performance&&typeof root.performance.now==="function"?root.performance.now():Date.now();
+const trendNuMs=()=>S.klokInstantOverride&&typeof S.klokInstantOverride.getTime==="function"?S.klokInstantOverride.getTime():Date.now();
 
 function leesCache(){try{return cacheSnoei(ls.get(CACHE_KEY,{}));}catch(e){return {};}}
 function schrijfCache(obj){try{ls.set(CACHE_KEY,cacheSnoei(obj));}catch(e){}}
@@ -70,9 +172,9 @@ function bewaarCache(lat,lon,label,land){
 
 /* Audit van het bestaande laadpad: de hoofdforecast is de kritieke request;
    luchtkwaliteit start al parallel en waarschuwingen komen na de eerste render.
-   We maken de hoofdrequest daarom niet zwaarder. Voor een recent bekeken plaats
-   wordt exact dezelfde coördinaatgebonden data direct getekend, terwijl de gewone
-   netwerkrefresh op de achtergrond gewoon doorgaat. */
+   Een recent bekeken plaats kan daarom uit exact die coördinaatgebonden cache
+   direct tekenen, terwijl de gewone netwerkrefresh doorgaat. De canonieke
+   laadTeller/AbortController-logica blijft eigenaar van racebescherming. */
 if(typeof load==="function"){
   const basisLoad=load;
   load=async function(lat,lon,label,stil,opslaan,land){
@@ -104,9 +206,8 @@ if(typeof load==="function"){
   };
 }
 
-/* Herhaalde zoektermen hoeven binnen dezelfde tab niet opnieuw naar de
-   geocoding-API. Dit verandert geen debounce of resultaten en voorkomt alleen
-   identieke netwerkvragen. */
+/* Herhaalde identieke zoekvragen hoeven binnen dezelfde tab niet opnieuw naar
+   Open-Meteo Geocoding. De bestaande debounce en inhoud van resultaten veranderen niet. */
 if(typeof j==="function"){
   const basisJ=j,zoekCache=new Map();
   j=async function(url,opt){
@@ -120,30 +221,70 @@ if(typeof j==="function"){
   };
 }
 
-/* Weekverwachting: kans blijft de hoofdwaarde. Alleen een werkelijk meetbare
-   modelhoeveelheid krijgt een tweede, rustige regel; 0,0 mm wordt nooit getoond. */
+function renderTemperatuurTrend(){
+  const waarde=document.getElementById("prec"),stat=waarde&&waarde.parentElement,kop=stat&&stat.querySelector(".eyebrow"),sub=document.getElementById("precsub");
+  if(!waarde||!stat||!kop||!sub)return;
+  kop.textContent="Temperatuurtrend";
+  stat.classList.add("q1-temp-trend");
+  const t=temperatuurTrend(S.d,trendNuMs());
+  if(!t.genoeg){waarde.textContent="–";sub.textContent="Temperatuurtrend niet beschikbaar.";return;}
+  waarde.innerHTML=String(t.van)+" → "+String(t.naar)+"<s>°C</s>";
+  sub.textContent=t.richting==="stijgt"?"Stijgt de komende drie uur."
+    :t.richting==="daalt"?"Daalt de komende drie uur.":"Blijft vrijwel gelijk.";
+}
+
+function renderNeerslagTegel(){
+  const waarde=document.getElementById("pop"),stat=waarde&&waarde.parentElement,kop=stat&&stat.querySelector(".eyebrow"),sub=document.getElementById("popsub"),stats=stat&&stat.parentElement;
+  if(!waarde||!stat||!kop||!sub||!stats)return;
+  const interpretatie=root.WeatherNowInterpretatie,beleid=root.WeatherNowKansbeleidV3;
+  const a=interpretatie&&typeof interpretatie.analyseerNeerslagData==="function"
+    ?interpretatie.analyseerNeerslagData(S.d,60,weatherNowActueleLokaleTijd()):null;
+  const relevant=neerslagTegelRelevant(a);
+  stat.style.display=relevant?"":"none";
+  stat.setAttribute("aria-hidden",relevant?"false":"true");
+  stats.classList.toggle("q1-pop-hidden",!relevant);
+  if(!relevant)return;
+  kop.textContent=a&&a.currentWet?"Neerslag nu":"Neerslag komend uur";
+  const hoofd=beleid&&typeof beleid.kansHoofd==="function"?beleid.kansHoofd(a):"–";
+  const mm=getal(a&&a.hoeveelheid),detail=mm!==null&&mm>=MM_MEETBAAR?mmTekst(mm):"";
+  if(a&&a.currentWet&&hoofd==="–")waarde.textContent="Nu"+(detail?" · "+detail:"");
+  else if(/^\d+%$/.test(String(hoofd)))waarde.innerHTML=String(hoofd).replace("%","<s>%</s>")+(detail?"<s> · "+detail+"</s>":"");
+  else waarde.innerHTML=String(hoofd||"–")+(detail?"<s> · "+detail+"</s>":"");
+  sub.textContent=beleid&&typeof beleid.komendUurTekst==="function"?beleid.komendUurTekst(a):"";
+}
+
+/* Dit is de enige Q1-wrapper rond meters(): de oude kwartierkop-wrapper uit de
+   screenshot-polish is verwijderd. De canonieke meters() rendert de overige
+   metrieken; Q1 bezit uitsluitend de twee productbeslissingen hierboven. */
+if(typeof meters==="function"){
+  const basisMeters=meters;
+  meters=function(){basisMeters();renderTemperatuurTrend();renderNeerslagTegel();};
+}
+
+/* Weekverwachting: de zichtbare kans en hoeveelheid komen beide uit de officiële
+   daily velden van dezelfde kalenderdag. 0,0 mm wordt niet getoond; 25% + 0,0 mm
+   blijft wel 25%. */
 if(typeof dagen==="function"){
   const basisDagen=dagen;
   dagen=function(){
     basisDagen();
-    const interpretatie=root.WeatherNowInterpretatie,beleid=root.WeatherNowKansbeleidV3;
-    if(!interpretatie||!beleid)return;
+    const beleid=root.WeatherNowKansbeleidV3,day=S.d&&S.d.daily;
+    if(!beleid||!day)return;
     document.querySelectorAll("#days .row.day:not(.kop)").forEach(rij=>{
-      const i=Number(rij.dataset.i),a=interpretatie.analyseerDagData(S.d,i,weatherNowActueleLokaleTijd());
+      const i=Number(rij.dataset.i),kans=getal(day.precipitation_probability_max&&day.precipitation_probability_max[i]),mm=getal(day.precipitation_sum&&day.precipitation_sum[i]);
       const kansEl=rij.querySelector(".drain");if(!kansEl)return;
-      const p=dagNeerslagPresentatie(a,beleid.kansHoofd,beleid.hoeveelheidTekst);
+      const p=dagNeerslagPresentatie(kans,mm,beleid.kansHoofd,beleid.hoeveelheidTekst);
       kansEl.textContent=p.hoofd;
       if(p.hoeveelheid){
         const small=document.createElement("small");small.className="q1-dag-mm";small.textContent=p.hoeveelheid;kansEl.appendChild(small);
-        kansEl.title=(kansEl.title?kansEl.title+". ":"")+"Verwachte hoeveelheid: "+p.hoeveelheid;
+        kansEl.title=(kansEl.title?kansEl.title+". ":"")+"Verwachte daghoeveelheid: "+p.hoeveelheid;
       }
     });
   };
 }
 
-/* De bestaande tooltip blijft zes regels hoog. De neerslagregel krijgt alleen
-   meer informatie wanneer er meetbare mm zijn: '65% · 1,4 mm'. Bij 0 mm blijft
-   uitsluitend de echte bronkans staan, dus bijvoorbeeld 8% en nooit geforceerd 0%. */
+/* De bestaande tooltip blijft compact. De neerslagregel combineert alleen bij
+   meetbare hoeveelheid de twee onafhankelijke bronvelden: '65% · 1,4 mm'. */
 function verrijkTooltip(ev){
   const svg=document.getElementById("chart"),g=document.getElementById("scrub"),G=S.geo;
   if(!svg||!g||!G||g.style.display==="none"||!G.n||!Number.isFinite(G.cw)||G.cw<=0)return;
@@ -165,7 +306,7 @@ if(typeof etmaal==="function"){
     G.Q1MM=[];
     for(let k=0;k<G.n;k++){
       const v=getal(h.precipitation&&h.precipitation[start+k]);
-      G.Q1MM.push(v===null||v<0?null:v);
+      G.Q1MM.push(G.P&&G.P[k]==null?null:(v===null||v<0?null:v));
     }
   };
 }
