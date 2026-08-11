@@ -58,6 +58,10 @@ async function controleer(type,naam,breedte){
     const url=`http://127.0.0.1:${server.address().port}/`;
     await page.goto(url,{waitUntil:"load"});
     await page.waitForFunction(()=>document.querySelector('#chart g[data-q4-rain-periods]')&&window.S&&S.geo&&Array.isArray(S.geo.MM),null,{timeout:10000});
+    await page.evaluate(()=>{
+      if(typeof chartHint!=="function")throw new Error("Actieve chartHint()-owner ontbreekt in definitieve artifact.");
+      chartHint();
+    });
 
     const resultaat=await page.evaluate(()=>{
       const svg=document.getElementById("chart"),g=S.geo;
@@ -91,7 +95,7 @@ async function controleer(type,naam,breedte){
     assert(resultaat.teksten.some(t=>t.includes("20:00–22:00")&&t.includes("0,5 mm")),naam+" "+breedte+": tweede periode moet afzonderlijk blijven");
     assert.equal(resultaat.kansGecentreerd,true,naam+" "+breedte+": procentlabels moeten bij hun eigen tijdstip staan");
     assert.equal(resultaat.mmUitgelijnd,true,naam+" "+breedte+": regenstrook moet exact dezelfde uurlijkse bronwaarden gebruiken");
-    assert.equal(resultaat.hint,"Selecteer een punt in de grafiek voor details.",naam+" "+breedte+": grafiekhint moet invoermethode-neutraal zijn");
+    assert.equal(resultaat.hint,"Selecteer een punt in de grafiek voor details.",naam+" "+breedte+": actieve chartHint()-owner moet invoermethode-neutraal zijn");
     assert.equal(resultaat.daghint,"Kies een dag om die verwachting in de grafiek te bekijken.",naam+" "+breedte+": daghint moet invoermethode-neutraal zijn");
     assert.equal(resultaat.windkop,"Windstoten nu",naam+" "+breedte+": actuele windstootkop moet ondubbelzinnig zijn");
     assert(!resultaat.dagteksten.some(t=>/rond \d{1,2}:\d{2}/.test(t)),naam+" "+breedte+": dagregels mogen geen minuutprecisie suggereren");
