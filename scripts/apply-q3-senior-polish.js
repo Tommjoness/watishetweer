@@ -12,6 +12,8 @@ const css=fs.readFileSync(path.join(__dirname,"q3-senior-polish.css"),"utf8");
 let html=fs.readFileSync(htmlPad,"utf8");
 
 const CSS_MARK="/* ===== CHECKPOINT 75 Q3 CSS ===== */";
+const METERS_OWNER_SIG='const basisMeters=meters;';
+const metersOwnersVoor=html.split(METERS_OWNER_SIG).length-1;
 const CLOUD_OLD='  if(n>=95)return "Vrijwel geheel bewolkt";';
 const CLOUD_NEW='  if(n===100)return "Geheel bewolkt";\n  if(n>=95)return "Vrijwel geheel bewolkt";';
 const UV_OLD=[
@@ -44,6 +46,7 @@ const UV_NEW=[
 ].join("\n");
 
 if(html.includes(CSS_MARK))throw new Error("Checkpoint-75 polish is al toegepast.");
+if(metersOwnersVoor<1)throw new Error("Bestaande meters-owner ontbreekt vóór checkpoint 75.");
 if((html.split(CLOUD_OLD).length-1)!==1)throw new Error("Bewolkingsanker voor checkpoint 75 ontbreekt of is dubbel.");
 if((html.split(UV_OLD).length-1)!==1)throw new Error("UV-anker voor checkpoint 75 ontbreekt of is dubbel.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor checkpoint 75.");
@@ -53,6 +56,8 @@ if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlb
 html=html.replace(CLOUD_OLD,CLOUD_NEW);
 html=html.replace(UV_OLD,UV_NEW);
 html=html.replace("</style>","\n"+CSS_MARK+"\n"+css+"\n/* ===== EINDE CHECKPOINT 75 Q3 CSS ===== */\n</style>");
+const metersOwnersNa=html.split(METERS_OWNER_SIG).length-1;
+if(metersOwnersNa!==metersOwnersVoor)throw new Error("Checkpoint 75 heeft het aantal bestaande meters-owners gewijzigd: "+metersOwnersVoor+" → "+metersOwnersNa+".");
 
 for(const vereist of [
   'if(n===100)return "Geheel bewolkt"',
@@ -100,4 +105,4 @@ sw=sw.replace(/watishetweer-[0-9a-f]{12}/g,versie);
 if(!sw.includes(versie))throw new Error("Checkpoint-75 cachehash niet toegepast.");
 fs.writeFileSync(swPad,sw,"utf8");
 
-console.log("Checkpoint 75% in-place toegepast: numerieke leesbaarheid, 100% bewolking en tijdgebonden UV; cache "+versie+".");
+console.log("Checkpoint 75% in-place toegepast: numerieke leesbaarheid, 100% bewolking en tijdgebonden UV; bestaande meters-owners "+metersOwnersVoor+" ongewijzigd; cache "+versie+".");
