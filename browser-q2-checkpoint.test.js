@@ -128,7 +128,7 @@ async function controleer(page,naam,breedte){
     const teksten=[...chart.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&rect(el).w>0&&rect(el).h>0).map(el=>({tekst:(el.textContent||"").trim(),box:rect(el),font:el.getAttribute("font-family")||"",fill:el.getAttribute("fill")||""}));
     const bots=[];
     for(let i=0;i<teksten.length;i++)for(let j=i+1;j<teksten.length;j++){
-      if(overlapt(teksten[i].box,teksten[j].box))bots.push([teksten[i].tekst,teksten[j].tekst]);
+      if(overlapt(teksten[i].box,teksten[j].box))bots.push({a:teksten[i],b:teksten[j]});
     }
     const gewone=teksten.filter(x=>/^-?\d+°$/.test(x.tekst)&&/Bodoni/i.test(x.font));
     const nu=teksten.filter(x=>/^nu(?:\s-?\d+°)?$/i.test(x.tekst));
@@ -158,7 +158,7 @@ async function controleer(page,naam,breedte){
     const score=Number(m[1]);
     assert.equal(oordeelUitAdvies(rij.advies),oordeelVoorScore(score),`${naam} ${breedte}px nacht ${i}: oordeel volgt zichtbare score`);
     assert.equal(rij.barWidth,score*10,`${naam} ${breedte}px nacht ${i}: balk volgt zichtbare score`);
-    assert.ok(rij.scoreBarGap>=4,`${naam} ${breedte}px nacht ${i}: score en balk hebben ruimte (${rij.scoreBarGap}px)`);
+    assert.ok(rij.scoreBarGap>=8,`${naam} ${breedte}px nacht ${i}: score en balk hebben minimaal 8px ruimte (${rij.scoreBarGap}px)`);
     assert.ok(rij.rowRight<=r.nachtRight+1,`${naam} ${breedte}px nacht ${i}: rij blijft binnen Nachtzicht`);
     assert.ok(rij.cloudRight<=r.nachtRight+1&&rij.cloudLeft>=0,`${naam} ${breedte}px nacht ${i}: bewolking blijft binnen kolom`);
     assert(/^\d{1,3}%$/.test(rij.cloud),`${naam} ${breedte}px nacht ${i}: mobiele/compacte bewolking blijft helder percentage`);
@@ -167,11 +167,11 @@ async function controleer(page,naam,breedte){
 
   const mobiel=breedte<760;
   assert.equal(r.viewBox.w,mobiel?380:900,`${naam} ${breedte}px: grafiekbreedte blijft canoniek`);
-  assert.equal(r.viewBox.h,mobiel?276:296,`${naam} ${breedte}px: mobiele grafiek is alleen verticaal compacter`);
+  assert.equal(r.viewBox.h,mobiel?284:296,`${naam} ${breedte}px: mobiele grafiek is compacter zonder labelruimte op te offeren`);
   assert.deepEqual(r.nu,["nu 21°"],`${naam} ${breedte}px: exact één actuele temperatuur in grafiek`);
   assert.ok(r.tempLabels>=6,`${naam} ${breedte}px: voldoende zichtbare temperatuurreferenties`);
   assert.deepEqual(r.tempBuiten,[],`${naam} ${breedte}px: temperatuurcijfers blijven binnen grafiek`);
-  assert.deepEqual(r.bots,[],`${naam} ${breedte}px: zichtbare grafiekteksten botsen niet`);
+  assert.deepEqual(r.bots,[],`${naam} ${breedte}px: zichtbare grafiekteksten botsen niet; botsingen: ${JSON.stringify(r.bots)}`);
 }
 
 (async()=>{
