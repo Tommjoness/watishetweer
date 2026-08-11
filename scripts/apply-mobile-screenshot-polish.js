@@ -20,17 +20,27 @@ const JS_MARK="/* ===== MOBILE SCREENSHOT POLISH 20260810B ===== */";
 const Q1_JS_MARK="/* ===== CHECKPOINT 25 Q1 ===== */";
 const START="/* ---------- start ---------- */";
 const RECENT_OLD='<div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">';
-const RECENT_NEW='<div class="eyebrow">Afgelopen kwartier</div><div class="sval" id="prec">';
+const TREND_NEW='<div class="eyebrow">Temperatuurtrend</div><div class="sval" id="prec">';
+const LEGACY_RECENT_START='  const recenteNeerslag=eindigGetal(c.precipitation);';
+const LEGACY_RECENT_END='  /* De tegel toont de kans voor precies het eerstvolgende uur (i+1). De subtekst';
 if(html.includes(CSS_MARK)||html.includes(JS_MARK)||html.includes(Q1_CSS_MARK)||html.includes(Q1_JS_MARK))throw new Error("Post-build polish is al geïnjecteerd.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor mobiele polish.");
 if((html.split(START).length-1)!==1)throw new Error("Startmarker ontbreekt of is dubbel voor mobiele polish.");
-if((html.split(RECENT_OLD).length-1)!==1)throw new Error("Statische kwartierkop ontbreekt of is dubbel in de bronartifact.");
+if((html.split(RECENT_OLD).length-1)!==1)throw new Error("Legacy recente-neerslagtegel ontbreekt of is dubbel in de bronartifact.");
+if((html.split(LEGACY_RECENT_START).length-1)!==1||(html.split(LEGACY_RECENT_END).length-1)!==1)throw new Error("Legacy recente-neerslaglogica ontbreekt of is dubbel in de bronartifact.");
 
-/* Maak de gebruikerszichtbare kop onderdeel van de definitieve HTML-artifact zelf.
-   De runtimecorrectie in mobile-screenshot-polish.js blijft bewust bestaan als
-   vangnet voor eventuele dynamische hertekening, maar de eerste render is hier
-   niet meer van afhankelijk. */
-html=html.replace(RECENT_OLD,RECENT_NEW);
+/* Productbeslissing checkpoint 25: de terugblik op recente neerslag bestaat niet
+   meer in de definitieve runtime. De bestaande bron-template bevat die historische
+   metriek nog, maar deze reeds bestaande post-buildstap is de enige artifactlaag
+   van de branch. We vervangen de tegel statisch en verwijderen het volledige oude
+   meters()-blok vóór de runtime-JS wordt gevalideerd. Er blijft dus geen verborgen
+   berekening over die later opnieuw een kwartierwaarde kan terugschrijven. */
+html=html.replace(RECENT_OLD,TREND_NEW);
+const legacyStart=html.indexOf(LEGACY_RECENT_START),legacyEind=html.indexOf(LEGACY_RECENT_END,legacyStart);
+if(legacyStart<0||legacyEind<=legacyStart)throw new Error("Legacy recente-neerslaglogica kon niet veilig worden afgebakend.");
+html=html.slice(0,legacyStart)
+  +'  /* Recente-neerslagterugblik verwijderd; #prec is nu exclusief van Q1 temperatuurtrend. */\n\n'
+  +html.slice(legacyEind);
 
 html=html.replace("</style>",
   "\n"+CSS_MARK+"\n"+mobileCss+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B CSS ===== */\n"
@@ -43,12 +53,14 @@ const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script
 if(!scripts.length)throw new Error("Geen inline script na mobiele polish.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:postbuild-"+(i+1)}));
 for(const vereist of [
-  "WeatherNowMobileScreenshotPolish","maan-fase-svg-v2","Afgelopen kwartier","bron-bronnen",
-  "WeatherNowQ1","q1-dag-mm","weerbriefing.plaatscache.q1","neerslagkans"
+  "WeatherNowMobileScreenshotPolish","maan-fase-svg-v2","Temperatuurtrend","bron-bronnen",
+  "WeatherNowQ1","q1-dag-mm","weerbriefing.plaatscache.q1","neerslagkans",
+  "temperatuurTrend","q1-pop-hidden"
 ]){
   if(!html.includes(vereist))throw new Error("Post-build invariant ontbreekt: "+vereist);
 }
-if(html.includes(RECENT_OLD))throw new Error("Oude statische kwartierkop staat nog in de productieartifact.");
+if(html.includes(RECENT_OLD)||html.includes("Afgelopen kwartier"))throw new Error("Verwijderde recente-neerslagtegel staat nog in de productieartifact.");
+if(html.includes(LEGACY_RECENT_START))throw new Error("Legacy recente-neerslagberekening staat nog in de productieartifact.");
 fs.writeFileSync(htmlPad,html,"utf8");
 
 /* build-weather.js maakt de serviceworker-cacheversie vóór deze gerichte laag.
