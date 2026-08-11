@@ -72,14 +72,14 @@ async function controleer(type,naam,breedte){
       });
       const mmUitgelijnd=g.MM.every((mm,i)=>{
         if(i===0||mm==null)return true;
-        const bron=S.d.hourly.time.indexOf(g.TI[i]);
-        return bron>=0&&Math.abs(Number(S.d.hourly.precipitation[bron])-Number(mm))<1e-9;
+        const bron=S.chartStart+i;
+        return Number.isInteger(bron)&&S.d.hourly.time[bron]===g.TI[i]&&Math.abs(Number(S.d.hourly.precipitation[bron])-Number(mm))<1e-9;
       });
       return {
         oudeStaven,oudeMm,teksten,kansGecentreerd,mmUitgelijnd,
         hint:(document.getElementById("charthint")||{}).textContent||"",
         daghint:(document.getElementById("dagenhint")||{}).textContent||"",
-        windkop:[...document.querySelectorAll(".stat span")].map(x=>x.textContent.trim()).find(x=>/^Windstoten/.test(x))||"",
+        windkop:[...document.querySelectorAll(".stat .eyebrow")].map(x=>x.textContent.trim()).find(x=>/^Windstoten/.test(x))||"",
         dagteksten:[...document.querySelectorAll("#days .dcond")].map(x=>x.textContent.trim()),
         h:Number(svg.getAttribute("viewBox").trim().split(/\s+/)[3])
       };
