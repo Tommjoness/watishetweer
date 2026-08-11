@@ -41,7 +41,9 @@ vervangBinnen(
   '  const tijd=a.eersteTijd?(()=>{const uur=Number(String(a.eersteTijd).slice(0,2));return Number.isFinite(uur)?(uur<6?" in de nacht":uur<12?" in de ochtend":uur<18?" in de middag":" in de avond"):"";})():"";',
   "dagverwachting zonder schijnprecisie"
 );
-vervangExact('el2.textContent="Houd de grafiek vast voor details.";','el2.textContent="Selecteer een punt in de grafiek voor details.";',"neutrale grafiekhint");
+/* De grafiekhint heeft vanaf Q4 één expliciete runtime-owner in
+   q4-rain-runtime.js. Geen tekstuele vervanging meer: die was statisch groen
+   terwijl de browser nog de historische functie uitvoerde. */
 vervangExact('Klik op een dag om die verwachting in de grafiek te laden.','Kies een dag om die verwachting in de grafiek te bekijken.',"neutrale daghint");
 vervangExact('<div class="eyebrow">Windstoten</div>','<div class="eyebrow">Windstoten nu</div>',"ondubbelzinnige windstootkop");
 
@@ -85,4 +87,4 @@ const swPad=path.join(OUT,"sw.js");let sw=fs.readFileSync(swPad,"utf8");
 if(!(sw.match(/watishetweer-[0-9a-f]{12}/g)||[]).length)throw new Error("Geen serviceworker-cachehash voor Q4 gevonden.");
 sw=sw.replace(/watishetweer-[0-9a-f]{12}/g,versie);fs.writeFileSync(swPad,sw,"utf8");
 
-console.log("Q4 toegepast: losse neerslagstaven weg, intervalperioden + totaal/piek, gecentreerde kanslabels, grovere dagtijd, neutrale hints en ruimere Nachtzicht-uitleg; cache "+versie+".");
+console.log("Q4 toegepast: losse neerslagstaven weg, intervalperioden + totaal/piek, gecentreerde kanslabels, grovere dagtijd, runtime-neutrale grafiekhint en ruimere Nachtzicht-uitleg; cache "+versie+".");
