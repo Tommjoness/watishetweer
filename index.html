@@ -1667,26 +1667,27 @@ function etmaal(start,n){
   T.forEach((v,i)=>{
     if(P[i]>0){
       const hgt=ih*0.42*(P[i]/100);
-      bars+=`<rect x="${x(i)-cw*0.3}" y="${pb-hgt}" width="${cw*0.6}" height="${hgt}" fill="${TEAL}" fill-opacity=".16"/>`;
+      const barBreed=cw*0.68;
+      bars+=`<rect x="${x(i)-barBreed/2}" y="${pb-hgt}" width="${barBreed}" height="${hgt}" fill="${TEAL}" fill-opacity=".16"/>`;
       /* De hoeveelheid staat laag ín een voldoende hoge kansstaaf. Boven de
          staaf deelde het label dezelfde zone met de temperatuurcurve en de
          temperatuurcijfers; bij aanhoudende regen werd dat onleesbaar. Een te
          lage staaf krijgt daarom geen los cijfer. De exacte hoeveelheid blijft
          altijd beschikbaar in de grafiektooltip. */
       const mm=MM[i];
-      /* Een kaal getal boven een staaf zegt niet wat het is. De eenheid erbij zodra
-         de kolom breed genoeg is; wordt het krapper dan alleen het getal, en bij een
-         week vervalt het helemaal in plaats van over de buren te lopen. */
+      /* De volledige eenheid staat in het toegankelijke label en in de tooltip.
+         Visueel komt "mm" alleen mee als dat echt binnen de staaf past; anders
+         blijft het decimale cijfer staan zonder over de buurstaaf uit te steken. */
       if(mm!=null&&mm>=0.1){
         /* De ruimte volgt uit de tekst zelf, niet uit een vast getal: "12,5 mm" is
            breder dan "2 mm", en een kolom is bij 24 uur ruim en bij een week smal.
            Past de eenheid niet, dan alleen het cijfer; past dat ook niet, dan niets. */
-        const fs = M?9.5:11, breed = t2 => t2.length*fs*0.6;
-        const vol = nl(mm)+" mm", kaal = nl(mm),maxBreed=cw*(M?1.35:1.45);
+        const fs = M?9:10, breed = t2 => t2.length*fs*0.6;
+        const vol = nl(mm)+" mm", kaal = nl(mm),maxBreed=Math.max(0,barBreed-4);
         const tekst = breed(vol)<=maxBreed ? vol : breed(kaal)<=maxBreed ? kaal : null;
         const tekstBreed=tekst?breed(tekst):0,links=x(i)-tekstBreed/2,rechts=x(i)+tekstBreed/2;
         if(hgt>=fs+7&&tekst&&links>=laatsteMmLabelRechts+3){
-        bars+=`<text x="${x(i)}" y="${pb-5}" text-anchor="middle" fill="${INK}"
+        bars+=`<text x="${x(i)}" y="${pb-5}" text-anchor="middle" fill="${INK}" aria-label="${nl(mm)} millimeter neerslag"
           font-family="DM Mono,monospace" font-size="${fs}" font-weight="500">${tekst}</text>`;
           laatsteMmLabelRechts=rechts;
         }

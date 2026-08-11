@@ -1906,15 +1906,15 @@ groep("Grafiek en hints");
     try{ api.etmaal(14,24); }catch(e){ stuk=e.message; }
     check("een natte dag laat de grafiek niet uitvallen",stuk===null,stuk);
     check("er staan staven bij neerslag",/<rect/.test(bak.chart.innerHTML));
-    check("de hoeveelheid staat met eenheid bij de staaf",
-      /">[\d,]+ mm</.test(bak.chart.innerHTML),
-      (bak.chart.innerHTML.match(/font-size="11"[^>]*>[^<]*/)||["niets"])[0]);
+    check("de hoeveelheid staat als cijfer in de staaf en houdt de eenheid toegankelijk",
+      /aria-label="[\d,]+ millimeter neerslag"[^>]*>[\d,]+(?: mm)?</.test(bak.chart.innerHTML),
+      (bak.chart.innerHTML.match(/aria-label="[^"]+"[^>]*>[^<]*/)||["niets"])[0]);
     const staven=[...bak.chart.innerHTML.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)" fill="var\(--teal\)"/g)]
       .map(m=>({x:+m[1],y:+m[2],w:+m[3],h:+m[4]}));
-    const mmLabels=[...bak.chart.innerHTML.matchAll(/<text x="([\d.]+)" y="([\d.]+)"[^>]*font-size="([\d.]+)" font-weight="500">[\d,]+ mm<\/text>/g)]
-      .map(m=>({x:+m[1],y:+m[2],fs:+m[3]}));
+    const mmLabels=[...bak.chart.innerHTML.matchAll(/<text x="([\d.]+)" y="([\d.]+)"[^>]*font-size="([\d.]+)" font-weight="500">([\d,]+(?: mm)?)<\/text>/g)]
+      .map(m=>({x:+m[1],y:+m[2],fs:+m[3],w:m[4].length*(+m[3])*0.6}));
     const labelsBuitenStaaf=mmLabels.filter(l=>!staven.some(s=>
-      l.x>=s.x&&l.x<=s.x+s.w&&l.y-l.fs>=s.y&&l.y<=s.y+s.h));
+      l.x-l.w/2>=s.x&&l.x+l.w/2<=s.x+s.w&&l.y-l.fs>=s.y&&l.y<=s.y+s.h));
     check("de hoeveelheid staat laag in een voldoende hoge staaf",
       mmLabels.length>0&&labelsBuitenStaaf.length===0
         && /y="\$\{pb-5\}"/.test(bronG)
@@ -1931,11 +1931,11 @@ groep("Grafiek en hints");
     api.etmaal(14,ber);
     // Alleen hoeveelheidslabels tellen: ze gebruiken mono, extra gewicht en
     // bevatten waar de ruimte het toelaat expliciet de mm-eenheid.
-    const heeft=/font-family="DM Mono,monospace" font-size="(?:9\.5|11)" font-weight="500">[\d,]+(?: mm)?/.test(bak.chart.innerHTML);
+    const heeft=/font-family="DM Mono,monospace" font-size="(?:9|10)" font-weight="500">[\d,]+(?: mm)?/.test(bak.chart.innerHTML);
     check(naam+": staaflabel "+(verwacht?"staat er":"wijkt"),heeft===verwacht,String(heeft));
   }
   check("de labelbreedte volgt uit de tekst, niet uit een vast getal",
-    /maxBreed=cw\*\(M\?1\.35:1\.45\)/.test(bronG)&&/breed\(vol\)<=maxBreed/.test(bronG));
+    /maxBreed=Math\.max\(0,barBreed-4\)/.test(bronG)&&/breed\(vol\)<=maxBreed/.test(bronG));
 
   /* Een gat in de reeks werd stilzwijgend nul graden, want y(null) rekent null als
      nul. De lijn dook dan naar de bodem en suggereerde een vorstnacht. */
