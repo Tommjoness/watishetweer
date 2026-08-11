@@ -17,21 +17,6 @@ chartHint=function(){
   if(el)el.textContent="Selecteer een punt in de grafiek voor details.";
 };
 
-/* Een reeds geopende, door een serviceworker gecontroleerde pagina vervangt zijn
-   bestaande DOM niet vanzelf wanneer een nieuwe worker via skipWaiting/claim de
-   controle overneemt. Dat verklaart hoe een oude tegel of kop nog zichtbaar kan
-   blijven nadat productie al een nieuw artifact serveert. Alleen sessies die bij
-   paginalaad al een controller hebben krijgen daarom één reload bij
-   controllerchange. Een eerste bezoek krijgt geen dubbele laadronde. */
-if("serviceWorker" in navigator&&navigator.serviceWorker.controller){
-  let q4VersieReload=false;
-  navigator.serviceWorker.addEventListener("controllerchange",()=>{
-    if(q4VersieReload)return;
-    q4VersieReload=true;
-    location.reload();
-  });
-}
-
 /* Bewolkingspercentages komen uit een model en suggereren bij 0–4% meer
    meetprecisie dan de hoofdtegel nodig heeft. De categorie eronder blijft de
    betekenis geven; in de grote waarde groeperen we alleen dit vrijwel wolkeloze
