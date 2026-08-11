@@ -38,11 +38,11 @@ function maakForecast(){
   d.current.visibility=20000;
   d.daily.sunshine_duration=d.daily.time.map(()=>6*3600);
 
-  /* Productie vraagt 24 uur historie + 168 uur toekomst. De fixture bootst die
-     192 punten exact na, zodat een toekomstige onbedoelde O(n)-regressie in de
-     echte datavorm meetelt in het budget. */
+  /* Productie vraagt 24 uur historie + 170 uur toekomst. Twee extra uur boven
+     exact zeven etmalen bewaren het volgende-00:00-grenspunt en een eventuele
+     najaars-DST-herhaling. De fixture bootst die 194 punten exact na. */
   const velden=Object.keys(h).filter(k=>Array.isArray(h[k]));
-  while(h.time.length<192){
+  while(h.time.length<194){
     const bron=24+(h.time.length%24),laatste=h.time[h.time.length-1];
     for(const veld of velden){
       if(veld==="time")continue;
@@ -51,8 +51,8 @@ function maakForecast(){
     }
     h.time.push(isoPlus(laatste,1));
   }
-  h.time=h.time.slice(0,192);
-  for(const veld of velden)if(veld!=="time")h[veld]=h[veld].slice(0,192);
+  h.time=h.time.slice(0,194);
+  for(const veld of velden)if(veld!=="time")h[veld]=h[veld].slice(0,194);
 
   d.minutely_15={
     time:["2026-07-22T13:00","2026-07-22T13:15","2026-07-22T13:30","2026-07-22T13:45","2026-07-22T14:00","2026-07-22T14:15","2026-07-22T14:30","2026-07-22T14:45"],
@@ -122,7 +122,7 @@ const mediaan=waarden=>waarden.slice().sort((a,b)=>a-b)[Math.floor(waarden.lengt
         }));
         assert.equal(resultaat.urls.length,1,`ronde ${ronde+1}: cold load doet exact één gezonde hoofdforecastaanvraag`);
         const forecastUrl=new URL(resultaat.urls[0]);
-        assert.equal(forecastUrl.searchParams.get("forecast_hours"),"168",`ronde ${ronde+1}: hoofdforecast is tot 168 toekomstige uren begrensd`);
+        assert.equal(forecastUrl.searchParams.get("forecast_hours"),"170",`ronde ${ronde+1}: hoofdforecast heeft veilige 170-uurs weekhorizon`);
         assert.equal(forecastUrl.searchParams.get("past_hours"),"24",`ronde ${ronde+1}: 24 uur historie blijft beschikbaar`);
         assert.equal(resultaat.dagen,7,`ronde ${ronde+1}: volledige zevendaagse tabel is al gerenderd binnen het budget`);
         assert(resultaat.nachten>=1,`ronde ${ronde+1}: Nachtzicht is al gerenderd binnen het budget`);
