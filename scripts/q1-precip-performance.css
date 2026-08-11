@@ -1,4 +1,4 @@
-/* Checkpoint 25%: extra neerslaghoeveelheid zonder nieuwe tabelkolom. */
+/* Checkpoint 25%: neerslaghoeveelheid en conditionele korte-termijntegel. */
 #days .drain .q1-dag-mm{
   display:block;
   margin-top:2px;
@@ -8,6 +8,20 @@
   color:var(--ink-45);
   white-space:nowrap;
 }
+
+/* De hero gebruikt in de uiteindelijke layout twee kolommen. Als de vierde
+   (korte-termijnneerslag) tegel bij droog weer verdwijnt, veranderen de zichtbare
+   even/oneven posities. Deze klasse herstelt dan uitsluitend borders/padding; er
+   wordt geen lege placeholder gehouden. */
+.dashrow-hero .stats.q1-pop-hidden .stat{border-right:1px solid var(--rule);padding-left:0;padding-right:22px}
+.dashrow-hero .stats.q1-pop-hidden .stat:nth-child(2),
+.dashrow-hero .stats.q1-pop-hidden .stat:nth-child(5),
+.dashrow-hero .stats.q1-pop-hidden .stat:nth-child(7),
+.dashrow-hero .stats.q1-pop-hidden .stat:nth-child(9){border-right:none;padding-left:22px;padding-right:0}
+
 @media(max-width:900px){
   #days .drain .q1-dag-mm{font-size:9.5px;margin-top:1px}
+  /* Met acht zichtbare tegels zijn vier volledige rijen rustiger dan zeven
+     halve tegels plus een UV-tegel over de volle breedte. */
+  .dashrow-hero .stats.q1-pop-hidden .stat.breed{grid-column:auto}
 }
