@@ -14,7 +14,9 @@ const html=fs.readFileSync(htmlPad,"utf8");
 for(const vereist of [
   "WeatherNowMobileScreenshotPolish",
   "maan-fase-svg-v2",
-  "Afgelopen kwartier",
+  "Temperatuurtrend",
+  "temperatuurTrend",
+  "q1-pop-hidden",
   "pollenEenheid",
   "grid-template-columns:62px 58px minmax(0,1fr) 76px",
   "bron-bronnen",
@@ -26,10 +28,13 @@ for(const vereist of [
 ]){
   if(!html.includes(vereist))throw new Error("Definitieve productie-invariant ontbreekt: "+vereist);
 }
-const oudeKop='<div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">';
-const nieuweKop='<div class="eyebrow">Afgelopen kwartier</div><div class="sval" id="prec">';
-if(html.includes(oudeKop))throw new Error("Oude statische kwartierkop staat nog in de definitieve artifact.");
-if((html.split(nieuweKop).length-1)!==1)throw new Error("Definitieve statische kwartierkop ontbreekt of is dubbel.");
+const oude15='<div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">';
+const oudeKwartier="Afgelopen kwartier";
+const trend='<div class="eyebrow">Temperatuurtrend</div><div class="sval" id="prec">';
+if(html.includes(oude15)||html.includes(oudeKwartier))throw new Error("Verwijderde recente-neerslagtegel staat nog in de definitieve artifact.");
+if((html.split(trend).length-1)!==1)throw new Error("Definitieve temperatuurtrendtegel ontbreekt of is dubbel.");
+if(html.includes("const recenteNeerslag=eindigGetal(c.precipitation)"))throw new Error("Legacy recente-neerslagberekening staat nog in de definitieve artifact.");
+if(html.includes("compactRecentLabel"))throw new Error("Legacy kwartier-wrapper staat nog in de definitieve artifact.");
 
 const CACHE_BRONNEN=[
   "index.html","manifest.json","icon-192.png","icon-512.png","icon-maskable-512.png",
