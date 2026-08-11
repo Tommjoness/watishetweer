@@ -1,4 +1,4 @@
-/* Checkpoint 25%: neerslaghoeveelheid en conditionele korte-termijntegel. */
+/* Checkpoint 25%: neerslaghoeveelheid en conditionele korte-termijnweergave. */
 #days .drain .q1-dag-mm{
   display:block;
   margin-top:2px;
@@ -8,6 +8,12 @@
   color:var(--ink-45);
   white-space:nowrap;
 }
+
+/* De twee-uurssectie verdwijnt alleen wanneer de centrale neerslaganalyse haar
+   als niet relevant classificeert. !important is hier bewust: nowcast() beheert
+   de SVG met een inline display-waarde; die mag een droge, verborgen sectie na
+   een hertekening niet opnieuw zichtbaar maken. */
+.q1-neerslag-hidden{display:none!important}
 
 /* De hero gebruikt in de uiteindelijke layout twee kolommen. Als de vierde
    (korte-termijnneerslag) tegel bij droog weer verdwijnt, veranderen de zichtbare
