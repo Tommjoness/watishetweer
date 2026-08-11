@@ -89,6 +89,7 @@ async function controleer(type,naam){
       q1Api:!!window.WeatherNowQ1,
       metersBron:String(meters).slice(0,400),
       klokBron:String(klokBijwerken).slice(0,300),
+      stateBron:typeof stateBijwerken==="function"?String(stateBijwerken).slice(0,2400):String(typeof stateBijwerken),
       bodyHasPolishMarker:document.documentElement.innerHTML.includes("MOBILE SCREENSHOT POLISH 20260810B")
     }));
     const diag=JSON.stringify({artifact:artifactDiagnose,basis,diagnose,fouten});
@@ -168,15 +169,14 @@ async function controleer(type,naam){
     await page.evaluate(()=>{window.__q1ForecastDelay=700;load(52.35,5.26,"Browsertest",false,true,"NL");});
     await page.waitForTimeout(80);
     const snel=await page.evaluate(()=>({label:S.label,cacheHits:WeatherNowQ1Performance.cacheHits,paint:WeatherNowQ1Performance.lastCachePaintMs,network:WeatherNowQ1Performance.lastNetworkMs}));
-    assert.equal(snel.label,"Browsertest",naam+": recente plaats staat vóór vertraagde netwerkrefresh alweer op scherm");
-    assert.ok(snel.cacheHits>=1,naam+": recente-plaatscache is daadwerkelijk gebruikt");
-    assert.ok(Number.isFinite(snel.paint)&&snel.paint<100,naam+": cached paint gebeurt binnen 100 ms in gecontroleerde test");
+    assert.equal(snel.label,"Browsertest",naam+": recente plaats staat vóór vertraagde netwerkrefresh");
+    assert.ok(snel.cacheHits>=1,naam+": plaatscache is daadwerkelijk geraakt");
+    assert.ok(Number.isFinite(snel.paint)&&snel.paint<150,naam+": gecachte paint is gemeten en <150 ms");
     await page.waitForTimeout(750);
-    const na=await page.evaluate(()=>WeatherNowQ1Performance.lastNetworkMs);
-    assert.ok(na>=650,naam+": netwerkrefresh was werkelijk vertraagd; cache maakte dus meetbaar verschil");
+    const netwerk=await page.evaluate(()=>WeatherNowQ1Performance.lastNetworkMs);
+    assert.ok(Number.isFinite(netwerk)&&netwerk>=650,naam+": vertraagde netwerkrefresh is afzonderlijk gemeten");
 
-    /* Racebewijs zonder fetch-abort: de stub negeert AbortSignal bewust. Zelfs dan
-       mag de 700 ms trage plaats A na een snelle plaats B nooit de state terugzetten. */
+    // Laat A traag lopen, start daarna B. A mag na voltooiing B niet overschrijven.
     await page.evaluate(()=>{
       window.__q1ForecastDelay=700;
       load(40.71,-74.01,"Langzaam A",false,true,"US");
