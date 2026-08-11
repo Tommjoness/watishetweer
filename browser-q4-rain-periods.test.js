@@ -67,7 +67,9 @@ async function controleer(type,naam,breedte){
     const base=`http://127.0.0.1:${server.address().port}/`;
     const url=base+"?lat=52.350&lon=5.260&plaats=Q4%20test&land=NL";
     await page.goto(url,{waitUntil:"load"});
-    await page.waitForFunction(()=>window.S&&S.d&&S.d.current&&S.d.current.time==="2026-07-22T14:00",null,{timeout:10000});
+    /* S is een globale lexical binding uit het klassieke script, niet een
+       property op window. Wachten op window.S kan daarom nooit slagen. */
+    await page.waitForFunction(()=>typeof S!=="undefined"&&S.d&&S.d.current&&S.d.current.time==="2026-07-22T14:00",null,{timeout:10000});
 
     /* Start de gecontroleerde beoordeling pas nadat exact onze URL-locatie en
        fixture actief zijn. Daarmee kan een eerste-bezoek/startup-pad nooit de
