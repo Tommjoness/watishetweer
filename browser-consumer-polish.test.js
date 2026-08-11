@@ -178,6 +178,14 @@ async function controleer(page, naam, modus) {
     const zoek = document.getElementById("q");
     const locatie = document.getElementById("here");
     const footer = document.querySelector("footer");
+    const trendWaarde = document.getElementById("prec");
+    const trendStat = trendWaarde && trendWaarde.parentElement;
+    const neerslagHint = document.getElementById("nchint");
+    const neerslagKop = neerslagHint && neerslagHint.previousElementSibling;
+    const neerslagUitleg = neerslagHint && neerslagHint.nextElementSibling;
+    const neerslagTekst = document.getElementById("nctext");
+    const neerslagGrafiek = document.getElementById("nc");
+    const neerslagElementen = [neerslagKop, neerslagHint, neerslagUitleg, neerslagTekst, neerslagGrafiek].filter(Boolean);
     return {
       heroTemp: (document.getElementById("t") || {}).textContent || "",
       nuTeksten,
@@ -194,8 +202,10 @@ async function controleer(page, naam, modus) {
       uvWaarde: uv ? uv.textContent.trim() : "",
       uvSub: (document.getElementById("uvsub") || {}).textContent || "",
       drukSub: (document.getElementById("pressub") || {}).textContent || "",
-      recent: (document.getElementById("prec") || {}).textContent || "",
-      recentSub: (document.getElementById("precsub") || {}).textContent || "",
+      trendKop: trendStat ? ((trendStat.querySelector(".eyebrow") || {}).textContent || "").trim() : "",
+      trend: trendWaarde ? trendWaarde.textContent.replace(/\s+/g, " ").trim() : "",
+      trendSub: (document.getElementById("precsub") || {}).textContent || "",
+      neerslagSectieVerborgen: neerslagElementen.length === 5 && neerslagElementen.every(el => getComputedStyle(el).display === "none"),
       nachtAdvies: document.querySelectorAll("#nights .nachtadvies").length,
       nachtMaan: document.querySelectorAll("#nights .nachtmaan").length,
       nachtRijen,
@@ -244,8 +254,11 @@ async function controleer(page, naam, modus) {
   assert.equal(resultaat.uvWaarde, "6", `${naam} ${modus}: UV-piek is consumentgericht afgerond`);
   assert.ok(/Rond 15:00 · hoog\./.test(resultaat.uvSub), `${naam} ${modus}: zichtbaar UV-getal en oordeel gebruiken dezelfde grens`);
   assert.equal(resultaat.drukSub, "Vrijwel stabiel.", `${naam} ${modus}: minieme luchtdrukverandering zonder schijnprecisie`);
-  assert.equal(resultaat.recent, "Droog", `${naam} ${modus}: recente droge tegel`);
-  assert.equal(resultaat.recentSub, "Geen neerslag.", `${naam} ${modus}: recente droge tegel is kort`);
+  assert.equal(resultaat.trendKop, "Temperatuurtrend", `${naam} ${modus}: oude recente-neerslagtegel is vervangen`);
+  assert.match(resultaat.trend, /^-?\d+\s*→\s*-?\d+\s*°C$/, `${naam} ${modus}: temperatuurtrend toont uitsluitend huidige en toekomstige temperatuur`);
+  assert.ok(["Stijgt de komende drie uur.","Daalt de komende drie uur.","Blijft vrijwel gelijk."].includes(resultaat.trendSub), `${naam} ${modus}: temperatuurtrend gebruikt alleen de afgesproken richtingstekst`);
+  assert.ok(!/neerslag|wind|gevoel/i.test(resultaat.trend+" "+resultaat.trendSub), `${naam} ${modus}: temperatuurtrend bevat geen andere weerinformatie`);
+  assert.equal(resultaat.neerslagSectieVerborgen, true, `${naam} ${modus}: volledig droge twee-uurssectie dupliceert de briefing niet`);
 
   assert.ok(resultaat.nachtAdvies > 0 && resultaat.nachtMaan > 0, `${naam} ${modus}: Nachtzicht heeft rustige aparte advies- en maanregels`);
   assert.ok(resultaat.nachtRijen.length > 0, `${naam} ${modus}: Nachtzicht heeft beoordeelde nachten`);
