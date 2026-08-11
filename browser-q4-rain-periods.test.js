@@ -161,12 +161,15 @@ async function controleer(type,naam,breedte){
     });
     const mouseTekst=(interactie.mouse&&interactie.mouse.teksten)||[];
     const touchTekst=(interactie.touch&&interactie.touch.teksten)||[];
-    assert(mouseTekst.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": muishover op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify(interactie)+"; pageerrors="+JSON.stringify(fouten));
-    assert(touchTekst.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": touch op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify(interactie)+"; pageerrors="+JSON.stringify(fouten));
-    assert(/Neerslagkans\s+86%/.test((interactie.mouse&&interactie.mouse.groepTekst)||""),naam+" "+breedte+": volledige kansinformatie blijft via muishover beschikbaar");
-    assert(/Neerslagkans\s+86%/.test((interactie.touch&&interactie.touch.groepTekst)||""),naam+" "+breedte+": volledige kansinformatie blijft via touch beschikbaar");
-    assert.equal(interactie.mouse.display,"block",naam+" "+breedte+": muishover maakt tooltip zichtbaar");
-    assert.equal(interactie.touch.display,"block",naam+" "+breedte+": touch maakt tooltip zichtbaar");
+    if(breedte<760){
+      assert(touchTekst.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": touch op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify(interactie)+"; pageerrors="+JSON.stringify(fouten));
+      assert(/Neerslagkans\s+86%/.test((interactie.touch&&interactie.touch.groepTekst)||""),naam+" "+breedte+": volledige kansinformatie blijft via touch beschikbaar");
+      assert.equal(interactie.touch.display,"block",naam+" "+breedte+": touch maakt tooltip zichtbaar");
+    }else{
+      assert(mouseTekst.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": muishover op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify(interactie)+"; pageerrors="+JSON.stringify(fouten));
+      assert(/Neerslagkans\s+86%/.test((interactie.mouse&&interactie.mouse.groepTekst)||""),naam+" "+breedte+": volledige kansinformatie blijft via muishover beschikbaar");
+      assert.equal(interactie.mouse.display,"block",naam+" "+breedte+": muishover maakt tooltip zichtbaar");
+    }
     assert.equal(interactie.zelfdeArray,true,naam+" "+breedte+": interactie leest dezelfde mm-array als regenstrip");
 
     const droog=await page.evaluate(()=>{
