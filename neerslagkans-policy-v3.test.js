@@ -1,6 +1,6 @@
 "use strict";
 const assert=require("assert");
-const {kansNiveau,kansHoofd,kansZin,komendUurTekst,briefingZin,dagKansSamenvatting}=require("./neerslagkans-policy-v3.js");
+const {kansNiveau,kansHoofd,kansZin,komendUurTekst,briefingZin,dagMomentZinsdeel,dagKansSamenvatting}=require("./neerslagkans-policy-v3.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 
 const grenzen=[
@@ -50,14 +50,26 @@ test("hoge kans zonder hoeveelheid benoemt hoeveelheidsonzekerheid",()=>{
   assert(/zeer grote kans/.test(zeerGroot)&&/hoeveelheid is onzeker/.test(zeerGroot),zeerGroot);
 });
 
-test("dagtekst laat kans altijd de modaliteit bepalen",()=>{
+test("dagmomenten gebruiken lokale dagdelen en geen minuutprecisie",()=>{
+  assert.equal(dagMomentZinsdeel("00:00")," in de nacht");
+  assert.equal(dagMomentZinsdeel("05:00")," in de vroege ochtend");
+  assert.equal(dagMomentZinsdeel("09:15")," in de ochtend");
+  assert.equal(dagMomentZinsdeel("12:25")," in de middag");
+  assert.equal(dagMomentZinsdeel("18:00")," in de avond");
+  assert.equal(dagMomentZinsdeel("ongeldig"),"");
+});
+
+test("dagtekst laat kans de modaliteit bepalen zonder schijnpreciese kloktijd",()=>{
   const basis={genoeg:true,status:"NEERSLAG_VERWACHT",soort:"motregen",eersteTijd:"05:00",hoeveelheid:3};
-  assert.equal(dagKansSamenvatting({...basis,kans:9},"Lichte motregen"),"Zeer kleine kans op lichte motregen rond 05:00");
-  assert.equal(dagKansSamenvatting({...basis,kans:10},"Lichte motregen"),"Kleine kans op lichte motregen rond 05:00");
-  assert.equal(dagKansSamenvatting({...basis,kans:30},"Lichte motregen"),"Lichte motregen mogelijk rond 05:00");
-  assert.equal(dagKansSamenvatting({...basis,kans:70},"Lichte motregen"),"Grote kans op lichte motregen rond 05:00");
-  assert.equal(dagKansSamenvatting({...basis,kans:90},"Lichte motregen"),"Zeer grote kans op lichte motregen rond 05:00");
-  assert.equal(dagKansSamenvatting({...basis,soort:"buien",kans:90},"Onweer"),"Zeer grote kans op onweer rond 05:00");
+  assert.equal(dagKansSamenvatting({...basis,kans:9},"Lichte motregen"),"Zeer kleine kans op lichte motregen in de vroege ochtend");
+  assert.equal(dagKansSamenvatting({...basis,kans:10},"Lichte motregen"),"Kleine kans op lichte motregen in de vroege ochtend");
+  assert.equal(dagKansSamenvatting({...basis,kans:30},"Lichte motregen"),"Lichte motregen mogelijk in de vroege ochtend");
+  assert.equal(dagKansSamenvatting({...basis,kans:70},"Lichte motregen"),"Grote kans op lichte motregen in de vroege ochtend");
+  assert.equal(dagKansSamenvatting({...basis,kans:90},"Lichte motregen"),"Zeer grote kans op lichte motregen in de vroege ochtend");
+  assert.equal(dagKansSamenvatting({...basis,soort:"buien",kans:90},"Onweer"),"Zeer grote kans op onweer in de vroege ochtend");
+  const middag=dagKansSamenvatting({...basis,kans:90,eersteTijd:"12:25"},"Lichte motregen");
+  assert.equal(middag,"Zeer grote kans op lichte motregen in de middag");
+  assert(!/12:25|rond\s+\d{1,2}:\d{2}/.test(middag),middag);
 });
 
 test("actuele neerslag blijft een actuele observatie en geen kanszin",()=>{
