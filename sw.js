@@ -30,11 +30,13 @@ self.addEventListener("activate", e => {
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
       /* Een fetch van de vorige worker kan precies tijdens activate nog met zijn
-         bestaande Cache-handle afronden. Chromium kan de verwijderde cachenaam
-         daardoor kort opnieuw zichtbaar maken. Een oudere worker mag tijdens
-         deze wachttijd echter nooit de cache van een al installerende opvolger
-         verwijderen. Alleen de nieuwste generatie doet daarom de late sweep. */
-      .then(() => new Promise(resolve => setTimeout(resolve, 150)))
+         bestaande Cache-handle afronden. Onder CI-belasting bleek 150 ms daarvoor
+         niet altijd genoeg: zo'n late response kon de verwijderde cachenaam na
+         onze sweep opnieuw zichtbaar maken. Geef de oude generatie één korte,
+         begrensde uitlooptijd en ruim daarna pas definitief op. Een oudere worker
+         mag intussen nooit de cache van een al installerende opvolger verwijderen;
+         alleen de nieuwste generatie doet daarom deze late sweep. */
+      .then(() => new Promise(resolve => setTimeout(resolve, 650)))
       .then(() => {
         if (self.registration.installing || self.registration.waiting) return;
         return caches.keys()
