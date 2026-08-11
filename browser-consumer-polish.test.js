@@ -255,9 +255,9 @@ async function controleer(page, naam, modus) {
   assert.equal(resultaat.uvWaarde, "6", `${naam} ${modus}: UV-piek is consumentgericht afgerond`);
   assert.equal(resultaat.uvSub, "Piek was rond 15:00 · hoog.", `${naam} ${modus}: verstreken UV-piek en zichtbaar oordeel volgen dezelfde afgeronde grens`);
   assert.equal(resultaat.drukSub, "Vrijwel stabiel.", `${naam} ${modus}: minieme luchtdrukverandering zonder schijnprecisie`);
-  assert.equal(resultaat.trendKop, "Temperatuurtrend", `${naam} ${modus}: oude recente-neerslagtegel is vervangen`);
+  assert.equal(resultaat.trendKop, "Temperatuur komende 3 uur", `${naam} ${modus}: trendhorizon staat altijd in de tegelkop`);
   assert.match(resultaat.trend, /^-?\d+\s*→\s*-?\d+\s*°C$/, `${naam} ${modus}: temperatuurtrend toont uitsluitend huidige en toekomstige temperatuur`);
-  assert.ok(["Stijgt de komende drie uur.","Daalt de komende drie uur.","Blijft vrijwel gelijk."].includes(resultaat.trendSub), `${naam} ${modus}: temperatuurtrend gebruikt alleen de afgesproken richtingstekst`);
+  assert.ok(["Stijgt.","Daalt.","Blijft vrijwel gelijk."].includes(resultaat.trendSub), `${naam} ${modus}: temperatuurtrend gebruikt één consistente richtingstekst`);
   assert.ok(!/neerslag|wind|gevoel/i.test(resultaat.trend+" "+resultaat.trendSub), `${naam} ${modus}: temperatuurtrend bevat geen andere weerinformatie`);
   assert.equal(resultaat.neerslagSectieVerborgen, true, `${naam} ${modus}: volledig droge twee-uurssectie dupliceert de briefing niet`);
 

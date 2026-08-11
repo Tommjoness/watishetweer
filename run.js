@@ -70,6 +70,10 @@ function brief(opties,breedte){
 {
   const droog=brief({pp:()=>5,pr:()=>0,som:0}).tekst;
   check("droog etmaal meldt droog",/blijft het droog/.test(droog),droog);
+  check("een droge middag vat ook de rest van vandaag samen",
+    /Ook later vandaag blijft neerslag onwaarschijnlijk/.test(droog),droog);
+  check("een briefing voor 18:00 noemt ook bij een vlakke trend het maximum van vandaag",
+    /(?:De maximumtemperatuur van vandaag ligt rond \d+ graden|Vandaag was het rond \d\d:\d\d het warmst met \d+ graden)/.test(droog),droog);
 
   /* Punt 8: zin 1 gaat nu over de komende twee uur, dezelfde termijn en bron als
      de neerslagtekst (kortetermijn()). Neerslag verderop vandaag komt er als losse,
@@ -1543,7 +1547,8 @@ groep("Nadruk");
   check("de uitkomst is vet, niet alleen het tijdstip",
     /blijft het <b>droog<\/b>/.test(bronN2));
   check("de maximumtemperatuur krijgt nadruk",
-    /<b>"\+Math\.round\(resterendVandaag\.v\)\s*\+" graden<\/b>/.test(bronN2)
+    /<b>"\+Math\.round\(vandaagMax\)\s*\+" graden<\/b>/.test(bronN2)
+      && /<b>"\+Math\.round\(vandaagMax\)\+" graden<\/b>/.test(bronN2)
       && /<b>"\+Math\.round\(morgenDagMax\)\+" graden<\/b>/.test(bronN2));
 }
 
@@ -1904,6 +1909,17 @@ groep("Grafiek en hints");
     check("de hoeveelheid staat met eenheid bij de staaf",
       /">[\d,]+ mm</.test(bak.chart.innerHTML),
       (bak.chart.innerHTML.match(/font-size="11"[^>]*>[^<]*/)||["niets"])[0]);
+    const staven=[...bak.chart.innerHTML.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)" fill="var\(--teal\)"/g)]
+      .map(m=>({x:+m[1],y:+m[2],w:+m[3],h:+m[4]}));
+    const mmLabels=[...bak.chart.innerHTML.matchAll(/<text x="([\d.]+)" y="([\d.]+)"[^>]*font-size="([\d.]+)" font-weight="500">[\d,]+ mm<\/text>/g)]
+      .map(m=>({x:+m[1],y:+m[2],fs:+m[3]}));
+    const labelsBuitenStaaf=mmLabels.filter(l=>!staven.some(s=>
+      l.x>=s.x&&l.x<=s.x+s.w&&l.y-l.fs>=s.y&&l.y<=s.y+s.h));
+    check("de hoeveelheid staat laag in een voldoende hoge staaf",
+      mmLabels.length>0&&labelsBuitenStaaf.length===0
+        && /y="\$\{pb-5\}"/.test(bronG)
+        && !/pb-hgt-4/.test(bronG),
+      labelsBuitenStaaf.length+" labels buiten een staaf");
   }
 
   /* Bij smalle kolommen hoort het label te wijken in plaats van te overlappen. */

@@ -1328,14 +1328,19 @@ function briefing(){
        "later vandaag" veroorzaken. Het dagelijkse maximum bevat ook uren uit de
        ochtend en kon om 23:00 dus een oude kans opnieuw als toekomst presenteren. */
     const na=kt.eind||h.time[Math.min(i+2,h.time.length-1)],vandaag=String(c.time||"").slice(0,10);
-    let dagKans=null;
+    let dagKans=null,toekomstigeKansen=0;
     for(let k=0;k<h.time.length;k++){
       if(h.time[k].slice(0,10)!==vandaag||h.time[k]<=na) continue;
       const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[k]);
-      if(kans!==null) dagKans=Math.max(dagKans===null?0:dagKans,clamp(kans,0,100));
+      if(kans!==null){
+        toekomstigeKansen++;
+        dagKans=Math.max(dagKans===null?0:dagKans,clamp(kans,0,100));
+      }
     }
     if(dagKans!==null&&dagKans>=25){
       zin1 += " Later vandaag is de neerslagkans <b>"+Math.round(dagKans)+"%</b>.";
+    }else if(dagKans!==null&&toekomstigeKansen>=2){
+      zin1 += " Ook later vandaag blijft neerslag onwaarschijnlijk.";
     }
   }
 
@@ -1358,8 +1363,11 @@ function briefing(){
     }
     return index===null?null:{v:waarde,i:index,t:h.time[index]};
   };
-  const resterendVandaag=piekOpDag(vandaag,nuLokaal.slice(0,13)+":00");
   const volledigePiekVandaag=piekOpDag(vandaag,null);
+  const vandaagDagMax=dagIndexVandaag>=0?eindigGetal(day.temperature_2m_max&&day.temperature_2m_max[dagIndexVandaag]):null;
+  const vandaagMax=volledigePiekVandaag&&vandaagDagMax!==null
+    ?Math.max(volledigePiekVandaag.v,vandaagDagMax)
+    :vandaagDagMax===null?(volledigePiekVandaag&&volledigePiekVandaag.v):vandaagDagMax;
   const morgenIndex=dagIndexVandaag>=0?dagIndexVandaag+1:-1;
   const morgenDatum=morgenIndex>=0&&day.time?day.time[morgenIndex]:null;
   const morgenUurPiek=morgenDatum?piekOpDag(morgenDatum,null):null;
@@ -1385,9 +1393,9 @@ function briefing(){
   const huidige=eindigGetal(c.temperature_2m),nutemp=rondGetal(huidige);
   let zin2="";
   const nachtZin=tmin===null?"":" Vannacht koelt het af naar <b>"+tmin+" graden</b>.";
-  if(resterendVandaag&&(huidige===null||resterendVandaag.v>huidige+0.5)&&resterendVandaag.t>nuLokaal){
-    zin2="Vandaag wordt het maximaal <b>"+Math.round(resterendVandaag.v)
-      +" graden</b>, met het warmste moment rond "+hhmm(resterendVandaag.t)+"."+nachtZin;
+  if(volledigePiekVandaag&&(huidige===null||volledigePiekVandaag.v>huidige+0.5)&&volledigePiekVandaag.t>nuLokaal){
+    zin2="Vandaag wordt het maximaal <b>"+Math.round(vandaagMax)
+      +" graden</b>, met het warmste moment rond "+hhmm(volledigePiekVandaag.t)+"."+nachtZin;
   }else if(plaatsDelen.hour>=18&&morgenDatum&&morgenDagMax!==null){
     const moment=morgenUurPiek?", met het warmste moment rond "+hhmm(morgenUurPiek.t):"";
     zin2="Morgen wordt het maximaal <b>"+Math.round(morgenDagMax)+" graden</b>"+moment+"."+nachtZin;
@@ -1396,6 +1404,8 @@ function briefing(){
       +" graden</b>, met het warmste moment rond "+hhmm(volledigePiekVandaag.t)+"."+nachtZin;
   }else if(volledigePiekVandaag&&volledigePiekVandaag.t<nuLokaal&&Math.round(volledigePiekVandaag.v)>nutemp){
     zin2="Vandaag was het rond "+hhmm(volledigePiekVandaag.t)+" het warmst met <b>"+Math.round(volledigePiekVandaag.v)+" graden</b>."+nachtZin;
+  }else if(plaatsDelen.hour<18&&vandaagMax!==null){
+    zin2="De maximumtemperatuur van vandaag ligt rond <b>"+Math.round(vandaagMax)+" graden</b>."+nachtZin;
   }else if(tmin!==null&&tmin<nutemp-1){
     zin2="Vannacht koelt het af naar <b>"+tmin+" graden</b>.";
   }else if(tmin!==null){
@@ -1658,15 +1668,16 @@ function etmaal(start,n){
     if(P[i]>0){
       const hgt=ih*0.42*(P[i]/100);
       bars+=`<rect x="${x(i)-cw*0.3}" y="${pb-hgt}" width="${cw*0.6}" height="${hgt}" fill="${TEAL}" fill-opacity=".16"/>`;
-      /* De hoeveelheid bij de staaf. Een kans van 80 procent zegt niets over of
-         het een spatje of een plensbui wordt. Alleen tonen als er ruimte is: een
-         getal als 2,4 vraagt ongeveer 22 px en bij een week zijn de kolommen
-         maar een paar pixels breed. Dan valt het weg in plaats van te overlappen. */
+      /* De hoeveelheid staat laag ín een voldoende hoge kansstaaf. Boven de
+         staaf deelde het label dezelfde zone met de temperatuurcurve en de
+         temperatuurcijfers; bij aanhoudende regen werd dat onleesbaar. Een te
+         lage staaf krijgt daarom geen los cijfer. De exacte hoeveelheid blijft
+         altijd beschikbaar in de grafiektooltip. */
       const mm=MM[i];
       /* Een kaal getal boven een staaf zegt niet wat het is. De eenheid erbij zodra
          de kolom breed genoeg is; wordt het krapper dan alleen het getal, en bij een
          week vervalt het helemaal in plaats van over de buren te lopen. */
-      if(mm!=null&&mm>=0.1&&hgt>=9){
+      if(mm!=null&&mm>=0.1){
         /* De ruimte volgt uit de tekst zelf, niet uit een vast getal: "12,5 mm" is
            breder dan "2 mm", en een kolom is bij 24 uur ruim en bij een week smal.
            Past de eenheid niet, dan alleen het cijfer; past dat ook niet, dan niets. */
@@ -1674,8 +1685,8 @@ function etmaal(start,n){
         const vol = nl(mm)+" mm", kaal = nl(mm),maxBreed=cw*(M?1.35:1.45);
         const tekst = breed(vol)<=maxBreed ? vol : breed(kaal)<=maxBreed ? kaal : null;
         const tekstBreed=tekst?breed(tekst):0,links=x(i)-tekstBreed/2,rechts=x(i)+tekstBreed/2;
-        if(tekst&&links>=laatsteMmLabelRechts+3){
-        bars+=`<text x="${x(i)}" y="${pb-hgt-4}" text-anchor="middle" fill="${INK}"
+        if(hgt>=fs+7&&tekst&&links>=laatsteMmLabelRechts+3){
+        bars+=`<text x="${x(i)}" y="${pb-5}" text-anchor="middle" fill="${INK}"
           font-family="DM Mono,monospace" font-size="${fs}" font-weight="500">${tekst}</text>`;
           laatsteMmLabelRechts=rechts;
         }

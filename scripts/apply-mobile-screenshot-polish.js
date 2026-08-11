@@ -20,7 +20,7 @@ const JS_MARK="/* ===== MOBILE SCREENSHOT POLISH 20260810B ===== */";
 const Q1_JS_MARK="/* ===== CHECKPOINT 25 Q1 ===== */";
 const START="/* ---------- start ---------- */";
 const RECENT_OLD='<div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">';
-const TREND_NEW='<div class="eyebrow">Temperatuurtrend</div><div class="sval" id="prec">';
+const TREND_NEW='<div class="eyebrow">Temperatuur komende 3 uur</div><div class="sval" id="prec">';
 const LEGACY_RECENT_START='  const recenteNeerslag=eindigGetal(c.precipitation);';
 const LEGACY_RECENT_END='  /* De tegel toont de kans voor precies het eerstvolgende uur (i+1). De subtekst';
 const ENGINE_RECENT_START='      zetEyebrow("prec","Afgelopen 15 minuten");\n      const c=S.d.current||{};';
@@ -142,7 +142,7 @@ const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script
 if(!scripts.length)throw new Error("Geen inline script na mobiele polish.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:postbuild-"+(i+1)}));
 for(const vereist of [
-  "WeatherNowMobileScreenshotPolish","maan-fase-svg-v2","Temperatuurtrend","bron-bronnen",
+  "WeatherNowMobileScreenshotPolish","maan-fase-svg-v2","Temperatuur komende 3 uur","bron-bronnen",
   "WeatherNowQ1","q1-dag-mm","weerbriefing.plaatscache.q1","neerslagkans",
   "temperatuurTrend","q1-pop-hidden","Beste modeluren","verbeterNachtzicht",
   "H=M?284:296","pt=M?70:76, ih=M?158:160","tijdLabelVrij=nuX==null",

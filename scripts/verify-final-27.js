@@ -18,7 +18,7 @@ const vereist=(tekst,naam)=>{if(!html.includes(tekst))throw new Error("Finale in
 const verboden=(tekst,naam)=>{if(html.includes(tekst))throw new Error("Verwijderde/ongewenste invariant staat nog in artifact: "+(naam||tekst));};
 
 /* 25%: oude recente-neerslagtegel is echt weg en temperatuurtrend is uniek. */
-exactEen('<div class="eyebrow">Temperatuurtrend</div><div class="sval" id="prec">',"temperatuurtrendtegel");
+exactEen('<div class="eyebrow">Temperatuur komende 3 uur</div><div class="sval" id="prec">',"temperatuurtrendtegel");
 for(const [tekst,naam] of [
   ['<div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">',"oude 15-minutentegel"],
   ["Afgelopen kwartier","oude kwartiertekst"],

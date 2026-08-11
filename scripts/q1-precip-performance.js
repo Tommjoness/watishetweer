@@ -297,13 +297,13 @@ if(typeof j==="function"){
 function renderTemperatuurTrend(){
   const waarde=document.getElementById("prec"),stat=waarde&&waarde.parentElement,kop=stat&&stat.querySelector(".eyebrow"),sub=document.getElementById("precsub");
   if(!waarde||!stat||!kop||!sub)return;
-  kop.textContent="Temperatuurtrend";
+  kop.textContent="Temperatuur komende 3 uur";
   stat.classList.add("q1-temp-trend");
   const t=temperatuurTrend(S.d,trendNuMs());
-  if(!t.genoeg){waarde.textContent="–";sub.textContent="Temperatuurtrend niet beschikbaar.";return;}
+  if(!t.genoeg){waarde.textContent="–";sub.textContent="Niet beschikbaar.";return;}
   waarde.innerHTML=String(t.van)+" → "+String(t.naar)+"<s>°C</s>";
-  sub.textContent=t.richting==="stijgt"?"Stijgt de komende drie uur."
-    :t.richting==="daalt"?"Daalt de komende drie uur.":"Blijft vrijwel gelijk.";
+  sub.textContent=t.richting==="stijgt"?"Stijgt."
+    :t.richting==="daalt"?"Daalt.":"Blijft vrijwel gelijk.";
 }
 
 function renderNeerslagTegel(){

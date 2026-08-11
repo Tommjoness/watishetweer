@@ -22,7 +22,7 @@ let html=fs.readFileSync(path.join(__dirname,"public/index.html"),"utf8");
 const artifactDiagnose={
   oud15:html.includes('<div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">'),
   oudKwartier:html.includes("Afgelopen kwartier"),
-  trend:html.includes('<div class="eyebrow">Temperatuurtrend</div><div class="sval" id="prec">'),
+  trend:html.includes('<div class="eyebrow">Temperatuur komende 3 uur</div><div class="sval" id="prec">'),
   legacyBerekening:html.includes("const recenteNeerslag=eindigGetal(c.precipitation)"),
   oudeWrapper:html.includes("compactRecentLabel"),
   polish:html.includes("MOBILE SCREENSHOT POLISH 20260810B"),
@@ -97,9 +97,9 @@ async function controleer(type,naam){
     const diag=JSON.stringify({artifact:artifactDiagnose,basis,diagnose,fouten});
     console.log("DIAG "+naam+" "+diag);
     assert.deepEqual(artifactDiagnose,{oud15:false,oudKwartier:false,trend:true,legacyBerekening:false,oudeWrapper:false,polish:true,q1:true},naam+": artifact bevat uitsluitend nieuwe trendroute | DIAG="+diag);
-    assert.equal(basis.trendKop,"Temperatuurtrend",naam+": nieuwe tegelkop");
+    assert.equal(basis.trendKop,"Temperatuur komende 3 uur",naam+": tegelkop noemt de vaste horizon");
     assert.match(basis.trendWaarde,/^-?\d+\s*→\s*-?\d+°C$/,naam+": trend toont uitsluitend twee temperaturen");
-    assert.ok(["Stijgt de komende drie uur.","Daalt de komende drie uur.","Blijft vrijwel gelijk."].includes(basis.trendSub),naam+": trendtekst is beperkt tot temperatuur");
+    assert.ok(["Stijgt.","Daalt.","Blijft vrijwel gelijk."].includes(basis.trendSub),naam+": onderregel herhaalt de horizon niet");
     assert.notEqual(basis.popDisplay,"none",naam+": droge korte termijn bewaart dezelfde negende tegelpositie");
     assert.equal(basis.popAria,"false",naam+": droge tegel blijft toegankelijk");
     assert.doesNotMatch(basis.gridClass,/q1-pop-hidden/,naam+": raster verandert niet meer tussen droge en natte steden");
