@@ -66,7 +66,7 @@ html=html.slice(0,begin)+engine+html.slice(eind);
    dus nog steeds de zekerheid. */
 const lokaalStart=html.indexOf("function lokaalNaarMinuten(tijd,tijdzone,utcOffsetSeconden){",begin);
 const lokaalEind=html.indexOf("\nfunction minutenNaarLokaal(minuten,tijdzone,utcOffsetSeconden){",lokaalStart);
-if(lokaalStart<0||lokaalEind<=lokaalStart||lokaalStart>eind+5000)throw new Error("lokaalNaarMinuten kon niet veilig worden afgebakend.");
+if(lokaalStart<0||lokaalEind<=lokaalStart)throw new Error("lokaalNaarMinuten kon niet veilig worden afgebakend.");
 const lokaalOud=html.slice(lokaalStart,lokaalEind);
 const bodyBegin=lokaalOud.indexOf("{")+1;
 const lokaalBody=lokaalOud.slice(bodyBegin);
@@ -87,7 +87,7 @@ function lokaalNaarMinuten(tijd,tijdzone,utcOffsetSeconden){
 html=html.slice(0,lokaalStart)+lokaalNieuw+html.slice(lokaalEind);
 
 html=html.replace("</style>","\n"+MARK+"\n</style>");
-const scripts=[...html.matchAll(/<script(?![^>]*\\ssrc=)[^>]*>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]);
+const scripts=[...html.matchAll(/<script(?![^>]* src=)[^>]*>([^]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime na performance-final.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:performance-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
