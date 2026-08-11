@@ -13,7 +13,7 @@ const SHELL = [
 /* De app-shell is volledig versioned en wordt uitsluitend tijdens install
    opgebouwd. Een oude worker schrijft daarna nooit meer naar zijn eigen cache.
    Daardoor kan een verwijderde generatiecache tijdens een update niet opnieuw
-   ontstaan door een late fetch of een vastgehouden Cache-handle. */
+   met nieuwe runtime-inhoud worden gevuld. */
 self.addEventListener("install", e => {
   e.waitUntil(
     caches.open(CACHE).then(c =>
@@ -23,9 +23,9 @@ self.addEventListener("install", e => {
   );
 });
 
-/* Eén deterministische sweep is voldoende: oude workers hebben na install geen
-   schrijfpad meer naar CacheStorage. Er is dus geen tijdgebaseerde tweede sweep
-   of kunstmatige activate-vertraging nodig. */
+/* Oude generaties worden op activate opgeruimd. CacheStorage kan tijdens een
+   browsertransitie kort een oude naam blijven rapporteren; fetches vertrouwen
+   daarom nooit op globale CacheStorage-volgorde maar uitsluitend op CACHE. */
 self.addEventListener("activate", e => {
   e.waitUntil(
     caches.keys()
@@ -33,6 +33,8 @@ self.addEventListener("activate", e => {
       .then(() => self.clients.claim())
   );
 });
+
+const uitHuidigeCache = request => caches.match(request,{cacheName:CACHE});
 
 self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
@@ -43,12 +45,12 @@ self.addEventListener("fetch", e => {
   if (url.origin !== location.origin) return;
 
   /* Navigatie blijft netwerk-eerst zodat een online bezoek direct de deployment
-     ziet. Offline valt die terug op de tijdens install vastgelegde shell. De
-     navigatie zelf schrijft bewust niet meer terug naar de generatiecache. */
+     ziet. Offline valt die uitsluitend terug op de install-cache van déze worker;
+     een eventueel nog zichtbare oude cache kan dus geen oude pagina teruggeven. */
   if (e.request.mode === "navigate" || url.pathname.endsWith("index.html")) {
     e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request)
-          .then(hit => hit || caches.match("./index.html"))
+      fetch(e.request).catch(() => uitHuidigeCache(e.request)
+          .then(hit => hit || uitHuidigeCache("./index.html"))
           // komt ook daar niets uit, dan een leesbare melding in plaats van een
           // lege belofte, want respondWith(undefined) is opnieuw een netwerkfout
           .then(hit => hit || new Response(
@@ -60,12 +62,12 @@ self.addEventListener("fetch", e => {
     return;
   }
 
-  /* De volledige app-shell is al tijdens install gecachet. Niet-shellresources
-     worden online gewoon opgehaald en krijgen geen runtime-cache-eigenaarschap;
-     offline kan een bestaand shellitem nog steeds rechtstreeks uit cache komen. */
+  /* De volledige app-shell is al tijdens install gecachet. Ook hier wordt alleen
+     de huidige generatie geraadpleegd; niet-shellresources worden online gewoon
+     opgehaald en krijgen geen runtime-cache-eigenaarschap. */
   e.respondWith(
-    caches.match(e.request)
+    uitHuidigeCache(e.request)
       .then(hit => hit || fetch(e.request))
-      .catch(() => caches.match(e.request).then(hit => hit || Response.error()))
+      .catch(() => uitHuidigeCache(e.request).then(hit => hit || Response.error()))
   );
 });
