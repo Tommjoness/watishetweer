@@ -110,9 +110,10 @@ function q4Regenperioden(g){
 function q4TekenRegenperioden(svg,g,perioden){
   svg.querySelectorAll('g[data-q4-rain-periods]').forEach(el=>el.remove());
 
-  /* De oude hoeveelheidstaven, losse mm-cijfers én losse kanspercentages
-     verdwijnen volledig. Kans blijft beschikbaar in de interactieve tooltip;
-     de statische grafiek toont alleen meetbare neerslagperioden. */
+  /* De oude hoeveelheidstaven en losse mm-cijfers verdwijnen volledig. Losse
+     kanslabels onder 10% zijn visuele ruis (zoals 1% en 5%); hogere kansen
+     blijven staan en worden na de historische intervalcorrectie terug op hun
+     eigen tijdstip gezet. De tooltip behoudt alle kanswaarden, ook onder 10%. */
   [...svg.querySelectorAll("rect")].forEach(el=>{
     if(el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".16")el.remove();
   });
@@ -120,7 +121,12 @@ function q4TekenRegenperioden(svg,g,perioden){
     if(/ millimeter neerslag$/.test(el.getAttribute("aria-label")||""))el.remove();
   });
   [...svg.querySelectorAll("text")].forEach(el=>{
-    if(el.getAttribute("fill")===TEAL&&/^\d+%$/.test((el.textContent||"").trim()))el.remove();
+    if(el.getAttribute("fill")!==TEAL||!/^\d+%$/.test((el.textContent||"").trim()))return;
+    const kans=Number((el.textContent||"").trim().replace("%",""));
+    if(Number.isFinite(kans)&&kans<10){el.remove();return;}
+    if(el.dataset.q4ProbabilityCentered==="1")return;
+    const x=q4Getal(el.getAttribute("x"));
+    if(x!==null){el.setAttribute("x",String(x+g.cw/2));el.dataset.q4ProbabilityCentered="1";}
   });
 
   const basisH=q4Getal(g.H)||296;
