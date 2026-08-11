@@ -169,8 +169,8 @@ async function controleer(page, naam, modus) {
     const maanTekst = maanGebied.map(el => el.textContent || "").join(" ");
     const maanSvgs = maanGebied.reduce((n, el) => n + el.querySelectorAll(".maan-fase-svg").length, 0);
     const faseSvg = document.querySelector(".maan-fase-svg");
-    const faseOutline = faseSvg ? faseSvg.querySelector('path + circle, circle[fill="currentColor"] + circle') : null;
-    const faseStyle = faseSvg ? getComputedStyle(faseSvg) : null;
+    const faseSchaduw = faseSvg ? faseSvg.querySelector(".maan-schaduw") : null;
+    const faseSchaduwStyle = faseSchaduw ? getComputedStyle(faseSchaduw) : null;
     const dagTeksten = [...document.querySelectorAll("#days .row.day:not(.kop) .dcond")].map(el => (el.textContent || "").trim());
     const merk = document.querySelector(".mast h1");
     const windKop = document.querySelector("#days .row.kop .dwind");
@@ -178,6 +178,14 @@ async function controleer(page, naam, modus) {
     const zoek = document.getElementById("q");
     const locatie = document.getElementById("here");
     const footer = document.querySelector("footer");
+    const trendWaarde = document.getElementById("prec");
+    const trendStat = trendWaarde && trendWaarde.parentElement;
+    const neerslagHint = document.getElementById("nchint");
+    const neerslagKop = neerslagHint && neerslagHint.previousElementSibling;
+    const neerslagUitleg = neerslagHint && neerslagHint.nextElementSibling;
+    const neerslagTekst = document.getElementById("nctext");
+    const neerslagGrafiek = document.getElementById("nc");
+    const neerslagElementen = [neerslagKop, neerslagHint, neerslagUitleg, neerslagTekst, neerslagGrafiek].filter(Boolean);
     return {
       heroTemp: (document.getElementById("t") || {}).textContent || "",
       nuTeksten,
@@ -194,17 +202,20 @@ async function controleer(page, naam, modus) {
       uvWaarde: uv ? uv.textContent.trim() : "",
       uvSub: (document.getElementById("uvsub") || {}).textContent || "",
       drukSub: (document.getElementById("pressub") || {}).textContent || "",
-      recent: (document.getElementById("prec") || {}).textContent || "",
-      recentSub: (document.getElementById("precsub") || {}).textContent || "",
+      trendKop: trendStat ? ((trendStat.querySelector(".eyebrow") || {}).textContent || "").trim() : "",
+      trend: trendWaarde ? trendWaarde.textContent.replace(/\s+/g, " ").trim() : "",
+      trendSub: (document.getElementById("precsub") || {}).textContent || "",
+      neerslagSectieVerborgen: neerslagElementen.length === 5 && neerslagElementen.every(el => getComputedStyle(el).display === "none"),
       nachtAdvies: document.querySelectorAll("#nights .nachtadvies").length,
       nachtMaan: document.querySelectorAll("#nights .nachtmaan").length,
       nachtRijen,
       maanTekst,
       maanSvgs,
-      maanOutlineDisplay: faseOutline ? getComputedStyle(faseOutline).display : null,
       maanBreedte: faseSvg ? faseSvg.getBoundingClientRect().width : 0,
-      maanAchtergrond: faseStyle ? faseStyle.backgroundColor : "",
-      maanRandRadius: faseStyle ? faseStyle.borderRadius : "",
+      maanSchaduw: !!faseSchaduw,
+      maanSchaduwVulling: faseSchaduwStyle ? faseSchaduwStyle.fill : "",
+      maanSchaduwLijn: faseSchaduwStyle ? faseSchaduwStyle.stroke : "",
+      maanSchaduwStraal: faseSchaduw ? faseSchaduw.getAttribute("r") : "",
       dagTeksten,
       merkTekst: merk ? merk.textContent.trim() : "",
       merkGrootte: merk ? parseFloat(getComputedStyle(merk).fontSize) : 0,
@@ -236,16 +247,19 @@ async function controleer(page, naam, modus) {
   assert.ok(/zon onder 21:30/i.test(resultaat.sunTekst), `${naam} ${modus}: exacte zonsondergang van morgen blijft zichtbaar`);
   assert.ok(!/Vandaag/i.test(resultaat.sunTekst), `${naam} ${modus}: geen verstreken vandaag-momenten na zonsondergang`);
   assert.ok(resultaat.sunOverflow <= 1, `${naam} ${modus}: zoninformatie heeft geen horizontale overflow`);
-  assert.equal(resultaat.hint, "Houd de grafiek vast voor details.", `${naam} ${modus}: korte grafiekhint`);
+  assert.equal(resultaat.hint, "Selecteer een punt in de grafiek voor details.", `${naam} ${modus}: input-neutrale grafiekhint`);
 
   assert.ok(!/wind komt|draait naar/i.test(resultaat.briefing), `${naam} ${modus}: 1 Bft krijgt geen briefing over richtingsdraai`);
   assert.ok(!/het is nu\s+-?\d+/i.test(resultaat.briefing), `${naam} ${modus}: briefing herhaalt actuele temperatuur niet`);
   assert.equal(resultaat.uvKop, "UV-piek vandaag", `${naam} ${modus}: UV is expliciet dagpiek`);
   assert.equal(resultaat.uvWaarde, "6", `${naam} ${modus}: UV-piek is consumentgericht afgerond`);
-  assert.ok(/Rond 15:00 · hoog\./.test(resultaat.uvSub), `${naam} ${modus}: zichtbaar UV-getal en oordeel gebruiken dezelfde grens`);
+  assert.equal(resultaat.uvSub, "Piek was rond 15:00 · hoog.", `${naam} ${modus}: verstreken UV-piek en zichtbaar oordeel volgen dezelfde afgeronde grens`);
   assert.equal(resultaat.drukSub, "Vrijwel stabiel.", `${naam} ${modus}: minieme luchtdrukverandering zonder schijnprecisie`);
-  assert.equal(resultaat.recent, "Droog", `${naam} ${modus}: recente droge tegel`);
-  assert.equal(resultaat.recentSub, "Geen neerslag.", `${naam} ${modus}: recente droge tegel is kort`);
+  assert.equal(resultaat.trendKop, "Temperatuur komende 3 uur", `${naam} ${modus}: trendhorizon staat altijd in de tegelkop`);
+  assert.match(resultaat.trend, /^-?\d+\s*→\s*-?\d+\s*°C$/, `${naam} ${modus}: temperatuurtrend toont uitsluitend huidige en toekomstige temperatuur`);
+  assert.ok(["Het wordt de komende uren warmer.","Het wordt de komende uren koeler.","De temperatuur verandert de komende uren nauwelijks."].includes(resultaat.trendSub), `${naam} ${modus}: temperatuurtrend gebruikt één natuurlijke richtingstekst`);
+  assert.ok(!/neerslag|wind|gevoel/i.test(resultaat.trend+" "+resultaat.trendSub), `${naam} ${modus}: temperatuurtrend bevat geen andere weerinformatie`);
+  assert.equal(resultaat.neerslagSectieVerborgen, true, `${naam} ${modus}: volledig droge twee-uurssectie dupliceert de briefing niet`);
 
   assert.ok(resultaat.nachtAdvies > 0 && resultaat.nachtMaan > 0, `${naam} ${modus}: Nachtzicht heeft rustige aparte advies- en maanregels`);
   assert.ok(resultaat.nachtRijen.length > 0, `${naam} ${modus}: Nachtzicht heeft beoordeelde nachten`);
@@ -262,10 +276,11 @@ async function controleer(page, naam, modus) {
   assert.ok(resultaat.maanSvgs >= resultaat.nachtMaan + 1, `${naam} ${modus}: maanfase gebruikt monochrome inline-SVG in kop en nachtrijen`);
   assert.ok(!/[🌑🌒🌓🌔🌕🌖🌗🌘]/u.test(resultaat.maanTekst), `${naam} ${modus}: geen platformkleurige maanemoji blijft zichtbaar`);
   assert.ok(resultaat.maanBreedte >= 13, `${naam} ${modus}: maanfase blijft op klein scherm herkenbaar`);
-  assert.notEqual(resultaat.maanAchtergrond, "rgba(0, 0, 0, 0)", `${naam} ${modus}: maanfase heeft een zichtbare schijf en leest niet als los haakje`);
-  assert.notEqual(resultaat.maanAchtergrond, "transparent", `${naam} ${modus}: maanfase-achtergrond is niet transparant`);
-  assert.ok(parseFloat(resultaat.maanRandRadius) > 0, `${naam} ${modus}: maanfase heeft ronde schijfvorm`);
-  if (resultaat.maanOutlineDisplay !== null) assert.equal(resultaat.maanOutlineDisplay, "none", `${naam} ${modus}: buitenste SVG-cirkel verdringt de zichtbare maanfase niet`);
+  assert.equal(resultaat.maanSchaduw, true, `${naam} ${modus}: maanfase heeft een fysieke ronde basisschijf`);
+  assert.notEqual(resultaat.maanSchaduwVulling, "none", `${naam} ${modus}: onverlichte maanschijf heeft een zichtbare themavulling`);
+  assert.notEqual(resultaat.maanSchaduwVulling, "rgba(0, 0, 0, 0)", `${naam} ${modus}: maanfase leest niet als los haakje`);
+  assert.notEqual(resultaat.maanSchaduwLijn, "none", `${naam} ${modus}: schijfrand blijft in ieder thema herkenbaar`);
+  assert.ok(parseFloat(resultaat.maanSchaduwStraal) >= 8, `${naam} ${modus}: fysieke maanschijf blijft groot genoeg`);
 
   // De fixture heeft voor vandaag een niet-neerslagbeeld uit de resterende uurdata,
   // maar voor toekomstige dagen bewust een dagelijkse regencode. Alleen het droge

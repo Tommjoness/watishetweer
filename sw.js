@@ -9,16 +9,39 @@ const SHELL = [
   "./dm-mono-latin-400-normal.woff2",
   "./dm-mono-latin-500-normal.woff2"
               ];
+const SHELL_VERPLICHT = new Set(["./","./index.html"]);
+
+/* Een nieuwe worker kan zijn installrequests uitvoeren terwijl de vorige worker
+   dezelfde client/origin nog controleert. Een gewone c.add('./index.html') kan
+   daardoor via de oude cache-first fetchhandler oude HTML terugkrijgen. Vraag de
+   shell daarom met een generatiegebonden query op; die bestaat nooit in een oude
+   cache. Sla de response daarna bewust onder de canonieke, queryloze sleutel van
+   de nieuwe CACHE op. Root en index zijn verplicht: zonder die twee activeert de
+   nieuwe worker niet met een onvolledige/offline-onbruikbare shell. */
+async function cacheerShellBestand(cache,u){
+  const canoniek=new URL(u,self.location.href);
+  const vers=new URL(canoniek.href);
+  vers.searchParams.set("__sw_install",CACHE);
+  try{
+    const r=await fetch(new Request(vers.href,{cache:"reload"}));
+    if(!r.ok)throw new Error("shell fetch "+r.status+" voor "+canoniek.pathname);
+    await cache.put(new Request(canoniek.href),r);
+  }catch(err){
+    if(SHELL_VERPLICHT.has(u))throw err;
+  }
+}
 
 self.addEventListener("install", e => {
   e.waitUntil(
-    caches.open(CACHE).then(c =>
-      // per bestand, zodat één ontbrekend bestand de hele installatie niet sloopt
-      Promise.all(SHELL.map(u => c.add(u).catch(() => {})))
-    ).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then(c => Promise.all(SHELL.map(u => cacheerShellBestand(c,u))))
+      .then(() => self.skipWaiting())
   );
 });
 
+/* Oude generaties worden op activate opgeruimd. CacheStorage kan tijdens een
+   browsertransitie kort een oude naam blijven rapporteren; fetches vertrouwen
+   daarom nooit op globale CacheStorage-volgorde maar uitsluitend op CACHE. */
 self.addEventListener("activate", e => {
   e.waitUntil(
     caches.keys()
@@ -26,6 +49,8 @@ self.addEventListener("activate", e => {
       .then(() => self.clients.claim())
   );
 });
+
+const uitHuidigeCache = request => caches.match(request,{cacheName:CACHE});
 
 self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
@@ -35,15 +60,13 @@ self.addEventListener("fetch", e => {
   if (url.pathname.startsWith("/api/")) return;   // serverfuncties altijd vers
   if (url.origin !== location.origin) return;
 
-  // app-shell: netwerk eerst voor index.html zodat updates direct doorkomen
+  /* Navigatie blijft netwerk-eerst zodat een online bezoek direct de deployment
+     ziet. Offline valt die uitsluitend terug op de install-cache van déze worker;
+     een eventueel nog zichtbare oude cache kan dus geen oude pagina teruggeven. */
   if (e.request.mode === "navigate" || url.pathname.endsWith("index.html")) {
     e.respondWith(
-      fetch(e.request).then(r => {
-        const copy = r.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-        return r;
-      }).catch(() => caches.match(e.request)
-          .then(hit => hit || caches.match("./index.html"))
+      fetch(e.request).catch(() => uitHuidigeCache(e.request)
+          .then(hit => hit || uitHuidigeCache("./index.html"))
           // komt ook daar niets uit, dan een leesbare melding in plaats van een
           // lege belofte, want respondWith(undefined) is opnieuw een netwerkfout
           .then(hit => hit || new Response(
@@ -55,16 +78,12 @@ self.addEventListener("fetch", e => {
     return;
   }
 
-  /* Zonder vangnet werd een mislukte ophaalpoging een onafgevangen belofte, en
-     dan geeft respondWith een netwerkfout terug in plaats van door te vallen naar
-     de browser. Dat leverde "Failed to fetch at sw.js" op in de console. */
+  /* De volledige app-shell is al tijdens install gecachet. Ook hier wordt alleen
+     de huidige generatie geraadpleegd; niet-shellresources worden online gewoon
+     opgehaald en krijgen geen runtime-cache-eigenaarschap. */
   e.respondWith(
-    caches.match(e.request)
-      .then(hit => hit || fetch(e.request).then(r => {
-        const copy = r.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-        return r;
-      }))
-      .catch(() => caches.match(e.request).then(hit => hit || Response.error()))
+    uitHuidigeCache(e.request)
+      .then(hit => hit || fetch(e.request))
+      .catch(() => uitHuidigeCache(e.request).then(hit => hit || Response.error()))
   );
 });

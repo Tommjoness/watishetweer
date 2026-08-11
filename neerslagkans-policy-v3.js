@@ -9,6 +9,10 @@
 (function(root){
 "use strict";
 
+const grammatica=typeof module!=="undefined"&&module.exports
+  ?require("./nederlandse-weergrammatica.js")
+  :root.WeatherNowNederlandseGrammatica;
+
 const num=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 const clamp=v=>Math.max(0,Math.min(100,v));
 const hoofdletter=t=>{t=String(t||"");return t?t.charAt(0).toUpperCase()+t.slice(1):t;};
@@ -55,6 +59,23 @@ function typeNeerslag(a){
   return soort||"neerslag";
 }
 
+/* Een dagregel is een samenvatting, geen uurmeting. eersteTijd kan bovendien
+   een minuutwaarde uit de actuele model-/fixturetijd dragen (zoals 12:25), wat
+   in een zevendaagse verwachting onterecht preciezer oogt dan de bron is.
+   Exacte tijden blijven beschikbaar in de uurgrafiek en tooltip; hier tonen we
+   alleen het natuurlijke deel van de lokale dag. */
+function dagMomentZinsdeel(tijd){
+  const m=/^(\d{1,2}):(\d{2})$/.exec(String(tijd||"").trim());
+  if(!m)return "";
+  const uur=Number(m[1]);
+  if(!Number.isFinite(uur)||uur<0||uur>23)return "";
+  if(uur<5)return " in de nacht";
+  if(uur<8)return " in de vroege ochtend";
+  if(uur<12)return " in de ochtend";
+  if(uur<18)return " in de middag";
+  return " in de avond";
+}
+
 function kansHoofd(a){
   if(!a||!a.genoeg) return "–";
   if(tegenstrijdigDroogSignaal(a)) return "Onzeker";
@@ -68,7 +89,7 @@ function kansZin(a,venster,opties){
   opties=opties||{};
   if(!a||!a.genoeg) return opties.kort?"Neerslagkans niet beschikbaar.":"Voor "+venster+" ontbreken voldoende gegevens voor een betrouwbare neerslaginschatting.";
   const soort=typeNeerslag(a),k=num(a.kans),niveau=kansNiveau(k);
-  if(a.currentWet||a.status==="NEERSLAG_NU") return "Er valt nu "+soort+".";
+  if(a.currentWet||a.status==="NEERSLAG_NU") return grammatica.actueleNeerslagZin(soort);
   if(niveau==="ONBEKEND") return "Neerslagkans niet beschikbaar.";
   const pct=Math.round(clamp(k));
   const hoeveelheidDetail=opties.kort?"":hoeveelheidConditioneel(a);
@@ -81,14 +102,14 @@ function kansZin(a,venster,opties){
   }
   if(niveau==="ZEER_KLEIN") return (opties.kort?"Zeer kleine kans op neerslag.":"De kans op "+soort+" in "+venster+" is zeer klein (maximaal "+pct+"%).")+detail;
   if(niveau==="KLEIN") return (opties.kort?"Kleine kans op neerslag.":"Er is een kleine kans op "+soort+" in "+venster+" (maximaal "+pct+"%).")+detail;
-  if(niveau==="MOGELIJK") return (opties.kort?"Neerslag is mogelijk.":hoofdletter(soort)+" is mogelijk in "+venster+" (maximaal "+pct+"%).")+detail;
+  if(niveau==="MOGELIJK") return (opties.kort?"Neerslag is mogelijk.":grammatica.soortIsMogelijk(soort)+" in "+venster+" (maximaal "+pct+"%).")+detail;
   if(niveau==="GROOT") return (opties.kort?"Grote kans op neerslag.":"Er is een grote kans op "+soort+" in "+venster+" (maximaal "+pct+"%).")+detail;
   return (opties.kort?"Zeer grote kans op neerslag.":"Er is een zeer grote kans op "+soort+" in "+venster+" (maximaal "+pct+"%).")+detail;
 }
 
 function komendUurTekst(a){
   if(!a||!a.genoeg) return "Neerslagkans niet beschikbaar.";
-  if(a.currentWet||a.status==="NEERSLAG_NU") return "Er valt nu "+typeNeerslag(a)+".";
+  if(a.currentWet||a.status==="NEERSLAG_NU") return grammatica.actueleNeerslagZin(typeNeerslag(a));
   if(tegenstrijdigDroogSignaal(a)) return "Neerslagverwachting onzeker.";
   const niveau=kansNiveau(a.kans);
   if(niveau==="DROOG") return "Geen neerslag verwacht.";
@@ -102,7 +123,7 @@ function komendUurTekst(a){
 
 function briefingZin(a){
   if(!a||!a.genoeg) return "Onvoldoende gegevens voor een betrouwbare neerslaginschatting in de komende twee uur.";
-  if(a.currentWet||a.status==="NEERSLAG_NU") return "Er valt nu "+typeNeerslag(a)+".";
+  if(a.currentWet||a.status==="NEERSLAG_NU") return grammatica.actueleNeerslagZin(typeNeerslag(a));
   if(tegenstrijdigDroogSignaal(a)) return "De neerslagverwachting voor de komende twee uur is onzeker.";
   const niveau=kansNiveau(a.kans);
   if(niveau==="DROOG") return "De komende twee uur blijft het droog.";
@@ -119,9 +140,10 @@ function dagKansSamenvatting(a,basis){
   basis=String(basis||"Verwachting");
   if(tegenstrijdigDroogSignaal(a)) return basis+"; neerslagverwachting onzeker";
   const soort=typeNeerslag(a),niveau=kansNiveau(a.kans);
-  const basisHeeftSoort=basis.toLowerCase().includes(soort.toLowerCase());
+  const basisIsNeerslag=/(?:motregen|regen|buien|sneeuw|ijzel|onweer|hagel)/i.test(basis);
+  const basisHeeftSoort=basisIsNeerslag||basis.toLowerCase().includes(soort.toLowerCase());
   const type=basisHeeftSoort?basis:hoofdletter(soort);
-  const tijd=a.eersteTijd?" rond "+a.eersteTijd:"";
+  const tijd=dagMomentZinsdeel(a.eersteTijd);
   if(niveau==="ONBEKEND") return basis;
   if(niveau==="DROOG") return basisHeeftSoort?"Overwegend droog":basis;
   if(niveau==="ZEER_KLEIN") return basisHeeftSoort?"Zeer kleine kans op "+kleineStart(type)+tijd:basis+"; zeer kleine neerslagkans";
@@ -131,7 +153,7 @@ function dagKansSamenvatting(a,basis){
   return basisHeeftSoort?"Zeer grote kans op "+kleineStart(type)+tijd:basis+"; zeer grote neerslagkans";
 }
 
-const api={kansNiveau,kansHoofd,hoeveelheidTekst,hoeveelheidConditioneel,kansZin,komendUurTekst,briefingZin,dagKansSamenvatting};
+const api={kansNiveau,kansHoofd,hoeveelheidTekst,hoeveelheidConditioneel,kansZin,komendUurTekst,briefingZin,dagMomentZinsdeel,dagKansSamenvatting};
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowKansbeleidV3=api;
 

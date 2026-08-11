@@ -25,6 +25,13 @@ ok(internPubliek.length===0,"geen interne test- of bouwbestanden in public");
 const sw=fs.readFileSync(path.join(PUBLIC,"sw.js"),"utf8");
 ok(/const CACHE = "watishetweer-[0-9a-f]{12}";/.test(sw),"serviceworker-cache volgt de gebouwde inhoudshash");
 ok(!/(?:weerbriefing|watishetweer)-v\d+/.test(sw),"geen handmatig vast cacheversienummer in productie");
+ok((sw.match(/caches\.open\(CACHE\)/g)||[]).length===1,"serviceworker opent de generatiecache uitsluitend tijdens install");
+ok(!/CACHE_HANDLE/.test(sw),"serviceworker houdt geen generatiecachehandle vast na install");
+ok(!/\.put\(e\.request/.test(sw),"oude serviceworker kan zijn verwijderde generatiecache niet via runtime-write terugbrengen");
+ok(!/setTimeout\(resolve,\s*\d+\)/.test(sw),"serviceworker-upgrade steunt niet op een tijdgebaseerde activate-uitlooptijd");
+ok(/const uitHuidigeCache = request => caches\.match\(request,\{cacheName:CACHE\}\);/.test(sw),"offline cachelookup is expliciet tot de huidige worker-generatie beperkt");
+ok(!/caches\.match\([^,\n]+\)(?:\.|\s)/.test(sw),"serviceworker gebruikt geen globale onbegrensde CacheStorage-match voor shellfallbacks");
+ok(/fetch\(e\.request\)\.catch\(\(\) => uitHuidigeCache\(e\.request\)/.test(sw),"navigatie blijft netwerk-eerst met huidige install-cache als offline fallback");
 
 const gebouwd=fs.readFileSync(path.join(PUBLIC,"index.html"),"utf8");
 ok(gebouwd.includes("S.actieveWaarschuwingen=[];"),"waarschuwingen van een vorige locatie worden direct gewist");
@@ -33,8 +40,10 @@ ok(gebouwd.includes("Officiële weerwaarschuwingen konden niet worden gecontrole
 ok(gebouwd.includes("zijn voor deze locatie niet beschikbaar"),"ontbrekende werelddekking wordt eerlijk gemeld");
 ok(gebouwd.includes("const rondGetal="),"temperatuurweergaven blokkeren null als kunstmatige nul");
 ok(gebouwd.includes('const scheiding="<!--brief-rest-->"'),"centrale neerslaglaag bewaart de rest van de briefing structureel");
+ok(gebouwd.includes("laterVandaagNeerslag(S.d,twee)"),"centrale briefing vat ook de uren na het twee-uursvenster samen");
 ok(gebouwd.includes('classList.contains("kop")'),"weekinterpretatie slaat de tabelkop over");
-ok(gebouwd.includes('dagAanduiding(h.time[top],true)+" wordt het maximaal'),"maximumtemperatuur noemt de dag vóór de claim");
+ok(gebouwd.includes('const morgenDagMax=')&&gebouwd.includes('morgenDagMax')&&gebouwd.includes('plaatsDelen.hour>=18'),"temperatuurbriefing scheidt de kalenderdagen en noemt morgen niet voortijdig");
+ok(gebouwd.includes('el.classList.add("aq-cols-1")'),"ontbrekende luchtkwaliteitsdata gebruikt een volle lege-statusrij");
 ok(gebouwd.includes("#suntimes .zondag")&&gebouwd.includes("Zonsopkomst ")&&gebouwd.includes("Zonsondergang "),"zonmomenten tonen de dag als eigen hiërarchische kop boven op- en ondergang");
 
 const vercel=JSON.parse(fs.readFileSync(path.join(ROOT,"vercel.json"),"utf8"));

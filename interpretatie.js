@@ -1,8 +1,11 @@
 (function(root,factory){
-  const api=factory();
+  const grammatica=typeof module==="object"&&module.exports
+    ?require("./nederlandse-weergrammatica.js")
+    :root&&root.WeatherNowNederlandseGrammatica;
+  const api=factory(grammatica);
   if(typeof module==="object"&&module.exports) module.exports=api;
   if(root) root.WeerInterpretatie=api;
-})(typeof globalThis!=="undefined"?globalThis:this,function(){
+})(typeof globalThis!=="undefined"?globalThis:this,function(grammatica){
   "use strict";
   const CONFIG=Object.freeze({meetbaarMm:0.1,actueelMm:0.05,kansZeerKleinMax:19,kansKleinMax:39,kansMogelijkMax:69,volledigeDekking:0.9,minimaleDekking:0.5});
   const WMO_FAMILIE=Object.freeze({0:"helder",1:"helder",2:"halfbewolkt",3:"bewolkt",45:"mist",48:"ijzel",51:"regen",53:"regen",55:"regen",56:"ijzel",57:"ijzel",61:"regen",63:"regen",65:"regen",66:"ijzel",67:"ijzel",71:"sneeuw",73:"sneeuw",75:"sneeuw",77:"sneeuw",80:"regen",81:"regen",82:"regen",85:"sneeuw",86:"sneeuw",95:"onweer",96:"onweer",99:"onweer"});
@@ -67,8 +70,8 @@
     opties=opties||{};const termijn=opties.termijn||("de komende "+(a.duurMinuten===60?"uur":a.duurMinuten===120?"twee uur":a.duurMinuten+" minuten")),kans="Maximale kans: "+kansTekst(a.maximaleKans)+".",mm="Verwachte hoeveelheid: "+mmTekst(a.hoeveelheid)+".";
     if(!a||!a.genoeg||a.status==="onvoldoende_data")return"Voor "+termijn+" is er niet genoeg aansluitende data voor een betrouwbare neerslaginschatting.";
     if(a.conflict)return"De neerslagsignalen spreken elkaar gedeeltelijk tegen. "+kans+" "+mm;
-    if(a.status==="neerslag_nu"){const stop=a.laatste?" Naar verwachting neemt de neerslag rond "+klok(a.laatste.tot)+" af.":"";return"Er valt nu "+a.type+"."+stop+" "+kans+" "+mm;}
-    if(a.status==="neerslag_verwacht"){const begin=a.eerste?" De eerste meetbare neerslag wordt rond "+klok(Math.max(a.start,a.eerste.van))+" verwacht.":"";return"Binnen "+termijn+" wordt "+a.type+" verwacht."+begin+" "+kans+" "+mm;}
+    if(a.status==="neerslag_nu"){const stop=a.laatste?" Naar verwachting neemt de neerslag rond "+klok(a.laatste.tot)+" af.":"";return grammatica.actueleNeerslagZin(a.type)+stop+" "+kans+" "+mm;}
+    if(a.status==="neerslag_verwacht"){const begin=a.eerste?" De eerste meetbare neerslag wordt rond "+klok(Math.max(a.start,a.eerste.van))+" verwacht.":"";return"Binnen "+termijn+" "+grammatica.soortWordtVerwacht(a.type)+"."+begin+" "+kans+" "+mm;}
     if(a.status==="spoor_berekend")return"Voor "+termijn+" wordt hooguit een zeer kleine hoeveelheid neerslag berekend. "+kans+" "+mm;
     if(a.status==="grote_kans_geen_hoeveelheid")return"Voor "+termijn+" is de kans op neerslag groot, maar het hoofdmodel berekent geen meetbare hoeveelheid. "+kans+" "+mm;
     if(a.status==="mogelijk")return"Voor "+termijn+" is neerslag mogelijk. "+kans+" "+mm;

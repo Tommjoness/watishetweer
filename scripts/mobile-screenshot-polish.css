@@ -1,10 +1,24 @@
-/* Gerichte fysieke-iPhone-polish, 10-08-2026. */
+/* Gerichte fysieke-iPhone-polish, 10-08-2026; checkpoint 50 Nachtzicht. */
 
-/* De ronde drager blijft licht; de v2-SVG tekent alleen de schaduwzijde.
-   Zo zijn nieuwe maan, volle maan en beide sikkels ook op 14 px verschillend. */
+/* De SVG bevat zelf een duidelijke donkere schijf en tekent daar het verlichte
+   deel overheen. De kleuren blijven aan de bestaande thematokens gekoppeld,
+   zodat nieuwe maan ook in donker/rood zichtbaar blijft en volle maan licht is. */
+:root{
+  --moon-unlit:var(--ink-70);
+  --moon-lit:var(--sheet);
+  --moon-outline:var(--ink-45);
+}
+html[data-thema="donker"],html[data-thema="rood"]{
+  --moon-unlit:var(--rule-soft);
+  --moon-lit:var(--ink);
+  --moon-outline:var(--ink-45);
+}
 .maan-fase-svg-v2{
-  color:var(--ink-70);
-  overflow:hidden;
+  color:var(--moon-lit);
+  overflow:visible;
+  padding:0;
+  border:0;
+  background:transparent;
 }
 
 /* Bronattributie blijft volledig zichtbaar, maar elk broncluster mag als eigen
@@ -26,6 +40,52 @@ footer .bron-bronnen .bronitem{
 }
 
 @media(max-width:900px){
+  /* Nachtzicht blijft vier duidelijke kolommen houden, maar gebruikt minder
+     vaste breedte. Bewolking krijgt nog steeds genoeg ruimte voor de volledige
+     kop; score en balk behouden de bestaande harde 8 px visuele scheiding. */
+  #nights .row.night{
+    grid-template-columns:56px 46px minmax(32px,1fr) 64px;
+    column-gap:8px;
+    row-gap:3px;
+  }
+  #nights .row.night .score{
+    font-size:16px;
+    line-height:1.2;
+    min-width:0;
+  }
+  #nights .row.night .sbar{min-width:0;margin-left:0}
+  #nights .row.night > .nmeta:not(.wide){
+    min-width:0;
+    text-align:right;
+    white-space:nowrap;
+  }
+  #nights .row.night.kop > .nmeta:not(.wide){
+    justify-self:end;
+    font-size:9.5px!important;
+    letter-spacing:.08em;
+  }
+  #nights .row.night .nmeta.wide{
+    grid-column:2 / -1;
+    margin-top:0;
+    min-width:0;
+    overflow-wrap:anywhere;
+  }
+  #nights .row.night .nachtadvies{
+    font-size:12px;
+    line-height:1.35;
+    margin-bottom:1px;
+  }
+  #nights .row.night .nachtmaan{
+    font-size:11px;
+    line-height:1.35;
+    white-space:normal;
+  }
+  #nights .row.night .maan-fase-svg-v2{
+    width:14px;
+    height:14px;
+    vertical-align:-2px;
+  }
+
   footer .bron-bronnen{
     row-gap:4px;
     column-gap:10px;
@@ -37,4 +97,13 @@ footer .bron-bronnen .bronitem{
     letter-spacing:.12em;
     text-transform:uppercase;
   }
+}
+
+@media(max-width:360px){
+  #nights .row.night{
+    grid-template-columns:52px 43px minmax(28px,1fr) 60px;
+    column-gap:8px;
+  }
+  #nights .row.night .score{font-size:15px}
+  #nights .row.night.kop > .nmeta:not(.wide){font-size:9px!important;letter-spacing:.06em}
 }

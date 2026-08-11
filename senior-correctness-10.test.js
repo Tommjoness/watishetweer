@@ -58,6 +58,8 @@ test("punt 2/3: ontbrekende uren vormen nooit een vals aaneengesloten zichtvenst
 
 test("punt 6: uurneerslag wordt een halve kolom naar het voorafgaande uur verschoven",()=>{
   assert.equal(grafiekNeerslagVerschuiving(100),-50);assert.equal(grafiekNeerslagVerschuiving(42),-21);
+  const bron=fs.readFileSync(path.join(__dirname,"senior-correctness-v2.js"),"utf8");
+  assert(bron.includes('millimeter neerslag$'),"hoeveelheidscijfers moeten met hun uurstaaf meeschuiven");
 });
 
 test("punt 9: nachtelijke bewolkingsomschrijving heeft expliciete heldere nachtvorm",()=>{
@@ -86,6 +88,17 @@ test("live polish: komend-uurtegel bevat geen bronjargon",()=>{
   const tekst=komendUurTekst({genoeg:true,status:"KLEINE_KANS",kans:27,soort:"regen"});
   assert.equal(tekst,"Kleine kans op neerslag het komende uur.");
   assert(!/model|overlapp|uurvak/i.test(tekst),tekst);
+});
+
+test("live polish: komend-uurtegel vervoegt meervoudige neerslagsoorten",()=>{
+  assert.equal(
+    komendUurTekst({genoeg:true,status:"NEERSLAG_VERWACHT",kans:55,soort:"buien"}),
+    "Buien zijn mogelijk het komende uur."
+  );
+  assert.equal(
+    komendUurTekst({genoeg:true,status:"NEERSLAG_VERWACHT",kans:85,soort:"buien"}),
+    "Buien worden het komende uur verwacht."
+  );
 });
 
 test("live polish: alleen maan-events binnen de nacht blijven over",()=>{

@@ -8,7 +8,7 @@ const PRODUCT_CONFIG=require("./product-config.js");
 const ROOT=__dirname,OUT=path.join(ROOT,"public");
 const NIET_PUBLICEREN=new Set([
   ".git",".github","api","lib","node_modules","public","scripts",
-  "build-weather.js","interpretatie-engine.js","interpretatie-engine.test.js","senior-correctness-v2.js","neerslagkans-policy-v3.js","live-polish.css","live-polish-v2.js","senior-semantiek-20260810.css","senior-semantiek-20260810.js","product-config.js",
+  "build-weather.js","interpretatie-engine.js","interpretatie-engine.test.js","nederlandse-weergrammatica.js","senior-correctness-v2.js","neerslagkans-policy-v3.js","live-polish.css","live-polish-v2.js","senior-semantiek-20260810.css","senior-semantiek-20260810.js","product-config.js",
   "run.js","run-built-matrix.js","kern.js","data.js","package.json","package-lock.json","vercel.json"
 ]);
 function intern(n){return NIET_PUBLICEREN.has(n)||n.endsWith(".test.js");}
@@ -23,6 +23,7 @@ fs.rmSync(OUT,{recursive:true,force:true});fs.mkdirSync(OUT,{recursive:true});
 for(const n of fs.readdirSync(ROOT)){if(!intern(n))kopieer(path.join(ROOT,n),path.join(OUT,n));}
 let html=fs.readFileSync(path.join(ROOT,"index.html"),"utf8");
 let engine=fs.readFileSync(path.join(ROOT,"interpretatie-engine.js"),"utf8");
+const grammatica=fs.readFileSync(path.join(ROOT,"nederlandse-weergrammatica.js"),"utf8");
 const correctness=fs.readFileSync(path.join(ROOT,"senior-correctness-v2.js"),"utf8");
 const kansbeleid=fs.readFileSync(path.join(ROOT,"neerslagkans-policy-v3.js"),"utf8");
 const polishCss=fs.readFileSync(path.join(ROOT,"live-polish.css"),"utf8");
@@ -120,7 +121,8 @@ html=html.replace("</style>",
   +"/* ===== SENIOR SEMANTIEK 20260810 CSS ===== */\n"+seniorSemantiekCss+"\n/* ===== EINDE SENIOR SEMANTIEK 20260810 CSS ===== */\n</style>");
 
 html=html.replace(start,
-  "/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */\n"+engine+"\n/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */\n\n"
+  "/* ===== NEDERLANDSE WEERGRAMMATICA ===== */\n"+grammatica+"\n/* ===== EINDE NEDERLANDSE WEERGRAMMATICA ===== */\n\n"
+  +"/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */\n"+engine+"\n/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */\n\n"
   +"/* ===== SENIOR CORRECTHEIDSLAAG ===== */\n"+correctness+"\n/* ===== EINDE SENIOR CORRECTHEIDSLAAG ===== */\n\n"
   +"/* ===== NEERSLAGKANSBELEID V3 ===== */\n"+kansbeleid+"\n/* ===== EINDE NEERSLAGKANSBELEID V3 ===== */\n\n"
   +"/* ===== LIVE INTERACTIEPOLISH ===== */\n"+polishJs+"\n/* ===== EINDE LIVE INTERACTIEPOLISH ===== */\n\n"
