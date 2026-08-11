@@ -22,4 +22,6 @@ jobs:
       - name: Bouw definitieve artifact
         run: npm run build
       - name: Checkpoint 25% in Chromium en WebKit
-        run: node browser-q1-checkpoint.test.js
+        run: |
+          node -e 'const fs=require("fs"),p="browser-q1-checkpoint.test.js";let s=fs.readFileSync(p,"utf8");const n="assert.ok(Number.isFinite(snel.paint)&&snel.paint<150,naam+\": gecachte paint is gemeten en <150 ms\");";if(!s.includes(n))throw new Error("cachepaint-assertie niet gevonden");s=s.replace(n,"console.log(\"CACHEPERF \"+naam+\" \"+JSON.stringify(snel));\n    "+n);fs.writeFileSync(p,s);'
+          node browser-q1-checkpoint.test.js
