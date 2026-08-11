@@ -23,7 +23,9 @@ const UV_OLD=[
 ].join("\n");
 const UV_NEW=[
   '    const pu=piek("uv_index"),uvSub=document.getElementById("uvsub"),uvVal=document.getElementById("uv");',
-  '    const nuUv=weatherNowActueleLokaleTijd(),datumUv=actueleDatum();',
+  '    const pUv=typeof plaatsTijdDelen==="function"?plaatsTijdDelen():null;',
+  '    const datumUv=pUv?pUv.year+"-"+String(pUv.month).padStart(2,"0")+"-"+String(pUv.day).padStart(2,"0"):actueleDatum();',
+  '    const nuUv=pUv?datumUv+"T"+String(pUv.hour).padStart(2,"0")+":"+String(pUv.minute).padStart(2,"0"):weatherNowActueleLokaleTijd();',
   '    if(uvSub){',
   '      if(!pu||num(pu.v)===null||pu.v<0){',
   '        if(uvVal)uvVal.textContent="–";',
@@ -57,6 +59,7 @@ for(const vereist of [
   'Piek was rond ',
   'Piek rond ',
   'UV-gegevens voor vandaag worden bijgewerkt.',
+  'const pUv=typeof plaatsTijdDelen',
   'slashed-zero',
   'font-feature-settings:"tnum" 1,"zero" 1',
   'function plaatsTijdDelen()',
