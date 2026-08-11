@@ -23,54 +23,47 @@ const RECENT_OLD='<div class="eyebrow">Afgelopen 15 minuten</div><div class="sva
 const TREND_NEW='<div class="eyebrow">Temperatuurtrend</div><div class="sval" id="prec">';
 const LEGACY_RECENT_START='  const recenteNeerslag=eindigGetal(c.precipitation);';
 const LEGACY_RECENT_END='  /* De tegel toont de kans voor precies het eerstvolgende uur (i+1). De subtekst';
-const DIAG_JS=`/* ===== TIJDELIJKE Q1 RUNTIME-DIAGNOSTIEK ===== */
-(function(){
-  if(typeof location==="undefined"||location.hostname!=="127.0.0.1"||typeof document==="undefined")return;
-  const label=()=>document.getElementById("prec")?.parentElement?.querySelector(".eyebrow")||null;
-  const meld=(reden,extra)=>{
-    const el=label();if(!el)return;
-    const tekst=String(el.textContent||"").trim();
-    if(tekst!=="Temperatuurtrend")console.error("Q1_TRENDKOP_DIAG",reden,JSON.stringify({tekst,extra:extra||null,html:el.parentElement&&el.parentElement.outerHTML}));
-  };
-  const nodeDesc=Object.getOwnPropertyDescriptor(Node.prototype,"textContent");
-  if(nodeDesc&&nodeDesc.set&&nodeDesc.get){
-    Object.defineProperty(Node.prototype,"textContent",{
-      configurable:true,enumerable:nodeDesc.enumerable,
-      get:nodeDesc.get,
-      set:function(v){
-        if(this===label()&&String(v||"").trim()!=="Temperatuurtrend")console.error("Q1_TRENDKOP_SET",String(v),new Error("trendkop setter").stack);
-        return nodeDesc.set.call(this,v);
-      }
-    });
-  }
-  const obs=new MutationObserver(muts=>{
-    for(const m of muts){
-      const el=label();
-      if(el&&(m.target===el||el.contains(m.target)||m.target===el.parentElement))meld("mutation",{type:m.type,oldValue:m.oldValue||null});
-    }
-  });
-  obs.observe(document.documentElement,{subtree:true,childList:true,characterData:true,characterDataOldValue:true});
-  meld("voor-start");
-})();
-/* ===== EINDE TIJDELIJKE Q1 RUNTIME-DIAGNOSTIEK ===== */`;
+const ENGINE_RECENT_START='      zetEyebrow("prec","Afgelopen 15 minuten");\n      const c=S.d.current||{};';
+const ENGINE_RECENT_END='      // Bewolkingswoorden zijn tijdsafhankelijk.';
+const STATE_RECENT_START='  const recenteNeerslag = eindigGetal(data.current?.precipitation);';
+const STATE_RECENT_END='  const gevoel = gevoelContext(data);';
 if(html.includes(CSS_MARK)||html.includes(JS_MARK)||html.includes(Q1_CSS_MARK)||html.includes(Q1_JS_MARK))throw new Error("Post-build polish is al geïnjecteerd.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor mobiele polish.");
 if((html.split(START).length-1)!==1)throw new Error("Startmarker ontbreekt of is dubbel voor mobiele polish.");
 if((html.split(RECENT_OLD).length-1)!==1)throw new Error("Legacy recente-neerslagtegel ontbreekt of is dubbel in de bronartifact.");
 if((html.split(LEGACY_RECENT_START).length-1)!==1||(html.split(LEGACY_RECENT_END).length-1)!==1)throw new Error("Legacy recente-neerslaglogica ontbreekt of is dubbel in de bronartifact.");
+if((html.split(ENGINE_RECENT_START).length-1)!==1||(html.split(ENGINE_RECENT_END).length-1)!==1)throw new Error("Interpretatie-engine recente-neerslaglogica ontbreekt of is dubbel in de bronartifact.");
+if((html.split(STATE_RECENT_START).length-1)!==1||(html.split(STATE_RECENT_END).length-1)!==1)throw new Error("State recente-neerslaglogica ontbreekt of is dubbel in de bronartifact.");
 
 /* Productbeslissing checkpoint 25: de terugblik op recente neerslag bestaat niet
-   meer in de definitieve runtime. De bestaande bron-template bevat die historische
-   metriek nog, maar deze reeds bestaande post-buildstap is de enige artifactlaag
-   van de branch. We vervangen de tegel statisch en verwijderen het volledige oude
-   meters()-blok vóór de runtime-JS wordt gevalideerd. Er blijft dus geen verborgen
-   berekening over die later opnieuw een kwartierwaarde kan terugschrijven. */
+   meer in de definitieve runtime. De bron bevat drie historische eigenaars van
+   dezelfde tegel: de canonieke meters(), de browserintegratie van de centrale
+   interpretatie-engine en een latere state-updater. Ze worden hier tijdens de
+   bestaande artifactassemblage volledig verwijderd vóór Q1 wordt geïnjecteerd.
+   Dit is bewust geen runtime-wrapper: na de build bestaat er nog maar één eigenaar
+   van #prec/#precsub, namelijk de temperatuurtrend. */
 html=html.replace(RECENT_OLD,TREND_NEW);
 const legacyStart=html.indexOf(LEGACY_RECENT_START),legacyEind=html.indexOf(LEGACY_RECENT_END,legacyStart);
 if(legacyStart<0||legacyEind<=legacyStart)throw new Error("Legacy recente-neerslaglogica kon niet veilig worden afgebakend.");
 html=html.slice(0,legacyStart)
-  +'  /* Recente-neerslagterugblik verwijderd; #prec is nu exclusief van Q1 temperatuurtrend. */\n\n'
+  +'  /* Recente-neerslagterugblik verwijderd; #prec is exclusief van temperatuurtrend. */\n\n'
   +html.slice(legacyEind);
+
+const engineStart=html.indexOf(ENGINE_RECENT_START),engineEind=html.indexOf(ENGINE_RECENT_END,engineStart);
+if(engineStart<0||engineEind<=engineStart)throw new Error("Interpretatie-engine recente-neerslaglogica kon niet veilig worden afgebakend.");
+html=html.slice(0,engineStart)
+  +'      const c=S.d.current||{};\n\n'
+  +html.slice(engineEind);
+
+const engineKop='      zetEyebrow("prec","Afgelopen 15 minuten");';
+if((html.split(engineKop).length-1)!==1)throw new Error("Interpretatie-engine tekenAlles-kop ontbreekt of is dubbel.");
+html=html.replace(engineKop,'      /* #prec-kop is exclusief van temperatuurtrend. */');
+
+const stateStart=html.indexOf(STATE_RECENT_START),stateEind=html.indexOf(STATE_RECENT_END,stateStart);
+if(stateStart<0||stateEind<=stateStart)throw new Error("State recente-neerslaglogica kon niet veilig worden afgebakend.");
+html=html.slice(0,stateStart)
+  +'  /* Recente-neerslagstate verwijderd; #prec is exclusief van temperatuurtrend. */\n\n'
+  +html.slice(stateEind);
 
 html=html.replace("</style>",
   "\n"+CSS_MARK+"\n"+mobileCss+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B CSS ===== */\n"
@@ -78,7 +71,7 @@ html=html.replace("</style>",
 html=html.replace(START,
   JS_MARK+"\n"+mobileJs+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B ===== */\n\n"
   +Q1_JS_MARK+"\n"+q1Js+"\n/* ===== EINDE CHECKPOINT 25 Q1 ===== */\n\n"
-  +DIAG_JS+"\n\n"+START);
+  +START);
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline script na mobiele polish.");
@@ -90,8 +83,8 @@ for(const vereist of [
 ]){
   if(!html.includes(vereist))throw new Error("Post-build invariant ontbreekt: "+vereist);
 }
-if(html.includes(RECENT_OLD)||html.includes("Afgelopen kwartier"))throw new Error("Verwijderde recente-neerslagtegel staat nog in de productieartifact.");
-if(html.includes(LEGACY_RECENT_START))throw new Error("Legacy recente-neerslagberekening staat nog in de productieartifact.");
+if(html.includes("Afgelopen 15 minuten")||html.includes("Afgelopen kwartier"))throw new Error("Verwijderde recente-neerslagfunctie staat nog in de productieartifact.");
+if(html.includes(LEGACY_RECENT_START)||html.includes(STATE_RECENT_START)||html.includes('zetEyebrow("prec"'))throw new Error("Een oude eigenaar van #prec staat nog in de productieartifact.");
 fs.writeFileSync(htmlPad,html,"utf8");
 
 /* build-weather.js maakt de serviceworker-cacheversie vóór deze gerichte laag.
@@ -118,4 +111,4 @@ sw=sw.replace(/watishetweer-[0-9a-f]{12}/g,versie);
 if(!sw.includes(versie))throw new Error("Nieuwe mobiele cachehash niet toegepast.");
 fs.writeFileSync(swPad,sw,"utf8");
 
-console.log("Mobiele polish + checkpoint 25% geïnjecteerd; cache "+versie+".");
+console.log("Mobiele polish + checkpoint 25% geïnjecteerd; oude recente-neerslagowners verwijderd; cache "+versie+".");
