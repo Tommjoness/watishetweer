@@ -8,12 +8,16 @@ const q4DagKort=t=>{try{const d=new Date(String(t).slice(0,10)+"T12:00:00");retu
 
 function q4Regenperioden(g){
   const h=S.d&&S.d.hourly||{},tijden=Array.isArray(g&&g.TI)?g.TI:[];
+  const bronStart=Number.isInteger(S.chartStart)?S.chartStart:null;
   const mm=tijden.map((tijd,i)=>{
     /* hourly precipitation op TI[i] beschrijft het voorafgaande interval.
        De eerste waarde ligt dus buiten het zichtbare grafiekvenster. */
     if(i===0)return null;
-    const bron=Array.isArray(h.time)?h.time.indexOf(tijd):-1;
-    if(bron<0)return null;
+    /* Gebruik de exacte bronindex van etmaal(), niet indexOf(tijd). Rond de
+       najaars-DST-omslag kan dezelfde lokale kloktekst namelijk twee keer
+       voorkomen. S.chartStart+i blijft dan één-op-één in forecastvolgorde. */
+    const bron=bronStart===null?-1:bronStart+i;
+    if(bron<0||!Array.isArray(h.time)||bron>=h.time.length||h.time[bron]!==tijd)return null;
     const waarde=q4Getal(h.precipitation&&h.precipitation[bron]);
     if(waarde===null||waarde<0)return null;
     if(S.dag==null&&globalThis.WeatherNowInterpretatie&&typeof globalThis.WeatherNowInterpretatie.lokaalNaarMinuten==="function"){
