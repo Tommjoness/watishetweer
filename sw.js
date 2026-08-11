@@ -29,6 +29,13 @@ self.addEventListener("activate", e => {
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
+      /* Een fetch van de vorige worker kan precies tijdens activate nog met zijn
+         bestaande Cache-handle afronden. Chromium kan de verwijderde cachenaam
+         daardoor kort opnieuw zichtbaar maken. Houd de nieuwe worker pas voor
+         geactiveerd nadat zo'n late write een tweede keer is opgeruimd. */
+      .then(() => new Promise(resolve => setTimeout(resolve, 150)))
+      .then(() => caches.keys())
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
   );
 });
 
