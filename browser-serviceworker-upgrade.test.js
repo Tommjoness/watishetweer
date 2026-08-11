@@ -13,8 +13,8 @@ const swPad=path.join(PUBLIC,"sw.js");
 if(!fs.existsSync(indexPad)||!fs.existsSync(swPad))throw new Error("Definitieve public-artifact ontbreekt voor serviceworker-E2E.");
 
 const indexNieuw=fs.readFileSync(indexPad,"utf8");
-const swNieuw=fs.readFileSync(swPad,"utf8");
-const cacheMatch=/const CACHE = "([^"]+)";/.exec(swNieuw);
+const swBasis=fs.readFileSync(swPad,"utf8");
+const cacheMatch=/const CACHE = "([^"]+)";/.exec(swBasis);
 if(!cacheMatch)throw new Error("Definitieve serviceworker-cache-id ontbreekt.");
 const cacheNieuw=cacheMatch[1];
 const cacheOud="watishetweer-deadbeef0000";
@@ -25,14 +25,42 @@ function metMarker(html,versie){
   if(!html.includes("</head>"))throw new Error("HTML-headanker ontbreekt voor SW-E2E-marker.");
   return html.replace("</head>",marker+"</head>");
 }
+
+function instrumenteerWorker(bron,versie){
+  const helper=`\nconst __SW_E2E_VERSION=${JSON.stringify(versie)};\nconst __swE2eDiag=(event,extra={})=>fetch("/__swdiag",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({version:__SW_E2E_VERSION,event,...extra})}).catch(()=>{});\n`;
+  let uit=bron.replace(/(const CACHE = "[^"]+";)/,"$1"+helper);
+  const eisen=[
+    ['self.addEventListener("install", e => {','self.addEventListener("install", e => {\n  __swE2eDiag("install-start");'],
+    ['    caches.open(CACHE).then(c =>\n      // per bestand','    (__swE2eDiag("install-cache-open"),caches.open(CACHE)).then(c =>\n      // per bestand'],
+    ['    ).then(() => self.skipWaiting())','    ).then(() => { __swE2eDiag("install-complete"); return self.skipWaiting(); })'],
+    ['self.addEventListener("activate", e => {','self.addEventListener("activate", e => {\n  __swE2eDiag("activate-start");'],
+    ['      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))','      .then(keys => { __swE2eDiag("activate-keys",{keys}); return Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))); })'],
+    ['      .then(() => self.clients.claim())','      .then(() => { __swE2eDiag("activate-complete"); return self.clients.claim(); })']
+  ];
+  for(const [van,naar] of eisen){
+    if(!uit.includes(van))throw new Error(`SW-diagnoseanker ontbreekt voor ${versie}: ${van}`);
+    uit=uit.replace(van,naar);
+  }
+  let runtimeOpen=0;
+  uit=uit.replace(/caches\.open\(CACHE\)\.then\(c => c\.put\(e\.request, copy\)\)/g,()=>{
+    runtimeOpen++;
+    return '(__swE2eDiag("runtime-cache-open",{path:url.pathname}),caches.open(CACHE)).then(c => c.put(e.request, copy))';
+  });
+  if(runtimeOpen!==2)throw new Error(`Verwacht twee runtime-cachewrites in ${versie}, vond ${runtimeOpen}.`);
+  return uit;
+}
+
 const indexOud=metMarker(indexNieuw,"old");
 const indexFinal=metMarker(indexNieuw,"new");
-const swOud=swNieuw.replace(/const CACHE = "[^"]+";/,'const CACHE = "'+cacheOud+'";');
-if(swOud===swNieuw||!swOud.includes(cacheOud))throw new Error("Oude serviceworkerfixture kon niet veilig worden afgeleid.");
+const swOudBasis=swBasis.replace(/const CACHE = "[^"]+";/,'const CACHE = "'+cacheOud+'";');
+if(swOudBasis===swBasis||!swOudBasis.includes(cacheOud))throw new Error("Oude serviceworkerfixture kon niet veilig worden afgeleid.");
+const swOud=instrumenteerWorker(swOudBasis,"old");
+const swNieuw=instrumenteerWorker(swBasis,"new");
 
 let fase="old";
 const serverStart=Date.now();
 const verzoeken=[];
+const lifecycle=[];
 const mime={
   ".html":"text/html; charset=utf-8",
   ".js":"application/javascript; charset=utf-8",
@@ -42,6 +70,15 @@ const mime={
 };
 const server=http.createServer((req,res)=>{
   const pathname=(req.url||"/").split("?")[0];
+  if(pathname==="/__swdiag"&&req.method==="POST"){
+    let body="";
+    req.on("data",d=>{body+=d;});
+    req.on("end",()=>{
+      try{lifecycle.push({ms:Date.now()-serverStart,fase,...JSON.parse(body)});}catch(err){lifecycle.push({ms:Date.now()-serverStart,fase,event:"diag-parse-error",error:String(err)});}
+      res.writeHead(204,{"cache-control":"no-store"});res.end();
+    });
+    return;
+  }
   verzoeken.push({ms:Date.now()-serverStart,fase,path:pathname});
   if(pathname==="/"||pathname==="/index.html"){
     res.writeHead(200,{"content-type":"text/html; charset=utf-8","cache-control":"no-store"});
@@ -127,6 +164,7 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
       clearInterval(window.__swDiagTimer);
       return window.__swDiag||[];
     });
+    await page.waitForTimeout(50);
     const overgangen=[];
     for(const x of diag){
       const compact={
@@ -142,6 +180,7 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
     }
     console.log("SW_DIAG_TRANSITIONS "+JSON.stringify(overgangen));
     console.log("SW_DIAG_REQUESTS "+JSON.stringify(verzoeken.filter(v=>v.path==="/"||v.path==="/index.html"||v.path==="/sw.js")));
+    console.log("SW_LIFECYCLE_DIAG "+JSON.stringify(lifecycle));
     const schoonIndex=diag.findIndex(x=>x.keys.includes(cacheNieuw)&&!x.keys.includes(cacheOud)&&x.active==="activated");
     const herleeft=schoonIndex>=0&&diag.slice(schoonIndex+1).some(x=>x.keys.includes(cacheOud));
     if(herleeft)throw new Error("BEWEZEN SERVICEWORKER-CACHERACE: oude WeatherNow-cache verdween na activate en werd daarna opnieuw aangemaakt.");
