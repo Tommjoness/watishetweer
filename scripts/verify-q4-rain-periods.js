@@ -12,7 +12,7 @@ ok(html.includes("waarde!==null&&waarde>=0.1"),"regenperiode begint pas bij meet
 ok(html.includes("lopend={van:i-1,tot:i"),"hoeveelheid op eindtijd wordt aan voorafgaand uurvak gekoppeld");
 ok(html.includes("const bronStart=Number.isInteger(S.chartStart)?S.chartStart:null;"),"regenperioden gebruiken de exacte zichtbare bronindex");
 ok(html.includes("const bron=bronStart===null?-1:bronStart+i;"),"ieder zichtbaar uur volgt forecastvolgorde zonder lokale indexOf");
-ok(!html.slice(html.indexOf("/* ===== Q4 REGENPERIODEN 20260811 ===== */")).includes("h.time.indexOf(tijd)"),"Q4 gebruikt bij dubbele DST-kloktijden geen indexOf op lokale tijdtekst");
+ok(!html.includes("const bron=Array.isArray(h.time)?h.time.indexOf(tijd):-1;"),"Q4 gebruikt bij dubbele DST-kloktijden geen indexOf op lokale tijdtekst");
 ok(html.includes("g.MM=mm;"),"regenstrook en interactie delen één uitgelijnde mm-reeks");
 ok(html.includes("p.som+=waarde"),"periodetotaal is som van dezelfde uurintervallen");
 ok(html.includes("waarde>lopend.piekMm"),"zwaarste uurvak komt uit dezelfde periodegegevens");
@@ -24,7 +24,7 @@ ok(html.includes("Selecteer een punt in de grafiek voor details."),"grafiekhint 
 ok(html.includes("Kies een dag om die verwachting in de grafiek te bekijken."),"daghint is invoermethode-neutraal");
 ok(!html.includes("Houd de grafiek vast voor details."),"oude touchspecifieke grafiekhint is weg");
 ok(!html.includes("Klik op een dag om die verwachting in de grafiek te laden."),"oude muisspecifieke daghint is weg");
-ok(html.includes("<span>Windstoten nu</span>"),"actuele windstootwaarde is ondubbelzinnig gelabeld");
+ok(html.includes('<div class="eyebrow">Windstoten nu</div>'),"actuele windstootwaarde is ondubbelzinnig gelabeld");
 
 /* Alleen de afgebakende senior-correctheidslaag bezit de uiteindelijke dagtekst.
    Een identieke helpertekst kan elders in de geassembleerde artifact bestaan als
