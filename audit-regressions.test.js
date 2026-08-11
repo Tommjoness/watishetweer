@@ -81,15 +81,58 @@ async function roepWaarschuwingen(query,fetchImpl){
 (async()=>{
   const nws=await roepWaarschuwingen(
     {lat:"40.7128",lon:"-74.0060"},
-    async()=>({ok:true,json:async()=>({features:[]})})
+    async()=>{throw new Error("teststoring");}
   );
-  ok(nws.statusCode===200,"NWS lege waarschuwingenlijst is geen serverfout");
+  ok(nws.statusCode===200,"waarschuwingroute blijft technisch beschikbaar bij bronstoring");
+  ok(nws.body&&nws.body.dekking===false,"NWS-storing wordt niet als geldige lege dekking gemeld");
+  ok(nws.body&&nws.body.reden==="bron onbereikbaar","NWS-storing heeft een expliciete reden");
 
-  const nietGedekt=await roepWaarschuwingen(
-    {lat:"35.6762",lon:"139.6503"},
-    async()=>{throw new Error("mag niet worden aangeroepen");}
+  const atom="<?xml version=\"1.0\"?><feed><entry><title>Code geel</title><summary>Landelijke waarschuwing</summary></entry></feed>";
+  const urls=[];
+  const meteo=await roepWaarschuwingen(
+    {lat:"52.3676",lon:"4.9041",land:"NL"},
+    async url=>{urls.push(String(url));return {ok:true,text:async()=>atom};}
   );
-  ok(nietGedekt.statusCode===200&&nietGedekt.body&&nietGedekt.body.dekking===false,"wereldlocatie zonder providerdekking wordt expliciet als niet gedekt gemeld");
+  ok(urls.length===2&&urls[0].includes("api/v1/warnings/feeds-netherlands")&&urls[1].includes("meteoalarm-legacy-atom-netherlands"),
+    "MeteoAlarm probeert eerst locatie-filterbare compatibiliteitsdata en daarna pas de landbrede Atom-fallback");
+  ok(meteo.body&&meteo.body.dekking===true,"beschikbare MeteoAlarm-fallback houdt dekking waar");
+  ok(meteo.body&&meteo.body.plaatsSpecifiek===false,"landbrede Atom-fallback wordt niet als plaats-specifiek voorgesteld");
+  ok(meteo.body&&meteo.body.lijst&&meteo.body.lijst[0]&&meteo.body.lijst[0].landelijk===true,
+    "Atom-waarschuwing zonder gebied wordt expliciet als breder gebied gemarkeerd");
 
-  console.log("Audit-regressies geslaagd: "+geslaagd);
-})().catch(err=>{console.error(err);process.exit(1);});
+  const atomEntiteiten="<?xml version=\"1.0\"?><feed><entry><title><![CDATA[Wind &amp; regen]]></title>"
+    +"<summary>Kans op hagel &lt; lokaal &gt; &#33;</summary></entry></feed>";
+  const meteoTekst=await roepWaarschuwingen(
+    {lat:"52.3676",lon:"4.9041",land:"NL"},
+    async()=>({ok:true,text:async()=>atomEntiteiten})
+  );
+  ok(meteoTekst.body.lijst[0].titel==="Wind & regen","Atom-titels decoderen XML-entiteiten en CDATA");
+  ok(meteoTekst.body.lijst[0].tekst==="Kans op hagel < lokaal > !","Atom-omschrijvingen decoderen XML-entiteiten");
+
+  async function landFeed(code,lat,lon){
+    const feedUrls=[];
+    const antwoord=await roepWaarschuwingen({lat:String(lat),lon:String(lon),land:code},async url=>{
+      feedUrls.push(String(url));
+      return {ok:true,text:async()=>atom};
+    });
+    return {antwoord,urls:feedUrls};
+  }
+  const andorra=await landFeed("AD",42.5063,1.5218);
+  ok(andorra.urls[0].includes("api/v1/warnings/feeds-andorra")&&andorra.urls.some(u=>u.includes("meteoalarm-legacy-atom-andorra"))&&andorra.antwoord.body.dekking===true,
+    "Andorra gebruikt de juiste MeteoAlarm-slug in compatibiliteits- en Atom-route");
+  const macedonie=await landFeed("MK",41.9981,21.4254);
+  ok(macedonie.urls[0].includes("api/v1/warnings/feeds-republic-of-north-macedonia")&&macedonie.urls.some(u=>u.includes("meteoalarm-legacy-atom-republic-of-north-macedonia"))&&macedonie.antwoord.body.dekking===true,
+    "Noord-Macedonië gebruikt de actuele officiële feedslug");
+
+  const roodAtom="<?xml version=\"1.0\"?><feed><entry><title>Code rood: Extreem weer</title><summary>Gevaarlijk weer</summary></entry></feed>";
+  const rood=await roepWaarschuwingen(
+    {lat:"52.3676",lon:"4.9041",land:"NL"},
+    async()=>({ok:true,text:async()=>roodAtom})
+  );
+  ok(rood.body.lijst[0].niveau==="rood","MeteoAlarm Atom-titel met rood wordt als rood geïnterpreteerd");
+
+  console.log("Code-auditregressies: "+geslaagd+" controles geslaagd.");
+})().catch(err=>{
+  console.error(err&&err.stack||err);
+  process.exitCode=1;
+});
