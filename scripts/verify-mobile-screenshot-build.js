@@ -31,8 +31,10 @@ for(const vereist of [
   "CHECKPOINT 25 Q1",
   "verbeterNachtzicht",
   "Beste modeluren",
-  "H=M?276:296",
-  "pt=M?68:76, ih=M?152:160",
+  "H=M?284:296",
+  "pt=M?70:76, ih=M?158:160",
+  "tijdLabelVrij=nuX==null",
+  "val+labelHoogte/2+4<=pb",
   "Nachtzicht-presentatie geconsolideerd in WeatherNowMobileScreenshotPolish"
 ]){
   if(!html.includes(vereist))throw new Error("Definitieve productie-invariant ontbreekt: "+vereist);
@@ -72,4 +74,4 @@ const m=/const CACHE = "([^"]+)";/.exec(sw);
 if(!m)throw new Error("Serviceworker-cache-id ontbreekt in definitieve artifact.");
 if(m[1]!==verwacht)throw new Error("Serviceworker-cache hoort bij een andere artifact: "+m[1]+" versus "+verwacht);
 
-console.log("Definitieve checkpoint-50 artifact geverifieerd: één Nachtzicht-owner, compacte mobiele grafiek en cache "+verwacht+".");
+console.log("Definitieve checkpoint-50 artifact geverifieerd: één Nachtzicht-owner, collision-proof compacte mobiele grafiek en cache "+verwacht+".");
