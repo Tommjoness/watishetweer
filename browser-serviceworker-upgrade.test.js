@@ -27,7 +27,7 @@ function metMarker(html,versie){
 }
 
 function instrumenteerWorker(bron,versie){
-  const helper=`\nconst __SW_E2E_VERSION=${JSON.stringify(versie)};\nconst __swE2eDiag=(event,extra={})=>fetch("/__swdiag",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({version:__SW_E2E_VERSION,event,...extra})}).catch(()=>{});\n`;
+  const helper=`\nconst __SW_E2E_VERSION=${JSON.stringify(versie)};\nconst __swE2eDiag=(event,extra={})=>fetch("/__swdiag",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({version:__SW_E2E_VERSION,event,...extra})}).catch(()=>{});\nself.addEventListener("message",e=>{if(e.data==="__sw-e2e-version"&&e.ports&&e.ports[0])e.ports[0].postMessage(__SW_E2E_VERSION);});\n`;
   let uit=bron.replace(/(const CACHE = "[^"]+";)/,"$1"+helper);
   const eisen=[
     ['const CACHE_HANDLE = caches.open(CACHE);','const CACHE_HANDLE = (__swE2eDiag("cache-handle-open"),caches.open(CACHE));'],
@@ -156,7 +156,13 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
     await page.waitForFunction(async({nieuw,oud})=>{
       const keys=await caches.keys();
       const r=await navigator.serviceWorker.getRegistration();
-      return !!(r&&r.active&&r.active.state==="activated"&&keys.includes(nieuw)&&!keys.includes(oud));
+      if(!(r&&r.active&&r.active.state==="activated"&&keys.includes(nieuw)&&!keys.includes(oud)))return false;
+      const versie=await new Promise(resolve=>{
+        const kanaal=new MessageChannel(),timer=setTimeout(()=>resolve(null),100);
+        kanaal.port1.onmessage=e=>{clearTimeout(timer);resolve(e.data);};
+        r.active.postMessage("__sw-e2e-version",[kanaal.port2]);
+      });
+      return versie==="new";
     },{nieuw:cacheNieuw,oud:cacheOud},{timeout:15000});
 
     /* Geef eventuele late writes van de oude worker bewust tijd om zichtbaar te worden. */
