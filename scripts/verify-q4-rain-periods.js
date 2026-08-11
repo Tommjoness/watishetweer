@@ -10,6 +10,9 @@ ok(html.includes("/* ===== Q4 REGENPERIODEN 20260811 ===== */"),"Q4-laag staat i
 ok(html.includes("if(i===0)return null;"),"eerste neerslaginterval buiten grafiekvenster telt niet mee");
 ok(html.includes("waarde!==null&&waarde>=0.1"),"regenperiode begint pas bij meetbare 0,1 mm");
 ok(html.includes("lopend={van:i-1,tot:i"),"hoeveelheid op eindtijd wordt aan voorafgaand uurvak gekoppeld");
+ok(html.includes("const bronStart=Number.isInteger(S.chartStart)?S.chartStart:null;"),"regenperioden gebruiken de exacte zichtbare bronindex");
+ok(html.includes("const bron=bronStart===null?-1:bronStart+i;"),"ieder zichtbaar uur volgt forecastvolgorde zonder lokale indexOf");
+ok(!html.slice(html.indexOf("/* ===== Q4 REGENPERIODEN 20260811 ===== */")).includes("h.time.indexOf(tijd)"),"Q4 gebruikt bij dubbele DST-kloktijden geen indexOf op lokale tijdtekst");
 ok(html.includes("g.MM=mm;"),"regenstrook en interactie delen één uitgelijnde mm-reeks");
 ok(html.includes("p.som+=waarde"),"periodetotaal is som van dezelfde uurintervallen");
 ok(html.includes("waarde>lopend.piekMm"),"zwaarste uurvak komt uit dezelfde periodegegevens");
