@@ -1,0 +1,33 @@
+name: Tijdelijke serviceworker E2E
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  sw:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Bouw definitieve artifact
+        run: npm run build
+      - name: Installeer Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Serviceworker E2E
+        shell: bash
+        run: |
+          set +e
+          node browser-serviceworker-upgrade.test.js > /tmp/sw-e2e.log 2>&1
+          code=$?
+          cat /tmp/sw-e2e.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 20 /tmp/sw-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=browser-serviceworker-upgrade.test.js,line=1::$msg"
+            exit "$code"
+          fi
