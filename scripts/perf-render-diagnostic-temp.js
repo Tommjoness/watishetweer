@@ -18,12 +18,8 @@ function compleet(aantal){
   d.daily.sunshine_duration=d.daily.time.map(()=>7*3600);
   const velden=Object.keys(h).filter(k=>Array.isArray(h[k]));
   while(h.time.length<aantal){
-    const i=h.time.length,bron=24+(i%24);
-    const laatste=h.time[h.time.length-1];
-    for(const k of velden){
-      if(k==="time")continue;
-      const reeks=h[k];reeks.push(reeks[bron%reeks.length]);
-    }
+    const i=h.time.length,bron=24+(i%24),laatste=h.time[h.time.length-1];
+    for(const k of velden){if(k!=="time"){const reeks=h[k];reeks.push(reeks[bron%reeks.length]);}}
     h.time.push(isoPlus(laatste,1));
   }
   for(const k of velden){if(k!=="time")h[k]=h[k].slice(0,aantal);}
@@ -36,8 +32,8 @@ const air={current:{european_aqi:22,us_aqi:37},hourly:{time:[data192.current.tim
 let html=fs.readFileSync(path.join(__dirname,"..","public","index.html"),"utf8");
 const stub=`<script>(function(){
  const D408=${JSON.stringify(data408)},D192=${JSON.stringify(data192)},AIR=${JSON.stringify(air)};
- window.__perfDelay=0;window.__forecastShape=[];
  const clone=x=>JSON.parse(JSON.stringify(x));
+ window.__D408=clone(D408);window.__D192=clone(D192);window.__AIR=clone(AIR);window.__perfDelay=0;window.__forecastShape=[];
  const response=x=>({ok:true,status:200,json:async()=>clone(x),text:async()=>JSON.stringify(x)});
  window.fetch=async function(url){
    const u=String(url);
@@ -63,44 +59,52 @@ const server=http.createServer((req,res)=>{
     res.writeHead(200,{"content-type":types[ext]||"application/octet-stream"});fs.createReadStream(file).pipe(res);
   }else{res.writeHead(404);res.end("not found");}
 });
-const median=a=>{const s=a.slice().sort((x,y)=>x-y);return s[Math.floor(s.length/2)];};
+const median=a=>{if(!a.length)return 0;const s=a.slice().sort((x,y)=>x-y);return s[Math.floor(s.length/2)];};
 (async()=>{
  await new Promise(r=>server.listen(0,"127.0.0.1",r));
  const browser=await chromium.launch({headless:true});
  try{
   const ctx=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:"block"});
   const page=await ctx.newPage();
-  const t0=Date.now();
   await page.goto(`http://127.0.0.1:${server.address().port}/?lat=52.35&lon=5.26&plaats=Start&land=NL`,{waitUntil:"domcontentloaded"});
   await page.waitForSelector("#app",{state:"visible"});
-  const initial=Date.now()-t0;
   await page.evaluate(()=>document.fonts&&document.fonts.ready);
   await page.evaluate(()=>{
-    window.__renderTimes=[];
-    const basis=tekenAlles;
-    tekenAlles=function(){const t=performance.now();try{return basis();}finally{window.__renderTimes.push(performance.now()-t);}};
+    window.__prof={};
+    const namen=["tekenAlles","themaToepassen","minibarBij","waarschuwingen","logBij","meters","briefing","etmaal","nowcast","dagen","nachten","lucht","stempel","nuTimerStart","klokTimerStart","maanHoogte","opOnder","naarUTC"];
+    for(const naam of namen){
+      const basis=window[naam];if(typeof basis!=="function")continue;
+      window.__prof[naam]=[];
+      window[naam]=function(...args){
+        const t=performance.now();
+        try{return basis.apply(this,args);}finally{window.__prof[naam].push(performance.now()-t);}
+      };
+    }
   });
   const loads=[];
-  for(let i=0;i<8;i++){
+  for(let i=0;i<4;i++){
     const x=await page.evaluate(async i=>{
-      localStorage.removeItem("weerbriefing.plaatscache.q1");
-      window.__perfDelay=0;window.__renderTimes=[];
+      localStorage.removeItem("weerbriefing.plaatscache.q1");window.__perfDelay=0;
       const t=performance.now();await load(10+i/100,20+i/100,"P"+i,false,false,"NL");
-      return {elapsed:performance.now()-t,render:window.__renderTimes[0]||0};
-    },i);
-    loads.push(x);
+      return performance.now()-t;
+    },i);loads.push(x);
   }
-  const delayed=[];
-  for(const delay of [200,1000]){
-    const x=await page.evaluate(async delay=>{
-      localStorage.removeItem("weerbriefing.plaatscache.q1");window.__perfDelay=delay;window.__renderTimes=[];
-      const t=performance.now();await load(30+delay/10000,40,"D"+delay,false,false,"NL");
-      return {delay,elapsed:performance.now()-t,render:window.__renderTimes[0]||0};
-    },delay);
-    delayed.push(x);
+  const profiel=await page.evaluate(()=>Object.fromEntries(Object.entries(window.__prof).map(([k,v])=>[k,v.slice()])));
+  const profielSamenvatting={};
+  for(const [naam,waarden] of Object.entries(profiel))profielSamenvatting[naam]={calls:waarden.length,medianMs:+median(waarden).toFixed(2),totalMs:+waarden.reduce((a,b)=>a+b,0).toFixed(2),maxMs:+Math.max(0,...waarden).toFixed(2)};
+
+  const vergelijk=[];
+  for(const [naam,sleutel] of [["408","__D408"],["192","__D192"]]){
+    const tijden=[];
+    for(let i=0;i<3;i++){
+      const t=await page.evaluate(sleutel=>{
+        S.d=JSON.parse(JSON.stringify(window[sleutel]));S.air=JSON.parse(JSON.stringify(window.__AIR));S.lat=52.35;S.lon=5.26;S.label="Direct";S.land="NL";S.dag=null;S.op=Date.now();
+        const p=performance.now();tekenAlles();return performance.now()-p;
+      },sleutel);tijden.push(t);
+    }
+    vergelijk.push({uren:+naam,medianRenderMs:+median(tijden).toFixed(1),runs:tijden.map(x=>+x.toFixed(1))});
   }
-  const shape=await page.evaluate(()=>window.__forecastShape.slice(-12));
-  console.log("PERF_RENDER_SUMMARY",JSON.stringify({initialMs:initial,medianLoadMs:+median(loads.map(x=>x.elapsed)).toFixed(1),medianRenderMs:+median(loads.map(x=>x.render)).toFixed(1),maxRenderMs:+Math.max(...loads.map(x=>x.render)).toFixed(1),delayed:delayed.map(x=>({delay:x.delay,elapsed:+x.elapsed.toFixed(1),render:+x.render.toFixed(1)})),shape}));
+  console.log("PERF_RENDER_PROFILE",JSON.stringify({medianLoadMs:+median(loads).toFixed(1),profiel:profielSamenvatting,vergelijk}));
   await ctx.close();
  }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exit(1);});
