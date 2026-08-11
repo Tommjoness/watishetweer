@@ -10,7 +10,9 @@ d.daily.precipitation_probability_max=[65,25,0,10,40,70,5];
 d.daily.precipitation_sum=[4.8,0,0,0,0.2,7.3,0];
 for(let i=0;i<d.hourly.time.length;i++){
   const t=d.hourly.time[i];
-  if(t==="2026-07-22T17:00"){d.hourly.precipitation_probability[i]=65;d.hourly.precipitation[i]=1.4;}
+  // Open-Meteo-uurneerslag hoort bij het voorafgaande uur. 18:00 beschrijft
+  // 17:00–18:00 en ligt dus volledig buiten het initiële venster 14:17–16:17.
+  if(t==="2026-07-22T18:00"){d.hourly.precipitation_probability[i]=65;d.hourly.precipitation[i]=1.4;}
   if(t==="2026-07-22T19:00"){d.hourly.precipitation_probability[i]=25;d.hourly.precipitation[i]=0;}
   if(t==="2026-07-22T20:00"){d.hourly.precipitation_probability[i]=0;d.hourly.precipitation[i]=0;}
 }
@@ -144,8 +146,8 @@ async function controleer(type,naam){
     assert.match(popNat.waarde,/65%/,naam+": zichtbare tegel behoudt bronkans");
     assert.match(popNat.waarde,/mm/,naam+": meetbare hoeveelheid staat naast kans");
 
-    const nat=await tooltip(page,"17:00"),droog=await tooltip(page,"19:00"),nul=await tooltip(page,"20:00");
-    const tipBron=await page.evaluate(()=>["17:00","19:00","20:00"].map(t=>{
+    const nat=await tooltip(page,"18:00"),droog=await tooltip(page,"19:00"),nul=await tooltip(page,"20:00");
+    const tipBron=await page.evaluate(()=>["18:00","19:00","20:00"].map(t=>{
       const i=S.geo.TI.findIndex(x=>String(x).slice(11,16)===t);
       return {t,i,kans:i>=0&&S.geo.P?S.geo.P[i]:null,mm:i>=0&&S.geo.Q1MM?S.geo.Q1MM[i]:null};
     }));
