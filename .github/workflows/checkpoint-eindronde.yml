@@ -34,4 +34,14 @@ jobs:
       - name: Checkpoint 100% in Chromium en WebKit
         run: node browser-q4-checkpoint.test.js
       - name: Serviceworker upgrade en offline in Chromium
-        run: node browser-serviceworker-upgrade.test.js
+        shell: bash
+        run: |
+          set +e
+          node browser-serviceworker-upgrade.test.js > /tmp/sw-e2e.log 2>&1
+          code=$?
+          cat /tmp/sw-e2e.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 20 /tmp/sw-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=browser-serviceworker-upgrade.test.js,line=1::$msg"
+            exit "$code"
+          fi
