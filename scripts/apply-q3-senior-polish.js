@@ -47,13 +47,15 @@ const UV_NEW=[
 
 if(html.includes(CSS_MARK))throw new Error("Checkpoint-75 polish is al toegepast.");
 if(metersOwnersVoor<1)throw new Error("Bestaande meters-owner ontbreekt vóór checkpoint 75.");
-if((html.split(CLOUD_OLD).length-1)!==1)throw new Error("Bewolkingsanker voor checkpoint 75 ontbreekt of is dubbel.");
+const cloudNieuwAantal=html.split(CLOUD_NEW).length-1;
+const cloudOudAantal=html.split(CLOUD_OLD).length-1;
+if(cloudNieuwAantal!==1&&cloudOudAantal!==1)throw new Error("Bewolkingsanker voor checkpoint 75 ontbreekt of is dubbel.");
 if((html.split(UV_OLD).length-1)!==1)throw new Error("UV-anker voor checkpoint 75 ontbreekt of is dubbel.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor checkpoint 75.");
 
 /* Geen nieuwe runtime-owner: we scherpen de bestaande pure cloud-helper en de
    bestaande senior meters()-owner in-place aan. */
-html=html.replace(CLOUD_OLD,CLOUD_NEW);
+if(cloudNieuwAantal!==1)html=html.replace(CLOUD_OLD,CLOUD_NEW);
 html=html.replace(UV_OLD,UV_NEW);
 html=html.replace("</style>","\n"+CSS_MARK+"\n"+css+"\n/* ===== EINDE CHECKPOINT 75 Q3 CSS ===== */\n</style>");
 const metersOwnersNa=html.split(METERS_OWNER_SIG).length-1;

@@ -1398,16 +1398,17 @@ function briefing(){
        Zo krijgt de gebruiker vóór de avond steeds antwoord op zowel "hoe warm"
        als "wanneer", zonder een eventueel afwijkend daily-getal aan een verkeerd
        uur te hangen. */
-    zin2="Vandaag wordt het maximaal <b>"+Math.round(volledigePiekVandaag.v)
-      +" graden</b>, met het warmste moment rond "+hhmm(volledigePiekVandaag.t)+"."+nachtZin;
+    zin2="Vandaag wordt het rond "+hhmm(volledigePiekVandaag.t)+" het warmst, met maximaal <b>"
+      +Math.round(volledigePiekVandaag.v)+" graden</b>."+nachtZin;
   }else if(plaatsDelen.hour>=18&&morgenDatum&&morgenDagMax!==null){
-    const moment=morgenUurPiek?", met het warmste moment rond "+hhmm(morgenUurPiek.t):"";
-    zin2="Morgen wordt het maximaal <b>"+Math.round(morgenDagMax)+" graden</b>"+moment+"."+nachtZin;
+    zin2=morgenUurPiek
+      ?"Morgen wordt het rond "+hhmm(morgenUurPiek.t)+" het warmst, met maximaal <b>"+Math.round(morgenDagMax)+" graden</b>."+nachtZin
+      :"Morgen wordt het maximaal <b>"+Math.round(morgenDagMax)+" graden</b>."+nachtZin;
   }else if(huidige===null&&volledigePiekVandaag){
-    zin2="Vandaag wordt het maximaal <b>"+Math.round(volledigePiekVandaag.v)
-      +" graden</b>, met het warmste moment rond "+hhmm(volledigePiekVandaag.t)+"."+nachtZin;
+    zin2="Vandaag wordt het rond "+hhmm(volledigePiekVandaag.t)+" het warmst, met maximaal <b>"
+      +Math.round(volledigePiekVandaag.v)+" graden</b>."+nachtZin;
   }else if(plaatsDelen.hour<18&&volledigePiekVandaag&&volledigePiekVandaag.t<=nuLokaal){
-    zin2="Vandaag was het rond "+hhmm(volledigePiekVandaag.t)+" het warmst met <b>"+Math.round(volledigePiekVandaag.v)+" graden</b>."+nachtZin;
+    zin2="Vandaag was het rond "+hhmm(volledigePiekVandaag.t)+" het warmst, met <b>"+Math.round(volledigePiekVandaag.v)+" graden</b>."+nachtZin;
   }else if(plaatsDelen.hour<18&&vandaagMax!==null){
     zin2="De maximumtemperatuur van vandaag ligt rond <b>"+Math.round(vandaagMax)+" graden</b>."+nachtZin;
   }else if(tmin!==null&&tmin<nutemp-1){

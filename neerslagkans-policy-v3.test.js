@@ -57,12 +57,21 @@ test("dagtekst laat kans altijd de modaliteit bepalen",()=>{
   assert.equal(dagKansSamenvatting({...basis,kans:30},"Lichte motregen"),"Lichte motregen mogelijk rond 05:00");
   assert.equal(dagKansSamenvatting({...basis,kans:70},"Lichte motregen"),"Grote kans op lichte motregen rond 05:00");
   assert.equal(dagKansSamenvatting({...basis,kans:90},"Lichte motregen"),"Zeer grote kans op lichte motregen rond 05:00");
+  assert.equal(dagKansSamenvatting({...basis,soort:"buien",kans:90},"Onweer"),"Zeer grote kans op onweer rond 05:00");
 });
 
 test("actuele neerslag blijft een actuele observatie en geen kanszin",()=>{
   const a={genoeg:true,status:"NEERSLAG_NU",currentWet:true,kans:10,soort:"regen",hoeveelheid:0.2};
-  assert.equal(kansZin(a,"de komende twee uur"),"Er valt nu regen.");
-  assert.equal(komendUurTekst(a),"Er valt nu regen.");
+  assert.equal(kansZin(a,"de komende twee uur"),"Het regent nu.");
+  assert.equal(komendUurTekst(a),"Het regent nu.");
+  const buien={...a,soort:"buien"};
+  assert.equal(kansZin(buien,"de komende twee uur"),"Er vallen nu buien.");
+  assert.equal(briefingZin(buien),"Er vallen nu buien.");
+});
+
+test("mogelijke neerslag vervoegt enkelvoud en meervoud",()=>{
+  assert.match(kansZin({genoeg:true,kans:40,hoeveelheid:0,soort:"regen"},"de komende twee uur"),/^Regen is mogelijk/);
+  assert.match(kansZin({genoeg:true,kans:40,hoeveelheid:0,soort:"buien"},"de komende twee uur"),/^Buien zijn mogelijk/);
 });
 
 if(process.exitCode) console.error("\nNeerslagkansbeleid v3: minstens één regressie mislukt.");

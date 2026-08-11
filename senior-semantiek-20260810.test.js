@@ -30,7 +30,7 @@ assert.equal(s.vervangExactForecastMoment("Lichte motregen mogelijk rond 05:00",
 
 assert.equal(
   s.briefingHistorieSemantiek("Vandaag was het rond 02:00 het warmst met <b>24&nbsp;graden</b>."),
-  "De hoogste verwachte temperatuur voor vandaag was <b>24&nbsp;graden</b>, rond 02:00."
+  "Vandaag was het rond 02:00 het warmst, met <b>24&nbsp;graden</b>."
 );
 assert.equal(s.briefingHistorieSemantiek("Morgen wordt het maximaal <b>24 graden</b>."),"Morgen wordt het maximaal <b>24 graden</b>.");
 
@@ -62,6 +62,13 @@ assert.equal(s.bewolkingOordeelGetoond(14.6,false),"Overwegend helder");
 assert.equal(s.bewolkingOordeelGetoond(39.6,true),"Half bewolkt");
 assert.equal(s.bewolkingOordeelGetoond(69.6,true),"Zwaar bewolkt");
 assert.equal(s.bewolkingOordeelGetoond(94.6,true),"Vrijwel geheel bewolkt");
+assert.equal(s.bewolkingOordeelGetoond(100,true),"Geheel bewolkt");
+assert.equal(s.actueleBewolkingsomschrijving(2,79,true,"Half bewolkt"),"Zwaar bewolkt");
+assert.equal(s.actueleBewolkingsomschrijving(61,79,true,"Lichte regen"),"Lichte regen");
+assert.equal(s.bewolkingscodeUitPercentage(14.9),0);
+assert.equal(s.bewolkingscodeUitPercentage(15),1);
+assert.equal(s.bewolkingscodeUitPercentage(40),2);
+assert.equal(s.bewolkingscodeUitPercentage(70),3);
 assert.deepEqual(s.aqiOordeelGetoond(20,true),{tekst:"goed",kleur:"teal"});
 assert.deepEqual(s.aqiOordeelGetoond(21,true),{tekst:"redelijk",kleur:"teal"});
 assert.deepEqual(s.aqiOordeelGetoond(40,true),{tekst:"redelijk",kleur:"teal"});
@@ -141,6 +148,7 @@ assert(bron.includes('nachtOordeelGetoond(zichtbaar)'),"Nachtzicht-oordeel is aa
 assert(bron.includes('balk.style.width=nachtBalkPercentageGetoond(zichtbaar)+"%"'),"Nachtzicht-balk is aan de zichtbare score gekoppeld");
 assert(bron.includes('neerslagWeerCode(a.code)?beleid.dagKansSamenvatting(a,basis):basis'),"droge/bewolkte dagteksten dupliceren de neerslagkolom niet");
 assert(bron.includes('uvOordeelGetoond(zichtbaar)'),"UV-oordeel gebruikt de zichtbare afgeronde waarde");
+assert(bron.includes('hoogste verwachte windstoot voor vandaag bedroeg'),"verstreken windstootpiek gebruikt natuurlijk Nederlands");
 assert(bron.includes('maanSymboolNaarSvgInHtml(lab.innerHTML||lab.textContent,12)'),"maankop gebruikt de DOM-onafhankelijke SVG-vervanging");
 assert(!bron.includes('lab.childNodes'),"maanvervanging leunt niet op iterable childNodes");
 

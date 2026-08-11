@@ -73,7 +73,7 @@ function brief(opties,breedte){
   check("een droge middag vat ook de rest van vandaag samen",
     /Ook later vandaag blijft neerslag onwaarschijnlijk/.test(droog),droog);
   check("een briefing voor 18:00 noemt bij het maximum ook het warmste tijdstip",
-    /(?:Vandaag wordt het maximaal \d+ graden, met het warmste moment rond \d\d:\d\d|Vandaag was het rond \d\d:\d\d het warmst met \d+ graden)/.test(droog),droog);
+    /(?:Vandaag wordt het rond \d\d:\d\d het warmst, met maximaal \d+ graden|Vandaag was het rond \d\d:\d\d het warmst, met \d+ graden)/.test(droog),droog);
 
   /* Punt 8: zin 1 gaat nu over de komende twee uur, dezelfde termijn en bron als
      de neerslagtekst (kortetermijn()). Neerslag verderop vandaag komt er als losse,
@@ -121,7 +121,7 @@ groep("Datumbewuste avondbriefing");
   api.etmaal(i,24);
   const tekst=bak.brief.innerHTML.replace(/<[^>]+>/g,"").replace(/\u00a0/g," ");
   check("een temperatuurpiek na middernacht begint expliciet met morgen",
-    /Morgen wordt het maximaal 31 graden, met het warmste moment rond 17:00/.test(tekst),tekst);
+    /Morgen wordt het rond 17:00 het warmst, met maximaal 31 graden/.test(tekst),tekst);
   check("de dag hoort direct bij de maximumclaim, niet pas bij de toelichting",
     !/Het wordt maximaal 31 graden[^.]*morgen/.test(tekst),tekst);
   check("een lage temperatuur overdag morgen wordt niet als minimum van vannacht verkocht",
@@ -149,7 +149,7 @@ groep("Datumbewuste avondbriefing");
   api.briefing();api.etmaal(i,24);
   const tekst=bak.brief.innerHTML.replace(/<[^>]+>/g,"").replace(/\u00a0/g," ");
   check("een maximum later op dezelfde dag begint expliciet met vandaag",
-    /Vandaag wordt het maximaal 30 graden/.test(tekst),tekst);
+    /Vandaag wordt het rond \d\d:\d\d het warmst, met maximaal 30 graden/.test(tekst),tekst);
   check("de daglichtregel zegt overdag expliciet vandaag",
     /class="zondag">Vandaag<\/span>/.test(bak.suntimes.innerHTML)
       &&/Zonsopkomst/.test(bak.suntimes.innerHTML),bak.suntimes.innerHTML);
@@ -402,7 +402,7 @@ groep("Volledigheid van de teksten");
   api.briefing();
   const t=norm(bak.brief.innerHTML).replace(/<[^>]+>/g,"");
   check("warmste moment in het verleden krijgt dag, tijd en temperatuur",
-    /(?:Vandaag was het rond \d\d:\d\d het warmst met \d+ graden|De hoogste verwachte temperatuur voor vandaag was \d+ graden, rond \d\d:\d\d)/.test(t),t);
+    /Vandaag was het rond \d\d:\d\d het warmst, met \d+ graden/.test(t),t);
   const nat=brief({pr:(u)=>u<12?0.4:0,pp:(u)=>u<12?70:5,som:2.4}).bak;
   check("neerslag die al gevallen is gebruikt ook de dagsomformulering, niet 'viel'",
     /in totaal 2,4 mm neerslag verwacht/.test(nat.precsub.textContent) && !/\bviel\b/.test(nat.precsub.textContent),

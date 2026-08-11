@@ -51,7 +51,7 @@ function vervangExactForecastMoment(tekst,tijd,horizonDagen){
 function briefingHistorieSemantiek(html){
   return String(html||"").replace(
     /Vandaag was het rond (\d{2}:\d{2}) het warmst met <b>(-?\d+)(?:\s|&nbsp;|\u00a0)+graden<\/b>\./i,
-    (_m,t,v)=>"De hoogste verwachte temperatuur voor vandaag was <b>"+v+"&nbsp;graden</b>, rond "+t+"."
+    (_m,t,v)=>"Vandaag was het rond "+t+" het warmst, met <b>"+v+"&nbsp;graden</b>."
   );
 }
 
@@ -103,11 +103,23 @@ function uvOordeelGetoond(waarde){
 function bewolkingOordeelGetoond(waarde,isDag){
   const v=num(waarde); if(v===null)return null;
   const n=Math.max(0,Math.min(100,Math.round(v)));
+  if(n===100)return "Geheel bewolkt";
   if(n>=95)return "Vrijwel geheel bewolkt";
   if(n>=70)return "Zwaar bewolkt";
   if(n>=40)return "Half bewolkt";
   if(n>=15)return isDag===false?"Overwegend helder":"Overwegend zonnig";
   return "Vrijwel onbewolkt";
+}
+
+function bewolkingscodeUitPercentage(waarde){
+  const v=num(waarde);if(v===null||v<0||v>100)return null;
+  return v>=70?3:v>=40?2:v>=15?1:0;
+}
+
+function actueleBewolkingsomschrijving(code,waarde,isDag,fallback){
+  const c=num(code);
+  if(c===null||c<0||c>3)return String(fallback||"");
+  return bewolkingOordeelGetoond(waarde,isDag)||String(fallback||"");
 }
 
 function aqiOordeelGetoond(waarde,europees){
@@ -237,6 +249,7 @@ const api={
   datumDagenVerschil,hhmm,dagdeelVanTijd,forecastMomentZinsdeel,vervangExactForecastMoment,
   briefingHistorieSemantiek,nachtLabelVarianten,nachtAdviesMetHorizon,nachtVensterMetHorizon,
   daglichtGrammatica,nachtOordeelGetoond,nachtBalkPercentageGetoond,neerslagWeerCode,uvOordeelGetoond,bewolkingOordeelGetoond,
+  bewolkingscodeUitPercentage,actueleBewolkingsomschrijving,
   aqiOordeelGetoond,pollenOordeelGetoond,zichtOordeelGetoond,zonurenOordeelGetoond,
   maanFaseUitSymbool,maanFaseSvg,maanSymboolNaarSvgInHtml,zonInfoRijen,tooltipCompactMaten
 };
@@ -316,7 +329,7 @@ meters=function(){
   try{
     const c=S.d.current||{},nu=weatherNowActueleLokaleTijd(),pg=piek("wind_gusts_10m"),gustSub=document.getElementById("gustsub");
     if(gustSub&&pg&&pg.t&&nu&&pg.t<nu&&pg.t.slice(0,10)===String(nu).slice(0,10)&&num(pg.v)!==null){
-      gustSub.textContent="De hoogste verwachte windstoot voor vandaag lag op "+Math.round(pg.v)+" km/u in het uur "+weatherNowUurvak(pg.t)+".";
+      gustSub.textContent="De hoogste verwachte windstoot voor vandaag bedroeg "+Math.round(pg.v)+" km/u in het uur "+weatherNowUurvak(pg.t)+".";
     }
 
     const wind=num(c.wind_speed_10m),richting=num(c.wind_direction_10m);
@@ -326,7 +339,17 @@ meters=function(){
     }
 
     const cc=num(c.cloud_cover),cloudSub=document.getElementById("cloudsub");
-    if(cloudSub&&cc!==null&&cc>=0&&cc<=100){const oordeel=bewolkingOordeelGetoond(cc,c.is_day!==0);if(oordeel)cloudSub.textContent=oordeel+".";}
+    if(cloudSub&&cc!==null&&cc>=0&&cc<=100){
+      const oordeel=bewolkingOordeelGetoond(cc,c.is_day!==0);if(oordeel)cloudSub.textContent=oordeel+".";
+      const omschrijving=actueleBewolkingsomschrijving(c.weather_code,cc,c.is_day!==0,typeof txt==="function"?txt(c.weather_code,c.is_day!==0):"");
+      if(omschrijving){
+        const conditie=document.getElementById("cond"),mini=document.getElementById("minicond");
+        if(conditie)conditie.textContent=omschrijving;
+        if(mini){mini.textContent=omschrijving.toLowerCase();mini.title=omschrijving.toLowerCase();}
+        const effectieveCode=bewolkingscodeUitPercentage(cc),icoon=document.getElementById("nowicon");
+        if(icoon&&effectieveCode!==null&&typeof icon==="function")icoon.innerHTML=icon(effectieveCode,c.is_day===1,46);
+      }
+    }
 
     const pu=piek("uv_index"),uvSub=document.getElementById("uvsub");
     if(uvSub&&pu&&num(pu.v)!==null&&pu.v>=0){

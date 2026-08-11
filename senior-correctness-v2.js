@@ -3,6 +3,10 @@
 (function(root){
 "use strict";
 
+const grammatica=typeof module!=="undefined"&&module.exports
+  ?require("./nederlandse-weergrammatica.js")
+  :root.WeatherNowNederlandseGrammatica;
+
 const num=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 const clampNum=(v,a,b)=>Math.max(a,Math.min(b,v));
 const natCode=code=>{code=Number(code);return code>=51&&code<=99;};
@@ -103,7 +107,7 @@ function komendUurTekst(a){
   if(a.status==="MOGELIJKE_NEERSLAG") return "Neerslag is mogelijk het komende uur.";
   if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return "Grote kans op neerslag; hoeveelheid onzeker.";
   if(a.status==="SPOORHOEVEELHEID") return "Enkele druppels mogelijk het komende uur.";
-  if(a.status==="NEERSLAG_NU") return "Er valt nu "+soort+".";
+  if(a.status==="NEERSLAG_NU") return grammatica.actueleNeerslagZin(soort);
   if(a.status==="NEERSLAG_VERWACHT"){
     if(kans!==null&&kans<=39) return "Kleine kans op neerslag het komende uur.";
     if(kans!==null&&kans<=69) return hoofdletter(soort)+" is mogelijk het komende uur.";
@@ -165,8 +169,7 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
     const d=new Date(String(t).slice(0,10)+"T12:00:00");return DAGEN[d.getDay()];
   }
   function redenTekst(r){
-    if(!r||!r.length) return "Geen aaneengesloten gunstig modelvenster";
-    return "Geen goed zichtvenster door "+r.join(r.length>1?" en ":"");
+    return grammatica.geenZichtvensterZin(r);
   }
   function nachtGrenzen(segment,vanafMs){
     const h=S.d.hourly||{},day=S.d.daily||{};
