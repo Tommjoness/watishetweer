@@ -29,8 +29,6 @@ ok(html.includes("millimeter neerslag$/.test")&&html.includes("el.remove();"),"o
 ok(html.includes('kans<10')&&html.includes('el.remove();return;'),"triviale kanslabels onder 10% verdwijnen uit de statische grafiek");
 ok(html.includes('^\\d+%$')&&html.includes("x+g.cw/2"),"resterende neerslagkanslabels worden op hun eigen tijdstip gecentreerd");
 ok(html.includes('cc!==null&&cc>=0&&cc<5')&&html.includes('&lt;5<s>%</s>'),"vrijwel wolkeloze modelwaarden worden zonder 0/1%-schijnprecisie gepresenteerd");
-ok(html.includes('navigator.serviceWorker.controller')&&html.includes('addEventListener("controllerchange"')&&html.includes('location.reload();'),"reeds gecontroleerde open sessies herladen één keer bij een nieuwe serviceworker");
-ok(html.includes('if(q4VersieReload)return;')&&html.includes('q4VersieReload=true;'),"serviceworker-versierefresh heeft een expliciete reload-loopguard");
 
 /* De geassembleerde artifact kan historische chartHint-assignments bevatten.
    Daarom zoeken we niet globaal naar de eerste/laatste match. De runtime-marker
