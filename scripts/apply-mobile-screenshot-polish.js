@@ -23,6 +23,36 @@ const RECENT_OLD='<div class="eyebrow">Afgelopen 15 minuten</div><div class="sva
 const TREND_NEW='<div class="eyebrow">Temperatuurtrend</div><div class="sval" id="prec">';
 const LEGACY_RECENT_START='  const recenteNeerslag=eindigGetal(c.precipitation);';
 const LEGACY_RECENT_END='  /* De tegel toont de kans voor precies het eerstvolgende uur (i+1). De subtekst';
+const DIAG_JS=`/* ===== TIJDELIJKE Q1 RUNTIME-DIAGNOSTIEK ===== */
+(function(){
+  if(typeof location==="undefined"||location.hostname!=="127.0.0.1"||typeof document==="undefined")return;
+  const label=()=>document.getElementById("prec")?.parentElement?.querySelector(".eyebrow")||null;
+  const meld=(reden,extra)=>{
+    const el=label();if(!el)return;
+    const tekst=String(el.textContent||"").trim();
+    if(tekst!=="Temperatuurtrend")console.error("Q1_TRENDKOP_DIAG",reden,JSON.stringify({tekst,extra:extra||null,html:el.parentElement&&el.parentElement.outerHTML}));
+  };
+  const nodeDesc=Object.getOwnPropertyDescriptor(Node.prototype,"textContent");
+  if(nodeDesc&&nodeDesc.set&&nodeDesc.get){
+    Object.defineProperty(Node.prototype,"textContent",{
+      configurable:true,enumerable:nodeDesc.enumerable,
+      get:nodeDesc.get,
+      set:function(v){
+        if(this===label()&&String(v||"").trim()!=="Temperatuurtrend")console.error("Q1_TRENDKOP_SET",String(v),new Error("trendkop setter").stack);
+        return nodeDesc.set.call(this,v);
+      }
+    });
+  }
+  const obs=new MutationObserver(muts=>{
+    for(const m of muts){
+      const el=label();
+      if(el&&(m.target===el||el.contains(m.target)||m.target===el.parentElement))meld("mutation",{type:m.type,oldValue:m.oldValue||null});
+    }
+  });
+  obs.observe(document.documentElement,{subtree:true,childList:true,characterData:true,characterDataOldValue:true});
+  meld("voor-start");
+})();
+/* ===== EINDE TIJDELIJKE Q1 RUNTIME-DIAGNOSTIEK ===== */`;
 if(html.includes(CSS_MARK)||html.includes(JS_MARK)||html.includes(Q1_CSS_MARK)||html.includes(Q1_JS_MARK))throw new Error("Post-build polish is al geïnjecteerd.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor mobiele polish.");
 if((html.split(START).length-1)!==1)throw new Error("Startmarker ontbreekt of is dubbel voor mobiele polish.");
@@ -47,7 +77,8 @@ html=html.replace("</style>",
   +Q1_CSS_MARK+"\n"+q1Css+"\n/* ===== EINDE CHECKPOINT 25 Q1 CSS ===== */\n</style>");
 html=html.replace(START,
   JS_MARK+"\n"+mobileJs+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B ===== */\n\n"
-  +Q1_JS_MARK+"\n"+q1Js+"\n/* ===== EINDE CHECKPOINT 25 Q1 ===== */\n\n"+START);
+  +Q1_JS_MARK+"\n"+q1Js+"\n/* ===== EINDE CHECKPOINT 25 Q1 ===== */\n\n"
+  +DIAG_JS+"\n\n"+START);
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline script na mobiele polish.");
