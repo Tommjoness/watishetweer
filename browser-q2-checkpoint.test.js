@@ -182,9 +182,12 @@ async function controleer(page,naam,breedte){
   }
   assert.ok(r.cloudKopRight===null||r.cloudKopRight<=r.nachtRight+1,`${naam} ${breedte}px: kop Bewolking loopt niet uit Nachtzicht`);
 
-  const mobiel=breedte<760;
+  const mobiel=breedte<760,basisH=mobiel?250:296;
   assert.equal(r.viewBox.w,mobiel?380:900,`${naam} ${breedte}px: grafiekbreedte blijft canoniek`);
-  assert.equal(r.viewBox.h,mobiel?250:296,`${naam} ${breedte}px: mobiele grafiek is compacter zonder labelruimte op te offeren`);
+  /* Checkpoint 50 bewaakt de basisgrafiek. Latere lagen mogen uitsluitend onder
+     die basis extra gereserveerde informatieruimte toevoegen (Q4 regenperioden),
+     maar de grafiek mag nooit krimpen of onbeheerst doorgroeien. */
+  assert.ok(r.viewBox.h>=basisH&&r.viewBox.h<=basisH+100,`${naam} ${breedte}px: grafiekhoogte blijft binnen basis + gereserveerde onderruimte (${r.viewBox.h}px)`);
   assert.deepEqual(r.nu,["nu 21°"],`${naam} ${breedte}px: exact één actuele temperatuur in grafiek`);
   assert.ok(r.tempLabels>=6,`${naam} ${breedte}px: voldoende zichtbare temperatuurreferenties`);
   assert.deepEqual(r.tempBuiten,[],`${naam} ${breedte}px: temperatuurcijfers blijven binnen grafiek`);
