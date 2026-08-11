@@ -1,0 +1,7 @@
+/* Checkpoint 75: cijfers moeten op kleine schermen niet op letters lijken.
+   tabular-nums bewaart de bestaande uitlijning; slashed-zero/OpenType zero
+   maakt 0 herkenbaar waar het actieve font die feature ondersteunt. */
+.num,.mono,#stamp,#plaatstijd,#minitijd,#minitemp,.sval,.score,.perc,.dmin,.dmax,.drain,.ctrl .mono{
+  font-variant-numeric:tabular-nums slashed-zero;
+  font-feature-settings:"tnum" 1,"zero" 1;
+}
