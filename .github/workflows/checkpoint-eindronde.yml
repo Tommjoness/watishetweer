@@ -33,6 +33,8 @@ jobs:
         run: node browser-q3-checkpoint.test.js
       - name: Checkpoint 100% in Chromium en WebKit
         run: node browser-q4-checkpoint.test.js
+      - name: Regenperioden, hover en uitlijning in Chromium en WebKit
+        run: node browser-q4-rain-periods.test.js
       - name: Serviceworker upgrade en offline in Chromium
         shell: bash
         run: |
