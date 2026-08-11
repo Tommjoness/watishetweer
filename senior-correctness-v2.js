@@ -297,7 +297,10 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
       }
     });
     [...svg.querySelectorAll("text")].forEach(el=>{
-      if(el.getAttribute("fill")===TEAL){const x=num(el.getAttribute("x"));if(x!==null)el.setAttribute("x",String(x+dx));}
+      const hoeveelheid=/ millimeter neerslag$/.test(el.getAttribute("aria-label")||"");
+      if(el.getAttribute("fill")===TEAL||hoeveelheid){
+        const x=num(el.getAttribute("x"));if(x!==null)el.setAttribute("x",String(x+dx));
+      }
     });
     const aria=svg.getAttribute("aria-label")||"Weergrafiek";
     svg.setAttribute("aria-label",aria+" Neerslagbalken zijn gecentreerd over het voorafgaande modeluur; een deels verstreken modeluur wordt niet kunstmatig naar minuten omgerekend.");

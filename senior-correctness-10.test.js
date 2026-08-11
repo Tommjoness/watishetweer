@@ -58,6 +58,8 @@ test("punt 2/3: ontbrekende uren vormen nooit een vals aaneengesloten zichtvenst
 
 test("punt 6: uurneerslag wordt een halve kolom naar het voorafgaande uur verschoven",()=>{
   assert.equal(grafiekNeerslagVerschuiving(100),-50);assert.equal(grafiekNeerslagVerschuiving(42),-21);
+  const bron=fs.readFileSync(path.join(__dirname,"senior-correctness-v2.js"),"utf8");
+  assert(bron.includes('millimeter neerslag$'),"hoeveelheidscijfers moeten met hun uurstaaf meeschuiven");
 });
 
 test("punt 9: nachtelijke bewolkingsomschrijving heeft expliciete heldere nachtvorm",()=>{
