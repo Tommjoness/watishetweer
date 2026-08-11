@@ -146,8 +146,10 @@ setTimeout(()=>{
     let aqVult=false;
     if(aq&&aqStats.length){
       const a=aq.getBoundingClientRect(),laatste=aqStats.at(-1).getBoundingClientRect();
-      const aqCols=getComputedStyle(aq).gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length;
-      aqVult=desktop?(aqCols===aqStats.length&&Math.abs(laatste.right-a.right)<=1):(aqStats.length%2===0||Math.abs(laatste.width-a.width)<=2);
+      const aqStijl=getComputedStyle(aq),aqCols=aqStijl.gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length;
+      const padL=parseFloat(aqStijl.paddingLeft)||0,padR=parseFloat(aqStijl.paddingRight)||0;
+      const inhoudBreed=a.width-padL-padR;
+      aqVult=desktop?(aqCols===aqStats.length&&Math.abs(laatste.right+padR-a.right)<=1):(aqStats.length%2===0||Math.abs(laatste.width-inhoudBreed)<=2);
     }
     const nightWide=[...document.querySelectorAll('#nights .row.night .nmeta.wide')];
     let nightAligned=true,nightRuim=true;
