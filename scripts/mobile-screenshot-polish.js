@@ -1,5 +1,5 @@
 /* Gerichte polish op basis van de fysieke iPhone-screenshots van 10-08-2026.
-   Alleen presentatie: maanfase, compacte recente-neerslagkop, pollen-eenheid en bronfooter. */
+   Alleen presentatie: maanfase, pollen-eenheid en bronfooter. */
 (function(root){
 "use strict";
 
@@ -66,15 +66,6 @@ function verbeterMaanfasen(){
   if(lab)verbeterMaanElement(lab,12,lab.textContent);
 }
 
-function compactRecentLabel(){
-  /* Deze tegel beschrijft functioneel altijd het laatste kwartier. De oude
-     correctie hing ten onrechte af van current.interval===900; dat veld kan in
-     een geldige API-respons ontbreken terwijl de kwartierdata zelf wel aanwezig
-     is. Daardoor kon de fysieke iPhone alsnog 'Afgelopen 15 minuten' tonen. */
-  const waarde=document.getElementById("prec"),stat=waarde&&waarde.parentElement,kop=stat&&stat.querySelector(".eyebrow");
-  if(kop)kop.textContent="Afgelopen kwartier";
-}
-
 /* De weergegeven pollenwaarde wordt afgerond vóór hij de gebruiker bereikt.
    De eenheid volgt daarom dat zichtbare getal: 1 korrel/m³, alle andere waarden
    korrels/m³. Zo staat er op een fysieke iPhone nooit meer '1 korrels/m³'. */
@@ -119,21 +110,11 @@ root.WeatherNowMobileScreenshotPolish=api;
 if(typeof document==="undefined"||typeof S==="undefined")return;
 
 structureerBronnen();
-/* De post-buildlaag wordt pas na de canonieke applicatiescriptcode geïnjecteerd.
-   De eerste meters-render kan daardoor al hebben plaatsgevonden voordat de wrapper
-   hieronder bestaat. Corrigeer de statische kop dus ook één keer meteen. */
-compactRecentLabel();
 
 const basisNachten=nachten;
 nachten=function(){
   basisNachten();
   verbeterMaanfasen();
-};
-
-const basisMeters=meters;
-meters=function(){
-  basisMeters();
-  compactRecentLabel();
 };
 
 const basisLucht=lucht;
