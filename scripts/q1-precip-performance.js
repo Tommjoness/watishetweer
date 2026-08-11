@@ -170,6 +170,78 @@ function bewaarCache(lat,lon,label,land){
   schrijfCache(c);
 }
 
+/* De eerste cacheweergave mag niet opnieuw de volledige, zware dashboardrender
+   blokkeren. Bij een locatiewissel worden daarom alle nog zichtbare secundaire
+   waarden van de vorige plaats eerst neutraal gemaakt; daarna vullen we alleen
+   plaats, actuele temperatuur en toestand. De rest wordt pas na de eerste echte
+   browserpaint, in losse taken, uit exact hetzelfde cached data-object opgebouwd. */
+let cacheRenderGeneratie=0;
+function cacheKernRender(wissel){
+  const d=S.d||{},c=d.current||{},h=d.hourly||{};
+  if(!Array.isArray(h.time))return false;
+  let i=h.time.findIndex(t=>String(t).slice(0,13)===String(c.time||"").slice(0,13));
+  S.i0=i<0?0:i;
+
+  if(wissel){
+    ["wind","gust","prec","pop","hum","pres","cloud","vis","uv"].forEach(id=>{
+      const el=document.getElementById(id);if(el){el.textContent="–";el.removeAttribute("title");}
+    });
+    ["windsub","gustsub","precsub","popsub","humsub","pressub","cloudsub","vissub","uvsub"].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.textContent="";
+    });
+    const briefEl=document.getElementById("brief");if(briefEl)briefEl.textContent="";
+    const chart=document.getElementById("chart");if(chart)chart.innerHTML="";
+    const nc=document.getElementById("nc");if(nc)nc.innerHTML="";
+    const nct=document.getElementById("nctext");if(nct)nct.textContent="";
+    const days=document.getElementById("days");if(days)days.innerHTML="";
+    const nights=document.getElementById("nights");if(nights)nights.innerHTML="";
+    const aq=document.getElementById("aq");if(aq)aq.innerHTML="";
+    const moon=document.getElementById("moonlab");if(moon)moon.textContent="";
+  }
+
+  const place=document.getElementById("place");
+  if(place)place.innerHTML=esc(S.label)+'<span id="plaatstijd">'+plaatsKlok()+'</span>';
+  document.title=S.label+" · Wat is het weer?";
+  const t=getal(c.temperature_2m),gevoel=getal(c.apparent_temperature);
+  const tempEl=document.getElementById("t");if(tempEl)tempEl.textContent=t===null?"–":Math.round(t);
+  const condEl=document.getElementById("cond");if(condEl)condEl.textContent=txt(c.weather_code,c.is_day!==0);
+  const feels=document.getElementById("feels");if(feels)feels.textContent=gevoel===null?"Gevoelstemperatuur niet beschikbaar":"Gevoelstemperatuur "+Math.round(gevoel)+"°C";
+  const ico=document.getElementById("nowicon");if(ico)ico.innerHTML=icon(c.weather_code,c.is_day===1,46);
+  const coords=document.getElementById("coords");if(coords&&Number.isFinite(S.lat)&&Number.isFinite(S.lon))coords.textContent=S.lat.toFixed(3)+", "+S.lon.toFixed(3)+" · "+String(d.timezone||"");
+  if(typeof themaToepassen==="function")themaToepassen();
+  if(typeof minibarBij==="function")minibarBij();
+  if(typeof briefing==="function")briefing();
+  const app=document.getElementById("app");if(app)app.style.display="block";
+  const state=document.getElementById("state");if(state)state.style.display="none";
+  if(typeof klokTimerStart==="function")klokTimerStart();
+  if(typeof stempel==="function")stempel();
+  return true;
+}
+
+function naEersteCachePaint(generatie,sleutel,cachedData,start){
+  const geldig=()=>generatie===cacheRenderGeneratie&&cacheSleutel(S.lat,S.lon)===sleutel&&S.d===cachedData;
+  const naPaint=()=>{
+    if(!geldig())return;
+    perf.lastCachePaintMs=Math.max(0,nuMs()-start);
+    const taken=[
+      ()=>{if(typeof etmaal==="function")etmaal(S.i0,S.bereik);},
+      ()=>{if(typeof nachten==="function")nachten();},
+      ()=>{if(typeof lucht==="function")lucht();},
+      ()=>{if(typeof meters==="function")meters();},
+      ()=>{if(typeof nowcast==="function")nowcast();},
+      ()=>{if(typeof dagen==="function")dagen();}
+    ];
+    const stap=()=>{
+      if(!geldig()||!taken.length)return;
+      const taak=taken.shift();try{taak();}catch(e){}
+      if(taken.length)setTimeout(stap,0);
+    };
+    setTimeout(stap,0);
+  };
+  if(typeof root.requestAnimationFrame==="function")root.requestAnimationFrame(naPaint);
+  else setTimeout(naPaint,0);
+}
+
 /* Audit van het bestaande laadpad: de hoofdforecast is de kritieke request;
    luchtkwaliteit start al parallel en waarschuwingen komen na de eerste render.
    Een recent bekeken plaats kan daarom uit exact die coördinaatgebonden cache
@@ -178,6 +250,7 @@ function bewaarCache(lat,lon,label,land){
 if(typeof load==="function"){
   const basisLoad=load;
   load=async function(lat,lon,label,stil,opslaan,land){
+    const generatie=++cacheRenderGeneratie;
     const start=nuMs(),sleutel=cacheSleutel(lat,lon),cache=sleutel?leesCache()[sleutel]:null;
     const wissel=cacheSleutel(S.lat,S.lon)!==sleutel;
     if(!stil&&cache&&cacheIsVers(cache,Date.now())&&cache.d){
@@ -192,11 +265,11 @@ if(typeof load==="function"){
       S.land=land!==undefined?normLand(land):normLand(cache.land);
       S.d=cache.d;S.air=cache.air||null;S.op=cache.op;S.dag=null;
       try{
-        tekenAlles();
-        const app=document.getElementById("app");if(app)app.style.display="block";
-        const state=document.getElementById("state");if(state)state.style.display="none";
-        if(typeof urlBij==="function")urlBij();
-        perf.cacheHits++;perf.lastCachePaintMs=Math.max(0,nuMs()-start);
+        if(cacheKernRender(wissel)){
+          if(typeof urlBij==="function")urlBij();
+          perf.cacheHits++;
+          naEersteCachePaint(generatie,sleutel,cache.d,start);
+        }
       }catch(e){}
     }
     const resultaat=await basisLoad(lat,lon,label,stil,opslaan,land);
