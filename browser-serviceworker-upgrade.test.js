@@ -31,6 +31,8 @@ const swOud=swNieuw.replace(/const CACHE = "[^"]+";/,'const CACHE = "'+cacheOud+
 if(swOud===swNieuw||!swOud.includes(cacheOud))throw new Error("Oude serviceworkerfixture kon niet veilig worden afgeleid.");
 
 let fase="old";
+const serverStart=Date.now();
+const verzoeken=[];
 const mime={
   ".html":"text/html; charset=utf-8",
   ".js":"application/javascript; charset=utf-8",
@@ -40,6 +42,7 @@ const mime={
 };
 const server=http.createServer((req,res)=>{
   const pathname=(req.url||"/").split("?")[0];
+  verzoeken.push({ms:Date.now()-serverStart,fase,path:pathname});
   if(pathname==="/"||pathname==="/index.html"){
     res.writeHead(200,{"content-type":"text/html; charset=utf-8","cache-control":"no-store"});
     res.end(fase==="old"?indexOud:indexFinal);return;
@@ -81,6 +84,30 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
     assert(keys.includes(cacheOud),"oude serviceworker moet zijn eigen app-shellcache hebben");
     assert(!keys.includes(cacheNieuw),"nieuwe cache mag vóór update nog niet bestaan");
 
+    /* Diagnostiek: bemonster cache- en workerstates fijnmazig rond de update. */
+    await page.evaluate(()=>{
+      window.__swDiag=[];
+      window.__swDiagStart=performance.now();
+      window.__swDiagBusy=false;
+      window.__swDiagTimer=setInterval(async()=>{
+        if(window.__swDiagBusy)return;
+        window.__swDiagBusy=true;
+        try{
+          const keys=await caches.keys();
+          const r=await navigator.serviceWorker.getRegistration();
+          window.__swDiag.push({
+            ms:Math.round((performance.now()-window.__swDiagStart)*10)/10,
+            keys,
+            active:r&&r.active?r.active.state:null,
+            installing:r&&r.installing?r.installing.state:null,
+            waiting:r&&r.waiting?r.waiting.state:null,
+            controller:navigator.serviceWorker.controller?navigator.serviceWorker.controller.scriptURL:null
+          });
+        }finally{window.__swDiagBusy=false;}
+      },5);
+    });
+    await page.waitForTimeout(25);
+
     /* 2. Publiceer exact de definitieve worker en dwing de normale browser-updatecheck af. */
     fase="new";
     await page.evaluate(async()=>{
@@ -93,9 +120,35 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
       const r=await navigator.serviceWorker.getRegistration();
       return !!(r&&r.active&&r.active.state==="activated"&&keys.includes(nieuw)&&!keys.includes(oud));
     },{nieuw:cacheNieuw,oud:cacheOud},{timeout:15000});
+
+    /* Geef eventuele late writes van de oude worker bewust tijd om zichtbaar te worden. */
+    await page.waitForTimeout(350);
+    const diag=await page.evaluate(()=>{
+      clearInterval(window.__swDiagTimer);
+      return window.__swDiag||[];
+    });
+    const overgangen=[];
+    for(const x of diag){
+      const compact={
+        ms:x.ms,
+        oud:x.keys.includes(cacheOud),
+        nieuw:x.keys.includes(cacheNieuw),
+        active:x.active,
+        installing:x.installing,
+        waiting:x.waiting
+      };
+      const vorige=overgangen[overgangen.length-1];
+      if(!vorige||vorige.oud!==compact.oud||vorige.nieuw!==compact.nieuw||vorige.active!==compact.active||vorige.installing!==compact.installing||vorige.waiting!==compact.waiting)overgangen.push(compact);
+    }
+    console.log("SW_DIAG_TRANSITIONS "+JSON.stringify(overgangen));
+    console.log("SW_DIAG_REQUESTS "+JSON.stringify(verzoeken.filter(v=>v.path==="/"||v.path==="/index.html"||v.path==="/sw.js")));
+    const schoonIndex=diag.findIndex(x=>x.keys.includes(cacheNieuw)&&!x.keys.includes(cacheOud)&&x.active==="activated");
+    const herleeft=schoonIndex>=0&&diag.slice(schoonIndex+1).some(x=>x.keys.includes(cacheOud));
+    if(herleeft)throw new Error("BEWEZEN SERVICEWORKER-CACHERACE: oude WeatherNow-cache verdween na activate en werd daarna opnieuw aangemaakt.");
+
     keys=await cacheSleutels(page);
     assert(keys.includes(cacheNieuw),"nieuwe worker moet de definitieve app-shellcache hebben");
-    assert(!keys.includes(cacheOud),"activate moet de oude WeatherNow-cache verwijderen");
+    assert(!keys.includes(cacheOud),"activate moet de oude WeatherNow-cache blijvend verwijderen");
 
     /* 3. Eén online navigatie moet aantoonbaar de nieuwe HTML tonen en opslaan. */
     const online=await page.reload({waitUntil:"load"});
@@ -118,6 +171,7 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
 
     console.log("Serviceworker-E2E geslaagd: oude cache → definitieve worker → oude cache verwijderd → nieuwe shell online → nieuwe shell en assets offline.");
   }finally{
+    await page.evaluate(()=>{if(window.__swDiagTimer)clearInterval(window.__swDiagTimer);}).catch(()=>{});
     await context.setOffline(false).catch(()=>{});
     await context.close().catch(()=>{});
     await browser.close().catch(()=>{});
