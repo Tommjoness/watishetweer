@@ -25,6 +25,8 @@ ok(internPubliek.length===0,"geen interne test- of bouwbestanden in public");
 const sw=fs.readFileSync(path.join(PUBLIC,"sw.js"),"utf8");
 ok(/const CACHE = "watishetweer-[0-9a-f]{12}";/.test(sw),"serviceworker-cache volgt de gebouwde inhoudshash");
 ok(!/(?:weerbriefing|watishetweer)-v\d+/.test(sw),"geen handmatig vast cacheversienummer in productie");
+ok((sw.match(/^const CACHE_HANDLE = caches\.open\(CACHE\);$/gm)||[]).length===1,"serviceworker opent per generatie exact één benoemde cachehandle");
+ok((sw.match(/CACHE_HANDLE\.then\(c => c\.put\(e\.request, copy\)\)\.then\(\(\) => r\)/g)||[]).length===2,"runtime-cachewrites blijven onderdeel van hun fetchevent en heropenen geen verwijderde cachenaam");
 
 const gebouwd=fs.readFileSync(path.join(PUBLIC,"index.html"),"utf8");
 ok(gebouwd.includes("S.actieveWaarschuwingen=[];"),"waarschuwingen van een vorige locatie worden direct gewist");

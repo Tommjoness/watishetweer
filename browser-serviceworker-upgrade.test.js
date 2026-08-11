@@ -30,8 +30,9 @@ function instrumenteerWorker(bron,versie){
   const helper=`\nconst __SW_E2E_VERSION=${JSON.stringify(versie)};\nconst __swE2eDiag=(event,extra={})=>fetch("/__swdiag",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({version:__SW_E2E_VERSION,event,...extra})}).catch(()=>{});\n`;
   let uit=bron.replace(/(const CACHE = "[^"]+";)/,"$1"+helper);
   const eisen=[
+    ['const CACHE_HANDLE = caches.open(CACHE);','const CACHE_HANDLE = (__swE2eDiag("cache-handle-open"),caches.open(CACHE));'],
     ['self.addEventListener("install", e => {','self.addEventListener("install", e => {\n  __swE2eDiag("install-start");'],
-    ['    caches.open(CACHE).then(c =>\n      // per bestand','    (__swE2eDiag("install-cache-open"),caches.open(CACHE)).then(c =>\n      // per bestand'],
+    ['    CACHE_HANDLE.then(c =>\n      // per bestand','    (__swE2eDiag("install-cache-open"),CACHE_HANDLE).then(c =>\n      // per bestand'],
     ['    ).then(() => self.skipWaiting())','    ).then(() => { __swE2eDiag("install-complete"); return self.skipWaiting(); })'],
     ['self.addEventListener("activate", e => {','self.addEventListener("activate", e => {\n  __swE2eDiag("activate-start");'],
     ['      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))','      .then(keys => { __swE2eDiag("activate-keys",{keys}); return Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))); })'],
@@ -41,12 +42,12 @@ function instrumenteerWorker(bron,versie){
     if(!uit.includes(van))throw new Error(`SW-diagnoseanker ontbreekt voor ${versie}: ${van}`);
     uit=uit.replace(van,naar);
   }
-  let runtimeOpen=0;
-  uit=uit.replace(/caches\.open\(CACHE\)\.then\(c => c\.put\(e\.request, copy\)\)/g,()=>{
-    runtimeOpen++;
-    return '(__swE2eDiag("runtime-cache-open",{path:url.pathname}),caches.open(CACHE)).then(c => c.put(e.request, copy))';
+  let runtimePut=0;
+  uit=uit.replace(/CACHE_HANDLE\.then\(c => c\.put\(e\.request, copy\)\)/g,()=>{
+    runtimePut++;
+    return '(__swE2eDiag("runtime-cache-put",{path:url.pathname}),CACHE_HANDLE).then(c => c.put(e.request, copy))';
   });
-  if(runtimeOpen!==2)throw new Error(`Verwacht twee runtime-cachewrites in ${versie}, vond ${runtimeOpen}.`);
+  if(runtimePut!==2)throw new Error(`Verwacht twee runtime-cachewrites via de generatiehandle in ${versie}, vond ${runtimePut}.`);
   return uit;
 }
 

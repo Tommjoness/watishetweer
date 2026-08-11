@@ -1,4 +1,9 @@
 const CACHE = "watishetweer-v1";
+/* Eén cachehandle per worker-generatie. Een oude worker mag na activatie van een
+   opvolger nooit via caches.open(CACHE) zijn verwijderde naam heraanmaken. Een
+   bestaande Cache-handle blijft na CacheStorage.delete wel bruikbaar voor een
+   reeds lopende fetch, maar wordt niet opnieuw onder die oude naam geregistreerd. */
+const CACHE_HANDLE = caches.open(CACHE);
 const SHELL = [
   "./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png",
   "./bodoni-moda-latin-400-normal.woff2",
@@ -12,7 +17,7 @@ const SHELL = [
 
 self.addEventListener("install", e => {
   e.waitUntil(
-    caches.open(CACHE).then(c =>
+    CACHE_HANDLE.then(c =>
       // per bestand, zodat één ontbrekend bestand de hele installatie niet sloopt
       Promise.all(SHELL.map(u => c.add(u).catch(() => {})))
     ).then(() => self.skipWaiting())
@@ -40,8 +45,7 @@ self.addEventListener("fetch", e => {
     e.respondWith(
       fetch(e.request).then(r => {
         const copy = r.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-        return r;
+        return CACHE_HANDLE.then(c => c.put(e.request, copy)).then(() => r);
       }).catch(() => caches.match(e.request)
           .then(hit => hit || caches.match("./index.html"))
           // komt ook daar niets uit, dan een leesbare melding in plaats van een
@@ -62,8 +66,7 @@ self.addEventListener("fetch", e => {
     caches.match(e.request)
       .then(hit => hit || fetch(e.request).then(r => {
         const copy = r.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-        return r;
+        return CACHE_HANDLE.then(c => c.put(e.request, copy)).then(() => r);
       }))
       .catch(() => caches.match(e.request).then(hit => hit || Response.error()))
   );
