@@ -28,16 +28,15 @@ ok(html.includes('el.getAttribute("fill-opacity")===".16"')&&html.includes("el.r
 ok(html.includes("millimeter neerslag$/.test")&&html.includes("el.remove();"),"oude losse mm-labels worden na render verwijderd");
 ok(html.includes('^\\d+%$')&&html.includes("x+g.cw/2"),"neerslagkanslabels worden terug op hun eigen tijdstip gecentreerd");
 
-/* De geassembleerde runtime bevat historische helperbron die door een latere
-   functie-owner wordt overschreven. Voor gedrag is daarom de laatst geldende
-   chartHint()-declaratie relevant; de browsertest roept die owner bovendien echt
-   aan. Dit voorkomt zowel een vals groene losse stringcheck als een vals rode
-   match op dode bron. */
-const hintStart=html.lastIndexOf("function chartHint(){"),hintEind=html.indexOf("\nfunction scrubKoppel()",hintStart);
-ok(hintStart>=0&&hintEind>hintStart,"actieve grafiekhint-owner is eenduidig afgebakend");
-const hintOwner=html.slice(hintStart,hintEind);
-ok(hintOwner.includes('el2.textContent="Selecteer een punt in de grafiek voor details.";'),"actieve grafiekhint werkt voor muis en touch");
-ok(!hintOwner.includes("Houd de grafiek vast voor details."),"actieve grafiekhint kan de oude touchtekst niet terugzetten");
+/* Niet langer afleiden welke historische functie-declaratie 'de laatste' lijkt.
+   Q4 bezit de globale chartHint-binding expliciet vóór de startup-router; de
+   browsertest bevestigt daarna het zichtbare runtimegedrag in beide engines. */
+const hintOwnerPos=html.indexOf('chartHint=function(){');
+ok(hintOwnerPos>=0&&hintOwnerPos<startupPos,"Q4 bezit de grafiekhint expliciet vóór startup");
+const hintOwnerEind=html.indexOf("\n};",hintOwnerPos);
+ok(hintOwnerEind>hintOwnerPos,"Q4 grafiekhint-owner is eenduidig afgebakend");
+const hintOwner=html.slice(hintOwnerPos,hintOwnerEind+3);
+ok(hintOwner.includes('el.textContent="Selecteer een punt in de grafiek voor details.";'),"Q4 grafiekhint-owner werkt voor muis en touch");
 ok(html.includes('<p class="hint" id="dagenhint">Kies een dag om die verwachting in de grafiek te bekijken.</p>'),"zichtbare daghint is invoermethode-neutraal");
 ok(html.includes('<div class="eyebrow">Windstoten nu</div>'),"actuele windstootwaarde is ondubbelzinnig gelabeld");
 
