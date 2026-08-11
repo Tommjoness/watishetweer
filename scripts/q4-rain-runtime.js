@@ -5,6 +5,24 @@ const q4Getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Num
 const q4Mm=v=>{const n=q4Getal(v);return n===null?"–":n.toFixed(1).replace(".",",");};
 const q4Tijd=t=>String(t||"").slice(11,16);
 const q4DagKort=t=>{try{const d=new Date(String(t).slice(0,10)+"T12:00:00");return DAGEN[d.getDay()]+" "+d.getDate();}catch(e){return "";}};
+const Q4_SVG_NS="http://www.w3.org/2000/svg";
+
+function q4SvgLijn(x1,y1,x2,y2,dikte){
+  const el=document.createElementNS(Q4_SVG_NS,"line");
+  el.setAttribute("x1",String(x1));el.setAttribute("y1",String(y1));
+  el.setAttribute("x2",String(x2));el.setAttribute("y2",String(y2));
+  el.setAttribute("stroke",TEAL);el.setAttribute("stroke-width",String(dikte));
+  return el;
+}
+function q4SvgTekst(x,y,waarde,font,samenvatting){
+  const el=document.createElementNS(Q4_SVG_NS,"text");
+  el.setAttribute("x",String(x));el.setAttribute("y",String(y));
+  el.setAttribute("fill",INK45);el.setAttribute("font-family","DM Mono,monospace");
+  el.setAttribute("font-size",String(font));
+  if(samenvatting)el.setAttribute("data-q4-rain-summary",samenvatting);
+  el.textContent=waarde;
+  return el;
+}
 
 function q4Regenperioden(g){
   const h=S.d&&S.d.hourly||{},tijden=Array.isArray(g&&g.TI)?g.TI:[];
@@ -81,12 +99,16 @@ function q4TekenRegenperioden(svg,g,perioden){
   const nieuwH=Math.max(basisH,y+17+regel+17+8);
   svg.setAttribute("viewBox","0 0 "+g.W+" "+nieuwH);g.H=nieuwH;
 
-  let inhoud="";
+  const groep=document.createElementNS(Q4_SVG_NS,"g");
+  groep.setAttribute("data-q4-rain-periods","1");
+  groep.setAttribute("aria-label","Neerslagperioden");
   perioden.forEach(p=>{
     const x1=g.x(p.van),x2=g.x(p.tot);
-    inhoud+='<line x1="'+x1+'" y1="'+y+'" x2="'+x2+'" y2="'+y+'" stroke="'+TEAL+'" stroke-width="3" stroke-linecap="square"/>'
-      +'<line x1="'+x1+'" y1="'+(y-4)+'" x2="'+x1+'" y2="'+(y+4)+'" stroke="'+TEAL+'" stroke-width="1"/>'
-      +'<line x1="'+x2+'" y1="'+(y-4)+'" x2="'+x2+'" y2="'+(y+4)+'" stroke="'+TEAL+'" stroke-width="1"/>';
+    const horizontaal=q4SvgLijn(x1,y,x2,y,3);
+    horizontaal.setAttribute("stroke-linecap","square");
+    groep.appendChild(horizontaal);
+    groep.appendChild(q4SvgLijn(x1,y-4,x1,y+4,1));
+    groep.appendChild(q4SvgLijn(x2,y-4,x2,y+4,1));
   });
 
   const totaal=perioden.reduce((som,p)=>som+p.som,0);
@@ -98,11 +120,9 @@ function q4TekenRegenperioden(svg,g,perioden){
   const dag=g.n>49?q4DagKort(g.TI[piek.piek])+" ":"";
   const piekTekst="Meeste regen "+dag+q4Tijd(g.TI[piek.piek-1])+"–"+q4Tijd(g.TI[piek.piek])+" · "+q4Mm(piek.piekMm)+" mm";
   const font=g.M?9.3:10.2;
-  inhoud+='<text data-q4-rain-summary="total" x="'+g.pl+'" y="'+(y+17)+'" fill="'+INK45+'" font-family="DM Mono,monospace" font-size="'+font+'">'+periodeTekst+'</text>';
-  inhoud+='<text data-q4-rain-summary="peak" x="'+g.pl+'" y="'+(y+17+regel)+'" fill="'+INK45+'" font-family="DM Mono,monospace" font-size="'+font+'">'+piekTekst+'</text>';
+  groep.appendChild(q4SvgTekst(g.pl,y+17,periodeTekst,font,"total"));
+  groep.appendChild(q4SvgTekst(g.pl,y+17+regel,piekTekst,font,"peak"));
 
-  const groep=document.createElementNS("http://www.w3.org/2000/svg","g");
-  groep.setAttribute("data-q4-rain-periods","1");groep.setAttribute("aria-label","Neerslagperioden");groep.innerHTML=inhoud;
   const scrub=svg.querySelector("#scrub");svg.insertBefore(groep,scrub||null);
   svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve.").trim());
 }
