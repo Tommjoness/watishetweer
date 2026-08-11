@@ -184,7 +184,7 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
   }
   function maanInfo(segment,vanafMs){
     try{
-      const grens=nachtGrenzen(segment,vanafMs);if(!grens)return {icoon:"",titel:"",tijden:""};
+      const grens=nachtGrenzen(segment,vanafMs);if(!grens)return {icoon:"",titel:"",tijden:"",fase:null};
       const mt=opOnder("maan",grens.start-6*3600000,S.lat,S.lon);
       const events=maanEventsBinnenVenster(mt.op,mt.onder,grens.start,grens.eind);
       const midden=(grens.start+grens.eind)/2,mn=maan(new Date(midden));
@@ -194,8 +194,8 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
       }else{
         tijden=maanHoogte(midden,S.lat,S.lon)>0?"maan blijft boven de horizon":"maan blijft onder de horizon";
       }
-      return {icoon:maanUnicode(mn.fase),titel:mn.naam+", "+Math.round(mn.ill*100)+" procent verlicht",tijden};
-    }catch(e){return {icoon:"",titel:"",tijden:""};}
+      return {icoon:maanUnicode(mn.fase),titel:mn.naam+", "+Math.round(mn.ill*100)+" procent verlicht",tijden,fase:mn.fase};
+    }catch(e){return {icoon:"",titel:"",tijden:"",fase:null};}
   }
 
   nachten=function(){
@@ -227,7 +227,8 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
       const kleur=!a.genoeg?INK25:a.score>=7?TEAL:a.score>=4?INK:INK25;
       const bew=a.genoeg&&Number.isFinite(a.gemBewolking)?Math.round(a.gemBewolking)+"%":"–";
       const zicht=a.genoeg&&Number.isFinite(a.gemZicht)?(a.gemZicht>=10000?"10+ km":nl(a.gemZicht/1000)+" km"):"onbekend";
-      const maanTekst=mi.tijden?` · <span class="maanbij" title="${esc(mi.titel)}">${mi.icoon}</span> ${esc(mi.tijden)}`:"";
+      const faseAttribuut=Number.isFinite(mi.fase)?` data-maan-fase="${mi.fase.toFixed(4)}"`:"";
+      const maanTekst=mi.tijden?` · <span class="maanbij" title="${esc(mi.titel)}"${faseAttribuut}>${mi.icoon}</span> ${esc(mi.tijden)}`:"";
       out+=`<div class="row night"><div class="dname">${lbl}</div><div class="score" style="color:${kleur}" title="Zichtscore op basis van resterende nacht">${score}</div>`
         +`<div class="sbar"><i style="width:${breed}%;background:${kleur}"></i></div>`
         +`<div class="nmeta"><span class="perc">${bew}</span> bewolking</div>`
@@ -236,7 +237,9 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
     const kop=`<div class="row night kop"><div class="dname">Nacht</div><div class="score">Score</div><div class="sbar"></div><div class="nmeta">Bewolking</div><div class="nmeta wide">Beste zichtperiode</div></div>`;
     document.getElementById("nights").innerHTML=out?kop+out:'<div class="msg">Geen nachtdata beschikbaar.</div>';
     const m=maan(new Date());
-    document.getElementById("moonlab").innerHTML=maanUnicode(m.fase)+"<span>"+m.naam+", "+Math.round(m.ill*100)+" procent verlicht</span>";
+    const moonlab=document.getElementById("moonlab");
+    moonlab.dataset.maanFase=m.fase.toFixed(4);
+    moonlab.innerHTML=maanUnicode(m.fase)+"<span>"+m.naam+", "+Math.round(m.ill*100)+" procent verlicht</span>";
   };
 
   /* De centrale engine houdt de volledige bronuitleg beschikbaar. In de kleine

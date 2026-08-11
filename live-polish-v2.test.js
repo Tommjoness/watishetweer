@@ -53,6 +53,8 @@ test("desktopgrid reset oude twee- en vierkolomsselectors expliciet",()=>{
   assert(css.includes("grid-auto-rows:1fr"));
   assert(css.includes("#nchint{display:none"));
   assert(css.includes("grid-template-columns:104px 52px minmax(80px,1fr) 116px 218px"));
+  assert(css.includes("white-space:normal"));
+  assert(css.includes("overflow-wrap:break-word"));
 });
 
 test("mobiele grafiekkop benut volle breedte zonder lege rechterkolom",()=>{

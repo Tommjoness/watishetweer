@@ -3019,8 +3019,9 @@ groep("Herstelronde v68");
     /\.night\{grid-template-columns:70px 40px minmax\(20px,1fr\) max-content;gap:4px 9px\}/.test(bronH));
   check("7b. de mobiele .day-regel gebruikt sinds de v70-kolomcorrectie een vaste naamkolom (40px), geen max-content meer",
     /\.day\{grid-template-columns:40px 22px 52px 1fr 1fr 64px;gap:6px\}/.test(bronH));
-  check("8. de standaard (desktop-breedte) .night-grid is niet gewijzigd",
-    /\.night\{grid-template-columns:104px 52px minmax\(40px,1fr\) 104px max-content;gap:16px\}/.test(bronH));
+  check("8. de standaard Nachtzicht-grid begrenst de rechtertekstkolom en laat die wrappen",
+    /\.night\{grid-template-columns:104px 52px minmax\(40px,1fr\) 104px minmax\(180px,218px\);gap:16px\}/.test(bronH)
+      &&/\.night \.nmeta\.wide\{[\s\S]*?min-width:0;[\s\S]*?white-space:normal;[\s\S]*?overflow-wrap:break-word;/.test(bronH));
   check("8b. de standaard (desktop-breedte) .day-grid gebruikt sinds de v70-kolomcorrectie een vaste naamkolom (100px), geen max-content meer",
     /\.day\{grid-template-columns:100px 26px 1fr 72px 54px 128px 46px 52px;gap:14px;cursor:pointer\}/.test(bronH));
   check("9. zeven-dagenklikwerking (de dag-click-handler) is niet aangeraakt",

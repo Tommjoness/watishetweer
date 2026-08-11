@@ -178,7 +178,15 @@
   }
   .row.night > .nmeta:not(.wide){text-align:right}
   .row.night.kop > .nmeta:not(.wide){text-align:right}
-  .row.night > .nmeta.wide{width:218px;max-width:218px;text-align:left}
+  .row.night > .nmeta.wide{
+    width:218px;
+    max-width:218px;
+    min-width:0;
+    text-align:left;
+    white-space:normal;
+    overflow-wrap:break-word;
+    word-break:normal;
+  }
 }
 
 @media(min-width:1500px){

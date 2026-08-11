@@ -14,6 +14,11 @@ const html=fs.readFileSync(htmlPad,"utf8");
 for(const vereist of [
   "WeatherNowMobileScreenshotPolish",
   "maan-fase-svg-v2",
+  "maan-schaduw",
+  "data-maan-fase",
+  "--moon-unlit",
+  "grid-template-columns:104px 52px minmax(40px,1fr) 104px minmax(180px,218px)",
+  "overflow-wrap:break-word",
   "Temperatuurtrend",
   "temperatuurTrend",
   "renderNeerslagSectie",
@@ -85,4 +90,4 @@ const m=/const CACHE = "([^"]+)";/.exec(sw);
 if(!m)throw new Error("Serviceworker-cache-id ontbreekt in definitieve artifact.");
 if(m[1]!==verwacht)throw new Error("Serviceworker-cache hoort bij een andere artifact: "+m[1]+" versus "+verwacht);
 
-console.log("Definitieve checkpoint-50 artifact geverifieerd: één Nachtzicht-owner, fontbox-collision-proof mobiele grafiek en cache "+verwacht+".");
+console.log("Definitieve checkpoint-50 artifact geverifieerd: één Nachtzicht-owner, begrensde tekstkolom, brongetrouwe maanfase, fontbox-collision-proof mobiele grafiek en cache "+verwacht+".");

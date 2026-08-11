@@ -29,27 +29,29 @@ function maanFaseUitBeschrijving(tekst){
 function maanFaseSvgV2(fase,size){
   const f=getal(fase),s=Math.max(8,Math.round(getal(size)||12));
   if(f===null)return "";
-  const p=((f%1)+1)%1,r=7,cos=Math.cos(2*Math.PI*p),ill=(1-cos)/2;
+  const p=((f%1)+1)%1,r=9,boven=12-r,onder=12+r,cos=Math.cos(2*Math.PI*p),ill=(1-cos)/2;
+  const schaduw='<circle class="maan-schaduw" cx="12" cy="12" r="'+r+'" fill="var(--moon-unlit)" stroke="var(--moon-outline)" stroke-width="1"/>';
   let vorm="";
   if(ill>0.985){
     vorm='<circle class="maan-licht-vol" cx="12" cy="12" r="'+r+'" fill="currentColor"/>';
   }else if(ill>=0.015){
     if(Math.abs(cos)<0.03){
       vorm=p<0.5
-        ?'<path class="maan-licht" d="M12 5 A7 7 0 0 1 12 19 Z" fill="currentColor"/>'
-        :'<path class="maan-licht" d="M12 5 A7 7 0 0 0 12 19 Z" fill="currentColor"/>';
+        ?'<path class="maan-licht" d="M12 '+boven+' A'+r+' '+r+' 0 0 1 12 '+onder+' Z" fill="currentColor"/>'
+        :'<path class="maan-licht" d="M12 '+boven+' A'+r+' '+r+' 0 0 0 12 '+onder+' Z" fill="currentColor"/>';
     }else{
       const rx=Math.max(0.6,Math.abs(r*cos)).toFixed(2),wassend=p<0.5,buiten=wassend?1:0,binnen=((cos>0)===wassend)?0:1;
-      vorm='<path class="maan-licht" d="M 12 5 A 7 7 0 0 '+buiten+' 12 19 A '+rx+' 7 0 0 '+binnen+' 12 5 Z" fill="currentColor"/>';
+      vorm='<path class="maan-licht" d="M 12 '+boven+' A '+r+' '+r+' 0 0 '+buiten+' 12 '+onder+' A '+rx+' '+r+' 0 0 '+binnen+' 12 '+boven+' Z" fill="currentColor"/>';
     }
   }
-  return '<svg class="maan-fase-svg maan-fase-svg-v2" data-fase="'+p.toFixed(4)+'" viewBox="0 0 24 24" width="'+s+'" height="'+s+'" aria-hidden="true" focusable="false">'+vorm+'</svg>';
+  return '<svg class="maan-fase-svg maan-fase-svg-v2" data-fase="'+p.toFixed(4)+'" viewBox="0 0 24 24" width="'+s+'" height="'+s+'" aria-hidden="true" focusable="false">'+schaduw+vorm+'</svg>';
 }
 
 function verbeterMaanElement(el,size,beschrijving){
   if(!el)return false;
   const tekst=String(beschrijving||el.getAttribute("title")||el.textContent||"");
-  const fase=maanFaseUitBeschrijving(tekst);
+  const dataFase=getal(el.getAttribute("data-maan-fase"));
+  const fase=dataFase!==null&&dataFase>=0&&dataFase<=1?dataFase:maanFaseUitBeschrijving(tekst);
   if(fase===null)return false;
   const svg=maanFaseSvgV2(fase,size);
   if(!svg)return false;

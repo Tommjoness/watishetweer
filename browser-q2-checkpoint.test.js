@@ -113,17 +113,22 @@ async function controleer(page,naam,breedte){
     const nights=document.getElementById("nights"),chart=document.getElementById("chart");
     const nachtRect=rect(nights);
     const rijen=[...nights.querySelectorAll(".row.night:not(.kop)")].map(rij=>{
-      const score=rij.querySelector(".score"),bar=rij.querySelector(".sbar"),cloud=rij.querySelector(".nmeta:not(.wide)"),advies=rij.querySelector(".nachtadvies"),moon=rij.querySelector(".nachtmaan");
-      const sr=rect(score),br=rect(bar),cr=rect(cloud),rr=rect(rij);
+      const score=rij.querySelector(".score"),bar=rij.querySelector(".sbar"),cloud=rij.querySelector(".nmeta:not(.wide)"),wide=rij.querySelector(".nmeta.wide"),advies=rij.querySelector(".nachtadvies"),moon=rij.querySelector(".nachtmaan"),maanBij=moon&&moon.querySelector(".maanbij"),maanSvg=moon&&moon.querySelector(".maan-fase-svg-v2");
+      const sr=rect(score),br=rect(bar),cr=rect(cloud),rr=rect(rij),wr=rect(wide);
       return {
         score:(score.textContent||"").trim(),advies:(advies&&advies.textContent||"").trim(),cloud:(cloud.textContent||"").trim(),
         barWidth:parseFloat(((rij.querySelector(".sbar i")||{}).style||{}).width||"0"),
         scoreBarGap:br.l-sr.r,rowRight:rr.r,cloudRight:cr.r,cloudLeft:cr.l,
-        moonText:moon?(moon.textContent||""):"",moonSvg:moon?moon.querySelectorAll(".maan-fase-svg-v2").length:0
+        rowScroll:rij.scrollWidth-rij.clientWidth,wideRight:wr.r,wideScroll:wide.scrollWidth-wide.clientWidth,
+        moonText:moon?(moon.textContent||""):"",moonSvg:moon?moon.querySelectorAll(".maan-fase-svg-v2").length:0,
+        moonBase:maanSvg?maanSvg.querySelectorAll(".maan-schaduw").length:0,
+        moonSource:maanBij&&maanBij.getAttribute("data-maan-fase")!==null?Number(maanBij.getAttribute("data-maan-fase")):null,
+        moonRendered:maanSvg&&maanSvg.getAttribute("data-fase")!==null?Number(maanSvg.getAttribute("data-fase")):null
       };
     });
     const kop=nights.querySelector(".row.night.kop"),cloudKop=kop&&kop.querySelector(".nmeta:not(.wide)");
     const cloudKopRect=cloudKop?rect(cloudKop):null;
+    const moonlab=document.getElementById("moonlab"),moonlabSvg=moonlab&&moonlab.querySelector(".maan-fase-svg-v2");
 
     const teksten=[...chart.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&rect(el).w>0&&rect(el).h>0).map(el=>({tekst:(el.textContent||"").trim(),box:rect(el),font:el.getAttribute("font-family")||"",fill:el.getAttribute("fill")||""}));
     const bots=[];
@@ -141,6 +146,11 @@ async function controleer(page,naam,breedte){
       cloudKopRight:cloudKopRect?cloudKopRect.r:null,cloudKopLeft:cloudKopRect?cloudKopRect.l:null,
       emoji:/[🌑🌒🌓🌔🌕🌖🌗🌘]/u.test((nights.textContent||"")+((document.getElementById("moonlab")||{}).textContent||"")),
       moonSvgs:document.querySelectorAll("#nights .maan-fase-svg-v2,#moonlab .maan-fase-svg-v2").length,
+      moonHeading:{
+        base:moonlabSvg?moonlabSvg.querySelectorAll(".maan-schaduw").length:0,
+        source:moonlab&&moonlab.getAttribute("data-maan-fase")!==null?Number(moonlab.getAttribute("data-maan-fase")):null,
+        rendered:moonlabSvg&&moonlabSvg.getAttribute("data-fase")!==null?Number(moonlabSvg.getAttribute("data-fase")):null
+      },
       viewBox:{w:vb.width,h:vb.height},bots,nu:nu.map(x=>x.tekst),tempLabels:gewone.length,tempBuiten,
       canonicalBeste:[...nights.querySelectorAll(".nachtadvies")].filter(x=>/Beste periode\s+\d{2}:\d{2}/i.test(x.textContent||"")).length
     };
@@ -151,6 +161,8 @@ async function controleer(page,naam,breedte){
   assert.ok(r.nightRows.length>=5,`${naam} ${breedte}px: Nachtzicht bevat de verwachte rijen`);
   assert.ok(r.moonSvgs>=r.nightRows.length,`${naam} ${breedte}px: continue maanfase-SVG's aanwezig`);
   assert.equal(r.emoji,false,`${naam} ${breedte}px: geen platformafhankelijke maanemoji in zichtbare Nachtzichttekst`);
+  assert.equal(r.moonHeading.base,1,`${naam} ${breedte}px: maanfase in de kop heeft één herkenbare schaduwschijf`);
+  assert.ok(Number.isFinite(r.moonHeading.source)&&Number.isFinite(r.moonHeading.rendered)&&Math.abs(r.moonHeading.source-r.moonHeading.rendered)<=0.0001,`${naam} ${breedte}px: maanfase in de kop volgt de berekende fase`);
   assert.equal(r.canonicalBeste,0,`${naam} ${breedte}px: oude overprecieze 'Beste periode'-tekst is niet zichtbaar`);
 
   for(const [i,rij] of r.nightRows.entries()){
@@ -161,6 +173,11 @@ async function controleer(page,naam,breedte){
     assert.ok(rij.scoreBarGap>=8,`${naam} ${breedte}px nacht ${i}: score en balk hebben minimaal 8px ruimte (${rij.scoreBarGap}px)`);
     assert.ok(rij.rowRight<=r.nachtRight+1,`${naam} ${breedte}px nacht ${i}: rij blijft binnen Nachtzicht`);
     assert.ok(rij.cloudRight<=r.nachtRight+1&&rij.cloudLeft>=0,`${naam} ${breedte}px nacht ${i}: bewolking blijft binnen kolom`);
+    assert.ok(rij.rowScroll<=1,`${naam} ${breedte}px nacht ${i}: rij-inhoud loopt niet horizontaal uit (${rij.rowScroll}px)`);
+    assert.ok(rij.wideRight<=r.nachtRight+1,`${naam} ${breedte}px nacht ${i}: tekstkolom blijft binnen Nachtzicht`);
+    assert.ok(rij.wideScroll<=1,`${naam} ${breedte}px nacht ${i}: tekstkolom wrapt zonder interne overflow (${rij.wideScroll}px)`);
+    assert.equal(rij.moonBase,1,`${naam} ${breedte}px nacht ${i}: maanfase heeft één herkenbare schaduwschijf`);
+    assert.ok(Number.isFinite(rij.moonSource)&&Number.isFinite(rij.moonRendered)&&Math.abs(rij.moonSource-rij.moonRendered)<=0.0001,`${naam} ${breedte}px nacht ${i}: zichtbare fase volgt de berekende fase`);
     assert(/^\d{1,3}%$/.test(rij.cloud),`${naam} ${breedte}px nacht ${i}: mobiele/compacte bewolking blijft helder percentage`);
   }
   assert.ok(r.cloudKopRight===null||r.cloudKopRight<=r.nachtRight+1,`${naam} ${breedte}px: kop Bewolking loopt niet uit Nachtzicht`);

@@ -16,12 +16,17 @@ const nieuw=p.maanFaseSvgV2(0,14);
 const vol=p.maanFaseSvgV2(0.5,14);
 const eerste=p.maanFaseSvgV2(0.25,14);
 const laatste=p.maanFaseSvgV2(0.75,14);
+const wassendeSikkel=p.maanFaseSvgV2(0.08,14);
+const afnemendeSikkel=p.maanFaseSvgV2(0.92,14);
+assert(nieuw.includes('class="maan-schaduw"'),"nieuwe maan is een herkenbare donkere schijf en geen lege cirkel");
 assert(!nieuw.includes("maan-licht-vol"),"nieuwe maan heeft geen verlicht vlak");
 assert(vol.includes("maan-licht-vol"),"volle maan vult de schijf volledig");
 assert.notEqual(nieuw,vol,"nieuwe en volle maan zijn visueel verschillend");
 assert.notEqual(eerste,laatste,"eerste en laatste kwartier staan aan een andere zijde");
-for(const svg of [nieuw,vol,eerste,laatste]){
+assert.notEqual(wassendeSikkel,afnemendeSikkel,"wassende en afnemende sikkel spiegelen visueel");
+for(const svg of [nieuw,vol,eerste,laatste,wassendeSikkel,afnemendeSikkel]){
   assert(svg.includes("maan-fase-svg-v2"));
+  assert(svg.includes("var(--moon-unlit)"));
   assert(!/[🌑🌒🌓🌔🌕🌖🌗🌘]/u.test(svg));
 }
 

@@ -1,13 +1,24 @@
 /* Gerichte fysieke-iPhone-polish, 10-08-2026; checkpoint 50 Nachtzicht. */
 
-/* De ronde drager is de onverlichte maanschijf; v2 tekent uitsluitend het
-   verlichte deel. Daardoor blijven nieuwe maan, volle maan en beide kwartieren
-   in ieder bestaand kleurthema herkenbaar zonder emoji-vormverschillen. */
+/* De SVG bevat zelf een duidelijke donkere schijf en tekent daar het verlichte
+   deel overheen. De kleuren blijven aan de bestaande thematokens gekoppeld,
+   zodat nieuwe maan ook in donker/rood zichtbaar blijft en volle maan licht is. */
+:root{
+  --moon-unlit:var(--ink-70);
+  --moon-lit:var(--sheet);
+  --moon-outline:var(--ink-45);
+}
+html[data-thema="donker"],html[data-thema="rood"]{
+  --moon-unlit:var(--rule-soft);
+  --moon-lit:var(--ink);
+  --moon-outline:var(--ink-45);
+}
 .maan-fase-svg-v2{
-  color:var(--ink-70);
-  overflow:hidden;
-  background:var(--rule-soft);
-  border-color:var(--ink-25);
+  color:var(--moon-lit);
+  overflow:visible;
+  padding:0;
+  border:0;
+  background:transparent;
 }
 
 /* Bronattributie blijft volledig zichtbaar, maar elk broncluster mag als eigen

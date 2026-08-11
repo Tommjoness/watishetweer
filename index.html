@@ -293,10 +293,16 @@
   .ico{color:var(--ink-70)}
   .dico{display:flex;justify-content:center}
 
-  .night{grid-template-columns:104px 52px minmax(40px,1fr) 104px max-content;gap:16px}
+  .night{grid-template-columns:104px 52px minmax(40px,1fr) 104px minmax(180px,218px);gap:16px}
   /* Op het bureaublad staan de metaregels in de laatste kolom naast de score; die
      lijnen nu uit met de kolom erboven in plaats van rechts weg te lopen. */
-  .night .nmeta.wide{text-align:left}
+  .night .nmeta.wide{
+    min-width:0;
+    text-align:left;
+    white-space:normal;
+    overflow-wrap:break-word;
+    word-break:normal;
+  }
   .nachtadvies,.nachtmaan{display:block}
   .nachtmaan{margin-top:2px;color:var(--ink-25);white-space:nowrap}
   .ctrl{grid-template-columns:120px 1fr 1fr max-content;gap:14px}
