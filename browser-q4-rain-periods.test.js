@@ -116,13 +116,25 @@ async function controleer(type,naam,breedte){
     const hover=await page.evaluate(()=>{
       const svg=document.getElementById("chart"),hit=document.getElementById("hit"),scrub=document.getElementById("scrub"),g=S.geo;
       const i=g.TI.findIndex(t=>String(t).endsWith("T17:00"));
-      if(i<0)return "GEEN_INDEX";
+      if(i<0)return {fout:"GEEN_INDEX",ti:g.TI};
       const box=svg.getBoundingClientRect(),hitBox=hit.getBoundingClientRect();
       const clientX=box.left+(g.x(i)/g.W)*box.width;
-      hit.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,clientX,clientY:hitBox.top+hitBox.height*.35,pointerType:"mouse"}));
-      return scrub.textContent.replace(/\s+/g," ").trim();
+      const clientY=hitBox.top+hitBox.height*.35;
+      const bron=Number.isInteger(S.chartStart)?S.chartStart+i:null;
+      const voor={
+        i,ti:g.TI[i],bron,
+        bronTijd:bron===null?null:S.d.hourly.time[bron],
+        raw:bron===null?null:S.d.hourly.precipitation[bron],
+        q1mm:Array.isArray(g.Q1MM)?g.Q1MM[i]:"GEEN_Q1MM",
+        mm:Array.isArray(g.MM)?g.MM[i]:"GEEN_MM",
+        display:scrub.style.display,
+        tekst:scrub.textContent.replace(/\s+/g," ").trim(),
+        clientX,clientY,svgWidth:box.width,hitWidth:hitBox.width
+      };
+      const dispatched=hit.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,clientX,clientY,pointerType:"mouse"}));
+      return {...voor,dispatched,displayNa:scrub.style.display,tekstNa:scrub.textContent.replace(/\s+/g," ").trim()};
     });
-    assert(/0,4\s*mm/.test(hover),naam+" "+breedte+": hover op 17:00 moet dezelfde 0,4 mm tonen; kreeg: "+hover);
+    assert(/0,4\s*mm/.test(hover.tekstNa||""),naam+" "+breedte+": hover op 17:00 moet dezelfde 0,4 mm tonen; diagnose="+JSON.stringify(hover)+"; pageerrors="+JSON.stringify(fouten));
 
     const droog=await page.evaluate(()=>{
       S.d.hourly.precipitation=S.d.hourly.precipitation.map(()=>0);
