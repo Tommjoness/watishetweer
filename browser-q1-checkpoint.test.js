@@ -99,7 +99,7 @@ async function controleer(type,naam){
     assert.deepEqual(artifactDiagnose,{oud15:false,oudKwartier:false,trend:true,legacyBerekening:false,oudeWrapper:false,polish:true,q1:true},naam+": artifact bevat uitsluitend nieuwe trendroute | DIAG="+diag);
     assert.equal(basis.trendKop,"Temperatuur komende 3 uur",naam+": tegelkop noemt de vaste horizon");
     assert.match(basis.trendWaarde,/^-?\d+\s*→\s*-?\d+°C$/,naam+": trend toont uitsluitend twee temperaturen");
-    assert.ok(["Stijgt.","Daalt.","Blijft vrijwel gelijk."].includes(basis.trendSub),naam+": onderregel herhaalt de horizon niet");
+    assert.ok(["Het wordt de komende uren warmer.","Het wordt de komende uren koeler.","De temperatuur verandert de komende uren nauwelijks."].includes(basis.trendSub),naam+": onderregel gebruikt een natuurlijke volledige zin");
     assert.notEqual(basis.popDisplay,"none",naam+": droge korte termijn bewaart dezelfde negende tegelpositie");
     assert.equal(basis.popAria,"false",naam+": droge tegel blijft toegankelijk");
     assert.doesNotMatch(basis.gridClass,/q1-pop-hidden/,naam+": raster verandert niet meer tussen droge en natte steden");

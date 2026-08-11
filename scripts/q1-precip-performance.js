@@ -300,10 +300,11 @@ function renderTemperatuurTrend(){
   kop.textContent="Temperatuur komende 3 uur";
   stat.classList.add("q1-temp-trend");
   const t=temperatuurTrend(S.d,trendNuMs());
-  if(!t.genoeg){waarde.textContent="–";sub.textContent="Niet beschikbaar.";return;}
+  if(!t.genoeg){waarde.textContent="–";sub.textContent="Er is niet genoeg data voor een betrouwbare trend.";return;}
   waarde.innerHTML=String(t.van)+" → "+String(t.naar)+"<s>°C</s>";
-  sub.textContent=t.richting==="stijgt"?"Stijgt."
-    :t.richting==="daalt"?"Daalt.":"Blijft vrijwel gelijk.";
+  sub.textContent=t.richting==="stijgt"?"Het wordt de komende uren warmer."
+    :t.richting==="daalt"?"Het wordt de komende uren koeler."
+    :"De temperatuur verandert de komende uren nauwelijks.";
 }
 
 function renderNeerslagTegel(){
