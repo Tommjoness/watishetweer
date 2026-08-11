@@ -90,6 +90,17 @@ test("live polish: komend-uurtegel bevat geen bronjargon",()=>{
   assert(!/model|overlapp|uurvak/i.test(tekst),tekst);
 });
 
+test("live polish: komend-uurtegel vervoegt meervoudige neerslagsoorten",()=>{
+  assert.equal(
+    komendUurTekst({genoeg:true,status:"NEERSLAG_VERWACHT",kans:55,soort:"buien"}),
+    "Buien zijn mogelijk het komende uur."
+  );
+  assert.equal(
+    komendUurTekst({genoeg:true,status:"NEERSLAG_VERWACHT",kans:85,soort:"buien"}),
+    "Buien worden het komende uur verwacht."
+  );
+});
+
 test("live polish: alleen maan-events binnen de nacht blijven over",()=>{
   const start=1000,eind=5000;
   assert.deepEqual(maanEventsBinnenVenster(3000,500,start,eind),[{type:"op",ms:3000}]);

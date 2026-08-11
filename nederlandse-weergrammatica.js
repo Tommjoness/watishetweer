@@ -32,9 +32,10 @@
     return hoofdletter(type)+(isMeervoud(type)?" zijn":" is")+" mogelijk";
   }
 
-  function soortWordtVerwacht(soort){
+  function soortWordtVerwacht(soort,tijdsbepaling){
     const type=schoon(soort);
-    return type+(isMeervoud(type)?" worden":" wordt")+" verwacht";
+    const wanneer=String(tijdsbepaling||"").trim();
+    return type+(isMeervoud(type)?" worden":" wordt")+(wanneer?" "+wanneer:"")+" verwacht";
   }
 
   function opsomming(items){

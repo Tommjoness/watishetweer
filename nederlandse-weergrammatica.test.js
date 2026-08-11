@@ -27,6 +27,7 @@ for(const [soort,verwacht] of actueel)assert.equal(g.actueleNeerslagZin(soort),v
 for(const soort of ["buien","lichte buien","regenbuien","sneeuwbuien","hagelbuien","onweersbuien","sneeuwkorrels"]){
   assert.equal(g.soortIsMogelijk(soort),soort.charAt(0).toUpperCase()+soort.slice(1)+" zijn mogelijk",soort);
   assert.equal(g.soortWordtVerwacht(soort),soort+" worden verwacht",soort);
+  assert.equal(g.soortWordtVerwacht(soort,"het komende uur"),soort+" worden het komende uur verwacht",soort);
 }
 for(const soort of ["neerslag","regen","motregen","sneeuw","natte sneeuw","ijzel","hagel","onweer"]){
   assert.equal(g.soortIsMogelijk(soort),soort.charAt(0).toUpperCase()+soort.slice(1)+" is mogelijk",soort);

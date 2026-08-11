@@ -110,8 +110,8 @@ function komendUurTekst(a){
   if(a.status==="NEERSLAG_NU") return grammatica.actueleNeerslagZin(soort);
   if(a.status==="NEERSLAG_VERWACHT"){
     if(kans!==null&&kans<=39) return "Kleine kans op neerslag het komende uur.";
-    if(kans!==null&&kans<=69) return hoofdletter(soort)+" is mogelijk het komende uur.";
-    return hoofdletter(soort)+" wordt het komende uur verwacht.";
+    if(kans!==null&&kans<=69) return grammatica.soortIsMogelijk(soort)+" het komende uur.";
+    return hoofdletter(grammatica.soortWordtVerwacht(soort,"het komende uur"))+".";
   }
   return "Neerslagverwachting beschikbaar.";
 }
