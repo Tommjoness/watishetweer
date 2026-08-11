@@ -1,0 +1,31 @@
+name: Tijdelijke Q4 browserdiagnose
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  q4diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Bouw definitieve artifact
+        run: npm run build
+      - name: Installeer Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Toon Q4 browserdiagnose
+        shell: bash
+        run: |
+          set +e
+          node scripts/q4-browser-diagnostic.js > /tmp/q4diag.log 2>&1
+          code=$?
+          cat /tmp/q4diag.log
+          msg="$(grep 'Q4_BROWSER_DIAG' /tmp/q4diag.log | tail -n 1 | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+          echo "::error file=browser-q4-rain-periods.test.js,line=1::$msg"
+          exit "$code"
