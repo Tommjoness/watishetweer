@@ -45,9 +45,14 @@ function q4Regenperioden(g){
     }
     return waarde;
   });
-  /* De hoverlaag en de regenstrook mogen vanaf hier dezelfde uitgelijnde reeks
-     gebruiken. Dit veld verandert geen brondata. */
+  /* Q4 is vanaf dit punt eigenaar van de definitief uitgelijnde uurhoeveelheid.
+     De regenstrook gebruikt g.MM. De oudere Q1-tooltip verwacht nog Q1MM; die
+     naam blijft tijdelijk als compatibiliteitsalias bestaan, maar wijst bewust
+     naar EXACT dezelfde array. Daardoor kan tooltip en strip niet meer uit twee
+     los berekende reeksen lezen. Een latere architectuuropschoning kan de alias
+     verwijderen zonder de releasefix nu breder te maken. */
   g.MM=mm;
+  g.Q1MM=mm;
   const perioden=[];let lopend=null;
   for(let i=1;i<mm.length;i++){
     const waarde=mm[i];
@@ -102,6 +107,10 @@ function q4TekenRegenperioden(svg,g,perioden){
   const groep=document.createElementNS(Q4_SVG_NS,"g");
   groep.setAttribute("data-q4-rain-periods","1");
   groep.setAttribute("aria-label","Neerslagperioden");
+  /* De bracketlaag is puur informatief. Het transparante #hit-vlak blijft de
+     exclusieve eigenaar van muis/touchinteractie; de regenlaag kan daardoor ook
+     na toekomstige DOM-herordening nooit een pointerevent onderscheppen. */
+  groep.setAttribute("pointer-events","none");
   perioden.forEach(p=>{
     const x1=g.x(p.van),x2=g.x(p.tot);
     const horizontaal=q4SvgLijn(x1,y,x2,y,3);
