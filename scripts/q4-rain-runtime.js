@@ -7,6 +7,16 @@ const q4Tijd=t=>String(t||"").slice(11,16);
 const q4DagKort=t=>{try{const d=new Date(String(t).slice(0,10)+"T12:00:00");return DAGEN[d.getDay()]+" "+d.getDate();}catch(e){return "";}};
 const Q4_SVG_NS="http://www.w3.org/2000/svg";
 
+/* De grafiekhint hoort bij de interactieve Q4-presentatielaag. Een tekstuele
+   postbuild-replace bleek geen betrouwbare runtime-eigenaar: de geassembleerde
+   artifact kan historische functiebron bevatten waarvan de uitvoervolgorde niet
+   overeenkomt met de laatste tekstmatch. Omdat Q4 vóór iedere startup-route
+   activeert, krijgt de globale binding hier één expliciete runtime-owner. */
+chartHint=function(){
+  const el=document.getElementById("charthint");
+  if(el)el.textContent="Selecteer een punt in de grafiek voor details.";
+};
+
 function q4SvgLijn(x1,y1,x2,y2,dikte){
   const el=document.createElementNS(Q4_SVG_NS,"line");
   el.setAttribute("x1",String(x1));el.setAttribute("y1",String(y1));
