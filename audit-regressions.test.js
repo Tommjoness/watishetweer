@@ -35,6 +35,7 @@ ok(gebouwd.includes("Officiële weerwaarschuwingen konden niet worden gecontrole
 ok(gebouwd.includes("zijn voor deze locatie niet beschikbaar"),"ontbrekende werelddekking wordt eerlijk gemeld");
 ok(gebouwd.includes("const rondGetal="),"temperatuurweergaven blokkeren null als kunstmatige nul");
 ok(gebouwd.includes('const scheiding="<!--brief-rest-->"'),"centrale neerslaglaag bewaart de rest van de briefing structureel");
+ok(gebouwd.includes("laterVandaagNeerslag(S.d,twee)"),"centrale briefing vat ook de uren na het twee-uursvenster samen");
 ok(gebouwd.includes('classList.contains("kop")'),"weekinterpretatie slaat de tabelkop over");
 ok(gebouwd.includes('const morgenDagMax=')&&gebouwd.includes('morgenDagMax')&&gebouwd.includes('plaatsDelen.hour>=18'),"temperatuurbriefing scheidt de kalenderdagen en noemt morgen niet voortijdig");
 ok(gebouwd.includes('el.classList.add("aq-cols-1")'),"ontbrekende luchtkwaliteitsdata gebruikt een volle lege-statusrij");

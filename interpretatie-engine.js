@@ -515,6 +515,28 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
     return neerslagZin(a);
   }
 
+  /* De eerste zin heeft bewust een vaste horizon van twee uur, maar een
+     dagbriefing mag daarna niet abrupt stoppen. Vat daarom alleen de nog niet
+     verstreken modeluren ná dat venster samen. Zo blijft een droge middag
+     informatief en wordt een latere buienkans niet verstopt. */
+  function laterVandaagNeerslag(data,twee){
+    if(!data||!twee||!twee.genoeg||!Number.isFinite(twee.eindMin))return null;
+    const huidig=parseLokaleTijd(data.current&&data.current.time);
+    const uur=data.hourly, tijden=uur&&Array.isArray(uur.time)?uur.time:[];
+    const kansen=uur&&Array.isArray(uur.precipitation_probability)?uur.precipitation_probability:[];
+    if(!huidig||!tijden.length)return null;
+    const datum=String(huidig.jaar).padStart(4,"0")+"-"+String(huidig.maand).padStart(2,"0")+"-"+String(huidig.dag).padStart(2,"0");
+    let max=null,aantal=0;
+    for(let i=0;i<tijden.length;i++){
+      if(String(tijden[i]).slice(0,10)!==datum)continue;
+      const minuut=lokaalNaarMinuten(tijden[i],data.timezone,data.utc_offset_seconds);
+      const kans=veldGetal("precipitation_probability",kansen[i]);
+      if(minuut===null||minuut<=twee.eindMin||kans===null)continue;
+      aantal++;max=Math.max(max===null?0:max,kans);
+    }
+    return aantal>=2?{kans:Math.round(max)}:null;
+  }
+
   function dagSamenvatting(a){
     if(!a||!a.genoeg) return "Onvoldoende consistente gegevens";
     const basis=(typeof txt==="function"&&a.code!==null)?txt(a.code,true):"Verwachting";
@@ -569,6 +591,12 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       const rest=idx>=0?bestaand.slice(idx+scheiding.length):bestaand;
       const twee=analyse(120);
       let voor=esc(briefingNeerslagZin(twee));
+      const later=laterVandaagNeerslag(S.d,twee);
+      if(later&&later.kans>=25){
+        voor+=" Later vandaag loopt de neerslagkans op tot <b>"+later.kans+"%</b>.";
+      }else if(later&&(twee.status==="GEEN_KANS"||twee.status==="ZEER_KLEINE_KANS")){
+        voor+=" Ook later vandaag blijft neerslag onwaarschijnlijk.";
+      }
       // Alleen een waarschuwing die door de bron tegen deze locatie is getoetst
       // mag de plaats-specifieke modelbriefing overrulen. Een landbrede Atom-
       // fallback blijft zichtbaar in het waarschuwingenblok, maar niet dominant.
