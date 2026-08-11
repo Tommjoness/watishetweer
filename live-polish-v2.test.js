@@ -52,7 +52,7 @@ test("desktopgrid reset oude twee- en vierkolomsselectors expliciet",()=>{
   assert(css.includes(".dashrow-hero .stat:nth-child(n)"));
   assert(css.includes("grid-auto-rows:1fr"));
   assert(css.includes("#nchint{display:none"));
-  assert(css.includes("grid-template-columns:104px 52px minmax(80px,1fr) 116px 218px"));
+  assert(css.includes("grid-template-columns:96px 58px minmax(150px,1fr) 96px minmax(260px,290px)"));
   assert(css.includes("white-space:normal"));
   assert(css.includes("overflow-wrap:break-word"));
 });

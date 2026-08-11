@@ -252,11 +252,11 @@
      desktop-hover werd daardoor een volledig witte rij totdat de vinger werd
      losgelaten. Alleen apparaten met een echte fijne aanwijzer krijgen hover. */
   @media(hover:hover) and (pointer:fine){.day:hover{background:var(--rule-soft)}}
-  /* De lijn zat tegen de dagnaam aan omdat de rij links geen ruimte had. Nu een
-     streep met lucht ernaast, en de rij schuift niet op want de opvulling vervangt
-     wat er eerst niet was. */
-  .day{padding-left:10px;margin-left:-10px}
-  .day.on{box-shadow:inset 3px 0 0 var(--carmine)}
+  /* De rijregels en de sectiekop beginnen exact op dezelfde x-positie. De
+     selectiestreep staat als los accent in de linkermarge en verandert daarom
+     de breedte of inhoudsuitlijning van de tabel niet. */
+  .day{position:relative}
+  .day.on::before{content:"";position:absolute;left:-10px;top:0;bottom:0;width:3px;background:var(--carmine)}
   .day.on .dname{font-weight:500}
   /* De dagkolom stond op max-content. Dat werkt alleen betrouwbaar binnen één
      gedeeld grid, maar iedere .row.day hier is een eigen, onafhankelijke grid
@@ -1339,12 +1339,31 @@ function briefing(){
     }
   }
 
-  // temperatuur: alleen echte getallen tellen mee; null mag nooit 0 °C worden.
-  let top=null,tv=null;
-  for(let k=i;k<eind;k++){
-    const v=eindigGetal(h.temperature_2m[k]);
-    if(v!==null&&(tv===null||v>tv)){tv=v;top=k;}
-  }
+  /* Temperatuurclaims horen bij een lokale kalenderdag. Een maximum uit het
+     rollende 24-uursvenster mag niet als het maximum van "morgen" worden
+     gepresenteerd: om 14:00 eindigt dat venster morgenmiddag en mist het dus
+     mogelijk een hogere waarde later op die dag. Overdag krijgt de resterende
+     huidige dag voorrang. Pas vanaf 18:00, als vandaag geen relevante stijging
+     meer bevat, wordt de volledige volgende kalenderdag samengevat. */
+  const plaatsDelen=plaatsTijdDelen(),vandaag=plaatsVandaag();
+  const nuLokaal=vandaag+"T"+String(plaatsDelen.hour).padStart(2,"0")+":"+String(plaatsDelen.minute).padStart(2,"0");
+  const dagIndexVandaag=day&&Array.isArray(day.time)?day.time.indexOf(vandaag):-1;
+  const piekOpDag=(datum,vanaf)=>{
+    let waarde=null,index=null;
+    for(let k=0;k<h.time.length;k++){
+      if(String(h.time[k]).slice(0,10)!==datum)continue;
+      if(vanaf&&String(h.time[k])<vanaf)continue;
+      const v=eindigGetal(h.temperature_2m&&h.temperature_2m[k]);
+      if(v!==null&&(waarde===null||v>waarde)){waarde=v;index=k;}
+    }
+    return index===null?null:{v:waarde,i:index,t:h.time[index]};
+  };
+  const resterendVandaag=piekOpDag(vandaag,nuLokaal.slice(0,13)+":00");
+  const volledigePiekVandaag=piekOpDag(vandaag,null);
+  const morgenIndex=dagIndexVandaag>=0?dagIndexVandaag+1:-1;
+  const morgenDatum=morgenIndex>=0&&day.time?day.time[morgenIndex]:null;
+  const morgenUurPiek=morgenDatum?piekOpDag(morgenDatum,null):null;
+  const morgenDagMax=morgenIndex>=0?eindigGetal(day.temperature_2m_max&&day.temperature_2m_max[morgenIndex]):null;
   /* "Vannacht" mag alleen de eerstvolgende aaneengesloten nacht bedoelen.
      Het minimum van een blind 20-uursvenster kon bij een koude middag morgen
      horen en toch als nachttemperatuur worden aangekondigd. */
@@ -1364,21 +1383,19 @@ function briefing(){
   }
   const tmin=rondGetal(nachtWaarden.length?Math.min(...nachtWaarden):null);
   const huidige=eindigGetal(c.temperature_2m),nutemp=rondGetal(huidige);
-  const dagPiek=piek("temperature_2m");
   let zin2="";
   const nachtZin=tmin===null?"":" Vannacht koelt het af naar <b>"+tmin+" graden</b>.";
-  if(huidige===null){
-    if(tv!==null&&top!==null){
-      zin2=dagAanduiding(h.time[top],true)+" wordt het maximaal <b>"+Math.round(tv)
-        +" graden</b>, met het warmste moment rond "+hhmm(h.time[top])+"."+nachtZin;
-    }else if(tmin!==null){
-      zin2="Vannacht wordt ongeveer <b>"+tmin+" graden</b> verwacht.";
-    }
-  }else if(top!==null&&top>i&&tv>huidige+0.5){
-    zin2=dagAanduiding(h.time[top],true)+" wordt het maximaal <b>"+Math.round(tv)
-        +" graden</b>, met het warmste moment rond "+hhmm(h.time[top])+"."+nachtZin;
-  }else if(dagPiek&&dagPiek.t<c.time&&Math.round(dagPiek.v)>nutemp){
-    zin2=dagAanduiding(dagPiek.t,true)+" was het rond "+hhmm(dagPiek.t)+" het warmst met <b>"+Math.round(dagPiek.v)+" graden</b>."+nachtZin;
+  if(resterendVandaag&&(huidige===null||resterendVandaag.v>huidige+0.5)&&resterendVandaag.t>nuLokaal){
+    zin2="Vandaag wordt het maximaal <b>"+Math.round(resterendVandaag.v)
+      +" graden</b>, met het warmste moment rond "+hhmm(resterendVandaag.t)+"."+nachtZin;
+  }else if(plaatsDelen.hour>=18&&morgenDatum&&morgenDagMax!==null){
+    const moment=morgenUurPiek?", met het warmste moment rond "+hhmm(morgenUurPiek.t):"";
+    zin2="Morgen wordt het maximaal <b>"+Math.round(morgenDagMax)+" graden</b>"+moment+"."+nachtZin;
+  }else if(huidige===null&&volledigePiekVandaag){
+    zin2="Vandaag wordt het maximaal <b>"+Math.round(volledigePiekVandaag.v)
+      +" graden</b>, met het warmste moment rond "+hhmm(volledigePiekVandaag.t)+"."+nachtZin;
+  }else if(volledigePiekVandaag&&volledigePiekVandaag.t<nuLokaal&&Math.round(volledigePiekVandaag.v)>nutemp){
+    zin2="Vandaag was het rond "+hhmm(volledigePiekVandaag.t)+" het warmst met <b>"+Math.round(volledigePiekVandaag.v)+" graden</b>."+nachtZin;
   }else if(tmin!==null&&tmin<nutemp-1){
     zin2="Vannacht koelt het af naar <b>"+tmin+" graden</b>.";
   }else if(tmin!==null){
@@ -1636,7 +1653,7 @@ function etmaal(start,n){
     }
   }
 
-  let bars="",pts=[],dots="",labs="",ticks="";
+  let bars="",pts=[],dots="",labs="",ticks="",laatsteMmLabelRechts=-Infinity;
   T.forEach((v,i)=>{
     if(P[i]>0){
       const hgt=ih*0.42*(P[i]/100);
@@ -1653,12 +1670,15 @@ function etmaal(start,n){
         /* De ruimte volgt uit de tekst zelf, niet uit een vast getal: "12,5 mm" is
            breder dan "2 mm", en een kolom is bij 24 uur ruim en bij een week smal.
            Past de eenheid niet, dan alleen het cijfer; past dat ook niet, dan niets. */
-        const fs = M?8.5:9, breed = t2 => t2.length*fs*0.6;
-        const vol = nl(mm)+" mm", kaal = nl(mm);
-        const tekst = breed(vol)<=cw*0.98 ? vol : breed(kaal)<=cw*0.92 ? kaal : null;
-        if(tekst)
-        bars+=`<text x="${x(i)}" y="${pb-hgt-3}" text-anchor="middle" fill="${TEAL}"
-          font-family="DM Mono,monospace" font-size="${fs}">${tekst}</text>`;
+        const fs = M?9.5:11, breed = t2 => t2.length*fs*0.6;
+        const vol = nl(mm)+" mm", kaal = nl(mm),maxBreed=cw*(M?1.35:1.45);
+        const tekst = breed(vol)<=maxBreed ? vol : breed(kaal)<=maxBreed ? kaal : null;
+        const tekstBreed=tekst?breed(tekst):0,links=x(i)-tekstBreed/2,rechts=x(i)+tekstBreed/2;
+        if(tekst&&links>=laatsteMmLabelRechts+3){
+        bars+=`<text x="${x(i)}" y="${pb-hgt-4}" text-anchor="middle" fill="${INK}"
+          font-family="DM Mono,monospace" font-size="${fs}" font-weight="500">${tekst}</text>`;
+          laatsteMmLabelRechts=rechts;
+        }
       }
     }
     /* y(null) rekent null als nul, dus een gat in de reeks trok de lijn naar nul
@@ -2356,7 +2376,8 @@ function lucht(){
   const c=S.air.current;
   const euro = inEuropa(S.lat,S.lon) && c.european_aqi!=null;
   const aqi = euro ? c.european_aqi : c.us_aqi;
-  const naamIndex = euro ? "Europese AQI" : "Amerikaanse AQI";
+  const naamIndex = "Luchtkwaliteit";
+  const schaalIndex = euro ? "Europese AQI" : "Amerikaanse AQI";
   const band = euro
     ? v=>v==null?["onbekend",INK45]:v<=20?["goed",TEAL]:v<=40?["redelijk",TEAL]:v<=60?["matig",INK]
       :v<=80?["slecht",CARMINE]:v<=100?["zeer slecht",CARMINE]:["extreem slecht",CARMINE]
@@ -2364,7 +2385,7 @@ function lucht(){
       :v<=200?["slecht",CARMINE]:v<=300?["zeer slecht",CARMINE]:["extreem slecht",CARMINE];
   const [nm,kl]=band(aqi);
   let out=`<div class="stat"><div class="eyebrow">${naamIndex}</div>
-      <div class="sval" style="color:${kl}">${aqi==null?"–":Math.round(aqi)}</div><div class="ssub">${nm}</div></div>
+      <div class="sval" style="color:${kl}">${aqi==null?"–":Math.round(aqi)}</div><div class="ssub">${nm} · ${schaalIndex}</div></div>
     ${zonurenTegel()}`;
   /* Pollen komt alleen uit het Europese CAMS-model. Buiten Europa zijn alle
      soorten null en meldde de app "Geen noemenswaardige concentraties". Dat is
@@ -2395,6 +2416,8 @@ function lucht(){
     }
   }
   el.innerHTML=out;
+  el.classList.remove("aq-cols-1","aq-cols-2","aq-cols-3","aq-cols-4");
+  el.classList.add("aq-cols-"+Math.max(1,Math.min(4,el.children.length)));
 }
 
 /* ---------- verwachting versus meting ---------- */

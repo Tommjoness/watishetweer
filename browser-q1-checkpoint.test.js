@@ -100,9 +100,9 @@ async function controleer(type,naam){
     assert.equal(basis.trendKop,"Temperatuurtrend",naam+": nieuwe tegelkop");
     assert.match(basis.trendWaarde,/^-?\d+\s*→\s*-?\d+°C$/,naam+": trend toont uitsluitend twee temperaturen");
     assert.ok(["Stijgt de komende drie uur.","Daalt de komende drie uur.","Blijft vrijwel gelijk."].includes(basis.trendSub),naam+": trendtekst is beperkt tot temperatuur");
-    assert.equal(basis.popDisplay,"none",naam+": droge korte termijn toont geen dubbele droogtegel");
-    assert.equal(basis.popAria,"true",naam+": verborgen droogtegel is ook uit toegankelijkheidsweergave");
-    assert.match(basis.gridClass,/q1-pop-hidden/,naam+": raster wordt zonder lege placeholder herverdeeld");
+    assert.notEqual(basis.popDisplay,"none",naam+": droge korte termijn bewaart dezelfde negende tegelpositie");
+    assert.equal(basis.popAria,"false",naam+": droge tegel blijft toegankelijk");
+    assert.doesNotMatch(basis.gridClass,/q1-pop-hidden/,naam+": raster verandert niet meer tussen droge en natte steden");
     assert.equal(basis.neerslagSectieDisplay,"none",naam+": volledig droge twee-uurssectie dupliceert de briefing niet");
     assert.equal(basis.dag[0].kans,"65%",naam+": daily kans komt uit probability_max");
     assert.equal(basis.dag[0].mm,"4,8 mm",naam+": daily hoeveelheid komt uit precipitation_sum");

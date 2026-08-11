@@ -157,11 +157,16 @@
     padding:14px 16px 15px;
     border-right:1px solid var(--rule);
     border-top:none;
+    text-align:center;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
   }
   .dashrow-hero .stat:nth-child(3n+1){padding-left:0}
   .dashrow-hero .stat:nth-child(3n){border-right:none;padding-right:0}
   .dashrow-hero .stat.breed{grid-column:auto;border-top:none}
-  .dashrow-hero .sval{font-size:clamp(22px,1.5vw,28px)}
+  .dashrow-hero .sval{font-size:clamp(22px,1.5vw,28px);justify-content:center}
   .dashrow-hero .ssub{
     font-size:12px;
     line-height:1.4;
@@ -173,20 +178,31 @@
      kolom daardoor per rij een andere breedte aannemen. Vaste rechterkolommen
      zorgen dat scorebalk, bewolking en uitleg van boven tot onder uitlijnen. */
   .row.night{
-    grid-template-columns:104px 52px minmax(80px,1fr) 116px 218px;
+    grid-template-columns:96px 58px minmax(150px,1fr) 96px minmax(260px,290px);
     gap:16px;
   }
   .row.night > .nmeta:not(.wide){text-align:right}
   .row.night.kop > .nmeta:not(.wide){text-align:right}
   .row.night > .nmeta.wide{
-    width:218px;
-    max-width:218px;
+    width:auto;
+    max-width:290px;
     min-width:0;
     text-align:left;
     white-space:normal;
     overflow-wrap:break-word;
     word-break:normal;
   }
+}
+
+@media(min-width:901px){
+  #aq.aq-cols-1{grid-template-columns:minmax(0,1fr)}
+  #aq.aq-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #aq.aq-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #aq.aq-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
+@media(max-width:900px){
+  #aq.aq-cols-1 .stat,#aq.aq-cols-3 .stat:last-child{grid-column:1 / -1}
 }
 
 @media(min-width:1500px){

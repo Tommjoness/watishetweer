@@ -187,7 +187,8 @@ for(const [naam,lat,lon,timezone,offset] of wereldprofielen){
   }
 }
 
-/* 3. Briefing en standaardgrafiek moeten exact hetzelfde 24-uursvenster lezen. */
+/* 3. De briefing gebruikt de lokale kalenderdag; de grafiek blijft een rollend
+   etmaal. Een waarde op morgen mag vroeg vandaag dus niet als dagmaximum gelden. */
 {
   const ctx=omgeving({breedte:390});
   const i=zetHuidigUur(ctx.d,"2026-07-22",1);
@@ -199,7 +200,7 @@ for(const [naam,lat,lon,timezone,offset] of wereldprofielen){
   }
   for(let stap=0;stap<24;stap++) h.temperature_2m[i+stap]=18+Math.max(0,16-Math.abs(stap-15));
   h.temperature_2m[i+15]=34;
-  h.temperature_2m[i+24]=50; // expliciet buiten het zichtbare 24-uursvenster
+  h.temperature_2m[i+24]=50; // rechtergrens van de rollende 24-uursgrafiek, op morgen
   ctx.d.current.temperature_2m=h.temperature_2m[i];
   ctx.d.current.apparent_temperature=h.apparent_temperature[i];
   zetPlaatsKlok(ctx.api,ctx.d.utc_offset_seconds,"2026-07-22T01:06");
@@ -208,9 +209,9 @@ for(const [naam,lat,lon,timezone,offset] of wereldprofielen){
   const tekst=zonderTags(ctx.bak.brief.innerHTML);
   check("briefing kiest de 34 graden uit het zichtbare etmaal",/34 graden/.test(tekst),tekst);
   check("briefing noemt het bijbehorende uur 16:00",/16:00/.test(tekst),tekst);
-  check("briefing neemt de 50 graden buiten de grafiek niet mee",!/50 graden/.test(tekst),tekst);
+  check("briefing noemt de 50 graden van morgen niet als maximum van vandaag",!/50 graden/.test(tekst),tekst);
   const labels=temperatuurLabels(ctx.bak.chart.innerHTML);
-  check("grafiek markeert hetzelfde maximum van 34 graden",labels.some(x=>x.waarde===34),labels.map(x=>x.waarde).join(","));
+  check("grafiek behoudt de aparte rollende rechtergrens van 50 graden",labels.some(x=>x.waarde===50),labels.map(x=>x.waarde).join(","));
 }
 
 /* 4. Informatiedichtheid en botsingsvrijheid bij alle relevante schermmaten. */

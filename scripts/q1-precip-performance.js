@@ -313,10 +313,15 @@ function renderNeerslagTegel(){
   const a=interpretatie&&typeof interpretatie.analyseerNeerslagData==="function"
     ?interpretatie.analyseerNeerslagData(S.d,60,weatherNowActueleLokaleTijd()):null;
   const relevant=neerslagTegelRelevant(a);
-  stat.style.display=relevant?"":"none";
-  stat.setAttribute("aria-hidden",relevant?"false":"true");
-  stats.classList.toggle("q1-pop-hidden",!relevant);
-  if(!relevant)return;
+  stat.style.display="";
+  stat.setAttribute("aria-hidden","false");
+  stats.classList.remove("q1-pop-hidden");
+  if(!relevant){
+    kop.textContent="Neerslag komend uur";
+    waarde.textContent=a&&a.genoeg?"Droog":"–";
+    sub.textContent=a&&a.genoeg?"Geen neerslag verwacht.":"Neerslaggegevens niet beschikbaar.";
+    return;
+  }
   kop.textContent=a&&a.currentWet?"Neerslag nu":"Neerslag komend uur";
   const hoofd=beleid&&typeof beleid.kansHoofd==="function"?beleid.kansHoofd(a):"–";
   const mm=getal(a&&a.hoeveelheid),detail=mm!==null&&mm>=MM_MEETBAAR?mmTekst(mm):"";

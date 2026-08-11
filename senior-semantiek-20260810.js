@@ -360,7 +360,8 @@ lucht=function(){
     const eerste=document.querySelector("#aq .stat");
     if(eerste&&raw!==null){
       const zichtbaar=Math.round(raw),o=aqiOordeelGetoond(zichtbaar,europees),val=eerste.querySelector(".sval"),sub=eerste.querySelector(".ssub");
-      if(val){val.textContent=zichtbaar;val.style.color=kleurToken(o.kleur);}if(sub)sub.textContent=o.tekst;
+      if(val){val.textContent=zichtbaar;val.style.color=kleurToken(o.kleur);}
+      if(sub)sub.textContent=o.tekst+" · "+(europees?"Europese AQI":"Amerikaanse AQI");
     }
     document.querySelectorAll("#aq .stat").forEach(stat=>{
       const kop=stat.querySelector(".eyebrow"),val=stat.querySelector(".sval"),sub=stat.querySelector(".ssub");

@@ -109,6 +109,7 @@ groep("Datumbewuste avondbriefing");
   d.hourly.precipitation=d.hourly.time.map(()=>0);
   d.daily.sunrise[1]="2026-07-23T05:55";
   d.daily.sunset[1]="2026-07-23T21:30";
+  d.daily.temperature_2m_max[1]=31;
   const i=d.hourly.time.findIndex(t=>t==="2026-07-22T23:00");
   Object.assign(api.S,{d,i0:i,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:24,
     klokOverride:new Date("2026-07-22T21:21:00Z")});
@@ -397,7 +398,7 @@ groep("Volledigheid van de teksten");
   api.briefing();
   const t=norm(bak.brief.innerHTML).replace(/<[^>]+>/g,"");
   check("warmste moment in het verleden krijgt dag, tijd en temperatuur",
-    /Vandaag was het rond \d\d:\d\d het warmst met \d+ graden/.test(t),t);
+    /(?:Vandaag was het rond \d\d:\d\d het warmst met \d+ graden|De hoogste verwachte temperatuur voor vandaag was \d+ graden, rond \d\d:\d\d)/.test(t),t);
   const nat=brief({pr:(u)=>u<12?0.4:0,pp:(u)=>u<12?70:5,som:2.4}).bak;
   check("neerslag die al gevallen is gebruikt ook de dagsomformulering, niet 'viel'",
     /in totaal 2,4 mm neerslag verwacht/.test(nat.precsub.textContent) && !/\bviel\b/.test(nat.precsub.textContent),
@@ -1359,7 +1360,7 @@ groep("Wereldwijd");
       check(naam+": binnen Europa staat de Europese index",/Europese AQI/.test(t),t.slice(0,90));
     }else{
       check(naam+": buiten Europa geen Europese index",!/Europese AQI/.test(t),t.slice(0,90));
-      check(naam+": buiten Europa wel een index met waarde",/Amerikaanse AQI/.test(t)&&/\b42\b/.test(t),t.slice(0,90));
+      check(naam+": buiten Europa wel een neutraal gelabelde index met waarde",/Luchtkwaliteit/.test(t)&&/Amerikaanse AQI/.test(t)&&/\b42\b/.test(t),t.slice(0,130));
       check(naam+": buiten Europa geen bewering over pollenconcentraties",
         !/noemenswaardige/.test(t),t.slice(0,140));
       check(naam+": buiten Europa staat dat pollen alleen in Europa bestaat",
@@ -1542,7 +1543,8 @@ groep("Nadruk");
   check("de uitkomst is vet, niet alleen het tijdstip",
     /blijft het <b>droog<\/b>/.test(bronN2));
   check("de maximumtemperatuur krijgt nadruk",
-    /<b>"\+Math\.round\(tv\)\s*\+" graden<\/b>/.test(bronN2));
+    /<b>"\+Math\.round\(resterendVandaag\.v\)\s*\+" graden<\/b>/.test(bronN2)
+      && /<b>"\+Math\.round\(morgenDagMax\)\+" graden<\/b>/.test(bronN2));
 }
 
 /* 10m. bevindingen uit de eerste live versie */
@@ -1901,7 +1903,7 @@ groep("Grafiek en hints");
     check("er staan staven bij neerslag",/<rect/.test(bak.chart.innerHTML));
     check("de hoeveelheid staat met eenheid bij de staaf",
       /">[\d,]+ mm</.test(bak.chart.innerHTML),
-      (bak.chart.innerHTML.match(/font-size="9">[^<]*/)||["niets"])[0]);
+      (bak.chart.innerHTML.match(/font-size="11"[^>]*>[^<]*/)||["niets"])[0]);
   }
 
   /* Bij smalle kolommen hoort het label te wijken in plaats van te overlappen. */
@@ -1911,13 +1913,13 @@ groep("Grafiek en hints");
     Object.assign(api.S,{d:bouw({pr:(u)=>u%3===0?2.4:0,pp:(u)=>u%3===0?80:5,som:9}),
       i0:14,op:Date.now(),lat:52.35,lon:5.26,label:"T",dag:null,bereik:ber});
     api.etmaal(14,ber);
-    // alleen de staaflabels tellen: die zijn teal en staan in de mono-letter.
-    // De aslabels zijn ook mono, dus zonder de kleur erbij tel je die mee.
-    const heeft=/fill="var\(--teal\)"[\s\S]{0,80}?font-size="[89](\.5)?">[\d,]+/.test(bak.chart.innerHTML);
+    // Alleen hoeveelheidslabels tellen: ze gebruiken mono, extra gewicht en
+    // bevatten waar de ruimte het toelaat expliciet de mm-eenheid.
+    const heeft=/font-family="DM Mono,monospace" font-size="(?:9\.5|11)" font-weight="500">[\d,]+(?: mm)?/.test(bak.chart.innerHTML);
     check(naam+": staaflabel "+(verwacht?"staat er":"wijkt"),heeft===verwacht,String(heeft));
   }
   check("de labelbreedte volgt uit de tekst, niet uit een vast getal",
-    /breed\(vol\)<=cw\*0?\.\d+/.test(bronG));
+    /maxBreed=cw\*\(M\?1\.35:1\.45\)/.test(bronG)&&/breed\(vol\)<=maxBreed/.test(bronG));
 
   /* Een gat in de reeks werd stilzwijgend nul graden, want y(null) rekent null als
      nul. De lijn dook dan naar de bodem en suggereerde een vorstnacht. */
@@ -1968,10 +1970,10 @@ groep("Opmaak en uitlijning");
   const fsL2=require("fs"), pathL2=require("path");
   const css=fsL2.readFileSync(pathL2.join(__dirname,"index.html"),"utf8");
 
-  /* De rode selectielijn zat tegen de tekst aan. */
+  /* De selectielijn staat in de marge zonder de rijregel breder te maken. */
   check("de geselecteerde dag heeft ruimte naast de lijn",
-    /\.day\{[^}]*padding-left:\d+px/.test(css) && /\.day\.on\{box-shadow:inset [3-9]px/.test(css));
-  check("de rij schuift niet op door die ruimte",/\.day\{[^}]*margin-left:-\d+px/.test(css));
+    /\.day\{position:relative\}/.test(css) && /\.day\.on::before\{[^}]*left:-\d+px/.test(css));
+  check("de rij schuift niet op door die ruimte",!/\.day\{[^}]*margin-left:-\d+px/.test(css));
   check("een weekrij kan op iOS scrollen zonder witte aanraakstatus",
     /\.day\{[^}]*touch-action:pan-y;[^}]*-webkit-tap-highlight-color:transparent;[^}]*user-select:none/.test(css)
       && /@media\(hover:hover\) and \(pointer:fine\)\{\.day:hover\{background:var\(--rule-soft\)\}\}/.test(css));
