@@ -31,10 +31,10 @@ footer .bron-bronnen .bronitem{
 @media(max-width:900px){
   /* Nachtzicht blijft vier duidelijke kolommen houden, maar gebruikt minder
      vaste breedte. Bewolking krijgt nog steeds genoeg ruimte voor de volledige
-     kop; score en balk behouden minimaal 6 px visuele scheiding. */
+     kop; score en balk behouden de bestaande harde 8 px visuele scheiding. */
   #nights .row.night{
     grid-template-columns:56px 46px minmax(32px,1fr) 64px;
-    column-gap:7px;
+    column-gap:8px;
     row-gap:3px;
   }
   #nights .row.night .score{
@@ -91,7 +91,7 @@ footer .bron-bronnen .bronitem{
 @media(max-width:360px){
   #nights .row.night{
     grid-template-columns:52px 43px minmax(28px,1fr) 60px;
-    column-gap:6px;
+    column-gap:8px;
   }
   #nights .row.night .score{font-size:15px}
   #nights .row.night.kop > .nmeta:not(.wide){font-size:9px!important;letter-spacing:.06em}
