@@ -80,13 +80,15 @@ async function controleer(type,naam){
       popDisplay:getComputedStyle(document.getElementById("pop").parentElement).display,
       popAria:document.getElementById("pop").parentElement.getAttribute("aria-hidden"),
       gridClass:document.getElementById("pop").parentElement.parentElement.className,
+      neerslagSectieDisplay:getComputedStyle(document.getElementById("nchint").previousElementSibling).display,
       dag:[...document.querySelectorAll("#days .row.day:not(.kop)")].map(r=>({kans:r.querySelector(".drain")?.childNodes[0]?.textContent?.trim()||"",mm:r.querySelector(".q1-dag-mm")?.textContent.trim()||""})),
       over:document.documentElement.scrollWidth-window.innerWidth
     }));
     const diagnose=await page.evaluate(()=>({
       polishApi:!!window.WeatherNowMobileScreenshotPolish,
       q1Api:!!window.WeatherNowQ1,
-      metersBron:String(meters).slice(0,300),
+      metersBron:String(meters).slice(0,400),
+      klokBron:String(klokBijwerken).slice(0,300),
       bodyHasPolishMarker:document.documentElement.innerHTML.includes("MOBILE SCREENSHOT POLISH 20260810B")
     }));
     const diag=JSON.stringify({artifact:artifactDiagnose,basis,diagnose,fouten});
@@ -98,26 +100,45 @@ async function controleer(type,naam){
     assert.equal(basis.popDisplay,"none",naam+": droge korte termijn toont geen dubbele droogtegel");
     assert.equal(basis.popAria,"true",naam+": verborgen droogtegel is ook uit toegankelijkheidsweergave");
     assert.match(basis.gridClass,/q1-pop-hidden/,naam+": raster wordt zonder lege placeholder herverdeeld");
+    assert.equal(basis.neerslagSectieDisplay,"none",naam+": volledig droge twee-uurssectie dupliceert de briefing niet");
     assert.equal(basis.dag[0].kans,"65%",naam+": daily kans komt uit probability_max");
     assert.equal(basis.dag[0].mm,"4,8 mm",naam+": daily hoeveelheid komt uit precipitation_sum");
     assert.equal(basis.dag[1].kans,"25%",naam+": 25% blijft staan bij 0 mm");
     assert.equal(basis.dag[1].mm,"",naam+": droge 0,0 mm wordt niet getoond");
     assert.ok(basis.over<=2,naam+": geen horizontale overflow op 390 px");
 
-    /* Relevante neerslag maakt dezelfde tegel weer zichtbaar. De uurvelden zijn
-       onafhankelijke kans/hoeveelheidsbronnen; daarna herstellen we het droge
-       scenario om de rest van de test niet te beïnvloeden. */
+    /* De bestaande lokale minuutklok moet de trend kunnen doorschuiven zonder
+       nieuwe fetch. We zetten twee echte uurpunten bewust uit elkaar en verplaatsen
+       alleen het lokale instant; klokBijwerken() moet daarna de trend opnieuw tekenen. */
+    const trendKlok=await page.evaluate(()=>{
+      const i17=S.d.hourly.time.indexOf("2026-07-22T17:00"),i19=S.d.hourly.time.indexOf("2026-07-22T19:00");
+      const oud17=S.d.hourly.temperature_2m[i17],oud19=S.d.hourly.temperature_2m[i19];
+      S.d.hourly.temperature_2m[i17]=11;S.d.hourly.temperature_2m[i19]=22;
+      S.klokInstantOverride=new Date(window.__q1Nu);klokBijwerken();
+      const voor=document.getElementById("prec").textContent.trim();
+      S.klokInstantOverride=new Date(window.__q1Nu+98*60000);klokBijwerken();
+      const na=document.getElementById("prec").textContent.trim();
+      S.d.hourly.temperature_2m[i17]=oud17;S.d.hourly.temperature_2m[i19]=oud19;S.klokInstantOverride=null;klokBijwerken();
+      return {voor,na};
+    });
+    assert.match(trendKlok.voor,/→\s*11°C$/,naam+": 14:17 lokale tijd kiest echt uurpunt rond 17:17");
+    assert.match(trendKlok.na,/→\s*22°C$/,naam+": lokale klokverschuiving kiest nieuw echt uurpunt zonder fetch");
+
+    /* Relevante neerslag maakt dezelfde tegel én de twee-uurssectie weer zichtbaar.
+       De uurvelden zijn onafhankelijke kans/hoeveelheidsbronnen; daarna herstellen
+       we het droge scenario om de rest van de test niet te beïnvloeden. */
     const popNat=await page.evaluate(()=>{
       const i15=S.d.hourly.time.indexOf("2026-07-22T15:00"),i16=S.d.hourly.time.indexOf("2026-07-22T16:00");
       S.d.hourly.precipitation_probability[i15]=65;S.d.hourly.precipitation[i15]=1.4;
       S.d.hourly.precipitation_probability[i16]=0;S.d.hourly.precipitation[i16]=0;
-      meters();
+      meters();nowcast();
       const stat=document.getElementById("pop").parentElement;
-      const uit={display:getComputedStyle(stat).display,kop:stat.querySelector(".eyebrow").textContent.trim(),waarde:document.getElementById("pop").textContent.trim(),sub:document.getElementById("popsub").textContent.trim()};
-      S.d.hourly.precipitation_probability[i15]=0;S.d.hourly.precipitation[i15]=0;meters();
+      const uit={display:getComputedStyle(stat).display,kop:stat.querySelector(".eyebrow").textContent.trim(),waarde:document.getElementById("pop").textContent.trim(),sub:document.getElementById("popsub").textContent.trim(),sectie:getComputedStyle(document.getElementById("nchint").previousElementSibling).display};
+      S.d.hourly.precipitation_probability[i15]=0;S.d.hourly.precipitation[i15]=0;meters();nowcast();
       return uit;
     });
     assert.notEqual(popNat.display,"none",naam+": relevante neerslag toont tegel");
+    assert.notEqual(popNat.sectie,"none",naam+": relevante neerslag toont twee-uurssectie");
     assert.equal(popNat.kop,"Neerslag komend uur",naam+": zichtbare tegel heeft expliciete scope");
     assert.match(popNat.waarde,/65%/,naam+": zichtbare tegel behoudt bronkans");
     assert.match(popNat.waarde,/mm/,naam+": meetbare hoeveelheid staat naast kans");
