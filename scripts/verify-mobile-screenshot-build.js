@@ -35,6 +35,9 @@ for(const vereist of [
   "pt=M?70:76, ih=M?158:160",
   "tijdLabelVrij=nuX==null",
   "val+labelHoogte/2+4<=pb",
+  "ruimBotsendeAslabelsOp",
+  "temperatuurLabels=teksten.filter",
+  "getBBox()",
   "Nachtzicht-presentatie geconsolideerd in WeatherNowMobileScreenshotPolish"
 ]){
   if(!html.includes(vereist))throw new Error("Definitieve productie-invariant ontbreekt: "+vereist);
@@ -56,6 +59,12 @@ if(html.includes('const basisNachten=nachten;\nnachten=function(){\n  basisNacht
   throw new Error("Oude senior Nachtzicht-wrapper staat nog in de definitieve artifact.");
 }
 
+/* De laatste grafiekbotsingslaag moet onderdeel zijn van de renderer zelf, niet
+   van een externe etmaal()-wrapper. Zo blijft er één renderpad en gebruikt de
+   beslissing de werkelijke SVG-fontboxen van de gekozen temperatuurcijfers. */
+if((html.split("const ruimBotsendeAslabelsOp=()=>{").length-1)!==1)throw new Error("Grafiek moet exact één fontbox-botsingslaag hebben.");
+if(html.includes("basisEtmaal=etmaal"))throw new Error("Checkpoint 50 mag geen extra etmaal-wrapper introduceren.");
+
 const CACHE_BRONNEN=[
   "index.html","manifest.json","icon-192.png","icon-512.png","icon-maskable-512.png",
   "bodoni-moda-latin-400-normal.woff2","bodoni-moda-latin-500-normal.woff2",
@@ -74,4 +83,4 @@ const m=/const CACHE = "([^"]+)";/.exec(sw);
 if(!m)throw new Error("Serviceworker-cache-id ontbreekt in definitieve artifact.");
 if(m[1]!==verwacht)throw new Error("Serviceworker-cache hoort bij een andere artifact: "+m[1]+" versus "+verwacht);
 
-console.log("Definitieve checkpoint-50 artifact geverifieerd: één Nachtzicht-owner, collision-proof compacte mobiele grafiek en cache "+verwacht+".");
+console.log("Definitieve checkpoint-50 artifact geverifieerd: één Nachtzicht-owner, fontbox-collision-proof mobiele grafiek en cache "+verwacht+".");
