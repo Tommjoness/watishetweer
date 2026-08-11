@@ -14,7 +14,7 @@ ok(html.includes("const bronStart=Number.isInteger(S.chartStart)?S.chartStart:nu
 ok(html.includes("const bron=bronStart===null?-1:bronStart+i;"),"ieder zichtbaar uur volgt forecastvolgorde zonder lokale indexOf");
 ok(!html.includes("const bron=Array.isArray(h.time)?h.time.indexOf(tijd):-1;"),"Q4 gebruikt bij dubbele DST-kloktijden geen indexOf op lokale tijdtekst");
 ok(html.includes("g.MM=mm;"),"regenstrook en interactie delen één uitgelijnde mm-reeks");
-ok(html.includes("p.som+=waarde"),"periodetotaal is som van dezelfde uurintervallen");
+ok(html.includes("lopend.som+=waarde"),"periodetotaal is som van dezelfde uurintervallen");
 ok(html.includes("waarde>lopend.piekMm"),"zwaarste uurvak komt uit dezelfde periodegegevens");
 ok(html.includes('data-q4-rain-periods'),"regenperioden hebben een eigen herkenbare SVG-laag");
 ok(html.includes('el.getAttribute("fill-opacity")===".16"')&&html.includes("el.remove();"),"oude losse neerslagstaven worden na render verwijderd");
