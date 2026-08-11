@@ -112,11 +112,13 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
     },cacheNieuw,{timeout:15000,polling:25});
 
     /* De nieuwe index moet vóór enige online reload al door install zijn vastgelegd. */
-    const installHeeftNieuweIndex=await page.evaluate(async naam=>{
-      const c=await caches.open(naam),r=await c.match("./index.html");
-      return !!(r&&(await r.text()).includes('name="sw-e2e-build" content="new"'));
+    const installInfo=await page.evaluate(async naam=>{
+      const c=await caches.open(naam),requests=await c.keys(),r=await c.match(new URL("/index.html",location.href).href);
+      const tekst=r?await r.text():"";
+      const m=/name="sw-e2e-build" content="([^"]+)"/.exec(tekst);
+      return {urls:requests.map(x=>x.url),marker:m?m[1]:null,heeftIndex:!!r,lengte:tekst.length};
     },cacheNieuw);
-    assert.equal(installHeeftNieuweIndex,true,"nieuwe install-cache bevat al de nieuwe index vóór online reload");
+    assert.equal(installInfo.marker,"new","nieuwe install-cache bevat al de nieuwe index vóór online reload; "+JSON.stringify(installInfo));
 
     /* 3. Maak daarna expres een kwaadaardige oude cache terug met oude HTML.
        Dit bootst het slechtste CacheStorage-randgeval na. De actieve worker mag
