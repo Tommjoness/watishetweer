@@ -20,6 +20,7 @@ const weer=bouw({
 });
 weer.current.interval=900;
 weer.current.visibility=16000;
+weer.current.cloud_cover=1;
 weer.elevation=3;
 weer.latitude=52.35;
 weer.longitude=5.26;
@@ -79,6 +80,7 @@ async function controleer(type,naam,breedte){
       etmaal(S.i0,24);
       if(typeof chartHint!=="function")throw new Error("Actieve chartHint()-owner ontbreekt.");
       chartHint();
+      meters();
     });
     await page.waitForFunction(()=>document.querySelector('#chart g[data-q4-rain-periods]')&&S.geo&&Array.isArray(S.geo.MM),null,{timeout:5000});
 
@@ -91,6 +93,7 @@ async function controleer(type,naam,breedte){
         oudeMm:[...svg.querySelectorAll("text")].filter(el=>/ millimeter neerslag$/.test(el.getAttribute("aria-label")||"")).length,
         brackets:regen.querySelectorAll("line").length,
         teksten,
+        kansOnderTien:kansLabels.filter(el=>Number((el.textContent||"").replace("%",""))<10).length,
         kansGecentreerd:kansLabels.every(el=>{const v=Number((el.textContent||"").replace("%","")),x=Number(el.getAttribute("x"));return g.P.some((p,i)=>Number(p)===v&&Math.abs(g.x(i)-x)<0.15);}),
         mmUitgelijnd:g.MM.every((mm,i)=>{if(i===0||mm==null)return true;const bron=S.chartStart+i;return Number.isInteger(bron)&&S.d.hourly.time[bron]===g.TI[i]&&Math.abs(Number(S.d.hourly.precipitation[bron])-Number(mm))<1e-9;}),
         mmZelfdeArray:g.MM===g.Q1MM,
@@ -98,6 +101,7 @@ async function controleer(type,naam,breedte){
         hint:(document.getElementById("charthint")||{}).textContent||"",
         daghint:(document.getElementById("dagenhint")||{}).textContent||"",
         windkop:[...document.querySelectorAll(".stat .eyebrow")].map(x=>x.textContent.trim()).find(x=>/^Windstoten/.test(x))||"",
+        bewolking:(document.getElementById("cloud")||{}).textContent||"",
         dagteksten:[...document.querySelectorAll("#days .dcond")].map(x=>x.textContent.trim()),
         h:Number(svg.getAttribute("viewBox").trim().split(/\s+/)[3])
       };
@@ -109,13 +113,15 @@ async function controleer(type,naam,breedte){
     assert.equal(r.teksten.length,2,naam+" "+breedte+": wisselvallig weer blijft bij twee samenvattingsregels");
     assert(r.teksten[0].includes("2 regenperiodes")&&r.teksten[0].includes("totaal 1,2 mm"),naam+" "+breedte+": totaalregel klopt: "+r.teksten.join(" | "));
     assert(r.teksten[1].includes("Meeste regen 16:00–17:00")&&r.teksten[1].includes("0,4 mm"),naam+" "+breedte+": piekuur klopt: "+r.teksten.join(" | "));
-    assert.equal(r.kansGecentreerd,true,naam+" "+breedte+": procentlabels horen bij hun eigen tijdstip");
+    assert.equal(r.kansOnderTien,0,naam+" "+breedte+": triviale kanslabels onder 10% blijven uit de statische grafiek");
+    assert.equal(r.kansGecentreerd,true,naam+" "+breedte+": zichtbare procentlabels horen bij hun eigen tijdstip");
     assert.equal(r.mmUitgelijnd,true,naam+" "+breedte+": strip gebruikt exact dezelfde uurwaarden als de grafiekbron");
     assert.equal(r.mmZelfdeArray,true,naam+" "+breedte+": tooltip en regenstrip delen letterlijk dezelfde mm-array");
     assert.equal(r.regenPointerEvents,"none",naam+" "+breedte+": regenlaag kan muis/touch niet onderscheppen");
     assert.equal(r.hint,"Selecteer een punt in de grafiek voor details.",naam+" "+breedte+": actieve grafiekhint is input-neutraal; kreeg "+JSON.stringify(r.hint));
     assert.equal(r.daghint,"Kies een dag om die verwachting in de grafiek te bekijken.",naam+" "+breedte+": daghint is input-neutraal");
     assert.equal(r.windkop,"Windstoten nu",naam+" "+breedte+": windstootkop is ondubbelzinnig");
+    assert.equal(r.bewolking,"<5%",naam+" "+breedte+": 1% modelbewolking wordt zonder schijnprecisie als <5% gepresenteerd");
     assert(!r.dagteksten.some(t=>/rond \d{1,2}:\d{2}/.test(t)),naam+" "+breedte+": dagregels suggereren geen minuutprecisie");
     assert(r.h>296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets en samenvatting");
 
@@ -157,6 +163,8 @@ async function controleer(type,naam,breedte){
     const touchTekst=(interactie.touch&&interactie.touch.teksten)||[];
     assert(mouseTekst.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": muishover op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify(interactie)+"; pageerrors="+JSON.stringify(fouten));
     assert(touchTekst.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": touch op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify(interactie)+"; pageerrors="+JSON.stringify(fouten));
+    assert(/Neerslagkans\s+86%/.test((interactie.mouse&&interactie.mouse.groepTekst)||""),naam+" "+breedte+": volledige kansinformatie blijft via muishover beschikbaar");
+    assert(/Neerslagkans\s+86%/.test((interactie.touch&&interactie.touch.groepTekst)||""),naam+" "+breedte+": volledige kansinformatie blijft via touch beschikbaar");
     assert.equal(interactie.mouse.display,"block",naam+" "+breedte+": muishover maakt tooltip zichtbaar");
     assert.equal(interactie.touch.display,"block",naam+" "+breedte+": touch maakt tooltip zichtbaar");
     assert.equal(interactie.zelfdeArray,true,naam+" "+breedte+": interactie leest dezelfde mm-array als regenstrip");
@@ -174,7 +182,7 @@ async function controleer(type,naam,breedte){
     });
     assert.equal(droog.groep,false,naam+" "+breedte+": 0 mm verzint geen regenperiode");
     assert.equal(droog.staven,0,naam+" "+breedte+": oude staven komen niet terug");
-    assert(droog.kansen>0,naam+" "+breedte+": kansinformatie blijft staan wanneer hoeveelheid nul is");
+    assert.equal(droog.kansen,0,naam+" "+breedte+": uitsluitend 8%-kansen geven geen losse grafiekruis");
     assert.equal(droog.zelfdeArray,true,naam+" "+breedte+": ook droog houdt één gedeelde mm-array");
     assert.deepEqual(fouten,[],naam+" "+breedte+": geen pageerrors");
     console.log("Q4-browser OK: "+naam+" "+breedte+"px; "+r.teksten.join(" | "));
