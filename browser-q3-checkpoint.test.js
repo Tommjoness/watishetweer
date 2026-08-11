@@ -137,7 +137,7 @@ async function controleer(page,browserNaam,scenario,breedte){
     assert.equal(compact(r.hum),"0%",`${browserNaam} ${breedte}px: 0% luchtvochtigheid blijft geldige data`);
     assert.equal(compact(r.cloud),"100%",`${browserNaam} ${breedte}px: 100% bewolking blijft exact zichtbaar`);
     assert.equal(r.cloudsub,"Geheel bewolkt.",`${browserNaam} ${breedte}px: 100% heet geheel bewolkt`);
-    assert.equal(compact(r.vis),"0km",`${browserNaam} ${breedte}px: nul meter zicht wordt niet als ontbrekend behandeld`);
+    assert.equal(compact(r.vis),"0,0km",`${browserNaam} ${breedte}px: nul meter zicht blijft geldige data met bestaande km-precisie`);
     assert.equal(r.uv,"0",`${browserNaam} ${breedte}px: UV nul blijft geldige data`);
     assert.equal(r.uvsub,"Nauwelijks UV vandaag.",`${browserNaam} ${breedte}px: nul-UV krijgt tijdneutrale nultekst`);
     assert(/^1\s*korrel\/m³$/i.test(r.pollen),`${browserNaam} ${breedte}px: één pollenkorrel gebruikt enkelvoud (${r.pollen})`);
@@ -146,7 +146,7 @@ async function controleer(page,browserNaam,scenario,breedte){
     assert(!/^0(?:°|$)/.test(r.temp),`${browserNaam}: ontbrekende temperatuur wordt geen 0`);
     assert(!/^0%$/.test(compact(r.hum)),`${browserNaam}: ontbrekende luchtvochtigheid wordt geen 0%`);
     assert(!/^0%$/.test(compact(r.cloud)),`${browserNaam}: ontbrekende bewolking wordt geen 0%`);
-    assert(!/^0km$/.test(compact(r.vis)),`${browserNaam}: ontbrekend zicht wordt geen 0 km`);
+    assert(!/^0(?:,0)?km$/.test(compact(r.vis)),`${browserNaam}: ontbrekend zicht wordt geen 0 of 0,0 km`);
     assert.notEqual(r.uv,"0",`${browserNaam}: ontbrekende UV wordt geen 0`);
     assert(/niet beschikbaar/i.test(r.humsub),`${browserNaam}: ontbrekende luchtvochtigheid wordt expliciet gemeld`);
     assert(/niet beschikbaar/i.test(r.cloudsub),`${browserNaam}: ontbrekende bewolking wordt expliciet gemeld`);
