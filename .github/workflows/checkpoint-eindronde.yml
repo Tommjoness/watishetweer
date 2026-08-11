@@ -23,3 +23,5 @@ jobs:
         run: npm run build
       - name: Checkpoint 25% in Chromium en WebKit
         run: node browser-q1-checkpoint.test.js
+      - name: Checkpoint 50% in Chromium en WebKit
+        run: node browser-q2-checkpoint.test.js
