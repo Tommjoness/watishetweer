@@ -1,15 +1,16 @@
 /* Gerichte polish op basis van de fysieke iPhone-screenshots van 10-08-2026.
-   Alleen presentatie: maanfase, pollen-eenheid en bronfooter. */
+   Checkpoint 50 consolideert hier ook de Nachtzicht-presentatie: één runtime-owner
+   na de canonieke nachtbewerking, zonder een tweede senior-wrapper eronder. */
 (function(root){
 "use strict";
 
 const getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 const begrens=(v,a,b)=>Math.max(a,Math.min(b,v));
+const esc=t=>String(t==null?"":t).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 
-/* De vorige SVG-route ging via één van acht Unicode-maanfases en verloor daarmee
-   de fijnere fase-informatie. In Nachtzicht staat gelukkig ook de fase-naam plus
-   het afgeronde verlichtingspercentage. Daarmee kan de fase opnieuw continu
-   worden benaderd: wassend ligt in [0, .5], afnemend in [.5, 1]. */
+/* De Unicode-fase in Nachtzicht bevat maar acht stappen. De fase-naam plus het
+   afgeronde verlichtingspercentage bewaart meer informatie, dus daaruit leiden
+   we een continue fase af: wassend in [0,.5], afnemend in [.5,1]. */
 function maanFaseUitBeschrijving(tekst){
   const t=String(tekst||"").toLowerCase();
   const m=/(nieuwe maan|wassende sikkel|eerste kwartier|wassende maan|volle maan|afnemende maan|laatste kwartier|afnemende sikkel)\s*,\s*(\d{1,3})\s*procent verlicht/.exec(t);
@@ -21,26 +22,25 @@ function maanFaseUitBeschrijving(tekst){
   return /afnemende|laatste/.test(naam)?1-hoek:hoek;
 }
 
-/* De ronde CSS-drager is het verlichte maanoppervlak. In de SVG tekenen we
-   uitsluitend de donkere/schaduwzijde. Daardoor is nieuwe maan een donkere
-   schijf en volle maan een lichte schijf, in plaats van twee varianten die als
-   hetzelfde lege rondje kunnen lezen. */
+/* De v2-SVG tekent juist het VERLICHTE deel. De neutrale ronde CSS-drager is
+   daarmee de onverlichte schijf. Dit blijft in licht, donker en rood thema
+   semantisch hetzelfde: nieuwe maan is leeg, volle maan volledig gevuld en de
+   kwartieren spiegelen elkaar. */
 function maanFaseSvgV2(fase,size){
   const f=getal(fase),s=Math.max(8,Math.round(getal(size)||12));
   if(f===null)return "";
-  const p=((f%1)+1)%1,r=7,schaduwFase=(p+0.5)%1;
-  const cos=Math.cos(2*Math.PI*schaduwFase),donker=(1-cos)/2;
+  const p=((f%1)+1)%1,r=7,cos=Math.cos(2*Math.PI*p),ill=(1-cos)/2;
   let vorm="";
-  if(donker>0.985){
-    vorm='<circle class="maan-schaduw-vol" cx="12" cy="12" r="'+r+'" fill="currentColor"/>';
-  }else if(donker>=0.015){
+  if(ill>0.985){
+    vorm='<circle class="maan-licht-vol" cx="12" cy="12" r="'+r+'" fill="currentColor"/>';
+  }else if(ill>=0.015){
     if(Math.abs(cos)<0.03){
-      vorm=schaduwFase<0.5
-        ?'<path class="maan-schaduw" d="M12 5 A7 7 0 0 1 12 19 Z" fill="currentColor"/>'
-        :'<path class="maan-schaduw" d="M12 5 A7 7 0 0 0 12 19 Z" fill="currentColor"/>';
+      vorm=p<0.5
+        ?'<path class="maan-licht" d="M12 5 A7 7 0 0 1 12 19 Z" fill="currentColor"/>'
+        :'<path class="maan-licht" d="M12 5 A7 7 0 0 0 12 19 Z" fill="currentColor"/>';
     }else{
-      const rx=Math.max(0.6,Math.abs(r*cos)).toFixed(2),rechts=schaduwFase<0.5,buiten=rechts?1:0,binnen=((cos>0)===rechts)?0:1;
-      vorm='<path class="maan-schaduw" d="M 12 5 A 7 7 0 0 '+buiten+' 12 19 A '+rx+' 7 0 0 '+binnen+' 12 5 Z" fill="currentColor"/>';
+      const rx=Math.max(0.6,Math.abs(r*cos)).toFixed(2),wassend=p<0.5,buiten=wassend?1:0,binnen=((cos>0)===wassend)?0:1;
+      vorm='<path class="maan-licht" d="M 12 5 A 7 7 0 0 '+buiten+' 12 19 A '+rx+' 7 0 0 '+binnen+' 12 5 Z" fill="currentColor"/>';
     }
   }
   return '<svg class="maan-fase-svg maan-fase-svg-v2" data-fase="'+p.toFixed(4)+'" viewBox="0 0 24 24" width="'+s+'" height="'+s+'" aria-hidden="true" focusable="false">'+vorm+'</svg>';
@@ -55,7 +55,11 @@ function verbeterMaanElement(el,size,beschrijving){
   if(!svg)return false;
   const bestaand=el.querySelector(".maan-fase-svg");
   if(bestaand)bestaand.outerHTML=svg;
-  else el.insertAdjacentHTML("afterbegin",svg);
+  else{
+    const unicode=[...el.childNodes].find(n=>n.nodeType===3&&/[🌑🌒🌓🌔🌕🌖🌗🌘]/u.test(n.nodeValue||""));
+    if(unicode)unicode.nodeValue=String(unicode.nodeValue||"").replace(/[🌑🌒🌓🌔🌕🌖🌗🌘]\uFE0F?/u,"");
+    el.insertAdjacentHTML("afterbegin",svg);
+  }
   if(el.classList.contains("maanbij"))el.setAttribute("aria-label",tekst);
   return true;
 }
@@ -66,9 +70,98 @@ function verbeterMaanfasen(){
   if(lab)verbeterMaanElement(lab,12,lab.textContent);
 }
 
+function nachtOordeelGetoond(score){
+  const s=getal(score);if(s===null)return "Onvoldoende data";
+  const n=begrens(Math.round(s),0,10);
+  return n>=9?"Uitstekend":n>=7?"Goed":n>=5?"Redelijk":n>=4?"Matig":"Ongunstig";
+}
+function nachtBalkPercentageGetoond(score){
+  const s=getal(score);return s===null?0:begrens(Math.round(s),0,10)*10;
+}
+function nachtLabelVarianten(label){
+  const t=String(label||"");
+  const m=/^([a-z]{2}) op ([a-z]{2})$/i.exec(t);
+  return m?{lang:t,kort:m[1]+"–"+m[2]}:{lang:t,kort:t};
+}
+function nachtAdviesMetHorizon(advies,horizonDagen){
+  const t=String(advies||"").trim(),h=getal(horizonDagen);if(!t||h===null||h<3)return t;
+  const klein=t.charAt(0).toLowerCase()+t.slice(1);
+  return h>=5?"Globale indicatie: "+klein:"Voorlopige indicatie: "+klein;
+}
+function dagdeelVanUur(tijd){
+  const m=/^(\d{2}):(\d{2})$/.exec(String(tijd||""));if(!m)return null;
+  const u=Number(m[1]);
+  return u<5?"nacht":u<8?"vroege ochtend":u<12?"ochtend":u<18?"middag":"avond";
+}
+function minuutVanTijd(tijd){
+  const m=/^(\d{2}):(\d{2})$/.exec(String(tijd||""));
+  return m?Number(m[1])*60+Number(m[2]):null;
+}
+function tijdVanMinuut(min){
+  const v=((Math.round(min)%1440)+1440)%1440;
+  return String(Math.floor(v/60)).padStart(2,"0")+":"+String(v%60).padStart(2,"0");
+}
+
+/* De canonieke nachtrenderer markeert een goed uurpunt en gebruikte het EERSTE
+   volgende (dus al niet-goede) uur als eindtijd. Twee goede punten 22:00 en
+   23:00 konden daardoor als 22:00–00:00 worden getoond. Open-Meteo's hourly
+   cloud_cover is een waarde OP het aangegeven uur, dus checkpoint 50 presenteert
+   uitsluitend de daadwerkelijk gunstige modeluren en trekt één uur van dat
+   kunstmatige eindpunt af. Voor verre nachten verdwijnen exacte kloktijden weer
+   naar dagdelen, zodat de tekst niet preciezer oogt dan de forecast-horizon. */
+function corrigeerNachtVensterBron(tekst,horizonDagen){
+  const t=String(tekst||"").trim(),h=getal(horizonDagen);
+  const m=/^Beste periode\s+(\d{2}:\d{2})[–-](\d{2}:\d{2})$/i.exec(t);
+  if(!m)return t;
+  const eind=minuutVanTijd(m[2]);if(eind===null)return t;
+  const werkelijkEind=tijdVanMinuut(eind-60),start=m[1];
+  if(h!==null&&h>=3){
+    const a=dagdeelVanUur(start),b=dagdeelVanUur(werkelijkEind);
+    if(!a||!b)return h>=5?"Globale indicatie voor het gunstigste zicht":"Voorlopige indicatie voor het gunstigste zicht";
+    const deel=a===b?"in de "+a:"van de "+a+" tot de "+b;
+    return h>=5?"Waarschijnlijk gunstigste zicht "+deel:"Gunstigste zicht "+deel;
+  }
+  return "Beste modeluren "+start+"–"+werkelijkEind;
+}
+
+/* Eén eigenaar voor de zichtbare Nachtzicht-rijen. De canonieke berekening blijft
+   onaangeraakt; hier worden uitsluitend score/oordeel/balk, horizonformulering,
+   compacte labels, bewolkingspresentatie en maanfase op elkaar afgestemd. */
+function verbeterNachtzicht(){
+  const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")];
+  rijen.forEach((rij,h)=>{
+    const naam=rij.querySelector(".dname"),score=rij.querySelector(".score"),advies=rij.querySelector(".nachtadvies"),bew=rij.querySelector(".nmeta:not(.wide)");
+    if(naam){
+      const v=nachtLabelVarianten((naam.textContent||"").trim());
+      naam.innerHTML=v.lang===v.kort?esc(v.lang):'<span class="nachtlabel-lang">'+esc(v.lang)+'</span><span class="nachtlabel-kort">'+esc(v.kort)+'</span>';
+    }
+    const m=/^(\d+)\/10$/.exec(String(score&&score.textContent||"").trim()),zichtbaar=m?Number(m[1]):null;
+    if(score){
+      score.title=h>=5?"Globale zichtscore op basis van de huidige verwachting":h>=3?"Voorlopige zichtscore op basis van de huidige verwachting":"Zichtscore op basis van de huidige verwachting";
+      if(zichtbaar!==null){
+        const teal=typeof TEAL!=="undefined"?TEAL:"currentColor",ink=typeof INK!=="undefined"?INK:"currentColor",ink25=typeof INK25!=="undefined"?INK25:"currentColor";
+        const kleur=zichtbaar>=7?teal:zichtbaar>=4?ink:ink25;
+        score.style.color=kleur;
+        const balk=rij.querySelector(".sbar i");if(balk){balk.style.background=kleur;balk.style.width=nachtBalkPercentageGetoond(zichtbaar)+"%";}
+      }
+    }
+    if(advies){
+      const delen=String(advies.textContent||"").split(/\s+·\s+/),venster=delen.length>1?delen.slice(1).join(" · "):"";
+      const oordeel=zichtbaar===null?(delen[0]||advies.textContent):nachtOordeelGetoond(zichtbaar);
+      const hoofd=nachtAdviesMetHorizon(oordeel,h),detail=venster?corrigeerNachtVensterBron(venster,h):"";
+      advies.textContent=detail?hoofd+" · "+detail:hoofd;
+    }
+    if(bew){
+      const p=bew.querySelector(".perc");
+      if(p){const pct=(p.textContent||"").trim();bew.innerHTML='<span class="perc">'+esc(pct)+'</span>';bew.setAttribute("aria-label","Bewolking "+pct);}
+    }
+  });
+  verbeterMaanfasen();
+}
+
 /* De weergegeven pollenwaarde wordt afgerond vóór hij de gebruiker bereikt.
    De eenheid volgt daarom dat zichtbare getal: 1 korrel/m³, alle andere waarden
-   korrels/m³. Zo staat er op een fysieke iPhone nooit meer '1 korrels/m³'. */
+   korrels/m³. */
 function pollenEenheid(waarde){
   const v=getal(waarde);
   return v!==null&&Math.round(v)===1?"korrel/m³":"korrels/m³";
@@ -84,9 +177,7 @@ function corrigeerPollenEenheden(){
   });
 }
 
-/* De bronregel was inhoudelijk correct maar werd op iPhone één lange reeks van
-   links, middendots en tekst. We behouden exact dezelfde links/attributie en
-   groeperen ze alleen in vier betekenisvolle, wrappende items. */
+/* De bronregel blijft volledig, maar elk broncluster mag zelfstandig wrappen. */
 function structureerBronnen(){
   const bron=document.querySelector("footer .bron:first-child");
   if(!bron||bron.classList.contains("bron-bronnen"))return false;
@@ -103,7 +194,11 @@ function structureerBronnen(){
   return true;
 }
 
-const api={maanFaseUitBeschrijving,maanFaseSvgV2,pollenEenheid};
+const api={
+  maanFaseUitBeschrijving,maanFaseSvgV2,pollenEenheid,nachtOordeelGetoond,
+  nachtBalkPercentageGetoond,nachtLabelVarianten,nachtAdviesMetHorizon,
+  corrigeerNachtVensterBron,dagdeelVanUur
+};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileScreenshotPolish=api;
 
@@ -114,7 +209,7 @@ structureerBronnen();
 const basisNachten=nachten;
 nachten=function(){
   basisNachten();
-  verbeterMaanfasen();
+  verbeterNachtzicht();
 };
 
 const basisLucht=lucht;
