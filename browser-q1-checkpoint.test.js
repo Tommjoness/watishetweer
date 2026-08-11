@@ -4,7 +4,6 @@ const {chromium,webkit}=require("playwright");
 const {bouw}=require("./data.js");
 
 const d=bouw({pp:()=>0,pr:()=>0,som:0,cc:()=>35,wc:()=>3,wcNu:3});
-delete d.current.interval; // expliciet het fysieke randgeval: kwartierkop mag hier niet van afhangen
 d.current.visibility=16000;d.elevation=3;d.latitude=52.35;d.longitude=5.26;
 d.daily.sunshine_duration=d.daily.time.map(()=>7*3600);
 d.daily.precipitation_probability_max=[65,25,0,10,40,70,5];
@@ -19,16 +18,21 @@ const air={current:{european_aqi:30,us_aqi:40},hourly:{time:[d.current.time],ald
 
 let html=fs.readFileSync(path.join(__dirname,"public/index.html"),"utf8");
 const artifactDiagnose={
-  oud:html.includes('<div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">'),
-  nieuw:html.includes('<div class="eyebrow">Afgelopen kwartier</div><div class="sval" id="prec">'),
+  oud15:html.includes('<div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">'),
+  oudKwartier:html.includes("Afgelopen kwartier"),
+  trend:html.includes('<div class="eyebrow">Temperatuurtrend</div><div class="sval" id="prec">'),
+  legacyBerekening:html.includes("const recenteNeerslag=eindigGetal(c.precipitation)"),
+  oudeWrapper:html.includes("compactRecentLabel"),
   polish:html.includes("MOBILE SCREENSHOT POLISH 20260810B"),
   q1:html.includes("CHECKPOINT 25 Q1")
 };
 const stub=`<script>
 window.__q1ForecastDelay=0;
-window.fetch=async function(url){
-  const u=String(url);
-  if(u.includes('api.open-meteo.com/v1/forecast')&&window.__q1ForecastDelay) await new Promise(r=>setTimeout(r,window.__q1ForecastDelay));
+window.__q1Nu=Date.UTC(2026,6,22,12,17,0); // 14:17 Europe/Amsterdam
+Date.now=()=>window.__q1Nu;
+window.fetch=async function(url,opt){
+  const u=String(url),delay=window.__q1ForecastDelay;
+  if(u.includes('api.open-meteo.com/v1/forecast')&&delay) await new Promise(r=>setTimeout(r,delay));
   const payload=u.includes('/api/waarschuwingen')?${JSON.stringify({bron:"test",dekking:true,lijst:[],land:"NL"})}
     :u.includes('air-quality-api.open-meteo.com')?${JSON.stringify(air)}
     :u.includes('geocoding-api.open-meteo.com')?${JSON.stringify({results:[{name:"Amsterdam",latitude:52.37,longitude:4.90,admin1:"Noord-Holland",country_code:"NL"}]})}
@@ -70,46 +74,72 @@ async function controleer(type,naam){
     await page.waitForSelector("#app",{state:"visible"});
 
     const basis=await page.evaluate(()=>({
-      recent:[...document.querySelectorAll(".stat")].find(x=>x.querySelector("#prec"))?.querySelector(".eyebrow")?.textContent.trim()||"",
-      dagMm:[...document.querySelectorAll("#days .q1-dag-mm")].map(x=>x.textContent.trim()),
+      trendKop:document.getElementById("prec")?.parentElement?.querySelector(".eyebrow")?.textContent.trim()||"",
+      trendWaarde:document.getElementById("prec")?.textContent.trim()||"",
+      trendSub:document.getElementById("precsub")?.textContent.trim()||"",
+      popDisplay:getComputedStyle(document.getElementById("pop").parentElement).display,
+      popAria:document.getElementById("pop").parentElement.getAttribute("aria-hidden"),
+      gridClass:document.getElementById("pop").parentElement.parentElement.className,
+      dag:[...document.querySelectorAll("#days .row.day:not(.kop)")].map(r=>({kans:r.querySelector(".drain")?.childNodes[0]?.textContent?.trim()||"",mm:r.querySelector(".q1-dag-mm")?.textContent.trim()||""})),
       over:document.documentElement.scrollWidth-window.innerWidth
     }));
-    const diagnose=await page.evaluate(()=>{
-      const kop=()=>document.getElementById("prec")?.parentElement?.querySelector(".eyebrow")?.textContent.trim()||"";
-      const voor=kop(),metersBron=String(meters),tekenBron=String(tekenAlles);
-      let metersFout="";
-      try{meters();}catch(e){metersFout=String(e&&e.stack||e);}
-      return {
-        polishApi:!!window.WeatherNowMobileScreenshotPolish,
-        q1Api:!!window.WeatherNowQ1,
-        precClass:document.getElementById("prec")?.className||"",
-        precParentClass:document.getElementById("prec")?.parentElement?.className||"",
-        precHeadingVoor:voor,
-        precHeadingNaMeters:kop(),
-        metersWrapped:metersBron.includes("compactRecentLabel"),
-        tekenWrapped:tekenBron.includes("compactRecentLabel"),
-        metersFout,
-        bodyHasPolishMarker:document.documentElement.innerHTML.includes("MOBILE SCREENSHOT POLISH 20260810B")
-      };
+    const diagnose=await page.evaluate(()=>({
+      polishApi:!!window.WeatherNowMobileScreenshotPolish,
+      q1Api:!!window.WeatherNowQ1,
+      metersBron:String(meters).slice(0,300),
+      bodyHasPolishMarker:document.documentElement.innerHTML.includes("MOBILE SCREENSHOT POLISH 20260810B")
+    }));
+    const diag=JSON.stringify({artifact:artifactDiagnose,basis,diagnose,fouten});
+    console.log("DIAG "+naam+" "+diag);
+    assert.deepEqual(artifactDiagnose,{oud15:false,oudKwartier:false,trend:true,legacyBerekening:false,oudeWrapper:false,polish:true,q1:true},naam+": artifact bevat uitsluitend nieuwe trendroute | DIAG="+diag);
+    assert.equal(basis.trendKop,"Temperatuurtrend",naam+": nieuwe tegelkop");
+    assert.match(basis.trendWaarde,/^-?\d+\s*→\s*-?\d+°C$/,naam+": trend toont uitsluitend twee temperaturen");
+    assert.ok(["Stijgt de komende drie uur.","Daalt de komende drie uur.","Blijft vrijwel gelijk."].includes(basis.trendSub),naam+": trendtekst is beperkt tot temperatuur");
+    assert.equal(basis.popDisplay,"none",naam+": droge korte termijn toont geen dubbele droogtegel");
+    assert.equal(basis.popAria,"true",naam+": verborgen droogtegel is ook uit toegankelijkheidsweergave");
+    assert.match(basis.gridClass,/q1-pop-hidden/,naam+": raster wordt zonder lege placeholder herverdeeld");
+    assert.equal(basis.dag[0].kans,"65%",naam+": daily kans komt uit probability_max");
+    assert.equal(basis.dag[0].mm,"4,8 mm",naam+": daily hoeveelheid komt uit precipitation_sum");
+    assert.equal(basis.dag[1].kans,"25%",naam+": 25% blijft staan bij 0 mm");
+    assert.equal(basis.dag[1].mm,"",naam+": droge 0,0 mm wordt niet getoond");
+    assert.ok(basis.over<=2,naam+": geen horizontale overflow op 390 px");
+
+    /* Relevante neerslag maakt dezelfde tegel weer zichtbaar. De uurvelden zijn
+       onafhankelijke kans/hoeveelheidsbronnen; daarna herstellen we het droge
+       scenario om de rest van de test niet te beïnvloeden. */
+    const popNat=await page.evaluate(()=>{
+      const i15=S.d.hourly.time.indexOf("2026-07-22T15:00"),i16=S.d.hourly.time.indexOf("2026-07-22T16:00");
+      S.d.hourly.precipitation_probability[i15]=65;S.d.hourly.precipitation[i15]=1.4;
+      S.d.hourly.precipitation_probability[i16]=0;S.d.hourly.precipitation[i16]=0;
+      meters();
+      const stat=document.getElementById("pop").parentElement;
+      const uit={display:getComputedStyle(stat).display,kop:stat.querySelector(".eyebrow").textContent.trim(),waarde:document.getElementById("pop").textContent.trim(),sub:document.getElementById("popsub").textContent.trim()};
+      S.d.hourly.precipitation_probability[i15]=0;S.d.hourly.precipitation[i15]=0;meters();
+      return uit;
     });
-    const kwartaalDiag=JSON.stringify({artifact:artifactDiagnose,basis,diagnose,fouten});
-    console.log("DIAG "+naam+" "+kwartaalDiag);
-    assert.equal(basis.recent,"Afgelopen kwartier",naam+": kwartierkop zonder current.interval | DIAG="+kwartaalDiag);
-    assert.ok(basis.dagMm.length>=1,naam+": minstens één neerslagdag toont mm");
-    assert.ok(!basis.dagMm.includes("0,0 mm"),naam+": droge dagen tonen geen 0,0 mm");
-    assert.ok(basis.over<=2,naam+": geen horizontale overflow");
+    assert.notEqual(popNat.display,"none",naam+": relevante neerslag toont tegel");
+    assert.equal(popNat.kop,"Neerslag komend uur",naam+": zichtbare tegel heeft expliciete scope");
+    assert.match(popNat.waarde,/65%/,naam+": zichtbare tegel behoudt bronkans");
+    assert.match(popNat.waarde,/mm/,naam+": meetbare hoeveelheid staat naast kans");
 
     const nat=await tooltip(page,"17:00"),droog=await tooltip(page,"19:00"),nul=await tooltip(page,"20:00");
     const tipBron=await page.evaluate(()=>["17:00","19:00","20:00"].map(t=>{
       const i=S.geo.TI.findIndex(x=>String(x).slice(11,16)===t);
-      return {t,i,kans:i>=0&&S.geo.P?S.geo.P[i]:null,mm:i>=0&&S.geo.Q1MM?S.geo.Q1MM[i]:null,x:i>=0?S.geo.x(i):null,W:S.geo.W,cw:S.geo.cw,pl:S.geo.pl};
+      return {t,i,kans:i>=0&&S.geo.P?S.geo.P[i]:null,mm:i>=0&&S.geo.Q1MM?S.geo.Q1MM[i]:null};
     }));
     console.log("TOOLTIP "+naam+" "+JSON.stringify({nat,droog,nul,tipBron}));
     assert.ok(nat.includes("neerslagkans")&&nat.includes("65% · 1,4 mm"),naam+": nat uur toont kans + mm");
     assert.ok(droog.includes("neerslagkans")&&droog.includes("25%"),naam+": 0 mm behoudt echte 25%-kans");
-    assert.ok(!droog.some(t=>/mm/.test(t)),naam+": 0 mm krijgt geen mm-regel");
+    assert.ok(!droog.some(t=>/mm/.test(t)),naam+": 0 mm krijgt geen nutteloze hoeveelheid");
     assert.ok(nul.includes("neerslagkans")&&nul.includes("0%"),naam+": echte nul-kans blijft 0%");
     assert.ok(!nul.some(t=>/mm/.test(t)),naam+": nul-kans/nul-mm blijft compact");
+
+    for(const breedte of [320,360,375,390,430]){
+      await page.setViewportSize({width:breedte,height:844});await page.waitForTimeout(80);
+      const over=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+      assert.ok(over<=2,naam+": geen horizontale overflow op "+breedte+" px");
+    }
+    await page.setViewportSize({width:390,height:844});
 
     // Cacheprestatie: eerst een tweede plaats laden, daarna terug naar de reeds
     // gecachte eerste plaats terwijl de netwerkforecast kunstmatig 700 ms wacht.
@@ -122,7 +152,21 @@ async function controleer(type,naam){
     assert.ok(Number.isFinite(snel.paint)&&snel.paint<100,naam+": cached paint gebeurt binnen 100 ms in gecontroleerde test");
     await page.waitForTimeout(750);
     const na=await page.evaluate(()=>WeatherNowQ1Performance.lastNetworkMs);
-    assert.ok(na>=650,naam+": test bevestigt dat de netwerkrefresh werkelijk vertraagd was en cache dus verschil maakte");
+    assert.ok(na>=650,naam+": netwerkrefresh was werkelijk vertraagd; cache maakte dus meetbaar verschil");
+
+    /* Racebewijs zonder fetch-abort: de stub negeert AbortSignal bewust. Zelfs dan
+       mag de 700 ms trage plaats A na een snelle plaats B nooit de state terugzetten. */
+    await page.evaluate(()=>{
+      window.__q1ForecastDelay=700;
+      load(40.71,-74.01,"Langzaam A",false,true,"US");
+      setTimeout(()=>{window.__q1ForecastDelay=0;load(35.68,139.69,"Snel B",false,true,"JP");},20);
+    });
+    await page.waitForTimeout(150);
+    assert.equal(await page.evaluate(()=>S.label),"Snel B",naam+": snelle B wint terwijl A nog loopt");
+    await page.waitForTimeout(700);
+    const race=await page.evaluate(()=>({label:S.label,lat:S.lat,lon:S.lon}));
+    assert.equal(race.label,"Snel B",naam+": late A mag B niet overschrijven");
+    assert.ok(Math.abs(race.lat-35.68)<0.001&&Math.abs(race.lon-139.69)<0.001,naam+": coördinaten blijven bij B");
 
     // Exact dezelfde geocodingvraag wordt binnen dezelfde tab hergebruikt.
     const geoHits=await page.evaluate(async()=>{
