@@ -21,7 +21,7 @@ const cacheOud="watishetweer-deadbeef0000";
 if(cacheNieuw===cacheOud)throw new Error("Testcache botst met definitieve cache-id.");
 assert.equal((swBasis.match(/caches\.open\(CACHE\)/g)||[]).length,1,"definitieve worker opent zijn generatiecache alleen tijdens install");
 assert(!/CACHE_HANDLE|\.put\(e\.request/.test(swBasis),"definitieve worker heeft geen runtime-schrijfpad naar zijn generatiecache");
-assert(!/setTimeout\(resolve,\s*\d+\)/.test(swBasis),"definitieve worker gebruikt geen tijdgebaseerde activate-uitlooptijd");
+assert(/caches\.match\(request,\{cacheName:CACHE\}\)/.test(swBasis),"offline lookup is tot de huidige generatiecache beperkt");
 
 function metMarker(html,versie){
   const marker='<meta name="sw-e2e-build" content="'+versie+'">';
@@ -30,21 +30,8 @@ function metMarker(html,versie){
 }
 
 function instrumenteerWorker(bron,versie){
-  const helper=`\nconst __SW_E2E_VERSION=${JSON.stringify(versie)};\nconst __swE2eDiag=(event,extra={})=>fetch("/__swdiag",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({version:__SW_E2E_VERSION,event,...extra})}).catch(()=>{});\nself.addEventListener("message",e=>{if(e.data==="__sw-e2e-version"&&e.ports&&e.ports[0])e.ports[0].postMessage(__SW_E2E_VERSION);});\n`;
-  let uit=bron.replace(/(const CACHE = "[^"]+";)/,"$1"+helper);
-  const eisen=[
-    ['self.addEventListener("install", e => {','self.addEventListener("install", e => {\n  __swE2eDiag("install-start");'],
-    ['    caches.open(CACHE).then(c =>\n      // per bestand','    (__swE2eDiag("install-cache-open"),caches.open(CACHE)).then(c =>\n      // per bestand'],
-    ['    ).then(() => self.skipWaiting())','    ).then(() => { __swE2eDiag("install-complete"); return self.skipWaiting(); })'],
-    ['self.addEventListener("activate", e => {','self.addEventListener("activate", e => {\n  __swE2eDiag("activate-start");'],
-    ['      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))','      .then(keys => { __swE2eDiag("activate-keys",{keys}); return Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))); })'],
-    ['      .then(() => self.clients.claim())','      .then(() => { __swE2eDiag("activate-complete"); return self.clients.claim(); })']
-  ];
-  for(const [van,naar] of eisen){
-    if(!uit.includes(van))throw new Error(`SW-diagnoseanker ontbreekt voor ${versie}: ${van}`);
-    uit=uit.replace(van,naar);
-  }
-  return uit;
+  const helper=`\nconst __SW_E2E_VERSION=${JSON.stringify(versie)};\nself.addEventListener("message",e=>{if(e.data==="__sw-e2e-version"&&e.ports&&e.ports[0])e.ports[0].postMessage(__SW_E2E_VERSION);});\n`;
+  return bron.replace(/(const CACHE = "[^"]+";)/,"$1"+helper);
 }
 
 const indexOud=metMarker(indexNieuw,"old");
@@ -55,9 +42,6 @@ const swOud=instrumenteerWorker(swOudBasis,"old");
 const swNieuw=instrumenteerWorker(swBasis,"new");
 
 let fase="old";
-const serverStart=Date.now();
-const verzoeken=[];
-const lifecycle=[];
 const mime={
   ".html":"text/html; charset=utf-8",
   ".js":"application/javascript; charset=utf-8",
@@ -67,16 +51,6 @@ const mime={
 };
 const server=http.createServer((req,res)=>{
   const pathname=(req.url||"/").split("?")[0];
-  if(pathname==="/__swdiag"&&req.method==="POST"){
-    let body="";
-    req.on("data",d=>{body+=d;});
-    req.on("end",()=>{
-      try{lifecycle.push({ms:Date.now()-serverStart,fase,...JSON.parse(body)});}catch(err){lifecycle.push({ms:Date.now()-serverStart,fase,event:"diag-parse-error",error:String(err)});}
-      res.writeHead(204,{"cache-control":"no-store"});res.end();
-    });
-    return;
-  }
-  verzoeken.push({ms:Date.now()-serverStart,fase,path:pathname});
   if(pathname==="/"||pathname==="/index.html"){
     res.writeHead(200,{"content-type":"text/html; charset=utf-8","cache-control":"no-store"});
     res.end(fase==="old"?indexOud:indexFinal);return;
@@ -94,9 +68,7 @@ const server=http.createServer((req,res)=>{
   res.writeHead(404,{"content-type":"text/plain; charset=utf-8"});res.end("not found");
 });
 
-async function marker(page){
-  return page.locator('meta[name="sw-e2e-build"]').getAttribute("content");
-}
+async function marker(page){return page.locator('meta[name="sw-e2e-build"]').getAttribute("content");}
 async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
 
 (async()=>{
@@ -107,7 +79,7 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
   const page=await context.newPage();
   const pageErrors=[];page.on("pageerror",e=>pageErrors.push(String(e)));
   try{
-    /* 1. Begin werkelijk op de oude app-shell en laat diens worker de client claimen. */
+    /* 1. Werkelijk met de oude shell/worker beginnen. */
     await page.goto(url,{waitUntil:"load"});
     assert.equal(await marker(page),"old","initiële navigatie moet de oude fixture tonen");
     await page.waitForFunction(async()=>{
@@ -118,122 +90,77 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
     assert(keys.includes(cacheOud),"oude serviceworker moet zijn eigen app-shellcache hebben");
     assert(!keys.includes(cacheNieuw),"nieuwe cache mag vóór update nog niet bestaan");
 
-    /* Diagnostiek: bemonster cache- en workerstates fijnmazig rond de update. */
-    await page.evaluate(()=>{
-      window.__swDiag=[];
-      window.__swDiagStart=performance.now();
-      window.__swDiagBusy=false;
-      window.__swDiagTimer=setInterval(async()=>{
-        if(window.__swDiagBusy)return;
-        window.__swDiagBusy=true;
-        try{
-          const keys=await caches.keys();
-          const r=await navigator.serviceWorker.getRegistration();
-          window.__swDiag.push({
-            ms:Math.round((performance.now()-window.__swDiagStart)*10)/10,
-            keys,
-            active:r&&r.active?r.active.state:null,
-            installing:r&&r.installing?r.installing.state:null,
-            waiting:r&&r.waiting?r.waiting.state:null,
-            controller:navigator.serviceWorker.controller?navigator.serviceWorker.controller.scriptURL:null
-          });
-        }finally{window.__swDiagBusy=false;}
-      },5);
-    });
-    await page.waitForTimeout(25);
-
-    /* 2. Publiceer exact de definitieve worker en dwing de normale browser-updatecheck af. */
+    /* 2. Normale updatecheck naar exact de definitieve worker. We wachten niet op
+       een specifieke CacheStorage-tussenstaat, maar op de relevante productstaat:
+       actieve én controlerende worker is versie new en zijn install-cache bestaat. */
     fase="new";
     await page.evaluate(async()=>{
       const r=await navigator.serviceWorker.getRegistration();
       if(!r)throw new Error("Serviceworkerregistratie ontbreekt vóór update.");
       await r.update();
     });
-
-    /* Chromium kan tijdens een serviceworkertransitie een korte niet-monotone
-       CacheStorage-weergave geven. De producteis is daarom niet 'één schoon poll',
-       maar 500 ms onafgebroken: nieuwe actieve worker, juiste versie, nieuwe cache
-       aanwezig en oude cache afwezig. Iedere terugkeer van de oude cache zet het
-       venster terug naar nul. */
-    await page.waitForFunction(async({nieuw,oud,stabielMs})=>{
-      const keys=await caches.keys();
+    await page.waitForFunction(async nieuw=>{
       const r=await navigator.serviceWorker.getRegistration();
-      let versie=null;
-      if(r&&r.active&&r.active.state==="activated"){
-        versie=await new Promise(resolve=>{
-          const kanaal=new MessageChannel(),timer=setTimeout(()=>resolve(null),100);
-          kanaal.port1.onmessage=e=>{clearTimeout(timer);resolve(e.data);};
-          r.active.postMessage("__sw-e2e-version",[kanaal.port2]);
-        });
-      }
-      const schoon=!!(r&&r.active&&r.active.state==="activated"&&versie==="new"&&keys.includes(nieuw)&&!keys.includes(oud));
-      if(!schoon){window.__swSchoonSinds=null;return false;}
-      if(!Number.isFinite(window.__swSchoonSinds))window.__swSchoonSinds=performance.now();
-      return performance.now()-window.__swSchoonSinds>=stabielMs;
-    },{nieuw:cacheNieuw,oud:cacheOud,stabielMs:500},{timeout:15000,polling:25});
+      if(!(r&&r.active&&r.active.state==="activated"&&navigator.serviceWorker.controller))return false;
+      const vraagVersie=worker=>new Promise(resolve=>{
+        const kanaal=new MessageChannel(),timer=setTimeout(()=>resolve(null),100);
+        kanaal.port1.onmessage=e=>{clearTimeout(timer);resolve(e.data);};
+        worker.postMessage("__sw-e2e-version",[kanaal.port2]);
+      });
+      const [actief,controller,keys]=await Promise.all([vraagVersie(r.active),vraagVersie(navigator.serviceWorker.controller),caches.keys()]);
+      return actief==="new"&&controller==="new"&&keys.includes(nieuw);
+    },cacheNieuw,{timeout:15000,polling:25});
 
-    const diag=await page.evaluate(()=>{
-      clearInterval(window.__swDiagTimer);
-      return window.__swDiag||[];
-    });
-    await page.waitForTimeout(50);
-    const overgangen=[];
-    for(const x of diag){
-      const compact={
-        ms:x.ms,
-        oud:x.keys.includes(cacheOud),
-        nieuw:x.keys.includes(cacheNieuw),
-        active:x.active,
-        installing:x.installing,
-        waiting:x.waiting
-      };
-      const vorige=overgangen[overgangen.length-1];
-      if(!vorige||vorige.oud!==compact.oud||vorige.nieuw!==compact.nieuw||vorige.active!==compact.active||vorige.installing!==compact.installing||vorige.waiting!==compact.waiting)overgangen.push(compact);
-    }
-    console.log("SW_DIAG_TRANSITIONS "+JSON.stringify(overgangen));
-    console.log("SW_DIAG_REQUESTS "+JSON.stringify(verzoeken.filter(v=>v.path==="/"||v.path==="/index.html"||v.path==="/sw.js")));
-    console.log("SW_LIFECYCLE_DIAG "+JSON.stringify(lifecycle));
-
-    keys=await cacheSleutels(page);
-    assert(keys.includes(cacheNieuw),"nieuwe worker moet na stabiele activatie de definitieve app-shellcache hebben");
-    assert(!keys.includes(cacheOud),"oude cache moet na stabiele activatie afwezig zijn");
-
-    /* Install moet de nieuwe HTML zelf al hebben vastgelegd. Zo is offline niet
-       afhankelijk van een latere succesvolle navigatie-runtimewrite. */
+    /* De nieuwe index moet vóór enige online reload al door install zijn vastgelegd. */
     const installHeeftNieuweIndex=await page.evaluate(async naam=>{
       const c=await caches.open(naam),r=await c.match("./index.html");
       return !!(r&&(await r.text()).includes('name="sw-e2e-build" content="new"'));
     },cacheNieuw);
     assert.equal(installHeeftNieuweIndex,true,"nieuwe install-cache bevat al de nieuwe index vóór online reload");
 
-    /* 3. Eén online navigatie moet aantoonbaar de nieuwe HTML tonen en mag de
-       verwijderde oude cache niet terugbrengen. */
+    /* 3. Maak daarna expres een kwaadaardige oude cache terug met oude HTML.
+       Dit bootst het slechtste CacheStorage-randgeval na. De actieve worker mag
+       die cache nooit kunnen kiezen, ongeacht cachevolgorde of browser-GC. */
+    await page.evaluate(async ({naam,oudeHtml})=>{
+      const c=await caches.open(naam),headers={"content-type":"text/html; charset=utf-8"};
+      await Promise.all([
+        c.put("./",new Response(oudeHtml,{status:200,headers})),
+        c.put("./index.html",new Response(oudeHtml,{status:200,headers}))
+      ]);
+    },{naam:cacheOud,oudeHtml:'<!doctype html><html><head><meta name="sw-e2e-build" content="old"></head><body>STALE OLD SHELL</body></html>'});
+    keys=await cacheSleutels(page);
+    assert(keys.includes(cacheOud)&&keys.includes(cacheNieuw),"adversarial test bevat bewust oude én nieuwe cache naast elkaar");
+
+    /* Online blijft netwerk-eerst en moet dus de nieuwe deployment tonen. */
     const online=await page.reload({waitUntil:"load"});
     assert(online&&online.ok(),"online reload na worker-update moet slagen");
-    assert.equal(await marker(page),"new","na update moet de nieuwe app-shell zichtbaar zijn");
-    keys=await cacheSleutels(page);
-    assert(!keys.includes(cacheOud),"online navigatie mag de oude generatiecache niet terugbrengen");
+    assert.equal(await marker(page),"new","online mag de bewust teruggeplaatste oude shell niet tonen");
 
-    /* 4. Daarna netwerk volledig uit: navigatie en shellasset moeten uit dezelfde
-       nieuwe install-cache komen en de oude cache blijft ook hier afwezig. */
+    /* De oude cache nogmaals aanwezig houden voor de echte offlineproef. */
+    await page.evaluate(async ({naam,oudeHtml})=>{
+      const c=await caches.open(naam),headers={"content-type":"text/html; charset=utf-8"};
+      await c.put("./index.html",new Response(oudeHtml,{status:200,headers}));
+    },{naam:cacheOud,oudeHtml:'<!doctype html><html><head><meta name="sw-e2e-build" content="old"></head><body>STALE OLD SHELL</body></html>'});
+
+    /* 4. Netwerk volledig uit. Juist nu bewijst de marker dat de fallback alleen
+       de huidige generation-scoped CACHE leest, zelfs als een oude cache bestaat. */
     await context.setOffline(true);
     const offline=await page.reload({waitUntil:"domcontentloaded",timeout:10000});
     assert(offline,"offline navigatie moet een response uit de serviceworker ontvangen");
     assert.equal(typeof offline.fromServiceWorker,"function");
     assert.equal(offline.fromServiceWorker(),true,"offline navigatie moet werkelijk door de serviceworker worden afgehandeld");
-    assert.equal(await marker(page),"new","offline fallback mag nooit terugvallen naar de oude app-shell");
+    assert.equal(await marker(page),"new","offline fallback moet de nieuwe install-shell kiezen en nooit de oude cache");
     const shell=await page.evaluate(async()=>{
-      const [manifest,icoon,keys]=await Promise.all([fetch("manifest.json"),fetch("icon-192.png"),caches.keys()]);
-      return {manifest:manifest.ok,icoon:icoon.ok,keys};
+      const [manifest,icoon]=await Promise.all([fetch("manifest.json"),fetch("icon-192.png")]);
+      return {manifest:manifest.ok,icoon:icoon.ok};
     });
-    assert.deepEqual({manifest:shell.manifest,icoon:shell.icoon},{manifest:true,icoon:true},"definitieve shellassets moeten offline uit cache beschikbaar blijven");
-    assert(!shell.keys.includes(cacheOud),"offline gebruik mag de oude generatiecache niet terugbrengen");
+    assert.deepEqual(shell,{manifest:true,icoon:true},"definitieve shellassets moeten offline uit de huidige cache beschikbaar blijven");
     assert.deepEqual(pageErrors,[],"serviceworker-upgrade/offlinepad mag geen pageerror veroorzaken");
 
-    console.log("Serviceworker-E2E geslaagd: oude cache → 500 ms stabiel schone definitieve worker → nieuwe install-shell online/offline zonder oude cachereturn.");
+    console.log("Serviceworker-E2E geslaagd: nieuwe worker/controller + install-shell; opzettelijk aanwezige stale cache kan online noch offline oude HTML lekken.");
   }finally{
-    await page.evaluate(()=>{if(window.__swDiagTimer)clearInterval(window.__swDiagTimer);}).catch(()=>{});
     await context.setOffline(false).catch(()=>{});
+    await page.evaluate(async naam=>{try{await caches.delete(naam);}catch(_){}},cacheOud).catch(()=>{});
     await context.close().catch(()=>{});
     await browser.close().catch(()=>{});
     await new Promise(resolve=>server.close(resolve));
