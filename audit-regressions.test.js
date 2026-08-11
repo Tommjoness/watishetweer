@@ -29,7 +29,9 @@ ok((sw.match(/caches\.open\(CACHE\)/g)||[]).length===1,"serviceworker opent de g
 ok(!/CACHE_HANDLE/.test(sw),"serviceworker houdt geen generatiecachehandle vast na install");
 ok(!/\.put\(e\.request/.test(sw),"oude serviceworker kan zijn verwijderde generatiecache niet via runtime-write terugbrengen");
 ok(!/setTimeout\(resolve,\s*\d+\)/.test(sw),"serviceworker-upgrade steunt niet op een tijdgebaseerde activate-uitlooptijd");
-ok(/fetch\(e\.request\)\.catch\(\(\) => caches\.match\(e\.request\)/.test(sw),"navigatie blijft netwerk-eerst met install-cache als offline fallback");
+ok(/const uitHuidigeCache = request => caches\.match\(request,\{cacheName:CACHE\}\);/.test(sw),"offline cachelookup is expliciet tot de huidige worker-generatie beperkt");
+ok(!/caches\.match\([^,\n]+\)(?:\.|\s)/.test(sw),"serviceworker gebruikt geen globale onbegrensde CacheStorage-match voor shellfallbacks");
+ok(/fetch\(e\.request\)\.catch\(\(\) => uitHuidigeCache\(e\.request\)/.test(sw),"navigatie blijft netwerk-eerst met huidige install-cache als offline fallback");
 
 const gebouwd=fs.readFileSync(path.join(PUBLIC,"index.html"),"utf8");
 ok(gebouwd.includes("S.actieveWaarschuwingen=[];"),"waarschuwingen van een vorige locatie worden direct gewist");
