@@ -59,6 +59,23 @@ function typeNeerslag(a){
   return soort||"neerslag";
 }
 
+/* Een dagregel is een samenvatting, geen uurmeting. eersteTijd kan bovendien
+   een minuutwaarde uit de actuele model-/fixturetijd dragen (zoals 12:25), wat
+   in een zevendaagse verwachting onterecht preciezer oogt dan de bron is.
+   Exacte tijden blijven beschikbaar in de uurgrafiek en tooltip; hier tonen we
+   alleen het natuurlijke deel van de lokale dag. */
+function dagMomentZinsdeel(tijd){
+  const m=/^(\d{1,2}):(\d{2})$/.exec(String(tijd||"").trim());
+  if(!m)return "";
+  const uur=Number(m[1]);
+  if(!Number.isFinite(uur)||uur<0||uur>23)return "";
+  if(uur<5)return " in de nacht";
+  if(uur<8)return " in de vroege ochtend";
+  if(uur<12)return " in de ochtend";
+  if(uur<18)return " in de middag";
+  return " in de avond";
+}
+
 function kansHoofd(a){
   if(!a||!a.genoeg) return "–";
   if(tegenstrijdigDroogSignaal(a)) return "Onzeker";
@@ -126,7 +143,7 @@ function dagKansSamenvatting(a,basis){
   const basisIsNeerslag=/(?:motregen|regen|buien|sneeuw|ijzel|onweer|hagel)/i.test(basis);
   const basisHeeftSoort=basisIsNeerslag||basis.toLowerCase().includes(soort.toLowerCase());
   const type=basisHeeftSoort?basis:hoofdletter(soort);
-  const tijd=a.eersteTijd?" rond "+a.eersteTijd:"";
+  const tijd=dagMomentZinsdeel(a.eersteTijd);
   if(niveau==="ONBEKEND") return basis;
   if(niveau==="DROOG") return basisHeeftSoort?"Overwegend droog":basis;
   if(niveau==="ZEER_KLEIN") return basisHeeftSoort?"Zeer kleine kans op "+kleineStart(type)+tijd:basis+"; zeer kleine neerslagkans";
@@ -136,7 +153,7 @@ function dagKansSamenvatting(a,basis){
   return basisHeeftSoort?"Zeer grote kans op "+kleineStart(type)+tijd:basis+"; zeer grote neerslagkans";
 }
 
-const api={kansNiveau,kansHoofd,hoeveelheidTekst,hoeveelheidConditioneel,kansZin,komendUurTekst,briefingZin,dagKansSamenvatting};
+const api={kansNiveau,kansHoofd,hoeveelheidTekst,hoeveelheidConditioneel,kansZin,komendUurTekst,briefingZin,dagMomentZinsdeel,dagKansSamenvatting};
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowKansbeleidV3=api;
 
