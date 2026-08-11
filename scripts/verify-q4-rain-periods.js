@@ -13,10 +13,11 @@ ok(html.includes("lopend={van:i-1,tot:i"),"hoeveelheid op eindtijd wordt aan voo
 ok(html.includes("const bronStart=Number.isInteger(S.chartStart)?S.chartStart:null;"),"regenperioden gebruiken de exacte zichtbare bronindex");
 ok(html.includes("const bron=bronStart===null?-1:bronStart+i;"),"ieder zichtbaar uur volgt forecastvolgorde zonder lokale indexOf");
 ok(!html.includes("const bron=Array.isArray(h.time)?h.time.indexOf(tijd):-1;"),"Q4 gebruikt bij dubbele DST-kloktijden geen indexOf op lokale tijdtekst");
-ok(html.includes("g.MM=mm;"),"regenstrook en interactie delen één uitgelijnde mm-reeks");
+ok(html.includes("g.MM=mm;\n  g.Q1MM=mm;"),"regenstrook en tooltip krijgen exact dezelfde uitgelijnde array");
 ok(html.includes("lopend.som+=waarde"),"periodetotaal is som van dezelfde uurintervallen");
 ok(html.includes("waarde>lopend.piekMm"),"zwaarste uurvak komt uit dezelfde periodegegevens");
 ok(html.includes('data-q4-rain-periods'),"regenperioden hebben een eigen herkenbare SVG-laag");
+ok(html.includes('groep.setAttribute("pointer-events","none")'),"regenlaag kan het centrale hitvlak nooit onderscheppen");
 ok(html.includes('document.createElementNS(Q4_SVG_NS,"line")'),"regenbrackets worden als echte SVG-lijnen opgebouwd");
 ok(html.includes('document.createElementNS(Q4_SVG_NS,"text")'),"regensamenvatting wordt als echte SVG-tekst opgebouwd");
 ok(!html.includes("groep.innerHTML=inhoud"),"Q4 gebruikt geen fragiele SVG-innerHTML-injectie meer");
