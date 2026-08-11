@@ -46,6 +46,36 @@ const GRAFIEK_LABEL_PAST_OUD='      const past=(val,bv)=> bv ? val-F.temp>=by+bh
 const GRAFIEK_LABEL_PAST_NIEUW='      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val+labelHoogte/2+4<=pb;';
 const GRAFIEK_TICK_OUD='    if(toonAs){\n      ticks+=';
 const GRAFIEK_TICK_NIEUW='    if(toonAs){\n      const tijdLabelVrij=nuX==null||Math.abs(x(i)-nuX)>Math.max(18,F.uur*2.2);\n      if(tijdLabelVrij) ticks+=';
+const GRAFIEK_GEO_ANCHOR='  S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,H:H,M:M};';
+const GRAFIEK_AS_CLEANUP=[
+  '  /* Checkpoint 50: temperatuurcijfers worden pas na de tijdas definitief',
+  '     geplaatst en mogen horizontaal uitwijken. Vaste marges kunnen daardoor',
+  '     nooit volledig voorspellen waar een Bodoni-label eindigt. Controleer na',
+  '     het renderen de werkelijke SVG-tekstboxen en verwijder uitsluitend een',
+  '     tijdlabel dat een temperatuurcijfer echt raakt. Neerslagpercentages en',
+  '     alle overige tijdlabels blijven staan; de tooltip houdt de exacte tijd. */',
+  '  const ruimBotsendeAslabelsOp=()=>{',
+  '    const teksten=[...svg.querySelectorAll("text")];',
+  '    const temperatuurLabels=teksten.filter(el=>/Bodoni Moda/.test(el.getAttribute("font-family")||"")&&/°$/.test((el.textContent||"").trim()));',
+  '    const asY=pb+(M?20:22);',
+  '    const tijdLabels=teksten.filter(el=>Math.abs(Number(el.getAttribute("y"))-asY)<0.1);',
+  '    const raakt=(a,b)=>{',
+  '      try{',
+  '        const A=a.getBBox(),B=b.getBBox();',
+  '        const ox=Math.min(A.x+A.width,B.x+B.width)-Math.max(A.x,B.x);',
+  '        const oy=Math.min(A.y+A.height,B.y+B.height)-Math.max(A.y,B.y);',
+  '        return ox>-1.5&&oy>-1.5;',
+  '      }catch(_){return false;}',
+  '    };',
+  '    tijdLabels.forEach(el=>{if(temperatuurLabels.some(t=>raakt(el,t)))el.remove();});',
+  '  };',
+  '  ruimBotsendeAslabelsOp();',
+  '  if(document.fonts&&document.fonts.ready){',
+  '    const verwachteViewBox="0 0 "+W+" "+H;',
+  '    document.fonts.ready.then(()=>{if(svg.getAttribute("viewBox")===verwachteViewBox)ruimBotsendeAslabelsOp();});',
+  '  }',
+  GRAFIEK_GEO_ANCHOR
+].join('\n');
 
 if(html.includes(CSS_MARK)||html.includes(JS_MARK)||html.includes(Q1_CSS_MARK)||html.includes(Q1_JS_MARK))throw new Error("Post-build polish is al geïnjecteerd.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor mobiele polish.");
@@ -58,6 +88,7 @@ if((html.split(SENIOR_NACHT_SIGNATURE).length-1)!==1)throw new Error("Specifieke
 if((html.split(GRAFIEK_MOBIEL_OUD).length-1)!==1)throw new Error("Canonieke mobiele grafiekmaten ontbreken of zijn dubbel.");
 if((html.split(GRAFIEK_LABEL_PAST_OUD).length-1)!==1)throw new Error("Canonieke grafiek-labelgrens ontbreekt of is dubbel.");
 if((html.split(GRAFIEK_TICK_OUD).length-1)!==1)throw new Error("Canonieke grafiek-tickrenderer ontbreekt of is dubbel.");
+if((html.split(GRAFIEK_GEO_ANCHOR).length-1)!==1)throw new Error("Canonieke grafiek-geometrieanchor ontbreekt of is dubbel.");
 
 /* Productbeslissing checkpoint 25: de terugblik op recente neerslag bestaat niet
    meer in de definitieve runtime. De twee op dit assemblagemoment aantoonbare
@@ -92,10 +123,12 @@ html=html.slice(0,seniorNachtStart)
 
 /* Grafiek: echt compacter, maar met een gereserveerde x-aszone. Het tijdlabel
    op het huidige uur is redundant naast `nu 21°` en wordt alleen daar onderdrukt;
-   overige tijdlabels, temperatuurpunten en data blijven intact. */
+   overige tijdlabels, temperatuurpunten en data blijven intact. De laatste
+   botsingscontrole gebruikt daarna de werkelijk gerenderde fontboxes. */
 html=html.replace(GRAFIEK_MOBIEL_OUD,GRAFIEK_MOBIEL_NIEUW);
 html=html.replace(GRAFIEK_LABEL_PAST_OUD,GRAFIEK_LABEL_PAST_NIEUW);
 html=html.replace(GRAFIEK_TICK_OUD,GRAFIEK_TICK_NIEUW);
+html=html.replace(GRAFIEK_GEO_ANCHOR,GRAFIEK_AS_CLEANUP);
 
 html=html.replace("</style>",
   "\n"+CSS_MARK+"\n"+mobileCss+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B CSS ===== */\n"
@@ -113,7 +146,7 @@ for(const vereist of [
   "WeatherNowQ1","q1-dag-mm","weerbriefing.plaatscache.q1","neerslagkans",
   "temperatuurTrend","q1-pop-hidden","Beste modeluren","verbeterNachtzicht",
   "H=M?284:296","pt=M?70:76, ih=M?158:160","tijdLabelVrij=nuX==null",
-  "val+labelHoogte/2+4<=pb"
+  "val+labelHoogte/2+4<=pb","ruimBotsendeAslabelsOp","getBBox()"
 ]){
   if(!html.includes(vereist))throw new Error("Post-build invariant ontbreekt: "+vereist);
 }
