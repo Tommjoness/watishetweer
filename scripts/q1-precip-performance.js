@@ -253,12 +253,41 @@ function renderNeerslagTegel(){
   sub.textContent=beleid&&typeof beleid.komendUurTekst==="function"?beleid.komendUurTekst(a):"";
 }
 
+/* De losse twee-uurssectie is alleen nuttig als daar relevante neerslag in zit.
+   Bij droog/zeer klein blijft de briefing de enige droogboodschap. Bij ontbrekende
+   data blijft de sectie juist zichtbaar zodat onzekerheid niet stil wordt verstopt. */
+function renderNeerslagSectie(){
+  const interpretatie=root.WeatherNowInterpretatie;
+  const a=interpretatie&&typeof interpretatie.analyseerNeerslagData==="function"
+    ?interpretatie.analyseerNeerslagData(S.d,120,weatherNowActueleLokaleTijd()):null;
+  const relevant=!a||!a.genoeg||neerslagTegelRelevant(a);
+  const hint=document.getElementById("nchint"),kop=hint&&hint.previousElementSibling,
+        uitleg=hint&&hint.nextElementSibling,tekst=document.getElementById("nctext"),grafiek=document.getElementById("nc");
+  [kop,hint,uitleg,tekst,grafiek].forEach(el=>{if(el)el.classList.toggle("q1-neerslag-hidden",!relevant);});
+}
+
 /* Dit is de enige Q1-wrapper rond meters(): de oude kwartierkop-wrapper uit de
    screenshot-polish is verwijderd. De canonieke meters() rendert de overige
-   metrieken; Q1 bezit uitsluitend de twee productbeslissingen hierboven. */
+   metrieken; Q1 bezit uitsluitend de productbeslissingen hierboven. */
 if(typeof meters==="function"){
   const basisMeters=meters;
-  meters=function(){basisMeters();renderTemperatuurTrend();renderNeerslagTegel();};
+  meters=function(){basisMeters();renderTemperatuurTrend();renderNeerslagTegel();renderNeerslagSectie();};
+}
+
+/* De bestaande lokale kloktimer loopt al exact op minuutgrenzen. De trend haakt
+   daarop aan zonder extra timer of fetch, zodat het gekozen +3-uursmodelpunt
+   logisch meeschuift wanneer de lokale klok passeert. */
+if(typeof klokBijwerken==="function"){
+  const basisKlokBijwerken=klokBijwerken;
+  klokBijwerken=function(){basisKlokBijwerken();if(S.d)renderTemperatuurTrend();};
+}
+
+/* Na nowcast() wordt de SVG zelf via inline display:block/none gezet. De Q1-klasse
+   wordt daarna nogmaals toegepast zodat een droge sectie niet door die inline
+   stijl terug zichtbaar kan worden; de inhoudslogica van nowcast blijft intact. */
+if(typeof nowcast==="function"){
+  const basisNowcast=nowcast;
+  nowcast=function(){basisNowcast();renderNeerslagSectie();};
 }
 
 /* Weekverwachting: de zichtbare kans en hoeveelheid komen beide uit de officiële
