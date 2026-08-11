@@ -31,3 +31,5 @@ jobs:
         run: node browser-q3-checkpoint.test.js
       - name: Checkpoint 100% in Chromium en WebKit
         run: node browser-q4-checkpoint.test.js
+      - name: Serviceworker upgrade en offline in Chromium
+        run: node browser-serviceworker-upgrade.test.js
