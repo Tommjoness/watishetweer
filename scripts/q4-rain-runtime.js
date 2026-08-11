@@ -17,6 +17,37 @@ chartHint=function(){
   if(el)el.textContent="Selecteer een punt in de grafiek voor details.";
 };
 
+/* Een reeds geopende, door een serviceworker gecontroleerde pagina vervangt zijn
+   bestaande DOM niet vanzelf wanneer een nieuwe worker via skipWaiting/claim de
+   controle overneemt. Dat verklaart hoe een oude tegel of kop nog zichtbaar kan
+   blijven nadat productie al een nieuw artifact serveert. Alleen sessies die bij
+   paginalaad al een controller hebben krijgen daarom één reload bij
+   controllerchange. Een eerste bezoek krijgt geen dubbele laadronde. */
+if("serviceWorker" in navigator&&navigator.serviceWorker.controller){
+  let q4VersieReload=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(q4VersieReload)return;
+    q4VersieReload=true;
+    location.reload();
+  });
+}
+
+/* Bewolkingspercentages komen uit een model en suggereren bij 0–4% meer
+   meetprecisie dan de hoofdtegel nodig heeft. De categorie eronder blijft de
+   betekenis geven; in de grote waarde groeperen we alleen dit vrijwel wolkeloze
+   randgebied tot <5%. Hogere waarden blijven ongewijzigd. */
+function q4BewolkingPresentatie(){
+  const c=S.d&&S.d.current,el=document.getElementById("cloud");
+  if(!c||!el)return;
+  const cc=q4Getal(c.cloud_cover);
+  if(cc!==null&&cc>=0&&cc<5)el.innerHTML="&lt;5<s>%</s>";
+}
+const q4BasisMeters=meters;
+meters=function(){
+  q4BasisMeters();
+  q4BewolkingPresentatie();
+};
+
 function q4SvgLijn(x1,y1,x2,y2,dikte){
   const el=document.createElementNS(Q4_SVG_NS,"line");
   el.setAttribute("x1",String(x1));el.setAttribute("y1",String(y1));
@@ -79,22 +110,17 @@ function q4Regenperioden(g){
 function q4TekenRegenperioden(svg,g,perioden){
   svg.querySelectorAll('g[data-q4-rain-periods]').forEach(el=>el.remove());
 
-  /* De oude hoeveelheidstaven en losse mm-cijfers verdwijnen volledig. */
+  /* De oude hoeveelheidstaven, losse mm-cijfers én losse kanspercentages
+     verdwijnen volledig. Kans blijft beschikbaar in de interactieve tooltip;
+     de statische grafiek toont alleen meetbare neerslagperioden. */
   [...svg.querySelectorAll("rect")].forEach(el=>{
     if(el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".16")el.remove();
   });
   [...svg.querySelectorAll("text")].forEach(el=>{
     if(/ millimeter neerslag$/.test(el.getAttribute("aria-label")||""))el.remove();
   });
-
-  /* De vorige correctheidslaag verplaatste alle teal teksten een halve kolom om
-     de oude intervalstaven te corrigeren. Daardoor schoven ook de procentlabels
-     van hun eigen tijdstip. Alleen die kanslabels worden exact teruggezet. */
   [...svg.querySelectorAll("text")].forEach(el=>{
-    if(el.getAttribute("fill")!==TEAL||!/^\d+%$/.test((el.textContent||"").trim()))return;
-    if(el.dataset.q4ProbabilityCentered==="1")return;
-    const x=q4Getal(el.getAttribute("x"));
-    if(x!==null){el.setAttribute("x",String(x+g.cw/2));el.dataset.q4ProbabilityCentered="1";}
+    if(el.getAttribute("fill")===TEAL&&/^\d+%$/.test((el.textContent||"").trim()))el.remove();
   });
 
   const basisH=q4Getal(g.H)||296;
