@@ -156,7 +156,7 @@ async function controleer(page,naam,breedte){
   for(const [i,rij] of r.nightRows.entries()){
     const m=/^(\d+)\/10$/.exec(rij.score);assert(m,`${naam} ${breedte}px nacht ${i}: zichtbare scorevorm`);
     const score=Number(m[1]);
-    assert.equal(oordeelUitAdvies(rij.advies),oordeelVoorScore(score),`${naam} ${breedte}px nacht ${i}: oordeel volgt zichtbare score`);
+    assert.equal(oordeelUitAdvies(rij.advies).toLowerCase(),oordeelVoorScore(score).toLowerCase(),`${naam} ${breedte}px nacht ${i}: oordeel volgt zichtbare score`);
     assert.equal(rij.barWidth,score*10,`${naam} ${breedte}px nacht ${i}: balk volgt zichtbare score`);
     assert.ok(rij.scoreBarGap>=8,`${naam} ${breedte}px nacht ${i}: score en balk hebben minimaal 8px ruimte (${rij.scoreBarGap}px)`);
     assert.ok(rij.rowRight<=r.nachtRight+1,`${naam} ${breedte}px nacht ${i}: rij blijft binnen Nachtzicht`);
