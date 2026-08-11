@@ -11,12 +11,14 @@ let html=fs.readFileSync(htmlPad,"utf8");
 const MARK="/* ===== PERFORMANCE FINAL 20260811 ===== */";
 if(html.includes(MARK))throw new Error("Performance-final is al toegepast.");
 
-/* De app toont zeven kalenderdagen, maar zonder forecast_hours leverde de
-   forecast-API naast 24 uur historie ruim meer uurlijkse toekomstdata dan de UI
-   gebruikt. Beperk uitsluitend het hourly-deel tot zeven toekomstige etmalen;
-   daily=7 en de 15-minutenreeks blijven ongewijzigd. */
+/* De app toont zeven kalenderdagen en een gekozen daggrafiek gebruikt ook de
+   rechtergrens 00:00 van de volgende dag. 168 waarden kunnen daardoor exact op
+   de laatste grens tekortkomen; een najaars-DST-omslag kan bovendien één extra
+   verstreken uur toevoegen. 170 toekomstige uren houdt beide randgevallen veilig
+   afgedekt, terwijl de vroegere onbegrensde ~384 toekomsturen ruim gehalveerd
+   blijven. Daily=7 en de 15-minutenreeks blijven ongewijzigd. */
 const forecastOud='&forecast_days=7&timezone=auto&wind_speed_unit=kmh";';
-const forecastNieuw='&forecast_days=7&forecast_hours=168&timezone=auto&wind_speed_unit=kmh";';
+const forecastNieuw='&forecast_days=7&forecast_hours=170&timezone=auto&wind_speed_unit=kmh";';
 const forecastAantal=html.split(forecastOud).length-1;
 if(forecastAantal!==1)throw new Error("Forecast-horizonanker ontbreekt of is dubbel: "+forecastAantal);
 html=html.replace(forecastOud,forecastNieuw);
@@ -91,4 +93,4 @@ const scripts=[...html.matchAll(/<script(?![^>]* src=)[^>]*>([^]*?)<\/script>/g)
 if(!scripts.length)throw new Error("Geen inline runtime na performance-final.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:performance-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
-console.log("Performance-final toegepast: 168 forecasturen, formatterhergebruik en begrensde lokale-tijdcache.");
+console.log("Performance-final toegepast: 170 forecasturen, formatterhergebruik en begrensde lokale-tijdcache.");
