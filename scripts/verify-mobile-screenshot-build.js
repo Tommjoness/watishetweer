@@ -59,11 +59,13 @@ if(html.includes('const basisNachten=nachten;\nnachten=function(){\n  basisNacht
   throw new Error("Oude senior Nachtzicht-wrapper staat nog in de definitieve artifact.");
 }
 
-/* De laatste grafiekbotsingslaag moet onderdeel zijn van de renderer zelf, niet
-   van een externe etmaal()-wrapper. Zo blijft er één renderpad en gebruikt de
-   beslissing de werkelijke SVG-fontboxen van de gekozen temperatuurcijfers. */
+/* De laatste grafiekbotsingslaag moet letterlijk BINNEN de bestaande etmaal-
+   renderer staan. Een generieke zoekterm naar `basisEtmaal` is ongeschikt:
+   oudere, legitieme productielagen gebruiken die naam al. Daarom bewaken we de
+   concrete positie tussen function etmaal() en function daglengte(). */
 if((html.split("const ruimBotsendeAslabelsOp=()=>{").length-1)!==1)throw new Error("Grafiek moet exact één fontbox-botsingslaag hebben.");
-if(html.includes("basisEtmaal=etmaal"))throw new Error("Checkpoint 50 mag geen extra etmaal-wrapper introduceren.");
+const etmaalStart=html.indexOf("function etmaal("),botsingsLaag=html.indexOf("const ruimBotsendeAslabelsOp=()=>{"),etmaalEind=html.indexOf("function daglengte(",etmaalStart);
+if(etmaalStart<0||botsingsLaag<=etmaalStart||etmaalEind<=botsingsLaag)throw new Error("Fontbox-botsingslaag staat niet aantoonbaar binnen de bestaande etmaal-renderer.");
 
 const CACHE_BRONNEN=[
   "index.html","manifest.json","icon-192.png","icon-512.png","icon-maskable-512.png",
