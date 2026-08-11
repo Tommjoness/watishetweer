@@ -37,8 +37,15 @@ for(const vereist of [
   if(!html.includes(vereist))throw new Error("Checkpoint-75 artifact mist invariant: "+vereist);
 }
 
-if((html.split('const basisMeters=meters;').length-1)!==2){
-  throw new Error("Checkpoint 75 mag geen extra meters-wrapper introduceren; verwacht exact de bestaande senior- en Q1-owner.");
+/* Niet gokken hoeveel andere historische wrappers bestaan. Bewijs het relevante
+   architectuurfeit: de Q3-UV-code staat binnen de al bestaande senior meters()-
+   owner, vóór diens volgende briefing-wrapper. apply-q3 bewaakt daarnaast dat
+   het totale aantal bestaande meters-owner-signatures vóór/na Q3 gelijk blijft. */
+const uvPos=html.indexOf('const pUv=typeof plaatsTijdDelen');
+const meterPos=html.lastIndexOf('const basisMeters=meters;',uvPos);
+const briefingPos=html.indexOf('const basisBriefing=briefing;',uvPos);
+if(uvPos<0||meterPos<0||briefingPos<0||!(meterPos<uvPos&&uvPos<briefingPos)){
+  throw new Error("Checkpoint-75 UV-correctie staat niet aantoonbaar in de bestaande senior meters-owner.");
 }
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
@@ -59,4 +66,4 @@ for(const naam of CACHE_BRONNEN){
 const verwacht="watishetweer-"+hash.digest("hex").slice(0,12);
 if(!sw.includes(verwacht))throw new Error("Serviceworker-cachehash volgt checkpoint-75 artifact niet: verwacht "+verwacht+".");
 
-console.log("Checkpoint-75 artifact geverifieerd: geen nieuwe runtime-owner, live lokale tijdankers, zon/pollen, slashed zero, cloud 100% en UV-tijdsemantiek; cache "+verwacht+".");
+console.log("Checkpoint-75 artifact geverifieerd: Q3 blijft in bestaande runtime-owner, live lokale tijdankers, zon/pollen, slashed zero, cloud 100% en UV-tijdsemantiek; cache "+verwacht+".");
