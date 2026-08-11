@@ -19,11 +19,24 @@ function vervangExact(van,naar,label){
   if(n!==1)throw new Error(label+" ontbreekt of is dubbel: "+n);
   html=html.replace(van,naar);
 }
+function vervangBinnen(beginMark,eindMark,van,naar,label){
+  const begin=html.indexOf(beginMark),eind=html.indexOf(eindMark,begin+beginMark.length);
+  if(begin<0||eind<=begin)throw new Error(label+": afgebakende laag ontbreekt of is ongeldig.");
+  const tweedeBegin=html.indexOf(beginMark,begin+beginMark.length);
+  if(tweedeBegin>=0)throw new Error(label+": afgebakende laag komt dubbel voor.");
+  const segment=html.slice(begin,eind);
+  const n=segment.split(van).length-1;
+  if(n!==1)throw new Error(label+" ontbreekt of is dubbel binnen eigenaarlaag: "+n);
+  html=html.slice(0,begin)+segment.replace(van,naar)+html.slice(eind);
+}
 
-/* Dagverwachtingen zijn samenvattingen, geen metingen op de minuut. Alleen de
-   presentatie van het tijdstip wordt grover; kans, hoeveelheid en weertype
-   blijven uit de bestaande centrale analyse komen. */
-vervangExact(
+/* Dagverwachtingen zijn samenvattingen, geen metingen op de minuut. Dezelfde
+   brontekst staat door de bestaande buildlagen meer dan één keer in de totale
+   artifact, maar alleen SENIOR CORRECTHEIDSLAAG is eigenaar van de uiteindelijke
+   dagformulering. Daarom wijzigen we bewust uitsluitend die afgebakende laag. */
+vervangBinnen(
+  "/* ===== SENIOR CORRECTHEIDSLAAG ===== */",
+  "/* ===== EINDE SENIOR CORRECTHEIDSLAAG ===== */",
   '  const tijd=a.eersteTijd?" rond "+a.eersteTijd:"";',
   '  const tijd=a.eersteTijd?(()=>{const uur=Number(String(a.eersteTijd).slice(0,2));return Number.isFinite(uur)?(uur<6?" in de nacht":uur<12?" in de ochtend":uur<18?" in de middag":" in de avond"):"";})():"";',
   "dagverwachting zonder schijnprecisie"
