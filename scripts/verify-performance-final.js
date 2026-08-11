@@ -10,8 +10,9 @@ function exact(tekst,naam){
   if(n!==1)throw new Error(naam+" moet exact één keer voorkomen; gevonden "+n);
 }
 exact("/* ===== PERFORMANCE FINAL 20260811 ===== */","performance-marker");
-exact("&forecast_days=7&forecast_hours=168&timezone=auto&wind_speed_unit=kmh","begrensde forecast-horizon");
+exact("&forecast_days=7&forecast_hours=170&timezone=auto&wind_speed_unit=kmh","begrensde forecast-horizon");
 if(html.includes("&forecast_days=7&timezone=auto&wind_speed_unit=kmh"))throw new Error("Onbegrensde forecast-horizon staat nog in de finale artifact.");
+if(html.includes("forecast_hours=168"))throw new Error("Te krappe 168-uurs horizon staat nog in de finale artifact.");
 for(const tekst of [
   "const zoneFormatterCache=new Map();",
   "zoneFormatterCache.size>24",
@@ -30,4 +31,4 @@ if(/new Intl\.DateTimeFormat/.test(engine.slice(zoneStart,zoneEind)))throw new E
 const scripts=[...html.matchAll(/<script(?![^>]* src=)[^>]*>([^]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:performance-verify-"+(i+1)}));
-console.log("Performance-final geverifieerd: forecast begrensd en centrale tijdconversie hergebruikt formatter/cache.");
+console.log("Performance-final geverifieerd: veilige 170-uurs horizon en centrale tijdconversie met formatter/cache.");
