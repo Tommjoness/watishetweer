@@ -67,7 +67,7 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
 
   const reporter=`<script>
 (function(){
-  const zet=(k,v)=>document.body.dataset[k]=String(v);
+  const zet=(k,v)=>document.body.setAttribute('data-'+k,String(v));
   if(window.__progressiveMode==='slow'){
     setTimeout(()=>{
       try{
