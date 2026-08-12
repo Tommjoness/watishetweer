@@ -1,0 +1,25 @@
+/* Wereldwijde UI-hardening voor plaatsnamen en het actuele weerblok.
+   De desktophero mag niet van compositie wisselen doordat een omschrijving kort
+   genoeg is om toevallig naast de temperatuur te passen. Temperatuur + icoon
+   vormen altijd de eerste rij; toestand + gevoelstemperatuur altijd de tweede. */
+@media(min-width:1100px){
+  .dashrow-hero > .hero{
+    display:grid;
+    grid-template-columns:max-content max-content;
+    grid-template-areas:
+      "temperatuur icoon"
+      "informatie informatie";
+    justify-content:start;
+    align-items:end;
+    column-gap:24px;
+    row-gap:12px;
+  }
+  .dashrow-hero > .hero .tempblok{grid-area:temperatuur}
+  .dashrow-hero > .hero #nowicon{grid-area:icoon;padding-bottom:7px}
+  .dashrow-hero > .hero .heroinfo{grid-area:informatie;padding-bottom:0;min-width:0}
+}
+
+/* Plaatsnamen komen uit wereldwijde geocoding en kunnen veel langer zijn dan
+   Nederlandse stadsnamen of geen bruikbare afbreekspatie bevatten. Ze mogen de
+   masthead nooit buiten het vel duwen. Normale namen blijven onaangeraakt. */
+#place,#miniplaats{max-width:100%;overflow-wrap:anywhere}

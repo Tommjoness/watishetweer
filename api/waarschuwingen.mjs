@@ -1,4 +1,7 @@
 import legacyHandler from "../lib/waarschuwingen.cjs";
+import scopeModule from "../lib/waarschuwing-scope.cjs";
+
+const { alleenPlaatsgebonden } = scopeModule;
 
 export default {
   async fetch(request) {
@@ -14,6 +17,7 @@ export default {
     };
 
     await legacyHandler({ query }, response);
+    body = alleenPlaatsgebonden(body);
     const internCache=headers.get("Cache-Control");
     if(internCache){
       headers.set("Vercel-CDN-Cache-Control",internCache);
