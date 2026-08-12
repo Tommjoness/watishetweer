@@ -142,10 +142,11 @@ async function controleer(type,naam,breedte){
 
     const leesScrub=()=>page.evaluate(()=>{
       const scrub=document.getElementById("scrub");
+      const teksten=[...scrub.querySelectorAll("text")].map(el=>(el.textContent||"").trim()).filter(Boolean);
       return {
         display:scrub.style.display,
-        groepTekst:(scrub.textContent||"").replace(/\s+/g," ").trim(),
-        teksten:[...scrub.querySelectorAll("text")].map(el=>(el.textContent||"").trim()).filter(Boolean),
+        groepTekst:teksten.join(" "),
+        teksten,
         aria:scrub.getAttribute("aria-label")||""
       };
     });
