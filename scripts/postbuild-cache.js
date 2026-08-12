@@ -4,10 +4,10 @@ const fs=require("fs");
 const path=require("path");
 const crypto=require("crypto");
 
-/* Eén eigenaar voor de app-shellhash die na iedere postbuild-mutatie opnieuw
-   nodig is. De lijst en hashvolgorde zijn bewust identiek aan build-weather.js:
-   bestandsnaam, NUL, bytes, NUL. Zo kan een presentatielaag de cacheversie niet
-   per ongeluk volgens een afwijkend recept berekenen. */
+/* Eén eigenaar voor de app-shellhash van zowel de eerste build als iedere
+   postbuild-mutatie. Bestandslijst en hashvolgorde staan uitsluitend hier:
+   bestandsnaam, NUL, bytes, NUL. Daardoor kunnen build- en presentatielagen
+   niet ongemerkt verschillende cacheversies voor dezelfde artifact berekenen. */
 const CACHE_BRONNEN=Object.freeze([
   "index.html","manifest.json","icon-192.png","icon-512.png","icon-maskable-512.png",
   "bodoni-moda-latin-400-normal.woff2","bodoni-moda-latin-500-normal.woff2",
