@@ -215,19 +215,32 @@ async function controleer(type,naam,breedte){
       const m=S.d.minutely_15,api=globalThis.WeatherNowInterpretatie;
       if(!m||!api||typeof api.analyseerNeerslagData!=="function")return {fout:"GEEN_KWARTIERDATA"};
       const origineel={
+        time:Array.isArray(m.time)?m.time.slice():null,
         precipitation:m.precipitation.slice(),
         rain:Array.isArray(m.rain)?m.rain.slice():null,
         showers:Array.isArray(m.showers)?m.showers.slice():null,
         snowfall:Array.isArray(m.snowfall)?m.snowfall.slice():null
       };
+      /* De algemene testfixture eindigt om 14:15, terwijl deze testklok 14:30
+         lokale tijd is. Maak uitsluitend voor deze browserproef twee volledige
+         toekomstige kwartieren zodat de analyse niet terecht alles als verleden
+         wegfiltert. */
+      m.time=["2026-07-22T14:45","2026-07-22T15:00"];
+      m.precipitation=[0,0];
+      if(Array.isArray(m.rain))m.rain=[0,0];
+      if(Array.isArray(m.showers))m.showers=[0,0];
+      if(Array.isArray(m.snowfall))m.snowfall=[0,0];
       const basis=api.analyseerNeerslagData(S.d,120,weatherNowActueleLokaleTijd());
       const items=basis&&Array.isArray(basis.minutelyItems)?basis.minutelyItems:[];
       const a=items.find(x=>Number(x.fractie)>0),b=items.find(x=>Number(x.fractie)>=0.999&&x!==a)||items[1];
-      if(!a||!b)return {fout:"TE_WEINIG_ITEMS",items:items.length};
-      m.precipitation=m.precipitation.map(()=>0);
-      if(Array.isArray(m.rain))m.rain=m.rain.map(()=>0);
-      if(Array.isArray(m.showers))m.showers=m.showers.map(()=>0);
-      if(Array.isArray(m.snowfall))m.snowfall=m.snowfall.map(()=>0);
+      if(!a||!b){
+        m.time=origineel.time;
+        m.precipitation=origineel.precipitation;
+        if(origineel.rain)m.rain=origineel.rain;
+        if(origineel.showers)m.showers=origineel.showers;
+        if(origineel.snowfall)m.snowfall=origineel.snowfall;
+        return {fout:"TE_WEINIG_ITEMS",items:items.length};
+      }
       const fa=Number(a.fractie)||1,fb=Number(b.fractie)||1;
       m.precipitation[a.i]=0.04/fa;
       m.precipitation[b.i]=0.1/fb;
@@ -238,6 +251,7 @@ async function controleer(type,naam,breedte){
         .filter(el=>el.getAttribute("fill")===TEAL&&/^\d+(?:[.,]\d+)?$/.test((el.textContent||"").trim()))
         .map(el=>(el.textContent||"").trim());
       const staven=[...svg.querySelectorAll("rect")].filter(el=>el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".2").length;
+      m.time=origineel.time;
       m.precipitation=origineel.precipitation;
       if(origineel.rain)m.rain=origineel.rain;
       if(origineel.showers)m.showers=origineel.showers;
