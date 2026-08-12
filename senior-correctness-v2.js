@@ -201,7 +201,6 @@ if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowCorrectnessV2=api;
 
 if(typeof document!=="undefined"&&typeof S!=="undefined"){
-  let laatsteZonInfo=null;
   function volledigeIsDagReeks(i){
     const day=S.d&&S.d.daily||{},h=S.d&&S.d.hourly||{},datum=day.time&&day.time[i];
     if(!datum||!Array.isArray(h.time)||!Array.isArray(h.is_day)) return null;
@@ -217,23 +216,8 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
   if(typeof daglengte==="function"){
     daglengte=function(i){
       const day=S.d&&S.d.daily||{};
-      const info=zonDaglichtInfo(day.sunrise&&day.sunrise[i],day.sunset&&day.sunset[i],volledigeIsDagReeks(i));
-      laatsteZonInfo={index:i,info};
-      return info.tekst;
+      return zonDaglichtInfo(day.sunrise&&day.sunrise[i],day.sunset&&day.sunset[i],volledigeIsDagReeks(i)).tekst;
     };
-  }
-  function actualiseerZonKop(){
-    const vast=laatsteZonInfo&&laatsteZonInfo.info;
-    if(!vast||vast.status==="normaal") return;
-    const box=document.getElementById("suntimes");
-    if(!box) return;
-    const dag=box.querySelector(".zondag");
-    box.textContent="";
-    if(dag) box.appendChild(dag);
-    const voeg=tekst=>{const span=document.createElement("span");span.textContent=tekst;box.appendChild(span);};
-    if(vast.status==="pooldag"){voeg(vast.zontekst);voeg(vast.daglichtTekst);return;}
-    if(vast.status==="poolnacht"){voeg(vast.zontekst);voeg(vast.daglichtTekst);return;}
-    voeg("Zoninformatie niet beschikbaar");
   }
   function maanFactor(tijd){
     try{
@@ -416,7 +400,6 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
        laatste uur 23:00–00:00 van de gekozen dag. */
     const gekozenDag=S.dag!=null&&n===24,h=S.d&&S.d.hourly||{};
     let oudeKans,oudeMm,hadKans=false,hadMm=false;
-    laatsteZonInfo=null;
     if(gekozenDag&&Number.isInteger(start)&&start>=0){
       if(Array.isArray(h.precipitation_probability)&&start<h.precipitation_probability.length){hadKans=true;oudeKans=h.precipitation_probability[start];h.precipitation_probability[start]=null;}
       if(Array.isArray(h.precipitation)&&start<h.precipitation.length){hadMm=true;oudeMm=h.precipitation[start];h.precipitation[start]=null;}
@@ -425,7 +408,6 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
       if(hadKans)h.precipitation_probability[start]=oudeKans;
       if(hadMm)h.precipitation[start]=oudeMm;
     }
-    actualiseerZonKop();
     const svg=document.getElementById("chart"),g=S.geo;
     if(!svg||!g||!Number.isFinite(g.cw)) return;
     const dx=grafiekNeerslagVerschuiving(g.cw);
