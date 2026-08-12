@@ -88,9 +88,41 @@ function lokaalNaarMinuten(tijd,tijdzone,utcOffsetSeconden){
 }`;
 html=html.slice(0,lokaalStart)+lokaalNieuw+html.slice(lokaalEind);
 
+/* De UI-runtime heeft daarnaast eigen helpers voor lokale klokteksten. Bij een
+   geldige IANA-zone blijft die zone leidend. Als een provider ooit een onbekende
+   of malforme zone-id levert, geeft weatherNowZoneOffset null terug. Voorheen
+   werd de lokale klok dan stil als UTC behandeld. Dat wijkt ook af van
+   naarLokaal(), dat in hetzelfde geval al naar utc_offset_seconds terugvalt.
+   Maak beide richtingen daarom fail-safe en symmetrisch: alleen een volledig
+   geldige zoneconversie mag de IANA-uitkomst retourneren; anders gebruiken we
+   de numerieke provider-offset. */
+const naarUtcStart=html.indexOf("function naarUTC(lokaal){");
+const naarUtcEind=html.indexOf("\nfunction naarLokaal(msUTC){",naarUtcStart);
+if(naarUtcStart<0||naarUtcEind<=naarUtcStart)throw new Error("naarUTC kon niet veilig worden afgebakend.");
+const naarUtcNieuw=`function naarUTC(lokaal){
+  const m=/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})/.exec(String(lokaal||""));
+  if(!m)return NaN;
+  const doel=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]);
+  const tz=S.d&&S.d.timezone;
+  if(tz&&typeof Intl!=="undefined"&&Intl.DateTimeFormat){
+    let gok=doel,zoneGeldig=true;
+    for(let i=0;i<4;i++){
+      const off=weatherNowZoneOffset(gok,tz);
+      if(off===null){zoneGeldig=false;break;}
+      const nieuw=doel-off;
+      if(Math.abs(nieuw-gok)<1000){gok=nieuw;break;}
+      gok=nieuw;
+    }
+    if(zoneGeldig)return gok;
+  }
+  const off=(S.d&&S.d.utc_offset_seconds!=null?S.d.utc_offset_seconds:0)*1000;
+  return doel-off;
+}`;
+html=html.slice(0,naarUtcStart)+naarUtcNieuw+html.slice(naarUtcEind);
+
 html=html.replace("</style>","\n"+MARK+"\n</style>");
 const scripts=[...html.matchAll(/<script(?![^>]* src=)[^>]*>([^]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime na performance-final.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:performance-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
-console.log("Performance-final toegepast: 170 forecasturen, formatterhergebruik en begrensde lokale-tijdcache.");
+console.log("Performance-final toegepast: 170 forecasturen, formatterhergebruik, lokale-tijdcache en veilige tijdzonefallback.");
