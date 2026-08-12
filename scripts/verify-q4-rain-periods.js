@@ -35,6 +35,8 @@ ok(html.includes("while((rijen[rij]||[]).some"),"periodehoeveelheden kunnen op s
 ok(html.includes('cc!==null&&cc>=0&&cc<5')&&html.includes('&lt;5<s>%</s>'),"vrijwel wolkeloze modelwaarden worden zonder 0/1%-schijnprecisie gepresenteerd");
 ok(html.includes('function q4NachtzichtPresentatie()')&&html.includes('el.textContent="<5%"')&&html.includes('const q4BasisNachten=nachten;'),"Nachtzicht gebruikt dezelfde <5%-presentatieregel zonder de scoreberekening te wijzigen");
 ok(html.includes('function q4LuchtkwaliteitPresentatie()')&&html.includes('(Europese|Amerikaanse) AQI')&&html.includes('const q4BasisLucht=lucht;'),"AQI-presentatie verwijdert de redundante schaalnaam uit de subregel");
+ok(html.includes('function q4NeerslagTegelPresentatie()')&&html.includes('kop.textContent="Neerslag komend uur"'),"neerslagtegel benoemt het 60-minutentijdvak van kans en hoeveelheid eerlijk");
+ok(html.includes('function q4KwartierMeetbaarPresentatie()')&&html.includes('api.INTERPRETATIE_CONFIG&&api.INTERPRETATIE_CONFIG.meetbaarMm')&&html.includes('waarde>=meetbaar'),"kwartiergrafiek gebruikt dezelfde centrale meetbaarheidsgrens als de interpretatie");
 
 /* De geassembleerde artifact kan historische chartHint-assignments bevatten.
    Daarom zoeken we niet globaal naar de eerste/laatste match. De runtime-marker
