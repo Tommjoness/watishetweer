@@ -23,6 +23,8 @@ jobs:
         run: npm run build
       - name: Finale 27-punten artifactcontrole
         run: node scripts/verify-final-27.js
+      - name: Weergave en favicon in Chromium en WebKit
+        run: node browser-ui-shell-playwright.test.js
       - name: Cold-load browser-performancebudget
         run: node browser-performance-budget.test.js
       - name: Checkpoint 25% in Chromium en WebKit
