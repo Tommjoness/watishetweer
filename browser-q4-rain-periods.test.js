@@ -158,7 +158,7 @@ async function controleer(type,naam,breedte){
       },coords);
       interactie=await leesScrub();
       assert(interactie.teksten.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": touch op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify({coords,interactie})+"; pageerrors="+JSON.stringify(fouten));
-      assert(/Neerslagkans\s+86%/.test(interactie.groepTekst),naam+" "+breedte+": volledige kansinformatie blijft via touch beschikbaar");
+      assert(/neerslagkans\s+86%/i.test(interactie.groepTekst),naam+" "+breedte+": volledige kansinformatie blijft via touch beschikbaar");
       assert.equal(interactie.display,"block",naam+" "+breedte+": touch maakt tooltip zichtbaar");
     }else{
       /* Gebruik hier de echte Playwright-muisroute. Een handmatig geconstrueerde
@@ -169,7 +169,7 @@ async function controleer(type,naam,breedte){
       await page.waitForTimeout(30);
       interactie=await leesScrub();
       assert(interactie.teksten.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": echte muishover op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify({coords,interactie})+"; pageerrors="+JSON.stringify(fouten));
-      assert(/Neerslagkans\s+86%/.test(interactie.groepTekst),naam+" "+breedte+": volledige kansinformatie blijft via echte muishover beschikbaar");
+      assert(/neerslagkans\s+86%/i.test(interactie.groepTekst),naam+" "+breedte+": volledige kansinformatie blijft via echte muishover beschikbaar");
       assert.equal(interactie.display,"block",naam+" "+breedte+": echte muishover maakt tooltip zichtbaar");
     }
     assert.equal(coords.zelfdeArray,true,naam+" "+breedte+": interactie leest dezelfde mm-array als regenstrip");
