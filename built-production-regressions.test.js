@@ -112,7 +112,7 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  const i=zetBasis(api,d);api.S.i0=i;api.S.klokOverride=null;api.S.klokInstantOverride=new Date("2026-07-22T22:30:00Z");api.nachten();const t=tekst(bak.nights);
  ok(/vannacht/i.test(t),"na middernacht blijft de lopende nacht de eerste Nachtzicht-rij",t.slice(0,400));
  ok(/Ongunstig/.test(t)&&!/Goed ·/.test(t),"100 meter zicht kan in productie niet als Goed worden beoordeeld",t.slice(0,400));
- ok(/Zicht 0,1 km/.test(t),"Nachtzicht laat slecht zicht expliciet in de beoordeling terugkomen",t.slice(0,400));
+ ok(/Gem\. zicht 0,1 km/.test(t),"Nachtzicht laat slecht gemiddeld zicht expliciet in de beoordeling terugkomen",t.slice(0,400));
 }
 {
  const {api,bak}=laadKern(390),d=bouw({temp:(u,dag)=>10+u/10}),i=zetBasis(api,d);d.hourly.temperature_2m[i+5]=null;api.etmaal(i,24);ok(!/>0°<\/text>/.test(bak.chart.innerHTML),"null wordt niet als kunstmatig 0°C-extreem gelabeld",bak.chart.innerHTML.slice(0,200));
