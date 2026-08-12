@@ -27,10 +27,20 @@ function q4BewolkingPresentatie(){
   const cc=q4Getal(c.cloud_cover);
   if(cc!==null&&cc>=0&&cc<5)el.innerHTML="&lt;5<s>%</s>";
 }
+/* De grote kans/hoeveelheidswaarde in #pop wordt door Q1 uit een 60-minutenanalyse
+   opgebouwd. Als het op dit moment regent veranderde Q1 alleen de kop naar
+   "Neerslag nu", waardoor een uurkans en uurhoeveelheid als momentopname konden
+   worden gelezen. De subtekst mag de actuele toestand blijven noemen; de kop
+   benoemt voortaan altijd eerlijk het tijdvak van de cijfers. */
+function q4NeerslagTegelPresentatie(){
+  const waarde=document.getElementById("pop"),stat=waarde&&waarde.parentElement,kop=stat&&stat.querySelector(".eyebrow");
+  if(kop&&/^Neerslag (?:nu|komend uur)$/i.test((kop.textContent||"").trim()))kop.textContent="Neerslag komend uur";
+}
 const q4BasisMeters=meters;
 meters=function(){
   q4BasisMeters();
   q4BewolkingPresentatie();
+  q4NeerslagTegelPresentatie();
 };
 
 /* Nachtzicht toont het gemiddelde van een hele nacht. Ook daar is 0–4% een
@@ -233,6 +243,51 @@ function q4TekenRegenperioden(svg,g,perioden){
   const scrub=svg.querySelector("#scrub");svg.insertBefore(groep,scrub||null);
   svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve. Onder iedere periode staat de verwachte hoeveelheid; kanswaarden zonder meetbare hoeveelheid blijven via de details beschikbaar.").trim());
 }
+
+/* De kwartiergrafiek tekent in de historische owner ieder positief getal. Een
+   interpolatie van bijvoorbeeld 0,04 mm krijgt daardoor een echte staaf, waarna
+   de formattering op één decimaal er zichtbaar "0,0" van maakt. Dat is precies
+   strijdig met de centrale interpretatiedrempel: WeatherNow noemt pas 0,1 mm
+   meetbaar. We veranderen de brondata niet. Na de gewone render verwijderen we
+   uitsluitend de statische staaf, toplijn en hoeveelheidtekst van intervallen
+   die volgens DEZELFDE centrale drempel nog een spoorhoeveelheid zijn. De analyse
+   en eventuele consumententekst houden de onbewerkte waarden beschikbaar. */
+function q4KwartierMeetbaarPresentatie(){
+  const svg=document.getElementById("nc"),api=globalThis.WeatherNowInterpretatie;
+  if(!svg||!api||typeof api.analyseerNeerslagData!=="function")return;
+  const analyse=api.analyseerNeerslagData(S.d,120,weatherNowActueleLokaleTijd());
+  const grens=q4Getal(api.INTERPRETATIE_CONFIG&&api.INTERPRETATIE_CONFIG.meetbaarMm);
+  if(!analyse||analyse.bronHoeveelheid!=="kwartierdata"||!Array.isArray(analyse.minutelyItems)||!analyse.minutelyItems.length)return;
+  const meetbaar=grens===null?0.1:grens,items=analyse.minutelyItems;
+  const M=typeof window!=="undefined"&&window.innerWidth<760,W=M?380:900,pl=M?26:44,pr=M?8:20,iw=W-pl-pr,cw=iw/items.length;
+  const tolerantie=Math.max(0.6,cw*.03);
+  items.forEach((item,k)=>{
+    const p=q4Getal(item&&item.precipitation),fractie=q4Getal(item&&item.fractie);
+    const waarde=p===null||fractie===null?null:p*fractie;
+    if(waarde===null||waarde<=0||waarde>=meetbaar)return;
+    const midden=pl+k*cw+cw/2;
+    [...svg.querySelectorAll("rect")].forEach(el=>{
+      if(el.getAttribute("fill")!==TEAL||el.getAttribute("fill-opacity")!==".2")return;
+      const x=q4Getal(el.getAttribute("x")),breedte=q4Getal(el.getAttribute("width"));
+      if(x!==null&&breedte!==null&&Math.abs(x+breedte/2-midden)<=tolerantie)el.remove();
+    });
+    [...svg.querySelectorAll("line")].forEach(el=>{
+      if(el.getAttribute("stroke")!==TEAL||el.getAttribute("stroke-width")!=="1.2")return;
+      const x1=q4Getal(el.getAttribute("x1")),x2=q4Getal(el.getAttribute("x2"));
+      if(x1!==null&&x2!==null&&Math.abs((x1+x2)/2-midden)<=tolerantie)el.remove();
+    });
+    [...svg.querySelectorAll("text")].forEach(el=>{
+      if(el.getAttribute("fill")!==TEAL||!/^-?\d+(?:[.,]\d+)?$/.test((el.textContent||"").trim()))return;
+      const x=q4Getal(el.getAttribute("x"));
+      if(x!==null&&Math.abs(x-midden)<=tolerantie)el.remove();
+    });
+  });
+}
+const q4BasisNowcast=nowcast;
+nowcast=function(){
+  q4BasisNowcast();
+  q4KwartierMeetbaarPresentatie();
+};
 
 const q4BasisEtmaal=etmaal;
 etmaal=function(start,n){
