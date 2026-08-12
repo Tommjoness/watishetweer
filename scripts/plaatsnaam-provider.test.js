@@ -1,11 +1,16 @@
 "use strict";
 
 const assert=require("assert");
-const pad=require.resolve("../lib/plaatsnaam.cjs");
+const plaatsPad=require.resolve("../lib/plaatsnaam.cjs");
+const waarschuwingPad=require.resolve("../lib/waarschuwingen.cjs");
 
-function laad(){
-  delete require.cache[pad];
-  return require(pad);
+function laadPlaats(){
+  delete require.cache[plaatsPad];
+  return require(plaatsPad);
+}
+function laadWaarschuwingen(){
+  delete require.cache[waarschuwingPad];
+  return require(waarschuwingPad);
 }
 
 async function metEnv(waarde,fn){
@@ -28,7 +33,7 @@ function nepResponse(){
 
 (async()=>{
   await metEnv(null,async()=>{
-    const {_intern}=laad();
+    const {_intern}=laadPlaats();
     assert.equal(_intern.nominatimBasisUrl(),"https://nominatim.openstreetmap.org");
     const u=new URL(_intern.reverseUrl("52.3676","4.9041"));
     assert.equal(u.origin,"https://nominatim.openstreetmap.org");
@@ -41,7 +46,7 @@ function nepResponse(){
   });
 
   await metEnv("https://geo.example.test/nominatim/",async()=>{
-    const handler=laad(),{_intern}=handler;
+    const handler=laadPlaats(),{_intern}=handler;
     assert.equal(_intern.nominatimBasisUrl(),"https://geo.example.test/nominatim");
     const u=new URL(_intern.reverseUrl("-33.8688","151.2093"));
     assert.equal(u.origin,"https://geo.example.test");
@@ -67,6 +72,36 @@ function nepResponse(){
     }finally{global.fetch=vorigeFetch;}
   });
 
+  /* De waarschuwingroute heeft dezelfde providerconfig nodig wanneer de browser
+     geen landcode meegeeft. Zo kan één toekomstige providerwissel niet alleen
+     plaatsnamen maar ook de server-side landbepaling half omzetten. */
+  await metEnv("https://geo.example.test/nominatim/",async()=>{
+    const handler=laadWaarschuwingen();
+    const vorigeFetch=global.fetch;
+    const aanvragen=[];
+    try{
+      global.fetch=async(url,opt)=>{
+        const s=String(url);aanvragen.push({url:s,opt});
+        if(s.startsWith("https://geo.example.test/nominatim/reverse?")){
+          return {ok:true,status:200,json:async()=>({address:{country_code:"fr"}})};
+        }
+        return {ok:false,status:503,json:async()=>({}),text:async()=>""};
+      };
+      const res=nepResponse();
+      await handler({query:{lat:"48.8566",lon:"2.3522"}},res);
+      const reverse=new URL(aanvragen[0].url);
+      assert.equal(reverse.origin,"https://geo.example.test");
+      assert.equal(reverse.pathname,"/nominatim/reverse");
+      assert.equal(reverse.searchParams.get("zoom"),"3");
+      assert.equal(reverse.searchParams.get("accept-language"),"en");
+      assert.match(aanvragen[0].opt.headers["User-Agent"],/WatIsHetWeer\/1\.0/);
+      assert.equal(res.statusCode,200);
+      assert.equal(res.body.land,"FR");
+      assert.equal(res.body.bron,"MeteoAlarm france");
+      assert.equal(res.body.dekking,false);
+    }finally{global.fetch=vorigeFetch;}
+  });
+
   for(const fout of [
     "http://geo.example.test",
     "not a url",
@@ -75,18 +110,18 @@ function nepResponse(){
     "https://geo.example.test#x"
   ]){
     await metEnv(fout,async()=>{
-      const {_intern}=laad();
+      const {_intern}=laadPlaats();
       assert.throws(()=>_intern.nominatimBasisUrl(),/NOMINATIM_BASE_URL/);
     });
   }
 
   await metEnv("http://localhost:8080/nominatim",async()=>{
-    const {_intern}=laad();
+    const {_intern}=laadPlaats();
     assert.equal(_intern.nominatimBasisUrl(),"http://localhost:8080/nominatim");
   });
 
   await metEnv("not a url",async()=>{
-    const handler=laad();
+    const handler=laadPlaats();
     const vorigeFetch=global.fetch;
     let fetchAangeroepen=false;
     try{
@@ -101,5 +136,5 @@ function nepResponse(){
     }finally{global.fetch=vorigeFetch;}
   });
 
-  console.log("Plaatsnaamprovider: standaardprovider, configureerbare fallback, runtimepad en fail-closed validatie geslaagd.");
+  console.log("Nominatim-provider: gedeelde standaard/custom provider, plaatsnaam- en waarschuwingsruntime en fail-closed validatie geslaagd.");
 })().catch(e=>{console.error(e);process.exit(1);});
