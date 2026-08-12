@@ -59,10 +59,20 @@ const luchtStart=html.indexOf("const luchtBelofte=j(a"),weerStart=html.indexOf("
 if(luchtStart<0||weerStart<0||luchtStart>weerStart)throw new Error("Luchtkwaliteit start niet aantoonbaar parallel vóór het wachten op de hoofdforecast.");
 if(waarschuwingStart<0)throw new Error("Waarschuwingen worden niet vanuit de renderketen gestart.");
 
-/* Externe request-eigenaars moeten uniek blijven. Een normale load hoort één
-   forecast-, één lucht- en één waarschuwingroute te bezitten; fmin is uitsluitend
-   de expliciete forecastfallback. */
-exactEen("https://api.open-meteo.com/v1/forecast?latitude=","hoofdforecast-URL-eigenaar");
+/* Externe request-eigenaars moeten expliciet blijven. De volledige forecast is
+   nog steeds exact één canonieke route. Daarnaast mag er exact één afzonderlijke
+   current-only previewroute bestaan; die route mag geen hourly/daily/minutely
+   data bezitten en vervangt de hoofdforecast nooit. */
+exactEen('const basis="https://api.open-meteo.com/v1/forecast?latitude="','hoofdforecast-URL-eigenaar');
+exactEen('return "https://api.open-meteo.com/v1/forecast?latitude="+encodeURIComponent(a)','current-only previewforecast-eigenaar');
+for(const tekst of [
+  "WeatherNowProgressiveLocation",
+  "const SNEL_START_VERTRAGING_MS=120",
+  "const SNEL_TIMEOUT_MS=3000",
+  'current=temperature_2m,apparent_temperature,is_day,weather_code',
+  "const volledigeBelofte=basisLoad(lat,lon,label,stil,opslaan,land)",
+  "Verwachting wordt aangevuld."
+])vereist(tekst,"progressieve locatielading "+tekst);
 exactEen("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=","luchtkwaliteit-URL-eigenaar");
 exactEen('"/api/waarschuwingen?lat="',"waarschuwingen-URL-eigenaar");
 exactEen("https://geocoding-api.open-meteo.com/v1/search?name=","zoek-geocoding-URL-eigenaar");
@@ -81,4 +91,4 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:final-
 
 /* Serviceworker moet exact bij deze app-shell horen. */
 const verwacht=verifieerServiceworkerCache(OUT,"finale");
-console.log("Finale 27-punten artifactguard geslaagd: 25/50/75-invariants, unieke requesteigenaars, race/fallback-ankers, syntactische runtime en serviceworker "+verwacht+".");
+console.log("Finale 27-punten artifactguard geslaagd: 25/50/75-invariants, expliciete hoofd- en previewrequesteigenaars, race/fallback-ankers, syntactische runtime en serviceworker "+verwacht+".");
