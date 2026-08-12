@@ -3,7 +3,8 @@
    1. zoekresultaten mogen dezelfde geografische plaats niet dubbel aanbieden;
    2. deduplicatie mag niet stil minder keus opleveren als de provider verderop
       nog unieke resultaten heeft;
-   3. een waarschuwing mag alleen als plaatswaarschuwing worden getoond wanneer
+   3. externe geocodingdata mag alleen de UI in met geldige naam/coördinaten;
+   4. een waarschuwing mag alleen als plaatswaarschuwing worden getoond wanneer
       de bron expliciet bewijst dat het gekozen punt binnen het gebied valt.
 
    De module verandert geen weerwaarden, modellen of formules. Geocoding wordt
@@ -17,6 +18,26 @@ const PROVIDER_ZOEKVENSTER=12;
 const tekst=v=>String(v==null?"":v).trim().toLocaleLowerCase("und").normalize("NFKC");
 const coord=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v).toFixed(5):"";
 
+function geldigeCoordinaat(v,min,max){
+  if(v===null||v===undefined||String(v).trim()==="")return null;
+  const n=Number(v);
+  return Number.isFinite(n)&&n>=min&&n<=max?n:null;
+}
+
+/* Open-Meteo levert normaal keurige numerieke coördinaten, maar zoekdata blijft
+   externe invoer. De bestaande renderer plaatst latitude/longitude rechtstreeks
+   in data-attributen; daarom normaliseren we die grens hier naar echte eindige
+   getallen en laten we onvolledige/malforme resultaten helemaal weg. Zo blijft
+   de renderer simpel zonder op providervertrouwen te leunen. */
+function normaliseerZoekresultaat(r){
+  if(!r||typeof r!=="object")return null;
+  const name=String(r.name==null?"":r.name).trim();
+  const latitude=geldigeCoordinaat(r.latitude,-90,90);
+  const longitude=geldigeCoordinaat(r.longitude,-180,180);
+  if(!name||latitude===null||longitude===null)return null;
+  return Object.assign({},r,{name,latitude,longitude});
+}
+
 function zoekSleutel(r){
   if(!r||typeof r!=="object")return null;
   if(r.id!==null&&r.id!==undefined&&String(r.id).trim()!=="")return "id:"+String(r.id).trim();
@@ -28,7 +49,9 @@ function zoekSleutel(r){
 
 function dedupliceerZoekresultaten(resultaten,max){
   const uit=[],gezien=new Set(),limiet=Number.isInteger(max)&&max>=0?max:Infinity;
-  for(const r of (Array.isArray(resultaten)?resultaten:[])){
+  for(const bron of (Array.isArray(resultaten)?resultaten:[])){
+    const r=normaliseerZoekresultaat(bron);
+    if(!r)continue;
     const sleutel=zoekSleutel(r);
     if(!sleutel||gezien.has(sleutel))continue;
     gezien.add(sleutel);uit.push(r);
@@ -74,14 +97,14 @@ function alleenPlaatsgebondenWaarschuwingen(data){
   return Object.assign({},data,{lijst:bewezen});
 }
 
-const api={MAX_ZOEKRESULTATEN,PROVIDER_ZOEKVENSTER,zoekSleutel,dedupliceerZoekresultaten,verruimZoekUrl,alleenPlaatsgebondenWaarschuwingen};
+const api={MAX_ZOEKRESULTATEN,PROVIDER_ZOEKVENSTER,geldigeCoordinaat,normaliseerZoekresultaat,zoekSleutel,dedupliceerZoekresultaten,verruimZoekUrl,alleenPlaatsgebondenWaarschuwingen};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowGlobalLocationHardening=api;
 
 /* In de browser blijft alleen geocoding hier eigenaar: we vragen een iets
-   ruimer provider-venster op, dedupliceren stabiel en geven maximaal hetzelfde
-   aantal opties terug als de bestaande UI verwacht. Waarschuwingen zijn tegen
-   deze tijd al fail-closed genormaliseerd door /api/waarschuwingen. */
+   ruimer provider-venster op, valideren/dedupliceren stabiel en geven maximaal
+   hetzelfde aantal opties terug als de bestaande UI verwacht. Waarschuwingen
+   zijn tegen deze tijd al fail-closed genormaliseerd door /api/waarschuwingen. */
 if(typeof document==="undefined"||typeof j!=="function")return;
 const basisJ=j;
 j=async function(url,opt){

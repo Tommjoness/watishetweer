@@ -1,7 +1,9 @@
 "use strict";
 
-/* Echte Chromium-integratietest voor drie wereldwijde UI-contracten:
+/* Echte Chromium-integratietest voor wereldwijde UI-contracten:
    - geocodingduplicaten worden vóór rendering verwijderd;
+   - malforme externe coördinaten bereiken de zoek-UI niet en numerieke strings
+     worden naar echte getallen genormaliseerd;
    - een door de API fail-closed genormaliseerde waarschuwing blijft neutraal;
    - de desktophero houdt dezelfde compositie bij korte/lange omschrijvingen en
      extreem lange plaatsnamen veroorzaken geen horizontale overflow.
@@ -30,9 +32,11 @@ window.fetch=function(url){
   const u=String(url);
   const response=data=>Promise.resolve({ok:true,status:200,json:async()=>data,text:async()=>JSON.stringify(data)});
   if(u.includes('geocoding-api.open-meteo.com/v1/search?'))return response({results:[
-    {id:777,name:'Ja',admin1:'Janub-Darfur',country_code:'SD',latitude:11.1,longitude:24.2},
+    {id:777,name:'Ja',admin1:'Janub-Darfur',country_code:'SD',latitude:'11.1',longitude:'24.2'},
     {id:777,name:'Ja',admin1:'Janub-Darfur',country_code:'SD',latitude:11.1001,longitude:24.2001},
-    {id:778,name:'Ja',admin1:'Janub-Darfur',country_code:'SD',latitude:11.8,longitude:24.8}
+    {id:778,name:'Ja',admin1:'Janub-Darfur',country_code:'SD',latitude:11.8,longitude:24.8},
+    {id:779,name:'Malforme coordinaat',admin1:'Test',country_code:'XX',latitude:'11.2\\" onmouseover=\\"alert(1)',longitude:24.3},
+    {id:780,name:'Buiten aarde',admin1:'Test',country_code:'XX',latitude:95,longitude:24.3}
   ]});
   if(u.includes('/api/waarschuwingen?'))return response({
     dekking:false,plaatsSpecifiek:false,bron:'MeteoAlarm landfeed',
@@ -52,7 +56,8 @@ setTimeout(async()=>{
     if(app){app.classList.remove('wn-progressief');app.removeAttribute('aria-busy');app.style.display='block';}
     const g=await j('https://geocoding-api.open-meteo.com/v1/search?name=ja');
     const w=await j('/api/waarschuwingen?lat=44.356&lon=9.388&land=IT');
-    zet('hardening-search',g&&g.results&&g.results.length===2?'ok':'fout');
+    const zoekSchoon=g&&Array.isArray(g.results)&&g.results.length===2&&g.results.every(r=>Number.isFinite(r.latitude)&&Number.isFinite(r.longitude)&&Math.abs(r.latitude)<=90&&Math.abs(r.longitude)<=180);
+    zet('hardening-search',zoekSchoon?'ok':'fout');
     zet('hardening-warning',w&&w.dekking===false&&w.plaatsSpecifiek===false&&Array.isArray(w.lijst)&&w.lijst.length===0?'ok':'fout');
 
     const hero=document.querySelector('.dashrow-hero > .hero'),temp=document.querySelector('.dashrow-hero .tempblok'),info=document.querySelector('.dashrow-hero .heroinfo');
@@ -83,5 +88,5 @@ try{
   for(const k of ["hardening-search","hardening-warning","hardening-hero","hardening-place"]){
     if(waarde(k)!=="ok")throw new Error(k+"="+waarde(k)+", exception="+waarde("hardening-exception"));
   }
-  console.log("Wereldwijde browserhardening: deduplicatie, server-genormaliseerde waarschuwingen, vaste hero en lange plaatsnaam geslaagd.");
+  console.log("Wereldwijde browserhardening: gevalideerde deduplicatie, server-genormaliseerde waarschuwingen, vaste hero en lange plaatsnaam geslaagd.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}

@@ -21,6 +21,27 @@ const zonderId=[
 assert.equal(h.dedupliceerZoekresultaten(zonderId).length,2,"gelijke fallback-identiteit dedupliceert, andere coordinaten blijven apart");
 assert.deepEqual(h.dedupliceerZoekresultaten(null),[]);
 
+/* Providerdata gaat later als data-lat/data-lon de zoek-UI in. Alleen geldige
+   wereldcoördinaten en een niet-lege naam mogen die grens passeren; numerieke
+   strings worden bewust naar echte numbers genormaliseerd. */
+const extern=[
+  {id:1,name:" Geldig ",country_code:"NL",latitude:"52.3676",longitude:"4.9041"},
+  {id:2,name:"Attribuutinjectie",country_code:"NL",latitude:'52.1\" onmouseover=\"alert(1)',longitude:5},
+  {id:3,name:"Te noordelijk",country_code:"XX",latitude:91,longitude:0},
+  {id:4,name:"Te oostelijk",country_code:"XX",latitude:0,longitude:181},
+  {id:5,name:"   ",country_code:"NL",latitude:52,longitude:5},
+  {id:6,name:"Geen latitude",country_code:"NL",longitude:5}
+];
+const schoonExtern=h.dedupliceerZoekresultaten(extern);
+assert.equal(schoonExtern.length,1,"malforme of onvolledige providerresultaten mogen de UI niet bereiken");
+assert.equal(schoonExtern[0].name,"Geldig");
+assert.strictEqual(schoonExtern[0].latitude,52.3676);
+assert.strictEqual(schoonExtern[0].longitude,4.9041);
+assert.equal(h.geldigeCoordinaat(-90,-90,90),-90);
+assert.equal(h.geldigeCoordinaat(180,-180,180),180);
+assert.equal(h.geldigeCoordinaat("",-90,90),null);
+assert.equal(h.geldigeCoordinaat("Infinity",-90,90),null);
+
 /* Dedupliceren mag de lijst niet onnodig kort maken. De requestlaag vraagt
    daarom twaalf kandidaten en de UI krijgt hoogstens zes unieke resultaten in
    de oorspronkelijke provider-volgorde terug. */
@@ -69,4 +90,4 @@ const nws=h.alleenPlaatsgebondenWaarschuwingen({
 assert.equal(nws.dekking,true);
 assert.equal(nws.lijst.length,1);
 
-console.log("Wereldwijde locatiehardening: uniek zoekvenster, deduplicatie en fail-closed plaatswaarschuwingen geslaagd.");
+console.log("Wereldwijde locatiehardening: validatie, uniek zoekvenster, deduplicatie en fail-closed plaatswaarschuwingen geslaagd.");
