@@ -12,6 +12,16 @@ const {
   vernieuwServiceworkerCache
 }=require("./postbuild-cache.js");
 
+/* Architectuurcontract: build-weather mag niet opnieuw een eigen shelllijst of
+   SHA-256-recept invoeren. De eerste build en alle postbuildlagen moeten dezelfde
+   helper gebruiken; anders kan één toekomstige assetwijziging twee cache-eigenaars
+   uit elkaar laten lopen. */
+const buildBron=fs.readFileSync(path.join(__dirname,"..","build-weather.js"),"utf8");
+assert(buildBron.includes('require("./scripts/postbuild-cache.js")'),"build-weather moet de gedeelde cachehelper importeren");
+assert(buildBron.includes('vernieuwServiceworkerCache(OUT,"build-weather")'),"build-weather moet zijn initiële cache via de gedeelde helper vernieuwen");
+assert(!buildBron.includes('crypto.createHash("sha256")'),"build-weather mag geen tweede hashrecept bevatten");
+assert(!/const\s+CACHE_BRONNEN\s*=/.test(buildBron),"build-weather mag geen tweede app-shelllijst bevatten");
+
 const OUT=fs.mkdtempSync(path.join(os.tmpdir(),"weathernow-cache-"));
 try{
   for(const naam of CACHE_BRONNEN){
@@ -45,7 +55,7 @@ try{
     "een onvolledige shell mag geen geldige cacheversie krijgen"
   );
 
-  console.log("Postbuild-cachehelper: berekening, legacy migratie, stale detectie en ontbrekende shell geslaagd.");
+  console.log("Postbuild-cachehelper: één eigenaar, berekening, legacy migratie, stale detectie en ontbrekende shell geslaagd.");
 }finally{
   fs.rmSync(OUT,{recursive:true,force:true});
 }
