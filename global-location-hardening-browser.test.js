@@ -2,9 +2,12 @@
 
 /* Echte Chromium-integratietest voor drie wereldwijde UI-contracten:
    - geocodingduplicaten worden vóór rendering verwijderd;
-   - land-/onbewezen waarschuwingen komen niet als plaatskaart door;
+   - een door de API fail-closed genormaliseerde waarschuwing blijft neutraal;
    - de desktophero houdt dezelfde compositie bij korte/lange omschrijvingen en
-     extreem lange plaatsnamen veroorzaken geen horizontale overflow. */
+     extreem lange plaatsnamen veroorzaken geen horizontale overflow.
+
+   Het daadwerkelijke afwijzen van land-/onbewezen waarschuwingen wordt apart
+   aan de servergrens getest in scripts/api-waarschuwing-scope.test.mjs. */
 const fs=require("fs"),os=require("os"),path=require("path"),{spawnSync}=require("child_process");
 function vindBrowser(){
   for(const naam of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){
@@ -32,8 +35,8 @@ window.fetch=function(url){
     {id:778,name:'Ja',admin1:'Janub-Darfur',country_code:'SD',latitude:11.8,longitude:24.8}
   ]});
   if(u.includes('/api/waarschuwingen?'))return response({
-    dekking:true,plaatsSpecifiek:false,bron:'landfeed',
-    lijst:[{titel:'Red warning Sardegna',landelijk:true,plaatsSpecifiek:false}]
+    dekking:false,plaatsSpecifiek:false,bron:'MeteoAlarm landfeed',
+    reden:'geen plaats-specifieke dekking',lijst:[]
   });
   return new Promise(()=>{});
 };
@@ -50,7 +53,7 @@ setTimeout(async()=>{
     const g=await j('https://geocoding-api.open-meteo.com/v1/search?name=ja');
     const w=await j('/api/waarschuwingen?lat=44.356&lon=9.388&land=IT');
     zet('hardening-search',g&&g.results&&g.results.length===2?'ok':'fout');
-    zet('hardening-warning',w&&w.dekking===false&&Array.isArray(w.lijst)&&w.lijst.length===0?'ok':'fout');
+    zet('hardening-warning',w&&w.dekking===false&&w.plaatsSpecifiek===false&&Array.isArray(w.lijst)&&w.lijst.length===0?'ok':'fout');
 
     const hero=document.querySelector('.dashrow-hero > .hero'),temp=document.querySelector('.dashrow-hero .tempblok'),info=document.querySelector('.dashrow-hero .heroinfo');
     const cond=document.getElementById('cond'),feels=document.getElementById('feels'),ico=document.getElementById('nowicon');
@@ -80,5 +83,5 @@ try{
   for(const k of ["hardening-search","hardening-warning","hardening-hero","hardening-place"]){
     if(waarde(k)!=="ok")throw new Error(k+"="+waarde(k)+", exception="+waarde("hardening-exception"));
   }
-  console.log("Wereldwijde browserhardening: deduplicatie, plaatswaarschuwingen, vaste hero en lange plaatsnaam geslaagd.");
+  console.log("Wereldwijde browserhardening: deduplicatie, server-genormaliseerde waarschuwingen, vaste hero en lange plaatsnaam geslaagd.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
