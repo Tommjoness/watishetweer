@@ -1,7 +1,7 @@
 "use strict";
 const assert=require("assert"),fs=require("fs"),path=require("path");
 const {analyseerNeerslagData,analyseerDagData,neerslagZin}=require("./interpretatie-engine.js");
-const {nachtzichtScore,grafiekNeerslagVerschuiving,dagKansSamenvatting,komendUurTekst,maanEventsBinnenVenster,huidigeNeerslagEindMin}=require("./senior-correctness-v2.js");
+const {zonDaglichtInfo,nachtzichtScore,grafiekNeerslagVerschuiving,dagKansSamenvatting,komendUurTekst,maanEventsBinnenVenster,huidigeNeerslagEindMin}=require("./senior-correctness-v2.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 const uren=(datum,start,aantal)=>Array.from({length:aantal},(_,i)=>new Date(Date.UTC(+datum.slice(0,4),+datum.slice(5,7)-1,+datum.slice(8,10),start+i)).toISOString().slice(0,16));
 function basis(){
@@ -9,6 +9,34 @@ function basis(){
   const mt=Array.from({length:8},(_,i)=>new Date(Date.UTC(2026,6,31,19,15*(i+1))).toISOString().slice(0,16));
   return {current:{time:"2026-07-31T19:00",precipitation:0,weather_code:3},hourly:{time:ht,precipitation:Array(6).fill(0),precipitation_probability:Array(6).fill(4),weather_code:Array(6).fill(3),rain:Array(6).fill(0),showers:Array(6).fill(0),snowfall:Array(6).fill(0)},minutely_15:{time:mt,precipitation:Array(8).fill(0),weather_code:Array(8).fill(3),rain:Array(8).fill(0),showers:Array(8).fill(0),snowfall:Array(8).fill(0)},daily:{time:["2026-07-31","2026-08-01"],weather_code:[3,3]}};
 }
+
+test("poolnacht: Open-Meteo gelijke lokale middernachten betekenen nul uur daglicht",()=>{
+  const a=zonDaglichtInfo("2021-11-06T00:00","2021-11-06T00:00");
+  assert.equal(a.status,"poolnacht");assert.equal(a.minuten,0);assert.equal(a.tekst,"0 uur daglicht");assert.equal(a.zontekst,"Zon komt niet op");
+});
+
+test("pooldag: Open-Meteo middernacht tot volgende kalenderdag betekent 24 uur daglicht",()=>{
+  const a=zonDaglichtInfo("2021-11-06T00:00","2021-11-07T00:00");
+  assert.equal(a.status,"pooldag");assert.equal(a.minuten,1440);assert.equal(a.tekst,"24 uur daglicht");assert.equal(a.zontekst,"Zon gaat niet onder");
+});
+
+test("poolovergang: zeer korte en zeer lange dag blijven normale daglengtes",()=>{
+  const kort=zonDaglichtInfo("2026-01-20T11:00","2026-01-20T13:00");
+  const lang=zonDaglichtInfo("2026-05-01T00:30","2026-05-01T23:30");
+  assert.equal(kort.status,"normaal");assert.equal(kort.minuten,120);
+  assert.equal(lang.status,"normaal");assert.equal(lang.minuten,1380);
+});
+
+test("daglengte: kalenderdatum blijft onderdeel van een over-middernachtinterval",()=>{
+  const a=zonDaglichtInfo("2026-05-01T01:30","2026-05-02T00:30");
+  assert.equal(a.status,"normaal");assert.equal(a.minuten,1380);assert.equal(a.tekst,"23 uur en 0 minuten daglicht");
+});
+
+test("zondata: ontbrekende, onmogelijke of omgekeerde tijden falen gesloten",()=>{
+  for(const [op,onder] of [[null,null],["2026-02-31T00:00","2026-02-31T01:00"],["2026-05-02T12:00","2026-05-01T12:00"],["geen-tijd","2026-05-01T12:00"]]){
+    const a=zonDaglichtInfo(op,onder);assert.equal(a.status,"onbekend",JSON.stringify({op,onder,a}));assert.equal(a.minuten,null);
+  }
+});
 
 test("punt 4: actuele regen blijft regen als later sneeuw volgt",()=>{
   const d=basis();d.current.precipitation=0.2;d.current.weather_code=61;
