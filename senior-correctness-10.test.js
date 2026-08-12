@@ -1,7 +1,7 @@
 "use strict";
 const assert=require("assert"),fs=require("fs"),path=require("path");
 const {analyseerNeerslagData,analyseerDagData,neerslagZin}=require("./interpretatie-engine.js");
-const {nachtzichtScore,grafiekNeerslagVerschuiving,dagKansSamenvatting,komendUurTekst,maanEventsBinnenVenster}=require("./senior-correctness-v2.js");
+const {nachtzichtScore,grafiekNeerslagVerschuiving,dagKansSamenvatting,komendUurTekst,maanEventsBinnenVenster,huidigeNeerslagEindMin}=require("./senior-correctness-v2.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 const uren=(datum,start,aantal)=>Array.from({length:aantal},(_,i)=>new Date(Date.UTC(+datum.slice(0,4),+datum.slice(5,7)-1,+datum.slice(8,10),start+i)).toISOString().slice(0,16));
 function basis(){
@@ -51,9 +51,32 @@ test("punt 2: langdurige mist en neerslag begrenzen Nachtzicht hard",()=>{
   const a=nachtzichtScore(r);assert(a.score<=1.5,"score "+a.score);assert.equal(a.beste,null);
 });
 
+test("punt 2: een tijdelijke zichtdip wordt niet als slecht nachtgemiddelde geformuleerd",()=>{
+  const zicht=[500,15000,15000,15000];
+  const r=zicht.map((visibility,i)=>({ms:i*3600000,cloud:45,visibility,precip:0,code:i===0?45:3,humidity:80,spread:4,gust:5,moon:0}));
+  const a=nachtzichtScore(r);
+  assert(a.genoeg);assert(a.gemZicht>=10000,"gemiddeld zicht "+a.gemZicht);
+  assert(a.redenen.includes("tijdelijk slechter zicht"),JSON.stringify(a.redenen));
+  assert(!a.redenen.includes("beperkt zicht"),JSON.stringify(a.redenen));
+});
+
 test("punt 2/3: ontbrekende uren vormen nooit een vals aaneengesloten zichtvenster",()=>{
   const r=[{ms:0,cloud:0,visibility:20000,precip:0,code:0,moon:0},{ms:3*3600000,cloud:0,visibility:20000,precip:0,code:0,moon:0}];
   const a=nachtzichtScore(r);assert.equal(a.beste,null);
+});
+
+test("actuele neerslag: eerste droge kwartier na aaneengesloten natte reeks bepaalt eindmoment",()=>{
+  const a={currentWet:true,bronHoeveelheid:"kwartierdata",minutelyItems:[
+    {begin:100,eind:115,precipitation:0.1},{begin:115,eind:130,precipitation:0.2},{begin:130,eind:145,precipitation:0},{begin:145,eind:160,precipitation:0}
+  ]};
+  assert.equal(huidigeNeerslagEindMin(a,0.1),130);
+});
+
+test("actuele neerslag: gat in kwartierreeks verzint geen droogtijd",()=>{
+  const a={currentWet:true,bronHoeveelheid:"kwartierdata",minutelyItems:[
+    {begin:100,eind:115,precipitation:0.1},{begin:130,eind:145,precipitation:0}
+  ]};
+  assert.equal(huidigeNeerslagEindMin(a,0.1),null);
 });
 
 test("punt 6: uurneerslag wordt een halve kolom naar het voorafgaande uur verschoven",()=>{
@@ -112,6 +135,7 @@ test("live polish: desktop gebruikt 3 x 3 meetblokken en Nachtzicht drie rustige
   assert(css.includes("grid-template-columns:repeat(3,minmax(0,1fr))"));
   assert(css.includes("min-width:1100px"));
   assert(correct.includes('class="nachtvenster"'));
+  assert(correct.includes("Gem. zicht "));
   assert(!correct.includes("Gemiddeld zicht"));
 });
 
