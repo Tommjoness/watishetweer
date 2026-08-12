@@ -21,6 +21,7 @@ const weer=bouw({
 weer.current.interval=900;
 weer.current.visibility=16000;
 weer.current.cloud_cover=1;
+weer.hourly.cloud_cover=weer.hourly.cloud_cover.map(()=>1);
 weer.elevation=3;
 weer.latitude=52.35;
 weer.longitude=5.26;
@@ -78,6 +79,10 @@ async function controleer(type,naam,breedte){
       meters();
     });
     await page.waitForFunction(()=>document.querySelector('#chart g[data-q4-rain-periods]')&&S.geo&&Array.isArray(S.geo.MM),null,{timeout:5000});
+    await page.waitForFunction(()=>{
+      const el=document.querySelector("#aq .stat:first-child .sval");
+      return el&&(el.textContent||"").trim()==="22";
+    },null,{timeout:5000});
 
     const r=await page.evaluate(()=>{
       const svg=document.getElementById("chart"),g=S.geo,regen=svg.querySelector('g[data-q4-rain-periods]');
@@ -97,6 +102,8 @@ async function controleer(type,naam,breedte){
         daghint:(document.getElementById("dagenhint")||{}).textContent||"",
         windkop:[...document.querySelectorAll(".stat .eyebrow")].map(x=>x.textContent.trim()).find(x=>/^Windstoten/.test(x))||"",
         bewolking:(document.getElementById("cloud")||{}).textContent||"",
+        nachtBewolking:[...document.querySelectorAll("#nights .perc")].map(el=>(el.textContent||"").trim()),
+        aqiSub:(document.querySelector("#aq .stat:first-child .ssub")||{}).textContent||"",
         dagteksten:[...document.querySelectorAll("#days .dcond")].map(x=>x.textContent.trim()),
         h:Number(svg.getAttribute("viewBox").trim().split(/\s+/)[3])
       };
@@ -117,6 +124,8 @@ async function controleer(type,naam,breedte){
     assert.equal(r.daghint,"Kies een dag om die verwachting in de grafiek te bekijken.",naam+" "+breedte+": daghint is input-neutraal");
     assert.equal(r.windkop,"Windstoten nu",naam+" "+breedte+": windstootkop is ondubbelzinnig");
     assert.equal(r.bewolking,"<5%",naam+" "+breedte+": 1% modelbewolking wordt zonder schijnprecisie als <5% gepresenteerd");
+    assert(r.nachtBewolking.length>0&&r.nachtBewolking.every(t=>t==="<5%"),naam+" "+breedte+": Nachtzicht gebruikt dezelfde <5%-notatie; kreeg "+JSON.stringify(r.nachtBewolking));
+    assert.equal(r.aqiSub,"Redelijk",naam+" "+breedte+": AQI-subregel herhaalt de schaalnaam niet; kreeg "+JSON.stringify(r.aqiSub));
     assert(!r.dagteksten.some(t=>/rond \d{1,2}:\d{2}/.test(t)),naam+" "+breedte+": dagregels suggereren geen minuutprecisie");
     assert(r.h>296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets en samenvatting");
 
