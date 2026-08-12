@@ -23,14 +23,18 @@ assertBronInvariant(html,"opacity:0","verborgen mobiele minibalk wordt visueel t
 assertBronInvariant(html,"pointer-events:none","verborgen mobiele minibalk onderschept geen interactie");
 assertBronInvariant(html,"background:var(--rule-soft)","maanfase heeft een zichtbare subtiele schijf");
 
-/* Deze snelle Chromium-fixture controleert de scroll-state-machine. CSS-transities
-   lopen onder --dump-dom/virtual-time niet betrouwbaar door frames heen; de echte
-   visuele transform + opacity wordt daarom aanvullend in de Playwright-consumententest
-   in Chromium én WebKit gecontroleerd. */
+/* Deze fixture test uitsluitend de scroll-state-machine, niet het laadpad. De
+   fetch blijft expres eindeloos wachten zodat geen forecast-render de DOM kan
+   verschuiven. Progressieve locatielading heeft in die kunstmatige situatie
+   terecht een tijdelijke laadklasse actief; die verwijderen we in de reporter
+   expliciet voordat de sticky-meting begint. Het aparte progressive-location-
+   browsertestbestand bewaakt juist die tijdelijke staat zelf. */
 html=html.replace("</head>",'<style>#app{display:block!important}</style><script>window.fetch=()=>new Promise(()=>{});</script></head>');
 const reporter=`<script>
 setTimeout(()=>{
   try{
+    document.documentElement.classList.remove('wn-progressief');
+    const app=document.getElementById('app');if(app){app.classList.remove('wn-progressief');app.removeAttribute('aria-busy');}
     const bar=document.getElementById('minibar'),hero=document.querySelector('.hero'),sheet=document.querySelector('.sheet');
     if(!bar||!hero||!sheet) throw new Error('vereiste DOM ontbreekt');
     document.body.style.minHeight='3600px';

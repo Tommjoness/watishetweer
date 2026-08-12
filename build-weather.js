@@ -30,10 +30,12 @@ const polishCss=fs.readFileSync(path.join(ROOT,"live-polish.css"),"utf8");
 const polishJs=fs.readFileSync(path.join(ROOT,"live-polish-v2.js"),"utf8");
 const seniorSemantiekCss=fs.readFileSync(path.join(ROOT,"senior-semantiek-20260810.css"),"utf8");
 const seniorSemantiekJs=fs.readFileSync(path.join(ROOT,"senior-semantiek-20260810.js"),"utf8");
+const progressiveCss=fs.readFileSync(path.join(ROOT,"scripts","progressive-location.css"),"utf8");
+const progressiveJs=fs.readFileSync(path.join(ROOT,"scripts","progressive-location.js"),"utf8");
 const start="/* ---------- start ---------- */";
 if((html.match(/\/\* ---------- start ---------- \*\//g)||[]).length!==1)throw new Error("Startmarker ontbreekt of is dubbel.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Stijlblok ontbreekt of is dubbel.");
-if(html.includes("CENTRALE INTERPRETATIE-ENGINE")||html.includes("SENIOR CORRECTHEIDSLAAG")||html.includes("NEERSLAGKANSBELEID V3")||html.includes("LIVE POLISH")||html.includes("LIVE INTERACTIEPOLISH")||html.includes("SENIOR SEMANTIEK 20260810"))throw new Error("Bron-index bevat een buildlaag al.");
+if(html.includes("CENTRALE INTERPRETATIE-ENGINE")||html.includes("SENIOR CORRECTHEIDSLAAG")||html.includes("NEERSLAGKANSBELEID V3")||html.includes("LIVE POLISH")||html.includes("LIVE INTERACTIEPOLISH")||html.includes("SENIOR SEMANTIEK 20260810")||html.includes("PROGRESSIEVE LOCATIELADING"))throw new Error("Bron-index bevat een buildlaag al.");
 
 /* De bestaande briefingrenderer blijft eigenaar van waarschuwingen, markup en
    de overige briefingzinnen. Alleen zijn korte neerslagzin wordt op runtime
@@ -113,12 +115,14 @@ const MINIBAR_PRODUCTIE=`(function(){
 })();`;
 vervangProductregel(MINIBAR_BRON,MINIBAR_PRODUCTIE,"Minibalk-zichtbaarheidsblok");
 
-/* Presentatiepolish en de gerichte semantiekronde zijn expliciete, afzonderlijk
-   testbare buildlagen. Zo blijft de bron-index leesbaar en is er geen verborgen
-   runtime-stijlinjectie. */
+/* Presentatiepolish, semantiek en progressieve locatielading zijn expliciete,
+   afzonderlijk testbare buildlagen. De progressieve laag verandert alleen de
+   korte laadpresentatie; de volledige forecast blijft eigenaar van alle
+   uiteindelijke weerdata en berekeningen. */
 html=html.replace("</style>",
   "\n/* ===== LIVE POLISH ===== */\n"+polishCss+"\n/* ===== EINDE LIVE POLISH ===== */\n"
-  +"/* ===== SENIOR SEMANTIEK 20260810 CSS ===== */\n"+seniorSemantiekCss+"\n/* ===== EINDE SENIOR SEMANTIEK 20260810 CSS ===== */\n</style>");
+  +"/* ===== SENIOR SEMANTIEK 20260810 CSS ===== */\n"+seniorSemantiekCss+"\n/* ===== EINDE SENIOR SEMANTIEK 20260810 CSS ===== */\n"
+  +"/* ===== PROGRESSIEVE LOCATIELADING CSS ===== */\n"+progressiveCss+"\n/* ===== EINDE PROGRESSIEVE LOCATIELADING CSS ===== */\n</style>");
 
 html=html.replace(start,
   "/* ===== NEDERLANDSE WEERGRAMMATICA ===== */\n"+grammatica+"\n/* ===== EINDE NEDERLANDSE WEERGRAMMATICA ===== */\n\n"
@@ -126,12 +130,13 @@ html=html.replace(start,
   +"/* ===== SENIOR CORRECTHEIDSLAAG ===== */\n"+correctness+"\n/* ===== EINDE SENIOR CORRECTHEIDSLAAG ===== */\n\n"
   +"/* ===== NEERSLAGKANSBELEID V3 ===== */\n"+kansbeleid+"\n/* ===== EINDE NEERSLAGKANSBELEID V3 ===== */\n\n"
   +"/* ===== LIVE INTERACTIEPOLISH ===== */\n"+polishJs+"\n/* ===== EINDE LIVE INTERACTIEPOLISH ===== */\n\n"
-  +"/* ===== SENIOR SEMANTIEK 20260810 ===== */\n"+seniorSemantiekJs+"\n/* ===== EINDE SENIOR SEMANTIEK 20260810 ===== */\n\n"+start);
+  +"/* ===== SENIOR SEMANTIEK 20260810 ===== */\n"+seniorSemantiekJs+"\n/* ===== EINDE SENIOR SEMANTIEK 20260810 ===== */\n\n"
+  +"/* ===== PROGRESSIEVE LOCATIELADING ===== */\n"+progressiveJs+"\n/* ===== EINDE PROGRESSIEVE LOCATIELADING ===== */\n\n"+start);
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline script gevonden.");
 scripts.forEach((s,i)=>new vm.Script(s,{filename:"public/index.html:inline-"+(i+1)}));
 const vereist=[
-  "WeatherNowInterpretatie","WeatherNowCorrectnessV2","WeatherNowKansbeleidV3","WeatherNowPolishV2","WeatherNowSeniorRonde20260810","weatherNowActueleLokaleTijd","plaatsTijdDelen","weatherNowZoneOffset",
+  "WeatherNowInterpretatie","WeatherNowCorrectnessV2","WeatherNowKansbeleidV3","WeatherNowPolishV2","WeatherNowSeniorRonde20260810","WeatherNowProgressiveLocation","weatherNowActueleLokaleTijd","plaatsTijdDelen","weatherNowZoneOffset",
   "const beleid=root.WeatherNowKansbeleidV3;","typeof beleid.briefingZin===\"function\"",
   "const eind=Math.min(i+25,h.time.length);","const punten=n===24?25:n;",
   "hoeveelheid onzeker","daily.weather_code&&daily.weather_code[dagIndex]","117.000001",
@@ -142,6 +147,7 @@ const vereist=[
   "grid-template-columns:repeat(3,minmax(0,1fr))","setInterval(liveKlokTik,1000)","tooltipWaardeKort","temperatuurLabelsBotsen","neerslagkans",
   "forecastMomentZinsdeel","Globale indicatie:","kop.textContent=\"Neerslag\"","senior-zoninfo","tooltipCompactMaten",
   "window.addEventListener(\"scroll\",plan,{passive:true})","r.bottom<=0","timer=setTimeout(zet,16)","senior-verstopt","verschil>0","(max-width:900px)",
+  "Verwachting wordt aangevuld.","current=temperature_2m,apparent_temperature,is_day,weather_code",
   "load(52.3676,4.9041,\"Amsterdam\",false,true,\"NL\")"
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);
@@ -166,4 +172,4 @@ if(fs.existsSync(swp)){
   fs.writeFileSync(swp,sw,"utf8");
 }
 for(const n of fs.readdirSync(OUT))if(intern(n))throw new Error("Intern bestand publiek gebouwd: "+n);
-console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek en cache "+versie+".");
+console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading en cache "+versie+".");
