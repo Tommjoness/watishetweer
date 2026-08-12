@@ -3,7 +3,7 @@
 const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
-const crypto=require("crypto");
+const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
@@ -66,22 +66,8 @@ if(!scripts.length)throw new Error("Geen inline runtime gevonden na Q4.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:q4-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
 
-/* index.html veranderde; de serviceworker-hash moet weer exact de nieuwe shell
-   vertegenwoordigen. */
-const CACHE_BRONNEN=[
-  "index.html","manifest.json","icon-192.png","icon-512.png","icon-maskable-512.png",
-  "bodoni-moda-latin-400-normal.woff2","bodoni-moda-latin-500-normal.woff2",
-  "instrument-sans-latin-400-normal.woff2","instrument-sans-latin-500-normal.woff2",
-  "instrument-sans-latin-600-normal.woff2","dm-mono-latin-400-normal.woff2","dm-mono-latin-500-normal.woff2"
-];
-const hash=crypto.createHash("sha256");
-for(const naam of CACHE_BRONNEN){
-  const p=path.join(OUT,naam);if(!fs.existsSync(p))throw new Error("App-shellbestand ontbreekt voor Q4-cachehash: "+naam);
-  hash.update(naam+"\0");hash.update(fs.readFileSync(p));hash.update("\0");
-}
-const versie="watishetweer-"+hash.digest("hex").slice(0,12);
-const swPad=path.join(OUT,"sw.js");let sw=fs.readFileSync(swPad,"utf8");
-if(!(sw.match(/watishetweer-[0-9a-f]{12}/g)||[]).length)throw new Error("Geen serviceworker-cachehash voor Q4 gevonden.");
-sw=sw.replace(/watishetweer-[0-9a-f]{12}/g,versie);fs.writeFileSync(swPad,sw,"utf8");
+/* index.html veranderde; dezelfde gedeelde app-shellhash wordt opnieuw
+   berekend. Dit verandert geen cachebeleid, alleen de eigenaar van het recept. */
+const versie=vernieuwServiceworkerCache(OUT,"Q4");
 
 console.log("Q4 toegepast: losse neerslagstaven weg, intervalperioden + totaal/piek, meetbare kwartierneerslag, gecentreerde kanslabels, runtime-neutrale grafiekhint en ruimere Nachtzicht-uitleg; cache "+versie+".");

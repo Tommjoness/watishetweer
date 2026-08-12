@@ -3,7 +3,7 @@
 const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
-const crypto=require("crypto");
+const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
@@ -85,26 +85,8 @@ if(!scripts.length)throw new Error("Geen inline runtime gevonden na checkpoint 7
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:q3-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
 
-/* index.html is gewijzigd; de serviceworker-hash moet exact dezelfde shell opnieuw
-   vertegenwoordigen. Geen handmatige cacheversie en geen cache-bypass. */
-const CACHE_BRONNEN=[
-  "index.html","manifest.json","icon-192.png","icon-512.png","icon-maskable-512.png",
-  "bodoni-moda-latin-400-normal.woff2","bodoni-moda-latin-500-normal.woff2",
-  "instrument-sans-latin-400-normal.woff2","instrument-sans-latin-500-normal.woff2",
-  "instrument-sans-latin-600-normal.woff2","dm-mono-latin-400-normal.woff2","dm-mono-latin-500-normal.woff2"
-];
-const hash=crypto.createHash("sha256");
-for(const naam of CACHE_BRONNEN){
-  const p=path.join(OUT,naam);
-  if(!fs.existsSync(p))throw new Error("App-shellbestand ontbreekt voor checkpoint-75 cachehash: "+naam);
-  hash.update(naam+"\0");hash.update(fs.readFileSync(p));hash.update("\0");
-}
-const versie="watishetweer-"+hash.digest("hex").slice(0,12);
-const swPad=path.join(OUT,"sw.js");
-let sw=fs.readFileSync(swPad,"utf8");
-if(!(sw.match(/watishetweer-[0-9a-f]{12}/g)||[]).length)throw new Error("Geen serviceworker-cachehash gevonden.");
-sw=sw.replace(/watishetweer-[0-9a-f]{12}/g,versie);
-if(!sw.includes(versie))throw new Error("Checkpoint-75 cachehash niet toegepast.");
-fs.writeFileSync(swPad,sw,"utf8");
+/* index.html is gewijzigd; dezelfde gedeelde app-shellhash wordt opnieuw
+   berekend. Dit verandert geen cachebeleid, alleen de eigenaar van het recept. */
+const versie=vernieuwServiceworkerCache(OUT,"checkpoint-75");
 
 console.log("Checkpoint 75% in-place toegepast: numerieke leesbaarheid, 100% bewolking en tijdgebonden UV; bestaande meters-owners "+metersOwnersVoor+" ongewijzigd; cache "+versie+".");
