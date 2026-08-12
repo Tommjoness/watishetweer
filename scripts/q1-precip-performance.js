@@ -10,8 +10,15 @@ const getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Numbe
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const MM_MEETBAAR=0.1;
 const CACHE_KEY="weerbriefing.plaatscache.q1";
-const CACHE_MAX=3;
+/* De app laat maximaal acht bewaarde plaatsen toe. De locatiecache volgt exact
+   die bovengrens, zodat een rondje langs de eigen plaatsen niet na de derde stad
+   opnieuw volledig van het netwerk afhankelijk wordt. */
+const CACHE_MAX=8;
+/* Tot tien minuten is een cache-item vers. Tussen tien en dertig minuten mag het
+   uitsluitend als directe tussenweergave dienen terwijl dezelfde load() meteen
+   een stille netwerkrefresh start. De ouderdom blijft zichtbaar via stempel(). */
 const CACHE_VERS_MS=10*60*1000;
+const CACHE_DIRECT_MS=30*60*1000;
 const TREND_UREN=3;
 const TREND_MAX_AFWIJKING_MIN=45;
 
@@ -48,6 +55,10 @@ function cacheSleutel(lat,lon){
 function cacheIsVers(item,nu){
   const op=getal(item&&item.op),t=getal(nu);if(op===null||t===null)return false;
   return t>=op&&t-op<=CACHE_VERS_MS;
+}
+function cacheIsDirectBruikbaar(item,nu){
+  const op=getal(item&&item.op),t=getal(nu);if(op===null||t===null)return false;
+  return t>=op&&t-op<=CACHE_DIRECT_MS;
 }
 function cacheSnoei(obj){
   const bron=obj&&typeof obj==="object"?obj:{};
@@ -148,9 +159,9 @@ function neerslagTegelRelevant(analyse){
 }
 
 const api={
-  mmTekst,tooltipNeerslag,dagNeerslagPresentatie,cacheSleutel,cacheIsVers,cacheSnoei,
+  mmTekst,tooltipNeerslag,dagNeerslagPresentatie,cacheSleutel,cacheIsVers,cacheIsDirectBruikbaar,cacheSnoei,
   parseLokaleTijd,lokaleInstantKandidaten,uurInstants,temperatuurTrend,neerslagTegelRelevant,
-  MM_MEETBAAR,CACHE_VERS_MS,TREND_UREN,TREND_MAX_AFWIJKING_MIN
+  MM_MEETBAAR,CACHE_VERS_MS,CACHE_DIRECT_MS,TREND_UREN,TREND_MAX_AFWIJKING_MIN
 };
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowQ1=api;
@@ -244,16 +255,19 @@ function naEersteCachePaint(generatie,sleutel,cachedData,start){
 
 /* Audit van het bestaande laadpad: de hoofdforecast is de kritieke request;
    luchtkwaliteit start al parallel en waarschuwingen komen na de eerste render.
-   Een recent bekeken plaats kan daarom uit exact die coördinaatgebonden cache
-   direct tekenen, terwijl de gewone netwerkrefresh doorgaat. De canonieke
-   laadTeller/AbortController-logica blijft eigenaar van racebescherming. */
+   Een eerder bekeken plaats kan daarom direct uit de coördinaatgebonden cache
+   tekenen terwijl de gewone netwerkrefresh doorgaat. Tot tien minuten is die
+   cache vers; tussen tien en dertig minuten is hij alleen een tijdelijke,
+   gedateerde tussenweergave. De canonieke laadTeller/AbortController-logica
+   blijft eigenaar van racebescherming en de netwerkdata blijft altijd leidend. */
 if(typeof load==="function"){
   const basisLoad=load;
   load=async function(lat,lon,label,stil,opslaan,land){
     const generatie=++cacheRenderGeneratie;
     const start=nuMs(),sleutel=cacheSleutel(lat,lon),cache=sleutel?leesCache()[sleutel]:null;
     const wissel=cacheSleutel(S.lat,S.lon)!==sleutel;
-    if(!stil&&cache&&cacheIsVers(cache,Date.now())&&cache.d){
+    let cacheGetoond=false;
+    if(!stil&&cache&&cacheIsDirectBruikbaar(cache,Date.now())&&cache.d){
       if(wissel){
         try{
           waarschuwingTeller++;
@@ -268,11 +282,15 @@ if(typeof load==="function"){
         if(cacheKernRender(wissel)){
           if(typeof urlBij==="function")urlBij();
           perf.cacheHits++;
+          cacheGetoond=true;
           naEersteCachePaint(generatie,sleutel,cache.d,start);
         }
       }catch(e){}
     }
-    const resultaat=await basisLoad(lat,lon,label,stil,opslaan,land);
+    /* Zodra al bruikbare doeldata op het scherm staat, is de netwerkronde een
+       achtergrondrefresh. Geen vijf seconden durende 'Gegevens ophalen'-status
+       over een al bruikbare stad heen; fouten blijven door basisLoad zelf zichtbaar. */
+    const resultaat=await basisLoad(lat,lon,label,cacheGetoond?true:stil,opslaan,land);
     perf.lastNetworkMs=Math.max(0,nuMs()-start);
     if(cacheSleutel(S.lat,S.lon)===sleutel&&S.d)bewaarCache(lat,lon,label,land);
     return resultaat;
