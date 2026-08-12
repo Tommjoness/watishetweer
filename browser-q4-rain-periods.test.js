@@ -120,6 +120,7 @@ async function controleer(type,naam,breedte){
     assert(!r.dagteksten.some(t=>/rond \d{1,2}:\d{2}/.test(t)),naam+" "+breedte+": dagregels suggereren geen minuutprecisie");
     assert(r.h>296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets en samenvatting");
 
+    await page.locator("#chart").scrollIntoViewIfNeeded();
     const coords=await page.evaluate(()=>{
       const svg=document.getElementById("chart"),hit=document.getElementById("hit"),g=S.geo;
       const i=g.TI.findIndex(t=>String(t).endsWith("T17:00"));
