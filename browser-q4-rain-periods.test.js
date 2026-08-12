@@ -13,7 +13,7 @@ const indexPad=path.join(PUBLIC,"index.html");
 if(!fs.existsSync(indexPad))throw new Error("Definitieve public/index.html ontbreekt voor Q4-browsercontrole.");
 
 const weer=bouw({
-  pp:(u,dag)=>dag===0&&((u>=16&&u<=18)||(u>=21&&u<=22))?86:8,
+  pp:(u,dag)=>dag===0&&u===15?19:dag===0&&((u>=16&&u<=18)||(u>=21&&u<=22))?86:8,
   pr:(u,dag)=>dag===0?(u===16?0.2:u===17?0.4:u===18?0.1:u===21?0.3:u===22?0.2:0):0,
   wc:(u,dag)=>dag===0&&((u>=16&&u<=18)||(u>=21&&u<=22))?61:3,
   som:1.2
@@ -87,13 +87,20 @@ async function controleer(type,naam,breedte){
     const r=await page.evaluate(()=>{
       const svg=document.getElementById("chart"),g=S.geo,regen=svg.querySelector('g[data-q4-rain-periods]');
       const teksten=[...regen.querySelectorAll("text")].map(el=>(el.textContent||"").trim());
+      const samenvattingen=[...regen.querySelectorAll('text[data-q4-rain-summary]')].map(el=>(el.textContent||"").trim());
+      const periodeBedragen=[...regen.querySelectorAll('text[data-q4-rain-period-amount]')].map(el=>(el.textContent||"").trim());
       const kansLabels=[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim()));
       return {
         oudeStaven:[...svg.querySelectorAll("rect")].filter(el=>el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".16").length,
         oudeMm:[...svg.querySelectorAll("text")].filter(el=>/ millimeter neerslag$/.test(el.getAttribute("aria-label")||"")).length,
         brackets:regen.querySelectorAll("line").length,
-        teksten,
+        teksten,samenvattingen,periodeBedragen,
         kansOnderTien:kansLabels.filter(el=>Number((el.textContent||"").replace("%",""))<10).length,
+        kansNegentien:kansLabels.some(el=>(el.textContent||"").trim()==="19%"),
+        kansAlleenBijRegen:kansLabels.every(el=>{
+          const x=Number(el.getAttribute("x"));
+          return g.MM.some((mm,i)=>Number(mm)>=0.1&&Math.abs(g.x(i)-x)<0.15);
+        }),
         kansGecentreerd:kansLabels.every(el=>{const v=Number((el.textContent||"").replace("%","")),x=Number(el.getAttribute("x"));return g.P.some((p,i)=>Number(p)===v&&Math.abs(g.x(i)-x)<0.15);}),
         mmUitgelijnd:g.MM.every((mm,i)=>{if(i===0||mm==null)return true;const bron=S.chartStart+i;return Number.isInteger(bron)&&S.d.hourly.time[bron]===g.TI[i]&&Math.abs(Number(S.d.hourly.precipitation[bron])-Number(mm))<1e-9;}),
         mmZelfdeArray:g.MM===g.Q1MM,
@@ -110,12 +117,15 @@ async function controleer(type,naam,breedte){
     });
 
     assert.equal(r.oudeStaven,0,naam+" "+breedte+": losse hoeveelheidstaven zijn weg");
-    assert.equal(r.oudeMm,0,naam+" "+breedte+": losse mm-labels zijn weg");
+    assert.equal(r.oudeMm,0,naam+" "+breedte+": oude losse mm-labels zijn weg");
     assert.equal(r.brackets,6,naam+" "+breedte+": twee regenperioden geven twee brackets met eindkapjes; kreeg "+r.brackets+" lijnen; "+r.teksten.join(" | "));
-    assert.equal(r.teksten.length,2,naam+" "+breedte+": wisselvallig weer blijft bij twee samenvattingsregels");
-    assert(r.teksten[0].includes("2 regenperiodes")&&r.teksten[0].includes("totaal 1,2 mm"),naam+" "+breedte+": totaalregel klopt: "+r.teksten.join(" | "));
-    assert(r.teksten[1].includes("Meeste regen 16:00–17:00")&&r.teksten[1].includes("0,4 mm"),naam+" "+breedte+": piekuur klopt: "+r.teksten.join(" | "));
+    assert.deepEqual(r.periodeBedragen,["0,7 mm","0,5 mm"],naam+" "+breedte+": iedere bracket toont zijn eigen periodetotaal; kreeg "+JSON.stringify(r.periodeBedragen));
+    assert.equal(r.samenvattingen.length,2,naam+" "+breedte+": wisselvallig weer houdt twee globale samenvattingsregels");
+    assert(r.samenvattingen[0].includes("2 regenperiodes")&&r.samenvattingen[0].includes("totaal 1,2 mm"),naam+" "+breedte+": totaalregel klopt: "+r.samenvattingen.join(" | "));
+    assert(r.samenvattingen[1].includes("Meeste regen 16:00–17:00")&&r.samenvattingen[1].includes("0,4 mm"),naam+" "+breedte+": piekuur klopt: "+r.samenvattingen.join(" | "));
     assert.equal(r.kansOnderTien,0,naam+" "+breedte+": triviale kanslabels onder 10% blijven uit de statische grafiek");
+    assert.equal(r.kansNegentien,false,naam+" "+breedte+": een 19%-kans bij 0 mm staat niet los onder een droog grafiekstuk");
+    assert.equal(r.kansAlleenBijRegen,true,naam+" "+breedte+": ieder zichtbaar statisch kanslabel hoort bij een meetbaar regeninterval");
     assert.equal(r.kansGecentreerd,true,naam+" "+breedte+": zichtbare procentlabels horen bij hun eigen tijdstip");
     assert.equal(r.mmUitgelijnd,true,naam+" "+breedte+": strip gebruikt exact dezelfde uurwaarden als de grafiekbron");
     assert.equal(r.mmZelfdeArray,true,naam+" "+breedte+": tooltip en regenstrip delen letterlijk dezelfde mm-array");
@@ -127,13 +137,13 @@ async function controleer(type,naam,breedte){
     assert(r.nachtBewolking.length>0&&r.nachtBewolking.every(t=>t==="<5%"),naam+" "+breedte+": Nachtzicht gebruikt dezelfde <5%-notatie; kreeg "+JSON.stringify(r.nachtBewolking));
     assert.equal(r.aqiSub,"Redelijk",naam+" "+breedte+": AQI-subregel herhaalt de schaalnaam niet; kreeg "+JSON.stringify(r.aqiSub));
     assert(!r.dagteksten.some(t=>/rond \d{1,2}:\d{2}/.test(t)),naam+" "+breedte+": dagregels suggereren geen minuutprecisie");
-    assert(r.h>296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets en samenvatting");
+    assert(r.h>296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets, bedragen en samenvatting");
 
     await page.locator("#chart").scrollIntoViewIfNeeded();
-    const coords=await page.evaluate(()=>{
+    const puntCoords=uur=>page.evaluate(uur=>{
       const svg=document.getElementById("chart"),hit=document.getElementById("hit"),g=S.geo;
-      const i=g.TI.findIndex(t=>String(t).endsWith("T17:00"));
-      if(i<0)return {fout:"GEEN_INDEX",ti:g.TI};
+      const i=g.TI.findIndex(t=>String(t).endsWith("T"+uur));
+      if(i<0)return {fout:"GEEN_INDEX",uur,ti:g.TI};
       const box=svg.getBoundingClientRect(),hitBox=hit.getBoundingClientRect();
       const bron=Number.isInteger(S.chartStart)?S.chartStart+i:null;
       return {
@@ -147,7 +157,9 @@ async function controleer(type,naam,breedte){
         clientY:hitBox.top+hitBox.height*.35,
         svgWidth:box.width,hitWidth:hitBox.width
       };
-    });
+    },uur);
+
+    const coords=await puntCoords("17:00");
     assert(!coords.fout,naam+" "+breedte+": 17:00-interactiepunt bestaat; diagnose="+JSON.stringify(coords));
 
     const leesScrub=()=>page.evaluate(()=>{
@@ -161,29 +173,36 @@ async function controleer(type,naam,breedte){
       };
     });
 
-    let interactie;
-    if(breedte<760){
-      await page.evaluate(({clientX,clientY})=>{
-        const hit=document.getElementById("hit");
-        hit.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,clientX,clientY,pointerType:"touch"}));
-      },coords);
-      interactie=await leesScrub();
-      assert(interactie.teksten.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": touch op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify({coords,interactie})+"; pageerrors="+JSON.stringify(fouten));
-      assert(/neerslagkans\s+86%/i.test(interactie.groepTekst),naam+" "+breedte+": volledige kansinformatie blijft via touch beschikbaar");
-      assert.equal(interactie.display,"block",naam+" "+breedte+": touch maakt tooltip zichtbaar");
-    }else{
-      /* Gebruik hier de echte Playwright-muisroute. Een handmatig geconstrueerde
-         PointerEvent is geen betrouwbare simulatie van browser-hit-testing en
-         pointer/mouse-eventcompatibiliteit; deze test moet juist bewijzen wat een
-         gebruiker met een echte muis krijgt. */
-      await page.mouse.move(coords.clientX,coords.clientY);
-      await page.waitForTimeout(30);
-      interactie=await leesScrub();
-      assert(interactie.teksten.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": echte muishover op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify({coords,interactie})+"; pageerrors="+JSON.stringify(fouten));
-      assert(/neerslagkans\s+86%/i.test(interactie.groepTekst),naam+" "+breedte+": volledige kansinformatie blijft via echte muishover beschikbaar");
-      assert.equal(interactie.display,"block",naam+" "+breedte+": echte muishover maakt tooltip zichtbaar");
-    }
+    const interacteer=async coords=>{
+      if(breedte<760){
+        await page.evaluate(({clientX,clientY})=>{
+          const hit=document.getElementById("hit");
+          hit.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,clientX,clientY,pointerType:"touch"}));
+        },coords);
+      }else{
+        /* Gebruik hier de echte Playwright-muisroute. Een handmatig geconstrueerde
+           PointerEvent is geen betrouwbare simulatie van browser-hit-testing en
+           pointer/mouse-eventcompatibiliteit. */
+        await page.mouse.move(coords.clientX,coords.clientY);
+        await page.waitForTimeout(30);
+      }
+      return leesScrub();
+    };
+
+    const interactie=await interacteer(coords);
+    assert(interactie.teksten.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": interactie op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify({coords,interactie})+"; pageerrors="+JSON.stringify(fouten));
+    assert(/neerslagkans\s+86%/i.test(interactie.groepTekst),naam+" "+breedte+": volledige kansinformatie blijft via tooltip beschikbaar");
+    assert.equal(interactie.display,"block",naam+" "+breedte+": interactie maakt tooltip zichtbaar");
     assert.equal(coords.zelfdeArray,true,naam+" "+breedte+": interactie leest dezelfde mm-array als regenstrip");
+
+    /* Het New-York-randgeval: 19% kans maar 0 mm hoort niet als statisch label
+       onder een droog stuk te staan. De kans verdwijnt echter niet uit de data:
+       via mouse/touch op dat uur blijft hij volledig beschikbaar. */
+    const drogeKansCoords=await puntCoords("15:00");
+    assert(!drogeKansCoords.fout,naam+" "+breedte+": droog 19%-interactiepunt bestaat; diagnose="+JSON.stringify(drogeKansCoords));
+    assert.equal(Number(drogeKansCoords.raw),0,naam+" "+breedte+": 15:00-fixture heeft aantoonbaar 0 mm");
+    const drogeKansInteractie=await interacteer(drogeKansCoords);
+    assert(/neerslagkans\s+19%/i.test(drogeKansInteractie.groepTekst),naam+" "+breedte+": verborgen droge 19%-kans blijft via tooltip beschikbaar; diagnose="+JSON.stringify(drogeKansInteractie));
 
     const droog=await page.evaluate(()=>{
       S.d.hourly.precipitation=S.d.hourly.precipitation.map(()=>0);
@@ -202,7 +221,7 @@ async function controleer(type,naam,breedte){
     assert.equal(droog.kansen,0,naam+" "+breedte+": uitsluitend 8%-kansen geven geen losse grafiekruis");
     assert.equal(droog.zelfdeArray,true,naam+" "+breedte+": ook droog houdt één gedeelde mm-array");
     assert.deepEqual(fouten,[],naam+" "+breedte+": geen pageerrors");
-    console.log("Q4-browser OK: "+naam+" "+breedte+"px; "+r.teksten.join(" | "));
+    console.log("Q4-browser OK: "+naam+" "+breedte+"px; "+r.samenvattingen.join(" | ")+"; perioden "+r.periodeBedragen.join(" | "));
   }finally{
     await context.close();await browser.close();
   }
