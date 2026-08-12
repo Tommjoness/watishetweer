@@ -45,7 +45,6 @@ const menuCss=`
    iets lichter; primaire tekst, grafieken en semantische kleuren blijven gelijk. */
 html[data-thema="donker"]{--ink-45:#A8A8A8;--ink-25:#959595}
 #thema{letter-spacing:.08em}
-#thema::after{content:"⌄";display:inline-block;margin-left:6px;font-size:12px;line-height:1;transform:translateY(-1px)}
 #themamenu{position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:236px;background:var(--sheet);border:1px solid var(--rule);box-shadow:0 10px 26px rgba(0,0,0,.14);text-align:left}
 html[data-thema="donker"] #themamenu{box-shadow:0 12px 30px rgba(0,0,0,.38)}
 #themamenu[hidden]{display:none}
