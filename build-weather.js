@@ -5,6 +5,7 @@ const path=require("path");
 const vm=require("vm");
 const PRODUCT_CONFIG=require("./product-config.js");
 const {vernieuwServiceworkerCache}=require("./scripts/postbuild-cache.js");
+/* CACHE_BRONNEN en het hashrecept zijn uitsluitend eigendom van postbuild-cache.js. */
 const ROOT=__dirname,OUT=path.join(ROOT,"public");
 const NIET_PUBLICEREN=new Set([
   ".git",".github","api","lib","node_modules","public","scripts",
