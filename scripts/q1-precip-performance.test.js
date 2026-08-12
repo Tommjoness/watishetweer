@@ -113,7 +113,9 @@ assert.equal(q.temperatuurTrend({timezone:"Europe/Amsterdam",current:{temperatur
 assert.equal(q.cacheSleutel(52.367612,4.9041),"52.368,4.904");
 assert.equal(q.cacheIsVers({op:1000},1000+q.CACHE_VERS_MS),true);
 assert.equal(q.cacheIsVers({op:1000},1001+q.CACHE_VERS_MS),false);
-const gesnoeid=q.cacheSnoei({a:{op:1},b:{op:2},c:{op:3},d:{op:4}});
-assert.deepEqual(Object.keys(gesnoeid),["d","c","b"]);
+assert.equal(q.cacheIsDirectBruikbaar({op:1000},1000+q.CACHE_DIRECT_MS),true,"cache mag tot de directe tussenweergavegrens onmiddellijk tekenen");
+assert.equal(q.cacheIsDirectBruikbaar({op:1000},1001+q.CACHE_DIRECT_MS),false,"ouder dan de tussenweergavegrens wacht op actuele netwerkdata");
+const gesnoeid=q.cacheSnoei({a:{op:1},b:{op:2},c:{op:3},d:{op:4},e:{op:5},f:{op:6},g:{op:7},h:{op:8},i:{op:9}});
+assert.deepEqual(Object.keys(gesnoeid),["i","h","g","f","e","d","c","b"],"cache volgt de acht mogelijke bewaarde plaatsen");
 
 console.log("Checkpoint 25%: temperatuurtrend, neerslagsemantiek en performancecache geslaagd.");
