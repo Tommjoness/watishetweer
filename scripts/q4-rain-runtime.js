@@ -33,6 +33,40 @@ meters=function(){
   q4BewolkingPresentatie();
 };
 
+/* Nachtzicht toont het gemiddelde van een hele nacht. Ook daar is 0–4% een
+   modeluitkomst, geen meting met procentpuntprecisie. De score blijft met de
+   ongewijzigde ruwe cw rekenen; uitsluitend de al gerenderde presentatie wordt
+   na de bestaande nachten()-owner genormaliseerd naar dezelfde <5%-notatie. */
+function q4NachtzichtPresentatie(){
+  document.querySelectorAll("#nights .perc").forEach(el=>{
+    const m=/^(\d+(?:[.,]\d+)?)%$/.exec((el.textContent||"").trim());
+    if(!m)return;
+    const waarde=Number(m[1].replace(",","."));
+    if(Number.isFinite(waarde)&&waarde<5)el.textContent="<5%";
+  });
+}
+const q4BasisNachten=nachten;
+nachten=function(){
+  q4BasisNachten();
+  q4NachtzichtPresentatie();
+};
+
+/* De schaal staat al in de AQI-kop. De subregel hoeft die niet nogmaals te
+   herhalen ("redelijk · Europese AQI"). De classificatie zelf blijft exact
+   dezelfde; alleen de redundante suffix verdwijnt en begint als zelfstandig
+   statuswoord met een hoofdletter. */
+function q4LuchtkwaliteitPresentatie(){
+  const sub=document.querySelector("#aq .stat:first-child .ssub");
+  if(!sub)return;
+  const schoon=(sub.textContent||"").replace(/\s*·\s*(Europese|Amerikaanse) AQI\s*$/i,"").trim();
+  if(schoon)sub.textContent=schoon.charAt(0).toUpperCase()+schoon.slice(1);
+}
+const q4BasisLucht=lucht;
+lucht=function(){
+  q4BasisLucht();
+  q4LuchtkwaliteitPresentatie();
+};
+
 function q4SvgLijn(x1,y1,x2,y2,dikte){
   const el=document.createElementNS(Q4_SVG_NS,"line");
   el.setAttribute("x1",String(x1));el.setAttribute("y1",String(y1));
