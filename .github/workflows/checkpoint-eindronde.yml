@@ -23,6 +23,8 @@ jobs:
         run: npm run build
       - name: Finale 27-punten artifactcontrole
         run: node scripts/verify-final-27.js
+      - name: Pooldag en poolnacht in Chromium en WebKit
+        run: node browser-polar-solar.test.js
       - name: Weergave en favicon in Chromium en WebKit
         run: node browser-ui-shell-playwright.test.js
       - name: Tijdzones en fallback in Chromium en WebKit

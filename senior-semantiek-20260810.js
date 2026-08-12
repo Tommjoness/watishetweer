@@ -212,14 +212,29 @@ function zonInfoRijen(daily,nuLokaal,geselecteerdIndex,daglengteFn,labelFn){
   const label=idx=>typeof labelFn==="function"?labelFn(tijden[idx]):tijden[idx];
   const lengte=idx=>typeof daglengteFn==="function"?daglichtGrammatica(daglengteFn(idx)):"";
   const rij=(idx,items)=>({label:label(idx),items:items.filter(Boolean)});
-  const op=idx=>sunrise[idx]?"zon op "+hhmm(sunrise[idx]):"";
-  const onder=idx=>sunset[idx]?"zon onder "+hhmm(sunset[idx]):"";
+  const op=idx=>{const t=hhmm(sunrise[idx]);return t?"zon op "+t:"";};
+  const onder=idx=>{const t=hhmm(sunset[idx]);return t?"zon onder "+t:"";};
   const daglicht=idx=>lengte(idx)||"";
+  const bijzonder=idx=>{
+    const l=daglicht(idx),sr=sunrise[idx],ss=sunset[idx];
+    if(l==="Zoninformatie niet beschikbaar")return [l];
+    const beideOntbreken=!sr&&!ss,srt=hhmm(sr),sst=hhmm(ss);
+    const dagen=sr&&ss?datumDagenVerschil(String(sr).slice(0,10),String(ss).slice(0,10)):null;
+    if(l==="poolnacht"&&(beideOntbreken||(srt==="00:00"&&sst==="00:00"&&dagen===0)))
+      return ["Zon komt niet op","0 uur daglicht"];
+    if(l==="24 uur daglicht"&&(beideOntbreken||(srt==="00:00"&&sst==="00:00"&&dagen===1)))
+      return ["Zon gaat niet onder","24 uur daglicht"];
+    return null;
+  };
+  const volledigeDag=idx=>bijzonder(idx)||[op(idx),onder(idx),daglicht(idx)];
+  const volgendeOp=idx=>bijzonder(idx)||[op(idx)];
 
   if(Number.isInteger(geselecteerdIndex)&&geselecteerdIndex>=0){
-    return [rij(i,[op(i),onder(i),daglicht(i)])];
+    return [rij(i,volledigeDag(i))];
   }
 
+  const speciaal=bijzonder(i);
+  if(speciaal)return [rij(i,speciaal)];
   const nu=String(nuLokaal||"");
   if(!sunrise[i]&&!sunset[i]) return [rij(i,[daglicht(i)])];
   if(sunrise[i]&&!sunset[i]){
@@ -228,18 +243,18 @@ function zonInfoRijen(daily,nuLokaal,geselecteerdIndex,daglengteFn,labelFn){
   if(!sunrise[i]&&sunset[i]){
     if(nu<sunset[i]){
       const uit=[rij(i,[onder(i),daglicht(i)])];
-      if(i+1<tijden.length&&sunrise[i+1])uit.push(rij(i+1,[op(i+1)]));
+      if(i+1<tijden.length)uit.push(rij(i+1,volgendeOp(i+1)));
       return uit;
     }
-    return i+1<tijden.length?[rij(i+1,[op(i+1),onder(i+1),daglicht(i+1)])]:[rij(i,[daglicht(i)])];
+    return i+1<tijden.length?[rij(i+1,volledigeDag(i+1))]:[rij(i,[daglicht(i)])];
   }
   if(nu<sunrise[i]) return [rij(i,[op(i),onder(i),daglicht(i)])];
   if(nu<sunset[i]){
     const uit=[rij(i,[onder(i),daglicht(i)])];
-    if(i+1<tijden.length&&sunrise[i+1]) uit.push(rij(i+1,[op(i+1)]));
+    if(i+1<tijden.length) uit.push(rij(i+1,volgendeOp(i+1)));
     return uit;
   }
-  if(i+1<tijden.length) return [rij(i+1,[op(i+1),onder(i+1),daglicht(i+1)])];
+  if(i+1<tijden.length) return [rij(i+1,volledigeDag(i+1))];
   return [rij(i,[daglicht(i)])];
 }
 

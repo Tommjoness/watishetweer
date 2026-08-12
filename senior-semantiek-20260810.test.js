@@ -138,7 +138,24 @@ assert.deepEqual(s.zonInfoRijen(daily,"2026-08-10T16:04",2,lengte,labels),[
 ]);
 
 const polar={time:["2026-12-20"],sunrise:[null],sunset:[null]};
-assert.deepEqual(s.zonInfoRijen(polar,"2026-12-20T12:00",null,()=>"poolnacht",()=>"Vandaag"),[{label:"Vandaag",items:["poolnacht"]}]);
+assert.deepEqual(s.zonInfoRijen(polar,"2026-12-20T12:00",null,()=>"poolnacht",()=>"Vandaag"),[
+  {label:"Vandaag",items:["Zon komt niet op","0 uur daglicht"]}
+]);
+assert.deepEqual(s.zonInfoRijen(polar,"2026-12-20T12:00",null,()=>"24 uur daglicht",()=>"Vandaag"),[
+  {label:"Vandaag",items:["Zon gaat niet onder","24 uur daglicht"]}
+]);
+const polarNachtProvider={time:["2026-12-20"],sunrise:["2026-12-20T00:00"],sunset:["2026-12-20T00:00"]};
+assert.deepEqual(s.zonInfoRijen(polarNachtProvider,"2026-12-20T12:00",null,()=>"poolnacht",()=>"Vandaag"),[
+  {label:"Vandaag",items:["Zon komt niet op","0 uur daglicht"]}
+]);
+const polarDagProvider={time:["2026-06-20"],sunrise:["2026-06-20T00:00"],sunset:["2026-06-21T00:00"]};
+assert.deepEqual(s.zonInfoRijen(polarDagProvider,"2026-06-20T12:00",null,()=>"24 uur daglicht",()=>"Vandaag"),[
+  {label:"Vandaag",items:["Zon gaat niet onder","24 uur daglicht"]}
+]);
+const ongeldigeZon={time:["2026-06-20"],sunrise:["ongeldig"],sunset:["2026-06-20T23:00"]};
+assert.deepEqual(s.zonInfoRijen(ongeldigeZon,"2026-06-20T12:00",null,()=>"Zoninformatie niet beschikbaar",()=>"Vandaag"),[
+  {label:"Vandaag",items:["Zoninformatie niet beschikbaar"]}
+]);
 const alleenOp={time:["2026-05-15"],sunrise:["2026-05-15T01:20"],sunset:[null]};
 assert.deepEqual(s.zonInfoRijen(alleenOp,"2026-05-15T00:30",null,()=>"24 uur daglicht",()=>"Vandaag"),[{label:"Vandaag",items:["zon op 01:20","24 uur daglicht"]}]);
 assert.deepEqual(s.zonInfoRijen(alleenOp,"2026-05-15T02:00",null,()=>"24 uur daglicht",()=>"Vandaag"),[{label:"Vandaag",items:["24 uur daglicht"]}]);

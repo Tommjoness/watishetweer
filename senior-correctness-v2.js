@@ -14,6 +14,51 @@ const mistCode=code=>Number(code)===45||Number(code)===48;
 const hoofdletter=t=>{t=String(t||"");return t?t.charAt(0).toUpperCase()+t.slice(1):t;};
 const kleineStart=t=>{t=String(t||"");return t?t.charAt(0).toLowerCase()+t.slice(1):t;};
 
+/* Open-Meteo gebruikt bij poolnacht twee gelijke lokale middernachten en bij
+   pooldag lokale middernacht tot middernacht van de volgende kalenderdag. De
+   datum hoort daarom bij de betekenis van sunrise/sunset: alleen HH:MM
+   aftrekken maakt 24 uur daglicht ten onrechte gelijk aan nul. Deze helper
+   leest uitsluitend de lokale civiele tijd die de provider levert; er wordt
+   geen apparaat- of UTC-tijdzone op toegepast. Ongeldige of onverwachte data
+   valt fail-closed terug naar onbekend. */
+function lokaalZonTijdstip(tijd){
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/.exec(String(tijd||""));
+  if(!m) return null;
+  const jaar=Number(m[1]),maand=Number(m[2]),dag=Number(m[3]),uur=Number(m[4]),minuut=Number(m[5]);
+  if(maand<1||maand>12||dag<1||dag>31||uur<0||uur>23||minuut<0||minuut>59) return null;
+  const ms=Date.UTC(jaar,maand-1,dag),controle=new Date(ms);
+  if(controle.getUTCFullYear()!==jaar||controle.getUTCMonth()!==maand-1||controle.getUTCDate()!==dag) return null;
+  return {dagNr:Math.floor(ms/86400000),minuutVanDag:uur*60+minuut};
+}
+function poolZonInfo(status){
+  if(status==="pooldag") return {status,minuten:1440,tekst:"24 uur daglicht",daglichtTekst:"24 uur daglicht",zontekst:"Zon gaat niet onder"};
+  return {status:"poolnacht",minuten:0,tekst:"poolnacht",daglichtTekst:"0 uur daglicht",zontekst:"Zon komt niet op"};
+}
+function poolStatusUitVolledigeDag(isDagWaarden){
+  if(!Array.isArray(isDagWaarden)||isDagWaarden.length<23) return null;
+  const waarden=isDagWaarden.map(v=>num(v));
+  if(waarden.some(v=>v!==0&&v!==1)) return null;
+  if(waarden.every(v=>v===1)) return "pooldag";
+  if(waarden.every(v=>v===0)) return "poolnacht";
+  return null;
+}
+function zonDaglichtInfo(sunrise,sunset,isDagWaarden){
+  const opOntbreekt=sunrise===null||sunrise===undefined||sunrise==="";
+  const onderOntbreekt=sunset===null||sunset===undefined||sunset==="";
+  const op=lokaalZonTijdstip(sunrise),onder=lokaalZonTijdstip(sunset);
+  if(!op||!onder){
+    const fallback=opOntbreekt&&onderOntbreekt?poolStatusUitVolledigeDag(isDagWaarden):null;
+    return fallback?poolZonInfo(fallback):{status:"onbekend",minuten:null,tekst:"Zoninformatie niet beschikbaar",daglichtTekst:"Zoninformatie niet beschikbaar",zontekst:"Zoninformatie niet beschikbaar"};
+  }
+  const minuten=(onder.dagNr-op.dagNr)*1440+(onder.minuutVanDag-op.minuutVanDag);
+  if(!Number.isInteger(minuten)||minuten<0||minuten>1440)
+    return {status:"onbekend",minuten:null,tekst:"Zoninformatie niet beschikbaar",daglichtTekst:"Zoninformatie niet beschikbaar",zontekst:"Zoninformatie niet beschikbaar"};
+  if(minuten===0) return poolZonInfo("poolnacht");
+  if(minuten===1440) return poolZonInfo("pooldag");
+  const tekst=Math.floor(minuten/60)+" uur en "+(minuten%60)+" minuten daglicht";
+  return {status:"normaal",minuten,tekst,daglichtTekst:tekst,zontekst:null};
+}
+
 function nachtzichtScore(rijen){
   const alle=Array.isArray(rijen)?rijen:[];
   const geldig=alle.filter(r=>num(r.cloud)!==null&&num(r.visibility)!==null);
@@ -151,11 +196,29 @@ function huidigeNeerslagEindMin(analyse,drempel){
   return null;
 }
 
-const api={nachtzichtScore,grafiekNeerslagVerschuiving,dagKansSamenvatting,komendUurTekst,maanEventsBinnenVenster,huidigeNeerslagEindMin};
+const api={zonDaglichtInfo,nachtzichtScore,grafiekNeerslagVerschuiving,dagKansSamenvatting,komendUurTekst,maanEventsBinnenVenster,huidigeNeerslagEindMin};
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowCorrectnessV2=api;
 
 if(typeof document!=="undefined"&&typeof S!=="undefined"){
+  function volledigeIsDagReeks(i){
+    const day=S.d&&S.d.daily||{},h=S.d&&S.d.hourly||{},datum=day.time&&day.time[i];
+    if(!datum||!Array.isArray(h.time)||!Array.isArray(h.is_day)) return null;
+    const waarden=[];let eerste=false,laatste=false;
+    for(let k=0;k<h.time.length;k++){
+      const t=String(h.time[k]||"");
+      if(t.slice(0,10)!==datum) continue;
+      const hm=t.slice(11,16);if(hm==="00:00")eerste=true;if(hm==="23:00")laatste=true;
+      waarden.push(h.is_day[k]);
+    }
+    return eerste&&laatste&&waarden.length>=23?waarden:null;
+  }
+  if(typeof daglengte==="function"){
+    daglengte=function(i){
+      const day=S.d&&S.d.daily||{};
+      return zonDaglichtInfo(day.sunrise&&day.sunrise[i],day.sunset&&day.sunset[i],volledigeIsDagReeks(i)).tekst;
+    };
+  }
   function maanFactor(tijd){
     try{
       const ms=naarUTC(tijd),m=maan(new Date(ms));
