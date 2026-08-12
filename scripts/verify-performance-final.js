@@ -18,7 +18,10 @@ for(const tekst of [
   "zoneFormatterCache.size>24",
   "const lokaleMinutenCache=new Map();",
   "lokaleMinutenCache.size>4096",
-  "zoneFormatter(tijdzone).formatToParts(new Date(ms))"
+  "zoneFormatter(tijdzone).formatToParts(new Date(ms))",
+  "let gok=doel,zoneGeldig=true;",
+  "if(off===null){zoneGeldig=false;break;}",
+  "if(zoneGeldig)return gok;"
 ])if(!html.includes(tekst))throw new Error("Performance-invariant ontbreekt: "+tekst);
 
 const begin=html.indexOf("/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */"),eind=html.indexOf("/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */",begin);
@@ -28,7 +31,13 @@ const zoneStart=engine.indexOf("function zoneDelen(ms,tijdzone){"),zoneEind=engi
 if(zoneStart<0||zoneEind<=zoneStart)throw new Error("zoneDelen ontbreekt in centrale engine.");
 if(/new Intl\.DateTimeFormat/.test(engine.slice(zoneStart,zoneEind)))throw new Error("zoneDelen bouwt nog per conversie een formatter.");
 
+const naarUtcStart=html.indexOf("function naarUTC(lokaal){"),naarUtcEind=html.indexOf("function naarLokaal(msUTC){",naarUtcStart);
+if(naarUtcStart<0||naarUtcEind<=naarUtcStart)throw new Error("naarUTC ontbreekt in finale artifact.");
+const naarUtc=html.slice(naarUtcStart,naarUtcEind);
+if(!naarUtc.includes("zoneGeldig=false")||!naarUtc.includes("utc_offset_seconds"))throw new Error("naarUTC mist de veilige numerieke offsetfallback.");
+if((naarUtc.match(/return doel-off;/g)||[]).length!==1)throw new Error("naarUTC numerieke fallback is niet eenduidig.");
+
 const scripts=[...html.matchAll(/<script(?![^>]* src=)[^>]*>([^]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:performance-verify-"+(i+1)}));
-console.log("Performance-final geverifieerd: veilige 170-uurs horizon en centrale tijdconversie met formatter/cache.");
+console.log("Performance-final geverifieerd: veilige 170-uurs horizon, centrale tijdconversie met cache en consistente tijdzonefallback.");
