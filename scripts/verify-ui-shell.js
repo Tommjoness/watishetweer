@@ -19,6 +19,8 @@ for(const keuze of ["auto","licht","donker","rood"])ok(html.includes('data-thema
 ok(html.includes("Automatisch (dag/nacht)"),"automatische stand legt het dag/nachtgedrag uit");
 ok(html.includes('knop.textContent="Weergave · "+THEMA_KNOP_LABEL[keuze]'),"knop benoemt functie én huidige voorkeur");
 ok(html.includes('optie.setAttribute("aria-checked",optie.dataset.themaKeuze===keuze?"true":"false")'),"actieve keuze wordt in het menu gemarkeerd");
+ok(html.includes('if(zoek)zoek.classList.remove("on")')&&html.includes('if(invoer)invoer.setAttribute("aria-expanded","false")'),"weergavemenu sluit een eventueel open zoekresultatenpaneel");
+ok(html.includes('e.key==="ArrowDown"')&&html.includes('e.key==="ArrowUp"')&&html.includes('e.key==="Home"')&&html.includes('e.key==="End"'),"weergavemenu ondersteunt standaard toetsenbordnavigatie");
 ok(html.includes('if(e.key==="Escape"&&!themaMenu.hidden)'),"weergavemenu sluit via Escape");
 ok(!html.includes('THEMAS[(THEMAS.indexOf(nu)+1)%THEMAS.length]'),"oude cyclische themalogica is verwijderd");
 ok(!html.includes("Klik voor de volgende stand."),"oude onduidelijke cyclusinstructie is verwijderd");
