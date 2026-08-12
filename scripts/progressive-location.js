@@ -1,0 +1,124 @@
+/* Progressieve locatielading voor een nog niet gecachte plaats.
+   De volledige forecast blijft de enige bron voor alle uiteindelijke waarden.
+   Alleen wanneer een zichtbare locatiewissel op die forecast moet wachten, mag
+   een kleine current-only request alvast de plaats, temperatuur en toestand
+   tonen. Er worden nooit partial-data in S.d gezet en nooit formules uitgevoerd
+   op de snelle response. */
+(function(root){
+"use strict";
+
+const SNEL_START_VERTRAGING_MS=120;
+const SNEL_TIMEOUT_MS=3000;
+const getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
+
+function snellePreviewUrl(lat,lon){
+  const a=getal(lat),b=getal(lon);
+  if(a===null||b===null)return null;
+  return "https://api.open-meteo.com/v1/forecast?latitude="+encodeURIComponent(a)
+    +"&longitude="+encodeURIComponent(b)
+    +"&current=temperature_2m,apparent_temperature,is_day,weather_code"
+    +"&timezone=auto";
+}
+
+function normaliseerSnellePreview(data){
+  const d=data&&typeof data==="object"?data:{},c=d.current&&typeof d.current==="object"?d.current:{};
+  const temperatuur=getal(c.temperature_2m),gevoel=getal(c.apparent_temperature),code=getal(c.weather_code),isDag=getal(c.is_day);
+  if(temperatuur===null||code===null||(isDag!==0&&isDag!==1))return null;
+  return {
+    temperatuur:Math.round(temperatuur),
+    gevoel:gevoel===null?null:Math.round(gevoel),
+    code:Math.round(code),
+    isDag:isDag===1,
+    tijdzone:typeof d.timezone==="string"?d.timezone:""
+  };
+}
+
+const api={snellePreviewUrl,normaliseerSnellePreview,SNEL_START_VERTRAGING_MS,SNEL_TIMEOUT_MS};
+if(typeof module!=="undefined"&&module.exports)module.exports=api;
+root.WeatherNowProgressiveLocation=api;
+
+if(typeof document==="undefined"||typeof load!=="function"||typeof j!=="function")return;
+
+const perf=root.WeatherNowProgressiveLocationPerformance={previewHits:0,lastPreviewMs:null,lastFullMs:null};
+const nuMs=()=>root.performance&&typeof root.performance.now==="function"?root.performance.now():Date.now();
+let generatie=0,actievePreviewController=null,actievePreviewTimer=null;
+
+function stopPreviewPresentatie(){
+  document.documentElement.classList.remove("wn-progressief");
+  const app=document.getElementById("app");
+  if(app){app.classList.remove("wn-progressief");app.removeAttribute("aria-busy");}
+}
+
+function bereidPreviewVoor(){
+  stopPreviewPresentatie();
+  document.documentElement.classList.add("wn-progressief");
+  const app=document.getElementById("app");
+  if(app){app.classList.add("wn-progressief");app.setAttribute("aria-busy","true");app.style.display="none";}
+}
+
+function renderSnellePreview(data,label,lat,lon){
+  const p=normaliseerSnellePreview(data);if(!p)return false;
+  const app=document.getElementById("app"),state=document.getElementById("state"),place=document.getElementById("place");
+  if(!app||!state||!place)return false;
+
+  const naam=String(label||"");
+  place.innerHTML=(typeof esc==="function"?esc(naam):naam)+"<span id=\"plaatstijd\"></span>";
+  document.title=naam+" · Wat is het weer?";
+  const temp=document.getElementById("t");if(temp)temp.textContent=String(p.temperatuur);
+  const cond=document.getElementById("cond");if(cond&&typeof txt==="function")cond.textContent=txt(p.code,p.isDag);
+  const feels=document.getElementById("feels");if(feels)feels.textContent=p.gevoel===null?"Gevoelstemperatuur niet beschikbaar":"Gevoelstemperatuur "+p.gevoel+"°C";
+  const ico=document.getElementById("nowicon");if(ico&&typeof icon==="function")ico.innerHTML=icon(p.code,p.isDag,46);
+  const coords=document.getElementById("coords");
+  if(coords&&Number.isFinite(Number(lat))&&Number.isFinite(Number(lon)))coords.textContent=Number(lat).toFixed(3)+", "+Number(lon).toFixed(3)+(p.tijdzone?" · "+p.tijdzone:"");
+
+  state.style.display="block";state.className="msg";state.textContent="Verwachting wordt aangevuld.";
+  app.style.display="block";
+  return true;
+}
+
+const basisLoad=load;
+load=async function(lat,lon,label,stil,opslaan,land){
+  const mijnGeneratie=++generatie,start=nuMs();
+  if(actievePreviewTimer!==null){clearTimeout(actievePreviewTimer);actievePreviewTimer=null;}
+  if(actievePreviewController){actievePreviewController.abort();actievePreviewController=null;}
+  stopPreviewPresentatie();
+
+  const nieuweLat=Number(lat),nieuweLon=Number(lon);
+  const wissel=S.lat!==nieuweLat||S.lon!==nieuweLon;
+  const progressief=!stil&&wissel;
+  if(progressief)bereidPreviewVoor();
+
+  let volledigKlaar=false,lokaleController=null;
+  const volledigeBelofte=basisLoad(lat,lon,label,stil,opslaan,land);
+
+  if(progressief){
+    actievePreviewTimer=setTimeout(()=>{
+      actievePreviewTimer=null;
+      if(mijnGeneratie!==generatie||volledigKlaar)return;
+      const url=snellePreviewUrl(lat,lon);if(!url)return;
+      const controller=new AbortController();
+      lokaleController=controller;actievePreviewController=controller;
+      const previewStart=nuMs();
+      j(url,{timeoutMs:SNEL_TIMEOUT_MS,signal:controller.signal}).then(data=>{
+        if(mijnGeneratie!==generatie||volledigKlaar||controller.signal.aborted)return;
+        if(renderSnellePreview(data,label,lat,lon)){
+          perf.previewHits++;
+          perf.lastPreviewMs=Math.max(0,nuMs()-previewStart);
+        }
+      }).catch(()=>{});
+    },SNEL_START_VERTRAGING_MS);
+  }
+
+  try{
+    return await volledigeBelofte;
+  }finally{
+    volledigKlaar=true;
+    perf.lastFullMs=Math.max(0,nuMs()-start);
+    if(actievePreviewTimer!==null&&mijnGeneratie===generatie){clearTimeout(actievePreviewTimer);actievePreviewTimer=null;}
+    if(lokaleController)lokaleController.abort();
+    if(actievePreviewController===lokaleController)actievePreviewController=null;
+    if(mijnGeneratie===generatie)stopPreviewPresentatie();
+  }
+};
+
+})(typeof globalThis!=="undefined"?globalThis:this);
