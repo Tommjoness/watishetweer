@@ -1,0 +1,11 @@
+/* Tijdens een cold locatiewissel mag nooit een nieuw hero-blok boven details
+   van de vorige plaats staan. Tot de volledige forecast binnen is toont de app
+   daarom uitsluitend de actuele kern uit de kleine current-only response. */
+html.wn-progressief #app.wn-progressief > :not(.dashrow-hero){display:none!important}
+html.wn-progressief #app.wn-progressief .dashrow-hero .stats{display:none!important}
+html.wn-progressief #app.wn-progressief .dashrow-hero{margin-top:0}
+html.wn-progressief #minibar{display:none!important}
+/* De bestaande kloktimer leest S.d, dat bewust pas bij de volledige forecast
+   wordt vervangen. Verberg daarom de klok in deze korte tussenfase in plaats
+   van een seconde lang de tijdzone van de vorige plaats te kunnen tonen. */
+html.wn-progressief #plaatstijd{visibility:hidden}
