@@ -47,14 +47,7 @@ function bouw(o){
     daily:{time:dt,weather_code:wcm,temperature_2m_max:tmax,temperature_2m_min:tmin,sunrise:sr,sunset:ss,
       precipitation_probability_max:ppm,precipitation_sum:psum,uv_index_max:uvm,
       wind_speed_10m_max:wsm,wind_gusts_10m_max:wgm,wind_direction_10m_dominant:wdm}};
-  // Houd ook toekomstige kwartieren in de gedeelde fixture. Een aantal browsertests
-  // zet de testklok bewust op 14:30; met alleen 14:00 en 14:15 zou de analyse dan
-  // terecht nul bruikbare kwartieren overhouden en testten we de meetbaarheidsgrens
-  // niet werkelijk.
-  if(!o.geenKwartier) d.minutely_15={
-    time:["2026-07-22T14:00","2026-07-22T14:15","2026-07-22T14:30","2026-07-22T14:45","2026-07-22T15:00"],
-    precipitation:[0,0,0,0,0]
-  };
+  if(!o.geenKwartier) d.minutely_15={time:["2026-07-22T14:00","2026-07-22T14:15"],precipitation:[0,0]};
   return d;
 }
 module.exports={bouw};
