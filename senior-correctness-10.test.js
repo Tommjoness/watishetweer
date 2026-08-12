@@ -12,12 +12,20 @@ function basis(){
 
 test("poolnacht: Open-Meteo gelijke lokale middernachten betekenen nul uur daglicht",()=>{
   const a=zonDaglichtInfo("2021-11-06T00:00","2021-11-06T00:00");
-  assert.equal(a.status,"poolnacht");assert.equal(a.minuten,0);assert.equal(a.tekst,"0 uur daglicht");assert.equal(a.zontekst,"Zon komt niet op");
+  assert.equal(a.status,"poolnacht");assert.equal(a.minuten,0);assert.equal(a.tekst,"poolnacht");assert.equal(a.daglichtTekst,"0 uur daglicht");assert.equal(a.zontekst,"Zon komt niet op");
 });
 
 test("pooldag: Open-Meteo middernacht tot volgende kalenderdag betekent 24 uur daglicht",()=>{
   const a=zonDaglichtInfo("2021-11-06T00:00","2021-11-07T00:00");
-  assert.equal(a.status,"pooldag");assert.equal(a.minuten,1440);assert.equal(a.tekst,"24 uur daglicht");assert.equal(a.zontekst,"Zon gaat niet onder");
+  assert.equal(a.status,"pooldag");assert.equal(a.minuten,1440);assert.equal(a.tekst,"24 uur daglicht");assert.equal(a.daglichtTekst,"24 uur daglicht");assert.equal(a.zontekst,"Zon gaat niet onder");
+});
+
+test("poolfallback: ontbrekende zonstippen vereisen een volledige eenduidige is_day-dag",()=>{
+  const dag=Array(24).fill(1),nacht=Array(24).fill(0),gemengd=Array(24).fill(0);gemengd[12]=1;
+  assert.equal(zonDaglichtInfo(null,null,dag).status,"pooldag");
+  assert.equal(zonDaglichtInfo(null,null,nacht).status,"poolnacht");
+  assert.equal(zonDaglichtInfo(null,null,gemengd).status,"onbekend");
+  assert.equal(zonDaglichtInfo(null,null,Array(22).fill(1)).status,"onbekend");
 });
 
 test("poolovergang: zeer korte en zeer lange dag blijven normale daglengtes",()=>{
