@@ -17,16 +17,27 @@ if(!browser){
 const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie)){console.error("FOUT UI-shell: public/index.html ontbreekt.");process.exit(1);}
 let html=fs.readFileSync(productie,"utf8");
-html=html.replace("</head>",'<script>try{localStorage.removeItem("weerbriefing.thema");}catch(e){};window.fetch=()=>new Promise(()=>{});</script></head>');
+/* Een nooit oplossende fetch hield de --dump-dom-fixture onnodig in een half
+   opgestarte toestand. Voor deze UI-test hebben we geen weerdata nodig: netwerk
+   faalt daarom direct en deterministisch, waarna alleen het shellgedrag wordt
+   getoetst. */
+html=html.replace("</head>",'<script>try{localStorage.removeItem("weerbriefing.thema");}catch(e){};window.fetch=async()=>({ok:false,status:503,json:async()=>({}),text:async()=>""});</script></head>');
 const reporter=`<script>
 setTimeout(()=>{
   try{
     const knop=document.getElementById('thema'),menu=document.getElementById('themamenu'),favicon=document.querySelector('link[rel="icon"]');
+    const zoek=document.getElementById('res'),invoer=document.getElementById('q');
     const opties=menu?[...menu.querySelectorAll('[data-thema-keuze]')]:[];
     const uniek=new Set(opties.map(x=>x.dataset.themaKeuze)).size===4;
     const begin=!!(knop&&menu&&menu.hidden&&knop.getAttribute('aria-expanded')==='false'&&knop.textContent.trim()==='Weergave · auto');
+    if(zoek)zoek.classList.add('on');if(invoer)invoer.setAttribute('aria-expanded','true');
     knop.click();
     const open=!menu.hidden&&knop.getAttribute('aria-expanded')==='true';
+    const zoekSluit=!!(zoek&&invoer&&!zoek.classList.contains('on')&&invoer.getAttribute('aria-expanded')==='false');
+    const autoOpt=menu.querySelector('[data-thema-keuze="auto"]'),lichtOpt=menu.querySelector('[data-thema-keuze="licht"]');
+    const focusBegin=document.activeElement===autoOpt;
+    menu.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+    const pijlOk=document.activeElement===lichtOpt;
     const donker=menu.querySelector('[data-thema-keuze="donker"]');
     donker.click();
     const donkerOk=document.documentElement.getAttribute('data-thema')==='donker'&&menu.hidden&&knop.textContent.trim()==='Weergave · donker'&&donker.getAttribute('aria-checked')==='true';
@@ -38,16 +49,18 @@ setTimeout(()=>{
     const auto=menu.querySelector('[data-thema-keuze="auto"]');
     auto.click();
     const autoOk=document.documentElement.getAttribute('data-thema')==='licht'&&knop.textContent.trim()==='Weergave · auto'&&auto.getAttribute('aria-checked')==='true'&&/dag\/nacht/i.test(auto.textContent||'');
+    const knopLeesbaar=knop.scrollWidth<=knop.clientWidth+1;
     knop.click();
     const r=menu.getBoundingClientRect();
     const binnen=r.left>=-1&&r.right<=window.innerWidth+1;
     document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
     const escapeOk=menu.hidden&&knop.getAttribute('aria-expanded')==='false';
     const favOk=!!(favicon&&String(favicon.getAttribute('href')||'').startsWith('data:image/svg+xml,')&&decodeURIComponent(favicon.getAttribute('href')).includes('<circle cx="32" cy="32" r="11"'));
-    document.body.dataset.uiShellResult=(begin&&open&&donkerOk&&roodOk&&autoOk&&uniek&&binnen&&escapeOk&&favOk)?'ok':'fout';
-    document.body.dataset.uiShellDiag=JSON.stringify({begin,open,donkerOk,roodOk,autoOk,uniek,binnen,escapeOk,favOk,breedte:window.innerWidth,knop:knop&&knop.textContent,menuHidden:menu&&menu.hidden});
+    const goed=begin&&open&&zoekSluit&&focusBegin&&pijlOk&&donkerOk&&roodOk&&autoOk&&knopLeesbaar&&uniek&&binnen&&escapeOk&&favOk;
+    document.body.dataset.uiShellResult=goed?'ok':'fout';
+    document.body.dataset.uiShellDiag=JSON.stringify({begin,open,zoekSluit,focusBegin,pijlOk,donkerOk,roodOk,autoOk,knopLeesbaar,uniek,binnen,escapeOk,favOk,breedte:window.innerWidth,knop:knop&&knop.textContent,menuHidden:menu&&menu.hidden});
   }catch(e){document.body.dataset.uiShellResult='exception';document.body.dataset.uiShellDiag=String(e&&e.message||e);}
-},80);
+},120);
 </script>`;
 html=html.replace("</body>",reporter+"</body>");
 
@@ -55,7 +68,7 @@ const dir=fs.mkdtempSync(path.join(os.tmpdir(),"weathernow-ui-shell-"));
 const fixture=path.join(dir,"index.html");fs.writeFileSync(fixture,html);
 const url="file://"+fixture;
 function draai(breedte){
-  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size="+breedte+",900","--virtual-time-budget=1200","--dump-dom",url],{encoding:"utf8",maxBuffer:16*1024*1024});
+  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size="+breedte+",900","--virtual-time-budget=1800","--dump-dom",url],{encoding:"utf8",maxBuffer:16*1024*1024});
   if(r.status!==0)throw new Error("browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"",m=/data-ui-shell-result="([^"]+)"/.exec(dom),d=/data-ui-shell-diag="([^"]*)"/.exec(dom);
   if(!m||m[1]!=="ok")throw new Error("UI-shell "+breedte+" px resultaat="+(m&&m[1])+" diag="+(d&&d[1]));
