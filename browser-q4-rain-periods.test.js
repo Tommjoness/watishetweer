@@ -90,6 +90,7 @@ async function controleer(type,naam,breedte){
       const samenvattingen=[...regen.querySelectorAll('text[data-q4-rain-summary]')].map(el=>(el.textContent||"").trim());
       const periodeBedragen=[...regen.querySelectorAll('text[data-q4-rain-period-amount]')].map(el=>(el.textContent||"").trim());
       const kansLabels=[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim()));
+      const pop=document.getElementById("pop"),popStat=pop&&pop.parentElement,popKop=popStat&&popStat.querySelector(".eyebrow");
       return {
         oudeStaven:[...svg.querySelectorAll("rect")].filter(el=>el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".16").length,
         oudeMm:[...svg.querySelectorAll("text")].filter(el=>/ millimeter neerslag$/.test(el.getAttribute("aria-label")||"")).length,
@@ -108,6 +109,7 @@ async function controleer(type,naam,breedte){
         hint:(document.getElementById("charthint")||{}).textContent||"",
         daghint:(document.getElementById("dagenhint")||{}).textContent||"",
         windkop:[...document.querySelectorAll(".stat .eyebrow")].map(x=>x.textContent.trim()).find(x=>/^Windstoten/.test(x))||"",
+        neerslagKop:(popKop&&popKop.textContent||"").trim(),
         bewolking:(document.getElementById("cloud")||{}).textContent||"",
         nachtBewolking:[...document.querySelectorAll("#nights .perc")].map(el=>(el.textContent||"").trim()),
         aqiSub:(document.querySelector("#aq .stat:first-child .ssub")||{}).textContent||"",
@@ -133,6 +135,7 @@ async function controleer(type,naam,breedte){
     assert.equal(r.hint,"Selecteer een punt in de grafiek voor details.",naam+" "+breedte+": actieve grafiekhint is input-neutraal; kreeg "+JSON.stringify(r.hint));
     assert.equal(r.daghint,"Kies een dag om die verwachting in de grafiek te bekijken.",naam+" "+breedte+": daghint is input-neutraal");
     assert.equal(r.windkop,"Windstoten nu",naam+" "+breedte+": windstootkop is ondubbelzinnig");
+    assert.equal(r.neerslagKop,"Neerslag komend uur",naam+" "+breedte+": kans en hoeveelheid worden niet meer als momentopname 'nu' gelabeld");
     assert.equal(r.bewolking,"<5%",naam+" "+breedte+": 1% modelbewolking wordt zonder schijnprecisie als <5% gepresenteerd");
     assert(r.nachtBewolking.length>0&&r.nachtBewolking.every(t=>t==="<5%"),naam+" "+breedte+": Nachtzicht gebruikt dezelfde <5%-notatie; kreeg "+JSON.stringify(r.nachtBewolking));
     assert.equal(r.aqiSub,"Redelijk",naam+" "+breedte+": AQI-subregel herhaalt de schaalnaam niet; kreeg "+JSON.stringify(r.aqiSub));
@@ -203,6 +206,48 @@ async function controleer(type,naam,breedte){
     assert.equal(Number(drogeKansCoords.raw),0,naam+" "+breedte+": 15:00-fixture heeft aantoonbaar 0 mm");
     const drogeKansInteractie=await interacteer(drogeKansCoords);
     assert(/neerslagkans\s+19%/i.test(drogeKansInteractie.groepTekst),naam+" "+breedte+": verborgen droge 19%-kans blijft via tooltip beschikbaar; diagnose="+JSON.stringify(drogeKansInteractie));
+
+    /* Luoyang-randgeval: een positieve, maar onder de centrale 0,1-mm-grens
+       liggende kwartierwaarde mag niet eerst een staaf tekenen en vervolgens als
+       0,0 worden afgerond. Eén echt meetbaar interval van exact 0,1 blijft wel
+       zichtbaar. We muteren alleen de testfixture en herstellen hem direct. */
+    const kwartier=await page.evaluate(()=>{
+      const m=S.d.minutely_15,api=globalThis.WeatherNowInterpretatie;
+      if(!m||!api||typeof api.analyseerNeerslagData!=="function")return {fout:"GEEN_KWARTIERDATA"};
+      const origineel={
+        precipitation:m.precipitation.slice(),
+        rain:Array.isArray(m.rain)?m.rain.slice():null,
+        showers:Array.isArray(m.showers)?m.showers.slice():null,
+        snowfall:Array.isArray(m.snowfall)?m.snowfall.slice():null
+      };
+      const basis=api.analyseerNeerslagData(S.d,120,weatherNowActueleLokaleTijd());
+      const items=basis&&Array.isArray(basis.minutelyItems)?basis.minutelyItems:[];
+      const a=items.find(x=>Number(x.fractie)>0),b=items.find(x=>Number(x.fractie)>=0.999&&x!==a)||items[1];
+      if(!a||!b)return {fout:"TE_WEINIG_ITEMS",items:items.length};
+      m.precipitation=m.precipitation.map(()=>0);
+      if(Array.isArray(m.rain))m.rain=m.rain.map(()=>0);
+      if(Array.isArray(m.showers))m.showers=m.showers.map(()=>0);
+      if(Array.isArray(m.snowfall))m.snowfall=m.snowfall.map(()=>0);
+      const fa=Number(a.fractie)||1,fb=Number(b.fractie)||1;
+      m.precipitation[a.i]=0.04/fa;
+      m.precipitation[b.i]=0.1/fb;
+      if(Array.isArray(m.rain)){m.rain[a.i]=m.precipitation[a.i];m.rain[b.i]=m.precipitation[b.i];}
+      nowcast();
+      const svg=document.getElementById("nc");
+      const bedragen=[...svg.querySelectorAll("text")]
+        .filter(el=>el.getAttribute("fill")===TEAL&&/^\d+(?:[.,]\d+)?$/.test((el.textContent||"").trim()))
+        .map(el=>(el.textContent||"").trim());
+      const staven=[...svg.querySelectorAll("rect")].filter(el=>el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".2").length;
+      m.precipitation=origineel.precipitation;
+      if(origineel.rain)m.rain=origineel.rain;
+      if(origineel.showers)m.showers=origineel.showers;
+      if(origineel.snowfall)m.snowfall=origineel.snowfall;
+      return {bedragen,staven};
+    });
+    assert(!kwartier.fout,naam+" "+breedte+": kwartierfixture kon worden opgebouwd; diagnose="+JSON.stringify(kwartier));
+    assert(!kwartier.bedragen.includes("0,0"),naam+" "+breedte+": spoorhoeveelheid wordt nooit als 0,0 getoond; kreeg "+JSON.stringify(kwartier));
+    assert.deepEqual(kwartier.bedragen,["0,1"],naam+" "+breedte+": alleen het meetbare 0,1-mm-interval houdt een hoeveelheidlabel; kreeg "+JSON.stringify(kwartier));
+    assert.equal(kwartier.staven,1,naam+" "+breedte+": spoorhoeveelheid krijgt geen statische staaf; exact 0,1 mm wel");
 
     const droog=await page.evaluate(()=>{
       S.d.hourly.precipitation=S.d.hourly.precipitation.map(()=>0);
