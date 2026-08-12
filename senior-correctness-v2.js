@@ -110,7 +110,6 @@ function komendUurTekst(a){
   if(a.status==="KLEINE_KANS") return "Kleine kans op neerslag het komende uur.";
   if(a.status==="MOGELIJKE_NEERSLAG") return "Neerslag is mogelijk het komende uur.";
   if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return "Grote kans op neerslag; hoeveelheid onzeker.";
-  if(a.status==="SPOORHOEVEID") return "Enkele druppels mogelijk het komende uur.";
   if(a.status==="SPOORHOEVEELHEID") return "Enkele druppels mogelijk het komende uur.";
   if(a.status==="NEERSLAG_NU") return grammatica.actueleNeerslagZin(soort);
   if(a.status==="NEERSLAG_VERWACHT"){
