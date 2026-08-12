@@ -17,13 +17,12 @@ if(!browser){
 const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie)){console.error("FOUT UI-shell: public/index.html ontbreekt.");process.exit(1);}
 let html=fs.readFileSync(productie,"utf8");
-/* Een nooit oplossende fetch hield de --dump-dom-fixture onnodig in een half
-   opgestarte toestand. Voor deze UI-test hebben we geen weerdata nodig: netwerk
-   faalt daarom direct en deterministisch, waarna alleen het shellgedrag wordt
-   getoetst. */
+/* Deze fixture toetst uitsluitend de reeds opgebouwde UI-shell. Netwerk faalt
+   direct en deterministisch; de controle zelf draait synchroon nadat de normale
+   WeatherNow-runtime is geëvalueerd, zodat --dump-dom niet van timers afhangt. */
 html=html.replace("</head>",'<script>try{localStorage.removeItem("weerbriefing.thema");}catch(e){};window.fetch=async()=>({ok:false,status:503,json:async()=>({}),text:async()=>""});</script></head>');
 const reporter=`<script>
-setTimeout(()=>{
+(()=>{
   try{
     const knop=document.getElementById('thema'),menu=document.getElementById('themamenu'),favicon=document.querySelector('link[rel="icon"]');
     const zoek=document.getElementById('res'),invoer=document.getElementById('q');
@@ -44,7 +43,7 @@ setTimeout(()=>{
     knop.click();
     const rood=menu.querySelector('[data-thema-keuze="rood"]');
     rood.click();
-    const roodOk=document.documentElement.getAttribute('data-thema')==='rood'&&knop.textContent.trim()==='Weergave · rood'&&rood.getAttribute('aria-checked')==='true';
+    const roodOk=document.documentElement.getAttribute('data-thema')==='rood'&&menu.hidden&&knop.textContent.trim()==='Weergave · rood'&&rood.getAttribute('aria-checked')==='true';
     knop.click();
     const auto=menu.querySelector('[data-thema-keuze="auto"]');
     auto.click();
@@ -60,18 +59,19 @@ setTimeout(()=>{
     document.body.dataset.uiShellResult=goed?'ok':'fout';
     document.body.dataset.uiShellDiag=JSON.stringify({begin,open,zoekSluit,focusBegin,pijlOk,donkerOk,roodOk,autoOk,knopLeesbaar,uniek,binnen,escapeOk,favOk,breedte:window.innerWidth,knop:knop&&knop.textContent,menuHidden:menu&&menu.hidden});
   }catch(e){document.body.dataset.uiShellResult='exception';document.body.dataset.uiShellDiag=String(e&&e.message||e);}
-},120);
+})();
 </script>`;
+if(!html.includes("</body>"))throw new Error("UI-shell browserfixture kan body-afsluiting niet vinden.");
 html=html.replace("</body>",reporter+"</body>");
 
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"weathernow-ui-shell-"));
 const fixture=path.join(dir,"index.html");fs.writeFileSync(fixture,html);
 const url="file://"+fixture;
 function draai(breedte){
-  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size="+breedte+",900","--virtual-time-budget=1800","--dump-dom",url],{encoding:"utf8",maxBuffer:16*1024*1024});
+  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size="+breedte+",900","--virtual-time-budget=1000","--dump-dom",url],{encoding:"utf8",maxBuffer:16*1024*1024});
   if(r.status!==0)throw new Error("browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"",m=/data-ui-shell-result="([^"]+)"/.exec(dom),d=/data-ui-shell-diag="([^"]*)"/.exec(dom);
-  if(!m||m[1]!=="ok")throw new Error("UI-shell "+breedte+" px resultaat="+(m&&m[1])+" diag="+(d&&d[1]));
+  if(!m||m[1]!=="ok")throw new Error("UI-shell "+breedte+" px resultaat="+(m&&m[1])+" diag="+(d&&d[1])+" stderr="+(r.stderr||"").slice(-500));
 }
 try{
   draai(390);draai(1280);
