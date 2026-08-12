@@ -2,15 +2,15 @@
 
 const fs=require("fs");
 const path=require("path");
-const crypto=require("crypto");
 const vm=require("vm");
+const {verifieerServiceworkerCache}=require("./postbuild-cache.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
 const htmlPad=path.join(OUT,"index.html");
 const swPad=path.join(OUT,"sw.js");
 if(!fs.existsSync(htmlPad)||!fs.existsSync(swPad))throw new Error("Definitieve WeatherNow-artifact ontbreekt.");
-const html=fs.readFileSync(htmlPad,"utf8"),sw=fs.readFileSync(swPad,"utf8");
+const html=fs.readFileSync(htmlPad,"utf8");
 
 const aantal=tekst=>html.split(tekst).length-1;
 const exactEen=(tekst,naam)=>{const n=aantal(tekst);if(n!==1)throw new Error(naam+" moet exact één keer voorkomen; gevonden "+n+".");};
@@ -80,20 +80,5 @@ if(!scripts.length)throw new Error("Geen inline WeatherNow-runtime gevonden.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:final-27-"+(i+1)}));
 
 /* Serviceworker moet exact bij deze app-shell horen. */
-const CACHE_BRONNEN=[
-  "index.html","manifest.json","icon-192.png","icon-512.png","icon-maskable-512.png",
-  "bodoni-moda-latin-400-normal.woff2","bodoni-moda-latin-500-normal.woff2",
-  "instrument-sans-latin-400-normal.woff2","instrument-sans-latin-500-normal.woff2",
-  "instrument-sans-latin-600-normal.woff2","dm-mono-latin-400-normal.woff2","dm-mono-latin-500-normal.woff2"
-];
-const hash=crypto.createHash("sha256");
-for(const naam of CACHE_BRONNEN){
-  const p=path.join(OUT,naam);if(!fs.existsSync(p))throw new Error("App-shellbestand ontbreekt: "+naam);
-  hash.update(naam+"\0");hash.update(fs.readFileSync(p));hash.update("\0");
-}
-const verwacht="watishetweer-"+hash.digest("hex").slice(0,12);
-const cacheMatch=/const CACHE = "([^"]+)";/.exec(sw);
-if(!cacheMatch)throw new Error("Serviceworker-cache-id ontbreekt.");
-if(cacheMatch[1]!==verwacht)throw new Error("Serviceworker-cache hoort niet bij de finale artifact: "+cacheMatch[1]+" versus "+verwacht+".");
-
+const verwacht=verifieerServiceworkerCache(OUT,"finale");
 console.log("Finale 27-punten artifactguard geslaagd: 25/50/75-invariants, unieke requesteigenaars, race/fallback-ankers, syntactische runtime en serviceworker "+verwacht+".");
