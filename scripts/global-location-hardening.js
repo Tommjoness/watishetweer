@@ -6,8 +6,9 @@
    3. een waarschuwing mag alleen als plaatswaarschuwing worden getoond wanneer
       de bron expliciet bewijst dat het gekozen punt binnen het gebied valt.
 
-   De module verandert geen weerwaarden, modellen of formules. Hij normaliseert
-   uitsluitend responses/requests van de bestaande geocoding- en waarschuwingroutes. */
+   De module verandert geen weerwaarden, modellen of formules. Geocoding wordt
+   in de browser genormaliseerd; waarschuwingsscope wordt aan de servergrens
+   genormaliseerd zodat er maar één eigenaar van dat veiligheidscontract is. */
 (function(root){
 "use strict";
 
@@ -50,6 +51,10 @@ function verruimZoekUrl(url){
   }
 }
 
+/* Zelfde pure contract als de servermodule, voor compacte unitdekking. De
+   productie-requestroute gebruikt lib/waarschuwing-scope.cjs als enige runtime
+   eigenaar; deze helper wordt niet nogmaals over een al genormaliseerde
+   /api/waarschuwingen-response heen gezet. */
 function alleenPlaatsgebondenWaarschuwingen(data){
   if(!data||typeof data!=="object")return data;
   const lijst=Array.isArray(data.lijst)?data.lijst:[];
@@ -73,11 +78,10 @@ const api={MAX_ZOEKRESULTATEN,PROVIDER_ZOEKVENSTER,zoekSleutel,dedupliceerZoekre
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowGlobalLocationHardening=api;
 
-/* In de browser blijven de bestaande request-eigenaars intact. Voor geocoding
-   vragen we een iets ruimer provider-venster op, dedupliceren we stabiel en
-   geven we maximaal hetzelfde aantal opties terug als de bestaande UI verwacht.
-   Zo kan een dubbel providerresultaat niet één van de zes nuttige keuzes
-   verdringen. Waarschuwingen gaan na succes door een fail-closed scopefilter. */
+/* In de browser blijft alleen geocoding hier eigenaar: we vragen een iets
+   ruimer provider-venster op, dedupliceren stabiel en geven maximaal hetzelfde
+   aantal opties terug als de bestaande UI verwacht. Waarschuwingen zijn tegen
+   deze tijd al fail-closed genormaliseerd door /api/waarschuwingen. */
 if(typeof document==="undefined"||typeof j!=="function")return;
 const basisJ=j;
 j=async function(url,opt){
@@ -88,7 +92,6 @@ j=async function(url,opt){
     if(!data||typeof data!=="object")return data;
     return Object.assign({},data,{results:dedupliceerZoekresultaten(data.results,MAX_ZOEKRESULTATEN)});
   }
-  if(oorspronkelijk.includes("/api/waarschuwingen?"))return alleenPlaatsgebondenWaarschuwingen(data);
   return data;
 };
 
