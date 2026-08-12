@@ -29,6 +29,8 @@ ok(html.includes("millimeter neerslag$/.test")&&html.includes("el.remove();"),"o
 ok(html.includes('kans<10')&&html.includes('el.remove();return;'),"triviale kanslabels onder 10% verdwijnen uit de statische grafiek");
 ok(html.includes('^\\d+%$')&&html.includes("x+g.cw/2"),"resterende neerslagkanslabels worden op hun eigen tijdstip gecentreerd");
 ok(html.includes('cc!==null&&cc>=0&&cc<5')&&html.includes('&lt;5<s>%</s>'),"vrijwel wolkeloze modelwaarden worden zonder 0/1%-schijnprecisie gepresenteerd");
+ok(html.includes('function q4NachtzichtPresentatie()')&&html.includes('el.textContent="<5%"')&&html.includes('const q4BasisNachten=nachten;'),"Nachtzicht gebruikt dezelfde <5%-presentatieregel zonder de scoreberekening te wijzigen");
+ok(html.includes('function q4LuchtkwaliteitPresentatie()')&&html.includes('(Europese|Amerikaanse) AQI')&&html.includes('const q4BasisLucht=lucht;'),"AQI-presentatie verwijdert de redundante schaalnaam uit de subregel");
 
 /* De geassembleerde artifact kan historische chartHint-assignments bevatten.
    Daarom zoeken we niet globaal naar de eerste/laatste match. De runtime-marker
