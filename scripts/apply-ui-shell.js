@@ -30,23 +30,32 @@ vervangEen(
 
 /* De oude themaknop cyclde blind door auto -> licht -> donker -> rood. In de
    avond is auto zelf al donker, waardoor donker visueel twee keer in dezelfde
-   cyclus voorkwam. De knop opent nu een expliciete keuze: auto blijft bestaan,
-   maar is niet langer een extra visuele stap waar je doorheen moet klikken. */
+   cyclus voorkwam. Het expliciete menu houdt alleen de drie nuttige standen:
+   automatisch, licht en donker. Rood licht is geen productkeuze meer. */
 vervangEen(
   '<button id="thema" title="Wissel tussen licht, donker en rood licht">Auto</button>',
-  '<button id="thema" type="button" title="Verander de weergave" aria-haspopup="menu" aria-expanded="false">Weergave · auto</button>\n        <div id="themamenu" role="menu" aria-label="Weergave kiezen" hidden>\n          <button type="button" role="menuitemradio" data-thema-keuze="auto" aria-checked="true">Automatisch (dag/nacht)</button>\n          <button type="button" role="menuitemradio" data-thema-keuze="licht" aria-checked="false">Licht</button>\n          <button type="button" role="menuitemradio" data-thema-keuze="donker" aria-checked="false">Donker</button>\n          <button type="button" role="menuitemradio" data-thema-keuze="rood" aria-checked="false">Rood licht</button>\n        </div>',
+  '<button id="thema" type="button" title="Verander de weergave" aria-haspopup="menu" aria-expanded="false">Weergave</button>\n        <div id="themamenu" role="menu" aria-label="Weergave kiezen" hidden>\n          <button type="button" role="menuitemradio" data-thema-keuze="auto" aria-checked="true">Automatisch (dag/nacht)</button>\n          <button type="button" role="menuitemradio" data-thema-keuze="licht" aria-checked="false">Licht</button>\n          <button type="button" role="menuitemradio" data-thema-keuze="donker" aria-checked="false">Donker</button>\n        </div>',
   "oude cyclische themaknop"
 );
 
 const menuCss=`
 <style id="ui-shell-controls">
-#themamenu{position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:236px;background:var(--sheet);border:1px solid var(--ink);text-align:left}
+/* Donkere modus blijft rustig, maar secundaire tekst mag niet wegvallen op
+   schermen met lager contrast. Alleen de twee secundaire tekstniveaus worden
+   iets lichter; primaire tekst, grafieken en semantische kleuren blijven gelijk. */
+html[data-thema="donker"]{--ink-45:#A8A8A8;--ink-25:#959595}
+#thema{letter-spacing:.08em}
+#themamenu{position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:236px;background:var(--sheet);border:1px solid var(--rule);box-shadow:0 10px 26px rgba(0,0,0,.14);text-align:left}
+html[data-thema="donker"] #themamenu{box-shadow:0 12px 30px rgba(0,0,0,.38)}
 #themamenu[hidden]{display:none}
-#themamenu button{display:flex;flex:none;align-items:center;justify-content:space-between;width:100%;margin:0;padding:9px 11px;border:0;border-bottom:1px solid var(--rule-soft);background:var(--sheet);color:var(--ink-70);font-family:var(--sans);font-size:13px;font-weight:400;letter-spacing:0;text-transform:none;text-align:left;white-space:normal;overflow:visible;text-overflow:clip}
+#themamenu button{display:flex;flex:none;align-items:center;justify-content:space-between;width:100%;margin:0;padding:10px 12px;border:0;border-bottom:1px solid var(--rule-soft);background:var(--sheet);color:var(--ink-70);font-family:var(--sans);font-size:13px;font-weight:400;letter-spacing:0;text-transform:none;text-align:left;white-space:normal;overflow:visible;text-overflow:clip}
 #themamenu button:last-child{border-bottom:0}
 #themamenu button:hover,#themamenu button:focus-visible{background:var(--paper);color:var(--ink)}
-#themamenu button[aria-checked="true"]{font-weight:600;color:var(--ink)}
+#themamenu button[aria-checked="true"]{background:var(--paper);font-weight:600;color:var(--ink)}
 #themamenu button[aria-checked="true"]::after{content:"✓";margin-left:12px;flex:0 0 auto}
+/* De weektabel houdt op desktop een kleine veilige rechterinset. Percentages
+   en mm-waarden staan daardoor niet strak tegen de rand van de module. */
+@media(min-width:901px){#days .row.day,#days .row.kop{padding-right:8px}}
 @media(max-width:430px){#themamenu{left:0;right:0;width:auto}}
 </style>`;
 vervangEen("</head>",menuCss+"\n</head>","headafsluiting voor weergavemenu");
@@ -72,11 +81,14 @@ document.getElementById("thema").addEventListener("click",()=>{
 themaToepassen();`;
 
 const themaNieuw=`/* ---------- thema ---------- */
-const THEMA_KEUZES=["auto","licht","donker","rood"];
-const THEMA_KNOP_LABEL={auto:"auto",licht:"licht",donker:"donker",rood:"rood"};
+const THEMA_KEUZES=["auto","licht","donker"];
 function themaKeuze(){
   const keuze=ls.get("weerbriefing.thema","auto");
-  return THEMA_KEUZES.includes(keuze)?keuze:"auto";
+  if(THEMA_KEUZES.includes(keuze))return keuze;
+  /* Oude opgeslagen waarden (waaronder de verwijderde rode stand) mogen geen
+     verborgen vierde toestand achterlaten. Migreer ze één keer naar auto. */
+  ls.set("weerbriefing.thema","auto");
+  return "auto";
 }
 function themaMenuSluit(){
   const menu=document.getElementById("themamenu"),knop=document.getElementById("thema");
@@ -89,13 +101,13 @@ function themaToepassen(){
   if(keuze==="auto") actief=(S.d&&S.d.current&&S.d.current.is_day===0)?"donker":"licht";
   document.documentElement.setAttribute("data-thema",actief);
   document.querySelector('meta[name="theme-color"]').setAttribute("content",
-    actief==="donker"?"#0B120F":actief==="rood"?"#080202":"#F4F5F3");
+    actief==="donker"?"#0B120F":"#F4F5F3");
   const knop=document.getElementById("thema"),menu=document.getElementById("themamenu");
   if(knop){
-    knop.textContent="Weergave · "+THEMA_KNOP_LABEL[keuze];
+    knop.textContent="Weergave";
     knop.title=keuze==="auto"
-      ?"Weergave staat op automatisch (nu "+actief+"). Klik om te kiezen."
-      :"Weergave staat op "+THEMA_KNOP_LABEL[keuze]+". Klik om te kiezen.";
+      ?"Weergave kiezen. Automatisch volgt dag en nacht (nu "+actief+")."
+      :"Weergave kiezen. Huidige voorkeur: "+keuze+".";
     knop.setAttribute("aria-label",knop.title);
   }
   if(menu)menu.querySelectorAll("[data-thema-keuze]").forEach(optie=>{
@@ -154,4 +166,4 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-she
 
 fs.writeFileSync(pad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"UI-shell");
-console.log("UI-shell toegepast: expliciet weergavemenu, unieke themakeuze en zon-favicon; serviceworker "+versie+".");
+console.log("UI-shell toegepast: drie duidelijke weergavestanden, dark-mode contrast, weekinset en zon-favicon; serviceworker "+versie+".");
