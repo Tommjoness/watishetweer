@@ -3,7 +3,9 @@
 const fs=require("fs");
 const path=require("path");
 const assert=require("assert");
-const html=fs.readFileSync(path.join(__dirname,"..","public","index.html"),"utf8");
+const {verifieerServiceworkerCache}=require("./postbuild-cache.js");
+const OUT=path.join(__dirname,"..","public");
+const html=fs.readFileSync(path.join(OUT,"index.html"),"utf8");
 let n=0;const ok=(v,m)=>{assert.ok(v,m);n++;console.log("OK  "+m);};
 
 ok(html.includes("/* ===== Q4 REGENPERIODEN 20260811 ===== */"),"Q4-laag staat in definitieve artifact");
@@ -69,6 +71,7 @@ ok(!policy.includes('const tijd=a.eersteTijd?" rond "+a.eersteTijd:"";'),"canoni
 ok(policy.includes('if(uur<5)return " in de nacht";')&&policy.includes('if(uur<8)return " in de vroege ochtend";')&&policy.includes('if(uur<12)return " in de ochtend";')&&policy.includes('if(uur<18)return " in de middag";'),"dagdelen hebben expliciete en testbare grenzen");
 
 ok(html.includes("minmax(140px,.72fr) 92px minmax(260px,1fr)"),"Nachtzicht geeft desktopuitleg meer ruimte dan de scorebalk");
-ok(/const CACHE = "watishetweer-[0-9a-f]{12}";/.test(fs.readFileSync(path.join(__dirname,"..","public","sw.js"),"utf8")),"serviceworker houdt inhoudsgebonden Q4-cachehash");
+const verwacht=verifieerServiceworkerCache(OUT,"Q4");
+ok(/^watishetweer-[0-9a-f]{12}$/.test(verwacht),"serviceworker hoort exact bij de Q4-app-shell");
 
 console.log("Q4-artifactcontrole: "+n+" invarianten geslaagd.");
