@@ -88,7 +88,7 @@ load=async function(lat,lon,label,stil,opslaan,land){
   const progressief=!stil&&wissel;
   if(progressief)bereidPreviewVoor();
 
-  let volledigKlaar=false,lokaleController=null;
+  let volledigKlaar=false,lokaleController=null,previewGetoond=false;
   const volledigeBelofte=basisLoad(lat,lon,label,stil,opslaan,land);
 
   if(progressief){
@@ -102,6 +102,7 @@ load=async function(lat,lon,label,stil,opslaan,land){
       j(url,{timeoutMs:SNEL_TIMEOUT_MS,signal:controller.signal}).then(data=>{
         if(mijnGeneratie!==generatie||volledigKlaar||controller.signal.aborted)return;
         if(renderSnellePreview(data,label,lat,lon)){
+          previewGetoond=true;
           perf.previewHits++;
           perf.lastPreviewMs=Math.max(0,nuMs()-previewStart);
         }
@@ -117,7 +118,17 @@ load=async function(lat,lon,label,stil,opslaan,land){
     if(actievePreviewTimer!==null&&mijnGeneratie===generatie){clearTimeout(actievePreviewTimer);actievePreviewTimer=null;}
     if(lokaleController)lokaleController.abort();
     if(actievePreviewController===lokaleController)actievePreviewController=null;
-    if(mijnGeneratie===generatie)stopPreviewPresentatie();
+    if(mijnGeneratie===generatie){
+      /* basisLoad vangt netwerkfouten zelf af. Daarom bepalen we hier aan de
+         canonieke state of de volledige forecast werkelijk voor deze locatie is
+         gecommit. Als alleen de snelle preview lukte, mag het verwijderen van de
+         tijdelijke CSS nooit oude details van de vorige stad weer zichtbaar maken. */
+      const volledigGecommit=Number(S.lat)===nieuweLat&&Number(S.lon)===nieuweLon&&!!S.d;
+      if(progressief&&previewGetoond&&!volledigGecommit){
+        const app=document.getElementById("app");if(app)app.style.display="none";
+      }
+      stopPreviewPresentatie();
+    }
   }
 };
 
