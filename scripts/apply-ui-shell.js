@@ -107,6 +107,11 @@ if(themaKnop&&themaMenu){
   themaKnop.addEventListener("click",e=>{
     e.stopPropagation();
     const openen=themaMenu.hidden;
+    if(openen){
+      const zoek=document.getElementById("res"),invoer=document.getElementById("q");
+      if(zoek)zoek.classList.remove("on");
+      if(invoer)invoer.setAttribute("aria-expanded","false");
+    }
     themaMenu.hidden=!openen;
     themaKnop.setAttribute("aria-expanded",openen?"true":"false");
     if(openen){
@@ -123,6 +128,15 @@ if(themaKnop&&themaMenu){
     themaToepassen();
     themaMenuSluit();
     themaKnop.focus();
+  });
+  themaMenu.addEventListener("keydown",e=>{
+    const opties=[...themaMenu.querySelectorAll("[data-thema-keuze]")],i=opties.indexOf(document.activeElement);
+    let volgende=null;
+    if(e.key==="ArrowDown")volgende=opties[(i+1+opties.length)%opties.length];
+    else if(e.key==="ArrowUp")volgende=opties[(i-1+opties.length)%opties.length];
+    else if(e.key==="Home")volgende=opties[0];
+    else if(e.key==="End")volgende=opties[opties.length-1];
+    if(volgende){e.preventDefault();volgende.focus();}
   });
   document.addEventListener("click",e=>{
     if(!e.target.closest("#thema")&&!e.target.closest("#themamenu"))themaMenuSluit();
