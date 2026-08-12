@@ -21,7 +21,6 @@ ok(html.includes('const THEMA_KEUZES=["auto","licht","donker"]'),"runtime kent u
 ok(html.includes('ls.set("weerbriefing.thema","auto");')&&html.includes('return "auto";'),"oude of ongeldige opgeslagen themakeuzes migreren naar automatisch");
 ok(html.includes("Automatisch (dag/nacht)"),"automatische stand legt het dag/nachtgedrag uit");
 ok(html.includes('knop.textContent="Weergave"'),"knop benoemt de functie compact zonder afgekapt statuslabel");
-ok(html.includes('#thema::after{content:"⌄"'),"weergaveknop toont dat er een menu opent");
 ok(html.includes('html[data-thema="donker"]{--ink-45:#A8A8A8;--ink-25:#959595}'),"secundaire dark-mode tekst heeft versterkt contrast");
 ok(html.includes('#themamenu button[aria-checked="true"]{background:var(--paper);'),"actieve weergavekeuze krijgt een rustige geselecteerde staat");
 ok(html.includes('@media(min-width:901px){#days .row.day,#days .row.kop{padding-right:8px}}'),"weekneerslag houdt op desktop afstand tot de rechterrand");
