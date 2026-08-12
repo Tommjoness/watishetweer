@@ -58,8 +58,12 @@ function nachtzichtScore(rijen){
   }
   const besteVenster=beste.length>=2?beste:null;
 
-  const redenen=[];
-  if(gemVis<8000||fog) redenen.push(gemVis<1000||fog/geldig.length>=0.5?"mist of zeer slecht zicht":"beperkt zicht");
+  const redenen=[],fogAandeel=fog/geldig.length;
+  if(gemVis<8000||fog){
+    if(gemVis<1000||fogAandeel>=0.5) redenen.push("mist of zeer slecht zicht");
+    else if(gemVis>=8000) redenen.push("tijdelijk slechter zicht");
+    else redenen.push("beperkt zicht");
+  }
   if(wet) redenen.push("neerslag");
   if(cw>=35) redenen.push("bewolking");
   if(moon.length&&gem(moon)>=0.2) redenen.push("maanlicht");
@@ -127,7 +131,27 @@ function maanEventsBinnenVenster(op,onder,startMs,eindMs){
   return uit.sort((a,b)=>a.ms-b.ms);
 }
 
-const api={nachtzichtScore,grafiekNeerslagVerschuiving,dagKansSamenvatting,komendUurTekst,maanEventsBinnenVenster};
+/* Als het nu regent, mag een eindtijd alleen uit een ononderbroken reeks echte
+   kwartierintervallen komen. Eerst moet minstens één toekomstig interval nog
+   meetbaar nat zijn; daarna markeert het BEGIN van het eerste droge interval het
+   verwachte einde. Gaten, ontbrekende waarden of alleen uurdata leveren null op:
+   dan tonen we liever geen tijd dan een verzonnen precisie. */
+function huidigeNeerslagEindMin(analyse,drempel){
+  const a=analyse||{},grens=num(drempel),meetbaar=grens!==null&&grens>=0?grens:0.1;
+  if(!a.currentWet||a.bronHoeveelheid!=="kwartierdata"||!Array.isArray(a.minutelyItems)||a.minutelyItems.length<2)return null;
+  let natVooruit=false,vorigeEind=null;
+  for(const item of a.minutelyItems){
+    const begin=num(item&&item.begin),eind=num(item&&item.eind),mm=num(item&&item.precipitation);
+    if(begin===null||eind===null||mm===null||eind<=begin)return null;
+    if(vorigeEind!==null&&Math.abs(begin-vorigeEind)>1e-6)return null;
+    if(mm>=meetbaar)natVooruit=true;
+    else if(natVooruit)return begin;
+    vorigeEind=eind;
+  }
+  return null;
+}
+
+const api={nachtzichtScore,grafiekNeerslagVerschuiving,dagKansSamenvatting,komendUurTekst,maanEventsBinnenVenster,huidigeNeerslagEindMin};
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowCorrectnessV2=api;
 
@@ -235,7 +259,7 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
       out+=`<div class="row night"><div class="dname">${lbl}</div><div class="score" style="color:${kleur}" title="Zichtscore op basis van resterende nacht">${score}</div>`
         +`<div class="sbar"><i style="width:${breed}%;background:${kleur}"></i></div>`
         +`<div class="nmeta"><span class="perc">${bew}</span> bewolking</div>`
-        +`<div class="nmeta wide"><span class="nachtadvies">${advies}</span><span class="nachtvenster">${venster}</span><span class="nachtmaan">Zicht ${zicht}${maanTekst}</span></div></div>`;
+        +`<div class="nmeta wide"><span class="nachtadvies">${advies}</span><span class="nachtvenster">${venster}</span><span class="nachtmaan">Gem. zicht ${zicht}${maanTekst}</span></div></div>`;
     }
     const kop=`<div class="row night kop"><div class="dname">Nacht</div><div class="score">Score</div><div class="sbar"></div><div class="nmeta">Bewolking</div><div class="nmeta wide">Beste zichtperiode</div></div>`;
     document.getElementById("nights").innerHTML=out?kop+out:'<div class="msg">Geen nachtdata beschikbaar.</div>';
@@ -244,6 +268,36 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
     moonlab.dataset.maanFase=m.fase.toFixed(4);
     moonlab.innerHTML=maanUnicode(m.fase)+"<span>"+m.naam+", "+Math.round(m.ill*100)+" procent verlicht</span>";
   };
+
+  /* De centrale engine bezit de bronanalyse. Deze correctheidslaag gebruikt
+     uitsluitend het reeds berekende kwartierverloop om een nuttige eindtijd van
+     ACTUELE neerslag te tonen. Geen aaneengesloten bewijs = geen eindtijd. */
+  if(typeof nowcast==="function"){
+    const basisNowcastCorrectness=nowcast;
+    nowcast=function(){
+      basisNowcastCorrectness();
+      try{
+        const interpretatie=root.WeatherNowInterpretatie;
+        if(!interpretatie||typeof interpretatie.analyseerNeerslagData!=="function"||typeof interpretatie.minutenNaarLokaal!=="function")return;
+        const a=interpretatie.analyseerNeerslagData(S.d,120,weatherNowActueleLokaleTijd());
+        const drempel=interpretatie.INTERPRETATIE_CONFIG&&interpretatie.INTERPRETATIE_CONFIG.meetbaarMm;
+        const eindMin=huidigeNeerslagEindMin(a,drempel);
+        if(!Number.isFinite(eindMin))return;
+        const lokaal=interpretatie.minutenNaarLokaal(eindMin,S.d&&S.d.timezone,S.d&&S.d.utc_offset_seconds);
+        const tijd=lokaal&&String(lokaal).slice(11,16);if(!/^\d{2}:\d{2}$/.test(String(tijd||"")))return;
+        const basis=grammatica&&typeof grammatica.actueleNeerslagZin==="function"
+          ?grammatica.actueleNeerslagZin(a.soort):"Er valt nu neerslag.";
+        const zin=basis+" Rond "+tijd+" wordt het naar verwachting droog.";
+        const tx=document.getElementById("nctext");if(tx)tx.textContent=zin;
+        const grafiek=document.getElementById("nc");
+        if(grafiek){
+          const oud=grafiek.getAttribute("aria-label")||"",p=oud.indexOf("Kwartierwaarden");
+          const techniek=p>=0?oud.slice(p):"Kwartierwaarden tonen de verwachting per voorafgaand kwartier.";
+          grafiek.setAttribute("aria-label",zin+" "+techniek);
+        }
+      }catch(e){}
+    };
+  }
 
   /* De centrale engine houdt de volledige bronuitleg beschikbaar. In de kleine
      tegel tonen we alleen de consumentenzin; het percentage zelf staat al erboven. */

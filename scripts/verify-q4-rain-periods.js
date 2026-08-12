@@ -26,7 +26,20 @@ ok(html.includes('document.createElementNS(Q4_SVG_NS,"text")'),"regensamenvattin
 ok(!html.includes("groep.innerHTML=inhoud"),"Q4 gebruikt geen fragiele SVG-innerHTML-injectie meer");
 ok(html.includes('el.getAttribute("fill-opacity")===".16"')&&html.includes("el.remove();"),"oude losse neerslagstaven worden na render verwijderd");
 ok(html.includes("millimeter neerslag$/.test")&&html.includes("el.remove();"),"oude losse mm-labels worden na render verwijderd");
-ok(html.includes('^\\d+%$')&&html.includes("x+g.cw/2"),"neerslagkanslabels worden terug op hun eigen tijdstip gecentreerd");
+ok(html.includes("function q4KansIndex(g,x)")&&html.includes("mm===null||mm<0.1"),"statische kanslabels worden gekoppeld aan dezelfde meetbare regenintervallen");
+ok(html.includes("kans<10||mm===null||mm<0.1"),"lage of droge kanspercentages verdwijnen uit de statische grafiek");
+ok(html.includes('^\\d+%$')&&html.includes('el.setAttribute("x",String(positie.midden))'),"resterende neerslagkanslabels worden op hun eigen tijdstip gecentreerd");
+ok(html.includes("function q4PeriodeBedragLabels(g,perioden,y,font)"),"periodehoeveelheden hebben een eigen botsingsbewuste layouthulp");
+ok(html.includes('data-q4-rain-period-amount')&&html.includes('q4Mm(p.som)+" mm"'),"iedere regenperiode toont zijn eigen berekende totaalhoeveelheid");
+ok(html.includes("while((rijen[rij]||[]).some"),"periodehoeveelheden kunnen op smalle schermen naar een volgende regel uitwijken");
+ok(html.includes('cc!==null&&cc>=0&&cc<5')&&html.includes('&lt;5<s>%</s>'),"vrijwel wolkeloze modelwaarden worden zonder 0/1%-schijnprecisie gepresenteerd");
+ok(html.includes('function q4NachtzichtPresentatie()')&&html.includes('el.textContent="<5%"')&&html.includes('const q4BasisNachten=nachten;'),"Nachtzicht gebruikt dezelfde <5%-presentatieregel zonder de scoreberekening te wijzigen");
+ok(html.includes('function q4LuchtkwaliteitPresentatie()')&&html.includes('(Europese|Amerikaanse) AQI')&&html.includes('const q4BasisLucht=lucht;'),"AQI-presentatie verwijdert de redundante schaalnaam uit de subregel");
+ok(html.includes('function q4NeerslagTegelPresentatie()')&&html.includes('kop.textContent="Neerslag komend uur"'),"neerslagtegel benoemt het 60-minutentijdvak van kans en hoeveelheid eerlijk");
+ok(html.includes('const meetbaarMm=globalThis.WeatherNowInterpretatie&&globalThis.WeatherNowInterpretatie.INTERPRETATIE_CONFIG')
+  &&html.includes('if(waarde>=meetbaarMm) out+=`<rect')
+  &&html.includes('if(waarde>=meetbaarMm){\n      /* Het cijfer'),
+  "kwartier-nowcast tekent staaf en label rechtstreeks met de centrale meetbaarheidsgrens");
 
 /* De geassembleerde artifact kan historische chartHint-assignments bevatten.
    Daarom zoeken we niet globaal naar de eerste/laatste match. De runtime-marker

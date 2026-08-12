@@ -30,6 +30,20 @@ function vervangExact(van,naar,label){
 vervangExact('Klik op een dag om die verwachting in de grafiek te laden.','Kies een dag om die verwachting in de grafiek te bekijken.',"neutrale daghint");
 vervangExact('<div class="eyebrow">Windstoten</div>','<div class="eyebrow">Windstoten nu</div>',"ondubbelzinnige windstootkop");
 
+/* De kwartiergrafiek heeft de effectieve, overlappende 15-minutenhoeveelheid al
+   in P staan. De historische renderer tekende echter iedere positieve waarde en
+   rondde het label daarna op één decimaal af. Daardoor werd bijvoorbeeld 0,04 mm
+   als een echte staaf met '0,0' zichtbaar. Maak de renderer zelf eigenaar van de
+   centrale meetbaarheidsgrens; geen post-render DOM-filter en geen tweede index-
+   mapping. Deze exacte vervangingen falen hard zodra de bronvorm verandert. */
+vervangExact(
+  '  const M=(typeof window!=="undefined"&&window.innerWidth)?window.innerWidth<760:false;\n  const mx=Math.max(0.5,...P),W=M?380:900,pl=M?26:44,pr=M?8:20,iw=W-pl-pr,',
+  '  const M=(typeof window!=="undefined"&&window.innerWidth)?window.innerWidth<760:false;\n  const meetbaarMm=globalThis.WeatherNowInterpretatie&&globalThis.WeatherNowInterpretatie.INTERPRETATIE_CONFIG\n    &&Number.isFinite(Number(globalThis.WeatherNowInterpretatie.INTERPRETATIE_CONFIG.meetbaarMm))\n      ?Number(globalThis.WeatherNowInterpretatie.INTERPRETATIE_CONFIG.meetbaarMm):NEERSLAG_DREMPEL_MM;\n  const mx=Math.max(0.5,...P),W=M?380:900,pl=M?26:44,pr=M?8:20,iw=W-pl-pr,',
+  "kwartiergrafiek gebruikt centrale meetbaarheidsgrens"
+);
+vervangExact('    if(waarde>0) out+=`<rect','    if(waarde>=meetbaarMm) out+=`<rect',"kwartierstaaf alleen bij meetbare neerslag");
+vervangExact('    if(waarde>0){\n      /* Het cijfer stond altijd zes pixels boven de balk.','    if(waarde>=meetbaarMm){\n      /* Het cijfer stond altijd zes pixels boven de balk.',"kwartierlabel alleen bij meetbare neerslag");
+
 /* Q4 moet voor ELKE startup-route actief zijn: gedeelde URL, laatst gebruikte
    plaats, opgeslagen keuze en eerste bezoek. De eerdere implementatie hing de
    runtime vóór de Amsterdam-call uit alleen het eerste-bezoekpad. Daardoor kon
@@ -70,4 +84,4 @@ const swPad=path.join(OUT,"sw.js");let sw=fs.readFileSync(swPad,"utf8");
 if(!(sw.match(/watishetweer-[0-9a-f]{12}/g)||[]).length)throw new Error("Geen serviceworker-cachehash voor Q4 gevonden.");
 sw=sw.replace(/watishetweer-[0-9a-f]{12}/g,versie);fs.writeFileSync(swPad,sw,"utf8");
 
-console.log("Q4 toegepast: losse neerslagstaven weg, intervalperioden + totaal/piek, gecentreerde kanslabels, runtime-neutrale grafiekhint en ruimere Nachtzicht-uitleg; cache "+versie+".");
+console.log("Q4 toegepast: losse neerslagstaven weg, intervalperioden + totaal/piek, meetbare kwartierneerslag, gecentreerde kanslabels, runtime-neutrale grafiekhint en ruimere Nachtzicht-uitleg; cache "+versie+".");

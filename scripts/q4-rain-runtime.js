@@ -17,6 +17,66 @@ chartHint=function(){
   if(el)el.textContent="Selecteer een punt in de grafiek voor details.";
 };
 
+/* Bewolkingspercentages komen uit een model en suggereren bij 0–4% meer
+   meetprecisie dan de hoofdtegel nodig heeft. De categorie eronder blijft de
+   betekenis geven; in de grote waarde groeperen we alleen dit vrijwel wolkeloze
+   randgebied tot <5%. Hogere waarden blijven ongewijzigd. */
+function q4BewolkingPresentatie(){
+  const c=S.d&&S.d.current,el=document.getElementById("cloud");
+  if(!c||!el)return;
+  const cc=q4Getal(c.cloud_cover);
+  if(cc!==null&&cc>=0&&cc<5)el.innerHTML="&lt;5<s>%</s>";
+}
+/* De grote kans/hoeveelheidswaarde in #pop wordt door Q1 uit een 60-minutenanalyse
+   opgebouwd. Als het op dit moment regent veranderde Q1 alleen de kop naar
+   "Neerslag nu", waardoor een uurkans en uurhoeveelheid als momentopname konden
+   worden gelezen. De subtekst mag de actuele toestand blijven noemen; de kop
+   benoemt voortaan altijd eerlijk het tijdvak van de cijfers. */
+function q4NeerslagTegelPresentatie(){
+  const waarde=document.getElementById("pop"),stat=waarde&&waarde.parentElement,kop=stat&&stat.querySelector(".eyebrow");
+  if(kop&&/^Neerslag (?:nu|komend uur)$/i.test((kop.textContent||"").trim()))kop.textContent="Neerslag komend uur";
+}
+const q4BasisMeters=meters;
+meters=function(){
+  q4BasisMeters();
+  q4BewolkingPresentatie();
+  q4NeerslagTegelPresentatie();
+};
+
+/* Nachtzicht toont het gemiddelde van een hele nacht. Ook daar is 0–4% een
+   modeluitkomst, geen meting met procentpuntprecisie. De score blijft met de
+   ongewijzigde ruwe cw rekenen; uitsluitend de al gerenderde presentatie wordt
+   na de bestaande nachten()-owner genormaliseerd naar dezelfde <5%-notatie. */
+function q4NachtzichtPresentatie(){
+  document.querySelectorAll("#nights .perc").forEach(el=>{
+    const m=/^(\d+(?:[.,]\d+)?)%$/.exec((el.textContent||"").trim());
+    if(!m)return;
+    const waarde=Number(m[1].replace(",","."));
+    if(Number.isFinite(waarde)&&waarde<5)el.textContent="<5%";
+  });
+}
+const q4BasisNachten=nachten;
+nachten=function(){
+  q4BasisNachten();
+  q4NachtzichtPresentatie();
+};
+
+/* De schaal staat al in de AQI-kop. De subregel hoeft die niet nogmaals te
+   herhalen ("redelijk · Europese AQI"). De classificatie zelf blijft exact
+   dezelfde; alleen de redundante suffix verdwijnt en begint als zelfstandig
+   statuswoord met een hoofdletter. */
+function q4LuchtkwaliteitPresentatie(){
+  const sub=document.querySelector("#aq .stat:first-child .ssub");
+  if(!sub)return;
+  const schoon=(sub.textContent||"").replace(/\s*·\s*(Europese|Amerikaanse) AQI\s*$/i,"").trim();
+  if(schoon)sub.textContent=schoon.charAt(0).toUpperCase()+schoon.slice(1);
+}
+const q4BasisLucht=lucht;
+lucht=function(){
+  q4BasisLucht();
+  q4LuchtkwaliteitPresentatie();
+};
+
 function q4SvgLijn(x1,y1,x2,y2,dikte){
   const el=document.createElementNS(Q4_SVG_NS,"line");
   el.setAttribute("x1",String(x1));el.setAttribute("y1",String(y1));
@@ -76,25 +136,54 @@ function q4Regenperioden(g){
   return perioden;
 }
 
+function q4KansIndex(g,x){
+  const midden=q4Getal(x)===null?null:q4Getal(x)+g.cw/2;
+  if(midden===null||!Number.isFinite(g.n))return {i:-1,midden:null};
+  let beste=-1,afstand=Infinity;
+  for(let i=0;i<g.n;i++){
+    const d=Math.abs(g.x(i)-midden);
+    if(d<afstand){beste=i;afstand=d;}
+  }
+  return {i:afstand<=Math.max(0.75,g.cw*.12)?beste:-1,midden};
+}
+
+function q4PeriodeBedragLabels(g,perioden,y,font){
+  const links=q4Getal(g.pl)||0,rechts=g.W-(q4Getal(g.pr)||0),rijen=[],labels=[];
+  perioden.forEach((p,index)=>{
+    const tekst=q4Mm(p.som)+" mm",x1=g.x(p.van),x2=g.x(p.tot);
+    const geschat=Math.max(28,tekst.length*font*.62),midden=(x1+x2)/2;
+    const x=Math.max(links+geschat/2,Math.min(rechts-geschat/2,midden));
+    const vak={links:x-geschat/2-4,rechts:x+geschat/2+4};
+    let rij=0;
+    while((rijen[rij]||[]).some(b=>!(vak.rechts<b.links||vak.links>b.rechts)))rij++;
+    if(!rijen[rij])rijen[rij]=[];rijen[rij].push(vak);
+    labels.push({index,tekst,x,rij});
+  });
+  return {labels,rijen:Math.max(1,rijen.length),eersteY:y+14,stap:11};
+}
+
 function q4TekenRegenperioden(svg,g,perioden){
   svg.querySelectorAll('g[data-q4-rain-periods]').forEach(el=>el.remove());
 
-  /* De oude hoeveelheidstaven en losse mm-cijfers verdwijnen volledig. */
+  /* De oude hoeveelheidstaven en losse mm-cijfers verdwijnen volledig. Een
+     statisch kanspercentage hoort voortaan alleen bij een uur waarvoor dezelfde
+     definitief uitgelijnde Q4-array ook meetbare neerslag bevat. Zo staat een
+     losse 19%-kans niet meer visueel onder een droog stuk alsof daar al een
+     regenperiode loopt. De tooltip behoudt ALLE kansen, ook bij 0 mm en <10%. */
   [...svg.querySelectorAll("rect")].forEach(el=>{
     if(el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".16")el.remove();
   });
   [...svg.querySelectorAll("text")].forEach(el=>{
     if(/ millimeter neerslag$/.test(el.getAttribute("aria-label")||""))el.remove();
   });
-
-  /* De vorige correctheidslaag verplaatste alle teal teksten een halve kolom om
-     de oude intervalstaven te corrigeren. Daardoor schoven ook de procentlabels
-     van hun eigen tijdstip. Alleen die kanslabels worden exact teruggezet. */
   [...svg.querySelectorAll("text")].forEach(el=>{
     if(el.getAttribute("fill")!==TEAL||!/^\d+%$/.test((el.textContent||"").trim()))return;
+    const kans=Number((el.textContent||"").trim().replace("%",""));
+    const positie=q4KansIndex(g,el.getAttribute("x"));
+    const mm=positie.i>=0&&Array.isArray(g.MM)?q4Getal(g.MM[positie.i]):null;
+    if(!Number.isFinite(kans)||kans<10||mm===null||mm<0.1){el.remove();return;}
     if(el.dataset.q4ProbabilityCentered==="1")return;
-    const x=q4Getal(el.getAttribute("x"));
-    if(x!==null){el.setAttribute("x",String(x+g.cw/2));el.dataset.q4ProbabilityCentered="1";}
+    el.setAttribute("x",String(positie.midden));el.dataset.q4ProbabilityCentered="1";
   });
 
   const basisH=q4Getal(g.H)||296;
@@ -107,16 +196,19 @@ function q4TekenRegenperioden(svg,g,perioden){
   }
 
   /* Iedere aaneengesloten periode houdt zijn eigen bracket op de werkelijke
-     uurpositie. De tekst wordt bewust NIET per bracket herhaald: op een buiige
-     dag zou dat zes of meer regels kunnen opleveren. Eén totaalsom en één
-     zwaarste uurvak zijn de informatie die de gebruiker daadwerkelijk vroeg. */
-  const pb=g.pt+g.ih,y=pb+48,regel=g.M?14:16;
-  const nieuwH=Math.max(basisH,y+17+regel+17+8);
+     uurpositie en krijgt direct eronder de som van exact diezelfde intervallen.
+     Korte perioden kunnen op mobiel dicht bij elkaar liggen; de bedragen worden
+     daarom automatisch over meerdere compacte regels verdeeld als ze botsen. */
+  const pb=g.pt+g.ih,y=pb+48,regel=g.M?14:16,bedragFont=g.M?8.8:9.4;
+  const bedragen=q4PeriodeBedragLabels(g,perioden,y,bedragFont);
+  const laatsteBedragY=bedragen.eersteY+(bedragen.rijen-1)*bedragen.stap;
+  const samenvattingY=laatsteBedragY+20;
+  const nieuwH=Math.max(basisH,samenvattingY+regel+17+8);
   svg.setAttribute("viewBox","0 0 "+g.W+" "+nieuwH);g.H=nieuwH;
 
   const groep=document.createElementNS(Q4_SVG_NS,"g");
   groep.setAttribute("data-q4-rain-periods","1");
-  groep.setAttribute("aria-label","Neerslagperioden");
+  groep.setAttribute("aria-label","Neerslagperioden met hoeveelheid per periode");
   /* De bracketlaag is puur informatief. Het transparante #hit-vlak blijft de
      exclusieve eigenaar van muis/touchinteractie; de regenlaag kan daardoor ook
      na toekomstige DOM-herordening nooit een pointerevent onderscheppen. */
@@ -129,6 +221,12 @@ function q4TekenRegenperioden(svg,g,perioden){
     groep.appendChild(q4SvgLijn(x1,y-4,x1,y+4,1));
     groep.appendChild(q4SvgLijn(x2,y-4,x2,y+4,1));
   });
+  bedragen.labels.forEach(item=>{
+    const label=q4SvgTekst(item.x,bedragen.eersteY+item.rij*bedragen.stap,item.tekst,bedragFont);
+    label.setAttribute("text-anchor","middle");
+    label.setAttribute("data-q4-rain-period-amount",String(item.index));
+    groep.appendChild(label);
+  });
 
   const totaal=perioden.reduce((som,p)=>som+p.som,0);
   let piek=perioden[0];for(const p of perioden)if(p.piekMm>piek.piekMm)piek=p;
@@ -139,12 +237,57 @@ function q4TekenRegenperioden(svg,g,perioden){
   const dag=g.n>49?q4DagKort(g.TI[piek.piek])+" ":"";
   const piekTekst="Meeste regen "+dag+q4Tijd(g.TI[piek.piek-1])+"–"+q4Tijd(g.TI[piek.piek])+" · "+q4Mm(piek.piekMm)+" mm";
   const font=g.M?9.3:10.2;
-  groep.appendChild(q4SvgTekst(g.pl,y+17,periodeTekst,font,"total"));
-  groep.appendChild(q4SvgTekst(g.pl,y+17+regel,piekTekst,font,"peak"));
+  groep.appendChild(q4SvgTekst(g.pl,samenvattingY,periodeTekst,font,"total"));
+  groep.appendChild(q4SvgTekst(g.pl,samenvattingY+regel,piekTekst,font,"peak"));
 
   const scrub=svg.querySelector("#scrub");svg.insertBefore(groep,scrub||null);
-  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve.").trim());
+  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve. Onder iedere periode staat de verwachte hoeveelheid; kanswaarden zonder meetbare hoeveelheid blijven via de details beschikbaar.").trim());
 }
+
+/* De kwartiergrafiek tekent in de historische owner ieder positief getal. Een
+   interpolatie van bijvoorbeeld 0,04 mm krijgt daardoor een echte staaf, waarna
+   de formattering op één decimaal er zichtbaar "0,0" van maakt. Dat is precies
+   strijdig met de centrale interpretatiedrempel: WeatherNow noemt pas 0,1 mm
+   meetbaar. We veranderen de brondata niet. Na de gewone render verwijderen we
+   uitsluitend de statische staaf, toplijn en hoeveelheidtekst van intervallen
+   die volgens DEZELFDE centrale drempel nog een spoorhoeveelheid zijn. De analyse
+   en eventuele consumententekst houden de onbewerkte waarden beschikbaar. */
+function q4KwartierMeetbaarPresentatie(){
+  const svg=document.getElementById("nc"),api=globalThis.WeatherNowInterpretatie;
+  if(!svg||!api||typeof api.analyseerNeerslagData!=="function")return;
+  const analyse=api.analyseerNeerslagData(S.d,120,weatherNowActueleLokaleTijd());
+  const grens=q4Getal(api.INTERPRETATIE_CONFIG&&api.INTERPRETATIE_CONFIG.meetbaarMm);
+  if(!analyse||analyse.bronHoeveelheid!=="kwartierdata"||!Array.isArray(analyse.minutelyItems)||!analyse.minutelyItems.length)return;
+  const meetbaar=grens===null?0.1:grens,items=analyse.minutelyItems;
+  const M=typeof window!=="undefined"&&window.innerWidth<760,W=M?380:900,pl=M?26:44,pr=M?8:20,iw=W-pl-pr,cw=iw/items.length;
+  const tolerantie=Math.max(0.6,cw*.03);
+  items.forEach((item,k)=>{
+    const p=q4Getal(item&&item.precipitation),fractie=q4Getal(item&&item.fractie);
+    const waarde=p===null||fractie===null?null:p*fractie;
+    if(waarde===null||waarde<=0||waarde>=meetbaar)return;
+    const midden=pl+k*cw+cw/2;
+    [...svg.querySelectorAll("rect")].forEach(el=>{
+      if(el.getAttribute("fill")!==TEAL||el.getAttribute("fill-opacity")!==".2")return;
+      const x=q4Getal(el.getAttribute("x")),breedte=q4Getal(el.getAttribute("width"));
+      if(x!==null&&breedte!==null&&Math.abs(x+breedte/2-midden)<=tolerantie)el.remove();
+    });
+    [...svg.querySelectorAll("line")].forEach(el=>{
+      if(el.getAttribute("stroke")!==TEAL||el.getAttribute("stroke-width")!=="1.2")return;
+      const x1=q4Getal(el.getAttribute("x1")),x2=q4Getal(el.getAttribute("x2"));
+      if(x1!==null&&x2!==null&&Math.abs((x1+x2)/2-midden)<=tolerantie)el.remove();
+    });
+    [...svg.querySelectorAll("text")].forEach(el=>{
+      if(el.getAttribute("fill")!==TEAL||!/^-?\d+(?:[.,]\d+)?$/.test((el.textContent||"").trim()))return;
+      const x=q4Getal(el.getAttribute("x"));
+      if(x!==null&&Math.abs(x-midden)<=tolerantie)el.remove();
+    });
+  });
+}
+const q4BasisNowcast=nowcast;
+nowcast=function(){
+  q4BasisNowcast();
+  q4KwartierMeetbaarPresentatie();
+};
 
 const q4BasisEtmaal=etmaal;
 etmaal=function(start,n){
