@@ -2,13 +2,12 @@
 
 const fs=require("fs");
 const path=require("path");
-const crypto=require("crypto");
 const vm=require("vm");
+const {verifieerServiceworkerCache}=require("./postbuild-cache.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
 const html=fs.readFileSync(path.join(OUT,"index.html"),"utf8");
-const sw=fs.readFileSync(path.join(OUT,"sw.js"),"utf8");
 
 const exactEen=(tekst,naam)=>{
   const n=html.split(tekst).length-1;
@@ -51,19 +50,5 @@ if(uvPos<0||meterPos<0||briefingPos<0||!(meterPos<uvPos&&uvPos<briefingPos)){
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:q3-verify-"+(i+1)}));
 
-const CACHE_BRONNEN=[
-  "index.html","manifest.json","icon-192.png","icon-512.png","icon-maskable-512.png",
-  "bodoni-moda-latin-400-normal.woff2","bodoni-moda-latin-500-normal.woff2",
-  "instrument-sans-latin-400-normal.woff2","instrument-sans-latin-500-normal.woff2",
-  "instrument-sans-latin-600-normal.woff2","dm-mono-latin-400-normal.woff2","dm-mono-latin-500-normal.woff2"
-];
-const hash=crypto.createHash("sha256");
-for(const naam of CACHE_BRONNEN){
-  const p=path.join(OUT,naam);
-  if(!fs.existsSync(p))throw new Error("App-shellbestand ontbreekt: "+naam);
-  hash.update(naam+"\0");hash.update(fs.readFileSync(p));hash.update("\0");
-}
-const verwacht="watishetweer-"+hash.digest("hex").slice(0,12);
-if(!sw.includes(verwacht))throw new Error("Serviceworker-cachehash volgt checkpoint-75 artifact niet: verwacht "+verwacht+".");
-
+const verwacht=verifieerServiceworkerCache(OUT,"checkpoint-75");
 console.log("Checkpoint-75 artifact geverifieerd: Q3 blijft in bestaande runtime-owner, live lokale tijdankers, zon/pollen, slashed zero, cloud 100% en UV-tijdsemantiek; cache "+verwacht+".");

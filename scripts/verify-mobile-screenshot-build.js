@@ -2,7 +2,7 @@
 
 const fs=require("fs");
 const path=require("path");
-const crypto=require("crypto");
+const {verifieerServiceworkerCache}=require("./postbuild-cache.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
@@ -72,22 +72,5 @@ if((html.split("const ruimBotsendeAslabelsOp=()=>{").length-1)!==1)throw new Err
 const etmaalStart=html.indexOf("function etmaal("),botsingsLaag=html.indexOf("const ruimBotsendeAslabelsOp=()=>{"),etmaalEind=html.indexOf("function daglengte(",etmaalStart);
 if(etmaalStart<0||botsingsLaag<=etmaalStart||etmaalEind<=botsingsLaag)throw new Error("Fontbox-botsingslaag staat niet aantoonbaar binnen de bestaande etmaal-renderer.");
 
-const CACHE_BRONNEN=[
-  "index.html","manifest.json","icon-192.png","icon-512.png","icon-maskable-512.png",
-  "bodoni-moda-latin-400-normal.woff2","bodoni-moda-latin-500-normal.woff2",
-  "instrument-sans-latin-400-normal.woff2","instrument-sans-latin-500-normal.woff2",
-  "instrument-sans-latin-600-normal.woff2","dm-mono-latin-400-normal.woff2","dm-mono-latin-500-normal.woff2"
-];
-const hash=crypto.createHash("sha256");
-for(const naam of CACHE_BRONNEN){
-  const p=path.join(OUT,naam);
-  if(!fs.existsSync(p))throw new Error("App-shellbestand ontbreekt in definitieve artifact: "+naam);
-  hash.update(naam+"\0");hash.update(fs.readFileSync(p));hash.update("\0");
-}
-const verwacht="watishetweer-"+hash.digest("hex").slice(0,12);
-const sw=fs.readFileSync(swPad,"utf8");
-const m=/const CACHE = "([^"]+)";/.exec(sw);
-if(!m)throw new Error("Serviceworker-cache-id ontbreekt in definitieve artifact.");
-if(m[1]!==verwacht)throw new Error("Serviceworker-cache hoort bij een andere artifact: "+m[1]+" versus "+verwacht);
-
+const verwacht=verifieerServiceworkerCache(OUT,"checkpoint-50");
 console.log("Definitieve checkpoint-50 artifact geverifieerd: één Nachtzicht-owner, begrensde tekstkolom, brongetrouwe maanfase, fontbox-collision-proof mobiele grafiek en cache "+verwacht+".");
