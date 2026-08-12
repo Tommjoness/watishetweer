@@ -21,6 +21,18 @@ const zonderId=[
 assert.equal(h.dedupliceerZoekresultaten(zonderId).length,2,"gelijke fallback-identiteit dedupliceert, andere coordinaten blijven apart");
 assert.deepEqual(h.dedupliceerZoekresultaten(null),[]);
 
+/* Dedupliceren mag de lijst niet onnodig kort maken. De requestlaag vraagt
+   daarom twaalf kandidaten en de UI krijgt hoogstens zes unieke resultaten in
+   de oorspronkelijke provider-volgorde terug. */
+assert(/count=12/.test(h.verruimZoekUrl("https://geocoding-api.open-meteo.com/v1/search?name=ja&count=6&language=nl")));
+assert(/count=20/.test(h.verruimZoekUrl("https://geocoding-api.open-meteo.com/v1/search?name=ja&count=20")),"een al ruimer zoekvenster mag niet worden verkleind");
+const veel=[];
+for(let i=0;i<8;i++){
+  veel.push({id:i,name:"Plaats "+i,country_code:"NL",latitude:52+i/100,longitude:5});
+  if(i<3)veel.push({id:i,name:"Plaats "+i,country_code:"NL",latitude:52+i/100,longitude:5});
+}
+assert.deepEqual(h.dedupliceerZoekresultaten(veel,6).map(x=>x.id),[0,1,2,3,4,5]);
+
 /* Waarschuwingen zijn fail-closed: alleen aantoonbaar punt-/gebiedspecifieke
    kaarten mogen door. Een landfeed mag nooit regionale waarschuwingen als
    plaatswaarschuwing tonen. */
@@ -57,4 +69,4 @@ const nws=h.alleenPlaatsgebondenWaarschuwingen({
 assert.equal(nws.dekking,true);
 assert.equal(nws.lijst.length,1);
 
-console.log("Wereldwijde locatiehardening: zoekdeduplicatie en fail-closed plaatswaarschuwingen geslaagd.");
+console.log("Wereldwijde locatiehardening: uniek zoekvenster, deduplicatie en fail-closed plaatswaarschuwingen geslaagd.");
