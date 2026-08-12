@@ -76,7 +76,7 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
           &&app&&app.classList.contains('wn-progressief')&&app.getAttribute('aria-busy')==='true'
           &&((document.getElementById('t')||{}).textContent||'').trim()==='27'
           &&/Verwachting wordt aangevuld/.test((state||{}).textContent||'')
-          &&(!window.S||!S.d)
+          &&(typeof S==='undefined'||!S.d)
           &&window.__progressiveFetch.preview===1&&window.__progressiveFetch.full===1
           &&(!details||getComputedStyle(details).display==='none');
         zet('progressive-preview',previewOk?'ok':'fout');
@@ -85,7 +85,7 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
         zet('progressive-preview-count',window.__progressiveFetch.preview);
         zet('progressive-preview-full-count',window.__progressiveFetch.full);
         zet('progressive-preview-state',(state||{}).textContent||'');
-        zet('progressive-preview-sd',!!(window.S&&S.d));
+        zet('progressive-preview-sd',!!(typeof S!=='undefined'&&S.d));
       }catch(e){zet('progressive-preview','exception');zet('progressive-preview-exception',e&&e.message||e);}
     },360);
     setTimeout(()=>{
@@ -95,7 +95,7 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
         const fullOk=!document.documentElement.classList.contains('wn-progressief')
           &&app&&!app.classList.contains('wn-progressief')&&!app.hasAttribute('aria-busy')
           &&((document.getElementById('t')||{}).textContent||'').trim()==='18'
-          &&window.S&&S.d&&Math.round(Number(S.d.current&&S.d.current.temperature_2m))===18
+          &&typeof S!=='undefined'&&S.d&&Math.round(Number(S.d.current&&S.d.current.temperature_2m))===18
           &&window.__progressiveFetch.preview===1&&window.__progressiveFetch.full===1
           &&dagen>=7&&state&&getComputedStyle(state).display==='none';
         zet('progressive-full',fullOk?'ok':'fout');
@@ -115,7 +115,7 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
         &&app&&!app.classList.contains('wn-progressief')&&!app.hasAttribute('aria-busy')
         &&((document.getElementById('t')||{}).textContent||'').trim()==='18'
         &&window.__progressiveFetch.preview===0&&window.__progressiveFetch.full===1
-        &&window.S&&S.d&&Math.round(Number(S.d.current&&S.d.current.temperature_2m))===18;
+        &&typeof S!=='undefined'&&S.d&&Math.round(Number(S.d.current&&S.d.current.temperature_2m))===18;
       zet('progressive-fast',fastOk?'ok':'fout');
       zet('progressive-fast-temp',((document.getElementById('t')||{}).textContent||'').trim());
       zet('progressive-fast-preview-count',window.__progressiveFetch.preview);
