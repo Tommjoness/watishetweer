@@ -1,0 +1,68 @@
+"use strict";
+
+const fs=require("fs"),os=require("os"),path=require("path"),{spawnSync}=require("child_process");
+function vindBrowser(){
+  for(const naam of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){
+    const r=spawnSync("sh",["-lc","command -v "+naam],{encoding:"utf8"});
+    if(r.status===0&&r.stdout.trim())return r.stdout.trim();
+  }
+  return null;
+}
+const browser=vindBrowser();
+if(!browser){
+  if(process.env.CI){console.error("FOUT UI-shell: Chrome/Chromium ontbreekt op CI.");process.exit(1);}
+  console.log("SKIP UI-shell: lokaal geen Chrome/Chromium gevonden.");process.exit(0);
+}
+
+const productie=path.join(__dirname,"public","index.html");
+if(!fs.existsSync(productie)){console.error("FOUT UI-shell: public/index.html ontbreekt.");process.exit(1);}
+let html=fs.readFileSync(productie,"utf8");
+html=html.replace("</head>",'<script>try{localStorage.removeItem("weerbriefing.thema");}catch(e){};window.fetch=()=>new Promise(()=>{});</script></head>');
+const reporter=`<script>
+setTimeout(()=>{
+  try{
+    const knop=document.getElementById('thema'),menu=document.getElementById('themamenu'),favicon=document.querySelector('link[rel="icon"]');
+    const opties=menu?[...menu.querySelectorAll('[data-thema-keuze]')]:[];
+    const uniek=new Set(opties.map(x=>x.dataset.themaKeuze)).size===4;
+    const begin=!!(knop&&menu&&menu.hidden&&knop.getAttribute('aria-expanded')==='false'&&knop.textContent.trim()==='Weergave · auto');
+    knop.click();
+    const open=!menu.hidden&&knop.getAttribute('aria-expanded')==='true';
+    const donker=menu.querySelector('[data-thema-keuze="donker"]');
+    donker.click();
+    const donkerOk=document.documentElement.getAttribute('data-thema')==='donker'&&menu.hidden&&knop.textContent.trim()==='Weergave · donker'&&donker.getAttribute('aria-checked')==='true';
+    knop.click();
+    const rood=menu.querySelector('[data-thema-keuze="rood"]');
+    rood.click();
+    const roodOk=document.documentElement.getAttribute('data-thema')==='rood'&&knop.textContent.trim()==='Weergave · rood'&&rood.getAttribute('aria-checked')==='true';
+    knop.click();
+    const auto=menu.querySelector('[data-thema-keuze="auto"]');
+    auto.click();
+    const autoOk=document.documentElement.getAttribute('data-thema')==='licht'&&knop.textContent.trim()==='Weergave · auto'&&auto.getAttribute('aria-checked')==='true'&&/dag\/nacht/i.test(auto.textContent||'');
+    knop.click();
+    const r=menu.getBoundingClientRect();
+    const binnen=r.left>=-1&&r.right<=window.innerWidth+1;
+    document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+    const escapeOk=menu.hidden&&knop.getAttribute('aria-expanded')==='false';
+    const favOk=!!(favicon&&String(favicon.getAttribute('href')||'').startsWith('data:image/svg+xml,')&&decodeURIComponent(favicon.getAttribute('href')).includes('<circle cx="32" cy="32" r="11"'));
+    document.body.dataset.uiShellResult=(begin&&open&&donkerOk&&roodOk&&autoOk&&uniek&&binnen&&escapeOk&&favOk)?'ok':'fout';
+    document.body.dataset.uiShellDiag=JSON.stringify({begin,open,donkerOk,roodOk,autoOk,uniek,binnen,escapeOk,favOk,breedte:window.innerWidth,knop:knop&&knop.textContent,menuHidden:menu&&menu.hidden});
+  }catch(e){document.body.dataset.uiShellResult='exception';document.body.dataset.uiShellDiag=String(e&&e.message||e);}
+},80);
+</script>`;
+html=html.replace("</body>",reporter+"</body>");
+
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),"weathernow-ui-shell-"));
+const fixture=path.join(dir,"index.html");fs.writeFileSync(fixture,html);
+const url="file://"+fixture;
+function draai(breedte){
+  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size="+breedte+",900","--virtual-time-budget=1200","--dump-dom",url],{encoding:"utf8",maxBuffer:16*1024*1024});
+  if(r.status!==0)throw new Error("browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
+  const dom=r.stdout||"",m=/data-ui-shell-result="([^"]+)"/.exec(dom),d=/data-ui-shell-diag="([^"]*)"/.exec(dom);
+  if(!m||m[1]!=="ok")throw new Error("UI-shell "+breedte+" px resultaat="+(m&&m[1])+" diag="+(d&&d[1]));
+}
+try{
+  draai(390);draai(1280);
+  console.log("UI-shell browsercontrole geslaagd op 390 px en 1280 px.");
+}finally{
+  fs.rmSync(dir,{recursive:true,force:true});
+}
