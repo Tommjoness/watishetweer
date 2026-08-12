@@ -177,6 +177,7 @@ async function controleer(type,naam,breedte){
 
     const droog=await page.evaluate(()=>{
       S.d.hourly.precipitation=S.d.hourly.precipitation.map(()=>0);
+      S.d.hourly.precipitation_probability=S.d.hourly.precipitation_probability.map(()=>8);
       etmaal(S.i0,24);
       const svg=document.getElementById("chart");
       return {
