@@ -221,17 +221,24 @@ async function controleer(type,naam,breedte){
         showers:Array.isArray(m.showers)?m.showers.slice():null,
         snowfall:Array.isArray(m.snowfall)?m.snowfall.slice():null
       };
-      /* De algemene testfixture eindigt om 14:15, terwijl deze testklok 14:30
-         lokale tijd is. Maak uitsluitend voor deze browserproef twee volledige
-         toekomstige kwartieren zodat de analyse niet terecht alles als verleden
-         wegfiltert. */
-      m.time=["2026-07-22T14:45","2026-07-22T15:00"];
-      m.precipitation=[0,0];
-      if(Array.isArray(m.rain))m.rain=[0,0];
-      if(Array.isArray(m.showers))m.showers=[0,0];
-      if(Array.isArray(m.snowfall))m.snowfall=[0,0];
+      /* De centrale engine kiest kwartierdata pas bij minimaal 90% dekking van
+         het gevraagde venster. Maak daarom uitsluitend voor deze browserproef
+         een volledig toekomstig twee-uursvenster van acht kwartieren. */
+      m.time=["2026-07-22T14:45","2026-07-22T15:00","2026-07-22T15:15","2026-07-22T15:30","2026-07-22T15:45","2026-07-22T16:00","2026-07-22T16:15","2026-07-22T16:30"];
+      m.precipitation=m.time.map(()=>0);
+      if(Array.isArray(m.rain))m.rain=m.time.map(()=>0);
+      if(Array.isArray(m.showers))m.showers=m.time.map(()=>0);
+      if(Array.isArray(m.snowfall))m.snowfall=m.time.map(()=>0);
       const basis=api.analyseerNeerslagData(S.d,120,weatherNowActueleLokaleTijd());
       const items=basis&&Array.isArray(basis.minutelyItems)?basis.minutelyItems:[];
+      if(!basis||basis.bronHoeveelheid!=="kwartierdata"){
+        m.time=origineel.time;
+        m.precipitation=origineel.precipitation;
+        if(origineel.rain)m.rain=origineel.rain;
+        if(origineel.showers)m.showers=origineel.showers;
+        if(origineel.snowfall)m.snowfall=origineel.snowfall;
+        return {fout:"GEEN_KWARTIERBRON",bron:basis&&basis.bronHoeveelheid,dekking:basis&&basis.hoeveelheidDekking,items:items.length};
+      }
       const a=items.find(x=>Number(x.fractie)>0),b=items.find(x=>Number(x.fractie)>=0.999&&x!==a)||items[1];
       if(!a||!b){
         m.time=origineel.time;
