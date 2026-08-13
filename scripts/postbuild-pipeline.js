@@ -25,6 +25,8 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-ui-shell.js",
   "apply-pollen-hour-correctness.js",
   "verify-pollen-hour-correctness.js",
+  "apply-cache-fallback-country.js",
+  "verify-cache-fallback-country.js",
   "verify-final-27.js"
 ]);
 
