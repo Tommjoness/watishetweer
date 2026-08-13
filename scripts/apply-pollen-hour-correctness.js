@@ -37,7 +37,7 @@ vervangEen(
 );
 
 html=html.replace("</style>","\n"+MARK+"\n</style>");
-const scripts=[...html.matchAll(/<script(?![^>]*\\ssrc=)[^>]*>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]);
+const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime na pollen-uurcorrectie.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:pollen-hour-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
