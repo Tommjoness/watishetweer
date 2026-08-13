@@ -1,5 +1,8 @@
 "use strict";
 const assert=require("assert");
+const fs=require("fs");
+const path=require("path");
+const vm=require("vm");
 const h=require("./global-location-hardening.js");
 
 /* Zoekresultaten: identieke GeoNames-id's zijn dezelfde plaats, ook als een
@@ -41,6 +44,10 @@ assert.equal(h.geldigeCoordinaat(-90,-90,90),-90);
 assert.equal(h.geldigeCoordinaat(180,-180,180),180);
 assert.equal(h.geldigeCoordinaat("",-90,90),null);
 assert.equal(h.geldigeCoordinaat("Infinity",-90,90),null);
+assert.deepEqual(h.normaliseerLaadCoordinaten("52.3676","4.9041"),{latitude:52.3676,longitude:4.9041});
+assert.equal(h.normaliseerLaadCoordinaten(91,0),null);
+assert.equal(h.normaliseerLaadCoordinaten(0,-181),null);
+assert.equal(h.normaliseerLaadCoordinaten(Infinity,0),null);
 
 /* Dedupliceren mag de lijst niet onnodig kort maken. De requestlaag vraagt
    daarom twaalf kandidaten en de UI krijgt hoogstens zes unieke resultaten in
@@ -90,4 +97,45 @@ const nws=h.alleenPlaatsgebondenWaarschuwingen({
 assert.equal(nws.dekking,true);
 assert.equal(nws.lijst.length,1);
 
-console.log("Wereldwijde locatiehardening: validatie, uniek zoekvenster, deduplicatie en fail-closed plaatswaarschuwingen geslaagd.");
+/* De pure validator is pas productveilig als de browserruntime hem ook echt aan
+   de centrale load-boundary hangt. Voer daarom dezelfde module in een minimale
+   browserachtige VM uit en bewijs dat geldige numerieke strings genormaliseerd
+   doorgaan, terwijl onmogelijke of niet-eindige coördinaten de providergrens
+   nooit bereiken. */
+const bron=fs.readFileSync(path.join(__dirname,"global-location-hardening.js"),"utf8");
+(async()=>{
+  const calls=[];
+  const state={style:{display:"none"},className:"",textContent:""};
+  const context={
+    URL,
+    document:{getElementById:id=>id==="state"?state:null},
+    j:async()=>({results:[]}),
+    load:async(...args)=>{calls.push(args);return "geladen";},
+    console
+  };
+  context.globalThis=context;
+  vm.runInNewContext(bron,context,{filename:"global-location-hardening.runtime.test.js"});
+
+  const geldig=await context.load("52.3676","4.9041","Amsterdam",false,true,"NL");
+  assert.equal(geldig,"geladen","geldige locatie moet de bestaande load blijven bereiken");
+  assert.equal(calls.length,1);
+  assert.strictEqual(calls[0][0],52.3676);
+  assert.strictEqual(calls[0][1],4.9041);
+
+  for(const [lat,lon] of [[91,4],[52,181],[Infinity,4],["NaN",4]]){
+    const ervoor=calls.length;
+    const uit=await context.load(lat,lon,"Ongeldig",false,false,null);
+    assert.equal(uit,false,"ongeldige locatie moet fail-closed terugkeren");
+    assert.equal(calls.length,ervoor,"ongeldige locatie mag de forecast-load niet bereiken");
+    assert.equal(state.className,"msg err");
+    assert.equal(state.style.display,"block");
+    assert.equal(state.textContent,"Deze locatie is ongeldig. Zoek een plaats of gebruik Mijn locatie.");
+  }
+
+  state.textContent="stil behouden";
+  const stil=await context.load(999,0,"Ongeldig",true,false,null);
+  assert.equal(stil,false);
+  assert.equal(state.textContent,"stil behouden","stille achtergrondload mag geen nieuwe foutmelding forceren");
+
+  console.log("Wereldwijde locatiehardening: validatie, centrale load-boundary, uniek zoekvenster, deduplicatie en fail-closed plaatswaarschuwingen geslaagd.");
+})().catch(err=>{console.error(err&&err.stack||err);process.exitCode=1;});

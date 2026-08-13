@@ -4,12 +4,13 @@
    2. deduplicatie mag niet stil minder keus opleveren als de provider verderop
       nog unieke resultaten heeft;
    3. externe geocodingdata mag alleen de UI in met geldige naam/coördinaten;
-   4. een waarschuwing mag alleen als plaatswaarschuwing worden getoond wanneer
+   4. iedere locatie die de forecastgrens bereikt moet geldige wereldcoördinaten hebben;
+   5. een waarschuwing mag alleen als plaatswaarschuwing worden getoond wanneer
       de bron expliciet bewijst dat het gekozen punt binnen het gebied valt.
 
-   De module verandert geen weerwaarden, modellen of formules. Geocoding wordt
-   in de browser genormaliseerd; waarschuwingsscope wordt aan de servergrens
-   genormaliseerd zodat er maar één eigenaar van dat veiligheidscontract is. */
+   De module verandert geen weerwaarden, modellen of formules. Geocoding en de
+   centrale locatie-ingang worden in de browser genormaliseerd; waarschuwingsscope
+   wordt aan de servergrens genormaliseerd zodat er maar één eigenaar per contract is. */
 (function(root){
 "use strict";
 
@@ -22,6 +23,11 @@ function geldigeCoordinaat(v,min,max){
   if(v===null||v===undefined||String(v).trim()==="")return null;
   const n=Number(v);
   return Number.isFinite(n)&&n>=min&&n<=max?n:null;
+}
+
+function normaliseerLaadCoordinaten(lat,lon){
+  const latitude=geldigeCoordinaat(lat,-90,90),longitude=geldigeCoordinaat(lon,-180,180);
+  return latitude===null||longitude===null?null:{latitude,longitude};
 }
 
 /* Open-Meteo levert normaal keurige numerieke coördinaten, maar zoekdata blijft
@@ -97,15 +103,34 @@ function alleenPlaatsgebondenWaarschuwingen(data){
   return Object.assign({},data,{lijst:bewezen});
 }
 
-const api={MAX_ZOEKRESULTATEN,PROVIDER_ZOEKVENSTER,geldigeCoordinaat,normaliseerZoekresultaat,zoekSleutel,dedupliceerZoekresultaten,verruimZoekUrl,alleenPlaatsgebondenWaarschuwingen};
+const api={MAX_ZOEKRESULTATEN,PROVIDER_ZOEKVENSTER,geldigeCoordinaat,normaliseerLaadCoordinaten,normaliseerZoekresultaat,zoekSleutel,dedupliceerZoekresultaten,verruimZoekUrl,alleenPlaatsgebondenWaarschuwingen};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowGlobalLocationHardening=api;
 
-/* In de browser blijft alleen geocoding hier eigenaar: we vragen een iets
-   ruimer provider-venster op, valideren/dedupliceren stabiel en geven maximaal
-   hetzelfde aantal opties terug als de bestaande UI verwacht. Waarschuwingen
-   zijn tegen deze tijd al fail-closed genormaliseerd door /api/waarschuwingen. */
+/* In de browser blijft deze laag eigenaar van de externe locatiegrenzen. Eerst
+   wordt iedere load-aanroep op echte wereldcoördinaten begrensd; daarna blijft
+   de bestaande geocodingwrapper verantwoordelijk voor providerresultaten. */
 if(typeof document==="undefined"||typeof j!=="function")return;
+
+if(typeof load==="function"){
+  const basisLoad=load;
+  load=async function(lat,lon,label,stil,opslaan,land){
+    const positie=normaliseerLaadCoordinaten(lat,lon);
+    if(!positie){
+      if(stil!==true){
+        const st=document.getElementById("state");
+        if(st){
+          st.style.display="block";
+          st.className="msg err";
+          st.textContent="Deze locatie is ongeldig. Zoek een plaats of gebruik Mijn locatie.";
+        }
+      }
+      return false;
+    }
+    return basisLoad(positie.latitude,positie.longitude,label,stil,opslaan,land);
+  };
+}
+
 const basisJ=j;
 j=async function(url,opt){
   const oorspronkelijk=String(url||""),isZoek=oorspronkelijk.includes("geocoding-api.open-meteo.com/v1/search?");
