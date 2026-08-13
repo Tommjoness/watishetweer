@@ -62,13 +62,16 @@ function zoneDelen(ms,tijdzone){
 engine=engine.slice(0,zoneStart)+zoneNieuw+engine.slice(zoneEind);
 html=html.slice(0,begin)+engine+html.slice(eind);
 
-/* Pure tijdconversies worden daarnaast per exacte lokale kloktekst en tijdzone
-   gememoized. Dit is dezelfde deterministische functie-uitkomst; dubbele lokale
-   tijden blijven als dubbele bronstring door leesReeks() gedetecteerd en verlagen
-   dus nog steeds de zekerheid. */
+/* Pure civiele tijdconversies worden per exacte lokale kloktekst en tijdzone
+   gememoized. Belangrijk: begrens uitsluitend het eigen functieblok. De eerdere
+   implementatie gebruikte `function minutenNaarLokaal` als eindanker en slikte
+   daardoor nieuwe top-level helpers tussen beide functies stil als nested code
+   in. Een kolom-0 sluitaccolade is onderdeel van het broncontract van deze pure
+   helper en laat opvolgende helpers volledig ongemoeid. */
 const lokaalStart=html.indexOf("function lokaalNaarMinuten(tijd,tijdzone,utcOffsetSeconden){",begin);
-const lokaalEind=html.indexOf("\nfunction minutenNaarLokaal(minuten,tijdzone,utcOffsetSeconden){",lokaalStart);
-if(lokaalStart<0||lokaalEind<=lokaalStart)throw new Error("lokaalNaarMinuten kon niet veilig worden afgebakend.");
+const lokaalSluit=html.indexOf("\n}\n",lokaalStart);
+const lokaalEind=lokaalSluit<0?-1:lokaalSluit+2;
+if(lokaalStart<0||lokaalEind<=lokaalStart||lokaalEind>=eind)throw new Error("lokaalNaarMinuten kon niet veilig als eigen functieblok worden afgebakend.");
 const lokaalOud=html.slice(lokaalStart,lokaalEind);
 const bodyBegin=lokaalOud.indexOf("{")+1;
 const lokaalBody=lokaalOud.slice(bodyBegin);
