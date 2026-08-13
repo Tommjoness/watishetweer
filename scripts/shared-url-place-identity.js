@@ -6,7 +6,13 @@
 "use strict";
 
 const canoniekeNaam=v=>typeof v==="string"&&v.trim()?v.trim():null;
-const api={canoniekeNaam};
+async function plaatsnaamUitCoordinaten(lat,lon,opt){
+  const la=Number(lat),lo=Number(lon);
+  if(!Number.isFinite(la)||la< -90||la>90||!Number.isFinite(lo)||lo< -180||lo>180)return null;
+  const timeoutMs=opt&&Number.isFinite(opt.timeoutMs)?opt.timeoutMs:10000;
+  return j("/api/plaatsnaam?lat="+la.toFixed(4)+"&lon="+lo.toFixed(4),{timeoutMs});
+}
+const api={canoniekeNaam,plaatsnaamUitCoordinaten};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowSharedUrlPlaceIdentity=api;
 
@@ -25,12 +31,9 @@ load=async function(lat,lon,label,stil,opslaan,land){
     const q=document.getElementById("q");
     if(q)q.value=naam;
     try{
-      const g=await j("/api/plaatsnaam?lat="+gedeeld.latitude.toFixed(4)+"&lon="+gedeeld.longitude.toFixed(4),{timeoutMs:2500});
+      const g=await plaatsnaamUitCoordinaten(gedeeld.latitude,gedeeld.longitude,{timeoutMs:2500});
       naam=canoniekeNaam(g&&g.naam)||naam;
     }catch(_){ }
-
-    /* Tijdens de reverse-geocode kan de gebruiker zelf een nieuwe plaats kiezen.
-       De vertraagde gedeelde startup mag die nieuwere keuze nooit overschrijven. */
     if(beurt!==generatie)return false;
     if(q)q.value=naam;
     return basisLoad(gedeeld.latitude,gedeeld.longitude,naam,stil,opslaan,land);
