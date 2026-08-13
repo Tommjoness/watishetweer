@@ -82,7 +82,7 @@ async function roepWaarschuwingen(query,fetchImpl){
 
 (async()=>{
   const nws=await roepWaarschuwingen(
-    {lat:"40.7128",lon:"-74.0060"},
+    {lat:"40.7128",lon:"-74.0060",land:"US"},
     async()=>{throw new Error("teststoring");}
   );
   ok(nws.statusCode===200,"waarschuwingroute blijft technisch beschikbaar bij bronstoring");
