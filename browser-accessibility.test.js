@@ -28,9 +28,9 @@ async function controleer(browserType,naam){
     await page.goto("http://127.0.0.1:"+server.address().port+"/",{waitUntil:"domcontentloaded"});
     const resultaat=await page.evaluate(()=>{
       const app=document.getElementById("app");
-      if(app)app.style.display="block";
+      if(app)app.style.setProperty("display","block","important");
       const footer=document.querySelector("footer");
-      if(footer)footer.style.display="block";
+      if(footer)footer.style.setProperty("display","flex","important");
       const mains=[...document.querySelectorAll("main")];
       const meetDoel=el=>{
         const r=el.getBoundingClientRect();
@@ -44,10 +44,11 @@ async function controleer(browserType,naam){
         }
         return {tekst:(el.textContent||"").trim(),hoogte:r.height,breedte:r.width,verborgenDoor};
       };
-      /* De footer is op cold-load bewust verborgen tot er weerdata staat. Voor
-         dit accessibility-contract brengen we hem in zijn zichtbare app-state.
-         Een gesloten details verbergt descendant-links terecht met 0x0; meet
-         daarom eerst de summary en daarna de links in geopende toestand. */
+      /* Dit is bewust een layoutcontract op het definitieve artifact, niet een
+         dataloadtest. #app en footer starten cold-load verborgen en worden hier
+         alleen voor de meting in hun normale zichtbare display gezet. Een
+         gesloten details verbergt descendant-links terecht met 0x0; meet eerst
+         de summary en daarna de links in geopende toestand. */
       const summaries=[...document.querySelectorAll("footer details summary")].map(meetDoel);
       [...document.querySelectorAll("footer details")].forEach(el=>{el.open=true;});
       const links=[...document.querySelectorAll("footer a")].map(meetDoel);
@@ -55,6 +56,7 @@ async function controleer(browserType,naam){
         mainAantal:mains.length,
         mainId:mains[0]&&mains[0].id,
         appTag:app&&app.tagName,
+        footerDisplay:footer&&getComputedStyle(footer).display,
         doelen:[...summaries,...links],
         maanAria:[...document.querySelectorAll(".maanbij")].map(el=>el.getAttribute("aria-label"))
       };
@@ -62,6 +64,7 @@ async function controleer(browserType,naam){
     assert.equal(resultaat.mainAantal,1,naam+": exact één main-landmark");
     assert.equal(resultaat.mainId,"app",naam+": #app is het main-landmark");
     assert.equal(resultaat.appTag,"MAIN",naam+": #app gebruikt native main-semantiek");
+    assert.equal(resultaat.footerDisplay,"flex",naam+": footer staat in zichtbare layoutstate");
     assert.ok(resultaat.doelen.length>=5,naam+": footerdoelen ontbreken");
     resultaat.doelen.forEach(doel=>{
       const context=doel.verborgenDoor?"; verborgen door "+JSON.stringify(doel.verborgenDoor):"";
