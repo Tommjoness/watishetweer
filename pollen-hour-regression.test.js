@@ -15,7 +15,7 @@ const origineel=fs.readFileSync(bron);
 const testScript=`
 const assert=require("assert");
 const {laadKern}=require("./kern.js");
-function context(airUur,grass=250){
+function context(airUur,grass=250,lat=52.37,lon=4.90){
   const {api,bak,doc}=laadKern(390);
   /* kern.js ondersteunt selectors op geparste elementen volledig, maar de
      generieke documentmock retourneert voor querySelectorAll bewust een lege
@@ -25,7 +25,7 @@ function context(airUur,grass=250){
   const basisQuerySelectorAll=doc.querySelectorAll.bind(doc);
   doc.querySelectorAll=sel=>sel==="#aq .stat"?bak.aq.querySelectorAll(".stat"):basisQuerySelectorAll(sel);
   Object.assign(api.S,{
-    lat:52.37,lon:4.90,label:"PollenTest",op:Date.now(),dag:null,
+    lat,lon,label:"PollenTest",op:Date.now(),dag:null,
     d:{current:{time:"2026-08-13T12:00"},daily:{time:["2026-08-13"],sunshine_duration:[18000]}},
     air:{current:{european_aqi:22,us_aqi:45},hourly:{time:[airUur],alder_pollen:[0],birch_pollen:[0],grass_pollen:[grass],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}}
   });
@@ -63,7 +63,30 @@ const nulPollen=vind(nul,"Pollen");
 assert(nulPollen,nul);
 assert.equal(nulPollen.sub,"Geen pollen verwacht voor dit uur");
 
-console.log("Pollenregressie: mismatch faalt gesloten; exact uur en sub-1 concentraties blijven eerlijk zichtbaar zonder universele ernstschaal.");
+/* CAMS Regional Europe dekt 25W–45E / 30N–72N. De oude appgrens eindigde al
+   bij 71,5N en begon bij 29,5N. Toets de zichtbare modelkeuze op en rond beide
+   breedtegrenzen, niet alleen de bronstring. */
+const noord=context("2026-08-13T12:00",250,71.7,20);
+assert.equal(vind(noord,"Luchtkwaliteit").sub,"redelijk · Europese AQI","71,7N ligt binnen CAMS Europe: "+JSON.stringify(noord));
+assert(vind(noord,"Pollen gras"),"71,7N moet Europese pollendata kunnen tonen: "+JSON.stringify(noord));
+
+const noordRand=context("2026-08-13T12:00",250,72,20);
+assert.equal(vind(noordRand,"Luchtkwaliteit").sub,"redelijk · Europese AQI","72N is de gedocumenteerde noordgrens");
+assert(vind(noordRand,"Pollen gras"),"72N moet binnen de CAMS-dekking blijven");
+
+const noordBuiten=context("2026-08-13T12:00",250,72.01,20);
+assert.equal(vind(noordBuiten,"Luchtkwaliteit").sub,"goed · Amerikaanse AQI","boven 72N moet de globale AQI worden gebruikt");
+assert.equal(vind(noordBuiten,"Pollen").sub,"Alleen beschikbaar in Europa","boven 72N mag Europese pollenfixture niet worden getoond");
+
+const zuidRand=context("2026-08-13T12:00",250,30,20);
+assert.equal(vind(zuidRand,"Luchtkwaliteit").sub,"redelijk · Europese AQI","30N is de gedocumenteerde zuidgrens");
+assert(vind(zuidRand,"Pollen gras"),"30N moet binnen de CAMS-dekking blijven");
+
+const zuidBuiten=context("2026-08-13T12:00",250,29.99,20);
+assert.equal(vind(zuidBuiten,"Luchtkwaliteit").sub,"goed · Amerikaanse AQI","onder 30N moet de globale AQI worden gebruikt");
+assert.equal(vind(zuidBuiten,"Pollen").sub,"Alleen beschikbaar in Europa","onder 30N mag Europese pollenfixture niet worden getoond");
+
+console.log("Lucht/pollenregressie: CAMS-Europe-randen, uurmismatch, exact uur en sub-1 concentraties blijven correct zichtbaar.");
 `;
 let status=1;
 try{
