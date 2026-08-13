@@ -83,7 +83,7 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
       zet('initial',typeof S!=='undefined'&&S.d&&Math.round(Number(S.d.current&&S.d.current.temperature_2m))===18?'ok':'fout');
       if(${cacheBehouden}){
         /* Simuleer een geldige cache van vóór de landcode-migratie: alle
-           forecastdata/coördinaten zijn intact, alleen `land` ontbreekt. */
+           forecastdata/coördinaten zijn intact, alleen land ontbreekt. */
         const legacy=JSON.parse(localStorage.getItem('weerbriefing.data')||'null');
         if(legacy){delete legacy.land;localStorage.setItem('weerbriefing.data',JSON.stringify(legacy));}
       }else{
