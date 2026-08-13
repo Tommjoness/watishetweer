@@ -30,14 +30,21 @@ async function controleer(browserType,naam){
       const app=document.getElementById("app");
       if(app)app.style.display="block";
       const mains=[...document.querySelectorAll("main")];
+      const meetDoel=el=>{
+        const r=el.getBoundingClientRect();
+        return {tekst:(el.textContent||"").trim(),hoogte:r.height,breedte:r.width};
+      };
+      /* Een gesloten details verbergt zijn descendant-links terecht met een
+         0x0-layoutbox. Meet de summary in gesloten toestand, open daarna de
+         details en meet pas dan de links die voor de gebruiker zichtbaar zijn. */
+      const summaries=[...document.querySelectorAll("footer details summary")].map(meetDoel);
+      [...document.querySelectorAll("footer details")].forEach(el=>{el.open=true;});
+      const links=[...document.querySelectorAll("footer a")].map(meetDoel);
       return {
         mainAantal:mains.length,
         mainId:mains[0]&&mains[0].id,
         appTag:app&&app.tagName,
-        doelen:[...document.querySelectorAll("footer a,footer details summary")].map(el=>{
-          const r=el.getBoundingClientRect();
-          return {tekst:(el.textContent||"").trim(),hoogte:r.height,breedte:r.width};
-        }),
+        doelen:[...summaries,...links],
         maanAria:[...document.querySelectorAll(".maanbij")].map(el=>el.getAttribute("aria-label"))
       };
     });
