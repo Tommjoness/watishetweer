@@ -29,6 +29,8 @@ async function controleer(browserType,naam){
     const resultaat=await page.evaluate(()=>{
       const app=document.getElementById("app");
       if(app)app.style.display="block";
+      const footer=document.querySelector("footer");
+      if(footer)footer.style.display="block";
       const mains=[...document.querySelectorAll("main")];
       const meetDoel=el=>{
         const r=el.getBoundingClientRect();
@@ -42,9 +44,10 @@ async function controleer(browserType,naam){
         }
         return {tekst:(el.textContent||"").trim(),hoogte:r.height,breedte:r.width,verborgenDoor};
       };
-      /* Een gesloten details verbergt zijn descendant-links terecht met een
-         0x0-layoutbox. Meet de summary in gesloten toestand, open daarna de
-         details en meet pas dan de links die voor de gebruiker zichtbaar zijn. */
+      /* De footer is op cold-load bewust verborgen tot er weerdata staat. Voor
+         dit accessibility-contract brengen we hem in zijn zichtbare app-state.
+         Een gesloten details verbergt descendant-links terecht met 0x0; meet
+         daarom eerst de summary en daarna de links in geopende toestand. */
       const summaries=[...document.querySelectorAll("footer details summary")].map(meetDoel);
       [...document.querySelectorAll("footer details")].forEach(el=>{el.open=true;});
       const links=[...document.querySelectorAll("footer a")].map(meetDoel);
