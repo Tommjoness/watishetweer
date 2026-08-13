@@ -146,6 +146,9 @@ function aqiOordeelGetoond(waarde,europees){
   return {tekst:"gevaarlijk",kleur:"carmine"};
 }
 
+/* Legacy pure-helper API: behouden totdat de oudere brede testset afzonderlijk
+   wordt gemigreerd. De productie-runtime hieronder gebruikt deze ernstschaal
+   niet meer. */
 function pollenOordeelGetoond(waarde){
   const v=num(waarde); if(v===null)return {tekst:"onbekend",kleur:"ink45"};
   const n=Math.max(0,Math.round(v));
@@ -153,6 +156,15 @@ function pollenOordeelGetoond(waarde){
   if(n<50)return {tekst:"matig",kleur:"ink"};
   if(n<200)return {tekst:"hoog",kleur:"carmine"};
   return {tekst:"zeer hoog",kleur:"carmine"};
+}
+
+/* Open-Meteo/CAMS levert voor pollen concentraties in korrels/m³, maar geen
+   universele ernstcategorie voor alle zes soorten. Presenteer daarom alleen
+   aanwezigheid voor het actuele modeluur en laat de ruwe concentratie leidend. */
+function pollenPresentatieGetoond(aanwezig){
+  if(aanwezig===true)return {tekst:"Verwacht voor dit uur",kleur:"ink"};
+  if(aanwezig===false)return {tekst:"Geen pollen verwacht voor dit uur",kleur:"ink45"};
+  return {tekst:"onbekend",kleur:"ink45"};
 }
 
 function zichtOordeelGetoond(kilometer,plus){
@@ -270,7 +282,7 @@ const api={
   briefingHistorieSemantiek,nachtLabelVarianten,nachtAdviesMetHorizon,nachtVensterMetHorizon,
   daglichtGrammatica,nachtOordeelGetoond,nachtBalkPercentageGetoond,neerslagWeerCode,uvOordeelGetoond,bewolkingOordeelGetoond,
   bewolkingscodeUitPercentage,bewolkingMagActueelWeerOverschrijven,actueleBewolkingsomschrijving,
-  aqiOordeelGetoond,pollenOordeelGetoond,zichtOordeelGetoond,zonurenOordeelGetoond,
+  aqiOordeelGetoond,pollenOordeelGetoond,pollenPresentatieGetoond,zichtOordeelGetoond,zonurenOordeelGetoond,
   maanFaseUitSymbool,maanFaseSvg,maanSymboolNaarSvgInHtml,zonInfoRijen,tooltipCompactMaten
 };
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
@@ -393,8 +405,9 @@ briefing=function(){
   if(el)el.innerHTML=briefingHistorieSemantiek(el.innerHTML);
 };
 
-/* Ook luchtkwaliteit/pollen en zonuren gebruiken categorieën naast afgeronde
-   waarden. De grenswaarde wordt daarom op het zichtbare getal toegepast. */
+/* Luchtkwaliteit en zonuren behouden hun eigen bewezen categorieën. Pollen
+   krijgt juist geen universele ernstschaal: de CAMS-concentratie blijft staan
+   en de subregel zegt alleen of pollen voor het actuele modeluur wordt verwacht. */
 const basisLucht=lucht;
 lucht=function(){
   basisLucht();
@@ -414,8 +427,9 @@ lucht=function(){
         const u=Number(String(val.textContent||"").replace(",",".").replace(/[^0-9.-]/g,""));
         const tekst=zonurenOordeelGetoond(u);if(tekst)sub.textContent=tekst;
       }else if(/^Pollen\s+/i.test(kop.textContent)){
-        const v=Number(String(val.textContent||"").replace(/[^0-9.-]/g,""));
-        if(Number.isFinite(v)){const o=pollenOordeelGetoond(v);sub.textContent=o.tekst;val.style.color=kleurToken(o.kleur);}
+        const o=pollenPresentatieGetoond(true);sub.textContent=o.tekst;val.style.color=kleurToken(o.kleur);
+      }else if(kop.textContent.trim()==="Pollen"&&sub.textContent.trim()==="Geen noemenswaardige concentraties"){
+        const o=pollenPresentatieGetoond(false);sub.textContent=o.tekst;
       }
     });
   }catch(e){}
