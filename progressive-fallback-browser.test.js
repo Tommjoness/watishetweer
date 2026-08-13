@@ -109,8 +109,13 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
       zet('preview-count',window.__fallbackFetch.preview);
       zet('new-full-count',window.__fallbackFetch.newFull);
       if(${cacheBehouden}){
-        const warningBijCache=/lat=52(?:\\.368|\\.3676)?(?:&|%26)/.test(laatsteWarning)&&/lon=4(?:\\.904|\\.9041)?(?:&|%26)/.test(laatsteWarning);
-        const geenStaleLand=!/[?&]land=US(?:&|$)/.test(laatsteWarning)&&typeof S!=='undefined'&&S.land==null;
+        let warningBijCache=false,geenStaleLand=false;
+        try{
+          const warningUrl=new URL(laatsteWarning,'https://watishetweer.test');
+          const lat=Number(warningUrl.searchParams.get('lat')),lon=Number(warningUrl.searchParams.get('lon'));
+          warningBijCache=Math.abs(lat-52.368)<0.0015&&Math.abs(lon-4.904)<0.0015;
+          geenStaleLand=warningUrl.searchParams.get('land')!=='US'&&typeof S!=='undefined'&&S.land==null;
+        }catch(_){ }
         const veilig=zichtbaar&&/laatste briefing/i.test(stateTekst)&&typeof S!=='undefined'&&S.label==='Amsterdam'&&sTemp===18&&plaats==='Amsterdam'&&warningBijCache&&geenStaleLand;
         zet('result',veilig?'ok':'fout');
       }else{
