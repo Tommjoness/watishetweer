@@ -51,12 +51,19 @@ assert(/250/.test(gras.val),"exact uur moet echte pollenwaarde blijven tonen: "+
 assert.equal(gras.sub,"Verwacht voor dit uur");
 assert(!/^(?:laag|matig|hoog|zeer hoog)$/.test(gras.sub),"productie mag geen universele pollen-ernstcategorie tonen: "+JSON.stringify(gras));
 
+const klein=context("2026-08-13T12:00",0.4);
+const kleinGras=vind(klein,"Pollen gras");
+assert(kleinGras,"positieve sub-1 pollenwaarde moet een rij houden: "+JSON.stringify(klein));
+assert(/(?:&lt;|<)1/.test(kleinGras.val),"positieve sub-1 pollenwaarde mag niet als nul worden getoond: "+JSON.stringify(kleinGras));
+assert(/korrel\/m³/.test(kleinGras.val),"sub-1 pollen gebruikt de enkelvoudige eenheid: "+JSON.stringify(kleinGras));
+assert.equal(kleinGras.sub,"Verwacht voor dit uur");
+
 const nul=context("2026-08-13T12:00",0);
 const nulPollen=vind(nul,"Pollen");
 assert(nulPollen,nul);
 assert.equal(nulPollen.sub,"Geen pollen verwacht voor dit uur");
 
-console.log("Pollenregressie: mismatch faalt gesloten; exact uur toont concentratie zonder universele ernstschaal.");
+console.log("Pollenregressie: mismatch faalt gesloten; exact uur en sub-1 concentraties blijven eerlijk zichtbaar zonder universele ernstschaal.");
 `;
 let status=1;
 try{
