@@ -65,11 +65,9 @@ function zoneOffset(ms,tijdzone){
   return Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second)-Math.floor(ms/1000)*1000;
 }
 
-/* Zonder tijdzone blijft dit bewust de oude 'lokale kalenderas': tests en
-   grafiekhelpers gebruiken die als een abstracte monotone minutenas. Met een
-   IANA-tijdzone wordt dezelfde lokale kloktekst naar een werkelijk instant
-   vertaald. Daardoor duren 'de komende twee uur' ook tijdens de voorjaars- of
-   najaarsklokomslag echt twee verstreken uren. */
+/* Civiele lokale tijden (bijvoorbeeld een zelf opgebouwd lokaal middernacht-
+   tijdstip) worden met de IANA-zone naar een werkelijk instant vertaald. Die
+   route is datumafhankelijk en hoort dus wél rekening te houden met DST. */
 function lokaalNaarMinuten(tijd,tijdzone,utcOffsetSeconden){
   const p=parseLokaleTijd(tijd);
   if(!p) return null;
@@ -90,6 +88,27 @@ function lokaalNaarMinuten(tijd,tijdzone,utcOffsetSeconden){
   }
   const off=getal(utcOffsetSeconden);
   return (doel-(off===null?0:off*1000))/60000;
+}
+
+/* Open-Meteo serialiseert één response met één vaste utc_offset_seconds over de
+   provider-tijdas. De lokale labels in current/hourly/minutely zijn daarom geen
+   zelfstandige civiele IANA-tijden: rond een klokomslag blijven ze vaste stappen
+   vanaf die response-offset. De provider-as moet met precies die offset worden
+   terugvertaald; pas voor zichtbare labels formatteren we het resulterende instant
+   weer met de echte IANA-zone. Zonder offset behouden tests/abstracte reeksen de
+   bestaande UTC-achtige kalenderas. */
+function providerNaarMinuten(tijd,utcOffsetSeconden){
+  const p=parseLokaleTijd(tijd);
+  if(!p) return null;
+  const doel=Date.UTC(p.jaar,p.maand-1,p.dag,p.uur,p.minuut);
+  const off=getal(utcOffsetSeconden);
+  return (doel-(off===null?0:off*1000))/60000;
+}
+
+function analyseStartMinuten(current,nuOverride,tijdzone,utcOffsetSeconden){
+  if(typeof nuOverride==="number"&&Number.isFinite(nuOverride)) return nuOverride;
+  if(nuOverride!==undefined) return lokaalNaarMinuten(nuOverride,tijdzone,utcOffsetSeconden);
+  return providerNaarMinuten(current&&current.time,utcOffsetSeconden);
 }
 
 function minutenNaarLokaal(minuten,tijdzone,utcOffsetSeconden){
@@ -164,14 +183,13 @@ function leesReeks(reeks,stapMin,startMin,eindMin,velden,tijdzone,utcOffsetSecon
   const gezien=new Set();
   let dubbeleTijd=false;
   for(let i=0;i<tijden.length;i++){
-    const eind=lokaalNaarMinuten(tijden[i],tijdzone,utcOffsetSeconden);
+    const eind=providerNaarMinuten(tijden[i],utcOffsetSeconden);
     if(eind===null) continue;
     const begin=eind-stapMin;
     const overlap=overlapMinuten(begin,eind,startMin,eindMin);
     if(overlap<=0) continue;
-    // Een dubbele lokale kloktekst tijdens de najaarsomslag is zonder expliciete
-    // offset in de bron ambigu. Dan liever geen stellige conclusie over dit
-    // venster dan één van de twee instanties gokken.
+    // Exact dubbel aangeleverde providerlabels zijn ambigu/corrupt. Open-Meteo's
+    // vaste response-as hoort zelf monotone unieke labels te leveren.
     const lokaleSleutel=String(tijden[i]);
     if(gezien.has(lokaleSleutel)){ dubbeleTijd=true; continue; }
     gezien.add(lokaleSleutel);
@@ -250,7 +268,7 @@ function analyseerNeerslagData(data,duurMin,nuOverride){
   duurMin=Number(duurMin)||120;
   const current=data&&data.current||{};
   const tijdzone=data&&data.timezone||null,utcOffsetSeconden=data&&data.utc_offset_seconds;
-  const startMin=lokaalNaarMinuten(nuOverride!==undefined?nuOverride:current.time,tijdzone,utcOffsetSeconden);
+  const startMin=analyseStartMinuten(current,nuOverride,tijdzone,utcOffsetSeconden);
   if(startMin===null){
     return {status:"ONVOLDOENDE_DATA",genoeg:false,duurMin,reden:"ongeldig huidig tijdstip"};
   }
@@ -285,7 +303,7 @@ function analyseerNeerslagData(data,duurMin,nuOverride){
     status,
     rang:STATUS_RANG[status],
     genoeg,
-    reden:dubbeleTijd?"dubbele lokale tijd rond een klokomslag":null,
+    reden:dubbeleTijd?"dubbel provider-tijdstip":null,
     duurMin,
     startMin,
     eindMin,
@@ -423,7 +441,7 @@ function analyseerDagData(data,dagIndex,nuOverride){
   const volgende=volgendeDatum(datum);
   const dagEind=volgende?datumStartMinuten(volgende,tijdzone,utcOffsetSeconden):null;
   if(dagStart===null||dagEind===null||dagEind<=dagStart) return {genoeg:false,status:"ONVOLDOENDE_DATA"};
-  const nu=lokaalNaarMinuten(nuOverride!==undefined?nuOverride:data.current&&data.current.time,tijdzone,utcOffsetSeconden);
+  const nu=analyseStartMinuten(data&&data.current||{},nuOverride,tijdzone,utcOffsetSeconden);
   const start=nu!==null&&nu>dagStart&&nu<dagEind?nu:dagStart;
   const duur=Math.max(0,dagEind-start);
   if(duur<1) return {genoeg:false,status:"ONVOLDOENDE_DATA",datum,voorbij:true};
@@ -464,6 +482,7 @@ const publiekeApi={
   INTERPRETATIE_CONFIG,
   STATUS_RANG,
   lokaalNaarMinuten,
+  providerNaarMinuten,
   minutenNaarLokaal,
   hoeveelheidTekst,
   kansTekst,
@@ -496,7 +515,12 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
     stempel:typeof stempel==="function"?stempel:null
   };
 
-  const analyse=duur=>analyseerNeerslagData(S.d,duur,weatherNowActueleLokaleTijd());
+  function browserNuMinuten(){
+    if(S.klokInstantOverride&&typeof S.klokInstantOverride.getTime==="function") return S.klokInstantOverride.getTime()/60000;
+    if(!S.klokOverride) return Date.now()/60000;
+    return lokaalNaarMinuten(weatherNowActueleLokaleTijd(),S.d&&S.d.timezone,S.d&&S.d.utc_offset_seconds);
+  }
+  const analyse=duur=>analyseerNeerslagData(S.d,duur,browserNuMinuten());
 
   function zetEyebrow(id,tekst){
     const el=document.getElementById(id);
@@ -529,7 +553,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
     let max=null,aantal=0;
     for(let i=0;i<tijden.length;i++){
       if(String(tijden[i]).slice(0,10)!==datum)continue;
-      const minuut=lokaalNaarMinuten(tijden[i],data.timezone,data.utc_offset_seconds);
+      const minuut=providerNaarMinuten(tijden[i],data.utc_offset_seconds);
       const kans=veldGetal("precipitation_probability",kansen[i]);
       if(minuut===null||minuut<=twee.eindMin||kans===null)continue;
       aantal++;max=Math.max(max===null?0:max,kans);
@@ -641,7 +665,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       const rijen=document.querySelectorAll("#days .row.day");
       rijen.forEach(rij=>{
         if(rij.classList&&rij.classList.contains("kop")) return;
-        const i=Number(rij.dataset.i),a=analyseerDagData(S.d,i,weatherNowActueleLokaleTijd());
+        const i=Number(rij.dataset.i),a=analyseerDagData(S.d,i,browserNuMinuten());
         const cond=rij.querySelector(".dcond"),kans=rij.querySelector(".drain"),icoon=rij.querySelector(".dico");
         if(cond) cond.textContent=dagSamenvatting(a);
         if(kans){
