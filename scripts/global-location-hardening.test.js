@@ -44,10 +44,21 @@ assert.equal(h.geldigeCoordinaat(-90,-90,90),-90);
 assert.equal(h.geldigeCoordinaat(180,-180,180),180);
 assert.equal(h.geldigeCoordinaat("",-90,90),null);
 assert.equal(h.geldigeCoordinaat("Infinity",-90,90),null);
+assert.equal(h.geldigeCoordinaat("52abc",-90,90),null,"trailing rommel mag niet zoals parseFloat worden afgekapt");
 assert.deepEqual(h.normaliseerLaadCoordinaten("52.3676","4.9041"),{latitude:52.3676,longitude:4.9041});
 assert.equal(h.normaliseerLaadCoordinaten(91,0),null);
 assert.equal(h.normaliseerLaadCoordinaten(0,-181),null);
 assert.equal(h.normaliseerLaadCoordinaten(Infinity,0),null);
+
+/* Gedeelde links worden uit de ruwe query gelezen. Aanwezigheid van één van de
+   twee parameters maakt het een gedeelde-locatiepoging; beide moeten daarna
+   strikt geldig zijn. */
+assert.deepEqual(h.gedeeldeUrlCoordinaten("?lat=52.3676&lon=4.9041"),{
+  aanwezig:true,geldig:true,latitude:52.3676,longitude:4.9041
+});
+assert.equal(h.gedeeldeUrlCoordinaten("?lat=52abc&lon=5xyz").geldig,false);
+assert.equal(h.gedeeldeUrlCoordinaten("?lat=52.3").geldig,false,"halve gedeelde locatie moet ongeldig zijn");
+assert.equal(h.gedeeldeUrlCoordinaten("?hier=1").aanwezig,false,"andere startup-parameters zijn geen gedeelde locatie");
 
 /* Dedupliceren mag de lijst niet onnodig kort maken. De requestlaag vraagt
    daarom twaalf kandidaten en de UI krijgt hoogstens zes unieke resultaten in
@@ -99,15 +110,14 @@ assert.equal(nws.lijst.length,1);
 
 /* De pure validator is pas productveilig als de browserruntime hem ook echt aan
    de centrale load-boundary hangt. Voer daarom dezelfde module in een minimale
-   browserachtige VM uit en bewijs dat geldige numerieke strings genormaliseerd
-   doorgaan, terwijl onmogelijke of niet-eindige coördinaten de providergrens
-   nooit bereiken. */
+   browserachtige VM uit en bewijs normale, gedeelde en ongeldige routes. */
 const bron=fs.readFileSync(path.join(__dirname,"global-location-hardening.js"),"utf8");
 (async()=>{
   const calls=[];
   const state={style:{display:"none"},className:"",textContent:""};
   const context={
-    URL,
+    URL,URLSearchParams,
+    location:{search:""},
     document:{getElementById:id=>id==="state"?state:null},
     j:async()=>({results:[]}),
     load:async(...args)=>{calls.push(args);return "geladen";},
@@ -137,5 +147,32 @@ const bron=fs.readFileSync(path.join(__dirname,"global-location-hardening.js"),"
   assert.equal(stil,false);
   assert.equal(state.textContent,"stil behouden","stille achtergrondload mag geen nieuwe foutmelding forceren");
 
-  console.log("Wereldwijde locatiehardening: validatie, centrale load-boundary, uniek zoekvenster, deduplicatie en fail-closed plaatswaarschuwingen geslaagd.");
+  /* Bewijs het oorspronkelijke parseFloat-gat: de startup kan 52/5 aanleveren,
+     maar de wrapper moet de ruwe query 52abc/5xyz zien en de request blokkeren. */
+  context.location.search="?lat=52abc&lon=5xyz&plaats=KapotteLink";
+  const voorKapotteLink=calls.length;
+  const kapot=await context.load(52,5,"KapotteLink",false,false,null);
+  assert.equal(kapot,false);
+  assert.equal(calls.length,voorKapotteLink,"kapotte gedeelde link mag geen plausibele forecastrequest starten");
+  assert.equal(state.textContent,"Deze gedeelde locatie is ongeldig. Zoek een plaats of gebruik Mijn locatie.");
+
+  /* Bij een geldige gedeelde link zijn de ruwe URL-waarden leidend en blijft
+     opslaan=false ook bij stille refreshes van exact dezelfde positie. */
+  context.location.search="?lat=52.3676&lon=4.9041&plaats=Gedeeld";
+  const gedeeld=await context.load(52,4,"Gedeeld",false,false,"NL");
+  assert.equal(gedeeld,"geladen");
+  assert.strictEqual(calls.at(-1)[0],52.3676,"ruwe gedeelde latitude is leidend boven parseFloat-aanvoer");
+  assert.strictEqual(calls.at(-1)[1],4.9041,"ruwe gedeelde longitude is leidend boven parseFloat-aanvoer");
+  assert.strictEqual(calls.at(-1)[4],false,"eerste gedeelde load mag niet opslaan");
+
+  await context.load(52.3676,4.9041,"Gedeeld",true,undefined,"NL");
+  assert.strictEqual(calls.at(-1)[4],false,"achtergrondrefresh van gedeelde locatie mag niet alsnog opslaan");
+
+  await context.load(52.5,5.1,"Nieuwe keuze",false,true,"NL");
+  assert.strictEqual(calls.at(-1)[4],true,"een echte nieuwe gebruikerskeuze moet de gedeelde sessie beëindigen en opslaan");
+
+  await context.load(52.5,5.1,"Nieuwe keuze",true,undefined,"NL");
+  assert.strictEqual(calls.at(-1)[4],undefined,"na een nieuwe keuze mag de normale load-default weer gelden");
+
+  console.log("Wereldwijde locatiehardening: strikte gedeelde links, niet-opslaande gedeelde refresh, centrale load-boundary, uniek zoekvenster, deduplicatie en fail-closed plaatswaarschuwingen geslaagd.");
 })().catch(err=>{console.error(err&&err.stack||err);process.exitCode=1;});
