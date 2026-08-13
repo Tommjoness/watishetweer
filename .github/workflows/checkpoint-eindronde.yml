@@ -21,6 +21,8 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
       - name: Bouw definitieve artifact
         run: npm run build
+      - name: Accessibility-landmark en mobiele footerdoelen in Chromium en WebKit
+        run: node browser-accessibility.test.js
       - name: Finale 27-punten artifactcontrole
         run: node scripts/verify-final-27.js
       - name: Pooldag en poolnacht in Chromium en WebKit
