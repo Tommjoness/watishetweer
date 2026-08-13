@@ -33,7 +33,24 @@ function normaliseerSnellePreview(data){
   };
 }
 
-const api={snellePreviewUrl,normaliseerSnellePreview,SNEL_START_VERTRAGING_MS,SNEL_TIMEOUT_MS};
+/* De basisloader vangt netwerkfouten zelf af en retourneert daarom geen aparte
+   successtatus. Bij een locatiewissel kan S.d vóór de request nog de forecast
+   van de vorige plaats bevatten. Alleen coords + !!S.d controleren is dan niet
+   genoeg: na een mislukte request staan de coords al op het nieuwe doel terwijl
+   S.d nog exact hetzelfde oude object kan zijn.
+
+   Een nieuw object op de doelcoords is door basisLoad gecommit (verse response
+   of een cache voor precies die doelplaats). Data op andere coords is de door
+   basisLoad bewust en volledig teruggezette, correct gelabelde laatste briefing.
+   Alleen geen data of exact het oude object onder de nieuwe coords is onveilig. */
+function classificeerEindstate(dataVoor,huidigeData,huidigeLat,huidigeLon,doelLat,doelLon){
+  if(!huidigeData)return "geen-data";
+  const opDoel=Number(huidigeLat)===Number(doelLat)&&Number(huidigeLon)===Number(doelLon);
+  if(!opDoel)return "cache-fallback";
+  return huidigeData===dataVoor?"oude-data-op-doel":"doeldata";
+}
+
+const api={snellePreviewUrl,normaliseerSnellePreview,classificeerEindstate,SNEL_START_VERTRAGING_MS,SNEL_TIMEOUT_MS};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowProgressiveLocation=api;
 
@@ -86,6 +103,7 @@ load=async function(lat,lon,label,stil,opslaan,land){
   const nieuweLat=Number(lat),nieuweLon=Number(lon);
   const wissel=S.lat!==nieuweLat||S.lon!==nieuweLon;
   const progressief=!stil&&wissel;
+  const dataVoorLoad=S.d;
   if(progressief)bereidPreviewVoor();
 
   let volledigKlaar=false,lokaleController=null,previewGetoond=false;
@@ -119,12 +137,14 @@ load=async function(lat,lon,label,stil,opslaan,land){
     if(lokaleController)lokaleController.abort();
     if(actievePreviewController===lokaleController)actievePreviewController=null;
     if(mijnGeneratie===generatie){
-      /* basisLoad vangt netwerkfouten zelf af. Daarom bepalen we hier aan de
-         canonieke state of de volledige forecast werkelijk voor deze locatie is
-         gecommit. Als alleen de snelle preview lukte, mag het verwijderen van de
-         tijdelijke CSS nooit oude details van de vorige stad weer zichtbaar maken. */
-      const volledigGecommit=Number(S.lat)===nieuweLat&&Number(S.lon)===nieuweLon&&!!S.d;
-      if(progressief&&previewGetoond&&!volledigGecommit){
+      const eindstate=classificeerEindstate(dataVoorLoad,S.d,S.lat,S.lon,nieuweLat,nieuweLon);
+      /* Een preview mag alleen blijven staan wanneer de basisloader hem met
+         veilige doeldata verving. Een expliciet gelabelde cachefallback heeft
+         basisLoad zelf al volledig gerenderd en blijft eveneens zichtbaar. Bij
+         geen data of een oud S.d-object onder de nieuwe coords verbergen we de
+         preview vóór de tijdelijke CSS wordt verwijderd, zodat details van de
+         vorige plaats nooit onder de nieuwe plaatsnaam kunnen verschijnen. */
+      if(progressief&&previewGetoond&&(eindstate==="geen-data"||eindstate==="oude-data-op-doel")){
         const app=document.getElementById("app");if(app)app.style.display="none";
       }
       stopPreviewPresentatie();
