@@ -30,21 +30,31 @@ function context(airUur,grass=250){
     air:{current:{european_aqi:22,us_aqi:45},hourly:{time:[airUur],alder_pollen:[0],birch_pollen:[0],grass_pollen:[grass],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}}
   });
   api.lucht();
-  return String(bak.aq.innerHTML||"");
+  const stats=bak.aq.querySelectorAll(".stat").map(stat=>{
+    const kop=stat.querySelector(".eyebrow"),val=stat.querySelector(".sval"),sub=stat.querySelector(".ssub");
+    return {kop:kop?String(kop.textContent||"").trim():"",val:val?String(val.textContent||"").trim():"",sub:sub?String(sub.textContent||"").trim():""};
+  });
+  return stats;
 }
+const vind=(stats,kop)=>stats.find(x=>x.kop===kop);
+
 const mismatch=context("2026-08-13T00:00");
-assert(/Pollendata voor het huidige uur niet beschikbaar/.test(mismatch),mismatch);
-assert(!/250/.test(mismatch),"mismatch mag geen 00:00-pollen als actuele waarde tonen: "+mismatch);
+const mismatchPollen=vind(mismatch,"Pollen");
+assert(mismatchPollen,mismatch);
+assert.equal(mismatchPollen.sub,"Pollendata voor het huidige uur niet beschikbaar");
+assert(!mismatch.some(x=>/250/.test(x.val)),"mismatch mag geen 00:00-pollen als actuele waarde tonen: "+JSON.stringify(mismatch));
 
 const gelijk=context("2026-08-13T12:00",250);
-assert(/250/.test(gelijk),"exact uur moet echte pollenwaarde blijven tonen: "+gelijk);
-assert(/Pollen gras[\\s\\S]*?Verwacht voor dit uur/.test(gelijk),"positieve pollenwaarde moet neutraal als uurverwachting worden gepresenteerd: "+gelijk);
-assert(!/Pollen gras[\\s\\S]*?<div class="ssub">(?:laag|matig|hoog|zeer hoog)<\\/div>/.test(gelijk),"productie mag geen universele pollen-ernstcategorie tonen: "+gelijk);
-assert(!/huidige uur niet beschikbaar/.test(gelijk),gelijk);
+const gras=vind(gelijk,"Pollen gras");
+assert(gras,"exact uur moet een gras-pollenrij tonen: "+JSON.stringify(gelijk));
+assert(/250/.test(gras.val),"exact uur moet echte pollenwaarde blijven tonen: "+JSON.stringify(gras));
+assert.equal(gras.sub,"Verwacht voor dit uur");
+assert(!/^(?:laag|matig|hoog|zeer hoog)$/.test(gras.sub),"productie mag geen universele pollen-ernstcategorie tonen: "+JSON.stringify(gras));
 
 const nul=context("2026-08-13T12:00",0);
-assert(/Geen pollen verwacht voor dit uur/.test(nul),"echte nulwaarde moet als nulverwachting worden benoemd: "+nul);
-assert(!/Geen noemenswaardige concentraties/.test(nul),"oude impliciete ernsttaal mag niet zichtbaar blijven: "+nul);
+const nulPollen=vind(nul,"Pollen");
+assert(nulPollen,nul);
+assert.equal(nulPollen.sub,"Geen pollen verwacht voor dit uur");
 
 console.log("Pollenregressie: mismatch faalt gesloten; exact uur toont concentratie zonder universele ernstschaal.");
 `;
