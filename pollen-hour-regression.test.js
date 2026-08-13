@@ -16,7 +16,14 @@ const testScript=`
 const assert=require("assert");
 const {laadKern}=require("./kern.js");
 function context(airUur,grass=250){
-  const {api,bak}=laadKern(390);
+  const {api,bak,doc}=laadKern(390);
+  /* kern.js ondersteunt selectors op geparste elementen volledig, maar de
+     generieke documentmock retourneert voor querySelectorAll bewust een lege
+     lijst. Routeer hier alleen de echte #aq-selector van de productiewrapper
+     naar hetzelfde geparste AQ-element. Zo draait api.lucht() inclusief alle
+     definitieve wrappers in plaats van alleen de basisrenderer. */
+  const basisQuerySelectorAll=doc.querySelectorAll.bind(doc);
+  doc.querySelectorAll=sel=>sel==="#aq .stat"?bak.aq.querySelectorAll(".stat"):basisQuerySelectorAll(sel);
   Object.assign(api.S,{
     lat:52.37,lon:4.90,label:"PollenTest",op:Date.now(),dag:null,
     d:{current:{time:"2026-08-13T12:00"},daily:{time:["2026-08-13"],sunshine_duration:[18000]}},
