@@ -55,7 +55,7 @@ const klein=context("2026-08-13T12:00",0.4);
 const kleinGras=vind(klein,"Pollen gras");
 assert(kleinGras,"positieve sub-1 pollenwaarde moet een rij houden: "+JSON.stringify(klein));
 assert(/(?:&lt;|<)1/.test(kleinGras.val),"positieve sub-1 pollenwaarde mag niet als nul worden getoond: "+JSON.stringify(kleinGras));
-assert(/korrel\/m³/.test(kleinGras.val),"sub-1 pollen gebruikt de enkelvoudige eenheid: "+JSON.stringify(kleinGras));
+assert(kleinGras.val.includes("korrel/m³"),"sub-1 pollen gebruikt de enkelvoudige eenheid: "+JSON.stringify(kleinGras));
 assert.equal(kleinGras.sub,"Verwacht voor dit uur");
 
 const nul=context("2026-08-13T12:00",0);
