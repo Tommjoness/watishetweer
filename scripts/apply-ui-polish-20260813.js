@@ -34,8 +34,9 @@ ${CSS_MARK}
 .row.day.kop .bar{text-align:center}
 `;
 
-if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor UI-polish.");
-html=html.replace("</style>",css+"</style>");
+const HEAD_EIND="</head>";
+if(html.split(HEAD_EIND).length-1!==1)throw new Error("Exact één head-einde vereist voor UI-polish.");
+html=html.replace(HEAD_EIND,"<style>"+css+"</style>\n"+HEAD_EIND);
 
 const START="/* ---------- start ---------- */";
 const aantal=html.split(START).length-1;
