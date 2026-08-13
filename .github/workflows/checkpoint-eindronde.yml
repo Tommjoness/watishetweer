@@ -22,7 +22,17 @@ jobs:
       - name: Bouw definitieve artifact
         run: npm run build
       - name: Accessibility-landmark en mobiele footerdoelen in Chromium en WebKit
-        run: node browser-accessibility.test.js
+        shell: bash
+        run: |
+          set +e
+          node browser-accessibility.test.js > /tmp/accessibility-e2e.log 2>&1
+          code=$?
+          cat /tmp/accessibility-e2e.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 30 /tmp/accessibility-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=browser-accessibility.test.js,line=1::$msg"
+            exit "$code"
+          fi
       - name: Finale 27-punten artifactcontrole
         run: node scripts/verify-final-27.js
       - name: Pooldag en poolnacht in Chromium en WebKit
