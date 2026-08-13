@@ -36,10 +36,21 @@ vervangEen(
   "pollen-mismatchtekst"
 );
 
+/* Pollenwaarden zijn floating-point concentraties. Een positieve waarde onder
+   0,5 werd door Math.round zichtbaar 0 korrels/m³, terwijl dezelfde rij juist
+   alleen bestaat wanneer de ruwe waarde >0 is. Toon sub-1 daarom zonder
+   schijnprecisie als <1 en laat vanaf 1 de bestaande afronding staan. De eenheid
+   volgt het zichtbare getal. */
+vervangEen(
+  '${Math.round(o.v)}<s>korrels/m³</s>',
+  '${o.v<1?"&lt;1":Math.round(o.v)}<s>${o.v<1||Math.round(o.v)===1?"korrel/m³":"korrels/m³"}</s>',
+  "positieve sub-1 pollenpresentatie"
+);
+
 html=html.replace("</style>","\n"+MARK+"\n</style>");
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime na pollen-uurcorrectie.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:pollen-hour-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"pollen-hour");
-console.log("Pollen-uurcorrectie toegepast: tijdreeksmismatch faalt gesloten; cache "+versie+".");
+console.log("Pollen-correctheid toegepast: tijdreeksmismatch faalt gesloten en positieve sub-1 concentraties blijven zichtbaar positief; cache "+versie+".");

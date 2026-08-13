@@ -15,23 +15,55 @@ const origineel=fs.readFileSync(bron);
 const testScript=`
 const assert=require("assert");
 const {laadKern}=require("./kern.js");
-function context(airUur){
-  const {api,bak}=laadKern(390);
+function context(airUur,grass=250){
+  const {api,bak,doc}=laadKern(390);
+  /* kern.js ondersteunt selectors op geparste elementen volledig, maar de
+     generieke documentmock retourneert voor querySelectorAll bewust een lege
+     lijst. Routeer hier alleen de echte #aq-selector van de productiewrapper
+     naar hetzelfde geparste AQ-element. Zo draait api.lucht() inclusief alle
+     definitieve wrappers in plaats van alleen de basisrenderer. */
+  const basisQuerySelectorAll=doc.querySelectorAll.bind(doc);
+  doc.querySelectorAll=sel=>sel==="#aq .stat"?bak.aq.querySelectorAll(".stat"):basisQuerySelectorAll(sel);
   Object.assign(api.S,{
     lat:52.37,lon:4.90,label:"PollenTest",op:Date.now(),dag:null,
     d:{current:{time:"2026-08-13T12:00"},daily:{time:["2026-08-13"],sunshine_duration:[18000]}},
-    air:{current:{european_aqi:22,us_aqi:45},hourly:{time:[airUur],alder_pollen:[0],birch_pollen:[0],grass_pollen:[250],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}}
+    air:{current:{european_aqi:22,us_aqi:45},hourly:{time:[airUur],alder_pollen:[0],birch_pollen:[0],grass_pollen:[grass],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}}
   });
   api.lucht();
-  return String(bak.aq.innerHTML||"");
+  const stats=bak.aq.querySelectorAll(".stat").map(stat=>{
+    const kop=stat.querySelector(".eyebrow"),val=stat.querySelector(".sval"),sub=stat.querySelector(".ssub");
+    return {kop:kop?String(kop.textContent||"").trim():"",val:val?String(val.textContent||"").trim():"",sub:sub?String(sub.textContent||"").trim():""};
+  });
+  return stats;
 }
+const vind=(stats,kop)=>stats.find(x=>x.kop===kop);
+
 const mismatch=context("2026-08-13T00:00");
-assert(/Pollendata voor het huidige uur niet beschikbaar/.test(mismatch),mismatch);
-assert(!/250/.test(mismatch),"mismatch mag geen 00:00-pollen als actuele waarde tonen: "+mismatch);
-const gelijk=context("2026-08-13T12:00");
-assert(/250/.test(gelijk),"exact uur moet echte pollenwaarde blijven tonen: "+gelijk);
-assert(!/huidige uur niet beschikbaar/.test(gelijk),gelijk);
-console.log("Pollen-uurregressie: mismatch faalt gesloten en exact uur blijft zichtbaar.");
+const mismatchPollen=vind(mismatch,"Pollen");
+assert(mismatchPollen,mismatch);
+assert.equal(mismatchPollen.sub,"Pollendata voor het huidige uur niet beschikbaar");
+assert(!mismatch.some(x=>/250/.test(x.val)),"mismatch mag geen 00:00-pollen als actuele waarde tonen: "+JSON.stringify(mismatch));
+
+const gelijk=context("2026-08-13T12:00",250);
+const gras=vind(gelijk,"Pollen gras");
+assert(gras,"exact uur moet een gras-pollenrij tonen: "+JSON.stringify(gelijk));
+assert(/250/.test(gras.val),"exact uur moet echte pollenwaarde blijven tonen: "+JSON.stringify(gras));
+assert.equal(gras.sub,"Verwacht voor dit uur");
+assert(!/^(?:laag|matig|hoog|zeer hoog)$/.test(gras.sub),"productie mag geen universele pollen-ernstcategorie tonen: "+JSON.stringify(gras));
+
+const klein=context("2026-08-13T12:00",0.4);
+const kleinGras=vind(klein,"Pollen gras");
+assert(kleinGras,"positieve sub-1 pollenwaarde moet een rij houden: "+JSON.stringify(klein));
+assert(/(?:&lt;|<)1/.test(kleinGras.val),"positieve sub-1 pollenwaarde mag niet als nul worden getoond: "+JSON.stringify(kleinGras));
+assert(kleinGras.val.includes("korrel/m³"),"sub-1 pollen gebruikt de enkelvoudige eenheid: "+JSON.stringify(kleinGras));
+assert.equal(kleinGras.sub,"Verwacht voor dit uur");
+
+const nul=context("2026-08-13T12:00",0);
+const nulPollen=vind(nul,"Pollen");
+assert(nulPollen,nul);
+assert.equal(nulPollen.sub,"Geen pollen verwacht voor dit uur");
+
+console.log("Pollenregressie: mismatch faalt gesloten; exact uur en sub-1 concentraties blijven eerlijk zichtbaar zonder universele ernstschaal.");
 `;
 let status=1;
 try{
