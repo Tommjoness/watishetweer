@@ -1,31 +1,18 @@
 "use strict";
-
-const fs=require("fs");
-const path=require("path");
-const root=path.join(__dirname,"..");
-const index=fs.readFileSync(path.join(root,"index.html"),"utf8");
-const q4=fs.readFileSync(path.join(__dirname,"q4-rain-runtime.js"),"utf8");
-
-const fouten=[];
-const eis=(ok,naam)=>{if(!ok)fouten.push(naam);};
-
-/* Deze test is expres gedrag-/contractgericht: hij legt de zichtbare problemen
-   uit de wereldwijde previewronde vast vóórdat de presentatielaag wordt aangepast. */
-eis(!/\.waarsch h3\{[^}]*color:var\(--carmine\)/.test(index),
-  "waarschuwingstitels mogen niet standaard rood zijn");
-eis(!/dagAanduiding\(pg\.t,true\)\+\" maximaal \"/.test(index),
-  "verstreken model-windstoot mag niet als kale 'maximaal'-zin worden gepresenteerd");
-eis(!/<div class=\"bar\"><\/div><div class=\"dmax\">/.test(index),
-  "temperatuurbalk in de zevendagentabel moet een zichtbare betekenis/kop hebben");
-eis(!/dcond[^\n]*nl\(som\)[^\n]*mm/.test(index),
-  "dagomschrijving mag neerslaghoeveelheid niet dupliceren naast de neerslagkolom");
-eis(!/const woord = uur<2 \? \"Weinig zon vandaag\"[\s\S]*\"Vandaag redelijk wat zon\"/.test(index),
-  "zonurentekst moet rekening houden met het beschikbare daglicht, niet alleen absolute uren");
-eis(q4.includes("data-ui-rain-period-probability"),
-  "regenperiode moet één zichtbare kanssamenvatting per periode hebben");
-
-if(fouten.length){
-  console.error("UI-polish regressies nog aanwezig:\n- "+fouten.join("\n- "));
-  process.exit(1);
-}
+const assert=require("assert"),fs=require("fs"),path=require("path"),vm=require("vm");
+const runtime=fs.readFileSync(path.join(__dirname,"ui-polish-20260813-runtime.js"),"utf8");
+const context={};vm.createContext(context);vm.runInContext(runtime,context);
+const api=context.WeatherNowUiPolish20260813;
+assert(api,"UI-polish helpercontract ontbreekt");
+assert.equal(api.windstootTekst({t:"2026-08-13T02:00",v:52},"2026-08-13T16:00","Vandaag","02:00–03:00"),"Eerder vandaag lag de hoogste verwachte windstoot rond 02:00–03:00 op 52 km/u.");
+assert.equal(api.windstootTekst({t:"2026-08-13T18:00",v:44},"2026-08-13T16:00","Vandaag","18:00–19:00"),"Later vandaag kunnen windstoten tot 44 km/u voorkomen, rond 18:00–19:00.");
+assert.equal(api.zonurenWoord(13.8,14.83),"Bijna de hele dag zon");
+assert.equal(api.zonurenWoord(8,14),"Regelmatig zon vandaag");
+assert.equal(api.dagNeerslagTekst(2,0),"Droog");
+assert.equal(api.dagNeerslagTekst(9,0.05),"Droog");
+assert.equal(api.dagNeerslagTekst(5,0.2),"5%");
+assert.equal(api.isNwsStructuur("* WHAT...Heat index values. * WHERE...Dallas."),true);
+assert.equal(api.isNwsStructuur("Plaatselijk zware buien mogelijk."),false);
+assert(runtime.includes("data-ui-rain-period-probability"));
+assert(runtime.includes('bereik.textContent="Bereik"'));
 console.log("UI-polish regressiecontract groen.");

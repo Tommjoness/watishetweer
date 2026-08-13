@@ -27,11 +27,12 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-pollen-hour-correctness.js",
   "apply-cache-fallback-country.js",
   "verify-cache-fallback-country.js",
+  "apply-ui-polish-20260813.js",
   "verify-final-27.js"
 ]);
 
 function voerPostbuildUit(opt={}){
-  const uitvoerder=typeof opt.spawnSync==="function"?opt.spawnSync:spawnSync;
+  const uitvoerder=typeof opt.spawnSync=="function"?opt.spawnSync:spawnSync;
   const node=opt.execPath||process.execPath;
   const scriptsMap=opt.scriptsDir||__dirname;
 
@@ -51,7 +52,7 @@ function voerPostbuildUit(opt={}){
 
 if(require.main===module){
   try{voerPostbuildUit();}
-  catch(e){console.error(e&&e.stack||e);process.exit(typeof e.status==="number"?e.status:1);}
+  catch(e){console.error(e&&e.stack||e);process.exit(typeof e.status=="number"?e.status:1);}
 }
 
 module.exports={POSTBUILD_STAPPEN,voerPostbuildUit};
