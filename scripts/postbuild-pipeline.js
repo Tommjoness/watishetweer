@@ -23,6 +23,8 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-performance-final.js",
   "apply-ui-shell.js",
   "verify-ui-shell.js",
+  "apply-pollen-hour-correctness.js",
+  "verify-pollen-hour-correctness.js",
   "verify-final-27.js"
 ]);
 
