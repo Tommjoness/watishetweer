@@ -23,7 +23,14 @@ assert.deepEqual(
 );
 assert.equal(p.normaliseerSnellePreview({current:{temperature_2m:null,is_day:1,weather_code:1}}),null,"ontbrekende temperatuur mag geen 0 °C-preview geven");
 assert.equal(p.normaliseerSnellePreview({current:{temperature_2m:20,is_day:2,weather_code:1}}),null,"ongeldige dag/nachtstatus wordt niet gepresenteerd");
+
+const oud={id:"oude forecast"},nieuw={id:"nieuwe forecast"},cache={id:"cache"};
+assert.equal(p.classificeerEindstate(oud,nieuw,40.7128,-74.006,40.7128,-74.006),"doeldata","nieuw forecastobject op doelcoords is veilig gecommit");
+assert.equal(p.classificeerEindstate(oud,oud,40.7128,-74.006,40.7128,-74.006),"oude-data-op-doel","oude S.d mag niet door alleen gewijzigde coords als doeldata gelden");
+assert.equal(p.classificeerEindstate(oud,cache,52.3676,4.9041,40.7128,-74.006),"cache-fallback","correct gelabelde fallback op andere coords blijft herkenbaar");
+assert.equal(p.classificeerEindstate(oud,null,40.7128,-74.006,40.7128,-74.006),"geen-data","ontbrekende data blijft fail-closed");
+
 assert.equal(p.SNEL_START_VERTRAGING_MS,120);
 assert.equal(p.SNEL_TIMEOUT_MS,3000);
 
-console.log("Progressieve locatielading: current-only previewcontract geslaagd.");
+console.log("Progressieve locatielading: current-only preview- en eindstatecontract geslaagd.");
