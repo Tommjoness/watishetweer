@@ -32,7 +32,15 @@ async function controleer(browserType,naam){
       const mains=[...document.querySelectorAll("main")];
       const meetDoel=el=>{
         const r=el.getBoundingClientRect();
-        return {tekst:(el.textContent||"").trim(),hoogte:r.height,breedte:r.width};
+        let verborgenDoor=null;
+        for(let node=el;node;node=node.parentElement){
+          const stijl=getComputedStyle(node);
+          if(node.hidden||stijl.display==="none"||stijl.visibility==="hidden"){
+            verborgenDoor={tag:node.tagName,id:node.id||"",klasse:typeof node.className==="string"?node.className:"",hidden:node.hidden,display:stijl.display,visibility:stijl.visibility};
+            break;
+          }
+        }
+        return {tekst:(el.textContent||"").trim(),hoogte:r.height,breedte:r.width,verborgenDoor};
       };
       /* Een gesloten details verbergt zijn descendant-links terecht met een
          0x0-layoutbox. Meet de summary in gesloten toestand, open daarna de
@@ -53,8 +61,9 @@ async function controleer(browserType,naam){
     assert.equal(resultaat.appTag,"MAIN",naam+": #app gebruikt native main-semantiek");
     assert.ok(resultaat.doelen.length>=5,naam+": footerdoelen ontbreken");
     resultaat.doelen.forEach(doel=>{
-      assert.ok(doel.hoogte>=43.5,naam+": footerdoel '"+doel.tekst+"' is "+doel.hoogte+"px hoog");
-      assert.ok(doel.breedte>0,naam+": footerdoel '"+doel.tekst+"' heeft geen breedte");
+      const context=doel.verborgenDoor?"; verborgen door "+JSON.stringify(doel.verborgenDoor):"";
+      assert.ok(doel.hoogte>=43.5,naam+": footerdoel '"+doel.tekst+"' is "+doel.hoogte+"px hoog"+context);
+      assert.ok(doel.breedte>0,naam+": footerdoel '"+doel.tekst+"' heeft geen breedte"+context);
     });
     assert.ok(resultaat.maanAria.every(v=>v===null),naam+": .maanbij krijgt geen dubbel aria-label");
   }finally{await browser.close();}
