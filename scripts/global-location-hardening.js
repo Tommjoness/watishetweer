@@ -7,7 +7,8 @@
    4. iedere locatie die de forecastgrens bereikt moet geldige wereldcoördinaten hebben;
    5. gedeelde URL-coördinaten worden uit de ruwe URL strikt gevalideerd en blijven
       tijdens achtergrondverversing buiten de persoonlijke laatst-gebruikte opslag;
-   6. een waarschuwing mag alleen als plaatswaarschuwing worden getoond wanneer
+   6. een onbewezen landcode uit een gedeelde URL mag waarschuwingrouting niet bepalen;
+   7. een waarschuwing mag alleen als plaatswaarschuwing worden getoond wanneer
       de bron expliciet bewijst dat het gekozen punt binnen het gebied valt.
 
    De module verandert geen weerwaarden, modellen of formules. Geocoding en de
@@ -137,11 +138,13 @@ if(typeof load==="function"){
   let gedeeldePositie=null;
   const zelfdePositie=(a,b)=>!!(a&&b&&Math.abs(a.latitude-b.latitude)<1e-9&&Math.abs(a.longitude-b.longitude)<1e-9);
   load=async function(lat,lon,label,stil,opslaan,land){
-    let positie=null;
+    let positie=null,effectiefLand=land;
 
     /* Alleen de initiële gedeelde-URL-route is niet-stil én opslaan=false. Lees
        daar de ruwe query opnieuw zodat parseFloat uit de historische startup-
-       router nooit de betekenis van externe invoer bepaalt. */
+       router nooit de betekenis van externe invoer bepaalt. Een `land`-query
+       is evenmin bewijs dat de gevalideerde coördinaten in dat land liggen;
+       laat de waarschuwingserver dat daarom opnieuw uit de positie afleiden. */
     if(stil!==true&&opslaan===false&&typeof location!=="undefined"){
       const gedeeld=gedeeldeUrlCoordinaten(location.search);
       if(gedeeld.aanwezig){
@@ -156,6 +159,7 @@ if(typeof load==="function"){
         }
         positie={latitude:gedeeld.latitude,longitude:gedeeld.longitude};
         gedeeldePositie=positie;
+        effectiefLand=null;
       }
     }
 
@@ -183,7 +187,7 @@ if(typeof load==="function"){
       else if(stil!==true&&opslaan!==false)gedeeldePositie=null;
     }
 
-    return basisLoad(positie.latitude,positie.longitude,label,stil,effectiefOpslaan,land);
+    return basisLoad(positie.latitude,positie.longitude,label,stil,effectiefOpslaan,effectiefLand);
   };
 }
 
