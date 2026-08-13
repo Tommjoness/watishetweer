@@ -19,6 +19,18 @@ function vervangEen(bron,doel,label){
   html=html.replace(bron,doel);
 }
 
+/* De Europese CAMS-forecast dekt 25°W–45°E en 30°N–72°N. De bronapp gebruikte
+   nog een oude benadering (29,5–71,5°N), waardoor locaties in de noordelijke
+   modelstrook ten onrechte de globale AQI/pollenstatus kregen en een smalle
+   strook ten zuiden van het model juist als Europa gold. Houd deze grens bij
+   de bestaande lucht/pollen-correctheidseigenaar en laat vervangEen fail-fast
+   bewaken dat er precies één canonieke predicate in het artifact staat. */
+vervangEen(
+  "const inEuropa=(lat,lon)=>lat>29.5&&lat<71.5&&lon>-25&&lon<45;",
+  "const inEuropa=(lat,lon)=>lat>=30&&lat<=72&&lon>=-25&&lon<=45;",
+  "CAMS-Europe-dekking"
+);
+
 /* CAMS hourly en de forecast-current kunnen bij een vertraagde/partiële update
    tijdelijk geen identiek lokaal uur bevatten. Index 0 is dan geen geldige
    fallback: dat is het eerste uur van de CAMS-kalenderdag en kan dus uren van
@@ -53,4 +65,4 @@ if(!scripts.length)throw new Error("Geen inline runtime na pollen-uurcorrectie."
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:pollen-hour-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"pollen-hour");
-console.log("Pollen-correctheid toegepast: tijdreeksmismatch faalt gesloten en positieve sub-1 concentraties blijven zichtbaar positief; cache "+versie+".");
+console.log("Lucht/pollen-correctheid toegepast: CAMS-Europe-dekking klopt, tijdreeksmismatch faalt gesloten en positieve sub-1 concentraties blijven zichtbaar positief; cache "+versie+".");
