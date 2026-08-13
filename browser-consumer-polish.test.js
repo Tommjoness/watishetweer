@@ -330,7 +330,7 @@ async function controleer(page, naam, modus) {
     assert.ok(omhoog.heroBottom < 0, `${naam} ${modus}: balk keert terug zonder dat hero opnieuw zichtbaar hoeft te zijn`);
   }
 
-  assert.equal(resultaat.pollenSub, "laag", `${naam} ${modus}: pollen geeft kwalitatieve betekenis`);
+  assert.equal(resultaat.pollenSub, "Verwacht voor dit uur", `${naam} ${modus}: pollen behoudt concentratie zonder onbewezen universele ernstcategorie`);
   assert.deepEqual(fouten, [], `${naam} ${modus}: console/page errors: ${fouten.join(" | ")}`);
 }
 
