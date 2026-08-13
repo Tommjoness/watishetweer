@@ -160,18 +160,21 @@ test("ontbrekende kans wordt niet stilletjes nul",()=>{
   assert.equal(a.genoeg,false);
 });
 
-test("dubbele lokale tijd rond klokomslag verlaagt zekerheid",()=>{
+test("exact dubbel provider-tijdstip verlaagt zekerheid",()=>{
   const d=basis();
+  // Open-Meteo's vaste response-as hoort rond DST gewoon unieke labels te
+  // blijven leveren. Een exact dubbel label binnen het actieve venster is dus
+  // ambigue/corrupte providerdata en moet fail-closed blijven.
   d.hourly.time[4]=d.hourly.time[3];
   const a=analyseerNeerslagData(d,120);
   assert.equal(a.genoeg,false);
-  assert(/klokomslag/.test(a.reden));
+  assert.equal(a.reden,"dubbel provider-tijdstip");
 });
 
-test("dubbele lokale tijd buiten het onderzochte venster verlaagt de zekerheid niet",()=>{
+test("exact dubbel provider-tijdstip buiten het onderzochte venster verlaagt de zekerheid niet",()=>{
   const d=basis();
-  // Beide intervallen eindigen ruim voor het venster 19:00-21:00. Een
-  // klokomslag in oude data mag een actuele conclusie niet ongeldig maken.
+  // Beide intervallen eindigen ruim voor het venster 19:00-21:00. Oude
+  // corrupte data mag een actuele conclusie niet ongeldig maken.
   d.hourly.time[1]=d.hourly.time[0];
   const a=analyseerNeerslagData(d,120);
   assert.equal(a.genoeg,true);
