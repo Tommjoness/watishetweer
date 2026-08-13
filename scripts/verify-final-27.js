@@ -77,9 +77,16 @@ exactEen("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=","luch
 exactEen('"/api/waarschuwingen?lat="',"waarschuwingen-URL-eigenaar");
 exactEen("https://geocoding-api.open-meteo.com/v1/search?name=","zoek-geocoding-URL-eigenaar");
 exactEen("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=","primaire reverse-geocode-eigenaar");
-exactEen('"/api/plaatsnaam?lat="',"reverse-geocode-fallback-eigenaar");
-const bdc=html.indexOf("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude="),fallback=html.indexOf('"/api/plaatsnaam?lat="');
-if(!(bdc>=0&&fallback>bdc))throw new Error("Reverse geocoding is niet aantoonbaar primaire bron gevolgd door fallback.");
+const plaatsFallback='"/api/plaatsnaam?lat="';
+const fallbackAantal=aantal(plaatsFallback);
+if(fallbackAantal!==2)throw new Error("Reverse-geocodefallback moet exact twee expliciete consumenten hebben; gevonden "+fallbackAantal+".");
+const bdc=html.indexOf("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=");
+const gpsFallback=html.indexOf(plaatsFallback);
+const gedeeldeLaag=html.indexOf("/* ===== GEDEELDE URL PLAATSIDENTITEIT ===== */");
+const gedeeldeFallback=html.indexOf(plaatsFallback,gpsFallback+1);
+if(!(bdc>=0&&gpsFallback>bdc))throw new Error("GPS reverse geocoding is niet aantoonbaar BigDataCloud gevolgd door de serverfallback.");
+if(!(gedeeldeLaag>gpsFallback&&gedeeldeFallback>gedeeldeLaag))throw new Error("De tweede plaatsnaamfallback hoort uitsluitend bij de gedeelde-linklaag.");
+vereist("plaatsnaamUitCoordinaten","gedeelde plaatsnaamhelper");
 
 /* Geen tijdelijke diagnosecode in het productie-artifact. */
 for(const tekst of ["CACHEPERF","DEELPERF","window.__q4","console.log(\"DIAG "]){verboden(tekst,"tijdelijke diagnose "+tekst);}
