@@ -18,6 +18,8 @@ const verwacht=[
   "verify-ui-shell.js",
   "apply-pollen-hour-correctness.js",
   "verify-pollen-hour-correctness.js",
+  "apply-cache-fallback-country.js",
+  "verify-cache-fallback-country.js",
   "verify-final-27.js"
 ];
 assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten");
@@ -32,6 +34,9 @@ assert(positie("verify-performance-final.js")<positie("apply-ui-shell.js"),"UI-s
 assert(positie("apply-ui-shell.js")<positie("verify-ui-shell.js"));
 assert(positie("verify-ui-shell.js")<positie("apply-pollen-hour-correctness.js"),"pollen-correctie ziet de definitieve UI-shell");
 assert(positie("apply-pollen-hour-correctness.js")<positie("verify-pollen-hour-correctness.js"));
+assert(positie("verify-pollen-hour-correctness.js")<positie("apply-cache-fallback-country.js"),"cachefallback-landcorrectie ziet de volledige lucht/pollenartifact");
+assert(positie("apply-cache-fallback-country.js")<positie("verify-cache-fallback-country.js"));
+assert(positie("verify-cache-fallback-country.js")<positie("verify-final-27.js"),"cachefallback-verifier moet vóór de finale artifactguard slagen");
 assert.equal(POSTBUILD_STAPPEN.at(-1),"verify-final-27.js","finale artifactguard moet laatste stap zijn");
 const gezien=[];
 voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args,opt)=>{gezien.push({node,args,opt});return {status:0};}});
