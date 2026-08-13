@@ -1,6 +1,7 @@
 "use strict";
 
 /* Echte Chromium-integratietest voor wereldwijde UI-contracten:
+   - een malforme gedeelde URL wordt vóór iedere forecastrequest afgewezen;
    - geocodingduplicaten worden vóór rendering verwijderd;
    - malforme externe coördinaten bereiken de zoek-UI niet en numerieke strings
      worden naar echte getallen genormaliseerd;
@@ -28,6 +29,7 @@ if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
 let html=fs.readFileSync(productie,"utf8");
 const stub=`<script>
 try{localStorage.clear();sessionStorage.clear();}catch(e){}
+window.__hardeningForecastRequests=0;
 window.fetch=function(url){
   const u=String(url);
   const response=data=>Promise.resolve({ok:true,status:200,json:async()=>data,text:async()=>JSON.stringify(data)});
@@ -42,6 +44,7 @@ window.fetch=function(url){
     dekking:false,plaatsSpecifiek:false,bron:'MeteoAlarm landfeed',
     reden:'geen plaats-specifieke dekking',lijst:[]
   });
+  if(u.includes('api.open-meteo.com/v1/forecast'))window.__hardeningForecastRequests++;
   return new Promise(()=>{});
 };
 try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}
@@ -51,6 +54,11 @@ const reporter=`<script>
 setTimeout(async()=>{
   const zet=(k,v)=>document.body.setAttribute('data-'+k,String(v));
   try{
+    const startupState=((document.getElementById('state')||{}).textContent||'').trim();
+    zet('hardening-shared',window.__hardeningForecastRequests===0&&/gedeelde locatie is ongeldig/i.test(startupState)?'ok':'fout');
+    zet('hardening-shared-requests',window.__hardeningForecastRequests);
+    zet('hardening-shared-state',startupState);
+
     document.documentElement.classList.remove('wn-progressief');
     const app=document.getElementById('app');
     if(app){app.classList.remove('wn-progressief');app.removeAttribute('aria-busy');app.style.display='block';}
@@ -81,12 +89,13 @@ html=html.replace("</body>",reporter+"</body>");
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"weathernow-global-hardening-"));
 try{
   const pad=path.join(dir,"index.html");fs.writeFileSync(pad,html);
-  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1440,1000","--virtual-time-budget=1200","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:20*1024*1024});
+  const url="file://"+pad+"?lat=52abc&lon=5xyz&plaats=KapotteLink";
+  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1440,1000","--virtual-time-budget=1200","--dump-dom",url],{encoding:"utf8",maxBuffer:20*1024*1024});
   if(r.status!==0)throw new Error("browser exit "+r.status+" "+(r.stderr||"").slice(-1200));
   const dom=r.stdout||"";
   const waarde=k=>{const m=new RegExp('data-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
-  for(const k of ["hardening-search","hardening-warning","hardening-hero","hardening-place"]){
-    if(waarde(k)!=="ok")throw new Error(k+"="+waarde(k)+", exception="+waarde("hardening-exception"));
+  for(const k of ["hardening-shared","hardening-search","hardening-warning","hardening-hero","hardening-place"]){
+    if(waarde(k)!=="ok")throw new Error(k+"="+waarde(k)+", requests="+waarde("hardening-shared-requests")+", state="+waarde("hardening-shared-state")+", exception="+waarde("hardening-exception"));
   }
-  console.log("Wereldwijde browserhardening: gevalideerde deduplicatie, server-genormaliseerde waarschuwingen, vaste hero en lange plaatsnaam geslaagd.");
+  console.log("Wereldwijde browserhardening: kapotte gedeelde link fail-closed, gevalideerde deduplicatie, server-genormaliseerde waarschuwingen, vaste hero en lange plaatsnaam geslaagd.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
