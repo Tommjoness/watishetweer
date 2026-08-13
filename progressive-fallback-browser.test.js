@@ -10,6 +10,14 @@
  * Scenario 2: dezelfde wissel met een geldige cache van A. De basisloader toont
  * die cache bewust als expliciet gelabelde "laatste briefing". De progressieve
  * wrapper mag die veilige fallback niet vervolgens verbergen.
+ *
+ * Migratiegrens binnen scenario 2: een oudere cache kan nog geen `land` hebben.
+ * Wanneer een nieuwe locatie met een andere landcode daarna faalt, moeten niet
+ * alleen lat/lon/label maar ook de locatie-identiteit van de cache worden
+ * hersteld. De waarschuwingrequest voor de teruggevallen Amsterdam-cache mag dus
+ * nooit de mislukte New York-code `land=US` meenemen. Zonder bewezen cacheland
+ * moet de request landloos vertrekken zodat de server het land uit de herstelde
+ * coördinaten opnieuw bepaalt.
  */
 const fs=require("fs"),os=require("os"),path=require("path"),{spawnSync}=require("child_process");
 const {bouw}=require("./data.js");
@@ -48,9 +56,10 @@ function fixture(cacheBehouden){
 try{localStorage.clear();sessionStorage.clear();}catch(e){}
 Date.now=()=>${testNow};
 window.__fallbackFetch={preview:0,oldFull:0,newFull:0};
+window.__fallbackWarnings=[];
 window.fetch=function(url){
   const u=String(url);
-  if(u.includes('/api/waarschuwingen'))return Promise.resolve(${antwoord({bron:"test",dekking:true,lijst:[]})});
+  if(u.includes('/api/waarschuwingen')){window.__fallbackWarnings.push(u);return Promise.resolve(${antwoord({bron:"test",dekking:true,lijst:[]})});}
   if(u.includes('air-quality-api.open-meteo.com'))return Promise.resolve(${antwoord(air)});
   if(u.includes('/api/plaatsnaam'))return Promise.resolve(${antwoord({naam:"Amsterdam",bron:"test"})});
   if(u.includes('api.open-meteo.com/v1/forecast')){
@@ -72,7 +81,14 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
   setTimeout(()=>{
     try{
       zet('initial',typeof S!=='undefined'&&S.d&&Math.round(Number(S.d.current&&S.d.current.temperature_2m))===18?'ok':'fout');
-      ${cacheBehouden?"":"try{localStorage.clear();}catch(e){}"}
+      if(${cacheBehouden}){
+        /* Simuleer een geldige cache van vóór de landcode-migratie: alle
+           forecastdata/coördinaten zijn intact, alleen `land` ontbreekt. */
+        const legacy=JSON.parse(localStorage.getItem('weerbriefing.data')||'null');
+        if(legacy){delete legacy.land;localStorage.setItem('weerbriefing.data',JSON.stringify(legacy));}
+      }else{
+        try{localStorage.clear();}catch(e){}
+      }
       load(40.7128,-74.0060,'New York',false,true,'US');
     }catch(e){zet('switch-exception',e&&e.message||e);}
   },420);
@@ -83,14 +99,19 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
       const stateTekst=(state&&state.textContent||'').trim();
       const plaats=(place&&place.childNodes&&place.childNodes[0]&&place.childNodes[0].textContent||'').trim();
       const sTemp=typeof S!=='undefined'&&S.d&&S.d.current?Math.round(Number(S.d.current.temperature_2m)):null;
+      const warnings=window.__fallbackWarnings||[],laatsteWarning=warnings.length?warnings[warnings.length-1]:'';
       zet('visible',zichtbaar);
       zet('state',stateTekst);
       zet('place',plaats);
       zet('stemp',sTemp);
+      zet('land',typeof S!=='undefined'&&S.land!=null?S.land:'null');
+      zet('warning-last',laatsteWarning);
       zet('preview-count',window.__fallbackFetch.preview);
       zet('new-full-count',window.__fallbackFetch.newFull);
       if(${cacheBehouden}){
-        const veilig=zichtbaar&&/laatste briefing/i.test(stateTekst)&&typeof S!=='undefined'&&S.label==='Amsterdam'&&sTemp===18&&plaats==='Amsterdam';
+        const warningBijCache=/lat=52(?:\\.368|\\.3676)?(?:&|%26)/.test(laatsteWarning)&&/lon=4(?:\\.904|\\.9041)?(?:&|%26)/.test(laatsteWarning);
+        const geenStaleLand=!/[?&]land=US(?:&|$)/.test(laatsteWarning)&&typeof S!=='undefined'&&S.land==null;
+        const veilig=zichtbaar&&/laatste briefing/i.test(stateTekst)&&typeof S!=='undefined'&&S.label==='Amsterdam'&&sTemp===18&&plaats==='Amsterdam'&&warningBijCache&&geenStaleLand;
         zet('result',veilig?'ok':'fout');
       }else{
         const veilig=!zichtbaar&&/Ophalen mislukt/i.test(stateTekst)&&typeof S!=='undefined'&&S.label==='New York';
@@ -115,10 +136,10 @@ function draai(cacheBehouden){
 function waarde(dom,veld){const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];}
 function eis(dom,label){
   if(waarde(dom,"initial")!=="ok"||waarde(dom,"result")!=="ok"){
-    throw new Error(label+" fout: initial="+waarde(dom,"initial")+", result="+waarde(dom,"result")+", visible="+waarde(dom,"visible")+", state="+waarde(dom,"state")+", place="+waarde(dom,"place")+", sTemp="+waarde(dom,"stemp")+", preview="+waarde(dom,"preview-count")+", full="+waarde(dom,"new-full-count")+", switchEx="+waarde(dom,"switch-exception")+", ex="+waarde(dom,"exception"));
+    throw new Error(label+" fout: initial="+waarde(dom,"initial")+", result="+waarde(dom,"result")+", visible="+waarde(dom,"visible")+", state="+waarde(dom,"state")+", place="+waarde(dom,"place")+", sTemp="+waarde(dom,"stemp")+", land="+waarde(dom,"land")+", warning="+waarde(dom,"warning-last")+", preview="+waarde(dom,"preview-count")+", full="+waarde(dom,"new-full-count")+", switchEx="+waarde(dom,"switch-exception")+", ex="+waarde(dom,"exception"));
   }
 }
 
 eis(draai(false),"zonder cache");
-eis(draai(true),"met cache");
-console.log("Progressive fallback browser: mislukte locatiewissel lekt geen oude details en veilige laatste briefing blijft zichtbaar.");
+eis(draai(true),"met legacy-cache zonder land");
+console.log("Progressive fallback browser: mislukte locatiewissel lekt geen oude details, veilige laatste briefing blijft zichtbaar en legacy-cache neemt geen landcode van de mislukte locatie over.");
