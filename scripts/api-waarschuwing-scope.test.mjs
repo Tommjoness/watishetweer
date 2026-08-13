@@ -49,6 +49,28 @@ try {
     assert.deepEqual(body.lijst,[]);
   }
 
+  /* GPS/eerste load kan nog geen land= meesturen. Ook dan mag de rechthoek niet
+     zelfstandig beslissen. Toronto moet eerst via reverse geocoding als CA
+     worden bevestigd en daarna fail-closed buiten NWS blijven. */
+  let gpsNws=false,gpsReverse=false;
+  globalThis.fetch=async url=>{
+    const u=String(url);
+    if(u.includes("nominatim.openstreetmap.org/reverse")){
+      gpsReverse=true;
+      return {ok:true,status:200,json:async()=>({address:{country_code:"ca"}})};
+    }
+    if(u.includes("api.weather.gov")){gpsNws=true;throw new Error("NWS buiten bevestigd NWS-land");}
+    throw new Error("onverwachte fetch in GPS-Toronto-test: "+u);
+  };
+  const gps=await api.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=43.6532&lon=-79.3832"));
+  assert.equal(gps.status,200);
+  const gpsBody=await gps.json();
+  assert.equal(gpsReverse,true,"GPS-pad moet land bevestigen vóór NWS");
+  assert.equal(gpsNws,false,"GPS-Toronto mag NWS niet aanroepen");
+  assert.equal(gpsBody.land,"CA");
+  assert.equal(gpsBody.dekking,false);
+  assert.deepEqual(gpsBody.lijst,[]);
+
   /* Dallas/NWS: puntdekking is wél bewijsbaar en moet dus door de servergrens
      heen blijven komen. Dit voorkomt dat fail-closed per ongeluk alle landen
      zonder waarschuwingen maakt. */
@@ -68,11 +90,12 @@ try {
   const usBody=await us.json();
   assert.equal(usBody.dekking,true);
   assert.equal(usBody.plaatsSpecifiek,true);
+  assert.equal(usBody.land,"US");
   assert.equal(usBody.lijst.length,1);
   assert.equal(usBody.lijst[0].titel,"Heat Advisory");
   assert.equal(usBody.lijst[0].plaatsSpecifiek,true);
 
-  console.log("API-waarschuwingsscope: landfeed fail-closed, NWS-landgrens en puntdekking behouden.");
+  console.log("API-waarschuwingsscope: landfeed fail-closed, NWS-landgrens, GPS-landcheck en puntdekking behouden.");
 } finally {
   globalThis.fetch=origineelFetch;
 }
