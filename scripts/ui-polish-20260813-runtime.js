@@ -119,28 +119,46 @@ if(typeof dagen==="function"){
 function uiPolishRegenperiodeKansen(){
   const groep=document.querySelector('g[data-q4-rain-periods="1"]');
   if(!groep)return;
-  const svg=groep.closest("svg");if(!svg)return;
+  const svg=groep.closest("svg"),g=S&&S.geo;if(!svg||!g||typeof g.x!=="function"||!Array.isArray(g.P)||!Array.isArray(g.MM))return;
   const perioden=[...groep.querySelectorAll("line")].filter(el=>{
     const x1=uiGetal(el.getAttribute("x1")),x2=uiGetal(el.getAttribute("x2"));
     const y1=uiGetal(el.getAttribute("y1")),y2=uiGetal(el.getAttribute("y2"));
     return x1!==null&&x2!==null&&y1!==null&&y2!==null&&Math.abs(y1-y2)<0.2&&Math.abs(x2-x1)>1;
   });
-  const alle=[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim()));
+  if(!perioden.length)return;
+
+  /* De historische etmaalrenderer tekent kanspercentages alleen op het vaste
+     3-uursraster. Een echte regenperiode kan volledig tussen twee rasterpunten
+     vallen en kreeg dan geen kanslabel. Q4 is al eigenaar van de uitgelijnde
+     MM/P-reeksen en van de periodebrackets; leid de statische kans daarom uit
+     diezelfde data af in plaats van toevallig aanwezige rasterlabels te hergebruiken. */
+  [...svg.querySelectorAll("text")].forEach(el=>{
+    if(/^\d+%$/.test((el.textContent||"").trim())&&(el.getAttribute("fill")===TEAL||el.getAttribute("data-ui-rain-period-probability")==="1"))el.remove();
+  });
+
+  const ns="http://www.w3.org/2000/svg";
   perioden.forEach(lijn=>{
     const a=Number(lijn.getAttribute("x1")),b=Number(lijn.getAttribute("x2"));
     const links=Math.min(a,b)-0.75,rechts=Math.max(a,b)+0.75;
-    const kandidaten=alle.filter(el=>{
-      if(!el.isConnected)return false;
-      const x=uiGetal(el.getAttribute("x"));return x!==null&&x>=links&&x<=rechts;
-    });
-    if(!kandidaten.length)return;
-    kandidaten.sort((x,y)=>parseInt(y.textContent,10)-parseInt(x.textContent,10));
-    const hou=kandidaten[0],hoogste=parseInt(hou.textContent,10);
-    kandidaten.slice(1).forEach(el=>el.remove());
-    hou.setAttribute("x",String((a+b)/2));
-    hou.setAttribute("text-anchor","middle");
-    hou.setAttribute("data-ui-rain-period-probability","1");
-    hou.setAttribute("aria-label","Hoogste neerslagkans in deze periode: "+hoogste+" procent");
+    const kansen=g.P.map((p,i)=>({
+      kans:uiGetal(p),mm:uiGetal(g.MM[i]),x:uiGetal(g.x(i))
+    })).filter(item=>item.kans!==null&&item.mm!==null&&item.mm>=0.1&&item.x!==null&&item.x>=links&&item.x<=rechts);
+    if(!kansen.length)return;
+    const hoogste=Math.round(Math.max(...kansen.map(item=>item.kans)));
+    /* Triviale percentages blijven, net als vóór deze polish, uit de statische
+       grafiek. De exacte kans blijft via de tooltip beschikbaar. */
+    if(hoogste<10)return;
+    const label=document.createElementNS(ns,"text");
+    label.setAttribute("x",String((a+b)/2));
+    label.setAttribute("y",String((uiGetal(g.pt)||0)+(uiGetal(g.ih)||0)+(g.M?35:37)));
+    label.setAttribute("text-anchor","middle");
+    label.setAttribute("fill",TEAL);
+    label.setAttribute("font-family","DM Mono,monospace");
+    label.setAttribute("font-size",String(g.M?10:9.5));
+    label.setAttribute("data-ui-rain-period-probability","1");
+    label.setAttribute("aria-label","Hoogste neerslagkans in deze periode: "+hoogste+" procent");
+    label.textContent=hoogste+"%";
+    groep.appendChild(label);
   });
 }
 
