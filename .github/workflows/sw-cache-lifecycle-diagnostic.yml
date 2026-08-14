@@ -1,0 +1,35 @@
+name: SW cache lifecycle diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Playwright
+        run: npm install --no-save --package-lock=false playwright
+      - name: Bouw definitieve artifact
+        run: npm run build
+      - name: Installeer Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Instrumenteer uitsluitend de testkopie
+        run: node scripts/instrument-sw-lifecycle-diagnostic.js
+      - name: Serviceworker lifecycle diagnostic
+        shell: bash
+        run: |
+          set +e
+          node browser-serviceworker-upgrade.test.js > /tmp/sw-diagnostic.log 2>&1
+          code=$?
+          cat /tmp/sw-diagnostic.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 30 /tmp/sw-diagnostic.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=browser-serviceworker-upgrade.test.js,line=1::$msg"
+          fi
+          exit "$code"
