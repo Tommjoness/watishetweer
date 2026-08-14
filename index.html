@@ -431,6 +431,7 @@
     .row.kop .dwind{grid-column:auto}
     .row.kop .dico{display:block}
     .dwind{display:none}
+    #here .here-prefix{display:none}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
@@ -546,7 +547,7 @@
     <div class="mastright">
       <div class="tools">
         <input type="text" id="q" placeholder="Plaats zoeken" autocomplete="off" aria-label="Plaats zoeken" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="res">
-        <button id="here" title="Gebruik je huidige locatie">Mijn locatie</button>
+        <button id="here" title="Gebruik je huidige locatie" aria-label="Mijn locatie"><span class="here-prefix" aria-hidden="true">Mijn </span>Locatie</button>
         <button id="ververs" title="Gegevens opnieuw ophalen">Ververs</button>
         <button id="thema" title="Wissel tussen licht, donker en rood licht">Auto</button>
         <div class="results" id="res" role="listbox" aria-label="Zoekresultaten"></div>

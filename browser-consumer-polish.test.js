@@ -223,6 +223,9 @@ async function controleer(page, naam, modus) {
       themaVisueel: thema ? getComputedStyle(thema, "::after").content.replace(/["']/g, "") : "",
       zoekHoogte: zoek ? zoek.getBoundingClientRect().height : 0,
       knopHoogte: locatie ? locatie.getBoundingClientRect().height : 0,
+      locatieTekst: locatie ? locatie.innerText.trim() : "",
+      locatieNaam: locatie ? locatie.getAttribute("aria-label") : "",
+      bewaarHoogte: document.querySelector(".chip.add") ? document.querySelector(".chip.add").getBoundingClientRect().height : 0,
       popSubDisplay: getComputedStyle(document.getElementById("popsub")).display,
       footerGrootte: footer ? parseFloat(getComputedStyle(footer).fontSize) : 0,
       pollenSub: pollen && pollen.querySelector(".ssub") ? pollen.querySelector(".ssub").textContent.trim() : ""
@@ -292,8 +295,11 @@ async function controleer(page, naam, modus) {
 
   if (modus === "mobiel") {
     assert.equal(resultaat.windKopVisueel, "Wind", `${naam} ${modus}: mobiele weekkop heeft geen dubbelzinnig extra 'max'`);
-    assert.ok(resultaat.zoekHoogte <= 38, `${naam} ${modus}: zoekveld blijft compact`);
-    assert.ok(resultaat.knopHoogte <= 36, `${naam} ${modus}: locatiebediening blijft compact`);
+    assert.ok(resultaat.zoekHoogte >= 43.5, `${naam} ${modus}: zoekveld heeft geen comfortabel mobiel aanraakvlak`);
+    assert.ok(resultaat.knopHoogte >= 43.5, `${naam} ${modus}: locatiebediening heeft geen comfortabel mobiel aanraakvlak`);
+    assert.equal(resultaat.locatieTekst.toLocaleLowerCase("nl-NL"),"mijn locatie",`${naam} ${modus}: volledig locatielabel hoort op 390px zichtbaar te blijven`);
+    assert.equal(resultaat.locatieNaam,"Mijn locatie",`${naam} ${modus}: locatieknop mist een stabiele toegankelijke naam`);
+    assert.ok(resultaat.bewaarHoogte>=35.5,`${naam} ${modus}: plaats bewaren heeft geen bruikbaar mobiel aanraakvlak`);
     assert.equal(resultaat.popSubDisplay, "none", `${naam} ${modus}: derde neerslagzin wordt niet dubbel getoond`);
     assert.ok(resultaat.footerGrootte >= 10.5 && resultaat.footerGrootte <= 11.5, `${naam} ${modus}: bronfooter is compact maar leesbaar`);
 

@@ -110,6 +110,20 @@ async function controleer(browserType,naam){
     await page.waitForSelector("#zoekmelding.on");
     const leeg=await page.evaluate(()=>({melding:document.getElementById("zoekmelding").textContent,rol:document.getElementById("zoekmelding").getAttribute("role"),opties:document.querySelectorAll("#res [role='option']").length,resOpen:document.getElementById("res").classList.contains("on"),expanded:document.getElementById("q").getAttribute("aria-expanded")}));
     assert.deepEqual(leeg,{melding:"Niets gevonden",rol:"status",opties:0,resOpen:false,expanded:"false"},naam+": lege zoekstate gebruikt geen afzonderlijke statussemantiek");
+
+    await page.setViewportSize({width:320,height:844});
+    const smal=await page.evaluate(()=>{
+      const knop=document.getElementById("here"),invoer=document.getElementById("q"),bewaar=document.querySelector(".chip.add");
+      const r=el=>el?el.getBoundingClientRect():null;
+      return {knop:r(knop),knoppen:[...document.querySelectorAll(".tools > button")].map(r),invoer:r(invoer),bewaar:r(bewaar),tekst:knop?knop.innerText.trim():"",naam:knop?knop.getAttribute("aria-label"):"",overflow:document.documentElement.scrollWidth-window.innerWidth};
+    });
+    assert.ok(smal.knop&&smal.knop.height>=43.5,naam+": 320px locatieknop is kleiner dan 44px");
+    assert.ok(smal.knoppen.length===3&&smal.knoppen.every(r=>r.height>=43.5),naam+": niet alle 320px hoofdknoppen zijn minimaal 44px hoog");
+    assert.ok(smal.invoer&&smal.invoer.height>=43.5,naam+": 320px zoekveld is kleiner dan 44px");
+    assert.equal(smal.tekst.toLocaleLowerCase("nl-NL"),"locatie",naam+": 320px gebruikt niet het compacte zichtbare locatielabel");
+    assert.equal(smal.naam,"Mijn locatie",naam+": compact label verandert de toegankelijke knopnaam");
+    if(smal.bewaar)assert.ok(smal.bewaar.height>=35.5,naam+": bewaarplaatsknop blijft te klein");
+    assert.ok(smal.overflow<=2,naam+": grotere mobiele controls veroorzaken horizontale overflow ("+smal.overflow+"px)");
   }finally{await browser.close();}
 }
 
