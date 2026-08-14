@@ -42,11 +42,14 @@ footer .bron-bronnen .bronitem{
 @media(max-width:900px){
   /* Nachtzicht blijft vier duidelijke kolommen houden, maar gebruikt minder
      vaste breedte. Bewolking krijgt nog steeds genoeg ruimte voor de volledige
-     kop; score en balk behouden de bestaande harde 8 px visuele scheiding. */
+     kop; score en balk behouden de bestaande harde 8 px visuele scheiding.
+     De toelichting staat bewust niet meer op 11–12 px: op echte telefoonbreedte
+     is die inhoud belangrijk genoeg om dezelfde rustige leesbaarheid te krijgen
+     als de overige secundaire weertekst. */
   #nights .row.night{
     grid-template-columns:56px 46px minmax(32px,1fr) 64px;
     column-gap:8px;
-    row-gap:3px;
+    row-gap:5px;
   }
   #nights .row.night .score{
     font-size:16px;
@@ -61,23 +64,23 @@ footer .bron-bronnen .bronitem{
   }
   #nights .row.night.kop > .nmeta:not(.wide){
     justify-self:end;
-    font-size:9.5px!important;
+    font-size:10px!important;
     letter-spacing:.08em;
   }
   #nights .row.night .nmeta.wide{
     grid-column:2 / -1;
-    margin-top:0;
+    margin-top:2px;
     min-width:0;
     overflow-wrap:anywhere;
   }
   #nights .row.night .nachtadvies{
-    font-size:12px;
-    line-height:1.35;
-    margin-bottom:1px;
+    font-size:13px;
+    line-height:1.4;
+    margin-bottom:2px;
   }
   #nights .row.night .nachtmaan{
-    font-size:11px;
-    line-height:1.35;
+    font-size:12px;
+    line-height:1.4;
     white-space:normal;
   }
   #nights .row.night .maan-fase-svg-v2{
@@ -105,5 +108,5 @@ footer .bron-bronnen .bronitem{
     column-gap:8px;
   }
   #nights .row.night .score{font-size:15px}
-  #nights .row.night.kop > .nmeta:not(.wide){font-size:9px!important;letter-spacing:.06em}
+  #nights .row.night.kop > .nmeta:not(.wide){font-size:9.5px!important;letter-spacing:.06em}
 }

@@ -1,7 +1,20 @@
 "use strict";
 
 const assert=require("assert");
+const fs=require("fs");
+const path=require("path");
 const p=require("./mobile-screenshot-polish.js");
+
+/* De live 390px-productiecontrole liet zien dat juist de toelichtende Nachtzicht-
+   tekst visueel kleiner uitviel dan de rest van de secundaire weerinformatie.
+   Bewaak daarom de responsive leesbaarheidsvloer in de bron-CSS; dit verandert
+   geen score-, maan- of forecastsemantiek. */
+const mobileCss=fs.readFileSync(path.join(__dirname,"mobile-screenshot-polish.css"),"utf8");
+assert(/#nights \.row\.night\{[\s\S]*?row-gap:5px;[\s\S]*?\}/.test(mobileCss),"Nachtzicht houdt op mobiel extra verticale ademruimte");
+assert(/#nights \.row\.night\.kop > \.nmeta:not\(\.wide\)\{[\s\S]*?font-size:10px!important;[\s\S]*?\}/.test(mobileCss),"Mobiele Nachtzicht-kop blijft minimaal 10 px op normale telefoonbreedte");
+assert(/#nights \.row\.night \.nachtadvies\{[\s\S]*?font-size:13px;[\s\S]*?line-height:1\.4;[\s\S]*?\}/.test(mobileCss),"Mobiel Nachtzicht-advies gebruikt leesbare 13 px tekst");
+assert(/#nights \.row\.night \.nachtmaan\{[\s\S]*?font-size:12px;[\s\S]*?line-height:1\.4;[\s\S]*?\}/.test(mobileCss),"Mobiele maantoelichting zakt niet onder 12 px");
+assert(/@media\(max-width:360px\)[\s\S]*?#nights \.row\.night\.kop > \.nmeta:not\(\.wide\)\{font-size:9\.5px!important;/.test(mobileCss),"Ook op 320–360 px blijft de Nachtzicht-kop leesbaar zonder kolomoverflow");
 
 const afnemend=p.maanFaseUitBeschrijving("afnemende sikkel, 7 procent verlicht");
 const wassend=p.maanFaseUitBeschrijving("wassende sikkel, 7 procent verlicht");
@@ -57,4 +70,4 @@ assert.equal(p.pollenEenheid(1.5),"korrels/m³","een naar 2 afgeronde waarde geb
 assert.equal(p.pollenEenheid(0),"korrels/m³","nul gebruikt meervoud");
 assert.equal(p.pollenEenheid(4),"korrels/m³","meerdere korrels gebruiken meervoud");
 
-console.log("Mobiele screenshot-polish: checkpoint-50 Nachtzicht-, maanfase- en pollenregressies geslaagd.");
+console.log("Mobiele screenshot-polish: checkpoint-50 Nachtzicht-, leesbaarheids-, maanfase- en pollenregressies geslaagd.");
