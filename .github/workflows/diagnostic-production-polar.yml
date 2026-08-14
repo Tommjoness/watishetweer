@@ -1,0 +1,28 @@
+name: Diagnostic production polar smoke
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  production-polar-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Playwright
+        run: npm install --no-save --package-lock=false playwright
+      - name: Installeer Chromium en WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Echte productiecontrole pooldag
+        run: node scripts/diagnostic-production-polar-smoke.js
+      - name: Bewaar screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-polar-smoke
+          path: /tmp/weathernow-prod-*.png
+          if-no-files-found: warn
