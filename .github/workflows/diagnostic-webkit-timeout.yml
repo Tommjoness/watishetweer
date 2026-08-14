@@ -1,0 +1,93 @@
+name: WeatherNow diagnostic WebKit timeout
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Installeer Chromium en WebKit
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium webkit
+      - name: Meet fetch-timeouts op productie
+        run: |
+          cat > /tmp/webkit-timeout-diagnostic.js <<'NODE'
+          "use strict";
+          const { chromium, webkit } = require("playwright");
+          const url = "https://watishetweer.nl/?lat=52.3702&lon=4.8952&plaats=Amsterdam&land=NL";
+          const engines = [["Chromium", chromium], ["WebKit", webkit]];
+          const attempts = 4;
+
+          function classify(u){
+            const s=String(u||"");
+            if(s.includes("air-quality-api.open-meteo.com")) return "air";
+            if(!s.includes("api.open-meteo.com/v1/forecast")) return "other";
+            if(s.includes("minutely_15=")) return "forecast-full";
+            if(s.includes("visibility") || s.includes("precipitation_probability")) return "forecast-fallback";
+            return "forecast-small";
+          }
+
+          (async()=>{
+            for(const [engineName, launcher] of engines){
+              const browser=await launcher.launch({headless:true});
+              try{
+                for(let attempt=1;attempt<=attempts;attempt++){
+                  const context=await browser.newContext({viewport:{width:390,height:844}});
+                  const page=await context.newPage();
+                  await page.addInitScript(()=>{
+                    window.__fetchTrace=[];
+                    const original=window.fetch.bind(window);
+                    window.fetch=async function(...args){
+                      const input=args[0];
+                      const u=typeof input==="string"?input:(input&&input.url)||String(input||"");
+                      const started=performance.now();
+                      try{
+                        const response=await original(...args);
+                        window.__fetchTrace.push({url:u,ok:true,status:response.status,ms:Math.round(performance.now()-started)});
+                        return response;
+                      }catch(error){
+                        window.__fetchTrace.push({url:u,ok:false,name:error&&error.name||"",message:error&&error.message||String(error),ms:Math.round(performance.now()-started)});
+                        throw error;
+                      }
+                    };
+                  });
+                  const started=Date.now();
+                  let outcome="timeout";
+                  try{
+                    const response=await page.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
+                    if(!response||response.status()>=400) throw new Error(`HTTP ${response&&response.status()}`);
+                    outcome=await Promise.race([
+                      page.waitForFunction(()=>{
+                        const app=document.getElementById("app");
+                        const days=document.querySelectorAll("#days .row.day:not(.kop)").length;
+                        const state=document.getElementById("state");
+                        if(app&&getComputedStyle(app).display!=="none"&&days>=7) return "loaded";
+                        if(state&&getComputedStyle(state).display!=="none"&&state.textContent.trim()) return "state:"+state.textContent.trim();
+                        return false;
+                      },{timeout:26000}).then(h=>h.jsonValue()),
+                      new Promise(resolve=>setTimeout(()=>resolve("timeout"),27000))
+                    ]);
+                  }catch(error){ outcome="navigation:"+(error&&error.message||String(error)); }
+                  const trace=await page.evaluate(()=>window.__fetchTrace||[]).catch(()=>[]);
+                  const compact=trace.map(x=>({kind:classify(x.url),ok:x.ok,status:x.status||0,name:x.name||"",message:x.message||"",ms:x.ms}));
+                  console.log(`${engineName}/attempt-${attempt}: outcome=${JSON.stringify(outcome)} totalMs=${Date.now()-started}`);
+                  console.log(`${engineName}/attempt-${attempt}: trace=${JSON.stringify(compact)}`);
+                  await context.close();
+                }
+              } finally { await browser.close(); }
+            }
+          })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
+          NODE
+          NODE_PATH="$PWD/node_modules" node /tmp/webkit-timeout-diagnostic.js
