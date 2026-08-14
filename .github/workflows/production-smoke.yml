@@ -1,0 +1,26 @@
+name: WeatherNow production smoke
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: weathernow-production-smoke
+  cancel-in-progress: false
+
+jobs:
+  production-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Wacht op exacte Vercel-productie en controleer SEO/routes
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          SMOKE_POLL_MS: 10000
+          SMOKE_ATTEMPTS: 36
+        run: node scripts/production-smoke.js
