@@ -24,10 +24,21 @@ const EERSTE_BEZOEK_PRODUCTIE=`  // D. eerste bezoek: Amsterdam is de neutrale s
 const KALENDERDAG_PUNTEN_BRON="const punten=S.dag==null&&n===24?25:n;";
 const KALENDERDAG_PUNTEN_PRODUCTIE="const punten=n===24?25:n;";
 
+/* Browser- en fetch-implementaties formuleren een afgebroken request anders
+   (bijvoorbeeld WebKit: "Fetch is aborted"). Die technische fouttekst hoort
+   nooit rechtstreeks in de product-UI. Een AbortError bij de actuele laadbeurt
+   betekent hier dat de eigen requesttimeout is verstreken; een door een nieuwe
+   plaats veroorzaakte abort wordt al eerder via laadTeller genegeerd. Overige
+   netwerk/providerfouten krijgen eveneens een stabiele, menselijke melding. */
+const OPHAALFOUT_BRON='st.textContent="Ophalen mislukt ("+err.message+"). Controleer je verbinding of kies een andere plaats.";';
+const OPHAALFOUT_PRODUCTIE='st.textContent=(err&&err.name==="AbortError")?"Het ophalen duurt te lang. Controleer je verbinding en probeer het opnieuw.":"Ophalen mislukt. Controleer je verbinding en probeer het opnieuw.";';
+
 module.exports=Object.freeze({
   EERSTE_BEZOEK_BRON,
   EERSTE_BEZOEK_PRODUCTIE,
   KALENDERDAG_PUNTEN_BRON,
   KALENDERDAG_PUNTEN_PRODUCTIE,
+  OPHAALFOUT_BRON,
+  OPHAALFOUT_PRODUCTIE,
   defaultLocation:Object.freeze({naam:"Amsterdam",lat:52.3676,lon:4.9041,land:"NL"})
 });
