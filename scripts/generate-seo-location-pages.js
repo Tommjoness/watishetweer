@@ -11,6 +11,7 @@ const ROOT_HTML=path.join(OUT,"index.html");
 const MARKER_NAV="<!-- WEATHER NOW INDEXEERBARE PLAATSEN -->";
 const MARKER_ROUTE="<!-- WEATHER NOW PLAATSROUTE -->";
 const START_HAAK="(function(){\n  const p=new URLSearchParams(location.search);\n";
+const URL_SYNC_HAAK=`  try{\n    const u=new URL(location.href);\n    u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n    u.searchParams.set("plaats",S.label);\n    if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n    history.replaceState(null,"",u);\n  }catch(e){}\n`;
 
 function escHtml(v){return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function escXml(v){return escHtml(v).replace(/'/g,"&apos;");}
@@ -67,6 +68,13 @@ function voegBaseToe(html,slug){
   return bron.replace(matches[0][0],nieuw);
 }
 
+function voegRouteUrlBeleidToe(html,slug){
+  let bron=String(html||"");
+  if(tel(bron,URL_SYNC_HAAK)!==1)throw new Error(`${slug}: URL-sync-haak ontbreekt of is dubbel.`);
+  const routeBewust=`  try{\n    const route=window.__WEATHERNOW_ROUTE_LOCATION__;\n    const zelfdeRoute=route&&Number(S.lat)===Number(route.lat)&&Number(S.lon)===Number(route.lon);\n    if(!zelfdeRoute){\n      const u=route?new URL("/",location.origin):new URL(location.href);\n      u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n      u.searchParams.set("plaats",S.label);\n      if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n      history.replaceState(null,"",u);\n    }\n  }catch(e){}\n`;
+  return bron.replace(URL_SYNC_HAAK,routeBewust);
+}
+
 function voegRouteToe(html,loc){
   let bron=String(html||"");
   if(tel(bron,START_HAAK)!==1)throw new Error(`${loc.slug}: start-haak ontbreekt of is dubbel.`);
@@ -87,6 +95,7 @@ function voegRouteContextToe(html,loc){
 function maakPlaatsPagina(rootHtml,loc){
   let html=vervangMeta(rootHtml,loc);
   html=voegBaseToe(html,loc.slug);
+  html=voegRouteUrlBeleidToe(html,loc.slug);
   html=voegRouteToe(html,loc);
   html=voegRouteContextToe(html,loc);
   return html;
@@ -130,4 +139,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={MARKER_NAV,MARKER_ROUTE,voegPlaatsNavigatieToe,maakPlaatsPagina,maakPlaatsIndex,maakSitemap};
+module.exports={MARKER_NAV,MARKER_ROUTE,voegPlaatsNavigatieToe,voegRouteUrlBeleidToe,maakPlaatsPagina,maakPlaatsIndex,maakSitemap};
