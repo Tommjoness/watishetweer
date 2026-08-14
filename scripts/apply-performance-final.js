@@ -23,12 +23,13 @@ const forecastAantal=html.split(forecastOud).length-1;
 if(forecastAantal!==1)throw new Error("Forecast-horizonanker ontbreekt of is dubbel: "+forecastAantal);
 html=html.replace(forecastOud,forecastNieuw);
 
-/* De centrale interpretatie converteert dezelfde lokale uurstrings voor tegel,
-   briefing, nowcast en zeven dagregels. Intl.DateTimeFormat bouwen is veel duurder
-   dan formatToParts op een bestaand formatterobject. De formatter is volledig
-   bepaald door de IANA-zone, dus hergebruik verandert geen tijd-, DST- of
-   kalendersemantiek. De kleine begrensde cache voorkomt onbeperkte groei wanneer
-   veel locaties na elkaar worden bekeken. */
+/* De centrale interpretatie converteert dezelfde instants herhaaldelijk voor
+   briefing, tegels, grafiek en dagregels. Naast de al begrensde formattercache
+   bewaren we daarom ook succesvolle formatToParts-resultaten per exact instant
+   + IANA-zone. De resultaatcache is FIFO-begrensd en bewaart alleen primitieve
+   componenten; iedere hit krijgt een nieuw object zodat callers nooit gedeelde
+   mutable state zien. DST en niet-hele offsets blijven daardoor volledig door
+   Intl bepaald voor precies dezelfde instant en zone. */
 const beginMark="/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */";
 const eindMark="/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */";
 const begin=html.indexOf(beginMark),eind=html.indexOf(eindMark,begin+beginMark.length);
@@ -38,6 +39,7 @@ const zoneStart=engine.indexOf("function zoneDelen(ms,tijdzone){");
 const zoneEind=engine.indexOf("\nfunction zoneOffset(ms,tijdzone){",zoneStart);
 if(zoneStart<0||zoneEind<=zoneStart)throw new Error("zoneDelen kon niet veilig worden afgebakend.");
 const zoneNieuw=`const zoneFormatterCache=new Map();
+const zoneDelenCache=new Map();
 function zoneFormatter(tijdzone){
   let formatter=zoneFormatterCache.get(tijdzone);
   if(!formatter){
@@ -50,17 +52,53 @@ function zoneFormatter(tijdzone){
   }
   return formatter;
 }
+function zoneDelenObject(waarden){
+  return {year:waarden[0],month:waarden[1],day:waarden[2],hour:waarden[3],minute:waarden[4],second:waarden[5]};
+}
 function zoneDelen(ms,tijdzone){
   if(!tijdzone||typeof Intl==="undefined"||!Intl.DateTimeFormat) return null;
   try{
-    const delen=zoneFormatter(tijdzone).formatToParts(new Date(ms));
+    const instant=new Date(ms),epoch=instant.getTime();
+    if(!Number.isFinite(epoch))return null;
+    const sleutel=String(tijdzone)+"|"+epoch;
+    const bewaard=zoneDelenCache.get(sleutel);
+    if(bewaard)return zoneDelenObject(bewaard);
+    const delen=zoneFormatter(tijdzone).formatToParts(instant);
     const p={};
     delen.forEach(x=>{if(x.type!=="literal")p[x.type]=Number(x.value);});
-    return [p.year,p.month,p.day,p.hour,p.minute,p.second].every(Number.isFinite)?p:null;
+    const waarden=[p.year,p.month,p.day,p.hour,p.minute,p.second];
+    if(!waarden.every(Number.isFinite))return null;
+    zoneDelenCache.set(sleutel,waarden);
+    if(zoneDelenCache.size>2048)zoneDelenCache.delete(zoneDelenCache.keys().next().value);
+    return p;
   }catch(e){return null;}
 }`;
 engine=engine.slice(0,zoneStart)+zoneNieuw+engine.slice(zoneEind);
+
+/* De Q1-laag heeft een eigen DST-veilige uurreconstructie. Die hoeft niet ook
+   een tweede Intl-conversie-engine te bezitten: maak alleen de bestaande pure
+   centrale zoneDelen-helper beschikbaar. Q1 behoudt zijn eigen algoritme en
+   fallback, maar kan in de browser exact dezelfde begrensde instant+zonecache
+   gebruiken. */
+const apiOud='  neerslagZin,\n  statusRang\n};';
+const apiNieuw='  neerslagZin,\n  statusRang,\n  zoneDelen\n};';
+const apiAantal=engine.split(apiOud).length-1;
+if(apiAantal!==1)throw new Error("Publieke interpretatie-API-anchor ontbreekt of is dubbel: "+apiAantal);
+engine=engine.replace(apiOud,apiNieuw);
 html=html.slice(0,begin)+engine+html.slice(eind);
+
+const q1Mark="/* ===== CHECKPOINT 25 Q1 ===== */";
+const q1Begin=html.indexOf(q1Mark);
+const q1ZoneStart=html.indexOf("function zoneDelen(ms,tijdzone){",q1Begin);
+const q1ZoneEind=html.indexOf("\nfunction zoneOffset(ms,tijdzone){",q1ZoneStart);
+if(q1Begin<0||q1ZoneStart<0||q1ZoneEind<=q1ZoneStart)throw new Error("Q1 zoneDelen kon niet veilig worden afgebakend.");
+let q1Zone=html.slice(q1ZoneStart,q1ZoneEind);
+const q1Open=q1Zone.indexOf("{")+1;
+if(q1Open<=0||!q1Zone.includes('new Intl.DateTimeFormat("en-CA"'))throw new Error("Q1 zoneDelen heeft een onverwachte vorm.");
+const q1Delegatie='\n  const centraal=root.WeatherNowInterpretatie;\n  if(centraal&&typeof centraal.zoneDelen==="function")return centraal.zoneDelen(ms,tijdzone);';
+if(q1Zone.includes("WeatherNowInterpretatie"))throw new Error("Q1 zoneDelen delegeert al vóór performance-final.");
+q1Zone=q1Zone.slice(0,q1Open)+q1Delegatie+q1Zone.slice(q1Open);
+html=html.slice(0,q1ZoneStart)+q1Zone+html.slice(q1ZoneEind);
 
 /* Pure civiele tijdconversies worden per exacte lokale kloktekst en tijdzone
    gememoized. Belangrijk: begrens uitsluitend het eigen functieblok. De eerdere
@@ -128,4 +166,4 @@ const scripts=[...html.matchAll(/<script(?![^>]* src=)[^>]*>([^]*?)<\/script>/g)
 if(!scripts.length)throw new Error("Geen inline runtime na performance-final.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:performance-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
-console.log("Performance-final toegepast: 170 forecasturen, formatterhergebruik, lokale-tijdcache en veilige tijdzonefallback.");
+console.log("Performance-final toegepast: 170 forecasturen, centrale begrensde instant-zonecache gedeeld met Q1, lokale-tijdcache en veilige tijdzonefallback.");
