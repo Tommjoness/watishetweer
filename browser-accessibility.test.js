@@ -24,7 +24,10 @@ const server=http.createServer((req,res)=>{
 async function controleer(browserType,naam){
   const browser=await browserType.launch({headless:true});
   try{
-    const page=await browser.newPage({viewport:{width:390,height:844}});
+    /* Deze test routeert geocoding naar deterministische fixtures. Blokkeer de
+       serviceworker hier, zodat WebKit die requests niet buiten page.route om
+       afhandelt; serviceworker-upgrade/offline heeft een eigen browsercontract. */
+    const page=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:"block"});
     await page.goto("http://127.0.0.1:"+server.address().port+"/",{waitUntil:"domcontentloaded"});
     const resultaat=await page.evaluate(()=>{
       const app=document.getElementById("app");
