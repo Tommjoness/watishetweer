@@ -27,6 +27,8 @@ const verwacht=[
   "verify-fetch-error-semantics.js",
   "apply-polar-chart-sentinel.js",
   "verify-polar-chart-sentinel.js",
+  "apply-seo-foundation.js",
+  "verify-seo-foundation.js",
   "verify-final-27.js"
 ];
 assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten");
@@ -50,7 +52,9 @@ assert(positie("verify-weather-fallback-hedge.js")<positie("apply-fetch-error-se
 assert(positie("apply-fetch-error-semantics.js")<positie("verify-fetch-error-semantics.js"),"foutsemantiek moet direct na toepassing worden geverifieerd");
 assert(positie("verify-fetch-error-semantics.js")<positie("apply-polar-chart-sentinel.js"),"poolgrafiekcorrectie moet de definitieve request- en foutsemantiek als basis zien");
 assert(positie("apply-polar-chart-sentinel.js")<positie("verify-polar-chart-sentinel.js"),"poolgrafiekcorrectie moet direct na toepassing worden geverifieerd");
-assert(positie("verify-polar-chart-sentinel.js")<positie("verify-final-27.js"),"finale artifactguard moet de poolgrafiekcorrectie meenemen");
+assert(positie("verify-polar-chart-sentinel.js")<positie("apply-seo-foundation.js"),"SEO-metadata moet op het inhoudelijk definitieve artifact worden toegepast");
+assert(positie("apply-seo-foundation.js")<positie("verify-seo-foundation.js"),"SEO-fundering moet direct na toepassing worden geverifieerd");
+assert(positie("verify-seo-foundation.js")<positie("verify-final-27.js"),"finale artifactguard moet de SEO-fundering meenemen");
 assert.equal(POSTBUILD_STAPPEN.at(-1),"verify-final-27.js","finale artifactguard moet laatste stap zijn");
 const gezien=[];
 voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args,opt)=>{gezien.push({node,args,opt});return {status:0};}});
