@@ -25,7 +25,7 @@ ok(html.includes('html[data-thema="donker"]{--ink-45:#A8A8A8;--ink-25:#959595}')
 ok(html.includes('#themamenu button[aria-checked="true"]{background:var(--paper);'),"actieve weergavekeuze krijgt een rustige geselecteerde staat");
 ok(html.includes('@media(min-width:901px){#days .row.day,#days .row.kop{padding-right:8px}}'),"weekneerslag houdt op desktop afstand tot de rechterrand");
 ok(html.includes('optie.setAttribute("aria-checked",optie.dataset.themaKeuze===keuze?"true":"false")'),"actieve keuze wordt in het menu gemarkeerd");
-ok(html.includes('if(zoek)zoek.classList.remove("on")')&&html.includes('if(invoer)invoer.setAttribute("aria-expanded","false")'),"weergavemenu sluit een eventueel open zoekresultatenpaneel");
+ok(html.includes('document.querySelectorAll("#res.on,#zoekmelding.on")')&&html.includes('zoekpanelen.forEach(paneel=>paneel.classList.remove("on"))')&&html.includes('if(invoer)invoer.setAttribute("aria-expanded","false")'),"weergavemenu sluit zowel zoekresultaten als zoekmeldingen");
 ok(html.includes('e.key==="ArrowDown"')&&html.includes('e.key==="ArrowUp"')&&html.includes('e.key==="Home"')&&html.includes('e.key==="End"'),"weergavemenu ondersteunt standaard toetsenbordnavigatie");
 ok(html.includes('if(e.key==="Escape"&&!themaMenu.hidden)'),"weergavemenu sluit via Escape");
 ok(!html.includes('THEMAS[(THEMAS.indexOf(nu)+1)%THEMAS.length]'),"oude cyclische themalogica is verwijderd");
