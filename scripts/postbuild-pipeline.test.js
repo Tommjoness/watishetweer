@@ -25,6 +25,8 @@ const verwacht=[
   "verify-weather-fallback-hedge.js",
   "apply-fetch-error-semantics.js",
   "verify-fetch-error-semantics.js",
+  "apply-polar-chart-sentinel.js",
+  "verify-polar-chart-sentinel.js",
   "verify-final-27.js"
 ];
 assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten");
@@ -46,7 +48,9 @@ assert(positie("apply-ui-polish-20260813.js")<positie("apply-weather-fallback-he
 assert(positie("apply-weather-fallback-hedge.js")<positie("verify-weather-fallback-hedge.js"),"weather-fallback moet direct na toepassing worden geverifieerd");
 assert(positie("verify-weather-fallback-hedge.js")<positie("apply-fetch-error-semantics.js"),"menselijke foutsemantiek moet op de nieuwe fallbackstrategie worden toegepast");
 assert(positie("apply-fetch-error-semantics.js")<positie("verify-fetch-error-semantics.js"),"foutsemantiek moet direct na toepassing worden geverifieerd");
-assert(positie("verify-fetch-error-semantics.js")<positie("verify-final-27.js"),"finale artifactguard moet de menselijke foutsemantiek meenemen");
+assert(positie("verify-fetch-error-semantics.js")<positie("apply-polar-chart-sentinel.js"),"poolgrafiekcorrectie moet de definitieve request- en foutsemantiek als basis zien");
+assert(positie("apply-polar-chart-sentinel.js")<positie("verify-polar-chart-sentinel.js"),"poolgrafiekcorrectie moet direct na toepassing worden geverifieerd");
+assert(positie("verify-polar-chart-sentinel.js")<positie("verify-final-27.js"),"finale artifactguard moet de poolgrafiekcorrectie meenemen");
 assert.equal(POSTBUILD_STAPPEN.at(-1),"verify-final-27.js","finale artifactguard moet laatste stap zijn");
 const gezien=[];
 voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args,opt)=>{gezien.push({node,args,opt});return {status:0};}});
