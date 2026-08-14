@@ -1,0 +1,124 @@
+name: WeatherNow responsive layout resize gate PR75
+
+on:
+  push:
+    branches: [agent/mobile-week-preview-20260814]
+
+jobs:
+  layout-resize-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Toon Chrome-versie
+        run: google-chrome --version
+      - name: Installeer Playwright en WebKit
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps webkit
+      - name: Laad preview eenmaal per engine en resize dezelfde pagina naar 390, 360 en 320 px
+        env:
+          PREVIEW_URL: "https://weathernow-75vzd467l-tommjoness-projects.vercel.app/?_vercel_share=9fFgTRo51wyeDNjU83IMtbsOrq4C6QO7&lat=52.3500&lon=5.2600&plaats=Almere&land=NL"
+        run: |
+          cat > .preview-layout-resize-pr75.js <<'NODE'
+          "use strict";
+          const assert=require("assert");
+          const {chromium,webkit}=require("playwright");
+          const url=process.env.PREVIEW_URL;
+          if(!url)throw new Error("PREVIEW_URL ontbreekt");
+          const widths=[390,360,320];
+
+          function isToolbarCsp(text){
+            const s=String(text||"");
+            return s.includes("vercel.live/_next-live/") && (s.includes("Content Security Policy")||s.includes("Refused to load"));
+          }
+
+          async function runEngine(engine,launch){
+            const browser=await launch();
+            const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block"});
+            const page=await context.newPage();
+            const appErrors=[],toolbarErrors=[];
+            page.on("pageerror",e=>appErrors.push("pageerror: "+String(e)));
+            page.on("console",m=>{
+              if(m.type()!=="error")return;
+              const text=m.text();
+              if(isToolbarCsp(text))toolbarErrors.push(text);
+              else appErrors.push("console: "+text);
+            });
+            try{
+              const response=await page.goto(url,{waitUntil:"domcontentloaded",timeout:45000});
+              assert(response&&response.status()<400,`${engine}: preview-navigatie mislukt`);
+              await page.waitForFunction(()=>{
+                const app=document.querySelector("#app"),t=document.querySelector("#t"),c=document.querySelector("#cond");
+                if(!app||!t||!c)return false;
+                const a=getComputedStyle(app),temp=t.textContent.trim(),condition=c.textContent.trim();
+                return a.display!=="none"&&a.visibility!=="hidden"&&app.getBoundingClientRect().height>0&&temp&&!/[–—]/.test(temp)&&condition&&document.querySelectorAll("#days .row.day:not(.kop)").length>=7;
+              },null,{timeout:60000});
+
+              for(const width of widths){
+                const height=width===390?844:width===360?800:700;
+                await page.setViewportSize({width,height});
+                await page.waitForTimeout(250);
+                const r=await page.evaluate(()=>{
+                  const rows=[...document.querySelectorAll("#days .row.day")];
+                  const first=document.querySelector("#days .row.day:not(.kop)");
+                  const css=sel=>{const el=first&&first.querySelector(sel);return el?getComputedStyle(el):null;};
+                  return {
+                    width:innerWidth,
+                    documentWidth:document.documentElement.scrollWidth,
+                    days:document.querySelectorAll("#days .row.day:not(.kop)").length,
+                    temp:document.querySelector("#t")?.textContent?.trim()||"",
+                    condition:document.querySelector("#cond")?.textContent?.trim()||"",
+                    nameFont:css(".dname")?.fontSize||null,
+                    windFont:css(".dwind")?.fontSize||null,
+                    windDisplay:css(".dwind")?.display||null,
+                    rainFont:css(".drain")?.fontSize||null,
+                    minFont:css(".dmin")?.fontSize||null,
+                    maxFont:css(".dmax")?.fontSize||null,
+                    rowOverflow:rows.some(el=>el.scrollWidth>el.clientWidth+1),
+                    rowOutside:rows.some(el=>{const b=el.getBoundingClientRect();return b.left<-1||b.right>innerWidth+1;})
+                  };
+                });
+                assert.equal(r.width,width,`${engine}-${width}: viewport klopt niet`);
+                assert(r.documentWidth<=width+2,`${engine}-${width}: documentoverflow ${r.documentWidth}`);
+                assert(r.days>=7&&r.temp&&!/[–—]/.test(r.temp)&&r.condition,`${engine}-${width}: geladen inhoud verdween bij resize`);
+                assert.equal(r.nameFont,"13.5px",`${engine}-${width}: dagnaam ${r.nameFont}`);
+                assert.equal(r.rainFont,"13px",`${engine}-${width}: neerslag ${r.rainFont}`);
+                assert.equal(r.minFont,"14px",`${engine}-${width}: min ${r.minFont}`);
+                assert.equal(r.maxFont,"14px",`${engine}-${width}: max ${r.maxFont}`);
+                if(width>370){
+                  assert.notEqual(r.windDisplay,"none",`${engine}-${width}: wind onverwacht verborgen`);
+                  assert.equal(r.windFont,"13px",`${engine}-${width}: wind ${r.windFont}`);
+                }else assert.equal(r.windDisplay,"none",`${engine}-${width}: wind hoort verborgen te zijn`);
+                assert.equal(r.rowOverflow,false,`${engine}-${width}: interne rij-overflow`);
+                assert.equal(r.rowOutside,false,`${engine}-${width}: rij buiten viewport`);
+                assert.deepEqual(appErrors,[],`${engine}-${width}: WeatherNow-browserfouten: ${appErrors.join(" | ")}`);
+                await page.locator("#days").screenshot({path:`layout-${engine}-${width}.png`});
+                console.log(`LAYOUT ${engine}-${width} groen: ${JSON.stringify({...r,toolbarErrors:toolbarErrors.length})}`);
+              }
+              await page.setViewportSize({width:390,height:844});
+              await page.screenshot({path:`layout-${engine}-390-full.png`,fullPage:true});
+            }finally{
+              await context.close();
+              await browser.close();
+            }
+          }
+
+          (async()=>{
+            await runEngine("chromium",()=>chromium.launch({headless:true,channel:"chrome"}));
+            await runEngine("webkit",()=>webkit.launch({headless:true}));
+            console.log("PR75 responsive layout-resizegate volledig groen in Chromium en WebKit.");
+          })().catch(e=>{console.error(e.stack||e);process.exit(1);});
+          NODE
+          node .preview-layout-resize-pr75.js
+      - name: Bewaar screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr75-layout-resize-screenshots
+          path: layout-*.png
+          if-no-files-found: warn
+          retention-days: 1
