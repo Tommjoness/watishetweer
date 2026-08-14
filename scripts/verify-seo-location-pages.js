@@ -3,7 +3,7 @@
 const fs=require("fs");
 const path=require("path");
 const {LOCATIES,POPULAIR,BASIS_URL,plaatsUrl,plaatsTitel,plaatsBeschrijving}=require("./seo-locations.config.js");
-const {MARKER_NAV,MARKER_ROUTE}=require("./generate-seo-location-pages.js");
+const {MARKER_NAV,MARKER_ROUTE,gerelateerdePlaatsen}=require("./generate-seo-location-pages.js");
 const {verifieerServiceworkerCache}=require("./postbuild-cache.js");
 
 const OUT=path.join(__dirname,"..","public");
@@ -47,11 +47,35 @@ for(const loc of LOCATIES){
   if(!html.includes("load(route.lat,route.lon,route.name,false,false,normLand(route.country));"))throw new Error(`${loc.slug}: runtime start niet via de bestaande load-keten.`);
   if(!html.includes(`<h2 id="seo-route-title">Weer in ${loc.naam}</h2>`))throw new Error(`${loc.slug}: zichtbare prerendercontext ontbreekt.`);
   if(/<link rel="canonical" href="https:\/\/watishetweer\.nl\/">/.test(html))throw new Error(`${loc.slug}: homepage-canonical lekt naar plaatsroute.`);
+
+  const breadcrumb=/<nav class="seo-breadcrumb" aria-label="Broodkruimelnavigatie">([\s\S]*?)<\/nav>/.exec(html);
+  if(!breadcrumb)throw new Error(`${loc.slug}: zichtbare breadcrumb ontbreekt.`);
+  if(!breadcrumb[1].includes('href="/"')||!breadcrumb[1].includes('href="/weer/"')||!breadcrumb[1].includes(`aria-current="page">${loc.naam}</span>`))throw new Error(`${loc.slug}: zichtbare breadcrumb wijkt af van site > plaatsindex > plaats.`);
+
+  const nearby=/<div class="seo-route-nearby-links">([\s\S]*?)<\/div>/.exec(html);
+  if(!nearby)throw new Error(`${loc.slug}: blok met nabijgelegen plaatsen ontbreekt.`);
+  const nearbyLinks=[...nearby[1].matchAll(/href="(\/weer\/[^"?#]+\/)"/g)].map(m=>m[1]);
+  const expectedNearby=gerelateerdePlaatsen(loc).map(x=>`/weer/${x.slug}/`);
+  if(JSON.stringify(nearbyLinks)!==JSON.stringify(expectedNearby))throw new Error(`${loc.slug}: nabijgelegen links wijken af: ${nearbyLinks.join(", ")} versus ${expectedNearby.join(", ")}.`);
+  if(nearbyLinks.includes(`/weer/${loc.slug}/`))throw new Error(`${loc.slug}: nabijgelegen links mogen niet naar zichzelf verwijzen.`);
+
   const ld=[...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
   if(ld.length!==1)throw new Error(`${loc.slug}: verwacht exact één JSON-LD-blok.`);
   let data;try{data=JSON.parse(ld[0][1]);}catch(e){throw new Error(`${loc.slug}: ongeldige JSON-LD: ${e.message}`);}
-  if(!Array.isArray(data)||data.length!==2||data[1]?.["@type"]!=="WebPage"||data[1]?.url!==canonical)throw new Error(`${loc.slug}: WebPage structured data wijkt af.`);
+  if(!Array.isArray(data)||data.length!==3||data[1]?.["@type"]!=="WebPage"||data[1]?.url!==canonical)throw new Error(`${loc.slug}: WebPage structured data wijkt af.`);
+  const crumbs=data[2];
+  const items=crumbs?.itemListElement;
+  if(crumbs?.["@type"]!=="BreadcrumbList"||!Array.isArray(items)||items.length!==3)throw new Error(`${loc.slug}: BreadcrumbList structured data ontbreekt of heeft verkeerde lengte.`);
+  const verwachteCrumbs=[
+    {positie:1,naam:"Wat is het weer?",url:`${BASIS_URL}/`},
+    {positie:2,naam:"Weer per plaats",url:`${BASIS_URL}/weer/`},
+    {positie:3,naam:loc.naam,url:canonical}
+  ];
+  for(let i=0;i<verwachteCrumbs.length;i++){
+    const verwachtItem=verwachteCrumbs[i],item=items[i];
+    if(item?.["@type"]!=="ListItem"||item.position!==verwachtItem.positie||item.name!==verwachtItem.naam||item.item!==verwachtItem.url)throw new Error(`${loc.slug}: breadcrumb-item ${i+1} wijkt af van de zichtbare routehiërarchie.`);
+  }
 }
 
 const cache=verifieerServiceworkerCache(OUT,"seo-location-pages-verifier");
-console.log(`SEO-plaatsarchitectuur geverifieerd: ${LOCATIES.length} indexeerbare routes, hub, interne links, sitemap, routecontext en cache ${cache}.`);
+console.log(`SEO-plaatsarchitectuur geverifieerd: ${LOCATIES.length} indexeerbare routes, hub, breadcrumbs, vier nabijgelegen links per route, sitemap, routecontext en cache ${cache}.`);
