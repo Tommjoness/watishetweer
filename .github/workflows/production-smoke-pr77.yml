@@ -1,0 +1,123 @@
+name: WeatherNow production smoke PR77
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  production-smoke:
+    if: github.head_ref == 'agent/production-smoke-pr77-20260814'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Installeer Chromium en WebKit
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium webkit
+      - name: Controleer productie op root en www
+        run: |
+          cat > /tmp/production-smoke-pr77.js <<'NODE'
+          "use strict";
+          const { chromium, webkit } = require("playwright");
+
+          const urls = [
+            ["root", "https://watishetweer.nl/?lat=52.3702&lon=4.8952&plaats=Amsterdam&land=NL"],
+            ["www", "https://www.watishetweer.nl/?lat=52.3702&lon=4.8952&plaats=Amsterdam&land=NL"]
+          ];
+          const engines = [["Chromium", chromium], ["WebKit", webkit]];
+          const attemptsPerCase = 3;
+          const minimumSuccesses = 2;
+
+          function isIgnorableConsole(text) {
+            return /Failed to load resource.*cancelled/i.test(text) || /Fetch is aborted/i.test(text);
+          }
+
+          async function oneAttempt(browser, engineName, domainName, url, attempt) {
+            const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+            const page = await context.newPage();
+            const pageErrors = [];
+            const consoleErrors = [];
+            const failedRequests = [];
+            page.on("pageerror", e => pageErrors.push(String(e)));
+            page.on("console", m => { if (m.type() === "error" && !isIgnorableConsole(m.text())) consoleErrors.push(m.text()); });
+            page.on("requestfailed", r => failedRequests.push(`${r.url()} :: ${r.failure() && r.failure().errorText}`));
+
+            try {
+              const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+              if (!response || response.status() >= 400) throw new Error(`HTTP ${response && response.status()}`);
+              const outcome = await Promise.race([
+                page.waitForFunction(() => {
+                  const app = document.getElementById("app");
+                  const days = document.querySelectorAll("#days .row.day:not(.kop)");
+                  const state = document.getElementById("state");
+                  const appVisible = app && getComputedStyle(app).display !== "none";
+                  const stateVisible = state && getComputedStyle(state).display !== "none" && state.textContent.trim().length > 0;
+                  if (appVisible && days.length >= 7) return { kind: "loaded", days: days.length };
+                  if (stateVisible && /mislukt|duurt te lang|probeer het opnieuw|geen verbinding|fout/i.test(state.textContent)) return { kind: "error", text: state.textContent.trim() };
+                  return false;
+                }, { timeout: 25000 }).then(h => h.jsonValue()),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("25s eindtoestand-timeout")), 26000))
+              ]);
+              if (!outcome || outcome.kind !== "loaded") throw new Error(`app niet geladen: ${JSON.stringify(outcome)}`);
+
+              const facts = await page.evaluate(() => ({
+                finalUrl: location.href,
+                days: document.querySelectorAll("#days .row.day:not(.kop)").length,
+                nights: document.querySelectorAll("#nights .row.night:not(.kop)").length,
+                docWidth: document.documentElement.scrollWidth,
+                viewportWidth: innerWidth,
+                stateVisible: (() => { const s=document.getElementById("state"); return !!(s && getComputedStyle(s).display !== "none"); })(),
+                appVisible: (() => { const a=document.getElementById("app"); return !!(a && getComputedStyle(a).display !== "none"); })()
+              }));
+              if (!facts.appVisible || facts.days < 7) throw new Error(`onvolledige app: ${JSON.stringify(facts)}`);
+              if (facts.docWidth > facts.viewportWidth + 1) throw new Error(`horizontale overflow: ${JSON.stringify(facts)}`);
+              if (pageErrors.length) throw new Error(`pageerror: ${pageErrors.join(" | ")}`);
+              if (consoleErrors.length) throw new Error(`console error: ${consoleErrors.join(" | ")}`);
+              console.log(`${engineName}/${domainName}/attempt-${attempt}: OK ${JSON.stringify(facts)}`);
+              return { ok: true, facts };
+            } catch (error) {
+              console.log(`${engineName}/${domainName}/attempt-${attempt}: FAIL ${error.message}`);
+              if (failedRequests.length) console.log(`${engineName}/${domainName}/attempt-${attempt}: failedRequests=${JSON.stringify(failedRequests.slice(-12))}`);
+              return { ok: false, error: error.message, failedRequests };
+            } finally {
+              await context.close();
+            }
+          }
+
+          (async () => {
+            let failed = false;
+            for (const [engineName, launcher] of engines) {
+              const browser = await launcher.launch({ headless: true });
+              try {
+                for (const [domainName, url] of urls) {
+                  let successes = 0;
+                  const results = [];
+                  for (let attempt = 1; attempt <= attemptsPerCase; attempt++) {
+                    const result = await oneAttempt(browser, engineName, domainName, url, attempt);
+                    results.push(result);
+                    if (result.ok) successes++;
+                  }
+                  console.log(`${engineName}/${domainName}: ${successes}/${attemptsPerCase} succesvolle verse productiesessies`);
+                  if (successes < minimumSuccesses) {
+                    failed = true;
+                    console.error(`${engineName}/${domainName}: onvoldoende succesvolle sessies (${successes}/${attemptsPerCase}, minimaal ${minimumSuccesses})`);
+                  }
+                }
+              } finally {
+                await browser.close();
+              }
+            }
+            if (failed) process.exit(1);
+            console.log("Production smoke: root + www in Chromium + WebKit voldoende succesvol, zonder layout/page/console-regressie in geladen sessies.");
+          })().catch(e => { console.error(e && e.stack || e); process.exit(1); });
+          NODE
+          NODE_PATH="$PWD/node_modules" node /tmp/production-smoke-pr77.js
