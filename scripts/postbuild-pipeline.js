@@ -34,6 +34,8 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-fetch-error-semantics.js",
   "apply-polar-chart-sentinel.js",
   "verify-polar-chart-sentinel.js",
+  "apply-seo-foundation.js",
+  "verify-seo-foundation.js",
   "verify-final-27.js"
 ]);
 
