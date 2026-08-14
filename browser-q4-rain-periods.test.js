@@ -202,6 +202,9 @@ async function controleer(type,naam,breedte){
       };
     });
 
+    const grafiekAria=await page.locator("#chart").getAttribute("aria-label")||"";
+    assert(!grafiekAria.includes(".;")&&!/;\s*een deels verstreken modeluur/i.test(grafiekAria),naam+" "+breedte+": grafieklabel bevat achtergebleven interpunctie of een halve verwijderde zin: "+grafiekAria);
+
     const interacteer=async coords=>{
       if(breedte<760){
         await page.evaluate(({clientX,clientY})=>{

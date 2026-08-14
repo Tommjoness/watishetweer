@@ -188,7 +188,10 @@ function q4TekenRegenperioden(svg,g,perioden){
 
   const basisH=q4Getal(g.H)||296;
   const oudeAria=(svg.getAttribute("aria-label")||"")
-    .replace(/ Neerslagbalken zijn[^.]*?(?:modeluur|omgerekend)\.?/g,"").trim();
+    /* Deze door de eerdere correctheidslaag toegevoegde uitleg is één volledige
+       zin met een puntkomma. Verwijder de hele zin; stoppen bij het eerste woord
+       'modeluur' liet eerder een losse '; een deels verstreken …' achter. */
+    .replace(/ Neerslagbalken zijn[^.]*\./g,"").trim();
   if(!perioden.length){
     svg.setAttribute("viewBox","0 0 "+g.W+" "+basisH);
     svg.setAttribute("aria-label",oudeAria);

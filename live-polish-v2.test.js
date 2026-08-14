@@ -115,7 +115,8 @@ test("productiebundel bevat interactiepolish, desktopbalk en richtinggevoelige m
   assert(html.includes("nuLabelPositie"));
   assert(html.includes("nuLabelConcurreert"));
   assert(html.includes("positioneerNuLabel"));
-  assert(html.includes('grafiekKop.classList.add("chartkop")'));
+  assert(html.includes('<div class="chartkop">'));
+  assert(html.includes('<h2><span id="chartlab">Het etmaal</span></h2>'));
   assert(html.includes("#minibar.aan{display:flex}"));
   assert(html.includes("const aan=Number.isFinite(r.bottom)&&r.bottom<=0"));
   assert(html.includes('bar.classList.toggle("aan",aan)'));

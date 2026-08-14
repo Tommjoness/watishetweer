@@ -78,12 +78,6 @@ root.WeatherNowPolishV2=api;
 
 if(typeof document==="undefined"||typeof S==="undefined") return;
 
-/* Geef alleen de grafiekkop een eigen class. Zo kan de responsive polish deze
-   sectie compact ordenen zonder alle andere h2-koppen met een .r-blok te raken. */
-const zoninfo=document.getElementById("suntimes");
-const grafiekKop=zoninfo&&zoninfo.closest?zoninfo.closest("h2"):null;
-if(grafiekKop) grafiekKop.classList.add("chartkop");
-
 /* De klok is puur presentatie. Elke seconde worden alleen de twee klokteksten
    bijgewerkt. De bestaande dagwisselcontrole blijft via klokBijwerken() actief;
    weerdata of grafieken worden dus niet iedere seconde opnieuw opgehaald/getekend. */

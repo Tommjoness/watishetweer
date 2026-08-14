@@ -3167,7 +3167,7 @@ groep("v69 polishronde");
     check("2. de buitenste grafiekmodule gebruikt geen --surface-rain",
       !/\.mod-chart\{background:var\(--surface-rain\)/.test(bronP));
     check("de grafiek-dashcol is weer de gewone, ongekleurde wrapper",
-      /<div class="dashcol">\s*\n\s*<h2><span id="chartlab">Het etmaal<\/span>/.test(bronP));
+      /<div class="dashcol">\s*\n\s*<div class="chartkop">\s*\n\s*<h2><span id="chartlab">Het etmaal<\/span><\/h2>/.test(bronP));
     check("8. geen dubbele #chart is ontstaan",(bronP.match(/id="chart"/g)||[]).length===1);
 
     const {api,bak}=laadKern(1280);
