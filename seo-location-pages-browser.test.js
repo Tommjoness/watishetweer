@@ -58,24 +58,46 @@ async function controleer(type,naam){
     const basis=`http://127.0.0.1:${server.address().port}`;
     await page.goto(basis+"/weer/almere/",{waitUntil:"networkidle"});
     await page.waitForFunction(()=>document.querySelectorAll("#days .row.day").length>=5,{timeout:15000});
-    const staat=await page.evaluate(()=>({
-      place:(document.getElementById("place")?.textContent||"").trim(),
-      pathname:location.pathname,
-      search:location.search,
-      canonical:document.querySelector('link[rel="canonical"]')?.href||"",
-      base:document.baseURI,
-      title:document.title,
-      context:(document.querySelector(".seo-route-context")?.textContent||"").replace(/\s+/g," ").trim(),
-      days:document.querySelectorAll("#days .row.day").length,
-      overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+1
-    }));
+    const staat=await page.evaluate(()=>{
+      let structured=null;
+      try{structured=JSON.parse(document.querySelector('script[type="application/ld+json"]')?.textContent||"null");}catch(e){}
+      return {
+        place:(document.getElementById("place")?.textContent||"").trim(),
+        pathname:location.pathname,
+        search:location.search,
+        canonical:document.querySelector('link[rel="canonical"]')?.href||"",
+        base:document.baseURI,
+        title:document.title,
+        context:(document.querySelector(".seo-route-context")?.textContent||"").replace(/\s+/g," ").trim(),
+        breadcrumb:[...document.querySelectorAll(".seo-breadcrumb a,.seo-breadcrumb [aria-current='page']")].map(el=>({text:(el.textContent||"").trim(),href:el.getAttribute("href"),current:el.getAttribute("aria-current")})),
+        nearby:[...document.querySelectorAll(".seo-route-nearby-links a")].map(a=>a.getAttribute("href")),
+        structured,
+        days:document.querySelectorAll("#days .row.day").length,
+        overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+1
+      };
+    });
     assert(/Almere/i.test(staat.place),`${naam}: route start niet in Almere: ${staat.place}`);
     assert.equal(staat.pathname,"/weer/almere/",`${naam}: plaatsroute verandert onverwacht van pad`);
     assert.equal(staat.search,"",`${naam}: plaatsroute lekt terug naar query-URL`);
     assert.equal(staat.canonical,"https://watishetweer.nl/weer/almere/",`${naam}: canonical wijkt af`);
     assert.equal(staat.base,basis+"/",`${naam}: baseURI staat niet op root; subpad-assets zijn dan onveilig`);
     assert.equal(staat.title,"Weer Almere vandaag | Wat is het weer?",`${naam}: unieke titel ontbreekt`);
-    assert(staat.context.includes("Weer in Almere")&&staat.context.includes("Flevoland"),`${naam}: zichtbare prerendercontext ontbreekt`);
+    assert(staat.context.includes("Weer in Almere")&&staat.context.includes("Flevoland")&&staat.context.includes("Plaatsen in de buurt"),`${naam}: zichtbare prerendercontext ontbreekt`);
+    assert.deepEqual(staat.breadcrumb,[
+      {text:"Wat is het weer?",href:"/",current:null},
+      {text:"Weer per plaats",href:"/weer/",current:null},
+      {text:"Almere",href:null,current:"page"}
+    ],`${naam}: zichtbare breadcrumb wijkt af`);
+    assert.equal(staat.nearby.length,4,`${naam}: route moet vier nabijgelegen links tonen`);
+    assert.equal(new Set(staat.nearby).size,4,`${naam}: nabijgelegen links moeten uniek zijn`);
+    assert(staat.nearby.every(href=>/^\/weer\/[a-z0-9-]+\/$/.test(href)&&href!=="/weer/almere/"),`${naam}: nabijgelegen links moeten schone andere plaatsroutes zijn: ${staat.nearby.join(", ")}`);
+    const crumbs=Array.isArray(staat.structured)?staat.structured.find(x=>x&&x["@type"]==="BreadcrumbList"):null;
+    assert(crumbs&&Array.isArray(crumbs.itemListElement)&&crumbs.itemListElement.length===3,`${naam}: BreadcrumbList structured data ontbreekt`);
+    assert.deepEqual(crumbs.itemListElement.map(x=>[x.position,x.name,x.item]),[
+      [1,"Wat is het weer?","https://watishetweer.nl/"],
+      [2,"Weer per plaats","https://watishetweer.nl/weer/"],
+      [3,"Almere","https://watishetweer.nl/weer/almere/"]
+    ],`${naam}: structured breadcrumb wijkt af van zichtbare routehiërarchie`);
     assert(staat.days>=5,`${naam}: bestaande WeatherNow-runtime rendert geen weekdata`);
     assert.equal(staat.overflow,false,`${naam}: 390px route introduceert horizontale overflow`);
     assert.deepEqual(pageErrors,[],`${naam}: pageerrors op plaatsroute`);
@@ -108,7 +130,7 @@ server.listen(0,"127.0.0.1",async()=>{
   try{
     await controleer(chromium,"Chromium");
     await controleer(webkit,"WebKit");
-    console.log("SEO-plaatsbrowser: Chromium + WebKit, canonieke Almere-route/titel, fallback-deel-URL/title, root-assets, runtime, SW-scope, mobiel en /weer/-hub geslaagd.");
+    console.log("SEO-plaatsbrowser: Chromium + WebKit, canonieke Almere-route/titel, breadcrumbs + nabijgelegen links, fallback-deel-URL/title, root-assets, runtime, SW-scope, mobiel en /weer/-hub geslaagd.");
   }catch(e){console.error(e&&e.stack||e);process.exitCode=1;}
   finally{server.close();}
 });

@@ -2,7 +2,7 @@
 
 const assert=require("assert");
 const {LOCATIES,POPULAIR,plaatsUrl,plaatsTitel,plaatsBeschrijving}=require("./seo-locations.config.js");
-const {voegRouteTitelBeleidToe}=require("./generate-seo-location-pages.js");
+const {afstandKm,gerelateerdePlaatsen,voegRouteTitelBeleidToe}=require("./generate-seo-location-pages.js");
 
 assert(LOCATIES.length>=30,"SEO-kernset moet minimaal 30 echte Nederlandse plaatsen bevatten");
 assert(LOCATIES.length<=60,"SEO-kernset mag niet ongemerkt uitgroeien tot massale thin-page generatie");
@@ -19,7 +19,17 @@ for(const loc of LOCATIES){
   assert(titel.length<=70,`${loc.slug}: titel te lang (${titel.length})`);
   assert(desc.includes(loc.naam)&&desc.includes("7-daagse verwachting"),`${loc.slug}: description mist kerninhoud`);
   assert(desc.length>=100&&desc.length<=170,`${loc.slug}: description ongeschikte lengte (${desc.length})`);
+
+  const gerelateerd=gerelateerdePlaatsen(loc);
+  assert.equal(gerelateerd.length,4,`${loc.slug}: verwacht exact vier nabijgelegen routes`);
+  assert.equal(new Set(gerelateerd.map(x=>x.slug)).size,4,`${loc.slug}: nabijgelegen routes moeten uniek zijn`);
+  assert(gerelateerd.every(x=>LOCATIES.includes(x)&&x.slug!==loc.slug),`${loc.slug}: nabijgelegen routes moeten uit de kernset komen en zichzelf uitsluiten`);
+  const afstanden=gerelateerd.map(x=>afstandKm(loc,x));
+  assert(afstanden.every(Number.isFinite),`${loc.slug}: afstand naar nabijgelegen route moet eindig zijn`);
+  for(let i=1;i<afstanden.length;i++)assert(afstanden[i]>=afstanden[i-1]-1e-9,`${loc.slug}: nabijgelegen routes moeten op echte afstand gesorteerd zijn`);
 }
+assert.equal(gerelateerdePlaatsen(LOCATIES[0],99).length,4,"routecontext mag nooit meer dan vier nabijgelegen links krijgen");
+assert.equal(gerelateerdePlaatsen(LOCATIES[0],0).length,0,"expliciete nul levert geen nabijgelegen links op");
 assert(POPULAIR.length>=8&&POPULAIR.length<=16,"homepage moet een compacte populaire-plaatsenselectie houden");
 assert(POPULAIR.every(x=>LOCATIES.includes(x)&&x.populair),"populaire set moet rechtstreeks uit de kernset komen");
 
@@ -34,4 +44,4 @@ assert.equal((routeBewust.match(/const route=window\.__WEATHERNOW_ROUTE_LOCATION
 assert.equal((routeBewust.match(/if\(!zelfdeRoute\) document\.title=S\.label\+" · Wat is het weer\?";/g)||[]).length,2,"beide title-writers moeten alleen buiten dezelfde route de dynamische titel zetten");
 assert.throws(()=>voegRouteTitelBeleidToe(`function canoniek(){${titleWriter}}`,"regressie"),/exact 2 title-sync-writers/,"één ontbrekende title-writer moet het buildcontract laten falen");
 
-console.log(`SEO-locatieconfig: ${LOCATIES.length} unieke NL-plaatsen, metadata, compacte populaire set en dubbel title-writercontract geslaagd.`);
+console.log(`SEO-locatieconfig: ${LOCATIES.length} unieke NL-plaatsen, metadata, vier afstandsgesorteerde interne routes, compacte populaire set en dubbel title-writercontract geslaagd.`);
