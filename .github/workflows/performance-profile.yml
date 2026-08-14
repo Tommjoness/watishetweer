@@ -17,5 +17,7 @@ jobs:
         run: google-chrome --version
       - name: Installeer alleen Playwright-package
         run: npm install --no-save --package-lock=false playwright
+      - name: Bouw dezelfde definitieve artifact als performancebudget
+        run: npm run build
       - name: Measurement-only CPU-profiel in voorgeinstalleerde Chrome
         run: node browser-performance-profile.test.js
