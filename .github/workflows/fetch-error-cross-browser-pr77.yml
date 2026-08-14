@@ -1,0 +1,109 @@
+name: WeatherNow fetch-error cross-browser PR77
+
+on:
+  pull_request:
+    branches:
+      - agent/human-fetch-error-20260814
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-error-cross-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Installeer project en bouw definitief artifact
+        run: |
+          npm install --ignore-scripts
+          npm run build
+      - name: Installeer Playwright Chromium en WebKit
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium webkit
+      - name: Test menselijke fetchfouten in Chromium en WebKit
+        run: |
+          cat > /tmp/fetch-error-cross-browser.js <<'NODE'
+          "use strict";
+          const fs = require("fs");
+          const { chromium, webkit } = require("playwright");
+
+          const basis = fs.readFileSync("public/index.html", "utf8");
+          const cases = [
+            {
+              name: "AbortError",
+              errorExpr: 'new DOMException("Fetch is aborted","AbortError")',
+              expected: "Het ophalen duurt te lang. Controleer je verbinding en probeer het opnieuw.",
+              forbidden: ["Fetch is aborted", "AbortError"]
+            },
+            {
+              name: "generic-network",
+              errorExpr: 'new TypeError("Load failed")',
+              expected: "Ophalen mislukt. Controleer je verbinding en probeer het opnieuw.",
+              forbidden: ["Load failed", "TypeError"]
+            }
+          ];
+
+          function fixture(testCase) {
+            const stub = `<script>
+          try{localStorage.clear();sessionStorage.clear();}catch(e){}
+          window.fetch=function(url){
+            const u=String(url);
+            if(u.includes('/api/waarschuwingen'))return Promise.resolve({ok:true,status:200,json:async()=>({bron:'test',dekking:true,lijst:[]}),text:async()=>''});
+            if(u.includes('/api/plaatsnaam'))return Promise.resolve({ok:true,status:200,json:async()=>({naam:'Amsterdam',land:'NL',bron:'test'}),text:async()=>''});
+            if(u.includes('geocoding-api.open-meteo.com'))return Promise.resolve({ok:true,status:200,json:async()=>({results:[]}),text:async()=>''});
+            if(u.includes('open-meteo.com'))return Promise.reject(${testCase.errorExpr});
+            return Promise.resolve({ok:true,status:200,json:async()=>({}),text:async()=>''});
+          };
+          try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}
+          </script>`;
+            return basis.replace("</head>", stub + "</head>");
+          }
+
+          async function runEngine(engineName, launcher) {
+            const browser = await launcher.launch({ headless: true });
+            try {
+              for (const testCase of cases) {
+                const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+                const page = await context.newPage();
+                const pageErrors = [];
+                const consoleErrors = [];
+                page.on("pageerror", error => pageErrors.push(String(error)));
+                page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
+                await page.setContent(fixture(testCase), { waitUntil: "load" });
+                await page.waitForFunction(() => {
+                  const state = document.getElementById("state");
+                  return state && getComputedStyle(state).display !== "none" && state.textContent.trim().length > 0;
+                }, { timeout: 5000 });
+                const text = await page.locator("#state").innerText();
+                if (text.trim() !== testCase.expected) {
+                  throw new Error(`${engineName}/${testCase.name}: onverwachte tekst: ${text}`);
+                }
+                for (const forbidden of testCase.forbidden) {
+                  if (text.includes(forbidden)) throw new Error(`${engineName}/${testCase.name}: technische tekst lekt: ${text}`);
+                }
+                if (pageErrors.length) throw new Error(`${engineName}/${testCase.name}: pageerror: ${pageErrors.join(" | ")}`);
+                if (consoleErrors.length) throw new Error(`${engineName}/${testCase.name}: console error: ${consoleErrors.join(" | ")}`);
+                console.log(`${engineName}/${testCase.name}: OK — ${text.trim()}`);
+                await context.close();
+              }
+            } finally {
+              await browser.close();
+            }
+          }
+
+          (async () => {
+            await runEngine("Chromium", chromium);
+            await runEngine("WebKit", webkit);
+            console.log("Cross-browser fetch-error gate: Chromium + WebKit volledig groen.");
+          })().catch(error => {
+            console.error(error && error.stack || error);
+            process.exit(1);
+          });
+          NODE
+          NODE_PATH="$PWD/node_modules" node /tmp/fetch-error-cross-browser.js
