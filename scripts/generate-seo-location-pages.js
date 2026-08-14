@@ -19,6 +19,25 @@ function escHtml(v){return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").
 function escXml(v){return escHtml(v).replace(/'/g,"&apos;");}
 function tel(tekst,zoek){return String(tekst).split(zoek).length-1;}
 
+/* Uitsluitend voor statische navigatie tussen de bestaande plaatsroutes.
+   Dit raakt geen weerdata of providerlogica: de reeds vastgelegde stadskernen
+   bepalen alleen welke vier andere routes voor een bezoeker het meest nabij zijn. */
+function afstandKm(a,b){
+  const rad=v=>Number(v)*Math.PI/180;
+  const dLat=rad(b.lat-a.lat),dLon=rad(b.lon-a.lon),latA=rad(a.lat),latB=rad(b.lat);
+  const h=Math.sin(dLat/2)**2+Math.cos(latA)*Math.cos(latB)*Math.sin(dLon/2)**2;
+  return 2*6371*Math.asin(Math.min(1,Math.sqrt(h)));
+}
+function gerelateerdePlaatsen(loc,aantal=4){
+  const limiet=Math.max(0,Math.min(4,Number.isFinite(Number(aantal))?Math.floor(Number(aantal)):4));
+  return LOCATIES
+    .filter(andere=>andere.slug!==loc.slug)
+    .map(andere=>({loc:andere,afstand:afstandKm(loc,andere)}))
+    .sort((a,b)=>a.afstand-b.afstand||a.loc.slug.localeCompare(b.loc.slug))
+    .slice(0,limiet)
+    .map(item=>item.loc);
+}
+
 function navHtml(){
   const links=POPULAIR.map(loc=>`<a href="/weer/${loc.slug}/">${escHtml(loc.naam)}</a>`).join("\n      ");
   return `${MARKER_NAV}\n<nav class="seo-plaatsnav" aria-label="Weer per plaats">\n  <div class="seo-plaatsnav-inner">\n    <div>\n      <div class="seo-plaatsnav-kop">Weer per plaats</div>\n      <p>Bekijk direct het actuele weer en de verwachting voor veelgekozen plaatsen.</p>\n    </div>\n    <div class="seo-plaatsnav-links">\n      ${links}\n      <a class="seo-plaatsnav-alles" href="/weer/">Alle plaatsen</a>\n    </div>\n  </div>\n</nav>`;
@@ -28,7 +47,7 @@ function voegPlaatsNavigatieToe(html){
   let bron=String(html||"");
   if(bron.includes(MARKER_NAV))return bron;
   if(tel(bron,"</head>")!==1||tel(bron,"</body>")!==1)throw new Error("Plaatsnavigatie verwacht exact één head- en body-einde.");
-  const css=`<style id="weather-now-seo-place-styles">\n/* ===== INDEXEERBARE PLAATSNAVIGATIE ===== */\n.seo-plaatsnav,.seo-route-context{max-width:min(1180px,100%);margin:18px auto 0;color:var(--ink-70)}\n.seo-plaatsnav{border-top:1px solid var(--rule);padding-top:18px}\n.seo-plaatsnav-inner{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(0,2.2fr);gap:24px;align-items:start}\n.seo-plaatsnav-kop,.seo-route-context h2{font-family:var(--serif);font-size:18px;font-weight:400;color:var(--ink);margin:0}\n.seo-plaatsnav p,.seo-route-context p{font-size:13px;line-height:1.55;margin:4px 0 0;max-width:58ch}\n.seo-plaatsnav-links{display:flex;flex-wrap:wrap;gap:8px 14px}\n.seo-plaatsnav a{font-size:13px;color:var(--ink-70);text-decoration:none;border-bottom:1px solid transparent}\n.seo-plaatsnav a:hover,.seo-plaatsnav a:focus-visible{color:var(--ink);border-bottom-color:var(--ink)}\n.seo-plaatsnav-alles{font-weight:500}\n.seo-route-context{padding:18px 0 0;border-top:1px solid var(--rule)}\n.seo-route-context a{color:inherit}\n@media(max-width:700px){.seo-plaatsnav-inner{grid-template-columns:1fr;gap:12px}.seo-plaatsnav-links{gap:8px 12px}}\n/* ===== EINDE INDEXEERBARE PLAATSNAVIGATIE ===== */\n</style>`;
+  const css=`<style id="weather-now-seo-place-styles">\n/* ===== INDEXEERBARE PLAATSNAVIGATIE ===== */\n.seo-plaatsnav,.seo-route-context,.seo-breadcrumb{max-width:min(1180px,100%);margin:18px auto 0;color:var(--ink-70)}\n.seo-plaatsnav{border-top:1px solid var(--rule);padding-top:18px}\n.seo-plaatsnav-inner{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(0,2.2fr);gap:24px;align-items:start}\n.seo-plaatsnav-kop,.seo-route-context h2{font-family:var(--serif);font-size:18px;font-weight:400;color:var(--ink);margin:0}\n.seo-plaatsnav p,.seo-route-context p{font-size:13px;line-height:1.55;margin:4px 0 0;max-width:58ch}\n.seo-plaatsnav-links,.seo-route-nearby-links{display:flex;flex-wrap:wrap;gap:8px 14px}\n.seo-plaatsnav a,.seo-route-nearby a,.seo-breadcrumb a{color:var(--ink-70);text-decoration:none;border-bottom:1px solid transparent}\n.seo-plaatsnav a,.seo-route-nearby a{font-size:13px}\n.seo-plaatsnav a:hover,.seo-plaatsnav a:focus-visible,.seo-route-nearby a:hover,.seo-route-nearby a:focus-visible,.seo-breadcrumb a:hover,.seo-breadcrumb a:focus-visible{color:var(--ink);border-bottom-color:var(--ink)}\n.seo-plaatsnav-alles{font-weight:500}\n.seo-breadcrumb{display:flex;flex-wrap:wrap;align-items:center;gap:5px 8px;font-size:12px;line-height:1.45;margin-top:0}\n.seo-breadcrumb [aria-current="page"]{color:var(--ink)}\n.seo-breadcrumb-sep{color:var(--ink-40)}\n.seo-route-context{padding:18px 0 0;border-top:1px solid var(--rule)}\n.seo-route-context h2{margin-top:10px}\n.seo-route-nearby{margin-top:14px}\n.seo-route-nearby-kop{font-size:12px;font-weight:500;color:var(--ink);margin-bottom:7px}\n@media(max-width:700px){.seo-plaatsnav-inner{grid-template-columns:1fr;gap:12px}.seo-plaatsnav-links,.seo-route-nearby-links{gap:8px 12px}}\n/* ===== EINDE INDEXEERBARE PLAATSNAVIGATIE ===== */\n</style>`;
   bron=bron.replace("</head>",css+"\n</head>");
   return bron.replace("</body>",navHtml()+"\n</body>");
 }
@@ -52,7 +71,12 @@ function vervangMeta(html,loc){
   if(ld.length!==1)throw new Error(`${loc.slug}: verwacht exact één JSON-LD-blok.`);
   const structured=[
     {"@context":"https://schema.org","@type":"WebSite",name:SEO.siteName,url:SEO.canonical},
-    {"@context":"https://schema.org","@type":"WebPage",name:titel,url:canonical,isPartOf:{"@type":"WebSite",name:SEO.siteName,url:SEO.canonical},about:{"@type":"Place",name:loc.naam,address:{"@type":"PostalAddress",addressRegion:loc.provincie,addressCountry:"NL"}}}
+    {"@context":"https://schema.org","@type":"WebPage",name:titel,url:canonical,isPartOf:{"@type":"WebSite",name:SEO.siteName,url:SEO.canonical},about:{"@type":"Place",name:loc.naam,address:{"@type":"PostalAddress",addressRegion:loc.provincie,addressCountry:"NL"}}},
+    {"@context":"https://schema.org","@type":"BreadcrumbList",itemListElement:[
+      {"@type":"ListItem",position:1,name:SEO.siteName,item:SEO.canonical},
+      {"@type":"ListItem",position:2,name:"Weer per plaats",item:`${BASIS_URL}/weer/`},
+      {"@type":"ListItem",position:3,name:loc.naam,item:canonical}
+    ]}
   ];
   bron=bron.replace(ld[0][0],`<script type="application/ld+json">${JSON.stringify(structured)}</script>`);
   return bron;
@@ -97,7 +121,10 @@ function voegRouteToe(html,loc){
 }
 
 function voegRouteContextToe(html,loc){
-  const blok=`<section class="seo-route-context" aria-labelledby="seo-route-title">\n  <h2 id="seo-route-title">Weer in ${escHtml(loc.naam)}</h2>\n  <p>Bekijk het actuele weer in ${escHtml(loc.naam)}, ${escHtml(loc.provincie)}, met neerslag voor de komende uren en de 7-daagse verwachting. Alle tijden volgen de lokale tijd van de gekozen plaats.</p>\n</section>`;
+  const gerelateerd=gerelateerdePlaatsen(loc);
+  const links=gerelateerd.map(andere=>`<a href="/weer/${andere.slug}/">${escHtml(andere.naam)}</a>`).join("\n      ");
+  const breadcrumb=`<nav class="seo-breadcrumb" aria-label="Broodkruimelnavigatie">\n    <a href="/">${escHtml(SEO.siteName)}</a>\n    <span class="seo-breadcrumb-sep" aria-hidden="true">›</span>\n    <a href="/weer/">Weer per plaats</a>\n    <span class="seo-breadcrumb-sep" aria-hidden="true">›</span>\n    <span aria-current="page">${escHtml(loc.naam)}</span>\n  </nav>`;
+  const blok=`<section class="seo-route-context" aria-labelledby="seo-route-title">\n  ${breadcrumb}\n  <h2 id="seo-route-title">Weer in ${escHtml(loc.naam)}</h2>\n  <p>Bekijk het actuele weer in ${escHtml(loc.naam)}, ${escHtml(loc.provincie)}, met neerslag voor de komende uren en de 7-daagse verwachting. Alle tijden volgen de lokale tijd van de gekozen plaats.</p>\n  <div class="seo-route-nearby" aria-label="Plaatsen in de buurt">\n    <div class="seo-route-nearby-kop">Plaatsen in de buurt</div>\n    <div class="seo-route-nearby-links">\n      ${links}\n    </div>\n  </div>\n</section>`;
   if(tel(html,"</body>")!==1)throw new Error(`${loc.slug}: body-einde ontbreekt of is dubbel.`);
   return html.replace(navHtml(),blok+"\n"+navHtml());
 }
@@ -146,8 +173,8 @@ function main(){
   }
   fs.writeFileSync(path.join(OUT,"sitemap.xml"),maakSitemap(),"utf8");
   const versie=vernieuwServiceworkerCache(OUT,"seo-location-pages");
-  console.log(`SEO-plaatsarchitectuur gegenereerd: ${LOCATIES.length} plaatsroutes + /weer/ + crawlbare rootlinks; cache ${versie}.`);
+  console.log(`SEO-plaatsarchitectuur gegenereerd: ${LOCATIES.length} plaatsroutes + /weer/ + crawlbare rootlinks, breadcrumbs en nabijgelegen plaatsen; cache ${versie}.`);
 }
 
 if(require.main===module)main();
-module.exports={MARKER_NAV,MARKER_ROUTE,voegPlaatsNavigatieToe,voegRouteUrlBeleidToe,voegRouteTitelBeleidToe,maakPlaatsPagina,maakPlaatsIndex,maakSitemap};
+module.exports={MARKER_NAV,MARKER_ROUTE,afstandKm,gerelateerdePlaatsen,voegPlaatsNavigatieToe,voegRouteUrlBeleidToe,voegRouteTitelBeleidToe,maakPlaatsPagina,maakPlaatsIndex,maakSitemap};
