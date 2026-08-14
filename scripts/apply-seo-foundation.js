@@ -1,0 +1,58 @@
+"use strict";
+
+const fs=require("fs");
+const path=require("path");
+const SEO=require("./seo-foundation.config.js");
+const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
+
+const OUT=path.join(__dirname,"..","public");
+const DOEL=path.join(OUT,"index.html");
+const MARKER="<!-- WEATHER NOW SEO FOUNDATION -->";
+
+function attr(v){return String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function pasSeoFoundationToe(html){
+  let bron=String(html||"");
+  if(bron.includes(MARKER))return bron;
+
+  const titles=[...bron.matchAll(/<title>[^<]*<\/title>/g)];
+  if(titles.length!==1)throw new Error("SEO verwacht exact één title-element; gevonden: "+titles.length);
+  const descriptions=[...bron.matchAll(/<meta name="description" content="[^"]*">/g)];
+  if(descriptions.length!==1)throw new Error("SEO verwacht exact één meta-description; gevonden: "+descriptions.length);
+
+  bron=bron.replace(titles[0][0],`<title>${SEO.title}</title>`);
+  const nieuweDescription=`<meta name="description" content="${attr(SEO.description)}">`;
+  bron=bron.replace(descriptions[0][0],nieuweDescription);
+
+  const websiteJson=JSON.stringify({
+    "@context":"https://schema.org",
+    "@type":"WebSite",
+    name:SEO.siteName,
+    url:SEO.canonical
+  });
+  const blok=[
+    MARKER,
+    `<link rel="canonical" href="${attr(SEO.canonical)}">`,
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="${attr(SEO.siteName)}">`,
+    `<meta property="og:title" content="${attr(SEO.title)}">`,
+    `<meta property="og:description" content="${attr(SEO.description)}">`,
+    `<meta property="og:url" content="${attr(SEO.canonical)}">`,
+    `<meta name="twitter:card" content="summary">`,
+    `<script type="application/ld+json">${websiteJson}</script>`
+  ].join("\n");
+
+  return bron.replace(nieuweDescription,nieuweDescription+"\n"+blok);
+}
+
+function main(){
+  if(!fs.existsSync(DOEL))throw new Error("public/index.html ontbreekt; voer eerst de basisbuild uit.");
+  const voor=fs.readFileSync(DOEL,"utf8");
+  const na=pasSeoFoundationToe(voor);
+  fs.writeFileSync(DOEL,na,"utf8");
+  const versie=vernieuwServiceworkerCache(OUT,"seo-foundation");
+  console.log("SEO-fundering toegepast: canonical, zoekmetadata en WebSite-structured data; cache "+versie+".");
+}
+
+if(require.main===module)main();
+module.exports={MARKER,pasSeoFoundationToe};
