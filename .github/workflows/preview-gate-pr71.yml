@@ -21,9 +21,9 @@ jobs:
         env:
           PREVIEW_URL: "https://weathernow-11rtxc419-tommjoness-projects.vercel.app/?_vercel_share=B650gXw423GXEfKuRwVJVhcNwFR8gIEZ&lat=52.3500&lon=5.2600&plaats=Almere&land=NL"
         run: |
-          cat > /tmp/preview-gate.js <<'NODE'
+          cat > .preview-gate.js <<'NODE'
           "use strict";
-          const fs=require("fs"),assert=require("assert");
+          const assert=require("assert");
           const {chromium}=require("playwright");
           const url=process.env.PREVIEW_URL;
           if(!url)throw new Error("PREVIEW_URL ontbreekt");
@@ -47,17 +47,14 @@ jobs:
               const r=await page.evaluate(()=>{
                 const txt=s=>document.querySelector(s)?.textContent?.trim()||"";
                 const app=document.querySelector("#app"),state=document.querySelector("#state");
-                const chart=document.querySelector("#chart svg");
                 return {
-                  href:location.href,
-                  title:document.title,
+                  href:location.href,title:document.title,
                   appVisible:!!app&&getComputedStyle(app).display!=="none",
-                  stateClass:state?.className||"",
-                  stateText:state?.textContent?.trim()||"",
-                  temp:txt("#t"),condition:txt("#cond"),briefing:txt("#brief"),place:txt("#place"),
-                  coords:txt("#coords"),days:document.querySelectorAll("#days .row.day:not(.kop)").length,
+                  stateClass:state?.className||"",stateText:state?.textContent?.trim()||"",
+                  temp:txt("#t"),condition:txt("#cond"),briefing:txt("#brief"),place:txt("#place"),coords:txt("#coords"),
+                  days:document.querySelectorAll("#days .row.day:not(.kop)").length,
                   nights:document.querySelectorAll("#nights .row.night:not(.kop)").length,
-                  chart:!!chart,footerLinks:document.querySelectorAll("footer a").length,
+                  chart:!!document.querySelector("#chart svg"),footerLinks:document.querySelectorAll("footer a").length,
                   loadingBusy:app?.getAttribute("aria-busy")||null
                 };
               });
@@ -88,7 +85,7 @@ jobs:
             }finally{await browser.close();}
           })().catch(e=>{console.error(e.stack||e);process.exit(1);});
           NODE
-          node /tmp/preview-gate.js
+          node .preview-gate.js
       - name: Bewaar previewscreenshots
         if: always()
         uses: actions/upload-artifact@v4
