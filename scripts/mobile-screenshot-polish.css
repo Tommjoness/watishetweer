@@ -89,6 +89,15 @@ footer .bron-bronnen .bronitem{
     vertical-align:-2px;
   }
 
+  /* De zevendaagse tabel was op echte 390px-productie merkbaar fijner gezet
+     dan de omliggende modules. Min/max staan al op 14 px; dag, wind en
+     neerslag krijgen daarom alleen een kleine leesbaarheidsverhoging zonder
+     kolombreedtes, inhoud of forecastsemantiek te wijzigen. Onder 370 px valt
+     de windkolom via de bestaande layoutregel al weg. */
+  #days .row.day:not(.kop) .dname{font-size:13.5px}
+  #days .row.day:not(.kop) .dwind,
+  #days .row.day:not(.kop) .drain{font-size:13px}
+
   footer .bron-bronnen{
     row-gap:4px;
     column-gap:10px;

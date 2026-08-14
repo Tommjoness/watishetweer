@@ -16,6 +16,12 @@ assert(/#nights \.row\.night \.nachtadvies\{[\s\S]*?font-size:13px;[\s\S]*?line-
 assert(/#nights \.row\.night \.nachtmaan\{[\s\S]*?font-size:12px;[\s\S]*?line-height:1\.4;[\s\S]*?\}/.test(mobileCss),"Mobiele maantoelichting zakt niet onder 12 px");
 assert(/@media\(max-width:360px\)[\s\S]*?#nights \.row\.night\.kop > \.nmeta:not\(\.wide\)\{font-size:9\.5px!important;/.test(mobileCss),"Ook op 320–360 px blijft de Nachtzicht-kop leesbaar zonder kolomoverflow");
 
+/* De zevendaagse tabel moet op mobiel visueel in dezelfde orde van grootte
+   blijven als de overige secundaire weerinformatie. Alleen de leesbaarheid
+   verandert; kolommen, waarden en forecastlogica blijven ongemoeid. */
+assert(/#days \.row\.day:not\(\.kop\) \.dname\{font-size:13\.5px\}/.test(mobileCss),"Mobiele dagnaam blijft minimaal 13,5 px");
+assert(/#days \.row\.day:not\(\.kop\) \.dwind,[\s\S]*?#days \.row\.day:not\(\.kop\) \.drain\{font-size:13px\}/.test(mobileCss),"Mobiele wind- en neerslagtekst blijven minimaal 13 px");
+
 const afnemend=p.maanFaseUitBeschrijving("afnemende sikkel, 7 procent verlicht");
 const wassend=p.maanFaseUitBeschrijving("wassende sikkel, 7 procent verlicht");
 assert(afnemend>0.75&&afnemend<1,"afnemende sikkel ligt aan het einde van de cyclus");
@@ -70,4 +76,4 @@ assert.equal(p.pollenEenheid(1.5),"korrels/m³","een naar 2 afgeronde waarde geb
 assert.equal(p.pollenEenheid(0),"korrels/m³","nul gebruikt meervoud");
 assert.equal(p.pollenEenheid(4),"korrels/m³","meerdere korrels gebruiken meervoud");
 
-console.log("Mobiele screenshot-polish: checkpoint-50 Nachtzicht-, leesbaarheids-, maanfase- en pollenregressies geslaagd.");
+console.log("Mobiele screenshot-polish: Nachtzicht-, weekleesbaarheids-, maanfase- en pollenregressies geslaagd.");
