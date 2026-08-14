@@ -22,7 +22,17 @@ jobs:
       - name: Bouw definitieve artifact
         run: npm run build
       - name: SEO-plaatsroutes in Chromium en WebKit
-        run: node seo-location-pages-browser.test.js
+        shell: bash
+        run: |
+          set +e
+          node seo-location-pages-browser.test.js > /tmp/seo-routes-e2e.log 2>&1
+          code=$?
+          cat /tmp/seo-routes-e2e.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 40 /tmp/seo-routes-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=seo-location-pages-browser.test.js,line=1::$msg"
+            exit "$code"
+          fi
       - name: Accessibility-landmark en mobiele footerdoelen in Chromium en WebKit
         shell: bash
         run: |
