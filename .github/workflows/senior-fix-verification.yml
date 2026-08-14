@@ -28,3 +28,5 @@ jobs:
         run: node browser-playwright.test.js
       - name: Consumentenpolish — iPhone-randgeval in Chromium en WebKit
         run: node browser-consumer-polish.test.js
+      - name: SEO-plaatsroutes — Chromium en WebKit
+        run: node seo-location-pages-browser.test.js
