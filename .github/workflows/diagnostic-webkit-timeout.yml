@@ -73,8 +73,11 @@ jobs:
                         const app=document.getElementById("app");
                         const days=document.querySelectorAll("#days .row.day:not(.kop)").length;
                         const state=document.getElementById("state");
-                        if(app&&getComputedStyle(app).display!=="none"&&days>=7) return "loaded";
-                        if(state&&getComputedStyle(state).display!=="none"&&state.textContent.trim()) return "state:"+state.textContent.trim();
+                        const appVisible=!!(app&&getComputedStyle(app).display!=="none");
+                        const stateVisible=!!(state&&getComputedStyle(state).display!=="none");
+                        const stateText=stateVisible?state.textContent.trim():"";
+                        if(appVisible&&days>=7) return "loaded";
+                        if(stateText&&/mislukt|duurt te lang|probeer het opnieuw|geen verbinding|fout/i.test(stateText)) return "state:"+stateText;
                         return false;
                       },{timeout:26000}).then(h=>h.jsonValue()),
                       new Promise(resolve=>setTimeout(()=>resolve("timeout"),27000))
