@@ -1,0 +1,119 @@
+name: WeatherNow production gate PR73
+
+on:
+  push:
+    branches: [agent/mobile-nachtzicht-preview-20260814]
+
+jobs:
+  production-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Toon Chrome-versie
+        run: google-chrome --version
+      - name: Installeer alleen Playwright-package
+        run: npm install --no-save --package-lock=false playwright
+      - name: Controleer beide productiedomeinen op desktop, 390 en 320 px
+        run: |
+          cat > .production-gate-pr73.js <<'NODE'
+          "use strict";
+          const assert=require("assert");
+          const {chromium}=require("playwright");
+          const qs="?lat=52.3500&lon=5.2600&plaats=Almere&land=NL";
+          const origins=["https://watishetweer.nl/","https://www.watishetweer.nl/"];
+          const doelen=[
+            ["desktop",{width:1440,height:900}],
+            ["mobile-390",{width:390,height:844}],
+            ["mobile-320",{width:320,height:700}]
+          ];
+
+          async function controle(browser,origin,naam,viewport){
+            const context=await browser.newContext({viewport,serviceWorkers:"block"});
+            const page=await context.newPage();
+            const fouten=[];
+            page.on("pageerror",e=>fouten.push("pageerror: "+String(e)));
+            page.on("console",m=>{if(m.type()==="error")fouten.push("console: "+m.text());});
+            try{
+              const response=await page.goto(origin+qs,{waitUntil:"domcontentloaded",timeout:45000});
+              assert(response,origin+" "+naam+": geen navigatieresponse");
+              assert(response.status()<400,origin+" "+naam+": HTTP "+response.status());
+              await page.waitForSelector("#app",{state:"visible",timeout:30000});
+              await page.waitForSelector("#nights .row.night:not(.kop)",{state:"visible",timeout:30000});
+              await page.waitForFunction(()=>{
+                const t=document.querySelector("#t"),c=document.querySelector("#cond");
+                return t&&c&&t.textContent.trim()&&!/[–—]/.test(t.textContent)&&c.textContent.trim();
+              },null,{timeout:30000});
+              await page.waitForTimeout(1200);
+
+              const r=await page.evaluate(()=>{
+                const css=s=>{const el=document.querySelector(s);return el?getComputedStyle(el):null;};
+                const advies=css("#nights .row.night:not(.kop) .nachtadvies");
+                const maan=css("#nights .row.night:not(.kop) .nachtmaan");
+                const kop=css("#nights .row.night.kop > .nmeta:not(.wide)");
+                const rows=[...document.querySelectorAll("#nights .row.night")];
+                const wides=[...document.querySelectorAll("#nights .row.night:not(.kop) .nmeta.wide")];
+                const dayRows=document.querySelectorAll("#days .row.day").length;
+                return {
+                  href:location.href,
+                  host:location.hostname,
+                  width:innerWidth,
+                  documentWidth:document.documentElement.scrollWidth,
+                  nights:document.querySelectorAll("#nights .row.night:not(.kop)").length,
+                  days:dayRows,
+                  adviceFont:advies?.fontSize||null,
+                  moonFont:maan?.fontSize||null,
+                  headerFont:kop?.fontSize||null,
+                  rowOverflow:rows.some(el=>el.scrollWidth>el.clientWidth+1),
+                  wideOverflow:wides.some(el=>el.scrollWidth>el.clientWidth+1),
+                  rowOutside:rows.some(el=>{const b=el.getBoundingClientRect();return b.left<-1||b.right>innerWidth+1;}),
+                  stateVisible:document.querySelector("#state")?getComputedStyle(document.querySelector("#state")).display!=="none":false,
+                  temp:document.querySelector("#t")?.textContent?.trim()||"",
+                  condition:document.querySelector("#cond")?.textContent?.trim()||""
+                };
+              });
+
+              assert(["watishetweer.nl","www.watishetweer.nl"].includes(r.host),origin+" "+naam+": onverwachte eindhost "+r.host);
+              assert(r.nights>=5,origin+" "+naam+": Nachtzicht onvolledig: "+r.nights);
+              assert(r.days>=5,origin+" "+naam+": weekweergave onvolledig: "+r.days);
+              assert(r.documentWidth<=r.width+2,origin+" "+naam+`: horizontale pagina-overflow ${r.documentWidth} > ${r.width}`);
+              assert.equal(r.rowOverflow,false,origin+" "+naam+": Nachtzicht-rij heeft interne overflow");
+              assert.equal(r.wideOverflow,false,origin+" "+naam+": toelichting wordt horizontaal afgeknipt");
+              assert.equal(r.rowOutside,false,origin+" "+naam+": Nachtzicht-rij valt buiten viewport");
+              assert.equal(r.stateVisible,false,origin+" "+naam+": loading/foutstate bleef zichtbaar");
+              assert(r.temp && !/[–—]/.test(r.temp),origin+" "+naam+": temperatuur niet geladen");
+              assert(r.condition,origin+" "+naam+": conditie niet geladen");
+              if(viewport.width<=900){
+                assert.equal(r.adviceFont,"13px",origin+" "+naam+": adviesfont "+r.adviceFont);
+                assert.equal(r.moonFont,"12px",origin+" "+naam+": maanfont "+r.moonFont);
+                assert.equal(r.headerFont,viewport.width<=360?"9.5px":"10px",origin+" "+naam+": kopfont "+r.headerFont);
+              }
+              assert.deepEqual(fouten,[],origin+" "+naam+": browserfouten: "+fouten.join(" | "));
+
+              const slug=origin.includes("www.")?"www":"root";
+              await page.locator("#nights").screenshot({path:`production-${slug}-${naam}-nachtzicht.png`});
+              if(naam==="mobile-390")await page.screenshot({path:`production-${slug}-mobile-390-full.png`,fullPage:true});
+              console.log(origin+" "+naam+" groen: "+JSON.stringify(r));
+            }finally{await context.close();}
+          }
+
+          (async()=>{
+            const browser=await chromium.launch({headless:true,channel:"chrome"});
+            try{
+              for(const origin of origins)for(const [naam,viewport] of doelen)await controle(browser,origin,naam,viewport);
+              console.log("Beide WeatherNow-productiedomeinen volledig groen op desktop, 390 en 320 px.");
+            }finally{await browser.close();}
+          })().catch(e=>{console.error(e.stack||e);process.exit(1);});
+          NODE
+          node .production-gate-pr73.js
+      - name: Bewaar productiescreenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr73-production-browser-screenshots
+          path: production-*.png
+          if-no-files-found: warn
+          retention-days: 1
