@@ -1,11 +1,11 @@
-name: WeatherNow interactive preview gate PR71
+name: WeatherNow production browser gate PR71
 
 on:
   pull_request:
     branches: [agent/performance-zone-cache-20260814]
 
 jobs:
-  preview-gate:
+  production-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -17,27 +17,26 @@ jobs:
         run: google-chrome --version
       - name: Installeer alleen Playwright-package
         run: npm install --no-save --package-lock=false playwright
-      - name: Interactieve desktop- en mobiele previewcontrole
-        env:
-          PREVIEW_URL: "https://weathernow-11rtxc419-tommjoness-projects.vercel.app/?_vercel_share=B650gXw423GXEfKuRwVJVhcNwFR8gIEZ&lat=52.3500&lon=5.2600&plaats=Almere&land=NL"
+      - name: Interactieve productiecontrole op beide domeinen
         run: |
-          cat > .preview-gate.js <<'NODE'
+          cat > .production-gate.js <<'NODE'
           "use strict";
           const assert=require("assert");
           const {chromium}=require("playwright");
-          const url=process.env.PREVIEW_URL;
-          if(!url)throw new Error("PREVIEW_URL ontbreekt");
+          const doelen=[
+            ["root","https://watishetweer.nl/?lat=52.3500&lon=5.2600&plaats=Almere&land=NL"],
+            ["www","https://www.watishetweer.nl/?lat=52.3500&lon=5.2600&plaats=Almere&land=NL"]
+          ];
 
-          async function controle(browser,naam,viewport){
-            const context=await browser.newContext({viewport,serviceWorkers:"block"});
-            const page=await context.newPage();
-            const fouten=[];
+          async function controle(browser,domein,url,modus,viewport){
+            const context=await browser.newContext({viewport});
+            const page=await context.newPage(),fouten=[];
             page.on("pageerror",e=>fouten.push("pageerror: "+String(e)));
             page.on("console",m=>{if(m.type()==="error")fouten.push("console: "+m.text());});
             try{
               const response=await page.goto(url,{waitUntil:"domcontentloaded",timeout:45000});
-              assert(response,naam+": geen navigatieresponse");
-              assert(response.status()<400,naam+": HTTP "+response.status());
+              assert(response,`${domein} ${modus}: geen navigatieresponse`);
+              assert(response.status()<400,`${domein} ${modus}: HTTP ${response.status()}`);
               await page.waitForSelector("#app",{state:"visible",timeout:30000});
               await page.waitForFunction(()=>{
                 const t=document.querySelector("#t"),c=document.querySelector("#cond");
@@ -50,6 +49,7 @@ jobs:
                 return {
                   href:location.href,title:document.title,
                   appVisible:!!app&&getComputedStyle(app).display!=="none",
+                  stateVisible:!!state&&getComputedStyle(state).display!=="none",
                   stateClass:state?.className||"",stateText:state?.textContent?.trim()||"",
                   temp:txt("#t"),condition:txt("#cond"),briefing:txt("#brief"),place:txt("#place"),coords:txt("#coords"),
                   days:document.querySelectorAll("#days .row.day:not(.kop)").length,
@@ -59,40 +59,43 @@ jobs:
                   loadingBusy:app?.getAttribute("aria-busy")||null
                 };
               });
-              await page.screenshot({path:`preview-${naam}.png`,fullPage:true});
-              assert(r.href.includes("weathernow-11rtxc419-tommjoness-projects.vercel.app"),naam+": onverwachte eind-URL "+r.href);
-              assert(r.appVisible,naam+": app niet zichtbaar");
-              assert(!/err/.test(r.stateClass),naam+": foutstate: "+r.stateText);
-              assert(r.temp&&r.condition,naam+": actuele weerdata ontbreekt");
-              assert(r.briefing.length>=20,naam+": briefing ontbreekt/te kort");
-              assert(r.chart,naam+": grafiekcontainer ontbreekt");
-              assert(r.chartLabels>=5,naam+": te weinig temperatuurpunten in grafiek: "+r.chartLabels);
-              assert.equal(r.days,7,naam+": verwacht 7 dagkaarten, kreeg "+r.days);
-              assert(r.nights>=1,naam+": Nachtzicht ontbreekt");
-              assert(r.footerLinks>=1,naam+": footerlinks ontbreken");
-              assert(/Almere/i.test(r.place),naam+": locatie is niet Almere: "+r.place);
-              assert(/Europe\/Amsterdam/i.test(r.coords),naam+": verwachte tijdzone niet zichtbaar: "+r.coords);
-              assert.equal(r.loadingBusy,null,naam+": loading state bleef aria-busy");
-              assert.deepEqual(fouten,[],naam+": browserfouten: "+fouten.join(" | "));
-              console.log(naam+" groen: "+JSON.stringify(r));
+              await page.screenshot({path:`production-${domein}-${modus}.png`,fullPage:true});
+              const host=new URL(r.href).hostname;
+              assert(["watishetweer.nl","www.watishetweer.nl"].includes(host),`${domein} ${modus}: onverwachte eindhost ${host}`);
+              assert(r.appVisible,`${domein} ${modus}: app niet zichtbaar`);
+              assert.equal(r.stateVisible,false,`${domein} ${modus}: loading/foutstate bleef zichtbaar: ${r.stateText}`);
+              assert(!/err/.test(r.stateClass),`${domein} ${modus}: foutstate: ${r.stateText}`);
+              assert(r.temp&&r.condition,`${domein} ${modus}: actuele weerdata ontbreekt`);
+              assert(r.briefing.length>=20,`${domein} ${modus}: briefing ontbreekt/te kort`);
+              assert(r.chart&&r.chartLabels>=5,`${domein} ${modus}: grafiek ontbreekt/onvolledig (${r.chartLabels})`);
+              assert.equal(r.days,7,`${domein} ${modus}: verwacht 7 dagkaarten, kreeg ${r.days}`);
+              assert(r.nights>=1,`${domein} ${modus}: Nachtzicht ontbreekt`);
+              assert(r.footerLinks>=1,`${domein} ${modus}: footerlinks ontbreken`);
+              assert(/Almere/i.test(r.place),`${domein} ${modus}: locatie is niet Almere: ${r.place}`);
+              assert(/Europe\/Amsterdam/i.test(r.coords),`${domein} ${modus}: tijdzone niet zichtbaar: ${r.coords}`);
+              assert.equal(r.loadingBusy,null,`${domein} ${modus}: aria-busy bleef staan`);
+              assert.deepEqual(fouten,[],`${domein} ${modus}: browserfouten: ${fouten.join(" | ")}`);
+              console.log(`${domein} ${modus} groen: ${JSON.stringify(r)}`);
             }finally{await context.close();}
           }
 
           (async()=>{
             const browser=await chromium.launch({headless:true,channel:"chrome"});
             try{
-              await controle(browser,"desktop",{width:1440,height:900});
-              await controle(browser,"mobile-390",{width:390,height:844});
-              console.log("Interactieve PR71-previewgate volledig groen.");
+              for(const [domein,url] of doelen){
+                await controle(browser,domein,url,"desktop",{width:1440,height:900});
+                await controle(browser,domein,url,"mobile-390",{width:390,height:844});
+              }
+              console.log("Productie-browsergate volledig groen voor beide domeinen.");
             }finally{await browser.close();}
           })().catch(e=>{console.error(e.stack||e);process.exit(1);});
           NODE
-          node .preview-gate.js
-      - name: Bewaar previewscreenshots
+          node .production-gate.js
+      - name: Bewaar productiescreenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pr71-interactive-preview-screenshots
-          path: preview-*.png
+          name: pr71-production-browser-screenshots
+          path: production-*.png
           if-no-files-found: warn
           retention-days: 1
