@@ -1,0 +1,39 @@
+"use strict";
+
+const fs=require("fs");
+const path=require("path");
+const SEO=require("./seo-foundation.config.js");
+
+const ROOT=path.join(__dirname,"..");
+const OUT=path.join(ROOT,"public");
+const htmlPath=path.join(OUT,"index.html");
+const robotsPath=path.join(OUT,"robots.txt");
+const sitemapPath=path.join(OUT,"sitemap.xml");
+for(const p of [htmlPath,robotsPath,sitemapPath])if(!fs.existsSync(p))throw new Error("SEO-artifact ontbreekt: "+path.basename(p));
+
+const html=fs.readFileSync(htmlPath,"utf8");
+const robots=fs.readFileSync(robotsPath,"utf8");
+const sitemap=fs.readFileSync(sitemapPath,"utf8");
+const tel=(tekst,zoek)=>tekst.split(zoek).length-1;
+
+if(tel(html,"<!-- WEATHER NOW SEO FOUNDATION -->")!==1)throw new Error("SEO-marker moet exact één keer aanwezig zijn.");
+if(tel(html,`<link rel="canonical" href="${SEO.canonical}">`)!==1)throw new Error("Canonical ontbreekt of is dubbel.");
+if(!html.includes(`<title>${SEO.title}</title>`))throw new Error("SEO-title ontbreekt in definitief artifact.");
+if(!html.includes(`name="description" content="${SEO.description.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}"`))throw new Error("SEO-description ontbreekt in definitief artifact.");
+if(tel(html,`property="og:url" content="${SEO.canonical}"`)!==1)throw new Error("og:url ontbreekt of is dubbel.");
+if(!html.includes(`property="og:site_name" content="${SEO.siteName}"`))throw new Error("og:site_name ontbreekt.");
+if(!html.includes('name="twitter:card" content="summary"'))throw new Error("Twitter/X card metadata ontbreekt.");
+
+const ld=[...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+if(ld.length!==1)throw new Error("Definitief artifact moet exact één JSON-LD-blok bevatten; gevonden: "+ld.length);
+let data;
+try{data=JSON.parse(ld[0][1]);}catch(e){throw new Error("JSON-LD is ongeldig JSON: "+e.message);}
+if(data["@context"]!=="https://schema.org"||data["@type"]!=="WebSite"||data.name!==SEO.siteName||data.url!==SEO.canonical)throw new Error("WebSite structured data wijkt af van de SEO-configuratie.");
+
+if(!/^User-agent: \*$/m.test(robots)||!/^Allow: \/$/m.test(robots))throw new Error("robots.txt staat algemene crawling niet expliciet toe.");
+if(!robots.includes(`Sitemap: ${SEO.canonical}sitemap.xml`))throw new Error("robots.txt verwijst niet naar de canonieke sitemap.");
+if(!sitemap.includes(`<loc>${SEO.canonical}</loc>`))throw new Error("Sitemap bevat de canonieke homepage niet.");
+if((sitemap.match(/<loc>/g)||[]).length!==1)throw new Error("SEO-fundering publiceert voorlopig alleen de bewezen canonieke homepage in de sitemap.");
+if(/\?lat=|\?lon=|www\.watishetweer\.nl/.test(sitemap))throw new Error("Sitemap mag geen gedeelde query-URLs of www-duplicaat bevatten.");
+
+console.log("SEO-fundering geverifieerd: canonical, metadata, WebSite JSON-LD, robots.txt en root-sitemap zijn coherent.");
