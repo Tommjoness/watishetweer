@@ -82,7 +82,7 @@ async function controleer(browserType,naam){
     /* Zoekresultaten horen altijd bij de query die zichtbaar in het invoerveld
        staat. Een oudere lijst wordt direct bij input gewist, dus niet pas nadat
        de volgende geocodingrequest is voltooid. */
-    await page.route("https://geocoding-api.open-meteo.com/**",async route=>{
+    await page.route(/^https:\/\/geocoding-api\.open-meteo\.com\//,async route=>{
       const query=new URL(route.request().url()).searchParams.get("name");
       if(query==="Amsterdam"){
         await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({results:[{name:"Amsterdam",admin1:"Noord-Holland",country_code:"NL",latitude:52.3676,longitude:4.9041}]})});return;
