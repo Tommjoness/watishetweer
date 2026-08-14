@@ -21,6 +21,8 @@ const verwacht=[
   "apply-cache-fallback-country.js",
   "verify-cache-fallback-country.js",
   "apply-ui-polish-20260813.js",
+  "apply-fetch-error-semantics.js",
+  "verify-fetch-error-semantics.js",
   "verify-final-27.js"
 ];
 assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten");
@@ -38,7 +40,9 @@ assert(positie("apply-pollen-hour-correctness.js")<positie("verify-pollen-hour-c
 assert(positie("verify-pollen-hour-correctness.js")<positie("apply-cache-fallback-country.js"),"cachefallback-landcorrectie ziet de volledige lucht/pollenartifact");
 assert(positie("apply-cache-fallback-country.js")<positie("verify-cache-fallback-country.js"));
 assert(positie("verify-cache-fallback-country.js")<positie("apply-ui-polish-20260813.js"),"UI-polish moet de volledige bewezen artifact als basis zien");
-assert(positie("apply-ui-polish-20260813.js")<positie("verify-final-27.js"),"finale artifactguard moet UI-polish meenemen");
+assert(positie("apply-ui-polish-20260813.js")<positie("apply-fetch-error-semantics.js"),"foutsemantiek ziet de volledige UI-polishartifact");
+assert(positie("apply-fetch-error-semantics.js")<positie("verify-fetch-error-semantics.js"),"foutsemantiek moet direct na toepassing worden geverifieerd");
+assert(positie("verify-fetch-error-semantics.js")<positie("verify-final-27.js"),"finale artifactguard moet de menselijke foutsemantiek meenemen");
 assert.equal(POSTBUILD_STAPPEN.at(-1),"verify-final-27.js","finale artifactguard moet laatste stap zijn");
 const gezien=[];
 voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args,opt)=>{gezien.push({node,args,opt});return {status:0};}});
