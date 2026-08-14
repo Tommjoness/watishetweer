@@ -1,0 +1,116 @@
+name: WeatherNow WebKit load probe PR75
+
+on:
+  push:
+    branches: [agent/mobile-week-preview-20260814]
+
+jobs:
+  webkit-load-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Playwright en WebKit
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps webkit
+      - name: Herhaal verse WebKit 390-sessies tegen exact PR75-preview
+        env:
+          PREVIEW_URL: "https://weathernow-75vzd467l-tommjoness-projects.vercel.app/?_vercel_share=9fFgTRo51wyeDNjU83IMtbsOrq4C6QO7&lat=52.3500&lon=5.2600&plaats=Almere&land=NL"
+        run: |
+          cat > .webkit-load-probe-pr75.js <<'NODE'
+          "use strict";
+          const assert=require("assert");
+          const {webkit}=require("playwright");
+          const url=process.env.PREVIEW_URL;
+          if(!url)throw new Error("PREVIEW_URL ontbreekt");
+
+          async function runOne(browser,i){
+            const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block"});
+            const page=await context.newPage();
+            const consoleErrors=[],requestFailures=[],badResponses=[];
+            page.on("pageerror",e=>consoleErrors.push("pageerror: "+String(e)));
+            page.on("console",m=>{if(m.type()==="error")consoleErrors.push("console: "+m.text());});
+            page.on("requestfailed",r=>requestFailures.push({url:r.url(),failure:r.failure()?.errorText||"unknown"}));
+            page.on("response",r=>{if(r.status()>=400)badResponses.push({status:r.status(),url:r.url()});});
+            let error=null,navStatus=null,navUrl=null;
+            try{
+              const response=await page.goto(url,{waitUntil:"domcontentloaded",timeout:45000});
+              navStatus=response?.status()??null;
+              navUrl=response?.url()??null;
+              await page.waitForFunction(()=>{
+                const app=document.querySelector("#app"),state=document.querySelector("#state");
+                if(!app)return false;
+                const a=getComputedStyle(app),s=state?getComputedStyle(state):null;
+                const appVisible=a.display!=="none"&&a.visibility!=="hidden"&&Number(a.opacity||1)>0&&app.getBoundingClientRect().height>0;
+                const stateVisible=!!state&&s.display!=="none"&&s.visibility!=="hidden"&&state.getBoundingClientRect().height>0;
+                return appVisible||stateVisible;
+              },null,{timeout:30000});
+              await page.waitForTimeout(900);
+            }catch(e){error=String(e&&e.message||e);}
+
+            const snapshot=await page.evaluate(()=>{
+              const app=document.querySelector("#app"),state=document.querySelector("#state");
+              const a=app?getComputedStyle(app):null,s=state?getComputedStyle(state):null;
+              const appVisible=!!app&&a.display!=="none"&&a.visibility!=="hidden"&&Number(a.opacity||1)>0&&app.getBoundingClientRect().height>0;
+              const first=document.querySelector("#days .row.day:not(.kop)");
+              const css=sel=>{const el=first&&first.querySelector(sel);return el?getComputedStyle(el):null;};
+              const rows=[...document.querySelectorAll("#days .row.day")];
+              return {
+                href:location.href,
+                appVisible,
+                appDisplay:a?.display||null,
+                appVisibility:a?.visibility||null,
+                appOpacity:a?.opacity||null,
+                appClass:app?.className||null,
+                appBusy:app?.getAttribute("aria-busy")||null,
+                appHeight:app?.getBoundingClientRect().height||0,
+                stateText:state?.textContent?.trim().replace(/\s+/g," ").slice(0,500)||"",
+                stateDisplay:s?.display||null,
+                stateVisibility:s?.visibility||null,
+                temp:document.querySelector("#t")?.textContent?.trim()||"",
+                condition:document.querySelector("#cond")?.textContent?.trim()||"",
+                days:document.querySelectorAll("#days .row.day:not(.kop)").length,
+                width:innerWidth,
+                documentWidth:document.documentElement.scrollWidth,
+                nameFont:css(".dname")?.fontSize||null,
+                windFont:css(".dwind")?.fontSize||null,
+                windDisplay:css(".dwind")?.display||null,
+                rainFont:css(".drain")?.fontSize||null,
+                minFont:css(".dmin")?.fontSize||null,
+                maxFont:css(".dmax")?.fontSize||null,
+                rowOverflow:rows.some(el=>el.scrollWidth>el.clientWidth+1),
+                rowOutside:rows.some(el=>{const b=el.getBoundingClientRect();return b.left<-1||b.right>innerWidth+1;})
+              };
+            });
+            const ok=!error&&navStatus!==null&&navStatus<400&&snapshot.appVisible&&snapshot.temp&&!/[–—]/.test(snapshot.temp)&&snapshot.condition&&snapshot.days>=7&&snapshot.documentWidth<=snapshot.width+2&&!snapshot.rowOverflow&&!snapshot.rowOutside&&snapshot.nameFont==="13.5px"&&snapshot.windFont==="13px"&&snapshot.windDisplay!=="none"&&snapshot.rainFont==="13px"&&snapshot.minFont==="14px"&&snapshot.maxFont==="14px"&&consoleErrors.length===0;
+            const result={i,ok,error,navStatus,navUrl,snapshot,consoleErrors,requestFailures,badResponses};
+            console.log("WEBKIT_PROBE "+JSON.stringify(result));
+            await page.screenshot({path:`webkit-load-${i}-${ok?"ok":"fail"}.png`,fullPage:true});
+            await context.close();
+            return result;
+          }
+
+          (async()=>{
+            const browser=await webkit.launch({headless:true});
+            try{
+              const results=[];
+              for(let i=1;i<=6;i++)results.push(await runOne(browser,i));
+              const failures=results.filter(r=>!r.ok);
+              console.log(`WEBKIT_SAMENVATTING ${results.length-failures.length}/${results.length} groen; failures=${failures.length}`);
+              assert.equal(failures.length,0,"WebKit preview-laadfouten: "+JSON.stringify(failures));
+            }finally{await browser.close();}
+          })().catch(e=>{console.error(e.stack||e);process.exit(1);});
+          NODE
+          node .webkit-load-probe-pr75.js
+      - name: Bewaar probe-screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr75-webkit-load-probe-screenshots
+          path: webkit-load-*.png
+          if-no-files-found: warn
+          retention-days: 1
