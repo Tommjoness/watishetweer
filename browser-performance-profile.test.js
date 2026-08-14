@@ -120,13 +120,25 @@ function vatProfielSamen(profile,poort){
   const poort=server.address().port;
   const browser=await chromium.launch({headless:true,channel:"chrome"});
   const perFunctie=new Map(KANDIDATEN.map(naam=>[naam,[]]));
-  const coldLoads=[];
+  const coldLoads=[],intlCalls=[],intlUnique=[];
   try{
     for(let ronde=0;ronde<RONDEN;ronde++){
       const context=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:"block"});
       const page=await context.newPage(),fouten=[];
       page.on("pageerror",e=>fouten.push(String(e)));
       page.on("console",m=>{if(m.type()==="error")fouten.push(m.text());});
+      await page.addInitScript(()=>{
+        const origineel=Intl.DateTimeFormat.prototype.formatToParts;
+        const aantallen=new Map();
+        window.__intlProbe={calls:0,aantallen};
+        Intl.DateTimeFormat.prototype.formatToParts=function(waarde){
+          window.__intlProbe.calls++;
+          let sleutel="anders";
+          if(waarde instanceof Date&&Number.isFinite(waarde.getTime()))sleutel=String(waarde.getTime());
+          aantallen.set(sleutel,(aantallen.get(sleutel)||0)+1);
+          return origineel.call(this,waarde);
+        };
+      });
       const cdp=await context.newCDPSession(page);
       try{
         await cdp.send("Profiler.enable");
@@ -134,12 +146,18 @@ function vatProfielSamen(profile,poort){
         await cdp.send("Profiler.start");
         await page.goto(`http://127.0.0.1:${poort}/?lat=52.35&lon=5.26&plaats=Performance&land=NL`,{waitUntil:"domcontentloaded"});
         await page.waitForSelector("#app",{state:"visible",timeout:5000});
-        const resultaat=await page.evaluate(()=>({
-          elapsed:performance.now()-window.__perf.start,
-          urls:window.__perf.forecastUrls.slice(),
-          dagen:document.querySelectorAll("#days .row.day:not(.kop)").length,
-          nachten:document.querySelectorAll("#nights .row.night:not(.kop)").length
-        }));
+        const resultaat=await page.evaluate(()=>{
+          const herhalingen=[...window.__intlProbe.aantallen.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8);
+          return {
+            elapsed:performance.now()-window.__perf.start,
+            urls:window.__perf.forecastUrls.slice(),
+            dagen:document.querySelectorAll("#days .row.day:not(.kop)").length,
+            nachten:document.querySelectorAll("#nights .row.night:not(.kop)").length,
+            intlCalls:window.__intlProbe.calls,
+            intlUnique:window.__intlProbe.aantallen.size,
+            intlTop:herhalingen
+          };
+        });
         const {profile}=await cdp.send("Profiler.stop");
         const samenvatting=vatProfielSamen(profile,poort);
 
@@ -148,11 +166,14 @@ function vatProfielSamen(profile,poort){
         assert(resultaat.nachten>=1,`ronde ${ronde+1}: Nachtzicht gerenderd`);
         assert.deepEqual(fouten,[],`ronde ${ronde+1}: geen runtime-/consolefouten`);
         assert((profile.samples||[]).length>0,`ronde ${ronde+1}: CPU-profiler leverde samples`);
+        assert(resultaat.intlCalls>0,`ronde ${ronde+1}: Intl-probe zag formatToParts-aanroepen`);
 
         coldLoads.push(resultaat.elapsed);
+        intlCalls.push(resultaat.intlCalls);
+        intlUnique.push(resultaat.intlUnique);
         for(const naam of KANDIDATEN)perFunctie.get(naam).push(samenvatting.get(naam)||0);
         const top=[...samenvatting.entries()].sort((a,b)=>b[1]-a[1]).slice(0,12);
-        console.log(`Profiler ronde ${ronde+1}: cold-load ${resultaat.elapsed.toFixed(1)} ms; top appfuncties: ${top.map(([naam,ms])=>`${naam} ${ms.toFixed(1)} ms`).join("; ")}`);
+        console.log(`Profiler ronde ${ronde+1}: cold-load ${resultaat.elapsed.toFixed(1)} ms; Intl formatToParts ${resultaat.intlCalls} calls / ${resultaat.intlUnique} unieke timestamps; top herhalingen ${resultaat.intlTop.map(([sleutel,aantal])=>`${sleutel}:${aantal}x`).join(", ")}; top appfuncties: ${top.map(([naam,ms])=>`${naam} ${ms.toFixed(1)} ms`).join("; ")}`);
       }finally{
         try{await cdp.send("Profiler.disable");}catch(_){/* context kan al sluiten */}
         await context.close();
@@ -160,11 +181,12 @@ function vatProfielSamen(profile,poort){
     }
 
     console.log(`Profiler cold-load mediaan: ${mediaan(coldLoads).toFixed(1)} ms; runs ${coldLoads.map(x=>x.toFixed(1)).join(", ")} ms.`);
+    console.log(`Intl formatToParts mediaan: ${mediaan(intlCalls)} calls voor ${mediaan(intlUnique)} unieke timestamps; ${((1-mediaan(intlUnique)/mediaan(intlCalls))*100).toFixed(1)}% van de aanroepen gebruikt dus een timestamp die in dezelfde cold-load al eerder is geformatteerd.`);
     const regels=KANDIDATEN.map(naam=>({naam,mediaan:mediaan(perFunctie.get(naam)),runs:perFunctie.get(naam)})).sort((a,b)=>b.mediaan-a.mediaan);
     for(const regel of regels){
       console.log(`Profiler ${regel.naam}: mediaan sampled self-time ${regel.mediaan.toFixed(1)} ms; runs ${regel.runs.map(x=>x.toFixed(1)).join(", ")} ms.`);
     }
-    console.log("Measurement-only performanceprofiel voltooid; er is geen productbudget of productcode gewijzigd.");
+    console.log("Measurement-only performanceprofiel voltooid; de Intl-probe wijzigt uitsluitend de in-memory testpagina en geen productartifact.");
   }finally{
     await browser.close();
     server.close();
