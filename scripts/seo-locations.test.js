@@ -2,7 +2,7 @@
 
 const assert=require("assert");
 const {LOCATIES,POPULAIR,plaatsUrl,plaatsTitel,plaatsBeschrijving}=require("./seo-locations.config.js");
-const {afstandKm,gerelateerdePlaatsen,voegRouteTitelBeleidToe}=require("./generate-seo-location-pages.js");
+const {afstandKm,gerelateerdePlaatsen,voegRouteUrlBeleidToe,voegRouteTitelBeleidToe}=require("./generate-seo-location-pages.js");
 
 assert(LOCATIES.length>=30,"SEO-kernset moet minimaal 30 echte Nederlandse plaatsen bevatten");
 assert(LOCATIES.length<=60,"SEO-kernset mag niet ongemerkt uitgroeien tot massale thin-page generatie");
@@ -43,5 +43,16 @@ const routeBewust=voegRouteTitelBeleidToe(tweeWriters,"regressie");
 assert.equal((routeBewust.match(/const route=window\.__WEATHERNOW_ROUTE_LOCATION__;/g)||[]).length,2,"beide title-writers moeten route-aware worden");
 assert.equal((routeBewust.match(/if\(!zelfdeRoute\) document\.title=S\.label\+" · Wat is het weer\?";/g)||[]).length,2,"beide title-writers moeten alleen buiten dezelfde route de dynamische titel zetten");
 assert.throws(()=>voegRouteTitelBeleidToe(`function canoniek(){${titleWriter}}`,"regressie"),/exact 2 title-sync-writers/,"één ontbrekende title-writer moet het buildcontract laten falen");
+
+const urlWriter=`function urlBij(){\n${`  try{\n    const u=new URL(location.href);\n    u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n    u.searchParams.set("plaats",S.label);\n    if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n    history.replaceState(null,"",u);\n  }catch(e){}\n`}\n}`;
+const routeUrlBewust=voegRouteUrlBeleidToe(urlWriter,"regressie");
+for(const vereist of [
+  "window.__WEATHERNOW_ROUTE_LOCATION__=null",
+  "canonical.href=\"https://watishetweer.nl/\"",
+  "context.hidden=true",
+  'new URL("/",location.origin)',
+  'script[type="application/ld+json"]'
+])assert(routeUrlBewust.includes(vereist),`route-exitcontract mist ${vereist}`);
+assert.throws(()=>voegRouteUrlBeleidToe("function urlBij(){}","regressie"),/URL-sync-haak ontbreekt of is dubbel/,"route-URL-contract moet een verdwenen writer hard afwijzen");
 
 console.log(`SEO-locatieconfig: ${LOCATIES.length} unieke NL-plaatsen, metadata, vier afstandsgesorteerde interne routes, compacte populaire set en dubbel title-writercontract geslaagd.`);
