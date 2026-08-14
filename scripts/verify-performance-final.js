@@ -16,9 +16,13 @@ if(html.includes("forecast_hours=168"))throw new Error("Te krappe 168-uurs horiz
 for(const tekst of [
   "const zoneFormatterCache=new Map();",
   "zoneFormatterCache.size>24",
+  "const zoneDelenCache=new Map();",
+  "zoneDelenCache.size>2048",
+  "const sleutel=String(tijdzone)+\"|\"+epoch;",
+  "if(bewaard)return zoneDelenObject(bewaard);",
+  "zoneFormatter(tijdzone).formatToParts(instant)",
   "const lokaleMinutenCache=new Map();",
   "lokaleMinutenCache.size>4096",
-  "zoneFormatter(tijdzone).formatToParts(new Date(ms))",
   "let gok=doel,zoneGeldig=true;",
   "if(off===null){zoneGeldig=false;break;}",
   "if(zoneGeldig)return gok;",
@@ -30,7 +34,11 @@ if(begin<0||eind<=begin)throw new Error("Centrale interpretatie-engine ontbreekt
 const engine=html.slice(begin,eind);
 const zoneStart=engine.indexOf("function zoneDelen(ms,tijdzone){"),zoneEind=engine.indexOf("function zoneOffset(ms,tijdzone){",zoneStart);
 if(zoneStart<0||zoneEind<=zoneStart)throw new Error("zoneDelen ontbreekt in centrale engine.");
-if(/new Intl\.DateTimeFormat/.test(engine.slice(zoneStart,zoneEind)))throw new Error("zoneDelen bouwt nog per conversie een formatter.");
+const zoneBlok=engine.slice(zoneStart,zoneEind);
+if(/new Intl\.DateTimeFormat/.test(zoneBlok))throw new Error("zoneDelen bouwt nog per conversie een formatter.");
+if(!zoneBlok.includes("new Date(ms),epoch=instant.getTime()"))throw new Error("zoneDelen cachet niet op de canonieke instant.");
+if(!zoneBlok.includes("return zoneDelenObject(bewaard)"))throw new Error("zoneDelen geeft op cache-hit geen vers resultaatobject terug.");
+if(zoneBlok.includes("return bewaard"))throw new Error("zoneDelen mag geen gedeeld mutable cacheobject teruggeven.");
 
 const lokaalStart=engine.indexOf("function lokaalNaarMinuten(tijd,tijdzone,utcOffsetSeconden){");
 const lokaalSluit=engine.indexOf("\n}\n",lokaalStart);
@@ -49,4 +57,4 @@ if((naarUtc.match(/return doel-off;/g)||[]).length!==1)throw new Error("naarUTC 
 const scripts=[...html.matchAll(/<script(?![^>]* src=)[^>]*>([^]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:performance-verify-"+(i+1)}));
-console.log("Performance-final geverifieerd: veilige 170-uurs horizon, centrale tijdconversie met cache, top-level provider-as en consistente tijdzonefallback.");
+console.log("Performance-final geverifieerd: veilige 170-uurs horizon, begrensde instant-zonecache met verse hit-objecten, top-level provider-as en consistente tijdzonefallback.");
