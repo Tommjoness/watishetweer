@@ -36,6 +36,7 @@ function pasSeoFoundationToe(html){
   const blok=[
     MARKER,
     `<link rel="canonical" href="${attr(SEO.canonical)}">`,
+    `<meta name="msvalidate.01" content="${attr(SEO.bingVerification)}">`,
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${attr(SEO.siteName)}">`,
     `<meta property="og:title" content="${attr(SEO.title)}">`,
@@ -54,7 +55,7 @@ function main(){
   const na=pasSeoFoundationToe(voor);
   fs.writeFileSync(DOEL,na,"utf8");
   const versie=vernieuwServiceworkerCache(OUT,"seo-foundation");
-  console.log("SEO-fundering toegepast: canonical, zoekmetadata en WebSite-structured data; cache "+versie+".");
+  console.log("SEO-fundering toegepast: canonical, Bing-verificatie, zoekmetadata en WebSite-structured data; cache "+versie+".");
 }
 
 if(require.main===module)main();
