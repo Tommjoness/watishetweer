@@ -2,8 +2,10 @@
 
 const fs=require("fs");
 const path=require("path");
+const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 
-const DOEL=path.join(__dirname,"..","public","index.html");
+const OUT=path.join(__dirname,"..","public");
+const DOEL=path.join(OUT,"index.html");
 
 const OUD=`  const overgangen=[];
   if(day&&Array.isArray(day.sunset)&&Array.isArray(day.sunrise)){
@@ -54,8 +56,9 @@ function main(){
   if(!fs.existsSync(DOEL))throw new Error("public/index.html ontbreekt; voer eerst de basisbuild uit.");
   const voor=fs.readFileSync(DOEL,"utf8");
   const na=pasPolarGrafiekSentinelsToe(voor);
-  fs.writeFileSync(DOEL,na);
-  console.log("Poolzon-sentinels worden niet meer als grafiekovergang gerenderd.");
+  fs.writeFileSync(DOEL,na,"utf8");
+  const versie=vernieuwServiceworkerCache(OUT,"polar-chart-sentinel");
+  console.log("Poolzon-sentinels worden niet meer als grafiekovergang gerenderd; cache "+versie+".");
 }
 
 if(require.main===module)main();
