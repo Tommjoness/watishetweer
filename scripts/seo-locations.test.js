@@ -2,6 +2,7 @@
 
 const assert=require("assert");
 const {LOCATIES,POPULAIR,plaatsUrl,plaatsTitel,plaatsBeschrijving}=require("./seo-locations.config.js");
+const {voegRouteTitelBeleidToe}=require("./generate-seo-location-pages.js");
 
 assert(LOCATIES.length>=30,"SEO-kernset moet minimaal 30 echte Nederlandse plaatsen bevatten");
 assert(LOCATIES.length<=60,"SEO-kernset mag niet ongemerkt uitgroeien tot massale thin-page generatie");
@@ -21,4 +22,16 @@ for(const loc of LOCATIES){
 }
 assert(POPULAIR.length>=8&&POPULAIR.length<=16,"homepage moet een compacte populaire-plaatsenselectie houden");
 assert(POPULAIR.every(x=>LOCATIES.includes(x)&&x.populair),"populaire set moet rechtstreeks uit de kernset komen");
-console.log(`SEO-locatieconfig: ${LOCATIES.length} unieke NL-plaatsen, metadata en compacte populaire set geslaagd.`);
+
+/* Het definitieve artifact heeft bewust twee title-writers: de canonieke render
+   en de snelle Q1-cache-render. Op een crawlbare plaatsroute moeten beide de
+   server-side SEO-titel respecteren; een nieuwe/verdwenen writer moet daarom
+   expliciet als contractwijziging worden behandeld. */
+const titleWriter='document.title=S.label+" · Wat is het weer?";';
+const tweeWriters=`function canoniek(){${titleWriter}}\nfunction cacheKernRender(){${titleWriter}}`;
+const routeBewust=voegRouteTitelBeleidToe(tweeWriters,"regressie");
+assert.equal((routeBewust.match(/const route=window\.__WEATHERNOW_ROUTE_LOCATION__;/g)||[]).length,2,"beide title-writers moeten route-aware worden");
+assert.equal((routeBewust.match(/if\(!zelfdeRoute\) document\.title=S\.label\+" · Wat is het weer\?";/g)||[]).length,2,"beide title-writers moeten alleen buiten dezelfde route de dynamische titel zetten");
+assert.throws(()=>voegRouteTitelBeleidToe(`function canoniek(){${titleWriter}}`,"regressie"),/exact 2 title-sync-writers/,"één ontbrekende title-writer moet het buildcontract laten falen");
+
+console.log(`SEO-locatieconfig: ${LOCATIES.length} unieke NL-plaatsen, metadata, compacte populaire set en dubbel title-writercontract geslaagd.`);
