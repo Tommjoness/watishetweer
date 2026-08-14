@@ -43,8 +43,6 @@ jobs:
         run: node browser-timezone-hardening.test.js
       - name: Cold-load browser-performancebudget
         run: node browser-performance-budget.test.js
-      - name: Measurement-only CPU-profiel in Chromium
-        run: node browser-performance-profile.test.js
       - name: Checkpoint 25% in Chromium en WebKit
         run: node browser-q1-checkpoint.test.js
       - name: Checkpoint 50% in Chromium en WebKit
