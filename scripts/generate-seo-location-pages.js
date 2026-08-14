@@ -12,7 +12,7 @@ const MARKER_NAV="<!-- WEATHER NOW INDEXEERBARE PLAATSEN -->";
 const MARKER_ROUTE="<!-- WEATHER NOW PLAATSROUTE -->";
 const START_HAAK="(function(){\n  const p=new URLSearchParams(location.search);\n";
 const URL_SYNC_HAAK=`  try{\n    const u=new URL(location.href);\n    u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n    u.searchParams.set("plaats",S.label);\n    if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n    history.replaceState(null,"",u);\n  }catch(e){}\n`;
-const TITLE_SYNC_HAAK='  document.title=S.label+" · Wat is het weer?";\n';
+const TITLE_SYNC_HAAK='document.title=S.label+" · Wat is het weer?";';
 
 function escHtml(v){return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function escXml(v){return escHtml(v).replace(/'/g,"&apos;");}
@@ -79,7 +79,7 @@ function voegRouteUrlBeleidToe(html,slug){
 function voegRouteTitelBeleidToe(html,slug){
   let bron=String(html||"");
   if(tel(bron,TITLE_SYNC_HAAK)!==1)throw new Error(`${slug}: title-sync-haak ontbreekt of is dubbel.`);
-  const routeBewust=`  {\n    const route=window.__WEATHERNOW_ROUTE_LOCATION__;\n    const zelfdeRoute=route&&Number(S.lat)===Number(route.lat)&&Number(S.lon)===Number(route.lon);\n    if(!zelfdeRoute) document.title=S.label+" · Wat is het weer?";\n  }\n`;
+  const routeBewust=`{\n    const route=window.__WEATHERNOW_ROUTE_LOCATION__;\n    const zelfdeRoute=route&&Number(S.lat)===Number(route.lat)&&Number(S.lon)===Number(route.lon);\n    if(!zelfdeRoute) document.title=S.label+" · Wat is het weer?";\n  }`;
   return bron.replace(TITLE_SYNC_HAAK,routeBewust);
 }
 
