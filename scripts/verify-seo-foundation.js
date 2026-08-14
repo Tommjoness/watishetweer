@@ -28,7 +28,9 @@ const ld=[...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/sc
 if(ld.length!==1)throw new Error("Definitief artifact moet exact één JSON-LD-blok bevatten; gevonden: "+ld.length);
 let data;
 try{data=JSON.parse(ld[0][1]);}catch(e){throw new Error("JSON-LD is ongeldig JSON: "+e.message);}
-if(data["@context"]!=="https://schema.org"||data["@type"]!=="WebSite"||data.name!==SEO.siteName||data.url!==SEO.canonical)throw new Error("WebSite structured data wijkt af van de SEO-configuratie.");
+if(!Array.isArray(data)||data.length!==1)throw new Error("JSON-LD moet exact één WebSite-item in de top-level array bevatten.");
+const website=data[0];
+if(!website||website["@context"]!=="https://schema.org"||website["@type"]!=="WebSite"||website.name!==SEO.siteName||website.url!==SEO.canonical)throw new Error("WebSite structured data wijkt af van de SEO-configuratie.");
 
 if(!/^User-agent: \*$/m.test(robots)||!/^Allow: \/$/m.test(robots))throw new Error("robots.txt staat algemene crawling niet expliciet toe.");
 if(!robots.includes(`Sitemap: ${SEO.canonical}sitemap.xml`))throw new Error("robots.txt verwijst niet naar de canonieke sitemap.");
@@ -36,4 +38,4 @@ if(!sitemap.includes(`<loc>${SEO.canonical}</loc>`))throw new Error("Sitemap bev
 if((sitemap.match(/<loc>/g)||[]).length!==1)throw new Error("SEO-fundering publiceert voorlopig alleen de bewezen canonieke homepage in de sitemap.");
 if(/\?lat=|\?lon=|www\.watishetweer\.nl/.test(sitemap))throw new Error("Sitemap mag geen gedeelde query-URLs of www-duplicaat bevatten.");
 
-console.log("SEO-fundering geverifieerd: canonical, metadata, WebSite JSON-LD, robots.txt en root-sitemap zijn coherent.");
+console.log("SEO-fundering geverifieerd: canonical, metadata, één WebSite JSON-LD-item, robots.txt en root-sitemap zijn coherent.");
