@@ -21,6 +21,8 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
       - name: Bouw definitieve artifact
         run: npm run build
+      - name: SEO-plaatsroutes in Chromium en WebKit
+        run: node seo-location-pages-browser.test.js
       - name: Accessibility-landmark en mobiele footerdoelen in Chromium en WebKit
         shell: bash
         run: |
