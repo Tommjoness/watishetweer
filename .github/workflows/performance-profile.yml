@@ -1,0 +1,21 @@
+name: WeatherNow measurement-only performance profile
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Toon voorgeinstalleerde Chrome-versie
+        run: google-chrome --version
+      - name: Installeer alleen Playwright-package
+        run: npm install --no-save --package-lock=false playwright
+      - name: Measurement-only CPU-profiel in voorgeinstalleerde Chrome
+        run: node browser-performance-profile.test.js
