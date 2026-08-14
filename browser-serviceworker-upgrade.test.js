@@ -93,42 +93,49 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
     /* 2. Normale updatecheck naar exact de definitieve worker. De worker mag pas
        activeren nadat zijn install-waitUntil klaar is. Chromium kan de zojuist
        gecommitte CacheStorage-entries vanuit de page-context echter een fractie
-       later zichtbaar maken dan active/controller. Wacht daarom op de echte
-       productstaat: nieuwe worker + controller én de verplichte nieuwe index met
-       marker in de huidige generatiecache. Dit verzwakt niets: ontbreekt die
-       entry werkelijk, dan volgt gewoon een timeout.
+       later zichtbaar maken dan active/controller.
 
-       Belangrijk voor het testcontract: gebruik daarna exact dé observatie die
-       deze wachtconditie liet slagen. Een tweede, losse caches.open() direct na
-       de geslaagde poll kan in Chromium tijdens CacheStorage-propagatie tijdelijk
-       een andere/lege view opleveren en meet dan browserobservatie in plaats van
-       de productbelofte. De latere echte offlineproef blijft de duurzaamheid van
-       dezelfde install-shell afzonderlijk bewijzen. */
+       De oude test gebruikte page.waitForFunction met een async predicate en
+       deed daarna nog een tweede losse CacheStorage-read. Op CI bleek die combinatie
+       geen betrouwbaar async-resultaatobject te leveren en kon de tweede read een
+       lege observatie zien nadat de eerste dezelfde index al had gevonden.
+       page.evaluate wacht wél op de async functie zelf. Poll daarom binnen één
+       browser-evaluatie op precies de productstaat en retourneer diezelfde observatie.
+       De 15 s grens en 25 ms observatiecadans blijven gelijk; er komt geen extra
+       retrybudget bij. De latere echte offlineproef bewijst de duurzaamheid apart. */
     fase="new";
     await page.evaluate(async()=>{
       const r=await navigator.serviceWorker.getRegistration();
       if(!r)throw new Error("Serviceworkerregistratie ontbreekt vóór update.");
       await r.update();
     });
-    const installHandle=await page.waitForFunction(async nieuw=>{
-      const r=await navigator.serviceWorker.getRegistration();
-      if(!(r&&r.active&&r.active.state==="activated"&&navigator.serviceWorker.controller))return false;
+    const installInfo=await page.evaluate(async ({nieuw,timeout,polling})=>{
+      const deadline=Date.now()+timeout;
       const vraagVersie=worker=>new Promise(resolve=>{
         const kanaal=new MessageChannel(),timer=setTimeout(()=>resolve(null),100);
         kanaal.port1.onmessage=e=>{clearTimeout(timer);resolve(e.data);};
         worker.postMessage("__sw-e2e-version",[kanaal.port2]);
       });
-      const [actief,controller,keys]=await Promise.all([vraagVersie(r.active),vraagVersie(navigator.serviceWorker.controller),caches.keys()]);
-      if(actief!=="new"||controller!=="new"||!keys.includes(nieuw))return false;
-      const c=await caches.open(nieuw),index=await c.match(new URL("/index.html",location.href).href);
-      if(!index)return false;
-      const tekst=await index.text(),m=/name="sw-e2e-build" content="([^"]+)"/.exec(tekst);
-      if(!(m&&m[1]==="new"))return false;
-      const requests=await c.keys();
-      return {urls:requests.map(x=>x.url),marker:m[1],heeftIndex:true,lengte:tekst.length};
-    },cacheNieuw,{timeout:15000,polling:25});
-    const installInfo=await installHandle.jsonValue();
-    await installHandle.dispose();
+      while(Date.now()<deadline){
+        const r=await navigator.serviceWorker.getRegistration();
+        if(r&&r.active&&r.active.state==="activated"&&navigator.serviceWorker.controller){
+          const [actief,controller,keys]=await Promise.all([vraagVersie(r.active),vraagVersie(navigator.serviceWorker.controller),caches.keys()]);
+          if(actief==="new"&&controller==="new"&&keys.includes(nieuw)){
+            const c=await caches.open(nieuw),index=await c.match(new URL("/index.html",location.href).href);
+            if(index){
+              const tekst=await index.text(),m=/name="sw-e2e-build" content="([^"]+)"/.exec(tekst);
+              if(m&&m[1]==="new"){
+                const requests=await c.keys();
+                return {urls:requests.map(x=>x.url),marker:m[1],heeftIndex:true,lengte:tekst.length};
+              }
+            }
+          }
+        }
+        await new Promise(resolve=>setTimeout(resolve,polling));
+      }
+      return null;
+    },{nieuw:cacheNieuw,timeout:15000,polling:25});
+    assert(installInfo,"nieuwe worker/controller + install-cache met nieuwe indexmarker moeten binnen 15 s zichtbaar zijn");
     assert.equal(installInfo.marker,"new","nieuwe install-cache bevat de nieuwe index vóór online reload; "+JSON.stringify(installInfo));
     assert.equal(installInfo.heeftIndex,true,"geslaagde install-observatie moet de canonieke index bevatten");
     assert(installInfo.lengte>0,"geslaagde install-observatie moet niet-lege index-HTML bevatten");
