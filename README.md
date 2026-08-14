@@ -109,3 +109,36 @@ Werk via een aparte branch en pull request. Houd wijzigingen klein en bewijsbaar
 7. pas na merge productie, runtimefouten en het uiteindelijke deployment-SHA controleren.
 
 Weerformules, interpretatiebeleid, waarschuwing-scope en andere productregels horen niet als screenshotpatch of plaats-specifieke uitzondering te worden aangepast. Nieuwe oplossingen moeten generiek blijven voor huidige en toekomstige locaties.
+
+## Productie terugdraaien
+
+Gebruik een rollback alleen bij een bewezen productiestoring of ernstige regressie. Een rollback verplaatst het productieverkeer naar een eerder Vercel-artifact; de code op `main` verandert hierdoor niet. Pauzeer daarom nieuwe merges totdat de oorzaak via een aparte pull request is hersteld.
+
+1. Leg de fout, het tijdstip en de actieve build-SHA vast. De productie-HTML bevat hiervoor `weather-build-sha`:
+
+   ```bash
+   curl -fsS https://watishetweer.nl/ | grep -o 'name="weather-build-sha" content="[^"]*"'
+   ```
+
+2. Kies uitsluitend een eerder `READY` productie-artifact waarvan commit en functionele werking bekend zijn. Controleer het doel vóór de rollback:
+
+   ```bash
+   vercel list --prod
+   vercel inspect <vorige-deployment-url-of-id>
+   ```
+
+3. Wijs productie terug naar exact dat artifact en controleer de rollbackstatus:
+
+   ```bash
+   vercel rollback <vorige-deployment-url-of-id>
+   vercel rollback status weathernow
+   ```
+
+4. Verifieer daarna minimaal:
+
+   - `https://watishetweer.nl/` reageert en toont de verwachte build-SHA;
+   - `https://www.watishetweer.nl/` verwijst correct naar het hoofddomein;
+   - zoeken, een plaatsroute, `/api/plaatsnaam` en `/api/waarschuwingen` werken;
+   - de productielogs bevatten geen nieuwe errors of `5xx`-responses.
+
+5. Repareer of revert de fout daarna via een nieuwe branch en pull request. Controleer opnieuw de volledige CI, preview en productie voordat de normale mergeflow wordt hervat. Verwijder geen deployment: die blijft nodig voor analyse en een eventuele herstelactie.
