@@ -24,12 +24,15 @@ function pasSeoFoundationToe(html){
   const nieuweDescription=`<meta name="description" content="${attr(SEO.description)}">`;
   bron=bron.replace(descriptions[0][0],nieuweDescription);
 
-  const websiteJson=JSON.stringify({
+  /* Google ondersteunt meerdere JSON-LD-items expliciet als een top-level array.
+     Met één WebSite-item blijft de semantiek identiek, terwijl het blok ook een
+     geldige, onschadelijke JavaScript-expressie is voor de bestaande testloader. */
+  const websiteJson=JSON.stringify([{
     "@context":"https://schema.org",
     "@type":"WebSite",
     name:SEO.siteName,
     url:SEO.canonical
-  });
+  }]);
   const blok=[
     MARKER,
     `<link rel="canonical" href="${attr(SEO.canonical)}">`,
