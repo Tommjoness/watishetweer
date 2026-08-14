@@ -1,0 +1,115 @@
+name: WeatherNow production load probe PR73
+
+on:
+  push:
+    branches: [agent/mobile-nachtzicht-preview-20260814]
+
+jobs:
+  load-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Playwright-package
+        run: npm install --no-save --package-lock=false playwright
+      - name: Herhaal exact de mobiele productieroute en log fouttoestand
+        run: |
+          cat > .production-load-probe.js <<'NODE'
+          "use strict";
+          const assert=require("assert");
+          const {chromium}=require("playwright");
+          const qs="?lat=52.3500&lon=5.2600&plaats=Almere&land=NL";
+          const routes=[
+            "https://www.watishetweer.nl/",
+            "https://watishetweer.nl/",
+            "https://www.watishetweer.nl/",
+            "https://watishetweer.nl/",
+            "https://www.watishetweer.nl/",
+            "https://watishetweer.nl/",
+            "https://www.watishetweer.nl/",
+            "https://watishetweer.nl/"
+          ];
+
+          async function probe(browser,origin,i){
+            const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block"});
+            const page=await context.newPage();
+            const consoleErrors=[],requestFailures=[],badResponses=[];
+            page.on("pageerror",e=>consoleErrors.push("pageerror: "+String(e)));
+            page.on("console",m=>{if(m.type()==="error")consoleErrors.push("console: "+m.text());});
+            page.on("requestfailed",r=>requestFailures.push({url:r.url(),failure:r.failure()?.errorText||"unknown"}));
+            page.on("response",r=>{if(r.status()>=400)badResponses.push({status:r.status(),url:r.url()});});
+            let navStatus=null,navUrl=null,error=null;
+            try{
+              const response=await page.goto(origin+qs,{waitUntil:"domcontentloaded",timeout:45000});
+              navStatus=response?.status()??null; navUrl=response?.url()??null;
+              await page.waitForFunction(()=>{
+                const app=document.querySelector("#app"),state=document.querySelector("#state");
+                if(!app)return false;
+                const a=getComputedStyle(app),s=state?getComputedStyle(state):null;
+                const appVisible=a.display!=="none"&&a.visibility!=="hidden"&&Number(a.opacity||1)>0&&app.getBoundingClientRect().height>0;
+                const stateVisible=!!state&&s.display!=="none"&&s.visibility!=="hidden"&&state.getBoundingClientRect().height>0;
+                return appVisible||stateVisible;
+              },null,{timeout:20000});
+              await page.waitForTimeout(700);
+            }catch(e){error=String(e&&e.message||e);}
+
+            const snapshot=await page.evaluate(()=>{
+              const app=document.querySelector("#app"),state=document.querySelector("#state");
+              const a=app?getComputedStyle(app):null,s=state?getComputedStyle(state):null;
+              const appVisible=!!app&&a.display!=="none"&&a.visibility!=="hidden"&&Number(a.opacity||1)>0&&app.getBoundingClientRect().height>0;
+              const advice=document.querySelector("#nights .row.night:not(.kop) .nachtadvies");
+              const moon=document.querySelector("#nights .row.night:not(.kop) .nachtmaan");
+              const header=document.querySelector("#nights .row.night.kop > .nmeta:not(.wide)");
+              return {
+                href:location.href,
+                appVisible,
+                appDisplay:a?.display||null,
+                appVisibility:a?.visibility||null,
+                appOpacity:a?.opacity||null,
+                appClass:app?.className||null,
+                appBusy:app?.getAttribute("aria-busy")||null,
+                stateText:state?.textContent?.trim().replace(/\s+/g," ").slice(0,500)||"",
+                stateDisplay:s?.display||null,
+                stateVisibility:s?.visibility||null,
+                temp:document.querySelector("#t")?.textContent?.trim()||"",
+                condition:document.querySelector("#cond")?.textContent?.trim()||"",
+                nights:document.querySelectorAll("#nights .row.night:not(.kop)").length,
+                days:document.querySelectorAll("#days .row.day").length,
+                width:innerWidth,
+                documentWidth:document.documentElement.scrollWidth,
+                adviceFont:advice?getComputedStyle(advice).fontSize:null,
+                moonFont:moon?getComputedStyle(moon).fontSize:null,
+                headerFont:header?getComputedStyle(header).fontSize:null
+              };
+            });
+            const ok=!error&&snapshot.appVisible&&snapshot.temp&&!/[–—]/.test(snapshot.temp)&&snapshot.condition&&snapshot.nights>=5&&snapshot.days>=5&&snapshot.documentWidth<=snapshot.width+2&&snapshot.adviceFont==="13px"&&snapshot.moonFont==="12px"&&snapshot.headerFont==="10px"&&consoleErrors.length===0;
+            const result={i,origin,ok,error,navStatus,navUrl,snapshot,consoleErrors,requestFailures,badResponses};
+            console.log("PROBE "+JSON.stringify(result));
+            await page.screenshot({path:`load-probe-${i}-${origin.includes("www.")?"www":"root"}-${ok?"ok":"fail"}.png`,fullPage:true});
+            await context.close();
+            return result;
+          }
+
+          (async()=>{
+            const browser=await chromium.launch({headless:true,channel:"chrome"});
+            try{
+              const results=[];
+              for(let i=0;i<routes.length;i++)results.push(await probe(browser,routes[i],i+1));
+              const failures=results.filter(r=>!r.ok);
+              console.log(`SAMENVATTING ${results.length-failures.length}/${results.length} groen; failures=${failures.length}`);
+              assert.equal(failures.length,0,"Intermitterende productielaadfouten: "+JSON.stringify(failures));
+            }finally{await browser.close();}
+          })().catch(e=>{console.error(e.stack||e);process.exit(1);});
+          NODE
+          node .production-load-probe.js
+      - name: Bewaar probe-screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr73-production-load-probe-screenshots
+          path: load-probe-*.png
+          if-no-files-found: warn
+          retention-days: 1
