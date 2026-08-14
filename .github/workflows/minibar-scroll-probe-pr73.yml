@@ -1,0 +1,82 @@
+name: WeatherNow mobile minibar scroll probe PR73
+
+on:
+  pull_request:
+    branches: [agent/mobile-nachtzicht-readability-20260814]
+
+jobs:
+  minibar-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: npm install --no-save --package-lock=false playwright
+      - name: Simuleer echte neerwaartse scroll op 390 en 320 px
+        env:
+          PREVIEW_URL: "https://weathernow-63ka7w0qw-tommjoness-projects.vercel.app/?_vercel_share=BNCDXVymZL8eKAtYl4UzoIU8TCWBKjG3&lat=52.3500&lon=5.2600&plaats=Almere&land=NL"
+        run: |
+          cat > .minibar-probe.js <<'NODE'
+          "use strict";
+          const assert=require("assert");
+          const {chromium}=require("playwright");
+          const url=process.env.PREVIEW_URL;
+
+          async function run(browser,width,height){
+            const context=await browser.newContext({viewport:{width,height},serviceWorkers:"block"});
+            const page=await context.newPage();
+            const errors=[];
+            page.on("pageerror",e=>errors.push(String(e)));
+            page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});
+            try{
+              await page.goto(url,{waitUntil:"domcontentloaded",timeout:45000});
+              await page.waitForSelector("#app",{state:"visible",timeout:30000});
+              await page.waitForSelector("#nights .row.night:not(.kop)",{state:"visible",timeout:30000});
+              await page.waitForTimeout(800);
+              await page.evaluate(()=>window.scrollTo(0,0));
+              await page.waitForTimeout(100);
+              const target=await page.evaluate(()=>Math.max(0,document.querySelector("#nights").getBoundingClientRect().top+scrollY-4));
+              while((await page.evaluate(()=>scrollY))<target-25){
+                await page.mouse.wheel(0,Math.min(320,target-(await page.evaluate(()=>scrollY))));
+                await page.waitForTimeout(45);
+              }
+              await page.waitForTimeout(350);
+              const r=await page.evaluate(()=>{
+                const bar=document.getElementById("minibar"),n=document.getElementById("nights");
+                const bs=getComputedStyle(bar),b=bar.getBoundingClientRect(),nr=n.getBoundingClientRect();
+                const zichtbaar=bs.display!=="none"&&Number(bs.opacity||1)>.05&&b.bottom>0&&b.top<innerHeight;
+                return {
+                  width:innerWidth,scrollY,
+                  barClass:bar.className,display:bs.display,opacity:bs.opacity,transform:bs.transform,
+                  barTop:b.top,barBottom:b.bottom,nightsTop:nr.top,
+                  zichtbaar,overlap:zichtbaar&&b.bottom>nr.top&&b.top<nr.bottom,
+                  docWidth:document.documentElement.scrollWidth
+                };
+              });
+              assert(r.scrollY>100,width+": scrollprobe heeft niet echt gescrold");
+              assert(r.docWidth<=width+2,width+": horizontale overflow tijdens scroll");
+              assert.equal(r.overlap,false,width+": zichtbare minibalk bedekt Nachtzicht bij neerwaarts lezen");
+              assert(r.barClass.includes("senior-verstopt")||!r.zichtbaar,width+": minibalk is na neerwaartse scroll niet verborgen");
+              assert.deepEqual(errors,[],width+": browserfouten: "+errors.join(" | "));
+              await page.screenshot({path:`minibar-down-${width}.png`});
+              console.log(width+" groen: "+JSON.stringify(r));
+            }finally{await context.close();}
+          }
+
+          (async()=>{
+            const browser=await chromium.launch({headless:true,channel:"chrome"});
+            try{await run(browser,390,844);await run(browser,320,700);}
+            finally{await browser.close();}
+          })().catch(e=>{console.error(e.stack||e);process.exit(1);});
+          NODE
+          node .minibar-probe.js
+      - name: Bewaar scrollscreenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr73-minibar-scroll-screenshots
+          path: minibar-down-*.png
+          if-no-files-found: warn
+          retention-days: 1
