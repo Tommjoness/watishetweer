@@ -58,7 +58,10 @@ async function controleer(browserType,naam){
         appTag:app&&app.tagName,
         footerDisplay:footer&&getComputedStyle(footer).display,
         doelen:[...summaries,...links],
-        maanAria:[...document.querySelectorAll(".maanbij")].map(el=>el.getAttribute("aria-label"))
+        maanAria:[...document.querySelectorAll(".maanbij")].map(el=>el.getAttribute("aria-label")),
+        grafiekKop:(document.querySelector(".chartkop h2")?.textContent||"").trim(),
+        zonBinnenKop:!!document.querySelector(".chartkop h2 #suntimes"),
+        terugBinnenKop:!!document.querySelector(".chartkop h2 #back")
       };
     });
     assert.equal(resultaat.mainAantal,1,naam+": exact één main-landmark");
@@ -72,6 +75,9 @@ async function controleer(browserType,naam){
       assert.ok(doel.breedte>0,naam+": footerdoel '"+doel.tekst+"' heeft geen breedte"+context);
     });
     assert.ok(resultaat.maanAria.every(v=>v===null),naam+": .maanbij krijgt geen dubbel aria-label");
+    assert.equal(resultaat.grafiekKop,"Het etmaal",naam+": grafiekheading bevat meer dan de sectietitel");
+    assert.equal(resultaat.zonBinnenKop,false,naam+": zoninformatie staat ten onrechte binnen de heading");
+    assert.equal(resultaat.terugBinnenKop,false,naam+": interactieve terugknop staat ten onrechte binnen de heading");
   }finally{await browser.close();}
 }
 

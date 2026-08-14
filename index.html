@@ -211,10 +211,17 @@
   h2 .r #moonlab{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
   h2 .r{font-family:var(--sans);letter-spacing:0;text-transform:none;font-size:11.5px;color:var(--ink-45);
         display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap}
+  /* De grafiektitel is een zelfstandige heading. Zoninformatie en de terugknop
+     staan er visueel naast, maar horen niet bij de toegankelijke headingnaam. */
+  .chartkop{margin:var(--s4) 0 0;padding-bottom:10px;border-bottom:1px solid var(--ink);
+    display:flex;justify-content:space-between;align-items:flex-end;gap:10px 16px;flex-wrap:wrap}
+  .chartkop h2{margin:0;padding:0;border:0;flex:0 1 auto}
+  .chartkop > .r{font-family:var(--sans);letter-spacing:0;text-transform:none;font-size:11.5px;color:var(--ink-45);
+    display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap}
   #suntimes{display:grid;grid-template-columns:repeat(3,max-content);gap:2px 18px;align-items:center;text-align:left}
   #suntimes span{white-space:nowrap}
   #suntimes .zondag{grid-column:1 / -1;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-25);font-weight:500}
-  h2 button{padding:4px 9px;font-size:9.5px}
+  h2 button,.chartkop button{padding:4px 9px;font-size:9.5px}
   .bereik{display:inline-flex}
   .bereik button+button{border-left:none}
   .bereik button.aan{border-color:var(--ink);color:var(--ink);font-weight:600}
@@ -586,11 +593,13 @@
 
     <div class="dashrow dashrow-chart">
     <div class="dashcol">
-    <h2><span id="chartlab">Het etmaal</span>
+    <div class="chartkop">
+      <h2><span id="chartlab">Het etmaal</span></h2>
       <span class="r">
         <span id="suntimes"></span>
         <button id="back" style="display:none">Terug naar nu</button>
-      </span></h2>
+      </span>
+    </div>
     <div class="dagmod">
       <p class="hint" id="charthint"></p>
       <svg id="chart" viewBox="0 0 900 296" width="100%" role="img"
