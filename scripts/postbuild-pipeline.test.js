@@ -29,6 +29,10 @@ const verwacht=[
   "verify-polar-chart-sentinel.js",
   "apply-seo-foundation.js",
   "verify-seo-foundation.js",
+  "generate-seo-location-pages.js",
+  "verify-seo-location-pages.js",
+  "apply-build-provenance.js",
+  "verify-build-provenance.js",
   "verify-final-27.js"
 ];
 assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten");
@@ -54,7 +58,11 @@ assert(positie("verify-fetch-error-semantics.js")<positie("apply-polar-chart-sen
 assert(positie("apply-polar-chart-sentinel.js")<positie("verify-polar-chart-sentinel.js"),"poolgrafiekcorrectie moet direct na toepassing worden geverifieerd");
 assert(positie("verify-polar-chart-sentinel.js")<positie("apply-seo-foundation.js"),"SEO-metadata moet op het inhoudelijk definitieve artifact worden toegepast");
 assert(positie("apply-seo-foundation.js")<positie("verify-seo-foundation.js"),"SEO-fundering moet direct na toepassing worden geverifieerd");
-assert(positie("verify-seo-foundation.js")<positie("verify-final-27.js"),"finale artifactguard moet de SEO-fundering meenemen");
+assert(positie("verify-seo-foundation.js")<positie("generate-seo-location-pages.js"),"plaatsroutes mogen pas na bewezen root-SEO worden gegenereerd");
+assert(positie("generate-seo-location-pages.js")<positie("verify-seo-location-pages.js"),"plaatsroutes moeten direct na generatie worden geverifieerd");
+assert(positie("verify-seo-location-pages.js")<positie("apply-build-provenance.js"),"build-SHA wordt op het complete route-artifact gestempeld");
+assert(positie("apply-build-provenance.js")<positie("verify-build-provenance.js"),"build-provenance moet direct na toepassing worden geverifieerd");
+assert(positie("verify-build-provenance.js")<positie("verify-final-27.js"),"finale artifactguard moet routes en provenance meenemen");
 assert.equal(POSTBUILD_STAPPEN.at(-1),"verify-final-27.js","finale artifactguard moet laatste stap zijn");
 const gezien=[];
 voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args,opt)=>{gezien.push({node,args,opt});return {status:0};}});
@@ -63,4 +71,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde, bestanden, guards en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");

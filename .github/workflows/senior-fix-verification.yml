@@ -28,3 +28,15 @@ jobs:
         run: node browser-playwright.test.js
       - name: Consumentenpolish — iPhone-randgeval in Chromium en WebKit
         run: node browser-consumer-polish.test.js
+      - name: SEO-plaatsroutes — Chromium en WebKit
+        shell: bash
+        run: |
+          set +e
+          node seo-location-pages-browser.test.js > /tmp/seo-routes-e2e.log 2>&1
+          code=$?
+          cat /tmp/seo-routes-e2e.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 40 /tmp/seo-routes-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=seo-location-pages-browser.test.js,line=1::$msg"
+            exit "$code"
+          fi
