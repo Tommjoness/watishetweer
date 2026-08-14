@@ -28,12 +28,23 @@ jobs:
           const url=process.env.PREVIEW_URL;
           if(!url)throw new Error("PREVIEW_URL ontbreekt");
 
+          function isPreviewToolbarCsp(text){
+            const s=String(text||"");
+            return s.includes("vercel.live/_next-live/") &&
+              (s.includes("Content Security Policy")||s.includes("Refused to load"));
+          }
+
           async function runOne(browser,i){
             const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block"});
             const page=await context.newPage();
-            const consoleErrors=[],requestFailures=[],badResponses=[];
-            page.on("pageerror",e=>consoleErrors.push("pageerror: "+String(e)));
-            page.on("console",m=>{if(m.type()==="error")consoleErrors.push("console: "+m.text());});
+            const appConsoleErrors=[],previewToolbarErrors=[],requestFailures=[],badResponses=[];
+            page.on("pageerror",e=>appConsoleErrors.push("pageerror: "+String(e)));
+            page.on("console",m=>{
+              if(m.type()!=="error")return;
+              const text=m.text();
+              if(isPreviewToolbarCsp(text))previewToolbarErrors.push("console: "+text);
+              else appConsoleErrors.push("console: "+text);
+            });
             page.on("requestfailed",r=>requestFailures.push({url:r.url(),failure:r.failure()?.errorText||"unknown"}));
             page.on("response",r=>{if(r.status()>=400)badResponses.push({status:r.status(),url:r.url()});});
             let error=null,navStatus=null,navUrl=null;
@@ -42,13 +53,14 @@ jobs:
               navStatus=response?.status()??null;
               navUrl=response?.url()??null;
               await page.waitForFunction(()=>{
-                const app=document.querySelector("#app"),state=document.querySelector("#state");
-                if(!app)return false;
-                const a=getComputedStyle(app),s=state?getComputedStyle(state):null;
+                const app=document.querySelector("#app"),t=document.querySelector("#t"),c=document.querySelector("#cond");
+                if(!app||!t||!c)return false;
+                const a=getComputedStyle(app);
                 const appVisible=a.display!=="none"&&a.visibility!=="hidden"&&Number(a.opacity||1)>0&&app.getBoundingClientRect().height>0;
-                const stateVisible=!!state&&s.display!=="none"&&s.visibility!=="hidden"&&state.getBoundingClientRect().height>0;
-                return appVisible||stateVisible;
-              },null,{timeout:30000});
+                const temp=t.textContent.trim(),condition=c.textContent.trim();
+                const days=document.querySelectorAll("#days .row.day:not(.kop)").length;
+                return appVisible&&temp&&!/[–—]/.test(temp)&&condition&&days>=7;
+              },null,{timeout:40000});
               await page.waitForTimeout(900);
             }catch(e){error=String(e&&e.message||e);}
 
@@ -86,8 +98,8 @@ jobs:
                 rowOutside:rows.some(el=>{const b=el.getBoundingClientRect();return b.left<-1||b.right>innerWidth+1;})
               };
             });
-            const ok=!error&&navStatus!==null&&navStatus<400&&snapshot.appVisible&&snapshot.temp&&!/[–—]/.test(snapshot.temp)&&snapshot.condition&&snapshot.days>=7&&snapshot.documentWidth<=snapshot.width+2&&!snapshot.rowOverflow&&!snapshot.rowOutside&&snapshot.nameFont==="13.5px"&&snapshot.windFont==="13px"&&snapshot.windDisplay!=="none"&&snapshot.rainFont==="13px"&&snapshot.minFont==="14px"&&snapshot.maxFont==="14px"&&consoleErrors.length===0;
-            const result={i,ok,error,navStatus,navUrl,snapshot,consoleErrors,requestFailures,badResponses};
+            const ok=!error&&navStatus!==null&&navStatus<400&&snapshot.appVisible&&snapshot.temp&&!/[–—]/.test(snapshot.temp)&&snapshot.condition&&snapshot.days>=7&&snapshot.documentWidth<=snapshot.width+2&&!snapshot.rowOverflow&&!snapshot.rowOutside&&snapshot.nameFont==="13.5px"&&snapshot.windFont==="13px"&&snapshot.windDisplay!=="none"&&snapshot.rainFont==="13px"&&snapshot.minFont==="14px"&&snapshot.maxFont==="14px"&&appConsoleErrors.length===0;
+            const result={i,ok,error,navStatus,navUrl,snapshot,appConsoleErrors,previewToolbarErrors,requestFailures,badResponses};
             console.log("WEBKIT_PROBE "+JSON.stringify(result));
             await page.screenshot({path:`webkit-load-${i}-${ok?"ok":"fail"}.png`,fullPage:true});
             await context.close();
@@ -100,7 +112,8 @@ jobs:
               const results=[];
               for(let i=1;i<=6;i++)results.push(await runOne(browser,i));
               const failures=results.filter(r=>!r.ok);
-              console.log(`WEBKIT_SAMENVATTING ${results.length-failures.length}/${results.length} groen; failures=${failures.length}`);
+              const toolbarCount=results.reduce((n,r)=>n+r.previewToolbarErrors.length,0);
+              console.log(`WEBKIT_SAMENVATTING ${results.length-failures.length}/${results.length} groen; failures=${failures.length}; previewToolbarErrors=${toolbarCount}`);
               assert.equal(failures.length,0,"WebKit preview-laadfouten: "+JSON.stringify(failures));
             }finally{await browser.close();}
           })().catch(e=>{console.error(e.stack||e);process.exit(1);});
