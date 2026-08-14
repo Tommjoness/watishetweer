@@ -39,22 +39,36 @@ jobs:
             ["webkit",()=>webkit.launch({headless:true})]
           ];
 
+          function isPreviewToolbarCsp(text){
+            const s=String(text||"");
+            return s.includes("vercel.live/_next-live/") &&
+              (s.includes("Content Security Policy")||s.includes("Refused to load"));
+          }
+
           async function controle(browser,engine,naam,viewport){
             const context=await browser.newContext({viewport,serviceWorkers:"block"});
             const page=await context.newPage();
-            const fouten=[];
-            page.on("pageerror",e=>fouten.push("pageerror: "+String(e)));
-            page.on("console",m=>{if(m.type()==="error")fouten.push("console: "+m.text());});
+            const appFouten=[],previewToolbarErrors=[];
+            page.on("pageerror",e=>appFouten.push("pageerror: "+String(e)));
+            page.on("console",m=>{
+              if(m.type()!=="error")return;
+              const text=m.text();
+              if(isPreviewToolbarCsp(text))previewToolbarErrors.push("console: "+text);
+              else appFouten.push("console: "+text);
+            });
             try{
               const response=await page.goto(url,{waitUntil:"domcontentloaded",timeout:45000});
               assert(response,`${engine}-${naam}: geen navigatieresponse`);
               assert(response.status()<400,`${engine}-${naam}: HTTP ${response.status()}`);
-              await page.waitForSelector("#app",{state:"visible",timeout:30000});
-              await page.waitForSelector("#days .row.day:not(.kop)",{state:"visible",timeout:30000});
               await page.waitForFunction(()=>{
-                const t=document.querySelector("#t"),c=document.querySelector("#cond");
-                return t&&c&&t.textContent.trim()&&!/[–—]/.test(t.textContent)&&c.textContent.trim();
-              },null,{timeout:30000});
+                const app=document.querySelector("#app"),t=document.querySelector("#t"),c=document.querySelector("#cond");
+                if(!app||!t||!c)return false;
+                const a=getComputedStyle(app);
+                const appVisible=a.display!=="none"&&a.visibility!=="hidden"&&Number(a.opacity||1)>0&&app.getBoundingClientRect().height>0;
+                const temp=t.textContent.trim(),condition=c.textContent.trim();
+                const days=document.querySelectorAll("#days .row.day:not(.kop)").length;
+                return appVisible&&temp&&!/[–—]/.test(temp)&&condition&&days>=7;
+              },null,{timeout:40000});
               await page.waitForTimeout(900);
 
               const r=await page.evaluate(()=>{
@@ -75,7 +89,9 @@ jobs:
                   maxFont:dmax?.fontSize||null,
                   rowOverflow:rows.some(el=>el.scrollWidth>el.clientWidth+1),
                   rowOutside:rows.some(el=>{const b=el.getBoundingClientRect();return b.left<-1||b.right>innerWidth+1;}),
-                  stateVisible:document.querySelector("#state")?getComputedStyle(document.querySelector("#state")).display!=="none":false
+                  stateVisible:document.querySelector("#state")?getComputedStyle(document.querySelector("#state")).display!=="none":false,
+                  temp:document.querySelector("#t")?.textContent?.trim()||"",
+                  condition:document.querySelector("#cond")?.textContent?.trim()||""
                 };
               });
 
@@ -85,6 +101,8 @@ jobs:
               assert.equal(r.rowOverflow,false,`${engine}-${naam}: weekrij heeft interne overflow`);
               assert.equal(r.rowOutside,false,`${engine}-${naam}: weekrij valt buiten viewport`);
               assert.equal(r.stateVisible,false,`${engine}-${naam}: loading/foutstate bleef zichtbaar`);
+              assert(r.temp&&!/[–—]/.test(r.temp),`${engine}-${naam}: temperatuur niet geladen`);
+              assert(r.condition,`${engine}-${naam}: conditie niet geladen`);
               assert.equal(r.nameFont,"13.5px",`${engine}-${naam}: dagnaam ${r.nameFont}`);
               assert.equal(r.rainFont,"13px",`${engine}-${naam}: neerslag ${r.rainFont}`);
               assert.equal(r.minFont,"14px",`${engine}-${naam}: min ${r.minFont}`);
@@ -95,10 +113,10 @@ jobs:
               }else{
                 assert.equal(r.windDisplay,"none",`${engine}-${naam}: wind hoort onder 370 px verborgen te zijn`);
               }
-              assert.deepEqual(fouten,[],`${engine}-${naam}: browserfouten: ${fouten.join(" | ")}`);
+              assert.deepEqual(appFouten,[],`${engine}-${naam}: WeatherNow-browserfouten: ${appFouten.join(" | ")}`);
               await page.locator("#days").screenshot({path:`week-${engine}-${naam}.png`});
               if(naam==="390")await page.screenshot({path:`full-${engine}-390.png`,fullPage:true});
-              console.log(`${engine}-${naam} groen: ${JSON.stringify(r)}`);
+              console.log(`${engine}-${naam} groen: ${JSON.stringify({...r,previewToolbarErrors:previewToolbarErrors.length})}`);
             }finally{await context.close();}
           }
 
