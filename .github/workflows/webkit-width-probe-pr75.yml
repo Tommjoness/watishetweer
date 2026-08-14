@@ -1,0 +1,129 @@
+name: WeatherNow WebKit width probe PR75
+
+on:
+  push:
+    branches: [agent/mobile-week-preview-20260814]
+
+jobs:
+  webkit-width-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Playwright en WebKit
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps webkit
+      - name: Test 390, 360 en 320 px elk tweemaal in verse WebKit-contexten
+        env:
+          PREVIEW_URL: "https://weathernow-75vzd467l-tommjoness-projects.vercel.app/?_vercel_share=9fFgTRo51wyeDNjU83IMtbsOrq4C6QO7&lat=52.3500&lon=5.2600&plaats=Almere&land=NL"
+        run: |
+          cat > .webkit-width-probe-pr75.js <<'NODE'
+          "use strict";
+          const assert=require("assert");
+          const {webkit}=require("playwright");
+          const url=process.env.PREVIEW_URL;
+          if(!url)throw new Error("PREVIEW_URL ontbreekt");
+          const cases=[390,360,320,390,360,320];
+
+          function isPreviewToolbarCsp(text){
+            const s=String(text||"");
+            return s.includes("vercel.live/_next-live/") &&
+              (s.includes("Content Security Policy")||s.includes("Refused to load"));
+          }
+
+          async function testCase(browser,width,i){
+            const height=width===390?844:width===360?800:700;
+            const context=await browser.newContext({viewport:{width,height},serviceWorkers:"block"});
+            const page=await context.newPage();
+            const appErrors=[],toolbarErrors=[],requestFailures=[],badResponses=[];
+            page.on("pageerror",e=>appErrors.push("pageerror: "+String(e)));
+            page.on("console",m=>{
+              if(m.type()!=="error")return;
+              const text=m.text();
+              if(isPreviewToolbarCsp(text))toolbarErrors.push(text);
+              else appErrors.push("console: "+text);
+            });
+            page.on("requestfailed",r=>requestFailures.push({url:r.url(),failure:r.failure()?.errorText||"unknown"}));
+            page.on("response",r=>{if(r.status()>=400)badResponses.push({status:r.status(),url:r.url()});});
+
+            let error=null,navStatus=null,navUrl=null;
+            try{
+              const response=await page.goto(url,{waitUntil:"domcontentloaded",timeout:45000});
+              navStatus=response?.status()??null;
+              navUrl=response?.url()??null;
+              await page.waitForFunction(()=>{
+                const app=document.querySelector("#app"),t=document.querySelector("#t"),c=document.querySelector("#cond");
+                if(!app||!t||!c)return false;
+                const a=getComputedStyle(app);
+                const visible=a.display!=="none"&&a.visibility!=="hidden"&&Number(a.opacity||1)>0&&app.getBoundingClientRect().height>0;
+                const temp=t.textContent.trim(),condition=c.textContent.trim();
+                return visible&&temp&&!/[–—]/.test(temp)&&condition&&document.querySelectorAll("#days .row.day:not(.kop)").length>=7;
+              },null,{timeout:40000});
+              await page.waitForTimeout(900);
+            }catch(e){error=String(e&&e.message||e);}
+
+            const snapshot=await page.evaluate(()=>{
+              const app=document.querySelector("#app"),state=document.querySelector("#state");
+              const a=app?getComputedStyle(app):null,s=state?getComputedStyle(state):null;
+              const first=document.querySelector("#days .row.day:not(.kop)");
+              const css=sel=>{const el=first&&first.querySelector(sel);return el?getComputedStyle(el):null;};
+              const rows=[...document.querySelectorAll("#days .row.day")];
+              return {
+                href:location.href,
+                appVisible:!!app&&a.display!=="none"&&a.visibility!=="hidden"&&Number(a.opacity||1)>0&&app.getBoundingClientRect().height>0,
+                stateDisplay:s?.display||null,
+                temp:document.querySelector("#t")?.textContent?.trim()||"",
+                condition:document.querySelector("#cond")?.textContent?.trim()||"",
+                days:document.querySelectorAll("#days .row.day:not(.kop)").length,
+                width:innerWidth,
+                documentWidth:document.documentElement.scrollWidth,
+                nameFont:css(".dname")?.fontSize||null,
+                windFont:css(".dwind")?.fontSize||null,
+                windDisplay:css(".dwind")?.display||null,
+                rainFont:css(".drain")?.fontSize||null,
+                minFont:css(".dmin")?.fontSize||null,
+                maxFont:css(".dmax")?.fontSize||null,
+                rowOverflow:rows.some(el=>el.scrollWidth>el.clientWidth+1),
+                rowOutside:rows.some(el=>{const b=el.getBoundingClientRect();return b.left<-1||b.right>innerWidth+1;})
+              };
+            });
+
+            const windCorrect=width>370
+              ? snapshot.windDisplay!=="none"&&snapshot.windFont==="13px"
+              : snapshot.windDisplay==="none";
+            const ok=!error&&navStatus!==null&&navStatus<400&&snapshot.appVisible&&snapshot.temp&&!/[–—]/.test(snapshot.temp)&&snapshot.condition&&snapshot.days>=7&&snapshot.width===width&&snapshot.documentWidth<=width+2&&snapshot.nameFont==="13.5px"&&snapshot.rainFont==="13px"&&snapshot.minFont==="14px"&&snapshot.maxFont==="14px"&&windCorrect&&!snapshot.rowOverflow&&!snapshot.rowOutside&&appErrors.length===0;
+            const result={i,width,ok,error,navStatus,navUrl,snapshot,appErrors,toolbarErrors:toolbarErrors.length,requestFailures,badResponses};
+            console.log("WEBKIT_WIDTH "+JSON.stringify(result));
+            await page.screenshot({path:`webkit-width-${width}-run${i}-${ok?"ok":"fail"}.png`,fullPage:true});
+            await context.close();
+            return result;
+          }
+
+          (async()=>{
+            const browser=await webkit.launch({headless:true});
+            try{
+              const results=[];
+              for(let i=0;i<cases.length;i++)results.push(await testCase(browser,cases[i],i+1));
+              const failures=results.filter(r=>!r.ok);
+              const summary=Object.fromEntries([390,360,320].map(w=>[w,{
+                ok:results.filter(r=>r.width===w&&r.ok).length,
+                total:results.filter(r=>r.width===w).length
+              }]));
+              console.log("WEBKIT_WIDTH_SUMMARY "+JSON.stringify({summary,failures:failures.length}));
+              assert.equal(failures.length,0,"WebKit breedtefouten: "+JSON.stringify(failures));
+            }finally{await browser.close();}
+          })().catch(e=>{console.error(e.stack||e);process.exit(1);});
+          NODE
+          node .webkit-width-probe-pr75.js
+      - name: Bewaar screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr75-webkit-width-probe-screenshots
+          path: webkit-width-*.png
+          if-no-files-found: warn
+          retention-days: 1
