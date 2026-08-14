@@ -1,0 +1,132 @@
+name: WeatherNow production WebKit domain probe PR75
+
+on:
+  push:
+    branches: [agent/mobile-week-preview-20260814]
+
+jobs:
+  webkit-domain-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Playwright en WebKit
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps webkit
+      - name: Wissel www en root af in acht verse WebKit-contexten
+        run: |
+          cat > .production-webkit-domain-probe-pr75.js <<'NODE'
+          "use strict";
+          const assert=require("assert");
+          const {webkit}=require("playwright");
+          const qs="?lat=52.3500&lon=5.2600&plaats=Almere&land=NL";
+          const routes=[
+            "https://www.watishetweer.nl/",
+            "https://watishetweer.nl/",
+            "https://www.watishetweer.nl/",
+            "https://watishetweer.nl/",
+            "https://www.watishetweer.nl/",
+            "https://watishetweer.nl/",
+            "https://www.watishetweer.nl/",
+            "https://watishetweer.nl/"
+          ];
+
+          async function one(browser,origin,i){
+            const slug=origin.includes("www.")?"www":"root";
+            const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block"});
+            const page=await context.newPage();
+            const consoleErrors=[],requestFailures=[],badResponses=[];
+            page.on("pageerror",e=>consoleErrors.push("pageerror: "+String(e)));
+            page.on("console",m=>{if(m.type()==="error")consoleErrors.push("console: "+m.text());});
+            page.on("requestfailed",r=>requestFailures.push({url:r.url(),failure:r.failure()?.errorText||"unknown"}));
+            page.on("response",r=>{if(r.status()>=400)badResponses.push({status:r.status(),url:r.url()});});
+            let error=null,navStatus=null,navUrl=null;
+            try{
+              const response=await page.goto(origin+qs,{waitUntil:"domcontentloaded",timeout:45000});
+              navStatus=response?.status()??null;
+              navUrl=response?.url()??null;
+              await page.waitForFunction(()=>{
+                const app=document.querySelector("#app"),t=document.querySelector("#t"),c=document.querySelector("#cond");
+                if(!app||!t||!c)return false;
+                const a=getComputedStyle(app),temp=t.textContent.trim(),condition=c.textContent.trim();
+                return a.display!=="none"&&a.visibility!=="hidden"&&app.getBoundingClientRect().height>0&&temp&&!/[–—]/.test(temp)&&condition&&document.querySelectorAll("#days .row.day:not(.kop)").length>=7;
+              },null,{timeout:50000});
+              await page.waitForTimeout(500);
+            }catch(e){error=String(e&&e.stack||e);}
+
+            async function snapshot(){
+              return page.evaluate(()=>{
+                const rows=[...document.querySelectorAll("#days .row.day")];
+                const first=document.querySelector("#days .row.day:not(.kop)");
+                const css=sel=>{const el=first&&first.querySelector(sel);return el?getComputedStyle(el):null;};
+                const app=document.querySelector("#app"),state=document.querySelector("#state");
+                const a=app?getComputedStyle(app):null,s=state?getComputedStyle(state):null;
+                return {
+                  href:location.href,
+                  host:location.hostname,
+                  appVisible:!!app&&a.display!=="none"&&a.visibility!=="hidden"&&app.getBoundingClientRect().height>0,
+                  stateText:state?.textContent?.trim().replace(/\s+/g," ").slice(0,300)||"",
+                  stateDisplay:s?.display||null,
+                  temp:document.querySelector("#t")?.textContent?.trim()||"",
+                  condition:document.querySelector("#cond")?.textContent?.trim()||"",
+                  days:document.querySelectorAll("#days .row.day:not(.kop)").length,
+                  width:innerWidth,
+                  documentWidth:document.documentElement.scrollWidth,
+                  nameFont:css(".dname")?.fontSize||null,
+                  windFont:css(".dwind")?.fontSize||null,
+                  windDisplay:css(".dwind")?.display||null,
+                  rainFont:css(".drain")?.fontSize||null,
+                  minFont:css(".dmin")?.fontSize||null,
+                  maxFont:css(".dmax")?.fontSize||null,
+                  rowOverflow:rows.some(el=>el.scrollWidth>el.clientWidth+1),
+                  rowOutside:rows.some(el=>{const b=el.getBoundingClientRect();return b.left<-1||b.right>innerWidth+1;})
+                };
+              });
+            }
+
+            const s390=await snapshot();
+            let s320=null;
+            if(!error&&s390.appVisible&&s390.days>=7){
+              await page.setViewportSize({width:320,height:700});
+              await page.waitForTimeout(250);
+              s320=await snapshot();
+            }
+            const baseOk=!error&&navStatus!==null&&navStatus<400&&s390.appVisible&&s390.temp&&!/[–—]/.test(s390.temp)&&s390.condition&&s390.days>=7&&s390.host==="watishetweer.nl"&&s390.documentWidth<=392&&s390.nameFont==="13.5px"&&s390.windFont==="13px"&&s390.windDisplay!=="none"&&s390.rainFont==="13px"&&s390.minFont==="14px"&&s390.maxFont==="14px"&&!s390.rowOverflow&&!s390.rowOutside&&consoleErrors.length===0;
+            const smallOk=!!s320&&s320.width===320&&s320.documentWidth<=322&&s320.nameFont==="13.5px"&&s320.windDisplay==="none"&&s320.rainFont==="13px"&&s320.minFont==="14px"&&s320.maxFont==="14px"&&!s320.rowOverflow&&!s320.rowOutside;
+            const ok=baseOk&&smallOk;
+            const result={i,slug,origin,ok,error,navStatus,navUrl,s390,s320,consoleErrors,requestFailures,badResponses};
+            console.log("WEBKIT_DOMAIN "+JSON.stringify(result));
+            try{await page.setViewportSize({width:390,height:844});await page.screenshot({path:`prod-webkit-domain-${i}-${slug}-${ok?"ok":"fail"}.png`,fullPage:true});}catch(_e){}
+            await context.close();
+            return result;
+          }
+
+          (async()=>{
+            const browser=await webkit.launch({headless:true});
+            try{
+              const results=[];
+              for(let i=0;i<routes.length;i++)results.push(await one(browser,routes[i],i+1));
+              const bySlug=slug=>results.filter(r=>r.slug===slug);
+              const summary={
+                www:{green:bySlug("www").filter(r=>r.ok).length,total:bySlug("www").length},
+                root:{green:bySlug("root").filter(r=>r.ok).length,total:bySlug("root").length},
+                failures:results.filter(r=>!r.ok).map(r=>({i:r.i,slug:r.slug,error:r.error,navStatus:r.navStatus,requestFailures:r.requestFailures,badResponses:r.badResponses}))
+              };
+              console.log("WEBKIT_DOMAIN_SUMMARY "+JSON.stringify(summary));
+              assert.equal(summary.failures.length,0,"WebKit productie-domeinprobe bevat mislukkingen: "+JSON.stringify(summary));
+            }finally{await browser.close();}
+          })().catch(e=>{console.error(e.stack||e);process.exit(1);});
+          NODE
+          node .production-webkit-domain-probe-pr75.js
+      - name: Bewaar screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr75-production-webkit-domain-screenshots
+          path: prod-webkit-domain-*.png
+          if-no-files-found: warn
+          retention-days: 1
