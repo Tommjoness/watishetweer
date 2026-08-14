@@ -1,0 +1,46 @@
+name: WeatherNow measurement-only final zone-cache profile
+
+on:
+  pull_request:
+    branches: [agent/performance-zone-cache-20260814]
+
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Toon voorgeinstalleerde Chrome-versie
+        run: google-chrome --version
+      - name: Installeer alleen Playwright-package
+        run: npm install --no-save --package-lock=false playwright
+      - name: Bouw definitieve PR71-artifact
+        run: npm run build
+      - name: Zone-cache correctness in voorgeinstalleerde Chrome
+        run: node browser-zone-cache-correctness.test.js
+      - name: Vijfvoudig CPU-profiel van definitieve PR71
+        run: node browser-performance-profile.test.js
+      - name: Bouw exact main en definitieve PR71 in aparte worktrees
+        run: |
+          git worktree add --detach /tmp/weathernow-main 51bddeadd2ed1414b850c640e693e169996ebda0
+          git worktree add --detach /tmp/weathernow-candidate 03244ac3671fbd72e50e4188f944055039857457
+          (cd /tmp/weathernow-main && npm run build)
+          (cd /tmp/weathernow-candidate && npm run build)
+          test "$(git -C /tmp/weathernow-main rev-parse HEAD)" = "51bddeadd2ed1414b850c640e693e169996ebda0"
+          test "$(git -C /tmp/weathernow-candidate rev-parse HEAD)" = "03244ac3671fbd72e50e4188f944055039857457"
+      - name: Paired A-B hoofdmeting op dezelfde runner en browser
+        run: node browser-performance-paired-ab.test.js /tmp/weathernow-main/public /tmp/weathernow-candidate/public
+      - name: Bewaar definitieve meetresultaten
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-zone-cache-performance-evidence
+          path: |
+            performance-profile-results.json
+            performance-paired-ab-results.json
+          if-no-files-found: error
+          retention-days: 1
