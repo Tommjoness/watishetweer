@@ -21,14 +21,21 @@ jobs:
         run: |
           npm install --no-save playwright@1.58.2
           npx playwright install --with-deps chromium webkit
-      - name: Meet fetch-timeouts op productie
+      - name: Meet fetch-timeouts wereldwijd in WebKit
         run: |
           cat > /tmp/webkit-timeout-diagnostic.js <<'NODE'
           "use strict";
-          const { chromium, webkit } = require("playwright");
-          const url = "https://watishetweer.nl/?lat=52.3702&lon=4.8952&plaats=Amsterdam&land=NL";
-          const engines = [["Chromium", chromium], ["WebKit", webkit]];
-          const attempts = 4;
+          const { webkit } = require("playwright");
+          const locations = [
+            ["Amsterdam",52.3702,4.8952,"NL"],
+            ["New York",40.7128,-74.0060,"US"],
+            ["Tokyo",35.6762,139.6503,"JP"],
+            ["Sydney",-33.8688,151.2093,"AU"],
+            ["Colombo",6.9271,79.8612,"LK"],
+            ["Longyearbyen",78.2232,15.6469,"SJ"],
+            ["Apia",-13.8333,-171.7500,"WS"]
+          ];
+          const attempts = 2;
 
           function classify(u){
             const s=String(u||"");
@@ -40,9 +47,10 @@ jobs:
           }
 
           (async()=>{
-            for(const [engineName, launcher] of engines){
-              const browser=await launcher.launch({headless:true});
-              try{
+            const browser=await webkit.launch({headless:true});
+            try{
+              for(const [name,lat,lon,land] of locations){
+                const url=`https://watishetweer.nl/?lat=${lat}&lon=${lon}&plaats=${encodeURIComponent(name)}&land=${land}`;
                 for(let attempt=1;attempt<=attempts;attempt++){
                   const context=await browser.newContext({viewport:{width:390,height:844}});
                   const page=await context.newPage();
@@ -85,12 +93,12 @@ jobs:
                   }catch(error){ outcome="navigation:"+(error&&error.message||String(error)); }
                   const trace=await page.evaluate(()=>window.__fetchTrace||[]).catch(()=>[]);
                   const compact=trace.map(x=>({kind:classify(x.url),ok:x.ok,status:x.status||0,name:x.name||"",message:x.message||"",ms:x.ms}));
-                  console.log(`${engineName}/attempt-${attempt}: outcome=${JSON.stringify(outcome)} totalMs=${Date.now()-started}`);
-                  console.log(`${engineName}/attempt-${attempt}: trace=${JSON.stringify(compact)}`);
+                  console.log(`${name}/attempt-${attempt}: outcome=${JSON.stringify(outcome)} totalMs=${Date.now()-started}`);
+                  console.log(`${name}/attempt-${attempt}: trace=${JSON.stringify(compact)}`);
                   await context.close();
                 }
-              } finally { await browser.close(); }
-            }
+              }
+            } finally { await browser.close(); }
           })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
           NODE
           NODE_PATH="$PWD/node_modules" node /tmp/webkit-timeout-diagnostic.js
