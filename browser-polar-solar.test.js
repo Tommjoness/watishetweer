@@ -83,25 +83,31 @@ async function controleer(type,naam){
     await page.goto(basis+"/pooldag?lat=78.2232&lon=15.6469&plaats=Longyearbyen",{waitUntil:"networkidle"});
     await page.waitForSelector("#suntimes .zonregel");
     const dag=await page.locator("#suntimes").innerText();
+    const dagPagina=await page.locator("body").innerText();
     const dagNachten=await page.locator("#nights").innerText();
     assert(dag.includes("Zon gaat niet onder"),naam+": pooldag mist feitelijke tekst: "+dag);
     assert(dag.includes("24 uur daglicht"),naam+": pooldag mist daglengte: "+dag);
-    assert(!/zon op 00:00|zon onder 00:00/i.test(dag),naam+": pooldag toont provider-sentinel als kloktijd: "+dag);
+    assert(!/zon op 00:00|zon onder 00:00/i.test(dag),naam+": pooldag toont provider-sentinel in zoninformatie: "+dag);
+    assert(!/zon op 00:00|zon onder 00:00/i.test(dagPagina),naam+": pooldag toont provider-sentinel elders op de pagina/grafiek: "+dagPagina);
     assert(/Geen nachtdata beschikbaar/i.test(dagNachten),naam+": pooldag hoort geen Nachtzicht-nacht te fabriceren: "+dagNachten);
 
     await page.goto(basis+"/poolnacht?lat=-77.8419&lon=166.6863&plaats=McMurdo",{waitUntil:"networkidle"});
     await page.waitForSelector("#suntimes .zonregel");
     const nacht=await page.locator("#suntimes").innerText();
+    const nachtPagina=await page.locator("body").innerText();
     const nachtRijen=await page.locator("#nights .row.night:not(.kop)").count();
     assert(nacht.includes("Zon komt niet op"),naam+": poolnacht mist feitelijke tekst: "+nacht);
     assert(nacht.includes("0 uur daglicht"),naam+": poolnacht mist daglengte: "+nacht);
-    assert(!/zon op 00:00|zon onder 00:00/i.test(nacht),naam+": poolnacht toont provider-sentinel als kloktijd: "+nacht);
+    assert(!/zon op 00:00|zon onder 00:00/i.test(nacht),naam+": poolnacht toont provider-sentinel in zoninformatie: "+nacht);
+    assert(!/zon op 00:00|zon onder 00:00/i.test(nachtPagina),naam+": poolnacht toont provider-sentinel elders op de pagina/grafiek: "+nachtPagina);
     assert(nachtRijen>=1,naam+": poolnacht verliest Nachtzicht ondanks volledige is_day=0-reeks");
 
     await page.goto(basis+"/overgang?lat=69.6492&lon=18.9553&plaats=Tromso",{waitUntil:"networkidle"});
     await page.waitForSelector("#suntimes .zonregel");
     const overgang=await page.locator("#suntimes").innerText();
+    const overgangPagina=await page.locator("body").innerText();
     assert(/zon onder 23:00/i.test(overgang),naam+": lange overgangsdag verliest conventionele zonsondergang: "+overgang);
+    assert(/zon onder 23:00/i.test(overgangPagina),naam+": gewone zonsondergang moet zichtbaar blijven op de pagina/grafiek: "+overgangPagina);
     assert(/22 uur en 0 minuten daglicht/i.test(overgang),naam+": lange overgangsdag heeft verkeerde daglengte: "+overgang);
     assert(!/Zon gaat niet onder|Zon komt niet op/i.test(overgang),naam+": overgangsdag is ten onrechte als poolstatus gelabeld: "+overgang);
     assert.deepEqual(errors,[],naam+": page errors");
@@ -112,7 +118,7 @@ server.listen(0,"127.0.0.1",async()=>{
   try{
     await controleer(chromium,"Chromium");
     await controleer(webkit,"WebKit");
-    console.log("Pooldag/poolnacht groen in Chromium en WebKit: officiële sentinelsemantiek, Nachtzicht en overgangsdag.");
+    console.log("Pooldag/poolnacht groen in Chromium en WebKit: zoninformatie én 24-uurgrafiek tonen geen 00:00-sentinels; overgangsdag blijft intact.");
   }catch(e){console.error(e.stack||e);process.exitCode=1;}
   finally{server.close();}
 });
