@@ -90,11 +90,13 @@ footer .bron:first-child{max-width:72ch}
   .mast h1{font-size:21px;line-height:1.1}
   .mast{gap:10px}
   .mastright{gap:4px}
-  .tools button{min-height:34px;padding:6px 8px}
-  .tools input[type=text]{min-height:36px;padding-top:7px;padding-bottom:7px}
+  .tools button{min-height:44px;padding:8px}
+  .tools input[type=text]{min-height:44px;padding-top:8px;padding-bottom:8px}
+  .results{top:44px}
   #stamp{font-size:10.5px;line-height:1.35}
   .chips{margin-top:10px;gap:6px}
   .chip{padding:4px 9px;font-size:12.5px}
+  .chip.add{min-height:36px;align-items:center}
   .brief{margin-top:16px;padding-top:18px}
 
   /* De mobiele contextbalk blijft fixed om de eerdere sticky/tril-regressie niet
