@@ -32,6 +32,8 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-weather-fallback-hedge.js",
   "apply-fetch-error-semantics.js",
   "verify-fetch-error-semantics.js",
+  "apply-polar-chart-sentinel.js",
+  "verify-polar-chart-sentinel.js",
   "verify-final-27.js"
 ]);
 
