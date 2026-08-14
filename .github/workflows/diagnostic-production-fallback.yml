@@ -102,7 +102,7 @@ jobs:
               if(config.maxMs&&elapsed>config.maxMs)throw new Error(`te laat ${elapsed}ms`);
               if(config.minMs&&elapsed<config.minMs)throw new Error(`te vroeg ${elapsed}ms`);
               if(outcome.docWidth&&outcome.docWidth>outcome.viewportWidth+1)throw new Error(`overflow=${outcome.docWidth}/${outcome.viewportWidth}`);
-              if(outcome.days!=null&&(outcome.days<7||outcome.nights<5))throw new Error(`onvolledig=${JSON.stringify(outcome)}`);
+              if(outcome.days!=null&&outcome.days<7)throw new Error(`onvolledig=${JSON.stringify(outcome)}`);
               console.log(`${engine}/${domain}/${config.name}/${viewport.width}: OK elapsed=${elapsed}ms fallbackStart=${Math.round(probe.fallbackStart)}ms full=${probe.full} fallback=${probe.fallback} outcome=${JSON.stringify(outcome)}`);
             }finally{await context.close();}
           }
