@@ -28,6 +28,8 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "apply-cache-fallback-country.js",
   "verify-cache-fallback-country.js",
   "apply-ui-polish-20260813.js",
+  "apply-weather-fallback-hedge.js",
+  "verify-weather-fallback-hedge.js",
   "apply-fetch-error-semantics.js",
   "verify-fetch-error-semantics.js",
   "verify-final-27.js"
