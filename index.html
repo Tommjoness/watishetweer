@@ -139,6 +139,8 @@
   .results div{padding:8px 11px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--rule-soft)}
   .results div:last-child{border-bottom:none}
   .results div:hover{background:var(--paper)}
+  .zoekmelding{padding:8px 11px;color:var(--ink-45);font-size:14px;cursor:default}
+  .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 
   /* v67: de kop stond eerder als los span-element tussen de chips in dezelfde
      flex-wrap-rij, dus kon op smalle schermen op dezelfde regel als de eerste
@@ -543,11 +545,13 @@
     </div>
     <div class="mastright">
       <div class="tools">
-        <input type="text" id="q" placeholder="Plaats zoeken" autocomplete="off" aria-label="Plaats zoeken" role="combobox" aria-expanded="false" aria-controls="res">
+        <input type="text" id="q" placeholder="Plaats zoeken" autocomplete="off" aria-label="Plaats zoeken" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="res">
         <button id="here" title="Gebruik je huidige locatie">Mijn locatie</button>
         <button id="ververs" title="Gegevens opnieuw ophalen">Ververs</button>
         <button id="thema" title="Wissel tussen licht, donker en rood licht">Auto</button>
-        <div class="results" id="res" role="listbox"></div>
+        <div class="results" id="res" role="listbox" aria-label="Zoekresultaten"></div>
+        <div class="results zoekmelding" id="zoekmelding" role="status" aria-live="polite"></div>
+        <div class="sr-only" id="zoekstatus" role="status" aria-live="polite"></div>
       </div>
       <span id="stamp" aria-live="polite"></span>
     </div>
@@ -2658,9 +2662,20 @@ function urlBij(){
 }
 
 /* ---------- zoeken ---------- */
-const q=document.getElementById("q"),res=document.getElementById("res");
+const q=document.getElementById("q"),res=document.getElementById("res"),zoekMelding=document.getElementById("zoekmelding"),zoekStatus=document.getElementById("zoekstatus");
 let timer=null,zoekGeneratie=0,zoekIndex=-1;
 const zoekOpties=()=>Array.from(res.querySelectorAll("div[data-lat]"));
+function zoekPanelenSluit(wisOpties=false){
+  res.classList.remove("on");
+  if(wisOpties)res.innerHTML="";
+  zoekMelding.classList.remove("on");zoekMelding.textContent="";
+  q.setAttribute("aria-expanded","false");q.removeAttribute("aria-activedescendant");
+}
+function zoekMeldingToon(tekst){
+  res.classList.remove("on");res.innerHTML="";
+  q.setAttribute("aria-expanded","false");q.removeAttribute("aria-activedescendant");
+  zoekMelding.textContent=tekst;zoekMelding.classList.add("on");
+}
 function zoekMarkeer(n){
   const opties=zoekOpties();if(!opties.length){zoekIndex=-1;q.removeAttribute("aria-activedescendant");return;}
   zoekIndex=Math.max(0,Math.min(n,opties.length-1));
@@ -2669,20 +2684,26 @@ function zoekMarkeer(n){
 }
 function zoekKies(el){
   if(!el)return;
-  ++zoekGeneratie;clearTimeout(timer);res.classList.remove("on");q.setAttribute("aria-expanded","false");q.removeAttribute("aria-activedescendant");
+  ++zoekGeneratie;clearTimeout(timer);zoekPanelenSluit(true);zoekStatus.textContent="";
   q.value=el.dataset.nm;zoekIndex=-1;gpsGeneratie++;load(el.dataset.lat,el.dataset.lon,el.dataset.nm,false,true,el.dataset.land||null);
 }
 q.addEventListener("input",()=>{
-  clearTimeout(timer);const generatie=++zoekGeneratie,v=q.value.trim();zoekIndex=-1;q.removeAttribute("aria-activedescendant");
-  if(v.length<2){res.classList.remove("on");q.setAttribute("aria-expanded","false");return;}
+  clearTimeout(timer);const generatie=++zoekGeneratie,v=q.value.trim();zoekIndex=-1;
+  /* Zodra de zichtbare query verandert, horen reeds gerenderde opties niet meer
+     bij de invoer. Maak ze direct niet-zichtbaar én niet-aanklikbaar; de
+     generatiecheck hieronder blijft daarnaast late netwerkresponses afvangen. */
+  zoekPanelenSluit(true);zoekStatus.textContent="";
+  if(v.length<2)return;
   timer=setTimeout(async()=>{
     try{
       const d=await j("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(v)+"&count=6&language=nl&format=json");
       if(generatie!==zoekGeneratie)return;
       const resultaten=Array.isArray(d.results)?d.results:[];
-      res.innerHTML=resultaten.length?resultaten.map((r,i)=>`<div id="zoekopt-${i}" role="option" aria-selected="false" data-lat="${r.latitude}" data-lon="${r.longitude}" data-nm="${esc(r.name)}" data-land="${esc(normLand(r.country_code)||"")}">${esc(r.name)}<span style="color:${INK45}"> · ${esc(r.admin1||"")} ${esc(r.country_code||"")}</span></div>`).join(""):"<div>Niets gevonden</div>";
-      res.classList.add("on");q.setAttribute("aria-expanded","true");
-    }catch(e){if(generatie!==zoekGeneratie)return;res.innerHTML="<div>Zoeken mislukt</div>";res.classList.add("on");q.setAttribute("aria-expanded","true");}
+      if(!resultaten.length){zoekMeldingToon("Niets gevonden");return;}
+      res.innerHTML=resultaten.map((r,i)=>`<div id="zoekopt-${i}" role="option" aria-selected="false" data-lat="${r.latitude}" data-lon="${r.longitude}" data-nm="${esc(r.name)}" data-land="${esc(normLand(r.country_code)||"")}">${esc(r.name)}<span style="color:${INK45}"> · ${esc(r.admin1||"")} ${esc(r.country_code||"")}</span></div>`).join("");
+      zoekStatus.textContent=resultaten.length===1?"1 plaats gevonden.":resultaten.length+" plaatsen gevonden.";
+      q.setAttribute("aria-expanded","true");res.classList.add("on");
+    }catch(e){if(generatie!==zoekGeneratie)return;zoekMeldingToon("Zoeken is niet gelukt. Probeer het opnieuw.");}
   },320);
 });
 q.addEventListener("keydown",e=>{
@@ -2690,10 +2711,10 @@ q.addEventListener("keydown",e=>{
   if(e.key==="ArrowDown"&&opties.length){e.preventDefault();zoekMarkeer(zoekIndex<0?0:zoekIndex+1);}
   else if(e.key==="ArrowUp"&&opties.length){e.preventDefault();zoekMarkeer(zoekIndex<0?opties.length-1:zoekIndex-1);}
   else if(e.key==="Enter"&&zoekIndex>=0){e.preventDefault();zoekKies(opties[zoekIndex]);}
-  else if(e.key==="Escape"){res.classList.remove("on");q.setAttribute("aria-expanded","false");q.removeAttribute("aria-activedescendant");zoekIndex=-1;}
+  else if(e.key==="Escape"){zoekPanelenSluit();zoekIndex=-1;}
 });
 res.addEventListener("click",e=>zoekKies(e.target.closest("div[data-lat]")));
-document.addEventListener("click",e=>{if(!e.target.closest(".tools")){res.classList.remove("on");q.setAttribute("aria-expanded","false");}});
+document.addEventListener("click",e=>{if(!e.target.closest(".tools"))zoekPanelenSluit();});
 
 document.getElementById("ververs").addEventListener("click",async()=>{
   if(S.lat==null) return;

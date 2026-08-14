@@ -78,6 +78,35 @@ async function controleer(browserType,naam){
     assert.equal(resultaat.grafiekKop,"Het etmaal",naam+": grafiekheading bevat meer dan de sectietitel");
     assert.equal(resultaat.zonBinnenKop,false,naam+": zoninformatie staat ten onrechte binnen de heading");
     assert.equal(resultaat.terugBinnenKop,false,naam+": interactieve terugknop staat ten onrechte binnen de heading");
+
+    /* Zoekresultaten horen altijd bij de query die zichtbaar in het invoerveld
+       staat. Een oudere lijst wordt direct bij input gewist, dus niet pas nadat
+       de volgende geocodingrequest is voltooid. */
+    await page.route("https://geocoding-api.open-meteo.com/**",async route=>{
+      const query=new URL(route.request().url()).searchParams.get("name");
+      if(query==="Amsterdam"){
+        await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({results:[{name:"Amsterdam",admin1:"Noord-Holland",country_code:"NL",latitude:52.3676,longitude:4.9041}]})});return;
+      }
+      if(query==="Colombo"){
+        await new Promise(resolve=>setTimeout(resolve,650));
+        await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({results:[{name:"Colombo",admin1:"Western",country_code:"LK",latitude:6.935,longitude:79.849}]})});return;
+      }
+      await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({results:[]})});
+    });
+    const invoer=page.locator("#q");
+    await invoer.fill("Amsterdam");
+    await page.waitForSelector('#res.on [data-nm="Amsterdam"]');
+    await invoer.fill("Colombo");
+    const direct=await page.evaluate(()=>({waarde:document.getElementById("q").value,opties:document.querySelectorAll("#res [role='option']").length,open:document.getElementById("res").classList.contains("on"),expanded:document.getElementById("q").getAttribute("aria-expanded")}));
+    assert.deepEqual(direct,{waarde:"Colombo",opties:0,open:false,expanded:"false"},naam+": oude Amsterdam-opties blijven zichtbaar of selecteerbaar bij query Colombo");
+    await page.waitForSelector('#res.on [data-nm="Colombo"]');
+    const nieuw=await page.evaluate(()=>({opties:[...document.querySelectorAll("#res [role='option']")].map(x=>x.dataset.nm),status:document.getElementById("zoekstatus").textContent,expanded:document.getElementById("q").getAttribute("aria-expanded")}));
+    assert.deepEqual(nieuw,{opties:["Colombo"],status:"1 plaats gevonden.",expanded:"true"},naam+": nieuwe zoekresultaten/status zijn niet coherent: "+JSON.stringify(nieuw));
+
+    await invoer.fill("Bestaat beslist niet");
+    await page.waitForSelector("#zoekmelding.on");
+    const leeg=await page.evaluate(()=>({melding:document.getElementById("zoekmelding").textContent,rol:document.getElementById("zoekmelding").getAttribute("role"),opties:document.querySelectorAll("#res [role='option']").length,resOpen:document.getElementById("res").classList.contains("on"),expanded:document.getElementById("q").getAttribute("aria-expanded")}));
+    assert.deepEqual(leeg,{melding:"Niets gevonden",rol:"status",opties:0,resOpen:false,expanded:"false"},naam+": lege zoekstate gebruikt geen afzonderlijke statussemantiek");
   }finally{await browser.close();}
 }
 

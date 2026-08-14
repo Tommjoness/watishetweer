@@ -120,8 +120,8 @@ if(themaKnop&&themaMenu){
     e.stopPropagation();
     const openen=themaMenu.hidden;
     if(openen){
-      const zoek=document.getElementById("res"),invoer=document.getElementById("q");
-      if(zoek)zoek.classList.remove("on");
+      const zoekpanelen=document.querySelectorAll("#res.on,#zoekmelding.on"),invoer=document.getElementById("q");
+      zoekpanelen.forEach(paneel=>paneel.classList.remove("on"));
       if(invoer)invoer.setAttribute("aria-expanded","false");
     }
     themaMenu.hidden=!openen;
