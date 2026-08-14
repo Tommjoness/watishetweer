@@ -98,11 +98,16 @@ vereist("plaatsnaamUitCoordinaten","gedeelde plaatsnaamhelper");
 /* Geen tijdelijke diagnosecode in het productie-artifact. */
 for(const tekst of ["CACHEPERF","DEELPERF","window.__q4","console.log(\"DIAG "]){verboden(tekst,"tijdelijke diagnose "+tekst);}
 
-/* Alle inline runtime blijft syntactisch geldig. */
-const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
-if(!scripts.length)throw new Error("Geen inline WeatherNow-runtime gevonden.");
-scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:final-27-"+(i+1)}));
+/* Uitvoerbare inline runtime blijft syntactisch geldig. Niet-uitvoerbare
+   structured data wordt als JSON gevalideerd in plaats van als JavaScript:
+   application/ld+json is volgens zijn HTML-type data en geen runtime-script. */
+const scriptBlokken=[...html.matchAll(/<script(?![^>]*\ssrc=)([^>]*)>([\s\S]*?)<\/script>/g)];
+const runtimeScripts=scriptBlokken.filter(m=>!/\btype\s*=\s*["']application\/ld\+json["']/i.test(m[1])).map(m=>m[2]);
+const jsonLdScripts=scriptBlokken.filter(m=>/\btype\s*=\s*["']application\/ld\+json["']/i.test(m[1])).map(m=>m[2]);
+if(!runtimeScripts.length)throw new Error("Geen inline WeatherNow-runtime gevonden.");
+runtimeScripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:final-27-runtime-"+(i+1)}));
+jsonLdScripts.forEach((bron,i)=>{try{JSON.parse(bron);}catch(e){throw new Error("Ongeldige JSON-LD in definitief artifact #"+(i+1)+": "+e.message);}});
 
 /* Serviceworker moet exact bij deze app-shell horen. */
 const verwacht=verifieerServiceworkerCache(OUT,"finale");
-console.log("Finale 27-punten artifactguard geslaagd: 25/50/75-invariants, expliciete hoofd- en previewrequesteigenaars, 5s fallback-hedge, race-/stale-loadankers, syntactische runtime en serviceworker "+verwacht+".");
+console.log("Finale 27-punten artifactguard geslaagd: 25/50/75-invariants, expliciete hoofd- en previewrequesteigenaars, 5s fallback-hedge, race-/stale-loadankers, syntactische runtime, geldige JSON-LD en serviceworker "+verwacht+".");
