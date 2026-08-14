@@ -42,20 +42,27 @@ for(const tekst of ["Piek was rond ","Piek rond ","UV-gegevens voor vandaag word
 
 /* Finale architectuur/performance: geen cosmetische performanceclaim. De lucht-
    aanvraag start vóór de hoofdforecast wordt afgewacht; waarschuwingen starten
-   vanuit de eerste render en blokkeren de hoofdforecast niet. Alle drie hebben
-   eigen race-/abortbescherming. */
+   vanuit de eerste render en blokkeren de hoofdforecast niet. De volledige
+   forecast behoudt zijn 10s hard cap, maar krijgt na 5s een lichte fallback-hedge.
+   Snelle loads blijven enkelvoudig; zodra beide lopen wint het eerste succesvolle
+   antwoord en stale loads mogen geen oude fallback starten. */
 for(const tekst of [
   "let laadTeller=0,waarschuwingTeller=0,actieveWeerController=null,actieveLuchtController=null,actieveWaarschuwingController=null",
   "const luchtBelofte=j(a,{timeoutMs:7000,signal:luchtController.signal})",
-  "vol=await j(f,{timeoutMs:10000,signal:weerController.signal})",
-  "vol=await j(fmin,{timeoutMs:10000,signal:weerController.signal})",
+  "const WEER_HEDGE_MS=5000;",
+  "const volledigeBelofte=j(f,{timeoutMs:10000,signal:weerController.signal});",
+  "fallbackBelofte=j(fmin,{timeoutMs:10000,signal:weerController.signal})",
+  "hedgeTimer=setTimeout(()=>resolve({soort:\"traag\"}),WEER_HEDGE_MS);",
+  "volledigeBelofte.then(geslaagd,mislukt);",
+  "fallback.then(geslaagd,mislukt);",
   "if(mijnBeurt!==laadTeller) return",
   "if(mijnBeurt!==laadTeller||S.d!==vol) return;",
   "if(mijnBeurt!==waarschuwingTeller||S.lat!==lat||S.lon!==lon) return;",
   "waarschuwingen();",
   "const basisJ=j,zoekCache=new Map();"
 ])vereist(tekst);
-const luchtStart=html.indexOf("const luchtBelofte=j(a"),weerStart=html.indexOf("vol=await j(f,{timeoutMs:10000"),waarschuwingStart=html.indexOf("waarschuwingen();");
+verboden("try{vol=await j(f,{timeoutMs:10000,signal:weerController.signal});}","oude sequentiële full-forecastwait");
+const luchtStart=html.indexOf("const luchtBelofte=j(a"),weerStart=html.indexOf("const volledigeBelofte=j(f,{timeoutMs:10000"),waarschuwingStart=html.indexOf("waarschuwingen();");
 if(luchtStart<0||weerStart<0||luchtStart>weerStart)throw new Error("Luchtkwaliteit start niet aantoonbaar parallel vóór het wachten op de hoofdforecast.");
 if(waarschuwingStart<0)throw new Error("Waarschuwingen worden niet vanuit de renderketen gestart.");
 
@@ -98,4 +105,4 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:final-
 
 /* Serviceworker moet exact bij deze app-shell horen. */
 const verwacht=verifieerServiceworkerCache(OUT,"finale");
-console.log("Finale 27-punten artifactguard geslaagd: 25/50/75-invariants, expliciete hoofd- en previewrequesteigenaars, race/fallback-ankers, syntactische runtime en serviceworker "+verwacht+".");
+console.log("Finale 27-punten artifactguard geslaagd: 25/50/75-invariants, expliciete hoofd- en previewrequesteigenaars, 5s fallback-hedge, race-/stale-loadankers, syntactische runtime en serviceworker "+verwacht+".");
