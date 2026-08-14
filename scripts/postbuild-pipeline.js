@@ -36,6 +36,10 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-polar-chart-sentinel.js",
   "apply-seo-foundation.js",
   "verify-seo-foundation.js",
+  "generate-seo-location-pages.js",
+  "verify-seo-location-pages.js",
+  "apply-build-provenance.js",
+  "verify-build-provenance.js",
   "verify-final-27.js"
 ]);
 
