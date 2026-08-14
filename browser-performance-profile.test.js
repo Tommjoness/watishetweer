@@ -14,7 +14,7 @@ const {bouw}=require("./data.js");
 const RONDEN=5;
 const KANDIDATEN=[
   "tekenAlles","themaToepassen","minibarBij","waarschuwingen","logBij",
-  "meters","briefing","etmaal","nowcast","dagen","nachten","lucht","stempel"
+  "meters","briefing","etmaal","nowcast","dagen","nachten","lucht","stempel","zoneDelen"
 ];
 
 function isoPlus(iso,uren){
@@ -180,9 +180,20 @@ function vatProfielSamen(profile,poort){
       }
     }
 
-    console.log(`Profiler cold-load mediaan: ${mediaan(coldLoads).toFixed(1)} ms; runs ${coldLoads.map(x=>x.toFixed(1)).join(", ")} ms.`);
-    console.log(`Intl formatToParts mediaan: ${mediaan(intlCalls)} calls voor ${mediaan(intlUnique)} unieke timestamps; ${((1-mediaan(intlUnique)/mediaan(intlCalls))*100).toFixed(1)}% van de aanroepen gebruikt dus een timestamp die in dezelfde cold-load al eerder is geformatteerd.`);
     const regels=KANDIDATEN.map(naam=>({naam,mediaan:mediaan(perFunctie.get(naam)),runs:perFunctie.get(naam)})).sort((a,b)=>b.mediaan-a.mediaan);
+    const rapport={
+      coldLoads,
+      coldLoadMedian:mediaan(coldLoads),
+      intlCalls,
+      intlCallsMedian:mediaan(intlCalls),
+      intlUnique,
+      intlUniqueMedian:mediaan(intlUnique),
+      repeatedPct:(1-mediaan(intlUnique)/mediaan(intlCalls))*100,
+      functions:Object.fromEntries(regels.map(r=>[r.naam,{median:r.mediaan,runs:r.runs}]))
+    };
+    fs.writeFileSync(path.join(__dirname,"performance-profile-results.json"),JSON.stringify(rapport,null,2));
+    console.log(`Profiler cold-load mediaan: ${rapport.coldLoadMedian.toFixed(1)} ms; runs ${coldLoads.map(x=>x.toFixed(1)).join(", ")} ms.`);
+    console.log(`Intl formatToParts mediaan: ${rapport.intlCallsMedian} calls voor ${rapport.intlUniqueMedian} unieke timestamps; ${rapport.repeatedPct.toFixed(1)}% van de aanroepen gebruikt dus een timestamp die in dezelfde cold-load al eerder is geformatteerd.`);
     for(const regel of regels){
       console.log(`Profiler ${regel.naam}: mediaan sampled self-time ${regel.mediaan.toFixed(1)} ms; runs ${regel.runs.map(x=>x.toFixed(1)).join(", ")} ms.`);
     }

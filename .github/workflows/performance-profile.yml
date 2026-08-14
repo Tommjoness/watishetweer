@@ -21,3 +21,10 @@ jobs:
         run: npm run build
       - name: Measurement-only CPU-profiel in voorgeinstalleerde Chrome
         run: node browser-performance-profile.test.js
+      - name: Bewaar meetresultaat
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-performance-profile
+          path: performance-profile-results.json
+          if-no-files-found: error
+          retention-days: 1
