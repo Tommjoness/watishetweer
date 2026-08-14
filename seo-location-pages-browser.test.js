@@ -81,6 +81,14 @@ async function controleer(type,naam){
     assert.deepEqual(pageErrors,[],`${naam}: pageerrors op plaatsroute`);
     assert.deepEqual(eigen404,[],`${naam}: subpad-assets/API's geven 404: ${eigen404.join(", ")}`);
 
+    await page.evaluate(async()=>{await load(52.3676,4.9041,"Amsterdam",false,false,"NL");});
+    const gedeeld=await page.evaluate(()=>({pathname:location.pathname,search:location.search}));
+    assert.equal(gedeeld.pathname,"/",`${naam}: andere plaats vanaf SEO-route blijft ten onrechte onder /weer/almere/ hangen`);
+    const gedeeldeParams=new URLSearchParams(gedeeld.search);
+    assert.equal(gedeeldeParams.get("lat"),"52.368",`${naam}: fallback-deel-URL mist Amsterdam-latitude`);
+    assert.equal(gedeeldeParams.get("lon"),"4.904",`${naam}: fallback-deel-URL mist Amsterdam-longitude`);
+    assert(gedeeldeParams.has("plaats"),`${naam}: fallback-deel-URL mist plaatsparameter`);
+
     if(await page.evaluate(()=>"serviceWorker" in navigator)){
       await page.waitForTimeout(500);
       const regs=await page.evaluate(async()=>{const rs=await navigator.serviceWorker.getRegistrations();return rs.map(r=>({scope:r.scope,script:r.active?.scriptURL||r.installing?.scriptURL||r.waiting?.scriptURL||""}));});
@@ -99,7 +107,7 @@ server.listen(0,"127.0.0.1",async()=>{
   try{
     await controleer(chromium,"Chromium");
     await controleer(webkit,"WebKit");
-    console.log("SEO-plaatsbrowser: Chromium + WebKit, Almere-route, root-assets, runtime, SW-scope, mobiel en /weer/-hub geslaagd.");
+    console.log("SEO-plaatsbrowser: Chromium + WebKit, canonieke Almere-route, fallback-deel-URL, root-assets, runtime, SW-scope, mobiel en /weer/-hub geslaagd.");
   }catch(e){console.error(e&&e.stack||e);process.exitCode=1;}
   finally{server.close();}
 });
