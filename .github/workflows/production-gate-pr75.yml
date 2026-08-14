@@ -1,0 +1,147 @@
+name: WeatherNow production gate PR75
+
+on:
+  push:
+    branches: [agent/mobile-week-preview-20260814]
+
+jobs:
+  production-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Toon Chrome-versie
+        run: google-chrome --version
+      - name: Installeer Playwright en WebKit
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps webkit
+      - name: Controleer beide productiedomeinen in Chromium en WebKit
+        run: |
+          cat > .production-gate-pr75.js <<'NODE'
+          "use strict";
+          const assert=require("assert");
+          const {chromium,webkit}=require("playwright");
+          const origins=["https://watishetweer.nl/","https://www.watishetweer.nl/"];
+          const qs="?lat=52.3500&lon=5.2600&plaats=Almere&land=NL";
+
+          async function inspect(page,engine,origin,width){
+            const height=width===1440?900:width===390?844:700;
+            await page.setViewportSize({width,height});
+            await page.waitForTimeout(250);
+            const r=await page.evaluate(()=>{
+              const rows=[...document.querySelectorAll("#days .row.day")];
+              const first=document.querySelector("#days .row.day:not(.kop)");
+              const css=sel=>{const el=first&&first.querySelector(sel);return el?getComputedStyle(el):null;};
+              const state=document.querySelector("#state");
+              return {
+                href:location.href,
+                host:location.hostname,
+                width:innerWidth,
+                documentWidth:document.documentElement.scrollWidth,
+                days:document.querySelectorAll("#days .row.day:not(.kop)").length,
+                temp:document.querySelector("#t")?.textContent?.trim()||"",
+                condition:document.querySelector("#cond")?.textContent?.trim()||"",
+                stateVisible:state?getComputedStyle(state).display!=="none":false,
+                nameFont:css(".dname")?.fontSize||null,
+                windFont:css(".dwind")?.fontSize||null,
+                windDisplay:css(".dwind")?.display||null,
+                rainFont:css(".drain")?.fontSize||null,
+                minFont:css(".dmin")?.fontSize||null,
+                maxFont:css(".dmax")?.fontSize||null,
+                rowOverflow:rows.some(el=>el.scrollWidth>el.clientWidth+1),
+                rowOutside:rows.some(el=>{const b=el.getBoundingClientRect();return b.left<-1||b.right>innerWidth+1;})
+              };
+            });
+            assert(["watishetweer.nl","www.watishetweer.nl"].includes(r.host),`${engine} ${origin} ${width}: onverwachte eindhost ${r.host}`);
+            assert.equal(r.width,width,`${engine} ${origin} ${width}: viewport klopt niet`);
+            assert(r.days>=7,`${engine} ${origin} ${width}: weekweergave onvolledig (${r.days})`);
+            assert(r.temp&&!/[–—]/.test(r.temp),`${engine} ${origin} ${width}: temperatuur niet geladen`);
+            assert(r.condition,`${engine} ${origin} ${width}: conditie niet geladen`);
+            assert.equal(r.stateVisible,false,`${engine} ${origin} ${width}: loading/foutstate zichtbaar`);
+            assert(r.documentWidth<=width+2,`${engine} ${origin} ${width}: documentoverflow ${r.documentWidth}`);
+            assert.equal(r.rowOverflow,false,`${engine} ${origin} ${width}: interne weekrij-overflow`);
+            assert.equal(r.rowOutside,false,`${engine} ${origin} ${width}: weekrij buiten viewport`);
+            if(width<=900){
+              assert.equal(r.nameFont,"13.5px",`${engine} ${origin} ${width}: dagnaam ${r.nameFont}`);
+              assert.equal(r.rainFont,"13px",`${engine} ${origin} ${width}: neerslag ${r.rainFont}`);
+              assert.equal(r.minFont,"14px",`${engine} ${origin} ${width}: min ${r.minFont}`);
+              assert.equal(r.maxFont,"14px",`${engine} ${origin} ${width}: max ${r.maxFont}`);
+              if(width>370){
+                assert.notEqual(r.windDisplay,"none",`${engine} ${origin} ${width}: wind onverwacht verborgen`);
+                assert.equal(r.windFont,"13px",`${engine} ${origin} ${width}: wind ${r.windFont}`);
+              }else{
+                assert.equal(r.windDisplay,"none",`${engine} ${origin} ${width}: wind hoort verborgen te zijn`);
+              }
+            }
+            const slug=origin.includes("www.")?"www":"root";
+            await page.locator("#days").screenshot({path:`prod-week-${engine}-${slug}-${width}.png`});
+            if(width===390)await page.screenshot({path:`prod-full-${engine}-${slug}-390.png`,fullPage:true});
+            console.log(`PROD_LAYOUT ${engine} ${slug} ${width} groen: ${JSON.stringify(r)}`);
+            return r;
+          }
+
+          async function runOrigin(browser,engine,origin,widths){
+            const slug=origin.includes("www.")?"www":"root";
+            const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block"});
+            const page=await context.newPage();
+            const consoleErrors=[],requestFailures=[],badResponses=[];
+            page.on("pageerror",e=>consoleErrors.push("pageerror: "+String(e)));
+            page.on("console",m=>{if(m.type()==="error")consoleErrors.push("console: "+m.text());});
+            page.on("requestfailed",r=>requestFailures.push({url:r.url(),failure:r.failure()?.errorText||"unknown"}));
+            page.on("response",r=>{if(r.status()>=400)badResponses.push({status:r.status(),url:r.url()});});
+            const result={engine,origin,slug,ok:false,error:null,navStatus:null,navUrl:null,layouts:[],consoleErrors,requestFailures,badResponses};
+            try{
+              const response=await page.goto(origin+qs,{waitUntil:"domcontentloaded",timeout:45000});
+              result.navStatus=response?.status()??null;
+              result.navUrl=response?.url()??null;
+              assert(response&&response.status()<400,`${engine} ${slug}: navigatie HTTP ${response?.status()}`);
+              await page.waitForFunction(()=>{
+                const app=document.querySelector("#app"),t=document.querySelector("#t"),c=document.querySelector("#cond");
+                if(!app||!t||!c)return false;
+                const a=getComputedStyle(app),temp=t.textContent.trim(),condition=c.textContent.trim();
+                return a.display!=="none"&&a.visibility!=="hidden"&&app.getBoundingClientRect().height>0&&temp&&!/[–—]/.test(temp)&&condition&&document.querySelectorAll("#days .row.day:not(.kop)").length>=7;
+              },null,{timeout:50000});
+              await page.waitForTimeout(700);
+              for(const width of widths)result.layouts.push(await inspect(page,engine,origin,width));
+              assert.deepEqual(consoleErrors,[],`${engine} ${slug}: WeatherNow-browserfouten: ${consoleErrors.join(" | ")}`);
+              result.ok=true;
+            }catch(e){
+              result.error=String(e&&e.stack||e);
+              try{await page.screenshot({path:`prod-fail-${engine}-${slug}.png`,fullPage:true});}catch(_e){}
+            }finally{await context.close();}
+            console.log("PROD_RESULT "+JSON.stringify(result));
+            return result;
+          }
+
+          (async()=>{
+            const results=[];
+            const chrome=await chromium.launch({headless:true,channel:"chrome"});
+            try{
+              for(const origin of origins)results.push(await runOrigin(chrome,"chromium",origin,[1440,390,320]));
+            }finally{await chrome.close();}
+            const wk=await webkit.launch({headless:true});
+            try{
+              for(const origin of origins)results.push(await runOrigin(wk,"webkit",origin,[390,320]));
+            }finally{await wk.close();}
+            const failures=results.filter(r=>!r.ok);
+            console.log("PROD_SUMMARY "+JSON.stringify({green:results.length-failures.length,total:results.length,failures:failures.map(r=>({engine:r.engine,slug:r.slug,error:r.error,navStatus:r.navStatus,requestFailures:r.requestFailures,badResponses:r.badResponses}))}));
+            assert.equal(failures.length,0,"Productiebrowserfouten: "+JSON.stringify(failures));
+            console.log("PR75 productie volledig groen op beide domeinen in Chromium en WebKit.");
+          })().catch(e=>{console.error(e.stack||e);process.exit(1);});
+          NODE
+          node .production-gate-pr75.js
+      - name: Bewaar productiescreenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr75-production-browser-screenshots
+          path: |
+            prod-week-*.png
+            prod-full-*.png
+            prod-fail-*.png
+          if-no-files-found: warn
+          retention-days: 1
