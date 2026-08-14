@@ -1,0 +1,170 @@
+name: WeatherNow production fallback diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  production-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Installeer Chromium en WebKit
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium webkit
+      - name: Controleer echte productie en gedeployde fallbackcode
+        run: |
+          cat > /tmp/production-fallback.js <<'NODE'
+          "use strict";
+          const { chromium, webkit } = require("playwright");
+          const { bouw } = require(process.cwd()+"/data.js");
+          const domains = [
+            ["root","https://watishetweer.nl/?lat=52.3702&lon=4.8952&plaats=Amsterdam&land=NL"],
+            ["www","https://www.watishetweer.nl/?lat=52.3702&lon=4.8952&plaats=Amsterdam&land=NL"]
+          ];
+          const engines = [["Chromium",chromium],["WebKit",webkit]];
+
+          function dataset(temp){
+            const d=bouw({tempNu:temp,wcNu:1,ccNu:20});
+            d.current.interval=900; d.current.visibility=18000; d.elevation=2;
+            d.latitude=52.3702; d.longitude=4.8952;
+            d.daily.sunshine_duration=d.daily.time.map(()=>7*3600);
+            return d;
+          }
+          const payloads={
+            full:dataset(11), fallback:dataset(22),
+            preview:{timezone:"Europe/Amsterdam",current:{temperature_2m:12,apparent_temperature:12,is_day:1,weather_code:1}},
+            air:{current:{european_aqi:18,us_aqi:35},hourly:{time:[dataset(11).current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[0],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}}
+          };
+
+          async function normalAttempt(browser,engine,domain,url,attempt,viewport){
+            const context=await browser.newContext({viewport});
+            const page=await context.newPage();
+            const pageErrors=[];
+            page.on("pageerror",e=>pageErrors.push(String(e)));
+            try{
+              const response=await page.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
+              if(!response||response.status()>=400)throw new Error(`HTTP ${response&&response.status()}`);
+              const outcome=await Promise.race([
+                page.waitForFunction(()=>{
+                  const app=document.getElementById("app"),state=document.getElementById("state");
+                  const days=document.querySelectorAll("#days .row.day:not(.kop)").length;
+                  if(app&&getComputedStyle(app).display!=="none"&&days>=7)return {kind:"loaded",days};
+                  const text=state&&getComputedStyle(state).display!=="none"?state.textContent.trim():"";
+                  if(text&&/mislukt|duurt te lang|probeer het opnieuw|geen verbinding|fout/i.test(text))return {kind:"error",text};
+                  return false;
+                },{timeout:18000}).then(h=>h.jsonValue()),
+                new Promise(resolve=>setTimeout(()=>resolve({kind:"timeout"}),19000))
+              ]);
+              if(outcome.kind!=="loaded")throw new Error(`terminal=${JSON.stringify(outcome)}`);
+              const facts=await page.evaluate(()=>({
+                finalUrl:location.href,
+                days:document.querySelectorAll("#days .row.day:not(.kop)").length,
+                nights:document.querySelectorAll("#nights .row.night:not(.kop)").length,
+                docWidth:document.documentElement.scrollWidth,
+                viewportWidth:innerWidth,
+                appVisible:getComputedStyle(document.getElementById("app")).display!=="none"
+              }));
+              if(pageErrors.length)throw new Error(`pageerror=${pageErrors.join(" | ")}`);
+              if(!facts.appVisible||facts.days<7||facts.nights<5)throw new Error(`onvolledig=${JSON.stringify(facts)}`);
+              if(facts.docWidth>facts.viewportWidth+1)throw new Error(`overflow=${facts.docWidth}/${facts.viewportWidth}`);
+              console.log(`${engine}/${domain}/normal-${attempt}/${viewport.width}: OK ${JSON.stringify(facts)}`);
+              return true;
+            }catch(e){
+              console.log(`${engine}/${domain}/normal-${attempt}/${viewport.width}: FAIL ${e.message}`);
+              return false;
+            }finally{await context.close();}
+          }
+
+          function installStub({payloads,config}){
+            try{localStorage.clear();sessionStorage.clear();}catch(e){}
+            window.__hedgeProbe={full:0,fallback:0,fallbackStart:-1,start:performance.now()};
+            const answer=(payload,ok=true,status=200)=>({ok,status,json:async()=>payload,text:async()=>JSON.stringify(payload)});
+            const later=(ms,payload,signal,mode)=>new Promise((resolve,reject)=>{
+              let timer=null,done=false;
+              const stop=()=>{if(timer!==null){clearTimeout(timer);timer=null;}};
+              const abort=()=>{if(done)return;done=true;stop();reject(new DOMException("Fetch is aborted","AbortError"));};
+              if(signal){if(signal.aborted)return abort();signal.addEventListener("abort",abort,{once:true});}
+              if(mode==="hang")return;
+              timer=setTimeout(()=>{if(done)return;done=true;if(signal)signal.removeEventListener("abort",abort);resolve(answer(payload));},ms);
+            });
+            window.fetch=function(input,opt){
+              const u=typeof input==="string"?input:(input&&input.url)||String(input||"");
+              const signal=opt&&opt.signal;
+              if(u.includes("/api/waarschuwingen"))return Promise.resolve(answer({bron:"test",dekking:true,lijst:[]}));
+              if(u.includes("/api/plaatsnaam"))return Promise.resolve(answer({naam:"Amsterdam",land:"NL",bron:"test"}));
+              if(u.includes("geocoding-api.open-meteo.com"))return Promise.resolve(answer({results:[]}));
+              if(u.includes("air-quality-api.open-meteo.com"))return later(25,payloads.air,signal,"ok");
+              if(u.includes("api.open-meteo.com/v1/forecast")){
+                const preview=u.includes("current=temperature_2m,apparent_temperature,is_day,weather_code")&&!u.includes("daily=");
+                const full=u.includes("minutely_15=");
+                const fallback=!preview&&!full&&u.includes("daily=");
+                if(preview)return later(20,payloads.preview,signal,"ok");
+                if(full){window.__hedgeProbe.full++;return later(config.fullMs,payloads.full,signal,config.fullMode);}
+                if(fallback){window.__hedgeProbe.fallback++;if(window.__hedgeProbe.fallbackStart<0)window.__hedgeProbe.fallbackStart=performance.now()-window.__hedgeProbe.start;return later(config.fallbackMs,payloads.fallback,signal,config.fallbackMode);}
+              }
+              return Promise.resolve(answer({}));
+            };
+            try{Object.defineProperty(navigator,"geolocation",{value:undefined,configurable:true});}catch(e){}
+          }
+
+          async function controlled(browser,engine,domain,url,config){
+            const context=await browser.newContext({viewport:{width:390,height:844}});
+            const page=await context.newPage();
+            const pageErrors=[]; page.on("pageerror",e=>pageErrors.push(String(e)));
+            await page.addInitScript(installStub,{payloads,config});
+            const started=Date.now();
+            try{
+              const response=await page.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
+              if(!response||response.status()>=400)throw new Error(`HTTP ${response&&response.status()}`);
+              let outcome;
+              if(config.error){
+                await page.waitForFunction(expected=>{const s=document.getElementById("state");return !!(s&&getComputedStyle(s).display!=="none"&&s.textContent.trim()===expected);},config.error,{timeout:18000});
+                outcome={error:(await page.locator("#state").textContent()).trim()};
+              }else{
+                await page.waitForFunction(expected=>typeof S!=="undefined"&&S.d&&S.d.current&&Math.round(Number(S.d.current.temperature_2m))===expected&&document.querySelectorAll("#days .row.day:not(.kop)").length>=7,config.temp,{timeout:12000});
+                if(config.settle)await page.waitForTimeout(config.settle);
+                outcome=await page.evaluate(()=>({temp:Math.round(Number(S.d.current.temperature_2m)),days:document.querySelectorAll("#days .row.day:not(.kop)").length,docWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth}));
+              }
+              const elapsed=Date.now()-started;
+              const probe=await page.evaluate(()=>window.__hedgeProbe);
+              if(pageErrors.length)throw new Error(`pageerror=${pageErrors.join(" | ")}`);
+              if(probe.fallback!==config.fallback)throw new Error(`fallback=${probe.fallback}, verwacht ${config.fallback}`);
+              if(config.hedge&&!(probe.fallbackStart>=4700&&probe.fallbackStart<=5500))throw new Error(`fallbackStart=${probe.fallbackStart}`);
+              if(config.maxMs&&elapsed>config.maxMs)throw new Error(`te laat ${elapsed}ms`);
+              if(config.minMs&&elapsed<config.minMs)throw new Error(`te vroeg ${elapsed}ms`);
+              if(outcome.docWidth&&outcome.docWidth>outcome.viewportWidth+1)throw new Error(`overflow`);
+              console.log(`${engine}/${domain}/${config.name}: OK elapsed=${elapsed}ms fallbackStart=${Math.round(probe.fallbackStart)}ms full=${probe.full} fallback=${probe.fallback} outcome=${JSON.stringify(outcome)}`);
+            }finally{await context.close();}
+          }
+
+          (async()=>{
+            for(const [engine,launcher] of engines){
+              const browser=await launcher.launch({headless:true});
+              try{
+                for(const [domain,url] of domains){
+                  let successes=0;
+                  for(let i=1;i<=3;i++)if(await normalAttempt(browser,engine,domain,url,i,{width:390,height:844}))successes++;
+                  const minimum=engine==="Chromium"?2:1;
+                  if(successes<minimum)throw new Error(`${engine}/${domain}: normale productie ${successes}/3, minimaal ${minimum}`);
+                  await controlled(browser,engine,domain,url,{name:"fast-full",fullMode:"ok",fullMs:120,fallbackMode:"ok",fallbackMs:120,temp:11,fallback:0,settle:5300,maxMs:8000});
+                  await controlled(browser,engine,domain,url,{name:"slow-full-fallback",fullMode:"hang",fullMs:0,fallbackMode:"ok",fallbackMs:180,temp:22,fallback:1,hedge:true,maxMs:8500});
+                }
+                const [domain,url]=domains[0];
+                await controlled(browser,engine,domain,url,{name:"both-hang",fullMode:"hang",fullMs:0,fallbackMode:"hang",fallbackMs:0,error:"Het ophalen duurt te lang. Controleer je verbinding en probeer het opnieuw.",fallback:1,hedge:true,minMs:14200,maxMs:17500});
+                if(!(await normalAttempt(browser,engine,"root-desktop",domains[0][1],1,{width:1440,height:900})))throw new Error(`${engine}: desktop productie faalde`);
+              }finally{await browser.close();}
+            }
+            console.log("Production fallback diagnostic: publieke root+www laden, gedeployde 5s hedge werkt in Chromium+WebKit, dubbele hang eindigt menselijk rond 15s, desktop blijft intact.");
+          })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
+          NODE
+          NODE_PATH="$PWD/node_modules" node /tmp/production-fallback.js
