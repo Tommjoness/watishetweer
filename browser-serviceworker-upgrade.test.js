@@ -96,14 +96,21 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
        later zichtbaar maken dan active/controller. Wacht daarom op de echte
        productstaat: nieuwe worker + controller én de verplichte nieuwe index met
        marker in de huidige generatiecache. Dit verzwakt niets: ontbreekt die
-       entry werkelijk, dan volgt gewoon een timeout. */
+       entry werkelijk, dan volgt gewoon een timeout.
+
+       Belangrijk voor het testcontract: gebruik daarna exact dé observatie die
+       deze wachtconditie liet slagen. Een tweede, losse caches.open() direct na
+       de geslaagde poll kan in Chromium tijdens CacheStorage-propagatie tijdelijk
+       een andere/lege view opleveren en meet dan browserobservatie in plaats van
+       de productbelofte. De latere echte offlineproef blijft de duurzaamheid van
+       dezelfde install-shell afzonderlijk bewijzen. */
     fase="new";
     await page.evaluate(async()=>{
       const r=await navigator.serviceWorker.getRegistration();
       if(!r)throw new Error("Serviceworkerregistratie ontbreekt vóór update.");
       await r.update();
     });
-    await page.waitForFunction(async nieuw=>{
+    const installHandle=await page.waitForFunction(async nieuw=>{
       const r=await navigator.serviceWorker.getRegistration();
       if(!(r&&r.active&&r.active.state==="activated"&&navigator.serviceWorker.controller))return false;
       const vraagVersie=worker=>new Promise(resolve=>{
@@ -116,18 +123,15 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
       const c=await caches.open(nieuw),index=await c.match(new URL("/index.html",location.href).href);
       if(!index)return false;
       const tekst=await index.text(),m=/name="sw-e2e-build" content="([^"]+)"/.exec(tekst);
-      return !!(m&&m[1]==="new");
+      if(!(m&&m[1]==="new"))return false;
+      const requests=await c.keys();
+      return {urls:requests.map(x=>x.url),marker:m[1],heeftIndex:true,lengte:tekst.length};
     },cacheNieuw,{timeout:15000,polling:25});
-
-    /* De nieuwe index is nu aantoonbaar door install vastgelegd; lees daarna de
-       volledige cache nogmaals uit voor diagnostiek en een expliciete assertion. */
-    const installInfo=await page.evaluate(async naam=>{
-      const c=await caches.open(naam),requests=await c.keys(),r=await c.match(new URL("/index.html",location.href).href);
-      const tekst=r?await r.text():"";
-      const m=/name="sw-e2e-build" content="([^"]+)"/.exec(tekst);
-      return {urls:requests.map(x=>x.url),marker:m?m[1]:null,heeftIndex:!!r,lengte:tekst.length};
-    },cacheNieuw);
+    const installInfo=await installHandle.jsonValue();
+    await installHandle.dispose();
     assert.equal(installInfo.marker,"new","nieuwe install-cache bevat de nieuwe index vóór online reload; "+JSON.stringify(installInfo));
+    assert.equal(installInfo.heeftIndex,true,"geslaagde install-observatie moet de canonieke index bevatten");
+    assert(installInfo.lengte>0,"geslaagde install-observatie moet niet-lege index-HTML bevatten");
 
     /* 3. Maak daarna expres een kwaadaardige oude cache terug met oude HTML.
        Dit bootst het slechtste CacheStorage-randgeval na. De actieve worker mag
