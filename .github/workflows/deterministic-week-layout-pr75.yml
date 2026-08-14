@@ -1,0 +1,153 @@
+name: WeatherNow deterministic week layout gate PR75
+
+on:
+  push:
+    branches: [agent/mobile-week-preview-20260814]
+
+jobs:
+  deterministic-week-layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Playwright
+        run: npm install --no-save --package-lock=false playwright
+      - name: Installeer Chromium en WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Bouw definitieve PR75-artifact
+        run: npm run build
+      - name: Controleer weeklayout deterministisch in Chromium en WebKit
+        run: |
+          cat > .deterministic-week-layout-pr75.js <<'NODE'
+          "use strict";
+          const fs=require("fs");
+          const path=require("path");
+          const http=require("http");
+          const assert=require("assert");
+          const {chromium,webkit}=require("playwright");
+          const {bouw}=require("./data.js");
+
+          const d=bouw({geenKwartier:true});
+          const now=Date.UTC(2026,6,22,12,0);
+          const lat=52.35,lon=5.26,land="NL",plaats="Almere";
+          d.latitude=lat;d.longitude=lon;
+          const air={current:{european_aqi:24,us_aqi:33},hourly:{
+            time:[d.current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[4],mugwort_pollen:[1],ragweed_pollen:[0],olive_pollen:[0]
+          }};
+
+          let html=fs.readFileSync(path.join(__dirname,"public/index.html"),"utf8");
+          const stub=`<script>
+          (function(){
+            const d=${JSON.stringify(d)};
+            const air=${JSON.stringify(air)};
+            Date.now=()=>${now};
+            window.fetch=async function(url){
+              const u=String(url);
+              const payload=u.includes('/api/waarschuwingen')?{bron:'test',dekking:true,lijst:[],land:'NL'}
+                :u.includes('air-quality-api.open-meteo.com')?air
+                :u.includes('geocoding-api.open-meteo.com')?{results:[{name:'Almere',latitude:${lat},longitude:${lon},country_code:'NL'}]}
+                :u.includes('/api/plaatsnaam')?{naam:'Almere',land:'NL',bron:'test'}
+                :d;
+              return {ok:true,status:200,json:async()=>payload,text:async()=>JSON.stringify(payload)};
+            };
+            try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}
+          })();
+          </script>`;
+          html=html.replace("</head>",stub+"</head>");
+
+          const server=http.createServer((req,res)=>{
+            const pathname=(req.url||"").split("?")[0];
+            if(pathname==="/"||pathname==="/index.html"){
+              res.writeHead(200,{"content-type":"text/html; charset=utf-8"});res.end(html);return;
+            }
+            const rel=pathname.startsWith("/")?pathname.slice(1):pathname;
+            const file=path.join(__dirname,"public",rel);
+            if(fs.existsSync(file)&&fs.statSync(file).isFile()){
+              const ext=path.extname(file).toLowerCase();
+              const types={".js":"application/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".json":"application/json; charset=utf-8",".woff2":"font/woff2",".png":"image/png",".svg":"image/svg+xml"};
+              res.writeHead(200,{"content-type":types[ext]||"application/octet-stream"});fs.createReadStream(file).pipe(res);
+            }else{res.writeHead(404);res.end("not found");}
+          });
+
+          async function inspect(page,engine,width){
+            const height=width===390?844:width===360?800:700;
+            await page.setViewportSize({width,height});
+            await page.waitForTimeout(200);
+            const r=await page.evaluate(()=>{
+              const rows=[...document.querySelectorAll("#days .row.day")];
+              const first=document.querySelector("#days .row.day:not(.kop)");
+              const css=sel=>{const el=first&&first.querySelector(sel);return el?getComputedStyle(el):null;};
+              return {
+                width:innerWidth,
+                documentWidth:document.documentElement.scrollWidth,
+                days:document.querySelectorAll("#days .row.day:not(.kop)").length,
+                nameFont:css(".dname")?.fontSize||null,
+                windFont:css(".dwind")?.fontSize||null,
+                windDisplay:css(".dwind")?.display||null,
+                rainFont:css(".drain")?.fontSize||null,
+                minFont:css(".dmin")?.fontSize||null,
+                maxFont:css(".dmax")?.fontSize||null,
+                rowOverflow:rows.some(el=>el.scrollWidth>el.clientWidth+1),
+                rowOutside:rows.some(el=>{const b=el.getBoundingClientRect();return b.left<-1||b.right>innerWidth+1;})
+              };
+            });
+            assert.equal(r.width,width,`${engine}-${width}: viewport klopt niet`);
+            assert(r.days>=7,`${engine}-${width}: weekweergave onvolledig (${r.days})`);
+            assert(r.documentWidth<=width+2,`${engine}-${width}: documentoverflow ${r.documentWidth}`);
+            assert.equal(r.nameFont,"13.5px",`${engine}-${width}: dagnaam ${r.nameFont}`);
+            assert.equal(r.rainFont,"13px",`${engine}-${width}: neerslag ${r.rainFont}`);
+            assert.equal(r.minFont,"14px",`${engine}-${width}: min ${r.minFont}`);
+            assert.equal(r.maxFont,"14px",`${engine}-${width}: max ${r.maxFont}`);
+            if(width>370){
+              assert.notEqual(r.windDisplay,"none",`${engine}-${width}: wind onverwacht verborgen`);
+              assert.equal(r.windFont,"13px",`${engine}-${width}: wind ${r.windFont}`);
+            }else{
+              assert.equal(r.windDisplay,"none",`${engine}-${width}: wind hoort verborgen te zijn`);
+            }
+            assert.equal(r.rowOverflow,false,`${engine}-${width}: interne rij-overflow`);
+            assert.equal(r.rowOutside,false,`${engine}-${width}: rij buiten viewport`);
+            await page.locator("#days").screenshot({path:`det-week-${engine}-${width}.png`});
+            console.log(`DET_WEEK ${engine}-${width} groen: ${JSON.stringify(r)}`);
+          }
+
+          async function runEngine(name,launch){
+            const browser=await launch();
+            const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block"});
+            const page=await context.newPage();
+            const fouten=[];
+            page.on("pageerror",e=>fouten.push("pageerror: "+String(e)));
+            page.on("console",m=>{if(m.type()==="error")fouten.push("console: "+m.text());});
+            try{
+              const qs=new URLSearchParams({lat:String(lat),lon:String(lon),plaats,land});
+              await page.goto(`http://127.0.0.1:${server.address().port}/?${qs}`,{waitUntil:"networkidle"});
+              await page.waitForSelector("#app",{state:"visible",timeout:20000});
+              await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length>=7,null,{timeout:20000});
+              await page.evaluate(()=>document.fonts&&document.fonts.ready);
+              for(const width of [390,360,320])await inspect(page,name,width);
+              assert.deepEqual(fouten,[],`${name}: WeatherNow-browserfouten: ${fouten.join(" | ")}`);
+              await page.setViewportSize({width:390,height:844});
+              await page.screenshot({path:`det-week-${name}-390-full.png`,fullPage:true});
+            }finally{await context.close();await browser.close();}
+          }
+
+          server.listen(0,"127.0.0.1",async()=>{
+            try{
+              await runEngine("chromium",()=>chromium.launch({headless:true}));
+              await runEngine("webkit",()=>webkit.launch({headless:true}));
+              console.log("PR75 deterministische weeklayout volledig groen in Chromium en WebKit.");
+              server.close(()=>process.exit(0));
+            }catch(e){console.error(e.stack||e);server.close(()=>process.exit(1));}
+          });
+          NODE
+          node .deterministic-week-layout-pr75.js
+      - name: Bewaar screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr75-deterministic-week-layout-screenshots
+          path: det-week-*.png
+          if-no-files-found: warn
+          retention-days: 1
