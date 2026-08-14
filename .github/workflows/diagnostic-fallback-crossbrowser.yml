@@ -1,0 +1,143 @@
+name: WeatherNow fallback hedge cross-browser diagnostic
+
+on:
+  pull_request:
+    branches:
+      - agent/weather-fallback-hedge-20260814
+
+permissions:
+  contents: read
+
+jobs:
+  hedge-cross-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Bouw exact feature-artifact
+        run: |
+          npm install --ignore-scripts
+          npm run build
+      - name: Installeer Chromium en WebKit
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium webkit
+      - name: Verifieer 5s hedge in Chromium en WebKit
+        run: |
+          python3 -m http.server 4173 --directory public >/tmp/weathernow-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          cat > /tmp/fallback-crossbrowser.js <<'NODE'
+          "use strict";
+          const { chromium, webkit } = require("playwright");
+          const { bouw } = require(process.cwd()+"/data.js");
+
+          function dataset(temp){
+            const d=bouw({tempNu:temp,wcNu:1,ccNu:20});
+            d.current.interval=900;d.current.visibility=18000;d.elevation=2;
+            d.latitude=52.3702;d.longitude=4.8952;
+            d.daily.sunshine_duration=d.daily.time.map(()=>7*3600);
+            return d;
+          }
+          const payloads={
+            full:dataset(11),
+            fallback:dataset(22),
+            preview:{timezone:"Europe/Amsterdam",current:{temperature_2m:12,apparent_temperature:12,is_day:1,weather_code:1}},
+            air:{current:{european_aqi:18,us_aqi:35},hourly:{time:[dataset(11).current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[0],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}}
+          };
+          const cases=[
+            {name:"fast-full-no-fallback",fullMode:"ok",fullMs:120,fallbackMode:"ok",fallbackMs:120,expectTemp:11,expectFallback:0,settleAfterLoadMs:5400,maxTotalMs:8000},
+            {name:"slow-full-fallback-wins",fullMode:"hang",fullMs:0,fallbackMode:"ok",fallbackMs:180,expectTemp:22,expectFallback:1,minFallbackStart:4700,maxFallbackStart:5400,maxTotalMs:8000},
+            {name:"slow-full-still-wins",fullMode:"ok",fullMs:6000,fallbackMode:"ok",fallbackMs:4000,expectTemp:11,expectFallback:1,minFallbackStart:4700,maxFallbackStart:5400,maxTotalMs:8500},
+            {name:"both-hang-fails-before-old-chain",fullMode:"hang",fullMs:0,fallbackMode:"hang",fallbackMs:0,expectError:"Het ophalen duurt te lang. Controleer je verbinding en probeer het opnieuw.",expectFallback:1,minFallbackStart:4700,maxFallbackStart:5400,minTotalMs:14200,maxTotalMs:17000}
+          ];
+
+          function initBrowserFetch({payloads,config}){
+            try{localStorage.clear();sessionStorage.clear();}catch(e){}
+            window.__hedge={full:0,fallback:0,fallbackStart:-1,start:performance.now()};
+            const answer=(payload,ok=true,status=200)=>({ok,status,json:async()=>payload,text:async()=>JSON.stringify(payload)});
+            const later=(ms,payload,signal,mode)=>new Promise((resolve,reject)=>{
+              let timer=null,done=false;
+              const stop=()=>{if(timer!==null){clearTimeout(timer);timer=null;}};
+              const abort=()=>{if(done)return;done=true;stop();reject(new DOMException("Fetch is aborted","AbortError"));};
+              if(signal){if(signal.aborted)return abort();signal.addEventListener("abort",abort,{once:true});}
+              if(mode==="hang")return;
+              timer=setTimeout(()=>{
+                if(done)return;done=true;
+                if(signal)signal.removeEventListener("abort",abort);
+                resolve(answer(payload,true,200));
+              },ms);
+            });
+            window.fetch=function(input,opt){
+              const u=typeof input==="string"?input:(input&&input.url)||String(input||"");
+              const signal=opt&&opt.signal;
+              if(u.includes("/api/waarschuwingen"))return Promise.resolve(answer({bron:"test",dekking:true,lijst:[]}));
+              if(u.includes("/api/plaatsnaam"))return Promise.resolve(answer({naam:"Amsterdam",land:"NL",bron:"test"}));
+              if(u.includes("geocoding-api.open-meteo.com"))return Promise.resolve(answer({results:[]}));
+              if(u.includes("air-quality-api.open-meteo.com"))return later(25,payloads.air,signal,"ok");
+              if(u.includes("api.open-meteo.com/v1/forecast")){
+                const preview=u.includes("current=temperature_2m,apparent_temperature,is_day,weather_code")&&!u.includes("daily=");
+                const full=u.includes("minutely_15=");
+                const fallback=!preview&&!full&&u.includes("daily=");
+                if(preview)return later(20,payloads.preview,signal,"ok");
+                if(full){window.__hedge.full++;return later(config.fullMs,payloads.full,signal,config.fullMode);}
+                if(fallback){window.__hedge.fallback++;if(window.__hedge.fallbackStart<0)window.__hedge.fallbackStart=performance.now()-window.__hedge.start;return later(config.fallbackMs,payloads.fallback,signal,config.fallbackMode);}
+              }
+              return Promise.resolve(answer({}));
+            };
+            try{Object.defineProperty(navigator,"geolocation",{value:undefined,configurable:true});}catch(e){}
+          }
+
+          async function runCase(browser,engineName,config){
+            const context=await browser.newContext({viewport:{width:390,height:844}});
+            const page=await context.newPage();
+            const pageErrors=[];
+            page.on("pageerror",e=>pageErrors.push(String(e)));
+            await page.addInitScript(initBrowserFetch,{payloads,config});
+            const started=Date.now();
+            try{
+              const response=await page.goto("http://127.0.0.1:4173/?lat=52.3702&lon=4.8952&plaats=Amsterdam&land=NL",{waitUntil:"domcontentloaded",timeout:30000});
+              if(!response||response.status()>=400)throw new Error(`HTTP ${response&&response.status()}`);
+              let outcome;
+              if(config.expectError){
+                await page.waitForFunction(expected=>{
+                  const state=document.getElementById("state");
+                  return !!(state&&getComputedStyle(state).display!=="none"&&state.textContent.trim()===expected);
+                },config.expectError,{timeout:18000});
+                outcome={error:(await page.locator("#state").textContent()).trim()};
+              }else{
+                await page.waitForFunction(expected=>{
+                  const app=document.getElementById("app");
+                  const current=typeof S!=="undefined"&&S.d&&S.d.current?Math.round(Number(S.d.current.temperature_2m)):null;
+                  return !!(app&&getComputedStyle(app).display!=="none"&&current===expected&&document.querySelectorAll("#days .row.day:not(.kop)").length>=7);
+                },config.expectTemp,{timeout:12000});
+                if(config.settleAfterLoadMs)await page.waitForTimeout(config.settleAfterLoadMs);
+                outcome=await page.evaluate(()=>({temp:Math.round(Number(S.d.current.temperature_2m)),days:document.querySelectorAll("#days .row.day:not(.kop)").length,nights:document.querySelectorAll("#nights .row.night:not(.kop)").length,docWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth}));
+              }
+              const elapsed=Date.now()-started;
+              const hedge=await page.evaluate(()=>window.__hedge);
+              if(pageErrors.length)throw new Error(`pageerror: ${pageErrors.join(" | ")}`);
+              if(hedge.fallback!==config.expectFallback)throw new Error(`fallback count ${hedge.fallback}, expected ${config.expectFallback}`);
+              if(config.minFallbackStart!=null&&hedge.fallbackStart<config.minFallbackStart)throw new Error(`fallback too early: ${hedge.fallbackStart}ms`);
+              if(config.maxFallbackStart!=null&&hedge.fallbackStart>config.maxFallbackStart)throw new Error(`fallback too late: ${hedge.fallbackStart}ms`);
+              if(config.minTotalMs!=null&&elapsed<config.minTotalMs)throw new Error(`terminal state too early: ${elapsed}ms`);
+              if(config.maxTotalMs!=null&&elapsed>config.maxTotalMs)throw new Error(`terminal state too late: ${elapsed}ms`);
+              if(outcome.docWidth!=null&&outcome.docWidth>outcome.viewportWidth+1)throw new Error(`horizontal overflow ${outcome.docWidth}/${outcome.viewportWidth}`);
+              console.log(`${engineName}/${config.name}: OK elapsed=${elapsed}ms fallbackStart=${Math.round(hedge.fallbackStart)}ms full=${hedge.full} fallback=${hedge.fallback} outcome=${JSON.stringify(outcome)}`);
+            } finally { await context.close(); }
+          }
+
+          (async()=>{
+            for(const [engineName,launcher] of [["Chromium",chromium],["WebKit",webkit]]){
+              const browser=await launcher.launch({headless:true});
+              try{for(const config of cases)await runCase(browser,engineName,config);}
+              finally{await browser.close();}
+            }
+            console.log("Cross-browser hedge diagnostic: Chromium + WebKit bevestigen snelle single-request, 5s hedge, first-success en ~15s dubbele timeout.");
+          })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
+          NODE
+          NODE_PATH="$PWD/node_modules" node /tmp/fallback-crossbrowser.js
