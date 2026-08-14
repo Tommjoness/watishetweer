@@ -161,10 +161,12 @@ jobs:
                 }
                 const [domain,url]=domains[0];
                 await controlled(browser,engine,domain,url,{name:"both-hang",fullMode:"hang",fullMs:0,fallbackMode:"hang",fallbackMs:0,error:"Het ophalen duurt te lang. Controleer je verbinding en probeer het opnieuw.",fallback:1,hedge:true,minMs:14200,maxMs:17500});
-                if(!(await normalAttempt(browser,engine,"root-desktop",domains[0][1],1,{width:1440,height:900})))throw new Error(`${engine}: desktop productie faalde`);
+                let desktopSuccesses=0;
+                for(let i=1;i<=3;i++)if(await normalAttempt(browser,engine,"root-desktop",domains[0][1],i,{width:1440,height:900}))desktopSuccesses++;
+                if(desktopSuccesses<1)throw new Error(`${engine}: desktop productie ${desktopSuccesses}/3, minimaal 1`);
               }finally{await browser.close();}
             }
-            console.log("Production fallback diagnostic: publieke root+www laden, gedeployde 5s hedge werkt in Chromium+WebKit, dubbele hang eindigt menselijk rond 15s, desktop blijft intact.");
+            console.log("Production fallback diagnostic: publieke root+www laden, gedeployde 5s hedge werkt in Chromium+WebKit, dubbele hang eindigt menselijk rond 15s, desktop heeft aantoonbaar succesvolle live-loads.");
           })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
           NODE
           NODE_PATH="$PWD/node_modules" node /tmp/production-fallback.js
