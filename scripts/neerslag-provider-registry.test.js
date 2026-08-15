@@ -112,7 +112,44 @@ test("generieke providerlaag levert hetzelfde contract voor Nederland en België
     assert.equal(uit.capabilities.actueel, true);
     assert.equal(uit.capabilities.nowcast, true);
     assert.equal(uit.capabilities.nowcastMinuten, 120);
+    assert.equal("degradaties" in uit, false);
   }
+});
+
+test("partiële KNMI-uitval blijft bruikbaar en meldt de uitgevallen capability", async () => {
+  const uit = await haalNeerslagVoorLocatie({
+    lat: 51.989,
+    lon: 5.0939,
+    land: "NL",
+    nuMs: NU,
+    fetchImpl: async url => {
+      const u = new URL(url);
+      const dataset = u.searchParams.get("DATASET");
+      const request = u.searchParams.get("REQUEST");
+      if (dataset === "nl_rdr_data_rtcor_5m" && request === "GetPointValue") {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([{
+            name: "precipitation_real_time",
+            units: "mm/hr",
+            point: { SRS: "EPSG:4326", coords: "5.093900,51.989000" },
+            data: { [REF]: "0" }
+          }])
+        };
+      }
+      if (dataset === "radar_forecast_2.0" && request === "GetCapabilities") {
+        throw new Error("KNMI WMS status 429");
+      }
+      throw new Error("onverwachte providerrequest: " + url);
+    }
+  });
+  assert.equal(uit.beschikbaar, true);
+  assert.equal(uit.capabilities.actueel, true);
+  assert.equal(uit.capabilities.nowcast, false);
+  assert.equal(uit.actueel.waarde, 0);
+  assert.equal(uit.nowcast, null);
+  assert.deepEqual(uit.degradaties, { nowcast: "KNMI WMS status 429" });
 });
 
 test("onondersteunde landen doen geen externe providerrequest", async () => {
