@@ -44,16 +44,11 @@ d.elevation=3;
 d.latitude=52.35;
 d.longitude=5.26;
 
-/* Geen kwartierbron: hiermee bewijzen we expliciet dat een droge actuele KNMI-
-   meting alleen de NU-claim wist en de 12% toekomstige modelkans niet weggooit. */
 d.minutely_15=null;
 d.daily.precipitation_probability_max=d.daily.time.map(()=>12);
 d.daily.precipitation_sum=d.daily.time.map(()=>0);
 d.daily.weather_code=d.daily.time.map(()=>3);
 
-/* Productie ontvangt KNMI niet als veld van de Open-Meteo forecast. De policy
-   haalt deze payload ná de gewone forecast op via /api/neerslag en zet hem dan
-   op S.d. De browsertest volgt bewust dezelfde lifecycle. */
 const knmi={
   beschikbaar:true,
   opgehaaldOp:"2026-07-22T12:17:20Z",
@@ -73,8 +68,9 @@ let html=fs.readFileSync(path.join(__dirname,"public/index.html"),"utf8");
 const fixedNow=Date.UTC(2026,6,22,12,17,0); // 14:17 Europe/Amsterdam
 const stub=`<script>
 Date.now=()=>${fixedNow};
+window.__unifiedFetches=[];
 window.fetch=async function(url){
-  const u=String(url);
+  const u=String(url);window.__unifiedFetches.push(u);
   const payload=u.includes('/api/neerslag')?${JSON.stringify(knmi)}
     :u.includes('/api/waarschuwingen')?${JSON.stringify({bron:"test",dekking:true,lijst:[],land:"NL"})}
     :u.includes('air-quality-api.open-meteo.com')?${JSON.stringify(air)}
@@ -102,6 +98,23 @@ const server=http.createServer((req,res)=>{
   }else{res.writeHead(404);res.end("not found");}
 });
 
+async function lifecycleDiag(page){
+  return page.evaluate(()=>{
+    const p=globalThis.WeatherNowNeerslagPresentatieV2;
+    const a=p&&typeof p.analyse==="function"?p.analyse(120):null;
+    return {
+      land:typeof S!=="undefined"?S.land:null,
+      lat:typeof S!=="undefined"?S.lat:null,
+      lon:typeof S!=="undefined"?S.lon:null,
+      fetches:Array.isArray(window.__unifiedFetches)?window.__unifiedFetches.slice():[],
+      hasKnmi:!!(typeof S!=="undefined"&&S.d&&S.d.__knmiNeerslag),
+      knmiBeschikbaar:!!(typeof S!=="undefined"&&S.d&&S.d.__knmiNeerslag&&S.d.__knmiNeerslag.beschikbaar),
+      presentatieApi:!!p,
+      analyse:a?{status:a.status,genoeg:a.genoeg,kans:a.kans,currentWet:a.currentWet,currentRadarWet:a.currentRadarWet,bronActueel:a.bronActueel}:null
+    };
+  });
+}
+
 async function controleer(type,naam){
   const browser=await type.launch({headless:true});
   try{
@@ -110,13 +123,16 @@ async function controleer(type,naam){
     page.on("console",m=>{if(m.type()==="error")fouten.push(m.text());});
     await page.goto(`http://127.0.0.1:${server.address().port}/?lat=52.35&lon=5.26&plaats=Browsertest&land=NL`,{waitUntil:"networkidle"});
     await page.waitForSelector("#app",{state:"visible"});
-    /* De officiële neerslagrequest start bewust pas na de gewone forecastcommit.
-       Wacht op de echte bronstatus in plaats van op een arbitraire slaapduur. */
-    await page.waitForFunction(()=>{
-      const p=globalThis.WeatherNowNeerslagPresentatieV2;
-      const a=p&&typeof p.analyse==="function"?p.analyse(120):null;
-      return !!(a&&a.bronActueel==="knmi-rtcor");
-    },null,{timeout:5000});
+    try{
+      await page.waitForFunction(()=>{
+        const p=globalThis.WeatherNowNeerslagPresentatieV2;
+        const a=p&&typeof p.analyse==="function"?p.analyse(120):null;
+        return !!(a&&a.bronActueel==="knmi-rtcor");
+      },null,{timeout:5000});
+    }catch(e){
+      const diag=await lifecycleDiag(page);
+      throw new Error(naam+": officiële KNMI-bron werd niet actief | DIAG="+JSON.stringify(diag)+" | "+(e&&e.message||e));
+    }
 
     const r=await page.evaluate(()=>{
       const tekst=id=>((document.getElementById(id)||{}).textContent||"").replace(/\s+/g," ").trim();
@@ -127,22 +143,17 @@ async function controleer(type,naam){
       const presentatie=globalThis.WeatherNowNeerslagPresentatieV2;
       const a=presentatie&&typeof presentatie.analyse==="function"?presentatie.analyse(120):null;
       return {
-        hero:tekst("cond"),
-        mini:tekst("minicond"),
+        hero:tekst("cond"),mini:tekst("minicond"),
         briefing:briefEl?(briefEl.textContent||"").replace(/\s+/g," ").trim():"",
-        briefCanoniek:tekst("brief"),
-        briefingAlias:tekst("briefing"),
+        briefCanoniek:tekst("brief"),briefingAlias:tekst("briefing"),
         popKop:popStat?((popStat.querySelector(".eyebrow")||{}).textContent||"").trim():"",
-        pop:tekst("pop"),
-        popSub:tekst("popsub"),
-        tweeUur:tekst("nctext"),
+        pop:tekst("pop"),popSub:tekst("popsub"),tweeUur:tekst("nctext"),
         tweeUurZichtbaar:ncKop?getComputedStyle(ncKop).display!=="none":false,
         dagCond:eersteDag?((eersteDag.querySelector(".dcond")||{}).textContent||"").replace(/\s+/g," ").trim():"",
         dagKans:eersteDag?((eersteDag.querySelector(".drain")||{}).childNodes[0]?.textContent||"").trim():"",
         bronActueel:a&&a.bronActueel||"",
         analyse:a?{status:a.status,genoeg:a.genoeg,kans:a.kans,hoeveelheid:a.hoeveelheid,currentWet:a.currentWet,currentRadarWet:a.currentRadarWet,bronActueel:a.bronActueel,bronHoeveelheid:a.bronHoeveelheid}:null,
-        i0:S&&S.i0,
-        currentTime:S&&S.d&&S.d.current&&S.d.current.time
+        i0:S&&S.i0,currentTime:S&&S.d&&S.d.current&&S.d.current.time
       };
     });
 
