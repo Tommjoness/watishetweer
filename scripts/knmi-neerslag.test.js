@@ -9,6 +9,7 @@ const {
   isVers,
   normaliseerPuntAntwoord,
   referenceTimeUitCapabilities,
+  nowcastReeksCompleet,
   normaliseerNowcastAntwoord,
   haalActueelPunt,
   haalNowcastPunt
@@ -36,6 +37,13 @@ function nowcastFixture(ref = "2026-08-15T10:35:00Z") {
     point: { SRS: "EPSG:4326", coords: "5.093900,51.989000" },
     data: { [ref]: data }
   }];
+}
+
+function verwijderNowcastStap(payload, tijd) {
+  const kopie = JSON.parse(JSON.stringify(payload));
+  const ref = Object.keys(kopie[0].data)[0];
+  delete kopie[0].data[ref][tijd];
+  return kopie;
 }
 
 test("Vianen valt binnen de KNMI-dekking", () => {
@@ -94,13 +102,27 @@ test("nowcast-puntvraag vraagt exact +0 tot +120 minuten op", () => {
   assert.equal(u.searchParams.get("time"), "2026-08-15T10:35:00Z/2026-08-15T12:35:00Z");
 });
 
-test("nowcast JSON bewaart 25 geldige numerieke 5-minutenpunten", () => {
+test("nowcast JSON bewaart exact 25 aaneengesloten geldige 5-minutenpunten", () => {
   const uit = normaliseerNowcastAntwoord(nowcastFixture(), "2026-08-15T10:35:00Z");
   assert(uit);
   assert.equal(uit.punten.length, 25);
   assert.equal(uit.punten[0].waarde, 0.12);
   assert.equal(uit.punten.at(-1).tijd, "2026-08-15T12:35:00Z");
   assert.equal(uit.horizonMinuten, 120);
+  assert.equal(nowcastReeksCompleet(uit.punten, "2026-08-15T10:35:00Z"), true);
+});
+
+test("nowcast met één ontbrekende interne 5-minutenstap wordt volledig geweigerd", () => {
+  const payload = verwijderNowcastStap(nowcastFixture(), "2026-08-15T10:50:00Z");
+  assert.equal(normaliseerNowcastAntwoord(payload, "2026-08-15T10:35:00Z"), null);
+});
+
+test("nowcast met dezelfde horizon maar verschoven eerste stap wordt geweigerd", () => {
+  const payload = nowcastFixture();
+  const ref = "2026-08-15T10:35:00Z";
+  delete payload[0].data[ref][ref];
+  payload[0].data[ref]["2026-08-15T12:40:00Z"] = "0";
+  assert.equal(normaliseerNowcastAntwoord(payload, ref), null);
 });
 
 test("haalActueelPunt accepteert een verse echte-vorm WMS-respons", async () => {
@@ -134,6 +156,24 @@ test("haalNowcastPunt valideert capabilities en de volledige puntreeks", async (
   assert.equal(uit.punten.length, 25);
   assert.equal(uit.referenceTime, "2026-08-15T10:35:00Z");
   assert.equal(uit.bron, "KNMI radar-nowcast");
+});
+
+test("haalNowcastPunt faalt gesloten bij een gat in de providerreeks", async () => {
+  let stap = 0;
+  const fakeFetch = async () => {
+    stap++;
+    if (stap === 1) return {
+      ok: true,
+      status: 200,
+      text: async () => '<WMS_Capabilities><Layer><Name>precipitation_nowcast</Name><Dimension name="reference_time" default="2026-08-15T10:35:00Z">x</Dimension></Layer></WMS_Capabilities>'
+    };
+    const payload = verwijderNowcastStap(nowcastFixture(), "2026-08-15T10:50:00Z");
+    return { ok: true, status: 200, text: async () => JSON.stringify(payload) };
+  };
+  await assert.rejects(
+    () => haalNowcastPunt(51.989, 5.0939, fakeFetch, NU),
+    /geen volledige aaneengesloten 5-minutenreeks/
+  );
 });
 
 process.on("beforeExit", () => {
