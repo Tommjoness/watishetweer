@@ -3,7 +3,12 @@ name: WeatherNow production smoke
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: "17 * * * *"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: weathernow-production-smoke
@@ -18,9 +23,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-      - name: Wacht op exacte Vercel-productie en controleer SEO/routes
+      - name: Controleer exacte productie, routes, redirects en API-contracten
         env:
           EXPECTED_SHA: ${{ github.sha }}
           SMOKE_POLL_MS: 10000
           SMOKE_ATTEMPTS: 36
+          SMOKE_REQUEST_TIMEOUT_MS: 10000
         run: node scripts/production-smoke.js
