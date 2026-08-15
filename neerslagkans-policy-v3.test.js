@@ -1,6 +1,7 @@
 "use strict";
 const assert=require("assert");
-const {kansNiveau,kansHoofd,kansZin,komendUurTekst,briefingZin,dagMomentZinsdeel,dagKansSamenvatting}=require("./neerslagkans-policy-v3.js");
+const interpretatie=require("./interpretatie-engine.js");
+const {kansNiveau,kansHoofd,kansZin,komendUurTekst,briefingZin,dagMomentZinsdeel,dagKansSamenvatting,knmiPayloadVers,verrijkAnalyseMetKnmi}=require("./neerslagkans-policy-v3.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 
 const grenzen=[
@@ -105,6 +106,57 @@ test("actuele neerslag blijft een actuele observatie en geen kanszin",()=>{
 test("mogelijke neerslag vervoegt enkelvoud en meervoud",()=>{
   assert.match(kansZin({genoeg:true,kans:40,hoeveelheid:0,soort:"regen"},"de komende twee uur"),/^Regen is mogelijk/);
   assert.match(kansZin({genoeg:true,kans:40,hoeveelheid:0,soort:"buien"},"de komende twee uur"),/^Buien zijn mogelijk/);
+});
+
+function knmiPunten(refMs,waarden){
+  const uit=[];
+  for(let i=0;i<=24;i++)uit.push({tijd:new Date(refMs+i*5*60000).toISOString(),waarde:waarden(i)});
+  return uit;
+}
+
+test("KNMI actuele puntwaarde kan model-droog veilig overrulen",()=>{
+  const start=Date.parse("2026-08-15T10:35:00Z")/60000;
+  const data={
+    timezone:"Europe/Amsterdam",utc_offset_seconds:7200,current:{weather_code:3},
+    __knmiNeerslag:{beschikbaar:true,actueel:{waarde:0.12},nowcast:{punten:knmiPunten(start*60000,i=>i<=2?0.12:0)}}
+  };
+  const basis={genoeg:true,status:"GEEN_KANS",rang:0,kans:0,kansDekking:1,hoeveelheid:0,currentWet:false,currentHoeveelheid:0,soort:"neerslag",startMin:start,duurMin:120};
+  const a=verrijkAnalyseMetKnmi(basis,data,120,interpretatie);
+  assert.equal(a.currentWet,true);
+  assert.equal(a.currentRadarWet,true);
+  assert.equal(a.currentIntensiteit,0.12);
+  assert.equal(a.status,"NEERSLAG_NU");
+  assert.equal(kansHoofd(a),"Neerslag");
+  assert.match(briefingZin(a),/^Er valt nu neerslag\./);
+  assert(!/droog/i.test(briefingZin(a).split(".")[0]));
+});
+
+test("KNMI nowcast wint voor Nederlandse komende-twee-uurhoeveelheid",()=>{
+  const ref=Date.parse("2026-08-15T10:35:00Z"),start=ref/60000;
+  const data={
+    timezone:"Europe/Amsterdam",utc_offset_seconds:7200,current:{weather_code:3},
+    __knmiNeerslag:{beschikbaar:true,actueel:{waarde:0},nowcast:{punten:knmiPunten(ref,i=>i>=2&&i<=7?3:0)}}
+  };
+  const basis={genoeg:true,status:"GEEN_KANS",rang:0,kans:0,kansDekking:1,hoeveelheid:0,currentWet:false,currentHoeveelheid:0,soort:"neerslag",startMin:start,duurMin:120};
+  const a=verrijkAnalyseMetKnmi(basis,data,120,interpretatie);
+  assert.equal(a.bronHoeveelheid,"knmi-nowcast");
+  assert.equal(a.status,"NEERSLAG_VERWACHT");
+  assert(a.hoeveelheid>1,a.hoeveelheid);
+  assert.equal(a.eersteTijd,"12:45");
+  assert.equal(kansHoofd(a),"Neerslag");
+  assert.match(briefingZin(a),/^Vanaf ongeveer 12:45 wordt neerslag verwacht\./);
+});
+
+test("zonder KNMI-payload blijft internationale analyse exact ongemoeid",()=>{
+  const basis={genoeg:true,status:"KLEINE_KANS",kans:20,hoeveelheid:0,soort:"regen",startMin:12345};
+  const a=verrijkAnalyseMetKnmi(basis,{timezone:"Europe/London"},120,interpretatie);
+  assert.deepEqual(a,basis);
+});
+
+test("verouderde clientpayload wordt genegeerd en valt terug op het model",()=>{
+  const nu=Date.parse("2026-08-15T11:00:00Z");
+  assert.equal(knmiPayloadVers({beschikbaar:true,opgehaaldOp:"2026-08-15T10:30:00Z"},nu),false);
+  assert.equal(knmiPayloadVers({beschikbaar:true,opgehaaldOp:"2026-08-15T10:55:00Z"},nu),true);
 });
 
 if(process.exitCode) console.error("\nNeerslagkansbeleid v3: minstens één regressie mislukt.");
