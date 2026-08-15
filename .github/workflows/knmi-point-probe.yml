@@ -1,0 +1,23 @@
+name: KNMI point probe
+
+on:
+  pull_request:
+    paths:
+      - "lib/knmi-neerslag.cjs"
+      - "scripts/knmi-neerslag-live-probe.js"
+      - ".github/workflows/knmi-point-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Vraag echte KNMI-puntdata voor Vianen op
+        run: node scripts/knmi-neerslag-live-probe.js
