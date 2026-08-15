@@ -15,15 +15,15 @@ test("centrale engine en zichtbaar kansbeleid delen exact dezelfde grenzen",()=>
   assert.equal(c.zeerKleineKansMax,9);
   assert.equal(c.kleineKansMax,29);
   assert.equal(c.mogelijkeKansMax,69);
-  assert.equal(beleid.kansNiveau(9),"ZEER_KLEIN");
-  assert.equal(beleid.kansNiveau(10),"KLEIN");
-  assert.equal(beleid.kansNiveau(29),"KLEIN");
-  assert.equal(beleid.kansNiveau(30),"MOGELIJK");
-  assert.equal(beleid.kansNiveau(69),"MOGELIJK");
-  assert.equal(beleid.kansNiveau(70),"GROOT");
+  const matrix=[
+    [0,"DROOG"],[1,"ZEER_KLEIN"],[9,"ZEER_KLEIN"],
+    [10,"KLEIN"],[29,"KLEIN"],[30,"MOGELIJK"],[69,"MOGELIJK"],
+    [70,"GROOT"],[89,"GROOT"],[90,"ZEER_GROOT"],[100,"ZEER_GROOT"]
+  ];
+  for(const [kans,niveau] of matrix)assert.equal(beleid.kansNiveau(kans),niveau,kans+"% heeft verkeerde categorie");
 });
 
-test("Dronten: verse droge KNMI-meting wist een actuele modelregenclaim uit",()=>{
+test("verse droge KNMI-meting wist generiek een actuele modelregenclaim uit",()=>{
   const nu=Date.parse("2026-08-15T14:55:00Z");
   const start=nu/60000;
   const data={
@@ -123,6 +123,22 @@ test("verouderde droge KNMI-meting mag een verse modelregenclaim niet overschrij
   assert.equal(a.bronActueel,undefined);
   assert.equal(a.currentWet,true);
   assert.equal(a.status,"NEERSLAG_NU");
+});
+
+test("zonder ondersteunde actuele provider blijft modelwaarheid wereldwijd ongemoeid",()=>{
+  const nu=Date.parse("2026-08-15T14:55:00Z");
+  for(const timezone of ["Europe/Berlin","America/New_York","Asia/Tokyo","Australia/Sydney"]){
+    const basis={
+      genoeg:true,status:"MOGELIJKE_NEERSLAG",rang:interpretatie.STATUS_RANG.MOGELIJKE_NEERSLAG,
+      kans:42,kansDekking:1,hoeveelheid:0,bronHoeveelheid:"uurdata",
+      currentWet:false,currentHoeveelheid:0,soort:"neerslag",startMin:nu/60000,duurMin:120
+    };
+    const a=beleid.verrijkAnalyseMetKnmi(basis,{timezone,current:{weather_code:3,precipitation:0}},120,interpretatie,nu);
+    assert.equal(a.status,"MOGELIJKE_NEERSLAG",timezone);
+    assert.equal(a.kans,42,timezone);
+    assert.equal(a.currentWet,false,timezone);
+    assert.equal(a.bronActueel,undefined,timezone);
+  }
 });
 
 if(process.exitCode)console.error("\nUnified weather truth: minstens één regressie mislukt.");
