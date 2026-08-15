@@ -12,9 +12,9 @@
 if(typeof document==="undefined"||typeof S==="undefined")return;
 if(typeof meters!=="function"||typeof briefing!=="function"||typeof nowcast!=="function")return;
 
-const policy=root.WeatherNowKansbeleidV3;
 const interpretatie=root.WeatherNowInterpretatie;
 const ACTUEEL_DREMPEL_MMU=0.1;
+const SPOOR_MM=0.005;
 
 const num=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 const clamp=v=>Math.max(0,Math.min(100,Number(v)||0));
@@ -62,6 +62,12 @@ function kansKomendUur(a){
   return k===null?null:Math.round(clamp(k));
 }
 
+function betrouwbareKomendUurHoeveelheid(a){
+  if(!a||a.bronHoeveelheid!=="knmi-nowcast")return null;
+  const mm=num(a.hoeveelheid);
+  return mm!==null&&mm>SPOOR_MM?mm:null;
+}
+
 function werkNeerslagkaartBij(){
   const a=analyse(60),kaart=statVoor("pop");
   if(!kaart.el)return;
@@ -77,9 +83,21 @@ function werkNeerslagkaartBij(){
     return;
   }
 
-  /* Zonder meetbare actuele neerslag blijft het bestaande percentage staan.
-     De kop maakt nu expliciet dat dit een kans is, zodat 49% nooit als een
-     hoeveelheid of intensiteit gelezen kan worden. */
+  const komendMm=betrouwbareKomendUurHoeveelheid(a);
+  if(komendMm!==null){
+    if(kaart.kop)kaart.kop.textContent="Neerslag komend uur";
+    zetHtml(kaart.el,waardeMetEenheid(komendMm,"mm"));
+    if(kaart.sub){
+      kaart.sub.textContent=a&&a.eersteTijd
+        ?"Vanaf ongeveer "+a.eersteTijd+" wordt neerslag verwacht."
+        :"Verwachte hoeveelheid in het komende uur.";
+    }
+    return;
+  }
+
+  /* Zonder meetbare actuele neerslag of betrouwbare hoeveelheid blijft het
+     bestaande percentage staan. De kop maakt expliciet dat dit een kans is,
+     zodat 49% nooit als een hoeveelheid of intensiteit gelezen kan worden. */
   if(kaart.kop)kaart.kop.textContent="Neerslagkans komend uur";
 }
 
@@ -185,7 +203,7 @@ nowcast=function(){
 };
 
 root.WeatherNowNeerslagPresentatieV2={
-  analyse,actueleIntensiteit,meetbareNeerslagNu,kansKomendUur,
+  analyse,actueleIntensiteit,meetbareNeerslagNu,kansKomendUur,betrouwbareKomendUurHoeveelheid,
   actueleConditieTekst,actueleNeerslagZin,tweeUurTekst,
   werkNeerslagkaartBij,synchroniseerHero,werkTweeUurBij
 };
