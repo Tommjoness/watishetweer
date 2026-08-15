@@ -33,7 +33,6 @@ const context={
   console,
   S:{land:"NL",lat:52.259,lon:5.606,d:{current:{weather_code:3,is_day:1}}},
   document:{getElementById:id=>els[id]||null},
-  WeatherNowKansbeleidV3:{},
   WeatherNowInterpretatie:{analyseerNeerslagData:()=>({...analyse})},
   weatherNowActueleLokaleTijd:()=>new Date("2026-08-15T13:46:00Z"),
   icon:()=>"<svg>regen</svg>",
@@ -80,13 +79,19 @@ assert.match(els.nc.attrs["aria-label"],/0,2 mm\/u/);
 analyse={genoeg:true,bronActueel:null,currentWet:false,currentRadarWet:false,status:"MOGELIJKE_NEERSLAG",kans:49,hoeveelheid:0,soort:"regen"};
 context.meters();
 assert.equal(kop.textContent,"Neerslagkans komend uur");
-assert.equal(els.pop.innerHTML,"49<s>%</s>","zonder actuele meting blijft het bestaande kanscijfer intact");
+assert.equal(els.pop.innerHTML,"49<s>%</s>","zonder actuele meting of betrouwbare hoeveelheid blijft het bestaande kanscijfer intact");
 assert.equal(els.cond.textContent,"Neerslag","presentatielaag mag een niet-natte hero niet zelf naar modeltekst terugschrijven");
 
 analyse={
   genoeg:true,bronActueel:"knmi-rtcor",currentIntensiteit:0,currentWet:false,currentRadarWet:false,
   status:"NEERSLAG_VERWACHT",kans:55,bronHoeveelheid:"knmi-nowcast",hoeveelheid:0.7,eersteTijd:"16:20"
 };
+context.meters();
+assert.equal(kop.textContent,"Neerslag komend uur");
+assert.match(els.pop.innerHTML,/0,7/);
+assert.match(els.pop.innerHTML,/<s> mm<\/s>/);
+assert.equal(els.popsub.textContent,"Vanaf ongeveer 16:20 wordt neerslag verwacht.");
+
 els.nctext.textContent="Neerslag wordt verwacht.";
 context.nowcast();
 assert.equal(els.nctext.textContent,"Het is nu droog. Vanaf ongeveer 16:20 wordt neerslag verwacht. Verwachte hoeveelheid: ongeveer 0,7 mm.");
@@ -99,4 +104,4 @@ els.nctext.textContent="Er valt nu neerslag.";
 context.nowcast();
 assert.equal(els.nctext.textContent,"Er valt nu neerslag: 0,2 mm/u.","zonder nowcast mag geen droogtijd of hoeveelheid worden verzonnen");
 
-console.log("Neerslagpresentatie v2: actuele mm/u, kanslabel, briefing, hero en twee-uurscijfers geslaagd.");
+console.log("Neerslagpresentatie v2: actuele mm/u, komende-uurhoeveelheid, kanslabel, briefing, hero en twee-uurscijfers geslaagd.");
