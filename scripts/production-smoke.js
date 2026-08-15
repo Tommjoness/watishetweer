@@ -7,26 +7,57 @@ const WWW="https://www.watishetweer.nl";
 const verwacht=String(process.env.EXPECTED_SHA||process.argv[2]||"").trim();
 const wachtMs=Number(process.env.SMOKE_POLL_MS||10000);
 const pogingen=Number(process.env.SMOKE_ATTEMPTS||36);
+const requestTimeoutMs=Number(process.env.SMOKE_REQUEST_TIMEOUT_MS||10000);
+const retryDelayMs=Number(process.env.SMOKE_RETRY_DELAY_MS||300);
 
 if(!/^[0-9a-f]{7,40}$/i.test(verwacht))throw new Error("EXPECTED_SHA ontbreekt of is ongeldig voor production-smoke.");
+if(!Number.isFinite(requestTimeoutMs)||requestTimeoutMs<1000||requestTimeoutMs>30000)throw new Error("SMOKE_REQUEST_TIMEOUT_MS moet tussen 1000 en 30000 ms liggen.");
 const slaap=ms=>new Promise(r=>setTimeout(r,ms));
 
 async function haal(url,opt={}){
-  const response=await fetch(url,{redirect:opt.redirect||"follow",headers:{"user-agent":"WeatherNow-production-smoke/1.0","cache-control":"no-cache"}});
-  const text=await response.text();
-  return {response,text};
+  const maxPogingen=opt.retry===false?1:2;
+  const timeoutMs=Number(opt.timeoutMs||requestTimeoutMs);
+  let laatsteFout=null;
+  for(let poging=1;poging<=maxPogingen;poging++){
+    try{
+      const response=await fetch(url,{
+        redirect:opt.redirect||"follow",
+        headers:{"user-agent":"WeatherNow-production-smoke/1.0","cache-control":"no-cache","accept":opt.accept||"*/*"},
+        signal:AbortSignal.timeout(timeoutMs)
+      });
+      const text=await response.text();
+      const transient=response.status===429||response.status>=500;
+      if(transient&&poging<maxPogingen){
+        console.log(`Tijdelijke HTTP ${response.status} voor ${url}; één retry.`);
+        await slaap(retryDelayMs);
+        continue;
+      }
+      return {response,text};
+    }catch(e){
+      laatsteFout=e;
+      if(poging>=maxPogingen)throw e;
+      console.log(`Tijdelijke fetchfout voor ${url}: ${e.message}; één retry.`);
+      await slaap(retryDelayMs);
+    }
+  }
+  throw laatsteFout||new Error(`Request naar ${url} mislukte.`);
 }
 function buildSha(html){return /<meta name="weather-build-sha" content="([^"]+)">/.exec(html)?.[1]||null;}
 function geenNoindex(response,label){
   const robots=response.headers.get("x-robots-tag")||"";
   assert(!/noindex/i.test(robots),`${label}: productie mag geen x-robots-tag noindex hebben (${robots})`);
 }
+function leesJson(resultaat,label){
+  try{return JSON.parse(resultaat.text);}
+  catch(e){throw new Error(`${label}: response is geen geldige JSON (${e.message})`);}
+}
 
 async function wachtOpExacteDeployment(){
   let laatst=null,lastStatus=null,lastError=null;
   for(let i=1;i<=pogingen;i++){
     try{
-      const {response,text}=await haal(ROOT+"/");
+      // De buitenste deploymentpoll is zelf al begrensd; voorkom hier een tweede retrylaag.
+      const {response,text}=await haal(ROOT+"/",{retry:false,timeoutMs:Math.min(requestTimeoutMs,4000)});
       lastStatus=response.status;laatst=buildSha(text);lastError=null;
       if(response.ok&&laatst===verwacht){
         console.log(`Production deployment zichtbaar na poging ${i}: ${verwacht}.`);
@@ -78,6 +109,13 @@ async function wachtOpExacteDeployment(){
   assert(almere.text.includes("WEATHER NOW PLAATSROUTE")&&almere.text.includes('"slug":"almere"'),"Almere-route mist routebootstrap");
   assert(almere.text.includes("Weer in Almere"),"Almere-route mist zichtbare prerendercontext");
 
+  const wwwRedirect=await haal(WWW+"/",{redirect:"manual"});
+  assert([301,302,307,308].includes(wwwRedirect.response.status),`www-homepage moet redirecten naar canonieke host, status=${wwwRedirect.response.status}`);
+  const locatie=wwwRedirect.response.headers.get("location");
+  assert(locatie,"www-homepage redirect mist Location-header");
+  const doel=new URL(locatie,WWW+"/");
+  assert.equal(doel.origin+doel.pathname,ROOT+"/","www-homepage redirect niet naar canonieke root");
+
   const www=await haal(WWW+"/");
   assert(www.response.ok,"www-homepage is niet 2xx na redirects");
   geenNoindex(www.response,"www-homepage");
@@ -95,5 +133,22 @@ async function wachtOpExacteDeployment(){
   const onbekend=await haal(ROOT+"/weer/dit-bestaat-niet/");
   assert.equal(onbekend.response.status,404,"onbekende plaatsroute moet echte 404 zijn en geen thin page");
 
-  console.log(`PRODUCTION-SMOKE GESLAAGD: ${verwacht}; homepage/www, robots, sitemap, /weer/, Almere-route, share-canonical en 404-semantiek zijn publiek coherent.`);
+  const plaatsnaam=await haal(ROOT+"/api/plaatsnaam?lat=52.3508&lon=5.2647",{accept:"application/json"});
+  assert.equal(plaatsnaam.response.status,200,"plaatsnaam-API moet voor geldige coordinaten 200 teruggeven");
+  const plaats=leesJson(plaatsnaam,"plaatsnaam-API");
+  assert(plaats&&typeof plaats==="object"&&!Array.isArray(plaats),"plaatsnaam-API moet een JSON-object teruggeven");
+  assert(Object.prototype.hasOwnProperty.call(plaats,"naam")&&Object.prototype.hasOwnProperty.call(plaats,"land"),"plaatsnaam-API mist naam/land-contract");
+  assert(plaats.naam===null||typeof plaats.naam==="string","plaatsnaam-API naam moet string of null zijn");
+  assert(plaats.land===null||typeof plaats.land==="string","plaatsnaam-API land moet string of null zijn");
+
+  const waarschuwingen=await haal(ROOT+"/api/waarschuwingen?lat=52.3508&lon=5.2647&land=NL",{accept:"application/json"});
+  assert.equal(waarschuwingen.response.status,200,"waarschuwingen-API moet voor geldige coordinaten 200 teruggeven");
+  const waarschuwing=leesJson(waarschuwingen,"waarschuwingen-API");
+  assert(waarschuwing&&typeof waarschuwing==="object"&&!Array.isArray(waarschuwing),"waarschuwingen-API moet een JSON-object teruggeven");
+  assert.equal(waarschuwing.land,"NL","waarschuwingen-API moet de expliciete landcode behouden");
+  assert.equal(typeof waarschuwing.dekking,"boolean","waarschuwingen-API dekking moet boolean zijn");
+  assert(Array.isArray(waarschuwing.lijst),"waarschuwingen-API lijst moet een array zijn");
+  assert(waarschuwing.lijst.every(item=>item&&item.plaatsSpecifiek===true),"waarschuwingen-API mag alleen plaatsgebonden waarschuwingen publiceren");
+
+  console.log(`PRODUCTION-SMOKE GESLAAGD: ${verwacht}; exacte build, homepage/www-redirect, robots, sitemap, kernroutes, share-canonical, 404 en beide API-contracten zijn publiek coherent.`);
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
