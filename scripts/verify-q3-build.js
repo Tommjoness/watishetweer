@@ -22,8 +22,8 @@ exactEen('Piek rond ','toekomstige UV-piekformulering');
 exactEen('const pUv=typeof plaatsTijdDelen','UV gebruikt live plaatsklok');
 
 for(const vereist of [
-  "slashed-zero",
-  'font-feature-settings:"tnum" 1,"zero" 1',
+  "font-variant-numeric:tabular-nums",
+  'font-feature-settings:"tnum" 1,"zero" 0',
   "function plaatsTijdDelen()",
   "timeZone:tz",
   "if(dag!==klokKalenderdag)",
@@ -34,6 +34,9 @@ for(const vereist of [
   "bron-bronnen"
 ]){
   if(!html.includes(vereist))throw new Error("Checkpoint-75 artifact mist invariant: "+vereist);
+}
+if(html.includes('font-feature-settings:"tnum" 1,"zero" 1')||html.includes('tabular-nums slashed-zero')){
+  throw new Error("Checkpoint-75 artifact dwingt nog doorgestreepte nullen af.");
 }
 
 /* Niet gokken hoeveel andere historische wrappers bestaan. Bewijs het relevante
@@ -51,4 +54,4 @@ const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:q3-verify-"+(i+1)}));
 
 const verwacht=verifieerServiceworkerCache(OUT,"checkpoint-75");
-console.log("Checkpoint-75 artifact geverifieerd: Q3 blijft in bestaande runtime-owner, live lokale tijdankers, zon/pollen, slashed zero, cloud 100% en UV-tijdsemantiek; cache "+verwacht+".");
+console.log("Checkpoint-75 artifact geverifieerd: Q3 blijft in bestaande runtime-owner, live lokale tijdankers, zon/pollen, gewone nullen, cloud 100% en UV-tijdsemantiek; cache "+verwacht+".");
