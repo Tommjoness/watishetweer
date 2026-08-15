@@ -50,7 +50,11 @@ d.minutely_15=null;
 d.daily.precipitation_probability_max=d.daily.time.map(()=>12);
 d.daily.precipitation_sum=d.daily.time.map(()=>0);
 d.daily.weather_code=d.daily.time.map(()=>3);
-d.__knmiNeerslag={
+
+/* Productie ontvangt KNMI niet als veld van de Open-Meteo forecast. De policy
+   haalt deze payload ná de gewone forecast op via /api/neerslag en zet hem dan
+   op S.d. De browsertest volgt bewust dezelfde lifecycle. */
+const knmi={
   beschikbaar:true,
   opgehaaldOp:"2026-07-22T12:17:20Z",
   actueel:{waarde:0,tijd:"2026-07-22T12:15:00Z"},
@@ -71,7 +75,8 @@ const stub=`<script>
 Date.now=()=>${fixedNow};
 window.fetch=async function(url){
   const u=String(url);
-  const payload=u.includes('/api/waarschuwingen')?${JSON.stringify({bron:"test",dekking:true,lijst:[],land:"NL"})}
+  const payload=u.includes('/api/neerslag')?${JSON.stringify(knmi)}
+    :u.includes('/api/waarschuwingen')?${JSON.stringify({bron:"test",dekking:true,lijst:[],land:"NL"})}
     :u.includes('air-quality-api.open-meteo.com')?${JSON.stringify(air)}
     :u.includes('geocoding-api.open-meteo.com')?${JSON.stringify({results:[{name:"Browsertest",latitude:52.35,longitude:5.26,admin1:"Flevoland",country_code:"NL"}]})}
     :u.includes('/api/plaatsnaam')?${JSON.stringify({naam:"Browsertest",land:"NL",bron:"test"})}
@@ -105,7 +110,13 @@ async function controleer(type,naam){
     page.on("console",m=>{if(m.type()==="error")fouten.push(m.text());});
     await page.goto(`http://127.0.0.1:${server.address().port}/?lat=52.35&lon=5.26&plaats=Browsertest&land=NL`,{waitUntil:"networkidle"});
     await page.waitForSelector("#app",{state:"visible"});
-    await page.waitForTimeout(120);
+    /* De officiële neerslagrequest start bewust pas na de gewone forecastcommit.
+       Wacht op de echte bronstatus in plaats van op een arbitraire slaapduur. */
+    await page.waitForFunction(()=>{
+      const p=globalThis.WeatherNowNeerslagPresentatieV2;
+      const a=p&&typeof p.analyse==="function"?p.analyse(120):null;
+      return !!(a&&a.bronActueel==="knmi-rtcor");
+    },null,{timeout:5000});
 
     const r=await page.evaluate(()=>{
       const tekst=id=>((document.getElementById(id)||{}).textContent||"").replace(/\s+/g," ").trim();
