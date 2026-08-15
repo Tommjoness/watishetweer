@@ -31,6 +31,8 @@ const verwacht=[
   "verify-unified-weather-truth.js",
   "apply-small-chance-consistency.js",
   "verify-small-chance-consistency.js",
+  "apply-nederlandse-microcopy.js",
+  "verify-nederlandse-microcopy.js",
   "apply-seo-foundation.js",
   "verify-seo-foundation.js",
   "generate-seo-location-pages.js",
@@ -64,7 +66,9 @@ assert(positie("verify-polar-chart-sentinel.js")<positie("apply-unified-weather-
 assert(positie("apply-unified-weather-truth.js")<positie("verify-unified-weather-truth.js"),"weather-truth moet direct na toepassing worden geverifieerd");
 assert(positie("verify-unified-weather-truth.js")<positie("apply-small-chance-consistency.js"),"kleine-kans-correctie ziet eerst de volledig geverifieerde weather-truth-laag");
 assert(positie("apply-small-chance-consistency.js")<positie("verify-small-chance-consistency.js"),"kleine-kans-correctie moet direct fail-closed worden geverifieerd");
-assert(positie("verify-small-chance-consistency.js")<positie("apply-seo-foundation.js"),"SEO-routes erven de definitieve kleine-kans-semantiek");
+assert(positie("verify-small-chance-consistency.js")<positie("apply-nederlandse-microcopy.js"),"taalnormalisatie moet pas na alle neerslagsemantiek draaien");
+assert(positie("apply-nederlandse-microcopy.js")<positie("verify-nederlandse-microcopy.js"),"microcopy moet direct na toepassing worden geverifieerd");
+assert(positie("verify-nederlandse-microcopy.js")<positie("apply-seo-foundation.js"),"SEO-routes moeten de definitieve Nederlandse copy erven");
 assert(positie("apply-seo-foundation.js")<positie("verify-seo-foundation.js"),"SEO-fundering moet direct na toepassing worden geverifieerd");
 assert(positie("verify-seo-foundation.js")<positie("generate-seo-location-pages.js"),"plaatsroutes mogen pas na bewezen root-SEO worden gegenereerd");
 assert(positie("generate-seo-location-pages.js")<positie("verify-seo-location-pages.js"),"plaatsroutes moeten direct na generatie worden geverifieerd");
@@ -79,4 +83,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde, unified weather truth, kleine-kans-consistentie, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde, weather truth, kleine-kans-consistentie, Nederlandse microcopy, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");

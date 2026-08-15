@@ -33,7 +33,8 @@ if(nachtOwners!==1)throw new Error("Nachtzicht heeft "+nachtOwners+" presentatie
 exactEen("const ruimBotsendeAslabelsOp=()=>{","grafiek fontbox-collisionlaag");
 vereist("getBBox()","echte SVG-fontboxmeting");
 vereist("maan-fase-svg-v2","platformonafhankelijke maanfase-SVG");
-vereist("Beste modeluren","niet-overprecieze beste-periodepresentatie");
+vereist("Beste periode: ","natuurlijke niet-overprecieze beste-periodepresentatie");
+verboden("Beste modeluren","oude modeljargon-beste-periodepresentatie");
 
 /* 75%: live plaatsklok, 100% bewolking, UV-tijd en numerieke leesbaarheid. */
 exactEen('if(n===100)return "Geheel bewolkt";','100%-bewolkingsregel');
