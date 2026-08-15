@@ -24,7 +24,7 @@ const q1Start=html.indexOf(Q1_DAG_START),q1End=html.indexOf(Q1_DAG_END,q1Start);
 if(q1Start<0||q1End<=q1Start)throw new Error("Q1-dagwrapper kon niet veilig worden afgebakend.");
 if(html.indexOf(Q1_DAG_START,q1Start+1)>=0)throw new Error("Q1-dagwrapper is dubbel aanwezig.");
 html=html.slice(0,q1Start)
-  +MARK+"\n/* Weekneerslag heeft één runtime-owner: WeatherNowKansbeleidV3/dagen(). */\n\n"
+  +MARK+"\n/* Weekneerslag heeft één finale runtime-owner: WeatherNowKansbeleidV3/dagen(). */\n\n"
   +html.slice(q1End);
 
 /* De overblijvende centrale dagenrenderer gebruikt exact de resterende lokale
@@ -45,12 +45,31 @@ const oudeZichtvensters=(html.match(/Geen goed zichtvenster/g)||[]).length;
 if(oudeZichtvensters<1)throw new Error("Nachtzicht-copyanchor ontbreekt.");
 html=html.replace(/Geen goed zichtvenster/g,"Geen gunstig kijkvenster");
 
-/* Als de afgeronde huidige temperatuur al gelijk is aan de afgeronde latere
-   dagpiek, is 'het wordt maximaal 24 graden' semantisch stroef. Beschrijf dan
-   een vrijwel vlak plateau; alleen bij een echt hoger afgerond maximum blijft
-   de bestaande piekformulering staan. */
-const TEMP_OUD='  if(volledigePiekVandaag&&volledigePiekVandaag.t>nuLokaal){\n    zin2="Vandaag wordt het rond "+hhmm(volledigePiekVandaag.t)+" het warmst, met maximaal <b>"+Math.round(volledigePiekVandaag.v)+" graden</b>."+nachtZin;\n  }';
-const TEMP_NIEUW='  if(volledigePiekVandaag&&volledigePiekVandaag.t>nuLokaal){\n    const piekAfgerond=Math.round(volledigePiekVandaag.v),huidigAfgerond=huidige===null?null:Math.round(huidige);\n    zin2=huidigAfgerond!==null&&piekAfgerond<=huidigAfgerond\n      ?"De temperatuur blijft tot rond "+hhmm(volledigePiekVandaag.t)+" ongeveer <b>"+huidigAfgerond+" graden</b>."+nachtZin\n      :"Vandaag wordt het rond "+hhmm(volledigePiekVandaag.t)+" het warmst, met maximaal <b>"+piekAfgerond+" graden</b>."+nachtZin;\n  }';
+/* De temperatuurzin heeft in de echte briefingbron een toelichtend commentaar en
+   is over twee regels opgebouwd. Match precies dat bestaande blok; daardoor
+   faalt de build gesloten als deze logica later opnieuw wordt herschreven. */
+const TEMP_OUD=[
+  '  if(volledigePiekVandaag&&volledigePiekVandaag.t>nuLokaal){',
+  '    /* Koppel een maximum alleen aan het uurpunt waaruit dat maximum zelf komt.',
+  '       Zo krijgt de gebruiker vóór de avond steeds antwoord op zowel "hoe warm"',
+  '       als "wanneer", zonder een eventueel afwijkend daily-getal aan een verkeerd',
+  '       uur te hangen. */',
+  '    zin2="Vandaag wordt het rond "+hhmm(volledigePiekVandaag.t)+" het warmst, met maximaal <b>"',
+  '      +Math.round(volledigePiekVandaag.v)+" graden</b>."+nachtZin;',
+  '  }'
+].join("\n");
+const TEMP_NIEUW=[
+  '  if(volledigePiekVandaag&&volledigePiekVandaag.t>nuLokaal){',
+  '    /* Een later uurpunt dat op dezelfde hele graad uitkomt als de actuele',
+  '       temperatuur is geen betekenisvolle toekomstige stijging. Beschrijf dan',
+  '       het plateau in plaats van te suggereren dat 24 graden nog bereikt moet',
+  '       worden terwijl de hero al 24 graden laat zien. */',
+  '    const piekAfgerond=Math.round(volledigePiekVandaag.v),huidigAfgerond=huidige===null?null:Math.round(huidige);',
+  '    zin2=huidigAfgerond!==null&&piekAfgerond<=huidigAfgerond',
+  '      ?"De temperatuur blijft tot rond "+hhmm(volledigePiekVandaag.t)+" ongeveer <b>"+huidigAfgerond+" graden</b>."+nachtZin',
+  '      :"Vandaag wordt het rond "+hhmm(volledigePiekVandaag.t)+" het warmst, met maximaal <b>"+piekAfgerond+" graden</b>."+nachtZin;',
+  '  }'
+].join("\n");
 if((html.split(TEMP_OUD).length-1)!==1)throw new Error("Temperatuurpiek-anchor ontbreekt of is dubbel.");
 html=html.replace(TEMP_OUD,TEMP_NIEUW);
 
@@ -70,4 +89,4 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:unifie
 
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"unified-weather-truth");
-console.log("Unified weather truth toegepast; dubbele dagowner verwijderd; copy/updateflow aangescherpt; cache "+versie+".");
+console.log("Unified weather truth toegepast; daghorizon, actuele neerslag, copy en updateflow geconsolideerd; cache "+versie+".");
