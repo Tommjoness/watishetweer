@@ -199,7 +199,7 @@ async function controleer(page, naam, modus) {
       uvKop: uv ? uv.parentElement.querySelector(".eyebrow").textContent.trim() : "",
       uvWaarde: uv ? uv.textContent.trim() : "",
       uvSub: (document.getElementById("uvsub") || {}).textContent || "",
-      drukSub: (document.getElementById("psub") || {}).textContent || "",
+      drukSub: (document.getElementById("pressub") || {}).textContent || "",
       trendKop: trendStat ? trendStat.querySelector(".eyebrow").textContent.trim() : "",
       trend: prec ? prec.textContent.trim() : "",
       trendSub: (document.getElementById("precsub") || {}).textContent || "",
