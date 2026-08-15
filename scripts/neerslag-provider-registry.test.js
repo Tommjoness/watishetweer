@@ -73,8 +73,9 @@ function fakeKnmiFetch(url) {
   throw new Error("onverwachte providerrequest: " + url);
 }
 
-test("Nederland selecteert KNMI en expliciet ander land niet", () => {
+test("Nederland en België selecteren KNMI binnen de gepubliceerde dekking", () => {
   assert.equal(kiesProvider({ lat: 51.989, lon: 5.0939, land: "NL" }).id, "knmi");
+  assert.equal(kiesProvider({ lat: 50.8503, lon: 4.3517, land: "BE" }).id, "knmi");
   assert.equal(kiesProvider({ lat: 51.989, lon: 5.0939, land: "DE" }), null);
   assert.equal(kiesProvider({ lat: 40.7128, lon: -74.006, land: "US" }), null);
 });
@@ -84,37 +85,42 @@ test("bestaande Nederlandse client zonder landcode blijft compatibel", () => {
 });
 
 test("capability-register maakt ondersteuning per land expliciet", () => {
-  assert.deepEqual(providerCapabilitiesVoorLand("NL"), [{
+  const verwacht = [{
     id: "knmi",
     capabilities: { actueel: true, nowcast: true, nowcastMinuten: 120 }
-  }]);
-  assert.deepEqual(providerCapabilitiesVoorLand("BE"), []);
+  }];
+  assert.deepEqual(providerCapabilitiesVoorLand("NL"), verwacht);
+  assert.deepEqual(providerCapabilitiesVoorLand("BE"), verwacht);
+  assert.deepEqual(providerCapabilitiesVoorLand("DE"), []);
 });
 
-test("generieke providerlaag levert het bestaande Nederlandse contract", async () => {
-  const uit = await haalNeerslagVoorLocatie({
-    lat: 51.989,
-    lon: 5.0939,
-    land: "NL",
-    fetchImpl: fakeKnmiFetch,
-    nuMs: NU
-  });
-  assert.equal(uit.beschikbaar, true);
-  assert.equal(uit.provider, "knmi");
-  assert.equal(uit.bron, "KNMI");
-  assert.equal(uit.actueel.waarde, 0.18);
-  assert.equal(uit.nowcast.punten.length, 25);
-  assert.equal(uit.capabilities.actueel, true);
-  assert.equal(uit.capabilities.nowcast, true);
-  assert.equal(uit.capabilities.nowcastMinuten, 120);
+test("generieke providerlaag levert hetzelfde contract voor Nederland en België", async () => {
+  for (const locatie of [
+    { lat: 51.989, lon: 5.0939, land: "NL" },
+    { lat: 50.8503, lon: 4.3517, land: "BE" }
+  ]) {
+    const uit = await haalNeerslagVoorLocatie({
+      ...locatie,
+      fetchImpl: fakeKnmiFetch,
+      nuMs: NU
+    });
+    assert.equal(uit.beschikbaar, true);
+    assert.equal(uit.provider, "knmi");
+    assert.equal(uit.bron, "KNMI");
+    assert.equal(uit.actueel.waarde, 0.18);
+    assert.equal(uit.nowcast.punten.length, 25);
+    assert.equal(uit.capabilities.actueel, true);
+    assert.equal(uit.capabilities.nowcast, true);
+    assert.equal(uit.capabilities.nowcastMinuten, 120);
+  }
 });
 
 test("onondersteunde landen doen geen externe providerrequest", async () => {
   let aangeroepen = false;
   const uit = await haalNeerslagVoorLocatie({
-    lat: 50.8503,
-    lon: 4.3517,
-    land: "BE",
+    lat: 50.1109,
+    lon: 8.6821,
+    land: "DE",
     fetchImpl: async () => { aangeroepen = true; throw new Error("mag niet"); },
     nuMs: NU
   });
