@@ -1,8 +1,5 @@
-/* Gerichte fysieke-iPhone-polish, 10-08-2026; checkpoint 50 Nachtzicht. */
+/* Gerichte fysieke-iPhone-polish; Nachtzicht en bronpresentatie. */
 
-/* De SVG bevat zelf een duidelijke donkere schijf en tekent daar het verlichte
-   deel overheen. De kleuren blijven aan de bestaande thematokens gekoppeld,
-   zodat nieuwe maan ook in donker/rood zichtbaar blijft en volle maan licht is. */
 :root{
   --moon-unlit:var(--ink-70);
   --moon-lit:var(--sheet);
@@ -21,14 +18,14 @@ html[data-thema="donker"],html[data-thema="rood"]{
   background:transparent;
 }
 
-/* Bronattributie blijft volledig zichtbaar, maar elk broncluster mag als eigen
-   eenheid wrappen. Geen losse middendot meer aan een regeleinde. */
+/* Bronattributie bestaat uit zelfstandige bronitems. Geen slash of middendot
+   hoeft mee te wrappen naar de volgende regel. */
 footer .bron-bronnen{
   max-width:none;
   display:flex;
   flex-wrap:wrap;
   align-items:baseline;
-  gap:3px 11px;
+  gap:3px 14px;
 }
 footer .bron-bronnen .bronlabel{
   font-weight:500;
@@ -39,13 +36,17 @@ footer .bron-bronnen .bronitem{
   white-space:normal;
 }
 
+/* Nachtzicht-detailregels zijn ook op desktop inhoudelijk gescheiden: oordeel,
+   beste periode, gemiddeld zicht en maan hoeven niet in één tekststroom te staan. */
+#nights .nachtadvies .nachtoordeel,
+#nights .nachtadvies .nachtvenster,
+#nights .nachtmaan .nachtzichtregel,
+#nights .nachtmaan .nachtmaanregel{display:block}
+#nights .nachtadvies .nachtvenster{margin-top:2px;color:var(--ink-45)}
+#nights .nachtmaan .nachtzichtregel{color:var(--ink-45)}
+#nights .nachtmaan .nachtmaanregel{margin-top:1px;color:var(--ink-25)}
+
 @media(max-width:900px){
-  /* Nachtzicht blijft vier duidelijke kolommen houden, maar gebruikt minder
-     vaste breedte. Bewolking krijgt nog steeds genoeg ruimte voor de volledige
-     kop; score en balk behouden de bestaande harde 8 px visuele scheiding.
-     De toelichting staat bewust niet meer op 11–12 px: op echte telefoonbreedte
-     is die inhoud belangrijk genoeg om dezelfde rustige leesbaarheid te krijgen
-     als de overige secundaire weertekst. */
   #nights .row.night{
     grid-template-columns:56px 46px minmax(32px,1fr) 64px;
     column-gap:8px;
@@ -76,31 +77,28 @@ footer .bron-bronnen .bronitem{
   #nights .row.night .nachtadvies{
     font-size:13px;
     line-height:1.4;
-    margin-bottom:2px;
+    margin-bottom:4px;
   }
   #nights .row.night .nachtmaan{
     font-size:12px;
     line-height:1.4;
     white-space:normal;
   }
+  #nights .row.night .nachtzichtregel,
+  #nights .row.night .nachtmaanregel{white-space:normal}
   #nights .row.night .maan-fase-svg-v2{
     width:14px;
     height:14px;
     vertical-align:-2px;
   }
 
-  /* De zevendaagse tabel was op echte 390px-productie merkbaar fijner gezet
-     dan de omliggende modules. Min/max staan al op 14 px; dag, wind en
-     neerslag krijgen daarom alleen een kleine leesbaarheidsverhoging zonder
-     kolombreedtes, inhoud of forecastsemantiek te wijzigen. Onder 370 px valt
-     de windkolom via de bestaande layoutregel al weg. */
   #days .row.day:not(.kop) .dname{font-size:13.5px}
   #days .row.day:not(.kop) .dwind,
   #days .row.day:not(.kop) .drain{font-size:13px}
 
   footer .bron-bronnen{
     row-gap:4px;
-    column-gap:10px;
+    column-gap:12px;
   }
   footer .bron-bronnen .bronlabel{
     flex:0 0 100%;
