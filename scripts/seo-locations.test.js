@@ -2,7 +2,7 @@
 
 const assert=require("assert");
 const {LOCATIES,POPULAIR,plaatsUrl,plaatsTitel,plaatsBeschrijving}=require("./seo-locations.config.js");
-const {afstandKm,gerelateerdePlaatsen,voegRouteUrlBeleidToe,voegRouteTitelBeleidToe}=require("./generate-seo-location-pages.js");
+const {afstandKm,gerelateerdePlaatsen,voegPlaatsNavigatieToe,voegRouteUrlBeleidToe,voegRouteTitelBeleidToe,maakPlaatsIndex}=require("./generate-seo-location-pages.js");
 
 assert(LOCATIES.length>=30,"SEO-kernset moet minimaal 30 echte Nederlandse plaatsen bevatten");
 assert(LOCATIES.length<=60,"SEO-kernset mag niet ongemerkt uitgroeien tot massale thin-page generatie");
@@ -33,6 +33,13 @@ assert.equal(gerelateerdePlaatsen(LOCATIES[0],0).length,0,"expliciete nul levert
 assert(POPULAIR.length>=8&&POPULAIR.length<=16,"homepage moet een compacte populaire-plaatsenselectie houden");
 assert(POPULAIR.every(x=>LOCATIES.includes(x)&&x.populair),"populaire set moet rechtstreeks uit de kernset komen");
 
+const plaatsNav=voegPlaatsNavigatieToe("<html><head></head><body></body></html>");
+assert(plaatsNav.includes('<a class="seo-plaatsnav-alles" href="/weer/">Meer plaatsen</a>'),"homepage moet de aanvullende plaatsindex eerlijk als Meer plaatsen labelen");
+assert(!plaatsNav.includes(">Alle plaatsen</a>"),"homepage mag niet suggereren dat de beperkte kernset letterlijk alle plaatsen bevat");
+const plaatsIndex=maakPlaatsIndex();
+assert(plaatsIndex.includes("Kies een plaats voor het actuele weer, neerslag in de komende uren en de 7-daagse verwachting."),"plaatsindex mist de korte gebruikersgerichte uitleg");
+assert(!plaatsIndex.includes("WeatherNow-weerkern"),"plaatsindex mag geen oude technische productnaam/implementatietaal tonen");
+
 /* Het definitieve artifact heeft bewust twee title-writers: de canonieke render
    en de snelle Q1-cache-render. Op een crawlbare plaatsroute moeten beide de
    server-side SEO-titel respecteren; een nieuwe/verdwenen writer moet daarom
@@ -55,4 +62,4 @@ for(const vereist of [
 ])assert(routeUrlBewust.includes(vereist),`route-exitcontract mist ${vereist}`);
 assert.throws(()=>voegRouteUrlBeleidToe("function urlBij(){}","regressie"),/URL-sync-haak ontbreekt of is dubbel/,"route-URL-contract moet een verdwenen writer hard afwijzen");
 
-console.log(`SEO-locatieconfig: ${LOCATIES.length} unieke NL-plaatsen, metadata, vier afstandsgesorteerde interne routes, compacte populaire set en dubbel title-writercontract geslaagd.`);
+console.log(`SEO-locatieconfig: ${LOCATIES.length} unieke NL-plaatsen, metadata, vier afstandsgesorteerde interne routes, compacte populaire set, eerlijke plaatslabels en dubbel title-writercontract geslaagd.`);
