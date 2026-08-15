@@ -1,0 +1,21 @@
+name: KNMI nowcast diagnostic
+
+on:
+  push:
+    branches:
+      - agent/knmi-nowcast-diagnostics-20260815
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: KNMI live providerdiagnose
+        run: node scripts/knmi-live-diagnostic.js
