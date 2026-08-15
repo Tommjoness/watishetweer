@@ -109,7 +109,7 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:postbu
 for(const vereist of [
   "WeatherNowMobileScreenshotPolish","maan-fase-svg-v2","Temperatuur komende 3 uur","bron-bronnen",
   "WeatherNowQ1","q1-dag-mm","weerbriefing.plaatscache.q1","neerslagkans",
-  "temperatuurTrend","q1-pop-hidden","normaliseerNachtDagdata","nachtIsActiefNu","verbeterNachtzicht","Beste periode:",
+  "temperatuurTrend","q1-pop-hidden","normaliseerNachtDagdata","nachtIsActiefNu","corrigeerNachtVensterBron","verbeterNachtzicht",
   "H=M?250:296","pt=M?59:76, ih=M?145:160","tijdLabelVrij=nuX==null",
   "val+labelHoogte/2+4<=pb","ruimBotsendeAslabelsOp","getBBox()"
 ]){
