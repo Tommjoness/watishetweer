@@ -21,6 +21,24 @@ const KNMI_ACTUEEL_DREMPEL_MMU=0.1;
 const KNMI_TOEKOMST_DREMPEL_MMU=0.05;
 const KNMI_MIN_DEKKING=0.90;
 const KNMI_CLIENT_MAX_LEEFTIJD_MS=12*60*1000;
+const KNMI_ACTUEEL_MAX_LEEFTIJD_MS=10*60*1000;
+const KNMI_FRAME_MS=5*60*1000;
+const KNMI_PUBLICATIE_MARGE_MS=45*1000;
+const KNMI_HERPROBEER_MS=60*1000;
+const KNMI_MIN_VERVERS_MS=45*1000;
+const KNMI_MAX_VERVERS_MS=5*60*1000;
+const KNMI_FOCUS_MAX_PAYLOAD_MS=60*1000;
+
+function nuNaarMs(nuMs){
+  if(nuMs instanceof Date)return nuMs.getTime();
+  const n=Number(nuMs);
+  return Number.isFinite(n)?n:Date.now();
+}
+
+function tijdNaarMs(tijd){
+  const ms=Date.parse(tijd||"");
+  return Number.isFinite(ms)?ms:null;
+}
 
 function kansNiveau(kans){
   const n=num(kans);
@@ -89,10 +107,84 @@ function dagMomentZinsdeel(tijd){
 
 function knmiPayloadVers(knmi,nuMs){
   if(!knmi||knmi.beschikbaar!==true)return false;
-  const opgehaald=Date.parse(knmi.opgehaaldOp||"");
-  if(!Number.isFinite(opgehaald))return true;
-  const nu=Number.isFinite(nuMs)?nuMs:Date.now();
+  const opgehaald=tijdNaarMs(knmi.opgehaaldOp);
+  if(opgehaald===null)return true;
+  const nu=nuNaarMs(nuMs);
   return nu-opgehaald>=-60000&&nu-opgehaald<=KNMI_CLIENT_MAX_LEEFTIJD_MS;
+}
+
+function knmiMeetpuntVers(tijd,nuMs){
+  const ms=tijdNaarMs(tijd);
+  if(ms===null)return false;
+  const leeftijd=nuNaarMs(nuMs)-ms;
+  return leeftijd>=-60000&&leeftijd<=KNMI_ACTUEEL_MAX_LEEFTIJD_MS;
+}
+
+function knmiActueleKandidaat(knmi,nuMs){
+  if(!knmi||knmi.beschikbaar!==true)return null;
+  const kandidaten=[];
+  const act=knmi.actueel&&typeof knmi.actueel==="object"?knmi.actueel:null;
+  const actWaarde=act?num(act.waarde):null;
+  const actTijd=act?tijdNaarMs(act.tijd):null;
+  if(actWaarde!==null&&actWaarde>=0){
+    if(actTijd===null){
+      /* Alleen voor backwards-compatibele fixtures/oude payloads. De actuele
+         productie-API levert altijd een brontijd en wordt hieronder streng
+         op absolute ouderdom gecontroleerd. */
+      if(!knmi.opgehaaldOp)kandidaten.push({waarde:actWaarde,tijd:null,bron:"knmi-rtcor",prioriteit:2});
+    }else if(knmiMeetpuntVers(act.tijd,nuMs)){
+      kandidaten.push({waarde:actWaarde,tijd:act.tijd,bron:"knmi-rtcor",prioriteit:2});
+    }
+  }
+
+  const nowcast=knmi.nowcast&&Array.isArray(knmi.nowcast.punten)?knmi.nowcast:null;
+  if(nowcast){
+    const ref=nowcast.referenceTime||((nowcast.punten[0]||{}).tijd);
+    const refMs=tijdNaarMs(ref);
+    const nul=nowcast.punten.find(p=>tijdNaarMs(p&&p.tijd)===refMs)||null;
+    const nulWaarde=nul?num(nul.waarde):null;
+    if(refMs!==null&&nulWaarde!==null&&nulWaarde>=0&&knmiMeetpuntVers(ref,nuMs)){
+      kandidaten.push({waarde:nulWaarde,tijd:ref,bron:"knmi-nowcast-0",prioriteit:1});
+    }
+  }
+
+  if(!kandidaten.length)return null;
+  kandidaten.sort((a,b)=>{
+    const ta=tijdNaarMs(a.tijd),tb=tijdNaarMs(b.tijd);
+    if(ta!==null||tb!==null){
+      const va=ta===null?-Infinity:ta,vb=tb===null?-Infinity:tb;
+      if(va!==vb)return va-vb;
+    }
+    return a.prioriteit-b.prioriteit;
+  });
+  return kandidaten.at(-1);
+}
+
+function knmiLaatsteBronTijdMs(knmi){
+  if(!knmi)return null;
+  const tijden=[];
+  const act=tijdNaarMs(knmi.actueel&&knmi.actueel.tijd);
+  const ref=tijdNaarMs(knmi.nowcast&&knmi.nowcast.referenceTime);
+  const eerste=tijdNaarMs(knmi.nowcast&&Array.isArray(knmi.nowcast.punten)&&knmi.nowcast.punten[0]&&knmi.nowcast.punten[0].tijd);
+  if(act!==null)tijden.push(act);
+  if(ref!==null)tijden.push(ref);
+  if(eerste!==null)tijden.push(eerste);
+  return tijden.length?Math.max(...tijden):null;
+}
+
+function volgendeKnmiVerversingMs(knmi,nuMs){
+  const bronTijd=knmiLaatsteBronTijdMs(knmi);
+  if(bronTijd===null)return KNMI_MAX_VERVERS_MS;
+  const resterend=bronTijd+KNMI_FRAME_MS+KNMI_PUBLICATIE_MARGE_MS-nuNaarMs(nuMs);
+  if(resterend<=0)return KNMI_HERPROBEER_MS;
+  return Math.max(KNMI_MIN_VERVERS_MS,Math.min(KNMI_MAX_VERVERS_MS,resterend));
+}
+
+function knmiPayloadMoetBijFocusVervers(knmi,nuMs){
+  if(!knmi||knmi.beschikbaar!==true)return true;
+  const opgehaald=tijdNaarMs(knmi.opgehaaldOp);
+  if(opgehaald===null)return true;
+  return nuNaarMs(nuMs)-opgehaald>KNMI_FOCUS_MAX_PAYLOAD_MS;
 }
 
 function statusUitKnmi(kans,hoeveelheid,currentWet){
@@ -112,11 +204,15 @@ function verrijkAnalyseMetKnmi(analyse,data,duurMin,engineApi,nuMs){
   const a={...(analyse||{})},knmi=data&&data.__knmiNeerslag;
   if(!knmiPayloadVers(knmi,nuMs))return a;
   const engine=engineApi||{};
-  const act=knmi.actueel&&typeof knmi.actueel==="object"?knmi.actueel:null;
-  const intensiteit=act?num(act.waarde):null;
+  const actueel=knmiActueleKandidaat(knmi,nuMs);
+  const intensiteit=actueel?num(actueel.waarde):null;
   if(intensiteit!==null&&intensiteit>=0){
     a.currentIntensiteit=intensiteit;
+    /* Houd de publieke broncode compatibel met de bestaande presentatie. De
+       detailbron laat wel zien of de nieuwste +0-nowcast recenter was. */
     a.bronActueel="knmi-rtcor";
+    a.bronActueelDetail=actueel.bron;
+    a.currentBronTijd=actueel.tijd||null;
     a.currentRadarWet=intensiteit>=KNMI_ACTUEEL_DREMPEL_MMU;
     if(a.currentRadarWet){
       a.currentWet=true;
@@ -266,7 +362,7 @@ function dagKansSamenvatting(a,basis){
   return basisHeeftSoort?"Zeer grote kans op "+kleineStart(type)+tijd:basis+"; zeer grote neerslagkans";
 }
 
-const api={kansNiveau,kansHoofd,hoeveelheidTekst,hoeveelheidConditioneel,kansZin,komendUurTekst,briefingZin,dagMomentZinsdeel,dagKansSamenvatting,knmiPayloadVers,verrijkAnalyseMetKnmi};
+const api={kansNiveau,kansHoofd,hoeveelheidTekst,hoeveelheidConditioneel,kansZin,komendUurTekst,briefingZin,dagMomentZinsdeel,dagKansSamenvatting,knmiPayloadVers,knmiMeetpuntVers,knmiActueleKandidaat,volgendeKnmiVerversingMs,knmiPayloadMoetBijFocusVervers,verrijkAnalyseMetKnmi};
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowKansbeleidV3=api;
 
@@ -276,7 +372,7 @@ if(!interpretatie||typeof interpretatie.analyseerNeerslagData!=="function") retu
 
 const basisAnalyseerNeerslag=interpretatie.analyseerNeerslagData.bind(interpretatie);
 interpretatie.analyseerNeerslagData=function(data,duur,nuOverride){
-  return verrijkAnalyseMetKnmi(basisAnalyseerNeerslag(data,duur,nuOverride),data,duur,interpretatie);
+  return verrijkAnalyseMetKnmi(basisAnalyseerNeerslag(data,duur,nuOverride),data,duur,interpretatie,nuNaarMs(nuOverride));
 };
 const analyse=duur=>interpretatie.analyseerNeerslagData(S.d,duur,weatherNowActueleLokaleTijd());
 
@@ -435,13 +531,18 @@ function stopKnmi(){
   if(knmiTimer!==null){clearTimeout(knmiTimer);knmiTimer=null;}
   laatsteKnmiSleutel="";
 }
-function planKnmiVerversing(gen){
+function planKnmiVerversing(gen,payload){
   if(knmiTimer!==null)clearTimeout(knmiTimer);
+  const wacht=volgendeKnmiVerversingMs(payload||null,Date.now());
   knmiTimer=setTimeout(()=>{
     knmiTimer=null;
     if(gen!==knmiGeneratie||S.land!=="NL"||S.lat==null||S.lon==null)return;
+    if(document.visibilityState==="hidden"){
+      planKnmiVerversing(gen,null);
+      return;
+    }
     vraagKnmiEnPasToe(S.lat,S.lon,gen,true);
-  },5*60*1000);
+  },wacht);
 }
 async function vraagKnmiEnPasToe(lat,lon,gen,force){
   if(gen!==knmiGeneratie||S.land!=="NL")return;
@@ -450,19 +551,32 @@ async function vraagKnmiEnPasToe(lat,lon,gen,force){
   laatsteKnmiSleutel=sleutel;
   if(knmiController)knmiController.abort();
   const controller=new AbortController();knmiController=controller;
+  let planPayload=null;
   try{
     const payload=await j("/api/neerslag?lat="+encodeURIComponent(lat)+"&lon="+encodeURIComponent(lon),{timeoutMs:7500,signal:controller.signal});
     if(gen!==knmiGeneratie||controller.signal.aborted||S.land!=="NL"||Number(S.lat)!==Number(lat)||Number(S.lon)!==Number(lon))return;
-    if(payload&&payload.beschikbaar===true&&zetKnmiOpData(payload))hertekenNeerslagdelen();
+    if(payload&&payload.beschikbaar===true&&zetKnmiOpData(payload)){
+      planPayload=payload;
+      hertekenNeerslagdelen();
+    }
   }catch(e){}finally{
     if(knmiController===controller)knmiController=null;
-    if(gen===knmiGeneratie&&S.land==="NL")planKnmiVerversing(gen);
+    if(gen===knmiGeneratie&&S.land==="NL")planKnmiVerversing(gen,planPayload);
   }
 }
 function startKnmiVoorHuidigePlaats(force){
   if(S.land!=="NL"||S.lat==null||S.lon==null||!S.d)return;
   vraagKnmiEnPasToe(S.lat,S.lon,knmiGeneratie,!!force);
 }
+function verversKnmiBijTerugkeer(){
+  if(document.visibilityState&&document.visibilityState!=="visible")return;
+  if(knmiController||S.land!=="NL"||S.lat==null||S.lon==null||!S.d)return;
+  if(knmiPayloadMoetBijFocusVervers(S.d.__knmiNeerslag,Date.now()))startKnmiVoorHuidigePlaats(true);
+}
+if(document.addEventListener)document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible")verversKnmiBijTerugkeer();
+});
+if(root.addEventListener)root.addEventListener("pageshow",verversKnmiBijTerugkeer);
 
 const basisOnthoudLand=onthoudLand;
 onthoudLand=function(v){
