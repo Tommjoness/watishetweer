@@ -117,6 +117,8 @@ async function controleer(type,naam){
         hero:tekst("cond"),
         mini:tekst("minicond"),
         briefing:briefEl?(briefEl.textContent||"").replace(/\s+/g," ").trim():"",
+        briefCanoniek:tekst("brief"),
+        briefingAlias:tekst("briefing"),
         popKop:popStat?((popStat.querySelector(".eyebrow")||{}).textContent||"").trim():"",
         pop:tekst("pop"),
         popSub:tekst("popsub"),
@@ -124,10 +126,14 @@ async function controleer(type,naam){
         tweeUurZichtbaar:ncKop?getComputedStyle(ncKop).display!=="none":false,
         dagCond:eersteDag?((eersteDag.querySelector(".dcond")||{}).textContent||"").replace(/\s+/g," ").trim():"",
         dagKans:eersteDag?((eersteDag.querySelector(".drain")||{}).childNodes[0]?.textContent||"").trim():"",
-        bronActueel:(typeof analyseerNeerslag==="function"&&S&&S.d)?(analyseerNeerslag(S.d,120,S.d.current.time).bronActueel||""):""
+        bronActueel:(typeof analyseerNeerslag==="function"&&S&&S.d)?(analyseerNeerslag(S.d,120,S.d.current.time).bronActueel||""):"",
+        analyse:(typeof analyseerNeerslag==="function"&&S&&S.d)?(()=>{const a=analyseerNeerslag(S.d,120,S.d.current.time);return {status:a.status,genoeg:a.genoeg,kans:a.kans,hoeveelheid:a.hoeveelheid,currentWet:a.currentWet,currentRadarWet:a.currentRadarWet,bronActueel:a.bronActueel,bronHoeveelheid:a.bronHoeveelheid};})():null,
+        i0:S&&S.i0,
+        currentTime:S&&S.d&&S.d.current&&S.d.current.time
       };
     });
 
+    console.log("UNIFIED PREASSERT "+naam+" "+JSON.stringify({r,fouten}));
     const zichtbareKeten=[r.hero,r.mini,r.briefing,r.popKop,r.pop,r.popSub,r.tweeUur,r.dagCond,r.dagKans].join(" | ");
     assert.ok(r.hero,naam+": actuele hero heeft een conditietekst");
     assert.doesNotMatch(r.hero,/regen|motregen|bui|sneeuw|neerslag/i,naam+": verse droge KNMI-meting neutraliseert de modelregen in de hero");
