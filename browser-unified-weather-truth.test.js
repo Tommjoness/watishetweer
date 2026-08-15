@@ -65,6 +65,13 @@ const air={
 };
 
 let html=fs.readFileSync(path.join(__dirname,"public/index.html"),"utf8");
+const artifactDiag={
+  presentatieMarker:html.includes("/* ===== NEERSLAGPRESENTATIE V2 ===== */"),
+  presentatieApiCode:html.includes("WeatherNowNeerslagPresentatieV2"),
+  positiePresentatie:html.indexOf("/* ===== NEERSLAGPRESENTATIE V2 ===== */"),
+  positieStart:html.indexOf("/* ---------- start ---------- */")
+};
+console.log("UNIFIED ARTIFACT "+JSON.stringify(artifactDiag));
 const fixedNow=Date.UTC(2026,6,22,12,17,0); // 14:17 Europe/Amsterdam
 const stub=`<script>
 Date.now=()=>${fixedNow};
@@ -103,6 +110,10 @@ async function lifecycleDiag(page){
     const p=globalThis.WeatherNowNeerslagPresentatieV2;
     const a=p&&typeof p.analyse==="function"?p.analyse(120):null;
     return {
+      typeS:typeof S,
+      typeMeters:typeof meters,
+      typeBriefing:typeof briefing,
+      typeNowcast:typeof nowcast,
       land:typeof S!=="undefined"?S.land:null,
       lat:typeof S!=="undefined"?S.lat:null,
       lon:typeof S!=="undefined"?S.lon:null,
@@ -131,7 +142,7 @@ async function controleer(type,naam){
       },null,{timeout:5000});
     }catch(e){
       const diag=await lifecycleDiag(page);
-      throw new Error(naam+": officiële KNMI-bron werd niet actief | DIAG="+JSON.stringify(diag)+" | "+(e&&e.message||e));
+      throw new Error(naam+": officiële KNMI-bron werd niet actief | ARTIFACT="+JSON.stringify(artifactDiag)+" | DIAG="+JSON.stringify(diag)+" | "+(e&&e.message||e));
     }
 
     const r=await page.evaluate(()=>{
