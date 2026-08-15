@@ -147,6 +147,45 @@ test("KNMI nowcast wint voor Nederlandse komende-twee-uurhoeveelheid",()=>{
   assert.match(briefingZin(a),/^Vanaf ongeveer 12:45 wordt neerslag verwacht\./);
 });
 
+test("verse droge KNMI-meting wist aankomende kwartierregen niet uit",()=>{
+  const tijden=[];
+  const start=Date.UTC(2026,7,15,12,45);
+  for(let i=0;i<9;i++)tijden.push(new Date(start+i*15*60000).toISOString().slice(0,16));
+  const data={
+    timezone:"Europe/Amsterdam",utc_offset_seconds:7200,
+    current:{time:"2026-08-15T12:35",precipitation:0.2,weather_code:80},
+    minutely_15:{
+      time:tijden,
+      precipitation:[0,0,0.8,0.6,0.2,0,0,0,0],
+      rain:[0,0,0.8,0.6,0.2,0,0,0,0],
+      showers:[0,0,0,0,0,0,0,0,0],
+      snowfall:[0,0,0,0,0,0,0,0,0],
+      weather_code:[3,3,80,80,61,3,3,3,3]
+    },
+    hourly:{
+      time:["2026-08-15T13:00","2026-08-15T14:00","2026-08-15T15:00"],
+      precipitation_probability:[80,70,20],
+      precipitation:[0.8,0.8,0],rain:[0.8,0.8,0],showers:[0,0,0],snowfall:[0,0,0],weather_code:[80,61,3]
+    },
+    __knmiNeerslag:{
+      beschikbaar:true,opgehaaldOp:"2026-08-15T10:40:00Z",
+      actueel:{waarde:0,tijd:"2026-08-15T10:35:00Z"},nowcast:null
+    }
+  };
+  const basis=interpretatie.analyseerNeerslagData(data,120);
+  assert.equal(basis.bronHoeveelheid,"kwartierdata");
+  assert.equal(basis.currentWet,true);
+  assert(basis.hoeveelheid>=1,basis.hoeveelheid);
+  const a=verrijkAnalyseMetKnmi(basis,data,120,interpretatie,Date.parse("2026-08-15T10:40:00Z"));
+  assert.equal(a.currentWet,false,"officiële actuele 0-meting moet modelregen voor nu neutraliseren");
+  assert.equal(a.currentRadarWet,false);
+  assert.equal(a.bronHoeveelheid,"kwartierdata","toekomst moet op kwartiermodeldata blijven");
+  assert.equal(a.hoeveelheid,basis.hoeveelheid,"toekomstige hoeveelheid mag niet verdwijnen");
+  assert.equal(a.status,"NEERSLAG_VERWACHT");
+  assert(!/geen neerslag verwacht|droog/i.test(briefingZin(a)),briefingZin(a));
+  assert.notEqual(kansHoofd(a),"Droog");
+});
+
 test("zonder KNMI-payload blijft internationale analyse exact ongemoeid",()=>{
   const basis={genoeg:true,status:"KLEINE_KANS",kans:20,hoeveelheid:0,soort:"regen",startMin:12345};
   const a=verrijkAnalyseMetKnmi(basis,{timezone:"Europe/London"},120,interpretatie);
