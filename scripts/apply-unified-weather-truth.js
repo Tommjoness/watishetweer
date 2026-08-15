@@ -14,22 +14,58 @@ const MARK="/* ===== UNIFIED WEATHER TRUTH 20260815 ===== */";
 if(html.includes(MARK))throw new Error("Unified-weather-truth is al toegepast.");
 
 /* Q1 voegde na de centrale dagenrenderer opnieuw een tweede runtime-owner toe
-   die ruwe daily totalen terugschreef. Voor 'vandaag' zijn die velden inclusief
-   verstreken uren en dus niet dezelfde horizon als de resterende-daganalyse.
-   Verwijder uitsluitend deze duplicerende runtime-wrapper; de pure Q1-helper en
-   de rest van de Q1-functionaliteit blijven intact. */
+   die ruwe daily totalen over iedere rij terugschreef. Dat is voor vandaag fout:
+   de daily velden bevatten ook verstreken uren. Voor toekomstige dagen beschrijven
+   diezelfde officiële daily velden juist exact de volledige kalenderdag die de rij
+   voorstelt. Vervang daarom uitsluitend de oude algemene wrapper door een
+   horizonbewuste wrapper: vandaag blijft volledig eigendom van de resterende-
+   daganalyse; toekomstige dagen gebruiken kans én hoeveelheid uit dezelfde daily
+   kalenderdag. De rest van de Q1-functionaliteit blijft intact. */
 const Q1_DAG_START="/* Weekverwachting: de zichtbare kans en hoeveelheid komen beide uit de officiële";
 const Q1_DAG_END="/* De bestaande tooltip blijft compact.";
 const q1Start=html.indexOf(Q1_DAG_START),q1End=html.indexOf(Q1_DAG_END,q1Start);
 if(q1Start<0||q1End<=q1Start)throw new Error("Q1-dagwrapper kon niet veilig worden afgebakend.");
 if(html.indexOf(Q1_DAG_START,q1Start+1)>=0)throw new Error("Q1-dagwrapper is dubbel aanwezig.");
-html=html.slice(0,q1Start)
-  +MARK+"\n/* Weekneerslag heeft één finale runtime-owner: WeatherNowKansbeleidV3/dagen(). */\n\n"
-  +html.slice(q1End);
+const Q1_DAG_NIEUW=[
+  MARK,
+  "/* Weekneerslag heeft één horizon per rij: vandaag resterend, toekomstige dagen volledig. */",
+  'if(typeof dagen==="function"){',
+  '  const basisDagenVolledigeToekomst=dagen;',
+  '  dagen=function(){',
+  '    basisDagenVolledigeToekomst();',
+  '    const beleid=root.WeatherNowKansbeleidV3,day=S.d&&S.d.daily;',
+  '    if(!beleid||!day||!Array.isArray(day.time))return;',
+  '    const huidigeDatum=String(S.d&&S.d.current&&S.d.current.time||"").slice(0,10);',
+  '    document.querySelectorAll("#days .row.day:not(.kop)").forEach(rij=>{',
+  '      const i=Number(rij.dataset.i),datum=day.time[i];',
+  '      if(!datum||datum===huidigeDatum)return;',
+  '      const kans=getal(day.precipitation_probability_max&&day.precipitation_probability_max[i]),mm=getal(day.precipitation_sum&&day.precipitation_sum[i]);',
+  '      const kansEl=rij.querySelector(".drain");if(!kansEl)return;',
+  '      const presentatie=dagNeerslagPresentatie(kans,mm,beleid.kansHoofd,beleid.hoeveelheidTekst);',
+  '      kansEl.textContent=presentatie.hoofd;',
+  '      kansEl.title=presentatie.hoofd==="Onzeker"?"Kans en hoeveelheid spreken elkaar tegen":presentatie.hoofd==="Droog"?"Geen neerslag verwacht":presentatie.hoofd==="–"?"Geen betrouwbare kans beschikbaar":"Neerslagkans "+presentatie.hoofd;',
+  '      if(presentatie.hoeveelheid){',
+  '        const small=document.createElement("small");small.className="q1-dag-mm";small.textContent=presentatie.hoeveelheid;kansEl.appendChild(small);',
+  '        kansEl.title+=(kansEl.title?". ":"")+"Verwachte daghoeveelheid: "+presentatie.hoeveelheid;',
+  '      }',
+  '      const cond=rij.querySelector(".dcond"),code=getal(day.weather_code&&day.weather_code[i]);',
+  '      if(cond&&typeof beleid.dagKansSamenvatting==="function"){',
+  '        const basis=code!==null&&typeof txt==="function"?txt(code,true):"Verwachting";',
+  '        const soort=root.WeatherNowInterpretatie&&typeof root.WeatherNowInterpretatie.neerslagSoortUitCode==="function"?root.WeatherNowInterpretatie.neerslagSoortUitCode(code):"neerslag";',
+  '        cond.textContent=beleid.dagKansSamenvatting({genoeg:kans!==null||mm!==null,kans,hoeveelheid:mm,code,soort},basis);',
+  '      }',
+  '    });',
+  '  };',
+  '}',
+  ""
+].join("\n");
+html=html.slice(0,q1Start)+Q1_DAG_NIEUW+html.slice(q1End);
 
-/* De overblijvende centrale dagenrenderer gebruikt exact de resterende lokale
+/* De centrale dagenrenderer bezit vandaag en gebruikt exact de resterende lokale
    horizon. Toon ook de hoeveelheid uit diezelfde analyse, zodat kans en mm nooit
-   meer uit verschillende tijdvensters komen. */
+   meer uit verschillende tijdvensters komen. De horizonbewuste Q1-wrapper hierboven
+   overschrijft daarna uitsluitend toekomstige kalenderdagen met hun officiële
+   daily kans én hoeveelheid. */
 const DAG_HOOFD='      kansEl.textContent=hoofd;';
 if((html.split(DAG_HOOFD).length-1)!==1)throw new Error("Centrale dagrenderer-anchor ontbreekt of is dubbel.");
 html=html.replace(DAG_HOOFD,DAG_HOOFD+'\n'
@@ -128,4 +164,4 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:unifie
 
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"unified-weather-truth");
-console.log("Unified weather truth toegepast; daghorizon, actuele neerslag, hero, copy en updateflow geconsolideerd; cache "+versie+".");
+console.log("Unified weather truth toegepast; daghorizons, actuele neerslag, hero, copy en updateflow geconsolideerd; cache "+versie+".");
