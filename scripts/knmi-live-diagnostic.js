@@ -1,22 +1,96 @@
 "use strict";
 
 const BASIS = "https://anonymous.api.dataplatform.knmi.nl/wms/adaguc-server";
+const DATASET = "radar_forecast_2.0";
+const LAAG = "precipitation_nowcast";
+
+function basisUrl(request) {
+  const u = new URL(BASIS);
+  u.searchParams.set("DATASET", DATASET);
+  u.searchParams.set("SERVICE", "WMS");
+  u.searchParams.set("REQUEST", request);
+  u.searchParams.set("VERSION", request === "GetCapabilities" ? "1.3.0" : "1.1.1");
+  return u;
+}
+
+function referenceTimeUitCapabilities(xml) {
+  const tags = [...String(xml || "").matchAll(/<(?:Dimension|Extent)\b([^>]*)>/gi)];
+  for (const m of tags) {
+    const attrs = m[1] || "";
+    if (!/\bname=["']reference_time["']/i.test(attrs)) continue;
+    const d = /\bdefault=["']([^"']+)["']/i.exec(attrs);
+    if (d && Number.isFinite(Date.parse(d[1]))) return d[1];
+  }
+  return null;
+}
+
+function isoZonderMillis(ms) {
+  return new Date(ms).toISOString().replace(/\.000Z$/, "Z");
+}
+
+async function getTekst(u, accept) {
+  const r = await fetch(u, { headers: { Accept: accept, "User-Agent": "watishetweer.nl-audit/1.0" } });
+  const tekst = await r.text();
+  if (!r.ok) throw new Error(`${u.searchParams.get("REQUEST")} gaf ${r.status}`);
+  return tekst;
+}
+
+async function punt(lat, lon, referenceTime) {
+  const u = basisUrl("GetPointValue");
+  u.searchParams.set("SRS", "EPSG:4326");
+  u.searchParams.set("QUERY_LAYERS", LAAG);
+  u.searchParams.set("X", Number(lon).toFixed(5));
+  u.searchParams.set("Y", Number(lat).toFixed(5));
+  u.searchParams.set("INFO_FORMAT", "application/json");
+  const refMs = Date.parse(referenceTime);
+  u.searchParams.set("time", referenceTime + "/" + isoZonderMillis(refMs + 120 * 60000));
+  u.searchParams.set("DIM_reference_time", referenceTime);
+  const payload = JSON.parse(await getTekst(u, "application/json"));
+  const item = payload && payload[0];
+  const reeks = item && item.data && (item.data[referenceTime] || Object.values(item.data)[0]);
+  const punten = Object.entries(reeks || {}).map(([tijd, waarde]) => ({ tijd, waarde: Number(waarde) }));
+  return {
+    point: item && item.point,
+    units: item && item.units,
+    waarden: punten.filter(p => Number.isFinite(p.waarde) && p.waarde !== 0),
+    min: punten.length ? Math.min(...punten.map(p => p.waarde)) : null,
+    max: punten.length ? Math.max(...punten.map(p => p.waarde)) : null
+  };
+}
 
 (async () => {
-  const u = new URL(BASIS);
-  u.searchParams.set("DATASET", "radar_forecast_2.0");
-  u.searchParams.set("SERVICE", "WMS");
-  u.searchParams.set("REQUEST", "GetMetaData");
-  u.searchParams.set("VERSION", "1.1.1");
-  u.searchParams.set("LAYER", "precipitation_nowcast");
-  u.searchParams.set("FORMAT", "text/plain");
+  const cap = basisUrl("GetCapabilities");
+  const xml = await getTekst(cap, "text/xml");
+  const referenceTime = referenceTimeUitCapabilities(xml);
+  if (!referenceTime) throw new Error("reference_time ontbreekt");
 
-  const response = await fetch(u, { headers: { Accept: "text/plain,text/html", "User-Agent": "watishetweer.nl-audit/1.0" } });
-  const tekst = await response.text();
-  const regels = tekst.split(/\r?\n/).filter(regel =>
-    /forecast|precip|units|fill|missing|nodata|scale|offset|valid|transform|threshold|minimum|maximum/i.test(regel)
+  const meta = basisUrl("GetMetaData");
+  meta.searchParams.set("LAYER", LAAG);
+  meta.searchParams.set("FORMAT", "text/plain");
+  const metadata = await getTekst(meta, "text/plain,text/html");
+  const regels = metadata.split(/\r?\n/);
+  const relevanteRegels = regels.filter(regel =>
+    /calibration|formula|out_of_image|fill|missing|image3|image_data|forecast|precip|units|scale|offset/i.test(regel)
   );
-  console.log(JSON.stringify({ status: response.status, relevanteRegels: regels.slice(0, 120) }, null, 2));
+  console.log("METADATA", JSON.stringify({ referenceTime, relevanteRegels: relevanteRegels.slice(0, 260) }, null, 2));
+
+  const locaties = [
+    ["Amsterdam", 52.3676, 4.9041],
+    ["Utrecht", 52.0907, 5.1214],
+    ["Utrecht-west", 52.0907, 5.0714],
+    ["Utrecht-oost", 52.0907, 5.1714],
+    ["Utrecht-zuid", 52.0407, 5.1214],
+    ["Utrecht-noord", 52.1407, 5.1214],
+    ["Dronten", 52.5250, 5.7180],
+    ["Groningen", 53.2194, 6.5665],
+    ["Maastricht", 50.8514, 5.6910],
+    ["Brussel", 50.8503, 4.3517]
+  ];
+  for (const [naam, lat, lon] of locaties) {
+    const uit = await punt(lat, lon, referenceTime);
+    console.log("PUNT", JSON.stringify({ naam, lat, lon, referenceTime, ...uit }));
+    await new Promise(resolve => setTimeout(resolve, 1100));
+  }
 })().catch(err => {
   console.error("KNMI live-diagnose kon niet worden uitgevoerd:", err && err.stack || err);
   process.exitCode = 1;
