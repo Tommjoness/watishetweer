@@ -21,21 +21,6 @@ function test(naam, fn) {
   });
 }
 
-function nowcastFixture() {
-  const reeks = {};
-  const refMs = Date.parse(REF);
-  for (let i = 0; i <= 24; i++) {
-    const tijd = new Date(refMs + i * 5 * 60000).toISOString().replace(/\.000Z$/, "Z");
-    reeks[tijd] = i < 3 ? "0.18" : "0";
-  }
-  return [{
-    name: "precipitation_nowcast",
-    units: "mm/hr",
-    point: { SRS: "EPSG:4326", coords: "5.093900,51.989000" },
-    data: { [REF]: reeks }
-  }];
-}
-
 function fakeKnmiFetch(url) {
   const u = new URL(url);
   const dataset = u.searchParams.get("DATASET");
@@ -54,22 +39,6 @@ function fakeKnmiFetch(url) {
     });
   }
 
-  if (dataset === "radar_forecast_2.0" && request === "GetCapabilities") {
-    return Promise.resolve({
-      ok: true,
-      status: 200,
-      text: async () => '<WMS_Capabilities><Layer><Name>precipitation_nowcast</Name><Dimension name="reference_time" default="' + REF + '">x</Dimension></Layer></WMS_Capabilities>'
-    });
-  }
-
-  if (dataset === "radar_forecast_2.0" && request === "GetPointValue") {
-    return Promise.resolve({
-      ok: true,
-      status: 200,
-      text: async () => JSON.stringify(nowcastFixture())
-    });
-  }
-
   throw new Error("onverwachte providerrequest: " + url);
 }
 
@@ -84,35 +53,60 @@ test("bestaande Nederlandse client zonder landcode blijft compatibel", () => {
   assert.equal(kiesProvider({ lat: 51.989, lon: 5.0939 }).id, "knmi");
 });
 
-test("capability-register maakt ondersteuning per land expliciet", () => {
+test("capability-register publiceert alleen de bewezen actuele KNMI-laag", () => {
   const verwacht = [{
     id: "knmi",
-    capabilities: { actueel: true, nowcast: true, nowcastMinuten: 120 }
+    capabilities: { actueel: true, nowcast: false, nowcastMinuten: 0 }
   }];
   assert.deepEqual(providerCapabilitiesVoorLand("NL"), verwacht);
   assert.deepEqual(providerCapabilitiesVoorLand("BE"), verwacht);
   assert.deepEqual(providerCapabilitiesVoorLand("DE"), []);
 });
 
-test("generieke providerlaag levert hetzelfde contract voor Nederland en België", async () => {
+test("generieke providerlaag levert actuele KNMI-data zonder forecast-WMS voor Nederland en België", async () => {
   for (const locatie of [
     { lat: 51.989, lon: 5.0939, land: "NL" },
     { lat: 50.8503, lon: 4.3517, land: "BE" }
   ]) {
+    const requests = [];
     const uit = await haalNeerslagVoorLocatie({
       ...locatie,
-      fetchImpl: fakeKnmiFetch,
+      fetchImpl: async url => {
+        requests.push(String(url));
+        return fakeKnmiFetch(url);
+      },
       nuMs: NU
     });
     assert.equal(uit.beschikbaar, true);
     assert.equal(uit.provider, "knmi");
     assert.equal(uit.bron, "KNMI");
     assert.equal(uit.actueel.waarde, 0.18);
-    assert.equal(uit.nowcast.punten.length, 25);
+    assert.equal(uit.nowcast, null);
     assert.equal(uit.capabilities.actueel, true);
-    assert.equal(uit.capabilities.nowcast, true);
-    assert.equal(uit.capabilities.nowcastMinuten, 120);
+    assert.equal(uit.capabilities.nowcast, false);
+    assert.equal(uit.capabilities.nowcastMinuten, 0);
+    assert.equal(requests.length, 1, requests.join("\n"));
+    assert(requests[0].includes("DATASET=nl_rdr_data_rtcor_5m"), requests[0]);
+    assert(!requests.some(x => x.includes("radar_forecast_2.0") || x.includes("precipitation_nowcast")), requests.join("\n"));
   }
+});
+
+test("een kapotte actuele KNMI-call leidt niet tot een verborgen forecast-WMS fallback", async () => {
+  const requests = [];
+  const uit = await haalNeerslagVoorLocatie({
+    lat: 52.09,
+    lon: 5.12,
+    land: "NL",
+    fetchImpl: async url => {
+      requests.push(String(url));
+      return { ok: false, status: 503, text: async () => "tijdelijk niet beschikbaar" };
+    },
+    nuMs: NU
+  });
+  assert.equal(uit.beschikbaar, false);
+  assert.equal(uit.provider, "knmi");
+  assert.equal(requests.length, 1, requests.join("\n"));
+  assert(!requests.some(x => x.includes("radar_forecast_2.0") || x.includes("precipitation_nowcast")), requests.join("\n"));
 });
 
 test("onondersteunde landen doen geen externe providerrequest", async () => {
