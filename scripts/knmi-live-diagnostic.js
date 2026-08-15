@@ -15,13 +15,19 @@ function vorm(payload, referenceTime) {
   const data = item && item.data && typeof item.data === "object" ? item.data : null;
   const reeks = data && (data[referenceTime]
     || Object.values(data).find(v => v && typeof v === "object" && !Array.isArray(v)));
-  const keys = reeks && typeof reeks === "object" ? Object.keys(reeks).sort() : [];
+  const entries = reeks && typeof reeks === "object" ? Object.entries(reeks).sort((a, b) => Date.parse(a[0]) - Date.parse(b[0])) : [];
+  const geldige = entries.filter(([tijd, waarde]) => Number.isFinite(Date.parse(tijd)) && Number.isFinite(Number(waarde)) && Number(waarde) >= 0);
+  const ongeldig = entries.filter(([tijd, waarde]) => !(Number.isFinite(Date.parse(tijd)) && Number.isFinite(Number(waarde)) && Number(waarde) >= 0));
   return {
     name: item && (item.name || item.standard_name) || null,
     units: item && item.units || null,
-    punten: keys.length,
-    eersteTijd: keys[0] || null,
-    laatsteTijd: keys.at(-1) || null,
+    punten: entries.length,
+    geldigePunten: geldige.length,
+    ongeldigePunten: ongeldig.length,
+    eersteTijd: entries[0] && entries[0][0] || null,
+    laatsteTijd: entries.at(-1) && entries.at(-1)[0] || null,
+    eersteWaarden: entries.slice(0, 4).map(([tijd, waarde]) => ({ tijd, type: typeof waarde, waarde: String(waarde).slice(0, 80), nummer: Number(waarde) })),
+    ongeldigeVoorbeelden: ongeldig.slice(0, 4).map(([tijd, waarde]) => ({ tijd, type: typeof waarde, waarde: String(waarde).slice(0, 80) })),
     parserAccepteert: !!knmi.normaliseerNowcastAntwoord(payload, referenceTime)
   };
 }
