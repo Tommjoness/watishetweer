@@ -8,7 +8,9 @@
 const getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 const begrens=(v,a,b)=>Math.max(a,Math.min(b,v));
 const esc=t=>String(t==null?"":t).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-const hhmmIso=t=>{const m=/T(\d{2}):(\d{2})/.exec(String(t||""));return m?m[1]+":"+m[2]:null;};
+/* Lokale tijdhelpers accepteren zowel ISO-T als een spatie tussen datum en tijd.
+   De productiehelper gebruikt niet overal exact hetzelfde seriële formaat. */
+const hhmmIso=t=>{const s=String(t||"");const m=/(?:T|\s)(\d{2}):(\d{2})/.exec(s)||/^(\d{2}):(\d{2})/.exec(s);return m?m[1]+":"+m[2]:null;};
 
 function datumVerschuif(datum,dagen){
   const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(datum||""));
@@ -127,13 +129,14 @@ function opTijdlijn(min,start){return min===null||start===null?null:(min<start?m
 /* De bronrenderer gebruikt het eerste niet-goede uurpunt als eindpunt, behalve
    wanneer de goede reeks tot aan de astronomische zonsopkomst doorloopt. Alleen
    in het eerste geval trekken we één modeluur af. Daarna wordt het eindpunt hard
-   begrensd op de echte zonsopkomst. Een actief venster begint zichtbaar bij 'nu';
-   een reeds verstreken beste periode wordt ook als verleden benoemd. */
+   begrensd op de echte zonsopkomst. Voor de eerste rij bepalen we actief/verstreken
+   uit het venster zelf; zo is de zichtbare copy niet afhankelijk van één datum-
+   serialisatie of van de afzonderlijke is_day-vlag. */
 function corrigeerNachtVensterBron(tekst,horizonDagen,score,opties={}){
   const t=String(tekst||"").trim(),h=getal(horizonDagen),s=getal(score),relatief=s!==null&&s<4;
   if(/^Geen gunstig kijkvenster door /i.test(t))return /[.!?]$/.test(t)?t:t+".";
   if(/^Geen goed zichtvenster door /i.test(t))return t.replace(/^Geen goed zichtvenster/i,"Geen gunstig kijkvenster")+( /[.!?]$/.test(t)?"":".");
-  const m=/^Beste periode\s+(\d{2}:\d{2})[–-](\d{2}:\d{2})$/i.exec(t);if(!m)return t;
+  const m=/^Beste periode:?\s+(\d{2}:\d{2})[–-](\d{2}:\d{2})$/i.exec(t);if(!m)return t;
   const start=m[1],rawEind=m[2],startMin=minuutVanTijd(start),rawEindMin=minuutVanTijd(rawEind);if(startMin===null||rawEindMin===null)return t;
   const zon=String(opties.zonsopkomst||""),zonMin=minuutVanTijd(zon);
   let eind=rawEind===zon?rawEind:tijdVanMinuut(rawEindMin-60);
@@ -149,10 +152,10 @@ function corrigeerNachtVensterBron(tekst,horizonDagen,score,opties={}){
     return (h>=5?"Waarschijnlijk beste periode ":"Beste periode ")+deel+".";
   }
 
-  const nu=opties.actief?minuutVanTijd(opties.nuTijd):null,nuLijn=opTijdlijn(nu,startMin);
+  const nu=minuutVanTijd(opties.nuTijd),nuLijn=opTijdlijn(nu,startMin);
   const label=relatief?"Relatief beste periode":"Beste periode";
-  if(nuLijn!==null&&nuLijn>=startMin&&nuLijn<eindLijn)return label+": nu tot "+eind+".";
-  if(nuLijn!==null&&nuLijn>=eindLijn)return label+" was "+start+"–"+eind+".";
+  if(h===0&&nuLijn!==null&&nuLijn>=startMin&&nuLijn<eindLijn)return label+": nu tot "+eind+".";
+  if(h===0&&nuLijn!==null&&nuLijn>=eindLijn)return label+" was "+start+"–"+eind+".";
   return label+": "+start+"–"+eind+".";
 }
 
@@ -228,22 +231,40 @@ function corrigeerPollenPresentatie(){
   });
 }
 
-/* Bronnen zijn zelfstandige items. Geen decoratieve slash of middendot wordt
-   onderdeel van de tekststroom, zodat wrapping op mobiel nooit een los teken
-   achterlaat. */
+/* Bronnen zijn zelfstandige items. Ook een later/dynamisch toegevoegde KNMI-
+   attributie wordt in dezelfde bronrij opgenomen; losse slash/middendot-tekst
+   mag nooit als zelfstandig teken blijven wrappen. */
 function structureerBronnen(){
-  const bron=document.querySelector("footer .bron:first-child");if(!bron||bron.classList.contains("bron-bronnen"))return false;
-  const links=[...bron.querySelectorAll("a")],pak=naam=>links.find(a=>(a.textContent||"").trim()===naam);
-  const open=pak("Open-Meteo"),alarm=pak("MeteoAlarm"),nws=pak("National Weather Service"),osm=pak("© OpenStreetMap-bijdragers");
-  if(!open||!alarm||!nws||!osm)return false;
-  bron.classList.add("bron-bronnen");
-  bron.innerHTML='<span class="bronlabel">Bronnen</span>'
-    +'<span class="bronitem">'+open.outerHTML+'</span>'
-    +'<span class="bronitem">CAMS</span>'
-    +'<span class="bronitem">'+alarm.outerHTML+'</span>'
-    +'<span class="bronitem">'+nws.outerHTML+'</span>'
-    +'<span class="bronitem">BigDataCloud</span>'
-    +'<span class="bronitem">'+osm.outerHTML+'</span>';
+  const footer=document.querySelector("footer");if(!footer)return false;
+  const bron=[...footer.children].find(el=>el.classList&&el.classList.contains("bron")&&!/Privacy\s*&/i.test(el.textContent||""));
+  if(!bron)return false;
+  let knmi=false;
+
+  if(!bron.classList.contains("bron-bronnen")){
+    const links=[...bron.querySelectorAll("a")],pak=naam=>links.find(a=>(a.textContent||"").trim()===naam);
+    const open=pak("Open-Meteo"),alarm=pak("MeteoAlarm"),nws=pak("National Weather Service"),osm=pak("© OpenStreetMap-bijdragers");
+    if(!open||!alarm||!nws||!osm)return false;
+    knmi=/\bKNMI\b/i.test(bron.textContent||"");
+    bron.classList.add("bron-bronnen");
+    bron.innerHTML='<span class="bronlabel">Bronnen</span>'
+      +'<span class="bronitem">'+open.outerHTML+'</span>'
+      +'<span class="bronitem">CAMS</span>'
+      +'<span class="bronitem">'+alarm.outerHTML+'</span>'
+      +'<span class="bronitem">'+nws.outerHTML+'</span>'
+      +'<span class="bronitem">BigDataCloud</span>'
+      +'<span class="bronitem">'+osm.outerHTML+'</span>';
+  }
+
+  /* Sommige providerlagen voegen KNMI na de eerste footeropbouw toe, als tekst
+     in de hoofdbron of als apart .bron-element. Neem beide vormen over. */
+  [...bron.childNodes].filter(n=>n.nodeType===3).forEach(n=>{
+    if(/\bKNMI\b/i.test(n.nodeValue||"")){knmi=true;n.nodeValue=String(n.nodeValue||"").replace(/\s*[·/]?\s*KNMI\s*/ig," ");}
+  });
+  const los=[...footer.children].find(el=>el!==bron&&el.classList&&el.classList.contains("bron")&&/^\s*[·/]?\s*KNMI\s*$/i.test(el.textContent||""));
+  if(los){knmi=true;los.remove();}
+  if(knmi&&! [...bron.querySelectorAll(".bronitem")].some(el=>/^KNMI$/i.test((el.textContent||"").trim()))){
+    const item=document.createElement("span");item.className="bronitem";item.textContent="KNMI";bron.appendChild(item);
+  }
   return true;
 }
 
@@ -267,9 +288,10 @@ nachten=function(){
   try{if(renderData!==origineel)S.d=renderData;basisNachten();}
   finally{S.d=origineel;}
   verbeterNachtzicht(renderData,nu,actief);
+  structureerBronnen();
 };
 
 const basisLucht=lucht;
-lucht=function(){basisLucht();corrigeerPollenPresentatie();};
+lucht=function(){basisLucht();corrigeerPollenPresentatie();structureerBronnen();};
 
 })(typeof globalThis!=="undefined"?globalThis:this);
