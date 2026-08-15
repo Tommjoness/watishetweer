@@ -34,6 +34,8 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-fetch-error-semantics.js",
   "apply-polar-chart-sentinel.js",
   "verify-polar-chart-sentinel.js",
+  "apply-unified-weather-truth.js",
+  "verify-unified-weather-truth.js",
   "apply-seo-foundation.js",
   "verify-seo-foundation.js",
   "generate-seo-location-pages.js",
@@ -44,7 +46,7 @@ const POSTBUILD_STAPPEN=Object.freeze([
 ]);
 
 function voerPostbuildUit(opt={}){
-  const uitvoerder=typeof opt.spawnSync=="function"?opt.spawnSync:spawnSync;
+  const uitvoerder=typeof opt.spawnSync==="function"?opt.spawnSync:spawnSync;
   const node=opt.execPath||process.execPath;
   const scriptsMap=opt.scriptsDir||__dirname;
 
@@ -64,7 +66,7 @@ function voerPostbuildUit(opt={}){
 
 if(require.main===module){
   try{voerPostbuildUit();}
-  catch(e){console.error(e&&e.stack||e);process.exit(typeof e.status=="number"?e.status:1);}
+  catch(e){console.error(e&&e.stack||e);process.exit(typeof e.status==="number"?e.status:1);}
 }
 
 module.exports={POSTBUILD_STAPPEN,voerPostbuildUit};
