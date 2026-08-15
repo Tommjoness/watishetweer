@@ -194,7 +194,7 @@ async function controleer(page, naam, modus) {
       sunTekst: sun ? sun.textContent.replace(/\s+/g," ").trim() : "",
       sunRijen,
       sunOverflow: sun ? sun.scrollWidth - sun.clientWidth : 0,
-      hint: (document.getElementById("hint") || {}).textContent || "",
+      hint: (document.getElementById("charthint") || {}).textContent || "",
       briefing: (document.getElementById("briefing") || {}).textContent || "",
       uvKop: uv ? uv.parentElement.querySelector(".eyebrow").textContent.trim() : "",
       uvWaarde: uv ? uv.textContent.trim() : "",
