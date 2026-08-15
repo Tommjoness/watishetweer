@@ -15,6 +15,7 @@ let generatie=0,controller=null,timer=null,laatsteSleutel="";
 const num=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 const landcode=v=>String(v||"").trim().toUpperCase();
 const ondersteund=land=>EXTRA_LANDEN.has(landcode(land));
+const beleid=()=>root.WeatherNowKansbeleidV3||null;
 
 function stop(){
   generatie++;
@@ -74,13 +75,24 @@ function herteken(){
   if(typeof minibarBij==="function")minibarBij();
 }
 
-function plan(gen){
+function volgendeWachttijd(payload){
+  const api=beleid();
+  return api&&typeof api.volgendeKnmiVerversingMs==="function"
+    ?api.volgendeKnmiVerversingMs(payload||null,Date.now())
+    :5*60*1000;
+}
+
+function plan(gen,payload){
   if(timer!==null)clearTimeout(timer);
   timer=setTimeout(()=>{
     timer=null;
     if(gen!==generatie||!ondersteund(S.land)||S.lat==null||S.lon==null)return;
+    if(document.visibilityState==="hidden"){
+      plan(gen,null);
+      return;
+    }
     vraag(S.lat,S.lon,gen,true);
-  },5*60*1000);
+  },volgendeWachttijd(payload));
 }
 
 async function vraag(lat,lon,gen,force){
@@ -91,15 +103,33 @@ async function vraag(lat,lon,gen,force){
   laatsteSleutel=sleutel;
   if(controller)controller.abort();
   const c=new AbortController();controller=c;
+  let planPayload=null;
   try{
     const payload=await j("/api/neerslag?lat="+encodeURIComponent(lat)+"&lon="+encodeURIComponent(lon)+"&land="+encodeURIComponent(land),{timeoutMs:7500,signal:c.signal});
     if(gen!==generatie||c.signal.aborted||landcode(S.land)!==land||Number(S.lat)!==Number(lat)||Number(S.lon)!==Number(lon))return;
-    if(payload&&payload.beschikbaar===true&&zetPayload(payload))herteken();
+    if(payload&&payload.beschikbaar===true&&zetPayload(payload)){
+      planPayload=payload;
+      herteken();
+    }
   }catch(e){}finally{
     if(controller===c)controller=null;
-    if(gen===generatie&&ondersteund(S.land))plan(gen);
+    if(gen===generatie&&ondersteund(S.land))plan(gen,planPayload);
   }
 }
+
+function verversBijTerugkeer(){
+  if(document.visibilityState&&document.visibilityState!=="visible")return;
+  if(controller||!ondersteund(S.land)||S.lat==null||S.lon==null||!S.d)return;
+  const api=beleid();
+  const moet=api&&typeof api.knmiPayloadMoetBijFocusVervers==="function"
+    ?api.knmiPayloadMoetBijFocusVervers(S.d.__knmiNeerslag,Date.now())
+    :true;
+  if(moet)void vraag(S.lat,S.lon,generatie,true);
+}
+if(document.addEventListener)document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible")verversBijTerugkeer();
+});
+if(root.addEventListener)root.addEventListener("pageshow",verversBijTerugkeer);
 
 const basisLoad=load;
 load=async function(lat,lon,label,stil,opslaan,land){
