@@ -2,20 +2,16 @@ const ENDPOINT="https://anonymous.api.dataplatform.knmi.nl/wms/adaguc-server";
 const Vianen={lat:51.9925,lon:5.0917};
 const queries=[
   {
+    label:"nowcast-current-selector",
+    dataset:"radar_forecast_2.0",layer:"precipitation_nowcast",
+    time:"2026-08-15T09:00:00Z/2026-08-15T11:00:00Z",
+    dims:{reference_time:"current"}
+  },
+  {
     label:"nowcast-latest-cycle-explicit",
     dataset:"radar_forecast_2.0",layer:"precipitation_nowcast",
     time:"2026-08-15T09:00:00Z/2026-08-15T11:00:00Z",
     dims:{reference_time:"2026-08-15T09:00:00Z"}
-  },
-  {
-    label:"nowcast-latest-cycle-default",
-    dataset:"radar_forecast_2.0",layer:"precipitation_nowcast",
-    time:"2026-08-15T09:00:00Z/2026-08-15T11:00:00Z"
-  },
-  {
-    label:"observed-latest-single",
-    dataset:"nl_rdr_data_rtcor_5m",layer:"precipitation_real_time",
-    time:"2026-08-15T09:00:00Z"
   }
 ];
 
@@ -36,6 +32,6 @@ for(const q of queries){
   const text=await r.text();
   let parsed=null;
   try{parsed=JSON.parse(text);}catch{}
-  console.log("KNMI_POINT",JSON.stringify({label:q.label,dataset:q.dataset,layer:q.layer,time:q.time,dims:q.dims||{},status:r.status,contentType:r.headers.get("content-type"),parsed,raw:text.slice(0,6000)}));
+  console.log("KNMI_POINT",JSON.stringify({label:q.label,status:r.status,parsed,raw:text.slice(0,6000)}));
   if(!r.ok||!parsed)process.exitCode=1;
 }
