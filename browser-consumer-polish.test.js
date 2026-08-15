@@ -274,11 +274,11 @@ async function controleer(page, naam, modus) {
 
   // De fixture heeft voor vandaag een niet-neerslagbeeld uit de resterende uurdata,
   // maar voor toekomstige dagen bewust een officiële dagelijkse regencode (61) en
-  // 40% neerslagkans. De centrale kanspolicy hoort dat concreet als 'Regen mogelijk'
-  // te formuleren; zo bewaken we de betekenis in plaats van één oud woordpatroon.
+  // 40% neerslagkans. Code 61 is 'Lichte regen'; de centrale kanspolicy hoort dat
+  // bij 40% concreet als 'Lichte regen mogelijk' te formuleren.
   assert.ok(resultaat.dagTeksten.length >= 2, `${naam} ${modus}: weektabel bevat meerdere dagen`);
   assert.ok(!/neerslagkans/i.test(resultaat.dagTeksten[0]), `${naam} ${modus}: niet-neerslagbeeld dupliceert de aparte neerslagkolom niet`);
-  assert.ok(resultaat.dagTeksten.slice(1).some(t => /^Regen mogelijk(?:\b|$)/i.test(t)), `${naam} ${modus}: officiële regendag met 40% krijgt de centrale formulering 'Regen mogelijk'`);
+  assert.ok(resultaat.dagTeksten.slice(1).some(t => /^Lichte regen mogelijk(?:\b|$)/i.test(t)), `${naam} ${modus}: officiële lichte-regendag met 40% krijgt de centrale formulering 'Lichte regen mogelijk'`);
 
   if (modus === "mobiel") {
     assert.equal(resultaat.windKopVisueel, "Wind", `${naam} ${modus}: mobiele weekkop heeft geen dubbelzinnig extra 'max'`);
