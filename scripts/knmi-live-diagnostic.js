@@ -31,11 +31,11 @@ function isoZonderMillis(ms) {
 async function getTekst(u, accept) {
   const r = await fetch(u, { headers: { Accept: accept, "User-Agent": "watishetweer.nl-audit/1.0" } });
   const tekst = await r.text();
-  if (!r.ok) throw new Error(`${u.searchParams.get("REQUEST")} gaf ${r.status}`);
+  if (!r.ok) throw new Error(`${u.searchParams.get("REQUEST") || u.hostname} gaf ${r.status}: ${tekst.slice(0, 300)}`);
   return tekst;
 }
 
-async function punt(lat, lon, referenceTime) {
+async function knmiPunt(lat, lon, referenceTime) {
   const u = basisUrl("GetPointValue");
   u.searchParams.set("SRS", "EPSG:4326");
   u.searchParams.set("QUERY_LAYERS", LAAG);
@@ -58,6 +58,35 @@ async function punt(lat, lon, referenceTime) {
   };
 }
 
+async function openMeteo15m(lat, lon, model) {
+  const u = new URL("https://api.open-meteo.com/v1/forecast");
+  u.searchParams.set("latitude", String(lat));
+  u.searchParams.set("longitude", String(lon));
+  u.searchParams.set("minutely_15", "precipitation,rain,showers");
+  u.searchParams.set("forecast_minutely_15", "12");
+  u.searchParams.set("timezone", "UTC");
+  if (model) u.searchParams.set("models", model);
+  const r = await fetch(u, { headers: { Accept: "application/json", "User-Agent": "watishetweer.nl-audit/1.0" } });
+  const tekst = await r.text();
+  let payload;
+  try { payload = JSON.parse(tekst); } catch { payload = { raw: tekst.slice(0, 500) }; }
+  if (!r.ok) return { status: r.status, model: model || "best_match", fout: payload };
+  const m = payload.minutely_15 || {};
+  return {
+    status: r.status,
+    model: model || "best_match",
+    timezone: payload.timezone,
+    interval: payload.minutely_15_units && payload.minutely_15_units.interval,
+    units: payload.minutely_15_units,
+    punten: (m.time || []).map((tijd, i) => ({
+      tijd,
+      precipitation: m.precipitation && m.precipitation[i],
+      rain: m.rain && m.rain[i],
+      showers: m.showers && m.showers[i]
+    }))
+  };
+}
+
 (async () => {
   const cap = basisUrl("GetCapabilities");
   const xml = await getTekst(cap, "text/xml");
@@ -70,28 +99,31 @@ async function punt(lat, lon, referenceTime) {
   const metadata = await getTekst(meta, "text/plain,text/html");
   const regels = metadata.split(/\r?\n/);
   const relevanteRegels = regels.filter(regel =>
-    /calibration|formula|out_of_image|fill|missing|image3|image_data|forecast|precip|units|scale|offset/i.test(regel)
+    /calibration|formula|out_of_image|fill|missing|image_data|forecast|precip|units|scale|offset/i.test(regel)
   );
-  console.log("METADATA", JSON.stringify({ referenceTime, relevanteRegels: relevanteRegels.slice(0, 260) }, null, 2));
+  console.log("METADATA", JSON.stringify({ referenceTime, relevanteRegels: relevanteRegels.slice(0, 80) }, null, 2));
 
-  const locaties = [
+  for (const [naam, lat, lon] of [
     ["Amsterdam", 52.3676, 4.9041],
     ["Utrecht", 52.0907, 5.1214],
-    ["Utrecht-west", 52.0907, 5.0714],
-    ["Utrecht-oost", 52.0907, 5.1714],
-    ["Utrecht-zuid", 52.0407, 5.1214],
-    ["Utrecht-noord", 52.1407, 5.1214],
     ["Dronten", 52.5250, 5.7180],
-    ["Groningen", 53.2194, 6.5665],
     ["Maastricht", 50.8514, 5.6910],
     ["Brussel", 50.8503, 4.3517]
-  ];
-  for (const [naam, lat, lon] of locaties) {
-    const uit = await punt(lat, lon, referenceTime);
-    console.log("PUNT", JSON.stringify({ naam, lat, lon, referenceTime, ...uit }));
+  ]) {
+    const uit = await knmiPunt(lat, lon, referenceTime);
+    console.log("KNMI_PUNT", JSON.stringify({ naam, lat, lon, referenceTime, ...uit }));
     await new Promise(resolve => setTimeout(resolve, 1100));
   }
+
+  for (const [naam, lat, lon] of [
+    ["Amsterdam", 52.3676, 4.9041],
+    ["Dronten", 52.5250, 5.7180],
+    ["Utrecht", 52.0907, 5.1214]
+  ]) {
+    console.log("OPENMETEO_BEST", JSON.stringify({ naam, ...(await openMeteo15m(lat, lon, null)) }));
+    console.log("OPENMETEO_ICON_D2", JSON.stringify({ naam, ...(await openMeteo15m(lat, lon, "icon_d2")) }));
+  }
 })().catch(err => {
-  console.error("KNMI live-diagnose kon niet worden uitgevoerd:", err && err.stack || err);
+  console.error("Live-diagnose kon niet worden uitgevoerd:", err && err.stack || err);
   process.exitCode = 1;
 });
