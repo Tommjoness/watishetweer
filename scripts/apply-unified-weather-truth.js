@@ -73,6 +73,45 @@ const TEMP_NIEUW=[
 if((html.split(TEMP_OUD).length-1)!==1)throw new Error("Temperatuurpiek-anchor ontbreekt of is dubbel.");
 html=html.replace(TEMP_OUD,TEMP_NIEUW);
 
+/* De forecastanalyse gebruikt lokale kloktekst; KNMI-brontijden zijn absolute
+   UTC-instants. Gebruik voor freshness daarom de echte browserklok, niet Date.parse
+   op een offsetloze lokale plaats-string (dat zou afhangen van de tijdzone van
+   het apparaat van de bezoeker). */
+const KNMI_NU_OUD='  return verrijkAnalyseMetKnmi(basisAnalyseerNeerslag(data,duur,nuOverride),data,duur,interpretatie,nuNaarMs(nuOverride));';
+const KNMI_NU_NIEUW='  return verrijkAnalyseMetKnmi(basisAnalyseerNeerslag(data,duur,nuOverride),data,duur,interpretatie,Date.now());';
+if((html.split(KNMI_NU_OUD).length-1)!==1)throw new Error("KNMI-freshness browseranchor ontbreekt of is dubbel.");
+html=html.replace(KNMI_NU_OUD,KNMI_NU_NIEUW);
+
+/* Als de verse radar droog meet maar de model-weathercode nog een neerslagcode
+   heeft, mag de hero niet opnieuw 'regen' tonen. Gebruik dan uitsluitend voor
+   de actuele hero een neutrale bewolkingscode uit de eveneens actuele
+   cloud_cover. Zonder verse droge KNMI-meting blijft de modelcode ongewijzigd. */
+const HERO_OUD=[
+  'function modelConditieHerstellen(){',
+  '  if(!S.d||!S.d.current)return;',
+  '  const c=S.d.current,cond=document.getElementById("cond"),ico=document.getElementById("nowicon"),mini=document.getElementById("minicond");',
+  '  if(cond&&typeof txt==="function")cond.textContent=txt(c.weather_code,c.is_day!==0);',
+  '  if(ico&&typeof icon==="function")ico.innerHTML=icon(c.weather_code,c.is_day===1,46);',
+  '  if(mini&&typeof txt==="function")mini.textContent=txt(c.weather_code,c.is_day!==0);',
+  '}'
+].join("\n");
+const HERO_NIEUW=[
+  'function modelConditieHerstellen(){',
+  '  if(!S.d||!S.d.current)return;',
+  '  const c=S.d.current,cond=document.getElementById("cond"),ico=document.getElementById("nowicon"),mini=document.getElementById("minicond");',
+  '  const modelCode=num(c.weather_code),actueel=knmiActueleKandidaat(S.d.__knmiNeerslag,Date.now());',
+  '  const radarDroog=!!(actueel&&num(actueel.waarde)!==null&&num(actueel.waarde)<KNMI_ACTUEEL_DREMPEL_MMU);',
+  '  const cc=num(c.cloud_cover);',
+  '  const currentHeroCode=radarDroog&&modelCode!==null&&modelCode>=51&&modelCode<=99&&cc!==null',
+  '    ?(cc>=95?3:cc>=40?2:cc>=15?1:0):modelCode;',
+  '  if(cond&&typeof txt==="function")cond.textContent=txt(currentHeroCode,c.is_day!==0);',
+  '  if(ico&&typeof icon==="function")ico.innerHTML=icon(currentHeroCode,c.is_day===1,46);',
+  '  if(mini&&typeof txt==="function")mini.textContent=txt(currentHeroCode,c.is_day!==0);',
+  '}'
+].join("\n");
+if((html.split(HERO_OUD).length-1)!==1)throw new Error("Actuele hero-anchor ontbreekt of is dubbel.");
+html=html.replace(HERO_OUD,HERO_NIEUW);
+
 /* Een dataverversing mag niet betekenen dat een lang openstaande tab oude
    productlogica blijft draaien. De serviceworker claimt nieuwe clients al; de
    pagina controleert voortaan bij terugkeer expliciet op een update en herlaadt
@@ -89,4 +128,4 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:unifie
 
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"unified-weather-truth");
-console.log("Unified weather truth toegepast; daghorizon, actuele neerslag, copy en updateflow geconsolideerd; cache "+versie+".");
+console.log("Unified weather truth toegepast; daghorizon, actuele neerslag, hero, copy en updateflow geconsolideerd; cache "+versie+".");
