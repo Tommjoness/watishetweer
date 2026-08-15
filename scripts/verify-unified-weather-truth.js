@@ -10,15 +10,18 @@ function bevat(tekst,reden){if(!html.includes(tekst))throw new Error(reden+": "+
 function mist(tekst,reden){if(html.includes(tekst))throw new Error(reden+": "+tekst);}
 
 bevat("/* ===== UNIFIED WEATHER TRUTH 20260815 ===== */","unified-weather-truth marker ontbreekt");
-bevat("Weekneerslag heeft één finale runtime-owner: WeatherNowKansbeleidV3/dagen()","finale dagowner is niet geconsolideerd");
+bevat("Weekneerslag heeft één horizon per rij: vandaag resterend, toekomstige dagen volledig","daghorizon is niet expliciet geconsolideerd");
+bevat('if(!datum||datum===huidigeDatum)return;',"huidige dag wordt niet beschermd tegen volledige daily totalen");
+bevat('day.precipitation_probability_max&&day.precipitation_probability_max[i]','toekomstige dagkans gebruikt niet het officiële daily veld');
+bevat('day.precipitation_sum&&day.precipitation_sum[i]','toekomstige daghoeveelheid gebruikt niet het officiële daily veld');
 bevat('const dagMm=num(a&&a.hoeveelheid);',"resterende daghoeveelheid wordt niet uit centrale analyse gelezen");
 bevat('small.className="q1-dag-mm";small.textContent=hoeveelheidTekst(dagMm)',"daghoeveelheid wordt niet uit hetzelfde analyseobject getoond");
-mist("Weekverwachting: de zichtbare kans en hoeveelheid komen beide uit de officiële","oude Q1 daily-owner staat nog in runtime");
-mist("const p=dagNeerslagPresentatie(kans,mm,beleid.kansHoofd,beleid.hoeveelheidTekst);","Q1 schrijft ruwe hele-dagtotalen nog over de resterende-daganalyse heen");
+mist("Weekverwachting: de zichtbare kans en hoeveelheid komen beide uit de officiële","oude algemene Q1 daily-owner staat nog in runtime");
+mist("const p=dagNeerslagPresentatie(kans,mm,beleid.kansHoofd,beleid.hoeveelheidTekst);","oude onvoorwaardelijke Q1 daily-owner staat nog in runtime");
 /* De oorspronkelijke basisrenderer mag de daily velden nog gebruiken om zijn
-   eerste DOM op te bouwen: de centrale policy-wrapper is de finale eigenaar en
-   herschrijft die waarden in dezelfde synchrone render. De regressie bewaakt dus
-   de bewezen late Q1-override, niet een onschadelijke bronverwijzing in de basis. */
+   eerste DOM op te bouwen. Daarna gelden twee expliciete, niet-overlappende
+   horizons: de centrale policy bezit vandaag vanaf lokaal nu; de horizonbewuste
+   Q1-laag bezit uitsluitend toekomstige volledige kalenderdagen. */
 mist("Geen goed zichtvenster","Nachtzicht gebruikt nog ambigu zichtvenster");
 bevat("Geen gunstig kijkvenster","Nachtzicht gebruikt geen helder kijkvensterbegrip");
 bevat('De temperatuur blijft tot rond "+hhmm(volledigePiekVandaag.t)+" ongeveer <b>"+huidigAfgerond+" graden</b>.',"temperatuurplateau-copy ontbreekt");
@@ -34,4 +37,4 @@ const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script
 if(!scripts.length)throw new Error("geen inline scripts om syntactisch te valideren");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:verify-unified-"+(i+1)}));
 
-console.log("Unified weather truth verifier: actuele neerslag/hero, resterende dag, Nachtzicht-copy, temperatuurplateau en appupdate geslaagd.");
+console.log("Unified weather truth verifier: actuele neerslag/hero, daghorizons, Nachtzicht-copy, temperatuurplateau en appupdate geslaagd.");
