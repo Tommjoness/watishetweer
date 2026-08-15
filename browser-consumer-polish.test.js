@@ -222,8 +222,8 @@ async function controleer(page, naam, modus) {
       knopHoogte: locatie ? locatie.getBoundingClientRect().height : 0,
       locatieTekst: locatie ? locatie.textContent.trim() : "",
       locatieNaam: locatie ? locatie.getAttribute("aria-label") || "" : "",
-      bewaarHoogte: document.getElementById("fav") ? document.getElementById("fav").getBoundingClientRect().height : 0,
-      popSubDisplay: (document.getElementById("popsub") || {}).style.display || "",
+      bewaarHoogte: document.querySelector(".chip.add") ? document.querySelector(".chip.add").getBoundingClientRect().height : 0,
+      popSubDisplay: document.getElementById("popsub") ? getComputedStyle(document.getElementById("popsub")).display : "",
       footerGrootte: footer ? parseFloat(getComputedStyle(footer).fontSize) : 0,
       topbar,
       nav,
@@ -302,7 +302,7 @@ async function controleer(page, naam, modus) {
     });
     await page.waitForTimeout(360);
     const scrollOnder = await page.evaluate(() => {
-      const top = document.querySelector(".topbar").getBoundingClientRect();
+      const top = document.getElementById("minibar").getBoundingClientRect();
       return { bottom: top.bottom, hoogte: top.height, y: scrollY, appTop: document.getElementById("app").getBoundingClientRect().top };
     });
     assert.ok(scrollOnder.hoogte > 30, `${naam} ${modus}: mobiele topbar bestaat nog`);
@@ -315,7 +315,7 @@ async function controleer(page, naam, modus) {
     });
     await page.waitForTimeout(360);
     const scrollTerug = await page.evaluate(() => {
-      const top = document.querySelector(".topbar").getBoundingClientRect();
+      const top = document.getElementById("minibar").getBoundingClientRect();
       return { top: top.top, bottom: top.bottom, hoogte: top.height };
     });
     assert.ok(scrollTerug.top >= -1, `${naam} ${modus}: topbar keert terug bij omhoog scrollen`);
