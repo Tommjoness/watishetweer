@@ -140,12 +140,13 @@ function corrigeerNachtVensterBron(tekst,horizonDagen,score,opties={}){
   let eindLijn=opTijdlijn(minuutVanTijd(eind),startMin);
   const zonLijn=opTijdlijn(zonMin,startMin);
   if(zonLijn!==null&&eindLijn!==null&&eindLijn>zonLijn){eind=zon;eindLijn=zonLijn;}
-  if(eindLijn===null||eindLijn<=startMin)return relatief?"Geen gunstig kijkvenster.":"Geen gunstig kijkvenster.";
+  if(eindLijn===null||eindLijn<=startMin)return "Geen gunstig kijkvenster.";
 
   if(h!==null&&h>=3){
     const a=dagdeelVanUur(start),b=dagdeelVanUur(eind);if(!a||!b)return relatief?"Relatief beste periode.":"Beste periode.";
     const deel=a===b?"in de "+a:"van de "+a+" tot de "+b;
-    return (h>=5?"Waarschijnlijk ":"")+(relatief?"relatief beste periode ":"beste periode ")+deel+".";
+    if(relatief)return "Relatief beste periode "+deel+".";
+    return (h>=5?"Waarschijnlijk beste periode ":"Beste periode ")+deel+".";
   }
 
   const nu=opties.actief?minuutVanTijd(opties.nuTijd):null,nuLijn=opTijdlijn(nu,startMin);
