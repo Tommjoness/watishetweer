@@ -113,6 +113,8 @@ async function controleer(type,naam){
       const pop=document.getElementById("pop"),popStat=pop&&pop.closest(".stat");
       const ncHint=document.getElementById("nchint"),ncKop=ncHint&&ncHint.previousElementSibling;
       const eersteDag=document.querySelector("#days .row.day:not(.kop)");
+      const presentatie=globalThis.WeatherNowNeerslagPresentatieV2;
+      const a=presentatie&&typeof presentatie.analyse==="function"?presentatie.analyse(120):null;
       return {
         hero:tekst("cond"),
         mini:tekst("minicond"),
@@ -126,8 +128,8 @@ async function controleer(type,naam){
         tweeUurZichtbaar:ncKop?getComputedStyle(ncKop).display!=="none":false,
         dagCond:eersteDag?((eersteDag.querySelector(".dcond")||{}).textContent||"").replace(/\s+/g," ").trim():"",
         dagKans:eersteDag?((eersteDag.querySelector(".drain")||{}).childNodes[0]?.textContent||"").trim():"",
-        bronActueel:(typeof analyseerNeerslag==="function"&&S&&S.d)?(analyseerNeerslag(S.d,120,S.d.current.time).bronActueel||""):"",
-        analyse:(typeof analyseerNeerslag==="function"&&S&&S.d)?(()=>{const a=analyseerNeerslag(S.d,120,S.d.current.time);return {status:a.status,genoeg:a.genoeg,kans:a.kans,hoeveelheid:a.hoeveelheid,currentWet:a.currentWet,currentRadarWet:a.currentRadarWet,bronActueel:a.bronActueel,bronHoeveelheid:a.bronHoeveelheid};})():null,
+        bronActueel:a&&a.bronActueel||"",
+        analyse:a?{status:a.status,genoeg:a.genoeg,kans:a.kans,hoeveelheid:a.hoeveelheid,currentWet:a.currentWet,currentRadarWet:a.currentRadarWet,bronActueel:a.bronActueel,bronHoeveelheid:a.bronHoeveelheid}:null,
         i0:S&&S.i0,
         currentTime:S&&S.d&&S.d.current&&S.d.current.time
       };
