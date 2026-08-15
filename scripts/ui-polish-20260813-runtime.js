@@ -49,13 +49,25 @@ function uiLuchtdrukTekst(tekst){
   return t;
 }
 
-function uiBriefingTijdtaal(html,nuLokaal){
+/* Rond middernacht mag de taal niet alleen naar de klok kijken. Als de genoemde
+   nachtminimumtemperatuur al bereikt is (of binnen de afrondmarge ligt), is
+   "koelt later af naar" feitelijk onjuist. Dan benoemen we het minimum zonder
+   een toekomstige daling te suggereren. Alleen bij een echte resterende daling
+   gebruiken we "Later vannacht". */
+function uiBriefingTijdtaal(html,nuLokaal,huidigeTemperatuur){
   const bron=String(html||"");
   const m=/T(\d{2}):(\d{2})/.exec(String(nuLokaal||""));
   if(!m)return bron;
   const uur=Number(m[1]);
   if(!Number.isFinite(uur)||uur<0||uur>=5)return bron;
-  return bron.replace(/(^|[.!?]\s+)Vannacht koelt\b/g,"$1Later vannacht koelt");
+  const huidige=uiGetal(huidigeTemperatuur);
+  return bron.replace(/Vannacht koelt het af naar\s*(<b>)?(-?\d+(?:[.,]\d+)?) graden(<\/b>)?\./gi,(volledig,open,doelTekst,sluit)=>{
+    const doel=Number(String(doelTekst).replace(",","."));
+    const waarde=(open||"")+doelTekst+" graden"+(sluit||"");
+    if(huidige!==null&&Number.isFinite(doel)&&doel>=huidige-0.75)
+      return "De minimumtemperatuur vannacht ligt rond "+waarde+".";
+    return "Later vannacht koelt het af naar "+waarde+".";
+  });
 }
 
 function uiDagNeerslagTekst(kans,som){
@@ -226,7 +238,8 @@ if(typeof briefing==="function"){
     if(el){
       el.innerHTML=(el.innerHTML||"").replace(/\s*De officiële waarschuwing heeft voorrang op de modelverwachting\.\s*/g," ");
       const nu=typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():(S.d&&S.d.current&&S.d.current.time)||"";
-      el.innerHTML=uiBriefingTijdtaal(el.innerHTML,nu);
+      const huidige=S.d&&S.d.current?uiGetal(S.d.current.temperature_2m):null;
+      el.innerHTML=uiBriefingTijdtaal(el.innerHTML,nu,huidige);
     }
     return uit;
   };
