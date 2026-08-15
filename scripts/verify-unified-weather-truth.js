@@ -1,0 +1,29 @@
+"use strict";
+
+const fs=require("fs");
+const path=require("path");
+const vm=require("vm");
+
+const html=fs.readFileSync(path.join(__dirname,"..","public","index.html"),"utf8");
+
+function bevat(tekst,reden){if(!html.includes(tekst))throw new Error(reden+": "+tekst);}
+function mist(tekst,reden){if(html.includes(tekst))throw new Error(reden+": "+tekst);}
+
+bevat("/* ===== UNIFIED WEATHER TRUTH 20260815 ===== */","unified-weather-truth marker ontbreekt");
+bevat("Weekneerslag heeft één runtime-owner: WeatherNowKansbeleidV3/dagen()","dagowner is niet geconsolideerd");
+bevat('const dagMm=num(a&&a.hoeveelheid);',"resterende daghoeveelheid wordt niet uit centrale analyse gelezen");
+bevat('small.className="q1-dag-mm";small.textContent=hoeveelheidTekst(dagMm)',"daghoeveelheid wordt niet uit hetzelfde analyseobject getoond");
+mist("Weekverwachting: de zichtbare kans en hoeveelheid komen beide uit de officiële","oude Q1 daily-owner staat nog in runtime");
+mist("day.precipitation_probability_max&&day.precipitation_probability_max[i]","ruwe daily probability overschrijft nog de resterende dag");
+mist("Geen goed zichtvenster","Nachtzicht gebruikt nog ambigu zichtvenster");
+bevat("Geen gunstig kijkvenster","Nachtzicht gebruikt geen helder kijkvensterbegrip");
+bevat('De temperatuur blijft tot rond "+hhmm(volledigePiekVandaag.t)+" ongeveer <b>"+huidigAfgerond+" graden</b>.',"temperatuurplateau-copy ontbreekt");
+bevat("weatherNowHadController","serviceworker-updatebewustzijn ontbreekt");
+bevat('navigator.serviceWorker.addEventListener("controllerchange"',"nieuwe appcontroller leidt niet tot gecontroleerde reload");
+bevat('window.addEventListener("pageshow",weatherNowSwUpdate)',"terugkerende tab controleert appupdate niet");
+
+const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+if(!scripts.length)throw new Error("geen inline scripts om syntactisch te valideren");
+scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:verify-unified-"+(i+1)}));
+
+console.log("Unified weather truth verifier: resterende dag, Nachtzicht-copy, temperatuurplateau en appupdate geslaagd.");
