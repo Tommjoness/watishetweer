@@ -27,26 +27,38 @@ for(const [tekst,naam] of [
 ])verboden(tekst,naam);
 for(const tekst of ["WeatherNowQ1","CHECKPOINT 25 Q1","weerbriefing.plaatscache.q1","renderNeerslagSectie","q1-dag-mm","naEersteCachePaint","requestAnimationFrame"]){vereist(tekst);}
 
-/* 50%: Nachtzicht heeft één eigenaar en de grafiek één fontbox-collisionlaag. */
+/* 50%: Nachtzicht heeft één presentatie-owner. Die owner bezit nu ook de lokale
+   kalendergrens, astronomische eindgrens en scanbare maan/zichtpresentatie. */
 const nachtOwners=aantal("const basisNachten=nachten;");
 if(nachtOwners!==1)throw new Error("Nachtzicht heeft "+nachtOwners+" presentatie-owners; exact één vereist.");
 exactEen("const ruimBotsendeAslabelsOp=()=>{","grafiek fontbox-collisionlaag");
 vereist("getBBox()","echte SVG-fontboxmeting");
 vereist("maan-fase-svg-v2","platformonafhankelijke maanfase-SVG");
-vereist("Beste periode: ","natuurlijke niet-overprecieze beste-periodepresentatie");
+for(const tekst of [
+  "normaliseerNachtDagdata","nachtIsActiefNu","corrigeerNachtVensterBron",
+  "formatteerMaanTekst","nachtzichtregel","nachtmaanregel","pollenKop"
+])vereist(tekst,"Nachtzicht-kern "+tekst);
 verboden("Beste modeluren","oude modeljargon-beste-periodepresentatie");
+verboden("Relatief gunstigste modeluren","oude relatieve modeljargonpresentatie");
 
-/* 75%: live plaatsklok, 100% bewolking, UV-tijd en numerieke leesbaarheid. */
+/* 75%: live plaatsklok, 100% bewolking, UV-tijd en consumentvriendelijke cijfers. */
 exactEen('if(n===100)return "Geheel bewolkt";','100%-bewolkingsregel');
 exactEen('const pUv=typeof plaatsTijdDelen','UV live-plaatsklokanker');
-for(const tekst of ["Piek was rond ","Piek rond ","UV-gegevens voor vandaag worden bijgewerkt.","slashed-zero",'font-feature-settings:"tnum" 1,"zero" 1',"senior-zoninfo","pollenEenheid","bron-bronnen"]){vereist(tekst);}
+for(const tekst of [
+  "Piek was rond ","Piek rond ","UV-gegevens voor vandaag worden bijgewerkt.",
+  'font-feature-settings:"tnum" 1,"zero" 0',"senior-zoninfo","pollenEenheid","bron-bronnen"
+])vereist(tekst);
+verboden('font-feature-settings:"tnum" 1,"zero" 1',"oude OpenType slashed-zero feature");
+verboden("tabular-nums slashed-zero","oude slashed-zero fontvariant");
 
-/* Finale architectuur/performance: geen cosmetische performanceclaim. De lucht-
-   aanvraag start vóór de hoofdforecast wordt afgewacht; waarschuwingen starten
-   vanuit de eerste render en blokkeren de hoofdforecast niet. De volledige
-   forecast behoudt zijn 10s hard cap, maar krijgt na 5s een lichte fallback-hedge.
-   Snelle loads blijven enkelvoudig; zodra beide lopen wint het eerste succesvolle
-   antwoord en stale loads mogen geen oude fallback starten. */
+/* Finale copy-architectuur: tijdtaal en microcopy komen uit de inhoudelijke
+   eigenaren; de late Nederlandse laag is alleen neerslagcompatibiliteit. */
+for(const tekst of [
+  "uiWindstootTekst","uiLuchtdrukTekst","uiBriefingTijdtaal","uiZonurenWoord",
+  "De komende twee uur wordt er geen neerslag verwacht."
+])vereist(tekst,"copy-eigenaar "+tekst);
+
+/* Finale architectuur/performance. */
 for(const tekst of [
   "let laadTeller=0,waarschuwingTeller=0,actieveWeerController=null,actieveLuchtController=null,actieveWaarschuwingController=null",
   "const luchtBelofte=j(a,{timeoutMs:7000,signal:luchtController.signal})",
@@ -67,19 +79,13 @@ const luchtStart=html.indexOf("const luchtBelofte=j(a"),weerStart=html.indexOf("
 if(luchtStart<0||weerStart<0||luchtStart>weerStart)throw new Error("Luchtkwaliteit start niet aantoonbaar parallel vóór het wachten op de hoofdforecast.");
 if(waarschuwingStart<0)throw new Error("Waarschuwingen worden niet vanuit de renderketen gestart.");
 
-/* Externe request-eigenaars moeten expliciet blijven. De volledige forecast is
-   nog steeds exact één canonieke route. Daarnaast mag er exact één afzonderlijke
-   current-only previewroute bestaan; die route mag geen hourly/daily/minutely
-   data bezitten en vervangt de hoofdforecast nooit. */
+/* Externe request-eigenaars moeten expliciet blijven. */
 exactEen('const basis="https://api.open-meteo.com/v1/forecast?latitude="','hoofdforecast-URL-eigenaar');
 exactEen('return "https://api.open-meteo.com/v1/forecast?latitude="+encodeURIComponent(a)','current-only previewforecast-eigenaar');
 for(const tekst of [
-  "WeatherNowProgressiveLocation",
-  "const SNEL_START_VERTRAGING_MS=120",
-  "const SNEL_TIMEOUT_MS=3000",
+  "WeatherNowProgressiveLocation","const SNEL_START_VERTRAGING_MS=120","const SNEL_TIMEOUT_MS=3000",
   'current=temperature_2m,apparent_temperature,is_day,weather_code',
-  "const volledigeBelofte=basisLoad(lat,lon,label,stil,opslaan,land)",
-  "Verwachting wordt aangevuld."
+  "const volledigeBelofte=basisLoad(lat,lon,label,stil,opslaan,land)","Verwachting wordt aangevuld."
 ])vereist(tekst,"progressieve locatielading "+tekst);
 exactEen("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=","luchtkwaliteit-URL-eigenaar");
 exactEen('"/api/waarschuwingen?lat="',"waarschuwingen-URL-eigenaar");
@@ -96,12 +102,8 @@ if(!(bdc>=0&&gpsFallback>bdc))throw new Error("GPS reverse geocoding is niet aan
 if(!(gedeeldeLaag>gpsFallback&&gedeeldeFallback>gedeeldeLaag))throw new Error("De tweede plaatsnaamfallback hoort uitsluitend bij de gedeelde-linklaag.");
 vereist("plaatsnaamUitCoordinaten","gedeelde plaatsnaamhelper");
 
-/* Geen tijdelijke diagnosecode in het productie-artifact. */
 for(const tekst of ["CACHEPERF","DEELPERF","window.__q4","console.log(\"DIAG "]){verboden(tekst,"tijdelijke diagnose "+tekst);}
 
-/* Uitvoerbare inline runtime blijft syntactisch geldig. Niet-uitvoerbare
-   structured data wordt als JSON gevalideerd in plaats van als JavaScript:
-   application/ld+json is volgens zijn HTML-type data en geen runtime-script. */
 const scriptBlokken=[...html.matchAll(/<script(?![^>]*\ssrc=)([^>]*)>([\s\S]*?)<\/script>/g)];
 const runtimeScripts=scriptBlokken.filter(m=>!/\btype\s*=\s*["']application\/ld\+json["']/i.test(m[1])).map(m=>m[2]);
 const jsonLdScripts=scriptBlokken.filter(m=>/\btype\s*=\s*["']application\/ld\+json["']/i.test(m[1])).map(m=>m[2]);
@@ -109,6 +111,5 @@ if(!runtimeScripts.length)throw new Error("Geen inline WeatherNow-runtime gevond
 runtimeScripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:final-27-runtime-"+(i+1)}));
 jsonLdScripts.forEach((bron,i)=>{try{JSON.parse(bron);}catch(e){throw new Error("Ongeldige JSON-LD in definitief artifact #"+(i+1)+": "+e.message);}});
 
-/* Serviceworker moet exact bij deze app-shell horen. */
 const verwacht=verifieerServiceworkerCache(OUT,"finale");
-console.log("Finale 27-punten artifactguard geslaagd: 25/50/75-invariants, expliciete hoofd- en previewrequesteigenaars, 5s fallback-hedge, race-/stale-loadankers, syntactische runtime, geldige JSON-LD en serviceworker "+verwacht+".");
+console.log("Finale 27-punten artifactguard geslaagd: één Nachtzicht-owner met kalendergrens, gewone nullen, copy-eigenaars, requestarchitectuur, syntactische runtime, geldige JSON-LD en serviceworker "+verwacht+".");
