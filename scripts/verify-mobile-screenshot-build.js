@@ -26,6 +26,7 @@ for(const vereist of [
   "q1-pop-hidden",
   "klokBijwerken=function(){basisKlokBijwerken();if(S.d)renderTemperatuurTrend();}",
   "pollenEenheid",
+  "pollenKop",
   "grid-template-columns:56px 46px minmax(32px,1fr) 64px",
   "grid-template-columns:52px 43px minmax(28px,1fr) 60px",
   "bron-bronnen",
@@ -35,7 +36,12 @@ for(const vereist of [
   "weerbriefing.plaatscache.q1",
   "CHECKPOINT 25 Q1",
   "verbeterNachtzicht",
-  "Beste modeluren",
+  "normaliseerNachtDagdata",
+  "nachtIsActiefNu",
+  "corrigeerNachtVensterBron",
+  "formatteerMaanTekst",
+  "nachtzichtregel",
+  "nachtmaanregel",
   "H=M?250:296",
   "pt=M?59:76, ih=M?145:160",
   "tijdLabelVrij=nuX==null",
@@ -54,23 +60,15 @@ if(html.includes(oude15)||html.includes(oudeKwartier))throw new Error("Verwijder
 if((html.split(trend).length-1)!==1)throw new Error("Definitieve temperatuurtrendtegel ontbreekt of is dubbel.");
 if(html.includes("const recenteNeerslag=eindigGetal(c.precipitation)"))throw new Error("Legacy recente-neerslagberekening staat nog in de definitieve artifact.");
 if(html.includes("compactRecentLabel"))throw new Error("Legacy kwartier-wrapper staat nog in de definitieve artifact.");
+if(html.includes("Beste modeluren")||html.includes("Relatief gunstigste modeluren"))throw new Error("Nachtzicht bevat nog oud modeljargon in de definitieve artifact.");
 
-/* Checkpoint 50: precies één runtime-wrapper mag Nachtzicht na de canonieke
-   renderer presenteren. De oude senior-wrapper is op assemblagetijd verwijderd;
-   WeatherNowMobileScreenshotPolish is de enige resterende eigenaar. */
 const nachtOwners=html.split("const basisNachten=nachten;").length-1;
 if(nachtOwners!==1)throw new Error("Nachtzicht heeft "+nachtOwners+" presentatie-owners; exact één vereist.");
-if(html.includes('const basisNachten=nachten;\nnachten=function(){\n  basisNachten();\n  const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")]')){
-  throw new Error("Oude senior Nachtzicht-wrapper staat nog in de definitieve artifact.");
-}
+if(html.includes('const basisNachten=nachten;\nnachten=function(){\n  basisNachten();\n  const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")]'))throw new Error("Oude senior Nachtzicht-wrapper staat nog in de definitieve artifact.");
 
-/* De laatste grafiekbotsingslaag moet letterlijk BINNEN de bestaande etmaal-
-   renderer staan. Een generieke zoekterm naar `basisEtmaal` is ongeschikt:
-   oudere, legitieme productielagen gebruiken die naam al. Daarom bewaken we de
-   concrete positie tussen function etmaal() en function daglengte(). */
 if((html.split("const ruimBotsendeAslabelsOp=()=>{").length-1)!==1)throw new Error("Grafiek moet exact één fontbox-botsingslaag hebben.");
 const etmaalStart=html.indexOf("function etmaal("),botsingsLaag=html.indexOf("const ruimBotsendeAslabelsOp=()=>{"),etmaalEind=html.indexOf("function daglengte(",etmaalStart);
 if(etmaalStart<0||botsingsLaag<=etmaalStart||etmaalEind<=botsingsLaag)throw new Error("Fontbox-botsingslaag staat niet aantoonbaar binnen de bestaande etmaal-renderer.");
 
 const verwacht=verifieerServiceworkerCache(OUT,"checkpoint-50");
-console.log("Definitieve checkpoint-50 artifact geverifieerd: één Nachtzicht-owner, begrensde tekstkolom, brongetrouwe maanfase, fontbox-collision-proof mobiele grafiek en cache "+verwacht+".");
+console.log("Definitieve checkpoint-50 artifact geverifieerd: één Nachtzicht-owner met kalendergrens en zonsopkomstgrens, scanbare maan/zichtregels, brongetrouwe maanfase, fontbox-collision-proof mobiele grafiek en cache "+verwacht+".");

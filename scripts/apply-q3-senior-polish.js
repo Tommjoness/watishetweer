@@ -67,8 +67,8 @@ for(const vereist of [
   'Piek rond ',
   'UV-gegevens voor vandaag worden bijgewerkt.',
   'const pUv=typeof plaatsTijdDelen',
-  'slashed-zero',
-  'font-feature-settings:"tnum" 1,"zero" 1',
+  'font-variant-numeric:tabular-nums',
+  'font-feature-settings:"tnum" 1,"zero" 0',
   'function plaatsTijdDelen()',
   'timeZone:tz',
   'if(dag!==klokKalenderdag)',
@@ -77,6 +77,9 @@ for(const vereist of [
   'bron-bronnen'
 ]){
   if(!html.includes(vereist))throw new Error("Checkpoint-75 invariant ontbreekt: "+vereist);
+}
+if(html.includes('font-feature-settings:"tnum" 1,"zero" 1')||html.includes('tabular-nums slashed-zero')){
+  throw new Error("Checkpoint-75 mag geen doorgestreepte nullen meer afdwingen.");
 }
 
 /* Syntax van alle uiteindelijke inline runtimeblokken blijft hard gecontroleerd. */
@@ -89,4 +92,4 @@ fs.writeFileSync(htmlPad,html,"utf8");
    berekend. Dit verandert geen cachebeleid, alleen de eigenaar van het recept. */
 const versie=vernieuwServiceworkerCache(OUT,"checkpoint-75");
 
-console.log("Checkpoint 75% in-place toegepast: numerieke leesbaarheid, 100% bewolking en tijdgebonden UV; bestaande meters-owners "+metersOwnersVoor+" ongewijzigd; cache "+versie+".");
+console.log("Checkpoint 75% in-place toegepast: rustige consumentencijfers, 100% bewolking en tijdgebonden UV; bestaande meters-owners "+metersOwnersVoor+" ongewijzigd; cache "+versie+".");
