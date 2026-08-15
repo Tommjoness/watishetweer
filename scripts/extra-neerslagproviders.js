@@ -1,6 +1,6 @@
 /* Extra neerslagproviders.
  *
- * Nederland blijft voorlopig via de bestaande, bewezen KNMI-client lopen.
+ * Nederland blijft via de bestaande KNMI-client lopen voor actuele neerslag.
  * Deze laag activeert dezelfde generieke /api/neerslag-route voor expliciet
  * toegevoegde landen. Een providerfout mag nooit de gewone Open-Meteo-load
  * blokkeren of vervangen.
@@ -59,10 +59,8 @@ function pasBrontekstAan(){
   if(landcode(S.land)!=="BE"||!S.d||!S.d.__knmiNeerslag)return;
   const detail=document.querySelector(".data-uitleg p"),payload=S.d.__knmiNeerslag;
   if(!detail)return;
-  if(payload.nowcast){
-    detail.textContent="Voor Belgische locaties wordt actuele neerslag aangevuld met KNMI-puntdata en de KNMI-nowcast. Temperatuur, wind en de langere verwachting blijven uit de gewone weermodellen komen.";
-  }else if(payload.actueel){
-    detail.textContent="Voor Belgische locaties wordt actuele neerslag aangevuld met KNMI-puntdata. Voor de komende twee uur blijft de gewone modelverwachting actief als geen volledige radar-nowcast beschikbaar is.";
+  if(payload.actueel){
+    detail.textContent="Voor Belgische locaties wordt actuele neerslag aangevuld met KNMI-puntdata. De komende uren volgen de beschikbare kwartier- en modelverwachting.";
   }
 }
 
