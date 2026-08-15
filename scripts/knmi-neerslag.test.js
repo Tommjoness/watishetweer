@@ -4,10 +4,17 @@ const assert = require("assert");
 const {
   binnenKnmiDekking,
   actueelPuntUrl,
+  capabilitiesUrl,
+  nowcastPuntUrl,
+  isVers,
   normaliseerPuntAntwoord,
-  haalActueelPunt
+  referenceTimeUitCapabilities,
+  normaliseerNowcastAntwoord,
+  haalActueelPunt,
+  haalNowcastPunt
 } = require("../lib/knmi-neerslag.cjs")._intern;
 
+const NU = Date.parse("2026-08-15T10:40:00Z");
 let n = 0;
 function test(naam, fn) {
   Promise.resolve().then(fn).then(() => {
@@ -17,6 +24,18 @@ function test(naam, fn) {
     console.error("FOUT " + naam + "\n  " + e.stack);
     process.exitCode = 1;
   });
+}
+
+function nowcastFixture(ref = "2026-08-15T10:35:00Z") {
+  const data = {};
+  const refMs = Date.parse(ref);
+  for (let i = 0; i <= 24; i++) data[new Date(refMs + i * 5 * 60000).toISOString().replace(/\.000Z$/, "Z")] = i < 3 ? "0.12" : "0";
+  return [{
+    name: "precipitation_nowcast",
+    units: "mm/hr",
+    point: { SRS: "EPSG:4326", coords: "5.093900,51.989000" },
+    data: { [ref]: data }
+  }];
 }
 
 test("Vianen valt binnen de KNMI-dekking", () => {
@@ -37,39 +56,86 @@ test("GetPointValue gebruikt numerieke WMS-puntopvraag en geen kaartbeeld", () =
   assert.equal(u.searchParams.has("HEIGHT"), false);
 });
 
-test("ADAGUC JSON wordt naar laatste numerieke puntwaarde genormaliseerd", () => {
+test("actuele ADAGUC JSON wordt alleen als niet-negatieve mm/uur-intensiteit geaccepteerd", () => {
   const uit = normaliseerPuntAntwoord([{
-    name: "precipitation_amount",
-    units: "mm",
+    name: "precipitation_real_time",
+    units: "mm/hr",
     point: { SRS: "EPSG:4326", coords: "5.093900,51.989000" },
-    dims: "time",
     data: {
-      "2026-08-15T09:55:00Z": "0.000",
-      "2026-08-15T10:00:00Z": "0.033"
+      "2026-08-15T10:30:00Z": "0.12",
+      "2026-08-15T10:35:00Z": "0"
     }
   }]);
-  assert.equal(uit.waarde, 0.033);
-  assert.equal(uit.tijd, "2026-08-15T10:00:00Z");
-  assert.equal(uit.units, "mm");
+  assert.equal(uit.waarde, 0);
+  assert.equal(uit.tijd, "2026-08-15T10:35:00Z");
+  assert.equal(uit.units, "mm/hr");
+  assert.equal(normaliseerPuntAntwoord([{ units: "mm", data: { "2026-08-15T10:35:00Z": "0.1" } }]), null);
+  assert.equal(normaliseerPuntAntwoord([{ units: "mm/hr", data: { "2026-08-15T10:35:00Z": "-9999" } }]), null);
 });
 
-test("haalActueelPunt accepteert een geldige numerieke WMS-respons", async () => {
-  const fakeFetch = async url => ({
+test("stale guard weigert oude providerdata", () => {
+  assert.equal(isVers("2026-08-15T10:35:00Z", NU), true);
+  assert.equal(isVers("2026-08-15T10:10:00Z", NU), false);
+  assert.equal(isVers("2026-08-15T10:50:01Z", NU), false);
+});
+
+test("nowcast reference_time komt uit de officiële capabilities-dimensie", () => {
+  const xml = '<Dimension name="reference_time" units="ISO8601" default="2026-08-15T10:35:00Z">2026-08-15T10:35:00Z</Dimension>';
+  assert.equal(referenceTimeUitCapabilities(xml), "2026-08-15T10:35:00Z");
+  const u = new URL(capabilitiesUrl("radar_forecast_2.0"));
+  assert.equal(u.searchParams.get("REQUEST"), "GetCapabilities");
+});
+
+test("nowcast-puntvraag vraagt exact +0 tot +120 minuten op", () => {
+  const u = new URL(nowcastPuntUrl(51.989, 5.0939, "2026-08-15T10:35:00Z"));
+  assert.equal(u.searchParams.get("DATASET"), "radar_forecast_2.0");
+  assert.equal(u.searchParams.get("QUERY_LAYERS"), "precipitation_nowcast");
+  assert.equal(u.searchParams.get("DIM_reference_time"), "2026-08-15T10:35:00Z");
+  assert.equal(u.searchParams.get("time"), "2026-08-15T10:35:00Z/2026-08-15T12:35:00Z");
+});
+
+test("nowcast JSON bewaart 25 geldige numerieke 5-minutenpunten", () => {
+  const uit = normaliseerNowcastAntwoord(nowcastFixture(), "2026-08-15T10:35:00Z");
+  assert(uit);
+  assert.equal(uit.punten.length, 25);
+  assert.equal(uit.punten[0].waarde, 0.12);
+  assert.equal(uit.punten.at(-1).tijd, "2026-08-15T12:35:00Z");
+  assert.equal(uit.horizonMinuten, 120);
+});
+
+test("haalActueelPunt accepteert een verse echte-vorm WMS-respons", async () => {
+  const fakeFetch = async () => ({
     ok: true,
     status: 200,
     text: async () => JSON.stringify([{
-      name: "precipitation_amount",
-      units: "mm",
+      name: "precipitation_real_time",
+      units: "mm/hr",
       point: { SRS: "EPSG:4326", coords: "5.093900,51.989000" },
-      dims: "time",
-      data: { "2026-08-15T10:00:00Z": "0.033" }
+      data: { "2026-08-15T10:35:00Z": "0.12" }
     }])
   });
-  const uit = await haalActueelPunt(51.989, 5.0939, fakeFetch);
-  assert.equal(uit.waarde, 0.033);
+  const uit = await haalActueelPunt(51.989, 5.0939, fakeFetch, NU);
+  assert.equal(uit.waarde, 0.12);
   assert.equal(uit.bron, "KNMI RTCOR 5m");
 });
 
+test("haalNowcastPunt valideert capabilities en de volledige puntreeks", async () => {
+  let stap = 0;
+  const fakeFetch = async () => {
+    stap++;
+    if (stap === 1) return {
+      ok: true,
+      status: 200,
+      text: async () => '<WMS_Capabilities><Layer><Name>precipitation_nowcast</Name><Dimension name="reference_time" default="2026-08-15T10:35:00Z">x</Dimension></Layer></WMS_Capabilities>'
+    };
+    return { ok: true, status: 200, text: async () => JSON.stringify(nowcastFixture()) };
+  };
+  const uit = await haalNowcastPunt(51.989, 5.0939, fakeFetch, NU);
+  assert.equal(uit.punten.length, 25);
+  assert.equal(uit.referenceTime, "2026-08-15T10:35:00Z");
+  assert.equal(uit.bron, "KNMI radar-nowcast");
+});
+
 process.on("beforeExit", () => {
-  if (!process.exitCode) console.log("\nKNMI-neerslagpunt: " + n + " regressies geslaagd.");
+  if (!process.exitCode) console.log("\nKNMI-neerslag: " + n + " regressies geslaagd.");
 });
