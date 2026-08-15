@@ -2,20 +2,20 @@ const ENDPOINT="https://anonymous.api.dataplatform.knmi.nl/wms/adaguc-server";
 const Vianen={lat:51.9925,lon:5.0917};
 const queries=[
   {
-    label:"nowcast-latest-cycle",
+    label:"nowcast-latest-cycle-explicit",
     dataset:"radar_forecast_2.0",layer:"precipitation_nowcast",
     time:"2026-08-15T09:00:00Z/2026-08-15T11:00:00Z",
     dims:{reference_time:"2026-08-15T09:00:00Z"}
   },
   {
+    label:"nowcast-latest-cycle-default",
+    dataset:"radar_forecast_2.0",layer:"precipitation_nowcast",
+    time:"2026-08-15T09:00:00Z/2026-08-15T11:00:00Z"
+  },
+  {
     label:"observed-latest-single",
     dataset:"nl_rdr_data_rtcor_5m",layer:"precipitation_real_time",
     time:"2026-08-15T09:00:00Z"
-  },
-  {
-    label:"observed-recent-range",
-    dataset:"nl_rdr_data_rtcor_5m",layer:"precipitation_real_time",
-    time:"2026-08-15T08:30:00Z/2026-08-15T09:00:00Z"
   }
 ];
 
