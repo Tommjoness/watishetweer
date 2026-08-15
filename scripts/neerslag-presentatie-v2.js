@@ -12,8 +12,6 @@
 if(typeof document==="undefined"||typeof S==="undefined")return;
 if(typeof meters!=="function"||typeof briefing!=="function"||typeof nowcast!=="function")return;
 
-const interpretatie=root.WeatherNowInterpretatie;
-const beleid=root.WeatherNowKansbeleidV3;
 const ACTUEEL_DREMPEL_MMU=0.1;
 const SPOOR_MM=0.005;
 
@@ -26,10 +24,27 @@ function lokaleNu(){
   return typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():undefined;
 }
 
+function interpretatieNu(){return root.WeatherNowInterpretatie;}
+function beleidNu(){return root.WeatherNowKansbeleidV3;}
+
 function analyse(duur){
+  const interpretatie=interpretatieNu(),beleid=beleidNu();
   if(!interpretatie||typeof interpretatie.analyseerNeerslagData!=="function"||!S.d)return null;
-  try{return interpretatie.analyseerNeerslagData(S.d,duur,lokaleNu());}
-  catch(e){return null;}
+  try{
+    const a=interpretatie.analyseerNeerslagData(S.d,duur,lokaleNu());
+    if(!a)return a;
+    /* In de normale build heeft het centrale kansbeleid de engine al verrijkt.
+       Deze fallback maakt de presentatielaag echter ongevoelig voor injectie- of
+       wrappervolgorde: als er wél KNMI-data op S.d staat maar de ontvangen analyse
+       nog geen KNMI-bron draagt, verrijken we exact één keer met dezelfde officiële
+       policy. Al verrijkte analyses worden nooit dubbel verwerkt. */
+    const knmi=S.d&&S.d.__knmiNeerslag;
+    const alVerrijkt=a.bronActueel==="knmi-rtcor"||a.bronHoeveelheid==="knmi-nowcast";
+    if(knmi&&beleid&&typeof beleid.verrijkAnalyseMetKnmi==="function"&&!alVerrijkt){
+      return beleid.verrijkAnalyseMetKnmi(a,S.d,duur,interpretatie,Date.now());
+    }
+    return a;
+  }catch(e){return null;}
 }
 
 function actueleIntensiteit(a){
@@ -78,7 +93,7 @@ function betrouwbareKomendUurHoeveelheid(a){
 }
 
 function werkNeerslagkaartBij(){
-  const a=analyse(60),kaart=statVoor("pop");
+  const a=analyse(60),kaart=statVoor("pop"),beleid=beleidNu();
   if(!kaart.el)return;
   const intensiteit=actueleIntensiteit(a);
 
@@ -162,7 +177,7 @@ function actueleNeerslagZin(a,metCijfer){
 }
 
 function vervangEersteNeerslagzinInBriefing(a){
-  const nat=meetbareNeerslagNu(a),droog=officieleDrogeMeting(a);
+  const nat=meetbareNeerslagNu(a),droog=officieleDrogeMeting(a),beleid=beleidNu();
   if(!nat&&!droog)return;
   const el=document.getElementById("brief");
   if(!el||typeof el.innerHTML!=="string")return;
