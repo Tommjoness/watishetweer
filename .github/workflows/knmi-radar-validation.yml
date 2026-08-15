@@ -20,3 +20,4 @@ jobs:
           node-version: 24
       - run: node scripts/knmi-radar-capabilities-probe.mjs
       - run: node scripts/knmi-radar-point-probe.mjs
+        # Includes an explicit comparison of reference_time=current with the latest cycle.
