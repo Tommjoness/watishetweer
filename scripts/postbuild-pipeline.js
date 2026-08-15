@@ -36,6 +36,8 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-polar-chart-sentinel.js",
   "apply-unified-weather-truth.js",
   "verify-unified-weather-truth.js",
+  "apply-small-chance-consistency.js",
+  "verify-small-chance-consistency.js",
   "apply-seo-foundation.js",
   "verify-seo-foundation.js",
   "generate-seo-location-pages.js",
