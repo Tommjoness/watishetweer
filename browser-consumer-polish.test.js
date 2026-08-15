@@ -188,6 +188,7 @@ async function controleer(page, naam, modus) {
     const nachtAdvies = document.querySelectorAll("#nights .nachtadvies").length;
     const nachtMaan = document.querySelectorAll("#nights .nachtmaan").length;
     const maanRect = faseSvg ? faseSvg.getBoundingClientRect() : null;
+    const windPseudo = windKop ? getComputedStyle(windKop, "::after").content : "";
     return {
       nuTeksten,
       bots,
@@ -216,7 +217,7 @@ async function controleer(page, naam, modus) {
       maanSchaduwStraal: faseSchaduw ? faseSchaduw.getAttribute("r") : "0",
       dagTeksten,
       merk: merk ? merk.textContent.trim() : "",
-      windKopVisueel: windKop ? windKop.textContent.trim() : "",
+      windKopVisueel: windKop ? ((windPseudo && windPseudo !== "none" && windPseudo !== "normal") ? windPseudo.replace(/^["']|["']$/g, "").trim() : windKop.textContent.trim()) : "",
       zoekHoogte: zoek ? zoek.getBoundingClientRect().height : 0,
       knopHoogte: locatie ? locatie.getBoundingClientRect().height : 0,
       locatieTekst: locatie ? locatie.textContent.trim() : "",
