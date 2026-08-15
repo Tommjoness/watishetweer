@@ -104,8 +104,7 @@ async function controleer(page,browserNaam,scenario,breedte){
 
   const r=await page.evaluate(()=>{
     const txt=id=>((document.getElementById(id)||{}).textContent||"").trim();
-    const stat=label=>[...document.querySelectorAll("#aq .stat")].find(x=>((x.querySelector(".eyebrow")||{}).textContent||"").trim()===label);
-    const pollen=[...document.querySelectorAll("#aq .stat")].find(x=>/^Pollen\s+/i.test(((x.querySelector(".eyebrow")||{}).textContent||"").trim()));
+    const pollen=[...document.querySelectorAll("#aq .stat")].find(x=>((x.querySelector(".eyebrow")||{}).textContent||"").trim()==="Graspollen");
     const footer=document.querySelector("footer");
     const sun=document.getElementById("suntimes"),sunRect=sun.getBoundingClientRect();
     const zonRijen=[...sun.querySelectorAll(".zonregel")].map(el=>{const b=el.getBoundingClientRect();return {tekst:(el.textContent||"").trim(),l:b.left,r:b.right,t:b.top,b:b.bottom};});
@@ -127,8 +126,8 @@ async function controleer(page,browserNaam,scenario,breedte){
 
   assert.deepEqual(fouten,[],`${browserNaam} ${scenario} ${breedte}px: geen runtime/consolefouten`);
   assert.ok(r.overflow<=2,`${browserNaam} ${scenario} ${breedte}px: geen horizontale overflow (${r.overflow}px)`);
-  assert.equal(r.footerItems,4,`${browserNaam} ${scenario}: vier afzonderlijke bronclusters blijven zichtbaar`);
-  for(const bron of ["Open-Meteo","MeteoAlarm","National Weather Service","OpenStreetMap"]){
+  assert.equal(r.footerItems,6,`${browserNaam} ${scenario}: zes zelfstandige bronitems blijven zichtbaar`);
+  for(const bron of ["Open-Meteo","CAMS","MeteoAlarm","National Weather Service","BigDataCloud","OpenStreetMap"]){
     assert(r.footerText.includes(bron),`${browserNaam} ${scenario}: bron ${bron} blijft zichtbaar`);
   }
 
@@ -140,8 +139,9 @@ async function controleer(page,browserNaam,scenario,breedte){
     assert.equal(compact(r.vis),"0,0km",`${browserNaam} ${breedte}px: nul meter zicht blijft geldige data met bestaande km-precisie`);
     assert.equal(r.uv,"0",`${browserNaam} ${breedte}px: UV nul blijft geldige data`);
     assert.equal(r.uvsub,"Nauwelijks UV vandaag.",`${browserNaam} ${breedte}px: nul-UV krijgt tijdneutrale nultekst`);
-    assert(/^1\s*korrel\/m³$/i.test(r.pollen),`${browserNaam} ${breedte}px: één pollenkorrel gebruikt enkelvoud (${r.pollen})`);
-    assert(/slashed-zero/i.test(r.fontVariant)||/zero/i.test(r.fontFeatures),`${browserNaam} ${breedte}px: numerieke nul heeft slashed-zero/OpenType-zero (${r.fontVariant}; ${r.fontFeatures})`);
+    assert(/^1\s*korrel\/m³$/i.test(r.pollen),`${browserNaam} ${breedte}px: Graspollen met één korrel gebruikt enkelvoud (${r.pollen})`);
+    assert(/tabular-nums/i.test(r.fontVariant)||/tnum/i.test(r.fontFeatures),`${browserNaam} ${breedte}px: numerieke kolommen behouden tabular-nums (${r.fontVariant}; ${r.fontFeatures})`);
+    assert(!/slashed-zero/i.test(r.fontVariant)&&!/["']?zero["']?\s+1/i.test(r.fontFeatures),`${browserNaam} ${breedte}px: consumentencijfers gebruiken geen doorgestreepte nul (${r.fontVariant}; ${r.fontFeatures})`);
   }else if(scenario==="missing"){
     assert(!/^0(?:°|$)/.test(r.temp),`${browserNaam}: ontbrekende temperatuur wordt geen 0`);
     assert(!/^0%$/.test(compact(r.hum)),`${browserNaam}: ontbrekende luchtvochtigheid wordt geen 0%`);
@@ -183,6 +183,6 @@ async function controleer(page,browserNaam,scenario,breedte){
         }
       }finally{await browser.close();}
     }
-    console.log("Checkpoint 75 browsermatrix geslaagd: nul/missing, 100% bewolking, UV-tijd, lokale middernacht, zoninfo, pollen/footer en numerieke leesbaarheid in Chromium/WebKit.");
+    console.log("Checkpoint 75 browsermatrix geslaagd: nul/missing, 100% bewolking, UV-tijd, lokale middernacht, zoninfo, natuurlijke pollen/footercopy en numerieke leesbaarheid in Chromium/WebKit.");
   }finally{server.close();}
 })().catch(err=>{console.error(err);process.exit(1);});
