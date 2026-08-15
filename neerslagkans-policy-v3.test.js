@@ -28,6 +28,27 @@ test("nul kans met meetbare hoeveelheid wordt niet als Droog voorgesteld",()=>{
   assert(/onzeker/.test(briefingZin(a)));
 });
 
+test("ook een komende spoorhoeveelheid blokkeert een droge claim",()=>{
+  const a={genoeg:true,status:"SPOORHOEVEELHEID",kans:0,hoeveelheid:0.04,soort:"regen",currentWet:false,currentHoeveelheid:0};
+  assert.equal(kansHoofd(a),"Onzeker");
+  assert(/onzeker/.test(briefingZin(a)),briefingZin(a));
+  assert(!/blijft.*droog/i.test(briefingZin(a)),briefingZin(a));
+});
+
+test("actuele positieve neerslag wint van een droge code of nul kans",()=>{
+  const a={genoeg:true,status:"GEEN_KANS",currentWet:false,currentHoeveelheid:0.2,kans:0,hoeveelheid:0,soort:"neerslag"};
+  assert.equal(kansHoofd(a),"Neerslag");
+  assert.equal(kansZin(a,"de komende twee uur"),"Er valt nu neerslag.");
+  assert.equal(komendUurTekst(a),"Er valt nu neerslag.");
+  assert.equal(briefingZin(a),"Er valt nu neerslag.");
+});
+
+test("nul kans zonder nat signaal is een verwachting en geen absolute droogclaim",()=>{
+  const a={genoeg:true,status:"GEEN_KANS",currentWet:false,currentHoeveelheid:0,kans:0,hoeveelheid:0,soort:"neerslag"};
+  assert.equal(briefingZin(a),"De komende twee uur wordt geen neerslag verwacht.");
+  assert(!/blijft.*droog/i.test(briefingZin(a)));
+});
+
 test("30, 70 en 90 procent krijgen zichtbaar verschillende zekerheid",()=>{
   assert(/mogelijk/.test(kansZin({genoeg:true,kans:30,hoeveelheid:0,soort:"regen"},"de komende twee uur")));
   assert(/grote kans/.test(kansZin({genoeg:true,kans:70,hoeveelheid:0,soort:"regen"},"de komende twee uur")));
@@ -36,7 +57,7 @@ test("30, 70 en 90 procent krijgen zichtbaar verschillende zekerheid",()=>{
 
 test("briefing gebruikt dezelfde grenzen zonder percentages te herhalen",()=>{
   const metHoeveelheid={genoeg:true,soort:"regen",hoeveelheid:1};
-  assert.equal(briefingZin({...metHoeveelheid,kans:9}),"De komende twee uur blijft het waarschijnlijk droog.");
+  assert.equal(briefingZin({...metHoeveelheid,kans:9}),"De kans op neerslag in de komende twee uur is zeer klein.");
   assert.equal(briefingZin({...metHoeveelheid,kans:10}),"De komende twee uur is er een kleine kans op neerslag.");
   assert.equal(briefingZin({...metHoeveelheid,kans:30}),"In de komende twee uur is neerslag mogelijk.");
   assert.equal(briefingZin({...metHoeveelheid,kans:70}),"De komende twee uur is er een grote kans op neerslag.");
