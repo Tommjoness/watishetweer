@@ -21,6 +21,12 @@
   letter-spacing:.10em;
 }
 
+/* De oude tegel "Afgelopen 15 minuten" hoort niet meer bij het productconcept.
+   De bronmarkup blijft voorlopig bestaan omdat de weerlogica current.precipitation
+   nog intern gebruikt om actuele modelneerslag te duiden. Verberg daarom de hele
+   kaart semantisch en visueel, zonder de neerslaglogica of databron te veranderen. */
+.stat:has(#prec){display:none}
+
 /* Zoninformatie hoort bij concrete kalenderdagen. Iedere regel heeft daarom
    één dagaanduiding en alleen de astronomische momenten die bij die dag horen. */
 #suntimes.senior-zoninfo{
