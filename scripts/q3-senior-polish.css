@@ -1,8 +1,14 @@
 /* Checkpoint 75: cijfers moeten op kleine schermen rustig en direct leesbaar zijn.
-   tabular-nums bewaart de bestaande uitlijning. De OpenType-zero-feature staat
-   bewust uit: een doorgestreepte nul liet gewone consumentencijfers op mobiel
-   onnodig technisch ogen (20 als 2Ø, 1018 als 1Ø18). */
-.num,.mono,#stamp,#plaatstijd,#minitijd,#minitemp,.sval,.score,.perc,.dmin,.dmax,.drain,.ctrl .mono{
+   DM Mono tekent de nul in het basisglyph zelf doorgestreept; de OpenType-zero-
+   feature uitzetten verandert dat dus niet. Consumentencijfers gebruiken daarom
+   Instrument Sans met tabular-nums. Alleen echte technische/tijdlabels houden
+   de monospacefamilie. */
+.sval,.score,.perc,.dmin,.dmax,.drain{
+  font-family:var(--sans);
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1;
+}
+.num,.mono,#stamp,#plaatstijd,#minitijd,#minitemp,.ctrl .mono{
   font-variant-numeric:tabular-nums;
   font-feature-settings:"tnum" 1,"zero" 0;
 }
