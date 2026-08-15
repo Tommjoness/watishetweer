@@ -61,6 +61,8 @@ jobs:
         run: node browser-q2-checkpoint.test.js
       - name: Checkpoint 75% in Chromium en WebKit
         run: node browser-q3-checkpoint.test.js
+      - name: Consumentencijfers zonder slashed zero in Chromium en WebKit
+        run: node browser-consumer-numerals.test.js
       - name: Checkpoint 100% in Chromium en WebKit
         run: node browser-q4-checkpoint.test.js
       - name: Zichtbare neerslagwaarheid in Chromium en WebKit

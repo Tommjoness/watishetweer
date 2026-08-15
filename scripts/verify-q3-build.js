@@ -24,6 +24,8 @@ exactEen('const pUv=typeof plaatsTijdDelen','UV gebruikt live plaatsklok');
 for(const vereist of [
   "font-variant-numeric:tabular-nums",
   'font-feature-settings:"tnum" 1,"zero" 0',
+  ".sval,.score,.perc,.dmin,.dmax,.drain{",
+  "font-family:var(--sans)",
   "function plaatsTijdDelen()",
   "timeZone:tz",
   "if(dag!==klokKalenderdag)",
@@ -54,4 +56,4 @@ const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:q3-verify-"+(i+1)}));
 
 const verwacht=verifieerServiceworkerCache(OUT,"checkpoint-75");
-console.log("Checkpoint-75 artifact geverifieerd: Q3 blijft in bestaande runtime-owner, live lokale tijdankers, zon/pollen, gewone nullen, cloud 100% en UV-tijdsemantiek; cache "+verwacht+".");
+console.log("Checkpoint-75 artifact geverifieerd: Q3 blijft in bestaande runtime-owner, consumentencijfers gebruiken leesbare tabular sans-nummers, live lokale tijdankers, zon/pollen, cloud 100% en UV-tijdsemantiek; cache "+verwacht+".");

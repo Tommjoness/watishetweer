@@ -32,13 +32,26 @@ for(const tekst of [
 for(const eigenaar of [
   "function uiWindstootTekst(pg,nu,dag,vak){",
   "function uiLuchtdrukTekst(tekst){",
-  "function uiBriefingTijdtaal(html,nuLokaal){",
+  "function uiBriefingTijdtaal(html,nuLokaal,huidigeTemperatuur){",
   "function normaliseerNachtDagdata(data,nuLokaal){",
   "function corrigeerNachtVensterBron(tekst,horizonDagen,score,opties={}){",
   "function formatteerMaanTekst(tekst){",
   "function pollenKop(tekst){"
 ]){
   if(!html.includes(eigenaar))throw new Error("Presentatie-owner ontbreekt uit artifact: "+eigenaar);
+}
+
+/* De nachtbriefing moet temperatuurgedreven blijven. Een klok-only herschrijving
+   kan bij locaties als Kandy een al bereikt minimum ten onrechte als toekomstige
+   afkoeling presenteren. Bewaak daarom zowel de actuele-temperatuurinput als de
+   neutrale formulering voor een reeds bereikt minimum. */
+for(const invariant of [
+  "const huidige=uiGetal(huidigeTemperatuur);",
+  "doel>=huidige-0.75",
+  "De minimumtemperatuur vannacht ligt rond ",
+  "Later vannacht koelt het af naar "
+]){
+  if(!html.includes(invariant))throw new Error("Temperatuurgedreven nachtbriefing mist invariant: "+invariant);
 }
 
 /* Voorkom dat de late compatibilitylaag opnieuw een tweede eigenaar wordt voor
@@ -62,4 +75,4 @@ const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script
 if(!scripts.length)throw new Error("Geen inline runtime gevonden voor microcopy-verificatie.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:verify-nederlandse-microcopy-"+(i+1)}));
 
-console.log("Nederlandse microcopy geverifieerd: neerslagcompatibiliteit centraal, overige taal bij de eigen UI-owner en runtime syntactisch geldig.");
+console.log("Nederlandse microcopy geverifieerd: neerslagcompatibiliteit centraal, nachtbriefing temperatuurgedreven en overige taal bij de eigen UI-owner.");

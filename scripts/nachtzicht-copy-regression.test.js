@@ -18,5 +18,15 @@ assert.equal(
   "Waarschijnlijk beste periode van de avond tot de nacht.",
   "verre horizon blijft expliciet onzeker"
 );
+assert.equal(
+  p.corrigeerNachtVensterBron("Beste periode 00:57–07:00",0,8,{zonsopkomst:"06:25",nuTijd:"00:57"}),
+  "Beste periode: nu tot 06:00.",
+  "de actieve eerste nacht benoemt het venster relatief aan nu"
+);
+assert.equal(
+  p.corrigeerNachtVensterBron("Beste periode: 00:57–07:00",0,8,{zonsopkomst:"06:25",nuTijd:"00:58"}),
+  "Beste periode: nu tot 06:00.",
+  "een reeds genormaliseerde dubbelepuntvariant blijft actief herkenbaar"
+);
 
-console.log("Nachtzicht-copyregressie groen: horizonzinnen beginnen correct en verre verwachting blijft onzeker.");
+console.log("Nachtzicht-copyregressie groen: actief venster, horizonzinnen en verre onzekerheid kloppen.");

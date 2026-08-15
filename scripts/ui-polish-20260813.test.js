@@ -19,10 +19,12 @@ assert.equal(api.luchtdrukTekst("In de afgelopen drie uur 2,4 hPa gedaald."),"De
 assert.equal(api.luchtdrukTekst("Vrijwel stabiel."),"Vrijwel stabiel.");
 
 const briefing="Vandaag wordt het warm. Vannacht koelt het af naar <b>16 graden</b>.";
-assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T00:03"),"Vandaag wordt het warm. Later vannacht koelt het af naar <b>16 graden</b>.");
-assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T04:59"),"Vandaag wordt het warm. Later vannacht koelt het af naar <b>16 graden</b>.");
-assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T05:00"),briefing);
-assert.equal(api.briefingTijdtaal(briefing,"2026-08-15T23:30"),briefing);
+assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T00:03",19),"Vandaag wordt het warm. Later vannacht koelt het af naar <b>16 graden</b>.");
+assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T04:59",19),"Vandaag wordt het warm. Later vannacht koelt het af naar <b>16 graden</b>.");
+assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T04:28",16),"Vandaag wordt het warm. De minimumtemperatuur vannacht ligt rond <b>16 graden</b>.");
+assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T04:28",15.5),"Vandaag wordt het warm. De minimumtemperatuur vannacht ligt rond <b>16 graden</b>.");
+assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T05:00",19),briefing);
+assert.equal(api.briefingTijdtaal(briefing,"2026-08-15T23:30",19),briefing);
 
 assert.equal(api.dagNeerslagTekst(2,0),"Droog");
 assert.equal(api.dagNeerslagTekst(9,0.05),"Droog");
