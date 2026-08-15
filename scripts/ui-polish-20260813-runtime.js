@@ -4,36 +4,58 @@
 
 const uiGetal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 
+/* Zichtbare microcopy hoort bij de runtime die het betreffende UI-onderdeel
+   bezit. Daarmee hoeft een late artifactpatch geen wind-, druk-, zon- of
+   briefingtekst meer te herschrijven. */
 function uiWindstootTekst(pg,nu,dag,vak){
   if(!pg||uiGetal(pg.v)===null||!pg.t)return "Geen uurgegevens beschikbaar.";
   const waarde=Math.round(Number(pg.v));
   const dagNaam=String(dag||"").trim();
   const tijdvak=String(vak||"").trim();
+  const dagInZin=dagNaam?dagNaam.charAt(0).toLowerCase()+dagNaam.slice(1):"eerder";
   if(String(pg.t)>String(nu||"")){
-    if(/^Vandaag$/i.test(dagNaam))return `Later vandaag kunnen windstoten tot ${waarde} km/u voorkomen, rond ${tijdvak}.`;
-    if(/^Morgen$/i.test(dagNaam))return `Morgen kunnen windstoten tot ${waarde} km/u voorkomen, rond ${tijdvak}.`;
-    return `${dagNaam||"Later"} kunnen windstoten tot ${waarde} km/u voorkomen, rond ${tijdvak}.`;
+    if(/^Vandaag$/i.test(dagNaam))return `Later vandaag kunnen rond ${tijdvak} windstoten tot ${waarde} km/u voorkomen.`;
+    if(/^Morgen$/i.test(dagNaam))return `Morgen kunnen rond ${tijdvak} windstoten tot ${waarde} km/u voorkomen.`;
+    return `${dagNaam||"Later"} kunnen rond ${tijdvak} windstoten tot ${waarde} km/u voorkomen.`;
   }
-  if(/^Vandaag$/i.test(dagNaam))return `Eerder vandaag lag de hoogste verwachte windstoot rond ${tijdvak} op ${waarde} km/u.`;
-  if(/^Gisteren$/i.test(dagNaam))return `Gisteren lag de hoogste verwachte windstoot rond ${tijdvak} op ${waarde} km/u.`;
-  return `${dagNaam||"Eerder"} lag de hoogste verwachte windstoot rond ${tijdvak} op ${waarde} km/u.`;
+  if(/^Vandaag$/i.test(dagNaam))return `Volgens de verwachting kwam de sterkste windstoot vandaag rond ${tijdvak} uit op ${waarde} km/u.`;
+  if(/^Gisteren$/i.test(dagNaam))return `Volgens de verwachting kwam de sterkste windstoot gisteren rond ${tijdvak} uit op ${waarde} km/u.`;
+  return `Volgens de verwachting kwam de sterkste windstoot ${dagInZin} rond ${tijdvak} uit op ${waarde} km/u.`;
 }
 
 function uiZonurenWoord(uur,daglichtUur){
   const zon=uiGetal(uur),daglicht=uiGetal(daglichtUur);
-  if(zon===null)return "Zonuren niet beschikbaar";
+  if(zon===null)return "Zonuren niet beschikbaar.";
   if(daglicht!==null&&daglicht>0){
     const aandeel=Math.max(0,Math.min(1,zon/daglicht));
-    if(aandeel>=0.8)return "Bijna de hele dag zon";
-    if(aandeel>=0.6)return "Veel zon vandaag";
-    if(aandeel>=0.35)return "Regelmatig zon vandaag";
-    if(aandeel>=0.15)return "Af en toe zon vandaag";
-    return "Weinig zon vandaag";
+    if(aandeel>=0.8)return "De zon schijnt bijna de hele dag.";
+    if(aandeel>=0.6)return "Vandaag is er veel zon.";
+    if(aandeel>=0.35)return "Vandaag zijn er meerdere uren zon.";
+    if(aandeel>=0.15)return "Vandaag zijn er enkele uren zon.";
+    return "Vandaag is er weinig zon.";
   }
-  if(zon>=8)return "Veel zon vandaag";
-  if(zon>=4)return "Regelmatig zon vandaag";
-  if(zon>=1)return "Af en toe zon vandaag";
-  return "Weinig zon vandaag";
+  if(zon>=8)return "Vandaag is er veel zon.";
+  if(zon>=4)return "Vandaag zijn er meerdere uren zon.";
+  if(zon>=1)return "Vandaag zijn er enkele uren zon.";
+  return "Vandaag is er weinig zon.";
+}
+
+function uiLuchtdrukTekst(tekst){
+  const t=String(tekst||"").trim();
+  let m=/^Licht (gestegen|gedaald) in de afgelopen drie uur\.$/i.exec(t);
+  if(m)return "De luchtdruk is in de afgelopen drie uur licht "+m[1].toLowerCase()+".";
+  m=/^In de afgelopen drie uur ([0-9]+(?:[.,][0-9]+)? hPa) (gestegen|gedaald)\.$/i.exec(t);
+  if(m)return "De luchtdruk is in de afgelopen drie uur "+m[1]+" "+m[2].toLowerCase()+".";
+  return t;
+}
+
+function uiBriefingTijdtaal(html,nuLokaal){
+  const bron=String(html||"");
+  const m=/T(\d{2}):(\d{2})/.exec(String(nuLokaal||""));
+  if(!m)return bron;
+  const uur=Number(m[1]);
+  if(!Number.isFinite(uur)||uur<0||uur>=5)return bron;
+  return bron.replace(/(^|[.!?]\s+)Vannacht koelt\b/g,"$1Later vannacht koelt");
 }
 
 function uiDagNeerslagTekst(kans,som){
@@ -52,6 +74,8 @@ function uiIsNwsStructuur(tekst){
 globalThis.WeatherNowUiPolish20260813=Object.freeze({
   windstootTekst:uiWindstootTekst,
   zonurenWoord:uiZonurenWoord,
+  luchtdrukTekst:uiLuchtdrukTekst,
+  briefingTijdtaal:uiBriefingTijdtaal,
   dagNeerslagTekst:uiDagNeerslagTekst,
   isNwsStructuur:uiIsNwsStructuur
 });
@@ -81,6 +105,8 @@ if(typeof meters==="function"){
   const uiBasisMeters=meters;
   meters=function(){
     uiBasisMeters();
+    const druk=document.getElementById("pressub");
+    if(druk)druk.textContent=uiLuchtdrukTekst(druk.textContent);
     const pgRuw=typeof piek==="function"?piek("wind_gusts_10m"):null;
     const pg=pgRuw&&uiGetal(pgRuw.v)!==null&&Number(pgRuw.v)>=0?pgRuw:null;
     if(!pg)return;
@@ -145,8 +171,6 @@ function uiPolishRegenperiodeKansen(){
     })).filter(item=>item.kans!==null&&item.mm!==null&&item.mm>=0.1&&item.x!==null&&item.x>=links&&item.x<=rechts);
     if(!kansen.length)return;
     const hoogste=Math.round(Math.max(...kansen.map(item=>item.kans)));
-    /* Triviale percentages blijven, net als vóór deze polish, uit de statische
-       grafiek. De exacte kans blijft via de tooltip beschikbaar. */
     if(hoogste<10)return;
     const label=document.createElementNS(ns,"text");
     label.setAttribute("x",String((a+b)/2));
@@ -199,7 +223,11 @@ if(typeof briefing==="function"){
   briefing=function(){
     const uit=uiBasisBriefing.apply(this,arguments);
     const el=document.getElementById("brief");
-    if(el)el.innerHTML=(el.innerHTML||"").replace(/\s*De officiële waarschuwing heeft voorrang op de modelverwachting\.\s*/g," ");
+    if(el){
+      el.innerHTML=(el.innerHTML||"").replace(/\s*De officiële waarschuwing heeft voorrang op de modelverwachting\.\s*/g," ");
+      const nu=typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():(S.d&&S.d.current&&S.d.current.time)||"";
+      el.innerHTML=uiBriefingTijdtaal(el.innerHTML,nu);
+    }
     return uit;
   };
 }
