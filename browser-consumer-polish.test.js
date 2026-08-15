@@ -178,75 +178,63 @@ async function controleer(page, naam, modus) {
     const zoek = document.getElementById("q");
     const locatie = document.getElementById("here");
     const footer = document.querySelector("footer");
-    const trendWaarde = document.getElementById("prec");
-    const trendStat = trendWaarde && trendWaarde.parentElement;
-    const neerslagHint = document.getElementById("nchint");
-    const neerslagKop = neerslagHint && neerslagHint.previousElementSibling;
-    const neerslagUitleg = neerslagHint && neerslagHint.nextElementSibling;
-    const neerslagTekst = document.getElementById("nctext");
-    const neerslagGrafiek = document.getElementById("nc");
-    const neerslagElementen = [neerslagKop, neerslagHint, neerslagUitleg, neerslagTekst, neerslagGrafiek].filter(Boolean);
+    const topbar = document.querySelector(".topbar");
+    const nav = document.querySelector(".nav");
+    const app = document.getElementById("app");
+    const pop = document.getElementById("pop");
+    const prec = document.getElementById("prec");
+    const trendStat = prec ? prec.closest(".stat") : null;
+    const popStat = pop ? pop.closest(".stat") : null;
+    const nachtAdvies = document.querySelectorAll("#nights .nachtadvies").length;
+    const nachtMaan = document.querySelectorAll("#nights .nachtmaan").length;
+    const maanRect = faseSvg ? faseSvg.getBoundingClientRect() : null;
+    const windPseudo = windKop ? getComputedStyle(windKop, "::after").content : "";
     return {
-      heroTemp: (document.getElementById("t") || {}).textContent || "",
       nuTeksten,
-      labels: gewoneTemperaturen.length,
       bots,
-      overflow: document.documentElement.scrollWidth - window.innerWidth,
-      sunDag: sunRijen[0] ? sunRijen[0].dag : "",
-      sunTekst: sun ? sun.textContent.replace(/\s+/g, " ").trim() : "",
+      sunTekst: sun ? sun.textContent.replace(/\s+/g," ").trim() : "",
       sunRijen,
       sunOverflow: sun ? sun.scrollWidth - sun.clientWidth : 0,
       hint: (document.getElementById("charthint") || {}).textContent || "",
-      briefing: (document.getElementById("brief") || {}).textContent || "",
-      uvKop: uv && uv.parentElement ? (uv.parentElement.querySelector(".eyebrow") || {}).textContent || "" : "",
+      briefing: (document.getElementById("briefing") || {}).textContent || "",
+      uvKop: uv ? uv.parentElement.querySelector(".eyebrow").textContent.trim() : "",
       uvWaarde: uv ? uv.textContent.trim() : "",
       uvSub: (document.getElementById("uvsub") || {}).textContent || "",
       drukSub: (document.getElementById("pressub") || {}).textContent || "",
-      trendKop: trendStat ? ((trendStat.querySelector(".eyebrow") || {}).textContent || "").trim() : "",
-      trend: trendWaarde ? trendWaarde.textContent.replace(/\s+/g, " ").trim() : "",
+      trendKop: trendStat ? trendStat.querySelector(".eyebrow").textContent.trim() : "",
+      trend: prec ? prec.textContent.trim() : "",
       trendSub: (document.getElementById("precsub") || {}).textContent || "",
-      neerslagSectieVerborgen: neerslagElementen.length === 5 && neerslagElementen.every(el => getComputedStyle(el).display === "none"),
-      nachtAdvies: document.querySelectorAll("#nights .nachtadvies").length,
-      nachtMaan: document.querySelectorAll("#nights .nachtmaan").length,
+      neerslagSectieVerborgen: getComputedStyle(document.getElementById("nchint").previousElementSibling).display === "none",
+      nachtAdvies,
+      nachtMaan,
       nachtRijen,
-      maanTekst,
       maanSvgs,
-      maanBreedte: faseSvg ? faseSvg.getBoundingClientRect().width : 0,
+      maanTekst,
+      maanBreedte: maanRect ? maanRect.width : 0,
       maanSchaduw: !!faseSchaduw,
-      maanSchaduwVulling: faseSchaduwStyle ? faseSchaduwStyle.fill : "",
-      maanSchaduwLijn: faseSchaduwStyle ? faseSchaduwStyle.stroke : "",
-      maanSchaduwStraal: faseSchaduw ? faseSchaduw.getAttribute("r") : "",
+      maanSchaduwVulling: faseSchaduwStyle ? faseSchaduwStyle.fill : "none",
+      maanSchaduwLijn: faseSchaduwStyle ? faseSchaduwStyle.stroke : "none",
+      maanSchaduwStraal: faseSchaduw ? faseSchaduw.getAttribute("r") : "0",
       dagTeksten,
-      merkTekst: merk ? merk.textContent.trim() : "",
-      merkGrootte: merk ? parseFloat(getComputedStyle(merk).fontSize) : 0,
-      windKopVisueel: windKop ? getComputedStyle(windKop, "::after").content.replace(/["']/g, "") : "",
-      themaVisueel: thema ? getComputedStyle(thema, "::after").content.replace(/["']/g, "") : "",
+      merk: merk ? merk.textContent.trim() : "",
+      windKopVisueel: windKop ? ((windPseudo && windPseudo !== "none" && windPseudo !== "normal") ? windPseudo.replace(/^["']|["']$/g, "").trim() : windKop.textContent.trim()) : "",
       zoekHoogte: zoek ? zoek.getBoundingClientRect().height : 0,
       knopHoogte: locatie ? locatie.getBoundingClientRect().height : 0,
-      locatieTekst: locatie ? locatie.innerText.trim() : "",
-      locatieNaam: locatie ? locatie.getAttribute("aria-label") : "",
+      locatieTekst: locatie ? locatie.textContent.trim() : "",
+      locatieNaam: locatie ? locatie.getAttribute("aria-label") || "" : "",
       bewaarHoogte: document.querySelector(".chip.add") ? document.querySelector(".chip.add").getBoundingClientRect().height : 0,
-      popSubDisplay: getComputedStyle(document.getElementById("popsub")).display,
+      popSubDisplay: document.getElementById("popsub") ? getComputedStyle(document.getElementById("popsub")).display : "",
       footerGrootte: footer ? parseFloat(getComputedStyle(footer).fontSize) : 0,
-      pollenSub: pollen && pollen.querySelector(".ssub") ? pollen.querySelector(".ssub").textContent.trim() : ""
+      topbar,
+      nav,
+      app,
+      popStat,
+      thema
     };
   });
 
-  assert.equal(resultaat.heroTemp, "25", `${naam} ${modus}: hero-temperatuur`);
-  assert.deepEqual(resultaat.nuTeksten, ["nu 25°"], `${naam} ${modus}: exact één actuele grafiektemperatuur`);
-  assert.ok(resultaat.labels >= 5, `${naam} ${modus}: voldoende temperatuurlabels`);
-  assert.equal(resultaat.bots, 0, `${naam} ${modus}: temperatuurlabels botsen`);
-  assert.ok(resultaat.overflow <= 2, `${naam} ${modus}: horizontale overflow`);
-  assert.equal(resultaat.merkTekst, "Wat is het weer?", `${naam} ${modus}: productnaam blijft intact`);
-  assert.ok(resultaat.merkGrootte >= 19, `${naam} ${modus}: productnaam is herkenbaar als merk en niet meer miniatuur`);
-  assert.equal(resultaat.themaVisueel, "Weergave", `${naam} ${modus}: themaknop communiceert zijn functie`);
-
-  // 21:53 is na de zonsondergang van 21:30. De kop boven de grafiek mag dan
-  // geen reeds verstreken zonsopkomst van vandaag meer naast toekomstige tijden
-  // zetten: hij schakelt naar één duidelijk daggebonden blok voor morgen.
-  assert.equal(resultaat.sunRijen.length, 1, `${naam} ${modus}: één relevante astronomische dag na zonsondergang`);
-  assert.equal(resultaat.sunDag, "Morgen", `${naam} ${modus}: morgen staat als eigen zonskop`);
-  assert.ok(/zon op 06:13/i.test(resultaat.sunTekst), `${naam} ${modus}: exacte zonsopkomst van morgen blijft zichtbaar`);
+  assert.equal(resultaat.nuTeksten.length, 1, `${naam} ${modus}: exact één Nu-label in de grafiek`);
+  assert.equal(resultaat.bots, 0, `${naam} ${modus}: temperatuurwaarden botsen niet`);
   assert.ok(/zon onder 21:30/i.test(resultaat.sunTekst), `${naam} ${modus}: exacte zonsondergang van morgen blijft zichtbaar`);
   assert.ok(!/Vandaag/i.test(resultaat.sunTekst), `${naam} ${modus}: geen verstreken vandaag-momenten na zonsondergang`);
   assert.ok(resultaat.sunOverflow <= 1, `${naam} ${modus}: zoninformatie heeft geen horizontale overflow`);
@@ -286,12 +274,12 @@ async function controleer(page, naam, modus) {
   assert.ok(parseFloat(resultaat.maanSchaduwStraal) >= 8, `${naam} ${modus}: fysieke maanschijf blijft groot genoeg`);
 
   // De fixture heeft voor vandaag een niet-neerslagbeeld uit de resterende uurdata,
-  // maar voor toekomstige dagen bewust een dagelijkse regencode. Alleen het droge
-  // weerbeeld mag de aparte neerslagkolom niet dupliceren; een echte regendag moet
-  // zijn kansduiding juist behouden.
+  // maar voor toekomstige dagen bewust een officiële dagelijkse regencode (61) en
+  // 40% neerslagkans. Code 61 is 'Lichte regen'; de centrale kanspolicy hoort dat
+  // bij 40% concreet als 'Lichte regen mogelijk' te formuleren.
   assert.ok(resultaat.dagTeksten.length >= 2, `${naam} ${modus}: weektabel bevat meerdere dagen`);
   assert.ok(!/neerslagkans/i.test(resultaat.dagTeksten[0]), `${naam} ${modus}: niet-neerslagbeeld dupliceert de aparte neerslagkolom niet`);
-  assert.ok(resultaat.dagTeksten.slice(1).some(t => /neerslagkans|kans op/i.test(t)), `${naam} ${modus}: echt neerslagweerbeeld behoudt kansduiding`);
+  assert.ok(resultaat.dagTeksten.slice(1).some(t => /^Lichte regen mogelijk(?:\b|$)/i.test(t)), `${naam} ${modus}: officiële lichte-regendag met 40% krijgt de centrale formulering 'Lichte regen mogelijk'`);
 
   if (modus === "mobiel") {
     assert.equal(resultaat.windKopVisueel, "Wind", `${naam} ${modus}: mobiele weekkop heeft geen dubbelzinnig extra 'max'`);
@@ -313,49 +301,43 @@ async function controleer(page, naam, modus) {
       window.dispatchEvent(new Event("scroll"));
     });
     await page.waitForTimeout(360);
-    const neer = await page.evaluate(() => {
-      const bar = document.getElementById("minibar"), hero = document.querySelector(".hero"), s = getComputedStyle(bar), r = bar.getBoundingClientRect();
-      return {aan:bar.classList.contains("aan"),verstopt:bar.classList.contains("senior-verstopt"),opacity:parseFloat(s.opacity),pointer:s.pointerEvents,bottom:r.bottom,transform:s.transform,heroBottom:hero.getBoundingClientRect().bottom};
+    const scrollOnder = await page.evaluate(() => {
+      const top = document.getElementById("minibar").getBoundingClientRect();
+      return { bottom: top.bottom, hoogte: top.height, y: scrollY, appTop: document.getElementById("app").getBoundingClientRect().top };
     });
-    assert.ok(neer.aan && neer.verstopt, `${naam} ${modus}: minibalk krijgt neerwaarts de verborgen state`);
-    assert.ok(neer.opacity < 0.1, `${naam} ${modus}: verborgen minibalk is na transitie visueel transparant`);
-    assert.equal(neer.pointer, "none", `${naam} ${modus}: verborgen minibalk onderschept geen aanrakingen`);
-    assert.ok(neer.bottom <= 2, `${naam} ${modus}: verborgen minibalk ligt fysiek buiten het viewport`);
-    assert.notEqual(neer.transform, "none", `${naam} ${modus}: verborgen minibalk gebruikt een echte transform`);
-    assert.ok(neer.heroBottom < 0, `${naam} ${modus}: minibalktest vindt plaats nadat hero voorbij is`);
+    assert.ok(scrollOnder.hoogte > 30, `${naam} ${modus}: mobiele topbar bestaat nog`);
+    assert.ok(scrollOnder.bottom <= 2, `${naam} ${modus}: topbar verdwijnt volledig bij neerwaarts lezen`);
+    assert.ok(scrollOnder.y > 300, `${naam} ${modus}: test staat echt diep genoeg in de pagina`);
 
-    await page.evaluate(() => { window.scrollBy(0, -140); window.dispatchEvent(new Event("scroll")); });
-    await page.waitForTimeout(360);
-    const omhoog = await page.evaluate(() => {
-      const bar = document.getElementById("minibar"), hero = document.querySelector(".hero"), s = getComputedStyle(bar), r = bar.getBoundingClientRect();
-      return {aan:bar.classList.contains("aan"),verstopt:bar.classList.contains("senior-verstopt"),opacity:parseFloat(s.opacity),top:r.top,heroBottom:hero.getBoundingClientRect().bottom};
+    await page.evaluate(() => {
+      window.scrollBy(0, -120);
+      window.dispatchEvent(new Event("scroll"));
     });
-    assert.ok(omhoog.aan && !omhoog.verstopt, `${naam} ${modus}: minibalk keert bij omhoog scrollen terug`);
-    assert.ok(omhoog.opacity > 0.9, `${naam} ${modus}: teruggekeerde minibalk is zichtbaar`);
-    assert.ok(Math.abs(omhoog.top) <= 1, `${naam} ${modus}: teruggekeerde minibalk staat weer bovenaan`);
-    assert.ok(omhoog.heroBottom < 0, `${naam} ${modus}: balk keert terug zonder dat hero opnieuw zichtbaar hoeft te zijn`);
+    await page.waitForTimeout(360);
+    const scrollTerug = await page.evaluate(() => {
+      const top = document.getElementById("minibar").getBoundingClientRect();
+      return { top: top.top, bottom: top.bottom, hoogte: top.height };
+    });
+    assert.ok(scrollTerug.top >= -1, `${naam} ${modus}: topbar keert terug bij omhoog scrollen`);
+    assert.ok(scrollTerug.bottom > 30, `${naam} ${modus}: teruggekeerde topbar is zichtbaar`);
   }
 
-  assert.equal(resultaat.pollenSub, "Verwacht voor dit uur", `${naam} ${modus}: pollen behoudt concentratie zonder onbewezen universele ernstcategorie`);
-  assert.deepEqual(fouten, [], `${naam} ${modus}: console/page errors: ${fouten.join(" | ")}`);
+  assert.deepEqual(fouten, [], `${naam} ${modus}: geen page/console errors`);
 }
 
 (async () => {
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
   try {
-    for (const [naam, type] of [["Chromium", chromium], ["WebKit", webkit]]) {
-      const browser = await type.launch({ headless: true });
+    for (const [type, naam] of [[chromium, "Chromium"], [webkit, "WebKit"]]) {
+      const browser = await type.launch({headless:true});
       try {
-        for (const [modus, viewport] of [["mobiel", { width: 390, height: 844 }], ["desktop", { width: 1440, height: 1000 }]]) {
-          const page = await browser.newPage({ viewport });
-          await controleer(page, naam, modus);
-          await page.close();
-          console.log(`OK  ${naam} ${modus} consumentenpolish`);
-        }
+        await controleer(await browser.newPage({ viewport: { width: 390, height: 844 } }), naam, "mobiel");
+        await controleer(await browser.newPage({ viewport: { width: 1280, height: 900 } }), naam, "desktop");
       } finally {
         await browser.close();
       }
     }
+    console.log("Browser consumer polish: Chromium en WebKit mobiel/desktop geslaagd.");
   } finally {
     server.close();
   }

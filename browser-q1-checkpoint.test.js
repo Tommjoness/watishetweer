@@ -104,9 +104,10 @@ async function controleer(type,naam){
     assert.equal(basis.popAria,"false",naam+": droge tegel blijft toegankelijk");
     assert.doesNotMatch(basis.gridClass,/q1-pop-hidden/,naam+": raster verandert niet meer tussen droge en natte steden");
     assert.equal(basis.neerslagSectieDisplay,"none",naam+": volledig droge twee-uurssectie dupliceert de briefing niet");
-    assert.equal(basis.dag[0].kans,"65%",naam+": daily kans komt uit probability_max");
-    assert.equal(basis.dag[0].mm,"4,8 mm",naam+": daily hoeveelheid komt uit precipitation_sum");
-    assert.equal(basis.dag[1].kans,"25%",naam+": 25% blijft staan bij 0 mm");
+    assert.equal(basis.dag[0].kans,"65%",naam+": vandaag gebruikt de hoogste kans binnen de resterende lokale daghorizon");
+    assert.equal(basis.dag[0].mm,"1,4 mm",naam+": vandaag gebruikt alleen hoeveelheid binnen de resterende lokale daghorizon");
+    assert.notEqual(basis.dag[0].mm,"4,8 mm",naam+": verstreken daghoeveelheid mag vandaag niet opnieuw worden teruggeschreven");
+    assert.equal(basis.dag[1].kans,"25%",naam+": toekomstige dag gebruikt officiële volledige-dagkans");
     assert.equal(basis.dag[1].mm,"",naam+": droge 0,0 mm wordt niet getoond");
     assert.ok(basis.over<=2,naam+": geen horizontale overflow op 390 px");
 

@@ -74,6 +74,12 @@ function geenMeetbareHoeveelheid(a){
 
 function actueelNeerslagSignaal(a){
   const mm=num(a&&a.currentHoeveelheid),intensiteit=num(a&&a.currentIntensiteit);
+  /* Zodra een verse KNMI-puntmeting voor 'nu' beschikbaar is, is die meting
+     autoritatief voor de actuele nat/droog-vraag. Een positief modelveld mag
+     dan niet alsnog 'het regent nu' afdwingen tegen een droge radarwaarneming. */
+  if(a&&a.bronActueel==="knmi-rtcor"&&intensiteit!==null){
+    return !!a.currentRadarWet&&intensiteit>=KNMI_ACTUEEL_DREMPEL_MMU;
+  }
   return !!(a&&(a.currentWet||a.status==="NEERSLAG_NU"
     ||(intensiteit!==null&&intensiteit>=KNMI_ACTUEEL_DREMPEL_MMU)
     ||(mm!==null&&mm>SPOOR_MM)));
@@ -191,12 +197,12 @@ function statusUitKnmi(kans,hoeveelheid,currentWet){
   if(currentWet)return "NEERSLAG_NU";
   if(hoeveelheid>=0.1)return "NEERSLAG_VERWACHT";
   if(hoeveelheid>SPOOR_MM)return "SPOORHOEVEELHEID";
-  const k=num(kans);
-  if(k===null)return "ONVOLDOENDE_DATA";
-  if(k<=0)return "GEEN_KANS";
-  if(k<=19)return "ZEER_KLEINE_KANS";
-  if(k<=39)return "KLEINE_KANS";
-  if(k<=69)return "MOGELIJKE_NEERSLAG";
+  const niveau=kansNiveau(kans);
+  if(niveau==="ONBEKEND")return "ONVOLDOENDE_DATA";
+  if(niveau==="DROOG")return "GEEN_KANS";
+  if(niveau==="ZEER_KLEIN")return "ZEER_KLEINE_KANS";
+  if(niveau==="KLEIN")return "KLEINE_KANS";
+  if(niveau==="MOGELIJK")return "MOGELIJKE_NEERSLAG";
   return "GROTE_KANS_ZONDER_HOEVEELHEID";
 }
 
@@ -207,6 +213,8 @@ function verrijkAnalyseMetKnmi(analyse,data,duurMin,engineApi,nuMs){
   const actueel=knmiActueleKandidaat(knmi,nuMs);
   const intensiteit=actueel?num(actueel.waarde):null;
   if(intensiteit!==null&&intensiteit>=0){
+    a.currentModelWet=!!a.currentWet;
+    a.currentModelHoeveelheid=num(a.currentHoeveelheid);
     a.currentIntensiteit=intensiteit;
     /* Houd de publieke broncode compatibel met de bestaande presentatie. De
        detailbron laat wel zien of de nieuwste +0-nowcast recenter was. */
@@ -223,6 +231,18 @@ function verrijkAnalyseMetKnmi(analyse,data,duurMin,engineApi,nuMs){
       const modelSoort=code!==null&&typeof engine.neerslagSoortUitCode==="function"
         ?engine.neerslagSoortUitCode(code):"neerslag";
       a.soort=modelSoort&&modelSoort!=="neerslag"?modelSoort:"neerslag";
+    }else{
+      /* Een verse droge KNMI-observatie wist alleen de actuele modelclaim uit.
+         Kans en hoeveelheid voor de toekomst blijven uit het model beschikbaar
+         wanneer er geen volledige nowcast is. */
+      a.currentWet=false;
+      if(a.genoeg){
+        a.status=statusUitKnmi(a.kans,Math.max(0,num(a.hoeveelheid)||0),false);
+        if(engine.STATUS_RANG&&engine.STATUS_RANG[a.status]!==undefined)a.rang=engine.STATUS_RANG[a.status];
+      }else if(a.status==="NEERSLAG_NU"){
+        a.status="ONVOLDOENDE_DATA";
+        if(engine.STATUS_RANG)a.rang=engine.STATUS_RANG.ONVOLDOENDE_DATA;
+      }
     }
   }
 

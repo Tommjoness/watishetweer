@@ -27,7 +27,29 @@ jobs:
       - name: Echte browsers — mobiel en desktop
         run: node browser-playwright.test.js
       - name: Consumentenpolish — iPhone-randgeval in Chromium en WebKit
-        run: node browser-consumer-polish.test.js
+        shell: bash
+        run: |
+          set +e
+          node browser-consumer-polish.test.js > /tmp/consumer-polish-e2e.log 2>&1
+          code=$?
+          cat /tmp/consumer-polish-e2e.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 60 /tmp/consumer-polish-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=browser-consumer-polish.test.js,line=1::$msg"
+            exit "$code"
+          fi
+      - name: Zichtbare neerslagwaarheid — Chromium en WebKit
+        shell: bash
+        run: |
+          set +e
+          node browser-unified-weather-truth.test.js > /tmp/unified-weather-truth-e2e.log 2>&1
+          code=$?
+          cat /tmp/unified-weather-truth-e2e.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 60 /tmp/unified-weather-truth-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=browser-unified-weather-truth.test.js,line=1::$msg"
+            exit "$code"
+          fi
       - name: SEO-plaatsroutes — Chromium en WebKit
         shell: bash
         run: |

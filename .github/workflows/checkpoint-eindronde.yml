@@ -63,6 +63,18 @@ jobs:
         run: node browser-q3-checkpoint.test.js
       - name: Checkpoint 100% in Chromium en WebKit
         run: node browser-q4-checkpoint.test.js
+      - name: Zichtbare neerslagwaarheid in Chromium en WebKit
+        shell: bash
+        run: |
+          set +e
+          node browser-unified-weather-truth.test.js > /tmp/unified-weather-truth-e2e.log 2>&1
+          code=$?
+          cat /tmp/unified-weather-truth-e2e.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 60 /tmp/unified-weather-truth-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=browser-unified-weather-truth.test.js,line=1::$msg"
+            exit "$code"
+          fi
       - name: Regenperioden, hover en uitlijning in Chromium en WebKit
         shell: bash
         run: |

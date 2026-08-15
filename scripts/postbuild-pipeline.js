@@ -1,5 +1,6 @@
 "use strict";
 
+const fs=require("fs");
 const path=require("path");
 const {spawnSync}=require("child_process");
 
@@ -34,6 +35,10 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-fetch-error-semantics.js",
   "apply-polar-chart-sentinel.js",
   "verify-polar-chart-sentinel.js",
+  "apply-unified-weather-truth.js",
+  "verify-unified-weather-truth.js",
+  "apply-small-chance-consistency.js",
+  "verify-small-chance-consistency.js",
   "apply-seo-foundation.js",
   "verify-seo-foundation.js",
   "generate-seo-location-pages.js",
@@ -43,10 +48,14 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-final-27.js"
 ]);
 
+const PRESENTATIE_MARKER="/* ===== NEERSLAGPRESENTATIE V2 ===== */";
+
 function voerPostbuildUit(opt={}){
-  const uitvoerder=typeof opt.spawnSync=="function"?opt.spawnSync:spawnSync;
+  const uitvoerder=typeof opt.spawnSync==="function"?opt.spawnSync:spawnSync;
   const node=opt.execPath||process.execPath;
   const scriptsMap=opt.scriptsDir||__dirname;
+  const artifactPad=opt.artifactPath||path.join(scriptsMap,"..","public","index.html");
+  const bewaakPresentatie=fs.existsSync(artifactPad)&&fs.readFileSync(artifactPad,"utf8").includes(PRESENTATIE_MARKER);
 
   for(const stap of POSTBUILD_STAPPEN){
     const absoluut=path.join(scriptsMap,stap);
@@ -59,12 +68,21 @@ function voerPostbuildUit(opt={}){
       fout.stap=stap;
       throw fout;
     }
+    if(bewaakPresentatie){
+      const aanwezig=fs.existsSync(artifactPad)&&fs.readFileSync(artifactPad,"utf8").includes(PRESENTATIE_MARKER);
+      if(!aanwezig){
+        const fout=new Error("Postbuild verwijderde neerslagpresentatie bij "+stap);
+        fout.status=1;
+        fout.stap=stap;
+        throw fout;
+      }
+    }
   }
 }
 
 if(require.main===module){
   try{voerPostbuildUit();}
-  catch(e){console.error(e&&e.stack||e);process.exit(typeof e.status=="number"?e.status:1);}
+  catch(e){console.error(e&&e.stack||e);process.exit(typeof e.status==="number"?e.status:1);}
 }
 
-module.exports={POSTBUILD_STAPPEN,voerPostbuildUit};
+module.exports={POSTBUILD_STAPPEN,PRESENTATIE_MARKER,voerPostbuildUit};

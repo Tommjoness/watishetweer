@@ -12,8 +12,8 @@ const INTERPRETATIE_CONFIG = Object.freeze({
   meetbaarMm: 0.1,
   spoorMm: 0.005,
   minimaleDekking: 0.90,
-  zeerKleineKansMax: 19,
-  kleineKansMax: 39,
+  zeerKleineKansMax: 9,
+  kleineKansMax: 29,
   mogelijkeKansMax: 69
 });
 
