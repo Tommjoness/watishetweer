@@ -10,11 +10,15 @@ function bevat(tekst,reden){if(!html.includes(tekst))throw new Error(reden+": "+
 function mist(tekst,reden){if(html.includes(tekst))throw new Error(reden+": "+tekst);}
 
 bevat("/* ===== UNIFIED WEATHER TRUTH 20260815 ===== */","unified-weather-truth marker ontbreekt");
-bevat("Weekneerslag heeft één runtime-owner: WeatherNowKansbeleidV3/dagen()","dagowner is niet geconsolideerd");
+bevat("Weekneerslag heeft één finale runtime-owner: WeatherNowKansbeleidV3/dagen()","finale dagowner is niet geconsolideerd");
 bevat('const dagMm=num(a&&a.hoeveelheid);',"resterende daghoeveelheid wordt niet uit centrale analyse gelezen");
 bevat('small.className="q1-dag-mm";small.textContent=hoeveelheidTekst(dagMm)',"daghoeveelheid wordt niet uit hetzelfde analyseobject getoond");
 mist("Weekverwachting: de zichtbare kans en hoeveelheid komen beide uit de officiële","oude Q1 daily-owner staat nog in runtime");
-mist("day.precipitation_probability_max&&day.precipitation_probability_max[i]","ruwe daily probability overschrijft nog de resterende dag");
+mist("const p=dagNeerslagPresentatie(kans,mm,beleid.kansHoofd,beleid.hoeveelheidTekst);","Q1 schrijft ruwe hele-dagtotalen nog over de resterende-daganalyse heen");
+/* De oorspronkelijke basisrenderer mag de daily velden nog gebruiken om zijn
+   eerste DOM op te bouwen: de centrale policy-wrapper is de finale eigenaar en
+   herschrijft die waarden in dezelfde synchrone render. De regressie bewaakt dus
+   de bewezen late Q1-override, niet een onschadelijke bronverwijzing in de basis. */
 mist("Geen goed zichtvenster","Nachtzicht gebruikt nog ambigu zichtvenster");
 bevat("Geen gunstig kijkvenster","Nachtzicht gebruikt geen helder kijkvensterbegrip");
 bevat('De temperatuur blijft tot rond "+hhmm(volledigePiekVandaag.t)+" ongeveer <b>"+huidigAfgerond+" graden</b>.',"temperatuurplateau-copy ontbreekt");
