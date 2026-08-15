@@ -1,4 +1,4 @@
-import legacyHandler from "../lib/knmi-neerslag.cjs";
+import providerHandler from "../lib/neerslag.cjs";
 
 export default {
   async fetch(request) {
@@ -13,7 +13,7 @@ export default {
       json(value) { body = value; return response; }
     };
 
-    await legacyHandler({ query }, response);
+    await providerHandler({ query }, response);
     const internCache = headers.get("Cache-Control");
     if (internCache) {
       headers.set("Vercel-CDN-Cache-Control", internCache);
