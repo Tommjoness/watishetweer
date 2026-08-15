@@ -13,6 +13,7 @@ if(typeof document==="undefined"||typeof S==="undefined")return;
 if(typeof meters!=="function"||typeof briefing!=="function"||typeof nowcast!=="function")return;
 
 const interpretatie=root.WeatherNowInterpretatie;
+const beleid=root.WeatherNowKansbeleidV3;
 const ACTUEEL_DREMPEL_MMU=0.1;
 const SPOOR_MM=0.005;
 
@@ -39,6 +40,14 @@ function actueleIntensiteit(a){
 function meetbareNeerslagNu(a){
   const v=actueleIntensiteit(a);
   return v!==null&&v>=ACTUEEL_DREMPEL_MMU&&!!(a.currentRadarWet||a.currentWet||a.status==="NEERSLAG_NU");
+}
+
+/* Een verse officiële 0-meting is net zo betekenisvol als een natte meting.
+   Dit expliciete predicaat voorkomt dat de presentatielaag alleen de natte helft
+   van de providerwaarheid kan zien en een eerder getekende modelregen laat staan. */
+function officieleDrogeMeting(a){
+  const v=actueleIntensiteit(a);
+  return v!==null&&v<ACTUEEL_DREMPEL_MMU&&a&&a.currentRadarWet===false;
 }
 
 function waardeMetEenheid(v,eenheid){
@@ -95,10 +104,18 @@ function werkNeerslagkaartBij(){
     return;
   }
 
-  /* Zonder meetbare actuele neerslag of betrouwbare hoeveelheid blijft het
-     bestaande percentage staan. De kop maakt expliciet dat dit een kans is,
-     zodat 49% nooit als een hoeveelheid of intensiteit gelezen kan worden. */
+  /* Zonder meetbare actuele neerslag of betrouwbare hoeveelheid is dit een
+     kanskaart. Schrijf die kans uit dezelfde analyse expliciet terug in plaats
+     van te vertrouwen op de tekst van een eerdere renderer. Zo kan een verse
+     droge meting een toekomstige kleine kans niet per ongeluk naar 'Droog'
+     reduceren. */
   if(kaart.kop)kaart.kop.textContent="Neerslagkans komend uur";
+  if(a&&a.genoeg&&beleid&&typeof beleid.kansHoofd==="function"){
+    const hoofd=String(beleid.kansHoofd(a)||"–");
+    if(/^\d+%$/.test(hoofd))kaart.el.innerHTML=hoofd.replace("%","<s>%</s>");
+    else kaart.el.textContent=hoofd;
+  }
+  if(kaart.sub&&beleid&&typeof beleid.komendUurTekst==="function")kaart.sub.textContent=beleid.komendUurTekst(a);
 }
 
 function actueleConditieTekst(a){
@@ -108,15 +125,32 @@ function actueleConditieTekst(a){
   return "Neerslag";
 }
 
+function drogeHeroCode(a){
+  if(!officieleDrogeMeting(a)||!S.d||!S.d.current)return null;
+  const c=S.d.current,modelCode=num(c.weather_code),cc=num(c.cloud_cover);
+  if(modelCode===null)return null;
+  /* Alleen een conflicterende neerslagcode wordt geneutraliseerd. De actuele
+     bewolkingsgraad komt uit hetzelfde current-object en verandert geen forecast. */
+  if(modelCode>=51&&modelCode<=99&&cc!==null)return cc>=95?3:cc>=40?2:cc>=15?1:0;
+  return modelCode;
+}
+
 function synchroniseerHero(){
-  const a=analyse(120),tekst=actueleConditieTekst(a);
-  if(!tekst)return;
+  const a=analyse(120),nat=meetbareNeerslagNu(a),droog=officieleDrogeMeting(a);
+  if(!nat&&!droog)return;
   const cond=document.getElementById("cond"),mini=document.getElementById("minicond"),ico=document.getElementById("nowicon");
-  zetTekst(cond,tekst);zetTekst(mini,tekst);
-  if(ico&&typeof icon==="function"&&S.d&&S.d.current){
-    const code=num(S.d.current.weather_code),regenCode=code!==null&&code>=51&&code<=99?code:61;
-    ico.innerHTML=icon(regenCode,S.d.current.is_day===1,46);
+  let code=null,tekst=null;
+  if(nat){
+    tekst=actueleConditieTekst(a);
+    const modelCode=S.d&&S.d.current?num(S.d.current.weather_code):null;
+    code=modelCode!==null&&modelCode>=51&&modelCode<=99?modelCode:61;
+  }else{
+    code=drogeHeroCode(a);
+    if(code!==null&&typeof txt==="function"&&S.d&&S.d.current)tekst=txt(code,S.d.current.is_day!==0);
   }
+  if(!tekst)return;
+  zetTekst(cond,tekst);zetTekst(mini,tekst);
+  if(ico&&code!==null&&typeof icon==="function"&&S.d&&S.d.current)ico.innerHTML=icon(code,S.d.current.is_day===1,46);
 }
 
 function actueleNeerslagZin(a,metCijfer){
@@ -128,10 +162,13 @@ function actueleNeerslagZin(a,metCijfer){
 }
 
 function vervangEersteNeerslagzinInBriefing(a){
-  if(!meetbareNeerslagNu(a))return;
+  const nat=meetbareNeerslagNu(a),droog=officieleDrogeMeting(a);
+  if(!nat&&!droog)return;
   const el=document.getElementById("brief");
   if(!el||typeof el.innerHTML!=="string")return;
-  const nieuw=actueleNeerslagZin(a,true);
+  const nieuw=nat
+    ?actueleNeerslagZin(a,true)
+    :(beleid&&typeof beleid.briefingZin==="function"?beleid.briefingZin(a):"");
   if(!nieuw)return;
 
   /* De neerslagzin staat bewust als eerste, onopgemaakte zin in de briefing.
@@ -203,8 +240,8 @@ nowcast=function(){
 };
 
 root.WeatherNowNeerslagPresentatieV2={
-  analyse,actueleIntensiteit,meetbareNeerslagNu,kansKomendUur,betrouwbareKomendUurHoeveelheid,
-  actueleConditieTekst,actueleNeerslagZin,tweeUurTekst,
+  analyse,actueleIntensiteit,meetbareNeerslagNu,officieleDrogeMeting,kansKomendUur,betrouwbareKomendUurHoeveelheid,
+  actueleConditieTekst,drogeHeroCode,actueleNeerslagZin,tweeUurTekst,
   werkNeerslagkaartBij,synchroniseerHero,werkTweeUurBij
 };
 })(typeof globalThis!=="undefined"?globalThis:this);
