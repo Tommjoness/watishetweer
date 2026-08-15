@@ -17,6 +17,7 @@ const num=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(
 const clamp=v=>Math.max(0,Math.min(100,v));
 const hoofdletter=t=>{t=String(t||"");return t?t.charAt(0).toUpperCase()+t.slice(1):t;};
 const kleineStart=t=>{t=String(t||"");return t?t.charAt(0).toLowerCase()+t.slice(1):t;};
+const SPOOR_MM=0.005;
 
 function kansNiveau(kans){
   const n=num(kans);
@@ -39,19 +40,35 @@ function hoeveelheidTekst(mm){
 
 function hoeveelheidConditioneel(a){
   const mm=num(a&&a.hoeveelheid);
-  if(mm===null||mm<=0.005) return "";
+  if(mm===null||mm<=SPOOR_MM) return "";
   if(mm<0.1) return " Als er neerslag valt, gaat het waarschijnlijk om hooguit enkele druppels.";
   return " Als er neerslag valt, berekent het model ongeveer "+hoeveelheidTekst(mm)+".";
 }
 
 function geenMeetbareHoeveelheid(a){
   const mm=num(a&&a.hoeveelheid);
-  return mm===null||mm<=0.005;
+  return mm===null||mm<=SPOOR_MM;
 }
 
+/* Een actuele positieve neerslaghoeveelheid is zelf al een actueel signaal.
+   De weather_code kan een cyclus achterlopen; zo'n verschil mag nooit tot de
+   consumententekst "Droog" leiden. Als de actuele code het neerslagtype niet
+   bevestigt, blijven we bewust generiek en zeggen we alleen "neerslag". */
+function actueelNeerslagSignaal(a){
+  const mm=num(a&&a.currentHoeveelheid);
+  return !!(a&&(a.currentWet||a.status==="NEERSLAG_NU"||(mm!==null&&mm>SPOOR_MM)));
+}
+function actueleSoort(a){
+  return a&&a.currentWet?typeNeerslag(a):"neerslag";
+}
+
+/* Kans 0 mag evenmin als droog worden gepresenteerd wanneer dezelfde analyse
+   een toekomstige spoor- of meetbare hoeveelheid bevat. In zo'n intern
+   tegenstrijdig geval is "onzeker" feitelijker dan een absolute droogclaim. */
 function tegenstrijdigDroogSignaal(a){
   const mm=num(a&&a.hoeveelheid);
-  return kansNiveau(a&&a.kans)==="DROOG"&&mm!==null&&mm>=0.1;
+  const natteStatus=a&&(a.status==="SPOORHOEVEELHEID"||a.status==="NEERSLAG_VERWACHT");
+  return kansNiveau(a&&a.kans)==="DROOG"&&((mm!==null&&mm>SPOOR_MM)||natteStatus);
 }
 
 function typeNeerslag(a){
@@ -78,6 +95,10 @@ function dagMomentZinsdeel(tijd){
 
 function kansHoofd(a){
   if(!a||!a.genoeg) return "–";
+  if(actueelNeerslagSignaal(a)){
+    const k=num(a.kans),pct=k===null?0:Math.round(clamp(k));
+    return pct>0?pct+"%":"Neerslag";
+  }
   if(tegenstrijdigDroogSignaal(a)) return "Onzeker";
   const niveau=kansNiveau(a.kans),k=num(a.kans);
   if(niveau==="ONBEKEND") return "–";
@@ -89,7 +110,7 @@ function kansZin(a,venster,opties){
   opties=opties||{};
   if(!a||!a.genoeg) return opties.kort?"Neerslagkans niet beschikbaar.":"Voor "+venster+" ontbreken voldoende gegevens voor een betrouwbare neerslaginschatting.";
   const soort=typeNeerslag(a),k=num(a.kans),niveau=kansNiveau(k);
-  if(a.currentWet||a.status==="NEERSLAG_NU") return grammatica.actueleNeerslagZin(soort);
+  if(actueelNeerslagSignaal(a)) return grammatica.actueleNeerslagZin(actueleSoort(a));
   if(niveau==="ONBEKEND") return "Neerslagkans niet beschikbaar.";
   const pct=Math.round(clamp(k));
   const hoeveelheidDetail=opties.kort?"":hoeveelheidConditioneel(a);
@@ -109,7 +130,7 @@ function kansZin(a,venster,opties){
 
 function komendUurTekst(a){
   if(!a||!a.genoeg) return "Neerslagkans niet beschikbaar.";
-  if(a.currentWet||a.status==="NEERSLAG_NU") return grammatica.actueleNeerslagZin(typeNeerslag(a));
+  if(actueelNeerslagSignaal(a)) return grammatica.actueleNeerslagZin(actueleSoort(a));
   if(tegenstrijdigDroogSignaal(a)) return "Neerslagverwachting onzeker.";
   const niveau=kansNiveau(a.kans);
   if(niveau==="DROOG") return "Geen neerslag verwacht.";
@@ -123,11 +144,11 @@ function komendUurTekst(a){
 
 function briefingZin(a){
   if(!a||!a.genoeg) return "Onvoldoende gegevens voor een betrouwbare neerslaginschatting in de komende twee uur.";
-  if(a.currentWet||a.status==="NEERSLAG_NU") return grammatica.actueleNeerslagZin(typeNeerslag(a));
+  if(actueelNeerslagSignaal(a)) return grammatica.actueleNeerslagZin(actueleSoort(a));
   if(tegenstrijdigDroogSignaal(a)) return "De neerslagverwachting voor de komende twee uur is onzeker.";
   const niveau=kansNiveau(a.kans);
-  if(niveau==="DROOG") return "De komende twee uur blijft het droog.";
-  if(niveau==="ZEER_KLEIN") return "De komende twee uur blijft het waarschijnlijk droog.";
+  if(niveau==="DROOG") return "De komende twee uur wordt geen neerslag verwacht.";
+  if(niveau==="ZEER_KLEIN") return "De kans op neerslag in de komende twee uur is zeer klein.";
   if(niveau==="KLEIN") return "De komende twee uur is er een kleine kans op neerslag.";
   if(niveau==="MOGELIJK") return "In de komende twee uur is neerslag mogelijk.";
   if(niveau==="GROOT") return "De komende twee uur is er een grote kans op neerslag"+(geenMeetbareHoeveelheid(a)?", maar de hoeveelheid is onzeker.":".");
@@ -169,7 +190,7 @@ const basisMeters=meters;
 meters=function(){
   basisMeters();
   const a=analyse(60),hoofd=kansHoofd(a);
-  if(hoofd==="–"||hoofd==="Droog"||hoofd==="Onzeker") set("pop",hoofd);
+  if(hoofd==="–"||hoofd==="Droog"||hoofd==="Onzeker"||hoofd==="Neerslag") set("pop",hoofd);
   else set("pop",hoofd.replace("%","<s>%</s>"));
   zetTekst("popsub",komendUurTekst(a));
 };
