@@ -13,6 +13,7 @@ function element(id){
     id,
     textContent:"",
     innerHTML:"",
+    title:"",
     attrs:{},
     setAttribute(k,v){this.attrs[k]=String(v);},
     getAttribute(k){return this.attrs[k]||null;},
@@ -43,6 +44,10 @@ const context={
   weatherNowActueleLokaleTijd:()=>new Date(),
   txt:code=>({0:"Onbewolkt",1:"Licht bewolkt",2:"Half bewolkt",3:"Bewolkt",61:"Lichte regen"}[code]||"Verwachting"),
   icon:code=>'<svg data-code="'+code+'">icoon</svg>',
+  minibarBij(){
+    const c=context.S.d.current,tekst=context.txt(c.weather_code,c.is_day!==0).toLowerCase();
+    els.minicond.textContent=tekst;els.minicond.title=tekst;
+  },
   meters(){
     kop.textContent="Neerslag komend uur";
     els.pop.innerHTML="49<s>%</s>";
@@ -131,6 +136,13 @@ assert.match(els.brief.innerHTML,/^De komende twee uur is er een kleine kans op 
 assert.doesNotMatch(els.brief.innerHTML,/(valt|regent) nu/i);
 assert.match(els.brief.innerHTML,/<b>24 graden<\/b>/,"droge correctie bewaart latere briefingmarkup");
 
+/* De basis-minibalk schrijft in productie na een async KNMI-update opnieuw de
+   ruwe modelconditie. De presentatiewrapper moet daar direct dezelfde officiële
+   droge hero-waarheid overheen leggen, inclusief title voor afgekorte tekst. */
+context.minibarBij();
+assert.equal(els.minicond.textContent,"Half bewolkt","mobiele balk mag modelregen niet als laatste eigenaar terugschrijven");
+assert.equal(els.minicond.title,"Half bewolkt");
+
 /* Toekomstige KNMI-nowcastpresentatie blijft onaangeraakt door de fallback omdat
    deze analyse al een officiële bron draagt. */
 basisAnalyse={
@@ -156,4 +168,4 @@ els.nctext.textContent="Er valt nu neerslag.";
 context.nowcast();
 assert.equal(els.nctext.textContent,"Er valt nu neerslag: 0,2 mm/u.","zonder nowcast mag geen droogtijd of hoeveelheid worden verzonnen");
 
-console.log("Neerslagpresentatie v2: echte KNMI-verrijking, nat/droog, kanslabel, briefing, hero en twee-uurscijfers geslaagd.");
+console.log("Neerslagpresentatie v2: echte KNMI-verrijking, nat/droog, kanslabel, briefing, hero, minibalk en twee-uurscijfers geslaagd.");
