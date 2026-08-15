@@ -21,8 +21,8 @@ function vervangAlles(oud,nieuw,label,{vereist=true}={}){
 }
 
 /* Deze laatste laag is bewust klein. Windstoten, luchtdruk, zonuren, briefing-
-   tijdtaal, Nachtzicht, pollen en bronnen hebben nu ieder hun eigen runtime-owner.
-   Hier blijft alleen een compatibiliteitsnormalisatie voor de grote, gedeelde
+   tijdtaal, Nachtzicht, pollen en bronnen hebben ieder hun eigen runtime-owner.
+   Hier blijft alleen compatibiliteitsnormalisatie voor de grote, gedeelde
    neerslagbeleidslaag staan. Daarmee is dit geen tweede semantische eigenaar. */
 vervangAlles(" wordt geen neerslag verwacht."," wordt er geen neerslag verwacht.","ontbrekend 'er' bij droge verwachting");
 vervangAlles("Neerslag wordt verwacht het komende uur.","Het komende uur wordt neerslag verwacht.","woordvolgorde neerslag komend uur");
@@ -33,24 +33,6 @@ vervangAlles("Kleine kans op neerslag het komende uur.","Het komende uur is er e
 vervangAlles("Neerslag is mogelijk het komende uur.","Het komende uur is neerslag mogelijk.","mogelijke neerslag komend uur");
 vervangAlles("Grote kans op neerslag het komende uur.","Het komende uur is er een grote kans op neerslag.","grote kans komend uur",{vereist:false});
 vervangAlles("Zeer grote kans op neerslag het komende uur.","Het komende uur is er een zeer grote kans op neerslag.","zeer grote kans komend uur",{vereist:false});
-
-/* Architectuurguard: als een toekomstige wijziging hier opnieuw UI-eigenaren
-   gaat patchen, moet dat zichtbaar falen in review/tests in plaats van stil een
-   nieuwe patch-op-patchlaag te worden. */
-const verbodenEigenaars=[
-  "function uiWindstootTekst(pg,nu,dag,vak){",
-  'zetTekst("pressub"',
-  "Geen gunstig kijkvenster door ",
-  "Gem. zicht ",
-  "Beste modeluren ",
-  "Pollen gras",
-  "Pollen bijvoet"
-];
-for(const tekst of verbodenEigenaars){
-  /* De uiteindelijke artifact mag deze tekst als broncode bevatten; wat hier
-     bewaakt wordt is dat dit script zelf geen vervangopdracht daarvoor bezit. */
-  if(module&&module.exports&&false)console.log(tekst);
-}
 
 if((html.match(/<\/body>/g)||[]).length!==1)throw new Error("Exact één </body> vereist voor microcopy-marker.");
 html=html.replace("</body>",MARK+"\n</body>");
