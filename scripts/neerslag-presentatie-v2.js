@@ -18,7 +18,7 @@ const SPOOR_MM=0.005;
 const num=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 const clamp=v=>Math.max(0,Math.min(100,Number(v)||0));
 const fmt1=v=>Number(v).toFixed(1).replace(".",",");
-const esc=t=>String(t==null?"":t).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const esc=t=>String(t==null?"":t).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 function lokaleNu(){
   return typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():undefined;
@@ -165,7 +165,22 @@ function synchroniseerHero(){
   }
   if(!tekst)return;
   zetTekst(cond,tekst);zetTekst(mini,tekst);
+  if(mini)mini.title=tekst;
   if(ico&&code!==null&&typeof icon==="function"&&S.d&&S.d.current)ico.innerHTML=icon(code,S.d.current.is_day===1,46);
+}
+
+/* De basis-minibalk wordt ook bij een async KNMI-hertekening opnieuw gevuld en
+   schreef daarbij als laatste weer de ruwe modelcode naar #minicond. Laat de
+   basisrenderer eerst zijn normale plaats/tijd/temperatuurwerk doen en leg daarna
+   dezelfde actuele waarheid als de hero terug. Buiten een officiële actuele
+   meting is synchroniseerHero() een no-op en blijft wereldwijd het model leidend. */
+if(typeof minibarBij==="function"){
+  const basisMinibarBij=minibarBij;
+  minibarBij=function(){
+    const r=basisMinibarBij.apply(this,arguments);
+    synchroniseerHero();
+    return r;
+  };
 }
 
 function actueleNeerslagZin(a,metCijfer){
