@@ -27,19 +27,12 @@ const ENGINE_RECENT_START='      zetEyebrow("prec","Afgelopen 15 minuten");\n   
 const ENGINE_RECENT_END='      // Bewolkingswoorden zijn tijdsafhankelijk.';
 
 /* Checkpoint 50: Nachtzicht had na de canonieke renderer twee opeenvolgende
-   presentatie-wrappers: de seniorlaag en daarna mobiele screenshot-polish.
-   Dat is precies het soort patch-op-patch dat we niet willen behouden. De
-   senior-wrapper wordt daarom op assemblagetijd verwijderd; zijn pure helpers
-   blijven staan. De mobiele polish hieronder is daarna de ENIGE presentatie-
-   owner bovenop de canonieke nachtbewerking. */
+   presentatie-wrappers. De senior-wrapper wordt op assemblagetijd verwijderd;
+   WeatherNowMobileScreenshotPolish is daarna de enige presentatie-owner. */
 const SENIOR_NACHT_START='const basisNachten=nachten;\nnachten=function(){';
 const SENIOR_NACHT_END='\n\n/* Verstreken uurwaarden zijn forecast/modelwaarden';
 const SENIOR_NACHT_SIGNATURE='const basisNachten=nachten;\nnachten=function(){\n  basisNachten();\n  const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")]';
 
-/* Checkpoint 50: de mobiele grafiek blijft compacter dan de oorspronkelijke
-   292px, maar niet ten koste van labelruimte. Daarnaast worden twee bronregels
-   in de canonieke renderer exact aangescherpt: temperatuurlabels mogen niet in
-   de x-aszone zakken en het tijdlabel direct onder de rode nu-lijn vervalt. */
 const GRAFIEK_MOBIEL_OUD='  const W=M?380:900, H=M?292:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?20:22, bh=M?11:16;\n  const pt=M?72:76, ih=M?166:160, pb=pt+ih;';
 const GRAFIEK_MOBIEL_NIEUW='  const W=M?380:900, H=M?250:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?18:22, bh=M?10:16;\n  const pt=M?59:76, ih=M?145:160, pb=pt+ih;';
 const GRAFIEK_LABEL_PAST_OUD='      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val<=pb-3;';
@@ -48,12 +41,8 @@ const GRAFIEK_TICK_OUD='    if(toonAs){\n      ticks+=';
 const GRAFIEK_TICK_NIEUW='    if(toonAs){\n      const tijdLabelVrij=nuX==null||Math.abs(x(i)-nuX)>Math.max(18,F.uur*2.2);\n      if(tijdLabelVrij) ticks+=';
 const GRAFIEK_GEO_ANCHOR='  S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,H:H,M:M};';
 const GRAFIEK_AS_CLEANUP=[
-  '  /* Checkpoint 50: temperatuurcijfers worden pas na de tijdas definitief',
-  '     geplaatst en mogen horizontaal uitwijken. Vaste marges kunnen daardoor',
-  '     nooit volledig voorspellen waar een Bodoni-label eindigt. Controleer na',
-  '     het renderen de werkelijke SVG-tekstboxen en verwijder uitsluitend een',
-  '     tijdlabel dat een temperatuurcijfer echt raakt. Neerslagpercentages en',
-  '     alle overige tijdlabels blijven staan; de tooltip houdt de exacte tijd. */',
+  '  /* Checkpoint 50: controleer na renderen de werkelijke SVG-fontboxes en',
+  '     verwijder uitsluitend een tijdlabel dat een temperatuurcijfer echt raakt. */',
   '  const ruimBotsendeAslabelsOp=()=>{',
   '    const teksten=[...svg.querySelectorAll("text")];',
   '    const temperatuurLabels=teksten.filter(el=>/Bodoni Moda/.test(el.getAttribute("font-family")||"")&&/°$/.test((el.textContent||"").trim()));',
@@ -90,53 +79,29 @@ if((html.split(GRAFIEK_LABEL_PAST_OUD).length-1)!==1)throw new Error("Canonieke 
 if((html.split(GRAFIEK_TICK_OUD).length-1)!==1)throw new Error("Canonieke grafiek-tickrenderer ontbreekt of is dubbel.");
 if((html.split(GRAFIEK_GEO_ANCHOR).length-1)!==1)throw new Error("Canonieke grafiek-geometrieanchor ontbreekt of is dubbel.");
 
-/* Productbeslissing checkpoint 25: de terugblik op recente neerslag bestaat niet
-   meer in de definitieve runtime. De twee op dit assemblagemoment aantoonbare
-   historische eigenaars van dezelfde tegel — de canonieke meters() en de
-   browserintegratie van de centrale interpretatie-engine — worden volledig
-   verwijderd vóór Q1 wordt geïnjecteerd. */
 html=html.replace(RECENT_OLD,TREND_NEW);
 const legacyStart=html.indexOf(LEGACY_RECENT_START),legacyEind=html.indexOf(LEGACY_RECENT_END,legacyStart);
 if(legacyStart<0||legacyEind<=legacyStart)throw new Error("Legacy recente-neerslaglogica kon niet veilig worden afgebakend.");
-html=html.slice(0,legacyStart)
-  +'  /* Recente-neerslagterugblik verwijderd; #prec is exclusief van temperatuurtrend. */\n\n'
-  +html.slice(legacyEind);
+html=html.slice(0,legacyStart)+'  /* Recente-neerslagterugblik verwijderd; #prec is exclusief van temperatuurtrend. */\n\n'+html.slice(legacyEind);
 
 const engineStart=html.indexOf(ENGINE_RECENT_START),engineEind=html.indexOf(ENGINE_RECENT_END,engineStart);
 if(engineStart<0||engineEind<=engineStart)throw new Error("Interpretatie-engine recente-neerslaglogica kon niet veilig worden afgebakend.");
-html=html.slice(0,engineStart)
-  +'      const c=S.d.current||{};\n\n'
-  +html.slice(engineEind);
-
+html=html.slice(0,engineStart)+'      const c=S.d.current||{};\n\n'+html.slice(engineEind);
 const engineKop='      zetEyebrow("prec","Afgelopen 15 minuten");';
 if((html.split(engineKop).length-1)!==1)throw new Error("Interpretatie-engine tekenAlles-kop ontbreekt of is dubbel.");
 html=html.replace(engineKop,'      /* #prec-kop is exclusief van temperatuurtrend. */');
 
-/* Nachtzicht-owner consolideren vóór de uiteindelijke mobiele laag wordt
-   geïnjecteerd. Alleen de runtime-wrapper verdwijnt; de pure seniorhelpers en
-   overige seniorcorrecties blijven exact staan. */
 const seniorNachtStart=html.indexOf(SENIOR_NACHT_START),seniorNachtEind=html.indexOf(SENIOR_NACHT_END,seniorNachtStart);
 if(seniorNachtStart<0||seniorNachtEind<=seniorNachtStart)throw new Error("Senior Nachtzicht-wrapper kon niet veilig worden afgebakend.");
-html=html.slice(0,seniorNachtStart)
-  +'/* Nachtzicht-presentatie geconsolideerd in WeatherNowMobileScreenshotPolish. */'
-  +html.slice(seniorNachtEind);
+html=html.slice(0,seniorNachtStart)+'/* Nachtzicht-presentatie geconsolideerd in WeatherNowMobileScreenshotPolish. */'+html.slice(seniorNachtEind);
 
-/* Grafiek: echt compacter, maar met een gereserveerde x-aszone. Het tijdlabel
-   op het huidige uur is redundant naast `nu 21°` en wordt alleen daar onderdrukt;
-   overige tijdlabels, temperatuurpunten en data blijven intact. De laatste
-   botsingscontrole gebruikt daarna de werkelijk gerenderde fontboxes. */
 html=html.replace(GRAFIEK_MOBIEL_OUD,GRAFIEK_MOBIEL_NIEUW);
 html=html.replace(GRAFIEK_LABEL_PAST_OUD,GRAFIEK_LABEL_PAST_NIEUW);
 html=html.replace(GRAFIEK_TICK_OUD,GRAFIEK_TICK_NIEUW);
 html=html.replace(GRAFIEK_GEO_ANCHOR,GRAFIEK_AS_CLEANUP);
 
-html=html.replace("</style>",
-  "\n"+CSS_MARK+"\n"+mobileCss+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B CSS ===== */\n"
-  +Q1_CSS_MARK+"\n"+q1Css+"\n/* ===== EINDE CHECKPOINT 25 Q1 CSS ===== */\n</style>");
-html=html.replace(START,
-  JS_MARK+"\n"+mobileJs+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B ===== */\n\n"
-  +Q1_JS_MARK+"\n"+q1Js+"\n/* ===== EINDE CHECKPOINT 25 Q1 ===== */\n\n"
-  +START);
+html=html.replace("</style>","\n"+CSS_MARK+"\n"+mobileCss+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B CSS ===== */\n"+Q1_CSS_MARK+"\n"+q1Css+"\n/* ===== EINDE CHECKPOINT 25 Q1 CSS ===== */\n</style>");
+html=html.replace(START,JS_MARK+"\n"+mobileJs+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B ===== */\n\n"+Q1_JS_MARK+"\n"+q1Js+"\n/* ===== EINDE CHECKPOINT 25 Q1 ===== */\n\n"+START);
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline script na mobiele polish.");
@@ -144,7 +109,7 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:postbu
 for(const vereist of [
   "WeatherNowMobileScreenshotPolish","maan-fase-svg-v2","Temperatuur komende 3 uur","bron-bronnen",
   "WeatherNowQ1","q1-dag-mm","weerbriefing.plaatscache.q1","neerslagkans",
-  "temperatuurTrend","q1-pop-hidden","Beste modeluren","verbeterNachtzicht",
+  "temperatuurTrend","q1-pop-hidden","normaliseerNachtDagdata","nachtIsActiefNu","verbeterNachtzicht","Beste periode:",
   "H=M?250:296","pt=M?59:76, ih=M?145:160","tijdLabelVrij=nuX==null",
   "val+labelHoogte/2+4<=pb","ruimBotsendeAslabelsOp","getBBox()"
 ]){
@@ -154,11 +119,7 @@ if(html.includes("Afgelopen 15 minuten")||html.includes("Afgelopen kwartier"))th
 if(html.includes(LEGACY_RECENT_START)||html.includes('zetEyebrow("prec"'))throw new Error("Een oude eigenaar van #prec staat nog in de productieartifact.");
 if(html.includes(SENIOR_NACHT_SIGNATURE))throw new Error("Patch-op-patch: specifieke oude senior Nachtzicht-wrapper staat nog in de productieartifact.");
 if((html.split('const basisNachten=nachten;').length-1)!==1)throw new Error("Nachtzicht moet exact één presentatie-wrapper hebben na consolidatie.");
+if(html.includes("Beste modeluren")||html.includes("Relatief gunstigste modeluren"))throw new Error("Nachtzicht bevat nog modeljargon in de presentatie-owner.");
 fs.writeFileSync(htmlPad,html,"utf8");
-
-/* build-weather.js maakt de serviceworker-cacheversie vóór deze gerichte laag.
-   Omdat index.html nu bewust is gewijzigd, gebruiken we daarna hetzelfde gedeelde
-   postbuild-recept om uitsluitend de serviceworker-versie opnieuw te berekenen. */
 const versie=vernieuwServiceworkerCache(OUT,"mobiele");
-
-console.log("Mobiele polish + checkpoint 50% geïnjecteerd; Nachtzicht-owner geconsolideerd; cache "+versie+".");
+console.log("Mobiele polish + checkpoint 50% geïnjecteerd; Nachtzicht-owner geconsolideerd met kalendergrenscorrectie; cache "+versie+".");
