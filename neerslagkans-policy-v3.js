@@ -90,7 +90,7 @@ function dagMomentZinsdeel(tijd){
 function knmiPayloadVers(knmi,nuMs){
   if(!knmi||knmi.beschikbaar!==true)return false;
   const opgehaald=Date.parse(knmi.opgehaaldOp||"");
-  if(!Number.isFinite(opgehaald))return true; // oudere testfixtures zonder meta blijven geldig
+  if(!Number.isFinite(opgehaald))return true;
   const nu=Number.isFinite(nuMs)?nuMs:Date.now();
   return nu-opgehaald>=-60000&&nu-opgehaald<=KNMI_CLIENT_MAX_LEEFTIJD_MS;
 }
@@ -274,9 +274,6 @@ if(typeof document==="undefined"||typeof S==="undefined") return;
 const interpretatie=root.WeatherNowInterpretatie;
 if(!interpretatie||typeof interpretatie.analyseerNeerslagData!=="function") return;
 
-/* Alle bestaande consumenten van de centrale interpretatielaag krijgen dezelfde
-   KNMI-verrijking. De oorspronkelijke Open-Meteo-response zelf wordt niet
-   gemuteerd en de KNMI-payload wordt niet in localStorage opgeslagen. */
 const basisAnalyseerNeerslag=interpretatie.analyseerNeerslagData.bind(interpretatie);
 interpretatie.analyseerNeerslagData=function(data,duur,nuOverride){
   return verrijkAnalyseMetKnmi(basisAnalyseerNeerslag(data,duur,nuOverride),data,duur,interpretatie);
@@ -394,7 +391,6 @@ function hertekenNeerslagdelen(){
   if(typeof minibarBij==="function")minibarBij();
 }
 
-/* De centrale briefingrenderer vraagt briefingZin() rechtstreeks via de buildhaak. */
 const basisMeters=meters;
 meters=function(){
   basisMeters();
@@ -432,9 +428,6 @@ dagen=function(){
   });
 };
 
-/* KNMI wordt alleen voor bewezen Nederlandse locaties opgevraagd. De gewone
-   weather-load wacht er niet op: de pagina verschijnt eerst met de wereldwijde
-   fallback en wordt daarna geruisloos verfijnd. */
 let knmiGeneratie=0,knmiController=null,knmiTimer=null,laatsteKnmiSleutel="";
 function stopKnmi(){
   knmiGeneratie++;
@@ -478,17 +471,14 @@ onthoudLand=function(v){
   else{verwijderKnmiVanData();werkBronvermeldingBij(false);}
 };
 
+/* Een KNMI-request start pas nadat de gewone forecast voor de gekozen plaats
+   is gecommit. Zo kan een snelle neerslagresponse nooit op S.d van de vorige
+   locatie terechtkomen tijdens een locatiewissel. De weather-load zelf blijft
+   wereldwijd volledig onafhankelijk van KNMI en houdt dus zijn fallback. */
 const basisLoad=load;
 load=async function(lat,lon,label,stil,opslaan,land){
   stopKnmi();
-  const gen=knmiGeneratie,landCode=typeof normLand==="function"?normLand(land):String(land||"").toUpperCase();
-  if(landCode==="NL"){
-    /* Start parallel; toepassing wacht vanzelf tot S.d voor deze locatie bestaat. */
-    Promise.resolve().then(async()=>{
-      while(gen===knmiGeneratie&&!S.d)await new Promise(r=>setTimeout(r,20));
-      if(gen===knmiGeneratie&&S.land==="NL")startKnmiVoorHuidigePlaats(false);
-    });
-  }
+  const gen=knmiGeneratie;
   const resultaat=await basisLoad(lat,lon,label,stil,opslaan,land);
   if(gen!==knmiGeneratie)return resultaat;
   if(S.land==="NL")startKnmiVoorHuidigePlaats(false);
