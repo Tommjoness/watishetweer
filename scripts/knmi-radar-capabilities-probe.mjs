@@ -13,7 +13,12 @@ for(const dataset of DATASETS){
   const r=await fetch(u,{headers:{"user-agent":"watishetweer.nl capability validation"},signal:AbortSignal.timeout(10000)});
   const xml=await r.text();
   const names=uniek([...xml.matchAll(/<Name>([\s\S]*?)<\/Name>/gi)].map(m=>decodeXml(m[1].trim()))).filter(Boolean);
-  const times=[...xml.matchAll(/<(?:Dimension|Extent)\b[^>]*name=["']time["'][^>]*>([\s\S]*?)<\/(?:Dimension|Extent)>/gi)].map(m=>decodeXml(m[1].trim()));
-  console.log("KNMI_CAPABILITIES",JSON.stringify({dataset,status:r.status,contentType:r.headers.get("content-type"),names,timeDimensions:times.slice(0,10),xmlStart:xml.slice(0,300)}));
+  const dimensions=[];
+  for(const m of xml.matchAll(/<(Dimension|Extent)\b([^>]*)>([\s\S]*?)<\/\1>/gi)){
+    const name=/\bname=["']([^"']+)["']/i.exec(m[2]);
+    if(!name)continue;
+    dimensions.push({name:name[1],attrs:m[2].trim().replace(/\s+/g," "),value:decodeXml(m[3].trim()).slice(0,1600)});
+  }
+  console.log("KNMI_CAPABILITIES",JSON.stringify({dataset,status:r.status,contentType:r.headers.get("content-type"),names,dimensions,xmlStart:xml.slice(0,300)}));
   if(!r.ok)process.exitCode=1;
 }
