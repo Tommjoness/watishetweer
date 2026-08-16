@@ -208,10 +208,16 @@ function uiPolishLuchtModelstatus(){
   [...c.querySelectorAll(".stat")].forEach(stat=>{
     const kop=stat.querySelector(".eyebrow"),val=stat.querySelector(".sval"),sub=stat.querySelector(".ssub");
     if(!kop||!sub||!/pollen/i.test(kop.textContent||""))return;
+    const kopTekst=String(kop.textContent||"").trim(),subTekst=String(sub.textContent||"").trim();
+    if(/niet beschikbaar|Alleen beschikbaar in Europa/i.test(subTekst))return;
+    if(/^Pollen$/i.test(kopTekst)){
+      if(/^Geen pollen verwacht voor dit uur\.?$/i.test(subTekst))sub.textContent=uiPollenTekst(false);
+      return;
+    }
     const getalMatch=String(val&&val.textContent||"").replace(",",".").match(/-?\d+(?:\.\d+)?/);
     const concentratie=getalMatch?Number(getalMatch[0]):null;
-    const aanwezig=Number.isFinite(concentratie)?concentratie>0:!/\bgeen\b/i.test(sub.textContent||"");
-    sub.textContent=uiPollenTekst(aanwezig);
+    if(!Number.isFinite(concentratie))return;
+    sub.textContent=uiPollenTekst(concentratie>0);
   });
 }
 if(typeof lucht==="function"){
