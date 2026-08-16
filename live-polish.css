@@ -79,6 +79,20 @@
 }
 
 @media(max-width:900px){
+  /* De lokale klok is context bij de plaatsnaam, geen onderdeel van de naam.
+     Op een smal scherm krijgt hij daarom een eigen, niet-afbreekbare regel.
+     Dit voorkomt dat bij lange plaatsnamen alleen ':55' naar de volgende regel
+     valt, zoals op een echte iPhone bij Vijfheerenlanden gebeurde. */
+  #plaatstijd{
+    display:block;
+    width:max-content;
+    max-width:100%;
+    margin:4px 0 0;
+    vertical-align:baseline;
+    white-space:nowrap;
+    font-size:.34em;
+  }
+
   /* Op mobiel maakte de rechts uitgelijnde zoninformatie de grafiekkop onnodig
      hoog: links bleef boven "De komende 24 uur" een groot wit vlak staan. De
      grafiekkop krijgt één duidelijke verticale volgorde en de tijden benutten
