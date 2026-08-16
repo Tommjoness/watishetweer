@@ -10,7 +10,11 @@ const {bouw}=require("./data.js");
 /* Fysieke iPhone-regressie: tijdens een nog lopende officiële bronaanvraag mag
    het waarschuwingengebied niet stilletjes leeg zijn. Zodra een succesvolle,
    officiële Nederlandse feed leeg terugkomt moet de eindstate expliciet zeggen
-   dat er voor deze locatie geen officiële waarschuwingen zijn. */
+   dat er voor deze locatie geen officiële waarschuwingen zijn.
+
+   De waarschuwingrespons wordt hieronder bewust met een expliciete gate
+   vastgehouden in plaats van met een vaste timeout. Zo bewijst de test de
+   tussenstate zonder afhankelijk te zijn van runner- of browser­snelheid. */
 const d=bouw({temp:22,tempNu:22,pp:5,pr:0,som:0,ws:10,wsNu:10,cc:40,ccNu:40,wg:20,wc:2,wcNu:2});
 d.current.time="2026-08-16T14:02";
 d.current.temperature_2m=22;
@@ -39,11 +43,22 @@ let html=fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8");
 const fixedNow=Date.UTC(2026,7,16,12,2);
 const stub=`<script>
 Date.now=()=>${fixedNow};
+window.__warningRequestCount=0;
+window.__warningGateOpen=false;
+window.__warningPending=[];
+window.__releaseWarningFetch=function(){
+  window.__warningGateOpen=true;
+  const pending=window.__warningPending.splice(0);
+  pending.forEach(resolve=>resolve());
+};
 window.fetch=async function(url){
   const u=String(url);
   let payload;
   if(u.includes('/api/waarschuwingen')){
-    await new Promise(resolve=>setTimeout(resolve,450));
+    window.__warningRequestCount+=1;
+    if(!window.__warningGateOpen){
+      await new Promise(resolve=>window.__warningPending.push(resolve));
+    }
     payload=${JSON.stringify({bron:"MeteoAlarm",dekking:true,lijst:[],land:"NL"})};
   }else if(u.includes('air-quality-api.open-meteo.com')){
     payload=${JSON.stringify(air)};
@@ -81,19 +96,28 @@ async function controleer(browserType,naam){
     page.on("pageerror",e=>fouten.push(String(e)));
     page.on("console",m=>{if(m.type()==="error")fouten.push(m.text());});
     await page.goto(`http://127.0.0.1:${server.address().port}/?lat=51.99&lon=5.09&plaats=Vijfheerenlanden&land=NL`,{waitUntil:"domcontentloaded"});
-    await page.waitForSelector("#app",{state:"visible"});
 
+    /* Houd de officiële respons nog tegen. Eerst moet aantoonbaar de echte
+       aanvraag lopen én de loadingstate in het definitieve artifact staan. */
+    await page.waitForFunction(()=>window.__warningRequestCount>0&&window.__warningPending.length>0,null,{timeout:5000});
     await page.waitForFunction(()=>{
       const el=document.querySelector('#waarschuwingen [data-ui-warning-loading="1"]');
       return !!el&&/controleren/.test(el.textContent||"");
-    },null,{timeout:2000});
+    },null,{timeout:5000});
+    await page.waitForSelector("#app",{state:"visible",timeout:5000});
+
     const tijdens=await page.locator("#waarschuwingen").innerText();
     assert.match(tijdens,/Officiële weerwaarschuwingen controleren/,`${naam}: lopende officiële controle is zichtbaar`);
+
+    /* Pas nadat de zichtbare tussenstate bewezen is mag de lege officiële feed
+       terugkomen. Vanaf dit moment worden eventuele vervolgrequests niet meer
+       geblokkeerd, zodat meerdere geldige renderer-aanroepen niet kunnen hangen. */
+    await page.evaluate(()=>window.__releaseWarningFetch());
 
     await page.waitForFunction(()=>{
       const el=document.getElementById("waarschuwingen");
       return !!el&&(el.textContent||"").trim()==="Geen officiële weerwaarschuwingen voor deze locatie.";
-    },null,{timeout:3000});
+    },null,{timeout:5000});
     const eind=await page.locator("#waarschuwingen").innerText();
     assert.equal(eind.trim(),"Geen officiële weerwaarschuwingen voor deze locatie.",`${naam}: lege officiële NL-feed krijgt expliciete nulwaarschuwingstatus`);
     assert.equal(await page.locator('#waarschuwingen [data-ui-warning-loading="1"]').count(),0,`${naam}: laadstatus verdwijnt na officiële eindstate`);
