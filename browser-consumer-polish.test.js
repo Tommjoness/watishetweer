@@ -244,7 +244,7 @@ async function controleer(page, naam, modus) {
   assert.ok(!/het is nu\s+-?\d+/i.test(resultaat.briefing), `${naam} ${modus}: briefing herhaalt actuele temperatuur niet`);
   assert.equal(resultaat.uvKop, "UV-piek vandaag", `${naam} ${modus}: UV is expliciet dagpiek`);
   assert.equal(resultaat.uvWaarde, "6", `${naam} ${modus}: UV-piek is consumentgericht afgerond`);
-  assert.equal(resultaat.uvSub, "Piek was rond 15:00 · hoog.", `${naam} ${modus}: verstreken UV-piek en zichtbaar oordeel volgen dezelfde afgeronde grens`);
+  assert.equal(resultaat.uvSub, "Verwachte UV-piek lag rond 15:00 · hoog.", `${naam} ${modus}: verstreken UV-piek blijft expliciet modelverwachting en volgt dezelfde afgeronde grens`);
   assert.equal(resultaat.drukSub, "Vrijwel stabiel.", `${naam} ${modus}: minieme luchtdrukverandering zonder schijnprecisie`);
   assert.equal(resultaat.trendKop, "Temperatuur komende 3 uur", `${naam} ${modus}: trendhorizon staat altijd in de tegelkop`);
   assert.match(resultaat.trend, /^-?\d+\s*→\s*-?\d+\s*°C$/, `${naam} ${modus}: temperatuurtrend toont uitsluitend huidige en toekomstige temperatuur`);
