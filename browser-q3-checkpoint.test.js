@@ -153,10 +153,10 @@ async function controleer(page,browserNaam,scenario,breedte){
     assert(/niet beschikbaar/i.test(r.uvsub),`${browserNaam}: ontbrekende UV wordt expliciet gemeld`);
   }else if(scenario==="uvfuture"){
     assert.equal(r.uv,"7",`${browserNaam}: UV-piek rondt zichtbaar consistent af`);
-    assert.equal(r.uvsub,"Piek rond 13:00 · hoog.",`${browserNaam}: toekomstige UV-piek wordt als toekomst gepresenteerd`);
+    assert.equal(r.uvsub,"Verwachte UV-piek rond 13:00 · hoog.",`${browserNaam}: toekomstige UV-piek blijft expliciet een modelverwachting`);
   }else if(scenario==="uvpast"){
     assert.equal(r.uv,"7",`${browserNaam}: verstreken UV-piek behoudt de dagwaarde`);
-    assert.equal(r.uvsub,"Piek was rond 13:00 · hoog.",`${browserNaam}: verstreken UV-piek wordt niet als toekomst gepresenteerd`);
+    assert.equal(r.uvsub,"Verwachte UV-piek lag rond 13:00 · hoog.",`${browserNaam}: verstreken UV-piek blijft expliciet een modelverwachting en wordt niet als toekomst gepresenteerd`);
   }else if(scenario==="tokyo"||scenario==="newyork"){
     assert.equal(r.plaatsVandaag,"2026-07-23",`${browserNaam} ${scenario}: kalenderdag volgt live IANA-plaatsklok`);
     assert.equal(r.uv,"–",`${browserNaam} ${scenario}: UV van stale vorige kalenderdag wordt niet als vandaag getoond`);
