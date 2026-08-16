@@ -12,6 +12,18 @@ const OUDE_MARK="<!-- ===== NEDERLANDSE MICROCOPY 20260815 ===== -->";
 
 if(html.includes(OUDE_MARK))throw new Error("Verouderde Nederlandse microcopy-compatibilitymarker staat nog in het artifact.");
 
+function contexten(bron,tekst){
+  const uit=[];
+  let vanaf=0;
+  while(true){
+    const i=bron.indexOf(tekst,vanaf);
+    if(i<0)break;
+    uit.push(bron.slice(Math.max(0,i-140),Math.min(bron.length,i+tekst.length+140)).replace(/\s+/g," "));
+    vanaf=i+tekst.length;
+  }
+  return uit;
+}
+
 /* De neerslagowner moet de definitieve Nederlandse zinnen nu zelf leveren. */
 for(const tekst of [
   "Voor "+'"+venster+"'+" wordt er geen neerslag verwacht.",
@@ -26,7 +38,7 @@ for(const tekst of [
 ]){
   if(!policyBron.includes(tekst))throw new Error("Canonieke neerslagowner mist definitieve Nederlandse copy: "+tekst);
 }
-for(const tekst of [
+const oud=[
   " wordt geen neerslag verwacht.",
   "Neerslag wordt verwacht het komende uur.",
   "Enkele druppels zijn mogelijk het komende uur.",
@@ -35,9 +47,19 @@ for(const tekst of [
   "Neerslag is mogelijk het komende uur.",
   "Grote kans op neerslag het komende uur.",
   "Zeer grote kans op neerslag het komende uur."
-]){
-  if(policyBron.includes(tekst))throw new Error("Verouderde Nederlandse neerslagcopy staat nog in de canonieke owner: "+tekst);
-  if(html.includes(tekst))throw new Error("Verouderde Nederlandse neerslagcopy staat nog in het finale artifact: "+tekst);
+];
+const gevonden=[];
+for(const tekst of oud){
+  if(policyBron.includes(tekst))gevonden.push({tekst,bron:"canonieke owner",context:contexten(policyBron,tekst)});
+  const hits=contexten(html,tekst);
+  if(hits.length)gevonden.push({tekst,bron:"finale artifact",context:hits});
+}
+if(gevonden.length){
+  for(const item of gevonden){
+    console.error("OUDE NEERSLAGCOPY ["+item.bron+"] "+item.tekst);
+    item.context.forEach((ctx,i)=>console.error("  #"+(i+1)+" "+ctx));
+  }
+  throw new Error("Verouderde Nederlandse neerslagcopy staat nog in "+gevonden.length+" bron/tekst-combinaties.");
 }
 for(const tekst of [
   "De komende twee uur wordt er geen neerslag verwacht.",
