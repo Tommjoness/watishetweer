@@ -15,7 +15,7 @@ const {bouw}=require("./data.js");
    De waarschuwingrespons wordt hieronder bewust met een expliciete gate
    vastgehouden in plaats van met een vaste timeout. Zo bewijst de test de
    tussenstate zonder afhankelijk te zijn van runner- of browser­snelheid. */
-const d=bouw({temp:22,tempNu:22,pp:5,pr:0,som:0,ws:10,wsNu:10,cc:40,ccNu:40,wg:20,wc:2,wcNu:2});
+const d=bouw({temp:()=>22,tempNu:22,pp:()=>5,pr:()=>0,som:0,ws:10,wsNu:10,cc:()=>40,ccNu:40,wg:()=>20,wc:()=>2,wcNu:2});
 d.current.time="2026-08-16T14:02";
 d.current.temperature_2m=22;
 d.current.apparent_temperature=22;
