@@ -218,7 +218,12 @@ function q4TekenRegenperioden(svg,g,perioden){
   const bedragen=q4PeriodeBedragLabels(g,perioden,y,bedragFont);
   const laatsteBedragY=bedragen.eersteY+(bedragen.rijen-1)*bedragen.stap;
   const samenvattingY=laatsteBedragY+20;
-  const detailRegels=perioden.length>1?perioden.map(p=>q4PeriodeTijdvak(g,p)+" · "+q4Mm(p.som)+" mm"):[];
+  /* Exacte periode-regels zijn vooral nodig bij de 24-uursgrafiek, waar de
+     gebruiker de komende regenmomenten praktisch wil kunnen plannen. Op 48 uur
+     of zeven dagen kunnen er veel afzonderlijke natte blokken zijn; alle regels
+     uitschrijven zou de SVG daar onnodig hoog maken. Brackets, totalen en piek
+     blijven in die langere weergaven wel gewoon bestaan. */
+  const detailRegels=perioden.length>1&&g.n<=25?perioden.map(p=>q4PeriodeTijdvak(g,p)+" · "+q4Mm(p.som)+" mm"):[];
   const piekY=samenvattingY+regel*(detailRegels.length+1);
   const nieuwH=Math.max(basisH,piekY+17+8);
   svg.setAttribute("viewBox","0 0 "+g.W+" "+nieuwH);g.H=nieuwH;
@@ -264,7 +269,8 @@ function q4TekenRegenperioden(svg,g,perioden){
   groep.appendChild(q4SvgTekst(g.pl,piekY,piekTekst,font,"peak"));
 
   const scrub=svg.querySelector("#scrub");svg.insertBefore(groep,scrub||null);
-  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve. Onder de grafiek staan tijdvak en verwachte hoeveelheid per regenperiode; kanswaarden zonder meetbare hoeveelheid blijven via de details beschikbaar.").trim());
+  const detailAria=g.n<=25?" Onder de grafiek staan tijdvak en verwachte hoeveelheid per regenperiode.":"";
+  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve."+detailAria+" Kanswaarden zonder meetbare hoeveelheid blijven via de details beschikbaar.").trim());
 }
 
 /* De kwartiergrafiek tekent in de historische owner ieder positief getal. Een
