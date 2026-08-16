@@ -1,12 +1,7 @@
 "use strict";
 const assert=require("assert"),fs=require("fs"),path=require("path");
-const {klokTekstMetSeconden,tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert}=require("./live-polish-v2.js");
+const {tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert}=require("./live-polish-v2.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
-
-test("live klok toont uren minuten en seconden",()=>{
-  assert.equal(klokTekstMetSeconden({hour:13,minute:4,second:9}),"13:04:09");
-  assert.equal(klokTekstMetSeconden({hour:0,minute:0,second:0}),"00:00:00");
-});
 
 test("tooltip houdt links altijd hetzelfde label voor neerslagkans",()=>{
   assert.equal(tooltipWaardeKort("geen neerslag verwacht"),"droog");
@@ -57,6 +52,14 @@ test("desktopgrid reset oude twee- en vierkolomsselectors expliciet",()=>{
   assert(css.includes("overflow-wrap:break-word"));
 });
 
+test("mobiele plaatsklok staat op een eigen onafbreekbare regel",()=>{
+  const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
+  assert(css.includes("#plaatstijd{"));
+  assert(css.includes("display:block"));
+  assert(css.includes("white-space:nowrap"));
+  assert(css.includes("font-size:.34em"));
+});
+
 test("mobiele grafiekkop benut volle breedte zonder lege rechterkolom",()=>{
   const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
   assert(css.includes(".chartkop{"));
@@ -103,11 +106,13 @@ test("actuele weerblok staat op desktop verticaal in balans met meetraster",()=>
   assert(css.includes("align-self:center"));
 });
 
-test("productiebundel bevat interactiepolish, desktopbalk en richtinggevoelige mobiele scrollcontrole",()=>{
+test("productiebundel bevat interactiepolish zonder aparte secondenklok",()=>{
   const html=fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8");
   assert(html.includes("LIVE INTERACTIEPOLISH"));
   assert(html.includes("WeatherNowPolishV2"));
-  assert(html.includes("setInterval(liveKlokTik,1000)"));
+  assert(!html.includes("liveKlokTik"));
+  assert(!html.includes("klokTekstMetSeconden"));
+  assert(html.includes("klokMinuutTimer=setInterval(klokBijwerken,60000)"));
   assert(html.includes("tooltipWaardeKort"));
   assert(html.includes("neerslagkans"));
   assert(html.includes("temperatuurPuntIndex"));
