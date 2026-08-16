@@ -138,7 +138,7 @@ async function controleer(page,browserNaam,scenario,breedte){
     assert.equal(r.cloudsub,"Geheel bewolkt.",`${browserNaam} ${breedte}px: 100% heet geheel bewolkt`);
     assert.equal(compact(r.vis),"0,0km",`${browserNaam} ${breedte}px: nul meter zicht blijft geldige data met bestaande km-precisie`);
     assert.equal(r.uv,"0",`${browserNaam} ${breedte}px: UV nul blijft geldige data`);
-    assert.equal(r.uvsub,"Nauwelijks UV vandaag.",`${browserNaam} ${breedte}px: nul-UV krijgt tijdneutrale nultekst`);
+    assert.equal(r.uvsub,"Nauwelijks UV verwacht vandaag.",`${browserNaam} ${breedte}px: nul-UV blijft expliciet een modelverwachting`);
     assert(/^1\s*korrel\/m³$/i.test(r.pollen),`${browserNaam} ${breedte}px: Graspollen met één korrel gebruikt enkelvoud (${r.pollen})`);
     assert(/tabular-nums/i.test(r.fontVariant)||/tnum/i.test(r.fontFeatures),`${browserNaam} ${breedte}px: numerieke kolommen behouden tabular-nums (${r.fontVariant}; ${r.fontFeatures})`);
     assert(!/slashed-zero/i.test(r.fontVariant)&&!/["']?zero["']?\s+1/i.test(r.fontFeatures),`${browserNaam} ${breedte}px: consumentencijfers gebruiken geen doorgestreepte nul (${r.fontVariant}; ${r.fontFeatures})`);
@@ -153,10 +153,10 @@ async function controleer(page,browserNaam,scenario,breedte){
     assert(/niet beschikbaar/i.test(r.uvsub),`${browserNaam}: ontbrekende UV wordt expliciet gemeld`);
   }else if(scenario==="uvfuture"){
     assert.equal(r.uv,"7",`${browserNaam}: UV-piek rondt zichtbaar consistent af`);
-    assert.equal(r.uvsub,"Piek rond 13:00 · hoog.",`${browserNaam}: toekomstige UV-piek wordt als toekomst gepresenteerd`);
+    assert.equal(r.uvsub,"Verwachte UV-piek rond 13:00 · hoog.",`${browserNaam}: toekomstige UV-piek blijft expliciet een modelverwachting`);
   }else if(scenario==="uvpast"){
     assert.equal(r.uv,"7",`${browserNaam}: verstreken UV-piek behoudt de dagwaarde`);
-    assert.equal(r.uvsub,"Piek was rond 13:00 · hoog.",`${browserNaam}: verstreken UV-piek wordt niet als toekomst gepresenteerd`);
+    assert.equal(r.uvsub,"Verwachte UV-piek lag rond 13:00 · hoog.",`${browserNaam}: verstreken UV-piek blijft expliciet een modelverwachting en wordt niet als toekomst gepresenteerd`);
   }else if(scenario==="tokyo"||scenario==="newyork"){
     assert.equal(r.plaatsVandaag,"2026-07-23",`${browserNaam} ${scenario}: kalenderdag volgt live IANA-plaatsklok`);
     assert.equal(r.uv,"–",`${browserNaam} ${scenario}: UV van stale vorige kalenderdag wordt niet als vandaag getoond`);

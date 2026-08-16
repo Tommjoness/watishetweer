@@ -14,6 +14,14 @@ assert.equal(landfeed.lijst.length,0);
 assert.equal(landfeed.plaatsSpecifiek,false);
 assert.equal(landfeed.reden,"geen plaats-specifieke dekking");
 
+const legeLandfeed=alleenPlaatsgebonden({
+  bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:false,land:"NL",lijst:[]
+});
+assert.equal(legeLandfeed.dekking,true,"een succesvol opgehaalde lege officiële landfeed bewijst nul actieve waarschuwingen");
+assert.deepEqual(legeLandfeed.lijst,[]);
+assert.equal(legeLandfeed.plaatsSpecifiek,false);
+assert.equal(legeLandfeed.reden,undefined);
+
 const punt=alleenPlaatsgebonden({
   bron:"National Weather Service",dekking:true,plaatsSpecifiek:true,
   lijst:[{titel:"Heat Advisory",plaatsSpecifiek:true,scope:"punt"}]
@@ -43,4 +51,4 @@ assert.equal(onbereikbaar.dekking,false);
 assert.deepEqual(onbereikbaar.lijst,[]);
 assert.equal(onbereikbaar.reden,"bron onbereikbaar");
 
-console.log("Waarschuwingsscope servergrens: punt/gebied toegestaan, land/onbewezen fail-closed geslaagd.");
+console.log("Waarschuwingsscope servergrens: punt/gebied toegestaan, lege officiële landfeed als nulwaarschuwing en niet-lege land/onbewezen fail-closed geslaagd.");

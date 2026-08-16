@@ -162,6 +162,18 @@ function q4PeriodeBedragLabels(g,perioden,y,font){
   return {labels,rijen:Math.max(1,rijen.length),eersteY:y+14,stap:11};
 }
 
+/* Een bracket is visueel snel te scannen, maar bij meerdere perioden hoort de
+   exacte timing ook als tekst onder de grafiek te staan. Dat voorkomt dat de
+   gebruiker de x-as moet terugrekenen. Bij een kalendergrens noemen we beide
+   dagen expliciet, zodat 23:00–02:00 nooit dubbelzinnig wordt. */
+function q4PeriodeTijdvak(g,p){
+  const van=g&&Array.isArray(g.TI)?g.TI[p.van]:null,tot=g&&Array.isArray(g.TI)?g.TI[p.tot]:null;
+  const vanDatum=String(van||"").slice(0,10),totDatum=String(tot||"").slice(0,10);
+  const vanDag=q4DagKort(van),totDag=q4DagKort(tot);
+  if(vanDatum&&totDatum&&vanDatum!==totDatum)return vanDag+" "+q4Tijd(van)+"–"+totDag+" "+q4Tijd(tot);
+  return (vanDag?vanDag+" ":"")+q4Tijd(van)+"–"+q4Tijd(tot);
+}
+
 function q4TekenRegenperioden(svg,g,perioden){
   svg.querySelectorAll('g[data-q4-rain-periods]').forEach(el=>el.remove());
 
@@ -206,12 +218,19 @@ function q4TekenRegenperioden(svg,g,perioden){
   const bedragen=q4PeriodeBedragLabels(g,perioden,y,bedragFont);
   const laatsteBedragY=bedragen.eersteY+(bedragen.rijen-1)*bedragen.stap;
   const samenvattingY=laatsteBedragY+20;
-  const nieuwH=Math.max(basisH,samenvattingY+regel+17+8);
+  /* Exacte periode-regels zijn vooral nodig bij de 24-uursgrafiek, waar de
+     gebruiker de komende regenmomenten praktisch wil kunnen plannen. Op 48 uur
+     of zeven dagen kunnen er veel afzonderlijke natte blokken zijn; alle regels
+     uitschrijven zou de SVG daar onnodig hoog maken. Brackets, totalen en piek
+     blijven in die langere weergaven wel gewoon bestaan. */
+  const detailRegels=perioden.length>1&&g.n<=25?perioden.map(p=>q4PeriodeTijdvak(g,p)+" · "+q4Mm(p.som)+" mm"):[];
+  const piekY=samenvattingY+regel*(detailRegels.length+1);
+  const nieuwH=Math.max(basisH,piekY+17+8);
   svg.setAttribute("viewBox","0 0 "+g.W+" "+nieuwH);g.H=nieuwH;
 
   const groep=document.createElementNS(Q4_SVG_NS,"g");
   groep.setAttribute("data-q4-rain-periods","1");
-  groep.setAttribute("aria-label","Neerslagperioden met hoeveelheid per periode");
+  groep.setAttribute("aria-label","Neerslagperioden met tijdvak en hoeveelheid per periode");
   /* De bracketlaag is puur informatief. Het transparante #hit-vlak blijft de
      exclusieve eigenaar van muis/touchinteractie; de regenlaag kan daardoor ook
      na toekomstige DOM-herordening nooit een pointerevent onderscheppen. */
@@ -237,14 +256,21 @@ function q4TekenRegenperioden(svg,g,perioden){
   const periodeTekst=één
     ? q4Tijd(g.TI[eerste.van])+"–"+q4Tijd(g.TI[eerste.tot])+" · totaal "+q4Mm(totaal)+" mm"
     : perioden.length+" regenperiodes · totaal "+q4Mm(totaal)+" mm";
-  const dag=g.n>49?q4DagKort(g.TI[piek.piek])+" ":"";
+  const basisDatum=String(g.TI&&g.TI[0]||"").slice(0,10),piekDatum=String(g.TI&&g.TI[piek.piek]||"").slice(0,10);
+  const dag=(g.n>49||(basisDatum&&piekDatum&&basisDatum!==piekDatum))?q4DagKort(g.TI[piek.piek])+" ":"";
   const piekTekst="Meeste regen "+dag+q4Tijd(g.TI[piek.piek-1])+"–"+q4Tijd(g.TI[piek.piek])+" · "+q4Mm(piek.piekMm)+" mm";
   const font=g.M?9.3:10.2;
   groep.appendChild(q4SvgTekst(g.pl,samenvattingY,periodeTekst,font,"total"));
-  groep.appendChild(q4SvgTekst(g.pl,samenvattingY+regel,piekTekst,font,"peak"));
+  detailRegels.forEach((tekst,i)=>{
+    const detail=q4SvgTekst(g.pl,samenvattingY+regel*(i+1),tekst,font);
+    detail.setAttribute("data-q4-rain-period-detail",String(i));
+    groep.appendChild(detail);
+  });
+  groep.appendChild(q4SvgTekst(g.pl,piekY,piekTekst,font,"peak"));
 
   const scrub=svg.querySelector("#scrub");svg.insertBefore(groep,scrub||null);
-  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve. Onder iedere periode staat de verwachte hoeveelheid; kanswaarden zonder meetbare hoeveelheid blijven via de details beschikbaar.").trim());
+  const detailAria=g.n<=25?" Onder de grafiek staan tijdvak en verwachte hoeveelheid per regenperiode.":"";
+  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve."+detailAria+" Kanswaarden zonder meetbare hoeveelheid blijven via de details beschikbaar.").trim());
 }
 
 /* De kwartiergrafiek tekent in de historische owner ieder positief getal. Een

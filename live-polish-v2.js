@@ -5,12 +5,6 @@
 
 const eindig=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 
-function klokTekstMetSeconden(delen){
-  const p=delen||{};
-  if(![p.hour,p.minute,p.second].every(Number.isFinite)) return "--:--:--";
-  return String(p.hour).padStart(2,"0")+":"+String(p.minute).padStart(2,"0")+":"+String(p.second).padStart(2,"0");
-}
-
 function tooltipWaardeKort(waarde){
   const t=String(waarde==null?"":waarde).trim();
   if(/^geen neerslag verwacht\.?$/i.test(t)) return "droog";
@@ -72,38 +66,17 @@ function nuLabelConcurreert(punt,label,cw,mobiel){
   return Math.abs(lx-px)<=dx&&Math.abs(ly-py)<=dy;
 }
 
-const api={klokTekstMetSeconden,tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert};
+const api={tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert};
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowPolishV2=api;
 
 if(typeof document==="undefined"||typeof S==="undefined") return;
 
-/* De klok is puur presentatie. Elke seconde worden alleen de twee klokteksten
-   bijgewerkt. De bestaande dagwisselcontrole blijft via klokBijwerken() actief;
-   weerdata of grafieken worden dus niet iedere seconde opnieuw opgehaald/getekend. */
-const basisKlokBijwerken=klokBijwerken;
-const basisClearKlokTimer=clearKlokTimer;
-let liveKlokTimer=null,liveKlokUitlijnTimer=null;
-function liveKlokTik(){
-  basisKlokBijwerken();
-  const tijd=klokTekstMetSeconden(plaatsTijdDelen());
-  const pt=document.getElementById("plaatstijd");if(pt)pt.textContent=tijd;
-  const mt=document.getElementById("minitijd");if(mt)mt.textContent=tijd;
-}
-clearKlokTimer=function(){
-  basisClearKlokTimer();
-  if(liveKlokUitlijnTimer!==null){clearTimeout(liveKlokUitlijnTimer);liveKlokUitlijnTimer=null;}
-  if(liveKlokTimer!==null){clearInterval(liveKlokTimer);liveKlokTimer=null;}
-};
-klokTimerStart=function(){
-  clearKlokTimer();
-  liveKlokTik();
-  const wacht=1000-(Date.now()%1000);
-  liveKlokUitlijnTimer=setTimeout(()=>{
-    liveKlokTik();
-    liveKlokTimer=setInterval(liveKlokTik,1000);
-  },wacht);
-};
+/* De bestaande plaatsklok in de kernruntime is bewust minuutprecies en wordt
+   exact op de minuutgrens bijgewerkt. Een eerdere polishlaag verving die door
+   HH:MM:SS en schreef elke seconde naar de DOM; dat voegde geen weerwaarde toe
+   en kon bij lange plaatsnamen op mobiel midden in de klok afbreken. Laat de
+   centrale klokowner daarom weer ongewijzigd eigenaar van #plaatstijd/#minitijd. */
 
 /* In de SVG-tooltip staan label en waarde als twee losse tekstnodes. Lange
    consumententeksten worden hier alleen typografisch ingekort; de betekenis

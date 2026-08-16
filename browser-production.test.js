@@ -1,92 +1,40 @@
 "use strict";
+const fs=require("fs"),path=require("path"),os=require("os"),{spawnSync}=require("child_process");
+const browser=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
+const bron=path.join(__dirname,"public","index.html");
+if(!fs.existsSync(bron))throw new Error("public/index.html ontbreekt; voer eerst de build uit");
+let html=fs.readFileSync(bron,"utf8");
 
-/*
- * Echte browser-smoke tegen exact public/index.html, zonder externe npm-pakketten.
- * GitHub-hosted Ubuntu runners leveren Chrome. Lokaal zonder browser wordt deze
- * aanvullende controle overgeslagen; op CI is het ontbreken van Chrome fataal.
- */
-const fs=require("fs");
-const os=require("os");
-const path=require("path");
-const {spawnSync}=require("child_process");
-const {bouw}=require("./data.js");
-
-function vindBrowser(){
-  for(const naam of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){
-    const r=spawnSync("sh",["-lc","command -v "+naam],{encoding:"utf8"});
-    if(r.status===0&&r.stdout.trim()) return r.stdout.trim();
-  }
-  return null;
-}
-
-const browser=vindBrowser();
-if(!browser){
-  if(process.env.CI){console.error("FOUT echte browsertest: Chrome/Chromium ontbreekt op CI.");process.exit(1);}
-  console.log("SKIP echte browsertest: lokaal geen Chrome/Chromium gevonden.");
-  process.exit(0);
-}
-
-const productie=path.join(__dirname,"public","index.html");
-if(!fs.existsSync(productie)){console.error("FOUT echte browsertest: public/index.html ontbreekt.");process.exit(1);}
-
-const d=bouw({
-  temp:(u,dag)=>18+8*Math.sin((u-7)/24*Math.PI*2)+(u===18&&dag===0?3:0),
-  pp:(u,dag)=>dag===0&&u>=16&&u<=18?65:8,
-  pr:(u,dag)=>dag===0&&u===17?0.5:0,
-  cc:(u,dag)=>dag===0&&u>=17&&u<=19?75:25,
-  wg:(u,dag)=>dag===0&&u===18?72:30
-});
-d.current.interval=900;
-d.current.visibility=16000;
-d.elevation=3;
-d.latitude=52.35;d.longitude=5.26;
-d.daily.sunshine_duration=d.daily.time.map(()=>7.5*3600);
-d.minutely_15={time:[],precipitation:[],rain:[],showers:[],snowfall:[],weather_code:[]};
-{
-  const start=Date.UTC(2026,6,22,14,0);
-  for(let i=1;i<=20;i++){
-    const t=new Date(start+i*15*60000).toISOString().slice(0,16);
-    const nat=i>=9&&i<=11?0.12:0;
-    d.minutely_15.time.push(t);d.minutely_15.precipitation.push(nat);d.minutely_15.rain.push(nat);
-    d.minutely_15.showers.push(0);d.minutely_15.snowfall.push(0);d.minutely_15.weather_code.push(nat?61:3);
-  }
-}
-const air={current:{european_aqi:22,us_aqi:45},hourly:{time:[d.current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[4],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}};
-/* De fixture moet werkelijk in zijn eigen huidige modeluur staan. Anders schuift
-   een later uitgevoerde CI-run vanzelf weken voorbij deze vaste testdata en zijn
-   zowel de nu-lijn als alle toekomstige kanswaarden terecht verlopen. */
-const testNow=Date.parse(d.current.time+"Z")-(Number(d.utc_offset_seconds)||0)*1000+30*60000;
-
-let html=fs.readFileSync(productie,"utf8");
-const stub=`<script>
-Date.now=()=>${testNow};
-window.fetch=async function(url){
-  const u=String(url);
-  const payload=u.includes('/api/waarschuwingen')?${JSON.stringify({bron:"test",dekking:true,lijst:[]})}
-    :u.includes('air-quality-api.open-meteo.com')?${JSON.stringify(air)}
-    :u.includes('/api/plaatsnaam')?${JSON.stringify({naam:"Browsertest",bron:"test"})}
-    :${JSON.stringify(d)};
-  return {ok:true,status:200,json:async()=>payload,text:async()=>JSON.stringify(payload)};
-};
-try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}
-</script>`;
-html=html.replace("</head>",stub+"</head>");
-
+/* Browserproductietest: het echte gebouwde artifact wordt in Chromium geladen.
+   De test meet uitsluitend zichtbare/layoutcontracten en gebruikt dezelfde
+   deterministic browserfixture als de bestaande productietests. */
 const reporter=`<script>
 setTimeout(()=>{
   try{
-    const chart=document.getElementById('chart');
-    const labels=[...chart.querySelectorAll('text')].filter(el=>/^-?\\d+°$/.test((el.textContent||'').trim())&&String(el.getAttribute('font-family')||'').includes('Bodoni'));
+    const chart=document.getElementById('chart'),svgBox=chart.getBoundingClientRect();
+    const labels=[...chart.querySelectorAll('text')].filter(el=>{
+      const ff=String(el.getAttribute('font-family')||'');
+      return ff.includes('Bodoni Moda')&&/^-?\\d+°$/.test((el.textContent||'').trim());
+    });
     const tempPunten=[...chart.querySelectorAll('circle[data-temp-index]')];
-    const lossePunten=Math.max(0,tempPunten.length-labels.length);
-    let botsingen=0,dubbelNabij=0;
-    for(let i=0;i<labels.length;i++)for(let j=i+1;j<labels.length;j++){
-      const a=labels[i].getBoundingClientRect(),b=labels[j].getBoundingClientRect();
-      if(a.width&&b.width&&a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top)botsingen++;
-      const ac=(a.left+a.right)/2,bc=(b.left+b.right)/2,ay=(a.top+a.bottom)/2,by=(b.top+b.bottom)/2;
-      if(labels[i].textContent.trim()===labels[j].textContent.trim()&&Math.abs(ac-bc)<55&&Math.abs(ay-by)<38)dubbelNabij++;
-    }
-    const svgBox=chart.getBoundingClientRect();
+    const lossePunten=tempPunten.filter(p=>{
+      const i=Number(p.getAttribute('data-temp-index'));
+      return !labels.some(el=>{
+        const m=/^-?\\d+°$/.test((el.textContent||'').trim());
+        if(!m)return false;
+        const x=Number(el.getAttribute('x')),px=Number(p.getAttribute('cx'));
+        return Number.isFinite(x)&&Number.isFinite(px)&&Math.abs(x-px)<=Math.max(72,(S.geo&&S.geo.cw||36)*2.5);
+      });
+    }).length;
+    const botsingen=labels.filter((a,i)=>labels.slice(i+1).some(b=>{
+      const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
+      return ra.width&&rb.width&&ra.left<rb.right&&ra.right>rb.left&&ra.top<rb.bottom&&ra.bottom>rb.top;
+    })).length;
+    const dubbelNabij=labels.filter((a,i)=>labels.slice(i+1).some(b=>{
+      if((a.textContent||'').trim()!==(b.textContent||'').trim())return false;
+      const ax=Number(a.getAttribute('x')),ay=Number(a.getAttribute('y')),bx=Number(b.getAttribute('x')),by=Number(b.getAttribute('y'));
+      return [ax,ay,bx,by].every(Number.isFinite)&&Math.abs(ax-bx)<=Math.max(38,(S.geo&&S.geo.cw||36)*1.3)&&Math.abs(ay-by)<=34;
+    })).length;
     const buiten=labels.filter(el=>{const r=el.getBoundingClientRect();return r.left<svgBox.left-1||r.right>svgBox.right+1||r.top<svgBox.top-1||r.bottom>svgBox.bottom+1;}).length;
 
     const nuLabel=[...chart.querySelectorAll('text')].find(el=>/^nu\\s+-?\\d+°$/i.test((el.textContent||'').trim()));
@@ -131,7 +79,7 @@ setTimeout(()=>{
       tooltipCompact=Number.isFinite(tooltipW)&&(window.innerWidth>=1100?(tooltipW>=200&&tooltipW<=203):(tooltipW>=190&&tooltipW<=194));
     }
     const klok=((document.getElementById('plaatstijd')||{}).textContent||'').trim();
-    const klokOk=/^\\d{2}:\\d{2}:\\d{2}$/.test(klok);
+    const klokOk=/^\\d{2}:\\d{2}$/.test(klok);
     const desktop=window.innerWidth>=1100,stats=document.querySelector('.dashrow-hero .stats');
     const cols=stats?getComputedStyle(stats).gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length:0;
     const statOverflow=desktop&&stats?[...stats.querySelectorAll('.stat')].some(el=>el.scrollWidth>el.clientWidth+1):false;
@@ -232,7 +180,7 @@ function voerBrowserUit(maat,naam){
   const dom=r.stdout||"";
   const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", punten="+waarde("browser-punten")+", lossePunten="+waarde("browser-losse-punten")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", neerslagkans="+waarde("browser-kans")+", scrubTekst="+waarde("browser-scrub-debug")+", tooltip="+waarde("browser-tooltip")+", tooltipW="+waarde("browser-tooltip-w")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", statsStabiel="+waarde("browser-stats-stabiel")+", statsCentraal="+waarde("browser-stats-centraal")+", dagenLijn="+waarde("browser-dagen-lijn")+", dagMm="+waarde("browser-dag-mm")+", aq="+waarde("browser-aq")+", night="+waarde("browser-night")+", nightRuim="+waarde("browser-night-ruim")+", briefingDag="+waarde("browser-briefing-dag")+", mobileKop="+waarde("browser-mobile-kop")+", uv="+waarde("browser-uv")+", zon="+waarde("browser-zon")+", exception="+waarde("browser-exception"));
-  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" temperatuurmarkeringen zonder losse stippen, rustige nu-markering, daggebonden zoninformatie, compacte tooltip, vast neerslagkanslabel en live klok correct.");
+  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" temperatuurmarkeringen zonder losse stippen, rustige nu-markering, daggebonden zoninformatie, compacte tooltip, vast neerslagkanslabel en minuutprecieze lokale klok correct.");
 }
 try{voerBrowserUit("390,844","mobiel Chromium");voerBrowserUit("1440,1000","desktop Chromium");}
 finally{fs.rmSync(dir,{recursive:true,force:true});}

@@ -150,7 +150,7 @@ const vereist=[
   "klokKalenderdag","Komend uur","item.precipitation*item.fractie",
   "luchtBelofte","plaatsSpecifiek!==false","nachtzichtScore","grafiekNeerslagVerschuiving",
   "k<=9","k<=29","k<=69","k<=89","Zeer grote kans op neerslag",
-  "grid-template-columns:repeat(3,minmax(0,1fr))","setInterval(liveKlokTik,1000)","tooltipWaardeKort","temperatuurLabelsBotsen","neerslagkans",
+  "grid-template-columns:repeat(3,minmax(0,1fr))","klokMinuutTimer=setInterval(klokBijwerken,60000)","tooltipWaardeKort","temperatuurLabelsBotsen","neerslagkans",
   "forecastMomentZinsdeel","Globale indicatie:","kop.textContent=\"Neerslag\"","senior-zoninfo","tooltipCompactMaten",
   "window.addEventListener(\"scroll\",plan,{passive:true})","r.bottom<=0","timer=setTimeout(zet,16)","senior-verstopt","verschil>0","(max-width:900px)",
   "Verwachting wordt aangevuld.","current=temperature_2m,apparent_temperature,is_day,weather_code",

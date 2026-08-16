@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: 22
       - name: Installeer Playwright
-        run: npm install --no-save --package-lock=false playwright
+        run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Pure en buildregressies
         run: npm test
       - name: Installeer echte browsers
@@ -43,6 +43,18 @@ jobs:
           if [ "$code" -ne 0 ]; then
             msg="$(tail -n 30 /tmp/accessibility-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
             echo "::error file=browser-accessibility.test.js,line=1::$msg"
+            exit "$code"
+          fi
+      - name: Officiële waarschuwingstatus in Chromium en WebKit
+        shell: bash
+        run: |
+          set +e
+          node browser-warning-empty-state.test.js > /tmp/warning-e2e.log 2>&1
+          code=$?
+          cat /tmp/warning-e2e.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 50 /tmp/warning-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=browser-warning-empty-state.test.js,line=1::$msg"
             exit "$code"
           fi
       - name: Finale 27-punten artifactcontrole
@@ -89,6 +101,8 @@ jobs:
             echo "::error file=browser-q4-rain-periods.test.js,line=1::$msg"
             exit "$code"
           fi
+      - name: Regenperioden exact per tijdvak in Chromium en WebKit
+        run: node browser-rain-period-details.test.js
       - name: Serviceworker upgrade en offline in Chromium
         shell: bash
         run: |

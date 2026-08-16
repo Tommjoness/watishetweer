@@ -78,10 +78,10 @@ assert.equal(p.corrigeerNachtVensterBron("Beste periode 23:00–02:00",1,3,{zons
 assert.equal(p.corrigeerNachtVensterBron("Beste periode 23:00–02:00",5,8,{zonsopkomst:"06:25"}),"Waarschijnlijk beste periode van de avond tot de nacht.");
 assert.equal(p.corrigeerNachtVensterBron("Geen gunstig kijkvenster door bewolking en maanlicht",0),"Geen gunstig kijkvenster door bewolking en maanlicht.");
 
-assert.equal(p.formatteerMaanTekst("maan onder 22:03"),"Maan: gaat om 22:03 onder.");
-assert.equal(p.formatteerMaanTekst("de maan blijft onder de horizon"),"Maan: blijft onder de horizon.");
-assert.equal(p.formatteerMaanTekst("maan op 21:10 · onder 04:20"),"Maan: komt om 21:10 op en gaat om 04:20 onder.");
-assert.deepEqual(p.nachtMetaDelen("Gem. zicht 10+ km · maan onder 22:03"),{zicht:"Gemiddeld zicht: 10+ km",maan:"Maan: gaat om 22:03 onder."});
+assert.equal(p.formatteerMaanTekst("maan onder 22:03"),"Maanondergang om 22:03.");
+assert.equal(p.formatteerMaanTekst("de maan blijft onder de horizon"),"Maan blijft onder de horizon.");
+assert.equal(p.formatteerMaanTekst("maan op 21:10 · onder 04:20"),"Maanopkomst om 21:10 · maanondergang om 04:20.");
+assert.deepEqual(p.nachtMetaDelen("Gem. zicht 10+ km · maan onder 22:03"),{zicht:"Gemiddeld zicht: 10+ km",maan:"Maanondergang om 22:03."});
 
 assert.equal(p.pollenKop("Pollen gras"),"Graspollen");
 assert.equal(p.pollenKop("Pollen bijvoet"),"Bijvoetpollen");
@@ -91,4 +91,4 @@ assert.equal(p.pollenEenheid(1.5),"korrels/m³");
 assert.equal(p.pollenEenheid(0),"korrels/m³");
 assert.equal(p.pollenEenheid(4),"korrels/m³");
 
-console.log("Mobiele screenshot-polish: kalendergrens, Nachtzicht, maanfase, copy, weekleesbaarheid en pollenregressies geslaagd.");
+console.log("Mobiele screenshot-polish: kalendergrens, Nachtzicht, maanfase, natuurlijke maancopy, weekleesbaarheid en pollenregressies geslaagd.");

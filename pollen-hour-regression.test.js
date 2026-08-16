@@ -47,21 +47,21 @@ assert(!mismatch.some(x=>/250/.test(x.val)),"mismatch mag geen 00:00-pollen als 
 const gelijk=context("2026-08-13T12:00",250);
 const gras=vind(gelijk,"Graspollen");
 assert(gras,"exact uur moet een gras-pollenrij tonen: "+JSON.stringify(gelijk));
-assert(/250/.test(gras.val),"exact uur moet echte pollenwaarde blijven tonen: "+JSON.stringify(gras));
-assert.equal(gras.sub,"Verwacht voor dit uur");
-assert(!/^(?:laag|matig|hoog|zeer hoog)$/.test(gras.sub),"productie mag geen universele pollen-ernstcategorie tonen: "+JSON.stringify(gras));
+assert(/250/.test(gras.val),"exact uur moet echte pollenwaarde blijven tonen: "+JSON.stringify(gelijk));
+assert.equal(gras.sub,"Modelverwachting voor dit uur.");
+assert(!/^(?:laag|matig|hoog|zeer hoog)$/.test(gras.sub),"productie mag geen universele pollen-ernstcategorie tonen: "+JSON.stringify(gelijk));
 
 const klein=context("2026-08-13T12:00",0.4);
 const kleinGras=vind(klein,"Graspollen");
 assert(kleinGras,"positieve sub-1 pollenwaarde moet een rij houden: "+JSON.stringify(klein));
 assert(/(?:&lt;|<)1/.test(kleinGras.val),"positieve sub-1 pollenwaarde mag niet als nul worden getoond: "+JSON.stringify(kleinGras));
 assert(kleinGras.val.includes("korrel/m³"),"sub-1 pollen gebruikt de enkelvoudige eenheid: "+JSON.stringify(kleinGras));
-assert.equal(kleinGras.sub,"Verwacht voor dit uur");
+assert.equal(kleinGras.sub,"Modelverwachting voor dit uur.");
 
 const nul=context("2026-08-13T12:00",0);
 const nulPollen=vind(nul,"Pollen");
 assert(nulPollen,nul);
-assert.equal(nulPollen.sub,"Geen pollen verwacht voor dit uur");
+assert.equal(nulPollen.sub,"Model verwacht geen pollen voor dit uur.");
 
 /* CAMS Regional Europe dekt 25W–45E / 30N–72N. De oude appgrens eindigde al
    bij 71,5N en begon bij 29,5N. Toets de zichtbare modelkeuze op en rond beide
