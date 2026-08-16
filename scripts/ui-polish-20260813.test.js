@@ -53,6 +53,7 @@ assert.equal(api.isNwsStructuur("* WHAT...Heat index values. * WHERE...Dallas.")
 assert.equal(api.isNwsStructuur("Plaatselijk zware buien mogelijk."),false);
 assert(runtime.includes("data-ui-rain-period-probability"));
 assert(runtime.includes('bereik.textContent="Bereik"'));
+assert(runtime.includes("Geen officiële weerwaarschuwingen voor deze locatie."),"succesvolle nulwaarschuwingstatus ontbreekt");
 assert(runtime.includes("Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen."),"niet-ondersteunde waarschuwingstatus is niet consumentvriendelijk");
 assert(runtime.includes("Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald."),"tijdelijke waarschuwingstoring blijft onduidelijk");
 assert(runtime.includes("uiPolishRegenperiodeDaglabel"),"regenperiode over de daggrens mist dagcontext");
@@ -64,4 +65,4 @@ assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
 assert(apply.includes('if((html.match(/<main id="app" style="display:none">/g)||[]).length!==1)'),"definitieve main-landmark wordt niet op uniciteit geverifieerd");
-console.log("UI-polish regressiecontract groen: bronsemantiek, tijdtaal, cijfers en accessibility.");
+console.log("UI-polish regressiecontract groen: bronsemantiek, waarschuwingstatus, tijdtaal, cijfers en accessibility.");
