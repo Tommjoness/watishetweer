@@ -3,6 +3,28 @@ import api from "../api/waarschuwingen.mjs";
 
 const origineelFetch=globalThis.fetch;
 try {
+  /* Nederland: als de puntcompatibiliteitsfeed tijdelijk niet bruikbaar is maar
+     de officiële landfeed succesvol en leeg wordt opgehaald, is nul actieve
+     waarschuwingen wél bewezen. Een lege landelijke set kan immers nergens een
+     lokale waarschuwing bevatten. */
+  globalThis.fetch=async url=>{
+    const u=String(url);
+    if(u.includes("feeds.meteoalarm.org/api/v1/warnings/feeds-netherlands"))return {ok:false,status:503};
+    if(u.includes("meteoalarm-legacy-atom-netherlands"))return {
+      ok:true,status:200,
+      text:async()=>"<feed></feed>"
+    };
+    throw new Error("onverwachte fetch in Nederland-test: "+u);
+  };
+  const nl=await api.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=51.95&lon=5.10&land=NL"));
+  assert.equal(nl.status,200);
+  const nlBody=await nl.json();
+  assert.equal(nlBody.dekking,true);
+  assert.equal(nlBody.plaatsSpecifiek,false);
+  assert.equal(nlBody.land,"NL");
+  assert.deepEqual(nlBody.lijst,[]);
+  assert.equal(nlBody.reden,undefined);
+
   /* Italië/Ligurië: de compatibiliteitsfeed is niet bruikbaar en de fallback
      bevat alleen landbrede Atom-items voor andere regio's. De API-grens moet
      die informatie behouden als 'geen plaats-specifieke dekking', maar mag geen
@@ -95,7 +117,7 @@ try {
   assert.equal(usBody.lijst[0].titel,"Heat Advisory");
   assert.equal(usBody.lijst[0].plaatsSpecifiek,true);
 
-  console.log("API-waarschuwingsscope: landfeed fail-closed, NWS-landgrens, GPS-landcheck en puntdekking behouden.");
+  console.log("API-waarschuwingsscope: lege NL-landfeed als nulwaarschuwing, niet-lege landfeed fail-closed, NWS-landgrens, GPS-landcheck en puntdekking behouden.");
 } finally {
   globalThis.fetch=origineelFetch;
 }
