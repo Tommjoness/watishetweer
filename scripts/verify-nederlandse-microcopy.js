@@ -12,6 +12,12 @@ const OUDE_MARK="<!-- ===== NEDERLANDSE MICROCOPY 20260815 ===== -->";
 
 if(html.includes(OUDE_MARK))throw new Error("Verouderde Nederlandse microcopy-compatibilitymarker staat nog in het artifact.");
 
+function contextRond(bron,tekst){
+  const i=bron.indexOf(tekst);
+  if(i<0)return "";
+  return bron.slice(Math.max(0,i-120),Math.min(bron.length,i+tekst.length+120)).replace(/\s+/g," ");
+}
+
 /* De neerslagowner moet de definitieve Nederlandse zinnen nu zelf leveren. */
 for(const tekst of [
   "Voor "+'"+venster+"'+" wordt er geen neerslag verwacht.",
@@ -37,7 +43,10 @@ for(const tekst of [
   "Zeer grote kans op neerslag het komende uur."
 ]){
   if(policyBron.includes(tekst))throw new Error("Verouderde Nederlandse neerslagcopy staat nog in de canonieke owner: "+tekst);
-  if(html.includes(tekst))throw new Error("Verouderde Nederlandse neerslagcopy staat nog in het finale artifact: "+tekst);
+  if(html.includes(tekst)){
+    console.error("CONTEXT OUDE NEERSLAGCOPY ["+tekst+"]: "+contextRond(html,tekst));
+    throw new Error("Verouderde Nederlandse neerslagcopy staat nog in het finale artifact: "+tekst);
+  }
 }
 for(const tekst of [
   "De komende twee uur wordt er geen neerslag verwacht.",
