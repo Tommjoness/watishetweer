@@ -56,6 +56,7 @@ assert(runtime.includes('bereik.textContent="Bereik"'));
 assert(runtime.includes("Geen officiële weerwaarschuwingen voor deze locatie."),"succesvolle nulwaarschuwingstatus ontbreekt");
 assert(runtime.includes("Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen."),"niet-ondersteunde waarschuwingstatus is niet consumentvriendelijk");
 assert(runtime.includes("Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald."),"tijdelijke waarschuwingstoring blijft onduidelijk");
+assert(runtime.includes('data-ui-warning-loading="1"')&&runtime.includes("Officiële weerwaarschuwingen controleren…"),"lopende officiële waarschuwingcontrole mag niet stil leeg zijn");
 assert(runtime.includes("uiPolishRegenperiodeDaglabel"),"regenperiode over de daggrens mist dagcontext");
 
 /* Accessibility-regressies horen bij het artifactcontract, niet bij de
