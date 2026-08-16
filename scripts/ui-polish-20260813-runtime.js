@@ -341,7 +341,20 @@ if(typeof briefing==="function"){
 
 if(typeof waarschuwingen==="function"){
   const uiBasisWaarschuwingen=waarschuwingen;
-  waarschuwingen=async function(){const uit=await uiBasisWaarschuwingen.apply(this,arguments);uiPolishWaarschuwingen();return uit;};
+  waarschuwingen=async function(){
+    /* De basisrenderer wist eerst de oude status en wacht daarna op de officiële
+       bron. Op een echte telefoon kon die tussenfase enkele seconden volledig
+       leeg zijn, waardoor het leek alsof de site waarschuwingen stilletjes
+       oversloeg. Start de basisaanvraag eerst (zodat die zijn oude DOM wist),
+       toon daarna een rustige controle-status en vervang die na afloop door de
+       echte uitkomst: kaarten, bewezen geen-waarschuwingen of een foutstatus. */
+    const belofte=uiBasisWaarschuwingen.apply(this,arguments);
+    const el=document.getElementById("waarschuwingen");
+    if(el&&!(el.textContent||"").trim())el.innerHTML='<div class="msg" data-ui-warning-loading="1">Officiële weerwaarschuwingen controleren…</div>';
+    const uit=await belofte;
+    uiPolishWaarschuwingen();
+    return uit;
+  };
 }
 
 })();
