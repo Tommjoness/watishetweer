@@ -27,6 +27,22 @@ if(html.split(APP_CLOSE).length-1!==1)throw new Error("#app-afsluiting ontbreekt
 html=html.replace(APP_OPEN,'<main id="app" style="display:none">');
 html=html.replace(APP_CLOSE,'    </footer>\n  </main>\n</div>\n\n<script>');
 
+/* De waarschuwingrenderer zelf is eigenaar van loading en de bewezen lege
+   eindstate. Een latere runtime-wrapper is te laat voor de allereerste aanvraag
+   op een cold load: de basisfunctie kan dan al wachten op de officiële bron.
+   Patch daarom de bestaande renderer in het artifact op twee nauw begrensde
+   ankers. We veranderen geen bronselectie of waarschuwingdata, alleen de status
+   die zichtbaar is terwijl en nadat diezelfde aanvraag loopt. */
+const WAARSCHUWING_START='  S.actieveWaarschuwingen=[];\n  el.innerHTML="";\n  try{';
+const WAARSCHUWING_START_NIEUW='  S.actieveWaarschuwingen=[];\n  el.innerHTML=\'<div class="msg" data-ui-warning-loading="1">Officiële weerwaarschuwingen controleren…</div>\';\n  try{';
+if(html.split(WAARSCHUWING_START).length-1!==1)throw new Error("Start van waarschuwingrenderer ontbreekt of is dubbel.");
+html=html.replace(WAARSCHUWING_START,WAARSCHUWING_START_NIEUW);
+
+const WAARSCHUWING_EIND='        +`</p></div>`;\n    }).join("");\n  }catch(e){';
+const WAARSCHUWING_EIND_NIEUW='        +`</p></div>`;\n    }).join("");\n    if(lijst.length===0) el.innerHTML=\'<div class="msg">Geen officiële weerwaarschuwingen voor deze locatie.</div>\';\n  }catch(e){';
+if(html.split(WAARSCHUWING_EIND).length-1!==1)throw new Error("Einde van waarschuwingrenderer ontbreekt of is dubbel.");
+html=html.replace(WAARSCHUWING_EIND,WAARSCHUWING_EIND_NIEUW);
+
 const css=`
 ${CSS_MARK}
 /* Waarschuwingen zijn belangrijk, maar een gewone advisory hoeft niet dezelfde
@@ -66,10 +82,12 @@ html=html.replace(START,runtime+"\n"+START);
 if((html.match(/<main id="app" style="display:none">/g)||[]).length!==1)throw new Error("Definitief main-landmark ontbreekt of is dubbel.");
 if(html.includes(APP_OPEN))throw new Error("Oude #app-div is na accessibility-polish blijven staan.");
 if(!html.includes("footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px"))throw new Error("Mobiele footer-hitbox ontbreekt uit definitief artifact.");
+if(!html.includes('data-ui-warning-loading="1">Officiële weerwaarschuwingen controleren…'))throw new Error("Waarschuwing-laadstatus ontbreekt uit definitief artifact.");
+if(!html.includes("Geen officiële weerwaarschuwingen voor deze locatie."))throw new Error("Lege waarschuwing-eindstate ontbreekt uit definitief artifact.");
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden na UI-polish.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-polish-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"ui-polish-20260813");
-console.log("UI-polish toegepast: rustige waarschuwingen, natuurlijke windtekst, bereik-kop, opgeschoonde neerslagpresentatie, daglichtbewuste zontekst, main-landmark en mobiele footer-hitboxes; cache "+versie+".");
+console.log("UI-polish toegepast: rustige waarschuwingen, zichtbare officiële waarschuwingstatus, natuurlijke windtekst, bereik-kop, opgeschoonde neerslagpresentatie, daglichtbewuste zontekst, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
