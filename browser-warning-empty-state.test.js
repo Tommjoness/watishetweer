@@ -88,7 +88,7 @@ async function controleer(browserType,naam){
       return !!el&&/controleren/.test(el.textContent||"");
     },null,{timeout:2000});
     const tijdens=await page.locator("#waarschuwingen").innerText();
-    assert.match(tijdens,/Officiële weerwaarschuwingen controleren/ `${naam}: lopende officiële controle is zichtbaar`);
+    assert.match(tijdens,/Officiële weerwaarschuwingen controleren/,`${naam}: lopende officiële controle is zichtbaar`);
 
     await page.waitForFunction(()=>{
       const el=document.getElementById("waarschuwingen");
