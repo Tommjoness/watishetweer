@@ -45,6 +45,8 @@ jobs:
             echo "::error file=browser-accessibility.test.js,line=1::$msg"
             exit "$code"
           fi
+      - name: Officiële waarschuwingstatus in Chromium en WebKit
+        run: node browser-warning-empty-state.test.js
       - name: Finale 27-punten artifactcontrole
         run: node scripts/verify-final-27.js
       - name: Pooldag en poolnacht in Chromium en WebKit
