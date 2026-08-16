@@ -297,13 +297,15 @@ if(typeof etmaal==="function"){
 
 function uiPolishWaarschuwingen(){
   const el=document.getElementById("waarschuwingen");if(!el)return;
+  const waarschuwingenLijst=Array.isArray(S.actieveWaarschuwingen)?S.actieveWaarschuwingen:[];
   const melding=el.querySelector(".msg");
   if(melding){
     const t=(melding.textContent||"").trim();
     if(t==="Officiële weerwaarschuwingen zijn voor deze locatie niet beschikbaar.")melding.textContent="Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.";
     else if(t==="Officiële weerwaarschuwingen konden niet worden gecontroleerd.")melding.textContent="Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald.";
+  }else if(waarschuwingenLijst.length===0&&!(el.textContent||"").trim()){
+    el.innerHTML='<div class="msg">Geen officiële weerwaarschuwingen voor deze locatie.</div>';
   }
-  const waarschuwingenLijst=Array.isArray(S.actieveWaarschuwingen)?S.actieveWaarschuwingen:[];
   [...el.querySelectorAll(".waarsch")].forEach((kaart,i)=>{
     const w=waarschuwingenLijst[i]||{};
     kaart.setAttribute("data-ui-severity",String(w.niveau||"").toLowerCase());
