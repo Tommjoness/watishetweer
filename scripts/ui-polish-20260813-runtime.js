@@ -167,8 +167,8 @@ if(typeof meters==="function"){
     const druk=document.getElementById("pressub");
     if(druk)druk.textContent=uiLuchtdrukTekst(druk.textContent);
     const nu=(S.d&&S.d.current&&S.d.current.time)||"";
-    const uvPiek=typeof piek==="function"?piek("uv_index"):null,uvSub=document.getElementById("uvsub");
-    if(uvSub&&uvPiek)uvSub.textContent=uiUvPiekTekst(uvPiek,nu);
+    const uvPiek=typeof piek==="function"?piek("uv_index"):null,uvSub=document.getElementById("uvsub"),uvWaarde=document.getElementById("uv");
+    if(uvSub&&uvPiek&&uvWaarde&&uiGetal(uvWaarde.textContent)!==null)uvSub.textContent=uiUvPiekTekst(uvPiek,nu);
     const pgRuw=typeof piek==="function"?piek("wind_gusts_10m"):null;
     const pg=pgRuw&&uiGetal(pgRuw.v)!==null&&Number(pgRuw.v)>=0?pgRuw:null;
     if(!pg)return;
