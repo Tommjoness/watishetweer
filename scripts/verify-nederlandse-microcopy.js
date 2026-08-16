@@ -8,21 +8,10 @@ const ROOT=path.join(__dirname,"..");
 const htmlPad=path.join(ROOT,"public","index.html");
 const html=fs.readFileSync(htmlPad,"utf8");
 const policyBron=fs.readFileSync(path.join(ROOT,"neerslagkans-policy-v3.js"),"utf8");
+const seniorBron=fs.readFileSync(path.join(ROOT,"senior-correctness-v2.js"),"utf8");
 const OUDE_MARK="<!-- ===== NEDERLANDSE MICROCOPY 20260815 ===== -->";
 
 if(html.includes(OUDE_MARK))throw new Error("Verouderde Nederlandse microcopy-compatibilitymarker staat nog in het artifact.");
-
-function contexten(bron,tekst){
-  const uit=[];
-  let vanaf=0;
-  while(true){
-    const i=bron.indexOf(tekst,vanaf);
-    if(i<0)break;
-    uit.push(bron.slice(Math.max(0,i-140),Math.min(bron.length,i+tekst.length+140)).replace(/\s+/g," "));
-    vanaf=i+tekst.length;
-  }
-  return uit;
-}
 
 /* De neerslagowner moet de definitieve Nederlandse zinnen nu zelf leveren. */
 for(const tekst of [
@@ -38,7 +27,20 @@ for(const tekst of [
 ]){
   if(!policyBron.includes(tekst))throw new Error("Canonieke neerslagowner mist definitieve Nederlandse copy: "+tekst);
 }
-const oud=[
+
+/* Senior-correctness mag de korte neerslagcopy niet opnieuw bezitten. De helper
+   blijft uitsluitend als compatibility-API bestaan en delegeert naar hetzelfde
+   kansbeleid dat later de zichtbare kaart definitief schrijft. */
+for(const invariant of [
+  'require("./neerslagkans-policy-v3.js")',
+  'const beleid=(root&&root.WeatherNowKansbeleidV3)||kansbeleidNode;',
+  'typeof beleid.komendUurTekst==="function"',
+  'beleid.komendUurTekst(a)'
+]){
+  if(!seniorBron.includes(invariant))throw new Error("Senior-correctness mist neerslagcopydelegatie: "+invariant);
+}
+
+for(const tekst of [
   " wordt geen neerslag verwacht.",
   "Neerslag wordt verwacht het komende uur.",
   "Enkele druppels zijn mogelijk het komende uur.",
@@ -47,19 +49,10 @@ const oud=[
   "Neerslag is mogelijk het komende uur.",
   "Grote kans op neerslag het komende uur.",
   "Zeer grote kans op neerslag het komende uur."
-];
-const gevonden=[];
-for(const tekst of oud){
-  if(policyBron.includes(tekst))gevonden.push({tekst,bron:"canonieke owner",context:contexten(policyBron,tekst)});
-  const hits=contexten(html,tekst);
-  if(hits.length)gevonden.push({tekst,bron:"finale artifact",context:hits});
-}
-if(gevonden.length){
-  for(const item of gevonden){
-    console.error("OUDE NEERSLAGCOPY ["+item.bron+"] "+item.tekst);
-    item.context.forEach((ctx,i)=>console.error("  #"+(i+1)+" "+ctx));
-  }
-  throw new Error("Verouderde Nederlandse neerslagcopy staat nog in "+gevonden.length+" bron/tekst-combinaties.");
+]){
+  if(policyBron.includes(tekst))throw new Error("Verouderde Nederlandse neerslagcopy staat nog in de canonieke owner: "+tekst);
+  if(seniorBron.includes(tekst))throw new Error("Senior-correctness bezit nog verouderde Nederlandse neerslagcopy: "+tekst);
+  if(html.includes(tekst))throw new Error("Verouderde Nederlandse neerslagcopy staat nog in het finale artifact: "+tekst);
 }
 for(const tekst of [
   "De komende twee uur wordt er geen neerslag verwacht.",
@@ -101,4 +94,4 @@ const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script
 if(!scripts.length)throw new Error("Geen inline runtime gevonden voor microcopy-verificatie.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:verify-nederlandse-microcopy-"+(i+1)}));
 
-console.log("Nederlandse microcopy geverifieerd: neerslagcopy komt rechtstreeks uit de canonieke neerslagowner; overige taal blijft bij de eigen UI-owner.");
+console.log("Nederlandse microcopy geverifieerd: neerslagcopy komt rechtstreeks uit de canonieke neerslagowner; senior-correctness delegeert en overige taal blijft bij de eigen UI-owner.");
