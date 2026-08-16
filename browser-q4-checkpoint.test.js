@@ -192,13 +192,13 @@ async function apiStress(browser,naam){
 
     /* Lucht en waarschuwingen mogen afzonderlijk falen zonder weerdata te verliezen. */
     await page.evaluate(async()=>{__q4.fail.air.D=true;__q4.fail.warn.D=true;await load(-33.92,18.42,'Degradatie D',false,true,'ZA');});
-    await page.waitForFunction(()=>/Waarschuwingsdienst kon niet worden gecontroleerd/i.test(document.getElementById('waarschuwingen').textContent));
+    await page.waitForFunction(()=>/Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald/i.test(document.getElementById('waarschuwingen').textContent));
     await page.waitForTimeout(30);
     const degradatie=await page.evaluate(()=>({label:S.label,air:S.air,aq:document.getElementById('aq').textContent,warn:document.getElementById('waarschuwingen').textContent,temp:document.getElementById('t').textContent}));
     assert.equal(degradatie.label,'Degradatie D',naam+": falende nevenbronnen veranderen locatie niet");
     assert.equal(degradatie.air,null,naam+": netwerkfout luchtkwaliteit wordt geen synthetische data");
     assert(/niet beschikbaar/i.test(degradatie.aq),naam+": luchtkwaliteitfout wordt eerlijk gemeld");
-    assert(/Waarschuwingsdienst kon niet worden gecontroleerd/i.test(degradatie.warn),naam+": waarschuwingfout wordt eerlijk gemeld");
+    assert(/Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald/i.test(degradatie.warn),naam+": waarschuwingfout wordt eerlijk gemeld");
     assert(!/NaN|undefined/.test(degradatie.temp),naam+": hoofdweer blijft bruikbaar bij falende nevenbronnen");
 
     /* Beide forecastvarianten stuk: bestaande laatste briefing wordt expliciet
