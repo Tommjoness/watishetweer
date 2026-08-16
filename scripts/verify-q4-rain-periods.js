@@ -34,6 +34,10 @@ ok(html.includes('^\\d+%$')&&html.includes('el.setAttribute("x",String(positie.m
 ok(html.includes("function q4PeriodeBedragLabels(g,perioden,y,font)"),"periodehoeveelheden hebben een eigen botsingsbewuste layouthulp");
 ok(html.includes('data-q4-rain-period-amount')&&html.includes('q4Mm(p.som)+" mm"'),"iedere regenperiode toont zijn eigen berekende totaalhoeveelheid");
 ok(html.includes("while((rijen[rij]||[]).some"),"periodehoeveelheden kunnen op smalle schermen naar een volgende regel uitwijken");
+ok(html.includes("function q4PeriodeTijdvak(g,p)"),"regenperioden hebben één dag- en tijdvakformatter");
+ok(html.includes('vanDatum!==totDatum')&&html.includes('vanDag+" "+q4Tijd(van)+"–"+totDag+" "+q4Tijd(tot)'),"regenperiode over middernacht benoemt beide kalenderdagen");
+ok(html.includes('data-q4-rain-period-detail')&&html.includes('perioden.map(p=>q4PeriodeTijdvak(g,p)+" · "+q4Mm(p.som)+" mm")'),"meerdere regenperioden krijgen onder de grafiek elk tijdvak plus eigen hoeveelheid");
+ok(html.includes('const piekY=samenvattingY+regel*(detailRegels.length+1)'),"grafiekhoogte reserveert ruimte voor alle regenperioderegels vóór het piekuur");
 ok(html.includes('cc!==null&&cc>=0&&cc<5')&&html.includes('&lt;5<s>%</s>'),"vrijwel wolkeloze modelwaarden worden zonder 0/1%-schijnprecisie gepresenteerd");
 ok(html.includes('function q4NachtzichtPresentatie()')&&html.includes('el.textContent="<5%"')&&html.includes('const q4BasisNachten=nachten;'),"Nachtzicht gebruikt dezelfde <5%-presentatieregel zonder de scoreberekening te wijzigen");
 ok(html.includes('function q4LuchtkwaliteitPresentatie()')&&html.includes('(Europese|Amerikaanse) AQI')&&html.includes('const q4BasisLucht=lucht;'),"AQI-presentatie verwijdert de redundante schaalnaam uit de subregel");
