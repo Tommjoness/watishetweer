@@ -51,7 +51,7 @@ test("verse droge KNMI-meting wist generiek een actuele modelregenclaim uit",()=
   assert.equal(a.status,"KLEINE_KANS","12% blijft toekomstige kleine kans en geen actuele regen");
   assert.equal(beleid.kansHoofd(a),"12%");
   assert.equal(beleid.briefingZin(a),"De komende twee uur is er een kleine kans op neerslag.");
-  assert.equal(beleid.komendUurTekst(a),"Kleine kans op neerslag het komende uur.");
+  assert.equal(beleid.komendUurTekst(a),"Het komende uur is er een kleine kans op neerslag.");
   assert(!/(valt|regent|vallen) nu/i.test(beleid.kansZin(a,"de komende twee uur")));
 });
 
