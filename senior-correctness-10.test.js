@@ -143,20 +143,20 @@ test("live polish: lage dagkans wordt nooit als zekere motregen geformuleerd",()
   assert.equal(dagKansSamenvatting({...basisA,kans:80},"Lichte motregen"),"Lichte motregen rond 20:00");
 });
 
-test("live polish: komend-uurtegel bevat geen bronjargon",()=>{
+test("live polish: komend-uurtegel volgt de canonieke kansowner zonder bronjargon",()=>{
   const tekst=komendUurTekst({genoeg:true,status:"KLEINE_KANS",kans:27,soort:"regen"});
-  assert.equal(tekst,"Kleine kans op neerslag het komende uur.");
+  assert.equal(tekst,"Het komende uur is er een kleine kans op neerslag.");
   assert(!/model|overlapp|uurvak/i.test(tekst),tekst);
 });
 
-test("live polish: komend-uurtegel vervoegt meervoudige neerslagsoorten",()=>{
+test("live polish: komend-uurtegel gebruikt dezelfde canonieke modaliteit",()=>{
   assert.equal(
     komendUurTekst({genoeg:true,status:"NEERSLAG_VERWACHT",kans:55,soort:"buien"}),
-    "Buien zijn mogelijk het komende uur."
+    "Het komende uur is neerslag mogelijk."
   );
   assert.equal(
     komendUurTekst({genoeg:true,status:"NEERSLAG_VERWACHT",kans:85,soort:"buien"}),
-    "Buien worden het komende uur verwacht."
+    "Het komende uur is er een grote kans op neerslag."
   );
 });
 
