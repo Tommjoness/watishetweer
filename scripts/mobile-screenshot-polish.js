@@ -163,11 +163,11 @@ function formatteerMaanTekst(tekst){
   let t=String(tekst||"").replace(/[🌑🌒🌓🌔🌕🌖🌗🌘]\uFE0F?/gu,"").trim();
   t=t.replace(/^de maan\s+/i,"maan ");
   let m=/^maan (?:komt )?op(?: om)? (\d{2}:\d{2})\s*[·,]\s*(?:gaat )?onder(?: om)? (\d{2}:\d{2})$/i.exec(t);
-  if(m)return "Maan: komt om "+m[1]+" op en gaat om "+m[2]+" onder.";
-  m=/^maan (?:komt )?op(?: om)? (\d{2}:\d{2})$/i.exec(t);if(m)return "Maan: komt om "+m[1]+" op.";
-  m=/^maan (?:gaat )?onder(?: om)? (\d{2}:\d{2})$/i.exec(t);if(m)return "Maan: gaat om "+m[1]+" onder.";
-  if(/^maan blijft onder de horizon$/i.test(t))return "Maan: blijft onder de horizon.";
-  if(/^maan blijft boven de horizon$/i.test(t))return "Maan: blijft boven de horizon.";
+  if(m)return "Maanopkomst om "+m[1]+" · maanondergang om "+m[2]+".";
+  m=/^maan (?:komt )?op(?: om)? (\d{2}:\d{2})$/i.exec(t);if(m)return "Maanopkomst om "+m[1]+".";
+  m=/^maan (?:gaat )?onder(?: om)? (\d{2}:\d{2})$/i.exec(t);if(m)return "Maanondergang om "+m[1]+".";
+  if(/^maan blijft onder de horizon$/i.test(t))return "Maan blijft onder de horizon.";
+  if(/^maan blijft boven de horizon$/i.test(t))return "Maan blijft boven de horizon.";
   return t?(/^[Mm]aan:/.test(t)?t:"Maan: "+t.charAt(0).toLowerCase()+t.slice(1)):"";
 }
 function nachtMetaDelen(tekst){
