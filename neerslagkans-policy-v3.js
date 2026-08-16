@@ -323,7 +323,7 @@ function kansZin(a,venster,opties){
   const detail=hoeveelheidDetail||hogeKansZonderHoeveelheid;
   if(niveau==="DROOG"){
     if(tegenstrijdigDroogSignaal(a)) return "De neerslagverwachting is onzeker; kans en hoeveelheid spreken elkaar tegen.";
-    return opties.kort?"Geen neerslag verwacht.":"Voor "+venster+" wordt geen neerslag verwacht.";
+    return opties.kort?"Geen neerslag verwacht.":"Voor "+venster+" wordt er geen neerslag verwacht.";
   }
   if(niveau==="ZEER_KLEIN") return (opties.kort?"Zeer kleine kans op neerslag.":"De kans op "+soort+" in "+venster+" is zeer klein (maximaal "+pct+"%).")+detail;
   if(niveau==="KLEIN") return (opties.kort?"Kleine kans op neerslag.":"Er is een kleine kans op "+soort+" in "+venster+" (maximaal "+pct+"%).")+detail;
@@ -335,16 +335,16 @@ function kansZin(a,venster,opties){
 function komendUurTekst(a){
   if(!a||!a.genoeg) return "Neerslagkans niet beschikbaar.";
   if(actueelNeerslagSignaal(a)) return actueleZinMetEinde(a);
-  if(a.bronHoeveelheid==="knmi-nowcast"&&a.status==="NEERSLAG_VERWACHT")return a.eersteTijd?"Vanaf ongeveer "+a.eersteTijd+" wordt neerslag verwacht.":"Neerslag wordt verwacht het komende uur.";
-  if(a.bronHoeveelheid==="knmi-nowcast"&&a.status==="SPOORHOEVEELHEID")return "Enkele druppels zijn mogelijk het komende uur.";
+  if(a.bronHoeveelheid==="knmi-nowcast"&&a.status==="NEERSLAG_VERWACHT")return a.eersteTijd?"Vanaf ongeveer "+a.eersteTijd+" wordt neerslag verwacht.":"Het komende uur wordt neerslag verwacht.";
+  if(a.bronHoeveelheid==="knmi-nowcast"&&a.status==="SPOORHOEVEELHEID")return "Het komende uur zijn enkele druppels mogelijk.";
   if(tegenstrijdigDroogSignaal(a)) return "Neerslagverwachting onzeker.";
   const niveau=kansNiveau(a.kans);
   if(niveau==="DROOG") return "Geen neerslag verwacht.";
-  if(niveau==="ZEER_KLEIN") return "Zeer kleine kans op neerslag het komende uur.";
-  if(niveau==="KLEIN") return "Kleine kans op neerslag het komende uur.";
-  if(niveau==="MOGELIJK") return "Neerslag is mogelijk het komende uur.";
-  if(niveau==="GROOT") return "Grote kans op neerslag het komende uur.";
-  if(niveau==="ZEER_GROOT") return "Zeer grote kans op neerslag het komende uur.";
+  if(niveau==="ZEER_KLEIN") return "Het komende uur is er een zeer kleine kans op neerslag.";
+  if(niveau==="KLEIN") return "Het komende uur is er een kleine kans op neerslag.";
+  if(niveau==="MOGELIJK") return "Het komende uur is neerslag mogelijk.";
+  if(niveau==="GROOT") return "Het komende uur is er een grote kans op neerslag.";
+  if(niveau==="ZEER_GROOT") return "Het komende uur is er een zeer grote kans op neerslag.";
   return "Neerslagkans niet beschikbaar.";
 }
 
@@ -355,7 +355,7 @@ function briefingZin(a){
   if(a.bronHoeveelheid==="knmi-nowcast"&&a.status==="SPOORHOEVEELHEID")return "In de komende twee uur kunnen enkele druppels vallen.";
   if(tegenstrijdigDroogSignaal(a)) return "De neerslagverwachting voor de komende twee uur is onzeker.";
   const niveau=kansNiveau(a.kans);
-  if(niveau==="DROOG") return "De komende twee uur wordt geen neerslag verwacht.";
+  if(niveau==="DROOG") return "De komende twee uur wordt er geen neerslag verwacht.";
   if(niveau==="ZEER_KLEIN") return "De kans op neerslag in de komende twee uur is zeer klein.";
   if(niveau==="KLEIN") return "De komende twee uur is er een kleine kans op neerslag.";
   if(niveau==="MOGELIJK") return "In de komende twee uur is neerslag mogelijk.";
