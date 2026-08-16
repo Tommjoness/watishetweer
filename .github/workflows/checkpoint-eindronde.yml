@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: 22
       - name: Installeer Playwright
-        run: npm install --no-save --package-lock=false playwright
+        run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Pure en buildregressies
         run: npm test
       - name: Installeer echte browsers
