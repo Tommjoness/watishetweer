@@ -91,6 +91,8 @@ jobs:
             echo "::error file=browser-q4-rain-periods.test.js,line=1::$msg"
             exit "$code"
           fi
+      - name: Regenperioden exact per tijdvak in Chromium en WebKit
+        run: node browser-rain-period-details.test.js
       - name: Serviceworker upgrade en offline in Chromium
         shell: bash
         run: |
