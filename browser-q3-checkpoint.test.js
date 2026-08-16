@@ -138,7 +138,7 @@ async function controleer(page,browserNaam,scenario,breedte){
     assert.equal(r.cloudsub,"Geheel bewolkt.",`${browserNaam} ${breedte}px: 100% heet geheel bewolkt`);
     assert.equal(compact(r.vis),"0,0km",`${browserNaam} ${breedte}px: nul meter zicht blijft geldige data met bestaande km-precisie`);
     assert.equal(r.uv,"0",`${browserNaam} ${breedte}px: UV nul blijft geldige data`);
-    assert.equal(r.uvsub,"Nauwelijks UV vandaag.",`${browserNaam} ${breedte}px: nul-UV krijgt tijdneutrale nultekst`);
+    assert.equal(r.uvsub,"Nauwelijks UV verwacht vandaag.",`${browserNaam} ${breedte}px: nul-UV blijft expliciet een modelverwachting`);
     assert(/^1\s*korrel\/m³$/i.test(r.pollen),`${browserNaam} ${breedte}px: Graspollen met één korrel gebruikt enkelvoud (${r.pollen})`);
     assert(/tabular-nums/i.test(r.fontVariant)||/tnum/i.test(r.fontFeatures),`${browserNaam} ${breedte}px: numerieke kolommen behouden tabular-nums (${r.fontVariant}; ${r.fontFeatures})`);
     assert(!/slashed-zero/i.test(r.fontVariant)&&!/["']?zero["']?\s+1/i.test(r.fontFeatures),`${browserNaam} ${breedte}px: consumentencijfers gebruiken geen doorgestreepte nul (${r.fontVariant}; ${r.fontFeatures})`);
