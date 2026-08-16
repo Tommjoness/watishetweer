@@ -14,13 +14,13 @@ function uiWindstootTekst(pg,nu,dag,vak){
   const tijdvak=String(vak||"").trim();
   const dagInZin=dagNaam?dagNaam.charAt(0).toLowerCase()+dagNaam.slice(1):"eerder";
   if(String(pg.t)>String(nu||"")){
-    if(/^Vandaag$/i.test(dagNaam))return `Later vandaag kunnen rond ${tijdvak} windstoten tot ${waarde} km/u voorkomen.`;
-    if(/^Morgen$/i.test(dagNaam))return `Morgen kunnen rond ${tijdvak} windstoten tot ${waarde} km/u voorkomen.`;
-    return `${dagNaam||"Later"} kunnen rond ${tijdvak} windstoten tot ${waarde} km/u voorkomen.`;
+    if(/^Vandaag$/i.test(dagNaam))return `Later vandaag worden rond ${tijdvak} windstoten tot ${waarde} km/u verwacht.`;
+    if(/^Morgen$/i.test(dagNaam))return `Morgen worden rond ${tijdvak} windstoten tot ${waarde} km/u verwacht.`;
+    return `${dagNaam||"Later"} worden rond ${tijdvak} windstoten tot ${waarde} km/u verwacht.`;
   }
-  if(/^Vandaag$/i.test(dagNaam))return `Volgens de verwachting kwam de sterkste windstoot vandaag rond ${tijdvak} uit op ${waarde} km/u.`;
-  if(/^Gisteren$/i.test(dagNaam))return `Volgens de verwachting kwam de sterkste windstoot gisteren rond ${tijdvak} uit op ${waarde} km/u.`;
-  return `Volgens de verwachting kwam de sterkste windstoot ${dagInZin} rond ${tijdvak} uit op ${waarde} km/u.`;
+  if(/^Vandaag$/i.test(dagNaam))return `Voor vandaag lag de hoogste verwachte windstoot rond ${tijdvak} op ${waarde} km/u.`;
+  if(/^Gisteren$/i.test(dagNaam))return `Voor gisteren lag de hoogste verwachte windstoot rond ${tijdvak} op ${waarde} km/u.`;
+  return `De hoogste verwachte windstoot lag ${dagInZin} rond ${tijdvak} op ${waarde} km/u.`;
 }
 
 function uiZonurenWoord(uur,daglichtUur){
@@ -28,16 +28,16 @@ function uiZonurenWoord(uur,daglichtUur){
   if(zon===null)return "Zonuren niet beschikbaar.";
   if(daglicht!==null&&daglicht>0){
     const aandeel=Math.max(0,Math.min(1,zon/daglicht));
-    if(aandeel>=0.8)return "De zon schijnt bijna de hele dag.";
-    if(aandeel>=0.6)return "Vandaag is er veel zon.";
-    if(aandeel>=0.35)return "Vandaag zijn er meerdere uren zon.";
-    if(aandeel>=0.15)return "Vandaag zijn er enkele uren zon.";
-    return "Vandaag is er weinig zon.";
+    if(aandeel>=0.8)return "Naar verwachting bijna de hele dag zon.";
+    if(aandeel>=0.6)return "Naar verwachting veel zon vandaag.";
+    if(aandeel>=0.35)return "Naar verwachting meerdere uren zon vandaag.";
+    if(aandeel>=0.15)return "Naar verwachting enkele uren zon vandaag.";
+    return "Naar verwachting weinig zon vandaag.";
   }
-  if(zon>=8)return "Vandaag is er veel zon.";
-  if(zon>=4)return "Vandaag zijn er meerdere uren zon.";
-  if(zon>=1)return "Vandaag zijn er enkele uren zon.";
-  return "Vandaag is er weinig zon.";
+  if(zon>=8)return "Naar verwachting veel zon vandaag.";
+  if(zon>=4)return "Naar verwachting meerdere uren zon vandaag.";
+  if(zon>=1)return "Naar verwachting enkele uren zon vandaag.";
+  return "Naar verwachting weinig zon vandaag.";
 }
 
 function uiLuchtdrukTekst(tekst){
@@ -47,6 +47,37 @@ function uiLuchtdrukTekst(tekst){
   m=/^In de afgelopen drie uur ([0-9]+(?:[.,][0-9]+)? hPa) (gestegen|gedaald)\.$/i.exec(t);
   if(m)return "De luchtdruk is in de afgelopen drie uur "+m[1]+" "+m[2].toLowerCase()+".";
   return t;
+}
+
+/* Modelvelden mogen ook nadat hun klokmoment verstreken is niet als gemeten
+   historie worden geformuleerd. Deze normalisatie verandert geen waarde of
+   tijdstip; alleen de epistemische status van de zichtbare zin wordt expliciet. */
+function uiBriefingBronSemantiek(html){
+  return String(html||"")
+    .replace(/Vandaag was het rond (\d{2}:\d{2}) het warmst,?\s+met (<b>-?\d+(?:[.,]\d+)?(?:\s|&nbsp;|\u00a0)+graden<\/b>)\./gi,
+      (_m,t,waarde)=>"Het verwachte maximum lag vandaag rond "+t+" op "+waarde+".")
+    .replace(/Vandaag wordt het rond (\d{2}:\d{2}) het warmst, met maximaal (<b>-?\d+(?:[.,]\d+)?(?:\s|&nbsp;|\u00a0)+graden<\/b>)\./gi,
+      (_m,t,waarde)=>"Het verwachte maximum ligt vandaag rond "+t+" op "+waarde+".")
+    .replace(/Morgen wordt het rond (\d{2}:\d{2}) het warmst, met maximaal (<b>-?\d+(?:[.,]\d+)?(?:\s|&nbsp;|\u00a0)+graden<\/b>)\./gi,
+      (_m,t,waarde)=>"Het verwachte maximum ligt morgen rond "+t+" op "+waarde+".")
+    .replace(/Morgen wordt het maximaal (<b>-?\d+(?:[.,]\d+)?(?:\s|&nbsp;|\u00a0)+graden<\/b>)\./gi,
+      (_m,waarde)=>"Het verwachte maximum voor morgen is "+waarde+".");
+}
+
+function uiUvOordeel(waarde){
+  const v=uiGetal(waarde);
+  if(v===null)return "onbekend";
+  const n=Math.max(0,Math.round(v));
+  return n<=2?"laag":n<=5?"matig":n<=7?"hoog":n<=10?"zeer hoog":"extreem";
+}
+function uiUvPiekTekst(pu,nu){
+  if(!pu||uiGetal(pu.v)===null||Number(pu.v)<0)return "UV-piek niet beschikbaar.";
+  if(Number(pu.v)<0.5)return "Nauwelijks UV verwacht vandaag.";
+  const tijd=String(pu.t||"").slice(11,16),bron=String(pu.t||""),huidig=String(nu||"");
+  const verstreken=bron&&huidig&&bron.slice(0,10)===huidig.slice(0,10)&&bron<huidig;
+  const oordeel=uiUvOordeel(pu.v);
+  if(!/^\d{2}:\d{2}$/.test(tijd))return "Verwachte UV-piek · "+oordeel+".";
+  return (verstreken?"Verwachte UV-piek lag rond ":"Verwachte UV-piek rond ")+tijd+" · "+oordeel+".";
 }
 
 /* Rond middernacht mag de taal niet alleen naar de klok kijken. Als de genoemde
@@ -82,13 +113,29 @@ function uiIsNwsStructuur(tekst){
   return /\*\s*(?:WHAT|WHERE|WHEN|IMPACTS)\.\.\./i.test(String(tekst||""));
 }
 
+function uiPollenTekst(aanwezig){
+  return aanwezig?"Modelverwachting voor dit uur.":"Model verwacht geen pollen voor dit uur.";
+}
+
+function uiRegenperiodeDagprefix(periodeDatum,basisDatum){
+  const datum=String(periodeDatum||"").slice(0,10),basis=String(basisDatum||"").slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(datum)||datum===basis)return "";
+  const d=new Date(datum+"T12:00:00");
+  if(!Number.isFinite(d.getTime()))return "";
+  return ["zo","ma","di","wo","do","vr","za"][d.getDay()]+" ";
+}
+
 /* Exporteer alleen zuivere presentatieregels voor regressietests. */
 globalThis.WeatherNowUiPolish20260813=Object.freeze({
   windstootTekst:uiWindstootTekst,
   zonurenWoord:uiZonurenWoord,
   luchtdrukTekst:uiLuchtdrukTekst,
+  briefingBronSemantiek:uiBriefingBronSemantiek,
   briefingTijdtaal:uiBriefingTijdtaal,
+  uvPiekTekst:uiUvPiekTekst,
   dagNeerslagTekst:uiDagNeerslagTekst,
+  pollenTekst:uiPollenTekst,
+  regenperiodeDagprefix:uiRegenperiodeDagprefix,
   isNwsStructuur:uiIsNwsStructuur
 });
 
@@ -119,10 +166,12 @@ if(typeof meters==="function"){
     uiBasisMeters();
     const druk=document.getElementById("pressub");
     if(druk)druk.textContent=uiLuchtdrukTekst(druk.textContent);
+    const nu=(S.d&&S.d.current&&S.d.current.time)||"";
+    const uvPiek=typeof piek==="function"?piek("uv_index"):null,uvSub=document.getElementById("uvsub");
+    if(uvSub&&uvPiek)uvSub.textContent=uiUvPiekTekst(uvPiek,nu);
     const pgRuw=typeof piek==="function"?piek("wind_gusts_10m"):null;
     const pg=pgRuw&&uiGetal(pgRuw.v)!==null&&Number(pgRuw.v)>=0?pgRuw:null;
     if(!pg)return;
-    const nu=(S.d&&S.d.current&&S.d.current.time)||"";
     const dag=typeof dagAanduiding==="function"?dagAanduiding(pg.t,true):"";
     const vak=typeof weatherNowUurvak==="function"?weatherNowUurvak(pg.t):String(pg.t).slice(11,16);
     if(typeof zetTekst==="function")zetTekst("gustsub",uiWindstootTekst(pg,nu,dag,vak));
@@ -152,6 +201,22 @@ function uiPolishDagen(){
 if(typeof dagen==="function"){
   const uiBasisDagen=dagen;
   dagen=function(){const uit=uiBasisDagen.apply(this,arguments);uiPolishDagen();return uit;};
+}
+
+function uiPolishLuchtModelstatus(){
+  const c=document.getElementById("aq");if(!c)return;
+  [...c.querySelectorAll(".stat")].forEach(stat=>{
+    const kop=stat.querySelector(".eyebrow"),val=stat.querySelector(".sval"),sub=stat.querySelector(".ssub");
+    if(!kop||!sub||!/pollen/i.test(kop.textContent||""))return;
+    const getalMatch=String(val&&val.textContent||"").replace(",",".").match(/-?\d+(?:\.\d+)?/);
+    const concentratie=getalMatch?Number(getalMatch[0]):null;
+    const aanwezig=Number.isFinite(concentratie)?concentratie>0:!/\bgeen\b/i.test(sub.textContent||"");
+    sub.textContent=uiPollenTekst(aanwezig);
+  });
+}
+if(typeof lucht==="function"){
+  const uiBasisLucht=lucht;
+  lucht=function(){const uit=uiBasisLucht.apply(this,arguments);uiPolishLuchtModelstatus();return uit;};
 }
 
 function uiPolishRegenperiodeKansen(){
@@ -198,9 +263,30 @@ function uiPolishRegenperiodeKansen(){
   });
 }
 
+function uiPolishRegenperiodeDaglabel(){
+  const groep=document.querySelector('g[data-q4-rain-periods="1"]'),g=S&&S.geo;
+  const label=groep&&groep.querySelector('text[data-q4-rain-summary="total"]');
+  if(!label||!g||!Array.isArray(g.MM)||!Array.isArray(g.TI))return;
+  if(!/^\d{2}:\d{2}–\d{2}:\d{2}\s+·\s+totaal\b/.test((label.textContent||"").trim()))return;
+  let eersteNat=-1;
+  for(let i=1;i<g.MM.length;i++){
+    const mm=uiGetal(g.MM[i]);
+    if(mm!==null&&mm>=0.1){eersteNat=i;break;}
+  }
+  if(eersteNat<1)return;
+  const periodeStart=String(g.TI[eersteNat-1]||""),basis=String(g.TI[0]||"");
+  const prefix=uiRegenperiodeDagprefix(periodeStart.slice(0,10),basis.slice(0,10));
+  if(prefix)label.textContent=prefix+label.textContent;
+}
+
 if(typeof etmaal==="function"){
   const uiBasisEtmaal=etmaal;
-  etmaal=function(){const uit=uiBasisEtmaal.apply(this,arguments);uiPolishRegenperiodeKansen();return uit;};
+  etmaal=function(){
+    const uit=uiBasisEtmaal.apply(this,arguments);
+    uiPolishRegenperiodeKansen();
+    uiPolishRegenperiodeDaglabel();
+    return uit;
+  };
 }
 
 function uiPolishWaarschuwingen(){
@@ -208,8 +294,8 @@ function uiPolishWaarschuwingen(){
   const melding=el.querySelector(".msg");
   if(melding){
     const t=(melding.textContent||"").trim();
-    if(t==="Officiële weerwaarschuwingen zijn voor deze locatie niet beschikbaar.")melding.textContent="Waarschuwingsdienst niet beschikbaar voor deze locatie.";
-    else if(t==="Officiële weerwaarschuwingen konden niet worden gecontroleerd.")melding.textContent="Waarschuwingsdienst kon niet worden gecontroleerd.";
+    if(t==="Officiële weerwaarschuwingen zijn voor deze locatie niet beschikbaar.")melding.textContent="Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.";
+    else if(t==="Officiële weerwaarschuwingen konden niet worden gecontroleerd.")melding.textContent="Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald.";
   }
   const waarschuwingenLijst=Array.isArray(S.actieveWaarschuwingen)?S.actieveWaarschuwingen:[];
   [...el.querySelectorAll(".waarsch")].forEach((kaart,i)=>{
@@ -239,7 +325,7 @@ if(typeof briefing==="function"){
       el.innerHTML=(el.innerHTML||"").replace(/\s*De officiële waarschuwing heeft voorrang op de modelverwachting\.\s*/g," ");
       const nu=typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():(S.d&&S.d.current&&S.d.current.time)||"";
       const huidige=S.d&&S.d.current?uiGetal(S.d.current.temperature_2m):null;
-      el.innerHTML=uiBriefingTijdtaal(el.innerHTML,nu,huidige);
+      el.innerHTML=uiBriefingBronSemantiek(uiBriefingTijdtaal(el.innerHTML,nu,huidige));
     }
     return uit;
   };
