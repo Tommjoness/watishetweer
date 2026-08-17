@@ -9,8 +9,8 @@ const {chromium,webkit}=require("playwright");
 const {bouw}=require("./data.js");
 
 /* De daghelper blijft nodig voor de toegankelijke bracketbeschrijving over een
-   kalendergrens. De zichtbare endpointlabels worden hieronder juist klok-only
-   bewaakt. */
+   kalendergrens. De zichtbare tijdlabels worden hieronder juist klok-only
+   bewaakt, zowel als losse eindpunten als compacte range. */
 const runtimeBron=fs.readFileSync(path.join(__dirname,"scripts","q4-rain-runtime.js"),"utf8");
 const helperRegel=(runtimeBron.match(/^const q4DagKort=.*;$/m)||[])[0];
 assert.ok(helperRegel,"q4DagKort ontbreekt in de canonieke Q4-runtime");
@@ -94,21 +94,28 @@ async function controleer(type,naam){
 
     const meerdere=await page.evaluate(()=>{
       S.dag=null;S.bereik=24;etmaal(S.i0,24);
-      const groep=document.querySelector('#chart g[data-q4-rain-periods="1"]');
+      const svg=document.getElementById("chart"),groep=svg.querySelector('g[data-q4-rain-periods="1"]');
       return {
         starts:groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')].map(x=>(x.textContent||"").trim()):[],
         ends:groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')].map(x=>(x.textContent||"").trim()):[],
+        ranges:groep?[...groep.querySelectorAll('text[data-q4-rain-period-range]')].map(x=>(x.textContent||"").trim()):[],
         bedragen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(x=>(x.textContent||"").trim()):[],
+        aria:groep?[...groep.querySelectorAll('line[aria-label]')].map(x=>x.getAttribute("aria-label")||""):[],
         details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
-        samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0
+        samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0,
+        kansen:[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).length
       };
     });
-    assert.deepEqual(meerdere.starts,["15:00","22:00","03:00"],`${naam}: zichtbare begintijden blijven klok-only, ook over een lokale kalendergrens`);
-    assert.deepEqual(meerdere.ends,["17:00","02:00","10:00"],`${naam}: zichtbare eindtijden blijven klok-only, ook over een lokale kalendergrens`);
+    assert.deepEqual(meerdere.ranges,["15:00–17:00","22:00–02:00"],`${naam}: korte mobiele perioden gebruiken één compacte klokrange, ook over middernacht`);
+    assert.deepEqual(meerdere.starts,["03:00"],`${naam}: brede volgende-dagperiode houdt een losse begintijd`);
+    assert.deepEqual(meerdere.ends,["10:00"],`${naam}: brede volgende-dagperiode houdt een losse eindtijd`);
     assert.deepEqual(meerdere.bedragen,["0,4 mm","2,0 mm","6,4 mm"],`${naam}: iedere bracket houdt zijn eigen hoeveelheid`);
+    assert.ok(meerdere.aria.some(x=>x.includes("wo 22:00–do 02:00")&&x.includes("2,0 mm")),`${naam}: toegankelijke cross-midnightbeschrijving houdt beide kalenderdagen; kreeg ${JSON.stringify(meerdere.aria)}`);
     assert.equal(meerdere.details,0,`${naam}: tijdvakken worden niet nogmaals als losse regels herhaald`);
     assert.equal(meerdere.samenvattingen,0,`${naam}: geen totaalregel of Meeste regen-regel onder de brackets`);
-    assert.ok([...meerdere.starts,...meerdere.ends].every(x=>/^\d{2}:\d{2}$/.test(x)),`${naam}: zichtbare endpointlabels bevatten uitsluitend kloktijden`);
+    assert.equal(meerdere.kansen,0,`${naam}: zichtbare neerslagstrook toont geen statische kanspercentages`);
+    assert.ok([...meerdere.starts,...meerdere.ends].every(x=>/^\d{2}:\d{2}$/.test(x)),`${naam}: losse endpointlabels bevatten uitsluitend kloktijden`);
+    assert.ok(meerdere.ranges.every(x=>/^\d{2}:\d{2}–\d{2}:\d{2}$/.test(x)),`${naam}: compacte labels bevatten uitsluitend een klokrange`);
 
     const enkelVolgendeDag=await page.evaluate(()=>{
       S.d.hourly.precipitation=S.d.hourly.precipitation.map((_,i)=>{
@@ -121,20 +128,24 @@ async function controleer(type,naam){
         return 0;
       });
       S.dag=null;S.bereik=24;etmaal(S.i0,24);
-      const groep=document.querySelector('#chart g[data-q4-rain-periods="1"]');
+      const svg=document.getElementById("chart"),groep=svg.querySelector('g[data-q4-rain-periods="1"]');
       return {
         starts:groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')].map(x=>(x.textContent||"").trim()):[],
         ends:groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')].map(x=>(x.textContent||"").trim()):[],
+        ranges:groep?[...groep.querySelectorAll('text[data-q4-rain-period-range]')].map(x=>(x.textContent||"").trim()):[],
         bedragen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(x=>(x.textContent||"").trim()):[],
-        samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0
+        samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0,
+        kansen:[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).length
       };
     });
-    assert.deepEqual(enkelVolgendeDag.starts,["03:00"],`${naam}: volgende lokale dag krijgt zichtbaar geen overbodige weekdag`);
+    assert.deepEqual(enkelVolgendeDag.starts,["03:00"],`${naam}: brede volgende lokale dag krijgt zichtbaar geen overbodige weekdag`);
     assert.deepEqual(enkelVolgendeDag.ends,["10:00"],`${naam}: eindtijd blijft een pure kloktijd`);
+    assert.deepEqual(enkelVolgendeDag.ranges,[],`${naam}: brede periode hoeft niet onnodig compact te worden`);
     assert.deepEqual(enkelVolgendeDag.bedragen,["6,4 mm"],`${naam}: enkele periode houdt alleen haar eigen mm-waarde`);
     assert.equal(enkelVolgendeDag.samenvattingen,0,`${naam}: ook één periode krijgt geen totaal- of pieksamenvatting`);
+    assert.equal(enkelVolgendeDag.kansen,0,`${naam}: ook één periode toont geen statisch kanspercentage`);
     assert.deepEqual(fouten,[],`${naam}: geen page errors`);
-    console.log(`${naam}: 24-uurs regenbrackets tonen alleen kloktijden en mm, zonder zichtbare dag- of samenvattingsregels.`);
+    console.log(`${naam}: 24-uurs regenbrackets kiezen adaptief losse kloktijden of een compacte range, met dagcontext alleen in aria.`);
   }finally{await browser.close();}
 }
 
