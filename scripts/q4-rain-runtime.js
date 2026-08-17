@@ -136,17 +136,6 @@ function q4Regenperioden(g){
   return perioden;
 }
 
-function q4KansIndex(g,x){
-  const midden=q4Getal(x)===null?null:q4Getal(x)+g.cw/2;
-  if(midden===null||!Number.isFinite(g.n))return {i:-1,midden:null};
-  let beste=-1,afstand=Infinity;
-  for(let i=0;i<g.n;i++){
-    const d=Math.abs(g.x(i)-midden);
-    if(d<afstand){beste=i;afstand=d;}
-  }
-  return {i:afstand<=Math.max(0.75,g.cw*.12)?beste:-1,midden};
-}
-
 function q4PeriodeBedragLabels(g,perioden,eersteY,font){
   const links=q4Getal(g.pl)||0,rechts=g.W-(q4Getal(g.pr)||0),rijen=[],labels=[];
   perioden.forEach((p,index)=>{
@@ -174,9 +163,10 @@ function q4PeriodeTijdvak(g,p){
   return dag+q4Tijd(van)+"–"+q4Tijd(tot);
 }
 
-/* In de 24-uursweergave zijn alleen de kloktijden aan de bracket zichtbaar.
-   De chronologische x-as geeft al genoeg dagcontext; extra weekdagen maken deze
-   compacte laag onnodig druk. */
+/* De 24-uursweergave kiest per periode tussen twee losse eindpunten en één
+   compacte klokrange. De keuze volgt de echte grafiekbreedte, niet het apparaat:
+   brede perioden lezen het snelst als 03:00 ├──┤ 10:00; korte perioden blijven
+   rustig als één 23:00–00:00-label onder de bracket. */
 function q4PeriodeRandTekst(g,p){
   const van=g&&Array.isArray(g.TI)?g.TI[p.van]:null,tot=g&&Array.isArray(g.TI)?g.TI[p.tot]:null;
   return {van:q4Tijd(van),tot:q4Tijd(tot)};
@@ -184,43 +174,42 @@ function q4PeriodeRandTekst(g,p){
 function q4PeriodeRandLabels(g,perioden,y,font){
   const eersteY=y+13;
   if(!g||g.n>25)return {labels:[],rijen:0,eersteY,stap:11};
-  const links=q4Getal(g.pl)||0,rechts=g.W-(q4Getal(g.pr)||0),rijen=[],labels=[],marge=4;
+  const links=2,rechts=g.W-2,rijen=[],labels=[],marge=4;
+  const breedteVoor=tekst=>Math.max(20,String(tekst||"").length*font*.62);
   const vakVoor=(x,anchor,breedte)=>anchor==="end"?{links:x-breedte,rechts:x}:anchor==="start"?{links:x,rechts:x+breedte}:{links:x-breedte/2,rechts:x+breedte/2};
+  const overlapt=(a,b)=>!(a.rechts+2<b.links||b.rechts+2<a.links);
+  const plaatsRij=vakken=>{
+    let rij=0;
+    while((rijen[rij]||[]).some(bestaand=>vakken.some(v=>overlapt(bestaand,v))))rij++;
+    if(!rijen[rij])rijen[rij]=[];rijen[rij].push(...vakken);
+    return rij;
+  };
   const opties=(soort,tekst,ruwX)=>{
-    const breedte=Math.max(20,tekst.length*font*.62);
+    const breedte=breedteVoor(tekst);
     const voorkeur=soort==="start"
       ?[{x:ruwX-marge,anchor:"end",rang:0},{x:ruwX+marge,anchor:"start",rang:1}]
       :[{x:ruwX+marge,anchor:"start",rang:0},{x:ruwX-marge,anchor:"end",rang:1}];
-    const geldig=voorkeur.map(o=>({...o,vak:vakVoor(o.x,o.anchor,breedte)})).filter(o=>o.vak.links>=links&&o.vak.rechts<=rechts);
-    if(geldig.length)return geldig;
-    const x=Math.max(links+breedte/2,Math.min(rechts-breedte/2,ruwX));
-    return [{x,anchor:"middle",rang:3,vak:vakVoor(x,"middle",breedte)}];
+    return voorkeur.map(o=>({...o,vak:vakVoor(o.x,o.anchor,breedte)})).filter(o=>o.vak.links>=links&&o.vak.rechts<=rechts);
   };
-  const overlapt=(a,b)=>!(a.rechts+2<b.links||b.rechts+2<a.links);
   perioden.forEach((p,index)=>{
-    const tekst=q4PeriodeRandTekst(g,p),startOpties=opties("start",tekst.van,g.x(p.van)),eindOpties=opties("end",tekst.tot,g.x(p.tot));
-    const combinaties=[];
-    startOpties.forEach(start=>eindOpties.forEach(eind=>{if(!overlapt(start.vak,eind.vak))combinaties.push({start,eind,rang:start.rang+eind.rang});}));
-    combinaties.sort((a,b)=>a.rang-b.rang);
-    if(combinaties.length){
-      const gekozen=combinaties[0];let rij=0;
-      while((rijen[rij]||[]).some(v=>overlapt(v,gekozen.start.vak)||overlapt(v,gekozen.eind.vak)))rij++;
-      if(!rijen[rij])rijen[rij]=[];rijen[rij].push(gekozen.start.vak,gekozen.eind.vak);
-      labels.push({index,soort:"start",tekst:tekst.van,x:gekozen.start.x,anchor:gekozen.start.anchor,rij});
-      labels.push({index,soort:"end",tekst:tekst.tot,x:gekozen.eind.x,anchor:gekozen.eind.anchor,rij});
-      return;
+    const tekst=q4PeriodeRandTekst(g,p),x1=g.x(p.van),x2=g.x(p.tot),span=Math.abs(x2-x1);
+    const startBreedte=breedteVoor(tekst.van),eindBreedte=breedteVoor(tekst.tot);
+    const splitMin=Math.max(52,startBreedte+eindBreedte+10);
+    if(span>=splitMin){
+      const startOpties=opties("start",tekst.van,x1),eindOpties=opties("end",tekst.tot,x2),combinaties=[];
+      startOpties.forEach(start=>eindOpties.forEach(eind=>{if(!overlapt(start.vak,eind.vak))combinaties.push({start,eind,rang:start.rang+eind.rang});}));
+      combinaties.sort((a,b)=>a.rang-b.rang);
+      if(combinaties.length){
+        const gekozen=combinaties[0],rij=plaatsRij([gekozen.start.vak,gekozen.eind.vak]);
+        labels.push({index,soort:"start",tekst:tekst.van,x:gekozen.start.x,anchor:gekozen.start.anchor,rij});
+        labels.push({index,soort:"end",tekst:tekst.tot,x:gekozen.eind.x,anchor:gekozen.eind.anchor,rij});
+        return;
+      }
     }
-    /* Alleen als een extreem smalle grafiekrand werkelijk geen twee labels op
-       één regel kan bevatten, mag de generieke fallback ze scheiden. Normale
-       korte regenperioden blijven als één visuele eenheid op dezelfde regel. */
-    [
-      {soort:"start",tekst:tekst.van,optie:startOpties[0]},
-      {soort:"end",tekst:tekst.tot,optie:eindOpties[0]}
-    ].forEach(item=>{
-      let rij=0;while((rijen[rij]||[]).some(v=>overlapt(v,item.optie.vak)))rij++;
-      if(!rijen[rij])rijen[rij]=[];rijen[rij].push(item.optie.vak);
-      labels.push({index,soort:item.soort,tekst:item.tekst,x:item.optie.x,anchor:item.optie.anchor,rij});
-    });
+    const compactTekst=tekst.van+"–"+tekst.tot,compactBreedte=breedteVoor(compactTekst),midden=(x1+x2)/2;
+    const x=Math.max(links+compactBreedte/2,Math.min(rechts-compactBreedte/2,midden));
+    const vak=vakVoor(x,"middle",compactBreedte),rij=plaatsRij([vak]);
+    labels.push({index,soort:"range",tekst:compactTekst,x,anchor:"middle",rij});
   });
   return {labels,rijen:rijen.length,eersteY,stap:11};
 }
@@ -228,11 +217,10 @@ function q4PeriodeRandLabels(g,perioden,y,font){
 function q4TekenRegenperioden(svg,g,perioden){
   svg.querySelectorAll('g[data-q4-rain-periods]').forEach(el=>el.remove());
 
-  /* De oude hoeveelheidstaven en losse mm-cijfers verdwijnen volledig. Een
-     statisch kanspercentage hoort voortaan alleen bij een uur waarvoor dezelfde
-     definitief uitgelijnde Q4-array ook meetbare neerslag bevat. Zo staat een
-     losse 19%-kans niet meer visueel onder een droog stuk alsof daar al een
-     regenperiode loopt. De tooltip behoudt ALLE kansen, ook bij 0 mm en <10%. */
+  /* De oude hoeveelheidstaven en losse mm-cijfers verdwijnen volledig. Ook de
+     statische neerslagpercentages verdwijnen uit de 24-uursgrafiek: de bracket
+     communiceert alleen tijdvak en hoeveelheid. De volledige kansinformatie
+     blijft ongewijzigd beschikbaar via de interactieve tooltip. */
   [...svg.querySelectorAll("rect")].forEach(el=>{
     if(el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".16")el.remove();
   });
@@ -240,13 +228,7 @@ function q4TekenRegenperioden(svg,g,perioden){
     if(/ millimeter neerslag$/.test(el.getAttribute("aria-label")||""))el.remove();
   });
   [...svg.querySelectorAll("text")].forEach(el=>{
-    if(el.getAttribute("fill")!==TEAL||!/^\d+%$/.test((el.textContent||"").trim()))return;
-    const kans=Number((el.textContent||"").trim().replace("%",""));
-    const positie=q4KansIndex(g,el.getAttribute("x"));
-    const mm=positie.i>=0&&Array.isArray(g.MM)?q4Getal(g.MM[positie.i]):null;
-    if(!Number.isFinite(kans)||kans<10||mm===null||mm<0.1){el.remove();return;}
-    if(el.dataset.q4ProbabilityCentered==="1")return;
-    el.setAttribute("x",String(positie.midden));el.dataset.q4ProbabilityCentered="1";
+    if(el.getAttribute("fill")===TEAL&&/^\d+%$/.test((el.textContent||"").trim()))el.remove();
   });
 
   const basisH=q4Getal(g.H)||296;
@@ -262,9 +244,9 @@ function q4TekenRegenperioden(svg,g,perioden){
   }
 
   /* Iedere aaneengesloten periode houdt zijn eigen bracket op de werkelijke
-     uurpositie. In de 24-uursweergave staan uitsluitend begin/einde en de mm-som
-     bij de bracket; losse totalen en een aparte 'Meeste regen'-regel zijn bewust
-     verwijderd om dezelfde informatie niet nogmaals uit te schrijven. */
+     uurpositie. In de 24-uursweergave staan uitsluitend het tijdvak en de mm-som
+     bij de bracket; losse totalen, kanspercentages en een aparte 'Meeste regen'-
+     regel zijn bewust verwijderd om dezelfde informatie niet te stapelen. */
   const pb=g.pt+g.ih,y=pb+48,randFont=g.M?8.3:8.9,bedragFont=g.M?8.8:9.4;
   const randen=q4PeriodeRandLabels(g,perioden,y,randFont);
   const laatsteRandY=randen.rijen?randen.eersteY+(randen.rijen-1)*randen.stap:y;
@@ -276,7 +258,7 @@ function q4TekenRegenperioden(svg,g,perioden){
 
   const groep=document.createElementNS(Q4_SVG_NS,"g");
   groep.setAttribute("data-q4-rain-periods","1");
-  groep.setAttribute("aria-label","Neerslagperioden met begin- en eindtijd en hoeveelheid per periode");
+  groep.setAttribute("aria-label","Neerslagperioden met tijdvak en hoeveelheid per periode");
   /* De bracketlaag is puur informatief. Het transparante #hit-vlak blijft de
      exclusieve eigenaar van muis/touchinteractie; de regenlaag kan daardoor ook
      na toekomstige DOM-herordening nooit een pointerevent onderscheppen. */
@@ -304,8 +286,8 @@ function q4TekenRegenperioden(svg,g,perioden){
   });
 
   const scrub=svg.querySelector("#scrub");svg.insertBefore(groep,scrub||null);
-  const detailAria=g.n<=25?" Bij iedere regenperiode staan begin- en eindtijd en verwachte hoeveelheid.":"";
-  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve."+detailAria+" Kanswaarden zonder meetbare hoeveelheid blijven via de details beschikbaar.").trim());
+  const detailAria=g.n<=25?" Bij iedere regenperiode staat het tijdvak en de verwachte hoeveelheid.":"";
+  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve."+detailAria+" Neerslagkansen blijven via de details beschikbaar.").trim());
 }
 
 /* De kwartiergrafiek tekent in de historische owner ieder positief getal. Een
