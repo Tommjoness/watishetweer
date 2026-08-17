@@ -189,20 +189,43 @@ function q4PeriodeRandTekst(g,p){
 function q4PeriodeRandLabels(g,perioden,y,font){
   const eersteY=y+13;
   if(!g||g.n>25)return {labels:[],rijen:0,eersteY,stap:11};
-  const links=q4Getal(g.pl)||0,rechts=g.W-(q4Getal(g.pr)||0),rijen=[],labels=[];
-  const voeg=(index,soort,tekst,ruwX)=>{
-    const geschat=Math.max(20,tekst.length*font*.62);
-    const x=Math.max(links+geschat/2,Math.min(rechts-geschat/2,ruwX));
-    const vak={links:x-geschat/2-3,rechts:x+geschat/2+3};
-    let rij=0;
-    while((rijen[rij]||[]).some(b=>!(vak.rechts<b.links||vak.links>b.rechts)))rij++;
-    if(!rijen[rij])rijen[rij]=[];rijen[rij].push(vak);
-    labels.push({index,soort,tekst,x,rij});
+  const links=q4Getal(g.pl)||0,rechts=g.W-(q4Getal(g.pr)||0),rijen=[],labels=[],marge=4;
+  const vakVoor=(x,anchor,breedte)=>anchor==="end"?{links:x-breedte,rechts:x}:anchor==="start"?{links:x,rechts:x+breedte}:{links:x-breedte/2,rechts:x+breedte/2};
+  const opties=(soort,tekst,ruwX)=>{
+    const breedte=Math.max(20,tekst.length*font*.62);
+    const voorkeur=soort==="start"
+      ?[{x:ruwX-marge,anchor:"end",rang:0},{x:ruwX+marge,anchor:"start",rang:1}]
+      :[{x:ruwX+marge,anchor:"start",rang:0},{x:ruwX-marge,anchor:"end",rang:1}];
+    const geldig=voorkeur.map(o=>({...o,vak:vakVoor(o.x,o.anchor,breedte)})).filter(o=>o.vak.links>=links&&o.vak.rechts<=rechts);
+    if(geldig.length)return geldig;
+    const x=Math.max(links+breedte/2,Math.min(rechts-breedte/2,ruwX));
+    return [{x,anchor:"middle",rang:3,vak:vakVoor(x,"middle",breedte)}];
   };
+  const overlapt=(a,b)=>!(a.rechts+2<b.links||b.rechts+2<a.links);
   perioden.forEach((p,index)=>{
-    const tekst=q4PeriodeRandTekst(g,p);
-    voeg(index,"start",tekst.van,g.x(p.van));
-    voeg(index,"end",tekst.tot,g.x(p.tot));
+    const tekst=q4PeriodeRandTekst(g,p),startOpties=opties("start",tekst.van,g.x(p.van)),eindOpties=opties("end",tekst.tot,g.x(p.tot));
+    const combinaties=[];
+    startOpties.forEach(start=>eindOpties.forEach(eind=>{if(!overlapt(start.vak,eind.vak))combinaties.push({start,eind,rang:start.rang+eind.rang});}));
+    combinaties.sort((a,b)=>a.rang-b.rang);
+    if(combinaties.length){
+      const gekozen=combinaties[0];let rij=0;
+      while((rijen[rij]||[]).some(v=>overlapt(v,gekozen.start.vak)||overlapt(v,gekozen.eind.vak)))rij++;
+      if(!rijen[rij])rijen[rij]=[];rijen[rij].push(gekozen.start.vak,gekozen.eind.vak);
+      labels.push({index,soort:"start",tekst:tekst.van,x:gekozen.start.x,anchor:gekozen.start.anchor,rij});
+      labels.push({index,soort:"end",tekst:tekst.tot,x:gekozen.eind.x,anchor:gekozen.eind.anchor,rij});
+      return;
+    }
+    /* Alleen als een extreem smalle grafiekrand werkelijk geen twee labels op
+       één regel kan bevatten, mag de generieke fallback ze scheiden. Normale
+       korte regenperioden blijven als één visuele eenheid op dezelfde regel. */
+    [
+      {soort:"start",tekst:tekst.van,optie:startOpties[0]},
+      {soort:"end",tekst:tekst.tot,optie:eindOpties[0]}
+    ].forEach(item=>{
+      let rij=0;while((rijen[rij]||[]).some(v=>overlapt(v,item.optie.vak)))rij++;
+      if(!rijen[rij])rijen[rij]=[];rijen[rij].push(item.optie.vak);
+      labels.push({index,soort:item.soort,tekst:item.tekst,x:item.optie.x,anchor:item.optie.anchor,rij});
+    });
   });
   return {labels,rijen:rijen.length,eersteY,stap:11};
 }
@@ -245,8 +268,8 @@ function q4TekenRegenperioden(svg,g,perioden){
 
   /* Iedere aaneengesloten periode houdt zijn eigen bracket op de werkelijke
      uurpositie. In de 24-uursweergave staan begin/einde direct aan de bracket;
-     de hoeveelheid blijft er gecentreerd onder. Korte perioden kunnen op mobiel
-     dicht bij elkaar liggen, dus beide labelsoorten wijken botsingsbewust uit. */
+     de hoeveelheid blijft er gecentreerd onder. Korte perioden blijven op één
+     regel zolang de beschikbare grafiekruimte dat geometrisch toelaat. */
   const pb=g.pt+g.ih,y=pb+48,regel=g.M?14:16,randFont=g.M?8.3:8.9,bedragFont=g.M?8.8:9.4;
   const randen=q4PeriodeRandLabels(g,perioden,y,randFont);
   const laatsteRandY=randen.rijen?randen.eersteY+(randen.rijen-1)*randen.stap:y;
@@ -276,7 +299,7 @@ function q4TekenRegenperioden(svg,g,perioden){
   });
   randen.labels.forEach(item=>{
     const label=q4SvgTekst(item.x,randen.eersteY+item.rij*randen.stap,item.tekst,randFont);
-    label.setAttribute("text-anchor","middle");
+    label.setAttribute("text-anchor",item.anchor||"middle");
     label.setAttribute("data-q4-rain-period-"+item.soort,String(item.index));
     groep.appendChild(label);
   });
