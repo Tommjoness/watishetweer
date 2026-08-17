@@ -36,8 +36,8 @@ body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 system-ui,
 <h2>Zelf wissen</h2>
 <p><button id="wis" type="button">Wis lokale gegevens</button><span id="wisstatus" role="status" aria-live="polite"></span></p>
 <p class="klein">Dit wist de lokaal opgeslagen plaatsen, instellingen en weersnapshot van deze site. Je kunt sitegegevens ook via de instellingen van je browser verwijderen.</p>
-<h2>Bronnen en contact</h2>
-<p>Bronvermelding staat ook onderaan de weerpagina. Voor vragen over deze app of gegevensverwerking kun je contact opnemen via de <a href="https://github.com/Tommjoness/weathernow">GitHub-repository</a>.</p>
+<h2>Bronnen en projectinformatie</h2>
+<p>Bronvermelding staat ook onderaan de weerpagina. Technische documentatie, broncode en het openbare wijzigingenoverzicht zijn beschikbaar via de <a href="https://github.com/Tommjoness/weathernow">projectpagina op GitHub</a>.</p>
 </main>
 <script>document.getElementById("wis").addEventListener("click",()=>{try{localStorage.clear();document.getElementById("wisstatus").textContent=" Lokale gegevens gewist.";}catch(e){document.getElementById("wisstatus").textContent=" Wissen lukte niet; gebruik de browserinstellingen.";}});</script>
 </body></html>
