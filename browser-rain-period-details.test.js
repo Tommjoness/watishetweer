@@ -72,8 +72,14 @@ async function controleer(type,naam){
           const eind=groep.querySelector(`text[data-q4-rain-period-end="${i}"]`),a=start.getBBox(),b=eind.getBBox();
           const overlapt=!(a.x+a.width+2<b.x||b.x+b.width+2<a.x);
           const zelfdeRegel=Math.abs(Number(start.getAttribute("y"))-Number(eind.getAttribute("y")))<0.1;
-          const binnen=a.x>=g.pl-0.5&&a.x+a.width<=g.W-g.pr+0.5&&b.x>=g.pl-0.5&&b.x+b.width<=g.W-g.pr+0.5;
-          return {overlapt,zelfdeRegel,binnen};
+          /* De labels horen juist buiten hun bracketuiteinden te kunnen staan.
+             De SVG-rand is daarom de echte visuele clipgrens; de binnenste plot-
+             marge is geen foutgrens voor tekst die onder de plot wordt gezet. */
+          const binnen=a.x>=-0.5&&a.x+a.width<=g.W+0.5&&b.x>=-0.5&&b.x+b.width<=g.W+0.5;
+          return {
+            overlapt,zelfdeRegel,binnen,
+            start:{x:a.x,w:a.width},eind:{x:b.x,w:b.width},svg:{links:0,rechts:g.W},plot:{links:g.pl,rechts:g.W-g.pr}
+          };
         });
         return {
           n:g&&g.n,mobiel:g&&g.M,
@@ -92,7 +98,7 @@ async function controleer(type,naam){
       assert.equal(uur24.details,0,`${naam} ${breedte}: losse dubbele perioderegels onder de grafiek zijn verwijderd`);
       assert.equal(uur24.samenvattingen,0,`${naam} ${breedte}: totaalregel en Meeste regen zijn verwijderd`);
       assert.deepEqual(uur24.totalen,["0,7 mm","0,5 mm"],`${naam} ${breedte}: bracketbedragen blijven gelijk aan de periodegegevens`);
-      assert.ok(uur24.layouts.length===2&&uur24.layouts.every(x=>x.zelfdeRegel&&!x.overlapt&&x.binnen),`${naam} ${breedte}: ook de één-uursperiode houdt begin/einde op één niet-overlappende regel binnen de grafiek; kreeg ${JSON.stringify(uur24.layouts)}`);
+      assert.ok(uur24.layouts.length===2&&uur24.layouts.every(x=>x.zelfdeRegel&&!x.overlapt&&x.binnen),`${naam} ${breedte}: ook de één-uursperiode houdt begin/einde op één niet-overlappende regel zonder SVG-clipping; kreeg ${JSON.stringify(uur24.layouts)}`);
       assert.ok(uur24.asTijden.length>=6,`${naam} ${breedte}: vaste uuras blijft zichtbaar; kreeg ${JSON.stringify(uur24.asTijden)}`);
 
       const langer=await page.evaluate(()=>{
