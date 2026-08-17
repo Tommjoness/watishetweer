@@ -4,7 +4,7 @@
 const q4Getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 const q4Mm=v=>{const n=q4Getal(v);return n===null?"–":n.toFixed(1).replace(".",",");};
 const q4Tijd=t=>String(t||"").slice(11,16);
-const q4DagKort=t=>{try{const d=new Date(String(t).slice(0,10)+"T12:00:00");return DAGEN[d.getDay()]+" "+d.getDate();}catch(e){return "";}};
+const q4DagKort=t=>{try{const d=new Date(String(t).slice(0,10)+"T12:00:00");return Number.isNaN(d.getTime())?"":(DAGEN[d.getDay()]||"");}catch(e){return "";}};
 const Q4_SVG_NS="http://www.w3.org/2000/svg";
 
 /* De grafiekhint hoort bij de interactieve Q4-presentatielaag. Een tekstuele
