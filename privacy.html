@@ -5,8 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Privacy & gegevens · Wat is het weer?</title>
 <meta name="robots" content="index,follow">
+<meta name="theme-color" content="#F4F5F3">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'">
-<style>body{margin:0;background:#f4f5f3;color:#12211c;font:16px/1.65 system-ui,-apple-system,sans-serif;padding:32px 20px}.kaart{max-width:760px;margin:auto;background:#fff;border:1px solid #dce1de;padding:32px}h1{font:400 36px/1.15 Georgia,serif;margin:0 0 24px}h2{font-size:17px;margin-top:28px}a{color:inherit}button{background:transparent;border:1px solid #41514b;padding:10px 14px;cursor:pointer;font:inherit}.klein{color:#65716c;font-size:14px}#wisstatus{margin-left:10px}</style>
+<script>
+(()=>{try{
+  const raw=localStorage.getItem("weerbriefing.thema");
+  const keuze=raw?JSON.parse(raw):"auto";
+  if(!["licht","donker","rood"].includes(keuze))return;
+  document.documentElement.setAttribute("data-thema",keuze);
+  const kleur=keuze==="donker"?"#0B120F":keuze==="rood"?"#080202":"#F4F5F3";
+  document.querySelector('meta[name="theme-color"]').setAttribute("content",kleur);
+}catch(e){}})();
+</script>
+<style>
+:root{--paper:#f4f5f3;--sheet:#fff;--ink:#12211c;--ink-70:#41514b;--muted:#65716c;--rule:#dce1de}
+html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70:#b8b8b8;--muted:#999;--rule:#2a2a2a}
+html[data-thema="rood"]{--paper:#080202;--sheet:#0d0303;--ink:#d24a3c;--ink-70:#b23e32;--muted:#97352b;--rule:#3a1611}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 system-ui,-apple-system,sans-serif;padding:32px 20px}.kaart{max-width:760px;margin:auto;background:var(--sheet);border:1px solid var(--rule);padding:32px}h1{font:400 36px/1.15 Georgia,serif;margin:0 0 24px}h2{font-size:17px;margin-top:28px}a{color:inherit}button{background:transparent;color:var(--ink);border:1px solid var(--ink-70);padding:10px 14px;cursor:pointer;font:inherit}.klein{color:var(--muted);font-size:14px}#wisstatus{margin-left:10px}
+</style>
 </head>
 <body><main class="kaart">
 <p><a href="./">← Terug naar het weer</a></p>
