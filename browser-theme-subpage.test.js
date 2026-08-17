@@ -14,6 +14,7 @@ const privacyBron=fs.readFileSync(privacyPad,"utf8");
 const themaInit=privacyBron.indexOf('localStorage.getItem("weerbriefing.thema")');
 const stijl=privacyBron.indexOf("<style>");
 assert.ok(themaInit>0&&stijl>themaInit,"thema-initialisatie moet vóór het eerste stijlblok staan om een verkeerde themapaint te voorkomen");
+assert.ok(!privacyBron.includes('data-thema="rood"'),"de verwijderde rode weergavestand mag niet opnieuw op de privacypagina ontstaan");
 
 const mime={".html":"text/html; charset=utf-8",".js":"application/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".woff2":"font/woff2",".png":"image/png"};
 const server=http.createServer((req,res)=>{
@@ -30,8 +31,8 @@ const server=http.createServer((req,res)=>{
 const gevallen=[
   {keuze:"donker",thema:"donker",achtergrond:"rgb(10, 10, 10)",kaart:"rgb(20, 20, 20)"},
   {keuze:"licht",thema:"licht",achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"},
-  {keuze:"rood",thema:"rood",achtergrond:"rgb(8, 2, 2)",kaart:"rgb(13, 3, 3)"},
-  {keuze:"auto",thema:null,achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"}
+  {keuze:"auto",thema:null,achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"},
+  {keuze:"rood",thema:null,achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"}
 ];
 
 async function controleer(browserType,naam){
@@ -52,14 +53,14 @@ async function controleer(browserType,naam){
         kaart:getComputedStyle(document.querySelector(".kaart")).backgroundColor,
         titel:(document.querySelector("h1")||{}).textContent||""
       }));
-      assert.equal(staat.thema,geval.thema,`${naam}: directe privacy-load respecteert ${geval.keuze}`);
+      assert.equal(staat.thema,geval.thema,`${naam}: directe privacy-load verwerkt ${geval.keuze} volgens het actieve themacontract`);
       assert.equal(staat.achtergrond,geval.achtergrond,`${naam}: pagina-achtergrond klopt voor ${geval.keuze}`);
       assert.equal(staat.kaart,geval.kaart,`${naam}: kaartachtergrond klopt voor ${geval.keuze}`);
       assert.equal(staat.titel.trim(),"Privacy & gegevens",`${naam}: privacypagina blijft inhoudelijk geladen`);
       assert.deepEqual(fouten,[],`${naam}: geen page errors bij ${geval.keuze}`);
       await context.close();
     }
-    console.log(`${naam}: privacy respecteert opgeslagen licht/donker/rood en behoudt auto-fallback.`);
+    console.log(`${naam}: privacy respecteert licht/donker, behoudt auto-fallback en heractiveert oude rode voorkeur niet.`);
   }finally{await browser.close();}
 }
 
