@@ -8,8 +8,9 @@ const assert=require("assert");
 const {chromium,webkit}=require("playwright");
 const {bouw}=require("./data.js");
 
-/* Test de echte canonieke helperbron ook los op kalendergrenzen. Zo bewaken we
-   dat een korte dagnaam nooit ongemerkt weer een dagnummer krijgt. */
+/* De daghelper blijft nodig voor de toegankelijke bracketbeschrijving over een
+   kalendergrens. De zichtbare endpointlabels worden hieronder juist klok-only
+   bewaakt. */
 const runtimeBron=fs.readFileSync(path.join(__dirname,"scripts","q4-rain-runtime.js"),"utf8");
 const helperRegel=(runtimeBron.match(/^const q4DagKort=.*;$/m)||[])[0];
 assert.ok(helperRegel,"q4DagKort ontbreekt in de canonieke Q4-runtime");
@@ -97,14 +98,17 @@ async function controleer(type,naam){
       return {
         starts:groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')].map(x=>(x.textContent||"").trim()):[],
         ends:groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')].map(x=>(x.textContent||"").trim()):[],
+        bedragen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(x=>(x.textContent||"").trim()):[],
         details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
-        piek:(groep&&groep.querySelector('text[data-q4-rain-summary="peak"]')||{}).textContent||""
+        samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0
       };
     });
-    assert.deepEqual(meerdere.starts,["15:00","wo 22:00","do 03:00"],`${naam}: begintijden gebruiken huidige dag, kalendergrens en volgende lokale dag consequent`);
-    assert.deepEqual(meerdere.ends,["17:00","do 02:00","10:00"],`${naam}: eindtijden benoemen de nieuwe kalenderdag alleen waar die nodig is`);
+    assert.deepEqual(meerdere.starts,["15:00","22:00","03:00"],`${naam}: zichtbare begintijden blijven klok-only, ook over een lokale kalendergrens`);
+    assert.deepEqual(meerdere.ends,["17:00","02:00","10:00"],`${naam}: zichtbare eindtijden blijven klok-only, ook over een lokale kalendergrens`);
+    assert.deepEqual(meerdere.bedragen,["0,4 mm","2,0 mm","6,4 mm"],`${naam}: iedere bracket houdt zijn eigen hoeveelheid`);
     assert.equal(meerdere.details,0,`${naam}: tijdvakken worden niet nogmaals als losse regels herhaald`);
-    assert.equal(meerdere.piek.trim(),"Meeste regen do 05:00–06:00 · 2,6 mm",`${naam}: natste uur gebruikt dezelfde korte dagconventie`);
+    assert.equal(meerdere.samenvattingen,0,`${naam}: geen totaalregel of Meeste regen-regel onder de brackets`);
+    assert.ok([...meerdere.starts,...meerdere.ends].every(x=>/^\d{2}:\d{2}$/.test(x)),`${naam}: zichtbare endpointlabels bevatten uitsluitend kloktijden`);
 
     const enkelVolgendeDag=await page.evaluate(()=>{
       S.d.hourly.precipitation=S.d.hourly.precipitation.map((_,i)=>{
@@ -119,18 +123,18 @@ async function controleer(type,naam){
       S.dag=null;S.bereik=24;etmaal(S.i0,24);
       const groep=document.querySelector('#chart g[data-q4-rain-periods="1"]');
       return {
-        totaal:(groep&&groep.querySelector('text[data-q4-rain-summary="total"]')||{}).textContent||"",
         starts:groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')].map(x=>(x.textContent||"").trim()):[],
         ends:groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')].map(x=>(x.textContent||"").trim()):[],
-        piek:(groep&&groep.querySelector('text[data-q4-rain-summary="peak"]')||{}).textContent||""
+        bedragen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(x=>(x.textContent||"").trim()):[],
+        samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0
       };
     });
-    assert.equal(enkelVolgendeDag.totaal.trim(),"1 regenperiode · totaal 6,4 mm",`${naam}: enkele periode houdt een compacte totaalregel zonder dubbel tijdvak`);
-    assert.deepEqual(enkelVolgendeDag.starts,["do 03:00"],`${naam}: enkele regenperiode op volgende lokale dag noemt de dag aan het begin`);
-    assert.deepEqual(enkelVolgendeDag.ends,["10:00"],`${naam}: eindtijd op dezelfde volgende dag hoeft de dag niet te herhalen`);
-    assert.equal(enkelVolgendeDag.piek.trim(),"Meeste regen do 05:00–06:00 · 2,6 mm",`${naam}: piek blijft gelijk aan periodeconventie`);
+    assert.deepEqual(enkelVolgendeDag.starts,["03:00"],`${naam}: volgende lokale dag krijgt zichtbaar geen overbodige weekdag`);
+    assert.deepEqual(enkelVolgendeDag.ends,["10:00"],`${naam}: eindtijd blijft een pure kloktijd`);
+    assert.deepEqual(enkelVolgendeDag.bedragen,["6,4 mm"],`${naam}: enkele periode houdt alleen haar eigen mm-waarde`);
+    assert.equal(enkelVolgendeDag.samenvattingen,0,`${naam}: ook één periode krijgt geen totaal- of pieksamenvatting`);
     assert.deepEqual(fouten,[],`${naam}: geen page errors`);
-    console.log(`${naam}: regendatumlabels aan bracketuiteinden zijn consistent over lokale daggrens en halve-uur tijdzone.`);
+    console.log(`${naam}: 24-uurs regenbrackets tonen alleen kloktijden en mm, zonder zichtbare dag- of samenvattingsregels.`);
   }finally{await browser.close();}
 }
 
