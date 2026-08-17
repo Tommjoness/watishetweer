@@ -8,9 +8,9 @@ const {chromium,webkit}=require("playwright");
 const {bouw}=require("./data.js");
 
 const weer=bouw({
-  pp:(u,dag)=>dag===0&&((u>=16&&u<=18)||(u>=21&&u<=22))?86:8,
-  pr:(u,dag)=>dag===0?(u===16?0.2:u===17?0.4:u===18?0.1:u===21?0.3:u===22?0.2:0):0,
-  wc:(u,dag)=>dag===0&&((u>=16&&u<=18)||(u>=21&&u<=22))?61:3,
+  pp:(u,dag)=>dag===0&&((u>=16&&u<=18)||u===22)?86:8,
+  pr:(u,dag)=>dag===0?(u===16?0.2:u===17?0.4:u===18?0.1:u===22?0.5:0):0,
+  wc:(u,dag)=>dag===0&&((u>=16&&u<=18)||u===22)?61:3,
   som:1.2
 });
 weer.current.interval=900;
@@ -58,6 +58,7 @@ async function controleer(type,naam){
       page.on("pageerror",e=>fouten.push(String(e)));
       await page.goto(`http://127.0.0.1:${server.address().port}/?lat=52.35&lon=5.26&plaats=Regenperiodetest&land=NL`,{waitUntil:"load"});
       await page.waitForFunction(()=>typeof S!=="undefined"&&S.d&&S.i0>=0,null,{timeout:10000});
+      await page.evaluate(()=>document.fonts&&document.fonts.ready);
 
       const uur24=await page.evaluate(()=>{
         S.dag=null;S.bereik=24;etmaal(S.i0,24);
@@ -66,21 +67,30 @@ async function controleer(type,naam){
         const asTijden=[...svg.querySelectorAll("text")]
           .filter(el=>Math.abs(Number(el.getAttribute("y"))-asY)<0.1&&/^\d{2}$/.test((el.textContent||"").trim()))
           .map(el=>(el.textContent||"").trim());
+        const startEls=groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')]:[];
+        const layouts=startEls.map((start,i)=>{
+          const eind=groep.querySelector(`text[data-q4-rain-period-end="${i}"]`),a=start.getBBox(),b=eind.getBBox();
+          const overlapt=!(a.x+a.width+2<b.x||b.x+b.width+2<a.x);
+          const zelfdeRegel=Math.abs(Number(start.getAttribute("y"))-Number(eind.getAttribute("y")))<0.1;
+          const binnen=a.x>=g.pl-0.5&&a.x+a.width<=g.W-g.pr+0.5&&b.x>=g.pl-0.5&&b.x+b.width<=g.W-g.pr+0.5;
+          return {overlapt,zelfdeRegel,binnen};
+        });
         return {
           n:g&&g.n,mobiel:g&&g.M,
-          starts:groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')].map(el=>(el.textContent||"").trim()):[],
+          starts:startEls.map(el=>(el.textContent||"").trim()),
           ends:groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')].map(el=>(el.textContent||"").trim()):[],
           details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
           totalen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(el=>(el.textContent||"").trim()):[],
-          asTijden
+          layouts,asTijden
         };
       });
       assert.ok(uur24.n<=25,`${naam} ${breedte}: test gebruikt daadwerkelijk de 24-uursweergave`);
       assert.equal(uur24.mobiel,breedte<760,`${naam} ${breedte}: renderer gebruikt de verwachte viewportmodus`);
-      assert.deepEqual(uur24.starts,["15:00","20:00"],`${naam} ${breedte}: iedere regenbracket toont de eigen begintijd`);
+      assert.deepEqual(uur24.starts,["15:00","21:00"],`${naam} ${breedte}: iedere regenbracket toont de eigen begintijd`);
       assert.deepEqual(uur24.ends,["18:00","22:00"],`${naam} ${breedte}: iedere regenbracket toont de eigen eindtijd`);
       assert.equal(uur24.details,0,`${naam} ${breedte}: losse dubbele perioderegels onder de grafiek zijn verwijderd`);
       assert.deepEqual(uur24.totalen,["0,7 mm","0,5 mm"],`${naam} ${breedte}: bracketbedragen blijven gelijk aan de periodegegevens`);
+      assert.ok(uur24.layouts.length===2&&uur24.layouts.every(x=>x.zelfdeRegel&&!x.overlapt&&x.binnen),`${naam} ${breedte}: ook de één-uursperiode houdt begin/einde op één niet-overlappende regel binnen de grafiek; kreeg ${JSON.stringify(uur24.layouts)}`);
       assert.ok(uur24.asTijden.length>=6,`${naam} ${breedte}: vaste uuras blijft zichtbaar; kreeg ${JSON.stringify(uur24.asTijden)}`);
 
       const langer=await page.evaluate(()=>{
@@ -100,7 +110,7 @@ async function controleer(type,naam){
       assert.deepEqual(fouten,[],`${naam} ${breedte}: geen page errors`);
       await page.close();
     }
-    console.log(`${naam}: regenbrackets tonen start/einde op 24 uur en de uuras blijft zichtbaar op mobiel én desktop.`);
+    console.log(`${naam}: regenbrackets tonen start/einde op één regel, inclusief één-uursperiode, en de uuras blijft zichtbaar op mobiel én desktop.`);
   }finally{await browser.close();}
 }
 
