@@ -162,9 +162,8 @@ function q4PeriodeBedragLabels(g,perioden,eersteY,font){
   return {labels,rijen:Math.max(1,rijen.length),eersteY,stap:11};
 }
 
-/* Eén formatter blijft eigenaar van de datumconventie. Op de huidige lokale dag
-   is alleen de klok nodig; op een volgende dag komt de korte weekdag erbij; bij
-   een periode over middernacht worden beide dagen expliciet benoemd. */
+/* Eén formatter blijft eigenaar van de datumconventie voor de toegankelijke
+   bracketbeschrijving. De zichtbare 24-uurslabels blijven bewust kloktijden. */
 function q4PeriodeTijdvak(g,p){
   const van=g&&Array.isArray(g.TI)?g.TI[p.van]:null,tot=g&&Array.isArray(g.TI)?g.TI[p.tot]:null;
   const basisDatum=String(g&&Array.isArray(g.TI)&&g.TI[0]||"").slice(0,10);
@@ -175,16 +174,12 @@ function q4PeriodeTijdvak(g,p){
   return dag+q4Tijd(van)+"–"+q4Tijd(tot);
 }
 
-/* In de 24-uursweergave horen begin en einde direct bij de bracket te staan.
-   Dat maakt de losse, herhaalde perioderegels onder de grafiek overbodig. Dezelfde
-   daglogica als q4PeriodeTijdvak() bepaalt of een weekdag nodig is. */
+/* In de 24-uursweergave zijn alleen de kloktijden aan de bracket zichtbaar.
+   De chronologische x-as geeft al genoeg dagcontext; extra weekdagen maken deze
+   compacte laag onnodig druk. */
 function q4PeriodeRandTekst(g,p){
   const van=g&&Array.isArray(g.TI)?g.TI[p.van]:null,tot=g&&Array.isArray(g.TI)?g.TI[p.tot]:null;
-  const basisDatum=String(g&&Array.isArray(g.TI)&&g.TI[0]||"").slice(0,10);
-  const vanDatum=String(van||"").slice(0,10),totDatum=String(tot||"").slice(0,10);
-  if(vanDatum&&totDatum&&vanDatum!==totDatum)return {van:q4DagKort(van)+" "+q4Tijd(van),tot:q4DagKort(tot)+" "+q4Tijd(tot)};
-  const dag=vanDatum&&basisDatum&&vanDatum!==basisDatum?q4DagKort(van)+" ":"";
-  return {van:dag+q4Tijd(van),tot:q4Tijd(tot)};
+  return {van:q4Tijd(van),tot:q4Tijd(tot)};
 }
 function q4PeriodeRandLabels(g,perioden,y,font){
   const eersteY=y+13;
@@ -267,18 +262,16 @@ function q4TekenRegenperioden(svg,g,perioden){
   }
 
   /* Iedere aaneengesloten periode houdt zijn eigen bracket op de werkelijke
-     uurpositie. In de 24-uursweergave staan begin/einde direct aan de bracket;
-     de hoeveelheid blijft er gecentreerd onder. Korte perioden blijven op één
-     regel zolang de beschikbare grafiekruimte dat geometrisch toelaat. */
-  const pb=g.pt+g.ih,y=pb+48,regel=g.M?14:16,randFont=g.M?8.3:8.9,bedragFont=g.M?8.8:9.4;
+     uurpositie. In de 24-uursweergave staan uitsluitend begin/einde en de mm-som
+     bij de bracket; losse totalen en een aparte 'Meeste regen'-regel zijn bewust
+     verwijderd om dezelfde informatie niet nogmaals uit te schrijven. */
+  const pb=g.pt+g.ih,y=pb+48,randFont=g.M?8.3:8.9,bedragFont=g.M?8.8:9.4;
   const randen=q4PeriodeRandLabels(g,perioden,y,randFont);
   const laatsteRandY=randen.rijen?randen.eersteY+(randen.rijen-1)*randen.stap:y;
   const bedragStartY=randen.rijen?laatsteRandY+14:y+14;
   const bedragen=q4PeriodeBedragLabels(g,perioden,bedragStartY,bedragFont);
   const laatsteBedragY=bedragen.eersteY+(bedragen.rijen-1)*bedragen.stap;
-  const samenvattingY=laatsteBedragY+20;
-  const piekY=samenvattingY+regel;
-  const nieuwH=Math.max(basisH,piekY+17+8);
+  const nieuwH=Math.max(basisH,laatsteBedragY+17+8);
   svg.setAttribute("viewBox","0 0 "+g.W+" "+nieuwH);g.H=nieuwH;
 
   const groep=document.createElementNS(Q4_SVG_NS,"g");
@@ -309,16 +302,6 @@ function q4TekenRegenperioden(svg,g,perioden){
     label.setAttribute("data-q4-rain-period-amount",String(item.index));
     groep.appendChild(label);
   });
-
-  const totaal=perioden.reduce((som,p)=>som+p.som,0);
-  let piek=perioden[0];for(const p of perioden)if(p.piekMm>piek.piekMm)piek=p;
-  const periodeTekst=perioden.length+" regenperiode"+(perioden.length===1?"":"s")+" · totaal "+q4Mm(totaal)+" mm";
-  const basisDatum=String(g.TI&&g.TI[0]||"").slice(0,10),piekDatum=String(g.TI&&g.TI[piek.piek]||"").slice(0,10);
-  const dag=(g.n>49||(basisDatum&&piekDatum&&basisDatum!==piekDatum))?q4DagKort(g.TI[piek.piek])+" ":"";
-  const piekTekst="Meeste regen "+dag+q4Tijd(g.TI[piek.piek-1])+"–"+q4Tijd(g.TI[piek.piek])+" · "+q4Mm(piek.piekMm)+" mm";
-  const font=g.M?9.3:10.2;
-  groep.appendChild(q4SvgTekst(g.pl,samenvattingY,periodeTekst,font,"total"));
-  groep.appendChild(q4SvgTekst(g.pl,piekY,piekTekst,font,"peak"));
 
   const scrub=svg.querySelector("#scrub");svg.insertBefore(groep,scrub||null);
   const detailAria=g.n<=25?" Bij iedere regenperiode staan begin- en eindtijd en verwachte hoeveelheid.":"";
