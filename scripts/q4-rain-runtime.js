@@ -168,10 +168,12 @@ function q4PeriodeBedragLabels(g,perioden,y,font){
    dagen expliciet, zodat 23:00–02:00 nooit dubbelzinnig wordt. */
 function q4PeriodeTijdvak(g,p){
   const van=g&&Array.isArray(g.TI)?g.TI[p.van]:null,tot=g&&Array.isArray(g.TI)?g.TI[p.tot]:null;
+  const basisDatum=String(g&&Array.isArray(g.TI)&&g.TI[0]||"").slice(0,10);
   const vanDatum=String(van||"").slice(0,10),totDatum=String(tot||"").slice(0,10);
   const vanDag=q4DagKort(van),totDag=q4DagKort(tot);
   if(vanDatum&&totDatum&&vanDatum!==totDatum)return vanDag+" "+q4Tijd(van)+"–"+totDag+" "+q4Tijd(tot);
-  return (vanDag?vanDag+" ":"")+q4Tijd(van)+"–"+q4Tijd(tot);
+  const dag=vanDatum&&basisDatum&&vanDatum!==basisDatum?vanDag+" ":"";
+  return dag+q4Tijd(van)+"–"+q4Tijd(tot);
 }
 
 function q4TekenRegenperioden(svg,g,perioden){
@@ -254,7 +256,7 @@ function q4TekenRegenperioden(svg,g,perioden){
   let piek=perioden[0];for(const p of perioden)if(p.piekMm>piek.piekMm)piek=p;
   const één=perioden.length===1,eerste=perioden[0];
   const periodeTekst=één
-    ? q4Tijd(g.TI[eerste.van])+"–"+q4Tijd(g.TI[eerste.tot])+" · totaal "+q4Mm(totaal)+" mm"
+    ? q4PeriodeTijdvak(g,eerste)+" · totaal "+q4Mm(totaal)+" mm"
     : perioden.length+" regenperiodes · totaal "+q4Mm(totaal)+" mm";
   const basisDatum=String(g.TI&&g.TI[0]||"").slice(0,10),piekDatum=String(g.TI&&g.TI[piek.piek]||"").slice(0,10);
   const dag=(g.n>49||(basisDatum&&piekDatum&&basisDatum!==piekDatum))?q4DagKort(g.TI[piek.piek])+" ":"";
