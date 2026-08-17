@@ -80,6 +80,7 @@ async function controleer(type,naam){
           starts:startEls.map(el=>(el.textContent||"").trim()),
           ends:groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')].map(el=>(el.textContent||"").trim()):[],
           details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
+          samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0,
           totalen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(el=>(el.textContent||"").trim()):[],
           layouts,asTijden
         };
@@ -89,6 +90,7 @@ async function controleer(type,naam){
       assert.deepEqual(uur24.starts,["15:00","21:00"],`${naam} ${breedte}: iedere regenbracket toont de eigen begintijd`);
       assert.deepEqual(uur24.ends,["18:00","22:00"],`${naam} ${breedte}: iedere regenbracket toont de eigen eindtijd`);
       assert.equal(uur24.details,0,`${naam} ${breedte}: losse dubbele perioderegels onder de grafiek zijn verwijderd`);
+      assert.equal(uur24.samenvattingen,0,`${naam} ${breedte}: totaalregel en Meeste regen zijn verwijderd`);
       assert.deepEqual(uur24.totalen,["0,7 mm","0,5 mm"],`${naam} ${breedte}: bracketbedragen blijven gelijk aan de periodegegevens`);
       assert.ok(uur24.layouts.length===2&&uur24.layouts.every(x=>x.zelfdeRegel&&!x.overlapt&&x.binnen),`${naam} ${breedte}: ook de één-uursperiode houdt begin/einde op één niet-overlappende regel binnen de grafiek; kreeg ${JSON.stringify(uur24.layouts)}`);
       assert.ok(uur24.asTijden.length>=6,`${naam} ${breedte}: vaste uuras blijft zichtbaar; kreeg ${JSON.stringify(uur24.asTijden)}`);
@@ -100,17 +102,21 @@ async function controleer(type,naam){
           n:S.geo&&S.geo.n,
           starts:groep?groep.querySelectorAll('text[data-q4-rain-period-start]').length:0,
           ends:groep?groep.querySelectorAll('text[data-q4-rain-period-end]').length:0,
-          details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0
+          details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
+          samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0,
+          bedragen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(el=>(el.textContent||"").trim()):[]
         };
       });
       assert.ok(langer.n>25,`${naam} ${breedte}: tweede controle gebruikt een langere grafiek`);
       assert.equal(langer.starts,0,`${naam} ${breedte}: 48-uursgrafiek wordt niet volgezet met begintijdlabels`);
       assert.equal(langer.ends,0,`${naam} ${breedte}: 48-uursgrafiek wordt niet volgezet met eindtijdlabels`);
       assert.equal(langer.details,0,`${naam} ${breedte}: langere grafiek houdt geen uitgeschreven perioderegels`);
+      assert.equal(langer.samenvattingen,0,`${naam} ${breedte}: langere grafiek krijgt ook geen losse totaal- of pieksamenvatting`);
+      assert.ok(langer.bedragen.length>=2,`${naam} ${breedte}: langere grafiek behoudt de mm-bedragen per bracket`);
       assert.deepEqual(fouten,[],`${naam} ${breedte}: geen page errors`);
       await page.close();
     }
-    console.log(`${naam}: regenbrackets tonen start/einde op één regel, inclusief één-uursperiode, en de uuras blijft zichtbaar op mobiel én desktop.`);
+    console.log(`${naam}: regenbrackets tonen alleen start/einde + mm, inclusief één-uursperiode, en de uuras blijft zichtbaar op mobiel én desktop.`);
   }finally{await browser.close();}
 }
 
