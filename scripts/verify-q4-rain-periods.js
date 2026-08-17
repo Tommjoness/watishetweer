@@ -36,8 +36,10 @@ ok(html.includes('data-q4-rain-period-amount')&&html.includes('q4Mm(p.som)+" mm"
 ok(html.includes("function q4PeriodeRandTekst(g,p)"),"bracketuiteinden gebruiken een eigen dagbewuste teksthelper");
 ok(html.includes("function q4PeriodeRandLabels(g,perioden,y,font)"),"bracketuiteinden hebben een eigen botsingsbewuste layouthulp");
 ok(html.includes('if(!g||g.n>25)return {labels:[],rijen:0'),"begin- en eindtijdlabels blijven beperkt tot de 24-uursweergave");
-ok(html.includes('data-q4-rain-period-"+item.soort')&&html.includes('voeg(index,"start"')&&html.includes('voeg(index,"end"'),"iedere 24-uursregenperiode krijgt begin- en eindtijd aan de bracket");
-ok(html.includes("while((rijen[rij]||[]).some"),"regenlabels kunnen bij korte perioden botsingsbewust naar een volgende regel uitwijken");
+ok(html.includes('labels.push({index,soort:"start"')&&html.includes('labels.push({index,soort:"end"')&&html.includes('data-q4-rain-period-"+item.soort'),"iedere 24-uursregenperiode krijgt begin- en eindtijd aan de bracket");
+ok(html.includes('const combinaties=[];')&&html.includes('gekozen.start.vak')&&html.includes('gekozen.eind.vak'),"begin en einde worden eerst als één niet-overlappende labelcombinatie op dezelfde regel geplaatst");
+ok(html.includes('label.setAttribute("text-anchor",item.anchor||"middle")'),"brackettijden gebruiken randgerichte SVG-ankers in plaats van altijd centreren");
+ok(html.includes("while((rijen[rij]||[]).some"),"regenlabels houden een generieke botsingsfallback voor uitzonderlijk krappe grafiekranden");
 ok(!html.includes("data-q4-rain-period-detail"),"losse dubbele perioderegels onder de grafiek zijn verwijderd");
 ok(html.includes("function q4PeriodeTijdvak(g,p)"),"regenperioden behouden één canonieke dag- en tijdvakformatter");
 ok(html.includes('vanDatum!==totDatum')&&html.includes('vanDag+" "+q4Tijd(van)+"–"+totDag+" "+q4Tijd(tot)'),"regenperiode over middernacht benoemt beide kalenderdagen");
