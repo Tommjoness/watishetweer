@@ -29,7 +29,7 @@ ok(!html.includes("groep.innerHTML=inhoud"),"Q4 gebruikt geen fragiele SVG-inner
 ok(html.includes('el.getAttribute("fill-opacity")===".16"')&&html.includes("el.remove();"),"oude losse neerslagstaven worden na render verwijderd");
 ok(html.includes("millimeter neerslag$/.test")&&html.includes("el.remove();"),"oude losse mm-labels worden na render verwijderd");
 ok(!html.includes("function q4KansIndex(g,x)"),"ongebruikte statische-kanspositionering is uit de Q4-runtime verwijderd");
-ok(html.includes('el.getAttribute("fill")===TEAL&&/^\\d+%$/.test((el.textContent||"").trim())')&&html.includes("el.remove();"),"statische neerslagpercentages worden volledig uit de grafiek verwijderd");
+ok(html.includes('!el.closest("#scrub")&&/^\\d+%$/.test((el.textContent||"").trim())')&&html.includes("el.remove();"),"statische neerslagpercentages worden semantisch uit de tijdlijn verwijderd zonder de interactieve tooltip te raken");
 ok(html.includes("function q4PeriodeBedragLabels(g,perioden,eersteY,font)"),"periodehoeveelheden hebben een eigen botsingsbewuste layouthulp");
 ok(html.includes('data-q4-rain-period-amount')&&html.includes('q4Mm(p.som)+" mm"'),"iedere regenperiode toont zijn eigen berekende totaalhoeveelheid");
 ok(html.includes("function q4PeriodeRandTekst(g,p)"),"regenperiode heeft één zichtbare kloktijdhelper");
