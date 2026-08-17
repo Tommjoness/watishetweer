@@ -147,9 +147,7 @@ async function controleer(type,naam,breedte){
     assert.equal(r.oudeMm,0,naam+" "+breedte+": oude losse mm-labels zijn weg");
     assert.equal(r.brackets,6,naam+" "+breedte+": twee regenperioden geven twee brackets met eindkapjes; kreeg "+r.brackets+" lijnen; "+r.teksten.join(" | "));
     assert.deepEqual(r.periodeBedragen,["0,7 mm","0,5 mm"],naam+" "+breedte+": iedere bracket toont zijn eigen periodetotaal; kreeg "+JSON.stringify(r.periodeBedragen));
-    assert.equal(r.samenvattingen.length,2,naam+" "+breedte+": wisselvallig weer houdt twee globale samenvattingsregels");
-    assert(r.samenvattingen[0].includes("2 regenperiodes")&&r.samenvattingen[0].includes("totaal 1,2 mm"),naam+" "+breedte+": totaalregel klopt: "+r.samenvattingen.join(" | "));
-    assert(r.samenvattingen[1].includes("Meeste regen 16:00–17:00")&&r.samenvattingen[1].includes("0,4 mm"),naam+" "+breedte+": piekuur klopt: "+r.samenvattingen.join(" | "));
+    assert.equal(r.samenvattingen.length,0,naam+" "+breedte+": totaalregel en pieksamenvatting zijn bewust verwijderd");
     assert.equal(r.kansOnderTien,0,naam+" "+breedte+": triviale kanslabels onder 10% blijven uit de statische grafiek");
     assert.equal(r.kansNegentien,false,naam+" "+breedte+": een 19%-kans bij 0 mm staat niet los onder een droog grafiekstuk");
     assert.equal(r.kansPeriodeAantal,2,naam+" "+breedte+": twee regenperioden houden exact twee statische periodemaxima");
@@ -166,7 +164,7 @@ async function controleer(type,naam,breedte){
     assert(r.nachtBewolking.length>0&&r.nachtBewolking.every(t=>t==="<5%"),naam+" "+breedte+": Nachtzicht gebruikt dezelfde <5%-notatie; kreeg "+JSON.stringify(r.nachtBewolking));
     assert.equal(r.aqiSub,"Redelijk",naam+" "+breedte+": AQI-subregel herhaalt de schaalnaam niet; kreeg "+JSON.stringify(r.aqiSub));
     assert(!r.dagteksten.some(t=>/rond \d{1,2}:\d{2}/.test(t)),naam+" "+breedte+": dagregels suggereren geen minuutprecisie");
-    assert(r.h>296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets, bedragen en samenvatting");
+    assert(r.h>296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets, tijdlabels en bedragen");
 
     await page.locator("#chart").scrollIntoViewIfNeeded();
     const puntCoords=uur=>page.evaluate(uur=>{
@@ -316,7 +314,7 @@ async function controleer(type,naam,breedte){
     assert.equal(droog.kansen,0,naam+" "+breedte+": uitsluitend 8%-kansen geven geen losse grafiekruis");
     assert.equal(droog.zelfdeArray,true,naam+" "+breedte+": ook droog houdt één gedeelde mm-array");
     assert.deepEqual(fouten,[],naam+" "+breedte+": geen pageerrors");
-    console.log("Q4-browser OK: "+naam+" "+breedte+"px; "+r.samenvattingen.join(" | ")+"; perioden "+r.periodeBedragen.join(" | "));
+    console.log("Q4-browser OK: "+naam+" "+breedte+"px; perioden "+r.periodeBedragen.join(" | ")+"; zonder losse samenvattingen");
   }finally{
     await context.close();await browser.close();
   }
