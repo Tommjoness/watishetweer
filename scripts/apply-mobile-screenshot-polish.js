@@ -41,9 +41,11 @@ const GRAFIEK_TICK_OUD='    if(toonAs){\n      ticks+=';
 const GRAFIEK_TICK_NIEUW='    if(toonAs){\n      const tijdLabelVrij=nuX==null||Math.abs(x(i)-nuX)>Math.max(18,F.uur*2.2);\n      if(tijdLabelVrij) ticks+=';
 const GRAFIEK_GEO_ANCHOR='  S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,H:H,M:M};';
 const GRAFIEK_AS_CLEANUP=[
-  '  /* Checkpoint 50: controleer na renderen de werkelijke SVG-fontboxes en',
-  '     verwijder uitsluitend een tijdlabel dat een temperatuurcijfer echt raakt. */',
+  '  /* Checkpoint 50: controleer op mobiele grafieken de werkelijke SVG-fontboxes',
+  '     en verwijder uitsluitend een tijdlabel dat een temperatuurcijfer echt raakt.',
+  '     Desktop heeft voldoende ruimte en behoudt bewust het volledige drie-uursraster. */',
   '  const ruimBotsendeAslabelsOp=()=>{',
+  '    if(!M)return;',
   '    const teksten=[...svg.querySelectorAll("text")];',
   '    const temperatuurLabels=teksten.filter(el=>/Bodoni Moda/.test(el.getAttribute("font-family")||"")&&/°$/.test((el.textContent||"").trim()));',
   '    const asY=pb+(M?20:22);',
@@ -111,7 +113,7 @@ for(const vereist of [
   "WeatherNowQ1","q1-dag-mm","weerbriefing.plaatscache.q1","neerslagkans",
   "temperatuurTrend","q1-pop-hidden","normaliseerNachtDagdata","nachtIsActiefNu","corrigeerNachtVensterBron","verbeterNachtzicht",
   "H=M?250:296","pt=M?59:76, ih=M?145:160","tijdLabelVrij=nuX==null",
-  "val+labelHoogte/2+4<=pb","ruimBotsendeAslabelsOp","getBBox()"
+  "val+labelHoogte/2+4<=pb","ruimBotsendeAslabelsOp","if(!M)return;","getBBox()"
 ]){
   if(!html.includes(vereist))throw new Error("Post-build invariant ontbreekt: "+vereist);
 }

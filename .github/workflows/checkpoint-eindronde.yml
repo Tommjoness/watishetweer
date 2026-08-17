@@ -63,6 +63,8 @@ jobs:
         run: node browser-polar-solar.test.js
       - name: Weergave en favicon in Chromium en WebKit
         run: node browser-ui-shell-playwright.test.js
+      - name: Subpaginathema in Chromium en WebKit
+        run: node browser-theme-subpage.test.js
       - name: Tijdzones en fallback in Chromium en WebKit
         run: node browser-timezone-hardening.test.js
       - name: Cold-load browser-performancebudget
@@ -103,6 +105,8 @@ jobs:
           fi
       - name: Regenperioden exact per tijdvak in Chromium en WebKit
         run: node browser-rain-period-details.test.js
+      - name: Regendatumlabels in Chromium en WebKit
+        run: node browser-rain-date-labels.test.js
       - name: Serviceworker upgrade en offline in Chromium
         shell: bash
         run: |
