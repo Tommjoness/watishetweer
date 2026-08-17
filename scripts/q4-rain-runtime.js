@@ -218,9 +218,12 @@ function q4TekenRegenperioden(svg,g,perioden){
   svg.querySelectorAll('g[data-q4-rain-periods]').forEach(el=>el.remove());
 
   /* De oude hoeveelheidstaven en losse mm-cijfers verdwijnen volledig. Ook de
-     statische neerslagpercentages verdwijnen uit de 24-uursgrafiek: de bracket
-     communiceert alleen tijdvak en hoeveelheid. De volledige kansinformatie
-     blijft ongewijzigd beschikbaar via de interactieve tooltip. */
+     statische neerslagpercentages verdwijnen uit de tijdlijn: de bracket
+     communiceert alleen tijdvak en hoeveelheid. Selecteren op de kleur van zo'n
+     label is te fragiel voor een geassembleerde artifact; de betekenis is het
+     contract. Daarom verwijderen we ieder los numeriek %-label uit #chart,
+     behalve tekst in de interactieve #scrub-tooltip. De volledige kansinformatie
+     blijft daar ongewijzigd beschikbaar. */
   [...svg.querySelectorAll("rect")].forEach(el=>{
     if(el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".16")el.remove();
   });
@@ -228,7 +231,7 @@ function q4TekenRegenperioden(svg,g,perioden){
     if(/ millimeter neerslag$/.test(el.getAttribute("aria-label")||""))el.remove();
   });
   [...svg.querySelectorAll("text")].forEach(el=>{
-    if(el.getAttribute("fill")===TEAL&&/^\d+%$/.test((el.textContent||"").trim()))el.remove();
+    if(!el.closest("#scrub")&&/^\d+%$/.test((el.textContent||"").trim()))el.remove();
   });
 
   const basisH=q4Getal(g.H)||296;
