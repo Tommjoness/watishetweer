@@ -95,15 +95,15 @@ async function controleer(type,naam){
       S.dag=null;S.bereik=24;etmaal(S.i0,24);
       const groep=document.querySelector('#chart g[data-q4-rain-periods="1"]');
       return {
-        details:groep?[...groep.querySelectorAll('text[data-q4-rain-period-detail]')].map(x=>(x.textContent||"").trim()):[],
+        starts:groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')].map(x=>(x.textContent||"").trim()):[],
+        ends:groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')].map(x=>(x.textContent||"").trim()):[],
+        details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
         piek:(groep&&groep.querySelector('text[data-q4-rain-summary="peak"]')||{}).textContent||""
       };
     });
-    assert.deepEqual(meerdere.details,[
-      "15:00–17:00 · 0,4 mm",
-      "wo 22:00–do 02:00 · 2,0 mm",
-      "do 03:00–10:00 · 6,4 mm"
-    ],`${naam}: vandaag, kalendergrens en volgende lokale dag gebruiken één datumconventie`);
+    assert.deepEqual(meerdere.starts,["15:00","wo 22:00","do 03:00"],`${naam}: begintijden gebruiken huidige dag, kalendergrens en volgende lokale dag consequent`);
+    assert.deepEqual(meerdere.ends,["17:00","do 02:00","10:00"],`${naam}: eindtijden benoemen de nieuwe kalenderdag alleen waar die nodig is`);
+    assert.equal(meerdere.details,0,`${naam}: tijdvakken worden niet nogmaals als losse regels herhaald`);
     assert.equal(meerdere.piek.trim(),"Meeste regen do 05:00–06:00 · 2,6 mm",`${naam}: natste uur gebruikt dezelfde korte dagconventie`);
 
     const enkelVolgendeDag=await page.evaluate(()=>{
@@ -120,13 +120,17 @@ async function controleer(type,naam){
       const groep=document.querySelector('#chart g[data-q4-rain-periods="1"]');
       return {
         totaal:(groep&&groep.querySelector('text[data-q4-rain-summary="total"]')||{}).textContent||"",
+        starts:groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')].map(x=>(x.textContent||"").trim()):[],
+        ends:groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')].map(x=>(x.textContent||"").trim()):[],
         piek:(groep&&groep.querySelector('text[data-q4-rain-summary="peak"]')||{}).textContent||""
       };
     });
-    assert.equal(enkelVolgendeDag.totaal.trim(),"do 03:00–10:00 · totaal 6,4 mm",`${naam}: enkele regenperiode op volgende lokale dag noemt de dag`);
+    assert.equal(enkelVolgendeDag.totaal.trim(),"1 regenperiode · totaal 6,4 mm",`${naam}: enkele periode houdt een compacte totaalregel zonder dubbel tijdvak`);
+    assert.deepEqual(enkelVolgendeDag.starts,["do 03:00"],`${naam}: enkele regenperiode op volgende lokale dag noemt de dag aan het begin`);
+    assert.deepEqual(enkelVolgendeDag.ends,["10:00"],`${naam}: eindtijd op dezelfde volgende dag hoeft de dag niet te herhalen`);
     assert.equal(enkelVolgendeDag.piek.trim(),"Meeste regen do 05:00–06:00 · 2,6 mm",`${naam}: piek blijft gelijk aan periodeconventie`);
     assert.deepEqual(fouten,[],`${naam}: geen page errors`);
-    console.log(`${naam}: regendatumlabels zijn consistent over lokale daggrens en halve-uur tijdzone.`);
+    console.log(`${naam}: regendatumlabels aan bracketuiteinden zijn consistent over lokale daggrens en halve-uur tijdzone.`);
   }finally{await browser.close();}
 }
 
