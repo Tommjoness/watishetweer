@@ -52,36 +52,55 @@ const server=http.createServer((req,res)=>{
 async function controleer(type,naam){
   const browser=await type.launch({headless:true});
   try{
-    const page=await browser.newPage({viewport:{width:390,height:844}});
-    const fouten=[];
-    page.on("pageerror",e=>fouten.push(String(e)));
-    await page.goto(`http://127.0.0.1:${server.address().port}/?lat=52.35&lon=5.26&plaats=Regenperiodetest&land=NL`,{waitUntil:"load"});
-    await page.waitForFunction(()=>typeof S!=="undefined"&&S.d&&S.i0>=0,null,{timeout:10000});
+    for(const breedte of [390,1280]){
+      const page=await browser.newPage({viewport:{width:breedte,height:900}});
+      const fouten=[];
+      page.on("pageerror",e=>fouten.push(String(e)));
+      await page.goto(`http://127.0.0.1:${server.address().port}/?lat=52.35&lon=5.26&plaats=Regenperiodetest&land=NL`,{waitUntil:"load"});
+      await page.waitForFunction(()=>typeof S!=="undefined"&&S.d&&S.i0>=0,null,{timeout:10000});
 
-    const uur24=await page.evaluate(()=>{
-      S.dag=null;S.bereik=24;etmaal(S.i0,24);
-      const groep=document.querySelector('#chart g[data-q4-rain-periods="1"]');
-      return {
-        n:S.geo&&S.geo.n,
-        details:groep?[...groep.querySelectorAll('text[data-q4-rain-period-detail]')].map(el=>(el.textContent||"").trim()):[],
-        totalen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(el=>(el.textContent||"").trim()):[]
-      };
-    });
-    assert.ok(uur24.n<=25,`${naam}: test gebruikt daadwerkelijk de 24-uursweergave`);
-    assert.equal(uur24.details.length,2,`${naam}: twee regenperioden krijgen twee tekstregels`);
-    assert.ok(/\b\d{2}:\d{2}–\d{2}:\d{2}\b.*0,7 mm/.test(uur24.details[0]),`${naam}: eerste periode toont tijdvak en 0,7 mm; kreeg ${uur24.details[0]}`);
-    assert.ok(/\b\d{2}:\d{2}–\d{2}:\d{2}\b.*0,5 mm/.test(uur24.details[1]),`${naam}: tweede periode toont tijdvak en 0,5 mm; kreeg ${uur24.details[1]}`);
-    assert.deepEqual(uur24.totalen,["0,7 mm","0,5 mm"],`${naam}: bracketbedragen blijven gelijk aan de uitgeschreven perioden`);
+      const uur24=await page.evaluate(()=>{
+        S.dag=null;S.bereik=24;etmaal(S.i0,24);
+        const svg=document.getElementById("chart"),groep=svg.querySelector('g[data-q4-rain-periods="1"]'),g=S.geo;
+        const asY=g.pt+g.ih+(g.M?20:22);
+        const asTijden=[...svg.querySelectorAll("text")]
+          .filter(el=>Math.abs(Number(el.getAttribute("y"))-asY)<0.1&&/^\d{2}$/.test((el.textContent||"").trim()))
+          .map(el=>(el.textContent||"").trim());
+        return {
+          n:g&&g.n,mobiel:g&&g.M,
+          starts:groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')].map(el=>(el.textContent||"").trim()):[],
+          ends:groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')].map(el=>(el.textContent||"").trim()):[],
+          details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
+          totalen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(el=>(el.textContent||"").trim()):[],
+          asTijden
+        };
+      });
+      assert.ok(uur24.n<=25,`${naam} ${breedte}: test gebruikt daadwerkelijk de 24-uursweergave`);
+      assert.equal(uur24.mobiel,breedte<760,`${naam} ${breedte}: renderer gebruikt de verwachte viewportmodus`);
+      assert.deepEqual(uur24.starts,["15:00","20:00"],`${naam} ${breedte}: iedere regenbracket toont de eigen begintijd`);
+      assert.deepEqual(uur24.ends,["18:00","22:00"],`${naam} ${breedte}: iedere regenbracket toont de eigen eindtijd`);
+      assert.equal(uur24.details,0,`${naam} ${breedte}: losse dubbele perioderegels onder de grafiek zijn verwijderd`);
+      assert.deepEqual(uur24.totalen,["0,7 mm","0,5 mm"],`${naam} ${breedte}: bracketbedragen blijven gelijk aan de periodegegevens`);
+      assert.ok(uur24.asTijden.length>=6,`${naam} ${breedte}: vaste uuras blijft zichtbaar; kreeg ${JSON.stringify(uur24.asTijden)}`);
 
-    const langer=await page.evaluate(()=>{
-      S.dag=null;S.bereik=48;etmaal(S.i0,48);
-      const groep=document.querySelector('#chart g[data-q4-rain-periods="1"]');
-      return {n:S.geo&&S.geo.n,details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0};
-    });
-    assert.ok(langer.n>25,`${naam}: tweede controle gebruikt een langere grafiek`);
-    assert.equal(langer.details,0,`${naam}: langere grafiek wordt niet opgeblazen met alle perioderegels`);
-    assert.deepEqual(fouten,[],`${naam}: geen page errors`);
-    console.log(`${naam}: 24-uurs regenperioden tonen elk tijdvak + mm; langere grafieken blijven compact.`);
+      const langer=await page.evaluate(()=>{
+        S.dag=null;S.bereik=48;etmaal(S.i0,48);
+        const groep=document.querySelector('#chart g[data-q4-rain-periods="1"]');
+        return {
+          n:S.geo&&S.geo.n,
+          starts:groep?groep.querySelectorAll('text[data-q4-rain-period-start]').length:0,
+          ends:groep?groep.querySelectorAll('text[data-q4-rain-period-end]').length:0,
+          details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0
+        };
+      });
+      assert.ok(langer.n>25,`${naam} ${breedte}: tweede controle gebruikt een langere grafiek`);
+      assert.equal(langer.starts,0,`${naam} ${breedte}: 48-uursgrafiek wordt niet volgezet met begintijdlabels`);
+      assert.equal(langer.ends,0,`${naam} ${breedte}: 48-uursgrafiek wordt niet volgezet met eindtijdlabels`);
+      assert.equal(langer.details,0,`${naam} ${breedte}: langere grafiek houdt geen uitgeschreven perioderegels`);
+      assert.deepEqual(fouten,[],`${naam} ${breedte}: geen page errors`);
+      await page.close();
+    }
+    console.log(`${naam}: regenbrackets tonen start/einde op 24 uur en de uuras blijft zichtbaar op mobiel én desktop.`);
   }finally{await browser.close();}
 }
 
