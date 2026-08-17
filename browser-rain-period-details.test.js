@@ -68,61 +68,90 @@ async function controleer(type,naam){
           .filter(el=>Math.abs(Number(el.getAttribute("y"))-asY)<0.1&&/^\d{2}$/.test((el.textContent||"").trim()))
           .map(el=>(el.textContent||"").trim());
         const startEls=groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')]:[];
-        const layouts=startEls.map((start,i)=>{
-          const eind=groep.querySelector(`text[data-q4-rain-period-end="${i}"]`),a=start.getBBox(),b=eind.getBBox();
-          const overlapt=!(a.x+a.width+2<b.x||b.x+b.width+2<a.x);
-          const zelfdeRegel=Math.abs(Number(start.getAttribute("y"))-Number(eind.getAttribute("y")))<0.1;
-          /* De labels horen juist buiten hun bracketuiteinden te kunnen staan.
-             De SVG-rand is daarom de echte visuele clipgrens; de binnenste plot-
-             marge is geen foutgrens voor tekst die onder de plot wordt gezet. */
-          const binnen=a.x>=-0.5&&a.x+a.width<=g.W+0.5&&b.x>=-0.5&&b.x+b.width<=g.W+0.5;
+        const endEls=groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')]:[];
+        const rangeEls=groep?[...groep.querySelectorAll('text[data-q4-rain-period-range]')]:[];
+        const tijdEls=[...startEls,...endEls,...rangeEls];
+        const tijdBinnen=tijdEls.map(el=>{
+          const b=el.getBBox();return {tekst:(el.textContent||"").trim(),binnen:b.x>=-0.5&&b.x+b.width<=g.W+0.5,x:b.x,w:b.width};
+        });
+        const splitLayouts=startEls.map(start=>{
+          const index=start.getAttribute("data-q4-rain-period-start"),eind=groep.querySelector(`text[data-q4-rain-period-end="${index}"]`);
+          if(!eind)return {index,fout:"GEEN_EIND"};
+          const a=start.getBBox(),b=eind.getBBox();
           return {
-            overlapt,zelfdeRegel,binnen,
-            start:{x:a.x,w:a.width},eind:{x:b.x,w:b.width},svg:{links:0,rechts:g.W},plot:{links:g.pl,rechts:g.W-g.pr}
+            index,
+            overlapt:!(a.x+a.width+2<b.x||b.x+b.width+2<a.x),
+            zelfdeRegel:Math.abs(Number(start.getAttribute("y"))-Number(eind.getAttribute("y")))<0.1
           };
         });
+        const bedragenEls=groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')]:[];
+        const bedragOnderTijd=bedragenEls.map(bedrag=>{
+          const index=bedrag.getAttribute("data-q4-rain-period-amount"),y=Number(bedrag.getAttribute("y"));
+          const tijden=[
+            groep.querySelector(`text[data-q4-rain-period-start="${index}"]`),
+            groep.querySelector(`text[data-q4-rain-period-end="${index}"]`),
+            groep.querySelector(`text[data-q4-rain-period-range="${index}"]`)
+          ].filter(Boolean);
+          return tijden.length>0&&tijden.every(t=>y>Number(t.getAttribute("y")));
+        });
+        const kansLabels=[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).map(el=>(el.textContent||"").trim());
         return {
           n:g&&g.n,mobiel:g&&g.M,
           starts:startEls.map(el=>(el.textContent||"").trim()),
-          ends:groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')].map(el=>(el.textContent||"").trim()):[],
+          ends:endEls.map(el=>(el.textContent||"").trim()),
+          ranges:rangeEls.map(el=>(el.textContent||"").trim()),
           details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
           samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0,
-          totalen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(el=>(el.textContent||"").trim()):[],
-          layouts,asTijden
+          totalen:bedragenEls.map(el=>(el.textContent||"").trim()),
+          tijdBinnen,splitLayouts,bedragOnderTijd,kansLabels,asTijden
         };
       });
       assert.ok(uur24.n<=25,`${naam} ${breedte}: test gebruikt daadwerkelijk de 24-uursweergave`);
       assert.equal(uur24.mobiel,breedte<760,`${naam} ${breedte}: renderer gebruikt de verwachte viewportmodus`);
-      assert.deepEqual(uur24.starts,["15:00","21:00"],`${naam} ${breedte}: iedere regenbracket toont de eigen begintijd`);
-      assert.deepEqual(uur24.ends,["18:00","22:00"],`${naam} ${breedte}: iedere regenbracket toont de eigen eindtijd`);
+      if(breedte<760){
+        assert.deepEqual(uur24.starts,[],`${naam} ${breedte}: krappe mobiele perioden forceren geen losse begintijden`);
+        assert.deepEqual(uur24.ends,[],`${naam} ${breedte}: krappe mobiele perioden forceren geen losse eindtijden`);
+        assert.deepEqual(uur24.ranges,["15:00–18:00","21:00–22:00"],`${naam} ${breedte}: mobiele perioden vallen generiek terug op compacte tijdvakken`);
+      }else{
+        assert.deepEqual(uur24.starts,["15:00"],`${naam} ${breedte}: brede desktopperiode houdt een losse begintijd`);
+        assert.deepEqual(uur24.ends,["18:00"],`${naam} ${breedte}: brede desktopperiode houdt een losse eindtijd`);
+        assert.deepEqual(uur24.ranges,["21:00–22:00"],`${naam} ${breedte}: één-uursperiode gebruikt ook op desktop de compacte range`);
+      }
       assert.equal(uur24.details,0,`${naam} ${breedte}: losse dubbele perioderegels onder de grafiek zijn verwijderd`);
       assert.equal(uur24.samenvattingen,0,`${naam} ${breedte}: totaalregel en Meeste regen zijn verwijderd`);
       assert.deepEqual(uur24.totalen,["0,7 mm","0,5 mm"],`${naam} ${breedte}: bracketbedragen blijven gelijk aan de periodegegevens`);
-      assert.ok(uur24.layouts.length===2&&uur24.layouts.every(x=>x.zelfdeRegel&&!x.overlapt&&x.binnen),`${naam} ${breedte}: ook de één-uursperiode houdt begin/einde op één niet-overlappende regel zonder SVG-clipping; kreeg ${JSON.stringify(uur24.layouts)}`);
+      assert.equal(uur24.kansLabels.length,0,`${naam} ${breedte}: statische neerslagpercentages zijn volledig uit de grafiek verwijderd`);
+      assert.ok(uur24.tijdBinnen.length===2+(breedte>=760?1:0)&&uur24.tijdBinnen.every(x=>x.binnen),`${naam} ${breedte}: alle zichtbare tijdlabels blijven binnen de SVG; kreeg ${JSON.stringify(uur24.tijdBinnen)}`);
+      assert.ok(uur24.splitLayouts.every(x=>!x.fout&&x.zelfdeRegel&&!x.overlapt),`${naam} ${breedte}: losse begin/eindlabels blijven op één niet-overlappende regel; kreeg ${JSON.stringify(uur24.splitLayouts)}`);
+      assert.ok(uur24.bedragOnderTijd.length===2&&uur24.bedragOnderTijd.every(Boolean),`${naam} ${breedte}: iedere mm-waarde staat onder het eigen tijdlabel`);
       assert.ok(uur24.asTijden.length>=6,`${naam} ${breedte}: vaste uuras blijft zichtbaar; kreeg ${JSON.stringify(uur24.asTijden)}`);
 
       const langer=await page.evaluate(()=>{
         S.dag=null;S.bereik=48;etmaal(S.i0,48);
-        const groep=document.querySelector('#chart g[data-q4-rain-periods="1"]');
+        const svg=document.getElementById("chart"),groep=svg.querySelector('g[data-q4-rain-periods="1"]');
         return {
           n:S.geo&&S.geo.n,
           starts:groep?groep.querySelectorAll('text[data-q4-rain-period-start]').length:0,
           ends:groep?groep.querySelectorAll('text[data-q4-rain-period-end]').length:0,
+          ranges:groep?groep.querySelectorAll('text[data-q4-rain-period-range]').length:0,
           details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
           samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0,
-          bedragen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(el=>(el.textContent||"").trim()):[]
+          bedragen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(el=>(el.textContent||"").trim()):[],
+          kansen:[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).length
         };
       });
       assert.ok(langer.n>25,`${naam} ${breedte}: tweede controle gebruikt een langere grafiek`);
       assert.equal(langer.starts,0,`${naam} ${breedte}: 48-uursgrafiek wordt niet volgezet met begintijdlabels`);
       assert.equal(langer.ends,0,`${naam} ${breedte}: 48-uursgrafiek wordt niet volgezet met eindtijdlabels`);
+      assert.equal(langer.ranges,0,`${naam} ${breedte}: 48-uursgrafiek krijgt ook geen compacte tijdlabels`);
       assert.equal(langer.details,0,`${naam} ${breedte}: langere grafiek houdt geen uitgeschreven perioderegels`);
       assert.equal(langer.samenvattingen,0,`${naam} ${breedte}: langere grafiek krijgt ook geen losse totaal- of pieksamenvatting`);
+      assert.equal(langer.kansen,0,`${naam} ${breedte}: ook langere grafiek houdt statische kanspercentages uit de neerslagstrook`);
       assert.ok(langer.bedragen.length>=2,`${naam} ${breedte}: langere grafiek behoudt de mm-bedragen per bracket`);
       assert.deepEqual(fouten,[],`${naam} ${breedte}: geen page errors`);
       await page.close();
     }
-    console.log(`${naam}: regenbrackets tonen alleen start/einde + mm, inclusief één-uursperiode, en de uuras blijft zichtbaar op mobiel én desktop.`);
+    console.log(`${naam}: regenbrackets kiezen adaptief losse tijden of een compacte range, tonen alleen mm en houden de uuras zichtbaar.`);
   }finally{await browser.close();}
 }
 
