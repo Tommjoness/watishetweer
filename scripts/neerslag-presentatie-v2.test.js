@@ -130,7 +130,7 @@ assert.equal(els.minicond.textContent,"Half bewolkt");
 assert.match(els.nowicon.innerHTML,/data-code="2"/);
 assert.equal(kop.textContent,"Neerslagkans komend uur");
 assert.equal(els.pop.innerHTML,"12<s>%</s>");
-assert.equal(els.popsub.textContent,"Kleine kans op neerslag het komende uur.");
+assert.equal(els.popsub.textContent,"Het komende uur is er een kleine kans op neerslag.");
 context.briefing();
 assert.match(els.brief.innerHTML,/^De komende twee uur is er een kleine kans op neerslag\./);
 assert.doesNotMatch(els.brief.innerHTML,/(valt|regent) nu/i);

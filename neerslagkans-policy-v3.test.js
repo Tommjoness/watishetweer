@@ -19,7 +19,20 @@ test("hoeveelheid maakt een lage kans nooit stellig",()=>{
   assert(!/wordt .*verwacht/i.test(zin),zin);
   assert(/Als er neerslag valt/.test(zin),zin);
   assert.equal(kansHoofd(a),"20%");
-  assert.equal(komendUurTekst(a),"Kleine kans op neerslag het komende uur.");
+  assert.equal(komendUurTekst(a),"Het komende uur is er een kleine kans op neerslag.");
+});
+
+test("neerslagowner levert definitieve Nederlandse copy zonder postbuild-normalisatie",()=>{
+  const basis={genoeg:true,currentWet:false,currentHoeveelheid:0,hoeveelheid:0,soort:"neerslag"};
+  assert.equal(kansZin({...basis,kans:0},"de komende twee uur"),"Voor de komende twee uur wordt er geen neerslag verwacht.");
+  assert.equal(briefingZin({...basis,kans:0}),"De komende twee uur wordt er geen neerslag verwacht.");
+  assert.equal(komendUurTekst({...basis,bronHoeveelheid:"knmi-nowcast",status:"NEERSLAG_VERWACHT",kans:50,hoeveelheid:1}),"Het komende uur wordt neerslag verwacht.");
+  assert.equal(komendUurTekst({...basis,bronHoeveelheid:"knmi-nowcast",status:"SPOORHOEVEELHEID",kans:20,hoeveelheid:0.04}),"Het komende uur zijn enkele druppels mogelijk.");
+  assert.equal(komendUurTekst({...basis,kans:9}),"Het komende uur is er een zeer kleine kans op neerslag.");
+  assert.equal(komendUurTekst({...basis,kans:10}),"Het komende uur is er een kleine kans op neerslag.");
+  assert.equal(komendUurTekst({...basis,kans:30}),"Het komende uur is neerslag mogelijk.");
+  assert.equal(komendUurTekst({...basis,kans:70}),"Het komende uur is er een grote kans op neerslag.");
+  assert.equal(komendUurTekst({...basis,kans:90}),"Het komende uur is er een zeer grote kans op neerslag.");
 });
 
 test("nul kans met meetbare hoeveelheid wordt niet als Droog voorgesteld",()=>{
@@ -46,7 +59,7 @@ test("actuele positieve neerslag wint van een droge code of nul kans",()=>{
 
 test("nul kans zonder nat signaal is een verwachting en geen absolute droogclaim",()=>{
   const a={genoeg:true,status:"GEEN_KANS",currentWet:false,currentHoeveelheid:0,kans:0,hoeveelheid:0,soort:"neerslag"};
-  assert.equal(briefingZin(a),"De komende twee uur wordt geen neerslag verwacht.");
+  assert.equal(briefingZin(a),"De komende twee uur wordt er geen neerslag verwacht.");
   assert(!/blijft.*droog/i.test(briefingZin(a)));
 });
 

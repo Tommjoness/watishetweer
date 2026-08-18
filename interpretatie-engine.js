@@ -348,7 +348,7 @@ function neerslagKorteWeergave(analyse){
 function dagHoeveelheidZin(mm){
   const v=getal(mm);
   if(v===null) return "De totale neerslagverwachting voor vandaag is niet beschikbaar.";
-  if(v<=INTERPRETATIE_CONFIG.spoorMm) return "Voor vandaag wordt geen neerslag verwacht.";
+  if(v<=INTERPRETATIE_CONFIG.spoorMm) return "Voor vandaag wordt er geen neerslag verwacht.";
   if(v<INTERPRETATIE_CONFIG.meetbaarMm) return "Voor vandaag worden hooguit enkele druppels verwacht.";
   return "Voor vandaag wordt "+hoeveelheidTekst(v)+" neerslag verwacht.";
 }
@@ -370,7 +370,7 @@ function neerslagZin(analyse){
     ?" (hoogste modelkans in de overlappende uurvakken: "+kans+"%)"
     :" (maximaal "+kans+"%)");
   if(a.status==="GEEN_KANS"){
-    return "Voor "+venster+" wordt geen neerslag verwacht.";
+    return "Voor "+venster+" wordt er geen neerslag verwacht.";
   }
   if(a.status==="ZEER_KLEINE_KANS"){
     return "De kans op neerslag in "+venster+" is zeer klein"+kansTussen+".";

@@ -85,7 +85,7 @@ test("droge verwachting noemt nergens 0% of 0,0 mm",()=>{
     const d=basis({kans:Array(9).fill(0)});
     const a=analyseerNeerslagData(d,duur);
     const zin=neerslagZin(a),kort=neerslagKorteWeergave(a);
-    assert(/wordt geen neerslag verwacht/.test(zin),zin);
+    assert(/wordt er geen neerslag verwacht/.test(zin),zin);
     assert(!/0%|0,0 mm/.test(zin+" "+kort.hoofd+" "+kort.detail),zin);
     assert.equal(kort.hoofd,"Droog");
   }
@@ -239,7 +239,7 @@ test("alle kans-zonder-hoeveelheidstakken leggen het signaal uit zonder 0,0 mm",
 });
 
 test("daghoeveelheid gebruikt taal in plaats van droge nul",()=>{
-  assert.equal(dagHoeveelheidZin(0),"Voor vandaag wordt geen neerslag verwacht.");
+  assert.equal(dagHoeveelheidZin(0),"Voor vandaag wordt er geen neerslag verwacht.");
   assert.equal(dagHoeveelheidZin(0.04),"Voor vandaag worden hooguit enkele druppels verwacht.");
   assert(!/0,0 mm/.test(dagHoeveelheidZin(0)));
 });

@@ -7,28 +7,62 @@ const vm=require("vm");
 const ROOT=path.join(__dirname,"..");
 const htmlPad=path.join(ROOT,"public","index.html");
 const html=fs.readFileSync(htmlPad,"utf8");
-const applyBron=fs.readFileSync(path.join(ROOT,"scripts","apply-nederlandse-microcopy.js"),"utf8");
-const MARK="<!-- ===== NEDERLANDSE MICROCOPY 20260815 ===== -->";
+const policyBron=fs.readFileSync(path.join(ROOT,"neerslagkans-policy-v3.js"),"utf8");
+const seniorBron=fs.readFileSync(path.join(ROOT,"senior-correctness-v2.js"),"utf8");
+const OUDE_MARK="<!-- ===== NEDERLANDSE MICROCOPY 20260815 ===== -->";
 
-if((html.split(MARK).length-1)!==1)throw new Error("Nederlandse microcopy-marker ontbreekt of is dubbel.");
+if(html.includes(OUDE_MARK))throw new Error("Verouderde Nederlandse microcopy-compatibilitymarker staat nog in het artifact.");
 
-/* De compatibilitylaag blijft eigenaar van uitsluitend de gedeelde neerslagzin. */
+/* De neerslagowner moet de definitieve Nederlandse zinnen nu zelf leveren. */
+for(const tekst of [
+  "Voor "+'"+venster+"'+" wordt er geen neerslag verwacht.",
+  "De komende twee uur wordt er geen neerslag verwacht.",
+  "Het komende uur wordt neerslag verwacht.",
+  "Het komende uur zijn enkele druppels mogelijk.",
+  "Het komende uur is er een zeer kleine kans op neerslag.",
+  "Het komende uur is er een kleine kans op neerslag.",
+  "Het komende uur is neerslag mogelijk.",
+  "Het komende uur is er een grote kans op neerslag.",
+  "Het komende uur is er een zeer grote kans op neerslag."
+]){
+  if(!policyBron.includes(tekst))throw new Error("Canonieke neerslagowner mist definitieve Nederlandse copy: "+tekst);
+}
+
+/* Senior-correctness mag de korte neerslagcopy niet opnieuw bezitten. De helper
+   blijft uitsluitend als compatibility-API bestaan en delegeert naar hetzelfde
+   kansbeleid dat later de zichtbare kaart definitief schrijft. */
+for(const invariant of [
+  'require("./neerslagkans-policy-v3.js")',
+  'const beleid=(root&&root.WeatherNowKansbeleidV3)||kansbeleidNode;',
+  'typeof beleid.komendUurTekst==="function"',
+  'beleid.komendUurTekst(a)'
+]){
+  if(!seniorBron.includes(invariant))throw new Error("Senior-correctness mist neerslagcopydelegatie: "+invariant);
+}
+
+for(const tekst of [
+  " wordt geen neerslag verwacht.",
+  "Neerslag wordt verwacht het komende uur.",
+  "Enkele druppels zijn mogelijk het komende uur.",
+  "Zeer kleine kans op neerslag het komende uur.",
+  "Kleine kans op neerslag het komende uur.",
+  "Neerslag is mogelijk het komende uur.",
+  "Grote kans op neerslag het komende uur.",
+  "Zeer grote kans op neerslag het komende uur."
+]){
+  if(policyBron.includes(tekst))throw new Error("Verouderde Nederlandse neerslagcopy staat nog in de canonieke owner: "+tekst);
+  if(seniorBron.includes(tekst))throw new Error("Senior-correctness bezit nog verouderde Nederlandse neerslagcopy: "+tekst);
+  if(html.includes(tekst))throw new Error("Verouderde Nederlandse neerslagcopy staat nog in het finale artifact: "+tekst);
+}
 for(const tekst of [
   "De komende twee uur wordt er geen neerslag verwacht.",
   "Het komende uur wordt neerslag verwacht.",
   "Het komende uur is er een kleine kans op neerslag."
 ]){
-  if(!html.includes(tekst))throw new Error("Gecorrigeerde neerslagcopy ontbreekt: "+tekst);
-}
-for(const tekst of [
-  "De komende twee uur wordt geen neerslag verwacht.",
-  "Neerslag wordt verwacht het komende uur.",
-  "Kleine kans op neerslag het komende uur."
-]){
-  if(html.includes(tekst))throw new Error("Verouderde neerslagcopy staat nog in het finale artifact: "+tekst);
+  if(!html.includes(tekst))throw new Error("Definitieve neerslagcopy ontbreekt uit het finale artifact: "+tekst);
 }
 
-/* De overige taal hoort nu aantoonbaar bij de inhoudelijke runtime-owner. */
+/* De overige taal hoort aantoonbaar bij de inhoudelijke runtime-owner. */
 for(const eigenaar of [
   "function uiWindstootTekst(pg,nu,dag,vak){",
   "function uiLuchtdrukTekst(tekst){",
@@ -54,25 +88,10 @@ for(const invariant of [
   if(!html.includes(invariant))throw new Error("Temperatuurgedreven nachtbriefing mist invariant: "+invariant);
 }
 
-/* Voorkom dat de late compatibilitylaag opnieuw een tweede eigenaar wordt voor
-   wind, druk, zon, Nachtzicht, pollen of footer. */
-for(const verboden of [
-  "const WIND_OUD=",
-  "const DRUK_OUD=",
-  "const MAAN_BASIS_OUD=",
-  'vervangAlles("Gem. zicht ',
-  'vervangAlles("Geen gunstig kijkvenster',
-  'vervangAlles("Een aantal zonuren vandaag',
-  'vervangAlles("Pollen gras',
-  'vervangAlles("Pollen bijvoet'
-]){
-  if(applyBron.includes(verboden))throw new Error("Late microcopylaag claimt opnieuw een inhoudelijke UI-owner: "+verboden);
-}
-
 if(html.includes("Beste modeluren")||html.includes("Relatief gunstigste modeluren"))throw new Error("Nachtzicht bevat nog modeljargon in het finale artifact.");
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden voor microcopy-verificatie.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:verify-nederlandse-microcopy-"+(i+1)}));
 
-console.log("Nederlandse microcopy geverifieerd: neerslagcompatibiliteit centraal, nachtbriefing temperatuurgedreven en overige taal bij de eigen UI-owner.");
+console.log("Nederlandse microcopy geverifieerd: neerslagcopy komt rechtstreeks uit de canonieke neerslagowner; senior-correctness delegeert en overige taal blijft bij de eigen UI-owner.");

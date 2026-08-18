@@ -1,11 +1,14 @@
 /* Senior-correctheidslaag: pure rekenhelpers + browserintegratie.
-   Wordt door build-weather.js in de productiebundel ingevoegd. */
+ * Wordt door build-weather.js in de productiebundel ingevoegd. */
 (function(root){
 "use strict";
 
 const grammatica=typeof module!=="undefined"&&module.exports
   ?require("./nederlandse-weergrammatica.js")
   :root.WeatherNowNederlandseGrammatica;
+const kansbeleidNode=typeof module!=="undefined"&&module.exports
+  ?require("./neerslagkans-policy-v3.js")
+  :null;
 
 const num=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 const clampNum=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -144,25 +147,14 @@ function dagKansSamenvatting(a,basis){
   return basis;
 }
 
-/* De waarde 27% staat al groot boven deze tekst. De toelichting eronder moet de
-   gebruiker helpen, niet de bronberekening herhalen met termen als modeluur en
-   overlappende uurvakken. De technische uitleg blijft elders beschikbaar. */
+/* De zichtbare komend-uurcopy is eigendom van WeatherNowKansbeleidV3. Deze
+   correctheidslaag houdt alleen een delegator zodat bestaande interne callers
+   en Node-contracten niet tegelijk hoeven te veranderen. */
 function komendUurTekst(a){
-  if(!a||!a.genoeg) return "Neerslagkans niet beschikbaar.";
-  const kans=num(a.kans),soort=String(a.soort||"neerslag");
-  if(a.status==="GEEN_KANS") return "Geen neerslag verwacht.";
-  if(a.status==="ZEER_KLEINE_KANS") return "Zeer kleine kans op neerslag het komende uur.";
-  if(a.status==="KLEINE_KANS") return "Kleine kans op neerslag het komende uur.";
-  if(a.status==="MOGELIJKE_NEERSLAG") return "Neerslag is mogelijk het komende uur.";
-  if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return "Grote kans op neerslag; hoeveelheid onzeker.";
-  if(a.status==="SPOORHOEVEELHEID") return "Enkele druppels mogelijk het komende uur.";
-  if(a.status==="NEERSLAG_NU") return grammatica.actueleNeerslagZin(soort);
-  if(a.status==="NEERSLAG_VERWACHT"){
-    if(kans!==null&&kans<=39) return "Kleine kans op neerslag het komende uur.";
-    if(kans!==null&&kans<=69) return grammatica.soortIsMogelijk(soort)+" het komende uur.";
-    return hoofdletter(grammatica.soortWordtVerwacht(soort,"het komende uur"))+".";
-  }
-  return "Neerslagverwachting beschikbaar.";
+  const beleid=(root&&root.WeatherNowKansbeleidV3)||kansbeleidNode;
+  return beleid&&typeof beleid.komendUurTekst==="function"
+    ?beleid.komendUurTekst(a)
+    :"Neerslagkans niet beschikbaar.";
 }
 
 /* Alleen maanopkomst/-ondergang binnen het werkelijk beoordeelde nachtvenster
