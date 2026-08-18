@@ -155,7 +155,7 @@ function neerslagTegelRelevant(analyse){
   const a=analyse||{},k=getal(a.kans),mm=getal(a.hoeveelheid);
   if(a.currentWet||a.status==="NEERSLAG_NU")return true;
   if(!a.genoeg)return false;
-  return (k!==null&&k>=30)||(mm!==null&&mm>=MM_MEETBAAR);
+  return (k!==null&&k>=10)||(mm!==null&&mm>=MM_MEETBAAR);
 }
 
 const api={
