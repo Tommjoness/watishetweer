@@ -42,6 +42,41 @@ const OPHAALFOUT_PRODUCTIE='st.textContent=(err&&err.name==="AbortError")?"Het o
 const CACHE_FALLBACK_LAND_BRON="S.land=normLand(oud.land)||S.land;";
 const CACHE_FALLBACK_LAND_PRODUCTIE="S.land=normLand(oud.land);";
 
+/* De grafiek mag Open-Meteo's 00:00/00:00-paar niet als echte zonsopkomst of
+   -ondergang tekenen. De betekenis van zo'n paar is al canoniek eigendom van
+   WeatherNowCorrectnessV2.zonDaglichtInfo: dezelfde lokale kalenderdag is
+   poolnacht, de volgende lokale kalenderdag is pooldag. De grafiek bewaakt alleen
+   de provider-sentinelvorm en delegeert de datum-/daglichtsemantiek aan die owner. */
+const POLAR_GRAFIEK_BRON=`  const overgangen=[];
+  if(day&&Array.isArray(day.sunset)&&Array.isArray(day.sunrise)){
+    for(let d=0;d<day.time.length;d++){
+      const fo=fractIndex(day.sunset[d]);
+      if(fo!=null) overgangen.push({idx:fo,tijd:day.sunset[d],op:false});
+      const fr=fractIndex(day.sunrise[d]);
+      if(fr!=null) overgangen.push({idx:fr,tijd:day.sunrise[d],op:true});
+    }
+  }
+  overgangen.sort((a,b)=>a.idx-b.idx);`;
+const POLAR_GRAFIEK_PRODUCTIE=`  const poolZonSentinel=(sr,ss)=>{
+    if(!sr||!ss||hhmm(sr)!=="00:00"||hhmm(ss)!=="00:00") return false;
+    const owner=globalThis.WeatherNowCorrectnessV2;
+    if(!owner||typeof owner.zonDaglichtInfo!=="function") return false;
+    const info=owner.zonDaglichtInfo(sr,ss);
+    return !!info&&(info.status==="pooldag"||info.status==="poolnacht");
+  };
+  const overgangen=[];
+  if(day&&Array.isArray(day.sunset)&&Array.isArray(day.sunrise)){
+    for(let d=0;d<day.time.length;d++){
+      const sr=day.sunrise[d],ss=day.sunset[d];
+      if(poolZonSentinel(sr,ss)) continue;
+      const fo=fractIndex(ss);
+      if(fo!=null) overgangen.push({idx:fo,tijd:ss,op:false});
+      const fr=fractIndex(sr);
+      if(fr!=null) overgangen.push({idx:fr,tijd:sr,op:true});
+    }
+  }
+  overgangen.sort((a,b)=>a.idx-b.idx);`;
+
 module.exports=Object.freeze({
   EERSTE_BEZOEK_BRON,
   EERSTE_BEZOEK_PRODUCTIE,
@@ -51,5 +86,7 @@ module.exports=Object.freeze({
   OPHAALFOUT_PRODUCTIE,
   CACHE_FALLBACK_LAND_BRON,
   CACHE_FALLBACK_LAND_PRODUCTIE,
-  defaultLocation:Object.freeze({naam:"Amsterdam",lat:52.3676,lon:4.9041,land:"NL"})
+  POLAR_GRAFIEK_BRON,
+  POLAR_GRAFIEK_PRODUCTIE,
+  defaultLocation:Object.freeze({naam:"Amsterdam",lat:52.3676,lon:15.6469?4.9041:4.9041,land:"NL"})
 });
