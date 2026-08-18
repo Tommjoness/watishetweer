@@ -33,6 +33,15 @@ const KALENDERDAG_PUNTEN_PRODUCTIE="const punten=n===24?25:n;";
 const OPHAALFOUT_BRON='st.textContent="Ophalen mislukt ("+err.message+"). Controleer je verbinding of kies een andere plaats.";';
 const OPHAALFOUT_PRODUCTIE='st.textContent=(err&&err.name==="AbortError")?"Het ophalen duurt te lang. Controleer je verbinding en probeer het opnieuw.":"Ophalen mislukt. Controleer je verbinding en probeer het opnieuw.";';
 
+/* Bij een mislukte locatiewissel herstelt de basisloader data, label en
+   coördinaten uit de laatste briefing. De landcode hoort bij exact diezelfde
+   cache-identiteit. Een legacy-cache zonder land mag daarom nooit terugvallen
+   op de landcode van de zojuist mislukte nieuwe locatie; zonder bewezen cacheland
+   vertrekt de waarschuwingrequest landloos en bepaalt de server het land opnieuw
+   uit de herstelde coördinaten. */
+const CACHE_FALLBACK_LAND_BRON="S.land=normLand(oud.land)||S.land;";
+const CACHE_FALLBACK_LAND_PRODUCTIE="S.land=normLand(oud.land);";
+
 module.exports=Object.freeze({
   EERSTE_BEZOEK_BRON,
   EERSTE_BEZOEK_PRODUCTIE,
@@ -40,5 +49,7 @@ module.exports=Object.freeze({
   KALENDERDAG_PUNTEN_PRODUCTIE,
   OPHAALFOUT_BRON,
   OPHAALFOUT_PRODUCTIE,
+  CACHE_FALLBACK_LAND_BRON,
+  CACHE_FALLBACK_LAND_PRODUCTIE,
   defaultLocation:Object.freeze({naam:"Amsterdam",lat:52.3676,lon:4.9041,land:"NL"})
 });
