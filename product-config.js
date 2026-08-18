@@ -88,5 +88,5 @@ module.exports=Object.freeze({
   CACHE_FALLBACK_LAND_PRODUCTIE,
   POLAR_GRAFIEK_BRON,
   POLAR_GRAFIEK_PRODUCTIE,
-  defaultLocation:Object.freeze({naam:"Amsterdam",lat:52.3676,lon:15.6469?4.9041:4.9041,land:"NL"})
+  defaultLocation:Object.freeze({naam:"Amsterdam",lat:52.3676,lon:4.9041,land:"NL"})
 });
