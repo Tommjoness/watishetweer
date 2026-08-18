@@ -19,7 +19,9 @@ assert.deepEqual(q.dagNeerslagPresentatie(0,0,hoofd,q.mmTekst),{hoofd:"Droog",ho
 assert.deepEqual(q.dagNeerslagPresentatie(25,0,hoofd,q.mmTekst),{hoofd:"25%",hoeveelheid:""},"daily 0 mm mag 25% niet naar 0% veranderen");
 assert.deepEqual(q.dagNeerslagPresentatie(null,null,hoofd,q.mmTekst),{hoofd:"–",hoeveelheid:""});
 
-assert.equal(q.neerslagTegelRelevant({genoeg:true,kans:25,hoeveelheid:0,currentWet:false}),false,"kleine droge kans blijft uit de prominente tegel");
+assert.equal(q.neerslagTegelRelevant({genoeg:true,kans:9,hoeveelheid:0,currentWet:false}),false,"1–9% blijft te klein voor de prominente tegel");
+assert.equal(q.neerslagTegelRelevant({genoeg:true,kans:10,hoeveelheid:0,currentWet:false}),true,"10% is de ondergrens van de gedeelde kleine-kanscategorie");
+assert.equal(q.neerslagTegelRelevant({genoeg:true,kans:25,hoeveelheid:0,currentWet:false}),true,"10–29% blijft zichtbaar als kleine kans");
 assert.equal(q.neerslagTegelRelevant({genoeg:true,kans:65,hoeveelheid:0,currentWet:false}),true,"relevante kans maakt de tegel zichtbaar");
 assert.equal(q.neerslagTegelRelevant({genoeg:true,kans:0,hoeveelheid:1.4,currentWet:false}),true,"meetbare hoeveelheid met tegenstrijdige kans moet zichtbaar blijven");
 assert.equal(q.neerslagTegelRelevant({genoeg:false,kans:null,hoeveelheid:null,currentWet:true,status:"NEERSLAG_NU"}),true,"actuele neerslag blijft relevant");

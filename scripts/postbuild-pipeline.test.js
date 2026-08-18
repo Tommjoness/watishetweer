@@ -29,7 +29,6 @@ const verwacht=[
   "verify-polar-chart-sentinel.js",
   "apply-unified-weather-truth.js",
   "verify-unified-weather-truth.js",
-  "apply-small-chance-consistency.js",
   "verify-small-chance-consistency.js",
   "verify-nederlandse-microcopy.js",
   "apply-seo-foundation.js",
@@ -63,8 +62,7 @@ assert(positie("verify-fetch-error-semantics.js")<positie("apply-polar-chart-sen
 assert(positie("apply-polar-chart-sentinel.js")<positie("verify-polar-chart-sentinel.js"),"poolgrafiekcorrectie moet direct na toepassing worden geverifieerd");
 assert(positie("verify-polar-chart-sentinel.js")<positie("apply-unified-weather-truth.js"),"weather-truth consolideert pas na inhoudelijke UI-correcties");
 assert(positie("apply-unified-weather-truth.js")<positie("verify-unified-weather-truth.js"),"weather-truth moet direct na toepassing worden geverifieerd");
-assert(positie("verify-unified-weather-truth.js")<positie("apply-small-chance-consistency.js"),"kleine-kans-correctie ziet eerst de volledig geverifieerde weather-truth-laag");
-assert(positie("apply-small-chance-consistency.js")<positie("verify-small-chance-consistency.js"),"kleine-kans-correctie moet direct fail-closed worden geverifieerd");
+assert(positie("verify-unified-weather-truth.js")<positie("verify-small-chance-consistency.js"),"kleine-kans-owner wordt pas na de geverifieerde weather-truth-laag gecontroleerd");
 assert(positie("verify-small-chance-consistency.js")<positie("verify-nederlandse-microcopy.js"),"Nederlandse copy-verifier ziet de definitieve neerslagsemantiek uit de canonieke owner");
 assert(positie("verify-nederlandse-microcopy.js")<positie("apply-seo-foundation.js"),"SEO-routes moeten de definitieve Nederlandse copy erven");
 assert(positie("apply-seo-foundation.js")<positie("verify-seo-foundation.js"),"SEO-fundering moet direct na toepassing worden geverifieerd");
@@ -81,4 +79,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde, weather truth, kleine-kans-consistentie, canonieke Nederlandse neerslagcopy, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde, weather truth, canonieke kleine-kans-owner, Nederlandse neerslagcopy, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");
