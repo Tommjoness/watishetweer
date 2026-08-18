@@ -62,6 +62,7 @@ function vervangProductregel(bron,productie,label){
 }
 vervangProductregel(PRODUCT_CONFIG.EERSTE_BEZOEK_BRON,PRODUCT_CONFIG.EERSTE_BEZOEK_PRODUCTIE,"Eerste-bezoekblok");
 vervangProductregel(PRODUCT_CONFIG.KALENDERDAG_PUNTEN_BRON,PRODUCT_CONFIG.KALENDERDAG_PUNTEN_PRODUCTIE,"24-uursgrensregel");
+vervangProductregel(PRODUCT_CONFIG.OPHAALFOUT_BRON,PRODUCT_CONFIG.OPHAALFOUT_PRODUCTIE,"Ophaalfoutsemantiek");
 
 /* De compacte meelopende weerbalk gebruikte oorspronkelijk alleen een
    IntersectionObserver. Dat is zuinig, maar browsers mogen zo'n callback rond
@@ -117,7 +118,6 @@ const MINIBAR_PRODUCTIE=`(function(){
   plan();
 })();`;
 vervangProductregel(MINIBAR_BRON,MINIBAR_PRODUCTIE,"Minibalk-zichtbaarheidsblok");
-
 /* Presentatiepolish, semantiek, progressieve locatielading en wereldwijde
    locatiehardening zijn expliciete, afzonderlijk testbare buildlagen. De
    hardeninglaag wijzigt alleen locatiezoekresultaten, bewezen waarschuwingsscope

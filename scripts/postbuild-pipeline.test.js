@@ -23,7 +23,6 @@ const verwacht=[
   "apply-ui-polish-20260813.js",
   "apply-weather-fallback-hedge.js",
   "verify-weather-fallback-hedge.js",
-  "apply-fetch-error-semantics.js",
   "verify-fetch-error-semantics.js",
   "apply-polar-chart-sentinel.js",
   "verify-polar-chart-sentinel.js",
@@ -56,8 +55,7 @@ assert(positie("apply-cache-fallback-country.js")<positie("verify-cache-fallback
 assert(positie("verify-cache-fallback-country.js")<positie("apply-ui-polish-20260813.js"),"UI-polish moet de volledige bewezen artifact als basis zien");
 assert(positie("apply-ui-polish-20260813.js")<positie("apply-weather-fallback-hedge.js"),"weather-fallback ziet de volledige UI-polishartifact");
 assert(positie("apply-weather-fallback-hedge.js")<positie("verify-weather-fallback-hedge.js"),"weather-fallback moet direct na toepassing worden geverifieerd");
-assert(positie("verify-weather-fallback-hedge.js")<positie("apply-fetch-error-semantics.js"),"menselijke foutsemantiek moet op de nieuwe fallbackstrategie worden toegepast");
-assert(positie("apply-fetch-error-semantics.js")<positie("verify-fetch-error-semantics.js"),"foutsemantiek moet direct na toepassing worden geverifieerd");
+assert(positie("verify-weather-fallback-hedge.js")<positie("verify-fetch-error-semantics.js"),"menselijke foutsemantiek uit de base-build moet na de fallbackstrategie geverifieerd blijven");
 assert(positie("verify-fetch-error-semantics.js")<positie("apply-polar-chart-sentinel.js"),"poolgrafiekcorrectie moet de definitieve request- en foutsemantiek als basis zien");
 assert(positie("apply-polar-chart-sentinel.js")<positie("verify-polar-chart-sentinel.js"),"poolgrafiekcorrectie moet direct na toepassing worden geverifieerd");
 assert(positie("verify-polar-chart-sentinel.js")<positie("apply-unified-weather-truth.js"),"weather-truth consolideert pas na inhoudelijke UI-correcties");
@@ -79,4 +77,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde, weather truth, canonieke kleine-kans-owner, Nederlandse neerslagcopy, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde, base-build foutsemantiek, weather truth, canonieke kleine-kans-owner, Nederlandse neerslagcopy, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");
