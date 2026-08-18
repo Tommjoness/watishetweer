@@ -9,12 +9,28 @@ const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
 const htmlPad=path.join(OUT,"index.html");
 let html=fs.readFileSync(htmlPad,"utf8");
-const runtime=fs.readFileSync(path.join(__dirname,"ui-polish-20260813-runtime.js"),"utf8");
+let runtime=fs.readFileSync(path.join(__dirname,"ui-polish-20260813-runtime.js"),"utf8");
 const RUNTIME_MARK="/* ===== UI POLISH RUNTIME 20260813 ===== */";
 const CSS_MARK="/* ===== UI POLISH CSS 20260813 ===== */";
 
 if(html.includes(RUNTIME_MARK)||html.includes(CSS_MARK))throw new Error("UI-polish is al toegepast.");
 if(!runtime.includes(RUNTIME_MARK))throw new Error("UI-polish runtime mist versie-marker.");
+
+/* Q4 is inmiddels de enige eigenaar van de regenperiodepresentatie. De oudere
+   UI-polish-runtime uit 20260813 bevatte nog een latere etmaal-wrapper die na Q4
+   opnieuw statische kanspercentages toevoegde en een weekdag aan een oude
+   samenvattingsregel kon prefixen. Dat maakte de uiteindelijke artifactvolgorde
+   strijdig met het huidige productcontract. Verwijder precies dat verouderde
+   blok vóór injectie; overige UI-polish blijft onaangeraakt. */
+const VEROUDE_REGEN_START="function uiPolishRegenperiodeKansen(){";
+const VEROUDE_REGEN_EIND="function uiPolishWaarschuwingen(){";
+const regenStart=runtime.indexOf(VEROUDE_REGEN_START),regenEind=runtime.indexOf(VEROUDE_REGEN_EIND,regenStart+1);
+if(regenStart<0||regenEind<=regenStart)throw new Error("Verouderde UI-polish regenperiode-owner ontbreekt of is gewijzigd.");
+runtime=runtime.slice(0,regenStart)
+  +"/* Regenperiodepresentatie wordt volledig beheerd door Q4. */\n\n"
+  +runtime.slice(regenEind);
+if(runtime.includes("uiPolishRegenperiodeKansen")||runtime.includes("data-ui-rain-period-probability"))
+  throw new Error("Verouderde statische regenkanspresentatie bleef in de UI-polish-runtime achter.");
 
 /* Accessibility hoort in het definitieve artifact, zonder de dashboardstructuur
    of weerlogica te herschikken. #app is al de ene container van alle primaire
@@ -84,10 +100,11 @@ if(html.includes(APP_OPEN))throw new Error("Oude #app-div is na accessibility-po
 if(!html.includes("footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px"))throw new Error("Mobiele footer-hitbox ontbreekt uit definitief artifact.");
 if(!html.includes('data-ui-warning-loading="1">Officiële weerwaarschuwingen controleren…'))throw new Error("Waarschuwing-laadstatus ontbreekt uit definitief artifact.");
 if(!html.includes("Geen officiële weerwaarschuwingen voor deze locatie."))throw new Error("Lege waarschuwing-eindstate ontbreekt uit definitief artifact.");
+if(html.includes("uiPolishRegenperiodeKansen")||html.includes("data-ui-rain-period-probability"))throw new Error("UI-polish overschrijft de Q4-regenperiodepresentatie nog steeds.");
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden na UI-polish.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-polish-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"ui-polish-20260813");
-console.log("UI-polish toegepast: rustige waarschuwingen, zichtbare officiële waarschuwingstatus, natuurlijke windtekst, bereik-kop, opgeschoonde neerslagpresentatie, daglichtbewuste zontekst, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
+console.log("UI-polish toegepast: rustige waarschuwingen, zichtbare officiële waarschuwingstatus, natuurlijke windtekst, bereik-kop, Q4 als enige regenperiode-owner, daglichtbewuste zontekst, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");

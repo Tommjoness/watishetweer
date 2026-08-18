@@ -89,45 +89,13 @@ async function controleer(type,naam,breedte){
       const teksten=[...regen.querySelectorAll("text")].map(el=>(el.textContent||"").trim());
       const samenvattingen=[...regen.querySelectorAll('text[data-q4-rain-summary]')].map(el=>(el.textContent||"").trim());
       const periodeBedragen=[...regen.querySelectorAll('text[data-q4-rain-period-amount]')].map(el=>(el.textContent||"").trim());
-      const kansLabels=[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim()));
-      const periodeLijnen=[...regen.querySelectorAll("line")].filter(el=>{
-        const x1=Number(el.getAttribute("x1")),x2=Number(el.getAttribute("x2"));
-        const y1=Number(el.getAttribute("y1")),y2=Number(el.getAttribute("y2"));
-        return [x1,x2,y1,y2].every(Number.isFinite)&&Math.abs(y1-y2)<0.2&&Math.abs(x2-x1)>1;
-      });
+      const kansLabels=[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).map(el=>(el.textContent||"").trim());
       const pop=document.getElementById("pop"),popStat=pop&&pop.parentElement,popKop=popStat&&popStat.querySelector(".eyebrow");
       return {
         oudeStaven:[...svg.querySelectorAll("rect")].filter(el=>el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".16").length,
         oudeMm:[...svg.querySelectorAll("text")].filter(el=>/ millimeter neerslag$/.test(el.getAttribute("aria-label")||"")).length,
         brackets:regen.querySelectorAll("line").length,
-        teksten,samenvattingen,periodeBedragen,
-        kansOnderTien:kansLabels.filter(el=>Number((el.textContent||"").replace("%",""))<10).length,
-        kansNegentien:kansLabels.some(el=>(el.textContent||"").trim()==="19%"),
-        kansPeriodeAantal:kansLabels.filter(el=>el.getAttribute("data-ui-rain-period-probability")==="1").length,
-        kansAlleenBijRegen:kansLabels.every(el=>{
-          const x=Number(el.getAttribute("x"));
-          if(el.getAttribute("data-ui-rain-period-probability")!=="1")return false;
-          return periodeLijnen.some(lijn=>{
-            const a=Number(lijn.getAttribute("x1")),b=Number(lijn.getAttribute("x2")),midden=(a+b)/2;
-            if(Math.abs(midden-x)>=0.15)return false;
-            const links=Math.min(a,b)-0.75,rechts=Math.max(a,b)+0.75;
-            return g.MM.some((mm,i)=>Number(mm)>=0.1&&g.x(i)>=links&&g.x(i)<=rechts);
-          });
-        }),
-        kansGecentreerd:kansLabels.every(el=>{
-          const v=Number((el.textContent||"").replace("%","")),x=Number(el.getAttribute("x"));
-          if(el.getAttribute("text-anchor")!=="middle")return false;
-          if(el.getAttribute("aria-label")!=="Hoogste neerslagkans in deze periode: "+v+" procent")return false;
-          return periodeLijnen.some(lijn=>{
-            const a=Number(lijn.getAttribute("x1")),b=Number(lijn.getAttribute("x2")),midden=(a+b)/2;
-            if(Math.abs(midden-x)>=0.15)return false;
-            const links=Math.min(a,b)-0.75,rechts=Math.max(a,b)+0.75;
-            const kansen=g.P.map((p,i)=>({p:Number(p),mm:Number(g.MM[i]),x:g.x(i)}))
-              .filter(item=>item.mm>=0.1&&item.x>=links&&item.x<=rechts&&Number.isFinite(item.p))
-              .map(item=>item.p);
-            return kansen.length>0&&v===Math.max(...kansen);
-          });
-        }),
+        teksten,samenvattingen,periodeBedragen,kansLabels,
         mmUitgelijnd:g.MM.every((mm,i)=>{if(i===0||mm==null)return true;const bron=S.chartStart+i;return Number.isInteger(bron)&&S.d.hourly.time[bron]===g.TI[i]&&Math.abs(Number(S.d.hourly.precipitation[bron])-Number(mm))<1e-9;}),
         mmZelfdeArray:g.MM===g.Q1MM,
         regenPointerEvents:regen.getAttribute("pointer-events"),
@@ -147,14 +115,8 @@ async function controleer(type,naam,breedte){
     assert.equal(r.oudeMm,0,naam+" "+breedte+": oude losse mm-labels zijn weg");
     assert.equal(r.brackets,6,naam+" "+breedte+": twee regenperioden geven twee brackets met eindkapjes; kreeg "+r.brackets+" lijnen; "+r.teksten.join(" | "));
     assert.deepEqual(r.periodeBedragen,["0,7 mm","0,5 mm"],naam+" "+breedte+": iedere bracket toont zijn eigen periodetotaal; kreeg "+JSON.stringify(r.periodeBedragen));
-    assert.equal(r.samenvattingen.length,2,naam+" "+breedte+": wisselvallig weer houdt twee globale samenvattingsregels");
-    assert(r.samenvattingen[0].includes("2 regenperiodes")&&r.samenvattingen[0].includes("totaal 1,2 mm"),naam+" "+breedte+": totaalregel klopt: "+r.samenvattingen.join(" | "));
-    assert(r.samenvattingen[1].includes("Meeste regen 16:00–17:00")&&r.samenvattingen[1].includes("0,4 mm"),naam+" "+breedte+": piekuur klopt: "+r.samenvattingen.join(" | "));
-    assert.equal(r.kansOnderTien,0,naam+" "+breedte+": triviale kanslabels onder 10% blijven uit de statische grafiek");
-    assert.equal(r.kansNegentien,false,naam+" "+breedte+": een 19%-kans bij 0 mm staat niet los onder een droog grafiekstuk");
-    assert.equal(r.kansPeriodeAantal,2,naam+" "+breedte+": twee regenperioden houden exact twee statische periodemaxima");
-    assert.equal(r.kansAlleenBijRegen,true,naam+" "+breedte+": ieder zichtbaar statisch kanslabel hoort bij een meetbare regenperiode");
-    assert.equal(r.kansGecentreerd,true,naam+" "+breedte+": ieder periodemaximum staat gecentreerd boven de eigen regenperiode en toont de hoogste kans");
+    assert.equal(r.samenvattingen.length,0,naam+" "+breedte+": totaalregel en pieksamenvatting zijn bewust verwijderd");
+    assert.equal(r.kansLabels.length,0,naam+" "+breedte+": statische neerslagpercentages zijn bewust uit de tijdlijn verwijderd; kreeg "+JSON.stringify(r.kansLabels));
     assert.equal(r.mmUitgelijnd,true,naam+" "+breedte+": strip gebruikt exact dezelfde uurwaarden als de grafiekbron");
     assert.equal(r.mmZelfdeArray,true,naam+" "+breedte+": tooltip en regenstrip delen letterlijk dezelfde mm-array");
     assert.equal(r.regenPointerEvents,"none",naam+" "+breedte+": regenlaag kan muis/touch niet onderscheppen");
@@ -166,7 +128,7 @@ async function controleer(type,naam,breedte){
     assert(r.nachtBewolking.length>0&&r.nachtBewolking.every(t=>t==="<5%"),naam+" "+breedte+": Nachtzicht gebruikt dezelfde <5%-notatie; kreeg "+JSON.stringify(r.nachtBewolking));
     assert.equal(r.aqiSub,"Redelijk",naam+" "+breedte+": AQI-subregel herhaalt de schaalnaam niet; kreeg "+JSON.stringify(r.aqiSub));
     assert(!r.dagteksten.some(t=>/rond \d{1,2}:\d{2}/.test(t)),naam+" "+breedte+": dagregels suggereren geen minuutprecisie");
-    assert(r.h>296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets, bedragen en samenvatting");
+    assert(r.h>296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets, tijdlabels en bedragen");
 
     await page.locator("#chart").scrollIntoViewIfNeeded();
     const puntCoords=uur=>page.evaluate(uur=>{
@@ -313,10 +275,10 @@ async function controleer(type,naam,breedte){
     });
     assert.equal(droog.groep,false,naam+" "+breedte+": 0 mm verzint geen regenperiode");
     assert.equal(droog.staven,0,naam+" "+breedte+": oude staven komen niet terug");
-    assert.equal(droog.kansen,0,naam+" "+breedte+": uitsluitend 8%-kansen geven geen losse grafiekruis");
+    assert.equal(droog.kansen,0,naam+" "+breedte+": droge grafiek houdt geen statische kanspercentages");
     assert.equal(droog.zelfdeArray,true,naam+" "+breedte+": ook droog houdt één gedeelde mm-array");
     assert.deepEqual(fouten,[],naam+" "+breedte+": geen pageerrors");
-    console.log("Q4-browser OK: "+naam+" "+breedte+"px; "+r.samenvattingen.join(" | ")+"; perioden "+r.periodeBedragen.join(" | "));
+    console.log("Q4-browser OK: "+naam+" "+breedte+"px; perioden "+r.periodeBedragen.join(" | ")+"; kansen alleen interactief");
   }finally{
     await context.close();await browser.close();
   }

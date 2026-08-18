@@ -5,8 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Privacy & gegevens · Wat is het weer?</title>
 <meta name="robots" content="index,follow">
+<meta name="theme-color" content="#F4F5F3">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'">
-<style>body{margin:0;background:#f4f5f3;color:#12211c;font:16px/1.65 system-ui,-apple-system,sans-serif;padding:32px 20px}.kaart{max-width:760px;margin:auto;background:#fff;border:1px solid #dce1de;padding:32px}h1{font:400 36px/1.15 Georgia,serif;margin:0 0 24px}h2{font-size:17px;margin-top:28px}a{color:inherit}button{background:transparent;border:1px solid #41514b;padding:10px 14px;cursor:pointer;font:inherit}.klein{color:#65716c;font-size:14px}#wisstatus{margin-left:10px}</style>
+<!-- Pas een expliciete thema-keuze toe vóór CSS, zodat directe subpagina-loads niet eerst in het verkeerde thema renderen. -->
+<script>
+(()=>{try{
+  const raw=localStorage.getItem("weerbriefing.thema");
+  const keuze=raw?JSON.parse(raw):"auto";
+  if(!["licht","donker"].includes(keuze))return;
+  document.documentElement.setAttribute("data-thema",keuze);
+  document.querySelector('meta[name="theme-color"]').setAttribute("content",keuze==="donker"?"#0B120F":"#F4F5F3");
+}catch(e){}})();
+</script>
+<style>
+:root{--paper:#f4f5f3;--sheet:#fff;--ink:#12211c;--ink-70:#41514b;--muted:#65716c;--rule:#dce1de}
+html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70:#b8b8b8;--muted:#999;--rule:#2a2a2a}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 system-ui,-apple-system,sans-serif;padding:32px 20px}.kaart{max-width:760px;margin:auto;background:var(--sheet);border:1px solid var(--rule);padding:32px}h1{font:400 36px/1.15 Georgia,serif;margin:0 0 24px}h2{font-size:17px;margin-top:28px}a{color:inherit}button{background:transparent;color:var(--ink);border:1px solid var(--ink-70);padding:10px 14px;cursor:pointer;font:inherit}.klein{color:var(--muted);font-size:14px}#wisstatus{margin-left:10px}
+</style>
 </head>
 <body><main class="kaart">
 <p><a href="./">← Terug naar het weer</a></p>
@@ -21,8 +36,8 @@
 <h2>Zelf wissen</h2>
 <p><button id="wis" type="button">Wis lokale gegevens</button><span id="wisstatus" role="status" aria-live="polite"></span></p>
 <p class="klein">Dit wist de lokaal opgeslagen plaatsen, instellingen en weersnapshot van deze site. Je kunt sitegegevens ook via de instellingen van je browser verwijderen.</p>
-<h2>Bronnen en contact</h2>
-<p>Bronvermelding staat ook onderaan de weerpagina. Voor vragen over deze app of gegevensverwerking kun je contact opnemen via de <a href="https://github.com/Tommjoness/weathernow">GitHub-repository</a>.</p>
+<h2>Bronnen en projectinformatie</h2>
+<p>Bronvermelding staat ook onderaan de weerpagina. Technische documentatie, broncode en het openbare wijzigingenoverzicht zijn beschikbaar via de <a href="https://github.com/Tommjoness/weathernow">projectpagina op GitHub</a>.</p>
 </main>
 <script>document.getElementById("wis").addEventListener("click",()=>{try{localStorage.clear();document.getElementById("wisstatus").textContent=" Lokale gegevens gewist.";}catch(e){document.getElementById("wisstatus").textContent=" Wissen lukte niet; gebruik de browserinstellingen.";}});</script>
 </body></html>

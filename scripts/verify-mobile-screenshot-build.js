@@ -47,6 +47,7 @@ for(const vereist of [
   "tijdLabelVrij=nuX==null",
   "val+labelHoogte/2+4<=pb",
   "ruimBotsendeAslabelsOp",
+  "if(!M)return;",
   "temperatuurLabels=teksten.filter",
   "getBBox()",
   "Nachtzicht-presentatie geconsolideerd in WeatherNowMobileScreenshotPolish"
@@ -69,6 +70,8 @@ if(html.includes('const basisNachten=nachten;\nnachten=function(){\n  basisNacht
 if((html.split("const ruimBotsendeAslabelsOp=()=>{").length-1)!==1)throw new Error("Grafiek moet exact één fontbox-botsingslaag hebben.");
 const etmaalStart=html.indexOf("function etmaal("),botsingsLaag=html.indexOf("const ruimBotsendeAslabelsOp=()=>{"),etmaalEind=html.indexOf("function daglengte(",etmaalStart);
 if(etmaalStart<0||botsingsLaag<=etmaalStart||etmaalEind<=botsingsLaag)throw new Error("Fontbox-botsingslaag staat niet aantoonbaar binnen de bestaande etmaal-renderer.");
+const botsingsBron=html.slice(botsingsLaag,etmaalEind);
+if(!botsingsBron.includes("if(!M)return;"))throw new Error("Fontbox-botsingslaag moet uitsluitend op mobiele grafieken actief zijn; desktop-uuras mag niet worden opgeschoond.");
 
 const verwacht=verifieerServiceworkerCache(OUT,"checkpoint-50");
-console.log("Definitieve checkpoint-50 artifact geverifieerd: één Nachtzicht-owner met kalendergrens en zonsopkomstgrens, scanbare maan/zichtregels, brongetrouwe maanfase, fontbox-collision-proof mobiele grafiek en cache "+verwacht+".");
+console.log("Definitieve checkpoint-50 artifact geverifieerd: één Nachtzicht-owner met kalendergrens en zonsopkomstgrens, scanbare maan/zichtregels, brongetrouwe maanfase, mobiel begrensde fontbox-collision cleanup en cache "+verwacht+".");

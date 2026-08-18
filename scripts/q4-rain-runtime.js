@@ -4,7 +4,7 @@
 const q4Getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 const q4Mm=v=>{const n=q4Getal(v);return n===null?"–":n.toFixed(1).replace(".",",");};
 const q4Tijd=t=>String(t||"").slice(11,16);
-const q4DagKort=t=>{try{const d=new Date(String(t).slice(0,10)+"T12:00:00");return DAGEN[d.getDay()]+" "+d.getDate();}catch(e){return "";}};
+const q4DagKort=t=>{try{const d=new Date(String(t).slice(0,10)+"T12:00:00");return Number.isNaN(d.getTime())?"":(DAGEN[d.getDay()]||"");}catch(e){return "";}};
 const Q4_SVG_NS="http://www.w3.org/2000/svg";
 
 /* De grafiekhint hoort bij de interactieve Q4-presentatielaag. Een tekstuele
@@ -136,18 +136,7 @@ function q4Regenperioden(g){
   return perioden;
 }
 
-function q4KansIndex(g,x){
-  const midden=q4Getal(x)===null?null:q4Getal(x)+g.cw/2;
-  if(midden===null||!Number.isFinite(g.n))return {i:-1,midden:null};
-  let beste=-1,afstand=Infinity;
-  for(let i=0;i<g.n;i++){
-    const d=Math.abs(g.x(i)-midden);
-    if(d<afstand){beste=i;afstand=d;}
-  }
-  return {i:afstand<=Math.max(0.75,g.cw*.12)?beste:-1,midden};
-}
-
-function q4PeriodeBedragLabels(g,perioden,y,font){
+function q4PeriodeBedragLabels(g,perioden,eersteY,font){
   const links=q4Getal(g.pl)||0,rechts=g.W-(q4Getal(g.pr)||0),rijen=[],labels=[];
   perioden.forEach((p,index)=>{
     const tekst=q4Mm(p.som)+" mm",x1=g.x(p.van),x2=g.x(p.tot);
@@ -159,29 +148,82 @@ function q4PeriodeBedragLabels(g,perioden,y,font){
     if(!rijen[rij])rijen[rij]=[];rijen[rij].push(vak);
     labels.push({index,tekst,x,rij});
   });
-  return {labels,rijen:Math.max(1,rijen.length),eersteY:y+14,stap:11};
+  return {labels,rijen:Math.max(1,rijen.length),eersteY,stap:11};
 }
 
-/* Een bracket is visueel snel te scannen, maar bij meerdere perioden hoort de
-   exacte timing ook als tekst onder de grafiek te staan. Dat voorkomt dat de
-   gebruiker de x-as moet terugrekenen. Bij een kalendergrens noemen we beide
-   dagen expliciet, zodat 23:00–02:00 nooit dubbelzinnig wordt. */
+/* Eén formatter blijft eigenaar van de datumconventie voor de toegankelijke
+   bracketbeschrijving. De zichtbare 24-uurslabels blijven bewust kloktijden. */
 function q4PeriodeTijdvak(g,p){
   const van=g&&Array.isArray(g.TI)?g.TI[p.van]:null,tot=g&&Array.isArray(g.TI)?g.TI[p.tot]:null;
+  const basisDatum=String(g&&Array.isArray(g.TI)&&g.TI[0]||"").slice(0,10);
   const vanDatum=String(van||"").slice(0,10),totDatum=String(tot||"").slice(0,10);
   const vanDag=q4DagKort(van),totDag=q4DagKort(tot);
   if(vanDatum&&totDatum&&vanDatum!==totDatum)return vanDag+" "+q4Tijd(van)+"–"+totDag+" "+q4Tijd(tot);
-  return (vanDag?vanDag+" ":"")+q4Tijd(van)+"–"+q4Tijd(tot);
+  const dag=vanDatum&&basisDatum&&vanDatum!==basisDatum?vanDag+" ":"";
+  return dag+q4Tijd(van)+"–"+q4Tijd(tot);
+}
+
+/* De 24-uursweergave kiest per periode tussen twee losse eindpunten en één
+   compacte klokrange. De keuze volgt de echte grafiekbreedte, niet het apparaat:
+   brede perioden lezen het snelst als 03:00 ├──┤ 10:00; korte perioden blijven
+   rustig als één 23:00–00:00-label onder de bracket. */
+function q4PeriodeRandTekst(g,p){
+  const van=g&&Array.isArray(g.TI)?g.TI[p.van]:null,tot=g&&Array.isArray(g.TI)?g.TI[p.tot]:null;
+  return {van:q4Tijd(van),tot:q4Tijd(tot)};
+}
+function q4PeriodeRandLabels(g,perioden,y,font){
+  const eersteY=y+13;
+  if(!g||g.n>25)return {labels:[],rijen:0,eersteY,stap:11};
+  const links=2,rechts=g.W-2,rijen=[],labels=[],marge=4;
+  const breedteVoor=tekst=>Math.max(20,String(tekst||"").length*font*.62);
+  const vakVoor=(x,anchor,breedte)=>anchor==="end"?{links:x-breedte,rechts:x}:anchor==="start"?{links:x,rechts:x+breedte}:{links:x-breedte/2,rechts:x+breedte/2};
+  const overlapt=(a,b)=>!(a.rechts+2<b.links||b.rechts+2<a.links);
+  const plaatsRij=vakken=>{
+    let rij=0;
+    while((rijen[rij]||[]).some(bestaand=>vakken.some(v=>overlapt(bestaand,v))))rij++;
+    if(!rijen[rij])rijen[rij]=[];rijen[rij].push(...vakken);
+    return rij;
+  };
+  const opties=(soort,tekst,ruwX)=>{
+    const breedte=breedteVoor(tekst);
+    const voorkeur=soort==="start"
+      ?[{x:ruwX-marge,anchor:"end",rang:0},{x:ruwX+marge,anchor:"start",rang:1}]
+      :[{x:ruwX+marge,anchor:"start",rang:0},{x:ruwX-marge,anchor:"end",rang:1}];
+    return voorkeur.map(o=>({...o,vak:vakVoor(o.x,o.anchor,breedte)})).filter(o=>o.vak.links>=links&&o.vak.rechts<=rechts);
+  };
+  perioden.forEach((p,index)=>{
+    const tekst=q4PeriodeRandTekst(g,p),x1=g.x(p.van),x2=g.x(p.tot),span=Math.abs(x2-x1);
+    const startBreedte=breedteVoor(tekst.van),eindBreedte=breedteVoor(tekst.tot);
+    const splitMin=Math.max(52,startBreedte+eindBreedte+10);
+    if(span>=splitMin){
+      const startOpties=opties("start",tekst.van,x1),eindOpties=opties("end",tekst.tot,x2),combinaties=[];
+      startOpties.forEach(start=>eindOpties.forEach(eind=>{if(!overlapt(start.vak,eind.vak))combinaties.push({start,eind,rang:start.rang+eind.rang});}));
+      combinaties.sort((a,b)=>a.rang-b.rang);
+      if(combinaties.length){
+        const gekozen=combinaties[0],rij=plaatsRij([gekozen.start.vak,gekozen.eind.vak]);
+        labels.push({index,soort:"start",tekst:tekst.van,x:gekozen.start.x,anchor:gekozen.start.anchor,rij});
+        labels.push({index,soort:"end",tekst:tekst.tot,x:gekozen.eind.x,anchor:gekozen.eind.anchor,rij});
+        return;
+      }
+    }
+    const compactTekst=tekst.van+"–"+tekst.tot,compactBreedte=breedteVoor(compactTekst),midden=(x1+x2)/2;
+    const x=Math.max(links+compactBreedte/2,Math.min(rechts-compactBreedte/2,midden));
+    const vak=vakVoor(x,"middle",compactBreedte),rij=plaatsRij([vak]);
+    labels.push({index,soort:"range",tekst:compactTekst,x,anchor:"middle",rij});
+  });
+  return {labels,rijen:rijen.length,eersteY,stap:11};
 }
 
 function q4TekenRegenperioden(svg,g,perioden){
   svg.querySelectorAll('g[data-q4-rain-periods]').forEach(el=>el.remove());
 
-  /* De oude hoeveelheidstaven en losse mm-cijfers verdwijnen volledig. Een
-     statisch kanspercentage hoort voortaan alleen bij een uur waarvoor dezelfde
-     definitief uitgelijnde Q4-array ook meetbare neerslag bevat. Zo staat een
-     losse 19%-kans niet meer visueel onder een droog stuk alsof daar al een
-     regenperiode loopt. De tooltip behoudt ALLE kansen, ook bij 0 mm en <10%. */
+  /* De oude hoeveelheidstaven en losse mm-cijfers verdwijnen volledig. Ook de
+     statische neerslagpercentages verdwijnen uit de tijdlijn: de bracket
+     communiceert alleen tijdvak en hoeveelheid. Selecteren op de kleur van zo'n
+     label is te fragiel voor een geassembleerde artifact; de betekenis is het
+     contract. Daarom verwijderen we ieder los numeriek %-label uit #chart,
+     behalve tekst in de interactieve #scrub-tooltip. De volledige kansinformatie
+     blijft daar ongewijzigd beschikbaar. */
   [...svg.querySelectorAll("rect")].forEach(el=>{
     if(el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".16")el.remove();
   });
@@ -189,13 +231,7 @@ function q4TekenRegenperioden(svg,g,perioden){
     if(/ millimeter neerslag$/.test(el.getAttribute("aria-label")||""))el.remove();
   });
   [...svg.querySelectorAll("text")].forEach(el=>{
-    if(el.getAttribute("fill")!==TEAL||!/^\d+%$/.test((el.textContent||"").trim()))return;
-    const kans=Number((el.textContent||"").trim().replace("%",""));
-    const positie=q4KansIndex(g,el.getAttribute("x"));
-    const mm=positie.i>=0&&Array.isArray(g.MM)?q4Getal(g.MM[positie.i]):null;
-    if(!Number.isFinite(kans)||kans<10||mm===null||mm<0.1){el.remove();return;}
-    if(el.dataset.q4ProbabilityCentered==="1")return;
-    el.setAttribute("x",String(positie.midden));el.dataset.q4ProbabilityCentered="1";
+    if(!el.closest("#scrub")&&/^\d+%$/.test((el.textContent||"").trim()))el.remove();
   });
 
   const basisH=q4Getal(g.H)||296;
@@ -211,21 +247,16 @@ function q4TekenRegenperioden(svg,g,perioden){
   }
 
   /* Iedere aaneengesloten periode houdt zijn eigen bracket op de werkelijke
-     uurpositie en krijgt direct eronder de som van exact diezelfde intervallen.
-     Korte perioden kunnen op mobiel dicht bij elkaar liggen; de bedragen worden
-     daarom automatisch over meerdere compacte regels verdeeld als ze botsen. */
-  const pb=g.pt+g.ih,y=pb+48,regel=g.M?14:16,bedragFont=g.M?8.8:9.4;
-  const bedragen=q4PeriodeBedragLabels(g,perioden,y,bedragFont);
+     uurpositie. In de 24-uursweergave staan uitsluitend het tijdvak en de mm-som
+     bij de bracket; losse totalen, kanspercentages en een aparte 'Meeste regen'-
+     regel zijn bewust verwijderd om dezelfde informatie niet te stapelen. */
+  const pb=g.pt+g.ih,y=pb+48,randFont=g.M?8.3:8.9,bedragFont=g.M?8.8:9.4;
+  const randen=q4PeriodeRandLabels(g,perioden,y,randFont);
+  const laatsteRandY=randen.rijen?randen.eersteY+(randen.rijen-1)*randen.stap:y;
+  const bedragStartY=randen.rijen?laatsteRandY+14:y+14;
+  const bedragen=q4PeriodeBedragLabels(g,perioden,bedragStartY,bedragFont);
   const laatsteBedragY=bedragen.eersteY+(bedragen.rijen-1)*bedragen.stap;
-  const samenvattingY=laatsteBedragY+20;
-  /* Exacte periode-regels zijn vooral nodig bij de 24-uursgrafiek, waar de
-     gebruiker de komende regenmomenten praktisch wil kunnen plannen. Op 48 uur
-     of zeven dagen kunnen er veel afzonderlijke natte blokken zijn; alle regels
-     uitschrijven zou de SVG daar onnodig hoog maken. Brackets, totalen en piek
-     blijven in die langere weergaven wel gewoon bestaan. */
-  const detailRegels=perioden.length>1&&g.n<=25?perioden.map(p=>q4PeriodeTijdvak(g,p)+" · "+q4Mm(p.som)+" mm"):[];
-  const piekY=samenvattingY+regel*(detailRegels.length+1);
-  const nieuwH=Math.max(basisH,piekY+17+8);
+  const nieuwH=Math.max(basisH,laatsteBedragY+17+8);
   svg.setAttribute("viewBox","0 0 "+g.W+" "+nieuwH);g.H=nieuwH;
 
   const groep=document.createElementNS(Q4_SVG_NS,"g");
@@ -239,9 +270,16 @@ function q4TekenRegenperioden(svg,g,perioden){
     const x1=g.x(p.van),x2=g.x(p.tot);
     const horizontaal=q4SvgLijn(x1,y,x2,y,3);
     horizontaal.setAttribute("stroke-linecap","square");
+    horizontaal.setAttribute("aria-label",q4PeriodeTijdvak(g,p)+" · "+q4Mm(p.som)+" mm");
     groep.appendChild(horizontaal);
     groep.appendChild(q4SvgLijn(x1,y-4,x1,y+4,1));
     groep.appendChild(q4SvgLijn(x2,y-4,x2,y+4,1));
+  });
+  randen.labels.forEach(item=>{
+    const label=q4SvgTekst(item.x,randen.eersteY+item.rij*randen.stap,item.tekst,randFont);
+    label.setAttribute("text-anchor",item.anchor||"middle");
+    label.setAttribute("data-q4-rain-period-"+item.soort,String(item.index));
+    groep.appendChild(label);
   });
   bedragen.labels.forEach(item=>{
     const label=q4SvgTekst(item.x,bedragen.eersteY+item.rij*bedragen.stap,item.tekst,bedragFont);
@@ -250,27 +288,9 @@ function q4TekenRegenperioden(svg,g,perioden){
     groep.appendChild(label);
   });
 
-  const totaal=perioden.reduce((som,p)=>som+p.som,0);
-  let piek=perioden[0];for(const p of perioden)if(p.piekMm>piek.piekMm)piek=p;
-  const één=perioden.length===1,eerste=perioden[0];
-  const periodeTekst=één
-    ? q4Tijd(g.TI[eerste.van])+"–"+q4Tijd(g.TI[eerste.tot])+" · totaal "+q4Mm(totaal)+" mm"
-    : perioden.length+" regenperiodes · totaal "+q4Mm(totaal)+" mm";
-  const basisDatum=String(g.TI&&g.TI[0]||"").slice(0,10),piekDatum=String(g.TI&&g.TI[piek.piek]||"").slice(0,10);
-  const dag=(g.n>49||(basisDatum&&piekDatum&&basisDatum!==piekDatum))?q4DagKort(g.TI[piek.piek])+" ":"";
-  const piekTekst="Meeste regen "+dag+q4Tijd(g.TI[piek.piek-1])+"–"+q4Tijd(g.TI[piek.piek])+" · "+q4Mm(piek.piekMm)+" mm";
-  const font=g.M?9.3:10.2;
-  groep.appendChild(q4SvgTekst(g.pl,samenvattingY,periodeTekst,font,"total"));
-  detailRegels.forEach((tekst,i)=>{
-    const detail=q4SvgTekst(g.pl,samenvattingY+regel*(i+1),tekst,font);
-    detail.setAttribute("data-q4-rain-period-detail",String(i));
-    groep.appendChild(detail);
-  });
-  groep.appendChild(q4SvgTekst(g.pl,piekY,piekTekst,font,"peak"));
-
   const scrub=svg.querySelector("#scrub");svg.insertBefore(groep,scrub||null);
-  const detailAria=g.n<=25?" Onder de grafiek staan tijdvak en verwachte hoeveelheid per regenperiode.":"";
-  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve."+detailAria+" Kanswaarden zonder meetbare hoeveelheid blijven via de details beschikbaar.").trim());
+  const detailAria=g.n<=25?" Bij iedere regenperiode staat het tijdvak en de verwachte hoeveelheid.":"";
+  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve."+detailAria+" Neerslagkansen blijven via de details beschikbaar.").trim());
 }
 
 /* De kwartiergrafiek tekent in de historische owner ieder positief getal. Een
