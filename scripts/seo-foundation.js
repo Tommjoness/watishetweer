@@ -1,12 +1,6 @@
 "use strict";
 
-const fs=require("fs");
-const path=require("path");
 const SEO=require("./seo-foundation.config.js");
-const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
-
-const OUT=path.join(__dirname,"..","public");
-const DOEL=path.join(OUT,"index.html");
 const MARKER="<!-- WEATHER NOW SEO FOUNDATION -->";
 
 function attr(v){return String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
@@ -49,14 +43,4 @@ function pasSeoFoundationToe(html){
   return bron.replace(nieuweDescription,nieuweDescription+"\n"+blok);
 }
 
-function main(){
-  if(!fs.existsSync(DOEL))throw new Error("public/index.html ontbreekt; voer eerst de basisbuild uit.");
-  const voor=fs.readFileSync(DOEL,"utf8");
-  const na=pasSeoFoundationToe(voor);
-  fs.writeFileSync(DOEL,na,"utf8");
-  const versie=vernieuwServiceworkerCache(OUT,"seo-foundation");
-  console.log("SEO-fundering toegepast: canonical, Bing-verificatie, zoekmetadata en WebSite-structured data; cache "+versie+".");
-}
-
-if(require.main===module)main();
 module.exports={MARKER,pasSeoFoundationToe};

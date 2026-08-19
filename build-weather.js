@@ -4,6 +4,7 @@ const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
 const PRODUCT_CONFIG=require("./product-config.js");
+const {pasSeoFoundationToe}=require("./scripts/seo-foundation.js");
 const {vernieuwServiceworkerCache}=require("./scripts/postbuild-cache.js");
 /* CACHE_BRONNEN en het hashrecept zijn uitsluitend eigendom van postbuild-cache.js. */
 const ROOT=__dirname,OUT=path.join(ROOT,"public");
@@ -160,6 +161,11 @@ const vereist=[
   "load(52.3676,4.9041,\"Amsterdam\",false,true,\"NL\")"
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);
+
+/* SEO-fundering is productmetadata en hoort net als de overige canonieke
+   productieconfiguratie in de base-build. De pure owner gebruikt uitsluitend
+   seo-foundation.config.js; latere plaatsroutegeneratie erft deze rootmetadata. */
+html=pasSeoFoundationToe(html);
 fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 
 /* Ook de eerste build gebruikt dezelfde eigenaar als alle latere postbuildlagen.
@@ -169,4 +175,4 @@ fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"build-weather");
 
 for(const n of fs.readdirSync(OUT))if(intern(n))throw new Error("Intern bestand publiek gebouwd: "+n);
-console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");
+console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, SEO-fundering, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");
