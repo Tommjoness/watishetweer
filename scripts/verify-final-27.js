@@ -41,13 +41,19 @@ for(const tekst of [
 verboden("Beste modeluren","oude modeljargon-beste-periodepresentatie");
 verboden("Relatief gunstigste modeluren","oude relatieve modeljargonpresentatie");
 
-/* 75%: live plaatsklok, 100% bewolking, UV-tijd en consumentvriendelijke cijfers. */
+/* 75%: live plaatsklok, 100% bewolking, één UV-copy-owner en consumentvriendelijke cijfers. */
 exactEen('if(n===100)return "Geheel bewolkt";','100%-bewolkingsregel');
 exactEen('const pUv=typeof plaatsTijdDelen','UV live-plaatsklokanker');
+exactEen("Verwachte UV-piek lag rond ","verstreken finale UV-copy");
+exactEen("Verwachte UV-piek rond ","actuele/toekomstige finale UV-copy");
+exactEen("Nauwelijks UV verwacht vandaag.","nul-UV finale modelcopy");
 for(const tekst of [
-  "Piek was rond ","Piek rond ","UV-gegevens voor vandaag worden bijgewerkt.",
+  "UV-gegevens voor vandaag worden bijgewerkt.",
   'font-feature-settings:"tnum" 1,"zero" 0',"senior-zoninfo","pollenEenheid","bron-bronnen"
 ])vereist(tekst);
+verboden("Piek was rond ","oude Q3-tussenformulering voor verstreken UV-piek");
+verboden("Piek rond ","oude Q3-tussenformulering voor actuele/toekomstige UV-piek");
+verboden("uiUvPiekTekst","late UI-polish UV-copy-owner");
 verboden('font-feature-settings:"tnum" 1,"zero" 1',"oude OpenType slashed-zero feature");
 verboden("tabular-nums slashed-zero","oude slashed-zero fontvariant");
 
@@ -112,4 +118,4 @@ runtimeScripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html
 jsonLdScripts.forEach((bron,i)=>{try{JSON.parse(bron);}catch(e){throw new Error("Ongeldige JSON-LD in definitief artifact #"+(i+1)+": "+e.message);}});
 
 const verwacht=verifieerServiceworkerCache(OUT,"finale");
-console.log("Finale 27-punten artifactguard geslaagd: één Nachtzicht-owner met kalendergrens, gewone nullen, copy-eigenaars, requestarchitectuur, syntactische runtime, geldige JSON-LD en serviceworker "+verwacht+".");
+console.log("Finale 27-punten artifactguard geslaagd: één Nachtzicht-owner met kalendergrens, gewone nullen, één Q3-UV-copy-owner, copy-eigenaars, requestarchitectuur, syntactische runtime, geldige JSON-LD en serviceworker "+verwacht+".");

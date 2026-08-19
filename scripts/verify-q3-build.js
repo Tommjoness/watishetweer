@@ -17,8 +17,9 @@ const exactEen=(tekst,naam)=>{
 exactEen("/* ===== CHECKPOINT 75 Q3 CSS ===== */","checkpoint-75 CSS-marker");
 exactEen('if(n===100)return "Geheel bewolkt";','100%-bewolkingsregel');
 exactEen('UV-gegevens voor vandaag worden bijgewerkt.','stale-dag UV-bescherming');
-exactEen('Piek was rond ','verstreken UV-piekformulering');
-exactEen('Piek rond ','toekomstige UV-piekformulering');
+exactEen('Verwachte UV-piek lag rond ','verstreken UV-piekformulering');
+exactEen('Verwachte UV-piek rond ','actuele/toekomstige UV-piekformulering');
+exactEen('Nauwelijks UV verwacht vandaag.','nul-UV modelverwachting');
 exactEen('const pUv=typeof plaatsTijdDelen','UV gebruikt live plaatsklok');
 
 for(const vereist of [
@@ -56,4 +57,4 @@ const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:q3-verify-"+(i+1)}));
 
 const verwacht=verifieerServiceworkerCache(OUT,"checkpoint-75");
-console.log("Checkpoint-75 artifact geverifieerd: Q3 blijft in bestaande runtime-owner, consumentencijfers gebruiken leesbare tabular sans-nummers, live lokale tijdankers, zon/pollen, cloud 100% en UV-tijdsemantiek; cache "+verwacht+".");
+console.log("Checkpoint-75 artifact geverifieerd: Q3 blijft in bestaande runtime-owner en bezit de finale UV-copy, met consumentencijfers, live lokale tijdankers, zon/pollen en cloud 100%; cache "+verwacht+".");
