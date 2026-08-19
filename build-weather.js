@@ -64,6 +64,7 @@ vervangProductregel(PRODUCT_CONFIG.EERSTE_BEZOEK_BRON,PRODUCT_CONFIG.EERSTE_BEZO
 vervangProductregel(PRODUCT_CONFIG.KALENDERDAG_PUNTEN_BRON,PRODUCT_CONFIG.KALENDERDAG_PUNTEN_PRODUCTIE,"24-uursgrensregel");
 vervangProductregel(PRODUCT_CONFIG.OPHAALFOUT_BRON,PRODUCT_CONFIG.OPHAALFOUT_PRODUCTIE,"Ophaalfoutsemantiek");
 vervangProductregel(PRODUCT_CONFIG.CACHE_FALLBACK_LAND_BRON,PRODUCT_CONFIG.CACHE_FALLBACK_LAND_PRODUCTIE,"Cachefallback-landcontext");
+vervangProductregel(PRODUCT_CONFIG.POLAR_GRAFIEK_BRON,PRODUCT_CONFIG.POLAR_GRAFIEK_PRODUCTIE,"Poolgrafiek-zonsemantiek");
 
 /* De compacte meelopende weerbalk gebruikte oorspronkelijk alleen een
    IntersectionObserver. Dat is zuinig, maar browsers mogen zo'n callback rond

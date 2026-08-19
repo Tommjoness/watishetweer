@@ -24,7 +24,6 @@ const verwacht=[
   "apply-weather-fallback-hedge.js",
   "verify-weather-fallback-hedge.js",
   "verify-fetch-error-semantics.js",
-  "apply-polar-chart-sentinel.js",
   "verify-polar-chart-sentinel.js",
   "apply-unified-weather-truth.js",
   "verify-unified-weather-truth.js",
@@ -42,6 +41,7 @@ assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet e
 assert.equal(new Set(POSTBUILD_STAPPEN).size,POSTBUILD_STAPPEN.length,"postbuild mag geen stap dubbel uitvoeren");
 for(const stap of POSTBUILD_STAPPEN){assert(fs.existsSync(path.join(__dirname,stap)),"postbuild verwijst naar ontbrekend script: "+stap);}
 assert(!fs.existsSync(path.join(__dirname,"apply-cache-fallback-country.js")),"oude misleidende cachefallback-owner moet verwijderd zijn");
+assert(!fs.existsSync(path.join(__dirname,"apply-polar-chart-sentinel.js")),"oude late poolgrafiekmutator moet verwijderd zijn");
 const positie=naam=>POSTBUILD_STAPPEN.indexOf(naam);
 assert(positie("apply-mobile-screenshot-polish.js")<positie("verify-mobile-screenshot-build.js"));
 assert(positie("apply-q3-senior-polish.js")<positie("verify-q3-build.js"));
@@ -57,9 +57,8 @@ assert(positie("verify-cache-fallback-country.js")<positie("apply-ui-polish-2026
 assert(positie("apply-ui-polish-20260813.js")<positie("apply-weather-fallback-hedge.js"),"weather-fallback ziet de volledige UI-polishartifact");
 assert(positie("apply-weather-fallback-hedge.js")<positie("verify-weather-fallback-hedge.js"),"weather-fallback moet direct na toepassing worden geverifieerd");
 assert(positie("verify-weather-fallback-hedge.js")<positie("verify-fetch-error-semantics.js"),"menselijke foutsemantiek uit de base-build moet na de fallbackstrategie geverifieerd blijven");
-assert(positie("verify-fetch-error-semantics.js")<positie("apply-polar-chart-sentinel.js"),"poolgrafiekcorrectie moet de definitieve request- en foutsemantiek als basis zien");
-assert(positie("apply-polar-chart-sentinel.js")<positie("verify-polar-chart-sentinel.js"),"poolgrafiekcorrectie moet direct na toepassing worden geverifieerd");
-assert(positie("verify-polar-chart-sentinel.js")<positie("apply-unified-weather-truth.js"),"weather-truth consolideert pas na inhoudelijke UI-correcties");
+assert(positie("verify-fetch-error-semantics.js")<positie("verify-polar-chart-sentinel.js"),"poolgrafieksemantiek uit de base-build moet na request- en foutsemantiek geverifieerd blijven");
+assert(positie("verify-polar-chart-sentinel.js")<positie("apply-unified-weather-truth.js"),"weather-truth consolideert pas na bewezen poolgrafieksemantiek");
 assert(positie("apply-unified-weather-truth.js")<positie("verify-unified-weather-truth.js"),"weather-truth moet direct na toepassing worden geverifieerd");
 assert(positie("verify-unified-weather-truth.js")<positie("verify-small-chance-consistency.js"),"kleine-kans-owner wordt pas na de geverifieerde weather-truth-laag gecontroleerd");
 assert(positie("verify-small-chance-consistency.js")<positie("verify-nederlandse-microcopy.js"),"Nederlandse copy-verifier ziet de definitieve neerslagsemantiek uit de canonieke owner");
@@ -78,4 +77,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde, expliciete shared-URL-owner, base-build foutsemantiek, weather truth, canonieke kleine-kans-owner, Nederlandse neerslagcopy, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde, expliciete shared-URL-owner, base-build foutsemantiek en poolgrafiekowner, weather truth, canonieke kleine-kans-owner, Nederlandse neerslagcopy, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");
