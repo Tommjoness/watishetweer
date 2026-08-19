@@ -14,10 +14,6 @@ assert.equal(api.zonurenWoord(13.8,14.83),"Naar verwachting bijna de hele dag zo
 assert.equal(api.zonurenWoord(8,14),"Naar verwachting meerdere uren zon vandaag.");
 assert.equal(api.zonurenWoord(2,14),"Naar verwachting weinig zon vandaag.");
 
-assert.equal(api.luchtdrukTekst("Licht gestegen in de afgelopen drie uur."),"De luchtdruk is in de afgelopen drie uur licht gestegen.");
-assert.equal(api.luchtdrukTekst("In de afgelopen drie uur 2,4 hPa gedaald."),"De luchtdruk is in de afgelopen drie uur 2,4 hPa gedaald.");
-assert.equal(api.luchtdrukTekst("Vrijwel stabiel."),"Vrijwel stabiel.");
-
 assert.equal(
   api.briefingBronSemantiek("Vandaag was het rond 13:00 het warmst, met <b>29 graden</b>."),
   "Het verwachte maximum lag vandaag rond 13:00 op <b>29 graden</b>."
@@ -61,6 +57,13 @@ assert(!runtime.includes("uiPollenTekst"),"UI-polish mag geen eigen pollen-copyh
 assert(!runtime.includes("uiPolishLuchtModelstatus"),"UI-polish mag geen late pollen-DOM-owner meer bevatten");
 assert(!runtime.includes("uiBasisLucht"),"UI-polish mag lucht() niet meer voor pollen wrappen");
 
+/* De base-build pressure-copy-owner produceert de finale luchtdruksubtekst.
+   UI-polish mag pressub daarom niet meer achteraf lezen of herschrijven. */
+assert.equal(api.luchtdrukTekst,undefined,"UI-polish mag geen luchtdrukcopyhelper meer exporteren");
+assert(!runtime.includes("uiLuchtdrukTekst"),"UI-polish mag geen late luchtdrukcopyhelper meer bevatten");
+assert(!runtime.includes('document.getElementById("pressub")'),"UI-polish meters-wrapper mag pressub niet meer herschrijven");
+assert(runtime.includes("Luchtdrukcopy is al definitief wanneer deze runtime wordt ingevoegd."),"UI-polish mist expliciet pressure-copy ownershipcontract");
+
 assert(!runtime.includes("uiPolishRegenperiodeKansen"),"UI-polish bronruntime mag de oude regenkans-owner niet meer bevatten");
 assert(!runtime.includes("uiPolishRegenperiodeDaglabel"),"UI-polish bronruntime mag de oude regendaglabel-owner niet meer bevatten");
 assert(!runtime.includes("data-ui-rain-period-probability"),"UI-polish bronruntime mag geen oude statische periodekanslabels meer bezitten");
@@ -89,4 +92,4 @@ assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
 assert(apply.includes('if((html.match(/<main id="app" style="display:none">/g)||[]).length!==1)'),"definitieve main-landmark wordt niet op uniciteit geverifieerd");
-console.log("UI-polish regressiecontract groen: bronsemantiek, warning-state base ownership, tijdtaal, cijfers, Q4-ownership, geen dubbele UV-/pollen-owner en accessibility.");
+console.log("UI-polish regressiecontract groen: bronsemantiek, warning-state base ownership, tijdtaal, cijfers, Q4-ownership, geen dubbele UV-/pollen-/luchtdrukowner en accessibility.");
