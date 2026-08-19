@@ -4,6 +4,7 @@ const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
+const {START_BRON,START_PRODUCTIE,EIND_BRON,EIND_PRODUCTIE}=require("./warning-render-state.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
@@ -37,21 +38,13 @@ if(html.split(APP_CLOSE).length-1!==1)throw new Error("#app-afsluiting ontbreekt
 html=html.replace(APP_OPEN,'<main id="app" style="display:none">');
 html=html.replace(APP_CLOSE,'    </footer>\n  </main>\n</div>\n\n<script>');
 
-/* De waarschuwingrenderer zelf is eigenaar van loading en de bewezen lege
-   eindstate. Een latere runtime-wrapper is te laat voor de allereerste aanvraag
-   op een cold load: de basisfunctie kan dan al wachten op de officiële bron.
-   Patch daarom de bestaande renderer in het artifact op twee nauw begrensde
-   ankers. We veranderen geen bronselectie of waarschuwingdata, alleen de status
-   die zichtbaar is terwijl en nadat diezelfde aanvraag loopt. */
-const WAARSCHUWING_START='  S.actieveWaarschuwingen=[];\n  el.innerHTML="";\n  try{';
-const WAARSCHUWING_START_NIEUW='  S.actieveWaarschuwingen=[];\n  el.innerHTML=\'<div class="msg" data-ui-warning-loading="1">Officiële weerwaarschuwingen controleren…</div>\';\n  try{';
-if(html.split(WAARSCHUWING_START).length-1!==1)throw new Error("Start van waarschuwingrenderer ontbreekt of is dubbel.");
-html=html.replace(WAARSCHUWING_START,WAARSCHUWING_START_NIEUW);
-
-const WAARSCHUWING_EIND='        +`</p></div>`;\n    }).join("");\n  }catch(e){';
-const WAARSCHUWING_EIND_NIEUW='        +`</p></div>`;\n    }).join("");\n    if(lijst.length===0) el.innerHTML=\'<div class="msg">Geen officiële weerwaarschuwingen voor deze locatie.</div>\';\n  }catch(e){';
-if(html.split(WAARSCHUWING_EIND).length-1!==1)throw new Error("Einde van waarschuwingrenderer ontbreekt of is dubbel.");
-html=html.replace(WAARSCHUWING_EIND,WAARSCHUWING_EIND_NIEUW);
+/* Loading en de bewezen lege waarschuwingstate zijn al eigendom van de pure
+   base-build owner. UI-polish mag die requeststatussen niet opnieuw schrijven;
+   bewaak hier alleen dat precies het verwachte renderercontract is aangeleverd. */
+if((html.split(START_PRODUCTIE).length-1)!==1)throw new Error("Base-build waarschuwing-laadstatus ontbreekt of is dubbel vóór UI-polish.");
+if((html.split(EIND_PRODUCTIE).length-1)!==1)throw new Error("Base-build waarschuwing-leegstatus ontbreekt of is dubbel vóór UI-polish.");
+if(html.includes(START_BRON))throw new Error("Oude lege startstate van waarschuwingrenderer heeft base-build overleefd.");
+if(html.includes(EIND_BRON))throw new Error("Oude impliciete lege eindstate van waarschuwingrenderer heeft base-build overleefd.");
 
 const css=`
 ${CSS_MARK}
@@ -101,4 +94,4 @@ if(!scripts.length)throw new Error("Geen inline runtime gevonden na UI-polish.")
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-polish-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"ui-polish-20260813");
-console.log("UI-polish toegepast: rustige waarschuwingen, zichtbare officiële waarschuwingstatus, natuurlijke windtekst, bereik-kop, Q4 als enige regenperiode-owner, daglichtbewuste zontekst, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
+console.log("UI-polish toegepast: rustige waarschuwingpresentatie, natuurlijke windtekst, bereik-kop, Q4 als enige regenperiode-owner, daglichtbewuste zontekst, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
