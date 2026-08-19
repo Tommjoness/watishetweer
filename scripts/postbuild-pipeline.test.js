@@ -44,6 +44,18 @@ assert(!fs.existsSync(path.join(__dirname,"apply-seo-foundation.js")),"oude late
 assert(!fs.existsSync(path.join(__dirname,"apply-pollen-hour-correctness.js")),"oude late pollen-mutator moet verwijderd zijn");
 assert(fs.existsSync(path.join(__dirname,"seo-foundation.js")),"pure SEO-owner moet bestaan");
 assert(fs.existsSync(path.join(__dirname,"pollen-hour-correctness.js")),"pure pollen-owner moet bestaan");
+
+/* Bewolkingscopy hoort uitsluitend bij de canonieke senior-semantiekbron. Q3 mag
+   de bewezen 100%/95%-grenzen controleren, maar geen compatibiliteitsfallback
+   meer bezitten die dezelfde helper later opnieuw kan herschrijven. */
+const q3Bron=fs.readFileSync(path.join(__dirname,"apply-q3-senior-polish.js"),"utf8");
+const seniorSemantiekBron=fs.readFileSync(path.join(__dirname,"..","senior-semantiek-20260810.js"),"utf8");
+assert(seniorSemantiekBron.includes('if(n===100)return "Geheel bewolkt";'),"canonieke senior-semantiek moet de 100%-bewolkingsgrens bezitten");
+assert(seniorSemantiekBron.includes('if(n>=95)return "Vrijwel geheel bewolkt";'),"canonieke senior-semantiek moet de 95%-bewolkingsgrens bezitten");
+for(const oudeOwner of ["CLOUD_OLD","CLOUD_NEW","cloudNieuwAantal","cloudOudAantal"]){
+  assert(!q3Bron.includes(oudeOwner),"Q3 mag geen oude cloud-fallback-owner meer bevatten: "+oudeOwner);
+}
+
 const positie=naam=>POSTBUILD_STAPPEN.indexOf(naam);
 assert(positie("apply-mobile-screenshot-polish.js")<positie("verify-mobile-screenshot-build.js"));
 assert(positie("apply-q3-senior-polish.js")<positie("verify-q3-build.js"));
@@ -77,4 +89,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde, expliciete shared-URL-owner, base-build foutsemantiek, poolgrafiek, pollen en SEO-owner, weather truth, canonieke kleine-kans-owner, Nederlandse neerslagcopy, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde, canonieke cloud-owner, expliciete shared-URL-owner, base-build foutsemantiek, poolgrafiek, pollen en SEO-owner, weather truth, canonieke kleine-kans-owner, Nederlandse neerslagcopy, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");
