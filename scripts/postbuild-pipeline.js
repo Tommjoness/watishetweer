@@ -26,7 +26,7 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-ui-shell.js",
   "apply-pollen-hour-correctness.js",
   "verify-pollen-hour-correctness.js",
-  "apply-cache-fallback-country.js",
+  "apply-shared-url-place-identity.js",
   "verify-cache-fallback-country.js",
   "apply-ui-polish-20260813.js",
   "apply-weather-fallback-hedge.js",

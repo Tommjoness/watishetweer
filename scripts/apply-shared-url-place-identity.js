@@ -10,9 +10,9 @@ const OUT=path.join(ROOT,"public");
 const htmlPad=path.join(OUT,"index.html");
 let html=fs.readFileSync(htmlPad,"utf8");
 
-/* Compatibiliteitsnaam: cachefallback-landcontext wordt sinds #114 door
-   product-config.js + de base-build bezeten. Deze overgebleven postbuildstap
-   injecteert uitsluitend de afzonderlijke shared-URL-plaatsidentiteitslaag. */
+/* Deze postbuildstap bezit uitsluitend de gedeelde URL-plaatsidentiteit.
+   Cachefallback-landcontext wordt sinds #124 door product-config.js + de
+   base-build bezeten en hoort bewust niet meer in deze owner. */
 const START="/* ---------- start ---------- */";
 const BEGIN="/* ===== GEDEELDE URL PLAATSIDENTITEIT ===== */";
 const EINDE="/* ===== EINDE GEDEELDE URL PLAATSIDENTITEIT ===== */";
@@ -28,4 +28,4 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:shared
 
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"shared-url-place-identity");
-console.log("Gedeelde URL-plaatsidentiteit toegepast; cachefallback-landcontext komt uit de base-build; cache "+versie+".");
+console.log("Gedeelde URL-plaatsidentiteit toegepast; cache "+versie+".");

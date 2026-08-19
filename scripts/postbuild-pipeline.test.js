@@ -18,7 +18,7 @@ const verwacht=[
   "verify-ui-shell.js",
   "apply-pollen-hour-correctness.js",
   "verify-pollen-hour-correctness.js",
-  "apply-cache-fallback-country.js",
+  "apply-shared-url-place-identity.js",
   "verify-cache-fallback-country.js",
   "apply-ui-polish-20260813.js",
   "apply-weather-fallback-hedge.js",
@@ -41,6 +41,7 @@ const verwacht=[
 assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten");
 assert.equal(new Set(POSTBUILD_STAPPEN).size,POSTBUILD_STAPPEN.length,"postbuild mag geen stap dubbel uitvoeren");
 for(const stap of POSTBUILD_STAPPEN){assert(fs.existsSync(path.join(__dirname,stap)),"postbuild verwijst naar ontbrekend script: "+stap);}
+assert(!fs.existsSync(path.join(__dirname,"apply-cache-fallback-country.js")),"oude misleidende cachefallback-owner moet verwijderd zijn");
 const positie=naam=>POSTBUILD_STAPPEN.indexOf(naam);
 assert(positie("apply-mobile-screenshot-polish.js")<positie("verify-mobile-screenshot-build.js"));
 assert(positie("apply-q3-senior-polish.js")<positie("verify-q3-build.js"));
@@ -50,8 +51,8 @@ assert(positie("verify-performance-final.js")<positie("apply-ui-shell.js"),"UI-s
 assert(positie("apply-ui-shell.js")<positie("verify-ui-shell.js"));
 assert(positie("verify-ui-shell.js")<positie("apply-pollen-hour-correctness.js"),"pollen-correctie ziet de definitieve UI-shell");
 assert(positie("apply-pollen-hour-correctness.js")<positie("verify-pollen-hour-correctness.js"));
-assert(positie("verify-pollen-hour-correctness.js")<positie("apply-cache-fallback-country.js"),"cachefallback-landcorrectie ziet de volledige lucht/pollenartifact");
-assert(positie("apply-cache-fallback-country.js")<positie("verify-cache-fallback-country.js"));
+assert(positie("verify-pollen-hour-correctness.js")<positie("apply-shared-url-place-identity.js"),"shared-URL-plaatsidentiteit ziet de volledige lucht/pollenartifact");
+assert(positie("apply-shared-url-place-identity.js")<positie("verify-cache-fallback-country.js"));
 assert(positie("verify-cache-fallback-country.js")<positie("apply-ui-polish-20260813.js"),"UI-polish moet de volledige bewezen artifact als basis zien");
 assert(positie("apply-ui-polish-20260813.js")<positie("apply-weather-fallback-hedge.js"),"weather-fallback ziet de volledige UI-polishartifact");
 assert(positie("apply-weather-fallback-hedge.js")<positie("verify-weather-fallback-hedge.js"),"weather-fallback moet direct na toepassing worden geverifieerd");
@@ -77,4 +78,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde, base-build foutsemantiek, weather truth, canonieke kleine-kans-owner, Nederlandse neerslagcopy, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde, expliciete shared-URL-owner, base-build foutsemantiek, weather truth, canonieke kleine-kans-owner, Nederlandse neerslagcopy, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");
