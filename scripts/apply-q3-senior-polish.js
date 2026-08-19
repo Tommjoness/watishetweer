@@ -14,8 +14,8 @@ let html=fs.readFileSync(htmlPad,"utf8");
 const CSS_MARK="/* ===== CHECKPOINT 75 Q3 CSS ===== */";
 const METERS_OWNER_SIG='const basisMeters=meters;';
 const metersOwnersVoor=html.split(METERS_OWNER_SIG).length-1;
-const CLOUD_OLD='  if(n>=95)return "Vrijwel geheel bewolkt";';
-const CLOUD_NEW='  if(n===100)return "Geheel bewolkt";\n  if(n>=95)return "Vrijwel geheel bewolkt";';
+const CLOUD_CANONIEK_100='  if(n===100)return "Geheel bewolkt";';
+const CLOUD_CANONIEK_95='  if(n>=95)return "Vrijwel geheel bewolkt";';
 const UV_OLD=[
   '    const pu=piek("uv_index"),uvSub=document.getElementById("uvsub");',
   '    if(uvSub&&pu&&num(pu.v)!==null&&pu.v>=0){',
@@ -47,15 +47,15 @@ const UV_NEW=[
 
 if(html.includes(CSS_MARK))throw new Error("Checkpoint-75 polish is al toegepast.");
 if(metersOwnersVoor<1)throw new Error("Bestaande meters-owner ontbreekt vóór checkpoint 75.");
-const cloudNieuwAantal=html.split(CLOUD_NEW).length-1;
-const cloudOudAantal=html.split(CLOUD_OLD).length-1;
-if(cloudNieuwAantal!==1&&cloudOudAantal!==1)throw new Error("Bewolkingsanker voor checkpoint 75 ontbreekt of is dubbel.");
+if((html.split(CLOUD_CANONIEK_100).length-1)!==1)throw new Error("Canonieke 100%-bewolkingsregel ontbreekt of is dubbel vóór checkpoint 75.");
+if((html.split(CLOUD_CANONIEK_95).length-1)!==1)throw new Error("Canonieke 95%-bewolkingsregel ontbreekt of is dubbel vóór checkpoint 75.");
 if((html.split(UV_OLD).length-1)!==1)throw new Error("UV-anker voor checkpoint 75 ontbreekt of is dubbel.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor checkpoint 75.");
 
-/* Geen nieuwe runtime-owner: we scherpen de bestaande pure cloud-helper en de
-   bestaande senior meters()-owner in-place aan. */
-if(cloudNieuwAantal!==1)html=html.replace(CLOUD_OLD,CLOUD_NEW);
+/* Bewolkingscopy heeft al één canonieke eigenaar in senior-semantiek-20260810.js.
+   Q3 verifieert alleen dat de bewezen 100%/95%-grenzen aanwezig zijn en doet
+   geen fallback-stringpatch meer over die pure helper heen. De bestaande
+   senior meters()-owner blijft wel eigenaar van de Q3-UV-correctie hieronder. */
 html=html.replace(UV_OLD,UV_NEW);
 html=html.replace("</style>","\n"+CSS_MARK+"\n"+css+"\n/* ===== EINDE CHECKPOINT 75 Q3 CSS ===== */\n</style>");
 const metersOwnersNa=html.split(METERS_OWNER_SIG).length-1;
@@ -92,4 +92,4 @@ fs.writeFileSync(htmlPad,html,"utf8");
    berekend. Dit verandert geen cachebeleid, alleen de eigenaar van het recept. */
 const versie=vernieuwServiceworkerCache(OUT,"checkpoint-75");
 
-console.log("Checkpoint 75% in-place toegepast: rustige consumentencijfers, 100% bewolking en tijdgebonden UV; bestaande meters-owners "+metersOwnersVoor+" ongewijzigd; cache "+versie+".");
+console.log("Checkpoint 75% in-place toegepast: rustige consumentencijfers, canonieke cloudcopy geverifieerd en tijdgebonden UV; bestaande meters-owners "+metersOwnersVoor+" ongewijzigd; cache "+versie+".");
