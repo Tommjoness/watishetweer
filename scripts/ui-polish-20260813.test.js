@@ -30,9 +30,6 @@ assert.equal(
   api.briefingBronSemantiek("Morgen wordt het rond 15:00 het warmst, met maximaal <b>21&nbsp;graden</b>."),
   "Het verwachte maximum ligt morgen rond 15:00 op <b>21&nbsp;graden</b>."
 );
-assert.equal(api.uvPiekTekst({t:"2026-08-16T13:00",v:8},"2026-08-16T15:26"),"Verwachte UV-piek lag rond 13:00 · zeer hoog.");
-assert.equal(api.uvPiekTekst({t:"2026-08-16T13:00",v:5},"2026-08-16T11:56"),"Verwachte UV-piek rond 13:00 · matig.");
-assert.equal(api.uvPiekTekst({t:"2026-08-16T13:00",v:0.2},"2026-08-16T11:56"),"Nauwelijks UV verwacht vandaag.");
 assert.equal(api.pollenTekst(true),"Modelverwachting voor dit uur.");
 assert.equal(api.pollenTekst(false),"Model verwacht geen pollen voor dit uur.");
 assert.equal(api.regenperiodeDagprefix("2026-08-17","2026-08-16"),"ma ");
@@ -51,6 +48,14 @@ assert.equal(api.dagNeerslagTekst(9,0.05),"Droog");
 assert.equal(api.dagNeerslagTekst(5,0.2),"5%");
 assert.equal(api.isNwsStructuur("* WHAT...Heat index values. * WHERE...Dallas."),true);
 assert.equal(api.isNwsStructuur("Plaatselijk zware buien mogelijk."),false);
+
+/* Q3/senior meters() is de enige eigenaar van de UV-presentatie. UI-polish
+   mag die zichtbare copy niet opnieuw berekenen of na Q3 overschrijven. */
+assert.equal(api.uvPiekTekst,undefined,"UI-polish mag geen UV-copyhelper meer exporteren");
+assert(!runtime.includes("uiUvOordeel"),"UI-polish mag geen eigen UV-oordeelschaal meer bevatten");
+assert(!runtime.includes("uiUvPiekTekst"),"UI-polish mag geen late UV-copy-owner meer bevatten");
+assert(!runtime.includes('piek("uv_index")'),"UI-polish meters-wrapper mag UV niet opnieuw ophalen");
+
 assert(!runtime.includes("uiPolishRegenperiodeKansen"),"UI-polish bronruntime mag de oude regenkans-owner niet meer bevatten");
 assert(!runtime.includes("uiPolishRegenperiodeDaglabel"),"UI-polish bronruntime mag de oude regendaglabel-owner niet meer bevatten");
 assert(!runtime.includes("data-ui-rain-period-probability"),"UI-polish bronruntime mag geen oude statische periodekanslabels meer bezitten");
@@ -70,4 +75,4 @@ assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
 assert(apply.includes('if((html.match(/<main id="app" style="display:none">/g)||[]).length!==1)'),"definitieve main-landmark wordt niet op uniciteit geverifieerd");
-console.log("UI-polish regressiecontract groen: bronsemantiek, waarschuwingstatus, tijdtaal, cijfers, Q4-ownership en accessibility.");
+console.log("UI-polish regressiecontract groen: bronsemantiek, waarschuwingstatus, tijdtaal, cijfers, Q4-ownership, geen dubbele UV-owner en accessibility.");
