@@ -7,18 +7,26 @@ on:
 jobs:
   checkpoint:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-      - name: Installeer Playwright
+      - name: Installeer Playwright-pakket
         run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Koppel Chromium voor directe browsertests
+        run: |
+          CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          test -x "$CHROME_PATH"
+          ln -sf "$CHROME_PATH" /usr/local/bin/google-chrome
+          test -x /usr/local/bin/google-chrome
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
       - name: Pure en buildregressies
         run: npm test
-      - name: Installeer echte browsers
-        run: npx playwright install --with-deps chromium webkit
       - name: Bouw definitieve artifact
         run: npm run build
       - name: SEO-plaatsroutes in Chromium en WebKit
