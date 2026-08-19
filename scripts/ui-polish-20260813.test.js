@@ -51,13 +51,17 @@ assert.equal(api.dagNeerslagTekst(9,0.05),"Droog");
 assert.equal(api.dagNeerslagTekst(5,0.2),"5%");
 assert.equal(api.isNwsStructuur("* WHAT...Heat index values. * WHERE...Dallas."),true);
 assert.equal(api.isNwsStructuur("Plaatselijk zware buien mogelijk."),false);
-assert(runtime.includes("data-ui-rain-period-probability"));
+assert(!runtime.includes("uiPolishRegenperiodeKansen"),"UI-polish bronruntime mag de oude regenkans-owner niet meer bevatten");
+assert(!runtime.includes("uiPolishRegenperiodeDaglabel"),"UI-polish bronruntime mag de oude regendaglabel-owner niet meer bevatten");
+assert(!runtime.includes("data-ui-rain-period-probability"),"UI-polish bronruntime mag geen oude statische periodekanslabels meer bezitten");
+assert(runtime.includes("/* Regenperiodepresentatie wordt volledig beheerd door Q4. */"),"UI-polish bronruntime mist expliciet Q4-ownership");
+assert(!apply.includes("VEROUDE_REGEN_START")&&!apply.includes("runtime=runtime.slice"),"apply-stap mag zijn eigen regenowner niet meer tijdens buildtijd uitsnijden");
+assert(apply.includes("Verouderde UI-polish regenperiode-owner staat weer in de bronruntime"),"apply-stap bewaakt Q4-ownership niet fail-fast");
 assert(runtime.includes('bereik.textContent="Bereik"'));
 assert(runtime.includes("Geen officiële weerwaarschuwingen voor deze locatie."),"succesvolle nulwaarschuwingstatus ontbreekt");
 assert(runtime.includes("Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen."),"niet-ondersteunde waarschuwingstatus is niet consumentvriendelijk");
 assert(runtime.includes("Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald."),"tijdelijke waarschuwingstoring blijft onduidelijk");
 assert(runtime.includes('data-ui-warning-loading="1"')&&runtime.includes("Officiële weerwaarschuwingen controleren…"),"lopende officiële waarschuwingcontrole mag niet stil leeg zijn");
-assert(runtime.includes("uiPolishRegenperiodeDaglabel"),"regenperiode over de daggrens mist dagcontext");
 
 /* Accessibility-regressies horen bij het artifactcontract, niet bij de
    weerdata. Bewaak daarom dat de final-polish exact de bestaande #app-container
@@ -66,4 +70,4 @@ assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
 assert(apply.includes('if((html.match(/<main id="app" style="display:none">/g)||[]).length!==1)'),"definitieve main-landmark wordt niet op uniciteit geverifieerd");
-console.log("UI-polish regressiecontract groen: bronsemantiek, waarschuwingstatus, tijdtaal, cijfers en accessibility.");
+console.log("UI-polish regressiecontract groen: bronsemantiek, waarschuwingstatus, tijdtaal, cijfers, Q4-ownership en accessibility.");
