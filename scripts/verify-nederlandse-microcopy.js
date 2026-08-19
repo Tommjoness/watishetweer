@@ -9,6 +9,7 @@ const htmlPad=path.join(ROOT,"public","index.html");
 const html=fs.readFileSync(htmlPad,"utf8");
 const policyBron=fs.readFileSync(path.join(ROOT,"neerslagkans-policy-v3.js"),"utf8");
 const seniorBron=fs.readFileSync(path.join(ROOT,"senior-correctness-v2.js"),"utf8");
+const pressureBron=fs.readFileSync(path.join(__dirname,"pressure-copy-owner.js"),"utf8");
 const OUDE_MARK="<!-- ===== NEDERLANDSE MICROCOPY 20260815 ===== -->";
 
 if(html.includes(OUDE_MARK))throw new Error("Verouderde Nederlandse microcopy-compatibilitymarker staat nog in het artifact.");
@@ -62,10 +63,27 @@ for(const tekst of [
   if(!html.includes(tekst))throw new Error("Definitieve neerslagcopy ontbreekt uit het finale artifact: "+tekst);
 }
 
+/* Luchtdrukcopy is uit de brede UI-polish gemigreerd. Bewaak dat de pure
+   base-build owner de finale zinnen bezit en dat de oude late DOM-owner echt
+   verdwenen is. Drukwaarden en tendensberekening worden elders bevroren. */
+for(const invariant of [
+  "function pasPressureCopyToe(html){",
+  "De luchtdruk is in de afgelopen drie uur licht ",
+  "De luchtdruk is in de afgelopen drie uur "
+]){
+  if(!pressureBron.includes(invariant))throw new Error("Luchtdrukcopy-owner mist invariant: "+invariant);
+}
+for(const tekst of [
+  "De luchtdruk is in de afgelopen drie uur licht ",
+  "De luchtdruk is in de afgelopen drie uur "
+]){
+  if(!html.includes(tekst))throw new Error("Definitieve luchtdrukcopy ontbreekt uit artifact: "+tekst);
+}
+if(html.includes("function uiLuchtdrukTekst(tekst){"))throw new Error("Verouderde UI-polish luchtdrukcopy-owner staat nog in artifact.");
+
 /* De overige taal hoort aantoonbaar bij de inhoudelijke runtime-owner. */
 for(const eigenaar of [
   "function uiWindstootTekst(pg,nu,dag,vak){",
-  "function uiLuchtdrukTekst(tekst){",
   "function uiBriefingTijdtaal(html,nuLokaal,huidigeTemperatuur){",
   "function normaliseerNachtDagdata(data,nuLokaal){",
   "function corrigeerNachtVensterBron(tekst,horizonDagen,score,opties={}){",
@@ -94,4 +112,4 @@ const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script
 if(!scripts.length)throw new Error("Geen inline runtime gevonden voor microcopy-verificatie.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:verify-nederlandse-microcopy-"+(i+1)}));
 
-console.log("Nederlandse microcopy geverifieerd: neerslagcopy komt rechtstreeks uit de canonieke neerslagowner; senior-correctness delegeert en overige taal blijft bij de eigen UI-owner.");
+console.log("Nederlandse microcopy geverifieerd: neerslagcopy uit de canonieke neerslagowner, luchtdrukcopy uit de base-build owner en overige taal bij de eigen runtime-owner.");

@@ -5,8 +5,8 @@
 const uiGetal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 
 /* Zichtbare microcopy hoort bij de runtime die het betreffende UI-onderdeel
-   bezit. Daarmee hoeft een late artifactpatch geen wind-, druk-, zon- of
-   briefingtekst meer te herschrijven. */
+   bezit. Luchtdrukcopy hoort inmiddels bij de pure base-build owner; deze
+   brede UI-polish bezit hier alleen nog zijn eigen wind-, zon- en briefingcopy. */
 function uiWindstootTekst(pg,nu,dag,vak){
   if(!pg||uiGetal(pg.v)===null||!pg.t)return "Geen uurgegevens beschikbaar.";
   const waarde=Math.round(Number(pg.v));
@@ -38,15 +38,6 @@ function uiZonurenWoord(uur,daglichtUur){
   if(zon>=4)return "Naar verwachting meerdere uren zon vandaag.";
   if(zon>=1)return "Naar verwachting enkele uren zon vandaag.";
   return "Naar verwachting weinig zon vandaag.";
-}
-
-function uiLuchtdrukTekst(tekst){
-  const t=String(tekst||"").trim();
-  let m=/^Licht (gestegen|gedaald) in de afgelopen drie uur\.$/i.exec(t);
-  if(m)return "De luchtdruk is in de afgelopen drie uur licht "+m[1].toLowerCase()+".";
-  m=/^In de afgelopen drie uur ([0-9]+(?:[.,][0-9]+)? hPa) (gestegen|gedaald)\.$/i.exec(t);
-  if(m)return "De luchtdruk is in de afgelopen drie uur "+m[1]+" "+m[2].toLowerCase()+".";
-  return t;
 }
 
 /* Modelvelden mogen ook nadat hun klokmoment verstreken is niet als gemeten
@@ -106,12 +97,11 @@ function uiRegenperiodeDagprefix(periodeDatum,basisDatum){
 }
 
 /* Exporteer alleen zuivere presentatieregels voor regressietests. UV-copy hoort
-   volledig bij de bestaande Q3/senior meters-owner; pollen-modelcopy bij de
-   pure pollen-owner in de base-build. Geen van beide wordt hier herhaald. */
+   bij Q3/senior meters, pollen-modelcopy bij de pure pollen-owner en
+   luchtdrukcopy bij pressure-copy-owner. Geen van die domeinen wordt hier herhaald. */
 globalThis.WeatherNowUiPolish20260813=Object.freeze({
   windstootTekst:uiWindstootTekst,
   zonurenWoord:uiZonurenWoord,
-  luchtdrukTekst:uiLuchtdrukTekst,
   briefingBronSemantiek:uiBriefingBronSemantiek,
   briefingTijdtaal:uiBriefingTijdtaal,
   dagNeerslagTekst:uiDagNeerslagTekst,
@@ -140,12 +130,12 @@ if(typeof zonurenTegel==="function"){
   };
 }
 
+/* meters() wordt hier nog alleen voor de windstoot-presentatie gewrapt.
+   Luchtdrukcopy is al definitief wanneer deze runtime wordt ingevoegd. */
 if(typeof meters==="function"){
   const uiBasisMeters=meters;
   meters=function(){
     uiBasisMeters();
-    const druk=document.getElementById("pressub");
-    if(druk)druk.textContent=uiLuchtdrukTekst(druk.textContent);
     const nu=(S.d&&S.d.current&&S.d.current.time)||"";
     const pgRuw=typeof piek==="function"?piek("wind_gusts_10m"):null;
     const pg=pgRuw&&uiGetal(pgRuw.v)!==null&&Number(pgRuw.v)>=0?pgRuw:null;

@@ -57,12 +57,16 @@ verboden("uiUvPiekTekst","late UI-polish UV-copy-owner");
 verboden('font-feature-settings:"tnum" 1,"zero" 1',"oude OpenType slashed-zero feature");
 verboden("tabular-nums slashed-zero","oude slashed-zero fontvariant");
 
-/* Finale copy-architectuur: tijdtaal en microcopy komen uit de inhoudelijke
-   eigenaren; de late Nederlandse laag is alleen neerslagcompatibiliteit. */
+/* Finale copy-architectuur: tijdtaal en overige microcopy komen uit hun
+   inhoudelijke owners. Luchtdrukcopy is nu al in de base-build definitief. */
 for(const tekst of [
-  "uiWindstootTekst","uiLuchtdrukTekst","uiBriefingTijdtaal","uiZonurenWoord",
-  "De komende twee uur wordt er geen neerslag verwacht."
+  "uiWindstootTekst","uiBriefingTijdtaal","uiZonurenWoord",
+  "De komende twee uur wordt er geen neerslag verwacht.",
+  "De luchtdruk is in de afgelopen drie uur licht ",
+  "De luchtdruk is in de afgelopen drie uur "
 ])vereist(tekst,"copy-eigenaar "+tekst);
+verboden("uiLuchtdrukTekst","late UI-polish luchtdrukcopy-owner");
+verboden('document.getElementById("pressub")',"late UI-polish pressub-rewrite");
 
 /* Finale architectuur/performance. */
 for(const tekst of [
@@ -118,4 +122,4 @@ runtimeScripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html
 jsonLdScripts.forEach((bron,i)=>{try{JSON.parse(bron);}catch(e){throw new Error("Ongeldige JSON-LD in definitief artifact #"+(i+1)+": "+e.message);}});
 
 const verwacht=verifieerServiceworkerCache(OUT,"finale");
-console.log("Finale 27-punten artifactguard geslaagd: één Nachtzicht-owner met kalendergrens, gewone nullen, één Q3-UV-copy-owner, copy-eigenaars, requestarchitectuur, syntactische runtime, geldige JSON-LD en serviceworker "+verwacht+".");
+console.log("Finale 27-punten artifactguard geslaagd: één Nachtzicht-owner met kalendergrens, gewone nullen, één Q3-UV-copy-owner, geconsolideerde copy-eigenaars, requestarchitectuur, syntactische runtime, geldige JSON-LD en serviceworker "+verwacht+".");
