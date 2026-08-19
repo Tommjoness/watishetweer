@@ -38,9 +38,9 @@ const UV_NEW=[
   '      }else{',
   '        const zichtbaar=Math.round(Math.max(0,pu.v)),tijd=hhmm(pu.t);',
   '        if(uvVal)uvVal.textContent=zichtbaar;',
-  '        if(pu.v<0.5)uvSub.textContent="Nauwelijks UV vandaag.";',
-  '        else if(!tijd)uvSub.textContent="UV-piek vandaag · "+uvOordeelGetoond(zichtbaar)+".";',
-  '        else uvSub.textContent=(String(pu.t)<=String(nuUv)?"Piek was rond ":"Piek rond ")+tijd+" · "+uvOordeelGetoond(zichtbaar)+".";',
+  '        if(pu.v<0.5)uvSub.textContent="Nauwelijks UV verwacht vandaag.";',
+  '        else if(!tijd)uvSub.textContent="Verwachte UV-piek · "+uvOordeelGetoond(zichtbaar)+".";',
+  '        else uvSub.textContent=(String(pu.t)<String(nuUv)?"Verwachte UV-piek lag rond ":"Verwachte UV-piek rond ")+tijd+" · "+uvOordeelGetoond(zichtbaar)+".";',
   '      }',
   '    }'
 ].join("\n");
@@ -55,7 +55,7 @@ if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlb
 /* Bewolkingscopy heeft al één canonieke eigenaar in senior-semantiek-20260810.js.
    Q3 verifieert alleen dat de bewezen 100%/95%-grenzen aanwezig zijn en doet
    geen fallback-stringpatch meer over die pure helper heen. De bestaande
-   senior meters()-owner blijft wel eigenaar van de Q3-UV-correctie hieronder. */
+   senior meters()-owner blijft eigenaar van de volledige Q3-UV-presentatie. */
 html=html.replace(UV_OLD,UV_NEW);
 html=html.replace("</style>","\n"+CSS_MARK+"\n"+css+"\n/* ===== EINDE CHECKPOINT 75 Q3 CSS ===== */\n</style>");
 const metersOwnersNa=html.split(METERS_OWNER_SIG).length-1;
@@ -63,8 +63,9 @@ if(metersOwnersNa!==metersOwnersVoor)throw new Error("Checkpoint 75 heeft het aa
 
 for(const vereist of [
   'if(n===100)return "Geheel bewolkt"',
-  'Piek was rond ',
-  'Piek rond ',
+  'Verwachte UV-piek lag rond ',
+  'Verwachte UV-piek rond ',
+  'Nauwelijks UV verwacht vandaag.',
   'UV-gegevens voor vandaag worden bijgewerkt.',
   'const pUv=typeof plaatsTijdDelen',
   'font-variant-numeric:tabular-nums',
@@ -92,4 +93,4 @@ fs.writeFileSync(htmlPad,html,"utf8");
    berekend. Dit verandert geen cachebeleid, alleen de eigenaar van het recept. */
 const versie=vernieuwServiceworkerCache(OUT,"checkpoint-75");
 
-console.log("Checkpoint 75% in-place toegepast: rustige consumentencijfers, canonieke cloudcopy geverifieerd en tijdgebonden UV; bestaande meters-owners "+metersOwnersVoor+" ongewijzigd; cache "+versie+".");
+console.log("Checkpoint 75% in-place toegepast: rustige consumentencijfers, canonieke cloudcopy geverifieerd en Q3 bezit de volledige tijdgebonden UV-copy; bestaande meters-owners "+metersOwnersVoor+" ongewijzigd; cache "+versie+".\n");
