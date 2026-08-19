@@ -3,6 +3,8 @@
 const vm=require("vm");
 
 const MARK="/* ===== POLLEN-UUR CORRECTHEID 20260813 ===== */";
+/* Eén pure base-build owner bewaakt zowel pollenfeitelijkheid als de finale
+   modelcopy; generieke UI-polish mag lucht() hiervoor niet opnieuw wrappen. */
 const CONTRACTEN=Object.freeze([
   Object.freeze({label:"CAMS-Europe-dekking",bron:"const inEuropa=(lat,lon)=>lat>29.5&&lat<71.5&&lon>-25&&lon<45;",productie:"const inEuropa=(lat,lon)=>lat>=30&&lat<=72&&lon>=-25&&lon<=45;"}),
   Object.freeze({label:"onveilige pollen-uurfallback",bron:"    if(i<0)i=0;",productie:"    if(i<0)i=null;"}),
