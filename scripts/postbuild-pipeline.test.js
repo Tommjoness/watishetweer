@@ -52,7 +52,7 @@ const q3Bron=fs.readFileSync(path.join(__dirname,"apply-q3-senior-polish.js"),"u
 const seniorSemantiekBron=fs.readFileSync(path.join(__dirname,"..","senior-semantiek-20260810.js"),"utf8");
 assert(seniorSemantiekBron.includes('if(n===100)return "Geheel bewolkt";'),"canonieke senior-semantiek moet de 100%-bewolkingsgrens bezitten");
 assert(seniorSemantiekBron.includes('if(n>=95)return "Vrijwel geheel bewolkt";'),"canonieke senior-semantiek moet de 95%-bewolkingsgrens bezitten");
-for(const oudeOwner van ["CLOUD_OLD","CLOUD_NEW","cloudNieuwAantal","cloudOudAantal"]){
+for(const oudeOwner of ["CLOUD_OLD","CLOUD_NEW","cloudNieuwAantal","cloudOudAantal"]){
   assert(!q3Bron.includes(oudeOwner),"Q3 mag geen oude cloud-fallback-owner meer bevatten: "+oudeOwner);
 }
 
