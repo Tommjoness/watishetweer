@@ -64,22 +64,6 @@ function uiBriefingBronSemantiek(html){
       (_m,waarde)=>"Het verwachte maximum voor morgen is "+waarde+".");
 }
 
-function uiUvOordeel(waarde){
-  const v=uiGetal(waarde);
-  if(v===null)return "onbekend";
-  const n=Math.max(0,Math.round(v));
-  return n<=2?"laag":n<=5?"matig":n<=7?"hoog":n<=10?"zeer hoog":"extreem";
-}
-function uiUvPiekTekst(pu,nu){
-  if(!pu||uiGetal(pu.v)===null||Number(pu.v)<0)return "UV-piek niet beschikbaar.";
-  if(Number(pu.v)<0.5)return "Nauwelijks UV verwacht vandaag.";
-  const tijd=String(pu.t||"").slice(11,16),bron=String(pu.t||""),huidig=String(nu||"");
-  const verstreken=bron&&huidig&&bron.slice(0,10)===huidig.slice(0,10)&&bron<huidig;
-  const oordeel=uiUvOordeel(pu.v);
-  if(!/^\d{2}:\d{2}$/.test(tijd))return "Verwachte UV-piek · "+oordeel+".";
-  return (verstreken?"Verwachte UV-piek lag rond ":"Verwachte UV-piek rond ")+tijd+" · "+oordeel+".";
-}
-
 /* Rond middernacht mag de taal niet alleen naar de klok kijken. Als de genoemde
    nachtminimumtemperatuur al bereikt is (of binnen de afrondmarge ligt), is
    "koelt later af naar" feitelijk onjuist. Dan benoemen we het minimum zonder
@@ -125,14 +109,14 @@ function uiRegenperiodeDagprefix(periodeDatum,basisDatum){
   return ["zo","ma","di","wo","do","vr","za"][d.getDay()]+" ";
 }
 
-/* Exporteer alleen zuivere presentatieregels voor regressietests. */
+/* Exporteer alleen zuivere presentatieregels voor regressietests. UV-copy hoort
+   volledig bij de bestaande Q3/senior meters-owner en wordt hier niet herhaald. */
 globalThis.WeatherNowUiPolish20260813=Object.freeze({
   windstootTekst:uiWindstootTekst,
   zonurenWoord:uiZonurenWoord,
   luchtdrukTekst:uiLuchtdrukTekst,
   briefingBronSemantiek:uiBriefingBronSemantiek,
   briefingTijdtaal:uiBriefingTijdtaal,
-  uvPiekTekst:uiUvPiekTekst,
   dagNeerslagTekst:uiDagNeerslagTekst,
   pollenTekst:uiPollenTekst,
   regenperiodeDagprefix:uiRegenperiodeDagprefix,
@@ -167,8 +151,6 @@ if(typeof meters==="function"){
     const druk=document.getElementById("pressub");
     if(druk)druk.textContent=uiLuchtdrukTekst(druk.textContent);
     const nu=(S.d&&S.d.current&&S.d.current.time)||"";
-    const uvPiek=typeof piek==="function"?piek("uv_index"):null,uvSub=document.getElementById("uvsub"),uvWaarde=document.getElementById("uv");
-    if(uvSub&&uvPiek&&uvWaarde&&uiGetal(uvWaarde.textContent)!==null)uvSub.textContent=uiUvPiekTekst(uvPiek,nu);
     const pgRuw=typeof piek==="function"?piek("wind_gusts_10m"):null;
     const pg=pgRuw&&uiGetal(pgRuw.v)!==null&&Number(pgRuw.v)>=0?pgRuw:null;
     if(!pg)return;
