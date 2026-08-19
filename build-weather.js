@@ -7,6 +7,7 @@ const PRODUCT_CONFIG=require("./product-config.js");
 const {pasSeoFoundationToe}=require("./scripts/seo-foundation.js");
 const {pasPollenHourCorrectnessToe}=require("./scripts/pollen-hour-correctness.js");
 const {pasWarningRenderStateToe}=require("./scripts/warning-render-state.js");
+const {pasPressureCopyToe}=require("./scripts/pressure-copy-owner.js");
 const {vernieuwServiceworkerCache}=require("./scripts/postbuild-cache.js");
 /* CACHE_BRONNEN en het hashrecept zijn uitsluitend eigendom van postbuild-cache.js. */
 const ROOT=__dirname,OUT=path.join(ROOT,"public");
@@ -73,6 +74,12 @@ vervangProductregel(PRODUCT_CONFIG.POLAR_GRAFIEK_BRON,PRODUCT_CONFIG.POLAR_GRAFI
    De pure owner zet ze daarom al in de base-build; late presentatielagen mogen
    deze twee statussen alleen nog consumeren of verifiëren. */
 html=pasWarningRenderStateToe(html);
+
+/* Luchtdrukwaarden, de drie-uursdelta en alle drempels blijven eigendom van de
+   bestaande meters()-renderer. Alleen de al bestaande finale consumentencopy
+   wordt nu in de base-build door één domeinowner geleverd, zodat UI-polish de
+   luchtdruksubtekst niet nogmaals hoeft te herschrijven. */
+html=pasPressureCopyToe(html);
 
 /* De compacte meelopende weerbalk gebruikte oorspronkelijk alleen een
    IntersectionObserver. Dat is zuinig, maar browsers mogen zo'n callback rond
@@ -149,7 +156,7 @@ html=html.replace(start,
   +"/* ===== PROGRESSIEVE LOCATIELADING ===== */\n"+progressiveJs+"\n/* ===== EINDE PROGRESSIEVE LOCATIELADING ===== */\n\n"
   +"/* ===== WERELDWIJDE LOCATIEHARDENING ===== */\n"+globalLocationJs+"\n/* ===== EINDE WERELDWIJDE LOCATIEHARDENING ===== */\n\n"+start);
 
-/* Lucht/pollen-correctheid is één pure productie-owner. De vier bestaande
+/* Lucht/pollen-correctheid is één pure productie-owner. De zes bestaande
    productregels worden nu al in de base-build toegepast; latere postbuildlagen
    mogen deze semantiek alleen nog verifiëren, niet herschrijven. */
 html=pasPollenHourCorrectnessToe(html);
@@ -172,6 +179,7 @@ const vereist=[
   "Verwachting wordt aangevuld.","current=temperature_2m,apparent_temperature,is_day,weather_code",
   "geen plaats-specifieke dekking","dedupliceerZoekresultaten","grid-template-areas:","informatie informatie","overflow-wrap:anywhere",
   "Officiële weerwaarschuwingen controleren…","Geen officiële weerwaarschuwingen voor deze locatie.",
+  "De luchtdruk is in de afgelopen drie uur licht ","De luchtdruk is in de afgelopen drie uur ",
   "load(52.3676,4.9041,\"Amsterdam\",false,true,\"NL\")"
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);
@@ -189,4 +197,4 @@ fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"build-weather");
 
 for(const n of fs.readdirSync(OUT))if(intern(n))throw new Error("Intern bestand publiek gebouwd: "+n);
-console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, waarschuwing-laad/leegstatus, lucht/pollen-correctheid, SEO-fundering, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");
+console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, waarschuwing-laad/leegstatus, luchtdrukcopy, lucht/pollen-correctheid, SEO-fundering, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");
