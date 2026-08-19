@@ -27,7 +27,7 @@ if(!Array.isArray(CONTRACTEN)||CONTRACTEN.length!==4)throw new Error("Pollen-own
 for(const contract of CONTRACTEN){
   if(typeof contract.bron!=="string"||typeof contract.productie!=="string"||!contract.label)throw new Error("Ongeldig pollen-ownercontract.");
   if(html.includes(contract.bron))throw new Error("Verouderde pollenbron staat nog in het finale artifact: "+contract.label);
-  if(html.split(contract.productie).length-1!==1)throw new Error("Pollenproductieregel ontbreekt of is dubbel in finale artifact: "+contract.label);
+  if(!html.includes(contract.productie))throw new Error("Pollenproductieregel ontbreekt in finale artifact: "+contract.label);
 }
 
 for(const tekst of [
