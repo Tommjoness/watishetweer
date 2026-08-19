@@ -26,7 +26,10 @@ jobs:
       - name: Installeer Playwright-pakket
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Koppel Chromium voor directe browsertests
-        run: echo "CHROME_PATH=$(node -e 'process.stdout.write(require(\"playwright\").chromium.executablePath())')" >> "$GITHUB_ENV"
+        run: |
+          CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          test -x "$CHROME_PATH"
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
       - name: Echte browsers — mobiel en desktop
         run: node browser-playwright.test.js
       - name: Consumentenpolish — iPhone-randgeval in Chromium en WebKit
