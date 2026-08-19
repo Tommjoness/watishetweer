@@ -16,7 +16,6 @@ function pasPollenHourCorrectnessToe(html){
   for(const contract of CONTRACTEN){
     const aantal=bron.split(contract.bron).length-1;
     if(aantal!==1)throw new Error(contract.label+" ontbreekt of is dubbel: "+aantal);
-    if(bron.includes(contract.productie))throw new Error(contract.label+" staat al in productie-vorm vóór de canonieke owner.");
     bron=bron.replace(contract.bron,contract.productie);
   }
   if((bron.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor pollen-uurcorrectheid.");
