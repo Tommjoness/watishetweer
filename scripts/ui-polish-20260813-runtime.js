@@ -97,10 +97,6 @@ function uiIsNwsStructuur(tekst){
   return /\*\s*(?:WHAT|WHERE|WHEN|IMPACTS)\.\.\./i.test(String(tekst||""));
 }
 
-function uiPollenTekst(aanwezig){
-  return aanwezig?"Modelverwachting voor dit uur.":"Model verwacht geen pollen voor dit uur.";
-}
-
 function uiRegenperiodeDagprefix(periodeDatum,basisDatum){
   const datum=String(periodeDatum||"").slice(0,10),basis=String(basisDatum||"").slice(0,10);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(datum)||datum===basis)return "";
@@ -110,7 +106,8 @@ function uiRegenperiodeDagprefix(periodeDatum,basisDatum){
 }
 
 /* Exporteer alleen zuivere presentatieregels voor regressietests. UV-copy hoort
-   volledig bij de bestaande Q3/senior meters-owner en wordt hier niet herhaald. */
+   volledig bij de bestaande Q3/senior meters-owner; pollen-modelcopy bij de
+   pure pollen-owner in de base-build. Geen van beide wordt hier herhaald. */
 globalThis.WeatherNowUiPolish20260813=Object.freeze({
   windstootTekst:uiWindstootTekst,
   zonurenWoord:uiZonurenWoord,
@@ -118,7 +115,6 @@ globalThis.WeatherNowUiPolish20260813=Object.freeze({
   briefingBronSemantiek:uiBriefingBronSemantiek,
   briefingTijdtaal:uiBriefingTijdtaal,
   dagNeerslagTekst:uiDagNeerslagTekst,
-  pollenTekst:uiPollenTekst,
   regenperiodeDagprefix:uiRegenperiodeDagprefix,
   isNwsStructuur:uiIsNwsStructuur
 });
@@ -183,28 +179,6 @@ function uiPolishDagen(){
 if(typeof dagen==="function"){
   const uiBasisDagen=dagen;
   dagen=function(){const uit=uiBasisDagen.apply(this,arguments);uiPolishDagen();return uit;};
-}
-
-function uiPolishLuchtModelstatus(){
-  const c=document.getElementById("aq");if(!c)return;
-  [...c.querySelectorAll(".stat")].forEach(stat=>{
-    const kop=stat.querySelector(".eyebrow"),val=stat.querySelector(".sval"),sub=stat.querySelector(".ssub");
-    if(!kop||!sub||!/pollen/i.test(kop.textContent||""))return;
-    const kopTekst=String(kop.textContent||"").trim(),subTekst=String(sub.textContent||"").trim();
-    if(/niet beschikbaar|Alleen beschikbaar in Europa/i.test(subTekst))return;
-    if(/^Pollen$/i.test(kopTekst)){
-      if(/^Geen pollen verwacht voor dit uur\.?$/i.test(subTekst))sub.textContent=uiPollenTekst(false);
-      return;
-    }
-    const getalMatch=String(val&&val.textContent||"").replace(",",".").match(/-?\d+(?:\.\d+)?/);
-    const concentratie=getalMatch?Number(getalMatch[0]):null;
-    if(!Number.isFinite(concentratie))return;
-    sub.textContent=uiPollenTekst(concentratie>0);
-  });
-}
-if(typeof lucht==="function"){
-  const uiBasisLucht=lucht;
-  lucht=function(){const uit=uiBasisLucht.apply(this,arguments);uiPolishLuchtModelstatus();return uit;};
 }
 
 /* Regenperiodepresentatie wordt volledig beheerd door Q4. */
