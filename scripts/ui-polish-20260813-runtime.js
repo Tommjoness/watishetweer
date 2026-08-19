@@ -209,6 +209,9 @@ if(typeof lucht==="function"){
 
 /* Regenperiodepresentatie wordt volledig beheerd door Q4. */
 
+/* De base-build waarschuwingrenderer bezit loading en de expliciete lege
+   eindstate. UI-polish beperkt zich hier tot presentatienormalisatie van een
+   reeds afgeronde basisuitkomst en kaartdetails. */
 function uiPolishWaarschuwingen(){
   const el=document.getElementById("waarschuwingen");if(!el)return;
   const waarschuwingenLijst=Array.isArray(S.actieveWaarschuwingen)?S.actieveWaarschuwingen:[];
@@ -217,8 +220,6 @@ function uiPolishWaarschuwingen(){
     const t=(melding.textContent||"").trim();
     if(t==="Officiële weerwaarschuwingen zijn voor deze locatie niet beschikbaar.")melding.textContent="Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.";
     else if(t==="Officiële weerwaarschuwingen konden niet worden gecontroleerd.")melding.textContent="Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald.";
-  }else if(waarschuwingenLijst.length===0&&!(el.textContent||"").trim()){
-    el.innerHTML='<div class="msg">Geen officiële weerwaarschuwingen voor deze locatie.</div>';
   }
   [...el.querySelectorAll(".waarsch")].forEach((kaart,i)=>{
     const w=waarschuwingenLijst[i]||{};
@@ -256,16 +257,7 @@ if(typeof briefing==="function"){
 if(typeof waarschuwingen==="function"){
   const uiBasisWaarschuwingen=waarschuwingen;
   waarschuwingen=async function(){
-    /* De basisrenderer wist eerst de oude status en wacht daarna op de officiële
-       bron. Op een echte telefoon kon die tussenfase enkele seconden volledig
-       leeg zijn, waardoor het leek alsof de site waarschuwingen stilletjes
-       oversloeg. Start de basisaanvraag eerst (zodat die zijn oude DOM wist),
-       toon daarna een rustige controle-status en vervang die na afloop door de
-       echte uitkomst: kaarten, bewezen geen-waarschuwingen of een foutstatus. */
-    const belofte=uiBasisWaarschuwingen.apply(this,arguments);
-    const el=document.getElementById("waarschuwingen");
-    if(el&&!(el.textContent||"").trim())el.innerHTML='<div class="msg" data-ui-warning-loading="1">Officiële weerwaarschuwingen controleren…</div>';
-    const uit=await belofte;
+    const uit=await uiBasisWaarschuwingen.apply(this,arguments);
     uiPolishWaarschuwingen();
     return uit;
   };
