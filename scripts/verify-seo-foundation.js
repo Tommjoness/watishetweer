@@ -3,20 +3,33 @@
 const fs=require("fs");
 const path=require("path");
 const SEO=require("./seo-foundation.config.js");
+const {MARKER}=require("./seo-foundation.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
 const htmlPath=path.join(OUT,"index.html");
 const robotsPath=path.join(OUT,"robots.txt");
 const sitemapPath=path.join(OUT,"sitemap.xml");
-for(const p of [htmlPath,robotsPath,sitemapPath])if(!fs.existsSync(p))throw new Error("SEO-artifact ontbreekt: "+path.basename(p));
+const ownerPath=path.join(__dirname,"seo-foundation.js");
+const oudeApplyPath=path.join(__dirname,"apply-seo-foundation.js");
+const buildPath=path.join(ROOT,"build-weather.js");
+for(const p of [htmlPath,robotsPath,sitemapPath,ownerPath,buildPath])if(!fs.existsSync(p))throw new Error("SEO-artifact of owner ontbreekt: "+path.basename(p));
+if(fs.existsSync(oudeApplyPath))throw new Error("Late SEO-mutator bestaat nog; SEO-fundering hoort bij de base-build.");
 
 const html=fs.readFileSync(htmlPath,"utf8");
 const robots=fs.readFileSync(robotsPath,"utf8");
 const sitemap=fs.readFileSync(sitemapPath,"utf8");
+const owner=fs.readFileSync(ownerPath,"utf8");
+const build=fs.readFileSync(buildPath,"utf8");
 const tel=(tekst,zoek)=>tekst.split(zoek).length-1;
 
-if(tel(html,"<!-- WEATHER NOW SEO FOUNDATION -->")!==1)throw new Error("SEO-marker moet exact één keer aanwezig zijn.");
+if(!build.includes('require("./scripts/seo-foundation.js")')||!build.includes("html=pasSeoFoundationToe(html);"))throw new Error("Base-build bezit de SEO-fundering niet aantoonbaar.");
+if(!owner.includes('require("./seo-foundation.config.js")')||!owner.includes("function pasSeoFoundationToe(html)"))throw new Error("Pure SEO-owner gebruikt de canonieke SEO-configuratie niet aantoonbaar.");
+for(const verboden of ["public/index.html","writeFileSync","vernieuwServiceworkerCache"]){
+  if(owner.includes(verboden))throw new Error("Pure SEO-owner bevat nog late artifactmutatie-infrastructuur: "+verboden);
+}
+
+if(tel(html,MARKER)!==1)throw new Error("SEO-marker moet exact één keer aanwezig zijn.");
 if(tel(html,`<link rel="canonical" href="${SEO.canonical}">`)!==1)throw new Error("Canonical ontbreekt of is dubbel.");
 if(tel(html,`<meta name="msvalidate.01" content="${SEO.bingVerification}">`)!==1)throw new Error("Bing-verificatiemeta ontbreekt of is dubbel.");
 if(!html.includes(`<title>${SEO.title}</title>`))throw new Error("SEO-title ontbreekt in definitief artifact.");
@@ -39,4 +52,4 @@ if(!sitemap.includes(`<loc>${SEO.canonical}</loc>`))throw new Error("Sitemap bev
 if((sitemap.match(/<loc>/g)||[]).length!==1)throw new Error("SEO-fundering publiceert voorlopig alleen de bewezen canonieke homepage in de sitemap.");
 if(/\?lat=|\?lon=|www\.watishetweer\.nl/.test(sitemap))throw new Error("Sitemap mag geen gedeelde query-URLs of www-duplicaat bevatten.");
 
-console.log("SEO-fundering geverifieerd: canonical, Bing-verificatie, metadata, één WebSite JSON-LD-item, robots.txt en root-sitemap zijn coherent.");
+console.log("SEO-fundering geverifieerd: pure owner draait in de base-build; canonical, Bing-verificatie, metadata, één WebSite JSON-LD-item, robots.txt en root-sitemap zijn coherent.");
