@@ -6,6 +6,7 @@ const vm=require("vm");
 const PRODUCT_CONFIG=require("./product-config.js");
 const {pasSeoFoundationToe}=require("./scripts/seo-foundation.js");
 const {pasPollenHourCorrectnessToe}=require("./scripts/pollen-hour-correctness.js");
+const {pasWarningRenderStateToe}=require("./scripts/warning-render-state.js");
 const {vernieuwServiceworkerCache}=require("./scripts/postbuild-cache.js");
 /* CACHE_BRONNEN en het hashrecept zijn uitsluitend eigendom van postbuild-cache.js. */
 const ROOT=__dirname,OUT=path.join(ROOT,"public");
@@ -67,6 +68,11 @@ vervangProductregel(PRODUCT_CONFIG.KALENDERDAG_PUNTEN_BRON,PRODUCT_CONFIG.KALEND
 vervangProductregel(PRODUCT_CONFIG.OPHAALFOUT_BRON,PRODUCT_CONFIG.OPHAALFOUT_PRODUCTIE,"Ophaalfoutsemantiek");
 vervangProductregel(PRODUCT_CONFIG.CACHE_FALLBACK_LAND_BRON,PRODUCT_CONFIG.CACHE_FALLBACK_LAND_PRODUCTIE,"Cachefallback-landcontext");
 vervangProductregel(PRODUCT_CONFIG.POLAR_GRAFIEK_BRON,PRODUCT_CONFIG.POLAR_GRAFIEK_PRODUCTIE,"Poolgrafiek-zonsemantiek");
+
+/* Laad- en leegstatus horen inhoudelijk bij de waarschuwingrequestcyclus zelf.
+   De pure owner zet ze daarom al in de base-build; late presentatielagen mogen
+   deze twee statussen alleen nog consumeren of verifiëren. */
+html=pasWarningRenderStateToe(html);
 
 /* De compacte meelopende weerbalk gebruikte oorspronkelijk alleen een
    IntersectionObserver. Dat is zuinig, maar browsers mogen zo'n callback rond
@@ -165,6 +171,7 @@ const vereist=[
   "window.addEventListener(\"scroll\",plan,{passive:true})","r.bottom<=0","timer=setTimeout(zet,16)","senior-verstopt","verschil>0","(max-width:900px)",
   "Verwachting wordt aangevuld.","current=temperature_2m,apparent_temperature,is_day,weather_code",
   "geen plaats-specifieke dekking","dedupliceerZoekresultaten","grid-template-areas:","informatie informatie","overflow-wrap:anywhere",
+  "Officiële weerwaarschuwingen controleren…","Geen officiële weerwaarschuwingen voor deze locatie.",
   "load(52.3676,4.9041,\"Amsterdam\",false,true,\"NL\")"
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);
@@ -182,4 +189,4 @@ fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"build-weather");
 
 for(const n of fs.readdirSync(OUT))if(intern(n))throw new Error("Intern bestand publiek gebouwd: "+n);
-console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, lucht/pollen-correctheid, SEO-fundering, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");
+console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, waarschuwing-laad/leegstatus, lucht/pollen-correctheid, SEO-fundering, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");
