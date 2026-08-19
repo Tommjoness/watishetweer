@@ -5,6 +5,7 @@ const path=require("path");
 const vm=require("vm");
 const PRODUCT_CONFIG=require("./product-config.js");
 const {pasSeoFoundationToe}=require("./scripts/seo-foundation.js");
+const {pasPollenHourCorrectnessToe}=require("./scripts/pollen-hour-correctness.js");
 const {vernieuwServiceworkerCache}=require("./scripts/postbuild-cache.js");
 /* CACHE_BRONNEN en het hashrecept zijn uitsluitend eigendom van postbuild-cache.js. */
 const ROOT=__dirname,OUT=path.join(ROOT,"public");
@@ -141,6 +142,12 @@ html=html.replace(start,
   +"/* ===== SENIOR SEMANTIEK 20260810 ===== */\n"+seniorSemantiekJs+"\n/* ===== EINDE SENIOR SEMANTIEK 20260810 ===== */\n\n"
   +"/* ===== PROGRESSIEVE LOCATIELADING ===== */\n"+progressiveJs+"\n/* ===== EINDE PROGRESSIEVE LOCATIELADING ===== */\n\n"
   +"/* ===== WERELDWIJDE LOCATIEHARDENING ===== */\n"+globalLocationJs+"\n/* ===== EINDE WERELDWIJDE LOCATIEHARDENING ===== */\n\n"+start);
+
+/* Lucht/pollen-correctheid is één pure productie-owner. De vier bestaande
+   productregels worden nu al in de base-build toegepast; latere postbuildlagen
+   mogen deze semantiek alleen nog verifiëren, niet herschrijven. */
+html=pasPollenHourCorrectnessToe(html);
+
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline script gevonden.");
 scripts.forEach((s,i)=>new vm.Script(s,{filename:"public/index.html:inline-"+(i+1)}));
@@ -175,4 +182,4 @@ fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"build-weather");
 
 for(const n of fs.readdirSync(OUT))if(intern(n))throw new Error("Intern bestand publiek gebouwd: "+n);
-console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, SEO-fundering, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");
+console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, lucht/pollen-correctheid, SEO-fundering, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");
