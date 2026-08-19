@@ -32,7 +32,6 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "apply-weather-fallback-hedge.js",
   "verify-weather-fallback-hedge.js",
   "verify-fetch-error-semantics.js",
-  "apply-polar-chart-sentinel.js",
   "verify-polar-chart-sentinel.js",
   "apply-unified-weather-truth.js",
   "verify-unified-weather-truth.js",
