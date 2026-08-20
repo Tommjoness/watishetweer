@@ -5,6 +5,7 @@ const path=require("path");
 const vm=require("vm");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const {START_BRON,START_PRODUCTIE,EIND_BRON,EIND_PRODUCTIE}=require("./warning-render-state.js");
+const {GUST_BRON,GUST_PRODUCTIE,HELPER_PRODUCTIE}=require("./wind-gust-copy-owner.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
@@ -26,6 +27,17 @@ for(const verouderd of ["uiPolishRegenperiodeKansen","uiPolishRegenperiodeDaglab
 }
 if(!runtime.includes("/* Regenperiodepresentatie wordt volledig beheerd door Q4. */"))
   throw new Error("UI-polish runtime mist het expliciete Q4-ownershipcontract.");
+
+/* Windstootcopy is al in de base-build door de pure wind-gust owner gezet.
+   UI-polish mag meters() niet opnieuw wrappen of gustsub achteraf herschrijven. */
+if((html.split(GUST_PRODUCTIE).length-1)!==1)throw new Error("Base-build windstootcopy-call ontbreekt of is dubbel vóór UI-polish.");
+if((html.split(HELPER_PRODUCTIE).length-1)!==1)throw new Error("Base-build windstootcopy-helper ontbreekt of is dubbel vóór UI-polish.");
+if(html.includes(GUST_BRON))throw new Error("Oude windstootcopy heeft de base-build overleefd.");
+for(const verouderd of ["uiWindstootTekst","uiBasisMeters",'piek("wind_gusts_10m")','zetTekst("gustsub"']){
+  if(runtime.includes(verouderd))throw new Error("Verouderde UI-polish windstootowner staat weer in de bronruntime: "+verouderd);
+}
+if(!runtime.includes("UI-polish wrapt meters() daarom niet meer."))
+  throw new Error("UI-polish runtime mist het expliciete windstoot/pressure ownershipcontract.");
 
 /* Accessibility hoort in het definitieve artifact, zonder de dashboardstructuur
    of weerlogica te herschikken. #app is al de ene container van alle primaire
@@ -88,10 +100,11 @@ if(!html.includes("footer a,footer details summary{display:inline-flex;align-ite
 if(!html.includes('data-ui-warning-loading="1">Officiële weerwaarschuwingen controleren…'))throw new Error("Waarschuwing-laadstatus ontbreekt uit definitief artifact.");
 if(!html.includes("Geen officiële weerwaarschuwingen voor deze locatie."))throw new Error("Lege waarschuwing-eindstate ontbreekt uit definitief artifact.");
 if(html.includes("uiPolishRegenperiodeKansen")||html.includes("uiPolishRegenperiodeDaglabel")||html.includes("data-ui-rain-period-probability"))throw new Error("UI-polish overschrijft de Q4-regenperiodepresentatie nog steeds.");
+if(html.includes("function uiWindstootTekst(pg,nu,dag,vak){")||html.includes("const uiBasisMeters=meters;"))throw new Error("UI-polish bezit na assemblage opnieuw windstootcopy of meters().");
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden na UI-polish.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-polish-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"ui-polish-20260813");
-console.log("UI-polish toegepast: rustige waarschuwingpresentatie, natuurlijke windtekst, bereik-kop, Q4 als enige regenperiode-owner, daglichtbewuste zontekst, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
+console.log("UI-polish toegepast: rustige waarschuwingpresentatie, bereik-kop, Q4 als enige regenperiode-owner, daglichtbewuste zontekst, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");

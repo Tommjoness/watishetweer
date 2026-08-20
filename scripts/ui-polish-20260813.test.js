@@ -6,10 +6,6 @@ const context={};vm.createContext(context);vm.runInContext(runtime,context);
 const api=context.WeatherNowUiPolish20260813;
 assert(api,"UI-polish helpercontract ontbreekt");
 
-assert.equal(api.windstootTekst({t:"2026-08-13T02:00",v:52},"2026-08-13T16:00","Vandaag","02:00–03:00"),"Voor vandaag lag de hoogste verwachte windstoot rond 02:00–03:00 op 52 km/u.");
-assert.equal(api.windstootTekst({t:"2026-08-13T18:00",v:44},"2026-08-13T16:00","Vandaag","18:00–19:00"),"Later vandaag worden rond 18:00–19:00 windstoten tot 44 km/u verwacht.");
-assert.equal(api.windstootTekst({t:"2026-08-14T18:00",v:44},"2026-08-13T16:00","Morgen","18:00–19:00"),"Morgen worden rond 18:00–19:00 windstoten tot 44 km/u verwacht.");
-
 assert.equal(api.zonurenWoord(13.8,14.83),"Naar verwachting bijna de hele dag zon.");
 assert.equal(api.zonurenWoord(8,14),"Naar verwachting meerdere uren zon vandaag.");
 assert.equal(api.zonurenWoord(2,14),"Naar verwachting weinig zon vandaag.");
@@ -61,8 +57,18 @@ assert(!runtime.includes("uiBasisLucht"),"UI-polish mag lucht() niet meer voor p
    UI-polish mag pressub daarom niet meer achteraf lezen of herschrijven. */
 assert.equal(api.luchtdrukTekst,undefined,"UI-polish mag geen luchtdrukcopyhelper meer exporteren");
 assert(!runtime.includes("uiLuchtdrukTekst"),"UI-polish mag geen late luchtdrukcopyhelper meer bevatten");
-assert(!runtime.includes('document.getElementById("pressub")'),"UI-polish meters-wrapper mag pressub niet meer herschrijven");
-assert(runtime.includes("Luchtdrukcopy is al definitief wanneer deze runtime wordt ingevoegd."),"UI-polish mist expliciet pressure-copy ownershipcontract");
+assert(!runtime.includes('document.getElementById("pressub")'),"UI-polish mag pressub niet meer herschrijven");
+
+/* De nieuwe wind-gust-copy-owner produceert ook gustsub al in de base-build.
+   Daarmee heeft UI-polish geen enkele reden meer om meters() te wrappen. */
+assert.equal(api.windstootTekst,undefined,"UI-polish mag geen windstootcopyhelper meer exporteren");
+assert(!runtime.includes("uiWindstootTekst"),"UI-polish mag geen late windstootcopyhelper meer bevatten");
+assert(!runtime.includes("uiBasisMeters"),"UI-polish mag meters() niet meer wrappen");
+assert(!runtime.includes('piek("wind_gusts_10m")'),"UI-polish mag windstootpiek niet opnieuw ophalen");
+assert(!runtime.includes('zetTekst("gustsub"'),"UI-polish mag gustsub niet opnieuw schrijven");
+assert(runtime.includes("UI-polish wrapt meters() daarom niet meer."),"UI-polish mist expliciet windstoot/pressure ownershipcontract");
+assert(apply.includes('require("./wind-gust-copy-owner.js")'),"UI-polish apply-stap moet windstoot-ownercontract hergebruiken");
+assert(apply.includes("GUST_PRODUCTIE")&&apply.includes("HELPER_PRODUCTIE"),"UI-polish verifieert de base windstootowner niet");
 
 assert(!runtime.includes("uiPolishRegenperiodeKansen"),"UI-polish bronruntime mag de oude regenkans-owner niet meer bevatten");
 assert(!runtime.includes("uiPolishRegenperiodeDaglabel"),"UI-polish bronruntime mag de oude regendaglabel-owner niet meer bevatten");
@@ -92,4 +98,4 @@ assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
 assert(apply.includes('if((html.match(/<main id="app" style="display:none">/g)||[]).length!==1)'),"definitieve main-landmark wordt niet op uniciteit geverifieerd");
-console.log("UI-polish regressiecontract groen: bronsemantiek, warning-state base ownership, tijdtaal, cijfers, Q4-ownership, geen dubbele UV-/pollen-/luchtdrukowner en accessibility.");
+console.log("UI-polish regressiecontract groen: bronsemantiek, warning-state base ownership, tijdtaal, cijfers, Q4-ownership, geen dubbele UV-/pollen-/luchtdruk-/windstootowner en accessibility.");

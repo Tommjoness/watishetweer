@@ -8,6 +8,7 @@ const {pasSeoFoundationToe}=require("./scripts/seo-foundation.js");
 const {pasPollenHourCorrectnessToe}=require("./scripts/pollen-hour-correctness.js");
 const {pasWarningRenderStateToe}=require("./scripts/warning-render-state.js");
 const {pasPressureCopyToe}=require("./scripts/pressure-copy-owner.js");
+const {pasWindGustCopyToe}=require("./scripts/wind-gust-copy-owner.js");
 const {vernieuwServiceworkerCache}=require("./scripts/postbuild-cache.js");
 /* CACHE_BRONNEN en het hashrecept zijn uitsluitend eigendom van postbuild-cache.js. */
 const ROOT=__dirname,OUT=path.join(ROOT,"public");
@@ -80,6 +81,11 @@ html=pasWarningRenderStateToe(html);
    wordt nu in de base-build door één domeinowner geleverd, zodat UI-polish de
    luchtdruksubtekst niet nogmaals hoeft te herschrijven. */
 html=pasPressureCopyToe(html);
+
+/* Ook de finale windstootsubtekst hoort bij meters() zelf. De pure owner voegt
+   alleen de bestaande consumentencopy en zijn zuivere formatter toe; actuele
+   windstoot, piekselectie, tijdstip en uurdata blijven ongewijzigd. */
+html=pasWindGustCopyToe(html);
 
 /* De compacte meelopende weerbalk gebruikte oorspronkelijk alleen een
    IntersectionObserver. Dat is zuinig, maar browsers mogen zo'n callback rond
@@ -180,6 +186,7 @@ const vereist=[
   "geen plaats-specifieke dekking","dedupliceerZoekresultaten","grid-template-areas:","informatie informatie","overflow-wrap:anywhere",
   "Officiële weerwaarschuwingen controleren…","Geen officiële weerwaarschuwingen voor deze locatie.",
   "De luchtdruk is in de afgelopen drie uur licht ","De luchtdruk is in de afgelopen drie uur ",
+  "Later vandaag worden rond ","Voor vandaag lag de hoogste verwachte windstoot rond ",
   "load(52.3676,4.9041,\"Amsterdam\",false,true,\"NL\")"
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);
@@ -197,4 +204,4 @@ fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"build-weather");
 
 for(const n of fs.readdirSync(OUT))if(intern(n))throw new Error("Intern bestand publiek gebouwd: "+n);
-console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, waarschuwing-laad/leegstatus, luchtdrukcopy, lucht/pollen-correctheid, SEO-fundering, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");
+console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, waarschuwing-laad/leegstatus, luchtdrukcopy, windstootcopy, lucht/pollen-correctheid, SEO-fundering, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");

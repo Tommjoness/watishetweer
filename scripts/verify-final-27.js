@@ -58,13 +58,17 @@ verboden('font-feature-settings:"tnum" 1,"zero" 1',"oude OpenType slashed-zero f
 verboden("tabular-nums slashed-zero","oude slashed-zero fontvariant");
 
 /* Finale copy-architectuur: tijdtaal en overige microcopy komen uit hun
-   inhoudelijke owners. Luchtdrukcopy is nu al in de base-build definitief. */
+   inhoudelijke owners. Luchtdruk- en windstootcopy zijn nu al in de base-build
+   definitief; UI-polish mag geen tweede meters()-owner meer introduceren. */
 for(const tekst of [
-  "uiWindstootTekst","uiBriefingTijdtaal","uiZonurenWoord",
+  "weatherNowWindstootTekst","uiBriefingTijdtaal","uiZonurenWoord",
+  "Later vandaag worden rond ","Voor vandaag lag de hoogste verwachte windstoot rond ",
   "De komende twee uur wordt er geen neerslag verwacht.",
   "De luchtdruk is in de afgelopen drie uur licht ",
   "De luchtdruk is in de afgelopen drie uur "
 ])vereist(tekst,"copy-eigenaar "+tekst);
+verboden("uiWindstootTekst","late UI-polish windstootcopy-owner");
+verboden("const uiBasisMeters=meters;","late UI-polish meters-wrapper");
 verboden("uiLuchtdrukTekst","late UI-polish luchtdrukcopy-owner");
 verboden('document.getElementById("pressub")',"late UI-polish pressub-rewrite");
 
