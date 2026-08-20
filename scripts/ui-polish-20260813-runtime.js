@@ -5,24 +5,8 @@
 const uiGetal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 
 /* Zichtbare microcopy hoort bij de runtime die het betreffende UI-onderdeel
-   bezit. Luchtdrukcopy hoort inmiddels bij de pure base-build owner; deze
-   brede UI-polish bezit hier alleen nog zijn eigen wind-, zon- en briefingcopy. */
-function uiWindstootTekst(pg,nu,dag,vak){
-  if(!pg||uiGetal(pg.v)===null||!pg.t)return "Geen uurgegevens beschikbaar.";
-  const waarde=Math.round(Number(pg.v));
-  const dagNaam=String(dag||"").trim();
-  const tijdvak=String(vak||"").trim();
-  const dagInZin=dagNaam?dagNaam.charAt(0).toLowerCase()+dagNaam.slice(1):"eerder";
-  if(String(pg.t)>String(nu||"")){
-    if(/^Vandaag$/i.test(dagNaam))return `Later vandaag worden rond ${tijdvak} windstoten tot ${waarde} km/u verwacht.`;
-    if(/^Morgen$/i.test(dagNaam))return `Morgen worden rond ${tijdvak} windstoten tot ${waarde} km/u verwacht.`;
-    return `${dagNaam||"Later"} worden rond ${tijdvak} windstoten tot ${waarde} km/u verwacht.`;
-  }
-  if(/^Vandaag$/i.test(dagNaam))return `Voor vandaag lag de hoogste verwachte windstoot rond ${tijdvak} op ${waarde} km/u.`;
-  if(/^Gisteren$/i.test(dagNaam))return `Voor gisteren lag de hoogste verwachte windstoot rond ${tijdvak} op ${waarde} km/u.`;
-  return `De hoogste verwachte windstoot lag ${dagInZin} rond ${tijdvak} op ${waarde} km/u.`;
-}
-
+   bezit. Windstoot- en luchtdrukcopy horen inmiddels bij pure base-build owners;
+   deze brede UI-polish bezit hier alleen nog zijn eigen zon- en briefingcopy. */
 function uiZonurenWoord(uur,daglichtUur){
   const zon=uiGetal(uur),daglicht=uiGetal(daglichtUur);
   if(zon===null)return "Zonuren niet beschikbaar.";
@@ -97,10 +81,10 @@ function uiRegenperiodeDagprefix(periodeDatum,basisDatum){
 }
 
 /* Exporteer alleen zuivere presentatieregels voor regressietests. UV-copy hoort
-   bij Q3/senior meters, pollen-modelcopy bij de pure pollen-owner en
-   luchtdrukcopy bij pressure-copy-owner. Geen van die domeinen wordt hier herhaald. */
+   bij Q3/senior meters, pollen-modelcopy bij de pure pollen-owner,
+   luchtdrukcopy bij pressure-copy-owner en windstootcopy bij wind-gust-copy-owner.
+   Geen van die domeinen wordt hier herhaald. */
 globalThis.WeatherNowUiPolish20260813=Object.freeze({
-  windstootTekst:uiWindstootTekst,
   zonurenWoord:uiZonurenWoord,
   briefingBronSemantiek:uiBriefingBronSemantiek,
   briefingTijdtaal:uiBriefingTijdtaal,
@@ -130,21 +114,8 @@ if(typeof zonurenTegel==="function"){
   };
 }
 
-/* meters() wordt hier nog alleen voor de windstoot-presentatie gewrapt.
-   Luchtdrukcopy is al definitief wanneer deze runtime wordt ingevoegd. */
-if(typeof meters==="function"){
-  const uiBasisMeters=meters;
-  meters=function(){
-    uiBasisMeters();
-    const nu=(S.d&&S.d.current&&S.d.current.time)||"";
-    const pgRuw=typeof piek==="function"?piek("wind_gusts_10m"):null;
-    const pg=pgRuw&&uiGetal(pgRuw.v)!==null&&Number(pgRuw.v)>=0?pgRuw:null;
-    if(!pg)return;
-    const dag=typeof dagAanduiding==="function"?dagAanduiding(pg.t,true):"";
-    const vak=typeof weatherNowUurvak==="function"?weatherNowUurvak(pg.t):String(pg.t).slice(11,16);
-    if(typeof zetTekst==="function")zetTekst("gustsub",uiWindstootTekst(pg,nu,dag,vak));
-  };
-}
+/* Windstoot- en luchtdrukcopy zijn al definitief wanneer deze runtime wordt
+   ingevoegd. UI-polish wrapt meters() daarom niet meer. */
 
 function uiPolishDagen(){
   const c=document.getElementById("days"),day=S.d&&S.d.daily;
