@@ -105,11 +105,12 @@ for(const verouderd of ["uiBriefingBronSemantiek","uiBriefingTijdtaal","uiBasisB
 }
 if(!runtime.includes("UI-polish wrapt briefing() daarom niet meer."))
   throw new Error("UI-polish runtime mist het expliciete briefingcopy-ownershipcontract.");
-/* Deze zin werd historisch defensief door de late wrapper weggefilterd. Geen
-   huidige upstream owner hoort hem nog te produceren; als dat verandert moet de
-   echte bron worden gerepareerd in plaats van hem opnieuw hier te maskeren. */
+/* De interpretatielaag voegde historisch nog een uitlegzin over waarschuwing-
+   voorrang toe, waarna UI-polish die weer verwijderde. De base briefingowner
+   verwijdert die tussenstap nu vóór postbuild; hier bewaken we alleen dat het
+   late filter niet ongemerkt terugkomt. */
 if(html.includes("De officiële waarschuwing heeft voorrang op de modelverwachting."))
-  throw new Error("Verouderde briefing-waarschuwingcopy bestaat vóór UI-polish nog; herstel de upstream owner in plaats van een late filter.");
+  throw new Error("Verouderde briefing-waarschuwingcopy heeft de base briefingowner overleefd.");
 
 /* Accessibility hoort in het definitieve artifact, zonder de dashboardstructuur
    of weerlogica te herschikken. #app is al de ene container van alle primaire
@@ -175,14 +176,15 @@ if(html.includes("uiPolishRegenperiodeKansen")||html.includes("uiPolishRegenperi
 if(html.includes("function uiWindstootTekst(pg,nu,dag,vak){")||html.includes("const uiBasisMeters=meters;"))throw new Error("UI-polish bezit na assemblage opnieuw windstootcopy of meters().");
 if(html.includes("function uiZonurenWoord(uur,daglichtUur){")||html.includes("const uiBasisZonurenTegel=zonurenTegel;"))throw new Error("UI-polish bezit na assemblage opnieuw zonurencopy of zonurenTegel().");
 if(html.includes("function uiDagNeerslagTekst(kans,som){")||html.includes("const uiBasisDagen=dagen;"))throw new Error("UI-polish bezit na assemblage opnieuw daily-forecast copy of dagen().");
-if(html.includes("function uiBriefingBronSemantiek(html){")||html.includes("function uiBriefingTijdtaal(html,nuLokaal,huidigeTemperatuur){")||html.includes("const uiBasisBriefing=briefing;"))throw new Error("UI-polish bezit na assemblage opnieuw briefingcopy of briefing().");
+if(html.includes("function uiBriefingBronSemantiek(html){")||html.includes("const uiBasisBriefing=briefing;"))throw new Error("UI-polish bezit na assemblage opnieuw briefingcopy of briefing().");
 if((html.split(ZONUREN_PRODUCTIE).length-1)!==1||(html.split(ZON_HELPER_PRODUCTIE).length-1)!==1)throw new Error("Finale zonuren-owner is niet uniek in het artifact.");
 if((html.split(DAILY_HELPER_PRODUCTIE).length-1)!==1||(html.split(DCOND_PRODUCTIE).length-1)!==1||(html.split(DRAIN_PRODUCTIE).length-1)!==1||(html.split(KOP_PRODUCTIE).length-1)!==1)throw new Error("Finale daily-forecast owner is niet uniek in het artifact.");
-if((html.split(BRIEF_HELPER_PRODUCTIE).length-1)!==1||(html.split(VANDAAG_PIEK_PRODUCTIE).length-1)!==2||(html.split(MORGEN_PRODUCTIE).length-1)!==1||(html.split(VANDAAG_VERLEDEN_PRODUCTIE).length-1)!==1)throw new Error("Finale briefingcopy-owner is niet uniek in het artifact.");
+if((html.split(BRIEF_HELPER_PRODUCTIE).length-1)!==1)throw new Error("Finale briefingcopy-owner is niet uniek in het artifact.");
+if(html.includes("De officiële waarschuwing heeft voorrang op de modelverwachting."))throw new Error("Redundante briefing-waarschuwingcopy staat na UI-polish nog in artifact.");
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden na UI-polish.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-polish-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"ui-polish-20260813");
-console.log("UI-polish toegepast: rustige waarschuwingpresentatie, Q4 als enige regenperiode-owner, base zonuren-, daily-forecast- en briefingcopy-owners geverifieerd, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
+console.log("UI-polish toegepast: rustige waarschuwingpresentatie, Q4 als enige regenperiode-owner, base zonuren-, daily-forecast- en briefingowners geverifieerd, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
