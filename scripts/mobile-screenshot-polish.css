@@ -171,7 +171,7 @@ footer .bron-bronnen .bronitem{
     font-size:15px;
   }
   .tools > #here,.tools > #ververs,.tools > #thema{
-    min-height:42px;
+    min-height:44px;
     padding:8px 7px;
     border:0;
     border-right:1px solid var(--rule);
