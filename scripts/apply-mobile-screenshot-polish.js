@@ -39,6 +39,11 @@ const GRAFIEK_LABEL_PAST_OUD='      const past=(val,bv)=> bv ? val-F.temp>=by+bh
 const GRAFIEK_LABEL_PAST_NIEUW='      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val+labelHoogte/2+4<=pb;';
 const GRAFIEK_TICK_OUD='    if(toonAs){\n      ticks+=';
 const GRAFIEK_TICK_NIEUW='    if(toonAs){\n      const tijdLabelVrij=nuX==null||Math.abs(x(i)-nuX)>Math.max(18,F.uur*2.2);\n      if(tijdLabelVrij) ticks+=';
+/* Mobiel heeft al een apart rood nu-label. Voor het etmaal zijn daarnaast
+   alleen het globale minimum en maximum permanent nodig; alle tussenpunten
+   blijven via tik/tooltip beschikbaar. Desktop behoudt zijn volledige set. */
+const GRAFIEK_MOBIELE_LABELS_OUD='  let kandidaten=n<=24?kandidatenRuw:kandidatenRuw.filter((k,pos)=>{';
+const GRAFIEK_MOBIELE_LABELS_NIEUW='  let kandidaten=n<=24?(M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw):kandidatenRuw.filter((k,pos)=>{';
 const GRAFIEK_GEO_ANCHOR='  S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,H:H,M:M};';
 const GRAFIEK_AS_CLEANUP=[
   '  /* Checkpoint 50: controleer op mobiele grafieken de werkelijke SVG-fontboxes',
@@ -79,6 +84,7 @@ if((html.split(SENIOR_NACHT_SIGNATURE).length-1)!==1)throw new Error("Specifieke
 if((html.split(GRAFIEK_MOBIEL_OUD).length-1)!==1)throw new Error("Canonieke mobiele grafiekmaten ontbreken of zijn dubbel.");
 if((html.split(GRAFIEK_LABEL_PAST_OUD).length-1)!==1)throw new Error("Canonieke grafiek-labelgrens ontbreekt of is dubbel.");
 if((html.split(GRAFIEK_TICK_OUD).length-1)!==1)throw new Error("Canonieke grafiek-tickrenderer ontbreekt of is dubbel.");
+if((html.split(GRAFIEK_MOBIELE_LABELS_OUD).length-1)!==1)throw new Error("Canonieke etmaallabelselectie ontbreekt of is dubbel.");
 if((html.split(GRAFIEK_GEO_ANCHOR).length-1)!==1)throw new Error("Canonieke grafiek-geometrieanchor ontbreekt of is dubbel.");
 
 html=html.replace(RECENT_OLD,TREND_NEW);
@@ -100,6 +106,7 @@ html=html.slice(0,seniorNachtStart)+'/* Nachtzicht-presentatie geconsolideerd in
 html=html.replace(GRAFIEK_MOBIEL_OUD,GRAFIEK_MOBIEL_NIEUW);
 html=html.replace(GRAFIEK_LABEL_PAST_OUD,GRAFIEK_LABEL_PAST_NIEUW);
 html=html.replace(GRAFIEK_TICK_OUD,GRAFIEK_TICK_NIEUW);
+html=html.replace(GRAFIEK_MOBIELE_LABELS_OUD,GRAFIEK_MOBIELE_LABELS_NIEUW);
 html=html.replace(GRAFIEK_GEO_ANCHOR,GRAFIEK_AS_CLEANUP);
 
 html=html.replace("</style>","\n"+CSS_MARK+"\n"+mobileCss+"\n/* ===== EINDE MOBILE SCREENSHOT POLISH 20260810B CSS ===== */\n"+Q1_CSS_MARK+"\n"+q1Css+"\n/* ===== EINDE CHECKPOINT 25 Q1 CSS ===== */\n</style>");
@@ -112,7 +119,9 @@ for(const vereist of [
   "WeatherNowMobileScreenshotPolish","maan-fase-svg-v2","Temperatuur komende 3 uur","bron-bronnen",
   "WeatherNowQ1","q1-dag-mm","weerbriefing.plaatscache.q1","neerslagkans",
   "temperatuurTrend","q1-pop-hidden","normaliseerNachtDagdata","nachtIsActiefNu","corrigeerNachtVensterBron","verbeterNachtzicht",
+  "nachtzichtCompactAantal","Meer nachten bekijken","nacht-meer",
   "H=M?250:296","pt=M?59:76, ih=M?145:160","tijdLabelVrij=nuX==null",
+  "M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw",
   "val+labelHoogte/2+4<=pb","ruimBotsendeAslabelsOp","if(!M)return;","getBBox()"
 ]){
   if(!html.includes(vereist))throw new Error("Post-build invariant ontbreekt: "+vereist);
@@ -124,4 +133,4 @@ if((html.split('const basisNachten=nachten;').length-1)!==1)throw new Error("Nac
 if(html.includes("Beste modeluren")||html.includes("Relatief gunstigste modeluren"))throw new Error("Nachtzicht bevat nog modeljargon in de presentatie-owner.");
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"mobiele");
-console.log("Mobiele polish + checkpoint 50% geïnjecteerd; Nachtzicht-owner geconsolideerd met kalendergrenscorrectie; cache "+versie+".");
+console.log("Mobiele polish + checkpoint 50% geïnjecteerd; etmaallabels mobiel gereduceerd en Nachtzicht compact; cache "+versie+".");
