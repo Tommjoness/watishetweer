@@ -31,6 +31,15 @@ const DRAIN_PRODUCTIE='      <div class="drain">${neerslagTekst}${\n        som!
 const KOP_BRON='      <div class="dwind">Wind max</div><div class="dmin">Min</div><div class="bar"></div><div class="dmax">Max</div>\n      <div class="drain">Kans</div></div>`;\n';
 const KOP_PRODUCTIE='      <div class="dwind">Wind max</div><div class="dmin">Min</div><div class="bar">Bereik</div><div class="dmax">Max</div>\n      <div class="drain">Neerslag</div></div>`;\n';
 
+function dagNeerslagTekst(kans,som){
+  const getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
+  const k=getal(kans),mm=getal(som);
+  if(k===null)return "–";
+  const pct=Math.round(Math.max(0,Math.min(100,k)));
+  if(pct<10&&(mm===null||mm<0.1))return "Droog";
+  return pct+"%";
+}
+
 function vervangEen(html,bron,productie,label){
   const aantal=html.split(bron).length-1;
   if(aantal!==1)throw new Error(label+" ontbreekt of is dubbel: "+aantal+" keer gevonden.");
@@ -39,6 +48,8 @@ function vervangEen(html,bron,productie,label){
 
 function pasDailyForecastOwnerToe(html){
   let uit=String(html||"");
+  if(uit.includes("function weatherNowDagNeerslagTekst(kans,som){"))
+    throw new Error("Daily-forecast owner staat al in het aangeleverde artifact.");
   uit=vervangEen(uit,DAGEN_HAAK,HELPER_PRODUCTIE,"dagen()-ownerhaak");
   uit=vervangEen(uit,KANS_BRON,KANS_PRODUCTIE,"dagelijkse neerslagtekst-input");
   uit=vervangEen(uit,DCOND_BRON,DCOND_PRODUCTIE,"weekomschrijving zonder dubbele mm");
@@ -48,7 +59,7 @@ function pasDailyForecastOwnerToe(html){
 }
 
 module.exports={
-  pasDailyForecastOwnerToe,
+  dagNeerslagTekst,pasDailyForecastOwnerToe,
   DAGEN_HAAK,HELPER_PRODUCTIE,
   DCOND_BRON,DCOND_PRODUCTIE,KANS_BRON,KANS_PRODUCTIE,
   DRAIN_BRON,DRAIN_PRODUCTIE,KOP_BRON,KOP_PRODUCTIE
