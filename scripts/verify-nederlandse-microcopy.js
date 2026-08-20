@@ -11,6 +11,7 @@ const policyBron=fs.readFileSync(path.join(ROOT,"neerslagkans-policy-v3.js"),"ut
 const seniorBron=fs.readFileSync(path.join(ROOT,"senior-correctness-v2.js"),"utf8");
 const pressureBron=fs.readFileSync(path.join(__dirname,"pressure-copy-owner.js"),"utf8");
 const windGustBron=fs.readFileSync(path.join(__dirname,"wind-gust-copy-owner.js"),"utf8");
+const briefingBron=fs.readFileSync(path.join(__dirname,"briefing-copy-owner.js"),"utf8");
 const OUDE_MARK="<!-- ===== NEDERLANDSE MICROCOPY 20260815 ===== -->";
 
 if(html.includes(OUDE_MARK))throw new Error("Verouderde Nederlandse microcopy-compatibilitymarker staat nog in het artifact.");
@@ -102,9 +103,39 @@ for(const tekst of [
 if(html.includes("function uiWindstootTekst(pg,nu,dag,vak){"))throw new Error("Verouderde UI-polish windstootcopy-owner staat nog in artifact.");
 if(html.includes("const uiBasisMeters=meters;"))throw new Error("UI-polish wrapt meters() nog in het finale artifact.");
 
+/* De briefingcopy heeft nu eveneens één pure base-build owner. De bestaande
+   briefingrenderer blijft alle forecast/wind/neerslaginputs selecteren; de owner
+   maakt alleen bronstatus en nacht-tijdtaal direct definitief in briefing(). */
+for(const invariant of [
+  "function weatherNowBriefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){",
+  "Het verwachte maximum ligt vandaag rond ",
+  "Het verwachte maximum ligt morgen rond ",
+  "Het verwachte maximum lag vandaag rond ",
+  "Het verwachte maximum voor morgen is ",
+  "De minimumtemperatuur vannacht ligt rond ",
+  "Later vannacht koelt het af naar ",
+  "function pasBriefingCopyToe(html){"
+]){
+  if(!briefingBron.includes(invariant))throw new Error("Briefingcopy-owner mist invariant: "+invariant);
+}
+for(const tekst of [
+  "function weatherNowBriefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){",
+  "Het verwachte maximum ligt vandaag rond ",
+  "Het verwachte maximum ligt morgen rond ",
+  "Het verwachte maximum lag vandaag rond ",
+  "Het verwachte maximum voor morgen is ",
+  "De minimumtemperatuur vannacht ligt rond ",
+  "Later vannacht koelt het af naar "
+]){
+  if(!html.includes(tekst))throw new Error("Definitieve briefingcopy ontbreekt uit artifact: "+tekst);
+}
+for(const verouderd of ["uiBriefingBronSemantiek","uiBriefingTijdtaal","const uiBasisBriefing=briefing;"]){
+  if(html.includes(verouderd))throw new Error("Verouderde UI-polish briefingcopy-owner staat nog in artifact: "+verouderd);
+}
+if(html.includes("De officiële waarschuwing heeft voorrang op de modelverwachting."))throw new Error("Verouderde briefing-waarschuwingcopy staat nog in artifact.");
+
 /* De overige taal hoort aantoonbaar bij de inhoudelijke runtime-owner. */
 for(const eigenaar of [
-  "function uiBriefingTijdtaal(html,nuLokaal,huidigeTemperatuur){",
   "function normaliseerNachtDagdata(data,nuLokaal){",
   "function corrigeerNachtVensterBron(tekst,horizonDagen,score,opties={}){",
   "function formatteerMaanTekst(tekst){",
@@ -113,12 +144,10 @@ for(const eigenaar of [
   if(!html.includes(eigenaar))throw new Error("Presentatie-owner ontbreekt uit artifact: "+eigenaar);
 }
 
-/* De nachtbriefing moet temperatuurgedreven blijven. Een klok-only herschrijving
-   kan bij locaties als Kandy een al bereikt minimum ten onrechte als toekomstige
-   afkoeling presenteren. Bewaak daarom zowel de actuele-temperatuurinput als de
-   neutrale formulering voor een reeds bereikt minimum. */
+/* De nachtbriefing moet temperatuurgedreven blijven. Een klok-only formulering
+   kan bij een al bereikt minimum ten onrechte toekomstige afkoeling suggereren. */
 for(const invariant of [
-  "const huidige=uiGetal(huidigeTemperatuur);",
+  "const huidige=eindigGetal(huidigeTemperatuur);",
   "doel>=huidige-0.75",
   "De minimumtemperatuur vannacht ligt rond ",
   "Later vannacht koelt het af naar "
@@ -132,4 +161,4 @@ const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script
 if(!scripts.length)throw new Error("Geen inline runtime gevonden voor microcopy-verificatie.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:verify-nederlandse-microcopy-"+(i+1)}));
 
-console.log("Nederlandse microcopy geverifieerd: neerslagcopy uit de canonieke neerslagowner, luchtdruk- en windstootcopy uit base-build owners en overige taal bij de eigen runtime-owner.");
+console.log("Nederlandse microcopy geverifieerd: neerslagcopy uit de canonieke neerslagowner, luchtdruk-, windstoot- en briefingcopy uit base-build owners en overige taal bij de eigen runtime-owner.");

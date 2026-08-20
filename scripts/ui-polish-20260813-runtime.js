@@ -2,48 +2,10 @@
 (function(){
 "use strict";
 
-const uiGetal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
-
 /* Zichtbare microcopy hoort bij de runtime die het betreffende UI-onderdeel
-   bezit. Zonuren-, windstoot-, luchtdruk- en zeven-dagencopy horen inmiddels
-   bij pure base-build owners; deze brede UI-polish bezit hier alleen nog
-   briefingcopy en zijn expliciete presentatienormalisaties. */
-
-/* Modelvelden mogen ook nadat hun klokmoment verstreken is niet als gemeten
-   historie worden geformuleerd. Deze normalisatie verandert geen waarde of
-   tijdstip; alleen de epistemische status van de zichtbare zin wordt expliciet. */
-function uiBriefingBronSemantiek(html){
-  return String(html||"")
-    .replace(/Vandaag was het rond (\d{2}:\d{2}) het warmst,?\s+met (<b>-?\d+(?:[.,]\d+)?(?:\s|&nbsp;|\u00a0)+graden<\/b>)\./gi,
-      (_m,t,waarde)=>"Het verwachte maximum lag vandaag rond "+t+" op "+waarde+".")
-    .replace(/Vandaag wordt het rond (\d{2}:\d{2}) het warmst, met maximaal (<b>-?\d+(?:[.,]\d+)?(?:\s|&nbsp;|\u00a0)+graden<\/b>)\./gi,
-      (_m,t,waarde)=>"Het verwachte maximum ligt vandaag rond "+t+" op "+waarde+".")
-    .replace(/Morgen wordt het rond (\d{2}:\d{2}) het warmst, met maximaal (<b>-?\d+(?:[.,]\d+)?(?:\s|&nbsp;|\u00a0)+graden<\/b>)\./gi,
-      (_m,t,waarde)=>"Het verwachte maximum ligt morgen rond "+t+" op "+waarde+".")
-    .replace(/Morgen wordt het maximaal (<b>-?\d+(?:[.,]\d+)?(?:\s|&nbsp;|\u00a0)+graden<\/b>)\./gi,
-      (_m,waarde)=>"Het verwachte maximum voor morgen is "+waarde+".");
-}
-
-/* Rond middernacht mag de taal niet alleen naar de klok kijken. Als de genoemde
-   nachtminimumtemperatuur al bereikt is (of binnen de afrondmarge ligt), is
-   "koelt later af naar" feitelijk onjuist. Dan benoemen we het minimum zonder
-   een toekomstige daling te suggereren. Alleen bij een echte resterende daling
-   gebruiken we "Later vannacht". */
-function uiBriefingTijdtaal(html,nuLokaal,huidigeTemperatuur){
-  const bron=String(html||"");
-  const m=/T(\d{2}):(\d{2})/.exec(String(nuLokaal||""));
-  if(!m)return bron;
-  const uur=Number(m[1]);
-  if(!Number.isFinite(uur)||uur<0||uur>=5)return bron;
-  const huidige=uiGetal(huidigeTemperatuur);
-  return bron.replace(/Vannacht koelt het af naar\s*(<b>)?(-?\d+(?:[.,]\d+)?) graden(<\/b>)?\./gi,(volledig,open,doelTekst,sluit)=>{
-    const doel=Number(String(doelTekst).replace(",","."));
-    const waarde=(open||"")+doelTekst+" graden"+(sluit||"");
-    if(huidige!==null&&Number.isFinite(doel)&&doel>=huidige-0.75)
-      return "De minimumtemperatuur vannacht ligt rond "+waarde+".";
-    return "Later vannacht koelt het af naar "+waarde+".";
-  });
-}
+   bezit. Zonuren-, windstoot-, luchtdruk-, zeven-dagen- en briefingcopy horen
+   inmiddels bij pure base-build owners; deze brede UI-polish bezit hier alleen
+   nog expliciete waarschuwingpresentatie. */
 
 function uiIsNwsStructuur(tekst){
   return /\*\s*(?:WHAT|WHERE|WHEN|IMPACTS)\.\.\./i.test(String(tekst||""));
@@ -60,11 +22,10 @@ function uiRegenperiodeDagprefix(periodeDatum,basisDatum){
 /* Exporteer alleen zuivere presentatieregels voor regressietests. UV-copy hoort
    bij Q3/senior meters, pollen-modelcopy bij de pure pollen-owner,
    luchtdrukcopy bij pressure-copy-owner, windstootcopy bij wind-gust-copy-owner,
-   zonurencopy bij sunshine-copy-owner en de zeven-dagenpresentatie bij
-   daily-forecast-owner. Geen van die domeinen wordt hier herhaald. */
+   zonurencopy bij sunshine-copy-owner, de zeven-dagenpresentatie bij
+   daily-forecast-owner en briefingcopy bij briefing-copy-owner. Geen van die
+   domeinen wordt hier herhaald. */
 globalThis.WeatherNowUiPolish20260813=Object.freeze({
-  briefingBronSemantiek:uiBriefingBronSemantiek,
-  briefingTijdtaal:uiBriefingTijdtaal,
   regenperiodeDagprefix:uiRegenperiodeDagprefix,
   isNwsStructuur:uiIsNwsStructuur
 });
@@ -77,6 +38,9 @@ globalThis.WeatherNowUiPolish20260813=Object.freeze({
 
 /* De zeven-dagenpresentatie is al definitief wanneer deze runtime wordt
    ingevoegd. UI-polish wrapt dagen() daarom niet meer. */
+
+/* Bron- en tijdsemantiek van de weerbriefing zijn al definitief wanneer deze
+   runtime wordt ingevoegd. UI-polish wrapt briefing() daarom niet meer. */
 
 /* Regenperiodepresentatie wordt volledig beheerd door Q4. */
 
@@ -108,21 +72,6 @@ function uiPolishWaarschuwingen(){
     const bron=document.createElement("p");bron.lang="en";bron.textContent=tekst;
     details.appendChild(samenvatting);details.appendChild(bron);kaart.appendChild(details);
   });
-}
-
-if(typeof briefing==="function"){
-  const uiBasisBriefing=briefing;
-  briefing=function(){
-    const uit=uiBasisBriefing.apply(this,arguments);
-    const el=document.getElementById("brief");
-    if(el){
-      el.innerHTML=(el.innerHTML||"").replace(/\s*De officiële waarschuwing heeft voorrang op de modelverwachting\.\s*/g," ");
-      const nu=typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():(S.d&&S.d.current&&S.d.current.time)||"";
-      const huidige=S.d&&S.d.current?uiGetal(S.d.current.temperature_2m):null;
-      el.innerHTML=uiBriefingBronSemantiek(uiBriefingTijdtaal(el.innerHTML,nu,huidige));
-    }
-    return uit;
-  };
 }
 
 if(typeof waarschuwingen==="function"){
