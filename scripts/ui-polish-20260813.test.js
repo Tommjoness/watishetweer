@@ -6,10 +6,6 @@ const context={};vm.createContext(context);vm.runInContext(runtime,context);
 const api=context.WeatherNowUiPolish20260813;
 assert(api,"UI-polish helpercontract ontbreekt");
 
-assert.equal(api.zonurenWoord(13.8,14.83),"Naar verwachting bijna de hele dag zon.");
-assert.equal(api.zonurenWoord(8,14),"Naar verwachting meerdere uren zon vandaag.");
-assert.equal(api.zonurenWoord(2,14),"Naar verwachting weinig zon vandaag.");
-
 assert.equal(
   api.briefingBronSemantiek("Vandaag was het rond 13:00 het warmst, met <b>29 graden</b>."),
   "Het verwachte maximum lag vandaag rond 13:00 op <b>29 graden</b>."
@@ -59,7 +55,7 @@ assert.equal(api.luchtdrukTekst,undefined,"UI-polish mag geen luchtdrukcopyhelpe
 assert(!runtime.includes("uiLuchtdrukTekst"),"UI-polish mag geen late luchtdrukcopyhelper meer bevatten");
 assert(!runtime.includes('document.getElementById("pressub")'),"UI-polish mag pressub niet meer herschrijven");
 
-/* De nieuwe wind-gust-copy-owner produceert ook gustsub al in de base-build.
+/* De wind-gust-copy-owner produceert ook gustsub al in de base-build.
    Daarmee heeft UI-polish geen enkele reden meer om meters() te wrappen. */
 assert.equal(api.windstootTekst,undefined,"UI-polish mag geen windstootcopyhelper meer exporteren");
 assert(!runtime.includes("uiWindstootTekst"),"UI-polish mag geen late windstootcopyhelper meer bevatten");
@@ -69,6 +65,18 @@ assert(!runtime.includes('zetTekst("gustsub"'),"UI-polish mag gustsub niet opnie
 assert(runtime.includes("UI-polish wrapt meters() daarom niet meer."),"UI-polish mist expliciet windstoot/pressure ownershipcontract");
 assert(apply.includes('require("./wind-gust-copy-owner.js")'),"UI-polish apply-stap moet windstoot-ownercontract hergebruiken");
 assert(apply.includes("GUST_PRODUCTIE")&&apply.includes("HELPER_PRODUCTIE"),"UI-polish verifieert de base windstootowner niet");
+
+/* De sunshine-copy-owner produceert de finale daglichtbewuste zonurentegel al
+   in de base-build. UI-polish mag dezelfde lokale dag- en zonsdata niet opnieuw lezen. */
+assert.equal(api.zonurenWoord,undefined,"UI-polish mag geen zonurencopyhelper meer exporteren");
+assert(!runtime.includes("uiZonurenWoord"),"UI-polish mag geen eigen zonurencopyhelper meer bevatten");
+assert(!runtime.includes("uiBasisZonurenTegel"),"UI-polish mag zonurenTegel() niet meer wrappen");
+assert(!runtime.includes("zonurenTegel=function"),"UI-polish mag zonurenTegel() niet opnieuw definiëren");
+assert(!runtime.includes("day.sunshine_duration"),"UI-polish mag zonurendata niet opnieuw uitlezen");
+assert(!runtime.includes("day.sunrise")&&!runtime.includes("day.sunset"),"UI-polish mag daglichtduur niet opnieuw berekenen");
+assert(runtime.includes("UI-polish wrapt zonurenTegel() daarom niet meer."),"UI-polish mist expliciet zonuren-ownershipcontract");
+assert(apply.includes('require("./sunshine-copy-owner.js")'),"UI-polish apply-stap moet zonuren-ownercontract hergebruiken");
+assert(apply.includes("ZONUREN_PRODUCTIE")&&apply.includes("ZON_HELPER_PRODUCTIE"),"UI-polish verifieert de base zonurenowner niet");
 
 assert(!runtime.includes("uiPolishRegenperiodeKansen"),"UI-polish bronruntime mag de oude regenkans-owner niet meer bevatten");
 assert(!runtime.includes("uiPolishRegenperiodeDaglabel"),"UI-polish bronruntime mag de oude regendaglabel-owner niet meer bevatten");
@@ -98,4 +106,4 @@ assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
 assert(apply.includes('if((html.match(/<main id="app" style="display:none">/g)||[]).length!==1)'),"definitieve main-landmark wordt niet op uniciteit geverifieerd");
-console.log("UI-polish regressiecontract groen: bronsemantiek, warning-state base ownership, tijdtaal, cijfers, Q4-ownership, geen dubbele UV-/pollen-/luchtdruk-/windstootowner en accessibility.");
+console.log("UI-polish regressiecontract groen: bronsemantiek, warning-state base ownership, tijdtaal, cijfers, Q4-ownership, geen dubbele UV-/pollen-/luchtdruk-/windstoot-/zonurenowner en accessibility.");

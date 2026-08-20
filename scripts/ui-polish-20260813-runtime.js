@@ -5,24 +5,9 @@
 const uiGetal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 
 /* Zichtbare microcopy hoort bij de runtime die het betreffende UI-onderdeel
-   bezit. Windstoot- en luchtdrukcopy horen inmiddels bij pure base-build owners;
-   deze brede UI-polish bezit hier alleen nog zijn eigen zon- en briefingcopy. */
-function uiZonurenWoord(uur,daglichtUur){
-  const zon=uiGetal(uur),daglicht=uiGetal(daglichtUur);
-  if(zon===null)return "Zonuren niet beschikbaar.";
-  if(daglicht!==null&&daglicht>0){
-    const aandeel=Math.max(0,Math.min(1,zon/daglicht));
-    if(aandeel>=0.8)return "Naar verwachting bijna de hele dag zon.";
-    if(aandeel>=0.6)return "Naar verwachting veel zon vandaag.";
-    if(aandeel>=0.35)return "Naar verwachting meerdere uren zon vandaag.";
-    if(aandeel>=0.15)return "Naar verwachting enkele uren zon vandaag.";
-    return "Naar verwachting weinig zon vandaag.";
-  }
-  if(zon>=8)return "Naar verwachting veel zon vandaag.";
-  if(zon>=4)return "Naar verwachting meerdere uren zon vandaag.";
-  if(zon>=1)return "Naar verwachting enkele uren zon vandaag.";
-  return "Naar verwachting weinig zon vandaag.";
-}
+   bezit. Zonuren-, windstoot- en luchtdrukcopy horen inmiddels bij pure
+   base-build owners; deze brede UI-polish bezit hier alleen nog briefingcopy
+   en zijn expliciete presentatienormalisaties. */
 
 /* Modelvelden mogen ook nadat hun klokmoment verstreken is niet als gemeten
    historie worden geformuleerd. Deze normalisatie verandert geen waarde of
@@ -82,10 +67,9 @@ function uiRegenperiodeDagprefix(periodeDatum,basisDatum){
 
 /* Exporteer alleen zuivere presentatieregels voor regressietests. UV-copy hoort
    bij Q3/senior meters, pollen-modelcopy bij de pure pollen-owner,
-   luchtdrukcopy bij pressure-copy-owner en windstootcopy bij wind-gust-copy-owner.
-   Geen van die domeinen wordt hier herhaald. */
+   luchtdrukcopy bij pressure-copy-owner, windstootcopy bij wind-gust-copy-owner
+   en zonurencopy bij sunshine-copy-owner. Geen van die domeinen wordt hier herhaald. */
 globalThis.WeatherNowUiPolish20260813=Object.freeze({
-  zonurenWoord:uiZonurenWoord,
   briefingBronSemantiek:uiBriefingBronSemantiek,
   briefingTijdtaal:uiBriefingTijdtaal,
   dagNeerslagTekst:uiDagNeerslagTekst,
@@ -93,26 +77,8 @@ globalThis.WeatherNowUiPolish20260813=Object.freeze({
   isNwsStructuur:uiIsNwsStructuur
 });
 
-if(typeof zonurenTegel==="function"){
-  const uiBasisZonurenTegel=zonurenTegel;
-  zonurenTegel=function(){
-    const day=S.d&&S.d.daily;
-    const idx=day&&Array.isArray(day.time)?day.time.indexOf(plaatsVandaag()):-1;
-    const sec=idx>=0&&day&&Array.isArray(day.sunshine_duration)?uiGetal(day.sunshine_duration[idx]):null;
-    if(sec===null||sec<0)return uiBasisZonurenTegel();
-    const uur=sec/3600;
-    let daglichtUur=null;
-    const sr=day&&Array.isArray(day.sunrise)?day.sunrise[idx]:null;
-    const ss=day&&Array.isArray(day.sunset)?day.sunset[idx]:null;
-    if(sr&&ss&&typeof mins==="function"){
-      const minuten=mins(ss)-mins(sr);
-      if(Number.isFinite(minuten)&&minuten>0)daglichtUur=minuten/60;
-    }
-    const woord=uiZonurenWoord(uur,daglichtUur);
-    return `<div class="stat zon"><div class="eyebrow">Zonuren</div>
-      <div class="sval">${nl(uur)}<s>uur</s></div><div class="ssub">${woord}</div></div>`;
-  };
-}
+/* Zonurencopy is al definitief wanneer deze runtime wordt ingevoegd.
+   UI-polish wrapt zonurenTegel() daarom niet meer. */
 
 /* Windstoot- en luchtdrukcopy zijn al definitief wanneer deze runtime wordt
    ingevoegd. UI-polish wrapt meters() daarom niet meer. */
