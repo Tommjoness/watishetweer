@@ -7,6 +7,10 @@ const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const {START_BRON,START_PRODUCTIE,EIND_BRON,EIND_PRODUCTIE}=require("./warning-render-state.js");
 const {GUST_BRON,GUST_PRODUCTIE,HELPER_PRODUCTIE}=require("./wind-gust-copy-owner.js");
 const {ZONUREN_BRON,ZONUREN_PRODUCTIE,HELPER_PRODUCTIE:ZON_HELPER_PRODUCTIE}=require("./sunshine-copy-owner.js");
+const {
+  DCOND_BRON,DCOND_PRODUCTIE,DRAIN_BRON,DRAIN_PRODUCTIE,KOP_BRON,KOP_PRODUCTIE,
+  HELPER_PRODUCTIE:DAILY_HELPER_PRODUCTIE
+}=require("./daily-forecast-owner.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
@@ -51,6 +55,22 @@ for(const verouderd of ["uiZonurenWoord","uiBasisZonurenTegel","zonurenTegel=fun
 }
 if(!runtime.includes("UI-polish wrapt zonurenTegel() daarom niet meer."))
   throw new Error("UI-polish runtime mist het expliciete zonuren-ownershipcontract.");
+
+/* De zeven-dagenpresentatie is eveneens vóór UI-polish definitief. De base-owner
+   bewaart alle daily waarden en interactie, maar bezit nu de zichtbare koppen,
+   de ene mm-weergave en de Droog-presentatie. UI-polish mag dagen() niet wrappen. */
+if((html.split(DAILY_HELPER_PRODUCTIE).length-1)!==1)throw new Error("Base-build daily-forecast helper ontbreekt of is dubbel vóór UI-polish.");
+for(const [productie,label] of [[DCOND_PRODUCTIE,"weekomschrijving"],[DRAIN_PRODUCTIE,"weekneerslagcel"],[KOP_PRODUCTIE,"weekkoppen"]]){
+  if((html.split(productie).length-1)!==1)throw new Error("Base-build "+label+" ontbreekt of is dubbel vóór UI-polish.");
+}
+for(const [bron,label] of [[DCOND_BRON,"oude weekomschrijving"],[DRAIN_BRON,"oude weekneerslagcel"],[KOP_BRON,"oude weekkoppen"]]){
+  if(html.includes(bron))throw new Error(label+" heeft de base-build overleefd.");
+}
+for(const verouderd of ["uiDagNeerslagTekst","uiPolishDagen","uiBasisDagen","dagen=function"]){
+  if(runtime.includes(verouderd))throw new Error("Verouderde UI-polish daily-forecast owner staat weer in de bronruntime: "+verouderd);
+}
+if(!runtime.includes("UI-polish wrapt dagen() daarom niet meer."))
+  throw new Error("UI-polish runtime mist het expliciete daily-forecast ownershipcontract.");
 
 /* Accessibility hoort in het definitieve artifact, zonder de dashboardstructuur
    of weerlogica te herschikken. #app is al de ene container van alle primaire
@@ -115,11 +135,13 @@ if(!html.includes("Geen officiële weerwaarschuwingen voor deze locatie."))throw
 if(html.includes("uiPolishRegenperiodeKansen")||html.includes("uiPolishRegenperiodeDaglabel")||html.includes("data-ui-rain-period-probability"))throw new Error("UI-polish overschrijft de Q4-regenperiodepresentatie nog steeds.");
 if(html.includes("function uiWindstootTekst(pg,nu,dag,vak){")||html.includes("const uiBasisMeters=meters;"))throw new Error("UI-polish bezit na assemblage opnieuw windstootcopy of meters().");
 if(html.includes("function uiZonurenWoord(uur,daglichtUur){")||html.includes("const uiBasisZonurenTegel=zonurenTegel;"))throw new Error("UI-polish bezit na assemblage opnieuw zonurencopy of zonurenTegel().");
+if(html.includes("function uiDagNeerslagTekst(kans,som){")||html.includes("const uiBasisDagen=dagen;"))throw new Error("UI-polish bezit na assemblage opnieuw daily-forecast copy of dagen().");
 if((html.split(ZONUREN_PRODUCTIE).length-1)!==1||(html.split(ZON_HELPER_PRODUCTIE).length-1)!==1)throw new Error("Finale zonuren-owner is niet uniek in het artifact.");
+if((html.split(DAILY_HELPER_PRODUCTIE).length-1)!==1||(html.split(DCOND_PRODUCTIE).length-1)!==1||(html.split(DRAIN_PRODUCTIE).length-1)!==1||(html.split(KOP_PRODUCTIE).length-1)!==1)throw new Error("Finale daily-forecast owner is niet uniek in het artifact.");
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden na UI-polish.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-polish-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"ui-polish-20260813");
-console.log("UI-polish toegepast: rustige waarschuwingpresentatie, bereik-kop, Q4 als enige regenperiode-owner, base zonuren-owner geverifieerd, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
+console.log("UI-polish toegepast: rustige waarschuwingpresentatie, Q4 als enige regenperiode-owner, base zonuren- en daily-forecast owners geverifieerd, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
