@@ -6,6 +6,7 @@ const vm=require("vm");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const {START_BRON,START_PRODUCTIE,EIND_BRON,EIND_PRODUCTIE}=require("./warning-render-state.js");
 const {GUST_BRON,GUST_PRODUCTIE,HELPER_PRODUCTIE}=require("./wind-gust-copy-owner.js");
+const {ZONUREN_BRON,ZONUREN_PRODUCTIE,HELPER_PRODUCTIE:ZON_HELPER_PRODUCTIE}=require("./sunshine-copy-owner.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
@@ -38,6 +39,18 @@ for(const verouderd of ["uiWindstootTekst","uiBasisMeters",'piek("wind_gusts_10m
 }
 if(!runtime.includes("UI-polish wrapt meters() daarom niet meer."))
   throw new Error("UI-polish runtime mist het expliciete windstoot/pressure ownershipcontract.");
+
+/* Ook zonurencopy is vóór deze late presentatielaag al definitief. De base-owner
+   bewaart exact dezelfde lokale dag- en zondata; UI-polish mag de tegel niet
+   opnieuw wrappen of zelf daglichturen en copy berekenen. */
+if((html.split(ZONUREN_PRODUCTIE).length-1)!==1)throw new Error("Base-build zonurentegel ontbreekt of is dubbel vóór UI-polish.");
+if((html.split(ZON_HELPER_PRODUCTIE).length-1)!==1)throw new Error("Base-build zonurencopy-helper ontbreekt of is dubbel vóór UI-polish.");
+if(html.includes(ZONUREN_BRON))throw new Error("Oude zonurentegel heeft de base-build overleefd.");
+for(const verouderd of ["uiZonurenWoord","uiBasisZonurenTegel","zonurenTegel=function"]){
+  if(runtime.includes(verouderd))throw new Error("Verouderde UI-polish zonurenowner staat weer in de bronruntime: "+verouderd);
+}
+if(!runtime.includes("UI-polish wrapt zonurenTegel() daarom niet meer."))
+  throw new Error("UI-polish runtime mist het expliciete zonuren-ownershipcontract.");
 
 /* Accessibility hoort in het definitieve artifact, zonder de dashboardstructuur
    of weerlogica te herschikken. #app is al de ene container van alle primaire
@@ -101,10 +114,12 @@ if(!html.includes('data-ui-warning-loading="1">Officiële weerwaarschuwingen con
 if(!html.includes("Geen officiële weerwaarschuwingen voor deze locatie."))throw new Error("Lege waarschuwing-eindstate ontbreekt uit definitief artifact.");
 if(html.includes("uiPolishRegenperiodeKansen")||html.includes("uiPolishRegenperiodeDaglabel")||html.includes("data-ui-rain-period-probability"))throw new Error("UI-polish overschrijft de Q4-regenperiodepresentatie nog steeds.");
 if(html.includes("function uiWindstootTekst(pg,nu,dag,vak){")||html.includes("const uiBasisMeters=meters;"))throw new Error("UI-polish bezit na assemblage opnieuw windstootcopy of meters().");
+if(html.includes("function uiZonurenWoord(uur,daglichtUur){")||html.includes("const uiBasisZonurenTegel=zonurenTegel;"))throw new Error("UI-polish bezit na assemblage opnieuw zonurencopy of zonurenTegel().");
+if((html.split(ZONUREN_PRODUCTIE).length-1)!==1||(html.split(ZON_HELPER_PRODUCTIE).length-1)!==1)throw new Error("Finale zonuren-owner is niet uniek in het artifact.");
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden na UI-polish.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-polish-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"ui-polish-20260813");
-console.log("UI-polish toegepast: rustige waarschuwingpresentatie, bereik-kop, Q4 als enige regenperiode-owner, daglichtbewuste zontekst, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
+console.log("UI-polish toegepast: rustige waarschuwingpresentatie, bereik-kop, Q4 als enige regenperiode-owner, base zonuren-owner geverifieerd, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
