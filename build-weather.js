@@ -102,12 +102,6 @@ html=pasSunshineCopyToe(html);
    die renderer zelf, zodat UI-polish dagen() niet meer hoeft te wrappen. */
 html=pasDailyForecastOwnerToe(html);
 
-/* De briefing blijft dezelfde forecast-, wind- en neerslagdata selecteren. De
-   pure owner maakt uitsluitend de bestaande finale bron-/tijdsemantiek direct
-   onderdeel van briefing(), zodat UI-polish de briefing niet opnieuw hoeft te
-   wrappen en achteraf HTML hoeft te herschrijven. */
-html=pasBriefingCopyToe(html);
-
 /* De compacte meelopende weerbalk gebruikte oorspronkelijk alleen een
    IntersectionObserver. Dat is zuinig, maar browsers mogen zo'n callback rond
    layoutwisselingen uitstellen. Productie krijgt daarom één gedeelde
@@ -183,6 +177,13 @@ html=html.replace(start,
   +"/* ===== PROGRESSIEVE LOCATIELADING ===== */\n"+progressiveJs+"\n/* ===== EINDE PROGRESSIEVE LOCATIELADING ===== */\n\n"
   +"/* ===== WERELDWIJDE LOCATIEHARDENING ===== */\n"+globalLocationJs+"\n/* ===== EINDE WERELDWIJDE LOCATIEHARDENING ===== */\n\n"+start);
 
+/* De briefing blijft dezelfde forecast-, wind- en neerslagdata selecteren. De
+   pure owner draait pas nadat de inhoudelijke runtimes zijn geassembleerd, zodat
+   zowel de basistekst als de historische waarschuwing-voorrangzin in één keer
+   naar de reeds zichtbare finale productiecopy migreren. UI-polish hoeft
+   briefing() daardoor niet meer te wrappen of achteraf HTML te herschrijven. */
+html=pasBriefingCopyToe(html);
+
 /* Lucht/pollen-correctheid is één pure productie-owner. De zes bestaande
    productregels worden nu al in de base-build toegepast; latere postbuildlagen
    mogen deze semantiek alleen nog verifiëren, niet herschrijven. */
@@ -214,6 +215,7 @@ const vereist=[
   "load(52.3676,4.9041,\"Amsterdam\",false,true,\"NL\")"
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);
+if(html.includes("De officiële waarschuwing heeft voorrang op de modelverwachting."))throw new Error("Redundante waarschuwing-voorrangzin heeft de base briefingowner overleefd.");
 
 /* SEO-fundering is productmetadata en hoort net als de overige canonieke
    productieconfiguratie in de base-build. De pure owner gebruikt uitsluitend
