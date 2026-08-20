@@ -6,31 +6,25 @@ const context={};vm.createContext(context);vm.runInContext(runtime,context);
 const api=context.WeatherNowUiPolish20260813;
 assert(api,"UI-polish helpercontract ontbreekt");
 
-assert.equal(
-  api.briefingBronSemantiek("Vandaag was het rond 13:00 het warmst, met <b>29 graden</b>."),
-  "Het verwachte maximum lag vandaag rond 13:00 op <b>29 graden</b>."
-);
-assert.equal(
-  api.briefingBronSemantiek("Vandaag wordt het rond 14:00 het warmst, met maximaal <b>24 graden</b>."),
-  "Het verwachte maximum ligt vandaag rond 14:00 op <b>24 graden</b>."
-);
-assert.equal(
-  api.briefingBronSemantiek("Morgen wordt het rond 15:00 het warmst, met maximaal <b>21&nbsp;graden</b>."),
-  "Het verwachte maximum ligt morgen rond 15:00 op <b>21&nbsp;graden</b>."
-);
 assert.equal(api.regenperiodeDagprefix("2026-08-17","2026-08-16"),"ma ");
 assert.equal(api.regenperiodeDagprefix("2026-08-16","2026-08-16"),"");
-
-const briefing="Vandaag wordt het warm. Vannacht koelt het af naar <b>16 graden</b>.";
-assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T00:03",19),"Vandaag wordt het warm. Later vannacht koelt het af naar <b>16 graden</b>.");
-assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T04:59",19),"Vandaag wordt het warm. Later vannacht koelt het af naar <b>16 graden</b>.");
-assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T04:28",16),"Vandaag wordt het warm. De minimumtemperatuur vannacht ligt rond <b>16 graden</b>.");
-assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T04:28",15.5),"Vandaag wordt het warm. De minimumtemperatuur vannacht ligt rond <b>16 graden</b>.");
-assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T05:00",19),briefing);
-assert.equal(api.briefingTijdtaal(briefing,"2026-08-15T23:30",19),briefing);
-
 assert.equal(api.isNwsStructuur("* WHAT...Heat index values. * WHERE...Dallas."),true);
 assert.equal(api.isNwsStructuur("Plaatselijk zware buien mogelijk."),false);
+
+/* Briefing bron- en tijdsemantiek worden door de pure briefing-copy owner in de
+   base-build gezet. UI-polish mag briefing() niet meer wrappen of #brief-HTML
+   achteraf herschrijven; neerslagpresentatie blijft bewust een andere owner. */
+assert.equal(api.briefingBronSemantiek,undefined,"UI-polish mag geen briefing-broncopyhelper meer exporteren");
+assert.equal(api.briefingTijdtaal,undefined,"UI-polish mag geen briefing-tijdcopyhelper meer exporteren");
+assert(!runtime.includes("uiBriefingBronSemantiek"),"UI-polish mag geen late briefing-broncopyhelper meer bevatten");
+assert(!runtime.includes("uiBriefingTijdtaal"),"UI-polish mag geen late briefing-tijdcopyhelper meer bevatten");
+assert(!runtime.includes("uiBasisBriefing"),"UI-polish mag briefing() niet meer wrappen");
+assert(!runtime.includes('document.getElementById("brief")'),"UI-polish mag briefing-HTML niet meer achteraf herschrijven");
+assert(!runtime.includes("De officiële waarschuwing heeft voorrang op de modelverwachting."),"UI-polish mag stale briefingcopy niet meer defensief verbergen");
+assert(runtime.includes("UI-polish wrapt briefing() daarom niet meer."),"UI-polish mist expliciet briefingcopy-ownershipcontract");
+assert(apply.includes('require("./briefing-copy-owner.js")'),"UI-polish apply-stap moet briefingcopy-ownercontract hergebruiken");
+assert(apply.includes("BRIEF_HELPER_PRODUCTIE")&&apply.includes("VANDAAG_PIEK_PRODUCTIE")&&apply.includes("MORGEN_PRODUCTIE"),"UI-polish verifieert de base briefingcopy-owner niet");
+assert(apply.includes("Verouderde briefing-waarschuwingcopy bestaat vóór UI-polish nog"),"stale waarschuwingzin moet upstream fail-fast worden bewaakt");
 
 /* Q3/senior meters() is de enige eigenaar van de UV-presentatie. UI-polish
    mag die zichtbare copy niet opnieuw berekenen of na Q3 overschrijven. */
@@ -114,4 +108,4 @@ assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
 assert(apply.includes('if((html.match(/<main id="app" style="display:none">/g)||[]).length!==1)'),"definitieve main-landmark wordt niet op uniciteit geverifieerd");
-console.log("UI-polish regressiecontract groen: bronsemantiek, warning-state base ownership, tijdtaal, Q4-ownership, geen dubbele UV-/pollen-/luchtdruk-/windstoot-/zonuren-/daily-forecast owner en accessibility.");
+console.log("UI-polish regressiecontract groen: warning-state/Q4/accessibility blijven, en UV-/pollen-/luchtdruk-/windstoot-/zonuren-/daily-forecast-/briefingcopy hebben geen dubbele owner meer.");
