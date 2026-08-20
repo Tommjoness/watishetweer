@@ -1,4 +1,4 @@
-/* Gerichte fysieke-iPhone-polish; Nachtzicht en bronpresentatie. */
+/* Gerichte fysieke-iPhone-polish; bediening, Nachtzicht en bronpresentatie. */
 
 :root{
   --moon-unlit:var(--ink-70);
@@ -48,6 +48,29 @@ footer .bron-bronnen .bronitem{
 #nights .nacht-meer{display:none}
 
 @media(max-width:900px){
+  /* De headerbediening krijgt op aanraakschermen dezelfde rustige hiërarchie als
+     de rest van het product. De opslaglogica en knopvolgorde blijven ongemoeid;
+     dit zijn uitsluitend afmetingen, ritme en presentatie. */
+  .mastright{gap:7px}
+  .chips{margin-top:10px;gap:6px}
+  .chiprij{gap:6px}
+  .chip{min-height:40px}
+  .chip.add{
+    min-height:44px;
+    padding:0 2px;
+    border:0;
+    background:transparent;
+    color:var(--ink-70);
+    box-shadow:inset 0 -1px 0 var(--rule);
+    font-size:12.5px;
+    font-weight:500;
+  }
+  .chip.add:hover,.chip.add:focus-visible{
+    border:0;
+    color:var(--ink);
+    box-shadow:inset 0 -1px 0 var(--ink);
+  }
+
   #nights .row.night{
     grid-template-columns:56px 46px minmax(32px,1fr) 64px;
     column-gap:8px;
@@ -126,6 +149,40 @@ footer .bron-bronnen .bronitem{
     letter-spacing:.12em;
     text-transform:uppercase;
   }
+}
+
+@media(max-width:430px){
+  /* Eén compositie in plaats van een zoekveld met daaronder drie los ogende
+     vakken. De invoer is de eerste rij; de drie acties delen exact de tweede. */
+  .tools{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    width:100%;
+    border:1px solid var(--rule);
+    background:var(--sheet);
+  }
+  .tools > input[type=text]{
+    grid-column:1 / -1;
+    width:100%;
+    min-height:46px;
+    padding:10px 12px;
+    border:0;
+    border-bottom:1px solid var(--rule);
+    font-size:15px;
+  }
+  .tools > #here,.tools > #ververs,.tools > #thema{
+    min-height:42px;
+    padding:8px 7px;
+    border:0;
+    border-right:1px solid var(--rule);
+    font-size:10px;
+    letter-spacing:.07em;
+    overflow:visible;
+    text-overflow:clip;
+  }
+  .tools > #thema{border-right:0}
+  .results{top:46px;left:-1px;right:-1px}
+  #stamp{padding:0 1px;line-height:1.35}
 }
 
 @media(max-width:360px){
