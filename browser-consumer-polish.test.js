@@ -158,6 +158,7 @@ async function controleer(page, naam, modus) {
       const scoreRect = scoreEl ? scoreEl.getBoundingClientRect() : null;
       const balkRect = balkEl ? balkEl.getBoundingClientRect() : null;
       return {
+        visible: !rij.hidden && getComputedStyle(rij).display !== "none",
         score: (scoreEl && scoreEl.textContent || "").trim(),
         advies: ((rij.querySelector(".nachtadvies") || {}).textContent || "").trim(),
         bewolking: ((rij.querySelector(".nmeta:not(.wide)") || {}).textContent || "").replace(/\s+/g, " ").trim(),
@@ -254,6 +255,7 @@ async function controleer(page, naam, modus) {
 
   assert.ok(resultaat.nachtAdvies > 0 && resultaat.nachtMaan > 0, `${naam} ${modus}: Nachtzicht heeft rustige aparte advies- en maanregels`);
   assert.ok(resultaat.nachtRijen.length > 0, `${naam} ${modus}: Nachtzicht heeft beoordeelde nachten`);
+  if (modus === "mobiel") assert.equal(resultaat.nachtRijen.filter(rij => rij.visible).length, Math.min(3, resultaat.nachtRijen.length), `${naam} ${modus}: alleen de eerste drie Nachtzicht-rijen zijn standaard zichtbaar`);
   for (const rij of resultaat.nachtRijen) {
     const m = /^(\d+)\/10$/.exec(rij.score);
     if (!m) continue;
@@ -262,7 +264,7 @@ async function controleer(page, naam, modus) {
     assert.ok(rij.advies.toLowerCase().includes(oordeel), `${naam} ${modus}: ${rij.score} en Nachtzicht-oordeel zijn consistent`);
     assert.equal(rij.balk, score * 10, `${naam} ${modus}: ${rij.score} en Nachtzicht-balk zijn consistent`);
     assert.match(rij.bewolking, /^\d+%$/, `${naam} ${modus}: Bewolking-kolom herhaalt het woord niet per rij`);
-    if (modus === "mobiel") assert.ok(rij.scoreBalkRuimte >= 8, `${naam} ${modus}: ${rij.score} houdt minimaal 8px lucht vóór de scorebalk`);
+    if (modus === "mobiel" && rij.visible) assert.ok(rij.scoreBalkRuimte >= 8, `${naam} ${modus}: ${rij.score} houdt minimaal 8px lucht vóór de scorebalk`);
   }
   assert.ok(resultaat.maanSvgs >= resultaat.nachtMaan + 1, `${naam} ${modus}: maanfase gebruikt monochrome inline-SVG in kop en nachtrijen`);
   assert.ok(!/[🌑🌒🌓🌔🌕🌖🌗🌘]/u.test(resultaat.maanTekst), `${naam} ${modus}: geen platformkleurige maanemoji blijft zichtbaar`);

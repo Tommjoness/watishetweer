@@ -36,6 +36,10 @@ for(const vereist of [
   "weerbriefing.plaatscache.q1",
   "CHECKPOINT 25 Q1",
   "verbeterNachtzicht",
+  "nachtzichtCompactAantal",
+  "werkNachtzichtCompactBij",
+  "Meer nachten bekijken",
+  "nacht-meer",
   "normaliseerNachtDagdata",
   "nachtIsActiefNu",
   "corrigeerNachtVensterBron",
@@ -45,6 +49,7 @@ for(const vereist of [
   "H=M?250:296",
   "pt=M?59:76, ih=M?145:160",
   "tijdLabelVrij=nuX==null",
+  "M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw",
   "val+labelHoogte/2+4<=pb",
   "ruimBotsendeAslabelsOp",
   "if(!M)return;",
@@ -74,4 +79,4 @@ const botsingsBron=html.slice(botsingsLaag,etmaalEind);
 if(!botsingsBron.includes("if(!M)return;"))throw new Error("Fontbox-botsingslaag moet uitsluitend op mobiele grafieken actief zijn; desktop-uuras mag niet worden opgeschoond.");
 
 const verwacht=verifieerServiceworkerCache(OUT,"checkpoint-50");
-console.log("Definitieve checkpoint-50 artifact geverifieerd: één Nachtzicht-owner met kalendergrens en zonsopkomstgrens, scanbare maan/zichtregels, brongetrouwe maanfase, mobiel begrensde fontbox-collision cleanup en cache "+verwacht+".");
+console.log("Definitieve checkpoint-50 artifact geverifieerd: mobiel etmaal toont alleen nu/min/max permanent, Nachtzicht toont drie nachten met toegankelijke uitklap, één Nachtzicht-owner met kalendergrens en zonsopkomstgrens, scanbare maan/zichtregels, brongetrouwe maanfase en cache "+verwacht+".");

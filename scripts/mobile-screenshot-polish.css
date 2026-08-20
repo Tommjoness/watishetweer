@@ -45,6 +45,7 @@ footer .bron-bronnen .bronitem{
 #nights .nachtadvies .nachtvenster{margin-top:2px;color:var(--ink-45)}
 #nights .nachtmaan .nachtzichtregel{color:var(--ink-45)}
 #nights .nachtmaan .nachtmaanregel{margin-top:1px;color:var(--ink-25)}
+#nights .nacht-meer{display:none}
 
 @media(max-width:900px){
   #nights .row.night{
@@ -91,6 +92,24 @@ footer .bron-bronnen .bronitem{
     height:14px;
     vertical-align:-2px;
   }
+  #nights .row.night[hidden]{display:none!important}
+  #nights .nacht-meer{
+    display:block;
+    width:100%;
+    margin:4px 0 0;
+    padding:12px 0 3px;
+    border:0;
+    border-top:1px solid var(--rule);
+    text-align:left;
+    color:var(--ink-70);
+    background:transparent;
+    font-family:var(--sans);
+    font-size:11px;
+    font-weight:500;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+  }
+  #nights .nacht-meer:hover{color:var(--ink);border-top-color:var(--ink)}
 
   #days .row.day:not(.kop) .dname{font-size:13.5px}
   #days .row.day:not(.kop) .dwind,

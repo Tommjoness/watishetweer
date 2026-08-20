@@ -116,6 +116,7 @@ async function controleer(page,naam,breedte){
       const score=rij.querySelector(".score"),bar=rij.querySelector(".sbar"),cloud=rij.querySelector(".nmeta:not(.wide)"),wide=rij.querySelector(".nmeta.wide"),advies=rij.querySelector(".nachtadvies"),moon=rij.querySelector(".nachtmaan"),maanBij=moon&&moon.querySelector(".maanbij"),maanSvg=moon&&moon.querySelector(".maan-fase-svg-v2");
       const sr=rect(score),br=rect(bar),cr=rect(cloud),rr=rect(rij),wr=rect(wide);
       return {
+        visible:!rij.hidden&&getComputedStyle(rij).display!=="none",
         score:(score.textContent||"").trim(),advies:(advies&&advies.textContent||"").trim(),cloud:(cloud.textContent||"").trim(),
         barWidth:parseFloat(((rij.querySelector(".sbar i")||{}).style||{}).width||"0"),
         scoreBarGap:br.l-sr.r,rowRight:rr.r,cloudRight:cr.r,cloudLeft:cr.l,
@@ -165,31 +166,38 @@ async function controleer(page,naam,breedte){
   assert.ok(Number.isFinite(r.moonHeading.source)&&Number.isFinite(r.moonHeading.rendered)&&Math.abs(r.moonHeading.source-r.moonHeading.rendered)<=0.0001,`${naam} ${breedte}px: maanfase in de kop volgt de berekende fase`);
   assert.equal(r.canonicalBeste,0,`${naam} ${breedte}px: oude overprecieze 'Beste periode'-tekst is niet zichtbaar`);
 
+  const mobiel=breedte<760;
+  const zichtbareNachten=r.nightRows.filter(rij=>rij.visible).length;
+  assert.equal(zichtbareNachten,mobiel?Math.min(3,r.nightRows.length):r.nightRows.length,`${naam} ${breedte}px: juiste aantal Nachtzicht-rijen zichtbaar`);
+
   for(const [i,rij] of r.nightRows.entries()){
     const m=/^(\d+)\/10$/.exec(rij.score);assert(m,`${naam} ${breedte}px nacht ${i}: zichtbare scorevorm`);
     const score=Number(m[1]);
     assert.equal(oordeelUitAdvies(rij.advies).toLowerCase(),oordeelVoorScore(score).toLowerCase(),`${naam} ${breedte}px nacht ${i}: oordeel volgt zichtbare score`);
     assert.equal(rij.barWidth,score*10,`${naam} ${breedte}px nacht ${i}: balk volgt zichtbare score`);
-    assert.ok(rij.scoreBarGap>=8,`${naam} ${breedte}px nacht ${i}: score en balk hebben minimaal 8px ruimte (${rij.scoreBarGap}px)`);
-    assert.ok(rij.rowRight<=r.nachtRight+1,`${naam} ${breedte}px nacht ${i}: rij blijft binnen Nachtzicht`);
-    assert.ok(rij.cloudRight<=r.nachtRight+1&&rij.cloudLeft>=0,`${naam} ${breedte}px nacht ${i}: bewolking blijft binnen kolom`);
-    assert.ok(rij.rowScroll<=1,`${naam} ${breedte}px nacht ${i}: rij-inhoud loopt niet horizontaal uit (${rij.rowScroll}px)`);
-    assert.ok(rij.wideRight<=r.nachtRight+1,`${naam} ${breedte}px nacht ${i}: tekstkolom blijft binnen Nachtzicht`);
-    assert.ok(rij.wideScroll<=1,`${naam} ${breedte}px nacht ${i}: tekstkolom wrapt zonder interne overflow (${rij.wideScroll}px)`);
+    if(rij.visible){
+      assert.ok(rij.scoreBarGap>=8,`${naam} ${breedte}px nacht ${i}: score en balk hebben minimaal 8px ruimte (${rij.scoreBarGap}px)`);
+      assert.ok(rij.rowRight<=r.nachtRight+1,`${naam} ${breedte}px nacht ${i}: rij blijft binnen Nachtzicht`);
+      assert.ok(rij.cloudRight<=r.nachtRight+1&&rij.cloudLeft>=0,`${naam} ${breedte}px nacht ${i}: bewolking blijft binnen kolom`);
+      assert.ok(rij.rowScroll<=1,`${naam} ${breedte}px nacht ${i}: rij-inhoud loopt niet horizontaal uit (${rij.rowScroll}px)`);
+      assert.ok(rij.wideRight<=r.nachtRight+1,`${naam} ${breedte}px nacht ${i}: tekstkolom blijft binnen Nachtzicht`);
+      assert.ok(rij.wideScroll<=1,`${naam} ${breedte}px nacht ${i}: tekstkolom wrapt zonder interne overflow (${rij.wideScroll}px)`);
+    }
     assert.equal(rij.moonBase,1,`${naam} ${breedte}px nacht ${i}: maanfase heeft één herkenbare schaduwschijf`);
     assert.ok(Number.isFinite(rij.moonSource)&&Number.isFinite(rij.moonRendered)&&Math.abs(rij.moonSource-rij.moonRendered)<=0.0001,`${naam} ${breedte}px nacht ${i}: zichtbare fase volgt de berekende fase`);
     assert(/^\d{1,3}%$/.test(rij.cloud),`${naam} ${breedte}px nacht ${i}: mobiele/compacte bewolking blijft helder percentage`);
   }
   assert.ok(r.cloudKopRight===null||r.cloudKopRight<=r.nachtRight+1,`${naam} ${breedte}px: kop Bewolking loopt niet uit Nachtzicht`);
 
-  const mobiel=breedte<760,basisH=mobiel?250:296;
+  const basisH=mobiel?250:296;
   assert.equal(r.viewBox.w,mobiel?380:900,`${naam} ${breedte}px: grafiekbreedte blijft canoniek`);
   /* Checkpoint 50 bewaakt de basisgrafiek. Latere lagen mogen uitsluitend onder
      die basis extra gereserveerde informatieruimte toevoegen (Q4 regenperioden),
      maar de grafiek mag nooit krimpen of onbeheerst doorgroeien. */
   assert.ok(r.viewBox.h>=basisH&&r.viewBox.h<=basisH+100,`${naam} ${breedte}px: grafiekhoogte blijft binnen basis + gereserveerde onderruimte (${r.viewBox.h}px)`);
   assert.deepEqual(r.nu,["nu 21°"],`${naam} ${breedte}px: exact één actuele temperatuur in grafiek`);
-  assert.ok(r.tempLabels>=6,`${naam} ${breedte}px: voldoende zichtbare temperatuurreferenties`);
+  if(mobiel)assert.ok(r.tempLabels>=1&&r.tempLabels<=2,`${naam} ${breedte}px: mobiel toont alleen globale minimum/maximumlabels`);
+  else assert.ok(r.tempLabels>=6,`${naam} ${breedte}px: desktop houdt voldoende zichtbare temperatuurreferenties`);
   assert.deepEqual(r.tempBuiten,[],`${naam} ${breedte}px: temperatuurcijfers blijven binnen grafiek`);
   assert.deepEqual(r.bots,[],`${naam} ${breedte}px: zichtbare grafiekteksten botsen niet; botsingen: ${JSON.stringify(r.bots)}`);
 }

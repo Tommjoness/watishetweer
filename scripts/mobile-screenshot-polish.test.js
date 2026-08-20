@@ -6,14 +6,21 @@ const path=require("path");
 const p=require("./mobile-screenshot-polish.js");
 
 const mobileCss=fs.readFileSync(path.join(__dirname,"mobile-screenshot-polish.css"),"utf8");
+const apply=fs.readFileSync(path.join(__dirname,"apply-mobile-screenshot-polish.js"),"utf8");
 assert(/#nights \.row\.night\{[\s\S]*?row-gap:5px;[\s\S]*?\}/.test(mobileCss),"Nachtzicht houdt op mobiel extra verticale ademruimte");
 assert(/#nights \.row\.night\.kop > \.nmeta:not\(\.wide\)\{[\s\S]*?font-size:10px!important;[\s\S]*?\}/.test(mobileCss),"Mobiele Nachtzicht-kop blijft minimaal 10 px op normale telefoonbreedte");
 assert(/#nights \.row\.night \.nachtadvies\{[\s\S]*?font-size:13px;[\s\S]*?line-height:1\.4;[\s\S]*?\}/.test(mobileCss),"Mobiel Nachtzicht-advies gebruikt leesbare 13 px tekst");
 assert(/#nights \.row\.night \.nachtmaan\{[\s\S]*?font-size:12px;[\s\S]*?line-height:1\.4;[\s\S]*?\}/.test(mobileCss),"Mobiele maantoelichting zakt niet onder 12 px");
 assert(/@media\(max-width:360px\)[\s\S]*?#nights \.row\.night\.kop > \.nmeta:not\(\.wide\)\{font-size:9\.5px!important;/.test(mobileCss),"Ook op 320–360 px blijft de Nachtzicht-kop leesbaar zonder kolomoverflow");
 assert(mobileCss.includes(".nachtzichtregel")&&mobileCss.includes(".nachtmaanregel"),"zicht en maan hebben afzonderlijke presentatie-regels");
+assert(mobileCss.includes("#nights .nacht-meer")&&mobileCss.includes('#nights .row.night[hidden]'),"Nachtzicht heeft een mobiele uitklapbediening zonder rijen uit de DOM te verwijderen");
 assert(/#days \.row\.day:not\(\.kop\) \.dname\{font-size:13\.5px\}/.test(mobileCss),"Mobiele dagnaam blijft minimaal 13,5 px");
 assert(/#days \.row\.day:not\(\.kop\) \.dwind,[\s\S]*?#days \.row\.day:not\(\.kop\) \.drain\{font-size:13px\}/.test(mobileCss),"Mobiele wind- en neerslagtekst blijven minimaal 13 px");
+assert(apply.includes("M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw"),"Mobiel etmaal toont permanent alleen globale extrema naast het aparte nu-label");
+
+assert.equal(p.nachtzichtCompactAantal(6,true),3);
+assert.equal(p.nachtzichtCompactAantal(2,true),2);
+assert.equal(p.nachtzichtCompactAantal(6,false),6);
 
 const afnemend=p.maanFaseUitBeschrijving("afnemende sikkel, 7 procent verlicht");
 const wassend=p.maanFaseUitBeschrijving("wassende sikkel, 7 procent verlicht");
@@ -91,4 +98,4 @@ assert.equal(p.pollenEenheid(1.5),"korrels/m³");
 assert.equal(p.pollenEenheid(0),"korrels/m³");
 assert.equal(p.pollenEenheid(4),"korrels/m³");
 
-console.log("Mobiele screenshot-polish: kalendergrens, Nachtzicht, maanfase, natuurlijke maancopy, weekleesbaarheid en pollenregressies geslaagd.");
+console.log("Mobiele screenshot-polish: compacte etmaallabels, uitklapbaar Nachtzicht, kalendergrens, maanfase, natuurlijke maancopy, weekleesbaarheid en pollenregressies geslaagd.");

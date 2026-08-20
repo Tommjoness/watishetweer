@@ -220,6 +220,48 @@ function verbeterNachtzicht(data,nuLokaal,actief){
   verbeterMaanfasen();
 }
 
+/* Op een telefoon is zes volledig uitgeschreven nachten veel verticale inhoud.
+   De data en rijen blijven volledig in de DOM; alleen de presentatie start met
+   de eerste drie nachten en biedt daarna één expliciete, toegankelijke keuze om
+   de rest te tonen. Desktop behoudt altijd alle nachten. */
+function nachtzichtCompactAantal(totaal,mobiel){
+  const n=Math.max(0,Math.floor(Number(totaal)||0));
+  return mobiel?Math.min(3,n):n;
+}
+function werkNachtzichtCompactBij(){
+  const houder=document.getElementById("nights");if(!houder)return;
+  const rijen=[...houder.querySelectorAll(".row.night:not(.kop)")];
+  const mobiel=typeof window!=="undefined"&&typeof window.matchMedia==="function"
+    ?window.matchMedia("(max-width:900px)").matches
+    :typeof window!=="undefined"&&window.innerWidth<=900;
+  let knop=houder.querySelector(".nacht-meer");
+  const zichtbaar=nachtzichtCompactAantal(rijen.length,mobiel);
+  if(!mobiel||rijen.length<=zichtbaar){
+    rijen.forEach(rij=>{rij.hidden=false;rij.classList.remove("nacht-extra");});
+    if(knop)knop.remove();
+    delete houder.dataset.nachtExpanded;
+    return;
+  }
+  const uitgebreid=houder.dataset.nachtExpanded==="true";
+  rijen.forEach((rij,i)=>{
+    const extra=i>=zichtbaar;
+    rij.classList.toggle("nacht-extra",extra);
+    rij.hidden=extra&&!uitgebreid;
+  });
+  if(!knop){
+    knop=document.createElement("button");
+    knop.type="button";
+    knop.className="nacht-meer";
+    knop.addEventListener("click",()=>{
+      houder.dataset.nachtExpanded=houder.dataset.nachtExpanded==="true"?"false":"true";
+      werkNachtzichtCompactBij();
+    });
+    houder.appendChild(knop);
+  }
+  knop.setAttribute("aria-expanded",uitgebreid?"true":"false");
+  knop.textContent=uitgebreid?"Minder nachten tonen":"Meer nachten bekijken";
+}
+
 function pollenEenheid(waarde){const v=getal(waarde);return v!==null&&Math.round(v)===1?"korrel/m³":"korrels/m³";}
 function corrigeerPollenPresentatie(){
   document.querySelectorAll("#aq .stat").forEach(stat=>{
@@ -270,7 +312,7 @@ function structureerBronnen(){
 
 const api={
   maanFaseUitBeschrijving,maanFaseSvgV2,pollenEenheid,pollenKop,nachtOordeelGetoond,
-  nachtBalkPercentageGetoond,nachtLabelVarianten,nachtAdviesMetHorizon,
+  nachtBalkPercentageGetoond,nachtLabelVarianten,nachtAdviesMetHorizon,nachtzichtCompactAantal,
   corrigeerNachtVensterBron,dagdeelVanUur,datumVerschuif,normaliseerNachtDagdata,
   nachtIsActiefNu,formatteerMaanTekst,nachtMetaDelen
 };
@@ -288,8 +330,17 @@ nachten=function(){
   try{if(renderData!==origineel)S.d=renderData;basisNachten();}
   finally{S.d=origineel;}
   verbeterNachtzicht(renderData,nu,actief);
+  werkNachtzichtCompactBij();
   structureerBronnen();
 };
+
+let nachtCompactResizeTimer=null;
+if(typeof window!=="undefined"&&window.addEventListener){
+  window.addEventListener("resize",()=>{
+    if(nachtCompactResizeTimer!==null)clearTimeout(nachtCompactResizeTimer);
+    nachtCompactResizeTimer=setTimeout(werkNachtzichtCompactBij,120);
+  });
+}
 
 const basisLucht=lucht;
 lucht=function(){basisLucht();corrigeerPollenPresentatie();structureerBronnen();};
