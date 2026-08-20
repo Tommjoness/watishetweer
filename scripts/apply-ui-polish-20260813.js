@@ -33,7 +33,7 @@ if(!runtime.includes("/* Regenperiodepresentatie wordt volledig beheerd door Q4.
 if((html.split(GUST_PRODUCTIE).length-1)!==1)throw new Error("Base-build windstootcopy-call ontbreekt of is dubbel vóór UI-polish.");
 if((html.split(HELPER_PRODUCTIE).length-1)!==1)throw new Error("Base-build windstootcopy-helper ontbreekt of is dubbel vóór UI-polish.");
 if(html.includes(GUST_BRON))throw new Error("Oude windstootcopy heeft de base-build overleefd.");
-for(const verouderd of ["uiWindstootTekst","uiBasisMeters",'piek("wind_gusts_10m")','zetTekst("gustsub"')]){
+for(const verouderd of ["uiWindstootTekst","uiBasisMeters",'piek("wind_gusts_10m")','zetTekst("gustsub"']){
   if(runtime.includes(verouderd))throw new Error("Verouderde UI-polish windstootowner staat weer in de bronruntime: "+verouderd);
 }
 if(!runtime.includes("UI-polish wrapt meters() daarom niet meer."))
