@@ -11,6 +11,12 @@ const {
   DCOND_BRON,DCOND_PRODUCTIE,DRAIN_BRON,DRAIN_PRODUCTIE,KOP_BRON,KOP_PRODUCTIE,
   HELPER_PRODUCTIE:DAILY_HELPER_PRODUCTIE
 }=require("./daily-forecast-owner.js");
+const {
+  HELPER_PRODUCTIE:BRIEF_HELPER_PRODUCTIE,
+  NACHTZIN_BRON,NACHTZIN_PRODUCTIE,VANDAAG_PIEK_BRON,VANDAAG_PIEK_PRODUCTIE,
+  MORGEN_BRON,MORGEN_PRODUCTIE,VANDAAG_VERLEDEN_BRON,VANDAAG_VERLEDEN_PRODUCTIE,
+  VANDAAG_MAX_BRON,VANDAAG_MAX_PRODUCTIE,NACHT_STANDALONE_BRON,NACHT_STANDALONE_PRODUCTIE
+}=require("./briefing-copy-owner.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
@@ -71,6 +77,39 @@ for(const verouderd of ["uiDagNeerslagTekst","uiPolishDagen","uiBasisDagen","dag
 }
 if(!runtime.includes("UI-polish wrapt dagen() daarom niet meer."))
   throw new Error("UI-polish runtime mist het expliciete daily-forecast ownershipcontract.");
+
+/* Ook de bron- en tijdsemantiek van de briefing is al definitief in de
+   base-renderer. De late UI-polish mag briefing() niet meer wrappen of HTML na
+   rendering herschrijven. Neerslag-presentatie blijft een afzonderlijk domein
+   en wordt later in de pipeline bewust door zijn eigen owner gesynchroniseerd. */
+if((html.split(BRIEF_HELPER_PRODUCTIE).length-1)!==1)throw new Error("Base-build briefingcopy-helper ontbreekt of is dubbel vóór UI-polish.");
+for(const [productie,verwacht,label] of [
+  [NACHTZIN_PRODUCTIE,1,"briefing nachtzin"],
+  [VANDAAG_PIEK_PRODUCTIE,2,"briefing verwacht maximum vandaag"],
+  [MORGEN_PRODUCTIE,1,"briefing verwacht maximum morgen"],
+  [VANDAAG_VERLEDEN_PRODUCTIE,1,"briefing verstreken verwacht maximum"],
+  [VANDAAG_MAX_PRODUCTIE,1,"briefing maximum zonder piekuur"],
+  [NACHT_STANDALONE_PRODUCTIE,1,"briefing losse nachtzin"]
+]){
+  if((html.split(productie).length-1)!==verwacht)throw new Error("Base-build "+label+" ontbreekt of heeft onverwacht aantal vóór UI-polish.");
+}
+for(const [bron,label] of [
+  [NACHTZIN_BRON,"oude briefing nachtzin"],[VANDAAG_PIEK_BRON,"oude vandaag-piekcopy"],
+  [MORGEN_BRON,"oude morgencopy"],[VANDAAG_VERLEDEN_BRON,"oude verstreken-vandaagcopy"],
+  [VANDAAG_MAX_BRON,"oude vandaag-maxcopy"],[NACHT_STANDALONE_BRON,"oude losse nachtzin"]
+]){
+  if(html.includes(bron))throw new Error(label+" heeft de base-build overleefd.");
+}
+for(const verouderd of ["uiBriefingBronSemantiek","uiBriefingTijdtaal","uiBasisBriefing","briefing=function"]){
+  if(runtime.includes(verouderd))throw new Error("Verouderde UI-polish briefingcopy-owner staat weer in de bronruntime: "+verouderd);
+}
+if(!runtime.includes("UI-polish wrapt briefing() daarom niet meer."))
+  throw new Error("UI-polish runtime mist het expliciete briefingcopy-ownershipcontract.");
+/* Deze zin werd historisch defensief door de late wrapper weggefilterd. Geen
+   huidige upstream owner hoort hem nog te produceren; als dat verandert moet de
+   echte bron worden gerepareerd in plaats van hem opnieuw hier te maskeren. */
+if(html.includes("De officiële waarschuwing heeft voorrang op de modelverwachting."))
+  throw new Error("Verouderde briefing-waarschuwingcopy bestaat vóór UI-polish nog; herstel de upstream owner in plaats van een late filter.");
 
 /* Accessibility hoort in het definitieve artifact, zonder de dashboardstructuur
    of weerlogica te herschikken. #app is al de ene container van alle primaire
@@ -136,12 +175,14 @@ if(html.includes("uiPolishRegenperiodeKansen")||html.includes("uiPolishRegenperi
 if(html.includes("function uiWindstootTekst(pg,nu,dag,vak){")||html.includes("const uiBasisMeters=meters;"))throw new Error("UI-polish bezit na assemblage opnieuw windstootcopy of meters().");
 if(html.includes("function uiZonurenWoord(uur,daglichtUur){")||html.includes("const uiBasisZonurenTegel=zonurenTegel;"))throw new Error("UI-polish bezit na assemblage opnieuw zonurencopy of zonurenTegel().");
 if(html.includes("function uiDagNeerslagTekst(kans,som){")||html.includes("const uiBasisDagen=dagen;"))throw new Error("UI-polish bezit na assemblage opnieuw daily-forecast copy of dagen().");
+if(html.includes("function uiBriefingBronSemantiek(html){")||html.includes("function uiBriefingTijdtaal(html,nuLokaal,huidigeTemperatuur){")||html.includes("const uiBasisBriefing=briefing;"))throw new Error("UI-polish bezit na assemblage opnieuw briefingcopy of briefing().");
 if((html.split(ZONUREN_PRODUCTIE).length-1)!==1||(html.split(ZON_HELPER_PRODUCTIE).length-1)!==1)throw new Error("Finale zonuren-owner is niet uniek in het artifact.");
 if((html.split(DAILY_HELPER_PRODUCTIE).length-1)!==1||(html.split(DCOND_PRODUCTIE).length-1)!==1||(html.split(DRAIN_PRODUCTIE).length-1)!==1||(html.split(KOP_PRODUCTIE).length-1)!==1)throw new Error("Finale daily-forecast owner is niet uniek in het artifact.");
+if((html.split(BRIEF_HELPER_PRODUCTIE).length-1)!==1||(html.split(VANDAAG_PIEK_PRODUCTIE).length-1)!==2||(html.split(MORGEN_PRODUCTIE).length-1)!==1||(html.split(VANDAAG_VERLEDEN_PRODUCTIE).length-1)!==1)throw new Error("Finale briefingcopy-owner is niet uniek in het artifact.");
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden na UI-polish.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-polish-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"ui-polish-20260813");
-console.log("UI-polish toegepast: rustige waarschuwingpresentatie, Q4 als enige regenperiode-owner, base zonuren- en daily-forecast owners geverifieerd, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
+console.log("UI-polish toegepast: rustige waarschuwingpresentatie, Q4 als enige regenperiode-owner, base zonuren-, daily-forecast- en briefingcopy-owners geverifieerd, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
