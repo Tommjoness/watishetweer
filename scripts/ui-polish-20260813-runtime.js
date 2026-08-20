@@ -5,9 +5,9 @@
 const uiGetal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 
 /* Zichtbare microcopy hoort bij de runtime die het betreffende UI-onderdeel
-   bezit. Zonuren-, windstoot- en luchtdrukcopy horen inmiddels bij pure
-   base-build owners; deze brede UI-polish bezit hier alleen nog briefingcopy
-   en zijn expliciete presentatienormalisaties. */
+   bezit. Zonuren-, windstoot-, luchtdruk- en zeven-dagencopy horen inmiddels
+   bij pure base-build owners; deze brede UI-polish bezit hier alleen nog
+   briefingcopy en zijn expliciete presentatienormalisaties. */
 
 /* Modelvelden mogen ook nadat hun klokmoment verstreken is niet als gemeten
    historie worden geformuleerd. Deze normalisatie verandert geen waarde of
@@ -45,14 +45,6 @@ function uiBriefingTijdtaal(html,nuLokaal,huidigeTemperatuur){
   });
 }
 
-function uiDagNeerslagTekst(kans,som){
-  const k=uiGetal(kans),mm=uiGetal(som);
-  if(k===null)return null;
-  const pct=Math.round(Math.max(0,Math.min(100,k)));
-  if(pct<10&&(mm===null||mm<0.1))return "Droog";
-  return pct+"%";
-}
-
 function uiIsNwsStructuur(tekst){
   return /\*\s*(?:WHAT|WHERE|WHEN|IMPACTS)\.\.\./i.test(String(tekst||""));
 }
@@ -67,12 +59,12 @@ function uiRegenperiodeDagprefix(periodeDatum,basisDatum){
 
 /* Exporteer alleen zuivere presentatieregels voor regressietests. UV-copy hoort
    bij Q3/senior meters, pollen-modelcopy bij de pure pollen-owner,
-   luchtdrukcopy bij pressure-copy-owner, windstootcopy bij wind-gust-copy-owner
-   en zonurencopy bij sunshine-copy-owner. Geen van die domeinen wordt hier herhaald. */
+   luchtdrukcopy bij pressure-copy-owner, windstootcopy bij wind-gust-copy-owner,
+   zonurencopy bij sunshine-copy-owner en de zeven-dagenpresentatie bij
+   daily-forecast-owner. Geen van die domeinen wordt hier herhaald. */
 globalThis.WeatherNowUiPolish20260813=Object.freeze({
   briefingBronSemantiek:uiBriefingBronSemantiek,
   briefingTijdtaal:uiBriefingTijdtaal,
-  dagNeerslagTekst:uiDagNeerslagTekst,
   regenperiodeDagprefix:uiRegenperiodeDagprefix,
   isNwsStructuur:uiIsNwsStructuur
 });
@@ -83,30 +75,8 @@ globalThis.WeatherNowUiPolish20260813=Object.freeze({
 /* Windstoot- en luchtdrukcopy zijn al definitief wanneer deze runtime wordt
    ingevoegd. UI-polish wrapt meters() daarom niet meer. */
 
-function uiPolishDagen(){
-  const c=document.getElementById("days"),day=S.d&&S.d.daily;
-  if(!c||!day)return;
-  const kop=c.querySelector(".row.day.kop");
-  if(kop){
-    const bereik=kop.querySelector(".bar");if(bereik)bereik.textContent="Bereik";
-    const regen=kop.querySelector(".drain");if(regen)regen.textContent="Neerslag";
-  }
-  const rijen=[...c.querySelectorAll(".day:not(.kop)")];
-  rijen.forEach((rij,i)=>{
-    const oms=rij.querySelector(".dcond");
-    if(oms)oms.textContent=(oms.textContent||"").replace(/,\s*\d+(?:[.,]\d+)?\s*mm\s*$/i,"");
-    const kans=uiGetal(day.precipitation_probability_max&&day.precipitation_probability_max[i]);
-    const som=uiGetal(day.precipitation_sum&&day.precipitation_sum[i]);
-    const tekst=uiDagNeerslagTekst(kans,som);
-    const regen=rij.querySelector(".drain");
-    if(regen&&tekst==="Droog")regen.textContent="Droog";
-  });
-}
-
-if(typeof dagen==="function"){
-  const uiBasisDagen=dagen;
-  dagen=function(){const uit=uiBasisDagen.apply(this,arguments);uiPolishDagen();return uit;};
-}
+/* De zeven-dagenpresentatie is al definitief wanneer deze runtime wordt
+   ingevoegd. UI-polish wrapt dagen() daarom niet meer. */
 
 /* Regenperiodepresentatie wordt volledig beheerd door Q4. */
 
