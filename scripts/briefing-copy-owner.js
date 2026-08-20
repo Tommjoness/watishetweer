@@ -6,7 +6,10 @@
  * windselectie, lokale kalenderdag, markup en renderflow. Deze owner verplaatst
  * uitsluitend de al zichtbare finale UI-polish-copy naar die renderer zelf:
  * forecastmaxima blijven expliciet verwachtingen en rond 00:00–04:59 zegt de
- * nachtzin alleen "later" als er werkelijk nog een relevante daling resteert. */
+ * nachtzin alleen "later" als er werkelijk nog een relevante daling resteert.
+ * De interpretatielaag mag een gevalideerde waarschuwing nog steeds vóór de
+ * modelbriefing zetten; alleen de historisch daarna weer weggefilterde uitlegzin
+ * over 'voorrang' verdwijnt nu bij dezelfde briefingowner vóór assemblage klaar is. */
 
 const BRIEFING_HAAK="function briefing(){\n";
 const HELPER_PRODUCTIE=`function weatherNowBriefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){
@@ -44,6 +47,9 @@ const VANDAAG_MAX_PRODUCTIE='    zin2="De maximumtemperatuur van vandaag ligt ro
 const NACHT_STANDALONE_BRON='    zin2="Vannacht koelt het af naar <b>"+tmin+" graden</b>.";\n';
 const NACHT_STANDALONE_PRODUCTIE='    zin2=weatherNowBriefingNachtzin(tmin,nuLokaal,huidige);\n';
 
+const WAARSCHUWING_VOORRANG_BRON='        voor="<b>"+waarschKop+":</b> "+esc(w.titel)+". "+voor\n          +" De officiële waarschuwing heeft voorrang op de modelverwachting.";\n';
+const WAARSCHUWING_VOORRANG_PRODUCTIE='        voor="<b>"+waarschKop+":</b> "+esc(w.titel)+". "+voor;\n';
+
 function briefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){
   const getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
   const doel=getal(tmin);if(doel===null)return "";
@@ -74,6 +80,7 @@ function pasBriefingCopyToe(html){
   uit=vervangAantal(uit,VANDAAG_VERLEDEN_BRON,VANDAAG_VERLEDEN_PRODUCTIE,1,"verstreken verwacht maximum vandaag");
   uit=vervangAantal(uit,VANDAAG_MAX_BRON,VANDAAG_MAX_PRODUCTIE,1,"maximum vandaag zonder piekuur");
   uit=vervangAantal(uit,NACHT_STANDALONE_BRON,NACHT_STANDALONE_PRODUCTIE,1,"losse nachtzin");
+  uit=vervangAantal(uit,WAARSCHUWING_VOORRANG_BRON,WAARSCHUWING_VOORRANG_PRODUCTIE,1,"redundante waarschuwing-voorrangzin");
   return uit;
 }
 
@@ -81,5 +88,6 @@ module.exports={
   briefingNachtzin,pasBriefingCopyToe,BRIEFING_HAAK,HELPER_PRODUCTIE,
   NACHTZIN_BRON,NACHTZIN_PRODUCTIE,VANDAAG_PIEK_BRON,VANDAAG_PIEK_PRODUCTIE,
   MORGEN_BRON,MORGEN_PRODUCTIE,VANDAAG_VERLEDEN_BRON,VANDAAG_VERLEDEN_PRODUCTIE,
-  VANDAAG_MAX_BRON,VANDAAG_MAX_PRODUCTIE,NACHT_STANDALONE_BRON,NACHT_STANDALONE_PRODUCTIE
+  VANDAAG_MAX_BRON,VANDAAG_MAX_PRODUCTIE,NACHT_STANDALONE_BRON,NACHT_STANDALONE_PRODUCTIE,
+  WAARSCHUWING_VOORRANG_BRON,WAARSCHUWING_VOORRANG_PRODUCTIE
 };
