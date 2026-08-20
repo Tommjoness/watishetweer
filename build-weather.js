@@ -11,6 +11,7 @@ const {pasPressureCopyToe}=require("./scripts/pressure-copy-owner.js");
 const {pasWindGustCopyToe}=require("./scripts/wind-gust-copy-owner.js");
 const {pasSunshineCopyToe}=require("./scripts/sunshine-copy-owner.js");
 const {pasDailyForecastOwnerToe}=require("./scripts/daily-forecast-owner.js");
+const {pasBriefingCopyToe}=require("./scripts/briefing-copy-owner.js");
 const {vernieuwServiceworkerCache}=require("./scripts/postbuild-cache.js");
 /* CACHE_BRONNEN en het hashrecept zijn uitsluitend eigendom van postbuild-cache.js. */
 const ROOT=__dirname,OUT=path.join(ROOT,"public");
@@ -100,6 +101,12 @@ html=pasSunshineCopyToe(html);
    (Bereik/Neerslag, één mm-weergave en Droog bij verwaarloosbare neerslag) naar
    die renderer zelf, zodat UI-polish dagen() niet meer hoeft te wrappen. */
 html=pasDailyForecastOwnerToe(html);
+
+/* De briefing blijft dezelfde forecast-, wind- en neerslagdata selecteren. De
+   pure owner maakt uitsluitend de bestaande finale bron-/tijdsemantiek direct
+   onderdeel van briefing(), zodat UI-polish de briefing niet opnieuw hoeft te
+   wrappen en achteraf HTML hoeft te herschrijven. */
+html=pasBriefingCopyToe(html);
 
 /* De compacte meelopende weerbalk gebruikte oorspronkelijk alleen een
    IntersectionObserver. Dat is zuinig, maar browsers mogen zo'n callback rond
@@ -203,6 +210,7 @@ const vereist=[
   "Later vandaag worden rond ","Voor vandaag lag de hoogste verwachte windstoot rond ",
   "weatherNowZonurenWoord","Naar verwachting bijna de hele dag zon.","Naar verwachting veel zon vandaag.",
   "weatherNowDagNeerslagTekst","<div class=\"bar\">Bereik</div>","<div class=\"drain\">Neerslag</div>",
+  "weatherNowBriefingNachtzin","Het verwachte maximum ligt vandaag rond ","Het verwachte maximum ligt morgen rond ","Het verwachte maximum lag vandaag rond ","Het verwachte maximum voor morgen is ",
   "load(52.3676,4.9041,\"Amsterdam\",false,true,\"NL\")"
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);
@@ -220,4 +228,4 @@ fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"build-weather");
 
 for(const n of fs.readdirSync(OUT))if(intern(n))throw new Error("Intern bestand publiek gebouwd: "+n);
-console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, waarschuwing-laad/leegstatus, luchtdrukcopy, windstootcopy, zonurencopy, dagverwachtingcopy, lucht/pollen-correctheid, SEO-fundering, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");
+console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, waarschuwing-laad/leegstatus, luchtdrukcopy, windstootcopy, zonurencopy, dagverwachtingcopy, briefingcopy, lucht/pollen-correctheid, SEO-fundering, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");
