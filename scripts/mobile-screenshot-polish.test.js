@@ -23,7 +23,7 @@ assert(apply.includes("M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw"),"Mo
    bewaakt uitsluitend de fysieke mobiele presentatie en tapdoelen. */
 assert(/@media\(max-width:430px\)[\s\S]*?\.tools\{[\s\S]*?display:grid;[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\);/.test(mobileCss),"Mobiele topbediening heeft drie gelijke actiekolommen");
 assert(/\.tools > input\[type=text\]\{[\s\S]*?grid-column:1 \/ -1;[\s\S]*?min-height:46px;/.test(mobileCss),"Mobiele zoekinvoer staat op een eigen volle rij met ruim tapdoel");
-assert(/\.tools > #here,\.tools > #ververs,\.tools > #thema\{[\s\S]*?min-height:42px;[\s\S]*?border-right:1px solid var\(--rule\);/.test(mobileCss),"Locatie, verversen en weergave delen één rustige actierij");
+assert(/\.tools > #here,\.tools > #ververs,\.tools > #thema\{[\s\S]*?min-height:44px;[\s\S]*?border-right:1px solid var\(--rule\);/.test(mobileCss),"Locatie, verversen en weergave delen één rustige actierij met minimaal 44px taphoogte");
 assert(/\.results\{top:46px;left:-1px;right:-1px\}/.test(mobileCss),"Zoekresultaten blijven direct onder de zoekinvoer verankerd");
 assert(/\.chip\.add\{[\s\S]*?min-height:44px;[\s\S]*?border:0;[\s\S]*?box-shadow:inset 0 -1px 0 var\(--rule\);/.test(mobileCss),"Plaats bewaren is een rustige 44px-tekstactie in plaats van een gestippelde chip");
 
