@@ -17,15 +17,15 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
 {
  const {api,bak}=laadKern(390),d=bouw({temp:(u,dag)=>dag===1&&u===15?31:18});d.current.time="2026-07-22T23:55";d.current.temperature_2m=18;
  const i=d.hourly.time.findIndex(t=>t==="2026-07-22T23:00");Object.assign(api.S,{d,i0:i,op:Date.now(),lat:52.35,lon:5.26,label:"Productietest",dag:null,bereik:24,klokOverride:new Date("2026-07-22T22:05:00Z"),klokInstantOverride:null});
- api.briefing();const t=tekst(bak.brief);ok(/Vandaag wordt het rond \d\d:\d\d het warmst, met maximaal 31 graden/.test(t),"na lokale middernacht heet de nieuwe dag vandaag",t);ok(!/Morgen wordt het (?:maximaal|rond)/.test(t),"stale current.time houdt morgen niet vast",t);
+ api.briefing();const t=tekst(bak.brief);ok(/Het verwachte maximum ligt vandaag rond \d\d:\d\d op 31 graden/.test(t),"na lokale middernacht heet de nieuwe dag vandaag",t);ok(!/Het verwachte maximum (?:ligt morgen|voor morgen is)/.test(t),"stale current.time houdt morgen niet vast",t);
 }
 {
  const {api,bak}=laadKern(390),d=bouw({temp:(u,dag)=>dag===0&&u===17?35:dag===1&&u===14?36:33});
  d.current.time="2026-07-22T14:00";d.current.temperature_2m=33;d.daily.temperature_2m_max[0]=35;d.daily.temperature_2m_max[1]=38;
  const i=d.hourly.time.indexOf("2026-07-22T14:00");Object.assign(api.S,{d,i0:i,op:Date.now(),lat:40.42,lon:-3.70,label:"Madrid",dag:null,bereik:24,klokOverride:new Date("2026-07-22T12:02:00Z"),klokInstantOverride:null});
  api.briefing();const t=tekst(bak.brief);
- ok(/Vandaag wordt het rond \d\d:\d\d het warmst, met maximaal 35 graden/.test(t),"om 14:02 blijft de briefing bij de resterende huidige dag",t);
- ok(!/Morgen wordt het maximaal/.test(t),"om 14:02 loopt de briefing niet vooruit op morgen",t);
+ ok(/Het verwachte maximum ligt vandaag rond \d\d:\d\d op 35 graden/.test(t),"om 14:02 blijft de briefing bij de resterende huidige dag",t);
+ ok(!/Het verwachte maximum (?:ligt morgen|voor morgen is)/.test(t),"om 14:02 loopt de briefing niet vooruit op morgen",t);
 }
 {
  const {api,bak}=laadKern(390),d=bouw({pp:()=>5,pr:()=>0,som:0});zetBasis(api,d);api.briefing();let t=tekst(bak.brief);
@@ -43,7 +43,7 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  d.current.time="2026-07-22T19:00";d.current.temperature_2m=29;d.daily.temperature_2m_max[1]=38;
  const i=d.hourly.time.indexOf("2026-07-22T19:00");Object.assign(api.S,{d,i0:i,op:Date.now(),lat:40.42,lon:-3.70,label:"Madrid",dag:null,bereik:24,klokOverride:new Date("2026-07-22T17:05:00Z"),klokInstantOverride:null});
  api.briefing();const t=tekst(bak.brief);
- ok(/Morgen wordt het rond \d\d:\d\d het warmst, met maximaal 38 graden/.test(t),"in de avond gebruikt morgen het volledige kalenderdagmaximum",t);
+ ok(/Het verwachte maximum ligt morgen rond \d\d:\d\d op 38 graden/.test(t),"in de avond gebruikt morgen het volledige kalenderdagmaximum",t);
  ok(/rond 22:00/.test(t),"het warme moment van morgen wordt op diezelfde kalenderdag gezocht",t);
 }
 {
