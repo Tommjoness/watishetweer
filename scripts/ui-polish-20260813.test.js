@@ -24,7 +24,7 @@ assert(!runtime.includes("De officiële waarschuwing heeft voorrang op de modelv
 assert(runtime.includes("UI-polish wrapt briefing() daarom niet meer."),"UI-polish mist expliciet briefingcopy-ownershipcontract");
 assert(apply.includes('require("./briefing-copy-owner.js")'),"UI-polish apply-stap moet briefingcopy-ownercontract hergebruiken");
 assert(apply.includes("BRIEF_HELPER_PRODUCTIE")&&apply.includes("VANDAAG_PIEK_PRODUCTIE")&&apply.includes("MORGEN_PRODUCTIE"),"UI-polish verifieert de base briefingcopy-owner niet");
-assert(apply.includes("Verouderde briefing-waarschuwingcopy bestaat vóór UI-polish nog"),"stale waarschuwingzin moet upstream fail-fast worden bewaakt");
+assert(apply.includes("Verouderde briefing-waarschuwingcopy heeft de base briefingowner overleefd"),"stale waarschuwingzin moet upstream fail-fast worden bewaakt");
 
 /* Q3/senior meters() is de enige eigenaar van de UV-presentatie. UI-polish
    mag die zichtbare copy niet opnieuw berekenen of na Q3 overschrijven. */
