@@ -18,6 +18,15 @@ assert(/#days \.row\.day:not\(\.kop\) \.dname\{font-size:13\.5px\}/.test(mobileC
 assert(/#days \.row\.day:not\(\.kop\) \.dwind,[\s\S]*?#days \.row\.day:not\(\.kop\) \.drain\{font-size:13px\}/.test(mobileCss),"Mobiele wind- en neerslagtekst blijven minimaal 13 px");
 assert(apply.includes("M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw"),"Mobiel etmaal toont permanent alleen globale extrema naast het aparte nu-label");
 
+/* De mobiele header is één compositie: zoekveld over de volle breedte en drie
+   gelijke acties eronder. Alle semantiek blijft in de bestaande DOM; deze test
+   bewaakt uitsluitend de fysieke mobiele presentatie en tapdoelen. */
+assert(/@media\(max-width:430px\)[\s\S]*?\.tools\{[\s\S]*?display:grid;[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\);/.test(mobileCss),"Mobiele topbediening heeft drie gelijke actiekolommen");
+assert(/\.tools > input\[type=text\]\{[\s\S]*?grid-column:1 \/ -1;[\s\S]*?min-height:46px;/.test(mobileCss),"Mobiele zoekinvoer staat op een eigen volle rij met ruim tapdoel");
+assert(/\.tools > #here,\.tools > #ververs,\.tools > #thema\{[\s\S]*?min-height:44px;[\s\S]*?border-right:1px solid var\(--rule\);/.test(mobileCss),"Locatie, verversen en weergave delen één rustige actierij met minimaal 44px taphoogte");
+assert(/\.results\{top:46px;left:-1px;right:-1px\}/.test(mobileCss),"Zoekresultaten blijven direct onder de zoekinvoer verankerd");
+assert(/\.chip\.add\{[\s\S]*?min-height:44px;[\s\S]*?border:0;[\s\S]*?box-shadow:inset 0 -1px 0 var\(--rule\);/.test(mobileCss),"Plaats bewaren is een rustige 44px-tekstactie in plaats van een gestippelde chip");
+
 assert.equal(p.nachtzichtCompactAantal(6,true),3);
 assert.equal(p.nachtzichtCompactAantal(2,true),2);
 assert.equal(p.nachtzichtCompactAantal(6,false),6);
@@ -98,4 +107,4 @@ assert.equal(p.pollenEenheid(1.5),"korrels/m³");
 assert.equal(p.pollenEenheid(0),"korrels/m³");
 assert.equal(p.pollenEenheid(4),"korrels/m³");
 
-console.log("Mobiele screenshot-polish: compacte etmaallabels, uitklapbaar Nachtzicht, kalendergrens, maanfase, natuurlijke maancopy, weekleesbaarheid en pollenregressies geslaagd.");
+console.log("Mobiele screenshot-polish: topbediening, compacte etmaallabels, uitklapbaar Nachtzicht, kalendergrens, maanfase, natuurlijke maancopy, weekleesbaarheid en pollenregressies geslaagd.");

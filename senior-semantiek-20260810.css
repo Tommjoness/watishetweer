@@ -12,14 +12,10 @@
 }
 
 /* De bediening blijft volledig beschikbaar, maar hoeft niet dezelfde visuele
-   nadruk te krijgen als het weer zelf. */
+   nadruk te krijgen als het weer zelf. De UI-shell is inmiddels de enige eigenaar
+   van de zichtbare tekst van #thema; de historische font-size:0/::after-kopie is
+   verwijderd zodat "Weergave" niet dubbel meetelt in de mobiele knopbreedte. */
 .tools button{color:var(--ink-45);border-color:var(--rule)}
-#thema{font-size:0}
-#thema::after{
-  content:"Weergave";
-  font-size:10.5px;
-  letter-spacing:.10em;
-}
 
 /* Zoninformatie hoort bij concrete kalenderdagen. Iedere regel heeft daarom
    één dagaanduiding en alleen de astronomische momenten die bij die dag horen. */
