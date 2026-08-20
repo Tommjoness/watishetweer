@@ -58,12 +58,14 @@ verboden('font-feature-settings:"tnum" 1,"zero" 1',"oude OpenType slashed-zero f
 verboden("tabular-nums slashed-zero","oude slashed-zero fontvariant");
 
 /* Finale copy-architectuur: tijdtaal en overige microcopy komen uit hun
-   inhoudelijke owners. Luchtdruk-, windstoot- en zonurencopy zijn nu al in de
-   base-build definitief; UI-polish mag die domeinen niet opnieuw wrappen. */
+   inhoudelijke owners. Luchtdruk-, windstoot-, zonuren- en zeven-dagencopy zijn
+   nu al in de base-build definitief; UI-polish mag die domeinen niet opnieuw
+   wrappen of dezelfde daily data opnieuw uitlezen. */
 for(const tekst of [
-  "weatherNowWindstootTekst","weatherNowZonurenWoord","uiBriefingTijdtaal",
+  "weatherNowWindstootTekst","weatherNowZonurenWoord","weatherNowDagNeerslagTekst","uiBriefingTijdtaal",
   "Later vandaag worden rond ","Voor vandaag lag de hoogste verwachte windstoot rond ",
   "Naar verwachting bijna de hele dag zon.","Naar verwachting veel zon vandaag.",
+  '<div class="bar">Bereik</div>','<div class="drain">Neerslag</div>',
   "De komende twee uur wordt er geen neerslag verwacht.",
   "De luchtdruk is in de afgelopen drie uur licht ",
   "De luchtdruk is in de afgelopen drie uur "
@@ -74,6 +76,9 @@ verboden("uiLuchtdrukTekst","late UI-polish luchtdrukcopy-owner");
 verboden('document.getElementById("pressub")',"late UI-polish pressub-rewrite");
 verboden("uiZonurenWoord","late UI-polish zonurencopy-owner");
 verboden("const uiBasisZonurenTegel=zonurenTegel;","late UI-polish zonurentegel-wrapper");
+verboden("uiDagNeerslagTekst","late UI-polish daily-forecast copy-owner");
+verboden("uiPolishDagen","late UI-polish daily-forecast DOM-owner");
+verboden("const uiBasisDagen=dagen;","late UI-polish dagen-wrapper");
 
 /* Finale architectuur/performance. */
 for(const tekst of [
@@ -129,4 +134,4 @@ runtimeScripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html
 jsonLdScripts.forEach((bron,i)=>{try{JSON.parse(bron);}catch(e){throw new Error("Ongeldige JSON-LD in definitief artifact #"+(i+1)+": "+e.message);}});
 
 const verwacht=verifieerServiceworkerCache(OUT,"finale");
-console.log("Finale 27-punten artifactguard geslaagd: één Nachtzicht-owner met kalendergrens, gewone nullen, één Q3-UV-copy-owner, geconsolideerde copy-eigenaars inclusief zonuren, requestarchitectuur, syntactische runtime, geldige JSON-LD en serviceworker "+verwacht+".");
+console.log("Finale 27-punten artifactguard geslaagd: één Nachtzicht-owner met kalendergrens, gewone nullen, één Q3-UV-copy-owner, geconsolideerde copy-eigenaars inclusief zonuren en zeven-dagenpresentatie, requestarchitectuur, syntactische runtime, geldige JSON-LD en serviceworker "+verwacht+".");
