@@ -29,9 +29,6 @@ assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T04:28",15.5),"Vandaag wor
 assert.equal(api.briefingTijdtaal(briefing,"2026-08-16T05:00",19),briefing);
 assert.equal(api.briefingTijdtaal(briefing,"2026-08-15T23:30",19),briefing);
 
-assert.equal(api.dagNeerslagTekst(2,0),"Droog");
-assert.equal(api.dagNeerslagTekst(9,0.05),"Droog");
-assert.equal(api.dagNeerslagTekst(5,0.2),"5%");
 assert.equal(api.isNwsStructuur("* WHAT...Heat index values. * WHERE...Dallas."),true);
 assert.equal(api.isNwsStructuur("Plaatselijk zware buien mogelijk."),false);
 
@@ -78,13 +75,24 @@ assert(runtime.includes("UI-polish wrapt zonurenTegel() daarom niet meer."),"UI-
 assert(apply.includes('require("./sunshine-copy-owner.js")'),"UI-polish apply-stap moet zonuren-ownercontract hergebruiken");
 assert(apply.includes("ZONUREN_PRODUCTIE")&&apply.includes("ZON_HELPER_PRODUCTIE"),"UI-polish verifieert de base zonurenowner niet");
 
+/* De daily-forecast owner produceert de zichtbare zeven-dagenpresentatie al in
+   de base-build. UI-polish mag daily data niet opnieuw lezen en dagen() niet wrappen. */
+assert.equal(api.dagNeerslagTekst,undefined,"UI-polish mag geen daily-forecast copyhelper meer exporteren");
+assert(!runtime.includes("uiDagNeerslagTekst"),"UI-polish mag geen eigen daily-forecast copyhelper meer bevatten");
+assert(!runtime.includes("uiPolishDagen"),"UI-polish mag geen late daily DOM-owner meer bevatten");
+assert(!runtime.includes("uiBasisDagen"),"UI-polish mag dagen() niet meer wrappen");
+assert(!runtime.includes("precipitation_probability_max"),"UI-polish mag daily neerslagkans niet opnieuw uitlezen");
+assert(!runtime.includes("precipitation_sum"),"UI-polish mag daily neerslagsom niet opnieuw uitlezen");
+assert(runtime.includes("UI-polish wrapt dagen() daarom niet meer."),"UI-polish mist expliciet daily-forecast ownershipcontract");
+assert(apply.includes('require("./daily-forecast-owner.js")'),"UI-polish apply-stap moet daily-forecast ownercontract hergebruiken");
+assert(apply.includes("DAILY_HELPER_PRODUCTIE")&&apply.includes("DCOND_PRODUCTIE")&&apply.includes("DRAIN_PRODUCTIE")&&apply.includes("KOP_PRODUCTIE"),"UI-polish verifieert de base daily-forecast owner niet");
+
 assert(!runtime.includes("uiPolishRegenperiodeKansen"),"UI-polish bronruntime mag de oude regenkans-owner niet meer bevatten");
 assert(!runtime.includes("uiPolishRegenperiodeDaglabel"),"UI-polish bronruntime mag de oude regendaglabel-owner niet meer bevatten");
 assert(!runtime.includes("data-ui-rain-period-probability"),"UI-polish bronruntime mag geen oude statische periodekanslabels meer bezitten");
 assert(runtime.includes("/* Regenperiodepresentatie wordt volledig beheerd door Q4. */"),"UI-polish bronruntime mist expliciet Q4-ownership");
 assert(!apply.includes("VEROUDE_REGEN_START")&&!apply.includes("runtime=runtime.slice"),"apply-stap mag zijn eigen regenowner niet meer tijdens buildtijd uitsnijden");
 assert(apply.includes("Verouderde UI-polish regenperiode-owner staat weer in de bronruntime"),"apply-stap bewaakt Q4-ownership niet fail-fast");
-assert(runtime.includes('bereik.textContent="Bereik"'));
 assert(runtime.includes("Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen."),"niet-ondersteunde waarschuwingstatus is niet consumentvriendelijk");
 assert(runtime.includes("Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald."),"tijdelijke waarschuwingstoring blijft onduidelijk");
 
@@ -106,4 +114,4 @@ assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
 assert(apply.includes('if((html.match(/<main id="app" style="display:none">/g)||[]).length!==1)'),"definitieve main-landmark wordt niet op uniciteit geverifieerd");
-console.log("UI-polish regressiecontract groen: bronsemantiek, warning-state base ownership, tijdtaal, cijfers, Q4-ownership, geen dubbele UV-/pollen-/luchtdruk-/windstoot-/zonurenowner en accessibility.");
+console.log("UI-polish regressiecontract groen: bronsemantiek, warning-state base ownership, tijdtaal, Q4-ownership, geen dubbele UV-/pollen-/luchtdruk-/windstoot-/zonuren-/daily-forecast owner en accessibility.");
