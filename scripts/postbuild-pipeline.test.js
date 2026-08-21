@@ -20,6 +20,7 @@ const verwacht=[
   "apply-shared-url-place-identity.js",
   "verify-cache-fallback-country.js",
   "apply-ui-polish-20260813.js",
+  "verify-ui-polish-runtime-retirement.js",
   "apply-weather-fallback-hedge.js",
   "verify-weather-fallback-hedge.js",
   "verify-fetch-error-semantics.js",
@@ -35,13 +36,14 @@ const verwacht=[
   "verify-build-provenance.js",
   "verify-final-27.js"
 ];
-assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten");
+assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten plus directe runtime-retirementguard");
 assert.equal(new Set(POSTBUILD_STAPPEN).size,POSTBUILD_STAPPEN.length,"postbuild mag geen stap dubbel uitvoeren");
 for(const stap of POSTBUILD_STAPPEN){assert(fs.existsSync(path.join(__dirname,stap)),"postbuild verwijst naar ontbrekend script: "+stap);}
 assert(!fs.existsSync(path.join(__dirname,"apply-cache-fallback-country.js")),"oude misleidende cachefallback-owner moet verwijderd zijn");
 assert(!fs.existsSync(path.join(__dirname,"apply-polar-chart-sentinel.js")),"oude late poolgrafiekmutator moet verwijderd zijn");
 assert(!fs.existsSync(path.join(__dirname,"apply-seo-foundation.js")),"oude late SEO-mutator moet verwijderd zijn");
 assert(!fs.existsSync(path.join(__dirname,"apply-pollen-hour-correctness.js")),"oude late pollen-mutator moet verwijderd zijn");
+assert(!fs.existsSync(path.join(__dirname,"ui-polish-20260813-runtime.js")),"lege historische UI-polishruntime moet verwijderd zijn");
 assert(fs.existsSync(path.join(__dirname,"seo-foundation.js")),"pure SEO-owner moet bestaan");
 assert(fs.existsSync(path.join(__dirname,"pollen-hour-correctness.js")),"pure pollen-owner moet bestaan");
 
@@ -67,7 +69,8 @@ assert(positie("verify-ui-shell.js")<positie("verify-pollen-hour-correctness.js"
 assert(positie("verify-pollen-hour-correctness.js")<positie("apply-shared-url-place-identity.js"),"shared-URL-plaatsidentiteit ziet de volledig geverifieerde lucht/pollenartifact");
 assert(positie("apply-shared-url-place-identity.js")<positie("verify-cache-fallback-country.js"));
 assert(positie("verify-cache-fallback-country.js")<positie("apply-ui-polish-20260813.js"),"UI-polish moet de volledige bewezen artifact als basis zien");
-assert(positie("apply-ui-polish-20260813.js")<positie("apply-weather-fallback-hedge.js"),"weather-fallback ziet de volledige UI-polishartifact");
+assert(positie("apply-ui-polish-20260813.js")<positie("verify-ui-polish-runtime-retirement.js"),"runtime-retirement moet direct na de statische UI-polish worden geverifieerd");
+assert(positie("verify-ui-polish-runtime-retirement.js")<positie("apply-weather-fallback-hedge.js"),"weather-fallback ziet alleen een geverifieerde runtime-vrije UI-polishartifact");
 assert(positie("apply-weather-fallback-hedge.js")<positie("verify-weather-fallback-hedge.js"),"weather-fallback moet direct na toepassing worden geverifieerd");
 assert(positie("verify-weather-fallback-hedge.js")<positie("verify-fetch-error-semantics.js"),"menselijke foutsemantiek uit de base-build moet na de fallbackstrategie geverifieerd blijven");
 assert(positie("verify-fetch-error-semantics.js")<positie("verify-polar-chart-sentinel.js"),"poolgrafieksemantiek uit de base-build moet na request- en foutsemantiek geverifieerd blijven");
@@ -89,4 +92,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde, canonieke cloud-owner, expliciete shared-URL-owner, base-build foutsemantiek, poolgrafiek, pollen en SEO-owner, weather truth, canonieke kleine-kans-owner, Nederlandse neerslagcopy, SEO-routes, provenance, guards en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde, runtime-retirementguard, canonieke cloud-owner, shared-URL-owner, foutsemantiek, poolgrafiek, pollen/SEO, weather truth, kleine-kans-owner, routes, provenance en fail-fast gedrag geslaagd.");
