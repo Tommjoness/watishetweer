@@ -6,7 +6,8 @@ const path=require("path");
 const {
   dagNeerslagTekst,pasDailyForecastOwnerToe,
   DCOND_BRON,DCOND_PRODUCTIE,DRAIN_BRON,DRAIN_PRODUCTIE,
-  KOP_BRON,KOP_PRODUCTIE,HELPER_PRODUCTIE
+  KOP_BRON,KOP_PRODUCTIE,HELPER_PRODUCTIE,
+  KOP_CSS_BRON,KOP_CSS_PRODUCTIE
 }=require("./daily-forecast-owner.js");
 
 assert.equal(dagNeerslagTekst(null,0),"–");
@@ -20,17 +21,21 @@ const bron=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
 for(const [fragment,label] of [
   [DCOND_BRON,"oude weekomschrijving"],
   [DRAIN_BRON,"oude weekneerslagcel"],
-  [KOP_BRON,"oude weekkoppen"]
+  [KOP_BRON,"oude weekkoppen"],
+  [KOP_CSS_BRON,"bestaande weekkop-CSShaak"]
 ])assert.equal(bron.split(fragment).length-1,1,"ontwikkeltemplate mist exact "+label);
 assert(!bron.includes("function weatherNowDagNeerslagTekst(kans,som){"),"ontwikkeltemplate bevat de productiehelper al");
+assert(!bron.includes('.row.day.kop .bar{text-align:center}'),"ontwikkeltemplate bevat de late Bereik-uitlijning al");
 
 const uit=pasDailyForecastOwnerToe(bron);
 for(const [fragment,label] of [
   [DCOND_PRODUCTIE,"finale weekomschrijving"],
   [DRAIN_PRODUCTIE,"finale weekneerslagcel"],
   [KOP_PRODUCTIE,"finale weekkoppen"],
-  [HELPER_PRODUCTIE,"daily-forecast helper"]
+  [HELPER_PRODUCTIE,"daily-forecast helper"],
+  [KOP_CSS_PRODUCTIE,"daily-forecast weekkop-CSS"]
 ])assert.equal(uit.split(fragment).length-1,1,label+" ontbreekt of is dubbel");
+assert.equal(uit.split('.row.day.kop .bar{text-align:center}').length-1,1,"Bereik-kop moet exact één keer gecentreerd worden door de daily owner");
 for(const fragment of [DCOND_BRON,DRAIN_BRON,KOP_BRON])assert(!uit.includes(fragment),"oude daily-presentatie bleef in base-build staan");
 
 /* Daily data, temperatuur, wind, kans/hoeveelheid en daginteractie blijven van
@@ -45,4 +50,4 @@ for(const invariant of [
 assert.throws(()=>pasDailyForecastOwnerToe(uit),/staat al in het aangeleverde artifact/,
   "owner moet fail-fast zijn op een reeds gemigreerd artifact");
 
-console.log("Daily-forecast owner contract groen: finale zeven-dagenpresentatie zit in de base-build en daily data/interactie zijn ongewijzigd.");
+console.log("Daily-forecast owner contract groen: zeven-dagencopy en Bereik-uitlijning zitten in de base-build; daily data/interactie zijn ongewijzigd.");
