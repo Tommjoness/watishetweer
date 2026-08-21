@@ -13,9 +13,8 @@ const q4=fs.readFileSync(path.join(__dirname,"q4-rain-runtime.js"),"utf8");
    geformatteerd; houd dus geen losse compatibility-runtime in het artifact. */
 assert(!fs.existsSync(runtimePad),"historische UI-polishruntime hoort verwijderd te zijn");
 assert(!apply.includes("ui-polish-20260813-runtime.js"),"apply-stap mag de verwijderde runtime niet meer inlezen");
-assert(!apply.includes("UI POLISH RUNTIME 20260813"),"apply-stap mag geen runtime-marker meer injecteren of bewaken");
-assert(!apply.includes("WeatherNowUiPolish20260813"),"apply-stap mag geen historische globale helper-API meer verwachten");
 assert(!apply.includes('runtime+"\\n"+START'),"apply-stap mag geen historische runtime meer vóór startup injecteren");
+assert(apply.includes('if(html.includes("WeatherNowUiPolish20260813")||html.includes("UI POLISH RUNTIME 20260813"))'),"apply-stap moet terugkeer van de historische runtime juist expliciet verbieden");
 
 for(const invariant of [
   "const q4DagKort=",
