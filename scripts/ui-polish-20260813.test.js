@@ -56,6 +56,7 @@ for(const invariant of [
 ])assert(warningOwner.includes(invariant),"Base warning-owner mist finale presentatieregel: "+invariant);
 assert(!apply.includes('\n#waarschuwingen>.msg{font-size:12.5px;color:var(--ink-45);padding:7px 0}\n'),"UI-polish mag warning-CSS niet meer laat injecteren");
 assert(!apply.includes('\n.waarsch{border-left:1px solid var(--rule);padding:8px 0 8px 12px;margin-top:var(--s2)}\n'),"UI-polish mag warningkaartstijl niet meer bezitten");
+assert(!apply.includes('\n.waarsch-details{margin-top:6px;font-size:12px;color:var(--ink-45)}\n'),"UI-polish mag NWS-detailstijl niet meer bezitten");
 assert(apply.includes('html.split(WARNING_CSS_PRODUCTIE)'),"UI-polish moet de upstream warning-CSS fail-fast verifiëren");
 assert(apply.includes('html.includes(WARNING_CSS_BRON)'),"UI-polish moet terugkeer van oude warning-CSS blokkeren");
 
