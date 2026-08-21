@@ -4,9 +4,10 @@
  *
  * De bestaande dagen()-renderer blijft eigenaar van daily data, temperatuur,
  * weerbeeld, wind, klikgedrag en layout. Deze owner verplaatst uitsluitend de
- * al bestaande finale UI-polish-uitkomst naar die renderer zelf: geen dubbele
- * mm in de omschrijving, de koppen "Bereik" en "Neerslag", en "Droog" bij een
- * verwaarloosbare kans/hoeveelheid. */
+ * al bestaande finale UI-polish-uitkomst naar die renderer en zijn bestaande
+ * week-CSScluster zelf: geen dubbele mm in de omschrijving, de koppen "Bereik"
+ * en "Neerslag", "Droog" bij een verwaarloosbare kans/hoeveelheid en de reeds
+ * zichtbare centrering van de Bereik-kop. */
 
 const DAGEN_HAAK="function dagen(){\n";
 const HELPER_PRODUCTIE=`function weatherNowDagNeerslagTekst(kans,som){
@@ -30,6 +31,13 @@ const DRAIN_PRODUCTIE='      <div class="drain">${neerslagTekst}${\n        som!
 
 const KOP_BRON='      <div class="dwind">Wind max</div><div class="dmin">Min</div><div class="bar"></div><div class="dmax">Max</div>\n      <div class="drain">Kans</div></div>`;\n';
 const KOP_PRODUCTIE='      <div class="dwind">Wind max</div><div class="dmin">Min</div><div class="bar">Bereik</div><div class="dmax">Max</div>\n      <div class="drain">Neerslag</div></div>`;\n';
+
+/* De weekkop-CSS bestaat al in de ontwikkeltemplate. Alleen de tekstcentrering
+ * van de nieuwe Bereik-kop werd historisch pas door apply-ui-polish toegevoegd.
+ * Verplaats exact die finale regel naar hetzelfde base-build domein, zonder
+ * selectors, waarden of responsive gedrag te wijzigen. */
+const KOP_CSS_BRON='  .row.kop .bar,.row.kop .sbar{background:none}\n';
+const KOP_CSS_PRODUCTIE='  .row.kop .bar,.row.kop .sbar{background:none}\n  .row.day.kop .bar{text-align:center}\n';
 
 function dagNeerslagTekst(kans,som){
   const getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
@@ -55,6 +63,7 @@ function pasDailyForecastOwnerToe(html){
   uit=vervangEen(uit,DCOND_BRON,DCOND_PRODUCTIE,"weekomschrijving zonder dubbele mm");
   uit=vervangEen(uit,DRAIN_BRON,DRAIN_PRODUCTIE,"weekneerslagcel");
   uit=vervangEen(uit,KOP_BRON,KOP_PRODUCTIE,"weekverwachting-koppen");
+  uit=vervangEen(uit,KOP_CSS_BRON,KOP_CSS_PRODUCTIE,"Bereik-kopuitlijning");
   return uit;
 }
 
@@ -62,5 +71,6 @@ module.exports={
   dagNeerslagTekst,pasDailyForecastOwnerToe,
   DAGEN_HAAK,HELPER_PRODUCTIE,
   DCOND_BRON,DCOND_PRODUCTIE,KANS_BRON,KANS_PRODUCTIE,
-  DRAIN_BRON,DRAIN_PRODUCTIE,KOP_BRON,KOP_PRODUCTIE
+  DRAIN_BRON,DRAIN_PRODUCTIE,KOP_BRON,KOP_PRODUCTIE,
+  KOP_CSS_BRON,KOP_CSS_PRODUCTIE
 };
