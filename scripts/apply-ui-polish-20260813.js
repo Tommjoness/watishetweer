@@ -74,8 +74,9 @@ for(const verouderd of ["uiDagNeerslagTekst","uiPolishDagen","uiBasisDagen"]){
 }
 
 /* Ook de bron- en tijdsemantiek van de briefing is al definitief in de
-   base-renderer. Neerslagpresentatie blijft een afzonderlijk domein en wordt
-   later in de pipeline bewust door zijn eigen owner gesynchroniseerd. */
+   base-renderer. Andere bestaande presentatielagen mogen briefing() nog om hun
+   eigen reden wrappen; deze guard verbiedt uitsluitend de voormalige UI-polish
+   copyhelpers/wrapper. */
 if((html.split(BRIEF_HELPER_PRODUCTIE).length-1)!==1)throw new Error("Base-build briefingcopy-helper ontbreekt of is dubbel vóór UI-polish.");
 for(const [productie,verwacht,label] of [
   [NACHTZIN_PRODUCTIE,1,"briefing nachtzin"],
@@ -94,7 +95,7 @@ for(const [bron,label] of [
 ]){
   if(html.includes(bron))throw new Error(label+" heeft de base-build overleefd.");
 }
-for(const verouderd of ["uiBriefingBronSemantiek","uiBriefingTijdtaal","uiBasisBriefing","briefing=function"]){
+for(const verouderd of ["uiBriefingBronSemantiek","uiBriefingTijdtaal","uiBasisBriefing"]){
   if(html.includes(verouderd))throw new Error("Verouderde UI-polish briefingcopy-owner staat weer in het artifact: "+verouderd);
 }
 if(html.includes("De officiële waarschuwing heeft voorrang op de modelverwachting."))
