@@ -14,8 +14,8 @@ const runtimePad=path.join(__dirname,"ui-polish-20260813-runtime.js");
    accessibility en fail-fast contracten richting de inhoudelijke owners. */
 assert(!fs.existsSync(runtimePad),"UI-polish compatibility-runtime hoort verwijderd te zijn");
 assert(!apply.includes("ui-polish-20260813-runtime.js"),"apply-stap mag de verwijderde runtime niet meer lezen");
-assert(!apply.includes("WeatherNowUiPolish20260813"),"historische globale UI-polish API mag niet terugkomen");
-assert(!apply.includes("UI POLISH RUNTIME 20260813"),"historische runtime-marker mag niet terugkomen");
+assert(!apply.includes('runtime+"\\n"+START'),"apply-stap mag geen historische runtime meer injecteren");
+assert(apply.includes('if(html.includes("WeatherNowUiPolish20260813")||html.includes("UI POLISH RUNTIME 20260813"))'),"finale applyguard tegen terugkeer runtime ontbreekt");
 
 /* Regenperiode-daglabels horen aantoonbaar bij Q4 zelf. */
 for(const invariant of [
@@ -49,6 +49,5 @@ assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="displa
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
 assert(apply.includes('.waarsch[data-ui-severity="rood"]'),"warning-CSS ontbreekt uit de statische applylaag");
 assert(apply.includes('.row.day.kop .bar{text-align:center}'),"weekkop-uitlijning ontbreekt uit de statische applylaag");
-assert(apply.includes('if(html.includes("WeatherNowUiPolish20260813")||html.includes("UI POLISH RUNTIME 20260813"))'),"finale applyguard tegen terugkeer runtime ontbreekt");
 
 console.log("UI-polish statisch contract groen: geen runtime meer; CSS/accessibility blijven en inhoudelijke owners worden upstream bewaakt.");
