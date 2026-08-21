@@ -9,7 +9,7 @@ const {GUST_BRON,GUST_PRODUCTIE,HELPER_PRODUCTIE}=require("./wind-gust-copy-owne
 const {ZONUREN_BRON,ZONUREN_PRODUCTIE,HELPER_PRODUCTIE:ZON_HELPER_PRODUCTIE}=require("./sunshine-copy-owner.js");
 const {
   DCOND_BRON,DCOND_PRODUCTIE,DRAIN_BRON,DRAIN_PRODUCTIE,KOP_BRON,KOP_PRODUCTIE,
-  HELPER_PRODUCTIE:DAILY_HELPER_PRODUCTIE
+  KOP_CSS_PRODUCTIE,HELPER_PRODUCTIE:DAILY_HELPER_PRODUCTIE
 }=require("./daily-forecast-owner.js");
 const {
   HELPER_PRODUCTIE:BRIEF_HELPER_PRODUCTIE,
@@ -59,11 +59,11 @@ for(const verouderd of ["uiZonurenWoord","uiBasisZonurenTegel","zonurenTegel=fun
 
 /* De zeven-dagenpresentatie is eveneens vóór UI-polish definitief. De base-owner
    bewaart alle daily waarden en interactie, maar bezit nu de zichtbare koppen,
-   de ene mm-weergave en de Droog-presentatie. Andere bestaande lagen mogen
-   dagen() nog om een eigen reden wrappen; alleen de voormalige UI-polish
-   helper/wrappernamen zijn hier een geldige stale-ownerhandtekening. */
+   de ene mm-weergave, Droog-presentatie én Bereik-kopuitlijning. Andere
+   bestaande lagen mogen dagen() nog om een eigen reden wrappen; alleen de
+   voormalige UI-polish helper/wrappernamen zijn hier een stale-ownerhandtekening. */
 if((html.split(DAILY_HELPER_PRODUCTIE).length-1)!==1)throw new Error("Base-build daily-forecast helper ontbreekt of is dubbel vóór UI-polish.");
-for(const [productie,label] of [[DCOND_PRODUCTIE,"weekomschrijving"],[DRAIN_PRODUCTIE,"weekneerslagcel"],[KOP_PRODUCTIE,"weekkoppen"]]){
+for(const [productie,label] of [[DCOND_PRODUCTIE,"weekomschrijving"],[DRAIN_PRODUCTIE,"weekneerslagcel"],[KOP_PRODUCTIE,"weekkoppen"],[KOP_CSS_PRODUCTIE,"weekkop-uitlijning"]]){
   if((html.split(productie).length-1)!==1)throw new Error("Base-build "+label+" ontbreekt of is dubbel vóór UI-polish.");
 }
 for(const [bron,label] of [[DCOND_BRON,"oude weekomschrijving"],[DRAIN_BRON,"oude weekneerslagcel"],[KOP_BRON,"oude weekkoppen"]]){
@@ -135,7 +135,6 @@ ${CSS_MARK}
 .waarsch-details summary{display:inline;cursor:pointer;color:var(--ink-45);box-shadow:inset 0 -1px 0 var(--rule)}
 .waarsch-details summary:hover{color:var(--ink)}
 .waarsch-details p{margin-top:7px;font-size:12px;color:var(--ink-45);max-width:92ch}
-.row.day.kop .bar{text-align:center}
 /* De bronfooter blijft typografisch compact. Alleen op aanraakbreedtes krijgen
    links en het uitklapbare locatie-item een fysieke 44px-hoge hitbox en extra
    horizontale scheiding. Zo wordt de klikruimte groter zonder grotere letters,
@@ -163,7 +162,7 @@ if(html.includes("function uiDagNeerslagTekst(kans,som){")||html.includes("const
 if(html.includes("function uiBriefingBronSemantiek(html){")||html.includes("const uiBasisBriefing=briefing;"))throw new Error("UI-polish bezit na assemblage opnieuw briefingcopy of briefing().");
 if(html.includes("WeatherNowUiPolish20260813")||html.includes("UI POLISH RUNTIME 20260813"))throw new Error("Historische UI-polishruntime staat nog in het finale artifact.");
 if((html.split(ZONUREN_PRODUCTIE).length-1)!==1||(html.split(ZON_HELPER_PRODUCTIE).length-1)!==1)throw new Error("Finale zonuren-owner is niet uniek in het artifact.");
-if((html.split(DAILY_HELPER_PRODUCTIE).length-1)!==1||(html.split(DCOND_PRODUCTIE).length-1)!==1||(html.split(DRAIN_PRODUCTIE).length-1)!==1||(html.split(KOP_PRODUCTIE).length-1)!==1)throw new Error("Finale daily-forecast owner is niet uniek in het artifact.");
+if((html.split(DAILY_HELPER_PRODUCTIE).length-1)!==1||(html.split(DCOND_PRODUCTIE).length-1)!==1||(html.split(DRAIN_PRODUCTIE).length-1)!==1||(html.split(KOP_PRODUCTIE).length-1)!==1||(html.split(KOP_CSS_PRODUCTIE).length-1)!==1)throw new Error("Finale daily-forecast owner is niet uniek in het artifact.");
 if((html.split(BRIEF_HELPER_PRODUCTIE).length-1)!==1)throw new Error("Finale briefingcopy-owner is niet uniek in het artifact.");
 if(html.includes("De officiële waarschuwing heeft voorrang op de modelverwachting."))throw new Error("Redundante briefing-waarschuwingcopy staat na UI-polish nog in artifact.");
 
