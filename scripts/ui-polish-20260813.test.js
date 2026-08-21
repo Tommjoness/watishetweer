@@ -1,104 +1,41 @@
 "use strict";
-const assert=require("assert"),fs=require("fs"),path=require("path"),vm=require("vm");
-const runtime=fs.readFileSync(path.join(__dirname,"ui-polish-20260813-runtime.js"),"utf8");
+
+const assert=require("assert");
+const fs=require("fs");
+const path=require("path");
+
 const apply=fs.readFileSync(path.join(__dirname,"apply-ui-polish-20260813.js"),"utf8");
 const warningOwner=fs.readFileSync(path.join(__dirname,"warning-render-state.js"),"utf8");
-const context={};vm.createContext(context);vm.runInContext(runtime,context);
-const api=context.WeatherNowUiPolish20260813;
-assert(api,"UI-polish helpercontract ontbreekt");
+const q4=fs.readFileSync(path.join(__dirname,"q4-rain-runtime.js"),"utf8");
+const runtimePad=path.join(__dirname,"ui-polish-20260813-runtime.js");
 
-assert.equal(api.regenperiodeDagprefix("2026-08-17","2026-08-16"),"ma ");
-assert.equal(api.regenperiodeDagprefix("2026-08-16","2026-08-16"),"");
-assert.equal(api.isNwsStructuur,undefined,"NWS-structuurdetectie hoort niet meer bij UI-polish");
+/* De historische runtime is na de ownermigraties volledig verdwenen. Deze test
+   bewaakt alleen nog wat apply-ui-polish werkelijk bezit: statische CSS,
+   accessibility en fail-fast contracten richting de inhoudelijke owners. */
+assert(!fs.existsSync(runtimePad),"UI-polish compatibility-runtime hoort verwijderd te zijn");
+assert(!apply.includes("ui-polish-20260813-runtime.js"),"apply-stap mag de verwijderde runtime niet meer lezen");
+assert(!apply.includes("WeatherNowUiPolish20260813"),"historische globale UI-polish API mag niet terugkomen");
+assert(!apply.includes("UI POLISH RUNTIME 20260813"),"historische runtime-marker mag niet terugkomen");
 
-/* Briefing bron- en tijdsemantiek worden door de pure briefing-copy owner in de
-   base-build gezet. UI-polish mag briefing() niet meer wrappen of #brief-HTML
-   achteraf herschrijven; neerslagpresentatie blijft bewust een andere owner. */
-assert.equal(api.briefingBronSemantiek,undefined,"UI-polish mag geen briefing-broncopyhelper meer exporteren");
-assert.equal(api.briefingTijdtaal,undefined,"UI-polish mag geen briefing-tijdcopyhelper meer exporteren");
-assert(!runtime.includes("uiBriefingBronSemantiek"),"UI-polish mag geen late briefing-broncopyhelper meer bevatten");
-assert(!runtime.includes("uiBriefingTijdtaal"),"UI-polish mag geen late briefing-tijdcopyhelper meer bevatten");
-assert(!runtime.includes("uiBasisBriefing"),"UI-polish mag briefing() niet meer wrappen");
-assert(!runtime.includes('document.getElementById("brief")'),"UI-polish mag briefing-HTML niet meer achteraf herschrijven");
-assert(!runtime.includes("De officiële waarschuwing heeft voorrang op de modelverwachting."),"UI-polish mag stale briefingcopy niet meer defensief verbergen");
-assert(runtime.includes("UI-polish wrapt briefing() daarom niet meer."),"UI-polish mist expliciet briefingcopy-ownershipcontract");
-assert(apply.includes('require("./briefing-copy-owner.js")'),"UI-polish apply-stap moet briefingcopy-ownercontract hergebruiken");
-assert(apply.includes("BRIEF_HELPER_PRODUCTIE")&&apply.includes("VANDAAG_PIEK_PRODUCTIE")&&apply.includes("MORGEN_PRODUCTIE"),"UI-polish verifieert de base briefingcopy-owner niet");
-assert(apply.includes("Verouderde briefing-waarschuwingcopy heeft de base briefingowner overleefd"),"stale waarschuwingzin moet upstream fail-fast worden bewaakt");
+/* Regenperiode-daglabels horen aantoonbaar bij Q4 zelf. */
+for(const invariant of [
+  "const q4DagKort=",
+  "function q4PeriodeTijdvak(g,p){",
+  'const dag=vanDatum&&basisDatum&&vanDatum!==basisDatum?vanDag+" ":"";'
+])assert(q4.includes(invariant),"Q4 mist eigen regenperiodeformatter: "+invariant);
+assert(apply.includes("Q4-regenperiode-owner ontbreekt vóór UI-polish"),"statische applylaag bewaakt Q4 niet fail-fast");
+for(const verouderd of ["uiPolishRegenperiodeKansen","uiPolishRegenperiodeDaglabel","data-ui-rain-period-probability"])
+  assert(apply.includes(verouderd),"applylaag bewaakt verouderde regenowner niet: "+verouderd);
 
-/* Q3/senior meters() is de enige eigenaar van de UV-presentatie. UI-polish
-   mag die zichtbare copy niet opnieuw berekenen of na Q3 overschrijven. */
-assert.equal(api.uvPiekTekst,undefined,"UI-polish mag geen UV-copyhelper meer exporteren");
-assert(!runtime.includes("uiUvOordeel"),"UI-polish mag geen eigen UV-oordeelschaal meer bevatten");
-assert(!runtime.includes("uiUvPiekTekst"),"UI-polish mag geen late UV-copy-owner meer bevatten");
-assert(!runtime.includes('piek("uv_index")'),"UI-polish meters-wrapper mag UV niet opnieuw ophalen");
+/* De inhoudelijke base-build owners blijven vóór deze statische laag verplicht. */
+for(const invariant of [
+  'require("./warning-render-state.js")',"START_PRODUCTIE","EIND_PRODUCTIE",
+  'require("./wind-gust-copy-owner.js")',"GUST_PRODUCTIE","HELPER_PRODUCTIE",
+  'require("./sunshine-copy-owner.js")',"ZONUREN_PRODUCTIE","ZON_HELPER_PRODUCTIE",
+  'require("./daily-forecast-owner.js")',"DAILY_HELPER_PRODUCTIE","DCOND_PRODUCTIE","DRAIN_PRODUCTIE","KOP_PRODUCTIE",
+  'require("./briefing-copy-owner.js")',"BRIEF_HELPER_PRODUCTIE","VANDAAG_PIEK_PRODUCTIE","MORGEN_PRODUCTIE"
+])assert(apply.includes(invariant),"UI-polish applylaag mist upstream ownercontract: "+invariant);
 
-/* Pollen-modelcopy wordt door de pure pollen-owner in de base-build gezet.
-   UI-polish mag lucht() daarom niet opnieuw voor dezelfde zichtbare status wrappen. */
-assert.equal(api.pollenTekst,undefined,"UI-polish mag geen pollen-copyhelper meer exporteren");
-assert(!runtime.includes("uiPollenTekst"),"UI-polish mag geen eigen pollen-copyhelper meer bevatten");
-assert(!runtime.includes("uiPolishLuchtModelstatus"),"UI-polish mag geen late pollen-DOM-owner meer bevatten");
-assert(!runtime.includes("uiBasisLucht"),"UI-polish mag lucht() niet meer voor pollen wrappen");
-
-/* De base-build pressure-copy-owner produceert de finale luchtdruksubtekst.
-   UI-polish mag pressub daarom niet meer achteraf lezen of herschrijven. */
-assert.equal(api.luchtdrukTekst,undefined,"UI-polish mag geen luchtdrukcopyhelper meer exporteren");
-assert(!runtime.includes("uiLuchtdrukTekst"),"UI-polish mag geen late luchtdrukcopyhelper meer bevatten");
-assert(!runtime.includes('document.getElementById("pressub")'),"UI-polish mag pressub niet meer herschrijven");
-
-/* De wind-gust-copy-owner produceert ook gustsub al in de base-build.
-   Daarmee heeft UI-polish geen enkele reden meer om meters() te wrappen. */
-assert.equal(api.windstootTekst,undefined,"UI-polish mag geen windstootcopyhelper meer exporteren");
-assert(!runtime.includes("uiWindstootTekst"),"UI-polish mag geen late windstootcopyhelper meer bevatten");
-assert(!runtime.includes("uiBasisMeters"),"UI-polish mag meters() niet meer wrappen");
-assert(!runtime.includes('piek("wind_gusts_10m")'),"UI-polish mag windstootpiek niet opnieuw ophalen");
-assert(!runtime.includes('zetTekst("gustsub"'),"UI-polish mag gustsub niet opnieuw schrijven");
-assert(runtime.includes("UI-polish wrapt meters() daarom niet meer."),"UI-polish mist expliciet windstoot/pressure ownershipcontract");
-assert(apply.includes('require("./wind-gust-copy-owner.js")'),"UI-polish apply-stap moet windstoot-ownercontract hergebruiken");
-assert(apply.includes("GUST_PRODUCTIE")&&apply.includes("HELPER_PRODUCTIE"),"UI-polish verifieert de base windstootowner niet");
-
-/* De sunshine-copy-owner produceert de finale daglichtbewuste zonurentegel al
-   in de base-build. UI-polish mag dezelfde lokale dag- en zonsdata niet opnieuw lezen. */
-assert.equal(api.zonurenWoord,undefined,"UI-polish mag geen zonurencopyhelper meer exporteren");
-assert(!runtime.includes("uiZonurenWoord"),"UI-polish mag geen eigen zonurencopyhelper meer bevatten");
-assert(!runtime.includes("uiBasisZonurenTegel"),"UI-polish mag zonurenTegel() niet meer wrappen");
-assert(!runtime.includes("zonurenTegel=function"),"UI-polish mag zonurenTegel() niet opnieuw definiëren");
-assert(!runtime.includes("day.sunshine_duration"),"UI-polish mag zonurendata niet opnieuw uitlezen");
-assert(!runtime.includes("day.sunrise")&&!runtime.includes("day.sunset"),"UI-polish mag daglichtduur niet opnieuw berekenen");
-assert(runtime.includes("UI-polish wrapt zonurenTegel() daarom niet meer."),"UI-polish mist expliciet zonuren-ownershipcontract");
-assert(apply.includes('require("./sunshine-copy-owner.js")'),"UI-polish apply-stap moet zonuren-ownercontract hergebruiken");
-assert(apply.includes("ZONUREN_PRODUCTIE")&&apply.includes("ZON_HELPER_PRODUCTIE"),"UI-polish verifieert de base zonurenowner niet");
-
-/* De daily-forecast owner produceert de zichtbare zeven-dagenpresentatie al in
-   de base-build. UI-polish mag daily data niet opnieuw lezen en dagen() niet wrappen. */
-assert.equal(api.dagNeerslagTekst,undefined,"UI-polish mag geen daily-forecast copyhelper meer exporteren");
-assert(!runtime.includes("uiDagNeerslagTekst"),"UI-polish mag geen eigen daily-forecast copyhelper meer bevatten");
-assert(!runtime.includes("uiPolishDagen"),"UI-polish mag geen late daily DOM-owner meer bevatten");
-assert(!runtime.includes("uiBasisDagen"),"UI-polish mag dagen() niet meer wrappen");
-assert(!runtime.includes("precipitation_probability_max"),"UI-polish mag daily neerslagkans niet opnieuw uitlezen");
-assert(!runtime.includes("precipitation_sum"),"UI-polish mag daily neerslagsom niet opnieuw uitlezen");
-assert(runtime.includes("UI-polish wrapt dagen() daarom niet meer."),"UI-polish mist expliciet daily-forecast ownershipcontract");
-assert(apply.includes('require("./daily-forecast-owner.js")'),"UI-polish apply-stap moet daily-forecast ownercontract hergebruiken");
-assert(apply.includes("DAILY_HELPER_PRODUCTIE")&&apply.includes("DCOND_PRODUCTIE")&&apply.includes("DRAIN_PRODUCTIE")&&apply.includes("KOP_PRODUCTIE"),"UI-polish verifieert de base daily-forecast owner niet");
-
-assert(!runtime.includes("uiPolishRegenperiodeKansen"),"UI-polish bronruntime mag de oude regenkans-owner niet meer bevatten");
-assert(!runtime.includes("uiPolishRegenperiodeDaglabel"),"UI-polish bronruntime mag de oude regendaglabel-owner niet meer bevatten");
-assert(!runtime.includes("data-ui-rain-period-probability"),"UI-polish bronruntime mag geen oude statische periodekanslabels meer bezitten");
-assert(runtime.includes("/* Regenperiodepresentatie wordt volledig beheerd door Q4. */"),"UI-polish bronruntime mist expliciet Q4-ownership");
-assert(!apply.includes("VEROUDE_REGEN_START")&&!apply.includes("runtime=runtime.slice"),"apply-stap mag zijn eigen regenowner niet meer tijdens buildtijd uitsnijden");
-assert(apply.includes("Verouderde UI-polish regenperiode-owner staat weer in de bronruntime"),"apply-stap bewaakt Q4-ownership niet fail-fast");
-
-/* De waarschuwingrenderer bezit nu ook de finale foutcopy, severity en NWS-
-   detailmarkup. De historische UI-polish runtime mag geen warning-DOM meer lezen
-   of waarschuwingen() achteraf wrappen. */
-for(const verouderd of [
-  "uiIsNwsStructuur","uiPolishWaarschuwingen","uiBasisWaarschuwingen",
-  "waarschuwingen=async function","S.actieveWaarschuwingen",
-  "Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.",
-  "Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald.",
-  "Details van de waarschuwing","data-ui-severity"
-])assert(!runtime.includes(verouderd),"UI-polish bezit nog waarschuwingpresentatie: "+verouderd);
-assert(runtime.includes("UI-polish wrapt waarschuwingen()"),"UI-polish mist expliciet waarschuwing-ownershipcontract");
 for(const invariant of [
   "Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.",
   "Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald.",
@@ -106,21 +43,12 @@ for(const invariant of [
   "function pasWarningRenderStateToe(html){"
 ])assert(warningOwner.includes(invariant),"Base warning-owner mist finale presentatieregel: "+invariant);
 
-/* Loading en de succesvolle nulwaarschuwingstatus zijn dezelfde requeststates
-   en blijven onderdeel van die ene base-build owner. */
-assert(!runtime.includes("Geen officiële weerwaarschuwingen voor deze locatie."),"UI-polish runtime mag de lege warning-state niet meer bezitten");
-assert(!runtime.includes('data-ui-warning-loading="1"'),"UI-polish runtime mag de warning-loadingstate niet meer bezitten");
-assert(!runtime.includes("Officiële weerwaarschuwingen controleren…"),"UI-polish runtime mag de warning-loadingcopy niet meer bezitten");
-assert(runtime.includes("De waarschuwingrenderer bezit loading, lege/foutstatus"),"UI-polish mist expliciet volledig warning ownershipcontract");
-assert(apply.includes('require("./warning-render-state.js")'),"UI-polish apply-stap moet de base-owner contracten hergebruiken");
-assert(apply.includes("START_PRODUCTIE")&&apply.includes("EIND_PRODUCTIE"),"UI-polish verifieert de base warning-owner niet");
-assert(!apply.includes("WAARSCHUWING_START")&&!apply.includes("WAARSCHUWING_EIND"),"UI-polish apply-stap mag warning states niet meer muteren");
-
-/* Accessibility-regressies horen bij het artifactcontract, niet bij de
-   weerdata. Bewaak daarom dat de final-polish exact de bestaande #app-container
-   tot main maakt en mobiele footerdoelen een 44px-hitbox geeft. */
-assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),"main-landmark moet vanuit exact de bestaande #app-container worden opgebouwd");
+/* De overgebleven apply-verantwoordelijkheden blijven expliciet en testbaar. */
+assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),"main-landmark moet vanuit bestaande #app-container worden opgebouwd");
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
-assert(apply.includes('if((html.match(/<main id="app" style="display:none">/g)||[]).length!==1)'),"definitieve main-landmark wordt niet op uniciteit geverifieerd");
-console.log("UI-polish regressiecontract groen: geen late waarschuwingwrapper meer; warning/Q4/accessibility en overige base-build domeineigenaars blijven afgedekt.");
+assert(apply.includes('.waarsch[data-ui-severity="rood"]'),"warning-CSS ontbreekt uit de statische applylaag");
+assert(apply.includes('.row.day.kop .bar{text-align:center}'),"weekkop-uitlijning ontbreekt uit de statische applylaag");
+assert(apply.includes('if(html.includes("WeatherNowUiPolish20260813")||html.includes("UI POLISH RUNTIME 20260813"))'),"finale applyguard tegen terugkeer runtime ontbreekt");
+
+console.log("UI-polish statisch contract groen: geen runtime meer; CSS/accessibility blijven en inhoudelijke owners worden upstream bewaakt.");
