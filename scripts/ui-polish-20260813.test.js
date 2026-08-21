@@ -2,14 +2,14 @@
 const assert=require("assert"),fs=require("fs"),path=require("path"),vm=require("vm");
 const runtime=fs.readFileSync(path.join(__dirname,"ui-polish-20260813-runtime.js"),"utf8");
 const apply=fs.readFileSync(path.join(__dirname,"apply-ui-polish-20260813.js"),"utf8");
+const warningOwner=fs.readFileSync(path.join(__dirname,"warning-render-state.js"),"utf8");
 const context={};vm.createContext(context);vm.runInContext(runtime,context);
 const api=context.WeatherNowUiPolish20260813;
 assert(api,"UI-polish helpercontract ontbreekt");
 
 assert.equal(api.regenperiodeDagprefix("2026-08-17","2026-08-16"),"ma ");
 assert.equal(api.regenperiodeDagprefix("2026-08-16","2026-08-16"),"");
-assert.equal(api.isNwsStructuur("* WHAT...Heat index values. * WHERE...Dallas."),true);
-assert.equal(api.isNwsStructuur("Plaatselijk zware buien mogelijk."),false);
+assert.equal(api.isNwsStructuur,undefined,"NWS-structuurdetectie hoort niet meer bij UI-polish");
 
 /* Briefing bron- en tijdsemantiek worden door de pure briefing-copy owner in de
    base-build gezet. UI-polish mag briefing() niet meer wrappen of #brief-HTML
@@ -87,18 +87,33 @@ assert(!runtime.includes("data-ui-rain-period-probability"),"UI-polish bronrunti
 assert(runtime.includes("/* Regenperiodepresentatie wordt volledig beheerd door Q4. */"),"UI-polish bronruntime mist expliciet Q4-ownership");
 assert(!apply.includes("VEROUDE_REGEN_START")&&!apply.includes("runtime=runtime.slice"),"apply-stap mag zijn eigen regenowner niet meer tijdens buildtijd uitsnijden");
 assert(apply.includes("Verouderde UI-polish regenperiode-owner staat weer in de bronruntime"),"apply-stap bewaakt Q4-ownership niet fail-fast");
-assert(runtime.includes("Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen."),"niet-ondersteunde waarschuwingstatus is niet consumentvriendelijk");
-assert(runtime.includes("Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald."),"tijdelijke waarschuwingstoring blijft onduidelijk");
 
-/* Loading en de succesvolle nulwaarschuwingstatus zijn requeststates en hebben
-   nu één base-build owner. UI-polish mag ze niet meer zelf injecteren of als
-   lege-DOM-fallback aanmaken. */
+/* De waarschuwingrenderer bezit nu ook de finale foutcopy, severity en NWS-
+   detailmarkup. De historische UI-polish runtime mag geen warning-DOM meer lezen
+   of waarschuwingen() achteraf wrappen. */
+for(const verouderd of [
+  "uiIsNwsStructuur","uiPolishWaarschuwingen","uiBasisWaarschuwingen",
+  "waarschuwingen=async function","S.actieveWaarschuwingen",
+  "Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.",
+  "Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald.",
+  "Details van de waarschuwing","data-ui-severity"
+])assert(!runtime.includes(verouderd),"UI-polish bezit nog waarschuwingpresentatie: "+verouderd);
+assert(runtime.includes("UI-polish wrapt waarschuwingen()"),"UI-polish mist expliciet waarschuwing-ownershipcontract");
+for(const invariant of [
+  "Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.",
+  "Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald.",
+  "Details van de waarschuwing","data-ui-severity","waarsch-details","waarsch-meta",
+  "function pasWarningRenderStateToe(html){"
+])assert(warningOwner.includes(invariant),"Base warning-owner mist finale presentatieregel: "+invariant);
+
+/* Loading en de succesvolle nulwaarschuwingstatus zijn dezelfde requeststates
+   en blijven onderdeel van die ene base-build owner. */
 assert(!runtime.includes("Geen officiële weerwaarschuwingen voor deze locatie."),"UI-polish runtime mag de lege warning-state niet meer bezitten");
 assert(!runtime.includes('data-ui-warning-loading="1"'),"UI-polish runtime mag de warning-loadingstate niet meer bezitten");
 assert(!runtime.includes("Officiële weerwaarschuwingen controleren…"),"UI-polish runtime mag de warning-loadingcopy niet meer bezitten");
-assert(runtime.includes("De base-build waarschuwingrenderer bezit loading en de expliciete lege"),"UI-polish mist expliciet warning-state ownershipcontract");
+assert(runtime.includes("De waarschuwingrenderer bezit loading, lege/foutstatus"),"UI-polish mist expliciet volledig warning ownershipcontract");
 assert(apply.includes('require("./warning-render-state.js")'),"UI-polish apply-stap moet de base-owner contracten hergebruiken");
-assert(apply.includes("START_PRODUCTIE")&&apply.includes("EIND_PRODUCTIE"),"UI-polish verifieert de base warning-state owner niet");
+assert(apply.includes("START_PRODUCTIE")&&apply.includes("EIND_PRODUCTIE"),"UI-polish verifieert de base warning-owner niet");
 assert(!apply.includes("WAARSCHUWING_START")&&!apply.includes("WAARSCHUWING_EIND"),"UI-polish apply-stap mag warning states niet meer muteren");
 
 /* Accessibility-regressies horen bij het artifactcontract, niet bij de
@@ -108,4 +123,4 @@ assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
 assert(apply.includes('if((html.match(/<main id="app" style="display:none">/g)||[]).length!==1)'),"definitieve main-landmark wordt niet op uniciteit geverifieerd");
-console.log("UI-polish regressiecontract groen: warning-state/Q4/accessibility blijven, en UV-/pollen-/luchtdruk-/windstoot-/zonuren-/daily-forecast-/briefingcopy hebben geen dubbele owner meer.");
+console.log("UI-polish regressiecontract groen: geen late waarschuwingwrapper meer; warning/Q4/accessibility en overige base-build domeineigenaars blijven afgedekt.");
