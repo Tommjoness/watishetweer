@@ -4,7 +4,10 @@ const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
-const {START_BRON,START_PRODUCTIE,EIND_BRON,EIND_PRODUCTIE}=require("./warning-render-state.js");
+const {
+  START_BRON,START_PRODUCTIE,EIND_BRON,EIND_PRODUCTIE,
+  CSS_BRON:WARNING_CSS_BRON,CSS_PRODUCTIE:WARNING_CSS_PRODUCTIE
+}=require("./warning-render-state.js");
 const {GUST_BRON,GUST_PRODUCTIE,HELPER_PRODUCTIE}=require("./wind-gust-copy-owner.js");
 const {ZONUREN_BRON,ZONUREN_PRODUCTIE,HELPER_PRODUCTIE:ZON_HELPER_PRODUCTIE}=require("./sunshine-copy-owner.js");
 const {
@@ -112,29 +115,18 @@ if(html.split(APP_CLOSE).length-1!==1)throw new Error("#app-afsluiting ontbreekt
 html=html.replace(APP_OPEN,'<main id="app" style="display:none">');
 html=html.replace(APP_CLOSE,'    </footer>\n  </main>\n</div>\n\n<script>');
 
-/* Loading en de bewezen lege waarschuwingstate zijn al eigendom van de pure
-   base-build owner. UI-polish mag die requeststatussen niet opnieuw schrijven;
-   bewaak hier alleen dat precies het verwachte renderercontract is aangeleverd. */
+/* Requeststates, kaartmarkup en warningstijl zijn al eigendom van de pure
+   base-build owner. Deze late laag verifieert het contract alleen nog en mag
+   waarschuwingen inhoudelijk noch visueel opnieuw schrijven. */
 if((html.split(START_PRODUCTIE).length-1)!==1)throw new Error("Base-build waarschuwing-laadstatus ontbreekt of is dubbel vóór UI-polish.");
 if((html.split(EIND_PRODUCTIE).length-1)!==1)throw new Error("Base-build waarschuwing-leegstatus ontbreekt of is dubbel vóór UI-polish.");
+if((html.split(WARNING_CSS_PRODUCTIE).length-1)!==1)throw new Error("Base-build warning-CSS ontbreekt of is dubbel vóór UI-polish.");
 if(html.includes(START_BRON))throw new Error("Oude lege startstate van waarschuwingrenderer heeft base-build overleefd.");
 if(html.includes(EIND_BRON))throw new Error("Oude impliciete lege eindstate van waarschuwingrenderer heeft base-build overleefd.");
+if(html.includes(WARNING_CSS_BRON))throw new Error("Oude warning-CSS heeft de base-build overleefd.");
 
 const css=`
 ${CSS_MARK}
-/* Waarschuwingen zijn belangrijk, maar een gewone advisory hoeft niet dezelfde
-   visuele urgentie te krijgen als een rode waarschuwing. Alleen niveau rood
-   houdt daarom de carmine-accentkleur; de overige niveaus blijven rustig. */
-#waarschuwingen>.msg{font-size:12.5px;color:var(--ink-45);padding:7px 0}
-.waarsch{border-left:1px solid var(--rule);padding:8px 0 8px 12px;margin-top:var(--s2)}
-.waarsch h3{font-family:var(--sans);font-weight:500;font-size:14px;line-height:1.35;margin:0 0 3px;color:var(--ink)}
-.waarsch p{margin:0;font-size:13px;line-height:1.45;color:var(--ink-70)}
-.waarsch[data-ui-severity="rood"]{border-left:3px solid var(--carmine)}
-.waarsch[data-ui-severity="rood"] h3{color:var(--carmine)}
-.waarsch-details{margin-top:6px;font-size:12px;color:var(--ink-45)}
-.waarsch-details summary{display:inline;cursor:pointer;color:var(--ink-45);box-shadow:inset 0 -1px 0 var(--rule)}
-.waarsch-details summary:hover{color:var(--ink)}
-.waarsch-details p{margin-top:7px;font-size:12px;color:var(--ink-45);max-width:92ch}
 /* De bronfooter blijft typografisch compact. Alleen op aanraakbreedtes krijgen
    links en het uitklapbare locatie-item een fysieke 44px-hoge hitbox en extra
    horizontale scheiding. Zo wordt de klikruimte groter zonder grotere letters,
@@ -155,6 +147,8 @@ if(html.includes(APP_OPEN))throw new Error("Oude #app-div is na accessibility-po
 if(!html.includes("footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px"))throw new Error("Mobiele footer-hitbox ontbreekt uit definitief artifact.");
 if(!html.includes('data-ui-warning-loading="1">Officiële weerwaarschuwingen controleren…'))throw new Error("Waarschuwing-laadstatus ontbreekt uit definitief artifact.");
 if(!html.includes("Geen officiële weerwaarschuwingen voor deze locatie."))throw new Error("Lege waarschuwing-eindstate ontbreekt uit definitief artifact.");
+if((html.split(WARNING_CSS_PRODUCTIE).length-1)!==1)throw new Error("Finale warning-CSS is niet uniek in het artifact.");
+if(html.includes(WARNING_CSS_BRON))throw new Error("Oude warning-CSS staat na UI-polish nog in artifact.");
 if(html.includes("uiPolishRegenperiodeKansen")||html.includes("uiPolishRegenperiodeDaglabel")||html.includes("data-ui-rain-period-probability"))throw new Error("UI-polish overschrijft de Q4-regenperiodepresentatie nog steeds.");
 if(html.includes("function uiWindstootTekst(pg,nu,dag,vak){")||html.includes("const uiBasisMeters=meters;"))throw new Error("UI-polish bezit na assemblage opnieuw windstootcopy of meters().");
 if(html.includes("function uiZonurenWoord(uur,daglichtUur){")||html.includes("const uiBasisZonurenTegel=zonurenTegel;"))throw new Error("UI-polish bezit na assemblage opnieuw zonurencopy of zonurenTegel().");
@@ -171,4 +165,4 @@ if(!scripts.length)throw new Error("Geen inline runtime gevonden na UI-polish.")
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-polish-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"ui-polish-20260813");
-console.log("UI-polish toegepast zonder historische runtime: warning-CSS, base owner-contracten, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
+console.log("UI-polish toegepast zonder historische runtime: base owner-contracten, main-landmark en mobiele footer-hitboxes; cache "+versie+".\n");
