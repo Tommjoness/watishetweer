@@ -37,6 +37,6 @@ globalThis.WeatherNowUiPolish20260813=Object.freeze({
 
 /* De waarschuwingrenderer bezit loading, lege/foutstatus, severity en de
    NWS-detailpresentatie al in de base-build. UI-polish wrapt waarschuwingen()
-   daarom niet meer en leest S.actieveWaarschuwingen hier niet opnieuw uit. */
+   daarom niet meer en leest de actieve warninglijst hier niet opnieuw uit. */
 
 })();
