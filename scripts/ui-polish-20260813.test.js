@@ -6,11 +6,12 @@ const path=require("path");
 
 const apply=fs.readFileSync(path.join(__dirname,"apply-ui-polish-20260813.js"),"utf8");
 const warningOwner=fs.readFileSync(path.join(__dirname,"warning-render-state.js"),"utf8");
+const dailyOwner=fs.readFileSync(path.join(__dirname,"daily-forecast-owner.js"),"utf8");
 const q4=fs.readFileSync(path.join(__dirname,"q4-rain-runtime.js"),"utf8");
 const runtimePad=path.join(__dirname,"ui-polish-20260813-runtime.js");
 
 /* De historische runtime is na de ownermigraties volledig verdwenen. Deze test
-   bewaakt alleen nog wat apply-ui-polish werkelijk bezit: statische CSS,
+   bewaakt alleen nog wat apply-ui-polish werkelijk bezit: warning-CSS,
    accessibility en fail-fast contracten richting de inhoudelijke owners. */
 assert(!fs.existsSync(runtimePad),"UI-polish compatibility-runtime hoort verwijderd te zijn");
 assert(!apply.includes("ui-polish-20260813-runtime.js"),"apply-stap mag de verwijderde runtime niet meer lezen");
@@ -32,9 +33,16 @@ for(const invariant of [
   'require("./warning-render-state.js")',"START_PRODUCTIE","EIND_PRODUCTIE",
   'require("./wind-gust-copy-owner.js")',"GUST_PRODUCTIE","HELPER_PRODUCTIE",
   'require("./sunshine-copy-owner.js")',"ZONUREN_PRODUCTIE","ZON_HELPER_PRODUCTIE",
-  'require("./daily-forecast-owner.js")',"DAILY_HELPER_PRODUCTIE","DCOND_PRODUCTIE","DRAIN_PRODUCTIE","KOP_PRODUCTIE",
+  'require("./daily-forecast-owner.js")',"DAILY_HELPER_PRODUCTIE","DCOND_PRODUCTIE","DRAIN_PRODUCTIE","KOP_PRODUCTIE","KOP_CSS_PRODUCTIE",
   'require("./briefing-copy-owner.js")',"BRIEF_HELPER_PRODUCTIE","VANDAAG_PIEK_PRODUCTIE","MORGEN_PRODUCTIE"
 ])assert(apply.includes(invariant),"UI-polish applylaag mist upstream ownercontract: "+invariant);
+
+/* De Bereik-kopuitlijning hoort nu bij dezelfde daily owner als de koptekst.
+   UI-polish mag de selector niet nogmaals in zijn eigen CSS-template schrijven. */
+assert(dailyOwner.includes("KOP_CSS_PRODUCTIE"),"daily owner mist expliciet weekkop-CSScontract");
+assert(dailyOwner.includes('.row.day.kop .bar{text-align:center}'),"daily owner mist finale Bereik-uitlijning");
+assert(!apply.includes('\n.row.day.kop .bar{text-align:center}\n'),"UI-polish mag Bereik-uitlijning niet meer laat toevoegen");
+assert(apply.includes('[KOP_CSS_PRODUCTIE,"weekkop-uitlijning"]'),"UI-polish moet de upstream weekkopowner nog wel fail-fast verifiëren");
 
 for(const invariant of [
   "Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.",
@@ -48,6 +56,5 @@ assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
 assert(apply.includes('.waarsch[data-ui-severity="rood"]'),"warning-CSS ontbreekt uit de statische applylaag");
-assert(apply.includes('.row.day.kop .bar{text-align:center}'),"weekkop-uitlijning ontbreekt uit de statische applylaag");
 
-console.log("UI-polish statisch contract groen: geen runtime meer; CSS/accessibility blijven en inhoudelijke owners worden upstream bewaakt.");
+console.log("UI-polish statisch contract groen: geen runtime/weekkopowner meer; warning-CSS/accessibility blijven en inhoudelijke owners worden upstream bewaakt.");
