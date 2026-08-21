@@ -7,6 +7,7 @@ const p=require("./mobile-screenshot-polish.js");
 
 const mobileCss=fs.readFileSync(path.join(__dirname,"mobile-screenshot-polish.css"),"utf8");
 const apply=fs.readFileSync(path.join(__dirname,"apply-mobile-screenshot-polish.js"),"utf8");
+const bronHtml=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
 assert(/#nights \.row\.night\{[\s\S]*?row-gap:5px;[\s\S]*?\}/.test(mobileCss),"Nachtzicht houdt op mobiel extra verticale ademruimte");
 assert(/#nights \.row\.night\.kop > \.nmeta:not\(\.wide\)\{[\s\S]*?font-size:10px!important;[\s\S]*?\}/.test(mobileCss),"Mobiele Nachtzicht-kop blijft minimaal 10 px op normale telefoonbreedte");
 assert(/#nights \.row\.night \.nachtadvies\{[\s\S]*?font-size:13px;[\s\S]*?line-height:1\.4;[\s\S]*?\}/.test(mobileCss),"Mobiel Nachtzicht-advies gebruikt leesbare 13 px tekst");
@@ -17,6 +18,15 @@ assert(mobileCss.includes("#nights .nacht-meer")&&mobileCss.includes('#nights .r
 assert(/#days \.row\.day:not\(\.kop\) \.dname\{font-size:13\.5px\}/.test(mobileCss),"Mobiele dagnaam blijft minimaal 13,5 px");
 assert(/#days \.row\.day:not\(\.kop\) \.dwind,[\s\S]*?#days \.row\.day:not\(\.kop\) \.drain\{font-size:13px\}/.test(mobileCss),"Mobiele wind- en neerslagtekst blijven minimaal 13 px");
 assert(apply.includes("M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw"),"Mobiel etmaal toont permanent alleen globale extrema naast het aparte nu-label");
+
+/* De brede statistiektegel is op dit moment exact één UV-tegel. Daardoor mag
+   de mobiele presentatie-owner hem gericht compacter maken zonder een tweede
+   meetwaarde of toekomstige kaart stilzwijgend mee te nemen. */
+assert.equal((bronHtml.match(/class="stat breed"/g)||[]).length,1,"Bron heeft exact één brede statistiektegel");
+assert(/<div class="stat breed"><div class="eyebrow">UV-piek vandaag<\/div><div class="sval" id="uv">/.test(bronHtml),"De brede statistiektegel is aantoonbaar de UV-piek");
+assert(/@media\(max-width:430px\)[\s\S]*?\.stats \.stat\.breed\{[\s\S]*?display:grid;[\s\S]*?grid-template-columns:minmax\(0,1fr\) auto;[\s\S]*?grid-template-areas:"label value" "sub sub";[\s\S]*?padding:12px 0 14px;[\s\S]*?\}/.test(mobileCss),"Mobiele UV-piek blijft breed maar gebruikt een compacte tweeregelige gridcompositie zonder asymmetrische zijpadding");
+assert(/\.stats \.stat\.breed > \.sval\{[\s\S]*?grid-area:value;[\s\S]*?margin-top:0;[\s\S]*?text-align:right;[\s\S]*?\}/.test(mobileCss),"UV-waarde staat op dezelfde compacte bovenregel en rechts uitgelijnd");
+assert(/\.stats \.stat\.breed > \.ssub\{[\s\S]*?grid-area:sub;[\s\S]*?margin-top:0;[\s\S]*?\}/.test(mobileCss),"Bestaande UV-toelichting houdt een eigen volledige tweede regel");
 
 /* De mobiele header is één compositie: zoekveld over de volle breedte en drie
    gelijke acties eronder. Alle semantiek blijft in de bestaande DOM; deze test
@@ -107,4 +117,4 @@ assert.equal(p.pollenEenheid(1.5),"korrels/m³");
 assert.equal(p.pollenEenheid(0),"korrels/m³");
 assert.equal(p.pollenEenheid(4),"korrels/m³");
 
-console.log("Mobiele screenshot-polish: topbediening, compacte etmaallabels, uitklapbaar Nachtzicht, kalendergrens, maanfase, natuurlijke maancopy, weekleesbaarheid en pollenregressies geslaagd.");
+console.log("Mobiele screenshot-polish: compacte UV-piek, topbediening, compacte etmaallabels, uitklapbaar Nachtzicht, kalendergrens, maanfase, natuurlijke maancopy, weekleesbaarheid en pollenregressies geslaagd.");
