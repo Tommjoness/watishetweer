@@ -59,7 +59,9 @@ for(const verouderd of ["uiZonurenWoord","uiBasisZonurenTegel","zonurenTegel=fun
 
 /* De zeven-dagenpresentatie is eveneens vóór UI-polish definitief. De base-owner
    bewaart alle daily waarden en interactie, maar bezit nu de zichtbare koppen,
-   de ene mm-weergave en de Droog-presentatie. */
+   de ene mm-weergave en de Droog-presentatie. Andere bestaande lagen mogen
+   dagen() nog om een eigen reden wrappen; alleen de voormalige UI-polish
+   helper/wrappernamen zijn hier een geldige stale-ownerhandtekening. */
 if((html.split(DAILY_HELPER_PRODUCTIE).length-1)!==1)throw new Error("Base-build daily-forecast helper ontbreekt of is dubbel vóór UI-polish.");
 for(const [productie,label] of [[DCOND_PRODUCTIE,"weekomschrijving"],[DRAIN_PRODUCTIE,"weekneerslagcel"],[KOP_PRODUCTIE,"weekkoppen"]]){
   if((html.split(productie).length-1)!==1)throw new Error("Base-build "+label+" ontbreekt of is dubbel vóór UI-polish.");
@@ -67,7 +69,7 @@ for(const [productie,label] of [[DCOND_PRODUCTIE,"weekomschrijving"],[DRAIN_PROD
 for(const [bron,label] of [[DCOND_BRON,"oude weekomschrijving"],[DRAIN_BRON,"oude weekneerslagcel"],[KOP_BRON,"oude weekkoppen"]]){
   if(html.includes(bron))throw new Error(label+" heeft de base-build overleefd.");
 }
-for(const verouderd of ["uiDagNeerslagTekst","uiPolishDagen","uiBasisDagen","dagen=function"]){
+for(const verouderd of ["uiDagNeerslagTekst","uiPolishDagen","uiBasisDagen"]){
   if(html.includes(verouderd))throw new Error("Verouderde UI-polish daily-forecast owner staat weer in het artifact: "+verouderd);
 }
 
