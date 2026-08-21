@@ -55,7 +55,15 @@ for(const vereist of [
   "if(!M)return;",
   "temperatuurLabels=teksten.filter",
   "getBBox()",
-  "Nachtzicht-presentatie geconsolideerd in WeatherNowMobileScreenshotPolish"
+  "Nachtzicht-presentatie geconsolideerd in WeatherNowMobileScreenshotPolish",
+  ".stats .stat.breed{",
+  "grid-template-columns:minmax(0,1fr) auto",
+  "grid-template-areas:\"label value\" \"sub sub\"",
+  "padding:12px 0 14px",
+  ".stats .stat.breed > .sval{",
+  "grid-area:value",
+  ".stats .stat.breed > .ssub{",
+  "grid-area:sub"
 ]){
   if(!html.includes(vereist))throw new Error("Definitieve productie-invariant ontbreekt: "+vereist);
 }
@@ -68,6 +76,17 @@ if(html.includes("const recenteNeerslag=eindigGetal(c.precipitation)"))throw new
 if(html.includes("compactRecentLabel"))throw new Error("Legacy kwartier-wrapper staat nog in de definitieve artifact.");
 if(html.includes("Beste modeluren")||html.includes("Relatief gunstigste modeluren"))throw new Error("Nachtzicht bevat nog oud modeljargon in de definitieve artifact.");
 
+/* De mobiele compacte breedtebehandeling is bewust gekoppeld aan de enige brede
+   statistiektegel. Als later een tweede brede tegel wordt toegevoegd, moet de
+   presentatie opnieuw expliciet worden beoordeeld in plaats van stil mee te liften. */
+const bredeStats=html.match(/class="stat breed"/g)||[];
+if(bredeStats.length!==1)throw new Error("Mobiele UV-layout verwacht exact één brede statistiektegel; gevonden: "+bredeStats.length+".");
+const uvStat='<div class="stat breed"><div class="eyebrow">UV-piek vandaag</div><div class="sval" id="uv">';
+if((html.split(uvStat).length-1)!==1)throw new Error("De enige brede statistiektegel is niet aantoonbaar de UV-piek.");
+const uvCss=html.lastIndexOf(".stats .stat.breed{");
+const basisStats=html.indexOf(".stat{padding:var(--s2) 22px 18px 0");
+if(uvCss<0||basisStats<0||uvCss<=basisStats)throw new Error("Mobiele UV-override staat niet aantoonbaar na de basis-statistiekopmaak.");
+
 const nachtOwners=html.split("const basisNachten=nachten;").length-1;
 if(nachtOwners!==1)throw new Error("Nachtzicht heeft "+nachtOwners+" presentatie-owners; exact één vereist.");
 if(html.includes('const basisNachten=nachten;\nnachten=function(){\n  basisNachten();\n  const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")]'))throw new Error("Oude senior Nachtzicht-wrapper staat nog in de definitieve artifact.");
@@ -79,4 +98,4 @@ const botsingsBron=html.slice(botsingsLaag,etmaalEind);
 if(!botsingsBron.includes("if(!M)return;"))throw new Error("Fontbox-botsingslaag moet uitsluitend op mobiele grafieken actief zijn; desktop-uuras mag niet worden opgeschoond.");
 
 const verwacht=verifieerServiceworkerCache(OUT,"checkpoint-50");
-console.log("Definitieve checkpoint-50 artifact geverifieerd: mobiel etmaal toont alleen nu/min/max permanent, Nachtzicht toont drie nachten met toegankelijke uitklap, één Nachtzicht-owner met kalendergrens en zonsopkomstgrens, scanbare maan/zichtregels, brongetrouwe maanfase en cache "+verwacht+".");
+console.log("Definitieve checkpoint-50 artifact geverifieerd: compacte brede UV-piek op mobiel, mobiel etmaal toont alleen nu/min/max permanent, Nachtzicht toont drie nachten met toegankelijke uitklap, één Nachtzicht-owner met kalendergrens en zonsopkomstgrens, scanbare maan/zichtregels, brongetrouwe maanfase en cache "+verwacht+".");

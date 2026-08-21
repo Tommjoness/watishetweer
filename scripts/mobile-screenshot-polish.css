@@ -183,6 +183,33 @@ footer .bron-bronnen .bronitem{
   .tools > #thema{border-right:0}
   .results{top:46px;left:-1px;right:-1px}
   #stamp{padding:0 1px;line-height:1.35}
+
+  /* De brede stat is momenteel uitsluitend de UV-piek. Op mobiel blijft die
+     bewust over beide kolommen lopen, maar hij krijgt niet langer de 22px
+     rechterpadding van een halve statistiektegel. Label en waarde delen één
+     baseline; de bestaande UV-toelichting blijft daaronder volledig leesbaar.
+     Dit verandert uitsluitend geometrie, niet de UV-data of -copy. */
+  .stats .stat.breed{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    grid-template-areas:"label value" "sub sub";
+    align-items:baseline;
+    column-gap:12px;
+    row-gap:3px;
+    padding:12px 0 14px;
+  }
+  .stats .stat.breed > .eyebrow{grid-area:label;min-width:0}
+  .stats .stat.breed > .sval{
+    grid-area:value;
+    margin-top:0;
+    min-width:0;
+    text-align:right;
+  }
+  .stats .stat.breed > .ssub{
+    grid-area:sub;
+    margin-top:0;
+    min-width:0;
+  }
 }
 
 @media(max-width:360px){
