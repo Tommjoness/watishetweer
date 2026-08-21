@@ -11,8 +11,8 @@ const q4=fs.readFileSync(path.join(__dirname,"q4-rain-runtime.js"),"utf8");
 const runtimePad=path.join(__dirname,"ui-polish-20260813-runtime.js");
 
 /* De historische runtime is na de ownermigraties volledig verdwenen. Deze test
-   bewaakt alleen nog wat apply-ui-polish werkelijk bezit: warning-CSS,
-   accessibility en fail-fast contracten richting de inhoudelijke owners. */
+   bewaakt alleen nog wat apply-ui-polish werkelijk bezit: accessibility en
+   fail-fast contracten richting de inhoudelijke owners. */
 assert(!fs.existsSync(runtimePad),"UI-polish compatibility-runtime hoort verwijderd te zijn");
 assert(!apply.includes("ui-polish-20260813-runtime.js"),"apply-stap mag de verwijderde runtime niet meer lezen");
 assert(!apply.includes('runtime+"\\n"+START'),"apply-stap mag geen historische runtime meer injecteren");
@@ -30,7 +30,7 @@ for(const verouderd of ["uiPolishRegenperiodeKansen","uiPolishRegenperiodeDaglab
 
 /* De inhoudelijke base-build owners blijven vóór deze statische laag verplicht. */
 for(const invariant of [
-  'require("./warning-render-state.js")',"START_PRODUCTIE","EIND_PRODUCTIE",
+  'require("./warning-render-state.js")',"START_PRODUCTIE","EIND_PRODUCTIE","WARNING_CSS_PRODUCTIE",
   'require("./wind-gust-copy-owner.js")',"GUST_PRODUCTIE","HELPER_PRODUCTIE",
   'require("./sunshine-copy-owner.js")',"ZONUREN_PRODUCTIE","ZON_HELPER_PRODUCTIE",
   'require("./daily-forecast-owner.js")',"DAILY_HELPER_PRODUCTIE","DCOND_PRODUCTIE","DRAIN_PRODUCTIE","KOP_PRODUCTIE","KOP_CSS_PRODUCTIE",
@@ -44,17 +44,24 @@ assert(dailyOwner.includes('.row.day.kop .bar{text-align:center}'),"daily owner 
 assert(!apply.includes('\n.row.day.kop .bar{text-align:center}\n'),"UI-polish mag Bereik-uitlijning niet meer laat toevoegen");
 assert(apply.includes('[KOP_CSS_PRODUCTIE,"weekkop-uitlijning"]'),"UI-polish moet de upstream weekkopowner nog wel fail-fast verifiëren");
 
+/* Warning DOM, copy én CSS hebben één base-owner. De generieke applylaag mag
+   alleen verifiëren dat die owner vóór postbuild volledig is toegepast. */
 for(const invariant of [
   "Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.",
   "Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald.",
   "Details van de waarschuwing","data-ui-severity","waarsch-details","waarsch-meta",
-  "function pasWarningRenderStateToe(html){"
+  "function pasWarningRenderStateToe(html){","CSS_PRODUCTIE",
+  '#waarschuwingen>.msg{font-size:12.5px;color:var(--ink-45);padding:7px 0}',
+  '.waarsch[data-ui-severity="rood"]{border-left:3px solid var(--carmine)}'
 ])assert(warningOwner.includes(invariant),"Base warning-owner mist finale presentatieregel: "+invariant);
+assert(!apply.includes('\n#waarschuwingen>.msg{font-size:12.5px;color:var(--ink-45);padding:7px 0}\n'),"UI-polish mag warning-CSS niet meer laat injecteren");
+assert(!apply.includes('\n.waarsch{border-left:1px solid var(--rule);padding:8px 0 8px 12px;margin-top:var(--s2)}\n'),"UI-polish mag warningkaartstijl niet meer bezitten");
+assert(apply.includes('html.split(WARNING_CSS_PRODUCTIE)'),"UI-polish moet de upstream warning-CSS fail-fast verifiëren");
+assert(apply.includes('html.includes(WARNING_CSS_BRON)'),"UI-polish moet terugkeer van oude warning-CSS blokkeren");
 
-/* De overgebleven apply-verantwoordelijkheden blijven expliciet en testbaar. */
+/* De overgebleven apply-verantwoordelijkheden zijn uitsluitend accessibility. */
 assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),"main-landmark moet vanuit bestaande #app-container worden opgebouwd");
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
-assert(apply.includes('.waarsch[data-ui-severity="rood"]'),"warning-CSS ontbreekt uit de statische applylaag");
 
-console.log("UI-polish statisch contract groen: geen runtime/weekkopowner meer; warning-CSS/accessibility blijven en inhoudelijke owners worden upstream bewaakt.");
+console.log("UI-polish statisch contract groen: geen runtime/weekkop/warning-CSS-owner meer; alleen accessibility blijft en inhoudelijke owners worden upstream bewaakt.");
