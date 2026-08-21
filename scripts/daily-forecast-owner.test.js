@@ -17,6 +17,15 @@ assert.equal(dagNeerslagTekst(5,0.2),"5%");
 assert.equal(dagNeerslagTekst(101,2),"100%");
 assert.equal(dagNeerslagTekst(-3,2),"0%");
 
+/* Deze migratie mag inhoudelijk exact één bestaande CSS-declaratie verplaatsen:
+   dezelfde selector en dezelfde waarde. Zo kan een latere refactor niet stil
+   extra weeklayout aan deze architectuurslice koppelen. */
+assert.equal(
+  KOP_CSS_PRODUCTIE,
+  KOP_CSS_BRON+'  .row.day.kop .bar{text-align:center}\n',
+  "daily owner mag naast de bestaande CSS-haak alleen de ongewijzigde Bereik-centrering toevoegen"
+);
+
 const bron=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
 for(const [fragment,label] of [
   [DCOND_BRON,"oude weekomschrijving"],
