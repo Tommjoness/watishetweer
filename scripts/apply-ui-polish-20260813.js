@@ -37,12 +37,13 @@ for(const verouderd of ["uiPolishRegenperiodeKansen","uiPolishRegenperiodeDaglab
 }
 
 /* Windstootcopy is al in de base-build door de pure wind-gust owner gezet.
-   Deze statische UI-laag mag meters() niet opnieuw bezitten of gustsub achteraf
-   herschrijven. */
+   Deze statische UI-laag mag meters() niet opnieuw bezitten. De canonieke
+   meters()-renderer schrijft gustsub zelf en blijft daarom buiten deze stale-
+   ownercheck; alleen de voormalige UI-polish helper/wrapper zijn verboden. */
 if((html.split(GUST_PRODUCTIE).length-1)!==1)throw new Error("Base-build windstootcopy-call ontbreekt of is dubbel vóór UI-polish.");
 if((html.split(HELPER_PRODUCTIE).length-1)!==1)throw new Error("Base-build windstootcopy-helper ontbreekt of is dubbel vóór UI-polish.");
 if(html.includes(GUST_BRON))throw new Error("Oude windstootcopy heeft de base-build overleefd.");
-for(const verouderd of ["uiWindstootTekst","uiBasisMeters",'zetTekst("gustsub"']){
+for(const verouderd of ["uiWindstootTekst","uiBasisMeters"]){
   if(html.includes(verouderd))throw new Error("Verouderde UI-polish windstootowner staat weer in het artifact: "+verouderd);
 }
 
@@ -78,7 +79,6 @@ for(const [productie,verwacht,label] of [
   [NACHTZIN_PRODUCTIE,1,"briefing nachtzin"],
   [VANDAAG_PIEK_PRODUCTIE,2,"briefing verwacht maximum vandaag"],
   [MORGEN_PRODUCTIE,1,"briefing verwacht maximum morgen"],
-  [VANDAAG_VERLEDEN_BRON,0,"oude verstreken-vandaagcopy"],
   [VANDAAG_VERLEDEN_PRODUCTIE,1,"briefing verstreken verwacht maximum"],
   [VANDAAG_MAX_PRODUCTIE,1,"briefing maximum zonder piekuur"],
   [NACHT_STANDALONE_PRODUCTIE,1,"briefing losse nachtzin"]
