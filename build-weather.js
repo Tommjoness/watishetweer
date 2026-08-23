@@ -236,4 +236,6 @@ fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
    op één plek. Iedere volgende artifactmutatie kan dezelfde helper opnieuw
    aanroepen zonder dat build-weather een tweede cachecontract onderhoudt. */
 const versie=vernieuwServiceworkerCache(OUT,"build-weather");
-console.log("Productie-artifact gebouwd in public/; cache "+versie+".");
+
+for(const n of fs.readdirSync(OUT))if(intern(n))throw new Error("Intern bestand publiek gebouwd: "+n);
+console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, waarschuwing-laad/leegstatus, luchtdrukcopy, windstootcopy, Nachtzicht-maanvenster, zonurencopy, dagverwachtingcopy, briefingcopy, lucht/pollen-correctheid, SEO-fundering, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");
