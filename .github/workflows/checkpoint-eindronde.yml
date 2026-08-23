@@ -83,6 +83,8 @@ jobs:
         run: node browser-q2-checkpoint.test.js
       - name: Mobiele UV-presentatie op 360 en 390 px in Chromium en WebKit
         run: node browser-mobile-uv-presentation.test.js
+      - name: Mobiele horizontale overflow op 320, 375, 390 en 430 px
+        run: node browser-mobile-overflow.test.js
       - name: Checkpoint 75% in Chromium en WebKit
         run: node browser-q3-checkpoint.test.js
       - name: Consumentencijfers zonder slashed zero in Chromium en WebKit
