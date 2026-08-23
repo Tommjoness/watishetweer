@@ -4,10 +4,9 @@
  *
  * De bestaande dagen()-renderer blijft eigenaar van daily data, temperatuur,
  * weerbeeld, wind, klikgedrag en layout. Deze owner verplaatst uitsluitend de
- * al bestaande finale UI-polish-uitkomst naar die renderer en zijn bestaande
- * week-CSScluster zelf: geen dubbele mm in de omschrijving, de koppen "Bereik"
- * en "Neerslag", "Droog" bij een verwaarloosbare kans/hoeveelheid en de reeds
- * zichtbare centrering van de Bereik-kop. */
+ * finale gebruikerspresentatie naar die renderer en zijn bestaande week-CSS:
+ * geen dubbele mm in de omschrijving, duidelijke kolomkoppen, null-veilige
+ * neerslagtaal en een consistente hoeveelheid zodra die werkelijk beschikbaar is. */
 
 const DAGEN_HAAK="function dagen(){\n";
 const HELPER_PRODUCTIE=`function weatherNowDagNeerslagTekst(kans,som){
@@ -17,6 +16,12 @@ const HELPER_PRODUCTIE=`function weatherNowDagNeerslagTekst(kans,som){
   if(pct<10&&(mm===null||mm<0.1))return "Droog";
   return pct+"%";
 }
+function weatherNowDagNeerslagMmTekst(som){
+  const mm=eindigGetal(som);
+  if(mm===null||mm<=0)return "";
+  if(mm<0.1)return "<0,1 mm";
+  return nl(mm)+" mm";
+}
 function dagen(){
 `;
 
@@ -24,28 +29,30 @@ const DCOND_BRON='      <div class="dcond">${code===null?"Verwachting niet besch
 const DCOND_PRODUCTIE='      <div class="dcond">${code===null?"Verwachting niet beschikbaar":txt(code)}</div>\n';
 
 const KANS_BRON='    const kans=eindigGetal(day.precipitation_probability_max&&day.precipitation_probability_max[i]);\n';
-const KANS_PRODUCTIE='    const kans=eindigGetal(day.precipitation_probability_max&&day.precipitation_probability_max[i]);\n    const neerslagTekst=weatherNowDagNeerslagTekst(kans,som);\n';
+const KANS_PRODUCTIE='    const kans=eindigGetal(day.precipitation_probability_max&&day.precipitation_probability_max[i]);\n    const neerslagTekst=weatherNowDagNeerslagTekst(kans,som);\n    const neerslagMmTekst=weatherNowDagNeerslagMmTekst(som);\n';
 
 const DRAIN_BRON='      <div class="drain">${kans===null?"–":Math.round(clamp(kans,0,100))+"%"}${\n        som!==null&&som>0.5?`<small>${nl(som)} mm</small>`:""}</div></div>`;\n';
-const DRAIN_PRODUCTIE='      <div class="drain">${neerslagTekst}${\n        som!==null&&som>0.5?`<small>${nl(som)} mm</small>`:""}</div></div>`;\n';
+const DRAIN_PRODUCTIE='      <div class="drain">${neerslagTekst}${\n        neerslagMmTekst?`<small>${neerslagMmTekst}</small>`:""}</div></div>`;\n';
 
 const KOP_BRON='      <div class="dwind">Wind max</div><div class="dmin">Min</div><div class="bar"></div><div class="dmax">Max</div>\n      <div class="drain">Kans</div></div>`;\n';
 const KOP_PRODUCTIE='      <div class="dwind">Wind max</div><div class="dmin">Min</div><div class="bar">Bereik</div><div class="dmax">Max</div>\n      <div class="drain">Neerslag</div></div>`;\n';
 
-/* De weekkop-CSS bestaat al in de ontwikkeltemplate. Alleen de tekstcentrering
- * van de nieuwe Bereik-kop werd historisch pas door apply-ui-polish toegevoegd.
- * Verplaats exact die finale regel naar hetzelfde base-build domein, zonder
- * selectors, waarden of responsive gedrag te wijzigen. */
 const KOP_CSS_BRON='  .row.kop .bar,.row.kop .sbar{background:none}\n';
 const KOP_CSS_PRODUCTIE='  .row.kop .bar,.row.kop .sbar{background:none}\n  .row.day.kop .bar{text-align:center}\n';
 
+function getal(v){return v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;}
 function dagNeerslagTekst(kans,som){
-  const getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
   const k=getal(kans),mm=getal(som);
   if(k===null)return "–";
   const pct=Math.round(Math.max(0,Math.min(100,k)));
   if(pct<10&&(mm===null||mm<0.1))return "Droog";
   return pct+"%";
+}
+function dagNeerslagMmTekst(som){
+  const mm=getal(som);
+  if(mm===null||mm<=0)return "";
+  if(mm<0.1)return "<0,1 mm";
+  return String(Math.round(mm*10)/10).replace(".",",")+" mm";
 }
 
 function vervangEen(html,bron,productie,label){
@@ -68,7 +75,7 @@ function pasDailyForecastOwnerToe(html){
 }
 
 module.exports={
-  dagNeerslagTekst,pasDailyForecastOwnerToe,
+  dagNeerslagTekst,dagNeerslagMmTekst,pasDailyForecastOwnerToe,
   DAGEN_HAAK,HELPER_PRODUCTIE,
   DCOND_BRON,DCOND_PRODUCTIE,KANS_BRON,KANS_PRODUCTIE,
   DRAIN_BRON,DRAIN_PRODUCTIE,KOP_BRON,KOP_PRODUCTIE,
