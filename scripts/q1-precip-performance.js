@@ -390,8 +390,8 @@ if(typeof nowcast==="function"){
   nowcast=function(){basisNowcast();renderNeerslagSectie();};
 }
 
-/* Weekverwachting: kans en hoeveelheid komen beide uit de officiële daily velden
-   van dezelfde kalenderdag. Een volledig droge dag blijft compact als 'Droog'.
+/* Weekverwachting: de zichtbare kans en hoeveelheid komen beide uit de officiële
+   daily velden van dezelfde kalenderdag. Een volledig droge dag blijft compact als 'Droog'.
    Bij een positieve kans is de hoeveelheid juist expliciet: 0,0 mm is echt nul,
    een positieve spoorhoeveelheid wordt <0,1 mm en ontbrekende data blijft '–'. */
 if(typeof dagen==="function"){
