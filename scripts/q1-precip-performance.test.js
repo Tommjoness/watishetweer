@@ -9,15 +9,18 @@ assert.equal(q.mmTekst(null),"");
 
 assert.deepEqual(q.tooltipNeerslag(0,0),{kans:"0%",hoeveelheid:"",waarde:"0%"});
 assert.deepEqual(q.tooltipNeerslag(8,0),{kans:"8%",hoeveelheid:"",waarde:"8%"});
-assert.deepEqual(q.tooltipNeerslag(25,0),{kans:"25%",hoeveelheid:"",waarde:"25%"},"0 mm verandert een echte kans niet");
+assert.deepEqual(q.tooltipNeerslag(25,0),{kans:"25%",hoeveelheid:"",waarde:"25%"},"tooltip houdt kans en niet-meetbare hoeveelheid compact");
 assert.deepEqual(q.tooltipNeerslag(65,1.24),{kans:"65%",hoeveelheid:"1,2 mm",waarde:"65% · 1,2 mm"});
 assert.deepEqual(q.tooltipNeerslag(null,1.2),{kans:"–",hoeveelheid:"1,2 mm",waarde:"– · 1,2 mm"});
 
 const hoofd=a=>!a.genoeg?"–":a.kans===0?"Droog":a.kans==null?"–":a.kans+"%";
 assert.deepEqual(q.dagNeerslagPresentatie(60,4.8,hoofd,q.mmTekst),{hoofd:"60%",hoeveelheid:"4,8 mm"});
-assert.deepEqual(q.dagNeerslagPresentatie(0,0,hoofd,q.mmTekst),{hoofd:"Droog",hoeveelheid:""});
-assert.deepEqual(q.dagNeerslagPresentatie(25,0,hoofd,q.mmTekst),{hoofd:"25%",hoeveelheid:""},"daily 0 mm mag 25% niet naar 0% veranderen");
-assert.deepEqual(q.dagNeerslagPresentatie(null,null,hoofd,q.mmTekst),{hoofd:"–",hoeveelheid:""});
+assert.deepEqual(q.dagNeerslagPresentatie(0,0,hoofd,q.mmTekst),{hoofd:"Droog",hoeveelheid:""},"volledig droge dag stapelt geen 0,0 mm onder Droog");
+assert.deepEqual(q.dagNeerslagPresentatie(25,0,hoofd,q.mmTekst),{hoofd:"25%",hoeveelheid:"0,0 mm"},"positieve kans met echte nulhoeveelheid is niet langer visueel ambigu");
+assert.deepEqual(q.dagNeerslagPresentatie(25,0.04,hoofd,q.mmTekst),{hoofd:"25%",hoeveelheid:"<0,1 mm"},"positieve spoorhoeveelheid bereikt de bestaande <0,1 mm-formatter");
+assert.deepEqual(q.dagNeerslagPresentatie(0,0.04,hoofd,q.mmTekst),{hoofd:"Droog",hoeveelheid:"<0,1 mm"},"tegenstrijdige bronvelden worden niet stil als nul herschreven");
+assert.deepEqual(q.dagNeerslagPresentatie(null,1.2,hoofd,q.mmTekst),{hoofd:"–",hoeveelheid:"1,2 mm"},"ontbrekende kans wist een beschikbare hoeveelheid niet");
+assert.deepEqual(q.dagNeerslagPresentatie(null,null,hoofd,q.mmTekst),{hoofd:"–",hoeveelheid:""},"ontbrekende data blijft onderscheiden van nul");
 
 assert.equal(q.neerslagTegelRelevant({genoeg:true,kans:9,hoeveelheid:0,currentWet:false}),false,"1–9% blijft te klein voor de prominente tegel");
 assert.equal(q.neerslagTegelRelevant({genoeg:true,kans:10,hoeveelheid:0,currentWet:false}),true,"10% is de ondergrens van de gedeelde kleine-kanscategorie");
@@ -120,4 +123,4 @@ assert.equal(q.cacheIsDirectBruikbaar({op:1000},1001+q.CACHE_DIRECT_MS),false,"o
 const gesnoeid=q.cacheSnoei({a:{op:1},b:{op:2},c:{op:3},d:{op:4},e:{op:5},f:{op:6},g:{op:7},h:{op:8},i:{op:9}});
 assert.deepEqual(Object.keys(gesnoeid),["i","h","g","f","e","d","c","b"],"cache volgt de acht mogelijke bewaarde plaatsen");
 
-console.log("Checkpoint 25%: temperatuurtrend, neerslagsemantiek en performancecache geslaagd.");
+console.log("Checkpoint 25%: temperatuurtrend, expliciete weekneerslagsemantiek en performancecache geslaagd.");
