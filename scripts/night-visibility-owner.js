@@ -8,11 +8,12 @@
    maanhoogte * verlichting toegepast. Daardoor kon bijvoorbeeld een voor 82%
    verlichte maan laag boven de horizon al als gunstig gelden, terwijl de UI in
    dezelfde rij nog een maanondergang bijna twee uur later toont. Deze owner
-   gebruikt dezelfde bestaande 0,2-grens, maar maakt de betekenis helder:
+   gebruikt dezelfde numerieke 0,2-grens, maar maakt de vensterbetekenis helder:
    - een zwak verlichte maan (<20%) blokkeert het venster niet;
    - bij 20% of meer verlichting moet de maan onder de horizon zijn.
-   Er wordt geen nieuwe meteorologische/astronomische drempel geïntroduceerd. */
+   De continue totaalscore blijft de fijnmazige hoogteweging gebruiken. */
 function weatherNowMaanGeschiktVoorNachtvenster(maanOp,verlichting){
+  if(verlichting===null||verlichting===undefined||verlichting==="")return false;
   const ill=Number(verlichting);
   if(!Number.isFinite(ill)||ill<0||ill>1)return false;
   return ill<0.2||!maanOp;
