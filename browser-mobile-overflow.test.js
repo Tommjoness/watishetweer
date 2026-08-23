@@ -1,0 +1,132 @@
+"use strict";
+
+const fs=require("fs");
+const path=require("path");
+const http=require("http");
+const assert=require("assert");
+const {chromium,webkit}=require("playwright");
+const {bouw}=require("./data.js");
+
+const PUBLIC=path.join(__dirname,"public");
+const indexPad=path.join(PUBLIC,"index.html");
+if(!fs.existsSync(indexPad))throw new Error("public/index.html ontbreekt; voer build/postbuild eerst uit.");
+
+/* Natte fixture met twee regenperioden, zodat juist de informatielaag onder de
+   24-uursgrafiek, de weektabel en Nachtzicht allemaal daadwerkelijk renderen. */
+const weer=bouw({
+  pp:(u,dag)=>dag===0&&((u>=5&&u<=6)||(u>=16&&u<=18))?88:dag===0&&u===11?24:12,
+  pr:(u,dag)=>dag===0?(u===5?0.1:u===6?0.2:u===16?0.8:u===17?1.2:u===18?0.6:0):0,
+  wc:(u,dag)=>dag===0&&((u>=5&&u<=6)||(u>=16&&u<=18))?61:2,
+  cc:(u)=>u>=16&&u<=18?65:18,
+  som:2.9
+});
+weer.current.time="2026-07-22T04:30";
+weer.current.interval=900;
+weer.current.visibility=16000;
+weer.current.cloud_cover=18;
+weer.current.precipitation=0;
+weer.current.is_day=0;
+weer.latitude=52.35;weer.longitude=5.26;weer.elevation=3;
+weer.daily.sunshine_duration=weer.daily.time.map(()=>7*3600);
+const lucht={current:{european_aqi:24,us_aqi:42},hourly:{time:[weer.current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[4],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}};
+const testNow=Date.parse("2026-07-22T02:30:00Z");
+
+let html=fs.readFileSync(indexPad,"utf8");
+const stub=`<script>
+Date.now=()=>${testNow};
+window.fetch=async function(url){
+  const u=String(url);
+  const payload=u.includes('/api/waarschuwingen')?${JSON.stringify({bron:"test",dekking:true,lijst:[],land:"NL"})}
+    :u.includes('air-quality-api.open-meteo.com')?${JSON.stringify(lucht)}
+    :u.includes('/api/plaatsnaam')?${JSON.stringify({naam:"Overflowtest",land:"NL",bron:"test"})}
+    :${JSON.stringify(weer)};
+  return {ok:true,status:200,json:async()=>payload,text:async()=>JSON.stringify(payload)};
+};
+try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}
+</script>`;
+html=html.replace("</head>",stub+"</head>");
+
+const mime={".js":"application/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".woff2":"font/woff2",".png":"image/png"};
+const server=http.createServer((req,res)=>{
+  const pathname=(req.url||"/").split("?")[0];
+  if(pathname==="/"||pathname==="/index.html"){
+    res.writeHead(200,{"content-type":"text/html; charset=utf-8","cache-control":"no-store"});res.end(html);return;
+  }
+  const file=path.join(PUBLIC,pathname.replace(/^\//,""));
+  if(file.startsWith(PUBLIC+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile()){
+    res.writeHead(200,{"content-type":mime[path.extname(file)]||"application/octet-stream","cache-control":"no-store"});
+    fs.createReadStream(file).pipe(res);return;
+  }
+  res.writeHead(404);res.end("not found");
+});
+
+function omschrijf(el){
+  const id=el.id?"#"+el.id:"";
+  const cls=typeof el.className==="string"&&el.className.trim()?"."+el.className.trim().replace(/\s+/g,"."):"";
+  return el.tagName.toLowerCase()+id+cls;
+}
+
+async function controleer(type,naam,breedte){
+  const browser=await type.launch({headless:true});
+  const context=await browser.newContext({viewport:{width:breedte,height:900},serviceWorkers:"block"});
+  const page=await context.newPage();
+  const fouten=[];page.on("pageerror",e=>fouten.push(String(e)));
+  try{
+    await page.goto(`http://127.0.0.1:${server.address().port}/?lat=52.35&lon=5.26&plaats=Overflowtest&land=NL`,{waitUntil:"load"});
+    await page.waitForSelector("#app",{state:"visible"});
+    await page.waitForFunction(()=>document.querySelector("#chart g[data-q4-rain-periods]")&&document.querySelectorAll("#days .row.day").length>2&&document.querySelectorAll("#nights .row.night").length>1,null,{timeout:10000});
+
+    const resultaat=await page.evaluate(()=>{
+      const vw=document.documentElement.clientWidth;
+      const zichtbaar=el=>{
+        const s=getComputedStyle(el),r=el.getBoundingClientRect();
+        return s.display!=="none"&&s.visibility!=="hidden"&&Number(r.width)>0&&Number(r.height)>0;
+      };
+      const label=el=>{
+        const id=el.id?"#"+el.id:"";
+        const cls=typeof el.className==="string"&&el.className.trim()?"."+el.className.trim().replace(/\s+/g,"."):"";
+        return el.tagName.toLowerCase()+id+cls;
+      };
+      const buiten=[];
+      for(const el of document.querySelectorAll("body *")){
+        if(!zichtbaar(el))continue;
+        const r=el.getBoundingClientRect();
+        /* SVG-primitieven mogen intern buiten hun eigen viewBox liggen zonder de
+           documentlayout te verbreden; de SVG-container zelf telt wél mee. */
+        if(el instanceof SVGElement&&el.tagName.toLowerCase()!=="svg")continue;
+        const links=Math.min(0,r.left),rechts=Math.max(0,r.right-vw);
+        if(links<-.75||rechts>.75)buiten.push({el:label(el),left:+r.left.toFixed(2),right:+r.right.toFixed(2),width:+r.width.toFixed(2),links:+links.toFixed(2),rechts:+rechts.toFixed(2)});
+      }
+      const modules={};
+      for(const [naam,sel] of Object.entries({sheet:".sheet",header:".mast",chart:"#chart",days:"#days",nights:"#nights",air:"#aq",footer:"footer",minibar:"#minibar"})){
+        const el=document.querySelector(sel);if(!el)continue;const r=el.getBoundingClientRect();
+        modules[naam]={left:+r.left.toFixed(2),right:+r.right.toFixed(2),width:+r.width.toFixed(2),scrollWidth:el.scrollWidth,clientWidth:el.clientWidth};
+      }
+      return {
+        innerWidth:window.innerWidth,clientWidth:vw,
+        htmlScroll:document.documentElement.scrollWidth,
+        bodyScroll:document.body.scrollWidth,
+        buiten,modules,
+        q4Labels:[...document.querySelectorAll('#chart g[data-q4-rain-periods] text')].map(x=>(x.textContent||"").trim()),
+        q4ViewBox:document.getElementById("chart").getAttribute("viewBox")
+      };
+    });
+
+    const diagnose=JSON.stringify(resultaat);
+    assert.equal(resultaat.clientWidth,breedte,`${naam} ${breedte}: onverwachte viewport; ${diagnose}`);
+    assert.ok(resultaat.htmlScroll<=resultaat.clientWidth,`${naam} ${breedte}: document heeft horizontale overflow; ${diagnose}`);
+    assert.ok(resultaat.bodyScroll<=resultaat.clientWidth,`${naam} ${breedte}: body heeft horizontale overflow; ${diagnose}`);
+    assert.deepEqual(resultaat.buiten,[],`${naam} ${breedte}: zichtbare elementen steken buiten viewport; ${diagnose}`);
+    assert.deepEqual(fouten,[],`${naam} ${breedte}: pageerrors; ${JSON.stringify(fouten)}`);
+    console.log(`Mobiele overflow OK: ${naam} ${breedte}px; chart ${resultaat.modules.chart.width}px; labels ${resultaat.q4Labels.join(" | ")}`);
+  }finally{await context.close();await browser.close();}
+}
+
+(async()=>{
+  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
+  try{
+    for(const [type,naam] of [[chromium,"Chromium"],[webkit,"WebKit"]]){
+      for(const breedte of [320,375,390,430,1280])await controleer(type,naam,breedte);
+    }
+  }finally{await new Promise(resolve=>server.close(resolve));}
+})().catch(err=>{console.error(err&&err.stack||err);try{server.close(()=>{});}catch(_){}process.exit(1);});
