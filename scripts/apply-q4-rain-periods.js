@@ -4,15 +4,17 @@ const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
+const {pasQ4MobieleRegenlabelsToe}=require("./q4-mobile-rain-label-owner.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
 const htmlPad=path.join(OUT,"index.html");
 let html=fs.readFileSync(htmlPad,"utf8");
-const runtime=fs.readFileSync(path.join(__dirname,"q4-rain-runtime.js"),"utf8");
+let runtime=fs.readFileSync(path.join(__dirname,"q4-rain-runtime.js"),"utf8");
 const MARK="/* ===== Q4 REGENPERIODEN 20260811 ===== */";
 if(html.includes(MARK))throw new Error("Q4-regenperioden is al toegepast.");
 if(!runtime.includes(MARK))throw new Error("Q4-runtime mist zijn versie-marker.");
+runtime=pasQ4MobieleRegenlabelsToe(runtime);
 
 function vervangExact(van,naar,label){
   const n=html.split(van).length-1;
@@ -70,4 +72,4 @@ fs.writeFileSync(htmlPad,html,"utf8");
    berekend. Dit verandert geen cachebeleid, alleen de eigenaar van het recept. */
 const versie=vernieuwServiceworkerCache(OUT,"Q4");
 
-console.log("Q4 toegepast: losse neerslagstaven weg, intervalperioden + totaal/piek, meetbare kwartierneerslag, gecentreerde kanslabels, runtime-neutrale grafiekhint en ruimere Nachtzicht-uitleg; cache "+versie+".");
+console.log("Q4 toegepast: losse neerslagstaven weg, intervalperioden + totaal/piek, meetbare kwartierneerslag, compacte mobiele tijdvaklabels, runtime-neutrale grafiekhint en ruimere Nachtzicht-uitleg; cache "+versie+".");
