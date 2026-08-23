@@ -38,13 +38,16 @@ function tooltipNeerslag(kans,mm){
 
 /* Voor de zevendaagse zichtbare neerslagkolom worden de twee officiële daily
    velden naast elkaar gehouden: probability_max voor de kans en precipitation_sum
-   voor de hoeveelheid. Een afgeronde 0,0 mm verandert de bronkans nooit. */
+   voor de hoeveelheid. Een echte 0 blijft onderscheiden van ontbrekende data:
+   bij een positieve kans tonen we 0,0 mm expliciet, en een positieve hoeveelheid
+   onder de meetbaarheidsgrens als <0,1 mm. Een volledig droge dag blijft Droog. */
 function dagNeerslagPresentatie(kans,dagMm,kansHoofdFn,hoeveelheidFn){
   const k=getal(kans),mm=getal(dagMm),genoeg=k!==null||mm!==null;
   const a={genoeg,kans:k,hoeveelheid:mm};
   const hoofd=typeof kansHoofdFn==="function"?String(kansHoofdFn(a)||"–"):(k===null?"–":Math.round(clamp(k,0,100))+"%");
-  const hoeveelheid=mm!==null&&mm>=MM_MEETBAAR
-    ? (typeof hoeveelheidFn==="function"?hoeveelheidFn(mm):mmTekst(mm)) : "";
+  let hoeveelheid="";
+  if(mm!==null&&mm>0)hoeveelheid=typeof hoeveelheidFn==="function"?hoeveelheidFn(mm):mmTekst(mm);
+  else if(mm===0&&k!==null&&k>0)hoeveelheid=mmTekst(0);
   return {hoofd,hoeveelheid};
 }
 
@@ -387,9 +390,10 @@ if(typeof nowcast==="function"){
   nowcast=function(){basisNowcast();renderNeerslagSectie();};
 }
 
-/* Weekverwachting: de zichtbare kans en hoeveelheid komen beide uit de officiële
-   daily velden van dezelfde kalenderdag. 0,0 mm wordt niet getoond; 25% + 0,0 mm
-   blijft wel 25%. */
+/* Weekverwachting: kans en hoeveelheid komen beide uit de officiële daily velden
+   van dezelfde kalenderdag. Een volledig droge dag blijft compact als 'Droog'.
+   Bij een positieve kans is de hoeveelheid juist expliciet: 0,0 mm is echt nul,
+   een positieve spoorhoeveelheid wordt <0,1 mm en ontbrekende data blijft '–'. */
 if(typeof dagen==="function"){
   const basisDagen=dagen;
   dagen=function(){
