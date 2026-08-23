@@ -208,7 +208,7 @@ const vereist=[
   "geen plaats-specifieke dekking","dedupliceerZoekresultaten","grid-template-areas:","informatie informatie","overflow-wrap:anywhere",
   "Officiële weerwaarschuwingen controleren…","Geen officiële weerwaarschuwingen voor deze locatie.",
   "De luchtdruk is in de afgelopen drie uur licht ","De luchtdruk is in de afgelopen drie uur ",
-  "De hoogste windstoot wordt vandaag tussen ","De hoogste windstoot werd vandaag tussen ",
+  "Later vandaag worden rond ","Voor vandaag lag de hoogste verwachte windstoot rond ",
   "weatherNowZonurenWoord","Naar verwachting bijna de hele dag zon.","Naar verwachting veel zon vandaag.",
   "weatherNowDagNeerslagTekst","<div class=\"bar\">Bereik</div>","<div class=\"drain\">Neerslag</div>",
   "weatherNowBriefingNachtzin","Het verwachte maximum ligt vandaag rond ","Het verwachte maximum ligt morgen rond ","Het verwachte maximum lag vandaag rond ","Het verwachte maximum voor morgen is ",
