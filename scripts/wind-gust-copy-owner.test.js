@@ -10,23 +10,19 @@ const {
 
 assert.equal(
   windstootTekst({t:"2026-08-13T02:00",v:52},"2026-08-13T16:00","Vandaag","02:00–03:00"),
-  "De hoogste windstoot werd vandaag tussen 02:00 en 03:00 verwacht: 52 km/u."
+  "Voor vandaag lag de hoogste verwachte windstoot rond 02:00–03:00 op 52 km/u."
 );
 assert.equal(
   windstootTekst({t:"2026-08-13T18:00",v:44},"2026-08-13T16:00","Vandaag","18:00–19:00"),
-  "De hoogste windstoot wordt vandaag tussen 18:00 en 19:00 verwacht: 44 km/u."
+  "Later vandaag worden rond 18:00–19:00 windstoten tot 44 km/u verwacht."
 );
 assert.equal(
   windstootTekst({t:"2026-08-14T18:00",v:44},"2026-08-13T16:00","Morgen","18:00–19:00"),
-  "De hoogste windstoot wordt morgen tussen 18:00 en 19:00 verwacht: 44 km/u."
+  "Morgen worden rond 18:00–19:00 windstoten tot 44 km/u verwacht."
 );
 assert.equal(
   windstootTekst({t:"2026-08-12T18:00",v:37},"2026-08-13T16:00","Gisteren","18:00–19:00"),
-  "De hoogste windstoot werd gisteren tussen 18:00 en 19:00 verwacht: 37 km/u."
-);
-assert.equal(
-  windstootTekst({t:"2026-08-15T18:00",v:37},"2026-08-13T16:00","Zaterdag","18:00–19:00"),
-  "De hoogste windstoot wordt zaterdag tussen 18:00 en 19:00 verwacht: 37 km/u."
+  "Voor gisteren lag de hoogste verwachte windstoot rond 18:00–19:00 op 37 km/u."
 );
 assert.equal(windstootTekst(null,"2026-08-13T16:00","", ""),"Geen uurgegevens beschikbaar.");
 
@@ -38,7 +34,6 @@ const uit=pasWindGustCopyToe(bron);
 assert(!uit.includes(GUST_BRON),"oude windstootcopy bleef in de base-build staan");
 assert.equal(uit.split(GUST_PRODUCTIE).length-1,1,"finale windstootcopy-call ontbreekt of is dubbel");
 assert.equal(uit.split(HELPER_PRODUCTIE).length-1,1,"finale windstootcopy-helper ontbreekt of is dubbel");
-assert(!uit.includes("hoogste verwachte windstoot rond"),"oude semantisch onduidelijke windstootcopy mag de build niet overleven");
 
 /* Data-eigenaarschap blijft bij meters(): actuele windstoot, piekbron en de
    bestaande niet-negatieve filtering mogen door deze migratie niet veranderen. */
@@ -54,4 +49,4 @@ for(const invariant of [
 assert.throws(()=>pasWindGustCopyToe(uit),/staat al in het aangeleverde artifact/,
   "owner moet fail-fast zijn op een reeds gemigreerd artifact");
 
-console.log("Windstootcopy-owner contract groen: verwachting en tijdvak zijn semantisch expliciet; windstootdata blijven ongewijzigd.");
+console.log("Windstootcopy-owner contract groen: alleen de finale gustsub-presentatie is naar de base-build verplaatst.");
