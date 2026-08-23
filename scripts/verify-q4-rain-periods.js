@@ -36,9 +36,9 @@ ok(html.includes("function q4PeriodeRandTekst(g,p)"),"regenperiode heeft één z
 ok(html.includes('return {van:q4Tijd(van),tot:q4Tijd(tot)};'),"zichtbare tijdlabels tonen uitsluitend kloktijden zonder weekdag");
 ok(html.includes("function q4PeriodeRandLabels(g,perioden,y,font)"),"tijdlabels hebben een eigen botsingsbewuste layouthulp");
 ok(html.includes('if(!g||g.n>25)return {labels:[],rijen:0'),"tijdlabels blijven beperkt tot de 24-uursweergave");
-ok(html.includes('const splitMin=Math.max(52,startBreedte+eindBreedte+10);')&&html.includes('if(span>=splitMin)'),"split-versus-compact volgt de werkelijke beschikbare bracketbreedte");
-ok(html.includes('labels.push({index,soort:"start"')&&html.includes('labels.push({index,soort:"end"'),"brede periode kan losse begin- en eindtijd houden");
-ok(html.includes('const compactTekst=tekst.van+"–"+tekst.tot')&&html.includes('labels.push({index,soort:"range"'),"korte periode valt terug op één compacte klokrange");
+ok(html.includes('const splitMin=Math.max(52,startBreedte+eindBreedte+10);')&&html.includes('if(!g.M&&span>=splitMin)')&&!html.includes('if(span>=splitMin){'),"desktop split volgt beschikbare bracketbreedte; mobiel gebruikt de compacte klokrange");
+ok(html.includes('labels.push({index,soort:"start"')&&html.includes('labels.push({index,soort:"end"'),"brede desktopperiode kan losse begin- en eindtijd houden");
+ok(html.includes('const compactTekst=tekst.van+"–"+tekst.tot')&&html.includes('labels.push({index,soort:"range"'),"mobiel en korte perioden vallen terug op één compacte klokrange");
 ok(html.includes('const links=2,rechts=g.W-2'),"tijdlabels gebruiken de echte SVG-rand als clipgrens");
 ok(html.includes('label.setAttribute("text-anchor",item.anchor||"middle")'),"tijdlabels gebruiken passende SVG-ankers voor split en compact");
 ok(html.includes('data-q4-rain-period-"+item.soort'),"split- en compacte tijdlabels krijgen expliciete regressie-attributen");
