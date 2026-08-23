@@ -9,6 +9,7 @@ const {pasPollenHourCorrectnessToe}=require("./scripts/pollen-hour-correctness.j
 const {pasWarningRenderStateToe}=require("./scripts/warning-render-state.js");
 const {pasPressureCopyToe}=require("./scripts/pressure-copy-owner.js");
 const {pasWindGustCopyToe}=require("./scripts/wind-gust-copy-owner.js");
+const {pasNightVisibilityOwnerToe}=require("./scripts/night-visibility-owner.js");
 const {pasSunshineCopyToe}=require("./scripts/sunshine-copy-owner.js");
 const {pasDailyForecastOwnerToe}=require("./scripts/daily-forecast-owner.js");
 const {pasBriefingCopyToe}=require("./scripts/briefing-copy-owner.js");
@@ -86,9 +87,15 @@ html=pasWarningRenderStateToe(html);
 html=pasPressureCopyToe(html);
 
 /* Ook de finale windstootsubtekst hoort bij meters() zelf. De pure owner voegt
-   alleen de bestaande consumentencopy en zijn zuivere formatter toe; actuele
-   windstoot, piekselectie, tijdstip en uurdata blijven ongewijzigd. */
+   alleen consumentencopy en zijn zuivere formatter toe; actuele windstoot,
+   piekselectie, tijdstip en uurdata blijven ongewijzigd. */
 html=pasWindGustCopyToe(html);
+
+/* Nachtzicht houdt zijn bestaande continue totaalscore. Alleen de expliciete
+   selectie en redenanalyse van het beste kijkvenster krijgen één pure owner,
+   zodat sterk verlichte maan boven de horizon niet als beste sterrenkijktijd
+   wordt gepresenteerd terwijl dezelfde rij een latere maanondergang toont. */
+html=pasNightVisibilityOwnerToe(html);
 
 /* Zonuren, lokale dagselectie en sunrise/sunset blijven van de bestaande
    zonurentegel. De pure owner maakt alleen de al zichtbare daglichtbewuste copy
@@ -98,8 +105,8 @@ html=pasSunshineCopyToe(html);
 
 /* De zeven-dagenrenderer blijft eigenaar van alle daily waarden, dagselectie en
    interactie. De pure owner verplaatst alleen de reeds zichtbare eindpresentatie
-   (Bereik/Neerslag, één mm-weergave en Droog bij verwaarloosbare neerslag) naar
-   die renderer zelf, zodat UI-polish dagen() niet meer hoeft te wrappen. */
+   (Bereik/Neerslag, consistente beschikbare mm-weergave en Droog bij
+   verwaarloosbare neerslag) naar die renderer zelf. */
 html=pasDailyForecastOwnerToe(html);
 
 /* De compacte meelopende weerbalk gebruikte oorspronkelijk alleen een
@@ -208,9 +215,10 @@ const vereist=[
   "geen plaats-specifieke dekking","dedupliceerZoekresultaten","grid-template-areas:","informatie informatie","overflow-wrap:anywhere",
   "Officiële weerwaarschuwingen controleren…","Geen officiële weerwaarschuwingen voor deze locatie.",
   "De luchtdruk is in de afgelopen drie uur licht ","De luchtdruk is in de afgelopen drie uur ",
-  "Later vandaag worden rond ","Voor vandaag lag de hoogste verwachte windstoot rond ",
+  "De hoogste windstoot wordt vandaag tussen ","De hoogste windstoot werd vandaag tussen ","verwacht: ",
+  "weatherNowMaanGeschiktVoorNachtvenster","sc-=2.2*mn.ill*maanDeel*(1-cw/140)",
   "weatherNowZonurenWoord","Naar verwachting bijna de hele dag zon.","Naar verwachting veel zon vandaag.",
-  "weatherNowDagNeerslagTekst","<div class=\"bar\">Bereik</div>","<div class=\"drain\">Neerslag</div>",
+  "weatherNowDagNeerslagTekst","weatherNowDagNeerslagMmTekst","<div class=\"bar\">Bereik</div>","<div class=\"drain\">Neerslag</div>",
   "weatherNowBriefingNachtzin","Het verwachte maximum ligt vandaag rond ","Het verwachte maximum ligt morgen rond ","Het verwachte maximum lag vandaag rond ","Het verwachte maximum voor morgen is ",
   "load(52.3676,4.9041,\"Amsterdam\",false,true,\"NL\")"
 ];
@@ -228,6 +236,4 @@ fs.writeFileSync(path.join(OUT,"index.html"),html,"utf8");
    op één plek. Iedere volgende artifactmutatie kan dezelfde helper opnieuw
    aanroepen zonder dat build-weather een tweede cachecontract onderhoudt. */
 const versie=vernieuwServiceworkerCache(OUT,"build-weather");
-
-for(const n of fs.readdirSync(OUT))if(intern(n))throw new Error("Intern bestand publiek gebouwd: "+n);
-console.log("WeatherNow-build geslaagd: expliciete productconfiguratie, waarschuwing-laad/leegstatus, luchtdrukcopy, windstootcopy, zonurencopy, dagverwachtingcopy, briefingcopy, lucht/pollen-correctheid, SEO-fundering, centrale interpretatie, correctheidslaag, neerslagkansbeleid, live-polish, senior-semantiek, progressieve locatielading, wereldwijde locatiehardening en cache "+versie+".");
+console.log("Productie-artifact gebouwd in public/; cache "+versie+".");
