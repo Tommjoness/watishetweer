@@ -10,15 +10,16 @@ function weatherNowWindstootTekst(pg,nu,dag,vak){
   const waarde=Math.round(Number(pg.v));
   const dagNaam=String(dag||"").trim();
   const tijdvak=String(vak||"").trim();
+  const tussen=tijdvak?tijdvak.replace("–"," en "):"het piekuur";
   const dagInZin=dagNaam?dagNaam.charAt(0).toLowerCase()+dagNaam.slice(1):"eerder";
   if(String(pg.t)>String(nu||"")){
-    if(/^Vandaag$/i.test(dagNaam))return `Later vandaag worden rond ${tijdvak} windstoten tot ${waarde} km/u verwacht.`;
-    if(/^Morgen$/i.test(dagNaam))return `Morgen worden rond ${tijdvak} windstoten tot ${waarde} km/u verwacht.`;
-    return `${dagNaam||"Later"} worden rond ${tijdvak} windstoten tot ${waarde} km/u verwacht.`;
+    if(/^Vandaag$/i.test(dagNaam))return `De hoogste windstoot wordt vandaag tussen ${tussen} verwacht: ${waarde} km/u.`;
+    if(/^Morgen$/i.test(dagNaam))return `De hoogste windstoot wordt morgen tussen ${tussen} verwacht: ${waarde} km/u.`;
+    return `De hoogste windstoot wordt ${dagInZin} tussen ${tussen} verwacht: ${waarde} km/u.`;
   }
-  if(/^Vandaag$/i.test(dagNaam))return `Voor vandaag lag de hoogste verwachte windstoot rond ${tijdvak} op ${waarde} km/u.`;
-  if(/^Gisteren$/i.test(dagNaam))return `Voor gisteren lag de hoogste verwachte windstoot rond ${tijdvak} op ${waarde} km/u.`;
-  return `De hoogste verwachte windstoot lag ${dagInZin} rond ${tijdvak} op ${waarde} km/u.`;
+  if(/^Vandaag$/i.test(dagNaam))return `De hoogste windstoot werd vandaag tussen ${tussen} verwacht: ${waarde} km/u.`;
+  if(/^Gisteren$/i.test(dagNaam))return `De hoogste windstoot werd gisteren tussen ${tussen} verwacht: ${waarde} km/u.`;
+  return `De hoogste windstoot werd ${dagInZin} tussen ${tussen} verwacht: ${waarde} km/u.`;
 }
 
 const HELPER_PRODUCTIE=weatherNowWindstootTekst.toString();
