@@ -16,7 +16,7 @@ function weatherNowWindstootTekst(pg,nu,dag,vak){
   /* pg komt uit forecast-uurdata. Ook wanneer het piekuur inmiddels voorbij is,
      is de waarde dus geen gemeten historische windstoot. De werkwoordstijd mag
      meeschakelen met het lokale moment, maar de zin blijft expliciet een
-     verwachting en gebruikt daarom nooit "bedroeg" of een andere meetclaim. */
+     verwachting en gebruikt daarom nooit taal die een meting claimt. */
   if(/^Vandaag$/i.test(dagNaam))return toekomst
     ?`De hoogste windstoot wordt vandaag tussen ${tussen} verwacht: ${waarde} km/u.`
     :`De hoogste windstoot werd vandaag tussen ${tussen} verwacht: ${waarde} km/u.`;
