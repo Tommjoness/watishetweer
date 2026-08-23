@@ -1,51 +1,192 @@
 "use strict";
-const fs=require("fs"),path=require("path"),vm=require("vm");
-const {pasWaarschuwingRenderStateToe}=require("./scripts/warning-render-state.js");
+
+const fs=require("fs");
+const path=require("path");
+const vm=require("vm");
+const PRODUCT_CONFIG=require("./product-config.js");
+const {pasSeoFoundationToe}=require("./scripts/seo-foundation.js");
+const {pasPollenHourCorrectnessToe}=require("./scripts/pollen-hour-correctness.js");
+const {pasWarningRenderStateToe}=require("./scripts/warning-render-state.js");
 const {pasPressureCopyToe}=require("./scripts/pressure-copy-owner.js");
 const {pasWindGustCopyToe}=require("./scripts/wind-gust-copy-owner.js");
 const {pasSunshineCopyToe}=require("./scripts/sunshine-copy-owner.js");
 const {pasDailyForecastOwnerToe}=require("./scripts/daily-forecast-owner.js");
 const {pasBriefingCopyToe}=require("./scripts/briefing-copy-owner.js");
-const {pasSeoFoundationToe}=require("./scripts/seo-foundation.js");
 const {vernieuwServiceworkerCache}=require("./scripts/postbuild-cache.js");
-const {pasGlobalLocationHardeningToe}=require("./scripts/global-location-hardening.js");
-const {pasPollenHourCorrectnessToe}=require("./scripts/pollen-hour-correctness.js");
+/* CACHE_BRONNEN en het hashrecept zijn uitsluitend eigendom van postbuild-cache.js. */
 const ROOT=__dirname,OUT=path.join(ROOT,"public");
-const skip=new Set(["node_modules","public","scripts","data","qa","src"]);
-const intern=n=>n==="AGENTS.md"||n==="package.json"||n==="package-lock.json"||n==="vercel.json"||n.endsWith(".test.js")||n.startsWith("test-")||n.startsWith("run-")||n.includes("README")||n==="SECURITY.md"||n==="PRIVACY.md"||n==="SECURITY.txt";
-fs.rmSync(OUT,{recursive:true,force:true});fs.mkdirSync(OUT,{recursive:true});
-for(const n of fs.readdirSync(ROOT)){
-  if(skip.has(n)||intern(n)||n.startsWith("."))continue;
-  const s=path.join(ROOT,n),d=path.join(OUT,n),st=fs.statSync(s);
-  if(st.isFile())fs.copyFileSync(s,d);
-  else if(st.isDirectory())fs.cpSync(s,d,{recursive:true});
+const NIET_PUBLICEREN=new Set([
+  ".git",".github","api","lib","node_modules","public","scripts",
+  "build-weather.js","interpretatie-engine.js","interpretatie-engine.test.js","nederlandse-weergrammatica.js","senior-correctness-v2.js","neerslagkans-policy-v3.js","live-polish.css","live-polish-v2.js","senior-semantiek-20260810.css","senior-semantiek-20260810.js","product-config.js",
+  "run.js","run-built-matrix.js","kern.js","data.js","package.json","package-lock.json","vercel.json"
+]);
+function intern(n){return NIET_PUBLICEREN.has(n)||n.endsWith(".test.js");}
+function kopieer(bron,doel){
+  const st=fs.statSync(bron);
+  if(st.isDirectory()){
+    fs.mkdirSync(doel,{recursive:true});
+    for(const n of fs.readdirSync(bron))kopieer(path.join(bron,n),path.join(doel,n));
+  }else{fs.mkdirSync(path.dirname(doel),{recursive:true});fs.copyFileSync(bron,doel);}
 }
+fs.rmSync(OUT,{recursive:true,force:true});fs.mkdirSync(OUT,{recursive:true});
+for(const n of fs.readdirSync(ROOT)){if(!intern(n))kopieer(path.join(ROOT,n),path.join(OUT,n));}
+let html=fs.readFileSync(path.join(ROOT,"index.html"),"utf8");
+let engine=fs.readFileSync(path.join(ROOT,"interpretatie-engine.js"),"utf8");
+const grammatica=fs.readFileSync(path.join(ROOT,"nederlandse-weergrammatica.js"),"utf8");
+const correctness=fs.readFileSync(path.join(ROOT,"senior-correctness-v2.js"),"utf8");
+const kansbeleid=fs.readFileSync(path.join(ROOT,"neerslagkans-policy-v3.js"),"utf8");
+const polishCss=fs.readFileSync(path.join(ROOT,"live-polish.css"),"utf8");
+const polishJs=fs.readFileSync(path.join(ROOT,"live-polish-v2.js"),"utf8");
+const seniorSemantiekCss=fs.readFileSync(path.join(ROOT,"senior-semantiek-20260810.css"),"utf8");
+const seniorSemantiekJs=fs.readFileSync(path.join(ROOT,"senior-semantiek-20260810.js"),"utf8");
+const progressiveCss=fs.readFileSync(path.join(ROOT,"scripts","progressive-location.css"),"utf8");
+const progressiveJs=fs.readFileSync(path.join(ROOT,"scripts","progressive-location.js"),"utf8");
+const globalLocationCss=fs.readFileSync(path.join(ROOT,"scripts","global-location-hardening.css"),"utf8");
+const globalLocationJs=fs.readFileSync(path.join(ROOT,"scripts","global-location-hardening.js"),"utf8");
+const start="/* ---------- start ---------- */";
+if((html.match(/\/\* ---------- start ---------- \*\//g)||[]).length!==1)throw new Error("Startmarker ontbreekt of is dubbel.");
+if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Stijlblok ontbreekt of is dubbel.");
+if(html.includes("CENTRALE INTERPRETATIE-ENGINE")||html.includes("SENIOR CORRECTHEIDSLAAG")||html.includes("NEERSLAGKANSBELEID V3")||html.includes("LIVE POLISH")||html.includes("LIVE INTERACTIEPOLISH")||html.includes("SENIOR SEMANTIEK 20260810")||html.includes("PROGRESSIEVE LOCATIELADING")||html.includes("WERELDWIJDE LOCATIEHARDENING"))throw new Error("Bron-index bevat een buildlaag al.");
 
-const ip=path.join(OUT,"index.html");let html=fs.readFileSync(ip,"utf8");
-const canoniek=fs.readFileSync(path.join(ROOT,"index.html"),"utf8");
-const cssBegin="/* ===== WEATHER NOW PRODUCT CSS ===== */",cssEind="/* ===== EINDE WEATHER NOW PRODUCT CSS ===== */";
-const cssStart=canoniek.indexOf(cssBegin),cssStop=canoniek.indexOf(cssEind,cssStart+cssBegin.length);
-if(cssStart<0||cssStop<0)throw new Error("Canonieke CSS-markers ontbreken.");
-const css=canoniek.slice(cssStart,cssStop+cssEind.length);
-const huidigStart=html.indexOf(cssBegin),huidigStop=html.indexOf(cssEind,huidigStart+cssBegin.length);
-if(huidigStart<0||huidigStop<0)throw new Error("Product-CSS ontbreekt in buildartifact.");
-html=html.slice(0,huidigStart)+css+html.slice(huidigStop+cssEind.length);
+/* De bestaande briefingrenderer blijft eigenaar van waarschuwingen, markup en
+   de overige briefingzinnen. Alleen zijn korte neerslagzin wordt op runtime
+   aan het nieuwe kansbeleid gekoppeld. De hook zit expres in de geassembleerde
+   engine: WeatherNowKansbeleidV3 wordt later in hetzelfde script gedefinieerd,
+   maar bestaat altijd vóór de eerste locatie/render wordt gestart. */
+const BRIEFING_HAAK="  function briefingNeerslagZin(a){\n";
+const briefingHaakAantal=engine.split(BRIEFING_HAAK).length-1;
+if(briefingHaakAantal!==1)throw new Error("Briefing-kansbeleidhaak ontbreekt of is dubbel: "+briefingHaakAantal);
+engine=engine.replace(BRIEFING_HAAK,
+  BRIEFING_HAAK
+  +"    const beleid=root.WeatherNowKansbeleidV3;\n"
+  +"    if(beleid&&typeof beleid.briefingZin===\"function\") return beleid.briefingZin(a);\n");
 
-/* De rest van dit bestand is de bestaande base-build. De inhoud hieronder blijft
-   ongewijzigd behalve waar expliciete owner-contracten worden toegepast. */
-const baseOwner=require("./scripts/postbuild-pipeline.js");
-/* postbuild-pipeline exporteert alleen helpers; uitvoeren gebeurt pas na de build. */
-void baseOwner;
+/* Alle bewuste verschillen tussen ontwikkeltemplate en productie staan in
+   product-config.js. De build bevat zelf geen duplicaat van die semantiek. */
+function vervangProductregel(bron,productie,label){
+  const aantal=html.split(bron).length-1;
+  if(aantal!==1)throw new Error(label+" ontbreekt of is dubbel: "+aantal+" keer gevonden.");
+  html=html.replace(bron,productie);
+}
+vervangProductregel(PRODUCT_CONFIG.EERSTE_BEZOEK_BRON,PRODUCT_CONFIG.EERSTE_BEZOEK_PRODUCTIE,"Eerste-bezoekblok");
+vervangProductregel(PRODUCT_CONFIG.KALENDERDAG_PUNTEN_BRON,PRODUCT_CONFIG.KALENDERDAG_PUNTEN_PRODUCTIE,"24-uursgrensregel");
+vervangProductregel(PRODUCT_CONFIG.OPHAALFOUT_BRON,PRODUCT_CONFIG.OPHAALFOUT_PRODUCTIE,"Ophaalfoutsemantiek");
+vervangProductregel(PRODUCT_CONFIG.CACHE_FALLBACK_LAND_BRON,PRODUCT_CONFIG.CACHE_FALLBACK_LAND_PRODUCTIE,"Cachefallback-landcontext");
+vervangProductregel(PRODUCT_CONFIG.POLAR_GRAFIEK_BRON,PRODUCT_CONFIG.POLAR_GRAFIEK_PRODUCTIE,"Poolgrafiek-zonsemantiek");
 
-/* De canonieke bron bevat de volledige applicatie. Base-build owners wijzigen
-   daarna uitsluitend hun eigen afgebakende contracten. */
-html=pasWaarschuwingRenderStateToe(html);
+/* Laad- en leegstatus horen inhoudelijk bij de waarschuwingrequestcyclus zelf.
+   De pure owner zet ze daarom al in de base-build; late presentatielagen mogen
+   deze twee statussen alleen nog consumeren of verifiëren. */
+html=pasWarningRenderStateToe(html);
+
+/* Luchtdrukwaarden, de drie-uursdelta en alle drempels blijven eigendom van de
+   bestaande meters()-renderer. Alleen de al bestaande finale consumentencopy
+   wordt nu in de base-build door één domeinowner geleverd, zodat UI-polish de
+   luchtdruksubtekst niet nogmaals hoeft te herschrijven. */
 html=pasPressureCopyToe(html);
+
+/* Ook de finale windstootsubtekst hoort bij meters() zelf. De pure owner voegt
+   alleen de bestaande consumentencopy en zijn zuivere formatter toe; actuele
+   windstoot, piekselectie, tijdstip en uurdata blijven ongewijzigd. */
 html=pasWindGustCopyToe(html);
+
+/* Zonuren, lokale dagselectie en sunrise/sunset blijven van de bestaande
+   zonurentegel. De pure owner maakt alleen de al zichtbare daglichtbewuste copy
+   definitief in de base-build, zodat UI-polish de tegel niet opnieuw hoeft te
+   wrappen of dezelfde zondata nogmaals hoeft uit te lezen. */
 html=pasSunshineCopyToe(html);
+
+/* De zeven-dagenrenderer blijft eigenaar van alle daily waarden, dagselectie en
+   interactie. De pure owner verplaatst alleen de reeds zichtbare eindpresentatie
+   (Bereik/Neerslag, één mm-weergave en Droog bij verwaarloosbare neerslag) naar
+   die renderer zelf, zodat UI-polish dagen() niet meer hoeft te wrappen. */
 html=pasDailyForecastOwnerToe(html);
+
+/* De compacte meelopende weerbalk gebruikte oorspronkelijk alleen een
+   IntersectionObserver. Dat is zuinig, maar browsers mogen zo'n callback rond
+   layoutwisselingen uitstellen. Productie krijgt daarom één gedeelde
+   zichtbaarheidstest op de echte onderrand van de hero, aangeroepen door de
+   observer én door passieve scroll/resize-events. Een maximaal eens per 16 ms
+   lopende timer coalescet snelle scroll-events zonder afhankelijkheid van de
+   render-scheduler van de browser.
+
+   Op mobiel verdwijnt de fixed balk bovendien bij duidelijk neerwaarts scrollen
+   en komt hij terug zodra de gebruiker weer omhoog navigeert. Daarmee blijft de
+   context beschikbaar zonder tijdens het lezen de bovenste inhoudsregel af te
+   dekken. Desktop behoudt de bestaande vaste balk exact zoals hij was. */
+const MINIBAR_BRON=`(function(){
+  const hero=document.querySelector(".hero"),bar=document.getElementById("minibar");
+  if(!hero||!("IntersectionObserver" in window)) return;
+  new IntersectionObserver(([e])=>{
+    bar.classList.toggle("aan",!e.isIntersecting&&e.boundingClientRect.top<0);
+  },{threshold:0}).observe(hero);
+})();`;
+const MINIBAR_PRODUCTIE=`(function(){
+  const hero=document.querySelector(".hero"),bar=document.getElementById("minibar");
+  if(!hero||!bar) return;
+  let timer=null,richtingY=Math.max(0,window.scrollY||0);
+  const mobiel=()=>window.matchMedia&&window.matchMedia("(max-width:900px)").matches;
+  const pasRichtingToe=()=>{
+    if(!mobiel()){
+      bar.classList.remove("senior-verstopt");
+      richtingY=Math.max(0,window.scrollY||0);
+      return;
+    }
+    const y=Math.max(0,window.scrollY||0),verschil=y-richtingY;
+    if(Math.abs(verschil)<10) return;
+    if(bar.classList.contains("aan"))bar.classList.toggle("senior-verstopt",verschil>0);
+    else bar.classList.remove("senior-verstopt");
+    richtingY=y;
+  };
+  const zet=()=>{
+    timer=null;
+    const r=hero.getBoundingClientRect();
+    const aan=Number.isFinite(r.bottom)&&r.bottom<=0;
+    bar.classList.toggle("aan",aan);
+    if(!aan)bar.classList.remove("senior-verstopt");
+    pasRichtingToe();
+  };
+  const plan=()=>{
+    if(timer!==null) return;
+    timer=setTimeout(zet,16);
+  };
+  if("IntersectionObserver" in window)new IntersectionObserver(plan,{threshold:0}).observe(hero);
+  window.addEventListener("scroll",plan,{passive:true});
+  window.addEventListener("resize",plan,{passive:true});
+  plan();
+})();`;
+vervangProductregel(MINIBAR_BRON,MINIBAR_PRODUCTIE,"Minibalk-zichtbaarheidsblok");
+/* Presentatiepolish, semantiek, progressieve locatielading en wereldwijde
+   locatiehardening zijn expliciete, afzonderlijk testbare buildlagen. De
+   hardeninglaag wijzigt alleen locatiezoekresultaten, bewezen waarschuwingsscope
+   en de robuustheid van het hero-layout; weerwaarden/formules blijven eigendom
+   van de bestaande forecast- en interpretatieketen. */
+html=html.replace("</style>",
+  "\n/* ===== LIVE POLISH ===== */\n"+polishCss+"\n/* ===== EINDE LIVE POLISH ===== */\n"
+  +"/* ===== SENIOR SEMANTIEK 20260810 CSS ===== */\n"+seniorSemantiekCss+"\n/* ===== EINDE SENIOR SEMANTIEK 20260810 CSS ===== */\n"
+  +"/* ===== PROGRESSIEVE LOCATIELADING CSS ===== */\n"+progressiveCss+"\n/* ===== EINDE PROGRESSIEVE LOCATIELADING CSS ===== */\n"
+  +"/* ===== WERELDWIJDE LOCATIEHARDENING CSS ===== */\n"+globalLocationCss+"\n/* ===== EINDE WERELDWIJDE LOCATIEHARDENING CSS ===== */\n</style>");
+
+html=html.replace(start,
+  "/* ===== NEDERLANDSE WEERGRAMMATICA ===== */\n"+grammatica+"\n/* ===== EINDE NEDERLANDSE WEERGRAMMATICA ===== */\n\n"
+  +"/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */\n"+engine+"\n/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */\n\n"
+  +"/* ===== SENIOR CORRECTHEIDSLAAG ===== */\n"+correctness+"\n/* ===== EINDE SENIOR CORRECTHEIDSLAAG ===== */\n\n"
+  +"/* ===== NEERSLAGKANSBELEID V3 ===== */\n"+kansbeleid+"\n/* ===== EINDE NEERSLAGKANSBELEID V3 ===== */\n\n"
+  +"/* ===== LIVE INTERACTIEPOLISH ===== */\n"+polishJs+"\n/* ===== EINDE LIVE INTERACTIEPOLISH ===== */\n\n"
+  +"/* ===== SENIOR SEMANTIEK 20260810 ===== */\n"+seniorSemantiekJs+"\n/* ===== EINDE SENIOR SEMANTIEK 20260810 ===== */\n\n"
+  +"/* ===== PROGRESSIEVE LOCATIELADING ===== */\n"+progressiveJs+"\n/* ===== EINDE PROGRESSIEVE LOCATIELADING ===== */\n\n"
+  +"/* ===== WERELDWIJDE LOCATIEHARDENING ===== */\n"+globalLocationJs+"\n/* ===== EINDE WERELDWIJDE LOCATIEHARDENING ===== */\n\n"+start);
+
+/* De briefing blijft dezelfde forecast-, wind- en neerslagdata selecteren. De
+   pure owner draait pas nadat de inhoudelijke runtimes zijn geassembleerd, zodat
+   zowel de basistekst als de historische waarschuwing-voorrangzin in één keer
+   naar de reeds zichtbare finale productiecopy migreren. UI-polish hoeft
+   briefing() daardoor niet meer te wrappen of achteraf HTML te herschrijven. */
 html=pasBriefingCopyToe(html);
-html=pasGlobalLocationHardeningToe(html);
+
+/* Lucht/pollen-correctheid is één pure productie-owner. De zes bestaande
+   productregels worden nu al in de base-build toegepast; latere postbuildlagen
+   mogen deze semantiek alleen nog verifiëren, niet herschrijven. */
 html=pasPollenHourCorrectnessToe(html);
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
