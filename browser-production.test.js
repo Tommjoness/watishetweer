@@ -118,6 +118,22 @@ setTimeout(()=>{
         return !!(dag&&dag.textContent.trim()&&items.length>=1&&stijl&&parseFloat(stijl.fontSize)>=10);
       });
     }
+    const root=document.documentElement,body=document.body,vw=root.clientWidth,nc=document.getElementById('nc');
+    const paginaOverflow=Math.max(root.scrollWidth,body.scrollWidth)>vw+1;
+    const chartParent=chart.parentElement&&chart.parentElement.getBoundingClientRect();
+    const chartViewportOk=desktop||!!(chartParent&&svgBox.width>0&&svgBox.left>=-1&&svgBox.right<=vw+1&&svgBox.width<=chartParent.width+1);
+    let nowcastViewportOk=true;
+    if(!desktop&&nc&&getComputedStyle(nc).display!=='none'){
+      const nr=nc.getBoundingClientRect(),np=nc.parentElement&&nc.parentElement.getBoundingClientRect();
+      nowcastViewportOk=!!(np&&nr.width>0&&nr.left>=-1&&nr.right<=vw+1&&nr.width<=np.width+1);
+    }
+    const mobielRegenlabels=[...chart.querySelectorAll('text[data-q4-rain-period-mobile]')];
+    const desktopRegenlabels=[...chart.querySelectorAll('text[data-q4-rain-period-start],text[data-q4-rain-period-end],text[data-q4-rain-period-range],text[data-q4-rain-period-amount]')];
+    const regenLabelBotsing=mobielRegenlabels.some((a,i)=>mobielRegenlabels.slice(i+1).some(b=>{
+      const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
+      return ra.width&&rb.width&&ra.left<rb.right&&ra.right>rb.left&&ra.top<rb.bottom&&ra.bottom>rb.top;
+    }));
+    const regenMobielOk=desktop||mobielRegenlabels.length===0||(!desktopRegenlabels.length&&!regenLabelBotsing&&mobielRegenlabels.every(el=>{const r=el.getBoundingClientRect();return r.left>=svgBox.left-1&&r.right<=svgBox.right+1;}));
     if(!desktop){
       const kopStijl=chartKop&&getComputedStyle(chartKop),sunStijl=sun&&getComputedStyle(sun),uvStijl=uv&&getComputedStyle(uv);
       const kopCols=kopStijl?kopStijl.gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length:0;
@@ -138,7 +154,7 @@ setTimeout(()=>{
        minimum en maximum op hetzelfde punt hebben, dus 1–2 zwarte labels is
        het geldige contract. Tooltip/scrub blijft alle tussenpunten ontsluiten. */
     const labelDichtheidOk=desktop?labels.length>=5:(labels.length>=1&&labels.length<=2&&labels.length===tempPunten.length);
-    document.body.dataset.browserTestResult=(brief&&briefingDagOk&&dagen>=7&&labelDichtheidOk&&botsingen===0&&dubbelNabij===0&&buiten===0&&lossePunten===0&&nuRustig&&scrubOk&&scrubKort&&neerslagkansVast&&tooltipCompact&&klokOk&&gridOk&&!statOverflow&&statsStabiel&&statsCentraal&&dagenLijnOk&&dagMmLeesbaar&&aqVult&&nightAligned&&nightRuim&&mobileKopOk&&uvOk&&zonSemantiekOk)?'ok':'fout';
+    document.body.dataset.browserTestResult=(brief&&briefingDagOk&&dagen>=7&&labelDichtheidOk&&botsingen===0&&dubbelNabij===0&&buiten===0&&lossePunten===0&&nuRustig&&scrubOk&&scrubKort&&neerslagkansVast&&tooltipCompact&&klokOk&&gridOk&&!statOverflow&&statsStabiel&&statsCentraal&&dagenLijnOk&&dagMmLeesbaar&&aqVult&&nightAligned&&nightRuim&&mobileKopOk&&uvOk&&zonSemantiekOk&&!paginaOverflow&&chartViewportOk&&nowcastViewportOk&&regenMobielOk)?'ok':'fout';
     document.body.dataset.browserLabels=String(labels.length);
     document.body.dataset.browserPunten=String(tempPunten.length);
     document.body.dataset.browserLossePunten=String(lossePunten);
@@ -158,6 +174,10 @@ setTimeout(()=>{
     document.body.dataset.browserKlok=String(klokOk);
     document.body.dataset.browserGrid=String(gridOk);
     document.body.dataset.browserOverflow=String(statOverflow);
+    document.body.dataset.browserPageOverflow=String(paginaOverflow);
+    document.body.dataset.browserChartViewport=String(chartViewportOk);
+    document.body.dataset.browserNowcastViewport=String(nowcastViewportOk);
+    document.body.dataset.browserRainMobile=String(regenMobielOk);
     document.body.dataset.browserStatsStabiel=String(statsStabiel);
     document.body.dataset.browserStatsCentraal=String(statsCentraal);
     document.body.dataset.browserDagenLijn=String(dagenLijnOk);
@@ -185,8 +205,13 @@ function voerBrowserUit(maat,naam){
   if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"";
   const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
-  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", punten="+waarde("browser-punten")+", lossePunten="+waarde("browser-losse-punten")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", neerslagkans="+waarde("browser-kans")+", scrubTekst="+waarde("browser-scrub-debug")+", tooltip="+waarde("browser-tooltip")+", tooltipW="+waarde("browser-tooltip-w")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", statsStabiel="+waarde("browser-stats-stabiel")+", statsCentraal="+waarde("browser-stats-centraal")+", dagenLijn="+waarde("browser-dagen-lijn")+", dagMm="+waarde("browser-dag-mm")+", aq="+waarde("browser-aq")+", night="+waarde("browser-night")+", nightRuim="+waarde("browser-night-ruim")+", briefingDag="+waarde("browser-briefing-dag")+", mobileKop="+waarde("browser-mobile-kop")+", uv="+waarde("browser-uv")+", zon="+waarde("browser-zon")+", exception="+waarde("browser-exception"));
-  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" temperatuurmarkeringen zonder losse stippen, rustige nu-markering, daggebonden zoninformatie, compacte tooltip, vast neerslagkanslabel en minuutprecieze lokale klok correct.");
+  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", punten="+waarde("browser-punten")+", lossePunten="+waarde("browser-losse-punten")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", neerslagkans="+waarde("browser-kans")+", scrubTekst="+waarde("browser-scrub-debug")+", tooltip="+waarde("browser-tooltip")+", tooltipW="+waarde("browser-tooltip-w")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", pageOverflow="+waarde("browser-page-overflow")+", chartViewport="+waarde("browser-chart-viewport")+", nowcastViewport="+waarde("browser-nowcast-viewport")+", rainMobile="+waarde("browser-rain-mobile")+", statsStabiel="+waarde("browser-stats-stabiel")+", statsCentraal="+waarde("browser-stats-centraal")+", dagenLijn="+waarde("browser-dagen-lijn")+", dagMm="+waarde("browser-dag-mm")+", aq="+waarde("browser-aq")+", night="+waarde("browser-night")+", nightRuim="+waarde("browser-night-ruim")+", briefingDag="+waarde("browser-briefing-dag")+", mobileKop="+waarde("browser-mobile-kop")+", uv="+waarde("browser-uv")+", zon="+waarde("browser-zon")+", exception="+waarde("browser-exception"));
+  console.log("Echte browserproductietest "+naam+" geslaagd: grafieken blijven binnen de viewport, geen horizontale paginascroll en bestaande weer-/tooltipcontracten blijven correct.");
 }
-try{voerBrowserUit("390,844","mobiel Chromium");voerBrowserUit("1440,1000","desktop Chromium");}
-finally{fs.rmSync(dir,{recursive:true,force:true});}
+try{
+  voerBrowserUit("320,800","mobiel 320px Chromium");
+  voerBrowserUit("375,812","mobiel 375px Chromium");
+  voerBrowserUit("390,844","mobiel 390px Chromium");
+  voerBrowserUit("430,932","mobiel 430px Chromium");
+  voerBrowserUit("1440,1000","desktop Chromium");
+}finally{fs.rmSync(dir,{recursive:true,force:true});}
