@@ -48,6 +48,13 @@ footer .bron-bronnen .bronitem{
 #nights .nacht-meer{display:none}
 
 @media(max-width:900px){
+  /* De basislayout maakte beide SVG's bewust 34px breder dan hun container.
+     Dat gaf op fysieke iPhones een echte horizontale scrollrange, ook al clipte
+     html/body die later. De grafieken blijven nu intrinsiek binnen hun owner;
+     interne SVG-padding bepaalt de visuele marge, niet een te breed DOM-element. */
+  .dagmod,.dashcol{min-width:0;max-width:100%}
+  #chart,#nc{width:100%;max-width:100%;margin-left:0}
+
   /* De headerbediening krijgt op aanraakschermen dezelfde rustige hiërarchie als
      de rest van het product. De opslaglogica en knopvolgorde blijven ongemoeid;
      dit zijn uitsluitend afmetingen, ritme en presentatie. */
