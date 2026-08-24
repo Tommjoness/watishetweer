@@ -65,6 +65,9 @@ assert.equal(h.gedeeldeUrlCoordinaten("?hier=1").aanwezig,false,"andere startup-
    de oorspronkelijke provider-volgorde terug. */
 assert(/count=12/.test(h.verruimZoekUrl("https://geocoding-api.open-meteo.com/v1/search?name=ja&count=6&language=nl")));
 assert(/count=20/.test(h.verruimZoekUrl("https://geocoding-api.open-meteo.com/v1/search?name=ja&count=20")),"een al ruimer zoekvenster mag niet worden verkleind");
+assert(/language=en/.test(h.zoekFallbackTaalUrl("https://geocoding-api.open-meteo.com/v1/search?name=Tokyo&count=12&language=nl")),"lege Nederlandse zoekresultaten moeten de internationale namenindex kunnen gebruiken");
+assert.equal(h.zoekFallbackTaalUrl("https://geocoding-api.open-meteo.com/v1/search?name=Tokyo&language=de"),"https://geocoding-api.open-meteo.com/v1/search?name=Tokyo&language=de","een expliciete andere providertaal mag niet worden overschreven");
+assert.equal(h.zoekFallbackTaalUrl("https://api.open-meteo.com/v1/forecast?latitude=35.69&longitude=139.69"),"https://api.open-meteo.com/v1/forecast?latitude=35.69&longitude=139.69","de taalfallback geldt uitsluitend voor plaatszoeken");
 const veel=[];
 for(let i=0;i<8;i++){
   veel.push({id:i,name:"Plaats "+i,country_code:"NL",latitude:52+i/100,longitude:5});
@@ -113,18 +116,30 @@ assert.equal(nws.lijst.length,1);
    browserachtige VM uit en bewijs normale, gedeelde en ongeldige routes. */
 const bron=fs.readFileSync(path.join(__dirname,"global-location-hardening.js"),"utf8");
 (async()=>{
-  const calls=[];
+  const calls=[],zoekCalls=[];
   const state={style:{display:"none"},className:"",textContent:""};
   const context={
     URL,URLSearchParams,
     location:{search:""},
     document:{getElementById:id=>id==="state"?state:null},
-    j:async()=>({results:[]}),
+    j:async url=>{
+      zoekCalls.push(String(url));
+      return /language=en/.test(String(url))
+        ?{results:[{id:1850147,name:"Tokyo",country_code:"JP",latitude:35.6895,longitude:139.6917}]}
+        :{results:[]};
+    },
     load:async(...args)=>{calls.push(args);return "geladen";},
     console
   };
   context.globalThis=context;
   vm.runInNewContext(bron,context,{filename:"global-location-hardening.runtime.test.js"});
+
+  const tokyo=await context.j("https://geocoding-api.open-meteo.com/v1/search?name=Tokyo&count=6&language=nl&format=json");
+  assert.equal(tokyo.results.length,1,"Tokyo moet via de internationale namenindex gevonden worden als de Nederlandse index leeg is");
+  assert.equal(tokyo.results[0].name,"Tokyo");
+  assert.equal(zoekCalls.length,2,"de fallback hoort alleen na één lege Nederlandse zoekopdracht te lopen");
+  assert(/language=nl/.test(zoekCalls[0])&&/count=12/.test(zoekCalls[0]),"de eerste zoekopdracht blijft Nederlands en gebruikt het verruimde venster");
+  assert(/language=en/.test(zoekCalls[1])&&/count=12/.test(zoekCalls[1]),"de tweede zoekopdracht wijzigt uitsluitend de providertaal");
 
   const geldig=await context.load("52.3676","4.9041","Amsterdam",false,true,"NL");
   assert.equal(geldig,"geladen","geldige locatie moet de bestaande load blijven bereiken");
@@ -174,5 +189,5 @@ const bron=fs.readFileSync(path.join(__dirname,"global-location-hardening.js"),"
   await context.load(52.5,5.1,"Nieuwe keuze",true,undefined,"NL");
   assert.strictEqual(calls.at(-1)[4],undefined,"na een nieuwe keuze mag de normale load-default weer gelden");
 
-  console.log("Wereldwijde locatiehardening: strikte gedeelde links, niet-opslaande gedeelde refresh, centrale load-boundary, uniek zoekvenster, deduplicatie en fail-closed plaatswaarschuwingen geslaagd.");
+  console.log("Wereldwijde locatiehardening: internationale naamfallback, strikte gedeelde links, niet-opslaande gedeelde refresh, centrale load-boundary, uniek zoekvenster, deduplicatie en fail-closed plaatswaarschuwingen geslaagd.");
 })().catch(err=>{console.error(err&&err.stack||err);process.exitCode=1;});
