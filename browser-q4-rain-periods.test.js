@@ -101,7 +101,7 @@ async function controleer(type,naam,breedte){
         regenPointerEvents:regen.getAttribute("pointer-events"),
         hint:(document.getElementById("charthint")||{}).textContent||"",
         daghint:(document.getElementById("dagenhint")||{}).textContent||"",
-        windkop:[...document.querySelectorAll(".stat .eyebrow")].map(x=>x.textContent.trim()).find(x=>/^Windstoten/.test(x))||"",
+        windkop:[...document.querySelectorAll(".stat .eyebrow")].map(x=>x.textContent.trim()).find(x=>/^Windstoot/.test(x))||"",
         neerslagKop:(popKop&&popKop.textContent||"").trim(),
         bewolking:(document.getElementById("cloud")||{}).textContent||"",
         nachtBewolking:[...document.querySelectorAll("#nights .perc")].map(el=>(el.textContent||"").trim()),
