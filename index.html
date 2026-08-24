@@ -2967,7 +2967,7 @@ if("serviceWorker" in navigator){
 <script>
 if(new URLSearchParams(location.search).has("knmiDiag")){
   document.body.innerHTML='<pre id="knmi-diagnostiek">KNMI WCS-capabilities ophalen…</pre>';
-  fetch('/api/knmi-capabilities-diagnostic').then(r=>r.json()).then(data=>{
+  fetch('/api/knmi-capabilities-diagnostic'+location.search.replace('knmiDiag=1','')).then(r=>r.json()).then(data=>{
     document.getElementById("knmi-diagnostiek").textContent=JSON.stringify(data,null,2);
   }).catch(e=>{document.getElementById("knmi-diagnostiek").textContent=String(e&&e.message||e);});
 }
