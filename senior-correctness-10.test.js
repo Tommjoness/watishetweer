@@ -1,7 +1,7 @@
 "use strict";
 const assert=require("assert"),fs=require("fs"),path=require("path");
 const {analyseerNeerslagData,analyseerDagData,neerslagZin}=require("./interpretatie-engine.js");
-const {zonDaglichtInfo,nachtzichtScore,grafiekNeerslagVerschuiving,dagKansSamenvatting,komendUurTekst,maanEventsBinnenVenster,huidigeNeerslagEindMin}=require("./senior-correctness-v2.js");
+const {zonDaglichtInfo,nachtzichtScore,grafiekNeerslagVerschuiving,dagKansSamenvatting,komendUurTekst,maanEventsBinnenVenster,huidigeNeerslagEindMin,nachtSegmentHorizon}=require("./senior-correctness-v2.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 const uren=(datum,start,aantal)=>Array.from({length:aantal},(_,i)=>new Date(Date.UTC(+datum.slice(0,4),+datum.slice(5,7)-1,+datum.slice(8,10),start+i)).toISOString().slice(0,16));
 function basis(){
@@ -44,6 +44,13 @@ test("zondata: ontbrekende, onmogelijke of omgekeerde tijden falen gesloten",()=
   for(const [op,onder] of [[null,null],["2026-02-31T00:00","2026-02-31T01:00"],["2026-05-02T12:00","2026-05-01T12:00"],["geen-tijd","2026-05-01T12:00"]]){
     const a=zonDaglichtInfo(op,onder);assert.equal(a.status,"onbekend",JSON.stringify({op,onder,a}));assert.equal(a.minuten,null);
   }
+});
+
+test("poolovergang: alleen echte opeenvolgende kalendernachten krijgen een rij",()=>{
+  assert.equal(nachtSegmentHorizon("2026-08-25T23:00","2026-08-25T23:00","2026-08-24T16:00",false),null);
+  assert.equal(nachtSegmentHorizon("2026-08-29T23:00","2026-08-30T01:00","2026-08-24T16:00",false),5);
+  assert.equal(nachtSegmentHorizon("2026-08-25T00:00","2026-08-27T23:00","2026-08-24T16:00",false),null);
+  assert.equal(nachtSegmentHorizon("2026-08-24T00:00","2026-08-24T05:00","2026-08-24T02:00",true),0);
 });
 
 test("punt 4: actuele regen blijft regen als later sneeuw volgt",()=>{
