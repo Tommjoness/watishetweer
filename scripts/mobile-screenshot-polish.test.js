@@ -62,6 +62,8 @@ for(const svg of [nieuw,vol,eerste,laatste,wassendeSikkel,afnemendeSikkel]){
 for(const [score,oordeel] of [[0,"Ongunstig"],[3,"Ongunstig"],[4,"Matig"],[5,"Redelijk"],[6,"Redelijk"],[7,"Goed"],[8,"Goed"],[9,"Uitstekend"],[10,"Uitstekend"]])assert.equal(p.nachtOordeelGetoond(score),oordeel);
 assert.equal(p.nachtBalkPercentageGetoond(6.4),60);
 assert.equal(p.nachtBalkPercentageGetoond(6.6),70);
+assert.equal(p.nachtHorizonIndex("5",0),5,"een later werkelijk nachtvenster behoudt zijn daghorizon nadat pooldagrijen zijn overgeslagen");
+assert.equal(p.nachtHorizonIndex(undefined,2),2,"oude fixtures zonder data-d blijven achterwaarts compatibel");
 assert.deepEqual(p.nachtLabelVarianten("ma op di"),{lang:"ma op di",kort:"ma–di"});
 assert.equal(p.nachtAdviesMetHorizon("Goed",2),"Goed");
 assert.equal(p.nachtAdviesMetHorizon("Goed",3),"Voorlopig goed");
