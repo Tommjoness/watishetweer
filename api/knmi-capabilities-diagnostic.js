@@ -10,7 +10,11 @@ export default {
     upstream.searchParams.set("SERVICE",service);
     upstream.searchParams.set("REQUEST",operation);
     upstream.searchParams.set("VERSION",service==="WCS"?"1.0.0":"1.3.0");
-    if(operation==="DescribeCoverage")upstream.searchParams.set("COVERAGE",url.searchParams.get("coverage")||"precipitation_nowcast");
+    if(operation==="DescribeCoverage"||operation==="GetCoverage")upstream.searchParams.set("COVERAGE",url.searchParams.get("coverage")||"precipitation_nowcast");
+    for(const naam of ["CRS","BBOX","WIDTH","HEIGHT","FORMAT","TIME","DIM_forecast_reference_time"]){
+      const waarde=url.searchParams.get(naam)||url.searchParams.get(naam.toLowerCase());
+      if(waarde)upstream.searchParams.set(naam,waarde);
+    }
     const response=await fetch(upstream,{headers:{"Accept":"application/xml,text/xml;q=0.9,*/*;q=0.1","User-Agent":"watishetweer.nl-diagnostiek/1.0"}});
     const body=await response.text();
     return Response.json({ok:response.ok,status:response.status,contentType:response.headers.get("content-type"),url:upstream.toString(),body},{status:200,headers:{"Cache-Control":"no-store"}});
