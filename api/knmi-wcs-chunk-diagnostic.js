@@ -21,7 +21,7 @@ async function probeer(ref,lat,lon,aantal){
   try{
     const r=await fetch(u,{headers:{Accept:"application/x-netcdf,application/octet-stream;q=0.9,*/*;q=0.1","User-Agent":"watishetweer.nl-wcs-validatie/1.0"},signal:AbortSignal.timeout(12000)});
     const buf=Buffer.from(await r.arrayBuffer());
-    return {aantal,status:r.status,ok:r.ok,ms:Date.now()-start,bytes:buf.length,type:r.headers.get("content-type"),magic:buf.subarray(0,4).toString("hex"),begin:buf.subarray(0,120).toString("base64")};
+    return {aantal,status:r.status,ok:r.ok,ms:Date.now()-start,bytes:buf.length,type:r.headers.get("content-type"),magic:buf.subarray(0,4).toString("hex"),begin:buf.subarray(0,aantal===1?buf.length:120).toString("base64")};
   }catch(e){return {aantal,ok:false,ms:Date.now()-start,fout:String(e&&e.message||e)};}
 }
 
