@@ -66,6 +66,7 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
 {
  const html=fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8");
  ok(html.includes("const isResterendVandaag=")&&html.includes("zwaarsteCode(codes)??dagCode"),"gebouwde daginterpretatie gebruikt voor vandaag uitsluitend het resterende weerbeeld");
+ ok(html.includes('"Gegevens opgehaald om "+tijd+" · "+geleden')&&!html.includes('"zojuist opgehaald"'),"ophaalstempel toont het echte fetchmoment en heeft geen tweede relatieve copy-owner");
 }
 {
  const {api}=laadKern(390),d=bouw({}),i=zetBasis(api,d);
