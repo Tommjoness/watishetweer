@@ -101,7 +101,7 @@ async function controleer(type,naam,breedte){
         regenPointerEvents:regen.getAttribute("pointer-events"),
         hint:(document.getElementById("charthint")||{}).textContent||"",
         daghint:(document.getElementById("dagenhint")||{}).textContent||"",
-        windkop:[...document.querySelectorAll(".stat .eyebrow")].map(x=>x.textContent.trim()).find(x=>/^Windstoten/.test(x))||"",
+        windkop:[...document.querySelectorAll(".stat .eyebrow")].map(x=>x.textContent.trim()).find(x=>/^Windstoot/.test(x))||"",
         neerslagKop:(popKop&&popKop.textContent||"").trim(),
         bewolking:(document.getElementById("cloud")||{}).textContent||"",
         nachtBewolking:[...document.querySelectorAll("#nights .perc")].map(el=>(el.textContent||"").trim()),
@@ -122,7 +122,7 @@ async function controleer(type,naam,breedte){
     assert.equal(r.regenPointerEvents,"none",naam+" "+breedte+": regenlaag kan muis/touch niet onderscheppen");
     assert.equal(r.hint,"Selecteer een punt in de grafiek voor details.",naam+" "+breedte+": actieve grafiekhint is input-neutraal; kreeg "+JSON.stringify(r.hint));
     assert.equal(r.daghint,"Kies een dag om die verwachting in de grafiek te bekijken.",naam+" "+breedte+": daghint is input-neutraal");
-    assert.equal(r.windkop,"Windstoten nu",naam+" "+breedte+": windstootkop is ondubbelzinnig");
+    assert.equal(r.windkop,"Windstoot rond nu",naam+" "+breedte+": windstootkop is ondubbelzinnig zonder meting te suggereren");
     assert.equal(r.neerslagKop,"Neerslag komend uur",naam+" "+breedte+": kans en hoeveelheid worden niet meer als momentopname 'nu' gelabeld");
     assert.equal(r.bewolking,"<5%",naam+" "+breedte+": 1% modelbewolking wordt zonder schijnprecisie als <5% gepresenteerd");
     assert(r.nachtBewolking.length>0&&r.nachtBewolking.every(t=>t==="<5%"),naam+" "+breedte+": Nachtzicht gebruikt dezelfde <5%-notatie; kreeg "+JSON.stringify(r.nachtBewolking));

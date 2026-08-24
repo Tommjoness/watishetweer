@@ -241,6 +241,7 @@
      hier een kleine, positieve top-marge in plaats van de -2px die de tekst
      juist omhoog trok. */
   #dagenhint{margin-top:8px}
+  #nachthint,#pollenhint{margin-top:8px}
   .data-uitleg{font-size:11.5px;color:var(--ink-45);margin:-4px 0 12px}
   .data-uitleg summary{display:inline;cursor:pointer;color:var(--ink-45);box-shadow:inset 0 -1px 0 var(--rule)}
   .data-uitleg summary:hover{color:var(--ink)}
@@ -542,7 +543,7 @@
   <div class="mast">
     <div>
       <h1>Wat is het weer?</h1>
-      <h2 id="place">&nbsp;<span id="plaatstijd"></span></h2>
+      <h2 id="place" aria-label="Plaats">&nbsp;<span id="plaatstijd" aria-hidden="true"></span></h2>
     </div>
     <div class="mastright">
       <div class="tools">
@@ -627,17 +628,22 @@
     </div>
 
     <div class="dashcol">
-    <h2><span>Nachtzicht</span><span class="r" id="moonlab"></span></h2>
+    <div class="chartkop nachtkop">
+      <h2><span>Nachtzicht</span></h2>
+      <span class="r" id="moonlab" role="note"></span>
+    </div>
+    <p class="hint" id="nachthint">Indicatie op basis van bewolking, meteorologisch zicht, neerslag, vocht en maanlicht.</p>
     <div id="nights"></div>
     </div>
     </div>
 
 
     <h2><span>Luchtkwaliteit en pollen</span></h2>
+    <p class="hint" id="pollenhint">Pollen is een CAMS-modelconcentratie; lokale blootstelling en persoonlijke gevoeligheid kunnen afwijken.</p>
     <div class="stats" id="aq"></div>
 
     <footer>
-      <span class="bron"><b>Bronnen</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> / CAMS · <a href="https://meteoalarm.org" target="_blank" rel="noopener">MeteoAlarm</a> · <a href="https://www.weather.gov" target="_blank" rel="noopener">National Weather Service</a> · BigDataCloud / <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap-bijdragers</a></span>
+      <span class="bron"><b>Bronnen</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> / <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener">CAMS</a> · <a href="https://meteoalarm.org" target="_blank" rel="noopener">MeteoAlarm</a> · <a href="https://www.weather.gov" target="_blank" rel="noopener">National Weather Service</a> · <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener">BigDataCloud</a> / <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap-bijdragers</a></span>
       <span class="bron"><a href="privacy.html">Privacy &amp; gegevens</a></span>
       <details class="bron footer-details"><summary>Technische locatiegegevens</summary><span id="coords"></span></details>
     </footer>
@@ -1076,8 +1082,9 @@ function tekenAlles(){
   /* De tijd hoort bij de plaats: alle uren in deze app staan in de tijd daar,
      dus zonder klok weet je niet waar "gunstigste modelvenster van 01:00 tot 03:00" op slaat.
      Ook in Nederland, want dan is meteen duidelijk dat het de tijd van de plaats is. */
-  document.getElementById("place").innerHTML=
-    esc(S.label)+'<span id="plaatstijd">'+plaatsKlok()+'</span>';
+  const place=document.getElementById("place");
+  place.setAttribute("aria-label",S.label);
+  place.innerHTML=esc(S.label)+'<span id="plaatstijd" aria-hidden="true">'+plaatsKlok()+'</span>';
   document.title=S.label+" · Wat is het weer?";
   const huidigeTemperatuur=rondGetal(c.temperature_2m);
   const gevoelstemperatuur=rondGetal(c.apparent_temperature);
@@ -2364,7 +2371,7 @@ function nachten(){
     const lbl=d===0?"vannacht":DAGEN[new Date(ss.slice(0,10)+"T12:00:00").getDay()]+" op "+DAGEN[new Date(sr2.slice(0,10)+"T12:00:00").getDay()];
     out+=`<div class="row night" data-d="${d}">
       <div class="dname">${lbl}</div>
-      <div class="score" style="color:${kleur}" title="Modelscore ${nl(sc)} van 10">${Math.round(sc)}/10</div>
+      <div class="score" style="color:${kleur}" title="Indicatieve modelscore ${nl(sc)} van 10">${Math.round(sc)}/10</div>
       <div class="sbar"><i style="width:${sc*10}%;background:${kleur}"></i></div>
       <div class="nmeta"><span class="perc">${Math.round(cw)}%</span> bewolking</div>
       <div class="nmeta wide"><span class="nachtadvies">${sc>=8.5?"Uitstekend":sc>=7?"Goed":sc>=5?"Redelijk":sc>=3.5?"Matig":"Ongunstig"} · ${venster}</span>${maanTekst
@@ -2372,7 +2379,7 @@ function nachten(){
         : ""}</div></div>`;
   }
   const kopN=`<div class="row night kop">
-      <div class="dname">Nacht</div><div class="score">Score</div><div class="sbar"></div>
+      <div class="dname">Nacht</div><div class="score">Indicatie</div><div class="sbar"></div>
       <div class="nmeta">Bewolking</div><div class="nmeta wide">Beste zichtperiode</div></div>`;
   document.getElementById("nights").innerHTML=(out?kopN+out:"")||'<div class="msg">Geen nachtdata beschikbaar.</div>';
   const m=maan(new Date());
@@ -2644,7 +2651,11 @@ function stempel(){
   const el=document.getElementById("stamp");
   if(!S.d){el.textContent="";return;}
   const m=Math.floor((Date.now()-S.op)/60000);
-  el.textContent=(m<1?"zojuist bijgewerkt":m===1?"bijgewerkt om "+hhmm(S.d.current.time)+", 1 minuut geleden":"bijgewerkt om "+hhmm(S.d.current.time)+", "+m+" minuten geleden");
+  let tijd="";
+  try{tijd=new Intl.DateTimeFormat("nl-NL",{timeZone:S.d.timezone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(S.op));}
+  catch(_){tijd=new Date(S.op).toTimeString().slice(0,5);}
+  const geleden=m<1?"minder dan 1 min geleden":m===1?"1 min geleden":m+" min geleden";
+  el.textContent="Gegevens opgehaald om "+tijd+" · "+geleden;
   el.className=m>45?"oud":"";
 }
 setInterval(stempel,30000);

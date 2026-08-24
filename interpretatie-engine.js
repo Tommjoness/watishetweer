@@ -740,14 +740,6 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
     return "daglichtduur niet beschikbaar";
   };
 
-  stempel=function(){
-    const el=document.getElementById("stamp");
-    if(!S.d){el.textContent="";return;}
-    const m=Math.max(0,Math.floor((Date.now()-S.op)/60000));
-    el.textContent=m<1?"zojuist opgehaald":m===1?"1 minuut geleden opgehaald":m+" minuten geleden opgehaald";
-    el.className=m>45?"oud":"";
-  };
-
   if(origineel.tekenAlles){
     tekenAlles=function(){
       origineel.tekenAlles();

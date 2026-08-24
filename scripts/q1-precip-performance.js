@@ -211,7 +211,10 @@ function cacheKernRender(wissel){
   }
 
   const place=document.getElementById("place");
-  if(place)place.innerHTML=esc(S.label)+'<span id="plaatstijd">'+plaatsKlok()+'</span>';
+  if(place){
+    place.setAttribute("aria-label",S.label);
+    place.innerHTML=esc(S.label)+'<span id="plaatstijd" aria-hidden="true">'+plaatsKlok()+'</span>';
+  }
   document.title=S.label+" · Wat is het weer?";
   const t=getal(c.temperature_2m),gevoel=getal(c.apparent_temperature);
   const tempEl=document.getElementById("t");if(tempEl)tempEl.textContent=t===null?"–":Math.round(t);

@@ -79,7 +79,8 @@ function renderSnellePreview(data,label,lat,lon){
   if(!app||!state||!place)return false;
 
   const naam=String(label||"");
-  place.innerHTML=(typeof esc==="function"?esc(naam):naam)+"<span id=\"plaatstijd\"></span>";
+  place.setAttribute("aria-label",naam);
+  place.innerHTML=(typeof esc==="function"?esc(naam):naam)+"<span id=\"plaatstijd\" aria-hidden=\"true\"></span>";
   document.title=naam+" · Wat is het weer?";
   const temp=document.getElementById("t");if(temp)temp.textContent=String(p.temperatuur);
   const cond=document.getElementById("cond");if(cond&&typeof txt==="function")cond.textContent=txt(p.code,p.isDag);

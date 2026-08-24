@@ -72,7 +72,7 @@ ok(hintOwnerPos>q4RuntimeBegin&&hintOwnerPos<q4RuntimePos,"Q4 bezit de grafiekhi
 const hintTekstPos=html.indexOf('el.textContent="Selecteer een punt in de grafiek voor details.";',hintOwnerPos);
 ok(hintTekstPos>hintOwnerPos&&hintTekstPos<q4RuntimePos,"Q4 grafiekhint-owner bevat de input-neutrale zichtbare tekst");
 ok(html.includes('<p class="hint" id="dagenhint">Kies een dag om die verwachting in de grafiek te bekijken.</p>'),"zichtbare daghint is invoermethode-neutraal");
-ok(html.includes('<div class="eyebrow">Windstoten nu</div>'),"actuele windstootwaarde is ondubbelzinnig gelabeld");
+ok(html.includes('<div class="eyebrow">Windstoot rond nu</div>'),"modelwaarde rond het huidige uur is ondubbelzinnig gelabeld");
 
 /* Dag-neerslagtaal heeft één bron-eigenaar: NEERSLAGKANSBELEID V3. Q4 mag de
    senior-correctheidslaag niet meer tekstueel repareren. We controleren daarom

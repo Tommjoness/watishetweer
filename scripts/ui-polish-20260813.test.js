@@ -65,6 +65,6 @@ assert(apply.includes('html.includes(WARNING_CSS_BRON)'),"UI-polish moet terugke
 assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),"main-landmark moet vanuit bestaande #app-container worden opgebouwd");
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
-assert(index.includes('<h2 id="place">&nbsp;<span id="plaatstijd"></span></h2>'),"de zichtbare plaatsnaam mist native heading-semantiek");
+assert(index.includes('<h2 id="place" aria-label="Plaats">&nbsp;<span id="plaatstijd" aria-hidden="true"></span></h2>'),"de zichtbare plaatsnaam mist afgebakende native heading-semantiek");
 
 console.log("UI-polish statisch contract groen: geen runtime/weekkop/warning-CSS-owner meer; alleen accessibility blijft en inhoudelijke owners worden upstream bewaakt.");
