@@ -85,21 +85,25 @@ if(html.includes("function uiLuchtdrukTekst(tekst){"))throw new Error("Verouderd
 
 /* Ook windstootcopy hoort nu bij één pure base-build owner. De data en
    piekselectie blijven in meters(); alleen de zichtbare gustsub-zinnen zijn
-   uit de generieke UI-polish verwijderd. */
+   uit de generieke UI-polish verwijderd. De piekwaarde blijft forecastdata,
+   dus ook na het piekuur mag de copy geen gemeten historische waarde claimen. */
 for(const invariant of [
   "function weatherNowWindstootTekst(pg,nu,dag,vak){",
-  "Later vandaag worden rond ",
-  "Voor vandaag lag de hoogste verwachte windstoot rond ",
+  "De hoogste windstoot wordt vandaag tussen ",
+  "De hoogste windstoot werd vandaag tussen ",
+  "verwacht: ",
   "function pasWindGustCopyToe(html){"
 ]){
   if(!windGustBron.includes(invariant))throw new Error("Windstootcopy-owner mist invariant: "+invariant);
 }
 for(const tekst of [
-  "Later vandaag worden rond ",
-  "Voor vandaag lag de hoogste verwachte windstoot rond "
+  "De hoogste windstoot wordt vandaag tussen ",
+  "De hoogste windstoot werd vandaag tussen ",
+  "verwacht: "
 ]){
   if(!html.includes(tekst))throw new Error("Definitieve windstootcopy ontbreekt uit artifact: "+tekst);
 }
+if(/\bbedroeg\b/i.test(windGustBron))throw new Error("Windstootcopy-owner bevat nog een meetwaarde-achtige verledenclaim: bedroeg.");
 if(html.includes("function uiWindstootTekst(pg,nu,dag,vak){"))throw new Error("Verouderde UI-polish windstootcopy-owner staat nog in artifact.");
 if(html.includes("const uiBasisMeters=meters;"))throw new Error("UI-polish wrapt meters() nog in het finale artifact.");
 

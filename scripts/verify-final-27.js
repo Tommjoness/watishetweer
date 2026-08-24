@@ -36,7 +36,8 @@ vereist("getBBox()","echte SVG-fontboxmeting");
 vereist("maan-fase-svg-v2","platformonafhankelijke maanfase-SVG");
 for(const tekst of [
   "normaliseerNachtDagdata","nachtIsActiefNu","corrigeerNachtVensterBron",
-  "formatteerMaanTekst","nachtzichtregel","nachtmaanregel","pollenKop"
+  "formatteerMaanTekst","nachtzichtregel","nachtmaanregel","pollenKop",
+  "weatherNowMaanGeschiktVoorNachtvenster"
 ])vereist(tekst,"Nachtzicht-kern "+tekst);
 verboden("Beste modeluren","oude modeljargon-beste-periodepresentatie");
 verboden("Relatief gunstigste modeluren","oude relatieve modeljargonpresentatie");
@@ -63,8 +64,8 @@ verboden("tabular-nums slashed-zero","oude slashed-zero fontvariant");
    latere neerslag-presentatie mag briefing() wel afzonderlijk synchroniseren,
    want die bezit een ander domein: actuele/model-neerslagwaarheid. */
 for(const tekst of [
-  "weatherNowWindstootTekst","weatherNowZonurenWoord","weatherNowDagNeerslagTekst","weatherNowBriefingNachtzin",
-  "Later vandaag worden rond ","Voor vandaag lag de hoogste verwachte windstoot rond ",
+  "weatherNowWindstootTekst","weatherNowZonurenWoord","weatherNowDagNeerslagTekst","weatherNowDagNeerslagMmTekst","weatherNowBriefingNachtzin",
+  "De hoogste windstoot wordt vandaag tussen ","De hoogste windstoot werd vandaag tussen ","verwacht: ",
   "Naar verwachting bijna de hele dag zon.","Naar verwachting veel zon vandaag.",
   '<div class="bar">Bereik</div>','<div class="drain">Neerslag</div>',
   "Het verwachte maximum ligt vandaag rond ","Het verwachte maximum ligt morgen rond ",
@@ -141,4 +142,4 @@ runtimeScripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html
 jsonLdScripts.forEach((bron,i)=>{try{JSON.parse(bron);}catch(e){throw new Error("Ongeldige JSON-LD in definitief artifact #"+(i+1)+": "+e.message);}});
 
 const verwacht=verifieerServiceworkerCache(OUT,"finale");
-console.log("Finale 27-punten artifactguard geslaagd: één Nachtzicht-owner met kalendergrens, gewone nullen, één Q3-UV-copy-owner, geconsolideerde copy-eigenaars inclusief zonuren, zeven-dagenpresentatie en briefingcopy, requestarchitectuur, syntactische runtime, geldige JSON-LD en serviceworker "+verwacht+".");
+console.log("Finale 27-punten artifactguard geslaagd: één Nachtzicht-owner met kalendergrens en maanvenster, gewone nullen, één Q3-UV-copy-owner, geconsolideerde copy-eigenaars inclusief zonuren, zeven-dagenpresentatie en briefingcopy, requestarchitectuur, syntactische runtime, geldige JSON-LD en serviceworker "+verwacht+".");

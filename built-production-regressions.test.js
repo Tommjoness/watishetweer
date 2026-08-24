@@ -101,7 +101,7 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  const {api,bak}=laadKern(390),d=bouw({}),i=zetBasis(api,d);d.current.pressure_msl=1010;d.hourly.pressure_msl[i-3]=1000;d.hourly.pressure_msl[i-2]=1004;api.S.klokOverride=new Date("2026-07-22T12:30:00Z");api.meters();const t=tekst(bak.pressub);ok(/8,0 hPa gestegen/.test(t),"druktrend interpoleert naar exact drie uur geleden",t);ok(/afgelopen drie uur/.test(t),"druktrend benoemt het werkelijke venster",t);
 }
 {
- const {api,bak}=laadKern(390),d=bouw({wg:(u,dag)=>dag===0&&u===18?72:25});zetBasis(api,d);api.meters();const t=tekst(bak.gustsub);ok(/Later vandaag worden rond 17:00–18:00 windstoten tot 72 km\/u verwacht\./.test(t),"windstootpiek gebruikt al in het base-artifact de finale consumentencopy",t);ok(!/tussen 17:00 en 18:00|rond 18:00/.test(t),"windstootpiek valt niet terug op oude of exact-tijdstipcopy",t);
+ const {api,bak}=laadKern(390),d=bouw({wg:(u,dag)=>dag===0&&u===18?72:25});zetBasis(api,d);api.meters();const t=tekst(bak.gustsub);ok(/De hoogste windstoot wordt vandaag tussen 17:00 en 18:00 verwacht: 72 km\/u\./.test(t),"windstootpiek gebruikt al in het base-artifact de finale forecastcopy",t);ok(!/Later vandaag worden rond|Voor vandaag lag|\bbedroeg\b/i.test(t),"windstootpiek valt niet terug op historische of meetwaarde-achtige copy",t);
 }
 {
  const {api,bak}=laadKern(390),d=bouw({zicht:20000});d.current.visibility=20000;zetBasis(api,d);api.nachten();const t=tekst(bak.nights);ok(/Score/.test(t)&&/\d+\/10/.test(t),"nachtzichtscore is compact en begrijpelijk gelabeld",t.slice(0,300));ok(/Beste zichtperiode/.test(t),"nachtzicht benoemt de beste zichtperiode consumentgericht",t.slice(0,300));

@@ -4,7 +4,7 @@ const assert=require("assert");
 const fs=require("fs");
 const path=require("path");
 const {
-  dagNeerslagTekst,pasDailyForecastOwnerToe,
+  dagNeerslagTekst,dagNeerslagMmTekst,pasDailyForecastOwnerToe,
   DCOND_BRON,DCOND_PRODUCTIE,DRAIN_BRON,DRAIN_PRODUCTIE,
   KOP_BRON,KOP_PRODUCTIE,HELPER_PRODUCTIE,
   KOP_CSS_BRON,KOP_CSS_PRODUCTIE
@@ -16,6 +16,13 @@ assert.equal(dagNeerslagTekst(9,0.05),"Droog");
 assert.equal(dagNeerslagTekst(5,0.2),"5%");
 assert.equal(dagNeerslagTekst(101,2),"100%");
 assert.equal(dagNeerslagTekst(-3,2),"0%");
+assert.equal(dagNeerslagMmTekst(null),"");
+assert.equal(dagNeerslagMmTekst(undefined),"");
+assert.equal(dagNeerslagMmTekst(0),"");
+assert.equal(dagNeerslagMmTekst(0.04),"<0,1 mm");
+assert.equal(dagNeerslagMmTekst(0.1),"0,1 mm");
+assert.equal(dagNeerslagMmTekst(0.2),"0,2 mm");
+assert.equal(dagNeerslagMmTekst(8.14),"8,1 mm");
 
 /* Deze migratie mag inhoudelijk exact één bestaande CSS-declaratie verplaatsen:
    dezelfde selector en dezelfde waarde. Zo kan een latere refactor niet stil
@@ -45,6 +52,8 @@ for(const [fragment,label] of [
   [KOP_CSS_PRODUCTIE,"daily-forecast weekkop-CSS"]
 ])assert.equal(uit.split(fragment).length-1,1,label+" ontbreekt of is dubbel");
 assert.equal(uit.split('.row.day.kop .bar{text-align:center}').length-1,1,"Bereik-kop moet exact één keer gecentreerd worden door de daily owner");
+assert(uit.includes("function weatherNowDagNeerslagMmTekst(som){"),"hoeveelheidsformatter ontbreekt in base-build");
+assert(uit.includes('neerslagMmTekst?`<small>${neerslagMmTekst}</small>`:""'),"weekcel gebruikt de null-veilige hoeveelheid niet");
 for(const fragment of [DCOND_BRON,DRAIN_BRON,KOP_BRON])assert(!uit.includes(fragment),"oude daily-presentatie bleef in base-build staan");
 
 /* Daily data, temperatuur, wind, kans/hoeveelheid en daginteractie blijven van
@@ -59,4 +68,4 @@ for(const invariant of [
 assert.throws(()=>pasDailyForecastOwnerToe(uit),/staat al in het aangeleverde artifact/,
   "owner moet fail-fast zijn op een reeds gemigreerd artifact");
 
-console.log("Daily-forecast owner contract groen: zeven-dagencopy en Bereik-uitlijning zitten in de base-build; daily data/interactie zijn ongewijzigd.");
+console.log("Daily-forecast owner contract groen: kans en beschikbare hoeveelheid worden consistent en null-safe weergegeven.");

@@ -9,8 +9,8 @@ const {chromium,webkit}=require("playwright");
 const {bouw}=require("./data.js");
 
 /* De daghelper blijft nodig voor de toegankelijke bracketbeschrijving over een
-   kalendergrens. De zichtbare tijdlabels worden hieronder juist klok-only
-   bewaakt, zowel als losse eindpunten als compacte range. */
+   kalendergrens. Op mobiel worden de zichtbare perioden bewust als één compacte
+   klokrange weergegeven; weekdagcontext blijft uitsluitend in aria aanwezig. */
 const runtimeBron=fs.readFileSync(path.join(__dirname,"scripts","q4-rain-runtime.js"),"utf8");
 const helperRegel=(runtimeBron.match(/^const q4DagKort=.*;$/m)||[])[0];
 assert.ok(helperRegel,"q4DagKort ontbreekt in de canonieke Q4-runtime");
@@ -106,15 +106,14 @@ async function controleer(type,naam){
         kansen:[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).length
       };
     });
-    assert.deepEqual(meerdere.ranges,["15:00–17:00","22:00–02:00"],`${naam}: korte mobiele perioden gebruiken één compacte klokrange, ook over middernacht`);
-    assert.deepEqual(meerdere.starts,["03:00"],`${naam}: brede volgende-dagperiode houdt een losse begintijd`);
-    assert.deepEqual(meerdere.ends,["10:00"],`${naam}: brede volgende-dagperiode houdt een losse eindtijd`);
+    assert.deepEqual(meerdere.ranges,["15:00–17:00","22:00–02:00","03:00–10:00"],`${naam}: mobiel gebruikt voor iedere regenperiode één compacte klokrange, ook over middernacht`);
+    assert.deepEqual(meerdere.starts,[],`${naam}: mobiel toont geen losse beginlabels naast compacte ranges`);
+    assert.deepEqual(meerdere.ends,[],`${naam}: mobiel toont geen losse eindlabels naast compacte ranges`);
     assert.deepEqual(meerdere.bedragen,["0,4 mm","2,0 mm","6,4 mm"],`${naam}: iedere bracket houdt zijn eigen hoeveelheid`);
     assert.ok(meerdere.aria.some(x=>x.includes("wo 22:00–do 02:00")&&x.includes("2,0 mm")),`${naam}: toegankelijke cross-midnightbeschrijving houdt beide kalenderdagen; kreeg ${JSON.stringify(meerdere.aria)}`);
     assert.equal(meerdere.details,0,`${naam}: tijdvakken worden niet nogmaals als losse regels herhaald`);
     assert.equal(meerdere.samenvattingen,0,`${naam}: geen totaalregel of Meeste regen-regel onder de brackets`);
     assert.equal(meerdere.kansen,0,`${naam}: zichtbare neerslagstrook toont geen statische kanspercentages`);
-    assert.ok([...meerdere.starts,...meerdere.ends].every(x=>/^\d{2}:\d{2}$/.test(x)),`${naam}: losse endpointlabels bevatten uitsluitend kloktijden`);
     assert.ok(meerdere.ranges.every(x=>/^\d{2}:\d{2}–\d{2}:\d{2}$/.test(x)),`${naam}: compacte labels bevatten uitsluitend een klokrange`);
 
     const enkelVolgendeDag=await page.evaluate(()=>{
@@ -138,14 +137,14 @@ async function controleer(type,naam){
         kansen:[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).length
       };
     });
-    assert.deepEqual(enkelVolgendeDag.starts,["03:00"],`${naam}: brede volgende lokale dag krijgt zichtbaar geen overbodige weekdag`);
-    assert.deepEqual(enkelVolgendeDag.ends,["10:00"],`${naam}: eindtijd blijft een pure kloktijd`);
-    assert.deepEqual(enkelVolgendeDag.ranges,[],`${naam}: brede periode hoeft niet onnodig compact te worden`);
+    assert.deepEqual(enkelVolgendeDag.starts,[],`${naam}: brede periode op mobiel krijgt geen los beginlabel`);
+    assert.deepEqual(enkelVolgendeDag.ends,[],`${naam}: brede periode op mobiel krijgt geen los eindlabel`);
+    assert.deepEqual(enkelVolgendeDag.ranges,["03:00–10:00"],`${naam}: ook één brede periode blijft op mobiel één rustige klokrange`);
     assert.deepEqual(enkelVolgendeDag.bedragen,["6,4 mm"],`${naam}: enkele periode houdt alleen haar eigen mm-waarde`);
     assert.equal(enkelVolgendeDag.samenvattingen,0,`${naam}: ook één periode krijgt geen totaal- of pieksamenvatting`);
     assert.equal(enkelVolgendeDag.kansen,0,`${naam}: ook één periode toont geen statisch kanspercentage`);
     assert.deepEqual(fouten,[],`${naam}: geen page errors`);
-    console.log(`${naam}: 24-uurs regenbrackets kiezen adaptief losse kloktijden of een compacte range, met dagcontext alleen in aria.`);
+    console.log(`${naam}: mobiele 24-uurs regenbrackets tonen compacte klokranges, met dagcontext alleen in aria.`);
   }finally{await browser.close();}
 }
 
