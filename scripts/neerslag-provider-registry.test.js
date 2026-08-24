@@ -11,6 +11,14 @@ const NU = Date.parse("2026-08-15T10:40:00Z");
 const REF = "2026-08-15T10:35:00Z";
 let n = 0;
 
+function netcdfResponse(waarde=0.12){
+  const u32=x=>{const b=Buffer.alloc(4);b.writeUInt32BE(x);return b;},raw=Buffer.from("precipitation_nowcast");
+  const naam=Buffer.concat([u32(raw.length),raw,Buffer.alloc((4-raw.length%4)%4)]);
+  const voor=Buffer.concat([Buffer.from([67,68,70,1]),u32(0),u32(0),u32(0),u32(0),u32(0),u32(11),u32(1),naam,u32(0),u32(0),u32(0),u32(5),u32(4)]);
+  const data=Buffer.alloc(4);data.writeFloatBE(waarde);const b=Buffer.concat([voor,u32(voor.length+4),data]);
+  return {ok:true,status:200,headers:{get:()=>"application/netcdf"},arrayBuffer:async()=>b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength)};
+}
+
 function test(naam, fn) {
   Promise.resolve().then(fn).then(() => {
     n++;
@@ -38,6 +46,8 @@ function fakeKnmiFetch(url) {
       }])
     });
   }
+  if(dataset==="radar_forecast_2.0"&&request==="GetCapabilities")return Promise.resolve({ok:true,status:200,text:async()=>'<WMS_Capabilities><Layer><Name>precipitation_nowcast</Name><Dimension name="forecast_reference_time" default="2026-08-15T10:35:00Z">x</Dimension></Layer></WMS_Capabilities>'});
+  if(dataset==="radar_forecast_2.0"&&request==="GetCoverage")return Promise.resolve(netcdfResponse(0.08));
 
   throw new Error("onverwachte providerrequest: " + url);
 }
@@ -53,17 +63,17 @@ test("bestaande Nederlandse client zonder landcode blijft compatibel", () => {
   assert.equal(kiesProvider({ lat: 51.989, lon: 5.0939 }).id, "knmi");
 });
 
-test("capability-register publiceert alleen de bewezen actuele KNMI-laag", () => {
+test("capability-register publiceert de numerieke KNMI WCS-horizon", () => {
   const verwacht = [{
     id: "knmi",
-    capabilities: { actueel: true, nowcast: false, nowcastMinuten: 0 }
+    capabilities: { actueel: true, nowcast: true, nowcastMinuten: 120 }
   }];
   assert.deepEqual(providerCapabilitiesVoorLand("NL"), verwacht);
   assert.deepEqual(providerCapabilitiesVoorLand("BE"), verwacht);
   assert.deepEqual(providerCapabilitiesVoorLand("DE"), []);
 });
 
-test("generieke providerlaag levert actuele KNMI-data zonder forecast-WMS voor Nederland en België", async () => {
+test("generieke providerlaag levert RTCOR plus een volledige WCS-nowcast", async () => {
   for (const locatie of [
     { lat: 51.989, lon: 5.0939, land: "NL" },
     { lat: 50.8503, lon: 4.3517, land: "BE" }
@@ -81,17 +91,17 @@ test("generieke providerlaag levert actuele KNMI-data zonder forecast-WMS voor N
     assert.equal(uit.provider, "knmi");
     assert.equal(uit.bron, "KNMI");
     assert.equal(uit.actueel.waarde, 0.18);
-    assert.equal(uit.nowcast, null);
+    assert.equal(uit.nowcast.punten.length,25);
     assert.equal(uit.capabilities.actueel, true);
-    assert.equal(uit.capabilities.nowcast, false);
-    assert.equal(uit.capabilities.nowcastMinuten, 0);
-    assert.equal(requests.length, 1, requests.join("\n"));
-    assert(requests[0].includes("DATASET=nl_rdr_data_rtcor_5m"), requests[0]);
-    assert(!requests.some(x => x.includes("radar_forecast_2.0") || x.includes("precipitation_nowcast")), requests.join("\n"));
+    assert.equal(uit.capabilities.nowcast, true);
+    assert.equal(uit.capabilities.nowcastMinuten, 120);
+    assert.equal(requests.length,27,requests.join("\n"));
+    assert(requests.some(x=>x.includes("DATASET=nl_rdr_data_rtcor_5m")),requests.join("\n"));
+    assert.equal(requests.filter(x=>x.includes("REQUEST=GetCoverage")).length,25,requests.join("\n"));
   }
 });
 
-test("een kapotte actuele KNMI-call leidt niet tot een verborgen forecast-WMS fallback", async () => {
+test("een kapotte actuele KNMI-call blijft fail-closed, ook als de nowcast niet werkt", async () => {
   const requests = [];
   const uit = await haalNeerslagVoorLocatie({
     lat: 52.09,
@@ -105,8 +115,7 @@ test("een kapotte actuele KNMI-call leidt niet tot een verborgen forecast-WMS fa
   });
   assert.equal(uit.beschikbaar, false);
   assert.equal(uit.provider, "knmi");
-  assert.equal(requests.length, 1, requests.join("\n"));
-  assert(!requests.some(x => x.includes("radar_forecast_2.0") || x.includes("precipitation_nowcast")), requests.join("\n"));
+  assert.equal(requests.length,2,requests.join("\n"));
 });
 
 test("onondersteunde landen doen geen externe providerrequest", async () => {
