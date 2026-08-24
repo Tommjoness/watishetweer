@@ -3,6 +3,7 @@
 const assert=require("assert");
 const fs=require("fs");
 const path=require("path");
+const vm=require("vm");
 const {
   SPLIT_BRON,SPLIT_PRODUCTIE,HELPER_PRODUCTIE,RANDEN_PRODUCTIE,BEDRAGEN_PRODUCTIE,
   MOBIEL_LABEL_MIN_MM,MOBIEL_LABEL_MAX,q4MobieleGelabeldePerioden,pasQ4MobieleRegenlabelsToe
@@ -32,6 +33,17 @@ assert.deepStrictEqual(
 );
 assert.deepStrictEqual(q4MobieleGelabeldePerioden(null),[],"ontbrekende periodereeks is null-safe");
 
+/* De helper wordt letterlijk in de browserbundle gezet. Test hem daarom ook in
+   een lege VM zonder Node-modulebindings; zo kan een moduleconstante nooit meer
+   ongemerkt door de unit-test heen glippen en pas de echte browser breken. */
+assert(!HELPER_PRODUCTIE.includes("MOBIEL_LABEL_MIN_MM"),"browserhelper mag de Node-drempelconstante niet refereren");
+assert(!HELPER_PRODUCTIE.includes("MOBIEL_LABEL_MAX"),"browserhelper mag de Node-maxconstante niet refereren");
+const browserContext={uitkomst:null};
+new vm.Script(
+  HELPER_PRODUCTIE+"\noutkomst=q4MobieleGelabeldePerioden([{som:2.6},{som:0.1},{som:0.1},{som:1.0}]).map(p=>p.som);"
+).runInNewContext(browserContext);
+assert.deepStrictEqual(Array.from(browserContext.uitkomst),[2.6,1.0],"geïsoleerde browserhelper werkt zonder modulebindings");
+
 const bron=fs.readFileSync(path.join(__dirname,"q4-rain-runtime.js"),"utf8");
 assert.equal(bron.split(SPLIT_BRON).length-1,1,"Q4-runtime mist exact één brede-periode splitanker");
 assert(!bron.includes(SPLIT_PRODUCTIE),"Q4-runtime bevat de mobiele owner al vóór assemblage");
@@ -54,4 +66,4 @@ for(const invariant of [
 assert.throws(()=>pasQ4MobieleRegenlabelsToe(uit),/staat al in de runtime/,
   "owner moet fail-fast zijn bij dubbele assemblage");
 
-console.log("Q4 mobiele regenlabels groen: alle brackets blijven staan; mobiel labelt maximaal drie betekenisvolle perioden en desktop blijft volledig.");
+console.log("Q4 mobiele regenlabels groen: alle brackets blijven staan; mobiel labelt maximaal drie betekenisvolle perioden en de geïnjecteerde helper werkt geïsoleerd in browsercontext.");
