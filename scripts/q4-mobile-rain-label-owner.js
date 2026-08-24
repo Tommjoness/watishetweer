@@ -21,16 +21,21 @@ const BEDRAGEN_PRODUCTIE="  const bedragen=q4PeriodeBedragLabels(g,labelPerioden
 const MOBIEL_LABEL_MIN_MM=0.2;
 const MOBIEL_LABEL_MAX=3;
 
+/* Deze helper wordt via Function#toString letterlijk in de browserruntime gezet.
+   Daarom moeten de productiedrempels lokaal in de functie staan: moduleconstanten
+   bestaan daar niet. De geëxporteerde constanten hierboven blijven het test- en
+   documentatiecontract; de test bewaakt dat beide waarden gelijk blijven. */
 function q4MobieleGelabeldePerioden(perioden){
+  const minMm=0.2,maxLabels=3;
   const bron=Array.isArray(perioden)?perioden:[];
   const som=p=>p&&p.som!==null&&p.som!==undefined&&p.som!==""&&Number.isFinite(Number(p.som))?Number(p.som):-Infinity;
-  const betekenisvol=bron.filter(p=>som(p)>=MOBIEL_LABEL_MIN_MM);
+  const betekenisvol=bron.filter(p=>som(p)>=minMm);
   let basis=betekenisvol;
   if(!basis.length&&bron.length){
     basis=[bron.reduce((beste,p)=>som(p)>som(beste)?p:beste,bron[0])];
   }
-  if(basis.length<=MOBIEL_LABEL_MAX)return basis;
-  const sterkste=new Set([...basis].sort((a,b)=>som(b)-som(a)).slice(0,MOBIEL_LABEL_MAX));
+  if(basis.length<=maxLabels)return basis;
+  const sterkste=new Set([...basis].sort((a,b)=>som(b)-som(a)).slice(0,maxLabels));
   return bron.filter(p=>sterkste.has(p));
 }
 
