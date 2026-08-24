@@ -22,9 +22,13 @@ const ZON_RUNTIME_OUD=`      if(kop.textContent.trim()==="Zonuren"){
       }else if(/^Pollen\\s+/i.test(kop.textContent)){`;
 const ZON_RUNTIME_NIEUW=`      if(/^Pollen\\s+/i.test(kop.textContent)){`;
 
+/* unified-weather-truth normaliseert vóór deze stap alle historische
+   "Geen goed zichtvenster"-varianten naar "Geen gunstig kijkvenster". Daardoor
+   staan hier in de definitieve artifact twee identieke beginvoorwaarden; vervang
+   precies dat geassembleerde paar door één scorebewuste owner. */
 const NACHT_OUD=`  if(/^Geen gunstig kijkvenster door /i.test(t))return /[.!?]$/.test(t)?t:t+".";
-  if(/^Geen goed zichtvenster door /i.test(t))return t.replace(/^Geen goed zichtvenster/i,"Geen gunstig kijkvenster")+( /[.!?]$/.test(t)?"":".");`;
-const NACHT_NIEUW=`  const geenVenster=/^(?:Geen gunstig kijkvenster|Geen goed zichtvenster) door (.+?)[.!?]*$/i.exec(t);
+  if(/^Geen gunstig kijkvenster door /i.test(t))return t.replace(/^Geen gunstig kijkvenster/i,"Geen gunstig kijkvenster")+( /[.!?]$/.test(t)?"":".");`;
+const NACHT_NIEUW=`  const geenVenster=/^Geen gunstig kijkvenster door (.+?)[.!?]*$/i.exec(t);
   if(geenVenster){
     const reden=geenVenster[1].trim();
     if(s!==null&&s>=5&&reden){
@@ -44,7 +48,7 @@ function vervangExact(bron,oud,nieuw,naam){
 }
 
 let html=fs.readFileSync(PAD,"utf8");
-if(html.includes('const geenVenster=/^(?:Geen gunstig kijkvenster|Geen goed zichtvenster)'))
+if(html.includes('const geenVenster=/^Geen gunstig kijkvenster door'))
   throw new Error("Finale presentatieconsistentie staat al in de artifact.");
 if(!html.includes("function weatherNowZonurenWoord(uur,daglichtUur){"))
   throw new Error("Canonieke daglichtbewuste zonuren-owner ontbreekt vóór finale consistentie.");
