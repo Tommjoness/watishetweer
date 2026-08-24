@@ -101,6 +101,27 @@ function verruimZoekUrl(url){
   }
 }
 
+/* De Nederlandstalige providerindex kent sommige wereldsteden alleen onder de
+   Nederlandse naam (bijvoorbeeld "Tokio"). Iemand die "Tokyo" invoert hoort
+   niet ten onrechte "Niets gevonden" te krijgen. Alleen wanneer de eerste,
+   Nederlandse zoekopdracht nul geldige resultaten oplevert, proberen we exact
+   dezelfde query nog eenmaal met de internationale/Engelse namenindex. */
+function zoekFallbackTaalUrl(url){
+  const s=String(url||"");
+  if(!s.includes("geocoding-api.open-meteo.com/v1/search?"))return s;
+  try{
+    const absoluut=/^https?:\/\//i.test(s);
+    const u=new URL(s,absoluut?undefined:"https://watishetweer.invalid/");
+    const taal=String(u.searchParams.get("language")||"").toLowerCase();
+    if(taal&&taal!=="nl")return s;
+    u.searchParams.set("language","en");
+    return absoluut?u.href:u.pathname+u.search+u.hash;
+  }catch(_){
+    if(/([?&])language=nl(?:&|$)/i.test(s))return s.replace(/([?&])language=nl(?=&|$)/i,"$1language=en");
+    return s+(s.includes("?")?"&":"?")+"language=en";
+  }
+}
+
 /* Zelfde pure contract als de servermodule, voor compacte unitdekking. De
    productie-requestroute gebruikt lib/waarschuwing-scope.cjs als enige runtime
    eigenaar; deze helper wordt niet nogmaals over een al genormaliseerde
@@ -124,7 +145,7 @@ function alleenPlaatsgebondenWaarschuwingen(data){
   return Object.assign({},data,{lijst:bewezen});
 }
 
-const api={MAX_ZOEKRESULTATEN,PROVIDER_ZOEKVENSTER,geldigeCoordinaat,normaliseerLaadCoordinaten,gedeeldeUrlCoordinaten,normaliseerZoekresultaat,zoekSleutel,dedupliceerZoekresultaten,verruimZoekUrl,alleenPlaatsgebondenWaarschuwingen};
+const api={MAX_ZOEKRESULTATEN,PROVIDER_ZOEKVENSTER,geldigeCoordinaat,normaliseerLaadCoordinaten,gedeeldeUrlCoordinaten,normaliseerZoekresultaat,zoekSleutel,dedupliceerZoekresultaten,verruimZoekUrl,zoekFallbackTaalUrl,alleenPlaatsgebondenWaarschuwingen};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowGlobalLocationHardening=api;
 
@@ -195,8 +216,16 @@ const basisJ=j;
 j=async function(url,opt){
   const oorspronkelijk=String(url||""),isZoek=oorspronkelijk.includes("geocoding-api.open-meteo.com/v1/search?");
   const requestUrl=isZoek?verruimZoekUrl(oorspronkelijk):url;
-  const data=await basisJ(requestUrl,opt);
+  let data=await basisJ(requestUrl,opt);
   if(isZoek){
+    const eersteResultaten=data&&Array.isArray(data.results)?data.results:[];
+    if(!eersteResultaten.length){
+      const fallbackUrl=zoekFallbackTaalUrl(requestUrl);
+      if(fallbackUrl!==requestUrl){
+        const fallbackData=await basisJ(fallbackUrl,opt);
+        if(fallbackData&&typeof fallbackData==="object")data=fallbackData;
+      }
+    }
     if(!data||typeof data!=="object")return data;
     return Object.assign({},data,{results:dedupliceerZoekresultaten(data.results,MAX_ZOEKRESULTATEN)});
   }
