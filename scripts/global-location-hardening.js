@@ -103,9 +103,9 @@ function verruimZoekUrl(url){
 
 /* De Nederlandstalige providerindex kent sommige wereldsteden alleen onder de
    Nederlandse naam (bijvoorbeeld "Tokio"). Iemand die "Tokyo" invoert hoort
-   niet ten onrechte "Niets gevonden" te krijgen. Alleen wanneer de eerste,
-   Nederlandse zoekopdracht nul geldige resultaten oplevert, proberen we exact
-   dezelfde query nog eenmaal met de internationale/Engelse namenindex. */
+   niet ten onrechte "Niets gevonden" te krijgen. Als de Nederlandse index nog
+   geen volledige consumentenset oplevert, vullen we die aan vanuit de Engelse
+   index en dedupliceren we daarna op naam en coördinaten. */
 function zoekFallbackTaalUrl(url){
   const s=String(url||"");
   if(!s.includes("geocoding-api.open-meteo.com/v1/search?"))return s;
@@ -219,11 +219,14 @@ j=async function(url,opt){
   let data=await basisJ(requestUrl,opt);
   if(isZoek){
     const eersteResultaten=data&&Array.isArray(data.results)?data.results:[];
-    if(!eersteResultaten.length){
+    if(eersteResultaten.length<MAX_ZOEKRESULTATEN){
       const fallbackUrl=zoekFallbackTaalUrl(requestUrl);
       if(fallbackUrl!==requestUrl){
         const fallbackData=await basisJ(fallbackUrl,opt);
-        if(fallbackData&&typeof fallbackData==="object")data=fallbackData;
+        if(fallbackData&&typeof fallbackData==="object"){
+          const aanvulling=Array.isArray(fallbackData.results)?fallbackData.results:[];
+          data=Object.assign({},data,{results:eersteResultaten.concat(aanvulling)});
+        }
       }
     }
     if(!data||typeof data!=="object")return data;

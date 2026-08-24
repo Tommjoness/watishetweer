@@ -289,16 +289,16 @@ function structureerBronnen(){
 
   if(!bron.classList.contains("bron-bronnen")){
     const links=[...bron.querySelectorAll("a")],pak=naam=>links.find(a=>(a.textContent||"").trim()===naam);
-    const open=pak("Open-Meteo"),alarm=pak("MeteoAlarm"),nws=pak("National Weather Service"),osm=pak("© OpenStreetMap-bijdragers");
-    if(!open||!alarm||!nws||!osm)return false;
+    const open=pak("Open-Meteo"),cams=pak("CAMS"),alarm=pak("MeteoAlarm"),nws=pak("National Weather Service"),bdc=pak("BigDataCloud"),osm=pak("© OpenStreetMap-bijdragers");
+    if(!open||!cams||!alarm||!nws||!bdc||!osm)return false;
     knmi=/\bKNMI\b/i.test(bron.textContent||"");
     bron.classList.add("bron-bronnen");
     bron.innerHTML='<span class="bronlabel">Bronnen</span>'
       +'<span class="bronitem">'+open.outerHTML+'</span>'
-      +'<span class="bronitem">CAMS</span>'
+      +'<span class="bronitem">'+cams.outerHTML+'</span>'
       +'<span class="bronitem">'+alarm.outerHTML+'</span>'
       +'<span class="bronitem">'+nws.outerHTML+'</span>'
-      +'<span class="bronitem">BigDataCloud</span>'
+      +'<span class="bronitem">'+bdc.outerHTML+'</span>'
       +'<span class="bronitem">'+osm.outerHTML+'</span>';
   }
 
@@ -310,7 +310,9 @@ function structureerBronnen(){
   const los=[...footer.children].find(el=>el!==bron&&el.classList&&el.classList.contains("bron")&&/^\s*[·/]?\s*KNMI\s*$/i.test(el.textContent||""));
   if(los){knmi=true;los.remove();}
   if(knmi&&! [...bron.querySelectorAll(".bronitem")].some(el=>/^KNMI$/i.test((el.textContent||"").trim()))){
-    const item=document.createElement("span");item.className="bronitem";item.textContent="KNMI";bron.appendChild(item);
+    const item=document.createElement("span");item.className="bronitem";
+    item.innerHTML='<a href="https://www.knmi.nl/" target="_blank" rel="noopener">KNMI</a>';
+    bron.appendChild(item);
   }
   return true;
 }

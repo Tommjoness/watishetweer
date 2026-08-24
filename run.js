@@ -1711,7 +1711,7 @@ groep("Live bevindingen");
     Object.assign(a7.S,{d:d7,i0:14,op:Date.now(),lat:1,lon:1,label:"Testplaats",dag:null,bereik:24});
     a7.tekenAlles();
     const h=b7.place.innerHTML;
-    check(naam+": de plaatsnaam heeft een klok",/<span id="plaatstijd">\d\d:\d\d<\/span>/.test(h),h);
+    check(naam+": de plaatsnaam heeft een klok",/<span id="plaatstijd" aria-hidden="true">\d\d:\d\d<\/span>/.test(h),h);
     check(naam+": de plaatsnaam zelf blijft staan",/Testplaats/.test(h),h);
   }
   // de klok moet de tijd van de plaats tonen, niet die van de kijker
@@ -3137,8 +3137,8 @@ groep("v69 polishronde");
   {
     check("1. .mod-night bestaat niet meer (Nachtzicht is weer een gewone .dashcol)",
       !/class="dashcol mod-night"/.test(bronP) && !/\.mod-night\{/.test(bronP));
-    check("Nachtzicht-kop en -rijen staan weer in een gewone, ongekleurde wrapper",
-      /<div class="dashcol">\s*\n\s*<h2><span>Nachtzicht<\/span><span class="r" id="moonlab">/.test(bronP));
+    check("Nachtzicht-kop, maancontext en rijen staan in een gewone, ongekleurde wrapper",
+      /<div class="dashcol">\s*\n\s*<div class="chartkop nachtkop">\s*\n\s*<h2><span>Nachtzicht<\/span><\/h2>\s*\n\s*<span class="r" id="moonlab" role="note"><\/span>/.test(bronP));
     check("2. #nights heeft geen background meer, alleen nog een dunne neutrale scheidingslijn",
       /#nights\{border-top:1px solid var\(--rule\)\}/.test(bronP)
       && !/#nights\{[^}]*background/.test(bronP));

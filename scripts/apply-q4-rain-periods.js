@@ -30,7 +30,7 @@ function vervangExact(van,naar,label){
    q4-rain-runtime.js. Geen tekstuele vervanging meer: die was statisch groen
    terwijl de browser nog de historische functie uitvoerde. */
 vervangExact('Klik op een dag om die verwachting in de grafiek te laden.','Kies een dag om die verwachting in de grafiek te bekijken.',"neutrale daghint");
-vervangExact('<div class="eyebrow">Windstoten</div>','<div class="eyebrow">Windstoten nu</div>',"ondubbelzinnige windstootkop");
+vervangExact('<div class="eyebrow">Windstoten</div>','<div class="eyebrow">Windstoot rond nu</div>',"ondubbelzinnige windstootkop");
 
 /* De kwartiergrafiek heeft de effectieve, overlappende 15-minutenhoeveelheid al
    in P staan. De historische renderer tekende echter iedere positieve waarde en

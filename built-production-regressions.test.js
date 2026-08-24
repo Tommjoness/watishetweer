@@ -104,7 +104,7 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  const {api,bak}=laadKern(390),d=bouw({wg:(u,dag)=>dag===0&&u===18?72:25});zetBasis(api,d);api.meters();const t=tekst(bak.gustsub);ok(/De hoogste windstoot wordt vandaag tussen 17:00 en 18:00 verwacht: 72 km\/u\./.test(t),"windstootpiek gebruikt al in het base-artifact de finale forecastcopy",t);ok(!/Later vandaag worden rond|Voor vandaag lag|\bbedroeg\b/i.test(t),"windstootpiek valt niet terug op historische of meetwaarde-achtige copy",t);
 }
 {
- const {api,bak}=laadKern(390),d=bouw({zicht:20000});d.current.visibility=20000;zetBasis(api,d);api.nachten();const t=tekst(bak.nights);ok(/Score/.test(t)&&/\d+\/10/.test(t),"nachtzichtscore is compact en begrijpelijk gelabeld",t.slice(0,300));ok(/Beste zichtperiode/.test(t),"nachtzicht benoemt de beste zichtperiode consumentgericht",t.slice(0,300));
+ const {api,bak}=laadKern(390),d=bouw({zicht:20000});d.current.visibility=20000;zetBasis(api,d);api.nachten();const t=tekst(bak.nights);ok(/Indicatie/.test(t)&&/\d+\/10/.test(t),"nachtzichtscore is compact, indicatief en begrijpelijk gelabeld",t.slice(0,300));ok(/Beste zichtperiode/.test(t),"nachtzicht benoemt de beste zichtperiode consumentgericht",t.slice(0,300));
 }
 {
  const {api,bak}=laadKern(390),d=bouw({zicht:100,cc:()=>0,rh:100,spreiding:0,pr:()=>0,wc:()=>3});
