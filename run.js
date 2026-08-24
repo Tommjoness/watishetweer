@@ -1367,8 +1367,8 @@ groep("Wereldwijd");
       check(naam+": buiten Europa wel een neutraal gelabelde index met waarde",/Luchtkwaliteit/.test(t)&&/Amerikaanse AQI/.test(t)&&/\b42\b/.test(t),t.slice(0,130));
       check(naam+": buiten Europa geen bewering over pollenconcentraties",
         !/noemenswaardige/.test(t),t.slice(0,140));
-      check(naam+": buiten Europa staat dat pollen alleen in Europa bestaat",
-        /Alleen beschikbaar in Europa/.test(t),t.slice(0,140));
+      check(naam+": buiten de CAMS-dekking wordt pollen locatiegericht als niet beschikbaar benoemd",
+        /Voor deze locatie niet beschikbaar/.test(t),t.slice(0,140));
     }
   }
 
