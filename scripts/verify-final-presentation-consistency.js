@@ -15,10 +15,10 @@ ok(html.includes('if(aandeel>=0.6)return "Naar verwachting veel zon vandaag.";')
 ok(!html.includes('if(kop.textContent.trim()==="Zonuren"){'),"oude senior-runtime overschrijft de zonurencopy niet meer na render");
 ok(html.includes('if(/^Pollen\\s+/i.test(kop.textContent)){'),"pollenpresentatie uit de senior-runtime blijft behouden");
 
-ok(html.includes('const geenVenster=/^(?:Geen gunstig kijkvenster|Geen goed zichtvenster) door (.+?)[.!?]*$/i.exec(t);'),"Nachtzicht normaliseert beide historische geen-venstervarianten via één pad");
+ok(html.includes('const geenVenster=/^Geen gunstig kijkvenster door (.+?)[.!?]*$/i.exec(t);'),"Nachtzicht gebruikt één genormaliseerde geen-vensterroute na weather truth");
 ok(html.includes('const kwalificatie=s>=9?"Uitstekende":s>=7?"Goede":"Redelijke";'),"Nachtzicht verbindt venstercopy aan dezelfde zichtbare scoreklasse");
 ok(html.includes('is er geen aaneengesloten gunstig kijkvenster.'),"middelmatige/goede score kan eerlijk uitleggen dat alleen een aaneengesloten venster ontbreekt");
-ok(!html.includes('if(/^Geen goed zichtvenster door /i.test(t))return t.replace'),"oude kale Nachtzicht-return is uit de finale artifact verwijderd");
+ok(!html.includes('if(/^Geen gunstig kijkvenster door /i.test(t))return /[.!?]$/.test(t)?t:t+".";'),"oude kale Nachtzicht-return is uit de finale artifact verwijderd");
 
 ok(html.includes("function q4MobieleGelabeldePerioden(perioden){"),"Q4 heeft een expliciete mobiele labelselectie");
 ok(html.includes("const labelPerioden=g.M?q4MobieleGelabeldePerioden(perioden):perioden;"),"alleen mobiel gebruikt de gereduceerde permanente labelset");
