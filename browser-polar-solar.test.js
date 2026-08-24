@@ -90,6 +90,7 @@ async function controleer(type,naam){
     assert(!/zon op 00:00|zon onder 00:00/i.test(dag),naam+": pooldag toont provider-sentinel in zoninformatie: "+dag);
     assert(!/zon op 00:00|zon onder 00:00/i.test(dagPagina),naam+": pooldag toont provider-sentinel elders op de pagina/grafiek: "+dagPagina);
     assert(/Geen nachtdata beschikbaar/i.test(dagNachten),naam+": pooldag hoort geen Nachtzicht-nacht te fabriceren: "+dagNachten);
+    assert(!/\b([a-z]{2}) op \1\b/i.test(dagNachten),naam+": pooldag mag nooit een nacht binnen dezelfde kalenderdag tonen: "+dagNachten);
 
     await page.goto(basis+"/poolnacht?lat=-77.8419&lon=166.6863&plaats=McMurdo",{waitUntil:"networkidle"});
     await page.waitForSelector("#suntimes .zonregel");
