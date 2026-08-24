@@ -29,6 +29,8 @@ const verwacht=[
   "verify-unified-weather-truth.js",
   "verify-small-chance-consistency.js",
   "verify-nederlandse-microcopy.js",
+  "apply-final-presentation-consistency.js",
+  "verify-final-presentation-consistency.js",
   "verify-seo-foundation.js",
   "generate-seo-location-pages.js",
   "verify-seo-location-pages.js",
@@ -36,7 +38,7 @@ const verwacht=[
   "verify-build-provenance.js",
   "verify-final-27.js"
 ];
-assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten plus directe runtime-retirementguard");
+assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten plus finale presentatieconsistentie");
 assert.equal(new Set(POSTBUILD_STAPPEN).size,POSTBUILD_STAPPEN.length,"postbuild mag geen stap dubbel uitvoeren");
 for(const stap of POSTBUILD_STAPPEN){assert(fs.existsSync(path.join(__dirname,stap)),"postbuild verwijst naar ontbrekend script: "+stap);}
 assert(!fs.existsSync(path.join(__dirname,"apply-cache-fallback-country.js")),"oude misleidende cachefallback-owner moet verwijderd zijn");
@@ -46,6 +48,8 @@ assert(!fs.existsSync(path.join(__dirname,"apply-pollen-hour-correctness.js")),"
 assert(!fs.existsSync(path.join(__dirname,"ui-polish-20260813-runtime.js")),"lege historische UI-polishruntime moet verwijderd zijn");
 assert(fs.existsSync(path.join(__dirname,"seo-foundation.js")),"pure SEO-owner moet bestaan");
 assert(fs.existsSync(path.join(__dirname,"pollen-hour-correctness.js")),"pure pollen-owner moet bestaan");
+assert(fs.existsSync(path.join(__dirname,"apply-final-presentation-consistency.js")),"finale presentatieconsistentie moet een expliciete applystap hebben");
+assert(fs.existsSync(path.join(__dirname,"verify-final-presentation-consistency.js")),"finale presentatieconsistentie moet direct verifieerbaar zijn");
 
 /* Bewolkingscopy hoort uitsluitend bij de canonieke senior-semantiekbron. Q3 mag
    de bewezen 100%/95%-grenzen controleren, maar geen compatibiliteitsfallback
@@ -78,7 +82,9 @@ assert(positie("verify-polar-chart-sentinel.js")<positie("apply-unified-weather-
 assert(positie("apply-unified-weather-truth.js")<positie("verify-unified-weather-truth.js"),"weather-truth moet direct na toepassing worden geverifieerd");
 assert(positie("verify-unified-weather-truth.js")<positie("verify-small-chance-consistency.js"),"kleine-kans-owner wordt pas na de geverifieerde weather-truth-laag gecontroleerd");
 assert(positie("verify-small-chance-consistency.js")<positie("verify-nederlandse-microcopy.js"),"Nederlandse copy-verifier ziet de definitieve neerslagsemantiek uit de canonieke owner");
-assert(positie("verify-nederlandse-microcopy.js")<positie("verify-seo-foundation.js"),"SEO-verifier behoudt zijn bewezen positie na de definitieve Nederlandse copy");
+assert(positie("verify-nederlandse-microcopy.js")<positie("apply-final-presentation-consistency.js"),"finale presentatiecorrectie mag pas na de brede Nederlandse microcopyguard muteren");
+assert(positie("apply-final-presentation-consistency.js")<positie("verify-final-presentation-consistency.js"),"finale presentatiecorrectie wordt direct na toepassing geverifieerd");
+assert(positie("verify-final-presentation-consistency.js")<positie("verify-seo-foundation.js"),"SEO en plaatsroutes moeten de definitieve presentatieartifact zien");
 assert(positie("verify-seo-foundation.js")<positie("generate-seo-location-pages.js"),"plaatsroutes mogen pas na bewezen root-SEO worden gegenereerd");
 assert(positie("generate-seo-location-pages.js")<positie("verify-seo-location-pages.js"),"plaatsroutes moeten direct na generatie worden geverifieerd");
 assert(positie("verify-seo-location-pages.js")<positie("apply-build-provenance.js"),"build-SHA wordt op het complete route-artifact gestempeld");
@@ -92,4 +98,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde, runtime-retirementguard, canonieke cloud-owner, shared-URL-owner, foutsemantiek, poolgrafiek, pollen/SEO, weather truth, kleine-kans-owner, routes, provenance en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde, finale presentatieguard, canonieke cloud-owner, shared-URL-owner, foutsemantiek, poolgrafiek, pollen/SEO, weather truth, kleine-kans-owner, routes, provenance en fail-fast gedrag geslaagd.");
