@@ -6,6 +6,7 @@ const {
   actueelPuntUrl,
   capabilitiesUrl,
   nowcastPuntUrl,
+  normaliseerWcsPunt,
   isVers,
   normaliseerPuntAntwoord,
   referenceTimeUitCapabilities,
@@ -44,6 +45,20 @@ function verwijderNowcastStap(payload, tijd) {
   const ref = Object.keys(kopie[0].data)[0];
   delete kopie[0].data[ref][tijd];
   return kopie;
+}
+
+function netcdfPunt(waarde=0.12){
+  const delen=[];const u32=n=>{const b=Buffer.alloc(4);b.writeUInt32BE(n);return b;};
+  const naam=s=>{const raw=Buffer.from(s),pad=Buffer.alloc((4-raw.length%4)%4);return Buffer.concat([u32(raw.length),raw,pad]);};
+  delen.push(Buffer.from([67,68,70,1]),u32(0),u32(0),u32(0),u32(0),u32(0),u32(11),u32(1));
+  delen.push(naam("precipitation_nowcast"),u32(0),u32(0),u32(0),u32(5),u32(4));
+  const voor=Buffer.concat(delen),begin=voor.length+4,offset=u32(begin);
+  const data=Buffer.alloc(4);data.writeFloatBE(waarde);
+  return Buffer.concat([voor,offset,data]);
+}
+function netcdfResponse(waarde){
+  const b=netcdfPunt(waarde);
+  return {ok:true,status:200,headers:{get:()=>"application/netcdf"},arrayBuffer:async()=>b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength)};
 }
 
 test("Vianen valt binnen de KNMI-dekking", () => {
@@ -94,12 +109,21 @@ test("nowcast reference_time komt uit de officiële capabilities-dimensie", () =
   assert.equal(u.searchParams.get("REQUEST"), "GetCapabilities");
 });
 
-test("nowcast-puntvraag vraagt exact +0 tot +120 minuten op", () => {
-  const u = new URL(nowcastPuntUrl(51.989, 5.0939, "2026-08-15T10:35:00Z"));
+test("nowcast-puntvraag gebruikt numerieke WCS voor exact één tijdstap", () => {
+  const u = new URL(nowcastPuntUrl(51.989, 5.0939, "2026-08-15T10:35:00Z", "2026-08-15T10:40:00Z"));
   assert.equal(u.searchParams.get("DATASET"), "radar_forecast_2.0");
-  assert.equal(u.searchParams.get("QUERY_LAYERS"), "precipitation_nowcast");
-  assert.equal(u.searchParams.get("DIM_reference_time"), "2026-08-15T10:35:00Z");
-  assert.equal(u.searchParams.get("time"), "2026-08-15T10:35:00Z/2026-08-15T12:35:00Z");
+  assert.equal(u.searchParams.get("SERVICE"), "WCS");
+  assert.equal(u.searchParams.get("REQUEST"), "GetCoverage");
+  assert.equal(u.searchParams.get("COVERAGE"), "precipitation_nowcast");
+  assert.equal(u.searchParams.get("DIM_forecast_reference_time"), "2026-08-15T10:35:00Z");
+  assert.equal(u.searchParams.get("TIME"), "2026-08-15T10:40:00Z");
+  assert.equal(u.searchParams.get("FORMAT"), "NetCDF3");
+});
+
+test("NetCDF3-puntwaarde wordt numeriek en met gevraagde tijd gelezen",()=>{
+  const uit=normaliseerWcsPunt(netcdfPunt(0.37),"2026-08-15T10:40:00Z");
+  assert(Math.abs(uit.waarde-0.37)<1e-6);
+  assert.equal(uit.tijd,"2026-08-15T10:40:00Z");
 });
 
 test("nowcast JSON bewaart exact 25 aaneengesloten geldige 5-minutenpunten", () => {
@@ -143,14 +167,15 @@ test("haalActueelPunt accepteert een verse echte-vorm WMS-respons", async () => 
 
 test("haalNowcastPunt valideert capabilities en de volledige puntreeks", async () => {
   let stap = 0;
-  const fakeFetch = async () => {
+  const fakeFetch = async url => {
     stap++;
     if (stap === 1) return {
       ok: true,
       status: 200,
-      text: async () => '<WMS_Capabilities><Layer><Name>precipitation_nowcast</Name><Dimension name="reference_time" default="2026-08-15T10:35:00Z">x</Dimension></Layer></WMS_Capabilities>'
+      text: async () => '<WMS_Capabilities><Layer><Name>precipitation_nowcast</Name><Dimension name="forecast_reference_time" default="2026-08-15T10:35:00Z">x</Dimension></Layer></WMS_Capabilities>'
     };
-    return { ok: true, status: 200, text: async () => JSON.stringify(nowcastFixture()) };
+    assert.equal(new URL(url).searchParams.get("SERVICE"),"WCS");
+    return netcdfResponse(stap/100);
   };
   const uit = await haalNowcastPunt(51.989, 5.0939, fakeFetch, NU);
   assert.equal(uit.punten.length, 25);
@@ -158,7 +183,7 @@ test("haalNowcastPunt valideert capabilities en de volledige puntreeks", async (
   assert.equal(uit.bron, "KNMI radar-nowcast");
 });
 
-test("haalNowcastPunt faalt gesloten bij een gat in de providerreeks", async () => {
+test("haalNowcastPunt faalt gesloten zodra één WCS-tijdstap ontbreekt", async () => {
   let stap = 0;
   const fakeFetch = async () => {
     stap++;
@@ -167,12 +192,12 @@ test("haalNowcastPunt faalt gesloten bij een gat in de providerreeks", async () 
       status: 200,
       text: async () => '<WMS_Capabilities><Layer><Name>precipitation_nowcast</Name><Dimension name="reference_time" default="2026-08-15T10:35:00Z">x</Dimension></Layer></WMS_Capabilities>'
     };
-    const payload = verwijderNowcastStap(nowcastFixture(), "2026-08-15T10:50:00Z");
-    return { ok: true, status: 200, text: async () => JSON.stringify(payload) };
+    if(stap===5)return {ok:false,status:503,headers:{get:()=>"text/plain"},arrayBuffer:async()=>new ArrayBuffer(0)};
+    return netcdfResponse(0);
   };
   await assert.rejects(
     () => haalNowcastPunt(51.989, 5.0939, fakeFetch, NU),
-    /geen volledige aaneengesloten 5-minutenreeks/
+    /KNMI WCS status 503/
   );
 });
 
