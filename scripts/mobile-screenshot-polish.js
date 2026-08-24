@@ -110,6 +110,10 @@ function nachtOordeelGetoond(score){
   return n>=9?"Uitstekend":n>=7?"Goed":n>=5?"Redelijk":n>=4?"Matig":"Ongunstig";
 }
 function nachtBalkPercentageGetoond(score){const s=getal(score);return s===null?0:begrens(Math.round(s),0,10)*10;}
+function nachtHorizonIndex(bronwaarde,rijIndex){
+  const bron=Number(bronwaarde),fallback=Math.max(0,Math.floor(Number(rijIndex)||0));
+  return Number.isInteger(bron)&&bron>=0?bron:fallback;
+}
 function nachtLabelVarianten(label){
   const t=String(label||""),m=/^([a-z]{2}) op ([a-z]{2})$/i.exec(t);
   return m?{lang:t,kort:m[1]+"–"+m[2]}:{lang:t,kort:t};
@@ -194,11 +198,12 @@ function pollenKop(tekst){
 function verbeterNachtzicht(data,nuLokaal,actief){
   const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")],day=data&&data.daily||{};
   rijen.forEach((rij,h)=>{
+    const horizon=nachtHorizonIndex(rij.dataset&&rij.dataset.d,h);
     const naam=rij.querySelector(".dname"),score=rij.querySelector(".score"),advies=rij.querySelector(".nachtadvies"),bew=rij.querySelector(".nmeta:not(.wide)"),maan=rij.querySelector(".nachtmaan");
     if(naam){const v=nachtLabelVarianten((naam.textContent||"").trim());naam.innerHTML=v.lang===v.kort?esc(v.lang):'<span class="nachtlabel-lang">'+esc(v.lang)+'</span><span class="nachtlabel-kort">'+esc(v.kort)+'</span>';}
     const sm=/^(\d+)\/10$/.exec(String(score&&score.textContent||"").trim()),zichtbaar=sm?Number(sm[1]):null;
     if(score){
-      score.title=h>=5?"Globale zichtscore op basis van de huidige verwachting":h>=3?"Voorlopige zichtscore op basis van de huidige verwachting":"Zichtscore op basis van de huidige verwachting";
+      score.title=horizon>=5?"Globale zichtscore op basis van de huidige verwachting":horizon>=3?"Voorlopige zichtscore op basis van de huidige verwachting":"Zichtscore op basis van de huidige verwachting";
       if(zichtbaar!==null){
         const teal=typeof TEAL!=="undefined"?TEAL:"currentColor",ink=typeof INK!=="undefined"?INK:"currentColor",ink25=typeof INK25!=="undefined"?INK25:"currentColor",kleur=zichtbaar>=7?teal:zichtbaar>=4?ink:ink25;
         score.style.color=kleur;const balk=rij.querySelector(".sbar i");if(balk){balk.style.background=kleur;balk.style.width=nachtBalkPercentageGetoond(zichtbaar)+"%";}
@@ -206,9 +211,9 @@ function verbeterNachtzicht(data,nuLokaal,actief){
     }
     if(advies){
       const delen=String(advies.textContent||"").split(/\s+·\s+/),venster=delen.length>1?delen.slice(1).join(" · "):"";
-      const oordeel=zichtbaar===null?(delen[0]||advies.textContent):nachtOordeelGetoond(zichtbaar),hoofd=nachtAdviesMetHorizon(oordeel,h);
-      const sr=Array.isArray(day.sunrise)?hhmmIso(day.sunrise[h+1]):null;
-      const detail=venster?corrigeerNachtVensterBron(venster,h,zichtbaar,{zonsopkomst:sr,actief:!!actief&&h===0,nuTijd:hhmmIso(nuLokaal)}):"";
+      const oordeel=zichtbaar===null?(delen[0]||advies.textContent):nachtOordeelGetoond(zichtbaar),hoofd=nachtAdviesMetHorizon(oordeel,horizon);
+      const sr=Array.isArray(day.sunrise)?hhmmIso(day.sunrise[horizon+1]):null;
+      const detail=venster?corrigeerNachtVensterBron(venster,horizon,zichtbaar,{zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal)}):"";
       advies.innerHTML='<span class="nachtoordeel">'+esc(hoofd)+'</span>'+(detail?'<span class="nachtvenster">'+esc(detail)+'</span>':"");
     }
     if(bew){const p=bew.querySelector(".perc");if(p){const pct=(p.textContent||"").trim();bew.innerHTML='<span class="perc">'+esc(pct)+'</span>';bew.setAttribute("aria-label","Bewolking "+pct);}}
@@ -312,7 +317,7 @@ function structureerBronnen(){
 
 const api={
   maanFaseUitBeschrijving,maanFaseSvgV2,pollenEenheid,pollenKop,nachtOordeelGetoond,
-  nachtBalkPercentageGetoond,nachtLabelVarianten,nachtAdviesMetHorizon,nachtzichtCompactAantal,
+  nachtBalkPercentageGetoond,nachtHorizonIndex,nachtLabelVarianten,nachtAdviesMetHorizon,nachtzichtCompactAantal,
   corrigeerNachtVensterBron,dagdeelVanUur,datumVerschuif,normaliseerNachtDagdata,
   nachtIsActiefNu,formatteerMaanTekst,nachtMetaDelen
 };

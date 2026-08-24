@@ -330,17 +330,18 @@ nachten=function(){
   basisNachten();
   const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")];
   rijen.forEach((rij,h)=>{
+    const bronIndex=Number(rij.dataset&&rij.dataset.d),horizon=Number.isInteger(bronIndex)&&bronIndex>=0?bronIndex:h;
     const naam=rij.querySelector(".dname"),advies=rij.querySelector(".nachtadvies"),venster=rij.querySelector(".nachtvenster"),score=rij.querySelector(".score"),bew=rij.querySelector(".nmeta:not(.wide)");
     if(naam){
       const v=nachtLabelVarianten(naam.textContent);
       naam.innerHTML=v.lang===v.kort?escapeHtml(v.lang):'<span class="nachtlabel-lang">'+escapeHtml(v.lang)+'</span><span class="nachtlabel-kort">'+escapeHtml(v.kort)+'</span>';
     }
     const m=/^(\d+)\/10$/.exec(String(score&&score.textContent||"").trim()),zichtbaar=m?Number(m[1]):null;
-    if(advies&&zichtbaar!==null)advies.textContent=nachtAdviesMetHorizon(nachtOordeelGetoond(zichtbaar),h);
-    else if(advies)advies.textContent=nachtAdviesMetHorizon(advies.textContent,h);
-    if(venster)venster.textContent=nachtVensterMetHorizon(venster.textContent,h);
+    if(advies&&zichtbaar!==null)advies.textContent=nachtAdviesMetHorizon(nachtOordeelGetoond(zichtbaar),horizon);
+    else if(advies)advies.textContent=nachtAdviesMetHorizon(advies.textContent,horizon);
+    if(venster)venster.textContent=nachtVensterMetHorizon(venster.textContent,horizon);
     if(score){
-      score.title=h>=5?"Globale zichtscore op basis van de huidige verwachting":h>=3?"Voorlopige zichtscore op basis van de huidige verwachting":"Zichtscore op basis van de huidige verwachting";
+      score.title=horizon>=5?"Globale zichtscore op basis van de huidige verwachting":horizon>=3?"Voorlopige zichtscore op basis van de huidige verwachting":"Zichtscore op basis van de huidige verwachting";
       if(zichtbaar!==null){
         const kleur=zichtbaar>=7?TEAL:zichtbaar>=4?INK:INK25;
         score.style.color=kleur;

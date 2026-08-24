@@ -59,6 +59,7 @@ async function controleer(browserType,naam){
         mainAantal:mains.length,
         mainId:mains[0]&&mains[0].id,
         appTag:app&&app.tagName,
+        plaatsTag:document.getElementById("place")?.tagName||null,
         footerDisplay:footer&&getComputedStyle(footer).display,
         doelen:[...summaries,...links],
         maanAria:[...document.querySelectorAll(".maanbij")].map(el=>el.getAttribute("aria-label")),
@@ -70,6 +71,7 @@ async function controleer(browserType,naam){
     assert.equal(resultaat.mainAantal,1,naam+": exact één main-landmark");
     assert.equal(resultaat.mainId,"app",naam+": #app is het main-landmark");
     assert.equal(resultaat.appTag,"MAIN",naam+": #app gebruikt native main-semantiek");
+    assert.equal(resultaat.plaatsTag,"H2",naam+": de zichtbare plaatsnaam is geen native sectiekop");
     assert.equal(resultaat.footerDisplay,"flex",naam+": footer staat in zichtbare layoutstate");
     assert.ok(resultaat.doelen.length>=5,naam+": footerdoelen ontbreken");
     resultaat.doelen.forEach(doel=>{

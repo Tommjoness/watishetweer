@@ -8,6 +8,7 @@ const apply=fs.readFileSync(path.join(__dirname,"apply-ui-polish-20260813.js"),"
 const warningOwner=fs.readFileSync(path.join(__dirname,"warning-render-state.js"),"utf8");
 const dailyOwner=fs.readFileSync(path.join(__dirname,"daily-forecast-owner.js"),"utf8");
 const q4=fs.readFileSync(path.join(__dirname,"q4-rain-runtime.js"),"utf8");
+const index=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
 const runtimePad=path.join(__dirname,"ui-polish-20260813-runtime.js");
 
 /* De historische runtime is na de ownermigraties volledig verdwenen. Deze test
@@ -64,5 +65,6 @@ assert(apply.includes('html.includes(WARNING_CSS_BRON)'),"UI-polish moet terugke
 assert(apply.includes('const APP_OPEN=\'<div id="app" style="display:none">\''),"main-landmark moet vanuit bestaande #app-container worden opgebouwd");
 assert(apply.includes('html=html.replace(APP_OPEN,\'<main id="app" style="display:none">\')'),"#app wordt geen main-landmark");
 assert(apply.includes('footer a,footer details summary{display:inline-flex;align-items:center;min-height:44px'),"mobiele footerdoelen missen de 44px-hitbox");
+assert(index.includes('<h2 id="place">&nbsp;<span id="plaatstijd"></span></h2>'),"de zichtbare plaatsnaam mist native heading-semantiek");
 
 console.log("UI-polish statisch contract groen: geen runtime/weekkop/warning-CSS-owner meer; alleen accessibility blijft en inhoudelijke owners worden upstream bewaakt.");

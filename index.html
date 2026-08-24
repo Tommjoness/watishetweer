@@ -542,7 +542,7 @@
   <div class="mast">
     <div>
       <h1>Wat is het weer?</h1>
-      <div id="place">&nbsp;<span id="plaatstijd"></span></div>
+      <h2 id="place">&nbsp;<span id="plaatstijd"></span></h2>
     </div>
     <div class="mastright">
       <div class="tools">
@@ -2271,6 +2271,13 @@ function nachten(){
   for(let d=0;d<6;d++){
     const ss=day.sunset[d],sr2=day.sunrise[d+1];
     if(!ss||!sr2) break;
+    /* Een echte nacht loopt van de zonsondergang van kalenderdag d naar de
+       zonsopkomst van exact de volgende kalenderdag. Rond pooldag/poolnacht kan
+       de provider 00:00-sentinels of gebeurtenissen op dezelfde kalenderdag
+       leveren. Zonder deze grens ontstonden onmogelijke labels als "di op di"
+       en kregen latere presentatielagen bovendien de verkeerde horizon. */
+    const sunsetDag=dagVerschil(ss),sunriseDag=dagVerschil(sr2);
+    if(sunsetDag===null||sunriseDag===null||sunriseDag!==sunsetDag+1) continue;
     const a2=h.time.findIndex(t=>t>=ss);
     let b2=-1; for(let z=h.time.length-1;z>=0;z--){if(h.time[z]<=sr2){b2=z;break;}}
     if(a2<0||b2<0||b2<=a2) continue;
@@ -2355,7 +2362,7 @@ function nachten(){
 
     const kleur=sc>=7?TEAL:sc>=4?INK:INK25;
     const lbl=d===0?"vannacht":DAGEN[new Date(ss.slice(0,10)+"T12:00:00").getDay()]+" op "+DAGEN[new Date(sr2.slice(0,10)+"T12:00:00").getDay()];
-    out+=`<div class="row night">
+    out+=`<div class="row night" data-d="${d}">
       <div class="dname">${lbl}</div>
       <div class="score" style="color:${kleur}" title="Modelscore ${nl(sc)} van 10">${Math.round(sc)}/10</div>
       <div class="sbar"><i style="width:${sc*10}%;background:${kleur}"></i></div>
@@ -2427,7 +2434,7 @@ function lucht(){
   const h=S.air.hourly;
   if(!inEuropa(S.lat,S.lon)){
     out+='<div class="stat"><div class="eyebrow">Pollen</div><div class="sval">–</div>'
-       +'<div class="ssub">Alleen beschikbaar in Europa</div></div>';
+       +'<div class="ssub">Voor deze locatie niet beschikbaar</div></div>';
   }else if(h&&h.time){
     let i=h.time.findIndex(t=>t.slice(0,13)===S.d.current.time.slice(0,13));
     if(i<0)i=0;
