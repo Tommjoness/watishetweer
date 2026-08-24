@@ -56,7 +56,7 @@ html=vervangExact(html,NACHT_OUD,NACHT_NIEUW,"Nachtzicht venstercopy");
 html=vervangExact(html,ARIA_OUD,ARIA_NIEUW,"Q4 aria-uitleg");
 
 /* Syntaxcontrole vóór schrijven: de wijzigingen zitten alle drie in inline JS. */
-const scripts=[...html.matchAll(/<script(?![^>]*\\ssrc=)[^>]*>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]);
+const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline scripts na finale presentatieconsistentie.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:final-presentatie-"+(i+1)}));
 
