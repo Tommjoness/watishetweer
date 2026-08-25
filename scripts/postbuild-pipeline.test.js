@@ -33,6 +33,7 @@ const verwacht=[
   "verify-final-presentation-consistency.js",
   "verify-seo-foundation.js",
   "generate-seo-location-pages.js",
+  "apply-seo-location-h1.js",
   "verify-seo-location-pages.js",
   "apply-build-provenance.js",
   "verify-build-provenance.js",
@@ -86,7 +87,8 @@ assert(positie("verify-nederlandse-microcopy.js")<positie("apply-final-presentat
 assert(positie("apply-final-presentation-consistency.js")<positie("verify-final-presentation-consistency.js"),"finale presentatiecorrectie wordt direct na toepassing geverifieerd");
 assert(positie("verify-final-presentation-consistency.js")<positie("verify-seo-foundation.js"),"SEO en plaatsroutes moeten de definitieve presentatieartifact zien");
 assert(positie("verify-seo-foundation.js")<positie("generate-seo-location-pages.js"),"plaatsroutes mogen pas na bewezen root-SEO worden gegenereerd");
-assert(positie("generate-seo-location-pages.js")<positie("verify-seo-location-pages.js"),"plaatsroutes moeten direct na generatie worden geverifieerd");
+assert(positie("generate-seo-location-pages.js")<positie("apply-seo-location-h1.js"),"lokale H1 mag pas worden toegepast nadat alle plaatsroutes bestaan");
+assert(positie("apply-seo-location-h1.js")<positie("verify-seo-location-pages.js"),"SEO-verifier moet de definitieve lokale H1 zien");
 assert(positie("verify-seo-location-pages.js")<positie("apply-build-provenance.js"),"build-SHA wordt op het complete route-artifact gestempeld");
 assert(positie("apply-build-provenance.js")<positie("verify-build-provenance.js"),"build-provenance moet direct na toepassing worden geverifieerd");
 assert(positie("verify-build-provenance.js")<positie("verify-final-27.js"),"finale artifactguard moet routes en provenance meenemen");
@@ -98,4 +100,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde, finale presentatieguard, canonieke cloud-owner, shared-URL-owner, foutsemantiek, poolgrafiek, pollen/SEO, weather truth, kleine-kans-owner, routes, provenance en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde, finale presentatieguard, canonieke cloud-owner, shared-URL-owner, foutsemantiek, poolgrafiek, pollen/SEO, weather truth, kleine-kans-owner, lokale plaats-H1, routes, provenance en fail-fast gedrag geslaagd.");
