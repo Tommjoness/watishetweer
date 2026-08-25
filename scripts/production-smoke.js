@@ -141,6 +141,19 @@ async function wachtOpExacteDeployment(){
   assert(plaats.naam===null||typeof plaats.naam==="string","plaatsnaam-API naam moet string of null zijn");
   assert(plaats.land===null||typeof plaats.land==="string","plaatsnaam-API land moet string of null zijn");
 
+  const neerslag=await haal(ROOT+"/api/neerslag?lat=52.3508&lon=5.2647&land=NL",{accept:"application/json"});
+  assert.equal(neerslag.response.status,200,"neerslag-API moet voor geldige coordinaten binnen KNMI-dekking 200 teruggeven");
+  const regen=leesJson(neerslag,"neerslag-API");
+  assert(regen&&typeof regen==="object"&&!Array.isArray(regen),"neerslag-API moet een JSON-object teruggeven");
+  assert.equal(typeof regen.beschikbaar,"boolean","neerslag-API beschikbaar moet boolean zijn");
+  assert.equal(regen.provider,"knmi","neerslag-API moet binnen KNMI-dekking de KNMI-provider selecteren");
+  if(regen.beschikbaar){
+    assert(regen.actueel&&typeof regen.actueel==="object","beschikbare neerslag-API mist actuele KNMI-puntwaarde");
+    assert.equal(regen.bron,"KNMI","beschikbare neerslag-API moet KNMI als bron noemen");
+  }else{
+    assert.equal(regen.reden,"KNMI-neerslag tijdelijk niet beschikbaar","gedegradeerde neerslag-API mag geen intern providerdetail publiceren");
+  }
+
   const waarschuwingen=await haal(ROOT+"/api/waarschuwingen?lat=52.3508&lon=5.2647&land=NL",{accept:"application/json"});
   assert.equal(waarschuwingen.response.status,200,"waarschuwingen-API moet voor geldige coordinaten 200 teruggeven");
   const waarschuwing=leesJson(waarschuwingen,"waarschuwingen-API");
@@ -150,5 +163,5 @@ async function wachtOpExacteDeployment(){
   assert(Array.isArray(waarschuwing.lijst),"waarschuwingen-API lijst moet een array zijn");
   assert(waarschuwing.lijst.every(item=>item&&item.plaatsSpecifiek===true),"waarschuwingen-API mag alleen plaatsgebonden waarschuwingen publiceren");
 
-  console.log(`PRODUCTION-SMOKE GESLAAGD: ${verwacht}; exacte build, homepage/www-redirect, robots, sitemap, kernroutes, share-canonical, 404 en beide API-contracten zijn publiek coherent.`);
+  console.log(`PRODUCTION-SMOKE GESLAAGD: ${verwacht}; exacte build, homepage/www-redirect, robots, sitemap, kernroutes, share-canonical, 404 en alle drie API-contracten zijn publiek coherent.`);
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
