@@ -22,6 +22,7 @@ assert(smoke.includes("const maxPogingen=opt.retry===false?1:2"),"production-smo
 assert(smoke.includes('redirect:"manual"'),"production-smoke moet de www-redirect zelf controleren");
 assert(smoke.includes("/weer/dit-bestaat-niet/"),"production-smoke moet echte 404-semantiek bewaken");
 assert(smoke.includes("/api/plaatsnaam?lat=52.3508&lon=5.2647"),"production-smoke mist plaatsnaam-API-contract");
+assert(smoke.includes("/api/neerslag?lat=52.3508&lon=5.2647&land=NL"),"production-smoke mist neerslag-API-contract");
 assert(smoke.includes("/api/waarschuwingen?lat=52.3508&lon=5.2647&land=NL"),"production-smoke mist waarschuwingen-API-contract");
 assert(smoke.includes("item.plaatsSpecifiek===true"),"waarschuwingencontract moet plaatsgebonden filtering bewaken");
 

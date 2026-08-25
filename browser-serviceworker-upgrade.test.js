@@ -95,14 +95,11 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
        gecommitte CacheStorage-entries vanuit de page-context echter een fractie
        later zichtbaar maken dan active/controller.
 
-       De oude test gebruikte page.waitForFunction met een async predicate en
-       deed daarna nog een tweede losse CacheStorage-read. Op CI bleek die combinatie
-       geen betrouwbaar async-resultaatobject te leveren en kon de tweede read een
-       lege observatie zien nadat de eerste dezelfde index al had gevonden.
-       page.evaluate wacht wél op de async functie zelf. Poll daarom binnen één
-       browser-evaluatie op precies de productstaat en retourneer diezelfde observatie.
-       De 15 s grens en 25 ms observatiecadans blijven gelijk; er komt geen extra
-       retrybudget bij. De latere echte offlineproef bewijst de duurzaamheid apart. */
+       De observatie blijft read-only: caches.open() wordt pas gebruikt nadat
+       caches.keys() de nieuwe generatiecache al heeft aangetoond. Bij een timeout
+       retourneert dezelfde browser-evaluatie de laatste lifecycle-, versie- en
+       cachestatus. Daarmee kan CI een echte workerfout onderscheiden van een
+       observatierace zonder de 15 s grens of de inhoudelijke eisen te versoepelen. */
     fase="new";
     await page.evaluate(async()=>{
       const r=await navigator.serviceWorker.getRegistration();
@@ -112,30 +109,44 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
     const installInfo=await page.evaluate(async ({nieuw,timeout,polling})=>{
       const deadline=Date.now()+timeout;
       const vraagVersie=worker=>new Promise(resolve=>{
-        const kanaal=new MessageChannel(),timer=setTimeout(()=>resolve(null),100);
+        if(!worker)return resolve(null);
+        const kanaal=new MessageChannel(),timer=setTimeout(()=>resolve(null),150);
         kanaal.port1.onmessage=e=>{clearTimeout(timer);resolve(e.data);};
-        worker.postMessage("__sw-e2e-version",[kanaal.port2]);
+        try{worker.postMessage("__sw-e2e-version",[kanaal.port2]);}
+        catch(_){clearTimeout(timer);resolve(null);}
       });
+      let laatste=null;
       while(Date.now()<deadline){
         const r=await navigator.serviceWorker.getRegistration();
-        if(r&&r.active&&r.active.state==="activated"&&navigator.serviceWorker.controller){
-          const [actief,controller,keys]=await Promise.all([vraagVersie(r.active),vraagVersie(navigator.serviceWorker.controller),caches.keys()]);
-          if(actief==="new"&&controller==="new"&&keys.includes(nieuw)){
-            const c=await caches.open(nieuw),index=await c.match(new URL("/index.html",location.href).href);
-            if(index){
-              const tekst=await index.text(),m=/name="sw-e2e-build" content="([^"]+)"/.exec(tekst);
-              if(m&&m[1]==="new"){
-                const requests=await c.keys();
-                return {urls:requests.map(x=>x.url),marker:m[1],heeftIndex:true,lengte:tekst.length};
-              }
+        const controller=navigator.serviceWorker.controller||null;
+        const keys=await caches.keys();
+        const [installingVersie,wachtendVersie,actiefVersie,controllerVersie]=await Promise.all([
+          vraagVersie(r&&r.installing),vraagVersie(r&&r.waiting),vraagVersie(r&&r.active),vraagVersie(controller)
+        ]);
+        laatste={
+          installingState:r&&r.installing?r.installing.state:null,
+          waitingState:r&&r.waiting?r.waiting.state:null,
+          activeState:r&&r.active?r.active.state:null,
+          installingVersie,wachtendVersie,actiefVersie,controllerVersie,
+          controllerAanwezig:!!controller,
+          cacheSleutels:keys
+        };
+        if(r&&r.active&&r.active.state==="activated"&&controller&&actiefVersie==="new"&&controllerVersie==="new"&&keys.includes(nieuw)){
+          const c=await caches.open(nieuw),index=await c.match(new URL("/index.html",location.href).href);
+          if(index){
+            const tekst=await index.text(),m=/name="sw-e2e-build" content="([^"]+)"/.exec(tekst);
+            laatste={...laatste,heeftIndex:true,indexMarker:m&&m[1]||null,indexLengte:tekst.length};
+            if(m&&m[1]==="new"){
+              const requests=await c.keys();
+              return {ok:true,urls:requests.map(x=>x.url),marker:m[1],heeftIndex:true,lengte:tekst.length,laatste};
             }
-          }
+          }else laatste={...laatste,heeftIndex:false,indexMarker:null,indexLengte:0};
         }
         await new Promise(resolve=>setTimeout(resolve,polling));
       }
-      return null;
+      return {ok:false,laatste};
     },{nieuw:cacheNieuw,timeout:15000,polling:25});
-    assert(installInfo,"nieuwe worker/controller + install-cache met nieuwe indexmarker moeten binnen 15 s zichtbaar zijn");
+    assert(installInfo&&installInfo.ok,"nieuwe worker/controller + install-cache met nieuwe indexmarker moeten binnen 15 s zichtbaar zijn; laatste status="+JSON.stringify(installInfo&&installInfo.laatste));
     assert.equal(installInfo.marker,"new","nieuwe install-cache bevat de nieuwe index vóór online reload; "+JSON.stringify(installInfo));
     assert.equal(installInfo.heeftIndex,true,"geslaagde install-observatie moet de canonieke index bevatten");
     assert(installInfo.lengte>0,"geslaagde install-observatie moet niet-lege index-HTML bevatten");
