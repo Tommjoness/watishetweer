@@ -34,6 +34,7 @@ const verwacht=[
   "verify-seo-foundation.js",
   "generate-seo-location-pages.js",
   "apply-seo-location-h1.js",
+  "verify-seo-location-h1.js",
   "verify-seo-location-pages.js",
   "apply-build-provenance.js",
   "verify-build-provenance.js",
@@ -88,7 +89,8 @@ assert(positie("apply-final-presentation-consistency.js")<positie("verify-final-
 assert(positie("verify-final-presentation-consistency.js")<positie("verify-seo-foundation.js"),"SEO en plaatsroutes moeten de definitieve presentatieartifact zien");
 assert(positie("verify-seo-foundation.js")<positie("generate-seo-location-pages.js"),"plaatsroutes mogen pas na bewezen root-SEO worden gegenereerd");
 assert(positie("generate-seo-location-pages.js")<positie("apply-seo-location-h1.js"),"lokale H1 mag pas worden toegepast nadat alle plaatsroutes bestaan");
-assert(positie("apply-seo-location-h1.js")<positie("verify-seo-location-pages.js"),"SEO-verifier moet de definitieve lokale H1 zien");
+assert(positie("apply-seo-location-h1.js")<positie("verify-seo-location-h1.js"),"plaats-H1 moet direct na toepassing worden geverifieerd");
+assert(positie("verify-seo-location-h1.js")<positie("verify-seo-location-pages.js"),"brede SEO-verifier moet de geverifieerde lokale H1 zien");
 assert(positie("verify-seo-location-pages.js")<positie("apply-build-provenance.js"),"build-SHA wordt op het complete route-artifact gestempeld");
 assert(positie("apply-build-provenance.js")<positie("verify-build-provenance.js"),"build-provenance moet direct na toepassing worden geverifieerd");
 assert(positie("verify-build-provenance.js")<positie("verify-final-27.js"),"finale artifactguard moet routes en provenance meenemen");
