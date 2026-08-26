@@ -83,6 +83,7 @@ async function controleer(browserType,naam){
         dag:zichtbaarTekst(eerste.querySelector(".dname")),
         neerslag:drain.innerText.replace(/\s+/g," ").trim(),
         dagenHint:(document.getElementById("dagenhint").textContent||"").trim(),
+        dagenUitleg:(document.getElementById("dagenneerslaguitleg")?.textContent||"").trim(),
         tempLabels:tempLabels.length,
         overflow:document.documentElement.scrollWidth-window.innerWidth
       };
@@ -92,7 +93,8 @@ async function controleer(browserType,naam){
     assert.equal(voor.textTransform,"none",`${naam}: locatie erft geen uppercase h2-stijl`);
     assert.equal(voor.dag,"Vandaag",`${naam}: eerste lokale kalenderdag heet op mobiel Vandaag`);
     assert(/6%/.test(voor.neerslag)&&/0,0 mm/.test(voor.neerslag),`${naam}: 6% en bekende 0,0 mm staan samen zichtbaar (${voor.neerslag})`);
-    assert(/6% kans met 0,0 mm/i.test(voor.dagenHint)&&/één decimaal/i.test(voor.dagenHint),`${naam}: weekhint legt 6% + 0,0 mm begrijpelijk uit (${voor.dagenHint})`);
+    assert.equal(voor.dagenHint,"Kies een dag om die verwachting in de grafiek te bekijken.",`${naam}: weekbedieningshint blijft een korte instructie (${voor.dagenHint})`);
+    assert(/6% kans met 0,0 mm/i.test(voor.dagenUitleg)&&/één decimaal/i.test(voor.dagenUitleg),`${naam}: aparte uitlegregel verklaart 6% + 0,0 mm begrijpelijk (${voor.dagenUitleg})`);
     assert.ok(voor.tempLabels>=4,`${naam}: etmaalgrafiek toont meer dan alleen minimum en maximum (${voor.tempLabels})`);
     assert.ok(voor.overflow<=2,`${naam}: geen horizontale overflow (${voor.overflow}px)`);
 
@@ -115,6 +117,6 @@ async function controleer(browserType,naam){
   try{
     await controleer(chromium,"Chromium");
     await controleer(webkit,"WebKit");
-    console.log("Mobiele feedback 26-08 groen: plaatscasing, Vandaag, 0,0 mm met uitleg, gekozen-dagcontext en meerdere temperatuurlabels in Chromium/WebKit.");
+    console.log("Mobiele feedback 26-08 groen: plaatscasing, Vandaag, 0,0 mm met aparte uitleg, gekozen-dagcontext en meerdere temperatuurlabels in Chromium/WebKit.");
   }finally{server.close();}
 })().catch(err=>{console.error(err);process.exit(1);});
