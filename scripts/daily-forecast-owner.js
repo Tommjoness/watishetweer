@@ -8,16 +8,25 @@
  * geen dubbele mm in de omschrijving, duidelijke kolomkoppen, lokale Vandaag-
  * semantiek en een consistente hoeveelheid zodra die werkelijk beschikbaar is. */
 
+const DAG_SPOOR_MM=0.005;
+const DAG_KLEINER_DAN_005_MM=0.05;
 const DAGEN_HAAK="function dagen(){\n";
 const HELPER_PRODUCTIE=`function weatherNowDagNeerslagTekst(kans,som){
   const k=eindigGetal(kans);
   if(k===null)return "–";
   return Math.round(clamp(k,0,100))+"%";
 }
+function weatherNowDagSpoorMm(){
+  const cfg=globalThis.WeatherNowInterpretatie&&globalThis.WeatherNowInterpretatie.INTERPRETATIE_CONFIG;
+  const spoor=cfg&&Number.isFinite(Number(cfg.spoorMm))?Number(cfg.spoorMm):0.005;
+  return Math.max(0,spoor);
+}
 function weatherNowDagNeerslagMmTekst(som){
   const mm=eindigGetal(som);
   if(mm===null||mm<0)return "";
   if(mm===0)return "0,0 mm";
+  if(mm<=weatherNowDagSpoorMm())return "spoor";
+  if(mm<0.05)return "<0,05 mm";
   if(mm<0.1)return "<0,1 mm";
   return nl(mm)+" mm";
 }
@@ -77,10 +86,13 @@ function dagNeerslagTekst(kans,som){
   if(k===null)return "–";
   return Math.round(Math.max(0,Math.min(100,k)))+"%";
 }
-function dagNeerslagMmTekst(som){
-  const mm=getal(som);
+function dagNeerslagMmTekst(som,spoorMm=DAG_SPOOR_MM){
+  const mm=getal(som),spoor=getal(spoorMm);
+  const spoorgrens=spoor===null?DAG_SPOOR_MM:Math.max(0,spoor);
   if(mm===null||mm<0)return "";
   if(mm===0)return "0,0 mm";
+  if(mm<=spoorgrens)return "spoor";
+  if(mm<DAG_KLEINER_DAN_005_MM)return "<0,05 mm";
   if(mm<0.1)return "<0,1 mm";
   return String(Math.round(mm*10)/10).replace(".",",")+" mm";
 }
@@ -115,6 +127,7 @@ function pasDailyForecastOwnerToe(html){
 }
 
 module.exports={
+  DAG_SPOOR_MM,DAG_KLEINER_DAN_005_MM,
   dagNeerslagTekst,dagNeerslagMmTekst,dagNaam,pasDailyForecastOwnerToe,
   DAGEN_HAAK,HELPER_PRODUCTIE,
   DCOND_BRON,DCOND_PRODUCTIE,KANS_BRON,KANS_PRODUCTIE,
