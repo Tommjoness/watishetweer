@@ -51,10 +51,11 @@ function leesJson(resultaat,label){
   try{return JSON.parse(resultaat.text);}
   catch(e){throw new Error(`${label}: response is geen geldige JSON (${e.message})`);}
 }
-function controleerCloudflare(response,label){
+function controleerCloudflare(response,label,opt={}){
+  const hsts=opt.hsts!==false;
   assert.equal((response.headers.get("server")||"").toLowerCase(),"cloudflare",`${label}: response loopt niet aantoonbaar via Cloudflare`);
   assert(response.headers.get("cf-ray"),`${label}: Cloudflare CF-Ray ontbreekt`);
-  assert.equal(response.headers.get("strict-transport-security"),"max-age=31536000",`${label}: HSTS-contract ontbreekt of wijkt af`);
+  if(hsts)assert.equal(response.headers.get("strict-transport-security"),"max-age=31536000",`${label}: HSTS-contract ontbreekt of wijkt af`);
 }
 
 async function wachtOpExacteDeployment(){
@@ -85,13 +86,17 @@ async function wachtOpExacteDeployment(){
 
   const robots=await haal(ROOT+"/robots.txt");
   assert(robots.response.ok,"robots.txt is niet 2xx");
-  controleerCloudflare(robots.response,"robots.txt");
+  // robots.txt kan door Cloudflare op de edge worden behandeld buiten de normale
+  // Pages asset-headerlaag. Bewaak hier Cloudflare-provenance en inhoud; HSTS wordt
+  // hieronder streng gecontroleerd op meerdere gewone statische Pages-responses.
+  controleerCloudflare(robots.response,"robots.txt",{hsts:false});
   geenNoindex(robots.response,"robots.txt");
   assert(/^User-agent: \*$/m.test(robots.text)&&/^Allow: \/$/m.test(robots.text),"robots.txt staat crawling niet correct toe");
   assert(robots.text.includes("Sitemap: https://watishetweer.nl/sitemap.xml"),"robots.txt mist canonieke sitemap");
 
   const sitemap=await haal(ROOT+"/sitemap.xml");
   assert(sitemap.response.ok,"sitemap.xml is niet 2xx");
+  controleerCloudflare(sitemap.response,"sitemap.xml");
   geenNoindex(sitemap.response,"sitemap.xml");
   const sitemapLocs=[...sitemap.text.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m=>m[1]);
   assert(sitemapLocs.length>=32,"sitemap bevat onverwacht weinig indexeerbare URLs");
@@ -100,6 +105,7 @@ async function wachtOpExacteDeployment(){
 
   const hub=await haal(ROOT+"/weer/");
   assert(hub.response.ok,"/weer/ is niet 2xx");
+  controleerCloudflare(hub.response,"/weer/");
   geenNoindex(hub.response,"/weer/");
   assert(hub.text.includes('<link rel="canonical" href="https://watishetweer.nl/weer/">'),"plaatsindex canonical ontbreekt");
   assert(hub.text.includes('href="/weer/almere/"')&&hub.text.includes("Weer per plaats"),"plaatsindex mist crawlbare inhoud");
@@ -107,6 +113,7 @@ async function wachtOpExacteDeployment(){
 
   const almere=await haal(ROOT+"/weer/almere/");
   assert(almere.response.ok,"Almere-route is niet 2xx");
+  controleerCloudflare(almere.response,"/weer/almere/");
   geenNoindex(almere.response,"/weer/almere/");
   assert.equal(buildSha(almere.text),verwacht,"Almere-route komt uit andere deployment dan homepage");
   assert(almere.text.includes("<title>Weer Almere vandaag | Wat is het weer?</title>"),"Almere-route mist unieke title");
@@ -173,5 +180,5 @@ async function wachtOpExacteDeployment(){
   assert(Array.isArray(waarschuwing.lijst),"waarschuwingen-API lijst moet een array zijn");
   assert(waarschuwing.lijst.every(item=>item&&item.plaatsSpecifiek===true),"waarschuwingen-API mag alleen plaatsgebonden waarschuwingen publiceren");
 
-  console.log(`PRODUCTION-SMOKE GESLAAGD: ${verwacht}; exacte Cloudflare-build, HSTS, homepage/www-redirect, robots, sitemap, kernroutes, share-canonical, 404 en alle drie API-contracten zijn publiek coherent.`);
+  console.log(`PRODUCTION-SMOKE GESLAAGD: ${verwacht}; exacte Cloudflare-build, HSTS op statische/API-routes, homepage/www-redirect, robots, sitemap, kernroutes, share-canonical, 404 en alle drie API-contracten zijn publiek coherent.`);
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
