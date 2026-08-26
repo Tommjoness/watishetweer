@@ -1,0 +1,164 @@
+name: Post-migratie audit
+
+on:
+  push:
+    branches: [ops/post-migration-audit-20260826]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_PROJECT: watishetweer
+  PRODUCTION_ROOT: https://watishetweer.nl
+  EXPECTED_SHA: 49a7cc996db1d556535ea92fb34abbfc93eeb321
+
+jobs:
+  infra:
+    name: DNS, mail, TLS en Cloudflare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Controleer publieke DNS en mail
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== NS ==='
+          mapfile -t ns < <(dig +short NS watishetweer.nl | sed 's/\.$//' | tr '[:upper:]' '[:lower:]' | sort)
+          printf '%s\n' "${ns[@]}"
+          printf '%s\n' "${ns[@]}" | grep -qx 'desiree.ns.cloudflare.com'
+          printf '%s\n' "${ns[@]}" | grep -qx 'matias.ns.cloudflare.com'
+          test "${#ns[@]}" -eq 2
+
+          echo '=== MX ==='
+          mx="$(dig +short MX watishetweer.nl)"
+          printf '%s\n' "$mx"
+          test -n "$mx"
+
+          echo '=== SPF ==='
+          txt="$(dig +short TXT watishetweer.nl)"
+          printf '%s\n' "$txt"
+          printf '%s\n' "$txt" | grep -qi 'v=spf1'
+
+          echo '=== DMARC ==='
+          dmarc="$(dig +short TXT _dmarc.watishetweer.nl)"
+          printf '%s\n' "$dmarc"
+          printf '%s\n' "$dmarc" | grep -qi 'v=DMARC1'
+
+          echo '=== Mail discovery ==='
+          for host in autoconfig.watishetweer.nl autodiscover.watishetweer.nl; do
+            value="$(dig +short CNAME "$host"; dig +short A "$host"; dig +short AAAA "$host")"
+            echo "$host => ${value:-geen record}"
+          done
+
+          echo '=== DNSSEC ==='
+          ds="$(dig +short DS watishetweer.nl || true)"
+          echo "DS=${ds:-niet actief}"
+
+      - name: Controleer Cloudflare zone, Pages en DNS-records
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl' -o /tmp/zones.json
+          jq -e '.success == true and (.result|length)==1' /tmp/zones.json >/dev/null
+          zone_id="$(jq -r '.result[0].id' /tmp/zones.json)"
+          status="$(jq -r '.result[0].status' /tmp/zones.json)"
+          echo "ZONE_STATUS=$status"
+          test "$status" = active
+
+          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?per_page=100" -o /tmp/dns.json
+          jq -e '.success == true' /tmp/dns.json >/dev/null
+          echo '=== Cloudflare DNS inventory ==='
+          jq -r '.result | sort_by(.type,.name)[] | "\(.type) \(.name) proxied=\(.proxied // false)"' /tmp/dns.json
+          jq -e '.result[] | select(.type=="MX" and .name=="watishetweer.nl")' /tmp/dns.json >/dev/null
+          jq -e '.result[] | select(.type=="TXT" and .name=="watishetweer.nl" and (.content|ascii_downcase|contains("v=spf1")))' /tmp/dns.json >/dev/null
+          jq -e '.result[] | select(.type=="TXT" and .name=="_dmarc.watishetweer.nl" and (.content|ascii_downcase|contains("v=dmarc1")))' /tmp/dns.json >/dev/null
+          if jq -e '.result[] | select((.type=="MX" or .name=="autoconfig.watishetweer.nl" or .name=="autodiscover.watishetweer.nl") and (.proxied==true))' /tmp/dns.json >/dev/null; then
+            echo 'Mailgerelateerd DNS-record staat ten onrechte proxied.' >&2
+            exit 1
+          fi
+
+          pages="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT"
+          curl -fsS "${auth[@]}" "$pages" -o /tmp/pages.json
+          jq -e '.success == true and .result.production_branch=="main"' /tmp/pages.json >/dev/null
+          echo "PAGES_PRODUCTION_BRANCH=$(jq -r '.result.production_branch' /tmp/pages.json)"
+          curl -fsS "${auth[@]}" "$pages/domains" -o /tmp/domains.json
+          jq -e '.success == true' /tmp/domains.json >/dev/null
+          jq -r '.result[] | "DOMAIN \(.name)=\(.status) verification=\(.verification_data.status // "n/a") validation=\(.validation_data.status // "n/a")"' /tmp/domains.json
+          jq -e '.result[] | select(.name=="watishetweer.nl" and .status=="active")' /tmp/domains.json >/dev/null
+          jq -e '.result[] | select(.name=="www.watishetweer.nl" and .status=="active")' /tmp/domains.json >/dev/null
+
+          echo "ZONE_ID=$zone_id" >> "$GITHUB_ENV"
+
+      - name: Lees relevante Cloudflare instellingen
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          for setting in ssl always_use_https automatic_https_rewrites min_tls_version tls_1_3 brotli http3 opportunistic_encryption browser_cache_ttl; do
+            code="$(curl -sS -o "/tmp/$setting.json" -w '%{http_code}' "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/settings/$setting")"
+            if [ "$code" = 200 ]; then
+              echo "$setting=$(jq -r '.result.value // "unknown"' "/tmp/$setting.json")"
+            else
+              echo "$setting=onleesbaar(http $code)"
+            fi
+          done
+
+      - name: Controleer HTTP, HTTPS en securityheaders
+        shell: bash
+        run: |
+          set -euo pipefail
+          http_code="$(curl -sS -o /dev/null -w '%{http_code}' http://watishetweer.nl/)"
+          location="$(curl -sSI http://watishetweer.nl/ | awk 'BEGIN{IGNORECASE=1}/^location:/{sub(/\r$/,"");print $2;exit}')"
+          echo "HTTP_APEX=$http_code location=$location"
+          [[ "$http_code" =~ ^30[1278]$ ]]
+          [[ "$location" == https://watishetweer.nl/* ]]
+
+          www_code="$(curl -sS -o /dev/null -w '%{http_code}' https://www.watishetweer.nl/)"
+          apex_code="$(curl -sS -o /dev/null -w '%{http_code}' https://watishetweer.nl/)"
+          echo "HTTPS_APEX=$apex_code HTTPS_WWW=$www_code"
+          test "$apex_code" = 200
+          test "$www_code" = 200
+
+          curl -sSI https://watishetweer.nl/ -o /tmp/headers
+          cat /tmp/headers
+          grep -qi '^server: cloudflare' /tmp/headers
+          grep -qi '^cf-ray:' /tmp/headers
+          grep -qi '^x-content-type-options: nosniff' /tmp/headers
+          grep -qi '^x-frame-options: DENY' /tmp/headers
+          grep -qi '^referrer-policy: strict-origin-when-cross-origin' /tmp/headers
+          grep -qi '^content-security-policy:' /tmp/headers
+
+          echo | openssl s_client -connect watishetweer.nl:443 -servername watishetweer.nl -tls1_2 >/tmp/tls12 2>&1
+          grep -q 'Protocol  *: TLSv1.2\|Protocol: TLSv1.2\|New, TLSv1.2' /tmp/tls12
+          if echo | openssl s_client -connect watishetweer.nl:443 -servername watishetweer.nl -tls1 >/tmp/tls10 2>&1; then
+            if grep -q 'Protocol  *: TLSv1\([^.]\|$\)\|Protocol: TLSv1\([^.]\|$\)' /tmp/tls10; then
+              echo 'TLS 1.0 wordt nog geaccepteerd.' >&2
+              exit 1
+            fi
+          fi
+
+  production-smoke:
+    name: Production contract en wereldwijde browsers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: 49a7cc996db1d556535ea92fb34abbfc93eeb321
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Dependencies
+        run: npm install --ignore-scripts
+      - name: Production contract
+        env:
+          SMOKE_ATTEMPTS: 1
+          SMOKE_POLL_MS: 1000
+          SMOKE_REQUEST_TIMEOUT_MS: 15000
+        run: node scripts/production-smoke.js
+      - name: Installeer Chromium
+        run: npx --yes playwright@1.55.0 install --with-deps chromium
+      - name: Wereldwijde browseraudit
+        run: node scripts/production-worldwide-browser.js
