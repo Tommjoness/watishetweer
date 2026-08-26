@@ -35,7 +35,7 @@ function dagNeerslagNuance(kans,hoeveelheid,dagLabel,spoorMm){
   const dag=String(dagLabel||"Deze dag").trim()||"Deze dag";
   if(mm===0)return {
     mmTekst:"0,0 mm",
-    tekst:dag+" · "+pct+" is de hoogste neerslagkans in één uur; de berekende dagsom is 0,0 mm."
+    tekst:dag+" · "+pct+" kans met 0,0 mm. "+pct+" is de hoogste neerslagkans in één uur; de berekende dagsom is 0,0 mm en wordt op één decimaal weergegeven."
   };
   if(mm<=spoorgrens)return {
     mmTekst:"spoor",
