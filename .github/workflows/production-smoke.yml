@@ -15,19 +15,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  production-smoke:
+  production-contract:
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
-      options: --ipc=host
-    timeout-minutes: 20
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-      - name: Installeer Chromium-monitor
-        run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Controleer exacte productie, routes, redirects en API-contracten
         env:
           EXPECTED_SHA: ${{ github.sha }}
@@ -35,10 +30,40 @@ jobs:
           SMOKE_ATTEMPTS: 36
           SMOKE_REQUEST_TIMEOUT_MS: 10000
         run: node scripts/production-smoke.js
+
+  wereldwijd-browser:
+    needs: production-contract
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Chromium-monitor
+        run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Controleer wereldwijd op mobiel en desktop
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/production-worldwide-browser.js
+
+  staff-audit-browser:
+    needs: production-contract
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Chromium-monitor
+        run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Controleer staff-audit interacties op productie
         env:
           EXPECTED_SHA: ${{ github.sha }}
