@@ -39,6 +39,8 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-nederlandse-microcopy.js",
   "apply-final-presentation-consistency.js",
   "verify-final-presentation-consistency.js",
+  "apply-mobile-state-ux-20260826.js",
+  "verify-mobile-state-ux-20260826.js",
   "verify-seo-foundation.js",
   "generate-seo-location-pages.js",
   "apply-seo-location-h1.js",
