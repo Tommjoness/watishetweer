@@ -37,8 +37,19 @@ jobs:
             encoded_name="$(printf '%s' "$name" | jq -sRr @uri)"
             curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?type=$type&name=$encoded_name&per_page=100" -o /tmp/lookup.json
             jq -e '.success == true' /tmp/lookup.json >/dev/null
-            local id
-            id="$(jq -r '.result[0].id // ""' /tmp/lookup.json)"
+
+            local id=''
+            case "$type" in
+              TXT)
+                id="$(jq -r --arg content "$content" '[.result[] | select(.content==$content)][0].id // ""' /tmp/lookup.json)"
+                ;;
+              MX)
+                id="$(jq -r --arg content "$content" --argjson priority "$priority" '[.result[] | select(.content==$content and .priority==$priority)][0].id // ""' /tmp/lookup.json)"
+                ;;
+              *)
+                id="$(jq -r '.result[0].id // ""' /tmp/lookup.json)"
+                ;;
+            esac
 
             local body
             case "$type" in
@@ -62,7 +73,6 @@ jobs:
             echo "DNS gereed: $type $name"
           }
 
-          # Mail en verificatie: exact behouden zoals publiek bij TransIP gevonden.
           upsert CNAME 'autoconfig.watishetweer.nl' 'autoconfig.transip.email' '' false
           upsert CNAME 'autodiscover.watishetweer.nl' 'autodiscover.transip.email' '' false
           upsert TXT '_dmarc.watishetweer.nl' 'v=DMARC1; p=none;'
@@ -72,7 +82,6 @@ jobs:
           upsert TXT 'watishetweer.nl' 'google-site-verification=HhNZvxTogJOtg-j9epcy3hWPlaS0GbFoksdOSzLNimc'
           upsert TXT 'watishetweer.nl' 'v=spf1 include:_spf.transip.email ~all'
 
-          # Oude web-IP/CNAME-records mogen niet naast de Pages CNAME blijven bestaan.
           curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?per_page=100" -o /tmp/current.json
           jq -e '.success == true' /tmp/current.json >/dev/null
           jq -r --arg pages "$PAGES" '.result[] | select((.name == "watishetweer.nl" or .name == "www.watishetweer.nl") and (.type == "A" or .type == "AAAA" or (.type == "CNAME" and .content != $pages))) | .id' /tmp/current.json | while read -r id; do
@@ -81,14 +90,12 @@ jobs:
             jq -e '.success == true' /tmp/delete.json >/dev/null
           done
 
-          # Beide hostnames zijn al als Pages custom domain geregistreerd.
           upsert CNAME 'watishetweer.nl' "$PAGES" '' true
           upsert CNAME 'www.watishetweer.nl' "$PAGES" '' true
 
           curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?per_page=100" -o /tmp/final.json
           jq -e '.success == true' /tmp/final.json >/dev/null
 
-          # Fail closed: deze records moeten allemaal bestaan vóór de nameservercutover.
           jq -e '.result[] | select(.type=="MX" and .name=="watishetweer.nl" and .content=="mx.transip.email" and .priority==10)' /tmp/final.json >/dev/null
           jq -e '.result[] | select(.type=="TXT" and .name=="watishetweer.nl" and .content=="v=spf1 include:_spf.transip.email ~all")' /tmp/final.json >/dev/null
           jq -e '.result[] | select(.type=="TXT" and .name=="_dmarc.watishetweer.nl" and .content=="v=DMARC1; p=none;")' /tmp/final.json >/dev/null
