@@ -196,7 +196,7 @@ async function controleer(page,naam,breedte){
      maar de grafiek mag nooit krimpen of onbeheerst doorgroeien. */
   assert.ok(r.viewBox.h>=basisH&&r.viewBox.h<=basisH+100,`${naam} ${breedte}px: grafiekhoogte blijft binnen basis + gereserveerde onderruimte (${r.viewBox.h}px)`);
   assert.deepEqual(r.nu,["nu 21°"],`${naam} ${breedte}px: exact één actuele temperatuur in grafiek`);
-  if(mobiel)assert.ok(r.tempLabels>=1&&r.tempLabels<=2,`${naam} ${breedte}px: mobiel toont alleen globale minimum/maximumlabels`);
+  if(mobiel)assert.ok(r.tempLabels>=4,`${naam} ${breedte}px: mobiel houdt meerdere temperatuurreferenties naast het actuele punt (${r.tempLabels})`);
   else assert.ok(r.tempLabels>=6,`${naam} ${breedte}px: desktop houdt voldoende zichtbare temperatuurreferenties`);
   assert.deepEqual(r.tempBuiten,[],`${naam} ${breedte}px: temperatuurcijfers blijven binnen grafiek`);
   assert.deepEqual(r.bots,[],`${naam} ${breedte}px: zichtbare grafiekteksten botsen niet; botsingen: ${JSON.stringify(r.bots)}`);
