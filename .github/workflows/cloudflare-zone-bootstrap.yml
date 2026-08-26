@@ -24,6 +24,14 @@ jobs:
 
           curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones?name=$ZONE" -o /tmp/zones.json
           zone_id="$(jq -r '.result[0].id // ""' /tmp/zones.json)"
+          if [ -z "$zone_id" ]; then
+            echo 'Cloudflare-zone bestaat nog niet; maak hem aan.'
+            curl -fsS "${auth[@]}" -X POST 'https://api.cloudflare.com/client/v4/zones' \
+              --data "$(jq -cn --arg account "$CLOUDFLARE_ACCOUNT_ID" --arg name "$ZONE" '{account:{id:$account},name:$name,type:"full"}')" \
+              -o /tmp/create-zone.json
+            jq -e '.success == true' /tmp/create-zone.json >/dev/null
+            zone_id="$(jq -r '.result.id' /tmp/create-zone.json)"
+          fi
           test -n "$zone_id"
 
           curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id" -o /tmp/zone.json
