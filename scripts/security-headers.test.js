@@ -27,14 +27,25 @@ for(const contract of [
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",
-  "frame-ancestors 'none'",
-  "connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://geocoding-api.open-meteo.com https://api.bigdatacloud.net"
+  "frame-ancestors 'none'"
 ])assert(csp.includes(contract),"CSP-contract ontbreekt: "+contract);
 
-/* De huidige app assembleert nog inline runtime en CSS. 'unsafe-inline' kan pas
-   verdwijnen nadat die architectuur is gemigreerd; deze test voorkomt dat iemand
-   het nu stil verwijdert en productie breekt terwijl de overige CSP wel hard is. */
-assert(csp.includes("script-src 'self' 'unsafe-inline'"),"Huidige inline runtime past niet meer binnen CSP");
-assert(csp.includes("style-src 'self' 'unsafe-inline'"),"Huidige inline styles passen niet meer binnen CSP");
+const directives={};
+for(const deel of csp.split(";").map(v=>v.trim()).filter(Boolean)){
+  const [naam,...waarden]=deel.split(/\s+/);
+  directives[naam]=waarden.join(" ");
+}
+const verwachteConnect="'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://geocoding-api.open-meteo.com https://api.bigdatacloud.net";
+assert.equal(directives["connect-src"],verwachteConnect,"connect-src mag voor automatische Cloudflare Insights geen extra externe endpoint nodig hebben");
 
-console.log("security-headers: Cloudflare response-CSP, HSTS en basisheaders OK");
+/* De app assembleert nog inline runtime en CSS. 'unsafe-inline' kan pas
+   verdwijnen nadat die architectuur is gemigreerd. Cloudflare Pages injecteert
+   Web Analytics buiten de bronartifact; daarvoor staat uitsluitend de exacte
+   Insights-origin op script-src. Geen wildcard en geen extra analytics-host op
+   connect-src, omdat automatische RUM naar dezelfde site terugstuurt. */
+assert.equal(directives["script-src"],"'self' 'unsafe-inline' https://static.cloudflareinsights.com","script-src wijkt af van de minimale productie-allowlist");
+assert.equal(directives["style-src"],"'self' 'unsafe-inline'","Huidige inline styles passen niet meer binnen CSP");
+assert(!directives["script-src"].includes("*"),"script-src mag geen wildcard bevatten");
+assert(!directives["connect-src"].includes("cloudflareinsights.com"),"Automatische RUM hoort via dezelfde origin te versturen");
+
+console.log("security-headers: Cloudflare response-CSP, HSTS en minimale Insights-allowlist OK");
