@@ -3,7 +3,7 @@
 const fs=require("fs");
 const path=require("path");
 const SEO=require("./seo-foundation.config.js");
-const {MARKER}=require("./seo-foundation.js");
+const {MARKER,SHARE_IMAGE}=require("./seo-foundation.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
@@ -36,7 +36,17 @@ if(!html.includes(`<title>${SEO.title}</title>`))throw new Error("SEO-title ontb
 if(!html.includes(`name="description" content="${SEO.description.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}"`))throw new Error("SEO-description ontbreekt in definitief artifact.");
 if(tel(html,`property="og:url" content="${SEO.canonical}"`)!==1)throw new Error("og:url ontbreekt of is dubbel.");
 if(!html.includes(`property="og:site_name" content="${SEO.siteName}"`))throw new Error("og:site_name ontbreekt.");
-if(!html.includes('name="twitter:card" content="summary"'))throw new Error("Twitter/X card metadata ontbreekt.");
+for(const tag of [
+  `<meta property="og:image" content="${SHARE_IMAGE}">`,
+  '<meta property="og:image:width" content="512">',
+  '<meta property="og:image:height" content="512">',
+  `<meta property="og:image:alt" content="${SEO.siteName}">`,
+  '<meta name="twitter:card" content="summary">',
+  `<meta name="twitter:title" content="${SEO.title}">`,
+  `<meta name="twitter:description" content="${SEO.description.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}">`,
+  `<meta name="twitter:image" content="${SHARE_IMAGE}">`,
+  `<meta name="twitter:image:alt" content="${SEO.siteName}">`
+])if(!html.includes(tag))throw new Error("Share-metadata ontbreekt: "+tag);
 
 const ld=[...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
 if(ld.length!==1)throw new Error("Definitief artifact moet exact één JSON-LD-blok bevatten; gevonden: "+ld.length);
@@ -52,4 +62,4 @@ if(!sitemap.includes(`<loc>${SEO.canonical}</loc>`))throw new Error("Sitemap bev
 if((sitemap.match(/<loc>/g)||[]).length!==1)throw new Error("SEO-fundering publiceert voorlopig alleen de bewezen canonieke homepage in de sitemap.");
 if(/\?lat=|\?lon=|www\.watishetweer\.nl/.test(sitemap))throw new Error("Sitemap mag geen gedeelde query-URLs of www-duplicaat bevatten.");
 
-console.log("SEO-fundering geverifieerd: pure owner draait in de base-build; canonical, Bing-verificatie, metadata, één WebSite JSON-LD-item, robots.txt en root-sitemap zijn coherent.");
+console.log("SEO-fundering geverifieerd: canonical, share-image/Twitter metadata, structured data, robots.txt en root-sitemap zijn coherent.");
