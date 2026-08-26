@@ -105,7 +105,7 @@ async function controleer(browserType,naam){
     assert(/6%/.test(voor.neerslag)&&/0,0 mm/.test(voor.neerslag),`${naam}: 6% en bekende 0,0 mm staan samen zichtbaar (${voor.neerslag})`);
     assert.equal(voor.dagenHint,"Kies een dag om die verwachting in de grafiek te bekijken.",`${naam}: weekbedieningshint blijft een korte instructie (${voor.dagenHint})`);
     assert.equal(voor.losseUitleg,false,`${naam}: de oude algemene neerslaguitleg staat niet meer los boven de tabel`);
-    assert(voor.notities.some(t=>/Vandaag · 6% is de hoogste neerslagkans in één uur; de berekende dagsom is 0,0 mm\./i.test(t)),`${naam}: 6% + 0,0 mm wordt aan Vandaag gekoppeld`);
+    assert(voor.notities.some(t=>/Vandaag · 6% kans met 0,0 mm/i.test(t)&&/hoogste neerslagkans in één uur/i.test(t)&&/één decimaal/i.test(t)),`${naam}: 6% + 0,0 mm wordt aan Vandaag gekoppeld en correct geduid`);
     assert(voor.notities.some(t=>/42%.*spoorhoeveelheid/i.test(t)),`${naam}: amper meetbare hoeveelheid gebruikt spoor en geen <0,05`);
     assert(voor.notities.some(t=>/88%.*<0,05 mm/i.test(t)),`${naam}: echte 0,049-mm dagsom krijgt <0,05 bij de juiste dag`);
     assert(!voor.notities.some(t=>/75%.*<0,05 mm/i.test(t)),`${naam}: exact 0,05 mm krijgt niet ten onrechte <0,05`);
