@@ -7,6 +7,14 @@ const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replac
 const verwacht=String(process.env.EXPECTED_SHA||"").trim();
 if(!/^[0-9a-f]{7,40}$/i.test(verwacht))throw new Error("EXPECTED_SHA ontbreekt of is ongeldig.");
 
+function verwachteCloudflareAnalyticsCspFout(tekst){
+  const s=String(tekst||"");
+  return s.includes("static.cloudflareinsights.com/beacon.min.js")
+    && /Content Security Policy/i.test(s)
+    && /script-src 'self' 'unsafe-inline'/.test(s)
+    && /blocked/i.test(s);
+}
+
 async function wachtVolledig(page,naam){
   try{
     await page.waitForFunction(n=>{
@@ -53,6 +61,7 @@ async function kiesZoekresultaat(page,naam){
   try{
     const context=await browser.newContext({viewport:{width:390,height:844},locale:"nl-NL",serviceWorkers:"block"});
     const page=await context.newPage(),errors=[];
+    let cloudflareAnalyticsCspBlokkades=0;
     page.__wnNetwerk=[];
     const noteerNetwerk=(soort,url,detail)=>{
       if(!/open-meteo\.com|bigdatacloud\.net|\/api\//i.test(String(url||"")))return;
@@ -62,7 +71,16 @@ async function kiesZoekresultaat(page,naam){
     page.on("requestfailed",r=>noteerNetwerk("requestfailed",r.url(),r.failure()&&r.failure().errorText));
     page.on("response",r=>{if(r.status()>=400)noteerNetwerk("http",r.url(),r.status());});
     page.on("pageerror",e=>errors.push(String(e)));
-    page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});
+    page.on("console",m=>{
+      if(m.type()!=="error")return;
+      const tekst=m.text();
+      /* Cloudflare Web Analytics kan buiten het build-artifact om een beacon
+         injecteren. De site-CSP staat bewust alleen eigen scripts toe en blokkeert
+         die derde-partijscript. Negeer uitsluitend deze exacte CSP-handhaving;
+         iedere andere console-error blijft de productie-audit hard laten falen. */
+      if(verwachteCloudflareAnalyticsCspFout(tekst)){cloudflareAnalyticsCspBlokkades++;return;}
+      errors.push(tekst);
+    });
 
     /* Gebruik hier een wereldlocatie die ook door de aparte wereldwijde
        productie-monitor wordt gecontroleerd. Zo blijft deze test gericht op
@@ -80,7 +98,8 @@ async function kiesZoekresultaat(page,naam){
       main:document.querySelectorAll("main#app").length,
       skip:!!document.querySelector('.skiplink[href="#app"]'),
       og:document.querySelector('meta[property="og:image"]')?.content||"",
-      twitter:document.querySelector('meta[name="twitter:image"]')?.content||""
+      twitter:document.querySelector('meta[name="twitter:image"]')?.content||"",
+      csp:document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.content||""
     }));
     assert.equal(eerste.sha,verwacht,`verkeerde productiebuild ${eerste.sha}`);
     assert(eerste.uur>0,"uurlabels ontbreken op de eerste mobiele render");
@@ -89,6 +108,7 @@ async function kiesZoekresultaat(page,naam){
     assert(eerste.skip,"skiplink ontbreekt op productie");
     assert.equal(eerste.og,ROOT+"/icon-512.png","og:image wijkt af");
     assert.equal(eerste.twitter,ROOT+"/icon-512.png","twitter:image wijkt af");
+    assert(!/cloudflareinsights/i.test(eerste.csp),"document-CSP mag Cloudflare Analytics niet impliciet toestaan");
 
     const grafiekSummary=page.locator("#chartdata > summary");
     await grafiekSummary.focus();await page.keyboard.press("Enter");
@@ -139,7 +159,7 @@ async function kiesZoekresultaat(page,naam){
     await invalid.close();
 
     assert.deepEqual(errors,[],`productie-browserfouten: ${errors.join(" | ")}`);
-    console.log(`PRODUCTIE STAFF-AUDIT GESLAAGD: ${verwacht}; eerste grafiekstate, tabel/keyboard, Sydney→Amsterdam Back/Forward, 320–430px targets, resize, metadata en invalid deep link op Cloudflare-productie.`);
+    console.log(`PRODUCTIE STAFF-AUDIT GESLAAGD: ${verwacht}; eerste grafiekstate, tabel/keyboard, Sydney→Amsterdam Back/Forward, 320–430px targets, resize, metadata en invalid deep link op Cloudflare-productie. Bewust door CSP geblokkeerde Cloudflare Analytics-beacons: ${cloudflareAnalyticsCspBlokkades}.`);
     await context.close();
   }finally{await browser.close();}
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
