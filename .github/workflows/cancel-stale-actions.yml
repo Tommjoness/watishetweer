@@ -1,0 +1,41 @@
+name: Cancel stale Actions runs
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel-stale:
+    if: github.head_ref == 'ops/cancel-stale-actions-20260826'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Force-cancel stale runs from incident
+        shell: bash
+        run: |
+          set -euo pipefail
+          ids=(32984194006 32985269547 32985304066 32983999874 32983975570)
+          for id in "${ids[@]}"; do
+            echo "=== RUN $id BEFORE ==="
+            before="$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPO/actions/runs/$id")"
+            echo "$before" | jq '{id,name,status,conclusion,head_sha,event}'
+            status="$(echo "$before" | jq -r '.status')"
+            if [[ "$status" == "queued" || "$status" == "in_progress" || "$status" == "waiting" || "$status" == "pending" ]]; then
+              code="$(curl -sS -o /tmp/cancel-$id.out -w '%{http_code}' -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPO/actions/runs/$id/force-cancel")"
+              echo "force-cancel HTTP $code"
+              cat /tmp/cancel-$id.out || true
+              test "$code" = "202"
+            fi
+          done
+          sleep 3
+          for id in "${ids[@]}"; do
+            echo "=== RUN $id AFTER ==="
+            curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPO/actions/runs/$id" | jq '{id,name,status,conclusion,head_sha,event}'
+          done
