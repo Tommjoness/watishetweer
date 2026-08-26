@@ -5,10 +5,12 @@ const fs=require("fs");
 const path=require("path");
 
 const root=path.join(__dirname,"..");
-const config=JSON.parse(fs.readFileSync(path.join(root,"vercel.json"),"utf8"));
-const regel=(config.headers||[]).find(x=>x&&x.source==="/(.*)");
-assert(regel&&Array.isArray(regel.headers),"Algemene productieheaders ontbreken");
-const headers=Object.fromEntries(regel.headers.map(x=>[String(x.key||"").toLowerCase(),String(x.value||"")]));
+const bron=fs.readFileSync(path.join(root,"cloudflare","_headers"),"utf8");
+const headers={};
+for(const regel of bron.split(/\r?\n/)){
+  const match=/^\s{2}([^:]+):\s*(.*)$/.exec(regel);
+  if(match)headers[match[1].trim().toLowerCase()]=match[2].trim();
+}
 
 assert.equal(headers["x-content-type-options"],"nosniff","nosniff ontbreekt");
 assert.equal(headers["x-frame-options"],"DENY","framing moet geblokkeerd blijven");
@@ -32,4 +34,4 @@ for(const contract of [
 assert(csp.includes("script-src 'self' 'unsafe-inline'"),"Huidige inline runtime past niet meer binnen CSP");
 assert(csp.includes("style-src 'self' 'unsafe-inline'"),"Huidige inline styles passen niet meer binnen CSP");
 
-console.log("security-headers: response-CSP, HSTS en basisheaders OK");
+console.log("security-headers: Cloudflare CSP, HSTS en basisheaders OK");
