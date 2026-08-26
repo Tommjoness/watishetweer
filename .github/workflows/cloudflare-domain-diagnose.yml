@@ -51,6 +51,7 @@ jobs:
               ['AAAA',()=>dns.resolve6(name)],
               ['CNAME',()=>dns.resolveCname(name)],
               ['TXT',()=>dns.resolveTxt(name)],
+              ['MX',()=>dns.resolveMx(name)],
             ]) {
               try { console.log(label, JSON.stringify(await fn())); }
               catch(e){ console.log(label, `ERROR ${e.code||e.message}`); }
@@ -59,13 +60,17 @@ jobs:
           (async()=>{await one('watishetweer.nl');await one('www.watishetweer.nl');})().catch(e=>{console.error(e);process.exit(1)});
           NODE
 
-      - name: Cloudflare zone-read probe
+      - name: Cloudflare zone en voorbereide records
         shell: bash
         run: |
           set -euo pipefail
-          code="$(curl -sS -o /tmp/zone.json -w '%{http_code}' \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            -H 'Content-Type: application/json' \
-            'https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl')"
-          echo "Zone API HTTP $code"
-          jq -r '{success,errors,result:(.result // [] | map({id,name,status,name_servers,original_name_servers}))} | @json' /tmp/zone.json || cat /tmp/zone.json
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl' -o /tmp/zones.json
+          jq -e '.success == true' /tmp/zones.json >/dev/null
+          zone_id="$(jq -r '.result[0].id // ""' /tmp/zones.json)"
+          test -n "$zone_id"
+          jq -r '.result[0] | {id,name,status,name_servers,original_name_servers} | @json' /tmp/zones.json
+          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?per_page=100" -o /tmp/records.json
+          jq -e '.success == true' /tmp/records.json >/dev/null
+          echo '=== Cloudflare DNS records ==='
+          jq -r '.result[] | {id,type,name,content,priority,proxied,ttl} | @json' /tmp/records.json
