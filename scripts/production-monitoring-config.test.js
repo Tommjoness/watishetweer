@@ -16,6 +16,17 @@ assert(workflow.includes("EXPECTED_SHA: ${{ github.sha }}"),"workflow moet de ex
 assert(workflow.includes("SMOKE_REQUEST_TIMEOUT_MS:"),"workflow moet een expliciete request-timeout instellen");
 assert(workflow.includes("mcr.microsoft.com/playwright:v1.62.1-noble"),"production-smoke moet een vaste browserimage gebruiken");
 assert(workflow.includes("node scripts/production-worldwide-browser.js"),"workflow mist de wereldwijde browsermonitor");
+assert(workflow.includes("node scripts/production-staff-audit-browser.js"),"workflow mist de interactieve staff-auditmonitor");
+
+/* De wereldwijde monitor doet tien volledige live forecastloads. Als de
+   interactieve staff-audit daarna in dezelfde runner doorgaat, stapelt één
+   CI-adres onnodig providerbelasting op en kan de tweede monitor zichzelf
+   rate-limiten. Bewaak daarom drie aparte jobs: eerst het exacte deployment- en
+   API-contract, daarna beide browsercontroles parallel op geïsoleerde runners. */
+assert(/^  production-contract:/m.test(workflow),"production-smoke mist aparte deployment/API-contractjob");
+assert(/^  wereldwijd-browser:/m.test(workflow),"production-smoke mist aparte wereldwijde browserjob");
+assert(/^  staff-audit-browser:/m.test(workflow),"production-smoke mist aparte staff-audit browserjob");
+assert.equal((workflow.match(/^    needs: production-contract$/gm)||[]).length,2,"beide browserjobs moeten pas na het exacte productiecontract starten");
 
 assert(smoke.includes("AbortSignal.timeout(timeoutMs)"),"production-smoke requests moeten een harde timeout hebben");
 assert(smoke.includes("const maxPogingen=opt.retry===false?1:2"),"production-smoke mag per request maximaal één retry doen");
@@ -32,4 +43,4 @@ assert(wereldwijd.includes('{naam:"desktop",width:1440,height:1000}'),"wereldwij
 assert(wereldwijd.includes('uit.overflow<=1'),"wereldwijde monitor bewaakt horizontale overflow niet");
 assert(wereldwijd.includes('assert.equal(uit.sha,verwacht'),"wereldwijde browsermonitor moet de exacte build-SHA bewaken");
 
-console.log("production-monitoring-config: OK");
+console.log("production-monitoring-config: geïsoleerde live browserjobs OK");
