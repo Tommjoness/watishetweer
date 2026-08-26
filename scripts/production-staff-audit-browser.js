@@ -8,9 +8,37 @@ const verwacht=String(process.env.EXPECTED_SHA||"").trim();
 if(!/^[0-9a-f]{7,40}$/i.test(verwacht))throw new Error("EXPECTED_SHA ontbreekt of is ongeldig.");
 
 async function wachtVolledig(page,naam){
-  await page.waitForSelector("#app",{state:"visible",timeout:25000});
-  await page.waitForFunction(n=>document.getElementById("place")?.getAttribute("aria-label")===n,naam,{timeout:25000});
-  await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length===7,null,{timeout:25000});
+  try{
+    await page.waitForFunction(n=>{
+      const app=document.getElementById("app");
+      if(!app)return false;
+      const stijl=getComputedStyle(app);
+      const zichtbaar=stijl.display!=="none"&&stijl.visibility!=="hidden";
+      const plaats=document.getElementById("place")?.getAttribute("aria-label")||"";
+      const dagen=document.querySelectorAll("#days .row.day:not(.kop)").length;
+      return zichtbaar&&plaats===n&&dagen===7;
+    },naam,{timeout:25000});
+  }catch(err){
+    const diagnose=await page.evaluate(()=>{
+      const app=document.getElementById("app"),state=document.getElementById("state");
+      const stijl=app?getComputedStyle(app):null;
+      return {
+        href:location.href,
+        build:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
+        appAanwezig:!!app,
+        appDisplay:stijl&&stijl.display||null,
+        appVisibility:stijl&&stijl.visibility||null,
+        appClass:app&&app.className||"",
+        appBusy:app&&app.getAttribute("aria-busy")||null,
+        plaats:document.getElementById("place")?.getAttribute("aria-label")||"",
+        dagen:document.querySelectorAll("#days .row.day:not(.kop)").length,
+        state:(state?.textContent||"").trim(),
+        stateClass:state&&state.className||""
+      };
+    }).catch(()=>({diagnose:"browser-evaluatie mislukt"}));
+    const netwerk=Array.isArray(page.__wnNetwerk)?page.__wnNetwerk.slice(-12):[];
+    throw new Error(`Productie werd niet volledig voor ${naam}: ${JSON.stringify(diagnose)}; netwerk=${JSON.stringify(netwerk)}; oorzaak=${err&&err.message||err}`);
+  }
 }
 async function kiesZoekresultaat(page,naam){
   const q=page.locator("#q");await q.fill(naam);
@@ -25,13 +53,25 @@ async function kiesZoekresultaat(page,naam){
   try{
     const context=await browser.newContext({viewport:{width:390,height:844},locale:"nl-NL",serviceWorkers:"block"});
     const page=await context.newPage(),errors=[];
+    page.__wnNetwerk=[];
+    const noteerNetwerk=(soort,url,detail)=>{
+      if(!/open-meteo\.com|bigdatacloud\.net|\/api\//i.test(String(url||"")))return;
+      page.__wnNetwerk.push({soort,url:String(url),detail:String(detail||"")});
+      if(page.__wnNetwerk.length>30)page.__wnNetwerk.shift();
+    };
+    page.on("requestfailed",r=>noteerNetwerk("requestfailed",r.url(),r.failure()&&r.failure().errorText));
+    page.on("response",r=>{if(r.status()>=400)noteerNetwerk("http",r.url(),r.status());});
     page.on("pageerror",e=>errors.push(String(e)));
     page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});
 
-    const start=ROOT+"/?lat=-33.9249&lon=18.4241&plaats=Kaapstad&land=ZA";
+    /* Gebruik hier een wereldlocatie die ook door de aparte wereldwijde
+       productie-monitor wordt gecontroleerd. Zo blijft deze test gericht op
+       de staff-auditinteracties in plaats van een extra, unieke afhankelijkheid
+       van één externe forecastrequest toe te voegen. */
+    const start=ROOT+"/?lat=-33.8688&lon=151.2093&plaats=Sydney&land=AU";
     const response=await page.goto(start,{waitUntil:"domcontentloaded",timeout:30000});
-    assert(response&&response.ok(),`Kaapstad start HTTP ${response&&response.status()}`);
-    await wachtVolledig(page,"Kaapstad");
+    assert(response&&response.ok(),`Sydney start HTTP ${response&&response.status()}`);
+    await wachtVolledig(page,"Sydney");
     await page.evaluate(()=>document.fonts&&document.fonts.ready);
     const eerste=await page.evaluate(()=>({
       sha:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
@@ -56,8 +96,8 @@ async function kiesZoekresultaat(page,naam){
 
     await kiesZoekresultaat(page,"Amsterdam");
     assert(/plaats=Amsterdam/.test(page.url()),`Amsterdam-keuze synchroniseert URL niet: ${page.url()}`);
-    await page.goBack({waitUntil:"domcontentloaded"});await wachtVolledig(page,"Kaapstad");
-    assert(/plaats=Kaapstad/.test(page.url()),`Back herstelt Kaapstad-URL niet: ${page.url()}`);
+    await page.goBack({waitUntil:"domcontentloaded"});await wachtVolledig(page,"Sydney");
+    assert(/plaats=Sydney/.test(page.url()),`Back herstelt Sydney-URL niet: ${page.url()}`);
     await page.goForward({waitUntil:"domcontentloaded"});await wachtVolledig(page,"Amsterdam");
     assert(/plaats=Amsterdam/.test(page.url()),`Forward herstelt Amsterdam-URL niet: ${page.url()}`);
     assert.equal(await page.title(),"Amsterdam · Wat is het weer?","Forward synchroniseert titel niet");
@@ -99,7 +139,7 @@ async function kiesZoekresultaat(page,naam){
     await invalid.close();
 
     assert.deepEqual(errors,[],`productie-browserfouten: ${errors.join(" | ")}`);
-    console.log(`PRODUCTIE STAFF-AUDIT GESLAAGD: ${verwacht}; eerste grafiekstate, tabel/keyboard, Kaapstad→Amsterdam Back/Forward, 320–430px targets, resize, metadata en invalid deep link op Cloudflare-productie.`);
+    console.log(`PRODUCTIE STAFF-AUDIT GESLAAGD: ${verwacht}; eerste grafiekstate, tabel/keyboard, Sydney→Amsterdam Back/Forward, 320–430px targets, resize, metadata en invalid deep link op Cloudflare-productie.`);
     await context.close();
   }finally{await browser.close();}
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
