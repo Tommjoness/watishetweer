@@ -21,7 +21,15 @@ ok(!ux.grafiekHerstelNodig(true,24,["00"]),"bestaande mobiele uuras wordt niet o
 ok(ux.terugNaarBereikLabel(24)==="Komende 24 uur","resetknop benoemt de rollende 24-uursmodus");
 ok(ux.terugNaarBereikLabel(48)==="Komende 48 uur","resetknop benoemt ook de rollende 48-uursmodus");
 ok(ux.terugNaarBereikLabel(168)==="Komende zeven dagen","resetknop benoemt het langere bereik zonder 'terug naar nu'-ambiguïteit");
-ok(ux.weekUitlegSamenvatting("65% kans met 0,0 mm betekent dat neerslag mogelijk is")==="65% kans met 0,0 mm: afgerond op één decimaal.","weekuitleg krijgt een korte, direct begrijpelijke samenvatting");
+
+const nul=ux.dagNeerslagNuance(65,0,"do 27",0.005);
+ok(nul&&nul.mmTekst==="0,0 mm"&&/do 27 · 65%/.test(nul.tekst)&&/hoogste neerslagkans in één uur/.test(nul.tekst),"0,0-mm-nuance is aan de juiste dag en betekenis van het percentage gekoppeld");
+const spoor=ux.dagNeerslagNuance(42,0.001,"di 1",0.005);
+ok(spoor&&spoor.mmTekst==="spoor"&&!/<0,05/.test(spoor.tekst),"amper meetbare hoeveelheid krijgt spoor in plaats van <0,05-schijnprecisie");
+const klein=ux.dagNeerslagNuance(88,0.049,"za 29",0.005);
+ok(klein&&klein.mmTekst==="<0,05 mm"&&/<0,05 mm/.test(klein.tekst),"<0,05 wordt alleen gebruikt wanneer de echte dagsom onder 0,05 ligt en boven spoor uitkomt");
+ok(ux.dagNeerslagNuance(88,0.05,"za 29",0.005)===null,"0,05 mm valt niet ten onrechte in de <0,05-nuance");
+ok(ux.dagNeerslagNuance(0,0,"Vandaag",0.005)===null,"een droge 0%-dag krijgt geen overbodige neerslagnotitie");
 
 for(const vereist of [
   "/* ===== MOBILE STATE UX 20260826 ===== */",
@@ -31,8 +39,11 @@ for(const vereist of [
   "grafiekHerstelNodig(mobiel(),n,chartUurTeksten",
   "Deze kalenderdag per uur.",
   "Toon "+"\"+label.toLowerCase()+\" vanaf nu",
-  "dagenneerslaguitleg-compact",
-  "afgerond op één decimaal.",
+  "dagNeerslagNuance",
+  "dag-neerslagnotitie",
+  "hoogste neerslagkans in één uur",
+  "aria-pressed",
+  "aria-describedby",
   "nacht-meta-details",
   "Zicht en maan",
   "setTimeout(()=>{",
@@ -40,8 +51,10 @@ for(const vereist of [
 ])ok(html.includes(vereist),"artifact bevat state-UX invariant: "+vereist);
 
 ok(!html.includes('back.textContent="Terug naar nu"'),"nieuwe state-UX-runtime zet de resetcopy niet terug naar de ambigue oude tekst");
-ok(html.includes('details.className="data-uitleg dagenneerslaguitleg-compact"'),"weekuitleg wordt een inklapbaar details-element");
-ok(html.includes('const p=document.createElement("p");p.textContent=tekst;'),"volledige 0,0-mm-uitleg blijft achter de compacte samenvatting beschikbaar");
+ok(!html.includes('details.className="data-uitleg dagenneerslaguitleg-compact"'),"losse globale weekuitleg wordt niet opnieuw als apart detailsblok opgebouwd");
+ok(html.includes('if(losseUitleg)losseUitleg.remove();'),"oude globale neerslaguitleg wordt na de weekrender verwijderd");
+ok(html.includes('if(mm<=spoorgrens)return {'),"spoorhoeveelheden hebben een aparte semantiek vóór de <0,05-grens");
+ok(html.includes('if(mm<0.05)return {'),"<0,05-nuance heeft een harde echte grens");
 ok(html.includes('details.open=!mobiel();'),"Nachtzicht-details zijn mobiel compact en desktop standaard open");
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);

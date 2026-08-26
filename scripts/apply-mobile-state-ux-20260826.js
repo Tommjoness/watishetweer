@@ -19,7 +19,7 @@ if(html.includes(CSS_MARK)||html.includes(JS_MARK))throw new Error("Mobiele stat
 if((html.split(HEAD_EIND).length-1)!==1)throw new Error("Exact één head-eindmarker vereist voor mobiele state-UX.");
 if((html.split(START).length-1)!==1)throw new Error("Startmarker ontbreekt of is dubbel voor mobiele state-UX.");
 if(!html.includes("const ruimBotsendeAslabelsOp=()=>{"))throw new Error("Mobiele grafiek-collisionlaag ontbreekt vóór state-UX-herstel.");
-if(!html.includes("function weatherNowDagenNeerslagUitleg(){"))throw new Error("Finale weekuitleg-owner ontbreekt vóór compacte state-UX-presentatie.");
+if(!html.includes("function weatherNowDagenNeerslagUitleg(){"))throw new Error("Finale weekuitleg-owner ontbreekt vóór daggebonden state-UX-presentatie.");
 if(!html.includes("const basisNachten=nachten;"))throw new Error("Canonieke Nachtzicht-presentatie-owner ontbreekt vóór compacte detailpresentatie.");
 
 /* Deze laag draait laat in de postbuild, wanneer eerdere stappen meerdere style-
@@ -35,9 +35,10 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:mobile
 for(const vereist of [
   "WeatherNowMobileStateUX","grafiekHerstelNodig","document.fonts.ready",
   "Komende 24 uur","Komende 48 uur","Deze kalenderdag per uur",
-  "dagenneerslaguitleg-compact","nacht-meta-details","senior-verstopt"
+  "dagNeerslagNuance","dag-neerslagnotitie","hoogste neerslagkans in één uur",
+  "aria-pressed","aria-describedby","nacht-meta-details","senior-verstopt"
 ])if(!html.includes(vereist))throw new Error("Mobiele state-UX invariant ontbreekt: "+vereist);
 
 fs.writeFileSync(PAD,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"mobile-state-ux-20260826");
-console.log("Mobiele state-UX toegepast: eerste uuras herstelt na fontload, grafiekmodus is expliciet, contextbalk verdwijnt na rust en secundaire uitleg is compact; cache "+versie+".");
+console.log("Mobiele state-UX toegepast: eerste uuras herstelt na fontload, grafiekmodus is expliciet, weekneerslagnuance is aan de juiste dag gekoppeld, contextbalk verdwijnt na rust en Nachtzicht-details blijven compact; cache "+versie+".");
