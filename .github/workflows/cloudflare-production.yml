@@ -1,0 +1,156 @@
+name: Cloudflare production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_PROJECT: watishetweer
+  SOURCE_SHA: ${{ github.sha }}
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    outputs:
+      production_url: ${{ steps.production_url.outputs.url }}
+    steps:
+      - name: Checkout exacte main-SHA
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Installeer dependencies
+        run: npm install --ignore-scripts
+
+      - name: Controleer Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$SOURCE_SHA"
+
+      - name: Bouw Cloudflare productie-artifact
+        env:
+          WEATHER_BUILD_SHA: ${{ env.SOURCE_SHA }}
+        run: npm run build:cloudflare
+
+      - name: Deploy exact naar Cloudflare Pages production
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 pages deploy public \
+            --project-name="$CLOUDFLARE_PROJECT" \
+            --branch=main \
+            --commit-hash="$SOURCE_SHA" \
+            --commit-message="Cloudflare production $SOURCE_SHA" \
+            --commit-dirty=true | tee /tmp/cloudflare-production.log
+
+      - name: Noteer immutable production-URL
+        id: production_url
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="$(grep -Eo 'https://[[:alnum:]-]+\.watishetweer\.pages\.dev' /tmp/cloudflare-production.log | head -1)"
+          test -n "$URL"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          {
+            echo '## Cloudflare production deployment'
+            echo
+            echo "Immutable: $URL"
+            echo
+            echo "Bron-SHA: $SOURCE_SHA"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Production deployment: $URL"
+
+      - name: Smoke immutable deployment voor domeinkoppeling
+        env:
+          PREVIEW_ROOT: ${{ steps.production_url.outputs.url }}
+          EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+        run: node scripts/cloudflare-preview-smoke.js
+
+      - name: Koppel custom domains idempotent
+        id: domains
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT/domains"
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+
+          curl -fsS "${auth[@]}" "$API" -o /tmp/domains-before.json
+          jq -e '.success == true' /tmp/domains-before.json >/dev/null
+
+          ensure_domain() {
+            local domain="$1"
+            if jq -e --arg d "$domain" '.result[]? | select(.name == $d)' /tmp/domains-before.json >/dev/null; then
+              echo "$domain is al gekoppeld"
+              return 0
+            fi
+            echo "Koppel $domain aan Pages-project"
+            curl -fsS "${auth[@]}" -X POST "$API" \
+              --data "$(jq -cn --arg name "$domain" '{name:$name}')" \
+              -o "/tmp/domain-${domain//./-}.json"
+            jq -e '.success == true' "/tmp/domain-${domain//./-}.json" >/dev/null
+          }
+
+          ensure_domain 'watishetweer.nl'
+          ensure_domain 'www.watishetweer.nl'
+
+          echo 'Wacht op Cloudflare-domeinstatus...'
+          all_active=false
+          for attempt in $(seq 1 24); do
+            all_active=true
+            for domain in watishetweer.nl www.watishetweer.nl; do
+              encoded="$(printf '%s' "$domain" | jq -sRr @uri)"
+              curl -fsS "${auth[@]}" "$API/$encoded" -o "/tmp/status-${domain//./-}.json"
+              jq -e '.success == true' "/tmp/status-${domain//./-}.json" >/dev/null
+              status="$(jq -r '.result.status // "unknown"' "/tmp/status-${domain//./-}.json")"
+              echo "$domain: $status"
+              if [ "$status" != active ]; then all_active=false; fi
+            done
+            if [ "$all_active" = true ]; then break; fi
+            sleep 10
+          done
+
+          {
+            echo '## Custom domains'
+            echo
+            for domain in watishetweer.nl www.watishetweer.nl; do
+              file="/tmp/status-${domain//./-}.json"
+              status="$(jq -r '.result.status // "unknown"' "$file")"
+              echo "- $domain: $status"
+              jq -r '.result.validation_data? // empty | "  - validatie: " + ((.status // "unknown")|tostring) + (if .error_message then " (" + .error_message + ")" else "" end)' "$file" || true
+              jq -r '.result.error_message? // empty | "  - fout: " + .' "$file" || true
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "all_active=$all_active" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke publieke domeinen na actieve cutover
+        if: steps.domains.outputs.all_active == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for ROOT in https://watishetweer.nl https://www.watishetweer.nl; do
+            echo "Controleer $ROOT"
+            html="$(curl -fsSL --max-time 30 "$ROOT/")"
+            printf '%s' "$html" | grep -F "$SOURCE_SHA" >/dev/null
+          done
+
+      - name: Meld eventuele resterende DNS-validatie
+        if: steps.domains.outputs.all_active != 'true'
+        run: |
+          echo 'Cloudflare production staat gereed en is gesmoked, maar ten minste één custom domain is nog niet actief.'
+          echo 'Bestaand verkeer blijft daardoor op de huidige DNS-route totdat de Cloudflare-validatie/nameserverstap is afgerond.'

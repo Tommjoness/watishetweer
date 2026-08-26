@@ -1,0 +1,115 @@
+name: Cloudflare preview
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  preview:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'migrate/cloudflare-pages-20260826'
+    runs-on: ubuntu-latest
+    outputs:
+      preview_url: ${{ steps.preview_url.outputs.url }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_PROJECT: watishetweer
+      CLOUDFLARE_PREVIEW_BRANCH: pr-164
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exacte bron-SHA
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Installeer dependencies
+        run: npm install --ignore-scripts
+
+      - name: Controleer Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$SOURCE_SHA"
+
+      - name: Bouw Cloudflare artifact
+        env:
+          WEATHER_BUILD_SHA: ${{ env.SOURCE_SHA }}
+        run: npm run build:cloudflare
+
+      - name: Deploy preview naar Cloudflare Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 pages deploy public \
+            --project-name="$CLOUDFLARE_PROJECT" \
+            --branch="$CLOUDFLARE_PREVIEW_BRANCH" \
+            --commit-hash="$SOURCE_SHA" \
+            --commit-message="PR #164 Cloudflare preview" \
+            --commit-dirty=true | tee /tmp/cloudflare-deploy.log
+
+      - name: Noteer preview-URL
+        id: preview_url
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="$(grep -Eo 'https://[[:alnum:]-]+\.watishetweer\.pages\.dev' /tmp/cloudflare-deploy.log | head -1)"
+          test -n "$URL"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          {
+            echo '## Cloudflare preview'
+            echo
+            echo "Immutable: $URL"
+            echo
+            echo 'Alias: https://pr-164.watishetweer.pages.dev'
+            echo
+            echo "Bron-SHA: $SOURCE_SHA"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Preview: $URL"
+
+      - name: Test Cloudflare headers, routes en API-contracten
+        env:
+          PREVIEW_ROOT: ${{ steps.preview_url.outputs.url }}
+          EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+        run: node scripts/cloudflare-preview-smoke.js
+
+  preview-worldwide:
+    needs: preview
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      PREVIEW_ROOT: ${{ needs.preview.outputs.preview_url }}
+    steps:
+      - name: Checkout exacte bron-SHA
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Installeer Playwright
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+
+      - name: Wereldwijde preview in mobiel en desktop
+        env:
+          PRODUCTION_ROOT: ${{ env.PREVIEW_ROOT }}
+          EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+        run: node scripts/production-worldwide-browser.js
