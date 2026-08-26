@@ -39,3 +39,7 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/production-worldwide-browser.js
+      - name: Controleer staff-audit interacties op productie
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node scripts/production-staff-audit-browser.js
