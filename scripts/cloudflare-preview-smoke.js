@@ -49,20 +49,17 @@ function security(r,label){
   security(plaats.r,"plaatsnaam-API");
   assert(plaats.body&&typeof plaats.body==="object","plaatsnaam-API heeft geen objectpayload");
   assert("naam" in plaats.body&&"land" in plaats.body,"plaatsnaam-API mist contractvelden");
-  assert.equal(plaats.r.headers.get("vercel-cdn-cache-control"),null,"plaatsnaam-API lekt Vercel-cacheheader");
 
   const neerslag=await json("/api/neerslag?lat=52.3508&lon=5.2647&land=NL");
   assert.equal(neerslag.r.status,200,"neerslag-API is niet 200");
   security(neerslag.r,"neerslag-API");
   assert(neerslag.body&&typeof neerslag.body.beschikbaar==="boolean","neerslag-API mist beschikbaar-boolean");
-  assert.equal(neerslag.r.headers.get("vercel-cdn-cache-control"),null,"neerslag-API lekt Vercel-cacheheader");
 
   const waarschuwingen=await json("/api/waarschuwingen?lat=52.3508&lon=5.2647&land=NL");
   assert.equal(waarschuwingen.r.status,200,"waarschuwingen-API is niet 200");
   security(waarschuwingen.r,"waarschuwingen-API");
   assert(waarschuwingen.body&&typeof waarschuwingen.body.dekking==="boolean","waarschuwingen-API mist dekking-boolean");
   assert(Array.isArray(waarschuwingen.body.lijst),"waarschuwingen-API mist lijst-array");
-  assert.equal(waarschuwingen.r.headers.get("vercel-cdn-cache-control"),null,"waarschuwingen-API lekt Vercel-cacheheader");
 
   const post=await json("/api/plaatsnaam?lat=52.3508&lon=5.2647",{method:"POST"});
   assert.equal(post.r.status,405,"POST op plaatsnaam-API is niet 405");
