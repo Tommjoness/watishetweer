@@ -2,6 +2,7 @@
 
 const SEO=require("./seo-foundation.config.js");
 const MARKER="<!-- WEATHER NOW SEO FOUNDATION -->";
+const SHARE_IMAGE="https://watishetweer.nl/icon-512.png";
 
 function attr(v){return String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 
@@ -36,11 +37,19 @@ function pasSeoFoundationToe(html){
     `<meta property="og:title" content="${attr(SEO.title)}">`,
     `<meta property="og:description" content="${attr(SEO.description)}">`,
     `<meta property="og:url" content="${attr(SEO.canonical)}">`,
+    `<meta property="og:image" content="${SHARE_IMAGE}">`,
+    `<meta property="og:image:width" content="512">`,
+    `<meta property="og:image:height" content="512">`,
+    `<meta property="og:image:alt" content="${attr(SEO.siteName)}">`,
     `<meta name="twitter:card" content="summary">`,
+    `<meta name="twitter:title" content="${attr(SEO.title)}">`,
+    `<meta name="twitter:description" content="${attr(SEO.description)}">`,
+    `<meta name="twitter:image" content="${SHARE_IMAGE}">`,
+    `<meta name="twitter:image:alt" content="${attr(SEO.siteName)}">`,
     `<script type="application/ld+json">${websiteJson}</script>`
   ].join("\n");
 
   return bron.replace(nieuweDescription,nieuweDescription+"\n"+blok);
 }
 
-module.exports={MARKER,pasSeoFoundationToe};
+module.exports={MARKER,SHARE_IMAGE,pasSeoFoundationToe};
