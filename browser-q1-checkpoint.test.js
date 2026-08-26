@@ -108,7 +108,12 @@ async function controleer(type,naam){
     assert.equal(basis.dag[0].mm,"1,4 mm",naam+": vandaag gebruikt alleen hoeveelheid binnen de resterende lokale daghorizon");
     assert.notEqual(basis.dag[0].mm,"4,8 mm",naam+": verstreken daghoeveelheid mag vandaag niet opnieuw worden teruggeschreven");
     assert.equal(basis.dag[1].kans,"25%",naam+": toekomstige dag gebruikt officiële volledige-dagkans");
-    assert.equal(basis.dag[1].mm,"",naam+": droge 0,0 mm wordt niet getoond");
+    assert.equal(basis.dag[1].mm,"0,0 mm",naam+": niet-nul kans behoudt een bekende afgeronde dagsom van 0,0 mm");
+    assert.equal(basis.dag[2].mm,"",naam+": 0% kans en 0,0 mm blijven compact zonder redundante hoeveelheid");
+    assert.equal(basis.dag[3].mm,"0,0 mm",naam+": ook een lage niet-nul kans behoudt bekende 0,0 mm");
+    assert.equal(basis.dag[4].mm,"0,2 mm",naam+": positieve dagsom blijft zichtbaar");
+    assert.equal(basis.dag[5].mm,"7,3 mm",naam+": grotere dagsom blijft zichtbaar");
+    assert.equal(basis.dag[6].mm,"0,0 mm",naam+": kleine niet-nul kans behoudt bekende 0,0 mm");
     assert.ok(basis.over<=2,naam+": geen horizontale overflow op 390 px");
 
     /* De bestaande lokale minuutklok moet de trend kunnen doorschuiven zonder
@@ -155,7 +160,7 @@ async function controleer(type,naam){
     console.log("TOOLTIP "+naam+" "+JSON.stringify({nat,droog,nul,tipBron}));
     assert.ok(nat.includes("neerslagkans")&&nat.includes("65% · 1,4 mm"),naam+": nat uur toont kans + mm");
     assert.ok(droog.includes("neerslagkans")&&droog.includes("25%"),naam+": 0 mm behoudt echte 25%-kans");
-    assert.ok(!droog.some(t=>/mm/.test(t)),naam+": 0 mm krijgt geen nutteloze hoeveelheid");
+    assert.ok(!droog.some(t=>/mm/.test(t)),naam+": uurlijkse tooltip houdt 0 mm compact");
     assert.ok(nul.includes("neerslagkans")&&nul.includes("0%"),naam+": echte nul-kans blijft 0%");
     assert.ok(!nul.some(t=>/mm/.test(t)),naam+": nul-kans/nul-mm blijft compact");
 
