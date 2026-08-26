@@ -1,0 +1,42 @@
+name: Cloudflare DNSSEC voorbereiden
+
+on:
+  push:
+    branches: [ops/post-migration-audit-20260826]
+
+permissions:
+  contents: read
+
+jobs:
+  dnssec:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Activeer Cloudflare DNSSEC en toon DS-gegevens
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl' -o /tmp/zones.json
+          zone_id="$(jq -r '.result[0].id // ""' /tmp/zones.json)"
+          test -n "$zone_id"
+
+          code="$(curl -sS -o /tmp/before.json -w '%{http_code}' "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec")"
+          echo "DNSSEC_READ_HTTP=$code"
+          if [ "$code" != 200 ]; then
+            cat /tmp/before.json
+            exit 1
+          fi
+          before="$(jq -r '.result.status // "unknown"' /tmp/before.json)"
+          echo "DNSSEC_BEFORE=$before"
+
+          if [ "$before" != active ]; then
+            code="$(curl -sS -o /tmp/enable.json -w '%{http_code}' "${auth[@]}" -X PATCH "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec" --data '{"status":"active"}')"
+            echo "DNSSEC_ENABLE_HTTP=$code"
+            jq -e '.success == true' /tmp/enable.json >/dev/null
+          fi
+
+          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec" -o /tmp/after.json
+          jq -e '.success == true and .result.status == "active"' /tmp/after.json >/dev/null
+          jq -r '.result | "DNSSEC_STATUS=\(.status)\nKEY_TAG=\(.key_tag)\nALGORITHM=\(.algorithm)\nDIGEST_TYPE=\(.digest_type)\nDIGEST=\(.digest)\nDS=\(.ds)"' /tmp/after.json
