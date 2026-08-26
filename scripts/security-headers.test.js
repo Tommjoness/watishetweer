@@ -31,6 +31,12 @@ for(const contract of [
   "connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://geocoding-api.open-meteo.com https://api.bigdatacloud.net"
 ])assert(csp.includes(contract),"CSP-contract ontbreekt: "+contract);
 
+/* Cloudflare kan Web Analytics buiten het build-artifact automatisch injecteren.
+   Dat is geen reden om de site-CSP stil voor een extra derde-partijscript en
+   analytics-endpoint te openen. De productie-monitor herkent uitsluitend de
+   specifieke browsermelding waarin juist deze policy de beacon blokkeert. */
+assert(!/cloudflareinsights/i.test(csp),"CSP mag Cloudflare Analytics niet impliciet toestaan");
+
 /* De huidige app assembleert nog inline runtime en CSS. 'unsafe-inline' kan pas
    verdwijnen nadat die architectuur is gemigreerd; deze test voorkomt dat iemand
    het nu stil verwijdert en productie breekt terwijl de overige CSP wel hard is. */
