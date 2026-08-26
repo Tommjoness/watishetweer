@@ -49,7 +49,7 @@ for(const vereist of [
   "H=M?250:296",
   "pt=M?59:76, ih=M?145:160",
   "tijdLabelVrij=nuX==null",
-  "let kandidaten=n<=24?kandidatenRuw:",
+  "M?kandidatenRuw.filter(k=>k.rang>1||k.i%6===0):kandidatenRuw",
   "mm!==null&&mm>=0",
   "val+labelHoogte/2+4<=pb",
   "ruimBotsendeAslabelsOp",
@@ -101,4 +101,4 @@ const botsingsBron=html.slice(botsingsLaag,etmaalEind);
 if(!botsingsBron.includes("if(!M)return;"))throw new Error("Fontbox-botsingslaag moet uitsluitend op mobiele grafieken actief zijn; desktop-uuras mag niet worden opgeschoond.");
 
 const verwacht=verifieerServiceworkerCache(OUT,"checkpoint-50");
-console.log("Definitieve checkpoint-50 artifact geverifieerd: compacte brede UV-piek op mobiel, mobiel etmaal behoudt meerdere temperatuurreferenties met botsingscontrole, bekende 0,0 mm blijft zichtbaar, Nachtzicht toont drie nachten met toegankelijke uitklap, één Nachtzicht-owner met kalendergrens en zonsopkomstgrens, scanbare maan/zichtregels, brongetrouwe maanfase en cache "+verwacht+".");
+console.log("Definitieve checkpoint-50 artifact geverifieerd: compacte brede UV-piek op mobiel, etmaal toont zes-uursreferenties plus echte extrema met botsingscontrole, bekende 0,0 mm blijft zichtbaar, Nachtzicht toont drie nachten met toegankelijke uitklap, één Nachtzicht-owner met kalendergrens en zonsopkomstgrens, scanbare maan/zichtregels, brongetrouwe maanfase en cache "+verwacht+".");
