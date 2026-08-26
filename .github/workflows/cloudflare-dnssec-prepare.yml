@@ -22,21 +22,27 @@ jobs:
           zone_id="$(jq -r '.result[0].id // ""' /tmp/zones.json)"
           test -n "$zone_id"
 
-          code="$(curl -sS -o /tmp/before.json -w '%{http_code}' "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec")"
-          echo "DNSSEC_READ_HTTP=$code"
-          if [ "$code" != 200 ]; then
-            cat /tmp/before.json
-            exit 1
-          fi
+          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec" -o /tmp/before.json
+          jq -e '.success == true' /tmp/before.json >/dev/null
           before="$(jq -r '.result.status // "unknown"' /tmp/before.json)"
           echo "DNSSEC_BEFORE=$before"
 
-          if [ "$before" != active ]; then
+          if [ "$before" = disabled ]; then
             code="$(curl -sS -o /tmp/enable.json -w '%{http_code}' "${auth[@]}" -X PATCH "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec" --data '{"status":"active"}')"
             echo "DNSSEC_ENABLE_HTTP=$code"
             jq -e '.success == true' /tmp/enable.json >/dev/null
           fi
 
-          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec" -o /tmp/after.json
-          jq -e '.success == true and .result.status == "active"' /tmp/after.json >/dev/null
-          jq -r '.result | "DNSSEC_STATUS=\(.status)\nKEY_TAG=\(.key_tag)\nALGORITHM=\(.algorithm)\nDIGEST_TYPE=\(.digest_type)\nDIGEST=\(.digest)\nDS=\(.ds)"' /tmp/after.json
+          ready=false
+          for attempt in $(seq 1 18); do
+            curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec" -o /tmp/after.json
+            jq -e '.success == true' /tmp/after.json >/dev/null
+            status="$(jq -r '.result.status // "unknown"' /tmp/after.json)"
+            ds="$(jq -r '.result.ds // ""' /tmp/after.json)"
+            echo "DNSSEC_POLL_${attempt} status=$status ds_present=$([ -n "$ds" ] && echo yes || echo no)"
+            if [ -n "$ds" ]; then ready=true; break; fi
+            sleep 10
+          done
+
+          jq -r '.result | "DNSSEC_STATUS=\(.status)\nKEY_TAG=\(.key_tag // "")\nALGORITHM=\(.algorithm // "")\nDIGEST_TYPE=\(.digest_type // "")\nDIGEST=\(.digest // "")\nDS=\(.ds // "")"' /tmp/after.json
+          test "$ready" = true
