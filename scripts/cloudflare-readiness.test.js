@@ -18,11 +18,13 @@ assert.strictEqual(wrangler.pages_build_output_dir, "./public");
 assert.ok(wrangler.compatibility_date >= "2026-08-04", "Node-compatibele Workers-runtime vereist");
 
 for (const naam of ["neerslag", "plaatsnaam", "waarschuwingen"]) {
-  const bron = lees(`functions/api/${naam}.js`);
-  assert.ok(bron.includes(`../../api/${naam}.mjs`));
-  assert.ok(bron.includes("export async function onRequest(context)"));
-  assert.ok(bron.includes("Cloudflare-CDN-Cache-Control"));
-  assert.ok(bron.includes("headers.delete(\"Vercel-CDN-Cache-Control\")"));
+  const functie = lees(`functions/api/${naam}.js`);
+  const route = lees(`api/${naam}.mjs`);
+  assert.ok(functie.includes(`../../api/${naam}.mjs`));
+  assert.ok(functie.includes("export async function onRequest(context)"));
+  assert.ok(!/Vercel/i.test(functie), `${naam}-functie bevat nog Vercel-compatibiliteit`);
+  assert.ok(route.includes("Cloudflare-CDN-Cache-Control"), `${naam}-route mist Cloudflare-cacheheader`);
+  assert.ok(!route.includes("Vercel-CDN-Cache-Control"), `${naam}-route bevat nog Vercel-cacheheader`);
 }
 
 const middleware = lees("functions/_middleware.js");
@@ -33,20 +35,17 @@ assert.ok(middleware.includes("Content-Security-Policy"));
 const routes = JSON.parse(lees("cloudflare/_routes.json"));
 assert.deepStrictEqual(routes, { version: 1, include: ["/api/*"], exclude: [] });
 
-const vercel = JSON.parse(lees("vercel.json"));
 const cloudflareHeaders = lees("cloudflare/_headers");
-const globaleHeaders = vercel.headers.find(regel => regel.source === "/(.*)");
-assert.ok(globaleHeaders && Array.isArray(globaleHeaders.headers));
-for (const header of globaleHeaders.headers) {
-  assert.ok(
-    cloudflareHeaders.includes(`${header.key}: ${header.value}`),
-    `Cloudflare mist security header ${header.key}`
-  );
-  assert.ok(
-    middleware.includes(`\"${header.key}\"`) || middleware.includes(`${header.key}:`),
-    `Cloudflare Functions-middleware mist security header ${header.key}`
-  );
+const headerregels = cloudflareHeaders.split(/\r?\n/).map(regel => /^\s{2}([^:]+):\s*(.*)$/.exec(regel)).filter(Boolean);
+assert.ok(headerregels.length >= 6, "Cloudflare mist globale securityheaders");
+for (const match of headerregels) {
+  const key = match[1].trim();
+  const value = match[2].trim();
+  assert.ok(middleware.includes(`\"${key}\"`), `Cloudflare Functions-middleware mist security header ${key}`);
+  assert.ok(middleware.includes(value), `Cloudflare Functions-middleware wijkt af voor ${key}`);
 }
+
+assert.ok(!fs.existsSync(path.join(root, "vercel.json")), "vercel.json hoort niet meer in de Cloudflare-only repository");
 
 const nietGevonden = lees("cloudflare/404.html");
 assert.ok(nietGevonden.includes("<meta name=\"robots\" content=\"noindex,nofollow\">"));
@@ -58,4 +57,4 @@ for (const script of ["scripts/platform-output-cleanup.js", "scripts/cloudflare-
   assert.ok(fs.existsSync(path.join(root, script)), `${script} ontbreekt`);
 }
 
-console.log("Cloudflare migratiecontract klopt.");
+console.log("Cloudflare-only migratiecontract klopt.");
