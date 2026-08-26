@@ -21,14 +21,14 @@ if(!/^[0-9a-f]{7,40}$/i.test(verwacht))throw new Error("EXPECTED_SHA ontbreekt o
    blijft een frontendregressie hard rood zonder dat rate limiting een vals rood
    resultaat kan geven. De aparte wereldmonitor blijft de live provider-gate. */
 const locaties={
-  Sydney:{lat:-33.8688,lon:151.2093,land:"AU",tz:"Australia/Sydney",offset:36000,temp:18},
-  Amsterdam:{lat:52.3676,lon:4.9041,land:"NL",tz:"Europe/Amsterdam",offset:7200,temp:21}
+  Sydney:{lat:-33.8688,lon:151.2093,land:"AU",tz:"Australia/Sydney",offset:36000,temp:18,tijd:"2026-07-22T22:00",isDag:0},
+  Amsterdam:{lat:52.3676,lon:4.9041,land:"NL",tz:"Europe/Amsterdam",offset:7200,temp:21,tijd:"2026-07-22T14:00",isDag:1}
 };
 function forecast(loc){
   const d=bouw({tempNu:loc.temp,wcNu:1,ccNu:25,pp:()=>22,som:3.2});
   d.latitude=loc.lat;d.longitude=loc.lon;d.timezone=loc.tz;d.utc_offset_seconds=loc.offset;
-  d.current.temperature_2m=loc.temp;d.current.apparent_temperature=loc.temp;
-  d.current.weather_code=1;d.current.is_day=1;d.current.precipitation=0;
+  d.current.time=loc.tijd;d.current.temperature_2m=loc.temp;d.current.apparent_temperature=loc.temp;
+  d.current.weather_code=1;d.current.is_day=loc.isDag;d.current.precipitation=0;
   d.daily.sunshine_duration=d.daily.time.map(()=>7*3600);
   return d;
 }
@@ -40,6 +40,9 @@ const air={
     alder_pollen:[0],birch_pollen:[0],grass_pollen:[2],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]
   }
 };
+/* Beide locatie-fixtures stellen hetzelfde echte moment voor: Amsterdam 14:00
+   en Sydney 22:00. Vijftien minuten erna voorkomt een kunstmatige grenssituatie
+   exact op het uur, terwijl dag, uurdata en plaatsklok onderling kloppen. */
 const fixedNow=Date.parse(forecasts.Amsterdam.current.time+"Z")-(Number(forecasts.Amsterdam.utc_offset_seconds)||0)*1000+15*60000;
 
 function jsonFulfill(route,payload){
