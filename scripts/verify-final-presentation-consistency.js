@@ -27,6 +27,7 @@ ok(html.includes('horizontaal.setAttribute("aria-label",q4PeriodeTijdvak(g,p)+" 
 
 ok(html.includes("function weatherNowDagenNeerslagUitleg(){"),"weekverwachting heeft een finale uitleg-owner voor niet-nul kans met 0,0 mm");
 ok(html.includes('uitleg.id="dagenneerslaguitleg"'),"nul-mm-uitleg krijgt een eigen regel en overschrijft de bedieningshint niet");
+ok(!html.includes('hint.textContent=basis+" "+kans+" kans met 0,0 mm'),"bedieningshint wordt niet meer gebruikt als meteorologische toelichting");
 ok(html.includes('kans+" kans met 0,0 mm betekent dat neerslag mogelijk is'),"aparte weekuitleg legt kans en afgeronde daghoeveelheid in gewone taal uit");
 ok(html.includes('op één decimaal afrondt naar 0,0 mm.'),"uitleg benoemt waarom 0,0 mm naast een kanspercentage kan staan");
 
