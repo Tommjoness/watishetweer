@@ -4,7 +4,7 @@ const SECURITY_HEADERS=Object.freeze({
   "X-Frame-Options":"DENY",
   "Strict-Transport-Security":"max-age=31536000",
   "Permissions-Policy":"geolocation=(self), camera=(), microphone=()",
-  "Content-Security-Policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://geocoding-api.open-meteo.com https://api.bigdatacloud.net; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  "Content-Security-Policy":"default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://geocoding-api.open-meteo.com https://api.bigdatacloud.net; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 });
 
 export async function onRequest(context){
