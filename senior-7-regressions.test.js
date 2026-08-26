@@ -19,7 +19,7 @@ ok(engine.includes('w.niveauIsOfficieel===false')&&engine.includes('Officiële w
   try{
     const mod=await import(pathToFileURL(path.join(R,"api/plaatsnaam.mjs")).href+"?t="+Date.now());
     const r=await mod.default.fetch(new Request("https://example.test/api/plaatsnaam?lat=52.37&lon=4.90"));
-    ok(r.headers.get("vercel-cdn-cache-control")==="s-maxage=86400, stale-while-revalidate=604800","plaatsnaam zet expliciete Vercel-CDN TTL");
+    ok(r.headers.get("cloudflare-cdn-cache-control")==="s-maxage=86400, stale-while-revalidate=604800","plaatsnaam zet expliciete Cloudflare-CDN TTL");
     ok(r.headers.get("cache-control")==="public, max-age=0, must-revalidate","browser cachet dynamische plaatsnaam niet langdurig");
   }finally{global.fetch=oud;}
   console.log("Senior-7 regressies: "+n+" controles geslaagd.");
