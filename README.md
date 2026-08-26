@@ -4,13 +4,13 @@ Nederlandstalige weerapp voor `watishetweer.nl`. De applicatie combineert actuel
 
 ## Productie en build
 
-Vercel bouwt de applicatie met:
+Cloudflare Pages is het enige productieplatform. De productieflow draait vanuit GitHub Actions en bouwt met:
 
 ```bash
-npm run build
+npm run build:cloudflare
 ```
 
-De build assembleert de canonieke bronbestanden en gecontroleerde buildlagen tot `public/`. Vercel publiceert die map als productie-artifact. Wijzig daarom niet handmatig bestanden in `public/`; die map wordt opnieuw opgebouwd.
+De build assembleert de canonieke bronbestanden en gecontroleerde buildlagen tot `public/`. Daarna voegt `scripts/cloudflare-output.js` de Cloudflare Pages-configuratie toe en deployt `.github/workflows/cloudflare-production.yml` exact de `main`-SHA. Wijzig daarom niet handmatig bestanden in `public/`; die map wordt opnieuw opgebouwd.
 
 Belangrijke ingangen:
 
@@ -18,18 +18,22 @@ Belangrijke ingangen:
 - `interpretatie-engine.js` — centrale interpretatielogica.
 - `build-weather.js` — assembleert het productie-artifact en bindt de serviceworker-cache aan de app-shell.
 - `scripts/` — afgebakende build-, verificatie- en regressielagen.
-- `api/` — publieke Vercel-routes; bevat alleen de dunne API-wrappers.
-- `lib/` — serverlogica achter de API-wrappers.
-- `vercel.json` — build/output en algemene responseheaders.
+- `api/` — gedeelde serverroute-logica die door Cloudflare Pages Functions wordt aangeroepen.
+- `functions/api/` — dunne Cloudflare Pages Functions-wrappers.
+- `functions/_middleware.js` — securityheaders voor dynamische Cloudflare-responses.
+- `cloudflare/_headers` — securityheaders voor statische Cloudflare-responses.
+- `cloudflare/_routes.json` — expliciete Pages Functions-routing.
+- `wrangler.jsonc` — Cloudflare Pages-projectconfiguratie.
 
 ## API-routes
 
 De huidige publieke serverroutes zijn:
 
 - `api/plaatsnaam.mjs` — reverse geocoding voor `Mijn locatie` wanneer de directe BigDataCloud-resolutie niet genoeg oplevert.
+- `api/neerslag.mjs` — actuele en korte-termijnneerslag via de beschikbare providerlaag.
 - `api/waarschuwingen.mjs` — officiële weerwaarschuwingen op basis van de gekozen locatie.
 
-Serverlogica staat in `lib/`. Voeg niet zomaar extra bestanden aan `api/` toe: ieder bestand daar wordt een publieke functie.
+Serverlogica staat in `lib/`. De drie `functions/api/*.js`-bestanden zijn alleen de Cloudflare-ingangen en horen geen tweede implementatie van de route te bevatten.
 
 ### Reverse geocoding
 
@@ -73,10 +77,10 @@ De minimale lokale kwaliteitsketen is:
 npm test
 ```
 
-De buildketen is:
+De Cloudflare-productiebuild is:
 
 ```bash
-npm run build
+npm run build:cloudflare
 ```
 
 De repository bevat daarnaast echte browsercontroles voor Chromium en WebKit, mobiele en desktopbreedtes, performance, neerslagrandgevallen, internationale locaties en serviceworker/offlinegedrag. GitHub Actions is de uiteindelijke merge-eis; een wijziging hoort niet gemerged te worden op basis van alleen een lokale groene subset.
@@ -90,11 +94,13 @@ Belangrijke contracten die expliciet worden getest:
 - waarschuwingen zijn fail-closed wanneer plaatsdekking niet bewezen is;
 - lange plaatsnamen mogen geen horizontale overflow veroorzaken;
 - het definitieve artifact en de serviceworker-cacheversie moeten bij elkaar horen;
+- statische en dynamische productie-responses houden hetzelfde securitycontract;
+- API-cachegedrag gebruikt expliciet `Cloudflare-CDN-Cache-Control`;
 - dezelfde kernfunctionaliteit wordt in Chromium en WebKit gecontroleerd.
 
 ## Serviceworker en cache
 
-De serviceworker-versie wordt tijdens de build afgeleid van de definitieve app-shell. Verhoog of wijzig daarom niet handmatig een cacheversie om een wijziging ‘zichtbaar’ te krijgen. De gedeelde build-/postbuildhelpers vernieuwen en verifiëren de cachehash nadat het artifact is gewijzigd.
+De serviceworker-versie wordt tijdens de build afgeleid van de definitieve app-shell. Verhoog of wijzig daarom niet handmatig een cacheversie om een wijziging zichtbaar te krijgen. De gedeelde build- en postbuildhelpers vernieuwen en verifiëren de cachehash nadat het artifact is gewijzigd.
 
 ## Werkwijze voor wijzigingen
 
@@ -103,42 +109,21 @@ Werk via een aparte branch en pull request. Houd wijzigingen klein en bewijsbaar
 1. oorzaak vaststellen;
 2. plan bepalen;
 3. broncode aanpassen;
-4. relevante unit-/contracttests toevoegen of bijwerken;
+4. relevante unit- en contracttests toevoegen of bijwerken;
 5. volledige regressie- en browserketen draaien;
-6. preview controleren waar toegankelijk;
-7. pas na merge productie, runtimefouten en het uiteindelijke deployment-SHA controleren.
+6. Cloudflare-preview controleren waar van toepassing;
+7. pas na merge de Cloudflare-production-run en de publieke production-smoke controleren.
 
 Weerformules, interpretatiebeleid, waarschuwing-scope en andere productregels horen niet als screenshotpatch of plaats-specifieke uitzondering te worden aangepast. Nieuwe oplossingen moeten generiek blijven voor huidige en toekomstige locaties.
 
 ## Productie terugdraaien
 
-Gebruik een rollback alleen bij een bewezen productiestoring of ernstige regressie. Een rollback verplaatst het productieverkeer naar een eerder Vercel-artifact; de code op `main` verandert hierdoor niet. Pauzeer daarom nieuwe merges totdat de oorzaak via een aparte pull request is hersteld.
+Gebruik een rollback alleen bij een bewezen productiestoring of ernstige regressie. Productie hoort altijd herleidbaar te blijven tot een GitHub-SHA.
 
-1. Leg de fout, het tijdstip en de actieve build-SHA vast. De productie-HTML bevat hiervoor `weather-build-sha`:
+1. Leg de fout, het tijdstip en de actieve build-SHA vast. De productie-HTML bevat hiervoor `weather-build-sha`.
+2. Bepaal de laatste bekende goede commit op `main`.
+3. Maak een kleine revert-PR die de foutieve wijziging terugdraait. Omzeil de verplichte CI niet.
+4. Na merge deployt `Cloudflare production` exact de nieuwe `main`-SHA naar Pages.
+5. Verifieer daarna de `WeatherNow production smoke`: homepage, `www`-redirect, securityheaders, sitemap, kernroutes, API-contracten en de wereldwijde mobiel/desktopmatrix moeten groen zijn.
 
-   ```bash
-   curl -fsS https://watishetweer.nl/ | grep -o 'name="weather-build-sha" content="[^"]*"'
-   ```
-
-2. Kies uitsluitend een eerder `READY` productie-artifact waarvan commit en functionele werking bekend zijn. Controleer het doel vóór de rollback:
-
-   ```bash
-   vercel list --prod
-   vercel inspect <vorige-deployment-url-of-id>
-   ```
-
-3. Wijs productie terug naar exact dat artifact en controleer de rollbackstatus:
-
-   ```bash
-   vercel rollback <vorige-deployment-url-of-id>
-   vercel rollback status weathernow
-   ```
-
-4. Verifieer daarna minimaal:
-
-   - `https://watishetweer.nl/` reageert en toont de verwachte build-SHA;
-   - `https://www.watishetweer.nl/` verwijst correct naar het hoofddomein;
-   - zoeken, een plaatsroute, `/api/plaatsnaam` en `/api/waarschuwingen` werken;
-   - de productielogs bevatten geen nieuwe errors of `5xx`-responses.
-
-5. Repareer of revert de fout daarna via een nieuwe branch en pull request. Controleer opnieuw de volledige CI, preview en productie voordat de normale mergeflow wordt hervat. Verwijder geen deployment: die blijft nodig voor analyse en een eventuele herstelactie.
+Verwijder oude Cloudflare Pages-deployments niet routinematig; immutable deployments blijven nuttig voor vergelijking en incidentanalyse.
