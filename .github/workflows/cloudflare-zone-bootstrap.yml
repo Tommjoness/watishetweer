@@ -1,0 +1,45 @@
+name: Cloudflare zone bootstrap
+
+on:
+  push:
+    branches: [ops/cloudflare-domain-diagnose-20260826]
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Maak zone zo nodig aan en scan bestaande DNS
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl -sS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl' -o /tmp/zones.json
+          zone_id="$(jq -r '.result[0].id // ""' /tmp/zones.json)"
+          if [ -z "$zone_id" ]; then
+            echo 'Zone bestaat nog niet; probeer aan te maken.'
+            code="$(curl -sS -o /tmp/create.json -w '%{http_code}' "${auth[@]}" -X POST 'https://api.cloudflare.com/client/v4/zones' --data "$(jq -cn --arg account "$CLOUDFLARE_ACCOUNT_ID" '{account:{id:$account},name:"watishetweer.nl",type:"full"}')")"
+            echo "Create zone HTTP $code"
+            jq -r '{success,errors,result:(if .result then {id:.result.id,name:.result.name,status:.result.status,name_servers:.result.name_servers,original_name_servers:.result.original_name_servers} else null end)} | @json' /tmp/create.json
+            jq -e '.success == true' /tmp/create.json >/dev/null
+            zone_id="$(jq -r '.result.id' /tmp/create.json)"
+          else
+            echo "Zone bestaat: $zone_id"
+          fi
+
+          echo "ZONE_ID=$zone_id"
+          echo 'Trigger DNS quick scan.'
+          code="$(curl -sS -o /tmp/scan.json -w '%{http_code}' "${auth[@]}" -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/scan/trigger")"
+          echo "Scan trigger HTTP $code"
+          jq -r '{success,errors,messages} | @json' /tmp/scan.json
+          jq -e '.success == true' /tmp/scan.json >/dev/null
+
+          sleep 12
+          code="$(curl -sS -o /tmp/review.json -w '%{http_code}' "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/scan/review")"
+          echo "Scan review HTTP $code"
+          jq -r '{success,errors,count:(.result|length),records:(.result // [] | map({type,name,content,priority,ttl,proxied}))} | @json' /tmp/review.json
