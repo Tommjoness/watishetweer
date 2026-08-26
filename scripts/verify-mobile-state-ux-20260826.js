@@ -21,7 +21,7 @@ ok(!ux.grafiekHerstelNodig(true,24,["00"]),"bestaande mobiele uuras wordt niet o
 ok(ux.terugNaarBereikLabel(24)==="Komende 24 uur","resetknop benoemt de rollende 24-uursmodus");
 ok(ux.terugNaarBereikLabel(48)==="Komende 48 uur","resetknop benoemt ook de rollende 48-uursmodus");
 ok(ux.terugNaarBereikLabel(168)==="Komende zeven dagen","resetknop benoemt het langere bereik zonder 'terug naar nu'-ambiguïteit");
-ok(ux.weekUitlegSamenvatting("65% kans met 0,0 mm betekent dat neerslag mogelijk is")==="Waarom 65% kans en 0,0 mm?","weekuitleg krijgt een korte, concrete samenvatting");
+ok(ux.weekUitlegSamenvatting("65% kans met 0,0 mm betekent dat neerslag mogelijk is")==="65% kans met 0,0 mm: afgerond op één decimaal.","weekuitleg krijgt een korte, direct begrijpelijke samenvatting");
 
 for(const vereist of [
   "/* ===== MOBILE STATE UX 20260826 ===== */",
@@ -32,6 +32,7 @@ for(const vereist of [
   "Deze kalenderdag per uur.",
   "Toon "+"\"+label.toLowerCase()+\" vanaf nu",
   "dagenneerslaguitleg-compact",
+  "afgerond op één decimaal.",
   "nacht-meta-details",
   "Zicht en maan",
   "setTimeout(()=>{",
@@ -40,6 +41,7 @@ for(const vereist of [
 
 ok(!html.includes('back.textContent="Terug naar nu"'),"nieuwe state-UX-runtime zet de resetcopy niet terug naar de ambigue oude tekst");
 ok(html.includes('details.className="data-uitleg dagenneerslaguitleg-compact"'),"weekuitleg wordt een inklapbaar details-element");
+ok(html.includes('const p=document.createElement("p");p.textContent=tekst;'),"volledige 0,0-mm-uitleg blijft achter de compacte samenvatting beschikbaar");
 ok(html.includes('details.open=!mobiel();'),"Nachtzicht-details zijn mobiel compact en desktop standaard open");
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
