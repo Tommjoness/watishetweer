@@ -18,11 +18,6 @@ function vervangExact(bron,oud,nieuw,label){
   if(n!==1)throw new Error(label+"-anker ontbreekt of is dubbel: "+n);
   return bron.replace(oud,nieuw);
 }
-function voegNaUniekElementToe(bron,re,toevoeging,label){
-  const matches=[...bron.matchAll(re)];
-  if(matches.length!==1)throw new Error(label+"-anker ontbreekt of is dubbel: "+matches.length);
-  return bron.replace(matches[0][0],matches[0][0]+toevoeging);
-}
 
 let html=fs.readFileSync(PAD,"utf8");
 if(html.includes(CSS_MARK)||html.includes(JS_MARK))throw new Error("Staff-auditlaag staat al in de artifact.");
@@ -57,13 +52,11 @@ const CHART_NIEUW=CHART_BRON+`
       </details>`;
 html=vervangExact(html,CHART_BRON,CHART_NIEUW,"toegankelijke grafiektabel");
 
-/* Kans en hoeveelheid komen uit verschillende forecastproducten. De tekst van
-   #dagenhint is bewust eigendom van eerdere presentatielagen en kan wijzigen.
-   Veranker daarom op het semantisch unieke element, niet op zijn copy, en blijf
-   fail-fast als die structuur ontbreekt of dubbel is. */
-const DAGEN_UITLEG=`
-    <details id="weekbron-uitleg" class="data-uitleg weekbron-uitleg"><summary>Hoe neerslagkans en hoeveelheid samenhangen</summary><p>De kans is de hoogste uurlijkse kans op meer dan 0,1 mm neerslag en is gebaseerd op een ensemble van modelberekeningen. De hoeveelheid is de opgetelde neerslag uit de modelverwachting voor die dag. Het zijn verschillende grootheden; een lage kans en een hogere modelsom kunnen daarom tegelijk voorkomen.</p></details>`;
-html=voegNaUniekElementToe(html,/<p\s+class="hint"\s+id="dagenhint"[^>]*>[\s\S]*?<\/p>/g,DAGEN_UITLEG,"neerslag-broncontract");
+/* Neerslagkans en dagsom blijven bewust bij de relevante dagrij uitgelegd.
+   #179 heeft de losse algemene uitleg verwijderd; deze staff-laag mag die
+   productbeslissing niet opnieuw ongedaan maken. De runtime verrijkt alleen de
+   bestaande daggebonden notities met het broncontract. */
+if(html.includes('id="weekbron-uitleg"'))throw new Error("Losse weekbrede neerslaguitleg mag niet terugkeren.");
 
 /* De startup-router mag een beschadigde of gedeeltelijke lat/lon-query niet
    negeren en daarna oude localStorage-data onder die URL tonen. De bestaande
@@ -116,13 +109,15 @@ if(!scripts.length)throw new Error("Geen inline scripts na staff-audit.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:staff-audit-"+(i+1)}));
 
 for(const vereist of [
-  'class="skiplink"','role="banner"','<main id="app" tabindex="-1"','id="chartdata"','id="weekbron-uitleg"',
+  'class="skiplink"','role="banner"','<main id="app" tabindex="-1"','id="chartdata"',
   'WeatherNowStaffAudit.markeerNavigatie("push")','window.addEventListener("popstate"',
-  'Deze gedeelde locatie is ongeldig','Officiële melding','National Weather Service'
+  'Deze gedeelde locatie is ongeldig','Officiële melding','National Weather Service',
+  'Kans en dagsom zijn verschillende modelwaarden'
 ])if(!html.includes(vereist))throw new Error("Staff-audit invariant ontbreekt: "+vereist);
+if(html.includes('id="weekbron-uitleg"'))throw new Error("Staff-audit heeft losse weekbrede neerslaguitleg teruggebracht.");
 
 fs.writeFileSync(PAD,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"staff-audit-20260826");
-console.log("Staff-auditlaag toegepast: history, invalid deep links, grafiekdata, touch targets, warningtitels, neerslagduiding en landmarks; cache "+versie+".");
+console.log("Staff-auditlaag toegepast: history, invalid deep links, grafiekdata, touch targets, warningtitels, daggebonden neerslagduiding en landmarks; cache "+versie+".");
 
-module.exports={vervangExact,voegNaUniekElementToe,COORD_BRON,COORD_NIEUW,SEARCH_BRON,SEARCH_NIEUW,CHIP_BRON,CHIP_NIEUW,GPS_BRON,GPS_NIEUW,CHART_BRON,CHART_NIEUW,DAGEN_UITLEG};
+module.exports={vervangExact,COORD_BRON,COORD_NIEUW,SEARCH_BRON,SEARCH_NIEUW,CHIP_BRON,CHIP_NIEUW,GPS_BRON,GPS_NIEUW,CHART_BRON,CHART_NIEUW};
