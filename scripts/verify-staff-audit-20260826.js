@@ -15,12 +15,14 @@ for(const [naam,html] of [["root",rootHtml],["Amsterdam-route",routeHtml]]){
   if(tel(html,"/* ===== STAFF AUDIT 20260826 CSS ===== */")!==1)throw new Error(naam+": staff-CSS ontbreekt of is dubbel");
   for(const vereist of [
     'class="skiplink" href="#app"','role="banner"','<main id="app" tabindex="-1"',
-    'id="chartdata"','<table>','id="weekbron-uitleg"',
+    'id="chartdata"','<table>','document.querySelectorAll("#days .dag-neerslagnotitie")',
+    'Kans en dagsom zijn verschillende modelwaarden',
     'window.addEventListener("popstate"','history.pushState(state',
     'min-inline-size:40px','min-block-size:40px',
     'Deze gedeelde locatie is ongeldig','Waakzaamheid voor overstromingen',
     'Officiële titel:','National Weather Service'
   ])if(!html.includes(vereist))throw new Error(naam+": staff-invariant ontbreekt: "+vereist);
+  if(html.includes('id="weekbron-uitleg"'))throw new Error(naam+": losse weekbrede neerslaguitleg is teruggekeerd");
   if(!html.includes('property="og:image" content="https://watishetweer.nl/icon-512.png"'))throw new Error(naam+": og:image ontbreekt");
   if(!html.includes('name="twitter:image" content="https://watishetweer.nl/icon-512.png"'))throw new Error(naam+": twitter:image ontbreekt");
 }
@@ -28,7 +30,7 @@ for(const [naam,html] of [["root",rootHtml],["Amsterdam-route",routeHtml]]){
 if(!rootHtml.includes('hard.gedeeldeUrlCoordinaten(p)'))throw new Error("Root-startup gebruikt niet de bestaande centrale coordinate-validator.");
 if(rootHtml.includes('const la=parseFloat(p.get("lat")),lo=parseFloat(p.get("lon"));'))throw new Error("Oude permissieve parseFloat-startup staat nog in root artifact.");
 if(tel(rootHtml,'WeatherNowStaffAudit.markeerNavigatie("push")')<3)throw new Error("Niet alle expliciete locatiekeuzes markeren browserhistory.");
-if(!rootHtml.includes("De kans is de hoogste uurlijkse kans op meer dan 0,1 mm neerslag"))throw new Error("Broncontract kans versus hoeveelheid ontbreekt.");
+if(!rootHtml.includes("DAG_NEERSLAG_BRONCONTRACT"))throw new Error("Daggebonden broncontract kans versus hoeveelheid ontbreekt.");
 if(!rootHtml.includes("function weatherNowWindstootBegin(tijd)"))throw new Error("Datumgrensvaste windstoot-owner ontbreekt in productieartifact.");
 if(tel(rootHtml,"function weatherNowWindstootTekst(pg,nu,dag,vak){")!==1)throw new Error("Windstoottekst heeft niet exact één owner in productieartifact.");
 
@@ -38,4 +40,4 @@ if(!routeHtml.includes('<link rel="canonical" href="https://watishetweer.nl/weer
 if(!routeHtml.includes("window.__WEATHERNOW_ROUTE_LOCATION__"))throw new Error("Routebootstrap ontbreekt na staff-audit.");
 
 const rauw=Buffer.byteLength(rootHtml),gzip=require("zlib").gzipSync(Buffer.from(rootHtml)).length;
-console.log(`Staff-audit build groen: root + Amsterdam-route, history, invalid URL, 40px touch target, grafiektabel, warningmapping, neerslagduiding en share-image. Root HTML ${rauw} bytes, gzip ${gzip} bytes.`);
+console.log(`Staff-audit build groen: root + Amsterdam-route, history, invalid URL, 40px touch target, grafiektabel, warningmapping, daggebonden neerslagduiding en share-image. Root HTML ${rauw} bytes, gzip ${gzip} bytes.`);
