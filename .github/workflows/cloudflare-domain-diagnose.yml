@@ -52,6 +52,7 @@ jobs:
               ['CNAME',()=>dns.resolveCname(name)],
               ['TXT',()=>dns.resolveTxt(name)],
               ['MX',()=>dns.resolveMx(name)],
+              ['CAA',()=>dns.resolveCaa(name)],
             ]) {
               try { console.log(label, JSON.stringify(await fn())); }
               catch(e){ console.log(label, `ERROR ${e.code||e.message}`); }
@@ -73,4 +74,21 @@ jobs:
           curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?per_page=100" -o /tmp/records.json
           jq -e '.success == true' /tmp/records.json >/dev/null
           echo '=== Cloudflare DNS records ==='
-          jq -r '.result[] | {id,type,name,content,priority,proxied,ttl} | @json' /tmp/records.json
+          jq -r '.result[] | {type,name,content,priority,proxied,ttl} | @json' /tmp/records.json
+
+      - name: Scan huidige TransIP-zone en vergelijk
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl' -o /tmp/zones.json
+          zone_id="$(jq -r '.result[0].id // ""' /tmp/zones.json)"
+          test -n "$zone_id"
+
+          curl -fsS "${auth[@]}" -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/scan/trigger" -o /tmp/scan-trigger.json
+          jq -e '.success == true' /tmp/scan-trigger.json >/dev/null
+          sleep 12
+          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/scan/review" -o /tmp/scan-review.json
+          jq -e '.success == true' /tmp/scan-review.json >/dev/null
+          echo '=== Door Cloudflare gevonden records op huidige TransIP-zone ==='
+          jq -r '.result[]? | {type,name,content,priority,proxied,ttl} | @json' /tmp/scan-review.json
