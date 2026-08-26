@@ -47,13 +47,13 @@ export default {
 
     const internCache = headers.get("Cache-Control");
     if (statusCode >= 400) {
-      headers.delete("Vercel-CDN-Cache-Control");
+      headers.delete("Cloudflare-CDN-Cache-Control");
       headers.set("Cache-Control", "private, no-store");
     } else if (gedegradeerd) {
-      headers.set("Vercel-CDN-Cache-Control", "s-maxage=15, stale-while-revalidate=15");
+      headers.set("Cloudflare-CDN-Cache-Control", "s-maxage=15, stale-while-revalidate=15");
       headers.set("Cache-Control", "public, max-age=0, must-revalidate");
     } else if (internCache) {
-      headers.set("Vercel-CDN-Cache-Control", internCache);
+      headers.set("Cloudflare-CDN-Cache-Control", internCache);
       headers.set("Cache-Control", "public, max-age=0, must-revalidate");
     }
 
