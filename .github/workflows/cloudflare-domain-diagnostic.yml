@@ -1,0 +1,60 @@
+name: Cloudflare domeindiagnose
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_PROJECT: watishetweer
+
+jobs:
+  diagnose:
+    if: github.head_ref == 'diag/cloudflare-domain-20260826'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lees Pages custom-domainstatus
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT/domains"
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          for domain in watishetweer.nl www.watishetweer.nl; do
+            encoded="$(printf '%s' "$domain" | jq -sRr @uri)"
+            curl -sS "${auth[@]}" "$API/$encoded" -o "/tmp/domain-${domain//./-}.json"
+            echo "=== PAGES DOMAIN: $domain ==="
+            jq '{success, errors, result: (.result | {name, status, validation_data, error_message})}' "/tmp/domain-${domain//./-}.json"
+          done
+
+      - name: Lees Cloudflare-zonestatus met bestaand token
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sS \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            'https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl' \
+            -o /tmp/zone.json
+          echo '=== CLOUDFLARE ZONE ==='
+          jq '{success, errors, result: [.result[]? | {name, status, paused, name_servers, original_name_servers, original_registrar}]}' /tmp/zone.json
+
+      - name: Lees publieke DNS zonder mutaties
+        shell: bash
+        run: |
+          set -euo pipefail
+          dns() {
+            local name="$1" type="$2"
+            echo "=== DNS $type $name ==="
+            curl -fsS "https://dns.google/resolve?name=$name&type=$type" \
+              | jq '{Status, Answer: [.Answer[]? | {name, type, TTL, data}]}'
+          }
+          dns watishetweer.nl NS
+          dns watishetweer.nl A
+          dns watishetweer.nl AAAA
+          dns www.watishetweer.nl CNAME
+          dns www.watishetweer.nl A
