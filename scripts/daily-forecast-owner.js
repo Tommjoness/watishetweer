@@ -33,6 +33,20 @@ function weatherNowDagNaam(datum,volledig){
   if(sleutel===weatherNowLokaleDatumSleutel())return volledig?"Vandaag "+nr:"Vandaag";
   return (volledig?DAGENVOL[dt.getDay()]:DAGEN[dt.getDay()])+" "+nr;
 }
+function weatherNowGeselecteerdeDagKop(datum){
+  const sleutel=String(datum||"").slice(0,10),dt=new Date(sleutel+"T12:00:00");
+  if(!sleutel||!Number.isFinite(dt.getTime()))return "Dagverwachting";
+  const dagMaand=dt.toLocaleDateString("nl-NL",{day:"numeric",month:"long"});
+  if(sleutel===weatherNowLokaleDatumSleutel())return "Vandaag "+dagMaand+", per uur";
+  return dt.toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long"})+", per uur";
+}
+function weatherNowGeselecteerdeDagHint(day,index){
+  const i=Number(index),kans=eindigGetal(day&&day.precipitation_probability_max&&day.precipitation_probability_max[i]);
+  const som=eindigGetal(day&&day.precipitation_sum&&day.precipitation_sum[i]);
+  const kansTekst=weatherNowDagNeerslagTekst(kans,som),mmTekst=weatherNowDagNeerslagMmTekst(som);
+  if(kansTekst==="–"&& !mmTekst)return "Selecteer een punt in de grafiek voor uurdetails.";
+  return "Kans op neerslag: "+kansTekst+(mmTekst?" · verwachte hoeveelheid: "+mmTekst:"")+". Selecteer een punt in de grafiek voor uurdetails.";
+}
 function dagen(){
 `;
 
@@ -47,6 +61,9 @@ const DRAIN_PRODUCTIE='      <div class="drain">${neerslagTekst}${\n        neer
 
 const DAGNAAM_BRON='    const lang=DAGENVOL[dt.getDay()]+" "+nr;\n    const kort=DAGEN[dt.getDay()]+" "+nr;\n';
 const DAGNAAM_PRODUCTIE='    const lang=weatherNowDagNaam(t,true);\n    const kort=weatherNowDagNaam(t,false);\n';
+
+const CHARTLAB_BRON='  document.getElementById("chartlab").textContent = dg==null ? (S.bereik===24?"De komende 24 uur":S.bereik===48?"De komende 48 uur":"De komende zeven dagen")\n    : new Date(S.d.daily.time[dg]+"T12:00:00").toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long"})+", per uur";\n';
+const CHARTLAB_PRODUCTIE='  document.getElementById("chartlab").textContent = dg==null ? (S.bereik===24?"De komende 24 uur":S.bereik===48?"De komende 48 uur":"De komende zeven dagen")\n    : weatherNowGeselecteerdeDagKop(S.d.daily.time[dg]);\n  if(dg!=null){\n    const dagHint=document.getElementById("charthint");\n    if(dagHint)dagHint.textContent=weatherNowGeselecteerdeDagHint(S.d.daily,dg);\n  }\n';
 
 const KOP_BRON='      <div class="dwind">Wind max</div><div class="dmin">Min</div><div class="bar"></div><div class="dmax">Max</div>\n      <div class="drain">Kans</div></div>`;\n';
 const KOP_PRODUCTIE='      <div class="dwind">Wind max</div><div class="dmin">Min</div><div class="bar">Bereik</div><div class="dmax">Max</div>\n      <div class="drain">Neerslag</div></div>`;\n';
@@ -91,6 +108,7 @@ function pasDailyForecastOwnerToe(html){
   uit=vervangEen(uit,DCOND_BRON,DCOND_PRODUCTIE,"weekomschrijving zonder dubbele mm");
   uit=vervangEen(uit,DRAIN_BRON,DRAIN_PRODUCTIE,"weekneerslagcel");
   uit=vervangEen(uit,DAGNAAM_BRON,DAGNAAM_PRODUCTIE,"lokale dagnaam");
+  uit=vervangEen(uit,CHARTLAB_BRON,CHARTLAB_PRODUCTIE,"gekozen-dag grafiekkop");
   uit=vervangEen(uit,KOP_BRON,KOP_PRODUCTIE,"weekverwachting-koppen");
   uit=vervangEen(uit,KOP_CSS_BRON,KOP_CSS_PRODUCTIE,"Bereik-kopuitlijning");
   return uit;
@@ -100,6 +118,7 @@ module.exports={
   dagNeerslagTekst,dagNeerslagMmTekst,dagNaam,pasDailyForecastOwnerToe,
   DAGEN_HAAK,HELPER_PRODUCTIE,
   DCOND_BRON,DCOND_PRODUCTIE,KANS_BRON,KANS_PRODUCTIE,
-  DRAIN_BRON,DRAIN_PRODUCTIE,DAGNAAM_BRON,DAGNAAM_PRODUCTIE,KOP_BRON,KOP_PRODUCTIE,
+  DRAIN_BRON,DRAIN_PRODUCTIE,DAGNAAM_BRON,DAGNAAM_PRODUCTIE,
+  CHARTLAB_BRON,CHARTLAB_PRODUCTIE,KOP_BRON,KOP_PRODUCTIE,
   KOP_CSS_BRON,KOP_CSS_PRODUCTIE
 };
