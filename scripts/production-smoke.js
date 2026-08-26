@@ -51,12 +51,16 @@ function leesJson(resultaat,label){
   try{return JSON.parse(resultaat.text);}
   catch(e){throw new Error(`${label}: response is geen geldige JSON (${e.message})`);}
 }
+function controleerCloudflare(response,label){
+  assert.equal((response.headers.get("server")||"").toLowerCase(),"cloudflare",`${label}: response loopt niet aantoonbaar via Cloudflare`);
+  assert(response.headers.get("cf-ray"),`${label}: Cloudflare CF-Ray ontbreekt`);
+  assert.equal(response.headers.get("strict-transport-security"),"max-age=31536000",`${label}: HSTS-contract ontbreekt of wijkt af`);
+}
 
 async function wachtOpExacteDeployment(){
   let laatst=null,lastStatus=null,lastError=null;
   for(let i=1;i<=pogingen;i++){
     try{
-      // De buitenste deploymentpoll is zelf al begrensd; voorkom hier een tweede retrylaag.
       const {response,text}=await haal(ROOT+"/",{retry:false,timeoutMs:Math.min(requestTimeoutMs,4000)});
       lastStatus=response.status;laatst=buildSha(text);lastError=null;
       if(response.ok&&laatst===verwacht){
@@ -73,6 +77,7 @@ async function wachtOpExacteDeployment(){
 (async()=>{
   const root=await wachtOpExacteDeployment();
   assert(root.response.ok,"homepage is niet 2xx");
+  controleerCloudflare(root.response,"homepage");
   geenNoindex(root.response,"homepage");
   assert(root.text.includes('<link rel="canonical" href="https://watishetweer.nl/">'),"homepage canonical ontbreekt");
   assert(root.text.includes('href="/weer/"'),"homepage mist crawlbare plaatsindex-link");
@@ -80,6 +85,7 @@ async function wachtOpExacteDeployment(){
 
   const robots=await haal(ROOT+"/robots.txt");
   assert(robots.response.ok,"robots.txt is niet 2xx");
+  controleerCloudflare(robots.response,"robots.txt");
   geenNoindex(robots.response,"robots.txt");
   assert(/^User-agent: \*$/m.test(robots.text)&&/^Allow: \/$/m.test(robots.text),"robots.txt staat crawling niet correct toe");
   assert(robots.text.includes("Sitemap: https://watishetweer.nl/sitemap.xml"),"robots.txt mist canonieke sitemap");
@@ -118,6 +124,7 @@ async function wachtOpExacteDeployment(){
 
   const www=await haal(WWW+"/");
   assert(www.response.ok,"www-homepage is niet 2xx na redirects");
+  controleerCloudflare(www.response,"www-homepage");
   geenNoindex(www.response,"www-homepage");
   assert(www.text.includes('<link rel="canonical" href="https://watishetweer.nl/">'),"www-homepage canonicaliseert niet naar root");
   assert.equal(buildSha(www.text),verwacht,"www-homepage komt uit andere deployment");
@@ -135,6 +142,7 @@ async function wachtOpExacteDeployment(){
 
   const plaatsnaam=await haal(ROOT+"/api/plaatsnaam?lat=52.3508&lon=5.2647",{accept:"application/json"});
   assert.equal(plaatsnaam.response.status,200,"plaatsnaam-API moet voor geldige coordinaten 200 teruggeven");
+  controleerCloudflare(plaatsnaam.response,"plaatsnaam-API");
   const plaats=leesJson(plaatsnaam,"plaatsnaam-API");
   assert(plaats&&typeof plaats==="object"&&!Array.isArray(plaats),"plaatsnaam-API moet een JSON-object teruggeven");
   assert(Object.prototype.hasOwnProperty.call(plaats,"naam")&&Object.prototype.hasOwnProperty.call(plaats,"land"),"plaatsnaam-API mist naam/land-contract");
@@ -143,6 +151,7 @@ async function wachtOpExacteDeployment(){
 
   const neerslag=await haal(ROOT+"/api/neerslag?lat=52.3508&lon=5.2647&land=NL",{accept:"application/json"});
   assert.equal(neerslag.response.status,200,"neerslag-API moet voor geldige coordinaten binnen KNMI-dekking 200 teruggeven");
+  controleerCloudflare(neerslag.response,"neerslag-API");
   const regen=leesJson(neerslag,"neerslag-API");
   assert(regen&&typeof regen==="object"&&!Array.isArray(regen),"neerslag-API moet een JSON-object teruggeven");
   assert.equal(typeof regen.beschikbaar,"boolean","neerslag-API beschikbaar moet boolean zijn");
@@ -156,6 +165,7 @@ async function wachtOpExacteDeployment(){
 
   const waarschuwingen=await haal(ROOT+"/api/waarschuwingen?lat=52.3508&lon=5.2647&land=NL",{accept:"application/json"});
   assert.equal(waarschuwingen.response.status,200,"waarschuwingen-API moet voor geldige coordinaten 200 teruggeven");
+  controleerCloudflare(waarschuwingen.response,"waarschuwingen-API");
   const waarschuwing=leesJson(waarschuwingen,"waarschuwingen-API");
   assert(waarschuwing&&typeof waarschuwing==="object"&&!Array.isArray(waarschuwing),"waarschuwingen-API moet een JSON-object teruggeven");
   assert.equal(waarschuwing.land,"NL","waarschuwingen-API moet de expliciete landcode behouden");
@@ -163,5 +173,5 @@ async function wachtOpExacteDeployment(){
   assert(Array.isArray(waarschuwing.lijst),"waarschuwingen-API lijst moet een array zijn");
   assert(waarschuwing.lijst.every(item=>item&&item.plaatsSpecifiek===true),"waarschuwingen-API mag alleen plaatsgebonden waarschuwingen publiceren");
 
-  console.log(`PRODUCTION-SMOKE GESLAAGD: ${verwacht}; exacte build, homepage/www-redirect, robots, sitemap, kernroutes, share-canonical, 404 en alle drie API-contracten zijn publiek coherent.`);
+  console.log(`PRODUCTION-SMOKE GESLAAGD: ${verwacht}; exacte Cloudflare-build, HSTS, homepage/www-redirect, robots, sitemap, kernroutes, share-canonical, 404 en alle drie API-contracten zijn publiek coherent.`);
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
