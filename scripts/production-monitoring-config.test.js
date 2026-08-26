@@ -18,11 +18,13 @@ assert(workflow.includes("mcr.microsoft.com/playwright:v1.62.1-noble"),"producti
 assert(workflow.includes("node scripts/production-worldwide-browser.js"),"workflow mist de wereldwijde browsermonitor");
 assert(workflow.includes("node scripts/production-staff-audit-browser.js"),"workflow mist de interactieve staff-auditmonitor");
 
-/* De wereldwijde monitor doet tien volledige live forecastloads. Als de
-   interactieve staff-audit daarna in dezelfde runner doorgaat, stapelt één
-   CI-adres onnodig providerbelasting op en kan de tweede monitor zichzelf
-   rate-limiten. Bewaak daarom drie aparte jobs: eerst het exacte deployment- en
-   API-contract, daarna beide browsercontroles parallel op geïsoleerde runners. */
+/* De wereldmonitor blijft de echte live providerintegratie-gate; de staff-audit
+   gebruikt sinds de interactiefixture deterministische data voor frontendgedrag.
+   Houd die verantwoordelijkheden ook op workflowniveau apart: eerst bewijst één
+   job de exacte deployment en API-contracten, daarna draaien live provider-QA en
+   deterministische interactie-QA parallel op eigen runners. Zo is een fout direct
+   aan het juiste domein toe te schrijven en beïnvloeden browserworkloads elkaar
+   niet onnodig. */
 assert(/^  production-contract:/m.test(workflow),"production-smoke mist aparte deployment/API-contractjob");
 assert(/^  wereldwijd-browser:/m.test(workflow),"production-smoke mist aparte wereldwijde browserjob");
 assert(/^  staff-audit-browser:/m.test(workflow),"production-smoke mist aparte staff-audit browserjob");
@@ -43,4 +45,4 @@ assert(wereldwijd.includes('{naam:"desktop",width:1440,height:1000}'),"wereldwij
 assert(wereldwijd.includes('uit.overflow<=1'),"wereldwijde monitor bewaakt horizontale overflow niet");
 assert(wereldwijd.includes('assert.equal(uit.sha,verwacht'),"wereldwijde browsermonitor moet de exacte build-SHA bewaken");
 
-console.log("production-monitoring-config: geïsoleerde live browserjobs OK");
+console.log("production-monitoring-config: gescheiden live en deterministische browserjobs OK");
