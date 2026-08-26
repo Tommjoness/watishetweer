@@ -1,0 +1,66 @@
+name: Cloudflare cutover now
+
+on:
+  push:
+    branches: [ops/cloudflare-domain-diagnose-20260826]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_PROJECT: watishetweer
+    steps:
+      - name: Controleer delegatie en activeer zo nodig
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+
+          echo '=== Publieke NS ==='
+          ns="$(node - <<'NODE'
+          const dns=require('node:dns').promises;
+          dns.resolveNs('watishetweer.nl').then(x=>console.log(x.map(v=>v.toLowerCase()).sort().join('\n'))).catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          )"
+          printf '%s\n' "$ns"
+
+          curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl' -o /tmp/zones.json
+          jq -e '.success == true' /tmp/zones.json >/dev/null
+          zone_id="$(jq -r '.result[0].id // ""' /tmp/zones.json)"
+          status="$(jq -r '.result[0].status // "missing"' /tmp/zones.json)"
+          echo "ZONE_STATUS_BEFORE=$status"
+
+          if printf '%s\n' "$ns" | grep -qx 'desiree.ns.cloudflare.com' && printf '%s\n' "$ns" | grep -qx 'matias.ns.cloudflare.com' && [ "$status" = 'pending' ]; then
+            echo 'Cloudflare NS zijn publiek; vraag activation check aan.'
+            code="$(curl -sS -o /tmp/activation.json -w '%{http_code}' "${auth[@]}" -X PUT "https://api.cloudflare.com/client/v4/zones/$zone_id/activation_check")"
+            echo "ACTIVATION_CHECK_HTTP=$code"
+            jq -r '{success,errors,messages} | @json' /tmp/activation.json || true
+            sleep 8
+          fi
+
+          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id" -o /tmp/zone.json
+          status="$(jq -r '.result.status' /tmp/zone.json)"
+          echo "ZONE_STATUS_AFTER=$status"
+
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT/domains"
+          curl -fsS "${auth[@]}" "$API" -o /tmp/domains.json
+          jq -r '.result[] | "DOMAIN \(.name)=\(.status) verification=\(.verification_data.status // "n/a") validation=\(.validation_data.status // "n/a")"' /tmp/domains.json
+
+          echo '=== HTTPS ==='
+          for url in \
+            'https://watishetweer.nl/' \
+            'https://www.watishetweer.nl/' \
+            'https://watishetweer.nl/api/plaatsnaam?lat=52.37&lon=4.90' \
+            'https://watishetweer.nl/api/waarschuwingen?lat=52.37&lon=4.90' \
+            'https://watishetweer.nl/api/neerslag?lat=52.37&lon=4.90'; do
+            code="$(curl -L -sS --max-time 30 -o /tmp/body -w '%{http_code}' "$url" || true)"
+            echo "$code $url"
+          done
+
+          echo '=== Apex headers ==='
+          curl -I -sS --max-time 30 https://watishetweer.nl/ | grep -Ei '^(HTTP/|server:|cf-ray:|cf-cache-status:|weather-build-sha:)' || true
