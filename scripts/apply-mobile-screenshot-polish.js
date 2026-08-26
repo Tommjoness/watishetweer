@@ -79,7 +79,7 @@ const GRAFIEK_AS_CLEANUP=[
    grootheden en mogen naast elkaar staan. Onbekende/negatieve hoeveelheden
    blijven leeg; zeer kleine positieve hoeveelheden blijven <0,1 mm. */
 const Q1_DAG_MM_OUD='  const hoeveelheid=mm!==null&&mm>=MM_MEETBAAR\n    ? (typeof hoeveelheidFn==="function"?hoeveelheidFn(mm):mmTekst(mm)) : "";';
-const Q1_DAG_MM_NIEUW='  const hoeveelheid=mm!==null&&mm>=0\n    ? (typeof hoeveelheidFn==="function"?hoeveelheidFn(mm):mmTekst(mm)) : "";';
+const Q1_DAG_MM_NIEUW='  const hoeveelheid=mm!==null&&mm>=0\n    ? (mm===0?"0,0 mm":(typeof hoeveelheidFn==="function"?hoeveelheidFn(mm):mmTekst(mm))) : "";';
 const q1DagMmAantal=q1Js.split(Q1_DAG_MM_OUD).length-1;
 if(q1DagMmAantal!==1)throw new Error("Q1 dagelijkse hoeveelheid-owner ontbreekt of is dubbel: "+q1DagMmAantal);
 q1Js=q1Js.replace(Q1_DAG_MM_OUD,Q1_DAG_MM_NIEUW);
