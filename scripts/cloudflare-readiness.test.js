@@ -6,6 +6,9 @@ const assert = require("assert");
 
 const root = path.join(__dirname, "..");
 const lees = p => fs.readFileSync(path.join(root, p), "utf8");
+const legacyHost = "Ver" + "cel";
+const legacyConfig = "ver" + "cel.json";
+const legacyRegex = new RegExp(legacyHost, "i");
 
 const pkg = JSON.parse(lees("package.json"));
 assert.strictEqual(pkg.scripts["build:cloudflare"], "npm run build && node scripts/cloudflare-output.js");
@@ -22,9 +25,9 @@ for (const naam of ["neerslag", "plaatsnaam", "waarschuwingen"]) {
   const route = lees(`api/${naam}.mjs`);
   assert.ok(functie.includes(`../../api/${naam}.mjs`));
   assert.ok(functie.includes("export async function onRequest(context)"));
-  assert.ok(!/Vercel/i.test(functie), `${naam}-functie bevat nog Vercel-compatibiliteit`);
+  assert.ok(!legacyRegex.test(functie), `${naam}-functie bevat nog legacy-hostcompatibiliteit`);
   assert.ok(route.includes("Cloudflare-CDN-Cache-Control"), `${naam}-route mist Cloudflare-cacheheader`);
-  assert.ok(!route.includes("Vercel-CDN-Cache-Control"), `${naam}-route bevat nog Vercel-cacheheader`);
+  assert.ok(!legacyRegex.test(route), `${naam}-route bevat nog legacy-hostcompatibiliteit`);
 }
 
 const middleware = lees("functions/_middleware.js");
@@ -45,7 +48,26 @@ for (const match of headerregels) {
   assert.ok(middleware.includes(value), `Cloudflare Functions-middleware wijkt af voor ${key}`);
 }
 
-assert.ok(!fs.existsSync(path.join(root, "vercel.json")), "vercel.json hoort niet meer in de Cloudflare-only repository");
+assert.ok(!fs.existsSync(path.join(root, legacyConfig)), "Legacy hostconfig hoort niet meer in de Cloudflare-only repository");
+
+const scanExtensies = new Set([".js", ".mjs", ".cjs", ".json", ".jsonc", ".yml", ".yaml", ".md", ".html", ".txt"]);
+const negeerMappen = new Set([".git", "node_modules", "public"]);
+const overtredingen = [];
+function scanMap(map) {
+  for (const entry of fs.readdirSync(map, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (!negeerMappen.has(entry.name)) scanMap(path.join(map, entry.name));
+      continue;
+    }
+    if (!scanExtensies.has(path.extname(entry.name).toLowerCase())) continue;
+    const bestand = path.join(map, entry.name);
+    const relatief = path.relative(root, bestand).replace(/\\/g, "/");
+    const tekst = fs.readFileSync(bestand, "utf8");
+    if (legacyRegex.test(tekst)) overtredingen.push(relatief);
+  }
+}
+scanMap(root);
+assert.deepStrictEqual(overtredingen, [], `Actieve legacy-hostverwijzingen gevonden: ${overtredingen.join(", ")}`);
 
 const nietGevonden = lees("cloudflare/404.html");
 assert.ok(nietGevonden.includes("<meta name=\"robots\" content=\"noindex,nofollow\">"));
@@ -57,4 +79,4 @@ for (const script of ["scripts/platform-output-cleanup.js", "scripts/cloudflare-
   assert.ok(fs.existsSync(path.join(root, script)), `${script} ontbreekt`);
 }
 
-console.log("Cloudflare-only migratiecontract klopt.");
+console.log("Cloudflare-only migratiecontract klopt; geen actieve legacy-hostverwijzingen.");
