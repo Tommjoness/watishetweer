@@ -46,7 +46,11 @@ function weatherNowWindstootTekst(pg,nu,dag,vak){
     :`De hoogste windstoot werd ${dagInZin} tussen ${tussen} verwacht: ${waarde} km/u.`;
 }
 
-const HELPERS_PRODUCTIE=weatherNowWindstootBegin.toString()+"\n\n"+weatherNowWindstootTekst.toString();
+/* HELPER_PRODUCTIE blijft bewust het bestaande contract voor late verifiers:
+   zij bewaken de inhoudelijke tekstowner. HELPERS_PRODUCTIE is de volledige
+   injectie inclusief de nieuwe, zuiver datumgrenshelper. */
+const HELPER_PRODUCTIE=weatherNowWindstootTekst.toString();
+const HELPERS_PRODUCTIE=weatherNowWindstootBegin.toString()+"\n\n"+HELPER_PRODUCTIE;
 const METERS_MARKER="function meters(){";
 const GUST_BRON='  zetTekst("gustsub", !pg ? "Geen uurgegevens beschikbaar."\n    : pg.t>nu ? dagAanduiding(pg.t,true)+" tot "+Math.round(pg.v)+" km/u tussen "+weatherNowUurvak(pg.t).replace("–"," en ")+"."\n    : dagAanduiding(pg.t,true)+" maximaal "+Math.round(pg.v)+" km/u tussen "+weatherNowUurvak(pg.t).replace("–"," en ")+".");';
 const GUST_PRODUCTIE='  const gustBegin=pg?weatherNowWindstootBegin(pg.t):null;\n  zetTekst("gustsub",weatherNowWindstootTekst(\n    pg,nu,\n    pg?dagAanduiding(gustBegin||pg.t,true):"",\n    pg?weatherNowUurvak(pg.t):""\n  ));';
@@ -70,7 +74,7 @@ function pasWindGustCopyToe(html){
 }
 
 module.exports=Object.freeze({
-  METERS_MARKER,GUST_BRON,GUST_PRODUCTIE,HELPERS_PRODUCTIE,
+  METERS_MARKER,GUST_BRON,GUST_PRODUCTIE,HELPER_PRODUCTIE,HELPERS_PRODUCTIE,
   windstootBegin:weatherNowWindstootBegin,windstootTekst:weatherNowWindstootTekst,
   pasWindGustCopyToe
 });
