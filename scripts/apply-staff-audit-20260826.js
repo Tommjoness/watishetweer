@@ -76,7 +76,7 @@ const COORD_NIEUW=`  const heeftGedeeldeCoordinaten=p.has("lat")||p.has("lon");
       q.value=p.get("plaats")||"";
       const app=document.getElementById("app");if(app)app.style.display="none";
       const fout=document.getElementById("state");
-      if(fout){fout.style.display="block";fout.className="msg err";fout.setAttribute("role","alert");fout.textContent="Deze locatie-URL is ongeldig. Controleer de link, zoek een plaats of gebruik Mijn locatie.";}
+      if(fout){fout.style.display="block";fout.className="msg err";fout.setAttribute("role","alert");fout.textContent="Deze gedeelde locatie is ongeldig. Controleer de link, zoek een plaats of gebruik Mijn locatie.";}
       return;
     }
     const la=gedeeld.latitude,lo=gedeeld.longitude,nm=p.get("plaats")||"Gedeelde locatie";
@@ -111,7 +111,7 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:staff-
 for(const vereist of [
   'class="skiplink"','role="banner"','role="main"','id="chartdata"','id="weekbron-uitleg"',
   'WeatherNowStaffAudit.markeerNavigatie("push")','window.addEventListener("popstate"',
-  'Deze locatie-URL is ongeldig','Officiële melding','National Weather Service'
+  'Deze gedeelde locatie is ongeldig','Officiële melding','National Weather Service'
 ])if(!html.includes(vereist))throw new Error("Staff-audit invariant ontbreekt: "+vereist);
 
 fs.writeFileSync(PAD,html,"utf8");
