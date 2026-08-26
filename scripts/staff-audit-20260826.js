@@ -125,17 +125,22 @@ urlBij=function(){
       return;
     }
     const doel=rootUrlVoor(state);
+    const verlaatStatischeRoute=!!(initieleRoute&&route&&basisUrlBijStaff);
     if(mode==="push"){
+      /* Eerst een nieuwe entry maken zodat de statische route als Back-doel
+         behouden blijft. Daarna laat de bestaande SEO-owner de huidige entry
+         naar de algemene root/canonical/context transformeren. */
       if(location.href===doel)history.replaceState(state,"",doel);else history.pushState(state,"",doel);
-      /* Op een statische plaatsroute is de door de SEO-generator gemaakte oude
-         urlBij-owner nog steeds de eigenaar van het verlaten van route-metadata.
-         Hij draait pas NADAT de nieuwe history-entry is gemaakt, zodat de route
-         zelf als Back-bestemming intact blijft. */
-      if(initieleRoute&&route&&basisUrlBijStaff){basisUrlBijStaff();history.replaceState(state,"",doel);}
+      if(verlaatStatischeRoute)basisUrlBijStaff();
+      history.replaceState(state,"",doel);
     }else if(mode==="pop"){
-      if(initieleRoute&&route&&basisUrlBijStaff){basisUrlBijStaff();}
+      if(verlaatStatischeRoute)basisUrlBijStaff();
       history.replaceState(state,"",location.href);
     }else{
+      /* Ook programmatische/replace-locatiekeuzes moeten de statische SEO-
+         identiteit verlaten. Dit contract bestond al vóór history-support en
+         blijft bewust onafhankelijk van de wijze waarop load() is aangeroepen. */
+      if(verlaatStatischeRoute)basisUrlBijStaff();
       history.replaceState(state,"",doel);
     }
   }catch(_){/* weerdata blijft leidend; history-sync faalt gesloten als UI-bijzaak */}
