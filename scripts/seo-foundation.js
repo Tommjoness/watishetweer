@@ -3,12 +3,25 @@
 const SEO=require("./seo-foundation.config.js");
 const MARKER="<!-- WEATHER NOW SEO FOUNDATION -->";
 const SHARE_IMAGE="https://watishetweer.nl/icon-512.png";
+const CLOUDFLARE_INSIGHTS="https://static.cloudflareinsights.com";
+const META_CSP_BRON=`<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://geocoding-api.open-meteo.com https://api.bigdatacloud.net; base-uri 'none'; form-action 'none'">`;
+const META_CSP_PRODUCTIE=`<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' ${CLOUDFLARE_INSIGHTS}; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://geocoding-api.open-meteo.com https://api.bigdatacloud.net; base-uri 'none'; form-action 'none'">`;
 
 function attr(v){return String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function pasCloudflareInsightsCspToe(html){
+  const bron=String(html||"");
+  const oud=bron.split(META_CSP_BRON).length-1;
+  const nieuw=bron.split(META_CSP_PRODUCTIE).length-1;
+  if(nieuw===1&&oud===0)return bron;
+  if(oud!==1||nieuw!==0)throw new Error("Cloudflare Insights meta-CSP ontbreekt, is dubbel of al ambigu: bron="+oud+", productie="+nieuw);
+  return bron.replace(META_CSP_BRON,META_CSP_PRODUCTIE);
+}
 
 function pasSeoFoundationToe(html){
   let bron=String(html||"");
   if(bron.includes(MARKER))return bron;
+  bron=pasCloudflareInsightsCspToe(bron);
 
   const titles=[...bron.matchAll(/<title>[^<]*<\/title>/g)];
   if(titles.length!==1)throw new Error("SEO verwacht exact één title-element; gevonden: "+titles.length);
@@ -52,4 +65,4 @@ function pasSeoFoundationToe(html){
   return bron.replace(nieuweDescription,nieuweDescription+"\n"+blok);
 }
 
-module.exports={MARKER,SHARE_IMAGE,pasSeoFoundationToe};
+module.exports={MARKER,SHARE_IMAGE,CLOUDFLARE_INSIGHTS,META_CSP_BRON,META_CSP_PRODUCTIE,pasCloudflareInsightsCspToe,pasSeoFoundationToe};
