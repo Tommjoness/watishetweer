@@ -7,6 +7,21 @@ const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replac
 const verwacht=String(process.env.EXPECTED_SHA||"").trim();
 if(!/^[0-9a-f]{7,40}$/i.test(verwacht))throw new Error("EXPECTED_SHA ontbreekt of is ongeldig.");
 
+/* Cloudflare kan op het publieke domein zijn eigen Browser Insights-beacon in
+   de HTML injecteren. Onze CSP staat bewust alleen eigen scripts toe, waardoor
+   Chromium die platforminjectie blokkeert en daar een console-error voor meldt.
+   Dat is geen applicatiefout en we willen de CSP niet verruimen voor analytics.
+   Alleen deze exact herkenbare, geblokkeerde Cloudflare-beacon wordt daarom uit
+   de console-errorgate gefilterd; alle andere console- en pageerrors blijven
+   onverkort een productiefout. */
+function verwachteCloudflareInsightsCspMelding(tekst){
+  const t=String(tekst||"");
+  return t.includes("https://static.cloudflareinsights.com/beacon.min.js/")
+    &&t.includes("violates the following Content Security Policy directive")
+    &&t.includes("script-src 'self' 'unsafe-inline'")
+    &&t.includes("The action has been blocked");
+}
+
 async function wachtVolledig(page,naam){
   try{
     await page.waitForFunction(n=>{
@@ -62,7 +77,11 @@ async function kiesZoekresultaat(page,naam){
     page.on("requestfailed",r=>noteerNetwerk("requestfailed",r.url(),r.failure()&&r.failure().errorText));
     page.on("response",r=>{if(r.status()>=400)noteerNetwerk("http",r.url(),r.status());});
     page.on("pageerror",e=>errors.push(String(e)));
-    page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});
+    page.on("console",m=>{
+      if(m.type()!=="error")return;
+      const tekst=m.text();
+      if(!verwachteCloudflareInsightsCspMelding(tekst))errors.push(tekst);
+    });
 
     /* Gebruik hier een wereldlocatie die ook door de aparte wereldwijde
        productie-monitor wordt gecontroleerd. Zo blijft deze test gericht op
