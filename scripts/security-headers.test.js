@@ -13,6 +13,7 @@ const headers=Object.fromEntries(regel.headers.map(x=>[String(x.key||"").toLower
 assert.equal(headers["x-content-type-options"],"nosniff","nosniff ontbreekt");
 assert.equal(headers["x-frame-options"],"DENY","framing moet geblokkeerd blijven");
 assert.equal(headers["referrer-policy"],"strict-origin-when-cross-origin","referrer policy wijkt af");
+assert.equal(headers["strict-transport-security"],"max-age=31536000","HSTS moet HTTPS voor een jaar afdwingen zonder subdomeinen of preload");
 assert(headers["permissions-policy"]&&headers["permissions-policy"].includes("camera=()")&&headers["permissions-policy"].includes("microphone=()"),"camera/microfoon horen standaard uit");
 
 const csp=headers["content-security-policy"]||"";
@@ -31,4 +32,4 @@ for(const contract of [
 assert(csp.includes("script-src 'self' 'unsafe-inline'"),"Huidige inline runtime past niet meer binnen CSP");
 assert(csp.includes("style-src 'self' 'unsafe-inline'"),"Huidige inline styles passen niet meer binnen CSP");
 
-console.log("security-headers: response-CSP en basisheaders OK");
+console.log("security-headers: response-CSP, HSTS en basisheaders OK");
