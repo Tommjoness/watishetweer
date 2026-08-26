@@ -13,7 +13,7 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
-      - name: Activeer Cloudflare DNSSEC en toon DS-gegevens
+      - name: Toon volledige Cloudflare DNSSEC-gegevens
         shell: bash
         run: |
           set -euo pipefail
@@ -22,27 +22,11 @@ jobs:
           zone_id="$(jq -r '.result[0].id // ""' /tmp/zones.json)"
           test -n "$zone_id"
 
-          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec" -o /tmp/before.json
-          jq -e '.success == true' /tmp/before.json >/dev/null
-          before="$(jq -r '.result.status // "unknown"' /tmp/before.json)"
-          echo "DNSSEC_BEFORE=$before"
+          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec" -o /tmp/dnssec.json
+          jq -e '.success == true' /tmp/dnssec.json >/dev/null
+          jq -r '.result | "DNSSEC_STATUS=\(.status // "")\nKEY_TAG=\(.key_tag // "")\nALGORITHM=\(.algorithm // "")\nFLAGS=\(.flags // "")\nPUBLIC_KEY=\(.public_key // "")\nDIGEST_TYPE=\(.digest_type // "")\nDIGEST=\(.digest // "")\nDS=\(.ds // "")"' /tmp/dnssec.json
 
-          if [ "$before" = disabled ]; then
-            code="$(curl -sS -o /tmp/enable.json -w '%{http_code}' "${auth[@]}" -X PATCH "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec" --data '{"status":"active"}')"
-            echo "DNSSEC_ENABLE_HTTP=$code"
-            jq -e '.success == true' /tmp/enable.json >/dev/null
-          fi
-
-          ready=false
-          for attempt in $(seq 1 18); do
-            curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec" -o /tmp/after.json
-            jq -e '.success == true' /tmp/after.json >/dev/null
-            status="$(jq -r '.result.status // "unknown"' /tmp/after.json)"
-            ds="$(jq -r '.result.ds // ""' /tmp/after.json)"
-            echo "DNSSEC_POLL_${attempt} status=$status ds_present=$([ -n "$ds" ] && echo yes || echo no)"
-            if [ -n "$ds" ]; then ready=true; break; fi
-            sleep 10
-          done
-
-          jq -r '.result | "DNSSEC_STATUS=\(.status)\nKEY_TAG=\(.key_tag // "")\nALGORITHM=\(.algorithm // "")\nDIGEST_TYPE=\(.digest_type // "")\nDIGEST=\(.digest // "")\nDS=\(.ds // "")"' /tmp/after.json
-          test "$ready" = true
+          test -n "$(jq -r '.result.key_tag // ""' /tmp/dnssec.json)"
+          test -n "$(jq -r '.result.algorithm // ""' /tmp/dnssec.json)"
+          test -n "$(jq -r '.result.flags // ""' /tmp/dnssec.json)"
+          test -n "$(jq -r '.result.public_key // ""' /tmp/dnssec.json)"
