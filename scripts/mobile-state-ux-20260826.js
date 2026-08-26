@@ -8,6 +8,9 @@ function tekstVan(item){
   if(typeof item==="string")return item.trim();
   return String(item&&item.textContent||"").trim();
 }
+function getal(v){
+  return v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
+}
 function grafiekHeeftUurlabels(items){
   return Array.from(items||[]).some(item=>{
     const tekst=tekstVan(item);
@@ -24,12 +27,28 @@ function terugNaarBereikLabel(bereik){
   const n=Number(bereik);
   return n===48?"Komende 48 uur":n>48?"Komende zeven dagen":"Komende 24 uur";
 }
-function weekUitlegSamenvatting(tekst){
-  const m=/^(\d+)%\s+kans/i.exec(String(tekst||"").trim());
-  return m?m[1]+"% kans met 0,0 mm: afgerond op één decimaal.":"Kans met 0,0 mm: afgerond op één decimaal.";
+function dagNeerslagNuance(kans,hoeveelheid,dagLabel,spoorMm){
+  const k=getal(kans),mm=getal(hoeveelheid);
+  if(k===null||k<=0||mm===null||mm<0)return null;
+  const spoor=getal(spoorMm),spoorgrens=spoor===null?0.005:Math.max(0,spoor);
+  const pct=Math.round(Math.max(0,Math.min(100,k)))+"%";
+  const dag=String(dagLabel||"Deze dag").trim()||"Deze dag";
+  if(mm===0)return {
+    mmTekst:"0,0 mm",
+    tekst:dag+" · "+pct+" is de hoogste neerslagkans in één uur; de berekende dagsom is 0,0 mm."
+  };
+  if(mm<=spoorgrens)return {
+    mmTekst:"spoor",
+    tekst:dag+" · "+pct+" is de hoogste neerslagkans in één uur; het model geeft alleen een spoorhoeveelheid aan."
+  };
+  if(mm<0.05)return {
+    mmTekst:"<0,05 mm",
+    tekst:dag+" · "+pct+" is de hoogste neerslagkans in één uur; de berekende dagsom is <0,05 mm."
+  };
+  return null;
 }
 
-const api={grafiekHeeftUurlabels,grafiekHerstelNodig,terugNaarBereikLabel,weekUitlegSamenvatting};
+const api={grafiekHeeftUurlabels,grafiekHerstelNodig,terugNaarBereikLabel,dagNeerslagNuance};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileStateUX=api;
 
@@ -108,28 +127,60 @@ if(basisEtmaalMobieleState){
   window.addEventListener("touchend",plan,{passive:true});
 })();
 
-function maakWeekUitlegCompact(){
-  const uitleg=document.getElementById("dagenneerslaguitleg");if(!uitleg)return;
-  const tekst=tekstVan(uitleg);if(!tekst)return;
-  const wasOpen=uitleg.tagName==="DETAILS"&&uitleg.open;
-  let details=uitleg;
-  if(uitleg.tagName!=="DETAILS"){
-    details=document.createElement("details");
-    details.id="dagenneerslaguitleg";
-    uitleg.replaceWith(details);
-  }
-  details.className="data-uitleg dagenneerslaguitleg-compact";
-  const summary=document.createElement("summary");summary.textContent=weekUitlegSamenvatting(tekst);
-  const p=document.createElement("p");p.textContent=tekst;
-  details.replaceChildren(summary,p);
-  details.open=wasOpen;
+function dagLabelUitRij(rij,i,daily){
+  const datum=daily&&Array.isArray(daily.time)?daily.time[i]:null;
+  if(typeof weatherNowDagNaam==="function"&&datum)return weatherNowDagNaam(datum,false);
+  const kort=rij&&rij.querySelector(".dkort"),lang=rij&&rij.querySelector(".dlang");
+  return tekstVan(kort)||tekstVan(lang)||"Deze dag";
+}
+function centraleSpoorgrens(){
+  const cfg=root.WeatherNowInterpretatie&&root.WeatherNowInterpretatie.INTERPRETATIE_CONFIG;
+  const spoor=cfg&&getal(cfg.spoorMm);
+  return spoor===null?0.005:Math.max(0,spoor);
+}
+function verbindWeekNeerslagAanRijen(){
+  /* De oude uitleg stond los boven de hele weektabel. Dat suggereerde ten onrechte
+     dat één percentage voor de hele week gold. Elke nuance wordt nu uitsluitend
+     bij de dag geplaatst waarop precipitation_probability_max en precipitation_sum
+     betrekking hebben. De kans is dus expliciet de hoogste uurkans van die dag. */
+  document.querySelectorAll("#days .dag-neerslagnotitie").forEach(el=>el.remove());
+  const losseUitleg=document.getElementById("dagenneerslaguitleg");
+  if(losseUitleg)losseUitleg.remove();
+  const daily=S.d&&S.d.daily;if(!daily)return;
+  const kansen=daily.precipitation_probability_max,hoeveelheden=daily.precipitation_sum;
+  const spoor=centraleSpoorgrens();
+  document.querySelectorAll("#days .row.day:not(.kop)").forEach(rij=>{
+    const i=Number(rij.dataset.i),actief=S.dag===i;
+    rij.setAttribute("aria-pressed",actief?"true":"false");
+    rij.classList.remove("heeft-neerslagnotitie");
+    rij.removeAttribute("aria-describedby");
+    if(!Number.isInteger(i)||i<0)return;
+    const kans=getal(kansen&&kansen[i]),mm=getal(hoeveelheden&&hoeveelheden[i]);
+    const dag=dagLabelUitRij(rij,i,daily),nuance=dagNeerslagNuance(kans,mm,dag,spoor);
+    const drain=rij.querySelector(".drain");
+    if(drain&&kans!==null){
+      drain.title=Math.round(Math.max(0,Math.min(100,kans)))+"% is de hoogste neerslagkans in één uur op "+dag+".";
+    }
+    if(!nuance)return;
+    const klein=drain&&drain.querySelector("small");
+    if(klein)klein.textContent=nuance.mmTekst;
+    const note=document.createElement("div");
+    note.className="dag-neerslagnotitie";
+    note.id="dag-neerslagnotitie-"+i;
+    note.setAttribute("role","note");
+    note.textContent=nuance.tekst;
+    rij.classList.add("heeft-neerslagnotitie");
+    rij.setAttribute("aria-describedby",note.id);
+    rij.after(note);
+  });
 }
 
-/* De finale neerslagowner maakt de uitleg pas tijdens dagen(). Deze laatste
-   wrapper verandert alleen de presentatie naar een ingeklapte toelichting. */
+/* De finale neerslagowner maakt de weekrijen tijdens dagen(). Deze laatste
+   wrapper verbindt kans/hoeveelheidsnuance met de juiste rij en verwijdert de
+   vroegere globale uitleg. */
 const basisDagenMobieleState=typeof dagen==="function"?dagen:null;
 if(basisDagenMobieleState){
-  dagen=function(){basisDagenMobieleState();maakWeekUitlegCompact();};
+  dagen=function(){basisDagenMobieleState();verbindWeekNeerslagAanRijen();};
 }
 
 function zetNachtMetaBreedte(details){
