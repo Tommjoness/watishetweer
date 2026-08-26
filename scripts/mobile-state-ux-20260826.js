@@ -52,16 +52,14 @@ function pasEtmaalContextToe(){
   const hint=document.getElementById("charthint");
   if(!hint)return;
   const huidige=tekstVan(hint);
-  const detail=/Kans op neerslag:|verwachte hoeveelheid:/i.test(huidige)
-    ?huidige
-    :"Selecteer een punt in de grafiek voor details.";
   if(S.dag!=null){
+    const detail=/Kans op neerslag:|verwachte hoeveelheid:/i.test(huidige)
+      ?huidige.replace(/^Deze kalenderdag per uur\.\s*/i,"")
+      :"Selecteer een punt in de grafiek voor details.";
     hint.textContent="Deze kalenderdag per uur. "+detail;
-  }else if(Number(S.bereik)===24){
-    hint.textContent="Vanaf nu, de komende 24 uur. Selecteer een punt in de grafiek voor details.";
-  }else if(Number(S.bereik)===48){
-    hint.textContent="Vanaf nu, de komende 48 uur. Selecteer een punt in de grafiek voor details.";
   }else{
+    /* De resetknop benoemt hierboven al expliciet het rollende bereik. De hint
+       blijft daarom invoermethode-neutraal en behoudt de bestaande Q4-copy. */
     hint.textContent="Selecteer een punt in de grafiek voor details.";
   }
 }
