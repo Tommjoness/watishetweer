@@ -17,28 +17,23 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
     steps:
-      - name: Try both cancel endpoints for stale runs
+      - name: Try deleting stale incident runs
         shell: bash
         run: |
           set -u
           ids=(32984194006 32985269547 32985304066 32983999874 32983975570)
           for id in "${ids[@]}"; do
             echo "=== RUN $id BEFORE ==="
-            before="$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPO/actions/runs/$id")" || continue
-            echo "$before" | jq '{id,name,status,conclusion,head_sha,event,run_attempt}'
-            status="$(echo "$before" | jq -r '.status')"
-            if [[ "$status" == "queued" || "$status" == "in_progress" || "$status" == "waiting" || "$status" == "pending" ]]; then
-              normal="$(curl -sS -o /tmp/normal-$id.out -w '%{http_code}' -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPO/actions/runs/$id/cancel")"
-              echo "normal-cancel HTTP $normal"
-              cat /tmp/normal-$id.out || true
-              force="$(curl -sS -o /tmp/force-$id.out -w '%{http_code}' -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPO/actions/runs/$id/force-cancel")"
-              echo "force-cancel HTTP $force"
-              cat /tmp/force-$id.out || true
-            fi
+            curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPO/actions/runs/$id" | jq '{id,name,status,conclusion,head_sha,event,run_attempt}' || true
+            code="$(curl -sS -o /tmp/delete-$id.out -w '%{http_code}' -X DELETE -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPO/actions/runs/$id")"
+            echo "delete HTTP $code"
+            cat /tmp/delete-$id.out || true
           done
-          sleep 5
+          sleep 3
           for id in "${ids[@]}"; do
             echo "=== RUN $id AFTER ==="
-            curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPO/actions/runs/$id" | jq '{id,name,status,conclusion,head_sha,event,run_attempt}' || true
+            code="$(curl -sS -o /tmp/get-$id.out -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$REPO/actions/runs/$id")"
+            echo "GET HTTP $code"
+            if [[ "$code" == "200" ]]; then jq '{id,name,status,conclusion,head_sha,event,run_attempt}' /tmp/get-$id.out; else cat /tmp/get-$id.out || true; fi
           done
           exit 0
