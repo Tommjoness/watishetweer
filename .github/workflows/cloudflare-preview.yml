@@ -1,0 +1,80 @@
+name: Cloudflare preview
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  preview:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'migrate/cloudflare-pages-20260826'
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_PROJECT: watishetweer
+      CLOUDFLARE_PREVIEW_BRANCH: pr-164
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Installeer dependencies
+        run: npm install --ignore-scripts
+
+      - name: Controleer Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Bouw Cloudflare artifact
+        run: npm run build:cloudflare
+
+      - name: Maak Pages-project zo nodig aan
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 pages project list --json > /tmp/pages-projects.json
+          if node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("/tmp/pages-projects.json","utf8"));process.exit(Array.isArray(x)&&x.some(p=>p&&p.name===process.env.CLOUDFLARE_PROJECT)?0:1)'; then
+            echo "Pages-project $CLOUDFLARE_PROJECT bestaat al."
+          else
+            npx --yes wrangler@4 pages project create "$CLOUDFLARE_PROJECT" --production-branch=main
+          fi
+
+      - name: Deploy preview naar Cloudflare Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 pages deploy public \
+            --project-name="$CLOUDFLARE_PROJECT" \
+            --branch="$CLOUDFLARE_PREVIEW_BRANCH" \
+            --commit-hash="$GITHUB_SHA" \
+            --commit-message="PR #164 Cloudflare preview" | tee /tmp/cloudflare-deploy.log
+
+      - name: Noteer preview-URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 pages deployment list --project-name="$CLOUDFLARE_PROJECT" --environment=preview --json > /tmp/pages-deployments.json
+          node <<'NODE'
+          const fs=require('fs');
+          const deployments=JSON.parse(fs.readFileSync('/tmp/pages-deployments.json','utf8'));
+          const latest=Array.isArray(deployments) ? deployments.find(d => d && d.environment === 'preview') || deployments[0] : null;
+          if(!latest) throw new Error('Geen Cloudflare preview deployment gevonden');
+          const url=latest.url || latest.aliases?.[0];
+          if(!url) throw new Error('Cloudflare preview heeft geen URL');
+          const normalized=url.startsWith('http') ? url : `https://${url}`;
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Cloudflare preview\n\n${normalized}\n`);
+          console.log(`Preview: ${normalized}`);
+          NODE
