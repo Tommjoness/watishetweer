@@ -9,7 +9,7 @@ const OUT=path.join(__dirname,"..","public");
 const META_RE=/<meta name="weather-build-sha" content="[^"]+">/g;
 
 function bepaalSha(env=process.env){
-  const raw=env.VERCEL_GIT_COMMIT_SHA||env.GITHUB_SHA||"local";
+  const raw=env.WEATHER_BUILD_SHA||env.VERCEL_GIT_COMMIT_SHA||env.GITHUB_SHA||"local";
   const sha=String(raw).trim();
   if(sha!=="local"&&!/^[0-9a-f]{7,40}$/i.test(sha))throw new Error("Ongeldige build-SHA voor provenance: "+sha);
   return sha;
