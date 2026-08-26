@@ -25,58 +25,76 @@ jobs:
           curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones?name=$ZONE" -o /tmp/zones.json
           zone_id="$(jq -r '.result[0].id // ""' /tmp/zones.json)"
           test -n "$zone_id"
-          echo "ZONE_ID=$zone_id"
 
           curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id" -o /tmp/zone.json
           jq -e '.success == true' /tmp/zone.json >/dev/null
           echo "Zone-status: $(jq -r '.result.status' /tmp/zone.json)"
           echo "Cloudflare nameservers: $(jq -r '.result.name_servers | join(", ")' /tmp/zone.json)"
 
-          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/scan/review" -o /tmp/review.json
-          jq -e '.success == true' /tmp/review.json >/dev/null
+          upsert() {
+            local type="$1" name="$2" content="$3" priority="${4:-}" proxied="${5:-}"
+            local encoded_name
+            encoded_name="$(printf '%s' "$name" | jq -sRr @uri)"
+            curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?type=$type&name=$encoded_name&per_page=100" -o /tmp/lookup.json
+            jq -e '.success == true' /tmp/lookup.json >/dev/null
+            local id
+            id="$(jq -r '.result[0].id // ""' /tmp/lookup.json)"
 
-          jq '{
-            accepts: [.result[] | select(.name != "watishetweer.nl" or .type != "A") | select(.name != "www.watishetweer.nl" or .type != "CNAME") |
-              if .type == "MX" then {type,name,content,ttl,priority}
-              elif (.type == "A" or .type == "AAAA" or .type == "CNAME") then {type,name,content,ttl,proxied}
-              else {type,name,content,ttl}
-              end],
-            rejects: [.result[] | select((.name == "watishetweer.nl" and .type == "A") or (.name == "www.watishetweer.nl" and .type == "CNAME")) | {id}]
-          }' /tmp/review.json > /tmp/decision.json
+            local body
+            case "$type" in
+              MX)
+                body="$(jq -cn --arg type "$type" --arg name "$name" --arg content "$content" --argjson priority "$priority" '{type:$type,name:$name,content:$content,ttl:1,priority:$priority}')"
+                ;;
+              A|AAAA|CNAME)
+                body="$(jq -cn --arg type "$type" --arg name "$name" --arg content "$content" --argjson proxied "$proxied" '{type:$type,name:$name,content:$content,ttl:1,proxied:$proxied}')"
+                ;;
+              *)
+                body="$(jq -cn --arg type "$type" --arg name "$name" --arg content "$content" '{type:$type,name:$name,content:$content,ttl:1}')"
+                ;;
+            esac
 
-          if [ "$(jq '.accepts | length' /tmp/decision.json)" -gt 0 ] || [ "$(jq '.rejects | length' /tmp/decision.json)" -gt 0 ]; then
-            code="$(curl -sS "${auth[@]}" -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/scan/review" --data-binary @/tmp/decision.json -o /tmp/accepted.json -w '%{http_code}')"
-            echo "Scan review POST HTTP $code"
-            jq -r '{success,errors,messages,result} | @json' /tmp/accepted.json
-            jq -e '.success == true' /tmp/accepted.json >/dev/null
-            echo "Scanned DNS verwerkt."
-          else
-            echo 'Geen tijdelijke scanrecords meer te verwerken.'
-          fi
+            if [ -n "$id" ]; then
+              curl -fsS "${auth[@]}" -X PUT "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/$id" --data "$body" -o /tmp/write.json
+            else
+              curl -fsS "${auth[@]}" -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records" --data "$body" -o /tmp/write.json
+            fi
+            jq -e '.success == true' /tmp/write.json >/dev/null
+            echo "DNS gereed: $type $name"
+          }
 
+          # Mail en verificatie: exact behouden zoals publiek bij TransIP gevonden.
+          upsert CNAME 'autoconfig.watishetweer.nl' 'autoconfig.transip.email' '' false
+          upsert CNAME 'autodiscover.watishetweer.nl' 'autodiscover.transip.email' '' false
+          upsert TXT '_dmarc.watishetweer.nl' 'v=DMARC1; p=none;'
+          upsert A '*.watishetweer.nl' '86.105.244.1' '' false
+          upsert AAAA '*.watishetweer.nl' '2a01:7c8:e100:1::50a0' '' false
+          upsert MX 'watishetweer.nl' 'mx.transip.email' 10
+          upsert TXT 'watishetweer.nl' 'google-site-verification=HhNZvxTogJOtg-j9epcy3hWPlaS0GbFoksdOSzLNimc'
+          upsert TXT 'watishetweer.nl' 'v=spf1 include:_spf.transip.email ~all'
+
+          # Oude web-IP/CNAME-records mogen niet naast de Pages CNAME blijven bestaan.
           curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?per_page=100" -o /tmp/current.json
           jq -e '.success == true' /tmp/current.json >/dev/null
-          jq -r '.result[] | select((.name == "watishetweer.nl" or .name == "www.watishetweer.nl") and (.type == "A" or .type == "AAAA" or .type == "CNAME")) | .id' /tmp/current.json | while read -r id; do
+          jq -r --arg pages "$PAGES" '.result[] | select((.name == "watishetweer.nl" or .name == "www.watishetweer.nl") and (.type == "A" or .type == "AAAA" or (.type == "CNAME" and .content != $pages))) | .id' /tmp/current.json | while read -r id; do
             test -n "$id" || continue
             curl -fsS "${auth[@]}" -X DELETE "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/$id" -o /tmp/delete.json
             jq -e '.success == true' /tmp/delete.json >/dev/null
           done
 
-          for host in 'watishetweer.nl' 'www.watishetweer.nl'; do
-            body="$(jq -cn --arg name "$host" --arg content "$PAGES" '{type:"CNAME",name:$name,content:$content,ttl:1,proxied:true}')"
-            curl -fsS "${auth[@]}" -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records" --data "$body" -o /tmp/create-record.json
-            jq -e '.success == true' /tmp/create-record.json >/dev/null
-          done
+          # Beide hostnames zijn al als Pages custom domain geregistreerd.
+          upsert CNAME 'watishetweer.nl' "$PAGES" '' true
+          upsert CNAME 'www.watishetweer.nl' "$PAGES" '' true
 
           curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?per_page=100" -o /tmp/final.json
           jq -e '.success == true' /tmp/final.json >/dev/null
 
+          # Fail closed: deze records moeten allemaal bestaan vóór de nameservercutover.
           jq -e '.result[] | select(.type=="MX" and .name=="watishetweer.nl" and .content=="mx.transip.email" and .priority==10)' /tmp/final.json >/dev/null
-          jq -e '.result[] | select(.type=="TXT" and .name=="watishetweer.nl" and (.content|contains("v=spf1 include:_spf.transip.email ~all")))' /tmp/final.json >/dev/null
-          jq -e '.result[] | select(.type=="TXT" and .name=="_dmarc.watishetweer.nl" and (.content|contains("v=DMARC1; p=none;")))' /tmp/final.json >/dev/null
-          jq -e '.result[] | select(.type=="CNAME" and .name=="autoconfig.watishetweer.nl" and .content=="autoconfig.transip.email")' /tmp/final.json >/dev/null
-          jq -e '.result[] | select(.type=="CNAME" and .name=="autodiscover.watishetweer.nl" and .content=="autodiscover.transip.email")' /tmp/final.json >/dev/null
-          jq -e '.result[] | select(.type=="TXT" and .name=="watishetweer.nl" and (.content|contains("google-site-verification=")))' /tmp/final.json >/dev/null
+          jq -e '.result[] | select(.type=="TXT" and .name=="watishetweer.nl" and .content=="v=spf1 include:_spf.transip.email ~all")' /tmp/final.json >/dev/null
+          jq -e '.result[] | select(.type=="TXT" and .name=="_dmarc.watishetweer.nl" and .content=="v=DMARC1; p=none;")' /tmp/final.json >/dev/null
+          jq -e '.result[] | select(.type=="CNAME" and .name=="autoconfig.watishetweer.nl" and .content=="autoconfig.transip.email" and .proxied==false)' /tmp/final.json >/dev/null
+          jq -e '.result[] | select(.type=="CNAME" and .name=="autodiscover.watishetweer.nl" and .content=="autodiscover.transip.email" and .proxied==false)' /tmp/final.json >/dev/null
+          jq -e '.result[] | select(.type=="TXT" and .name=="watishetweer.nl" and (.content|startswith("google-site-verification=")))' /tmp/final.json >/dev/null
           jq -e --arg pages "$PAGES" '.result[] | select(.type=="CNAME" and .name=="watishetweer.nl" and .content==$pages and .proxied==true)' /tmp/final.json >/dev/null
           jq -e --arg pages "$PAGES" '.result[] | select(.type=="CNAME" and .name=="www.watishetweer.nl" and .content==$pages and .proxied==true)' /tmp/final.json >/dev/null
 
