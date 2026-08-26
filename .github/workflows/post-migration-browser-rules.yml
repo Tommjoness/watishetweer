@@ -1,42 +1,21 @@
-name: Post-migratie browsers en rules
+name: Cloudflare post-migratie afronding
 
 on:
   push:
     branches: [ops/post-migration-audit-20260826]
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 env:
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-  PRODUCTION_ROOT: https://watishetweer.nl
-  EXPECTED_SHA: 49a7cc996db1d556535ea92fb34abbfc93eeb321
 
 jobs:
-  worldwide:
-    name: 5 locaties mobiel en desktop
+  finalize:
+    name: Redirect en DNSSEC controleren
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: 49a7cc996db1d556535ea92fb34abbfc93eeb321
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-      - name: Installeer Playwright
-        run: |
-          npm install --no-save playwright@1.55.0
-          npx playwright install --with-deps chromium
-      - name: Wereldwijde productieaudit
-        run: node scripts/production-worldwide-browser.js
-
-  rules-access:
-    name: Cloudflare Redirect Rules toegang
-    runs-on: ubuntu-latest
-    steps:
-      - name: Lees Rulesets API zonder wijzigingen
+      - name: Maak www naar apex redirect idempotent aan
         shell: bash
         run: |
           set -euo pipefail
@@ -44,10 +23,87 @@ jobs:
           curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl' -o /tmp/zones.json
           zone_id="$(jq -r '.result[0].id // ""' /tmp/zones.json)"
           test -n "$zone_id"
-          code="$(curl -sS -o /tmp/rulesets.json -w '%{http_code}' "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/rulesets")"
-          echo "RULESETS_HTTP=$code"
-          if [ "$code" = 200 ]; then
-            jq -r '.result[] | "RULESET phase=\(.phase) kind=\(.kind) name=\(.name) id=\(.id)"' /tmp/rulesets.json
+
+          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/rulesets" -o /tmp/rulesets.json
+          ruleset_id="$(jq -r '.result[] | select(.phase=="http_request_dynamic_redirect" and .kind=="zone") | .id' /tmp/rulesets.json | head -n1)"
+
+          cat >/tmp/rule.json <<'JSON'
+          {
+            "ref": "canonical_www_to_apex",
+            "description": "Canonicaliseer www naar watishetweer.nl",
+            "expression": "(http.host eq \"www.watishetweer.nl\")",
+            "action": "redirect",
+            "action_parameters": {
+              "from_value": {
+                "target_url": {
+                  "expression": "concat(\"https://watishetweer.nl\", http.request.uri.path)"
+                },
+                "status_code": 301,
+                "preserve_query_string": true
+              }
+            }
+          }
+          JSON
+
+          if [ -z "$ruleset_id" ]; then
+            jq -n --slurpfile rule /tmp/rule.json '{name:"Canonical redirects",kind:"zone",phase:"http_request_dynamic_redirect",rules:$rule}' >/tmp/create.json
+            code="$(curl -sS -o /tmp/result.json -w '%{http_code}' "${auth[@]}" -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/rulesets" --data @/tmp/create.json)"
+            echo "CREATE_REDIRECT_RULESET_HTTP=$code"
+            jq -e '.success == true' /tmp/result.json >/dev/null
           else
-            jq -r '{success,errors,messages} | @json' /tmp/rulesets.json || true
+            curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/rulesets/$ruleset_id" -o /tmp/current.json
+            if jq -e '.result.rules[]? | select(.ref=="canonical_www_to_apex")' /tmp/current.json >/dev/null; then
+              echo 'REDIRECT_RULE=already-present'
+            else
+              code="$(curl -sS -o /tmp/result.json -w '%{http_code}' "${auth[@]}" -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/rulesets/$ruleset_id/rules" --data @/tmp/rule.json)"
+              echo "ADD_REDIRECT_RULE_HTTP=$code"
+              jq -e '.success == true' /tmp/result.json >/dev/null
+            fi
           fi
+
+          ok=false
+          for i in $(seq 1 12); do
+            headers="$(curl -sS --max-time 20 -o /dev/null -D - 'https://www.watishetweer.nl/weer/almere/?bron=redirect-test' || true)"
+            status="$(printf '%s' "$headers" | awk 'toupper($1) ~ /^HTTP\// {code=$2} END{print code}')"
+            location="$(printf '%s' "$headers" | awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/^[^:]+:[[:space:]]*/,""); sub(/\r$/,""); print; exit}')"
+            echo "REDIRECT_POLL_${i} status=$status location=$location"
+            if [ "$status" = 301 ] && [ "$location" = 'https://watishetweer.nl/weer/almere/?bron=redirect-test' ]; then ok=true; break; fi
+            sleep 5
+          done
+          test "$ok" = true
+
+      - name: Controleer DNSSEC bij SIDN en Cloudflare
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected='2371 13 2 4964A45079F18907774547EBCBC9B797985CEAF42BDF6B808028A4BADBBDADAB'
+          response="$(curl -fsS -H 'accept: application/dns-json' 'https://cloudflare-dns.com/dns-query?name=watishetweer.nl&type=DS')"
+          ds="$(printf '%s' "$response" | jq -r '.Answer[]?.data // empty' | tr '[:lower:]' '[:upper:]')"
+          echo "PUBLIC_DS=${ds:-none}"
+          if [ -n "$ds" ] && ! printf '%s\n' "$ds" | grep -Fx "$expected" >/dev/null; then
+            echo 'Publieke DS bestaat maar wijkt af van de Cloudflare-key.' >&2
+            exit 1
+          fi
+
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl' -o /tmp/zones.json
+          zone_id="$(jq -r '.result[0].id // ""' /tmp/zones.json)"
+          test -n "$zone_id"
+
+          if [ -z "$ds" ]; then
+            curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec" -o /tmp/dnssec.json
+            echo "CLOUDFLARE_DNSSEC=$(jq -r '.result.status' /tmp/dnssec.json)"
+            echo 'DNSSEC_PUBLIC=pending-registry-propagation'
+            exit 0
+          fi
+
+          active=false
+          for i in $(seq 1 12); do
+            curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dnssec" -o /tmp/dnssec.json
+            status="$(jq -r '.result.status' /tmp/dnssec.json)"
+            echo "DNSSEC_POLL_${i} status=$status"
+            if [ "$status" = active ]; then active=true; break; fi
+            sleep 10
+          done
+          test "$active" = true
+          echo 'DNSSEC_PUBLIC=active'
