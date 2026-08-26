@@ -1,0 +1,71 @@
+name: Cloudflare domain diagnose
+
+on:
+  push:
+    branches: [ops/cloudflare-domain-diagnose-20260826]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_PROJECT: watishetweer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Cloudflare custom-domainstatus
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT/domains"
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl -fsS "${auth[@]}" "$API" -o /tmp/domains.json
+          jq -e '.success == true' /tmp/domains.json >/dev/null
+          echo '=== Pages custom domains ==='
+          jq -r '.result[] | {name,status,verification_data,validation_data,zone_tag} | @json' /tmp/domains.json
+
+          echo '=== Detail per domein ==='
+          for domain in watishetweer.nl www.watishetweer.nl; do
+            encoded="$(printf '%s' "$domain" | jq -sRr @uri)"
+            curl -fsS "${auth[@]}" "$API/$encoded" -o "/tmp/domain-${domain//./-}.json"
+            jq -e '.success == true' "/tmp/domain-${domain//./-}.json" >/dev/null
+            jq -r '.result | {name,status,verification_data,validation_data,error_message,zone_tag} | @json' "/tmp/domain-${domain//./-}.json"
+          done
+
+      - name: Publieke DNS
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const dns=require('node:dns').promises;
+          async function one(name){
+            console.log(`=== DNS ${name} ===`);
+            for (const [label,fn] of [
+              ['NS',()=>dns.resolveNs(name)],
+              ['A',()=>dns.resolve4(name)],
+              ['AAAA',()=>dns.resolve6(name)],
+              ['CNAME',()=>dns.resolveCname(name)],
+              ['TXT',()=>dns.resolveTxt(name)],
+            ]) {
+              try { console.log(label, JSON.stringify(await fn())); }
+              catch(e){ console.log(label, `ERROR ${e.code||e.message}`); }
+            }
+          }
+          (async()=>{await one('watishetweer.nl');await one('www.watishetweer.nl');})().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Cloudflare zone-read probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl -sS -o /tmp/zone.json -w '%{http_code}' \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            'https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl')"
+          echo "Zone API HTTP $code"
+          jq -r '{success,errors,result:(.result // [] | map({id,name,status,name_servers,original_name_servers}))} | @json' /tmp/zone.json || cat /tmp/zone.json
