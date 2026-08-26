@@ -269,7 +269,11 @@ async function visueleStress(browser,naam){
         assert(r.nachten>=1,`${naam} ${scenario}: Nachtzicht blijft renderen`);
         assert(!/Het wordt maximaal \d+ graden/i.test(r.tekst),`${naam} ${scenario}: geen tijdloze oude maximumtemperatuurclaim`);
         if(scenario==='dry')assert(!/0,0\s*mm/i.test(r.tekst),`${naam} droog: nutteloze 0,0 mm blijft verborgen`);
-        if(scenario==='smallchance'){assert(/25%/.test(r.tekst),`${naam}: echte 25%-kans blijft zichtbaar`);assert(!/0,0\s*mm/i.test(r.tekst),`${naam}: 25% met 0 mm wordt niet als 0,0 mm gepresenteerd`);}
+        if(scenario==='smallchance'){
+          assert(/25%/.test(r.tekst),`${naam}: echte 25%-kans blijft zichtbaar`);
+          assert(/0,0\s*mm/i.test(r.tekst),`${naam}: bekende 0,0 mm blijft naast niet-nul kans zichtbaar`);
+          assert(/25% kans met 0,0 mm/i.test(r.tekst)&&/één decimaal/i.test(r.tekst),`${naam}: 25% + 0,0 mm krijgt direct begrijpelijke uitleg`);
+        }
         if(scenario==='overcast')assert.equal(r.cloudsub.trim(),'Geheel bewolkt.',`${naam}: 100% bewolking exact benoemd`);
         if(scenario==='fog')assert(!/^\s*–/.test(r.vis),`${naam}: 200 meter zicht blijft geldige data`);
       }
