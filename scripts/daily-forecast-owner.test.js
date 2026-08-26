@@ -4,12 +4,15 @@ const assert=require("assert");
 const fs=require("fs");
 const path=require("path");
 const {
+  DAG_SPOOR_MM,DAG_KLEINER_DAN_005_MM,
   dagNeerslagTekst,dagNeerslagMmTekst,dagNaam,pasDailyForecastOwnerToe,
   DCOND_BRON,DCOND_PRODUCTIE,DRAIN_BRON,DRAIN_PRODUCTIE,
   DAGNAAM_BRON,DAGNAAM_PRODUCTIE,KOP_BRON,KOP_PRODUCTIE,HELPER_PRODUCTIE,
   KOP_CSS_BRON,KOP_CSS_PRODUCTIE
 }=require("./daily-forecast-owner.js");
 
+assert.equal(DAG_SPOOR_MM,0.005,"dagpresentatie gebruikt dezelfde spoorgrens als de centrale interpretatie-engine");
+assert.equal(DAG_KLEINER_DAN_005_MM,0.05,"<0,05 wordt alleen onder de echte 0,05-mm grens gebruikt");
 assert.equal(dagNeerslagTekst(null,0),"–");
 assert.equal(dagNeerslagTekst(2,0),"2%");
 assert.equal(dagNeerslagTekst(6,0),"6%","een kleine echte kans blijft zichtbaar naast 0,0 mm");
@@ -20,11 +23,18 @@ assert.equal(dagNeerslagTekst(-3,2),"0%");
 assert.equal(dagNeerslagMmTekst(null),"");
 assert.equal(dagNeerslagMmTekst(undefined),"");
 assert.equal(dagNeerslagMmTekst(-1),"");
-assert.equal(dagNeerslagMmTekst(0),"0,0 mm");
-assert.equal(dagNeerslagMmTekst(0.04),"<0,1 mm");
+assert.equal(dagNeerslagMmTekst(0),"0,0 mm","een werkelijk nulpunt blijft exact nul, niet <0,05");
+assert.equal(dagNeerslagMmTekst(0.001),"spoor","amper meetbare hoeveelheid krijgt geen schijnprecisie");
+assert.equal(dagNeerslagMmTekst(0.005),"spoor","de centrale spoorgrens blijft spoor");
+assert.equal(dagNeerslagMmTekst(0.006),"<0,05 mm","boven de spoorgrens maar onder 0,05 is <0,05 correct");
+assert.equal(dagNeerslagMmTekst(0.04),"<0,05 mm");
+assert.equal(dagNeerslagMmTekst(0.049),"<0,05 mm");
+assert.equal(dagNeerslagMmTekst(0.05),"<0,1 mm","0,05 mag niet als <0,05 worden gepresenteerd");
+assert.equal(dagNeerslagMmTekst(0.09),"<0,1 mm");
 assert.equal(dagNeerslagMmTekst(0.1),"0,1 mm");
 assert.equal(dagNeerslagMmTekst(0.2),"0,2 mm");
 assert.equal(dagNeerslagMmTekst(8.14),"8,1 mm");
+assert.equal(dagNeerslagMmTekst(0.02,0.03),"spoor","formatter kan een expliciete centrale spoorgrens volgen");
 
 assert.equal(dagNaam("2026-08-26",false,"2026-08-26"),"Vandaag");
 assert.equal(dagNaam("2026-08-26",true,"2026-08-26"),"Vandaag 26");
@@ -64,6 +74,10 @@ for(const [fragment,label] of [
 assert.equal(uit.split('.row.day.kop .bar{text-align:center}').length-1,1,"Bereik-kop moet exact één keer gecentreerd worden door de daily owner");
 assert(uit.includes("function weatherNowDagNeerslagMmTekst(som){"),"hoeveelheidsformatter ontbreekt in base-build");
 assert(uit.includes('if(mm===0)return "0,0 mm";'),"bekende nulhoeveelheid moet expliciet als 0,0 mm worden weergegeven");
+assert(uit.includes('if(mm<=weatherNowDagSpoorMm())return "spoor";'),"spoorhoeveelheid mag geen <0,05-schijnprecisie krijgen");
+assert(uit.includes('if(mm<0.05)return "<0,05 mm";'),"kleine maar boven-spoorhoeveelheid krijgt de precieze <0,05-weergave");
+assert(uit.includes('if(mm<0.1)return "<0,1 mm";'),"0,05 tot 0,1 mm behoudt de bredere <0,1-weergave");
+assert(uit.includes('globalThis.WeatherNowInterpretatie.INTERPRETATIE_CONFIG'),"browserformatter leest de centrale spoorgrens wanneer beschikbaar");
 assert(uit.includes('if(sleutel===weatherNowLokaleDatumSleutel())return volledig?"Vandaag "+nr:"Vandaag";'),"weekrij gebruikt lokale kalenderdag voor Vandaag");
 assert(uit.includes('neerslagMmTekst?`<small>${neerslagMmTekst}</small>`:""'),"weekcel gebruikt de null-veilige hoeveelheid niet");
 for(const fragment of [DCOND_BRON,DRAIN_BRON,DAGNAAM_BRON,KOP_BRON])assert(!uit.includes(fragment),"oude daily-presentatie bleef in base-build staan");
@@ -80,4 +94,4 @@ for(const invariant of [
 assert.throws(()=>pasDailyForecastOwnerToe(uit),/staat al in het aangeleverde artifact/,
   "owner moet fail-fast zijn op een reeds gemigreerd artifact");
 
-console.log("Daily-forecast owner contract groen: lokale Vandaag-semantiek, kans en bekende hoeveelheid worden consistent weergegeven.");
+console.log("Daily-forecast owner contract groen: lokale Vandaag-semantiek, kans en kleine bekende hoeveelheden worden precies weergegeven.");
