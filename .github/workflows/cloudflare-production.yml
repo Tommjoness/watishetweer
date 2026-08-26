@@ -42,6 +42,20 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           test -n "$SOURCE_SHA"
 
+      - name: Controleer Pages-projectconfig
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT"
+          curl -fsS \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            "$API" -o /tmp/cloudflare-project.json
+          jq -e '.success == true' /tmp/cloudflare-project.json >/dev/null
+          production_branch="$(jq -r '.result.production_branch // ""' /tmp/cloudflare-project.json)"
+          echo "Cloudflare production branch: $production_branch"
+          test "$production_branch" = main
+
       - name: Bouw Cloudflare productie-artifact
         env:
           WEATHER_BUILD_SHA: ${{ env.SOURCE_SHA }}
@@ -74,6 +88,11 @@ jobs:
             echo "Bron-SHA: $SOURCE_SHA"
           } >> "$GITHUB_STEP_SUMMARY"
           echo "Production deployment: $URL"
+
+      - name: Wacht tot Pages Functions actief zijn
+        env:
+          CLOUDFLARE_ROOT: ${{ steps.production_url.outputs.url }}
+        run: node scripts/cloudflare-functions-readiness.js
 
       - name: Smoke immutable deployment voor domeinkoppeling
         env:
