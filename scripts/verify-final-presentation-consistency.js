@@ -25,6 +25,12 @@ ok(html.includes("const labelPerioden=g.M?q4MobieleGelabeldePerioden(perioden):p
 ok(html.includes('g.M?" De belangrijkste regenperioden zijn gelabeld; de overige blijven via de grafiekdetails beschikbaar."'),"toegankelijke mobiele Q4-uitleg beschrijft de gereduceerde zichtbare labels eerlijk");
 ok(html.includes('horizontaal.setAttribute("aria-label",q4PeriodeTijdvak(g,p)+" · "+q4Mm(p.som)+" mm")'),"iedere regenbracket houdt ongeacht zichtbare labelfilter zijn volledige aria-detail");
 
+ok(html.includes("function weatherNowDagenNeerslagUitleg(){"),"weekverwachting heeft een finale uitleg-owner voor niet-nul kans met 0,0 mm");
+ok(html.includes('uitleg.id="dagenneerslaguitleg"'),"nul-mm-uitleg krijgt een eigen regel en overschrijft de bedieningshint niet");
+ok(!html.includes('hint.textContent=basis+" "+kans+" kans met 0,0 mm'),"bedieningshint wordt niet meer gebruikt als meteorologische toelichting");
+ok(html.includes('kans+" kans met 0,0 mm betekent dat neerslag mogelijk is'),"aparte weekuitleg legt kans en afgeronde daghoeveelheid in gewone taal uit");
+ok(html.includes('op één decimaal afrondt naar 0,0 mm.'),"uitleg benoemt waarom 0,0 mm naast een kanspercentage kan staan");
+
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 ok(scripts.length>0,"finale artifact bevat inline runtime");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:verify-final-presentatie-"+(i+1)}));

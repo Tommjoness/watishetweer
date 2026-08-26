@@ -11,7 +11,7 @@ const htmlPad=path.join(OUT,"index.html");
 const mobileCss=fs.readFileSync(path.join(__dirname,"mobile-screenshot-polish.css"),"utf8");
 const q1Css=fs.readFileSync(path.join(__dirname,"q1-precip-performance.css"),"utf8");
 const mobileJs=fs.readFileSync(path.join(__dirname,"mobile-screenshot-polish.js"),"utf8");
-const q1Js=fs.readFileSync(path.join(__dirname,"q1-precip-performance.js"),"utf8");
+let q1Js=fs.readFileSync(path.join(__dirname,"q1-precip-performance.js"),"utf8");
 let html=fs.readFileSync(htmlPad,"utf8");
 
 const CSS_MARK="/* ===== MOBILE SCREENSHOT POLISH 20260810B CSS ===== */";
@@ -39,11 +39,12 @@ const GRAFIEK_LABEL_PAST_OUD='      const past=(val,bv)=> bv ? val-F.temp>=by+bh
 const GRAFIEK_LABEL_PAST_NIEUW='      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val+labelHoogte/2+4<=pb;';
 const GRAFIEK_TICK_OUD='    if(toonAs){\n      ticks+=';
 const GRAFIEK_TICK_NIEUW='    if(toonAs){\n      const tijdLabelVrij=nuX==null||Math.abs(x(i)-nuX)>Math.max(18,F.uur*2.2);\n      if(tijdLabelVrij) ticks+=';
-/* Mobiel heeft al een apart rood nu-label. Voor het etmaal zijn daarnaast
-   alleen het globale minimum en maximum permanent nodig; alle tussenpunten
-   blijven via tik/tooltip beschikbaar. Desktop behoudt zijn volledige set. */
+/* Op mobiel waren alleen minimum en maximum te karig, maar alle drie-uurslabels
+   tegelijk zijn onnodig druk. Houd daarom de vaste zes-uursreferenties én alle
+   echte lokale/globale extrema. De bestaande fontbox-, duplicaat- en nu-
+   controles blijven daarna eigenaar van daadwerkelijke botsingen. */
 const GRAFIEK_MOBIELE_LABELS_OUD='  let kandidaten=n<=24?kandidatenRuw:kandidatenRuw.filter((k,pos)=>{';
-const GRAFIEK_MOBIELE_LABELS_NIEUW='  let kandidaten=n<=24?(M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw):kandidatenRuw.filter((k,pos)=>{';
+const GRAFIEK_MOBIELE_LABELS_NIEUW='  let kandidaten=n<=24?(M?kandidatenRuw.filter(k=>k.rang>1||k.i%6===0):kandidatenRuw):kandidatenRuw.filter((k,pos)=>{';
 const GRAFIEK_GEO_ANCHOR='  S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,H:H,M:M};';
 const GRAFIEK_AS_CLEANUP=[
   '  /* Checkpoint 50: controleer op mobiele grafieken de werkelijke SVG-fontboxes',
@@ -72,6 +73,16 @@ const GRAFIEK_AS_CLEANUP=[
   '  }',
   GRAFIEK_GEO_ANCHOR
 ].join('\n');
+
+/* Q1 herschrijft de weekcel na dagen(). Een bekende dagelijkse hoeveelheid van
+   exact nul moet daar niet verdwijnen: 6% kans en 0,0 mm zijn verschillende
+   grootheden en mogen naast elkaar staan. Onbekende/negatieve hoeveelheden
+   blijven leeg; zeer kleine positieve hoeveelheden blijven <0,1 mm. */
+const Q1_DAG_MM_OUD='  const hoeveelheid=mm!==null&&mm>=MM_MEETBAAR\n    ? (typeof hoeveelheidFn==="function"?hoeveelheidFn(mm):mmTekst(mm)) : "";';
+const Q1_DAG_MM_NIEUW='  const hoeveelheid=mm!==null&&mm>=0\n    ? (mm===0?"0,0 mm":(typeof hoeveelheidFn==="function"?hoeveelheidFn(mm):mmTekst(mm))) : "";';
+const q1DagMmAantal=q1Js.split(Q1_DAG_MM_OUD).length-1;
+if(q1DagMmAantal!==1)throw new Error("Q1 dagelijkse hoeveelheid-owner ontbreekt of is dubbel: "+q1DagMmAantal);
+q1Js=q1Js.replace(Q1_DAG_MM_OUD,Q1_DAG_MM_NIEUW);
 
 if(html.includes(CSS_MARK)||html.includes(JS_MARK)||html.includes(Q1_CSS_MARK)||html.includes(Q1_JS_MARK))throw new Error("Post-build polish is al geïnjecteerd.");
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor mobiele polish.");
@@ -121,11 +132,13 @@ for(const vereist of [
   "temperatuurTrend","q1-pop-hidden","normaliseerNachtDagdata","nachtIsActiefNu","corrigeerNachtVensterBron","verbeterNachtzicht",
   "nachtzichtCompactAantal","Meer nachten bekijken","nacht-meer",
   "H=M?250:296","pt=M?59:76, ih=M?145:160","tijdLabelVrij=nuX==null",
-  "M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw",
+  "M?kandidatenRuw.filter(k=>k.rang>1||k.i%6===0):kandidatenRuw","mm!==null&&mm>=0",
   "val+labelHoogte/2+4<=pb","ruimBotsendeAslabelsOp","if(!M)return;","getBBox()"
 ]){
   if(!html.includes(vereist))throw new Error("Post-build invariant ontbreekt: "+vereist);
 }
+if(html.includes("M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw"))throw new Error("Mobiele etmaallabels zijn opnieuw beperkt tot alleen extrema.");
+if(html.includes(Q1_DAG_MM_OUD))throw new Error("Q1 verbergt bekende 0,0 mm nog in de productieartifact.");
 if(html.includes("Afgelopen 15 minuten")||html.includes("Afgelopen kwartier"))throw new Error("Verwijderde recente-neerslagfunctie staat nog in de productieartifact.");
 if(html.includes(LEGACY_RECENT_START)||html.includes('zetEyebrow("prec"'))throw new Error("Een oude eigenaar van #prec staat nog in de productieartifact.");
 if(html.includes(SENIOR_NACHT_SIGNATURE))throw new Error("Patch-op-patch: specifieke oude senior Nachtzicht-wrapper staat nog in de productieartifact.");
@@ -133,4 +146,4 @@ if((html.split('const basisNachten=nachten;').length-1)!==1)throw new Error("Nac
 if(html.includes("Beste modeluren")||html.includes("Relatief gunstigste modeluren"))throw new Error("Nachtzicht bevat nog modeljargon in de presentatie-owner.");
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"mobiele");
-console.log("Mobiele polish + checkpoint 50% geïnjecteerd; etmaallabels mobiel gereduceerd en Nachtzicht compact; cache "+versie+".");
+console.log("Mobiele polish + checkpoint 50% geïnjecteerd; etmaal toont zes-uursreferenties plus echte extrema, 0,0 mm blijft zichtbaar en Nachtzicht blijft compact; cache "+versie+".");

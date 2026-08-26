@@ -21,5 +21,8 @@
 
 /* Plaatsnamen komen uit wereldwijde geocoding en kunnen veel langer zijn dan
    Nederlandse stadsnamen of geen bruikbare afbreekspatie bevatten. Ze mogen de
-   masthead nooit buiten het vel duwen. Normale namen blijven onaangeraakt. */
+   masthead nooit buiten het vel duwen. #place is technisch een h2 en mag daarom
+   niet de algemene uppercase sectiekopstijl erven: broncasing zoals Amsterdam,
+   Vianen of São Paulo blijft intact. */
 #place,#miniplaats{max-width:100%;overflow-wrap:anywhere}
+#place{text-transform:none}

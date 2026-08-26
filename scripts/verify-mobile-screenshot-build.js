@@ -49,7 +49,8 @@ for(const vereist of [
   "H=M?250:296",
   "pt=M?59:76, ih=M?145:160",
   "tijdLabelVrij=nuX==null",
-  "M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw",
+  "M?kandidatenRuw.filter(k=>k.rang>1||k.i%6===0):kandidatenRuw",
+  "mm!==null&&mm>=0",
   "val+labelHoogte/2+4<=pb",
   "ruimBotsendeAslabelsOp",
   "if(!M)return;",
@@ -70,11 +71,13 @@ for(const vereist of [
 const oude15='<div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">';
 const oudeKwartier="Afgelopen kwartier";
 const trend='<div class="eyebrow">Temperatuur komende 3 uur</div><div class="sval" id="prec">';
+const oudeMobieleExtrema='M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw';
 if(html.includes(oude15)||html.includes(oudeKwartier))throw new Error("Verwijderde recente-neerslagtegel staat nog in de definitieve artifact.");
 if((html.split(trend).length-1)!==1)throw new Error("Definitieve temperatuurtrendtegel ontbreekt of is dubbel.");
 if(html.includes("const recenteNeerslag=eindigGetal(c.precipitation)"))throw new Error("Legacy recente-neerslagberekening staat nog in de definitieve artifact.");
 if(html.includes("compactRecentLabel"))throw new Error("Legacy kwartier-wrapper staat nog in de definitieve artifact.");
 if(html.includes("Beste modeluren")||html.includes("Relatief gunstigste modeluren"))throw new Error("Nachtzicht bevat nog oud modeljargon in de definitieve artifact.");
+if(html.includes(oudeMobieleExtrema))throw new Error("Mobiele etmaalgrafiek is opnieuw teruggebracht tot alleen minimum/maximum.");
 
 /* De mobiele compacte breedtebehandeling is bewust gekoppeld aan de enige brede
    statistiektegel. Als later een tweede brede tegel wordt toegevoegd, moet de
@@ -98,4 +101,4 @@ const botsingsBron=html.slice(botsingsLaag,etmaalEind);
 if(!botsingsBron.includes("if(!M)return;"))throw new Error("Fontbox-botsingslaag moet uitsluitend op mobiele grafieken actief zijn; desktop-uuras mag niet worden opgeschoond.");
 
 const verwacht=verifieerServiceworkerCache(OUT,"checkpoint-50");
-console.log("Definitieve checkpoint-50 artifact geverifieerd: compacte brede UV-piek op mobiel, mobiel etmaal toont alleen nu/min/max permanent, Nachtzicht toont drie nachten met toegankelijke uitklap, één Nachtzicht-owner met kalendergrens en zonsopkomstgrens, scanbare maan/zichtregels, brongetrouwe maanfase en cache "+verwacht+".");
+console.log("Definitieve checkpoint-50 artifact geverifieerd: compacte brede UV-piek op mobiel, etmaal toont zes-uursreferenties plus echte extrema met botsingscontrole, bekende 0,0 mm blijft zichtbaar, Nachtzicht toont drie nachten met toegankelijke uitklap, één Nachtzicht-owner met kalendergrens en zonsopkomstgrens, scanbare maan/zichtregels, brongetrouwe maanfase en cache "+verwacht+".");

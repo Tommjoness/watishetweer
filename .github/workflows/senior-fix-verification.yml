@@ -44,6 +44,18 @@ jobs:
             echo "::error file=browser-consumer-polish.test.js,line=1::$msg"
             exit "$code"
           fi
+      - name: Mobiele feedback 26 augustus — Chromium en WebKit
+        shell: bash
+        run: |
+          set +e
+          node browser-mobile-feedback-20260826.test.js > /tmp/mobile-feedback-e2e.log 2>&1
+          code=$?
+          cat /tmp/mobile-feedback-e2e.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 60 /tmp/mobile-feedback-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=browser-mobile-feedback-20260826.test.js,line=1::$msg"
+            exit "$code"
+          fi
       - name: Zichtbare neerslagwaarheid — Chromium en WebKit
         shell: bash
         run: |

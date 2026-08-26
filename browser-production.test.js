@@ -132,12 +132,11 @@ setTimeout(()=>{
     const dagen=document.querySelectorAll('#days .row.day:not(.kop)').length;
     const gridOk=desktop?cols===3:cols===2;
     const briefingDagOk=!/Morgen wordt het maximaal/i.test(brief);
-    /* Desktop houdt de bestaande rijkere referentielabels. Op mobiel is de
-       bewuste productwijziging juist dat alleen globaal minimum en maximum
-       permanent naast de aparte rode nu-waarde staan. Een vlakke reeks kan
-       minimum en maximum op hetzelfde punt hebben, dus 1–2 zwarte labels is
-       het geldige contract. Tooltip/scrub blijft alle tussenpunten ontsluiten. */
-    const labelDichtheidOk=desktop?labels.length>=5:(labels.length>=1&&labels.length<=2&&labels.length===tempPunten.length);
+    /* Desktop houdt de rijkere drie-uursreferenties. Mobiel toont een rustiger
+       middenniveau: zes-uursreferenties plus echte lokale/globale extrema. Dat
+       moet duidelijk meer context geven dan alleen min/max, zonder weer tien
+       permanente cijfers op een smalle grafiek te zetten. */
+    const labelDichtheidOk=desktop?labels.length>=5:(labels.length>=4&&labels.length<=8&&labels.length===tempPunten.length);
     document.body.dataset.browserTestResult=(brief&&briefingDagOk&&dagen>=7&&labelDichtheidOk&&botsingen===0&&dubbelNabij===0&&buiten===0&&lossePunten===0&&nuRustig&&scrubOk&&scrubKort&&neerslagkansVast&&tooltipCompact&&klokOk&&gridOk&&!statOverflow&&statsStabiel&&statsCentraal&&dagenLijnOk&&dagMmLeesbaar&&aqVult&&nightAligned&&nightRuim&&mobileKopOk&&uvOk&&zonSemantiekOk)?'ok':'fout';
     document.body.dataset.browserLabels=String(labels.length);
     document.body.dataset.browserPunten=String(tempPunten.length);
