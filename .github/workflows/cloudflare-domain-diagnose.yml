@@ -109,3 +109,5 @@ jobs:
             echo '=== Cloudflare headers apex ==='
             curl -I -sS --max-time 30 https://watishetweer.nl/ | grep -Ei '^(HTTP/|server:|cf-ray:|cf-cache-status:|weather-build-sha:)' || true
           fi
+
+      # automation-check: 2026-08-26T12:33:50Z
