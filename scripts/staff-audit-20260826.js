@@ -85,10 +85,13 @@ function zelfdeRoute(route){
     &&location.pathname===routePad(route));
 }
 function rootUrlVoor(state){
-  const u=new URL("/",location.origin);
+  /* Productie gebruikt altijd de canonieke root. Browsertests en lokale QA
+     kunnen de artifact rechtstreeks via file:// openen; ook daar mag URL-sync
+     nooit een succesvolle forecastload in een foutpad duwen. */
+  const u=/^https?:$/i.test(location.protocol)?new URL("/",location.href):new URL(location.href);
   u.searchParams.set("lat",Number(state.lat).toFixed(3));u.searchParams.set("lon",Number(state.lon).toFixed(3));
   u.searchParams.set("plaats",state.plaats);
-  if(state.land)u.searchParams.set("land",state.land);
+  if(state.land)u.searchParams.set("land",state.land);else u.searchParams.delete("land");
   return u.href;
 }
 function herstelRouteSeo(){
@@ -106,30 +109,36 @@ function herstelRouteSeo(){
 }
 
 urlBij=function(){
-  const route=root.__WEATHERNOW_ROUTE_LOCATION__;
-  const isRoute=zelfdeRoute(route);
-  const state=historyState(S.lat,S.lon,S.label,S.land,isRoute);if(!state)return;
-  const sleutel=locatieSleutel(S.lat,S.lon,S.label),mode=sleutel&&modusPerLocatie.get(sleutel)||"replace";
-  if(sleutel)modusPerLocatie.delete(sleutel);
+  /* URL/history is afgeleide navigatiepresentatie. Een browserbeperking op
+     History API (bijvoorbeeld file:// tijdens lokale QA) mag nooit weerdata of
+     de succesvolle loadstatus ongeldig maken. Dit behoudt het fail-safe gedrag
+     van de oorspronkelijke urlBij-owner. */
+  try{
+    const route=root.__WEATHERNOW_ROUTE_LOCATION__;
+    const isRoute=zelfdeRoute(route);
+    const state=historyState(S.lat,S.lon,S.label,S.land,isRoute);if(!state)return;
+    const sleutel=locatieSleutel(S.lat,S.lon,S.label),mode=sleutel&&modusPerLocatie.get(sleutel)||"replace";
+    if(sleutel)modusPerLocatie.delete(sleutel);
 
-  if(isRoute){
-    history.replaceState(state,"",location.pathname+location.search+location.hash);
-    return;
-  }
-  const doel=rootUrlVoor(state);
-  if(mode==="push"){
-    if(location.href===doel)history.replaceState(state,"",doel);else history.pushState(state,"",doel);
-    /* Op een statische plaatsroute is de door de SEO-generator gemaakte oude
-       urlBij-owner nog steeds de eigenaar van het verlaten van route-metadata.
-       Hij draait pas NADAT de nieuwe history-entry is gemaakt, zodat de route
-       zelf als Back-bestemming intact blijft. */
-    if(initieleRoute&&route&&basisUrlBijStaff){basisUrlBijStaff();history.replaceState(state,"",doel);}
-  }else if(mode==="pop"){
-    if(initieleRoute&&route&&basisUrlBijStaff){basisUrlBijStaff();}
-    history.replaceState(state,"",location.href);
-  }else{
-    history.replaceState(state,"",doel);
-  }
+    if(isRoute){
+      history.replaceState(state,"",location.pathname+location.search+location.hash);
+      return;
+    }
+    const doel=rootUrlVoor(state);
+    if(mode==="push"){
+      if(location.href===doel)history.replaceState(state,"",doel);else history.pushState(state,"",doel);
+      /* Op een statische plaatsroute is de door de SEO-generator gemaakte oude
+         urlBij-owner nog steeds de eigenaar van het verlaten van route-metadata.
+         Hij draait pas NADAT de nieuwe history-entry is gemaakt, zodat de route
+         zelf als Back-bestemming intact blijft. */
+      if(initieleRoute&&route&&basisUrlBijStaff){basisUrlBijStaff();history.replaceState(state,"",doel);}
+    }else if(mode==="pop"){
+      if(initieleRoute&&route&&basisUrlBijStaff){basisUrlBijStaff();}
+      history.replaceState(state,"",location.href);
+    }else{
+      history.replaceState(state,"",doel);
+    }
+  }catch(_){/* weerdata blijft leidend; history-sync faalt gesloten als UI-bijzaak */}
 };
 
 window.addEventListener("popstate",e=>{
