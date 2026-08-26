@@ -187,6 +187,19 @@ if(typeof waarschuwingen==="function"){
   waarschuwingen=async function(){const r=await basisWaarschuwingenStaff.apply(this,arguments);lokaliseerWaarschuwingen();return r;};
 }
 
+/* ---------------- daggebonden neerslagduiding ---------------- */
+const DAG_NEERSLAG_BRONCONTRACT="Kans en dagsom zijn verschillende modelwaarden en hoeven daarom niet één op één samen te vallen.";
+function verduidelijkDagNeerslagBroncontract(){
+  document.querySelectorAll("#days .dag-neerslagnotitie").forEach(note=>{
+    const tekst=schoon(note.textContent);
+    if(tekst&&!tekst.includes(DAG_NEERSLAG_BRONCONTRACT))note.append(" "+DAG_NEERSLAG_BRONCONTRACT);
+  });
+}
+if(typeof dagen==="function"){
+  const basisDagenStaff=dagen;
+  dagen=function(){const r=basisDagenStaff.apply(this,arguments);verduidelijkDagNeerslagBroncontract();return r;};
+}
+
 /* ---------------- alternatieve grafiekdata ---------------- */
 function lokaleTijdLabel(iso,meerdereDagen){
   const s=schoon(iso),m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(s);if(!m)return s||"–";
