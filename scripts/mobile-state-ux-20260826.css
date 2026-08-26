@@ -1,0 +1,14 @@
+/* Mobiele state- en interactiepolish van 26 augustus. */
+#dagenneerslaguitleg.dagenneerslaguitleg-compact{margin:7px 0 12px;color:var(--ink-45);font-size:11.5px;line-height:1.45}
+#dagenneerslaguitleg.dagenneerslaguitleg-compact > summary{width:max-content;max-width:100%;padding:4px 0;cursor:pointer;color:var(--ink-45);box-shadow:inset 0 -1px 0 var(--rule)}
+#dagenneerslaguitleg.dagenneerslaguitleg-compact > summary:hover,#dagenneerslaguitleg.dagenneerslaguitleg-compact > summary:focus-visible{color:var(--ink)}
+#dagenneerslaguitleg.dagenneerslaguitleg-compact > p{margin:7px 0 0;max-width:70ch}
+#nights .nacht-meta-details{margin:2px 0 0}
+#nights .nacht-meta-details > summary{cursor:pointer;color:var(--ink-45);font-family:var(--sans)}
+@media(max-width:900px){
+  #nights .row.night{padding:9px 0}
+  #nights .nacht-meta-details > summary{width:max-content;max-width:100%;padding:2px 0;font-size:10.5px;line-height:1.35;letter-spacing:.04em;box-shadow:inset 0 -1px 0 var(--rule)}
+  #nights .nacht-meta-details[open] > summary{margin-bottom:4px}
+  #nights .nacht-meta-details .nachtmaan{margin-top:0}
+}
+@media(min-width:901px){#nights .nacht-meta-details{margin-top:2px}#nights .nacht-meta-details > summary{display:none}}
