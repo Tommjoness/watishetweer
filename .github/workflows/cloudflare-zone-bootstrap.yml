@@ -32,8 +32,6 @@ jobs:
           echo "Zone-status: $(jq -r '.result.status' /tmp/zone.json)"
           echo "Cloudflare nameservers: $(jq -r '.result.name_servers | join(", ")' /tmp/zone.json)"
 
-          # Haal de gescande records op. De oude webrecords worden bewust niet overgenomen;
-          # alle mail-, verificatie- en overige records wel.
           curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/scan/review" -o /tmp/review.json
           jq -e '.success == true' /tmp/review.json >/dev/null
 
@@ -43,22 +41,19 @@ jobs:
               elif (.type == "A" or .type == "AAAA" or .type == "CNAME") then {type,name,content,ttl,proxied}
               else {type,name,content,ttl}
               end],
-            rejects: [.result[] | select((.name == "watishetweer.nl" and .type == "A") or (.name == "www.watishetweer.nl" and .type == "CNAME")) |
-              if .type == "CNAME" then {type,name,content,ttl,proxied}
-              else {type,name,content,ttl,proxied}
-              end]
+            rejects: [.result[] | select((.name == "watishetweer.nl" and .type == "A") or (.name == "www.watishetweer.nl" and .type == "CNAME")) | {id}]
           }' /tmp/review.json > /tmp/decision.json
 
           if [ "$(jq '.accepts | length' /tmp/decision.json)" -gt 0 ] || [ "$(jq '.rejects | length' /tmp/decision.json)" -gt 0 ]; then
-            curl -fsS "${auth[@]}" -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/scan/review" \
-              --data-binary @/tmp/decision.json -o /tmp/accepted.json
+            code="$(curl -sS "${auth[@]}" -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/scan/review" --data-binary @/tmp/decision.json -o /tmp/accepted.json -w '%{http_code}')"
+            echo "Scan review POST HTTP $code"
+            jq -r '{success,errors,messages,result} | @json' /tmp/accepted.json
             jq -e '.success == true' /tmp/accepted.json >/dev/null
-            echo "Scanned DNS verwerkt: $(jq '.result.accepts | length' /tmp/accepted.json) geaccepteerd, $(jq '.result.rejects | length' /tmp/accepted.json) verworpen."
+            echo "Scanned DNS verwerkt."
           else
             echo 'Geen tijdelijke scanrecords meer te verwerken.'
           fi
 
-          # Verwijder uitsluitend eventuele oude A/AAAA/CNAME-webrecords op apex en www.
           curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?per_page=100" -o /tmp/current.json
           jq -e '.success == true' /tmp/current.json >/dev/null
           jq -r '.result[] | select((.name == "watishetweer.nl" or .name == "www.watishetweer.nl") and (.type == "A" or .type == "AAAA" or .type == "CNAME")) | .id' /tmp/current.json | while read -r id; do
@@ -67,18 +62,15 @@ jobs:
             jq -e '.success == true' /tmp/delete.json >/dev/null
           done
 
-          # Beide webhostnames zijn al als Pages custom domain geregistreerd; wijs ze nu naar Pages.
           for host in 'watishetweer.nl' 'www.watishetweer.nl'; do
             body="$(jq -cn --arg name "$host" --arg content "$PAGES" '{type:"CNAME",name:$name,content:$content,ttl:1,proxied:true}')"
-            curl -fsS "${auth[@]}" -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records" \
-              --data "$body" -o /tmp/create-record.json
+            curl -fsS "${auth[@]}" -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records" --data "$body" -o /tmp/create-record.json
             jq -e '.success == true' /tmp/create-record.json >/dev/null
           done
 
           curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?per_page=100" -o /tmp/final.json
           jq -e '.success == true' /tmp/final.json >/dev/null
 
-          # Fail closed: mail en verificatie moeten aanwezig zijn vóór een nameserverwijziging.
           jq -e '.result[] | select(.type=="MX" and .name=="watishetweer.nl" and .content=="mx.transip.email" and .priority==10)' /tmp/final.json >/dev/null
           jq -e '.result[] | select(.type=="TXT" and .name=="watishetweer.nl" and (.content|contains("v=spf1 include:_spf.transip.email ~all")))' /tmp/final.json >/dev/null
           jq -e '.result[] | select(.type=="TXT" and .name=="_dmarc.watishetweer.nl" and (.content|contains("v=DMARC1; p=none;")))' /tmp/final.json >/dev/null
