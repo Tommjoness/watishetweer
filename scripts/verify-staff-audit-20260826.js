@@ -18,7 +18,7 @@ for(const [naam,html] of [["root",rootHtml],["Amsterdam-route",routeHtml]]){
     'id="chartdata"','<table>','id="weekbron-uitleg"',
     'window.addEventListener("popstate"','history.pushState(state',
     'min-inline-size:40px','min-block-size:40px',
-    'Deze locatie-URL is ongeldig','Waakzaamheid voor overstromingen',
+    'Deze gedeelde locatie is ongeldig','Waakzaamheid voor overstromingen',
     'Officiële titel:','National Weather Service'
   ])if(!html.includes(vereist))throw new Error(naam+": staff-invariant ontbreekt: "+vereist);
   if(!html.includes('property="og:image" content="https://watishetweer.nl/icon-512.png"'))throw new Error(naam+": og:image ontbreekt");
