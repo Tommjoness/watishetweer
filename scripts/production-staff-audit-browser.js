@@ -7,10 +7,42 @@ const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replac
 const verwacht=String(process.env.EXPECTED_SHA||"").trim();
 if(!/^[0-9a-f]{7,40}$/i.test(verwacht))throw new Error("EXPECTED_SHA ontbreekt of is ongeldig.");
 
-async function wachtVolledig(page,naam){
-  await page.waitForSelector("#app",{state:"visible",timeout:25000});
-  await page.waitForFunction(n=>document.getElementById("place")?.getAttribute("aria-label")===n,naam,{timeout:25000});
-  await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length===7,null,{timeout:25000});
+function verwachteCloudflareAnalyticsCspFout(tekst){
+  const s=String(tekst||"");
+  return s.includes("static.cloudflareinsights.com/beacon.min.js")
+    && /Content Security Policy/i.test(s)
+    && /script-src 'self' 'unsafe-inline'/.test(s)
+    && /blocked/i.test(s);
+}
+async function diagnoseLaadstate(page){
+  return page.evaluate(()=>{
+    const app=document.getElementById("app"),state=document.getElementById("state");
+    return {
+      state:(state?.textContent||"").trim(),
+      stateClass:state?.className||"",
+      stateDisplay:state?getComputedStyle(state).display:"ontbreekt",
+      appDisplay:app?getComputedStyle(app).display:"ontbreekt",
+      ariaBusy:app?.getAttribute("aria-busy")||null,
+      appClass:app?.className||""
+    };
+  }).catch(()=>({state:"",stateClass:"",stateDisplay:"onbekend",appDisplay:"onbekend",ariaBusy:null,appClass:""}));
+}
+async function wachtVolledig(page,naam,opt={}){
+  try{
+    await page.waitForSelector("#app",{state:"visible",timeout:25000});
+    await page.waitForFunction(n=>document.getElementById("place")?.getAttribute("aria-label")===n,naam,{timeout:25000});
+    await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length===7,null,{timeout:25000});
+  }catch(err){
+    const status=await diagnoseLaadstate(page);
+    const tijdelijk=/Ophalen mislukt|Geen verbinding/i.test(status.state);
+    if(opt.herlaadBijTijdelijkeOphaalfout&&tijdelijk){
+      const response=await page.reload({waitUntil:"domcontentloaded",timeout:30000});
+      assert(response&&response.ok(),`${naam}: retry na tijdelijke ophaalfout gaf HTTP ${response&&response.status()}`);
+      await wachtVolledig(page,naam,{herlaadBijTijdelijkeOphaalfout:false});
+      return;
+    }
+    throw new Error(`${naam}: volledige weerweergave niet gereed; state=${JSON.stringify(status.state)}, stateClass=${JSON.stringify(status.stateClass)}, stateDisplay=${status.stateDisplay}, appDisplay=${status.appDisplay}, ariaBusy=${status.ariaBusy}, appClass=${JSON.stringify(status.appClass)}, url=${page.url()}; oorzaak=${err.message}`);
+  }
 }
 async function kiesZoekresultaat(page,naam){
   const q=page.locator("#q");await q.fill(naam);
@@ -25,13 +57,28 @@ async function kiesZoekresultaat(page,naam){
   try{
     const context=await browser.newContext({viewport:{width:390,height:844},locale:"nl-NL",serviceWorkers:"block"});
     const page=await context.newPage(),errors=[];
+    let cloudflareAnalyticsCspBlokkades=0;
     page.on("pageerror",e=>errors.push(String(e)));
-    page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});
+    page.on("console",m=>{
+      if(m.type()!=="error")return;
+      const tekst=m.text();
+      /* Cloudflare Web Analytics kan buiten het build-artifact om een beacon
+         injecteren. De productie-CSP staat alleen eigen scripts toe en blokkeert
+         die derde-partijscript dus bewust. Dat is beveiligingshandhaving, geen
+         app-runtimefout. Negeer uitsluitend deze exacte combinatie; iedere andere
+         console-error blijft de productie-audit hard laten falen. */
+      if(verwachteCloudflareAnalyticsCspFout(tekst)){cloudflareAnalyticsCspBlokkades++;return;}
+      errors.push(tekst);
+    });
 
     const start=ROOT+"/?lat=-33.9249&lon=18.4241&plaats=Kaapstad&land=ZA";
     const response=await page.goto(start,{waitUntil:"domcontentloaded",timeout:30000});
     assert(response&&response.ok(),`Kaapstad start HTTP ${response&&response.status()}`);
-    await wachtVolledig(page,"Kaapstad");
+    /* De voorafgaande wereldwijde monitor doet tien live forecastloads vanaf
+       hetzelfde CI-adres. Alleen wanneer de app zélf expliciet een tijdelijke
+       ophaalfout toont, krijgt deze onafhankelijke start één schone reload. Een
+       persistente fout blijft na die ene poging gewoon rood. */
+    await wachtVolledig(page,"Kaapstad",{herlaadBijTijdelijkeOphaalfout:true});
     await page.evaluate(()=>document.fonts&&document.fonts.ready);
     const eerste=await page.evaluate(()=>({
       sha:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
@@ -40,7 +87,8 @@ async function kiesZoekresultaat(page,naam){
       main:document.querySelectorAll("main#app").length,
       skip:!!document.querySelector('.skiplink[href="#app"]'),
       og:document.querySelector('meta[property="og:image"]')?.content||"",
-      twitter:document.querySelector('meta[name="twitter:image"]')?.content||""
+      twitter:document.querySelector('meta[name="twitter:image"]')?.content||"",
+      csp:document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.content||""
     }));
     assert.equal(eerste.sha,verwacht,`verkeerde productiebuild ${eerste.sha}`);
     assert(eerste.uur>0,"uurlabels ontbreken op de eerste mobiele render");
@@ -49,6 +97,7 @@ async function kiesZoekresultaat(page,naam){
     assert(eerste.skip,"skiplink ontbreekt op productie");
     assert.equal(eerste.og,ROOT+"/icon-512.png","og:image wijkt af");
     assert.equal(eerste.twitter,ROOT+"/icon-512.png","twitter:image wijkt af");
+    assert(!/cloudflareinsights/i.test(eerste.csp),"document-CSP mag Cloudflare Analytics niet impliciet toestaan");
 
     const grafiekSummary=page.locator("#chartdata > summary");
     await grafiekSummary.focus();await page.keyboard.press("Enter");
@@ -99,7 +148,7 @@ async function kiesZoekresultaat(page,naam){
     await invalid.close();
 
     assert.deepEqual(errors,[],`productie-browserfouten: ${errors.join(" | ")}`);
-    console.log(`PRODUCTIE STAFF-AUDIT GESLAAGD: ${verwacht}; eerste grafiekstate, tabel/keyboard, Kaapstad→Amsterdam Back/Forward, 320–430px targets, resize, metadata en invalid deep link op Cloudflare-productie.`);
+    console.log(`PRODUCTIE STAFF-AUDIT GESLAAGD: ${verwacht}; eerste grafiekstate, tabel/keyboard, Kaapstad→Amsterdam Back/Forward, 320–430px targets, resize, metadata en invalid deep link op Cloudflare-productie. Bewust door CSP geblokkeerde Cloudflare Analytics-beacons: ${cloudflareAnalyticsCspBlokkades}.`);
     await context.close();
   }finally{await browser.close();}
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
