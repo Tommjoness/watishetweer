@@ -87,6 +87,13 @@ async function controleer(type,naam,breedte){
         const cls=typeof el.className==="string"&&el.className.trim()?"."+el.className.trim().replace(/\s+/g,"."):"";
         return el.tagName.toLowerCase()+id+cls;
       };
+      const begrensdDoorHorizontaleScroller=el=>{
+        for(let p=el.parentElement;p&&p!==document.body;p=p.parentElement){
+          const s=getComputedStyle(p),x=s.overflowX;
+          if((x==="auto"||x==="scroll")&&p.scrollWidth>p.clientWidth+.75)return p;
+        }
+        return null;
+      };
       const buiten=[];
       for(const el of document.querySelectorAll("body *")){
         if(!zichtbaar(el))continue;
@@ -95,12 +102,20 @@ async function controleer(type,naam,breedte){
            documentlayout te verbreden; de SVG-container zelf telt wél mee. */
         if(el instanceof SVGElement&&el.tagName.toLowerCase()!=="svg")continue;
         const links=Math.min(0,r.left),rechts=Math.max(0,r.right-vw);
-        if(links<-.75||rechts>.75)buiten.push({el:label(el),left:+r.left.toFixed(2),right:+r.right.toFixed(2),width:+r.width.toFixed(2),links:+links.toFixed(2),rechts:+rechts.toFixed(2)});
+        if(links<-.75||rechts>.75){
+          /* Een brede datatabel mag binnen een expliciete, zelf begrensde
+             horizontale scrollregio doorlopen. Dit is geen pagina-overflow:
+             de scroller zelf moet hieronder nog steeds binnen de viewport
+             vallen en html/body-scrollWidth blijven apart hard bewaakt. */
+          const scroller=begrensdDoorHorizontaleScroller(el);
+          if(scroller&&scroller!==el)continue;
+          buiten.push({el:label(el),left:+r.left.toFixed(2),right:+r.right.toFixed(2),width:+r.width.toFixed(2),links:+links.toFixed(2),rechts:+rechts.toFixed(2)});
+        }
       }
       const modules={};
-      for(const [naam,sel] of Object.entries({sheet:".sheet",header:".mast",chart:"#chart",days:"#days",nights:"#nights",air:"#aq",footer:"footer",minibar:"#minibar"})){
+      for(const [naam,sel] of Object.entries({sheet:".sheet",header:".mast",chart:"#chart",chartdata:".chartdata-scroll",days:"#days",nights:"#nights",air:"#aq",footer:"footer",minibar:"#minibar"})){
         const el=document.querySelector(sel);if(!el)continue;const r=el.getBoundingClientRect();
-        modules[naam]={left:+r.left.toFixed(2),right:+r.right.toFixed(2),width:+r.width.toFixed(2),scrollWidth:el.scrollWidth,clientWidth:el.clientWidth};
+        modules[naam]={left:+r.left.toFixed(2),right:+r.right.toFixed(2),width:+r.width.toFixed(2),scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,overflowX:getComputedStyle(el).overflowX};
       }
       return {
         innerWidth:window.innerWidth,clientWidth:vw,
@@ -117,6 +132,10 @@ async function controleer(type,naam,breedte){
     assert.ok(resultaat.htmlScroll<=resultaat.clientWidth,`${naam} ${breedte}: document heeft horizontale overflow; ${diagnose}`);
     assert.ok(resultaat.bodyScroll<=resultaat.clientWidth,`${naam} ${breedte}: body heeft horizontale overflow; ${diagnose}`);
     assert.deepEqual(resultaat.buiten,[],`${naam} ${breedte}: zichtbare elementen steken buiten viewport; ${diagnose}`);
+    if(resultaat.modules.chartdata){
+      assert.ok(resultaat.modules.chartdata.left>=-.75&&resultaat.modules.chartdata.right<=resultaat.clientWidth+.75,`${naam} ${breedte}: grafiekdatatabel-scroller zelf valt buiten viewport; ${diagnose}`);
+      assert.ok(["auto","scroll"].includes(resultaat.modules.chartdata.overflowX),`${naam} ${breedte}: brede grafiekdatatabel is niet horizontaal begrensd; ${diagnose}`);
+    }
     assert.deepEqual(fouten,[],`${naam} ${breedte}: pageerrors; ${JSON.stringify(fouten)}`);
     console.log(`Mobiele overflow OK: ${naam} ${breedte}px; chart ${resultaat.modules.chart.width}px; labels ${resultaat.q4Labels.join(" | ")}`);
   }finally{await context.close();await browser.close();}
