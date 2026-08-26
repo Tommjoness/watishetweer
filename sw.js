@@ -32,10 +32,15 @@ async function cacheerShellBestand(cache,u){
 }
 
 self.addEventListener("install", e => {
+  /* Zet de activatie-intentie meteen wanneer install begint. De worker kan
+     hierdoor niet onnodig in waiting blijven hangen achter de vorige controller.
+     event.waitUntil bewaakt onafhankelijk daarvan de volledige shellinstallatie:
+     activering kan dus pas plaatsvinden nadat alle verplichte cachewrites klaar
+     zijn en een mislukte verplichte shellfetch laat install nog steeds falen. */
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE)
       .then(c => Promise.all(SHELL.map(u => cacheerShellBestand(c,u))))
-      .then(() => self.skipWaiting())
   );
 });
 
