@@ -7,7 +7,7 @@ const root = path.join(__dirname, "..");
 const publicDir = path.join(root, "public");
 const cloudflareDir = path.join(root, "cloudflare");
 
-for (const naam of ["_headers", "_routes.json"]) {
+for (const naam of ["_headers", "_routes.json", "404.html"]) {
   const bron = path.join(cloudflareDir, naam);
   const doel = path.join(publicDir, naam);
   if (!fs.existsSync(bron)) throw new Error(`Cloudflare-bron ontbreekt: ${naam}`);

@@ -25,6 +25,11 @@ for (const naam of ["neerslag", "plaatsnaam", "waarschuwingen"]) {
   assert.ok(bron.includes("headers.delete(\"Vercel-CDN-Cache-Control\")"));
 }
 
+const middleware = lees("functions/_middleware.js");
+assert.ok(middleware.includes("export async function onRequest(context)"));
+assert.ok(middleware.includes("X-Content-Type-Options"));
+assert.ok(middleware.includes("Content-Security-Policy"));
+
 const routes = JSON.parse(lees("cloudflare/_routes.json"));
 assert.deepStrictEqual(routes, { version: 1, include: ["/api/*"], exclude: [] });
 
@@ -37,9 +42,19 @@ for (const header of globaleHeaders.headers) {
     cloudflareHeaders.includes(`${header.key}: ${header.value}`),
     `Cloudflare mist security header ${header.key}`
   );
+  assert.ok(
+    middleware.includes(`\"${header.key}\"`) || middleware.includes(`${header.key}:`),
+    `Cloudflare Functions-middleware mist security header ${header.key}`
+  );
 }
 
-for (const script of ["scripts/platform-output-cleanup.js", "scripts/cloudflare-output.js"]) {
+const nietGevonden = lees("cloudflare/404.html");
+assert.ok(nietGevonden.includes("<meta name=\"robots\" content=\"noindex,nofollow\">"));
+assert.ok(nietGevonden.includes("Pagina niet gevonden"));
+assert.ok(nietGevonden.includes("href=\"/\""));
+assert.ok(lees("scripts/cloudflare-output.js").includes("404.html"));
+
+for (const script of ["scripts/platform-output-cleanup.js", "scripts/cloudflare-output.js", "scripts/cloudflare-preview-smoke.js"]) {
   assert.ok(fs.existsSync(path.join(root, script)), `${script} ontbreekt`);
 }
 
