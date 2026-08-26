@@ -76,19 +76,36 @@ jobs:
           echo '=== Cloudflare DNS records ==='
           jq -r '.result[] | {type,name,content,priority,proxied,ttl} | @json' /tmp/records.json
 
-      - name: Scan huidige TransIP-zone en vergelijk
+      - name: Actuele cutoververificatie
         shell: bash
         run: |
           set -euo pipefail
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
-          curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl' -o /tmp/zones.json
-          zone_id="$(jq -r '.result[0].id // ""' /tmp/zones.json)"
-          test -n "$zone_id"
+          curl -fsS "${auth[@]}" 'https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl' -o /tmp/zones-now.json
+          zone_status="$(jq -r '.result[0].status // "missing"' /tmp/zones-now.json)"
+          echo "ZONE_STATUS=$zone_status"
 
-          curl -fsS "${auth[@]}" -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/scan/trigger" -o /tmp/scan-trigger.json
-          jq -e '.success == true' /tmp/scan-trigger.json >/dev/null
-          sleep 12
-          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/scan/review" -o /tmp/scan-review.json
-          jq -e '.success == true' /tmp/scan-review.json >/dev/null
-          echo '=== Door Cloudflare gevonden records op huidige TransIP-zone ==='
-          jq -r '.result[]? | {type,name,content,priority,proxied,ttl} | @json' /tmp/scan-review.json
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT/domains"
+          curl -fsS "${auth[@]}" "$API" -o /tmp/domains-now.json
+          jq -r '.result[] | "DOMAIN_STATUS \(.name)=\(.status) verification=\(.verification_data.status // "n/a") validation=\(.validation_data.status // "n/a")"' /tmp/domains-now.json
+
+          echo '=== Autoritatieve nameservers volgens publieke DNS ==='
+          node <<'NODE'
+          const dns=require('node:dns').promises;
+          dns.resolveNs('watishetweer.nl').then(x=>console.log(x.sort().join('\n'))).catch(e=>console.log(`NS_ERROR=${e.code||e.message}`));
+          NODE
+
+          if [ "$zone_status" = "active" ]; then
+            echo '=== HTTPS smoke ==='
+            for url in \
+              'https://watishetweer.nl/' \
+              'https://www.watishetweer.nl/' \
+              'https://watishetweer.nl/api/plaatsnaam?lat=52.37&lon=4.90' \
+              'https://watishetweer.nl/api/waarschuwingen?lat=52.37&lon=4.90' \
+              'https://watishetweer.nl/api/neerslag?lat=52.37&lon=4.90'; do
+              code="$(curl -L -sS --max-time 30 -o /tmp/body -w '%{http_code}' "$url" || true)"
+              echo "$code $url"
+            done
+            echo '=== Cloudflare headers apex ==='
+            curl -I -sS --max-time 30 https://watishetweer.nl/ | grep -Ei '^(HTTP/|server:|cf-ray:|cf-cache-status:|weather-build-sha:)' || true
+          fi
