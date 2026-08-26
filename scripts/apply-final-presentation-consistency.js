@@ -18,8 +18,8 @@ const PAD=path.join(OUT,"index.html");
       ook eerlijk zeggen, terwijl iedere bracket zijn eigen aria-label behoudt.
    4. Een bekende dagsom van 0,0 mm mag niet verdwijnen wanneer dezelfde dag nog
       een niet-nul neerslagkans heeft. Bij 0% + 0,0 mm blijft de rij wel compact.
-   5. Als kans en 0,0 mm samen zichtbaar zijn, legt de weekhint in gewone taal uit
-      waarom dat geen tegenspraak is. */
+   5. Als kans en 0,0 mm samen zichtbaar zijn, krijgt de weekverwachting een eigen
+      uitlegregel. De bedieningshint blijft daardoor uitsluitend een instructie. */
 const ZON_RUNTIME_OUD=`      if(kop.textContent.trim()==="Zonuren"){
         const u=Number(String(val.textContent||"").replace(",",".").replace(/[^0-9.-]/g,""));
         const tekst=zonurenOordeelGetoond(u);if(tekst)sub.textContent=tekst;
@@ -70,21 +70,28 @@ const VANDAAG_DAG_MM_NIEUW=`      const dagMm=num(a&&a.hoeveelheid),dagKans=num(
 /* Deze wrapper wordt als allerlaatste runtime-owner vlak vóór start ingevoegd.
    Daardoor leest hij de werkelijk zichtbare kans na alle dagcorrecties, inclusief
    de resterende lokale dag voor Vandaag. Alleen als een rij echt xx% + 0,0 mm
-   toont, wordt de uitleg aan de bestaande weekhint toegevoegd. */
+   toont, verschijnt een aparte toelichting direct onder de vaste weekhint. */
 const START_MARKER="/* ---------- start ---------- */";
 const DAGEN_UITLEG_RUNTIME=`/* Finale uitleg bij niet-nul neerslagkans + 0,0 mm. */
 function weatherNowDagenNeerslagUitleg(){
   const hint=document.getElementById("dagenhint");if(!hint)return;
-  const basis="Klik op een dag om die verwachting in de grafiek te laden.";
+  let uitleg=document.getElementById("dagenneerslaguitleg");
   const rij=[...document.querySelectorAll("#days .row.day:not(.kop)")].find(r=>{
     const mm=r.querySelector(".q1-dag-mm"),kansEl=r.querySelector(".drain");
     if(!mm||!kansEl||mm.textContent.trim()!=="0,0 mm")return false;
     const m=/(\\d+)%/.exec(kansEl.textContent||"");return !!m&&Number(m[1])>0;
   });
-  if(!rij){hint.textContent=basis;return;}
+  if(!rij){if(uitleg)uitleg.remove();return;}
+  if(!uitleg){
+    uitleg=document.createElement("p");
+    uitleg.id="dagenneerslaguitleg";
+    uitleg.className="hint";
+    uitleg.setAttribute("role","note");
+    hint.insertAdjacentElement("afterend",uitleg);
+  }
   const m=/(\\d+)%/.exec((rij.querySelector(".drain")||{}).textContent||"");
   const kans=m?m[1]+"%":"Een niet-nul kans";
-  hint.textContent=basis+" "+kans+" kans met 0,0 mm betekent dat neerslag mogelijk is, maar dat de verwachte totale hoeveelheid voor die dag op één decimaal afrondt naar 0,0 mm.";
+  uitleg.textContent=kans+" kans met 0,0 mm betekent dat neerslag mogelijk is, maar dat de verwachte totale hoeveelheid voor die dag op één decimaal afrondt naar 0,0 mm.";
 }
 if(typeof dagen==="function"){
   const basisDagenNeerslagUitleg=dagen;
@@ -123,9 +130,11 @@ if(!html.includes('mm===0&&k!==null&&k>0'))
   throw new Error("Q1-presenteerder onderscheidt 0% droog niet van niet-nul kans bij 0,0 mm.");
 if(!html.includes("function weatherNowDagenNeerslagUitleg(){"))
   throw new Error("Weekuitleg voor niet-nul kans met 0,0 mm ontbreekt.");
+if(!html.includes('uitleg.id="dagenneerslaguitleg"'))
+  throw new Error("Weekuitleg staat niet in een eigen uitlegregel.");
 
 fs.writeFileSync(PAD,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"finale-presentatie");
-console.log("Finale presentatieconsistentie toegepast: zonuren-owner hersteld, Nachtzicht genuanceerd, mobiele regen-uitleg gelijkgetrokken en xx% + 0,0 mm zichtbaar én uitgelegd; cache "+versie+".");
+console.log("Finale presentatieconsistentie toegepast: zonuren-owner hersteld, Nachtzicht genuanceerd, mobiele regen-uitleg gelijkgetrokken en xx% + 0,0 mm zichtbaar én apart uitgelegd; cache "+versie+".");
 
 module.exports={ZON_RUNTIME_OUD,ZON_RUNTIME_NIEUW,NACHT_OUD,NACHT_NIEUW,ARIA_OUD,ARIA_NIEUW,Q1_DAG_MM_OUD,Q1_DAG_MM_NIEUW,VANDAAG_DAG_MM_OUD,VANDAAG_DAG_MM_NIEUW,START_MARKER,DAGEN_UITLEG_RUNTIME,vervangExact};
