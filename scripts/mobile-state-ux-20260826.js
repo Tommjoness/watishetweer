@@ -26,7 +26,7 @@ function terugNaarBereikLabel(bereik){
 }
 function weekUitlegSamenvatting(tekst){
   const m=/^(\d+)%\s+kans/i.exec(String(tekst||"").trim());
-  return m?"Waarom "+m[1]+"% kans en 0,0 mm?":"Waarom kans en 0,0 mm?";
+  return m?m[1]+"% kans met 0,0 mm: afgerond op één decimaal.":"Kans met 0,0 mm: afgerond op één decimaal.";
 }
 
 const api={grafiekHeeftUurlabels,grafiekHerstelNodig,terugNaarBereikLabel,weekUitlegSamenvatting};
