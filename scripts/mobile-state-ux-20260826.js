@@ -38,7 +38,6 @@ if(typeof document==="undefined"||typeof window==="undefined"||typeof S==="undef
 const mobiel=()=>typeof window.matchMedia==="function"
   ?window.matchMedia("(max-width:900px)").matches
   :window.innerWidth<=900;
-const aanraak=()=>typeof window.matchMedia==="function"&&window.matchMedia("(pointer:coarse)").matches;
 
 function chartUurTeksten(svg){
   return svg?[...svg.querySelectorAll("text")].filter(el=>/^\d{2}$/.test(tekstVan(el))):[];
@@ -52,15 +51,18 @@ function pasEtmaalContextToe(){
   }
   const hint=document.getElementById("charthint");
   if(!hint)return;
-  const actie=aanraak()?"Tik":"Klik";
+  const huidige=tekstVan(hint);
+  const detail=/Kans op neerslag:|verwachte hoeveelheid:/i.test(huidige)
+    ?huidige
+    :"Selecteer een punt in de grafiek voor details.";
   if(S.dag!=null){
-    hint.textContent="Deze kalenderdag per uur. "+actie+" op een punt voor details.";
+    hint.textContent="Deze kalenderdag per uur. "+detail;
   }else if(Number(S.bereik)===24){
-    hint.textContent="Vanaf nu, de komende 24 uur. "+actie+" op een punt voor details.";
+    hint.textContent="Vanaf nu, de komende 24 uur. Selecteer een punt in de grafiek voor details.";
   }else if(Number(S.bereik)===48){
-    hint.textContent="Vanaf nu, de komende 48 uur. "+actie+" op een punt voor details.";
+    hint.textContent="Vanaf nu, de komende 48 uur. Selecteer een punt in de grafiek voor details.";
   }else{
-    hint.textContent=actie+" op een punt in de grafiek voor details.";
+    hint.textContent="Selecteer een punt in de grafiek voor details.";
   }
 }
 
