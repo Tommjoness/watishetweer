@@ -34,7 +34,7 @@ async function metFetchMock(mock, fn) {
   assert.equal(r.status, 400);
   assert.equal(body?.reden, "ongeldige coördinaten");
   assert.match(r.headers.get("cache-control") || "", /no-store/i);
-  assert.equal(r.headers.get("vercel-cdn-cache-control"), null);
+  assert.equal(r.headers.get("cloudflare-cdn-cache-control"), null);
 }
 
 {
@@ -43,7 +43,7 @@ async function metFetchMock(mock, fn) {
   assert.equal(r.status, 400);
   assert.equal(body?.reden, "ongeldige coordinaten");
   assert.match(r.headers.get("cache-control") || "", /no-store/i);
-  assert.equal(r.headers.get("vercel-cdn-cache-control"), null);
+  assert.equal(r.headers.get("cloudflare-cdn-cache-control"), null);
 }
 
 {
@@ -52,7 +52,7 @@ async function metFetchMock(mock, fn) {
   assert.equal(r.status, 400);
   assert.equal(body?.reden, "geen geldige locatie");
   assert.match(r.headers.get("cache-control") || "", /no-store/i);
-  assert.equal(r.headers.get("vercel-cdn-cache-control"), null);
+  assert.equal(r.headers.get("cloudflare-cdn-cache-control"), null);
 }
 
 await metFetchMock(async () => {
@@ -63,7 +63,7 @@ await metFetchMock(async () => {
   assert.equal(r.status, 200);
   assert.deepEqual(body, { naam: null, land: null, reden: "plaatsnaambron tijdelijk niet beschikbaar" });
   assert.doesNotMatch(JSON.stringify(body), /geheime upstream detail/i);
-  assert.equal(r.headers.get("vercel-cdn-cache-control"), "s-maxage=30, stale-while-revalidate=30");
+  assert.equal(r.headers.get("cloudflare-cdn-cache-control"), "s-maxage=30, stale-while-revalidate=30");
   assert.equal(r.headers.get("cache-control"), "public, max-age=0, must-revalidate");
 });
 
@@ -77,7 +77,7 @@ await metFetchMock(async () => {
   assert.equal(body?.provider, "knmi");
   assert.equal(body?.reden, "KNMI-neerslag tijdelijk niet beschikbaar");
   assert.doesNotMatch(JSON.stringify(body), /KNMI intern detail/i);
-  assert.equal(r.headers.get("vercel-cdn-cache-control"), "s-maxage=15, stale-while-revalidate=15");
+  assert.equal(r.headers.get("cloudflare-cdn-cache-control"), "s-maxage=15, stale-while-revalidate=15");
   assert.equal(r.headers.get("cache-control"), "public, max-age=0, must-revalidate");
 });
 
@@ -90,7 +90,7 @@ await metFetchMock(async () => {
   assert.equal(body?.dekking, false);
   assert.equal(body?.reden, "bron onbereikbaar");
   assert.doesNotMatch(JSON.stringify(body), /MeteoAlarm intern detail/i);
-  assert.equal(r.headers.get("vercel-cdn-cache-control"), "s-maxage=30, stale-while-revalidate=30");
+  assert.equal(r.headers.get("cloudflare-cdn-cache-control"), "s-maxage=30, stale-while-revalidate=30");
   assert.equal(r.headers.get("cache-control"), "public, max-age=0, must-revalidate");
 });
 

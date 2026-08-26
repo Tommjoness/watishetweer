@@ -46,9 +46,14 @@ ok(gebouwd.includes('const morgenDagMax=')&&gebouwd.includes('morgenDagMax')&&ge
 ok(gebouwd.includes('el.classList.add("aq-cols-1")'),"ontbrekende luchtkwaliteitsdata gebruikt een volle lege-statusrij");
 ok(gebouwd.includes("#suntimes .zondag")&&gebouwd.includes("Zonsopkomst ")&&gebouwd.includes("Zonsondergang "),"zonmomenten tonen de dag als eigen hiërarchische kop boven op- en ondergang");
 
-const vercel=JSON.parse(fs.readFileSync(path.join(ROOT,"vercel.json"),"utf8"));
-const headers=(vercel.headers&&vercel.headers[0]&&vercel.headers[0].headers)||[];
-const headerMap=Object.fromEntries(headers.map(h=>[String(h.key).toLowerCase(),h.value]));
+const cloudflareHeaders=fs.readFileSync(path.join(ROOT,"cloudflare","_headers"),"utf8");
+const headerMap={};
+for(const regel of cloudflareHeaders.split(/\r?\n/)){
+  const tekst=regel.trim();
+  if(!tekst||tekst==="/*")continue;
+  const i=tekst.indexOf(":");
+  if(i>0)headerMap[tekst.slice(0,i).toLowerCase()]=tekst.slice(i+1).trim();
+}
 ok(headerMap["x-content-type-options"]==="nosniff","nosniff-header staat aan");
 ok(headerMap["x-frame-options"]==="DENY","framing is geblokkeerd");
 ok(/geolocation=\(self\)/.test(headerMap["permissions-policy"]||""),"locatiebevoegdheid is tot de eigen site beperkt");

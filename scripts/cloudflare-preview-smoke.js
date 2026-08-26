@@ -28,6 +28,9 @@ function security(r,label){
   assert.equal(r.headers.get("referrer-policy"),"strict-origin-when-cross-origin",`${label}: referrer-policy wijkt af`);
   assert(/default-src 'self'/.test(r.headers.get("content-security-policy")||""),`${label}: CSP ontbreekt`);
 }
+function cloudflareCache(r,label){
+  assert(/^s-maxage=\d+/.test(r.headers.get("cloudflare-cdn-cache-control")||""),`${label}: Cloudflare CDN-cachecontract ontbreekt`);
+}
 
 (async()=>{
   const home=await request("/");
@@ -47,35 +50,37 @@ function security(r,label){
   const plaats=await json("/api/plaatsnaam?lat=52.3508&lon=5.2647");
   assert.equal(plaats.r.status,200,"plaatsnaam-API is niet 200");
   security(plaats.r,"plaatsnaam-API");
+  cloudflareCache(plaats.r,"plaatsnaam-API");
   assert(plaats.body&&typeof plaats.body==="object","plaatsnaam-API heeft geen objectpayload");
   assert("naam" in plaats.body&&"land" in plaats.body,"plaatsnaam-API mist contractvelden");
-  assert.equal(plaats.r.headers.get("vercel-cdn-cache-control"),null,"plaatsnaam-API lekt Vercel-cacheheader");
 
   const neerslag=await json("/api/neerslag?lat=52.3508&lon=5.2647&land=NL");
   assert.equal(neerslag.r.status,200,"neerslag-API is niet 200");
   security(neerslag.r,"neerslag-API");
+  cloudflareCache(neerslag.r,"neerslag-API");
   assert(neerslag.body&&typeof neerslag.body.beschikbaar==="boolean","neerslag-API mist beschikbaar-boolean");
-  assert.equal(neerslag.r.headers.get("vercel-cdn-cache-control"),null,"neerslag-API lekt Vercel-cacheheader");
 
   const waarschuwingen=await json("/api/waarschuwingen?lat=52.3508&lon=5.2647&land=NL");
   assert.equal(waarschuwingen.r.status,200,"waarschuwingen-API is niet 200");
   security(waarschuwingen.r,"waarschuwingen-API");
+  cloudflareCache(waarschuwingen.r,"waarschuwingen-API");
   assert(waarschuwingen.body&&typeof waarschuwingen.body.dekking==="boolean","waarschuwingen-API mist dekking-boolean");
   assert(Array.isArray(waarschuwingen.body.lijst),"waarschuwingen-API mist lijst-array");
-  assert.equal(waarschuwingen.r.headers.get("vercel-cdn-cache-control"),null,"waarschuwingen-API lekt Vercel-cacheheader");
 
   const post=await json("/api/plaatsnaam?lat=52.3508&lon=5.2647",{method:"POST"});
   assert.equal(post.r.status,405,"POST op plaatsnaam-API is niet 405");
   assert.equal(post.r.headers.get("allow"),"GET, HEAD","405 mist correcte Allow-header");
   assert(/no-store/i.test(post.r.headers.get("cache-control")||""),"405 mag niet publiek gecachet worden");
+  assert.equal(post.r.headers.get("cloudflare-cdn-cache-control"),null,"405 mag geen Cloudflare CDN-cacheheader krijgen");
 
   const ongeldig=await json("/api/neerslag?lat=abc&lon=5.2647&land=NL");
   assert.equal(ongeldig.r.status,400,"ongeldige neerslagcoördinaten zijn niet 400");
   assert(/no-store/i.test(ongeldig.r.headers.get("cache-control")||""),"400 mag niet publiek gecachet worden");
+  assert.equal(ongeldig.r.headers.get("cloudflare-cdn-cache-control"),null,"400 mag geen Cloudflare CDN-cacheheader krijgen");
 
   const head=await request("/api/plaatsnaam?lat=52.3508&lon=5.2647",{method:"HEAD"});
   assert.equal(head.status,200,"HEAD op plaatsnaam-API is niet 200");
   assert.equal((await head.text()).length,0,"HEAD bevat onverwacht een responsebody");
 
-  console.log(`CLOUDFLARE PREVIEW SMOKE GESLAAGD: ${ROOT}; SHA ${EXPECTED_SHA}; statisch, security en drie API-contracten groen.`);
+  console.log(`CLOUDFLARE PREVIEW SMOKE GESLAAGD: ${ROOT}; SHA ${EXPECTED_SHA}; statisch, security, CDN-cache en drie API-contracten groen.`);
 })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});
