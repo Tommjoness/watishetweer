@@ -17,7 +17,8 @@ assert(mobileCss.includes(".nachtzichtregel")&&mobileCss.includes(".nachtmaanreg
 assert(mobileCss.includes("#nights .nacht-meer")&&mobileCss.includes('#nights .row.night[hidden]'),"Nachtzicht heeft een mobiele uitklapbediening zonder rijen uit de DOM te verwijderen");
 assert(/#days \.row\.day:not\(\.kop\) \.dname\{font-size:13\.5px\}/.test(mobileCss),"Mobiele dagnaam blijft minimaal 13,5 px");
 assert(/#days \.row\.day:not\(\.kop\) \.dwind,[\s\S]*?#days \.row\.day:not\(\.kop\) \.drain\{font-size:13px\}/.test(mobileCss),"Mobiele wind- en neerslagtekst blijven minimaal 13 px");
-assert(apply.includes("M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw"),"Mobiel etmaal toont permanent alleen globale extrema naast het aparte nu-label");
+assert(apply.includes("M?kandidatenRuw.filter(k=>k.rang>1||(k.i%6===0&&!kandidatenRuw.some(g=>g.rang>1&&Math.abs(g.i-k.i)<=1))):kandidatenRuw"),"Mobiel etmaal toont rustige zes-uursreferenties plus echte extrema zonder dubbele nabije referentie");
+assert(apply.includes("k.rang>=2||(n<=24&&!M)"),"Reguliere mobiele zes-uurslabels worden niet horizontaal van hun datapunt geschoven");
 
 /* De brede statistiektegel is op dit moment exact één UV-tegel. Daardoor mag
    de mobiele presentatie-owner hem gericht compacter maken zonder een tweede
@@ -119,4 +120,4 @@ assert.equal(p.pollenEenheid(1.5),"korrels/m³");
 assert.equal(p.pollenEenheid(0),"korrels/m³");
 assert.equal(p.pollenEenheid(4),"korrels/m³");
 
-console.log("Mobiele screenshot-polish: compacte UV-piek, topbediening, compacte etmaallabels, uitklapbaar Nachtzicht, kalendergrens, maanfase, natuurlijke maancopy, weekleesbaarheid en pollenregressies geslaagd.");
+console.log("Mobiele screenshot-polish: compacte UV-piek, topbediening, rustige zes-uursreferenties plus extrema, uitklapbaar Nachtzicht, kalendergrens, maanfase, natuurlijke maancopy, weekleesbaarheid en pollenregressies geslaagd.");
