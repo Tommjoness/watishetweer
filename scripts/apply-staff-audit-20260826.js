@@ -24,14 +24,15 @@ if(html.includes(CSS_MARK)||html.includes(JS_MARK))throw new Error("Staff-auditl
 if(!html.includes("WeatherNowMobileStateUX"))throw new Error("Mobiele state-UX moet vóór de staff-audit zijn geassembleerd.");
 if(!html.includes("WeatherNowGlobalLocationHardening"))throw new Error("Wereldwijde locatiehardening ontbreekt vóór staff-audit.");
 
-/* Landmarks + skiplink. De bestaande layout-DOM blijft intact; ARIA-landmarks
-   vermijden een risicovolle wrapper-/gridwijziging. */
+/* Landmarks + skiplink. UI-polish heeft #app al naar de enige semantische
+   <main> omgezet; deze laag voegt alleen een focusdoel voor de skiplink toe en
+   maakt de bestaande mast expliciet het banner-landmark. */
 html=vervangExact(html,
   '<body>\n<div class="sheet">',
   '<body>\n<a class="skiplink" href="#app">Ga naar hoofdinhoud</a>\n<div class="sheet">',
   "skiplink");
 html=vervangExact(html,'  <div class="mast">','  <div class="mast" role="banner">',"header-landmark");
-html=vervangExact(html,'  <div id="app" style="display:none">','  <div id="app" role="main" tabindex="-1" style="display:none">',"main-landmark");
+html=vervangExact(html,'<main id="app" style="display:none">','<main id="app" tabindex="-1" style="display:none">',"main-focusdoel");
 
 /* De SVG blijft de rustige visuele grafiek. Een native details+table biedt
    dezelfde kerngegevens via toetsenbord/screenreader zonder ieder SVG-punt
@@ -109,7 +110,7 @@ if(!scripts.length)throw new Error("Geen inline scripts na staff-audit.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:staff-audit-"+(i+1)}));
 
 for(const vereist of [
-  'class="skiplink"','role="banner"','role="main"','id="chartdata"','id="weekbron-uitleg"',
+  'class="skiplink"','role="banner"','<main id="app" tabindex="-1"','id="chartdata"','id="weekbron-uitleg"',
   'WeatherNowStaffAudit.markeerNavigatie("push")','window.addEventListener("popstate"',
   'Deze gedeelde locatie is ongeldig','Officiële melding','National Weather Service'
 ])if(!html.includes(vereist))throw new Error("Staff-audit invariant ontbreekt: "+vereist);
