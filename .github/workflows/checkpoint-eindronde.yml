@@ -27,6 +27,18 @@ jobs:
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
       - name: Pure en buildregressies
         run: npm test
+      - name: Staff-audit interacties in Chromium en WebKit
+        shell: bash
+        run: |
+          set +e
+          node browser-staff-audit-20260826.test.js > /tmp/staff-audit-e2e.log 2>&1
+          code=$?
+          cat /tmp/staff-audit-e2e.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 60 /tmp/staff-audit-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=browser-staff-audit-20260826.test.js,line=1::$msg"
+            exit "$code"
+          fi
       - name: Bouw definitieve artifact
         run: npm run build
       - name: SEO-plaatsroutes in Chromium en WebKit
