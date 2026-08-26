@@ -134,6 +134,10 @@ footer .bron-bronnen .bronitem{
   }
   #nights .nacht-meer:hover{color:var(--ink);border-top-color:var(--ink)}
 
+  /* "Vandaag" is op mobiel bewust langer dan de overige korte dagnamen. De
+     naamkolom krijgt daarom de 56 px die de eerdere maatvoering al veronderstelde;
+     het 22 px weericoon blijft een eigen kolom en kan de tekst niet meer raken. */
+  #days .row.day{grid-template-columns:56px 22px 52px minmax(0,1fr) minmax(0,1fr) 64px}
   #days .row.day:not(.kop) .dname{font-size:13.5px}
   #days .row.day:not(.kop) .dwind,
   #days .row.day:not(.kop) .drain{font-size:13px}
@@ -210,6 +214,12 @@ footer .bron-bronnen .bronitem{
     margin-top:0;
     min-width:0;
   }
+}
+
+@media(max-width:370px){
+  /* Onder 370 px verdwijnt de windkolom uit de weektabel. Houd ook daar de
+     56 px naamkolom, zodat Vandaag niet alsnog tegen het icoon aanloopt. */
+  #days .row.day{grid-template-columns:56px 22px minmax(0,1fr) minmax(0,1fr) 62px}
 }
 
 @media(max-width:360px){
