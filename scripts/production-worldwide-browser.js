@@ -19,6 +19,12 @@ const locaties=[
 const schermen=[{naam:"mobiel",width:390,height:844},{naam:"desktop",width:1440,height:1000}];
 function klokMinuten(tekst){const m=/^(\d{2}):(\d{2})$/.exec(String(tekst||""));return m?Number(m[1])*60+Number(m[2]):null;}
 function klokVerschil(a,b){const x=klokMinuten(a),y=klokMinuten(b);if(x===null||y===null)return Infinity;const d=Math.abs(x-y);return Math.min(d,1440-d);}
+function isVolledigeForecast(url){
+  try{
+    const u=new URL(url);
+    return u.hostname==="api.open-meteo.com"&&u.pathname==="/v1/forecast"&&u.searchParams.get("forecast_hours")==="170"&&u.searchParams.get("past_hours")==="24"&&u.searchParams.has("hourly")&&u.searchParams.has("daily");
+  }catch(e){return false;}
+}
 
 (async()=>{
   const browser=await chromium.launch({headless:true});
@@ -30,7 +36,7 @@ function klokVerschil(a,b){const x=klokMinuten(a),y=klokMinuten(b);if(x===null||
         page.on("pageerror",e=>pageErrors.push(String(e)));
         const params=new URLSearchParams({lat:String(locatie.lat),lon:String(locatie.lon),plaats:locatie.naam,land:locatie.land});
         const bronBelofte=page.waitForResponse(r=>{
-          try{const u=new URL(r.url());return u.hostname==="api.open-meteo.com"&&u.pathname==="/v1/forecast"&&r.ok();}catch(e){return false;}
+          return isVolledigeForecast(r.url())&&r.ok();
         },{timeout:30000});
         const [response,bronResponse]=await Promise.all([
           page.goto(ROOT+"/?"+params,{waitUntil:"domcontentloaded",timeout:30000}),bronBelofte

@@ -14,6 +14,16 @@ const profielen=[
 const LIMIET={dom:10000,weer:15000,grafiek:18000};
 
 function isForecast(url){try{const u=new URL(url);return u.hostname==="api.open-meteo.com"&&u.pathname==="/v1/forecast";}catch(e){return false;}}
+function isVolledigeForecast(url){
+  if(!isForecast(url))return false;
+  const u=new URL(url);
+  return u.searchParams.get("forecast_hours")==="170"&&u.searchParams.get("past_hours")==="24"&&u.searchParams.has("hourly")&&u.searchParams.has("daily");
+}
+function isSnellePreview(url){
+  if(!isForecast(url))return false;
+  const u=new URL(url);
+  return !u.searchParams.has("forecast_hours")&&!u.searchParams.has("hourly")&&!u.searchParams.has("daily")&&u.searchParams.has("current");
+}
 function isBeacon(url){return /cloudflareinsights|beacon\.min\.js|\/cdn-cgi\/(?:rum|trace)/i.test(String(url));}
 
 (async()=>{
@@ -51,8 +61,13 @@ function isBeacon(url){return /cloudflareinsights|beacon\.min\.js|\/cdn-cgi\/(?:
       assert(grafiekMs<LIMIET.grafiek,`${profiel.naam}: bruikbare grafiek ${grafiekMs}ms overschrijdt ${LIMIET.grafiek}ms`);
 
       const succesvolleForecasts=responses.filter(r=>isForecast(r.url)&&r.status>=200&&r.status<300);
-      assert.equal(succesvolleForecasts.length,1,`${profiel.naam}: verwacht één succesvolle Open-Meteo-forecast, kreeg ${succesvolleForecasts.length}`);
-      const forecastUrl=new URL(succesvolleForecasts[0].url);
+      const volledigeForecasts=succesvolleForecasts.filter(r=>isVolledigeForecast(r.url));
+      const previewForecasts=succesvolleForecasts.filter(r=>isSnellePreview(r.url));
+      const onbekendeForecasts=succesvolleForecasts.filter(r=>!isVolledigeForecast(r.url)&&!isSnellePreview(r.url));
+      assert.equal(volledigeForecasts.length,1,`${profiel.naam}: verwacht één volledige Open-Meteo-forecast, kreeg ${volledigeForecasts.length}`);
+      assert(previewForecasts.length<=1,`${profiel.naam}: current-only preview werd ${previewForecasts.length} keer opgevraagd`);
+      assert.equal(onbekendeForecasts.length,0,`${profiel.naam}: onverwachte forecastaanvragen: ${onbekendeForecasts.map(r=>r.url).join(" | ")}`);
+      const forecastUrl=new URL(volledigeForecasts[0].url);
       assert.equal(forecastUrl.searchParams.get("forecast_hours"),"170",`${profiel.naam}: forecast_hours wijkt af`);
       assert.equal(forecastUrl.searchParams.get("past_hours"),"24",`${profiel.naam}: past_hours wijkt af`);
       const beacons=requests.filter(isBeacon);
@@ -81,7 +96,7 @@ function isBeacon(url){return /cloudflareinsights|beacon\.min\.js|\/cdn-cgi\/(?:
       assert(!mislukt.some(x=>isForecast(x.url)),`${profiel.naam}: mislukte forecastaanvraag ${mislukt.map(x=>x.url+": "+x.fout).join(" | ")}`);
 
       const herkomsten={};for(const url of requests){try{const o=new URL(url).origin;herkomsten[o]=(herkomsten[o]||0)+1;}catch(e){}}
-      console.log(JSON.stringify({profiel:profiel.naam,sha,domMs,weerMs,grafiekMs,forecastRequests:succesvolleForecasts.length,totaalRequests:requests.length,herkomsten,overflow:ui.overflow}));
+      console.log(JSON.stringify({profiel:profiel.naam,sha,domMs,weerMs,grafiekMs,volledigeForecasts:volledigeForecasts.length,previewForecasts:previewForecasts.length,totaalRequests:requests.length,herkomsten,overflow:ui.overflow}));
       await context.close();
     }finally{await browser.close();}
   }
