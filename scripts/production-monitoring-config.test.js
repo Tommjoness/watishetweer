@@ -48,8 +48,10 @@ assert(wereldwijd.includes('{naam:"desktop",width:1440,height:1000}'),"wereldwij
 assert(wereldwijd.includes('uit.overflow<=1'),"wereldwijde monitor bewaakt horizontale overflow niet");
 assert(wereldwijd.includes('assert.equal(uit.sha,verwacht'),"wereldwijde browsermonitor moet de exacte build-SHA bewaken");
 assert(wereldwijd.includes("verifieerBronwaarheid(bron,uit"),"wereldwijde browsermonitor vergelijkt zichtbare waarden niet met de live bronrespons");
+assert(wereldwijd.includes("isVolledigeForecast(r.url())"),"wereldwijde browsermonitor moet de volledige forecastrespons en niet de current-only preview vergelijken");
 assert(performance.includes('const {chromium,webkit,devices}=require("playwright")'),"live performancemonitor moet Chromium en WebKit gebruiken");
-assert(performance.includes("succesvolleForecasts.length,1"),"live performancemonitor bewaakt dubbele forecastaanvragen niet");
+assert(performance.includes("volledigeForecasts.length,1"),"live performancemonitor bewaakt dubbele volledige forecastaanvragen niet");
+assert(performance.includes("previewForecasts.length<=1"),"live performancemonitor begrenst de current-only preview niet");
 assert(performance.includes("beacons.length,0"),"live performancemonitor bewaakt Cloudflare beaconinjectie niet");
 
 require("./production-source-truth.test.js");
