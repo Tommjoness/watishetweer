@@ -52,6 +52,7 @@ assert(wereldwijd.includes("isVolledigeForecast(r.url())"),"wereldwijde browserm
 assert(performance.includes('const {chromium,webkit,devices}=require("playwright")'),"live performancemonitor moet Chromium en WebKit gebruiken");
 assert(performance.includes("volledigeForecasts.length,1"),"live performancemonitor bewaakt dubbele volledige forecastaanvragen niet");
 assert(performance.includes("previewForecasts.length<=1"),"live performancemonitor begrenst de current-only preview niet");
+assert(performance.includes("mislukteVolledige.length,0"),"live performancemonitor onderscheidt een afgebroken preview niet van een mislukte volledige forecast");
 assert(performance.includes("beacons.length,0"),"live performancemonitor bewaakt Cloudflare beaconinjectie niet");
 
 require("./production-source-truth.test.js");

@@ -93,7 +93,10 @@ function isBeacon(url){return /cloudflareinsights|beacon\.min\.js|\/cdn-cgi\/(?:
       assert.equal(ui.dagen,7,`${profiel.naam}: dagtabel verloor rijen tijdens scrollen`);
       assert.deepEqual(pageErrors,[],`${profiel.naam}: pageerrors ${pageErrors.join(" | ")}`);
       assert.deepEqual(consoleErrors,[],`${profiel.naam}: console-errors ${consoleErrors.join(" | ")}`);
-      assert(!mislukt.some(x=>isForecast(x.url)),`${profiel.naam}: mislukte forecastaanvraag ${mislukt.map(x=>x.url+": "+x.fout).join(" | ")}`);
+      const mislukteVolledige=mislukt.filter(x=>isVolledigeForecast(x.url));
+      const mislukteOnbekende=mislukt.filter(x=>isForecast(x.url)&&!isVolledigeForecast(x.url)&&!isSnellePreview(x.url));
+      assert.equal(mislukteVolledige.length,0,`${profiel.naam}: mislukte volledige forecast ${mislukteVolledige.map(x=>x.url+": "+x.fout).join(" | ")}`);
+      assert.equal(mislukteOnbekende.length,0,`${profiel.naam}: mislukte onbekende forecastvariant ${mislukteOnbekende.map(x=>x.url+": "+x.fout).join(" | ")}`);
 
       const herkomsten={};for(const url of requests){try{const o=new URL(url).origin;herkomsten[o]=(herkomsten[o]||0)+1;}catch(e){}}
       console.log(JSON.stringify({profiel:profiel.naam,sha,domMs,weerMs,grafiekMs,volledigeForecasts:volledigeForecasts.length,previewForecasts:previewForecasts.length,totaalRequests:requests.length,herkomsten,overflow:ui.overflow}));
