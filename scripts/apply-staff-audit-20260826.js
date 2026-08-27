@@ -42,6 +42,7 @@ const CHART_BRON=`      <svg id="chart" viewBox="0 0 900 296" width="100%" role=
 const CHART_NIEUW=CHART_BRON+`
       <details id="chartdata" class="chartdata">
         <summary>Grafiekgegevens als tabel</summary>
+        <p class="chartdata-scrollhint">Veeg horizontaal om alle kolommen te zien.</p>
         <div class="chartdata-scroll" tabindex="0" role="region" aria-label="Grafiekgegevens">
           <table>
             <caption class="sr-only">Alternatieve gegevensweergave van de huidige weergrafiek.</caption>

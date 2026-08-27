@@ -1,12 +1,14 @@
 "use strict";
 
 const assert=require("assert");
-const {waarschuwingTitelNl,locatieSleutel,historyState,historyStateGeldig,formatMm}=require("./staff-audit-20260826.js");
+const {waarschuwingTitelNl,waarschuwingTitelVoorBriefing,locatieSleutel,historyState,historyStateGeldig,formatMm}=require("./staff-audit-20260826.js");
 
 assert.deepEqual(waarschuwingTitelNl("Flood Watch"),{origineel:"Flood Watch",nederlands:"Waakzaamheid voor overstromingen",vertaald:true});
 assert.deepEqual(waarschuwingTitelNl("Extreme Heat Warning"),{origineel:"Extreme Heat Warning",nederlands:"Waarschuwing voor extreme hitte",vertaald:true});
 assert.deepEqual(waarschuwingTitelNl("Air Quality Alert"),{origineel:"Air Quality Alert",nederlands:"Luchtkwaliteitswaarschuwing",vertaald:true});
 assert.deepEqual(waarschuwingTitelNl("Unknown Marine Statement"),{origineel:"Unknown Marine Statement",nederlands:"Unknown Marine Statement",vertaald:false});
+assert.equal(waarschuwingTitelVoorBriefing("Flood Watch","US"),"Waakzaamheid voor overstromingen");
+assert.equal(waarschuwingTitelVoorBriefing("Flood Watch","NL"),"Flood Watch");
 
 assert.equal(locatieSleutel("52.3676",4.9041,"Amsterdam"),"52.36760|4.90410|amsterdam");
 assert.equal(locatieSleutel(null,4.9,"Amsterdam"),null);

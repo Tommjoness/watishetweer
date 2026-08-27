@@ -122,10 +122,12 @@ async function controleer(browserType,naam){
     assert((await page.evaluate(()=>history.length))>=3,`${naam}: expliciete locatiekeuzes maken geen history entries`);
     const warning=await page.evaluate(()=>({
       titel:document.querySelector("#waarschuwingen .waarsch h3")?.textContent||"",
-      officieel:document.querySelector("#waarschuwingen .waarsch-officieel-details")?.textContent||""
+      officieel:document.querySelector("#waarschuwingen .waarsch-officieel-details")?.textContent||"",
+      briefing:document.getElementById("brief")?.textContent||""
     }));
     assert.equal(warning.titel,"Waakzaamheid voor overstromingen",`${naam}: bekende NWS-titel niet gecontroleerd vertaald`);
     assert(/Flood Watch/.test(warning.officieel)&&/National Weather Service/.test(warning.officieel),`${naam}: officiële titel/bron niet behouden`);
+    assert(/Waakzaamheid voor overstromingen/.test(warning.briefing)&&!/Flood Watch/.test(warning.briefing),`${naam}: briefing gebruikt niet dezelfde Nederlandse waarschuwingstitel (${warning.briefing})`);
 
     await page.goBack({waitUntil:"domcontentloaded"});await wachtPlaats(page,"Amsterdam");
     assert(/plaats=Amsterdam/.test(page.url()),`${naam}: Back herstelt Amsterdam-URL niet (${page.url()})`);

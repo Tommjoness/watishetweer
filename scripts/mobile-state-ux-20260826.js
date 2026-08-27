@@ -47,8 +47,22 @@ function dagNeerslagNuance(kans,hoeveelheid,dagLabel,spoorMm){
   };
   return null;
 }
+function dagNeerslagTitel(kans,zichtbareTekst,dagLabel,isVandaag){
+  const dag=String(dagLabel||"Deze dag").trim()||"Deze dag";
+  if(isVandaag){
+    /* De Vandaag-rij wordt door de weather-truth-owner bewust herschreven naar
+       alleen de nog resterende lokale uren. Het raw daily-maximum kan ook een
+       al verstreken uur bevatten en mag daarom niet in deze tooltip belanden. */
+    const zichtbaar=/(\d{1,3})\s*%/.exec(String(zichtbareTekst||""));
+    if(!zichtbaar)return "";
+    const pct=Math.round(Math.max(0,Math.min(100,Number(zichtbaar[1]))));
+    return pct+"% is de hoogste neerslagkans in één uur in de resterende uren van vandaag.";
+  }
+  const k=getal(kans);if(k===null)return "";
+  return Math.round(Math.max(0,Math.min(100,k)))+"% is de hoogste neerslagkans in één uur op "+dag+".";
+}
 
-const api={grafiekHeeftUurlabels,grafiekHerstelNodig,terugNaarBereikLabel,dagNeerslagNuance};
+const api={grafiekHeeftUurlabels,grafiekHerstelNodig,terugNaarBereikLabel,dagNeerslagNuance,dagNeerslagTitel};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileStateUX=api;
 
@@ -156,10 +170,13 @@ function verbindWeekNeerslagAanRijen(){
     rij.removeAttribute("aria-describedby");
     if(!Number.isInteger(i)||i<0)return;
     const kans=getal(kansen&&kansen[i]),mm=getal(hoeveelheden&&hoeveelheden[i]);
-    const dag=dagLabelUitRij(rij,i,daily),nuance=dagNeerslagNuance(kans,mm,dag,spoor);
+    const dag=dagLabelUitRij(rij,i,daily),datum=Array.isArray(daily.time)?String(daily.time[i]||""):"";
+    const vandaag=!!datum&&datum===String(S.d&&S.d.current&&S.d.current.time||"").slice(0,10);
+    const nuance=dagNeerslagNuance(kans,mm,dag,spoor);
     const drain=rij.querySelector(".drain");
-    if(drain&&kans!==null){
-      drain.title=Math.round(Math.max(0,Math.min(100,kans)))+"% is de hoogste neerslagkans in één uur op "+dag+".";
+    if(drain){
+      const titel=dagNeerslagTitel(kans,drain.textContent,dag,vandaag);
+      if(titel)drain.title=titel;else drain.removeAttribute("title");
     }
     if(!nuance)return;
     const klein=drain&&drain.querySelector("small");

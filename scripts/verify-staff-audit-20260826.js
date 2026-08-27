@@ -15,7 +15,7 @@ for(const [naam,html] of [["root",rootHtml],["Amsterdam-route",routeHtml]]){
   if(tel(html,"/* ===== STAFF AUDIT 20260826 CSS ===== */")!==1)throw new Error(naam+": staff-CSS ontbreekt of is dubbel");
   for(const vereist of [
     'class="skiplink" href="#app"','role="banner"','<main id="app" tabindex="-1"',
-    'id="chartdata"','<table>','document.querySelectorAll("#days .dag-neerslagnotitie")',
+    'id="chartdata"','Veeg horizontaal om alle kolommen te zien.','<table>','document.querySelectorAll("#days .dag-neerslagnotitie")',
     'Kans en dagsom zijn verschillende modelwaarden',
     'window.addEventListener("popstate"','history.pushState(state',
     'min-inline-size:40px','min-block-size:40px',

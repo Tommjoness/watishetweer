@@ -45,6 +45,7 @@ for(const vereist of [
   "normaliseerNachtDagdata",
   "nachtIsActiefNu",
   "corrigeerNachtVensterBron",
+  "nachtVensterTekst",
   "formatteerMaanTekst",
   "nachtzichtregel",
   "nachtmaanregel",
@@ -100,6 +101,8 @@ if(uvCss<0||basisStats<0||uvCss<=basisStats)throw new Error("Mobiele UV-override
 const nachtOwners=html.split("const basisNachten=nachten;").length-1;
 if(nachtOwners!==1)throw new Error("Nachtzicht heeft "+nachtOwners+" presentatie-owners; exact één vereist.");
 if(html.includes('const basisNachten=nachten;\nnachten=function(){\n  basisNachten();\n  const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")]'))throw new Error("Oude senior Nachtzicht-wrapper staat nog in de definitieve artifact.");
+if(!html.includes('vensterEl=rij.querySelector(".nachtvenster")'))throw new Error("Nachtzicht-presentatie leest het losse canonieke kijkvenster niet.");
+if(!html.includes("if(detail&&vensterLos)vensterEl.textContent=detail;"))throw new Error("Nachtzicht werkt de losse kijkvenstercopy niet scorebewust bij.");
 
 if((html.split("const ruimBotsendeAslabelsOp=()=>{").length-1)!==1)throw new Error("Grafiek moet exact één fontbox-botsingslaag hebben.");
 const etmaalStart=html.indexOf("function etmaal("),botsingsLaag=html.indexOf("const ruimBotsendeAslabelsOp=()=>{"),etmaalEind=html.indexOf("function daglengte(",etmaalStart);
