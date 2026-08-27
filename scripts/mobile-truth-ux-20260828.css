@@ -1,24 +1,9 @@
-/* Mobiele hiërarchie en dichtheid 2026-08-28. Desktop blijft ongewijzigd. */
+/* Mobiele semantiek 2026-08-28. Bestaande responsive geometrie blijft eigenaar. */
 .mobile-neerslag-sleutel,.mobile-meetdetails{display:none}
 
 @media(max-width:900px){
-  /* De actuele temperatuur blijft het visuele anker, maar domineert niet langer
-     een groot deel van de eerste viewport. */
-  #t{font-size:76px}
-  .deg{font-size:29px;margin-top:4px}
-  .hero{gap:8px 12px;margin:16px 0 2px}
-  .brief{font-size:17px;line-height:1.45;margin-top:16px;padding-top:16px}
-
-  /* Minder spreadsheetgevoel: dezelfde waarden en scheidingsregels, zonder de
-     zware verticale celwanden. */
-  .dashrow-hero .stats{column-gap:18px;margin-top:16px}
-  .dashrow-hero .stats .stat:nth-child(n){
-    padding:12px 0 14px!important;
-    border-right:0!important;
-  }
-  .dashrow-hero .stats .sval{margin-top:5px}
-  .dashrow-hero .stats .mobile-secundaire-stat > .ssub{display:none}
-
+  /* Maak de twee grootheden onder de uurtegel expliciet zonder het bestaande
+     metriekgrid, de UV-rij of andere dashboardsecties opnieuw te stylen. */
   .mobile-neerslag-sleutel{
     display:block;
     margin-top:4px;
@@ -28,9 +13,11 @@
     color:var(--ink-25);
   }
 
+  /* Alleen de langere verklaringszinnen worden op mobiel samengevat. De
+     bestaande stat-tegels, kolommen, borders en afmetingen blijven onaangeraakt. */
+  .dashrow-hero .stats .mobile-secundaire-stat > .ssub{display:none}
   .mobile-meetdetails{
     display:block;
-    grid-column:1 / -1;
     margin:0;
     padding:10px 0 2px;
     border-bottom:1px solid var(--rule);
@@ -48,26 +35,5 @@
   .mobile-meetdetails-body p{margin:3px 0;line-height:1.45}
   .mobile-meetdetails-body strong{font-weight:500;color:var(--ink-70)}
 
-  /* De twee meest gevraagde vooruitblikken staan op mobiel vóór de verdiepende
-     24-uursgrafiek. De normale sectiestijl blijft intact. */
-  .mobile-priority-rain,
-  .mobile-priority-week{min-width:0;width:100%}
-  .mobile-priority-rain > h2,
-  .mobile-priority-week > h2{margin-top:26px}
-  .mobile-priority-rain > #nc{margin-bottom:2px}
-  .mobile-priority-week #dagenhint{margin-bottom:8px}
-
-  /* De weektabel komt eerder in beeld en hoeft daardoor niet ook nog extra hoge
-     rijen te gebruiken. Touch targets blijven ruim boven de 44px. */
-  .mobile-priority-week #days .row.day{padding-top:10px;padding-bottom:10px;min-height:48px}
-
-  /* De grafiekhint is nu inhoudelijker; geef hem net genoeg adem zonder opnieuw
-     een losse tekstband te creëren. */
   #charthint{line-height:1.4;margin-bottom:8px}
-}
-
-@media(max-width:430px){
-  #t{font-size:72px}
-  .deg{font-size:27px}
-  .dashrow-hero .stats{column-gap:16px}
 }
