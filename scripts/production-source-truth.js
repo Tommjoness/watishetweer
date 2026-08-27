@@ -3,6 +3,7 @@
 const assert=require("assert");
 const {kansHoofd,hoeveelheidTekst}=require("../neerslagkans-policy-v3.js");
 const {analyseerDagData}=require("../interpretatie-engine.js");
+const {zonInfoRijen}=require("../senior-semantiek-20260810.js");
 
 const BFT=[1,6,12,20,29,39,50,62,75,89,103,117.000001];
 
@@ -32,6 +33,17 @@ function zonDagIndex(bron){
   const onder=daily.sunset&&daily.sunset[i];
   if(onder&&String(bron.current.time)>=String(onder)&&i+1<(daily.time||[]).length)i++;
   return i;
+}
+function zonVerwachting(bron){
+  const rijen=zonInfoRijen(bron?.daily,bron?.current?.time,null,()=>"",datum=>datum);
+  const items=rijen.flatMap(r=>r.items||[]),op=[],onder=[];
+  for(const item of items){
+    const opMatch=/^zon op\s+(\d{2}:\d{2})$/i.exec(String(item));
+    const onderMatch=/^zon onder\s+(\d{2}:\d{2})$/i.exec(String(item));
+    if(opMatch)op.push(opMatch[1]);
+    if(onderMatch)onder.push(onderMatch[1]);
+  }
+  return {rijen,op,onder};
 }
 function verwachtDagRijen(bron){
   const d=bron?.daily||{},a=[],vandaag=String(bron?.current?.time||"").slice(0,10);
@@ -73,14 +85,14 @@ function verifieerBronwaarheid(bron,ui,label){
     gelijk(rij.neerslagHoeveelheid,dag.neerslag.hoeveelheid,`${prefix}: neerslaghoeveelheid wijkt af`);
   });
 
-  const zonIndex=zonDagIndex(bron),op=bron.daily.sunrise?.[zonIndex],onder=bron.daily.sunset?.[zonIndex];
-  if(op&&onder){
-    assert(ui.zon.includes(String(op).slice(11,16)),`${label}: zonsopkomst wijkt af van bron`);
-    assert(ui.zon.includes(String(onder).slice(11,16)),`${label}: zonsondergang wijkt af van bron`);
+  const zon=zonVerwachting(bron);
+  if(zon.op.length||zon.onder.length){
+    for(const tijd of zon.op)assert(ui.zon.includes(tijd),`${label}: verwachte komende zonsopkomst ${tijd} ontbreekt`);
+    for(const tijd of zon.onder)assert(ui.zon.includes(tijd),`${label}: verwachte komende zonsondergang ${tijd} ontbreekt`);
   }else{
     assert(/zon|daglicht/i.test(ui.zon),`${label}: pooldag/-nacht heeft geen eerlijke zonstatus`);
   }
-  return {dagen:verwacht.length,zonIndex};
+  return {dagen:verwacht.length,zonRijen:zon.rijen.length};
 }
 
-module.exports={BFT,getal,bft,zichtbaarGetal,dagNeerslag,uvPiekVandaag,zonDagIndex,verwachtDagRijen,verifieerBronwaarheid};
+module.exports={BFT,getal,bft,zichtbaarGetal,dagNeerslag,uvPiekVandaag,zonDagIndex,zonVerwachting,verwachtDagRijen,verifieerBronwaarheid};

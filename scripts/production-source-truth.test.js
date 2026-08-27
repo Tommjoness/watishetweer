@@ -1,7 +1,7 @@
 "use strict";
 
 const assert=require("assert");
-const {bft,dagNeerslag,uvPiekVandaag,zonDagIndex,verwachtDagRijen}=require("./production-source-truth.js");
+const {bft,dagNeerslag,uvPiekVandaag,zonDagIndex,zonVerwachting,verwachtDagRijen}=require("./production-source-truth.js");
 
 assert.equal(bft(0),0);assert.equal(bft(1),1);assert.equal(bft(12),3);assert.equal(bft(117),11);assert.equal(bft(118),12);
 assert.deepEqual(dagNeerslag(0,0),{hoofd:"Droog",hoeveelheid:""});
@@ -21,7 +21,20 @@ const bron={
 };
 assert.equal(uvPiekVandaag(bron),5);
 assert.equal(zonDagIndex(bron),1);
+assert.deepEqual(zonVerwachting(bron).op,["06:30"]);
+assert.deepEqual(zonVerwachting(bron).onder,["20:30"]);
 assert.equal(verwachtDagRijen(bron).length,7);
 assert.deepEqual(verwachtDagRijen(bron)[2],{datum:"2026-08-29",min:12,max:22,wind:2,neerslag:{hoofd:"20%",hoeveelheid:"0,1 mm"}});
+
+const avond={
+  current:{time:"2026-08-27T19:00",is_day:1},
+  daily:{
+    time:["2026-08-27","2026-08-28"],
+    sunrise:["2026-08-27T06:31","2026-08-28T06:33"],
+    sunset:["2026-08-27T20:31","2026-08-28T20:29"]
+  }
+};
+assert.deepEqual(zonVerwachting(avond).op,["06:33"],"na de verstreken zonsopkomst toont de UI de eerstvolgende opkomst");
+assert.deepEqual(zonVerwachting(avond).onder,["20:31"],"vóór zonsondergang blijft de huidige ondergang zichtbaar");
 
 console.log("production-source-truth: bron-naar-UI-contracten OK");
