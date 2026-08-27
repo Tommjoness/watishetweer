@@ -47,11 +47,13 @@ function dagNeerslagNuance(kans,hoeveelheid,dagLabel,spoorMm){
   };
   return null;
 }
-function dagNeerslagNuanceVoorRij(kans,hoeveelheid,dagLabel,spoorMm,isVandaag){
+function dagNeerslagNuanceVoorRij(kans,hoeveelheid,dagLabel,spoorMm,isVandaag,resterendVandaag){
   /* Vandaag wordt eerder door de centrale weather-truth-owner berekend over
      uitsluitend de resterende lokale uren. De raw daily-dagsom mag die horizon
      hier niet opnieuw overschrijven. */
-  return isVandaag?null:dagNeerslagNuance(kans,hoeveelheid,dagLabel,spoorMm);
+  if(!isVandaag)return dagNeerslagNuance(kans,hoeveelheid,dagLabel,spoorMm);
+  if(!resterendVandaag||!resterendVandaag.genoeg)return null;
+  return dagNeerslagNuance(resterendVandaag.kans,resterendVandaag.hoeveelheid,dagLabel,spoorMm);
 }
 function dagNeerslagTitel(kans,zichtbareTekst,dagLabel,isVandaag){
   const dag=String(dagLabel||"Deze dag").trim()||"Deze dag";
@@ -178,7 +180,9 @@ function verbindWeekNeerslagAanRijen(){
     const kans=getal(kansen&&kansen[i]),mm=getal(hoeveelheden&&hoeveelheden[i]);
     const dag=dagLabelUitRij(rij,i,daily),datum=Array.isArray(daily.time)?String(daily.time[i]||""):"";
     const vandaag=!!datum&&datum===String(S.d&&S.d.current&&S.d.current.time||"").slice(0,10);
-    const nuance=dagNeerslagNuanceVoorRij(kans,mm,dag,spoor,vandaag);
+    const analyse=root.WeatherNowInterpretatie&&root.WeatherNowInterpretatie.analyseerDagData;
+    const resterend=vandaag&&typeof analyse==="function"?analyse(S.d,i,S.d.current.time):null;
+    const nuance=dagNeerslagNuanceVoorRij(kans,mm,dag,spoor,vandaag,resterend);
     const drain=rij.querySelector(".drain");
     if(drain){
       const titel=dagNeerslagTitel(kans,drain.textContent,dag,vandaag);
