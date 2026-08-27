@@ -8,13 +8,18 @@ const api=require("./mobile-truth-ux-20260828.js");
 
 const ROOT=path.join(__dirname,"..");
 const html=fs.readFileSync(path.join(ROOT,"public","index.html"),"utf8");
+const CSS_START="/* ===== MOBILE TRUTH UX 20260828 CSS ===== */";
+const CSS_EIND="/* ===== EINDE MOBILE TRUTH UX 20260828 CSS ===== */";
+const JS_START="/* ===== MOBILE TRUTH UX 20260828 ===== */";
+const JS_EIND="/* ===== EINDE MOBILE TRUTH UX 20260828 ===== */";
+const aantal=marker=>html.split(marker).length-1;
 let n=0;
 function ok(voorwaarde,naam){assert.ok(voorwaarde,naam);n++;console.log("OK  "+naam);}
 
-ok((html.match(/MOBILE TRUTH UX 20260828 CSS/g)||[]).length===1,"mobile-truth CSS staat exact één keer in artifact");
-ok((html.match(/\/\* ===== MOBILE TRUTH UX 20260828 ===== \*\//g)||[]).length===1,"mobile-truth runtime staat exact één keer in artifact");
-ok(html.indexOf("/* ===== STAFF AUDIT 20260826 ===== */")<html.indexOf("/* ===== MOBILE TRUTH UX 20260828 ===== */"),"mobile-truth runtime volgt op staff-audit");
-ok(html.indexOf("/* ===== MOBILE TRUTH UX 20260828 ===== */")<html.indexOf("/* ---------- start ---------- */"),"mobile-truth runtime draait vóór startup");
+ok(aantal(CSS_START)===1&&aantal(CSS_EIND)===1,"mobile-truth CSS heeft exact één begin- en eindmarker in artifact");
+ok(aantal(JS_START)===1&&aantal(JS_EIND)===1,"mobile-truth runtime heeft exact één begin- en eindmarker in artifact");
+ok(html.indexOf("/* ===== STAFF AUDIT 20260826 ===== */")<html.indexOf(JS_START),"mobile-truth runtime volgt op staff-audit");
+ok(html.indexOf(JS_START)<html.indexOf("/* ---------- start ---------- */"),"mobile-truth runtime draait vóór startup");
 ok(html.includes("kans · verwachte hoeveelheid")&&html.includes("Uitleg meetwaarden"),"uurtegel en secundaire meetuitleg zijn expliciet");
 ok(html.includes("mobile-priority-rain")&&html.includes("mobile-priority-week"),"mobiele prioriteitsvolgorde is aanwezig");
 ok(html.includes("Temperatuur boven, neerslagperioden onder"),"grafiek legt temperatuur en regenperioden compact uit");
