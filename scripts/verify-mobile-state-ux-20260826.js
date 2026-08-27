@@ -30,6 +30,9 @@ const klein=ux.dagNeerslagNuance(88,0.049,"za 29",0.005);
 ok(klein&&klein.mmTekst==="<0,05 mm"&&/<0,05 mm/.test(klein.tekst),"<0,05 wordt alleen gebruikt wanneer de echte dagsom onder 0,05 ligt en boven spoor uitkomt");
 ok(ux.dagNeerslagNuance(88,0.05,"za 29",0.005)===null,"0,05 mm valt niet ten onrechte in de <0,05-nuance");
 ok(ux.dagNeerslagNuance(0,0,"Vandaag",0.005)===null,"een droge 0%-dag krijgt geen overbodige neerslagnotitie");
+ok(ux.dagNeerslagNuanceVoorRij(57,4.2,"Vandaag",0.005,true,{genoeg:true,kans:66,hoeveelheid:2.2})===null,"raw daily-dagsom overschrijft de resterende Vandaag-horizon niet");
+ok(ux.dagNeerslagNuanceVoorRij(57,4.2,"Vandaag",0.005,true,{genoeg:true,kans:6,hoeveelheid:0})?.mmTekst==="0,0 mm","Vandaag-uitleg gebruikt kans en hoeveelheid uit de resterende uren");
+ok(ux.dagNeerslagNuanceVoorRij(65,0,"vr 28",0.005,false)?.mmTekst==="0,0 mm","toekomstige dag behoudt de daily-neerslagnuance");
 ok(ux.dagNeerslagTitel(57,"66%\n2,2 mm","Vandaag",true)==="66% is de hoogste neerslagkans in één uur in de resterende uren van vandaag.","Vandaag-tooltip gebruikt dezelfde resterende-daghorizon en zichtbare kans als de rij");
 ok(ux.dagNeerslagTitel(57,"66%\n2,2 mm","vr 28",false)==="57% is de hoogste neerslagkans in één uur op vr 28.","toekomstige dagtooltip blijft het daily-maximum van die kalenderdag gebruiken");
 ok(ux.dagNeerslagTitel(57,"Droog","Vandaag",true)==="","droge resterende Vandaag-rij krijgt geen misleidende raw-daily-tooltip");
@@ -43,6 +46,7 @@ for(const vereist of [
   "Deze kalenderdag per uur.",
   "Toon "+"\"+label.toLowerCase()+\" vanaf nu",
   "dagNeerslagNuance",
+  "dagNeerslagNuanceVoorRij",
   "dagNeerslagTitel",
   "dag-neerslagnotitie",
   "hoogste neerslagkans in één uur",

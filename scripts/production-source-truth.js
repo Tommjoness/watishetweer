@@ -50,22 +50,27 @@ function verwachtDagRijen(bron){
   return a;
 }
 function verifieerBronwaarheid(bron,ui,label){
+  const gelijk=(werkelijk,verwacht,omschrijving)=>assert.equal(
+    werkelijk,
+    verwacht,
+    `${omschrijving}; UI=${JSON.stringify(werkelijk)}, bron=${JSON.stringify(verwacht)}`
+  );
   assert(bron&&bron.current&&bron.daily&&bron.hourly,`${label}: onvolledige Open-Meteo-bronrespons`);
-  assert.equal(ui.temperatuur,Math.round(Number(bron.current.temperature_2m)),`${label}: actuele temperatuur wijkt af van bron`);
-  assert.equal(ui.wind,Math.round(Number(bron.current.wind_speed_10m)),`${label}: actuele wind wijkt af van bron`);
-  assert.equal(ui.uv,uvPiekVandaag(bron),`${label}: UV-piek wijkt af van bron`);
-  assert.equal(ui.thema,Number(bron.current.is_day)===0?"donker":"licht",`${label}: dag/nachtthema wijkt af van current.is_day`);
+  gelijk(ui.temperatuur,Math.round(Number(bron.current.temperature_2m)),`${label}: actuele temperatuur wijkt af van bron`);
+  gelijk(ui.wind,Math.round(Number(bron.current.wind_speed_10m)),`${label}: actuele wind wijkt af van bron`);
+  gelijk(ui.uv,uvPiekVandaag(bron),`${label}: UV-piek wijkt af van bron`);
+  gelijk(ui.thema,Number(bron.current.is_day)===0?"donker":"licht",`${label}: dag/nachtthema wijkt af van current.is_day`);
 
   const verwacht=verwachtDagRijen(bron);
   assert.equal(verwacht.length,7,`${label}: bron levert geen zeven dagprognoses`);
   assert.equal(ui.rijen.length,7,`${label}: pagina toont geen zeven dagprognoses`);
   verwacht.forEach((dag,i)=>{
     const rij=ui.rijen[i],prefix=`${label}/${dag.datum}`;
-    assert.equal(rij.min,dag.min,`${prefix}: minimumtemperatuur wijkt af`);
-    assert.equal(rij.max,dag.max,`${prefix}: maximumtemperatuur wijkt af`);
-    assert.equal(rij.wind,dag.wind,`${prefix}: maximale windkracht wijkt af`);
-    assert.equal(rij.neerslagHoofd,dag.neerslag.hoofd,`${prefix}: neerslagkans wijkt af`);
-    assert.equal(rij.neerslagHoeveelheid,dag.neerslag.hoeveelheid,`${prefix}: neerslaghoeveelheid wijkt af`);
+    gelijk(rij.min,dag.min,`${prefix}: minimumtemperatuur wijkt af`);
+    gelijk(rij.max,dag.max,`${prefix}: maximumtemperatuur wijkt af`);
+    gelijk(rij.wind,dag.wind,`${prefix}: maximale windkracht wijkt af`);
+    gelijk(rij.neerslagHoofd,dag.neerslag.hoofd,`${prefix}: neerslagkans wijkt af`);
+    gelijk(rij.neerslagHoeveelheid,dag.neerslag.hoeveelheid,`${prefix}: neerslaghoeveelheid wijkt af`);
   });
 
   const zonIndex=zonDagIndex(bron),op=bron.daily.sunrise?.[zonIndex],onder=bron.daily.sunset?.[zonIndex];
