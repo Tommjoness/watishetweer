@@ -14,7 +14,7 @@ const START="/* ---------- start ---------- */";
 const CSS_MARK="/* ===== MOBILE TRUTH UX 20260828 CSS ===== */";
 const JS_MARK="/* ===== MOBILE TRUTH UX 20260828 ===== */";
 const NACHT_OWNER_ANCHOR='  verbeterNachtzicht(renderData,nu,actief);\n  werkNachtzichtCompactBij();';
-const NACHT_OWNER_NIEUW='  verbeterNachtzicht(renderData,nu,actief);\n  herstelNachtlabels();\n  werkNachtzichtCompactBij();';
+const NACHT_OWNER_NIEUW='  verbeterNachtzicht(renderData,nu,actief);\n  if(globalThis.WeatherNowMobileTruthUX20260828&&typeof globalThis.WeatherNowMobileTruthUX20260828.herstelNachtlabels==="function")globalThis.WeatherNowMobileTruthUX20260828.herstelNachtlabels();\n  werkNachtzichtCompactBij();';
 const NACHT_WRAPPER='if(typeof nachten==="function"){\n  const basisNachten=nachten;nachten=function(){const r=basisNachten.apply(this,arguments);herstelNachtlabels();return r;};\n}\n';
 
 let html=fs.readFileSync(PAD,"utf8");
@@ -27,8 +27,9 @@ if((html.split(NACHT_OWNER_ANCHOR).length-1)!==1)throw new Error("Bestaande geco
 if((JS.split(NACHT_WRAPPER).length-1)!==1)throw new Error("Te pensioneren mobile-truth Nachtzicht-wrapper ontbreekt of is dubbel.");
 
 /* Nachtzicht heeft al één geconsolideerde presentatie-owner. Voeg de nieuwe
-   kalendergrenslabelcorrectie in die owner in plaats van nog een wrapper bovenop
-   nachten() te stapelen. */
+   kalendergrenslabelcorrectie daar in via de expliciet geëxporteerde API. De
+   helper leeft in een eigen IIFE; een kale functienaam zou buiten die scope een
+   ReferenceError geven en de rest van tekenAlles() voortijdig afbreken. */
 html=html.replace(NACHT_OWNER_ANCHOR,NACHT_OWNER_NIEUW);
 JS=JS.replace(NACHT_WRAPPER,"");
 
@@ -51,11 +52,11 @@ for(const vereist of [
   "corrigeerLopendModeluur",
   "Temperatuur boven, neerslagperioden onder",
   "Actieve nacht tot zonsopkomst",
-  "herstelNachtlabels();"
+  "WeatherNowMobileTruthUX20260828.herstelNachtlabels"
 ])if(!html.includes(vereist))throw new Error("Mobile-truth-UX invariant ontbreekt: "+vereist);
 if((html.split("const basisNachten=nachten;").length-1)!==1)throw new Error("Nachtzicht moet na mobile-truth-assemblage exact één presentatie-owner houden.");
 if(html.includes("mobile-chart-return")||html.includes("mobile-rain-return")||html.includes("mobile-days-return"))throw new Error("Mobile-truth mag bestaande dashboardsecties niet meer verplaatsen.");
 
 fs.writeFileSync(PAD,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"mobile-truth-ux-20260828");
-console.log("Mobile-truth-UX toegepast: lopend modeluur alleen in zichtbare regenbracket, expliciete neerslagduiding, nachtlabels binnen één bestaande Nachtzicht-owner en compactere meetuitleg; responsive structuur intact; cache "+versie+".");
+console.log("Mobile-truth-UX toegepast: lopend modeluur alleen in zichtbare regenbracket, expliciete neerslagduiding, nachtlabels via de bestaande Nachtzicht-owner en compactere meetuitleg; responsive structuur intact; cache "+versie+".");
