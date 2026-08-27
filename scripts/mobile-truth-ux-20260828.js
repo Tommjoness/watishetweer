@@ -52,7 +52,26 @@ function nachtPaarLabel(daily,index){
   const a=dagKortUitIso(ss),b=dagKortUitIso(sr);return a&&b?a+"–"+b:null;
 }
 
-const api={lokaleSerieleMinuten,corrigeerLopendModeluur,regenperiodenGecorrigeerd,mmTekst,nachtPaarLabel};
+function herstelNachtlabels(){
+  if(typeof document==="undefined")return;
+  const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")];if(rijen.length<2)return;
+  const labels=rijen.map(r=>r.querySelector(".dname"));
+  for(let i=1;i<labels.length;i++){
+    const a=labels[i-1],b=labels[i];if(!a||!b)continue;
+    if((a.textContent||"").trim().toLowerCase()!==(b.textContent||"").trim().toLowerCase())continue;
+    if(i===1){
+      a.textContent="nu";
+      const op=typeof S!=="undefined"&&S.d&&S.d.daily&&S.d.daily.sunrise&&S.d.daily.sunrise[0];
+      if(op)a.title="Actieve nacht tot zonsopkomst "+String(op).slice(11,16);
+    }
+    const daily=typeof S!=="undefined"&&S.d&&S.d.daily||{};
+    const paar=nachtPaarLabel(daily,Math.max(0,i-1));
+    b.textContent=paar||"volgende nacht";
+    b.title="Volgende volledige nacht";
+  }
+}
+
+const api={lokaleSerieleMinuten,corrigeerLopendModeluur,regenperiodenGecorrigeerd,mmTekst,nachtPaarLabel,herstelNachtlabels};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileTruthUX20260828=api;
 
@@ -89,23 +108,6 @@ function meetdetailUitleg(){
     const p=document.createElement("p"),sterk=document.createElement("strong");sterk.textContent=label+": ";
     p.append(sterk,document.createTextNode((sub.textContent||"").trim()));body.appendChild(p);
   });
-}
-
-function herstelNachtlabels(){
-  const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")];if(rijen.length<2)return;
-  const labels=rijen.map(r=>r.querySelector(".dname"));
-  for(let i=1;i<labels.length;i++){
-    const a=labels[i-1],b=labels[i];if(!a||!b)continue;
-    if((a.textContent||"").trim().toLowerCase()!==(b.textContent||"").trim().toLowerCase())continue;
-    if(i===1){
-      a.textContent="nu";
-      const op=S.d&&S.d.daily&&S.d.daily.sunrise&&S.d.daily.sunrise[0];
-      if(op)a.title="Actieve nacht tot zonsopkomst "+String(op).slice(11,16);
-    }
-    const paar=nachtPaarLabel(S.d&&S.d.daily||{},Math.max(0,i-1));
-    b.textContent=paar||"volgende nacht";
-    b.title="Volgende volledige nacht";
-  }
 }
 
 /* Q4 blijft de enige eigenaar van de grafiek- en tooltipdata. We lezen de
