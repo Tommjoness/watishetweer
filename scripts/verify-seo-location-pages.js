@@ -12,6 +12,7 @@ const rootPath=path.join(OUT,"index.html"),hubPath=path.join(OUT,"weer","index.h
 for(const p of [rootPath,hubPath,sitemapPath])if(!fs.existsSync(p))throw new Error("SEO-plaatsartifact ontbreekt: "+p);
 
 const root=fs.readFileSync(rootPath,"utf8");
+if(tel(root,'<div class="sheet" data-nosnippet>')!==1)throw new Error("Homepage moet de dynamische weerinterface exact één keer uit zoeksnippets houden.");
 if(tel(root,MARKER_NAV)!==1)throw new Error("Homepage moet exact één crawlbare plaatsnavigatie bevatten.");
 if(!root.includes('href="/weer/"'))throw new Error("Homepage linkt niet naar de volledige plaatsindex.");
 for(const loc of POPULAIR){
@@ -35,6 +36,7 @@ for(const loc of LOCATIES){
   const p=path.join(OUT,"weer",loc.slug,"index.html");
   if(!fs.existsSync(p))throw new Error(`${loc.slug}: gegenereerde route ontbreekt.`);
   const html=fs.readFileSync(p,"utf8"),canonical=plaatsUrl(loc),titel=plaatsTitel(loc),desc=plaatsBeschrijving(loc);
+  if(tel(html,'<div class="sheet" data-nosnippet>')!==1)throw new Error(`${loc.slug}: dynamische weerinterface mist data-nosnippet.`);
   if(tel(html,MARKER_ROUTE)!==1)throw new Error(`${loc.slug}: route-marker ontbreekt of is dubbel.`);
   if(tel(html,MARKER_NAV)!==1)throw new Error(`${loc.slug}: plaatsnavigatie ontbreekt of is dubbel.`);
   if(tel(html,`<link rel="canonical" href="${canonical}">`)!==1)throw new Error(`${loc.slug}: canonical ontbreekt of is dubbel.`);

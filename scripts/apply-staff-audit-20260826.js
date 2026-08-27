@@ -28,8 +28,8 @@ if(!html.includes("WeatherNowGlobalLocationHardening"))throw new Error("Wereldwi
    <main> omgezet; deze laag voegt alleen een focusdoel voor de skiplink toe en
    maakt de bestaande mast expliciet het banner-landmark. */
 html=vervangExact(html,
-  '<body>\n<div class="sheet">',
-  '<body>\n<a class="skiplink" href="#app">Ga naar hoofdinhoud</a>\n<div class="sheet">',
+  '<body>\n<div class="sheet" data-nosnippet>',
+  '<body>\n<a class="skiplink" href="#app">Ga naar hoofdinhoud</a>\n<div class="sheet" data-nosnippet>',
   "skiplink");
 html=vervangExact(html,'  <div class="mast">','  <div class="mast" role="banner">',"header-landmark");
 html=vervangExact(html,'<main id="app" style="display:none">','<main id="app" tabindex="-1" style="display:none">',"main-focusdoel");

@@ -1,7 +1,12 @@
 "use strict";
 
 const assert=require("assert");
+const fs=require("fs");
+const path=require("path");
 const {waarschuwingTitelNl,waarschuwingTitelVoorBriefing,locatieSleutel,historyState,historyStateGeldig,formatMm}=require("./staff-audit-20260826.js");
+
+const owner=fs.readFileSync(path.join(__dirname,"apply-staff-audit-20260826.js"),"utf8");
+assert(owner.includes('<body>\\n<div class="sheet" data-nosnippet>'),"staff-audit moet de data-nosnippet-eigenschap van de dynamische appcontainer behouden");
 
 assert.deepEqual(waarschuwingTitelNl("Flood Watch"),{origineel:"Flood Watch",nederlands:"Waakzaamheid voor overstromingen",vertaald:true});
 assert.deepEqual(waarschuwingTitelNl("Extreme Heat Warning"),{origineel:"Extreme Heat Warning",nederlands:"Waarschuwing voor extreme hitte",vertaald:true});

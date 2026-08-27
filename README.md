@@ -83,7 +83,7 @@ De Cloudflare-productiebuild is:
 npm run build:cloudflare
 ```
 
-De repository bevat daarnaast echte browsercontroles voor Chromium en WebKit, mobiele en desktopbreedtes, performance, neerslagrandgevallen, internationale locaties en serviceworker/offlinegedrag. GitHub Actions is de uiteindelijke merge-eis; een wijziging hoort niet gemerged te worden op basis van alleen een lokale groene subset.
+De repository bevat daarnaast echte browsercontroles voor Chromium en WebKit, mobiele en desktopbreedtes, performance, neerslagrandgevallen, internationale locaties en serviceworker/offlinegedrag. Na iedere productiedeploy vergelijkt de wereldmonitor zes klimaatzones op mobiel en desktop met de Open-Meteo-respons waarmee de pagina werkelijk rendert. Een aparte live monitor meet in Chromium en WebKit de tijd tot zichtbare data en een bruikbare grafiek, het aantal externe verzoeken, dubbele forecastaanvragen, scroll/rendering en onverwachte Cloudflare Analytics-injectie. GitHub Actions is de uiteindelijke merge-eis; een wijziging hoort niet gemerged te worden op basis van alleen een lokale groene subset.
 
 Belangrijke contracten die expliciet worden getest:
 

@@ -31,6 +31,7 @@ function pasSeoFoundationToe(html){
   const blok=[
     MARKER,
     `<link rel="canonical" href="${attr(SEO.canonical)}">`,
+    `<meta name="google-site-verification" content="${attr(SEO.googleVerification)}">`,
     `<meta name="msvalidate.01" content="${attr(SEO.bingVerification)}">`,
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${attr(SEO.siteName)}">`,
