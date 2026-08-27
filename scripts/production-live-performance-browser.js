@@ -55,7 +55,8 @@ function isBeacon(url){return /cloudflareinsights|beacon\.min\.js|\/cdn-cgi\/(?:
       const forecastUrl=new URL(succesvolleForecasts[0].url);
       assert.equal(forecastUrl.searchParams.get("forecast_hours"),"170",`${profiel.naam}: forecast_hours wijkt af`);
       assert.equal(forecastUrl.searchParams.get("past_hours"),"24",`${profiel.naam}: past_hours wijkt af`);
-      assert(!requests.some(isBeacon),`${profiel.naam}: Cloudflare Analytics-beacon werd geïnjecteerd`);
+      const beacons=requests.filter(isBeacon);
+      assert.equal(beacons.length,0,`${profiel.naam}: Cloudflare Analytics-beacon werd geïnjecteerd: ${beacons.join(" | ")}`);
 
       const voorKlik=responses.filter(r=>isForecast(r.url)).length;
       await page.locator("#days .row.day:not(.kop)").nth(1).click();

@@ -41,7 +41,7 @@ const cloudflareHeaders = lees("cloudflare/_headers");
 const headerMap = {};
 for (const regel of cloudflareHeaders.split(/\r?\n/)) {
   const tekst = regel.trim();
-  if (!tekst || tekst === "/*") continue;
+  if (!tekst || !/^\s/.test(regel)) continue;
   const i = tekst.indexOf(":");
   assert.ok(i > 0, `Ongeldige Cloudflare-headerregel: ${tekst}`);
   headerMap[tekst.slice(0, i).toLowerCase()] = tekst.slice(i + 1).trim();

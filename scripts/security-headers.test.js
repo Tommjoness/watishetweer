@@ -9,7 +9,7 @@ const bron=fs.readFileSync(path.join(root,"cloudflare","_headers"),"utf8");
 const headers={};
 for(const regel of bron.split(/\r?\n/)){
   const tekst=regel.trim();
-  if(!tekst||tekst==="/*")continue;
+  if(!tekst||!/^\s/.test(regel))continue;
   const i=tekst.indexOf(":");
   assert(i>0,"Ongeldige Cloudflare-headerregel: "+tekst);
   headers[tekst.slice(0,i).toLowerCase()]=tekst.slice(i+1).trim();
@@ -37,4 +37,11 @@ for(const contract of [
 assert(csp.includes("script-src 'self' 'unsafe-inline'"),"Huidige inline runtime past niet meer binnen CSP");
 assert(csp.includes("style-src 'self' 'unsafe-inline'"),"Huidige inline styles passen niet meer binnen CSP");
 
-console.log("security-headers: Cloudflare response-CSP, HSTS en basisheaders OK");
+for(const route of ["/","/weer/*"]){
+  const escaped=route.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  const blok=new RegExp("(?:^|\\n)"+escaped+"\\r?\\n((?:[ \\t]+[^\\r\\n]+\\r?\\n?)*)").exec(bron);
+  assert(blok,`Cloudflare HTML-headerblok ontbreekt voor ${route}`);
+  assert(/^[ \t]+Cache-Control:\s*public, max-age=0, must-revalidate, no-transform\s*$/mi.test(blok[1]),`${route} mist no-transform tegen automatische Analytics-injectie`);
+}
+
+console.log("security-headers: Cloudflare response-CSP, HSTS, basisheaders en no-transform OK");

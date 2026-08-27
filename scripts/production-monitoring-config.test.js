@@ -50,7 +50,7 @@ assert(wereldwijd.includes('assert.equal(uit.sha,verwacht'),"wereldwijde browser
 assert(wereldwijd.includes("verifieerBronwaarheid(bron,uit"),"wereldwijde browsermonitor vergelijkt zichtbare waarden niet met de live bronrespons");
 assert(performance.includes('const {chromium,webkit,devices}=require("playwright")'),"live performancemonitor moet Chromium en WebKit gebruiken");
 assert(performance.includes("succesvolleForecasts.length,1"),"live performancemonitor bewaakt dubbele forecastaanvragen niet");
-assert(performance.includes("!requests.some(isBeacon)"),"live performancemonitor bewaakt Cloudflare beaconinjectie niet");
+assert(performance.includes("beacons.length,0"),"live performancemonitor bewaakt Cloudflare beaconinjectie niet");
 
 require("./production-source-truth.test.js");
 
