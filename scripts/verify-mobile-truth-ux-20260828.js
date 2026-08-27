@@ -21,7 +21,8 @@ ok(aantal(JS_START)===1&&aantal(JS_EIND)===1,"mobile-truth runtime heeft exact �
 ok(html.indexOf("/* ===== STAFF AUDIT 20260826 ===== */")<html.indexOf(JS_START),"mobile-truth runtime volgt op staff-audit");
 ok(html.indexOf(JS_START)<html.indexOf("/* ---------- start ---------- */"),"mobile-truth runtime draait vóór startup");
 ok(html.includes("kans · verwachte hoeveelheid")&&html.includes("Uitleg meetwaarden"),"uurtegel en secundaire meetuitleg zijn expliciet");
-ok(html.includes("Temperatuur boven, neerslagperioden onder"),"grafiek legt temperatuur en regenperioden compact uit");
+ok(html.includes("Selecteer een punt in de grafiek voor details."),"canonieke Q4-grafiekhint blijft aanwezig");
+ok(!html.includes("Temperatuur boven, neerslagperioden onder"),"mobile-truth overschrijft de canonieke Q4-grafiekhint niet");
 ok(html.includes("Actieve nacht tot zonsopkomst")&&html.includes("Volgende volledige nacht"),"dubbele vannacht-labels krijgen een eenduidige fallback");
 ok(typeof api.herstelNachtlabels==="function","Nachtzicht-labelherstel is via de expliciete mobile-truth API beschikbaar");
 ok(html.includes('globalThis.WeatherNowMobileTruthUX20260828.herstelNachtlabels()'),"bestaande Nachtzicht-owner roept labelherstel scopeveilig via de globale API aan");
