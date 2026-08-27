@@ -23,6 +23,9 @@ ok(html.indexOf(JS_START)<html.indexOf("/* ---------- start ---------- */"),"mob
 ok(html.includes("kans · verwachte hoeveelheid")&&html.includes("Uitleg meetwaarden"),"uurtegel en secundaire meetuitleg zijn expliciet");
 ok(html.includes("Temperatuur boven, neerslagperioden onder"),"grafiek legt temperatuur en regenperioden compact uit");
 ok(html.includes("Actieve nacht tot zonsopkomst")&&html.includes("Volgende volledige nacht"),"dubbele vannacht-labels krijgen een eenduidige fallback");
+ok(typeof api.herstelNachtlabels==="function","Nachtzicht-labelherstel is via de expliciete mobile-truth API beschikbaar");
+ok(html.includes('globalThis.WeatherNowMobileTruthUX20260828.herstelNachtlabels()'),"bestaande Nachtzicht-owner roept labelherstel scopeveilig via de globale API aan");
+ok(!/verbeterNachtzicht\(renderData,nu,actief\);\s*herstelNachtlabels\(\);/.test(html),"bestaande Nachtzicht-owner bevat geen kale IIFE-lokale helperaanroep");
 ok(!html.includes("mobile-chart-return")&&!html.includes("mobile-rain-return")&&!html.includes("mobile-days-return"),"mobile-truth verplaatst geen bestaande dashboardsecties");
 ok(!html.includes("regenBronPerArray")&&!html.includes("g.MM[i]=gecorrigeerd")&&!html.includes("g.Q1MM[i]=gecorrigeerd"),"mobile-truth muteert geen gedeelde Q4- of tooltiparrays");
 ok(!html.includes(".dashrow-hero .stats .stat:nth-child(n)"),"mobile-truth overschrijft het bestaande mobiele metriekgrid niet");
