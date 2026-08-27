@@ -59,6 +59,12 @@ root.WeatherNowMobileTruthUX20260828=api;
 
 if(typeof document==="undefined"||typeof window==="undefined"||typeof S==="undefined")return;
 const mobiel=()=>typeof window.matchMedia==="function"?window.matchMedia("(max-width:900px)").matches:window.innerWidth<=900;
+/* planGrafiekPolish kan per render zowel via requestAnimationFrame als na fontload
+   lopen. Bewaar daarom per Q4-array één onveranderde bronkopie: herhaalde polish
+   mag de al proportioneel verkleinde uurwaarde nooit nogmaals verkleinen. Een
+   nieuwe etmaalrender maakt een nieuwe g.MM-array en krijgt automatisch een
+   nieuwe bronkopie. */
+const regenBronPerArray=new WeakMap();
 
 /* De grote uurtegel bevat twee verschillende grootheden. Op touchscreens bestaat
    geen hover om die betekenis te ontdekken, dus staat er een korte zichtbare
@@ -126,15 +132,18 @@ function corrigeerRegenperiodenInGrafiek(){
   const svg=document.getElementById("chart"),g=S.geo,groep=svg&&svg.querySelector('g[data-q4-rain-periods]');
   if(!svg||!g||!groep||!Array.isArray(g.TI)||!Array.isArray(g.MM))return;
   const nu=typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():(S.d&&S.d.current&&S.d.current.time)||"";
-  const perioden=regenperiodenGecorrigeerd(g.MM,g.TI,nu,0.1);
+  let bronMm=regenBronPerArray.get(g.MM);
+  if(!bronMm){bronMm=Array.from(g.MM);regenBronPerArray.set(g.MM,bronMm);}
+  const perioden=regenperiodenGecorrigeerd(bronMm,g.TI,nu,0.1);
   const bedragen=[...groep.querySelectorAll("[data-q4-rain-period-amount]")];
   const lijnen=[...groep.querySelectorAll("line[aria-label]")];
   if(perioden.length!==bedragen.length||perioden.length!==lijnen.length)return;
 
   /* Werk ook de door de bestaande tooltip gebruikte compatibiliteitsarray bij.
-     Alleen het ene gedeeltelijk verstreken uur kan veranderen. */
+     Alleen het ene gedeeltelijk verstreken uur kan veranderen. Gebruik daarbij
+     altijd de onveranderde Q4-bronkopie, zodat een tweede polishpass idempotent is. */
   for(let i=1;i<g.MM.length&&i<g.TI.length;i++){
-    const ruw=getal(g.MM[i]);if(ruw===null)continue;
+    const ruw=getal(bronMm[i]);if(ruw===null)continue;
     const gecorrigeerd=corrigeerLopendModeluur(ruw,g.TI[i],nu);
     if(gecorrigeerd!==null&&Math.abs(gecorrigeerd-ruw)>1e-9){g.MM[i]=gecorrigeerd;if(Array.isArray(g.Q1MM))g.Q1MM[i]=gecorrigeerd;break;}
   }
