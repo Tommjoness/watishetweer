@@ -2,13 +2,14 @@
 const assert=require("assert"),fs=require("fs"),path=require("path"),cp=require("child_process");
 const R=__dirname,lees=p=>fs.readFileSync(path.join(R,p),"utf8");let n=0;
 const ok=(c,m)=>{assert.ok(c,m);n++;console.log("OK  "+m);};
-const index=lees("index.html"),engine=lees("interpretatie-engine.js"),waars=lees("lib/waarschuwingen.cjs"),plaats=lees("lib/plaatsnaam.cjs"),build=lees("build-weather.js"),cacheContract=lees("scripts/postbuild-cache.js");
+const index=lees("index.html"),privacy=lees("privacy.html"),engine=lees("interpretatie-engine.js"),waars=lees("lib/waarschuwingen.cjs"),plaats=lees("lib/plaatsnaam.cjs"),build=lees("build-weather.js"),cacheContract=lees("scripts/postbuild-cache.js");
 const workflowDir=path.join(R,".github","workflows");
 const workflowBestanden=fs.readdirSync(workflowDir).filter(f=>/\.ya?ml$/i.test(f));
 const workflows=workflowBestanden.map(f=>lees(path.join(".github","workflows",f))).join("\n");
 const manifest=JSON.parse(lees("manifest.json"));
 ok(index.includes("Wat is het weer?")&&manifest.name==="Wat is het weer?","publieke merknaam is consequent Nederlands");
 ok(index.includes("privacy.html")&&fs.existsSync(path.join(R,"privacy.html")),"privacy-informatie is direct bereikbaar");
+ok(!privacy.includes("—"),"zichtbare privacycopy gebruikt geen em dash");
 ok(!index.includes("Nu is het ")&&!index.includes("De actuele temperatuur is niet beschikbaar."),"briefing herhaalt de actuele temperatuur niet");
 ok(index.includes("const opvallendeWind=bm>=5")&&index.includes("gmax!==null&&gmax>=60"),"gewone windpiek tot 4 Bft krijgt geen hoofdrol in briefing");
 ok(index.includes("Afgelopen 15 minuten")&&index.includes("Komend uur")&&engine.includes('set(\"pop\",\"Droog\")'),"neerslagtegels gebruiken directe tijdvakken en consumententaal");

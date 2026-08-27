@@ -11,6 +11,7 @@
 .chartdata{margin:10px 0 0}
 .chartdata>summary,.waarsch-officieel-details>summary{cursor:pointer;color:var(--ink-70);font-size:12px}
 .chartdata>summary:focus-visible,.waarsch-officieel-details>summary:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.chartdata-scrollhint{display:none;margin:8px 0 0;color:var(--ink-45);font-size:12px}
 .chartdata-scroll{margin-top:8px;max-width:100%;overflow-x:auto;border:1px solid var(--rule);-webkit-overflow-scrolling:touch}
 .chartdata-scroll:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .chartdata table{border-collapse:collapse;width:100%;min-width:690px;font-size:12px;font-variant-numeric:tabular-nums}
@@ -25,5 +26,6 @@
 @media(max-width:430px){
   .chiprij{gap:8px}
   .chip{max-width:100%}
+  .chartdata-scrollhint{display:block}
   .chartdata table{min-width:650px}
 }

@@ -26,6 +26,11 @@ function waarschuwingTitelNl(titel){
   const origineel=schoon(titel),sleutel=origineel.toLocaleLowerCase("en-US");
   return {origineel,nederlands:WAARSCHUWING_TITELS[sleutel]||origineel,vertaald:Object.prototype.hasOwnProperty.call(WAARSCHUWING_TITELS,sleutel)};
 }
+function waarschuwingTitelVoorBriefing(titel,land){
+  const origineel=schoon(titel);
+  if(!NWS_LANDEN.has(schoon(land).toUpperCase()))return origineel;
+  return waarschuwingTitelNl(origineel).nederlands;
+}
 function locatieSleutel(lat,lon,label){
   const a=eindig(lat),b=eindig(lon);if(a===null||b===null)return null;
   return a.toFixed(5)+"|"+b.toFixed(5)+"|"+schoon(label).toLocaleLowerCase("und");
@@ -44,7 +49,7 @@ function formatMm(v){
   return n.toLocaleString("nl-NL",{minimumFractionDigits:1,maximumFractionDigits:1})+" mm";
 }
 
-const api={WAARSCHUWING_TITELS,waarschuwingTitelNl,locatieSleutel,historyState,historyStateGeldig,formatMm,markeerNavigatie:()=>{}};
+const api={WAARSCHUWING_TITELS,waarschuwingTitelNl,waarschuwingTitelVoorBriefing,locatieSleutel,historyState,historyStateGeldig,formatMm,markeerNavigatie:()=>{}};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowStaffAudit=api;
 
@@ -166,6 +171,23 @@ window.addEventListener("popstate",e=>{
 });
 
 /* ---------------- waarschuwingstitels ---------------- */
+/* De briefing rendert binnen de basis-waarschuwingflow vóór de kaartlokalisatie.
+   Geef alleen die renderer daarom tijdelijk een vertaalde kopie van NWS-titels;
+   de officiële brondata blijft intact voor het uitklapbare origineel. */
+if(typeof briefing==="function"){
+  const basisBriefingWaarschuwingNl=briefing;
+  briefing=function(){
+    const origineel=S.actieveWaarschuwingen,land=schoon(S.land).toUpperCase();
+    if(!Array.isArray(origineel)||!NWS_LANDEN.has(land))return basisBriefingWaarschuwingNl.apply(this,arguments);
+    const vertaald=origineel.map(w=>{
+      if(!w)return w;const titel=waarschuwingTitelVoorBriefing(w.titel,land);
+      return titel&&titel!==w.titel?Object.assign({},w,{titel}):w;
+    });
+    S.actieveWaarschuwingen=vertaald;
+    try{return basisBriefingWaarschuwingNl.apply(this,arguments);}
+    finally{S.actieveWaarschuwingen=origineel;}
+  };
+}
 function lokaliseerWaarschuwingen(){
   const land=schoon(S.land).toUpperCase();if(!NWS_LANDEN.has(land))return;
   document.querySelectorAll("#waarschuwingen .waarsch").forEach(kaart=>{

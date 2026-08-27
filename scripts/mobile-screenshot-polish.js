@@ -185,6 +185,11 @@ function nachtMetaDelen(tekst){
   if(!maan&&t&&!zicht)maan=t;
   return {zicht,maan:formatteerMaanTekst(maan)};
 }
+function nachtVensterTekst(adviesTekst,apartTekst){
+  const apart=String(apartTekst||"").trim();if(apart)return apart;
+  const delen=String(adviesTekst||"").split(/\s+·\s+/);
+  return delen.length>1?delen.slice(1).join(" · ").trim():"";
+}
 
 function pollenKop(tekst){
   const t=String(tekst||"").trim();
@@ -210,11 +215,18 @@ function verbeterNachtzicht(data,nuLokaal,actief){
       }
     }
     if(advies){
-      const delen=String(advies.textContent||"").split(/\s+·\s+/),venster=delen.length>1?delen.slice(1).join(" · "):"";
+      /* De canonieke renderer zet het kijkvenster als losse sibling naast het
+         oordeel. Oudere fixtures kunnen het nog met een middelpunt in hetzelfde
+         element leveren. Lees beide vormen, met de losse bron als eigenaar. */
+      const vensterEl=rij.querySelector(".nachtvenster"),vensterLos=!!(vensterEl&&vensterEl.parentElement!==advies);
+      const delen=String(advies.textContent||"").split(/\s+·\s+/),venster=nachtVensterTekst(advies.textContent,vensterEl&&vensterEl.textContent);
       const oordeel=zichtbaar===null?(delen[0]||advies.textContent):nachtOordeelGetoond(zichtbaar),hoofd=nachtAdviesMetHorizon(oordeel,horizon);
       const sr=Array.isArray(day.sunrise)?hhmmIso(day.sunrise[horizon+1]):null;
       const detail=venster?corrigeerNachtVensterBron(venster,horizon,zichtbaar,{zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal)}):"";
-      advies.innerHTML='<span class="nachtoordeel">'+esc(hoofd)+'</span>'+(detail?'<span class="nachtvenster">'+esc(detail)+'</span>':"");
+      advies.innerHTML='<span class="nachtoordeel">'+esc(hoofd)+'</span>';
+      if(detail&&vensterLos)vensterEl.textContent=detail;
+      else if(detail)advies.insertAdjacentHTML("beforeend",'<span class="nachtvenster">'+esc(detail)+'</span>');
+      else if(vensterLos)vensterEl.remove();
     }
     if(bew){const p=bew.querySelector(".perc");if(p){const pct=(p.textContent||"").trim();bew.innerHTML='<span class="perc">'+esc(pct)+'</span>';bew.setAttribute("aria-label","Bewolking "+pct);}}
     if(maan){
@@ -321,7 +333,7 @@ const api={
   maanFaseUitBeschrijving,maanFaseSvgV2,pollenEenheid,pollenKop,nachtOordeelGetoond,
   nachtBalkPercentageGetoond,nachtHorizonIndex,nachtLabelVarianten,nachtAdviesMetHorizon,nachtzichtCompactAantal,
   corrigeerNachtVensterBron,dagdeelVanUur,datumVerschuif,normaliseerNachtDagdata,
-  nachtIsActiefNu,formatteerMaanTekst,nachtMetaDelen
+  nachtIsActiefNu,formatteerMaanTekst,nachtMetaDelen,nachtVensterTekst
 };
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileScreenshotPolish=api;

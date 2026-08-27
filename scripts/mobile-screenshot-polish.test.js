@@ -69,6 +69,8 @@ assert.deepEqual(p.nachtLabelVarianten("ma op di"),{lang:"ma op di",kort:"ma–d
 assert.equal(p.nachtAdviesMetHorizon("Goed",2),"Goed");
 assert.equal(p.nachtAdviesMetHorizon("Goed",3),"Voorlopig goed");
 assert.equal(p.nachtAdviesMetHorizon("Goed",5),"Voorlopig goed");
+assert.equal(p.nachtVensterTekst("Goed","Geen gunstig kijkvenster door maanlicht"),"Geen gunstig kijkvenster door maanlicht","los Nachtzicht-venster uit de canonieke renderer wordt niet genegeerd");
+assert.equal(p.nachtVensterTekst("Goed · Beste periode 22:00–04:00",""),"Beste periode 22:00–04:00","oude gecombineerde Nachtzicht-markup blijft ondersteund");
 
 /* Midnight rollover: vóór zonsopkomst moet de eerste Nachtzicht-rij de lopende
    nacht blijven, niet alvast de komende avond. De brondata zelf mag niet wijzigen. */

@@ -75,6 +75,7 @@ async function controleer(type,naam,breedte){
     await page.goto(`http://127.0.0.1:${server.address().port}/?lat=52.35&lon=5.26&plaats=Overflowtest&land=NL`,{waitUntil:"load"});
     await page.waitForSelector("#app",{state:"visible"});
     await page.waitForFunction(()=>document.querySelector("#chart g[data-q4-rain-periods]")&&document.querySelectorAll("#days .row.day").length>2&&document.querySelectorAll("#nights .row.night").length>1,null,{timeout:10000});
+    await page.locator("#chartdata > summary").click();
 
     const resultaat=await page.evaluate(()=>{
       const vw=document.documentElement.clientWidth;
@@ -123,7 +124,8 @@ async function controleer(type,naam,breedte){
         bodyScroll:document.body.scrollWidth,
         buiten,modules,
         q4Labels:[...document.querySelectorAll('#chart g[data-q4-rain-periods] text')].map(x=>(x.textContent||"").trim()),
-        q4ViewBox:document.getElementById("chart").getAttribute("viewBox")
+        q4ViewBox:document.getElementById("chart").getAttribute("viewBox"),
+        scrollHint:getComputedStyle(document.querySelector(".chartdata-scrollhint")).display
       };
     });
 
@@ -136,6 +138,8 @@ async function controleer(type,naam,breedte){
       assert.ok(resultaat.modules.chartdata.left>=-.75&&resultaat.modules.chartdata.right<=resultaat.clientWidth+.75,`${naam} ${breedte}: grafiekdatatabel-scroller zelf valt buiten viewport; ${diagnose}`);
       assert.ok(["auto","scroll"].includes(resultaat.modules.chartdata.overflowX),`${naam} ${breedte}: brede grafiekdatatabel is niet horizontaal begrensd; ${diagnose}`);
     }
+    if(breedte<=430)assert.notEqual(resultaat.scrollHint,"none",`${naam} ${breedte}: horizontaal scrollbare grafiektabel mist een zichtbare aanwijzing; ${diagnose}`);
+    else assert.equal(resultaat.scrollHint,"none",`${naam} ${breedte}: mobiele scrollaanwijzing blijft onnodig zichtbaar op desktop; ${diagnose}`);
     assert.deepEqual(fouten,[],`${naam} ${breedte}: pageerrors; ${JSON.stringify(fouten)}`);
     console.log(`Mobiele overflow OK: ${naam} ${breedte}px; chart ${resultaat.modules.chart.width}px; labels ${resultaat.q4Labels.join(" | ")}`);
   }finally{await context.close();await browser.close();}
