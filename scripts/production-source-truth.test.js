@@ -1,0 +1,27 @@
+"use strict";
+
+const assert=require("assert");
+const {bft,dagNeerslag,uvPiekVandaag,zonDagIndex,verwachtDagRijen}=require("./production-source-truth.js");
+
+assert.equal(bft(0),0);assert.equal(bft(1),1);assert.equal(bft(12),3);assert.equal(bft(117),11);assert.equal(bft(118),12);
+assert.deepEqual(dagNeerslag(0,0),{hoofd:"Droog",hoeveelheid:""});
+assert.deepEqual(dagNeerslag(25,0),{hoofd:"25%",hoeveelheid:"0,0 mm"});
+assert.deepEqual(dagNeerslag(0,0.2),{hoofd:"Onzeker",hoeveelheid:"0,2 mm"});
+assert.deepEqual(dagNeerslag(65,1.24),{hoofd:"65%",hoeveelheid:"1,2 mm"});
+
+const bron={
+  current:{time:"2026-08-27T21:00",is_day:0},
+  hourly:{time:["2026-08-27T10:00","2026-08-27T12:00","2026-08-28T12:00"],uv_index:[2,5,7]},
+  daily:{
+    time:["2026-08-27","2026-08-28","2026-08-29","2026-08-30","2026-08-31","2026-09-01","2026-09-02"],
+    sunrise:Array(7).fill("2026-08-27T06:30"),sunset:Array(7).fill("2026-08-27T20:30"),
+    temperature_2m_min:[10,11,12,13,14,15,16],temperature_2m_max:[20,21,22,23,24,25,26],
+    wind_speed_10m_max:[0,1,6,12,20,29,39],precipitation_probability_max:[0,10,20,30,40,50,60],precipitation_sum:[0,0,0.1,0.2,0.3,0.4,0.5]
+  }
+};
+assert.equal(uvPiekVandaag(bron),5);
+assert.equal(zonDagIndex(bron),1);
+assert.equal(verwachtDagRijen(bron).length,7);
+assert.deepEqual(verwachtDagRijen(bron)[2],{datum:"2026-08-29",min:12,max:22,wind:2,neerslag:{hoofd:"20%",hoeveelheid:"0,1 mm"}});
+
+console.log("production-source-truth: bron-naar-UI-contracten OK");

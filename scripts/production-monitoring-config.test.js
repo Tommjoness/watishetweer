@@ -8,6 +8,7 @@ const root=path.join(__dirname,"..");
 const workflow=fs.readFileSync(path.join(root,".github","workflows","production-smoke.yml"),"utf8");
 const smoke=fs.readFileSync(path.join(root,"scripts","production-smoke.js"),"utf8");
 const wereldwijd=fs.readFileSync(path.join(root,"scripts","production-worldwide-browser.js"),"utf8");
+const performance=fs.readFileSync(path.join(root,"scripts","production-live-performance-browser.js"),"utf8");
 
 assert(/push:\s*\n\s*branches:\s*\[main\]/.test(workflow),"production-smoke moet na merges/pushes naar main draaien");
 assert(/schedule:\s*\n\s*- cron: ["']\d+ \* \* \* \*["']/.test(workflow),"production-smoke moet ieder uur gepland staan");
@@ -17,6 +18,7 @@ assert(workflow.includes("SMOKE_REQUEST_TIMEOUT_MS:"),"workflow moet een explici
 assert(workflow.includes("mcr.microsoft.com/playwright:v1.62.1-noble"),"production-smoke moet een vaste browserimage gebruiken");
 assert(workflow.includes("node scripts/production-worldwide-browser.js"),"workflow mist de wereldwijde browsermonitor");
 assert(workflow.includes("node scripts/production-staff-audit-browser.js"),"workflow mist de interactieve staff-auditmonitor");
+assert(workflow.includes("node scripts/production-live-performance-browser.js"),"workflow mist de live Chromium/WebKit-performancemonitor");
 
 /* De wereldmonitor blijft de echte live providerintegratie-gate; de staff-audit
    gebruikt sinds de interactiefixture deterministische data voor frontendgedrag.
@@ -28,7 +30,8 @@ assert(workflow.includes("node scripts/production-staff-audit-browser.js"),"work
 assert(/^  production-contract:/m.test(workflow),"production-smoke mist aparte deployment/API-contractjob");
 assert(/^  wereldwijd-browser:/m.test(workflow),"production-smoke mist aparte wereldwijde browserjob");
 assert(/^  staff-audit-browser:/m.test(workflow),"production-smoke mist aparte staff-audit browserjob");
-assert.equal((workflow.match(/^    needs: production-contract$/gm)||[]).length,2,"beide browserjobs moeten pas na het exacte productiecontract starten");
+assert(/^  live-performance-browser:/m.test(workflow),"production-smoke mist aparte live-performancejob");
+assert.equal((workflow.match(/^    needs: production-contract$/gm)||[]).length,3,"alle drie browserjobs moeten pas na het exacte productiecontract starten");
 
 assert(smoke.includes("AbortSignal.timeout(timeoutMs)"),"production-smoke requests moeten een harde timeout hebben");
 assert(smoke.includes("const maxPogingen=opt.retry===false?1:2"),"production-smoke mag per request maximaal één retry doen");
@@ -39,10 +42,16 @@ assert(smoke.includes("/api/neerslag?lat=52.3508&lon=5.2647&land=NL"),"productio
 assert(smoke.includes("/api/waarschuwingen?lat=52.3508&lon=5.2647&land=NL"),"production-smoke mist waarschuwingen-API-contract");
 assert(smoke.includes("item.plaatsSpecifiek===true"),"waarschuwingencontract moet plaatsgebonden filtering bewaken");
 
-for(const plek of ["Amsterdam","New York","Tokio","Sydney","Longyearbyen"])assert(wereldwijd.includes(`naam:\"${plek}\"`),`wereldwijde monitor mist ${plek}`);
+for(const plek of ["Amsterdam","New York","Tokio","Sydney","Singapore","Longyearbyen"])assert(wereldwijd.includes(`naam:\"${plek}\"`),`wereldwijde monitor mist ${plek}`);
 assert(wereldwijd.includes('{naam:"mobiel",width:390,height:844}'),"wereldwijde monitor mist mobiel 390px");
 assert(wereldwijd.includes('{naam:"desktop",width:1440,height:1000}'),"wereldwijde monitor mist desktop");
 assert(wereldwijd.includes('uit.overflow<=1'),"wereldwijde monitor bewaakt horizontale overflow niet");
 assert(wereldwijd.includes('assert.equal(uit.sha,verwacht'),"wereldwijde browsermonitor moet de exacte build-SHA bewaken");
+assert(wereldwijd.includes("verifieerBronwaarheid(bron,uit"),"wereldwijde browsermonitor vergelijkt zichtbare waarden niet met de live bronrespons");
+assert(performance.includes('const {chromium,webkit,devices}=require("playwright")'),"live performancemonitor moet Chromium en WebKit gebruiken");
+assert(performance.includes("succesvolleForecasts.length,1"),"live performancemonitor bewaakt dubbele forecastaanvragen niet");
+assert(performance.includes("!requests.some(isBeacon)"),"live performancemonitor bewaakt Cloudflare beaconinjectie niet");
+
+require("./production-source-truth.test.js");
 
 console.log("production-monitoring-config: gescheiden live en deterministische browserjobs OK");

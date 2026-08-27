@@ -31,6 +31,7 @@ for(const verboden of ["public/index.html","writeFileSync","vernieuwServiceworke
 
 if(tel(html,MARKER)!==1)throw new Error("SEO-marker moet exact één keer aanwezig zijn.");
 if(tel(html,`<link rel="canonical" href="${SEO.canonical}">`)!==1)throw new Error("Canonical ontbreekt of is dubbel.");
+if(tel(html,`<meta name="google-site-verification" content="${SEO.googleVerification}">`)!==1)throw new Error("Google Search Console-verificatiemeta ontbreekt of is dubbel.");
 if(tel(html,`<meta name="msvalidate.01" content="${SEO.bingVerification}">`)!==1)throw new Error("Bing-verificatiemeta ontbreekt of is dubbel.");
 if(!html.includes(`<title>${SEO.title}</title>`))throw new Error("SEO-title ontbreekt in definitief artifact.");
 if(!html.includes(`name="description" content="${SEO.description.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}"`))throw new Error("SEO-description ontbreekt in definitief artifact.");
