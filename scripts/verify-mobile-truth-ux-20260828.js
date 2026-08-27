@@ -24,6 +24,7 @@ ok(html.includes("kans · verwachte hoeveelheid")&&html.includes("Uitleg meetwaa
 ok(html.includes("mobile-priority-rain")&&html.includes("mobile-priority-week"),"mobiele prioriteitsvolgorde is aanwezig");
 ok(html.includes("Temperatuur boven, neerslagperioden onder"),"grafiek legt temperatuur en regenperioden compact uit");
 ok(html.includes("Actieve nacht tot zonsopkomst")&&html.includes("Volgende volledige nacht"),"dubbele vannacht-labels krijgen een eenduidige fallback");
+ok(html.includes("const regenBronPerArray=new WeakMap()")&&html.includes("regenBronPerArray.get(g.MM)")&&html.includes("regenBronPerArray.set(g.MM,bronMm)"),"herhaalde grafiekpolish gebruikt dezelfde onveranderde Q4-bron en schaalt het lopende uur niet dubbel");
 
 const deel=api.corrigeerLopendModeluur(4,"2026-08-28T01:00","2026-08-28T00:23");
 ok(Math.abs(deel-(4*37/60))<1e-9,"lopend uur telt alleen het nog toekomstige deel mee");
