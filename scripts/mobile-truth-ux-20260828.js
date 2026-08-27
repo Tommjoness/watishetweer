@@ -76,7 +76,6 @@ if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileTruthUX20260828=api;
 
 if(typeof document==="undefined"||typeof window==="undefined"||typeof S==="undefined")return;
-const mobiel=()=>typeof window.matchMedia==="function"?window.matchMedia("(max-width:900px)").matches:window.innerWidth<=900;
 
 function neerslagUurBetekenis(){
   const waarde=document.getElementById("pop"),stat=waarde&&waarde.closest(".stat");if(!waarde||!stat)return;
@@ -135,15 +134,10 @@ function corrigeerRegenperiodenInGrafiek(){
   });
 }
 
-function grafiekHint(){
-  if(!mobiel()||S.dag!=null)return;
-  const hint=document.getElementById("charthint");
-  if(hint)hint.textContent="Temperatuur boven, neerslagperioden onder. Selecteer een punt voor details.";
-}
 let grafiekToken=0;
 function planGrafiekPolish(){
   const token=++grafiekToken;
-  const doe=()=>{if(token===grafiekToken){corrigeerRegenperiodenInGrafiek();grafiekHint();}};
+  const doe=()=>{if(token===grafiekToken)corrigeerRegenperiodenInGrafiek();};
   if(typeof requestAnimationFrame==="function")requestAnimationFrame(doe);else setTimeout(doe,0);
 }
 
