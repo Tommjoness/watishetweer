@@ -100,7 +100,9 @@ async function controleer(type,naam){
         ends:groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')].map(x=>(x.textContent||"").trim()):[],
         ranges:groep?[...groep.querySelectorAll('text[data-q4-rain-period-range]')].map(x=>(x.textContent||"").trim()):[],
         bedragen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(x=>(x.textContent||"").trim()):[],
-        aria:groep?[...groep.querySelectorAll('line[aria-label]')].map(x=>x.getAttribute("aria-label")||""):[],
+        lineAria:groep?[...groep.querySelectorAll('line[aria-label]')].map(x=>x.getAttribute("aria-label")||""):[],
+        groepAriaHidden:groep?groep.getAttribute("aria-hidden"):null,
+        svgAria:svg.getAttribute("aria-label")||"",
         details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
         samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0,
         kansen:[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).length
@@ -110,7 +112,9 @@ async function controleer(type,naam){
     assert.deepEqual(meerdere.starts,[],`${naam}: mobiel toont geen losse beginlabels naast compacte ranges`);
     assert.deepEqual(meerdere.ends,[],`${naam}: mobiel toont geen losse eindlabels naast compacte ranges`);
     assert.deepEqual(meerdere.bedragen,["0,4 mm","2,0 mm","6,4 mm"],`${naam}: iedere bracket houdt zijn eigen hoeveelheid`);
-    assert.ok(meerdere.aria.some(x=>x.includes("wo 22:00–do 02:00")&&x.includes("2,0 mm")),`${naam}: toegankelijke cross-midnightbeschrijving houdt beide kalenderdagen; kreeg ${JSON.stringify(meerdere.aria)}`);
+    assert.deepEqual(meerdere.lineAria,[],`${naam}: decoratieve SVG-lijnen dragen geen ongeldig aria-label`);
+    assert.equal(meerdere.groepAriaHidden,"true",`${naam}: de visuele regenbrackets zijn decoratief voor de accessibility tree`);
+    assert.ok(meerdere.svgAria.includes("wo 22:00–do 02:00")&&meerdere.svgAria.includes("2,0 mm"),`${naam}: toegankelijke SVG-samenvatting houdt beide kalenderdagen en hoeveelheid; kreeg ${JSON.stringify(meerdere.svgAria)}`);
     assert.equal(meerdere.details,0,`${naam}: tijdvakken worden niet nogmaals als losse regels herhaald`);
     assert.equal(meerdere.samenvattingen,0,`${naam}: geen totaalregel of Meeste regen-regel onder de brackets`);
     assert.equal(meerdere.kansen,0,`${naam}: zichtbare neerslagstrook toont geen statische kanspercentages`);
@@ -144,7 +148,7 @@ async function controleer(type,naam){
     assert.equal(enkelVolgendeDag.samenvattingen,0,`${naam}: ook één periode krijgt geen totaal- of pieksamenvatting`);
     assert.equal(enkelVolgendeDag.kansen,0,`${naam}: ook één periode toont geen statisch kanspercentage`);
     assert.deepEqual(fouten,[],`${naam}: geen page errors`);
-    console.log(`${naam}: mobiele 24-uurs regenbrackets tonen compacte klokranges, met dagcontext alleen in aria.`);
+    console.log(`${naam}: mobiele 24-uurs regenbrackets tonen compacte klokranges; dagcontext staat geldig in het SVG-label.`);
   }finally{await browser.close();}
 }
 
