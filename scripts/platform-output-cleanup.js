@@ -44,8 +44,8 @@ function vervangExact(bron,oud,nieuw,label){
 function hardenRuntime(html){
   let bron=String(html||"");
   if(!bron.includes('rel="preload" href="/instrument-sans-latin-400-normal.woff2"')){
-    const anker="<style>";
-    if((bron.split(anker).length-1)!==1)throw new Error("Hoofdstijlanker ontbreekt of is dubbel voor fontpreload.");
+    const anker="</head>";
+    if((bron.split(anker).length-1)!==1)throw new Error("Head-einde ontbreekt of is dubbel voor fontpreload.");
     bron=bron.replace(anker,PRELOADS+anker);
   }
   const heeftQ4=bron.includes("function q4Regenperioden")||bron.includes(RAIN_ARIA_OUD);
