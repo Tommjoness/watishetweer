@@ -80,6 +80,9 @@ jobs:
           echo "Cloudflare production branch: $production_branch"
           test "$production_branch" = main
 
+      - name: Schakel Cloudflare Pages Web Analytics uit
+        run: node scripts/cloudflare-disable-web-analytics.js
+
       - name: Bouw Cloudflare productie-artifact
         env:
           WEATHER_BUILD_SHA: ${{ env.SOURCE_SHA }}
