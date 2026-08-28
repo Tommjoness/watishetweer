@@ -1,50 +1,70 @@
 "use strict";
 
-const ROOT=String(process.env.CLOUDFLARE_ROOT||"").replace(/\/$/,"");
-if(!/^https:\/\/[a-z0-9-]+\.watishetweer\.pages\.dev$/i.test(ROOT)){
-  throw new Error("CLOUDFLARE_ROOT ontbreekt of is geen watishetweer.pages.dev-deployment.");
-}
-
-const route="/api/plaatsnaam?lat=52.3508&lon=5.2647";
-const deadline=Date.now()+90000;
+const ROUTES=Object.freeze([
+  Object.freeze({naam:"plaatsnaam",pad:"/api/plaatsnaam?lat=52.3508&lon=5.2647"}),
+  Object.freeze({naam:"neerslag",pad:"/api/neerslag?lat=52.3508&lon=5.2647&land=NL"}),
+  Object.freeze({naam:"waarschuwingen",pad:"/api/waarschuwingen?lat=52.3508&lon=5.2647&land=NL"})
+]);
 const intervalMs=3000;
 const requestTimeoutMs=15000;
-let poging=0;
+const readinessTimeoutMs=90000;
 
+function geldigeRoot(waarde){
+  const root=String(waarde||"").replace(/\/$/,"");
+  if(!/^https:\/\/[a-z0-9-]+\.watishetweer\.pages\.dev$/i.test(root)){
+    throw new Error("CLOUDFLARE_ROOT ontbreekt of is geen watishetweer.pages.dev-deployment.");
+  }
+  return root;
+}
 function wacht(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+function geldigeJson(text){
+  if(!text)return false;
+  try{JSON.parse(text);return true;}catch{return false;}
+}
+function routeIsGereed(status,text){return Number(status)!==404&&geldigeJson(text);}
 
-async function probeer(){
-  poging+=1;
+async function controleerRoute(root,route,fetchImpl=fetch){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),requestTimeoutMs);
   try{
-    const r=await fetch(ROOT+route,{redirect:"manual",cache:"no-store",signal:controller.signal});
+    const r=await fetchImpl(root+route.pad,{redirect:"manual",cache:"no-store",signal:controller.signal});
     const text=await r.text();
-    let json=false;
-    try{if(text)JSON.parse(text),json=true;}catch{}
-
-    if(r.status!==404&&json){
-      console.log(`Cloudflare Functions-route is actief na poging ${poging}: HTTP ${r.status}.`);
-      return true;
-    }
-
-    console.log(`Cloudflare Functions nog niet gereed, poging ${poging}: HTTP ${r.status}, JSON=${json}.`);
-    return false;
+    return {naam:route.naam,status:r.status,json:geldigeJson(text),gereed:routeIsGereed(r.status,text)};
   }catch(error){
-    console.log(`Cloudflare Functions nog niet bereikbaar, poging ${poging}: ${error&&error.name||"fout"}.`);
-    return false;
+    return {naam:route.naam,status:null,json:false,gereed:false,fout:error&&error.name||"fout"};
   }finally{
     clearTimeout(timer);
   }
 }
 
-(async()=>{
-  while(Date.now()<deadline){
-    if(await probeer())return;
-    await wacht(intervalMs);
+async function probeer(root,poging,fetchImpl=fetch){
+  const resultaten=await Promise.all(ROUTES.map(route=>controleerRoute(root,route,fetchImpl)));
+  const nietGereed=resultaten.filter(x=>!x.gereed);
+  if(!nietGereed.length){
+    console.log(`Alle Cloudflare Functions-routes zijn actief na poging ${poging}: ${resultaten.map(x=>`${x.naam}=HTTP ${x.status}`).join(", ")}.`);
+    return true;
   }
-  throw new Error(`Cloudflare Pages Functions zijn na 90 seconden nog niet gereed op ${ROOT}.`);
-})().catch(error=>{
-  console.error(error&&error.stack||error);
-  process.exit(1);
-});
+  console.log(`Cloudflare Functions nog niet volledig gereed, poging ${poging}: ${resultaten.map(x=>`${x.naam}=HTTP ${x.status===null?x.fout:x.status}, JSON=${x.json}`).join("; ")}.`);
+  return false;
+}
+
+async function wachtTotGereed(root,fetchImpl=fetch,nu=Date.now,wachtImpl=wacht){
+  const deadline=nu()+readinessTimeoutMs;
+  let poging=0;
+  while(nu()<deadline){
+    poging+=1;
+    if(await probeer(root,poging,fetchImpl))return;
+    await wachtImpl(intervalMs);
+  }
+  throw new Error(`Cloudflare Pages Functions zijn na 90 seconden nog niet alle drie gereed op ${root}.`);
+}
+
+if(require.main===module){
+  const root=geldigeRoot(process.env.CLOUDFLARE_ROOT);
+  wachtTotGereed(root).catch(error=>{
+    console.error(error&&error.stack||error);
+    process.exit(1);
+  });
+}
+
+module.exports={ROUTES,geldigeRoot,geldigeJson,routeIsGereed,controleerRoute,probeer,wachtTotGereed,readinessTimeoutMs};
