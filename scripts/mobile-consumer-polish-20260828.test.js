@@ -23,6 +23,11 @@ assert(js.includes("het verwachte totaal in het komende uur"),"toegankelijke nee
 assert(js.includes("function naRender(basis,nawerk)"),"render-nawerk gebruikt één gedeelde wrapper in plaats van drie losse wrapperpatronen");
 assert(!js.includes("mobile-chart-return")&&!js.includes("mobile-rain-return")&&!js.includes("mobile-days-return"),"consumentenpolish verplaatst geen bestaande dashboardsecties");
 
+const zonderTiming=ux.bronGebruikUitResources([],"NL");
+assert.equal(zonderTiming.openmeteo,true,"Open-Meteo blijft als kernbron geattribueerd wanneer resource timing nog leeg is");
+assert.equal(zonderTiming.cams,false,"optionele CAMS-bron blijft zonder request verborgen");
+assert.equal(zonderTiming.knmi,false,"optionele KNMI-bron blijft zonder request verborgen");
+
 const bronnen=ux.bronGebruikUitResources([
   {name:"https://api.open-meteo.com/v1/forecast?x=1"},
   {name:"https://air-quality-api.open-meteo.com/v1/air-quality?x=1"},
