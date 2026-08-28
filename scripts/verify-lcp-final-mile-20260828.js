@@ -47,5 +47,9 @@ assert.equal(waarheid.daglengteTekst('13 uur en 53 minuten daglicht'),'Daglengte
 assert.equal(waarheid.onweerDagTekst(96),'Onweer mogelijk, lokaal hagel',"neerslagkans wordt niet als hagelkans geformuleerd");
 assert.ok(html.includes('mm.textContent="geen meetbare hoeveelheid"'),"0,0 mm naast niet-nul kans wordt compact als geen meetbare hoeveelheid gepresenteerd");
 assert.ok(html.includes('document.querySelectorAll("#days .dag-neerslagnotitie").forEach(el=>el.remove())'),"lange technische dagnotitie wordt uit de consumententabel verwijderd");
+assert.ok(html.includes('document.querySelectorAll("#nights .maanbij")'),"maanindicatoren krijgen een expliciete toegankelijkheidsowner");
+assert.ok(html.includes('el.setAttribute("role","img")'),"maanindicatoren krijgen een toegestane semantische afbeeldingsrol");
+assert.ok(html.includes('el.getAttribute("aria-label")||el.getAttribute("title")'),"maanindicator behoudt of hergebruikt zijn beschrijvende toegankelijke naam");
+assert.ok(/basisNachtenFinalTruth=nachten;[\s\S]*?veilig\(pasMaanToegankelijkheidToe\)/.test(html),"maansemantiek wordt na iedere Nachtzicht-render opnieuw toegepast");
 
-console.log("LCP/finale productwaarheid 20260828: wolkenlagen, temperatuurtrend, briefing, UV, zonuren, daglengte, neerslagsemantiek, onweermodaliteit, CLS-stabiele plaatsnav en mobiele briefingpaint geborgd.");
+console.log("LCP/finale productwaarheid 20260828: wolkenlagen, temperatuurtrend, briefing, UV, zonuren, daglengte, neerslagsemantiek, onweermodaliteit, CLS-stabiele plaatsnav, toegankelijke maaniconen en mobiele briefingpaint geborgd.");

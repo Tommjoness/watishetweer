@@ -143,6 +143,14 @@ function pasDaglengteToe(){
   });
 }
 
+function pasMaanToegankelijkheidToe(){
+  document.querySelectorAll("#nights .maanbij").forEach(el=>{
+    el.setAttribute("role","img");
+    const label=String(el.getAttribute("aria-label")||el.getAttribute("title")||"").trim();
+    if(label)el.setAttribute("aria-label",label);
+  });
+}
+
 function pasDagenToe(){
   const uitleg=document.getElementById("dagenneerslaguitleg");if(uitleg)uitleg.remove();
   document.querySelectorAll("#days .dag-neerslagnotitie").forEach(el=>el.remove());
@@ -186,6 +194,10 @@ if(typeof etmaal==="function"){
 if(typeof dagen==="function"){
   const basisDagenFinalTruth=dagen;
   dagen=function(){const r=basisDagenFinalTruth.apply(this,arguments);veilig(pasDagenToe);return r;};
+}
+if(typeof nachten==="function"){
+  const basisNachtenFinalTruth=nachten;
+  nachten=function(){const r=basisNachtenFinalTruth.apply(this,arguments);veilig(pasMaanToegankelijkheidToe);return r;};
 }
 
 })(typeof globalThis!=="undefined"?globalThis:this);
