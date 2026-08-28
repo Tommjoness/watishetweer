@@ -5,11 +5,11 @@
    veel losse klokteksten op. De Q4-runtime kent de mobiele geometrie al via g.M;
    daar kiezen we daarom altijd de bestaande compacte rangevariant.
 
-   Fysieke iPhone-controle liet daarnaast zien dat meerdere losse perioden van
-   0,1 mm alsnog een technisch labelbos kunnen vormen. De brackets blijven voor
-   ALLE meetbare perioden staan; alleen de permanente tekstlabels worden op
-   mobiel beperkt tot betekenisvolle perioden. Details blijven via de bestaande
-   grafiekinteractie en de aria-labels van iedere bracket beschikbaar. */
+   Iedere zichtbare regenbracket moet ook zichtbaar uitlegbaar zijn. Eerder
+   bleven brackets van kleine perioden wel staan terwijl hun tijdvak en bedrag
+   op mobiel werden weggefilterd. Dat gaf een los streepje zonder betekenis.
+   Q4 heeft al botsingsvrije meerrijige labelplaatsing en vergroot de viewBox
+   wanneer dat nodig is, dus mobiel gebruikt voortaan alle Q4-perioden. */
 const SPLIT_BRON="    if(span>=splitMin){";
 const SPLIT_PRODUCTIE="    if(!g.M&&span>=splitMin){";
 const HELPER_ANCHOR="function q4PeriodeBedragLabels(g,perioden,eersteY,font){";
@@ -18,25 +18,16 @@ const RANDEN_PRODUCTIE="  const labelPerioden=g.M?q4MobieleGelabeldePerioden(per
 const BEDRAGEN_BRON="  const bedragen=q4PeriodeBedragLabels(g,perioden,bedragStartY,bedragFont);";
 const BEDRAGEN_PRODUCTIE="  const bedragen=q4PeriodeBedragLabels(g,labelPerioden,bedragStartY,bedragFont);";
 
-const MOBIEL_LABEL_MIN_MM=0.2;
-const MOBIEL_LABEL_MAX=3;
+/* Documentatiecontract: Q4 bouwt perioden pas vanaf 0,1 mm. Binnen een 24-uurs-
+   grafiek kunnen er maximaal 24 afzonderlijke uurperioden bestaan. De helper
+   filtert daar bewust niet nógmaals op: een bracket zonder tekst is niet toegestaan. */
+const MOBIEL_LABEL_MIN_MM=0.1;
+const MOBIEL_LABEL_MAX=24;
 
 /* Deze helper wordt via Function#toString letterlijk in de browserruntime gezet.
-   Daarom moeten de productiedrempels lokaal in de functie staan: moduleconstanten
-   bestaan daar niet. De geëxporteerde constanten hierboven blijven het test- en
-   documentatiecontract; de test bewaakt dat beide waarden gelijk blijven. */
+   Houd hem daarom zelfstandig en zonder modulebindings. */
 function q4MobieleGelabeldePerioden(perioden){
-  const minMm=0.2,maxLabels=3;
-  const bron=Array.isArray(perioden)?perioden:[];
-  const som=p=>p&&p.som!==null&&p.som!==undefined&&p.som!==""&&Number.isFinite(Number(p.som))?Number(p.som):-Infinity;
-  const betekenisvol=bron.filter(p=>som(p)>=minMm);
-  let basis=betekenisvol;
-  if(!basis.length&&bron.length){
-    basis=[bron.reduce((beste,p)=>som(p)>som(beste)?p:beste,bron[0])];
-  }
-  if(basis.length<=maxLabels)return basis;
-  const sterkste=new Set([...basis].sort((a,b)=>som(b)-som(a)).slice(0,maxLabels));
-  return bron.filter(p=>sterkste.has(p));
+  return Array.isArray(perioden)?perioden.slice():[];
 }
 
 const HELPER_PRODUCTIE=q4MobieleGelabeldePerioden.toString();
