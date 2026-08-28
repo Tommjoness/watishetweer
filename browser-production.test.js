@@ -105,7 +105,7 @@ setTimeout(()=>{
        bestaande toegankelijke knop de rest kan uitklappen. Meet alleen de
        werkelijk zichtbare rijen voor layout; hidden rijen hebben terecht een
        nulrechthoek en zijn dus geen uitlijningsfout. */
-    const nightRijen=[...document.querySelectorAll('#nights .row.night')],nightKnop=document.querySelector('#nights .nacht-meer');
+    const nightRijen=[...document.querySelectorAll('#nights .row.night:not(.kop)')],nightKnop=document.querySelector('#nights .nacht-meer');
     const nightZichtbaar=nightRijen.filter(el=>!el.hidden&&getComputedStyle(el).display!=='none');
     const nightWide=nightZichtbaar.map(el=>el.querySelector('.nmeta.wide')).filter(Boolean);
     let nightAligned=true,nightRuim=true,nightCompact=true,nightExpand=true;
