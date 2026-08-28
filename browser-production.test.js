@@ -9,7 +9,25 @@ let html=fs.readFileSync(bron,"utf8");
    De test meet uitsluitend zichtbare/layoutcontracten en gebruikt dezelfde
    deterministic browserfixture als de bestaande productietests. */
 const reporter=`<script>
-setTimeout(()=>{
+(function(){
+  const gestart=performance.now();
+  function meetZodraGereed(){
+    const app=document.getElementById('app'),chart=document.getElementById('chart');
+    const gereed=!!(app&&getComputedStyle(app).display!=='none'
+      &&chart&&chart.querySelector('circle[data-temp-index]')
+      &&document.querySelectorAll('#days .row.day:not(.kop)').length>=7
+      &&document.querySelectorAll('#nights .row.night:not(.kop)').length>=3
+      &&document.querySelectorAll('#suntimes .zonregel').length>=1
+      &&document.querySelectorAll('#aq .stat').length>=1);
+    if(!gereed){
+      if(performance.now()-gestart<5000){setTimeout(meetZodraGereed,100);return;}
+      document.body.dataset.browserTestResult='niet-gereed';
+      document.body.dataset.browserException='weerweergave niet binnen 5 seconden gereed';
+      return;
+    }
+    requestAnimationFrame(()=>requestAnimationFrame(meet));
+  }
+  function meet(){
   try{
     const chart=document.getElementById('chart'),svgBox=chart.getBoundingClientRect();
     const labels=[...chart.querySelectorAll('text')].filter(el=>{
@@ -189,7 +207,9 @@ setTimeout(()=>{
     document.body.dataset.browserUv=String(uvOk);
     document.body.dataset.browserZon=String(zonSemantiekOk);
   }catch(e){document.body.dataset.browserTestResult='exception';document.body.dataset.browserException=String(e&&e.message||e);}
-},1100);
+  }
+  meetZodraGereed();
+})();
 </script>`;
 html=html.replace("</body>",reporter+"</body>");
 
@@ -199,7 +219,7 @@ const url="file://"+fixture+"?lat=52.3500&lon=5.2600&plaats=Browsertest";
 function voerBrowserUit(maat,naam){
   const r=spawnSync(browser,[
     "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",
-    "--window-size="+maat,"--virtual-time-budget=3500","--dump-dom",url
+    "--window-size="+maat,"--virtual-time-budget=7000","--dump-dom",url
   ],{encoding:"utf8",maxBuffer:16*1024*1024});
   if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"";
