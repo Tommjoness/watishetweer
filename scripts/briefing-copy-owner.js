@@ -5,11 +5,12 @@
  * De bestaande briefing() blijft eigenaar van neerslaganalyse, temperatuur- en
  * windselectie, lokale kalenderdag, markup en renderflow. Deze owner verplaatst
  * uitsluitend de al zichtbare finale UI-polish-copy naar die renderer zelf:
- * forecastmaxima blijven expliciet verwachtingen en rond 00:00–04:59 zegt de
- * nachtzin alleen "later" als er werkelijk nog een relevante daling resteert.
- * De interpretatielaag mag een gevalideerde waarschuwing nog steeds vóór de
- * modelbriefing zetten; alleen de historisch daarna weer weggefilterde uitlegzin
- * over 'voorrang' verdwijnt nu bij dezelfde briefingowner vóór assemblage klaar is. */
+ * forecastmaxima blijven expliciet verwachtingen en rond 00:00–04:59 beschrijft
+ * de nachtzin de resterende beweging vanaf de actuele temperatuur, zonder het
+ * onnatuurlijke "later vannacht" direct na middernacht. De interpretatielaag mag
+ * een gevalideerde waarschuwing nog steeds vóór de modelbriefing zetten; alleen
+ * de historisch daarna weer weggefilterde uitlegzin over 'voorrang' verdwijnt nu
+ * bij dezelfde briefingowner vóór assemblage klaar is. */
 
 const BRIEFING_HAAK="function briefing(){\n";
 const HELPER_PRODUCTIE=`function weatherNowBriefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){
@@ -20,11 +21,13 @@ const HELPER_PRODUCTIE=`function weatherNowBriefingNachtzin(tmin,nuLokaal,huidig
   const uur=m?Number(m[1]):null;
   if(Number.isFinite(uur)&&uur>=0&&uur<5){
     const huidige=eindigGetal(huidigeTemperatuur);
-    if(huidige!==null&&doel>=huidige-0.75)
-      return "De minimumtemperatuur vannacht ligt rond "+waarde+".";
-    return "Later vannacht koelt het af naar "+waarde+".";
+    if(huidige===null)return "De minimumtemperatuur vannacht ligt rond "+waarde+".";
+    if(Math.abs(doel-huidige)<0.75)return "Vannacht blijft de temperatuur rond "+waarde+".";
+    return doel<huidige
+      ?"Vannacht daalt de temperatuur naar ongeveer "+waarde+"."
+      :"Vannacht loopt de temperatuur op naar ongeveer "+waarde+".";
   }
-  return "Vannacht koelt het af naar "+waarde+".";
+  return "Vannacht koelt het af naar ongeveer "+waarde+".";
 }
 function briefing(){
 `;
@@ -57,10 +60,13 @@ function briefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){
   const m=/T(\d{2}):(\d{2})/.exec(String(nuLokaal||"")),uur=m?Number(m[1]):null;
   if(Number.isFinite(uur)&&uur>=0&&uur<5){
     const huidige=getal(huidigeTemperatuur);
-    if(huidige!==null&&doel>=huidige-0.75)return "De minimumtemperatuur vannacht ligt rond "+waarde+".";
-    return "Later vannacht koelt het af naar "+waarde+".";
+    if(huidige===null)return "De minimumtemperatuur vannacht ligt rond "+waarde+".";
+    if(Math.abs(doel-huidige)<0.75)return "Vannacht blijft de temperatuur rond "+waarde+".";
+    return doel<huidige
+      ?"Vannacht daalt de temperatuur naar ongeveer "+waarde+"."
+      :"Vannacht loopt de temperatuur op naar ongeveer "+waarde+".";
   }
-  return "Vannacht koelt het af naar "+waarde+".";
+  return "Vannacht koelt het af naar ongeveer "+waarde+".";
 }
 
 function vervangAantal(html,bron,productie,verwacht,label){
