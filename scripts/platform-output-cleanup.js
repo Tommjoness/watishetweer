@@ -14,8 +14,8 @@ const BRON_SNAPSHOT=path.join(ROOT,".weather-runtime-source.tmp");
 const RAIN_ARIA_OUD='groep.setAttribute("aria-label","Neerslagperioden met tijdvak en hoeveelheid per periode");';
 const RAIN_ARIA_NIEUW='groep.setAttribute("aria-hidden","true");';
 const RAIN_LINE_OUD='    horizontaal.setAttribute("aria-label",q4PeriodeTijdvak(g,p)+" · "+q4Mm(p.som)+" mm");\n';
-const RAIN_DETAIL_OUD='  const detailAria=g.n<=25?" Bij iedere regenperiode staat het tijdvak en de verwachte hoeveelheid.":"";\n  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve."+detailAria+" Neerslagkansen blijven via de details beschikbaar.").trim());';
-const RAIN_DETAIL_NIEUW='  const periodeAria=g.n<=25?perioden.map(p=>q4PeriodeTijdvak(g,p)+" · "+q4Mm(p.som)+" mm").join("; "):"";\n  const detailAria=periodeAria?" Neerslagperioden: "+periodeAria+".":"";\n  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve."+detailAria+" Neerslagkansen blijven via de details beschikbaar.").trim());';
+const RAIN_SVG_OUD='  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve."+detailAria+" Neerslagkansen blijven via de details beschikbaar.").trim());';
+const RAIN_SVG_NIEUW='  const periodeAria=g.n<=25?perioden.map(p=>q4PeriodeTijdvak(g,p)+" · "+q4Mm(p.som)+" mm").join("; "):"";\n  const periodeDetail=periodeAria?" Neerslagperioden: "+periodeAria+".":"";\n  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve."+periodeDetail+detailAria+" Neerslagkansen blijven via de details beschikbaar.").trim());';
 const CSP_META=/<meta http-equiv="Content-Security-Policy" content="[^"]*">\s*/gi;
 const PRELOADS='<link rel="preload" href="/instrument-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>\n<link rel="preload" href="/bodoni-moda-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>\n';
 const DELIVERY_META='<meta name="weather-delivery" content="external-minified-v1">';
@@ -52,7 +52,7 @@ function hardenRuntime(html){
   if(heeftQ4){
     bron=vervangExact(bron,RAIN_ARIA_OUD,RAIN_ARIA_NIEUW,"regenperiodegroep-ARIA");
     bron=vervangExact(bron,RAIN_LINE_OUD,"","regenperiodelijn-ARIA");
-    bron=vervangExact(bron,RAIN_DETAIL_OUD,RAIN_DETAIL_NIEUW,"regenperiode-SVG-samenvatting");
+    bron=vervangExact(bron,RAIN_SVG_OUD,RAIN_SVG_NIEUW,"regenperiode-SVG-samenvatting");
   }
   return bron;
 }
