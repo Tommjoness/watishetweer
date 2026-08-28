@@ -117,7 +117,7 @@ function werkNeerslagSleutelBij(){
 function werkStatKoppenBij(){
   if(!mobiel())return;
   const gust=document.getElementById("gust"),stat=gust&&gust.closest(".stat"),kop=stat&&stat.querySelector(".eyebrow");
-  if(kop)kop.textContent="Windstoot nu";
+  if(kop)kop.textContent="Windstoot rond nu";
 }
 function werkBronnenBij(){
   const bron=document.querySelector("footer .bron-bronnen");if(!bron)return;
