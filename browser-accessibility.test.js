@@ -77,7 +77,11 @@ async function controleer(browserType,naam){
     assert.equal(resultaat.appTag,"MAIN",naam+": #app gebruikt native main-semantiek");
     assert.equal(resultaat.plaatsTag,"H2",naam+": de zichtbare plaatsnaam is geen native sectiekop");
     assert.equal(resultaat.footerDisplay,"flex",naam+": footer staat in zichtbare layoutstate");
-    assert.ok(resultaat.doelen.length>=5,naam+": zichtbare footerdoelen ontbreken");
+    const footerTeksten=resultaat.doelen.map(doel=>doel.tekst.replace(/\s+/g," ").trim());
+    assert.ok(resultaat.doelen.length>=3,naam+": vaste footerdoelen ontbreken naast dynamisch gefilterde bronlinks: "+JSON.stringify(footerTeksten));
+    assert.ok(footerTeksten.some(t=>t==="Open-Meteo"),naam+": kernbron Open-Meteo is niet zichtbaar");
+    assert.ok(footerTeksten.some(t=>/Privacy & gegevens/i.test(t)),naam+": privacydoel is niet zichtbaar");
+    assert.ok(footerTeksten.some(t=>/Technische locatiegegevens/i.test(t)),naam+": technische locatiegegevens zijn niet zichtbaar");
     assert.ok(resultaat.doelen.every(doel=>!doel.verborgenDoor),naam+": verborgen bronlink telt ten onrechte als interactief footerdoel");
     resultaat.doelen.forEach(doel=>{
       assert.ok(doel.hoogte>=43.5,naam+": footerdoel '"+doel.tekst+"' is "+doel.hoogte+"px hoog");

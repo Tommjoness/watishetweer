@@ -1,8 +1,9 @@
-/* Mobiele grafiek- en informatie-UX 2026-08-28. Geen data- of DOM-herordening. */
+/* Grafiek-, bron- en informatie-UX 2026-08-28. Geen data- of DOM-herordening. */
+
+/* Dynamische provenance geldt op ieder schermformaat. */
+footer .bron-bronnen .bronitem[hidden]{display:none!important}
 
 @media(max-width:900px){
-  /* Zon- en daglichtinformatie mag op telefoon nooit in één lange regel worden
-     samengedrukt. Iedere bestaande betekenis houdt zijn eigen regel. */
   #suntimes{
     display:grid!important;
     grid-template-columns:minmax(0,1fr)!important;
@@ -13,8 +14,6 @@
   #suntimes span{white-space:normal!important;max-width:100%}
   #suntimes .zondag{grid-column:1!important;margin-top:1px}
 
-  /* De regenperioden blijven volledig zichtbaar en uitlegbaar, maar de labels
-     concurreren op mobiel minder met de temperatuurlijn. */
   #chart [data-q4-rain-period-range],
   #chart [data-q4-rain-period-amount]{
     opacity:.76;
@@ -22,9 +21,6 @@
   }
   #chart g[data-q4-rain-periods] line{opacity:.72}
 
-  /* Nachtzicht blijft inhoudelijk compleet. Alleen de repetitieve verticale
-     presentatie wordt compacter; verborgen/uitgeklapte rijen en de scorelogica
-     blijven eigendom van de bestaande Nachtzicht-owner. */
   #nights .row.night:not(.kop){
     padding-top:10px!important;
     padding-bottom:10px!important;
@@ -36,8 +32,6 @@
   #nights .row.night .nachtmaan{line-height:1.32}
   #nights .row.night .nachtmaan{margin-top:1px}
 
-  /* De bestaande echte knop krijgt een zichtbaar uitklapsignaal. Tapdoel,
-     aria-expanded en verborgen rijen blijven in de bestaande Nachtzicht-owner. */
   #nights .nacht-meer{
     display:flex;
     align-items:center;
@@ -53,13 +47,9 @@
     text-transform:none;
   }
   #nights .nacht-meer[aria-expanded="true"]::after{content:"⌃"}
-
-  footer .bron-bronnen .bronitem[hidden]{display:none!important}
 }
 
 @media(max-width:430px){
-  /* Compactere eerste schermhoogte zonder knoppen te verkleinen, secties te
-     verplaatsen of de 44px-tapdoelen aan te raken. */
   .mast{gap:14px}
   .mastright{gap:5px}
   .chips{margin-top:6px}
@@ -75,10 +65,6 @@
   #cond{font-size:22px}
   #feels{font-size:13.5px}
 
-  /* Minder hoge metriektegels en minder letterspatiëring voorkomen dat korte
-     consumentlabels onnodig over drie regels breken. De brede UV-tegel is geen
-     helft van het tweekolomsgrid en houdt daarom bewust zijn bestaande 0/0
-     zijpadding en volle breedte. */
   .dashrow-hero .stats .stat{padding-top:11px;padding-bottom:12px}
   .dashrow-hero .stats .stat:not(.breed):nth-child(2n){padding-left:14px}
   .dashrow-hero .stats .stat:not(.breed):nth-child(2n+1){padding-right:14px}
@@ -88,12 +74,19 @@
   #pop{gap:3px;flex-wrap:wrap}
   .mobile-neerslag-sleutel{font-size:9.5px;line-height:1.25}
 
-  /* De indexeerbare plaatslinks blijven allemaal in de DOM en op /weer/
-     bereikbaar. Op de hoofdweergave tonen we alleen de eerste reeks plus de
-     duidelijke ingang naar alle plaatsen. */
   .seo-plaatsnav{padding-top:14px;margin-top:14px}
   .seo-plaatsnav-inner{gap:8px!important}
   .seo-plaatsnav p{display:none}
   .seo-plaatsnav-links{gap:6px 12px!important}
   .seo-plaatsnav-links a:nth-child(n+7):not(.seo-plaatsnav-alles){display:none}
+}
+
+@media(min-width:901px){
+  /* Desktop blijft ruim, maar lange tekstblokken krijgen een leesbare maat en
+     secundaire uitleg concurreert minder met de hoofdwaarden. */
+  .brief{max-width:72ch}
+  .dashrow-hero .stats .ssub{max-width:34ch;line-height:1.42}
+  #nights .row.night:not(.kop){row-gap:4px}
+  .seo-plaatsnav p{max-width:72ch}
+  footer .bron-bronnen{align-items:flex-start}
 }
