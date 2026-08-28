@@ -166,21 +166,26 @@ function toonSeoPlaatsnav(){
 }
 api.toonSeoPlaatsnav=toonSeoPlaatsnav;
 
+/* Een presentatiecorrectie mag nooit de bewezen kernrender blokkeren. Bij een
+   onverwachte DOM-vorm blijft de bestaande owner dus zichtbaar en gaat de rest
+   van de pagina gewoon door. De helpertests bewaken los de inhoudelijke regels. */
+function veilig(fn){try{fn();}catch(e){if(root&&root.console&&typeof root.console.warn==="function")root.console.warn("final-product-truth",e);}}
+
 if(typeof meters==="function"){
   const basisMetersFinalTruth=meters;
-  meters=function(){const r=basisMetersFinalTruth.apply(this,arguments);pasBewolkingToe();pasTemperatuurTrendToe();pasUvToe();pasZonurenToe();return r;};
+  meters=function(){const r=basisMetersFinalTruth.apply(this,arguments);veilig(pasBewolkingToe);veilig(pasTemperatuurTrendToe);veilig(pasUvToe);veilig(pasZonurenToe);return r;};
 }
 if(typeof briefing==="function"){
   const basisBriefingFinalTruth=briefing;
-  briefing=function(){const r=basisBriefingFinalTruth.apply(this,arguments);pasMorgenBriefingToe();return r;};
+  briefing=function(){const r=basisBriefingFinalTruth.apply(this,arguments);veilig(pasMorgenBriefingToe);return r;};
 }
 if(typeof etmaal==="function"){
   const basisEtmaalFinalTruth=etmaal;
-  etmaal=function(){const r=basisEtmaalFinalTruth.apply(this,arguments);pasDaglengteToe();return r;};
+  etmaal=function(){const r=basisEtmaalFinalTruth.apply(this,arguments);veilig(pasDaglengteToe);return r;};
 }
 if(typeof dagen==="function"){
   const basisDagenFinalTruth=dagen;
-  dagen=function(){const r=basisDagenFinalTruth.apply(this,arguments);pasDagenToe();return r;};
+  dagen=function(){const r=basisDagenFinalTruth.apply(this,arguments);veilig(pasDagenToe);return r;};
 }
 
 })(typeof globalThis!=="undefined"?globalThis:this);
