@@ -11,7 +11,8 @@ const {spawnSync}=require("child_process");
  * geen HTML/CSS/runtime-uitvoer, maar voorkomt dat package.json en losse
  * commando's ieder een eigen kopie van de volgorde onderhouden. De verifiers
  * blijven direct na de laag staan die zij bewaken; de finale verifier blijft
- * altijd als laatste stap draaien.
+ * altijd als laatste stap draaien. Transportoptimalisatie gebeurt pas daarna via
+ * platform-output-cleanup.js en bewaart zo deze semantische keten intact.
  */
 const POSTBUILD_STAPPEN=Object.freeze([
   "apply-mobile-screenshot-polish.js",
@@ -62,6 +63,12 @@ function voerPostbuildUit(opt={}){
   const node=opt.execPath||process.execPath;
   const scriptsMap=opt.scriptsDir||__dirname;
   const artifactPad=opt.artifactPath||path.join(scriptsMap,"..","public","index.html");
+  /* Een eerdere npm test/build kan een niet-publieke runtimebronsnapshot hebben
+     achtergelaten voor verificatie ná delivery-minificatie. Binnen de semantische
+     postbuild moet altijd uitsluitend het verse inline artifact gelden. */
+  if(!opt.artifactPath){
+    fs.rmSync(path.join(scriptsMap,"..",".weather-runtime-source.tmp"),{force:true});
+  }
   const bewaakPresentatie=fs.existsSync(artifactPad)&&fs.readFileSync(artifactPad,"utf8").includes(PRESENTATIE_MARKER);
 
   for(const stap of POSTBUILD_STAPPEN){
