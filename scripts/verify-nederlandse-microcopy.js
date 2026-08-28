@@ -110,14 +110,20 @@ if(html.includes("const uiBasisMeters=meters;"))throw new Error("UI-polish wrapt
 /* De briefingcopy heeft nu eveneens één pure base-build owner. De bestaande
    briefingrenderer blijft alle forecast/wind/neerslaginputs selecteren; de owner
    maakt alleen bronstatus en nacht-tijdtaal direct definitief in briefing(). */
+const briefingNachtvarianten=[
+  "De minimumtemperatuur vannacht ligt rond ",
+  "Vannacht blijft de temperatuur rond ",
+  "Vannacht daalt de temperatuur naar ongeveer ",
+  "Vannacht loopt de temperatuur op naar ongeveer ",
+  "Vannacht koelt het af naar ongeveer "
+];
 for(const invariant of [
   "function weatherNowBriefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){",
   "Het verwachte maximum ligt vandaag rond ",
   "Het verwachte maximum ligt morgen rond ",
   "Het verwachte maximum lag vandaag rond ",
   "Het verwachte maximum voor morgen is ",
-  "De minimumtemperatuur vannacht ligt rond ",
-  "Later vannacht koelt het af naar ",
+  ...briefingNachtvarianten,
   "function pasBriefingCopyToe(html){"
 ]){
   if(!briefingBron.includes(invariant))throw new Error("Briefingcopy-owner mist invariant: "+invariant);
@@ -128,13 +134,15 @@ for(const tekst of [
   "Het verwachte maximum ligt morgen rond ",
   "Het verwachte maximum lag vandaag rond ",
   "Het verwachte maximum voor morgen is ",
-  "De minimumtemperatuur vannacht ligt rond ",
-  "Later vannacht koelt het af naar "
+  ...briefingNachtvarianten
 ]){
   if(!html.includes(tekst))throw new Error("Definitieve briefingcopy ontbreekt uit artifact: "+tekst);
 }
-for(const verouderd of ["uiBriefingBronSemantiek","uiBriefingTijdtaal","const uiBasisBriefing=briefing;"]){
-  if(html.includes(verouderd))throw new Error("Verouderde UI-polish briefingcopy-owner staat nog in artifact: "+verouderd);
+for(const verouderd of [
+  "uiBriefingBronSemantiek","uiBriefingTijdtaal","const uiBasisBriefing=briefing;",
+  "Later vannacht koelt het af naar "
+]){
+  if(briefingBron.includes(verouderd)||html.includes(verouderd))throw new Error("Verouderde briefingcopy staat nog in owner/artifact: "+verouderd);
 }
 if(html.includes("De officiële waarschuwing heeft voorrang op de modelverwachting."))throw new Error("Verouderde briefing-waarschuwingcopy staat nog in artifact.");
 
@@ -148,13 +156,16 @@ for(const eigenaar of [
   if(!html.includes(eigenaar))throw new Error("Presentatie-owner ontbreekt uit artifact: "+eigenaar);
 }
 
-/* De nachtbriefing moet temperatuurgedreven blijven. Een klok-only formulering
-   kan bij een al bereikt minimum ten onrechte toekomstige afkoeling suggereren. */
+/* De nachtbriefing moet temperatuurgedreven blijven. Na middernacht vergelijkt
+   hij het resterende nachtminimum expliciet met de actuele temperatuur, zodat
+   een al bereikt minimum geen toekomstige afkoeling suggereert. */
 for(const invariant of [
   "const huidige=eindigGetal(huidigeTemperatuur);",
-  "doel>=huidige-0.75",
-  "De minimumtemperatuur vannacht ligt rond ",
-  "Later vannacht koelt het af naar "
+  "Math.abs(doel-huidige)<0.75",
+  "doel<huidige",
+  "Vannacht blijft de temperatuur rond ",
+  "Vannacht daalt de temperatuur naar ongeveer ",
+  "Vannacht loopt de temperatuur op naar ongeveer "
 ]){
   if(!html.includes(invariant))throw new Error("Temperatuurgedreven nachtbriefing mist invariant: "+invariant);
 }

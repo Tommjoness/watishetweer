@@ -714,7 +714,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       const eerste=document.querySelector("#aq .stat");
       if(eerste&&waarde!==null){
         const kop=eerste.querySelector(".eyebrow"),val=eerste.querySelector(".sval"),sub=eerste.querySelector(".ssub");
-        const label=euro?"Europese AQI":"Amerikaanse AQI";
+        const label=euro?"Europese AQI":"AQI (VS-schaal)";
         let oordeel;
         if(euro) oordeel=waarde<=20?"goed":waarde<=40?"redelijk":waarde<=60?"matig":waarde<=80?"slecht":waarde<=100?"zeer slecht":"extreem slecht";
         else oordeel=waarde<=50?"goed":waarde<=100?"redelijk":waarde<=150?"ongezond voor gevoelige groepen":waarde<=200?"ongezond":waarde<=300?"zeer ongezond":"gevaarlijk";

@@ -9,7 +9,31 @@ let html=fs.readFileSync(bron,"utf8");
    De test meet uitsluitend zichtbare/layoutcontracten en gebruikt dezelfde
    deterministic browserfixture als de bestaande productietests. */
 const reporter=`<script>
-setTimeout(()=>{
+(function(){
+  let afgerond=false;
+  function weerweergaveGereed(){
+    const app=document.getElementById('app'),chart=document.getElementById('chart');
+    return !!(app&&getComputedStyle(app).display!=='none'
+      &&chart&&chart.querySelector('circle[data-temp-index]')
+      &&document.querySelectorAll('#days .row.day:not(.kop)').length>=7
+      &&document.querySelectorAll('#nights .row.night:not(.kop)').length>=3
+      &&document.querySelectorAll('#suntimes .zonregel').length>=1
+      &&document.querySelectorAll('#aq .stat').length>=1);
+  }
+  function probeer(definitief){
+    if(afgerond)return;
+    if(weerweergaveGereed()){
+      afgerond=true;
+      meet();
+      return;
+    }
+    if(definitief){
+      afgerond=true;
+      document.body.dataset.browserTestResult='niet-gereed';
+      document.body.dataset.browserException='weerweergave niet binnen 5 seconden gereed';
+    }
+  }
+  function meet(){
   try{
     const chart=document.getElementById('chart'),svgBox=chart.getBoundingClientRect();
     const labels=[...chart.querySelectorAll('text')].filter(el=>{
@@ -99,12 +123,30 @@ setTimeout(()=>{
       const inhoudBreed=a.width-padL-padR;
       aqVult=desktop?(aqCols===aqStats.length&&Math.abs(laatste.right+padR-a.right)<=1):(aqStats.length%2===0||Math.abs(laatste.width-inhoudBreed)<=2);
     }
-    const nightWide=[...document.querySelectorAll('#nights .row.night .nmeta.wide')];
-    let nightAligned=true,nightRuim=true;
+
+    /* Nachtzicht is op ieder schermformaat bewust compact: maximaal drie rijen
+       zijn initieel zichtbaar, terwijl alle rijen in de DOM blijven en de
+       bestaande toegankelijke knop de rest kan uitklappen. Meet alleen de
+       werkelijk zichtbare rijen voor layout; hidden rijen hebben terecht een
+       nulrechthoek en zijn dus geen uitlijningsfout. */
+    const nightRijen=[...document.querySelectorAll('#nights .row.night:not(.kop)')],nightKnop=document.querySelector('#nights .nacht-meer');
+    const nightZichtbaar=nightRijen.filter(el=>!el.hidden&&getComputedStyle(el).display!=='none');
+    const nightWide=nightZichtbaar.map(el=>el.querySelector('.nmeta.wide')).filter(Boolean);
+    let nightAligned=true,nightRuim=true,nightCompact=true,nightExpand=true;
     if(desktop&&nightWide.length>1){
       const r0=nightWide[0].getBoundingClientRect();
       nightAligned=nightWide.slice(1).every(el=>{const r=el.getBoundingClientRect();return Math.abs(r.left-r0.left)<=1&&Math.abs(r.width-r0.width)<=1;});
       nightRuim=r0.width>=260;
+    }
+    if(nightRijen.length>3){
+      nightCompact=nightZichtbaar.length===3&&!!nightKnop&&nightKnop.getAttribute('aria-expanded')==='false'&&getComputedStyle(nightKnop).display!=='none';
+      if(nightKnop){
+        nightKnop.click();
+        const naUitklap=nightRijen.filter(el=>!el.hidden&&getComputedStyle(el).display!=='none');
+        nightExpand=naUitklap.length===nightRijen.length&&nightKnop.getAttribute('aria-expanded')==='true';
+      }else nightExpand=false;
+    }else{
+      nightCompact=nightZichtbaar.length===nightRijen.length;
     }
 
     const chartKop=document.querySelector('.chartkop'),sun=document.getElementById('suntimes');
@@ -137,7 +179,7 @@ setTimeout(()=>{
        moet duidelijk meer context geven dan alleen min/max, zonder weer tien
        permanente cijfers op een smalle grafiek te zetten. */
     const labelDichtheidOk=desktop?labels.length>=5:(labels.length>=4&&labels.length<=8&&labels.length===tempPunten.length);
-    document.body.dataset.browserTestResult=(brief&&briefingDagOk&&dagen>=7&&labelDichtheidOk&&botsingen===0&&dubbelNabij===0&&buiten===0&&lossePunten===0&&nuRustig&&scrubOk&&scrubKort&&neerslagkansVast&&tooltipCompact&&klokOk&&gridOk&&!statOverflow&&statsStabiel&&statsCentraal&&dagenLijnOk&&dagMmLeesbaar&&aqVult&&nightAligned&&nightRuim&&mobileKopOk&&uvOk&&zonSemantiekOk)?'ok':'fout';
+    document.body.dataset.browserTestResult=(brief&&briefingDagOk&&dagen>=7&&labelDichtheidOk&&botsingen===0&&dubbelNabij===0&&buiten===0&&lossePunten===0&&nuRustig&&scrubOk&&scrubKort&&neerslagkansVast&&tooltipCompact&&klokOk&&gridOk&&!statOverflow&&statsStabiel&&statsCentraal&&dagenLijnOk&&dagMmLeesbaar&&aqVult&&nightAligned&&nightRuim&&nightCompact&&nightExpand&&mobileKopOk&&uvOk&&zonSemantiekOk)?'ok':'fout';
     document.body.dataset.browserLabels=String(labels.length);
     document.body.dataset.browserPunten=String(tempPunten.length);
     document.body.dataset.browserLossePunten=String(lossePunten);
@@ -164,12 +206,18 @@ setTimeout(()=>{
     document.body.dataset.browserAq=String(aqVult);
     document.body.dataset.browserNight=String(nightAligned);
     document.body.dataset.browserNightRuim=String(nightRuim);
+    document.body.dataset.browserNightCompact=String(nightCompact);
+    document.body.dataset.browserNightExpand=String(nightExpand);
     document.body.dataset.browserBriefingDag=String(briefingDagOk);
     document.body.dataset.browserMobileKop=String(mobileKopOk);
     document.body.dataset.browserUv=String(uvOk);
     document.body.dataset.browserZon=String(zonSemantiekOk);
   }catch(e){document.body.dataset.browserTestResult='exception';document.body.dataset.browserException=String(e&&e.message||e);}
-},1100);
+  }
+  setTimeout(()=>probeer(false),1400);
+  setTimeout(()=>probeer(false),2800);
+  setTimeout(()=>probeer(true),5000);
+})();
 </script>`;
 html=html.replace("</body>",reporter+"</body>");
 
@@ -179,13 +227,13 @@ const url="file://"+fixture+"?lat=52.3500&lon=5.2600&plaats=Browsertest";
 function voerBrowserUit(maat,naam){
   const r=spawnSync(browser,[
     "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",
-    "--window-size="+maat,"--virtual-time-budget=3500","--dump-dom",url
+    "--window-size="+maat,"--virtual-time-budget=7000","--dump-dom",url
   ],{encoding:"utf8",maxBuffer:16*1024*1024});
   if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"";
   const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
-  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", punten="+waarde("browser-punten")+", lossePunten="+waarde("browser-losse-punten")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", neerslagkans="+waarde("browser-kans")+", scrubTekst="+waarde("browser-scrub-debug")+", tooltip="+waarde("browser-tooltip")+", tooltipW="+waarde("browser-tooltip-w")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", statsStabiel="+waarde("browser-stats-stabiel")+", statsCentraal="+waarde("browser-stats-centraal")+", dagenLijn="+waarde("browser-dagen-lijn")+", dagMm="+waarde("browser-dag-mm")+", aq="+waarde("browser-aq")+", night="+waarde("browser-night")+", nightRuim="+waarde("browser-night-ruim")+", briefingDag="+waarde("browser-briefing-dag")+", mobileKop="+waarde("browser-mobile-kop")+", uv="+waarde("browser-uv")+", zon="+waarde("browser-zon")+", exception="+waarde("browser-exception"));
-  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" temperatuurmarkeringen zonder losse stippen, rustige nu-markering, daggebonden zoninformatie, compacte tooltip, vast neerslagkanslabel en minuutprecieze lokale klok correct.");
+  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", punten="+waarde("browser-punten")+", lossePunten="+waarde("browser-losse-punten")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", neerslagkans="+waarde("browser-kans")+", scrubTekst="+waarde("browser-scrub-debug")+", tooltip="+waarde("browser-tooltip")+", tooltipW="+waarde("browser-tooltip-w")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", statsStabiel="+waarde("browser-stats-stabiel")+", statsCentraal="+waarde("browser-stats-centraal")+", dagenLijn="+waarde("browser-dagen-lijn")+", dagMm="+waarde("browser-dag-mm")+", aq="+waarde("browser-aq")+", night="+waarde("browser-night")+", nightRuim="+waarde("browser-night-ruim")+", nightCompact="+waarde("browser-night-compact")+", nightExpand="+waarde("browser-night-expand")+", briefingDag="+waarde("browser-briefing-dag")+", mobileKop="+waarde("browser-mobile-kop")+", uv="+waarde("browser-uv")+", zon="+waarde("browser-zon")+", exception="+waarde("browser-exception"));
+  console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" temperatuurmarkeringen zonder losse stippen, rustige nu-markering, daggebonden zoninformatie, compacte tooltip, vast neerslagkanslabel, compact uitklapbaar Nachtzicht en minuutprecieze lokale klok correct.");
 }
 try{voerBrowserUit("390,844","mobiel Chromium");voerBrowserUit("1440,1000","desktop Chromium");}
 finally{fs.rmSync(dir,{recursive:true,force:true});}
