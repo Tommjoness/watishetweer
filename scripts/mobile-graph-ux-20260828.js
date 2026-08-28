@@ -39,7 +39,7 @@ function waarschuwingBronnenVoorLand(land){
 function neerslagSleutelTekst(waarde,subtekst){
   const t=String(waarde||"").replace(/\s+/g," ").trim(),sub=String(subtekst||"").toLowerCase();
   if(!/%/.test(t))return "";
-  if(/\bmm\b/i.test(t))return "kans · totaal komend uur";
+  if(/\bmm\b/i.test(t))return "kans · verwachte hoeveelheid";
   if(/onzeker|onvoldoende|niet beschikbaar|geen betrouwbare/i.test(sub))return "kans · hoeveelheid onzeker";
   return "kans";
 }
@@ -105,7 +105,8 @@ function werkNeerslagSleutelBij(){
   const waarde=document.getElementById("pop"),stat=waarde&&waarde.closest(".stat"),sleutel=stat&&stat.querySelector(".mobile-neerslag-sleutel"),sub=document.getElementById("popsub");
   if(!waarde||!sleutel)return;
   const tekst=neerslagSleutelTekst(waarde.textContent,sub&&sub.textContent),zichtbaar=String(waarde.textContent||"").replace(/\s+/g," ").trim();
-  sleutel.textContent=tekst;sleutel.hidden=!tekst;
+  const zichtbareSleutel=tekst==="kans · verwachte hoeveelheid"?"kans · totaal komend uur":tekst;
+  sleutel.textContent=zichtbareSleutel;sleutel.hidden=!zichtbareSleutel;
   if(/%/.test(zichtbaar)&&/\bmm\b/i.test(zichtbaar)){
     waarde.setAttribute("aria-label","Komend uur: "+zichtbaar+". Eerst de neerslagkans, daarna het verwachte totaal in het komende uur.");
   }else if(/%/.test(zichtbaar)){
