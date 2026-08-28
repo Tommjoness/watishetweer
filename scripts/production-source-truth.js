@@ -45,10 +45,12 @@ function zonVerwachting(bron){
   }
   return {rijen,op,onder};
 }
-function verwachtDagRijen(bron){
-  const d=bron?.daily||{},a=[],vandaag=String(bron?.current?.time||"").slice(0,10);
+function verwachtDagRijen(bron,nuOverride){
+  const d=bron?.daily||{},a=[];
+  const horizon=String(nuOverride||bron?.current?.time||"");
+  const vandaag=horizon.slice(0,10);
   for(let i=0;i<Math.min(7,(d.time||[]).length);i++){
-    const resterend=String(d.time[i]||"")===vandaag?analyseerDagData(bron,i,bron.current.time):null;
+    const resterend=String(d.time[i]||"")===vandaag?analyseerDagData(bron,i,horizon):null;
     const kans=resterend?resterend.kans:d.precipitation_probability_max?.[i];
     const hoeveelheid=resterend?resterend.hoeveelheid:d.precipitation_sum?.[i];
     a.push({
@@ -61,7 +63,7 @@ function verwachtDagRijen(bron){
   }
   return a;
 }
-function verifieerBronwaarheid(bron,ui,label){
+function verifieerBronwaarheid(bron,ui,label,nuOverride){
   const gelijk=(werkelijk,verwacht,omschrijving)=>assert.equal(
     werkelijk,
     verwacht,
@@ -73,7 +75,7 @@ function verifieerBronwaarheid(bron,ui,label){
   gelijk(ui.uv,uvPiekVandaag(bron),`${label}: UV-piek wijkt af van bron`);
   gelijk(ui.thema,Number(bron.current.is_day)===0?"donker":"licht",`${label}: dag/nachtthema wijkt af van current.is_day`);
 
-  const verwacht=verwachtDagRijen(bron);
+  const verwacht=verwachtDagRijen(bron,nuOverride);
   assert.equal(verwacht.length,7,`${label}: bron levert geen zeven dagprognoses`);
   assert.equal(ui.rijen.length,7,`${label}: pagina toont geen zeven dagprognoses`);
   verwacht.forEach((dag,i)=>{
