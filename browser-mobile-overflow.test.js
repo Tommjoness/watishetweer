@@ -4,6 +4,7 @@ const fs=require("fs");
 const path=require("path");
 const http=require("http");
 const assert=require("assert");
+const {execFileSync}=require("child_process");
 const {chromium,webkit}=require("playwright");
 const {bouw}=require("./data.js");
 
@@ -152,4 +153,8 @@ async function controleer(type,naam,breedte){
       for(const breedte of [320,375,390,430,1280])await controleer(type,naam,breedte);
     }
   }finally{await new Promise(resolve=>server.close(resolve));}
+  /* De mobiele overflowcheck is al een vaste eindrondepoort. Koppel hier ook
+     de fysieke iPhone-regressie aan, zodat eerste render en dagwissel van de
+     gewone uuras niet opnieuw ongemerkt uit de checkpoint kunnen verdwijnen. */
+  execFileSync(process.execPath,[path.join(__dirname,"browser-mobile-feedback-20260826.test.js")],{stdio:"inherit"});
 })().catch(err=>{console.error(err&&err.stack||err);try{server.close(()=>{});}catch(_){}process.exit(1);});

@@ -68,6 +68,17 @@ const server=http.createServer((req,res)=>{
   }else{res.writeHead(404);res.end("not found");}
 });
 
+async function telUurAs(page){
+  return page.evaluate(()=>{
+    const chart=document.getElementById("chart"),g=S.geo||{},plotOnder=Number(g.pt)+Number(g.ih);
+    if(!chart||!Number.isFinite(plotOnder))return 0;
+    return [...chart.querySelectorAll("text")].filter(el=>{
+      const tekst=String(el.textContent||"").trim(),y=Number(el.getAttribute("y"));
+      return /^(?:[01]?\d|2[0-3])$/.test(tekst)&&Number.isFinite(y)&&y>=plotOnder+6&&!(el.closest&&el.closest('g[data-q4-rain-periods]'));
+    }).length;
+  });
+}
+
 async function controleer(browserType,naam){
   const browser=await browserType.launch({headless:true});
   try{
@@ -78,6 +89,7 @@ async function controleer(browserType,naam){
     await page.goto(`http://127.0.0.1:${server.address().port}/?lat=52.3676&lon=4.9041&plaats=Amsterdam&land=NL`,{waitUntil:"networkidle"});
     await page.waitForSelector("#app",{state:"visible"});
     await page.evaluate(()=>document.fonts&&document.fonts.ready);
+    await page.waitForTimeout(400);
 
     const voor=await page.evaluate(()=>{
       const zichtbaarTekst=el=>[...el.children].filter(c=>getComputedStyle(c).display!=="none").map(c=>c.textContent.trim()).join("")||el.textContent.trim();
@@ -112,10 +124,17 @@ async function controleer(browserType,naam){
     assert(voor.describedBy.slice(0,3).every(Boolean),`${naam}: bijzondere dagrijen zijn toegankelijk aan hun eigen toelichting gekoppeld`);
     assert(voor.pressed.every(v=>v==="false"),`${naam}: vóór selectie is geen dag als actief aangekondigd`);
     assert.ok(voor.tempLabels>=4,`${naam}: etmaalgrafiek toont meer dan alleen minimum en maximum (${voor.tempLabels})`);
+    assert.ok(await telUurAs(page)>=4,`${naam}: eerste mobiele render toont minimaal vier gewone tijdlabels`);
     assert.ok(voor.overflow<=2,`${naam}: geen horizontale overflow (${voor.overflow}px)`);
 
-    await page.locator("#days .row.day:not(.kop)").first().click();
-    await page.waitForTimeout(100);
+    const dagRijen=page.locator("#days .row.day:not(.kop)");
+    await dagRijen.nth(1).click();
+    await page.waitForTimeout(400);
+    assert.ok(await telUurAs(page)>=4,`${naam}: tijdlabels blijven zichtbaar na wisselen naar een andere dag`);
+
+    await dagRijen.first().click();
+    await page.waitForTimeout(400);
+    assert.ok(await telUurAs(page)>=4,`${naam}: tijdlabels blijven zichtbaar na terugkeer naar Vandaag`);
     const na=await page.evaluate(()=>({
       kop:(document.getElementById("chartlab").textContent||"").trim(),
       hint:(document.getElementById("charthint").textContent||"").trim(),
@@ -137,6 +156,6 @@ async function controleer(browserType,naam){
   try{
     await controleer(chromium,"Chromium");
     await controleer(webkit,"WebKit");
-    console.log("Mobiele feedback 26-08 groen: daggebonden neerslagnuance, precieze kleine-hoeveelheidsgrenzen, actieve dagstate en grafieklabels in Chromium/WebKit.");
+    console.log("Mobiele feedback 26-08 groen: daggebonden neerslagnuance, mobiele tijdas op eerste render en dagwissel, actieve dagstate en grafieklabels in Chromium/WebKit.");
   }finally{server.close();}
 })().catch(err=>{console.error(err);process.exit(1);});

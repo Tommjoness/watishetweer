@@ -28,6 +28,10 @@ function kiesUurLabelIndices(tijden,minimaal=4){
   }
   return uit;
 }
+function isUurAsLabel(tekst,y,plotOnder,fontFamilie){
+  const t=String(tekst||"").trim(),py=Number(y),onder=Number(plotOnder),font=String(fontFamilie||"");
+  return /^(?:[01]?\d|2[0-3])$/.test(t)&&Number.isFinite(py)&&Number.isFinite(onder)&&py>=onder+6&&!/Bodoni/i.test(font);
+}
 function waarschuwingBronnenVoorLand(land){
   const code=String(land||"").trim().toUpperCase();
   return {nws:NWS_LANDEN.has(code),meteoalarm:METEOALARM_LANDEN.has(code)};
@@ -40,31 +44,36 @@ function neerslagSleutelTekst(waarde,subtekst){
   return "kans";
 }
 
-const api={uurUitIso,kiesUurLabelIndices,waarschuwingBronnenVoorLand,neerslagSleutelTekst};
+const api={uurUitIso,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
 if(typeof document==="undefined"||typeof window==="undefined"||typeof S==="undefined")return;
 const mobiel=()=>typeof window.matchMedia==="function"?window.matchMedia("(max-width:900px)").matches:window.innerWidth<=900;
 
-function bestaandeUurLabels(svg){
+function bestaandeUurLabels(svg,g){
+  const plotOnder=Number(g&&g.pt)+Number(g&&g.ih);
   return svg?[...svg.querySelectorAll("text")].filter(el=>{
-    const t=String(el.textContent||"").trim();
-    return /^(?:[01]\d|2[0-3])$/.test(t)&&!/Bodoni/i.test(el.getAttribute("font-family")||"");
+    if(el.closest&&el.closest('g[data-q4-rain-periods]'))return false;
+    return isUurAsLabel(el.textContent,el.getAttribute("y"),plotOnder,el.getAttribute("font-family"));
   }):[];
 }
 function herstelUurAs(){
-  if(!mobiel()||S.dag!=null)return;
+  if(!mobiel())return;
   const svg=document.getElementById("chart"),g=S.geo;
   if(!svg||!g||Number(g.n)>48||!Array.isArray(g.TI)||typeof g.x!=="function")return;
-  const minimum=4,bestaand=bestaandeUurLabels(svg);
-  if(bestaand.length>=minimum)return;
-  const posities=bestaand.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite);
+  const minimum=4,alle=bestaandeUurLabels(svg,g),fallback=alle.filter(el=>el.hasAttribute("data-mobile-hour-axis")),canoniek=alle.filter(el=>!el.hasAttribute("data-mobile-hour-axis"));
+  /* Zodra de gewone as later alsnog verschijnt, ruimt deze vangnetlaag haar
+     eigen labels weer op. Zo kan een late Safari-layout nooit dubbele tijden
+     achterlaten. */
+  if(canoniek.length>=minimum){fallback.forEach(el=>el.remove());return;}
+  if(alle.length>=minimum)return;
+  const posities=alle.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite);
   const y=Number(g.pt)+Number(g.ih)+20;
   if(!Number.isFinite(y))return;
   const kleur=getComputedStyle(document.documentElement).getPropertyValue("--ink-45").trim()||"currentColor";
   for(const i of kiesUurLabelIndices(g.TI,Math.max(minimum,6))){
-    if(bestaandeUurLabels(svg).length>=minimum)break;
+    if(bestaandeUurLabels(svg,g).length>=minimum)break;
     const x=Number(g.x(i)),uur=uurUitIso(g.TI[i]);
     if(!Number.isFinite(x)||!Number.isInteger(uur)||posities.some(p=>Math.abs(p-x)<18))continue;
     const el=document.createElementNS(SVG_NS,"text");
@@ -76,13 +85,20 @@ function herstelUurAs(){
     svg.insertBefore(el,regen||scrub||null);posities.push(x);
   }
 }
+let uurAsToken=0;
 function planUurAsHerstel(){
-  const voer=()=>{
-    const r1=()=>{const r2=()=>herstelUurAs();if(typeof requestAnimationFrame==="function")requestAnimationFrame(r2);else setTimeout(r2,0);};
+  const token=++uurAsToken;
+  const voer=()=>{if(token===uurAsToken)herstelUurAs();};
+  const start=()=>{
+    const r1=()=>{const r2=()=>voer();if(typeof requestAnimationFrame==="function")requestAnimationFrame(r2);else setTimeout(r2,0);};
     if(typeof requestAnimationFrame==="function")requestAnimationFrame(r1);else setTimeout(r1,0);
+    /* Bounded retries vangen de Safari-volgorde af waarin fonts, SVG-viewBox en
+       collisionpolish niet in dezelfde frame klaar zijn. De token voorkomt dat
+       een oudere render nog labels toevoegt nadat de gebruiker van dag wisselt. */
+    setTimeout(voer,120);setTimeout(voer,350);
   };
   const fonts=document.fonts&&document.fonts.ready;
-  if(fonts&&typeof fonts.then==="function")fonts.then(voer).catch(voer);else voer();
+  if(fonts&&typeof fonts.then==="function")fonts.then(start).catch(start);else start();
 }
 
 function werkNeerslagSleutelBij(){

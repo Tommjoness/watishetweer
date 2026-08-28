@@ -13,8 +13,20 @@ function lokaleSerieleMinuten(tijd){
   if(!m)return null;
   return Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5])/60000;
 }
+function tijdNaarSerieleMinuten(tijd){
+  return typeof tijd==="number"&&Number.isFinite(tijd)?tijd:lokaleSerieleMinuten(tijd);
+}
+/* Open-Meteo gebruikt binnen één response één vaste utc_offset_seconds voor de
+   provider-as. Date.now() is een echt instant; door daar precies die vaste offset
+   bij op te tellen krijgen we een ondubbelzinnige positie op dezelfde provider-as,
+   ook tijdens het dubbele lokale uur bij de najaarsomslag. */
+function providerSerieleMinutenNu(utcOffsetSeconden,nuMs){
+  const off=getal(utcOffsetSeconden),ms=getal(nuMs);
+  if(off===null||ms===null)return null;
+  return ms/60000+off/60;
+}
 function corrigeerLopendModeluur(waarde,eindTijd,nuTijd){
-  const mm=getal(waarde),eind=lokaleSerieleMinuten(eindTijd),nu=lokaleSerieleMinuten(nuTijd);
+  const mm=getal(waarde),eind=lokaleSerieleMinuten(eindTijd),nu=tijdNaarSerieleMinuten(nuTijd);
   if(mm===null||mm<0||eind===null||nu===null)return mm;
   const begin=eind-60;
   if(eind<=nu)return null;
@@ -23,15 +35,21 @@ function corrigeerLopendModeluur(waarde,eindTijd,nuTijd){
 }
 function regenperiodenGecorrigeerd(mm,tijden,nuTijd,drempel=0.1){
   const waarden=Array.from(mm||[]),T=Array.from(tijden||[]),grens=Math.max(0,getal(drempel)??0.1),perioden=[];
-  const nu=lokaleSerieleMinuten(nuTijd);
+  const nu=tijdNaarSerieleMinuten(nuTijd);
   let lopend=null;
   for(let i=1;i<waarden.length&&i<T.length;i++){
     const ruw=getal(waarden[i]),eind=lokaleSerieleMinuten(T[i]),begin=eind===null?null:eind-60;
     const waarde=ruw===null?null:corrigeerLopendModeluur(ruw,T[i],nuTijd);
     const actief=waarde!==null&&eind!==null&&nu!==null&&begin<nu&&nu<eind;
-    if(waarde!==null&&waarde>=grens){
+    /* Het bestaan van een Q4-regenperiode volgt de ongewijzigde bronwaarde en
+       dus dezelfde 0,1-mm-drempel als de bracket die al in de SVG staat. Alleen
+       het bedrag van het lopende uur wordt proportioneel verkleind. Daardoor
+       verdwijnt een bestaande bracket niet wanneer er bijvoorbeeld nog 0,01 mm
+       van een oorspronkelijk 0,12-mm-modeluur resteert. */
+    const hoortBijPeriode=ruw!==null&&ruw>=grens&&waarde!==null;
+    if(hoortBijPeriode){
       if(!lopend)lopend={van:i-1,tot:i,som:0,actiefStart:actief};
-      lopend.tot=i;lopend.som+=waarde;
+      lopend.tot=i;lopend.som+=Math.max(0,waarde);
     }else if(lopend){perioden.push(lopend);lopend=null;}
   }
   if(lopend)perioden.push(lopend);
@@ -71,7 +89,7 @@ function herstelNachtlabels(){
   }
 }
 
-const api={lokaleSerieleMinuten,corrigeerLopendModeluur,regenperiodenGecorrigeerd,mmTekst,nachtPaarLabel,herstelNachtlabels};
+const api={lokaleSerieleMinuten,tijdNaarSerieleMinuten,providerSerieleMinutenNu,corrigeerLopendModeluur,regenperiodenGecorrigeerd,mmTekst,nachtPaarLabel,herstelNachtlabels};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileTruthUX20260828=api;
 
@@ -117,7 +135,8 @@ function corrigeerRegenperiodenInGrafiek(){
   if(S.dag!=null)return;
   const svg=document.getElementById("chart"),g=S.geo,groep=svg&&svg.querySelector('g[data-q4-rain-periods]');
   if(!svg||!g||!groep||!Array.isArray(g.TI)||!Array.isArray(g.MM))return;
-  const nu=typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():(S.d&&S.d.current&&S.d.current.time)||"";
+  const providerNu=providerSerieleMinutenNu(S.d&&S.d.utc_offset_seconds,Date.now());
+  const nu=providerNu!==null?providerNu:(typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():(S.d&&S.d.current&&S.d.current.time)||"");
   const perioden=regenperiodenGecorrigeerd(g.MM,g.TI,nu,0.1);
   const bedragen=[...groep.querySelectorAll("[data-q4-rain-period-amount]")];
   const lijnen=[...groep.querySelectorAll("line[aria-label]")];
