@@ -1,0 +1,57 @@
+name: Lighthouse meting
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Lighthouse
+        run: npm install --global lighthouse@12.8.2
+      - name: Meet mobiel
+        run: |
+          lighthouse https://watishetweer.nl/ \
+            --quiet \
+            --chrome-flags="--headless --no-sandbox" \
+            --output=json \
+            --output-path=mobile.json \
+            --only-categories=performance,accessibility,best-practices,seo
+      - name: Meet desktop
+        run: |
+          lighthouse https://watishetweer.nl/ \
+            --quiet \
+            --preset=desktop \
+            --chrome-flags="--headless --no-sandbox" \
+            --output=json \
+            --output-path=desktop.json \
+            --only-categories=performance,accessibility,best-practices,seo
+      - name: Toon samenvatting
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          for(const naam of ['mobile','desktop']){
+            const r=JSON.parse(fs.readFileSync(`${naam}.json`,'utf8'));
+            const c=r.categories,a=r.audits;
+            const score=k=>Math.round((c[k]?.score||0)*100);
+            const val=k=>a[k]?.displayValue||null;
+            console.log(JSON.stringify({
+              naam,
+              performance:score('performance'),
+              accessibility:score('accessibility'),
+              bestPractices:score('best-practices'),
+              seo:score('seo'),
+              fcp:val('first-contentful-paint'),
+              lcp:val('largest-contentful-paint'),
+              tbt:val('total-blocking-time'),
+              cls:val('cumulative-layout-shift'),
+              speedIndex:val('speed-index'),
+              serverResponseTime:val('server-response-time')
+            }));
+          }
+          NODE
