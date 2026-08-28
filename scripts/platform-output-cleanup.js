@@ -36,9 +36,8 @@ function isDataScript(attrs){
   return /\btype\s*=\s*["'](?:application\/ld\+json|application\/json)["']/i.test(String(attrs||""));
 }
 function isExternScript(attrs){return /\bsrc\s*=/i.test(String(attrs||""));}
-function vervangExact(bron,oud,nieuw,label,opt={}){
+function vervangExact(bron,oud,nieuw,label){
   const aantal=bron.split(oud).length-1;
-  if(aantal===(opt.toestaanNul?0:1)&&opt.toestaanNul)return bron;
   if(aantal!==1)throw new Error(label+" verwacht exact één bronanker; gevonden "+aantal);
   return bron.replace(oud,nieuw);
 }
@@ -49,9 +48,12 @@ function hardenRuntime(html){
     if((bron.split(anker).length-1)!==1)throw new Error("Hoofdstijlanker ontbreekt of is dubbel voor fontpreload.");
     bron=bron.replace(anker,PRELOADS+anker);
   }
-  bron=vervangExact(bron,RAIN_ARIA_OUD,RAIN_ARIA_NIEUW,"regenperiodegroep-ARIA");
-  bron=vervangExact(bron,RAIN_LINE_OUD,"","regenperiodelijn-ARIA");
-  bron=vervangExact(bron,RAIN_DETAIL_OUD,RAIN_DETAIL_NIEUW,"regenperiode-SVG-samenvatting");
+  const heeftQ4=bron.includes("function q4Regenperioden")||bron.includes(RAIN_ARIA_OUD);
+  if(heeftQ4){
+    bron=vervangExact(bron,RAIN_ARIA_OUD,RAIN_ARIA_NIEUW,"regenperiodegroep-ARIA");
+    bron=vervangExact(bron,RAIN_LINE_OUD,"","regenperiodelijn-ARIA");
+    bron=vervangExact(bron,RAIN_DETAIL_OUD,RAIN_DETAIL_NIEUW,"regenperiode-SVG-samenvatting");
+  }
   return bron;
 }
 function cssMinify(html){
@@ -85,7 +87,7 @@ function routePrelude(){
   return '(function(){const el=document.getElementById("weather-now-route");if(!el)return;try{window.__WEATHERNOW_ROUTE_LOCATION__=Object.freeze(JSON.parse(el.textContent||"null"));}catch(e){window.__WEATHERNOW_ROUTE_LOCATION__=null;}})();\n';
 }
 async function minifyRuntime(scripts,routeData){
-  let bron=(routeData?routePrelude():"")+scripts.join("\n;\n");
+  const bron=(routeData?routePrelude():"")+scripts.join("\n;\n");
   if(!bron.trim())return null;
   new vm.Script(bron,{filename:"delivery-runtime-source.js"});
   const resultaat=await minify(bron,{
@@ -102,14 +104,15 @@ function hash12(v){return crypto.createHash("sha256").update(v).digest("hex").sl
 function verwijderOudeBundles(){
   for(const naam of fs.readdirSync(PUBLIC))if(/^app-[0-9a-f]{12}\.min\.js$/.test(naam))fs.rmSync(path.join(PUBLIC,naam),{force:true});
 }
+function migreerCspNaarHeader(html){
+  let bron=String(html),aantal=(bron.match(CSP_META)||[]).length;
+  if(aantal>1)throw new Error("CSP-meta komt meer dan één keer voor: "+aantal);
+  if(aantal===1)bron=bron.replace(CSP_META,"");
+  if(!bron.includes(DELIVERY_META)&&bron.includes("</head>"))bron=bron.replace("</head>",DELIVERY_META+"\n</head>");
+  return bron;
+}
 function voegBundleToe(html,naam){
-  let bron=String(html);
-  if((bron.match(CSP_META)||[]).length!==1)throw new Error("CSP-meta moet vóór delivery exact één keer bestaan.");
-  bron=bron.replace(CSP_META,"");
-  if(!bron.includes(DELIVERY_META)){
-    if((bron.split("</head>").length-1)!==1)throw new Error("head-einde ontbreekt of is dubbel bij delivery.");
-    bron=bron.replace("</head>",DELIVERY_META+"\n</head>");
-  }
+  let bron=migreerCspNaarHeader(html);
   if((bron.split("</body>").length-1)!==1)throw new Error("body-einde ontbreekt of is dubbel bij delivery.");
   return bron.replace("</body>",'<script src="/'+naam+'" defer></script>\n</body>');
 }
@@ -131,11 +134,11 @@ async function optimaliseerPublic(publicDir=PUBLIC){
   const bundleCache=new Map();let rootBundle=null,rootBron=null;
   for(const bestand of bestanden){
     let html=fs.readFileSync(bestand,"utf8");
-    if(!/<script/i.test(html))continue;
+    if(!/<script/i.test(html)){fs.writeFileSync(bestand,cssMinify(migreerCspNaarHeader(html)),"utf8");continue;}
     html=hardenRuntime(html);
     const verzameld=verzamelRuntime(html);
     if(!verzameld.scripts.length){
-      fs.writeFileSync(bestand,cssMinify(verzameld.html),"utf8");
+      fs.writeFileSync(bestand,cssMinify(migreerCspNaarHeader(verzameld.html)),"utf8");
       continue;
     }
     const runtime=await minifyRuntime(verzameld.scripts,verzameld.routeData);
@@ -167,4 +170,4 @@ if(require.main===module){
     .catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
 }
 
-module.exports={hardenRuntime,cssMinify,verzamelRuntime,minifyRuntime,hash12,optimaliseerPublic,BRON_SNAPSHOT};
+module.exports={hardenRuntime,cssMinify,verzamelRuntime,minifyRuntime,hash12,migreerCspNaarHeader,optimaliseerPublic,BRON_SNAPSHOT};
