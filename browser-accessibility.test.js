@@ -51,10 +51,13 @@ async function controleer(browserType,naam){
          dataloadtest. #app en footer starten cold-load verborgen en worden hier
          alleen voor de meting in hun normale zichtbare display gezet. Een
          gesloten details verbergt descendant-links terecht met 0x0; meet eerst
-         de summary en daarna de links in geopende toestand. */
+         de summary en daarna de links in geopende toestand. Bronlinks die door
+         de locatiebewuste bronfilter bewust hidden zijn, zijn geen tapdoelen en
+         horen daarom niet aan de minimale hitbox-eis te worden getoetst. */
       const summaries=[...document.querySelectorAll("footer details summary")].map(meetDoel);
       [...document.querySelectorAll("footer details")].forEach(el=>{el.open=true;});
-      const links=[...document.querySelectorAll("footer a")].map(meetDoel);
+      const alleLinks=[...document.querySelectorAll("footer a")].map(meetDoel);
+      const links=alleLinks.filter(doel=>!doel.verborgenDoor);
       return {
         mainAantal:mains.length,
         mainId:mains[0]&&mains[0].id,
@@ -62,6 +65,7 @@ async function controleer(browserType,naam){
         plaatsTag:document.getElementById("place")?.tagName||null,
         footerDisplay:footer&&getComputedStyle(footer).display,
         doelen:[...summaries,...links],
+        verborgenFooterLinks:alleLinks.filter(doel=>!!doel.verborgenDoor).map(doel=>doel.tekst),
         maanAria:[...document.querySelectorAll(".maanbij")].map(el=>el.getAttribute("aria-label")),
         grafiekKop:(document.querySelector(".chartkop h2")?.textContent||"").trim(),
         zonBinnenKop:!!document.querySelector(".chartkop h2 #suntimes"),
@@ -73,11 +77,11 @@ async function controleer(browserType,naam){
     assert.equal(resultaat.appTag,"MAIN",naam+": #app gebruikt native main-semantiek");
     assert.equal(resultaat.plaatsTag,"H2",naam+": de zichtbare plaatsnaam is geen native sectiekop");
     assert.equal(resultaat.footerDisplay,"flex",naam+": footer staat in zichtbare layoutstate");
-    assert.ok(resultaat.doelen.length>=5,naam+": footerdoelen ontbreken");
+    assert.ok(resultaat.doelen.length>=5,naam+": zichtbare footerdoelen ontbreken");
+    assert.ok(resultaat.doelen.every(doel=>!doel.verborgenDoor),naam+": verborgen bronlink telt ten onrechte als interactief footerdoel");
     resultaat.doelen.forEach(doel=>{
-      const context=doel.verborgenDoor?"; verborgen door "+JSON.stringify(doel.verborgenDoor):"";
-      assert.ok(doel.hoogte>=43.5,naam+": footerdoel '"+doel.tekst+"' is "+doel.hoogte+"px hoog"+context);
-      assert.ok(doel.breedte>0,naam+": footerdoel '"+doel.tekst+"' heeft geen breedte"+context);
+      assert.ok(doel.hoogte>=43.5,naam+": footerdoel '"+doel.tekst+"' is "+doel.hoogte+"px hoog");
+      assert.ok(doel.breedte>0,naam+": footerdoel '"+doel.tekst+"' heeft geen breedte");
     });
     assert.ok(resultaat.maanAria.every(v=>v===null),naam+": .maanbij krijgt geen dubbel aria-label");
     assert.equal(resultaat.grafiekKop,"Het etmaal",naam+": grafiekheading bevat meer dan de sectietitel");
