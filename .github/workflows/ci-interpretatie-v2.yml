@@ -18,22 +18,5 @@ jobs:
           node-version: 24
           package-manager-cache: false
       - run: npm install --ignore-scripts
-      - name: Run npm test with diagnostic log
-        id: npm_test
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -o pipefail
-          npm test 2>&1 | tee npm-test.log
-      - name: Upload npm test diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: npm-test-diagnostic
-          path: npm-test.log
-          if-no-files-found: error
-          retention-days: 1
-      - name: Fail when npm test failed
-        if: steps.npm_test.outcome == 'failure'
-        run: exit 1
+      - run: npm test
       - run: npm run build
