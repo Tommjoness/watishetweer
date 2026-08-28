@@ -9,7 +9,7 @@ const OUT=path.join(__dirname,"..","public");
 const PAD=path.join(OUT,"index.html");
 
 /* Laatste presentation-consistencylaag. Deze stap introduceert geen nieuwe
-   meteorologische berekeningen: hij ruimt vijf aantoonbare presentatieconflicten
+   meteorologische berekeningen: hij ruimt aantoonbare presentatieconflicten
    op nadat hun canonieke owners al zijn geassembleerd.
 
    1. De oude senior-runtime overschreef de nieuwere daglichtbewuste zonurencopy.
@@ -19,7 +19,9 @@ const PAD=path.join(OUT,"index.html");
    4. Een bekende dagsom van 0,0 mm mag niet verdwijnen wanneer dezelfde dag nog
       een niet-nul neerslagkans heeft. Bij 0% + 0,0 mm blijft de rij wel compact.
    5. Als kans en 0,0 mm samen zichtbaar zijn, krijgt de weekverwachting een eigen
-      uitlegregel. De bedieningshint blijft daardoor uitsluitend een instructie. */
+      uitlegregel. De bedieningshint blijft daardoor uitsluitend een instructie.
+   6. Een temperatuurtrend die afgerond gelijk blijft toont geen betekenisloze
+      pijl zoals 17 → 17 en zegt expliciet dat de temperatuur rond die waarde blijft. */
 const ZON_RUNTIME_OUD=`      if(kop.textContent.trim()==="Zonuren"){
         const u=Number(String(val.textContent||"").replace(",",".").replace(/[^0-9.-]/g,""));
         const tekst=zonurenOordeelGetoond(u);if(tekst)sub.textContent=tekst;
@@ -53,6 +55,21 @@ const Q1_DAG_MM_OUD=`  const hoeveelheid=mm!==null&&mm>=0
     ? (mm===0?"0,0 mm":(typeof hoeveelheidFn==="function"?hoeveelheidFn(mm):mmTekst(mm))) : "";`;
 const Q1_DAG_MM_NIEUW=`  const hoeveelheid=mm!==null&&(mm>=MM_MEETBAAR||(mm===0&&k!==null&&k>0))
     ? (mm===0?"0,0 mm":(typeof hoeveelheidFn==="function"?hoeveelheidFn(mm):mmTekst(mm))) : "";`;
+
+/* De Q1-owner bepaalt richting op de afgeronde zichtbare waarden. Als beide
+   waarden gelijk zijn is 17 → 17 geen trendinformatie. In dat geval tonen we
+   één waarde en benoemen we de stabiele band eerlijk als 'rond 17 °C'. */
+const TEMP_TREND_OUD=`  waarde.innerHTML=String(t.van)+" → "+String(t.naar)+"<s>°C</s>";
+  sub.textContent=t.richting==="stijgt"?"Het wordt de komende uren warmer."
+    :t.richting==="daalt"?"Het wordt de komende uren koeler."
+    :"De temperatuur verandert de komende uren nauwelijks.";`;
+const TEMP_TREND_NIEUW=`  if(t.richting==="gelijk"){
+    waarde.innerHTML=String(t.van)+"<s>°C</s>";
+    sub.textContent="De temperatuur blijft de komende uren rond "+String(t.van)+" °C.";
+  }else{
+    waarde.innerHTML=String(t.van)+" → "+String(t.naar)+"<s>°C</s>";
+    sub.textContent=t.richting==="stijgt"?"Het wordt de komende uren warmer.":"Het wordt de komende uren koeler.";
+  }`;
 
 /* Voor vandaag gebruikt unified-weather-truth terecht de resterende lokale
    daganalyse in plaats van het ruwe daily totaal. Ook daar moet een bekende nul
@@ -117,6 +134,7 @@ html=vervangExact(html,ZON_RUNTIME_OUD,ZON_RUNTIME_NIEUW,"legacy zonurenruntime"
 html=vervangExact(html,NACHT_OUD,NACHT_NIEUW,"Nachtzicht venstercopy");
 html=vervangExact(html,ARIA_OUD,ARIA_NIEUW,"Q4 aria-uitleg");
 html=vervangExact(html,Q1_DAG_MM_OUD,Q1_DAG_MM_NIEUW,"Q1 bekende nul millimeter");
+html=vervangExact(html,TEMP_TREND_OUD,TEMP_TREND_NIEUW,"Q1 gelijke temperatuurtrend");
 html=vervangExact(html,VANDAAG_DAG_MM_OUD,VANDAAG_DAG_MM_NIEUW,"Vandaag bekende nul millimeter");
 html=vervangExact(html,START_MARKER,DAGEN_UITLEG_RUNTIME+"\n"+START_MARKER,"weekuitleg nul millimeter");
 
@@ -128,6 +146,10 @@ if(!html.includes('dagMm===0?"0,0 mm":hoeveelheidTekst(dagMm)'))
   throw new Error("Vandaag-presenteerder borgt bekende 0,0 mm niet.");
 if(!html.includes('mm===0&&k!==null&&k>0'))
   throw new Error("Q1-presenteerder onderscheidt 0% droog niet van niet-nul kans bij 0,0 mm.");
+if(!html.includes('sub.textContent="De temperatuur blijft de komende uren rond "+String(t.van)+" °C.";'))
+  throw new Error("Gelijke temperatuurtrend wordt niet als stabiele temperatuur gepresenteerd.");
+if(html.includes('De temperatuur verandert de komende uren nauwelijks.'))
+  throw new Error("Oude vage copy voor gelijke temperatuurtrend staat nog in de artifact.");
 if(!html.includes("function weatherNowDagenNeerslagUitleg(){"))
   throw new Error("Weekuitleg voor niet-nul kans met 0,0 mm ontbreekt.");
 if(!html.includes('uitleg.id="dagenneerslaguitleg"'))
@@ -135,6 +157,6 @@ if(!html.includes('uitleg.id="dagenneerslaguitleg"'))
 
 fs.writeFileSync(PAD,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"finale-presentatie");
-console.log("Finale presentatieconsistentie toegepast: zonuren-owner hersteld, Nachtzicht genuanceerd, mobiele regen-uitleg gelijkgetrokken en xx% + 0,0 mm zichtbaar én apart uitgelegd; cache "+versie+".");
+console.log("Finale presentatieconsistentie toegepast: zonuren-owner hersteld, Nachtzicht genuanceerd, gelijke temperatuurtrend vereenvoudigd, mobiele regen-uitleg gelijkgetrokken en xx% + 0,0 mm zichtbaar én apart uitgelegd; cache "+versie+".");
 
-module.exports={ZON_RUNTIME_OUD,ZON_RUNTIME_NIEUW,NACHT_OUD,NACHT_NIEUW,ARIA_OUD,ARIA_NIEUW,Q1_DAG_MM_OUD,Q1_DAG_MM_NIEUW,VANDAAG_DAG_MM_OUD,VANDAAG_DAG_MM_NIEUW,START_MARKER,DAGEN_UITLEG_RUNTIME,vervangExact};
+module.exports={ZON_RUNTIME_OUD,ZON_RUNTIME_NIEUW,NACHT_OUD,NACHT_NIEUW,ARIA_OUD,ARIA_NIEUW,Q1_DAG_MM_OUD,Q1_DAG_MM_NIEUW,TEMP_TREND_OUD,TEMP_TREND_NIEUW,VANDAAG_DAG_MM_OUD,VANDAAG_DAG_MM_NIEUW,START_MARKER,DAGEN_UITLEG_RUNTIME,vervangExact};
