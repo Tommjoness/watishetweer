@@ -2,8 +2,10 @@
 
 const fs=require("fs");
 const path=require("path");
+const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 
-const bestand=path.join(__dirname,"..","public","index.html");
+const OUT=path.join(__dirname,"..","public");
+const bestand=path.join(OUT,"index.html");
 if(!fs.existsSync(bestand))throw new Error("public/index.html ontbreekt; voer build eerst uit.");
 let html=fs.readFileSync(bestand,"utf8");
 
@@ -25,4 +27,9 @@ if(na.length!==voor.length)throw new Error("Maan-templateaantal veranderde onver
 if(!na.every(tag=>/\brole="img"/.test(tag)))throw new Error("Niet iedere maan-template heeft role=img na toegankelijkheidspatch.");
 
 fs.writeFileSync(bestand,html,"utf8");
-console.log("Maan-toegankelijkheid op template-niveau geborgd voor "+na.length+" renderpad(en): iedere .maanbij wordt direct als role=img gerenderd.");
+/* index.html behoort tot de app-shellhash. Omdat deze stap bewust laat in de
+   postbuild draait, moet de serviceworker-ID meteen opnieuw bij de definitieve
+   artifact worden berekend; anders kan een correcte toegankelijkheidsmutatie
+   een verouderde offline generation-cache achterlaten. */
+const versie=vernieuwServiceworkerCache(OUT,"moon-a11y-template-20260828");
+console.log("Maan-toegankelijkheid op template-niveau geborgd voor "+na.length+" renderpad(en): iedere .maanbij wordt direct als role=img gerenderd; cache "+versie+".");
