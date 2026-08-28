@@ -24,9 +24,7 @@ const artifactDiagnose={
   oudKwartier:html.includes("Afgelopen kwartier"),
   trend:html.includes('<div class="eyebrow">Temperatuur komende 3 uur</div><div class="sval" id="prec">'),
   legacyBerekening:html.includes("const recenteNeerslag=eindigGetal(c.precipitation)"),
-  oudeWrapper:html.includes("compactRecentLabel"),
-  polish:html.includes("MOBILE SCREENSHOT POLISH 20260810B"),
-  q1:html.includes("CHECKPOINT 25 Q1")
+  oudeWrapper:html.includes("compactRecentLabel")
 };
 const stub=`<script>
 window.__q1ForecastDelay=0;
@@ -91,12 +89,13 @@ async function controleer(type,naam){
       q1Api:!!window.WeatherNowQ1,
       metersBron:String(meters).slice(0,400),
       klokBron:String(klokBijwerken).slice(0,300),
-      stateBron:typeof stateBijwerken==="function"?String(stateBijwerken).slice(0,2400):String(typeof stateBijwerken),
-      bodyHasPolishMarker:document.documentElement.innerHTML.includes("MOBILE SCREENSHOT POLISH 20260810B")
+      stateBron:typeof stateBijwerken==="function"?String(stateBijwerken).slice(0,2400):String(typeof stateBijwerken)
     }));
     const diag=JSON.stringify({artifact:artifactDiagnose,basis,diagnose,fouten});
     console.log("DIAG "+naam+" "+diag);
-    assert.deepEqual(artifactDiagnose,{oud15:false,oudKwartier:false,trend:true,legacyBerekening:false,oudeWrapper:false,polish:true,q1:true},naam+": artifact bevat uitsluitend nieuwe trendroute | DIAG="+diag);
+    assert.deepEqual(artifactDiagnose,{oud15:false,oudKwartier:false,trend:true,legacyBerekening:false,oudeWrapper:false},naam+": definitieve HTML bevat uitsluitend de nieuwe trendstructuur | DIAG="+diag);
+    assert.equal(diagnose.polishApi,true,naam+": mobiele polish-owner is in de geleverde runtime actief");
+    assert.equal(diagnose.q1Api,true,naam+": Q1-owner is in de geleverde runtime actief");
     assert.equal(basis.trendKop,"Temperatuur komende 3 uur",naam+": tegelkop noemt de vaste horizon");
     assert.match(basis.trendWaarde,/^-?\d+\s*→\s*-?\d+°C$/,naam+": trend toont uitsluitend twee temperaturen");
     assert.ok(["Het wordt de komende uren warmer.","Het wordt de komende uren koeler.","De temperatuur verandert de komende uren nauwelijks."].includes(basis.trendSub),naam+": onderregel gebruikt een natuurlijke volledige zin");
