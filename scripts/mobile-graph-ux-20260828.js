@@ -39,7 +39,7 @@ function waarschuwingBronnenVoorLand(land){
 function neerslagSleutelTekst(waarde,subtekst){
   const t=String(waarde||"").replace(/\s+/g," ").trim(),sub=String(subtekst||"").toLowerCase();
   if(!/%/.test(t))return "";
-  if(/\bmm\b/i.test(t))return "kans · verwachte hoeveelheid";
+  if(/\bmm\b/i.test(t))return "kans · totaal komend uur";
   if(/onzeker|onvoldoende|niet beschikbaar|geen betrouwbare/i.test(sub))return "kans · hoeveelheid onzeker";
   return "kans";
 }
@@ -106,10 +106,17 @@ function werkNeerslagSleutelBij(){
   if(!waarde||!sleutel)return;
   const tekst=neerslagSleutelTekst(waarde.textContent,sub&&sub.textContent),zichtbaar=String(waarde.textContent||"").replace(/\s+/g," ").trim();
   sleutel.textContent=tekst;sleutel.hidden=!tekst;
-  if(/%/.test(zichtbaar)&&!/\bmm\b/i.test(zichtbaar)){
+  if(/%/.test(zichtbaar)&&/\bmm\b/i.test(zichtbaar)){
+    waarde.setAttribute("aria-label","Komend uur: "+zichtbaar+". Eerst de neerslagkans, daarna het verwachte totaal in het komende uur.");
+  }else if(/%/.test(zichtbaar)){
     const pct=(zichtbaar.match(/\d+\s*%/)||[])[0]||zichtbaar;
     waarde.setAttribute("aria-label",tekst.includes("onzeker")?"Komend uur: "+pct+" kans. De verwachte hoeveelheid is onzeker.":"Komend uur: "+pct+" kans.");
   }
+}
+function werkStatKoppenBij(){
+  if(!mobiel())return;
+  const gust=document.getElementById("gust"),stat=gust&&gust.closest(".stat"),kop=stat&&stat.querySelector(".eyebrow");
+  if(kop)kop.textContent="Windstoot nu";
 }
 function werkBronnenBij(){
   const bron=document.querySelector("footer .bron-bronnen");if(!bron)return;
@@ -121,7 +128,7 @@ function werkBronnenBij(){
     else if(naam==="National Weather Service")item.hidden=!keuze.nws;
   });
 }
-function werkMobieleContextBij(){werkNeerslagSleutelBij();werkBronnenBij();}
+function werkMobieleContextBij(){werkNeerslagSleutelBij();werkStatKoppenBij();werkBronnenBij();}
 
 if(typeof etmaal==="function"){
   const grafiekBasisMobieleUX=etmaal;
@@ -129,7 +136,7 @@ if(typeof etmaal==="function"){
 }
 if(typeof meters==="function"){
   const metersBasisMobieleUX=meters;
-  meters=function(){const r=metersBasisMobieleUX.apply(this,arguments);werkNeerslagSleutelBij();werkBronnenBij();return r;};
+  meters=function(){const r=metersBasisMobieleUX.apply(this,arguments);werkNeerslagSleutelBij();werkStatKoppenBij();werkBronnenBij();return r;};
 }
 if(typeof lucht==="function"){
   const luchtBasisMobieleUX=lucht;
