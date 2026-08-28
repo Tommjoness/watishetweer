@@ -15,7 +15,7 @@ assert(/\.dashrow-hero \.stats \.eyebrow\{font-size:9\.5px;letter-spacing:\.10em
 assert(css.includes('.seo-plaatsnav-links a:nth-child(n+7):not(.seo-plaatsnav-alles){display:none}'),"mobiele hoofdweergave toont een korte plaatsselectie terwijl Meer plaatsen zichtbaar blijft");
 assert(css.includes(".seo-plaatsnav p{display:none}"),"SEO-uitleg neemt op de mobiele hoofdweergave geen extra schermhoogte in");
 assert(js.includes('const zichtbareSleutel=tekst==="kans · verwachte hoeveelheid"?"kans · totaal komend uur":tekst;'),"zichtbare uurtegel benoemt mm expliciet als totaal voor het komende uur");
-assert(js.includes('kop.textContent="Windstoot nu"'),"mobiele windstootkop gebruikt een kort consumentlabel");
+assert(js.includes('kop.textContent="Windstoot rond nu"'),"mobiele windstootkop blijft compact maar suggereert geen actuele meting");
 assert(js.includes("het verwachte totaal in het komende uur"),"toegankelijke neerslagbeschrijving maakt kans versus uurhoeveelheid expliciet");
 assert(!js.includes("mobile-chart-return")&&!js.includes("mobile-rain-return")&&!js.includes("mobile-days-return"),"consumentenpolish verplaatst geen bestaande dashboardsecties");
 
