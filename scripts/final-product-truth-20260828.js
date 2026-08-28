@@ -54,9 +54,9 @@ function vereenvoudigMorgenMaximumHtml(html){
 
 function uvPiekTekst(oudeTekst,waarde){
   const t=String(oudeTekst||"").trim(),v=String(waarde==null?"":waarde).trim();
-  let m=/^Verwachte UV-piek lag rond (\d{2}:\d{2}) · ([^.]+)\.$/i.exec(t);
+  let m=/^Verwachte UV-piek\s+lag rond (\d{2}:\d{2}) · ([^.]+)\.$/i.exec(t);
   if(m&&v)return "UV-piek vandaag: "+v+" ("+m[2]+"), rond "+m[1]+".";
-  m=/^Verwachte UV-piek rond (\d{2}:\d{2}) · ([^.]+)\.$/i.exec(t);
+  m=/^Verwachte UV-piek\s+rond (\d{2}:\d{2}) · ([^.]+)\.$/i.exec(t);
   if(m&&v)return "Verwachte UV-piek vandaag: "+v+" ("+m[2]+"), rond "+m[1]+".";
   return t;
 }
