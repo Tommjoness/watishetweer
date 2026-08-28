@@ -83,6 +83,9 @@ jobs:
       - name: Schakel Cloudflare Pages Web Analytics uit
         run: node scripts/cloudflare-disable-web-analytics.js
 
+      - name: Schakel Cloudflare RUM uit via Configuration Rule
+        run: node scripts/cloudflare-disable-rum.js
+
       - name: Bouw Cloudflare productie-artifact
         env:
           WEATHER_BUILD_SHA: ${{ env.SOURCE_SHA }}
