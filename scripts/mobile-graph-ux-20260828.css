@@ -1,0 +1,50 @@
+/* Mobiele grafiek- en informatie-UX 2026-08-28. Geen data- of DOM-herordening. */
+
+@media(max-width:900px){
+  /* Zon- en daglichtinformatie mag op telefoon nooit in één lange regel worden
+     samengedrukt. Iedere bestaande betekenis houdt zijn eigen regel. */
+  #suntimes{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:3px!important;
+    line-height:1.4;
+    max-width:100%;
+  }
+  #suntimes span{white-space:normal!important;max-width:100%}
+  #suntimes .zondag{grid-column:1!important;margin-top:1px}
+
+  /* De bestaande echte knop krijgt een zichtbaar uitklapsignaal. Tapdoel,
+     aria-expanded en verborgen rijen blijven in de bestaande Nachtzicht-owner. */
+  #nights .nacht-meer{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  #nights .nacht-meer::after{
+    content:"⌄";
+    flex:0 0 auto;
+    font-size:17px;
+    line-height:1;
+    letter-spacing:0;
+    text-transform:none;
+  }
+  #nights .nacht-meer[aria-expanded="true"]::after{content:"⌃"}
+
+  footer .bron-bronnen .bronitem[hidden]{display:none!important}
+}
+
+@media(max-width:430px){
+  /* Compactere eerste schermhoogte zonder knoppen te verkleinen, secties te
+     verplaatsen of de 44px-tapdoelen aan te raken. */
+  .mast{gap:14px}
+  .mastright{gap:5px}
+  .chips{margin-top:6px}
+  .brief{
+    margin-top:16px;
+    padding-top:16px;
+    font-size:16.5px;
+    line-height:1.45;
+  }
+  .hero{margin-top:16px}
+}
