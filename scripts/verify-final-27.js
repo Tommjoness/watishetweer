@@ -9,8 +9,17 @@ const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
 const htmlPad=path.join(OUT,"index.html");
 const swPad=path.join(OUT,"sw.js");
+const bronSnapshotPad=path.join(ROOT,".weather-runtime-source.tmp");
 if(!fs.existsSync(htmlPad)||!fs.existsSync(swPad))throw new Error("Definitieve WeatherNow-artifact ontbreekt.");
-const html=fs.readFileSync(htmlPad,"utf8");
+const paginaHtml=fs.readFileSync(htmlPad,"utf8");
+/* platform-output-cleanup draait bewust ná de semantische postbuildketen. Als die
+   deliverylaag de runtime heeft geëxternaliseerd/minified, bewaart hij uitsluitend
+   voor de CI-verifier een niet-publieke bronmomentopname buiten public/. Zo kunnen
+   de bestaande architectuurinvarianten op de leesbare bron blijven gelden, terwijl
+   syntaxis en browsergedrag hieronder juist op de werkelijk geleverde bundle
+   worden gecontroleerd. */
+const bronSnapshot=fs.existsSync(bronSnapshotPad)?fs.readFileSync(bronSnapshotPad,"utf8"):"";
+const html=paginaHtml+(bronSnapshot?"\n"+bronSnapshot:"");
 
 const aantal=tekst=>html.split(tekst).length-1;
 const exactEen=(tekst,naam)=>{const n=aantal(tekst);if(n!==1)throw new Error(naam+" moet exact één keer voorkomen; gevonden "+n+".");};
@@ -134,12 +143,25 @@ vereist("plaatsnaamUitCoordinaten","gedeelde plaatsnaamhelper");
 
 for(const tekst of ["CACHEPERF","DEELPERF","window.__q4","console.log(\"DIAG "]){verboden(tekst,"tijdelijke diagnose "+tekst);}
 
-const scriptBlokken=[...html.matchAll(/<script(?![^>]*\ssrc=)([^>]*)>([\s\S]*?)<\/script>/g)];
-const runtimeScripts=scriptBlokken.filter(m=>!/\btype\s*=\s*["']application\/ld\+json["']/i.test(m[1])).map(m=>m[2]);
-const jsonLdScripts=scriptBlokken.filter(m=>/\btype\s*=\s*["']application\/ld\+json["']/i.test(m[1])).map(m=>m[2]);
-if(!runtimeScripts.length)throw new Error("Geen inline WeatherNow-runtime gevonden.");
-runtimeScripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:final-27-runtime-"+(i+1)}));
+const inlineBlokken=[...paginaHtml.matchAll(/<script(?![^>]*\ssrc=)([^>]*)>([\s\S]*?)<\/script>/g)];
+const inlineRuntime=inlineBlokken.filter(m=>!/\btype\s*=\s*["'](?:application\/ld\+json|application\/json)["']/i.test(m[1])).map(m=>m[2]);
+const jsonLdScripts=inlineBlokken.filter(m=>/\btype\s*=\s*["']application\/ld\+json["']/i.test(m[1])).map(m=>m[2]);
+const externePaden=[...paginaHtml.matchAll(/<script[^>]*\bsrc=["']([^"']+)["'][^>]*><\/script>/g)].map(m=>m[1]);
+const externeRuntime=externePaden.map(src=>{
+  if(!/^\/app-[0-9a-f]{12}\.min\.js$/.test(src))throw new Error("Onverwachte externe runtime in definitief artifact: "+src);
+  const p=path.join(OUT,src.replace(/^\//,""));
+  if(!fs.existsSync(p))throw new Error("Externe runtime ontbreekt: "+src);
+  return fs.readFileSync(p,"utf8");
+});
+if(externeRuntime.length&&inlineRuntime.length)throw new Error("Definitief artifact mengt externe en executable inline runtime.");
+const runtimeScripts=externeRuntime.length?externeRuntime:inlineRuntime;
+if(!runtimeScripts.length)throw new Error("Geen WeatherNow-runtime gevonden.");
+runtimeScripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/runtime-final-27-"+(i+1)+".js"}));
 jsonLdScripts.forEach((bron,i)=>{try{JSON.parse(bron);}catch(e){throw new Error("Ongeldige JSON-LD in definitief artifact #"+(i+1)+": "+e.message);}});
+if(externeRuntime.length){
+  if(!paginaHtml.includes('<meta name="weather-delivery" content="external-minified-v1">'))throw new Error("Deliverymarker ontbreekt bij externe runtime.");
+  if(/http-equiv="Content-Security-Policy"/i.test(paginaHtml))throw new Error("CSP-meta hoort na delivery niet meer in het document.");
+}
 
 const verwacht=verifieerServiceworkerCache(OUT,"finale");
-console.log("Finale 27-punten artifactguard geslaagd: één Nachtzicht-owner met kalendergrens en maanvenster, gewone nullen, één Q3-UV-copy-owner, geconsolideerde copy-eigenaars inclusief zonuren, zeven-dagenpresentatie en briefingcopy, requestarchitectuur, syntactische runtime, geldige JSON-LD en serviceworker "+verwacht+".");
+console.log("Finale 27-punten artifactguard geslaagd: één Nachtzicht-owner met kalendergrens en maanvenster, gewone nullen, één Q3-UV-copy-owner, geconsolideerde copy-eigenaars inclusief zonuren, zeven-dagenpresentatie en briefingcopy, requestarchitectuur, syntactische geleverde runtime, geldige JSON-LD en serviceworker "+verwacht+".");
