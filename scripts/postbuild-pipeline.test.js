@@ -34,6 +34,8 @@ const verwacht=[
   "apply-mobile-state-ux-20260826.js",
   "verify-mobile-state-ux-20260826.js",
   "apply-staff-audit-20260826.js",
+  "apply-mobile-truth-ux-20260828.js",
+  "verify-mobile-truth-ux-20260828.js",
   "verify-seo-foundation.js",
   "generate-seo-location-pages.js",
   "apply-seo-location-h1.js",
@@ -60,6 +62,8 @@ assert(fs.existsSync(path.join(__dirname,"apply-mobile-state-ux-20260826.js")),"
 assert(fs.existsSync(path.join(__dirname,"verify-mobile-state-ux-20260826.js")),"mobiele state-UX moet direct verifieerbaar zijn");
 assert(fs.existsSync(path.join(__dirname,"apply-staff-audit-20260826.js")),"staff-audit moet een expliciete late applystap hebben");
 assert(fs.existsSync(path.join(__dirname,"verify-staff-audit-20260826.js")),"staff-audit moet na routegeneratie verifieerbaar zijn");
+assert(fs.existsSync(path.join(__dirname,"apply-mobile-truth-ux-20260828.js")),"mobiele weather-truth-UX moet een expliciete late applystap hebben");
+assert(fs.existsSync(path.join(__dirname,"verify-mobile-truth-ux-20260828.js")),"mobiele weather-truth-UX moet direct verifieerbaar zijn");
 
 /* Bewolkingscopy hoort uitsluitend bij de canonieke senior-semantiekbron. Q3 mag
    de bewezen 100%/95%-grenzen controleren, maar geen compatibiliteitsfallback
@@ -97,7 +101,9 @@ assert(positie("apply-final-presentation-consistency.js")<positie("verify-final-
 assert(positie("verify-final-presentation-consistency.js")<positie("apply-mobile-state-ux-20260826.js"),"mobiele state-UX mag pas na geverifieerde finale presentatie muteren");
 assert(positie("apply-mobile-state-ux-20260826.js")<positie("verify-mobile-state-ux-20260826.js"),"mobiele state-UX wordt direct na toepassing geverifieerd");
 assert(positie("verify-mobile-state-ux-20260826.js")<positie("apply-staff-audit-20260826.js"),"staff-audit moet de bewezen mobiele first-renderlaag behouden");
-assert(positie("apply-staff-audit-20260826.js")<positie("verify-seo-foundation.js"),"SEO-routes moeten de staff-auditlaag erven");
+assert(positie("apply-staff-audit-20260826.js")<positie("apply-mobile-truth-ux-20260828.js"),"mobiele weather-truth-UX moet de volledig geharde staff-artifact als basis zien");
+assert(positie("apply-mobile-truth-ux-20260828.js")<positie("verify-mobile-truth-ux-20260828.js"),"mobiele weather-truth-UX moet direct na toepassing worden geverifieerd");
+assert(positie("verify-mobile-truth-ux-20260828.js")<positie("verify-seo-foundation.js"),"SEO-routes moeten de geverifieerde mobiele weather-truth-UX erven");
 assert(positie("verify-seo-foundation.js")<positie("generate-seo-location-pages.js"),"plaatsroutes mogen pas na bewezen root-SEO worden gegenereerd");
 assert(positie("generate-seo-location-pages.js")<positie("apply-seo-location-h1.js"),"lokale H1 mag pas worden toegepast nadat alle plaatsroutes bestaan");
 assert(positie("apply-seo-location-h1.js")<positie("verify-seo-location-h1.js"),"plaats-H1 moet direct na toepassing worden geverifieerd");
@@ -114,4 +120,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde inclusief staff-audit, mobiele state-UX, finale presentatieguard, canonieke owners, SEO-routes, provenance en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde inclusief staff-audit, mobiele state-UX, mobiele weather-truth-UX, finale presentatieguard, canonieke owners, SEO-routes, provenance en fail-fast gedrag geslaagd.");
