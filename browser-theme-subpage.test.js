@@ -11,9 +11,17 @@ const privacyPad=path.join(PUBLIC,"privacy.html");
 if(!fs.existsSync(privacyPad))throw new Error("Definitieve public/privacy.html ontbreekt voor themacontrole.");
 
 const privacyBron=fs.readFileSync(privacyPad,"utf8");
-const themaInit=privacyBron.indexOf('localStorage.getItem("weerbriefing.thema")');
-const stijl=privacyBron.indexOf("<style>");
-assert.ok(themaInit>0&&stijl>themaInit,"thema-initialisatie moet vóór het eerste stijlblok staan om een verkeerde themapaint te voorkomen");
+const stijl=privacyBron.search(/<style\b/i);
+const externeScripts=[...privacyBron.matchAll(/<script\s+([^>]*\bsrc=["']([^"']+)["'][^>]*)><\/script>/gi)];
+const vroege=externeScripts.find(m=>m.index>=0&&m.index<stijl);
+assert.ok(vroege&&stijl>vroege.index,"thema-initialisatie moet als extern script vóór het eerste stijlblok staan om een verkeerde themapaint te voorkomen");
+assert.ok(!/\b(?:defer|async)\b/i.test(vroege[1]),"pre-paint themascript moet synchroon vóór CSS uitvoeren");
+const themaRel=vroege[2].replace(/^\//,"");
+const themaPad=path.join(PUBLIC,themaRel);
+assert.ok(themaPad.startsWith(PUBLIC+path.sep)&&fs.existsSync(themaPad),"extern pre-paint themascript ontbreekt in public");
+const themaBron=fs.readFileSync(themaPad,"utf8");
+assert.ok(themaBron.includes("weerbriefing.thema"),"extern pre-paint script bevat de thema-initialisatie niet");
+assert.ok(themaBron.includes("data-thema"),"extern pre-paint script zet het themakenmerk niet");
 assert.ok(!privacyBron.includes('data-thema="rood"'),"de verwijderde rode weergavestand mag niet opnieuw op de privacypagina ontstaan");
 
 const mime={".html":"text/html; charset=utf-8",".js":"application/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".woff2":"font/woff2",".png":"image/png"};
