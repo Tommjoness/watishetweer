@@ -83,7 +83,7 @@ function lokaalNaarMinuten(tijd,tijdzone,utcOffsetSeconden){
     const terug=zoneDelen(gok,tijdzone);
     // Een niet-bestaande lokale kloktijd (bv. 02:30 tijdens de voorjaarssprong)
     // mag nooit stilletjes naar 03:30 worden genormaliseerd.
-    if(terug&&terug.year===p.jaar&&terug.month===p.maand-1+1&&terug.day===p.dag
+    if(terug&&terug.year===p.jaar&&terug.month===p.maand&&terug.day===p.dag
       &&terug.hour===p.uur&&terug.minute===p.minuut) return gok/60000;
   }
   const off=getal(utcOffsetSeconden);
