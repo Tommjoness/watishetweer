@@ -76,11 +76,13 @@
   #feels{font-size:13.5px}
 
   /* Minder hoge metriektegels en minder letterspatiëring voorkomen dat korte
-     consumentlabels onnodig over drie regels breken. De twee kolommen blijven
-     exact dezelfde responsive structuur houden. */
+     consumentlabels onnodig over drie regels breken. De brede UV-tegel is geen
+     helft van het tweekolomsgrid en houdt daarom bewust zijn bestaande 0/0
+     zijpadding en volle breedte. */
   .dashrow-hero .stats .stat{padding-top:11px;padding-bottom:12px}
-  .dashrow-hero .stats .stat:nth-child(2n){padding-left:14px}
-  .dashrow-hero .stats .stat:nth-child(2n+1){padding-right:14px}
+  .dashrow-hero .stats .stat:not(.breed):nth-child(2n){padding-left:14px}
+  .dashrow-hero .stats .stat:not(.breed):nth-child(2n+1){padding-right:14px}
+  .dashrow-hero .stats .stat.breed{padding-left:0!important;padding-right:0!important}
   .dashrow-hero .stats .eyebrow{font-size:9.5px;letter-spacing:.10em;line-height:1.3}
   .dashrow-hero .stats .ssub{line-height:1.38}
   #pop{gap:3px;flex-wrap:wrap}
