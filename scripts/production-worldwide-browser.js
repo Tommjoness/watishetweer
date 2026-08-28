@@ -87,13 +87,11 @@ function isVolledigeForecast(url){
         assert(uit.overflow<=1,`${scherm.naam}/${locatie.naam}: ${uit.overflow}px horizontale overflow`);
         assert(uit.titel.startsWith(locatie.naam+" · "),`${scherm.naam}/${locatie.naam}: titel en plaats verschillen`);
         assert(uit.bronLinks>=1,`${scherm.naam}/${locatie.naam}: bronvermelding ontbreekt`);
-        /* De pagina rekent de resterende dag door met de live lokale klok. De
-           Open-Meteo current.time in dezelfde response kan enkele minuten ouder
-           zijn. Gebruik daarom voor de bronwaarheidsberekening exact dezelfde
-           lokale horizon, zonder één bronwaarde zelf te veranderen. */
-        const bronVoorControle=JSON.parse(JSON.stringify(bron));
-        if(uit.actueleLokaleTijd)bronVoorControle.current.time=uit.actueleLokaleTijd;
-        const bronUit=verifieerBronwaarheid(bronVoorControle,uit,`${scherm.naam}/${locatie.naam}`);
+        /* De providerresponse blijft exact zoals ontvangen. Alleen de horizon
+           voor de resterende huidige dag volgt dezelfde actuele lokale klok
+           als de pagina; temperatuur, wind, UV, thema en bronvelden blijven
+           rechtstreeks tegen de ongewijzigde live response gecontroleerd. */
+        const bronUit=verifieerBronwaarheid(bron,uit,`${scherm.naam}/${locatie.naam}`,uit.actueleLokaleTijd);
         const klokVerwacht=new Intl.DateTimeFormat("nl-NL",{timeZone:locatie.tz,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());
         assert(klokVerschil(uit.klok,klokVerwacht)<=1,`${scherm.naam}/${locatie.naam}: lokale klok ${uit.klok} wijkt af van ${locatie.tz} (${klokVerwacht})`);
         assert.deepEqual(pageErrors,[],`${scherm.naam}/${locatie.naam}: pageerrors ${pageErrors.join(" | ")}`);
