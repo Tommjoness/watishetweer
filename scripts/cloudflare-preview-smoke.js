@@ -25,24 +25,41 @@ function buildSha(html){return /<meta name="weather-build-sha" content="([0-9a-f
 function security(r,label){
   assert.equal(r.headers.get("x-content-type-options"),"nosniff",`${label}: nosniff ontbreekt`);
   assert.equal(r.headers.get("x-frame-options"),"DENY",`${label}: framing niet geblokkeerd`);
+  assert.equal(r.headers.get("cross-origin-opener-policy"),"same-origin",`${label}: COOP ontbreekt`);
   assert.equal(r.headers.get("referrer-policy"),"strict-origin-when-cross-origin",`${label}: referrer-policy wijkt af`);
-  assert(/default-src 'self'/.test(r.headers.get("content-security-policy")||""),`${label}: CSP ontbreekt`);
+  const csp=r.headers.get("content-security-policy")||"";
+  assert(/default-src 'self'/.test(csp),`${label}: CSP ontbreekt`);
+  assert(/script-src 'self'(?:;|$)/.test(csp),`${label}: script-src is niet self-only`);
+  assert(!/script-src[^;]*unsafe-inline/.test(csp),`${label}: executable inline script blijft toegestaan`);
+  assert(/script-src-attr 'none'/.test(csp),`${label}: inline eventhandlers zijn niet expliciet geblokkeerd`);
+}
+function compressed(r,label){
+  const encoding=(r.headers.get("content-encoding")||"").toLowerCase();
+  assert(["br","gzip"].includes(encoding),`${label}: Cloudflare comprimeert HTML niet (content-encoding=${encoding||"geen"})`);
 }
 function cloudflareCache(r,label){
   assert(/^s-maxage=\d+/.test(r.headers.get("cloudflare-cdn-cache-control")||""),`${label}: Cloudflare CDN-cachecontract ontbreekt`);
 }
 
 (async()=>{
-  const home=await request("/");
+  const home=await request("/",{headers:{"accept-encoding":"br, gzip"}});
   assert.equal(home.status,200,"homepage is niet 200");
   security(home,"homepage");
+  compressed(home,"homepage");
   const homeHtml=await home.text();
   assert.equal(buildSha(homeHtml),EXPECTED_SHA,"homepage bevat niet de exacte branch-head SHA");
+  assert(homeHtml.includes('name="weather-delivery" content="external-minified-v1"'),"homepage mist delivery-optimalisatiemarker");
+  assert(/<script src="\/app-[0-9a-f]{12}\.min\.js" defer><\/script>/.test(homeHtml),"homepage mist content-hashed externe runtime");
+  assert(!/http-equiv="Content-Security-Policy"/i.test(homeHtml),"homepage bevat nog een CSP-meta naast de responseheader");
 
-  const route=await request("/weer/almere/");
+  const route=await request("/weer/almere/",{headers:{"accept-encoding":"br, gzip"}});
   assert.equal(route.status,200,"SEO-route Almere is niet 200");
   security(route,"SEO-route");
-  assert.equal(buildSha(await route.text()),EXPECTED_SHA,"SEO-route bevat niet de exacte branch-head SHA");
+  compressed(route,"SEO-route");
+  const routeHtml=await route.text();
+  assert.equal(buildSha(routeHtml),EXPECTED_SHA,"SEO-route bevat niet de exacte branch-head SHA");
+  assert(/<script src="\/app-[0-9a-f]{12}\.min\.js" defer><\/script>/.test(routeHtml),"SEO-route mist externe runtime");
+  assert(routeHtml.includes('type="application/json" id="weather-now-route"'),"SEO-route mist niet-executable routebootstrap");
 
   const ontbreekt=await request("/__cloudflare_preview_onbestaand__");
   assert.equal(ontbreekt.status,404,"onbekende route is geen 404");
@@ -82,5 +99,5 @@ function cloudflareCache(r,label){
   assert.equal(head.status,200,"HEAD op plaatsnaam-API is niet 200");
   assert.equal((await head.text()).length,0,"HEAD bevat onverwacht een responsebody");
 
-  console.log(`CLOUDFLARE PREVIEW SMOKE GESLAAGD: ${ROOT}; SHA ${EXPECTED_SHA}; statisch, security, CDN-cache en drie API-contracten groen.`);
+  console.log(`CLOUDFLARE PREVIEW SMOKE GESLAAGD: ${ROOT}; SHA ${EXPECTED_SHA}; statisch, compressie, strikt securitybeleid, CDN-cache en drie API-contracten groen.`);
 })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});
