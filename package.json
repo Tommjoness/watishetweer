@@ -8,7 +8,7 @@
     "artifact:base": "node build-weather.js && node scripts/inject-extra-neerslagproviders.js",
     "test:built": "node live-polish-v2.test.js && node senior-correctness-10.test.js && node default-location-regression.test.js && node audit-regressions.test.js && node scripts/run-prelaunch-isolated.js && node senior-7-regressions.test.js && node run-built-regressions.test.js && node run-built-matrix.js && node run-api-source-compat.test.js",
     "test:browser-smoke": "node pollen-hour-regression.test.js && node browser-production.test.js && node desktop-sticky-browser.test.js && node progressive-location-browser.test.js && node progressive-fallback-browser.test.js && node weather-fallback-hedge-browser.test.js && node fetch-error-semantics-browser.test.js && node global-location-hardening-browser.test.js && node shared-url-place-identity-browser.test.js",
-    "test": "npm run test:prebuild && npm run artifact:base && npm run test:built && node scripts/postbuild-pipeline.js && node scripts/platform-output-cleanup.js && npm run test:browser-smoke",
+    "test": "npm run test:prebuild && npm run artifact:base && npm run test:built && node scripts/postbuild-pipeline.js && npm run test:browser-smoke && node scripts/platform-output-cleanup.js",
     "build": "npm run test:prebuild && npm run artifact:base && npm run test:built",
     "build:cloudflare": "npm run build && node scripts/cloudflare-output.js",
     "postbuild": "node scripts/postbuild-pipeline.js && node scripts/platform-output-cleanup.js"
