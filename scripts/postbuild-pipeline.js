@@ -64,9 +64,10 @@ function voerPostbuildUit(opt={}){
   const scriptsMap=opt.scriptsDir||__dirname;
   const artifactPad=opt.artifactPath||path.join(scriptsMap,"..","public","index.html");
   /* Een eerdere npm test/build kan een niet-publieke runtimebronsnapshot hebben
-     achtergelaten voor verificatie ná delivery-minificatie. Binnen de semantische
-     postbuild moet altijd uitsluitend het verse inline artifact gelden. */
-  if(!opt.artifactPath){
+     achtergelaten voor verificatie ná delivery-minificatie. Binnen de echte
+     semantische postbuild moet altijd uitsluitend het verse inline artifact
+     gelden. Unit-tests met een synthetische scriptsDir raken de werkruimte niet. */
+  if(!opt.scriptsDir&&!opt.artifactPath){
     fs.rmSync(path.join(scriptsMap,"..",".weather-runtime-source.tmp"),{force:true});
   }
   const bewaakPresentatie=fs.existsSync(artifactPad)&&fs.readFileSync(artifactPad,"utf8").includes(PRESENTATIE_MARKER);
