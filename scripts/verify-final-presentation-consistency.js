@@ -25,6 +25,12 @@ ok(html.includes("const labelPerioden=g.M?q4MobieleGelabeldePerioden(perioden):p
 ok(html.includes('g.M?" De belangrijkste regenperioden zijn gelabeld; de overige blijven via de grafiekdetails beschikbaar."'),"toegankelijke mobiele Q4-uitleg beschrijft de gereduceerde zichtbare labels eerlijk");
 ok(html.includes('horizontaal.setAttribute("aria-label",q4PeriodeTijdvak(g,p)+" · "+q4Mm(p.som)+" mm")'),"iedere regenbracket houdt ongeacht zichtbare labelfilter zijn volledige aria-detail");
 
+ok(html.includes('if(t.richting==="gelijk"){'),"gelijke temperatuurtrend krijgt een eigen presentatieroute");
+ok(html.includes('waarde.innerHTML=String(t.van)+"<s>°C</s>";'),"gelijke temperatuurtrend toont één temperatuur zonder 17 naar 17-pijl");
+ok(html.includes('sub.textContent="De temperatuur blijft de komende uren rond "+String(t.van)+" °C.";'),"gelijke temperatuurtrend benoemt expliciet dat de temperatuur rond dezelfde waarde blijft");
+ok(!html.includes('De temperatuur verandert de komende uren nauwelijks.'),"oude vage copy voor gelijke temperatuurtrend is verwijderd");
+ok(html.includes('waarde.innerHTML=String(t.van)+" → "+String(t.naar)+"<s>°C</s>";'),"stijgende en dalende temperatuurtrend houden de richtingpijl");
+
 ok(html.includes("function weatherNowDagenNeerslagUitleg(){"),"weekverwachting heeft een finale uitleg-owner voor niet-nul kans met 0,0 mm");
 ok(html.includes('uitleg.id="dagenneerslaguitleg"'),"nul-mm-uitleg krijgt een eigen regel en overschrijft de bedieningshint niet");
 ok(!html.includes('hint.textContent=basis+" "+kans+" kans met 0,0 mm'),"bedieningshint wordt niet meer gebruikt als meteorologische toelichting");
