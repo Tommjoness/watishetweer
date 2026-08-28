@@ -19,9 +19,7 @@ function kiesUurLabelIndices(tijden,minimaal=4){
   let basis=T.map((tijd,i)=>({i,uur:uurUitIso(tijd)}))
     .filter(x=>x.i>=2&&x.i<=T.length-3&&Number.isInteger(x.uur)&&x.uur%3===0)
     .map(x=>x.i);
-  if(basis.length<min){
-    basis=T.map((_,i)=>i).filter(i=>i>=2&&i<=T.length-3);
-  }
+  if(basis.length<min)basis=T.map((_,i)=>i).filter(i=>i>=2&&i<=T.length-3);
   if(basis.length<=min)return basis;
   const uit=[];
   for(let k=0;k<min;k++){
@@ -97,11 +95,6 @@ function werkNeerslagSleutelBij(){
     waarde.setAttribute("aria-label",tekst.includes("onzeker")?"Komend uur: "+pct+" kans. De verwachte hoeveelheid is onzeker.":"Komend uur: "+pct+" kans.");
   }
 }
-function werkNachtKnopBij(){
-  const knop=document.querySelector("#nights .nacht-meer");if(!knop)return;
-  const open=knop.getAttribute("aria-expanded")==="true";
-  knop.setAttribute("aria-label",open?"Minder nachten tonen":"Meer nachten bekijken");
-}
 function werkBronnenBij(){
   const bron=document.querySelector("footer .bron-bronnen");if(!bron)return;
   const label=bron.querySelector(".bronlabel");if(label)label.textContent="Bronnen voor deze weergave";
@@ -112,23 +105,19 @@ function werkBronnenBij(){
     else if(naam==="National Weather Service")item.hidden=!keuze.nws;
   });
 }
-function werkMobieleContextBij(){werkNeerslagSleutelBij();werkNachtKnopBij();werkBronnenBij();}
+function werkMobieleContextBij(){werkNeerslagSleutelBij();werkBronnenBij();}
 
 if(typeof etmaal==="function"){
-  const basisEtmaal=etmaal;
-  etmaal=function(){const r=basisEtmaal.apply(this,arguments);planUurAsHerstel();return r;};
+  const grafiekBasisMobieleUX=etmaal;
+  etmaal=function(){const r=grafiekBasisMobieleUX.apply(this,arguments);planUurAsHerstel();return r;};
 }
 if(typeof meters==="function"){
-  const basisMeters=meters;
-  meters=function(){const r=basisMeters.apply(this,arguments);werkNeerslagSleutelBij();werkBronnenBij();return r;};
-}
-if(typeof nachten==="function"){
-  const basisNachten=nachten;
-  nachten=function(){const r=basisNachten.apply(this,arguments);werkNachtKnopBij();werkBronnenBij();return r;};
+  const metersBasisMobieleUX=meters;
+  meters=function(){const r=metersBasisMobieleUX.apply(this,arguments);werkNeerslagSleutelBij();werkBronnenBij();return r;};
 }
 if(typeof lucht==="function"){
-  const basisLucht=lucht;
-  lucht=function(){const r=basisLucht.apply(this,arguments);werkBronnenBij();return r;};
+  const luchtBasisMobieleUX=lucht;
+  lucht=function(){const r=luchtBasisMobieleUX.apply(this,arguments);werkBronnenBij();return r;};
 }
 werkMobieleContextBij();planUurAsHerstel();
 
