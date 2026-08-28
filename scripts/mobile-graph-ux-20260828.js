@@ -48,7 +48,10 @@ function bronGebruikUitResources(resources,land,opties={}){
   const heeft=patroon=>namen.some(n=>patroon.test(n));
   const waarschuwingen=heeft(/\/api\/waarschuwingen(?:[?#]|$)/i);
   return {
-    openmeteo:!!opties.forecastBeschikbaar||heeft(/(?:api|geocoding-api)\.open-meteo\.com/i),
+    /* Open-Meteo is de kernbron van iedere weerweergave. Deze attributie blijft
+       daarom ook zichtbaar vóór/zonder een meetbare resource-entry; alleen de
+       optionele aanvullende bronnen worden dynamisch gefilterd. */
+    openmeteo:true,
     cams:!!opties.airBeschikbaar||heeft(/air-quality-api\.open-meteo\.com/i),
     bigdatacloud:heeft(/bigdatacloud\.net/i),
     osm:heeft(/\/api\/plaatsnaam(?:[?#]|$)|nominatim|openstreetmap/i),
