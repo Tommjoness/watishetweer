@@ -25,7 +25,8 @@ const PAD=path.join(OUT,"index.html");
    7. Nachtzicht toont ook op desktop eerst drie nachten, met dezelfde bestaande
       uitklapbediening als mobiel; alle rijen blijven in de DOM.
    8. Buiten Europa heet de AQI expliciet 'AQI (VS-schaal)' in plaats van het
-      dubbelzinnige 'Amerikaanse AQI'; de Q4-subreiniging volgt diezelfde schaalnaam.
+      dubbelzinnige 'Amerikaanse AQI'; ook senior-semantiek en Q4 volgen diezelfde
+      schaalnaam, zodat de actieve runtime nergens twee termen voor één schaal kent.
    9. De briefing benoemt een windpiek en zware windstoten in twee korte zinnen,
       zonder dubbele dagaanduiding of technisch 'in het uur'-proza.
   10. De desktop-etmaalgrafiek houdt extrema en echte veranderingen, maar laat
@@ -116,6 +117,8 @@ const NACHT_COMPACT_CSS_NIEUW=`#nights .row.night[hidden]{display:none!important
 
 const AQI_OUD='  const schaalIndex = euro ? "Europese AQI" : "Amerikaanse AQI";';
 const AQI_NIEUW='  const schaalIndex = euro ? "Europese AQI" : "AQI (VS-schaal)";';
+const SENIOR_AQI_SUB_OUD='      if(sub)sub.textContent=o.tekst+" · "+(europees?"Europese AQI":"Amerikaanse AQI");';
+const SENIOR_AQI_SUB_NIEUW='      if(sub)sub.textContent=o.tekst+" · "+(europees?"Europese AQI":"AQI (VS-schaal)");';
 const Q4_AQI_SUB_OUD='  const schoon=(sub.textContent||"").replace(/\\s*·\\s*(Europese|Amerikaanse) AQI\\s*$/i,"").trim();';
 const Q4_AQI_SUB_NIEUW='  const schoon=(sub.textContent||"").replace(/\\s*·\\s*(?:Europese AQI|AQI \\(VS-schaal\\))\\s*$/i,"").trim();';
 
@@ -209,6 +212,7 @@ html=vervangExact(html,NACHT_COMPACT_OUD,NACHT_COMPACT_NIEUW,"Nachtzicht compact
 html=vervangExact(html,NACHT_COMPACT_IF_OUD,NACHT_COMPACT_IF_NIEUW,"Nachtzicht desktopuitklap");
 html=vervangExact(html,NACHT_COMPACT_CSS_OUD,NACHT_COMPACT_CSS_NIEUW,"Nachtzicht desktopstijl");
 html=vervangExact(html,AQI_OUD,AQI_NIEUW,"AQI schaallabel");
+html=vervangExact(html,SENIOR_AQI_SUB_OUD,SENIOR_AQI_SUB_NIEUW,"senior AQI subregel");
 html=vervangExact(html,Q4_AQI_SUB_OUD,Q4_AQI_SUB_NIEUW,"Q4 AQI subregelcleanup");
 html=vervangExact(html,WIND_BRIEFING_OUD,WIND_BRIEFING_NIEUW,"briefing windcopy");
 html=vervangExact(html,GRAFIEK_LABELS_OUD,GRAFIEK_LABELS_NIEUW,"desktop grafieklabelselectie");
@@ -243,12 +247,13 @@ if(!html.includes("const belangrijkNabij=kandidatenRuw.some"))
 
 fs.writeFileSync(PAD,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"finale-presentatie");
-console.log("Finale presentatieconsistentie toegepast: zonuren-owner hersteld, Nachtzicht genuanceerd en compact, gelijke temperatuurtrend vereenvoudigd, 0,0-mm-uitleg ingekort, AQI-schaal en Q4-cleanup verduidelijkt, briefingwindcopy aangescherpt en redundante desktop-temperatuurlabels verminderd; cache "+versie+".");
+console.log("Finale presentatieconsistentie toegepast: zonuren-owner hersteld, Nachtzicht genuanceerd en compact, gelijke temperatuurtrend vereenvoudigd, 0,0-mm-uitleg ingekort, AQI-schaal volledig genormaliseerd, briefingwindcopy aangescherpt en redundante desktop-temperatuurlabels verminderd; cache "+versie+".");
 
 module.exports={
   ZON_RUNTIME_OUD,ZON_RUNTIME_NIEUW,NACHT_OUD,NACHT_NIEUW,ARIA_OUD,ARIA_NIEUW,
   Q1_DAG_MM_OUD,Q1_DAG_MM_NIEUW,TEMP_TREND_OUD,TEMP_TREND_NIEUW,VANDAAG_DAG_MM_OUD,VANDAAG_DAG_MM_NIEUW,
   NACHT_COMPACT_OUD,NACHT_COMPACT_NIEUW,NACHT_COMPACT_IF_OUD,NACHT_COMPACT_IF_NIEUW,NACHT_COMPACT_CSS_OUD,NACHT_COMPACT_CSS_NIEUW,
-  AQI_OUD,AQI_NIEUW,Q4_AQI_SUB_OUD,Q4_AQI_SUB_NIEUW,WIND_BRIEFING_OUD,WIND_BRIEFING_NIEUW,GRAFIEK_LABELS_OUD,GRAFIEK_LABELS_NIEUW,
+  AQI_OUD,AQI_NIEUW,SENIOR_AQI_SUB_OUD,SENIOR_AQI_SUB_NIEUW,Q4_AQI_SUB_OUD,Q4_AQI_SUB_NIEUW,
+  WIND_BRIEFING_OUD,WIND_BRIEFING_NIEUW,GRAFIEK_LABELS_OUD,GRAFIEK_LABELS_NIEUW,
   START_MARKER,DAGEN_UITLEG_RUNTIME,vervangExact
 };
