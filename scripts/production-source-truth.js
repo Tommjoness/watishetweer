@@ -34,8 +34,13 @@ function zonDagIndex(bron){
   if(onder&&String(bron.current.time)>=String(onder)&&i+1<(daily.time||[]).length)i++;
   return i;
 }
-function zonVerwachting(bron){
-  const rijen=zonInfoRijen(bron?.daily,bron?.current?.time,null,()=>"",datum=>datum);
+function zonVerwachting(bron,nuOverride){
+  /* De productie rendert zoninfo tegen weatherNowActueleLokaleTijd(). Rond
+     zonsopkomst/-ondergang kan de current.time uit dezelfde providerresponse
+     enkele minuten ouder zijn. Gebruik daarom dezelfde live lokale horizon als
+     de UI wanneer de browsermonitor die expliciet heeft meegegeven. */
+  const horizon=String(nuOverride||bron?.current?.time||"");
+  const rijen=zonInfoRijen(bron?.daily,horizon,null,()=>"",datum=>datum);
   const items=rijen.flatMap(r=>r.items||[]),op=[],onder=[];
   for(const item of items){
     const opMatch=/^zon op\s+(\d{2}:\d{2})$/i.exec(String(item));
@@ -87,7 +92,7 @@ function verifieerBronwaarheid(bron,ui,label,nuOverride){
     gelijk(rij.neerslagHoeveelheid,dag.neerslag.hoeveelheid,`${prefix}: neerslaghoeveelheid wijkt af`);
   });
 
-  const zon=zonVerwachting(bron);
+  const zon=zonVerwachting(bron,nuOverride);
   if(zon.op.length||zon.onder.length){
     for(const tijd of zon.op)assert(ui.zon.includes(tijd),`${label}: verwachte komende zonsopkomst ${tijd} ontbreekt`);
     for(const tijd of zon.onder)assert(ui.zon.includes(tijd),`${label}: verwachte komende zonsondergang ${tijd} ontbreekt`);

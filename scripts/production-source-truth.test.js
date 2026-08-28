@@ -37,4 +37,16 @@ const avond={
 assert.deepEqual(zonVerwachting(avond).op,["06:33"],"na de verstreken zonsopkomst toont de UI de eerstvolgende opkomst");
 assert.deepEqual(zonVerwachting(avond).onder,["20:31"],"vóór zonsondergang blijft de huidige ondergang zichtbaar");
 
+const rondZonsopkomst={
+  current:{time:"2026-08-28T06:15",is_day:1},
+  daily:{
+    time:["2026-08-28","2026-08-29"],
+    sunrise:["2026-08-28T06:19","2026-08-29T06:20"],
+    sunset:["2026-08-28T19:31","2026-08-29T19:29"]
+  }
+};
+assert.deepEqual(zonVerwachting(rondZonsopkomst).op,["06:19"],"zonder live override volgt de bronhorizon vóór zonsopkomst");
+assert.deepEqual(zonVerwachting(rondZonsopkomst,"2026-08-28T06:22").op,["06:20"],"met live lokale horizon verwacht de monitor na zonsopkomst alleen de volgende opkomst");
+assert.deepEqual(zonVerwachting(rondZonsopkomst,"2026-08-28T06:22").onder,["19:31"],"met live lokale horizon blijft de komende zonsondergang van vandaag zichtbaar");
+
 console.log("production-source-truth: bron-naar-UI-contracten OK");
