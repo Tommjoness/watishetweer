@@ -8,6 +8,7 @@ const ROUTES=Object.freeze([
 const intervalMs=3000;
 const requestTimeoutMs=15000;
 const readinessTimeoutMs=90000;
+const vereisteOpeenvolgendeSuccessen=3;
 
 function geldigeRoot(waarde){
   const root=String(waarde||"").replace(/\/$/,"");
@@ -41,7 +42,7 @@ async function probeer(root,poging,fetchImpl=fetch){
   const resultaten=await Promise.all(ROUTES.map(route=>controleerRoute(root,route,fetchImpl)));
   const nietGereed=resultaten.filter(x=>!x.gereed);
   if(!nietGereed.length){
-    console.log(`Alle Cloudflare Functions-routes zijn actief na poging ${poging}: ${resultaten.map(x=>`${x.naam}=HTTP ${x.status}`).join(", ")}.`);
+    console.log(`Alle Cloudflare Functions-routes zijn actief bij poging ${poging}: ${resultaten.map(x=>`${x.naam}=HTTP ${x.status}`).join(", ")}.`);
     return true;
   }
   console.log(`Cloudflare Functions nog niet volledig gereed, poging ${poging}: ${resultaten.map(x=>`${x.naam}=HTTP ${x.status===null?x.fout:x.status}, JSON=${x.json}`).join("; ")}.`);
@@ -51,12 +52,21 @@ async function probeer(root,poging,fetchImpl=fetch){
 async function wachtTotGereed(root,fetchImpl=fetch,nu=Date.now,wachtImpl=wacht){
   const deadline=nu()+readinessTimeoutMs;
   let poging=0;
+  let opeenvolgendeSuccessen=0;
   while(nu()<deadline){
     poging+=1;
-    if(await probeer(root,poging,fetchImpl))return;
+    if(await probeer(root,poging,fetchImpl)){
+      opeenvolgendeSuccessen+=1;
+      if(opeenvolgendeSuccessen>=vereisteOpeenvolgendeSuccessen){
+        console.log(`Cloudflare Functions zijn stabiel gereed na ${vereisteOpeenvolgendeSuccessen} opeenvolgende succesvolle controles.`);
+        return;
+      }
+    }else{
+      opeenvolgendeSuccessen=0;
+    }
     await wachtImpl(intervalMs);
   }
-  throw new Error(`Cloudflare Pages Functions zijn na 90 seconden nog niet alle drie gereed op ${root}.`);
+  throw new Error(`Cloudflare Pages Functions zijn na 90 seconden niet stabiel alle drie gereed op ${root}.`);
 }
 
 if(require.main===module){
@@ -67,4 +77,4 @@ if(require.main===module){
   });
 }
 
-module.exports={ROUTES,geldigeRoot,geldigeJson,routeIsGereed,controleerRoute,probeer,wachtTotGereed,readinessTimeoutMs};
+module.exports={ROUTES,geldigeRoot,geldigeJson,routeIsGereed,controleerRoute,probeer,wachtTotGereed,readinessTimeoutMs,vereisteOpeenvolgendeSuccessen};
