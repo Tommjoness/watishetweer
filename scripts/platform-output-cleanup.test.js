@@ -31,6 +31,7 @@ groep.setAttribute("aria-label","Neerslagperioden met tijdvak en hoeveelheid per
   const routeHtml='<script type="application/ld+json">{"x":1}</script><!-- WEATHER NOW PLAATSROUTE --><script>window.__WEATHERNOW_ROUTE_LOCATION__=Object.freeze({"slug":"almere","lat":52.35,"lon":5.26});</script><script>function publiek(){return 2 + 2;} globalThis.__deliveryTest=publiek();</script>';
   const verzameld=verzamelRuntime(routeHtml);
   assert.equal(verzameld.scripts.length,1,"routebootstrap mag geen executable inline runtime blijven");
+  assert.equal(verzameld.earlyScripts.length,0,"zonder stijlblok is er geen pre-paintscript om apart te houden");
   assert.equal(verzameld.routeData.slug,"almere","routebootstrap-data ging verloren");
   assert(verzameld.html.includes('type="application/json" id="weather-now-route"'),"routebootstrap is niet naar data-script gemigreerd");
   assert(verzameld.html.includes('type="application/ld+json"'),"JSON-LD mag niet worden geëxternaliseerd");
@@ -40,5 +41,16 @@ groep.setAttribute("aria-label","Neerslagperioden met tijdvak en hoeveelheid per
   new vm.Script(min.code);
   assert(/^[0-9a-f]{12}$/.test(hash12(min.code)),"contenthash heeft niet de afgesproken vorm");
 
-  console.log("Platform-output-cleanup: ARIA-hardening, fontpreload, CSS/JS-minificatie en routebootstrap-migratie geslaagd.");
+  const vroegHtml='<html><head><script>(()=>{const raw=localStorage.getItem("weerbriefing.thema");if(raw)document.documentElement.setAttribute("data-thema","donker");})();</script><style>body{color:red}</style></head><body><script>globalThis.laat=1;</script></body></html>';
+  const vroeg=verzamelRuntime(vroegHtml);
+  assert.equal(vroeg.earlyScripts.length,1,"pre-paint thema-initialisatie moet apart worden gehouden");
+  assert.equal(vroeg.scripts.length,1,"gewone bodyruntime blijft in de deferred hoofdbundle");
+  assert(vroeg.earlyScripts[0].body.includes('localStorage.getItem("weerbriefing.thema")'),"thema-initialisatie ging verloren");
+  const vroegPos=vroeg.html.indexOf(vroeg.earlyScripts[0].token);
+  const stijlPos=vroeg.html.indexOf("<style>");
+  assert(vroegPos>=0&&vroegPos<stijlPos,"placeholder bewaart de pre-paintpositie vóór CSS");
+  const vroegMin=await minifyRuntime([vroeg.earlyScripts[0].body],null);
+  assert(vroegMin.code.includes("weerbriefing.thema"),"minificatie verwijderde de vroege themalogica");
+
+  console.log("Platform-output-cleanup: ARIA-hardening, fontpreload, CSS/JS-minificatie, pre-paintscriptbehoud en routebootstrap-migratie geslaagd.");
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
