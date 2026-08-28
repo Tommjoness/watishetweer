@@ -1,7 +1,6 @@
-/* Mobiele grafiek- en informatie-UX 2026-08-28.
-   Deze laag verandert geen providerwaarden of weersformules. Hij herstelt alleen
-   ontbrekende uurcontext na de bestaande Safari-collisionlaag en maakt bestaande
-   UI-semantiek explicieter. */
+/* Grafiek-, bron- en informatie-UX 2026-08-28.
+   Deze laag verandert geen providerwaarden of weersformules. Hij bewaakt alleen
+   presentatiesemantiek, bronprovenance en zeldzame grafiekbotsingen. */
 (function(root){
 "use strict";
 
@@ -43,8 +42,29 @@ function neerslagSleutelTekst(waarde,subtekst){
   if(/onzeker|onvoldoende|niet beschikbaar|geen betrouwbare/i.test(sub))return "kans · hoeveelheid onzeker";
   return "kans";
 }
+function resourceNaam(r){return String(r&&typeof r==="object"?r.name:r||"");}
+function bronGebruikUitResources(resources,land,opties={}){
+  const namen=(Array.isArray(resources)?resources:[]).map(resourceNaam),waarschuwing=waarschuwingBronnenVoorLand(land);
+  const heeft=patroon=>namen.some(n=>patroon.test(n));
+  const waarschuwingen=heeft(/\/api\/waarschuwingen(?:[?#]|$)/i);
+  return {
+    openmeteo:!!opties.forecastBeschikbaar||heeft(/(?:api|geocoding-api)\.open-meteo\.com/i),
+    cams:!!opties.airBeschikbaar||heeft(/air-quality-api\.open-meteo\.com/i),
+    bigdatacloud:heeft(/bigdatacloud\.net/i),
+    osm:heeft(/\/api\/plaatsnaam(?:[?#]|$)|nominatim|openstreetmap/i),
+    knmi:heeft(/\/api\/neerslag(?:[?#]|$)/i),
+    meteoalarm:waarschuwingen&&waarschuwing.meteoalarm,
+    nws:waarschuwingen&&waarschuwing.nws
+  };
+}
+function rechthoekenBotsen(a,b,padding=0){
+  if(!a||!b)return false;
+  const p=Math.max(0,Number(padding)||0),ax=Number(a.x),ay=Number(a.y),aw=Number(a.width),ah=Number(a.height),bx=Number(b.x),by=Number(b.y),bw=Number(b.width),bh=Number(b.height);
+  if(![ax,ay,aw,ah,bx,by,bw,bh].every(Number.isFinite))return false;
+  return ax-p<bx+bw&&ax+aw+p>bx&&ay-p<by+bh&&ay+ah+p>by;
+}
 
-const api={uurUitIso,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst};
+const api={uurUitIso,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -63,9 +83,6 @@ function herstelUurAs(){
   const svg=document.getElementById("chart"),g=S.geo;
   if(!svg||!g||Number(g.n)>48||!Array.isArray(g.TI)||typeof g.x!=="function")return;
   const minimum=4,alle=bestaandeUurLabels(svg,g),fallback=alle.filter(el=>el.hasAttribute("data-mobile-hour-axis")),canoniek=alle.filter(el=>!el.hasAttribute("data-mobile-hour-axis"));
-  /* Zodra de gewone as later alsnog verschijnt, ruimt deze vangnetlaag haar
-     eigen labels weer op. Zo kan een late Safari-layout nooit dubbele tijden
-     achterlaten. */
   if(canoniek.length>=minimum){fallback.forEach(el=>el.remove());return;}
   if(alle.length>=minimum)return;
   const posities=alle.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite);
@@ -92,13 +109,26 @@ function planUurAsHerstel(){
   const start=()=>{
     const r1=()=>{const r2=()=>voer();if(typeof requestAnimationFrame==="function")requestAnimationFrame(r2);else setTimeout(r2,0);};
     if(typeof requestAnimationFrame==="function")requestAnimationFrame(r1);else setTimeout(r1,0);
-    /* Bounded retries vangen de Safari-volgorde af waarin fonts, SVG-viewBox en
-       collisionpolish niet in dezelfde frame klaar zijn. De token voorkomt dat
-       een oudere render nog labels toevoegt nadat de gebruiker van dag wisselt. */
     setTimeout(voer,120);setTimeout(voer,350);
   };
   const fonts=document.fonts&&document.fonts.ready;
   if(fonts&&typeof fonts.then==="function")fonts.then(start).catch(start);else start();
+}
+
+function polishNuLabel(){
+  const svg=document.getElementById("chart");if(!svg)return;
+  const teksten=[...svg.querySelectorAll("text")],nu=teksten.find(el=>/^nu(?:\s|$)/i.test(String(el.textContent||"").trim()));
+  if(!nu||typeof nu.getBBox!=="function")return;
+  nu.removeAttribute("data-now-collision-adjusted");nu.removeAttribute("dy");
+  let vak;try{vak=nu.getBBox();}catch(_){return;}
+  const temperatuurLabels=teksten.filter(el=>el!==nu&&/^-?\d+(?:[.,]\d+)?°$/.test(String(el.textContent||"").trim())&&typeof el.getBBox==="function");
+  const botst=temperatuurLabels.some(el=>{try{return rechthoekenBotsen(vak,el.getBBox(),3);}catch(_){return false;}});
+  if(botst){nu.setAttribute("dy","12");nu.setAttribute("data-now-collision-adjusted","1");}
+}
+let nuPolishToken=0;
+function planNuLabelPolish(){
+  const token=++nuPolishToken,voer=()=>{if(token===nuPolishToken)polishNuLabel();};
+  if(typeof requestAnimationFrame==="function")requestAnimationFrame(()=>requestAnimationFrame(voer));else setTimeout(voer,0);
 }
 
 function werkNeerslagSleutelBij(){
@@ -119,30 +149,41 @@ function werkStatKoppenBij(){
   const gust=document.getElementById("gust"),stat=gust&&gust.closest(".stat"),kop=stat&&stat.querySelector(".eyebrow");
   if(kop)kop.textContent="Windstoot rond nu";
 }
+function resourceEntries(){
+  try{return typeof performance!=="undefined"&&typeof performance.getEntriesByType==="function"?performance.getEntriesByType("resource"):[];}catch(_){return [];}
+}
 function werkBronnenBij(){
   const bron=document.querySelector("footer .bron-bronnen");if(!bron)return;
   const label=bron.querySelector(".bronlabel");if(label)label.textContent="Bronnen voor deze weergave";
-  const keuze=waarschuwingBronnenVoorLand(S.land);
+  const gebruik=bronGebruikUitResources(resourceEntries(),S.land,{forecastBeschikbaar:!!S.d,airBeschikbaar:false});
   [...bron.querySelectorAll(".bronitem")].forEach(item=>{
-    const naam=String(item.textContent||"").trim();
-    if(naam==="MeteoAlarm")item.hidden=!keuze.meteoalarm;
-    else if(naam==="National Weather Service")item.hidden=!keuze.nws;
+    const naam=String(item.textContent||"").replace(/\s+/g," ").trim();
+    let actief=true;
+    if(naam==="Open-Meteo")actief=gebruik.openmeteo;
+    else if(naam==="CAMS")actief=gebruik.cams;
+    else if(naam==="MeteoAlarm")actief=gebruik.meteoalarm;
+    else if(naam==="National Weather Service")actief=gebruik.nws;
+    else if(naam==="BigDataCloud")actief=gebruik.bigdatacloud;
+    else if(/OpenStreetMap/i.test(naam))actief=gebruik.osm;
+    else if(naam==="KNMI")actief=gebruik.knmi;
+    item.hidden=!actief;
   });
 }
-function werkMobieleContextBij(){werkNeerslagSleutelBij();werkStatKoppenBij();werkBronnenBij();}
+function werkContextBij(){werkNeerslagSleutelBij();werkStatKoppenBij();werkBronnenBij();}
+function naRender(basis,nawerk){
+  return function(){const r=basis.apply(this,arguments);nawerk();return r;};
+}
 
 if(typeof etmaal==="function"){
-  const grafiekBasisMobieleUX=etmaal;
-  etmaal=function(){const r=grafiekBasisMobieleUX.apply(this,arguments);planUurAsHerstel();return r;};
+  etmaal=naRender(etmaal,()=>{planUurAsHerstel();planNuLabelPolish();});
 }
 if(typeof meters==="function"){
-  const metersBasisMobieleUX=meters;
-  meters=function(){const r=metersBasisMobieleUX.apply(this,arguments);werkNeerslagSleutelBij();werkStatKoppenBij();werkBronnenBij();return r;};
+  meters=naRender(meters,werkContextBij);
 }
 if(typeof lucht==="function"){
-  const luchtBasisMobieleUX=lucht;
-  lucht=function(){const r=luchtBasisMobieleUX.apply(this,arguments);werkBronnenBij();return r;};
+  lucht=naRender(lucht,werkBronnenBij);
 }
-werkMobieleContextBij();planUurAsHerstel();
+werkContextBij();planUurAsHerstel();planNuLabelPolish();
+setTimeout(werkBronnenBij,450);setTimeout(werkBronnenBij,1400);
 
 })(typeof globalThis!=="undefined"?globalThis:this);
