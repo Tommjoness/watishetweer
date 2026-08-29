@@ -15,7 +15,10 @@ for(const vereist of [
   "function ruimWeekNeerslagNotitiesOp(){",
   'days.querySelectorAll(".row.day:not(.kop)").forEach(rij=>{',
   'rij.classList.remove("heeft-neerslagnotitie")',
-  'rij.removeAttribute("aria-describedby")',
+  'const ids=(rij.getAttribute("aria-describedby")||"").split(/\\s+/).filter(Boolean);',
+  'const over=ids.filter(id=>!id.startsWith("dag-neerslagnotitie-"));',
+  'if(over.length)rij.setAttribute("aria-describedby",over.join(" "));',
+  'else rij.removeAttribute("aria-describedby");',
   'const uitleg=document.getElementById("dagenneerslaguitleg");',
   'const basisDagenWeekForecastCompact=dagen;',
   "ruimWeekNeerslagNotitiesOp();"
@@ -32,5 +35,6 @@ const runtime=html.slice(markerStart,markerEind);
 for(const ongewenst of ["Malargüe","Amsterdam","land===","S.land","timezone","provider"]){
   assert(!runtime.includes(ongewenst),"compacte weekcleanup mag niet locatie/provider-specifiek zijn: "+ongewenst);
 }
+assert(!/rij\.classList\.remove\("heeft-neerslagnotitie"\);\s*rij\.removeAttribute\("aria-describedby"\);/.test(runtime),"compacte weekcleanup mag aria-describedby niet direct na de class-cleanup onvoorwaardelijk wissen");
 
-console.log("Compacte weekverwachting artifactcontract groen: globale late cleanupowner aanwezig zonder extra npm-browserdependency.");
+console.log("Compacte weekverwachting artifactcontract groen: eigen neerslag-aria verdwijnt, overige beschrijvingen blijven behouden.");
