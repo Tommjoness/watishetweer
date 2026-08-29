@@ -101,6 +101,8 @@ async function controleer(browserType,naam){
         textTransform:getComputedStyle(plaats).textTransform,
         dag:zichtbaarTekst(eerste.querySelector(".dname")),
         neerslag:drain.innerText.replace(/\s+/g," ").trim(),
+        neerslagRijen:rijen.slice(0,4).map(r=>(r.querySelector(".drain")?.innerText||"").replace(/\s+/g," ").trim()),
+        dagenTekst:(document.getElementById("days").innerText||"").replace(/\s+/g," ").trim(),
         dagenHint:(document.getElementById("dagenhint").textContent||"").trim(),
         losseUitleg:!!document.getElementById("dagenneerslaguitleg"),
         notities,
@@ -115,13 +117,14 @@ async function controleer(browserType,naam){
     assert.equal(voor.textTransform,"none",`${naam}: locatie erft geen uppercase h2-stijl`);
     assert.equal(voor.dag,"Vandaag",`${naam}: eerste lokale kalenderdag heet op mobiel Vandaag`);
     assert(/6%/.test(voor.neerslag)&&/0,0 mm/.test(voor.neerslag),`${naam}: 6% en bekende 0,0 mm staan samen zichtbaar (${voor.neerslag})`);
+    assert(/42%/.test(voor.neerslagRijen[1])&&/88%/.test(voor.neerslagRijen[2])&&/75%/.test(voor.neerslagRijen[3]),`${naam}: neerslagkansen van bijzondere vervolgdagen blijven in de tabel zichtbaar (${voor.neerslagRijen.join(" | ")})`);
     assert.equal(voor.dagenHint,"Kies een dag om die verwachting in de grafiek te bekijken.",`${naam}: weekbedieningshint blijft een korte instructie (${voor.dagenHint})`);
     assert.equal(voor.losseUitleg,false,`${naam}: de oude algemene neerslaguitleg staat niet meer los boven de tabel`);
-    assert(voor.notities.some(t=>/Vandaag · 6% kans met 0,0 mm/i.test(t)&&/hoogste neerslagkans in één uur/i.test(t)&&/één decimaal/i.test(t)),`${naam}: 6% + 0,0 mm wordt aan Vandaag gekoppeld en correct geduid`);
-    assert(voor.notities.some(t=>/42%.*spoorhoeveelheid/i.test(t)),`${naam}: amper meetbare hoeveelheid gebruikt spoor en geen <0,05`);
-    assert(voor.notities.some(t=>/88%.*<0,05 mm/i.test(t)),`${naam}: echte 0,049-mm dagsom krijgt <0,05 bij de juiste dag`);
-    assert(!voor.notities.some(t=>/75%.*<0,05 mm/i.test(t)),`${naam}: exact 0,05 mm krijgt niet ten onrechte <0,05`);
-    assert(voor.describedBy.slice(0,3).every(Boolean),`${naam}: bijzondere dagrijen zijn toegankelijk aan hun eigen toelichting gekoppeld`);
+    assert.deepEqual(voor.notities,[],`${naam}: lange daggebonden neerslagnotities zijn volledig uit de weektabel verwijderd`);
+    assert(voor.describedBy.every(v=>v===null),`${naam}: verwijderde dagnotities laten geen aria-describedby-koppelingen achter`);
+    for(const technisch of ["hoogste neerslagkans in één uur","berekende dagsom","verschillende modelwaarden","één op één samen te vallen"]){
+      assert(!voor.dagenTekst.toLowerCase().includes(technisch.toLowerCase()),`${naam}: technische weekuitleg blijft verborgen: ${technisch}`);
+    }
     assert(voor.pressed.every(v=>v==="false"),`${naam}: vóór selectie is geen dag als actief aangekondigd`);
     assert.ok(voor.tempLabels>=4,`${naam}: etmaalgrafiek toont meer dan alleen minimum en maximum (${voor.tempLabels})`);
     assert.ok(await telUurAs(page)>=4,`${naam}: eerste mobiele render toont minimaal vier gewone tijdlabels`);
@@ -146,7 +149,7 @@ async function controleer(browserType,naam){
     assert(/Kans op neerslag:\s*6%/i.test(na.hint)&&/verwachte hoeveelheid:\s*0,0 mm/i.test(na.hint),`${naam}: aangeklikte dag toont kans én hoeveelheid (${na.hint})`);
     assert(na.geselecteerd,`${naam}: aangeklikte dag blijft geselecteerd`);
     assert.equal(na.pressed,"true",`${naam}: geselecteerde dag wordt ook semantisch als actief aangekondigd`);
-    assert(/^dag-neerslagnotitie-0$/.test(na.beschreven),`${naam}: geselecteerde dag blijft aan zijn eigen neerslagnotitie gekoppeld`);
+    assert.equal(na.beschreven,"",`${naam}: geselecteerde dag verwijst niet meer naar een verwijderde lange neerslagnotitie`);
     await context.close();
   }finally{await browser.close();}
 }
@@ -156,6 +159,6 @@ async function controleer(browserType,naam){
   try{
     await controleer(chromium,"Chromium");
     await controleer(webkit,"WebKit");
-    console.log("Mobiele feedback 26-08 groen: daggebonden neerslagnuance, mobiele tijdas op eerste render en dagwissel, actieve dagstate en grafieklabels in Chromium/WebKit.");
+    console.log("Mobiele feedback 26-08 groen: compacte weektabel zonder lange technische notities, zichtbare neerslagwaarden, mobiele tijdas, actieve dagstate en grafieklabels in Chromium/WebKit.");
   }finally{server.close();}
 })().catch(err=>{console.error(err);process.exit(1);});
