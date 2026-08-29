@@ -40,6 +40,25 @@ if(!html.includes(PRODUCT_CSS_MARK)){
   html=html.replace("</head>",css+"</head>");
 }
 
+/* Intermitterende mobiele PageSpeed-runs lieten 0,528 CLS zien op main#app.
+   De oorzaak is de oude display:none -> display:block-overgang: de complete
+   hoofdstructuur heeft vóór de eerste weerresponse geen layoutbox en verschijnt
+   daarna in één keer. Reserveer de bestaande statische hoofdstructuur daarom
+   vanaf de eerste paint met visibility:hidden. De render vult diezelfde boxes
+   terwijl ze onzichtbaar zijn en onthult ze pas ná tekenAlles(); zo verandert
+   de zichtbaarheid zonder het hele hoofdblok opnieuw in de documentflow te
+   plaatsen. Playwright/Lighthouse beschouwen visibility:hidden nog steeds als
+   niet-zichtbaar, dus bestaande readiness-waits blijven correct. */
+const APP_OUD='<div id="app" style="display:none">';
+const APP_NIEUW='<div id="app" style="visibility:hidden">';
+const appAantal=html.split(APP_OUD).length-1;
+if(appAantal!==1)throw new Error("App-startanker ontbreekt of is dubbel: "+appAantal);
+html=html.replace(APP_OUD,APP_NIEUW);
+const APP_REVEAL_OUD='document.getElementById("app").style.display="block";';
+const appRevealAantal=html.split(APP_REVEAL_OUD).length-1;
+if(appRevealAantal!==2)throw new Error("App-revealanker verwacht exact twee keer, gevonden: "+appRevealAantal);
+html=html.split(APP_REVEAL_OUD).join('document.getElementById("app").style.visibility="visible";');
+
 const productRuntime=fs.readFileSync(path.join(__dirname,"final-product-truth-20260828.js"),"utf8");
 const PRODUCT_JS_MARK="/* ===== FINAL PRODUCT TRUTH 20260828 ===== */";
 const marker="/* ===== LCP FINAL MILE 20260828 ===== */";
@@ -61,8 +80,10 @@ if(oud.test(html)){
 if(!html.includes(marker))throw new Error("LCP-marker ontbreekt na patch.");
 if(!html.includes(PRODUCT_JS_MARK))throw new Error("Final-product-truth runtime ontbreekt na patch.");
 if(oud.test(html))throw new Error("Oude monolithische tekenAlles-renderroute is blijven staan.");
+if(html.includes(APP_OUD))throw new Error("main#app staat nog op display:none in de finale artifact.");
+if(html.includes(APP_REVEAL_OUD))throw new Error("main#app wordt nog via display:block onthuld.");
 if((html.match(/rel=\"preconnect\" href=\"https:\/\/api\.open-meteo\.com\"/g)||[]).length!==1)throw new Error("Forecast-preconnect moet exact één keer aanwezig zijn.");
 if((html.match(/rel=\"dns-prefetch\" href=\"\/\/api\.open-meteo\.com\"/g)||[]).length!==1)throw new Error("Forecast DNS-prefetch moet exact één keer aanwezig zijn.");
 
 fs.writeFileSync(bestand,html);
-console.log("LCP final-mile toegepast: forecast preconnect + DNS fallback, wolkenlagen, CLS-stabiele plaatsnav, vroegere mobiele briefing en finale consumentencopy.");
+console.log("LCP final-mile toegepast: forecast preconnect + DNS fallback, wolkenlagen, geometrisch gereserveerde hoofdstructuur, CLS-stabiele plaatsnav, vroegere mobiele briefing en finale consumentencopy.");
