@@ -15,6 +15,16 @@ const fixtureAir={current:{european_aqi:24,us_aqi:40},hourly:{time:[fixtureData.
 const fetchStub=`<script>
 const BROWSER_FIXTURE=${JSON.stringify(fixtureData)};
 const BROWSER_AIR=${JSON.stringify(fixtureAir)};
+const BROWSER_NATIVE_DATE=Date;
+const BROWSER_NATIVE_START=BROWSER_NATIVE_DATE.now();
+const BROWSER_FIXTURE_START=BROWSER_NATIVE_DATE.parse('2026-07-22T12:30:00Z');
+class BrowserFixtureDate extends BROWSER_NATIVE_DATE{
+  constructor(...args){
+    super(...(args.length?args:[BROWSER_FIXTURE_START+(BROWSER_NATIVE_DATE.now()-BROWSER_NATIVE_START)]));
+  }
+  static now(){return BROWSER_FIXTURE_START+(BROWSER_NATIVE_DATE.now()-BROWSER_NATIVE_START);}
+}
+window.Date=BrowserFixtureDate;
 window.fetch=async function(url){
   const u=String(url);
   const payload=u.includes('/api/waarschuwingen')?{bron:'test',dekking:true,land:'NL',lijst:[]}
