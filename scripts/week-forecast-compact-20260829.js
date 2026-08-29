@@ -3,8 +3,9 @@
  * Kans en hoeveelheid blijven zichtbaar in de bestaande Neerslag-kolom. De
  * lange daggebonden uitleg herhaalde die waarden en maakte de weektabel vooral
  * op desktop onnodig hoog. Deze laatste presentatie-owner verwijdert uitsluitend
- * die verklarende notities en hun aria-koppeling. Weerdata, daghorizon,
- * neerslagkans, hoeveelheid, tooltips en dagselectie blijven onaangeraakt.
+ * die verklarende notities en hun eigen aria-koppeling. Andere aria-describedby-
+ * doelen op de dagrij blijven intact. Weerdata, daghorizon, neerslagkans,
+ * hoeveelheid, tooltips en dagselectie blijven onaangeraakt.
  */
 (function(root){
 "use strict";
@@ -17,7 +18,10 @@ function ruimWeekNeerslagNotitiesOp(){
   notities.forEach(el=>el.remove());
   days.querySelectorAll(".row.day:not(.kop)").forEach(rij=>{
     rij.classList.remove("heeft-neerslagnotitie");
-    rij.removeAttribute("aria-describedby");
+    const ids=(rij.getAttribute("aria-describedby")||"").split(/\s+/).filter(Boolean);
+    const over=ids.filter(id=>!id.startsWith("dag-neerslagnotitie-"));
+    if(over.length)rij.setAttribute("aria-describedby",over.join(" "));
+    else rij.removeAttribute("aria-describedby");
   });
   const uitleg=document.getElementById("dagenneerslaguitleg");
   if(uitleg)uitleg.remove();
