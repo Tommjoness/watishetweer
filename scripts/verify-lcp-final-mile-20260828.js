@@ -19,6 +19,23 @@ assert.ok(html.includes("cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover
 assert.ok(html.includes('.seo-plaatsnav{visibility:hidden}.seo-plaatsnav.weer-klaar{visibility:visible}'),"plaatsnav blijft geometrisch aanwezig maar onzichtbaar tijdens frame-opbouw");
 assert.ok(html.includes('<noscript><style>.seo-plaatsnav{visibility:visible!important}</style></noscript>'),"plaatsnav blijft zonder JavaScript zichtbaar");
 
+/* De volledige hoofdstructuur moet vanaf first paint een layoutbox hebben.
+   display:none -> display:block veroorzaakte in intermitterende mobiele PSI-runs
+   0,528 CLS op main#app. Controleer het unieke main-landmark semantisch zodat
+   aanvullende attributen of attribuutvolgorde het contract niet fragiel maken. */
+const mainApp=[...html.matchAll(/<main\b[^>]*\bid=(['"])app\1[^>]*>/gi)];
+assert.equal(mainApp.length,1,"finale artifact moet exact één main#app-landmark bevatten");
+const mainOpening=mainApp[0][0];
+const styleMatch=/\bstyle=(['"])(.*?)\1/i.exec(mainOpening);
+assert.ok(styleMatch,"main#app moet een expliciete inline initial-state hebben");
+assert.ok(/(^|;)\s*visibility\s*:\s*hidden\s*(?=;|$)/i.test(styleMatch[2]),"main#app reserveert vanaf first paint geometrie via visibility:hidden");
+assert.ok(!/(^|;)\s*display\s*:\s*none\s*(?=;|$)/i.test(styleMatch[2]),"main#app mag niet meer volledig uit de documentflow verdwijnen");
+const appReveal='Object.assign(document.getElementById("app").style,{display:"block",visibility:"visible"});';
+assert.equal(html.split(appReveal).length-1,2,"succes- en cachefallback herstellen dezelfde gereserveerde hoofdstructuur inclusief locatiewissel-displaystate");
+assert.ok(!html.includes('document.getElementById("app").style.display="block";'),"oude kale app-reveal mag niet terugkomen");
+assert.ok(html.includes('progressievePreviewToegestaan(stil,wissel,dataVoorLoad)'),"progressieve preview heeft een expliciete cold-loadgate");
+assert.ok(html.includes('return !stil&&!!wissel&&!!dataVoorLoad;'),"eerste cold load mag geen progressieve display-toggle starten");
+
 assert.ok(html.includes('matchMedia("(max-width: 900px)").matches'),"frame-splitsing is expliciet beperkt tot de gemeten mobiele route");
 assert.ok(html.includes("let nietKritiekeRenderToken=0;"),"verouderde deferred render wordt tokenmatig ongeldig gemaakt bij een nieuwe render");
 assert.ok(html.includes("let mobieleLuchtRenderUitgesteld=false;"),"mobiele luchtkwaliteit heeft een expliciete deferred-rendergate");
@@ -52,4 +69,4 @@ assert.ok(html.includes('el.setAttribute("role","img")'),"maanindicatoren krijge
 assert.ok(html.includes('el.getAttribute("aria-label")||el.getAttribute("title")'),"maanindicator behoudt of hergebruikt zijn beschrijvende toegankelijke naam");
 assert.ok(/basisNachtenFinalTruth=nachten;[\s\S]*?veilig\(pasMaanToegankelijkheidToe\)/.test(html),"maansemantiek wordt na iedere Nachtzicht-render opnieuw toegepast");
 
-console.log("LCP/finale productwaarheid 20260828: wolkenlagen, temperatuurtrend, briefing, UV, zonuren, daglengte, neerslagsemantiek, onweermodaliteit, CLS-stabiele plaatsnav, toegankelijke maaniconen en mobiele briefingpaint geborgd.");
+console.log("LCP/finale productwaarheid 20260828: wolkenlagen, temperatuurtrend, briefing, UV, zonuren, daglengte, neerslagsemantiek, onweermodaliteit, semantisch geverifieerd geometrisch main#app, cold-loadgate, CLS-stabiele plaatsnav, toegankelijke maaniconen en mobiele briefingpaint geborgd.");

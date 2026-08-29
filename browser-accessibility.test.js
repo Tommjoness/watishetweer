@@ -31,7 +31,14 @@ async function controleer(browserType,naam){
     await page.goto("http://127.0.0.1:"+server.address().port+"/",{waitUntil:"domcontentloaded"});
     const resultaat=await page.evaluate(()=>{
       const app=document.getElementById("app");
-      if(app)app.style.setProperty("display","block","important");
+      /* main#app is na de CLS-hardening vanaf first paint geometrisch aanwezig
+         maar bewust visibility:hidden. Deze accessibilitytest meet geen dataload;
+         zet daarom exact de canonieke zichtbare eindstate terug in plaats van
+         alleen het historische display:block te forceren. */
+      if(app){
+        app.style.setProperty("display","block","important");
+        app.style.setProperty("visibility","visible","important");
+      }
       const footer=document.querySelector("footer");
       if(footer)footer.style.setProperty("display","flex","important");
       const mains=[...document.querySelectorAll("main")];
@@ -48,12 +55,10 @@ async function controleer(browserType,naam){
         return {tekst:(el.textContent||"").trim(),hoogte:r.height,breedte:r.width,verborgenDoor};
       };
       /* Dit is bewust een layoutcontract op het definitieve artifact, niet een
-         dataloadtest. #app en footer starten cold-load verborgen en worden hier
-         alleen voor de meting in hun normale zichtbare display gezet. Een
-         gesloten details verbergt descendant-links terecht met 0x0; meet eerst
-         de summary en daarna de links in geopende toestand. Bronlinks die door
-         de locatiebewuste bronfilter bewust hidden zijn, zijn geen tapdoelen en
-         horen daarom niet aan de minimale hitbox-eis te worden getoetst. */
+         dataloadtest. Een gesloten details verbergt descendant-links terecht
+         met 0x0; meet eerst de summary en daarna de links in geopende toestand.
+         Bronlinks die door de locatiebewuste bronfilter bewust hidden zijn, zijn
+         geen tapdoelen en horen niet aan de minimale hitbox-eis te worden getoetst. */
       const summaries=[...document.querySelectorAll("footer details summary")].map(meetDoel);
       [...document.querySelectorAll("footer details")].forEach(el=>{el.open=true;});
       const alleLinks=[...document.querySelectorAll("footer a")].map(meetDoel);
@@ -65,6 +70,8 @@ async function controleer(browserType,naam){
         plaatsTag:document.getElementById("place")?.tagName||null,
         footerDisplay:footer&&getComputedStyle(footer).display,
         doelen:[...summaries,...links],
+        summaryTeksten:summaries.map(doel=>doel.tekst.replace(/\s+/g," ").trim()),
+        footerKinderen:footer?[...footer.children].map(el=>({tag:el.tagName,klasse:typeof el.className==="string"?el.className:"",tekst:(el.textContent||"").replace(/\s+/g," ").trim(),hidden:el.hidden,display:getComputedStyle(el).display,visibility:getComputedStyle(el).visibility})):[],
         verborgenFooterLinks:alleLinks.filter(doel=>!!doel.verborgenDoor).map(doel=>doel.tekst),
         maanAria:[...document.querySelectorAll(".maanbij")].map(el=>el.getAttribute("aria-label")),
         grafiekKop:(document.querySelector(".chartkop h2")?.textContent||"").trim(),
@@ -78,14 +85,15 @@ async function controleer(browserType,naam){
     assert.equal(resultaat.plaatsTag,"H2",naam+": de zichtbare plaatsnaam is geen native sectiekop");
     assert.equal(resultaat.footerDisplay,"flex",naam+": footer staat in zichtbare layoutstate");
     const footerTeksten=resultaat.doelen.map(doel=>doel.tekst.replace(/\s+/g," ").trim());
-    assert.ok(resultaat.doelen.length>=3,naam+": vaste footerdoelen ontbreken naast dynamisch gefilterde bronlinks: "+JSON.stringify(footerTeksten));
-    assert.ok(footerTeksten.some(t=>t==="Open-Meteo"),naam+": kernbron Open-Meteo is niet zichtbaar");
-    assert.ok(footerTeksten.some(t=>/Privacy & gegevens/i.test(t)),naam+": privacydoel is niet zichtbaar");
-    assert.ok(footerTeksten.some(t=>/Technische locatiegegevens/i.test(t)),naam+": technische locatiegegevens zijn niet zichtbaar");
-    assert.ok(resultaat.doelen.every(doel=>!doel.verborgenDoor),naam+": verborgen bronlink telt ten onrechte als interactief footerdoel");
+    const footerDebug="; summaries="+JSON.stringify(resultaat.summaryTeksten)+"; kinderen="+JSON.stringify(resultaat.footerKinderen)+"; verborgenLinks="+JSON.stringify(resultaat.verborgenFooterLinks);
+    assert.ok(resultaat.doelen.length>=3,naam+": vaste footerdoelen ontbreken naast dynamisch gefilterde bronlinks: "+JSON.stringify(footerTeksten)+footerDebug);
+    assert.ok(footerTeksten.some(t=>t==="Open-Meteo"),naam+": kernbron Open-Meteo is niet zichtbaar"+footerDebug);
+    assert.ok(footerTeksten.some(t=>/Privacy & gegevens/i.test(t)),naam+": privacydoel is niet zichtbaar"+footerDebug);
+    assert.ok(footerTeksten.some(t=>/Technische locatiegegevens/i.test(t)),naam+": technische locatiegegevens zijn niet zichtbaar"+footerDebug);
+    assert.ok(resultaat.doelen.every(doel=>!doel.verborgenDoor),naam+": verborgen bronlink telt ten onrechte als interactief footerdoel"+footerDebug);
     resultaat.doelen.forEach(doel=>{
-      assert.ok(doel.hoogte>=43.5,naam+": footerdoel '"+doel.tekst+"' is "+doel.hoogte+"px hoog");
-      assert.ok(doel.breedte>0,naam+": footerdoel '"+doel.tekst+"' heeft geen breedte");
+      assert.ok(doel.hoogte>=43.5,naam+": footerdoel '"+doel.tekst+"' is "+doel.hoogte+"px hoog"+footerDebug);
+      assert.ok(doel.breedte>0,naam+": footerdoel '"+doel.tekst+"' heeft geen breedte"+footerDebug);
     });
     assert.ok(resultaat.maanAria.every(v=>v===null),naam+": .maanbij krijgt geen dubbel aria-label");
     assert.equal(resultaat.grafiekKop,"Het etmaal",naam+": grafiekheading bevat meer dan de sectietitel");

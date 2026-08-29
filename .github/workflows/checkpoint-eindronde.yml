@@ -27,6 +27,8 @@ jobs:
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
       - name: Pure en buildregressies
         run: npm test
+      - name: Mobiele cold-load CLS-budget op finale postbuild-artifact
+        run: node browser-mobile-cls-budget.test.js
       - name: Staff-audit interacties in Chromium en WebKit
         shell: bash
         run: |

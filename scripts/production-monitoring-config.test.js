@@ -9,6 +9,7 @@ const workflow=fs.readFileSync(path.join(root,".github","workflows","production-
 const smoke=fs.readFileSync(path.join(root,"scripts","production-smoke.js"),"utf8");
 const wereldwijd=fs.readFileSync(path.join(root,"scripts","production-worldwide-browser.js"),"utf8");
 const performance=fs.readFileSync(path.join(root,"scripts","production-live-performance-browser.js"),"utf8");
+const cls=fs.readFileSync(path.join(root,"scripts","production-mobile-cls-browser.js"),"utf8");
 const sitemapContract=require("./production-sitemap-contract.js");
 
 assert(/push:\s*\n\s*branches:\s*\[main\]/.test(workflow),"production-smoke moet na merges/pushes naar main draaien");
@@ -20,20 +21,18 @@ assert(workflow.includes("mcr.microsoft.com/playwright:v1.62.1-noble"),"producti
 assert(workflow.includes("node scripts/production-worldwide-browser.js"),"workflow mist de wereldwijde browsermonitor");
 assert(workflow.includes("node scripts/production-staff-audit-browser.js"),"workflow mist de interactieve staff-auditmonitor");
 assert(workflow.includes("node scripts/production-live-performance-browser.js"),"workflow mist de live Chromium/WebKit-performancemonitor");
+assert(workflow.includes("node scripts/production-mobile-cls-browser.js"),"workflow mist de mobiele CLS-productiemonitor");
 assert(workflow.includes("node scripts/production-sitemap-contract.js"),"workflow mist het exacte live sitemapcontract");
 
-/* De wereldmonitor blijft de echte live providerintegratie-gate; de staff-audit
-   gebruikt sinds de interactiefixture deterministische data voor frontendgedrag.
-   Houd die verantwoordelijkheden ook op workflowniveau apart: eerst bewijst één
-   job de exacte deployment en API-contracten, daarna draaien live provider-QA en
-   deterministische interactie-QA parallel op eigen runners. Zo is een fout direct
-   aan het juiste domein toe te schrijven en beïnvloeden browserworkloads elkaar
-   niet onnodig. */
+/* Iedere browsermonitor start pas nadat exact dezelfde SHA aantoonbaar live is.
+   De CLS-monitor is bewust een eigen job: vijf koude loads mogen niet worden
+   beïnvloed door de zware wereld-/staff-/performancetests op dezelfde runner. */
 assert(/^  production-contract:/m.test(workflow),"production-smoke mist aparte deployment/API-contractjob");
 assert(/^  wereldwijd-browser:/m.test(workflow),"production-smoke mist aparte wereldwijde browserjob");
 assert(/^  staff-audit-browser:/m.test(workflow),"production-smoke mist aparte staff-audit browserjob");
 assert(/^  live-performance-browser:/m.test(workflow),"production-smoke mist aparte live-performancejob");
-assert.equal((workflow.match(/^    needs: production-contract$/gm)||[]).length,3,"alle drie browserjobs moeten pas na het exacte productiecontract starten");
+assert(/^  mobile-cls-browser:/m.test(workflow),"production-smoke mist aparte mobiele CLS-job");
+assert.equal((workflow.match(/^    needs: production-contract$/gm)||[]).length,4,"alle vier browserjobs moeten pas na het exacte productiecontract starten");
 
 assert(smoke.includes("AbortSignal.timeout(timeoutMs)"),"production-smoke requests moeten een harde timeout hebben");
 assert(smoke.includes("const maxPogingen=opt.retry===false?1:2"),"production-smoke mag per request maximaal één retry doen");
@@ -67,6 +66,13 @@ assert(performance.includes("previewForecasts.length<=1"),"live performancemonit
 assert(performance.includes("mislukteVolledige.length,0"),"live performancemonitor onderscheidt een afgebroken preview niet van een mislukte volledige forecast");
 assert(performance.includes("beacons.length,0"),"live performancemonitor bewaakt Cloudflare beaconinjectie niet");
 
+assert(cls.includes("const RONDEN=5"),"productie-CLS-monitor moet vijf koude runs doen");
+assert(cls.includes("const CLS_BUDGET=0.1"),"productie-CLS-monitor moet onder 0,1 afdwingen");
+assert(cls.includes('type:"layout-shift"'),"productie-CLS-monitor moet echte LayoutShift-entries meten");
+assert(cls.includes("meting.finalScrollY,meting.initialScrollY"),"productie-CLS-monitor moet spontane initiële scroll bewaken");
+assert(cls.includes("meting.sha,verwacht"),"productie-CLS-monitor moet de exacte live SHA bewaken");
+assert(cls.includes("await page.waitForTimeout(8000)"),"productie-CLS-monitor moet late waarschuwing/fallbackmutaties meenemen");
+
 require("./production-source-truth.test.js");
 
-console.log("production-monitoring-config: gescheiden live en deterministische browserjobs + strikt sitemapcontract OK");
+console.log("production-monitoring-config: deploymentcontract, vier gescheiden browsergates, mobiele CLS en strikt sitemapcontract OK");

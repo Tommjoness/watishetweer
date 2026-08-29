@@ -236,10 +236,26 @@ async function geenCacheFout(browser,naam){
   try{
     await page.goto(`http://127.0.0.1:${server.address().port}/?mode=fail&failboot=1&lat=1.23&lon=2.34&plaats=GeenCache&land=XX`,{waitUntil:"domcontentloaded"});
     await page.waitForFunction(()=>/Ophalen mislukt/i.test(document.getElementById('state').textContent));
-    const r=await page.evaluate(()=>({state:document.getElementById('state').textContent,klasse:document.getElementById('state').className,app:getComputedStyle(document.getElementById('app')).display}));
+    const r=await page.evaluate(()=>{
+      const app=document.getElementById('app'),state=document.getElementById('state');
+      const appStijl=getComputedStyle(app),stateStijl=getComputedStyle(state);
+      return {
+        state:state.textContent,
+        klasse:state.className,
+        appDisplay:appStijl.display,
+        appVisibility:appStijl.visibility,
+        stateDisplay:stateStijl.display,
+        stateVisibility:stateStijl.visibility,
+        heeftData:!!(typeof S!=='undefined'&&S.d)
+      };
+    });
     assert(/Ophalen mislukt/i.test(r.state),naam+": totale forecastfout zonder cache geeft duidelijke melding");
     assert(/err/.test(r.klasse),naam+": fout zonder cache krijgt foutstatus");
-    assert.equal(r.app,'none',naam+": zonder geldige data wordt geen lege/stale app getoond");
+    assert.notEqual(r.appDisplay,'none',naam+": CLS-layout reserveert de app ook zonder geldige data");
+    assert.equal(r.appVisibility,'hidden',naam+": zonder geldige data blijft de gereserveerde app visueel verborgen");
+    assert.equal(r.heeftData,false,naam+": fout zonder cache mag geen geldige of stale S.d bevatten");
+    assert.notEqual(r.stateDisplay,'none',naam+": foutmelding zonder cache blijft in de layout zichtbaar");
+    assert.equal(r.stateVisibility,'visible',naam+": foutmelding zonder cache blijft visueel zichtbaar");
     assert.deepEqual(fouten,[],naam+": foutpad zonder cache veroorzaakt geen runtime/consolefout");
   }finally{await context.close();}
 }

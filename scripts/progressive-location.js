@@ -33,6 +33,16 @@ function normaliseerSnellePreview(data){
   };
 }
 
+/* Een current-only preview is nuttig bij een bewuste wissel vanaf een al
+   gerenderde plaats. Op de eerste cold load bestaat nog geen veilige vorige
+   forecast om tijdelijk naast de preview te houden. Daar veroorzaakte het oude
+   display:none -> display:block-pad bovendien de intermitterende 0,539 CLS in
+   mobiele PageSpeed-runs. Eerste load wacht daarom rechtstreeks op de volledige
+   forecast; latere locatiewissels behouden de bestaande snelle preview. */
+function progressievePreviewToegestaan(stil,wissel,dataVoorLoad){
+  return !stil&&!!wissel&&!!dataVoorLoad;
+}
+
 /* De basisloader vangt netwerkfouten zelf af en retourneert daarom geen aparte
    successtatus. Bij een locatiewissel kan S.d vóór de request nog de forecast
    van de vorige plaats bevatten. Alleen coords + !!S.d controleren is dan niet
@@ -50,7 +60,7 @@ function classificeerEindstate(dataVoor,huidigeData,huidigeLat,huidigeLon,doelLa
   return huidigeData===dataVoor?"oude-data-op-doel":"doeldata";
 }
 
-const api={snellePreviewUrl,normaliseerSnellePreview,classificeerEindstate,SNEL_START_VERTRAGING_MS,SNEL_TIMEOUT_MS};
+const api={snellePreviewUrl,normaliseerSnellePreview,progressievePreviewToegestaan,classificeerEindstate,SNEL_START_VERTRAGING_MS,SNEL_TIMEOUT_MS};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowProgressiveLocation=api;
 
@@ -103,8 +113,8 @@ load=async function(lat,lon,label,stil,opslaan,land){
 
   const nieuweLat=Number(lat),nieuweLon=Number(lon);
   const wissel=S.lat!==nieuweLat||S.lon!==nieuweLon;
-  const progressief=!stil&&wissel;
   const dataVoorLoad=S.d;
+  const progressief=progressievePreviewToegestaan(stil,wissel,dataVoorLoad);
   if(progressief)bereidPreviewVoor();
 
   let volledigKlaar=false,lokaleController=null,previewGetoond=false;
