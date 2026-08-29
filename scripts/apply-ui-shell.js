@@ -18,16 +18,20 @@ function vervangEen(bron,doel,label){
 
 /* De ruwe HTML bevat één crawlbare PNG-favicon voor zoekmachines. In de echte
    browser wordt exact diezelfde link na het parsen omgezet naar het bestaande
-   zon-icoon. Zo behouden we de dynamische tabweergave zonder twee concurrerende
-   rel=icon-elementen te publiceren. */
+   zon-icoon. De visuele tabicoonwissel is niet nodig voor de eerste paint en
+   draait daarom bewust in de gewone, later deferred runtime. Zo veroorzaakt
+   dit kleine cosmetische script geen synchrone early-bundle in het kritieke
+   renderpad, terwijl er nog steeds maar één rel=icon-element bestaat. */
 const faviconSvg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><g fill="none" stroke="#12211C" stroke-width="4" stroke-linecap="round"><circle cx="32" cy="32" r="11"/><path d="M32 6v8M32 50v8M6 32h8M50 32h8M13.6 13.6l5.7 5.7M44.7 44.7l5.7 5.7M50.4 13.6l-5.7 5.7M19.3 44.7l-5.7 5.7"/></g></svg>';
 const faviconHref="data:image/svg+xml,"+encodeURIComponent(faviconSvg);
 const crawlFavicon='<link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">';
 vervangEen(
   crawlFavicon,
-  '<!-- WEATHERNOW TABICOON -->\n'+crawlFavicon+'\n<script>!function(){const f=document.querySelector("link[rel=icon]");if(f)f.setAttribute("href","'+faviconHref+'")}();</script>',
+  '<!-- WEATHERNOW TABICOON -->\n'+crawlFavicon,
   "crawlbare faviconanker voor dynamisch tabicoon"
 );
+const faviconRuntime='<script>!function(){const f=document.querySelector("link[rel=icon]");if(f)f.setAttribute("href","'+faviconHref+'")}();</script>';
+vervangEen("</body>",faviconRuntime+"\n</body>","body-einde voor uitgestelde tabicoonruntime");
 
 /* De oude themaknop cyclde blind door auto -> licht -> donker -> rood. In de
    avond is auto zelf al donker, waardoor donker visueel twee keer in dezelfde
@@ -167,4 +171,4 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-she
 
 fs.writeFileSync(pad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"UI-shell");
-console.log("UI-shell toegepast: drie duidelijke weergavestanden, dark-mode contrast, weekinset en één crawlbare/dynamische favicon; serviceworker "+versie+".");
+console.log("UI-shell toegepast: drie duidelijke weergavestanden, dark-mode contrast, weekinset en één crawlbare/dynamische favicon zonder renderblokkerende early-runtime; serviceworker "+versie+".");
