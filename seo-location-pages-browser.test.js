@@ -81,10 +81,10 @@ async function controleer(type,naam){
     assert.equal(staat.search,"",`${naam}: plaatsroute lekt terug naar query-URL`);
     assert.equal(staat.canonical,"https://watishetweer.nl/weer/almere/",`${naam}: canonical wijkt af`);
     assert.equal(staat.base,basis+"/",`${naam}: baseURI staat niet op root; subpad-assets zijn dan onveilig`);
-    assert.equal(staat.title,"Weer Almere vandaag | Wat is het weer?",`${naam}: unieke titel ontbreekt`);
+    assert.equal(staat.title,"Weer Almere vandaag | watishetweer.nl",`${naam}: unieke titel ontbreekt`);
     assert(staat.context.includes("Weer in Almere")&&staat.context.includes("Flevoland")&&staat.context.includes("Plaatsen in de buurt"),`${naam}: zichtbare prerendercontext ontbreekt`);
     assert.deepEqual(staat.breadcrumb,[
-      {text:"Wat is het weer?",href:"/",current:null},
+      {text:"watishetweer.nl",href:"/",current:null},
       {text:"Weer per plaats",href:"/weer/",current:null},
       {text:"Almere",href:null,current:"page"}
     ],`${naam}: zichtbare breadcrumb wijkt af`);
@@ -94,7 +94,7 @@ async function controleer(type,naam){
     const crumbs=Array.isArray(staat.structured)?staat.structured.find(x=>x&&x["@type"]==="BreadcrumbList"):null;
     assert(crumbs&&Array.isArray(crumbs.itemListElement)&&crumbs.itemListElement.length===3,`${naam}: BreadcrumbList structured data ontbreekt`);
     assert.deepEqual(crumbs.itemListElement.map(x=>[x.position,x.name,x.item]),[
-      [1,"Wat is het weer?","https://watishetweer.nl/"],
+      [1,"watishetweer.nl","https://watishetweer.nl/"],
       [2,"Weer per plaats","https://watishetweer.nl/weer/"],
       [3,"Almere","https://watishetweer.nl/weer/almere/"]
     ],`${naam}: structured breadcrumb wijkt af van zichtbare routehiërarchie`);
@@ -131,10 +131,10 @@ async function controleer(type,naam){
     assert.equal(gedeeld.title,"Amsterdam · Wat is het weer?",`${naam}: title blijft ten onrechte in de Almere-routecontext hangen`);
     assert.equal(gedeeld.canonical,"https://watishetweer.nl/",`${naam}: canonical blijft ten onrechte de Almere-route claimen`);
     assert.equal(gedeeld.description,"Bekijk het actuele weer, neerslag voor de komende uren, de 7-daagse verwachting, luchtkwaliteit en nachtzicht voor plaatsen wereldwijd.",`${naam}: route-description wordt niet naar het algemene productcontract hersteld`);
-    assert.equal(gedeeld.ogTitle,"Weer vandaag en 7-daagse verwachting | Wat is het weer?",`${naam}: og:title blijft routegebonden`);
+    assert.equal(gedeeld.ogTitle,"Weer vandaag en 7-daagse verwachting | watishetweer.nl",`${naam}: og:title blijft routegebonden`);
     assert.equal(gedeeld.ogDescription,gedeeld.description,`${naam}: og:description wijkt na route-exit af van de algemene description`);
     assert.equal(gedeeld.ogUrl,"https://watishetweer.nl/",`${naam}: og:url blijft routegebonden`);
-    assert.deepEqual(gedeeld.structured,{"@context":"https://schema.org","@type":"WebSite",name:"Wat is het weer?",url:"https://watishetweer.nl/"},`${naam}: route-structured-data blijft na plaatswissel bestaan`);
+    assert.deepEqual(gedeeld.structured,{"@context":"https://schema.org","@type":"WebSite",name:"watishetweer.nl",url:"https://watishetweer.nl/"},`${naam}: route-structured-data blijft na plaatswissel bestaan`);
     assert.equal(gedeeld.routeActief,false,`${naam}: statische routecontext blijft intern actief na plaatswissel`);
     assert.equal(gedeeld.routeContextVerborgen,true,`${naam}: zichtbare Almere-routecontext wordt niet verborgen`);
     assert.equal(gedeeld.routeContextZichtbaar,false,`${naam}: Almere-routecontext blijft zichtbaar bij Amsterdam-weer`);
@@ -168,7 +168,7 @@ server.listen(0,"127.0.0.1",async()=>{
   try{
     await controleer(chromium,"Chromium");
     await controleer(webkit,"WebKit");
-    console.log("SEO-plaatsbrowser: Chromium + WebKit, canonieke Almere-route/titel, breadcrumbs + nabijgelegen links, fallback-deel-URL/title, root-assets, runtime, SW-scope, mobiel en /weer/-hub geslaagd.");
+    console.log("SEO-plaatsbrowser: Chromium + WebKit, merkgebonden Almere-route/titel, breadcrumbs + nabijgelegen links, fallback-deel-URL/title, root-assets, runtime, SW-scope, mobiel en /weer/-hub geslaagd.");
   }catch(e){console.error(e&&e.stack||e);process.exitCode=1;}
   finally{server.close();}
 });
