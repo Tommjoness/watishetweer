@@ -67,7 +67,28 @@ function rechthoekenBotsen(a,b,padding=0){
   return ax-p<bx+bw&&ax+aw+p>bx&&ay-p<by+bh&&ay+ah+p>by;
 }
 
-const api={uurUitIso,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen};
+/* Alleen voor de botsingsbeslissing van korte SVG-temperatuurlabels is een
+   browsergedreven getBBox()-meting onnodig duur: zo'n read kan na SVG-mutaties
+   een volledige layout flush afdwingen. Deze helper reconstrueert daarom een
+   conservatieve tekstbox uit de al bekende SVG-attributen. De schatting is
+   bewust iets ruimer dan de gangbare glyphbreedte; een zeldzame extra 12px
+   labelverschuiving is veiliger dan een gemiste visuele botsing. */
+function geschatteSvgTekstBox(tekst,x,y,anker="start",fontGrootte=12){
+  const inhoud=String(tekst||"").trim(),px=Number(x),py=Number(y),fs=Number(fontGrootte);
+  if(!inhoud||![px,py,fs].every(Number.isFinite)||fs<=0)return null;
+  const breed=Math.max(fs*.75,inhoud.length*fs*.66),hoogte=fs*1.18;
+  const a=String(anker||"start").toLowerCase();
+  const links=a==="middle"?px-breed/2:a==="end"?px-breed:px;
+  return {x:links,y:py-fs*.92,width:breed,height:hoogte};
+}
+function svgTekstBoxUitElement(el){
+  if(!el||typeof el.getAttribute!=="function")return null;
+  const x=el.getAttribute("x"),y=el.getAttribute("y"),anker=el.getAttribute("text-anchor")||"start";
+  const font=Number(el.getAttribute("font-size"));
+  return geschatteSvgTekstBox(el.textContent,x,y,anker,Number.isFinite(font)&&font>0?font:12);
+}
+
+const api={uurUitIso,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -121,11 +142,11 @@ function planUurAsHerstel(){
 function polishNuLabel(){
   const svg=document.getElementById("chart");if(!svg)return;
   const teksten=[...svg.querySelectorAll("text")],nu=teksten.find(el=>/^nu(?:\s|$)/i.test(String(el.textContent||"").trim()));
-  if(!nu||typeof nu.getBBox!=="function")return;
+  if(!nu)return;
   nu.removeAttribute("data-now-collision-adjusted");nu.removeAttribute("dy");
-  let vak;try{vak=nu.getBBox();}catch(_){return;}
-  const temperatuurLabels=teksten.filter(el=>el!==nu&&/^-?\d+(?:[.,]\d+)?°$/.test(String(el.textContent||"").trim())&&typeof el.getBBox==="function");
-  const botst=temperatuurLabels.some(el=>{try{return rechthoekenBotsen(vak,el.getBBox(),3);}catch(_){return false;}});
+  const vak=svgTekstBoxUitElement(nu);if(!vak)return;
+  const temperatuurLabels=teksten.filter(el=>el!==nu&&/^-?\d+(?:[.,]\d+)?°$/.test(String(el.textContent||"").trim()));
+  const botst=temperatuurLabels.some(el=>rechthoekenBotsen(vak,svgTekstBoxUitElement(el),3));
   if(botst){nu.setAttribute("dy","12");nu.setAttribute("data-now-collision-adjusted","1");}
 }
 let nuPolishToken=0;
