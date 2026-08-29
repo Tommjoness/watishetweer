@@ -37,7 +37,7 @@ assert.equal((workflow.match(/^    needs: production-contract$/gm)||[]).length,3
 
 assert(smoke.includes("AbortSignal.timeout(timeoutMs)"),"production-smoke requests moeten een harde timeout hebben");
 assert(smoke.includes("const maxPogingen=opt.retry===false?1:2"),"production-smoke mag per request maximaal één retry doen");
-assert(smoke.includes('redirect:\"manual\"'),"production-smoke moet de www-redirect zelf controleren");
+assert(smoke.includes('redirect:"manual"'),"production-smoke moet de www-redirect zelf controleren");
 assert(smoke.includes("/weer/dit-bestaat-niet/"),"production-smoke moet echte 404-semantiek bewaken");
 assert(smoke.includes("/api/plaatsnaam?lat=52.3508&lon=5.2647"),"production-smoke mist plaatsnaam-API-contract");
 assert(smoke.includes("/api/neerslag?lat=52.3508&lon=5.2647&land=NL"),"production-smoke mist neerslag-API-contract");
@@ -49,6 +49,9 @@ assert.equal(new Set(sitemapContract.VERWACHTE_URLS).size,sitemapContract.VERWAC
 assert(sitemapContract.VERWACHTE_URLS.includes("https://watishetweer.nl/over/"),"verwacht sitemapcontract moet /over/ bevatten");
 const testXml=`<?xml version="1.0"?><urlset>${sitemapContract.VERWACHTE_URLS.map(url=>`<url><loc>${url}</loc></url>`).join("")}</urlset>`;
 assert.deepEqual(sitemapContract.controleerSitemap(testXml),sitemapContract.VERWACHTE_URLS,"sitemapcontract moet de huidige canonieke set accepteren");
+const omgekeerd=[...sitemapContract.VERWACHTE_URLS].reverse();
+const omgekeerdXml=`<?xml version="1.0"?><urlset>${omgekeerd.map(url=>`<url><loc>${url}</loc></url>`).join("")}</urlset>`;
+assert.deepEqual(sitemapContract.controleerSitemap(omgekeerdXml),omgekeerd,"sitemapcontract mag niet onnodig van URL-volgorde afhangen");
 assert.throws(()=>sitemapContract.controleerSitemap(testXml.replace("<url><loc>https://watishetweer.nl/over/</loc></url>","")),/exact 37/,"sitemapcontract moet een ontbrekende /over/ afwijzen");
 
 for(const plek of ["Amsterdam","New York","Tokio","Sydney","Singapore","Longyearbyen"])assert(wereldwijd.includes(`naam:\"${plek}\"`),`wereldwijde monitor mist ${plek}`);
