@@ -29,6 +29,29 @@ for(const tekst of [
   "function providerNaarMinuten(tijd,utcOffsetSeconden){"
 ])if(!html.includes(tekst))throw new Error("Performance-invariant ontbreekt: "+tekst);
 
+/* De contextbalk mag niet meer tijdens scroll/opstart synchroon de hero-layout
+   meten. IntersectionObserverEntry levert dezelfde grensinformatie; scrollY
+   blijft uitsluitend eigenaar van de mobiele leesrichting. */
+for(const tekst of [
+  'new IntersectionObserver(([entry])=>{',
+  'const aan=!!entry&&!entry.isIntersecting&&entry.boundingClientRect.top<0;',
+  'window.addEventListener("scroll",planRichting,{passive:true});',
+  'typeof window.requestAnimationFrame==="function"?window.requestAnimationFrame(run):setTimeout(run,16)',
+  'bar.classList.toggle("senior-verstopt",verschil>0)',
+  'window.matchMedia("(max-width:900px)").matches'
+])if(!html.includes(tekst))throw new Error("Reflow-vrije minibalkinvariant ontbreekt: "+tekst);
+if(html.includes("const r=hero.getBoundingClientRect();"))throw new Error("Minibalk meet de hero-layout nog synchroon via getBoundingClientRect.");
+if(html.includes("timer=setTimeout(zet,16)"))throw new Error("Oude layout-metende minibalkscheduler staat nog in de artifact.");
+
+/* De actuele temperatuur gebruikt alleen een conservatieve tekstschatting om
+   links/rechts te kiezen. Browsergedreven SVG-tekstmeting is daarvoor onnodig
+   en veroorzaakte aantoonbaar een forced-layout read in de PageSpeed-bundle. */
+for(const tekst of [
+  'const labelTekst=String(tekst.textContent||"").trim();',
+  'const breed=Math.max(54,Math.min(88,labelTekst.length*(S.geo.M?8:9)+10));'
+])if(!html.includes(tekst))throw new Error("Reflow-vrije nu-labelinvariant ontbreekt: "+tekst);
+if(html.includes("getComputedTextLength"))throw new Error("Synchrone SVG-tekstmeting getComputedTextLength staat nog in de artifact.");
+
 const begin=html.indexOf("/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */"),eind=html.indexOf("/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */",begin);
 if(begin<0||eind<=begin)throw new Error("Centrale interpretatie-engine ontbreekt.");
 const engine=html.slice(begin,eind);
@@ -69,4 +92,4 @@ if((naarUtc.match(/return doel-off;/g)||[]).length!==1)throw new Error("naarUTC 
 const scripts=[...html.matchAll(/<script(?![^>]* src=)[^>]*>([^]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:performance-verify-"+(i+1)}));
-console.log("Performance-final geverifieerd: veilige 170-uurs horizon, één centrale begrensde instant-zonecache gedeeld met Q1, verse hit-objecten, top-level provider-as en consistente tijdzonefallback.");
+console.log("Performance-final geverifieerd: veilige horizon en tijdzones, plus contextbalk en nu-label zonder bewezen synchrone layout-reads.");
