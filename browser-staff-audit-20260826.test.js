@@ -137,7 +137,7 @@ async function controleer(browserType,naam){
     await page.goForward({waitUntil:"domcontentloaded"});await wachtPlaats(page,"New York");
     assert(/plaats=New\+York|plaats=New%20York/.test(page.url()),`${naam}: Forward herstelt New York-URL niet (${page.url()})`);
     await page.reload({waitUntil:"networkidle"});await wachtPlaats(page,"New York");
-    assert.equal(await page.title(),"New York · Wat is het weer?",`${naam}: refresh houdt locatie/titel niet synchroon`);
+    assert.equal(await page.title(),"New York · watishetweer.nl",`${naam}: refresh houdt locatie/titel niet synchroon`);
 
     const add=page.locator("#chipadd");if(await add.count())await add.click();
     assert.equal(await page.locator(".chip .x").count(),1,`${naam}: bewaarde locatie heeft geen verwijderknop`);
