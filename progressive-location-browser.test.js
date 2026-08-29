@@ -119,7 +119,10 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
         const initOk=temp()==='18'&&typeof S!=='undefined'&&S.d&&window.__progressiveFetch.full===1&&window.__progressiveFetch.preview===0;
         zet('switch-initial',initOk?'ok':'fout');
         if(typeof load!=='function')throw new Error('load ontbreekt');
-        load(40.7128,-74.0060,'New York',false,false,'US');
+        /* Dit simuleert de normale zoek-/plaatskeuze: niet stil en opslaan=true.
+           opslaan=false is het afzonderlijke gedeelde-URL-contract en hoort niet
+           als regressie voor de gebruikersgestuurde progressieve preview te dienen. */
+        load(40.7128,-74.0060,'New York',false,true,'US');
       }catch(e){zet('switch-initial','exception');zet('switch-initial-exception',e&&e.message||e);}
     },220);
     setTimeout(()=>{
@@ -192,4 +195,4 @@ if(waarde(fast,"fast")!=="ok"){
   throw new Error("fast pad fout: resultaat="+waarde(fast,"fast")+", temp="+waarde(fast,"fast-temp")+", preview="+waarde(fast,"fast-preview-count")+", full="+waarde(fast,"fast-full-count")+", exception="+waarde(fast,"fast-exception"));
 }
 
-console.log("Progressieve locatielading browser: cold load blijft geometrisch gereserveerd zonder preview; latere locatiewissel behoudt preview; snelle forecast verstuurt geen extra previewrequest.");
+console.log("Progressieve locatielading browser: cold load blijft geometrisch gereserveerd zonder preview; latere gebruikersgestuurde locatiewissel behoudt preview; snelle forecast verstuurt geen extra previewrequest.");
