@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Over watishetweer.nl</title>
+<meta name="description" content="Lees hoe watishetweer.nl actuele weersinformatie en modelverwachtingen samenbrengt, welke bronnen worden gebruikt en hoe je de informatie moet lezen.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://watishetweer.nl/over/">
+<link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="watishetweer.nl">
+<meta property="og:title" content="Over watishetweer.nl">
+<meta property="og:description" content="Lees hoe watishetweer.nl actuele weersinformatie en modelverwachtingen samenbrengt en welke bronnen worden gebruikt.">
+<meta property="og:url" content="https://watishetweer.nl/over/">
+<meta property="og:image" content="https://watishetweer.nl/icon-512.png">
+<meta name="theme-color" content="#F4F5F3">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<script type="application/ld+json">[{"@context":"https://schema.org","@type":"Organization","@id":"https://watishetweer.nl/#organization","name":"watishetweer.nl","alternateName":["watishetweer","Wat is het weer?"],"url":"https://watishetweer.nl/","logo":{"@type":"ImageObject","url":"https://watishetweer.nl/icon-512.png","width":512,"height":512},"description":"watishetweer.nl brengt actuele weersinformatie en modelverwachtingen voor plaatsen wereldwijd overzichtelijk samen."},{"@context":"https://schema.org","@type":"WebSite","@id":"https://watishetweer.nl/#website","name":"watishetweer.nl","alternateName":["watishetweer","Wat is het weer?"],"url":"https://watishetweer.nl/","publisher":{"@id":"https://watishetweer.nl/#organization"}},{"@context":"https://schema.org","@type":"AboutPage","name":"Over watishetweer.nl","url":"https://watishetweer.nl/over/","isPartOf":{"@id":"https://watishetweer.nl/#website"},"about":{"@id":"https://watishetweer.nl/#organization"}}]</script>
+<script>
+(()=>{try{
+  const raw=localStorage.getItem("weerbriefing.thema");
+  const keuze=raw?JSON.parse(raw):"auto";
+  if(!["licht","donker"].includes(keuze))return;
+  document.documentElement.setAttribute("data-thema",keuze);
+  document.querySelector('meta[name="theme-color"]').setAttribute("content",keuze==="donker"?"#0B120F":"#F4F5F3");
+}catch(e){}})();
+</script>
+<style>
+:root{--paper:#f4f5f3;--sheet:#fff;--ink:#12211c;--ink-70:#41514b;--muted:#65716c;--rule:#dce1de}
+html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70:#b8b8b8;--muted:#999;--rule:#2a2a2a}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 system-ui,-apple-system,sans-serif;padding:32px 20px}.kaart{max-width:760px;margin:auto;background:var(--sheet);border:1px solid var(--rule);padding:32px}h1{font:400 36px/1.15 Georgia,serif;margin:0 0 18px}h2{font-size:17px;margin:30px 0 8px}p{margin:10px 0;color:var(--ink-70)}a{color:inherit}.merk{font-weight:600;color:var(--ink)}.klein{color:var(--muted);font-size:14px}@media(max-width:600px){body{padding:14px}.kaart{padding:26px 22px}h1{font-size:32px}}
+</style>
+</head>
+<body><main class="kaart">
+<p><a href="/">← Terug naar het weer</a></p>
+<h1>Over watishetweer.nl</h1>
+<p><span class="merk">watishetweer.nl</span> brengt actuele weersinformatie en modelverwachtingen voor plaatsen wereldwijd overzichtelijk samen. In de interface gebruiken we de herkenbare vraag “Wat is het weer?”.</p>
+<h2>Wat je hier vindt</h2>
+<p>De site toont onder meer het actuele weer, neerslag voor de komende uren, een 7-daagse verwachting, wind en windstoten, luchtkwaliteit, zonuren en een indicatie voor nachtzicht. De weergave gebruikt lokale tijd voor de gekozen plaats.</p>
+<h2>Waar de gegevens vandaan komen</h2>
+<p>De concrete bronvermelding staat bij de weerweergave en kan per locatie verschillen. De site gebruikt onder meer Open-Meteo voor weer- en luchtkwaliteitsgegevens en CAMS voor atmosferische modelgegevens. Waar beschikbaar worden officiële weerwaarschuwingen uit daarvoor bestemde waarschuwingsbronnen getoond. Plaatsnamen en locatiecontext kunnen via aanvullende geodiensten worden bepaald.</p>
+<h2>Hoe je verwachtingen moet lezen</h2>
+<p>Een weersverwachting is geen meting van de toekomst. Modeluitkomsten veranderen wanneer nieuwe waarnemingen en berekeningen beschikbaar komen. Daarom kunnen temperaturen, neerslagkansen, wind en andere verwachtingen bij een volgende verversing wijzigen.</p>
+<h2>Waarschuwingen en veiligheid</h2>
+<p>De site probeert officiële waarschuwingen duidelijk te tonen wanneer daarvoor een ondersteunde bron beschikbaar is. Voor beslissingen waarbij veiligheid een rol speelt, blijft de officiële meteorologische dienst of waarschuwingendienst voor jouw locatie leidend.</p>
+<h2>Privacy en transparantie</h2>
+<p>watishetweer.nl heeft geen gebruikersaccount en gebruikt geen advertentietracking of analytics. Meer informatie over locatiegebruik en lokale opslag staat op <a href="/privacy.html">Privacy &amp; gegevens</a>.</p>
+<p>De broncode en het openbare wijzigingenoverzicht zijn beschikbaar via de <a href="https://github.com/Tommjoness/weathernow">projectpagina op GitHub</a>.</p>
+<p class="klein">Vaste sitenaam: watishetweer.nl · Productnaam in de interface: Wat is het weer?</p>
+</main></body>
+</html>
