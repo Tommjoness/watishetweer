@@ -54,22 +54,36 @@ const GRAFIEK_LABEL_SCHUIF_OUD='    if(cy===null && (k.rang>=2||n<=24)){';
 const GRAFIEK_LABEL_SCHUIF_NIEUW='    if(cy===null && (k.rang>=2||(n<=24&&!M))){';
 const GRAFIEK_GEO_ANCHOR='  S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,H:H,M:M};';
 const GRAFIEK_AS_CLEANUP=[
-  '  /* Checkpoint 50: controleer op mobiele grafieken de werkelijke SVG-fontboxes',
-  '     en verwijder uitsluitend een tijdlabel dat een temperatuurcijfer echt raakt.',
-  '     Desktop heeft voldoende ruimte en behoudt bewust het volledige drie-uursraster. */',
+  '  /* Checkpoint 50: verwijder op mobiele grafieken uitsluitend een tijdlabel',
+  '     dat een temperatuurcijfer raakt. De korte SVG-labels hebben al expliciete',
+  '     x/y/font-attributen; een conservatieve boxschatting voorkomt daarom een',
+  '     synchrone font-layoutmeting zonder de selectie- of verwijderlogica te wijzigen. */',
   '  const ruimBotsendeAslabelsOp=()=>{',
   '    if(!M)return;',
   '    const teksten=[...svg.querySelectorAll("text")];',
   '    const temperatuurLabels=teksten.filter(el=>/Bodoni Moda/.test(el.getAttribute("font-family")||"")&&/°$/.test((el.textContent||"").trim()));',
   '    const asY=pb+(M?20:22);',
   '    const tijdLabels=teksten.filter(el=>Math.abs(Number(el.getAttribute("y"))-asY)<0.1);',
+  '    const geschatteTekstBox=el=>{',
+  '      const tekst=String(el&&el.textContent||"").trim();',
+  '      const ex=Number(el&&el.getAttribute("x")),ey=Number(el&&el.getAttribute("y"));',
+  '      if(!tekst||!Number.isFinite(ex)||!Number.isFinite(ey))return null;',
+  '      const familie=String(el.getAttribute("font-family")||"");',
+  '      const attrFont=Number(el.getAttribute("font-size"));',
+  '      const fs=Number.isFinite(attrFont)&&attrFont>0?attrFont:(/Bodoni Moda/.test(familie)?F.temp:F.uur);',
+  '      const factor=/Bodoni Moda/.test(familie)?.64:.62;',
+  '      const breed=Math.max(fs*.8,tekst.length*fs*factor)+2;',
+  '      const hoog=fs*1.2;',
+  '      const anker=String(el.getAttribute("text-anchor")||"start").toLowerCase();',
+  '      const links=anker==="middle"?ex-breed/2:anker==="end"?ex-breed:ex;',
+  '      return {x:links,y:ey-fs*.94,width:breed,height:hoog};',
+  '    };',
   '    const raakt=(a,b)=>{',
-  '      try{',
-  '        const A=a.getBBox(),B=b.getBBox();',
-  '        const ox=Math.min(A.x+A.width,B.x+B.width)-Math.max(A.x,B.x);',
-  '        const oy=Math.min(A.y+A.height,B.y+B.height)-Math.max(A.y,B.y);',
-  '        return ox>-1.5&&oy>-1.5;',
-  '      }catch(_){return false;}',
+  '      const A=geschatteTekstBox(a),B=geschatteTekstBox(b);',
+  '      if(!A||!B)return false;',
+  '      const ox=Math.min(A.x+A.width,B.x+B.width)-Math.max(A.x,B.x);',
+  '      const oy=Math.min(A.y+A.height,B.y+B.height)-Math.max(A.y,B.y);',
+  '      return ox>-1.5&&oy>-1.5;',
   '    };',
   '    tijdLabels.forEach(el=>{if(temperatuurLabels.some(t=>raakt(el,t)))el.remove();});',
   '  };',
@@ -143,10 +157,11 @@ for(const vereist of [
   "H=M?250:296","pt=M?59:76, ih=M?145:160","tijdLabelVrij=nuX==null",
   "M?kandidatenRuw.filter(k=>k.rang>1||(k.i%6===0&&!kandidatenRuw.some(g=>g.rang>1&&Math.abs(g.i-k.i)<=1))):kandidatenRuw",
   "k.rang>=2||(n<=24&&!M)","mm!==null&&mm>=0",
-  "val+labelHoogte/2+4<=pb","ruimBotsendeAslabelsOp","if(!M)return;","getBBox()"
+  "val+labelHoogte/2+4<=pb","ruimBotsendeAslabelsOp","if(!M)return;","geschatteTekstBox"
 ]){
   if(!html.includes(vereist))throw new Error("Post-build invariant ontbreekt: "+vereist);
 }
+if(/\.getBBox\s*\(/.test(html))throw new Error("Synchrone SVG-fontboxmeting staat nog in de mobiele productieartifact.");
 if(html.includes("M?kandidatenRuw.filter(k=>k.rang===3):kandidatenRuw"))throw new Error("Mobiele etmaallabels zijn opnieuw beperkt tot alleen extrema.");
 if(html.includes("M?kandidatenRuw.filter(k=>k.rang>1||k.i%6===0):kandidatenRuw"))throw new Error("Mobiele zes-uurslabels vervangen nabije echte extrema nog niet.");
 if(html.includes("k.rang>=2||n<=24"))throw new Error("Mobiele reguliere grafieklabels kunnen nog horizontaal losraken van hun datapunt.");
@@ -158,4 +173,4 @@ if((html.split('const basisNachten=nachten;').length-1)!==1)throw new Error("Nac
 if(html.includes("Beste modeluren")||html.includes("Relatief gunstigste modeluren"))throw new Error("Nachtzicht bevat nog modeljargon in de presentatie-owner.");
 fs.writeFileSync(htmlPad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"mobiele");
-console.log("Mobiele polish + checkpoint 50% geïnjecteerd; etmaal toont rustige zes-uursreferenties plus echte extrema zonder losgeschoven reguliere labels, 0,0 mm blijft zichtbaar en Nachtzicht blijft compact; cache "+versie+".");
+console.log("Mobiele polish + checkpoint 50% geïnjecteerd; etmaal toont rustige zes-uursreferenties plus echte extrema zonder synchrone SVG-fontboxmeting, 0,0 mm blijft zichtbaar en Nachtzicht blijft compact; cache "+versie+".");

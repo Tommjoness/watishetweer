@@ -29,6 +29,41 @@ for(const tekst of [
   "function providerNaarMinuten(tijd,utcOffsetSeconden){"
 ])if(!html.includes(tekst))throw new Error("Performance-invariant ontbreekt: "+tekst);
 
+/* De contextbalk gebruikt tijdens de gewone load uitsluitend de observer-entry.
+   De scrollrichting wordt los van zichtbaarheid bewaard, zodat een observer- of
+   fallbackstate die later arriveert dezelfde hide/show-keuze toepast. De enige
+   geometry-read mag uitsluitend in de vertraagde scrollfallback staan. */
+for(const tekst of [
+  'new IntersectionObserver(([entry])=>{',
+  'observerVersie++;',
+  'zetAan(!!entry&&!entry.isIntersecting&&entry.boundingClientRect.top<0);',
+  'const meetFallback=versie=>{',
+  'if(observerVersie!==versie)return;',
+  'fallbackTimer=setTimeout(()=>meetFallback(versie),120);',
+  'let frame=null,fallbackTimer=null,observerVersie=0,richtingY=Math.max(0,window.scrollY||0),gewensteVerstopt=false;',
+  'gewensteVerstopt=verschil>0;',
+  'bar.classList.toggle("senior-verstopt",bar.classList.contains("aan")&&mobiel()&&gewensteVerstopt);',
+  'window.addEventListener("scroll",()=>{registreerRichting();planFallback();},{passive:true});',
+  'typeof window.requestAnimationFrame==="function"?window.requestAnimationFrame(run):setTimeout(run,16)',
+  'window.matchMedia("(max-width:900px)").matches'
+])if(!html.includes(tekst))throw new Error("Reflow-arme minibalkinvariant ontbreekt: "+tekst);
+if(html.includes("timer=setTimeout(zet,16)"))throw new Error("Oude layout-metende minibalkscheduler staat nog in de artifact.");
+if(html.includes("plan();\n})();"))throw new Error("Minibalk voert nog een synchrone geometrieplanning uit bij opstart.");
+exact("const r=hero.getBoundingClientRect();","enige hero-geometriemeting in vertraagde fallback");
+const fallbackStart=html.indexOf("const meetFallback=versie=>{");
+const fallbackEind=html.indexOf("const planFallback=()=>{",fallbackStart);
+const heroMeet=html.indexOf("const r=hero.getBoundingClientRect();");
+if(fallbackStart<0||fallbackEind<=fallbackStart||heroMeet<=fallbackStart||heroMeet>=fallbackEind)throw new Error("Hero-geometriemeting staat buiten de vertraagde scrollfallback.");
+
+/* De actuele temperatuur gebruikt alleen een conservatieve tekstschatting om
+   links/rechts te kiezen. Browsergedreven SVG-tekstmeting is daarvoor onnodig
+   en veroorzaakte aantoonbaar een forced-layout read in de PageSpeed-bundle. */
+for(const tekst of [
+  'const labelTekst=String(tekst.textContent||"").trim();',
+  'const breed=Math.max(54,Math.min(88,labelTekst.length*(S.geo.M?8:9)+10));'
+])if(!html.includes(tekst))throw new Error("Reflow-vrije nu-labelinvariant ontbreekt: "+tekst);
+if(html.includes("getComputedTextLength"))throw new Error("Synchrone SVG-tekstmeting getComputedTextLength staat nog in de artifact.");
+
 const begin=html.indexOf("/* ===== CENTRALE INTERPRETATIE-ENGINE ===== */"),eind=html.indexOf("/* ===== EINDE CENTRALE INTERPRETATIE-ENGINE ===== */",begin);
 if(begin<0||eind<=begin)throw new Error("Centrale interpretatie-engine ontbreekt.");
 const engine=html.slice(begin,eind);
@@ -69,4 +104,4 @@ if((naarUtc.match(/return doel-off;/g)||[]).length!==1)throw new Error("naarUTC 
 const scripts=[...html.matchAll(/<script(?![^>]* src=)[^>]*>([^]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:performance-verify-"+(i+1)}));
-console.log("Performance-final geverifieerd: veilige 170-uurs horizon, één centrale begrensde instant-zonecache gedeeld met Q1, verse hit-objecten, top-level provider-as en consistente tijdzonefallback.");
+console.log("Performance-final geverifieerd: veilige horizon en tijdzones, observergestuurde minibalk met vastgelegde scrollrichting, vertraagde robuustheidsfallback en nu-label zonder synchrone SVG-tekstmeting.");

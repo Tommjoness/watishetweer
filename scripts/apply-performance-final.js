@@ -11,6 +11,12 @@ let html=fs.readFileSync(htmlPad,"utf8");
 const MARK="/* ===== PERFORMANCE FINAL 20260811 ===== */";
 if(html.includes(MARK))throw new Error("Performance-final is al toegepast.");
 
+function vervangExact(oud,nieuw,naam){
+  const aantal=html.split(oud).length-1;
+  if(aantal!==1)throw new Error(naam+" ontbreekt of is dubbel: "+aantal);
+  html=html.replace(oud,nieuw);
+}
+
 /* De app toont zeven kalenderdagen en een gekozen daggrafiek gebruikt ook de
    rechtergrens 00:00 van de volgende dag. 168 waarden kunnen daardoor exact op
    de laatste grens tekortkomen; een najaars-DST-omslag kan bovendien één extra
@@ -161,9 +167,106 @@ const naarUtcNieuw=`function naarUTC(lokaal){
 }`;
 html=html.slice(0,naarUtcStart)+naarUtcNieuw+html.slice(naarUtcEind);
 
+/* De meelopende contextbalk gebruikt IntersectionObserver als primaire bron van
+   waarheid. Daardoor is er geen synchrone geometry-read meer tijdens de gewone
+   opstart. Scrollen legt de laatste betekenisvolle leesrichting los van de
+   zichtbaarheid vast, zodat een later binnenkomende observer- of fallbackstate
+   meteen dezelfde mobiele hide/show-keuze kan toepassen. Een vertraagde
+   fallback meet de hero uitsluitend als een browser na een echte scroll geen
+   nieuwe observer-entry levert. */
+const minibalkOud=`  let timer=null,richtingY=Math.max(0,window.scrollY||0);
+  const mobiel=()=>window.matchMedia&&window.matchMedia("(max-width:900px)").matches;
+  const pasRichtingToe=()=>{
+    if(!mobiel()){
+      bar.classList.remove("senior-verstopt");
+      richtingY=Math.max(0,window.scrollY||0);
+      return;
+    }
+    const y=Math.max(0,window.scrollY||0),verschil=y-richtingY;
+    if(Math.abs(verschil)<10) return;
+    if(bar.classList.contains("aan"))bar.classList.toggle("senior-verstopt",verschil>0);
+    else bar.classList.remove("senior-verstopt");
+    richtingY=y;
+  };
+  const zet=()=>{
+    timer=null;
+    const r=hero.getBoundingClientRect();
+    const aan=Number.isFinite(r.bottom)&&r.bottom<=0;
+    bar.classList.toggle("aan",aan);
+    if(!aan)bar.classList.remove("senior-verstopt");
+    pasRichtingToe();
+  };
+  const plan=()=>{
+    if(timer!==null) return;
+    timer=setTimeout(zet,16);
+  };
+  if("IntersectionObserver" in window)new IntersectionObserver(plan,{threshold:0}).observe(hero);
+  window.addEventListener("scroll",plan,{passive:true});
+  window.addEventListener("resize",plan,{passive:true});
+  plan();`;
+const minibalkNieuw=`  let frame=null,fallbackTimer=null,observerVersie=0,richtingY=Math.max(0,window.scrollY||0),gewensteVerstopt=false;
+  const mobiel=()=>window.matchMedia&&window.matchMedia("(max-width:900px)").matches;
+  const pasVerstoptToe=()=>{
+    bar.classList.toggle("senior-verstopt",bar.classList.contains("aan")&&mobiel()&&gewensteVerstopt);
+  };
+  const zetAan=aan=>{
+    bar.classList.toggle("aan",!!aan);
+    pasVerstoptToe();
+  };
+  const registreerRichting=()=>{
+    if(!mobiel()){
+      gewensteVerstopt=false;
+      richtingY=Math.max(0,window.scrollY||0);
+    }else{
+      const y=Math.max(0,window.scrollY||0),verschil=y-richtingY;
+      if(Math.abs(verschil)>=10){
+        gewensteVerstopt=verschil>0;
+        richtingY=y;
+      }
+    }
+    if(frame!==null)return;
+    const run=()=>{frame=null;pasVerstoptToe();};
+    frame=typeof window.requestAnimationFrame==="function"?window.requestAnimationFrame(run):setTimeout(run,16);
+  };
+  const meetFallback=versie=>{
+    fallbackTimer=null;
+    if(observerVersie!==versie)return;
+    const r=hero.getBoundingClientRect();
+    zetAan(Number.isFinite(r.bottom)&&r.bottom<=0);
+  };
+  const planFallback=()=>{
+    if(fallbackTimer!==null)clearTimeout(fallbackTimer);
+    const versie=observerVersie;
+    fallbackTimer=setTimeout(()=>meetFallback(versie),120);
+  };
+  if("IntersectionObserver" in window)new IntersectionObserver(([entry])=>{
+    observerVersie++;
+    if(fallbackTimer!==null){clearTimeout(fallbackTimer);fallbackTimer=null;}
+    zetAan(!!entry&&!entry.isIntersecting&&entry.boundingClientRect.top<0);
+  },{threshold:0}).observe(hero);
+  window.addEventListener("scroll",()=>{registreerRichting();planFallback();},{passive:true});
+  window.addEventListener("resize",()=>{
+    if(fallbackTimer!==null){clearTimeout(fallbackTimer);fallbackTimer=null;}
+    gewensteVerstopt=false;
+    zetAan(false);
+    richtingY=Math.max(0,window.scrollY||0);
+  },{passive:true});`;
+vervangExact(minibalkOud,minibalkNieuw,"Minibalk zonder synchrone opstart-layout-read");
+
+/* De rode actuele temperatuur hoeft zijn SVG-tekstbreedte niet door de browser
+   te laten uitmeten. Voor de enige beslissing hier, links of rechts van de stip,
+   is een conservatieve breedte op basis van de korte labeltekst voldoende. De
+   begrensde schatting voorkomt getComputedTextLength en houdt extra marge voor
+   mintekens en twee-cijferige temperaturen. */
+const nuBreedteOud=`  let breed=54;
+  try{const b=tekst.getComputedTextLength();if(Number.isFinite(b)&&b>0)breed=b;}catch(e){}`;
+const nuBreedteNieuw=`  const labelTekst=String(tekst.textContent||"").trim();
+  const breed=Math.max(54,Math.min(88,labelTekst.length*(S.geo.M?8:9)+10));`;
+vervangExact(nuBreedteOud,nuBreedteNieuw,"Nu-label zonder synchrone SVG-tekstmeting");
+
 html=html.replace("</style>","\n"+MARK+"\n</style>");
 const scripts=[...html.matchAll(/<script(?![^>]* src=)[^>]*>([^]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime na performance-final.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:performance-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
-console.log("Performance-final toegepast: 170 forecasturen, centrale begrensde instant-zonecache gedeeld met Q1, lokale-tijdcache en veilige tijdzonefallback.");
+console.log("Performance-final toegepast: 170 forecasturen, gedeelde tijdzonecache, veilige tijdzonefallback, observergedreven minibalk met robuuste scrollrichting en nu-label zonder synchrone SVG-tekstmeting.");
