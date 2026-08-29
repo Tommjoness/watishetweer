@@ -153,7 +153,7 @@ function maakPlaatsIndex(){
 }
 
 function maakSitemap(){
-  const urls=[`${BASIS_URL}/`,`${BASIS_URL}/weer/`,...LOCATIES.map(plaatsUrl)];
+  const urls=[`${BASIS_URL}/`,`${BASIS_URL}/weer/`,`${BASIS_URL}/over/`,...LOCATIES.map(plaatsUrl)];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(url=>`  <url>\n    <loc>${escXml(url)}</loc>\n  </url>`).join("\n")}\n</urlset>\n`;
 }
 

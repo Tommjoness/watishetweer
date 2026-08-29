@@ -29,7 +29,7 @@ for(const loc of LOCATIES){if(tel(hub,`href="/weer/${loc.slug}/"`)!==1)throw new
 
 const sitemap=fs.readFileSync(sitemapPath,"utf8");
 const locs=[...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m=>m[1]);
-const verwacht=[`${BASIS_URL}/`,`${BASIS_URL}/weer/`,...LOCATIES.map(plaatsUrl)];
+const verwacht=[`${BASIS_URL}/`,`${BASIS_URL}/weer/`,`${BASIS_URL}/over/`,...LOCATIES.map(plaatsUrl)];
 if(locs.length!==verwacht.length)throw new Error(`Sitemap bevat ${locs.length} URLs; verwacht ${verwacht.length}.`);
 if(new Set(locs).size!==locs.length)throw new Error("Sitemap bevat dubbele URLs.");
 if(JSON.stringify(locs)!==JSON.stringify(verwacht))throw new Error("Sitemapvolgorde/inhoud wijkt af van de bewezen locatieconfig.");
