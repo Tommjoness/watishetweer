@@ -128,7 +128,7 @@ async function controleer(type,naam){
     assert.equal(gedeeldeParams.get("lat"),"52.368",`${naam}: fallback-deel-URL mist Amsterdam-latitude`);
     assert.equal(gedeeldeParams.get("lon"),"4.904",`${naam}: fallback-deel-URL mist Amsterdam-longitude`);
     assert(gedeeldeParams.has("plaats"),`${naam}: fallback-deel-URL mist plaatsparameter`);
-    assert.equal(gedeeld.title,"Amsterdam · Wat is het weer?",`${naam}: title blijft ten onrechte in de Almere-routecontext hangen`);
+    assert.equal(gedeeld.title,"Amsterdam · watishetweer.nl",`${naam}: title blijft ten onrechte in de Almere-routecontext hangen`);
     assert.equal(gedeeld.canonical,"https://watishetweer.nl/",`${naam}: canonical blijft ten onrechte de Almere-route claimen`);
     assert.equal(gedeeld.description,"Bekijk het actuele weer, neerslag voor de komende uren, de 7-daagse verwachting, luchtkwaliteit en nachtzicht voor plaatsen wereldwijd.",`${naam}: route-description wordt niet naar het algemene productcontract hersteld`);
     assert.equal(gedeeld.ogTitle,"Weer vandaag en 7-daagse verwachting | watishetweer.nl",`${naam}: og:title blijft routegebonden`);
@@ -146,7 +146,7 @@ async function controleer(type,naam){
     const terug=await page.evaluate(()=>({pathname:location.pathname,search:location.search,title:document.title,routeActief:window.__WEATHERNOW_ROUTE_LOCATION__!==null,routeContextZichtbaar:document.querySelector(".seo-route-context")?.getClientRects().length>0}));
     assert.equal(terug.pathname,"/",`${naam}: teruggekozen Almere activeert de statische route opnieuw`);
     assert.equal(new URLSearchParams(terug.search).get("plaats"),"Almere",`${naam}: teruggekozen Almere mist de algemene deel-URL`);
-    assert.equal(terug.title,"Almere · Wat is het weer?",`${naam}: teruggekozen Almere krijgt niet de dynamische titel`);
+    assert.equal(terug.title,"Almere · watishetweer.nl",`${naam}: teruggekozen Almere krijgt niet de dynamische titel`);
     assert.equal(terug.routeActief,false,`${naam}: teruggekozen Almere activeert routecontext opnieuw`);
     assert.equal(terug.routeContextZichtbaar,false,`${naam}: teruggekozen Almere toont de oude routecontext opnieuw`);
 
@@ -158,7 +158,7 @@ async function controleer(type,naam){
 
     await page.goto(basis+"/weer/",{waitUntil:"domcontentloaded"});
     const hub=await page.evaluate(()=>({title:document.title,canonical:document.querySelector('link[rel="canonical"]')?.href||"",links:[...document.querySelectorAll('.plaatsen a')].map(a=>a.getAttribute('href'))}));
-    assert.equal(hub.title,"Weer per plaats in Nederland | Wat is het weer?",`${naam}: /weer/ title wijkt af`);
+    assert.equal(hub.title,"Weer per plaats in Nederland | watishetweer.nl",`${naam}: /weer/ title wijkt af`);
     assert.equal(hub.canonical,"https://watishetweer.nl/weer/",`${naam}: /weer/ canonical wijkt af`);
     assert(hub.links.length>=30&&hub.links.includes("/weer/almere/")&&hub.links.includes("/weer/amsterdam/"),`${naam}: /weer/ mist crawlbare plaatslinks`);
   }finally{await context.close().catch(()=>{});await browser.close().catch(()=>{});}
