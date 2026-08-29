@@ -89,6 +89,8 @@ jobs:
         run: node browser-timezone-hardening.test.js
       - name: Cold-load browser-performancebudget
         run: node browser-performance-budget.test.js
+      - name: Mobiele cold-load CLS-budget
+        run: node browser-mobile-cls-budget.test.js
       - name: Checkpoint 25% in Chromium en WebKit
         run: node browser-q1-checkpoint.test.js
       - name: Checkpoint 50% in Chromium en WebKit
