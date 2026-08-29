@@ -17,7 +17,11 @@ const RAIN_LINE_OUD='    horizontaal.setAttribute("aria-label",q4PeriodeTijdvak(
 const RAIN_SVG_OUD='  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve."+detailAria+" Neerslagkansen blijven via de details beschikbaar.").trim());';
 const RAIN_SVG_NIEUW='  const periodeAria=g.n<=25?perioden.map(p=>q4PeriodeTijdvak(g,p)+" · "+q4Mm(p.som)+" mm").join("; "):"";\n  const periodeDetail=periodeAria?" Neerslagperioden: "+periodeAria+".":"";\n  svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve."+periodeDetail+detailAria+" Neerslagkansen blijven via de details beschikbaar.").trim());';
 const CSP_META=/<meta http-equiv="Content-Security-Policy" content="[^"]*">\s*/gi;
-const PRELOADS='<link rel="preload" href="/instrument-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>\n<link rel="preload" href="/bodoni-moda-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>\n';
+const FONT_PRELOADS=[
+  {href:"/instrument-sans-latin-400-normal.woff2",tag:'<link rel="preload" href="/instrument-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>'},
+  {href:"/instrument-sans-latin-500-normal.woff2",tag:'<link rel="preload" href="/instrument-sans-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>'},
+  {href:"/bodoni-moda-latin-400-normal.woff2",tag:'<link rel="preload" href="/bodoni-moda-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>'}
+];
 const DELIVERY_META='<meta name="weather-delivery" content="external-minified-v1">';
 const SCRIPT_RE=/<script([^>]*)>([\s\S]*?)<\/script>/gi;
 const ROUTE_BOOTSTRAP=/^\s*window\.__WEATHERNOW_ROUTE_LOCATION__=Object\.freeze\((\{[\s\S]*\})\);\s*$/;
@@ -41,13 +45,23 @@ function vervangExact(bron,oud,nieuw,label){
   if(aantal!==1)throw new Error(label+" verwacht exact één bronanker; gevonden "+aantal);
   return bron.replace(oud,nieuw);
 }
-function hardenRuntime(html){
+function voegFontPreloadsToe(html){
   let bron=String(html||"");
-  if(!bron.includes('rel="preload" href="/instrument-sans-latin-400-normal.woff2"')){
-    const anker="</head>";
-    if((bron.split(anker).length-1)!==1)throw new Error("Head-einde ontbreekt of is dubbel voor fontpreload.");
-    bron=bron.replace(anker,PRELOADS+anker);
-  }
+  const ontbrekend=FONT_PRELOADS.filter(x=>!bron.includes('rel="preload" href="'+x.href+'"'));
+  if(!ontbrekend.length)return bron;
+  const blok=ontbrekend.map(x=>x.tag).join("\n")+"\n";
+  /* Zet de bekende above-the-fold fonts vóór het eerste stijlblok. Daarmee kan
+     de browser hun downloads al starten voordat hij de omvangrijke inline CSS
+     parseert. De 500-weight staat expliciet in de set omdat Lighthouse hem in
+     de actuele mobiele kritieke keten aantrof. */
+  const stijlPos=bron.search(/<style\b/i);
+  if(stijlPos>=0)return bron.slice(0,stijlPos)+blok+bron.slice(stijlPos);
+  const anker="</head>";
+  if((bron.split(anker).length-1)!==1)throw new Error("Head-einde ontbreekt of is dubbel voor fontpreload.");
+  return bron.replace(anker,blok+anker);
+}
+function hardenRuntime(html){
+  let bron=voegFontPreloadsToe(html);
   const heeftQ4=bron.includes("function q4Regenperioden")||bron.includes(RAIN_ARIA_OUD);
   if(heeftQ4){
     bron=vervangExact(bron,RAIN_ARIA_OUD,RAIN_ARIA_NIEUW,"regenperiodegroep-ARIA");
