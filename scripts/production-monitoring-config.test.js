@@ -68,16 +68,19 @@ assert(performance.includes("beacons.length,0"),"live performancemonitor bewaakt
 
 assert(cls.includes("const RONDEN=5"),"productie-CLS-monitor moet vijf koude runs doen");
 assert(cls.includes("const CLS_BUDGET=0.1"),"productie-CLS-monitor moet onder 0,1 afdwingen");
-assert(cls.includes("const UITKOMST_TIMEOUT_MS=15000"),"productie-CLS-monitor moet een begrensde cold-loaduitkomst afwachten");
+assert(cls.includes("const OBSERVATIE_MS=12000"),"productie-CLS-monitor moet een vast twaalfsecondenvenster meten");
+assert(cls.includes("const MIN_DATA_RONDEN=2"),"productie-CLS-monitor moet minimaal twee echte datarondes eisen");
 assert(cls.includes('type:"layout-shift"'),"productie-CLS-monitor moet echte LayoutShift-entries meten");
+assert(cls.includes("await page.waitForTimeout(OBSERVATIE_MS)"),"productie-CLS-monitor mag zijn layoutmeting niet op providerafronding blokkeren");
+assert(!cls.includes("waitForFunction"),"productie-CLS-monitor mag niet wachten op data/fout als voorwaarde om CLS te meten");
 assert(cls.includes("meting.finalScrollY,meting.initialScrollY"),"productie-CLS-monitor moet spontane initiële scroll bewaken");
 assert(cls.includes("meting.sha,verwacht"),"productie-CLS-monitor moet de exacte live SHA bewaken");
-assert(cls.includes('state.classList.contains("err")'),"productie-CLS-monitor moet ook het nette terminale foutlayout kunnen meten");
-assert(cls.includes('/Ophalen mislukt|Geen verbinding/i'),"productie-CLS-monitor mag alleen expliciete menselijke forecastfoutstates als eindstate accepteren");
-assert(cls.includes('eindstate.uitkomst==="data"?LATE_DATA_WACHT_MS:FOUT_SETTLE_MS'),"productie-CLS-monitor moet late datamutaties langer volgen dan een terminale foutstate");
-assert(cls.includes("LATE_DATA_WACHT_MS=8000"),"productie-CLS-monitor moet late waarschuwing/fallbackmutaties na succesvolle data acht seconden meenemen");
+assert(cls.includes('state.classList.contains("err")'),"productie-CLS-monitor moet een nette terminale foutlayout apart classificeren");
+assert(cls.includes('/Ophalen mislukt|Geen verbinding/i'),"productie-CLS-monitor mag alleen expliciete menselijke forecastfoutstates als fout classificeren");
+assert(cls.includes('uitkomst:heeftData?"data":terminaleFout?"fout":"laden"'),"productie-CLS-monitor moet ook een nog ladende providerstate als gemeten layoutstate rapporteren");
+assert(cls.includes("assert(dataRondes>=MIN_DATA_RONDEN"),"productie-CLS-monitor mag niet groen worden zonder representatieve echte weerdata");
 assert(cls.includes("Beschikbaarheid wordt apart bewaakt"),"CLS-monitor moet beschikbaarheid expliciet als aparte verantwoordelijkheid rapporteren");
 
 require("./production-source-truth.test.js");
 
-console.log("production-monitoring-config: deploymentcontract, vier gescheiden browsergates, zuivere mobiele CLS en strikt sitemapcontract OK");
+console.log("production-monitoring-config: deploymentcontract, vier gescheiden browsergates, vaste mobiele CLS-vensters en strikt sitemapcontract OK");
