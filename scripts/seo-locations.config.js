@@ -10,7 +10,7 @@ const LOCATIES=Object.freeze([
   {slug:"alkmaar",naam:"Alkmaar",provincie:"Noord-Holland",lat:52.6324,lon:4.7534},
   {slug:"almere",naam:"Almere",provincie:"Flevoland",lat:52.3508,lon:5.2647,populair:true},
   {slug:"alphen-aan-den-rijn",naam:"Alphen aan den Rijn",provincie:"Zuid-Holland",lat:52.1292,lon:4.6555},
-  {slug:"amersfoort",naam:"Amersfoort",provincie:"Utrecht",lat:52.1561,lon:5.3871,populair:true},
+  {slug:"amersfoort",naam:"Amersfoort",provincie:"Utrecht",lat:52.1561,lon:5.3874,populair:true},
   {slug:"amsterdam",naam:"Amsterdam",provincie:"Noord-Holland",lat:52.3676,lon:4.9041,populair:true},
   {slug:"apeldoorn",naam:"Apeldoorn",provincie:"Gelderland",lat:52.2112,lon:5.9699},
   {slug:"arnhem",naam:"Arnhem",provincie:"Gelderland",lat:51.9851,lon:5.8987,populair:true},
