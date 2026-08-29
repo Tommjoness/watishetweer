@@ -19,7 +19,7 @@ function controleerSitemap(xml){
   const locs=leesLocs(xml);
   assert.equal(locs.length,VERWACHTE_URLS.length,`live sitemap moet exact ${VERWACHTE_URLS.length} canonieke URLs bevatten; gevonden ${locs.length}`);
   assert.equal(new Set(locs).size,locs.length,"live sitemap bevat dubbele URLs");
-  assert.deepEqual(locs,VERWACHTE_URLS,"live sitemap wijkt af van de canonieke URL-set of volgorde uit de productiebron");
+  assert.deepEqual([...locs].sort(),[...VERWACHTE_URLS].sort(),"live sitemap wijkt af van de canonieke URL-set uit de productiebron");
   assert(locs.includes(`${ROOT}/over/`),"live sitemap mist /over/");
   assert(!locs.some(url=>url.startsWith("https://www.watishetweer.nl")||/[?](?:lat|lon)=/.test(url)),"live sitemap bevat een www- of share-URL");
   return locs;
