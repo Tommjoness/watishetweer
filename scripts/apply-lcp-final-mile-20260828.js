@@ -41,17 +41,30 @@ if(!html.includes(PRODUCT_CSS_MARK)){
 }
 
 /* Intermitterende mobiele PageSpeed-runs lieten 0,528 CLS zien op main#app.
-   UI-polish heeft #app vóór deze late laag al bewust tot het main-landmark
-   gemaakt. De oude display:none -> display:block-overgang gaf dat volledige
-   landmark vóór de eerste weerresponse geen layoutbox. Houd precies datzelfde
-   main-element daarom vanaf first paint in de flow via visibility:hidden. De
-   render vult de bestaande boxes en onthult daarna alleen painting, niet de
-   complete documentstructuur. */
-const APP_OUD='<main id="app" style="display:none">';
-const APP_NIEUW='<main id="app" style="visibility:hidden">';
-const appAantal=html.split(APP_OUD).length-1;
-if(appAantal!==1)throw new Error("Main-app-startanker ontbreekt of is dubbel: "+appAantal);
-html=html.replace(APP_OUD,APP_NIEUW);
+   UI-polish maakt #app vóór deze late laag al tot het main-landmark. Andere
+   postbuildowners mogen extra niet-geometrische attributen aan dat landmark
+   toevoegen, dus deze patch koppelt bewust aan de unieke semantische identiteit
+   main#app en niet aan één volledige letterlijke openingstag.
+
+   De oude display:none -> display:block-overgang gaf het volledige landmark vóór
+   de eerste weerresponse geen layoutbox. Houd precies datzelfde main-element
+   daarom vanaf first paint in de flow via visibility:hidden. De render vult de
+   bestaande boxes en onthult daarna alleen painting, niet de complete structuur. */
+const appOpenMatches=[...html.matchAll(/<main\b[^>]*\bid=(['"])app\1[^>]*>/gi)];
+if(appOpenMatches.length!==1)throw new Error("Main-app-landmark ontbreekt of is dubbel: "+appOpenMatches.length);
+const APP_OPEN_OUD=appOpenMatches[0][0];
+let displayNoneAantal=0;
+const APP_OPEN_NIEUW=APP_OPEN_OUD.replace(/\bstyle=(['"])(.*?)\1/i,(vol,quote,stijl)=>{
+  const patroon=/(^|;)\s*display\s*:\s*none\s*(?=;|$)/gi;
+  displayNoneAantal=(stijl.match(patroon)||[]).length;
+  if(displayNoneAantal!==1)return vol;
+  const nieuw=stijl.replace(/(^|;)\s*display\s*:\s*none\s*(?=;|$)/i,(_m,prefix)=>prefix+"visibility:hidden");
+  return "style="+quote+nieuw+quote;
+});
+if(displayNoneAantal!==1)throw new Error("main#app moet vóór LCP-final-mile exact één display:none in zijn inline style hebben; gevonden: "+displayNoneAantal+"; opening: "+APP_OPEN_OUD);
+if(APP_OPEN_NIEUW===APP_OPEN_OUD)throw new Error("main#app kon niet geometrisch worden gereserveerd.");
+html=html.replace(APP_OPEN_OUD,APP_OPEN_NIEUW);
+
 const APP_REVEAL_OUD='document.getElementById("app").style.display="block";';
 const appRevealAantal=html.split(APP_REVEAL_OUD).length-1;
 if(appRevealAantal!==2)throw new Error("App-revealanker verwacht exact twee keer, gevonden: "+appRevealAantal);
@@ -78,7 +91,7 @@ if(oud.test(html)){
 if(!html.includes(marker))throw new Error("LCP-marker ontbreekt na patch.");
 if(!html.includes(PRODUCT_JS_MARK))throw new Error("Final-product-truth runtime ontbreekt na patch.");
 if(oud.test(html))throw new Error("Oude monolithische tekenAlles-renderroute is blijven staan.");
-if(html.includes(APP_OUD))throw new Error("main#app staat nog op display:none in de finale artifact.");
+if(/<main\b[^>]*\bid=(['"])app\1[^>]*\bstyle=(['"])[^>]*\bdisplay\s*:\s*none/i.test(html))throw new Error("main#app staat nog op display:none in de finale artifact.");
 if(html.includes(APP_REVEAL_OUD))throw new Error("main#app wordt nog via display:block onthuld.");
 if((html.match(/rel=\"preconnect\" href=\"https:\/\/api\.open-meteo\.com\"/g)||[]).length!==1)throw new Error("Forecast-preconnect moet exact één keer aanwezig zijn.");
 if((html.match(/rel=\"dns-prefetch\" href=\"\/\/api\.open-meteo\.com\"/g)||[]).length!==1)throw new Error("Forecast DNS-prefetch moet exact één keer aanwezig zijn.");
