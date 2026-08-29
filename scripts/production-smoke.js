@@ -116,7 +116,7 @@ async function wachtOpExacteDeployment(){
   controleerCloudflare(almere.response,"/weer/almere/");
   geenNoindex(almere.response,"/weer/almere/");
   assert.equal(buildSha(almere.text),verwacht,"Almere-route komt uit andere deployment dan homepage");
-  assert(almere.text.includes("<title>Weer Almere vandaag | Wat is het weer?</title>"),"Almere-route mist unieke title");
+  assert(almere.text.includes("<title>Weer Almere vandaag | watishetweer.nl</title>"),"Almere-route mist unieke merkgebonden title");
   assert(almere.text.includes('<link rel="canonical" href="https://watishetweer.nl/weer/almere/">'),"Almere-route mist unieke canonical");
   assert(almere.text.includes('<base href="/">'),"Almere-route mist veilige root-base voor assets");
   assert(almere.text.includes("WEATHER NOW PLAATSROUTE")&&almere.text.includes('"slug":"almere"'),"Almere-route mist routebootstrap");
