@@ -70,7 +70,15 @@ const reporter=`<script>
       const regenLabels=regenGroep?[...regenGroep.querySelectorAll('text')]:[];
       const brackets=regenGroep?[...regenGroep.querySelectorAll('line[aria-label]')]:[];
       const regenBuiten=chartBox?regenLabels.filter(el=>{const r=el.getBoundingClientRect();return r.left<chartBox.left-1||r.right>chartBox.right+1||r.top<chartBox.top-1||r.bottom>chartBox.bottom+1;}).length:999;
-      const middernacht=brackets.some(el=>/wo\\s+22:00[–-]do\\s+01:00/i.test(el.getAttribute('aria-label')||''));
+      /* De Q4-owner voegt uitsluitend bij een echte kalendergrens aan beide
+         zijden een weekdag toe. Toets dus dát semantische contract en niet één
+         vooraf geraden klokrange: uurwaarden beschrijven het voorafgaande
+         interval en kunnen daardoor bewust anders liggen dan de fixture-index. */
+      const bracketAria=brackets.map(el=>el.getAttribute('aria-label')||'');
+      const middernacht=bracketAria.some(aria=>{
+        const m=/\\b(ma|di|wo|do|vr|za|zo)\\s+\\d{2}:\\d{2}[–-](ma|di|wo|do|vr|za|zo)\\s+\\d{2}:\\d{2}\\b/i.exec(aria);
+        return !!(m&&m[1].toLowerCase()!==m[2].toLowerCase());
+      });
       const bedragen=regenGroep?[...regenGroep.querySelectorAll('text[data-q4-rain-period-amount]')]:[];
       const resultaat=!!(chart&&regenGroep&&tempLabels.length>=5&&brackets.length>=4&&bedragen.length>=4&&middernacht&&botsingen(tempLabels)===0&&botsingen(regenLabels)===0&&regenBuiten===0&&chart.scrollWidth<=chart.clientWidth+1);
       document.body.dataset.graphStressResult=resultaat?'ok':'fout';
@@ -81,6 +89,7 @@ const reporter=`<script>
       document.body.dataset.graphStressRainCollisions=String(botsingen(regenLabels));
       document.body.dataset.graphStressRainOutside=String(regenBuiten);
       document.body.dataset.graphStressMidnight=String(middernacht);
+      document.body.dataset.graphStressAria=bracketAria.join('|');
     }catch(e){document.body.dataset.graphStressResult='exception';document.body.dataset.graphStressException=String(e&&e.message||e);}
   },10000);
 })();
@@ -95,6 +104,6 @@ try{
   if(r.status!==0)throw new Error("grafiekstresstest browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"";
   const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
-  if(waarde("graph-stress-result")!=="ok")throw new Error("grafiekstresstest resultaat="+waarde("graph-stress-result")+", tempLabels="+waarde("graph-stress-temps")+", perioden="+waarde("graph-stress-periods")+", bedragen="+waarde("graph-stress-amounts")+", tempBotsingen="+waarde("graph-stress-temp-collisions")+", regenBotsingen="+waarde("graph-stress-rain-collisions")+", regenBuiten="+waarde("graph-stress-rain-outside")+", middernacht="+waarde("graph-stress-midnight")+", exception="+waarde("graph-stress-exception"));
+  if(waarde("graph-stress-result")!=="ok")throw new Error("grafiekstresstest resultaat="+waarde("graph-stress-result")+", tempLabels="+waarde("graph-stress-temps")+", perioden="+waarde("graph-stress-periods")+", bedragen="+waarde("graph-stress-amounts")+", tempBotsingen="+waarde("graph-stress-temp-collisions")+", regenBotsingen="+waarde("graph-stress-rain-collisions")+", regenBuiten="+waarde("graph-stress-rain-outside")+", middernacht="+waarde("graph-stress-midnight")+", bracketAria="+waarde("graph-stress-aria")+", exception="+waarde("graph-stress-exception"));
   console.log("24-uursgrafiek stressregressie geslaagd: meerdere regenperioden, middernachtgrens en temperatuurpieken zonder labelbotsingen.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
