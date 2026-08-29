@@ -3,7 +3,7 @@
 const fs=require("fs");
 const path=require("path");
 const SEO=require("./seo-foundation.config.js");
-const {MARKER,BRAND_LINK_MARKER,SHARE_IMAGE,maakBrandStructuredData}=require("./seo-foundation.js");
+const {MARKER,BRAND_LINK_MARKER,SHARE_IMAGE,BRON_H1,MERK_H1,BRON_APP_TITLE,MERK_APP_TITLE,maakBrandStructuredData}=require("./seo-foundation.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
@@ -33,11 +33,14 @@ for(const verboden of ["public/index.html","writeFileSync","vernieuwServiceworke
   if(owner.includes(verboden))throw new Error("Pure SEO-owner bevat nog late artifactmutatie-infrastructuur: "+verboden);
 }
 
-if(SEO.siteName!=="watishetweer.nl"||SEO.productName!=="Wat is het weer?")throw new Error("Sitenaam en zichtbare productnaam moeten expliciet van elkaar onderscheiden blijven.");
-if(JSON.stringify(SEO.alternateNames)!==JSON.stringify(["watishetweer","Wat is het weer?"]))throw new Error("Merk-alternatieven wijken af van het vaste zoek-/productcontract.");
+if(SEO.siteName!=="watishetweer.nl")throw new Error("De vaste merk- en sitenaam moet watishetweer.nl zijn.");
+if(Object.prototype.hasOwnProperty.call(SEO,"productName"))throw new Error("De generieke vraag mag niet meer als tweede officiële product-/merknaam worden geconfigureerd.");
+if(JSON.stringify(SEO.alternateNames)!==JSON.stringify(["watishetweer"]))throw new Error("Alleen de schrijfwijze zonder .nl mag als alternatieve merknaam worden gepubliceerd.");
 if(tel(html,MARKER)!==1)throw new Error("SEO-marker moet exact één keer aanwezig zijn.");
 if(tel(html,BRAND_LINK_MARKER)!==1)throw new Error("Zichtbare merkverwijzing moet exact één keer aanwezig zijn.");
 if(!html.includes(`<a href="/over/"><b>${SEO.siteName}</b> · Over deze site</a>`))throw new Error("Homepage koppelt de vaste merknaam niet zichtbaar aan de Over-pagina.");
+if(tel(html,MERK_H1)!==1||html.includes(BRON_H1))throw new Error("Homepage-H1 publiceert niet eenduidig de vaste merknaam.");
+if(tel(html,MERK_APP_TITLE)!==1||html.includes(BRON_APP_TITLE))throw new Error("Apple-webappmetadata publiceert niet eenduidig de vaste merknaam.");
 if(tel(html,`<link rel="canonical" href="${SEO.canonical}">`)!==1)throw new Error("Canonical ontbreekt of is dubbel.");
 if(tel(html,'<link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">')!==1)throw new Error("Expliciet 192px favicon ontbreekt of is dubbel.");
 if(tel(html,`<meta name="google-site-verification" content="${SEO.googleVerification}">`)!==1)throw new Error("Google Search Console-verificatiemeta ontbreekt of is dubbel.");
@@ -67,13 +70,15 @@ if(JSON.stringify(data)!==JSON.stringify(verwachtMerk))throw new Error("Homepage
 const organisatie=data[0],website=data[1];
 if(organisatie["@type"]!=="Organization"||organisatie["@id"]!==SEO.organizationId||organisatie.name!==SEO.siteName||organisatie.url!==SEO.canonical)throw new Error("Organization structured data wijkt af.");
 if(organisatie.sameAs!==undefined)throw new Error("Organization mag geen onbewezen sameAs-profielen publiceren.");
+if(JSON.stringify(organisatie.alternateName)!==JSON.stringify(SEO.alternateNames))throw new Error("Organization alternateName wijkt af van de vaste merkvariant.");
 if(organisatie.logo?.url!==SEO.logo||organisatie.logo?.width!==512||organisatie.logo?.height!==512)throw new Error("Organization-logo wijkt af van de vaste 512px merkasset.");
 if(website["@type"]!=="WebSite"||website["@id"]!==SEO.websiteId||website.name!==SEO.siteName||website.url!==SEO.canonical||website.publisher?.["@id"]!==SEO.organizationId)throw new Error("WebSite structured data wijkt af van de merkconfiguratie.");
-if(JSON.stringify(website.alternateName)!==JSON.stringify(SEO.alternateNames))throw new Error("WebSite alternateName mist zoek- of productnaam.");
+if(JSON.stringify(website.alternateName)!==JSON.stringify(SEO.alternateNames))throw new Error("WebSite alternateName mist de vaste merkvariant.");
 
 if(!about.includes("<title>Over watishetweer.nl</title>")||!about.includes(`<link rel="canonical" href="${SEO.aboutUrl}">`)||!about.includes("<h1>Over watishetweer.nl</h1>"))throw new Error("Over-pagina mist title, canonical of zichtbare merk-H1.");
 if(!about.includes('<link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">'))throw new Error("Over-pagina mist expliciet favicon.");
-if(!about.includes("watishetweer.nl</span> brengt actuele weersinformatie")||!about.includes('href="/privacy.html"'))throw new Error("Over-pagina mist zichtbare merkduiding of privacyverbinding.");
+if(!about.includes("watishetweer.nl</span> is de vaste merk- en sitenaam")||!about.includes('href="/privacy.html"'))throw new Error("Over-pagina mist eenduidige merkduiding of privacyverbinding.");
+if(about.includes("Productnaam in de interface"))throw new Error("Over-pagina publiceert de generieke vraag nog als tweede officiële productnaam.");
 const aboutLd=[...about.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
 if(aboutLd.length!==1)throw new Error("Over-pagina moet exact één JSON-LD-blok bevatten.");
 let aboutData;try{aboutData=JSON.parse(aboutLd[0][1]);}catch(e){throw new Error("Over-pagina bevat ongeldige JSON-LD: "+e.message);}
@@ -88,4 +93,4 @@ if(!sitemap.includes(`<loc>${SEO.canonical}</loc>`))throw new Error("Sitemap bev
 if((sitemap.match(/<loc>/g)||[]).length!==1)throw new Error("SEO-fundering publiceert vóór de plaatsgenerator alleen de bewezen canonieke homepage in de sitemap.");
 if(/\?lat=|\?lon=|www\.watishetweer\.nl/.test(sitemap))throw new Error("Sitemap mag geen gedeelde query-URLs of www-duplicaat bevatten.");
 
-console.log("SEO-fundering geverifieerd: vaste merknaam, Organization/WebSite graph, Over-pagina, favicon, canonical, share-metadata, robots.txt en root-sitemap zijn coherent.");
+console.log("SEO-fundering geverifieerd: één vaste merknaam, Organization/WebSite graph, Over-pagina, favicon, canonical, share-metadata, robots.txt en root-sitemap zijn coherent.");
