@@ -12,17 +12,19 @@ const CSS=fs.readFileSync(path.join(__dirname,"mobile-truth-ux-20260828.css"),"u
 const GRAPH_CSS=fs.readFileSync(path.join(__dirname,"mobile-graph-ux-20260828.css"),"utf8");
 let JS=fs.readFileSync(path.join(__dirname,"mobile-truth-ux-20260828.js"),"utf8");
 const GRAPH_JS=fs.readFileSync(path.join(__dirname,"mobile-graph-ux-20260828.js"),"utf8");
+const WEEK_JS=fs.readFileSync(path.join(__dirname,"week-forecast-compact-20260829.js"),"utf8");
 const START="/* ---------- start ---------- */";
 const CSS_MARK="/* ===== MOBILE TRUTH UX 20260828 CSS ===== */";
 const JS_MARK="/* ===== MOBILE TRUTH UX 20260828 ===== */";
 const GRAPH_CSS_MARK="/* ===== MOBILE GRAPH UX 20260828 CSS ===== */";
 const GRAPH_JS_MARK="/* ===== MOBILE GRAPH UX 20260828 ===== */";
+const WEEK_JS_MARK="/* ===== WEEK FORECAST COMPACT 20260829 ===== */";
 const NACHT_OWNER_ANCHOR='  verbeterNachtzicht(renderData,nu,actief);\n  werkNachtzichtCompactBij();';
 const NACHT_OWNER_NIEUW='  verbeterNachtzicht(renderData,nu,actief);\n  if(globalThis.WeatherNowMobileTruthUX20260828&&typeof globalThis.WeatherNowMobileTruthUX20260828.herstelNachtlabels==="function")globalThis.WeatherNowMobileTruthUX20260828.herstelNachtlabels();\n  werkNachtzichtCompactBij();';
 const NACHT_WRAPPER='if(typeof nachten==="function"){\n  const basisNachten=nachten;nachten=function(){const r=basisNachten.apply(this,arguments);herstelNachtlabels();return r;};\n}\n';
 
 let html=fs.readFileSync(PAD,"utf8");
-if(html.includes(CSS_MARK)||html.includes(JS_MARK)||html.includes(GRAPH_CSS_MARK)||html.includes(GRAPH_JS_MARK))throw new Error("Mobiele truth/grafiek-UX staat al in de artifact.");
+if(html.includes(CSS_MARK)||html.includes(JS_MARK)||html.includes(GRAPH_CSS_MARK)||html.includes(GRAPH_JS_MARK)||html.includes(WEEK_JS_MARK))throw new Error("Mobiele truth/grafiek-UX of compacte weekverwachting staat al in de artifact.");
 if(!html.includes("/* ===== STAFF AUDIT 20260826 ===== */"))throw new Error("Staff-audit moet vóór mobile-truth-UX zijn geassembleerd.");
 if(!html.includes("WeatherNowMobileStateUX"))throw new Error("Mobiele state-UX ontbreekt vóór mobile-truth-UX.");
 if(!html.includes("Q4 REGENPERIODEN 20260811"))throw new Error("Q4-regenperioden ontbreken vóór mobile-truth-UX.");
@@ -37,9 +39,12 @@ JS=JS.replace(NACHT_WRAPPER,"");
 
 /* De grafiekcontextlaag wordt in dezelfde late mobiele applystap geassembleerd.
    Hij volgt de bestaande truth-runtime en kan daardoor uitsluitend ontbrekende
-   zichtbare context herstellen, zonder een extra postbuildvolgorde te creëren. */
+   zichtbare context herstellen, zonder een extra postbuildvolgorde te creëren.
+   De compacte weekowner volgt daarna als laatste dagen()-wrapper: kans en mm
+   blijven in hun bestaande kolom staan, maar de lange herhalende notities worden
+   na iedere weekrender opgeruimd. */
 html=html.replace("</head>",`<style>\n${CSS_MARK}\n${CSS}\n/* ===== EINDE MOBILE TRUTH UX 20260828 CSS ===== */\n${GRAPH_CSS_MARK}\n${GRAPH_CSS}\n/* ===== EINDE MOBILE GRAPH UX 20260828 CSS ===== */\n</style>\n</head>`);
-html=html.replace(START,`${JS_MARK}\n${JS}\n/* ===== EINDE MOBILE TRUTH UX 20260828 ===== */\n\n${GRAPH_JS_MARK}\n${GRAPH_JS}\n/* ===== EINDE MOBILE GRAPH UX 20260828 ===== */\n\n${START}`);
+html=html.replace(START,`${JS_MARK}\n${JS}\n/* ===== EINDE MOBILE TRUTH UX 20260828 ===== */\n\n${GRAPH_JS_MARK}\n${GRAPH_JS}\n/* ===== EINDE MOBILE GRAPH UX 20260828 ===== */\n\n${WEEK_JS_MARK}\n${WEEK_JS}\n/* ===== EINDE WEEK FORECAST COMPACT 20260829 ===== */\n\n${START}`);
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline scripts na mobile-truth/grafiek-UX.");
@@ -48,6 +53,9 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:mobile
 for(const vereist of [
   "WeatherNowMobileTruthUX20260828",
   "WeatherNowMobileGraphUX20260828",
+  "WeatherNowWeekForecastCompact20260829",
+  "basisDagenWeekForecastCompact",
+  "ruimWeekNeerslagNotitiesOp",
   "kans · verwachte hoeveelheid",
   "kans · hoeveelheid onzeker",
   "Uitleg meetwaarden",
@@ -65,4 +73,4 @@ if(html.includes("Temperatuur boven, neerslagperioden onder"))throw new Error("M
 
 fs.writeFileSync(PAD,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"mobile-truth-graph-ux-20260828");
-console.log("Mobiele truth/grafiek-UX toegepast: lopend modeluur, eerlijke uurtegel, harde uurasfallback, volledige regenperiodecontext, locatiebewuste bronnen, duidelijke Nachtzicht-bediening en compactere mobiele hiërarchie; cache "+versie+".");
+console.log("Mobiele truth/grafiek-UX toegepast: lopend modeluur, eerlijke uurtegel, harde uurasfallback, volledige regenperiodecontext, locatiebewuste bronnen, duidelijke Nachtzicht-bediening, compacte weekverwachting en compactere mobiele hiërarchie; cache "+versie+".");

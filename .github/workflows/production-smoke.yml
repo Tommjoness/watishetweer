@@ -70,6 +70,10 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/production-staff-audit-browser.js
+      - name: Controleer compacte weekverwachting op productie
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node scripts/production-week-forecast-compact-browser.js
 
   live-performance-browser:
     needs: production-contract
