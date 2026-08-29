@@ -14,6 +14,7 @@ const TITLE_NIEUW='document.title=S.label+" · watishetweer.nl";';
 const TITLE_WRITERS=2;
 const HUB_TITLE_OUD="Weer per plaats in Nederland | Wat is het weer?";
 const HUB_TITLE_NIEUW="Weer per plaats in Nederland | watishetweer.nl";
+const HUB_TITLE_WRITERS=3;
 const HUB_BRAND_OUD='<a class="brand" href="/">Wat is het weer?</a>';
 const HUB_BRAND_NIEUW='<a class="brand" href="/">watishetweer.nl</a>';
 const NAV_ARIA_OUD='aria-label="Weer per plaats"';
@@ -70,10 +71,10 @@ function pasPlaatsH1Toe(html,loc){
 
 function pasHubMerkToe(html){
   let bron=String(html||"");
-  if(tel(bron,HUB_TITLE_OUD)!==2)throw new Error("Plaatsindex verwacht de oude hubtitel exact in title en og:title.");
+  if(tel(bron,HUB_TITLE_OUD)!==HUB_TITLE_WRITERS)throw new Error(`Plaatsindex verwacht de oude hubtitel exact ${HUB_TITLE_WRITERS} keer in title, og:title en CollectionPage.`);
   if(tel(bron,HUB_BRAND_OUD)!==1)throw new Error("Plaatsindex mist de oude zichtbare merklink.");
   bron=bron.split(HUB_TITLE_OUD).join(HUB_TITLE_NIEUW).replace(HUB_BRAND_OUD,HUB_BRAND_NIEUW);
-  if(tel(bron,HUB_TITLE_NIEUW)!==2||tel(bron,HUB_BRAND_NIEUW)!==1)throw new Error("Plaatsindex kon niet eenduidig aan watishetweer.nl worden gekoppeld.");
+  if(tel(bron,HUB_TITLE_NIEUW)!==HUB_TITLE_WRITERS||tel(bron,HUB_BRAND_NIEUW)!==1)throw new Error("Plaatsindex kon niet eenduidig aan watishetweer.nl worden gekoppeld.");
   return bron;
 }
 
@@ -112,7 +113,7 @@ function main(){
 
 if(require.main===module)main();
 module.exports={
-  MERK_H1,ROUTE_EXIT_HAAK,H1_RESET,TITLE_OUD,TITLE_NIEUW,TITLE_WRITERS,HUB_TITLE_OUD,HUB_TITLE_NIEUW,HUB_BRAND_OUD,HUB_BRAND_NIEUW,
+  MERK_H1,ROUTE_EXIT_HAAK,H1_RESET,TITLE_OUD,TITLE_NIEUW,TITLE_WRITERS,HUB_TITLE_OUD,HUB_TITLE_NIEUW,HUB_TITLE_WRITERS,HUB_BRAND_OUD,HUB_BRAND_NIEUW,
   plaatsH1,pasPlaatsH1Toe,pasMerkTitelToe,pasHubMerkToe,pasPlaatsNavLabelToe,
   NAV_ARIA_OUD,NAV_ARIA_NIEUW,NAV_KOP_OUD,NAV_KOP_NIEUW,NAV_TEKST_OUD,NAV_TEKST_NIEUW
 };
