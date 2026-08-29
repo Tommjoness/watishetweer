@@ -32,29 +32,6 @@ html=html.replace("</head>",fetchStub+"</head>");
    deterministische browserfixture. */
 const reporter=`<script>
 (function(){
-  let afgerond=false;
-  function weerweergaveGereed(){
-    const app=document.getElementById('app'),chart=document.getElementById('chart');
-    return !!(app&&getComputedStyle(app).display!=='none'
-      &&chart&&chart.querySelector('circle[data-temp-index]')
-      &&document.querySelectorAll('#days .row.day:not(.kop)').length>=7
-      &&document.querySelectorAll('#nights .row.night:not(.kop)').length>=3
-      &&document.querySelectorAll('#suntimes .zonregel').length>=1
-      &&document.querySelectorAll('#aq .stat').length>=1);
-  }
-  function probeer(definitief){
-    if(afgerond)return;
-    if(weerweergaveGereed()){
-      afgerond=true;
-      meet();
-      return;
-    }
-    if(definitief){
-      afgerond=true;
-      document.body.dataset.browserTestResult='niet-gereed';
-      document.body.dataset.browserException='weerweergave niet binnen 10 seconden gereed';
-    }
-  }
   function meet(){
   try{
     const chart=document.getElementById('chart'),svgBox=chart.getBoundingClientRect();
@@ -236,13 +213,10 @@ const reporter=`<script>
     document.body.dataset.browserZon=String(zonSemantiekOk);
   }catch(e){document.body.dataset.browserTestResult='exception';document.body.dataset.browserException=String(e&&e.message||e);}
   }
-  /* Dit is uitsluitend CI-opstartmarge. Alle inhoudelijke/layoutasserties in
-     meet() blijven identiek; een runner krijgt alleen langer de kans om dezelfde
-     deterministische weerfixture volledig te renderen. */
-  setTimeout(()=>probeer(false),1400);
-  setTimeout(()=>probeer(false),3500);
-  setTimeout(()=>probeer(false),7000);
-  setTimeout(()=>probeer(true),10000);
+  /* Meet na de deterministische fixture-render rechtstreeks de echte UI-state.
+     Ontbrekende of onjuiste onderdelen falen daardoor via dezelfde inhoudelijke
+     assertions, zonder een tweede readiness-contract ervoor te zetten. */
+  setTimeout(meet,10000);
 })();
 </script>`;
 html=html.replace("</body>",reporter+"</body>");
