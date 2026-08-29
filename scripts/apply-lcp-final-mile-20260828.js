@@ -41,18 +41,16 @@ if(!html.includes(PRODUCT_CSS_MARK)){
 }
 
 /* Intermitterende mobiele PageSpeed-runs lieten 0,528 CLS zien op main#app.
-   De oorzaak is de oude display:none -> display:block-overgang: de complete
-   hoofdstructuur heeft vóór de eerste weerresponse geen layoutbox en verschijnt
-   daarna in één keer. Reserveer de bestaande statische hoofdstructuur daarom
-   vanaf de eerste paint met visibility:hidden. De render vult diezelfde boxes
-   terwijl ze onzichtbaar zijn en onthult ze pas ná tekenAlles(); zo verandert
-   de zichtbaarheid zonder het hele hoofdblok opnieuw in de documentflow te
-   plaatsen. Playwright/Lighthouse beschouwen visibility:hidden nog steeds als
-   niet-zichtbaar, dus bestaande readiness-waits blijven correct. */
-const APP_OUD='<div id="app" style="display:none">';
-const APP_NIEUW='<div id="app" style="visibility:hidden">';
+   UI-polish heeft #app vóór deze late laag al bewust tot het main-landmark
+   gemaakt. De oude display:none -> display:block-overgang gaf dat volledige
+   landmark vóór de eerste weerresponse geen layoutbox. Houd precies datzelfde
+   main-element daarom vanaf first paint in de flow via visibility:hidden. De
+   render vult de bestaande boxes en onthult daarna alleen painting, niet de
+   complete documentstructuur. */
+const APP_OUD='<main id="app" style="display:none">';
+const APP_NIEUW='<main id="app" style="visibility:hidden">';
 const appAantal=html.split(APP_OUD).length-1;
-if(appAantal!==1)throw new Error("App-startanker ontbreekt of is dubbel: "+appAantal);
+if(appAantal!==1)throw new Error("Main-app-startanker ontbreekt of is dubbel: "+appAantal);
 html=html.replace(APP_OUD,APP_NIEUW);
 const APP_REVEAL_OUD='document.getElementById("app").style.display="block";';
 const appRevealAantal=html.split(APP_REVEAL_OUD).length-1;
@@ -86,4 +84,4 @@ if((html.match(/rel=\"preconnect\" href=\"https:\/\/api\.open-meteo\.com\"/g)||[
 if((html.match(/rel=\"dns-prefetch\" href=\"\/\/api\.open-meteo\.com\"/g)||[]).length!==1)throw new Error("Forecast DNS-prefetch moet exact één keer aanwezig zijn.");
 
 fs.writeFileSync(bestand,html);
-console.log("LCP final-mile toegepast: forecast preconnect + DNS fallback, wolkenlagen, geometrisch gereserveerde hoofdstructuur, CLS-stabiele plaatsnav, vroegere mobiele briefing en finale consumentencopy.");
+console.log("LCP final-mile toegepast: forecast preconnect + DNS fallback, wolkenlagen, geometrisch gereserveerd main#app, CLS-stabiele plaatsnav, vroegere mobiele briefing en finale consumentencopy.");
