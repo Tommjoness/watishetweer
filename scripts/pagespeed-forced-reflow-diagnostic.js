@@ -3,9 +3,11 @@ const fs=require("fs");
 const path=require("path");
 const ROOT=path.join(__dirname,"..");
 const PUBLIC=path.join(ROOT,"public");
-const bestanden=fs.readdirSync(PUBLIC).filter(n=>/^app-[0-9a-f]{12}\.min\.js$/.test(n));
-if(bestanden.length!==1)throw new Error("Verwacht exact één homepage-appbundle, gevonden: "+bestanden.join(", "));
-const naam=bestanden[0];
+const html=fs.readFileSync(path.join(PUBLIC,"index.html"),"utf8");
+const matches=[...html.matchAll(/<script\b[^>]*\bsrc=["']\/(app-[0-9a-f]{12}\.min\.js)["'][^>]*>/gi)];
+const namen=[...new Set(matches.map(m=>m[1]))];
+if(namen.length!==1)throw new Error("Verwacht exact één homepage-appbundle in index.html, gevonden: "+namen.join(", "));
+const naam=namen[0];
 const bron=fs.readFileSync(path.join(PUBLIC,naam),"utf8");
 const regels=bron.split("\n");
 const posities=[
