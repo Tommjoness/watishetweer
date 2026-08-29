@@ -183,7 +183,7 @@ async function kiesZoekresultaat(page,naam){
     assert(/plaats=Sydney/.test(page.url()),`Back herstelt Sydney-URL niet: ${page.url()}`);
     await page.goForward({waitUntil:"domcontentloaded"});await wachtVolledig(page,"Amsterdam");
     assert(/plaats=Amsterdam/.test(page.url()),`Forward herstelt Amsterdam-URL niet: ${page.url()}`);
-    assert.equal(await page.title(),"Amsterdam · Wat is het weer?","Forward synchroniseert titel niet");
+    assert.equal(await page.title(),"Amsterdam · watishetweer.nl","Forward synchroniseert titel niet");
 
     const add=page.locator("#chipadd");if(await add.count())await add.click();
     const del=page.locator(".chip .x").first();
