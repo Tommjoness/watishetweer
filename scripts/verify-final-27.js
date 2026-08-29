@@ -147,8 +147,11 @@ const inlineBlokken=[...paginaHtml.matchAll(/<script(?![^>]*\ssrc=)([^>]*)>([\s\
 const inlineRuntime=inlineBlokken.filter(m=>!/\btype\s*=\s*["'](?:application\/ld\+json|application\/json)["']/i.test(m[1])).map(m=>m[2]);
 const jsonLdScripts=inlineBlokken.filter(m=>/\btype\s*=\s*["']application\/ld\+json["']/i.test(m[1])).map(m=>m[2]);
 const externePaden=[...paginaHtml.matchAll(/<script[^>]*\bsrc=["']([^"']+)["'][^>]*><\/script>/g)].map(m=>m[1]);
+const deliveryRuntimePatroon=/^\/(?:app|early)-[0-9a-f]{12}\.min\.js$/;
+const hoofdBundles=externePaden.filter(src=>/^\/app-[0-9a-f]{12}\.min\.js$/.test(src));
+if(externePaden.length&&hoofdBundles.length!==1)throw new Error("Definitief homepage-artifact moet exact één app-hoofdbundle hebben; gevonden "+hoofdBundles.length+".");
 const externeRuntime=externePaden.map(src=>{
-  if(!/^\/app-[0-9a-f]{12}\.min\.js$/.test(src))throw new Error("Onverwachte externe runtime in definitief artifact: "+src);
+  if(!deliveryRuntimePatroon.test(src))throw new Error("Onverwachte externe runtime in definitief artifact: "+src);
   const p=path.join(OUT,src.replace(/^\//,""));
   if(!fs.existsSync(p))throw new Error("Externe runtime ontbreekt: "+src);
   return fs.readFileSync(p,"utf8");
