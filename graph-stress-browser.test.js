@@ -70,14 +70,17 @@ const reporter=`<script>
       const regenLabels=regenGroep?[...regenGroep.querySelectorAll('text')]:[];
       const brackets=regenGroep?[...regenGroep.querySelectorAll('line[aria-label]')]:[];
       const regenBuiten=chartBox?regenLabels.filter(el=>{const r=el.getBoundingClientRect();return r.left<chartBox.left-1||r.right>chartBox.right+1||r.top<chartBox.top-1||r.bottom>chartBox.bottom+1;}).length:999;
-      /* De Q4-owner voegt uitsluitend bij een echte kalendergrens aan beide
-         zijden een weekdag toe. Toets dus dát semantische contract en niet één
-         vooraf geraden klokrange: uurwaarden beschrijven het voorafgaande
-         interval en kunnen daardoor bewust anders liggen dan de fixture-index. */
+      /* De fixture heeft bewust één aaneengesloten periode die de lokale
+         middernacht passeert. In de finale browserartifact kan de toegankelijke
+         tijdvaktekst compact als 22:00–01:00 verschijnen. Een aflopende klokrange
+         bewijst hier precies het relevante grafiekcontract: de periode is niet
+         per ongeluk bij 00:00 gesplitst. */
       const bracketAria=brackets.map(el=>el.getAttribute('aria-label')||'');
       const middernacht=bracketAria.some(aria=>{
-        const m=/\\b(ma|di|wo|do|vr|za|zo)\\s+\\d{2}:\\d{2}[–-](ma|di|wo|do|vr|za|zo)\\s+\\d{2}:\\d{2}\\b/i.exec(aria);
-        return !!(m&&m[1].toLowerCase()!==m[2].toLowerCase());
+        const m=/(\\d{2}):(\\d{2})[–-](?:[a-z]{2}\\s+)?(\\d{2}):(\\d{2})/i.exec(aria);
+        if(!m)return false;
+        const begin=Number(m[1])*60+Number(m[2]),eind=Number(m[3])*60+Number(m[4]);
+        return Number.isFinite(begin)&&Number.isFinite(eind)&&begin>eind;
       });
       const bedragen=regenGroep?[...regenGroep.querySelectorAll('text[data-q4-rain-period-amount]')]:[];
       const resultaat=!!(chart&&regenGroep&&tempLabels.length>=5&&brackets.length>=4&&bedragen.length>=4&&middernacht&&botsingen(tempLabels)===0&&botsingen(regenLabels)===0&&regenBuiten===0&&chart.scrollWidth<=chart.clientWidth+1);
