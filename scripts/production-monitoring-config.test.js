@@ -9,6 +9,7 @@ const workflow=fs.readFileSync(path.join(root,".github","workflows","production-
 const smoke=fs.readFileSync(path.join(root,"scripts","production-smoke.js"),"utf8");
 const wereldwijd=fs.readFileSync(path.join(root,"scripts","production-worldwide-browser.js"),"utf8");
 const performance=fs.readFileSync(path.join(root,"scripts","production-live-performance-browser.js"),"utf8");
+const sitemapContract=require("./production-sitemap-contract.js");
 
 assert(/push:\s*\n\s*branches:\s*\[main\]/.test(workflow),"production-smoke moet na merges/pushes naar main draaien");
 assert(/schedule:\s*\n\s*- cron: ["']\d+ \* \* \* \*["']/.test(workflow),"production-smoke moet ieder uur gepland staan");
@@ -19,6 +20,7 @@ assert(workflow.includes("mcr.microsoft.com/playwright:v1.62.1-noble"),"producti
 assert(workflow.includes("node scripts/production-worldwide-browser.js"),"workflow mist de wereldwijde browsermonitor");
 assert(workflow.includes("node scripts/production-staff-audit-browser.js"),"workflow mist de interactieve staff-auditmonitor");
 assert(workflow.includes("node scripts/production-live-performance-browser.js"),"workflow mist de live Chromium/WebKit-performancemonitor");
+assert(workflow.includes("node scripts/production-sitemap-contract.js"),"workflow mist het exacte live sitemapcontract");
 
 /* De wereldmonitor blijft de echte live providerintegratie-gate; de staff-audit
    gebruikt sinds de interactiefixture deterministische data voor frontendgedrag.
@@ -35,12 +37,19 @@ assert.equal((workflow.match(/^    needs: production-contract$/gm)||[]).length,3
 
 assert(smoke.includes("AbortSignal.timeout(timeoutMs)"),"production-smoke requests moeten een harde timeout hebben");
 assert(smoke.includes("const maxPogingen=opt.retry===false?1:2"),"production-smoke mag per request maximaal één retry doen");
-assert(smoke.includes('redirect:"manual"'),"production-smoke moet de www-redirect zelf controleren");
+assert(smoke.includes('redirect:\"manual\"'),"production-smoke moet de www-redirect zelf controleren");
 assert(smoke.includes("/weer/dit-bestaat-niet/"),"production-smoke moet echte 404-semantiek bewaken");
 assert(smoke.includes("/api/plaatsnaam?lat=52.3508&lon=5.2647"),"production-smoke mist plaatsnaam-API-contract");
 assert(smoke.includes("/api/neerslag?lat=52.3508&lon=5.2647&land=NL"),"production-smoke mist neerslag-API-contract");
 assert(smoke.includes("/api/waarschuwingen?lat=52.3508&lon=5.2647&land=NL"),"production-smoke mist waarschuwingen-API-contract");
 assert(smoke.includes("item.plaatsSpecifiek===true"),"waarschuwingencontract moet plaatsgebonden filtering bewaken");
+
+assert.equal(sitemapContract.VERWACHTE_URLS.length,37,"huidig sitemapcontract moet exact 37 canonieke URLs bevatten");
+assert.equal(new Set(sitemapContract.VERWACHTE_URLS).size,sitemapContract.VERWACHTE_URLS.length,"verwacht sitemapcontract mag geen duplicaten bevatten");
+assert(sitemapContract.VERWACHTE_URLS.includes("https://watishetweer.nl/over/"),"verwacht sitemapcontract moet /over/ bevatten");
+const testXml=`<?xml version="1.0"?><urlset>${sitemapContract.VERWACHTE_URLS.map(url=>`<url><loc>${url}</loc></url>`).join("")}</urlset>`;
+assert.deepEqual(sitemapContract.controleerSitemap(testXml),sitemapContract.VERWACHTE_URLS,"sitemapcontract moet de huidige canonieke set accepteren");
+assert.throws(()=>sitemapContract.controleerSitemap(testXml.replace("<url><loc>https://watishetweer.nl/over/</loc></url>","")),/exact 37/,"sitemapcontract moet een ontbrekende /over/ afwijzen");
 
 for(const plek of ["Amsterdam","New York","Tokio","Sydney","Singapore","Longyearbyen"])assert(wereldwijd.includes(`naam:\"${plek}\"`),`wereldwijde monitor mist ${plek}`);
 assert(wereldwijd.includes('{naam:"mobiel",width:390,height:844}'),"wereldwijde monitor mist mobiel 390px");
@@ -57,4 +66,4 @@ assert(performance.includes("beacons.length,0"),"live performancemonitor bewaakt
 
 require("./production-source-truth.test.js");
 
-console.log("production-monitoring-config: gescheiden live en deterministische browserjobs OK");
+console.log("production-monitoring-config: gescheiden live en deterministische browserjobs + strikt sitemapcontract OK");
