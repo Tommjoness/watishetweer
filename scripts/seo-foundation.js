@@ -4,8 +4,13 @@ const SEO=require("./seo-foundation.config.js");
 const MARKER="<!-- WEATHER NOW SEO FOUNDATION -->";
 const BRAND_LINK_MARKER="<!-- WEATHER NOW BRAND LINK -->";
 const SHARE_IMAGE="https://watishetweer.nl/icon-512.png";
+const BRON_H1="<h1>Wat is het weer?</h1>";
+const MERK_H1=`<h1>${SEO.siteName}</h1>`;
+const BRON_APP_TITLE='<meta name="apple-mobile-web-app-title" content="Wat is het weer?">';
+const MERK_APP_TITLE=`<meta name="apple-mobile-web-app-title" content="${SEO.siteName}">`;
 
 function attr(v){return String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function tel(tekst,zoek){return String(tekst).split(zoek).length-1;}
 
 function maakBrandStructuredData(){
   return [
@@ -39,17 +44,21 @@ function pasSeoFoundationToe(html){
   if(titles.length!==1)throw new Error("SEO verwacht exact één title-element; gevonden: "+titles.length);
   const descriptions=[...bron.matchAll(/<meta name="description" content="[^"]*">/g)];
   if(descriptions.length!==1)throw new Error("SEO verwacht exact één meta-description; gevonden: "+descriptions.length);
+  if(tel(bron,BRON_H1)!==1)throw new Error("SEO verwacht exact één generieke bron-H1 voor de merknaam.");
+  if(tel(bron,BRON_APP_TITLE)!==1)throw new Error("SEO verwacht exact één generieke Apple-appnaam voor de merknaam.");
 
   bron=bron.replace(titles[0][0],`<title>${SEO.title}</title>`);
   const nieuweDescription=`<meta name="description" content="${attr(SEO.description)}">`;
   bron=bron.replace(descriptions[0][0],nieuweDescription);
+  bron=bron.replace(BRON_H1,MERK_H1);
+  bron=bron.replace(BRON_APP_TITLE,MERK_APP_TITLE);
 
   /* Eén canonieke merkidentiteit op de homepage: watishetweer.nl is de vaste
-     sitenaam; "Wat is het weer?" blijft de zichtbare productnaam en staat als
-     alternateName in dezelfde graph. Organization en WebSite delen stabiele
-     @id's, zodat crawlers publisher en website niet als losse entiteiten hoeven
-     te raden. We voegen bewust geen sameAs-profielen toe zolang er geen echte,
-     door het project beheerde externe merkprofielen zijn. */
+     sitenaam én zichtbare merknaam. De schrijfwijze zonder .nl blijft alleen
+     als alternateName voor de merkzoekopdracht bestaan. De generieke vraag
+     "Wat is het weer?" wordt bewust niet als alternatieve merknaam gepubliceerd.
+     Organization en WebSite delen stabiele @id's. We voegen geen sameAs-profielen
+     toe zolang er geen echte, door het project beheerde externe merkprofielen zijn. */
   const websiteJson=JSON.stringify(maakBrandStructuredData());
   const blok=[
     MARKER,
@@ -75,10 +84,9 @@ function pasSeoFoundationToe(html){
   ].join("\n");
   bron=bron.replace(nieuweDescription,nieuweDescription+"\n"+blok);
 
-  /* De zichtbare productkop blijft bewust "Wat is het weer?". Een kleine,
-     crawlbare merkverwijzing in de bestaande footer koppelt die interface aan
-     de vaste domeinnaam en aan de transparante Over-pagina, zonder de hero of
-     de zoekintentie van de weerpagina te veranderen. */
+  /* De footer herhaalt de vaste merknaam en koppelt die aan een transparante
+     Over-pagina. Zo geven zichtbare homepagecopy en structured data hetzelfde
+     signaal zonder de weerinhoud met SEO-tekst te overladen. */
   const footerMatches=[...bron.matchAll(/<footer>/g)];
   if(footerMatches.length!==1)throw new Error("SEO verwacht exact één footer voor de merkverwijzing; gevonden: "+footerMatches.length);
   const brandLink=`${BRAND_LINK_MARKER}\n      <span class="bron"><a href="/over/"><b>${attr(SEO.siteName)}</b> · Over deze site</a></span>`;
@@ -87,4 +95,4 @@ function pasSeoFoundationToe(html){
   return bron;
 }
 
-module.exports={MARKER,BRAND_LINK_MARKER,SHARE_IMAGE,maakBrandStructuredData,pasSeoFoundationToe};
+module.exports={MARKER,BRAND_LINK_MARKER,SHARE_IMAGE,BRON_H1,MERK_H1,BRON_APP_TITLE,MERK_APP_TITLE,maakBrandStructuredData,pasSeoFoundationToe};
