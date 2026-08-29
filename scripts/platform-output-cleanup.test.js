@@ -18,8 +18,15 @@ groep.setAttribute("aria-label","Neerslagperioden met tijdvak en hoeveelheid per
   svg.setAttribute("aria-label",(oudeAria+" Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve."+detailAria+" Neerslagkansen blijven via de details beschikbaar.").trim());
 </script></body></html>`;
   const hard=hardenRuntime(bron);
-  assert(hard.includes('rel="preload" href="/instrument-sans-latin-400-normal.woff2"'),"Instrument Sans preload ontbreekt");
-  assert(hard.includes('rel="preload" href="/bodoni-moda-latin-400-normal.woff2"'),"Bodoni preload ontbreekt");
+  const font400='rel="preload" href="/instrument-sans-latin-400-normal.woff2"';
+  const font500='rel="preload" href="/instrument-sans-latin-500-normal.woff2"';
+  const bodoni400='rel="preload" href="/bodoni-moda-latin-400-normal.woff2"';
+  assert(hard.includes(font400),"Instrument Sans 400 preload ontbreekt");
+  assert(hard.includes(font500),"Instrument Sans 500 preload ontbreekt terwijl die weight in de kritieke mobiele keten staat");
+  assert(hard.includes(bodoni400),"Bodoni preload ontbreekt");
+  const eersteStijl=hard.indexOf("<style>");
+  assert(eersteStijl>0,"eerste stijlblok ontbreekt in geharde testartifact");
+  for(const preload of [font400,font500,bodoni400])assert(hard.indexOf(preload)<eersteStijl,"kritieke fontpreload moet vóór het eerste stijlblok staan: "+preload);
   assert(hard.includes('groep.setAttribute("aria-hidden","true")'),"regenperiodegroep is niet decoratief voor accessibility tree");
   assert(!hard.includes('horizontaal.setAttribute("aria-label"'),"ongeldige aria-label op SVG-line bleef staan");
   assert(hard.includes("Neerslagperioden: "),"exacte regenperiodesamenvatting verhuist niet naar het SVG-label");
@@ -43,7 +50,7 @@ groep.setAttribute("aria-label","Neerslagperioden met tijdvak en hoeveelheid per
 
   const vroegHtml='<html><head><script>(()=>{const raw=localStorage.getItem("weerbriefing.thema");if(raw)document.documentElement.setAttribute("data-thema","donker");})();</script><style>body{color:red}</style></head><body><script>globalThis.laat=1;</script></body></html>';
   const vroeg=verzamelRuntime(vroegHtml);
-  assert.equal(vroeg.earlyScripts.length,1,"pre-paint thema-initialisatie moet apart worden gehouden");
+  assert.equal(vroeg.earlyScripts.length,1,"echte pre-paint thema-initialisatie moet apart worden gehouden");
   assert.equal(vroeg.scripts.length,1,"gewone bodyruntime blijft in de deferred hoofdbundle");
   assert(vroeg.earlyScripts[0].body.includes('localStorage.getItem("weerbriefing.thema")'),"thema-initialisatie ging verloren");
   const vroegPos=vroeg.html.indexOf(vroeg.earlyScripts[0].token);
@@ -52,5 +59,5 @@ groep.setAttribute("aria-label","Neerslagperioden met tijdvak en hoeveelheid per
   const vroegMin=await minifyRuntime([vroeg.earlyScripts[0].body],null);
   assert(vroegMin.code.includes("weerbriefing.thema"),"minificatie verwijderde de vroege themalogica");
 
-  console.log("Platform-output-cleanup: ARIA-hardening, fontpreload, CSS/JS-minificatie, pre-paintscriptbehoud en routebootstrap-migratie geslaagd.");
+  console.log("Platform-output-cleanup: ARIA-hardening, drie vroege fontpreloads, CSS/JS-minificatie, echt pre-paintscriptbehoud en routebootstrap-migratie geslaagd.");
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
