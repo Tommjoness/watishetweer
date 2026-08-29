@@ -16,16 +16,17 @@ function vervangEen(bron,doel,label){
   html=html.replace(bron,doel);
 }
 
-/* Edge/Chrome toonde een generiek wereldbolletje omdat de pagina wel PWA- en
-   Apple-iconen had, maar geen faviconrelatie voor een normale browsertab. Een
-   kleine inline SVG houdt dit onafhankelijk van extra netwerkverzoeken en past
-   bij de bestaande haarlijn-iconen van WeatherNow. */
+/* De ruwe HTML bevat één crawlbare PNG-favicon voor zoekmachines. In de echte
+   browser wordt exact diezelfde link na het parsen omgezet naar het bestaande
+   zon-icoon. Zo behouden we de dynamische tabweergave zonder twee concurrerende
+   rel=icon-elementen te publiceren. */
 const faviconSvg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><g fill="none" stroke="#12211C" stroke-width="4" stroke-linecap="round"><circle cx="32" cy="32" r="11"/><path d="M32 6v8M32 50v8M6 32h8M50 32h8M13.6 13.6l5.7 5.7M44.7 44.7l5.7 5.7M50.4 13.6l-5.7 5.7M19.3 44.7l-5.7 5.7"/></g></svg>';
 const faviconHref="data:image/svg+xml,"+encodeURIComponent(faviconSvg);
+const crawlFavicon='<link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">';
 vervangEen(
-  '<link rel="apple-touch-icon" href="icon-192.png">',
-  '<link rel="apple-touch-icon" href="icon-192.png">\n<!-- WEATHERNOW TABICOON -->\n<link rel="icon" type="image/svg+xml" href="'+faviconHref+'">',
-  "Apple-touch-iconanker voor favicon"
+  crawlFavicon,
+  '<!-- WEATHERNOW TABICOON -->\n<link id="site-favicon" rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">\n<script>!function(){const f=document.getElementById("site-favicon");if(f)f.setAttribute("href","'+faviconHref+'")}();</script>',
+  "crawlbare faviconanker voor dynamisch tabicoon"
 );
 
 /* De oude themaknop cyclde blind door auto -> licht -> donker -> rood. In de
@@ -166,4 +167,4 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-she
 
 fs.writeFileSync(pad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"UI-shell");
-console.log("UI-shell toegepast: drie duidelijke weergavestanden, dark-mode contrast, weekinset en zon-favicon; serviceworker "+versie+".");
+console.log("UI-shell toegepast: drie duidelijke weergavestanden, dark-mode contrast, weekinset en één crawlbare/dynamische favicon; serviceworker "+versie+".");
