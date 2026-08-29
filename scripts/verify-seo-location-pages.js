@@ -2,6 +2,7 @@
 
 const fs=require("fs");
 const path=require("path");
+const SEO=require("./seo-foundation.config.js");
 const {LOCATIES,POPULAIR,BASIS_URL,plaatsUrl,plaatsTitel,plaatsBeschrijving}=require("./seo-locations.config.js");
 const {MARKER_NAV,MARKER_ROUTE,gerelateerdePlaatsen}=require("./generate-seo-location-pages.js");
 const {verifieerServiceworkerCache}=require("./postbuild-cache.js");
@@ -15,6 +16,7 @@ const root=fs.readFileSync(rootPath,"utf8");
 if(tel(root,'<div class="sheet" data-nosnippet>')!==1)throw new Error("Homepage moet de dynamische weerinterface exact één keer uit zoeksnippets houden.");
 if(tel(root,MARKER_NAV)!==1)throw new Error("Homepage moet exact één crawlbare plaatsnavigatie bevatten.");
 if(!root.includes('href="/weer/"'))throw new Error("Homepage linkt niet naar de volledige plaatsindex.");
+if(!root.includes('href="/over/"><b>watishetweer.nl</b> · Over deze site</a>'))throw new Error("Homepage mist de crawlbare vaste merkverwijzing naar de Over-pagina.");
 for(const loc of POPULAIR){
   if(tel(root,`href="/weer/${loc.slug}/"`)!==1)throw new Error(`Homepage moet populaire plaats ${loc.slug} exact één keer linken.`);
 }
@@ -22,6 +24,7 @@ for(const loc of POPULAIR){
 const hub=fs.readFileSync(hubPath,"utf8");
 if(!hub.includes(`<link rel="canonical" href="${BASIS_URL}/weer/">`))throw new Error("Plaatsindex mist eigen canonical.");
 if(!hub.includes("<h1>Weer per plaats</h1>"))throw new Error("Plaatsindex mist zichtbare hoofdkop.");
+if(!hub.includes(`property="og:site_name" content="${SEO.siteName}"`))throw new Error("Plaatsindex gebruikt niet de vaste technische sitenaam.");
 for(const loc of LOCATIES){if(tel(hub,`href="/weer/${loc.slug}/"`)!==1)throw new Error(`Plaatsindex mist unieke crawlbare link naar ${loc.slug}.`);}
 
 const sitemap=fs.readFileSync(sitemapPath,"utf8");
@@ -41,6 +44,7 @@ for(const loc of LOCATIES){
   if(tel(html,MARKER_NAV)!==1)throw new Error(`${loc.slug}: plaatsnavigatie ontbreekt of is dubbel.`);
   if(tel(html,`<link rel="canonical" href="${canonical}">`)!==1)throw new Error(`${loc.slug}: canonical ontbreekt of is dubbel.`);
   if(!html.includes(`<title>${titel}</title>`))throw new Error(`${loc.slug}: unieke title ontbreekt.`);
+  if(!html.includes(`property="og:site_name" content="${SEO.siteName}"`))throw new Error(`${loc.slug}: og:site_name wijkt af van de vaste merknaam.`);
   const escaped=desc.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   if(!html.includes(`name="description" content="${escaped}"`))throw new Error(`${loc.slug}: unieke description ontbreekt.`);
   if(tel(html,'<base href="/">')!==1)throw new Error(`${loc.slug}: root-base ontbreekt of is dubbel.`);
@@ -52,7 +56,7 @@ for(const loc of LOCATIES){
 
   const breadcrumb=/<nav class="seo-breadcrumb" aria-label="Broodkruimelnavigatie">([\s\S]*?)<\/nav>/.exec(html);
   if(!breadcrumb)throw new Error(`${loc.slug}: zichtbare breadcrumb ontbreekt.`);
-  if(!breadcrumb[1].includes('href="/"')||!breadcrumb[1].includes('href="/weer/"')||!breadcrumb[1].includes(`aria-current="page">${loc.naam}</span>`))throw new Error(`${loc.slug}: zichtbare breadcrumb wijkt af van site > plaatsindex > plaats.`);
+  if(!breadcrumb[1].includes('href="/"')||!breadcrumb[1].includes(`>${SEO.siteName}</a>`)||!breadcrumb[1].includes('href="/weer/"')||!breadcrumb[1].includes(`aria-current="page">${loc.naam}</span>`))throw new Error(`${loc.slug}: zichtbare breadcrumb wijkt af van merk > plaatsindex > plaats.`);
 
   const nearby=/<div class="seo-route-nearby-links">([\s\S]*?)<\/div>/.exec(html);
   if(!nearby)throw new Error(`${loc.slug}: blok met nabijgelegen plaatsen ontbreekt.`);
@@ -64,12 +68,12 @@ for(const loc of LOCATIES){
   const ld=[...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
   if(ld.length!==1)throw new Error(`${loc.slug}: verwacht exact één JSON-LD-blok.`);
   let data;try{data=JSON.parse(ld[0][1]);}catch(e){throw new Error(`${loc.slug}: ongeldige JSON-LD: ${e.message}`);}
-  if(!Array.isArray(data)||data.length!==3||data[1]?.["@type"]!=="WebPage"||data[1]?.url!==canonical)throw new Error(`${loc.slug}: WebPage structured data wijkt af.`);
+  if(!Array.isArray(data)||data.length!==3||data[0]?.["@type"]!=="WebSite"||data[0]?.name!==SEO.siteName||data[0]?.url!==SEO.canonical||data[1]?.["@type"]!=="WebPage"||data[1]?.url!==canonical)throw new Error(`${loc.slug}: WebSite/WebPage structured data wijkt af van de vaste merk- of routeconfiguratie.`);
   const crumbs=data[2];
   const items=crumbs?.itemListElement;
   if(crumbs?.["@type"]!=="BreadcrumbList"||!Array.isArray(items)||items.length!==3)throw new Error(`${loc.slug}: BreadcrumbList structured data ontbreekt of heeft verkeerde lengte.`);
   const verwachteCrumbs=[
-    {positie:1,naam:"Wat is het weer?",url:`${BASIS_URL}/`},
+    {positie:1,naam:SEO.siteName,url:`${BASIS_URL}/`},
     {positie:2,naam:"Weer per plaats",url:`${BASIS_URL}/weer/`},
     {positie:3,naam:loc.naam,url:canonical}
   ];
@@ -80,4 +84,4 @@ for(const loc of LOCATIES){
 }
 
 const cache=verifieerServiceworkerCache(OUT,"seo-location-pages-verifier");
-console.log(`SEO-plaatsarchitectuur geverifieerd: ${LOCATIES.length} indexeerbare routes, hub, breadcrumbs, vier nabijgelegen links per route, sitemap, routecontext en cache ${cache}.`);
+console.log(`SEO-plaatsarchitectuur geverifieerd: ${LOCATIES.length} indexeerbare routes met vaste merknaam, hub, breadcrumbs, vier nabijgelegen links per route, sitemap, routecontext en cache ${cache}.`);
