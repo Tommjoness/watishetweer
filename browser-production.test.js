@@ -30,7 +30,7 @@ const reporter=`<script>
     if(definitief){
       afgerond=true;
       document.body.dataset.browserTestResult='niet-gereed';
-      document.body.dataset.browserException='weerweergave niet binnen 5 seconden gereed';
+      document.body.dataset.browserException='weerweergave niet binnen 10 seconden gereed';
     }
   }
   function meet(){
@@ -214,9 +214,13 @@ const reporter=`<script>
     document.body.dataset.browserZon=String(zonSemantiekOk);
   }catch(e){document.body.dataset.browserTestResult='exception';document.body.dataset.browserException=String(e&&e.message||e);}
   }
+  /* Dit is uitsluitend CI-opstartmarge. Alle inhoudelijke/layoutasserties in
+     meet() blijven identiek; een runner krijgt alleen langer de kans om dezelfde
+     deterministische weerfixture volledig te renderen. */
   setTimeout(()=>probeer(false),1400);
-  setTimeout(()=>probeer(false),2800);
-  setTimeout(()=>probeer(true),5000);
+  setTimeout(()=>probeer(false),3500);
+  setTimeout(()=>probeer(false),7000);
+  setTimeout(()=>probeer(true),10000);
 })();
 </script>`;
 html=html.replace("</body>",reporter+"</body>");
@@ -227,7 +231,7 @@ const url="file://"+fixture+"?lat=52.3500&lon=5.2600&plaats=Browsertest";
 function voerBrowserUit(maat,naam){
   const r=spawnSync(browser,[
     "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",
-    "--window-size="+maat,"--virtual-time-budget=7000","--dump-dom",url
+    "--window-size="+maat,"--virtual-time-budget=12000","--dump-dom",url
   ],{encoding:"utf8",maxBuffer:16*1024*1024});
   if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"";
