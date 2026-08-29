@@ -35,6 +35,6 @@ const runtime=html.slice(markerStart,markerEind);
 for(const ongewenst of ["Malargüe","Amsterdam","land===","S.land","timezone","provider"]){
   assert(!runtime.includes(ongewenst),"compacte weekcleanup mag niet locatie/provider-specifiek zijn: "+ongewenst);
 }
-assert(!runtime.includes('rij.removeAttribute("aria-describedby");\n  });'),"compacte weekcleanup mag aria-describedby niet meer onvoorwaardelijk wissen");
+assert(!/rij\.classList\.remove\("heeft-neerslagnotitie"\);\s*rij\.removeAttribute\("aria-describedby"\);/.test(runtime),"compacte weekcleanup mag aria-describedby niet direct na de class-cleanup onvoorwaardelijk wissen");
 
 console.log("Compacte weekverwachting artifactcontract groen: eigen neerslag-aria verdwijnt, overige beschrijvingen blijven behouden.");
