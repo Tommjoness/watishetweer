@@ -25,7 +25,7 @@ const faviconHref="data:image/svg+xml,"+encodeURIComponent(faviconSvg);
 const crawlFavicon='<link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">';
 vervangEen(
   crawlFavicon,
-  '<!-- WEATHERNOW TABICOON -->\n<link id="site-favicon" rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">\n<script>!function(){const f=document.getElementById("site-favicon");if(f)f.setAttribute("href","'+faviconHref+'")}();</script>',
+  '<!-- WEATHERNOW TABICOON -->\n'+crawlFavicon+'\n<script>!function(){const f=document.querySelector("link[rel=icon]");if(f)f.setAttribute("href","'+faviconHref+'")}();</script>',
   "crawlbare faviconanker voor dynamisch tabicoon"
 );
 
