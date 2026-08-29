@@ -4,6 +4,7 @@ const fs=require("fs");
 const path=require("path");
 const {LOCATIES}=require("./seo-locations.config.js");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
+const {pasDesktopRefinementToe}=require("./desktop-refinement-20260829.js");
 
 const OUT=path.join(__dirname,"..","public");
 const MERK_H1="<h1>watishetweer.nl</h1>";
@@ -86,6 +87,7 @@ function main(){
   if(root.includes(H1_RESET))throw new Error("Homepage mag geen routegebonden H1-reset bevatten.");
   root=pasMerkTitelToe(root,"homepage");
   root=pasPlaatsNavLabelToe(root,"homepage");
+  root=pasDesktopRefinementToe(root,"homepage");
   fs.writeFileSync(rootPad,root,"utf8");
 
   const hubPad=path.join(OUT,"weer","index.html");
@@ -99,6 +101,7 @@ function main(){
     let aangepast=pasPlaatsH1Toe(fs.readFileSync(pad,"utf8"),loc);
     aangepast=pasMerkTitelToe(aangepast,loc.slug);
     aangepast=pasPlaatsNavLabelToe(aangepast,loc.slug);
+    aangepast=pasDesktopRefinementToe(aangepast,loc.slug);
     fs.writeFileSync(pad,aangepast,"utf8");
     if(tel(aangepast,plaatsH1(loc))!==1||tel(aangepast,H1_RESET)!==1||tel(aangepast,TITLE_NIEUW)!==TITLE_WRITERS)throw new Error(`${loc.slug}: plaats-H1, route-exit-reset of merktitel ontbreekt na schrijven.`);
   }
@@ -108,7 +111,7 @@ function main(){
   if(tel(rootNa,NAV_KOP_NIEUW)!==1)throw new Error("Homepage mist het contextuele Nederlandse plaatsnavlabel.");
   if(tel(rootNa,TITLE_NIEUW)!==TITLE_WRITERS)throw new Error("Homepage mist merkgebonden dynamische titels.");
   const versie=vernieuwServiceworkerCache(OUT,"seo-location-h1");
-  console.log(`SEO-plaats-H1 en merkpresentatie toegepast voor ${LOCATIES.length} routes; homepage, dynamische titels, hub, route-exit en Nederlandse navigatiecontext correct; cache ${versie}.`);
+  console.log(`SEO-plaats-H1, merkpresentatie en desktopverfijning toegepast voor ${LOCATIES.length} routes; homepage, dynamische titels, hub, route-exit en Nederlandse navigatiecontext correct; cache ${versie}.`);
 }
 
 if(require.main===module)main();
