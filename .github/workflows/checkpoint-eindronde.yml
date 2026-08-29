@@ -27,6 +27,8 @@ jobs:
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
       - name: Pure en buildregressies
         run: npm test
+      - name: Mobiele cold-load CLS-budget op finale postbuild-artifact
+        run: node browser-mobile-cls-budget.test.js
       - name: Staff-audit interacties in Chromium en WebKit
         shell: bash
         run: |
@@ -89,8 +91,6 @@ jobs:
         run: node browser-timezone-hardening.test.js
       - name: Cold-load browser-performancebudget
         run: node browser-performance-budget.test.js
-      - name: Mobiele cold-load CLS-budget
-        run: node browser-mobile-cls-budget.test.js
       - name: Checkpoint 25% in Chromium en WebKit
         run: node browser-q1-checkpoint.test.js
       - name: Checkpoint 50% in Chromium en WebKit
