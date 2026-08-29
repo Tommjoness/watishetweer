@@ -48,7 +48,6 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-seo-foundation.js",
   "generate-seo-location-pages.js",
   "apply-seo-location-h1.js",
-  "desktop-refinement-20260829.js",
   "verify-seo-location-h1.js",
   "verify-seo-location-pages.js",
   "verify-staff-audit-20260826.js",
