@@ -169,11 +169,11 @@ html=html.slice(0,naarUtcStart)+naarUtcNieuw+html.slice(naarUtcEind);
 
 /* De meelopende contextbalk gebruikt IntersectionObserver als primaire bron van
    waarheid. Daardoor is er geen synchrone geometry-read meer tijdens de gewone
-   opstart. Scrollen bepaalt verder alleen de leesrichting. Een vertraagde
+   opstart. Scrollen legt de laatste betekenisvolle leesrichting los van de
+   zichtbaarheid vast, zodat een later binnenkomende observer- of fallbackstate
+   meteen dezelfde mobiele hide/show-keuze kan toepassen. Een vertraagde
    fallback meet de hero uitsluitend als een browser na een echte scroll geen
-   nieuwe observer-entry levert; een normale moderne browser annuleert die
-   fallback binnen dezelfde rendercyclus. Zo blijft de balk ook in vertraagde
-   headless/WebView-situaties correct zonder de Lighthouse-loadroute te belasten. */
+   nieuwe observer-entry levert. */
 const minibalkOud=`  let timer=null,richtingY=Math.max(0,window.scrollY||0);
   const mobiel=()=>window.matchMedia&&window.matchMedia("(max-width:900px)").matches;
   const pasRichtingToe=()=>{
@@ -204,27 +204,28 @@ const minibalkOud=`  let timer=null,richtingY=Math.max(0,window.scrollY||0);
   window.addEventListener("scroll",plan,{passive:true});
   window.addEventListener("resize",plan,{passive:true});
   plan();`;
-const minibalkNieuw=`  let frame=null,fallbackTimer=null,observerVersie=0,richtingY=Math.max(0,window.scrollY||0);
+const minibalkNieuw=`  let frame=null,fallbackTimer=null,observerVersie=0,richtingY=Math.max(0,window.scrollY||0),gewensteVerstopt=false;
   const mobiel=()=>window.matchMedia&&window.matchMedia("(max-width:900px)").matches;
+  const pasVerstoptToe=()=>{
+    bar.classList.toggle("senior-verstopt",bar.classList.contains("aan")&&mobiel()&&gewensteVerstopt);
+  };
   const zetAan=aan=>{
     bar.classList.toggle("aan",!!aan);
-    if(!aan)bar.classList.remove("senior-verstopt");
+    pasVerstoptToe();
   };
-  const pasRichtingToe=()=>{
+  const registreerRichting=()=>{
     if(!mobiel()){
-      bar.classList.remove("senior-verstopt");
+      gewensteVerstopt=false;
       richtingY=Math.max(0,window.scrollY||0);
-      return;
+    }else{
+      const y=Math.max(0,window.scrollY||0),verschil=y-richtingY;
+      if(Math.abs(verschil)>=10){
+        gewensteVerstopt=verschil>0;
+        richtingY=y;
+      }
     }
-    const y=Math.max(0,window.scrollY||0),verschil=y-richtingY;
-    if(Math.abs(verschil)<10) return;
-    if(bar.classList.contains("aan"))bar.classList.toggle("senior-verstopt",verschil>0);
-    else bar.classList.remove("senior-verstopt");
-    richtingY=y;
-  };
-  const planRichting=()=>{
     if(frame!==null)return;
-    const run=()=>{frame=null;pasRichtingToe();};
+    const run=()=>{frame=null;pasVerstoptToe();};
     frame=typeof window.requestAnimationFrame==="function"?window.requestAnimationFrame(run):setTimeout(run,16);
   };
   const meetFallback=versie=>{
@@ -243,9 +244,10 @@ const minibalkNieuw=`  let frame=null,fallbackTimer=null,observerVersie=0,richti
     if(fallbackTimer!==null){clearTimeout(fallbackTimer);fallbackTimer=null;}
     zetAan(!!entry&&!entry.isIntersecting&&entry.boundingClientRect.top<0);
   },{threshold:0}).observe(hero);
-  window.addEventListener("scroll",()=>{planRichting();planFallback();},{passive:true});
+  window.addEventListener("scroll",()=>{registreerRichting();planFallback();},{passive:true});
   window.addEventListener("resize",()=>{
     if(fallbackTimer!==null){clearTimeout(fallbackTimer);fallbackTimer=null;}
+    gewensteVerstopt=false;
     zetAan(false);
     richtingY=Math.max(0,window.scrollY||0);
   },{passive:true});`;
@@ -267,4 +269,4 @@ const scripts=[...html.matchAll(/<script(?![^>]* src=)[^>]*>([^]*?)<\/script>/g)
 if(!scripts.length)throw new Error("Geen inline runtime na performance-final.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:performance-"+(i+1)}));
 fs.writeFileSync(htmlPad,html,"utf8");
-console.log("Performance-final toegepast: 170 forecasturen, gedeelde tijdzonecache, veilige tijdzonefallback, reflow-vrije normale minibalkopstart en nu-label zonder synchrone SVG-tekstmeting.");
+console.log("Performance-final toegepast: 170 forecasturen, gedeelde tijdzonecache, veilige tijdzonefallback, observergedreven minibalk met robuuste scrollrichting en nu-label zonder synchrone SVG-tekstmeting.");
