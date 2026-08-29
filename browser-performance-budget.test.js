@@ -74,6 +74,14 @@ const stub=`<script>(function(){
   const FORECAST=${JSON.stringify(forecast)},AIR=${JSON.stringify(air)};
   const clone=x=>JSON.parse(JSON.stringify(x));
   const goed=x=>({ok:true,status:200,json:async()=>clone(x),text:async()=>JSON.stringify(x)});
+  const NativeDate=Date;
+  const nativeStart=NativeDate.now();
+  const fixtureStart=NativeDate.parse('2026-07-22T12:00:00Z');
+  class FixtureDate extends NativeDate{
+    constructor(...args){super(...(args.length?args:[fixtureStart+(NativeDate.now()-nativeStart)]));}
+    static now(){return fixtureStart+(NativeDate.now()-nativeStart);}
+  }
+  window.Date=FixtureDate;
   window.__perf={start:performance.now(),forecastUrls:[]};
   window.fetch=async function(url){
     const u=String(url);
@@ -82,9 +90,9 @@ const stub=`<script>(function(){
     if(u.includes('/api/waarschuwingen'))return goed({bron:'test',dekking:true,land:'NL',lijst:[]});
     return goed({});
   };
-  Date.now=()=>Date.UTC(2026,6,22,12,0,0);
 })();</script>`;
-html=html.replace("</head>",stub+"</head>");
+if((html.split("<head>").length-1)!==1)throw new Error("Performancefixture verwacht exact één <head>-anker.");
+html=html.replace("<head>","<head>"+stub);
 
 const server=http.createServer((req,res)=>{
   const pathname=(req.url||"").split("?")[0];
