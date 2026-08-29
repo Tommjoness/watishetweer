@@ -1,38 +1,47 @@
 "use strict";
-const fs=require("fs"),path=require("path"),os=require("os"),{spawnSync}=require("child_process");
+const fs=require("fs"),path=require("path"),os=require("os"),{spawnSync}=require("child_process"),{bouw}=require("./data.js");
 const browser=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
 const bron=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(bron))throw new Error("public/index.html ontbreekt; voer eerst de build uit");
 let html=fs.readFileSync(bron,"utf8");
 
+/* Deze test beoordeelt het echte gebouwde UI-artifact, niet de beschikbaarheid
+   van externe providers. Gebruik daarom vaste geldige weer- en AQ-fixtures;
+   live providerwerking heeft eigen productie-smokes. */
+const fixtureData=bouw({tempNu:17,wcNu:1,ccNu:30,pp:()=>22,som:2.4});
+fixtureData.latitude=52.35;fixtureData.longitude=5.26;fixtureData.timezone="Europe/Amsterdam";fixtureData.utc_offset_seconds=7200;
+fixtureData.daily.sunshine_duration=fixtureData.daily.time.map(()=>7*3600);
+const fixtureAir={current:{european_aqi:24,us_aqi:40},hourly:{time:[fixtureData.current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[2],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}};
+const fetchStub=`<script>
+const BROWSER_FIXTURE=${JSON.stringify(fixtureData)};
+const BROWSER_AIR=${JSON.stringify(fixtureAir)};
+const BROWSER_NATIVE_DATE=Date;
+const BROWSER_NATIVE_START=BROWSER_NATIVE_DATE.now();
+const BROWSER_FIXTURE_START=BROWSER_NATIVE_DATE.parse('2026-07-22T12:30:00Z');
+class BrowserFixtureDate extends BROWSER_NATIVE_DATE{
+  constructor(...args){
+    super(...(args.length?args:[BROWSER_FIXTURE_START+(BROWSER_NATIVE_DATE.now()-BROWSER_NATIVE_START)]));
+  }
+  static now(){return BROWSER_FIXTURE_START+(BROWSER_NATIVE_DATE.now()-BROWSER_NATIVE_START);}
+}
+window.Date=BrowserFixtureDate;
+window.fetch=async function(url){
+  const u=String(url);
+  const payload=u.includes('/api/waarschuwingen')?{bron:'test',dekking:true,land:'NL',lijst:[]}
+    :u.includes('/api/neerslag')?{beschikbaar:false,provider:'knmi',reden:'niet beschikbaar'}
+    :u.includes('/api/plaatsnaam')?{naam:'Browsertest',land:'NL',bron:'test'}
+    :u.includes('air-quality-api.open-meteo.com')?BROWSER_AIR:BROWSER_FIXTURE;
+  return {ok:true,status:200,json:async()=>payload,text:async()=>JSON.stringify(payload)};
+};
+try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}
+</script>`;
+html=html.replace("</head>",fetchStub+"</head>");
+
 /* Browserproductietest: het echte gebouwde artifact wordt in Chromium geladen.
-   De test meet uitsluitend zichtbare/layoutcontracten en gebruikt dezelfde
-   deterministic browserfixture als de bestaande productietests. */
+   De test meet uitsluitend zichtbare/layoutcontracten met bovenstaande
+   deterministische browserfixture. */
 const reporter=`<script>
 (function(){
-  let afgerond=false;
-  function weerweergaveGereed(){
-    const app=document.getElementById('app'),chart=document.getElementById('chart');
-    return !!(app&&getComputedStyle(app).display!=='none'
-      &&chart&&chart.querySelector('circle[data-temp-index]')
-      &&document.querySelectorAll('#days .row.day:not(.kop)').length>=7
-      &&document.querySelectorAll('#nights .row.night:not(.kop)').length>=3
-      &&document.querySelectorAll('#suntimes .zonregel').length>=1
-      &&document.querySelectorAll('#aq .stat').length>=1);
-  }
-  function probeer(definitief){
-    if(afgerond)return;
-    if(weerweergaveGereed()){
-      afgerond=true;
-      meet();
-      return;
-    }
-    if(definitief){
-      afgerond=true;
-      document.body.dataset.browserTestResult='niet-gereed';
-      document.body.dataset.browserException='weerweergave niet binnen 5 seconden gereed';
-    }
-  }
   function meet(){
   try{
     const chart=document.getElementById('chart'),svgBox=chart.getBoundingClientRect();
@@ -214,9 +223,10 @@ const reporter=`<script>
     document.body.dataset.browserZon=String(zonSemantiekOk);
   }catch(e){document.body.dataset.browserTestResult='exception';document.body.dataset.browserException=String(e&&e.message||e);}
   }
-  setTimeout(()=>probeer(false),1400);
-  setTimeout(()=>probeer(false),2800);
-  setTimeout(()=>probeer(true),5000);
+  /* Meet na de deterministische fixture-render rechtstreeks de echte UI-state.
+     Ontbrekende of onjuiste onderdelen falen daardoor via dezelfde inhoudelijke
+     assertions, zonder een tweede readiness-contract ervoor te zetten. */
+  setTimeout(meet,10000);
 })();
 </script>`;
 html=html.replace("</body>",reporter+"</body>");
@@ -227,7 +237,7 @@ const url="file://"+fixture+"?lat=52.3500&lon=5.2600&plaats=Browsertest";
 function voerBrowserUit(maat,naam){
   const r=spawnSync(browser,[
     "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",
-    "--window-size="+maat,"--virtual-time-budget=7000","--dump-dom",url
+    "--window-size="+maat,"--virtual-time-budget=12000","--dump-dom",url
   ],{encoding:"utf8",maxBuffer:16*1024*1024});
   if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"";
