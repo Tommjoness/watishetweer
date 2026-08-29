@@ -30,10 +30,9 @@ for(const tekst of [
 ])if(!html.includes(tekst))throw new Error("Performance-invariant ontbreekt: "+tekst);
 
 /* De contextbalk gebruikt tijdens de gewone load uitsluitend de observer-entry.
-   De geometry-read mag alleen bestaan in de vertraagde scrollfallback, die door
-   iedere nieuwe observer-entry wordt geannuleerd. Daarmee blijft de productie-
-   state-machine robuust zonder de PageSpeed-opstart opnieuw layout te laten
-   afdwingen. */
+   De scrollrichting wordt los van zichtbaarheid bewaard, zodat een observer- of
+   fallbackstate die later arriveert dezelfde hide/show-keuze toepast. De enige
+   geometry-read mag uitsluitend in de vertraagde scrollfallback staan. */
 for(const tekst of [
   'new IntersectionObserver(([entry])=>{',
   'observerVersie++;',
@@ -41,9 +40,11 @@ for(const tekst of [
   'const meetFallback=versie=>{',
   'if(observerVersie!==versie)return;',
   'fallbackTimer=setTimeout(()=>meetFallback(versie),120);',
-  'window.addEventListener("scroll",()=>{planRichting();planFallback();},{passive:true});',
+  'let frame=null,fallbackTimer=null,observerVersie=0,richtingY=Math.max(0,window.scrollY||0),gewensteVerstopt=false;',
+  'gewensteVerstopt=verschil>0;',
+  'bar.classList.toggle("senior-verstopt",bar.classList.contains("aan")&&mobiel()&&gewensteVerstopt);',
+  'window.addEventListener("scroll",()=>{registreerRichting();planFallback();},{passive:true});',
   'typeof window.requestAnimationFrame==="function"?window.requestAnimationFrame(run):setTimeout(run,16)',
-  'bar.classList.toggle("senior-verstopt",verschil>0)',
   'window.matchMedia("(max-width:900px)").matches'
 ])if(!html.includes(tekst))throw new Error("Reflow-arme minibalkinvariant ontbreekt: "+tekst);
 if(html.includes("timer=setTimeout(zet,16)"))throw new Error("Oude layout-metende minibalkscheduler staat nog in de artifact.");
@@ -103,4 +104,4 @@ if((naarUtc.match(/return doel-off;/g)||[]).length!==1)throw new Error("naarUTC 
 const scripts=[...html.matchAll(/<script(?![^>]* src=)[^>]*>([^]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:performance-verify-"+(i+1)}));
-console.log("Performance-final geverifieerd: veilige horizon en tijdzones, normale minibalk-load via observer, vertraagde robuustheidsfallback en nu-label zonder synchrone SVG-tekstmeting.");
+console.log("Performance-final geverifieerd: veilige horizon en tijdzones, observergestuurde minibalk met vastgelegde scrollrichting, vertraagde robuustheidsfallback en nu-label zonder synchrone SVG-tekstmeting.");
