@@ -30,6 +30,8 @@ jobs:
           SMOKE_ATTEMPTS: 36
           SMOKE_REQUEST_TIMEOUT_MS: 10000
         run: node scripts/production-smoke.js
+      - name: Controleer exact live sitemapcontract
+        run: node scripts/production-sitemap-contract.js
 
   wereldwijd-browser:
     needs: production-contract
