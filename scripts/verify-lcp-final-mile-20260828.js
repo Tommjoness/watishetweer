@@ -19,6 +19,15 @@ assert.ok(html.includes("cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover
 assert.ok(html.includes('.seo-plaatsnav{visibility:hidden}.seo-plaatsnav.weer-klaar{visibility:visible}'),"plaatsnav blijft geometrisch aanwezig maar onzichtbaar tijdens frame-opbouw");
 assert.ok(html.includes('<noscript><style>.seo-plaatsnav{visibility:visible!important}</style></noscript>'),"plaatsnav blijft zonder JavaScript zichtbaar");
 
+/* De volledige hoofdstructuur moet vanaf first paint een layoutbox hebben.
+   display:none -> display:block veroorzaakte in intermitterende mobiele PSI-runs
+   0,528 CLS op main#app. visibility wisselt uitsluitend painting en houdt de
+   bestaande DOM-geometrie beschikbaar tijdens tekenAlles(). */
+assert.ok(html.includes('<div id="app" style="visibility:hidden">')||html.includes('<main id="app" style="visibility:hidden">'),"main#app reserveert vanaf first paint geometrie via visibility:hidden");
+assert.ok(!html.includes('id="app" style="display:none"'),"main#app mag niet meer volledig uit de documentflow verdwijnen");
+assert.equal((html.match(/document\.getElementById\("app"\)\.style\.visibility="visible";/g)||[]).length,2,"succes- en cachefallback onthullen dezelfde gereserveerde hoofdstructuur");
+assert.ok(!html.includes('document.getElementById("app").style.display="block";'),"main#app mag niet meer via display:block in één keer in de flow verschijnen");
+
 assert.ok(html.includes('matchMedia("(max-width: 900px)").matches'),"frame-splitsing is expliciet beperkt tot de gemeten mobiele route");
 assert.ok(html.includes("let nietKritiekeRenderToken=0;"),"verouderde deferred render wordt tokenmatig ongeldig gemaakt bij een nieuwe render");
 assert.ok(html.includes("let mobieleLuchtRenderUitgesteld=false;"),"mobiele luchtkwaliteit heeft een expliciete deferred-rendergate");
@@ -52,4 +61,4 @@ assert.ok(html.includes('el.setAttribute("role","img")'),"maanindicatoren krijge
 assert.ok(html.includes('el.getAttribute("aria-label")||el.getAttribute("title")'),"maanindicator behoudt of hergebruikt zijn beschrijvende toegankelijke naam");
 assert.ok(/basisNachtenFinalTruth=nachten;[\s\S]*?veilig\(pasMaanToegankelijkheidToe\)/.test(html),"maansemantiek wordt na iedere Nachtzicht-render opnieuw toegepast");
 
-console.log("LCP/finale productwaarheid 20260828: wolkenlagen, temperatuurtrend, briefing, UV, zonuren, daglengte, neerslagsemantiek, onweermodaliteit, CLS-stabiele plaatsnav, toegankelijke maaniconen en mobiele briefingpaint geborgd.");
+console.log("LCP/finale productwaarheid 20260828: wolkenlagen, temperatuurtrend, briefing, UV, zonuren, daglengte, neerslagsemantiek, onweermodaliteit, geometrisch gereserveerde hoofdstructuur, CLS-stabiele plaatsnav, toegankelijke maaniconen en mobiele briefingpaint geborgd.");
