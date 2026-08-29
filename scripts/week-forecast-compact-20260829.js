@@ -39,3 +39,4 @@ if(typeof dagen==="function"){
 }
 
 })(typeof globalThis!=="undefined"?globalThis:this);
+/* ===== EINDE COMPACTE WEEKVERWACHTING 20260829 ===== */
