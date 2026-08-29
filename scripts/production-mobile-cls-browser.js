@@ -9,9 +9,8 @@ if(!/^[0-9a-f]{7,40}$/i.test(verwacht))throw new Error("EXPECTED_SHA ontbreekt o
 
 const RONDEN=5;
 const CLS_BUDGET=0.1;
-const UITKOMST_TIMEOUT_MS=15000;
-const LATE_DATA_WACHT_MS=8000;
-const FOUT_SETTLE_MS=1000;
+const OBSERVATIE_MS=12000;
+const MIN_DATA_RONDEN=2;
 
 function clsUit(entries){
   const waarden=(entries||[]).filter(x=>x&&!x.hadRecentInput&&Number.isFinite(x.value)&&x.value>0).sort((a,b)=>a.startTime-b.startTime);
@@ -54,42 +53,27 @@ function clsUit(entries){
         const response=await page.goto(ROOT+"/?"+params,{waitUntil:"domcontentloaded",timeout:30000});
         assert(response&&response.ok(),`ronde ${ronde+1}: homepage HTTP ${response&&response.status()}`);
 
-        /* Deze job meet layoutstabiliteit, niet de uptime van Open-Meteo. De
-           aparte live-performance- en wereldwijde jobs bewaken dat de echte
-           productie weerdata kan laden. Hier is een cold load daarom afgerond
-           zodra óf geldige weerdata zichtbaar is óf de app na zijn geharde
-           full/fallbackketen een duidelijke terminale foutstatus toont. Zo kan
-           ook het foutpad op CLS worden bewaakt zonder een providerhapering als
-           een fictieve layout-regressie te rapporteren. */
-        await page.waitForFunction(()=>{
-          const app=document.getElementById("app"),temp=document.getElementById("t"),state=document.getElementById("state");
-          const heeftData=!!(app&&getComputedStyle(app).display!=="none"&&temp&&!/^(?:--|–)$/.test(temp.textContent.trim()));
-          const terminaleFout=!!(state&&state.classList.contains("err")&&/Ophalen mislukt|Geen verbinding/i.test(state.textContent||""));
-          return heeftData||terminaleFout;
-        },null,{timeout:UITKOMST_TIMEOUT_MS});
+        /* Deze job meet layoutstabiliteit in een vast cold-loadvenster. Hij
+           wacht bewust niet op Open-Meteo: een hangende provider mag de
+           layoutmeting niet omvormen tot een beschikbaarheidstest. De aparte
+           live-performance- en wereldwijde jobs blijven de echte dataketen
+           streng bewaken. Twaalf seconden dekt tegelijk de hoofdpaint en de
+           bekende late waarschuwing-/fallbackmutaties ruim af. */
+        await page.waitForTimeout(OBSERVATIE_MS);
 
-        const eindstate=await page.evaluate(()=>{
+        const meting=await page.evaluate(()=>{
           const app=document.getElementById("app"),temp=document.getElementById("t"),state=document.getElementById("state");
           const heeftData=!!(app&&getComputedStyle(app).display!=="none"&&temp&&!/^(?:--|–)$/.test(temp.textContent.trim()));
           const terminaleFout=!!(state&&state.classList.contains("err")&&/Ophalen mislukt|Geen verbinding/i.test(state.textContent||""));
           return {
-            uitkomst:heeftData?"data":terminaleFout?"fout":"onbeslist",
+            uitkomst:heeftData?"data":terminaleFout?"fout":"laden",
             stateTekst:state&&state.textContent||"",
-            stateKlasse:state&&state.className||""
+            stateKlasse:state&&state.className||"",
+            entries:window.__weatherClsEntries||[],observerError:window.__weatherClsObserverError||null,
+            initialScrollY:window.__weatherInitialScrollY,finalScrollY:window.scrollY,
+            sha:document.querySelector('meta[name="weather-build-sha"]')?.getAttribute("content")||null
           };
         });
-        assert.notEqual(eindstate.uitkomst,"onbeslist",`ronde ${ronde+1}: cold load bereikte geen geldige eindstate`);
-
-        /* Bij data houden we acht seconden aan om late waarschuwing- en
-           fallbackmutaties mee te nemen. Bij een terminale forecastfout zijn
-           die datagedreven mutaties niet gestart; één seconde is daar genoeg
-           om het foutlayout te laten settelen. */
-        await page.waitForTimeout(eindstate.uitkomst==="data"?LATE_DATA_WACHT_MS:FOUT_SETTLE_MS);
-        const meting=await page.evaluate(()=>({
-          entries:window.__weatherClsEntries||[],observerError:window.__weatherClsObserverError||null,
-          initialScrollY:window.__weatherInitialScrollY,finalScrollY:window.scrollY,
-          sha:document.querySelector('meta[name="weather-build-sha"]')?.getAttribute("content")||null
-        }));
         assert(!meting.observerError,`ronde ${ronde+1}: layout-shift observer faalde: ${meting.observerError}`);
         assert.equal(meting.sha,verwacht,`ronde ${ronde+1}: verkeerde productiebuild ${meting.sha}`);
         const cls=clsUit(meting.entries);
@@ -98,13 +82,15 @@ function clsUit(entries){
         assert.equal(meting.finalScrollY,meting.initialScrollY,`ronde ${ronde+1}: scrollY veranderde zonder gebruikersinput van ${meting.initialScrollY} naar ${meting.finalScrollY}`);
         assert.deepEqual(pageErrors,[],`ronde ${ronde+1}: pageerrors ${pageErrors.join(" | ")}`);
         assert.deepEqual(consoleErrors,[],`ronde ${ronde+1}: console-errors ${consoleErrors.join(" | ")}`);
-        resultaten.push({cls,bronnen,uitkomst:eindstate.uitkomst});
-        console.log(JSON.stringify({ronde:ronde+1,sha:meting.sha,uitkomst:eindstate.uitkomst,cls:Number(cls.toFixed(4)),scrollY:meting.finalScrollY,grootsteShifts:bronnen}));
+        resultaten.push({cls,bronnen,uitkomst:meting.uitkomst});
+        console.log(JSON.stringify({ronde:ronde+1,sha:meting.sha,uitkomst:meting.uitkomst,cls:Number(cls.toFixed(4)),scrollY:meting.finalScrollY,grootsteShifts:bronnen}));
       }finally{await context.close();}
     }
   }finally{await browser.close();}
   const max=Math.max(...resultaten.map(r=>r.cls));
   const dataRondes=resultaten.filter(r=>r.uitkomst==="data").length;
   const foutRondes=resultaten.filter(r=>r.uitkomst==="fout").length;
-  console.log(`MOBIELE CLS PRODUCTIE GESLAAGD: ${verwacht}; ${RONDEN} koude layout-runs (${dataRondes} met data, ${foutRondes} nette foutstate), max CLS ${max.toFixed(3)} (< ${CLS_BUDGET}), scrollY stabiel. Beschikbaarheid wordt apart bewaakt.`);
+  const laadRondes=resultaten.filter(r=>r.uitkomst==="laden").length;
+  assert(dataRondes>=MIN_DATA_RONDEN,`mobiele CLS-productiegate zag slechts ${dataRondes}/${RONDEN} succesvolle datarondes; minimaal ${MIN_DATA_RONDEN} vereist voor representatieve weer-layoutmeting`);
+  console.log(`MOBIELE CLS PRODUCTIE GESLAAGD: ${verwacht}; ${RONDEN} vaste koude layout-runs (${dataRondes} data, ${foutRondes} foutstate, ${laadRondes} nog ladend), max CLS ${max.toFixed(3)} (< ${CLS_BUDGET}), scrollY stabiel. Beschikbaarheid wordt apart bewaakt.`);
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
