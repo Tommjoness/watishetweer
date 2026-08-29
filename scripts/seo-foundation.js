@@ -85,12 +85,16 @@ function pasSeoFoundationToe(html){
   bron=bron.replace(nieuweDescription,nieuweDescription+"\n"+blok);
 
   /* De footer herhaalt de vaste merknaam en koppelt die aan een transparante
-     Over-pagina. Zo geven zichtbare homepagecopy en structured data hetzelfde
-     signaal zonder de weerinhoud met SEO-tekst te overladen. */
+     Over-pagina. De bestaande bronpresentatie heeft daarnaast een runtime-owner
+     die de eerste providerregel met class .bron omzet naar zelfstandige items.
+     Plaats de merkregel daarom bewust ná de providerregel en vóór Privacy, zodat
+     merk-SEO en bronattributie onafhankelijk van elkaar blijven functioneren. */
   const footerMatches=[...bron.matchAll(/<footer>/g)];
   if(footerMatches.length!==1)throw new Error("SEO verwacht exact één footer voor de merkverwijzing; gevonden: "+footerMatches.length);
+  const privacyAnker='<span class="bron"><a href="privacy.html">Privacy &amp; gegevens</a></span>';
+  if(tel(bron,privacyAnker)!==1)throw new Error("SEO verwacht exact één privacyregel als veilig footeranker voor de merkverwijzing.");
   const brandLink=`${BRAND_LINK_MARKER}\n      <span class="bron"><a href="/over/"><b>${attr(SEO.siteName)}</b> · Over deze site</a></span>`;
-  bron=bron.replace("<footer>","<footer>\n      "+brandLink);
+  bron=bron.replace(privacyAnker,brandLink+"\n      "+privacyAnker);
 
   return bron;
 }
