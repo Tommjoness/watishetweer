@@ -12,7 +12,9 @@ const html=fs.readFileSync(pad,"utf8");
 let n=0;const ok=(v,m)=>{assert.ok(v,m);n++;console.log("OK  "+m);};
 
 ok(html.includes("<!-- WEATHERNOW TABICOON -->"),"normale browsertab heeft een expliciet faviconanker");
-ok(/<link rel="icon" type="image\/svg\+xml" href="data:image\/svg\+xml,/.test(html),"favicon is een zelfstandige SVG-data-URI");
+ok((html.match(/rel="icon"/g)||[]).length===1,"artifact bevat exact één faviconrelatie");
+ok(html.includes('<link id="site-favicon" rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">'),"ruwe HTML publiceert een crawlbare 192px PNG-favicon");
+ok(html.includes('document.getElementById("site-favicon")')&&html.includes('f.setAttribute("href","data:image/svg+xml,'),"browser zet dezelfde faviconrelatie om naar het zon-icoon");
 ok(html.includes('id="thema" type="button"')&&html.includes('aria-haspopup="menu"'),"weergaveknop kondigt een keuzemenu aan");
 ok(html.includes('id="themamenu" role="menu" aria-label="Weergave kiezen" hidden'),"weergavemenu is standaard gesloten en toegankelijk gelabeld");
 for(const keuze of ["auto","licht","donker"])ok(html.includes('data-thema-keuze="'+keuze+'"'),"themakeuze "+keuze+" is expliciet beschikbaar");
