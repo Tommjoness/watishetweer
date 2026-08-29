@@ -58,8 +58,7 @@ for(const vereist of [
   "val+labelHoogte/2+4<=pb",
   "ruimBotsendeAslabelsOp",
   "if(!M)return;",
-  "temperatuurLabels=teksten.filter",
-  "getBBox()",
+  "geschatteTekstBox",
   "Nachtzicht-presentatie geconsolideerd in WeatherNowMobileScreenshotPolish",
   ".stats .stat.breed{",
   "grid-template-columns:minmax(0,1fr) auto",
@@ -72,6 +71,7 @@ for(const vereist of [
 ]){
   if(!html.includes(vereist))throw new Error("Definitieve productie-invariant ontbreekt: "+vereist);
 }
+if(/\.getBBox\s*\(/.test(html))throw new Error("Definitieve mobiele artifact bevat nog een uitvoerbare synchrone SVG-fontboxmeting.");
 const oude15='<div class="eyebrow">Afgelopen 15 minuten</div><div class="sval" id="prec">';
 const oudeKwartier="Afgelopen kwartier";
 const trend='<div class="eyebrow">Temperatuur komende 3 uur</div><div class="sval" id="prec">';
@@ -104,11 +104,12 @@ if(html.includes('const basisNachten=nachten;\nnachten=function(){\n  basisNacht
 if(!html.includes('vensterEl=rij.querySelector(".nachtvenster")'))throw new Error("Nachtzicht-presentatie leest het losse canonieke kijkvenster niet.");
 if(!html.includes("if(detail&&vensterLos)vensterEl.textContent=detail;"))throw new Error("Nachtzicht werkt de losse kijkvenstercopy niet scorebewust bij.");
 
-if((html.split("const ruimBotsendeAslabelsOp=()=>{").length-1)!==1)throw new Error("Grafiek moet exact één fontbox-botsingslaag hebben.");
+if((html.split("const ruimBotsendeAslabelsOp=()=>{").length-1)!==1)throw new Error("Grafiek moet exact één mobiele labelbotsingslaag hebben.");
 const etmaalStart=html.indexOf("function etmaal("),botsingsLaag=html.indexOf("const ruimBotsendeAslabelsOp=()=>{"),etmaalEind=html.indexOf("function daglengte(",etmaalStart);
-if(etmaalStart<0||botsingsLaag<=etmaalStart||etmaalEind<=botsingsLaag)throw new Error("Fontbox-botsingslaag staat niet aantoonbaar binnen de bestaande etmaal-renderer.");
+if(etmaalStart<0||botsingsLaag<=etmaalStart||etmaalEind<=botsingsLaag)throw new Error("Labelbotsingslaag staat niet aantoonbaar binnen de bestaande etmaal-renderer.");
 const botsingsBron=html.slice(botsingsLaag,etmaalEind);
-if(!botsingsBron.includes("if(!M)return;"))throw new Error("Fontbox-botsingslaag moet uitsluitend op mobiele grafieken actief zijn; desktop-uuras mag niet worden opgeschoond.");
+if(!botsingsBron.includes("if(!M)return;"))throw new Error("Labelbotsingslaag moet uitsluitend op mobiele grafieken actief zijn; desktop-uuras mag niet worden opgeschoond.");
+if(!botsingsBron.includes("geschatteTekstBox")||/\.getBBox\s*\(/.test(botsingsBron))throw new Error("Mobiele labelbotsingslaag gebruikt niet uitsluitend attribuutgebaseerde tekstboxen.");
 
 const verwacht=verifieerServiceworkerCache(OUT,"checkpoint-50");
-console.log("Definitieve checkpoint-50 artifact geverifieerd: Vandaag heeft een eigen mobiele naamkolom, etmaal toont rustige zes-uursreferenties plus echte extrema zonder losgeschoven reguliere labels, bekende 0,0 mm blijft zichtbaar, Nachtzicht toont drie nachten met toegankelijke uitklap, één Nachtzicht-owner met kalendergrens en zonsopkomstgrens, scanbare maan/zichtregels, brongetrouwe maanfase en cache "+verwacht+".");
+console.log("Definitieve checkpoint-50 artifact geverifieerd: Vandaag heeft een eigen mobiele naamkolom, etmaal toont rustige zes-uursreferenties plus echte extrema zonder synchrone SVG-fontboxmeting, bekende 0,0 mm blijft zichtbaar, Nachtzicht toont drie nachten met toegankelijke uitklap, één Nachtzicht-owner met kalendergrens en zonsopkomstgrens, scanbare maan/zichtregels, brongetrouwe maanfase en cache "+verwacht+".");
