@@ -4,7 +4,7 @@ const fs=require("fs");
 const path=require("path");
 const {LOCATIES}=require("./seo-locations.config.js");
 const {
-  MERK_H1,H1_RESET,TITLE_OUD,TITLE_NIEUW,TITLE_WRITERS,HUB_TITLE_NIEUW,HUB_BRAND_NIEUW,plaatsH1,
+  MERK_H1,H1_RESET,TITLE_OUD,TITLE_NIEUW,TITLE_WRITERS,HUB_TITLE_NIEUW,HUB_TITLE_WRITERS,HUB_BRAND_NIEUW,plaatsH1,
   NAV_ARIA_OUD,NAV_ARIA_NIEUW,NAV_KOP_OUD,NAV_KOP_NIEUW,NAV_TEKST_OUD,NAV_TEKST_NIEUW
 }=require("./apply-seo-location-h1.js");
 const {verifieerServiceworkerCache}=require("./postbuild-cache.js");
@@ -31,7 +31,7 @@ controleerNav(root,"homepage");
 const hubPad=path.join(OUT,"weer","index.html");
 if(!fs.existsSync(hubPad))throw new Error("Plaatsindex ontbreekt voor merkverificatie.");
 const hub=fs.readFileSync(hubPad,"utf8");
-if(tel(hub,HUB_TITLE_NIEUW)!==2||tel(hub,HUB_BRAND_NIEUW)!==1)throw new Error("Plaatsindex gebruikt niet consequent watishetweer.nl als merknaam.");
+if(tel(hub,HUB_TITLE_NIEUW)!==HUB_TITLE_WRITERS||tel(hub,HUB_BRAND_NIEUW)!==1)throw new Error("Plaatsindex gebruikt niet consequent watishetweer.nl als merknaam in title, og:title, CollectionPage en zichtbare merklink.");
 
 for(const loc of LOCATIES){
   const pad=path.join(OUT,"weer",loc.slug,"index.html");
