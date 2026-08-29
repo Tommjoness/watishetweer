@@ -20,6 +20,6 @@ assert.strictEqual(api.rechthoekenBotsen(start,dichtbij,3),true,"Nabije temperat
 assert.strictEqual(api.rechthoekenBotsen(start,verweg,3),false,"Verre temperatuurlabels mogen niet als botsing gelden.");
 
 const bron=fs.readFileSync(path.join(__dirname,"mobile-graph-ux-20260828.js"),"utf8");
-assert(!bron.includes("getBBox"),"Mobiele grafiekpolish mag geen synchrone SVG getBBox-layoutread meer bevatten.");
+assert(!/\.getBBox\s*\(/.test(bron),"Mobiele grafiekpolish mag geen uitvoerbare SVG getBBox-layoutread meer bevatten.");
 assert(bron.includes("svgTekstBoxUitElement"),"Mobiele grafiekpolish moet de attribuutgebaseerde boxhelper gebruiken.");
-console.log("Mobiele grafiek reflow-test groen: nu-labelbotsingen zonder getBBox.");
+console.log("Mobiele grafiek reflow-test groen: nu-labelbotsingen zonder uitvoerbare getBBox-read.");
