@@ -13,22 +13,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Meet compat- en Atom-feeds
+      - name: Meet compatfeed responseheaders
         shell: bash
         run: |
           set -euo pipefail
           ua='WatIsHetWeer/1.0 (watishetweer.nl; contact via github.com/Tommjoness/weathernow)'
           for slug in netherlands italy germany; do
-            for attempt in 1 2; do
-              echo "--- $slug attempt $attempt compat ---"
-              curl -sS --max-time 8 -A "$ua" -H 'Accept: application/json' \
-                -o "/tmp/${slug}-compat-${attempt}" \
-                -w 'status=%{http_code} total=%{time_total}s start=%{time_starttransfer}s bytes=%{size_download}\n' \
-                "https://feeds.meteoalarm.org/api/v1/warnings/feeds-${slug}" || true
-              echo "--- $slug attempt $attempt atom ---"
-              curl -sS --max-time 8 -A "$ua" -H 'Accept: */*' \
-                -o "/tmp/${slug}-atom-${attempt}" \
-                -w 'status=%{http_code} total=%{time_total}s start=%{time_starttransfer}s bytes=%{size_download}\n' \
-                "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-${slug}" || true
-            done
+            echo "--- $slug compat headers ---"
+            rm -f /tmp/headers
+            curl -sS --max-time 5 --max-filesize 1 -A "$ua" -H 'Accept: application/json' \
+              -D /tmp/headers -o /dev/null \
+              "https://feeds.meteoalarm.org/api/v1/warnings/feeds-${slug}" || true
+            grep -Ei '^(HTTP/|content-length:|content-type:|transfer-encoding:|etag:|last-modified:|cache-control:)' /tmp/headers || true
           done
