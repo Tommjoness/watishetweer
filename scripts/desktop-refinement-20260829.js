@@ -19,10 +19,11 @@ const MOTREGEN_BRON='55:["Zware motregen","regen"],56:["Aanvriezende motregen","
 const MOTREGEN_PRODUCTIE='55:["Motregen","regen"],56:["Aanvriezende motregen","ijzel"],57:["Aanvriezende motregen","ijzel"],';
 
 /* Desktop-only verfijning. De plaatslinks blijven exact dezelfde crawlbare
-   ankers, maar sluiten visueel aan op het witte hoofdvlak. Nachtzicht krijgt op
-   brede schermen een begrensde scorebalk, zodat de uitleg niet onnodig ver naar
-   rechts wordt gedrukt. Onder 1000 px blijft de bestaande responsieve layout
-   volledig eigenaar. */
+   ankers, maar sluiten visueel aan op het witte hoofdvlak. Nachtzicht houdt op
+   brede schermen vaste compacte labelkolommen en een begrensde uitlegkolom,
+   terwijl de scorebalk de resterende breedte vult. Zo blijft de uitleg leesbaar
+   zonder dat rechts van het grid een grote lege strook ontstaat. Onder 1000 px
+   blijft de bestaande responsieve layout volledig eigenaar. */
 const STIJL=`<style id="${MARKER}">
 @media(min-width:701px){
   .seo-plaatsnav{
@@ -36,8 +37,7 @@ const STIJL=`<style id="${MARKER}">
 }
 @media(min-width:1000px){
   #nights .row.night{
-    grid-template-columns:104px 52px minmax(180px,420px) 104px minmax(220px,280px);
-    justify-content:start
+    grid-template-columns:104px 52px minmax(180px,1fr) 104px minmax(220px,280px)
   }
 }
 </style>`;
@@ -73,7 +73,7 @@ function main(){
     fs.writeFileSync(doel.pad,pasDesktopRefinementToe(bron,doel.label),"utf8");
   }
   const versie=vernieuwServiceworkerCache(OUT,"desktop-refinement-20260829");
-  console.log(`Desktopverfijning toegepast op ${doelen.length} weerpagina's: plaatsnav geïntegreerd, Nachtzicht begrensd en motregencopy genormaliseerd; cache ${versie}.`);
+  console.log(`Desktopverfijning toegepast op ${doelen.length} weerpagina's: plaatsnav geïntegreerd, Nachtzicht breedtevullend en motregencopy genormaliseerd; cache ${versie}.`);
 }
 
 if(require.main===module)main();
