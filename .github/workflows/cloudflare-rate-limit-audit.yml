@@ -1,0 +1,50 @@
+name: Cloudflare rate-limit audit
+
+on:
+  push:
+    branches:
+      - hardening/cloudflare-rate-limit-audit-20260830
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Lees zoneplan en rate-limitconfig zonder wijzigingen
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+
+          zone_status="$(curl -sS -o /tmp/zones.json -w '%{http_code}' "${auth[@]}" \
+            "https://api.cloudflare.com/client/v4/zones?name=watishetweer.nl&account.id=$CLOUDFLARE_ACCOUNT_ID")"
+          echo "zone_lookup_http=$zone_status"
+          if [ "$zone_status" != 200 ]; then
+            jq '{success,errors:[.errors[]? | {code,message}]}' /tmp/zones.json
+            exit 2
+          fi
+          jq -e '.success == true and (.result|length)==1' /tmp/zones.json >/dev/null
+          zone_id="$(jq -r '.result[0].id' /tmp/zones.json)"
+          echo "zone_plan=$(jq -r '.result[0].plan.name // "unknown"' /tmp/zones.json)"
+          echo "zone_status=$(jq -r '.result[0].status // "unknown"' /tmp/zones.json)"
+
+          rules_status="$(curl -sS -o /tmp/ratelimit.json -w '%{http_code}' "${auth[@]}" \
+            "https://api.cloudflare.com/client/v4/zones/$zone_id/rulesets/phases/http_ratelimit/entrypoint")"
+          echo "ratelimit_entrypoint_http=$rules_status"
+          if [ "$rules_status" = 200 ]; then
+            jq -e '.success == true' /tmp/ratelimit.json >/dev/null
+            jq '{phase:.result.phase,ruleCount:(.result.rules|length),rules:[.result.rules[]? | {description,action,enabled,expression,period:(.ratelimit.period // null),requestsPerPeriod:(.ratelimit.requests_per_period // null),mitigationTimeout:(.ratelimit.mitigation_timeout // null),characteristics:(.ratelimit.characteristics // [])}]}' /tmp/ratelimit.json
+          elif [ "$rules_status" = 404 ]; then
+            echo 'ratelimit_entrypoint=absent'
+          else
+            jq '{success,errors:[.errors[]? | {code,message}]}' /tmp/ratelimit.json
+            exit 3
+          fi
