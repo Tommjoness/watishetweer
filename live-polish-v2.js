@@ -75,7 +75,69 @@ function temperatuurOntdubbelToegestaan(bereik){
   return n===null||n>24;
 }
 
-const api={tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan};
+/* Relatieve vochtigheid alleen zegt weinig over hoe de lucht aanvoelt. Het
+   dauwpunt combineert de actuele temperatuur en RH tot één bruikbare maat voor
+   de hoeveelheid waterdamp. Magnus is hier alleen presentatie-afleiding: de
+   ruwe Open-Meteo-waarden blijven zichtbaar en worden nergens gemuteerd. */
+function dauwpuntCelsius(temperatuur,relatieveVochtigheid){
+  const t=eindig(temperatuur),rh=eindig(relatieveVochtigheid);
+  if(t===null||rh===null||rh<=0||rh>100||t<-80||t>60)return null;
+  const a=17.62,b=243.12,g=Math.log(rh/100)+(a*t)/(b+t),d=b*g/(a-g);
+  return Number.isFinite(d)?d:null;
+}
+function luchtvochtigheidDuiding(temperatuur,relatieveVochtigheid){
+  const rh=eindig(relatieveVochtigheid);
+  if(rh===null||rh<0||rh>100)return "Luchtvochtigheid niet beschikbaar.";
+  const dp=dauwpuntCelsius(temperatuur,rh);
+  if(dp===null){
+    return rh<35?"Lage relatieve luchtvochtigheid."
+      :rh<=65?"Gemiddelde relatieve luchtvochtigheid."
+      :rh<=80?"Hoge relatieve luchtvochtigheid."
+      :"Zeer hoge relatieve luchtvochtigheid.";
+  }
+  const d=Math.round(dp),basis="Dauwpunt circa "+d+" °C · ";
+  if(dp<10)return basis+"voelt doorgaans niet klam.";
+  if(dp<15)return basis+"meestal aangenaam.";
+  if(dp<18)return basis+"kan wat klam aanvoelen.";
+  if(dp<21)return basis+"voelt klam aan.";
+  return basis+"voelt zeer klam aan.";
+}
+
+function temperatuurProminentie(temperaturen,index){
+  const T=Array.isArray(temperaturen)?temperaturen:[],i=Number(index),v=Number.isInteger(i)?eindig(T[i]):null;
+  if(v===null)return -Infinity;
+  const l=i>0?eindig(T[i-1]):null,r=i+1<T.length?eindig(T[i+1]):null;
+  let p=0;
+  if(l!==null&&r!==null)p=Math.min(Math.abs(v-l),Math.abs(v-r));
+  else if(l!==null)p=Math.abs(v-l);else if(r!==null)p=Math.abs(v-r);
+  const geldig=T.map(eindig).filter(x=>x!==null);
+  if(geldig.length&&(v===Math.max(...geldig)||v===Math.min(...geldig)))p+=100;
+  return p;
+}
+
+/* Desktop houdt alle vaste drie-uursreferenties. Extra extrema zijn bonuscontext
+   en mogen verdwijnen als ze vrijwel dezelfde afgeronde temperatuur tonen vlak
+   naast zo'n vaste referentie. Twee resterende extra's met vrijwel dezelfde
+   waarde worden op dezelfde manier teruggebracht tot de meest prominente. */
+function etmaalExtraTemperaturenWeg(temperaturen,gelabeldeIndices,rasterStap){
+  const T=Array.isArray(temperaturen)?temperaturen:[],stap=Math.max(1,Math.floor(eindig(rasterStap)||3));
+  const ids=[...new Set((Array.isArray(gelabeldeIndices)?gelabeldeIndices:[]).map(Number).filter(i=>Number.isInteger(i)&&i>=0&&i<T.length&&eindig(T[i])!==null))];
+  const raster=ids.filter(i=>i%stap===0),extra=ids.filter(i=>i%stap!==0),weg=new Set();
+  for(const i of extra){
+    if(raster.some(j=>Math.abs(i-j)<=2&&Math.abs(Math.round(T[i])-Math.round(T[j]))<=1))weg.add(i);
+  }
+  const over=extra.filter(i=>!weg.has(i)).sort((a,b)=>temperatuurProminentie(T,b)-temperatuurProminentie(T,a)||a-b),gehouden=[];
+  for(const i of over){
+    if(gehouden.some(j=>Math.abs(i-j)<=2&&Math.abs(Math.round(T[i])-Math.round(T[j]))<=1))weg.add(i);
+    else gehouden.push(i);
+  }
+  return [...weg].sort((a,b)=>a-b);
+}
+
+const api={
+  tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan,
+  dauwpuntCelsius,luchtvochtigheidDuiding,temperatuurProminentie,etmaalExtraTemperaturenWeg
+};
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowPolishV2=api;
 
@@ -86,6 +148,17 @@ if(typeof document==="undefined"||typeof S==="undefined") return;
    HH:MM:SS en schreef elke seconde naar de DOM; dat voegde geen weerwaarde toe
    en kon bij lange plaatsnamen op mobiel midden in de klok afbreken. Laat de
    centrale klokowner daarom weer ongewijzigd eigenaar van #plaatstijd/#minitijd. */
+
+/* De procentwaarde blijft exact de actuele relative_humidity_2m. Alleen de
+   uitlegregel krijgt een consumentgerichte dauwpuntduiding uit dezelfde actuele
+   temperatuur/RH-combinatie. */
+const basisMetersPolishV2=meters;
+meters=function(){
+  const r=basisMetersPolishV2.apply(this,arguments);
+  const c=S.d&&S.d.current,sub=document.getElementById("humsub");
+  if(c&&sub)sub.textContent=luchtvochtigheidDuiding(c.temperature_2m,c.relative_humidity_2m);
+  return r;
+};
 
 /* In de SVG-tooltip staan label en waarde als twee losse tekstnodes. Lange
    consumententeksten worden hier alleen typografisch ingekort; de betekenis
@@ -142,6 +215,32 @@ function ontdubbelTemperatuurlabels(svg){
   }
 }
 
+/* Binnen 24 uur zijn de i%3-rasterpunten verplicht. De extra piek/dal-labels
+   worden pas na de basisplaatsing beoordeeld, zodat alleen redundante bonuscopy
+   verdwijnt en nooit een vaste drie-uursreferentie. Mobiel houdt zijn bestaande
+   compacte selectie ongewijzigd. */
+function ruimEtmaalExtraTemperaturenOp(svg){
+  if(!svg||!S.geo||S.geo.M||!Number.isFinite(S.geo.n)||S.geo.n>24||!Array.isArray(S.geo.T))return;
+  const cw=Number.isFinite(S.geo.cw)?S.geo.cw:36;
+  const punten=[...svg.querySelectorAll("circle[data-temp-index]")].map(p=>({
+    el:p,i:Number(p.getAttribute("data-temp-index")),x:eindig(p.getAttribute("cx"))
+  })).filter(p=>Number.isInteger(p.i)&&p.x!==null);
+  const labels=[...svg.querySelectorAll("text")].filter(el=>{
+    const ff=String(el.getAttribute("font-family")||"");
+    return ff.includes("Bodoni Moda")&&/^-?\d+°$/.test(String(el.textContent||"").trim());
+  }).map(el=>{
+    const text=String(el.textContent||"").trim(),x=eindig(el.getAttribute("x"));
+    const i=temperatuurPuntIndex({text,x},punten,S.geo.T,Math.max(72,cw*2.5));
+    return {el,i};
+  }).filter(x=>x.i!==null);
+  const weg=new Set(etmaalExtraTemperaturenWeg(S.geo.T,labels.map(x=>x.i),3));
+  labels.forEach(({el,i})=>{
+    if(!weg.has(i))return;
+    const punt=punten.find(p=>p.i===i);if(punt&&punt.el)punt.el.remove();
+    el.remove();
+  });
+}
+
 /* Het rode "nu 22°" is de actuele meting en krijgt daarom voorrang boven een
    zwart modeluurcijfer in zijn directe omgeving. Ook hier verdwijnen cijfer en
    bijbehorend zwart punt als één visuele markering. Daarna krijgt het actuele
@@ -190,6 +289,7 @@ etmaal=function(start,n){
   const svg=document.getElementById("chart");
   ontdubbelTemperatuurlabels(svg);
   positioneerNuLabel(svg);
+  ruimEtmaalExtraTemperaturenOp(svg);
 };
 
 })(typeof globalThis!=="undefined"?globalThis:this);
