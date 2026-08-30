@@ -66,7 +66,7 @@ const GUST_BRON=`  const windstootRuw=eindigGetal(c.wind_gusts_10m);
   const pgRuw=piek("wind_gusts_10m"),pg=pgRuw&&pgRuw.v>=0?pgRuw:null;
   zetTekst("gustsub", !pg ? "Geen uurgegevens beschikbaar."
     : pg.t>nu ? dagAanduiding(pg.t,true)+" tot "+Math.round(pg.v)+" km/u tussen "+weatherNowUurvak(pg.t).replace("–"," en ")+"."
-    : dagAanduiding(pg.t,true)+" maximaal "+Math.round(pg.v)+" km/u tussen "+weatherNowUurvak(pg.t).replace("–"," en ")+");`;
+    : dagAanduiding(pg.t,true)+" maximaal "+Math.round(pg.v)+" km/u tussen "+weatherNowUurvak(pg.t).replace("–"," en ")+".");`;
 const GUST_PRODUCTIE=`  const gustUur=weatherNowWindstootDitUur(h,i);
   set("gust",gustUur===null?"–":Math.round(gustUur.v)+"<s>km/u</s>");
   const gustStat=document.getElementById("gust")&&document.getElementById("gust").closest(".stat");
