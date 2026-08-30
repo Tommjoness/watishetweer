@@ -30,7 +30,7 @@ ok(waars.includes("i.ends || i.expires || null"),"NWS gebruikt gebeurteniseinde 
 ok(waars.includes("American Samoa")&&waars.includes("-14.6"),"American Samoa valt binnen NWS-dekking");
 ok(waars.includes("waarschuwingTekst")&&!waars.includes("trim().slice(0, 300)"),"waarschuwingstekst breekt niet meer hard op 300 tekens af");
 ok(waars.includes("meteoalarm-legacy-atom-")&&waars.includes("api/v1/warnings/feeds-")&&waars.indexOf("api/v1/warnings/feeds-")<waars.indexOf("meteoalarm-legacy-atom-"),"MeteoAlarm probeert locatie-filterbare compatibiliteitsdata vóór de landbrede Atom-fallback");
-ok(waars.includes('haal(compat, "application/json", 4000)')&&waars.includes('haal(atom, "*/*", 1800)')&&waars.includes("timeoutMs = 6000"),"MeteoAlarm houdt compatibiliteits- en Atom-fallback samen binnen de clienttimeout");
+ok(waars.includes("METEO_COMPAT_TIMEOUT_MS = 4000")&&waars.includes("METEO_ATOM_TIMEOUT_MS = 3200")&&waars.includes("METEO_HEDGE_HEADER_MS = 1500")&&waars.includes("METEO_HEDGE_BYTES = 2000000")&&index.includes("timeoutMs:7000"),"MeteoAlarm hedget trage of grote compatibiliteitsfeeds binnen het waarschuwingclientbudget");
 ok(waars.includes("plaatsSpecifiek: false")&&waars.includes('scope: "land"'),"landbrede Atom-waarschuwingen worden expliciet als niet plaats-specifiek gemarkeerd");
 ok(index.includes("waarschuwingGeldigTot")&&!index.includes('" Geldig tot "+esc(w.tot)'),"waarschuwingstijd wordt lokaal en menselijk geformatteerd");
 ok(index.includes("kan Open-Meteo uurdata interpoleren"),"kwartiergrafiek benoemt mogelijke interpolatie");
