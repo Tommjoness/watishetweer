@@ -1,6 +1,9 @@
 "use strict";
 const assert=require("assert"),fs=require("fs"),path=require("path");
-const {tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan}=require("./live-polish-v2.js");
+const {
+  tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan,
+  dauwpuntCelsius,luchtvochtigheidDuiding,etmaalExtraTemperaturenWeg
+}=require("./live-polish-v2.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 
 test("tooltip houdt links altijd hetzelfde label voor neerslagkans",()=>{
@@ -50,6 +53,28 @@ test("24-uursgrafiek wordt niet opnieuw uitgedund door late ontdubbeling",()=>{
   assert.equal(temperatuurOntdubbelToegestaan(null),true);
   const js=fs.readFileSync(path.join(__dirname,"live-polish-v2.js"),"utf8");
   assert(js.includes("!temperatuurOntdubbelToegestaan(S.geo&&S.geo.n)"));
+});
+
+test("luchtvochtigheid krijgt dauwpunt en praktische duiding",()=>{
+  const d=dauwpuntCelsius(18,86);
+  assert.ok(d>15.5&&d<15.8,"18 °C / 86% hoort rond 15,6 °C dauwpunt uit te komen");
+  assert.equal(luchtvochtigheidDuiding(18,86),"Dauwpunt circa 16 °C · kan wat klam aanvoelen.");
+  assert.equal(luchtvochtigheidDuiding(25,50),"Dauwpunt circa 14 °C · meestal aangenaam.");
+  assert.equal(luchtvochtigheidDuiding(30,80),"Dauwpunt circa 26 °C · voelt zeer klam aan.");
+  assert.equal(luchtvochtigheidDuiding(null,86),"Zeer hoge relatieve luchtvochtigheid.");
+  assert.equal(luchtvochtigheidDuiding(18,null),"Luchtvochtigheid niet beschikbaar.");
+});
+
+test("desktop 24 uur houdt drie-uursraster maar verwijdert redundante extra extrema",()=>{
+  const T=[16,16.1,16.4,17,17.1,17.2,17,16.9,16.8,16.6];
+  const weg=etmaalExtraTemperaturenWeg(T,[0,3,4,5,6,9],3);
+  assert.deepEqual(weg,[4,5]);
+  assert(!weg.includes(0)&&!weg.includes(3)&&!weg.includes(6)&&!weg.includes(9),"vaste rasterpunten mogen nooit verdwijnen");
+  const scherp=[16,16,16,16,19,17,16];
+  assert.deepEqual(etmaalExtraTemperaturenWeg(scherp,[0,3,4,6],3),[],"duidelijk afwijkend extra extreem blijft zichtbaar");
+  const js=fs.readFileSync(path.join(__dirname,"live-polish-v2.js"),"utf8");
+  assert(js.includes("ruimEtmaalExtraTemperaturenOp"));
+  assert(js.includes("S.geo.M||!Number.isFinite(S.geo.n)||S.geo.n>24"));
 });
 
 test("desktopgrid reset oude twee- en vierkolomsselectors expliciet",()=>{
@@ -135,6 +160,10 @@ test("productiebundel bevat interactiepolish zonder aparte secondenklok",()=>{
   assert(html.includes("temperatuurPuntIndex"));
   assert(html.includes("verwijderTemperatuurMarkering"));
   assert(html.includes("temperatuurOntdubbelToegestaan"));
+  assert(html.includes("dauwpuntCelsius"));
+  assert(html.includes("luchtvochtigheidDuiding"));
+  assert(html.includes("etmaalExtraTemperaturenWeg"));
+  assert(html.includes("ruimEtmaalExtraTemperaturenOp"));
   assert(html.includes("nuLabelPositie"));
   assert(html.includes("nuLabelConcurreert"));
   assert(html.includes("positioneerNuLabel"));
