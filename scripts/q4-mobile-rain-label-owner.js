@@ -1,9 +1,12 @@
 "use strict";
 
-/* De 24-uursregenlaag kan op desktop brede perioden als twee losse eindlabels
-   tonen (bijv. 16:00 … 18:00). Op mobiel levert dat naast de gewone tijdas te
-   veel losse klokteksten op. De Q4-runtime kent de mobiele geometrie al via g.M;
-   daar kiezen we daarom altijd de bestaande compacte rangevariant.
+/* De 24-uursregenlaag gebruikt op desktop waar mogelijk losse eindlabels
+   (bijv. 16:00 … 18:00). Een korte periode houdt één compacte klokrange, maar
+   die range staat op desktop bij voorkeur nét buiten de smalle bracket. Zo
+   blijft 03:00–04:00 leesbaar zonder dat we extra labels of schijnruimte in de
+   bracket proppen. Past de buitenpositie niet veilig binnen de SVG-rand, dan
+   blijft de bestaande gecentreerde compacte range de fallback. Op mobiel blijft
+   de compacte range altijd de rustigste keuze.
 
    Iedere zichtbare regenbracket moet ook zichtbaar uitlegbaar zijn. Eerder
    bleven brackets van kleine perioden wel staan terwijl hun tijdvak en bedrag
@@ -11,7 +14,20 @@
    Q4 heeft al botsingsvrije meerrijige labelplaatsing en vergroot de viewBox
    wanneer dat nodig is, dus mobiel gebruikt voortaan alle Q4-perioden. */
 const SPLIT_BRON="    if(span>=splitMin){";
-const SPLIT_PRODUCTIE="    if(!g.M&&span>=splitMin){";
+const KORTE_DESKTOP_COMPACT=`    if(!g.M&&span<splitMin){
+      const compactTekst=tekst.van+"–"+tekst.tot,compactBreedte=breedteVoor(compactTekst);
+      const buiten=[
+        {x:x2+marge,anchor:"start",vak:vakVoor(x2+marge,"start",compactBreedte)},
+        {x:x1-marge,anchor:"end",vak:vakVoor(x1-marge,"end",compactBreedte)}
+      ].filter(optie=>optie.vak.links>=links&&optie.vak.rechts<=rechts);
+      if(buiten.length){
+        const gekozen=buiten[0],rij=plaatsRij([gekozen.vak]);
+        labels.push({index,soort:"range",tekst:compactTekst,x:gekozen.x,anchor:gekozen.anchor,rij});
+        return;
+      }
+    }
+`;
+const SPLIT_PRODUCTIE=KORTE_DESKTOP_COMPACT+"    if(!g.M&&span>=splitMin){";
 const HELPER_ANCHOR="function q4PeriodeBedragLabels(g,perioden,eersteY,font){";
 const RANDEN_BRON="  const randen=q4PeriodeRandLabels(g,perioden,y,randFont);";
 const RANDEN_PRODUCTIE="  const labelPerioden=g.M?q4MobieleGelabeldePerioden(perioden):perioden;\n  const randen=q4PeriodeRandLabels(g,labelPerioden,y,randFont);";
@@ -53,6 +69,6 @@ function pasQ4MobieleRegenlabelsToe(runtime){
 }
 
 module.exports=Object.freeze({
-  SPLIT_BRON,SPLIT_PRODUCTIE,HELPER_PRODUCTIE,RANDEN_PRODUCTIE,BEDRAGEN_PRODUCTIE,
+  SPLIT_BRON,SPLIT_PRODUCTIE,KORTE_DESKTOP_COMPACT,HELPER_PRODUCTIE,RANDEN_PRODUCTIE,BEDRAGEN_PRODUCTIE,
   MOBIEL_LABEL_MIN_MM,MOBIEL_LABEL_MAX,q4MobieleGelabeldePerioden,pasQ4MobieleRegenlabelsToe
 });
