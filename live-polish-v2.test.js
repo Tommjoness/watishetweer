@@ -1,6 +1,6 @@
 "use strict";
 const assert=require("assert"),fs=require("fs"),path=require("path");
-const {tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert}=require("./live-polish-v2.js");
+const {tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan}=require("./live-polish-v2.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 
 test("tooltip houdt links altijd hetzelfde label voor neerslagkans",()=>{
@@ -42,6 +42,16 @@ test("gelijke temperatuurlabels vlak naast elkaar worden als visueel dubbel gezi
   assert(!temperatuurLabelsBotsen({text:"16°",x:100,y:80},{text:"16°",x:170,y:80},45));
 });
 
+test("24-uursgrafiek wordt niet opnieuw uitgedund door late ontdubbeling",()=>{
+  assert.equal(temperatuurOntdubbelToegestaan(24),false);
+  assert.equal(temperatuurOntdubbelToegestaan("24"),false);
+  assert.equal(temperatuurOntdubbelToegestaan(48),true);
+  assert.equal(temperatuurOntdubbelToegestaan(168),true);
+  assert.equal(temperatuurOntdubbelToegestaan(null),true);
+  const js=fs.readFileSync(path.join(__dirname,"live-polish-v2.js"),"utf8");
+  assert(js.includes("!temperatuurOntdubbelToegestaan(S.geo&&S.geo.n)"));
+});
+
 test("desktopgrid reset oude twee- en vierkolomsselectors expliciet",()=>{
   const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
   assert(css.includes(".dashrow-hero .stat:nth-child(n)"));
@@ -50,6 +60,13 @@ test("desktopgrid reset oude twee- en vierkolomsselectors expliciet",()=>{
   assert(css.includes("grid-template-columns:96px 58px minmax(150px,1fr) 96px minmax(260px,290px)"));
   assert(css.includes("white-space:normal"));
   assert(css.includes("overflow-wrap:break-word"));
+});
+
+test("Nachtzicht-bewolking staat exact onder de gecentreerde kolomkop",()=>{
+  const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
+  assert(css.includes(".row.night > .nmeta:not(.wide),\n  .row.night.kop > .nmeta:not(.wide){text-align:center}"));
+  assert(css.includes(".row.night > .nmeta:not(.wide) .perc{min-width:0;text-align:center}"));
+  assert(!css.includes(".row.night > .nmeta:not(.wide){text-align:right}"));
 });
 
 test("mobiele plaatsklok staat op een eigen onafbreekbare regel",()=>{
@@ -117,12 +134,14 @@ test("productiebundel bevat interactiepolish zonder aparte secondenklok",()=>{
   assert(html.includes("neerslagkans"));
   assert(html.includes("temperatuurPuntIndex"));
   assert(html.includes("verwijderTemperatuurMarkering"));
+  assert(html.includes("temperatuurOntdubbelToegestaan"));
   assert(html.includes("nuLabelPositie"));
   assert(html.includes("nuLabelConcurreert"));
   assert(html.includes("positioneerNuLabel"));
   assert(html.includes('<div class="chartkop">'));
   assert(html.includes('<h2><span id="chartlab">Het etmaal</span></h2>'));
   assert(html.includes("#minibar.aan{display:flex}"));
+  assert(html.includes(".row.night > .nmeta:not(.wide) .perc{min-width:0;text-align:center}"));
   assert(html.includes("const aan=Number.isFinite(r.bottom)&&r.bottom<=0"));
   assert(html.includes('bar.classList.toggle("aan",aan)'));
   assert(html.includes('window.addEventListener("scroll",plan,{passive:true})'));

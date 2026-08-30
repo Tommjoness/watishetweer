@@ -195,8 +195,12 @@
     grid-template-columns:96px 58px minmax(150px,1fr) 96px minmax(260px,290px);
     gap:16px;
   }
-  .row.night > .nmeta:not(.wide){text-align:right}
-  .row.night.kop > .nmeta:not(.wide){text-align:right}
+  /* De bewolkingskolom is één vaste 96px-kolom. Kop en percentage horen daarom
+     op dezelfde optische middenas; de historische vaste breedte van .perc wordt
+     alleen hier opgeheven en blijft elders onaangeraakt. */
+  .row.night > .nmeta:not(.wide),
+  .row.night.kop > .nmeta:not(.wide){text-align:center}
+  .row.night > .nmeta:not(.wide) .perc{min-width:0;text-align:center}
   .row.night > .nmeta.wide{
     width:auto;
     max-width:290px;
