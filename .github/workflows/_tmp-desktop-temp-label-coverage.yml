@@ -33,7 +33,7 @@ jobs:
           test -x "$CHROME_PATH"
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
       - name: Voeg strikte regressie toe
-        run: python _tmp-desktop-temp-label-patch.py test
+        run: python3 _tmp-desktop-temp-label-patch.py test
       - name: Reproduceer huidig gedrag
         shell: bash
         run: |
@@ -46,7 +46,7 @@ jobs:
           cat /tmp/voor-fix.log
           echo "Voor-fix exitcode $code"
       - name: Pas desktop rasterprioriteit toe
-        run: python _tmp-desktop-temp-label-patch.py runtime
+        run: python3 _tmp-desktop-temp-label-patch.py runtime
       - name: Test de fix
         shell: bash
         run: |
