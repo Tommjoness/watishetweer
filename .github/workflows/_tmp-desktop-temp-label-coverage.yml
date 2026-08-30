@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - fix/desktop-24h-temperature-label-coverage-20260830
+    paths:
+      - _tmp-desktop-temp-label-patch.py
+      - .github/workflows/_tmp-desktop-temp-label-coverage.yml
 
 permissions:
   contents: write
