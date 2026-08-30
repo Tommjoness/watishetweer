@@ -1,4 +1,4 @@
-name: Temporary desktop temperature label coverage patch
+name: Temporary desktop temperature artifact diagnostic
 
 on:
   push:
@@ -9,12 +9,9 @@ permissions:
   contents: write
 
 jobs:
-  patch:
+  artifact:
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
-      options: --user 1001
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:
@@ -23,48 +20,25 @@ jobs:
         with:
           node-version: 22
           package-manager-cache: false
-      - name: Installeer browsertestdependencies
+      - name: Build production artifact
         shell: bash
         run: |
           set -euo pipefail
           npm install --ignore-scripts --package-lock=false
-          npm install --no-save --package-lock=false playwright@1.62.1
-          CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
-          test -x "$CHROME_PATH"
-          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
-      - name: Voeg strikte regressie toe
-        run: python3 _tmp-desktop-temp-label-patch.py test
-      - name: Reproduceer huidig gedrag
-        shell: bash
-        run: |
-          set -euo pipefail
           npm run artifact:base
-          set +e
-          node graph-stress-browser.test.js > /tmp/voor-fix.log 2>&1
-          code=$?
-          set -e
-          cat /tmp/voor-fix.log
-          echo "Voor-fix exitcode $code"
-      - name: Pas desktop rasterprioriteit toe
-        run: python3 _tmp-desktop-temp-label-patch.py runtime
-      - name: Test de fix
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm run artifact:base
-          node graph-stress-browser.test.js
-          node scripts/mobile-graph-reflow.test.js
+          node scripts/postbuild-pipeline.js
+          cp public/index.html _tmp-public-index.html
           git diff --check
-      - name: Commit de bronfix en regressie
+      - name: Commit diagnostic artifact
         shell: bash
         run: |
           set -euo pipefail
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add index.html graph-stress-browser.test.js
+          git add _tmp-public-index.html
           if git diff --cached --quiet; then
-            echo "Geen nieuwe bronwijzigingen te committen."
+            echo "Artifact unchanged."
             exit 0
           fi
-          git commit -m 'Houd desktop temperatuurreferenties zichtbaar'
+          git commit -m 'Leg productieartifact tijdelijk vast voor grafiekdiagnose'
           git push origin HEAD:fix/desktop-24h-temperature-label-coverage-20260830
