@@ -1,0 +1,56 @@
+name: Live KNMI upstream probe
+
+on:
+  push:
+    branches:
+      - hardening/knmi-upstream-probe-20260830
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Meet capabilities, actueel, WCS en koude API
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const {performance}=require('node:perf_hooks');
+          const BASE='https://anonymous.api.dataplatform.knmi.nl/wms/adaguc-server';
+          const lat=51.989, lon=5.0939;
+          async function get(url,{accept='*/*',timeout=9000,binary=false,headers={}}={}){
+            const t0=performance.now();
+            const r=await fetch(url,{headers:{Accept:accept,'User-Agent':'watishetweer-knmi-probe/1.0',...headers},signal:AbortSignal.timeout(timeout)});
+            const start=performance.now();
+            const body=binary?Buffer.from(await r.arrayBuffer()):await r.text();
+            const end=performance.now();
+            return {r,body,ttfb:start-t0,total:end-t0,bytes:binary?body.length:Buffer.byteLength(body)};
+          }
+          function log(name,x){
+            console.log(JSON.stringify({name,status:x.r.status,ttfb_ms:+x.ttfb.toFixed(1),total_ms:+x.total.toFixed(1),bytes:x.bytes,content_length:x.r.headers.get('content-length'),content_type:x.r.headers.get('content-type'),cache_control:x.r.headers.get('cache-control'),cf_cache_status:x.r.headers.get('cf-cache-status')}));
+          }
+          const caps=new URL(BASE);
+          for(const [k,v] of Object.entries({DATASET:'radar_forecast_2.0',SERVICE:'WMS',VERSION:'1.3.0',REQUEST:'GetCapabilities'}))caps.searchParams.set(k,v);
+          const c=await get(caps,{accept:'text/xml',timeout:9000}); log('capabilities',c);
+          const m=[...c.body.matchAll(/<(?:Dimension|Extent)\b([^>]*)>/gi)].find(x=>/\bname=["'](?:forecast_)?reference_time["']/i.test(x[1]||''));
+          const ref=m&&(/\bdefault=["']([^"']+)["']/i.exec(m[1]||'')||[])[1];
+          if(!ref||!Number.isFinite(Date.parse(ref)))throw new Error('geen geldige reference_time');
+          console.log('reference_time='+ref);
+
+          const act=new URL(BASE);
+          for(const [k,v] of Object.entries({DATASET:'nl_rdr_data_rtcor_5m',SERVICE:'WMS',REQUEST:'GetPointValue',VERSION:'1.1.1',SRS:'EPSG:4326',QUERY_LAYERS:'precipitation_real_time',X:lon.toFixed(5),Y:lat.toFixed(5),INFO_FORMAT:'application/json'}))act.searchParams.set(k,v);
+          const a=await get(act,{accept:'application/json',timeout:9000}); log('actueel',a);
+
+          const wcs=new URL(BASE);
+          const marge=.0001;
+          for(const [k,v] of Object.entries({DATASET:'radar_forecast_2.0',SERVICE:'WCS',REQUEST:'GetCoverage',VERSION:'1.0.0',COVERAGE:'precipitation_nowcast',CRS:'EPSG:4326',BBOX:[lon-marge,lat-marge,lon+marge,lat+marge].map(v=>v.toFixed(5)).join(','),WIDTH:'2',HEIGHT:'2',FORMAT:'NetCDF3',TIME:ref,DIM_forecast_reference_time:ref}))wcs.searchParams.set(k,v);
+          const w=await get(wcs,{accept:'application/netcdf',timeout:9000,binary:true}); log('wcs_een_tijdstap',w);
+
+          const api='https://f4d9d9ef.watishetweer.pages.dev/api/neerslag?lat=51.989&lon=5.0939&land=NL';
+          const p=await get(api,{accept:'application/json',timeout:12_000,headers:{'Cache-Control':'no-cache'}}); log('productie_api_koud',p);
+          const json=JSON.parse(p.body);
+          console.log(JSON.stringify({beschikbaar:json.beschikbaar,provider:json.provider,actueel:Boolean(json.actueel),nowcast:Boolean(json.nowcast),nowcast_punten:json.nowcast&&Array.isArray(json.nowcast.punten)?json.nowcast.punten.length:null,reden:json.reden||null,edge:p.r.headers.get('x-wiw-edge-cache')}));
+          NODE
