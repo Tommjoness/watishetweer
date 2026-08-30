@@ -12,6 +12,9 @@ const {
   referenceTimeUitCapabilities,
   nowcastReeksCompleet,
   normaliseerNowcastAntwoord,
+  NOWCAST_METADATA_CACHE_MAX_MS,
+  metadataMaxAgeMs,
+  haalNowcastMetadata,
   haalActueelPunt,
   haalNowcastPunt
 } = require("../lib/knmi-neerslag.cjs")._intern;
@@ -153,6 +156,55 @@ test("nowcast met dezelfde horizon maar verschoven eerste stap wordt geweigerd",
   delete payload[0].data[ref][ref];
   payload[0].data[ref]["2026-08-15T12:40:00Z"] = "0";
   assert.equal(normaliseerNowcastAntwoord(payload, ref), null);
+});
+
+test("KNMI metadata-cache volgt provider max-age met harde bovengrens", () => {
+  assert.equal(NOWCAST_METADATA_CACHE_MAX_MS, 10000);
+  assert.equal(metadataMaxAgeMs({get:()=>"public, max-age=10"}), 10000);
+  assert.equal(metadataMaxAgeMs({get:()=>"max-age=30"}), 10000);
+  assert.equal(metadataMaxAgeMs({get:()=>"no-cache"}), 0);
+});
+
+test("KNMI capabilities worden binnen provider-TTL hergebruikt en daarna vernieuwd", async () => {
+  let calls=0;
+  const fakeFetch=async()=>{calls++;return {
+    ok:true,status:200,headers:{get:n=>String(n).toLowerCase()==="cache-control"?"max-age=10":null},
+    text:async()=>'<WMS_Capabilities><Layer><Name>precipitation_nowcast</Name><Dimension name="reference_time" default="2026-08-15T10:35:00Z">x</Dimension></Layer></WMS_Capabilities>'
+  };};
+  await haalNowcastMetadata(fakeFetch,NU,1000);
+  await haalNowcastMetadata(fakeFetch,NU,10999);
+  assert.equal(calls,1);
+  await haalNowcastMetadata(fakeFetch,NU,11000);
+  assert.equal(calls,2);
+});
+
+test("gelijktijdige KNMI capabilities-requests delen één in-flight request", async () => {
+  let calls=0;
+  const fakeFetch=async()=>{
+    calls++;
+    await new Promise(resolve=>setTimeout(resolve,10));
+    return {ok:true,status:200,headers:{get:()=>"max-age=10"},text:async()=>'<WMS_Capabilities><Layer><Name>precipitation_nowcast</Name><Dimension name="reference_time" default="2026-08-15T10:35:00Z">x</Dimension></Layer></WMS_Capabilities>'};
+  };
+  const waarden=await Promise.all([
+    haalNowcastMetadata(fakeFetch,NU,2000),
+    haalNowcastMetadata(fakeFetch,NU,2000),
+    haalNowcastMetadata(fakeFetch,NU,2000)
+  ]);
+  assert.equal(calls,1);
+  assert(waarden.every(x=>x.referenceTime==="2026-08-15T10:35:00Z"));
+});
+
+test("mislukte of niet-cachebare capabilities worden niet als metadata-cachehit bewaard", async () => {
+  let calls=0;
+  const fakeFetch=async()=>{
+    calls++;
+    if(calls===1)return {ok:false,status:503,headers:{get:()=>"max-age=10"},text:async()=>"tijdelijk stuk"};
+    return {ok:true,status:200,headers:{get:()=>null},text:async()=>'<WMS_Capabilities><Layer><Name>precipitation_nowcast</Name><Dimension name="reference_time" default="2026-08-15T10:35:00Z">x</Dimension></Layer></WMS_Capabilities>'};
+  };
+  await assert.rejects(()=>haalNowcastMetadata(fakeFetch,NU,3000),/status 503/);
+  await haalNowcastMetadata(fakeFetch,NU,3001);
+  await haalNowcastMetadata(fakeFetch,NU,3002);
+  assert.equal(calls,3);
 });
 
 test("haalActueelPunt accepteert een verse echte-vorm WMS-respons", async () => {
