@@ -34,7 +34,10 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.62.1
           CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
           test -x "$CHROME_PATH"
+          mkdir -p /tmp/browser-bin
+          ln -sf "$CHROME_PATH" /tmp/browser-bin/chromium
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+          echo "/tmp/browser-bin" >> "$GITHUB_PATH"
       - name: Voeg regressie toe en reproduceer de fout
         shell: bash
         run: |
