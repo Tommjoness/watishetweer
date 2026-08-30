@@ -5,7 +5,7 @@ const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
 const {
-  SPLIT_BRON,SPLIT_PRODUCTIE,KORTE_DESKTOP_SPLIT,HELPER_PRODUCTIE,RANDEN_PRODUCTIE,BEDRAGEN_PRODUCTIE,
+  SPLIT_BRON,SPLIT_PRODUCTIE,KORTE_DESKTOP_COMPACT,HELPER_PRODUCTIE,RANDEN_PRODUCTIE,BEDRAGEN_PRODUCTIE,
   MOBIEL_LABEL_MIN_MM,MOBIEL_LABEL_MAX,q4MobieleGelabeldePerioden,pasQ4MobieleRegenlabelsToe
 }=require("./q4-mobile-rain-label-owner.js");
 
@@ -47,9 +47,10 @@ assert(!bron.includes(HELPER_PRODUCTIE),"Q4-runtime bevat de mobiele labelselect
 const uit=pasQ4MobieleRegenlabelsToe(bron);
 assert.equal(uit.split(SPLIT_PRODUCTIE).length-1,1,"mobiele compacte-rangeregel ontbreekt of is dubbel");
 assert(!uit.includes(SPLIT_BRON),"oude mobiele/desktop gedeelde splitregel bleef actief");
-assert.equal(uit.split(KORTE_DESKTOP_SPLIT).length-1,1,"korte desktopperiode krijgt exact één rustige buitenplaatsingsroute");
-assert(uit.includes('if(!g.M&&span<splitMin){'),"korte desktopperiode probeert losse eindlabels vóór de compacte fallback");
-assert(uit.includes('.filter(optie=>optie.rang===0)'),"korte desktopperiode gebruikt alleen buitenposities en zet tekst niet in de smalle bracket");
+assert.equal(uit.split(KORTE_DESKTOP_COMPACT).length-1,1,"korte desktopperiode krijgt exact één rustige compacte buitenplaatsingsroute");
+assert(uit.includes('if(!g.M&&span<splitMin){'),"korte desktopperiode krijgt vóór de fallback een eigen desktoproute");
+assert(uit.includes('{x:x2+marge,anchor:"start"')&&uit.includes('{x:x1-marge,anchor:"end"'),"korte compacte range probeert eerst rechts en daarna links buiten de bracket");
+assert(uit.includes('labels.push({index,soort:"range",tekst:compactTekst'),"korte desktopperiode blijft semantisch één compacte range");
 assert(uit.includes('if(!g.M&&span>=splitMin){'),"brede desktopperiode behoudt de bestaande splitroute");
 assert.equal(uit.split(HELPER_PRODUCTIE).length-1,1,"mobiele volledige labelset ontbreekt of is dubbel");
 assert(uit.includes(RANDEN_PRODUCTIE),"tijdlabels gebruiken mobiel de volledige Q4-periodenset");
@@ -65,4 +66,4 @@ for(const invariant of [
 assert.throws(()=>pasQ4MobieleRegenlabelsToe(uit),/staat al in de runtime/,
   "owner moet fail-fast zijn bij dubbele assemblage");
 
-console.log("Q4 regenlabels groen: mobiel houdt compacte ranges; korte desktopperioden gebruiken waar mogelijk rustige eindlabels buiten de bracket.");
+console.log("Q4 regenlabels groen: mobiel houdt compacte ranges; korte desktopperioden zetten die range waar mogelijk rustig buiten de bracket.");
