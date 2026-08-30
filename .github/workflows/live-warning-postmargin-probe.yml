@@ -1,0 +1,38 @@
+name: Live warning post-margin probe
+
+on:
+  push:
+    branches:
+      - hardening/live-warning-postmargin-probe-20260830
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Bewijs koude Duitse warningroute binnen clientbudget
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://e7331b2a.watishetweer.pages.dev/api/waarschuwingen?lat=52.52&lon=13.405&land=DE'
+          for attempt in 1 2 3; do
+            headers="/tmp/warning-${attempt}.headers"
+            body="/tmp/warning-${attempt}.json"
+            metrics="$(curl -sS --max-time 8 -H 'Cache-Control: no-cache' \
+              -D "$headers" -o "$body" \
+              -w '%{http_code} %{time_total}' "$url")"
+            status="${metrics%% *}"
+            total="${metrics#* }"
+            edge="$(awk 'BEGIN{IGNORECASE=1} /^x-wiw-edge-cache:/{gsub("\r",""); print $2}' "$headers" | tail -1)"
+            echo "attempt=$attempt status=$status total=${total}s edge=${edge:-missing}"
+            jq '{bron,dekking,plaatsSpecifiek,reden,aantal:(.lijst|length)}' "$body"
+            test "$status" = 200
+            test "$edge" = BYPASS
+            awk -v t="$total" 'BEGIN{exit !(t < 7.0)}'
+            jq -e '.reden != "bron onbereikbaar"' "$body" >/dev/null
+            jq -e '(.bron|type)=="string" and (.bron|startswith("MeteoAlarm"))' "$body" >/dev/null
+          done
+          echo 'Duitse warningroute: 3 koude bypass-probes binnen 7s zonder bron-onbereikbaar.'
