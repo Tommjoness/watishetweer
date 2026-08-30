@@ -14,6 +14,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -26,4 +28,4 @@ jobs:
           node scripts/cloudflare-edge-cache.test.mjs
           node scripts/cloudflare-api-observability.test.mjs
           node scripts/cloudflare-api-rate-limit.test.js
-          git diff --check HEAD~5..HEAD
+          git diff --check ed53f472c90069d95f92e5118ead6cbbf1c3ab35..HEAD
