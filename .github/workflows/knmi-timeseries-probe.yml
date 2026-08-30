@@ -1,0 +1,24 @@
+name: KNMI timeseries probe
+
+on:
+  push:
+    branches:
+      - hardening/knmi-warning-upstream-efficiency-20260830
+    paths:
+      - scripts/knmi-timeseries-probe.mjs
+      - .github/workflows/knmi-timeseries-probe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Vergelijk WCS met een-call timeseries
+        run: node scripts/knmi-timeseries-probe.mjs
