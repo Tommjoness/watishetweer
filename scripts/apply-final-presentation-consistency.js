@@ -29,8 +29,8 @@ const PAD=path.join(OUT,"index.html");
       schaalnaam, zodat de actieve runtime nergens twee termen voor één schaal kent.
    9. De briefing benoemt een windpiek en zware windstoten in twee korte zinnen,
       zonder dubbele dagaanduiding of technisch 'in het uur'-proza.
-  10. De desktop-etmaalgrafiek houdt extrema en echte veranderingen, maar laat
-      overbodige identieke afgeronde rasterlabels wijken. */
+  10. De desktop-etmaalgrafiek behoudt ieder vast drie-uursreferentiepunt;
+      extrema en echte veranderingen mogen daar alleen extra labels aan toevoegen. */
 const ZON_RUNTIME_OUD=`      if(kop.textContent.trim()==="Zonuren"){
         const u=Number(String(val.textContent||"").replace(",",".").replace(/[^0-9.-]/g,""));
         const tekst=zonurenOordeelGetoond(u);if(tekst)sub.textContent=tekst;
@@ -141,19 +141,13 @@ const WIND_BRIEFING_NIEUW=`    if(opvallendeWind){
       }
     }`;
 
-/* Mobiel gebruikt al een rustige zes-uursselectie. Desktop heeft meer ruimte,
-   maar hoeft identieke afgeronde temperaturen op nabije vaste rasterpunten niet
-   telkens opnieuw te schrijven. Extrema en prominente lokale punten blijven. */
+/* Mobiel gebruikt bewust een rustige zes-uursselectie. Desktop heeft genoeg
+   ruimte om in de 24-uursweergave ieder vaste drie-uursreferentiepunt te behouden.
+   Extrema en prominente lokale punten blijven daar als extra context bovenop staan. */
 const GRAFIEK_LABELS_OUD='  let kandidaten=n<=24?(M?kandidatenRuw.filter(k=>k.rang>1||(k.i%6===0&&!kandidatenRuw.some(g=>g.rang>1&&Math.abs(g.i-k.i)<=1))):kandidatenRuw):kandidatenRuw.filter((k,pos)=>{';
 const GRAFIEK_LABELS_NIEUW=`  let kandidaten=n<=24?(M
     ?kandidatenRuw.filter(k=>k.rang>1||(k.i%6===0&&!kandidatenRuw.some(g=>g.rang>1&&Math.abs(g.i-k.i)<=1)))
-    :kandidatenRuw.filter((k,pos,alle)=>{
-      if(k.rang!==1)return true;
-      const afgerond=Math.round(T[k.i]);
-      const belangrijkNabij=kandidatenRuw.some(g=>g.rang>1&&Math.abs(g.i-k.i)<=stap&&Math.round(T[g.i])===afgerond);
-      if(belangrijkNabij)return false;
-      return !alle.slice(0,pos).some(g=>g.rang===1&&g.i<k.i&&k.i-g.i<=stap*2&&Math.round(T[g.i])===afgerond);
-    })
+    :kandidatenRuw
   ):kandidatenRuw.filter((k,pos)=>{`;
 
 /* Deze wrapper wordt als allerlaatste runtime-owner vlak vóór start ingevoegd.
@@ -242,12 +236,14 @@ if(!html.includes('return Math.min(3,n);')||html.includes('if(!mobiel||rijen.len
   throw new Error("Nachtzicht is niet op alle schermformaten standaard compact.");
 if(!html.includes('Windstoten kunnen "+gustMoment+" oplopen tot '))
   throw new Error("Compacte briefingcopy voor zware windstoten ontbreekt.");
-if(!html.includes("const belangrijkNabij=kandidatenRuw.some"))
-  throw new Error("Desktop-grafiekfilter voor redundante temperatuurcijfers ontbreekt.");
+if(!html.includes(':kandidatenRuw\n  ):kandidatenRuw.filter((k,pos)=>{'))
+  throw new Error("Desktop-etmaalgrafiek behoudt niet het volledige drie-uursraster.");
+if(html.includes("const belangrijkNabij=kandidatenRuw.some"))
+  throw new Error("Oude desktopfilter voor afgerond gelijke temperatuurcijfers is nog actief.");
 
 fs.writeFileSync(PAD,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"finale-presentatie");
-console.log("Finale presentatieconsistentie toegepast: zonuren-owner hersteld, Nachtzicht genuanceerd en compact, gelijke temperatuurtrend vereenvoudigd, 0,0-mm-uitleg ingekort, AQI-schaal volledig genormaliseerd, briefingwindcopy aangescherpt en redundante desktop-temperatuurlabels verminderd; cache "+versie+".");
+console.log("Finale presentatieconsistentie toegepast: zonuren-owner hersteld, Nachtzicht genuanceerd en compact, gelijke temperatuurtrend vereenvoudigd, 0,0-mm-uitleg ingekort, AQI-schaal volledig genormaliseerd, briefingwindcopy aangescherpt en het volledige desktop-drie-uursraster behouden; cache "+versie+".");
 
 module.exports={
   ZON_RUNTIME_OUD,ZON_RUNTIME_NIEUW,NACHT_OUD,NACHT_NIEUW,ARIA_OUD,ARIA_NIEUW,

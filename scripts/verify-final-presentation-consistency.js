@@ -50,9 +50,9 @@ ok(html.includes('moment+" is de wind het sterkst, met <b>"+bm+" Bft</b>'),"brie
 ok(html.includes('zin3+=" Windstoten kunnen "+gustMoment+" oplopen tot "+Math.round(gmax)+" km/u.";'),"briefing geeft zware windstoten in een korte afzonderlijke zin");
 ok(!html.includes('" in het uur "+weatherNowUurvak(h.time[gi])+" kunnen windstoten tot "'),"oude mechanische windstootzin is verwijderd");
 
-ok(html.includes('const belangrijkNabij=kandidatenRuw.some'),"desktop etmaalgrafiek herkent redundante labels naast een belangrijk punt");
-ok(html.includes('alle.slice(0,pos).some(g=>g.rang===1&&g.i<k.i&&k.i-g.i<=stap*2&&Math.round(T[g.i])===afgerond)'),"desktop etmaalgrafiek onderdrukt alleen nabije identieke afgeronde rasterwaarden");
 ok(html.includes('?kandidatenRuw.filter(k=>k.rang>1||(k.i%6===0'),"mobiele rustige zes-uursselectie blijft behouden");
+ok(html.includes(':kandidatenRuw\n  ):kandidatenRuw.filter((k,pos)=>{'),"desktop etmaalgrafiek behoudt het volledige vaste drie-uursraster");
+ok(!html.includes('const belangrijkNabij=kandidatenRuw.some'),"finale presentatielaag filtert desktop rasterlabels niet meer op afgerond gelijke temperatuur");
 
 ok(html.includes('Vannacht daalt de temperatuur naar ongeveer "+waarde+".'),"briefing bevat natuurlijke resterende daling na middernacht");
 ok(html.includes('Vannacht blijft de temperatuur rond "+waarde+".'),"briefing bevat een stabiele nachtvariant na middernacht");
