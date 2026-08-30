@@ -24,43 +24,17 @@ jobs:
           node-version: 22
           package-manager-cache: false
       - name: Installeer browsertestdependencies
+        shell: bash
         run: |
+          set -euo pipefail
           npm install --ignore-scripts --package-lock=false
           npm install --no-save --package-lock=false playwright@1.62.1
           CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
           test -x "$CHROME_PATH"
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
-      - name: Voeg strikte 24-uurs rasterregressie toe
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('graph-stress-browser.test.js')
-          s=p.read_text()
-          marker='      const temperatuurDekking=tempIndices.length>=5&&maxTempGap<=6;'
-          if 'const rasterDekking=rasterTempIndices.every' not in s:
-              if s.count(marker)!=1:
-                  raise SystemExit(f'Verwacht exact één temperatuurDekking-marker, gevonden {s.count(marker)}')
-              toevoeging='''      /* Desktop 24 uur heeft genoeg horizontale ruimte voor het vaste drie-uursraster.
-         Dat raster is het minimale visuele contract: lokale pieken/dalen mogen extra
-         labels toevoegen, maar nooit 06:00/09:00-achtige gaten veroorzaken doordat
-         ze eerder in de collision queue terechtkomen. Index 0 valt bewust onder het
-         rode actuele label; vanaf index 3 moet ieder rasterpunt zichtbaar blijven. */
-      const rasterTempIndices=[3,6,9,12,15,18,21,24];
-      const rasterDekking=rasterTempIndices.every(i=>tempIndices.includes(i));'''
-              s=s.replace(marker,marker+'\n'+toevoeging)
-              oud='const resultaat=!!(chart&&regenGroep&&temperatuurDekking&&brackets.length>=4'
-              nieuw='const resultaat=!!(chart&&regenGroep&&temperatuurDekking&&rasterDekking&&brackets.length>=4'
-              if s.count(oud)!=1:
-                  raise SystemExit(f'Verwacht exact één resultaatmarker, gevonden {s.count(oud)}')
-              s=s.replace(oud,nieuw)
-              s=s.replace("      document.body.dataset.graphStressMaxTempGap=String(maxTempGap);", "      document.body.dataset.graphStressMaxTempGap=String(maxTempGap);\n      document.body.dataset.graphStressRaster=rasterDekking?'ok':'fout';")
-              s=s.replace('maxTempGap="+waarde("graph-stress-max-temp-gap")+", perioden=', 'maxTempGap="+waarde("graph-stress-max-temp-gap")+", raster="+waarde("graph-stress-raster")+", perioden=')
-              s=s.replace('temperatuurreferenties maximaal zes uur uit elkaar, meerdere regenperioden en geen labelbotsingen.', 'alle drie-uursreferenties zichtbaar, temperatuurreferenties maximaal zes uur uit elkaar, meerdere regenperioden en geen labelbotsingen.')
-              p.write_text(s)
-          PY
-      - name: Reproduceer het huidige labelgat
+      - name: Voeg strikte regressie toe
+        run: python _tmp-desktop-temp-label-patch.py test
+      - name: Reproduceer huidig gedrag
         shell: bash
         run: |
           set -euo pipefail
@@ -70,36 +44,10 @@ jobs:
           code=$?
           set -e
           cat /tmp/voor-fix.log
-          echo "Voor-fix exitcode: $code"
-      - name: Geef desktop drie-uursraster voorrang
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('index.html')
-          s=p.read_text()
-          old='''  // 6: reguliere, gelijkmatig verdeelde referentiepunten (het bestaande
-  // drie-uursraster), alleen waar nog geen belangrijker punt staat
-  for(let i=0;i<T.length;i++){
-    if(!geldig(i)||i%stap!==0) continue;
-    if(!kandKaart.has(i)) kandKaart.set(i,1);
-  }'''
-          new='''  // 6: reguliere, gelijkmatig verdeelde referentiepunten. Op desktop is het
-  // drie-uursraster binnen 24 uur het minimale leesbaarheidscontract: die vaste
-  // referenties gaan vóór extra lokale pieken/dalen, zodat een rustige of licht
-  // golvende periode nooit zes tot negen uur zonder temperatuurcijfer kan raken.
-  for(let i=0;i<T.length;i++){
-    if(!geldig(i)||i%stap!==0) continue;
-    zet(i,n<=24&&!M?4:1);
-  }'''
-          if new not in s:
-              if s.count(old)!=1:
-                  raise SystemExit(f'Verwacht exact één rasterkandidaat-anker, gevonden {s.count(old)}')
-              s=s.replace(old,new)
-              p.write_text(s)
-          PY
-      - name: Test de fix in een echte desktopbrowser
+          echo "Voor-fix exitcode $code"
+      - name: Pas desktop rasterprioriteit toe
+        run: python _tmp-desktop-temp-label-patch.py runtime
+      - name: Test de fix
         shell: bash
         run: |
           set -euo pipefail
