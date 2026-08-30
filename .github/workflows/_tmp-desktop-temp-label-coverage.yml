@@ -1,0 +1,105 @@
+name: Temporary desktop temperature label coverage patch
+
+on:
+  push:
+    branches:
+      - fix/desktop-24h-temperature-label-coverage-20260830
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --user 1001
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/desktop-24h-temperature-label-coverage-20260830
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Installeer browsertestdependencies
+        run: |
+          npm install --ignore-scripts --package-lock=false
+          npm install --no-save --package-lock=false playwright@1.62.1
+          CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          test -x "$CHROME_PATH"
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+      - name: Voeg strikte 24-uurs rasterregressie toe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('graph-stress-browser.test.js')
+          s=p.read_text()
+          old='''      const temperatuurDekking=tempIndices.length>=5&&maxTempGap<=6;\n      const resultaat=!!(chart&&regenGroep&&temperatuurDekking&&brackets.length>=4&&bedragen.length>=4&&middernacht&&botsingen(tempLabels)===0&&botsingen(regenLabels)===0&&regenBuiten===0&&chart.scrollWidth<=chart.clientWidth+1);\n'''
+          new='''      const temperatuurDekking=tempIndices.length>=5&&maxTempGap<=6;\n      /* Desktop 24 uur heeft genoeg horizontale ruimte voor het vaste drie-uursraster.\n         Dat raster is het minimale visuele contract: lokale pieken/dalen mogen extra\n         labels toevoegen, maar nooit 06:00/09:00-achtige gaten veroorzaken doordat\n         ze eerder in de collision queue terechtkomen. Index 0 valt bewust onder het\n         rode actuele label; vanaf index 3 moet ieder rasterpunt zichtbaar blijven. */\n      const rasterTempIndices=[3,6,9,12,15,18,21,24];\n      const rasterDekking=rasterTempIndices.every(i=>tempIndices.includes(i));\n      const resultaat=!!(chart&&regenGroep&&temperatuurDekking&&rasterDekking&&brackets.length>=4&&bedragen.length>=4&&middernacht&&botsingen(tempLabels)===0&&botsingen(regenLabels)===0&&regenBuiten===0&&chart.scrollWidth<=chart.clientWidth+1);\n'''
+          if new in s:
+              print('Strikte rasterregressie staat al in testbestand.')
+          elif s.count(old)==1:
+              s=s.replace(old,new)
+              s=s.replace("      document.body.dataset.graphStressMaxTempGap=String(maxTempGap);\n", "      document.body.dataset.graphStressMaxTempGap=String(maxTempGap);\n      document.body.dataset.graphStressRaster=rasterDekking?'ok':'fout';\n")
+              s=s.replace('maxTempGap="+waarde("graph-stress-max-temp-gap")+", perioden=', 'maxTempGap="+waarde("graph-stress-max-temp-gap")+", raster="+waarde("graph-stress-raster")+", perioden=')
+              s=s.replace('temperatuurreferenties maximaal zes uur uit elkaar, meerdere regenperioden en geen labelbotsingen.', 'alle drie-uursreferenties zichtbaar, temperatuurreferenties maximaal zes uur uit elkaar, meerdere regenperioden en geen labelbotsingen.')
+              p.write_text(s)
+          else:
+              raise SystemExit(f'Verwacht exact één grafiek-testanker, gevonden {s.count(old)}')
+          PY
+      - name: Reproduceer het huidige labelgat
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run artifact:base
+          set +e
+          node graph-stress-browser.test.js > /tmp/voor-fix.log 2>&1
+          code=$?
+          set -e
+          cat /tmp/voor-fix.log
+          echo "Voor-fix exitcode: $code"
+      - name: Geef desktop drie-uursraster voorrang
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          old='''  // 6: reguliere, gelijkmatig verdeelde referentiepunten (het bestaande\n  // drie-uursraster), alleen waar nog geen belangrijker punt staat\n  for(let i=0;i<T.length;i++){\n    if(!geldig(i)||i%stap!==0) continue;\n    if(!kandKaart.has(i)) kandKaart.set(i,1);\n  }\n'''
+          new='''  // 6: reguliere, gelijkmatig verdeelde referentiepunten. Op desktop is het\n  // drie-uursraster binnen 24 uur het minimale leesbaarheidscontract: die vaste\n  // referenties gaan vóór extra lokale pieken/dalen, zodat een rustige of licht\n  // golvende periode nooit zes tot negen uur zonder temperatuurcijfer kan raken.\n  for(let i=0;i<T.length;i++){\n    if(!geldig(i)||i%stap!==0) continue;\n    zet(i,n<=24&&!M?4:1);\n  }\n'''
+          if new in s:
+              print('Desktop rasterprioriteit staat al in index.html.')
+          elif s.count(old)==1:
+              s=s.replace(old,new)
+              s=s.replace('''    kandidaat met\n     rang 2 of hoger (een echte piek, dal, of het huidige/globale extreem)\n     verliest het nooit stilzwijgend van een regulier rasterlabel (rang 1). */\n''','''    kandidaat met een hogere rang verliest niet stilzwijgend van een lager\n     geprioriteerd label. Op desktop-24u heeft het vaste drie-uursraster daarom\n     bewust de hoogste rang; extra extrema vullen alleen vrije ruimte. */\n''')
+              s=s.replace('''    // label actief verwijderen om zelf een plek te krijgen.\n    if(cy===null){\n''','''    // label actief verwijderen om zelf een plek te krijgen. Op desktop-24u\n    // zijn rasterlabels rang 4 en mogen juist een extra extrema-label laten wijken.\n    if(cy===null){\n''')
+              p.write_text(s)
+          else:
+              raise SystemExit(f'Verwacht exact één rasterkandidaat-anker, gevonden {s.count(old)}')
+          PY
+      - name: Test de fix in een echte desktopbrowser
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run artifact:base
+          node graph-stress-browser.test.js
+          node scripts/mobile-graph-reflow.test.js
+          git diff --check
+      - name: Commit de bronfix en regressie
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add index.html graph-stress-browser.test.js
+          if git diff --cached --quiet; then
+            echo "Geen nieuwe bronwijzigingen te committen."
+            exit 0
+          fi
+          git commit -m 'Houd desktop temperatuurreferenties zichtbaar'
+          git push origin HEAD:fix/desktop-24h-temperature-label-coverage-20260830
