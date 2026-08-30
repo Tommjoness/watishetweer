@@ -66,6 +66,8 @@ const reporter=`<script>
     try{
       const chart=document.getElementById('chart'),chartBox=chart&&chart.getBoundingClientRect();
       const tempLabels=chart?[...chart.querySelectorAll('text')].filter(el=>String(el.getAttribute('font-family')||'').includes('Bodoni Moda')&&/^-?\\d+°$/.test((el.textContent||'').trim())):[];
+      const tempIndices=chart?[...chart.querySelectorAll('circle[data-temp-index]')].map(el=>Number(el.getAttribute('data-temp-index'))).filter(Number.isInteger).sort((a,b)=>a-b):[];
+      const maxTempGap=tempIndices.slice(1).reduce((max,i,pos)=>Math.max(max,i-tempIndices[pos]),0);
       const regenGroep=chart&&chart.querySelector('g[data-q4-rain-periods]');
       const regenLabels=regenGroep?[...regenGroep.querySelectorAll('text')]:[];
       const brackets=regenGroep?[...regenGroep.querySelectorAll('line[aria-label]')]:[];
@@ -83,9 +85,16 @@ const reporter=`<script>
         return Number.isFinite(begin)&&Number.isFinite(eind)&&begin>eind;
       });
       const bedragen=regenGroep?[...regenGroep.querySelectorAll('text[data-q4-rain-period-amount]')]:[];
-      const resultaat=!!(chart&&regenGroep&&tempLabels.length>=5&&brackets.length>=4&&bedragen.length>=4&&middernacht&&botsingen(tempLabels)===0&&botsingen(regenLabels)===0&&regenBuiten===0&&chart.scrollWidth<=chart.clientWidth+1);
+      /* Alleen een totaalaantal labels is onvoldoende: vijf labels kunnen aan één
+         kant van het etmaal clusteren. Binnen de 24-uursweergave mag tussen twee
+         zichtbare temperatuurreferenties daarom nooit meer dan zes modeluren
+         zitten. De bestaande botsingsregel blijft tegelijk hard op nul staan. */
+      const temperatuurDekking=tempIndices.length>=5&&maxTempGap<=6;
+      const resultaat=!!(chart&&regenGroep&&temperatuurDekking&&brackets.length>=4&&bedragen.length>=4&&middernacht&&botsingen(tempLabels)===0&&botsingen(regenLabels)===0&&regenBuiten===0&&chart.scrollWidth<=chart.clientWidth+1);
       document.body.dataset.graphStressResult=resultaat?'ok':'fout';
       document.body.dataset.graphStressTemps=String(tempLabels.length);
+      document.body.dataset.graphStressTempIndices=tempIndices.join(',');
+      document.body.dataset.graphStressMaxTempGap=String(maxTempGap);
       document.body.dataset.graphStressPeriods=String(brackets.length);
       document.body.dataset.graphStressAmounts=String(bedragen.length);
       document.body.dataset.graphStressTempCollisions=String(botsingen(tempLabels));
@@ -107,6 +116,6 @@ try{
   if(r.status!==0)throw new Error("grafiekstresstest browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"";
   const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
-  if(waarde("graph-stress-result")!=="ok")throw new Error("grafiekstresstest resultaat="+waarde("graph-stress-result")+", tempLabels="+waarde("graph-stress-temps")+", perioden="+waarde("graph-stress-periods")+", bedragen="+waarde("graph-stress-amounts")+", tempBotsingen="+waarde("graph-stress-temp-collisions")+", regenBotsingen="+waarde("graph-stress-rain-collisions")+", regenBuiten="+waarde("graph-stress-rain-outside")+", middernacht="+waarde("graph-stress-midnight")+", bracketAria="+waarde("graph-stress-aria")+", exception="+waarde("graph-stress-exception"));
-  console.log("24-uursgrafiek stressregressie geslaagd: meerdere regenperioden, middernachtgrens en temperatuurpieken zonder labelbotsingen.");
+  if(waarde("graph-stress-result")!=="ok")throw new Error("grafiekstresstest resultaat="+waarde("graph-stress-result")+", tempLabels="+waarde("graph-stress-temps")+", tempIndices="+waarde("graph-stress-temp-indices")+", maxTempGap="+waarde("graph-stress-max-temp-gap")+", perioden="+waarde("graph-stress-periods")+", bedragen="+waarde("graph-stress-amounts")+", tempBotsingen="+waarde("graph-stress-temp-collisions")+", regenBotsingen="+waarde("graph-stress-rain-collisions")+", regenBuiten="+waarde("graph-stress-rain-outside")+", middernacht="+waarde("graph-stress-midnight")+", bracketAria="+waarde("graph-stress-aria")+", exception="+waarde("graph-stress-exception"));
+  console.log("24-uursgrafiek stressregressie geslaagd: temperatuurreferenties maximaal zes uur uit elkaar, meerdere regenperioden en geen labelbotsingen.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
