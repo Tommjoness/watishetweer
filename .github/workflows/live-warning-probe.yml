@@ -16,7 +16,9 @@ jobs:
       - name: Vergelijk Duitse upstreams en immutable API
         shell: bash
         run: |
-          set -uo pipefail
+          set +e
+          set -u
+          set -o pipefail
           compat='https://feeds.meteoalarm.org/api/v1/warnings/feeds-germany'
           atom='https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-germany'
           app='https://f4d9d9ef.watishetweer.pages.dev/api/waarschuwingen?lat=52.52&lon=13.405&land=DE'
