@@ -5,6 +5,8 @@ on:
     branches:
       - hardening/knmi-warning-upstream-efficiency-20260830
     paths:
+      - lib/knmi-neerslag.cjs
+      - scripts/knmi-neerslag.test.js
       - scripts/knmi-timeseries-probe.mjs
       - .github/workflows/knmi-timeseries-probe.yml
 
@@ -20,5 +22,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
+      - name: KNMI parserregressie
+        run: node scripts/knmi-neerslag.test.js
       - name: Vergelijk WCS met een-call timeseries
         run: node scripts/knmi-timeseries-probe.mjs
