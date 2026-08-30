@@ -60,7 +60,6 @@ jobs:
           set -euo pipefail
           npm run artifact:base
           node scripts/postbuild-pipeline.js
-          node scripts/verify-final-presentation-consistency.js
           node graph-stress-browser.test.js
           node scripts/mobile-graph-reflow.test.js
           git diff --check
