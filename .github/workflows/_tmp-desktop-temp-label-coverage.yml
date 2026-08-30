@@ -38,18 +38,27 @@ jobs:
           from pathlib import Path
           p=Path('graph-stress-browser.test.js')
           s=p.read_text()
-          old='''      const temperatuurDekking=tempIndices.length>=5&&maxTempGap<=6;\n      const resultaat=!!(chart&&regenGroep&&temperatuurDekking&&brackets.length>=4&&bedragen.length>=4&&middernacht&&botsingen(tempLabels)===0&&botsingen(regenLabels)===0&&regenBuiten===0&&chart.scrollWidth<=chart.clientWidth+1);\n'''
-          new='''      const temperatuurDekking=tempIndices.length>=5&&maxTempGap<=6;\n      /* Desktop 24 uur heeft genoeg horizontale ruimte voor het vaste drie-uursraster.\n         Dat raster is het minimale visuele contract: lokale pieken/dalen mogen extra\n         labels toevoegen, maar nooit 06:00/09:00-achtige gaten veroorzaken doordat\n         ze eerder in de collision queue terechtkomen. Index 0 valt bewust onder het\n         rode actuele label; vanaf index 3 moet ieder rasterpunt zichtbaar blijven. */\n      const rasterTempIndices=[3,6,9,12,15,18,21,24];\n      const rasterDekking=rasterTempIndices.every(i=>tempIndices.includes(i));\n      const resultaat=!!(chart&&regenGroep&&temperatuurDekking&&rasterDekking&&brackets.length>=4&&bedragen.length>=4&&middernacht&&botsingen(tempLabels)===0&&botsingen(regenLabels)===0&&regenBuiten===0&&chart.scrollWidth<=chart.clientWidth+1);\n'''
-          if new in s:
-              print('Strikte rasterregressie staat al in testbestand.')
-          elif s.count(old)==1:
-              s=s.replace(old,new)
-              s=s.replace("      document.body.dataset.graphStressMaxTempGap=String(maxTempGap);\n", "      document.body.dataset.graphStressMaxTempGap=String(maxTempGap);\n      document.body.dataset.graphStressRaster=rasterDekking?'ok':'fout';\n")
+          marker='      const temperatuurDekking=tempIndices.length>=5&&maxTempGap<=6;'
+          if 'const rasterDekking=rasterTempIndices.every' not in s:
+              if s.count(marker)!=1:
+                  raise SystemExit(f'Verwacht exact één temperatuurDekking-marker, gevonden {s.count(marker)}')
+              toevoeging='''      /* Desktop 24 uur heeft genoeg horizontale ruimte voor het vaste drie-uursraster.
+         Dat raster is het minimale visuele contract: lokale pieken/dalen mogen extra
+         labels toevoegen, maar nooit 06:00/09:00-achtige gaten veroorzaken doordat
+         ze eerder in de collision queue terechtkomen. Index 0 valt bewust onder het
+         rode actuele label; vanaf index 3 moet ieder rasterpunt zichtbaar blijven. */
+      const rasterTempIndices=[3,6,9,12,15,18,21,24];
+      const rasterDekking=rasterTempIndices.every(i=>tempIndices.includes(i));'''
+              s=s.replace(marker,marker+'\n'+toevoeging)
+              oud='const resultaat=!!(chart&&regenGroep&&temperatuurDekking&&brackets.length>=4'
+              nieuw='const resultaat=!!(chart&&regenGroep&&temperatuurDekking&&rasterDekking&&brackets.length>=4'
+              if s.count(oud)!=1:
+                  raise SystemExit(f'Verwacht exact één resultaatmarker, gevonden {s.count(oud)}')
+              s=s.replace(oud,nieuw)
+              s=s.replace("      document.body.dataset.graphStressMaxTempGap=String(maxTempGap);", "      document.body.dataset.graphStressMaxTempGap=String(maxTempGap);\n      document.body.dataset.graphStressRaster=rasterDekking?'ok':'fout';")
               s=s.replace('maxTempGap="+waarde("graph-stress-max-temp-gap")+", perioden=', 'maxTempGap="+waarde("graph-stress-max-temp-gap")+", raster="+waarde("graph-stress-raster")+", perioden=')
               s=s.replace('temperatuurreferenties maximaal zes uur uit elkaar, meerdere regenperioden en geen labelbotsingen.', 'alle drie-uursreferenties zichtbaar, temperatuurreferenties maximaal zes uur uit elkaar, meerdere regenperioden en geen labelbotsingen.')
               p.write_text(s)
-          else:
-              raise SystemExit(f'Verwacht exact één grafiek-testanker, gevonden {s.count(old)}')
           PY
       - name: Reproduceer het huidige labelgat
         shell: bash
@@ -70,17 +79,25 @@ jobs:
           from pathlib import Path
           p=Path('index.html')
           s=p.read_text()
-          old='''  // 6: reguliere, gelijkmatig verdeelde referentiepunten (het bestaande\n  // drie-uursraster), alleen waar nog geen belangrijker punt staat\n  for(let i=0;i<T.length;i++){\n    if(!geldig(i)||i%stap!==0) continue;\n    if(!kandKaart.has(i)) kandKaart.set(i,1);\n  }\n'''
-          new='''  // 6: reguliere, gelijkmatig verdeelde referentiepunten. Op desktop is het\n  // drie-uursraster binnen 24 uur het minimale leesbaarheidscontract: die vaste\n  // referenties gaan vóór extra lokale pieken/dalen, zodat een rustige of licht\n  // golvende periode nooit zes tot negen uur zonder temperatuurcijfer kan raken.\n  for(let i=0;i<T.length;i++){\n    if(!geldig(i)||i%stap!==0) continue;\n    zet(i,n<=24&&!M?4:1);\n  }\n'''
-          if new in s:
-              print('Desktop rasterprioriteit staat al in index.html.')
-          elif s.count(old)==1:
+          old='''  // 6: reguliere, gelijkmatig verdeelde referentiepunten (het bestaande
+  // drie-uursraster), alleen waar nog geen belangrijker punt staat
+  for(let i=0;i<T.length;i++){
+    if(!geldig(i)||i%stap!==0) continue;
+    if(!kandKaart.has(i)) kandKaart.set(i,1);
+  }'''
+          new='''  // 6: reguliere, gelijkmatig verdeelde referentiepunten. Op desktop is het
+  // drie-uursraster binnen 24 uur het minimale leesbaarheidscontract: die vaste
+  // referenties gaan vóór extra lokale pieken/dalen, zodat een rustige of licht
+  // golvende periode nooit zes tot negen uur zonder temperatuurcijfer kan raken.
+  for(let i=0;i<T.length;i++){
+    if(!geldig(i)||i%stap!==0) continue;
+    zet(i,n<=24&&!M?4:1);
+  }'''
+          if new not in s:
+              if s.count(old)!=1:
+                  raise SystemExit(f'Verwacht exact één rasterkandidaat-anker, gevonden {s.count(old)}')
               s=s.replace(old,new)
-              s=s.replace('''    kandidaat met\n     rang 2 of hoger (een echte piek, dal, of het huidige/globale extreem)\n     verliest het nooit stilzwijgend van een regulier rasterlabel (rang 1). */\n''','''    kandidaat met een hogere rang verliest niet stilzwijgend van een lager\n     geprioriteerd label. Op desktop-24u heeft het vaste drie-uursraster daarom\n     bewust de hoogste rang; extra extrema vullen alleen vrije ruimte. */\n''')
-              s=s.replace('''    // label actief verwijderen om zelf een plek te krijgen.\n    if(cy===null){\n''','''    // label actief verwijderen om zelf een plek te krijgen. Op desktop-24u\n    // zijn rasterlabels rang 4 en mogen juist een extra extrema-label laten wijken.\n    if(cy===null){\n''')
               p.write_text(s)
-          else:
-              raise SystemExit(f'Verwacht exact één rasterkandidaat-anker, gevonden {s.count(old)}')
           PY
       - name: Test de fix in een echte desktopbrowser
         shell: bash
