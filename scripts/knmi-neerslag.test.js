@@ -47,11 +47,11 @@ function verwijderNowcastStap(payload, tijd) {
   return kopie;
 }
 
-function netcdfPunt(waarde=0.12){
+function netcdfPunt(waarde=0.12, variabele="precipitation_nowcast"){
   const delen=[];const u32=n=>{const b=Buffer.alloc(4);b.writeUInt32BE(n);return b;};
   const naam=s=>{const raw=Buffer.from(s),pad=Buffer.alloc((4-raw.length%4)%4);return Buffer.concat([u32(raw.length),raw,pad]);};
   delen.push(Buffer.from([67,68,70,1]),u32(0),u32(0),u32(0),u32(0),u32(0),u32(11),u32(1));
-  delen.push(naam("precipitation_nowcast"),u32(0),u32(0),u32(0),u32(5),u32(4));
+  delen.push(naam(variabele),u32(0),u32(0),u32(0),u32(5),u32(4));
   const voor=Buffer.concat(delen),begin=voor.length+4,offset=u32(begin);
   const data=Buffer.alloc(4);data.writeFloatBE(waarde);
   return Buffer.concat([voor,offset,data]);
@@ -124,6 +124,12 @@ test("NetCDF3-puntwaarde wordt numeriek en met gevraagde tijd gelezen",()=>{
   const uit=normaliseerWcsPunt(netcdfPunt(0.37),"2026-08-15T10:40:00Z");
   assert(Math.abs(uit.waarde-0.37)<1e-6);
   assert.equal(uit.tijd,"2026-08-15T10:40:00Z");
+});
+
+test("actuele KNMI WCS-variabele forecast wordt als nowcast-neerslag gelezen",()=>{
+  const uit=normaliseerWcsPunt(netcdfPunt(0.42,"forecast"),"2026-08-15T10:45:00Z");
+  assert(Math.abs(uit.waarde-0.42)<1e-6);
+  assert.equal(uit.tijd,"2026-08-15T10:45:00Z");
 });
 
 test("nowcast JSON bewaart exact 25 aaneengesloten geldige 5-minutenpunten", () => {
