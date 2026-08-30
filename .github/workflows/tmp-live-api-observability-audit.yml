@@ -74,11 +74,10 @@ jobs:
 
           : > /tmp/tail.log
           set +e
-          timeout 35s npx --yes wrangler@4 pages deployment tail "$DEPLOYMENT_URL" \
+          timeout 30s npx --yes wrangler@4 pages deployment tail "$DEPLOYMENT_URL" \
             --project-name="$CLOUDFLARE_PROJECT" \
             --environment=production \
-            --format=json \
-            --search=wiw_api_request > /tmp/tail.log 2>&1 &
+            --format=json > /tmp/tail.log 2>&1 &
           tail_pid=$!
           set -e
 
@@ -113,7 +112,7 @@ jobs:
             exit "$tail_status"
           fi
 
-          cat /tmp/tail.log
           grep -F 'wiw_api_request' /tmp/tail.log >/dev/null
-          grep -F 'request_id' /tmp/tail.log >/dev/null
-          echo "LIVE_LOG_EVENT wiw_api_request zichtbaar in Cloudflare Pages production tail"
+          grep -F "$id1" /tmp/tail.log >/dev/null
+          grep -F "$id2" /tmp/tail.log >/dev/null
+          echo "LIVE_LOG_EVENT wiw_api_request zichtbaar en beide response-request-ID's teruggevonden in Cloudflare Pages production tail"
