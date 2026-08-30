@@ -1,5 +1,6 @@
 import worker from "../../api/waarschuwingen.mjs";
+import { metEdgeCache } from "../../lib/cloudflare-edge-cache.mjs";
 
 export async function onRequest(context) {
-  return worker.fetch(context.request);
+  return metEdgeCache(context, "waarschuwingen", () => worker.fetch(context.request));
 }
