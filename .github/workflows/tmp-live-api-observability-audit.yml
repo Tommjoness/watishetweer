@@ -32,7 +32,7 @@ jobs:
         run: |
           set -euo pipefail
           for root in https://watishetweer.nl https://www.watishetweer.nl "$DEPLOYMENT_URL"; do
-            html="$(curl -fsSL --max-time 30 "$root/")"
+            html="$(curl -fsSL --retry 2 --retry-delay 1 --max-time 30 "$root/")"
             printf '%s' "$html" | grep -F "$EXPECTED_SHA" >/dev/null
             echo "SHA OK: $root"
           done
@@ -72,24 +72,37 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
 
+          npx --yes wrangler@4 --version >/dev/null
           : > /tmp/tail.log
-          set +e
-          timeout 30s npx --yes wrangler@4 pages deployment tail "$DEPLOYMENT_URL" \
+          npx --yes wrangler@4 pages deployment tail "$DEPLOYMENT_URL" \
             --project-name="$CLOUDFLARE_PROJECT" \
             --environment=production \
-            --format=json > /tmp/tail.log 2>&1 &
+            --format=json \
+            --method=GET > /tmp/tail.log 2>&1 &
           tail_pid=$!
-          set -e
 
-          sleep 10
+          cleanup() {
+            kill "$tail_pid" 2>/dev/null || true
+            wait "$tail_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
 
-          suffix=$((GITHUB_RUN_ID % 90000 + 10000))
-          lat="0.${suffix}"
-          lon="-140.${suffix}"
-          url="https://watishetweer.nl/api/neerslag?lat=${lat}&lon=${lon}&land=ZZ&live_obs=${GITHUB_RUN_ID}"
+          for attempt in $(seq 1 20); do
+            if ! kill -0 "$tail_pid" 2>/dev/null; then
+              echo "Tail-proces stopte vóór de live probe:"
+              cat /tmp/tail.log
+              exit 1
+            fi
+            if grep -Eqi 'tail|connected|created|listening' /tmp/tail.log; then
+              break
+            fi
+            sleep 1
+          done
+          sleep 3
 
-          curl -fsS --max-time 30 -D /tmp/h1 -o /tmp/b1 "$url"
-          curl -fsS --max-time 30 -D /tmp/h2 -o /tmp/b2 "$url"
+          url="https://watishetweer.nl/api/neerslag?lat=35.68043&lon=139.76611&land=JP"
+          curl -fsS --retry 3 --retry-delay 1 --max-time 30 -D /tmp/h1 -o /tmp/b1 "$url"
+          curl -fsS --retry 3 --retry-delay 1 --max-time 30 -D /tmp/h2 -o /tmp/b2 "$url"
 
           id1="$(awk 'BEGIN{IGNORECASE=1} /^X-WIW-Request-ID:/ {gsub(/\r/,"",$2); print $2}' /tmp/h1 | tail -1)"
           id2="$(awk 'BEGIN{IGNORECASE=1} /^X-WIW-Request-ID:/ {gsub(/\r/,"",$2); print $2}' /tmp/h2 | tail -1)"
@@ -102,17 +115,17 @@ jobs:
           test "$cache1" = "MISS" -o "$cache1" = "HIT"
           test "$cache2" = "HIT"
           cmp -s /tmp/b1 /tmp/b2
-
           echo "LIVE_API first=$cache1 second=$cache2 request_ids=present-and-distinct body=identical"
 
-          tail_status=0
-          wait "$tail_pid" || tail_status=$?
-          if [ "$tail_status" -ne 0 ] && [ "$tail_status" -ne 124 ]; then
-            cat /tmp/tail.log
-            exit "$tail_status"
-          fi
+          sleep 5
+          cleanup
+          trap - EXIT
 
-          grep -F 'wiw_api_request' /tmp/tail.log >/dev/null
+          if ! grep -F 'wiw_api_request' /tmp/tail.log >/dev/null; then
+            echo "Tail bevatte geen wiw_api_request; volledige tailoutput volgt:"
+            cat /tmp/tail.log
+            exit 1
+          fi
           grep -F "$id1" /tmp/tail.log >/dev/null
           grep -F "$id2" /tmp/tail.log >/dev/null
           echo "LIVE_LOG_EVENT wiw_api_request zichtbaar en beide response-request-ID's teruggevonden in Cloudflare Pages production tail"
