@@ -1,4 +1,4 @@
-name: Temporary desktop temperature artifact diagnostic
+name: Temporary desktop temperature label fix verification
 
 on:
   push:
@@ -9,9 +9,12 @@ permissions:
   contents: write
 
 jobs:
-  artifact:
+  fix:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --user 1001
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
         with:
@@ -20,25 +23,60 @@ jobs:
         with:
           node-version: 22
           package-manager-cache: false
-      - name: Build production artifact
+      - name: Installeer testdependencies
         shell: bash
         run: |
           set -euo pipefail
           npm install --ignore-scripts --package-lock=false
+          npm install --no-save --package-lock=false playwright@1.62.1
+          CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          test -x "$CHROME_PATH"
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+      - name: Voeg regressie toe en reproduceer de fout
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 _tmp-desktop-temp-label-patch.py test
           npm run artifact:base
           node scripts/postbuild-pipeline.js
-          cp public/index.html _tmp-public-index.html
+          set +e
+          node graph-stress-browser.test.js > /tmp/voor-fix.log 2>&1
+          code=$?
+          set -e
+          cat /tmp/voor-fix.log
+          if [ "$code" -eq 0 ]; then
+            echo "De nieuwe regressie reproduceerde de oude fout niet."
+            exit 1
+          fi
+          grep -q 'raster=fout' /tmp/voor-fix.log
+      - name: Pas de finale presentatiecorrectie toe
+        run: python3 _tmp-desktop-temp-label-patch.py final
+      - name: Verifieer productieartifact en browsergedrag
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run artifact:base
+          node scripts/postbuild-pipeline.js
+          node scripts/verify-final-presentation-consistency.js
+          node graph-stress-browser.test.js
+          node scripts/mobile-graph-reflow.test.js
           git diff --check
-      - name: Commit diagnostic artifact
+      - name: Volledige suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm test
+      - name: Commit uitsluitend de echte fix
         shell: bash
         run: |
           set -euo pipefail
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add _tmp-public-index.html
+          git add scripts/apply-final-presentation-consistency.js scripts/verify-final-presentation-consistency.js graph-stress-browser.test.js
+          git diff --cached --check
           if git diff --cached --quiet; then
-            echo "Artifact unchanged."
-            exit 0
+            echo "Geen echte bronwijzigingen te committen."
+            exit 1
           fi
-          git commit -m 'Leg productieartifact tijdelijk vast voor grafiekdiagnose'
+          git commit -m 'Behoud desktop temperatuurreferenties in 24-uursgrafiek'
           git push origin HEAD:fix/desktop-24h-temperature-label-coverage-20260830
