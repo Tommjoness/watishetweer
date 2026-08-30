@@ -50,6 +50,9 @@ def patch_test():
 def patch_final_presentation():
     p = Path("scripts/apply-final-presentation-consistency.js")
     s = p.read_text()
+    desired_guard = "if(!html.includes(':kandidatenRuw\\n  ):kandidatenRuw.filter((k,pos)=>{'))"
+    if desired_guard in s:
+        return
 
     s = s.replace(
         "  10. De desktop-etmaalgrafiek houdt extrema en echte veranderingen, maar laat\n      overbodige identieke afgeronde rasterlabels wijken. */",
@@ -67,10 +70,24 @@ def patch_final_presentation():
   ):kandidatenRuw.filter((k,pos)=>{`;
 
 /* Deze wrapper'''
-    s2, count = pattern.subn(replacement, s, count=1)
+    s, count = pattern.subn(replacement, s, count=1)
     if count != 1:
         raise SystemExit(f"Verwacht exact één GRAFIEK_LABELS_NIEUW-blok, vervangen {count}")
-    p.write_text(s2)
+
+    old_guard = '''if(!html.includes("const belangrijkNabij=kandidatenRuw.some"))
+  throw new Error("Desktop-grafiekfilter voor redundante temperatuurcijfers ontbreekt.");'''
+    new_guard = '''if(!html.includes(':kandidatenRuw\\n  ):kandidatenRuw.filter((k,pos)=>{'))
+  throw new Error("Desktop-etmaalgrafiek behoudt niet het volledige drie-uursraster.");
+if(html.includes("const belangrijkNabij=kandidatenRuw.some"))
+  throw new Error("Oude desktopfilter voor afgerond gelijke temperatuurcijfers is nog actief.");'''
+    if old_guard not in s:
+        raise SystemExit("Oude harde desktop-grafiekguard ontbreekt")
+    s = s.replace(old_guard, new_guard)
+    s = s.replace(
+        "briefingwindcopy aangescherpt en redundante desktop-temperatuurlabels verminderd; cache ",
+        "briefingwindcopy aangescherpt en het volledige desktop-drie-uursraster behouden; cache ",
+    )
+    p.write_text(s)
 
     v = Path("scripts/verify-final-presentation-consistency.js")
     t = v.read_text()
@@ -85,24 +102,9 @@ ok(!html.includes('const belangrijkNabij=kandidatenRuw.some'),"finale presentati
     v.write_text(t.replace(old, new))
 
 
-def patch_source_comment():
-    # De canonieke runtime in index.html hield desktop al onverkort; alleen de
-    # postbuildlaag was fout. Laat de bronlogica daarom functioneel ongemoeid.
-    p = Path("index.html")
-    s = p.read_text()
-    old = "  // drie-uursraster), alleen waar nog geen belangrijker punt staat"
-    new = "  // drie-uursraster), alleen waar nog geen belangrijker punt staat"
-    if old not in s:
-        raise SystemExit("Canonieke drie-uursrasterbron niet gevonden")
-    if new != old:
-        p.write_text(s.replace(old, new))
-
-
 if mode in ("test", "all"):
     patch_test()
 if mode in ("final", "all"):
     patch_final_presentation()
-if mode in ("source", "all"):
-    patch_source_comment()
-if mode not in ("test", "final", "source", "all"):
-    raise SystemExit("Gebruik: test, final, source of all")
+if mode not in ("test", "final", "all"):
+    raise SystemExit("Gebruik: test, final of all")
