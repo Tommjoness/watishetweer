@@ -5,7 +5,7 @@ const fs=require("fs");
 const path=require("path");
 const {
   GUST_BRON,GUST_PRODUCTIE,HELPERS_PRODUCTIE,
-  windstootBegin,windstootTekst,pasWindGustCopyToe
+  windstootBegin,windstootTekst,windstootDitUur,windstootDitUurTekst,pasWindGustCopyToe
 }=require("./wind-gust-copy-owner.js");
 
 /* Het forecast-tijdstip is het einde van het voorafgaande uurvak. */
@@ -14,6 +14,21 @@ assert.equal(windstootBegin("2026-08-26T18:00"),"2026-08-26T17:00");
 assert.equal(windstootBegin("2026-01-01T00:00"),"2025-12-31T23:00");
 assert.equal(windstootBegin("ongeldig"),null);
 
+/* De tegel leest de max-gust van het eerstvolgende hourly eindpunt. Dat punt
+   beschrijft volgens het providercontract het lopende klokuur. */
+const uurdata={
+  time:["2026-08-30T20:00","2026-08-30T21:00","2026-08-30T22:00"],
+  wind_gusts_10m:[11,14.4,19.7]
+};
+assert.deepEqual(windstootDitUur(uurdata,0),{v:14.4,t:"2026-08-30T21:00"});
+assert.deepEqual(windstootDitUur(uurdata,1),{v:19.7,t:"2026-08-30T22:00"});
+assert.equal(windstootDitUur({time:["2026-08-30T20:00"],wind_gusts_10m:[11]},0),null);
+assert.equal(windstootDitUur({time:["2026-08-30T20:00","2026-08-30T21:00"],wind_gusts_10m:[11,-1]},0),null);
+assert.equal(windstootDitUurTekst({v:14.4,t:"2026-08-30T21:00"},"20:00–21:00"),"Verwacht maximum voor 20:00–21:00.");
+assert.equal(windstootDitUurTekst(null,""),"Geen windstootverwachting voor dit uur.");
+
+/* De historische dagpiekformatter blijft beschikbaar voor briefing- en
+   architectuurregressies, maar is geen eigenaar meer van de hoofdtegel. */
 assert.equal(
   windstootTekst({t:"2026-08-13T03:00",v:52},"2026-08-13T16:00","Vandaag","02:00–03:00"),
   "De hoogste windstoot werd vandaag tussen 02:00 en 03:00 verwacht: 52 km/u."
@@ -22,18 +37,14 @@ assert.equal(
   windstootTekst({t:"2026-08-13T19:00",v:44},"2026-08-13T16:00","Vandaag","18:00–19:00"),
   "De hoogste windstoot wordt vandaag tussen 18:00 en 19:00 verwacht: 44 km/u."
 );
-/* Tokyo: lokale huidige tijd 04:07, venster 23:00–00:00 eindigt pas op de
-   volgende lokale ISO-datum en blijft dus toekomstig, maar heet nog Vandaag. */
 assert.equal(
   windstootTekst({t:"2026-08-27T00:00",v:48},"2026-08-26T04:07","Vandaag","23:00–00:00"),
   "De hoogste windstoot wordt vandaag tussen 23:00 en 00:00 verwacht: 48 km/u."
 );
-/* Kaapstad: hetzelfde datumgrenscontract bij 21:08 lokale tijd. */
 assert.equal(
   windstootTekst({t:"2026-08-27T00:00",v:57},"2026-08-26T21:08","Vandaag","23:00–00:00"),
   "De hoogste windstoot wordt vandaag tussen 23:00 en 00:00 verwacht: 57 km/u."
 );
-/* Lopend venster: 21:00–22:00 is om 21:30 nog niet verleden. */
 assert.equal(
   windstootTekst({t:"2026-08-26T22:00",v:41},"2026-08-26T21:30","Vandaag","21:00–22:00"),
   "De hoogste windstoot wordt vandaag tussen 21:00 en 22:00 verwacht: 41 km/u."
@@ -61,27 +72,27 @@ for(const tekst of [
 }
 
 const bron=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
-assert.equal(bron.split(GUST_BRON).length-1,1,"ontwikkeltemplate mist exact het oude windstootcopy-anker");
-assert(!bron.includes("function weatherNowWindstootTekst(pg,nu,dag,vak){"),"ontwikkeltemplate bevat de productiehelper al");
+assert.equal(bron.split(GUST_BRON).length-1,1,"ontwikkeltemplate mist exact het oude windstootanker");
+assert(!bron.includes("function weatherNowWindstootDitUur(hourly,index){"),"ontwikkeltemplate bevat de productiehelper al");
 
 const uit=pasWindGustCopyToe(bron);
-assert(!uit.includes(GUST_BRON),"oude windstootcopy bleef in de base-build staan");
-assert.equal(uit.split(GUST_PRODUCTIE).length-1,1,"finale windstootcopy-call ontbreekt of is dubbel");
-assert.equal(uit.split(HELPERS_PRODUCTIE).length-1,1,"finale windstootcopy-helpers ontbreken of zijn dubbel");
-assert(uit.includes("dagAanduiding(gustBegin||pg.t,true)"),"dagaanduiding moet bij intervalbegin horen");
+assert(!uit.includes(GUST_BRON),"oude gemengde windstoottegel bleef in de base-build staan");
+assert.equal(uit.split(GUST_PRODUCTIE).length-1,1,"finale windstoottegel ontbreekt of is dubbel");
+assert.equal(uit.split(HELPERS_PRODUCTIE).length-1,1,"finale windstoothelpers ontbreken of zijn dubbel");
+assert(uit.includes("weatherNowWindstootDitUur(h,i)"),"tegel moet het lopende forecast-uur lezen");
+assert(uit.includes('gustKop.textContent="Windstoot dit uur"'),"tegelkop benoemt dezelfde uur-scope");
+assert(uit.includes('weatherNowUurvak(gustUur.t)'),"subtekst gebruikt exact het uurvak van dezelfde forecastwaarde");
+assert(!uit.includes('set("gust",windstoot===null?"–":Math.round(windstoot)+"<s>km/u</s>")'),"actuele 15-minutenwindstoot mag niet meer als uurforecast worden getoond");
 
-/* Data-eigenaarschap blijft bij meters(): actuele windstoot, piekbron en de
-   bestaande niet-negatieve filtering mogen door deze migratie niet veranderen. */
+/* De gewone windkaart blijft current-data; deze owner raakt alleen windstoten. */
 for(const invariant of [
-  "const windstootRuw=eindigGetal(c.wind_gusts_10m);",
-  "const windstoot=windstootRuw!==null&&windstootRuw>=0?windstootRuw:null;",
-  'const pgRuw=piek("wind_gusts_10m"),pg=pgRuw&&pgRuw.v>=0?pgRuw:null;',
-  'set("gust",windstoot===null?"–":Math.round(windstoot)+"<s>km/u</s>");'
+  "const windRuw=eindigGetal(c.wind_speed_10m);",
+  'set("wind",Math.round(windsnelheid)+"<s>km/u</s>"'
 ]){
-  assert(uit.includes(invariant),"windstootdata-invariant is onbedoeld geraakt: "+invariant);
+  assert(uit.includes(invariant),"gewone winddata-invariant is onbedoeld geraakt: "+invariant);
 }
 
 assert.throws(()=>pasWindGustCopyToe(uit),/staat al in het aangeleverde artifact/,
   "owner moet fail-fast zijn op een reeds gemigreerd artifact");
 
-console.log("Windstootcopy-owner contract groen: lokale intervaleinden, middernacht en lopende vensters blijven correct forecastcopy.");
+console.log("Windstootowner groen: tegel gebruikt het lopende forecast-uur, dagpiekhelper blijft forecastcorrect en gewone wind blijft current-data.");

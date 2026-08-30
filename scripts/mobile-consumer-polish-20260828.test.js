@@ -18,7 +18,8 @@ assert(css.includes(".seo-plaatsnav p{display:none}"),"SEO-uitleg neemt op de mo
 assert(css.includes('footer .bron-bronnen .bronitem[hidden]{display:none!important}'),"dynamische bronprovenance wordt op mobiel en desktop echt verborgen");
 assert(/@media\(min-width:901px\)[\s\S]*?\.brief\{max-width:72ch\}/.test(css),"desktopbriefing houdt een leesbare regellengte");
 assert(js.includes('const zichtbareSleutel=tekst==="kans · verwachte hoeveelheid"?"kans · totaal komend uur":tekst;'),"zichtbare uurtegel benoemt mm expliciet als totaal voor het komende uur");
-assert(js.includes('kop.textContent="Windstoot rond nu"'),"mobiele windstootkop blijft compact maar suggereert geen actuele meting");
+assert(!js.includes('Windstoot rond nu')&&!js.includes('function werkStatKoppenBij'),"mobiele grafieklaag overschrijft de canonieke windstootkop niet meer");
+assert(js.includes("Windstootkop en -subtekst hebben één eigenaar in de base-build"),"mobiele laag documenteert expliciet dat de windstoottegel bij de base-owner blijft");
 assert(js.includes("het verwachte totaal in het komende uur"),"toegankelijke neerslagbeschrijving maakt kans versus uurhoeveelheid expliciet");
 assert(js.includes("function naRender(basis,nawerk)"),"render-nawerk gebruikt één gedeelde wrapper in plaats van drie losse wrapperpatronen");
 assert(!js.includes("mobile-chart-return")&&!js.includes("mobile-rain-return")&&!js.includes("mobile-days-return"),"consumentenpolish verplaatst geen bestaande dashboardsecties");

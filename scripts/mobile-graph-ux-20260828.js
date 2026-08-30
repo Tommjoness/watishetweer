@@ -168,11 +168,6 @@ function werkNeerslagSleutelBij(){
     waarde.setAttribute("aria-label",tekst.includes("onzeker")?"Komend uur: "+pct+" kans. De verwachte hoeveelheid is onzeker.":"Komend uur: "+pct+" kans.");
   }
 }
-function werkStatKoppenBij(){
-  if(!mobiel())return;
-  const gust=document.getElementById("gust"),stat=gust&&gust.closest(".stat"),kop=stat&&stat.querySelector(".eyebrow");
-  if(kop)kop.textContent="Windstoot rond nu";
-}
 function resourceEntries(){
   try{return typeof performance!=="undefined"&&typeof performance.getEntriesByType==="function"?performance.getEntriesByType("resource"):[];}catch(_){return [];}
 }
@@ -193,7 +188,9 @@ function werkBronnenBij(){
     item.hidden=!actief;
   });
 }
-function werkContextBij(){werkNeerslagSleutelBij();werkStatKoppenBij();werkBronnenBij();}
+/* Windstootkop en -subtekst hebben één eigenaar in de base-build. Deze mobiele
+   grafiek-/bronlaag raakt die tegel bewust niet meer aan. */
+function werkContextBij(){werkNeerslagSleutelBij();werkBronnenBij();}
 function naRender(basis,nawerk){
   return function(){const r=basis.apply(this,arguments);nawerk();return r;};
 }
