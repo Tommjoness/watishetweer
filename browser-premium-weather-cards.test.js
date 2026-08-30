@@ -1,11 +1,7 @@
 "use strict";
 
-const fs=require("fs");
-const path=require("path");
-const http=require("http");
-const assert=require("assert");
-const {chromium,webkit}=require("playwright");
-const {bouw}=require("./data.js");
+const fs=require("fs"),path=require("path"),os=require("os"),assert=require("assert"),{spawnSync}=require("child_process"),{bouw}=require("./data.js");
+const browser=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
 
 const d=bouw({temp:()=>18,tempNu:18,pp:()=>5,pr:()=>0,som:0,ws:9,wsNu:9,cc:()=>85,ccNu:85,wg:()=>12,wc:()=>3,wcNu:3});
 d.current.time="2026-07-22T20:10";
@@ -14,17 +10,22 @@ d.current.apparent_temperature=18;
 d.current.relative_humidity_2m=86;
 d.current.wind_speed_10m=9;
 d.current.wind_direction_10m=157.5;
-d.current.wind_gusts_10m=99; // bewust afwijkend: deze actuele 15-minutenwaarde mag de uurtegel niet voeden
+d.current.wind_gusts_10m=99; // bewust afwijkend: actuele waarde mag de uurforecasttegel niet voeden
 const i=d.hourly.time.findIndex(t=>t==="2026-07-22T20:00");
 assert(i>=0&&i+1<d.hourly.time.length,"fixture mist 20:00/21:00 uurpunten");
 d.hourly.wind_gusts_10m[i]=11;
-d.hourly.wind_gusts_10m[i+1]=14.4; // 21:00 beschrijft volgens providercontract het voorafgaande uur 20:00–21:00
+d.hourly.wind_gusts_10m[i+1]=14.4; // 21:00 beschrijft het voorafgaande uur 20:00–21:00
 
 const air={current:{european_aqi:25,us_aqi:35},hourly:{time:[d.current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[0],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}};
-let html=fs.readFileSync(path.join(__dirname,"public/index.html"),"utf8");
+let html=fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8");
 const fixedNow=Date.UTC(2026,6,22,18,10); // 20:10 CEST
 const stub=`<script>
-Date.now=()=>${fixedNow};
+const PREMIUM_NATIVE_DATE=Date;
+class PremiumFixtureDate extends PREMIUM_NATIVE_DATE{
+  constructor(...args){super(...(args.length?args:[${fixedNow}]));}
+  static now(){return ${fixedNow};}
+}
+Date=PremiumFixtureDate;
 window.fetch=async function(url){
   const u=String(url);
   const payload=u.includes('/api/waarschuwingen')?${JSON.stringify({bron:"test",dekking:true,lijst:[],land:"NL"})}
@@ -37,57 +38,47 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
 </script>`;
 html=html.replace("</head>",stub+"</head>");
 
-const server=http.createServer((req,res)=>{
-  const pathname=(req.url||"").split("?")[0];
-  if(pathname==="/"||pathname==="/index.html"){
-    res.writeHead(200,{"content-type":"text/html; charset=utf-8"});res.end(html);return;
-  }
-  const rel=pathname.startsWith("/")?pathname.slice(1):pathname,file=path.join(__dirname,"public",rel);
-  if(fs.existsSync(file)&&fs.statSync(file).isFile()){
-    const ext=path.extname(file).toLowerCase(),types={".js":"application/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".woff2":"font/woff2",".png":"image/png"};
-    res.writeHead(200,{"content-type":types[ext]||"application/octet-stream"});fs.createReadStream(file).pipe(res);
-  }else{res.writeHead(404);res.end("not found");}
-});
-
-async function controleer(browserType,naam,viewport){
-  const browser=await browserType.launch({headless:true});
+const reporter=`<script>
+setTimeout(()=>{
   try{
-    const context=await browser.newContext({viewport});
-    const page=await context.newPage(),fouten=[];
-    page.on("pageerror",e=>fouten.push(String(e)));
-    page.on("console",m=>{if(m.type()==="error")fouten.push(m.text());});
-    await page.goto(`http://127.0.0.1:${server.address().port}/?lat=52.35&lon=5.26&plaats=Almere&land=NL`,{waitUntil:"networkidle"});
-    await page.waitForSelector("#app",{state:"visible"});
-    await page.evaluate(()=>document.fonts&&document.fonts.ready);
-    await page.waitForTimeout(250);
-    const r=await page.evaluate(()=>{
-      const gust=document.getElementById("gust"),hum=document.getElementById("hum");
-      return {
-        gustKop:gust?.closest(".stat")?.querySelector(".eyebrow")?.textContent.trim()||"",
-        gustWaarde:(gust?.textContent||"").replace(/\s+/g," ").trim(),
-        gustSub:(document.getElementById("gustsub")?.textContent||"").replace(/\s+/g," ").trim(),
-        humWaarde:(hum?.textContent||"").replace(/\s+/g," ").trim(),
-        humSub:(document.getElementById("humsub")?.textContent||"").replace(/\s+/g," ").trim(),
-        overflow:document.documentElement.scrollWidth-window.innerWidth
-      };
-    });
-    assert.deepEqual(fouten,[],`${naam}: geen runtimefouten`);
-    assert.equal(r.gustKop,"Windstoot dit uur",`${naam}: windstootkop heeft één duidelijke tijdscope`);
-    assert(/14\s*km\/u/i.test(r.gustWaarde),`${naam}: uurforecast gebruikt 14 km/u en niet actuele 99 km/u (${r.gustWaarde})`);
-    assert(!/99/.test(r.gustWaarde),`${naam}: actuele 15-minutenwindstoot lekt niet in uurforecast`);
-    assert.equal(r.gustSub,"Verwacht maximum voor 20:00–21:00.",`${naam}: windstootsubtekst hoort bij exact dezelfde forecastwaarde`);
-    assert(/86\s*%/.test(r.humWaarde),`${naam}: relatieve luchtvochtigheid blijft zichtbaar (${r.humWaarde})`);
-    assert.equal(r.humSub,"Dauwpunt circa 16 °C · kan wat klam aanvoelen.",`${naam}: vochtigheid krijgt praktische dauwpuntduiding`);
-    assert(r.overflow<=2,`${naam}: premium copy veroorzaakt geen horizontale overflow (${r.overflow}px)`);
-    await context.close();
-  }finally{await browser.close();}
+    const gust=document.getElementById('gust'),hum=document.getElementById('hum');
+    const schoon=el=>String(el&&el.textContent||'').replace(/\\s+/g,' ').trim();
+    document.body.dataset.premiumResult='ok';
+    document.body.dataset.premiumGustKop=schoon(gust&&gust.closest('.stat')&&gust.closest('.stat').querySelector('.eyebrow'));
+    document.body.dataset.premiumGustWaarde=schoon(gust);
+    document.body.dataset.premiumGustSub=schoon(document.getElementById('gustsub'));
+    document.body.dataset.premiumHumWaarde=schoon(hum);
+    document.body.dataset.premiumHumSub=schoon(document.getElementById('humsub'));
+    document.body.dataset.premiumOverflow=String(document.documentElement.scrollWidth-window.innerWidth);
+  }catch(e){document.body.dataset.premiumResult='exception';document.body.dataset.premiumException=String(e&&e.message||e);}
+},8000);
+</script>`;
+html=html.replace("</body>",reporter+"</body>");
+
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),"weathernow-premium-"));
+const fixture=path.join(dir,"index.html");fs.writeFileSync(fixture,html);
+const url="file://"+fixture+"?lat=52.35&lon=5.26&plaats=Almere&land=NL";
+
+function controleer(maat,naam){
+  const r=spawnSync(browser,[
+    "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",
+    "--window-size="+maat,"--virtual-time-budget=10000","--dump-dom",url
+  ],{encoding:"utf8",maxBuffer:16*1024*1024});
+  if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+String(r.stderr||"").slice(-1000));
+  const dom=r.stdout||"";
+  const veld=naam=>{const m=new RegExp('data-'+naam+'="([^"]*)"').exec(dom);return m?m[1].replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">"):null;};
+  assert.equal(veld("premium-result"),"ok",naam+": runtimefixture moet slagen; "+veld("premium-exception"));
+  assert.equal(veld("premium-gust-kop"),"Windstoot dit uur",naam+": windstootkop heeft één duidelijke tijdscope");
+  assert(/14\s*km\/u/i.test(veld("premium-gust-waarde")||""),naam+": uurforecast gebruikt 14 km/u; waarde="+veld("premium-gust-waarde"));
+  assert(!/99/.test(veld("premium-gust-waarde")||""),naam+": actuele windstoot mag niet in uurforecast lekken");
+  assert.equal(veld("premium-gust-sub"),"Verwacht maximum voor 20:00–21:00.",naam+": subtekst hoort bij exact dezelfde forecastwaarde");
+  assert(/86\s*%/.test(veld("premium-hum-waarde")||""),naam+": relatieve luchtvochtigheid blijft zichtbaar; waarde="+veld("premium-hum-waarde"));
+  assert.equal(veld("premium-hum-sub"),"Dauwpunt circa 16 °C · kan wat klam aanvoelen.",naam+": vochtigheid krijgt praktische dauwpuntduiding");
+  assert(Number(veld("premium-overflow"))<=2,naam+": premium copy veroorzaakt geen horizontale overflow; overflow="+veld("premium-overflow"));
+  console.log("Premium weerkaarten "+naam+" groen: uurwindstoot, dauwpuntduiding en overflow kloppen.");
 }
 
-(async()=>{
-  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
-  try{
-    await controleer(chromium,"Chromium desktop",{width:1280,height:900});
-    await controleer(webkit,"WebKit mobiel",{width:390,height:844});
-    console.log("Premium weerkaarten groen: windstootforecast en vochtigheidsduiding kloppen op desktop en mobiel.");
-  }finally{server.close();}
-})().catch(err=>{console.error(err);process.exit(1);});
+try{
+  controleer("390,844","mobiel Chromium");
+  controleer("1280,900","desktop Chromium");
+}finally{fs.rmSync(dir,{recursive:true,force:true});}
