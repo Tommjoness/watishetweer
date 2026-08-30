@@ -57,6 +57,44 @@ for (const geheim of ["52.12345", "4.98765", "private-place", "supersecret", "ve
   assert.equal(serialized.includes(geheim), false, `observability mag ${geheim} niet loggen`);
 }
 
+{
+  const warnings = [];
+  const requestMetGeheim = new Request("https://watishetweer.nl/api/plaatsnaam?lat=51.11111&lon=5.22222&q=zeer-prive");
+  const origineelWarn = console.warn;
+  const origineelLog2 = console.log;
+  try {
+    console.warn = (...args) => warnings.push(args);
+    console.log = () => {};
+    const uit = await metEdgeCache(
+      {
+        request: requestMetGeheim,
+        cache: {
+          async match() { throw new Error("cachefout voor https://watishetweer.nl/api/plaatsnaam?lat=51.11111&lon=5.22222&q=zeer-prive"); },
+          async put() {}
+        }
+      },
+      "plaatsnaam",
+      async () => new Response(JSON.stringify({ naam: null, land: null, reden: "plaatsnaambron tijdelijk niet beschikbaar" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json; charset=utf-8" }
+      })
+    );
+    assert.equal(uit.headers.get("x-wiw-edge-cache"), "BYPASS");
+  } finally {
+    console.warn = origineelWarn;
+    console.log = origineelLog2;
+  }
+
+  const fout = warnings.map(args => args[0]).find(value => value && value.event === "wiw_edge_cache_error");
+  assert.ok(fout, "cachefout krijgt een gestructureerd privacyarm event");
+  assert.deepEqual(Object.keys(fout).sort(), ["error_name", "event", "operation", "route"].sort());
+  assert.equal(fout.operation, "match");
+  const foutTekst = JSON.stringify(fout);
+  for (const geheim of ["51.11111", "5.22222", "zeer-prive", "https://watishetweer.nl/api/"]) {
+    assert.equal(foutTekst.includes(geheim), false, `cachefoutlogging mag ${geheim} niet lekken`);
+  }
+}
+
 const vast = _intern.observabilityRecord(
   "plaatsnaam",
   new Request("https://watishetweer.nl/api/plaatsnaam?lat=1&lon=2"),
@@ -71,4 +109,4 @@ assert.equal(vast.status, 204);
 assert.equal(vast.request_id, "request-test");
 assert.equal(Object.isFrozen(vast), true);
 
-console.log("Cloudflare API-observability: gestructureerd, correleerbaar en zonder URL/coördinaten/IP/clientheaders.");
+console.log("Cloudflare API-observability: gestructureerd, correleerbaar en zonder URL/coördinaten/IP/clientheaders, ook bij cachefouten.");
