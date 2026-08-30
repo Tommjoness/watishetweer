@@ -20,10 +20,11 @@ assert.ok(uit.includes('65:["Zware regen","regen"]')&&uit.includes('82:["Zware b
 assert.strictEqual((uit.match(/<a\s+[^>]*href=/g)||[]).length,5,"crawlbare plaatslinks moeten exact behouden blijven");
 assert.ok(STIJL.includes("@media(min-width:701px)")&&STIJL.includes("@media(min-width:1000px)"),"verfijning moet responsief begrensd zijn");
 assert.ok(STIJL.includes("border-top:0")&&STIJL.includes("background:var(--sheet)"),"plaatsnav moet visueel op het hoofdvlak aansluiten");
-assert.ok(STIJL.includes("minmax(180px,420px)")&&STIJL.includes("justify-content:start"),"Nachtzicht moet op desktop een begrensde middenkolom krijgen");
+assert.ok(STIJL.includes("grid-template-columns:104px 52px minmax(180px,1fr) 104px minmax(220px,280px)"),"Nachtzicht moet op desktop de resterende breedte via de scorebalk vullen");
+assert.ok(!STIJL.includes("minmax(180px,420px)")&&!STIJL.includes("justify-content:start"),"oude breedtecap die rechts lege ruimte veroorzaakte mag niet terugkomen");
 assert.strictEqual(pasDesktopRefinementToe(uit,"unit-herhaling"),uit,"postbuildverfijning moet idempotent zijn");
 
 assert.throws(()=>pasDesktopRefinementToe(bron.replace(NAV_MARKER,""),"zonder-nav"),/plaatsnavigatie ontbreekt of is dubbel/);
 assert.throws(()=>pasDesktopRefinementToe(bron.replace(MOTREGEN_BRON,""),"zonder-codes"),/motregencodetabel ontbreekt of is dubbel/);
 
-console.log("Desktopverfijning unit-test geslaagd: links behouden, Nachtzicht desktop-only begrensd en motregencopy natuurlijk zonder andere intensiteiten te wijzigen.");
+console.log("Desktopverfijning unit-test geslaagd: links behouden, Nachtzicht vult de desktopbreedte en motregencopy blijft natuurlijk zonder andere intensiteiten te wijzigen.");
