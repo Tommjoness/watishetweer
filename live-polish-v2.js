@@ -66,7 +66,16 @@ function nuLabelConcurreert(punt,label,cw,mobiel){
   return Math.abs(lx-px)<=dx&&Math.abs(ly-py)<=dy;
 }
 
-const api={tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert};
+/* In de 24-uursweergave is de regelmatige temperatuurcontext belangrijker dan
+   het wegpoetsen van twee gelijke afgeronde waarden. De basisrenderer heeft al
+   botsingsdetectie en verschuiflagen; deze late polish mag die referenties dus
+   alleen op langere, veel dichtere horizons ontdubbelen. */
+function temperatuurOntdubbelToegestaan(bereik){
+  const n=eindig(bereik);
+  return n===null||n>24;
+}
+
+const api={tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan};
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowPolishV2=api;
 
@@ -115,11 +124,11 @@ function verwijderTemperatuurMarkering(svg,el){
 }
 
 /* Twee opeenvolgende uren met dezelfde afgeronde temperatuur kunnen beide als
-   relevant label uit de bestaande grafiek komen. Als zo'n dubbel cijfer vervalt,
-   verdwijnt ook zijn zwarte datapunt; een losse stip zonder label suggereert
-   anders betekenis terwijl de bijbehorende tekst bewust is weggehaald. */
+   relevant label uit de bestaande grafiek komen. Op 24 uur blijven die waarden
+   bewust staan: de regelmatige tijdcontext weegt daar zwaarder dan ontdubbeling.
+   Op langere horizons blijft de bestaande reductie actief. */
 function ontdubbelTemperatuurlabels(svg){
-  if(!svg) return;
+  if(!svg||!temperatuurOntdubbelToegestaan(S.geo&&S.geo.n)) return;
   const cw=S.geo&&Number.isFinite(S.geo.cw)?S.geo.cw:36;
   const maxDx=Math.max(38,cw*1.3),gehouden=[];
   const labels=[...svg.querySelectorAll("text")].filter(el=>{
