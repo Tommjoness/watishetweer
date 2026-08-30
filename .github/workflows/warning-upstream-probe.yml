@@ -1,0 +1,34 @@
+name: Warning upstream probe
+
+on:
+  push:
+    branches:
+      - hardening/warning-latency-probe-20260830
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Meet compat- en Atom-feeds
+        shell: bash
+        run: |
+          set -euo pipefail
+          ua='WatIsHetWeer/1.0 (watishetweer.nl; contact via github.com/Tommjoness/weathernow)'
+          for slug in netherlands italy germany; do
+            for attempt in 1 2; do
+              echo "--- $slug attempt $attempt compat ---"
+              curl -sS --max-time 8 -A "$ua" -H 'Accept: application/json' \
+                -o "/tmp/${slug}-compat-${attempt}" \
+                -w 'status=%{http_code} total=%{time_total}s start=%{time_starttransfer}s bytes=%{size_download}\n' \
+                "https://feeds.meteoalarm.org/api/v1/warnings/feeds-${slug}" || true
+              echo "--- $slug attempt $attempt atom ---"
+              curl -sS --max-time 8 -A "$ua" -H 'Accept: */*' \
+                -o "/tmp/${slug}-atom-${attempt}" \
+                -w 'status=%{http_code} total=%{time_total}s start=%{time_starttransfer}s bytes=%{size_download}\n' \
+                "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-${slug}" || true
+            done
+          done
