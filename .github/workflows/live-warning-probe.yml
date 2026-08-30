@@ -1,0 +1,31 @@
+name: Live warning hedge probe
+
+on:
+  push:
+    branches:
+      - hardening/live-warning-probe-20260830
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Meet koude Duitse warningroute zonder edge-cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://f4d9d9ef.watishetweer.pages.dev/api/waarschuwingen?lat=52.52&lon=13.405&land=DE'
+          for attempt in 1 2; do
+            echo "--- attempt $attempt ---"
+            rm -f /tmp/headers /tmp/body
+            curl -sS --max-time 9 -H 'Cache-Control: no-cache' \
+              -D /tmp/headers -o /tmp/body \
+              -w 'status=%{http_code} total=%{time_total}s start=%{time_starttransfer}s bytes=%{size_download}\n' \
+              "$url"
+            grep -Ei '^(x-wiw-edge-cache|cf-cache-status|age|content-type|cache-control|cloudflare-cdn-cache-control):' /tmp/headers || true
+            jq '{bron,dekking,plaatsSpecifiek,reden,aantal:(.lijst|length)}' /tmp/body
+            grep -Eiq '^x-wiw-edge-cache: BYPASS\r?$' /tmp/headers
+          done
