@@ -24,10 +24,17 @@ for (const naam of ["neerslag", "plaatsnaam", "waarschuwingen"]) {
   assert.ok(bron.includes("Cloudflare-CDN-Cache-Control"), `${naam} mist Cloudflare CDN-cachecontract`);
   assert.ok(!bron.includes("Vercel-CDN-Cache-Control"), `${naam} bevat nog Vercel-cachelogica`);
   assert.ok(wrapper.includes(`../../api/${naam}.mjs`));
+  assert.ok(wrapper.includes("../../lib/cloudflare-edge-cache.mjs"));
   assert.ok(wrapper.includes("export async function onRequest(context)"));
-  assert.ok(wrapper.includes("return worker.fetch(context.request)"));
+  assert.ok(wrapper.includes(`metEdgeCache(context, "${naam}", () => worker.fetch(context.request))`), `${naam}-wrapper omzeilt de veilige edge-cache of de bestaande handler`);
   assert.ok(!wrapper.includes("Vercel-CDN-Cache-Control"), `${naam}-wrapper bevat nog Vercel-vertaling`);
 }
+
+const edgeCache = lees("lib/cloudflare-edge-cache.mjs");
+assert.ok(edgeCache.includes("globalThis.caches.default"));
+assert.ok(edgeCache.includes("X-WIW-Edge-Cache"));
+assert.ok(edgeCache.includes("cache.match(key)"));
+assert.ok(edgeCache.includes("cache.put(key, kopie)"));
 
 const middleware = lees("functions/_middleware.js");
 assert.ok(middleware.includes("export async function onRequest(context)"));
@@ -58,7 +65,7 @@ assert.ok(nietGevonden.includes("Pagina niet gevonden"));
 assert.ok(nietGevonden.includes("href=\"/\""));
 assert.ok(lees("scripts/cloudflare-output.js").includes("404.html"));
 
-for (const script of ["scripts/platform-output-cleanup.js", "scripts/cloudflare-output.js", "scripts/cloudflare-preview-smoke.js"]) {
+for (const script of ["scripts/platform-output-cleanup.js", "scripts/cloudflare-output.js", "scripts/cloudflare-preview-smoke.js", "scripts/cloudflare-edge-cache-smoke.js"]) {
   assert.ok(fs.existsSync(path.join(root, script)), `${script} ontbreekt`);
 }
 
