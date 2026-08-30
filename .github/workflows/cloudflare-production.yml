@@ -198,6 +198,14 @@ jobs:
             printf '%s' "$html" | grep -F "$SOURCE_SHA" >/dev/null
           done
 
+      - name: Bewijs echte API edge-cache op publieke domeinen
+        if: steps.domains.outputs.all_active == 'true'
+        env:
+          CACHE_ROOTS: https://watishetweer.nl,https://www.watishetweer.nl
+          CACHE_PROBE_ID: ${{ github.run_id }}-${{ github.run_attempt }}-${{ env.SOURCE_SHA }}
+          EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+        run: node scripts/cloudflare-edge-cache-smoke.js
+
       - name: Meld eventuele resterende DNS-validatie
         if: steps.domains.outputs.all_active != 'true'
         run: |
