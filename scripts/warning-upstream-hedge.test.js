@@ -57,6 +57,10 @@ const legeAtom='<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><
 
   const bron=require("fs").readFileSync(require("path").join(__dirname,"..","lib","waarschuwingen.cjs"),"utf8");
   assert.ok(bron.includes("METEO_HEDGE_HEADER_MS = 1500"));
+  const atomTimeout=Number((bron.match(/METEO_ATOM_TIMEOUT_MS = (\d+)/)||[])[1]);
+  const hedgeTimeout=Number((bron.match(/METEO_HEDGE_HEADER_MS = (\d+)/)||[])[1]);
+  assert.equal(atomTimeout,4500,"Atom krijgt extra marge voor tijdelijke netwerkvariatie");
+  assert.ok(hedgeTimeout+atomTimeout<=6000,"hedged fallback blijft minstens 1 seconde onder het 7s clientbudget");
   assert.ok(bron.includes("if (!compatHeadersOntvangen) void startAtom()"),"trage responseheaders starten dezelfde lazy fallback vroeg");
   console.log("Warning upstream hedge: normale feed enkelvoudig; grote/trage feed hedged; geldige compatibiliteitsdata blijft leidend.");
 })().catch(err=>{console.error(err&&err.stack||err);process.exitCode=1;});
