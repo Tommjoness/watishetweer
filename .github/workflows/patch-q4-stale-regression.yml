@@ -1,0 +1,43 @@
+name: Patch Q4 stale regression
+
+on:
+  push:
+    branches:
+      - polish/premium-weather-cards-20260830
+    paths:
+      - .github/workflows/patch-q4-stale-regression.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: polish/premium-weather-cards-20260830
+          fetch-depth: 0
+      - name: Werk verouderde Q4-assertie bij
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('browser-q4-rain-periods.test.js')
+          s = p.read_text()
+          old = 'assert.equal(r.windkop,"Windstoot rond nu",naam+" "+breedte+": windstootkop is ondubbelzinnig zonder meting te suggereren");'
+          new = 'assert.equal(r.windkop,"Windstoot dit uur",naam+" "+breedte+": windstootkop gebruikt dezelfde uurforecast-scope als waarde en subtekst");'
+          if s.count(old) != 1:
+              raise SystemExit(f'Verwacht exact één oud Q4-anker, vond {s.count(old)}')
+          p.write_text(s.replace(old, new))
+          PY
+          git diff --check
+          git diff -- browser-q4-rain-periods.test.js
+      - name: Commit gerichte regressiefix
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add browser-q4-rain-periods.test.js
+          git commit -m 'Werk Q4 windstootregressie bij'
+          git push origin HEAD:polish/premium-weather-cards-20260830
