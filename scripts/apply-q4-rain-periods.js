@@ -30,7 +30,11 @@ function vervangExact(van,naar,label){
    q4-rain-runtime.js. Geen tekstuele vervanging meer: die was statisch groen
    terwijl de browser nog de historische functie uitvoerde. */
 vervangExact('Klik op een dag om die verwachting in de grafiek te laden.','Kies een dag om die verwachting in de grafiek te bekijken.',"neutrale daghint");
-vervangExact('<div class="eyebrow">Windstoten</div>','<div class="eyebrow">Windstoot rond nu</div>',"ondubbelzinnige windstootkop");
+/* De base-build maakt de windstootwaarde al tijdscope-correct. Q4 bezit alleen
+   de statische kaartkop in het uiteindelijke artifact en moet daarom dezelfde
+   uursemantiek gebruiken, zodat er ook vóór/naast een render geen oude 'rond nu'-
+   terminologie kan terugkomen. */
+vervangExact('<div class="eyebrow">Windstoten</div>','<div class="eyebrow">Windstoot dit uur</div>',"tijdscope-correcte windstootkop");
 
 /* De kwartiergrafiek heeft de effectieve, overlappende 15-minutenhoeveelheid al
    in P staan. De historische renderer tekende echter iedere positieve waarde en
@@ -72,4 +76,4 @@ fs.writeFileSync(htmlPad,html,"utf8");
    berekend. Dit verandert geen cachebeleid, alleen de eigenaar van het recept. */
 const versie=vernieuwServiceworkerCache(OUT,"Q4");
 
-console.log("Q4 toegepast: losse neerslagstaven weg, intervalperioden + totaal/piek, meetbare kwartierneerslag, compacte mobiele tijdvaklabels, runtime-neutrale grafiekhint en ruimere Nachtzicht-uitleg; cache "+versie+".");
+console.log("Q4 toegepast: losse neerslagstaven weg, intervalperioden + totaal/piek, meetbare kwartierneerslag, compacte mobiele tijdvaklabels, runtime-neutrale grafiekhint, tijdscope-correcte windstootkop en ruimere Nachtzicht-uitleg; cache "+versie+".");
