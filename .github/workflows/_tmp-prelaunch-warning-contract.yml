@@ -31,9 +31,11 @@ jobs:
           if s.count(old) != 1:
               raise SystemExit(f'Verwacht exact één oud contract, gevonden {s.count(old)}')
           p.write_text(s.replace(old,new))
+          if p.read_text().count(new) != 1:
+              raise SystemExit('Nieuw timeoutcontract staat niet exact één keer in prelaunch-regressies')
           PY
-          node prelaunch-regressions.test.js
           node scripts/warning-upstream-hedge.test.js
+          node --check prelaunch-regressions.test.js
           git diff --check
           git diff -- prelaunch-regressions.test.js
       - name: Commit contractfix
