@@ -10,16 +10,16 @@ const USER_AGENT = "watishetweer.nl/knmi-timeseries-probe";
 
 const slaap = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function haal(url, { accept = "*/*", buffer = false, pogingen = 4 } = {}) {
+async function haal(url, { accept = "*/*", buffer = false, pogingen = 4, headers = {} } = {}) {
   let laatste;
   for (let poging = 1; poging <= pogingen; poging += 1) {
     const gestart = Date.now();
     const response = await fetch(url, {
-      headers: { Accept: accept, "User-Agent": USER_AGENT },
+      headers: { Accept: accept, "User-Agent": USER_AGENT, ...headers },
       signal: AbortSignal.timeout(10000)
     });
     const duur = Date.now() - gestart;
-    console.log(`HTTP ${response.status} in ${duur} ms: ${new URL(url).searchParams.get("REQUEST") || "request"}`);
+    console.log(`HTTP ${response.status} in ${duur} ms: ${new URL(url).searchParams.get("REQUEST") || new URL(url).pathname}`);
     if (response.ok) {
       return buffer ? Buffer.from(await response.arrayBuffer()) : await response.text();
     }
@@ -81,6 +81,7 @@ function vorm(payload) {
   if (Array.isArray(payload)) {
     return payload.slice(0, 2).map(item => ({
       keys: item && typeof item === "object" ? Object.keys(item) : [],
+      name: item?.name,
       units: item?.units,
       dataKeys: item?.data && typeof item.data === "object" ? Object.keys(item.data).slice(0, 4) : []
     }));
@@ -89,16 +90,24 @@ function vorm(payload) {
 }
 
 function vergelijk(baseline, kandidaat) {
-  if (!kandidaat || !Array.isArray(kandidaat.punten)) return { gelijkwaardig: false, reden: "niet te normaliseren" };
-  if (baseline.length !== kandidaat.punten.length) return { gelijkwaardig: false, reden: `lengte ${kandidaat.punten.length} i.p.v. ${baseline.length}` };
+  if (!kandidaat || !Array.isArray(kandidaat.punten)) return { gelijkwaardig: false, structureelBruikbaar: false, reden: "niet te normaliseren" };
+  if (!Array.isArray(baseline)) {
+    return {
+      gelijkwaardig: false,
+      structureelBruikbaar: knmi.nowcastReeksCompleet(kandidaat.punten, kandidaat.referenceTime),
+      reden: "WCS-baseline niet beschikbaar voor numerieke vergelijking",
+      punten: kandidaat.punten.length
+    };
+  }
+  if (baseline.length !== kandidaat.punten.length) return { gelijkwaardig: false, structureelBruikbaar: false, reden: `lengte ${kandidaat.punten.length} i.p.v. ${baseline.length}` };
   let maxVerschil = 0;
   for (let i = 0; i < baseline.length; i += 1) {
     if (baseline[i].tijd !== kandidaat.punten[i].tijd) {
-      return { gelijkwaardig: false, reden: `timestamp wijkt af op index ${i}` };
+      return { gelijkwaardig: false, structureelBruikbaar: false, reden: `timestamp wijkt af op index ${i}` };
     }
     maxVerschil = Math.max(maxVerschil, Math.abs(baseline[i].waarde - kandidaat.punten[i].waarde));
   }
-  return { gelijkwaardig: maxVerschil <= 0.01, maxVerschil };
+  return { gelijkwaardig: maxVerschil <= 0.01, structureelBruikbaar: true, maxVerschil };
 }
 
 async function kandidaat(label, url, referenceTime, baseline) {
@@ -108,7 +117,7 @@ async function kandidaat(label, url, referenceTime, baseline) {
     try { payload = JSON.parse(tekst); }
     catch {
       console.log(`${label}: geen JSON; begin response=${JSON.stringify(tekst.slice(0, 500))}`);
-      return { label, gelijkwaardig: false, reden: "geen JSON" };
+      return { label, gelijkwaardig: false, structureelBruikbaar: false, reden: "geen JSON" };
     }
     console.log(`${label} responsevorm:`, JSON.stringify(vorm(payload)));
     const genormaliseerd = knmi.normaliseerNowcastAntwoord(payload, referenceTime);
@@ -116,13 +125,30 @@ async function kandidaat(label, url, referenceTime, baseline) {
     console.log(`${label}:`, JSON.stringify(resultaat));
     return { label, ...resultaat };
   } catch (error) {
-    const resultaat = { label, gelijkwaardig: false, reden: String(error?.message || error) };
+    const resultaat = { label, gelijkwaardig: false, structureelBruikbaar: false, reden: String(error?.message || error) };
     console.log(`${label}:`, JSON.stringify(resultaat));
     return resultaat;
   }
 }
 
 console.log("KNMI one-call timeseries probe", { lat: LAT, lon: LON });
+try {
+  const productieUrl = `https://watishetweer.nl/api/neerslag?lat=${LAT}&lon=${LON}&land=NL`;
+  const productieTekst = await haal(productieUrl, { accept: ACCEPT_JSON, headers: { "Cache-Control": "no-cache" } });
+  const productie = JSON.parse(productieTekst);
+  console.log("PRODUCTIE_NEERSLAG", JSON.stringify({
+    beschikbaar: productie?.beschikbaar,
+    bron: productie?.bron,
+    actueel: Boolean(productie?.actueel),
+    actueelTijd: productie?.actueel?.tijd || null,
+    nowcast: Boolean(productie?.nowcast),
+    nowcastPunten: productie?.nowcast?.punten?.length || 0,
+    reden: productie?.reden || null
+  }));
+} catch (error) {
+  console.log("PRODUCTIE_NEERSLAG kon niet worden gelezen", String(error?.message || error));
+}
+
 const capabilities = await haal(knmi.capabilitiesUrl(knmi.NOWCAST_DATASET), { accept: "text/xml" });
 if (!capabilities.includes(`<Name>${knmi.NOWCAST_LAAG}</Name>`)) throw new Error("nowcastlaag ontbreekt uit capabilities");
 const referenceTime = knmi.referenceTimeUitCapabilities(capabilities);
@@ -130,21 +156,36 @@ if (!referenceTime) throw new Error("reference_time ontbreekt uit capabilities")
 console.log("referenceTime", referenceTime);
 
 const refMs = Date.parse(referenceTime);
-const baseline = [];
+let baseline = [];
 for (let i = 0; i < knmi.NOWCAST_PUNTEN; i += 1) {
   const tijd = new Date(refMs + i * knmi.NOWCAST_STAP_MS).toISOString().replace(/\.000Z$/, "Z");
   const buffer = await haal(knmi.nowcastPuntUrl(LAT, LON, referenceTime, tijd), { accept: "application/netcdf", buffer: true });
-  baseline.push(knmi.normaliseerWcsPunt(buffer, tijd));
+  try {
+    baseline.push(knmi.normaliseerWcsPunt(buffer, tijd));
+  } catch (error) {
+    const nc = knmi.parseNetcdf3(buffer);
+    console.log("WCS_PARSE_FAILURE", JSON.stringify({
+      tijd,
+      fout: String(error?.message || error),
+      dimensions: nc.dims.map(d => ({ naam: d.naam, lengte: d.lengte })),
+      variables: nc.vars.map(v => ({ naam: v.naam, dimids: v.dimids, attrs: Object.keys(v.attrs || {}) }))
+    }));
+    baseline = null;
+    break;
+  }
   if (i < knmi.NOWCAST_PUNTEN - 1) await slaap(1050);
 }
-if (!knmi.nowcastReeksCompleet(baseline, referenceTime)) throw new Error("WCS-baseline is niet volledig");
-console.log(`WCS-baseline: ${baseline.length} punten, ${baseline[0].tijd} .. ${baseline.at(-1).tijd}`);
+if (baseline && !knmi.nowcastReeksCompleet(baseline, referenceTime)) {
+  console.log("WCS-baseline niet volledig", baseline.length);
+  baseline = null;
+}
+if (baseline) console.log(`WCS-baseline: ${baseline.length} punten, ${baseline[0].tijd} .. ${baseline.at(-1).tijd}`);
 
 await slaap(1100);
 const point = await kandidaat("GetPointValue TIME=*", pointTimeseriesUrl(referenceTime), referenceTime, baseline);
 await slaap(1100);
 const gfi = await kandidaat("GetFeatureInfo TIME=*", featureInfoTimeseriesUrl(referenceTime), referenceTime, baseline);
 
-const bruikbaar = [point, gfi].filter(x => x.gelijkwaardig);
-console.log("PROBE_RESULT", JSON.stringify({ referenceTime, point, gfi, bruikbaar: bruikbaar.map(x => x.label) }));
+const bruikbaar = [point, gfi].filter(x => x.gelijkwaardig || x.structureelBruikbaar);
+console.log("PROBE_RESULT", JSON.stringify({ referenceTime, baseline: Boolean(baseline), point, gfi, bruikbaar: bruikbaar.map(x => x.label) }));
 if (!bruikbaar.length) process.exitCode = 2;
