@@ -28,10 +28,7 @@ function jsonResponse(body, edge="s-maxage=120, stale-while-revalidate=180"){
 }
 
 async function run(context,route,fn){
-  const pending=[];
-  const r=await metEdgeCache({...context,waitUntil:p=>pending.push(Promise.resolve(p))},route,fn);
-  await Promise.all(pending);
-  return r;
+  return metEdgeCache(context,route,fn);
 }
 
 {
@@ -100,6 +97,18 @@ async function run(context,route,fn){
   );
   assert.equal(r.headers.get("x-wiw-edge-cache"),"MISS");
   assert.equal(cache.puts,1,"stabiele providerdekking mag wel worden gecachet");
+}
+
+{
+  const cache=new MemoryCache();
+  cache.put=async()=>{cache.puts+=1;throw new Error("cache write stuk");};
+  const r=await run({request:new Request(BASE+"/api/plaatsnaam?lat=52.37&lon=4.89"),cache},"plaatsnaam",async()=>
+    jsonResponse({naam:"Amsterdam",land:"NL",bron:"viaNominatim"},"s-maxage=86400, stale-while-revalidate=604800")
+  );
+  assert.equal(r.status,200);
+  assert.equal(r.headers.get("x-wiw-edge-cache"),"BYPASS","mislukte cachewrite mag nooit als MISS worden gerapporteerd");
+  assert.equal(cache.puts,1);
+  assert.equal((await r.json()).naam,"Amsterdam","cachefout mag de API-response niet breken");
 }
 
 {
