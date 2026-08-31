@@ -169,7 +169,7 @@ assert(bron.includes('nachtOordeelGetoond(zichtbaar)'),"Nachtzicht-oordeel is aa
 assert(bron.includes('balk.style.width=nachtBalkPercentageGetoond(zichtbaar)+"%"'),"Nachtzicht-balk is aan de zichtbare score gekoppeld");
 assert(bron.includes('neerslagWeerCode(a.code)?beleid.dagKansSamenvatting(a,basis):basis'),"droge/bewolkte dagteksten dupliceren de neerslagkolom niet");
 assert(bron.includes('uvOordeelGetoond(zichtbaar)'),"UV-oordeel gebruikt de zichtbare afgeronde waarde");
-assert(bron.includes('hoogste verwachte windstoot voor vandaag bedroeg'),"verstreken windstootpiek gebruikt natuurlijk Nederlands");
+assert(!bron.includes('document.getElementById("gustsub")'),"senior-semantiek raakt de zonsondergangtegel niet meer aan");
 assert(bron.includes('maanSymboolNaarSvgInHtml(lab.innerHTML||lab.textContent,12)'),"maankop gebruikt de DOM-onafhankelijke SVG-vervanging");
 assert(!bron.includes('lab.childNodes'),"maanvervanging leunt niet op iterable childNodes");
 
