@@ -45,6 +45,8 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "apply-staff-audit-20260826.js",
   "apply-mobile-truth-ux-20260828.js",
   "verify-mobile-truth-ux-20260828.js",
+  "apply-short-term-metric-clarity.js",
+  "verify-short-term-metric-clarity.js",
   "verify-seo-foundation.js",
   "generate-seo-location-pages.js",
   "apply-seo-location-h1.js",
