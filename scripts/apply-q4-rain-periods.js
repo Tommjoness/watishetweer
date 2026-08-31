@@ -30,24 +30,17 @@ function vervangExact(van,naar,label){
    q4-rain-runtime.js. Geen tekstuele vervanging meer: die was statisch groen
    terwijl de browser nog de historische functie uitvoerde. */
 vervangExact('Klik op een dag om die verwachting in de grafiek te laden.','Kies een dag om die verwachting in de grafiek te bekijken.',"neutrale daghint");
-/* De base-build maakt de windstootwaarde al tijdscope-correct. Q4 bezit alleen
-   de statische kaartkop in het uiteindelijke artifact en moet daarom dezelfde
-   uursemantiek gebruiken, zodat er ook vóór/naast een render geen oude 'rond nu'-
-   terminologie kan terugkomen. */
-vervangExact('<div class="eyebrow">Windstoten</div>','<div class="eyebrow">Windstoot dit uur</div>',"tijdscope-correcte windstootkop");
 
-/* Senior-semantiek bevatte nog een historische na-render owner die uitsluitend
-   wanneer de dagpiek al verstreken was #gustsub herschreef naar die dagpiek.
-   Dat botst met de nieuwe base-owner: waarde en kop gaan nu bewust over het
-   lopende uur. Pensioneer daarom alleen dat oude subtekstblok en behoud alle
-   overige senior-metercorrecties (wind, bewolking, UV en zicht). */
-const SENIOR_GUST_HISTORIE=`    const c=S.d.current||{},nu=weatherNowActueleLokaleTijd(),pg=piek("wind_gusts_10m"),gustSub=document.getElementById("gustsub");
-    if(gustSub&&pg&&pg.t&&nu&&pg.t<nu&&pg.t.slice(0,10)===String(nu).slice(0,10)&&num(pg.v)!==null){
-      gustSub.textContent="De hoogste verwachte windstoot voor vandaag bedroeg "+Math.round(pg.v)+" km/u in het uur "+weatherNowUurvak(pg.t)+".";
-    }
+/* De voormalige windstoottegel is in de base-build inhoudelijk overgenomen door
+   de zonsondergangowner. Q4 bezit alleen nog de statische kop in het uiteindelijke
+   artifact. Laat ook die vóór de eerste render dezelfde betekenis dragen, zodat
+   er nergens een historische windstootkop kan flitsen of door een statische test
+   als productwaarheid worden gezien. */
+vervangExact('<div class="eyebrow">Windstoten</div>','<div class="eyebrow">Tijd tot zonsondergang</div>',"statische zonsondergangkop");
 
-`;
-vervangExact(SENIOR_GUST_HISTORIE,'    const c=S.d.current||{};\n',"historische windstoot-dagpiekowner");
+/* De vroegere Q4-migratie van een verstreken windstootdagpiek is bewust weg.
+   senior-semantiek raakt #gustsub niet meer aan en de base-build is de enige
+   runtime-owner van waarde, kop en subtekst van de zonsondergangtegel. */
 
 /* De kwartiergrafiek heeft de effectieve, overlappende 15-minutenhoeveelheid al
    in P staan. De historische renderer tekende echter iedere positieve waarde en
@@ -80,7 +73,7 @@ const css=`\n${MARK}\n@media(min-width:1100px){\n  .night{grid-template-columns:
 if((html.match(/<\/style>/g)||[]).length!==1)throw new Error("Exact één stijlblok vereist voor Q4.");
 html=html.replace("</style>",css+"</style>");
 
-if(html.includes("De hoogste verwachte windstoot voor vandaag bedroeg"))throw new Error("Historische dagpiekcopy overschrijft de uurwindstoot nog.");
+if(html.includes("De hoogste verwachte windstoot voor vandaag bedroeg"))throw new Error("Historische dagpiekcopy overschrijft de zonsondergangtegel nog.");
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden na Q4.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:q4-"+(i+1)}));
@@ -90,4 +83,4 @@ fs.writeFileSync(htmlPad,html,"utf8");
    berekend. Dit verandert geen cachebeleid, alleen de eigenaar van het recept. */
 const versie=vernieuwServiceworkerCache(OUT,"Q4");
 
-console.log("Q4 toegepast: losse neerslagstaven weg, intervalperioden + totaal/piek, meetbare kwartierneerslag, compacte mobiele tijdvaklabels, runtime-neutrale grafiekhint, één tijdscope-correcte windstootowner en ruimere Nachtzicht-uitleg; cache "+versie+".");
+console.log("Q4 toegepast: losse neerslagstaven weg, intervalperioden + totaal/piek, meetbare kwartierneerslag, compacte mobiele tijdvaklabels, runtime-neutrale grafiekhint, statische zonsondergangkop en ruimere Nachtzicht-uitleg; cache "+versie+".");
