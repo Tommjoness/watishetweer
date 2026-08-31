@@ -2,7 +2,7 @@
 
 const fs=require("fs");
 const path=require("path");
-const CSP_SOURCE="https://static.cloudflareinsights.com/beacon.min.js";
+const CSP_SOURCE="https://static.cloudflareinsights.com";
 
 function ontleedRichtlijn(deel){
   const trim=String(deel||"").trim();
@@ -27,10 +27,10 @@ function verruimCsp(policy){
   const scriptIndex=info.findIndex(x=>x.naam==="script-src");
   const defaultIndex=info.findIndex(x=>x.naam==="default-src");
 
-  /* Een externe <script src> volgt CSP in deze volgorde: script-src-elem,
-     script-src, default-src. Verruim daarom uitsluitend de werkelijk effectieve
-     richtlijn. Zo behouden routes met een afwijkende meta-CSP hun bestaande
-     beperkingen en krijgt alleen de officiële Cloudflare-beacon extra toegang. */
+  /* Automatische Cloudflare Web Analytics kan een versiepad achter
+     beacon.min.js injecteren. Een CSP-bron die exact op beacon.min.js eindigt
+     blokkeert zo'n URL. Sta daarom uitsluitend de officiële Cloudflare Insights-
+     origin toe in de werkelijk effectieve script-richtlijn. */
   if(elemIndex>=0){
     delen[elemIndex]=voegBronToe(delen[elemIndex]);
     return delen.join(";");
