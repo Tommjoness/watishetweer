@@ -6,6 +6,12 @@ Een historische 90-dagenbezoekersbaseline kan op 31 augustus 2026 niet betrouwba
 
 Dit document scheidt technische productkwaliteit, Search Console-status, nieuw te verzamelen bezoekersdata en eventuele omzet strikt van elkaar.
 
+### Post-merge status op 31 augustus 2026
+
+De merge-SHA `b4a660848338cece3e308f44ae6a2074d0895616` is succesvol naar Cloudflare Pages uitgerold en de volledige production-smoke op die SHA is groen. De afzonderlijke workflow `Cloudflare Web Analytics setup` bereikte daarna aantoonbaar dezelfde live SHA, maar de eerste Web Analytics-accountaanvraag faalde met HTTP 403 omdat de huidige Cloudflare-token onvoldoende Account Settings-rechten heeft. Daardoor is Web Analytics via deze setup **nog niet aantoonbaar actief** en is **T0 nog niet gestart**.
+
+Er wordt daarom voor 31 augustus 2026 geen Cloudflare-bezoekersbaseline geclaimd. Nadat de GitHub Actions-token minimaal de benodigde Cloudflare Account Settings Read/Write-rechten heeft gekregen, moet uitsluitend de bestaande Web Analytics-setupworkflow opnieuw worden uitgevoerd en groen eindigen voordat T0 wordt ingevuld. De normale productieflow hoeft hiervoor niet te worden gewijzigd.
+
 ## Technische nulmeting
 
 De sale-readinessaudit van 31 augustus 2026 legde voor de toenmalige productie de volgende officiële PageSpeed Insights-labresultaten vast:
@@ -78,8 +84,8 @@ Vul dit per checkpoint aan buiten of in een gedateerde opvolgnotitie; overschrij
 
 | Metric | T0 | +7d | +30d | +60d | +90d |
 |---|---:|---:|---:|---:|---:|
-| Cloudflare pageviews | — |  |  |  |  |
-| Cloudflare bezoekers | — |  |  |  |  |
+| Cloudflare pageviews | nog niet gestart |  |  |  |  |
+| Cloudflare bezoekers | nog niet gestart |  |  |  |  |
 | Search Console klikken | account-snapshot vereist |  |  |  |  |
 | Search Console impressies | account-snapshot vereist |  |  |  |  |
 | Search Console CTR | account-snapshot vereist |  |  |  |  |
