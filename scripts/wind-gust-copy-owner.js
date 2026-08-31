@@ -55,7 +55,7 @@ function weatherNowWindstootDitUurTekst(punt,vak){
     :"Verwachte hoogste windstoot in dit uur.";
 }
 
-/* Zoek vanaf het huidige lokale forecastmoment de eerstvolgende beschikbare
+/* Zoek vanaf het huidige lokale moment de eerstvolgende beschikbare
    zonsondergang. De omzetter wordt geïnjecteerd, zodat productie de bestaande
    IANA/DST-veilige naarUTC() gebruikt en de unit-test een pure omzetter kan
    meegeven. Dit werkt ook voor poolgebieden: ontbrekende dagen worden
@@ -100,7 +100,8 @@ const GUST_BRON=`  const windstootRuw=eindigGetal(c.wind_gusts_10m);
     : pg.t>nu ? dagAanduiding(pg.t,true)+" tot "+Math.round(pg.v)+" km/u tussen "+weatherNowUurvak(pg.t).replace("–"," en ")+"."
     : dagAanduiding(pg.t,true)+" maximaal "+Math.round(pg.v)+" km/u tussen "+weatherNowUurvak(pg.t).replace("–"," en ")+".");`;
 const GUST_PRODUCTIE=`  /* #gust/#gustsub zijn legacy ids: de zichtbare tegel toont nu tijd tot zonsondergang. */
-  const zonOnder=weatherNowVolgendeZonsondergang(day,nu,naarUTC);
+  const zonNu=plaatsVandaag()+"T"+plaatsKlok();
+  const zonOnder=weatherNowVolgendeZonsondergang(day,zonNu,naarUTC);
   const gustStat=document.getElementById("gust")&&document.getElementById("gust").closest(".stat");
   const gustKop=gustStat&&gustStat.querySelector(".eyebrow");
   if(gustKop)gustKop.textContent="Tijd tot zonsondergang";
