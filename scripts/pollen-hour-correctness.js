@@ -9,7 +9,8 @@ const CONTRACTEN=Object.freeze([
   Object.freeze({label:"pollen-mismatchtekst",bron:'(gemeten?"Geen noemenswaardige concentraties":"Geen pollendata voor deze locatie")',productie:'(gemeten?"Geen noemenswaardige concentraties":i===null?"Pollendata voor het huidige uur niet beschikbaar":"Geen pollendata voor deze locatie")'}),
   Object.freeze({label:"positieve sub-1 pollenpresentatie",bron:'${Math.round(o.v)}<s>korrels/m³</s>',productie:'${o.v<1?"&lt;1":Math.round(o.v)}<s>${o.v<1||Math.round(o.v)===1?"korrel/m³":"korrels/m³"}</s>'}),
   Object.freeze({label:"positieve pollen-modelcopy",bron:'if(aanwezig===true)return {tekst:"Verwacht voor dit uur",kleur:"ink"};',productie:'if(aanwezig===true)return {tekst:"Modelverwachting voor dit uur.",kleur:"ink"};'}),
-  Object.freeze({label:"nul pollen-modelcopy",bron:'if(aanwezig===false)return {tekst:"Geen pollen verwacht voor dit uur",kleur:"ink45"};',productie:'if(aanwezig===false)return {tekst:"Model verwacht geen pollen voor dit uur.",kleur:"ink45"};'})
+  Object.freeze({label:"nul pollen-modelcopy",bron:'if(aanwezig===false)return {tekst:"Geen pollen verwacht voor dit uur",kleur:"ink45"};',productie:'if(aanwezig===false)return {tekst:"Model verwacht geen pollen voor dit uur.",kleur:"ink45"};'}),
+  Object.freeze({label:"expliciete nul pollenwaarde",bron:'const o=pollenPresentatieGetoond(false);sub.textContent=o.tekst;',productie:'const o=pollenPresentatieGetoond(false);sub.textContent=o.tekst;val.innerHTML="0<s>korrels/m³</s>";'})
 ]);
 
 function pasPollenHourCorrectnessToe(html){
