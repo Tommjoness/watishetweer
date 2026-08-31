@@ -9,31 +9,40 @@ const ROOT=path.join(__dirname,"..");
 const htmlPad=path.join(ROOT,"public","index.html");
 const bronPad=path.join(__dirname,"extra-neerslagproviders.js");
 const presentatiePad=path.join(__dirname,"neerslag-presentatie-v2.js");
+const lkiPad=path.join(__dirname,"luchtmeetnet-lki-client.js");
 const START="/* ---------- start ---------- */";
 const BEGIN="/* ===== EXTRA NEERSLAGPROVIDERS ===== */";
 const EINDE="/* ===== EINDE EXTRA NEERSLAGPROVIDERS ===== */";
 const PRESENTATIE_BEGIN="/* ===== NEERSLAGPRESENTATIE V2 ===== */";
 const PRESENTATIE_EINDE="/* ===== EINDE NEERSLAGPRESENTATIE V2 ===== */";
+const LKI_BEGIN="/* ===== LUCHTMEETNET LKI ===== */";
+const LKI_EINDE="/* ===== EINDE LUCHTMEETNET LKI ===== */";
 
 let html=fs.readFileSync(htmlPad,"utf8");
 const extra=fs.readFileSync(bronPad,"utf8");
 const presentatie=fs.readFileSync(presentatiePad,"utf8");
-if((html.split(START).length-1)!==1)throw new Error("Startmarker ontbreekt of is dubbel bij extra neerslagproviders.");
+const lki=fs.readFileSync(lkiPad,"utf8");
+if((html.split(START).length-1)!==1)throw new Error("Startmarker ontbreekt of is dubbel bij extra providers.");
 if(html.includes(BEGIN)||html.includes(EINDE))throw new Error("Extra neerslagproviders zijn al geïnjecteerd.");
 if(html.includes(PRESENTATIE_BEGIN)||html.includes(PRESENTATIE_EINDE))throw new Error("Neerslagpresentatie is al geïnjecteerd.");
+if(html.includes(LKI_BEGIN)||html.includes(LKI_EINDE))throw new Error("Luchtmeetnet LKI-client is al geïnjecteerd.");
 
 html=html.replace(START,
   BEGIN+"\n"+extra+"\n"+EINDE+"\n\n"+
-  PRESENTATIE_BEGIN+"\n"+presentatie+"\n"+PRESENTATIE_EINDE+"\n\n"+START);
+  PRESENTATIE_BEGIN+"\n"+presentatie+"\n"+PRESENTATIE_EINDE+"\n\n"+
+  LKI_BEGIN+"\n"+lki+"\n"+LKI_EINDE+"\n\n"+START);
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline script gevonden na providerinjectie.");
-scripts.forEach((s,i)=>new vm.Script(s,{filename:"public/index.html:extra-neerslag-"+(i+1)}));
+scripts.forEach((s,i)=>new vm.Script(s,{filename:"public/index.html:extra-provider-"+(i+1)}));
 if(!html.includes("WeatherNowExtraNeerslagproviders"))throw new Error("Extra providerclient ontbreekt uit buildartifact.");
 if(!html.includes("land=\"+encodeURIComponent(land)"))throw new Error("Expliciete provider-landcode ontbreekt uit buildartifact.");
 if(!html.includes("WeatherNowNeerslagPresentatieV2"))throw new Error("Neerslagpresentatie v2 ontbreekt uit buildartifact.");
 if(!html.includes("Neerslagkans komend uur"))throw new Error("Expliciet neerslagkanslabel ontbreekt uit buildartifact.");
 if(!html.includes("Neerslag nu"))throw new Error("Actuele neerslagkaart ontbreekt uit buildartifact.");
+if(!html.includes("WeatherNowLuchtmeetnetLki"))throw new Error("Luchtmeetnet LKI-client ontbreekt uit buildartifact.");
+if(!html.includes("Nederlandse LKI "))throw new Error("Expliciet Nederlands LKI-label ontbreekt uit buildartifact.");
+if(!html.includes("/api/luchtkwaliteit?lat="))throw new Error("Luchtkwaliteitroute ontbreekt uit buildartifact.");
 
 fs.writeFileSync(htmlPad,html,"utf8");
-const versie=vernieuwServiceworkerCache(path.join(ROOT,"public"),"extra-neerslagproviders-presentatie-v2");
-console.log("Extra neerslagproviders en neerslagpresentatie geïnjecteerd; cache vernieuwd: "+versie+".");
+const versie=vernieuwServiceworkerCache(path.join(ROOT,"public"),"extra-providers-neerslag-luchtmeetnet-lki");
+console.log("Extra neerslagproviders, neerslagpresentatie en Luchtmeetnet LKI geïnjecteerd; cache vernieuwd: "+versie+".");

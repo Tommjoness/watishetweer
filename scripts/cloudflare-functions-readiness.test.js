@@ -16,8 +16,9 @@ function antwoord(status,body){
 }
 
 (async()=>{
-  assert.deepStrictEqual(ROUTES.map(x=>x.naam),["plaatsnaam","neerslag","waarschuwingen"],"readiness moet alle drie productie-API's afwachten");
+  assert.deepStrictEqual(ROUTES.map(x=>x.naam),["plaatsnaam","neerslag","luchtkwaliteit","waarschuwingen"],"readiness moet alle vier productie-API's afwachten");
   assert(ROUTES.some(x=>x.pad.startsWith("/api/neerslag?")),"neerslagroute ontbreekt uit readiness");
+  assert(ROUTES.some(x=>x.pad.startsWith("/api/luchtkwaliteit?")),"luchtkwaliteitroute ontbreekt uit readiness");
   assert(ROUTES.some(x=>x.pad.startsWith("/api/waarschuwingen?")),"waarschuwingenroute ontbreekt uit readiness");
   assert.equal(vereisteOpeenvolgendeSuccessen,3,"één toevallige groene propagatiemeting mag productie niet vrijgeven");
 
@@ -34,12 +35,13 @@ function antwoord(status,body){
     gezien.push(url);
     return antwoord(200,{ok:true});
   });
-  assert.equal(allesGroen,true,"alle drie geldige routes moeten één readinessmeting groen maken");
-  assert.equal(gezien.length,3,"iedere poging moet alle drie routes controleren");
+  assert.equal(allesGroen,true,"alle vier geldige routes moeten één readinessmeting groen maken");
+  assert.equal(gezien.length,4,"iedere poging moet alle vier routes controleren");
   assert(gezien.some(url=>url.includes("/api/neerslag?")),"neerslag moet live worden gecontroleerd");
+  assert(gezien.some(url=>url.includes("/api/luchtkwaliteit?")),"luchtkwaliteit moet live worden gecontroleerd");
 
   const een404=await probeer("https://test.watishetweer.pages.dev",2,async url=>{
-    return url.includes("/api/neerslag?")?antwoord(404,{error:"not found"}):antwoord(200,{ok:true});
+    return url.includes("/api/luchtkwaliteit?")?antwoord(404,{error:"not found"}):antwoord(200,{ok:true});
   });
   assert.equal(een404,false,"één ontbrekende Function moet de deployment tegenhouden");
 
@@ -57,7 +59,7 @@ function antwoord(status,body){
     async ms=>{stabieleKlok+=ms;}
   );
   assert.equal(meetronde,ROUTES.length*5,"één groene ronde gevolgd door een propagatie-404 moet de succesreeks resetten en daarna drie groene rondes eisen");
-  assert.equal(stabieleKlok,readinessTimeoutMs-readinessTimeoutMs+12000,"tussen vijf meetrondes horen vier stabiliteitsintervallen te zitten");
+  assert.equal(stabieleKlok,12000,"tussen vijf meetrondes horen vier stabiliteitsintervallen te zitten");
 
   let klok=0;
   let pogingen=0;
@@ -68,11 +70,11 @@ function antwoord(status,body){
       ()=>klok,
       async ms=>{klok+=ms;}
     ),
-    /niet stabiel alle drie gereed/,
+    /niet stabiel alle vier gereed/,
     "readiness moet begrensd falen als een route niet stabiel actief wordt"
   );
   assert.equal(klok,readinessTimeoutMs,"timeout moet exact binnen het afgesproken 90s-venster blijven");
-  assert(pogingen>=3,"readiness moet opnieuw proberen vóór hij opgeeft");
+  assert(pogingen>=4,"readiness moet opnieuw proberen vóór hij opgeeft");
 
-  console.log("Cloudflare Functions-readiness: drie routes, stabiele propagatie, 404-blokkade, degradatie en timeout geslaagd.");
+  console.log("Cloudflare Functions-readiness: vier routes, stabiele propagatie, 404-blokkade, degradatie en timeout geslaagd.");
 })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});
