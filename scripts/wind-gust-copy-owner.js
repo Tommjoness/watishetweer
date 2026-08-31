@@ -50,8 +50,8 @@ function weatherNowWindstootDitUurTekst(punt,vak){
   if(!punt||!Number.isFinite(Number(punt.v)))return "Geen windstootverwachting voor dit uur.";
   const tijdvak=String(vak||"").trim();
   return tijdvak&&tijdvak!=="voorafgaand uur"
-    ?"Verwacht maximum voor "+tijdvak+"."
-    :"Verwacht maximum voor dit uur.";
+    ?"Verwachte hoogste windstoot tussen "+tijdvak.replace("–"," en ")+"."
+    :"Verwachte hoogste windstoot in dit uur.";
 }
 
 const HELPER_PRODUCTIE=weatherNowWindstootTekst.toString();
@@ -71,7 +71,7 @@ const GUST_PRODUCTIE=`  const gustUur=weatherNowWindstootDitUur(h,i);
   set("gust",gustUur===null?"–":Math.round(gustUur.v)+"<s>km/u</s>");
   const gustStat=document.getElementById("gust")&&document.getElementById("gust").closest(".stat");
   const gustKop=gustStat&&gustStat.querySelector(".eyebrow");
-  if(gustKop)gustKop.textContent="Windstoot dit uur";
+  if(gustKop)gustKop.textContent="Max. windstoot dit uur";
   zetTekst("gustsub",weatherNowWindstootDitUurTekst(gustUur,gustUur?weatherNowUurvak(gustUur.t):""));`;
 
 function pasWindGustCopyToe(html){
