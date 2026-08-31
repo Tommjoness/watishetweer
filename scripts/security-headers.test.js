@@ -25,7 +25,7 @@ assert(headers["permissions-policy"]&&headers["permissions-policy"].includes("ca
 const csp=headers["content-security-policy"]||"";
 for(const contract of [
   "default-src 'self'",
-  "script-src 'self' https://static.cloudflareinsights.com/beacon.min.js",
+  "script-src 'self' https://static.cloudflareinsights.com",
   "script-src-attr 'none'",
   "style-src 'self' 'unsafe-inline'",
   "object-src 'none'",
@@ -35,6 +35,7 @@ for(const contract of [
   "connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://geocoding-api.open-meteo.com https://api.bigdatacloud.net"
 ])assert(csp.includes(contract),"CSP-contract ontbreekt: "+contract);
 assert(!csp.includes("script-src 'self' 'unsafe-inline'"),"Executable inline scripts horen na delivery-externalisatie niet meer toegestaan te zijn");
+assert(!csp.includes("https://static.cloudflareinsights.com/beacon.min.js"),"CSP mag de Analytics-beacon niet meer tot het onversieerde bestandspad beperken; Cloudflare injecteert een versiepad");
 assert(!csp.includes("cloudflareinsights.com/cdn-cgi/rum"),"Proxied Web Analytics hoort via same-origin /cdn-cgi/rum te posten, niet via een extra connect-src origin");
 
 /* no-transform zette bij Cloudflare ook gzip/Brotli uit. HTML mag nog steeds
@@ -51,6 +52,7 @@ for(const route of ["/","/weer/*"]){
 
 const middleware=fs.readFileSync(path.join(root,"functions","_middleware.js"),"utf8");
 assert(middleware.includes('"Cross-Origin-Opener-Policy":"same-origin"'),"API-middleware mist COOP");
-assert(middleware.includes('"Content-Security-Policy":"default-src \'self\'; script-src \'self\' https://static.cloudflareinsights.com/beacon.min.js; script-src-attr \'none\';'),"API-middleware loopt achter op strikt scriptbeleid plus minimale analytics-bron");
+assert(middleware.includes('"Content-Security-Policy":"default-src \'self\'; script-src \'self\' https://static.cloudflareinsights.com; script-src-attr \'none\';'),"API-middleware loopt achter op strikt scriptbeleid plus versiecompatibele analytics-origin");
+assert(!middleware.includes("https://static.cloudflareinsights.com/beacon.min.js"),"API-middleware mag versiegebonden Cloudflare-beacons niet blokkeren met een exact bestandspad");
 
-console.log("security-headers: strikte CSP met alleen Cloudflare analytics beacon, COOP, HSTS en compressievriendelijke HTML-cacheheaders OK");
+console.log("security-headers: strikte CSP met Cloudflare Insights-origin voor versiebeacons, COOP, HSTS en compressievriendelijke HTML-cacheheaders OK");
