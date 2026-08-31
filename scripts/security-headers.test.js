@@ -25,7 +25,7 @@ assert(headers["permissions-policy"]&&headers["permissions-policy"].includes("ca
 const csp=headers["content-security-policy"]||"";
 for(const contract of [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' https://static.cloudflareinsights.com/beacon.min.js",
   "script-src-attr 'none'",
   "style-src 'self' 'unsafe-inline'",
   "object-src 'none'",
@@ -35,20 +35,22 @@ for(const contract of [
   "connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://geocoding-api.open-meteo.com https://api.bigdatacloud.net"
 ])assert(csp.includes(contract),"CSP-contract ontbreekt: "+contract);
 assert(!csp.includes("script-src 'self' 'unsafe-inline'"),"Executable inline scripts horen na delivery-externalisatie niet meer toegestaan te zijn");
+assert(!csp.includes("cloudflareinsights.com/cdn-cgi/rum"),"Proxied Web Analytics hoort via same-origin /cdn-cgi/rum te posten, niet via een extra connect-src origin");
 
 /* no-transform zette bij Cloudflare ook gzip/Brotli uit. HTML mag nog steeds
    direct revalideren, maar moet transformeerbaar blijven zodat de edge de grote
-   documentresponse kan comprimeren. */
+   documentresponse kan comprimeren en automatische Web Analytics-injectie niet
+   door een no-transform contract wordt tegengehouden. */
 for(const route of ["/","/weer/*"]){
   const escaped=route.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
   const blok=new RegExp("(?:^|\\n)"+escaped+"\\r?\\n((?:[ \\t]+[^\\r\\n]+\\r?\\n?)*)").exec(bron);
   assert(blok,`Cloudflare HTML-headerblok ontbreekt voor ${route}`);
   assert(/^[ \t]+Cache-Control:\s*public, max-age=0, must-revalidate\s*$/mi.test(blok[1]),`${route} mist revalidatiecache zonder no-transform`);
-  assert(!/no-transform/i.test(blok[1]),`${route} blokkeert onbedoeld edge-compressie met no-transform`);
+  assert(!/no-transform/i.test(blok[1]),`${route} blokkeert onbedoeld edge-compressie/analytics-injectie met no-transform`);
 }
 
 const middleware=fs.readFileSync(path.join(root,"functions","_middleware.js"),"utf8");
 assert(middleware.includes('"Cross-Origin-Opener-Policy":"same-origin"'),"API-middleware mist COOP");
-assert(middleware.includes('"Content-Security-Policy":"default-src \'self\'; script-src \'self\'; script-src-attr \'none\';'),"API-middleware loopt achter op strikt scriptbeleid");
+assert(middleware.includes('"Content-Security-Policy":"default-src \'self\'; script-src \'self\' https://static.cloudflareinsights.com/beacon.min.js; script-src-attr \'none\';'),"API-middleware loopt achter op strikt scriptbeleid plus minimale analytics-bron");
 
-console.log("security-headers: CSP zonder inline script, COOP, HSTS en compressievriendelijke HTML-cacheheaders OK");
+console.log("security-headers: strikte CSP met alleen Cloudflare analytics beacon, COOP, HSTS en compressievriendelijke HTML-cacheheaders OK");
