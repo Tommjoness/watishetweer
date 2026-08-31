@@ -5,7 +5,8 @@ const {
   MARK,NEERSLAG_UUR_OUD,NEERSLAG_UUR_NIEUW,GRAPH_SLEUTEL_OUD,GRAPH_SLEUTEL_NIEUW,pasKortetermijnMetricClarityToe
 }=require("./apply-short-term-metric-clarity.js");
 
-const bron='<script>\n'+NEERSLAG_UUR_OUD+'\n'+GRAPH_SLEUTEL_OUD+'\n</script>';
+const zonsondergang='<div class="stat"><div class="eyebrow">Tijd tot zonsondergang</div><div class="sval" id="gust">1 u 52 min</div><div class="ssub" id="gustsub">Vandaag om 20:29.</div></div>';
+const bron=zonsondergang+'<script>\n'+NEERSLAG_UUR_OUD+'\n'+GRAPH_SLEUTEL_OUD+'\n</script>';
 const uit=pasKortetermijnMetricClarityToe(bron);
 assert(uit.includes(MARK),"clarity-marker ontbreekt");
 assert(uit.includes(NEERSLAG_UUR_NIEUW),"nieuwe neerslag-uurowner ontbreekt");
@@ -18,6 +19,8 @@ assert(uit.includes('"Verwachte neerslag komend uur"'),"hoeveelheid-only toestan
 assert(uit.includes('"Neerslag nu"'),"actuele intensiteit behoudt een eigen scope");
 assert(uit.includes('if(kans!==null&&mm!==null)'),"bare Neerslag-waarde wordt niet naar beschikbare cijfers teruggebracht");
 assert(uit.includes('"kans · verwacht totaal"'),"kans en hoeveelheid krijgen geen zichtbare legenda");
+assert(uit.includes(zonsondergang),"kortetermijn-clarity mag de zonsondergangtegel niet herschrijven");
+assert(!uit.includes('gustKop.textContent="Max. windstoot dit uur"'),"clarity-laag mag geen oude windstootkop terugzetten");
 assert.throws(()=>pasKortetermijnMetricClarityToe(uit),/al toegepast/,"clarity-laag moet idempotentie-fouten gesloten detecteren");
 
-console.log("Kortetermijn-metric clarity groen: geen kale Neerslag-waarde bij beschikbare cijfers en alle uur-scopekoppen zijn expliciet.");
+console.log("Kortetermijn-metric clarity groen: neerslaguur is expliciet en de zonsondergangtegel blijft volledig onaangeraakt.");
