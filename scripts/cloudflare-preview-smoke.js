@@ -86,6 +86,20 @@ function cloudflareCache(r,label){
   cloudflareCache(neerslag.r,"neerslag-API");
   assert(neerslag.body&&typeof neerslag.body.beschikbaar==="boolean","neerslag-API mist beschikbaar-boolean");
 
+  const luchtkwaliteit=await json("/api/luchtkwaliteit?lat=52.3508&lon=5.2647&land=NL");
+  assert.equal(luchtkwaliteit.r.status,200,"luchtkwaliteit-API is niet 200");
+  security(luchtkwaliteit.r,"luchtkwaliteit-API");
+  cloudflareCache(luchtkwaliteit.r,"luchtkwaliteit-API");
+  assert(luchtkwaliteit.body&&typeof luchtkwaliteit.body.beschikbaar==="boolean","luchtkwaliteit-API mist beschikbaar-boolean");
+  assert.equal(luchtkwaliteit.body.provider,"luchtmeetnet","Nederlandse luchtkwaliteit-API moet de Luchtmeetnet-provider selecteren");
+  if(luchtkwaliteit.body.beschikbaar){
+    assert.equal(luchtkwaliteit.body.type,"actuele_lki","beschikbare Luchtmeetnet-payload moet expliciet een LKI zijn");
+    assert.equal(luchtkwaliteit.body.bron,"RIVM / Luchtmeetnet","beschikbare LKI mist expliciete bronvermelding");
+    assert(Number.isFinite(Number(luchtkwaliteit.body.lki))&&Number(luchtkwaliteit.body.lki)>=1&&Number(luchtkwaliteit.body.lki)<=11,"Nederlandse LKI valt buiten schaal 1–11");
+  }else{
+    assert.equal(typeof luchtkwaliteit.body.reden,"string","gedegradeerde Luchtmeetnet-payload mist een reden");
+  }
+
   const waarschuwingen=await json("/api/waarschuwingen?lat=52.3508&lon=5.2647&land=NL");
   assert.equal(waarschuwingen.r.status,200,"waarschuwingen-API is niet 200");
   security(waarschuwingen.r,"waarschuwingen-API");
@@ -108,5 +122,5 @@ function cloudflareCache(r,label){
   assert.equal(head.status,200,"HEAD op plaatsnaam-API is niet 200");
   assert.equal((await head.text()).length,0,"HEAD bevat onverwacht een responsebody");
 
-  console.log(`CLOUDFLARE PREVIEW SMOKE GESLAAGD: ${ROOT}; SHA ${EXPECTED_SHA}; statisch, compressie, strikt securitybeleid, versiecompatibele Analytics-CSP, CDN-cache en drie API-contracten groen.`);
+  console.log(`CLOUDFLARE PREVIEW SMOKE GESLAAGD: ${ROOT}; SHA ${EXPECTED_SHA}; statisch, compressie, strikt securitybeleid, versiecompatibele Analytics-CSP, CDN-cache en vier API-contracten groen.`);
 })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});
