@@ -104,8 +104,8 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
 {
  const {api,bak}=laadKern(390),d=bouw({wg:(u,dag)=>dag===0&&u===18?72:25});d.current.wind_gusts_10m=99;zetBasis(api,d);api.meters();const sub=tekst(bak.gustsub),waarde=norm(bak.gust.innerHTML);
  ok(/25/.test(waarde)&&!/99/.test(waarde),"windstoottegel gebruikt de uurforecast en niet de actuele 15-minutenwaarde",waarde);
- ok(/^Verwacht maximum voor 14:00–15:00\.$/.test(sub),"windstoottegel koppelt subtekst aan exact hetzelfde uurvak",sub);
- ok(!/hoogste windstoot|Later vandaag|Voor vandaag|\bbedroeg\b/i.test(sub),"windstoottegel mengt geen dagpiek of meetwaarde-achtige copy in het uurvak",sub);
+ ok(/^Verwachte hoogste windstoot tussen 14:00 en 15:00\.$/.test(sub),"windstoottegel koppelt de duidelijke subtekst aan exact hetzelfde uurvak",sub);
+ ok(!/Later vandaag|Voor vandaag|\bbedroeg\b/i.test(sub),"windstoottegel mengt geen dagpiek of meetwaarde-achtige copy in het uurvak",sub);
 }
 {
  const {api,bak}=laadKern(390),d=bouw({zicht:20000});d.current.visibility=20000;zetBasis(api,d);api.nachten();const t=tekst(bak.nights);ok(/Indicatie/.test(t)&&/\d+\/10/.test(t),"nachtzichtscore is compact, indicatief en begrijpelijk gelabeld",t.slice(0,300));ok(/Beste zichtperiode/.test(t),"nachtzicht benoemt de beste zichtperiode consumentgericht",t.slice(0,300));
