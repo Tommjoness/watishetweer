@@ -1,6 +1,7 @@
 "use strict";
 
 const assert=require("assert");
+const pkg=require("../package.json");
 const {
   MARKER,NAV_MARKER,MOTREGEN_BRON,MOTREGEN_PRODUCTIE,STIJL,pasDesktopRefinementToe
 }=require("./desktop-refinement-20260829.js");
@@ -30,9 +31,13 @@ assert.ok(STIJL.includes("min-width:0!important")&&STIJL.includes("max-width:non
 assert.ok(STIJL.includes("margin-left:0!important")&&STIJL.includes("margin-right:0!important"),"historische auto-marges mogen op desktop geen zijruimte terugbrengen");
 assert.ok(STIJL.includes("#minibar{")&&STIJL.includes("left:0!important")&&STIJL.includes("right:0!important"),"desktop-minibalk moet exact aan beide viewportranden worden verankerd");
 assert.ok(STIJL.includes("width:auto!important")&&STIJL.includes("transform:none!important"),"oude vaste/gecentreerde minibalkbreedte of transform mag de viewportbreedte niet meer beperken");
+const uitvoerStap="node scripts/desktop-refinement-20260829.js";
+assert.ok(pkg.scripts.test.includes(uitvoerStap),"npm test moet de desktopverfijning op de finale artifact uitvoeren vóór browserchecks");
+assert.ok(pkg.scripts.postbuild.includes(uitvoerStap),"npm postbuild moet de desktopverfijning op productie uitvoeren");
+assert.ok(pkg.scripts.test.indexOf(uitvoerStap)<pkg.scripts.test.indexOf("npm run test:browser-smoke"),"browserchecks moeten de echte verfijnde artifact zien");
 assert.strictEqual(pasDesktopRefinementToe(uit,"unit-herhaling"),uit,"postbuildverfijning moet idempotent zijn");
 
 assert.throws(()=>pasDesktopRefinementToe(bron.replace(NAV_MARKER,""),"zonder-nav"),/plaatsnavigatie ontbreekt of is dubbel/);
 assert.throws(()=>pasDesktopRefinementToe(bron.replace(MOTREGEN_BRON,""),"zonder-codes"),/motregencodetabel ontbreekt of is dubbel/);
 
-console.log("Desktopverfijning unit-test geslaagd: viewportbreed zonder zijgoten, onderste secties vullen de inhoudsbreedte, minibalk sluit aan, links behouden, Nachtzicht vult de desktopbreedte en motregencopy blijft natuurlijk.");
+console.log("Desktopverfijning unit-test geslaagd: finale build voert de laag echt uit; viewportbreed zonder zijgoten; onderste secties vullen de inhoudsbreedte; minibalk sluit aan; links behouden; Nachtzicht vult de desktopbreedte en motregencopy blijft natuurlijk.");
