@@ -23,10 +23,17 @@ for(const verboden of ["public/index.html","writeFileSync","vernieuwServiceworke
 }
 
 if(html.split(MARK).length-1!==1)throw new Error("Pollen-owner marker moet exact één keer in het finale artifact staan.");
-if(!Array.isArray(CONTRACTEN)||CONTRACTEN.length!==6)throw new Error("Pollen-owner moet exact zes bevroren bron→productiecontracten bevatten.");
+if(!Array.isArray(CONTRACTEN)||CONTRACTEN.length!==7)throw new Error("Pollen-owner moet exact zeven bevroren bron→productiecontracten bevatten.");
 for(const contract of CONTRACTEN){
   if(typeof contract.bron!=="string"||typeof contract.productie!=="string"||!contract.label)throw new Error("Ongeldig pollen-ownercontract.");
-  if(html.includes(contract.bron))throw new Error("Verouderde pollenbron staat nog in het finale artifact: "+contract.label);
+  /* Een vervangingscontract verwijdert zijn bron volledig. Het expliciete-nul-
+     contract is bewust uitbreidend: de bestaande subtekstregel blijft intact
+     en krijgt daarna de numerieke nulwaarde. In dat geval is de bron dus
+     noodzakelijk een substring van de productie en mag hij niet als stale
+     bron worden afgekeurd. De volledige productieregel moet in alle gevallen
+     wel exact in het artifact aanwezig zijn. */
+  const uitbreidend=contract.productie.includes(contract.bron);
+  if(!uitbreidend&&html.includes(contract.bron))throw new Error("Verouderde pollenbron staat nog in het finale artifact: "+contract.label);
   if(!html.includes(contract.productie))throw new Error("Pollenproductieregel ontbreekt in finale artifact: "+contract.label);
 }
 
@@ -37,7 +44,8 @@ for(const tekst of [
   'o.v<1?"&lt;1":Math.round(o.v)',
   'o.v<1||Math.round(o.v)===1?"korrel/m³":"korrels/m³"',
   'if(aanwezig===true)return {tekst:"Modelverwachting voor dit uur.",kleur:"ink"};',
-  'if(aanwezig===false)return {tekst:"Model verwacht geen pollen voor dit uur.",kleur:"ink45"};'
+  'if(aanwezig===false)return {tekst:"Model verwacht geen pollen voor dit uur.",kleur:"ink45"};',
+  'val.innerHTML="0<s>korrels/m³</s>";'
 ]){
   if(!html.includes(tekst))throw new Error("Bevroren pollenproductgedrag ontbreekt: "+tekst);
 }
@@ -51,4 +59,4 @@ for(const verouderd of [
   if(html.includes(verouderd))throw new Error("Verouderde/dubbele pollenpresentatie-owner staat nog in finale artifact: "+verouderd);
 }
 
-console.log("Lucht/pollenartifact geverifieerd: pure base-build owner bezit CAMS-dekking, uurmismatch, sub-1 presentatie en finale pollen-modelcopy zonder late UI-polish-owner.");
+console.log("Lucht/pollenartifact geverifieerd: pure base-build owner bezit CAMS-dekking, uurmismatch, sub-1 presentatie, expliciete nul en finale pollen-modelcopy zonder late UI-polish-owner.");

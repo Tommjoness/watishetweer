@@ -355,16 +355,14 @@ nachten=function(){
 
 /* Verstreken uurwaarden zijn forecast/modelwaarden, geen waarnemingen. Daarnaast
    worden categorieën die naast afgeronde cijfers staan op exact die zichtbare
-   cijfers gebaseerd: wind/Bft, bewolking, UV en zicht kunnen zo niet botsen. */
+   cijfers gebaseerd: wind/Bft, bewolking, UV en zicht kunnen zo niet botsen.
+   De historische #gust-tegel is inmiddels tijd-tot-zonsondergang; deze laag
+   schrijft daarom bewust niet meer naar #gustsub. */
 const basisMeters=meters;
 meters=function(){
   basisMeters();
   try{
-    const c=S.d.current||{},nu=weatherNowActueleLokaleTijd(),pg=piek("wind_gusts_10m"),gustSub=document.getElementById("gustsub");
-    if(gustSub&&pg&&pg.t&&nu&&pg.t<nu&&pg.t.slice(0,10)===String(nu).slice(0,10)&&num(pg.v)!==null){
-      gustSub.textContent="De hoogste verwachte windstoot voor vandaag bedroeg "+Math.round(pg.v)+" km/u in het uur "+weatherNowUurvak(pg.t)+".";
-    }
-
+    const c=S.d.current||{};
     const wind=num(c.wind_speed_10m),richting=num(c.wind_direction_10m);
     if(wind!==null&&wind>=0){
       const zichtbaar=Math.round(wind),bf=bft(zichtbaar),richtingVol=kompas(richting),sub=document.getElementById("windsub");

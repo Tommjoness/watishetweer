@@ -12,7 +12,11 @@ const MARK="/* ===== SHORT TERM METRIC CLARITY 20260831 ===== */";
 /* De late mobile-truthlaag draait bewust op alle viewports en was daardoor de
    laatste eigenaar van de kop boven #pop. Hij maakte van een precieze kans +
    hoeveelheid opnieuw het generieke 'Neerslag komend uur'. Vervang exact die
-   kleine presentatie-owner; brondata, kansbeleid en Q1-horizon blijven intact. */
+   kleine presentatie-owner; brondata, kansbeleid en Q1-horizon blijven intact.
+
+   Deze laag bezit bewust GEEN windstoottegel meer. De voormalige gust-slot in
+   het hoofdgrid presenteert nu tijd tot zonsondergang; windstootdata blijft
+   elders beschikbaar voor de bestaande weerlogica zonder deze kaart te muteren. */
 const NEERSLAG_UUR_OUD=`function neerslagUurBetekenis(){
   const waarde=document.getElementById("pop"),stat=waarde&&waarde.closest(".stat");if(!waarde||!stat)return;
   const kop=stat.querySelector(".eyebrow");if(kop)kop.textContent="Neerslag komend uur";
@@ -92,7 +96,7 @@ function voerUit(){
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:short-term-metric-clarity-"+(i+1)}));
   fs.writeFileSync(PAD,html,"utf8");
   const versie=vernieuwServiceworkerCache(OUT,"short-term-metric-clarity-20260831");
-  console.log("Kortetermijnmetingen verduidelijkt: windstootuurmaximum en neerslagkans/hoeveelheid zijn expliciet; cache "+versie+".");
+  console.log("Kortetermijnmetingen verduidelijkt: neerslagkans en verwachte hoeveelheid zijn expliciet; zonsondergangtegel blijft onaangeraakt; cache "+versie+".");
 }
 
 if(require.main===module)voerUit();

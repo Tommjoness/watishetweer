@@ -6,8 +6,12 @@ const path=require("path");
 const {spawnSync}=require("child_process");
 
 /* Test exact de definitieve artifact via dezelfde tijdelijke bronwissel als de
-   wereldmatrix. Zo bewaken we zichtbare runtime-uitvoer, niet alleen de tekst
-   van de postbuildpatch. */
+   wereldmatrix. Zo bewaken we runtime-uitvoer van de echte productiecode. Voor
+   een late innerHTML-mutatie bewaren we daarnaast de ruwe HTML: kern.js houdt
+   die bewust exact bij, terwijl zijn lichte DOM-mock (anders dan een browser)
+   de parent-textContent niet opnieuw afleidt uit later toegewezen innerHTML.
+   De echte zichtbaarheid van de nulwaarde wordt daarom aanvullend in Chromium
+   geborgd door browser-pollen-zero.test.js. */
 const bron=path.join(__dirname,"index.html");
 const gebouwd=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(gebouwd))throw new Error("public/index.html ontbreekt voor pollen-uurregressie");
@@ -32,7 +36,12 @@ function context(airUur,grass=250,lat=52.37,lon=4.90){
   api.lucht();
   const stats=bak.aq.querySelectorAll(".stat").map(stat=>{
     const kop=stat.querySelector(".eyebrow"),val=stat.querySelector(".sval"),sub=stat.querySelector(".ssub");
-    return {kop:kop?String(kop.textContent||"").trim():"",val:val?String(val.textContent||"").trim():"",sub:sub?String(sub.textContent||"").trim():""};
+    return {
+      kop:kop?String(kop.textContent||"").trim():"",
+      val:val?String(val.textContent||"").trim():"",
+      valHtml:val?String(val.innerHTML||"").trim():"",
+      sub:sub?String(sub.textContent||"").trim():""
+    };
   });
   return stats;
 }
@@ -62,6 +71,8 @@ const nul=context("2026-08-13T12:00",0);
 const nulPollen=vind(nul,"Pollen");
 assert(nulPollen,nul);
 assert.equal(nulPollen.sub,"Model verwacht geen pollen voor dit uur.");
+assert(/0/.test(nulPollen.valHtml)&&nulPollen.valHtml.includes("korrels/m³"),"expliciete modelnul moet als 0 korrels/m³ in de runtime-DOM staan: "+JSON.stringify(nulPollen));
+assert(!/^–$/.test(nulPollen.valHtml),"expliciete modelnul mag in de runtime-DOM niet op ontbrekende data lijken: "+JSON.stringify(nulPollen));
 
 /* CAMS Regional Europe dekt 25W–45E / 30N–72N. De oude appgrens eindigde al
    bij 71,5N en begon bij 29,5N. Toets de zichtbare modelkeuze op en rond beide
@@ -86,7 +97,7 @@ const zuidBuiten=context("2026-08-13T12:00",250,29.99,20);
 assert.equal(vind(zuidBuiten,"Luchtkwaliteit").sub,"goed · AQI (VS-schaal)","onder 30N moet de globale AQI worden gebruikt");
 assert.equal(vind(zuidBuiten,"Pollen").sub,"Voor deze locatie niet beschikbaar","onder 30N mag Europese pollenfixture niet worden getoond en moet de modeldekking eerlijk worden benoemd");
 
-console.log("Lucht/pollenregressie: CAMS-Europe-randen, uurmismatch, exact uur, natuurlijke kop en sub-1 concentraties blijven correct zichtbaar.");
+console.log("Lucht/pollenregressie: CAMS-Europe-randen, uurmismatch, expliciete nul in runtime-DOM, exact uur, natuurlijke kop en sub-1 concentraties blijven correct.");
 `;
 let status=1;
 try{

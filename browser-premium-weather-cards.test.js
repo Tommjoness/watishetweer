@@ -10,11 +10,15 @@ d.current.apparent_temperature=18;
 d.current.relative_humidity_2m=86;
 d.current.wind_speed_10m=9;
 d.current.wind_direction_10m=157.5;
-d.current.wind_gusts_10m=99; // bewust afwijkend: actuele waarde mag de uurforecasttegel niet voeden
+d.current.wind_gusts_10m=99; // blijft beschikbaar, maar voedt de hoofdtegel niet meer
 const i=d.hourly.time.findIndex(t=>t==="2026-07-22T20:00");
 assert(i>=0&&i+1<d.hourly.time.length,"fixture mist 20:00/21:00 uurpunten");
 d.hourly.wind_gusts_10m[i]=11;
-d.hourly.wind_gusts_10m[i+1]=14.4; // 21:00 beschrijft het voorafgaande uur 20:00–21:00
+d.hourly.wind_gusts_10m[i+1]=14.4;
+const di=d.daily.time.indexOf("2026-07-22");
+assert(di>=0&&di+1<d.daily.time.length,"fixture mist vandaag/morgen in daily");
+d.daily.sunset[di]="2026-07-22T21:45";
+d.daily.sunset[di+1]="2026-07-23T21:44";
 
 const air={current:{european_aqi:25,us_aqi:35},hourly:{time:[d.current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[0],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}};
 let html=fs.readFileSync(path.join(__dirname,"public","index.html"),"utf8");
@@ -68,14 +72,14 @@ function controleer(maat,naam){
   const dom=r.stdout||"";
   const veld=naam=>{const m=new RegExp('data-'+naam+'="([^"]*)"').exec(dom);return m?m[1].replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">"):null;};
   assert.equal(veld("premium-result"),"ok",naam+": runtimefixture moet slagen; "+veld("premium-exception"));
-  assert.equal(veld("premium-gust-kop"),"Max. windstoot dit uur",naam+": windstootkop benoemt expliciet dat de waarde het uurmaximum is");
-  assert(/14\s*km\/u/i.test(veld("premium-gust-waarde")||""),naam+": uurforecast gebruikt 14 km/u; waarde="+veld("premium-gust-waarde"));
-  assert(!/99/.test(veld("premium-gust-waarde")||""),naam+": actuele windstoot mag niet in uurforecast lekken");
-  assert.equal(veld("premium-gust-sub"),"Verwachte hoogste windstoot tussen 20:00 en 21:00.",naam+": subtekst benoemt betekenis en exact hetzelfde forecastuur");
+  assert.equal(veld("premium-gust-kop"),"Tijd tot zonsondergang",naam+": hoofdtegel benoemt de resterende tijd tot zonsondergang");
+  assert(/1\s*u\s*35\s*min/i.test(veld("premium-gust-waarde")||""),naam+": 20:10 tot 21:45 is 1 u 35 min; waarde="+veld("premium-gust-waarde"));
+  assert(!/99|14\s*km\/u/i.test(veld("premium-gust-waarde")||""),naam+": windstootdata mag niet in de zonsondergangtegel lekken");
+  assert.equal(veld("premium-gust-sub"),"Vandaag om 21:45.",naam+": subtekst noemt dezelfde lokale zonsondergang");
   assert(/86\s*%/.test(veld("premium-hum-waarde")||""),naam+": relatieve luchtvochtigheid blijft zichtbaar; waarde="+veld("premium-hum-waarde"));
   assert.equal(veld("premium-hum-sub"),"Dauwpunt circa 16 °C · kan wat klam aanvoelen.",naam+": vochtigheid krijgt praktische dauwpuntduiding");
   assert(Number(veld("premium-overflow"))<=2,naam+": premium copy veroorzaakt geen horizontale overflow; overflow="+veld("premium-overflow"));
-  console.log("Premium weerkaarten "+naam+" groen: expliciet uurmaximum windstoot, dauwpuntduiding en overflow kloppen.");
+  console.log("Premium weerkaarten "+naam+" groen: tijd tot zonsondergang, dauwpuntduiding en overflow kloppen.");
 }
 
 try{

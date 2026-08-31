@@ -72,8 +72,9 @@ ok(hintOwnerPos>q4RuntimeBegin&&hintOwnerPos<q4RuntimePos,"Q4 bezit de grafiekhi
 const hintTekstPos=html.indexOf('el.textContent="Selecteer een punt in de grafiek voor details.";',hintOwnerPos);
 ok(hintTekstPos>hintOwnerPos&&hintTekstPos<q4RuntimePos,"Q4 grafiekhint-owner bevat de input-neutrale zichtbare tekst");
 ok(html.includes('<p class="hint" id="dagenhint">Kies een dag om die verwachting in de grafiek te bekijken.</p>'),"zichtbare daghint is invoermethode-neutraal");
-ok(html.includes('<div class="eyebrow">Windstoot dit uur</div>'),"windstootkop benoemt dezelfde uurforecast als waarde en subtekst");
-ok(!html.includes('<div class="eyebrow">Windstoot rond nu</div>'),"oude vage windstootkop is uit de finale Q4-artifact verdwenen");
+ok(html.includes('<div class="eyebrow">Tijd tot zonsondergang</div>'),"statische hoofdtegelkop benoemt tijd tot zonsondergang");
+ok(!html.includes('<div class="eyebrow">Windstoot dit uur</div>')&&!html.includes('<div class="eyebrow">Windstoot rond nu</div>'),"historische windstootkoppen zijn uit de finale Q4-artifact verdwenen");
+ok(!html.includes("De hoogste verwachte windstoot voor vandaag bedroeg"),"historische windstootdagpiek kan de zonsondergangsubtekst niet overschrijven");
 
 /* Dag-neerslagtaal heeft één bron-eigenaar: NEERSLAGKANSBELEID V3. Q4 mag de
    senior-correctheidslaag niet meer tekstueel repareren. We controleren daarom
