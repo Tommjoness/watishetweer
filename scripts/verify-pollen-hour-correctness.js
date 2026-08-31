@@ -26,7 +26,14 @@ if(html.split(MARK).length-1!==1)throw new Error("Pollen-owner marker moet exact
 if(!Array.isArray(CONTRACTEN)||CONTRACTEN.length!==7)throw new Error("Pollen-owner moet exact zeven bevroren bron→productiecontracten bevatten.");
 for(const contract of CONTRACTEN){
   if(typeof contract.bron!=="string"||typeof contract.productie!=="string"||!contract.label)throw new Error("Ongeldig pollen-ownercontract.");
-  if(html.includes(contract.bron))throw new Error("Verouderde pollenbron staat nog in het finale artifact: "+contract.label);
+  /* Een vervangingscontract verwijdert zijn bron volledig. Het expliciete-nul-
+     contract is bewust uitbreidend: de bestaande subtekstregel blijft intact
+     en krijgt daarna de numerieke nulwaarde. In dat geval is de bron dus
+     noodzakelijk een substring van de productie en mag hij niet als stale
+     bron worden afgekeurd. De volledige productieregel moet in alle gevallen
+     wel exact in het artifact aanwezig zijn. */
+  const uitbreidend=contract.productie.includes(contract.bron);
+  if(!uitbreidend&&html.includes(contract.bron))throw new Error("Verouderde pollenbron staat nog in het finale artifact: "+contract.label);
   if(!html.includes(contract.productie))throw new Error("Pollenproductieregel ontbreekt in finale artifact: "+contract.label);
 }
 
