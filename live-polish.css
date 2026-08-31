@@ -210,6 +210,44 @@
     overflow-wrap:break-word;
     word-break:normal;
   }
+
+  /* Finale verkoop-/overdrachtspolish op breed desktop. Dit is bewust alleen
+     geometrie: de onderliggende SVG, weerwaarden, teksten, links en interacties
+     blijven exact dezelfde. */
+  #nc{
+    width:min(960px,100%);
+    margin-right:auto;
+  }
+  #nctext{margin-bottom:4px}
+
+  #days{max-width:1000px}
+  #days .row.day{
+    grid-template-columns:92px 24px minmax(260px,1fr) 62px 46px 104px 44px 54px;
+    gap:10px;
+    padding:10px 0;
+  }
+
+  #nights{max-width:1000px}
+  #nights .row.night{
+    grid-template-columns:88px 52px minmax(190px,1fr) 82px minmax(230px,260px);
+    gap:12px;
+    padding:10px 0;
+  }
+  #nights .row.night > .nmeta.wide{max-width:260px}
+
+  /* De SEO-plaatsnavigatie wordt later in de build gegenereerd. De extra
+     body-child-specificiteit is daarom doelbewust hoger dan de generieke
+     .seo-plaatsnav-regel uit die late laag. Zo sluit het blok visueel aan op
+     hetzelfde witte vel, zonder route-HTML of indexeerbare links te muteren. */
+  body > .seo-plaatsnav{
+    box-sizing:border-box;
+    max-width:min(1180px,100%);
+    margin:0 auto;
+    padding:20px 48px 24px;
+    border:1px solid var(--rule);
+    border-top:0;
+    background:var(--sheet);
+  }
 }
 
 @media(min-width:901px){
