@@ -68,14 +68,14 @@ function controleer(maat,naam){
   const dom=r.stdout||"";
   const veld=naam=>{const m=new RegExp('data-'+naam+'="([^"]*)"').exec(dom);return m?m[1].replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">"):null;};
   assert.equal(veld("premium-result"),"ok",naam+": runtimefixture moet slagen; "+veld("premium-exception"));
-  assert.equal(veld("premium-gust-kop"),"Windstoot dit uur",naam+": windstootkop heeft één duidelijke tijdscope");
+  assert.equal(veld("premium-gust-kop"),"Max. windstoot dit uur",naam+": windstootkop benoemt expliciet dat de waarde het uurmaximum is");
   assert(/14\s*km\/u/i.test(veld("premium-gust-waarde")||""),naam+": uurforecast gebruikt 14 km/u; waarde="+veld("premium-gust-waarde"));
   assert(!/99/.test(veld("premium-gust-waarde")||""),naam+": actuele windstoot mag niet in uurforecast lekken");
-  assert.equal(veld("premium-gust-sub"),"Verwacht maximum voor 20:00–21:00.",naam+": subtekst hoort bij exact dezelfde forecastwaarde");
+  assert.equal(veld("premium-gust-sub"),"Verwachte hoogste windstoot tussen 20:00 en 21:00.",naam+": subtekst benoemt betekenis en exact hetzelfde forecastuur");
   assert(/86\s*%/.test(veld("premium-hum-waarde")||""),naam+": relatieve luchtvochtigheid blijft zichtbaar; waarde="+veld("premium-hum-waarde"));
   assert.equal(veld("premium-hum-sub"),"Dauwpunt circa 16 °C · kan wat klam aanvoelen.",naam+": vochtigheid krijgt praktische dauwpuntduiding");
   assert(Number(veld("premium-overflow"))<=2,naam+": premium copy veroorzaakt geen horizontale overflow; overflow="+veld("premium-overflow"));
-  console.log("Premium weerkaarten "+naam+" groen: uurwindstoot, dauwpuntduiding en overflow kloppen.");
+  console.log("Premium weerkaarten "+naam+" groen: expliciet uurmaximum windstoot, dauwpuntduiding en overflow kloppen.");
 }
 
 try{
