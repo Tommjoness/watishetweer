@@ -229,12 +229,10 @@
     padding:10px 0;
   }
 
-  #nights .row.night{
-    grid-template-columns:88px 52px minmax(190px,1fr) 82px minmax(230px,260px);
-    gap:12px;
-    padding:10px 0;
-  }
-  #nights .row.night > .nmeta.wide{max-width:260px}
+  /* Nachtzicht blijft de volledige beschikbare rij benutten; alleen het
+     verticale ritme wordt compacter. De finale desktopowner mag de flexibele
+     middenkolom en rechtertekstkolom dus vrij laten meegroeien. */
+  #nights .row.night{padding:10px 0}
 
   /* De SEO-plaatsnavigatie wordt later in de build gegenereerd. De extra
      body-child-specificiteit is daarom doelbewust hoger dan de generieke
