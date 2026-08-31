@@ -26,8 +26,11 @@ const MOTREGEN_PRODUCTIE='55:["Motregen","regen"],56:["Aanvriezende motregen","i
    kan een historische max-width of brede/uitgezoomde browser nooit opnieuw
    grijze zijgoten zichtbaar maken. De fixed contextbalk volgt vanaf hetzelfde
    breakpoint exact die viewportgeometrie; oude gecentreerde breedte- of
-   transformregels worden daar expliciet geneutraliseerd. Onder 1100 px blijft
-   de bestaande responsieve layout volledig eigenaar. */
+   transformregels worden daar expliciet geneutraliseerd. De inhoud binnen het
+   productvlak krijgt op desktop dezelfde harde breedtewaarheid: #app, de
+   grafiekwrapper en vooral de gestapelde Zeven dagen/Nachtzicht-wrapper plus
+   beide kinderen mogen nooit opnieuw tot een smalle linkerkolom terugvallen.
+   Onder 1100 px blijft de bestaande responsieve layout volledig eigenaar. */
 const STIJL=`<style id="${MARKER}">
 @media(min-width:701px){
   .seo-plaatsnav{
@@ -55,6 +58,23 @@ const STIJL=`<style id="${MARKER}">
     max-width:none!important;
     margin-left:0!important;
     margin-right:0!important
+  }
+  #app,
+  .dashrow-chart,
+  .dashrow-chart>.dashcol,
+  .dashrow-days,
+  .dashrow-days>.dashcol,
+  #days,
+  #nights,
+  #aq{
+    box-sizing:border-box;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important
+  }
+  .dashrow-days{
+    display:block!important;
+    grid-template-columns:none!important
   }
   #minibar{
     left:0!important;
@@ -99,7 +119,7 @@ function main(){
     fs.writeFileSync(doel.pad,pasDesktopRefinementToe(bron,doel.label),"utf8");
   }
   const versie=vernieuwServiceworkerCache(OUT,"desktop-refinement-20260829");
-  console.log(`Desktopverfijning toegepast op ${doelen.length} weerpagina's: viewportbreed productvlak en minibalk, plaatsnav geïntegreerd, Nachtzicht breedtevullend en motregencopy genormaliseerd; cache ${versie}.`);
+  console.log(`Desktopverfijning toegepast op ${doelen.length} weerpagina's: viewportbreed productvlak, interne desktopsecties en minibalk; plaatsnav geïntegreerd, Nachtzicht breedtevullend en motregencopy genormaliseerd; cache ${versie}.`);
 }
 
 if(require.main===module)main();
