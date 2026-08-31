@@ -210,6 +210,43 @@
     overflow-wrap:break-word;
     word-break:normal;
   }
+
+  /* Finale verkoop-/overdrachtspolish op breed desktop. Dit is bewust alleen
+     geometrie: de onderliggende SVG, weerwaarden, teksten, links en interacties
+     blijven exact dezelfde. */
+  #nc{
+    width:min(960px,100%);
+    margin-right:auto;
+  }
+  #nctext{margin-bottom:4px}
+
+  /* Kop, hint en tabel houden samen dezelfde compacte leesbreedte. Daardoor
+     blijft de horizontale sectielijn exact op de rijen aansluiten. */
+  .dashrow-days > .dashcol{max-width:1000px}
+  #days .row.day{
+    grid-template-columns:92px 24px minmax(260px,1fr) 62px 46px 104px 44px 54px;
+    gap:10px;
+    padding:10px 0;
+  }
+
+  /* Nachtzicht blijft de volledige beschikbare rij benutten; alleen het
+     verticale ritme wordt compacter. De finale desktopowner mag de flexibele
+     middenkolom en rechtertekstkolom dus vrij laten meegroeien. */
+  #nights .row.night{padding:10px 0}
+
+  /* De SEO-plaatsnavigatie wordt later in de build gegenereerd. De extra
+     body-child-specificiteit is daarom doelbewust hoger dan de generieke
+     .seo-plaatsnav-regel uit die late laag. Zo sluit het blok visueel aan op
+     hetzelfde witte vel, zonder route-HTML of indexeerbare links te muteren. */
+  body > .seo-plaatsnav{
+    box-sizing:border-box;
+    max-width:min(1440px,100%);
+    margin:0 auto;
+    padding:20px 56px 24px;
+    border:1px solid var(--rule);
+    border-top:0;
+    background:var(--sheet);
+  }
 }
 
 @media(min-width:901px){
@@ -225,6 +262,7 @@
 
 @media(min-width:1500px){
   #minibar{padding-left:64px;padding-right:64px}
+  body > .seo-plaatsnav{padding-left:64px;padding-right:64px}
 }
 
 /* Nachtzicht leest rustiger als oordeel, beste periode en context ieder hun
