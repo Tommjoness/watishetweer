@@ -77,9 +77,9 @@ function controleer(maat,naam){
   assert(!/99|14\s*km\/u/i.test(veld("premium-gust-waarde")||""),naam+": windstootdata mag niet in de zonsondergangtegel lekken");
   assert.equal(veld("premium-gust-sub"),"Vandaag om 21:45.",naam+": subtekst noemt dezelfde lokale zonsondergang");
   assert(/86\s*%/.test(veld("premium-hum-waarde")||""),naam+": relatieve luchtvochtigheid blijft zichtbaar; waarde="+veld("premium-hum-waarde"));
-  assert.equal(veld("premium-hum-sub"),"Dauwpunt circa 16 °C · kan wat klam aanvoelen.",naam+": vochtigheid krijgt praktische dauwpuntduiding");
+  assert.equal(veld("premium-hum-sub"),"Hoge luchtvochtigheid. Dauwpunt circa 16 °C.",naam+": vochtigheid blijft feitelijk zonder ongegronde comfortclaim");
   assert(Number(veld("premium-overflow"))<=2,naam+": premium copy veroorzaakt geen horizontale overflow; overflow="+veld("premium-overflow"));
-  console.log("Premium weerkaarten "+naam+" groen: tijd tot zonsondergang, dauwpuntduiding en overflow kloppen.");
+  console.log("Premium weerkaarten "+naam+" groen: tijd tot zonsondergang, neutrale vochtigheidscopy en overflow kloppen.");
 }
 
 try{
