@@ -87,7 +87,7 @@ function pasKortetermijnMetricClarityToe(bron){
 function voerUit(){
   let html=fs.readFileSync(PAD,"utf8");
   html=pasKortetermijnMetricClarityToe(html);
-  const scripts=[...html.matchAll(/<script(?![^>]*\\ssrc=)[^>]*>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]);
+  const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
   if(!scripts.length)throw new Error("Geen inline runtime na kortetermijn-metric clarity.");
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:short-term-metric-clarity-"+(i+1)}));
   fs.writeFileSync(PAD,html,"utf8");
