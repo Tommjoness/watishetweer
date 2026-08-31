@@ -5,7 +5,7 @@ const {
   DOMAIN,
   authHeaders,
   haalZoneTag
-} = require("./cloudflare-disable-rum.js");
+} = require("./cloudflare-web-analytics-setup.js");
 
 const PHASE = "http_ratelimit";
 const RULE_REF = "watishetweer_api_rate_limit";
