@@ -1,18 +1,18 @@
 /* Mobiele semantiek 2026-08-28. Bestaande responsive geometrie blijft eigenaar. */
-.mobile-neerslag-sleutel,.mobile-meetdetails{display:none}
+.mobile-meetdetails{display:none}
+/* Kans en hoeveelheid zijn twee verschillende grootheden. Deze korte sleutel is
+   daarom niet alleen mobiel nuttig: ook op desktop moet 100% · 6,0 mm zonder
+   giswerk als kans plus verwacht uurtotaal te lezen zijn. */
+.mobile-neerslag-sleutel{
+  display:block;
+  margin-top:4px;
+  font-size:10px;
+  line-height:1.3;
+  letter-spacing:.02em;
+  color:var(--ink-25);
+}
 
 @media(max-width:900px){
-  /* Maak de twee grootheden onder de uurtegel expliciet zonder het bestaande
-     metriekgrid, de UV-rij of andere dashboardsecties opnieuw te stylen. */
-  .mobile-neerslag-sleutel{
-    display:block;
-    margin-top:4px;
-    font-size:10px;
-    line-height:1.3;
-    letter-spacing:.02em;
-    color:var(--ink-25);
-  }
-
   /* Alleen de langere verklaringszinnen worden op mobiel samengevat. De
      bestaande stat-tegels, kolommen, borders en afmetingen blijven onaangeraakt. */
   .dashrow-hero .stats .mobile-secundaire-stat > .ssub{display:none}
