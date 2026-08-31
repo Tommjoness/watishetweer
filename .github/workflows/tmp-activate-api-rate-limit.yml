@@ -11,7 +11,7 @@ permissions:
 jobs:
   activate-and-verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 6
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -37,7 +37,7 @@ jobs:
           printf '%s' "$html" | grep -F "$EXPECTED_SHA" >/dev/null
           echo "PRODUCTIE_SHA_OK $EXPECTED_SHA"
 
-      - name: Activeer Cloudflare API rate limit idempotent
+      - name: Borg Cloudflare API rate limit idempotent
         run: node scripts/cloudflare-api-rate-limit.js
 
       - name: Lees rate limit terug en bewijs exacte configuratie
@@ -53,7 +53,7 @@ jobs:
               project: process.env.CLOUDFLARE_PROJECT
             });
             console.log('RATE_LIMIT_STATUS ' + JSON.stringify(status));
-            if (!status.actief) throw new Error('Rate limit is na activatie niet actief: ' + String(status.reden || 'onbekend'));
+            if (!status.actief) throw new Error('Rate limit is niet actief: ' + String(status.reden || 'onbekend'));
           })().catch(error => {
             console.error(error && error.stack || error);
             process.exit(1);
@@ -65,8 +65,13 @@ jobs:
         run: |
           set -euo pipefail
           url='https://watishetweer.nl/api/neerslag?lat=35.68043&lon=139.76611&land=JP'
+          echo 'Wacht 20 seconden op edge-propagatie van de rate-limitregel...'
+          sleep 20
           : > /tmp/codes.txt
-          seq 1 72 | xargs -I{} -P24 sh -c 'curl -sS --max-time 20 -o /dev/null -w "%{http_code}\n" "$1" || true' _ "$url" >> /tmp/codes.txt
+          for batch in $(seq 1 12); do
+            seq 1 8 | xargs -I{} -P8 sh -c 'curl -sS --max-time 20 -o /dev/null -w "%{http_code}\n" "$1" || true' _ "$url" >> /tmp/codes.txt
+            sleep 1
+          done
           sort /tmp/codes.txt | uniq -c | sort -n
           count429="$(grep -c '^429$' /tmp/codes.txt || true)"
           test "$count429" -ge 1
