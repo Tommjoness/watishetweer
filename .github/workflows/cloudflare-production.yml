@@ -86,6 +86,9 @@ jobs:
       - name: Schakel Cloudflare RUM uit via Configuration Rule
         run: node scripts/cloudflare-disable-rum.js
 
+      - name: Borg Cloudflare API rate limit
+        run: node scripts/cloudflare-api-rate-limit.js
+
       - name: Bouw Cloudflare productie-artifact
         env:
           WEATHER_BUILD_SHA: ${{ env.SOURCE_SHA }}
