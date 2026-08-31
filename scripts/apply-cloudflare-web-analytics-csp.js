@@ -4,19 +4,53 @@ const fs=require("fs");
 const path=require("path");
 const CSP_SOURCE="https://static.cloudflareinsights.com/beacon.min.js";
 
+function ontleedRichtlijn(deel){
+  const trim=String(deel||"").trim();
+  if(!trim)return {naam:"",bronnen:[]};
+  const stukken=trim.split(/\s+/);
+  return {naam:String(stukken.shift()||"").toLowerCase(),bronnen:stukken};
+}
+
+function voegBronToe(deel){
+  const tekst=String(deel||"");
+  const trim=tekst.trim();
+  if(!trim||trim.split(/\s+/).includes(CSP_SOURCE))return tekst;
+  const prefix=tekst.slice(0,tekst.indexOf(trim));
+  return `${prefix}${trim} ${CSP_SOURCE}`;
+}
+
 function verruimCsp(policy){
-  const delen=String(policy||"").split(";");
-  let gevonden=false;
-  const nieuw=delen.map(deel=>{
-    const trim=deel.trim();
-    if(!/^script-src(?:\s|$)/.test(trim))return deel;
-    gevonden=true;
-    if(trim.includes(CSP_SOURCE))return deel;
-    const prefix=deel.slice(0,deel.indexOf(trim));
-    return `${prefix}${trim} ${CSP_SOURCE}`;
-  });
-  if(!gevonden)throw new Error("HTML-CSP mist script-src; automatische Cloudflare Web Analytics kan niet veilig worden toegestaan.");
-  return nieuw.join(";");
+  const origineel=String(policy||"");
+  const delen=origineel.split(";");
+  const info=delen.map(ontleedRichtlijn);
+  const elemIndex=info.findIndex(x=>x.naam==="script-src-elem");
+  const scriptIndex=info.findIndex(x=>x.naam==="script-src");
+  const defaultIndex=info.findIndex(x=>x.naam==="default-src");
+
+  /* Een externe <script src> volgt CSP in deze volgorde: script-src-elem,
+     script-src, default-src. Verruim daarom uitsluitend de werkelijk effectieve
+     richtlijn. Zo behouden routes met een afwijkende meta-CSP hun bestaande
+     beperkingen en krijgt alleen de officiële Cloudflare-beacon extra toegang. */
+  if(elemIndex>=0){
+    delen[elemIndex]=voegBronToe(delen[elemIndex]);
+    return delen.join(";");
+  }
+  if(scriptIndex>=0){
+    delen[scriptIndex]=voegBronToe(delen[scriptIndex]);
+    return delen.join(";");
+  }
+  if(defaultIndex>=0){
+    const bronnen=info[defaultIndex].bronnen;
+    if(!bronnen.length)throw new Error("HTML-CSP heeft een ongeldige lege default-src; Web Analytics kan niet veilig worden toegestaan.");
+    const nieuw=` script-src ${bronnen.join(" ")} ${CSP_SOURCE}`;
+    delen.splice(defaultIndex+1,0,nieuw);
+    return delen.join(";");
+  }
+
+  /* Zonder script-src(-elem) én zonder default-src beperkt deze meta-CSP
+     externe scripts niet. Extra beleid toevoegen zou de bestaande pagina juist
+     strenger kunnen maken en onverwacht breken, dus dit is bewust een noop. */
+  return origineel;
 }
 
 function pasHtmlAan(html){
@@ -62,4 +96,4 @@ if(require.main===module){
   catch(e){console.error(e&&e.stack||e);process.exit(1);}
 }
 
-module.exports={CSP_SOURCE,verruimCsp,pasHtmlAan,htmlBestanden,pasArtifactAan};
+module.exports={CSP_SOURCE,ontleedRichtlijn,voegBronToe,verruimCsp,pasHtmlAan,htmlBestanden,pasArtifactAan};
