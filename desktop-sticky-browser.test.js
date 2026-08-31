@@ -28,7 +28,13 @@ assertBronInvariant(html,"background:var(--rule-soft)","maanfase heeft een zicht
    verschuiven. Progressieve locatielading heeft in die kunstmatige situatie
    terecht een tijdelijke laadklasse actief; die verwijderen we in de reporter
    expliciet voordat de sticky-meting begint. Het aparte progressive-location-
-   browsertestbestand bewaakt juist die tijdelijke staat zelf. */
+   browsertestbestand bewaakt juist die tijdelijke staat zelf.
+
+   De desktop-hero stond historisch verticaal gecentreerd naast het hogere
+   meetraster. Na het viewportbrede redesign levert dat een groot leeg vlak
+   boven de actuele temperatuur op. De finale desktoplaag lijnt de hero daarom
+   bewust bovenaan uit. Deze test bewaakt nu die nieuwe visuele invariant én
+   blijft apart bewijzen dat de sticky minibalk pas na de hero actief is. */
 html=html.replace("</head>",'<style>#app{display:block!important}</style><script>window.fetch=()=>new Promise(()=>{});</script></head>');
 const reporter=`<script>
 setTimeout(()=>{
@@ -44,7 +50,7 @@ setTimeout(()=>{
     window.dispatchEvent(new Event('scroll'));
     setTimeout(()=>{
       const bs=getComputedStyle(bar),br=bar.getBoundingClientRect(),sr=sheet.getBoundingClientRect(),hr=hero.getBoundingClientRect();
-      const heroVoorbij=hr.bottom<=0,heroOk=hs.alignSelf==='center'&&hs.marginTop==='0px';
+      const heroVoorbij=hr.bottom<=0,heroOk=hs.alignSelf==='start'&&hs.marginTop==='0px';
       if(!mobiel){
         const breedteOk=Math.abs(br.width-sr.width)<=2,bovenOk=Math.abs(br.top)<=1;
         const balkOk=bar.classList.contains('aan')&&!bar.classList.contains('senior-verstopt')&&bs.display==='flex'&&bs.position==='fixed'&&breedteOk&&bovenOk&&heroVoorbij;
@@ -105,5 +111,5 @@ try{
   const mobiel=draai(390,844,3600);
   if(waarde(mobiel,"mobile-sticky-result")!=="ok") throw new Error("mobiel resultaat="+waarde(mobiel,"mobile-sticky-result")+", neer="+waarde(mobiel,"mobile-sticky-neer")+", aanNeer="+waarde(mobiel,"mobile-sticky-aan-neer")+", verstoptNeer="+waarde(mobiel,"mobile-sticky-verstopt-neer")+", pointerNeer="+waarde(mobiel,"mobile-sticky-pointer-neer")+", omhoog="+waarde(mobiel,"mobile-sticky-omhoog")+", aanOmhoog="+waarde(mobiel,"mobile-sticky-aan-omhoog")+", verstoptOmhoog="+waarde(mobiel,"mobile-sticky-verstopt-omhoog")+", pointerOmhoog="+waarde(mobiel,"mobile-sticky-pointer-omhoog")+", exception="+waarde(mobiel,"mobile-sticky-exception"));
 
-  console.log("Sticky state-test geslaagd: desktop blijft vast; mobiele hide/show-state wisselt correct.");
+  console.log("Sticky state-test geslaagd: desktophero start bovenaan en minibalk blijft vast; mobiele hide/show-state wisselt correct.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
