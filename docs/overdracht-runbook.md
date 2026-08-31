@@ -42,6 +42,7 @@ Belangrijkste onderdelen:
 | serviceworker en offline shell | `sw.js`, met een buildgebonden cacheversie in het artifact |
 | Pages-projectconfig | `wrangler.jsonc` |
 | deploy en domeinkoppeling | `.github/workflows/cloudflare-production.yml` |
+| Web Analytics setup | `.github/workflows/cloudflare-web-analytics.yml`, `scripts/cloudflare-web-analytics-setup.js` |
 | previewdeployments | `.github/workflows/cloudflare-preview.yml` |
 | kwaliteits- en productiemonitoring | `.github/workflows/senior-fix-verification.yml`, `.github/workflows/checkpoint-eindronde.yml`, `.github/workflows/production-smoke.yml` |
 
@@ -56,6 +57,7 @@ Belangrijkste onderdelen:
 | korte neerslag NL/BE | KNMI-dataplatform via de serverlaag | geen geheime waarde in de repository |
 | waarschuwingen Europa | MeteoAlarm | geen |
 | waarschuwingen VS en ondersteunde gebieden | National Weather Service | geen |
+| bezoek- en prestatietrends | Cloudflare Web Analytics | geen clientsecret; setup via Cloudflare-accounttoken |
 | kaartondergrond en plaatscontext | CARTO / OpenStreetMap-attributie | geen |
 
 Zon- en maanstanden worden lokaal berekend. Behoud alle zichtbare bronvermeldingen. Controleer vóór commercieel gebruik of na een eigendomsoverdracht opnieuw de actuele gebruiksvoorwaarden, fair-usegrenzen en attributie-eisen van iedere leverancier; die voorwaarden staan niet vast in de code.
@@ -66,10 +68,10 @@ GitHub Actions heeft exact deze twee geheime waarden nodig:
 
 | Naam | Doel | Waar instellen |
 |---|---|---|
-| `CLOUDFLARE_API_TOKEN` | Pages deployen, projectinstellingen lezen/schrijven, custom domains controleren en de bedoelde zone-regels beheren | GitHub repository Actions secrets |
+| `CLOUDFLARE_API_TOKEN` | Pages deployen, projectinstellingen lezen, custom domains controleren, de bedoelde zone-rate-limit beheren en de aparte Web Analytics-setup uitvoeren | GitHub repository Actions secrets |
 | `CLOUDFLARE_ACCOUNT_ID` | het juiste Cloudflare-account selecteren | GitHub repository Actions secrets |
 
-De token moet minimaal de acties uit `.github/workflows/cloudflare-production.yml` en de scripts `cloudflare-disable-web-analytics.js`, `cloudflare-disable-rum.js` en `cloudflare-api-rate-limit.js` mogen uitvoeren. De code geeft bij ontbrekende regels-permissies een gerichte fout. Geef geen ruimere accountrechten dan nodig.
+Voor de normale productieflow moet de token minimaal de acties uit `.github/workflows/cloudflare-production.yml` en `scripts/cloudflare-api-rate-limit.js` mogen uitvoeren. De geïsoleerde Web Analytics-setup vraagt daarnaast Cloudflare Account Settings Read/Write om het Web Analytics-siteobject te lezen/schrijven en Zone > Config Rules > Edit om uitsluitend de historische eigen `watishetweer_disable_rum`-regel te verwijderen. Het setupscript schrijft pas aan die Configuration Rule nadat de Analytics-site aantoonbaar actief is. Bij ontbrekende rechten stopt de setup met een gerichte fout zonder de productiecode of de bestaande blokkade onveilig te wijzigen. Geef geen ruimere accountrechten dan nodig.
 
 Niet-geheime configuratie:
 
@@ -102,6 +104,12 @@ Werk via een branch en pull request. De normale route is:
 
 Een lokaal ontbrekende Chromium/WebKit-installatie is geen productfout. Gebruik in dat geval de vaste Playwright-container uit de GitHub-workflows; merge nooit op basis van alleen een lokaal overgeslagen browserdeel.
 
+### Cloudflare Web Analytics
+
+Web Analytics wordt niet door iedere productiedeploy aan- of uitgezet. De aparte workflow `.github/workflows/cloudflare-web-analytics.yml` wacht eerst totdat exact dezelfde bron-SHA publiek live staat en voert daarna `scripts/cloudflare-web-analytics-setup.js` idempotent uit. Het script maakt of activeert één Analytics-site voor de watishetweer-zone, verifieert die via de Cloudflare API en verwijdert daarna alleen de historische eigen `disable_rum`-regel als die nog bestaat. De normale productiedeploy raakt deze instelling niet meer aan.
+
+De build laat uitsluitend de officiële Cloudflare-beaconbron toe in `script-src`; Web Analytics gebruikt de same-origin `/cdn-cgi/rum`-route. Er wordt geen handmatige analytics-snippet of analytics-token in de repository geplaatst. Zie `docs/commerciele-baseline-2026-08-31.md` voor de nulmeting en meetcyclus.
+
 ## Monitoring en alarmen
 
 `WeatherNow production smoke` draait na iedere push naar `main`, handmatig en ieder uur. De workflow bewaakt onder meer:
@@ -111,9 +119,10 @@ Een lokaal ontbrekende Chromium/WebKit-installatie is geen productfout. Gebruik 
 - Amsterdam, New York, Tokio, Sydney, Singapore en Longyearbyen op mobiel en desktop, inclusief vergelijking met de echte forecastrespons;
 - interacties, foutstates, toetsenbordbediening, mobiele touch targets en metadata;
 - Chromium desktop en WebKit iPhone, requestaantallen, grafiektijd en horizontale overflow;
+- uitsluitend de verwachte Cloudflare Web Analytics-scriptbron en same-origin RUM-route als Analytics actief is;
 - vijf koude mobiele CLS-runs.
 
-GitHub Actions is momenteel het alarmsysteem. Controleer bij overdracht dat de nieuwe eigenaar workflowmails of een andere GitHub Actions-notificatie ontvangt. Er is bewust geen advertentietracking of Cloudflare Web Analytics/RUM actief; beschikbaarheid is daardoor wel bewaakt, maar bezoekersaantallen en conversie niet.
+GitHub Actions is het technische alarmsysteem. Controleer bij overdracht dat de nieuwe eigenaar workflowmails of een andere GitHub Actions-notificatie ontvangt. Cloudflare Web Analytics levert daarnaast privacygerichte geaggregeerde bezoek- en prestatiestatistieken; het vervangt de productie-smoke niet.
 
 ## Kosten en limieten
 
@@ -154,7 +163,7 @@ Controleer eerst welke bron faalt. De hoofdforecast heeft een begrensde fallback
 2. vervang beide GitHub Actions-secrets;
 3. trek de oude token in;
 4. start eerst een preview en daarna pas een normale productieflow;
-5. controleer project, domains, RUM/analytics-regels en API-rate-limit via de workflow.
+5. controleer project, domains, API-rate-limit en de aparte Web Analytics-setup via de workflows.
 
 ## Hoe wijzig ik X?
 
@@ -167,6 +176,7 @@ Controleer eerst welke bron faalt. De hoofdforecast heeft een begrensde fallback
 | Nachtzicht wijzigen | behoud de score-, maan-, pooldag/poolnacht- en kalendergrenscontracten |
 | API-provider wijzigen | wijzig gedeelde logica in `lib/`/`api/`; houd de Function-wrapper dun en bewaak timeout, cache, privacy en fail-closed gedrag |
 | securityheader wijzigen | houd `cloudflare/_headers` en `functions/_middleware.js` inhoudelijk gelijk en draai `scripts/security-headers.test.js` |
+| Web Analytics opnieuw borgen | start `.github/workflows/cloudflare-web-analytics.yml`; verruim de CSP niet verder dan de officiële beaconbron en verwijder geen onbekende Configuration Rules |
 | monitoringfrequentie wijzigen | pas uitsluitend de cron in `.github/workflows/production-smoke.yml` aan en behoud push plus handmatige start |
 | domein wijzigen | werk eerst Cloudflare project/domain, canonieke SEO-config, CSP/headers, workflows, robots, sitemap, structured data en smokecontracten als één migratie bij |
 
@@ -176,6 +186,7 @@ Controleer eerst welke bron faalt. De hoofdforecast heeft een begrensde fallback
 - [ ] Branchregels, Actions en workflownotificaties onder de nieuwe eigenaar gecontroleerd.
 - [ ] Cloudflare-account/zone/Pages-project en facturatie overgedragen.
 - [ ] Nieuwe minimale Cloudflare-token geplaatst; oude token ingetrokken.
+- [ ] Cloudflare Web Analytics-site en de afwezigheid van de historische eigen `disable_rum`-regel via de setupworkflow geverifieerd.
 - [ ] Registrar-eigendom, contactgegevens, DNSSEC, verlengdatum en betaalmethode gecontroleerd.
 - [ ] `watishetweer.nl` en `www.watishetweer.nl` actief en TLS geldig.
 - [ ] Google Search Console-eigendom en sitemap onder de nieuwe eigenaar gecontroleerd.
