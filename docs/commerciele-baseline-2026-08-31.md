@@ -2,15 +2,25 @@
 
 ## Wat deze nulmeting wel en niet bewijst
 
-Een historische 90-dagenbezoekersbaseline kan op 31 augustus 2026 niet betrouwbaar worden teruggeconstrueerd: Cloudflare Web Analytics was vóór deze wijziging bewust uitgeschakeld en de repository bevat geen andere historische bezoekersdatabase. Daarom start de commerciële 90-dagenbaseline op **T0: het moment waarop de workflow `Cloudflare Web Analytics setup` voor de eerste keer succesvol eindigt op een live `main`-SHA**. Alles vóór T0 blijft buiten de verkeersbaseline tenzij later een afzonderlijke, controleerbare bron wordt aangeleverd.
+Een historische 90-dagenbezoekersbaseline kan op 31 augustus 2026 niet betrouwbaar worden teruggeconstrueerd: Cloudflare Web Analytics was vóór deze wijziging bewust uitgeschakeld en de repository bevat geen andere historische bezoekersdatabase. Daarom start de commerciële 90-dagenbaseline op **T0: het eerste controleerbare moment waarop Cloudflare Web Analytics aantoonbaar actief verkeer ontvangt op de bedoelde live `main`-SHA**. Alles vóór T0 blijft buiten de verkeersbaseline tenzij later een afzonderlijke, controleerbare bron wordt aangeleverd.
+
+Een succesvolle `Cloudflare Web Analytics setup`-workflow is de voorkeursroute om de accountconfiguratie via de Cloudflare API te verifiëren, maar de commerciële T0 hangt niet uitsluitend van die beheerroute af. Als de live browser aantoonbaar de officiële Cloudflare Insights-runtime bereikt en same-origin `/cdn-cgi/rum`-requests verstuurt, is de meting zelf feitelijk actief. Dat live gedrag is doorslaggevend voor de start van de bezoekersbaseline.
 
 Dit document scheidt technische productkwaliteit, Search Console-status, nieuw te verzamelen bezoekersdata en eventuele omzet strikt van elkaar.
 
-### Post-merge status op 31 augustus 2026
+### Historische setupstatus op 31 augustus 2026
 
-De merge-SHA `b4a660848338cece3e308f44ae6a2074d0895616` is succesvol naar Cloudflare Pages uitgerold en de volledige production-smoke op die SHA is groen. De afzonderlijke workflow `Cloudflare Web Analytics setup` bereikte daarna aantoonbaar dezelfde live SHA, maar de eerste Web Analytics-accountaanvraag faalde met HTTP 403 omdat de huidige Cloudflare-token onvoldoende Account Settings-rechten heeft. Daardoor is Web Analytics via deze setup **nog niet aantoonbaar actief** en is **T0 nog niet gestart**.
+De eerdere merge-SHA `b4a660848338cece3e308f44ae6a2074d0895616` is succesvol naar Cloudflare Pages uitgerold en de volledige production-smoke op die SHA was groen. De afzonderlijke workflow `Cloudflare Web Analytics setup` bereikte daarna aantoonbaar dezelfde live SHA, maar de eerste Web Analytics-accountaanvraag faalde met HTTP 403 omdat de toen gebruikte Cloudflare-token onvoldoende Account Settings-rechten had. Daardoor kon op dat moment via die beheerworkflow niet worden bewezen dat Web Analytics actief was en startte T0 toen nog niet.
 
-Er wordt daarom voor 31 augustus 2026 geen Cloudflare-bezoekersbaseline geclaimd. Nadat de GitHub Actions-token minimaal de benodigde Cloudflare Account Settings Read/Write-rechten heeft gekregen, moet uitsluitend de bestaande Web Analytics-setupworkflow opnieuw worden uitgevoerd en groen eindigen voordat T0 wordt ingevuld. De normale productieflow hoeft hiervoor niet te worden gewijzigd.
+Die mislukte beheeractie heeft geen historische bezoekersdata opgeleverd en blijft als auditfeit staan. Zij zegt echter niets over een latere handmatige of platformmatige activering buiten die specifieke API-call.
+
+### T0 nu aantoonbaar gestart
+
+Op de finale productie-SHA **`15ee416761b8ff6a5dd92d05bb7bc0a7542cfdb7`** is op 31 augustus 2026 tijdens de production-smoke live Cloudflare RUM-verkeer waargenomen in zowel Chromium desktop als WebKit iPhone. Beide browserprofielen bereikten `static.cloudflareinsights.com` en verstuurden elk **3 same-origin requests naar `/cdn-cgi/rum`**. Dezelfde meting bleef vrij van console- en page-errors en de production-smoke eindigde volledig groen.
+
+Daarmee is Cloudflare Web Analytics op live productie **feitelijk actief**. Voor deze commerciële baseline wordt daarom **T0 vastgelegd op 31 augustus 2026 om circa 16:31 CEST**, het eerste in deze auditketen controleerbare live moment waarop de meting actief is bewezen. Dit is bewust het eerste bewezen observatiemoment, niet de onbewezen aanname dat Cloudflare exact op dat tijdstip is ingeschakeld.
+
+De eerdere API-permissiefout blijft alleen relevant voor toekomstige geautomatiseerde accountconfiguratie. Uit de live browsermeting mag niet worden afgeleid dat de GitHub Actions-token inmiddels extra Account Settings-rechten heeft; daarvoor zou de setupworkflow of Cloudflare API afzonderlijk opnieuw succesvol moeten worden geverifieerd. Voor de vraag of bezoekersmeting nu daadwerkelijk loopt, is die beheerpermissie echter geen blocker meer.
 
 ## Technische nulmeting
 
@@ -23,7 +33,9 @@ De sale-readinessaudit van 31 augustus 2026 legde voor de toenmalige productie d
 
 PageSpeed rapporteerde op dat moment geen CrUX-velddata. Dat betekent dat er toen geen voldoende echte-gebruikersdataset voor die rapportage beschikbaar was; het zegt niet dat de labtest ontbrak.
 
-De production-smoke bewaakt daarnaast ieder uur de exacte live build-SHA, publieke routes en API-contracten, meerdere wereldlocaties op mobiel en desktop, interacties, performance en mobiele CLS. Technische beschikbaarheid en productcorrectheid blijven dus onafhankelijk van de nieuwe bezoekersmeting bewaakt.
+De finale production-smoke op `15ee416761b8ff6a5dd92d05bb7bc0a7542cfdb7` bevestigde daarnaast vijf groene productiegates: productiecontract, live performance in Chromium en WebKit, mobiele CLS, wereldwijde browsercontrole en staff-auditinteracties. De vijf koude mobiele CLS-runs lagen tussen 0,0108 en 0,0198, dus maximaal afgerond **0,020**, ruim binnen het bewaakte budget van 0,1.
+
+De production-smoke bewaakt daarnaast ieder uur de exacte live build-SHA, publieke routes en API-contracten, meerdere wereldlocaties op mobiel en desktop, interacties, performance en mobiele CLS. Technische beschikbaarheid en productcorrectheid blijven dus onafhankelijk van de bezoekersmeting bewaakt.
 
 ## Search Console-snapshot
 
@@ -37,11 +49,13 @@ Deze cijfers zijn een account-snapshot uit die sessie en staan niet als verifiee
 
 ## T0 en meetbronnen
 
-T0 wordt aantoonbaar door drie controles samen:
+T0 wordt in deze baseline aantoonbaar door de volgende live controles samen:
 
 1. de bedoelde `main`-SHA staat daadwerkelijk live op `https://watishetweer.nl/`;
-2. `Cloudflare Web Analytics setup` eindigt groen voor die SHA en verifieert via de Cloudflare API dat de Analytics-site met auto-install actief is;
-3. de historische eigen `watishetweer_disable_rum`-Configuration Rule is, indien aanwezig, door diezelfde setup verwijderd en daarna niet meer aangetroffen.
+2. een echte browser bereikt de officiële Cloudflare Insights-herkomst en verstuurt same-origin `/cdn-cgi/rum`-requests zonder onverwachte analytics-herkomst of browserfouten;
+3. de productiecontrole koppelt die requests aan exact dezelfde live build-SHA.
+
+De `Cloudflare Web Analytics setup`-workflow blijft daarnaast de voorkeursroute om accountconfiguratie, auto-install en eventuele oude Configuration Rules via de Cloudflare API te beheren en te auditen zodra de gebruikte token daarvoor voldoende rechten heeft. Die beheercontrole is aanvullend en vervangt de feitelijke live meting niet.
 
 Vanaf T0 worden deze bronnen gebruikt:
 
@@ -84,8 +98,8 @@ Vul dit per checkpoint aan buiten of in een gedateerde opvolgnotitie; overschrij
 
 | Metric | T0 | +7d | +30d | +60d | +90d |
 |---|---:|---:|---:|---:|---:|
-| Cloudflare pageviews | nog niet gestart |  |  |  |  |
-| Cloudflare bezoekers | nog niet gestart |  |  |  |  |
+| Cloudflare pageviews | meting gestart; dashboardnulstand vastleggen |  |  |  |  |
+| Cloudflare bezoekers | meting gestart; dashboardnulstand vastleggen |  |  |  |  |
 | Search Console klikken | account-snapshot vereist |  |  |  |  |
 | Search Console impressies | account-snapshot vereist |  |  |  |  |
 | Search Console CTR | account-snapshot vereist |  |  |  |  |
