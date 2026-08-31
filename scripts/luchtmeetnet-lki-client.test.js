@@ -41,7 +41,7 @@ assert.equal(context.WeatherNowLuchtmeetnetLki.ondersteund("BE"),false);
   assert(urls[0].includes("/api/luchtkwaliteit?"));
   assert(urls[0].includes("land=NL"));
   assert.equal(kinderen.length,1);
-  assert.equal(kinderen[0].textContent,"Nederlandse LKI 3/11 · RIVM");
+  assert.equal(kinderen[0].textContent,"Nederlandse LKI 3/11 · RIVM/Luchtmeetnet");
   assert.match(kinderen[0].title,/aparte schaal van de Europese AQI/);
   assert.equal(kaart.bestaandeWaarde,"42 · Europese AQI","bestaande AQI mag niet worden vervangen");
   assert.doesNotMatch(kinderen[0].textContent,/meting/i,"LKI mag niet als rauwe meting worden gelabeld");
