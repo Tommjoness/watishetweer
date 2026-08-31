@@ -21,9 +21,11 @@ const MOTREGEN_PRODUCTIE='55:["Motregen","regen"],56:["Aanvriezende motregen","i
 /* Desktop-only verfijning. De plaatslinks blijven exact dezelfde crawlbare
    ankers, maar sluiten visueel aan op het witte hoofdvlak. Nachtzicht houdt op
    brede schermen vaste compacte labelkolommen en een begrensde uitlegkolom,
-   terwijl de scorebalk de resterende breedte vult. Zo blijft de uitleg leesbaar
-   zonder dat rechts van het grid een grote lege strook ontstaat. Onder 1000 px
-   blijft de bestaande responsieve layout volledig eigenaar. */
+   terwijl de scorebalk de resterende breedte vult. Vanaf het echte desktop-
+   breakpoint is het witte productvlak bovendien altijd viewportbreed. Daarmee
+   kan een historische max-width of brede/uitgezoomde browser nooit opnieuw
+   grijze zijgoten zichtbaar maken. Onder 1100 px blijft de bestaande
+   responsieve layout volledig eigenaar. */
 const STIJL=`<style id="${MARKER}">
 @media(min-width:701px){
   .seo-plaatsnav{
@@ -38,6 +40,19 @@ const STIJL=`<style id="${MARKER}">
 @media(min-width:1000px){
   #nights .row.night{
     grid-template-columns:104px 52px minmax(180px,1fr) 104px minmax(220px,280px)
+  }
+}
+@media(min-width:1100px){
+  body{
+    padding-left:0!important;
+    padding-right:0!important
+  }
+  .sheet,.seo-plaatsnav{
+    box-sizing:border-box;
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important
   }
 }
 </style>`;
@@ -73,7 +88,7 @@ function main(){
     fs.writeFileSync(doel.pad,pasDesktopRefinementToe(bron,doel.label),"utf8");
   }
   const versie=vernieuwServiceworkerCache(OUT,"desktop-refinement-20260829");
-  console.log(`Desktopverfijning toegepast op ${doelen.length} weerpagina's: plaatsnav geïntegreerd, Nachtzicht breedtevullend en motregencopy genormaliseerd; cache ${versie}.`);
+  console.log(`Desktopverfijning toegepast op ${doelen.length} weerpagina's: viewportbreed productvlak, plaatsnav geïntegreerd, Nachtzicht breedtevullend en motregencopy genormaliseerd; cache ${versie}.`);
 }
 
 if(require.main===module)main();
