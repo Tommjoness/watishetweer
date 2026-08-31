@@ -41,6 +41,8 @@ jobs:
             echo "::error file=browser-staff-audit-20260826.test.js,line=1::$msg"
             exit "$code"
           fi
+      - name: Desktopinhoud vult brede viewport in Chromium en WebKit
+        run: node browser-desktop-content-width.test.js
       - name: Bouw definitieve artifact
         run: npm run build
       - name: SEO-plaatsroutes in Chromium en WebKit
