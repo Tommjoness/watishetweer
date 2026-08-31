@@ -4,7 +4,8 @@ const assert=require("assert");
 
 const ROOT=String(process.env.PREVIEW_ROOT||"").replace(/\/$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
-const ANALYTICS_SOURCE="https://static.cloudflareinsights.com/beacon.min.js";
+const ANALYTICS_SOURCE="https://static.cloudflareinsights.com";
+const TE_STRIKT_ANALYTICS_PAD="https://static.cloudflareinsights.com/beacon.min.js";
 if(!/^https:\/\/[a-z0-9-]+\.watishetweer\.pages\.dev$/i.test(ROOT))throw new Error("PREVIEW_ROOT ontbreekt of is geen watishetweer.pages.dev-preview.");
 if(!/^[0-9a-f]{40}$/i.test(EXPECTED_SHA))throw new Error("EXPECTED_SHA ontbreekt of is geen volledige commit-SHA.");
 
@@ -34,7 +35,8 @@ function security(r,label){
   assert(script,`${label}: script-src ontbreekt`);
   const bronnen=script[2].trim().split(/\s+/).filter(Boolean);
   assert(bronnen.includes("'self'"),`${label}: script-src mist self`);
-  assert(bronnen.includes(ANALYTICS_SOURCE),`${label}: officiële Cloudflare Web Analytics-bron ontbreekt`);
+  assert(bronnen.includes(ANALYTICS_SOURCE),`${label}: officiële Cloudflare Insights-origin ontbreekt`);
+  assert(!bronnen.includes(TE_STRIKT_ANALYTICS_PAD),`${label}: CSP beperkt Cloudflare Analytics nog tot het onversieerde beacon.min.js-pad`);
   const toegestaan=new Set(["'self'",ANALYTICS_SOURCE]);
   assert(bronnen.every(bron=>toegestaan.has(bron)),`${label}: script-src bevat een onverwachte executable bron`);
   assert(!bronnen.includes("'unsafe-inline'"),`${label}: executable inline script blijft toegestaan`);
@@ -106,5 +108,5 @@ function cloudflareCache(r,label){
   assert.equal(head.status,200,"HEAD op plaatsnaam-API is niet 200");
   assert.equal((await head.text()).length,0,"HEAD bevat onverwacht een responsebody");
 
-  console.log(`CLOUDFLARE PREVIEW SMOKE GESLAAGD: ${ROOT}; SHA ${EXPECTED_SHA}; statisch, compressie, strikt securitybeleid, CDN-cache en drie API-contracten groen.`);
+  console.log(`CLOUDFLARE PREVIEW SMOKE GESLAAGD: ${ROOT}; SHA ${EXPECTED_SHA}; statisch, compressie, strikt securitybeleid, versiecompatibele Analytics-CSP, CDN-cache en drie API-contracten groen.`);
 })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});
