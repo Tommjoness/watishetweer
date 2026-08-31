@@ -4,6 +4,7 @@ const assert=require("assert");
 
 const ROOT=String(process.env.PREVIEW_ROOT||"").replace(/\/$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
+const ANALYTICS_SOURCE="https://static.cloudflareinsights.com/beacon.min.js";
 if(!/^https:\/\/[a-z0-9-]+\.watishetweer\.pages\.dev$/i.test(ROOT))throw new Error("PREVIEW_ROOT ontbreekt of is geen watishetweer.pages.dev-preview.");
 if(!/^[0-9a-f]{40}$/i.test(EXPECTED_SHA))throw new Error("EXPECTED_SHA ontbreekt of is geen volledige commit-SHA.");
 
@@ -29,8 +30,14 @@ function security(r,label){
   assert.equal(r.headers.get("referrer-policy"),"strict-origin-when-cross-origin",`${label}: referrer-policy wijkt af`);
   const csp=r.headers.get("content-security-policy")||"";
   assert(/default-src 'self'/.test(csp),`${label}: CSP ontbreekt`);
-  assert(/script-src 'self'(?:;|$)/.test(csp),`${label}: script-src is niet self-only`);
-  assert(!/script-src[^;]*unsafe-inline/.test(csp),`${label}: executable inline script blijft toegestaan`);
+  const script=/((?:^|;)\s*script-src\s+)([^;]+)/.exec(csp);
+  assert(script,`${label}: script-src ontbreekt`);
+  const bronnen=script[2].trim().split(/\s+/).filter(Boolean);
+  assert(bronnen.includes("'self'"),`${label}: script-src mist self`);
+  assert(bronnen.includes(ANALYTICS_SOURCE),`${label}: officiële Cloudflare Web Analytics-bron ontbreekt`);
+  const toegestaan=new Set(["'self'",ANALYTICS_SOURCE]);
+  assert(bronnen.every(bron=>toegestaan.has(bron)),`${label}: script-src bevat een onverwachte executable bron`);
+  assert(!bronnen.includes("'unsafe-inline'"),`${label}: executable inline script blijft toegestaan`);
   assert(/script-src-attr 'none'/.test(csp),`${label}: inline eventhandlers zijn niet expliciet geblokkeerd`);
 }
 function compressed(r,label){
