@@ -13,22 +13,9 @@ const START_MARKER="/* ---------- start ---------- */";
 const NAV_MARKER="<!-- WEATHER NOW INDEXEERBARE PLAATSEN -->";
 const RUNTIME=fs.readFileSync(path.join(__dirname,"final-consumer-polish-20260831-runtime.js"),"utf8");
 
-/* WMO-code 55/57 beschrijft een hogere intensiteit van (aanvriezende) motregen.
-   De letterlijke combinatie 'zware motregen' leest in consumententaal echter
-   onnatuurlijk en wordt in kanszinnen nog sterker ('zeer grote kans op zware
-   motregen'). De meteorologische soort blijft behouden; alleen de zichtbare
-   intensiteitsbijvoeging vervalt. Regen, buien, sneeuw en onweer houden hun
-   bestaande lichte/zware onderscheid ongewijzigd. */
 const MOTREGEN_BRON='55:["Zware motregen","regen"],56:["Aanvriezende motregen","ijzel"],57:["Zware aanvriezende motregen","ijzel"],';
 const MOTREGEN_PRODUCTIE='55:["Motregen","regen"],56:["Aanvriezende motregen","ijzel"],57:["Aanvriezende motregen","ijzel"],';
 
-/* Finale productverfijning. Onder 1100 px blijft de bestaande responsieve
-   layout eigenaar; de zonnecyclus- en vochtigheidscorrectie is inhoudelijk en
-   geldt bewust op elk viewport en voor elke locatiepagina. Op desktop wordt de
-   nieuwe volle breedte ook intern opnieuw uitgebalanceerd: de week- en
-   Nachtzichtkolommen verdelen de extra ruimte, bronuitleg krijgt een normale
-   leesbreedte, de hero begint niet onnodig laag, grafiekcontext is compacter en
-   de footer gebruikt de beschikbare breedte zonder een links tekstkluitje. */
 const STIJL=`<style id="${MARKER}">
 @media(min-width:701px){
   .seo-plaatsnav{
@@ -85,9 +72,6 @@ const STIJL=`<style id="${MARKER}">
     transform:none!important
   }
 
-  /* De hero werd na het bredere dashboard visueel naar het midden van de hoge
-     metriekentabel getrokken. Begin hem weer bovenaan zonder de interne
-     baseline-uitlijning van temperatuur, icoon en conditie te veranderen. */
   .dashrow-hero>.hero{
     align-self:start!important;
     margin-top:0!important;
@@ -95,36 +79,31 @@ const STIJL=`<style id="${MARKER}">
     height:auto!important
   }
 
-  /* De SVG blijft volledig breed; alleen de typografie wordt in de finale
-     runtime subtieler. Hier halen we overtollige verticale witruimte rond de
-     grafiek weg zonder het dataplot of de hit-area te verkleinen. */
   .dashrow-chart .dagmod{padding-top:10px}
   .dashrow-chart #charthint{margin-bottom:4px}
   #chartdata{margin-top:8px}
 
-  /* De bronparagraaf stamde uit de oude halve desktopkolom. Op een brede pagina
-     mag hij langer doorlopen, maar niet onbeperkt over het hele scherm. */
   .data-uitleg p{max-width:min(110ch,100%)}
   #nctext{max-width:min(110ch,100%)}
 
-  /* Verdeel extra desktopruimte over verwachting, wind en temperatuurbereik in
-     plaats van vrijwel alles in één enorme verwachtingskolom te stoppen. */
   #days .row.day{
     grid-template-columns:100px 26px minmax(260px,1.4fr) minmax(90px,.45fr) 56px minmax(120px,.55fr) 52px 72px;
     gap:16px
   }
 
-  /* Nachtzicht krijgt dezelfde behandeling: scorebalk en zichttekst groeien
-     allebei mee. Daardoor staat bewolking niet meer op een eiland aan de
-     rechterrand en krijgt de verklaring genoeg regelbreedte. */
   #nights .row.night{
     grid-template-columns:104px 64px minmax(280px,1fr) 110px minmax(300px,.72fr);
     gap:18px
   }
-  #nights .night .nmeta.wide{line-height:1.45}
+  #nights .night .nmeta.wide{
+    box-sizing:border-box;
+    width:auto!important;
+    max-width:none!important;
+    min-width:0!important;
+    justify-self:stretch!important;
+    line-height:1.45
+  }
 
-  /* De footer gebruikte op desktop nog de mobiele éénkolomsopbouw. Bronnen
-     mogen wrappen, de twee korte acties krijgen een rustige vaste plek rechts. */
   footer{
     display:grid;
     grid-template-columns:minmax(0,1fr) max-content max-content;
@@ -154,7 +133,6 @@ function pasDesktopRefinementToe(html,label="artifact"){
   if(tel(bron,"</head>")!==1)throw new Error(`${label}: verwacht exact één head-einde.`);
   if(tel(bron,START_MARKER)!==1)throw new Error(`${label}: startmarker ontbreekt of is dubbel.`);
 
-  /* Vang syntaxfouten in de finale runtime af vóór een artifact wordt geschreven. */
   new vm.Script(RUNTIME,{filename:"final-consumer-polish-20260831-runtime.js"});
 
   const linksVoor=(bron.match(/<a\s+[^>]*href=/g)||[]).length;
