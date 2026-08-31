@@ -127,3 +127,10 @@ Gebruik een rollback alleen bij een bewezen productiestoring of ernstige regress
 5. Verifieer daarna de `WeatherNow production smoke`: homepage, `www`-redirect, securityheaders, sitemap, kernroutes, API-contracten en de wereldwijde mobiel/desktopmatrix moeten groen zijn.
 
 Verwijder oude Cloudflare Pages-deployments niet routinematig; immutable deployments blijven nuttig voor vergelijking en incidentanalyse.
+
+## Overdracht
+
+Voor architectuur, accountgrenzen, secrets zonder geheime waarden, databronnen, deploy, monitoring, kostencontrole, incidentherstel en veelvoorkomende wijzigingen:
+
+- [Overdracht en beheer](docs/overdracht-runbook.md)
+- [Sale-readiness audit van 31 augustus 2026](docs/sale-readiness-audit-2026-08-31.md)
