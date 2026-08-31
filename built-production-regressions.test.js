@@ -102,10 +102,10 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  const {api,bak}=laadKern(390),d=bouw({}),i=zetBasis(api,d);d.current.pressure_msl=1010;d.hourly.pressure_msl[i-3]=1000;d.hourly.pressure_msl[i-2]=1004;api.S.klokOverride=new Date("2026-07-22T12:30:00Z");api.meters();const t=tekst(bak.pressub);ok(/8,0 hPa gestegen/.test(t),"druktrend interpoleert naar exact drie uur geleden",t);ok(/afgelopen drie uur/.test(t),"druktrend benoemt het werkelijke venster",t);
 }
 {
- const {api,bak}=laadKern(390),d=bouw({wg:(u,dag)=>dag===0&&u===18?72:25});d.current.wind_gusts_10m=99;zetBasis(api,d);api.meters();const sub=tekst(bak.gustsub),waarde=norm(bak.gust.innerHTML);
- ok(/25/.test(waarde)&&!/99/.test(waarde),"windstoottegel gebruikt de uurforecast en niet de actuele 15-minutenwaarde",waarde);
- ok(/^Verwachte hoogste windstoot tussen 14:00 en 15:00\.$/.test(sub),"windstoottegel koppelt de duidelijke subtekst aan exact hetzelfde uurvak",sub);
- ok(!/Later vandaag|Voor vandaag|\bbedroeg\b/i.test(sub),"windstoottegel mengt geen dagpiek of meetwaarde-achtige copy in het uurvak",sub);
+ const {api,bak}=laadKern(390),d=bouw({wg:(u,dag)=>dag===0&&u===18?72:25});d.current.wind_gusts_10m=99;const i=zetBasis(api,d);api.S.i0=i;api.S.klokOverride=null;api.S.klokInstantOverride=new Date("2026-07-22T16:37:00Z");const di=d.daily.time.indexOf("2026-07-22");d.daily.sunset[di]="2026-07-22T20:29";d.daily.sunset[di+1]="2026-07-23T20:27";api.meters();const sub=tekst(bak.gustsub),waarde=norm(bak.gust.innerHTML);
+ ok(/1<s> u<\/s> 52<s> min<\/s>/.test(waarde),"hoofdtegel telt vanaf de actuele lokale klok af tot zonsondergang",waarde);
+ ok(/^Vandaag om 20:29\.$/.test(sub),"zonsondergangtegel koppelt de resterende duur aan dezelfde lokale zonsondergang",sub);
+ ok(!/km\/u|windstoot/i.test(waarde+" "+sub),"windstootdata lekt niet meer in de hoofdtegel",waarde+" | "+sub);
 }
 {
  const {api,bak}=laadKern(390),d=bouw({zicht:20000});d.current.visibility=20000;zetBasis(api,d);api.nachten();const t=tekst(bak.nights);ok(/Indicatie/.test(t)&&/\d+\/10/.test(t),"nachtzichtscore is compact, indicatief en begrijpelijk gelabeld",t.slice(0,300));ok(/Beste zichtperiode/.test(t),"nachtzicht benoemt de beste zichtperiode consumentgericht",t.slice(0,300));
