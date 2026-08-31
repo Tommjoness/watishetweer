@@ -36,6 +36,8 @@ const verwacht=[
   "apply-staff-audit-20260826.js",
   "apply-mobile-truth-ux-20260828.js",
   "verify-mobile-truth-ux-20260828.js",
+  "apply-short-term-metric-clarity.js",
+  "verify-short-term-metric-clarity.js",
   "verify-seo-foundation.js",
   "generate-seo-location-pages.js",
   "apply-seo-location-h1.js",
@@ -49,7 +51,7 @@ const verwacht=[
   "verify-build-provenance.js",
   "verify-final-27.js"
 ];
-assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten plus staff-audit, LCP-final-mile en maan-templatefix");
+assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten plus kortetermijn-metric clarity, staff-audit, LCP-final-mile en maan-templatefix");
 assert.equal(new Set(POSTBUILD_STAPPEN).size,POSTBUILD_STAPPEN.length,"postbuild mag geen stap dubbel uitvoeren");
 for(const stap of POSTBUILD_STAPPEN){assert(fs.existsSync(path.join(__dirname,stap)),"postbuild verwijst naar ontbrekend script: "+stap);}
 assert(!fs.existsSync(path.join(__dirname,"apply-cache-fallback-country.js")),"oude misleidende cachefallback-owner moet verwijderd zijn");
@@ -67,6 +69,8 @@ assert(fs.existsSync(path.join(__dirname,"apply-staff-audit-20260826.js")),"staf
 assert(fs.existsSync(path.join(__dirname,"verify-staff-audit-20260826.js")),"staff-audit moet na routegeneratie verifieerbaar zijn");
 assert(fs.existsSync(path.join(__dirname,"apply-mobile-truth-ux-20260828.js")),"mobiele weather-truth-UX moet een expliciete late applystap hebben");
 assert(fs.existsSync(path.join(__dirname,"verify-mobile-truth-ux-20260828.js")),"mobiele weather-truth-UX moet direct verifieerbaar zijn");
+assert(fs.existsSync(path.join(__dirname,"apply-short-term-metric-clarity.js")),"kortetermijn-metric clarity moet een expliciete late applystap hebben");
+assert(fs.existsSync(path.join(__dirname,"verify-short-term-metric-clarity.js")),"kortetermijn-metric clarity moet direct verifieerbaar zijn");
 assert(fs.existsSync(path.join(__dirname,"apply-lcp-final-mile-20260828.js")),"LCP-final-mile moet een expliciete late applystap hebben");
 assert(fs.existsSync(path.join(__dirname,"apply-moon-a11y-template-20260828.js")),"maan-templatefix moet een expliciete late applystap hebben");
 assert(fs.existsSync(path.join(__dirname,"verify-lcp-final-mile-20260828.js")),"LCP-final-mile moet direct verifieerbaar zijn");
@@ -109,7 +113,9 @@ assert(positie("apply-mobile-state-ux-20260826.js")<positie("verify-mobile-state
 assert(positie("verify-mobile-state-ux-20260826.js")<positie("apply-staff-audit-20260826.js"),"staff-audit moet de bewezen mobiele first-renderlaag behouden");
 assert(positie("apply-staff-audit-20260826.js")<positie("apply-mobile-truth-ux-20260828.js"),"mobiele weather-truth-UX moet de volledig geharde staff-artifact als basis zien");
 assert(positie("apply-mobile-truth-ux-20260828.js")<positie("verify-mobile-truth-ux-20260828.js"),"mobiele weather-truth-UX moet direct na toepassing worden geverifieerd");
-assert(positie("verify-mobile-truth-ux-20260828.js")<positie("verify-seo-foundation.js"),"SEO-routes moeten de geverifieerde mobiele weather-truth-UX erven");
+assert(positie("verify-mobile-truth-ux-20260828.js")<positie("apply-short-term-metric-clarity.js"),"kortetermijn-metric clarity moet de volledig geverifieerde weather-truth-UX als basis zien");
+assert(positie("apply-short-term-metric-clarity.js")<positie("verify-short-term-metric-clarity.js"),"kortetermijn-metric clarity moet direct na toepassing worden geverifieerd");
+assert(positie("verify-short-term-metric-clarity.js")<positie("verify-seo-foundation.js"),"SEO-routes moeten de geverifieerde duidelijke uurmetingen erven");
 assert(positie("verify-seo-foundation.js")<positie("generate-seo-location-pages.js"),"plaatsroutes mogen pas na bewezen root-SEO worden gegenereerd");
 assert(positie("generate-seo-location-pages.js")<positie("apply-seo-location-h1.js"),"lokale H1 mag pas worden toegepast nadat alle plaatsroutes bestaan");
 assert(positie("apply-seo-location-h1.js")<positie("verify-seo-location-h1.js"),"plaats-H1 moet direct na toepassing worden geverifieerd");
@@ -129,4 +135,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde inclusief staff-audit, mobiele state-UX, mobiele weather-truth-UX, LCP-final-mile, maan-templatefix, finale presentatieguard, canonieke owners, SEO-routes, provenance en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde inclusief kortetermijn-metric clarity, staff-audit, mobiele state-UX, mobiele weather-truth-UX, LCP-final-mile, maan-templatefix, finale presentatieguard, canonieke owners, SEO-routes, provenance en fail-fast gedrag geslaagd.");

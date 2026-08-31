@@ -24,7 +24,7 @@ assert.deepEqual(windstootDitUur(uurdata,0),{v:14.4,t:"2026-08-30T21:00"});
 assert.deepEqual(windstootDitUur(uurdata,1),{v:19.7,t:"2026-08-30T22:00"});
 assert.equal(windstootDitUur({time:["2026-08-30T20:00"],wind_gusts_10m:[11]},0),null);
 assert.equal(windstootDitUur({time:["2026-08-30T20:00","2026-08-30T21:00"],wind_gusts_10m:[11,-1]},0),null);
-assert.equal(windstootDitUurTekst({v:14.4,t:"2026-08-30T21:00"},"20:00–21:00"),"Verwacht maximum voor 20:00–21:00.");
+assert.equal(windstootDitUurTekst({v:14.4,t:"2026-08-30T21:00"},"20:00–21:00"),"Verwachte hoogste windstoot tussen 20:00 en 21:00.");
 assert.equal(windstootDitUurTekst(null,""),"Geen windstootverwachting voor dit uur.");
 
 /* De historische dagpiekformatter blijft beschikbaar voor briefing- en
@@ -80,8 +80,9 @@ assert(!uit.includes(GUST_BRON),"oude gemengde windstoottegel bleef in de base-b
 assert.equal(uit.split(GUST_PRODUCTIE).length-1,1,"finale windstoottegel ontbreekt of is dubbel");
 assert.equal(uit.split(HELPERS_PRODUCTIE).length-1,1,"finale windstoothelpers ontbreken of zijn dubbel");
 assert(uit.includes("weatherNowWindstootDitUur(h,i)"),"tegel moet het lopende forecast-uur lezen");
-assert(uit.includes('gustKop.textContent="Windstoot dit uur"'),"tegelkop benoemt dezelfde uur-scope");
+assert(uit.includes('gustKop.textContent="Max. windstoot dit uur"'),"tegelkop maakt expliciet dat de waarde het uurmaximum is");
 assert(uit.includes('weatherNowUurvak(gustUur.t)'),"subtekst gebruikt exact het uurvak van dezelfde forecastwaarde");
+assert(uit.includes('Verwachte hoogste windstoot tussen '),"subtekst benoemt expliciet wat het getal betekent");
 assert(!uit.includes('set("gust",windstoot===null?"–":Math.round(windstoot)+"<s>km/u</s>")'),"actuele 15-minutenwindstoot mag niet meer als uurforecast worden getoond");
 
 /* De gewone windkaart blijft current-data; deze owner raakt alleen windstoten. */
@@ -95,4 +96,4 @@ for(const invariant of [
 assert.throws(()=>pasWindGustCopyToe(uit),/staat al in het aangeleverde artifact/,
   "owner moet fail-fast zijn op een reeds gemigreerd artifact");
 
-console.log("Windstootowner groen: tegel gebruikt het lopende forecast-uur, dagpiekhelper blijft forecastcorrect en gewone wind blijft current-data.");
+console.log("Windstootowner groen: uurmaximum en uurvak zijn expliciet, dagpiekhelper blijft forecastcorrect en gewone wind blijft current-data.");

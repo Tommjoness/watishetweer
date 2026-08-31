@@ -141,13 +141,15 @@ async function controleer(type,naam){
       S.d.hourly.precipitation_probability[i16]=0;S.d.hourly.precipitation[i16]=0;
       meters();nowcast();
       const stat=document.getElementById("pop").parentElement;
-      const uit={display:getComputedStyle(stat).display,kop:stat.querySelector(".eyebrow").textContent.trim(),waarde:document.getElementById("pop").textContent.trim(),sub:document.getElementById("popsub").textContent.trim(),sectie:getComputedStyle(document.getElementById("nchint").previousElementSibling).display};
+      const sleutel=stat.querySelector(".mobile-neerslag-sleutel");
+      const uit={display:getComputedStyle(stat).display,kop:stat.querySelector(".eyebrow").textContent.trim(),waarde:document.getElementById("pop").textContent.trim(),sleutel:sleutel?sleutel.textContent.trim():"",sub:document.getElementById("popsub").textContent.trim(),sectie:getComputedStyle(document.getElementById("nchint").previousElementSibling).display};
       S.d.hourly.precipitation_probability[i15]=0;S.d.hourly.precipitation[i15]=0;meters();nowcast();
       return uit;
     });
     assert.notEqual(popNat.display,"none",naam+": relevante neerslag toont tegel");
     assert.notEqual(popNat.sectie,"none",naam+": relevante neerslag toont twee-uurssectie");
-    assert.equal(popNat.kop,"Neerslag komend uur",naam+": zichtbare tegel heeft expliciete scope");
+    assert.equal(popNat.kop,"Neerslagverwachting komend uur",naam+": zichtbare tegel benoemt kans en verwacht totaal expliciet");
+    assert.equal(popNat.sleutel,"kans · verwacht totaal",naam+": zichtbare tegel legt de twee grootheden expliciet uit");
     assert.match(popNat.waarde,/65%/,naam+": zichtbare tegel behoudt bronkans");
     assert.match(popNat.waarde,/mm/,naam+": meetbare hoeveelheid staat naast kans");
 
