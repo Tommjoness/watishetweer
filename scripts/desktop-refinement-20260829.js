@@ -24,8 +24,10 @@ const MOTREGEN_PRODUCTIE='55:["Motregen","regen"],56:["Aanvriezende motregen","i
    terwijl de scorebalk de resterende breedte vult. Vanaf het echte desktop-
    breakpoint is het witte productvlak bovendien altijd viewportbreed. Daarmee
    kan een historische max-width of brede/uitgezoomde browser nooit opnieuw
-   grijze zijgoten zichtbaar maken. Onder 1100 px blijft de bestaande
-   responsieve layout volledig eigenaar. */
+   grijze zijgoten zichtbaar maken. De fixed contextbalk volgt vanaf hetzelfde
+   breakpoint exact die viewportgeometrie; oude gecentreerde breedte- of
+   transformregels worden daar expliciet geneutraliseerd. Onder 1100 px blijft
+   de bestaande responsieve layout volledig eigenaar. */
 const STIJL=`<style id="${MARKER}">
 @media(min-width:701px){
   .seo-plaatsnav{
@@ -53,6 +55,15 @@ const STIJL=`<style id="${MARKER}">
     max-width:none!important;
     margin-left:0!important;
     margin-right:0!important
+  }
+  #minibar{
+    left:0!important;
+    right:0!important;
+    width:auto!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    transform:none!important
   }
 }
 </style>`;
@@ -88,7 +99,7 @@ function main(){
     fs.writeFileSync(doel.pad,pasDesktopRefinementToe(bron,doel.label),"utf8");
   }
   const versie=vernieuwServiceworkerCache(OUT,"desktop-refinement-20260829");
-  console.log(`Desktopverfijning toegepast op ${doelen.length} weerpagina's: viewportbreed productvlak, plaatsnav geïntegreerd, Nachtzicht breedtevullend en motregencopy genormaliseerd; cache ${versie}.`);
+  console.log(`Desktopverfijning toegepast op ${doelen.length} weerpagina's: viewportbreed productvlak en minibalk, plaatsnav geïntegreerd, Nachtzicht breedtevullend en motregencopy genormaliseerd; cache ${versie}.`);
 }
 
 if(require.main===module)main();
