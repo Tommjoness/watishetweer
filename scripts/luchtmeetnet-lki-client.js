@@ -25,7 +25,7 @@ function toon(){
   if(!kaart||typeof document.createElement!=="function")return;
   const regel=document.createElement("div");
   regel.className="ssub luchtmeetnet-lki";
-  regel.textContent="Nederlandse LKI "+Math.round(lki)+"/11 · RIVM";
+  regel.textContent="Nederlandse LKI "+Math.round(lki)+"/11 · RIVM/Luchtmeetnet";
   regel.setAttribute("title","Officiële Nederlandse luchtkwaliteitsindex van RIVM/Luchtmeetnet; aparte schaal van de Europese AQI.");
   kaart.appendChild(regel);
 }
