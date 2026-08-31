@@ -24,7 +24,13 @@ function isSnellePreview(url){
   const u=new URL(url);
   return !u.searchParams.has("forecast_hours")&&!u.searchParams.has("hourly")&&!u.searchParams.has("daily")&&u.searchParams.has("current");
 }
-function isBeacon(url){return /cloudflareinsights|beacon\.min\.js|\/cdn-cgi\/(?:rum|trace)/i.test(String(url));}
+function isAnalyticsScript(url){
+  try{const u=new URL(url);return u.origin==="https://static.cloudflareinsights.com"&&u.pathname==="/beacon.min.js";}catch(e){return false;}
+}
+function isEigenRum(url){
+  try{const u=new URL(url);return u.origin===ROOT&&/^\/cdn-cgi\/rum\/?$/.test(u.pathname);}catch(e){return false;}
+}
+function isCloudflareAnalytics(url){return isAnalyticsScript(url)||isEigenRum(url)||/cloudflareinsights\.com\/cdn-cgi\/rum/i.test(String(url));}
 
 (async()=>{
   for(const profiel of profielen){
@@ -70,8 +76,17 @@ function isBeacon(url){return /cloudflareinsights|beacon\.min\.js|\/cdn-cgi\/(?:
       const forecastUrl=new URL(volledigeForecasts[0].url);
       assert.equal(forecastUrl.searchParams.get("forecast_hours"),"170",`${profiel.naam}: forecast_hours wijkt af`);
       assert.equal(forecastUrl.searchParams.get("past_hours"),"24",`${profiel.naam}: past_hours wijkt af`);
-      const beacons=requests.filter(isBeacon);
-      assert.equal(beacons.length,0,`${profiel.naam}: Cloudflare Analytics-beacon werd geïnjecteerd: ${beacons.join(" | ")}`);
+
+      /* Web Analytics mag tijdens de account-cutover nog afwezig zijn. Zodra
+         Cloudflare injecteert, accepteren we uitsluitend het officiële script
+         en de same-origin /cdn-cgi/rum endpoint; andere analytics-origins blijven
+         een harde regressie. Console-/pageerrors blijven hieronder ongefilterd. */
+      const analytics=requests.filter(isCloudflareAnalytics);
+      const scripts=analytics.filter(isAnalyticsScript);
+      const eigenRum=analytics.filter(isEigenRum);
+      const vreemd=analytics.filter(url=>!isAnalyticsScript(url)&&!isEigenRum(url));
+      assert(scripts.length<=1,`${profiel.naam}: Cloudflare analytics-script werd ${scripts.length} keer geladen`);
+      assert.equal(vreemd.length,0,`${profiel.naam}: onverwachte Cloudflare analytics-origin: ${vreemd.join(" | ")}`);
 
       const voorKlik=responses.filter(r=>isForecast(r.url)).length;
       await page.locator("#days .row.day:not(.kop)").nth(1).click();
@@ -99,9 +114,9 @@ function isBeacon(url){return /cloudflareinsights|beacon\.min\.js|\/cdn-cgi\/(?:
       assert.equal(mislukteOnbekende.length,0,`${profiel.naam}: mislukte onbekende forecastvariant ${mislukteOnbekende.map(x=>x.url+": "+x.fout).join(" | ")}`);
 
       const herkomsten={};for(const url of requests){try{const o=new URL(url).origin;herkomsten[o]=(herkomsten[o]||0)+1;}catch(e){}}
-      console.log(JSON.stringify({profiel:profiel.naam,sha,domMs,weerMs,grafiekMs,volledigeForecasts:volledigeForecasts.length,previewForecasts:previewForecasts.length,totaalRequests:requests.length,herkomsten,overflow:ui.overflow}));
+      console.log(JSON.stringify({profiel:profiel.naam,sha,domMs,weerMs,grafiekMs,volledigeForecasts:volledigeForecasts.length,previewForecasts:previewForecasts.length,analyticsScript:scripts.length,rumRequests:eigenRum.length,totaalRequests:requests.length,herkomsten,overflow:ui.overflow}));
       await context.close();
     }finally{await browser.close();}
   }
-  console.log(`LIVE PERFORMANCE GESLAAGD: ${verwacht}; Chromium desktop en WebKit iPhone, één forecastaanvraag, grafiekinteractie en volledige scroll.`);
+  console.log(`LIVE PERFORMANCE GESLAAGD: ${verwacht}; Chromium desktop en WebKit iPhone, één forecastaanvraag, gecontroleerde Cloudflare Web Analytics, grafiekinteractie en volledige scroll.`);
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Privacy & gegevens | watishetweer.nl</title>
-<meta name="description" content="Lees hoe watishetweer.nl omgaat met locatiegegevens, lokale opslag en externe databronnen.">
+<meta name="description" content="Lees hoe watishetweer.nl omgaat met locatiegegevens, lokale opslag, bezoekstatistieken en externe databronnen.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://watishetweer.nl/privacy.html">
 <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">
@@ -12,7 +12,7 @@
 <meta property="og:title" content="Privacy & gegevens | watishetweer.nl">
 <meta property="og:url" content="https://watishetweer.nl/privacy.html">
 <meta name="theme-color" content="#F4F5F3">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com/beacon.min.js; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'">
 <!-- Pas een expliciete thema-keuze toe vóór CSS, zodat directe subpagina-loads niet eerst in het verkeerde thema renderen. -->
 <script>
 (()=>{try{
@@ -32,18 +32,20 @@ body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 system-ui,
 <body><main class="kaart">
 <p><a href="/">← Terug naar het weer</a></p>
 <h1>Privacy & gegevens</h1>
-<p><b>watishetweer.nl</b> heeft geen account, advertentietracking of analytics. De site gebruikt alleen gegevens die nodig zijn om het weer voor een gekozen plaats te tonen.</p>
+<p><b>watishetweer.nl</b> heeft geen account of advertentietracking. De site gebruikt alleen gegevens die nodig zijn om het weer voor een gekozen plaats te tonen en privacygerichte Cloudflare Web Analytics voor geaggregeerde bezoek- en prestatiestatistieken.</p>
 <h2>Je locatie</h2>
 <p>Je browser vraagt pas om je actuele locatie nadat je zelf op <b>Mijn locatie</b> kiest. De coördinaten worden gebruikt voor weerdata, een plaatsnaam en, waar beschikbaar, officiële weerwaarschuwingen. In lokale opslag en in de deel-URL wordt de positie afgerond op drie decimalen (ongeveer honderd meter); tijdens de actuele aanvraag kan de browser nauwkeuriger coördinaten gebruiken.</p>
+<h2>Bezoek- en prestatiestatistieken</h2>
+<p>Cloudflare Web Analytics meet onder meer paginaweergaven en technische laadprestaties. De Web Analytics-beacon gebruikt voor deze gebruiksmeting geen cookies of <code>localStorage</code> en Cloudflare geeft aan individuele bezoekers niet over websites van klanten heen te volgen. De meting wordt automatisch via Cloudflare geladen en verstuurd via de eigen <code>/cdn-cgi/rum</code>-route.</p>
 <h2>Externe diensten</h2>
-<p>Voor weer, luchtkwaliteit, pollen en plaatszoeken gebruikt de site Open-Meteo. Voor een actuele GPS-locatie vraagt je browser de plaatsnaam rechtstreeks op bij BigDataCloud; die gratis dienst wordt niet via onze server aangeroepen. Als dat niet lukt, gebruikt de server OpenStreetMap Nominatim als beperkte fallback. Officiële waarschuwingen komen, afhankelijk van de locatie, van MeteoAlarm of de Amerikaanse National Weather Service. Deze aanbieders en de hostingprovider kunnen bij een aanvraag technische gegevens zoals IP-adres en aangevraagde locatie verwerken volgens hun eigen voorwaarden.</p>
+<p>Voor weer, luchtkwaliteit, pollen en plaatszoeken gebruikt de site Open-Meteo. Voor een actuele GPS-locatie vraagt je browser de plaatsnaam rechtstreeks op bij BigDataCloud; die gratis dienst wordt niet via onze server aangeroepen. Als dat niet lukt, gebruikt de server OpenStreetMap Nominatim als beperkte fallback. Officiële waarschuwingen komen, afhankelijk van de locatie, van MeteoAlarm of de Amerikaanse National Weather Service. Cloudflare verzorgt hosting, beveiliging en Web Analytics. Deze aanbieders kunnen bij een aanvraag technische gegevens zoals IP-adres en aangevraagde locatie verwerken volgens hun eigen voorwaarden.</p>
 <h2>Wat je browser bewaart</h2>
 <p>De laatst gekozen plaats, bewaarde plaatsen, thema-instelling en een recente weersnapshot worden lokaal in je browser opgeslagen zodat de site sneller en ook bij een korte storing bruikbaar blijft. Er is geen eigen gebruikersdatabase waarin deze voorkeuren aan een account worden gekoppeld.</p>
 <h2>Zelf wissen</h2>
 <p><button id="wis" type="button">Wis lokale gegevens</button><span id="wisstatus" role="status" aria-live="polite"></span></p>
 <p class="klein">Dit wist de lokaal opgeslagen plaatsen, instellingen en weersnapshot van deze site. Je kunt sitegegevens ook via de instellingen van je browser verwijderen.</p>
 <h2>Bronnen en projectinformatie</h2>
-<p>Meer over de site en de manier waarop verwachtingen worden gepresenteerd staat op <a href="/over/">Over watishetweer.nl</a>. Bronvermelding staat ook onderaan de weerpagina. Technische documentatie, broncode en het openbare wijzigingenoverzicht zijn beschikbaar via de <a href="https://github.com/Tommjoness/weathernow">projectpagina op GitHub</a>.</p>
+<p>Meer over de site en de manier waarop verwachtingen worden gepresenteerd staat op <a href="/over/">Over watishetweer.nl</a>. Bronvermelding staat ook onderaan de weerpagina. Technische documentatie, broncode en het openbare wijzigingenoverzicht zijn beschikbaar via de <a href="https://github.com/Tommjoness/watishetweer">projectpagina op GitHub</a>.</p>
 </main>
 <script>document.getElementById("wis").addEventListener("click",()=>{try{localStorage.clear();document.getElementById("wisstatus").textContent=" Lokale gegevens gewist.";}catch(e){document.getElementById("wisstatus").textContent=" Wissen lukte niet; gebruik de browserinstellingen.";}});</script>
 </body></html>

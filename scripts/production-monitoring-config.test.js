@@ -64,7 +64,10 @@ assert(performance.includes('const {chromium,webkit,devices}=require("playwright
 assert(performance.includes("volledigeForecasts.length,1"),"live performancemonitor bewaakt dubbele volledige forecastaanvragen niet");
 assert(performance.includes("previewForecasts.length<=1"),"live performancemonitor begrenst de current-only preview niet");
 assert(performance.includes("mislukteVolledige.length,0"),"live performancemonitor onderscheidt een afgebroken preview niet van een mislukte volledige forecast");
-assert(performance.includes("beacons.length,0"),"live performancemonitor bewaakt Cloudflare beaconinjectie niet");
+assert(performance.includes("scripts.length<=1"),"live performancemonitor begrenst de Cloudflare analytics-scriptinjectie niet");
+assert(performance.includes("vreemd.length,0"),"live performancemonitor weigert onverwachte analytics-origins niet");
+assert(performance.includes("isEigenRum"),"live performancemonitor moet de proxied same-origin /cdn-cgi/rum route herkennen");
+assert(!performance.includes("beacons.length,0"),"live performancemonitor mag Web Analytics niet meer categorisch verbieden");
 
 assert(cls.includes("const RONDEN=5"),"productie-CLS-monitor moet vijf koude runs doen");
 assert(cls.includes("const CLS_BUDGET=0.1"),"productie-CLS-monitor moet onder 0,1 afdwingen");
@@ -83,4 +86,4 @@ assert(cls.includes("Beschikbaarheid wordt apart bewaakt"),"CLS-monitor moet bes
 
 require("./production-source-truth.test.js");
 
-console.log("production-monitoring-config: deploymentcontract, vier gescheiden browsergates, vaste mobiele CLS-vensters en strikt sitemapcontract OK");
+console.log("production-monitoring-config: deploymentcontract, vier gescheiden browsergates, gecontroleerde Cloudflare Web Analytics, vaste mobiele CLS-vensters en strikt sitemapcontract OK");

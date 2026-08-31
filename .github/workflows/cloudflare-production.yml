@@ -80,12 +80,6 @@ jobs:
           echo "Cloudflare production branch: $production_branch"
           test "$production_branch" = main
 
-      - name: Schakel Cloudflare Pages Web Analytics uit
-        run: node scripts/cloudflare-disable-web-analytics.js
-
-      - name: Schakel Cloudflare RUM uit via Configuration Rule
-        run: node scripts/cloudflare-disable-rum.js
-
       - name: Borg Cloudflare API rate limit
         run: node scripts/cloudflare-api-rate-limit.js
 
