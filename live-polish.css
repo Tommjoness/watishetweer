@@ -220,9 +220,10 @@
   }
   #nctext{margin-bottom:4px}
 
-  /* Kop, hint en tabel houden samen dezelfde compacte leesbreedte. Daardoor
-     blijft de horizontale sectielijn exact op de rijen aansluiten. */
-  .dashrow-days > .dashcol{max-width:1000px}
+  /* Zeven dagen en Nachtzicht blijven gestapeld, maar gebruiken op desktop
+     voortaan de volledige beschikbare inhoudsbreedte. De oude 1000px-cap was
+     precies de oorzaak van de grote lege rechterhelft op brede schermen. */
+  .dashrow-days > .dashcol{width:100%;max-width:none;min-width:0}
   #days .row.day{
     grid-template-columns:92px 24px minmax(260px,1fr) 62px 46px 104px 44px 54px;
     gap:10px;

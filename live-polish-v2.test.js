@@ -87,6 +87,12 @@ test("desktopgrid reset oude twee- en vierkolomsselectors expliciet",()=>{
   assert(css.includes("overflow-wrap:break-word"));
 });
 
+test("Zeven dagen en Nachtzicht benutten op desktop de volledige inhoudsbreedte",()=>{
+  const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
+  assert(css.includes(".dashrow-days > .dashcol{width:100%;max-width:none;min-width:0}"));
+  assert(!css.includes(".dashrow-days > .dashcol{max-width:1000px}"));
+});
+
 test("Nachtzicht-bewolking staat exact onder de gecentreerde kolomkop",()=>{
   const css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8");
   assert(css.includes(".row.night > .nmeta:not(.wide),\n  .row.night.kop > .nmeta:not(.wide){text-align:center}"));
