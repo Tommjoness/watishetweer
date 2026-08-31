@@ -22,12 +22,14 @@ const MOTREGEN_PRODUCTIE='55:["Motregen","regen"],56:["Aanvriezende motregen","i
    ankers, maar sluiten visueel aan op het witte hoofdvlak. Nachtzicht houdt op
    brede schermen vaste compacte labelkolommen en een begrensde uitlegkolom,
    terwijl de scorebalk de resterende breedte vult. Vanaf het echte desktop-
-   breakpoint is het witte productvlak bovendien altijd viewportbreed. Daarmee
-   kan een historische max-width of brede/uitgezoomde browser nooit opnieuw
-   grijze zijgoten zichtbaar maken. De fixed contextbalk volgt vanaf hetzelfde
-   breakpoint exact die viewportgeometrie; oude gecentreerde breedte- of
-   transformregels worden daar expliciet geneutraliseerd. Onder 1100 px blijft
-   de bestaande responsieve layout volledig eigenaar. */
+   breakpoint is het witte productvlak bovendien altijd viewportbreed. De
+   onderste dashboardsecties (grafiek, Zeven dagen en Nachtzicht) worden hier
+   expliciet uit iedere historische twee-koloms- of max-width-context gehaald:
+   zij blijven gestapeld en vullen ieder de volledige beschikbare inhoudsbreedte.
+   De fixed contextbalk volgt vanaf hetzelfde breakpoint exact die
+   viewportgeometrie; oude gecentreerde breedte- of transformregels worden daar
+   expliciet geneutraliseerd. Onder 1100 px blijft de bestaande responsieve
+   layout volledig eigenaar. */
 const STIJL=`<style id="${MARKER}">
 @media(min-width:701px){
   .seo-plaatsnav{
@@ -53,6 +55,24 @@ const STIJL=`<style id="${MARKER}">
     box-sizing:border-box;
     width:100%!important;
     max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important
+  }
+  .dashrow-chart,.dashrow-days{
+    box-sizing:border-box!important;
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin-left:0!important;
+    margin-right:0!important
+  }
+  .dashrow-chart>.dashcol,.dashrow-days>.dashcol,#days,#nights{
+    box-sizing:border-box!important;
+    display:block;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
     margin-left:0!important;
     margin-right:0!important
   }
@@ -99,7 +119,7 @@ function main(){
     fs.writeFileSync(doel.pad,pasDesktopRefinementToe(bron,doel.label),"utf8");
   }
   const versie=vernieuwServiceworkerCache(OUT,"desktop-refinement-20260829");
-  console.log(`Desktopverfijning toegepast op ${doelen.length} weerpagina's: viewportbreed productvlak en minibalk, plaatsnav geïntegreerd, Nachtzicht breedtevullend en motregencopy genormaliseerd; cache ${versie}.`);
+  console.log(`Desktopverfijning toegepast op ${doelen.length} weerpagina's: viewportbreed productvlak, grafiek, Zeven dagen, Nachtzicht en minibalk; plaatsnav geïntegreerd en motregencopy genormaliseerd; cache ${versie}.`);
 }
 
 if(require.main===module)main();
