@@ -41,6 +41,7 @@ const STYLE=`<style id="weather-final-audit-20260901">
   .final-top-grid>.stats .stat:nth-child(4n){border-right:1px solid var(--rule);padding-right:22px}
   .final-top-grid>.stats .stat:nth-child(2n){border-right:none;padding-right:0;padding-left:22px}
   .final-top-grid>.stats .stat:nth-child(2n+1){padding-left:0}
+  .dashrow-chart .dagmod{max-width:1280px;margin-left:auto;margin-right:auto}
 }
 @media(max-width:430px){.final-rain-summary{font-size:11px;margin-top:6px}}
 </style>`;
