@@ -34,13 +34,32 @@ function zonDagIndex(bron){
   if(onder&&String(bron.current.time)>=String(onder)&&i+1<(daily.time||[]).length)i++;
   return i;
 }
+function hhmm(tijd){const m=/(?:T|^)(\d{2}):(\d{2})/.exec(String(tijd||""));return m?m[1]+":"+m[2]:null;}
+function datumDagenVerschil(van,naar){
+  const p=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s||""));return m?[+m[1],+m[2],+m[3]]:null;};
+  const a=p(van),b=p(naar);if(!a||!b)return null;
+  return Math.round((Date.UTC(b[0],b[1]-1,b[2])-Date.UTC(a[0],a[1]-1,a[2]))/86400000);
+}
+function poolDaglichtStatus(daily,index){
+  const sr=daily?.sunrise?.[index],ss=daily?.sunset?.[index],srt=hhmm(sr),sst=hhmm(ss);
+  if(srt!=="00:00"||sst!=="00:00")return "";
+  const dagen=datumDagenVerschil(String(sr).slice(0,10),String(ss).slice(0,10));
+  if(dagen===0)return "poolnacht";
+  if(dagen===1)return "24 uur daglicht";
+  return "";
+}
 function zonVerwachting(bron,nuOverride){
   /* De productie rendert zoninfo tegen weatherNowActueleLokaleTijd(). Rond
      zonsopkomst/-ondergang kan de current.time uit dezelfde providerresponse
      enkele minuten ouder zijn. Gebruik daarom dezelfde live lokale horizon als
-     de UI wanneer de browsermonitor die expliciet heeft meegegeven. */
-  const horizon=String(nuOverride||bron?.current?.time||"");
-  const rijen=zonInfoRijen(bron?.daily,horizon,null,()=>"",datum=>datum);
+     de UI wanneer de browsermonitor die expliciet heeft meegegeven.
+
+     Open-Meteo kan rond de geografische polen 00:00/00:00 als sentinel leveren.
+     De product-UI vertaalt die combinatie bewust naar poolnacht of pooldag. De
+     bronmonitor moet daarom dezelfde semantiek gebruiken en mag 00:00 niet als
+     een echte zonsopkomst/-ondergang eisen. */
+  const horizon=String(nuOverride||bron?.current?.time||""),daily=bron?.daily||{};
+  const rijen=zonInfoRijen(daily,horizon,null,idx=>poolDaglichtStatus(daily,idx),datum=>datum);
   const items=rijen.flatMap(r=>r.items||[]),op=[],onder=[];
   for(const item of items){
     const opMatch=/^zon op\s+(\d{2}:\d{2})$/i.exec(String(item));
@@ -103,4 +122,4 @@ function verifieerBronwaarheid(bron,ui,label,nuOverride){
   return {dagen:verwacht.length,zonRijen:zon.rijen.length};
 }
 
-module.exports={BFT,getal,bft,zichtbaarGetal,dagNeerslag,uvPiekVandaag,zonDagIndex,zonVerwachting,verwachtDagRijen,verifieerBronwaarheid};
+module.exports={BFT,getal,bft,zichtbaarGetal,dagNeerslag,uvPiekVandaag,zonDagIndex,hhmm,datumDagenVerschil,poolDaglichtStatus,zonVerwachting,verwachtDagRijen,verifieerBronwaarheid};
