@@ -10,28 +10,38 @@ const START="/* ---------- start ---------- */";
 const GLOBAL_MARKER="/* ===== FINAL GLOBAL CORRECTNESS 20260901 ===== */";
 const MARKER="/* ===== FINAL BRIEFING GRAMMAR 20260901 ===== */";
 
+/* nbsp() zet zichtbare briefingtekst bewust om naar non-breaking spaces. De
+   centrale grammatica-policy blijft de inhoudelijke eigenaar; deze helper voegt
+   alleen transportrobuustheid toe door ook een behouden NBSP tussen 1/-1 en
+   'graden' als dezelfde zichtbare woordgrens te behandelen. */
+function corrigeerBriefingTransportTekst(tekst,centraal){
+  const bron=String(tekst==null?"":tekst);
+  const basis=typeof centraal==="function"?centraal(bron):bron;
+  return String(basis).replace(/(^|[^\d,.-])(-?1)([\s\u00a0]+)graden\b/g,"$1$2$3graad");
+}
+
 /* Deze laag draait bewust ná unified-weather-truth en final-global. De briefing-
    owners blijven verantwoordelijk voor inhoud, horizon en plateau-semantiek.
    Alleen de Nederlandse enkelvoudsvorm van zichtbare temperaturen wordt hier
    na iedere daadwerkelijke briefingrender genormaliseerd via de centrale pure
-   correctheidsfunctie. Daarmee kan een latere/asynchrone briefingrender de
-   grammatica niet opnieuw terugzetten naar '1 graden' of '-1 graden'. */
+   correctheidsfunctie, met bovenstaande NBSP-adapter voor de uiteindelijke DOM. */
 const RUNTIME=`
 ${MARKER}
 (function(){
 "use strict";
 const G=globalThis.WeatherNowFinalGlobalCorrectness;
 if(!G||typeof G.corrigeerGradenTekst!=="function"||typeof briefing!=="function")return;
+const corrigeerBriefingTransportTekst=${corrigeerBriefingTransportTekst.toString()};
 const basisBriefingGrammar=briefing;
 function corrigeerBriefingGrammatica(){
   const el=document.getElementById("brief");if(!el)return;
   if(typeof document.createTreeWalker==="function"){
     const showText=typeof NodeFilter!=="undefined"?NodeFilter.SHOW_TEXT:4,walker=document.createTreeWalker(el,showText);let n;
-    while((n=walker.nextNode())){const oud=n.nodeValue||"",nieuw=G.corrigeerGradenTekst(oud);if(nieuw!==oud)n.nodeValue=nieuw;}
+    while((n=walker.nextNode())){const oud=n.nodeValue||"",nieuw=corrigeerBriefingTransportTekst(oud,G.corrigeerGradenTekst);if(nieuw!==oud)n.nodeValue=nieuw;}
   }else{
-    const loop=node=>{for(const n of Array.from(node&&node.childNodes||[])){if(n.nodeType===3){const oud=n.nodeValue||"",nieuw=G.corrigeerGradenTekst(oud);if(nieuw!==oud)n.nodeValue=nieuw;}else loop(n);}};loop(el);
+    const loop=node=>{for(const n of Array.from(node&&node.childNodes||[])){if(n.nodeType===3){const oud=n.nodeValue||"",nieuw=corrigeerBriefingTransportTekst(oud,G.corrigeerGradenTekst);if(nieuw!==oud)n.nodeValue=nieuw;}else loop(n);}};loop(el);
   }
-  el.querySelectorAll("[aria-label],[title]").forEach(node=>{for(const a of ["aria-label","title"]){if(!node.hasAttribute(a))continue;const oud=node.getAttribute(a)||"",nieuw=G.corrigeerGradenTekst(oud);if(nieuw!==oud)node.setAttribute(a,nieuw);}});
+  el.querySelectorAll("[aria-label],[title]").forEach(node=>{for(const a of ["aria-label","title"]){if(!node.hasAttribute(a))continue;const oud=node.getAttribute(a)||"",nieuw=corrigeerBriefingTransportTekst(oud,G.corrigeerGradenTekst);if(nieuw!==oud)node.setAttribute(a,nieuw);}});
 }
 briefing=function(){const r=basisBriefingGrammar.apply(this,arguments);corrigeerBriefingGrammatica();return r;};
 corrigeerBriefingGrammatica();
@@ -68,4 +78,4 @@ function voerUit(){
 }
 
 if(require.main===module)voerUit();
-module.exports={START,GLOBAL_MARKER,MARKER,RUNTIME,pasToe,voerUit};
+module.exports={START,GLOBAL_MARKER,MARKER,RUNTIME,corrigeerBriefingTransportTekst,pasToe,voerUit};
