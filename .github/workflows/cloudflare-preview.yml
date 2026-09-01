@@ -135,3 +135,9 @@ jobs:
           PRODUCTION_ROOT: ${{ env.PREVIEW_ROOT }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
         run: node scripts/production-worldwide-browser.js
+
+      - name: Echte responsive preview met tijdelijke screenshots
+        env:
+          PREVIEW_ROOT: ${{ env.PREVIEW_ROOT }}
+          EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+        run: node scripts/preview-responsive-visual-browser.js
