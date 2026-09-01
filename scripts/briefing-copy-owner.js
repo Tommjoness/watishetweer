@@ -13,10 +13,14 @@
  * bij dezelfde briefingowner vóór assemblage klaar is. */
 
 const BRIEFING_HAAK="function briefing(){\n";
-const HELPER_PRODUCTIE=`function weatherNowBriefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){
+const HELPER_PRODUCTIE=`function weatherNowBriefingTemperatuurHtml(v){
+  const n=Number(v),eenheid=Number.isFinite(n)&&Math.abs(n)===1?"graad":"graden";
+  return "<b>"+v+" "+eenheid+"</b>";
+}
+function weatherNowBriefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){
   const doel=Number(tmin);
   if(!Number.isFinite(doel))return "";
-  const waarde="<b>"+tmin+" graden</b>";
+  const waarde=weatherNowBriefingTemperatuurHtml(tmin);
   const m=/T(\\d{2}):(\\d{2})/.exec(String(nuLokaal||""));
   const uur=m?Number(m[1]):null;
   if(Number.isFinite(uur)&&uur>=0&&uur<5){
@@ -36,16 +40,16 @@ const NACHTZIN_BRON='  const nachtZin=tmin===null?"":" Vannacht koelt het af naa
 const NACHTZIN_PRODUCTIE='  const nachtZin=weatherNowBriefingNachtzin(tmin,nuLokaal,huidige);\n';
 
 const VANDAAG_PIEK_BRON='    zin2="Vandaag wordt het rond "+hhmm(volledigePiekVandaag.t)+" het warmst, met maximaal <b>"\n      +Math.round(volledigePiekVandaag.v)+" graden</b>."+nachtZin;\n';
-const VANDAAG_PIEK_PRODUCTIE='    zin2="Het verwachte maximum ligt vandaag rond "+hhmm(volledigePiekVandaag.t)+" op <b>"\n      +Math.round(volledigePiekVandaag.v)+" graden</b>."+(nachtZin?" "+nachtZin:"");\n';
+const VANDAAG_PIEK_PRODUCTIE='    zin2="Het verwachte maximum ligt vandaag rond "+hhmm(volledigePiekVandaag.t)+" op "\n      +weatherNowBriefingTemperatuurHtml(Math.round(volledigePiekVandaag.v))+"."+(nachtZin?" "+nachtZin:"");\n';
 
 const MORGEN_BRON='    zin2=morgenUurPiek\n      ?"Morgen wordt het rond "+hhmm(morgenUurPiek.t)+" het warmst, met maximaal <b>"+Math.round(morgenDagMax)+" graden</b>."+nachtZin\n      :"Morgen wordt het maximaal <b>"+Math.round(morgenDagMax)+" graden</b>."+nachtZin;\n';
-const MORGEN_PRODUCTIE='    zin2=morgenUurPiek\n      ?"Het verwachte maximum ligt morgen rond "+hhmm(morgenUurPiek.t)+" op <b>"+Math.round(morgenDagMax)+" graden</b>."+(nachtZin?" "+nachtZin:"")\n      :"Het verwachte maximum voor morgen is <b>"+Math.round(morgenDagMax)+" graden</b>."+(nachtZin?" "+nachtZin:"");\n';
+const MORGEN_PRODUCTIE='    zin2=morgenUurPiek\n      ?"Het verwachte maximum ligt morgen rond "+hhmm(morgenUurPiek.t)+" op "+weatherNowBriefingTemperatuurHtml(Math.round(morgenDagMax))+"."+(nachtZin?" "+nachtZin:"")\n      :"Het verwachte maximum voor morgen is "+weatherNowBriefingTemperatuurHtml(Math.round(morgenDagMax))+"."+(nachtZin?" "+nachtZin:"");\n';
 
 const VANDAAG_VERLEDEN_BRON='    zin2="Vandaag was het rond "+hhmm(volledigePiekVandaag.t)+" het warmst, met <b>"+Math.round(volledigePiekVandaag.v)+" graden</b>."+nachtZin;\n';
-const VANDAAG_VERLEDEN_PRODUCTIE='    zin2="Het verwachte maximum lag vandaag rond "+hhmm(volledigePiekVandaag.t)+" op <b>"+Math.round(volledigePiekVandaag.v)+" graden</b>."+(nachtZin?" "+nachtZin:"");\n';
+const VANDAAG_VERLEDEN_PRODUCTIE='    zin2="Het verwachte maximum lag vandaag rond "+hhmm(volledigePiekVandaag.t)+" op "+weatherNowBriefingTemperatuurHtml(Math.round(volledigePiekVandaag.v))+"."+(nachtZin?" "+nachtZin:"");\n';
 
 const VANDAAG_MAX_BRON='    zin2="De maximumtemperatuur van vandaag ligt rond <b>"+Math.round(vandaagMax)+" graden</b>."+nachtZin;\n';
-const VANDAAG_MAX_PRODUCTIE='    zin2="De maximumtemperatuur van vandaag ligt rond <b>"+Math.round(vandaagMax)+" graden</b>."+(nachtZin?" "+nachtZin:"");\n';
+const VANDAAG_MAX_PRODUCTIE='    zin2="De maximumtemperatuur van vandaag ligt rond "+weatherNowBriefingTemperatuurHtml(Math.round(vandaagMax))+"."+(nachtZin?" "+nachtZin:"");\n';
 
 const NACHT_STANDALONE_BRON='    zin2="Vannacht koelt het af naar <b>"+tmin+" graden</b>.";\n';
 const NACHT_STANDALONE_PRODUCTIE='    zin2=weatherNowBriefingNachtzin(tmin,nuLokaal,huidige);\n';
@@ -53,10 +57,14 @@ const NACHT_STANDALONE_PRODUCTIE='    zin2=weatherNowBriefingNachtzin(tmin,nuLok
 const WAARSCHUWING_VOORRANG_BRON='        voor="<b>"+waarschKop+":</b> "+esc(w.titel)+". "+voor\n          +" De officiële waarschuwing heeft voorrang op de modelverwachting.";\n';
 const WAARSCHUWING_VOORRANG_PRODUCTIE='        voor="<b>"+waarschKop+":</b> "+esc(w.titel)+". "+voor;\n';
 
+function briefingTemperatuurHtml(v){
+  const n=Number(v),eenheid=Number.isFinite(n)&&Math.abs(n)===1?"graad":"graden";
+  return "<b>"+v+" "+eenheid+"</b>";
+}
 function briefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){
   const getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
   const doel=getal(tmin);if(doel===null)return "";
-  const waarde="<b>"+tmin+" graden</b>";
+  const waarde=briefingTemperatuurHtml(tmin);
   const m=/T(\d{2}):(\d{2})/.exec(String(nuLokaal||"")),uur=m?Number(m[1]):null;
   if(Number.isFinite(uur)&&uur>=0&&uur<5){
     const huidige=getal(huidigeTemperatuur);
@@ -91,7 +99,7 @@ function pasBriefingCopyToe(html){
 }
 
 module.exports={
-  briefingNachtzin,pasBriefingCopyToe,BRIEFING_HAAK,HELPER_PRODUCTIE,
+  briefingTemperatuurHtml,briefingNachtzin,pasBriefingCopyToe,BRIEFING_HAAK,HELPER_PRODUCTIE,
   NACHTZIN_BRON,NACHTZIN_PRODUCTIE,VANDAAG_PIEK_BRON,VANDAAG_PIEK_PRODUCTIE,
   MORGEN_BRON,MORGEN_PRODUCTIE,VANDAAG_VERLEDEN_BRON,VANDAAG_VERLEDEN_PRODUCTIE,
   VANDAAG_MAX_BRON,VANDAAG_MAX_PRODUCTIE,NACHT_STANDALONE_BRON,NACHT_STANDALONE_PRODUCTIE,
