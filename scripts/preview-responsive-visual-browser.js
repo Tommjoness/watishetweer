@@ -44,7 +44,9 @@ function binnenViewport(rect,width){return !!rect&&rect.left>=-1&&rect.right<=wi
         overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,
         pressure:[...document.querySelectorAll(".eyebrow")].find(e=>(e.textContent||"").includes("Luchtdruk"))?.textContent?.trim()||"",
         searchRect:(()=>{const r=document.getElementById("q")?.getBoundingClientRect();return r?{left:r.left,right:r.right,width:r.width}:null;})(),
-        topRects:[...document.querySelectorAll(".mast button,.mast input")].map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width,height:r.height,label:el.getAttribute("aria-label")||el.textContent||el.id||el.tagName};}),
+        topRects:[...document.querySelectorAll(".mast button,.mast input")]
+          .filter(el=>el.getClientRects().length>0&&getComputedStyle(el).visibility!=="hidden")
+          .map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width,height:r.height,label:el.getAttribute("aria-label")||el.textContent||el.id||el.tagName};}),
         legeNeerslag:[...document.querySelectorAll("#days .row.day:not(.kop) .drain")].filter(el=>!(el.textContent||el.getAttribute("aria-label")||"").trim()).length,
         drukAria:document.getElementById("pres")?.closest(".stat")?.getAttribute("aria-label")||"",
         appText:document.getElementById("app")?.textContent||""
@@ -56,7 +58,23 @@ function binnenViewport(rect,width){return !!rect&&rect.left>=-1&&rect.right<=wi
       assert.equal(basis.legeNeerslag,0,`${vp.naam}: lege neerslagpositie in dagtabel`);
       assert(!/(?:^|[^\d])-?1\s+graden\b/i.test(basis.appText),`${vp.naam}: enkelvoudtemperatuur gebruikt 'graden'`);
       assert(binnenViewport(basis.searchRect,vp.width),`${vp.naam}: zoekveld valt buiten viewport`);
-      for(const r of basis.topRects)assert(binnenViewport(r,vp.width),`${vp.naam}: bovenste bediening '${String(r.label).trim()}' valt buiten viewport`);
+      for(const r of basis.topRects)assert(binnenViewport(r,vp.width),`${vp.naam}: zichtbare bovenste bediening '${String(r.label).trim()}' valt buiten viewport`);
+
+      const thema=page.locator("#thema"),themaMenu=page.locator("#themamenu");
+      await thema.click();
+      await themaMenu.waitFor({state:"visible",timeout:3000});
+      const themaUit=await page.evaluate(()=>{
+        const menu=document.getElementById("themamenu"),r=menu?.getBoundingClientRect();
+        const opties=[...document.querySelectorAll('#themamenu [role="menuitemradio"]')].filter(el=>el.getClientRects().length>0).map(el=>{const b=el.getBoundingClientRect();return {left:b.left,right:b.right,width:b.width,label:(el.textContent||"").trim()};});
+        return {rect:r?{left:r.left,right:r.right,width:r.width}:null,opties,expanded:document.getElementById("thema")?.getAttribute("aria-expanded")||""};
+      });
+      assert.equal(themaUit.expanded,"true",`${vp.naam}: Weergave-menu meldt geopend niet`);
+      assert(binnenViewport(themaUit.rect,vp.width),`${vp.naam}: Weergave-menu valt buiten viewport`);
+      assert.equal(themaUit.opties.length,3,`${vp.naam}: Weergave-menu toont niet exact drie keuzes`);
+      for(const r of themaUit.opties)assert(binnenViewport(r,vp.width),`${vp.naam}: zichtbare Weergave-keuze '${r.label}' valt buiten viewport`);
+      await page.keyboard.press("Escape");
+      assert.equal(await thema.getAttribute("aria-expanded"),"false",`${vp.naam}: Escape sluit Weergave-menu niet`);
+      assert.equal(await themaMenu.isHidden(),true,`${vp.naam}: Weergave-menu blijft zichtbaar na Escape`);
 
       const q=page.locator("#q");
       await q.fill("Singapore");
@@ -76,7 +94,7 @@ function binnenViewport(rect,width){return !!rect&&rect.left>=-1&&rect.right<=wi
       await page.screenshot({path:png,fullPage:true});
       assert(fs.existsSync(png)&&fs.statSync(png).size>5000,`${vp.naam}: screenshot ontbreekt of is verdacht klein`);
       const hash=crypto.createHash("sha256").update(fs.readFileSync(png)).digest("hex").slice(0,12);
-      console.log(`${vp.naam}: echte preview zonder overflow; zoeklijst/druk/neerslag/a11y correct; screenshot sha256 ${hash}.`);
+      console.log(`${vp.naam}: echte preview zonder overflow; topcontrols/Weergave/zoeklijst/druk/neerslag/a11y correct; screenshot sha256 ${hash}.`);
       assert.deepEqual(pageErrors,[],`${vp.naam}: pageerrors ${pageErrors.join(" | ")}`);
       await context.close();
     }
