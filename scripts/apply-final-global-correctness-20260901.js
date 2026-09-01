@@ -90,19 +90,28 @@ if(globalThis.WeatherNowKansbeleidV3&&typeof globalThis.WeatherNowKansbeleidV3.d
 }
 
 function laatsteGetal(tekst){const m=/(-?\\d+(?:[.,]\\d+)?)\\s*$/.exec(String(tekst||""));return m?Number(m[1].replace(",",".")):null;}
+function bezoekTekstNodes(scope,callback){
+  if(!scope||typeof callback!=="function")return;
+  if(typeof document.createTreeWalker==="function"){
+    const showText=typeof NodeFilter!=="undefined"?NodeFilter.SHOW_TEXT:4,walker=document.createTreeWalker(scope,showText);let n;
+    while((n=walker.nextNode()))callback(n);return;
+  }
+  const stack=scope.childNodes?Array.from(scope.childNodes):[];
+  while(stack.length){const n=stack.shift();if(!n)continue;if(n.nodeType===3)callback(n);if(n.childNodes&&n.childNodes.length)stack.unshift(...Array.from(n.childNodes));}
+}
 function corrigeerTemperatuurDom(root){
-  const scope=root||document,showText=typeof NodeFilter!=="undefined"?NodeFilter.SHOW_TEXT:4,walker=document.createTreeWalker(scope,showText);let n;
-  while((n=walker.nextNode())){
+  const scope=root||document;
+  bezoekTekstNodes(scope,n=>{
     const oud=n.nodeValue||"",nieuw=G.corrigeerGradenTekst(oud);if(nieuw!==oud)n.nodeValue=nieuw;
     if(/^\\s*graden\\b/.test(n.nodeValue||"")&&n.previousSibling){const v=laatsteGetal(n.previousSibling.textContent);if(v!==null&&Math.abs(v)===1)n.nodeValue=String(n.nodeValue).replace(/^([\\s]*)graden\\b/,"$1graad");}
-  }
+  });
   scope.querySelectorAll&&scope.querySelectorAll("[aria-label],[title]").forEach(el=>{for(const a of ["aria-label","title"]){if(!el.hasAttribute(a))continue;const oud=el.getAttribute(a),nieuw=G.corrigeerGradenTekst(oud);if(nieuw!==oud)el.setAttribute(a,nieuw);}});
 }
 function corrigeerDrukSemantiek(){
   document.querySelectorAll(".eyebrow").forEach(el=>{if(el.textContent.trim()==="Luchtdruk")el.textContent="Luchtdruk op zeeniveau";});
   const pres=document.getElementById("pres");if(pres){const stat=pres.closest(".stat");if(stat){stat.setAttribute("title","Luchtdruk herleid tot zeeniveau (MSL).");stat.setAttribute("aria-label","Luchtdruk op zeeniveau. "+pres.textContent.trim());}}
-  const scope=document.getElementById("app");if(!scope)return;const showText=typeof NodeFilter!=="undefined"?NodeFilter.SHOW_TEXT:4,walker=document.createTreeWalker(scope,showText);let n;
-  while((n=walker.nextNode())){let t=n.nodeValue||"";t=t.replace(/\\bDe luchtdruk is\\b/g,"De luchtdruk op zeeniveau is").replace(/\\bDe luchtdruk blijft\\b/g,"De luchtdruk op zeeniveau blijft").replace(/\\bLuchtdruk:\\s*/g,"Luchtdruk op zeeniveau: ");n.nodeValue=t;}
+  const scope=document.getElementById("app");if(!scope)return;
+  bezoekTekstNodes(scope,n=>{let t=n.nodeValue||"";t=t.replace(/\\bDe luchtdruk is\\b/g,"De luchtdruk op zeeniveau is").replace(/\\bDe luchtdruk blijft\\b/g,"De luchtdruk op zeeniveau blijft").replace(/\\bLuchtdruk:\\s*/g,"Luchtdruk op zeeniveau: ");n.nodeValue=t;});
 }
 function finaliseerDagNeerslag(){
   document.querySelectorAll("#days .row.day:not(.kop)").forEach(r=>{
