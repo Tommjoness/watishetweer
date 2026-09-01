@@ -89,6 +89,28 @@ async function controleer(type,naam,breedte){
         const cls=typeof el.className==="string"&&el.className.trim()?"."+el.className.trim().replace(/\s+/g,"."):"";
         return el.tagName.toLowerCase()+id+cls;
       };
+      const pad=n=>Number.isFinite(n)?+n.toFixed(2):null;
+      const selectorPad=el=>{
+        if(!el||el.nodeType!==1)return null;
+        const delen=[];
+        for(let p=el;p&&p.nodeType===1&&delen.length<6;p=p.parentElement){
+          delen.unshift(label(p));
+          if(p.classList&&p.classList.contains("sheet"))break;
+        }
+        return delen.join(" > ");
+      };
+      const audit=el=>{
+        if(!el)return null;
+        const s=getComputedStyle(el),r=el.getBoundingClientRect();
+        return {
+          el:label(el),pad:selectorPad(el),parent:el.parentElement?label(el.parentElement):null,
+          left:pad(r.left),right:pad(r.right),width:pad(r.width),
+          clientWidth:el.clientWidth,scrollWidth:el.scrollWidth,offsetWidth:el.offsetWidth,
+          overflowX:s.overflowX,overflowY:s.overflowY,display:s.display,position:s.position,
+          cssWidth:s.width,minWidth:s.minWidth,maxWidth:s.maxWidth,whiteSpace:s.whiteSpace,
+          marginLeft:s.marginLeft,marginRight:s.marginRight,contain:s.contain,transform:s.transform
+        };
+      };
       const begrensdDoorHorizontaleScroller=el=>{
         for(let p=el.parentElement;p&&p!==document.body;p=p.parentElement){
           const s=getComputedStyle(p),x=s.overflowX;
@@ -119,11 +141,33 @@ async function controleer(type,naam,breedte){
         const el=document.querySelector(sel);if(!el)continue;const r=el.getBoundingClientRect();
         modules[naam]={left:+r.left.toFixed(2),right:+r.right.toFixed(2),width:+r.width.toFixed(2),scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,overflowX:getComputedStyle(el).overflowX};
       }
+
+      /* Diagnoseer scrollbare/intrinsieke overflow ook wanneer rects zelf netjes
+         binnen de viewport liggen. Dit verandert geen enkele assertie: het
+         maakt alleen de echte eigenaar zichtbaar wanneer de harde bodygate faalt. */
+      const sheet=document.querySelector(".sheet");
+      const kandidaten=sheet?[sheet,...sheet.querySelectorAll("*")]:[];
+      const offenders=kandidaten
+        .filter(el=>{
+          if(!zichtbaar(el))return false;
+          if(el instanceof SVGElement&&el.tagName.toLowerCase()!=="svg")return false;
+          const r=el.getBoundingClientRect();
+          return el.scrollWidth>el.clientWidth+1||r.left<-.75||r.right>vw+.75;
+        })
+        .map(audit)
+        .sort((a,b)=>Math.max((b.scrollWidth||0)-(b.clientWidth||0),Math.max(0,(b.right||0)-vw))-Math.max((a.scrollWidth||0)-(a.clientWidth||0),Math.max(0,(a.right||0)-vw)))
+        .slice(0,15);
+      const expliciet={};
+      for(const [k,sel] of Object.entries({
+        sheet:".sheet",details:"#chartdata",summary:"#chartdata > summary",hint:".chartdata-scrollhint",scroller:".chartdata-scroll",table:".chartdata-scroll table"
+      }))expliciet[k]=audit(document.querySelector(sel));
+
       return {
         innerWidth:window.innerWidth,clientWidth:vw,
         htmlScroll:document.documentElement.scrollWidth,
         bodyScroll:document.body.scrollWidth,
         buiten,modules,
+        overflowAudit:{offenders,expliciet},
         q4Labels:[...document.querySelectorAll('#chart g[data-q4-rain-periods] text')].map(x=>(x.textContent||"").trim()),
         q4ViewBox:document.getElementById("chart").getAttribute("viewBox"),
         scrollHint:getComputedStyle(document.querySelector(".chartdata-scrollhint")).display
