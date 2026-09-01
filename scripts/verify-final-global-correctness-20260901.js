@@ -22,6 +22,8 @@ for(const p of htmls(OUT)){
     [!s.includes('return "id:"+String(r.id).trim();'),"geen provider-ID als primaire zoeksleutel"],
     [s.includes("nuDatumTijd:nuLokaal"),"volledige lokale datetime voor Nachtzicht"],
     [s.includes("nachtDatum:Array.isArray(day.time)?day.time[horizon]:null"),"kalendernacht voor Nachtzicht"],
+    [s.includes("horizonDagen:h,nuDatumTijd:opties.nuDatumTijd"),"datum-/tijdpolicy voor iedere Nachtzicht-horizon"],
+    [s.includes("basisNachtVenster(tekst,1,score,{...opties,actief:false})"),"oude kloktijdowner kan toekomstige rijen niet meer als verleden markeren"],
     [s.includes("G.nachtAdvies(score,geen[1])"),"scorebewuste Nachtzichtcopy"],
     [s.includes("hoeveelheid onzeker"),"niet-lege hoeveelheidstoestand"],
     [s.includes("Modelgegevens, geen officiële waarschuwing."),"brononderscheid modelsignaal"],
