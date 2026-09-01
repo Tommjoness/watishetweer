@@ -34,9 +34,22 @@ for(const soort of ["neerslag","regen","motregen","sneeuw","natte sneeuw","ijzel
   assert.equal(g.soortWordtVerwacht(soort),soort+" wordt verwacht",soort);
 }
 
+assert.equal(g.minuten(1),"1 minuut");
+assert.equal(g.minuten(2),"2 minuten");
+assert.equal(g.uren(1),"1 uur");
+assert.equal(g.uren(2),"2 uur");
+assert.equal(g.graden(1),"1 graad");
+assert.equal(g.graden(-1),"-1 graad");
+assert.equal(g.graden(2),"2 graden");
+assert.equal(g.duur(1,1),"1 uur en 1 minuut");
+assert.equal(g.duur(2,2),"2 uur en 2 minuten");
+assert.equal(g.duur(0,1),"1 minuut");
+assert.equal(g.duurKort(1,5),"1 u 05 min");
+assert.equal(g.duurKort(0,1),"1 min");
+
 assert.equal(g.opsomming(["bewolking"]),"bewolking");
 assert.equal(g.opsomming(["neerslag","bewolking"]),"neerslag en bewolking");
 assert.equal(g.opsomming(["beperkt zicht","neerslag","bewolking"]),"beperkt zicht, neerslag en bewolking");
 assert.equal(g.geenZichtvensterZin(["beperkt zicht","neerslag","bewolking"]),"Geen goed zichtvenster door beperkt zicht, neerslag en bewolking");
 
-console.log("Nederlandse weergrammatica: "+actueel.size+" actuele vormen en alle enkelvoud/meervoud-vertakkingen geslaagd.");
+console.log("Nederlandse weergrammatica: "+actueel.size+" actuele vormen plus centrale minuut/uur/graad-formatters geslaagd.");
