@@ -6,7 +6,10 @@ const path=require("path");
 const {waarschuwingTitelNl,waarschuwingTitelVoorBriefing,locatieSleutel,historyState,historyStateGeldig,formatMm}=require("./staff-audit-20260826.js");
 
 const owner=fs.readFileSync(path.join(__dirname,"apply-staff-audit-20260826.js"),"utf8");
+const css=fs.readFileSync(path.join(__dirname,"staff-audit-20260826.css"),"utf8");
 assert(owner.includes('<body>\\n<div class="sheet" data-nosnippet>'),"staff-audit moet de data-nosnippet-eigenschap van de dynamische appcontainer behouden");
+assert(css.includes('.chartdata{margin:10px 0 0;min-width:0;max-width:100%;width:100%;box-sizing:border-box}'),"chartdata-details moet zijn intrinsieke tabelbreedte binnen de mobiele container begrenzen");
+assert(css.includes('.chartdata-scroll{margin-top:8px;width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:auto'),"grafiektabel-scroller moet zelf exact binnen zijn container blijven en alleen intern horizontaal scrollen");
 
 assert.deepEqual(waarschuwingTitelNl("Flood Watch"),{origineel:"Flood Watch",nederlands:"Waakzaamheid voor overstromingen",vertaald:true});
 assert.deepEqual(waarschuwingTitelNl("Extreme Heat Warning"),{origineel:"Extreme Heat Warning",nederlands:"Waarschuwing voor extreme hitte",vertaald:true});
@@ -30,4 +33,4 @@ assert.equal(formatMm(0),"0,0 mm");
 assert.equal(formatMm(0.04),"<0,1 mm");
 assert.equal(formatMm(31.2),"31,2 mm");
 
-console.log("Staff-audit pure contracts groen: gecontroleerde warningmapping, geldige history-state en nul/null-neerslag blijven onderscheiden.");
+console.log("Staff-audit pure contracts groen: gecontroleerde warningmapping, geldige history-state, grafiektabel-containment en nul/null-neerslag blijven onderscheiden.");
