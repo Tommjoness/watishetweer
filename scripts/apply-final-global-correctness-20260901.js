@@ -49,7 +49,16 @@ const DEDUP_NIEUW=`function dedupliceerZoekresultaten(resultaten,max){
 }`;
 
 const NACHT_CALL_OUD=`const detail=venster?corrigeerNachtVensterBron(venster,horizon,zichtbaar,{zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal)}):"";`;
-const NACHT_CALL_NIEUW=`const detail=venster?corrigeerNachtVensterBron(venster,horizon,zichtbaar,{zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal),nuDatumTijd:nuLokaal,nachtDatum:Array.isArray(day.time)?day.time[horizon]:null,tijdzone:S.d&&S.d.timezone,nuEpochMs:Date.now()}):"";`;
+const NACHT_CALL_NIEUW=`const detail=venster?(()=>{
+  const optiesNacht={zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal),nuDatumTijd:nuLokaal,nachtDatum:Array.isArray(day.time)?day.time[horizon]:null,tijdzone:S.d&&S.d.timezone,nuEpochMs:Date.now()};
+  const beleid=globalThis.WeatherNowFinalGlobalCorrectness;
+  let lokaal=corrigeerNachtVensterBron(venster,horizon,zichtbaar,optiesNacht);
+  const geen=/^Geen (?:gunstig|goed) kijkvenster door (.+?)[.!?]*$/i.exec(String(lokaal||"").trim());
+  if(beleid&&geen&&typeof beleid.nachtAdvies==="function")lokaal=beleid.nachtAdvies(zichtbaar,geen[1]);
+  return beleid&&typeof beleid.nachtVensterTijdsvorm==="function"
+    ?beleid.nachtVensterTijdsvorm(lokaal,{horizonDagen:horizon,nuDatumTijd:optiesNacht.nuDatumTijd,nachtDatum:optiesNacht.nachtDatum,tijdzone:optiesNacht.tijdzone,nuEpochMs:optiesNacht.nuEpochMs})
+    :lokaal;
+})():"";`;
 
 const CSS=`
 /* ===== FINAL GLOBAL CORRECTNESS 20260901 CSS ===== */
