@@ -9,14 +9,15 @@
 .chip .x:focus-visible,.chipplaats:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
 /* De brede tabel heeft één expliciete horizontale scroll-eigenaar. De buitenste
-   details-container vormt een echte lokale overflowgrens én inline-size
-   containment: de 650px tabel mag de min-contentbreedte van de dashboardkolom
-   niet oprekken. De interne scroller blijft horizontaal volledig bereikbaar. */
+   details-container vormt een lokale breedtegrens; de scroller zelf krijgt
+   layout/paint/inline-size containment zodat de 650px tabel niet in de
+   document-scrollgeometrie kan lekken. De interne horizontale scroll blijft
+   volledig bereikbaar. */
 .chartdata{margin:10px 0 0;min-width:0;max-width:100%;width:100%;box-sizing:border-box;overflow:hidden;contain:inline-size}
 .chartdata>summary,.waarsch-officieel-details>summary{cursor:pointer;color:var(--ink-70);font-size:12px}
 .chartdata>summary:focus-visible,.waarsch-officieel-details>summary:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 .chartdata-scrollhint{display:none;margin:8px 0 0;color:var(--ink-45);font-size:12px}
-.chartdata-scroll{margin-top:8px;width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:auto;overflow-y:hidden;border:1px solid var(--rule);-webkit-overflow-scrolling:touch}
+.chartdata-scroll{margin-top:8px;width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:auto;overflow-y:hidden;contain:layout paint inline-size;border:1px solid var(--rule);-webkit-overflow-scrolling:touch}
 .chartdata-scroll:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .chartdata table{border-collapse:collapse;width:100%;min-width:690px;font-size:12px;font-variant-numeric:tabular-nums}
 .chartdata th,.chartdata td{padding:7px 9px;border-bottom:1px solid var(--rule-soft);text-align:left;white-space:nowrap}
