@@ -12,7 +12,8 @@ eis(html.includes(".final-top-grid"),"desktop topgrid ontbreekt");
 eis(html.includes("grid-template-columns:minmax(0,.95fr) minmax(480px,1.05fr)"),"desktop topgrid heeft niet de geborgde twee kolommen");
 eis(html.includes("#chart g[data-q4-rain-periods]{display:none!important}"),"oude regenbrackets zijn niet visueel uitgezet");
 eis(html.includes("Verwachte meetbare neerslag:"),"nieuwe broncorrecte regenperiodecopy ontbreekt");
-eis(html.includes("Bij Vandaag geldt de neerslagkans vanaf nu"),"Vandaag-horizon is niet zichtbaar uitgelegd");
+eis(html.includes("Kies een dag om die verwachting in de grafiek te bekijken."),"weekhint is niet kort en consumentgericht");
+eis(html.includes("Vandaag: resterende neerslagkans vanaf nu"),"Vandaag-horizon is niet rijgebonden uitgelegd");
 eis(html.includes("Officiële waarschuwingen controleren; dit kan even duren."),"trage waarschuwingstatus ontbreekt");
 eis(html.includes("Uitleg van watishetweer.nl:"),"Nederlandse waarschuwinguitleg ontbreekt");
 eis(html.includes("Officiële tekst van de National Weather Service"),"officiële NWS-tekst is niet expliciet gelabeld");
@@ -32,4 +33,4 @@ eis(/\/app-\*\.min\.js[\s\S]*max-age=31536000, immutable/.test(headers),"immutab
 eis(/\/early-\*\.min\.js[\s\S]*max-age=31536000, immutable/.test(headers),"immutable cacheheader voor early-hash ontbreekt");
 eis(/\/sw\.js[\s\S]*max-age=0, must-revalidate/.test(headers),"serviceworker is niet hervalidatiegericht");
 
-console.log("Finale auditartifact groen: 2×4 desktop-topgrid, rustige regenpresentatie, Today-horizon, waarschuwingstatus, bronprovenance, contrast, privacycanonical en immutable hashes zijn geborgd.");
+console.log("Finale auditartifact groen: 2×4 desktop-topgrid, rustige regenpresentatie, rijgebonden Today-horizon, waarschuwingstatus, bronprovenance, contrast, privacycanonical en immutable hashes zijn geborgd.");
