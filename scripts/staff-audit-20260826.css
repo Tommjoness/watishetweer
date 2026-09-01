@@ -8,7 +8,10 @@
 .chip .x{inline-size:40px;block-size:40px;min-inline-size:40px;min-block-size:40px;display:inline-grid;place-items:center;padding:0;font-size:15px;line-height:1}
 .chip .x:focus-visible,.chipplaats:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
-.chartdata{margin:10px 0 0;min-width:0;max-width:100%;width:100%;box-sizing:border-box}
+/* De brede tabel heeft één expliciete horizontale scroll-eigenaar. De buitenste
+   details-container vormt alleen de lokale overflowgrens, zodat de interne
+   tabelbreedte nooit als document-/sheetbreedte doorlekt. */
+.chartdata{margin:10px 0 0;min-width:0;max-width:100%;width:100%;box-sizing:border-box;overflow-x:clip}
 .chartdata>summary,.waarsch-officieel-details>summary{cursor:pointer;color:var(--ink-70);font-size:12px}
 .chartdata>summary:focus-visible,.waarsch-officieel-details>summary:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 .chartdata-scrollhint{display:none;margin:8px 0 0;color:var(--ink-45);font-size:12px}
