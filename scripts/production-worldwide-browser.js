@@ -63,6 +63,7 @@ function isVolledigeForecast(url){
           bronLinks:[...document.querySelectorAll('a[href*="open-meteo"],a[href*="knmi"]')].length,
           temperatuur:Number((document.getElementById("t")?.textContent||"").replace(",",".")),
           wind:(document.getElementById("wind")?.textContent||""),
+          luchtdruk:document.getElementById("pres")?.textContent||"",
           uv:Number((document.getElementById("uv")?.textContent||"").replace(",",".")),
           thema:document.documentElement.getAttribute("data-thema")||"",
           klok:document.getElementById("plaatstijd")?.textContent||"",
@@ -82,7 +83,7 @@ function isVolledigeForecast(url){
             };
           })
         }));
-        uit.wind=zichtbaarGetal(uit.wind);uit.uv=Number.isFinite(uit.uv)?uit.uv:null;
+        uit.wind=zichtbaarGetal(uit.wind);uit.luchtdruk=zichtbaarGetal(uit.luchtdruk);uit.uv=Number.isFinite(uit.uv)?uit.uv:null;
         uit.rijen=uit.rijen.map(r=>({...r,min:zichtbaarGetal(r.min),max:zichtbaarGetal(r.max),wind:zichtbaarGetal(r.wind)}));
         assert.equal(uit.sha,verwacht,`${scherm.naam}/${locatie.naam}: verkeerde build ${uit.sha}`);
         assert.equal(uit.label,locatie.naam,`${scherm.naam}/${locatie.naam}: plaatsidentiteit werd ${uit.label}`);
@@ -102,13 +103,13 @@ function isVolledigeForecast(url){
         for(const [i,r] of uit.rijen.entries())assert(String(r.neerslagHoofd||r.neerslagHoeveelheid||r.neerslagAria).trim(),`${scherm.naam}/${locatie.naam}: dagrij ${i+1} heeft leeg neerslagveld`);
         /* De providerresponse blijft exact zoals ontvangen. Alleen de horizon
            voor de resterende huidige dag volgt dezelfde actuele lokale klok
-           als de pagina; temperatuur, wind, UV, thema en bronvelden blijven
-           rechtstreeks tegen de ongewijzigde live response gecontroleerd. */
+           als de pagina; temperatuur, wind, pressure_msl, UV, thema en bronvelden
+           blijven rechtstreeks tegen de ongewijzigde live response gecontroleerd. */
         const bronUit=verifieerBronwaarheid(bron,uit,`${scherm.naam}/${locatie.naam}`,uit.actueleLokaleTijd);
         const klokVerwacht=new Intl.DateTimeFormat("nl-NL",{timeZone:bron.timezone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());
         assert(klokVerschil(uit.klok,klokVerwacht)<=1,`${scherm.naam}/${locatie.naam}: lokale klok ${uit.klok} wijkt af van ${bron.timezone} (${klokVerwacht})`);
         assert.deepEqual(pageErrors,[],`${scherm.naam}/${locatie.naam}: pageerrors ${pageErrors.join(" | ")}`);
-        console.log(`BRONWAARHEID OK ${scherm.naam.padEnd(7)} ${locatie.naam}: temperatuur, wind, UV, druksoort, neerslagvelden, Nachtzicht-tijdsvorm, lokale tijd, zon en ${bronUit.dagen} dagrijen; overflow ${uit.overflow}px.`);
+        console.log(`BRONWAARHEID OK ${scherm.naam.padEnd(7)} ${locatie.naam}: temperatuur, wind, pressure_msl, UV, druksoort, neerslagvelden, Nachtzicht-tijdsvorm, lokale tijd, zon en ${bronUit.dagen} dagrijen; overflow ${uit.overflow}px.`);
         await page.close();
       }
       await context.close();
