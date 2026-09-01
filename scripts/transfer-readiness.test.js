@@ -40,7 +40,7 @@ assert(!preview.includes("migrate/cloudflare-pages-20260826"),"previewworkflow m
 assert(!preview.includes("pr-164"),"previewworkflow mag geen oude PR-preview hardcoden");
 assert(preview.includes("CLOUDFLARE_PREVIEW_BRANCH: pr-${{ github.event.pull_request.number || github.run_id }}"),"previewworkflow moet per PR of handmatige run een eigen branch gebruiken");
 assert(preview.includes("cancel-in-progress: true"),"verouderde previewruns moeten worden geannuleerd");
-assert(preview.includes("node scripts/production-worldwide-browser.js"),"preview moet de wereldwijde browsercontrole behouden");
+assert(preview.includes("node scripts/run-production-worldwide-browser.js"),"preview moet de wereldwijde browsercontrole via de gecontroleerde retry-runner behouden");
 
 /* Analytics is een aparte, idempotente accountmutatie. De normale productieflow
    mag die instelling niet bij iedere deploy terug uitzetten of opnieuw schrijven. */
