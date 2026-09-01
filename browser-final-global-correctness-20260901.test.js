@@ -31,13 +31,15 @@ setTimeout(()=>{
   const p=[...document.querySelectorAll('.eyebrow')].find(x=>/Luchtdruk/.test(x.textContent||''));zet('pressure',p&&p.textContent.trim()==='Luchtdruk op zeeniveau'?'ok':'fout');
   const risk=document.getElementById('modelrisico');if(risk){risk.hidden=false;risk.innerHTML='<div class="modelrisico-kop"><span class="modelrisico-label">Modelsignaal</span><span class="modelrisico-note">Modelgegevens, geen officiële waarschuwing.</span></div><div class="modelrisico-items"><span>Extreme hitte in de modelverwachting (43 °C).</span><span>Luchtkwaliteit volgens het model is ongezond (AQI VS 151).</span></div>';}
   const days=document.getElementById('days');if(days){days.innerHTML='<div class="row day"><div>Vandaag</div><div>22° / 14°</div><div class="drain" aria-label="Neerslagkans 61 procent; hoeveelheid onzeker">61%<small class="wiw-dag-onzeker">hoeveelheid onzeker</small></div><div>4 Bft</div></div>';}
-  requestAnimationFrame(()=>{requestAnimationFrame(()=>{
-    const overflow=document.documentElement.scrollWidth<=window.innerWidth+1&&document.body.scrollWidth<=window.innerWidth+1;
-    const pr=p&&p.getBoundingClientRect(),sheet=document.querySelector('.sheet'),sr=sheet&&sheet.getBoundingClientRect();
-    const drukPast=!!(pr&&sr&&pr.left>=sr.left-1&&pr.right<=sr.right+1);
-    const rr=risk&&risk.getBoundingClientRect(),risicoPast=!rr||rr.right<=window.innerWidth+1;
-    zet('layout',overflow&&drukPast&&risicoPast?'ok':'fout');
-  });});
+  /* getBoundingClientRect()/scrollWidth forceren zelf een actuele style/layout-
+     berekening. Een dubbele requestAnimationFrame maakte deze statische audit
+     onnodig afhankelijk van headless virtual-time scheduling en kon daardoor
+     een ontbrekend data-layout-attribuut geven zonder echte layoutfout. */
+  const overflow=document.documentElement.scrollWidth<=window.innerWidth+1&&document.body.scrollWidth<=window.innerWidth+1;
+  const pr=p&&p.getBoundingClientRect(),sheet=document.querySelector('.sheet'),sr=sheet&&sheet.getBoundingClientRect();
+  const drukPast=!!(pr&&sr&&pr.left>=sr.left-1&&pr.right<=sr.right+1);
+  const rr=risk&&risk.getBoundingClientRect(),risicoPast=!rr||rr.right<=window.innerWidth+1;
+  zet('layout',overflow&&drukPast&&risicoPast?'ok':'fout');
   const q=document.getElementById('q');if(q){q.value='Singapore';q.dispatchEvent(new Event('input',{bubbles:true}));}
   setTimeout(()=>{
     try{
