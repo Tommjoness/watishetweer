@@ -20,6 +20,8 @@ for(const p of htmls(OUT)){
     [s.includes('id="modelrisico" role="note" hidden'),"gescheiden modelsignaal"],
     [s.includes("Luchtdruk op zeeniveau"),"expliciete zeeniveaudruk"],
     [!s.includes('return "id:"+String(r.id).trim();'),"geen provider-ID als primaire zoeksleutel"],
+    [s.includes("const horizon=Math.max(h,nachtHorizonIndex(rij.dataset&&rij.dataset.d,h))"),"zichtbare Nachtzicht-rijpositie is ondergrens van de horizon"],
+    [s.includes("rij.dataset.d=String(horizon)"),"herstelde Nachtzicht-horizon wordt teruggeschreven voor latere owners"],
     [s.includes("nuDatumTijd:nuLokaal"),"volledige lokale datetime voor Nachtzicht"],
     [s.includes("nachtDatum:Array.isArray(day.time)?day.time[horizon]:null"),"kalendernacht voor Nachtzicht"],
     [s.includes("const beleid=globalThis.WeatherNowFinalGlobalCorrectness;"),"Nachtzicht-callpad ziet de centrale policy in zijn eigen scope"],
