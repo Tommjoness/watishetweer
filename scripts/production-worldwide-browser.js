@@ -93,7 +93,8 @@ function isVolledigeForecast(url){
         if(locatie.tz)assert.equal(bron.timezone,locatie.tz,`${scherm.naam}/${locatie.naam}: provider-tijdzone werd ${bron.timezone}, verwacht ${locatie.tz}`);
         assert.equal(uit.dagen,7,`${scherm.naam}/${locatie.naam}: geen zeven dagen`);
         assert(locatie.pool?(uit.nachten>0||uit.nachtLeeg):uit.nachten>0,`${scherm.naam}/${locatie.naam}: Nachtzicht heeft geen eerlijke staat`);
-        assert(!uit.toekomstigeNachtTeksten.some(t=>/\b(?:was|waren)\b/i.test(t)),`${scherm.naam}/${locatie.naam}: toekomstige Nachtzicht-rij gebruikt verleden tijd`);
+        const onjuisteToekomst=uit.toekomstigeNachtTeksten.filter(t=>/\b(?:was|waren)\b/i.test(t));
+        assert.equal(onjuisteToekomst.length,0,`${scherm.naam}/${locatie.naam}: toekomstige Nachtzicht-rij gebruikt verleden tijd: ${JSON.stringify(onjuisteToekomst)}`);
         assert(/^Gegevens opgehaald om \d{2}:\d{2} · /.test(uit.stamp),`${scherm.naam}/${locatie.naam}: ongeldige datastempel`);
         assert(uit.overflow<=1,`${scherm.naam}/${locatie.naam}: ${uit.overflow}px horizontale overflow`);
         assert(uit.titel.startsWith(locatie.naam+" · "),`${scherm.naam}/${locatie.naam}: titel en plaats verschillen`);
