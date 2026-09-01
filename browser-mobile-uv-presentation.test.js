@@ -70,37 +70,40 @@ async function controleer(type,naam,breedte){
 
     const g=await page.evaluate(()=>{
       const rect=el=>{const b=el.getBoundingClientRect();return {l:b.left,r:b.right,t:b.top,b:b.bottom,w:b.width,h:b.height};};
-      const uv=document.querySelector(".stats .stat.breed");
-      const stats=uv.closest(".stats"),label=uv.querySelector(".eyebrow"),value=uv.querySelector(".sval"),sub=uv.querySelector(".ssub");
-      const cs=getComputedStyle(uv),vs=getComputedStyle(value),ss=getComputedStyle(sub);
+      const value=document.getElementById("uv"),uv=value&&value.closest(".stat"),stats=uv&&uv.closest(".stats");
+      const zicht=document.getElementById("vis"),zichtStat=zicht&&zicht.closest(".stat");
+      const label=uv&&uv.querySelector(".eyebrow"),sub=uv&&uv.querySelector(".ssub");
+      const cs=uv&&getComputedStyle(uv),gridcs=stats&&getComputedStyle(stats);
+      const zichtbare=stats?[...stats.children].filter(el=>el.classList.contains("stat")&&getComputedStyle(el).display!=="none"):[];
       return {
         pageOverflow:document.documentElement.scrollWidth-window.innerWidth,
-        uv:rect(uv),stats:rect(stats),label:rect(label),value:rect(value),sub:rect(sub),
-        display:cs.display,columns:cs.gridTemplateColumns,areas:cs.gridTemplateAreas,
-        paddingLeft:parseFloat(cs.paddingLeft),paddingRight:parseFloat(cs.paddingRight),
-        uvOverflow:uv.scrollWidth-uv.clientWidth,subOverflow:sub.scrollWidth-sub.clientWidth,
-        valueMarginTop:parseFloat(vs.marginTop),subMarginTop:parseFloat(ss.marginTop),
-        labelText:(label.textContent||"").trim(),valueText:(value.textContent||"").trim(),subText:(sub.textContent||"").trim()
+        uv:uv&&rect(uv),stats:stats&&rect(stats),zicht:zichtStat&&rect(zichtStat),label:label&&rect(label),value:value&&rect(value),sub:sub&&rect(sub),
+        uvDisplay:cs&&cs.display,gridColumns:gridcs&&gridcs.gridTemplateColumns,
+        paddingLeft:cs&&parseFloat(cs.paddingLeft),paddingRight:cs&&parseFloat(cs.paddingRight),
+        uvOverflow:uv&&uv.scrollWidth-uv.clientWidth,subOverflow:sub&&sub.scrollWidth-sub.clientWidth,
+        labelText:(label&&label.textContent||"").trim(),valueText:(value&&value.textContent||"").trim(),subText:(sub&&sub.textContent||"").trim(),
+        breed:!!(uv&&uv.classList.contains("breed")),count:zichtbare.length,
+        pressureVisible:zichtbare.some(el=>/luchtdruk/i.test((el.querySelector(".eyebrow")?.textContent||"")))
       };
     });
 
     const d=(a,b)=>Math.abs(a-b);
     assert.deepEqual(fouten,[],`${naam} ${breedte}px: geen runtime/consolefouten`);
     assert.ok(g.pageOverflow<=2,`${naam} ${breedte}px: geen horizontale pagina-overflow (${g.pageOverflow}px)`);
-    assert.equal(g.labelText,"UV-piek vandaag",`${naam} ${breedte}px: juiste brede statistiektegel`);
+    assert.equal(g.count,8,`${naam} ${breedte}px: hoofdgrid bevat exact acht zichtbare tegels`);
+    assert.equal(g.pressureVisible,false,`${naam} ${breedte}px: luchtdruk staat niet meer in het zichtbare hoofdgrid`);
+    assert.equal(g.labelText,"UV-piek vandaag",`${naam} ${breedte}px: juiste UV-tegel`);
     assert.ok(/^\d+$/.test(g.valueText),`${naam} ${breedte}px: UV-waarde blijft zichtbaar (${g.valueText})`);
     assert.ok(g.subText.length>0&&/UV|piek/i.test(g.subText),`${naam} ${breedte}px: bestaande UV-toelichting blijft zichtbaar`);
-    assert.equal(g.display,"grid",`${naam} ${breedte}px: UV gebruikt de compacte mobiele gridcompositie`);
-    assert.notEqual(g.columns,"none",`${naam} ${breedte}px: gridkolommen zijn werkelijk actief`);
-    assert.ok(/label/.test(g.areas)&&/sub/.test(g.areas),`${naam} ${breedte}px: grid-areas zijn werkelijk actief (${g.areas})`);
-    assert.ok(g.paddingLeft<=0.5&&g.paddingRight<=0.5,`${naam} ${breedte}px: brede UV-tegel heeft symmetrisch nul zijpadding (${g.paddingLeft}/${g.paddingRight})`);
-    assert.ok(d(g.uv.l,g.stats.l)<=1&&d(g.uv.r,g.stats.r)<=1,`${naam} ${breedte}px: UV vult exact de statsbreedte`);
+    assert.equal(g.breed,false,`${naam} ${breedte}px: UV is geen brede volle-rijtegel meer`);
+    assert.ok(g.gridColumns&&g.gridColumns!=="none",`${naam} ${breedte}px: hoofdgrid heeft actieve kolommen`);
+    assert.ok(g.uv&&g.stats&&g.zicht,`${naam} ${breedte}px: UV, Zicht en hoofdgrid hebben meetbare geometrie`);
+    assert.ok(g.uv.w<=g.stats.w*0.56&&g.zicht.w<=g.stats.w*0.56,`${naam} ${breedte}px: UV en Zicht nemen ieder ongeveer één van twee kolommen in`);
+    assert.ok(d(g.uv.t,g.zicht.t)<=2&&d(g.uv.b,g.zicht.b)<=2,`${naam} ${breedte}px: Zicht en UV vormen samen de laatste rij`);
+    assert.ok(g.zicht.l<g.uv.l,`${naam} ${breedte}px: Zicht staat links en UV rechts in de laatste rij`);
+    assert.ok(d(g.uv.r,g.stats.r)<=1,`${naam} ${breedte}px: UV sluit rechts netjes aan op het raster`);
     assert.ok(g.uvOverflow<=1&&g.subOverflow<=1,`${naam} ${breedte}px: UV-inhoud loopt niet horizontaal uit`);
-    assert.ok(g.label.r+4<=g.value.l,`${naam} ${breedte}px: label en waarde botsen niet horizontaal`);
-    assert.ok(Math.min(g.label.b,g.value.b)-Math.max(g.label.t,g.value.t)>2,`${naam} ${breedte}px: label en waarde staan aantoonbaar op dezelfde rij`);
-    assert.ok(g.sub.t>=Math.max(g.label.b,g.value.b)+1,`${naam} ${breedte}px: toelichting staat onder label en waarde`);
-    assert.ok(d(g.sub.l,g.uv.l)<=1&&d(g.sub.r,g.uv.r)<=1,`${naam} ${breedte}px: UV-toelichting gebruikt de volledige tweede rij`);
-    assert.ok(g.valueMarginTop<=0.5&&g.subMarginTop<=0.5,`${naam} ${breedte}px: oude verticale stapeling is opgeheven`);
+    assert.ok(g.label&&g.value&&g.sub&&g.label.t<=g.value.t&&g.sub.t>=g.value.b-1,`${naam} ${breedte}px: label, waarde en toelichting hebben normale verticale tegelhiërarchie`);
   }finally{
     await browser.close();
   }
@@ -112,7 +115,7 @@ server.listen(0,"127.0.0.1",async()=>{
       await controleer(type,naam,360);
       await controleer(type,naam,390);
     }
-    console.log("Mobiele UV-presentatie groen in Chromium en WebKit op 360 en 390 px.");
+    console.log("Mobiele UV-presentatie groen in Chromium en WebKit op 360 en 390 px: normale achtste tegel naast Zicht.");
   }catch(e){
     console.error(e.stack||e);process.exitCode=1;
   }finally{
