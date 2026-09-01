@@ -50,7 +50,7 @@ jobs:
       - name: Controleer wereldwijd op mobiel en desktop
         env:
           EXPECTED_SHA: ${{ github.sha }}
-        run: node scripts/production-worldwide-browser.js
+        run: node scripts/run-production-worldwide-browser.js
 
   staff-audit-browser:
     needs: production-contract
