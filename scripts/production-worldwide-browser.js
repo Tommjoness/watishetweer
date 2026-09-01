@@ -10,11 +10,16 @@ if(!/^[0-9a-f]{7,40}$/i.test(verwacht))throw new Error("EXPECTED_SHA ontbreekt o
 
 const locaties=[
   {naam:"Amsterdam",land:"NL",lat:52.3676,lon:4.9041,tz:"Europe/Amsterdam"},
-  {naam:"New York",land:"US",lat:40.7128,lon:-74.0060,tz:"America/New_York"},
-  {naam:"Tokio",land:"JP",lat:35.6762,lon:139.6503,tz:"Asia/Tokyo"},
-  {naam:"Sydney",land:"AU",lat:-33.8688,lon:151.2093,tz:"Australia/Sydney"},
-  {naam:"Singapore",land:"SG",lat:1.3521,lon:103.8198,tz:"Asia/Singapore",tropen:true},
-  {naam:"Longyearbyen",land:"SJ",lat:78.2232,lon:15.6469,tz:"Arctic/Longyearbyen",pool:true}
+  {naam:"Singapore",land:"SG",lat:1.3521,lon:103.8198,tz:"Asia/Singapore"},
+  {naam:"Ushuaia",land:"AR",lat:-54.8019,lon:-68.3030,tz:"America/Argentina/Ushuaia"},
+  {naam:"La Paz",land:"BO",lat:-16.4897,lon:-68.1193,tz:"America/La_Paz"},
+  {naam:"Longyearbyen",land:"SJ",lat:78.2232,lon:15.6469,tz:"Arctic/Longyearbyen",pool:true},
+  {naam:"Zuidpool",land:"AQ",lat:-90,lon:0,tz:null,pool:true},
+  {naam:"Dubai",land:"AE",lat:25.2048,lon:55.2708,tz:"Asia/Dubai"},
+  {naam:"Reykjavik",land:"IS",lat:64.1466,lon:-21.9426,tz:"Atlantic/Reykjavik"},
+  {naam:"Punta Arenas",land:"CL",lat:-53.1638,lon:-70.9171,tz:"America/Punta_Arenas"},
+  {naam:"Miami",land:"US",lat:25.7617,lon:-80.1918,tz:"America/New_York"},
+  {naam:"Tokio",land:"JP",lat:35.6762,lon:139.6503,tz:"Asia/Tokyo"}
 ];
 const schermen=[{naam:"mobiel",width:390,height:844},{naam:"desktop",width:1440,height:1000}];
 function klokMinuten(tekst){const m=/^(\d{2}):(\d{2})$/.exec(String(tekst||""));return m?Number(m[1])*60+Number(m[2]):null;}
@@ -35,9 +40,7 @@ function isVolledigeForecast(url){
         const page=await context.newPage(),pageErrors=[];
         page.on("pageerror",e=>pageErrors.push(String(e)));
         const params=new URLSearchParams({lat:String(locatie.lat),lon:String(locatie.lon),plaats:locatie.naam,land:locatie.land});
-        const bronBelofte=page.waitForResponse(r=>{
-          return isVolledigeForecast(r.url())&&r.ok();
-        },{timeout:30000});
+        const bronBelofte=page.waitForResponse(r=>isVolledigeForecast(r.url())&&r.ok(),{timeout:30000});
         const [response,bronResponse]=await Promise.all([
           page.goto(ROOT+"/?"+params,{waitUntil:"domcontentloaded",timeout:30000}),bronBelofte
         ]);
@@ -53,6 +56,7 @@ function isVolledigeForecast(url){
           dagen:document.querySelectorAll("#days .row.day:not(.kop)").length,
           nachten:document.querySelectorAll("#nights .row.night:not(.kop)").length,
           nachtLeeg:(document.getElementById("nights")?.textContent||"").includes("Geen nachtdata beschikbaar"),
+          toekomstigeNachtTeksten:[...document.querySelectorAll("#nights .row.night:not(.kop)")].slice(1).map(r=>r.textContent||""),
           stamp:document.getElementById("stamp")?.textContent||"",
           overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,
           titel:document.title,
@@ -64,6 +68,8 @@ function isVolledigeForecast(url){
           klok:document.getElementById("plaatstijd")?.textContent||"",
           actueleLokaleTijd:typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():"",
           zon:document.getElementById("suntimes")?.textContent||"",
+          drukLabel:[...document.querySelectorAll(".eyebrow")].find(e=>(e.textContent||"").includes("Luchtdruk"))?.textContent?.trim()||"",
+          appTekst:document.getElementById("app")?.textContent||"",
           rijen:[...document.querySelectorAll("#days .row.day:not(.kop)")].map(rij=>{
             const hoofd=rij.querySelector(".drain")?.cloneNode(true),small=hoofd?.querySelector("small");
             const hoeveelheid=(small?.textContent||"").trim();if(small)small.remove();
@@ -71,7 +77,8 @@ function isVolledigeForecast(url){
               min:rij.querySelector(".dmin")?.textContent||"",
               max:rij.querySelector(".dmax")?.textContent||"",
               wind:rij.querySelector(".dwind")?.textContent||"",
-              neerslagHoofd:(hoofd?.textContent||"").trim(),neerslagHoeveelheid:hoeveelheid
+              neerslagHoofd:(hoofd?.textContent||"").trim(),neerslagHoeveelheid:hoeveelheid,
+              neerslagAria:rij.querySelector(".drain")?.getAttribute("aria-label")||""
             };
           })
         }));
@@ -80,26 +87,32 @@ function isVolledigeForecast(url){
         assert.equal(uit.sha,verwacht,`${scherm.naam}/${locatie.naam}: verkeerde build ${uit.sha}`);
         assert.equal(uit.label,locatie.naam,`${scherm.naam}/${locatie.naam}: plaatsidentiteit werd ${uit.label}`);
         assert.equal(uit.query,locatie.naam,`${scherm.naam}/${locatie.naam}: zoekveld werd ${uit.query}`);
-        assert.equal(uit.timezone,locatie.tz,`${scherm.naam}/${locatie.naam}: tijdzone werd ${uit.timezone}`);
+        assert(bron.timezone&&typeof bron.timezone==="string",`${scherm.naam}/${locatie.naam}: provider gaf geen tijdzone`);
+        assert.equal(uit.timezone,bron.timezone,`${scherm.naam}/${locatie.naam}: UI-tijdzone ${uit.timezone} wijkt af van bron ${bron.timezone}`);
+        if(locatie.tz)assert.equal(bron.timezone,locatie.tz,`${scherm.naam}/${locatie.naam}: provider-tijdzone werd ${bron.timezone}, verwacht ${locatie.tz}`);
         assert.equal(uit.dagen,7,`${scherm.naam}/${locatie.naam}: geen zeven dagen`);
-        assert(locatie.pool?(uit.nachten>0||uit.nachtLeeg):uit.nachten>0,`${scherm.naam}/${locatie.naam}: nachtzicht heeft geen eerlijke staat`);
+        assert(locatie.pool?(uit.nachten>0||uit.nachtLeeg):uit.nachten>0,`${scherm.naam}/${locatie.naam}: Nachtzicht heeft geen eerlijke staat`);
+        assert(!uit.toekomstigeNachtTeksten.some(t=>/\b(?:was|waren)\b/i.test(t)),`${scherm.naam}/${locatie.naam}: toekomstige Nachtzicht-rij gebruikt verleden tijd`);
         assert(/^Gegevens opgehaald om \d{2}:\d{2} · /.test(uit.stamp),`${scherm.naam}/${locatie.naam}: ongeldige datastempel`);
         assert(uit.overflow<=1,`${scherm.naam}/${locatie.naam}: ${uit.overflow}px horizontale overflow`);
         assert(uit.titel.startsWith(locatie.naam+" · "),`${scherm.naam}/${locatie.naam}: titel en plaats verschillen`);
         assert(uit.bronLinks>=1,`${scherm.naam}/${locatie.naam}: bronvermelding ontbreekt`);
+        assert.equal(uit.drukLabel,"Luchtdruk op zeeniveau",`${scherm.naam}/${locatie.naam}: druksoort is niet ondubbelzinnig gelabeld`);
+        assert(!/(?:^|[^\d])-?1\s+graden\b/i.test(uit.appTekst),`${scherm.naam}/${locatie.naam}: enkelvoudtemperatuur gebruikt 'graden'`);
+        for(const [i,r] of uit.rijen.entries())assert(String(r.neerslagHoofd||r.neerslagHoeveelheid||r.neerslagAria).trim(),`${scherm.naam}/${locatie.naam}: dagrij ${i+1} heeft leeg neerslagveld`);
         /* De providerresponse blijft exact zoals ontvangen. Alleen de horizon
            voor de resterende huidige dag volgt dezelfde actuele lokale klok
            als de pagina; temperatuur, wind, UV, thema en bronvelden blijven
            rechtstreeks tegen de ongewijzigde live response gecontroleerd. */
         const bronUit=verifieerBronwaarheid(bron,uit,`${scherm.naam}/${locatie.naam}`,uit.actueleLokaleTijd);
-        const klokVerwacht=new Intl.DateTimeFormat("nl-NL",{timeZone:locatie.tz,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());
-        assert(klokVerschil(uit.klok,klokVerwacht)<=1,`${scherm.naam}/${locatie.naam}: lokale klok ${uit.klok} wijkt af van ${locatie.tz} (${klokVerwacht})`);
+        const klokVerwacht=new Intl.DateTimeFormat("nl-NL",{timeZone:bron.timezone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());
+        assert(klokVerschil(uit.klok,klokVerwacht)<=1,`${scherm.naam}/${locatie.naam}: lokale klok ${uit.klok} wijkt af van ${bron.timezone} (${klokVerwacht})`);
         assert.deepEqual(pageErrors,[],`${scherm.naam}/${locatie.naam}: pageerrors ${pageErrors.join(" | ")}`);
-        console.log(`BRONWAARHEID OK ${scherm.naam.padEnd(7)} ${locatie.naam}: temperatuur, wind, UV, dag/nacht, lokale tijd, zon en ${bronUit.dagen} dagrijen; overflow ${uit.overflow}px.`);
+        console.log(`BRONWAARHEID OK ${scherm.naam.padEnd(7)} ${locatie.naam}: temperatuur, wind, UV, druksoort, neerslagvelden, Nachtzicht-tijdsvorm, lokale tijd, zon en ${bronUit.dagen} dagrijen; overflow ${uit.overflow}px.`);
         await page.close();
       }
       await context.close();
     }
-    console.log(`PRODUCTIE-BROWSERMONITOR GESLAAGD: ${verwacht}; 6 locaties × mobiel/desktop met live bronvergelijking.`);
+    console.log(`PRODUCTIE-BROWSERMONITOR GESLAAGD: ${verwacht}; ${locaties.length} locaties × mobiel/desktop met live bronvergelijking.`);
   }finally{await browser.close();}
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
