@@ -8,6 +8,11 @@
 .chip .x{inline-size:40px;block-size:40px;min-inline-size:40px;min-block-size:40px;display:inline-grid;place-items:center;padding:0;font-size:15px;line-height:1}
 .chip .x:focus-visible,.chipplaats:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
+/* De hoofdkaart is de laatste lokale overflowgrens. De grafiekdatatabel heeft
+   hieronder zijn eigen native horizontale scroller; clip voorkomt alleen dat
+   intrinsieke breedte uit die subtree alsnog in de body-scrollgeometrie lekt. */
+.sheet{overflow-x:clip}
+
 /* De brede tabel heeft één expliciete horizontale scroll-eigenaar. De buitenste
    details-container vormt een lokale breedtegrens; de scroller zelf krijgt
    layout/paint/inline-size containment zodat de 650px tabel niet in de
