@@ -81,9 +81,9 @@ const oudeZichtvensters=(html.match(/Geen goed zichtvenster/g)||[]).length;
 if(oudeZichtvensters<1)throw new Error("Nachtzicht-copyanchor ontbreekt.");
 html=html.replace(/Geen goed zichtvenster/g,"Geen gunstig kijkvenster");
 
-/* De temperatuurzin heeft in de echte briefingbron een toelichtend commentaar en
-   is over twee regels opgebouwd. Match precies het bestaande finale ownerblok;
-   daardoor faalt de build gesloten als deze logica later opnieuw wordt herschreven. */
+/* De briefingowner gebruikt inmiddels één centrale graadformatter. Deze laag
+   bewaart die eigenaar ook wanneer het verwachte maximum naar plateaucopy wordt
+   omgezet: enkelvoud/meervoud wordt hier dus niet opnieuw handmatig opgebouwd. */
 const TEMP_OUD=[
   '  if(volledigePiekVandaag&&volledigePiekVandaag.t>nuLokaal){',
   '    /* Koppel een maximum alleen aan het uurpunt waaruit dat maximum zelf komt.',
@@ -91,7 +91,7 @@ const TEMP_OUD=[
   '       als "wanneer", zonder een eventueel afwijkend daily-getal aan een verkeerd',
   '       uur te hangen. */',
   '    zin2="Het verwachte maximum ligt vandaag rond "+hhmm(volledigePiekVandaag.t)+" op <b>"',
-  '      +Math.round(volledigePiekVandaag.v)+" graden</b>."+(nachtZin?" "+nachtZin:"");',
+  '      +weatherNowBriefingGraden(Math.round(volledigePiekVandaag.v))+"</b>."+(nachtZin?" "+nachtZin:"");',
   '  }'
 ].join("\n");
 const TEMP_NIEUW=[
@@ -102,8 +102,8 @@ const TEMP_NIEUW=[
   '       worden terwijl de hero al 24 graden laat zien. */',
   '    const piekAfgerond=Math.round(volledigePiekVandaag.v),huidigAfgerond=huidige===null?null:Math.round(huidige);',
   '    zin2=huidigAfgerond!==null&&piekAfgerond<=huidigAfgerond',
-  '      ?"De temperatuur blijft tot rond "+hhmm(volledigePiekVandaag.t)+" ongeveer <b>"+huidigAfgerond+" graden</b>."+(nachtZin?" "+nachtZin:"")',
-  '      :"Het verwachte maximum ligt vandaag rond "+hhmm(volledigePiekVandaag.t)+" op <b>"+piekAfgerond+" graden</b>."+(nachtZin?" "+nachtZin:"");',
+  '      ?"De temperatuur blijft tot rond "+hhmm(volledigePiekVandaag.t)+" ongeveer <b>"+weatherNowBriefingGraden(huidigAfgerond)+"</b>."+(nachtZin?" "+nachtZin:"")',
+  '      :"Het verwachte maximum ligt vandaag rond "+hhmm(volledigePiekVandaag.t)+" op <b>"+weatherNowBriefingGraden(piekAfgerond)+"</b>."+(nachtZin?" "+nachtZin:"");',
   '  }'
 ].join("\n");
 if((html.split(TEMP_OUD).length-1)!==1)throw new Error("Temperatuurpiek-anchor ontbreekt of is dubbel.");
