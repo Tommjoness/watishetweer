@@ -9,9 +9,10 @@
 .chip .x:focus-visible,.chipplaats:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
 /* De brede tabel heeft één expliciete horizontale scroll-eigenaar. De buitenste
-   details-container vormt een echte lokale overflowgrens; de interne scroller
-   blijft de enige plek waar de 650px-tabel horizontaal bereikbaar is. */
-.chartdata{margin:10px 0 0;min-width:0;max-width:100%;width:100%;box-sizing:border-box;overflow:hidden}
+   details-container vormt een echte lokale overflowgrens én inline-size
+   containment: de 650px tabel mag de min-contentbreedte van de dashboardkolom
+   niet oprekken. De interne scroller blijft horizontaal volledig bereikbaar. */
+.chartdata{margin:10px 0 0;min-width:0;max-width:100%;width:100%;box-sizing:border-box;overflow:hidden;contain:inline-size}
 .chartdata>summary,.waarsch-officieel-details>summary{cursor:pointer;color:var(--ink-70);font-size:12px}
 .chartdata>summary:focus-visible,.waarsch-officieel-details>summary:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 .chartdata-scrollhint{display:none;margin:8px 0 0;color:var(--ink-45);font-size:12px}
