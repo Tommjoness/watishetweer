@@ -31,6 +31,11 @@ const STYLE=`<style id="weather-final-audit-20260901">
   .data-uitleg summary,.footer-details summary{min-height:44px;display:inline-flex;align-items:center}
   #days .row.day:not(.kop){min-height:44px}
 }
+@media(max-width:1099px){
+  .final-top-grid>.stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;min-width:0;max-width:100%}
+  .final-top-grid>.stats .stat{min-width:0}
+  .final-top-grid>.stats .stat.breed{grid-column:auto!important}
+}
 @media(min-width:1100px){
   .final-top-grid{display:grid;grid-template-columns:minmax(0,.95fr) minmax(480px,1.05fr);gap:48px;align-items:start;margin-top:var(--s3)}
   .final-top-left{display:flex;flex-direction:column;min-width:0}
