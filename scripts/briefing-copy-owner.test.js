@@ -4,15 +4,20 @@ const assert=require("assert");
 const fs=require("fs");
 const path=require("path");
 const {
-  briefingNachtzin,pasBriefingCopyToe,HELPER_PRODUCTIE,
+  briefingGraden,briefingNachtzin,pasBriefingCopyToe,HELPER_PRODUCTIE,
   NACHTZIN_BRON,NACHTZIN_PRODUCTIE,VANDAAG_PIEK_BRON,VANDAAG_PIEK_PRODUCTIE,
   MORGEN_BRON,MORGEN_PRODUCTIE,VANDAAG_VERLEDEN_BRON,VANDAAG_VERLEDEN_PRODUCTIE,
   VANDAAG_MAX_BRON,VANDAAG_MAX_PRODUCTIE,NACHT_STANDALONE_BRON,NACHT_STANDALONE_PRODUCTIE,
   WAARSCHUWING_VOORRANG_BRON,WAARSCHUWING_VOORRANG_PRODUCTIE
 }=require("./briefing-copy-owner.js");
 
+assert.equal(briefingGraden(1),"1 graad");
+assert.equal(briefingGraden(-1),"-1 graad");
+assert.equal(briefingGraden(2),"2 graden");
 assert.equal(briefingNachtzin(null,"2026-08-20T02:00",18),"");
 assert.equal(briefingNachtzin(16,"2026-08-20T23:30",19),"Vannacht koelt het af naar ongeveer <b>16 graden</b>.");
+assert.equal(briefingNachtzin(1,"2026-08-20T23:30",4),"Vannacht koelt het af naar ongeveer <b>1 graad</b>.");
+assert.equal(briefingNachtzin(-1,"2026-08-20T23:30",3),"Vannacht koelt het af naar ongeveer <b>-1 graad</b>.");
 assert.equal(briefingNachtzin(16,"2026-08-20T00:03",19),"Vannacht daalt de temperatuur naar ongeveer <b>16 graden</b>.");
 assert.equal(briefingNachtzin(16,"2026-08-20T04:59",16),"Vannacht blijft de temperatuur rond <b>16 graden</b>.");
 assert.equal(briefingNachtzin(16,"2026-08-20T04:59",15.5),"Vannacht blijft de temperatuur rond <b>16 graden</b>.");
@@ -44,16 +49,14 @@ assert.equal(uit.split(VANDAAG_VERLEDEN_PRODUCTIE).length-1,1,"finale verstreken
 assert.equal(uit.split(VANDAAG_MAX_PRODUCTIE).length-1,1,"finale vandaag-maxcopy ontbreekt of is dubbel");
 assert.equal(uit.split(NACHT_STANDALONE_PRODUCTIE).length-1,1,"finale losse nachtzin ontbreekt of is dubbel");
 assert.equal(uit.split(WAARSCHUWING_VOORRANG_PRODUCTIE).length-1,1,"waarschuwing blijft vooraan staan zonder redundante voorrangzin");
+assert(uit.includes('function weatherNowBriefingGraden(waarde){'),"centrale graadhelper ontbreekt in productieowner");
+assert(uit.includes('WeatherNowNederlandseGrammatica'),"briefingowner delegeert niet naar centrale grammatica");
 assert(!uit.includes("De officiële waarschuwing heeft voorrang op de modelverwachting."),"redundante waarschuwingzin bleef in briefingbron staan");
 assert(!uit.includes("Later vannacht koelt het af"),"onnatuurlijke later-vannacht-copy bleef in briefingowner staan");
-assert(uit.includes("Vannacht daalt de temperatuur naar ongeveer"),"middernachtcopy benoemt resterende daling natuurlijk");
-assert(uit.includes("Vannacht blijft de temperatuur rond"),"middernachtcopy ondersteunt stabiele temperatuur");
 
 for(const oud of [NACHTZIN_BRON,VANDAAG_PIEK_BRON,MORGEN_BRON,VANDAAG_VERLEDEN_BRON,VANDAAG_MAX_BRON,NACHT_STANDALONE_BRON,WAARSCHUWING_VOORRANG_BRON])
   assert(!uit.includes(oud),"oude briefingcopy bleef in base-build staan");
 
-/* Analyse en inputs blijven bij de bestaande renderer. De owner mag geen
-   neerslag-, temperatuur-, wind-, provider- of tijdzoneselectie verplaatsen. */
 for(const invariant of [
   "const kt=kortetermijn();","const eind=Math.min(i+25,h.time.length);",
   "const volledigePiekVandaag=piekOpDag(vandaag,null);","day.temperature_2m_max&&day.temperature_2m_max[dagIndexVandaag]",
@@ -67,4 +70,4 @@ for(const invariant of [
 assert.throws(()=>pasBriefingCopyToe(uit),/staat al in het aangeleverde artifact/,
   "owner moet fail-fast zijn op een reeds gemigreerd artifact");
 
-console.log("Briefingcopy-owner contract groen: natuurlijke nachtcopy rond middernacht, bron-/tijdsemantiek en waarschuwingcopy zitten vóór runtime in één owner; forecast/wind/neerslaginputs zijn ongewijzigd.");
+console.log("Briefingcopy-owner contract groen: centrale graadformatter, natuurlijke nachtcopy, bron-/tijdsemantiek en waarschuwingcopy zitten vóór runtime in één owner; forecast/wind/neerslaginputs zijn ongewijzigd.");
