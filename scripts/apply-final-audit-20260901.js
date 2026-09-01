@@ -50,6 +50,9 @@ function htmlBestanden(dir){const uit=[];for(const e of fs.readdirSync(dir,{with
 function weerBestand(html){return html.includes(PRIMARY)&&html.includes("WeatherNowFinalGlobalCorrectness");}
 function centraliseerBriefingPlateau(html,p){
   let uit=html;
+  /* Unified-weather-truth gebruikt de centrale formatter inmiddels zelf. Deze
+     compatibiliteitsroute blijft alleen bestaan voor oudere tussen-artifacts. */
+  if(uit.includes(PLATEAU_NIEUW)&&uit.includes(PIEK_NIEUW))return uit;
   for(const [oud,nieuw,label] of [[PLATEAU_OUD,PLATEAU_NIEUW,"briefingplateau"],[PIEK_OUD,PIEK_NIEUW,"briefingpiek"]]){
     const n=uit.split(oud).length-1;if(n!==1)throw new Error(label+" ontbreekt of is dubbel in "+p+": "+n);uit=uit.replace(oud,nieuw);
   }
