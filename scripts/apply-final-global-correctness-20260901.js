@@ -48,6 +48,8 @@ const DEDUP_NIEUW=`function dedupliceerZoekresultaten(resultaten,max){
   return uit;
 }`;
 
+const NACHT_HORIZON_OUD=`const horizon=nachtHorizonIndex(rij.dataset&&rij.dataset.d,h);`;
+const NACHT_HORIZON_NIEUW=`const horizon=Math.max(h,nachtHorizonIndex(rij.dataset&&rij.dataset.d,h));if(rij.dataset)rij.dataset.d=String(horizon);`;
 const NACHT_CALL_OUD=`const detail=venster?corrigeerNachtVensterBron(venster,horizon,zichtbaar,{zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal)}):"";`;
 const NACHT_CALL_NIEUW=`const detail=venster?(()=>{
   const optiesNacht={zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal),nuDatumTijd:nuLokaal,nachtDatum:Array.isArray(day.time)?day.time[horizon]:null,tijdzone:S.d&&S.d.timezone,nuEpochMs:Date.now()};
@@ -150,8 +152,8 @@ function weerHtmlBestanden(dir){const uit=[];for(const e of fs.readdirSync(dir,{
 function exactEen(bron,oud,nieuw,naam){const n=bron.split(oud).length-1;if(n!==1)throw new Error(naam+"-anker verwacht 1x, gevonden "+n);return bron.replace(oud,nieuw);}
 function pasToe(pad){
   let html=fs.readFileSync(pad,"utf8");if(!html.includes(START)||!html.includes("WeatherNowGlobalLocationHardening"))return false;if(html.includes(MARKER))throw new Error("Finale correctheidslaag staat al in "+pad);
-  html=exactEen(html,ZOEK_OUD,ZOEK_NIEUW,"zoeksleutel");html=exactEen(html,DEDUP_OUD,DEDUP_NIEUW,"zoekdeduplicatie");html=exactEen(html,NACHT_CALL_OUD,NACHT_CALL_NIEUW,"Nachtzicht datetime-call");
+  html=exactEen(html,ZOEK_OUD,ZOEK_NIEUW,"zoeksleutel");html=exactEen(html,DEDUP_OUD,DEDUP_NIEUW,"zoekdeduplicatie");html=exactEen(html,NACHT_HORIZON_OUD,NACHT_HORIZON_NIEUW,"Nachtzicht horizonindex");html=exactEen(html,NACHT_CALL_OUD,NACHT_CALL_NIEUW,"Nachtzicht datetime-call");
   html=exactEen(html,'<p class="brief" id="brief"></p>','<p class="brief" id="brief"></p>\n    <div id="modelrisico" role="note" hidden></div>',"modelsignaal-container");html=exactEen(html,"</head>","<style>"+CSS+"</style>\n</head>","finale-correctheidsstijl");html=exactEen(html,START,POLICY+"\n"+RUNTIME+"\n"+START,"startup-injectie");html=html.replace(/>Luchtdruk</g,">Luchtdruk op zeeniveau<");fs.writeFileSync(pad,html,"utf8");return true;
 }
 let aantal=0;for(const p of weerHtmlBestanden(OUT))if(pasToe(p))aantal++;if(!aantal)throw new Error("Geen weerpagina's gevonden voor finale correctheidslaag.");const versie=vernieuwServiceworkerCache(OUT,"final-global-correctness-20260901");console.log("Finale wereldwijde correctheidslaag toegepast op "+aantal+" weerpagina's; cache "+versie+".");
-module.exports={ZOEK_OUD,ZOEK_NIEUW,DEDUP_OUD,DEDUP_NIEUW,NACHT_CALL_OUD,NACHT_CALL_NIEUW,CSS,RUNTIME,MARKER,pasToe};
+module.exports={ZOEK_OUD,ZOEK_NIEUW,DEDUP_OUD,DEDUP_NIEUW,NACHT_HORIZON_OUD,NACHT_HORIZON_NIEUW,NACHT_CALL_OUD,NACHT_CALL_NIEUW,CSS,RUNTIME,MARKER,pasToe};
