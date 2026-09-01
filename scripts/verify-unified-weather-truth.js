@@ -24,7 +24,8 @@ mist("const p=dagNeerslagPresentatie(kans,mm,beleid.kansHoofd,beleid.hoeveelheid
    Q1-laag bezit uitsluitend toekomstige volledige kalenderdagen. */
 mist("Geen goed zichtvenster","Nachtzicht gebruikt nog ambigu zichtvenster");
 bevat("Geen gunstig kijkvenster","Nachtzicht gebruikt geen helder kijkvensterbegrip");
-bevat('De temperatuur blijft tot rond "+hhmm(volledigePiekVandaag.t)+" ongeveer <b>"+huidigAfgerond+" graden</b>.',"temperatuurplateau-copy ontbreekt");
+bevat('De temperatuur blijft tot rond "+hhmm(volledigePiekVandaag.t)+" ongeveer <b>"+weatherNowBriefingGraden(huidigAfgerond)+"</b>.',"temperatuurplateau gebruikt niet de centrale graadformatter");
+bevat('Het verwachte maximum ligt vandaag rond "+hhmm(volledigePiekVandaag.t)+" op <b>"+weatherNowBriefingGraden(piekAfgerond)+"</b>.',"temperatuurpiek gebruikt niet de centrale graadformatter");
 bevat('verrijkAnalyseMetKnmi(basisAnalyseerNeerslag(data,duur,nuOverride),data,duur,interpretatie,Date.now())',"KNMI freshness gebruikt niet de absolute browserklok");
 mist('verrijkAnalyseMetKnmi(basisAnalyseerNeerslag(data,duur,nuOverride),data,duur,interpretatie,nuNaarMs(nuOverride))',"offsetloze plaatstijd kan KNMI freshness nog beïnvloeden");
 bevat('const radarDroog=!!(actueel&&num(actueel.waarde)!==null&&num(actueel.waarde)<KNMI_ACTUEEL_DREMPEL_MMU);',"verse droge radarwaarheid ontbreekt in actuele hero");
@@ -37,4 +38,4 @@ const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script
 if(!scripts.length)throw new Error("geen inline scripts om syntactisch te valideren");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:verify-unified-"+(i+1)}));
 
-console.log("Unified weather truth verifier: actuele neerslag/hero, daghorizons, Nachtzicht-copy, temperatuurplateau en appupdate geslaagd.");
+console.log("Unified weather truth verifier: actuele neerslag/hero, daghorizons, Nachtzicht-copy, centrale graadformatter, temperatuurplateau en appupdate geslaagd.");

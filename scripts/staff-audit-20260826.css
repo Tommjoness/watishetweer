@@ -8,15 +8,28 @@
 .chip .x{inline-size:40px;block-size:40px;min-inline-size:40px;min-block-size:40px;display:inline-grid;place-items:center;padding:0;font-size:15px;line-height:1}
 .chip .x:focus-visible,.chipplaats:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
-.chartdata{margin:10px 0 0}
+/* De hoofdkaart is de laatste lokale overflowgrens. De grafiekdatatabel heeft
+   hieronder zijn eigen native horizontale scroller; clip voorkomt alleen dat
+   intrinsieke breedte uit die subtree alsnog in de body-scrollgeometrie lekt. */
+.sheet{overflow-x:clip}
+
+/* De brede tabel heeft één expliciete horizontale scroll-eigenaar. De buitenste
+   details-container vormt een lokale breedtegrens; de scroller zelf krijgt
+   layout/paint/inline-size containment zodat de 650px tabel niet in de
+   document-scrollgeometrie kan lekken. De interne horizontale scroll blijft
+   volledig bereikbaar. */
+.chartdata{margin:10px 0 0;min-width:0;max-width:100%;width:100%;box-sizing:border-box;overflow:hidden;contain:inline-size}
 .chartdata>summary,.waarsch-officieel-details>summary{cursor:pointer;color:var(--ink-70);font-size:12px}
 .chartdata>summary:focus-visible,.waarsch-officieel-details>summary:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 .chartdata-scrollhint{display:none;margin:8px 0 0;color:var(--ink-45);font-size:12px}
-.chartdata-scroll{margin-top:8px;max-width:100%;overflow-x:auto;border:1px solid var(--rule);-webkit-overflow-scrolling:touch}
+.chartdata-scroll{margin-top:8px;width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:auto;overflow-y:hidden;contain:layout paint inline-size;border:1px solid var(--rule);-webkit-overflow-scrolling:touch}
 .chartdata-scroll:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .chartdata table{border-collapse:collapse;width:100%;min-width:690px;font-size:12px;font-variant-numeric:tabular-nums}
 .chartdata th,.chartdata td{padding:7px 9px;border-bottom:1px solid var(--rule-soft);text-align:left;white-space:nowrap}
-.chartdata th{font-weight:600;color:var(--ink);background:var(--sheet);position:sticky;top:0}
+/* De tabel heeft alleen horizontale eigen scroll. Een sticky top-kop levert hier
+   geen bruikbaar gedrag op en kan zijn brede fragment buiten de lokale scroller
+   laten meetellen in de document-scrollgeometrie. Houd de kop daarom statisch. */
+.chartdata th{font-weight:600;color:var(--ink);background:var(--sheet);position:static}
 .chartdata td{color:var(--ink-70)}
 .chartdata tr:last-child td{border-bottom:0}
 

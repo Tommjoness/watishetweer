@@ -10,6 +10,7 @@
   const schoon=soort=>String(soort||"neerslag").trim().replace(/\s+/g," ");
   const klein=soort=>schoon(soort).toLocaleLowerCase("nl-NL");
   const hoofdletter=tekst=>{tekst=String(tekst||"");return tekst?tekst.charAt(0).toLocaleUpperCase("nl-NL")+tekst.slice(1):tekst;};
+  const getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 
   function isMeervoud(soort){
     return /(?:buien|korrels|vlokken)$/i.test(schoon(soort));
@@ -38,6 +39,38 @@
     return type+(isMeervoud(type)?" worden":" wordt")+(wanneer?" "+wanneer:"")+" verwacht";
   }
 
+  /* Eén centrale eigenaar voor dynamische tijd- en temperatuureenheden.
+     Uur heeft in het Nederlands dezelfde vorm in enkel- en meervoud, maar loopt
+     bewust door dezelfde formatter zodat zichtbare tekst, aria-labels en
+     briefings niet ieder een eigen uitzonderingspad krijgen. */
+  function eenheid(aantal,enkelvoud,meervoud){
+    const n=getal(aantal);
+    if(n===null)return "";
+    return Math.abs(n)===1?String(enkelvoud):String(meervoud);
+  }
+  function getalMetEenheid(aantal,enkelvoud,meervoud){
+    const n=getal(aantal);
+    if(n===null)return "";
+    return String(aantal)+" "+eenheid(n,enkelvoud,meervoud);
+  }
+  function minuten(aantal){return getalMetEenheid(aantal,"minuut","minuten");}
+  function uren(aantal){return getalMetEenheid(aantal,"uur","uur");}
+  function graden(aantal){return getalMetEenheid(aantal,"graad","graden");}
+  function duur(urenAantal,minutenAantal){
+    const u=getal(urenAantal),m=getal(minutenAantal);
+    if(u===null&&m===null)return "";
+    const delen=[];
+    if(u!==null&&u!==0)delen.push(uren(u));
+    if(m!==null&&(m!==0||!delen.length))delen.push(minuten(m));
+    return delen.join(" en ");
+  }
+  function duurKort(urenAantal,minutenAantal){
+    const u=getal(urenAantal),m=getal(minutenAantal);
+    if(u===null&&m===null)return "";
+    if(u!==null&&u>0)return String(u)+" u "+String(Math.max(0,m||0)).padStart(2,"0")+" min";
+    return String(Math.max(0,m||0))+" min";
+  }
+
   function opsomming(items){
     const delen=(Array.isArray(items)?items:[]).map(x=>String(x||"").trim()).filter(Boolean);
     if(delen.length<2)return delen[0]||"";
@@ -50,5 +83,5 @@
     return reden?"Geen goed zichtvenster door "+reden:"Geen aaneengesloten gunstig modelvenster";
   }
 
-  return {schoon,isMeervoud,actueleNeerslagZin,soortIsMogelijk,soortWordtVerwacht,opsomming,geenZichtvensterZin};
+  return {schoon,isMeervoud,actueleNeerslagZin,soortIsMogelijk,soortWordtVerwacht,eenheid,getalMetEenheid,minuten,uren,graden,duur,duurKort,opsomming,geenZichtvensterZin};
 });

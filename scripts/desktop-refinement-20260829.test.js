@@ -47,12 +47,12 @@ const almere={
     sunset:["2026-08-31T20:27","2026-09-01T20:25","2026-09-02T20:22"]
   }
 };
-const voorOnder=zonPresentatie(almere,Date.UTC(2026,7,31,17,0)); // 19:00 lokaal
+const voorOnder=zonPresentatie(almere,Date.UTC(2026,7,31,17,0));
 assert.equal(voorOnder.type,"ondergang");
 assert.equal(voorOnder.kop,"Tijd tot zonsondergang");
 assert.equal(voorOnder.sub,"Vandaag om 20:27.");
 assert.equal(voorOnder.uren,1);assert.equal(voorOnder.minuten,27);
-const naOnder=zonPresentatie(almere,Date.UTC(2026,7,31,21,4)); // 23:04 lokaal
+const naOnder=zonPresentatie(almere,Date.UTC(2026,7,31,21,4));
 assert.equal(naOnder.type,"opkomst");
 assert.equal(naOnder.kop,"Tijd tot zonsopkomst");
 assert.equal(naOnder.sub,"Morgen om 06:50.");
@@ -62,7 +62,7 @@ const tokio={
   timezone:"Asia/Tokyo",utc_offset_seconds:32400,current:{is_day:0},
   daily:{sunrise:["2026-09-01T05:13","2026-09-02T05:14"],sunset:["2026-09-01T18:08","2026-09-02T18:06"]}
 };
-const tokioNu=Date.UTC(2026,7,31,14,30); // 23:30 lokaal
+const tokioNu=Date.UTC(2026,7,31,14,30);
 assert.equal(volgendZonmoment(tokio,tokioNu).type,"opkomst","ook buiten Europa moet lokale tijdzone de eerstvolgende zonnegebeurtenis bepalen");
 assert.equal(zonPresentatie(tokio,tokioNu).sub,"Morgen om 05:13.");
 assert.equal(lokaleIsoNaarUtcMs("2026-09-01T05:13","Asia/Tokyo",32400),Date.UTC(2026,7,31,20,13),"lokale zonnetijd moet naar het juiste instant worden omgerekend");
@@ -70,9 +70,12 @@ assert.equal(lokaleIsoNaarUtcMs("2026-09-01T05:13","Asia/Tokyo",32400),Date.UTC(
 const pool={timezone:"Arctic/Longyearbyen",utc_offset_seconds:7200,current:{is_day:1},daily:{sunrise:["2026-06-21T00:00"],sunset:["2026-06-21T00:00"]}};
 assert.equal(zonPresentatie(pool,Date.UTC(2026,5,21,10)).type,"pooldag","identieke pool-sentinels mogen geen nep-zonmoment opleveren");
 
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:87,dew_point_2m:14}),"Hoge luchtvochtigheid. Dauwpunt circa 14 °C.","87% mag niet als aangenaam worden verkocht");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:68,dew_point_2m:12}),"Vochtige lucht. Dauwpunt circa 12 °C.");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:52,dew_point_2m:9}),"Gemiddelde luchtvochtigheid. Dauwpunt circa 9 °C.");
+/* De procentwaarde blijft RH, maar de comfortzin volgt primair het dauwpunt. */
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:43,dew_point_2m:25,temperature_2m:40}),"Zeer benauwde lucht. Dauwpunt circa 25 °C.","Dubai mag bij hoog dauwpunt nooit droog heten");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:67,dew_point_2m:-52,temperature_2m:-49}),"Extreem droge lucht. Dauwpunt circa -52 °C.","koude poollucht mag door hoge RH niet als vochtig worden verkocht");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:87,dew_point_2m:14}),"Aangename lucht. Dauwpunt circa 14 °C.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:52,dew_point_2m:9}),"Vrij droge lucht. Dauwpunt circa 9 °C.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:87,dew_point_2m:null}),"Hoge relatieve luchtvochtigheid.","zonder dauwpunt mag alleen relatieve vochtigheid worden geduid");
 assert.equal(vochtigheidPresentatie({relative_humidity_2m:null}),"Luchtvochtigheid niet beschikbaar.");
 
 const uitvoerStap="node scripts/desktop-refinement-20260829.js";
@@ -85,4 +88,4 @@ assert.throws(()=>pasDesktopRefinementToe(bron.replace(NAV_MARKER,""),"zonder-na
 assert.throws(()=>pasDesktopRefinementToe(bron.replace(MOTREGEN_BRON,""),"zonder-codes"),/motregencodetabel ontbreekt of is dubbel/);
 assert.throws(()=>pasDesktopRefinementToe(bron.replace(START_MARKER,""),"zonder-start"),/startmarker ontbreekt of is dubbel/);
 
-console.log("Finale productverfijning unit-test geslaagd: locatiebewuste zonnecyclus, neutrale vochtigheidscopy, compactere grafiektypografie, brede broncopy, uitgebalanceerde week/Nachtzicht-layout en desktopfooter zijn geborgd.");
+console.log("Finale productverfijning unit-test geslaagd: locatiebewuste zonnecyclus, dauwpuntgestuurd vochtcomfort, compactere grafiektypografie, brede broncopy, uitgebalanceerde week/Nachtzicht-layout en desktopfooter zijn geborgd.");

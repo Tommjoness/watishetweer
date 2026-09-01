@@ -8,6 +8,7 @@ const root=path.join(__dirname,"..");
 const workflow=fs.readFileSync(path.join(root,".github","workflows","production-smoke.yml"),"utf8");
 const smoke=fs.readFileSync(path.join(root,"scripts","production-smoke.js"),"utf8");
 const wereldwijd=fs.readFileSync(path.join(root,"scripts","production-worldwide-browser.js"),"utf8");
+const wereldwijdRunner=fs.readFileSync(path.join(root,"scripts","run-production-worldwide-browser.js"),"utf8");
 const performance=fs.readFileSync(path.join(root,"scripts","production-live-performance-browser.js"),"utf8");
 const cls=fs.readFileSync(path.join(root,"scripts","production-mobile-cls-browser.js"),"utf8");
 const sitemapContract=require("./production-sitemap-contract.js");
@@ -18,7 +19,11 @@ assert(/workflow_dispatch:/.test(workflow),"production-smoke moet handmatig star
 assert(workflow.includes("EXPECTED_SHA: ${{ github.sha }}"),"workflow moet de exacte GitHub-SHA aan productie koppelen");
 assert(workflow.includes("SMOKE_REQUEST_TIMEOUT_MS:"),"workflow moet een expliciete request-timeout instellen");
 assert(workflow.includes("mcr.microsoft.com/playwright:v1.62.1-noble"),"production-smoke moet een vaste browserimage gebruiken");
-assert(workflow.includes("node scripts/production-worldwide-browser.js"),"workflow mist de wereldwijde browsermonitor");
+assert(workflow.includes("node scripts/run-production-worldwide-browser.js"),"workflow mist de wereldwijde browsermonitor-runner");
+assert(wereldwijdRunner.includes('path.join(__dirname,"production-worldwide-browser.js")'),"wereldwijde runner moet de bestaande harde browsermonitor uitvoeren");
+assert(wereldwijdRunner.includes("page\\.waitForResponse: Timeout \\d+ms exceeded while waiting for event"),"wereldwijde runner mag alleen de specifieke provider-response-timeout herkennen");
+assert(wereldwijdRunner.includes("if(!providerResponseTimeout.test(eerste.uitvoer))process.exit(eerste.code)"),"wereldwijde runner moet iedere andere fout zonder retry laten falen");
+assert(wereldwijdRunner.includes("const tweede=draai()"),"wereldwijde runner moet maximaal één gecontroleerde retry uitvoeren");
 assert(workflow.includes("node scripts/production-staff-audit-browser.js"),"workflow mist de interactieve staff-auditmonitor");
 assert(workflow.includes("node scripts/production-live-performance-browser.js"),"workflow mist de live Chromium/WebKit-performancemonitor");
 assert(workflow.includes("node scripts/production-mobile-cls-browser.js"),"workflow mist de mobiele CLS-productiemonitor");
@@ -92,4 +97,4 @@ assert(cls.includes("Beschikbaarheid wordt apart bewaakt"),"CLS-monitor moet bes
 
 require("./production-source-truth.test.js");
 
-console.log("production-monitoring-config: deploymentcontract, volledige 11-locatiematrix, vier gescheiden browsergates, gecontroleerde Cloudflare Web Analytics, vaste mobiele CLS-vensters en strikt sitemapcontract OK");
+console.log("production-monitoring-config: deploymentcontract, volledige 11-locatiematrix, één gerichte provider-timeoutretry, vier gescheiden browsergates, gecontroleerde Cloudflare Web Analytics, vaste mobiele CLS-vensters en strikt sitemapcontract OK");
