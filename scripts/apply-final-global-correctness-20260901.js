@@ -76,9 +76,12 @@ if(typeof corrigeerNachtVensterBron==="function"){
     const geen=/^Geen (?:gunstig|goed) kijkvenster door (.+?)[.!?]*$/i.exec(t);
     if(geen)return G.nachtAdvies(score,geen[1]);
     const h=Number(horizon);
-    if(Number.isFinite(h)&&h===0){
-      const neutraal=basisNachtVenster(tekst,1,score,opties);
-      return G.nachtVensterTijdsvorm(neutraal,{horizonDagen:0,nuDatumTijd:opties.nuDatumTijd,nachtDatum:opties.nachtDatum,tijdzone:opties.tijdzone,nuEpochMs:opties.nuEpochMs});
+    if(Number.isFinite(h)&&h>=0){
+      /* De oude owner krijgt bewust een toekomstige horizon om alleen de
+         inhoud/scorecopy te normaliseren. De tijdsvorm wordt daarna voor
+         iedere rij uitsluitend door de datum-/tijdpolicy bepaald. */
+      const neutraal=basisNachtVenster(tekst,1,score,{...opties,actief:false});
+      return G.nachtVensterTijdsvorm(neutraal,{horizonDagen:h,nuDatumTijd:opties.nuDatumTijd,nachtDatum:opties.nachtDatum,tijdzone:opties.tijdzone,nuEpochMs:opties.nuEpochMs});
     }
     return basisNachtVenster(tekst,horizon,score,opties);
   };
