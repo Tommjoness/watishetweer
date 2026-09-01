@@ -8,7 +8,7 @@
  * falen. Oude S.d van A mag dan nooit als volledige data voor B zichtbaar worden.
  *
  * Scenario 2: dezelfde wissel met een geldige cache van A. De basisloader toont
- * die cache bewust als expliciet gelabelde "laatste briefing". De progressieve
+ * die cache bewust als expliciet gelabelde laatst opgehaalde gegevens. De progressieve
  * wrapper mag die veilige fallback niet vervolgens verbergen.
  *
  * Migratiegrens binnen scenario 2: een oudere cache kan nog geen `land` hebben.
@@ -116,7 +116,7 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
           warningBijCache=Math.abs(lat-52.368)<0.0015&&Math.abs(lon-4.904)<0.0015;
           geenStaleLand=warningUrl.searchParams.get('land')!=='US'&&typeof S!=='undefined'&&S.land==null;
         }catch(_){ }
-        const veilig=zichtbaar&&/laatste briefing/i.test(stateTekst)&&typeof S!=='undefined'&&S.label==='Amsterdam'&&sTemp===18&&plaats==='Amsterdam'&&warningBijCache&&geenStaleLand;
+        const veilig=zichtbaar&&/laatst opgehaalde gegevens/i.test(stateTekst)&&typeof S!=='undefined'&&S.label==='Amsterdam'&&sTemp===18&&plaats==='Amsterdam'&&warningBijCache&&geenStaleLand;
         zet('result',veilig?'ok':'fout');
       }else{
         const veilig=!zichtbaar&&/Ophalen mislukt/i.test(stateTekst)&&typeof S!=='undefined'&&S.label==='New York';
@@ -147,4 +147,4 @@ function eis(dom,label){
 
 eis(draai(false),"zonder cache");
 eis(draai(true),"met legacy-cache zonder land");
-console.log("Progressive fallback browser: mislukte locatiewissel lekt geen oude details, veilige laatste briefing blijft zichtbaar en legacy-cache neemt geen landcode van de mislukte locatie over.");
+console.log("Progressive fallback browser: mislukte locatiewissel lekt geen oude details, veilige laatst opgehaalde gegevens blijven zichtbaar en legacy-cache neemt geen landcode van de mislukte locatie over.");

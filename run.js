@@ -1420,7 +1420,7 @@ groep("Wereldwijd");
     check("de laatste briefing wordt bewaard",/ls\.set\(KEY_D,\{d:S\.d/.test(bronW));
     check("bij een mislukte poging komt die terug",
       /const oud=ls\.get\(KEY_D,null\)/.test(bronW) && /S\.d=oud\.d/.test(bronW));
-    check("er staat bij van wanneer die is",/laatste briefing van/.test(bronW));
+    check("er staat bij van wanneer die is",/laatst opgehaalde gegevens van/.test(bronW));
   }
 }
 

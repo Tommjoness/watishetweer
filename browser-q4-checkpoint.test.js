@@ -206,8 +206,8 @@ async function apiStress(browser,naam){
     await page.evaluate(async()=>{__q4.fail.full.G=true;__q4.fail.min.G=true;await load(1.23,2.34,'Defecte locatie',false,true,'XX');});
     const totaalFail=await page.evaluate(()=>({label:S.label,state:document.getElementById('state').textContent,klasse:document.getElementById('state').className}));
     assert.equal(totaalFail.label,'Degradatie D',naam+": totale fout herstelt de laatst geldige briefing met eigen label");
-    assert(/Geen verbinding\. Dit is de laatste briefing/i.test(totaalFail.state),naam+": cachefallback wordt expliciet benoemd");
-    assert(/err/.test(totaalFail.klasse),naam+": totale forecastfout krijgt foutstatus");
+    assert(/Verversen is niet gelukt\. Je ziet de laatst opgehaalde gegevens/i.test(totaalFail.state),naam+": cachefallback wordt expliciet benoemd zonder de internetverbinding te beschuldigen");
+    assert(!/err/.test(totaalFail.klasse),naam+": tijdelijke providerfout krijgt geen onterechte rode offline-status");
 
     /* Reverse geocoding: serverfallback alleen wanneer primaire bron onvolledig is. */
     await page.evaluate(()=>{__q4.fail.full.G=false;__q4.fail.min.G=false;__q4.bdcComplete=true;__q4.geo={lat:7.2906,lon:80.6337,accuracy:18};});
