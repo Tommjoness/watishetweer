@@ -162,12 +162,22 @@ async function controleer(type,naam,breedte){
         sheet:".sheet",details:"#chartdata",summary:"#chartdata > summary",hint:".chartdata-scrollhint",scroller:".chartdata-scroll",table:".chartdata-scroll table"
       }))expliciet[k]=audit(document.querySelector(sel));
 
+      const scroller=document.querySelector(".chartdata-scroll");
+      let scrollProbe=null;
+      if(scroller){
+        const voor=scroller.scrollLeft,max=Math.max(0,scroller.scrollWidth-scroller.clientWidth),doel=Math.min(48,max);
+        scroller.scrollLeft=doel;
+        scrollProbe={voor,na:scroller.scrollLeft,max};
+        scroller.scrollLeft=voor;
+      }
+
       return {
         innerWidth:window.innerWidth,clientWidth:vw,
         htmlScroll:document.documentElement.scrollWidth,
         bodyScroll:document.body.scrollWidth,
         buiten,modules,
         overflowAudit:{offenders,expliciet},
+        scrollProbe,
         q4Labels:[...document.querySelectorAll('#chart g[data-q4-rain-periods] text')].map(x=>(x.textContent||"").trim()),
         q4ViewBox:document.getElementById("chart").getAttribute("viewBox"),
         scrollHint:getComputedStyle(document.querySelector(".chartdata-scrollhint")).display
@@ -182,6 +192,9 @@ async function controleer(type,naam,breedte){
     if(resultaat.modules.chartdata){
       assert.ok(resultaat.modules.chartdata.left>=-.75&&resultaat.modules.chartdata.right<=resultaat.clientWidth+.75,`${naam} ${breedte}: grafiekdatatabel-scroller zelf valt buiten viewport; ${diagnose}`);
       assert.ok(["auto","scroll"].includes(resultaat.modules.chartdata.overflowX),`${naam} ${breedte}: brede grafiekdatatabel is niet horizontaal begrensd; ${diagnose}`);
+      if(resultaat.modules.chartdata.scrollWidth>resultaat.modules.chartdata.clientWidth+1){
+        assert.ok(resultaat.scrollProbe&&resultaat.scrollProbe.max>0&&resultaat.scrollProbe.na>resultaat.scrollProbe.voor,`${naam} ${breedte}: grafiekdatatabel is breed maar kan niet echt horizontaal worden gescrold; ${diagnose}`);
+      }
     }
     if(breedte<=430)assert.notEqual(resultaat.scrollHint,"none",`${naam} ${breedte}: horizontaal scrollbare grafiektabel mist een zichtbare aanwijzing; ${diagnose}`);
     else assert.equal(resultaat.scrollHint,"none",`${naam} ${breedte}: mobiele scrollaanwijzing blijft onnodig zichtbaar op desktop; ${diagnose}`);
