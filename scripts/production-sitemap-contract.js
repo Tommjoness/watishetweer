@@ -8,6 +8,7 @@ const VERWACHTE_URLS=Object.freeze([
   `${ROOT}/`,
   `${ROOT}/weer/`,
   `${ROOT}/over/`,
+  `${ROOT}/privacy`,
   ...LOCATIES.map(plaatsUrl)
 ]);
 
@@ -21,6 +22,7 @@ function controleerSitemap(xml){
   assert.equal(new Set(locs).size,locs.length,"live sitemap bevat dubbele URLs");
   assert.deepEqual([...locs].sort(),[...VERWACHTE_URLS].sort(),"live sitemap wijkt af van de canonieke URL-set uit de productiebron");
   assert(locs.includes(`${ROOT}/over/`),"live sitemap mist /over/");
+  assert(locs.includes(`${ROOT}/privacy`),"live sitemap mist de canonieke privacyroute /privacy");
   assert(!locs.some(url=>url.startsWith("https://www.watishetweer.nl")||/[?](?:lat|lon)=/.test(url)),"live sitemap bevat een www- of share-URL");
   return locs;
 }
@@ -53,7 +55,7 @@ async function haalSitemap(){
 
 async function main(){
   const aantal=await haalSitemap();
-  console.log(`LIVE-SITEMAP-CONTRACT GESLAAGD: exact ${aantal} unieke canonieke URLs, inclusief /over/.`);
+  console.log(`LIVE-SITEMAP-CONTRACT GESLAAGD: exact ${aantal} unieke canonieke URLs, inclusief /over/ en /privacy.`);
 }
 
 if(require.main===module){
