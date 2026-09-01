@@ -86,6 +86,6 @@ assert.strictEqual(pasDesktopRefinementToe(uit,"unit-herhaling"),uit,"finale ver
 
 assert.throws(()=>pasDesktopRefinementToe(bron.replace(NAV_MARKER,""),"zonder-nav"),/plaatsnavigatie ontbreekt of is dubbel/);
 assert.throws(()=>pasDesktopRefinementToe(bron.replace(MOTREGEN_BRON,""),"zonder-codes"),/motregencodetabel ontbreekt of is dubbel/);
-assert.throws(()=>pasDesktopRefinementToe(bron.replace(START_MARKER,""),/zonder-start/),/startmarker ontbreekt of is dubbel/);
+assert.throws(()=>pasDesktopRefinementToe(bron.replace(START_MARKER,""),"zonder-start"),/startmarker ontbreekt of is dubbel/);
 
 console.log("Finale productverfijning unit-test geslaagd: locatiebewuste zonnecyclus, dauwpuntgestuurd vochtcomfort, compactere grafiektypografie, brede broncopy, uitgebalanceerde week/Nachtzicht-layout en desktopfooter zijn geborgd.");
