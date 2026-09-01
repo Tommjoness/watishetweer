@@ -35,7 +35,7 @@ function regenSamenvattingBijwerken(){
 function verduidelijkVandaag(){
   const hint=document.getElementById("dagenhint"),day=typeof S!=="undefined"&&S.d&&S.d.daily,current=typeof S!=="undefined"&&S.d&&S.d.current;
   if(hint&&!hint.dataset.finalTodayWindow){
-    hint.textContent="Klik op een dag om die verwachting in de grafiek te laden. Bij Vandaag geldt de neerslagkans vanaf nu; minimum en maximum gelden voor de hele kalenderdag.";
+    hint.textContent="Kies een dag om die verwachting in de grafiek te bekijken.";
     hint.dataset.finalTodayWindow="1";
   }
   if(!day||!current||!Array.isArray(day.time))return;
