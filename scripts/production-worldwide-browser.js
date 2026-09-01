@@ -111,7 +111,20 @@ function isVolledigeForecast(url){
         assert(uit.titel.startsWith(uit.label+" · "),`${scherm.naam}/${locatie.naam}: titel en opgeloste plaats verschillen (${uit.titel} / ${uit.label})`);
         assert(uit.bronLinks>=1,`${scherm.naam}/${locatie.naam}: bronvermelding ontbreekt`);
         assert.equal(uit.drukLabel,"Luchtdruk op zeeniveau",`${scherm.naam}/${locatie.naam}: druksoort is niet ondubbelzinnig gelabeld`);
-        assert(!/(?:^|[^\d])-?1\s+graden\b/i.test(uit.appTekst),`${scherm.naam}/${locatie.naam}: enkelvoudtemperatuur gebruikt 'graden'`);
+        if(/(?:^|[^\d])-?1\s+graden\b/i.test(uit.appTekst)){
+          const diagnose=await page.evaluate(()=>{
+            const app=document.getElementById("app"),hits=[];
+            if(!app)return hits;
+            const showText=typeof NodeFilter!=="undefined"?NodeFilter.SHOW_TEXT:4,walker=document.createTreeWalker(app,showText);let n;
+            while((n=walker.nextNode())){
+              const tekst=String(n.nodeValue||"").trim();if(!/(?:^|[^\d])-?1\s+graden\b/i.test(tekst))continue;
+              const p=n.parentElement;
+              hits.push({tekst,tag:p&&p.tagName||"",id:p&&p.id||"",className:p&&p.className||"",parentTekst:String(p&&p.parentElement&&p.parentElement.textContent||"").trim().slice(0,300)});
+            }
+            return hits;
+          });
+          assert.fail(`${scherm.naam}/${locatie.naam}: enkelvoudtemperatuur gebruikt 'graden'; DOM=${JSON.stringify(diagnose)}`);
+        }
         for(const [i,r] of uit.rijen.entries())assert(String(r.neerslagHoofd||r.neerslagHoeveelheid||r.neerslagAria).trim(),`${scherm.naam}/${locatie.naam}: dagrij ${i+1} heeft leeg neerslagveld`);
         /* De providerresponse blijft exact zoals ontvangen. Alleen de horizon
            voor de resterende huidige dag volgt dezelfde actuele lokale klok
