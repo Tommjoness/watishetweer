@@ -130,6 +130,15 @@ jobs:
       - name: Installeer Playwright
         run: npm install --no-save --package-lock=false playwright@1.62.1
 
+      # Deze visuele gate gebruikt live deployed HTML/CSS/JS en live weerdata,
+      # maar een gecontroleerde zoekfixture. Draai hem vóór de zware live
+      # wereldmatrix zodat externe providerbursts de layouttest niet beïnvloeden.
+      - name: Echte responsive preview met tijdelijke screenshots
+        env:
+          PREVIEW_ROOT: ${{ env.PREVIEW_ROOT }}
+          EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+        run: node scripts/preview-responsive-visual-browser.js
+
       - name: Wereldwijde preview in mobiel en desktop
         env:
           PRODUCTION_ROOT: ${{ env.PREVIEW_ROOT }}

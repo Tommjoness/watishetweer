@@ -1,0 +1,159 @@
+"use strict";
+
+const fs=require("fs");
+const path=require("path");
+const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
+
+const OUT=path.join(__dirname,"..","public");
+const POLICY=fs.readFileSync(path.join(__dirname,"final-global-correctness-20260901.js"),"utf8");
+const MARKER="/* ===== FINAL GLOBAL CORRECTNESS 20260901 ===== */";
+const START="/* ---------- start ---------- */";
+
+const ZOEK_OUD=`function zoekSleutel(r){
+  if(!r||typeof r!=="object")return null;
+  if(r.id!==null&&r.id!==undefined&&String(r.id).trim()!=="")return "id:"+String(r.id).trim();
+  return [
+    tekst(r.name),tekst(r.admin1),tekst(r.admin2),tekst(r.country_code||r.country),
+    coord(r.latitude),coord(r.longitude)
+  ].join("|");
+}`;
+const ZOEK_NIEUW=`function zoekSleutel(r){
+  if(!r||typeof r!=="object")return null;
+  const beleid=typeof globalThis!=="undefined"&&globalThis.WeatherNowFinalGlobalCorrectness;
+  if(beleid&&typeof beleid.zoekSleutel==="function")return beleid.zoekSleutel(r);
+  return [tekst(r.name),tekst(r.country_code||r.country),tekst(r.admin1),tekst(r.admin2),coord(r.latitude),coord(r.longitude)].join("|");
+}`;
+const DEDUP_OUD=`function dedupliceerZoekresultaten(resultaten,max){
+  const uit=[],gezien=new Set(),limiet=Number.isInteger(max)&&max>=0?max:Infinity;
+  for(const bron of (Array.isArray(resultaten)?resultaten:[])){
+    const r=normaliseerZoekresultaat(bron);
+    if(!r)continue;
+    const sleutel=zoekSleutel(r);
+    if(!sleutel||gezien.has(sleutel))continue;
+    gezien.add(sleutel);uit.push(r);
+    if(uit.length>=limiet)break;
+  }
+  return uit;
+}`;
+const DEDUP_NIEUW=`function dedupliceerZoekresultaten(resultaten,max){
+  const uit=[],gezien=new Set(),gezienIds=new Set(),limiet=Number.isInteger(max)&&max>=0?max:Infinity;
+  for(const bron of (Array.isArray(resultaten)?resultaten:[])){
+    const r=normaliseerZoekresultaat(bron);
+    if(!r)continue;
+    const sleutel=zoekSleutel(r),id=r.id!==null&&r.id!==undefined&&String(r.id).trim()!==""?String(r.id).trim():null;
+    if(!sleutel||gezien.has(sleutel)||(id&&gezienIds.has(id)))continue;
+    gezien.add(sleutel);if(id)gezienIds.add(id);uit.push(r);
+    if(uit.length>=limiet)break;
+  }
+  return uit;
+}`;
+
+const NACHT_HORIZON_OUD=`const horizon=nachtHorizonIndex(rij.dataset&&rij.dataset.d,h);`;
+const NACHT_HORIZON_NIEUW=`const horizon=Math.max(h,nachtHorizonIndex(rij.dataset&&rij.dataset.d,h));if(rij.dataset)rij.dataset.d=String(horizon);`;
+const NACHT_CALL_OUD=`const detail=venster?corrigeerNachtVensterBron(venster,horizon,zichtbaar,{zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal)}):"";`;
+const NACHT_CALL_NIEUW=`const detail=venster?(()=>{
+  const optiesNacht={zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal),nuDatumTijd:nuLokaal,nachtDatum:Array.isArray(day.time)?day.time[horizon]:null,tijdzone:S.d&&S.d.timezone,nuEpochMs:Date.now()};
+  const beleid=globalThis.WeatherNowFinalGlobalCorrectness;
+  let lokaal=corrigeerNachtVensterBron(venster,horizon,zichtbaar,optiesNacht);
+  const geen=/^Geen (?:gunstig|goed) kijkvenster door (.+?)[.!?]*$/i.exec(String(lokaal||"").trim());
+  if(beleid&&geen&&typeof beleid.nachtAdvies==="function")lokaal=beleid.nachtAdvies(zichtbaar,geen[1]);
+  return beleid&&typeof beleid.nachtVensterTijdsvorm==="function"
+    ?beleid.nachtVensterTijdsvorm(lokaal,{horizonDagen:horizon,nuDatumTijd:optiesNacht.nuDatumTijd,nachtDatum:optiesNacht.nachtDatum,tijdzone:optiesNacht.tijdzone,nuEpochMs:optiesNacht.nuEpochMs})
+    :lokaal;
+})():"";`;
+
+const CSS=`
+/* ===== FINAL GLOBAL CORRECTNESS 20260901 CSS ===== */
+#modelrisico{margin:10px 0 0;padding:10px 0 0;border-top:1px solid var(--rule);max-width:72ch}
+#modelrisico[hidden]{display:none!important}
+#modelrisico .modelrisico-kop{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}
+#modelrisico .modelrisico-label{font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-70)}
+#modelrisico .modelrisico-note{font-family:var(--sans);font-size:11px;color:var(--ink-45)}
+#modelrisico .modelrisico-items{display:grid;gap:2px;margin-top:4px;font-size:13px;line-height:1.45}
+#days .wiw-dag-onzeker{display:block;white-space:normal;line-height:1.15;font-size:10px}
+@media(max-width:370px){#days .wiw-dag-onzeker{font-size:9px;letter-spacing:-.01em}}
+`;
+
+const RUNTIME=`
+${MARKER}
+(function(){
+"use strict";
+const G=globalThis.WeatherNowFinalGlobalCorrectness;if(!G)return;
+
+if(typeof corrigeerNachtVensterBron==="function"){
+  const basisNachtVenster=corrigeerNachtVensterBron;
+  corrigeerNachtVensterBron=function(tekst,horizon,score,opties={}){
+    const t=String(tekst||"").trim();
+    const geen=/^Geen (?:gunstig|goed) kijkvenster door (.+?)[.!?]*$/i.exec(t);
+    if(geen)return G.nachtAdvies(score,geen[1]);
+    const h=Number(horizon);
+    if(Number.isFinite(h)&&h>=0){
+      /* De oude owner krijgt bewust een toekomstige horizon om alleen de
+         inhoud/scorecopy te normaliseren. De tijdsvorm wordt daarna voor
+         iedere rij uitsluitend door de datum-/tijdpolicy bepaald. */
+      const neutraal=basisNachtVenster(tekst,1,score,{...opties,actief:false});
+      return G.nachtVensterTijdsvorm(neutraal,{horizonDagen:h,nuDatumTijd:opties.nuDatumTijd,nachtDatum:opties.nachtDatum,tijdzone:opties.tijdzone,nuEpochMs:opties.nuEpochMs});
+    }
+    return basisNachtVenster(tekst,horizon,score,opties);
+  };
+}
+
+if(globalThis.WeatherNowKansbeleidV3&&typeof globalThis.WeatherNowKansbeleidV3.dagKansSamenvatting==="function"){
+  const basisDagKans=globalThis.WeatherNowKansbeleidV3.dagKansSamenvatting;
+  globalThis.WeatherNowKansbeleidV3.dagKansSamenvatting=function(a,basis){return basisDagKans(a,G.dagBasis(a,basis));};
+}
+
+function laatsteGetal(tekst){const m=/(-?\\d+(?:[.,]\\d+)?)\\s*$/.exec(String(tekst||""));return m?Number(m[1].replace(",",".")):null;}
+function bezoekTekstNodes(scope,callback){
+  if(!scope||typeof callback!=="function")return;
+  if(typeof document.createTreeWalker==="function"){
+    const showText=typeof NodeFilter!=="undefined"?NodeFilter.SHOW_TEXT:4,walker=document.createTreeWalker(scope,showText);let n;
+    while((n=walker.nextNode()))callback(n);return;
+  }
+  const stack=scope.childNodes?Array.from(scope.childNodes):[];
+  while(stack.length){const n=stack.shift();if(!n)continue;if(n.nodeType===3)callback(n);if(n.childNodes&&n.childNodes.length)stack.unshift(...Array.from(n.childNodes));}
+}
+function corrigeerTemperatuurDom(root){
+  const scope=root||document;
+  bezoekTekstNodes(scope,n=>{
+    const oud=n.nodeValue||"",nieuw=G.corrigeerGradenTekst(oud);if(nieuw!==oud)n.nodeValue=nieuw;
+    if(/^\\s*graden\\b/.test(n.nodeValue||"")&&n.previousSibling){const v=laatsteGetal(n.previousSibling.textContent);if(v!==null&&Math.abs(v)===1)n.nodeValue=String(n.nodeValue).replace(/^([\\s]*)graden\\b/,"$1graad");}
+  });
+  scope.querySelectorAll&&scope.querySelectorAll("[aria-label],[title]").forEach(el=>{for(const a of ["aria-label","title"]){if(!el.hasAttribute(a))continue;const oud=el.getAttribute(a),nieuw=G.corrigeerGradenTekst(oud);if(nieuw!==oud)el.setAttribute(a,nieuw);}});
+}
+function corrigeerDrukSemantiek(){
+  document.querySelectorAll(".eyebrow").forEach(el=>{if(el.textContent.trim()==="Luchtdruk")el.textContent="Luchtdruk op zeeniveau";});
+  const pres=document.getElementById("pres");if(pres){const stat=pres.closest(".stat");if(stat){stat.setAttribute("title","Luchtdruk herleid tot zeeniveau (MSL).");stat.setAttribute("aria-label","Luchtdruk op zeeniveau. "+pres.textContent.trim());}}
+  const scope=document.getElementById("app");if(!scope)return;
+  bezoekTekstNodes(scope,n=>{let t=n.nodeValue||"";t=t.replace(/\\bDe luchtdruk is\\b/g,"De luchtdruk op zeeniveau is").replace(/\\bDe luchtdruk blijft\\b/g,"De luchtdruk op zeeniveau blijft").replace(/\\bLuchtdruk:\\s*/g,"Luchtdruk op zeeniveau: ");n.nodeValue=t;});
+}
+function finaliseerDagNeerslag(){
+  document.querySelectorAll("#days .row.day:not(.kop)").forEach(r=>{
+    const vak=r.querySelector(".drain");if(!vak)return;const m=/(\\d{1,3})%/.exec(vak.textContent||""),k=m?Number(m[1]):null,bekend=vak.querySelector("small,.q1-dag-mm");
+    if(k!==null&&k>0&&!bekend){const small=document.createElement("small");small.className="wiw-dag-onzeker";small.textContent="hoeveelheid onzeker";vak.appendChild(small);}
+    const delen=[];if(k!==null)delen.push("Neerslagkans "+k+" procent");const small=vak.querySelector("small,.q1-dag-mm");if(small&&small.textContent.trim())delen.push(small.textContent.trim());if(!delen.length&&/^[-–—]$/.test(vak.textContent.trim()))delen.push("Neerslaggegevens niet beschikbaar");if(delen.length)vak.setAttribute("aria-label",delen.join("; "));
+  });
+}
+function reeks(h,naam,begin,eind){const a=h&&Array.isArray(h[naam])?h[naam]:[];return a.slice(begin,eind).map(Number).filter(Number.isFinite);}
+function maxOf(a){return a.length?Math.max(...a):null;}function minOf(a){return a.length?Math.min(...a):null;}
+function renderModelRisico(){
+  const el=document.getElementById("modelrisico");if(!el)return;if(!S||!S.d||!S.d.hourly||(Number.isFinite(Number(S.op))&&Date.now()-Number(S.op)>60*60*1000)){el.hidden=true;el.innerHTML="";return;}
+  const h=S.d.hourly,i=Math.max(0,Number(S.i0)||0),e=Math.min(h.time&&h.time.length||i+25,i+25),euro=typeof inEuropa==="function"?inEuropa(S.lat,S.lon):false,c=S.air&&S.air.current||{},aqi=euro&&c.european_aqi!=null?Number(c.european_aqi):c.us_aqi!=null?Number(c.us_aqi):null;
+  const risicos=G.modelRisicos({maxTemperatuur:maxOf(reeks(h,"temperature_2m",i,e)),maxGevoel:maxOf(reeks(h,"apparent_temperature",i,e)),maxUv:maxOf(reeks(h,"uv_index",i,e)),maxWindstoot:maxOf(reeks(h,"wind_gusts_10m",i,e)),minZicht:minOf(reeks(h,"visibility",i,e)),aqi,aqiSchaal:euro&&c.european_aqi!=null?"EU":"US"});
+  if(!risicos.length){el.hidden=true;el.innerHTML="";return;}el.hidden=false;el.innerHTML='<div class="modelrisico-kop"><span class="modelrisico-label">Modelsignaal</span><span class="modelrisico-note">Modelgegevens, geen officiële waarschuwing.</span></div><div class="modelrisico-items">'+risicos.map(r=>'<span>'+String(r.tekst).replace(/[&<>]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[ch]))+'</span>').join("")+'</div>';
+}
+function finaleDomCorrecties(){finaliseerDagNeerslag();corrigeerTemperatuurDom(document.getElementById("app")||document);corrigeerDrukSemantiek();renderModelRisico();}
+if(typeof tekenAlles==="function"){const basisTekenAlles=tekenAlles;tekenAlles=function(){const r=basisTekenAlles.apply(this,arguments);finaleDomCorrecties();queueMicrotask(finaleDomCorrecties);return r;};}
+if(typeof lucht==="function"){const basisLucht=lucht;lucht=function(){const r=basisLucht.apply(this,arguments);corrigeerTemperatuurDom(document.getElementById("aq")||document);renderModelRisico();return r;};}
+})();
+`;
+
+function weerHtmlBestanden(dir){const uit=[];for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())uit.push(...weerHtmlBestanden(p));else if(e.isFile()&&e.name==="index.html")uit.push(p);}return uit;}
+function exactEen(bron,oud,nieuw,naam){const n=bron.split(oud).length-1;if(n!==1)throw new Error(naam+"-anker verwacht 1x, gevonden "+n);return bron.replace(oud,nieuw);}
+function pasToe(pad){
+  let html=fs.readFileSync(pad,"utf8");if(!html.includes(START)||!html.includes("WeatherNowGlobalLocationHardening"))return false;if(html.includes(MARKER))throw new Error("Finale correctheidslaag staat al in "+pad);
+  html=exactEen(html,ZOEK_OUD,ZOEK_NIEUW,"zoeksleutel");html=exactEen(html,DEDUP_OUD,DEDUP_NIEUW,"zoekdeduplicatie");html=exactEen(html,NACHT_HORIZON_OUD,NACHT_HORIZON_NIEUW,"Nachtzicht horizonindex");html=exactEen(html,NACHT_CALL_OUD,NACHT_CALL_NIEUW,"Nachtzicht datetime-call");
+  html=exactEen(html,'<p class="brief" id="brief"></p>','<p class="brief" id="brief"></p>\n    <div id="modelrisico" role="note" hidden></div>',"modelsignaal-container");html=exactEen(html,"</head>","<style>"+CSS+"</style>\n</head>","finale-correctheidsstijl");html=exactEen(html,START,POLICY+"\n"+RUNTIME+"\n"+START,"startup-injectie");html=html.replace(/>Luchtdruk</g,">Luchtdruk op zeeniveau<");fs.writeFileSync(pad,html,"utf8");return true;
+}
+let aantal=0;for(const p of weerHtmlBestanden(OUT))if(pasToe(p))aantal++;if(!aantal)throw new Error("Geen weerpagina's gevonden voor finale correctheidslaag.");const versie=vernieuwServiceworkerCache(OUT,"final-global-correctness-20260901");console.log("Finale wereldwijde correctheidslaag toegepast op "+aantal+" weerpagina's; cache "+versie+".");
+module.exports={ZOEK_OUD,ZOEK_NIEUW,DEDUP_OUD,DEDUP_NIEUW,NACHT_HORIZON_OUD,NACHT_HORIZON_NIEUW,NACHT_CALL_OUD,NACHT_CALL_NIEUW,CSS,RUNTIME,MARKER,pasToe};

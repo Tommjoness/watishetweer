@@ -53,13 +53,19 @@ const omgekeerdXml=`<?xml version="1.0"?><urlset>${omgekeerd.map(url=>`<url><loc
 assert.deepEqual(sitemapContract.controleerSitemap(omgekeerdXml),omgekeerd,"sitemapcontract mag niet onnodig van URL-volgorde afhangen");
 assert.throws(()=>sitemapContract.controleerSitemap(testXml.replace("<url><loc>https://watishetweer.nl/over/</loc></url>","")),/exact 37/,"sitemapcontract moet een ontbrekende /over/ afwijzen");
 
-for(const plek of ["Amsterdam","New York","Tokio","Sydney","Singapore","Longyearbyen"])assert(wereldwijd.includes(`naam:\"${plek}\"`),`wereldwijde monitor mist ${plek}`);
+const verplichteWereldmatrix=["Amsterdam","Singapore","Ushuaia","La Paz","Longyearbyen","Zuidpool","Dubai","Reykjavik","Punta Arenas","Miami","Tokio"];
+for(const plek of verplichteWereldmatrix)assert(wereldwijd.includes(`naam:\"${plek}\"`),`wereldwijde monitor mist ${plek}`);
+assert(wereldwijd.includes('locaties.length} locaties × mobiel/desktop'),"wereldwijde monitor moet het actuele aantal locaties rapporteren");
 assert(wereldwijd.includes('{naam:"mobiel",width:390,height:844}'),"wereldwijde monitor mist mobiel 390px");
 assert(wereldwijd.includes('{naam:"desktop",width:1440,height:1000}'),"wereldwijde monitor mist desktop");
 assert(wereldwijd.includes('uit.overflow<=1'),"wereldwijde monitor bewaakt horizontale overflow niet");
 assert(wereldwijd.includes('assert.equal(uit.sha,verwacht'),"wereldwijde browsermonitor moet de exacte build-SHA bewaken");
 assert(wereldwijd.includes("verifieerBronwaarheid(bron,uit"),"wereldwijde browsermonitor vergelijkt zichtbare waarden niet met de live bronrespons");
 assert(wereldwijd.includes("isVolledigeForecast(r.url())"),"wereldwijde browsermonitor moet de volledige forecastrespons en niet de current-only preview vergelijken");
+assert(wereldwijd.includes('assert.equal(uit.timezone,bron.timezone'),"wereldwijde browsermonitor moet de UI-tijdzone tegen dezelfde providerresponse verifiëren");
+assert(wereldwijd.includes('Luchtdruk op zeeniveau'),"wereldwijde browsermonitor moet de druksoort bewaken");
+assert(wereldwijd.includes('toekomstige Nachtzicht-rij gebruikt verleden tijd'),"wereldwijde browsermonitor moet toekomstige Nachtzicht-copy bewaken");
+assert(wereldwijd.includes('heeft leeg neerslagveld'),"wereldwijde browsermonitor moet lege dagneerslagvelden blokkeren");
 assert(performance.includes('const {chromium,webkit,devices}=require("playwright")'),"live performancemonitor moet Chromium en WebKit gebruiken");
 assert(performance.includes("volledigeForecasts.length,1"),"live performancemonitor bewaakt dubbele volledige forecastaanvragen niet");
 assert(performance.includes("previewForecasts.length<=1"),"live performancemonitor begrenst de current-only preview niet");
@@ -86,4 +92,4 @@ assert(cls.includes("Beschikbaarheid wordt apart bewaakt"),"CLS-monitor moet bes
 
 require("./production-source-truth.test.js");
 
-console.log("production-monitoring-config: deploymentcontract, vier gescheiden browsergates, gecontroleerde Cloudflare Web Analytics, vaste mobiele CLS-vensters en strikt sitemapcontract OK");
+console.log("production-monitoring-config: deploymentcontract, volledige 11-locatiematrix, vier gescheiden browsergates, gecontroleerde Cloudflare Web Analytics, vaste mobiele CLS-vensters en strikt sitemapcontract OK");
