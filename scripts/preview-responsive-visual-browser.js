@@ -22,6 +22,11 @@ const viewports=[
   {naam:"desktop-1440",width:1440,height:1000},
   {naam:"desktop-1920",width:1920,height:1080}
 ];
+const zoekFixture={results:[
+  {id:101,name:"Singapore",admin1:"Singapore",country_code:"SG",latitude:1.28967,longitude:103.85007},
+  {id:202,name:"Singapore",admin1:"Singapore",country_code:"SG",latitude:1.28967,longitude:103.85007},
+  {id:303,name:"Singapore",admin1:"North East",country_code:"SG",latitude:1.35,longitude:103.9}
+]};
 
 function binnenViewport(rect,width){return !!rect&&rect.left>=-1&&rect.right<=width+1&&rect.width>0;}
 
@@ -33,6 +38,12 @@ function binnenViewport(rect,width){return !!rect&&rect.left>=-1&&rect.right<=wi
       const context=await browser.newContext({viewport:{width:vp.width,height:vp.height},serviceWorkers:"block",locale:"nl-NL",reducedMotion:"reduce"});
       const page=await context.newPage(),pageErrors=[];
       page.on("pageerror",e=>pageErrors.push(String(e)));
+      /* Deze gate controleert deployed layout/interactie, niet de beschikbaarheid
+         van de externe geocodingprovider. De live bronwaarheid draait apart in
+         production-worldwide-browser.js. Gebruik daarom dezelfde deterministische
+         zoekfixture als de bestaande finale browseraudit: twee geografisch gelijke
+         providerrecords moeten tot één optie dedupliceren, plus één echt andere. */
+      await page.route("https://geocoding-api.open-meteo.com/**",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(zoekFixture)}));
       const params=new URLSearchParams({lat:"52.3676",lon:"4.9041",plaats:"Amsterdam",land:"NL"});
       const response=await page.goto(ROOT+"/?"+params,{waitUntil:"domcontentloaded",timeout:30000});
       assert(response&&response.ok(),`${vp.naam}: homepage HTTP ${response&&response.status()}`);
@@ -78,12 +89,12 @@ function binnenViewport(rect,width){return !!rect&&rect.left>=-1&&rect.right<=wi
 
       const q=page.locator("#q");
       await q.fill("Singapore");
-      await page.locator('#res [role="option"]').first().waitFor({state:"visible",timeout:12000});
+      await page.locator('#res [role="option"]').first().waitFor({state:"visible",timeout:5000});
       const zoek=await page.evaluate(()=>{
         const res=document.getElementById("res"),r=res?.getBoundingClientRect(),q=document.getElementById("q"),opties=[...document.querySelectorAll('#res [role="option"]')];
         return {rect:r?{left:r.left,right:r.right,width:r.width}:null,aantal:opties.length,expanded:q?.getAttribute("aria-expanded")||"",active:q?.getAttribute("aria-activedescendant")||""};
       });
-      assert(zoek.aantal>0,`${vp.naam}: zoeken leverde geen zichtbare opties`);
+      assert.equal(zoek.aantal,2,`${vp.naam}: geografische zoekdeduplicatie leverde ${zoek.aantal} in plaats van 2 opties`);
       assert(binnenViewport(zoek.rect,vp.width),`${vp.naam}: zoekresultaten vallen buiten viewport`);
       assert.equal(zoek.expanded,"true",`${vp.naam}: zoekveld meldt geopende lijst niet`);
       await q.press("ArrowDown");
