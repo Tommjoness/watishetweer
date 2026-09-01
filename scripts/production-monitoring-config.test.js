@@ -48,15 +48,17 @@ assert(smoke.includes("/api/neerslag?lat=52.3508&lon=5.2647&land=NL"),"productio
 assert(smoke.includes("/api/waarschuwingen?lat=52.3508&lon=5.2647&land=NL"),"production-smoke mist waarschuwingen-API-contract");
 assert(smoke.includes("item.plaatsSpecifiek===true"),"waarschuwingencontract moet plaatsgebonden filtering bewaken");
 
-assert.equal(sitemapContract.VERWACHTE_URLS.length,37,"huidig sitemapcontract moet exact 37 canonieke URLs bevatten");
+assert.equal(sitemapContract.VERWACHTE_URLS.length,38,"huidig sitemapcontract moet exact 38 canonieke URLs bevatten");
 assert.equal(new Set(sitemapContract.VERWACHTE_URLS).size,sitemapContract.VERWACHTE_URLS.length,"verwacht sitemapcontract mag geen duplicaten bevatten");
 assert(sitemapContract.VERWACHTE_URLS.includes("https://watishetweer.nl/over/"),"verwacht sitemapcontract moet /over/ bevatten");
+assert(sitemapContract.VERWACHTE_URLS.includes("https://watishetweer.nl/privacy"),"verwacht sitemapcontract moet de canonieke /privacy-route bevatten");
 const testXml=`<?xml version="1.0"?><urlset>${sitemapContract.VERWACHTE_URLS.map(url=>`<url><loc>${url}</loc></url>`).join("")}</urlset>`;
 assert.deepEqual(sitemapContract.controleerSitemap(testXml),sitemapContract.VERWACHTE_URLS,"sitemapcontract moet de huidige canonieke set accepteren");
 const omgekeerd=[...sitemapContract.VERWACHTE_URLS].reverse();
 const omgekeerdXml=`<?xml version="1.0"?><urlset>${omgekeerd.map(url=>`<url><loc>${url}</loc></url>`).join("")}</urlset>`;
 assert.deepEqual(sitemapContract.controleerSitemap(omgekeerdXml),omgekeerd,"sitemapcontract mag niet onnodig van URL-volgorde afhangen");
-assert.throws(()=>sitemapContract.controleerSitemap(testXml.replace("<url><loc>https://watishetweer.nl/over/</loc></url>","")),/exact 37/,"sitemapcontract moet een ontbrekende /over/ afwijzen");
+assert.throws(()=>sitemapContract.controleerSitemap(testXml.replace("<url><loc>https://watishetweer.nl/over/</loc></url>","")),/exact 38/,"sitemapcontract moet een ontbrekende /over/ afwijzen");
+assert.throws(()=>sitemapContract.controleerSitemap(testXml.replace("<url><loc>https://watishetweer.nl/privacy</loc></url>","")),/exact 38/,"sitemapcontract moet een ontbrekende /privacy afwijzen");
 
 const verplichteWereldmatrix=["Amsterdam","Singapore","Ushuaia","La Paz","Longyearbyen","Zuidpool","Dubai","Reykjavik","Punta Arenas","Miami","Tokio"];
 for(const plek of verplichteWereldmatrix)assert(wereldwijd.includes(`naam:\"${plek}\"`),`wereldwijde monitor mist ${plek}`);
