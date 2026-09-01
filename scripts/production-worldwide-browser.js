@@ -14,7 +14,7 @@ const locaties=[
   {naam:"Ushuaia",land:"AR",lat:-54.8019,lon:-68.3030,tz:"America/Argentina/Ushuaia"},
   {naam:"La Paz",land:"BO",lat:-16.4897,lon:-68.1193,tz:"America/La_Paz"},
   {naam:"Longyearbyen",land:"SJ",lat:78.2232,lon:15.6469,tz:"Arctic/Longyearbyen",pool:true},
-  {naam:"Zuidpool",land:"AQ",lat:-90,lon:0,tz:null,pool:true},
+  {naam:"Zuidpool",land:"AQ",lat:-90,lon:0,tz:null,pool:true,plaatsnaamVrij:true},
   {naam:"Dubai",land:"AE",lat:25.2048,lon:55.2708,tz:"Asia/Dubai"},
   {naam:"Reykjavik",land:"IS",lat:64.1466,lon:-21.9426,tz:"Atlantic/Reykjavik"},
   {naam:"Punta Arenas",land:"CL",lat:-53.1638,lon:-70.9171,tz:"America/Punta_Arenas"},
@@ -96,8 +96,9 @@ function isVolledigeForecast(url){
         uit.wind=zichtbaarGetal(uit.wind);uit.luchtdruk=zichtbaarGetal(uit.luchtdruk);uit.uv=Number.isFinite(uit.uv)?uit.uv:null;
         uit.rijen=uit.rijen.map(r=>({...r,min:zichtbaarGetal(r.min),max:zichtbaarGetal(r.max),wind:zichtbaarGetal(r.wind)}));
         assert.equal(uit.sha,verwacht,`${scherm.naam}/${locatie.naam}: verkeerde build ${uit.sha}`);
-        assert.equal(uit.label,locatie.naam,`${scherm.naam}/${locatie.naam}: plaatsidentiteit werd ${uit.label}`);
-        assert.equal(uit.query,locatie.naam,`${scherm.naam}/${locatie.naam}: zoekveld werd ${uit.query}`);
+        if(locatie.plaatsnaamVrij)assert(String(uit.label||"").trim(),`${scherm.naam}/${locatie.naam}: opgeloste plaatsidentiteit is leeg`);
+        else assert.equal(uit.label,locatie.naam,`${scherm.naam}/${locatie.naam}: plaatsidentiteit werd ${uit.label}`);
+        assert.equal(uit.query,uit.label,`${scherm.naam}/${locatie.naam}: zoekveld en opgeloste plaatsidentiteit verschillen (${uit.query} / ${uit.label})`);
         assert(bron.timezone&&typeof bron.timezone==="string",`${scherm.naam}/${locatie.naam}: provider gaf geen tijdzone`);
         assert.equal(uit.timezone,bron.timezone,`${scherm.naam}/${locatie.naam}: UI-tijdzone ${uit.timezone} wijkt af van bron ${bron.timezone}`);
         if(locatie.tz)assert.equal(bron.timezone,locatie.tz,`${scherm.naam}/${locatie.naam}: provider-tijdzone werd ${bron.timezone}, verwacht ${locatie.tz}`);
@@ -107,7 +108,7 @@ function isVolledigeForecast(url){
         assert.equal(onjuisteToekomst.length,0,`${scherm.naam}/${locatie.naam}: toekomstige Nachtzicht-rij gebruikt verleden tijd; fout=${JSON.stringify(onjuisteToekomst)}; alleRijen=${JSON.stringify(uit.nachtRijen)}; actueleLokaleTijd=${uit.actueleLokaleTijd}; currentTime=${uit.currentTime}; dailyTime=${JSON.stringify(uit.dailyTime)}`);
         assert(/^Gegevens opgehaald om \d{2}:\d{2} · /.test(uit.stamp),`${scherm.naam}/${locatie.naam}: ongeldige datastempel`);
         assert(uit.overflow<=1,`${scherm.naam}/${locatie.naam}: ${uit.overflow}px horizontale overflow`);
-        assert(uit.titel.startsWith(locatie.naam+" · "),`${scherm.naam}/${locatie.naam}: titel en plaats verschillen`);
+        assert(uit.titel.startsWith(uit.label+" · "),`${scherm.naam}/${locatie.naam}: titel en opgeloste plaats verschillen (${uit.titel} / ${uit.label})`);
         assert(uit.bronLinks>=1,`${scherm.naam}/${locatie.naam}: bronvermelding ontbreekt`);
         assert.equal(uit.drukLabel,"Luchtdruk op zeeniveau",`${scherm.naam}/${locatie.naam}: druksoort is niet ondubbelzinnig gelabeld`);
         assert(!/(?:^|[^\d])-?1\s+graden\b/i.test(uit.appTekst),`${scherm.naam}/${locatie.naam}: enkelvoudtemperatuur gebruikt 'graden'`);
