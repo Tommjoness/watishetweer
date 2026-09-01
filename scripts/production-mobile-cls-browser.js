@@ -64,7 +64,7 @@ function clsUit(entries){
         const meting=await page.evaluate(()=>{
           const app=document.getElementById("app"),temp=document.getElementById("t"),state=document.getElementById("state");
           const heeftData=!!(app&&getComputedStyle(app).display!=="none"&&temp&&!/^(?:--|–)$/.test(temp.textContent.trim()));
-          const terminaleFout=!!(state&&state.classList.contains("err")&&/Ophalen mislukt|Geen verbinding/i.test(state.textContent||""));
+          const terminaleFout=!!(state&&state.classList.contains("err")&&/Ophalen mislukt|Geen internetverbinding/i.test(state.textContent||""));
           return {
             uitkomst:heeftData?"data":terminaleFout?"fout":"laden",
             stateTekst:state&&state.textContent||"",

@@ -100,7 +100,8 @@ verboden("De officiële waarschuwing heeft voorrang op de modelverwachting.","ve
 /* Finale architectuur/performance. */
 for(const tekst of [
   "let laadTeller=0,waarschuwingTeller=0,actieveWeerController=null,actieveLuchtController=null,actieveWaarschuwingController=null",
-  "const luchtBelofte=j(a,{timeoutMs:7000,signal:luchtController.signal})",
+  "const luchtBelofte=luchtVerversen",
+  "?j(a,{timeoutMs:7000,signal:luchtController.signal})",
   "const WEER_HEDGE_MS=5000;",
   "const WEER_FALLBACK_TIMEOUT_MS=7000;",
   "const volledigeBelofte=j(f,{timeoutMs:10000,signal:weerController.signal});",
@@ -115,7 +116,7 @@ for(const tekst of [
   "const basisJ=j,zoekCache=new Map();"
 ])vereist(tekst);
 verboden("try{vol=await j(f,{timeoutMs:10000,signal:weerController.signal});}","oude sequentiële full-forecastwait");
-const luchtStart=html.indexOf("const luchtBelofte=j(a"),weerStart=html.indexOf("const volledigeBelofte=j(f,{timeoutMs:10000"),waarschuwingStart=html.indexOf("waarschuwingen();");
+const luchtStart=html.indexOf("const luchtBelofte=luchtVerversen"),weerStart=html.indexOf("const volledigeBelofte=j(f,{timeoutMs:10000"),waarschuwingStart=html.indexOf("waarschuwingen();");
 if(luchtStart<0||weerStart<0||luchtStart>weerStart)throw new Error("Luchtkwaliteit start niet aantoonbaar parallel vóór het wachten op de hoofdforecast.");
 if(waarschuwingStart<0)throw new Error("Waarschuwingen worden niet vanuit de renderketen gestart.");
 

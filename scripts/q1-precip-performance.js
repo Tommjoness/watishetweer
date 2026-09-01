@@ -177,7 +177,7 @@ function schrijfCache(obj){try{ls.set(CACHE_KEY,cacheSnoei(obj));}catch(e){}}
 function bewaarCache(lat,lon,label,land){
   const sleutel=cacheSleutel(lat,lon);if(!sleutel||!S.d)return;
   const c=leesCache();
-  c[sleutel]={d:S.d,air:S.air||null,label:String(label||S.label||""),lat:Number(lat),lon:Number(lon),land:land||S.land||null,op:S.op||Date.now()};
+  c[sleutel]={d:S.d,air:S.air||null,airOp:Number(S.luchtOp)||0,label:String(label||S.label||""),lat:Number(lat),lon:Number(lon),land:land||S.land||null,op:S.op||Date.now()};
   schrijfCache(c);
 }
 
@@ -280,7 +280,7 @@ if(typeof load==="function"){
       }
       S.lat=Number(lat);S.lon=Number(lon);S.label=String(label||cache.label||"");
       S.land=land!==undefined?normLand(land):normLand(cache.land);
-      S.d=cache.d;S.air=cache.air||null;S.op=cache.op;S.dag=null;
+      S.d=cache.d;S.air=cache.air||null;S.luchtOp=Number(cache.airOp)||0;S.op=cache.op;S.dag=null;
       try{
         if(cacheKernRender(wissel)){
           if(typeof urlBij==="function")urlBij();

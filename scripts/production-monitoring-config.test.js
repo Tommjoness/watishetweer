@@ -92,7 +92,7 @@ assert(!cls.includes("waitForFunction"),"productie-CLS-monitor mag niet wachten 
 assert(cls.includes("meting.finalScrollY,meting.initialScrollY"),"productie-CLS-monitor moet spontane initiële scroll bewaken");
 assert(cls.includes("meting.sha,verwacht"),"productie-CLS-monitor moet de exacte live SHA bewaken");
 assert(cls.includes('state.classList.contains("err")'),"productie-CLS-monitor moet een nette terminale foutlayout apart classificeren");
-assert(cls.includes('/Ophalen mislukt|Geen verbinding/i'),"productie-CLS-monitor mag alleen expliciete menselijke forecastfoutstates als fout classificeren");
+assert(cls.includes('/Ophalen mislukt|Geen internetverbinding/i'),"productie-CLS-monitor mag alleen expliciete menselijke terminale forecastfoutstates als fout classificeren");
 assert(cls.includes('uitkomst:heeftData?"data":terminaleFout?"fout":"laden"'),"productie-CLS-monitor moet ook een nog ladende providerstate als gemeten layoutstate rapporteren");
 assert(cls.includes("assert(dataRondes>=MIN_DATA_RONDEN"),"productie-CLS-monitor mag niet groen worden zonder representatieve echte weerdata");
 assert(cls.includes("Beschikbaarheid wordt apart bewaakt"),"CLS-monitor moet beschikbaarheid expliciet als aparte verantwoordelijkheid rapporteren");

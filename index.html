@@ -943,7 +943,7 @@ function maan(d){
 }
 
 /* ---------- state ---------- */
-const S={lat:null,lon:null,label:"",land:null,d:null,air:null,i0:0,dag:null,op:0,geo:null,bereik:24,actieveWaarschuwingen:[]};
+const S={lat:null,lon:null,label:"",land:null,d:null,air:null,i0:0,dag:null,op:0,luchtOp:0,waarschuwingenOp:0,verversMislukt:false,geo:null,bereik:24,actieveWaarschuwingen:[]};
 const KEY_P="weerbriefing.plaats",KEY_D="weerbriefing.data",KEY_L="weerbriefing.lijst";
 const ls={
   get(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f;}catch(e){return f;}},
@@ -1032,8 +1032,14 @@ async function load(lat,lon,label,stil,opslaan,land){
   if(actieveLuchtController) actieveLuchtController.abort();
   const weerController=new AbortController(),luchtController=new AbortController();
   actieveWeerController=weerController;actieveLuchtController=luchtController;
-  const luchtBelofte=j(a,{timeoutMs:7000,signal:luchtController.signal})
-    .then(value=>({ok:true,value}),()=>({ok:false,value:null}));
+  /* Open-Meteo/CAMS levert luchtkwaliteit en pollen als uurwaarden. Bij een
+     gewone forecastrefresh binnen hetzelfde uur bewaren we daarom de geldige
+     luchtdata in plaats van dezelfde bron iedere vijftien minuten opnieuw aan
+     te roepen. Een locatiewissel haalt uiteraard direct plaatsgebonden data. */
+  const luchtVerversen=plaatsWijzigt||!S.air||!Number.isFinite(Number(S.luchtOp))||Date.now()-Number(S.luchtOp)>=60*60*1000;
+  const luchtBelofte=luchtVerversen
+    ?j(a,{timeoutMs:7000,signal:luchtController.signal}).then(value=>({ok:true,value}),()=>({ok:false,value:null}))
+    :Promise.resolve({ok:null,value:S.air});
   try{
     let vol=null;
     try{vol=await j(f,{timeoutMs:10000,signal:weerController.signal});}
@@ -1042,29 +1048,36 @@ async function load(lat,lon,label,stil,opslaan,land){
       vol=await j(fmin,{timeoutMs:10000,signal:weerController.signal});
     }
     if(mijnBeurt!==laadTeller) return;   // er is inmiddels een nieuwere plaats gekozen
-    S.d=vol;S.air=null;
+    S.d=vol;if(luchtVerversen)S.air=null;
     S.op=Date.now(); if(!stil) S.dag=null;
+    S.verversMislukt=false;
     if(opslaan) ls.set(KEY_P,{lat:coordOpslag(S.lat),lon:coordOpslag(S.lon),label:label,land:S.land});
-    ls.set(KEY_D,{d:S.d,air:null,label:label,lat:coordOpslag(S.lat),lon:coordOpslag(S.lon),op:S.op,land:S.land});
+    ls.set(KEY_D,{d:S.d,air:S.air,airOp:S.luchtOp,label:label,lat:coordOpslag(S.lat),lon:coordOpslag(S.lon),op:S.op,land:S.land});
     tekenAlles();
     st.style.display="none";
     document.getElementById("app").style.display="block";
     urlBij();
-    luchtBelofte.then(result=>{
+    if(luchtVerversen)luchtBelofte.then(result=>{
       if(mijnBeurt!==laadTeller||S.d!==vol) return;
       S.air=result.ok?result.value:null;
-      ls.set(KEY_D,{d:S.d,air:S.air,label:S.label,lat:coordOpslag(S.lat),lon:coordOpslag(S.lon),op:S.op,land:S.land});
+      if(result.ok)S.luchtOp=Date.now();
+      ls.set(KEY_D,{d:S.d,air:S.air,airOp:S.luchtOp,label:S.label,lat:coordOpslag(S.lat),lon:coordOpslag(S.lon),op:S.op,land:S.land});
       lucht();
     });
   }catch(err){
     if(mijnBeurt!==laadTeller) return;
     const oud=ls.get(KEY_D,null);
     if(oud&&oud.d){
-      S.d=oud.d;S.air=oud.air;S.label=oud.label;S.lat=oud.lat;S.lon=oud.lon;S.op=oud.op;S.land=normLand(oud.land)||S.land;
+      S.d=oud.d;S.air=oud.air;S.label=oud.label;S.lat=oud.lat;S.lon=oud.lon;S.op=oud.op;S.luchtOp=Number(oud.airOp)||0;S.land=normLand(oud.land)||S.land;
+      S.verversMislukt=true;
       tekenAlles();
       document.getElementById("app").style.display="block";
-      st.style.display="block";st.className="msg err";
-      st.textContent="Geen verbinding. Dit is de laatste briefing van "+new Date(oud.op).toLocaleString("nl-NL")+".";
+      const offline=typeof navigator!=="undefined"&&navigator.onLine===false;
+      st.style.display="block";st.className=offline?"msg err":"msg";
+      const tijd=new Date(oud.op).toLocaleString("nl-NL");
+      st.textContent=offline
+        ?"Geen internetverbinding. Je ziet de laatst opgehaalde gegevens van "+tijd+"."
+        :"Verversen is niet gelukt. Je ziet de laatst opgehaalde gegevens van "+tijd+". Nieuwe poging over 1 minuut.";
     }else{
       st.style.display="block";st.className="msg err";
       st.textContent="Ophalen mislukt ("+err.message+"). Controleer je verbinding of kies een andere plaats.";
@@ -2505,6 +2518,7 @@ function waarschuwingGeldigTot(iso){
 }
 async function waarschuwingen(){
   const mijnBeurt=++waarschuwingTeller;
+  S.waarschuwingenOp=Date.now();
   if(actieveWaarschuwingController) actieveWaarschuwingController.abort();
   const waarschuwingController=new AbortController();
   actieveWaarschuwingController=waarschuwingController;
@@ -2659,14 +2673,30 @@ function stempel(){
   el.className=m>45?"oud":"";
 }
 setInterval(stempel,30000);
-setInterval(()=>{ if(document.visibilityState==="visible"&&S.lat!=null&&Date.now()-S.op>600000) load(S.lat,S.lon,S.label,true); },60000);
+const WEATHERNOW_VERVERS_INTERVAL=Object.freeze({tick:60*1000,forecast:15*60*1000,waarschuwingen:5*60*1000,lucht:60*60*1000});
+let weatherNowVerversBezig=false;
+async function weatherNowVerversTick(){
+  if(document.visibilityState!=="visible"||S.lat==null||weatherNowVerversBezig)return;
+  stempel();
+  const nu=Date.now();
+  if(S.verversMislukt||!Number.isFinite(Number(S.op))||nu-Number(S.op)>=WEATHERNOW_VERVERS_INTERVAL.forecast){
+    weatherNowVerversBezig=true;
+    try{await load(S.lat,S.lon,S.label,true);}
+    finally{weatherNowVerversBezig=false;}
+    return;
+  }
+  if(typeof waarschuwingen==="function"&&(!Number.isFinite(Number(S.waarschuwingenOp))||nu-Number(S.waarschuwingenOp)>=WEATHERNOW_VERVERS_INTERVAL.waarschuwingen)){
+    void waarschuwingen();
+  }
+}
+setInterval(weatherNowVerversTick,WEATHERNOW_VERVERS_INTERVAL.tick);
 document.addEventListener("visibilitychange",()=>{
   if(document.visibilityState==="visible"){
     // eerst de klok corrigeren: geen fetch, alleen #plaatstijd/#minitijd en de
     // minuutuitlijning opnieuw zetten, want een achtergrondtabblad kan de
     // timers van klokTimerStart() laten driften of laten pauzeren
     klokTimerStart();
-    if(S.lat!=null&&Date.now()-S.op>300000) load(S.lat,S.lon,S.label,true);
+    void weatherNowVerversTick();
   }
 });
 
