@@ -145,7 +145,7 @@ function pasDesktopRefinementToe(html,label="artifact"){
   if(tel(bron,MOTREGEN_PRODUCTIE)!==1||bron.includes(MOTREGEN_BRON))throw new Error(`${label}: motregencopy is niet eenduidig genormaliseerd.`);
   if(tel(bron,`id="${MARKER}"`)!==1)throw new Error(`${label}: desktopverfijningsstijl ontbreekt of is dubbel.`);
   if(tel(bron,RUNTIME_MARKER)!==1)throw new Error(`${label}: finale consumentencorrectie ontbreekt of is dubbel.`);
-  for(const invariant of ["Tijd tot zonsopkomst","Tijd tot zonsondergang","Hoge luchtvochtigheid.","Temp.bereik","desktopTypography"]){
+  for(const invariant of ["Tijd tot zonsopkomst","Tijd tot zonsondergang","Zeer benauwde lucht.","Temp.bereik","desktopTypography"]){
     if(!bron.includes(invariant))throw new Error(`${label}: finale consumenteninvariant ontbreekt: ${invariant}`);
   }
   return bron;
