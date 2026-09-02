@@ -133,10 +133,10 @@ function hardenLoad(html){
     const offline=typeof navigator!=="undefined"&&navigator.onLine===false;
     const timeout=!!(err&&err.name==="AbortError");
     const foutVoor=offline
-      ?"Geen internetverbinding; gegevens voor "+label+" konden niet worden opgehaald."
+      ?"Ophalen mislukt: geen internetverbinding; gegevens voor "+label+" konden niet worden opgehaald."
       :timeout
-        ?"Het ophalen van gegevens voor "+label+" duurde te lang."
-        :"Gegevens voor "+label+" konden niet worden opgehaald.";
+        ?"Ophalen mislukt: het ophalen van gegevens voor "+label+" duurde te lang."
+        :"Ophalen mislukt: gegevens voor "+label+" konden niet worden opgehaald.";
     if(oud&&oud.d&&weatherNowCachePastBij(oud,nieuweLat,nieuweLon)){
       S.d=oud.d;S.air=oud.air;S.label=label;S.lat=nieuweLat;S.lon=nieuweLon;S.op=oud.op;
       S.luchtOp=Number(oud.airOp)||0;S.land=normLand(oud.land)||aangevraagdeLand;S.verversMislukt=true;
@@ -157,7 +157,10 @@ function hardenLoad(html){
       S.d=null;S.air=null;S.label=label;S.lat=nieuweLat;S.lon=nieuweLon;S.land=aangevraagdeLand;
       S.verversMislukt=true;S.dag=null;S.actieveWaarschuwingen=[];
       document.getElementById("q").value=label;
-      document.getElementById("app").style.display="none";
+      /* Zonder cache blijft alleen de bestaande gereserveerde app-geometrie
+         staan voor CLS; bij een aanwezige maar verkeerde cache verbergen we
+         het weerbericht volledig zodat nooit data van die andere locatie lekt. */
+      document.getElementById("app").style.display=oud&&oud.d?"none":"block";
       document.title=label+" · Wat is het weer?";
       weatherNowFoutMetRetry(st,foutVoor+" Er worden geen weergegevens van een andere locatie getoond.",nieuweLat,nieuweLon,label,opslaan,land);
     }
