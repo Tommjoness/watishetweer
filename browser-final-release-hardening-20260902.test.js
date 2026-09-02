@@ -185,7 +185,7 @@ console.log("Final-release locatiehardening: 10 cache/fout/racescenario's elk in
 const viewports=[[320,844],[360,844],[390,844],[430,932],[1100,900],[1280,800],[1363,936],[1440,900],[1600,900],[1920,1080]];
 for(const [w,h] of viewports){
   let html=injecteerBasis(basisHtml);
-  const reporter=`<script>window.__wiwEchteSetTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-layout-'+k,String(v));try{
+  const reporter=`<script>window.__wiwEchteSetTimeout(()=>{const viewportWidth=window.innerWidth;const zet=(k,v)=>document.body.setAttribute('data-layout-'+k,String(v));try{
     const stats=[...document.querySelectorAll('.final-top-grid>.stats .stat')].filter(e=>getComputedStyle(e).display!=='none');
     const tops=[...new Set(stats.map(e=>Math.round(e.getBoundingClientRect().top)))];
     const table=document.getElementById('wiw-hour-table'),th3=table&&table.querySelector('thead th:nth-child(3)'),scroll=document.getElementById('wiw-hour-scroll');
@@ -193,7 +193,7 @@ for(const [w,h] of viewports){
     zet('head-clip',th3&&th3.scrollWidth<=th3.clientWidth+1?'ok':'fout');zet('table-overflow',scroll?Math.max(0,scroll.scrollWidth-scroll.clientWidth):999);
     zet('page-overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth);
     const minTouch=[...document.querySelectorAll('button')].filter(b=>{const r=b.getBoundingClientRect(),s=getComputedStyle(b);return r.width>0&&r.height>0&&s.display!=='none';}).map(b=>Math.min(b.getBoundingClientRect().width,b.getBoundingClientRect().height));
-    zet('min-touch',w<=430?Math.round(Math.min(...minTouch.filter(Number.isFinite))):44);zet('done','ok');
+    zet('min-touch',viewportWidth<=430?Math.round(Math.min(...minTouch.filter(Number.isFinite))):44);zet('done','ok');
   }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},700);</script>`;
   html=html.replace("</body>",reporter+"</body>");
   const dom=chromeDump(html,w,h,1800),v=k=>attr(dom,k,'layout');
