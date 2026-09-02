@@ -124,9 +124,8 @@ function wrapWaarschuwingen(){
 }
 
 let drukResizeGebonden=false;
-function herstelDruk(){
-  if(typeof S==="undefined"||!S.d)return;
-  const pres=document.getElementById("pres"),sub=document.getElementById("pressub");if(!pres||!sub)return;
+function bouwMeetgegevens(){
+  const pres=document.getElementById("pres");if(!pres)return;
   let details=document.getElementById("wiw-more-measurements");
   if(!details){
     const stat=pres.closest(".stat"),diag=document.getElementById("wiw-pressure-diagnostic"),anker=document.querySelector(".final-top-grid")||document.querySelector(".dashrow-hero");if(!stat||!anker||!anker.parentNode)return;
@@ -134,21 +133,18 @@ function herstelDruk(){
     const summary=document.createElement("summary");summary.textContent="Meer meetgegevens";details.appendChild(summary);
     const body=document.createElement("div");body.className="wiw-more-measurements-body";body.appendChild(stat);details.appendChild(body);anker.insertAdjacentElement("afterend",details);
     if(diag&&diag.parentNode)diag.remove();
+    const betekenis=document.createElement("p");betekenis.className="wiw-pressure-meaning";betekenis.textContent="Herleid tot zeeniveau zodat luchtdruk tussen locaties vergelijkbaar is.";stat.appendChild(betekenis);
     details.addEventListener("toggle",()=>{if(details.dataset.syncing!=="1")details.dataset.userChoice="1";});
   }
-  let betekenis=details.querySelector(".wiw-pressure-meaning");if(!betekenis){betekenis=document.createElement("p");betekenis.className="wiw-pressure-meaning";betekenis.textContent="Herleid tot zeeniveau zodat luchtdruk tussen locaties vergelijkbaar is.";sub.insertAdjacentElement("afterend",betekenis);}
-  const stat=pres.closest(".stat"),waarde=String(pres.textContent||"").replace(/\s+/g," ").replace(/(\d)(hPa)/i,"$1 hPa").trim(),trend=String(sub.textContent||"").replace(/\s+/g," ").trim();
-  if(stat)stat.setAttribute("aria-label",["Luchtdruk op zeeniveau",waarde,trend,betekenis.textContent].filter(Boolean).join(". "));
   const sync=()=>{if(details.dataset.userChoice==="1")return;details.dataset.syncing="1";details.open=window.innerWidth>=901;delete details.dataset.syncing;};sync();
   if(!drukResizeGebonden){drukResizeGebonden=true;window.addEventListener("resize",sync,{passive:true});}
 }
 
 function naRender(basis,fn){return function(){const r=basis.apply(this,arguments);fn();return r;};}
 
-bouwTopGrid();wrapWaarschuwingen();
+bouwTopGrid();bouwMeetgegevens();wrapWaarschuwingen();
 if(typeof etmaal==="function")etmaal=naRender(etmaal,regenSamenvattingBijwerken);
 if(typeof dagen==="function")dagen=naRender(dagen,verduidelijkVandaag);
-if(typeof meters==="function")meters=naRender(meters,herstelDruk);
-if(typeof tekenAlles==="function")tekenAlles=naRender(tekenAlles,()=>{verduidelijkVandaag();herstelDruk();});
+if(typeof tekenAlles==="function")tekenAlles=naRender(tekenAlles,verduidelijkVandaag);
 regenSamenvattingBijwerken();verduidelijkVandaag();verrijkNwsWaarschuwingen();
 })(typeof globalThis!=="undefined"?globalThis:this);
