@@ -12,14 +12,16 @@ function bft(k){const n=getal(k);if(n===null||n<0)return null;let uit=0;for(cons
 function zichtbaarGetal(tekst){const m=/-?\d+(?:[.,]\d+)?/.exec(String(tekst||""));return m?Number(m[0].replace(",",".")):null;}
 function dagNeerslag(kans,mm){
   const k=getal(kans),hoeveelheid=getal(mm),genoeg=k!==null||hoeveelheid!==null;
-  /* De finale DOM-laag onderscheidt een expliciete nul van ontbrekende data.
-     Een echte bronwaarde 0 blijft 0,0 mm bij kans >0; alleen wanneer de
-     hoeveelheid ontbreekt en de kans wel bekend/positief is, toont de UI
-     "hoeveelheid onzeker". De monitor volgt precies dat zichtbare contract. */
+  /* Volg exact de definitieve postbuild-presentatie:
+     - expliciete 0 + kans >0 blijft zichtbaar als 0,0 mm;
+     - >=0,1 mm blijft een concrete hoeveelheid;
+     - een positieve maar sub-0,1-mm dagsom wordt door Q1 niet als getal getoond
+       en krijgt daarna bij kans >0 de finale zichtbare staat "hoeveelheid onzeker";
+     - ontbrekende hoeveelheid bij kans >0 krijgt dezelfde eerlijke staat. */
   let hoeveelheidUi="";
   if(hoeveelheid!==null&&(hoeveelheid>=0.1||(hoeveelheid===0&&k!==null&&k>0))){
     hoeveelheidUi=hoeveelheid===0?"0,0 mm":hoeveelheidTekst(hoeveelheid);
-  }else if(hoeveelheid===null&&k!==null&&k>0){
+  }else if(k!==null&&k>0&&(hoeveelheid===null||hoeveelheid>0)){
     hoeveelheidUi="hoeveelheid onzeker";
   }
   return {
