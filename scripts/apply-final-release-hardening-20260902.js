@@ -145,14 +145,20 @@ function hardenLoad(html){
       document.getElementById("app").style.display="block";
       urlBij();
       const tijd=new Date(oud.op).toLocaleString("nl-NL");
-      weatherNowFoutMetRetry(st,foutVoor+" Je ziet de laatst opgehaalde gegevens voor "+label+" van "+tijd+".",nieuweLat,nieuweLon,label,opslaan,land);
+      weatherNowFoutMetRetry(st,"Verversen is niet gelukt. Je ziet de laatst opgehaalde gegevens voor "+label+" van "+tijd+".",nieuweLat,nieuweLon,label,opslaan,land);
+      st.classList.remove("err");
     }else if(vorigeLocatie&&vorigeLocatie.d&&Number.isFinite(Number(vorigeLocatie.lat))&&Number.isFinite(Number(vorigeLocatie.lon))){
       weatherNowHerstelLocatie(vorigeLocatie);
       document.getElementById("q").value=String(vorigeLocatie.label||"");
       tekenAlles();
       document.getElementById("app").style.display="block";
       urlBij();
-      weatherNowFoutMetRetry(st,foutVoor+" Je ziet weer de gegevens voor "+vorigeLocatie.label+".",nieuweLat,nieuweLon,label,opslaan,land);
+      if(offline){
+        weatherNowFoutMetRetry(st,foutVoor+" Je ziet weer de gegevens voor "+vorigeLocatie.label+".",nieuweLat,nieuweLon,label,opslaan,land);
+      }else{
+        weatherNowFoutMetRetry(st,"Verversen is niet gelukt. Je ziet de laatst opgehaalde gegevens voor "+vorigeLocatie.label+". Gegevens voor "+label+" konden niet worden opgehaald.",nieuweLat,nieuweLon,label,opslaan,land);
+        st.classList.remove("err");
+      }
     }else{
       S.d=null;S.air=null;S.label=label;S.lat=nieuweLat;S.lon=nieuweLon;S.land=aangevraagdeLand;
       S.verversMislukt=true;S.dag=null;S.actieveWaarschuwingen=[];
