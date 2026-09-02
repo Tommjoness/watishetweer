@@ -55,7 +55,7 @@ function chromeDump(html,w,h,budget){
 function attr(dom,k,prefix){const m=new RegExp(`data-${prefix||'fr'}-${k}="([^"]*)"`).exec(dom);return m&&m[1];}
 function eis(v,msg){if(!v)throw new Error(msg);}
 
-/* 1-10. Fout-/cache-/racegedrag in de werkelijk gebouwde browserruntime. */
+/* 1-10 plus expliciete pending-state. Fout-/cache-/racegedrag in de werkelijk gebouwde browserruntime. */
 {
   let html=injecteerBasis(fs.readFileSync(productie,"utf8"));
   const reporter=`<script>
@@ -67,11 +67,16 @@ function eis(v,msg){if(!v)throw new Error(msg);}
  const plan=(mode,delay,perLat)=>{window.__wiwPlan={mode,delay:delay||0,perLat:perLat||null};window.__wiwOffline=false;};
  const goed=(naam,lat,lon)=>S.d&&S.label===naam&&Math.abs(S.lat-lat)<.00001&&Math.abs(S.lon-lon)<.00001&&q.value===naam&&document.title.startsWith(naam+' · ');
  const laadGoed=async(naam,lat,lon,delay)=>{q.value=naam;plan('success',delay||0);await load(lat,lon,naam,false,true,null);await slaap(15);return goed(naam,lat,lon);};
+ const diagnose=(prefix)=>{zet(prefix+'-label',S.label);zet(prefix+'-lat',S.lat);zet(prefix+'-lon',S.lon);zet(prefix+'-q',q.value);zet(prefix+'-title',document.title);zet(prefix+'-state',st.textContent);zet(prefix+'-retry',!!st.querySelector('.wiw-location-retry'));zet(prefix+'-data',!!S.d);zet(prefix+'-app',getComputedStyle(app).display);};
  try{
    reset();ls.set(KEY_D,null);zet('fast',await laadGoed('Amsterdam',52.3676,4.9041,0)?'ok':'fout');
    reset();ls.set(KEY_D,null);zet('slow',await laadGoed('Kansas City',39.0997,-94.5786,25)?'ok':'fout');
 
+   reset();ls.set(KEY_D,null);await laadGoed('Amsterdam',52.3676,4.9041,0);q.value='Kansas City';plan('success',100);const pendingBelofte=load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(20);
+   zet('pending',goed('Amsterdam',52.3676,4.9041)&&/Kansas City/.test(st.textContent)&&/Amsterdam/.test(st.textContent)?'ok':'fout');diagnose('pending-detail');await pendingBelofte;await slaap(15);zet('pending-success',goed('Kansas City',39.0997,-94.5786)?'ok':'fout');
+
    reset();ls.set(KEY_D,null);await laadGoed('Amsterdam',52.3676,4.9041,0);q.value='Kansas City';plan('timeout',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(20);
+   diagnose('timeout-detail');
    zet('timeout',goed('Amsterdam',52.3676,4.9041)&&/Kansas City/.test(st.textContent)&&!!st.querySelector('.wiw-location-retry')?'ok':'fout');
 
    reset();ls.set(KEY_D,null);await laadGoed('Amsterdam',52.3676,4.9041,0);q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(15);
@@ -102,8 +107,13 @@ function eis(v,msg){if(!v)throw new Error(msg);}
   html=html.replace("</body>",reporter+"</body>");
   const dom=chromeDump(html,1363,936,3500);
   eis(attr(dom,'done')==='ok',"locatiescenario reporter faalde: "+attr(dom,'exception'));
-  for(const k of ['fast','slow','timeout','provider','offline','same-cache','wrong-cache','race','direct-wrong-cache','reload-cache'])eis(attr(dom,k)==='ok',`locatiescenario ${k} faalde (${attr(dom,k)})`);
-  console.log("Locatiehardening groen: snel, traag, timeout, providerfout, offline, cache-match/mismatch, race, directe URL en reload-cache.");
+  for(const k of ['fast','slow','pending','pending-success','timeout','provider','offline','same-cache','wrong-cache','race','direct-wrong-cache','reload-cache']){
+    if(attr(dom,k)!=='ok'){
+      const d=(k==='timeout'?' label='+attr(dom,'timeout-detail-label')+' lat='+attr(dom,'timeout-detail-lat')+' lon='+attr(dom,'timeout-detail-lon')+' q='+attr(dom,'timeout-detail-q')+' title='+attr(dom,'timeout-detail-title')+' retry='+attr(dom,'timeout-detail-retry')+' data='+attr(dom,'timeout-detail-data')+' app='+attr(dom,'timeout-detail-app')+' state='+attr(dom,'timeout-detail-state'):'');
+      throw new Error(`locatiescenario ${k} faalde (${attr(dom,k)})${d}`);
+    }
+  }
+  console.log("Locatiehardening groen: snel, traag, coherente pending-state, timeout, providerfout, offline, cache-match/mismatch, race, directe URL en reload-cache.");
 }
 
 /* Exact afgesproken responsive breedtes. */
@@ -131,4 +141,4 @@ for(const [w,h] of viewports){
   eis(Number(v('page-overflow'))<=1,`${w}px: pagina heeft ${v('page-overflow')}px horizontale overflow`);
   console.log(`${w}x${h}: layout groen; ${v('rows')} tegelrijen, Gevoel-kop past, pagina-overflow ${v('page-overflow')}px.`);
 }
-console.log("Final-release browsertest geslaagd op alle 10 foutscenario's en 10 afgesproken viewports.");
+console.log("Final-release browsertest geslaagd op alle foutscenario's, coherente pending-state en 10 afgesproken viewports.");
