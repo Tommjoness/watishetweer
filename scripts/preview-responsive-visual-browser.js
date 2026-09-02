@@ -74,22 +74,32 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       await page.waitForSelector("#app",{state:"visible",timeout:10000});
       await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length===7,null,{timeout:10000});
 
-      const basis=await page.evaluate(()=>({
-        sha:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
-        overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,
-        pressure:[...document.querySelectorAll(".eyebrow")].find(e=>(e.textContent||"").includes("Luchtdruk"))?.textContent?.trim()||"",
-        searchRect:(()=>{const r=document.getElementById("q")?.getBoundingClientRect();return r?{left:r.left,right:r.right,width:r.width}:null;})(),
-        topRects:[...document.querySelectorAll(".mast button,.mast input")]
-          .filter(el=>el.getClientRects().length>0&&getComputedStyle(el).visibility!=="hidden")
-          .map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width,height:r.height,label:el.getAttribute("aria-label")||el.textContent||el.id||el.tagName};}),
-        legeNeerslag:[...document.querySelectorAll("#days .row.day:not(.kop) .drain")].filter(el=>!(el.textContent||el.getAttribute("aria-label")||"").trim()).length,
-        drukAria:document.getElementById("pres")?.closest(".stat")?.getAttribute("aria-label")||"",
-        appText:document.getElementById("app")?.textContent||""
-      }));
+      const basis=await page.evaluate(()=>{
+        const druk=document.getElementById("pres"),drukStat=druk&&druk.closest(".stat"),drukDiag=document.getElementById("wiw-pressure-diagnostic");
+        const zichtbareDruk=[...document.querySelectorAll(".eyebrow")]
+          .filter(e=>e.getClientRects().length>0&&getComputedStyle(e).visibility!=="hidden"&&getComputedStyle(e).display!=="none")
+          .find(e=>(e.textContent||"").includes("Luchtdruk"));
+        return {
+          sha:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
+          overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,
+          pressureVisible:zichtbareDruk?.textContent?.trim()||"",
+          searchRect:(()=>{const r=document.getElementById("q")?.getBoundingClientRect();return r?{left:r.left,right:r.right,width:r.width}:null;})(),
+          topRects:[...document.querySelectorAll(".mast button,.mast input")]
+            .filter(el=>el.getClientRects().length>0&&getComputedStyle(el).visibility!=="hidden")
+            .map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width,height:r.height,label:el.getAttribute("aria-label")||el.textContent||el.id||el.tagName};}),
+          legeNeerslag:[...document.querySelectorAll("#days .row.day:not(.kop) .drain")].filter(el=>!(el.textContent||el.getAttribute("aria-label")||"").trim()).length,
+          drukAria:drukStat?.getAttribute("aria-label")||"",
+          drukOwner:!!(druk&&drukStat&&drukDiag&&drukDiag.contains(drukStat)),
+          drukDiagnosticHidden:!!(drukDiag&&(drukDiag.hidden||getComputedStyle(drukDiag).display==="none")),
+          appText:document.getElementById("app")?.textContent||""
+        };
+      });
       assert.equal(basis.sha,verwacht,`${vp.naam}: verkeerde preview-SHA ${basis.sha}`);
       assert(basis.overflow<=1,`${vp.naam}: ${basis.overflow}px horizontale pagina-overflow`);
-      assert.equal(basis.pressure,"Luchtdruk op zeeniveau",`${vp.naam}: druklabel is niet ondubbelzinnig`);
-      assert(/Luchtdruk op zeeniveau/.test(basis.drukAria),`${vp.naam}: toegankelijke druksoort ontbreekt`);
+      assert.equal(basis.pressureVisible,"",`${vp.naam}: luchtdruk hoort niet zichtbaar in de consumenten-UI te staan`);
+      assert.equal(basis.drukOwner,true,`${vp.naam}: verborgen drukrenderer-owner #pres ontbreekt of staat buiten de diagnostische container`);
+      assert.equal(basis.drukDiagnosticHidden,true,`${vp.naam}: drukdiagnostiek is niet werkelijk verborgen`);
+      assert(/Luchtdruk op zeeniveau/.test(basis.drukAria),`${vp.naam}: technische drukowner is niet ondubbelzinnig geïdentificeerd`);
       assert.equal(basis.legeNeerslag,0,`${vp.naam}: lege neerslagpositie in dagtabel`);
       assert(!/(?:^|[^\d])-?1\s+graden\b/i.test(basis.appText),`${vp.naam}: enkelvoudtemperatuur gebruikt 'graden'`);
       assert(binnenViewport(basis.searchRect,vp.width),`${vp.naam}: zoekveld valt buiten viewport`);
@@ -129,7 +139,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       await page.screenshot({path:png,fullPage:true});
       assert(fs.existsSync(png)&&fs.statSync(png).size>5000,`${vp.naam}: screenshot ontbreekt of is verdacht klein`);
       const hash=crypto.createHash("sha256").update(fs.readFileSync(png)).digest("hex").slice(0,12);
-      console.log(`${vp.naam}: gedeployde preview zonder overflow; topcontrols/Weergave/zoeklijst/druk/neerslag/a11y correct; screenshot sha256 ${hash}.`);
+      console.log(`${vp.naam}: gedeployde preview zonder overflow; topcontrols/Weergave/zoeklijst/verborgen-drukowner/neerslag/a11y correct; screenshot sha256 ${hash}.`);
       assert.deepEqual(pageErrors,[],`${vp.naam}: pageerrors ${pageErrors.join(" | ")}`);
       await context.close();
     }
