@@ -190,8 +190,8 @@ async function controleer(page, naam, modus) {
     const nachtMaan = document.querySelectorAll("#nights .nachtmaan").length;
     const maanRect = faseSvg ? faseSvg.getBoundingClientRect() : null;
     const windPseudo = windKop ? getComputedStyle(windKop, "::after").content : "";
-    const regenHint = document.getElementById("nchint");
-    const regenKop = document.querySelector(".wiw-rain-section > h2") || (regenHint && regenHint.previousElementSibling);
+    const regenSectie = document.getElementById("wiw-rain-section");
+    const regenSamenvatting = document.getElementById("wiw-rain-summary");
     return {
       nuTeksten,
       bots,
@@ -207,7 +207,8 @@ async function controleer(page, naam, modus) {
       trendKop: trendStat ? trendStat.querySelector(".eyebrow").textContent.trim() : "",
       trend: prec ? prec.textContent.trim() : "",
       trendSub: (document.getElementById("precsub") || {}).textContent || "",
-      neerslagSectieVerborgen: !!regenKop && getComputedStyle(regenKop).display === "none",
+      neerslagSectieZichtbaar: !!regenSectie && regenSectie.getClientRects().length > 0 && getComputedStyle(regenSectie).display !== "none",
+      neerslagSamenvatting: regenSamenvatting ? regenSamenvatting.textContent.replace(/\s+/g," ").trim() : "",
       nachtAdvies,
       nachtMaan,
       nachtRijen,
@@ -253,7 +254,8 @@ async function controleer(page, naam, modus) {
   assert.match(resultaat.trend, /^-?\d+\s*→\s*-?\d+\s*°C$/, `${naam} ${modus}: temperatuurtrend toont uitsluitend huidige en toekomstige temperatuur`);
   assert.ok(["Het wordt de komende uren warmer.","Het wordt de komende uren koeler.","De temperatuur verandert de komende uren nauwelijks."].includes(resultaat.trendSub), `${naam} ${modus}: temperatuurtrend gebruikt één natuurlijke richtingstekst`);
   assert.ok(!/neerslag|wind|gevoel/i.test(resultaat.trend+" "+resultaat.trendSub), `${naam} ${modus}: temperatuurtrend bevat geen andere weerinformatie`);
-  assert.equal(resultaat.neerslagSectieVerborgen, true, `${naam} ${modus}: volledig droge twee-uurssectie dupliceert de briefing niet`);
+  assert.equal(resultaat.neerslagSectieZichtbaar, true, `${naam} ${modus}: het finale twee-uurspaneel blijft ook bij droog weer zichtbaar`);
+  assert.match(resultaat.neerslagSamenvatting, /Huidige status\s*Droog/i, `${naam} ${modus}: droog twee-uurspaneel toont een eenduidige droge samenvatting`);
 
   assert.ok(resultaat.nachtAdvies > 0 && resultaat.nachtMaan > 0, `${naam} ${modus}: Nachtzicht heeft rustige aparte advies- en maanregels`);
   assert.ok(resultaat.nachtRijen.length > 0, `${naam} ${modus}: Nachtzicht heeft beoordeelde nachten`);
