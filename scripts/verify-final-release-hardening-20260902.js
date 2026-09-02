@@ -26,6 +26,9 @@ for(const p of weer){
   eis(html.includes("const WEATHER_CACHE_COORD_TOL=0.00051;"),rel+": expliciete cachetolerantie ontbreekt");
   eis(html.includes("weatherNowCachePastBij(oud,nieuweLat,nieuweLon)"),rel+": cache wordt niet aan aanvraagcoördinaten gekoppeld");
   eis(html.includes("weatherNowLocatieSnapshot()"),rel+": vorige succesvolle locatie wordt niet vastgelegd");
+  eis(html.includes("const vorigeBlijftZichtbaar=!!(plaatsWijzigt&&vorigeLocatie&&vorigeLocatie.d&&vorigeLocatie.label);"),rel+": trage locatiewissel borgt vorige identiteit niet");
+  eis(html.includes('document.getElementById("q").value=String(vorigeLocatie.label||"");'),rel+": zoekveld blijft tijdens trage locatiewissel niet bij vorige locatie");
+  eis(html.includes('S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;S.land=aangevraagdeLand;\n    document.getElementById("q").value=label;\n    S.d=vol'),rel+": nieuwe identiteit wordt niet atomair bij succesvolle forecast geactiveerd");
   eis(html.includes("Er worden geen weergegevens van een andere locatie getoond."),rel+": veilige mismatch-state ontbreekt");
   eis(html.includes("className=\"wiw-location-retry\""),rel+": retryknop ontbreekt");
   eis(html.includes('<th scope="col" aria-label="Gevoelstemperatuur">Gevoel</th>'),rel+": compacte toegankelijke gevoelstemperatuurkop ontbreekt");
@@ -47,4 +50,4 @@ for(const p of htmlBestanden(OUT)){
   const html=fs.readFileSync(p,"utf8");
   eis(!html.includes("https://github.com/Tommjoness/weathernow"),path.relative(OUT,p)+": oude GitHub-URL bleef in public artifact staan");
 }
-console.log(`Final release hardening geverifieerd op ${weer.length} weerartifacts: cache-identiteit, fout/retry-state, compacte uurkop, desktopgrids en repository-URL zijn geborgd.`);
+console.log(`Final release hardening geverifieerd op ${weer.length} weerartifacts: cache-identiteit, coherente laad/fout/retry-state, compacte uurkop, desktopgrids en repository-URL zijn geborgd.`);
