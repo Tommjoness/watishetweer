@@ -75,6 +75,9 @@ function eis(v,msg){if(!v)throw new Error(msg);}
  try{
    reset();ls.set(KEY_D,null);zet('fast',await laadGoed('Amsterdam',52.3676,4.9041,0)?'ok':'fout');
    reset();ls.set(KEY_D,null);zet('slow',await laadGoed('Kansas City',39.0997,-94.5786,300)?'ok':'fout');
+   /* Laat niet-geblokkeerde waarschuwing/luchtkwaliteitstaken van het vorige
+      scenario uitlopen voordat de coherente pending-state wordt gemeten. */
+   await slaap(1200);
 
    reset();ls.set(KEY_D,null);await laadGoed('Amsterdam',52.3676,4.9041,0);q.value='Kansas City';plan('success',600);const pendingBelofte=load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(180);
    const pendingOk=goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&!document.documentElement.classList.contains('wn-progressief')&&!app.classList.contains('wn-progressief')&&/Kansas City/.test(st.textContent)&&/Amsterdam/.test(st.textContent);
@@ -110,7 +113,7 @@ function eis(v,msg){if(!v)throw new Error(msg);}
 })();
 </script>`;
   html=html.replace("</body>",reporter+"</body>");
-  const dom=chromeDump(html,1363,936,5200);
+  const dom=chromeDump(html,1363,936,6400);
   eis(attr(dom,'done')==='ok',"locatiescenario reporter faalde: "+attr(dom,'exception'));
   for(const k of ['fast','slow','pending','pending-success','timeout','provider','offline','same-cache','wrong-cache','race','direct-wrong-cache','reload-cache']){
     if(attr(dom,k)!=='ok'){
