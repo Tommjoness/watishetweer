@@ -65,6 +65,8 @@ function nwsTitelNl(titel){
     [/^heat advisory\b/,"Hitteadvies"],
     [/^excessive heat warning\b/,"Waarschuwing voor extreme hitte"],
     [/^heat warning\b/,"Waarschuwing voor hitte"],
+    [/^air quality alert\b/,"Luchtkwaliteitswaarschuwing"],
+    [/^air quality advisory\b/,"Luchtkwaliteitsadvies"],
     [/^winter weather advisory\b/,"Winterweeradvies"],
     [/^severe thunderstorm warning\b/,"Waarschuwing voor zwaar onweer"],
     [/^tornado warning\b/,"Tornadowaarschuwing"],
@@ -77,10 +79,11 @@ function nwsTitelNl(titel){
   for(const [re,nl] of map)if(re.test(k))return nl;
   return t;
 }
+function isNwsHitteTitel(titel){return /^(?:heat advisory|excessive heat warning|heat warning)\b/i.test(String(titel||"").trim());}
 function fahrenheitContext(titel,tekst){
   const s=String(tekst||"");
   let m=/(-?\d+(?:[.,]\d+)?)\s*(?:to|through|[-–])\s*(-?\d+(?:[.,]\d+)?)\s*(?:°\s*F|degrees?\s*F(?:ahrenheit)?)/i.exec(s);
-  if(!m&&/heat/i.test(String(titel||"")))m=/(-?\d{2,3})\s*(?:to|through|[-–])\s*(-?\d{2,3})\s*degrees\b/i.exec(s);
+  if(!m&&isNwsHitteTitel(titel))m=/(-?\d{2,3})\s*(?:to|through|[-–])\s*(-?\d{2,3})\s*degrees\b/i.exec(s);
   if(m){
     const a=Number(m[1].replace(",",".")),b=Number(m[2].replace(",","."));
     if(Number.isFinite(a)&&Number.isFinite(b))return `${Math.round(a)}–${Math.round(b)} °F is ongeveer ${rondC(fahrenheitNaarCelsius(a))}–${rondC(fahrenheitNaarCelsius(b))} °C.`;
@@ -89,6 +92,13 @@ function fahrenheitContext(titel,tekst){
   while((x=re.exec(s))&&waarden.length<2){const f=Number(x[1].replace(",","."));if(Number.isFinite(f))waarden.push(f);}
   if(waarden.length===1)return `${Math.round(waarden[0])} °F is ongeveer ${rondC(fahrenheitNaarCelsius(waarden[0]))} °C.`;
   if(waarden.length>=2)return `${Math.round(waarden[0])} en ${Math.round(waarden[1])} °F zijn ongeveer ${rondC(fahrenheitNaarCelsius(waarden[0]))} en ${rondC(fahrenheitNaarCelsius(waarden[1]))} °C.`;
+  /* Alleen binnen een ondubbelzinnig NWS-hittewaarschuwingstype mag een kaal
+     Amerikaans heat-indexgetal als Fahrenheit worden geïnterpreteerd. De
+     officiële tekst zelf wordt nergens aangepast. */
+  if(isNwsHitteTitel(titel)){
+    const impliciet=/\bheat index values?\s+(?:up to|as high as|around|near)\s+(\d{2,3})(?!\s*(?:°\s*C|degrees?\s*C|celsius))\b/i.exec(s);
+    if(impliciet){const f=Number(impliciet[1]);if(Number.isFinite(f)&&f>=80&&f<=140)return `De Amerikaanse hitte-index loopt op tot ${Math.round(f)} °F, ongeveer ${rondC(fahrenheitNaarCelsius(f))} °C.`;}
+  }
   return "";
 }
 function nwsUitleg(titel,tekst){
@@ -99,5 +109,5 @@ function nwsUitleg(titel,tekst){
   return {titel:nl,uitleg:basis+(metrisch?" "+metrisch:""),metrisch};
 }
 
-return {regenperiodenVoorGrafiek,regenPeriodeTijdvak,regenSamenvatting,mmTekst,fahrenheitNaarCelsius,nwsTitelNl,fahrenheitContext,nwsUitleg};
+return {regenperiodenVoorGrafiek,regenPeriodeTijdvak,regenSamenvatting,mmTekst,fahrenheitNaarCelsius,nwsTitelNl,isNwsHitteTitel,fahrenheitContext,nwsUitleg};
 });
