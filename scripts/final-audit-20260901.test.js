@@ -25,9 +25,16 @@ assert.equal(p.length,1);assert.equal(Math.round(p[0].som*10)/10,0.7);
 
 assert.equal(a.nwsTitelNl("Heat Advisory"),"Hitteadvies");
 assert.equal(a.nwsTitelNl("Air Quality Alert"),"Luchtkwaliteitswaarschuwing");
+assert.equal(a.nwsTitelNl("Flood Watch"),"Waakzaamheid voor overstromingen");
+assert.equal(a.nwsTitelNl("Flood Warning"),"Waarschuwing voor overstromingen");
+assert.equal(a.nwsTitelNl("Severe Thunderstorm Watch"),"Waakzaamheid voor zwaar onweer");
+assert.equal(a.nwsTitelNl("Tornado Watch"),"Waakzaamheid voor tornado's");
+assert.equal(a.nwsTitelNl("Winter Storm Warning"),"Waarschuwing voor zwaar winterweer");
+assert.equal(a.nwsTitelNl("High Wind Warning"),"Waarschuwing voor zeer harde wind");
 assert.equal(a.fahrenheitContext("Heat Advisory","Heat index values of 100 to 110 degrees Fahrenheit."),"100–110 °F is ongeveer 38–43 °C.");
 assert.equal(a.fahrenheitContext("Heat Advisory","Temperatures near 104 °F."),"104 °F is ongeveer 40 °C.");
 assert.equal(a.fahrenheitContext("Heat Advisory","Heat index values up to 105."),"De Amerikaanse hitte-index loopt op tot 105 °F, ongeveer 41 °C.");
+assert.equal(a.fahrenheitContext("Extreme Heat Warning","Heat index values up to 105."),"De Amerikaanse hitte-index loopt op tot 105 °F, ongeveer 41 °C.");
 assert.equal(a.fahrenheitContext("Air Quality Alert","Index values up to 105."),"");
 assert.equal(a.fahrenheitContext("Heat Advisory","Heat index values up to 41 °C."),"");
 assert.match(a.nwsUitleg("Heat Advisory","100 to 110 degrees Fahrenheit").uitleg,/38–43 °C/);
@@ -48,4 +55,4 @@ assert.equal(zp.waardeTekst,"1 min");
 assert.match(zp.aria,/over 1 minuut,/);
 assert(!/1 minuten/.test(zp.aria));
 
-console.log("Finale audithelpers groen: regeninterval, Dubai/Longyearbyen/Ushuaia/Zuidpool, 1 minuut en NWS metrische uitleg zijn geborgd.");
+console.log("Finale audithelpers groen: regeninterval, Dubai/Longyearbyen/Ushuaia/Zuidpool, 1 minuut en consistente NWS titel/metrische uitleg zijn geborgd.");
