@@ -34,7 +34,6 @@ jobs:
           const NEW_SHA="9ae4a5bb35adee34ddd5a3519211834c9c3512f6";
           const amsterdam="?lat=52.3676&lon=4.9041&plaats=Amsterdam&land=NL";
           fs.mkdirSync("screenshots",{recursive:true});
-          const visible=el=>!!el&&el.getClientRects().length>0&&getComputedStyle(el).display!=="none"&&getComputedStyle(el).visibility!=="hidden";
           const fmt=n=>{const v=Number(n);if(!Number.isFinite(v))return "–";return (Math.round(v*10)/10).toFixed(1).replace(".",",").replace(/,0$/,"")+" °C";};
           async function load(page,url,expectedSha){
             const errors=[];page.on("pageerror",e=>errors.push(String(e)));page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});
@@ -66,16 +65,15 @@ jobs:
             const ctx=await browser.newContext({viewport,serviceWorkers:"block",locale:"nl-NL",reducedMotion:"reduce"});const page=await ctx.newPage();const warningUrls=[];page.on("request",r=>{if(r.url().includes("/api/waarschuwingen"))warningUrls.push(r.url());});
             const params=new URLSearchParams({lat:String(loc.lat),lon:String(loc.lon),plaats:loc.name,land:loc.country});const errors=await load(page,AFTER+"/?"+params,NEW_SHA);
             await page.locator("#thema").click();const choice=page.getByRole("menuitemradio",{name:new RegExp(theme,"i")});await choice.click();await page.waitForTimeout(250);
-            const out=await page.evaluate(({expectedTz})=>{
-              const rows=[...document.querySelectorAll("#wiw-hour-table tbody tr")];
-              const source=(typeof S!=="undefined"&&S.geo)?S.geo:null;
-              return {timezone:(document.getElementById("coords")?.textContent||"").split(" · ").at(-1),clock:document.getElementById("plaatstijd")?.textContent||"",overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,theme:document.documentElement.getAttribute("data-thema")||"",rows:rows.map(r=>({time:r.querySelector("time")?.dateTime||"",temp:r.children[1]?.textContent?.trim()||"",feel:r.children[2]?.textContent?.trim()||""})),TI:source?.TI?.slice(0,24)||[],T:source?.T?.slice(0,24)||[],A:source?.A?.slice(0,24)||[],expectedTz};
-            },{expectedTz:loc.tz});
+            const out=await page.evaluate(()=>{
+              const rows=[...document.querySelectorAll("#wiw-hour-table tbody tr")];const source=(typeof S!=="undefined"&&S.geo)?S.geo:null;
+              return {timezone:(document.getElementById("coords")?.textContent||"").split(" · ").at(-1),clock:document.getElementById("plaatstijd")?.textContent||"",overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,rows:rows.map(r=>({time:r.querySelector("time")?.dateTime||"",temp:r.children[1]?.textContent?.trim()||"",feel:r.children[2]?.textContent?.trim()||""})),TI:source?.TI?.slice(0,24)||[],T:source?.T?.slice(0,24)||[],A:source?.A?.slice(0,24)||[]};
+            });
             assert.equal(out.timezone,loc.tz,`${loc.name}: tijdzone ${out.timezone}`);assert(out.overflow<=1,`${loc.name}/${viewport.width}/${theme}: overflow ${out.overflow}`);assert.equal(out.rows.length,24,`${loc.name}: ${out.rows.length} uurrijen`);
             for(let i=0;i<24;i++){assert.equal(out.rows[i].time,out.TI[i],`${loc.name} rij ${i}: tijd`);assert.equal(out.rows[i].temp,fmt(out.T[i]),`${loc.name} rij ${i}: temp`);assert.equal(out.rows[i].feel,fmt(out.A[i]),`${loc.name} rij ${i}: gevoel`);}
             assert(new Set(out.TI.map(t=>String(t).slice(0,10))).size>=2,`${loc.name}: 24 uur kruist geen datumgrens`);
             const expectedClock=new Intl.DateTimeFormat("nl-NL",{timeZone:loc.tz,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());assert(minuteDiff(out.clock,expectedClock)<=1,`${loc.name}: lokale klok ${out.clock} vs ${expectedClock}`);
-            if(loc.country==="US")assert(warningUrls.some(u=>/[?&]land=US(?:&|$)/.test(u)),"Kansas City: NWS/US-waarschuwingsroute niet met US-scope aangeroepen");
+            if(loc.country==="US")assert(warningUrls.some(u=>/[?&]land=US(?:&|$)/.test(u)),"Kansas City: US-waarschuwingsroute niet met US-scope aangeroepen");
             assert.deepEqual(errors,[],`${loc.name}/${viewport.width}/${theme}: browserfouten ${errors.join(" | ")}`);await ctx.close();
             return {name:loc.name,viewport:viewport.width,theme,timezone:out.timezone,clock:out.clock,rows:out.rows.length};
           }
@@ -87,7 +85,7 @@ jobs:
             fs.writeFileSync("screenshots/report.json",JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
           }finally{await browser.close();}})().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
           NODE
-          node /tmp/final-ui-evidence.js
+          NODE_PATH="$PWD/node_modules" node /tmp/final-ui-evidence.js
       - name: Upload bewijsbeelden
         if: always()
         uses: actions/upload-artifact@v4
