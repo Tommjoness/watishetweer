@@ -15,17 +15,17 @@ jobs:
           node-version: 22
           package-manager-cache: false
       - run: npm install --ignore-scripts --package-lock=false
-      - name: Capture prebuild output
+      - name: Capture build output
         shell: bash
         run: |
           set +e
-          npm run test:prebuild > diagnostic.log 2>&1
+          npm run build > diagnostic.log 2>&1
           code=$?
           echo "$code" > diagnostic.exit
           exit 0
       - uses: actions/upload-artifact@v4
         with:
-          name: final-hardening-diagnostic
+          name: final-hardening-build-diagnostic
           path: |
             diagnostic.log
             diagnostic.exit
