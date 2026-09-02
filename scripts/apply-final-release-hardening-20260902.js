@@ -31,18 +31,17 @@ ${MARKER}
 .wiw-hour-table th:nth-child(2),.wiw-hour-table td:nth-child(2){width:34%}
 .wiw-hour-table th:nth-child(3),.wiw-hour-table td:nth-child(3){width:34%}
 @media(min-width:1100px) and (max-width:1599px){
-  .dashrow-hero .stats{grid-template-columns:repeat(6,minmax(0,1fr))!important}
-  .dashrow-hero .stats .stat{grid-column:span 2;padding-left:14px!important;padding-right:14px!important;border-right:1px solid var(--rule)!important;min-height:118px!important}
-  .dashrow-hero .stats .stat:nth-child(3n){border-right:none!important}
-  .dashrow-hero .stats .stat:nth-child(7),.dashrow-hero .stats .stat:nth-child(8){grid-column:span 3}
-  .dashrow-hero .stats .stat:nth-child(7){border-right:1px solid var(--rule)!important}
-  .dashrow-hero .stats .stat:nth-child(8){border-right:none!important}
+  .final-top-grid>.stats{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+  .final-top-grid>.stats .stat{grid-column:span 2;padding-left:14px!important;padding-right:14px!important;border-right:1px solid var(--rule)!important;min-height:118px!important}
+  .final-top-grid>.stats .stat:nth-child(3n){border-right:none!important}
+  .final-top-grid>.stats .stat:nth-child(7),.final-top-grid>.stats .stat:nth-child(8){grid-column:span 3}
+  .final-top-grid>.stats .stat:nth-child(7){border-right:1px solid var(--rule)!important}
+  .final-top-grid>.stats .stat:nth-child(8){border-right:none!important}
 }
 @media(min-width:1600px){
-  .dashrow-hero{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
-  .dashrow-hero .stats{grid-template-columns:repeat(4,minmax(0,1fr))!important}
-  .dashrow-hero .stats .stat{grid-column:auto!important;padding-left:14px!important;padding-right:14px!important;border-right:1px solid var(--rule)!important;min-height:128px!important}
-  .dashrow-hero .stats .stat:nth-child(4n){border-right:none!important}
+  .final-top-grid>.stats{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  .final-top-grid>.stats .stat{grid-column:auto!important;padding-left:14px!important;padding-right:14px!important;border-right:1px solid var(--rule)!important;min-height:128px!important}
+  .final-top-grid>.stats .stat:nth-child(4n){border-right:none!important}
 }
 @media(max-width:430px){
   .wiw-location-error{align-items:stretch}
