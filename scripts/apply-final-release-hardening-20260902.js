@@ -140,6 +140,7 @@ function hardenLoad(html){
       document.title=label+" · Wat is het weer?";
       weatherNowFoutMetRetry(st,foutVoor+" Er worden geen weergegevens van een andere locatie getoond.",nieuweLat,nieuweLon,label,opslaan,land);
     }
+  }
 `;
   bron=bron.slice(0,catchPos)+nieuweCatch+bron.slice(eindPos);
   return bron;
