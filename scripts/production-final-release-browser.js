@@ -28,6 +28,12 @@ async function wachtKlaar(page,naam,timeout=26000){
     return app&&getComputedStyle(app).display!=="none"&&label&&(!n||label===n)&&/^Gegevens opgehaald om \d{2}:\d{2}/.test(stamp);
   },naam,{timeout});
 }
+async function wachtVeiligeFoutstate(page,timeout=16000){
+  await page.waitForFunction(()=>{
+    const retry=!!document.querySelector('.wiw-location-retry'),state=(document.getElementById('state')?.textContent||'').trim();
+    return retry&&/konden niet worden opgehaald|duurde te lang|Geen internetverbinding/i.test(state);
+  },null,{timeout});
+}
 async function lees(page){return page.evaluate(()=>{
   const hour=document.getElementById("wiw-hour-table"),scroll=document.getElementById("wiw-hour-scroll"),th=hour&&hour.querySelector("thead th:nth-child(3)");
   const stats=[...document.querySelectorAll('.final-top-grid>.stats .stat')].filter(e=>getComputedStyle(e).display!=='none');
@@ -96,7 +102,7 @@ async function lees(page){return page.evaluate(()=>{
             assert.deepEqual(pageErrors,[],`${l.naam}: pageerrors ${pageErrors.join(' | ')}`);
             rapport.locations.push({name:l.naam,status:"source-verified",timezone:bron.timezone,currentTime:bron.current&&bron.current.time,raw:{temperature_2m:bron.current&&bron.current.temperature_2m,apparent_temperature:bron.current&&bron.current.apparent_temperature,wind_speed_10m:bron.current&&bron.current.wind_speed_10m,relative_humidity_2m:bron.current&&bron.current.relative_humidity_2m},ui:{temperature:uit.temp,feels:uit.feels,wind:uit.wind,humidity:uit.humidity},pageOverflow:uit.pageOverflow});
           }else{
-            await page.waitForTimeout(500);
+            try{await wachtVeiligeFoutstate(page,16000);}catch(e){laatsteFout=`${laatsteFout||"geen bronresponse"}; veilige foutstate niet bereikt: ${String(e&&e.message||e)}`;}
             const veilig=await lees(page);
             if(veilig.retry&&/konden niet worden opgehaald|duurde te lang|Geen internetverbinding/i.test(veilig.state)&&(!veilig.appVisible||veilig.query===veilig.label)){
               rapport.locations.push({name:l.naam,status:"provider-unreachable-safe",detail:laatsteFout,state:veilig.state});uit=veilig;
