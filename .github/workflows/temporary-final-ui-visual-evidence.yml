@@ -57,22 +57,26 @@ jobs:
             const heads=full?[...full.querySelectorAll("thead th")].map(h=>(h.textContent||"").trim().toLowerCase()):[];
             const ti=heads.findIndex(h=>/^tijd$/.test(h)),te=heads.findIndex(h=>/^temperatuur$/.test(h)),ge=heads.findIndex(h=>/gevoel/.test(h));
             const fullRows=full?[...full.querySelectorAll("tbody tr")].slice(0,24):[];
+            const clock=s=>((String(s||"").match(/\b\d{2}:\d{2}\b/)||[""])[0]);
+            let mismatch=null;
             const same=fullRows.length===24&&rows.every((r,i)=>{
               const a=[...r.children].map(c=>(c.textContent||"").replace(/\s+/g," ").trim()),b=[...fullRows[i].children].map(c=>(c.textContent||"").replace(/\s+/g," ").trim());
-              return a[0]===b[ti]&&a[1]===b[te]&&a[2]===b[ge];
+              const ok=clock(a[0])===clock(b[ti])&&a[1]===b[te]&&a[2]===b[ge];
+              if(!ok&&!mismatch)mismatch={i,compact:a,full:b,timeIndex:ti,tempIndex:te,feelIndex:ge};
+              return ok;
             });
-            return {overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,rows:rows.length,same,pressure:[...document.querySelectorAll(".eyebrow")].filter(visible).some(e=>/Luchtdruk/.test(e.textContent||"")),more:[...document.querySelectorAll("summary,h2,h3")].filter(visible).some(e=>/Meer meetgegevens/.test(e.textContent||"")),hour:!!document.getElementById("wiw-hour-panel"),rain:!!document.getElementById("wiw-rain-summary"),tz:(document.getElementById("coords")?.textContent||"").split(" · ").at(-1)};
+            return {overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,rows:rows.length,same,mismatch,pressure:[...document.querySelectorAll(".eyebrow")].filter(visible).some(e=>/Luchtdruk/.test(e.textContent||"")),more:[...document.querySelectorAll("summary,h2,h3")].filter(visible).some(e=>/Meer meetgegevens/.test(e.textContent||"")),hour:!!document.getElementById("wiw-hour-panel"),rain:!!document.getElementById("wiw-rain-summary"),tz:(document.getElementById("coords")?.textContent||"").split(" · ").at(-1)};
           }
           (async()=>{const browser=await chromium.launch({headless:true});try{
             const ams=await openReady(browser,"?lat=52.3676&lon=4.9041&plaats=Amsterdam&land=NL",{width:390,height:844});
             const m=await ams.page.evaluate(compactTruth);
-            assert(m.overflow<=1,`390px overflow ${m.overflow}`);assert.equal(m.rows,24);assert.equal(m.same,true,"compacte 24-uurswaarden wijken af van volledige tabel");assert.equal(m.pressure,false);assert.equal(m.more,false);assert.equal(m.hour,true);assert.equal(m.rain,true);
-            await ams.page.screenshot({path:"screenshots-current/after-390.png",fullPage:true});assert.deepEqual(ams.errors,[],`390 pageerrors ${ams.errors.join(" | ")}`);await ams.context.close();
+            await ams.page.screenshot({path:"screenshots-current/after-390.png",fullPage:true});
+            assert(m.overflow<=1,`390px overflow ${m.overflow}`);assert.equal(m.rows,24);assert.equal(m.same,true,`compacte 24-uurswaarden wijken af: ${JSON.stringify(m.mismatch)}`);assert.equal(m.pressure,false);assert.equal(m.more,false);assert.equal(m.hour,true);assert.equal(m.rain,true);assert.deepEqual(ams.errors,[],`390 pageerrors ${ams.errors.join(" | ")}`);await ams.context.close();
             const report={sha:SHA,mobile390:m,world:[]};
             for(const loc of [{name:"Kansas City",country:"US",lat:39.0997,lon:-94.5786,tz:"America/Chicago"},{name:"Kathmandu",country:"NP",lat:27.7172,lon:85.3240,tz:"Asia/Kathmandu"}]){
               for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
                 const x=await openReady(browser,`?lat=${loc.lat}&lon=${loc.lon}&plaats=${encodeURIComponent(loc.name)}&land=${loc.country}`,viewport);const o=await x.page.evaluate(compactTruth);
-                assert.equal(o.tz,loc.tz,`${loc.name}: ${o.tz}`);assert(o.overflow<=1,`${loc.name}/${viewport.width}: overflow ${o.overflow}`);assert.equal(o.rows,24);assert.equal(o.same,true,`${loc.name}/${viewport.width}: uurwaarden verschillen`);assert.equal(o.pressure,false);assert.equal(o.more,false);assert.deepEqual(x.errors,[],`${loc.name}/${viewport.width}: pageerrors ${x.errors.join(" | ")}`);
+                assert.equal(o.tz,loc.tz,`${loc.name}: ${o.tz}`);assert(o.overflow<=1,`${loc.name}/${viewport.width}: overflow ${o.overflow}`);assert.equal(o.rows,24);assert.equal(o.same,true,`${loc.name}/${viewport.width}: ${JSON.stringify(o.mismatch)}`);assert.equal(o.pressure,false);assert.equal(o.more,false);assert.deepEqual(x.errors,[],`${loc.name}/${viewport.width}: pageerrors ${x.errors.join(" | ")}`);
                 report.world.push({location:loc.name,width:viewport.width,timezone:o.tz,rows:o.rows,overflow:o.overflow});await x.context.close();
               }
             }
