@@ -3,11 +3,21 @@
 const fs=require("fs"),os=require("os"),path=require("path"),{spawnSync}=require("child_process");
 const {bouw}=require("./data.js");
 
-function vindBrowser(){for(const n of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){const r=spawnSync("sh",["-lc","command -v "+n],{encoding:"utf8"});if(r.status===0&&r.stdout.trim())return r.stdout.trim();}return null;}
+function vindBrowser(){
+  for(const n of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){
+    const r=spawnSync("sh",["-lc","command -v "+n],{encoding:"utf8"});
+    if(r.status===0&&r.stdout.trim())return r.stdout.trim();
+  }
+  return null;
+}
 const browser=vindBrowser();
-if(!browser){if(process.env.CI){console.error("FOUT final-release browsertest: Chrome/Chromium ontbreekt.");process.exit(1);}console.log("SKIP final-release browsertest: lokaal geen Chrome/Chromium.");process.exit(0);}
+if(!browser){
+  if(process.env.CI){console.error("FOUT final-release browsertest: Chrome/Chromium ontbreekt.");process.exit(1);}
+  console.log("SKIP final-release browsertest: lokaal geen Chrome/Chromium.");process.exit(0);
+}
 const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
+const basisHtml=fs.readFileSync(productie,"utf8");
 const fixture=bouw({geenKwartier:true});
 fixture.daily.sunshine_duration=fixture.daily.time.map(()=>6*3600);
 fixture.current.visibility=20000;
@@ -27,11 +37,13 @@ function injecteerBasis(html){
   try{Object.defineProperty(navigator,'onLine',{configurable:true,get:()=>!window.__wiwOffline});}catch(e){}
   try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}
   const abortFout=()=>{try{return new DOMException('Aborted','AbortError');}catch(e){const x=new Error('Aborted');x.name='AbortError';return x;}};
-  const antwoord=(ok,data,status)=>({ok:!!ok,status:status||200,json:async()=>JSON.parse(JSON.stringify(data))});
+  const antwoord=(ok,data,status)=>({ok:!!ok,status:status||200,json:async()=>JSON.parse(JSON.stringify(data)),text:async()=>JSON.stringify(data)});
   window.fetch=function(input,opt){
     const url=String(input||''),signal=opt&&opt.signal;
     if(url.includes('/api/waarschuwingen'))return Promise.resolve(antwoord(true,{dekking:false,reden:'niet beschikbaar'},200));
     if(url.includes('air-quality-api.open-meteo.com'))return Promise.resolve(antwoord(false,{},503));
+    if(url.includes('/api/plaatsnaam'))return Promise.resolve(antwoord(true,{naam:'Kansas City',bron:'test'},200));
+    if(url.includes('geocoding-api.open-meteo.com'))return Promise.resolve(antwoord(true,{results:[{name:'Kansas City',latitude:39.0997,longitude:-94.5786,country_code:'US'}]},200));
     if(!url.includes('api.open-meteo.com/v1/forecast'))return Promise.resolve(antwoord(false,{},404));
     let lat='';try{lat=new URL(url).searchParams.get('latitude')||'';}catch(e){}
     const plan=window.__wiwPlan||{},per=plan.perLat&&plan.perLat[lat],mode=per&&per.mode||plan.mode||'success',delay=per&&per.delay!=null?per.delay:(plan.delay||0);
@@ -51,80 +63,128 @@ function chromeDump(html,w,h,budget){
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-final-release-"));
   try{
     const pad=path.join(dir,"index.html");fs.writeFileSync(pad,html,"utf8");
-    const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${w},${h}`,`--virtual-time-budget=${budget||1600}`,"--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:48*1024*1024,timeout:30000});
+    const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${w},${h}`,`--virtual-time-budget=${budget||1800}`,"--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:48*1024*1024,timeout:30000});
     if(r.status!==0)throw new Error(`${w}x${h}: browser exit ${r.status}: `+String(r.stderr||"").slice(-1200));
     return r.stdout||"";
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 }
-function attr(dom,k,prefix){const m=new RegExp(`data-${prefix||'fr'}-${k}="([^"]*)"`).exec(dom);return m&&m[1];}
+function attr(dom,k,prefix){const m=new RegExp(`data-${prefix||'case'}-${k}="([^"]*)"`).exec(dom);return m&&m[1];}
 function eis(v,msg){if(!v)throw new Error(msg);}
 
-/* Verplichte cache-, fout- en racepaden. De coherente tussenstaat draait apart
-   in browser-final-release-pending-20260902.test.js met een vers browserproces. */
-{
-  let html=injecteerBasis(fs.readFileSync(productie,"utf8"));
+function scenarioHtml(code){
+  let html=injecteerBasis(basisHtml);
   const reporter=`<script>
 (async()=>{
- const zet=(k,v)=>document.body.setAttribute('data-fr-'+k,String(v));
- const slaap=ms=>new Promise(r=>window.__wiwEchteSetTimeout(r,ms));
- const app=document.getElementById('app'),st=document.getElementById('state'),q=document.getElementById('q');
- const reset=()=>{try{clearNuTimer();clearKlokTimer();}catch(e){};window.__wiwAccelerateTimeouts=false;document.documentElement.classList.remove('wn-progressief');app.classList.remove('wn-progressief');app.removeAttribute('aria-busy');S.lat=null;S.lon=null;S.label='';S.land=null;S.d=null;S.air=null;S.op=0;S.luchtOp=0;S.dag=null;S.verversMislukt=false;S.actieveWaarschuwingen=[];app.style.display='none';st.style.display='none';q.value='';};
- const plan=(mode,delay,perLat)=>{window.__wiwPlan={mode,delay:delay||0,perLat:perLat||null};window.__wiwOffline=false;window.__wiwAccelerateTimeouts=mode==='timeout';};
- const goed=(naam,lat,lon)=>S.d&&S.label===naam&&Math.abs(S.lat-lat)<.00001&&Math.abs(S.lon-lon)<.00001&&q.value===naam&&document.title.startsWith(naam+' · ');
- const laadGoed=async(naam,lat,lon,delay)=>{q.value=naam;plan('success',delay||0);await load(lat,lon,naam,false,true,null);await slaap(15);return goed(naam,lat,lon);};
- const diagnose=(prefix)=>{zet(prefix+'-label',S.label);zet(prefix+'-lat',S.lat);zet(prefix+'-lon',S.lon);zet(prefix+'-q',q.value);zet(prefix+'-title',document.title);zet(prefix+'-state',st.textContent);zet(prefix+'-retry',!!st.querySelector('.wiw-location-retry'));zet(prefix+'-data',!!S.d);zet(prefix+'-app',getComputedStyle(app).display);};
- try{
-   reset();ls.set(KEY_D,null);zet('fast',await laadGoed('Amsterdam',52.3676,4.9041,0)?'ok':'fout');
-   reset();ls.set(KEY_D,null);zet('slow',await laadGoed('Kansas City',39.0997,-94.5786,300)?'ok':'fout');
-   /* Laat niet-geblokkeerde waarschuwing/luchtkwaliteitstaken van het vorige
-      scenario uitlopen voor de volgende foutpaden beginnen. */
-   await slaap(1200);
-
-   reset();ls.set(KEY_D,null);await laadGoed('Amsterdam',52.3676,4.9041,0);q.value='Kansas City';plan('timeout',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(20);
-   diagnose('timeout-detail');
-   zet('timeout',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Kansas City/.test(st.textContent)&&!!st.querySelector('.wiw-location-retry')?'ok':'fout');
-
-   reset();ls.set(KEY_D,null);await laadGoed('Amsterdam',52.3676,4.9041,0);q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(15);
-   zet('provider',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Kansas City/.test(st.textContent)&&!!st.querySelector('.wiw-location-retry')?'ok':'fout');
-
-   reset();ls.set(KEY_D,null);await laadGoed('Amsterdam',52.3676,4.9041,0);q.value='Kathmandu';window.__wiwOffline=true;window.__wiwPlan={mode:'provider-error',delay:0,perLat:null};window.__wiwAccelerateTimeouts=false;await load(27.7172,85.3240,'Kathmandu',false,true,'NP');await slaap(15);
-   zet('offline',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Geen internetverbinding/.test(st.textContent)&&/Kathmandu/.test(st.textContent)?'ok':'fout');window.__wiwOffline=false;
-
-   reset();const op=Date.now()-60000;ls.set(KEY_D,{d:window.__wiwFixture,air:null,airOp:0,label:'Kansas City',lat:39.100,lon:-94.579,op,land:'US'});q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(15);
-   zet('same-cache',goed('Kansas City',39.0997,-94.5786)&&S.verversMislukt&&getComputedStyle(app).display!=='none'&&/laatst opgehaalde gegevens voor Kansas City/.test(st.textContent)?'ok':'fout');
-
-   reset();ls.set(KEY_D,{d:window.__wiwFixture,air:null,airOp:0,label:'Amsterdam',lat:52.368,lon:4.904,op,land:'NL'});q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(15);
-   zet('wrong-cache',S.d===null&&S.label==='Kansas City'&&q.value==='Kansas City'&&getComputedStyle(app).display==='none'&&/geen weergegevens van een andere locatie/.test(st.textContent)?'ok':'fout');
-
-   reset();ls.set(KEY_D,null);window.__wiwAccelerateTimeouts=false;window.__wiwPlan={mode:'success',delay:0,perLat:{'52.3676':{mode:'success',delay:400},'39.0997':{mode:'success',delay:250},'27.7172':{mode:'success',delay:60}}};
-   q.value='Amsterdam';const p1=load(52.3676,4.9041,'Amsterdam',false,true,'NL');await slaap(10);q.value='Kansas City';const p2=load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(10);q.value='Kathmandu';const p3=load(27.7172,85.3240,'Kathmandu',false,true,'NP');await Promise.allSettled([p1,p2,p3]);await slaap(30);
-   zet('race',goed('Kathmandu',27.7172,85.3240)?'ok':'fout');
-
-   reset();ls.set(KEY_D,{d:window.__wiwFixture,air:null,airOp:0,label:'Amsterdam',lat:52.368,lon:4.904,op,land:'NL'});history.replaceState(null,'','?lat=39.100&lon=-94.579&plaats=Kansas%20City&land=US');q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,false,'US');await slaap(15);
-   zet('direct-wrong-cache',S.d===null&&S.label==='Kansas City'&&q.value==='Kansas City'&&getComputedStyle(app).display==='none'&&document.title.startsWith('Kansas City · ')?'ok':'fout');
-
-   reset();ls.set(KEY_D,null);await laadGoed('Kathmandu',27.7172,85.3240,0);const bewaard=ls.get(KEY_D,null);reset();ls.set(KEY_D,bewaard);q.value='Kathmandu';plan('provider-error',0);await load(27.7172,85.3240,'Kathmandu',false,true,'NP');await slaap(15);
-   zet('reload-cache',goed('Kathmandu',27.7172,85.3240)&&S.verversMislukt&&/laatst opgehaalde gegevens voor Kathmandu/.test(st.textContent)?'ok':'fout');
-   zet('done','ok');
- }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}
+  const zet=(k,v)=>document.body.setAttribute('data-case-'+k,String(v));
+  const slaap=ms=>new Promise(r=>window.__wiwEchteSetTimeout(r,ms));
+  const app=document.getElementById('app'),st=document.getElementById('state'),q=document.getElementById('q');
+  const reset=(wisOpslag=true)=>{
+    try{clearNuTimer();clearKlokTimer();}catch(e){}
+    if(wisOpslag){try{localStorage.clear();sessionStorage.clear();}catch(e){}}
+    window.__wiwOffline=false;window.__wiwAccelerateTimeouts=false;window.__wiwPlan={mode:'success',delay:0,perLat:null};
+    document.documentElement.classList.remove('wn-progressief');app.classList.remove('wn-progressief');app.removeAttribute('aria-busy');
+    S.lat=null;S.lon=null;S.label='';S.land=null;S.d=null;S.air=null;S.op=0;S.luchtOp=0;S.dag=null;S.verversMislukt=false;S.actieveWaarschuwingen=[];
+    app.style.display='none';st.style.display='none';q.value='';
+    try{history.replaceState(null,'',location.pathname);}catch(e){}
+  };
+  const plan=(mode,delay,perLat)=>{window.__wiwPlan={mode,delay:delay||0,perLat:perLat||null};window.__wiwOffline=false;window.__wiwAccelerateTimeouts=mode==='timeout';};
+  const goed=(naam,lat,lon)=>S.d&&S.label===naam&&Math.abs(Number(S.lat)-lat)<.00001&&Math.abs(Number(S.lon)-lon)<.00001&&q.value===naam&&document.title.startsWith(naam+' · ');
+  const laadGoed=async(naam,lat,lon,delay,land)=>{q.value=naam;plan('success',delay||0);await load(lat,lon,naam,false,true,land||null);await slaap(40);return goed(naam,lat,lon);};
+  const snapshot=()=>{zet('label',S.label);zet('lat',S.lat);zet('lon',S.lon);zet('q',q.value);zet('title',document.title);zet('state',st.textContent);zet('retry',!!st.querySelector('.wiw-location-retry'));zet('data',!!S.d);zet('app',getComputedStyle(app).display);};
+  try{
+    await slaap(80);reset();
+    ${code}
+    snapshot();zet('done','ok');
+  }catch(e){snapshot();zet('error',e&&e.stack||e);zet('done','fout');}
 })();
 </script>`;
-  html=html.replace("</body>",reporter+"</body>");
-  const dom=chromeDump(html,1363,936,5200);
-  eis(attr(dom,'done')==='ok',"locatiescenario reporter faalde: "+attr(dom,'exception'));
-  for(const k of ['fast','slow','timeout','provider','offline','same-cache','wrong-cache','race','direct-wrong-cache','reload-cache']){
-    if(attr(dom,k)!=='ok'){
-      const t=(k==='timeout'?' label='+attr(dom,'timeout-detail-label')+' lat='+attr(dom,'timeout-detail-lat')+' lon='+attr(dom,'timeout-detail-lon')+' q='+attr(dom,'timeout-detail-q')+' title='+attr(dom,'timeout-detail-title')+' retry='+attr(dom,'timeout-detail-retry')+' data='+attr(dom,'timeout-detail-data')+' app='+attr(dom,'timeout-detail-app')+' state='+attr(dom,'timeout-detail-state'):'');
-      throw new Error(`locatiescenario ${k} faalde (${attr(dom,k)})${t}`);
-    }
-  }
-  console.log("Locatiehardening groen: snel, traag, timeout, providerfout, offline, cache-match/mismatch, race, directe URL en reload-cache.");
+  return html.replace("</body>",reporter+"</body>");
+}
+function draaiScenario(naam,code,budget){
+  const dom=chromeDump(scenarioHtml(code),1363,936,budget||1800);
+  const v=k=>attr(dom,k,'case');
+  if(v('done')!=="ok")throw new Error(naam+" reporter faalde: "+v('error'));
+  if(v('result')!=="ok")throw new Error(naam+" faalde: label="+v('label')+", lat="+v('lat')+", lon="+v('lon')+", q="+v('q')+", title="+v('title')+", retry="+v('retry')+", data="+v('data')+", app="+v('app')+", state="+v('state'));
+  console.log(naam+": OK");
 }
 
-/* Exact afgesproken responsive breedtes. */
+draaiScenario("snelle forecast",`
+  ls.set(KEY_D,null);
+  zet('result',await laadGoed('Amsterdam',52.3676,4.9041,0,'NL')?'ok':'fout');
+`);
+
+draaiScenario("trage succesvolle forecast",`
+  ls.set(KEY_D,null);
+  zet('result',await laadGoed('Kansas City',39.0997,-94.5786,300,'US')?'ok':'fout');
+`,2200);
+
+draaiScenario("timeout herstelt vorige locatie",`
+  ls.set(KEY_D,null);
+  if(!await laadGoed('Amsterdam',52.3676,4.9041,0,'NL'))throw new Error('Amsterdam start faalde');
+  q.value='Kansas City';plan('timeout',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(40);
+  zet('result',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Kansas City/.test(st.textContent)&&!!st.querySelector('.wiw-location-retry')?'ok':'fout');
+`,2200);
+
+draaiScenario("providerfout herstelt vorige locatie",`
+  ls.set(KEY_D,null);
+  if(!await laadGoed('Amsterdam',52.3676,4.9041,0,'NL'))throw new Error('Amsterdam start faalde');
+  q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(40);
+  zet('result',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Kansas City/.test(st.textContent)&&!!st.querySelector('.wiw-location-retry')?'ok':'fout');
+`);
+
+draaiScenario("offline herstelt vorige locatie",`
+  ls.set(KEY_D,null);
+  if(!await laadGoed('Amsterdam',52.3676,4.9041,0,'NL'))throw new Error('Amsterdam start faalde');
+  q.value='Kathmandu';plan('provider-error',0);window.__wiwOffline=true;await load(27.7172,85.3240,'Kathmandu',false,true,'NP');await slaap(40);
+  zet('result',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Geen internetverbinding/.test(st.textContent)&&/Kathmandu/.test(st.textContent)?'ok':'fout');
+`);
+
+draaiScenario("passende cache wordt gebruikt",`
+  const op=Date.now()-60000;
+  ls.set(KEY_D,{d:window.__wiwFixture,air:null,airOp:0,label:'Kansas City',lat:39.100,lon:-94.579,op,land:'US'});
+  q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(40);
+  zet('result',goed('Kansas City',39.0997,-94.5786)&&S.verversMislukt&&getComputedStyle(app).display!=='none'&&/laatst opgehaalde gegevens voor Kansas City/.test(st.textContent)?'ok':'fout');
+`);
+
+draaiScenario("verkeerde cache wordt geweigerd",`
+  const op=Date.now()-60000;
+  ls.set(KEY_D,{d:window.__wiwFixture,air:null,airOp:0,label:'Amsterdam',lat:52.368,lon:4.904,op,land:'NL'});
+  q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(40);
+  zet('result',S.d===null&&S.label==='Kansas City'&&q.value==='Kansas City'&&getComputedStyle(app).display==='none'&&/geen weergegevens van een andere locatie/i.test(st.textContent)?'ok':'fout');
+`);
+
+draaiScenario("race laat nieuwste locatie winnen",`
+  ls.set(KEY_D,null);window.__wiwAccelerateTimeouts=false;
+  window.__wiwPlan={mode:'success',delay:0,perLat:{'52.3676':{mode:'success',delay:400},'39.0997':{mode:'success',delay:250},'27.7172':{mode:'success',delay:60}}};
+  q.value='Amsterdam';const p1=load(52.3676,4.9041,'Amsterdam',false,true,'NL');await slaap(10);
+  q.value='Kansas City';const p2=load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(10);
+  q.value='Kathmandu';const p3=load(27.7172,85.3240,'Kathmandu',false,true,'NP');
+  await Promise.allSettled([p1,p2,p3]);await slaap(60);
+  zet('result',goed('Kathmandu',27.7172,85.3240)?'ok':'fout');
+`,2400);
+
+draaiScenario("directe URL weigert cache van andere locatie",`
+  const op=Date.now()-60000;
+  ls.set(KEY_D,{d:window.__wiwFixture,air:null,airOp:0,label:'Amsterdam',lat:52.368,lon:4.904,op,land:'NL'});
+  history.replaceState(null,'','?lat=39.100&lon=-94.579&plaats=Kansas%20City&land=US');q.value='Kansas City';plan('provider-error',0);
+  await load(39.0997,-94.5786,'Kansas City',false,false,'US');await slaap(60);
+  zet('result',S.d===null&&S.label==='Kansas City'&&q.value==='Kansas City'&&getComputedStyle(app).display==='none'&&document.title.startsWith('Kansas City · ')?'ok':'fout');
+`,2200);
+
+draaiScenario("reload gebruikt passende cache",`
+  ls.set(KEY_D,null);
+  if(!await laadGoed('Kathmandu',27.7172,85.3240,0,'NP'))throw new Error('Kathmandu start faalde');
+  const bewaard=ls.get(KEY_D,null);reset(false);ls.set(KEY_D,bewaard);q.value='Kathmandu';plan('provider-error',0);
+  await load(27.7172,85.3240,'Kathmandu',false,true,'NP');await slaap(40);
+  zet('result',goed('Kathmandu',27.7172,85.3240)&&S.verversMislukt&&/laatst opgehaalde gegevens voor Kathmandu/.test(st.textContent)?'ok':'fout');
+`);
+
+console.log("Final-release locatiehardening: 10 cache/fout/racescenario's elk in een vers Chromium-proces geslaagd.");
+
+/* Exact afgesproken responsive breedtes, eveneens ieder met een vers proces. */
 const viewports=[[320,844],[360,844],[390,844],[430,932],[1100,900],[1280,800],[1363,936],[1440,900],[1600,900],[1920,1080]];
 for(const [w,h] of viewports){
-  let html=injecteerBasis(fs.readFileSync(productie,"utf8"));
+  let html=injecteerBasis(basisHtml);
   const reporter=`<script>window.__wiwEchteSetTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-layout-'+k,String(v));try{
     const stats=[...document.querySelectorAll('.final-top-grid>.stats .stat')].filter(e=>getComputedStyle(e).display!=='none');
     const tops=[...new Set(stats.map(e=>Math.round(e.getBoundingClientRect().top)))];
@@ -147,4 +207,4 @@ for(const [w,h] of viewports){
   if(w<=430)eis(Number(v('min-touch'))>=44,`${w}px: kleinste zichtbare touchdoel is ${v('min-touch')}px`);
   console.log(`${w}x${h}: layout groen; ${v('rows')} tegelrijen, Gevoel-kop past, pagina-overflow ${v('page-overflow')}px${w<=430?', touch ≥'+v('min-touch')+'px':''}.`);
 }
-console.log("Final-release browsertest geslaagd op alle cache/fout/racescenario's en 10 afgesproken viewports.");
+console.log("Final-release browsertest geslaagd: geïsoleerde cache/fout/racescenario's plus 10 afgesproken viewports.");
