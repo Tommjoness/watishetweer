@@ -24,12 +24,18 @@ p=a.regenperiodenVoorGrafiek({grafiekTijden:dubbel,bronTijden:dubbel,neerslag:[0
 assert.equal(p.length,1);assert.equal(Math.round(p[0].som*10)/10,0.7);
 
 assert.equal(a.nwsTitelNl("Heat Advisory"),"Hitteadvies");
+assert.equal(a.nwsTitelNl("Air Quality Alert"),"Luchtkwaliteitswaarschuwing");
 assert.equal(a.fahrenheitContext("Heat Advisory","Heat index values of 100 to 110 degrees Fahrenheit."),"100–110 °F is ongeveer 38–43 °C.");
 assert.equal(a.fahrenheitContext("Heat Advisory","Temperatures near 104 °F."),"104 °F is ongeveer 40 °C.");
+assert.equal(a.fahrenheitContext("Heat Advisory","Heat index values up to 105."),"De Amerikaanse hitte-index loopt op tot 105 °F, ongeveer 41 °C.");
+assert.equal(a.fahrenheitContext("Air Quality Alert","Index values up to 105."),"");
+assert.equal(a.fahrenheitContext("Heat Advisory","Heat index values up to 41 °C."),"");
 assert.match(a.nwsUitleg("Heat Advisory","100 to 110 degrees Fahrenheit").uitleg,/38–43 °C/);
 
 /* Wereldwijde vochtigheid: relatieve waarde blijft meetwaarde, comfort volgt dauwpunt. */
 assert.equal(vochtigheidPresentatie({temperature_2m:40,relative_humidity_2m:43,dew_point_2m:25}),"Zeer benauwde lucht. Dauwpunt circa 25 °C.");
+assert.equal(vochtigheidPresentatie({temperature_2m:5,relative_humidity_2m:84,dew_point_2m:3}),"Hoge relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa 3 °C.");
+assert.equal(vochtigheidPresentatie({temperature_2m:2,relative_humidity_2m:78,dew_point_2m:-1}),"Hoge relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa -1 °C.");
 assert.equal(vochtigheidPresentatie({temperature_2m:-49,relative_humidity_2m:67,dew_point_2m:-52}),"Extreem droge lucht. Dauwpunt circa -52 °C.");
 assert.equal(vochtigheidPresentatie({temperature_2m:20,relative_humidity_2m:87}),"Hoge relatieve luchtvochtigheid.");
 assert(!/droog/i.test(vochtigheidPresentatie({temperature_2m:40,relative_humidity_2m:43,dew_point_2m:25})),"Dubai mag nooit droog heten");
@@ -42,4 +48,4 @@ assert.equal(zp.waardeTekst,"1 min");
 assert.match(zp.aria,/over 1 minuut,/);
 assert(!/1 minuten/.test(zp.aria));
 
-console.log("Finale audithelpers groen: regeninterval, Dubai/Zuidpool, 1 minuut en NWS metrische uitleg zijn geborgd.");
+console.log("Finale audithelpers groen: regeninterval, Dubai/Longyearbyen/Ushuaia/Zuidpool, 1 minuut en NWS metrische uitleg zijn geborgd.");
