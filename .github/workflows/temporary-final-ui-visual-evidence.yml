@@ -30,7 +30,6 @@ jobs:
           const ROOT="https://watishetweer.nl";
           const SHA="9ae4a5bb35adee34ddd5a3519211834c9c3512f6";
           fs.mkdirSync("screenshots-current",{recursive:true});
-          const overflow=()=>Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth;
           async function openReady(browser,params,viewport){
             let last;
             for(let attempt=1;attempt<=3;attempt++){
@@ -62,7 +61,7 @@ jobs:
               const a=[...r.children].map(c=>(c.textContent||"").replace(/\s+/g," ").trim()),b=[...fullRows[i].children].map(c=>(c.textContent||"").replace(/\s+/g," ").trim());
               return a[0]===b[ti]&&a[1]===b[te]&&a[2]===b[ge];
             });
-            return {overflow:overflow(),rows:rows.length,same,pressure:[...document.querySelectorAll(".eyebrow")].filter(visible).some(e=>/Luchtdruk/.test(e.textContent||"")),more:[...document.querySelectorAll("summary,h2,h3")].filter(visible).some(e=>/Meer meetgegevens/.test(e.textContent||"")),hour:!!document.getElementById("wiw-hour-panel"),rain:!!document.getElementById("wiw-rain-summary"),tz:(document.getElementById("coords")?.textContent||"").split(" · ").at(-1)};
+            return {overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,rows:rows.length,same,pressure:[...document.querySelectorAll(".eyebrow")].filter(visible).some(e=>/Luchtdruk/.test(e.textContent||"")),more:[...document.querySelectorAll("summary,h2,h3")].filter(visible).some(e=>/Meer meetgegevens/.test(e.textContent||"")),hour:!!document.getElementById("wiw-hour-panel"),rain:!!document.getElementById("wiw-rain-summary"),tz:(document.getElementById("coords")?.textContent||"").split(" · ").at(-1)};
           }
           (async()=>{const browser=await chromium.launch({headless:true});try{
             const ams=await openReady(browser,"?lat=52.3676&lon=4.9041&plaats=Amsterdam&land=NL",{width:390,height:844});
