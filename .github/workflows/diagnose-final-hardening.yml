@@ -1,0 +1,32 @@
+name: Diagnose final hardening
+on:
+  push:
+    branches:
+      - fix/final-hardening-20260902
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm install --ignore-scripts --package-lock=false
+      - name: Capture prebuild output
+        shell: bash
+        run: |
+          set +e
+          npm run test:prebuild > diagnostic.log 2>&1
+          code=$?
+          echo "$code" > diagnostic.exit
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: final-hardening-diagnostic
+          path: |
+            diagnostic.log
+            diagnostic.exit
+          if-no-files-found: error
