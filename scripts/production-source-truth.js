@@ -12,13 +12,16 @@ function bft(k){const n=getal(k);if(n===null||n<0)return null;let uit=0;for(cons
 function zichtbaarGetal(tekst){const m=/-?\d+(?:[.,]\d+)?/.exec(String(tekst||""));return m?Number(m[0].replace(",",".")):null;}
 function dagNeerslag(kans,mm){
   const k=getal(kans),hoeveelheid=getal(mm),genoeg=k!==null||hoeveelheid!==null;
-  /* De finale DOM-laag toont bij een bekende kans >0 zonder zichtbaar meetbare
-     dagsom expliciet "hoeveelheid onzeker". De bronmonitor controleert die
-     presentatie, niet een verzonnen 0,0 mm: providerdata en app-logica blijven
-     ongewijzigd. */
+  /* De finale DOM-laag onderscheidt een expliciete nul van ontbrekende data.
+     Een echte bronwaarde 0 blijft 0,0 mm bij kans >0; alleen wanneer de
+     hoeveelheid ontbreekt en de kans wel bekend/positief is, toont de UI
+     "hoeveelheid onzeker". De monitor volgt precies dat zichtbare contract. */
   let hoeveelheidUi="";
-  if(hoeveelheid!==null&&hoeveelheid>=0.1)hoeveelheidUi=hoeveelheidTekst(hoeveelheid);
-  else if(k!==null&&k>0)hoeveelheidUi="hoeveelheid onzeker";
+  if(hoeveelheid!==null&&(hoeveelheid>=0.1||(hoeveelheid===0&&k!==null&&k>0))){
+    hoeveelheidUi=hoeveelheid===0?"0,0 mm":hoeveelheidTekst(hoeveelheid);
+  }else if(hoeveelheid===null&&k!==null&&k>0){
+    hoeveelheidUi="hoeveelheid onzeker";
+  }
   return {
     hoofd:String(kansHoofd({genoeg,kans:k,hoeveelheid})||"–"),
     hoeveelheid:hoeveelheidUi
