@@ -133,7 +133,7 @@ function hardenLoad(html){
     const offline=typeof navigator!=="undefined"&&navigator.onLine===false;
     const timeout=!!(err&&err.name==="AbortError");
     const foutVoor=offline
-      ?"Ophalen mislukt: geen internetverbinding; gegevens voor "+label+" konden niet worden opgehaald."
+      ?"Ophalen mislukt. Geen internetverbinding: gegevens voor "+label+" konden niet worden opgehaald."
       :timeout
         ?"Ophalen mislukt: het ophalen van gegevens voor "+label+" duurde te lang."
         :"Ophalen mislukt: gegevens voor "+label+" konden niet worden opgehaald.";
