@@ -1,6 +1,7 @@
 "use strict";
 const assert=require("assert");
 const {uurRijenUitGeo,regenVelden,formatTemp}=require("./final-desktop-ui-runtime-20260902.js");
+const {RUNTIME,herstelDrukOwnerRuntime,PRESSURE_OLD}=require("./apply-final-desktop-ui-20260902.js");
 const TI=Array.from({length:24},(_,i)=>i<11?`2026-09-02T${String(i+13).padStart(2,"0")}:00`:`2026-09-03T${String(i-11).padStart(2,"0")}:00`);
 const T=TI.map((_,i)=>-8.5+i*.7),A=TI.map((_,i)=>-14.2+i*.55);
 let r=uurRijenUitGeo({TI,T,A},"2026-09-02T13:27",false);
@@ -9,4 +10,8 @@ r=uurRijenUitGeo({TI,T,A},"2026-09-02T13:27",true);assert.equal(r.some(x=>x.mark
 let v=regenVelden({genoeg:true,kans:87,hoeveelheid:2.36,eersteTijd:"14:15",soort:"regen"},false);
 assert.deepEqual(v.map(x=>x.label),["Huidige status","Verwacht begin rond","Hoogste neerslagkans","Verwachte totale hoeveelheid","Neerslagtype"]);assert.equal(v[3].waarde,"2,4 mm");
 v=regenVelden({genoeg:false,kans:20,hoeveelheid:4.2},false);assert.equal(v.some(x=>x.label.includes("hoeveelheid")),false,"onvoldoende gedekte hoeveelheid mag niet worden getoond");
-console.log("Finale desktop-UI helpers groen: 24 lokale uren, datumovergang, negatieve temperaturen, huidige rij en brongebonden neerslagsamenvatting.");
+assert.ok(RUNTIME.includes('diag=document.createElement("div");diag.id="wiw-pressure-diagnostic"'),"ontbrekende diagnostische container moet vóór verwijdering opnieuw worden aangemaakt");
+assert.ok(RUNTIME.includes('const veiligVerplaatst=!!(stat&&diag&&diag.contains(stat))'),"drukowner mag pas verdwijnen nadat #pres aantoonbaar veilig is verplaatst");
+assert.ok(RUNTIME.includes('else if(details){details.hidden=true;details.setAttribute("aria-hidden","true");}'),"bij mislukte verplaatsing moet de sectie onzichtbaar blijven zonder #pres te vernietigen");
+assert.throws(()=>herstelDrukOwnerRuntime(PRESSURE_OLD+"\n"+PRESSURE_OLD),/exact één keer/,"dubbel drukowneranker moet fail-fast stoppen");
+console.log("Finale desktop-UI helpers groen: 24 lokale uren, datumovergang, negatieve temperaturen, huidige rij, brongebonden neerslagsamenvatting en behouden drukrenderer-owner.");
