@@ -29,6 +29,8 @@ for(const p of weer){
   eis(html.includes("const vorigeBlijftZichtbaar=!!(plaatsWijzigt&&vorigeLocatie&&vorigeLocatie.d&&vorigeLocatie.label);"),rel+": trage locatiewissel borgt vorige identiteit niet");
   eis(html.includes('document.getElementById("q").value=String(vorigeLocatie.label||"");'),rel+": zoekveld blijft tijdens trage locatiewissel niet bij vorige locatie");
   eis(html.includes('S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;S.land=aangevraagdeLand;\n    document.getElementById("q").value=label;\n    S.d=vol'),rel+": nieuwe identiteit wordt niet atomair bij succesvolle forecast geactiveerd");
+  eis(html.includes("function progressievePreviewToegestaan(stil,wissel,dataVoorLoad){\n  /* Finale locatie-identiteit:"),rel+": finale previewblokkade ontbreekt");
+  eis(!html.includes("return !stil&&!!wissel&&!!dataVoorLoad;"),rel+": gedeeltelijke current-only locatiewisselpreview is nog actief");
   eis(html.includes("Er worden geen weergegevens van een andere locatie getoond."),rel+": veilige mismatch-state ontbreekt");
   eis(html.includes("className=\"wiw-location-retry\""),rel+": retryknop ontbreekt");
   eis(html.includes('<th scope="col" aria-label="Gevoelstemperatuur">Gevoel</th>'),rel+": compacte toegankelijke gevoelstemperatuurkop ontbreekt");
@@ -50,4 +52,4 @@ for(const p of htmlBestanden(OUT)){
   const html=fs.readFileSync(p,"utf8");
   eis(!html.includes("https://github.com/Tommjoness/weathernow"),path.relative(OUT,p)+": oude GitHub-URL bleef in public artifact staan");
 }
-console.log(`Final release hardening geverifieerd op ${weer.length} weerartifacts: cache-identiteit, coherente laad/fout/retry-state, compacte uurkop, desktopgrids en repository-URL zijn geborgd.`);
+console.log(`Final release hardening geverifieerd op ${weer.length} weerartifacts: cache-identiteit, uitgeschakelde partial preview, coherente laad/fout/retry-state, compacte uurkop, desktopgrids en repository-URL zijn geborgd.`);
