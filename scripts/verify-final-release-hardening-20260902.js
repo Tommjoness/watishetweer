@@ -35,8 +35,13 @@ for(const p of weer){
   eis(html.includes("className=\"wiw-location-retry\""),rel+": retryknop ontbreekt");
   eis(html.includes('<th scope="col" aria-label="Gevoelstemperatuur">Gevoel</th>'),rel+": compacte toegankelijke gevoelstemperatuurkop ontbreekt");
   eis(!html.includes('<th scope="col">Gevoelstemperatuur</th>'),rel+": afkappende oude uurkop staat nog in artifact");
-  eis(html.includes("grid-template-columns:repeat(6,minmax(0,1fr))!important"),rel+": 3+3+2 desktopgrid ontbreekt");
-  eis(html.includes("grid-template-columns:repeat(4,minmax(0,1fr))!important"),rel+": 4x2 brede desktopgrid ontbreekt");
+  eis(html.includes(".final-top-grid>.stats{grid-template-columns:repeat(6,minmax(0,1fr))!important}"),rel+": 3+3+2 desktopgrid richt zich niet op de finale stats-DOM");
+  eis(html.includes(".final-top-grid>.stats .stat{grid-column:span 2;"),rel+": 3+3+2 tegelspanning richt zich niet op de finale stats-DOM");
+  eis(html.includes(".final-top-grid>.stats .stat:nth-child(7),.final-top-grid>.stats .stat:nth-child(8){grid-column:span 3}"),rel+": laatste 2 tegels vormen geen finale halve rij");
+  eis(html.includes(".final-top-grid>.stats{grid-template-columns:repeat(4,minmax(0,1fr))!important}"),rel+": 4x2 brede desktopgrid richt zich niet op de finale stats-DOM");
+  eis(html.includes(".final-top-grid>.stats .stat{grid-column:auto!important;"),rel+": brede-desktop tegels resetten de middeldesktop-span niet");
+  eis(!html.includes(".dashrow-hero .stats{grid-template-columns:repeat(6,minmax(0,1fr))!important}"),rel+": finale 3+3+2-regel richt zich nog op verwijderde dashrow-hero DOM");
+  eis(!html.includes(".dashrow-hero .stats{grid-template-columns:repeat(4,minmax(0,1fr))!important}"),rel+": finale 4x2-regel richt zich nog op verwijderde dashrow-hero DOM");
   eis(html.includes("@media(min-width:1100px) and (max-width:1599px)"),rel+": middeldesktop-breakpoint ontbreekt");
   eis(html.includes("@media(min-width:1600px)"),rel+": brede-desktop-breakpoint ontbreekt");
   const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
@@ -52,4 +57,4 @@ for(const p of htmlBestanden(OUT)){
   const html=fs.readFileSync(p,"utf8");
   eis(!html.includes("https://github.com/Tommjoness/weathernow"),path.relative(OUT,p)+": oude GitHub-URL bleef in public artifact staan");
 }
-console.log(`Final release hardening geverifieerd op ${weer.length} weerartifacts: cache-identiteit, uitgeschakelde partial preview, coherente laad/fout/retry-state, compacte uurkop, desktopgrids en repository-URL zijn geborgd.`);
+console.log(`Final release hardening geverifieerd op ${weer.length} weerartifacts: cache-identiteit, uitgeschakelde partial preview, coherente laad/fout/retry-state, compacte uurkop, finale-DOM desktopgrids en repository-URL zijn geborgd.`);
