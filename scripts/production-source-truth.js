@@ -12,10 +12,21 @@ function bft(k){const n=getal(k);if(n===null||n<0)return null;let uit=0;for(cons
 function zichtbaarGetal(tekst){const m=/-?\d+(?:[.,]\d+)?/.exec(String(tekst||""));return m?Number(m[0].replace(",",".")):null;}
 function dagNeerslag(kans,mm){
   const k=getal(kans),hoeveelheid=getal(mm),genoeg=k!==null||hoeveelheid!==null;
+  /* Volg exact de definitieve postbuild-presentatie:
+     - expliciete 0 + kans >0 blijft zichtbaar als 0,0 mm;
+     - >=0,1 mm blijft een concrete hoeveelheid;
+     - een positieve maar sub-0,1-mm dagsom wordt door Q1 niet als getal getoond
+       en krijgt daarna bij kans >0 de finale zichtbare staat "hoeveelheid onzeker";
+     - ontbrekende hoeveelheid bij kans >0 krijgt dezelfde eerlijke staat. */
+  let hoeveelheidUi="";
+  if(hoeveelheid!==null&&(hoeveelheid>=0.1||(hoeveelheid===0&&k!==null&&k>0))){
+    hoeveelheidUi=hoeveelheid===0?"0,0 mm":hoeveelheidTekst(hoeveelheid);
+  }else if(k!==null&&k>0&&(hoeveelheid===null||hoeveelheid>0)){
+    hoeveelheidUi="hoeveelheid onzeker";
+  }
   return {
     hoofd:String(kansHoofd({genoeg,kans:k,hoeveelheid})||"–"),
-    hoeveelheid:hoeveelheid!==null&&(hoeveelheid>=0.1||(hoeveelheid===0&&k!==null&&k>0))
-      ?(hoeveelheid===0?"0,0 mm":hoeveelheidTekst(hoeveelheid)):""
+    hoeveelheid:hoeveelheidUi
   };
 }
 function uvPiekVandaag(bron){

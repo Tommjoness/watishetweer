@@ -18,9 +18,11 @@ function volgendZonmoment(data,nuMs=Date.now()){const d=data||{},day=d.daily||{}
 function zonPresentatie(data,nuMs=Date.now()){const d=data||{},event=volgendZonmoment(d,nuMs),vandaag=lokaleDatumNu(d,nuMs);if(event){const delta=Math.max(0,Math.ceil((event.ms-nuMs)/60000)),uren=Math.floor(delta/60),minuten=delta%60;const datum=String(event.iso).slice(0,10),morgen=datumPlus(vandaag,1);let daglabel=datum===vandaag?"Vandaag":datum===morgen?"Morgen":"";if(!daglabel){try{daglabel=new Intl.DateTimeFormat("nl-NL",{timeZone:d.timezone||"UTC",weekday:"long"}).format(new Date(event.ms));}catch(_){daglabel=datum;}daglabel=daglabel.charAt(0).toUpperCase()+daglabel.slice(1);}const tijd=String(event.iso).slice(11,16);const lang=grammatica&&typeof grammatica.duur==="function"?grammatica.duur(uren,minuten):(uren>0?uren+" uur en ":"")+minuten+" minuten";const kort=grammatica&&typeof grammatica.duurKort==="function"?grammatica.duurKort(uren,minuten):(uren>0?`${uren} u ${pad2(minuten)} min`:`${minuten} min`);return {type:event.type,kop:event.type==="opkomst"?"Tijd tot zonsopkomst":"Tijd tot zonsondergang",uren,minuten,waardeTekst:kort,sub:`${daglabel} om ${tijd}.`,aria:`${event.type==="opkomst"?"Zonsopkomst":"Zonsondergang"} over ${lang}, ${daglabel.toLowerCase()} om ${tijd}.`};}const day=d.daily||{},heeftReeks=Array.isArray(day.sunrise)&&Array.isArray(day.sunset)&&Math.max(day.sunrise.length,day.sunset.length)>0;if(heeftReeks&&d.current&&Number.isFinite(Number(d.current.is_day))){const dag=Number(d.current.is_day)===1;return {type:dag?"pooldag":"poolnacht",kop:"Zonlicht",waardeTekst:dag?"Pooldag":"Poolnacht",sub:dag?"De zon gaat binnen de beschikbare verwachting niet onder.":"De zon komt binnen de beschikbare verwachting niet op.",aria:null};}return {type:"onbekend",kop:"Zonlicht",waardeTekst:"--",sub:"Zoninformatie niet beschikbaar.",aria:null};}
 
 /* De procentwaarde blijft relatieve luchtvochtigheid. Het comfortoordeel wordt
-   primair door dauwpunt bepaald en gebruikt temperatuur alleen om milde,
-   koele situaties niet onnodig als benauwd te formuleren. Zonder dauwpunt wordt
-   bewust uitsluitend iets over de relatieve luchtvochtigheid gezegd. */
+   primair door dauwpunt bepaald. Bij normale koude buitenlucht wordt een hoge
+   relatieve vochtigheid niet meer als uitsluitend 'droog' gepresenteerd: de
+   tekst benoemt dan expliciet dat koude lucht ondanks een hoog percentage maar
+   weinig waterdamp kan bevatten. Extreem lage dauwpunten houden voorrang, zodat
+   poollucht meteorologisch correct als extreem droog blijft worden benoemd. */
 function vochtigheidPresentatie(current){
   const c=current||{},rh=getal(c.relative_humidity_2m),dp=getal(c.dew_point_2m),t=getal(c.temperature_2m);
   if(rh===null||rh<0||rh>100)return "Luchtvochtigheid niet beschikbaar.";
@@ -31,6 +33,8 @@ function vochtigheidPresentatie(current){
     if(rh<45)return "Relatief lage luchtvochtigheid.";
     return "Gemiddelde relatieve luchtvochtigheid.";
   }
+  if(dp<-15)return "Extreem droge lucht. Dauwpunt circa "+Math.round(dp)+" °C.";
+  if(t!==null&&t<=7&&rh>=70)return "Hoge relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa "+Math.round(dp)+" °C.";
   let basis;
   if(dp>=24)basis="Zeer benauwde lucht.";
   else if(dp>=21)basis="Benauwde lucht.";
@@ -39,8 +43,7 @@ function vochtigheidPresentatie(current){
   else if(dp>=10)basis="Aangename lucht.";
   else if(dp>=5)basis="Vrij droge lucht.";
   else if(dp>=0)basis="Droge lucht.";
-  else if(dp>=-15)basis="Zeer droge lucht.";
-  else basis="Extreem droge lucht.";
+  else basis="Zeer droge lucht.";
   return basis+" Dauwpunt circa "+Math.round(dp)+" °C.";
 }
 const api={parseLokaleIso,datumPlus,zoneDelen,lokaleIsoNaarUtcMs,lokaleDatumNu,volgendZonmoment,zonPresentatie,vochtigheidPresentatie};if(typeof module!=="undefined"&&module.exports)module.exports=api;root.WeatherNowFinalConsumerPolish20260831=api;
