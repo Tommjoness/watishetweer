@@ -92,7 +92,7 @@ window.fetch=async function(url){
   const u=String(url);
   const payload=u.includes('/api/waarschuwingen')?${JSON.stringify({ bron: "test", dekking: true, lijst: [], land: "NL" })}
     :u.includes('air-quality-api.open-meteo.com')?${JSON.stringify(air)}
-    :u.includes('geocoding-api.open-meteo.com')?${JSON.stringify({ results: [{ name: "Amsterdam", latitude: 52.37, longitude: 4.90, admin1: "Noord-Holland", country_code: "NL" }] })}
+    :u.includes('geocoding-api.open-meteo.com')?${JSON.stringify({ results: [{ name: "Amsterdam", latitude: 52.37, longitude: 4.90, admin1: "Noord-Holland", country_code: "NL" }]})}
     :u.includes('/api/plaatsnaam')?${JSON.stringify({ naam: "Almere", land: "NL", bron: "test" })}
     :${JSON.stringify(d)};
   return {ok:true,status:200,json:async()=>payload,text:async()=>JSON.stringify(payload)};
@@ -190,6 +190,8 @@ async function controleer(page, naam, modus) {
     const nachtMaan = document.querySelectorAll("#nights .nachtmaan").length;
     const maanRect = faseSvg ? faseSvg.getBoundingClientRect() : null;
     const windPseudo = windKop ? getComputedStyle(windKop, "::after").content : "";
+    const regenHint = document.getElementById("nchint");
+    const regenKop = document.querySelector(".wiw-rain-section > h2") || (regenHint && regenHint.previousElementSibling);
     return {
       nuTeksten,
       bots,
@@ -205,7 +207,7 @@ async function controleer(page, naam, modus) {
       trendKop: trendStat ? trendStat.querySelector(".eyebrow").textContent.trim() : "",
       trend: prec ? prec.textContent.trim() : "",
       trendSub: (document.getElementById("precsub") || {}).textContent || "",
-      neerslagSectieVerborgen: getComputedStyle(document.getElementById("nchint").previousElementSibling).display === "none",
+      neerslagSectieVerborgen: !!regenKop && getComputedStyle(regenKop).display === "none",
       nachtAdvies,
       nachtMaan,
       nachtRijen,
