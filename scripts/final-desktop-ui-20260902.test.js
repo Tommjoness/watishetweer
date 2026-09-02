@@ -10,8 +10,10 @@ r=uurRijenUitGeo({TI,T,A},"2026-09-02T13:27",true);assert.equal(r.some(x=>x.mark
 let v=regenVelden({genoeg:true,kans:87,hoeveelheid:2.36,eersteTijd:"14:15",soort:"regen"},false);
 assert.deepEqual(v.map(x=>x.label),["Huidige status","Verwacht begin rond","Hoogste neerslagkans","Verwachte totale hoeveelheid","Neerslagtype"]);assert.equal(v[3].waarde,"2,4 mm");
 v=regenVelden({genoeg:false,kans:20,hoeveelheid:4.2},false);assert.equal(v.some(x=>x.label.includes("hoeveelheid")),false,"onvoldoende gedekte hoeveelheid mag niet worden getoond");
+v=regenVelden({genoeg:true,kans:0,hoeveelheid:0,soort:"regen"},false);assert.deepEqual(v,[{label:"Huidige status",waarde:"Droog"}],"volledig droog toont geen irrelevante 0% of 0,0 mm");
+v=regenVelden({genoeg:true,kans:25,hoeveelheid:0,soort:"regen"},false);assert.equal(v.some(x=>x.label==="Hoogste neerslagkans"&&x.waarde==="25%"),true,"echte niet-nul kans blijft zichtbaar");assert.equal(v.some(x=>x.label==="Verwachte totale hoeveelheid"&&x.waarde==="0,0 mm"),true,"bekende 0,0 mm blijft relevant naast een niet-nul kans");
 assert.ok(RUNTIME.includes('diag=document.createElement("div");diag.id="wiw-pressure-diagnostic"'),"ontbrekende diagnostische container moet vóór verwijdering opnieuw worden aangemaakt");
 assert.ok(RUNTIME.includes('const veiligVerplaatst=!!(stat&&diag&&diag.contains(stat))'),"drukowner mag pas verdwijnen nadat #pres aantoonbaar veilig is verplaatst");
 assert.ok(RUNTIME.includes('else if(details){details.hidden=true;details.setAttribute("aria-hidden","true");}'),"bij mislukte verplaatsing moet de sectie onzichtbaar blijven zonder #pres te vernietigen");
 assert.throws(()=>herstelDrukOwnerRuntime(PRESSURE_OLD+"\n"+PRESSURE_OLD),/exact één keer/,"dubbel drukowneranker moet fail-fast stoppen");
-console.log("Finale desktop-UI helpers groen: 24 lokale uren, datumovergang, negatieve temperaturen, huidige rij, brongebonden neerslagsamenvatting en behouden drukrenderer-owner.");
+console.log("Finale desktop-UI helpers groen: 24 lokale uren, datumovergang, negatieve temperaturen, huidige rij, brongebonden neerslagsamenvatting, droge nulonderdrukking en behouden drukrenderer-owner.");
