@@ -7,7 +7,8 @@ assert.equal(bft(0),0);assert.equal(bft(1),1);assert.equal(bft(12),3);assert.equ
 assert.deepEqual(dagNeerslag(0,0),{hoofd:"Droog",hoeveelheid:""});
 assert.deepEqual(dagNeerslag(25,0),{hoofd:"25%",hoeveelheid:"0,0 mm"});
 assert.deepEqual(dagNeerslag(25,null),{hoofd:"25%",hoeveelheid:"hoeveelheid onzeker"});
-assert.deepEqual(dagNeerslag(25,0.03),{hoofd:"25%",hoeveelheid:""});
+assert.deepEqual(dagNeerslag(25,0.03),{hoofd:"25%",hoeveelheid:"hoeveelheid onzeker"});
+assert.deepEqual(dagNeerslag(25,0.09),{hoofd:"25%",hoeveelheid:"hoeveelheid onzeker"});
 assert.deepEqual(dagNeerslag(0,0.2),{hoofd:"Onzeker",hoeveelheid:"0,2 mm"});
 assert.deepEqual(dagNeerslag(65,1.24),{hoofd:"65%",hoeveelheid:"1,2 mm"});
 
