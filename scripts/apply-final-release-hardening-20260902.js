@@ -10,6 +10,16 @@ const MARKER="/* ===== FINAL RELEASE HARDENING 20260902 ===== */";
 const LOAD_HELPER_MARKER="weatherNowCachePastBij";
 const GEVOEL_OUD='<th scope="col">Gevoelstemperatuur</th>';
 const GEVOEL_NIEUW='<th scope="col" aria-label="Gevoelstemperatuur">Gevoel</th>';
+const PREVIEW_OUD=`function progressievePreviewToegestaan(stil,wissel,dataVoorLoad){
+  return !stil&&!!wissel&&!!dataVoorLoad;
+}`;
+const PREVIEW_NIEUW=`function progressievePreviewToegestaan(stil,wissel,dataVoorLoad){
+  /* Finale locatie-identiteit: een gedeeltelijke current-only response mag niet
+     alvast plaats/titel/hero wisselen terwijl zoekveld, URL en volledige data
+     nog aantoonbaar bij de vorige succesvolle locatie horen. De vorige complete
+     locatie blijft daarom zichtbaar tot de volledige nieuwe forecast slaagt. */
+  return false;
+}`;
 
 const STYLE=`
 ${MARKER}
@@ -81,6 +91,12 @@ function voegStijlToe(html){
   const pos=html.lastIndexOf("</style>");
   if(pos<0)throw new Error("Geen stijlblok gevonden voor final release hardening.");
   return html.slice(0,pos)+STYLE+"\n"+html.slice(pos);
+}
+
+function schakelProgressievePreviewUit(html){
+  const bron=String(html),n=bron.split(PREVIEW_OUD).length-1;
+  if(n!==1)throw new Error("Progressieve preview-owner verwacht exact één keer; gevonden "+n);
+  return bron.replace(PREVIEW_OUD,PREVIEW_NIEUW);
 }
 
 function hardenLoad(html){
@@ -156,6 +172,7 @@ function pasToe(pad){
   let html=fs.readFileSync(pad,"utf8");
   if(!html.includes("WeatherNowFinalDesktopUI20260902")||!html.includes("async function load(lat,lon,label,stil,opslaan,land){"))return false;
   html=hardenLoad(html);
+  html=schakelProgressievePreviewUit(html);
   const gevoelAantal=html.split(GEVOEL_OUD).length-1;
   if(gevoelAantal!==1)throw new Error(path.basename(pad)+": Gevoelstemperatuurkop verwacht exact één keer; gevonden "+gevoelAantal);
   html=html.replace(GEVOEL_OUD,GEVOEL_NIEUW);
@@ -181,8 +198,8 @@ function main(){
   for(const p of htmlBestanden(OUT))if(pasToe(p))n++;
   if(!n)throw new Error("Geen weerartifacts gevonden voor final release hardening.");
   const cache=vernieuwServiceworkerCache(OUT,"final-release-hardening-20260902");
-  console.log(`Final release hardening toegepast op ${n} weerpagina's: cache-identiteit geborgd, coherente laad-/retry-state toegevoegd, uurkop ingekort en desktopgrid uitgebalanceerd; cache ${cache}.`);
+  console.log(`Final release hardening toegepast op ${n} weerpagina's: cache-identiteit geborgd, gedeeltelijke locatiepreview uitgeschakeld, coherente laad-/retry-state toegevoegd, uurkop ingekort en desktopgrid uitgebalanceerd; cache ${cache}.`);
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER,STYLE,HELPERS,GEVOEL_OUD,GEVOEL_NIEUW,hardenLoad,voegStijlToe,pasToe,main};
+module.exports={OUT,MARKER,STYLE,HELPERS,GEVOEL_OUD,GEVOEL_NIEUW,PREVIEW_OUD,PREVIEW_NIEUW,hardenLoad,schakelProgressievePreviewUit,voegStijlToe,pasToe,main};
