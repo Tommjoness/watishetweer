@@ -18,10 +18,19 @@ const STYLE=`<style id="weather-final-audit-20260901">
 #chart g[data-q4-rain-periods]{display:none!important}
 .final-rain-summary{font-family:var(--sans);font-size:12px;line-height:1.45;color:var(--ink-70);margin:8px 0 0;max-width:90ch}
 .final-rain-summary[hidden]{display:none!important}
+.final-today-window-note{font-family:var(--sans);font-size:11px;line-height:1.4;color:var(--ink-45);margin:5px 0 0;max-width:72ch}
 .final-warning-explanation{margin:6px 0!important;color:var(--ink-70)!important}
 .final-warning-explanation strong{font-weight:600;color:var(--ink)}
+.final-warning-official-meta{margin-top:8px!important}
+.final-warning-official-text{white-space:pre-line}
 .final-warning-source{display:inline-flex;align-items:center;min-height:44px;margin-top:4px;font-size:12px;color:var(--ink-70);text-underline-offset:2px}
 .final-warning-source:hover,.final-warning-source:focus-visible{color:var(--ink)}
+.wiw-more-measurements{margin:14px 0 0;padding-top:8px;border-top:1px solid var(--rule);color:var(--ink-70)}
+.wiw-more-measurements>summary{display:inline-flex;align-items:center;min-height:44px;cursor:pointer;font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-70)}
+.wiw-more-measurements>summary:hover,.wiw-more-measurements>summary:focus-visible{color:var(--ink)}
+.wiw-more-measurements-body{max-width:540px}
+.wiw-more-measurements-body>.stat{padding:10px 0 2px!important;border:0!important;min-width:0!important}
+.wiw-pressure-meaning{margin:4px 0 0;font-size:11px;line-height:1.4;color:var(--ink-45)}
 @media(max-width:900px){
   .tools input,.tools button{min-height:44px}
   .results>div{min-height:44px;display:flex;align-items:center}
@@ -30,6 +39,9 @@ const STYLE=`<style id="weather-final-audit-20260901">
   .chip .x{min-width:36px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}
   .data-uitleg summary,.footer-details summary{min-height:44px;display:inline-flex;align-items:center}
   #days .row.day:not(.kop){min-height:44px}
+  .final-today-window-note{font-size:10.5px;margin-top:4px}
+  .wiw-more-measurements{margin-top:10px}
+  .wiw-more-measurements-body{max-width:none}
 }
 @media(max-width:1099px){
   .final-top-grid>.stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;min-width:0;max-width:100%}
