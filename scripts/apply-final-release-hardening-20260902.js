@@ -24,9 +24,9 @@ const PREVIEW_NIEUW=`function progressievePreviewToegestaan(stil,wissel,dataVoor
 const STYLE=`
 ${MARKER}
 /* Alleen de laatste aantoonbare layoutproblemen: geen redesign. */
-.wiw-location-error{display:flex!important;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap}
-.wiw-location-error p{margin:0;flex:1 1 280px;color:inherit}
-.wiw-location-error .wiw-location-retry{flex:0 0 auto;min-height:44px}
+.wiw-location-state{display:flex!important;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap}
+.wiw-location-state p{margin:0;flex:1 1 280px;color:inherit}
+.wiw-location-state .wiw-location-retry{flex:0 0 auto;min-height:44px}
 .wiw-hour-table th:nth-child(1),.wiw-hour-table td:nth-child(1){width:32%}
 .wiw-hour-table th:nth-child(2),.wiw-hour-table td:nth-child(2){width:34%}
 .wiw-hour-table th:nth-child(3),.wiw-hour-table td:nth-child(3){width:34%}
@@ -44,9 +44,9 @@ ${MARKER}
   .final-top-grid>.stats .stat:nth-child(4n){border-right:none!important}
 }
 @media(max-width:430px){
-  .wiw-location-error{align-items:stretch}
-  .wiw-location-error p{flex-basis:100%}
-  .wiw-location-error .wiw-location-retry{width:100%}
+  .wiw-location-state{align-items:stretch}
+  .wiw-location-state p{flex-basis:100%}
+  .wiw-location-state .wiw-location-retry{width:100%}
 }
 `;
 
@@ -75,7 +75,7 @@ function weatherNowHerstelLocatie(snapshot){
   S.actieveWaarschuwingen=snapshot.actieveWaarschuwingen||[];
 }
 function weatherNowFoutMetRetry(st,tekst,lat,lon,label,opslaan,land){
-  st.style.display="flex";st.className="msg err wiw-location-error";st.replaceChildren();
+  st.style.display="flex";st.className="msg err wiw-location-state";st.replaceChildren();
   const p=document.createElement("p");p.textContent=tekst;
   const knop=document.createElement("button");knop.type="button";knop.className="wiw-location-retry";
   knop.textContent="Opnieuw proberen";
