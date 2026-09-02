@@ -29,11 +29,14 @@ function uurRijenUitGeo(g,currentTime,dagGeselecteerd){
 function regenVelden(a,isNat){
   if(!a||typeof a!=="object")return [];
   const velden=[{label:"Huidige status",waarde:isNat?"Neerslag":"Droog"}];
+  const eersteTijd=String(a.eersteTijd||"").trim();
   if(isNat&&a.droogVanafTijd)velden.push({label:"Verwacht droog rond",waarde:String(a.droogVanafTijd)});
-  if(!isNat&&a.eersteTijd)velden.push({label:"Verwacht begin rond",waarde:String(a.eersteTijd)});
-  const kans=formatPct(a.kans);if(kans)velden.push({label:"Hoogste neerslagkans",waarde:kans});
-  const mm=a.genoeg===false?null:formatMm(a.hoeveelheid);if(mm)velden.push({label:"Verwachte totale hoeveelheid",waarde:mm});
-  const soort=String(a.soort||"").trim();if(soort&&soort.toLowerCase()!=="neerslag")velden.push({label:"Neerslagtype",waarde:soort.charAt(0).toUpperCase()+soort.slice(1)});
+  if(!isNat&&eersteTijd)velden.push({label:"Verwacht begin rond",waarde:eersteTijd});
+  const kansNum=num(a.kans),hoeveelheidNum=num(a.hoeveelheid);
+  const heeftNeerslagsignaal=!!(isNat||eersteTijd||(kansNum!==null&&kansNum>0)||(hoeveelheidNum!==null&&hoeveelheidNum>0));
+  const kans=heeftNeerslagsignaal?formatPct(a.kans):null;if(kans)velden.push({label:"Hoogste neerslagkans",waarde:kans});
+  const mm=a.genoeg===false||!heeftNeerslagsignaal?null:formatMm(a.hoeveelheid);if(mm)velden.push({label:"Verwachte totale hoeveelheid",waarde:mm});
+  const soort=String(a.soort||"").trim();if(heeftNeerslagsignaal&&soort&&soort.toLowerCase()!=="neerslag")velden.push({label:"Neerslagtype",waarde:soort.charAt(0).toUpperCase()+soort.slice(1)});
   return velden;
 }
 
