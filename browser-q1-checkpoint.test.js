@@ -137,10 +137,10 @@ async function controleer(type,naam){
     assert.match(trendKlok.voor,/→\s*11°C$/,naam+": 14:17 lokale tijd kiest echt uurpunt rond 17:17");
     assert.match(trendKlok.na,/→\s*22°C$/,naam+": lokale klokverschuiving kiest nieuw echt uurpunt zonder fetch");
 
-    /* Relevante neerslag houdt dezelfde tegel en het finale twee-uurspaneel zichtbaar,
-       maar verandert de centrale samenvatting van Droog naar Neerslag. De uurvelden
-       zijn onafhankelijke kans/hoeveelheidsbronnen; daarna herstellen we het droge
-       scenario om de rest van de test niet te beïnvloeden. */
+    /* Relevante toekomstige neerslag houdt dezelfde tegel en het finale twee-uurspaneel zichtbaar.
+       De huidige status blijft correct Droog zolang het nu niet regent; de verwachting
+       wordt afzonderlijk zichtbaar via start/kans/hoeveelheid. Daarna herstellen we het
+       droge scenario om de rest van de test niet te beïnvloeden. */
     const popNat=await page.evaluate(()=>{
       const i15=S.d.hourly.time.indexOf("2026-07-22T15:00"),i16=S.d.hourly.time.indexOf("2026-07-22T16:00");
       S.d.hourly.precipitation_probability[i15]=65;S.d.hourly.precipitation[i15]=1.4;
@@ -155,7 +155,8 @@ async function controleer(type,naam){
     });
     assert.notEqual(popNat.display,"none",naam+": relevante neerslag toont tegel");
     assert.notEqual(popNat.sectie,"none",naam+": relevante neerslag houdt twee-uurssectie zichtbaar");
-    assert.match(popNat.samenvatting,/Huidige status\s*Neerslag/i,naam+": relevante neerslag werkt de centrale twee-uurssamenvatting bij");
+    assert.match(popNat.samenvatting,/Huidige status\s*Droog/i,naam+": toekomstige neerslag verandert de actuele status niet ten onrechte in Neerslag");
+    assert.match(popNat.samenvatting,/Hoogste neerslagkans\s*65%/i,naam+": toekomstige neerslag werkt de twee-uursverwachting bij");
     assert.equal(popNat.kop,"Neerslagverwachting komend uur",naam+": zichtbare tegel benoemt kans en verwacht totaal expliciet");
     assert.equal(popNat.sleutel,"kans · verwacht totaal",naam+": zichtbare tegel legt de twee grootheden expliciet uit");
     assert.match(popNat.waarde,/65%/,naam+": zichtbare tegel behoudt bronkans");
