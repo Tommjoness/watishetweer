@@ -91,16 +91,22 @@ function hardenLoad(html){
   bron=bron.slice(0,laad)+HELPERS+"\n"+bron.slice(laad);
 
   const snapshotOud='  const mijnBeurt=++laadTeller;\n  const nieuweLat=Number(lat),nieuweLon=Number(lon);\n  const plaatsWijzigt=S.lat!==nieuweLat||S.lon!==nieuweLon;';
-  const snapshotNieuw='  const mijnBeurt=++laadTeller;\n  const nieuweLat=Number(lat),nieuweLon=Number(lon);\n  const vorigeLocatie=weatherNowLocatieSnapshot();\n  const plaatsWijzigt=S.lat!==nieuweLat||S.lon!==nieuweLon;';
+  const snapshotNieuw='  const mijnBeurt=++laadTeller;\n  const nieuweLat=Number(lat),nieuweLon=Number(lon);\n  const vorigeLocatie=weatherNowLocatieSnapshot();\n  const plaatsWijzigt=S.lat!==nieuweLat||S.lon!==nieuweLon;\n  const aangevraagdeLand=land!==undefined?normLand(land):(plaatsWijzigt?null:normLand(vorigeLocatie&&vorigeLocatie.land));';
   const nSnap=bron.split(snapshotOud).length-1;
   if(nSnap!==1)throw new Error("Snapshotanker verwacht exact één keer; gevonden "+nSnap);
   bron=bron.replace(snapshotOud,snapshotNieuw);
 
-  const ladenOud='  if(!stil){st.style.display="block";st.className="msg";st.textContent="Gegevens ophalen.";}';
-  const ladenNieuw='  if(!stil){st.style.display="block";st.className="msg";st.textContent=plaatsWijzigt&&vorigeLocatie&&vorigeLocatie.d&&vorigeLocatie.label\n    ?"Gegevens voor "+label+" ophalen. Tot die klaar zijn, zie je nog de gegevens voor "+vorigeLocatie.label+"."\n    :"Gegevens ophalen.";}';
-  const nLoad=bron.split(ladenOud).length-1;
-  if(nLoad!==1)throw new Error("Loading-statusanker verwacht exact één keer; gevonden "+nLoad);
-  bron=bron.replace(ladenOud,ladenNieuw);
+  const identiteitOud='  if(land!==undefined) S.land=normLand(land);\n  else if(plaatsWijzigt) S.land=null;\n  const st=document.getElementById("state");\n  if(!stil){st.style.display="block";st.className="msg";st.textContent="Gegevens ophalen.";}\n  S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;';
+  const identiteitNieuw='  const st=document.getElementById("state");\n  const vorigeBlijftZichtbaar=!!(plaatsWijzigt&&vorigeLocatie&&vorigeLocatie.d&&vorigeLocatie.label);\n  if(!stil){st.style.display="block";st.className="msg";st.textContent=vorigeBlijftZichtbaar\n    ?"Gegevens voor "+label+" ophalen. Tot die klaar zijn, zie je nog de gegevens voor "+vorigeLocatie.label+"."\n    :"Gegevens ophalen.";}\n  if(vorigeBlijftZichtbaar){\n    weatherNowHerstelLocatie(vorigeLocatie);\n    document.getElementById("q").value=String(vorigeLocatie.label||"");\n  }else{\n    S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;S.land=aangevraagdeLand;\n  }';
+  const nIdentiteit=bron.split(identiteitOud).length-1;
+  if(nIdentiteit!==1)throw new Error("Locatie-identiteitsanker verwacht exact één keer; gevonden "+nIdentiteit);
+  bron=bron.replace(identiteitOud,identiteitNieuw);
+
+  const succesOud='    if(mijnBeurt!==laadTeller) return;   // er is inmiddels een nieuwere plaats gekozen\n    S.d=vol;if(luchtVerversen)S.air=null;';
+  const succesNieuw='    if(mijnBeurt!==laadTeller) return;   // er is inmiddels een nieuwere plaats gekozen\n    S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;S.land=aangevraagdeLand;\n    document.getElementById("q").value=label;\n    S.d=vol;if(luchtVerversen)S.air=null;';
+  const nSucces=bron.split(succesOud).length-1;
+  if(nSucces!==1)throw new Error("Succes-identiteitsanker verwacht exact één keer; gevonden "+nSucces);
+  bron=bron.replace(succesOud,succesNieuw);
 
   const loadPos=bron.indexOf("async function load(lat,lon,label,stil,opslaan,land){");
   const catchPos=bron.indexOf("  }catch(err){",loadPos);
@@ -118,7 +124,7 @@ function hardenLoad(html){
         :"Gegevens voor "+label+" konden niet worden opgehaald.";
     if(oud&&oud.d&&weatherNowCachePastBij(oud,nieuweLat,nieuweLon)){
       S.d=oud.d;S.air=oud.air;S.label=label;S.lat=nieuweLat;S.lon=nieuweLon;S.op=oud.op;
-      S.luchtOp=Number(oud.airOp)||0;S.land=normLand(oud.land)||normLand(land);S.verversMislukt=true;
+      S.luchtOp=Number(oud.airOp)||0;S.land=normLand(oud.land)||aangevraagdeLand;S.verversMislukt=true;
       document.getElementById("q").value=label;
       tekenAlles();
       document.getElementById("app").style.display="block";
@@ -133,7 +139,7 @@ function hardenLoad(html){
       urlBij();
       weatherNowFoutMetRetry(st,foutVoor+" Je ziet weer de gegevens voor "+vorigeLocatie.label+".",nieuweLat,nieuweLon,label,opslaan,land);
     }else{
-      S.d=null;S.air=null;S.label=label;S.lat=nieuweLat;S.lon=nieuweLon;S.land=normLand(land);
+      S.d=null;S.air=null;S.label=label;S.lat=nieuweLat;S.lon=nieuweLon;S.land=aangevraagdeLand;
       S.verversMislukt=true;S.dag=null;S.actieveWaarschuwingen=[];
       document.getElementById("q").value=label;
       document.getElementById("app").style.display="none";
@@ -175,7 +181,7 @@ function main(){
   for(const p of htmlBestanden(OUT))if(pasToe(p))n++;
   if(!n)throw new Error("Geen weerartifacts gevonden voor final release hardening.");
   const cache=vernieuwServiceworkerCache(OUT,"final-release-hardening-20260902");
-  console.log(`Final release hardening toegepast op ${n} weerpagina's: cache-identiteit geborgd, retry-state toegevoegd, uurkop ingekort en desktopgrid uitgebalanceerd; cache ${cache}.`);
+  console.log(`Final release hardening toegepast op ${n} weerpagina's: cache-identiteit geborgd, coherente laad-/retry-state toegevoegd, uurkop ingekort en desktopgrid uitgebalanceerd; cache ${cache}.`);
 }
 
 if(require.main===module)main();
