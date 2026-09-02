@@ -5,7 +5,9 @@ const {bft,dagNeerslag,uvPiekVandaag,zonDagIndex,zonVerwachting,verwachtDagRijen
 
 assert.equal(bft(0),0);assert.equal(bft(1),1);assert.equal(bft(12),3);assert.equal(bft(117),11);assert.equal(bft(118),12);
 assert.deepEqual(dagNeerslag(0,0),{hoofd:"Droog",hoeveelheid:""});
-assert.deepEqual(dagNeerslag(25,0),{hoofd:"25%",hoeveelheid:"0,0 mm"});
+assert.deepEqual(dagNeerslag(25,0),{hoofd:"25%",hoeveelheid:"hoeveelheid onzeker"});
+assert.deepEqual(dagNeerslag(25,null),{hoofd:"25%",hoeveelheid:"hoeveelheid onzeker"});
+assert.deepEqual(dagNeerslag(25,0.03),{hoofd:"25%",hoeveelheid:"hoeveelheid onzeker"});
 assert.deepEqual(dagNeerslag(0,0.2),{hoofd:"Onzeker",hoeveelheid:"0,2 mm"});
 assert.deepEqual(dagNeerslag(65,1.24),{hoofd:"65%",hoeveelheid:"1,2 mm"});
 
@@ -24,6 +26,7 @@ assert.equal(zonDagIndex(bron),1);
 assert.deepEqual(zonVerwachting(bron).op,["06:30"]);
 assert.deepEqual(zonVerwachting(bron).onder,["20:30"]);
 assert.equal(verwachtDagRijen(bron).length,7);
+assert.deepEqual(verwachtDagRijen(bron)[1],{datum:"2026-08-28",min:11,max:21,wind:1,neerslag:{hoofd:"10%",hoeveelheid:"hoeveelheid onzeker"}});
 assert.deepEqual(verwachtDagRijen(bron)[2],{datum:"2026-08-29",min:12,max:22,wind:2,neerslag:{hoofd:"20%",hoeveelheid:"0,1 mm"}});
 
 const avond={
