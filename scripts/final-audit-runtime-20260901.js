@@ -88,7 +88,10 @@ function verrijkNwsWaarschuwingen(){
     if(meta.length){const p=document.createElement("p");p.className="waarsch-meta";p.textContent=meta.join(" ");card.appendChild(p);}
     const uitleg=document.createElement("p");uitleg.className="final-warning-explanation";
     const strong=document.createElement("strong");strong.textContent="Uitleg van watishetweer.nl: ";uitleg.appendChild(strong);uitleg.appendChild(document.createTextNode(u.uitleg));card.appendChild(uitleg);
-    const details=document.createElement("details");details.className="waarsch-details";
+    /* Behoud naast de finale class ook het al bestaande staff-auditcontract.
+       Zo blijft officiële titel/bron via dezelfde semantische container vindbaar,
+       terwijl de uitgebreide officiële NWS-tekst dezelfde details gebruikt. */
+    const details=document.createElement("details");details.className="waarsch-details waarsch-officieel-details";
     const summary=document.createElement("summary");summary.textContent="Officiële tekst van de National Weather Service";details.appendChild(summary);
     const bron=document.createElement("p");bron.className="final-warning-official-meta";bron.appendChild(document.createTextNode("Officiële titel: "));
     const officiëleTitel=document.createElement("span");officiëleTitel.lang="en";officiëleTitel.textContent=titel||"Weather alert";bron.appendChild(officiëleTitel);bron.appendChild(document.createTextNode(" · Bron: National Weather Service"));details.appendChild(bron);
