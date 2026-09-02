@@ -13,7 +13,10 @@ eis(html.includes('scroll.tabIndex=0'),"scrollbare uurtabel is niet toetsenbordf
 eis(html.includes('aria-current","time"'),"actuele/eerstvolgende uurmarkering mist semantiek");
 eis(html.includes('Alle grafiekgegevens bekijken'),"bediening volledige grafiekdata ontbreekt");
 eis(html.includes('herstelVerborgenDruk'),"drukdiagnostiek wordt niet terug verborgen");
-eis(html.includes('if(details)details.remove()'),"zichtbare Meer meetgegevens-sectie wordt niet verwijderd");
+eis(html.includes('diag=document.createElement("div");diag.id="wiw-pressure-diagnostic"'),"ontbrekende verborgen drukdiagnostiek wordt niet fail-safe hersteld");
+eis(html.includes('const veiligVerplaatst=!!(stat&&diag&&diag.contains(stat))'),"druktegel wordt niet aantoonbaar verplaatst vóór verwijdering");
+eis(html.includes('if(details&&veiligVerplaatst)details.remove()'),"zichtbare Meer meetgegevens-sectie wordt niet veilig verwijderd");
+eis(html.includes('else if(details){details.hidden=true;details.setAttribute("aria-hidden","true");}'),"drukowner heeft geen veilige verborgen fallback");
 eis(html.includes('wiw-pressure-diagnostic'),"verborgen drukdiagnostiek is niet behouden");
 eis(html.includes('.final-top-grid>.stats .stat{display:flex!important;flex-direction:column;align-items:center;justify-content:center;text-align:center'),"hoofdtegels worden niet volledig gecentreerd");
 eis(html.includes('@media(max-width:1099px)'),"responsive stack-breakpoint ontbreekt");
@@ -24,4 +27,4 @@ eis(!html.includes('rij.setAttribute("aria-label",bestaand?bestaand+". "+uitleg:
 const markerAantal=html.split("/* ===== FINAL DESKTOP UI 20260902 ===== */").length-1;eis(markerAantal===1,"buildmarker staat "+markerAantal+" keer in homepage");
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);scripts.forEach((s,i)=>new vm.Script(s,{filename:"final-desktop-ui-verifier-"+i}));
 for(const p of [path.join(OUT,"weer","amsterdam","index.html"),path.join(OUT,"weer","rotterdam","index.html")])if(fs.existsSync(p))eis(fs.readFileSync(p,"utf8").includes("/* ===== FINAL DESKTOP UI 20260902 ===== */"),path.relative(OUT,p)+" mist desktop-UI-laag");
-console.log("Finale desktop-UI artifact groen: druk verborgen, 8 gecentreerde tegels, 68/32 uurpaneel, 65/35 neerslagpaneel, semantische tabel, compacte footer en responsive stacking geborgd.");
+console.log("Finale desktop-UI artifact groen: druk onzichtbaar met behouden renderer-owner, 8 gecentreerde tegels, 68/32 uurpaneel, 65/35 neerslagpaneel, semantische tabel, compacte footer en responsive stacking geborgd.");
