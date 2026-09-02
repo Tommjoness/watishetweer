@@ -39,6 +39,32 @@ function gesprokenNeerslag(zichtbaar){
   if(mm){let v=mm[1].replace(/\s+/g,"").replace("<","minder dan ").replace(">","meer dan ");delen.push(v+" millimeter");}
   return delen.join("; ");
 }
+
+/* De weektabel heeft historisch meerdere dagen()-wrappers. De finale globale
+   correctheidslaag voegt bij een bekende kans zonder zichtbare hoeveelheid
+   terecht "hoeveelheid onzeker" toe, maar een latere/directe dagen()-render kan
+   de inhoud van .drain opnieuw opbouwen. Deze audit-runtime is de laatste
+   dagen()-owner en borgt daarom dezelfde eindstate na iedere weekrender. Er
+   verandert niets aan providerdata, kans, dagsom of drempels. */
+function herstelWeekNeerslagEindstate(){
+  document.querySelectorAll("#days .row.day:not(.kop)").forEach(rij=>{
+    const vak=rij.querySelector(".drain");if(!vak)return;
+    const match=/(\d{1,3})%/.exec(vak.textContent||""),kans=match?Number(match[1]):null;
+    let hoeveelheid=vak.querySelector("small,.q1-dag-mm");
+    if(kans!==null&&kans>0&&!hoeveelheid){
+      hoeveelheid=document.createElement("small");
+      hoeveelheid.className="wiw-dag-onzeker";
+      hoeveelheid.textContent="hoeveelheid onzeker";
+      vak.appendChild(hoeveelheid);
+    }
+    const delen=[];
+    if(kans!==null)delen.push("Neerslagkans "+kans+" procent");
+    if(hoeveelheid&&hoeveelheid.textContent.trim())delen.push(hoeveelheid.textContent.trim());
+    if(!delen.length&&/^[-–—]$/.test(vak.textContent.trim()))delen.push("Neerslaggegevens niet beschikbaar");
+    if(delen.length)vak.setAttribute("aria-label",delen.join("; "));
+  });
+}
+
 function verduidelijkVandaag(){
   const hint=document.getElementById("dagenhint"),day=typeof S!=="undefined"&&S.d&&S.d.daily,current=typeof S!=="undefined"&&S.d&&S.d.current;
   if(hint&&!hint.dataset.finalTodayWindow){
@@ -66,6 +92,8 @@ function verduidelijkVandaag(){
      daardoor verwachting, wind, minimum, maximum, kans en hoeveelheid bevatten. */
   drain.title=zichtbaar.textContent;
 }
+
+function finaliseerWeekNaRender(){herstelWeekNeerslagEindstate();verduidelijkVandaag();}
 
 function isNwsWaarschuwing(w){
   if(/^(US|PR|VI|GU|MP|AS)$/i.test(String(typeof S!=="undefined"&&S.land||"")))return true;
@@ -144,7 +172,7 @@ function naRender(basis,fn){return function(){const r=basis.apply(this,arguments
 
 bouwTopGrid();bouwMeetgegevens();wrapWaarschuwingen();
 if(typeof etmaal==="function")etmaal=naRender(etmaal,regenSamenvattingBijwerken);
-if(typeof dagen==="function")dagen=naRender(dagen,verduidelijkVandaag);
-if(typeof tekenAlles==="function")tekenAlles=naRender(tekenAlles,verduidelijkVandaag);
-regenSamenvattingBijwerken();verduidelijkVandaag();verrijkNwsWaarschuwingen();
+if(typeof dagen==="function")dagen=naRender(dagen,finaliseerWeekNaRender);
+if(typeof tekenAlles==="function")tekenAlles=naRender(tekenAlles,finaliseerWeekNaRender);
+regenSamenvattingBijwerken();finaliseerWeekNaRender();verrijkNwsWaarschuwingen();
 })(typeof globalThis!=="undefined"?globalThis:this);
