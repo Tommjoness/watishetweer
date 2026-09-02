@@ -20,5 +20,9 @@ jobs:
           package-manager-cache: false
       - name: Installeer Playwright
         run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Koppel exacte finale preview aan tijdelijke QA
+        run: |
+          sed -i 's#https://43694eef.watishetweer.pages.dev#https://ebfcfeab.watishetweer.pages.dev#' .github/qa/final-hardening-targeted.js
+          sed -i 's#8d0069cff6c2e86f63d7d6df1139bfa48db850ce#bea12758ba8a2c205b93e1f352e49f8b905bd7e4#' .github/qa/final-hardening-targeted.js
       - name: Zeven gevraagde locaties in Chromium en WebKit
         run: node .github/qa/final-hardening-targeted.js
