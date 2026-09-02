@@ -1,0 +1,98 @@
+name: Temporary final UI visual evidence
+on:
+  push:
+    branches:
+      - qa/final-ui-visual-evidence-20260902
+permissions:
+  contents: read
+jobs:
+  visual-evidence:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --user 1001
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Installeer Playwright
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Maak echte voor/na-screenshots en aanvullende wereldcheck
+        shell: bash
+        run: |
+          cat > /tmp/final-ui-evidence.js <<'NODE'
+          "use strict";
+          const fs=require("fs");
+          const assert=require("assert");
+          const {chromium}=require("playwright");
+          const BEFORE="https://26af5bbb.watishetweer.pages.dev";
+          const AFTER="https://watishetweer.nl";
+          const OLD_SHA="7f86eee12f89985c810bd01d63635d6efb13f608";
+          const NEW_SHA="9ae4a5bb35adee34ddd5a3519211834c9c3512f6";
+          const amsterdam="?lat=52.3676&lon=4.9041&plaats=Amsterdam&land=NL";
+          fs.mkdirSync("screenshots",{recursive:true});
+          const visible=el=>!!el&&el.getClientRects().length>0&&getComputedStyle(el).display!=="none"&&getComputedStyle(el).visibility!=="hidden";
+          const fmt=n=>{const v=Number(n);if(!Number.isFinite(v))return "–";return (Math.round(v*10)/10).toFixed(1).replace(".",",").replace(/,0$/,"")+" °C";};
+          async function load(page,url,expectedSha){
+            const errors=[];page.on("pageerror",e=>errors.push(String(e)));page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});
+            const r=await page.goto(url,{waitUntil:"domcontentloaded",timeout:60000});assert(r&&r.ok(),`HTTP ${r&&r.status()} ${url}`);
+            await page.waitForSelector("#app",{state:"visible",timeout:45000});
+            await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length===7,null,{timeout:45000});
+            await page.evaluate(()=>document.fonts&&document.fonts.ready);await page.waitForTimeout(1000);
+            const sha=await page.locator('meta[name="weather-build-sha"]').getAttribute("content");assert.equal(sha,expectedSha,`verkeerde SHA op ${url}`);
+            return errors;
+          }
+          async function snapshot(browser,label,base,sha,width,height){
+            const ctx=await browser.newContext({viewport:{width,height},serviceWorkers:"block",locale:"nl-NL",reducedMotion:"reduce"});const page=await ctx.newPage();
+            const errors=await load(page,base+"/"+amsterdam,sha);
+            const metrics=await page.evaluate(()=>{
+              const isVisible=el=>!!el&&el.getClientRects().length>0&&getComputedStyle(el).display!=="none"&&getComputedStyle(el).visibility!=="hidden";
+              const pressure=[...document.querySelectorAll(".eyebrow")].filter(isVisible).some(e=>/Luchtdruk/.test(e.textContent||""));
+              const more=[...document.querySelectorAll("summary,h2,h3")].filter(isVisible).some(e=>/Meer meetgegevens/.test(e.textContent||""));
+              const chart=document.getElementById("chart")?.getBoundingClientRect();const hour=document.getElementById("wiw-hour-panel")?.getBoundingClientRect();
+              const rain=document.getElementById("wiw-rain-summary")?.getBoundingClientRect();const footer=document.querySelector("footer")?.getBoundingClientRect();const places=document.querySelector(".seo-plaatsnav")?.getBoundingClientRect();
+              return {overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,pressureVisible:pressure,moreMeasurementsVisible:more,hourPanel:!!hour,rainSummary:!!rain,chartWidth:chart&&Math.round(chart.width),hourWidth:hour&&Math.round(hour.width),hourTop:hour&&Math.round(hour.top),chartTop:chart&&Math.round(chart.top),rainWidth:rain&&Math.round(rain.width),footerHeight:footer&&Math.round(footer.height),placesHeight:places&&Math.round(places.height)};
+            });
+            assert(metrics.overflow<=1,`${label}-${width}: ${metrics.overflow}px overflow`);
+            if(label==="after"){assert.equal(metrics.pressureVisible,false,`${width}: luchtdruk zichtbaar`);assert.equal(metrics.moreMeasurementsVisible,false,`${width}: Meer meetgegevens zichtbaar`);assert.equal(metrics.hourPanel,true,`${width}: uuroverzicht ontbreekt`);assert.equal(metrics.rainSummary,true,`${width}: neerslagsamenvatting ontbreekt`);}
+            await page.screenshot({path:`screenshots/${label}-${width}.png`,fullPage:true});
+            assert.deepEqual(errors,[],`${label}-${width}: browserfouten: ${errors.join(" | ")}`);await ctx.close();return metrics;
+          }
+          function minuteDiff(a,b){const p=s=>{const m=/^(\d{2}):(\d{2})$/.exec(s||"");return m?+m[1]*60 + +m[2]:null;};const x=p(a),y=p(b);if(x===null||y===null)return 999;const d=Math.abs(x-y);return Math.min(d,1440-d);}
+          async function worldCheck(browser,loc,viewport,theme){
+            const ctx=await browser.newContext({viewport,serviceWorkers:"block",locale:"nl-NL",reducedMotion:"reduce"});const page=await ctx.newPage();const warningUrls=[];page.on("request",r=>{if(r.url().includes("/api/waarschuwingen"))warningUrls.push(r.url());});
+            const params=new URLSearchParams({lat:String(loc.lat),lon:String(loc.lon),plaats:loc.name,land:loc.country});const errors=await load(page,AFTER+"/?"+params,NEW_SHA);
+            await page.locator("#thema").click();const choice=page.getByRole("menuitemradio",{name:new RegExp(theme,"i")});await choice.click();await page.waitForTimeout(250);
+            const out=await page.evaluate(({expectedTz})=>{
+              const rows=[...document.querySelectorAll("#wiw-hour-table tbody tr")];
+              const source=(typeof S!=="undefined"&&S.geo)?S.geo:null;
+              return {timezone:(document.getElementById("coords")?.textContent||"").split(" · ").at(-1),clock:document.getElementById("plaatstijd")?.textContent||"",overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,theme:document.documentElement.getAttribute("data-thema")||"",rows:rows.map(r=>({time:r.querySelector("time")?.dateTime||"",temp:r.children[1]?.textContent?.trim()||"",feel:r.children[2]?.textContent?.trim()||""})),TI:source?.TI?.slice(0,24)||[],T:source?.T?.slice(0,24)||[],A:source?.A?.slice(0,24)||[],expectedTz};
+            },{expectedTz:loc.tz});
+            assert.equal(out.timezone,loc.tz,`${loc.name}: tijdzone ${out.timezone}`);assert(out.overflow<=1,`${loc.name}/${viewport.width}/${theme}: overflow ${out.overflow}`);assert.equal(out.rows.length,24,`${loc.name}: ${out.rows.length} uurrijen`);
+            for(let i=0;i<24;i++){assert.equal(out.rows[i].time,out.TI[i],`${loc.name} rij ${i}: tijd`);assert.equal(out.rows[i].temp,fmt(out.T[i]),`${loc.name} rij ${i}: temp`);assert.equal(out.rows[i].feel,fmt(out.A[i]),`${loc.name} rij ${i}: gevoel`);}
+            assert(new Set(out.TI.map(t=>String(t).slice(0,10))).size>=2,`${loc.name}: 24 uur kruist geen datumgrens`);
+            const expectedClock=new Intl.DateTimeFormat("nl-NL",{timeZone:loc.tz,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());assert(minuteDiff(out.clock,expectedClock)<=1,`${loc.name}: lokale klok ${out.clock} vs ${expectedClock}`);
+            if(loc.country==="US")assert(warningUrls.some(u=>/[?&]land=US(?:&|$)/.test(u)),"Kansas City: NWS/US-waarschuwingsroute niet met US-scope aangeroepen");
+            assert.deepEqual(errors,[],`${loc.name}/${viewport.width}/${theme}: browserfouten ${errors.join(" | ")}`);await ctx.close();
+            return {name:loc.name,viewport:viewport.width,theme,timezone:out.timezone,clock:out.clock,rows:out.rows.length};
+          }
+          (async()=>{const browser=await chromium.launch({headless:true});try{
+            const report={sha:{before:OLD_SHA,after:NEW_SHA},screenshots:{},extraWorld:[]};
+            for(const width of [1920,390]){const height=width===1920?1080:844;report.screenshots[`before-${width}`]=await snapshot(browser,"before",BEFORE,OLD_SHA,width,height);report.screenshots[`after-${width}`]=await snapshot(browser,"after",AFTER,NEW_SHA,width,height);}
+            const locs=[{name:"Kansas City",country:"US",lat:39.0997,lon:-94.5786,tz:"America/Chicago"},{name:"Kathmandu",country:"NP",lat:27.7172,lon:85.3240,tz:"Asia/Kathmandu"}];
+            for(const loc of locs)for(const viewport of [{width:1440,height:1000},{width:390,height:844}])for(const theme of ["Licht","Donker"])report.extraWorld.push(await worldCheck(browser,loc,viewport,theme));
+            fs.writeFileSync("screenshots/report.json",JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
+          }finally{await browser.close();}})().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
+          NODE
+          node /tmp/final-ui-evidence.js
+      - name: Upload bewijsbeelden
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-ui-before-after-evidence
+          path: screenshots/
+          if-no-files-found: error
+          retention-days: 7
