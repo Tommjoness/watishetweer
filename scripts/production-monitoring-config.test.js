@@ -42,7 +42,7 @@ assert(/^  live-performance-browser:/m.test(workflow),"production-smoke mist apa
 assert(/^  mobile-cls-browser:/m.test(workflow),"production-smoke mist aparte mobiele CLS-job");
 assert(/^  final-release-browser:/m.test(workflow),"production-smoke mist aparte finale release-evidencejob");
 assert.equal((workflow.match(/^    needs: production-contract$/gm)||[]).length,5,"alle vijf browserjobs moeten pas na het exacte productiecontract starten");
-assert(finalRelease.includes("final-release-evidence"),"finale releasebrowser moet evidence-artifacts schrijven");
+assert(finalRelease.includes('"artifacts","final-release"')&&finalRelease.includes('"report.json"'),"finale releasebrowser moet evidence-artifacts en een bewijsrapport schrijven");
 assert(finalRelease.includes("Kansas City")&&finalRelease.includes("Kathmandu"),"finale releasebrowser mist de twee kritieke trage locaties");
 assert(finalRelease.includes("directWrongCache")&&finalRelease.includes("sameCache"),"finale releasebrowser moet verkeerde en juiste cache afzonderlijk bewijzen");
 assert(finalRelease.includes('[[1920,1080],[390,844]]'),"finale releasebrowser moet 1920- en 390-screenshots maken");
