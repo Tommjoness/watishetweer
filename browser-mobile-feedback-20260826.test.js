@@ -96,6 +96,7 @@ async function controleer(browserType,naam){
       const plaats=document.getElementById("place"),rijen=[...document.querySelectorAll("#days .row.day:not(.kop)")],eerste=rijen[0],drain=eerste.querySelector(".drain"),chart=document.getElementById("chart");
       const tempLabels=[...chart.querySelectorAll("text")].filter(el=>/^-?\d+°$/.test((el.textContent||"").trim())&&/Bodoni/i.test(el.getAttribute("font-family")||""));
       const notities=[...document.querySelectorAll("#days .dag-neerslagnotitie")].map(el=>el.textContent.trim());
+      const todayDescId=eerste.getAttribute("aria-describedby")||"",todayDesc=todayDescId&&document.getElementById(todayDescId);
       return {
         plaats:plaats.childNodes[0]&&plaats.childNodes[0].nodeValue?plaats.childNodes[0].nodeValue.trim():plaats.textContent.trim(),
         textTransform:getComputedStyle(plaats).textTransform,
@@ -104,9 +105,12 @@ async function controleer(browserType,naam){
         neerslagRijen:rijen.slice(0,4).map(r=>(r.querySelector(".drain")?.innerText||"").replace(/\s+/g," ").trim()),
         dagenTekst:(document.getElementById("days").innerText||"").replace(/\s+/g," ").trim(),
         dagenHint:(document.getElementById("dagenhint").textContent||"").trim(),
+        todayNote:(document.getElementById("final-today-window-note")?.textContent||"").trim(),
         losseUitleg:!!document.getElementById("dagenneerslaguitleg"),
         notities,
         describedBy:rijen.map(r=>r.getAttribute("aria-describedby")),
+        todayDesc:todayDesc?(todayDesc.textContent||"").replace(/\s+/g," ").trim():"",
+        todayAriaLabel:eerste.getAttribute("aria-label"),
         pressed:rijen.map(r=>r.getAttribute("aria-pressed")),
         tempLabels:tempLabels.length,
         overflow:document.documentElement.scrollWidth-window.innerWidth
@@ -119,9 +123,14 @@ async function controleer(browserType,naam){
     assert(/6%/.test(voor.neerslag)&&/0,0 mm/.test(voor.neerslag),`${naam}: 6% en bekende 0,0 mm staan samen zichtbaar (${voor.neerslag})`);
     assert(/42%/.test(voor.neerslagRijen[1])&&/88%/.test(voor.neerslagRijen[2])&&/75%/.test(voor.neerslagRijen[3]),`${naam}: neerslagkansen van bijzondere vervolgdagen blijven in de tabel zichtbaar (${voor.neerslagRijen.join(" | ")})`);
     assert.equal(voor.dagenHint,"Kies een dag om die verwachting in de grafiek te bekijken.",`${naam}: weekbedieningshint blijft een korte instructie (${voor.dagenHint})`);
+    assert.equal(voor.todayNote,"Vandaag: neerslag geldt vanaf nu; minimum en maximum gelden voor de volledige dag.",`${naam}: zichtbare Vandaag-uitleg ontbreekt of wijkt af (${voor.todayNote})`);
     assert.equal(voor.losseUitleg,false,`${naam}: de oude algemene neerslaguitleg staat niet meer los boven de tabel`);
     assert.deepEqual(voor.notities,[],`${naam}: lange daggebonden neerslagnotities zijn volledig uit de weektabel verwijderd`);
-    assert(voor.describedBy.every(v=>v===null),`${naam}: verwijderde dagnotities laten geen aria-describedby-koppelingen achter`);
+    assert(!!voor.describedBy[0],`${naam}: Vandaag heeft aanvullende aria-describedby-uitleg`);
+    assert(voor.describedBy.slice(1).every(v=>v===null),`${naam}: toekomstige dagen behouden hun bestaande toegankelijke naam zonder nieuwe beschrijving`);
+    assert.equal(voor.todayAriaLabel,null,`${naam}: Vandaag krijgt geen vervangend aria-label`);
+    assert(/6 procent; 0,0 millimeter/i.test(voor.todayDesc),`${naam}: kans en hoeveelheid worden gescheiden uitgesproken (${voor.todayDesc})`);
+    assert(/minimum en maximum gelden voor de volledige kalenderdag/i.test(voor.todayDesc),`${naam}: aanvullende kalenderdaguitleg ontbreekt (${voor.todayDesc})`);
     for(const technisch of ["hoogste neerslagkans in één uur","berekende dagsom","verschillende modelwaarden","één op één samen te vallen"]){
       assert(!voor.dagenTekst.toLowerCase().includes(technisch.toLowerCase()),`${naam}: technische weekuitleg blijft verborgen: ${technisch}`);
     }
@@ -149,7 +158,7 @@ async function controleer(browserType,naam){
     assert(/Kans op neerslag:\s*6%/i.test(na.hint)&&/verwachte hoeveelheid:\s*0,0 mm/i.test(na.hint),`${naam}: aangeklikte dag toont kans én hoeveelheid (${na.hint})`);
     assert(na.geselecteerd,`${naam}: aangeklikte dag blijft geselecteerd`);
     assert.equal(na.pressed,"true",`${naam}: geselecteerde dag wordt ook semantisch als actief aangekondigd`);
-    assert.equal(na.beschreven,"",`${naam}: geselecteerde dag verwijst niet meer naar een verwijderde lange neerslagnotitie`);
+    assert.equal(na.beschreven,voor.describedBy[0],`${naam}: geselecteerde Vandaag-rij behoudt uitsluitend zijn nieuwe aanvullende aria-beschrijving`);
     await context.close();
   }finally{await browser.close();}
 }
@@ -159,6 +168,6 @@ async function controleer(browserType,naam){
   try{
     await controleer(chromium,"Chromium");
     await controleer(webkit,"WebKit");
-    console.log("Mobiele feedback 26-08 groen: compacte weektabel zonder lange technische notities, zichtbare neerslagwaarden, mobiele tijdas, actieve dagstate en grafieklabels in Chromium/WebKit.");
+    console.log("Mobiele feedback 26-08 groen: compacte weektabel, zichtbare Vandaag-uitleg, beschreven kans/hoeveelheid, mobiele tijdas, actieve dagstate en grafieklabels in Chromium/WebKit.");
   }finally{server.close();}
 })().catch(err=>{console.error(err);process.exit(1);});
