@@ -11,6 +11,7 @@ const wereldwijd=fs.readFileSync(path.join(root,"scripts","production-worldwide-
 const wereldwijdRunner=fs.readFileSync(path.join(root,"scripts","run-production-worldwide-browser.js"),"utf8");
 const performance=fs.readFileSync(path.join(root,"scripts","production-live-performance-browser.js"),"utf8");
 const cls=fs.readFileSync(path.join(root,"scripts","production-mobile-cls-browser.js"),"utf8");
+const finalRelease=fs.readFileSync(path.join(root,"scripts","production-final-release-browser.js"),"utf8");
 const sitemapContract=require("./production-sitemap-contract.js");
 
 assert(/push:\s*\n\s*branches:\s*\[main\]/.test(workflow),"production-smoke moet na merges/pushes naar main draaien");
@@ -27,17 +28,26 @@ assert(wereldwijdRunner.includes("const tweede=draai()"),"wereldwijde runner moe
 assert(workflow.includes("node scripts/production-staff-audit-browser.js"),"workflow mist de interactieve staff-auditmonitor");
 assert(workflow.includes("node scripts/production-live-performance-browser.js"),"workflow mist de live Chromium/WebKit-performancemonitor");
 assert(workflow.includes("node scripts/production-mobile-cls-browser.js"),"workflow mist de mobiele CLS-productiemonitor");
+assert(workflow.includes("node scripts/production-final-release-browser.js"),"workflow mist de finale release-evidencebrowser");
 assert(workflow.includes("node scripts/production-sitemap-contract.js"),"workflow mist het exacte live sitemapcontract");
 
 /* Iedere browsermonitor start pas nadat exact dezelfde SHA aantoonbaar live is.
    De CLS-monitor is bewust een eigen job: vijf koude loads mogen niet worden
-   beïnvloed door de zware wereld-/staff-/performancetests op dezelfde runner. */
+   beïnvloed door de zware wereld-/staff-/performance-/release-evidencetests op
+   dezelfde runner. */
 assert(/^  production-contract:/m.test(workflow),"production-smoke mist aparte deployment/API-contractjob");
 assert(/^  wereldwijd-browser:/m.test(workflow),"production-smoke mist aparte wereldwijde browserjob");
 assert(/^  staff-audit-browser:/m.test(workflow),"production-smoke mist aparte staff-audit browserjob");
 assert(/^  live-performance-browser:/m.test(workflow),"production-smoke mist aparte live-performancejob");
 assert(/^  mobile-cls-browser:/m.test(workflow),"production-smoke mist aparte mobiele CLS-job");
-assert.equal((workflow.match(/^    needs: production-contract$/gm)||[]).length,4,"alle vier browserjobs moeten pas na het exacte productiecontract starten");
+assert(/^  final-release-browser:/m.test(workflow),"production-smoke mist aparte finale release-evidencejob");
+assert.equal((workflow.match(/^    needs: production-contract$/gm)||[]).length,5,"alle vijf browserjobs moeten pas na het exacte productiecontract starten");
+assert(finalRelease.includes("final-release-evidence"),"finale releasebrowser moet evidence-artifacts schrijven");
+assert(finalRelease.includes("Kansas City")&&finalRelease.includes("Kathmandu"),"finale releasebrowser mist de twee kritieke trage locaties");
+assert(finalRelease.includes("directWrongCache")&&finalRelease.includes("sameCache"),"finale releasebrowser moet verkeerde en juiste cache afzonderlijk bewijzen");
+assert(finalRelease.includes('[[1920,1080],[390,844]]'),"finale releasebrowser moet 1920- en 390-screenshots maken");
+assert(finalRelease.includes('["licht","donker"]'),"finale releasebrowser moet light en dark mode vastleggen");
+assert(finalRelease.includes('sha:u.sha')&&finalRelease.includes('assets:u.assets'),"finale releasebrowser moet live SHA en assets in het bewijsrapport opnemen");
 
 assert(smoke.includes("AbortSignal.timeout(timeoutMs)"),"production-smoke requests moeten een harde timeout hebben");
 assert(smoke.includes("const maxPogingen=opt.retry===false?1:2"),"production-smoke mag per request maximaal één retry doen");
@@ -99,4 +109,4 @@ assert(cls.includes("Beschikbaarheid wordt apart bewaakt"),"CLS-monitor moet bes
 
 require("./production-source-truth.test.js");
 
-console.log("production-monitoring-config: deploymentcontract, volledige 11-locatiematrix, één gerichte provider-timeoutretry, vier gescheiden browsergates, gecontroleerde Cloudflare Web Analytics, vaste mobiele CLS-vensters en strikt sitemapcontract OK");
+console.log("production-monitoring-config: deploymentcontract, volledige 11-locatiematrix, één gerichte provider-timeoutretry, vijf gescheiden browsergates inclusief finale release-evidence, gecontroleerde Cloudflare Web Analytics, vaste mobiele CLS-vensters en strikt sitemapcontract OK");
