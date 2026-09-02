@@ -1,0 +1,12 @@
+"use strict";
+const assert=require("assert");
+const {uurRijenUitGeo,regenVelden,formatTemp}=require("./final-desktop-ui-runtime-20260902.js");
+const TI=Array.from({length:24},(_,i)=>i<11?`2026-09-02T${String(i+13).padStart(2,"0")}:00`:`2026-09-03T${String(i-11).padStart(2,"0")}:00`);
+const T=TI.map((_,i)=>-8.5+i*.7),A=TI.map((_,i)=>-14.2+i*.55);
+let r=uurRijenUitGeo({TI,T,A},"2026-09-02T13:27",false);
+assert.equal(r.length,24);assert.equal(r[1].marker,"Eerstvolgend");assert.equal(r[11].datumLabel,"do 3 sep");assert.equal(r[0].tijd,"2026-09-02T13:00");assert.equal(formatTemp(-8.5),"-8,5 °C");
+r=uurRijenUitGeo({TI,T,A},"2026-09-02T13:27",true);assert.equal(r.some(x=>x.marker),false,"geselecteerde kalenderdag mag geen misleidende Nu-markering krijgen");
+let v=regenVelden({genoeg:true,kans:87,hoeveelheid:2.36,eersteTijd:"14:15",soort:"regen"},false);
+assert.deepEqual(v.map(x=>x.label),["Huidige status","Verwacht begin rond","Hoogste neerslagkans","Verwachte totale hoeveelheid","Neerslagtype"]);assert.equal(v[3].waarde,"2,4 mm");
+v=regenVelden({genoeg:false,kans:20,hoeveelheid:4.2},false);assert.equal(v.some(x=>x.label.includes("hoeveelheid")),false,"onvoldoende gedekte hoeveelheid mag niet worden getoond");
+console.log("Finale desktop-UI helpers groen: 24 lokale uren, datumovergang, negatieve temperaturen, huidige rij en brongebonden neerslagsamenvatting.");
