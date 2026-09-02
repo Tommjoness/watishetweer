@@ -73,17 +73,21 @@ async function controleer(type,naam){
     await page.goto(`http://127.0.0.1:${server.address().port}/?lat=52.35&lon=5.26&plaats=Browsertest&land=NL`,{waitUntil:"networkidle"});
     await page.waitForSelector("#app",{state:"visible"});
 
-    const basis=await page.evaluate(()=>({
-      trendKop:document.getElementById("prec")?.parentElement?.querySelector(".eyebrow")?.textContent.trim()||"",
-      trendWaarde:document.getElementById("prec")?.textContent.trim()||"",
-      trendSub:document.getElementById("precsub")?.textContent.trim()||"",
-      popDisplay:getComputedStyle(document.getElementById("pop").parentElement).display,
-      popAria:document.getElementById("pop").parentElement.getAttribute("aria-hidden"),
-      gridClass:document.getElementById("pop").parentElement.parentElement.className,
-      neerslagSectieDisplay:getComputedStyle(document.getElementById("nchint").previousElementSibling).display,
-      dag:[...document.querySelectorAll("#days .row.day:not(.kop)")].map(r=>({kans:r.querySelector(".drain")?.childNodes[0]?.textContent?.trim()||"",mm:r.querySelector(".q1-dag-mm")?.textContent.trim()||""})),
-      over:document.documentElement.scrollWidth-window.innerWidth
-    }));
+    const basis=await page.evaluate(()=>{
+      const regenSectie=document.getElementById("wiw-rain-section"),regenSamenvatting=document.getElementById("wiw-rain-summary");
+      return {
+        trendKop:document.getElementById("prec")?.parentElement?.querySelector(".eyebrow")?.textContent.trim()||"",
+        trendWaarde:document.getElementById("prec")?.textContent.trim()||"",
+        trendSub:document.getElementById("precsub")?.textContent.trim()||"",
+        popDisplay:getComputedStyle(document.getElementById("pop").parentElement).display,
+        popAria:document.getElementById("pop").parentElement.getAttribute("aria-hidden"),
+        gridClass:document.getElementById("pop").parentElement.parentElement.className,
+        neerslagSectieDisplay:regenSectie?getComputedStyle(regenSectie).display:"missing",
+        neerslagSamenvatting:regenSamenvatting?regenSamenvatting.textContent.replace(/\s+/g," ").trim():"",
+        dag:[...document.querySelectorAll("#days .row.day:not(.kop)")].map(r=>({kans:r.querySelector(".drain")?.childNodes[0]?.textContent?.trim()||"",mm:r.querySelector(".q1-dag-mm")?.textContent.trim()||""})),
+        over:document.documentElement.scrollWidth-window.innerWidth
+      };
+    });
     const diagnose=await page.evaluate(()=>({
       polishApi:!!window.WeatherNowMobileScreenshotPolish,
       q1Api:!!window.WeatherNowQ1,
@@ -102,7 +106,8 @@ async function controleer(type,naam){
     assert.notEqual(basis.popDisplay,"none",naam+": droge korte termijn bewaart dezelfde negende tegelpositie");
     assert.equal(basis.popAria,"false",naam+": droge tegel blijft toegankelijk");
     assert.doesNotMatch(basis.gridClass,/q1-pop-hidden/,naam+": raster verandert niet meer tussen droge en natte steden");
-    assert.equal(basis.neerslagSectieDisplay,"none",naam+": volledig droge twee-uurssectie dupliceert de briefing niet");
+    assert.notEqual(basis.neerslagSectieDisplay,"none",naam+": finale 65/35-twee-uurssectie blijft ook bij droog weer zichtbaar");
+    assert.match(basis.neerslagSamenvatting,/Huidige status\s*Droog/i,naam+": droge twee-uurssectie toont een eenduidige droge samenvatting");
     assert.equal(basis.dag[0].kans,"65%",naam+": vandaag gebruikt de hoogste kans binnen de resterende lokale daghorizon");
     assert.equal(basis.dag[0].mm,"1,4 mm",naam+": vandaag gebruikt alleen hoeveelheid binnen de resterende lokale daghorizon");
     assert.notEqual(basis.dag[0].mm,"4,8 mm",naam+": verstreken daghoeveelheid mag vandaag niet opnieuw worden teruggeschreven");
@@ -132,9 +137,10 @@ async function controleer(type,naam){
     assert.match(trendKlok.voor,/→\s*11°C$/,naam+": 14:17 lokale tijd kiest echt uurpunt rond 17:17");
     assert.match(trendKlok.na,/→\s*22°C$/,naam+": lokale klokverschuiving kiest nieuw echt uurpunt zonder fetch");
 
-    /* Relevante neerslag maakt dezelfde tegel én de twee-uurssectie weer zichtbaar.
-       De uurvelden zijn onafhankelijke kans/hoeveelheidsbronnen; daarna herstellen
-       we het droge scenario om de rest van de test niet te beïnvloeden. */
+    /* Relevante toekomstige neerslag houdt dezelfde tegel en het finale twee-uurspaneel zichtbaar.
+       De huidige status blijft correct Droog zolang het nu niet regent; de verwachting
+       wordt afzonderlijk zichtbaar via start/kans/hoeveelheid. Daarna herstellen we het
+       droge scenario om de rest van de test niet te beïnvloeden. */
     const popNat=await page.evaluate(()=>{
       const i15=S.d.hourly.time.indexOf("2026-07-22T15:00"),i16=S.d.hourly.time.indexOf("2026-07-22T16:00");
       S.d.hourly.precipitation_probability[i15]=65;S.d.hourly.precipitation[i15]=1.4;
@@ -142,12 +148,15 @@ async function controleer(type,naam){
       meters();nowcast();
       const stat=document.getElementById("pop").parentElement;
       const sleutel=stat.querySelector(".mobile-neerslag-sleutel");
-      const uit={display:getComputedStyle(stat).display,kop:stat.querySelector(".eyebrow").textContent.trim(),waarde:document.getElementById("pop").textContent.trim(),sleutel:sleutel?sleutel.textContent.trim():"",sub:document.getElementById("popsub").textContent.trim(),sectie:getComputedStyle(document.getElementById("nchint").previousElementSibling).display};
+      const sectie=document.getElementById("wiw-rain-section"),samenvatting=document.getElementById("wiw-rain-summary");
+      const uit={display:getComputedStyle(stat).display,kop:stat.querySelector(".eyebrow").textContent.trim(),waarde:document.getElementById("pop").textContent.trim(),sleutel:sleutel?sleutel.textContent.trim():"",sub:document.getElementById("popsub").textContent.trim(),sectie:sectie?getComputedStyle(sectie).display:"missing",samenvatting:samenvatting?samenvatting.textContent.replace(/\s+/g," ").trim():""};
       S.d.hourly.precipitation_probability[i15]=0;S.d.hourly.precipitation[i15]=0;meters();nowcast();
       return uit;
     });
     assert.notEqual(popNat.display,"none",naam+": relevante neerslag toont tegel");
-    assert.notEqual(popNat.sectie,"none",naam+": relevante neerslag toont twee-uurssectie");
+    assert.notEqual(popNat.sectie,"none",naam+": relevante neerslag houdt twee-uurssectie zichtbaar");
+    assert.match(popNat.samenvatting,/Huidige status\s*Droog/i,naam+": toekomstige neerslag verandert de actuele status niet ten onrechte in Neerslag");
+    assert.match(popNat.samenvatting,/Hoogste neerslagkans\s*65%/i,naam+": toekomstige neerslag werkt de twee-uursverwachting bij");
     assert.equal(popNat.kop,"Neerslagverwachting komend uur",naam+": zichtbare tegel benoemt kans en verwacht totaal expliciet");
     assert.equal(popNat.sleutel,"kans · verwacht totaal",naam+": zichtbare tegel legt de twee grootheden expliciet uit");
     assert.match(popNat.waarde,/65%/,naam+": zichtbare tegel behoudt bronkans");
