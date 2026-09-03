@@ -34,8 +34,13 @@ function normaliseerSnellePreview(data){
     tijdzone:typeof d.timezone==="string"?d.timezone:""
   };
 }
-/* Behouden voor bestaande contracttests; nieuwe runtime gebruikt geen preview. */
-function progressievePreviewToegestaan(stil,wissel,dataVoorLoad){return false;}
+/* Historische compatibiliteitspredicate voor de deterministische buildlaag.
+   De runtime hieronder roept deze helper bewust nergens meer aan; daardoor wordt
+   geen current-only previewrequest gestart. De finale releasehardening zet ook
+   deze compatibiliteitspredicate in het geleverde artifact expliciet op false. */
+function progressievePreviewToegestaan(stil,wissel,dataVoorLoad){
+  return !stil&&!!wissel&&!!dataVoorLoad;
+}
 function behoudBestaandeForecast(stil,wissel,dataVoorLoad){return !stil&&!!wissel&&!!dataVoorLoad;}
 
 /* De basisloader vangt netwerkfouten zelf af en retourneert daarom geen aparte
