@@ -82,7 +82,7 @@ ${MARKER}
   footer .bron:first-child{white-space:nowrap!important;max-width:100%!important}
   .seo-plaatsnav{
     margin-top:0!important;
-    padding:7px 0!important;
+    padding:2px 0!important;
     min-height:58px!important;
     border-top:1px solid var(--rule)!important;
     background:var(--sheet)!important;
