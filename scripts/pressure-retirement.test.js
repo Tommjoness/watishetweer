@@ -11,6 +11,7 @@ const bron=`<style>
 </style>
 <main>
 <div class="stat"><div class="eyebrow">Luchtdruk op zeeniveau</div><div class="sval" id="pres">--</div><div class="ssub" id="pressub">&nbsp;</div></div>
+<div id="wiw-pressure-diagnostic" hidden aria-hidden="true"></div>
 </main>
 <script>
 const basis="x&current=temperature_2m,cloud_cover,pressure_msl,wind_speed_10m";
@@ -62,6 +63,7 @@ assert(!/pressure_msl/i.test(uit));
 assert(!/getElementById\(["']pres["']\)/i.test(uit));
 assert(!/getElementById\(["']pressub["']\)/i.test(uit));
 assert(!/\bluchtdruk\b/i.test(uit));
+assert(!/wiw-pressure-diagnostic/i.test(uit));
 assert(!/corrigeerDrukSemantiek|bouwMeetgegevens|herstelVerborgenDruk|wiw-pressure/i.test(uit));
 assert(uit.includes("current=temperature_2m,cloud_cover,wind_speed_10m"));
 assert(uit.includes("hourly=uv_index,is_day"));
@@ -75,6 +77,7 @@ assert(!uit.includes('["pressub","Luchtdruk"]'),"alleen het verweesde mobiele pr
 assert.equal(verifieerPressureRetired(uit),true);
 assert.equal(retirePressure(uit),uit,"pressure-retirement moet op een al schoon artifact idempotent zijn");
 assert.throws(()=>verifieerPressureRetired('<div id="pres"></div>'),/#pres-element/);
+assert.throws(()=>verifieerPressureRetired('<div id="wiw-pressure-diagnostic" hidden></div>'),/pressure diagnostic container/);
 assert.equal(retirePressure('<html><body>Geen pressurefeature</body></html>'),'<html><body>Geen pressurefeature</body></html>');
 
-console.log("Pressure-retirement: tegel, providerquery, basisruntime, late pressure-only owners en mobiel secundair label volledig verwijderd.");
+console.log("Pressure-retirement: tegel, providerquery, basisruntime, late pressure-only owners, mobiel secundair label en diagnostiekcontainer volledig verwijderd.");
