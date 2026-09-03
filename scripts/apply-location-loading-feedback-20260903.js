@@ -76,6 +76,8 @@ const ZOEK_START='  timer=setTimeout(async()=>{\n    try{';
 const ZOEK_START_NIEUW='  timer=setTimeout(async()=>{\n    zoekMeldingToon("Plaatsen zoeken…");\n    try{';
 const ZOEK_SUCCES='      if(generatie!==zoekGeneratie)return;\n      const resultaten=Array.isArray(d.results)?d.results:[];';
 const ZOEK_SUCCES_NIEUW='      if(generatie!==zoekGeneratie)return;\n      zoekMelding.classList.remove("on");zoekMelding.textContent="";\n      const resultaten=Array.isArray(d.results)?d.results:[];';
+const STAMPEL_RESET='  el.className=m>45?"oud":"";';
+const STAMPEL_PRESERVE='  el.classList.toggle("oud",m>45);';
 
 function exactEen(html,zoek,vervang,label){
   const n=html.split(zoek).length-1;
@@ -106,6 +108,7 @@ function pasHtmlToe(html){
   if(html.includes(MARKER))throw new Error("Location-loading feedback staat al in artifact.");
   html=exactEen(html,"</head>",`<style>${STYLE}\n</style>\n</head>`,"Head");
   html=exactEen(html,"/* ---------- ophalen ---------- */",HELPER+"\n/* ---------- ophalen ---------- */","Ophaalsectie");
+  html=exactEen(html,STAMPEL_RESET,STAMPEL_PRESERVE,"Stempel-statebeheer");
   html=exactEen(html,LOAD_START,LOAD_START_NIEUW,"Hardened load-start");
   html=voegLoadFinallyToe(html);
   html=exactEen(html,ZOEK_START,ZOEK_START_NIEUW,"Zoek-start");
@@ -136,4 +139,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER,HARDENED_MARKER,STYLE,HELPER,pasHtmlToe,htmlBestanden,main};
+module.exports={OUT,MARKER,HARDENED_MARKER,STYLE,HELPER,STAMPEL_RESET,STAMPEL_PRESERVE,pasHtmlToe,htmlBestanden,main};
