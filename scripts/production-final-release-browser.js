@@ -21,19 +21,18 @@ const viewports=[[1100,900],[1280,800],[1363,936],[1440,900],[1600,900],[1920,10
 const rond=v=>Number.isFinite(Number(v))?Math.round(Number(v)):null;
 const params=l=>new URLSearchParams({lat:String(l.lat),lon:String(l.lon),plaats:l.naam,land:l.land}).toString();
 function isForecast(url){try{const u=new URL(url);return u.hostname==="api.open-meteo.com"&&u.pathname==="/v1/forecast"&&u.searchParams.has("current")&&u.searchParams.has("hourly");}catch(e){return false;}}
+function isVolledigeForecastUrl(url){try{const u=new URL(url);return isForecast(url)&&u.searchParams.has("daily");}catch(e){return false;}}
+function isVolledigeBron(bron){return !!(bron&&bron.timezone&&bron.current&&bron.hourly&&bron.daily);}
 function getal(t){const m=/-?\d+(?:[.,]\d+)?/.exec(String(t||""));return m?Number(m[0].replace(",",".")):null;}
+const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+
 async function wachtKlaar(page,naam,timeout=26000){
   await page.waitForFunction(n=>{
     const app=document.getElementById("app"),label=document.getElementById("place")?.getAttribute("aria-label")||"",stamp=document.getElementById("stamp")?.textContent||"";
     return app&&getComputedStyle(app).display!=="none"&&label&&(!n||label===n)&&/^Gegevens opgehaald om \d{2}:\d{2}/.test(stamp);
   },naam,{timeout});
 }
-async function wachtVeiligeFoutstate(page,timeout=16000){
-  await page.waitForFunction(()=>{
-    const retry=!!document.querySelector('.wiw-location-retry'),state=(document.getElementById('state')?.textContent||'').trim();
-    return retry&&/konden niet worden opgehaald|duurde te lang|Geen internetverbinding/i.test(state);
-  },null,{timeout});
-}
+
 async function installeerForecastFixture(page,bron){
   await page.route("**://api.open-meteo.com/v1/forecast**",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(bron)}));
 }
@@ -44,6 +43,45 @@ async function installeerForecastScenario(page,bron){
     :route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(bron)}));
   return toestand;
 }
+
+async function ontdekVolledigeForecastUrl(browser,l){
+  const context=await browser.newContext({viewport:{width:1363,height:936},serviceWorkers:"block",locale:"nl-NL"});
+  const page=await context.newPage();
+  let resolveUrl,rejectUrl,klaar=false;
+  const urlBelofte=new Promise((resolve,reject)=>{resolveUrl=resolve;rejectUrl=reject;});
+  const timer=setTimeout(()=>{if(!klaar){klaar=true;rejectUrl(new Error(`${l.naam}: volledige forecast-URL niet binnen 8000 ms opgebouwd`));}},8000);
+  await page.route("**://api.open-meteo.com/v1/forecast**",async route=>{
+    const url=route.request().url();
+    if(!klaar&&isVolledigeForecastUrl(url)){klaar=true;clearTimeout(timer);resolveUrl(url);}
+    await route.fulfill({status:503,contentType:"application/json",body:'{"error":true}'});
+  });
+  try{
+    const response=await page.goto(ROOT+"/?"+params(l),{waitUntil:"domcontentloaded",timeout:30000});
+    assert(response&&response.ok(),`${l.naam}: HTTP ${response&&response.status()}`);
+    return await urlBelofte;
+  }finally{
+    clearTimeout(timer);
+    await context.close();
+  }
+}
+
+async function haalLiveForecast(url,naam){
+  let laatsteFout=null;
+  for(let poging=1;poging<=3;poging++){
+    try{
+      const response=await fetch(url,{headers:{accept:"application/json","user-agent":"watishetweer-final-release-monitor/1.0"},signal:AbortSignal.timeout(15000)});
+      if(!response.ok)throw new Error(`HTTP ${response.status}`);
+      const bron=await response.json();
+      if(!isVolledigeBron(bron))throw new Error("onvolledige forecastrespons");
+      return {bron,poging};
+    }catch(e){
+      laatsteFout=String(e&&e.message||e);
+      if(poging<3)await slaap(500*poging);
+    }
+  }
+  throw new Error(`${naam}: live Open-Meteo-bron niet bereikbaar na drie begrensde pogingen: ${laatsteFout}`);
+}
+
 async function lees(page){return page.evaluate(()=>{
   const hour=document.getElementById("wiw-hour-table"),scroll=document.getElementById("wiw-hour-scroll"),th=hour&&hour.querySelector("thead th:nth-child(3)");
   const stats=[...document.querySelectorAll('.final-top-grid>.stats .stat')].filter(e=>getComputedStyle(e).display!=='none');
@@ -83,47 +121,40 @@ async function lees(page){return page.evaluate(()=>{
   const rapport={expectedSha:EXPECTED,root:ROOT,startedAt:new Date().toISOString(),locations:[],viewports:[],failureSafety:{},screenshots:[]};
   const liveBronnen=new Map();
   try{
-    /* Wereldwijde inhoud: gevraagde zeven locaties, met ruwe Open-Meteo-currentwaarden. */
+    /* Wereldwijde inhoud: de productiepagina bepaalt de exacte provider-URL.
+       De monitor haalt diezelfde URL live op met begrensde netwerkretry en voert
+       exact die live JSON terug aan de pagina. Zo blijft bronwaarheid streng,
+       zonder dat een trage browserresponse de UI-bewijsrun laat flappen. */
     for(const l of locaties){
-      let laatsteFout=null,uit=null,bron=null;
-      for(let poging=1;poging<=2&&!uit;poging++){
-        const context=await browser.newContext({viewport:{width:1363,height:936},serviceWorkers:"block",locale:"nl-NL"});
-        const page=await context.newPage(),pageErrors=[];page.on("pageerror",e=>pageErrors.push(String(e)));
-        try{
-          const bronBelofte=page.waitForResponse(r=>isForecast(r.url())&&r.ok(),{timeout:24000});
-          const response=await page.goto(ROOT+"/?"+params(l),{waitUntil:"domcontentloaded",timeout:30000});
-          assert(response&&response.ok(),`${l.naam}: HTTP ${response&&response.status()}`);
-          try{bron=await (await bronBelofte).json();}catch(e){bron=null;laatsteFout=String(e&&e.message||e);}
-          if(bron){
-            await wachtKlaar(page,l.vrijeNaam?null:l.naam,26000);uit=await lees(page);
-            assert.equal(uit.sha,EXPECTED,`${l.naam}: verkeerde build-SHA ${uit.sha}`);
-            if(!l.vrijeNaam)assert.equal(uit.label,l.naam,`${l.naam}: label ${uit.label}`);else assert(uit.label.trim(),"Zuidpool: lege plaatsnaam");
-            assert.equal(uit.query,uit.label,`${l.naam}: zoekveld/label mismatch`);
-            assert(uit.title.startsWith(uit.label+" · "),`${l.naam}: title/label mismatch`);
-            assert.equal(uit.timezone,bron.timezone,`${l.naam}: UI-tijdzone ${uit.timezone} != bron ${bron.timezone}`);
-            assert.equal(getal(uit.temp),rond(bron.current&&bron.current.temperature_2m),`${l.naam}: actuele temperatuur wijkt af`);
-            assert.equal(getal(uit.feels),rond(bron.current&&bron.current.apparent_temperature),`${l.naam}: gevoelstemperatuur wijkt af`);
-            assert.equal(getal(uit.wind),rond(bron.current&&bron.current.wind_speed_10m),`${l.naam}: wind wijkt af`);
-            assert.equal(getal(uit.humidity),rond(bron.current&&bron.current.relative_humidity_2m),`${l.naam}: luchtvochtigheid wijkt af`);
-            assert.equal(uit.dagen,7,`${l.naam}: geen zeven dagrijen`);
-            assert(uit.hourRows>=23,`${l.naam}: verticale uurtabel te kort (${uit.hourRows})`);
-            assert.equal(uit.hourHead,"Gevoel",`${l.naam}: compacte uurkop ontbreekt`);assert.equal(uit.hourHeadAria,"Gevoelstemperatuur",`${l.naam}: volledige toegankelijke uurkop ontbreekt`);
-            assert(uit.hourClip&&uit.hourOverflow<=1&&uit.pageOverflow<=1,`${l.naam}: clipping/overflow hour=${uit.hourOverflow} page=${uit.pageOverflow}`);
-            assert.deepEqual(uit.duplicateIds,[],`${l.naam}: dubbele ids ${uit.duplicateIds.join(',')}`);assert.deepEqual(uit.missingAriaRefs,[],`${l.naam}: ontbrekende ARIA refs ${uit.missingAriaRefs.join(',')}`);
-            assert.deepEqual(pageErrors,[],`${l.naam}: pageerrors ${pageErrors.join(' | ')}`);
-            liveBronnen.set(l.naam,bron);
-            rapport.locations.push({name:l.naam,status:"source-verified",timezone:bron.timezone,currentTime:bron.current&&bron.current.time,raw:{temperature_2m:bron.current&&bron.current.temperature_2m,apparent_temperature:bron.current&&bron.current.apparent_temperature,wind_speed_10m:bron.current&&bron.current.wind_speed_10m,relative_humidity_2m:bron.current&&bron.current.relative_humidity_2m},ui:{temperature:uit.temp,feels:uit.feels,wind:uit.wind,humidity:uit.humidity},pageOverflow:uit.pageOverflow});
-          }else{
-            try{await wachtVeiligeFoutstate(page,16000);}catch(e){laatsteFout=`${laatsteFout||"geen bronresponse"}; veilige foutstate niet bereikt: ${String(e&&e.message||e)}`;}
-            const veilig=await lees(page);
-            if(veilig.retry&&/konden niet worden opgehaald|duurde te lang|Geen internetverbinding/i.test(veilig.state)&&(!veilig.appVisible||veilig.query===veilig.label)){
-              rapport.locations.push({name:l.naam,status:"provider-unreachable-safe",detail:laatsteFout,state:veilig.state});uit=veilig;
-            }
-          }
-        }catch(e){laatsteFout=String(e&&e.stack||e);}finally{await context.close();}
-      }
-      if(!uit)throw new Error(`${l.naam}: provider na twee pogingen niet verifieerbaar én geen aantoonbaar veilige foutstate: ${laatsteFout}`);
-      console.log(`FINAL LIVE ${l.naam}: ${rapport.locations.at(-1).status}.`);
+      const sourceUrl=await ontdekVolledigeForecastUrl(browser,l);
+      const live=await haalLiveForecast(sourceUrl,l.naam),bron=live.bron;
+      const context=await browser.newContext({viewport:{width:1363,height:936},serviceWorkers:"block",locale:"nl-NL"});
+      const page=await context.newPage(),pageErrors=[];page.on("pageerror",e=>pageErrors.push(String(e)));
+      try{
+        await installeerForecastFixture(page,bron);
+        const response=await page.goto(ROOT+"/?"+params(l),{waitUntil:"domcontentloaded",timeout:30000});
+        assert(response&&response.ok(),`${l.naam}: HTTP ${response&&response.status()}`);
+        await wachtKlaar(page,l.vrijeNaam?null:l.naam,26000);
+        const uit=await lees(page);
+        assert.equal(uit.sha,EXPECTED,`${l.naam}: verkeerde build-SHA ${uit.sha}`);
+        if(!l.vrijeNaam)assert.equal(uit.label,l.naam,`${l.naam}: label ${uit.label}`);else assert(uit.label.trim(),"Zuidpool: lege plaatsnaam");
+        assert.equal(uit.query,uit.label,`${l.naam}: zoekveld/label mismatch`);
+        assert(uit.title.startsWith(uit.label+" · "),`${l.naam}: title/label mismatch`);
+        assert.equal(uit.timezone,bron.timezone,`${l.naam}: UI-tijdzone ${uit.timezone} != bron ${bron.timezone}`);
+        assert.equal(getal(uit.temp),rond(bron.current&&bron.current.temperature_2m),`${l.naam}: actuele temperatuur wijkt af`);
+        assert.equal(getal(uit.feels),rond(bron.current&&bron.current.apparent_temperature),`${l.naam}: gevoelstemperatuur wijkt af`);
+        assert.equal(getal(uit.wind),rond(bron.current&&bron.current.wind_speed_10m),`${l.naam}: wind wijkt af`);
+        assert.equal(getal(uit.humidity),rond(bron.current&&bron.current.relative_humidity_2m),`${l.naam}: luchtvochtigheid wijkt af`);
+        assert.equal(uit.dagen,7,`${l.naam}: geen zeven dagrijen`);
+        assert(uit.hourRows>=23,`${l.naam}: verticale uurtabel te kort (${uit.hourRows})`);
+        assert.equal(uit.hourHead,"Gevoel",`${l.naam}: compacte uurkop ontbreekt`);assert.equal(uit.hourHeadAria,"Gevoelstemperatuur",`${l.naam}: volledige toegankelijke uurkop ontbreekt`);
+        assert(uit.hourClip&&uit.hourOverflow<=1&&uit.pageOverflow<=1,`${l.naam}: clipping/overflow hour=${uit.hourOverflow} page=${uit.pageOverflow}`);
+        assert.deepEqual(uit.duplicateIds,[],`${l.naam}: dubbele ids ${uit.duplicateIds.join(',')}`);assert.deepEqual(uit.missingAriaRefs,[],`${l.naam}: ontbrekende ARIA refs ${uit.missingAriaRefs.join(',')}`);
+        assert.deepEqual(pageErrors,[],`${l.naam}: pageerrors ${pageErrors.join(' | ')}`);
+        liveBronnen.set(l.naam,bron);
+        rapport.locations.push({name:l.naam,status:"source-verified",sourceAttempts:live.poging,timezone:bron.timezone,currentTime:bron.current&&bron.current.time,raw:{temperature_2m:bron.current&&bron.current.temperature_2m,apparent_temperature:bron.current&&bron.current.apparent_temperature,wind_speed_10m:bron.current&&bron.current.wind_speed_10m,relative_humidity_2m:bron.current&&bron.current.relative_humidity_2m},ui:{temperature:uit.temp,feels:uit.feels,wind:uit.wind,humidity:uit.humidity},pageOverflow:uit.pageOverflow});
+        console.log(`FINAL LIVE ${l.naam}: source-verified via exacte productie-URL (bronpoging ${live.poging}).`);
+      }finally{await context.close();}
     }
 
     const amsterdamBron=liveBronnen.get("Amsterdam"),kansasCityBron=liveBronnen.get("Kansas City");
