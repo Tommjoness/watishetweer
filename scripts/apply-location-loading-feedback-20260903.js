@@ -7,17 +7,20 @@ const OUT=path.join(__dirname,"..","public");
 const MARKER="/* ===== LOCATION LOADING FEEDBACK 20260903 ===== */";
 const STYLE=`
 ${MARKER}
-/* De bestaande #stamp-regel doet tijdelijk dienst als laadstatus. Daardoor
-   verschijnt er duidelijke feedback pal onder de zoekbediening zonder een
-   extra rij, layoutshift of breder zoekblok te introduceren. */
+/* De bestaande #stamp-regel doet tijdelijk dienst als laadstatus. De zichtbare
+   indicator komt uit pseudo-elementen, zodat een tussentijdse tekenAlles()-
+   render de laadfeedback niet kan wegschrijven terwijl de volledige forecast
+   nog onderweg is. Er wordt geen extra layoutrij toegevoegd. */
 #stamp.laden{
   display:inline-flex!important;
   align-items:center!important;
   justify-content:flex-end!important;
   gap:7px!important;
-  min-height:18px
+  min-height:18px;
+  font-size:0!important
 }
-#stamp .locatieladen-spinner{
+#stamp.laden::before{
+  content:"";
   width:11px;
   height:11px;
   flex:0 0 11px;
@@ -26,34 +29,43 @@ ${MARKER}
   border-radius:50%;
   animation:wiw-locatie-laden .72s linear infinite
 }
+#stamp.laden::after{
+  content:"Weer ophalen…";
+  font:500 12px/1.3 var(--sans);
+  letter-spacing:.01em;
+  color:var(--ink-45);
+  white-space:nowrap
+}
 @keyframes wiw-locatie-laden{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){
-  #stamp .locatieladen-spinner{animation:none}
+  #stamp.laden::before{animation:none}
 }
 `;
 
 const HELPER=`
 ${MARKER.replace("/*","/* JS")}
-let weatherNowStampVoorLaden=null;
+let weatherNowStampAriaVoorLaden=null,weatherNowStampAtomicVoorLaden=null;
 function weatherNowLocatieLaden(aan){
   const veld=document.getElementById("q"),stamp=document.getElementById("stamp");
   if(veld)veld.setAttribute("aria-busy",aan?"true":"false");
   if(!stamp)return;
   if(aan){
-    if(!stamp.classList.contains("laden"))weatherNowStampVoorLaden=stamp.textContent;
+    if(!stamp.classList.contains("laden")){
+      weatherNowStampAriaVoorLaden=stamp.getAttribute("aria-label");
+      weatherNowStampAtomicVoorLaden=stamp.getAttribute("aria-atomic");
+    }
     stamp.classList.add("laden");
+    stamp.setAttribute("aria-label","Weer ophalen…");
     stamp.setAttribute("aria-atomic","true");
-    stamp.innerHTML='<span class="locatieladen-spinner" aria-hidden="true"></span><span>Weer ophalen…</span>';
     return;
   }
-  if(stamp.classList.contains("laden")){
-    stamp.classList.remove("laden");
-    /* tekenAlles() vervangt de spinner bij succes of geldige cache al door de
-       nieuwe timestamp. Alleen wanneer er helemaal niets kon worden getekend,
-       staat de spinner hier nog en herstellen we de vorige timestamp. */
-    if(stamp.querySelector(".locatieladen-spinner"))stamp.textContent=weatherNowStampVoorLaden||"";
-  }
-  weatherNowStampVoorLaden=null;
+  stamp.classList.remove("laden");
+  if(weatherNowStampAriaVoorLaden===null)stamp.removeAttribute("aria-label");
+  else stamp.setAttribute("aria-label",weatherNowStampAriaVoorLaden);
+  if(weatherNowStampAtomicVoorLaden===null)stamp.removeAttribute("aria-atomic");
+  else stamp.setAttribute("aria-atomic",weatherNowStampAtomicVoorLaden);
+  weatherNowStampAriaVoorLaden=null;
+  weatherNowStampAtomicVoorLaden=null;
 }
 `;
 
