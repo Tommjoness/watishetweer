@@ -14,6 +14,7 @@ const GLOBAL_SEMANTIEK_RE=/\nfunction corrigeerDrukSemantiek\(\)\{[\s\S]*?\n\}\n
 const AUDIT_MEETGEGEVENS_RE=/\nlet drukResizeGebonden=false;\nfunction bouwMeetgegevens\(\)\{[\s\S]*?\n\}\n\nfunction naRender/g;
 const DESKTOP_DRUK_RE=/\nfunction herstelVerborgenDruk\(\)\{[\s\S]*?\n\}\n\nfunction maakUurPaneel/g;
 const MOBILE_SECUNDAIR_DRUK_RE=/\[\s*["']pressub["']\s*,\s*["']Luchtdruk["']\s*\]\s*,?/g;
+const DIAGNOSTIC_RE=/<div id="wiw-pressure-diagnostic"[^>]*><\/div>\s*/g;
 const PRESSURE_CSS_RE=/\s*\.wiw-(?:more-measurements[^\{]*|pressure-meaning)\{[^}]*\}/g;
 const PRESSURE_SIGNAAL_RE=/id="pres"|id="pressub"|pressure_msl|corrigeerDrukSemantiek|bouwMeetgegevens|herstelVerborgenDruk|wiw-pressure|["']pressub["']\s*,\s*["']Luchtdruk["']/i;
 
@@ -29,6 +30,7 @@ function verifieerPressureRetired(html,label="artifact"){
     [/getElementById\(["']pressub["']\)/i,"#pressub-runtime"],
     [/pressure_msl/i,"pressure_msl"],
     [/\bluchtdruk\b/i,"luchtdrukcopy"],
+    [/id="wiw-pressure-diagnostic"/i,"pressure diagnostic container"],
     [/corrigeerDrukSemantiek|bouwMeetgegevens|herstelVerborgenDruk|wiw-pressure/i,"pressure compatibility-runtime"]
   ]){
     if(re.test(bron))throw new Error(label+": pressure-retirement incompleet; "+naam+" staat nog in artifact. Context: "+context(bron,re));
@@ -63,6 +65,9 @@ function retirePressure(html){
   /* De mobiele detail-uitleg blijft bestaan voor vocht, bewolking en zicht;
      alleen het verweesde pressub-item verdwijnt uit de secundaire lijst. */
   bron=bron.replace(MOBILE_SECUNDAIR_DRUK_RE,"");
+  /* De finale desktoplaag liet nog een lege verborgen diagnostiekcontainer achter.
+     Ook die heeft zonder pressurefeature geen eigenaar of functie meer. */
+  bron=bron.replace(DIAGNOSTIC_RE,"");
   bron=bron.replace(PRESSURE_CSS_RE,"");
 
   verifieerPressureRetired(bron,"delivery artifact");
@@ -71,5 +76,5 @@ function retirePressure(html){
 
 module.exports={
   TEGEL_RE,RUNTIME_RE,GLOBAL_SEMANTIEK_RE,AUDIT_MEETGEGEVENS_RE,DESKTOP_DRUK_RE,
-  MOBILE_SECUNDAIR_DRUK_RE,PRESSURE_CSS_RE,PRESSURE_SIGNAAL_RE,retirePressure,verifieerPressureRetired
+  MOBILE_SECUNDAIR_DRUK_RE,DIAGNOSTIC_RE,PRESSURE_CSS_RE,PRESSURE_SIGNAAL_RE,retirePressure,verifieerPressureRetired
 };
