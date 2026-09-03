@@ -78,7 +78,7 @@ assert(wereldwijd.includes('{naam:"desktop",width:1440,height:1000}'),"wereldwij
 assert(wereldwijd.includes('uit.overflow<=1'),"wereldwijde monitor bewaakt horizontale overflow niet");
 assert(wereldwijd.includes('assert.equal(uit.sha,verwacht'),"wereldwijde browsermonitor moet de exacte build-SHA bewaken");
 assert(wereldwijd.includes("verifieerBronwaarheid(bron,uit"),"wereldwijde browsermonitor vergelijkt zichtbare waarden niet met de live bronrespons");
-assert(wereldwijd.includes("isVolledigeForecast(r.url())"),"wereldwijde browsermonitor moet de volledige forecastrespons en niet de current-only preview vergelijken");
+assert(wereldwijd.includes("if(!klaar&&isVolledigeForecast(url))")&&wereldwijd.includes("haalLiveForecast(sourceUrl"),"wereldwijde browsermonitor moet de volledige forecastrespons via de exacte productie-URL live vergelijken en niet de current-only preview");
 assert(wereldwijd.includes('assert.equal(uit.timezone,bron.timezone'),"wereldwijde browsermonitor moet de UI-tijdzone tegen dezelfde providerresponse verifiëren");
 assert(wereldwijd.includes('Luchtdruk op zeeniveau'),"wereldwijde browsermonitor moet de druksoort bewaken");
 assert(wereldwijd.includes('toekomstige Nachtzicht-rij gebruikt verleden tijd'),"wereldwijde browsermonitor moet toekomstige Nachtzicht-copy bewaken");

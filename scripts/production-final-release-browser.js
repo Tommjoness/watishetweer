@@ -27,10 +27,31 @@ function getal(t){const m=/-?\d+(?:[.,]\d+)?/.exec(String(t||""));return m?Numbe
 const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 async function wachtKlaar(page,naam,timeout=26000){
-  await page.waitForFunction(n=>{
-    const app=document.getElementById("app"),label=document.getElementById("place")?.getAttribute("aria-label")||"",stamp=document.getElementById("stamp")?.textContent||"";
-    return app&&getComputedStyle(app).display!=="none"&&label&&(!n||label===n)&&/^Gegevens opgehaald om \d{2}:\d{2}/.test(stamp);
-  },naam,{timeout});
+  try{
+    await page.waitForFunction(n=>{
+      const app=document.getElementById("app"),label=document.getElementById("place")?.getAttribute("aria-label")||"";
+      const d=typeof S!=="undefined"?S.d:null;
+      const bronKlaar=!!(d&&d.current&&Array.isArray(d.hourly?.time)&&d.hourly.time.length>=23&&Array.isArray(d.daily?.time)&&d.daily.time.length>=7);
+      const dagen=document.querySelectorAll("#days .row.day:not(.kop)").length;
+      const uren=document.querySelectorAll("#wiw-hour-table tbody tr").length;
+      return app&&getComputedStyle(app).display!=="none"&&label&&(!n||label===n)&&bronKlaar&&dagen>=7&&uren>=23;
+    },naam,{timeout});
+  }catch(e){
+    const diagnose=await page.evaluate(()=>({
+      label:document.getElementById("place")?.getAttribute("aria-label")||"",
+      query:document.getElementById("q")?.value||"",
+      title:document.title,
+      state:(document.getElementById("state")?.textContent||"").trim(),
+      stamp:(document.getElementById("stamp")?.textContent||"").trim(),
+      appVisible:!!document.getElementById("app")&&getComputedStyle(document.getElementById("app")).display!=="none",
+      hasCurrent:!!(typeof S!=="undefined"&&S.d&&S.d.current),
+      hourlyTimes:typeof S!=="undefined"&&S.d&&Array.isArray(S.d.hourly?.time)?S.d.hourly.time.length:0,
+      dailyTimes:typeof S!=="undefined"&&S.d&&Array.isArray(S.d.daily?.time)?S.d.daily.time.length:0,
+      dayRows:document.querySelectorAll("#days .row.day:not(.kop)").length,
+      hourRows:document.querySelectorAll("#wiw-hour-table tbody tr").length
+    }));
+    throw new Error(`${naam||"vrije locatie"}: volledige weer-UI niet binnen ${timeout} ms gereed: ${JSON.stringify(diagnose)}`);
+  }
 }
 
 async function installeerForecastFixture(page,bron){
