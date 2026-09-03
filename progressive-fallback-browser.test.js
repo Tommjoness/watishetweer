@@ -1,10 +1,11 @@
 "use strict";
 
 /* Foutpaden voor de locatiewisselstatus.
-   Zonder persistente cache blijft de al zichtbare forecast én locatie-identiteit
-   volledig intact. Met cache mag de basisloader zijn expliciet gelabelde fallback
-   tonen. In beide gevallen verschijnt een compacte foutstatus met retry en wordt
-   nooit een current-only preview opgevraagd. */
+   Zonder persistente cache én met een legacy-cache van de vorige locatie blijft
+   de al zichtbare forecast en locatie-identiteit volledig intact. Een cache van
+   Amsterdam mag bij een mislukte New York-aanvraag nooit als New York-fallback
+   worden gebruikt. In beide gevallen verschijnt een compacte foutstatus met
+   retry en wordt nooit een current-only preview opgevraagd. */
 const fs=require("fs"),os=require("os"),path=require("path"),{spawnSync}=require("child_process");
 const {bouw}=require("./data.js");
 
@@ -96,15 +97,19 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
       zet('land',typeof S!=='undefined'&&S.land!=null?S.land:'null');zet('status',statusTekst());
       zet('warning-last',laatsteWarning);zet('preview-count',window.__fallbackFetch.preview);zet('new-full-count',window.__fallbackFetch.newFull);
       if(${cacheBehouden}){
-        let warningBijCache=false,geenStaleLand=false;
+        let warningBijVorige=false,geenStaleLand=false;
         try{
           const warningUrl=new URL(laatsteWarning,'https://watishetweer.test');
           const lat=Number(warningUrl.searchParams.get('lat')),lon=Number(warningUrl.searchParams.get('lon'));
-          warningBijCache=Math.abs(lat-52.368)<0.0015&&Math.abs(lon-4.904)<0.0015;
+          warningBijVorige=Math.abs(lat-52.368)<0.0015&&Math.abs(lon-4.904)<0.0015;
           geenStaleLand=warningUrl.searchParams.get('land')!=='US'&&typeof S!=='undefined'&&S.land==null;
         }catch(_){ }
-        const veilig=foutUi&&zichtbaar&&/laatst opgehaalde gegevens/i.test(stateTekst)
-          &&typeof S!=='undefined'&&S.label==='Amsterdam'&&sTemp===18&&plaats()==='Amsterdam'&&warningBijCache&&geenStaleLand;
+        const o=window.__oudeLocatie||{};
+        const zelfdeCoords=Math.abs(Number(S.lat)-Number(o.lat))<1e-9&&Math.abs(Number(S.lon)-Number(o.lon))<1e-9;
+        const compacteFout=/New York niet geladen/.test(statusTekst())&&/Amsterdam/.test(statusTekst());
+        const stateVerborgen=!!(state&&getComputedStyle(state).display==='none');
+        const veilig=foutUi&&compacteFout&&zichtbaar&&stateVerborgen&&zelfdeCoords
+          &&typeof S!=='undefined'&&S.label==='Amsterdam'&&sTemp===18&&plaats()==='Amsterdam'&&warningBijVorige&&geenStaleLand;
         zet('result',veilig?'ok':'fout');
       }else{
         const o=window.__oudeLocatie||{};
@@ -138,4 +143,4 @@ function eis(dom,label){
 
 eis(draai(false),"zonder cache");
 eis(draai(true),"met legacy-cache zonder land");
-console.log("Progressive fallback browser: bestaande forecast blijft bij fout intact, cachefallback blijft correct gelabeld, compacte retry-status zichtbaar en geen previewrequest.");
+console.log("Progressive fallback browser: vorige forecast blijft bij fout intact, mismatched legacy-cache wordt niet als doellocatie gebruikt, compacte retry-status zichtbaar en geen previewrequest.");
