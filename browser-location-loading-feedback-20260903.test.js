@@ -66,6 +66,13 @@ const reporter=`<script>
   const zet=(k,v)=>document.body.setAttribute('data-'+k,String(v));
   const status=()=>document.getElementById('stamp');
   const q=()=>document.getElementById('q');
+  const laadZichtbaar=s=>{
+    if(!s||!s.classList.contains('laden'))return false;
+    const voor=getComputedStyle(s,'::before'),na=getComputedStyle(s,'::after');
+    return /Weer ophalen/.test(na.content||'')
+      &&voor.content!==''&&voor.content!=='none'
+      &&s.getAttribute('aria-label')==='Weer ophalen…';
+  };
   setTimeout(()=>{
     try{
       const veld=q();veld.value='New';veld.dispatchEvent(new Event('input',{bubbles:true}));
@@ -87,16 +94,16 @@ const reporter=`<script>
   setTimeout(()=>{
     try{
       const s=status(),veld=q();
-      const ok=s&&s.classList.contains('laden')&&s.querySelector('.locatieladen-spinner')
-        &&/Weer ophalen/.test(s.textContent)&&veld.getAttribute('aria-busy')==='true';
+      const ok=laadZichtbaar(s)&&veld.getAttribute('aria-busy')==='true';
       zet('forecast',ok?'ok':'fout');
     }catch(e){zet('forecast','exception:'+e.message);}
   },1250);
   setTimeout(()=>{
     try{
       const s=status(),veld=q(),plaats=document.getElementById('place');
-      const ok=s&&!s.classList.contains('laden')&&!s.querySelector('.locatieladen-spinner')
-        &&!/Weer ophalen/.test(s.textContent)&&veld.getAttribute('aria-busy')==='false'
+      const ok=s&&!s.classList.contains('laden')
+        &&s.getAttribute('aria-label')!=='Weer ophalen…'
+        &&veld.getAttribute('aria-busy')==='false'
         &&/New York/.test((plaats||{}).textContent||'');
       zet('klaar',ok?'ok':'fout');
       load(51.5074,-0.1278,'Londen',false,true,'GB');
@@ -106,14 +113,15 @@ const reporter=`<script>
   setTimeout(()=>{
     try{
       const s=status(),veld=q();
-      const ok=s&&s.classList.contains('laden')&&/Weer ophalen/.test(s.textContent)&&veld.getAttribute('aria-busy')==='true';
+      const ok=laadZichtbaar(s)&&veld.getAttribute('aria-busy')==='true';
       zet('race-pending',ok?'ok':'fout');
     }catch(e){zet('race-pending','exception:'+e.message);}
   },2500);
   setTimeout(()=>{
     try{
       const s=status(),veld=q(),plaats=document.getElementById('place');
-      const ok=s&&!s.classList.contains('laden')&&!s.querySelector('.locatieladen-spinner')
+      const ok=s&&!s.classList.contains('laden')
+        &&s.getAttribute('aria-label')!=='Weer ophalen…'
         &&veld.getAttribute('aria-busy')==='false'&&/Tokio/.test((plaats||{}).textContent||'');
       zet('race-klaar',ok?'ok':'fout');
     }catch(e){zet('race-klaar','exception:'+e.message);}
@@ -132,5 +140,5 @@ try{
   for(const k of ["geocoder","forecast","klaar","race-pending","race-klaar"]){
     if(waarde(k)!=="ok")throw new Error(`Location-loading browsercheck ${k}: ${waarde(k)||"ontbreekt"}`);
   }
-  console.log("Location-loading browser: Plaatsen zoeken, zichtbare forecastspinner, aria-busy, cleanup en latest-wins race zijn groen op 390px.");
+  console.log("Location-loading browser: Plaatsen zoeken, preview-veilige forecastspinner, aria-busy, cleanup en latest-wins race zijn groen op 390px.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
