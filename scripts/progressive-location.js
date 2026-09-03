@@ -35,7 +35,7 @@ function normaliseerSnellePreview(data){
   };
 }
 /* Behouden voor bestaande contracttests; nieuwe runtime gebruikt geen preview. */
-function progressievePreviewToegestaan(){return false;}
+function progressievePreviewToegestaan(stil,wissel,dataVoorLoad){return false;}
 function behoudBestaandeForecast(stil,wissel,dataVoorLoad){return !stil&&!!wissel&&!!dataVoorLoad;}
 
 /* De basisloader vangt netwerkfouten zelf af en retourneert daarom geen aparte
