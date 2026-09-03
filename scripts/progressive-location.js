@@ -193,7 +193,14 @@ load=async function(lat,lon,label,stil,opslaan,land){
         onthoudStabieleLocatie();
         if(zichtbareActie){statusWis();busy(false);}
       }else{
-        let foutTekst="Weer voor "+labelVan(label,"deze locatie")+" kon niet worden opgehaald.";
+        const basisState=document.getElementById("state");
+        /* Zonder bestaande forecast blijft de specifieke fout van de basisloader
+           waardevol (bijvoorbeeld de timeoutmelding). Neem die over in de compacte
+           status vóór #state wordt leeggemaakt, zodat er één fout-owner blijft
+           zonder de oorzaak te reduceren tot een generieke netwerkfout. */
+        const basisFoutTekst=!S.d&&basisState&&basisState.classList.contains("err")
+          ?String(basisState.textContent||"").trim():"";
+        let foutTekst=basisFoutTekst||"Weer voor "+labelVan(label,"deze locatie")+" kon niet worden opgehaald.";
 
         if(eindstate==="oude-data-op-doel"&&vorige){
           /* Ongeharde basisloader: targetcoördinaten zijn al gestaged, maar de
