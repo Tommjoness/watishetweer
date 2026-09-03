@@ -10,13 +10,10 @@ const STYLE=`
 ${MARKER}
 /* Laatste visuele polish: gecentreerde meetwaarden, rustige scrollbars en een
    optisch uitgebalanceerd Nachtzicht-raster. Dezelfde eindlaag bewaakt nu ook
-   mobiele scroll-UX, safe areas, headerhiërarchie en toegankelijk rood contrast. */
+   mobiele scroll-UX, safe areas en een rustigere headerhiërarchie. */
 .final-top-grid>.stats .stat .sval{justify-content:center!important;align-items:baseline!important;margin-left:auto!important;margin-right:auto!important}
 
-/* Rood thema: alle teksttokens halen minimaal WCAG AA op de rode sheet/paper. */
-html[data-thema="rood"]{--ink:#F27667;--ink-70:#E46355;--ink-45:#CF5A4D;--ink-25:#C65549;--rule:#5C251F;--rule-soft:#311512;--teal:#F27667;--carmine:#FF8375}
-
-/* Zoek + locatie blijven primaire taken; handmatig verversen en thema zijn secundair. */
+/* Zoek + locatie blijven primaire taken; handmatig verversen en weergave zijn secundair. */
 .tools #here{color:var(--ink);border-color:var(--ink);font-weight:600}
 .tools #ververs,.tools #thema{color:var(--ink-45);opacity:.72;font-size:9.5px;letter-spacing:.1em}
 .tools #ververs:hover,.tools #ververs:focus-visible,.tools #thema:hover,.tools #thema:focus-visible{color:var(--ink);opacity:1}
@@ -87,7 +84,8 @@ function synchroniseerUren(){
     const heeftMeer=rijen.length>8;
     rijen.forEach(function(rij,i){rij.classList.toggle("wiw-hour-mobile-hidden",heeftMeer&&!urenUitgeklapt&&i>=8);});
     knop.hidden=!heeftMeer;knop.setAttribute("aria-expanded",urenUitgeklapt?"true":"false");
-    knop.textContent=urenUitgeklapt?"Minder uren tonen":"Alle uren bekijken";
+    const label=urenUitgeklapt?"Minder uren tonen":"Alle uren bekijken";
+    if(knop.textContent!==label)knop.textContent=label;
   }else{
     rijen.forEach(function(rij){rij.classList.remove("wiw-hour-mobile-hidden");});
     knop.hidden=true;knop.setAttribute("aria-expanded","false");
@@ -148,7 +146,7 @@ function main(){
   for(const p of htmlBestanden(OUT))if(pasToe(p))n++;
   if(!n)throw new Error("Geen finale weerartifacts gevonden voor visual polish.");
   const cache=vernieuwServiceworkerCache(OUT,"final-visual-polish-20260903");
-  console.log(`Final visual polish toegepast op ${n} weerpagina's: mobiele urenpreview, safe areas, rood contrast, headerhiërarchie en Nachtzicht-semantiek geborgd; cache ${cache}.`);
+  console.log(`Final visual polish toegepast op ${n} weerpagina's: mobiele urenpreview, safe areas, headerhiërarchie en Nachtzicht-semantiek geborgd; cache ${cache}.`);
 }
 
 if(require.main===module)main();
