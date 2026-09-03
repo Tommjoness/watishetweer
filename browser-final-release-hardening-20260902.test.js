@@ -145,7 +145,8 @@ draaiScenario("offline herstelt vorige locatie",`
   ls.set(KEY_D,null);
   if(!await laadGoed('Amsterdam',52.3676,4.9041,0,'NL'))throw new Error('Amsterdam start faalde');
   q.value='Kathmandu';plan('provider-error',0);window.__wiwOffline=true;await load(27.7172,85.3240,'Kathmandu',false,true,'NP');await slaap(40);
-  zet('result',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Geen internetverbinding/.test(statusTekst())&&/Kathmandu/.test(statusTekst())?'ok':'fout');
+  const tekst=statusTekst();
+  zet('result',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Kathmandu/.test(tekst)&&/Amsterdam/.test(tekst)&&/niet geladen|blijven staan/i.test(tekst)&&retryAanwezig()?'ok':'fout');
 `);
 
 draaiScenario("passende cache wordt gebruikt",`
