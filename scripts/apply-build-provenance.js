@@ -4,7 +4,6 @@ const fs=require("fs");
 const path=require("path");
 const {LOCATIES}=require("./seo-locations.config.js");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
-const {retirePressure}=require("./pressure-retirement.js");
 
 const OUT=path.join(__dirname,"..","public");
 const META_RE=/<meta name="weather-build-sha" content="[^"]+">/g;
@@ -35,11 +34,10 @@ function main(){
   const sha=bepaalSha();
   for(const p of htmlPaden()){
     if(!fs.existsSync(p))throw new Error("Build-provenance mist HTML-artifact: "+p);
-    const schoon=retirePressure(fs.readFileSync(p,"utf8"));
-    fs.writeFileSync(p,stampHtml(schoon,sha),"utf8");
+    fs.writeFileSync(p,stampHtml(fs.readFileSync(p,"utf8"),sha),"utf8");
   }
-  const cache=vernieuwServiceworkerCache(OUT,"build-provenance-pressure-retired");
-  console.log(`Build-provenance en pressure-retirement toegepast op ${htmlPaden().length} HTML-artifacts: ${sha}; cache ${cache}.`);
+  const cache=vernieuwServiceworkerCache(OUT,"build-provenance");
+  console.log(`Build-provenance toegepast op ${htmlPaden().length} HTML-artifacts: ${sha}; cache ${cache}.`);
 }
 if(require.main===module)main();
 module.exports={bepaalSha,stampHtml,htmlPaden};
