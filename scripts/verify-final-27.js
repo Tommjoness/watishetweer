@@ -68,8 +68,9 @@ verboden('font-feature-settings:"tnum" 1,"zero" 1',"oude OpenType slashed-zero f
 verboden("tabular-nums slashed-zero","oude slashed-zero fontvariant");
 
 /* Finale copy-architectuur: zichtbare microcopy komt uit inhoudelijke owners.
-   Luchtdruk-, windstoot-, zonuren-, zeven-dagen- en briefingcopy zijn al in de
-   base-build definitief; UI-polish mag die domeinen niet opnieuw wrappen. De
+   Windstoot-, zonuren-, zeven-dagen- en briefingcopy zijn al in de base-build
+   definitief; UI-polish mag die domeinen niet opnieuw wrappen. Luchtdruk is in de
+   deliverylaag volledig retired en wordt hieronder juist als afwezig geborgd. De
    latere neerslag-presentatie mag briefing() wel afzonderlijk synchroniseren,
    want die bezit een ander domein: actuele/model-neerslagwaarheid. */
 for(const tekst of [
@@ -79,10 +80,15 @@ for(const tekst of [
   '<div class="bar">Bereik</div>','<div class="drain">Neerslag</div>',
   "Het verwachte maximum ligt vandaag rond ","Het verwachte maximum ligt morgen rond ",
   "Het verwachte maximum lag vandaag rond ","Het verwachte maximum voor morgen is ",
-  "De komende twee uur wordt er geen neerslag verwacht.",
-  "De luchtdruk is in de afgelopen drie uur licht ",
-  "De luchtdruk is in de afgelopen drie uur "
+  "De komende twee uur wordt er geen neerslag verwacht."
 ])vereist(tekst,"copy-eigenaar "+tekst);
+for(const [tekst,naam] of [
+  ["pressure_msl","pressure-providerparameter/runtime"],
+  ['id="pres"',"drukwaarde-element"],
+  ['id="pressub"',"druksubtekst-element"],
+  ["wiw-pressure-diagnostic","drukdiagnostiekcontainer"],
+  ["Luchtdruk","luchtdrukcopy"]
+])verboden(tekst,naam);
 verboden("uiWindstootTekst","late UI-polish windstootcopy-owner");
 verboden("const uiBasisMeters=meters;","late UI-polish meters-wrapper");
 verboden("uiLuchtdrukTekst","late UI-polish luchtdrukcopy-owner");
