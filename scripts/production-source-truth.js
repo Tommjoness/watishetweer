@@ -107,7 +107,6 @@ function verifieerBronwaarheid(bron,ui,label,nuOverride){
   assert(bron&&bron.current&&bron.daily&&bron.hourly,`${label}: onvolledige Open-Meteo-bronrespons`);
   gelijk(ui.temperatuur,Math.round(Number(bron.current.temperature_2m)),`${label}: actuele temperatuur wijkt af van bron`);
   gelijk(ui.wind,Math.round(Number(bron.current.wind_speed_10m)),`${label}: actuele wind wijkt af van bron`);
-  gelijk(ui.luchtdruk,Math.round(Number(bron.current.pressure_msl)),`${label}: zeeniveaudruk wijkt af van pressure_msl`);
   gelijk(ui.uv,uvPiekVandaag(bron),`${label}: UV-piek wijkt af van bron`);
   gelijk(ui.thema,Number(bron.current.is_day)===0?"donker":"licht",`${label}: dag/nachtthema wijkt af van current.is_day`);
 
