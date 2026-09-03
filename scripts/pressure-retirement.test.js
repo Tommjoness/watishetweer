@@ -58,6 +58,7 @@ const SECUNDAIR=[
 function meetdetailUitleg(){return SECUNDAIR.map(x=>x[1]).join(", ");}
 </script>`;
 
+// De browser-consumer-polish suite borgt hetzelfde retirementcontract in Chromium en WebKit.
 const uit=retirePressure(bron);
 assert(!/pressure_msl/i.test(uit));
 assert(!/getElementById\(["']pres["']\)/i.test(uit));
