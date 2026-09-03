@@ -30,6 +30,10 @@ function isVolledigeForecast(url){
     return u.hostname==="api.open-meteo.com"&&u.pathname==="/v1/forecast"&&u.searchParams.get("forecast_hours")==="170"&&u.searchParams.get("past_hours")==="24"&&u.searchParams.has("hourly")&&u.searchParams.has("daily");
   }catch(e){return false;}
 }
+function verifieerGeenPressureQuery(url,naam){
+  const u=new URL(url),velden=[u.searchParams.get("current")||"",u.searchParams.get("hourly")||""];
+  assert(!velden.some(v=>v.split(",").includes("pressure_msl")),`${naam}: retired pressure_msl staat nog in productiequery ${url}`);
+}
 function isVolledigeBron(bron){return !!(bron&&bron.timezone&&bron.current&&bron.hourly&&bron.daily);}
 const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const query=locatie=>new URLSearchParams({lat:String(locatie.lat),lon:String(locatie.lon),plaats:locatie.naam,land:locatie.land});
@@ -108,9 +112,10 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
     const liveBronnen=new Map();
     for(const locatie of locaties){
       const sourceUrl=await ontdekVolledigeForecastUrl(browser,locatie);
+      verifieerGeenPressureQuery(sourceUrl,locatie.naam);
       const live=await haalLiveForecast(sourceUrl,locatie.naam);
       liveBronnen.set(locatie.naam,live.bron);
-      console.log(`BRON LIVE ${locatie.naam}: exacte productie-URL opgehaald (poging ${live.poging}).`);
+      console.log(`BRON LIVE ${locatie.naam}: exacte pressure-vrije productie-URL opgehaald (poging ${live.poging}).`);
     }
 
     for(const scherm of schermen){
@@ -149,13 +154,12 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
           bronLinks:[...document.querySelectorAll('a[href*="open-meteo"],a[href*="knmi"]')].length,
           temperatuur:Number((document.getElementById("t")?.textContent||"").replace(",",".")),
           wind:(document.getElementById("wind")?.textContent||""),
-          luchtdruk:document.getElementById("pres")?.textContent||"",
           uv:Number((document.getElementById("uv")?.textContent||"").replace(",",".")),
           thema:document.documentElement.getAttribute("data-thema")||"",
           klok:document.getElementById("plaatstijd")?.textContent||"",
           actueleLokaleTijd:typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():"",
           zon:document.getElementById("suntimes")?.textContent||"",
-          drukLabel:[...document.querySelectorAll(".eyebrow")].find(e=>(e.textContent||"").includes("Luchtdruk"))?.textContent?.trim()||"",
+          pressureRest:!!document.getElementById("pres")||!!document.getElementById("pressub")||/luchtdruk/i.test(document.body.textContent||""),
           appTekst:document.getElementById("app")?.textContent||"",
           rijen:[...document.querySelectorAll("#days .row.day:not(.kop)")].map(rij=>{
             const hoofd=rij.querySelector(".drain")?.cloneNode(true),small=hoofd?.querySelector("small");
@@ -169,7 +173,7 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
             };
           })
         }));
-        uit.wind=zichtbaarGetal(uit.wind);uit.luchtdruk=zichtbaarGetal(uit.luchtdruk);uit.uv=Number.isFinite(uit.uv)?uit.uv:null;
+        uit.wind=zichtbaarGetal(uit.wind);uit.uv=Number.isFinite(uit.uv)?uit.uv:null;
         uit.rijen=uit.rijen.map(r=>({...r,min:zichtbaarGetal(r.min),max:zichtbaarGetal(r.max),wind:zichtbaarGetal(r.wind)}));
         assert.equal(uit.sha,verwacht,`${scherm.naam}/${locatie.naam}: verkeerde build ${uit.sha}`);
         if(locatie.plaatsnaamVrij)assert(String(uit.label||"").trim(),`${scherm.naam}/${locatie.naam}: opgeloste plaatsidentiteit is leeg`);
@@ -186,7 +190,7 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
         assert(uit.overflow<=1,`${scherm.naam}/${locatie.naam}: ${uit.overflow}px horizontale overflow`);
         assert(uit.titel.startsWith(uit.label+" · "),`${scherm.naam}/${locatie.naam}: titel en opgeloste plaats verschillen (${uit.titel} / ${uit.label})`);
         assert(uit.bronLinks>=1,`${scherm.naam}/${locatie.naam}: bronvermelding ontbreekt`);
-        assert.equal(uit.drukLabel,"Luchtdruk op zeeniveau",`${scherm.naam}/${locatie.naam}: druksoort is niet ondubbelzinnig gelabeld`);
+        assert.equal(uit.pressureRest,false,`${scherm.naam}/${locatie.naam}: retired luchtdruk staat nog in DOM/copy`);
         if(/(?:^|[^\d])-?1\s+graden\b/i.test(uit.appTekst)){
           const diagnose=await page.evaluate(()=>{
             const app=document.getElementById("app"),hits=[];
@@ -204,17 +208,17 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
         for(const [i,r] of uit.rijen.entries())assert(String(r.neerslagHoofd||r.neerslagHoeveelheid||r.neerslagAria).trim(),`${scherm.naam}/${locatie.naam}: dagrij ${i+1} heeft leeg neerslagveld`);
         /* De providerresponse blijft exact zoals live ontvangen. Alleen de horizon
            voor de resterende huidige dag volgt dezelfde actuele lokale klok
-           als de pagina; temperatuur, wind, pressure_msl, UV, thema en bronvelden
-           blijven rechtstreeks tegen die ongewijzigde live response gecontroleerd. */
+           als de pagina; temperatuur, wind, UV, thema en bronvelden blijven
+           rechtstreeks tegen die ongewijzigde live response gecontroleerd. */
         const bronUit=verifieerBronwaarheid(bron,uit,`${scherm.naam}/${locatie.naam}`,uit.actueleLokaleTijd);
         const klokVerwacht=new Intl.DateTimeFormat("nl-NL",{timeZone:bron.timezone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());
         assert(klokVerschil(uit.klok,klokVerwacht)<=1,`${scherm.naam}/${locatie.naam}: lokale klok ${uit.klok} wijkt af van ${bron.timezone} (${klokVerwacht})`);
         assert.deepEqual(pageErrors,[],`${scherm.naam}/${locatie.naam}: pageerrors ${pageErrors.join(" | ")}`);
-        console.log(`BRONWAARHEID OK ${scherm.naam.padEnd(7)} ${locatie.naam}: temperatuur, wind, pressure_msl, UV, druksoort, neerslagvelden, Nachtzicht-tijdsvorm, lokale tijd, zon en ${bronUit.dagen} dagrijen; overflow ${uit.overflow}px.`);
+        console.log(`BRONWAARHEID OK ${scherm.naam.padEnd(7)} ${locatie.naam}: temperatuur, wind, UV, pressure-retirement, neerslagvelden, Nachtzicht-tijdsvorm, lokale tijd, zon en ${bronUit.dagen} dagrijen; overflow ${uit.overflow}px.`);
         await page.close();
       }
       await context.close();
     }
-    console.log(`PRODUCTIE-BROWSERMONITOR GESLAAGD: ${verwacht}; ${locaties.length} locaties × mobiel/desktop met live bronvergelijking.`);
+    console.log(`PRODUCTIE-BROWSERMONITOR GESLAAGD: ${verwacht}; ${locaties.length} locaties × mobiel/desktop met live bronvergelijking en pressure-retirement.`);
   }finally{await browser.close();}
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
