@@ -96,10 +96,15 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
   setTimeout(()=>{
     try{
       const state=document.getElementById('state'),tekst=(state&&state.textContent||'').trim();
+      const locatieStatus=document.getElementById('locatie-laadstatus');
+      const statusTekst=(locatieStatus&&locatieStatus.querySelector('.locatie-status-tekst')&&locatieStatus.querySelector('.locatie-status-tekst').textContent||'').trim();
+      const retry=locatieStatus&&locatieStatus.querySelector('.locatie-status-retry');
       const temp=typeof S!=='undefined'&&S.d&&S.d.current?Math.round(Number(S.d.current.temperature_2m)):null;
       zet('temp',temp);
       zet('label',typeof S!=='undefined'?S.label:'');
       zet('state',tekst);
+      zet('status',statusTekst);
+      zet('retry',!!(retry&&!retry.hidden));
       zet('full',window.__hedge.full);
       zet('fallback',window.__hedge.fallback);
       zet('old-fallback',window.__hedge.oldFallback);
@@ -125,11 +130,15 @@ function waarde(dom,veld){const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom
 
 for(const geval of gevallen){
   const dom=draai(geval),v=geval.verwacht;
-  const info=()=>`temp=${waarde(dom,'temp')} label=${waarde(dom,'label')} state=${waarde(dom,'state')} full=${waarde(dom,'full')} fallback=${waarde(dom,'fallback')} oldFallback=${waarde(dom,'old-fallback')} newFallback=${waarde(dom,'new-fallback')} fallbackStart=${waarde(dom,'fallback-start')} reportError=${waarde(dom,'report-error')} switchError=${waarde(dom,'switch-error')}`;
+  const info=()=>`temp=${waarde(dom,'temp')} label=${waarde(dom,'label')} state=${waarde(dom,'state')} status=${waarde(dom,'status')} retry=${waarde(dom,'retry')} full=${waarde(dom,'full')} fallback=${waarde(dom,'fallback')} oldFallback=${waarde(dom,'old-fallback')} newFallback=${waarde(dom,'new-fallback')} fallbackStart=${waarde(dom,'fallback-start')} reportError=${waarde(dom,'report-error')} switchError=${waarde(dom,'switch-error')}`;
   if(waarde(dom,'report-error'))throw new Error(geval.naam+": reporter faalde: "+info());
   if(v.temp!=null&&Number(waarde(dom,'temp'))!==v.temp)throw new Error(geval.naam+": verkeerde forecast won: "+info());
   if(v.label&&waarde(dom,'label')!==v.label)throw new Error(geval.naam+": verkeerde locatie-identiteit: "+info());
-  if(v.error&&waarde(dom,'state')!==v.error)throw new Error(geval.naam+": verwachte fouttoestand ontbreekt: "+info());
+  if(v.error){
+    if(waarde(dom,'status')!==v.error)throw new Error(geval.naam+": specifieke fouttoestand ontbreekt in compacte status: "+info());
+    if(waarde(dom,'retry')!=="true")throw new Error(geval.naam+": retry ontbreekt bij compacte fouttoestand: "+info());
+    if(waarde(dom,'state'))throw new Error(geval.naam+": dubbele fout-owner bleef zichtbaar: "+info());
+  }
   if(Number(waarde(dom,'fallback'))!==v.fallback)throw new Error(geval.naam+": onverwacht fallbackaantal: "+info());
   const start=Number(waarde(dom,'fallback-start'));
   if(v.minFallbackStart!=null&&!(start>=v.minFallbackStart))throw new Error(geval.naam+": fallback te vroeg gestart: "+info());
@@ -139,4 +148,4 @@ for(const geval of gevallen){
   console.log(geval.naam+": OK — "+info());
 }
 
-console.log("Weather fallback hedge browser: snelle loads blijven enkelvoudig, trage full krijgt na 5 s een fallback, eerste succes wint, dubbele hang eindigt vóór 20 s en stale loads starten geen oude fallback.");
+console.log("Weather fallback hedge browser: snelle loads blijven enkelvoudig, trage full krijgt na 5 s een fallback, eerste succes wint, dubbele hang eindigt vóór 20 s met één specifieke compacte retry-status en stale loads starten geen oude fallback.");
