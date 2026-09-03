@@ -96,7 +96,7 @@ function voegLoadFinallyToe(html){
   const sluitPos=segment.lastIndexOf("\n  }");
   if(sluitPos<0)throw new Error("Catch-sluitbrace ontbreekt voor location-loading cleanup.");
   const absoluut=catchPos+sluitPos;
-  const invoeg='\n  }finally{\n    /* Een oude, ingehaalde aanvraag mag de indicator van de nieuwste locatie\n       nooit uitzetten. Refreshes met stil=true houden hun bestaande knopstatus. */\n    if(!stil&&mijnBeurt===laadTeller)weatherNowLocatieLaden(false);';
+  const invoeg='\n  }finally{\n    /* Een oude, ingehaalde aanvraag mag de indicator van de nieuwste locatie\n       nooit uitzetten. Refreshes met stil=true houden hun bestaande knopstatus. */\n    if(!stil&&mijnBeurt===laadTeller)weatherNowLocatieLaden(false);\n  }';
   return html.slice(0,absoluut)+invoeg+html.slice(absoluut+4);
 }
 
