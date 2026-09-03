@@ -35,7 +35,6 @@ d.current.cloud_cover = 20;
 d.current.wind_speed_10m = 1;
 d.current.wind_direction_10m = 67.5;
 d.current.wind_gusts_10m = 9;
-d.current.pressure_msl = 1013;
 d.current.visibility = 16000;
 d.elevation = 3;
 d.latitude = 52.35;
@@ -44,13 +43,8 @@ d.daily.sunshine_duration = d.daily.time.map(() => 11.5 * 3600);
 d.daily.sunset = d.daily.time.map(t => t + "T21:30");
 d.daily.sunrise = d.daily.time.map(t => t + "T06:13");
 
-// Druk 0,4 hPa hoger dan circa drie uur geleden: dit hoort als 'Vrijwel stabiel'
-// te lezen, niet als een betekenisvolle numerieke daling/stijging.
 for (let i = 0; i < d.hourly.time.length; i++) {
   const uur = d.hourly.time[i].slice(11, 13);
-  if (d.hourly.time[i].slice(0, 10) === "2026-07-22" && (uur === "18" || uur === "19")) {
-    d.hourly.pressure_msl[i] = 1012.6;
-  }
   // 5,9 wordt zichtbaar 6. De zichtbare categorie moet daarom óók die 6 volgen:
   // UV 6 is hoog, niet het verborgen-decimaal-oordeel 'matig'.
   if (d.hourly.time[i].slice(0, 10) === "2026-07-22" && uur === "15") {
@@ -203,7 +197,7 @@ async function controleer(page, naam, modus) {
       uvKop: uv ? uv.parentElement.querySelector(".eyebrow").textContent.trim() : "",
       uvWaarde: uv ? uv.textContent.trim() : "",
       uvSub: (document.getElementById("uvsub") || {}).textContent || "",
-      drukSub: (document.getElementById("pressub") || {}).textContent || "",
+      pressureRetired: !document.getElementById("pres") && !document.getElementById("pressub") && !document.getElementById("wiw-pressure-diagnostic") && !/\bLuchtdruk\b/i.test(document.body.innerText || ""),
       trendKop: trendStat ? trendStat.querySelector(".eyebrow").textContent.trim() : "",
       trend: prec ? prec.textContent.trim() : "",
       trendSub: (document.getElementById("precsub") || {}).textContent || "",
@@ -249,7 +243,7 @@ async function controleer(page, naam, modus) {
   assert.equal(resultaat.uvKop, "UV-piek vandaag", `${naam} ${modus}: UV is expliciet dagpiek`);
   assert.equal(resultaat.uvWaarde, "6", `${naam} ${modus}: UV-piek is consumentgericht afgerond`);
   assert.equal(resultaat.uvSub, "Verwachte UV-piek lag rond 15:00 · hoog.", `${naam} ${modus}: verstreken UV-piek blijft expliciet modelverwachting en volgt dezelfde afgeronde grens`);
-  assert.equal(resultaat.drukSub, "Vrijwel stabiel.", `${naam} ${modus}: minieme luchtdrukverandering zonder schijnprecisie`);
+  assert.equal(resultaat.pressureRetired, true, `${naam} ${modus}: luchtdrukfeature is volledig uit de finale consumenten-UI verwijderd`);
   assert.equal(resultaat.trendKop, "Temperatuur komende 3 uur", `${naam} ${modus}: trendhorizon staat altijd in de tegelkop`);
   assert.match(resultaat.trend, /^-?\d+\s*→\s*-?\d+\s*°C$/, `${naam} ${modus}: temperatuurtrend toont uitsluitend huidige en toekomstige temperatuur`);
   assert.ok(["Het wordt de komende uren warmer.","Het wordt de komende uren koeler.","De temperatuur verandert de komende uren nauwelijks."].includes(resultaat.trendSub), `${naam} ${modus}: temperatuurtrend gebruikt één natuurlijke richtingstekst`);
