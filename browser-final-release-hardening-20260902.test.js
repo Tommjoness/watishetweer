@@ -153,14 +153,16 @@ draaiScenario("passende cache wordt gebruikt",`
   const op=Date.now()-60000;
   ls.set(KEY_D,{d:window.__wiwFixture,air:null,airOp:0,label:'Kansas City',lat:39.100,lon:-94.579,op,land:'US'});
   q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(40);
-  zet('result',goed('Kansas City',39.0997,-94.5786)&&S.verversMislukt&&getComputedStyle(app).display!=='none'&&/laatst opgehaalde gegevens voor Kansas City/.test(statusTekst())?'ok':'fout');
+  const tekst=statusTekst();
+  zet('result',goed('Kansas City',39.0997,-94.5786)&&S.verversMislukt&&getComputedStyle(app).display!=='none'&&/Kansas City/.test(tekst)&&/niet vernieuwd|blijven staan/i.test(tekst)&&retryAanwezig()?'ok':'fout');
 `);
 
 draaiScenario("verkeerde cache wordt geweigerd",`
   const op=Date.now()-60000;
   ls.set(KEY_D,{d:window.__wiwFixture,air:null,airOp:0,label:'Amsterdam',lat:52.368,lon:4.904,op,land:'NL'});
   q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(40);
-  zet('result',S.d===null&&S.label==='Kansas City'&&q.value==='Kansas City'&&getComputedStyle(app).display==='none'&&/geen weergegevens van een andere locatie/i.test(statusTekst())?'ok':'fout');
+  const tekst=statusTekst();
+  zet('result',S.d===null&&S.label==='Kansas City'&&q.value==='Kansas City'&&getComputedStyle(app).display==='none'&&/Kansas City/.test(tekst)&&/niet geladen|geen weergegevens/i.test(tekst)&&retryAanwezig()?'ok':'fout');
 `);
 
 draaiScenario("race laat nieuwste locatie winnen",`
@@ -186,7 +188,8 @@ draaiScenario("reload gebruikt passende cache",`
   if(!await laadGoed('Kathmandu',27.7172,85.3240,0,'NP'))throw new Error('Kathmandu start faalde');
   const bewaard=ls.get(KEY_D,null);reset(false);ls.set(KEY_D,bewaard);q.value='Kathmandu';plan('provider-error',0);
   await load(27.7172,85.3240,'Kathmandu',false,true,'NP');await slaap(40);
-  zet('result',goed('Kathmandu',27.7172,85.3240)&&S.verversMislukt&&/laatst opgehaalde gegevens voor Kathmandu/.test(statusTekst())?'ok':'fout');
+  const tekst=statusTekst();
+  zet('result',goed('Kathmandu',27.7172,85.3240)&&S.verversMislukt&&/Kathmandu/.test(tekst)&&/niet vernieuwd|blijven staan/i.test(tekst)&&retryAanwezig()?'ok':'fout');
 `);
 
 console.log("Final-release locatiehardening: 10 cache/fout/racescenario's elk in een vers Chromium-proces geslaagd.");
