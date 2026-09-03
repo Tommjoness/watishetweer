@@ -195,11 +195,15 @@ load=async function(lat,lon,label,stil,opslaan,land){
       }else{
         const basisState=document.getElementById("state");
         /* Zonder bestaande forecast blijft de specifieke fout van de basisloader
-           waardevol (bijvoorbeeld de timeoutmelding). Neem die over in de compacte
-           status vóór #state wordt leeggemaakt, zodat er één fout-owner blijft
-           zonder de oorzaak te reduceren tot een generieke netwerkfout. */
+           waardevol (bijvoorbeeld de timeoutmelding). De finale hardening kan die
+           fout al rechtstreeks in de compacte status hebben gezet en #state hebben
+           leeggemaakt. Bewaar daarom ook een reeds bestaande compacte fout vóór we
+           de status opnieuw schrijven, zodat veiligheidscontext niet verloren gaat. */
+        const bestaandCompact=statusElement(),bestaandCompactTekstEl=statusTekst(bestaandCompact);
+        const bestaandCompactTekst=!S.d&&bestaandCompact&&bestaandCompact.classList.contains("fout")&&bestaandCompactTekstEl
+          ?String(bestaandCompactTekstEl.textContent||"").trim():"";
         const basisFoutTekst=!S.d&&basisState&&basisState.classList.contains("err")
-          ?String(basisState.textContent||"").trim():"";
+          ?String(basisState.textContent||"").trim():bestaandCompactTekst;
         let foutTekst=basisFoutTekst||"Weer voor "+labelVan(label,"deze locatie")+" kon niet worden opgehaald.";
 
         if(eindstate==="oude-data-op-doel"&&vorige){
