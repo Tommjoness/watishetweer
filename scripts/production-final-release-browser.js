@@ -41,20 +41,23 @@ async function wachtKlaar(page,naam,timeout=26000){
       return app&&getComputedStyle(app).display!=="none"&&label&&bronKlaar&&dagen>=7&&uren>=23;
     },null,{timeout});
   }catch(e){
-    const diagnose=await page.evaluate(()=>({
-      label:document.getElementById("place")?.getAttribute("aria-label")||"",
-      query:document.getElementById("q")?.value||"",
-      title:document.title,
-      href:location.href,
-      state:(document.getElementById("state")?.textContent||"").trim(),
-      stamp:(document.getElementById("stamp")?.textContent||"").trim(),
-      appVisible:!!document.getElementById("app")&&getComputedStyle(document.getElementById("app")).display!=="none",
-      hasCurrent:!!(typeof S!=="undefined"&&S.d&&S.d.current),
-      hourlyTimes:typeof S!=="undefined"&&S.d&&Array.isArray(S.d.hourly?.time)?S.d.hourly.time.length:0,
-      dailyTimes:typeof S!=="undefined"&&S.d&&Array.isArray(S.d.daily?.time)?S.d.daily.time.length:0,
-      dayRows:document.querySelectorAll("#days .row.day:not(.kop)").length,
-      hourRows:document.querySelectorAll("#wiw-hour-table tbody tr").length
-    }));
+    const diagnose=await page.evaluate(()=>{
+      const compact=document.getElementById("locatie-laadstatus"),compactTekst=compact&&compact.querySelector(".locatie-status-tekst"),state=document.getElementById("state");
+      return {
+        label:document.getElementById("place")?.getAttribute("aria-label")||"",
+        query:document.getElementById("q")?.value||"",
+        title:document.title,
+        href:location.href,
+        state:String(compact&&compact.hidden===false&&compactTekst?compactTekst.textContent:(state&&state.textContent)||"").trim(),
+        stamp:(document.getElementById("stamp")?.textContent||"").trim(),
+        appVisible:!!document.getElementById("app")&&getComputedStyle(document.getElementById("app")).display!=="none",
+        hasCurrent:!!(typeof S!=="undefined"&&S.d&&S.d.current),
+        hourlyTimes:typeof S!=="undefined"&&S.d&&Array.isArray(S.d.hourly?.time)?S.d.hourly.time.length:0,
+        dailyTimes:typeof S!=="undefined"&&S.d&&Array.isArray(S.d.daily?.time)?S.d.daily.time.length:0,
+        dayRows:document.querySelectorAll("#days .row.day:not(.kop)").length,
+        hourRows:document.querySelectorAll("#wiw-hour-table tbody tr").length
+      };
+    });
     throw new Error(`${naam||"vrije locatie"}: volledige weer-UI niet binnen ${timeout} ms gereed: ${JSON.stringify(diagnose)}`);
   }
 }
@@ -114,6 +117,7 @@ async function lees(page){return page.evaluate(()=>{
   const rowTops=[...new Set(stats.map(e=>Math.round(e.getBoundingClientRect().top)))];
   const ids=[...document.querySelectorAll('[id]')].map(e=>e.id),dubbel=ids.filter((x,i)=>ids.indexOf(x)!==i);
   const ariaRefs=[];for(const e of document.querySelectorAll('[aria-labelledby],[aria-describedby],[aria-controls],[aria-activedescendant]'))for(const a of ['aria-labelledby','aria-describedby','aria-controls','aria-activedescendant']){const raw=e.getAttribute(a);if(raw)for(const id of raw.split(/\s+/))if(id&&!document.getElementById(id))ariaRefs.push(a+':'+id);}
+  const compact=document.getElementById('locatie-laadstatus'),compactTekst=compact&&compact.querySelector('.locatie-status-tekst'),compactRetry=compact&&compact.querySelector('.locatie-status-retry'),state=document.getElementById('state');
   return {
     sha:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
     delivery:document.querySelector('meta[name="weather-delivery"]')?.content||"",
@@ -138,7 +142,8 @@ async function lees(page){return page.evaluate(()=>{
     tileRows:rowTops.length,tileCount:stats.length,
     duplicateIds:[...new Set(dubbel)],missingAriaRefs:[...new Set(ariaRefs)],
     headings:[...document.querySelectorAll('h1,h2,h3')].map(h=>({tag:h.tagName,text:(h.textContent||'').trim().slice(0,100)})),
-    retry:!!document.querySelector('.wiw-location-retry'),state:(document.getElementById('state')?.textContent||'').trim(),
+    retry:!!((compactRetry&&!compactRetry.hidden)||(state&&state.querySelector('.wiw-location-retry'))),
+    state:String(compact&&compact.hidden===false&&compactTekst?compactTekst.textContent:(state&&state.textContent)||'').trim(),
     appVisible:!!document.getElementById('app')&&getComputedStyle(document.getElementById('app')).display!=='none'
   };
 });}
@@ -212,8 +217,8 @@ async function lees(page){return page.evaluate(()=>{
       await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Amsterdam");
       scenario.fail=true;
       await page.goto(ROOT+"/?"+params(locaties[1]),{waitUntil:"domcontentloaded",timeout:30000});
-      await page.waitForFunction(()=>!!document.querySelector('.wiw-location-retry'),null,{timeout:10000});const u=await lees(page);
-      assert.equal(u.query,"Kansas City","direct mismatch: zoekveld niet Kansas City");assert(u.title.startsWith("Kansas City · "),"direct mismatch: titel niet Kansas City");assert(!u.appVisible,"direct mismatch: weerapp van andere locatie bleef zichtbaar");assert(/geen weergegevens van een andere locatie/i.test(u.state),"direct mismatch: veilige melding ontbreekt");
+      await page.waitForFunction(()=>{const compact=document.querySelector('.locatie-status-retry');return !!((compact&&!compact.hidden)||document.querySelector('.wiw-location-retry'));},null,{timeout:10000});const u=await lees(page);
+      assert.equal(u.query,"Kansas City","direct mismatch: zoekveld niet Kansas City");assert(u.title.startsWith("Kansas City · "),"direct mismatch: titel niet Kansas City");assert(!u.appVisible,"direct mismatch: weerapp van andere locatie bleef zichtbaar");assert(/Kansas City/i.test(u.state)&&/niet geladen|kon niet worden opgehaald|geen weergegevens/i.test(u.state),"direct mismatch: veilige melding ontbreekt");assert(u.retry,"direct mismatch: retry ontbreekt");
       rapport.failureSafety.directWrongCache={ok:true,state:u.state};await context.close();
     }
     /* Exact dezelfde cache mag bij providerfout wél als stale data terugkomen. */
@@ -222,8 +227,8 @@ async function lees(page){return page.evaluate(()=>{
       const scenario=await installeerForecastScenario(page,kansasCityBron);
       await page.goto(ROOT+"/?"+params(locaties[1]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Kansas City");
       scenario.fail=true;await page.reload({waitUntil:"domcontentloaded",timeout:30000});
-      await page.waitForFunction(()=>!!document.querySelector('.wiw-location-retry'),null,{timeout:10000});const u=await lees(page);
-      assert(u.appVisible&&u.label==="Kansas City"&&u.query==="Kansas City"&&u.title.startsWith("Kansas City · "),"same-cache: identiteit niet volledig Kansas City");assert(/laatst opgehaalde gegevens voor Kansas City/i.test(u.state),"same-cache: stale melding ontbreekt");
+      await page.waitForFunction(()=>{const compact=document.querySelector('.locatie-status-retry');return !!((compact&&!compact.hidden)||document.querySelector('.wiw-location-retry'));},null,{timeout:10000});const u=await lees(page);
+      assert(u.appVisible&&u.label==="Kansas City"&&u.query==="Kansas City"&&u.title.startsWith("Kansas City · "),"same-cache: identiteit niet volledig Kansas City");assert(/Kansas City/i.test(u.state)&&/niet vernieuwd|laatst opgehaalde gegevens/i.test(u.state),"same-cache: stale melding ontbreekt");assert(u.retry,"same-cache: retry ontbreekt");
       rapport.failureSafety.sameCache={ok:true,state:u.state};await context.close();
     }
 
