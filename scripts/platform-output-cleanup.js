@@ -7,6 +7,7 @@ const vm=require("vm");
 const {minify}=require("terser");
 const CleanCSS=require("clean-css");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
+const {retirePressure,verifieerPressureRetired}=require("./pressure-retirement.js");
 
 const ROOT=path.join(__dirname,"..");
 const PUBLIC=path.join(ROOT,"public");
@@ -175,7 +176,9 @@ async function optimaliseerPublic(publicDir=PUBLIC){
   if(!bestanden.includes(path.join(PUBLIC,"index.html")))throw new Error("public/index.html ontbreekt voor delivery-optimalisatie.");
   const bundleCache=new Map();const earlyCache=new Map();let rootBundle=null,rootBron=null;
   for(const bestand of bestanden){
-    let html=fs.readFileSync(bestand,"utf8");
+    /* Pressure-retirement hoort bewust hier: dit is de laatste deliverymutator,
+       ná alle historische UI/runtimelagen en vóór bundling/minificatie. */
+    let html=retirePressure(fs.readFileSync(bestand,"utf8"));
     if(!/<script/i.test(html)){fs.writeFileSync(bestand,cssMinify(migreerCspNaarHeader(html)),"utf8");continue;}
     html=hardenRuntime(html);
     const verzameld=verzamelRuntime(html);
@@ -200,16 +203,18 @@ async function optimaliseerPublic(publicDir=PUBLIC){
   }
   if(!rootBundle||!rootBron)throw new Error("Homepage-runtime is niet verpakt.");
   werkServiceworkerBij(rootBundle);
-  vernieuwServiceworkerCache(PUBLIC,"delivery");
+  vernieuwServiceworkerCache(PUBLIC,"delivery-pressure-retired");
   const rootHtml=fs.readFileSync(path.join(PUBLIC,"index.html"),"utf8");
   if(/<script(?![^>]*\bsrc=)(?![^>]*\btype=["'](?:application\/ld\+json|application\/json)["'])[^>]*>[\s\S]*?<\/script>/i.test(rootHtml))throw new Error("Executable inline script bleef achter op homepage.");
   if(/http-equiv="Content-Security-Policy"/i.test(rootHtml))throw new Error("CSP-meta bleef achter na header-migratie.");
   if(rootHtml.includes('horizontaal.setAttribute("aria-label"'))throw new Error("Ongeldige line-ARIA bleef achter in delivery-runtime.");
+  for(const bestand of bestanden)verifieerPressureRetired(fs.readFileSync(bestand,"utf8"),bestand);
+  verifieerPressureRetired(rootBron,"delivery runtime snapshot");
   return {htmlBestanden:bestanden.length,bundles:bundleCache.size,earlyBundles:earlyCache.size,rootBundle};
 }
 
 if(require.main===module){
-  optimaliseerPublic().then(r=>console.log(`Platform/delivery cleanup: ${r.htmlBestanden} HTML-bestanden, ${r.bundles} minified runtimebundles, ${r.earlyBundles} vroege bundles; homepage ${r.rootBundle}.`))
+  optimaliseerPublic().then(r=>console.log(`Platform/delivery cleanup: ${r.htmlBestanden} HTML-bestanden, ${r.bundles} minified runtimebundles, ${r.earlyBundles} vroege bundles; pressure-retired; homepage ${r.rootBundle}.`))
     .catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
 }
 
