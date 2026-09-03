@@ -52,8 +52,14 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
   const reporter=`<script>
 setTimeout(()=>{
   const state=document.getElementById('state');
+  const status=document.getElementById('locatie-laadstatus');
+  const statusTekst=status&&status.querySelector('.locatie-status-tekst');
+  const retry=status&&status.querySelector('.locatie-status-retry');
   document.body.setAttribute('data-state',(state&&state.textContent||'').trim());
-  document.body.setAttribute('data-visible',state&&getComputedStyle(state).display!=='none'?'true':'false');
+  document.body.setAttribute('data-state-visible',state&&getComputedStyle(state).display!=='none'?'true':'false');
+  document.body.setAttribute('data-status',(statusTekst&&statusTekst.textContent||'').trim());
+  document.body.setAttribute('data-status-visible',status&&status.hidden===false?'true':'false');
+  document.body.setAttribute('data-retry-visible',retry&&!retry.hidden?'true':'false');
 },900);
 </script>`;
   return html.replace("</body>",reporter+"</body>");
@@ -71,10 +77,12 @@ function draai(geval){
 function attr(dom,naam){const m=new RegExp('data-'+naam+'="([^"]*)"').exec(dom);return m?m[1].replace(/&amp;/g,"&"):null;}
 
 for(const geval of gevallen){
-  const dom=draai(geval),tekst=attr(dom,"state");
-  if(attr(dom,"visible")!=="true")throw new Error(geval.naam+": foutstate is niet zichtbaar");
+  const dom=draai(geval),tekst=attr(dom,"status");
+  if(attr(dom,"status-visible")!=="true")throw new Error(geval.naam+": compacte foutstatus is niet zichtbaar");
+  if(attr(dom,"retry-visible")!=="true")throw new Error(geval.naam+": retry ontbreekt bij compacte foutstatus");
+  if(attr(dom,"state-visible")==="true"&&attr(dom,"state"))throw new Error(geval.naam+": oude foutstate bleef als tweede fout-owner zichtbaar");
   if(tekst!==geval.verwacht)throw new Error(geval.naam+": onverwachte fouttekst: "+tekst);
   for(const verboden of geval.verboden)if(String(tekst).includes(verboden))throw new Error(geval.naam+": technische fouttekst lekt naar UI: "+tekst);
 }
 
-console.log("Fetch-error-semantics browser: AbortError en generieke netwerkfout tonen stabiele menselijke producttekst zonder browserdetails.");
+console.log("Fetch-error-semantics browser: AbortError en generieke netwerkfout tonen één zichtbare compacte retry-status met stabiele menselijke producttekst zonder browserdetails.");
