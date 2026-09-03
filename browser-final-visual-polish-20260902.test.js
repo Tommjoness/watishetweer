@@ -25,6 +25,7 @@ setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-final-visual-'
   const rr=e=>{const r=e&&e.getBoundingClientRect();return r?{l:r.left,r:r.right,t:r.top,b:r.bottom,w:r.width,h:r.height,cx:r.left+r.width/2}:null;};
   const stats=[...document.querySelectorAll('.final-top-grid>.stats .stat')].filter(e=>getComputedStyle(e).display!=='none');
   const values=stats.map(e=>e.querySelector('.sval')).filter(Boolean);
+  zet('viewport-width',innerWidth);zet('compact-media',matchMedia('(max-width:430px)').matches?'ja':'nee');
   zet('tiles',stats.length);zet('values-centered',values.length&&values.every(e=>getComputedStyle(e).justifyContent==='center')?'ok':'fout');
   const ss=getComputedStyle(scroll),hs=getComputedStyle(document.documentElement);zet('hour-scrollbar',ss.scrollbarWidth||'');zet('page-scrollbar',hs.scrollbarWidth||'');
   zet('hour-overflow-y',ss.overflowY);zet('hour-role',scroll.getAttribute('role')||'');zet('hour-tabindex',scroll.hasAttribute('tabindex')?'ja':'nee');
@@ -62,6 +63,7 @@ try{
     if(r.status!==0)throw new Error(`${w}px: browser exit ${r.status}: `+String(r.stderr||"").slice(-1000));
     const dom=r.stdout||"",v=k=>{const m=new RegExp('data-final-visual-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
     if(v('done')!=='ok')throw new Error(`${w}px reporter: ${v('exception')}`);
+    const actualW=Number(v('viewport-width'));
     if(v('tiles')!=='8'||v('values-centered')!=='ok')throw new Error(`${w}px: hoofdtegelwaarden niet geometrisch gecentreerd (tiles=${v('tiles')}, values=${v('values-centered')})`);
     if(v('hour-scrollbar')!=='thin'||v('page-scrollbar')!=='thin')throw new Error(`${w}px: scrollbar styling niet actief (hour=${v('hour-scrollbar')}, page=${v('page-scrollbar')})`);
     if(v('night-label')!=='Zichtscore')throw new Error(`${w}px: Nachtzicht gebruikt nog geen duidelijke Zichtscore-label (${v('night-label')})`);
@@ -69,12 +71,12 @@ try{
     if(v('theme-menu')!=='ja')throw new Error(`${w}px: ondersteunde Auto/Licht/Donker-weergave ontbreekt`);
     if(!(Number(v('refresh-opacity'))<Number(v('here-opacity'))&&Number(v('theme-opacity'))<Number(v('here-opacity'))))throw new Error(`${w}px: headerhiërarchie ontbreekt (locatie=${v('here-opacity')}, ververs=${v('refresh-opacity')}, weergave=${v('theme-opacity')})`);
     if(Number(v('overflow'))>2)throw new Error(`${w}px: ${v('overflow')}px horizontale overflow`);
-    if(w<=900){
+    if(actualW<=900){
       if(v('hour-overflow-y')!=='visible'||v('hour-role')!==''||v('hour-tabindex')!=='nee')throw new Error(`${w}px: mobiele uurtabel is nog een geneste scroller (overflow=${v('hour-overflow-y')}, role=${v('hour-role')}, tabindex=${v('hour-tabindex')})`);
       if(v('hour-toggle')!=='zichtbaar'||v('hour-toggle-expanded')!=='false'||v('hour-hidden')!=='4')throw new Error(`${w}px: mobiele 8-uurs preview klopt niet (toggle=${v('hour-toggle')}, expanded=${v('hour-toggle-expanded')}, hidden=${v('hour-hidden')})`);
       if(v('hour-expanded-hidden')!=='0'||v('hour-expanded-state')!=='true')throw new Error(`${w}px: uitklappen uren werkt niet (hidden=${v('hour-expanded-hidden')}, state=${v('hour-expanded-state')})`);
       if(v('night-mobile-wide')!=='ok')throw new Error(`${w}px: mobiele Nachtzicht-flow is geraakt`);
-      if(w<=430&&(Number(v('body-pad-left'))>8.5||Math.abs(Number(v('sheet-pad-left'))-16)>.5))throw new Error(`${w}px: mobiele horizontale ruimte niet optimaal (body=${v('body-pad-left')}, sheet=${v('sheet-pad-left')})`);
+      if(v('compact-media')==='ja'&&(Number(v('body-pad-left'))>8.5||Math.abs(Number(v('sheet-pad-left'))-16)>.5))throw new Error(`${w}px: mobiele horizontale ruimte niet optimaal (body=${v('body-pad-left')}, sheet=${v('sheet-pad-left')})`);
     }else{
       if(v('hour-overflow-y')!=='auto'||v('hour-role')!=='region'||v('hour-tabindex')!=='ja'||v('hour-toggle')!=='verborgen')throw new Error(`${w}px: desktop uurtabelgedrag is geraakt (overflow=${v('hour-overflow-y')}, role=${v('hour-role')}, tabindex=${v('hour-tabindex')}, toggle=${v('hour-toggle')})`);
       if(v('night-wide-style')!=='ok'||v('night-wide-axis')!=='ok'||v('night-cloud-axis')!=='ok'||v('night-advice-axis')!=='ok'||v('night-right-edge')!=='ok')throw new Error(`${w}px: Nachtzicht-uitlijning fout wide=${v('night-wide-style')}/${v('night-wide-axis')} cloud=${v('night-cloud-axis')} advice=${v('night-advice-axis')} edge=${v('night-right-edge')}`);
@@ -82,7 +84,7 @@ try{
       if(Number(v('night-wide-width'))<280)throw new Error(`${w}px: Beste zichtperiode te smal (${v('night-wide-width')}px)`);
       if(Number(v('night-bar-width'))<180)throw new Error(`${w}px: zichtscorebalk te smal (${v('night-bar-width')}px)`);
     }
-    console.log(`${w}px: final visual UX groen; overflow ${v('overflow')}px, urenpreview en headerhiërarchie correct${w>=1100?', zichtperiode '+v('night-wide-width')+'px':''}.`);
+    console.log(`${w}px (CSS viewport ${actualW}px): final visual UX groen; overflow ${v('overflow')}px, urenpreview en headerhiërarchie correct${actualW>=1100?', zichtperiode '+v('night-wide-width')+'px':''}.`);
   }
-  console.log("Final visual polish browsertest geslaagd op 320/390/430/1100/1366/1440/1600/1920 px.");
+  console.log("Final visual polish browsertest geslaagd op de aangevraagde 320/390/430/1100/1366/1440/1600/1920 vensters; asserts volgen de gemeten CSS-viewport.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
