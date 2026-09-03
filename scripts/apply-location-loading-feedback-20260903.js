@@ -5,6 +5,7 @@ const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 
 const OUT=path.join(__dirname,"..","public");
 const MARKER="/* ===== LOCATION LOADING FEEDBACK 20260903 ===== */";
+const HARDENED_MARKER="const vorigeBlijftZichtbaar=!!(";
 const STYLE=`
 ${MARKER}
 /* De bestaande #stamp-regel doet tijdelijk dienst als laadstatus. De zichtbare
@@ -69,10 +70,8 @@ function weatherNowLocatieLaden(aan){
 }
 `;
 
-const LOAD_START='  if(!stil){st.style.display="block";st.className="msg";st.textContent="Gegevens ophalen.";}';
-const LOAD_START_NIEUW=LOAD_START+'\n  if(!stil)weatherNowLocatieLaden(true);';
-const LOAD_EIND='    }\n  }\n  chips();\n}\n\n/* ---------- tekenen ---------- */';
-const LOAD_EIND_NIEUW='    }\n  }finally{\n    /* Een oude, ingehaalde aanvraag mag de indicator van de nieuwste locatie\n       nooit uitzetten. Refreshes met stil=true houden hun bestaande knopstatus. */\n    if(!stil&&mijnBeurt===laadTeller)weatherNowLocatieLaden(false);\n  }\n  chips();\n}\n\n/* ---------- tekenen ---------- */';
+const LOAD_START='  if(!stil){st.style.display="block";st.className="msg";st.textContent=vorigeBlijftZichtbaar\n    ?"Gegevens voor "+label+" ophalen. Tot die klaar zijn, zie je nog de gegevens voor "+vorigeLocatie.label+"."\n    :"Gegevens ophalen.";}\n  if(vorigeBlijftZichtbaar){';
+const LOAD_START_NIEUW='  if(!stil){st.style.display="block";st.className="msg";st.textContent=vorigeBlijftZichtbaar\n    ?"Gegevens voor "+label+" ophalen. Tot die klaar zijn, zie je nog de gegevens voor "+vorigeLocatie.label+"."\n    :"Gegevens ophalen.";}\n  if(!stil)weatherNowLocatieLaden(true);\n  if(vorigeBlijftZichtbaar){';
 const ZOEK_START='  timer=setTimeout(async()=>{\n    try{';
 const ZOEK_START_NIEUW='  timer=setTimeout(async()=>{\n    zoekMeldingToon("Plaatsen zoeken…");\n    try{';
 const ZOEK_SUCCES='      if(generatie!==zoekGeneratie)return;\n      const resultaten=Array.isArray(d.results)?d.results:[];';
@@ -84,13 +83,31 @@ function exactEen(html,zoek,vervang,label){
   return html.replace(zoek,vervang);
 }
 
+function voegLoadFinallyToe(html){
+  const loadAnker="async function load(lat,lon,label,stil,opslaan,land){";
+  const loadPos=html.indexOf(loadAnker);
+  if(loadPos<0)throw new Error("load()-anker ontbreekt voor location-loading cleanup.");
+  const catchPos=html.indexOf("  }catch(err){",loadPos);
+  if(catchPos<0)throw new Error("Hardened catch ontbreekt voor location-loading cleanup.");
+  const eindAnker="\n  chips();\n}";
+  const eindPos=html.indexOf(eindAnker,catchPos);
+  if(eindPos<0)throw new Error("load()-eindanker ontbreekt voor location-loading cleanup.");
+  const segment=html.slice(catchPos,eindPos);
+  const sluitPos=segment.lastIndexOf("\n  }");
+  if(sluitPos<0)throw new Error("Catch-sluitbrace ontbreekt voor location-loading cleanup.");
+  const absoluut=catchPos+sluitPos;
+  const invoeg='\n  }finally{\n    /* Een oude, ingehaalde aanvraag mag de indicator van de nieuwste locatie\n       nooit uitzetten. Refreshes met stil=true houden hun bestaande knopstatus. */\n    if(!stil&&mijnBeurt===laadTeller)weatherNowLocatieLaden(false);';
+  return html.slice(0,absoluut)+invoeg+html.slice(absoluut+4);
+}
+
 function pasHtmlToe(html){
   if(!html.includes("async function load(lat,lon,label,stil,opslaan,land)"))return html;
+  if(!html.includes(HARDENED_MARKER))throw new Error("Location-loading feedback vereist eerst de final-release locatie-cachehardening.");
   if(html.includes(MARKER))throw new Error("Location-loading feedback staat al in artifact.");
   html=exactEen(html,"</style>",STYLE+"\n</style>","Stijlblok");
   html=exactEen(html,"/* ---------- ophalen ---------- */",HELPER+"\n/* ---------- ophalen ---------- */","Ophaalsectie");
-  html=exactEen(html,LOAD_START,LOAD_START_NIEUW,"Load-start");
-  html=exactEen(html,LOAD_EIND,LOAD_EIND_NIEUW,"Load-finally");
+  html=exactEen(html,LOAD_START,LOAD_START_NIEUW,"Hardened load-start");
+  html=voegLoadFinallyToe(html);
   html=exactEen(html,ZOEK_START,ZOEK_START_NIEUW,"Zoek-start");
   html=exactEen(html,ZOEK_SUCCES,ZOEK_SUCCES_NIEUW,"Zoek-succes");
   return html;
@@ -113,10 +130,10 @@ function main(){
     if(nieuw===oud)continue;
     fs.writeFileSync(p,nieuw,"utf8");n++;
   }
-  if(!n)throw new Error("Geen interactief weerartifact gevonden voor location-loading feedback.");
+  if(!n)throw new Error("Geen gehard interactief weerartifact gevonden voor location-loading feedback.");
   const cache=vernieuwServiceworkerCache(OUT,"location-loading-feedback-20260903");
-  console.log(`Location-loading feedback toegepast op ${n} weerpagina's; cache ${cache}.`);
+  console.log(`Location-loading feedback na cachehardening toegepast op ${n} weerpagina's; cache ${cache}.`);
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER,STYLE,HELPER,pasHtmlToe,htmlBestanden,main};
+module.exports={OUT,MARKER,HARDENED_MARKER,STYLE,HELPER,pasHtmlToe,htmlBestanden,main};
