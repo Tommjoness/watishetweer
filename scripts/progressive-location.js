@@ -154,9 +154,8 @@ load=async function(lat,lon,label,stil,opslaan,land){
     if(typeof clearKlokTimer==="function")clearKlokTimer();
   }
 
-  let belofte;
   try{
-    belofte=basisLoad(lat,lon,label,stil,opslaan,land);
+    const volledigeBelofte=basisLoad(lat,lon,label,stil,opslaan,land);
 
     /* basisLoad zet synchronously de generieke melding en leegt waarschuwingen.
        Herstel dit nog binnen dezelfde taak, vóór de browser kan painten. Zo blijft
@@ -170,7 +169,7 @@ load=async function(lat,lon,label,stil,opslaan,land){
     }
     if(bewaren&&waarschuwingEl)waarschuwingEl.innerHTML=waarschuwingenVoor;
 
-    return await belofte;
+    return await volledigeBelofte;
   }finally{
     perf.lastFullMs=Math.max(0,nuMs()-start);
     if(mijnGeneratie===generatie){
