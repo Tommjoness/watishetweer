@@ -104,7 +104,7 @@ function pasHtmlToe(html){
   if(!html.includes("async function load(lat,lon,label,stil,opslaan,land)"))return html;
   if(!html.includes(HARDENED_MARKER))throw new Error("Location-loading feedback vereist eerst de final-release locatie-cachehardening.");
   if(html.includes(MARKER))throw new Error("Location-loading feedback staat al in artifact.");
-  html=exactEen(html,"</style>",STYLE+"\n</style>","Stijlblok");
+  html=exactEen(html,"</head>",`<style>${STYLE}\n</style>\n</head>`,"Head");
   html=exactEen(html,"/* ---------- ophalen ---------- */",HELPER+"\n/* ---------- ophalen ---------- */","Ophaalsectie");
   html=exactEen(html,LOAD_START,LOAD_START_NIEUW,"Hardened load-start");
   html=voegLoadFinallyToe(html);
