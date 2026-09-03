@@ -34,6 +34,16 @@ async function wachtVeiligeFoutstate(page,timeout=16000){
     return retry&&/konden niet worden opgehaald|duurde te lang|Geen internetverbinding/i.test(state);
   },null,{timeout});
 }
+async function installeerForecastFixture(page,bron){
+  await page.route("**://api.open-meteo.com/v1/forecast**",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(bron)}));
+}
+async function installeerForecastScenario(page,bron){
+  const toestand={fail:false};
+  await page.route("**://api.open-meteo.com/v1/forecast**",route=>toestand.fail
+    ?route.fulfill({status:503,contentType:"application/json",body:'{"error":true}'})
+    :route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(bron)}));
+  return toestand;
+}
 async function lees(page){return page.evaluate(()=>{
   const hour=document.getElementById("wiw-hour-table"),scroll=document.getElementById("wiw-hour-scroll"),th=hour&&hour.querySelector("thead th:nth-child(3)");
   const stats=[...document.querySelectorAll('.final-top-grid>.stats .stat')].filter(e=>getComputedStyle(e).display!=='none');
@@ -71,6 +81,7 @@ async function lees(page){return page.evaluate(()=>{
 (async()=>{
   const browser=await chromium.launch({headless:true});
   const rapport={expectedSha:EXPECTED,root:ROOT,startedAt:new Date().toISOString(),locations:[],viewports:[],failureSafety:{},screenshots:[]};
+  const liveBronnen=new Map();
   try{
     /* Wereldwijde inhoud: gevraagde zeven locaties, met ruwe Open-Meteo-currentwaarden. */
     for(const l of locaties){
@@ -100,6 +111,7 @@ async function lees(page){return page.evaluate(()=>{
             assert(uit.hourClip&&uit.hourOverflow<=1&&uit.pageOverflow<=1,`${l.naam}: clipping/overflow hour=${uit.hourOverflow} page=${uit.pageOverflow}`);
             assert.deepEqual(uit.duplicateIds,[],`${l.naam}: dubbele ids ${uit.duplicateIds.join(',')}`);assert.deepEqual(uit.missingAriaRefs,[],`${l.naam}: ontbrekende ARIA refs ${uit.missingAriaRefs.join(',')}`);
             assert.deepEqual(pageErrors,[],`${l.naam}: pageerrors ${pageErrors.join(' | ')}`);
+            liveBronnen.set(l.naam,bron);
             rapport.locations.push({name:l.naam,status:"source-verified",timezone:bron.timezone,currentTime:bron.current&&bron.current.time,raw:{temperature_2m:bron.current&&bron.current.temperature_2m,apparent_temperature:bron.current&&bron.current.apparent_temperature,wind_speed_10m:bron.current&&bron.current.wind_speed_10m,relative_humidity_2m:bron.current&&bron.current.relative_humidity_2m},ui:{temperature:uit.temp,feels:uit.feels,wind:uit.wind,humidity:uit.humidity},pageOverflow:uit.pageOverflow});
           }else{
             try{await wachtVeiligeFoutstate(page,16000);}catch(e){laatsteFout=`${laatsteFout||"geen bronresponse"}; veilige foutstate niet bereikt: ${String(e&&e.message||e)}`;}
@@ -114,11 +126,19 @@ async function lees(page){return page.evaluate(()=>{
       console.log(`FINAL LIVE ${l.naam}: ${rapport.locations.at(-1).status}.`);
     }
 
-    /* Exacte afgesproken viewports tegen productie. */
+    const amsterdamBron=liveBronnen.get("Amsterdam"),kansasCityBron=liveBronnen.get("Kansas City");
+    assert(amsterdamBron,"Amsterdam: live source-verified fixture ontbreekt voor layoutbewijs");
+    assert(kansasCityBron,"Kansas City: live source-verified fixture ontbreekt voor cachebewijs");
+    rapport.renderFixture={source:"live-source-verified-same-run",locations:["Amsterdam","Kansas City"]};
+
+    /* Exacte afgesproken viewports tegen productie. De providerdata is hierboven
+       in dezelfde run live geverifieerd; vanaf hier meten we deterministisch de
+       rendering van exact die response zodat een extra provider-timeout geen
+       layoutbewijs kan veranderen in een beschikbaarheidstest. */
     for(const [w,h] of viewports){
       const context=await browser.newContext({viewport:{width:w,height:h},serviceWorkers:"block",locale:"nl-NL"});const page=await context.newPage();
-      const bronBelofte=page.waitForResponse(r=>isForecast(r.url())&&r.ok(),{timeout:24000});
-      await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"domcontentloaded",timeout:30000});await bronBelofte;await wachtKlaar(page,"Amsterdam");
+      await installeerForecastFixture(page,amsterdamBron);
+      await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Amsterdam");
       const u=await lees(page);assert.equal(u.sha,EXPECTED,`${w}px: verkeerde SHA`);assert(u.pageOverflow<=1,`${w}px: ${u.pageOverflow}px pagina-overflow`);assert(u.hourOverflow<=1&&u.hourClip,`${w}px: uurtabel overflow/clipping`);
       if(w>=1100&&w<1600)assert.equal(u.tileRows,3,`${w}px: verwacht 3 tegelrijen, kreeg ${u.tileRows}`);if(w>=1600)assert.equal(u.tileRows,2,`${w}px: verwacht 2 tegelrijen, kreeg ${u.tileRows}`);
       rapport.viewports.push({width:w,height:h,tileRows:u.tileRows,pageOverflow:u.pageOverflow,hourOverflow:u.hourOverflow});await context.close();
@@ -128,8 +148,9 @@ async function lees(page){return page.evaluate(()=>{
     /* Mismatched cache op een directe locatie-URL: geen Amsterdam-data onder Kansas City. */
     {
       const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block",locale:"nl-NL"});const page=await context.newPage();
+      const scenario=await installeerForecastScenario(page,amsterdamBron);
       await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Amsterdam");
-      await page.route("**://api.open-meteo.com/v1/forecast**",route=>route.fulfill({status:503,contentType:"application/json",body:'{"error":true}'}));
+      scenario.fail=true;
       await page.goto(ROOT+"/?"+params(locaties[1]),{waitUntil:"domcontentloaded",timeout:30000});
       await page.waitForFunction(()=>!!document.querySelector('.wiw-location-retry'),null,{timeout:10000});const u=await lees(page);
       assert.equal(u.query,"Kansas City","direct mismatch: zoekveld niet Kansas City");assert(u.title.startsWith("Kansas City · "),"direct mismatch: titel niet Kansas City");assert(!u.appVisible,"direct mismatch: weerapp van andere locatie bleef zichtbaar");assert(/geen weergegevens van een andere locatie/i.test(u.state),"direct mismatch: veilige melding ontbreekt");
@@ -138,8 +159,9 @@ async function lees(page){return page.evaluate(()=>{
     /* Exact dezelfde cache mag bij providerfout wél als stale data terugkomen. */
     {
       const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block",locale:"nl-NL"});const page=await context.newPage();
+      const scenario=await installeerForecastScenario(page,kansasCityBron);
       await page.goto(ROOT+"/?"+params(locaties[1]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Kansas City");
-      await page.route("**://api.open-meteo.com/v1/forecast**",route=>route.fulfill({status:503,contentType:"application/json",body:'{"error":true}'}));await page.reload({waitUntil:"domcontentloaded",timeout:30000});
+      scenario.fail=true;await page.reload({waitUntil:"domcontentloaded",timeout:30000});
       await page.waitForFunction(()=>!!document.querySelector('.wiw-location-retry'),null,{timeout:10000});const u=await lees(page);
       assert(u.appVisible&&u.label==="Kansas City"&&u.query==="Kansas City"&&u.title.startsWith("Kansas City · "),"same-cache: identiteit niet volledig Kansas City");assert(/laatst opgehaalde gegevens voor Kansas City/i.test(u.state),"same-cache: stale melding ontbreekt");
       rapport.failureSafety.sameCache={ok:true,state:u.state};await context.close();
@@ -149,7 +171,8 @@ async function lees(page){return page.evaluate(()=>{
     for(const [w,h] of [[1920,1080],[390,844]])for(const theme of ["licht","donker"]){
       const context=await browser.newContext({viewport:{width:w,height:h},serviceWorkers:"block",locale:"nl-NL"});
       await context.addInitScript(t=>{try{localStorage.setItem("weerbriefing.thema",JSON.stringify(t));}catch(e){}},theme);
-      const page=await context.newPage();const bronBelofte=page.waitForResponse(r=>isForecast(r.url())&&r.ok(),{timeout:24000});await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"networkidle",timeout:30000});await bronBelofte;await wachtKlaar(page,"Amsterdam");
+      const page=await context.newPage();await installeerForecastFixture(page,amsterdamBron);
+      await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Amsterdam");
       const actief=await page.evaluate(()=>document.documentElement.getAttribute("data-thema"));assert.equal(actief,theme,`${w}px ${theme}: thema niet actief`);
       const naam=`watishetweer-${w}-${theme}.png`;await page.screenshot({path:path.join(OUT,naam),fullPage:true});rapport.screenshots.push({width:w,height:h,theme,file:naam});
       if(w===1920){const u=await lees(page);rapport.liveProof={sha:u.sha,delivery:u.delivery,assets:u.assets,url:page.url()};}
