@@ -11,7 +11,7 @@ const stub=`<script>try{localStorage.clear();sessionStorage.clear();}catch(e){}w
 html=html.replace("</head>",stub+"</head>");
 const reporter=`<script>
 setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-final-visual-'+k,String(v));try{
-  document.documentElement.classList.remove('wn-progressief');document.documentElement.setAttribute('data-thema','rood');
+  document.documentElement.classList.remove('wn-progressief');
   const app=document.getElementById('app');if(app){app.classList.remove('wn-progressief');app.removeAttribute('aria-busy');app.style.display='block';}
   const state=document.getElementById('state');if(state)state.style.display='none';
   if(globalThis.WeatherNowFinalDesktopUI20260902&&typeof WeatherNowFinalDesktopUI20260902.render==='function')WeatherNowFinalDesktopUI20260902.render();
@@ -33,8 +33,8 @@ setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-final-visual-'
   const kop=nights.querySelector('.row.night.kop'),rij=nights.querySelector('.row.night:not(.kop)'),kw=kop.querySelector('.nmeta.wide'),rw=rij.querySelector('.nmeta.wide'),ka=kop.querySelector('.nmeta:not(.wide)'),ra=rij.querySelector('.nmeta:not(.wide)'),advies=rij.querySelector('.nachtadvies'),bar=rij.querySelector('.sbar');
   const R=rr(rij),KW=rr(kw),RW=rr(rw),KA=rr(ka),RA=rr(ra),ADV=rr(advies),BAR=rr(bar),w=innerWidth;
   zet('night-label',kop.querySelector('.score').textContent.trim());zet('visibility-copy',vissub?vissub.textContent.trim():'');
-  const here=document.getElementById('here'),ververs=document.getElementById('ververs');zet('here-opacity',here?getComputedStyle(here).opacity:'');zet('refresh-opacity',ververs?getComputedStyle(ververs).opacity:'');
-  zet('red-ink45',getComputedStyle(document.documentElement).getPropertyValue('--ink-45').trim().toUpperCase());
+  const here=document.getElementById('here'),ververs=document.getElementById('ververs'),thema=document.getElementById('thema');zet('here-opacity',here?getComputedStyle(here).opacity:'');zet('refresh-opacity',ververs?getComputedStyle(ververs).opacity:'');zet('theme-opacity',thema?getComputedStyle(thema).opacity:'');
+  zet('theme-menu',document.getElementById('themamenu')?'ja':'nee');
   const bodyStyle=getComputedStyle(document.body),sheet=document.querySelector('.sheet'),sheetStyle=sheet&&getComputedStyle(sheet);zet('body-pad-left',parseFloat(bodyStyle.paddingLeft)||0);zet('sheet-pad-left',sheetStyle?parseFloat(sheetStyle.paddingLeft)||0:0);
   zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);
   if(w>=1100){
@@ -66,8 +66,8 @@ try{
     if(v('hour-scrollbar')!=='thin'||v('page-scrollbar')!=='thin')throw new Error(`${w}px: scrollbar styling niet actief (hour=${v('hour-scrollbar')}, page=${v('page-scrollbar')})`);
     if(v('night-label')!=='Zichtscore')throw new Error(`${w}px: Nachtzicht gebruikt nog geen duidelijke Zichtscore-label (${v('night-label')})`);
     if(v('visibility-copy')!=='Goed zicht.')throw new Error(`${w}px: redundante zichttekst niet ingekort (${v('visibility-copy')})`);
-    if(v('red-ink45')!=='#CF5A4D')throw new Error(`${w}px: rood contrasttoken niet actief (${v('red-ink45')})`);
-    if(!(Number(v('refresh-opacity'))<Number(v('here-opacity'))))throw new Error(`${w}px: headerhiërarchie ontbreekt (locatie=${v('here-opacity')}, ververs=${v('refresh-opacity')})`);
+    if(v('theme-menu')!=='ja')throw new Error(`${w}px: ondersteunde Auto/Licht/Donker-weergave ontbreekt`);
+    if(!(Number(v('refresh-opacity'))<Number(v('here-opacity'))&&Number(v('theme-opacity'))<Number(v('here-opacity'))))throw new Error(`${w}px: headerhiërarchie ontbreekt (locatie=${v('here-opacity')}, ververs=${v('refresh-opacity')}, weergave=${v('theme-opacity')})`);
     if(Number(v('overflow'))>2)throw new Error(`${w}px: ${v('overflow')}px horizontale overflow`);
     if(w<=900){
       if(v('hour-overflow-y')!=='visible'||v('hour-role')!==''||v('hour-tabindex')!=='nee')throw new Error(`${w}px: mobiele uurtabel is nog een geneste scroller (overflow=${v('hour-overflow-y')}, role=${v('hour-role')}, tabindex=${v('hour-tabindex')})`);
@@ -82,7 +82,7 @@ try{
       if(Number(v('night-wide-width'))<280)throw new Error(`${w}px: Beste zichtperiode te smal (${v('night-wide-width')}px)`);
       if(Number(v('night-bar-width'))<180)throw new Error(`${w}px: zichtscorebalk te smal (${v('night-bar-width')}px)`);
     }
-    console.log(`${w}px: final visual UX groen; overflow ${v('overflow')}px, rood AA-token actief, urenpreview correct${w>=1100?', zichtperiode '+v('night-wide-width')+'px':''}.`);
+    console.log(`${w}px: final visual UX groen; overflow ${v('overflow')}px, urenpreview en headerhiërarchie correct${w>=1100?', zichtperiode '+v('night-wide-width')+'px':''}.`);
   }
   console.log("Final visual polish browsertest geslaagd op 320/390/430/1100/1366/1440/1600/1920 px.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
