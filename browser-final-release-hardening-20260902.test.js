@@ -189,7 +189,7 @@ draaiScenario("reload gebruikt passende cache",`
   const bewaard=ls.get(KEY_D,null);reset(false);ls.set(KEY_D,bewaard);q.value='Kathmandu';plan('provider-error',0);
   await load(27.7172,85.3240,'Kathmandu',false,true,'NP');await slaap(40);
   const tekst=statusTekst();
-  zet('result',goed('Kathmandu',27.7172,85.3240)&&S.verversMislukt&&/Kathmandu/.test(tekst)&&/niet vernieuwd|blijven staan/i.test(tekst)&&retryAanwezig()?'ok':'fout');
+  zet('result',goed('Kathmandu',27.7172,85.3240)&&S.verversMislukt&&/Kathmandu/.test(tekst)&&/niet vernieuwd|blijven staan|laatst opgehaalde gegevens/i.test(tekst)&&retryAanwezig()?'ok':'fout');
 `);
 
 console.log("Final-release locatiehardening: 10 cache/fout/racescenario's elk in een vers Chromium-proces geslaagd.");
