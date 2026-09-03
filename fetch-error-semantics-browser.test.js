@@ -76,6 +76,9 @@ function draai(geval){
 }
 function attr(dom,naam){const m=new RegExp('data-'+naam+'="([^"]*)"').exec(dom);return m?m[1].replace(/&amp;/g,"&"):null;}
 
+/* De compacte locatiestatus is bij een cold-loadfout bewust de enige zichtbare
+   fout-owner. #state mag dus leeg/verborgen zijn, maar nooit daarnaast nog een
+   tweede technische of dubbele gebruikersmelding tonen. */
 for(const geval of gevallen){
   const dom=draai(geval),tekst=attr(dom,"status");
   if(attr(dom,"status-visible")!=="true")throw new Error(geval.naam+": compacte foutstatus is niet zichtbaar");
