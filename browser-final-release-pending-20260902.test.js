@@ -73,19 +73,28 @@ const reporter=`<script>
     const pendingBelofte=load(39.0997,-94.5786,'Kansas City',false,true,'US');
     await slaap(180);
 
+    const laadstatus=document.getElementById('locatie-laadstatus');
+    const laadtekst=laadstatus&&laadstatus.querySelector('.locatie-status-tekst');
+    const retry=laadstatus&&laadstatus.querySelector('.locatie-status-retry');
     const pendingOk=identiteit('Amsterdam',52.3676,4.9041)
       &&getComputedStyle(app).display!=='none'
       &&!document.documentElement.classList.contains('wn-progressief')
       &&!app.classList.contains('wn-progressief')
-      &&app.getAttribute('aria-busy')!=='true'
+      &&app.getAttribute('aria-busy')==='true'
+      &&q.getAttribute('aria-busy')==='true'
       &&place.getAttribute('aria-label')==='Amsterdam'
       &&urlIs('Amsterdam',52.368,4.904)
-      &&/Kansas City/.test(st.textContent)&&/Amsterdam/.test(st.textContent)
+      &&(!st.textContent||getComputedStyle(st).display==='none')
+      &&!!laadstatus&&laadstatus.hidden===false
+      &&!!laadtekst&&/Weer voor Kansas City ophalen/.test(laadtekst.textContent||'')
+      &&!!retry&&retry.hidden
       &&window.__wiwForecastRequests===aanvragenVoorSwitch+1;
     zet('pending',pendingOk?'ok':'fout');
     zet('pending-label',S.label);zet('pending-lat',S.lat);zet('pending-lon',S.lon);zet('pending-q',q.value);
     zet('pending-title',document.title);zet('pending-place',place.getAttribute('aria-label')||'');zet('pending-url',location.href);
-    zet('pending-state',st.textContent);zet('pending-app',getComputedStyle(app).display);zet('pending-progressief',document.documentElement.classList.contains('wn-progressief'));
+    zet('pending-state',st.textContent);zet('pending-status',laadtekst&&laadtekst.textContent||'');
+    zet('pending-app',getComputedStyle(app).display);zet('pending-busy',app.getAttribute('aria-busy'));
+    zet('pending-q-busy',q.getAttribute('aria-busy'));zet('pending-progressief',document.documentElement.classList.contains('wn-progressief'));
     zet('pending-requests',window.__wiwForecastRequests-aanvragenVoorSwitch);
 
     await pendingBelofte;await slaap(30);
@@ -94,10 +103,14 @@ const reporter=`<script>
       &&place.getAttribute('aria-label')==='Kansas City'
       &&urlIs('Kansas City',39.100,-94.579)
       &&!document.documentElement.classList.contains('wn-progressief')
-      &&!app.classList.contains('wn-progressief');
+      &&!app.classList.contains('wn-progressief')
+      &&app.getAttribute('aria-busy')!=='true'
+      &&q.getAttribute('aria-busy')!=='true'
+      &&(!laadstatus||laadstatus.hidden===true);
     zet('success',successOk?'ok':'fout');
     zet('success-label',S.label);zet('success-lat',S.lat);zet('success-lon',S.lon);zet('success-q',q.value);
     zet('success-title',document.title);zet('success-place',place.getAttribute('aria-label')||'');zet('success-url',location.href);
+    zet('success-status',laadtekst&&laadtekst.textContent||'');zet('success-busy',app.getAttribute('aria-busy'));
     zet('done','ok');
   }catch(e){zet('error',e&&e.stack||e);zet('done','fout');}
 })();
@@ -112,7 +125,7 @@ try{
   const dom=r.stdout||"";
   const v=k=>{const m=new RegExp('data-pending-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(v('done')!=="ok")throw new Error("pending-state reporter faalde: "+v('error'));
-  if(v('pending')!=="ok")throw new Error("pending-state niet coherent: label="+v('pending-label')+", lat="+v('pending-lat')+", lon="+v('pending-lon')+", q="+v('pending-q')+", title="+v('pending-title')+", place="+v('pending-place')+", app="+v('pending-app')+", progressief="+v('pending-progressief')+", requests="+v('pending-requests')+", state="+v('pending-state')+", url="+v('pending-url'));
-  if(v('success')!=="ok")throw new Error("successtate niet atomair: label="+v('success-label')+", lat="+v('success-lat')+", lon="+v('success-lon')+", q="+v('success-q')+", title="+v('success-title')+", place="+v('success-place')+", url="+v('success-url'));
-  console.log("Final-release pending-state groen: na 180 ms blijft Amsterdam volledig zichtbaar en coherent; na volledige forecast schakelt alle locatie-identiteit atomair naar Kansas City.");
+  if(v('pending')!=="ok")throw new Error("pending-state niet coherent: label="+v('pending-label')+", lat="+v('pending-lat')+", lon="+v('pending-lon')+", q="+v('pending-q')+", title="+v('pending-title')+", place="+v('pending-place')+", app="+v('pending-app')+", busy="+v('pending-busy')+", qBusy="+v('pending-q-busy')+", progressief="+v('pending-progressief')+", requests="+v('pending-requests')+", state="+v('pending-state')+", status="+v('pending-status')+", url="+v('pending-url'));
+  if(v('success')!=="ok")throw new Error("successtate niet atomair: label="+v('success-label')+", lat="+v('success-lat')+", lon="+v('success-lon')+", q="+v('success-q')+", title="+v('success-title')+", place="+v('success-place')+", busy="+v('success-busy')+", status="+v('success-status')+", url="+v('success-url'));
+  console.log("Final-release pending-state groen: tijdens wachten blijft Amsterdam volledig zichtbaar en coherent met één compacte Kansas City-laadstatus; na volledige forecast schakelt alle locatie-identiteit atomair naar Kansas City.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
