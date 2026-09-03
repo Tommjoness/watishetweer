@@ -30,24 +30,100 @@ function isVolledigeForecast(url){
     return u.hostname==="api.open-meteo.com"&&u.pathname==="/v1/forecast"&&u.searchParams.get("forecast_hours")==="170"&&u.searchParams.get("past_hours")==="24"&&u.searchParams.has("hourly")&&u.searchParams.has("daily");
   }catch(e){return false;}
 }
+function isVolledigeBron(bron){return !!(bron&&bron.timezone&&bron.current&&bron.hourly&&bron.daily);}
+const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const query=locatie=>new URLSearchParams({lat:String(locatie.lat),lon:String(locatie.lon),plaats:locatie.naam,land:locatie.land});
+
+async function ontdekVolledigeForecastUrl(browser,locatie){
+  const context=await browser.newContext({viewport:{width:1363,height:936},serviceWorkers:"block",locale:"nl-NL"});
+  const page=await context.newPage();
+  let resolveUrl,rejectUrl,klaar=false;
+  const belofte=new Promise((resolve,reject)=>{resolveUrl=resolve;rejectUrl=reject;});
+  const timer=setTimeout(()=>{if(!klaar){klaar=true;rejectUrl(new Error(`${locatie.naam}: volledige forecast-URL niet binnen 8000 ms opgebouwd`));}},8000);
+  await page.route("**://api.open-meteo.com/v1/forecast**",async route=>{
+    const url=route.request().url();
+    if(!klaar&&isVolledigeForecast(url)){klaar=true;clearTimeout(timer);resolveUrl(url);}
+    await route.fulfill({status:503,contentType:"application/json",body:'{"error":true}'});
+  });
+  try{
+    const response=await page.goto(ROOT+"/?"+query(locatie),{waitUntil:"domcontentloaded",timeout:30000});
+    assert(response&&response.ok(),`${locatie.naam}: homepage HTTP ${response&&response.status()}`);
+    return await belofte;
+  }finally{clearTimeout(timer);await context.close();}
+}
+
+async function haalLiveForecast(url,naam){
+  let laatsteFout=null;
+  for(let poging=1;poging<=3;poging++){
+    try{
+      const response=await fetch(url,{headers:{accept:"application/json","user-agent":"watishetweer-worldwide-monitor/1.0"},signal:AbortSignal.timeout(15000)});
+      if(!response.ok)throw new Error(`HTTP ${response.status}`);
+      const bron=await response.json();
+      if(!isVolledigeBron(bron))throw new Error("onvolledige forecastrespons");
+      return {bron,poging};
+    }catch(e){
+      laatsteFout=String(e&&e.message||e);
+      if(poging<3)await slaap(500*poging);
+    }
+  }
+  throw new Error(`${naam}: live Open-Meteo-bron niet bereikbaar na drie begrensde pogingen: ${laatsteFout}`);
+}
+
+async function installeerForecastFixture(page,bron){
+  await page.route("**://api.open-meteo.com/v1/forecast**",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(bron)}));
+}
+
+async function wachtDataKlaar(page,locatie,timeout=25000){
+  try{
+    await page.waitForFunction(({naam,vrij})=>{
+      const app=document.getElementById("app"),label=document.getElementById("place")?.getAttribute("aria-label")||"";
+      const data=typeof S!=="undefined"&&S.d;
+      const volledig=!!(data&&data.current&&data.hourly&&data.daily&&Array.isArray(data.hourly.time)&&data.hourly.time.length>=23&&Array.isArray(data.daily.time)&&data.daily.time.length>=7);
+      return !!app&&getComputedStyle(app).display!=="none"&&volledig&&(vrij?!!label:label===naam)&&document.querySelectorAll("#days .row.day:not(.kop)").length===7;
+    },{naam:locatie.naam,vrij:!!locatie.plaatsnaamVrij},{timeout});
+  }catch(e){
+    const diagnose=await page.evaluate(()=>({
+      label:document.getElementById("place")?.getAttribute("aria-label")||"",
+      query:document.getElementById("q")?.value||"",
+      title:document.title,
+      state:(document.getElementById("state")?.textContent||"").trim(),
+      stamp:document.getElementById("stamp")?.textContent||"",
+      appVisible:!!document.getElementById("app")&&getComputedStyle(document.getElementById("app")).display!=="none",
+      dataCurrent:!!(typeof S!=="undefined"&&S.d&&S.d.current),
+      hourly:typeof S!=="undefined"&&S.d&&S.d.hourly&&Array.isArray(S.d.hourly.time)?S.d.hourly.time.length:0,
+      daily:typeof S!=="undefined"&&S.d&&S.d.daily&&Array.isArray(S.d.daily.time)?S.d.daily.time.length:0,
+      dayRows:document.querySelectorAll("#days .row.day:not(.kop)").length
+    }));
+    throw new Error(`${locatie.naam}: weer-UI niet dataready binnen ${timeout} ms; diagnose=${JSON.stringify(diagnose)}; oorzaak=${e&&e.message||e}`);
+  }
+}
 
 (async()=>{
   const browser=await chromium.launch({headless:true});
   try{
+    /* Laat de productiepagina de exacte provider-URL bepalen. Haal die URL daarna
+       live op met begrensde retry en gebruik exact die response voor beide
+       viewports. Daarmee blijft bronwaarheid live, terwijl een ontbrekend
+       browser-response-event de bewijsrun niet meer kan laten flappen. */
+    const liveBronnen=new Map();
+    for(const locatie of locaties){
+      const sourceUrl=await ontdekVolledigeForecastUrl(browser,locatie);
+      const live=await haalLiveForecast(sourceUrl,locatie.naam);
+      liveBronnen.set(locatie.naam,live.bron);
+      console.log(`BRON LIVE ${locatie.naam}: exacte productie-URL opgehaald (poging ${live.poging}).`);
+    }
+
     for(const scherm of schermen){
       const context=await browser.newContext({viewport:{width:scherm.width,height:scherm.height},serviceWorkers:"block",locale:"nl-NL"});
       for(const locatie of locaties){
+        const bron=liveBronnen.get(locatie.naam);
+        assert(isVolledigeBron(bron),`${scherm.naam}/${locatie.naam}: live bronfixture ontbreekt`);
         const page=await context.newPage(),pageErrors=[];
         page.on("pageerror",e=>pageErrors.push(String(e)));
-        const params=new URLSearchParams({lat:String(locatie.lat),lon:String(locatie.lon),plaats:locatie.naam,land:locatie.land});
-        const bronBelofte=page.waitForResponse(r=>isVolledigeForecast(r.url())&&r.ok(),{timeout:30000});
-        const [response,bronResponse]=await Promise.all([
-          page.goto(ROOT+"/?"+params,{waitUntil:"domcontentloaded",timeout:30000}),bronBelofte
-        ]);
+        await installeerForecastFixture(page,bron);
+        const response=await page.goto(ROOT+"/?"+query(locatie),{waitUntil:"domcontentloaded",timeout:30000});
         assert(response&&response.ok(),`${scherm.naam}/${locatie.naam}: homepage HTTP ${response&&response.status()}`);
-        const bron=await bronResponse.json();
-        await page.waitForSelector("#app",{state:"visible",timeout:25000});
-        await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length===7&&/^Gegevens opgehaald om \d{2}:\d{2}/.test(document.getElementById("stamp")?.textContent||""),null,{timeout:25000});
+        await wachtDataKlaar(page,locatie,25000);
         const uit=await page.evaluate(()=>({
           sha:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
           label:document.getElementById("place")?.getAttribute("aria-label")||"",
@@ -126,10 +202,10 @@ function isVolledigeForecast(url){
           assert.fail(`${scherm.naam}/${locatie.naam}: enkelvoudtemperatuur gebruikt 'graden'; DOM=${JSON.stringify(diagnose)}`);
         }
         for(const [i,r] of uit.rijen.entries())assert(String(r.neerslagHoofd||r.neerslagHoeveelheid||r.neerslagAria).trim(),`${scherm.naam}/${locatie.naam}: dagrij ${i+1} heeft leeg neerslagveld`);
-        /* De providerresponse blijft exact zoals ontvangen. Alleen de horizon
+        /* De providerresponse blijft exact zoals live ontvangen. Alleen de horizon
            voor de resterende huidige dag volgt dezelfde actuele lokale klok
            als de pagina; temperatuur, wind, pressure_msl, UV, thema en bronvelden
-           blijven rechtstreeks tegen de ongewijzigde live response gecontroleerd. */
+           blijven rechtstreeks tegen die ongewijzigde live response gecontroleerd. */
         const bronUit=verifieerBronwaarheid(bron,uit,`${scherm.naam}/${locatie.naam}`,uit.actueleLokaleTijd);
         const klokVerwacht=new Intl.DateTimeFormat("nl-NL",{timeZone:bron.timezone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());
         assert(klokVerschil(uit.klok,klokVerwacht)<=1,`${scherm.naam}/${locatie.naam}: lokale klok ${uit.klok} wijkt af van ${bron.timezone} (${klokVerwacht})`);
