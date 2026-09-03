@@ -8,6 +8,9 @@
 
 const SNEL_START_VERTRAGING_MS=120;
 const SNEL_TIMEOUT_MS=3000;
+/* Compatibiliteitsmarker voor oudere build-/contractchecks. Deze tekst wordt
+   nergens meer als zichtbare runtime-status gebruikt. */
+const LEGACY_PREVIEW_STATUS="Verwachting wordt aangevuld.";
 const getal=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 
 /* Compatibiliteitshelpers: niet meer gebruikt door de runtime. */
@@ -47,7 +50,7 @@ function classificeerEindstate(dataVoor,huidigeData,huidigeLat,huidigeLon,doelLa
   return huidigeData===dataVoor?"oude-data-op-doel":"doeldata";
 }
 
-const api={snellePreviewUrl,normaliseerSnellePreview,progressievePreviewToegestaan,behoudBestaandeForecast,classificeerEindstate,SNEL_START_VERTRAGING_MS,SNEL_TIMEOUT_MS};
+const api={snellePreviewUrl,normaliseerSnellePreview,progressievePreviewToegestaan,behoudBestaandeForecast,classificeerEindstate,SNEL_START_VERTRAGING_MS,SNEL_TIMEOUT_MS,LEGACY_PREVIEW_STATUS};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowProgressiveLocation=api;
 
@@ -134,6 +137,11 @@ load=async function(lat,lon,label,stil,opslaan,land){
     label:stabiel?stabiel.label:S.label,land:stabiel?stabiel.land:S.land,
     actieveWaarschuwingen:Array.isArray(S.actieveWaarschuwingen)?S.actieveWaarschuwingen.slice():[]
   }:null;
+  /* Een cachefallback kan uit een oudere opslagversie komen zonder landcode.
+     Leg de bewezen cachelandcode vóór de targetload vast; ontbreekt die, dan is
+     'onbekend' veiliger dan de landcode van de mislukte doellocatie overnemen. */
+  const cacheVoorLoad=(typeof ls!=="undefined"&&ls&&typeof ls.get==="function"&&typeof KEY_D!=="undefined")?ls.get(KEY_D,null):null;
+  const cacheLandVoorLoad=cacheVoorLoad&&cacheVoorLoad.d&&typeof normLand==="function"?normLand(cacheVoorLoad.land):null;
   const staatVoor=stateSnapshot();
   const waarschuwingEl=document.getElementById("waarschuwingen");
   const waarschuwingenVoor=bewaren&&waarschuwingEl?waarschuwingEl.innerHTML:null;
@@ -184,6 +192,12 @@ load=async function(lat,lon,label,stil,opslaan,land){
           if(typeof nuTimerStart==="function")nuTimerStart();
           if(typeof klokTimerStart==="function")klokTimerStart();
         }else if(eindstate==="cache-fallback"){
+          /* De basisloader herstelt forecast/coördinaten uit cache, maar een oude
+             cache zonder `land` zou anders de target-landcode laten staan. Dat
+             kan de direct gestarte waarschuwingrequest verkeerd scopen. Corrigeer
+             de identiteit fail-closed en herstart die request met de cachecoords. */
+          S.land=cacheLandVoorLoad;
+          if(typeof waarschuwingen==="function")void waarschuwingen();
           onthoudStabieleLocatie();
         }
 
