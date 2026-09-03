@@ -46,7 +46,8 @@ html::-webkit-scrollbar-thumb:hover{background:var(--ink-70)}
 @media(max-width:900px){
   body{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(14px + env(safe-area-inset-bottom));padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
   #minibar{top:env(safe-area-inset-top)!important;left:max(8px,env(safe-area-inset-left))!important;right:max(8px,env(safe-area-inset-right))!important}
-  .wiw-hour-table-scroll{max-height:none!important;overflow-y:visible!important;overflow-x:hidden!important;overscroll-behavior:auto!important;scrollbar-gutter:auto!important}
+  /* clip op de x-as voorkomt zijwaartse uitloop zonder visible op de y-as naar auto te laten berekenen. */
+  .wiw-hour-table-scroll{max-height:none!important;overflow-y:visible!important;overflow-x:clip!important;overscroll-behavior:auto!important;scrollbar-gutter:auto!important}
   .wiw-hour-mobile-hidden{display:none!important}
   .wiw-hour-toggle{min-height:44px}
 }
