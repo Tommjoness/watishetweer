@@ -1,11 +1,43 @@
-/* Tijdens een cold locatiewissel mag nooit een nieuw hero-blok boven details
-   van de vorige plaats staan. Tot de volledige forecast binnen is toont de app
-   daarom uitsluitend de actuele kern uit de kleine current-only response. */
-html.wn-progressief #app.wn-progressief > :not(.dashrow-hero){display:none!important}
-html.wn-progressief #app.wn-progressief .dashrow-hero .stats{display:none!important}
-html.wn-progressief #app.wn-progressief .dashrow-hero{margin-top:0}
-html.wn-progressief #minibar{display:none!important}
-/* De bestaande kloktimer leest S.d, dat bewust pas bij de volledige forecast
-   wordt vervangen. Verberg daarom de klok in deze korte tussenfase in plaats
-   van een seconde lang de tijdzone van de vorige plaats te kunnen tonen. */
-html.wn-progressief #plaatstijd{visibility:hidden}
+/* Compacte locatiestatus op exact de plek waar normaal de ophaalstempel staat.
+   Daardoor krijgt de gebruiker direct feedback bij de zoekbediening zonder een
+   extra rij, skeleton of verspringende dashboardlayout. */
+.locatie-laadstatus{
+  min-height:16px;
+  max-width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:7px;
+  color:var(--ink-45);
+  font-family:var(--mono);
+  font-size:11px;
+  font-variant-numeric:tabular-nums;
+  text-align:right;
+}
+.locatie-laadstatus[hidden]{display:none!important}
+.locatie-spinner{
+  width:10px;
+  height:10px;
+  flex:0 0 10px;
+  border:1px solid var(--rule);
+  border-top-color:var(--ink-45);
+  border-radius:50%;
+  animation:wn-locatie-spin .7s linear infinite;
+}
+.locatie-laadstatus.fout{color:var(--carmine)}
+.locatie-laadstatus.fout .locatie-spinner{display:none}
+.locatie-status-tekst{min-width:0}
+.locatie-status-retry{
+  min-height:0!important;
+  padding:1px 5px!important;
+  border-color:currentColor!important;
+  color:inherit!important;
+  font-size:9.5px!important;
+  letter-spacing:.08em!important;
+  line-height:1.35!important;
+}
+@keyframes wn-locatie-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.locatie-spinner{animation:none}}
+@media(max-width:900px){
+  .locatie-laadstatus{width:100%;font-size:10.5px;justify-content:flex-end}
+}
