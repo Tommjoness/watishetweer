@@ -83,7 +83,7 @@ assert(wereldwijd.includes('assert.equal(uit.sha,verwacht'),"wereldwijde browser
 assert(wereldwijd.includes("verifieerBronwaarheid(bron,uit"),"wereldwijde browsermonitor vergelijkt zichtbare waarden niet met de live bronrespons");
 assert(wereldwijd.includes("if(!klaar&&isVolledigeForecast(url))")&&wereldwijd.includes("haalLiveForecast(sourceUrl"),"wereldwijde browsermonitor moet de volledige forecastrespons via de exacte productie-URL live vergelijken en niet de current-only preview");
 assert(wereldwijd.includes('assert.equal(uit.timezone,bron.timezone'),"wereldwijde browsermonitor moet de UI-tijdzone tegen dezelfde providerresponse verifiëren");
-assert(wereldwijd.includes('Luchtdruk op zeeniveau'),"wereldwijde browsermonitor moet de druksoort bewaken");
+assert(wereldwijd.includes('retired pressure_msl')&&wereldwijd.includes('pressureRest'),"wereldwijde browsermonitor moet pressure-retirement in providerquery én DOM bewaken");
 assert(wereldwijd.includes('toekomstige Nachtzicht-rij gebruikt verleden tijd'),"wereldwijde browsermonitor moet toekomstige Nachtzicht-copy bewaken");
 assert(wereldwijd.includes('heeft leeg neerslagveld'),"wereldwijde browsermonitor moet lege dagneerslagvelden blokkeren");
 assert(performance.includes('const {chromium,webkit,devices}=require("playwright")'),"live performancemonitor moet Chromium en WebKit gebruiken");
@@ -110,6 +110,7 @@ assert(cls.includes('uitkomst:heeftData?"data":terminaleFout?"fout":"laden"'),"p
 assert(cls.includes("assert(dataRondes>=MIN_DATA_RONDEN"),"productie-CLS-monitor mag niet groen worden zonder representatieve echte weerdata");
 assert(cls.includes("Beschikbaarheid wordt apart bewaakt"),"CLS-monitor moet beschikbaarheid expliciet als aparte verantwoordelijkheid rapporteren");
 
+require("./pressure-retirement.test.js");
 require("./production-source-truth.test.js");
 
-console.log("production-monitoring-config: deploymentcontract, volledige 11-locatiematrix, één gerichte provider-timeoutretry, vijf gescheiden browsergates inclusief finale release-evidence, gecontroleerde Cloudflare Web Analytics, vaste mobiele CLS-vensters en strikt sitemapcontract OK");
+console.log("production-monitoring-config: deploymentcontract, volledige 11-locatiematrix, één gerichte provider-timeoutretry, vijf gescheiden browsergates inclusief finale release-evidence, pressure-retirement, gecontroleerde Cloudflare Web Analytics, vaste mobiele CLS-vensters en strikt sitemapcontract OK");
