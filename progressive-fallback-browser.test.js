@@ -1,24 +1,11 @@
 "use strict";
 
-/*
- * Regressie voor de foutpaden van progressieve locatielading.
- *
- * Scenario 1: locatie A is volledig geladen, blijvende opslag valt daarna weg,
- * locatie B krijgt wel een snelle current-preview maar beide volledige requests
- * falen. Oude S.d van A mag dan nooit als volledige data voor B zichtbaar worden.
- *
- * Scenario 2: dezelfde wissel met een geldige cache van A. De basisloader toont
- * die cache bewust als expliciet gelabelde laatst opgehaalde gegevens. De progressieve
- * wrapper mag die veilige fallback niet vervolgens verbergen.
- *
- * Migratiegrens binnen scenario 2: een oudere cache kan nog geen `land` hebben.
- * Wanneer een nieuwe locatie met een andere landcode daarna faalt, moeten niet
- * alleen lat/lon/label maar ook de locatie-identiteit van de cache worden
- * hersteld. De waarschuwingrequest voor de teruggevallen Amsterdam-cache mag dus
- * nooit de mislukte New York-code `land=US` meenemen. Zonder bewezen cacheland
- * moet de request landloos vertrekken zodat de server het land uit de herstelde
- * coördinaten opnieuw bepaalt.
- */
+/* Foutpaden voor de locatiewisselstatus.
+   Zonder persistente cache én met een legacy-cache van de vorige locatie blijft
+   de al zichtbare forecast en locatie-identiteit volledig intact. Een cache van
+   Amsterdam mag bij een mislukte New York-aanvraag nooit als New York-fallback
+   worden gebruikt. In beide gevallen verschijnt een compacte foutstatus met
+   retry en wordt nooit een current-only preview opgevraagd. */
 const fs=require("fs"),os=require("os"),path=require("path"),{spawnSync}=require("child_process");
 const {bouw}=require("./data.js");
 
@@ -65,7 +52,7 @@ window.fetch=function(url){
   if(u.includes('api.open-meteo.com/v1/forecast')){
     const nieuw=/latitude=40(?:\\.7128)?(?:&|%26)/.test(u)||u.includes('latitude=40.7128');
     const preview=u.includes('current=temperature_2m,apparent_temperature,is_day,weather_code')&&!u.includes('daily=');
-    if(nieuw&&preview){window.__fallbackFetch.preview++;return new Promise(resolve=>setTimeout(()=>resolve(${antwoord(snel)}),35));}
+    if(nieuw&&preview){window.__fallbackFetch.preview++;return Promise.resolve(${antwoord(snel)});}
     if(nieuw){window.__fallbackFetch.newFull++;return new Promise(resolve=>setTimeout(()=>resolve(${antwoord({reason:"test outage"},false,503)}),260));}
     window.__fallbackFetch.oldFull++;return new Promise(resolve=>setTimeout(()=>resolve(${antwoord(oud)}),35));
   }
@@ -78,12 +65,15 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
   const reporter=`<script>
 (function(){
   const zet=(k,v)=>document.body.setAttribute('data-'+k,String(v));
+  const plaats=()=>{const p=document.getElementById('place');return p&&p.childNodes&&p.childNodes[0]?String(p.childNodes[0].textContent||'').trim():'';};
+  const status=()=>document.getElementById('locatie-laadstatus');
+  const statusTekst=()=>((status()||{}).textContent||'').replace(/\\s+/g,' ').trim();
   setTimeout(()=>{
     try{
-      zet('initial',typeof S!=='undefined'&&S.d&&Math.round(Number(S.d.current&&S.d.current.temperature_2m))===18?'ok':'fout');
+      const initOk=typeof S!=='undefined'&&S.d&&Math.round(Number(S.d.current&&S.d.current.temperature_2m))===18;
+      zet('initial',initOk?'ok':'fout');
+      window.__oudeLocatie={lat:S.lat,lon:S.lon,label:S.label,land:S.land,place:plaats()};
       if(${cacheBehouden}){
-        /* Simuleer een geldige cache van vóór de landcode-migratie: alle
-           forecastdata/coördinaten zijn intact, alleen land ontbreekt. */
         const legacy=JSON.parse(localStorage.getItem('weerbriefing.data')||'null');
         if(legacy){delete legacy.land;localStorage.setItem('weerbriefing.data',JSON.stringify(legacy));}
       }else{
@@ -94,36 +84,45 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
   },420);
   setTimeout(()=>{
     try{
-      const app=document.getElementById('app'),state=document.getElementById('state'),place=document.getElementById('place');
+      const app=document.getElementById('app'),state=document.getElementById('state'),s=status(),retry=s&&s.querySelector('.locatie-status-retry');
       const zichtbaar=!!(app&&getComputedStyle(app).display!=='none');
       const stateTekst=(state&&state.textContent||'').trim();
-      const plaats=(place&&place.childNodes&&place.childNodes[0]&&place.childNodes[0].textContent||'').trim();
       const sTemp=typeof S!=='undefined'&&S.d&&S.d.current?Math.round(Number(S.d.current.temperature_2m)):null;
       const warnings=window.__fallbackWarnings||[],laatsteWarning=warnings.length?warnings[warnings.length-1]:'';
-      zet('visible',zichtbaar);
-      zet('state',stateTekst);
-      zet('place',plaats);
-      zet('stemp',sTemp);
-      zet('land',typeof S!=='undefined'&&S.land!=null?S.land:'null');
-      zet('warning-last',laatsteWarning);
-      zet('preview-count',window.__fallbackFetch.preview);
-      zet('new-full-count',window.__fallbackFetch.newFull);
+      const foutUi=!!(s&&s.hidden===false&&s.classList.contains('fout')&&/New York niet geladen/.test(statusTekst())&&retry&&!retry.hidden
+        &&app&&!app.hasAttribute('aria-busy')&&!(document.getElementById('q')||{}).hasAttribute('aria-busy')
+        &&window.__fallbackFetch.preview===0);
+      zet('visible',zichtbaar);zet('state',stateTekst);zet('place',plaats());zet('stemp',sTemp);
+      zet('label',typeof S!=='undefined'?S.label:'');zet('lat',typeof S!=='undefined'?S.lat:'');zet('lon',typeof S!=='undefined'?S.lon:'');
+      zet('land',typeof S!=='undefined'&&S.land!=null?S.land:'null');zet('status',statusTekst());
+      zet('warning-last',laatsteWarning);zet('preview-count',window.__fallbackFetch.preview);zet('new-full-count',window.__fallbackFetch.newFull);
       if(${cacheBehouden}){
-        let warningBijCache=false,geenStaleLand=false;
+        let warningBijVorige=false,geenStaleLand=false;
         try{
           const warningUrl=new URL(laatsteWarning,'https://watishetweer.test');
           const lat=Number(warningUrl.searchParams.get('lat')),lon=Number(warningUrl.searchParams.get('lon'));
-          warningBijCache=Math.abs(lat-52.368)<0.0015&&Math.abs(lon-4.904)<0.0015;
+          warningBijVorige=Math.abs(lat-52.368)<0.0015&&Math.abs(lon-4.904)<0.0015;
           geenStaleLand=warningUrl.searchParams.get('land')!=='US'&&typeof S!=='undefined'&&S.land==null;
         }catch(_){ }
-        const veilig=zichtbaar&&/laatst opgehaalde gegevens/i.test(stateTekst)&&typeof S!=='undefined'&&S.label==='Amsterdam'&&sTemp===18&&plaats==='Amsterdam'&&warningBijCache&&geenStaleLand;
+        const o=window.__oudeLocatie||{};
+        /* Persistente locatiecoördinaten worden bewust op drie decimalen opgeslagen.
+           Een veilige fallback mag daarom maximaal de opslagafronding afwijken van
+           de vóór de wissel zichtbare locatie, maar nooit naar de doelcoördinaten springen. */
+        const zelfdeCoords=Math.abs(Number(S.lat)-Number(o.lat))<0.001&&Math.abs(Number(S.lon)-Number(o.lon))<0.001;
+        const compacteFout=/New York niet geladen/.test(statusTekst())&&/Amsterdam/.test(statusTekst());
+        const stateVerborgen=!!(state&&getComputedStyle(state).display==='none');
+        const veilig=foutUi&&compacteFout&&zichtbaar&&stateVerborgen&&zelfdeCoords
+          &&typeof S!=='undefined'&&S.label==='Amsterdam'&&sTemp===18&&plaats()==='Amsterdam'&&warningBijVorige&&geenStaleLand;
         zet('result',veilig?'ok':'fout');
       }else{
-        const veilig=!zichtbaar&&/Ophalen mislukt/i.test(stateTekst)&&typeof S!=='undefined'&&S.label==='New York';
+        const o=window.__oudeLocatie||{};
+        const zelfdeCoords=Math.abs(Number(S.lat)-Number(o.lat))<1e-9&&Math.abs(Number(S.lon)-Number(o.lon))<1e-9;
+        const veilig=foutUi&&zichtbaar&&typeof S!=='undefined'&&S.label===o.label&&sTemp===18&&plaats()===o.place&&zelfdeCoords
+          &&state&&getComputedStyle(state).display==='none';
         zet('result',veilig?'ok':'fout');
       }
     }catch(e){zet('result','exception');zet('exception',e&&e.message||e);}
-  },1350);
+  },1500);
 })();
 </script>`;
   return html.replace("</body>",reporter+"</body>");
@@ -133,7 +132,7 @@ function draai(cacheBehouden){
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),"weathernow-progressive-fallback-"));
   try{
     const pad=path.join(dir,"index.html");fs.writeFileSync(pad,fixture(cacheBehouden));
-    const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1200,900","--virtual-time-budget=2200","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:20*1024*1024});
+    const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1200,900","--virtual-time-budget=2400","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:20*1024*1024});
     if(r.status!==0)throw new Error("browser exit "+r.status+" "+(r.stderr||"").slice(-1200));
     return r.stdout||"";
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
@@ -141,10 +140,10 @@ function draai(cacheBehouden){
 function waarde(dom,veld){const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];}
 function eis(dom,label){
   if(waarde(dom,"initial")!=="ok"||waarde(dom,"result")!=="ok"){
-    throw new Error(label+" fout: initial="+waarde(dom,"initial")+", result="+waarde(dom,"result")+", visible="+waarde(dom,"visible")+", state="+waarde(dom,"state")+", place="+waarde(dom,"place")+", sTemp="+waarde(dom,"stemp")+", land="+waarde(dom,"land")+", warning="+waarde(dom,"warning-last")+", preview="+waarde(dom,"preview-count")+", full="+waarde(dom,"new-full-count")+", switchEx="+waarde(dom,"switch-exception")+", ex="+waarde(dom,"exception"));
+    throw new Error(label+" fout: initial="+waarde(dom,"initial")+", result="+waarde(dom,"result")+", visible="+waarde(dom,"visible")+", state="+waarde(dom,"state")+", place="+waarde(dom,"place")+", label="+waarde(dom,"label")+", lat="+waarde(dom,"lat")+", lon="+waarde(dom,"lon")+", sTemp="+waarde(dom,"stemp")+", land="+waarde(dom,"land")+", status="+waarde(dom,"status")+", warning="+waarde(dom,"warning-last")+", preview="+waarde(dom,"preview-count")+", full="+waarde(dom,"new-full-count")+", switchEx="+waarde(dom,"switch-exception")+", ex="+waarde(dom,"exception"));
   }
 }
 
 eis(draai(false),"zonder cache");
 eis(draai(true),"met legacy-cache zonder land");
-console.log("Progressive fallback browser: mislukte locatiewissel lekt geen oude details, veilige laatst opgehaalde gegevens blijven zichtbaar en legacy-cache neemt geen landcode van de mislukte locatie over.");
+console.log("Progressive fallback browser: vorige forecast blijft bij fout intact, mismatched legacy-cache wordt niet als doellocatie gebruikt, compacte retry-status zichtbaar en geen previewrequest.");

@@ -78,6 +78,15 @@ function scenarioHtml(code){
   const zet=(k,v)=>document.body.setAttribute('data-case-'+k,String(v));
   const slaap=ms=>new Promise(r=>window.__wiwEchteSetTimeout(r,ms));
   const app=document.getElementById('app'),st=document.getElementById('state'),q=document.getElementById('q');
+  const status=document.getElementById('locatie-laadstatus');
+  const statusTekst=()=>{
+    const tekst=status&&status.querySelector('.locatie-status-tekst');
+    return String(status&&status.hidden===false&&tekst?tekst.textContent:(st&&st.textContent)||'');
+  };
+  const retryAanwezig=()=>{
+    const compact=status&&status.querySelector('.locatie-status-retry');
+    return !!((compact&&!compact.hidden)||(st&&st.querySelector('.wiw-location-retry')));
+  };
   const reset=(wisOpslag=true)=>{
     try{clearNuTimer();clearKlokTimer();}catch(e){}
     if(wisOpslag){try{localStorage.clear();sessionStorage.clear();}catch(e){}}
@@ -90,7 +99,7 @@ function scenarioHtml(code){
   const plan=(mode,delay,perLat)=>{window.__wiwPlan={mode,delay:delay||0,perLat:perLat||null};window.__wiwOffline=false;window.__wiwAccelerateTimeouts=mode==='timeout';};
   const goed=(naam,lat,lon)=>S.d&&S.label===naam&&Math.abs(Number(S.lat)-lat)<.00001&&Math.abs(Number(S.lon)-lon)<.00001&&q.value===naam&&document.title.startsWith(naam+' · ');
   const laadGoed=async(naam,lat,lon,delay,land)=>{q.value=naam;plan('success',delay||0);await load(lat,lon,naam,false,true,land||null);await slaap(40);return goed(naam,lat,lon);};
-  const snapshot=()=>{zet('label',S.label);zet('lat',S.lat);zet('lon',S.lon);zet('q',q.value);zet('title',document.title);zet('state',st.textContent);zet('retry',!!st.querySelector('.wiw-location-retry'));zet('data',!!S.d);zet('app',getComputedStyle(app).display);};
+  const snapshot=()=>{zet('label',S.label);zet('lat',S.lat);zet('lon',S.lon);zet('q',q.value);zet('title',document.title);zet('state',statusTekst());zet('retry',retryAanwezig());zet('data',!!S.d);zet('app',getComputedStyle(app).display);};
   try{
     await slaap(80);reset();
     ${code}
@@ -122,35 +131,38 @@ draaiScenario("timeout herstelt vorige locatie",`
   ls.set(KEY_D,null);
   if(!await laadGoed('Amsterdam',52.3676,4.9041,0,'NL'))throw new Error('Amsterdam start faalde');
   q.value='Kansas City';plan('timeout',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(40);
-  zet('result',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Kansas City/.test(st.textContent)&&!!st.querySelector('.wiw-location-retry')?'ok':'fout');
+  zet('result',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Kansas City/.test(statusTekst())&&retryAanwezig()?'ok':'fout');
 `,2200);
 
 draaiScenario("providerfout herstelt vorige locatie",`
   ls.set(KEY_D,null);
   if(!await laadGoed('Amsterdam',52.3676,4.9041,0,'NL'))throw new Error('Amsterdam start faalde');
   q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(40);
-  zet('result',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Kansas City/.test(st.textContent)&&!!st.querySelector('.wiw-location-retry')?'ok':'fout');
+  zet('result',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Kansas City/.test(statusTekst())&&retryAanwezig()?'ok':'fout');
 `);
 
 draaiScenario("offline herstelt vorige locatie",`
   ls.set(KEY_D,null);
   if(!await laadGoed('Amsterdam',52.3676,4.9041,0,'NL'))throw new Error('Amsterdam start faalde');
   q.value='Kathmandu';plan('provider-error',0);window.__wiwOffline=true;await load(27.7172,85.3240,'Kathmandu',false,true,'NP');await slaap(40);
-  zet('result',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Geen internetverbinding/.test(st.textContent)&&/Kathmandu/.test(st.textContent)?'ok':'fout');
+  const tekst=statusTekst();
+  zet('result',goed('Amsterdam',52.3676,4.9041)&&getComputedStyle(app).display!=='none'&&/Kathmandu/.test(tekst)&&/Amsterdam/.test(tekst)&&/niet geladen|blijven staan/i.test(tekst)&&retryAanwezig()?'ok':'fout');
 `);
 
 draaiScenario("passende cache wordt gebruikt",`
   const op=Date.now()-60000;
   ls.set(KEY_D,{d:window.__wiwFixture,air:null,airOp:0,label:'Kansas City',lat:39.100,lon:-94.579,op,land:'US'});
   q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(40);
-  zet('result',goed('Kansas City',39.0997,-94.5786)&&S.verversMislukt&&getComputedStyle(app).display!=='none'&&/laatst opgehaalde gegevens voor Kansas City/.test(st.textContent)?'ok':'fout');
+  const tekst=statusTekst();
+  zet('result',goed('Kansas City',39.0997,-94.5786)&&S.verversMislukt&&getComputedStyle(app).display!=='none'&&/Kansas City/.test(tekst)&&/niet vernieuwd|blijven staan/i.test(tekst)&&retryAanwezig()?'ok':'fout');
 `);
 
 draaiScenario("verkeerde cache wordt geweigerd",`
   const op=Date.now()-60000;
   ls.set(KEY_D,{d:window.__wiwFixture,air:null,airOp:0,label:'Amsterdam',lat:52.368,lon:4.904,op,land:'NL'});
   q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(40);
-  zet('result',S.d===null&&S.label==='Kansas City'&&q.value==='Kansas City'&&getComputedStyle(app).display==='none'&&/geen weergegevens van een andere locatie/i.test(st.textContent)?'ok':'fout');
+  const tekst=statusTekst();
+  zet('result',S.d===null&&S.label==='Kansas City'&&q.value==='Kansas City'&&getComputedStyle(app).display==='none'&&/Kansas City/.test(tekst)&&/niet geladen|geen weergegevens/i.test(tekst)&&retryAanwezig()?'ok':'fout');
 `);
 
 draaiScenario("race laat nieuwste locatie winnen",`
@@ -176,7 +188,8 @@ draaiScenario("reload gebruikt passende cache",`
   if(!await laadGoed('Kathmandu',27.7172,85.3240,0,'NP'))throw new Error('Kathmandu start faalde');
   const bewaard=ls.get(KEY_D,null);reset(false);ls.set(KEY_D,bewaard);q.value='Kathmandu';plan('provider-error',0);
   await load(27.7172,85.3240,'Kathmandu',false,true,'NP');await slaap(40);
-  zet('result',goed('Kathmandu',27.7172,85.3240)&&S.verversMislukt&&/laatst opgehaalde gegevens voor Kathmandu/.test(st.textContent)?'ok':'fout');
+  const tekst=statusTekst();
+  zet('result',goed('Kathmandu',27.7172,85.3240)&&S.verversMislukt&&/Kathmandu/.test(tekst)&&/niet vernieuwd|blijven staan|laatst opgehaalde gegevens/i.test(tekst)&&retryAanwezig()?'ok':'fout');
 `);
 
 console.log("Final-release locatiehardening: 10 cache/fout/racescenario's elk in een vers Chromium-proces geslaagd.");

@@ -204,10 +204,22 @@ async function apiStress(browser,naam){
     /* Beide forecastvarianten stuk: bestaande laatste briefing wordt expliciet
        hersteld in plaats van data onder de nieuwe plaatsnaam te laten staan. */
     await page.evaluate(async()=>{__q4.fail.full.G=true;__q4.fail.min.G=true;await load(1.23,2.34,'Defecte locatie',false,true,'XX');});
-    const totaalFail=await page.evaluate(()=>({label:S.label,state:document.getElementById('state').textContent,klasse:document.getElementById('state').className}));
+    const totaalFail=await page.evaluate(()=>{
+      const state=document.getElementById('state');
+      const compact=document.getElementById('locatie-laadstatus');
+      const tekst=compact&&compact.querySelector('.locatie-status-tekst');
+      const retry=compact&&compact.querySelector('.locatie-status-retry');
+      return {
+        label:S.label,
+        melding:String(compact&&compact.hidden===false&&tekst?tekst.textContent:(state&&state.textContent)||''),
+        klasse:state?state.className:'',
+        retry:!!((retry&&!retry.hidden)||(state&&state.querySelector('button')))
+      };
+    });
     assert.equal(totaalFail.label,'Degradatie D',naam+": totale fout herstelt de laatst geldige briefing met eigen label");
-    assert(/Verversen is niet gelukt\. Je ziet de laatst opgehaalde gegevens/i.test(totaalFail.state),naam+": cachefallback wordt expliciet benoemd zonder de internetverbinding te beschuldigen");
-    assert(!/err/.test(totaalFail.klasse),naam+": tijdelijke providerfout krijgt geen onterechte rode offline-status");
+    assert(/Defecte locatie/i.test(totaalFail.melding)&&/Degradatie D/i.test(totaalFail.melding),naam+": compacte foutmelding noemt doel en behouden bronlocatie");
+    assert(totaalFail.retry,naam+": retry ontbreekt bij totale forecastfout met bestaande data");
+    assert(!/err/.test(totaalFail.klasse),naam+": tijdelijke providerfout krijgt geen onterechte rode offline-status in de basisstate");
 
     /* Reverse geocoding: serverfallback alleen wanneer primaire bron onvolledig is. */
     await page.evaluate(()=>{__q4.fail.full.G=false;__q4.fail.min.G=false;__q4.bdcComplete=true;__q4.geo={lat:7.2906,lon:80.6337,accuracy:18};});
@@ -235,22 +247,33 @@ async function geenCacheFout(browser,naam){
   const page=await context.newPage(),fouten=[];page.on("pageerror",e=>fouten.push(String(e)));page.on("console",m=>{if(m.type()==="error")fouten.push(m.text());});
   try{
     await page.goto(`http://127.0.0.1:${server.address().port}/?mode=fail&failboot=1&lat=1.23&lon=2.34&plaats=GeenCache&land=XX`,{waitUntil:"domcontentloaded"});
-    await page.waitForFunction(()=>/Ophalen mislukt/i.test(document.getElementById('state').textContent));
+    await page.waitForFunction(()=>{
+      const compact=document.getElementById('locatie-laadstatus');
+      const compactTekst=compact&&compact.querySelector('.locatie-status-tekst');
+      const state=document.getElementById('state');
+      const melding=String(compact&&compact.hidden===false&&compactTekst?compactTekst.textContent:(state&&state.textContent)||'');
+      return /Ophalen mislukt|duurt te lang|kon niet worden opgehaald|niet geladen/i.test(melding);
+    });
     const r=await page.evaluate(()=>{
-      const app=document.getElementById('app'),state=document.getElementById('state');
-      const appStijl=getComputedStyle(app),stateStijl=getComputedStyle(state);
+      const app=document.getElementById('app'),state=document.getElementById('state'),compact=document.getElementById('locatie-laadstatus');
+      const compactTekst=compact&&compact.querySelector('.locatie-status-tekst');
+      const compactRetry=compact&&compact.querySelector('.locatie-status-retry');
+      const eigenaar=compact&&compact.hidden===false?compact:state;
+      const appStijl=getComputedStyle(app),eigenaarStijl=eigenaar?getComputedStyle(eigenaar):null;
       return {
-        state:state.textContent,
-        klasse:state.className,
+        state:String(compact&&compact.hidden===false&&compactTekst?compactTekst.textContent:(state&&state.textContent)||''),
+        foutstatus:!!((compact&&compact.hidden===false&&compact.classList.contains('fout'))||(state&&state.classList.contains('err'))),
+        retry:!!((compactRetry&&!compactRetry.hidden)||(state&&state.querySelector('button'))),
         appDisplay:appStijl.display,
         appVisibility:appStijl.visibility,
-        stateDisplay:stateStijl.display,
-        stateVisibility:stateStijl.visibility,
+        stateDisplay:eigenaarStijl?eigenaarStijl.display:'none',
+        stateVisibility:eigenaarStijl?eigenaarStijl.visibility:'hidden',
         heeftData:!!(typeof S!=='undefined'&&S.d)
       };
     });
-    assert(/Ophalen mislukt/i.test(r.state),naam+": totale forecastfout zonder cache geeft duidelijke melding");
-    assert(/err/.test(r.klasse),naam+": fout zonder cache krijgt foutstatus");
+    assert(/Ophalen mislukt|duurt te lang|kon niet worden opgehaald|niet geladen/i.test(r.state),naam+": totale forecastfout zonder cache geeft duidelijke melding");
+    assert(r.foutstatus,naam+": fout zonder cache krijgt foutstatus");
+    assert(r.retry,naam+": fout zonder cache biedt retry");
     assert.notEqual(r.appDisplay,'none',naam+": CLS-layout reserveert de app ook zonder geldige data");
     assert.equal(r.appVisibility,'hidden',naam+": zonder geldige data blijft de gereserveerde app visueel verborgen");
     assert.equal(r.heeftData,false,naam+": fout zonder cache mag geen geldige of stale S.d bevatten");
