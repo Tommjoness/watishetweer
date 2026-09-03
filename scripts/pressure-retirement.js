@@ -6,15 +6,16 @@
  * Deze helper draait uitsluitend in de delivery-laag, dus nadat alle historische
  * UI/runtime-owners hun werk hebben gedaan. Hij verwijdert de complete verweesde
  * productfeature uit het werkelijk te leveren artifact: tegel, providerdata,
- * basisrenderer én drie late compatibility/diagnostic owners.
+ * basisrenderer én late compatibility/diagnostic owners.
  */
 const TEGEL_RE=/<div class="stat"><div class="eyebrow">Luchtdruk(?: op zeeniveau)?<\/div><div class="sval" id="pres">[\s\S]*?<\/div><div class="ssub" id="pressub">[\s\S]*?<\/div><\/div>\s*/g;
 const RUNTIME_RE=/\n  const drukRuw=eindigGetal\(c\.pressure_msl\);[\s\S]*?\n\n  const cc=/g;
 const GLOBAL_SEMANTIEK_RE=/\nfunction corrigeerDrukSemantiek\(\)\{[\s\S]*?\n\}\nfunction finaliseerDagNeerslag/g;
 const AUDIT_MEETGEGEVENS_RE=/\nlet drukResizeGebonden=false;\nfunction bouwMeetgegevens\(\)\{[\s\S]*?\n\}\n\nfunction naRender/g;
 const DESKTOP_DRUK_RE=/\nfunction herstelVerborgenDruk\(\)\{[\s\S]*?\n\}\n\nfunction maakUurPaneel/g;
+const MOBILE_SECUNDAIR_DRUK_RE=/\[\s*["']pressub["']\s*,\s*["']Luchtdruk["']\s*\]\s*,?/g;
 const PRESSURE_CSS_RE=/\s*\.wiw-(?:more-measurements[^\{]*|pressure-meaning)\{[^}]*\}/g;
-const PRESSURE_SIGNAAL_RE=/id="pres"|id="pressub"|pressure_msl|corrigeerDrukSemantiek|bouwMeetgegevens|herstelVerborgenDruk|wiw-pressure/i;
+const PRESSURE_SIGNAAL_RE=/id="pres"|id="pressub"|pressure_msl|corrigeerDrukSemantiek|bouwMeetgegevens|herstelVerborgenDruk|wiw-pressure|["']pressub["']\s*,\s*["']Luchtdruk["']/i;
 
 function tel(bron,re){return (String(bron||"").match(re)||[]).length;}
 function context(bron,re){const m=re.exec(String(bron||""));re.lastIndex=0;if(!m)return "";const i=m.index;return String(bron).slice(Math.max(0,i-120),Math.min(String(bron).length,i+260)).replace(/\s+/g," ");}
@@ -59,6 +60,9 @@ function retirePressure(html){
   bron=bron.replace(DESKTOP_DRUK_RE,"\nfunction maakUurPaneel");
   bron=bron.replace(/herstelVerborgenDruk\(\);/g,"");
   bron=bron.replace(/,herstelVerborgenDruk(?=[,}])/g,"");
+  /* De mobiele detail-uitleg blijft bestaan voor vocht, bewolking en zicht;
+     alleen het verweesde pressub-item verdwijnt uit de secundaire lijst. */
+  bron=bron.replace(MOBILE_SECUNDAIR_DRUK_RE,"");
   bron=bron.replace(PRESSURE_CSS_RE,"");
 
   verifieerPressureRetired(bron,"delivery artifact");
@@ -67,5 +71,5 @@ function retirePressure(html){
 
 module.exports={
   TEGEL_RE,RUNTIME_RE,GLOBAL_SEMANTIEK_RE,AUDIT_MEETGEGEVENS_RE,DESKTOP_DRUK_RE,
-  PRESSURE_CSS_RE,PRESSURE_SIGNAAL_RE,retirePressure,verifieerPressureRetired
+  MOBILE_SECUNDAIR_DRUK_RE,PRESSURE_CSS_RE,PRESSURE_SIGNAAL_RE,retirePressure,verifieerPressureRetired
 };
