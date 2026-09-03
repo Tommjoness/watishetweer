@@ -18,29 +18,34 @@ const locaties=[
   {naam:"Zuidpool",lat:-90,lon:0,land:"AQ",vrijeNaam:true}
 ];
 const viewports=[[1100,900],[1280,800],[1363,936],[1440,900],[1600,900],[1920,1080],[320,844],[360,844],[390,844],[430,932]];
+const COORD_TOL=0.001;
 const rond=v=>Number.isFinite(Number(v))?Math.round(Number(v)):null;
 const params=l=>new URLSearchParams({lat:String(l.lat),lon:String(l.lon),plaats:l.naam,land:l.land}).toString();
 function isForecast(url){try{const u=new URL(url);return u.hostname==="api.open-meteo.com"&&u.pathname==="/v1/forecast"&&u.searchParams.has("current")&&u.searchParams.has("hourly");}catch(e){return false;}}
 function isVolledigeForecastUrl(url){try{const u=new URL(url);return isForecast(url)&&u.searchParams.has("daily");}catch(e){return false;}}
 function isVolledigeBron(bron){return !!(bron&&bron.timezone&&bron.current&&bron.hourly&&bron.daily);}
+function coordPast(a,b){return Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a)-Number(b))<=COORD_TOL;}
+function urlPastBijLocatie(url,l){try{const u=new URL(url),lat=u.searchParams.get("lat"),lon=u.searchParams.get("lon"),land=u.searchParams.get("land");return lat!==null&&lon!==null&&coordPast(lat,l.lat)&&coordPast(lon,l.lon)&&(!land||land===l.land);}catch(e){return false;}}
+function forecastUrlPastBijLocatie(url,l){try{const u=new URL(url),lat=u.searchParams.get("latitude"),lon=u.searchParams.get("longitude");return lat!==null&&lon!==null&&coordPast(lat,l.lat)&&coordPast(lon,l.lon);}catch(e){return false;}}
 function getal(t){const m=/-?\d+(?:[.,]\d+)?/.exec(String(t||""));return m?Number(m[0].replace(",",".")):null;}
 const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 async function wachtKlaar(page,naam,timeout=26000){
   try{
-    await page.waitForFunction(n=>{
+    await page.waitForFunction(()=>{
       const app=document.getElementById("app"),label=document.getElementById("place")?.getAttribute("aria-label")||"";
       const d=typeof S!=="undefined"?S.d:null;
       const bronKlaar=!!(d&&d.current&&Array.isArray(d.hourly?.time)&&d.hourly.time.length>=23&&Array.isArray(d.daily?.time)&&d.daily.time.length>=7);
       const dagen=document.querySelectorAll("#days .row.day:not(.kop)").length;
       const uren=document.querySelectorAll("#wiw-hour-table tbody tr").length;
-      return app&&getComputedStyle(app).display!=="none"&&label&&(!n||label===n)&&bronKlaar&&dagen>=7&&uren>=23;
-    },naam,{timeout});
+      return app&&getComputedStyle(app).display!=="none"&&label&&bronKlaar&&dagen>=7&&uren>=23;
+    },null,{timeout});
   }catch(e){
     const diagnose=await page.evaluate(()=>({
       label:document.getElementById("place")?.getAttribute("aria-label")||"",
       query:document.getElementById("q")?.value||"",
       title:document.title,
+      href:location.href,
       state:(document.getElementById("state")?.textContent||"").trim(),
       stamp:(document.getElementById("stamp")?.textContent||"").trim(),
       appVisible:!!document.getElementById("app")&&getComputedStyle(document.getElementById("app")).display!=="none",
@@ -113,6 +118,7 @@ async function lees(page){return page.evaluate(()=>{
     sha:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
     delivery:document.querySelector('meta[name="weather-delivery"]')?.content||"",
     assets:[...document.scripts].map(s=>s.src).filter(Boolean).map(s=>new URL(s).pathname),
+    href:location.href,
     label:document.getElementById("place")?.getAttribute("aria-label")||"",
     query:document.getElementById("q")?.value||"",
     title:document.title,
@@ -148,6 +154,7 @@ async function lees(page){return page.evaluate(()=>{
        zonder dat een trage browserresponse de UI-bewijsrun laat flappen. */
     for(const l of locaties){
       const sourceUrl=await ontdekVolledigeForecastUrl(browser,l);
+      assert(forecastUrlPastBijLocatie(sourceUrl,l),`${l.naam}: forecast-URL wijkt af van gevraagde coördinaten`);
       const live=await haalLiveForecast(sourceUrl,l.naam),bron=live.bron;
       const context=await browser.newContext({viewport:{width:1363,height:936},serviceWorkers:"block",locale:"nl-NL"});
       const page=await context.newPage(),pageErrors=[];page.on("pageerror",e=>pageErrors.push(String(e)));
@@ -155,10 +162,11 @@ async function lees(page){return page.evaluate(()=>{
         await installeerForecastFixture(page,bron);
         const response=await page.goto(ROOT+"/?"+params(l),{waitUntil:"domcontentloaded",timeout:30000});
         assert(response&&response.ok(),`${l.naam}: HTTP ${response&&response.status()}`);
-        await wachtKlaar(page,l.vrijeNaam?null:l.naam,26000);
+        await wachtKlaar(page,l.naam,26000);
         const uit=await lees(page);
         assert.equal(uit.sha,EXPECTED,`${l.naam}: verkeerde build-SHA ${uit.sha}`);
-        if(!l.vrijeNaam)assert.equal(uit.label,l.naam,`${l.naam}: label ${uit.label}`);else assert(uit.label.trim(),"Zuidpool: lege plaatsnaam");
+        assert(uit.label.trim(),`${l.naam}: lege plaatsnaam`);
+        assert(urlPastBijLocatie(uit.href,l),`${l.naam}: browser-URL wijkt af van gevraagde coördinaten (${uit.href})`);
         assert.equal(uit.query,uit.label,`${l.naam}: zoekveld/label mismatch`);
         assert(uit.title.startsWith(uit.label+" · "),`${l.naam}: title/label mismatch`);
         assert.equal(uit.timezone,bron.timezone,`${l.naam}: UI-tijdzone ${uit.timezone} != bron ${bron.timezone}`);
@@ -173,8 +181,8 @@ async function lees(page){return page.evaluate(()=>{
         assert.deepEqual(uit.duplicateIds,[],`${l.naam}: dubbele ids ${uit.duplicateIds.join(',')}`);assert.deepEqual(uit.missingAriaRefs,[],`${l.naam}: ontbrekende ARIA refs ${uit.missingAriaRefs.join(',')}`);
         assert.deepEqual(pageErrors,[],`${l.naam}: pageerrors ${pageErrors.join(' | ')}`);
         liveBronnen.set(l.naam,bron);
-        rapport.locations.push({name:l.naam,status:"source-verified",sourceAttempts:live.poging,timezone:bron.timezone,currentTime:bron.current&&bron.current.time,raw:{temperature_2m:bron.current&&bron.current.temperature_2m,apparent_temperature:bron.current&&bron.current.apparent_temperature,wind_speed_10m:bron.current&&bron.current.wind_speed_10m,relative_humidity_2m:bron.current&&bron.current.relative_humidity_2m},ui:{temperature:uit.temp,feels:uit.feels,wind:uit.wind,humidity:uit.humidity},pageOverflow:uit.pageOverflow});
-        console.log(`FINAL LIVE ${l.naam}: source-verified via exacte productie-URL (bronpoging ${live.poging}).`);
+        rapport.locations.push({name:l.naam,displayLabel:uit.label,status:"source-verified",sourceAttempts:live.poging,timezone:bron.timezone,currentTime:bron.current&&bron.current.time,raw:{temperature_2m:bron.current&&bron.current.temperature_2m,apparent_temperature:bron.current&&bron.current.apparent_temperature,wind_speed_10m:bron.current&&bron.current.wind_speed_10m,relative_humidity_2m:bron.current&&bron.current.relative_humidity_2m},ui:{temperature:uit.temp,feels:uit.feels,wind:uit.wind,humidity:uit.humidity},pageOverflow:uit.pageOverflow});
+        console.log(`FINAL LIVE ${l.naam}: source-verified via exacte productie-URL als ${uit.label} (bronpoging ${live.poging}).`);
       }finally{await context.close();}
     }
 

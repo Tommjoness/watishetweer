@@ -48,6 +48,9 @@ assert(finalRelease.includes("directWrongCache")&&finalRelease.includes("sameCac
 assert(finalRelease.includes('[[1920,1080],[390,844]]'),"finale releasebrowser moet 1920- en 390-screenshots maken");
 assert(finalRelease.includes('["licht","donker"]'),"finale releasebrowser moet light en dark mode vastleggen");
 assert(finalRelease.includes('sha:u.sha')&&finalRelease.includes('assets:u.assets'),"finale releasebrowser moet live SHA en assets in het bewijsrapport opnemen");
+assert(finalRelease.includes("forecastUrlPastBijLocatie(sourceUrl,l)")&&finalRelease.includes("urlPastBijLocatie(uit.href,l)"),"finale releasebrowser moet provider- en browser-URL op gevraagde coördinaten bewaken");
+assert(finalRelease.includes("assert.equal(uit.query,uit.label")&&finalRelease.includes("uit.title.startsWith(uit.label+\" · \""),"finale releasebrowser moet zichtbare locatie-identiteit intern consistent houden");
+assert(!finalRelease.includes("assert.equal(uit.label,l.naam"),"finale releasebrowser mag een reverse-geocoderlabel niet als coordinate identity gebruiken");
 
 assert(smoke.includes("AbortSignal.timeout(timeoutMs)"),"production-smoke requests moeten een harde timeout hebben");
 assert(smoke.includes("const maxPogingen=opt.retry===false?1:2"),"production-smoke mag per request maximaal één retry doen");
