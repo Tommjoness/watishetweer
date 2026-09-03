@@ -105,7 +105,10 @@ try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:
           geenStaleLand=warningUrl.searchParams.get('land')!=='US'&&typeof S!=='undefined'&&S.land==null;
         }catch(_){ }
         const o=window.__oudeLocatie||{};
-        const zelfdeCoords=Math.abs(Number(S.lat)-Number(o.lat))<1e-9&&Math.abs(Number(S.lon)-Number(o.lon))<1e-9;
+        /* Persistente locatiecoördinaten worden bewust op drie decimalen opgeslagen.
+           Een veilige fallback mag daarom maximaal de opslagafronding afwijken van
+           de vóór de wissel zichtbare locatie, maar nooit naar de doelcoördinaten springen. */
+        const zelfdeCoords=Math.abs(Number(S.lat)-Number(o.lat))<0.001&&Math.abs(Number(S.lon)-Number(o.lon))<0.001;
         const compacteFout=/New York niet geladen/.test(statusTekst())&&/Amsterdam/.test(statusTekst());
         const stateVerborgen=!!(state&&getComputedStyle(state).display==='none');
         const veilig=foutUi&&compacteFout&&zichtbaar&&stateVerborgen&&zelfdeCoords
