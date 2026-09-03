@@ -74,7 +74,27 @@ function weatherNowHerstelLocatie(snapshot){
   S.dag=snapshot.dag;S.verversMislukt=snapshot.verversMislukt;
   S.actieveWaarschuwingen=snapshot.actieveWaarschuwingen||[];
 }
-function weatherNowFoutMetRetry(st,tekst,lat,lon,label,opslaan,land){
+function weatherNowFoutMetRetry(st,tekst,lat,lon,label,opslaan,land,stil){
+  /* De progressieve locatielaag is de zichtbare status-owner. Final hardening
+     herstelt data/identiteit, maar mag daarna geen tweede grote foutregel maken.
+     Schrijf daarom rechtstreeks naar dezelfde compacte status als die bestaat.
+     Dit borgt ook de retry wanneer een latere stille refresh de outer generatie
+     heeft ingehaald. */
+  const compact=document.getElementById("locatie-laadstatus");
+  const compactTekst=compact&&compact.querySelector(".locatie-status-tekst");
+  const compactRetry=compact&&compact.querySelector(".locatie-status-retry");
+  if(!stil&&compact&&compactTekst&&compactRetry){
+    compact.classList.add("fout");compact.hidden=false;
+    compactTekst.textContent=tekst;
+    compactRetry.hidden=false;
+    compactRetry.onclick=()=>load(lat,lon,label,false,opslaan,land);
+    const stamp=document.getElementById("stamp"),app=document.getElementById("app"),q=document.getElementById("q");
+    if(stamp)stamp.hidden=true;
+    if(app)app.removeAttribute("aria-busy");
+    if(q)q.removeAttribute("aria-busy");
+    if(st){st.style.display="none";st.className="msg";st.replaceChildren();}
+    return;
+  }
   st.style.display="flex";st.className="msg err wiw-location-state";st.replaceChildren();
   const p=document.createElement("p");p.textContent=tekst;
   const knop=document.createElement("button");knop.type="button";knop.className="wiw-location-retry";
@@ -145,7 +165,7 @@ function hardenLoad(html){
       document.getElementById("app").style.display="block";
       urlBij();
       const tijd=new Date(oud.op).toLocaleString("nl-NL");
-      weatherNowFoutMetRetry(st,"Verversen is niet gelukt. Je ziet de laatst opgehaalde gegevens voor "+label+" van "+tijd+".",nieuweLat,nieuweLon,label,opslaan,land);
+      weatherNowFoutMetRetry(st,"Verversen is niet gelukt. Je ziet de laatst opgehaalde gegevens voor "+label+" van "+tijd+".",nieuweLat,nieuweLon,label,opslaan,land,stil);
       st.classList.remove("err");
     }else if(vorigeLocatie&&vorigeLocatie.d&&Number.isFinite(Number(vorigeLocatie.lat))&&Number.isFinite(Number(vorigeLocatie.lon))){
       weatherNowHerstelLocatie(vorigeLocatie);
@@ -154,9 +174,9 @@ function hardenLoad(html){
       document.getElementById("app").style.display="block";
       urlBij();
       if(offline){
-        weatherNowFoutMetRetry(st,foutVoor+" Je ziet weer de gegevens voor "+vorigeLocatie.label+".",nieuweLat,nieuweLon,label,opslaan,land);
+        weatherNowFoutMetRetry(st,foutVoor+" Je ziet weer de gegevens voor "+vorigeLocatie.label+".",nieuweLat,nieuweLon,label,opslaan,land,stil);
       }else{
-        weatherNowFoutMetRetry(st,"Verversen is niet gelukt. Je ziet de laatst opgehaalde gegevens voor "+vorigeLocatie.label+". Gegevens voor "+label+" konden niet worden opgehaald.",nieuweLat,nieuweLon,label,opslaan,land);
+        weatherNowFoutMetRetry(st,"Verversen is niet gelukt. Je ziet de laatst opgehaalde gegevens voor "+vorigeLocatie.label+". Gegevens voor "+label+" konden niet worden opgehaald.",nieuweLat,nieuweLon,label,opslaan,land,stil);
         st.classList.remove("err");
       }
     }else{
@@ -168,7 +188,7 @@ function hardenLoad(html){
          het weerbericht volledig zodat nooit data van die andere locatie lekt. */
       document.getElementById("app").style.display=oud&&oud.d?"none":"block";
       document.title=label+" · Wat is het weer?";
-      weatherNowFoutMetRetry(st,foutVoor+" Er worden geen weergegevens van een andere locatie getoond.",nieuweLat,nieuweLon,label,opslaan,land);
+      weatherNowFoutMetRetry(st,foutVoor+" Er worden geen weergegevens van een andere locatie getoond.",nieuweLat,nieuweLon,label,opslaan,land,stil);
     }
   }
 `;
