@@ -41,18 +41,20 @@ function normaliseerSnellePreview(data){
 function progressievePreviewToegestaan(stil,wissel,dataVoorLoad){
   return !stil&&!!wissel&&!!dataVoorLoad;
 }
-function behoudBestaandeForecast(stil,wissel,dataVoorLoad){return !stil&&!!wissel&&!!dataVoorLoad;}
+function behoudBestaandeForecast(stil,wissel,dataVoorLoad){
+  return Boolean(!stil&&wissel&&dataVoorLoad);
+}
 
 /* De basisloader vangt netwerkfouten zelf af en retourneert daarom geen aparte
    successtatus. Bij een locatiewissel kan S.d vóór de request nog de forecast
    van de vorige plaats bevatten. Alleen coords + !!S.d controleren is dan niet
-   genoeg: na een mislukte request staan de coords al op het nieuwe doel terwijl
-   S.d nog exact hetzelfde oude object kan zijn. */
+   genoeg: na een mislukte request kunnen targetcoords met oude data blijven staan,
+   óf een geharde loader kan de vorige succesvolle locatie al hebben teruggezet. */
 function classificeerEindstate(dataVoor,huidigeData,huidigeLat,huidigeLon,doelLat,doelLon){
   if(!huidigeData)return "geen-data";
   const opDoel=Number(huidigeLat)===Number(doelLat)&&Number(huidigeLon)===Number(doelLon);
-  if(!opDoel)return "cache-fallback";
-  return huidigeData===dataVoor?"oude-data-op-doel":"doeldata";
+  if(opDoel)return huidigeData===dataVoor?"oude-data-op-doel":"doeldata";
+  return huidigeData===dataVoor?"oude-data-teruggezet":"cache-fallback";
 }
 
 const api={snellePreviewUrl,normaliseerSnellePreview,progressievePreviewToegestaan,behoudBestaandeForecast,classificeerEindstate,SNEL_START_VERTRAGING_MS,SNEL_TIMEOUT_MS,LEGACY_PREVIEW_STATUS};
@@ -96,12 +98,12 @@ function statusLaden(label){
   if(retry){retry.hidden=true;retry.onclick=null;}
   if(stamp)stamp.hidden=true;
 }
-function statusFout(label,opnieuw){
+function statusFout(boodschap,opnieuw){
   const el=statusElement(),stamp=document.getElementById("stamp");
   if(!el)return;
   const tekst=statusTekst(el),retry=statusRetry(el);
   el.classList.add("fout");el.hidden=false;
-  if(tekst)tekst.textContent=String(label||"Deze locatie")+" niet geladen. Huidige gegevens blijven staan.";
+  if(tekst)tekst.textContent=String(boodschap||"Weergegevens konden niet worden opgehaald.");
   if(retry){retry.hidden=false;retry.onclick=typeof opnieuw==="function"?opnieuw:null;}
   if(stamp)stamp.hidden=true;
 }
@@ -126,6 +128,14 @@ function stateSnapshot(){
 function stateHerstel(s){
   const el=document.getElementById("state");if(!el||!s)return;
   el.style.display=s.display;el.className=s.className;el.textContent=s.text;
+}
+function stateVerberg(){
+  const el=document.getElementById("state");
+  if(el){el.style.display="none";el.className="msg";el.textContent="";}
+}
+function labelVan(v,fallback){
+  const s=String(v==null?"":v).trim();
+  return s||String(fallback||"de huidige locatie");
 }
 
 const basisLoad=load;
@@ -168,9 +178,7 @@ load=async function(lat,lon,label,stil,opslaan,land){
        statusregel bij de zoekbediening verandert. */
     if(zichtbareActie){
       if(bewaren)stateHerstel(staatVoor);
-      else{
-        const st=document.getElementById("state");if(st)st.style.display="none";
-      }
+      else stateVerberg();
     }
     if(bewaren&&waarschuwingEl)waarschuwingEl.innerHTML=waarschuwingenVoor;
 
@@ -179,36 +187,52 @@ load=async function(lat,lon,label,stil,opslaan,land){
     perf.lastFullMs=Math.max(0,nuMs()-start);
     if(mijnGeneratie===generatie){
       const eindstate=classificeerEindstate(dataVoorLoad,S.d,S.lat,S.lon,doelLat,doelLon);
-      if(eindstate==="doeldata"){
+      const verversingMislukt=!!S.verversMislukt;
+      const echtSucces=eindstate==="doeldata"&&!verversingMislukt;
+      if(echtSucces){
         onthoudStabieleLocatie();
         if(zichtbareActie){statusWis();busy(false);}
       }else{
+        let foutTekst="Weer voor "+labelVan(label,"deze locatie")+" kon niet worden opgehaald.";
+
         if(eindstate==="oude-data-op-doel"&&vorige){
-          /* Geen bruikbare fallback: basisLoad heeft alleen target-coördinaten in S
-             gezet en de oude forecast ongemoeid gelaten. Zet de state ook intern
-             terug naar de werkelijk zichtbare forecast, anders kan een latere resize
-             oude data alsnog onder de nieuwe plaatsidentiteit renderen. */
+          /* Ongeharde basisloader: targetcoördinaten zijn al gestaged, maar de
+             zichtbare forecast is nog het oude object. Zet intern alles terug. */
           S.lat=vorige.lat;S.lon=vorige.lon;S.label=vorige.label;S.land=vorige.land;
           S.actieveWaarschuwingen=vorige.actieveWaarschuwingen;
-          stateHerstel(staatVoor);
           if(waarschuwingEl)waarschuwingEl.innerHTML=waarschuwingenVoor;
           if(typeof chips==="function")chips();
           if(typeof nuTimerStart==="function")nuTimerStart();
           if(typeof klokTimerStart==="function")klokTimerStart();
+          foutTekst="Weer voor "+labelVan(label,"deze locatie")+" niet geladen. Gegevens voor "+labelVan(vorige.label,"de vorige locatie")+" blijven staan.";
+        }else if(eindstate==="oude-data-teruggezet"){
+          /* De finale geharde basisloader heeft de vorige succesvolle locatie al
+             teruggezet. Laat die identiteit (inclusief landcode) ongemoeid. */
+          if(typeof nuTimerStart==="function")nuTimerStart();
+          if(typeof klokTimerStart==="function")klokTimerStart();
+          foutTekst="Weer voor "+labelVan(label,"deze locatie")+" niet geladen. Gegevens voor "+labelVan(S.label,vorige&&vorige.label)+" blijven staan.";
         }else if(eindstate==="cache-fallback"){
-          /* De basisloader herstelt forecast/coördinaten uit cache, maar een oude
-             cache zonder `land` zou anders de target-landcode laten staan. Dat
-             kan de direct gestarte waarschuwingrequest verkeerd scopen. Corrigeer
-             de identiteit fail-closed en herstart die request met de cachecoords. */
+          /* Alleen een werkelijk ander fallbackobject op andere coördinaten komt
+             hier. Een ontbrekende cachelandcode wordt fail-closed als onbekend. */
           S.land=cacheLandVoorLoad;
           if(typeof waarschuwingen==="function")void waarschuwingen();
           onthoudStabieleLocatie();
+          foutTekst="Weer voor "+labelVan(label,"deze locatie")+" niet geladen. Gegevens voor "+labelVan(S.label,"de laatst opgehaalde locatie")+" blijven staan.";
+        }else if(eindstate==="doeldata"&&verversingMislukt){
+          /* Target-passende cachedata is bruikbaar, maar is nadrukkelijk geen
+             succesvolle nieuwe fetch. Houd de stale-state zichtbaar en retrybaar. */
+          onthoudStabieleLocatie();
+          foutTekst="Weer voor "+labelVan(label,"deze locatie")+" niet vernieuwd. Laatst opgehaalde gegevens blijven staan.";
         }
 
         if(zichtbareActie){
+          /* De basisloader kan zelf een grote state/retry hebben opgebouwd. De
+             compacte status hierboven is nu de enige fout-owner, zodat er geen
+             dubbele foutmeldingen of extra layoutrij ontstaan. */
+          if(S.d)stateHerstel(staatVoor);else stateVerberg();
           busy(false);
           const opnieuw=()=>load(lat,lon,label,false,opslaan,land);
-          statusFout(label,opnieuw);
+          statusFout(foutTekst,opnieuw);
         }
       }
     }
