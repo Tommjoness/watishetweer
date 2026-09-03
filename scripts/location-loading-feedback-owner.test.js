@@ -6,10 +6,15 @@ const {MARKER,HELPER,pasHtmlToe}=require("./apply-location-loading-feedback-2026
 function eis(cond,msg){if(!cond)throw new Error(msg);}
 
 /* Deze owner hoort bewust ná final-release-hardening. De fixture bevat alleen
-   de geharde load-vorm en de zoekankers die deze UX-laag mag aanraken. */
+   de geharde load-vorm, stempel-owner en zoekankers die deze UX-laag mag aanraken. */
 const bron=`<!doctype html><html><head><style>:root{--rule:#ccc;--ink-70:#222;--ink-45:#555;--sans:Arial}</style></head><body>
 <input id="q"><span id="stamp"></span><div id="state"></div><div id="zoekmelding"></div>
 <script>
+function stempel(){
+  const el=document.getElementById("stamp"),m=0;
+  el.textContent="Gegevens opgehaald";
+  el.className=m>45?"oud":"";
+}
 /* ---------- ophalen ---------- */
 async function load(lat,lon,label,stil,opslaan,land){
   const mijnBeurt=++laadTeller;
@@ -60,6 +65,8 @@ eis(html.includes('stamp.setAttribute("aria-label","Weer ophalen…")'),"Toegank
 eis(html.includes('stamp.removeAttribute("aria-label")'),"Toegankelijke laadnaam wordt niet hersteld.");
 eis(html.includes('zoekMeldingToon("Plaatsen zoeken…")'),"Zichtbare geocoder-feedback ontbreekt.");
 eis(html.includes('zoekMelding.classList.remove("on");zoekMelding.textContent="";'),"Geocoder-laadmelding wordt na succes niet opgeruimd.");
+eis(html.includes('el.classList.toggle("oud",m>45);'),"Stempelupdate bewaart tijdelijke classes zoals laden niet.");
+eis(!html.includes('el.className=m>45?"oud":"";'),"Oude className-reset kan de laadstatus nog wissen.");
 eis(!html.includes('stamp.innerHTML='),"Laadfeedback mag niet meer door tekenAlles() overschrijfbaar DOM-markup gebruiken.");
 eis(!html.includes('<div id="locatieladen"'),"De fix mag geen extra layoutrij toevoegen.");
 new Function(HELPER);
@@ -75,4 +82,4 @@ let teVroeg=false;
 try{pasHtmlToe(ruw);}catch(e){teVroeg=/vereist eerst/.test(String(e&&e.message));}
 eis(teVroeg,"Owner weigert een nog niet geharde bron niet fail-fast.");
 
-console.log("Location-loading owner: alleen na cachehardening, syntactisch geldige finally, geocoderfeedback, preview-veilige forecastindicator, aria-busy en latest-wins guard aanwezig.");
+console.log("Location-loading owner: alleen na cachehardening, stempel bewaart tijdelijke laadclass, syntactisch geldige finally, geocoderfeedback, forecastindicator, aria-busy en latest-wins guard aanwezig.");
