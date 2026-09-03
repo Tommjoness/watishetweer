@@ -51,6 +51,10 @@ function herstelVerborgenDruk(){
 function maakUurPaneel(){return true;}
 function installeer(){voegStijlToe();herstelVerborgenDruk();maakUurPaneel();}
 root.WeatherNowFinalDesktopUI20260902={maakUurPaneel,herstelVerborgenDruk,render:maakUurPaneel};
+const SECUNDAIR=[
+  ["humsub","Luchtvochtigheid"],["pressub","Luchtdruk"],["cloudsub","Bewolking"],["vissub","Zicht"]
+];
+function meetdetailUitleg(){return SECUNDAIR.map(x=>x[1]).join(", ");}
 </script>`;
 
 const uit=retirePressure(bron);
@@ -64,9 +68,13 @@ assert(uit.includes("hourly=uv_index,is_day"));
 assert(uit.includes("const cc=eindigGetal(c.cloud_cover);"));
 assert(uit.includes("function finaliseerDagNeerslag"));
 assert(uit.includes("function maakUurPaneel"));
+assert(uit.includes('["humsub","Luchtvochtigheid"]'),"mobiele luchtvochtigheidsdetail moet behouden blijven");
+assert(uit.includes('["cloudsub","Bewolking"]'),"mobiele bewolkingsdetail moet behouden blijven");
+assert(uit.includes('["vissub","Zicht"]'),"mobiele zichtdetail moet behouden blijven");
+assert(!uit.includes('["pressub","Luchtdruk"]'),"alleen het verweesde mobiele pressuredetail moet verdwijnen");
 assert.equal(verifieerPressureRetired(uit),true);
 assert.equal(retirePressure(uit),uit,"pressure-retirement moet op een al schoon artifact idempotent zijn");
 assert.throws(()=>verifieerPressureRetired('<div id="pres"></div>'),/#pres-element/);
 assert.equal(retirePressure('<html><body>Geen pressurefeature</body></html>'),'<html><body>Geen pressurefeature</body></html>');
 
-console.log("Pressure-retirement: tegel, providerquery, basisruntime en late pressure-only owners volledig verwijderd.");
+console.log("Pressure-retirement: tegel, providerquery, basisruntime, late pressure-only owners en mobiel secundair label volledig verwijderd.");
