@@ -26,7 +26,7 @@ function actieveTitleHaak(bron,slug){
   const totaal=aantallen.reduce((som,x)=>som+x.aantal,0);
   const actief=aantallen.filter(x=>x.aantal>0);
   if(totaal!==TITLE_SYNC_WRITERS||actief.length!==1||actief[0].aantal!==TITLE_SYNC_WRITERS){
-    throw new Error(`${slug}: verwacht exact ${TITLE_SYNC_WRITERS} gelijksoortige bekende title-sync-writers, gevonden ${aantallen.map(x=>x.aantal).join("+")}.`);
+    throw new Error(`${slug}: verwacht exact ${TITLE_SYNC_WRITERS} title-sync-writers van exact één bekende buildgeneratie; gevonden ${aantallen.map(x=>x.aantal).join("+")}.`);
   }
   return actief[0].haak;
 }
