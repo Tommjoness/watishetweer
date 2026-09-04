@@ -21,7 +21,7 @@ const requestedLocations=[
   {name:"Kathmandu",lat:27.7172,lon:85.3240,land:"NP"},
   {name:"Tokyo",lat:35.6762,lon:139.6503,land:"JP"},
   {name:"Sydney",lat:-33.8688,lon:151.2093,land:"AU"},
-  {name:"Longyearbyen",lat:78.2232,lon:15.6469,land:"SJ"},
+  {name:"Longyearbyen",lat:78.2232,lon:15.6469,land:"NO"},
   {name:"Ushuaia",lat:-54.8019,lon:-68.3030,land:"AR"}
 ];
 const coordOk=(a,b)=>Number.isFinite(Number(a))&&Math.abs(Number(a)-Number(b))<=0.0011;
