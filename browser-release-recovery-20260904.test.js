@@ -38,13 +38,18 @@ function fetchFixtureScript(){
       static now(){return fixtureStart+(NativeDate.now()-realStart)+offset();}
     }
     window.Date=ReleaseDate;
-    window.__wiwFetchCount=0;window.__wiwPageshowPersisted=false;window.__wiwIntervals=[];
-    const nativeSetInterval=window.setInterval.bind(window);
+    window.__wiwFetchCount=0;window.__wiwPageshowPersisted=false;window.__wiwActiveIntervals=Object.create(null);
+    const nativeSetInterval=window.setInterval.bind(window),nativeClearInterval=window.clearInterval.bind(window);
     window.setInterval=function(fn,ms,...args){
       const id=nativeSetInterval(fn,ms,...args);
-      window.__wiwIntervals.push({id:Number(id),ms:Number(ms)});
+      window.__wiwActiveIntervals[String(id)]=Number(ms);
       return id;
     };
+    window.clearInterval=function(id){
+      delete window.__wiwActiveIntervals[String(id)];
+      return nativeClearInterval(id);
+    };
+    window.__wiwActiveIntervalMs=()=>Object.values(window.__wiwActiveIntervals).map(Number).sort((a,b)=>a-b);
     window.addEventListener("pageshow",e=>{window.__wiwPageshowPersisted=!!e.persisted;});
     window.fetch=async function(url){
       window.__wiwFetchCount++;
@@ -159,9 +164,9 @@ async function snapshot(page){
       await page.goto(base+"/weer/amsterdam/",{waitUntil:"load"});
       await page.waitForSelector("#app",{state:"visible",timeout:10000});
       await page.waitForFunction(()=>/Gegevens opgehaald om/.test(document.getElementById("stamp")?.textContent||""));
-      const voor=await page.evaluate(()=>({fetches:window.__wiwFetchCount,intervals:window.__wiwIntervals.map(x=>x.ms).sort((a,b)=>a-b)}));
-      assert.equal(voor.intervals.filter(ms=>ms===30000).length,1,"voor BFCache moet exact één freshnessinterval van 30s bestaan");
-      assert.equal(voor.intervals.filter(ms=>ms===60000).length,1,"voor BFCache moet exact één forecast/kloktick van 60s bestaan");
+      const voor=await page.evaluate(()=>({fetches:window.__wiwFetchCount,intervals:window.__wiwActiveIntervalMs()}));
+      assert.equal(voor.intervals.filter(ms=>ms===30000).length,1,"voor BFCache moet exact één actieve freshnessinterval van 30s bestaan");
+      assert.equal(voor.intervals.filter(ms=>ms===60000).length,1,"voor BFCache moet exact één actieve forecasttick van 60s bestaan");
       await page.goto(base+"/weer/",{waitUntil:"load"});
       await page.evaluate(()=>localStorage.setItem("__wiw_clock_offset","125000"));
       await page.goBack({waitUntil:"commit"});
@@ -171,19 +176,19 @@ async function snapshot(page){
         stamp:document.getElementById("stamp")?.textContent||"",
         fetches:window.__wiwFetchCount,
         plaatsTijd:document.getElementById("plaatstijd")?.textContent||"",
-        intervals:window.__wiwIntervals.map(x=>x.ms).sort((a,b)=>a-b)
+        intervals:window.__wiwActiveIntervalMs()
       }));
       assert.equal(bfcache.persisted,true,"Chromium moet deze terugkeer werkelijk uit BFCache herstellen");
       assert(/2 min geleden/.test(bfcache.stamp),`freshnesslabel moet direct 2 min geleden tonen, kreeg: ${bfcache.stamp}`);
       assert(/^\d{2}:\d{2}$/.test(bfcache.plaatsTijd.trim()),"locatieklok moet direct geldig zijn na BFCache");
       assert.equal(bfcache.fetches,voor.fetches,"pageshow-freshnessfix mag geen extra weatherrequest starten");
-      assert.deepEqual(bfcache.intervals,voor.intervals,"BFCache-pageshow mag geen interval opnieuw registreren");
-      assert.equal(bfcache.intervals.filter(ms=>ms===30000).length,1,"na BFCache moet exact één freshnessinterval van 30s bestaan");
-      assert.equal(bfcache.intervals.filter(ms=>ms===60000).length,1,"na BFCache moet exact één forecast/kloktick van 60s bestaan");
+      assert.deepEqual(bfcache.intervals,voor.intervals,"BFCache-pageshow mag de actieve intervalset niet wijzigen");
+      assert.equal(bfcache.intervals.filter(ms=>ms===30000).length,1,"na BFCache moet exact één actieve freshnessinterval van 30s bestaan");
+      assert.equal(bfcache.intervals.filter(ms=>ms===60000).length,1,"na BFCache moet exact één actieve forecasttick van 60s bestaan");
       await context.close();
     }
 
-    console.log("Release-herstel-E2E geslaagd: no-JS, blocked-main op root/Amsterdam, echte 12s→13s late success zonder reload, route-refresh-determinisme en BFCache-freshness/timerstabiliteit.");
+    console.log("Release-herstel-E2E geslaagd: no-JS, blocked-main op root/Amsterdam, echte 12s→13s late success zonder reload, route-refresh-determinisme en BFCache-freshness/actieve-timerstabiliteit.");
   }finally{
     await browser.close().catch(()=>{});
     await new Promise(resolve=>server.close(resolve));
