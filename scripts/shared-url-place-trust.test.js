@@ -3,7 +3,17 @@ const assert=require("assert");
 const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
-const bron=fs.readFileSync(path.join(__dirname,"global-location-hardening.js"),"utf8")+"\n"+fs.readFileSync(path.join(__dirname,"shared-url-place-identity.js"),"utf8");
+const globalBron=fs.readFileSync(path.join(__dirname,"global-location-hardening.js"),"utf8");
+const identityBron=fs.readFileSync(path.join(__dirname,"shared-url-place-identity.js"),"utf8");
+const bron=globalBron+"\n"+identityBron;
+
+/* De shared-identiteitslaag bezit uitsluitend naam/landvertrouwen. Browser-
+   history heeft elders één canonieke owner; een tweede push/pop-owner zou één
+   bewuste locatiekeuze dubbel boeken en Back/Forward overslaan. */
+assert(!identityBron.includes("weatherLocation"),"shared-identiteit mag geen tweede history-state schema bezitten");
+assert(!identityBron.includes("history.pushState"),"shared-identiteit mag geen tweede pushState-owner bezitten");
+assert(!identityBron.includes("history.replaceState"),"shared-identiteit mag geen tweede replaceState-owner bezitten");
+assert(!/addEventListener\(\s*["']popstate["']/.test(identityBron),"shared-identiteit mag geen tweede popstate-owner bezitten");
 
 async function controleerExpliciet({naam,lat,lon,land,reverseNaam,reverseLand}){
   const calls=[],reverseCalls=[],geocodeCalls=[];
@@ -69,5 +79,5 @@ async function controleerExpliciet({naam,lat,lon,land,reverseNaam,reverseLand}){
   assert.strictEqual(calls[0][2],"काठमाडौं");
   assert.strictEqual(q.value,"काठमाडौं");
 
-  console.log("Plaatsidentiteit: expliciete namen zijn autoritatief voor 10 wereld-/schrift-/landgevallen; reverse bezit alleen de naam wanneer expliciete identiteit ontbreekt.");
+  console.log("Plaatsidentiteit: expliciete namen zijn autoritatief voor 10 wereld-/schrift-/landgevallen; reverse bezit alleen de naam wanneer expliciete identiteit ontbreekt; browser-history heeft exact één externe owner.");
 })().catch(err=>{console.error(err&&err.stack||err);process.exitCode=1;});
