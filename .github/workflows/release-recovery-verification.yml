@@ -41,6 +41,11 @@ jobs:
         run: |
           set -o pipefail
           node browser-release-recovery-20260904.test.js 2>&1 | tee release-recovery-browser.log
+      - name: Test actuele offline serviceworker-generatie
+        shell: bash
+        run: |
+          set -o pipefail
+          node browser-serviceworker-upgrade.test.js 2>&1 | tee release-recovery-serviceworker.log
       - name: Bewaar hersteltestdiagnostiek
         if: always()
         uses: actions/upload-artifact@v4
