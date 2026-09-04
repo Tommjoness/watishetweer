@@ -159,12 +159,17 @@ async function historyFlowAttempt(profile,browser){
     const u=new URL(x.href);assert.equal(u.searchParams.get("plaats"),loc.name,`${profile.name}/${loc.name}: URL-plaats mismatch`);
     return {name:loc.name,href:x.href,title:x.title,land:x.s.land,timezone:x.s.timezone};
   };
+  const kiesLocatie=loc=>page.evaluate(async locatie=>{
+    if(!window.WeatherNowStaffAudit||typeof window.WeatherNowStaffAudit.markeerNavigatie!=="function")throw new Error("WeatherNowStaffAudit.markeerNavigatie ontbreekt");
+    window.WeatherNowStaffAudit.markeerNavigatie("push");
+    await load(locatie.lat,locatie.lon,locatie.name,false,true,locatie.land);
+  },loc);
   try{
     const q=new URLSearchParams({lat:String(A.lat),lon:String(A.lon),plaats:A.name,land:A.land});
     await page.goto(ROOT+"/?"+q,{waitUntil:"domcontentloaded",timeout:30000});
     const states=[await waitName(A)];
-    await page.evaluate(loc=>load(loc.lat,loc.lon,loc.name,false,true,loc.land),B);states.push(await waitName(B));
-    await page.evaluate(loc=>load(loc.lat,loc.lon,loc.name,false,true,loc.land),C);states.push(await waitName(C));
+    await kiesLocatie(B);states.push(await waitName(B));
+    await kiesLocatie(C);states.push(await waitName(C));
     await page.goBack({waitUntil:"domcontentloaded",timeout:30000});states.push(await waitName(B));
     await page.goBack({waitUntil:"domcontentloaded",timeout:30000});states.push(await waitName(A));
     await page.goForward({waitUntil:"domcontentloaded",timeout:30000});states.push(await waitName(B));
