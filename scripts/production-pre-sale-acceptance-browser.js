@@ -13,7 +13,6 @@ const profiles=[
   {name:"Chromium 390x844",engine:chromium,options:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2}},
   {name:"WebKit iPhone",engine:webkit,options:{...devices["iPhone 13"]}}
 ];
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const coordOk=(a,b)=>Number.isFinite(Number(a))&&Math.abs(Number(a)-Number(b))<=0.0011;
 
 async function read(page){return page.evaluate(()=>{
@@ -24,7 +23,7 @@ async function read(page){return page.evaluate(()=>{
   const temp=(document.getElementById("t")?.textContent||"").trim();
   const appVisible=!!app&&getComputedStyle(app).display!=="none";
   const data=!!(appVisible&&s&&s.data&&temp&&!/^(?:--|–)$/.test(temp));
-  const error=!!((state&&state.className.includes("err")&&getComputedStyle(state).display!=="none")||(compact&&compact.hidden===false&&/fout|niet geladen|niet vernieuwd|opnieuw/i.test(String(compactText?.textContent||compact.textContent||""))));
+  const error=!!((state&&state.className.includes("err")&&getComputedStyle(state).display!=="none")||(compact&&compact.hidden===false&&compact.classList.contains("fout")));
   return {
     href:location.href,title:document.title,label,q,temp,data,error,appVisible,
     status:String(compact&&compact.hidden===false?(compactText?.textContent||compact.textContent||""):(state?.textContent||"")).trim(),
