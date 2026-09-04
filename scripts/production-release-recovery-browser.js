@@ -6,6 +6,7 @@ const {bouw}=require("../data.js");
 
 const ROOT=(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/+$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
+const BFCACHE_MARKER="__WIW_PRODUCTION_BFCACHE_EVIDENCE__";
 const LIVE_ROUTES=[
   {label:"/",url:"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL",canonical:ROOT+"/",plaats:"Amsterdam"},
   {label:"/weer/amsterdam/",url:"/weer/amsterdam/",canonical:ROOT+"/weer/amsterdam/",plaats:"Amsterdam"},
@@ -22,16 +23,42 @@ tokyo.latitude=35.6762;tokyo.longitude=139.6503;tokyo.timezone="Asia/Tokyo";toky
 const air={current:{european_aqi:28,us_aqi:42},hourly:{time:[amsterdam.current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[1],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}};
 
 function fixtureInit(){
-  return ({ams,tokyo,air})=>{
+  return ({ams,tokyo,air,bfcacheMarker})=>{
     const NativeDate=Date,realStart=NativeDate.now(),fixtureStart=NativeDate.parse("2026-07-22T12:30:00Z");
-    const offset=()=>{try{return Number(localStorage.getItem("__wiw_prod_clock_offset")||0)||0;}catch(_){return 0;}};
+    window.__wiwProdClockOffset=0;
+    const offset=()=>Number(window.__wiwProdClockOffset||0)||0;
     class ReleaseDate extends NativeDate{
       constructor(...args){super(...(args.length?args:[fixtureStart+(NativeDate.now()-realStart)+offset()]));}
       static now(){return fixtureStart+(NativeDate.now()-realStart)+offset();}
     }
     window.Date=ReleaseDate;
-    window.__wiwProdFetchCount=0;window.__wiwProdPageshowPersisted=false;
-    window.addEventListener("pageshow",e=>{window.__wiwProdPageshowPersisted=!!e.persisted;});
+    window.__wiwProdFetchCount=0;window.__wiwProdPageshowPersisted=false;window.__wiwProdPageshowCount=0;
+    window.__wiwProdActiveIntervals=Object.create(null);
+    const nativeSetInterval=window.setInterval.bind(window),nativeClearInterval=window.clearInterval.bind(window);
+    window.setInterval=function(fn,ms,...args){
+      const id=nativeSetInterval(fn,ms,...args);
+      window.__wiwProdActiveIntervals[String(id)]={ms:Number(ms),name:typeof fn==="function"?String(fn.name||""):""};
+      return id;
+    };
+    window.clearInterval=function(id){
+      delete window.__wiwProdActiveIntervals[String(id)];
+      return nativeClearInterval(id);
+    };
+    window.__wiwProdActiveIntervalOwners=()=>Object.values(window.__wiwProdActiveIntervals).map(x=>({
+      ms:Number(x.ms),
+      owner:x.name==="stempel"?"freshness":x.name==="weatherNowVerversTick"?"forecast":x.name||"anonymous"
+    })).sort((a,b)=>a.ms-b.ms||a.owner.localeCompare(b.owner));
+    window.addEventListener("pageshow",e=>{
+      window.__wiwProdPageshowCount++;window.__wiwProdPageshowPersisted=!!e.persisted;
+      if(e.persisted)setTimeout(()=>console.info(bfcacheMarker+JSON.stringify({
+        persisted:true,
+        pageshowCount:window.__wiwProdPageshowCount,
+        stamp:document.getElementById("stamp")?.textContent||"",
+        klok:document.getElementById("plaatstijd")?.textContent||"",
+        fetches:window.__wiwProdFetchCount,
+        intervals:window.__wiwProdActiveIntervalOwners()
+      })),0);
+    });
     window.fetch=async function(url){
       window.__wiwProdFetchCount++;
       const u=String(url);
@@ -50,6 +77,27 @@ function fixtureInit(){
 
 async function ready(page){await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="ready",null,{timeout:15000});}
 async function visibleApp(page){await page.waitForSelector("#app",{state:"visible",timeout:15000});}
+function wachtBfcacheEvidence(page,timeout=10000){
+  return new Promise((resolve,reject)=>{
+    const onConsole=msg=>{
+      const tekst=msg.text();
+      if(!tekst.startsWith(BFCACHE_MARKER))return;
+      cleanup();
+      try{resolve(JSON.parse(tekst.slice(BFCACHE_MARKER.length)));}
+      catch(e){reject(new Error(`Ongeldige BFCache-evidence: ${tekst.slice(0,500)} (${e.message})`));}
+    };
+    const timer=setTimeout(()=>{cleanup();reject(new Error("Geen persisted productie-BFCache-evidence ontvangen."));},timeout);
+    function cleanup(){clearTimeout(timer);page.off("console",onConsole);}
+    page.on("console",onConsole);
+  });
+}
+function controleerTimerOwners(owners,fase){
+  const dertig=owners.filter(x=>x.ms===30000);
+  assert.equal(dertig.filter(x=>x.owner==="freshness").length,1,`${fase}: exact één actieve freshness/stempel-interval van 30s vereist; actief=${JSON.stringify(owners)}`);
+  assert.equal(dertig.filter(x=>x.owner==="anonymous").length,1,`${fase}: exact één actieve anonieme 30s-zonnecyclusowner vereist; actief=${JSON.stringify(owners)}`);
+  assert.equal(dertig.length,2,`${fase}: geen extra 30s-intervalowner toegestaan; actief=${JSON.stringify(owners)}`);
+  assert.equal(owners.filter(x=>x.ms===60000&&x.owner==="forecast").length,1,`${fase}: exact één actieve forecast/ververs-tick van 60s vereist; actief=${JSON.stringify(owners)}`);
+}
 async function snap(page){return page.evaluate(()=>({
   build:document.querySelector('meta[name="weather-build-sha"]')?.content||null,
   script:[...document.scripts].map(s=>s.getAttribute("src")||"").find(s=>/\/app-[0-9a-f]{12}\.min\.js$/.test(s))||null,
@@ -65,7 +113,13 @@ async function snap(page){return page.evaluate(()=>({
 }));}
 
 (async()=>{
-  const browser=await chromium.launch({headless:true});
+  const browser=await chromium.launch({
+    // Headless Chromium reports BackForwardCacheDisabledForDelegate. The
+    // production workflow supplies Xvfb for this real persisted=true gate.
+    headless:false,
+    ignoreDefaultArgs:["--disable-back-forward-cache"],
+    args:["--enable-features=BackForwardCache"]
+  });
   try{
     /* No-JS op root én route: duidelijke uitleg, geen nepbediening, SEO-links blijven. */
     for(const route of ["/","/weer/amsterdam/"]){
@@ -138,7 +192,7 @@ async function snap(page){return page.evaluate(()=>({
     /* Plaatsroute -> client-side Tokyo -> exacte URL refresh: dezelfde clientlogica en zichtbare state. */
     {
       const context=await browser.newContext({serviceWorkers:"block"});
-      await context.addInitScript(fixtureInit(),{ams:amsterdam,tokyo,air});
+      await context.addInitScript(fixtureInit(),{ams:amsterdam,tokyo,air,bfcacheMarker:BFCACHE_MARKER});
       const page=await context.newPage(),pageErrors=[];page.on("pageerror",e=>pageErrors.push(String(e)));
       await page.goto(ROOT+"/weer/amsterdam/",{waitUntil:"load",timeout:30000});await visibleApp(page);
       const routeStart=await snap(page);
@@ -165,24 +219,30 @@ async function snap(page){return page.evaluate(()=>({
     /* Echte BFCache-return: freshness direct +2 minuten, zonder nieuwe weatherfetch. */
     {
       const context=await browser.newContext({serviceWorkers:"block"});
-      await context.addInitScript(fixtureInit(),{ams:amsterdam,tokyo,air});
+      await context.addInitScript(fixtureInit(),{ams:amsterdam,tokyo,air,bfcacheMarker:BFCACHE_MARKER});
       const page=await context.newPage();
+      const cdp=await context.newCDPSession(page);
+      await cdp.send("Page.enable");
+      let bfcacheNotUsed=null;
+      cdp.on("Page.backForwardCacheNotUsed",event=>{bfcacheNotUsed=event;});
       await page.goto(ROOT+"/weer/amsterdam/",{waitUntil:"load",timeout:30000});await visibleApp(page);
       await page.waitForFunction(()=>/Gegevens opgehaald om/.test(document.getElementById("stamp")?.textContent||""));
-      const fetchesVoor=await page.evaluate(()=>window.__wiwProdFetchCount);
+      const voor=await page.evaluate(()=>({fetches:window.__wiwProdFetchCount,intervals:window.__wiwProdActiveIntervalOwners()}));
+      controleerTimerOwners(voor.intervals,"voor productie-BFCache");
+      await page.evaluate(()=>{window.__wiwProdClockOffset=125000;});
+      const evidencePromise=wachtBfcacheEvidence(page);
       await page.goto(ROOT+"/weer/",{waitUntil:"domcontentloaded",timeout:30000});
-      await page.evaluate(()=>localStorage.setItem("__wiw_prod_clock_offset","125000"));
-      await page.goBack({waitUntil:"commit",timeout:15000});
-      const resultaat=await page.evaluate(()=>({
-        persisted:window.__wiwProdPageshowPersisted,
-        stamp:document.getElementById("stamp")?.textContent||"",
-        klok:document.getElementById("plaatstijd")?.textContent||"",
-        fetches:window.__wiwProdFetchCount
-      }));
+      await page.evaluate(()=>history.back());
+      let resultaat;
+      try{resultaat=await evidencePromise;}
+      catch(e){throw new Error(`${e.message} cdpNotUsed=${JSON.stringify(bfcacheNotUsed)}`);}
       assert.equal(resultaat.persisted,true,"productietest moet werkelijk via BFCache terugkomen");
+      assert(resultaat.pageshowCount>=2,`productie-BFCache mist tweede pageshow; count=${resultaat.pageshowCount}`);
       assert(/2 min geleden/.test(resultaat.stamp),`freshness moet binnen pageshow direct 2 min geleden zijn, kreeg ${resultaat.stamp}`);
       assert(/^\d{2}:\d{2}$/.test(resultaat.klok.trim()),"locatieklok moet direct geldig zijn na BFCache");
-      assert.equal(resultaat.fetches,fetchesVoor,"pageshow mag geen extra weatherrequest starten");
+      assert.equal(resultaat.fetches,voor.fetches,"pageshow mag geen extra weatherrequest starten");
+      assert.deepEqual(resultaat.intervals,voor.intervals,"productie-pageshow mag de actieve intervalowners niet wijzigen");
+      controleerTimerOwners(resultaat.intervals,"na productie-BFCache");
       await context.close();
     }
 
