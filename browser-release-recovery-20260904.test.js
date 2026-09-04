@@ -101,7 +101,7 @@ function controleerTimerOwners(owners,fase){
 (async()=>{
   await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
   const base=`http://127.0.0.1:${server.address().port}`;
-  const browser=await chromium.launch({headless:true});
+  const browser=await chromium.launch({headless:true,ignoreDefaultArgs:["--disable-back-forward-cache"]});
   try{
     for(const route of ["/","/weer/amsterdam/"]){
       const context=await browser.newContext({javaScriptEnabled:false,serviceWorkers:"block"});
