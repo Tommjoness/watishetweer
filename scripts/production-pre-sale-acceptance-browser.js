@@ -165,9 +165,9 @@ async function historyFlowAttempt(profile,browser){
     const states=[await waitName(A)];
     await page.evaluate(loc=>load(loc.lat,loc.lon,loc.name,false,true,loc.land),B);states.push(await waitName(B));
     await page.evaluate(loc=>load(loc.lat,loc.lon,loc.name,false,true,loc.land),C);states.push(await waitName(C));
-    await page.evaluate(()=>history.back());states.push(await waitName(B));
-    await page.evaluate(()=>history.back());states.push(await waitName(A));
-    await page.evaluate(()=>history.forward());states.push(await waitName(B));
+    await page.goBack({waitUntil:"domcontentloaded",timeout:30000});states.push(await waitName(B));
+    await page.goBack({waitUntil:"domcontentloaded",timeout:30000});states.push(await waitName(A));
+    await page.goForward({waitUntil:"domcontentloaded",timeout:30000});states.push(await waitName(B));
     await page.reload({waitUntil:"domcontentloaded",timeout:30000});states.push(await waitName(B));
     assert.deepEqual(errors,[],`${profile.name} history: pageerrors ${errors.join(" | ")}`);
     return states;
