@@ -53,11 +53,16 @@ async function read(page){return page.evaluate(()=>{
   };
 });}
 
+/* S.d en de temperatuur worden iets eerder gezet dan de rest van dezelfde
+   rendercyclus. Voor deze verkoopgate is 'data' daarom pas terminaal wanneer de
+   kerninterface die we direct hierna beoordelen ook echt coherent is. Een echte
+   fout blijft onmiddellijk terminaal en de harde observatiegrens blijft gelijk. */
+const kernGereed=x=>!!(x&&x.data&&x.brief.length>0&&x.chartTexts>=4&&x.days===7);
 async function waitTerminal(page,start,limit=OBSERVATION_MS){
   let last=await read(page);
   while(Date.now()-start<limit){
     last=await read(page);
-    if(last.data||last.error)return {state:last,ms:Date.now()-start};
+    if(last.error||kernGereed(last))return {state:last,ms:Date.now()-start};
     await page.waitForTimeout(50);
   }
   return {state:await read(page),ms:Date.now()-start};
@@ -90,7 +95,7 @@ async function coldLoads(profile,browser){
       const terminal=await waitTerminal(page,start);
       const x=terminal.state;
       assert.equal(x.sha,EXPECTED,`${profile.name} run ${i}: verkeerde build ${x.sha}`);
-      assert(x.data||x.error,`${profile.name} run ${i}: na ${terminal.ms} ms nog generiek laden; status=${x.status}`);
+      assert(kernGereed(x)||x.error,`${profile.name} run ${i}: na ${terminal.ms} ms nog generiek/onvolledig laden; status=${x.status}`);
       assertIdentity(x,{name:"Almere",lat:52.3508,lon:5.2647,land:"NL"});
       assert.deepEqual(pageErrors,[],`${profile.name} run ${i}: pageerrors ${pageErrors.join(" | ")}`);
       assert.deepEqual(consoleErrors,[],`${profile.name} run ${i}: console-errors ${consoleErrors.join(" | ")}`);
@@ -116,7 +121,7 @@ async function dubaiRepeats(profile,browser,count){
       const start=Date.now(),q=new URLSearchParams({lat:"25.2048",lon:"55.2708",plaats:"Dubai",land:"AE",identity:`${i}-${Date.now()}`});
       await page.goto(ROOT+"/?"+q,{waitUntil:"domcontentloaded",timeout:30000});
       const terminal=await waitTerminal(page,start);
-      assert(terminal.state.data||terminal.state.error,`${profile.name} Dubai ${i}: bleef laden`);
+      assert(kernGereed(terminal.state)||terminal.state.error,`${profile.name} Dubai ${i}: bleef laden`);
       assertIdentity(terminal.state,{name:"Dubai",lat:25.2048,lon:55.2708,land:"AE"});
       assert.deepEqual(errors,[],`${profile.name} Dubai ${i}: pageerrors ${errors.join(" | ")}`);
       results.push({profile:profile.name,run:i,terminal:terminal.state.data?"data":"error",ms:terminal.ms,label:terminal.state.s&&terminal.state.s.label});
@@ -132,7 +137,7 @@ async function historyFlow(profile,browser){
   const waitName=async loc=>{
     await page.waitForFunction(({name,lat,lon})=>typeof S!=="undefined"&&S.d&&S.label===name&&Math.abs(Number(S.lat)-lat)<.0011&&Math.abs(Number(S.lon)-lon)<.0011,{name:loc.name,lat:loc.lat,lon:loc.lon},{timeout:15000});
     await page.waitForTimeout(150);
-    const x=await read(page);assertIdentity(x,loc);assert(x.data&&x.brief&&x.chartTexts>=4&&x.days===7,`${profile.name}/${loc.name}: hoofdinterface incoherent`);
+    const x=await read(page);assertIdentity(x,loc);assert(kernGereed(x),`${profile.name}/${loc.name}: hoofdinterface incoherent`);
     const u=new URL(x.href);assert.equal(u.searchParams.get("plaats"),loc.name,`${profile.name}/${loc.name}: URL-plaats mismatch`);
     return {name:loc.name,href:x.href,title:x.title,land:x.s.land,timezone:x.s.timezone};
   };
@@ -165,7 +170,7 @@ async function requestedLocationMatrix(browser){
         const start=Date.now(),response=await page.goto(ROOT+"/?"+q,{waitUntil:"domcontentloaded",timeout:30000});
         assert(response&&response.ok(),`${loc.name}: HTTP ${response&&response.status()}`);
         const terminal=await waitTerminal(page,start,15000),x=terminal.state;
-        if(!x.data){
+        if(!kernGereed(x)){
           lastFailure=new Error(`${loc.name}: poging ${attempt} gaf geen bruikbare forecast; terminal=${x.error?"error":"loading"}, status=${x.status}`);
           continue;
         }
