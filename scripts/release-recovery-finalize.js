@@ -3,17 +3,17 @@
 const fs=require("fs");
 const path=require("path");
 const {
-  MARKER_ROUTE,
-  voegRouteUrlBeleidToe,
   voegRouteTitelBeleidToe,
   maakPlaatsPagina
 }=require("./generate-seo-location-pages.js");
+const SEO=require("./seo-foundation.config.js");
 const {LOCATIES}=require("./seo-locations.config.js");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 
 const OUT=path.join(__dirname,"..","public");
 const ROOT_HTML=path.join(OUT,"index.html");
 const START_HAAK="(function(){\n  const p=new URLSearchParams(location.search);\n";
+const URL_SYNC_HAAK=`  try{\n    const u=new URL(location.href);\n    u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n    u.searchParams.set("plaats",S.label);\n    if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n    history.replaceState(null,"",u);\n  }catch(e){}\n`;
 const ROOT_ROUTE_MARKER="<!-- WEATHER NOW ROOT ROUTEDATA -->";
 const WATCHDOG_ID="weather-bootstrap-watchdog";
 const FAILURE_ID="bootstrap-failure";
@@ -54,8 +54,16 @@ function voegBootstrapHerstelToe(html){
   return bron;
 }
 
+function voegGedeeldRouteUrlBeleidToe(html,label){
+  let bron=String(html||"");
+  if(tel(bron,URL_SYNC_HAAK)!==1)throw new Error(`${label}: URL-sync-haak ontbreekt of is dubbel.`);
+  const websiteJson=JSON.stringify({"@context":"https://schema.org","@type":"WebSite",name:SEO.siteName,url:SEO.canonical});
+  const gedeeld=`  try{\n    const route=window.__WEATHERNOW_ROUTE_LOCATION__;\n    const routeGeldig=route&&Number.isFinite(Number(route.lat))&&Number.isFinite(Number(route.lon))&&!!route.name;\n    const zelfdeRoute=routeGeldig&&Number(S.lat)===Number(route.lat)&&Number(S.lon)===Number(route.lon);\n    if(routeGeldig){\n      if(!zelfdeRoute){\n        window.__WEATHERNOW_ROUTE_LOCATION__=null;\n        const canonical=document.querySelector('link[rel="canonical"]');\n        if(canonical)canonical.href=${JSON.stringify(SEO.canonical)};\n        const description=document.querySelector('meta[name="description"]');\n        if(description)description.content=${JSON.stringify(SEO.description)};\n        const ogTitle=document.querySelector('meta[property="og:title"]');\n        if(ogTitle)ogTitle.content=${JSON.stringify(SEO.title)};\n        const ogDescription=document.querySelector('meta[property="og:description"]');\n        if(ogDescription)ogDescription.content=${JSON.stringify(SEO.description)};\n        const ogUrl=document.querySelector('meta[property="og:url"]');\n        if(ogUrl)ogUrl.content=${JSON.stringify(SEO.canonical)};\n        const structured=document.querySelector('script[type="application/ld+json"]');\n        if(structured)structured.textContent=${JSON.stringify(websiteJson)};\n        const context=document.querySelector(".seo-route-context");\n        if(context)context.hidden=true;\n        const u=new URL("/",location.origin);\n        u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n        u.searchParams.set("plaats",S.label);\n        if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n        history.replaceState(null,"",u);\n      }\n    }else{\n      const u=new URL(location.href);\n      u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n      u.searchParams.set("plaats",S.label);\n      if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n      history.replaceState(null,"",u);\n    }\n  }catch(e){}\n`;
+  return bron.replace(URL_SYNC_HAAK,gedeeld);
+}
+
 function voegGedeeldeRouteRuntimeToe(html,label){
-  let bron=voegRouteUrlBeleidToe(String(html||""),label);
+  let bron=voegGedeeldRouteUrlBeleidToe(String(html||""),label);
   bron=voegRouteTitelBeleidToe(bron,label);
   if(tel(bron,START_HAAK)!==1)throw new Error(`${label}: start-haak ontbreekt of is dubbel.`);
   const routeStart=`(function(){\n  const route=window.__WEATHERNOW_ROUTE_LOCATION__;\n  if(route&&Number.isFinite(route.lat)&&Number.isFinite(route.lon)&&route.name){\n    q.value=route.name;\n    load(route.lat,route.lon,route.name,false,false,normLand(route.country));\n    return;\n  }\n  const p=new URLSearchParams(location.search);\n`;
@@ -129,6 +137,6 @@ function finaliseerRelease(){
 
 if(require.main===module)finaliseerRelease();
 module.exports={
-  voegBootstrapHerstelToe,voegGedeeldeRouteRuntimeToe,normaliseerRouteScripts,voegRootRouteDataToe,finaliseerRelease,
+  voegBootstrapHerstelToe,voegGedeeldRouteUrlBeleidToe,voegGedeeldeRouteRuntimeToe,normaliseerRouteScripts,voegRootRouteDataToe,finaliseerRelease,
   WATCHDOG_ID,FAILURE_ID,NOSCRIPT_ID,ROOT_ROUTE_MARKER
 };
