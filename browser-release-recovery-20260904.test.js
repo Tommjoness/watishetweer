@@ -45,7 +45,7 @@ function fetchFixtureScript(){
       static now(){return fixtureStart+(NativeDate.now()-realStart)+offset();}
     }
     window.Date=ReleaseDate;
-    window.__wiwFetchCount=0;window.__wiwPageshowPersisted=false;window.__wiwActiveIntervals=Object.create(null);
+    window.__wiwFetchCount=0;window.__wiwPageshowPersisted=false;window.__wiwPageshowCount=0;window.__wiwActiveIntervals=Object.create(null);
     const nativeSetInterval=window.setInterval.bind(window),nativeClearInterval=window.clearInterval.bind(window);
     window.setInterval=function(fn,ms,...args){
       const id=nativeSetInterval(fn,ms,...args);
@@ -60,7 +60,7 @@ function fetchFixtureScript(){
       ms:Number(x.ms),
       owner:x.name==="stempel"?"freshness":x.name==="weatherNowVerversTick"?"forecast":x.name||"anonymous"
     })).sort((a,b)=>a.ms-b.ms||a.owner.localeCompare(b.owner));
-    window.addEventListener("pageshow",e=>{window.__wiwPageshowPersisted=!!e.persisted;});
+    window.addEventListener("pageshow",e=>{window.__wiwPageshowCount++;window.__wiwPageshowPersisted=!!e.persisted;});
     window.fetch=async function(url){
       window.__wiwFetchCount++;
       const u=String(url);
@@ -181,12 +181,16 @@ function controleerTimerOwners(owners,fase){
       await page.goto(base+"/weer/",{waitUntil:"load"});
       await page.goBack({waitUntil:"commit"});
       await page.waitForSelector("#stamp",{state:"attached",timeout:5000});
+      try{
+        await page.waitForFunction(()=>window.__wiwPageshowCount>=2&&window.__wiwPageshowPersisted===true,null,{timeout:5000});
+      }catch(_){ }
       const bfcache=await page.evaluate(()=>{
         const nav=performance.getEntriesByType("navigation")[0];
         let notRestoredReasons=null;
         try{notRestoredReasons=nav&&"notRestoredReasons" in nav?JSON.parse(JSON.stringify(nav.notRestoredReasons)):null;}catch(_){notRestoredReasons="unavailable";}
         return {
           persisted:window.__wiwPageshowPersisted,
+          pageshowCount:window.__wiwPageshowCount,
           stamp:document.getElementById("stamp")?.textContent||"",
           fetches:window.__wiwFetchCount,
           plaatsTijd:document.getElementById("plaatstijd")?.textContent||"",
@@ -194,7 +198,7 @@ function controleerTimerOwners(owners,fase){
           notRestoredReasons
         };
       });
-      assert.equal(bfcache.persisted,true,`Chromium moet deze terugkeer werkelijk uit BFCache herstellen; notRestoredReasons=${JSON.stringify(bfcache.notRestoredReasons)}`);
+      assert.equal(bfcache.persisted,true,`Chromium moet deze terugkeer werkelijk uit BFCache herstellen; pageshowCount=${bfcache.pageshowCount}; notRestoredReasons=${JSON.stringify(bfcache.notRestoredReasons)}`);
       assert(/2 min geleden/.test(bfcache.stamp),`freshnesslabel moet direct 2 min geleden tonen, kreeg: ${bfcache.stamp}`);
       assert(/^\d{2}:\d{2}$/.test(bfcache.plaatsTijd.trim()),"locatieklok moet direct geldig zijn na BFCache");
       assert.equal(bfcache.fetches,voor.fetches,"pageshow-freshnessfix mag geen extra weatherrequest starten");
