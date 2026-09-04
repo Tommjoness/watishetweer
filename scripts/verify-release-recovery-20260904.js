@@ -11,6 +11,7 @@ const {verifieerServiceworkerCache}=require("./postbuild-cache.js");
 const ROOT=path.join(__dirname,"..");
 const PUBLIC=path.join(ROOT,"public");
 const SOURCE=path.join(ROOT,".weather-runtime-source.tmp");
+const INPUT_SOURCE=path.join(ROOT,"index.html");
 const BUILD_RE=/<meta name="weather-build-sha" content="([^"]+)">/;
 const MANIFEST_META='<meta name="weather-client-manifest" content="/'+MANIFEST_NAAM+'">';
 
@@ -35,8 +36,10 @@ function main(){
   const rootPad=path.join(PUBLIC,"index.html");
   assert(fs.existsSync(rootPad),"public/index.html ontbreekt.");
   assert(fs.existsSync(SOURCE),"Delivery-runtimebron ontbreekt voor release-verificatie.");
+  assert(fs.existsSync(INPUT_SOURCE),"Canonieke index.html-bron ontbreekt voor release-verificatie.");
   const rootHtml=fs.readFileSync(rootPad,"utf8");
   const bron=fs.readFileSync(SOURCE,"utf8");
+  const inputBron=fs.readFileSync(INPUT_SOURCE,"utf8");
   const build=(BUILD_RE.exec(rootHtml)||[])[1];
   assert(build&&/^[0-9a-f]{40}$/i.test(build),"Homepage mist geldige build-SHA.");
   const rootBundle=mainScript(rootHtml,"homepage");
@@ -112,9 +115,9 @@ function main(){
     ["mijnBeurt!==laadTeller","requestgeneratie"],
     ["Number.isFinite(Number(S.op))","freshness-validatie"],
     ["timeZone:S.d.timezone","geselecteerde-locatie-timezone"],
-    ["&forecast_days=7&timezone=auto&wind_speed_unit=kmh","Open-Meteo timezone=auto"],
     ["forecast:15*60*1000","forecast-freshnessdrempel"]
   ])assert(bron.includes(anker),`Bestaande beveiliging verdwenen uit delivery-runtime: ${label}.`);
+  assert(inputBron.includes("&forecast_days=7&timezone=auto&wind_speed_unit=kmh"),"Canonieke weerproviderbron gebruikt niet langer timezone=auto voor de geselecteerde locatie.");
 
   console.log(`Release recovery verifier groen: build ${build}, ${weatherPages.length} weerroutes -> /${rootBundle}; no-JS/failed-JS watchdog onafhankelijk; pageshow-freshness direct zonder request/timer; SW/cache/manifest consistent.`);
 }
