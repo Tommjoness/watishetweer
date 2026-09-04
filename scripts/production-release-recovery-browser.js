@@ -6,6 +6,13 @@ const {bouw}=require("../data.js");
 
 const ROOT=(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/+$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
+const LIVE_ROUTES=[
+  {label:"/",url:"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL",canonical:ROOT+"/",plaats:"Amsterdam"},
+  {label:"/weer/amsterdam/",url:"/weer/amsterdam/",canonical:ROOT+"/weer/amsterdam/",plaats:"Amsterdam"},
+  {label:"/weer/rotterdam/",url:"/weer/rotterdam/",canonical:ROOT+"/weer/rotterdam/",plaats:"Rotterdam"},
+  {label:"/weer/utrecht/",url:"/weer/utrecht/",canonical:ROOT+"/weer/utrecht/",plaats:"Utrecht"},
+  {label:"/weer/groningen/",url:"/weer/groningen/",canonical:ROOT+"/weer/groningen/",plaats:"Groningen"}
+];
 
 const amsterdam=bouw({tempNu:17,wcNu:2,ccNu:55,pp:()=>35,som:1.2});
 amsterdam.latitude=52.3676;amsterdam.longitude=4.9041;amsterdam.timezone="Europe/Amsterdam";amsterdam.utc_offset_seconds=7200;
@@ -41,18 +48,19 @@ function fixtureInit(){
   };
 }
 
-async function ready(page){await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="ready",null,{timeout:10000});}
-async function visibleApp(page){await page.waitForSelector("#app",{state:"visible",timeout:10000});}
+async function ready(page){await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="ready",null,{timeout:15000});}
+async function visibleApp(page){await page.waitForSelector("#app",{state:"visible",timeout:15000});}
 async function snap(page){return page.evaluate(()=>({
   build:document.querySelector('meta[name="weather-build-sha"]')?.content||null,
   script:[...document.scripts].map(s=>s.getAttribute("src")||"").find(s=>/\/app-[0-9a-f]{12}\.min\.js$/.test(s))||null,
+  bootstrap:[...document.scripts].map(s=>s.getAttribute("src")||"").find(s=>/\/bootstrap-[0-9a-f]{12}\.min\.js$/.test(s))||null,
   url:location.href,
   plaats:(document.getElementById("place")?.getAttribute("aria-label")||"").trim(),
-  briefing:(document.getElementById("brief")?.textContent||"").trim(),
+  briefing:(document.getElementById("brief")?.textContent||"").replace(/\s+/g," ").trim(),
   temp:(document.getElementById("t")?.textContent||"").trim(),
   uur:document.getElementById("chart")?.getAttribute("aria-label")||"",
-  dag:(document.getElementById("days")?.innerText||"").trim(),
-  week:(document.getElementById("days")?.textContent||"").trim(),
+  dag:(document.getElementById("days")?.innerText||"").replace(/\s+/g," ").trim(),
+  week:(document.getElementById("days")?.textContent||"").replace(/\s+/g," ").trim(),
   canonical:document.querySelector('link[rel="canonical"]')?.href||null
 }));}
 
@@ -70,23 +78,55 @@ async function snap(page){return page.evaluate(()=>({
       await context.close();
     }
 
-    /* Alleen hoofdclient geblokkeerd: early watchdog moet zelfstandig herstellen naar een bruikbare foutstate. */
-    {
+    /* Live release-evidence: root met expliciete locatie plus vier canonieke routes.
+       Geen fixture hier: dit bewijst dat de gedeployde app werkelijk kan starten en
+       zichtbare weatherstate opbouwen. */
+    const liveEvidence=[];let gedeeldeApp=null,gedeeldeBootstrap=null,gedeeldeBuild=null;
+    for(const scenario of LIVE_ROUTES){
+      const context=await browser.newContext({serviceWorkers:"block"}),page=await context.newPage(),consoleErrors=[];
+      page.on("console",msg=>{if(msg.type()==="error")consoleErrors.push(msg.text());});
+      page.on("pageerror",e=>consoleErrors.push("pageerror: "+String(e)));
+      await page.goto(ROOT+scenario.url,{waitUntil:"load",timeout:30000});
+      await ready(page);await visibleApp(page);
+      await page.waitForFunction(()=>{
+        const brief=(document.getElementById("brief")?.textContent||"").trim();
+        const temp=(document.getElementById("t")?.textContent||"").trim();
+        return !!brief&&!!temp&&!!document.getElementById("chart")?.getAttribute("aria-label")&&(document.querySelectorAll("#days .row.day:not(.kop)").length>=7);
+      },null,{timeout:20000});
+      const s=await snap(page);
+      if(EXPECTED_SHA)assert.equal(s.build,EXPECTED_SHA,`${scenario.label}: live buildmarker wijkt af van deployment-SHA`);
+      assert.equal(s.canonical,scenario.canonical,`${scenario.label}: live canonical wijkt af`);
+      assert.equal(s.plaats,scenario.plaats,`${scenario.label}: geselecteerde locatie wijkt af`);
+      assert(s.script&&s.bootstrap,`${scenario.label}: app/bootstrap ontbreekt in live document`);
+      assert(s.briefing&&s.temp&&s.uur&&s.dag&&s.week,`${scenario.label}: zichtbare hourly/daily/weekly weatherstate is onvolledig`);
+      if(gedeeldeBuild===null)gedeeldeBuild=s.build;else assert.equal(s.build,gedeeldeBuild,`${scenario.label}: live buildmarker divergeert`);
+      if(gedeeldeApp===null)gedeeldeApp=s.script;else assert.equal(s.script,gedeeldeApp,`${scenario.label}: live app-bundle divergeert`);
+      if(gedeeldeBootstrap===null)gedeeldeBootstrap=s.bootstrap;else assert.equal(s.bootstrap,gedeeldeBootstrap,`${scenario.label}: live bootstrap divergeert`);
+      assert.deepEqual(consoleErrors,[],`${scenario.label}: console/page errors in live release-evidence`);
+      liveEvidence.push({route:scenario.label,build:s.build,app:s.script,bootstrap:s.bootstrap,url:s.url,selectedLocation:s.plaats,briefing:s.briefing,temperature:s.temp,hourlyState:s.uur,dailyState:s.dag,weeklyState:s.week,canonical:s.canonical,consoleErrors});
+      await context.close();
+    }
+    console.log("PRODUCTION_ROUTE_EVIDENCE\n"+JSON.stringify(liveEvidence,null,2));
+
+    /* Alleen hoofdclient geblokkeerd: 12s-bootstrap moet zelfstandig naar een
+       bruikbare foutstate gaan. 15s is bewust langer dan de production watchdog. */
+    for(const route of ["/","/weer/amsterdam/"]){
       const context=await browser.newContext({serviceWorkers:"block"}),page=await context.newPage();
-      await page.route(/\/app-[0-9a-f]{12}\.min\.js(?:\?.*)?$/,r=>r.abort("failed"));
-      await page.goto(ROOT+"/",{waitUntil:"load",timeout:30000});
-      await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="failed",null,{timeout:7000});
-      assert(await page.locator("#bootstrap-failure").isVisible(),"productie moet failed-JS-herstel tonen");
-      assert.equal(await page.locator("#state").isVisible(),false,"eindeloze laadstate moet verdwijnen bij geblokkeerde hoofdclient");
-      assert.equal(await page.locator("#q").isDisabled(),true,"zoekveld moet disabled zijn bij appstartfout");
-      await page.unroute(/\/app-[0-9a-f]{12}\.min\.js(?:\?.*)?$/);
+      const patroon=/\/app-[0-9a-f]{12}\.min\.js(?:\?.*)?$/;
+      await page.route(patroon,r=>r.abort("failed"));
+      await page.goto(ROOT+route,{waitUntil:"load",timeout:30000});
+      await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="failed",null,{timeout:15000});
+      assert(await page.locator("#bootstrap-failure").isVisible(),`${route}: productie moet failed-JS-herstel tonen`);
+      assert.equal(await page.locator("#state").isVisible(),false,`${route}: eindeloze laadstate moet verdwijnen bij geblokkeerde hoofdclient`);
+      for(const id of ["q","here","ververs","thema"])assert.equal(await page.locator("#"+id).isDisabled(),true,`${route}: ${id} moet disabled zijn bij appstartfout`);
+      await page.unroute(patroon);
       await page.reload({waitUntil:"load",timeout:30000});await ready(page);
-      assert.equal(await page.locator("#bootstrap-failure").isVisible(),false,"reload moet failed-JS-state opruimen");
-      assert.equal(await page.locator("#q").isDisabled(),false,"bediening moet na recovery actief zijn");
+      assert.equal(await page.locator("#bootstrap-failure").isVisible(),false,`${route}: reload moet failed-JS-state opruimen`);
+      for(const id of ["q","here","ververs","thema"])assert.equal(await page.locator("#"+id).isDisabled(),false,`${route}: ${id} moet na recovery actief zijn`);
       await context.close();
     }
 
-    /* Vertraagde maar succesvolle hoofdclient: geen foutflits. */
+    /* Vertraagde maar succesvolle hoofdclient ruim binnen watchdog: geen foutflits. */
     {
       const context=await browser.newContext({serviceWorkers:"block"}),page=await context.newPage();
       await page.route(/\/app-[0-9a-f]{12}\.min\.js(?:\?.*)?$/,async r=>{await new Promise(resolve=>setTimeout(resolve,1500));await r.continue();});
@@ -111,10 +151,11 @@ async function snap(page){return page.evaluate(()=>({
       assert(voor.url.startsWith(ROOT+"/?"),`route-exit moet naar root-query URL gaan, kreeg ${voor.url}`);
       assert.equal(voor.canonical,ROOT+"/","client-side locatiewissel moet homepage-canonical krijgen");
       assert.equal(voor.script,routeStart.script,"plaatsroute en client-side rootstate moeten dezelfde hoofdclient gebruiken");
+      assert.equal(voor.bootstrap,routeStart.bootstrap,"plaatsroute en client-side rootstate moeten dezelfde bootstrap gebruiken");
       const exacteUrl=voor.url;
       await page.goto(exacteUrl,{waitUntil:"load",timeout:30000});await visibleApp(page);
       const na=await snap(page);
-      for(const sleutel of ["build","script","plaats","briefing","temp","uur","dag","week","canonical"]){
+      for(const sleutel of ["build","script","bootstrap","plaats","briefing","temp","uur","dag","week","canonical"]){
         assert.equal(na[sleutel],voor[sleutel],`productie refresh-determinisme wijkt af voor ${sleutel}`);
       }
       assert.deepEqual(pageErrors,[],"route-switch + refresh mag geen pageerror veroorzaken");
@@ -145,6 +186,6 @@ async function snap(page){return page.evaluate(()=>({
       await context.close();
     }
 
-    console.log("Productie release-herstelbrowser geslaagd: no-JS, failed-JS/recovery, trage start, route-switch+refresh en BFCache-freshness.");
+    console.log("Productie release-herstelbrowser geslaagd: vijf live route-evidencechecks, no-JS, failed-JS/recovery root+Amsterdam, trage start, route-switch+refresh en BFCache-freshness.");
   }finally{await browser.close();}
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
