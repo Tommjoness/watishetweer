@@ -12,12 +12,24 @@ const MARKER_NAV="<!-- WEATHER NOW INDEXEERBARE PLAATSEN -->";
 const MARKER_ROUTE="<!-- WEATHER NOW PLAATSROUTE -->";
 const START_HAAK="(function(){\n  const p=new URLSearchParams(location.search);\n";
 const URL_SYNC_HAAK=`  try{\n    const u=new URL(location.href);\n    u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n    u.searchParams.set("plaats",S.label);\n    if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n    history.replaceState(null,"",u);\n  }catch(e){}\n`;
-const TITLE_SYNC_HAAK='document.title=S.label+" · Wat is het weer?";';
+const TITLE_SYNC_HAKEN=Object.freeze([
+  'document.title=S.label+" · Wat is het weer?";',
+  'document.title=S.label+" · watishetweer.nl";'
+]);
 const TITLE_SYNC_WRITERS=2;
 
 function escHtml(v){return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function escXml(v){return escHtml(v).replace(/'/g,"&apos;");}
 function tel(tekst,zoek){return String(tekst).split(zoek).length-1;}
+function actieveTitleHaak(bron,slug){
+  const aantallen=TITLE_SYNC_HAKEN.map(haak=>({haak,aantal:tel(bron,haak)}));
+  const totaal=aantallen.reduce((som,x)=>som+x.aantal,0);
+  const actief=aantallen.filter(x=>x.aantal>0);
+  if(totaal!==TITLE_SYNC_WRITERS||actief.length!==1||actief[0].aantal!==TITLE_SYNC_WRITERS){
+    throw new Error(`${slug}: verwacht exact ${TITLE_SYNC_WRITERS} gelijksoortige bekende title-sync-writers, gevonden ${aantallen.map(x=>x.aantal).join("+")}.`);
+  }
+  return actief[0].haak;
+}
 
 /* Uitsluitend voor statische navigatie tussen de bestaande plaatsroutes.
    Dit raakt geen weerdata of providerlogica: de reeds vastgelegde stadskernen
@@ -104,10 +116,9 @@ function voegRouteUrlBeleidToe(html,slug){
 
 function voegRouteTitelBeleidToe(html,slug){
   let bron=String(html||"");
-  const aantal=tel(bron,TITLE_SYNC_HAAK);
-  if(aantal!==TITLE_SYNC_WRITERS)throw new Error(`${slug}: verwacht exact ${TITLE_SYNC_WRITERS} title-sync-writers (canonieke render + Q1-cache-render), gevonden ${aantal}.`);
-  const routeBewust=`{\n    const route=window.__WEATHERNOW_ROUTE_LOCATION__;\n    const zelfdeRoute=route&&Number(S.lat)===Number(route.lat)&&Number(S.lon)===Number(route.lon);\n    if(!zelfdeRoute) document.title=S.label+" · Wat is het weer?";\n  }`;
-  return bron.split(TITLE_SYNC_HAAK).join(routeBewust);
+  const titleHaak=actieveTitleHaak(bron,slug);
+  const routeBewust=`{\n    const route=window.__WEATHERNOW_ROUTE_LOCATION__;\n    const zelfdeRoute=route&&Number(S.lat)===Number(route.lat)&&Number(S.lon)===Number(route.lon);\n    if(!zelfdeRoute) ${titleHaak}\n  }`;
+  return bron.split(titleHaak).join(routeBewust);
 }
 
 function voegRouteToe(html,loc){
@@ -178,4 +189,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={MARKER_NAV,MARKER_ROUTE,afstandKm,gerelateerdePlaatsen,voegPlaatsNavigatieToe,voegRouteUrlBeleidToe,voegRouteTitelBeleidToe,maakPlaatsPagina,maakPlaatsIndex,maakSitemap};
+module.exports={MARKER_NAV,MARKER_ROUTE,TITLE_SYNC_HAKEN,TITLE_SYNC_WRITERS,actieveTitleHaak,afstandKm,gerelateerdePlaatsen,voegPlaatsNavigatieToe,voegRouteUrlBeleidToe,voegRouteTitelBeleidToe,maakPlaatsPagina,maakPlaatsIndex,maakSitemap};
