@@ -15,9 +15,9 @@ const {pasDailyForecastOwnerToe}=require("./scripts/daily-forecast-owner.js");
 const {pasBriefingCopyToe}=require("./scripts/briefing-copy-owner.js");
 const {vernieuwServiceworkerCache}=require("./scripts/postbuild-cache.js");
 /* CACHE_BRONNEN en het hashrecept zijn uitsluitend eigendom van postbuild-cache.js. */
-const ROOT=__dirname,OUT=path.join(ROOT,"public");
+const ROOT=__dirname,OUT=path.join(ROOT,"public"),BRON_SNAPSHOT=path.join(ROOT,".weather-runtime-source.tmp");
 const NIET_PUBLICEREN=new Set([
-  ".git",".github","api","lib","node_modules","public","scripts",
+  ".git",".github","api","lib","node_modules","public","scripts",".weather-runtime-source.tmp",
   "build-weather.js","interpretatie-engine.js","interpretatie-engine.test.js","nederlandse-weergrammatica.js","senior-correctness-v2.js","neerslagkans-policy-v3.js","live-polish.css","live-polish-v2.js","senior-semantiek-20260810.css","senior-semantiek-20260810.js","product-config.js",
   "run.js","run-built-matrix.js","kern.js","data.js","package.json","package-lock.json","vercel.json"
 ]);
@@ -29,6 +29,10 @@ function kopieer(bron,doel){
     for(const n of fs.readdirSync(bron))kopieer(path.join(bron,n),path.join(doel,n));
   }else{fs.mkdirSync(path.dirname(doel),{recursive:true});fs.copyFileSync(bron,doel);}
 }
+/* De delivery-snapshot hoort uitsluitend bij de zojuist geëxternaliseerde
+   runtime. Een afgebroken/vorige build mag nooit verifierinput of public asset
+   van de volgende build worden. */
+fs.rmSync(BRON_SNAPSHOT,{force:true});
 fs.rmSync(OUT,{recursive:true,force:true});fs.mkdirSync(OUT,{recursive:true});
 for(const n of fs.readdirSync(ROOT)){if(!intern(n))kopieer(path.join(ROOT,n),path.join(OUT,n));}
 let html=fs.readFileSync(path.join(ROOT,"index.html"),"utf8");
