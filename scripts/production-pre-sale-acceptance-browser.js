@@ -141,7 +141,9 @@ async function dubaiRepeats(profile,browser,count){
 
 async function historyFlowAttempt(profile,browser){
   const context=await browser.newContext({...profile.options,locale:"nl-NL",serviceWorkers:"block"});
-  const page=await context.newPage(),errors=[];page.on("pageerror",e=>errors.push(String(e)));
+  const page=await context.newPage(),errors=[],failed=[];
+  page.on("pageerror",e=>errors.push(String(e)));
+  page.on("requestfailed",r=>failed.push({url:r.url(),error:r.failure()?.errorText||"failed"}));
   const A={name:"Amsterdam",lat:52.3676,lon:4.9041,land:"NL"},B={name:"Dubai",lat:25.2048,lon:55.2708,land:"AE"},C={name:"Kathmandu",lat:27.7172,lon:85.3240,land:"NP"};
   const waitName=async loc=>{
     await page.waitForFunction(({name,lat,lon})=>{
@@ -180,6 +182,7 @@ async function historyFlowAttempt(profile,browser){
     await page.goBack({waitUntil:"domcontentloaded",timeout:30000});states.push(await waitName(A));
     await page.goForward({waitUntil:"domcontentloaded",timeout:30000});states.push(await waitName(B));
     await page.reload({waitUntil:"domcontentloaded",timeout:30000});states.push(await waitName(B));
+    if(errors.length)console.log("PRE_SALE_HISTORY_NETWORK_DIAG "+JSON.stringify({profile:profile.name,pageErrors:errors,requestFailed:failed}));
     assert.deepEqual(errors,[],`${profile.name} history: pageerrors ${errors.join(" | ")}`);
     return states;
   }finally{await context.close();}
@@ -252,9 +255,11 @@ async function requestedLocationMatrix(browser){
       report.cold.push(...await coldLoads(profile,browser));
       report.dubai.push(...await dubaiRepeats(profile,browser,3));
       report.history[profile.name]=await historyFlow(profile,browser);
-      if(profile.engine===chromium)report.locations=await requestedLocationMatrix(browser);
     }finally{await browser.close();}
   }
+  const matrixBrowser=await chromium.launch({headless:true});
+  try{report.locations=await requestedLocationMatrix(matrixBrowser);}
+  finally{await matrixBrowser.close();}
   assert.equal(report.cold.length,PER_PROFILE*profiles.length,"cold-load totaal klopt niet");
   assert.equal(report.cold.filter(r=>r.terminal==="data"||r.terminal==="error").length,report.cold.length,"niet alle cold loads zijn terminaal");
   assert.equal(report.locations.length,requestedLocations.length,"niet alle voorgeschreven locaties zijn geverifieerd");
