@@ -2,12 +2,9 @@
 
 const fs=require("fs");
 const path=require("path");
-const {
-  voegRouteTitelBeleidToe,
-  maakPlaatsPagina
-}=require("./generate-seo-location-pages.js");
 const SEO=require("./seo-foundation.config.js");
 const {LOCATIES}=require("./seo-locations.config.js");
+const {TITLE_NIEUW,TITLE_WRITERS}=require("./apply-seo-location-h1.js");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 
 const OUT=path.join(__dirname,"..","public");
@@ -58,15 +55,23 @@ function voegGedeeldRouteUrlBeleidToe(html,label){
   let bron=String(html||"");
   if(tel(bron,URL_SYNC_HAAK)!==1)throw new Error(`${label}: URL-sync-haak ontbreekt of is dubbel.`);
   const websiteJson=JSON.stringify({"@context":"https://schema.org","@type":"WebSite",name:SEO.siteName,url:SEO.canonical});
-  const gedeeld=`  try{\n    const route=window.__WEATHERNOW_ROUTE_LOCATION__;\n    const routeGeldig=route&&Number.isFinite(Number(route.lat))&&Number.isFinite(Number(route.lon))&&!!route.name;\n    const zelfdeRoute=routeGeldig&&Number(S.lat)===Number(route.lat)&&Number(S.lon)===Number(route.lon);\n    if(routeGeldig){\n      if(!zelfdeRoute){\n        window.__WEATHERNOW_ROUTE_LOCATION__=null;\n        const canonical=document.querySelector('link[rel="canonical"]');\n        if(canonical)canonical.href=${JSON.stringify(SEO.canonical)};\n        const description=document.querySelector('meta[name="description"]');\n        if(description)description.content=${JSON.stringify(SEO.description)};\n        const ogTitle=document.querySelector('meta[property="og:title"]');\n        if(ogTitle)ogTitle.content=${JSON.stringify(SEO.title)};\n        const ogDescription=document.querySelector('meta[property="og:description"]');\n        if(ogDescription)ogDescription.content=${JSON.stringify(SEO.description)};\n        const ogUrl=document.querySelector('meta[property="og:url"]');\n        if(ogUrl)ogUrl.content=${JSON.stringify(SEO.canonical)};\n        const structured=document.querySelector('script[type="application/ld+json"]');\n        if(structured)structured.textContent=${JSON.stringify(websiteJson)};\n        const context=document.querySelector(".seo-route-context");\n        if(context)context.hidden=true;\n        const u=new URL("/",location.origin);\n        u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n        u.searchParams.set("plaats",S.label);\n        if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n        history.replaceState(null,"",u);\n      }\n    }else{\n      const u=new URL(location.href);\n      u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n      u.searchParams.set("plaats",S.label);\n      if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n      history.replaceState(null,"",u);\n    }\n  }catch(e){}\n`;
+  const gedeeld=`  try{\n    const route=window.__WEATHERNOW_ROUTE_LOCATION__;\n    const routeGeldig=route&&Number.isFinite(Number(route.lat))&&Number.isFinite(Number(route.lon))&&!!route.name;\n    const zelfdeRoute=routeGeldig&&Number(S.lat)===Number(route.lat)&&Number(S.lon)===Number(route.lon);\n    if(routeGeldig){\n      if(!zelfdeRoute){\n        window.__WEATHERNOW_ROUTE_LOCATION__=null;\n        const canonical=document.querySelector('link[rel="canonical"]');\n        if(canonical)canonical.href=${JSON.stringify(SEO.canonical)};\n        const description=document.querySelector('meta[name="description"]');\n        if(description)description.content=${JSON.stringify(SEO.description)};\n        const ogTitle=document.querySelector('meta[property="og:title"]');\n        if(ogTitle)ogTitle.content=${JSON.stringify(SEO.title)};\n        const ogDescription=document.querySelector('meta[property="og:description"]');\n        if(ogDescription)ogDescription.content=${JSON.stringify(SEO.description)};\n        const ogUrl=document.querySelector('meta[property="og:url"]');\n        if(ogUrl)ogUrl.content=${JSON.stringify(SEO.canonical)};\n        const structured=document.querySelector('script[type="application/ld+json"]');\n        if(structured)structured.textContent=${JSON.stringify(websiteJson)};\n        const context=document.querySelector(".seo-route-context");\n        if(context)context.hidden=true;\n        const hoofdkop=document.querySelector(".mast h1");\n        if(hoofdkop)hoofdkop.textContent="watishetweer.nl";\n        const u=new URL("/",location.origin);\n        u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n        u.searchParams.set("plaats",S.label);\n        if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n        history.replaceState(null,"",u);\n      }\n    }else{\n      const u=new URL(location.href);\n      u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n      u.searchParams.set("plaats",S.label);\n      if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n      history.replaceState(null,"",u);\n    }\n  }catch(e){}\n`;
   return bron.replace(URL_SYNC_HAAK,gedeeld);
+}
+
+function voegGedeeldTitelBeleidToe(html,label){
+  let bron=String(html||"");
+  const aantal=tel(bron,TITLE_NIEUW);
+  if(aantal!==TITLE_WRITERS)throw new Error(`${label}: verwacht exact ${TITLE_WRITERS} finale merk-title-writers, gevonden ${aantal}.`);
+  const routeBewust=`{\n    const route=window.__WEATHERNOW_ROUTE_LOCATION__;\n    const routeGeldig=route&&Number.isFinite(Number(route.lat))&&Number.isFinite(Number(route.lon))&&!!route.name;\n    const zelfdeRoute=routeGeldig&&Number(S.lat)===Number(route.lat)&&Number(S.lon)===Number(route.lon);\n    if(!zelfdeRoute) document.title=S.label+" · watishetweer.nl";\n  }`;
+  return bron.split(TITLE_NIEUW).join(routeBewust);
 }
 
 function voegGedeeldeRouteRuntimeToe(html,label){
   let bron=voegGedeeldRouteUrlBeleidToe(String(html||""),label);
-  bron=voegRouteTitelBeleidToe(bron,label);
+  bron=voegGedeeldTitelBeleidToe(bron,label);
   if(tel(bron,START_HAAK)!==1)throw new Error(`${label}: start-haak ontbreekt of is dubbel.`);
-  const routeStart=`(function(){\n  const route=window.__WEATHERNOW_ROUTE_LOCATION__;\n  if(route&&Number.isFinite(route.lat)&&Number.isFinite(route.lon)&&route.name){\n    q.value=route.name;\n    load(route.lat,route.lon,route.name,false,false,normLand(route.country));\n    return;\n  }\n  const p=new URLSearchParams(location.search);\n`;
+  const routeStart=`(function(){\n  const route=window.__WEATHERNOW_ROUTE_LOCATION__;\n  if(route&&Number.isFinite(Number(route.lat))&&Number.isFinite(Number(route.lon))&&route.name){\n    q.value=route.name;\n    load(Number(route.lat),Number(route.lon),route.name,false,false,normLand(route.country));\n    return;\n  }\n  const p=new URLSearchParams(location.search);\n`;
   return bron.replace(START_HAAK,routeStart);
 }
 
@@ -107,7 +112,8 @@ function verifieerVoorDelivery(rootHtml){
   const vereist=[
     `id="${WATCHDOG_ID}"`,`id="${FAILURE_ID}"`,`id="${NOSCRIPT_ID}"`,
     'window.addEventListener("pageshow"','klokBijwerken();','stempel();',
-    'window.__WEATHERNOW_APP_READY__=true',READY_EVENT,ROOT_ROUTE_MARKER
+    'window.__WEATHERNOW_APP_READY__=true',READY_EVENT,ROOT_ROUTE_MARKER,
+    'const routeGeldig=route&&Number.isFinite(Number(route.lat))'
   ];
   for(const marker of vereist)if(!rootHtml.includes(marker))throw new Error("Release-herstelmarker ontbreekt vóór delivery: "+marker);
   if(!rootHtml.includes("AbortController")||!rootHtml.includes("laadTeller")||!rootHtml.includes("zoekGeneratie"))throw new Error("Bestaande request/race-hardening ontbreekt na release-herstel.");
@@ -115,15 +121,17 @@ function verifieerVoorDelivery(rootHtml){
 
 function finaliseerRelease(){
   if(!fs.existsSync(ROOT_HTML))throw new Error("public/index.html ontbreekt voor release-herstel.");
-  const finaleRootVoorHerstel=fs.readFileSync(ROOT_HTML,"utf8");
-  const hersteld=voegBootstrapHerstelToe(finaleRootVoorHerstel);
-  const gedeeld=voegGedeeldeRouteRuntimeToe(hersteld,"release-root");
+  const finaleRoot=fs.readFileSync(ROOT_HTML,"utf8");
+  const rootHersteld=voegBootstrapHerstelToe(finaleRoot);
+  const gedeeld=voegGedeeldeRouteRuntimeToe(rootHersteld,"release-root");
 
   for(const loc of LOCATIES){
     const routePad=path.join(OUT,"weer",loc.slug,"index.html");
-    const routeSpecifiek=maakPlaatsPagina(hersteld,loc);
-    const routeMetGedeeldeRuntime=normaliseerRouteScripts(routeSpecifiek,gedeeld,loc.slug);
-    fs.mkdirSync(path.dirname(routePad),{recursive:true});
+    if(!fs.existsSync(routePad))throw new Error(`${loc.slug}: finale plaatsroute ontbreekt vóór release-herstel.`);
+    const routeBestaand=fs.readFileSync(routePad,"utf8");
+    if(!routeBestaand.includes("<!-- WEATHER NOW PLAATSROUTE -->"))throw new Error(`${loc.slug}: routebootstrap ontbreekt in finale plaatsroute.`);
+    const routeHersteld=voegBootstrapHerstelToe(routeBestaand);
+    const routeMetGedeeldeRuntime=normaliseerRouteScripts(routeHersteld,gedeeld,loc.slug);
     fs.writeFileSync(routePad,routeMetGedeeldeRuntime,"utf8");
   }
 
@@ -131,12 +139,12 @@ function finaliseerRelease(){
   fs.writeFileSync(ROOT_HTML,rootMetRouteData,"utf8");
   verifieerVoorDelivery(rootMetRouteData);
   const cache=vernieuwServiceworkerCache(OUT,"release-recovery-finalize");
-  console.log(`Release-herstel gefinaliseerd: ${LOCATIES.length} plaatsroutes opnieuw afgeleid van de finale root-runtime; no/failed-JS en BFCache-freshness actief; cache ${cache}.`);
+  console.log(`Release-herstel gefinaliseerd: ${LOCATIES.length} bestaande finale plaatsroutes delen nu exact de finale root-runtime; no/failed-JS en BFCache-freshness actief; cache ${cache}.`);
   return {routes:LOCATIES.length,cache};
 }
 
 if(require.main===module)finaliseerRelease();
 module.exports={
-  voegBootstrapHerstelToe,voegGedeeldRouteUrlBeleidToe,voegGedeeldeRouteRuntimeToe,normaliseerRouteScripts,voegRootRouteDataToe,finaliseerRelease,
-  WATCHDOG_ID,FAILURE_ID,NOSCRIPT_ID,ROOT_ROUTE_MARKER
+  voegBootstrapHerstelToe,voegGedeeldRouteUrlBeleidToe,voegGedeeldTitelBeleidToe,voegGedeeldeRouteRuntimeToe,
+  normaliseerRouteScripts,voegRootRouteDataToe,finaliseerRelease,WATCHDOG_ID,FAILURE_ID,NOSCRIPT_ID,ROOT_ROUTE_MARKER
 };
