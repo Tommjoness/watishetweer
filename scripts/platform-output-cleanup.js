@@ -27,6 +27,8 @@ const DELIVERY_META='<meta name="weather-delivery" content="external-minified-v1
 const SCRIPT_RE=/<script([^>]*)>([\s\S]*?)<\/script>/gi;
 const ROUTE_BOOTSTRAP=/^\s*window\.__WEATHERNOW_ROUTE_LOCATION__=Object\.freeze\((\{[\s\S]*\})\);\s*$/;
 const BEWAAR_COMMENTS=/NEERSLAGPRESENTATIE V2|CHECKPOINT 25 Q1|GEDEELDE URL PLAATSIDENTITEIT/;
+const HASHED_RUNTIME=/^(?:app|early|page)-[0-9a-f]{12}\.min\.js$|^bootstrap-[0-9a-f]{12}(?:\.min)?\.js$/;
+const BOOTSTRAP_RUNTIME=/^bootstrap-[0-9a-f]{12}\.min\.js$/;
 
 function htmlBestanden(dir){
   const uit=[];
@@ -128,8 +130,29 @@ async function minifyRuntime(scripts,routeData){
   return {bron,code:resultaat.code};
 }
 function hash12(v){return crypto.createHash("sha256").update(v).digest("hex").slice(0,12);}
-function verwijderOudeBundles(){
-  for(const naam of fs.readdirSync(PUBLIC))if(/^(?:app|early)-[0-9a-f]{12}\.min\.js$/.test(naam))fs.rmSync(path.join(PUBLIC,naam),{force:true});
+function isWeatherAppBestand(bestand){
+  const rel=path.relative(PUBLIC,bestand).split(path.sep).join("/");
+  return rel==="index.html"||/^weer\/[^/]+\/index\.html$/.test(rel);
+}
+function bootstrapUitRoot(html){
+  const gevonden=[];
+  for(const m of String(html||"").matchAll(/<script\b([^>]*)><\/script>/gi)){
+    const attrs=m[1]||"";
+    if(!/\bdata-weather-bootstrap\b/i.test(attrs))continue;
+    const src=/\bsrc=["']\/([^"']+)["']/i.exec(attrs);
+    if(!src)throw new Error("Bootstrap-script mist een lokale src.");
+    gevonden.push(src[1]);
+  }
+  if(gevonden.length!==1)throw new Error("Homepage moet vóór delivery exact één bootstrapasset hebben; gevonden "+gevonden.length+".");
+  if(!BOOTSTRAP_RUNTIME.test(gevonden[0]))throw new Error("Ongeldige actuele bootstrapasset: "+gevonden[0]);
+  const pad=path.join(PUBLIC,gevonden[0]);
+  if(!fs.existsSync(pad))throw new Error("Actuele bootstrapasset ontbreekt op disk: "+gevonden[0]);
+  return gevonden[0];
+}
+function verwijderOudeBundles(behoud=new Set()){
+  for(const naam of fs.readdirSync(PUBLIC)){
+    if(HASHED_RUNTIME.test(naam)&&!behoud.has(naam))fs.rmSync(path.join(PUBLIC,naam),{force:true});
+  }
 }
 function migreerCspNaarHeader(html){
   let bron=String(html),aantal=(bron.match(CSP_META)||[]).length;
@@ -159,22 +182,25 @@ async function vervangVroegeScripts(html,earlyScripts,cache){
   }
   return bron;
 }
-function werkServiceworkerBij(rootBundle){
+function werkServiceworkerBij(rootBundle,bootstrapBundle){
   const swPad=path.join(PUBLIC,"sw.js");
-  if(!fs.existsSync(swPad)||!rootBundle)return;
+  if(!fs.existsSync(swPad)||!rootBundle||!bootstrapBundle)return;
   let sw=fs.readFileSync(swPad,"utf8");
   const shellAnker='  "./", "./index.html", "./manifest.json"';
   if((sw.split(shellAnker).length-1)!==1)throw new Error("Serviceworker-shellanker ontbreekt of is dubbel.");
-  sw=sw.replace(shellAnker,'  "./", "./index.html", "./'+rootBundle+'", "./manifest.json"');
+  sw=sw.replace(shellAnker,'  "./", "./index.html", "./'+rootBundle+'", "./'+bootstrapBundle+'", "./manifest.json"');
   fs.writeFileSync(swPad,sw,"utf8");
 }
 async function optimaliseerPublic(publicDir=PUBLIC){
   if(path.resolve(publicDir)!==path.resolve(PUBLIC))throw new Error("Delivery-optimalisatie werkt uitsluitend op de definitieve public-map.");
   for(const naam of ["functions","cloudflare"])fs.rmSync(path.join(PUBLIC,naam),{recursive:true,force:true});
-  verwijderOudeBundles();
+  const rootVoorDelivery=fs.readFileSync(path.join(PUBLIC,"index.html"),"utf8");
+  const bootstrapBundle=bootstrapUitRoot(rootVoorDelivery);
+  verwijderOudeBundles(new Set([bootstrapBundle]));
   const bestanden=htmlBestanden(PUBLIC).sort();
   if(!bestanden.includes(path.join(PUBLIC,"index.html")))throw new Error("public/index.html ontbreekt voor delivery-optimalisatie.");
   const bundleCache=new Map();const earlyCache=new Map();let rootBundle=null,rootBron=null;
+  const appBundles=new Set(),pageBundles=new Set();
   for(const bestand of bestanden){
     /* Pressure-retirement hoort bewust hier: dit is de laatste deliverymutator,
        ná alle historische UI/runtimelagen en vóór bundling/minificatie. */
@@ -188,34 +214,39 @@ async function optimaliseerPublic(publicDir=PUBLIC){
       continue;
     }
     const runtime=await minifyRuntime(verzameld.scripts,verzameld.routeData);
+    const weatherApp=isWeatherAppBestand(bestand);
     if(bestand===path.join(PUBLIC,"index.html")){rootBron=runtime.bron;fs.writeFileSync(BRON_SNAPSHOT,rootBron,"utf8");}
-    const sleutel=runtime.code;
+    const prefix=weatherApp?"app":"page";
+    const sleutel=prefix+":"+runtime.code;
     let naam=bundleCache.get(sleutel);
     if(!naam){
-      naam="app-"+hash12(runtime.code)+".min.js";
+      naam=prefix+"-"+hash12(runtime.code)+".min.js";
       fs.writeFileSync(path.join(PUBLIC,naam),runtime.code,"utf8");
       bundleCache.set(sleutel,naam);
     }
+    if(weatherApp)appBundles.add(naam);else pageBundles.add(naam);
     if(bestand===path.join(PUBLIC,"index.html"))rootBundle=naam;
     let uit=voegBundleToe(geleverd,naam);
     uit=cssMinify(uit);
     fs.writeFileSync(bestand,uit,"utf8");
   }
   if(!rootBundle||!rootBron)throw new Error("Homepage-runtime is niet verpakt.");
-  werkServiceworkerBij(rootBundle);
+  if(appBundles.size!==1)throw new Error("Weather-app delivery moet exact één gedeelde app-bundle opleveren; gevonden "+appBundles.size+".");
+  werkServiceworkerBij(rootBundle,bootstrapBundle);
   vernieuwServiceworkerCache(PUBLIC,"delivery-pressure-retired");
   const rootHtml=fs.readFileSync(path.join(PUBLIC,"index.html"),"utf8");
   if(/<script(?![^>]*\bsrc=)(?![^>]*\btype=["'](?:application\/ld\+json|application\/json)["'])[^>]*>[\s\S]*?<\/script>/i.test(rootHtml))throw new Error("Executable inline script bleef achter op homepage.");
   if(/http-equiv="Content-Security-Policy"/i.test(rootHtml))throw new Error("CSP-meta bleef achter na header-migratie.");
   if(rootHtml.includes('horizontaal.setAttribute("aria-label"'))throw new Error("Ongeldige line-ARIA bleef achter in delivery-runtime.");
+  if(!rootHtml.includes(`src="/${bootstrapBundle}" defer data-weather-bootstrap`))throw new Error("Deferred bootstrapasset ontbreekt na delivery.");
   for(const bestand of bestanden)verifieerPressureRetired(fs.readFileSync(bestand,"utf8"),bestand);
   verifieerPressureRetired(rootBron,"delivery runtime snapshot");
-  return {htmlBestanden:bestanden.length,bundles:bundleCache.size,earlyBundles:earlyCache.size,rootBundle};
+  return {htmlBestanden:bestanden.length,bundles:bundleCache.size,appBundles:appBundles.size,pageBundles:pageBundles.size,earlyBundles:earlyCache.size,rootBundle,bootstrapBundle};
 }
 
 if(require.main===module){
-  optimaliseerPublic().then(r=>console.log(`Platform/delivery cleanup: ${r.htmlBestanden} HTML-bestanden, ${r.bundles} minified runtimebundles, ${r.earlyBundles} vroege bundles; pressure-retired; homepage ${r.rootBundle}.`))
+  optimaliseerPublic().then(r=>console.log(`Platform/delivery cleanup: ${r.htmlBestanden} HTML-bestanden, ${r.appBundles} gedeelde app-bundle, ${r.pageBundles} page-bundles, ${r.earlyBundles} vroege bundles; bootstrap ${r.bootstrapBundle}; pressure-retired; homepage ${r.rootBundle}.`))
     .catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
 }
 
-module.exports={hardenRuntime,cssMinify,verzamelRuntime,minifyRuntime,hash12,migreerCspNaarHeader,optimaliseerPublic,BRON_SNAPSHOT};
+module.exports={hardenRuntime,cssMinify,verzamelRuntime,minifyRuntime,hash12,isWeatherAppBestand,bootstrapUitRoot,migreerCspNaarHeader,optimaliseerPublic,BRON_SNAPSHOT};
