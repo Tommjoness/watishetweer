@@ -183,7 +183,7 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
         assert.equal(uit.timezone,bron.timezone,`${scherm.naam}/${locatie.naam}: UI-tijdzone ${uit.timezone} wijkt af van bron ${bron.timezone}`);
         if(locatie.tz)assert.equal(bron.timezone,locatie.tz,`${scherm.naam}/${locatie.naam}: provider-tijdzone werd ${bron.timezone}, verwacht ${locatie.tz}`);
         assert.equal(uit.dagen,7,`${scherm.naam}/${locatie.naam}: geen zeven dagen`);
-        assert(locatie.pool?(uit.nachten>0||uit.nachtLeeg):uit.nachten>0,`${scherm.naam}/${locatie.naam}: Nachtzicht heeft geen eerlijke staat`);
+        assert(uit.nachten>0||uit.nachtLeeg,`${scherm.naam}/${locatie.naam}: Nachtzicht heeft noch rijen noch de expliciete lege state`);
         const onjuisteToekomst=uit.nachtRijen.slice(1).filter(r=>/\b(?:was|waren)\b/i.test(r.tekst));
         assert.equal(onjuisteToekomst.length,0,`${scherm.naam}/${locatie.naam}: toekomstige Nachtzicht-rij gebruikt verleden tijd; fout=${JSON.stringify(onjuisteToekomst)}; alleRijen=${JSON.stringify(uit.nachtRijen)}; actueleLokaleTijd=${uit.actueleLokaleTijd}; currentTime=${uit.currentTime}; dailyTime=${JSON.stringify(uit.dailyTime)}`);
         assert(/^Gegevens opgehaald om \d{2}:\d{2} · /.test(uit.stamp),`${scherm.naam}/${locatie.naam}: ongeldige datastempel`);
