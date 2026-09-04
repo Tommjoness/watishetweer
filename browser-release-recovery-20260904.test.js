@@ -214,6 +214,10 @@ function controleerTimerOwners(owners,fase){
     {
       const context=await browser.newContext({serviceWorkers:"block"});
       const page=await context.newPage();
+      const cdp=await context.newCDPSession(page);
+      await cdp.send("Page.enable");
+      let bfcacheNotUsed=null;
+      cdp.on("Page.backForwardCacheNotUsed",event=>{bfcacheNotUsed=event;});
       await page.goto(base+"/weer/amsterdam/?__wiw_fixture=1",{waitUntil:"load"});
       await page.waitForSelector("#app",{state:"visible",timeout:10000});
       await page.waitForFunction(()=>/Gegevens opgehaald om/.test(document.getElementById("stamp")?.textContent||""));
@@ -231,7 +235,7 @@ function controleerTimerOwners(owners,fase){
           try{return nav&&"notRestoredReasons" in nav?JSON.parse(JSON.stringify(nav.notRestoredReasons)):null;}
           catch(_){return "unavailable";}
         }).catch(()=>"page-unavailable");
-        throw new Error(`${e.message} notRestoredReasons=${JSON.stringify(diagnose)}`);
+        throw new Error(`${e.message} notRestoredReasons=${JSON.stringify(diagnose)}; cdpNotUsed=${JSON.stringify(bfcacheNotUsed)}`);
       }
       assert.equal(bfcache.persisted,true,"BFCache-evidence moet uitsluitend uit een pageshow.persisted=true event komen");
       assert(bfcache.pageshowCount>=2,`herstelde documentcontext mist tweede pageshow; count=${bfcache.pageshowCount}`);
