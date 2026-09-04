@@ -18,7 +18,7 @@ const BRON=`    let vol=null;
 
 const PRODUCTIE=`    let vol=null;
     const WEER_HEDGE_MS=5000;
-    const WEER_FALLBACK_TIMEOUT_MS=7000;
+    const WEER_FALLBACK_TIMEOUT_MS=5000;
     let hedgeTimer=null,fallbackBelofte=null;
     const startFallback=()=>{
       if(!fallbackBelofte)fallbackBelofte=j(fmin,{timeoutMs:WEER_FALLBACK_TIMEOUT_MS,signal:weerController.signal});
@@ -74,7 +74,7 @@ if(require.main===module){
   scripts.forEach((code,i)=>new vm.Script(code,{filename:"public/index.html:weather-fallback-"+(i+1)}));
   fs.writeFileSync(htmlPad,html,"utf8");
   const versie=vernieuwServiceworkerCache(OUT,"weather-fallback-hedge");
-  console.log("Trage volledige forecast krijgt na 5 s een lichte hedged fallback met 7 s hard cap; normale snelle loads blijven enkelvoudig; cache "+versie+".");
+  console.log("Trage volledige forecast krijgt na 5 s een lichte hedged fallback met eigen 5 s cap; dubbele providerhang eindigt rond 10 s zodat retry/fallback vóór 12 s zichtbaar kan worden; normale snelle loads blijven enkelvoudig; cache "+versie+".");
 }
 
 module.exports={BRON,PRODUCTIE,pasToe};
