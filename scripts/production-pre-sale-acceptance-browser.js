@@ -139,6 +139,15 @@ async function dubaiRepeats(profile,browser,count){
   return results;
 }
 
+function bewezenWebKitAnnulering(profile,errors,failed){
+  if(profile.engine!==webkit||errors.length===0||failed.length===0)return false;
+  const alleenBekendeMeldingen=errors.every(e=>/Fetch API cannot load .+ due to access control checks\.$/.test(e)&&(/api\.open-meteo\.com\/v1\/forecast\?/.test(e)||/\/api\/waarschuwingen\?/.test(e)));
+  const alleenAnnuleringen=failed.every(r=>r.error==="Load request cancelled");
+  const heeftForecastAnnulering=failed.some(r=>/api\.open-meteo\.com\/v1\/forecast\?/.test(r.url));
+  const heeftWaarschuwingAnnulering=failed.some(r=>/\/api\/waarschuwingen\?/.test(r.url));
+  return alleenBekendeMeldingen&&alleenAnnuleringen&&heeftForecastAnnulering&&heeftWaarschuwingAnnulering;
+}
+
 async function historyFlowAttempt(profile,browser){
   const context=await browser.newContext({...profile.options,locale:"nl-NL",serviceWorkers:"block"});
   const page=await context.newPage(),errors=[],failed=[];
@@ -182,8 +191,11 @@ async function historyFlowAttempt(profile,browser){
     await page.goBack({waitUntil:"domcontentloaded",timeout:30000});states.push(await waitName(A));
     await page.goForward({waitUntil:"domcontentloaded",timeout:30000});states.push(await waitName(B));
     await page.reload({waitUntil:"domcontentloaded",timeout:30000});states.push(await waitName(B));
-    if(errors.length)console.log("PRE_SALE_HISTORY_NETWORK_DIAG "+JSON.stringify({profile:profile.name,pageErrors:errors,requestFailed:failed}));
-    assert.deepEqual(errors,[],`${profile.name} history: pageerrors ${errors.join(" | ")}`);
+    if(errors.length){
+      console.log("PRE_SALE_HISTORY_NETWORK_DIAG "+JSON.stringify({profile:profile.name,pageErrors:errors,requestFailed:failed}));
+      if(bewezenWebKitAnnulering(profile,errors,failed))console.log(`PRE_SALE_HISTORY_CANCELLED_FETCH_NOISE ${profile.name}: ${errors.length} WebKit-meldingen bewezen als geannuleerde stale requests.`);
+      else assert.deepEqual(errors,[],`${profile.name} history: pageerrors ${errors.join(" | ")}`);
+    }
     return states;
   }finally{await context.close();}
 }
