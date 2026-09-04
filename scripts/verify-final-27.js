@@ -103,7 +103,7 @@ for(const tekst of [
   "const luchtBelofte=luchtVerversen",
   "?j(a,{timeoutMs:7000,signal:luchtController.signal})",
   "const WEER_HEDGE_MS=5000;",
-  "const WEER_FALLBACK_TIMEOUT_MS=7000;",
+  "const WEER_FALLBACK_TIMEOUT_MS=5000;",
   "const volledigeBelofte=j(f,{timeoutMs:10000,signal:weerController.signal});",
   "fallbackBelofte=j(fmin,{timeoutMs:WEER_FALLBACK_TIMEOUT_MS,signal:weerController.signal})",
   "hedgeTimer=setTimeout(()=>resolve({soort:\"traag\"}),WEER_HEDGE_MS);",
