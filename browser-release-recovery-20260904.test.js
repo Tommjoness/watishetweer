@@ -20,7 +20,8 @@ const air={current:{european_aqi:28,us_aqi:42},hourly:{time:[fixture.current.tim
 
 const mime={".html":"text/html; charset=utf-8",".js":"application/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".woff2":"font/woff2",".png":"image/png",".xml":"application/xml; charset=utf-8",".txt":"text/plain; charset=utf-8"};
 const server=http.createServer((req,res)=>{
-  let pathname=(req.url||"/").split("?")[0];
+  const requestUrl=new URL(req.url||"/","http://127.0.0.1");
+  let pathname=requestUrl.pathname;
   try{pathname=decodeURIComponent(pathname);}catch(_){ }
   let rel=pathname.replace(/^\/+/,"");
   if(!rel||pathname.endsWith("/"))rel=path.join(rel,"index.html");
@@ -32,6 +33,11 @@ const server=http.createServer((req,res)=>{
   const immutable=/^(?:app|bootstrap|page|early)-[0-9a-f]{12}\.min\.js$/.test(naam);
   const cacheControl=immutable?"public, max-age=31536000, immutable":"public, max-age=0, must-revalidate";
   res.writeHead(200,{"content-type":mime[path.extname(bestand).toLowerCase()]||"application/octet-stream","cache-control":cacheControl});
+  if(path.extname(bestand).toLowerCase()===".html"&&requestUrl.searchParams.get("__wiw_fixture")==="1"){
+    const html=fs.readFileSync(bestand,"utf8");
+    if(!html.includes("</head>"))throw new Error("Fixture-HTML mist head-einde.");
+    res.end(html.replace("</head>",fixtureHtml()+"</head>"));return;
+  }
   fs.createReadStream(bestand).pipe(res);
 });
 
@@ -71,6 +77,9 @@ function fetchFixtureScript(){
       return {ok:true,status:200,json:async()=>payload,text:async()=>JSON.stringify(payload)};
     };
   };
+}
+function fixtureHtml(){
+  return `<script>(${fetchFixtureScript().toString()})(${JSON.stringify({weather:fixture,air})});<\/script>`;
 }
 
 async function wachtReady(page,timeout=10000){
@@ -153,9 +162,8 @@ function controleerTimerOwners(owners,fase){
 
     {
       const context=await browser.newContext({serviceWorkers:"block"});
-      await context.addInitScript(fetchFixtureScript(),{weather:fixture,air});
       const page=await context.newPage(),errors=[];page.on("pageerror",e=>errors.push(String(e)));
-      await page.goto(base+"/weer/amsterdam/",{waitUntil:"load"});
+      await page.goto(base+"/weer/amsterdam/?__wiw_fixture=1",{waitUntil:"load"});
       await page.waitForSelector("#app",{state:"visible",timeout:10000});
       const voor=await snapshot(page);
       await page.reload({waitUntil:"load"});
@@ -170,15 +178,14 @@ function controleerTimerOwners(owners,fase){
 
     {
       const context=await browser.newContext({serviceWorkers:"block"});
-      await context.addInitScript(fetchFixtureScript(),{weather:fixture,air});
       const page=await context.newPage();
-      await page.goto(base+"/weer/amsterdam/",{waitUntil:"load"});
+      await page.goto(base+"/weer/amsterdam/?__wiw_fixture=1",{waitUntil:"load"});
       await page.waitForSelector("#app",{state:"visible",timeout:10000});
       await page.waitForFunction(()=>/Gegevens opgehaald om/.test(document.getElementById("stamp")?.textContent||""));
       const voor=await page.evaluate(()=>({fetches:window.__wiwFetchCount,intervals:window.__wiwActiveIntervalOwners()}));
       controleerTimerOwners(voor.intervals,"voor BFCache");
       await page.evaluate(()=>{window.__wiwClockOffset=125000;});
-      await page.goto(base+"/weer/",{waitUntil:"load"});
+      await page.goto(base+"/weer/?__wiw_fixture=1",{waitUntil:"load"});
       await page.goBack({waitUntil:"commit"});
       await page.waitForSelector("#stamp",{state:"attached",timeout:5000});
       try{
