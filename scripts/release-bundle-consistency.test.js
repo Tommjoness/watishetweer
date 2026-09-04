@@ -5,13 +5,16 @@ const path=require("path");
 const assert=require("assert");
 const {LOCATIES}=require("./seo-locations.config.js");
 
-const PUBLIC=path.join(__dirname,"..","public");
+const ROOT=path.join(__dirname,"..");
+const PUBLIC=path.join(ROOT,"public");
+const SNAPSHOT=path.join(ROOT,".weather-runtime-source.tmp");
 const APP_RE=/\/app-([0-9a-f]{12})\.min\.js/g;
 const BOOTSTRAP_RE=/\/bootstrap-([0-9a-f]{12})\.min\.js/g;
 const HASHED_RE=/^(?:app|bootstrap|page|early)-[0-9a-f]{12}\.min\.js$/;
 const BUILD_RE=/<meta name="weather-build-sha" content="([^"]+)">/;
 const CANONICAL_RE=/<link rel="canonical" href="([^"]+)">/;
 const CONTROL_IDS=["q","here","ververs","thema"];
+const FRESHNESS_OWNER=`window.addEventListener("pageshow",()=>{\n  if(!S.d)return;\n  klokBijwerken();\n  stempel();\n});`;
 
 function lees(rel){
   const p=path.join(PUBLIC,rel);
@@ -93,6 +96,9 @@ assert.deepEqual(appOpDisk,[path.basename(verwachtBundle)],"public moet exact é
 const bootOpDisk=fs.readdirSync(PUBLIC).filter(n=>/^bootstrap-[0-9a-f]{12}\.min\.js$/.test(n));
 assert.deepEqual(bootOpDisk,[path.basename(verwachtBootstrap)],"public moet exact één actuele bootstrap-bundle bevatten");
 assert(!fs.existsSync(path.join(PUBLIC,".weather-runtime-source.tmp")),"runtime-snapshot mag nooit in public terechtkomen");
+assert(fs.existsSync(SNAPSHOT),"delivery runtime-snapshot ontbreekt voor semantische ownercontrole");
+const snapshot=fs.readFileSync(SNAPSHOT,"utf8");
+assert.equal(tel(snapshot,FRESHNESS_OWNER),1,"gedeelde deliverybron moet exact één BFCache-freshness-pageshowowner bevatten");
 
 for(const bestand of htmlBestanden(PUBLIC)){
   const html=fs.readFileSync(bestand,"utf8");
@@ -116,9 +122,8 @@ assert(![...sw.matchAll(/bootstrap-[0-9a-f]{12}\.min\.js/g)].some(m=>m[0]!==boot
 const bundel=fs.readFileSync(bundlePad,"utf8");
 for(const marker of ["weathernow:app-ready","AbortController","laadTeller","zoekGeneratie"])
   assert(bundel.includes(marker),`Actieve hoofdclient mist release-/race-invariant: ${marker}`);
-assert.equal(tel(bundel,'addEventListener("pageshow"'),1,"gedeelde hoofdclient moet exact één freshness-pageshowlistener hebben");
 const bootstrapBron=fs.readFileSync(bootstrapPad,"utf8");
 assert(bootstrapBron.includes("12000"),"bootstrap-watchdog moet de afgesproken 12s timeout bevatten");
 assert(!bootstrapBron.includes("30000"),"oude 30s watchdogtimeout mag niet meer actief zijn");
 
-console.log(`Release-bundleconsistentie geslaagd: ${scenarios.length} weather-routes delen build ${verwachtBuild}, ${verwachtBundle} en ${verwachtBootstrap}; SW en hashed assets zijn generatieconsistent.`);
+console.log(`Release-bundleconsistentie geslaagd: ${scenarios.length} weather-routes delen build ${verwachtBuild}, ${verwachtBundle} en ${verwachtBootstrap}; SW, BFCache-freshnessowner en hashed assets zijn generatieconsistent.`);
