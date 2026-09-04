@@ -38,7 +38,13 @@ function fetchFixtureScript(){
       static now(){return fixtureStart+(NativeDate.now()-realStart)+offset();}
     }
     window.Date=ReleaseDate;
-    window.__wiwFetchCount=0;window.__wiwPageshowPersisted=false;
+    window.__wiwFetchCount=0;window.__wiwPageshowPersisted=false;window.__wiwIntervals=[];
+    const nativeSetInterval=window.setInterval.bind(window);
+    window.setInterval=function(fn,ms,...args){
+      const id=nativeSetInterval(fn,ms,...args);
+      window.__wiwIntervals.push({id:Number(id),ms:Number(ms)});
+      return id;
+    };
     window.addEventListener("pageshow",e=>{window.__wiwPageshowPersisted=!!e.persisted;});
     window.fetch=async function(url){
       window.__wiwFetchCount++;
@@ -52,13 +58,14 @@ function fetchFixtureScript(){
   };
 }
 
-async function wachtReady(page){
-  await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="ready",null,{timeout:10000});
+async function wachtReady(page,timeout=10000){
+  await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="ready",null,{timeout});
 }
 async function snapshot(page){
   return page.evaluate(()=>({
     build:document.querySelector('meta[name="weather-build-sha"]')?.content||null,
     script:[...document.scripts].map(s=>s.getAttribute("src")||"").find(s=>/\/app-[0-9a-f]{12}\.min\.js$/.test(s))||null,
+    bootstrap:[...document.scripts].map(s=>s.getAttribute("src")||"").find(s=>/\/bootstrap-[0-9a-f]{12}\.min\.js$/.test(s))||null,
     url:location.href,
     plaats:(document.getElementById("place")?.getAttribute("aria-label")||"").trim(),
     briefing:(document.getElementById("brief")?.textContent||"").trim(),
@@ -86,35 +93,43 @@ async function snapshot(page){
       await context.close();
     }
 
-    /* WIW-002: alleen hoofdapp blokkeren; onafhankelijke early-watchdog blijft draaien. */
-    {
+    /* WIW-002: hoofdapp blokkeren; onafhankelijke deferred bootstrap blijft draaien. */
+    for(const route of ["/","/weer/amsterdam/"]){
       const context=await browser.newContext({serviceWorkers:"block"});
       const page=await context.newPage();
       const errors=[];page.on("pageerror",e=>errors.push(String(e)));
       await page.route(/\/app-[0-9a-f]{12}\.min\.js$/,r=>r.abort("failed"));
-      await page.goto(base+"/",{waitUntil:"load"});
+      await page.goto(base+route,{waitUntil:"load"});
       await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="failed",null,{timeout:5000});
-      assert(await page.locator("#bootstrap-failure").isVisible(),"geblokkeerde hoofdapp moet duidelijke herstelstate tonen");
-      assert.equal(await page.locator("#state").isVisible(),false,"oude eindeloze laadstate moet bij appstartfout verdwijnen");
-      assert.equal(await page.locator("#q").isDisabled(),true,"zoekveld moet bij appstartfout disabled zijn");
-      assert.equal(await page.locator("#here").isDisabled(),true,"locatieknop moet bij appstartfout disabled zijn");
-      await page.unroute(/\/app-[0-9a-f]{12}\.min\.js$/);
-      await page.reload({waitUntil:"load"});
-      await wachtReady(page);
-      assert.equal(await page.locator("#bootstrap-failure").isVisible(),false,"reload recovery moet failed-JS-state volledig verwijderen");
-      assert.equal(await page.locator("#q").isDisabled(),false,"bediening moet na succesvolle recovery weer actief zijn");
-      assert.deepEqual(errors,[],"failed-JS/recoverypad mag geen pageerror veroorzaken");
+      assert(await page.locator("#bootstrap-failure").isVisible(),`${route}: geblokkeerde hoofdapp moet duidelijke herstelstate tonen`);
+      assert.equal(await page.locator("#state").isVisible(),false,`${route}: oude eindeloze laadstate moet bij appstartfout verdwijnen`);
+      for(const id of ["q","here","ververs","thema"])assert.equal(await page.locator("#"+id).isDisabled(),true,`${route}: ${id} moet bij appstartfout disabled zijn`);
+      assert.deepEqual(errors,[],`${route}: blocked-main-pad mag geen pageerror veroorzaken`);
       await context.close();
     }
 
-    /* Trage maar succesvolle appstart mag de foutstate niet laten zien. */
+    /* Echte watchdoggrens: eerst timeout-failure, daarna dezelfde apprequest late success zonder reload. */
     {
       const context=await browser.newContext({serviceWorkers:"block"});
-      const page=await context.newPage();
-      await page.route(/\/app-[0-9a-f]{12}\.min\.js$/,async r=>{await new Promise(resolve=>setTimeout(resolve,1500));await r.continue();});
-      await page.goto(base+"/",{waitUntil:"load"});
-      await wachtReady(page);
-      assert.equal(await page.locator("#bootstrap-failure").isVisible(),false,"vertraagde succesvolle hoofdapp mag geen foutstate tonen");
+      const page=await context.newPage(),errors=[];page.on("pageerror",e=>errors.push(String(e)));
+      let appRequests=0;
+      await page.route(/\/app-[0-9a-f]{12}\.min\.js$/,async r=>{
+        appRequests++;
+        await new Promise(resolve=>setTimeout(resolve,13000));
+        await r.continue();
+      });
+      await page.goto(base+"/",{waitUntil:"commit"});
+      await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="failed",null,{timeout:15000});
+      assert(await page.locator("#bootstrap-failure").isVisible(),"12s watchdogfailure moet vóór late app-success zichtbaar worden");
+      for(const id of ["q","here","ververs","thema"])assert.equal(await page.locator("#"+id).isDisabled(),true,`timeout-failure: ${id} moet disabled blijven`);
+      await wachtReady(page,6000);
+      assert.equal(appRequests,1,"late-successpad moet exact dezelfde ene apprequest afmaken");
+      assert.equal(await page.locator("#bootstrap-failure").isVisible(),false,"late app-success moet foutmelding zonder reload verwijderen");
+      for(const id of ["q","here","ververs","thema"])assert.equal(await page.locator("#"+id).isDisabled(),false,`late success: ${id} moet zonder reload actief worden`);
+      const nav=await page.evaluate(()=>({type:performance.getEntriesByType("navigation")[0]?.type||"",ready:window.__WEATHERNOW_APP_READY__===true}));
+      assert.equal(nav.type,"navigate","late-successherstel mag geen reload hebben uitgevoerd");
+      assert.equal(nav.ready,true,"app-ready-signaal ontbreekt na late success");
+      assert.deepEqual(errors,[],"timeout→late-successpad mag geen pageerror veroorzaken");
       await context.close();
     }
 
@@ -129,14 +144,14 @@ async function snapshot(page){
       await page.reload({waitUntil:"load"});
       await page.waitForSelector("#app",{state:"visible",timeout:10000});
       const na=await snapshot(page);
-      for(const sleutel of ["build","script","plaats","briefing","temperatuur","uurdata","dagdata","weekdata","canonical"]){
+      for(const sleutel of ["build","script","bootstrap","plaats","briefing","temperatuur","uurdata","dagdata","weekdata","canonical"]){
         assert.equal(na[sleutel],voor[sleutel],`refresh-determinisme wijkt af voor ${sleutel}`);
       }
       assert.deepEqual(errors,[],"route/refresh-determinisme mag geen pageerror veroorzaken");
       await context.close();
     }
 
-    /* WIW-003: BFCache-terugkeer rendert klok/freshness meteen, zonder fetch of timerherstart. */
+    /* WIW-003: BFCache-terugkeer rendert freshness meteen zonder fetch of intervalherstart. */
     {
       const context=await browser.newContext({serviceWorkers:"block"});
       await context.addInitScript(fetchFixtureScript(),{weather:fixture,air});
@@ -144,7 +159,9 @@ async function snapshot(page){
       await page.goto(base+"/weer/amsterdam/",{waitUntil:"load"});
       await page.waitForSelector("#app",{state:"visible",timeout:10000});
       await page.waitForFunction(()=>/Gegevens opgehaald om/.test(document.getElementById("stamp")?.textContent||""));
-      const fetchesVoor=await page.evaluate(()=>window.__wiwFetchCount);
+      const voor=await page.evaluate(()=>({fetches:window.__wiwFetchCount,intervals:window.__wiwIntervals.map(x=>x.ms).sort((a,b)=>a-b)}));
+      assert.equal(voor.intervals.filter(ms=>ms===30000).length,1,"voor BFCache moet exact één freshnessinterval van 30s bestaan");
+      assert.equal(voor.intervals.filter(ms=>ms===60000).length,1,"voor BFCache moet exact één forecast/kloktick van 60s bestaan");
       await page.goto(base+"/weer/",{waitUntil:"load"});
       await page.evaluate(()=>localStorage.setItem("__wiw_clock_offset","125000"));
       await page.goBack({waitUntil:"commit"});
@@ -153,16 +170,20 @@ async function snapshot(page){
         persisted:window.__wiwPageshowPersisted,
         stamp:document.getElementById("stamp")?.textContent||"",
         fetches:window.__wiwFetchCount,
-        plaatsTijd:document.getElementById("plaatstijd")?.textContent||""
+        plaatsTijd:document.getElementById("plaatstijd")?.textContent||"",
+        intervals:window.__wiwIntervals.map(x=>x.ms).sort((a,b)=>a-b)
       }));
       assert.equal(bfcache.persisted,true,"Chromium moet deze terugkeer werkelijk uit BFCache herstellen");
       assert(/2 min geleden/.test(bfcache.stamp),`freshnesslabel moet direct 2 min geleden tonen, kreeg: ${bfcache.stamp}`);
       assert(/^\d{2}:\d{2}$/.test(bfcache.plaatsTijd.trim()),"locatieklok moet direct geldig zijn na BFCache");
-      assert.equal(bfcache.fetches,fetchesVoor,"pageshow-freshnessfix mag geen extra weatherrequest starten");
+      assert.equal(bfcache.fetches,voor.fetches,"pageshow-freshnessfix mag geen extra weatherrequest starten");
+      assert.deepEqual(bfcache.intervals,voor.intervals,"BFCache-pageshow mag geen interval opnieuw registreren");
+      assert.equal(bfcache.intervals.filter(ms=>ms===30000).length,1,"na BFCache moet exact één freshnessinterval van 30s bestaan");
+      assert.equal(bfcache.intervals.filter(ms=>ms===60000).length,1,"na BFCache moet exact één forecast/kloktick van 60s bestaan");
       await context.close();
     }
 
-    console.log("Release-herstel-E2E geslaagd: no-JS, failed-JS + recovery, trage start, route-refresh-determinisme en BFCache-freshness zonder extra fetch.");
+    console.log("Release-herstel-E2E geslaagd: no-JS, blocked-main op root/Amsterdam, echte 12s→13s late success zonder reload, route-refresh-determinisme en BFCache-freshness/timerstabiliteit.");
   }finally{
     await browser.close().catch(()=>{});
     await new Promise(resolve=>server.close(resolve));
