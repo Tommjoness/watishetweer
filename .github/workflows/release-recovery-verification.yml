@@ -27,8 +27,25 @@ jobs:
       - name: Bouw exact herstelartifact
         env:
           WEATHER_BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: npm run build:cloudflare
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build:cloudflare 2>&1 | tee release-recovery-build.log
       - name: Controleer één hoofdclient op alle app-routes
-        run: node scripts/release-bundle-consistency.test.js
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/release-bundle-consistency.test.js 2>&1 | tee release-recovery-static.log
       - name: Test no-JS, failed-JS, refresh en BFCache
-        run: node browser-release-recovery-20260904.test.js
+        shell: bash
+        run: |
+          set -o pipefail
+          node browser-release-recovery-20260904.test.js 2>&1 | tee release-recovery-browser.log
+      - name: Bewaar hersteltestdiagnostiek
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-recovery-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}
+          path: release-recovery-*.log
+          if-no-files-found: warn
+          retention-days: 7
