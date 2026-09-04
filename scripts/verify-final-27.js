@@ -145,26 +145,41 @@ vereist("plaatsnaamUitCoordinaten","gedeelde plaatsnaamhelper");
 
 for(const tekst of ["CACHEPERF","DEELPERF","window.__q4","console.log(\"DIAG "]){verboden(tekst,"tijdelijke diagnose "+tekst);}
 
+/* release-recovery-finalize mag vóór de delivery-cleanup al één onafhankelijke
+   bootstrapresource toevoegen. Dat is bewust nog géén app-delivery: de hoofdapp
+   staat op dit moment inline en wordt pas daarna geëxternaliseerd. De finale
+   deliveryguard blijft strikt zodra de deliverymarker aanwezig is. */
 const inlineBlokken=[...paginaHtml.matchAll(/<script(?![^>]*\ssrc=)([^>]*)>([\s\S]*?)<\/script>/g)];
 const inlineRuntime=inlineBlokken.filter(m=>!/\btype\s*=\s*["'](?:application\/ld\+json|application\/json)["']/i.test(m[1])).map(m=>m[2]);
 const jsonLdScripts=inlineBlokken.filter(m=>/\btype\s*=\s*["']application\/ld\+json["']/i.test(m[1])).map(m=>m[2]);
 const externePaden=[...paginaHtml.matchAll(/<script[^>]*\bsrc=["']([^"']+)["'][^>]*><\/script>/g)].map(m=>m[1]);
-const deliveryRuntimePatroon=/^\/(?:app|early)-[0-9a-f]{12}\.min\.js$/;
-const hoofdBundles=externePaden.filter(src=>/^\/app-[0-9a-f]{12}\.min\.js$/.test(src));
-if(externePaden.length&&hoofdBundles.length!==1)throw new Error("Definitief homepage-artifact moet exact één app-hoofdbundle hebben; gevonden "+hoofdBundles.length+".");
+const deliveryActief=paginaHtml.includes('<meta name="weather-delivery" content="external-minified-v1">');
+const appPatroon=/^\/app-[0-9a-f]{12}\.min\.js$/;
+const earlyPatroon=/^\/early-[0-9a-f]{12}\.min\.js$/;
+const bootstrapPatroon=/^\/bootstrap-[0-9a-f]{12}(?:\.min)?\.js$/;
+const hoofdBundles=externePaden.filter(src=>appPatroon.test(src));
+const bootstrapBundles=externePaden.filter(src=>bootstrapPatroon.test(src));
+if(bootstrapBundles.length>1)throw new Error("Homepage mag maximaal één onafhankelijke bootstrapbundle hebben; gevonden "+bootstrapBundles.length+".");
+if(deliveryActief){
+  if(hoofdBundles.length!==1)throw new Error("Definitief homepage-artifact moet exact één app-hoofdbundle hebben; gevonden "+hoofdBundles.length+".");
+  if(inlineRuntime.length)throw new Error("Definitief delivery-artifact mag geen executable inline runtime meer bevatten.");
+}else{
+  if(hoofdBundles.length)throw new Error("App-hoofdbundle staat extern vóór de deliverymarker actief is.");
+  const onverwacht=externePaden.filter(src=>!bootstrapPatroon.test(src));
+  if(onverwacht.length)throw new Error("Onverwachte externe pre-delivery runtime: "+onverwacht.join(", "));
+  if(!inlineRuntime.length)throw new Error("Pre-delivery artifact mist de inline WeatherNow-runtime.");
+}
 const externeRuntime=externePaden.map(src=>{
-  if(!deliveryRuntimePatroon.test(src))throw new Error("Onverwachte externe runtime in definitief artifact: "+src);
+  if(!(appPatroon.test(src)||earlyPatroon.test(src)||bootstrapPatroon.test(src)))throw new Error("Onverwachte externe runtime in definitief artifact: "+src);
   const p=path.join(OUT,src.replace(/^\//,""));
   if(!fs.existsSync(p))throw new Error("Externe runtime ontbreekt: "+src);
   return fs.readFileSync(p,"utf8");
 });
-if(externeRuntime.length&&inlineRuntime.length)throw new Error("Definitief artifact mengt externe en executable inline runtime.");
-const runtimeScripts=externeRuntime.length?externeRuntime:inlineRuntime;
+const runtimeScripts=deliveryActief?externeRuntime:inlineRuntime.concat(externeRuntime);
 if(!runtimeScripts.length)throw new Error("Geen WeatherNow-runtime gevonden.");
 runtimeScripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/runtime-final-27-"+(i+1)+".js"}));
 jsonLdScripts.forEach((bron,i)=>{try{JSON.parse(bron);}catch(e){throw new Error("Ongeldige JSON-LD in definitief artifact #"+(i+1)+": "+e.message);}});
-if(externeRuntime.length){
-  if(!paginaHtml.includes('<meta name="weather-delivery" content="external-minified-v1">'))throw new Error("Deliverymarker ontbreekt bij externe runtime.");
+if(deliveryActief){
   if(/http-equiv="Content-Security-Policy"/i.test(paginaHtml))throw new Error("CSP-meta hoort na delivery niet meer in het document.");
 }
 
