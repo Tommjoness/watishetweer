@@ -17,6 +17,7 @@ const WATCHDOG_ID="weather-bootstrap-watchdog";
 const FAILURE_ID="bootstrap-failure";
 const NOSCRIPT_ID="weather-js-required";
 const READY_EVENT="weathernow:app-ready";
+const CONTROL_IDS=["q","here","ververs","thema"];
 
 function tel(tekst,zoek){return String(tekst).split(zoek).length-1;}
 function vervangExact(bron,oud,nieuw,label){
@@ -27,25 +28,42 @@ function vervangExact(bron,oud,nieuw,label){
 function hash12(v){return crypto.createHash("sha256").update(String(v)).digest("hex").slice(0,12);}
 
 function watchdogBron(){
-  return `(function(){\n"use strict";\nconst READY=${JSON.stringify(READY_EVENT)},APP=/\\/app-[0-9a-f]{12}\\.min\\.js(?:$|\\?)/;\nlet gefaald=false;\nfunction onderdelen(){return Array.from(document.querySelectorAll(".tools input,.tools button"));}\nfunction bediening(uit){\n  onderdelen().forEach(el=>{el.disabled=!!uit;el.setAttribute("aria-disabled",uit?"true":"false");});\n  const tools=document.querySelector(".tools");\n  if(tools){tools.style.opacity=uit?".55":"";tools.style.pointerEvents=uit?"none":"";}\n}\nfunction foutUi(){\n  document.documentElement.dataset.appBootstrap="failed";bediening(true);\n  const state=document.getElementById("state");\n  if(state){if(state.style.display!=="none")state.dataset.bootstrapHidden="1";state.style.display="none";}\n  const fout=document.getElementById(${JSON.stringify(FAILURE_ID)});if(fout)fout.hidden=false;\n}\nfunction herstel(){\n  gefaald=false;document.documentElement.dataset.appBootstrap="ready";bediening(false);\n  const fout=document.getElementById(${JSON.stringify(FAILURE_ID)});if(fout)fout.hidden=true;\n  const state=document.getElementById("state");\n  if(state&&state.dataset.bootstrapHidden==="1"){state.style.display="block";delete state.dataset.bootstrapHidden;}\n}\nfunction mislukt(){\n  if(window.__WEATHERNOW_APP_READY__)return;\n  gefaald=true;document.documentElement.dataset.appBootstrap="failed";\n  if(document.readyState==="loading")return;\n  foutUi();\n}\nfunction pending(){\n  if(window.__WEATHERNOW_APP_READY__){herstel();return;}\n  if(gefaald){foutUi();return;}\n  document.documentElement.dataset.appBootstrap="pending";bediening(true);\n}\nwindow.addEventListener(READY,herstel);\nwindow.addEventListener("error",e=>{const t=e&&e.target;if(t&&t.tagName==="SCRIPT"&&APP.test(String(t.src||"")))mislukt();},true);\ndocument.addEventListener("DOMContentLoaded",pending,{once:true});\nsetTimeout(mislukt,30000);\n})();`;
+  return `(function(){\n"use strict";\nconst READY=${JSON.stringify(READY_EVENT)},APP=/\\/app-[0-9a-f]{12}\\.min\\.js(?:$|\\?)/,IDS=${JSON.stringify(CONTROL_IDS)};\nlet gefaald=false;\nfunction onderdelen(){return IDS.map(id=>document.getElementById(id)).filter(Boolean);}\nfunction bediening(uit){\n  onderdelen().forEach(el=>{el.disabled=!!uit;el.setAttribute("aria-disabled",uit?"true":"false");});\n  const tools=document.querySelector(".tools");\n  if(tools){tools.style.opacity=uit?".55":"";tools.style.pointerEvents=uit?"none":"";}\n}\nfunction foutUi(){\n  document.documentElement.dataset.appBootstrap="failed";bediening(true);\n  const state=document.getElementById("state");\n  if(state){if(state.style.display!=="none")state.dataset.bootstrapHidden="1";state.style.display="none";}\n  const fout=document.getElementById(${JSON.stringify(FAILURE_ID)});if(fout)fout.hidden=false;\n}\nfunction herstel(){\n  gefaald=false;document.documentElement.dataset.appBootstrap="ready";bediening(false);\n  const fout=document.getElementById(${JSON.stringify(FAILURE_ID)});if(fout)fout.hidden=true;\n  const state=document.getElementById("state");\n  if(state&&state.dataset.bootstrapHidden==="1"){state.style.display="block";delete state.dataset.bootstrapHidden;}\n}\nfunction mislukt(){\n  if(window.__WEATHERNOW_APP_READY__)return;\n  gefaald=true;document.documentElement.dataset.appBootstrap="failed";\n  if(document.readyState==="loading")return;\n  foutUi();\n}\nfunction pending(){\n  if(window.__WEATHERNOW_APP_READY__){herstel();return;}\n  if(gefaald){foutUi();return;}\n  document.documentElement.dataset.appBootstrap="pending";bediening(true);\n}\nwindow.addEventListener(READY,herstel);\nwindow.addEventListener("error",e=>{const t=e&&e.target;if(t&&t.tagName==="SCRIPT"&&APP.test(String(t.src||"")))mislukt();},true);\ndocument.addEventListener("DOMContentLoaded",pending,{once:true});\nsetTimeout(mislukt,12000);\n})();`;
 }
 function schrijfWatchdogBundle(){
   const bron=watchdogBron();
-  const naam=`bootstrap-${hash12(bron)}.js`;
+  const naam=`bootstrap-${hash12(bron)}.min.js`;
   fs.writeFileSync(path.join(OUT,naam),bron,"utf8");
   return naam;
+}
+
+function zetControlStandaardUit(html,id){
+  const patroon=new RegExp(`<(?:input|button)\\b[^>]*\\bid=["']${id}["'][^>]*>`,"gi");
+  const matches=String(html||"").match(patroon)||[];
+  if(matches.length!==1)throw new Error(`${id}: verwacht exact één interactief control, gevonden ${matches.length}.`);
+  const tag=matches[0];
+  const disabled=/\sdisabled(?:\s|=|>)/i.test(tag);
+  const aria=/\saria-disabled=["']true["']/i.test(tag);
+  if(disabled!==aria)throw new Error(`${id}: disabled en aria-disabled moeten samen aanwezig zijn.`);
+  if(disabled&&aria)return String(html||"");
+  const nieuw=tag.replace(/>$/,` disabled aria-disabled="true">`);
+  return String(html||"").replace(tag,nieuw);
+}
+function zetControlsStandaardUit(html){
+  let bron=String(html||"");
+  for(const id of CONTROL_IDS)bron=zetControlStandaardUit(bron,id);
+  return bron;
 }
 
 function voegBootstrapHerstelToe(html,watchdogNaam){
   let bron=String(html||"");
   if(bron.includes(`id=\"${WATCHDOG_ID}\"`)||bron.includes(`id='${WATCHDOG_ID}'`))return bron;
-  if(!/^bootstrap-[0-9a-f]{12}\.js$/.test(String(watchdogNaam||"")))throw new Error("Ongeldige watchdog-bundlenaam.");
+  if(!/^bootstrap-[0-9a-f]{12}\.min\.js$/.test(String(watchdogNaam||"")))throw new Error("Ongeldige watchdog-bundlenaam.");
 
-  /* De watchdog is bewust een eigen, zeer kleine first-party resource. Hij moet
-     al luisteren vóór de hoofdapp wordt aangevraagd, zodat een geblokkeerde
-     app-bundle aantoonbaar een foutstate oplevert. Hij wordt niet in de main
-     app gebundeld en ook niet als delivery early-*.js behandeld. */
-  const watchdog=`<script id="${WATCHDOG_ID}" src="/${watchdogNaam}"></script>\n`;
+  /* De watchdog blijft een eigen first-party resource en staat vóór de app in
+     documentvolgorde. defer houdt hem parser-niet-blokkerend; na delivery zijn
+     bootstrap en hoofdapp beide deferred en bewaart de browser deze volgorde. */
+  const watchdog=`<script id="${WATCHDOG_ID}" src="/${watchdogNaam}" defer data-weather-bootstrap></script>\n`;
   const eersteStijl=bron.search(/<style\b/i);
   if(eersteStijl<0)throw new Error("Bootstrap-watchdog kan niet vóór het eerste stijlblok worden geplaatst.");
   bron=bron.slice(0,eersteStijl)+watchdog+bron.slice(eersteStijl);
@@ -57,6 +75,7 @@ function voegBootstrapHerstelToe(html,watchdogNaam){
   const state='<div id="state" class="msg" role="status" aria-live="polite">Gegevens ophalen.</div>';
   const failed=`<div id="${FAILURE_ID}" class="msg err" role="alert" hidden>De weerapp kon niet worden gestart. Controleer je verbinding en <a href="">laad de pagina opnieuw</a>.</div>`;
   bron=vervangExact(bron,state,state+"\n"+failed,"failed-js-state");
+  bron=zetControlsStandaardUit(bron);
 
   const urlAnker="\nfunction urlBij(){";
   const pageshow=`\nwindow.addEventListener("pageshow",()=>{\n  if(!S.d)return;\n  klokBijwerken();\n  stempel();\n});\n`;
@@ -95,7 +114,6 @@ function voegGedeeldeRouteRuntimeToe(html,label){
 function isDataScript(attrs){
   return /\btype\s*=\s*["'](?:application\/ld\+json|application\/json)["']/i.test(String(attrs||""));
 }
-function isExternScript(attrs){return /\bsrc\s*=/i.test(String(attrs||""));}
 function isRouteBootstrap(body){return /^\s*window\.__WEATHERNOW_ROUTE_LOCATION__=Object\.freeze\(/.test(String(body||""));}
 function executableScripts(html,routeBootstrapOverslaan){
   const uit=[];
@@ -128,12 +146,16 @@ function voegRootRouteDataToe(html){
 
 function verifieerVoorDelivery(rootHtml,watchdogNaam){
   const vereist=[
-    `id="${WATCHDOG_ID}"`,`src="/${watchdogNaam}"`,`id="${FAILURE_ID}"`,`id="${NOSCRIPT_ID}"`,
+    `id="${WATCHDOG_ID}"`,`src="/${watchdogNaam}"`,`defer data-weather-bootstrap`,`id="${FAILURE_ID}"`,`id="${NOSCRIPT_ID}"`,
     'window.addEventListener("pageshow"','klokBijwerken();','stempel();',
     'window.__WEATHERNOW_APP_READY__=true',READY_EVENT,ROOT_ROUTE_MARKER,
     'const routeGeldig=route&&Number.isFinite(Number(route.lat))'
   ];
   for(const marker of vereist)if(!rootHtml.includes(marker))throw new Error("Release-herstelmarker ontbreekt vóór delivery: "+marker);
+  for(const id of CONTROL_IDS){
+    const m=rootHtml.match(new RegExp(`<(?:input|button)\\b[^>]*\\bid=["']${id}["'][^>]*>`,"i"));
+    if(!m||!/\sdisabled(?:\s|=|>)/i.test(m[0])||!/\saria-disabled=["']true["']/i.test(m[0]))throw new Error(`${id}: control staat vóór appstart niet fail-safe disabled.`);
+  }
   if(!rootHtml.includes("AbortController")||!rootHtml.includes("laadTeller")||!rootHtml.includes("zoekGeneratie"))throw new Error("Bestaande request/race-hardening ontbreekt na release-herstel.");
   const watchdogPad=path.join(OUT,watchdogNaam);
   if(!fs.existsSync(watchdogPad)||fs.readFileSync(watchdogPad,"utf8")!==watchdogBron())throw new Error("Watchdog-bundle ontbreekt of hoort niet bij de actuele herstelcode.");
@@ -160,7 +182,7 @@ function finaliseerRelease(){
   fs.writeFileSync(ROOT_HTML,rootMetRouteData,"utf8");
   verifieerVoorDelivery(rootMetRouteData,watchdogNaam);
   const cache=vernieuwServiceworkerCache(OUT,"release-recovery-finalize");
-  console.log(`Release-herstel gefinaliseerd: ${LOCATIES.length} bestaande finale plaatsroutes delen nu exact de finale root-runtime; onafhankelijke ${watchdogNaam}, no/failed-JS en BFCache-freshness actief; cache ${cache}.`);
+  console.log(`Release-herstel gefinaliseerd: ${LOCATIES.length} bestaande finale plaatsroutes delen nu exact de finale root-runtime; onafhankelijke deferred ${watchdogNaam}, standaard disabled controls, no/failed-JS en BFCache-freshness actief; cache ${cache}.`);
   return {routes:LOCATIES.length,cache,watchdogNaam};
 }
 
@@ -168,5 +190,5 @@ if(require.main===module)finaliseerRelease();
 module.exports={
   watchdogBron,schrijfWatchdogBundle,voegBootstrapHerstelToe,voegGedeeldRouteUrlBeleidToe,voegGedeeldTitelBeleidToe,
   voegGedeeldeRouteRuntimeToe,normaliseerRouteScripts,voegRootRouteDataToe,finaliseerRelease,
-  WATCHDOG_ID,FAILURE_ID,NOSCRIPT_ID,ROOT_ROUTE_MARKER
+  WATCHDOG_ID,FAILURE_ID,NOSCRIPT_ID,ROOT_ROUTE_MARKER,CONTROL_IDS
 };
