@@ -47,7 +47,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          node browser-release-recovery-20260904.test.js 2>&1 | tee release-recovery-browser.log
+          xvfb-run --auto-servernum node browser-release-recovery-20260904.test.js 2>&1 | tee release-recovery-browser.log
       - name: Test actuele offline serviceworker-generatie
         shell: bash
         run: |
