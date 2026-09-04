@@ -16,6 +16,12 @@
 /app-*.min.js
   Cache-Control: public, max-age=31536000, immutable
 
+/bootstrap-*.min.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/page-*.min.js
+  Cache-Control: public, max-age=31536000, immutable
+
 /early-*.min.js
   Cache-Control: public, max-age=31536000, immutable
 
