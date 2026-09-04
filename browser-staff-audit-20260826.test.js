@@ -73,8 +73,26 @@ const server=http.createServer((req,res)=>{
 });
 
 async function wachtPlaats(page,naam){
-  await page.waitForFunction(n=>document.getElementById("place")?.getAttribute("aria-label")===n,naam,{timeout:10000});
-  await page.waitForSelector("#app",{state:"visible",timeout:10000});
+  try{
+    await page.waitForFunction(n=>{
+      let s=null;try{s={label:S.label,data:!!S.d};}catch(_){ }
+      const app=document.getElementById("app"),compact=document.getElementById("locatie-laadstatus"),q=document.getElementById("q");
+      const label=document.getElementById("place")?.getAttribute("aria-label")||"";
+      const appZichtbaar=!!app&&getComputedStyle(app).display!=="none";
+      const nietMeerBusy=(!app||app.getAttribute("aria-busy")!=="true")&&(!q||q.getAttribute("aria-busy")!=="true");
+      const compacteLoadKlaar=!compact||compact.hidden!==false;
+      return label===n&&s&&s.label===n&&s.data&&appZichtbaar&&nietMeerBusy&&compacteLoadKlaar;
+    },naam,{timeout:15000});
+  }catch(err){
+    const diagnose=await page.evaluate(()=>{
+      let s=null;try{s={label:S.label,lat:S.lat,lon:S.lon,data:!!S.d,land:S.land};}catch(_){ }
+      const app=document.getElementById("app"),compact=document.getElementById("locatie-laadstatus"),q=document.getElementById("q");
+      return {href:location.href,historyState:history.state,historyLength:history.length,label:document.getElementById("place")?.getAttribute("aria-label")||"",s,appDisplay:app&&getComputedStyle(app).display,appBusy:app&&app.getAttribute("aria-busy"),qBusy:q&&q.getAttribute("aria-busy"),compactHidden:compact?compact.hidden:null,compactText:compact?.textContent||"",state:document.getElementById("state")?.textContent||""};
+    }).catch(()=>null);
+    console.error("STAFF_HISTORY_TIMEOUT "+naam+" "+JSON.stringify(diagnose));
+    throw err;
+  }
+  await page.waitForSelector("#app",{state:"visible",timeout:15000});
 }
 async function kies(page,naam){
   await page.locator("#q").fill(naam);
