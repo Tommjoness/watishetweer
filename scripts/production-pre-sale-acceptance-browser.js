@@ -13,25 +13,42 @@ const profiles=[
   {name:"Chromium 390x844",engine:chromium,options:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2}},
   {name:"WebKit iPhone",engine:webkit,options:{...devices["iPhone 13"]}}
 ];
+const requestedLocations=[
+  {name:"Almere",lat:52.3508,lon:5.2647,land:"NL"},
+  {name:"Amsterdam",lat:52.3676,lon:4.9041,land:"NL"},
+  {name:"New York",lat:40.7128,lon:-74.0060,land:"US"},
+  {name:"Dubai",lat:25.2048,lon:55.2708,land:"AE"},
+  {name:"Kathmandu",lat:27.7172,lon:85.3240,land:"NP"},
+  {name:"Tokyo",lat:35.6762,lon:139.6503,land:"JP"},
+  {name:"Sydney",lat:-33.8688,lon:151.2093,land:"AU"},
+  {name:"Longyearbyen",lat:78.2232,lon:15.6469,land:"SJ"},
+  {name:"Ushuaia",lat:-54.8019,lon:-68.3030,land:"AR"}
+];
 const coordOk=(a,b)=>Number.isFinite(Number(a))&&Math.abs(Number(a)-Number(b))<=0.0011;
 
 async function read(page){return page.evaluate(()=>{
   const app=document.getElementById("app"),state=document.getElementById("state"),compact=document.getElementById("locatie-laadstatus"),compactText=compact&&compact.querySelector(".locatie-status-tekst");
-  let s=null;try{s={lat:S.lat,lon:S.lon,label:S.label,land:S.land,data:!!S.d,timezone:S.d&&S.d.timezone||null,verversMislukt:!!S.verversMislukt};}catch(_){ }
+  let s=null;try{s={lat:S.lat,lon:S.lon,label:S.label,land:S.land,data:!!S.d,timezone:S.d&&S.d.timezone||null,verversMislukt:!!S.verversMislukt,currentTime:S.d&&S.d.current&&S.d.current.time||null};}catch(_){ }
   const label=document.getElementById("place")?.getAttribute("aria-label")||"";
   const q=document.getElementById("q")?.value||"";
   const temp=(document.getElementById("t")?.textContent||"").trim();
   const appVisible=!!app&&getComputedStyle(app).display!=="none";
   const data=!!(appVisible&&s&&s.data&&temp&&!/^(?:--|–)$/.test(temp));
   const error=!!((state&&state.className.includes("err")&&getComputedStyle(state).display!=="none")||(compact&&compact.hidden===false&&compact.classList.contains("fout")));
+  let localDate="";try{localDate=typeof plaatsVandaag==="function"?plaatsVandaag():"";}catch(_){ }
   return {
     href:location.href,title:document.title,label,q,temp,data,error,appVisible,
     status:String(compact&&compact.hidden===false?(compactText?.textContent||compact.textContent||""):(state?.textContent||"")).trim(),
     sha:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
     brief:(document.getElementById("brief")?.textContent||"").trim(),
+    hero:(document.querySelector(".hero")?.textContent||"").trim(),
+    localClock:(document.getElementById("plaatstijd")?.textContent||"").trim(),
+    localDate,
+    sun:(document.getElementById("suntimes")?.textContent||"").trim(),
     chartTexts:document.querySelectorAll("#chart text").length,
     days:document.querySelectorAll("#days .row.day:not(.kop)").length,
     nights:document.querySelectorAll("#nights .row.night:not(.kop)").length,
+    nightText:(document.getElementById("nights")?.textContent||"").trim(),
     s
   };
 });}
@@ -134,21 +151,66 @@ async function historyFlow(profile,browser){
   }finally{await context.close();}
 }
 
+async function requestedLocationMatrix(browser){
+  const results=[];
+  for(const loc of requestedLocations){
+    let success=null,lastFailure=null;
+    for(let attempt=1;attempt<=2&&!success;attempt++){
+      const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2,locale:"nl-NL",serviceWorkers:"block"});
+      const page=await context.newPage(),consoleErrors=[],pageErrors=[];
+      page.on("console",m=>{if(m.type()==="error")consoleErrors.push(m.text());});
+      page.on("pageerror",e=>pageErrors.push(String(e)));
+      try{
+        const q=new URLSearchParams({lat:String(loc.lat),lon:String(loc.lon),plaats:loc.name,land:loc.land,locationcheck:`${loc.name}-${attempt}-${Date.now()}`});
+        const start=Date.now(),response=await page.goto(ROOT+"/?"+q,{waitUntil:"domcontentloaded",timeout:30000});
+        assert(response&&response.ok(),`${loc.name}: HTTP ${response&&response.status()}`);
+        const terminal=await waitTerminal(page,start,15000),x=terminal.state;
+        if(!x.data){
+          lastFailure=new Error(`${loc.name}: poging ${attempt} gaf geen bruikbare forecast; terminal=${x.error?"error":"loading"}, status=${x.status}`);
+          continue;
+        }
+        assert.equal(x.sha,EXPECTED,`${loc.name}: verkeerde build ${x.sha}`);
+        assertIdentity(x,loc);
+        const u=new URL(x.href);assert.equal(u.searchParams.get("plaats"),loc.name,`${loc.name}: URL-plaats mismatch`);
+        assert(/^\d{2}:\d{2}$/.test(x.localClock),`${loc.name}: lokale klok ontbreekt of is ongeldig (${x.localClock})`);
+        assert(/^\d{4}-\d{2}-\d{2}$/.test(x.localDate),`${loc.name}: lokale datum ontbreekt of is ongeldig (${x.localDate})`);
+        assert(x.s&&typeof x.s.timezone==="string"&&x.s.timezone.length>0,`${loc.name}: timezone ontbreekt`);
+        assert(x.temp&&!/^(?:--|–)$/.test(x.temp),`${loc.name}: actuele temperatuur ontbreekt`);
+        assert(x.hero.length>0,`${loc.name}: huidig-weerblok leeg`);
+        assert.equal(x.days,7,`${loc.name}: weekverwachting heeft ${x.days} rijen`);
+        assert(x.chartTexts>=4,`${loc.name}: grafiek niet bruikbaar`);
+        assert(x.brief.length>0,`${loc.name}: briefing leeg`);
+        assert(x.nights>0||/geen nachtdata beschikbaar/i.test(x.nightText),`${loc.name}: Nachtzicht heeft geen bruikbare of eerlijke lege state`);
+        assert(x.sun.length>0,`${loc.name}: zonsopkomst/zonsondergang ontbreekt`);
+        assert.deepEqual(pageErrors,[],`${loc.name}: pageerrors ${pageErrors.join(" | ")}`);
+        assert.deepEqual(consoleErrors,[],`${loc.name}: console-errors ${consoleErrors.join(" | ")}`);
+        success={name:loc.name,attempt,ms:terminal.ms,label:x.s.label,land:x.s.land,timezone:x.s.timezone,localDate:x.localDate,localClock:x.localClock};
+      }catch(e){lastFailure=e;}
+      finally{await context.close();}
+    }
+    if(!success)throw lastFailure||new Error(`${loc.name}: locatie-regressie mislukte`);
+    results.push(success);console.log("PRE_SALE_LOCATION "+JSON.stringify(success));
+  }
+  return results;
+}
+
 (async()=>{
-  const report={expectedSha:EXPECTED,cold:[],dubai:[],history:{}};
+  const report={expectedSha:EXPECTED,cold:[],dubai:[],history:{},locations:[]};
   for(const profile of profiles){
     const browser=await profile.engine.launch({headless:true});
     try{
       report.cold.push(...await coldLoads(profile,browser));
       report.dubai.push(...await dubaiRepeats(profile,browser,3));
       report.history[profile.name]=await historyFlow(profile,browser);
+      if(profile.engine===chromium)report.locations=await requestedLocationMatrix(browser);
     }finally{await browser.close();}
   }
   assert.equal(report.cold.length,PER_PROFILE*profiles.length,"cold-load totaal klopt niet");
   assert.equal(report.cold.filter(r=>r.terminal==="data"||r.terminal==="error").length,report.cold.length,"niet alle cold loads zijn terminaal");
+  assert.equal(report.locations.length,requestedLocations.length,"niet alle voorgeschreven locaties zijn geverifieerd");
   const normale=report.cold.filter(r=>r.terminal==="data"&&r.forecastDurations.some(ms=>ms<=2000));
   assert(normale.length>0,"geen normale succesvolle performance-runs gemeten");
   const sorted=normale.map(r=>r.terminalMs).sort((a,b)=>a-b),median=sorted[Math.floor(sorted.length/2)];
   assert(median<=2500,`normale succesvolle mediane kernload ${median}ms is regressief`);
-  console.log("PRE_SALE_ACCEPTANCE_SUMMARY "+JSON.stringify({expectedSha:EXPECTED,coldRuns:report.cold.length,loadingAfter12s:0,wrongLocation:0,pageErrors:0,consoleErrors:0,normalMedianMs:median,dubaiRepeats:report.dubai.length,historyProfiles:Object.keys(report.history)}));
+  console.log("PRE_SALE_ACCEPTANCE_SUMMARY "+JSON.stringify({expectedSha:EXPECTED,coldRuns:report.cold.length,loadingAfter12s:0,wrongLocation:0,pageErrors:0,consoleErrors:0,normalMedianMs:median,dubaiRepeats:report.dubai.length,historyProfiles:Object.keys(report.history),locations:report.locations.map(x=>x.name)}));
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
