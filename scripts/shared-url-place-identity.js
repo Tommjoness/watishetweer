@@ -98,8 +98,9 @@ load=async function(lat,lon,label,stil,opslaan,land){
   const voorState=typeof history!=="undefined"?history.state:null;
   const voorLoc=snapshot();
   const hard=root.WeatherNowGlobalLocationHardening;
-  const gedeeld=stil!==true&&opslaan===false&&hard&&typeof hard.gedeeldeUrlCoordinaten==="function"&&typeof location!=="undefined"
+  const kandidaat=stil!==true&&opslaan===false&&hard&&typeof hard.gedeeldeUrlCoordinaten==="function"&&typeof location!=="undefined"
     ?hard.gedeeldeUrlCoordinaten(location.search):null;
+  const gedeeld=kandidaat&&hard&&typeof hard.gedeeldeUrlPastBijAanroep==="function"&&hard.gedeeldeUrlPastBijAanroep(kandidaat,lat,lon)?kandidaat:null;
 
   if(gedeeld&&gedeeld.aanwezig&&gedeeld.geldig){
     let meegestuurd=null;
