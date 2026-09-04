@@ -31,7 +31,7 @@ function injecteerBasis(html){
   const echteSetTimeout=window.setTimeout.bind(window);window.__wiwEchteSetTimeout=echteSetTimeout;
   window.setTimeout=function(fn,ms){
     const args=[].slice.call(arguments,2);
-    const versneld=window.__wiwAccelerateTimeouts?(ms===10000?45:ms===7000?35:ms):ms;
+    const versneld=window.__wiwAccelerateTimeouts?(ms===10000?45:ms===7000?35:ms===5000?25:ms):ms;
     return echteSetTimeout(()=>fn.apply(null,args),versneld);
   };
   try{Object.defineProperty(navigator,'onLine',{configurable:true,get:()=>!window.__wiwOffline});}catch(e){}

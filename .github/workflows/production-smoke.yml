@@ -119,18 +119,25 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
       options: --ipc=host
-    timeout-minutes: 18
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-      - name: Installeer Chromium-monitor
+      - name: Installeer Chromium- en WebKit-monitor
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Verzamel finale live releasebewijzen
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/production-final-release-browser.js
+      - name: Verifieer 30 onafhankelijke cold loads, Dubai en history op productie
+        if: github.event_name != 'schedule'
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          COLD_LOAD_RUNS_PER_PROFILE: 15
+          COLD_LOAD_OBSERVATION_MS: 12000
+        run: node scripts/production-pre-sale-acceptance-browser.js
       - name: Bewaar screenshots en bewijsrapport
         if: always()
         uses: actions/upload-artifact@v4

@@ -51,6 +51,17 @@ function gedeeldeUrlCoordinaten(zoek){
     :{aanwezig:true,geldig:false,latitude:null,longitude:null};
 }
 
+/* In een reeds actieve client-side sessie mag een oude URL alleen nog eigenaar
+   zijn wanneer de nieuwe load werkelijk dezelfde afgeronde positie betreft. Op
+   de initiële share-load blijft de strikt gelezen ruwe URL altijd leidend boven
+   historische startup-parsing. De 0,0011-grens dekt uitsluitend de bestaande
+   3-decimaal-shareafronding af en is geen geografische plaatsmatching. */
+function gedeeldeUrlPastBijAanroep(gedeeld,lat,lon){
+  const positie=normaliseerLaadCoordinaten(lat,lon);
+  if(!gedeeld||gedeeld.geldig!==true||!positie)return false;
+  return Math.abs(positie.latitude-Number(gedeeld.latitude))<=0.0011&&Math.abs(positie.longitude-Number(gedeeld.longitude))<=0.0011;
+}
+
 /* Open-Meteo levert normaal keurige numerieke coördinaten, maar zoekdata blijft
    externe invoer. De bestaande renderer plaatst latitude/longitude rechtstreeks
    in data-attributen; daarom normaliseren we die grens hier naar echte eindige
@@ -145,7 +156,7 @@ function alleenPlaatsgebondenWaarschuwingen(data){
   return Object.assign({},data,{lijst:bewezen});
 }
 
-const api={MAX_ZOEKRESULTATEN,PROVIDER_ZOEKVENSTER,geldigeCoordinaat,normaliseerLaadCoordinaten,gedeeldeUrlCoordinaten,normaliseerZoekresultaat,zoekSleutel,dedupliceerZoekresultaten,verruimZoekUrl,zoekFallbackTaalUrl,alleenPlaatsgebondenWaarschuwingen};
+const api={MAX_ZOEKRESULTATEN,PROVIDER_ZOEKVENSTER,geldigeCoordinaat,normaliseerLaadCoordinaten,gedeeldeUrlCoordinaten,gedeeldeUrlPastBijAanroep,normaliseerZoekresultaat,zoekSleutel,dedupliceerZoekresultaten,verruimZoekUrl,zoekFallbackTaalUrl,alleenPlaatsgebondenWaarschuwingen};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowGlobalLocationHardening=api;
 
@@ -160,31 +171,35 @@ if(typeof load==="function"){
   const zelfdePositie=(a,b)=>!!(a&&b&&Math.abs(a.latitude-b.latitude)<1e-9&&Math.abs(a.longitude-b.longitude)<1e-9);
   load=async function(lat,lon,label,stil,opslaan,land){
     let positie=null,effectiefLand=land;
+    const aanroepPositie=normaliseerLaadCoordinaten(lat,lon);
+    let bestaandeLocatie=false;
+    try{bestaandeLocatie=!!(typeof S!=="undefined"&&S&&S.d&&Number.isFinite(Number(S.lat))&&Number.isFinite(Number(S.lon)));}catch(_){ }
 
-    /* Alleen de initiële gedeelde-URL-route is niet-stil én opslaan=false. Lees
-       daar de ruwe query opnieuw zodat parseFloat uit de historische startup-
-       router nooit de betekenis van externe invoer bepaalt. Een `land`-query
-       is evenmin bewijs dat de gevalideerde coördinaten in dat land liggen;
-       laat de waarschuwingserver dat daarom opnieuw uit de positie afleiden. */
+    /* Eerste deep link: de raw URL is eigenaar. Actieve sessie: een oude query
+       mag uitsluitend nog meedoen wanneer hij dezelfde load beschrijft. Zo
+       blijven zowel raw share-validatie als client-side plaatswissels correct. */
     if(stil!==true&&opslaan===false&&typeof location!=="undefined"){
       const gedeeld=gedeeldeUrlCoordinaten(location.search);
       if(gedeeld.aanwezig){
         if(!gedeeld.geldig){
-          const st=document.getElementById("state");
-          if(st){
-            st.style.display="block";
-            st.className="msg err";
-            st.textContent="Deze gedeelde locatie is ongeldig. Zoek een plaats of gebruik Mijn locatie.";
+          if(!bestaandeLocatie){
+            const st=document.getElementById("state");
+            if(st){
+              st.style.display="block";
+              st.className="msg err";
+              st.textContent="Deze gedeelde locatie is ongeldig. Zoek een plaats of gebruik Mijn locatie.";
+            }
+            return false;
           }
-          return false;
+        }else if(!bestaandeLocatie||gedeeldeUrlPastBijAanroep(gedeeld,lat,lon)){
+          positie={latitude:gedeeld.latitude,longitude:gedeeld.longitude};
+          gedeeldePositie=positie;
+          effectiefLand=null;
         }
-        positie={latitude:gedeeld.latitude,longitude:gedeeld.longitude};
-        gedeeldePositie=positie;
-        effectiefLand=null;
       }
     }
 
-    if(!positie)positie=normaliseerLaadCoordinaten(lat,lon);
+    if(!positie)positie=aanroepPositie;
     if(!positie){
       if(stil!==true){
         const st=document.getElementById("state");
