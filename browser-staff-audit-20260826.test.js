@@ -116,6 +116,7 @@ async function controleer(browserType,naam){
     await page.goto(`http://127.0.0.1:${server.address().port}/?${urlVoor("Kaapstad")}`,{waitUntil:"networkidle"});
     await wachtPlaats(page,"Kaapstad");
     await page.evaluate(()=>document.fonts&&document.fonts.ready);
+    await page.waitForFunction(()=>[...document.querySelectorAll("#chart text")].some(el=>/^\\d{2}$/.test((el.textContent||"").trim())),null,{timeout:2500});
 
     const init=await page.evaluate(()=>({
       uur:[...document.querySelectorAll("#chart text")].filter(el=>/^\d{2}$/.test((el.textContent||"").trim())).length,
