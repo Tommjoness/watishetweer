@@ -142,7 +142,9 @@ function controleerTimerOwners(owners,fase){
   await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
   const base=`http://127.0.0.1:${server.address().port}`;
   const browser=await chromium.launch({
-    headless:true,
+    // Chromium's headless delegate disables BFCache. CI runs this headed
+    // browser under Xvfb so pageshow.persisted remains a real release gate.
+    headless:false,
     ignoreDefaultArgs:["--disable-back-forward-cache"],
     args:["--enable-features=BackForwardCache"]
   });
