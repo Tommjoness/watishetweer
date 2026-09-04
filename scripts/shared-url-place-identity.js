@@ -107,8 +107,10 @@ load=async function(lat,lon,label,stil,opslaan,land){
     let naam=meegestuurd;
     let doelLand=land;
     /* Alleen wanneer géén expliciete identiteit bestaat, mag reverse geocoding
-       de zichtbare naam bepalen. Een expliciete naam start de forecast direct;
-       ontbrekende landmetadata wordt desgewenst los en niet-blokkerend gevuld. */
+       de zichtbare naam bepalen. Een expliciete naam start de forecast direct.
+       De globale hardening vertrouwt een landcode uit een externe share-URL
+       terecht niet; daarom wordt landmetadata los, op basis van coördinaten en
+       niet-blokkerend, geverifieerd zonder ooit de naam te wijzigen. */
     if(!naam){
       try{
         const g=await plaatsnaamUitCoordinaten(gedeeld.latitude,gedeeld.longitude,{timeoutMs:2500});
@@ -116,7 +118,7 @@ load=async function(lat,lon,label,stil,opslaan,land){
         naam=canoniekeNaam(g&&g.naam)||"Gedeelde locatie";
         if(!doelLand&&g&&g.land)doelLand=g.land;
       }catch(_){naam="Gedeelde locatie";}
-    }else if(!doelLand){
+    }else{
       vulLandOpAchtergrond(beurt,gedeeld.latitude,gedeeld.longitude);
     }
     if(beurt!==generatie)return false;
