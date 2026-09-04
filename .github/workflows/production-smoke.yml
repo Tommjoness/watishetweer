@@ -138,6 +138,11 @@ jobs:
           COLD_LOAD_RUNS_PER_PROFILE: 15
           COLD_LOAD_OBSERVATION_MS: 12000
         run: node scripts/run-production-pre-sale-acceptance-browser.js
+      - name: Gerichte WIW-001/002/003 herstelproef op productie
+        if: github.event_name != 'schedule'
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node scripts/release-recovery-deployed-browser-20260904.js
       - name: Bewaar screenshots en bewijsrapport
         if: always()
         uses: actions/upload-artifact@v4
