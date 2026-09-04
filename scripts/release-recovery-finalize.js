@@ -2,6 +2,7 @@
 
 const fs=require("fs");
 const path=require("path");
+const crypto=require("crypto");
 const SEO=require("./seo-foundation.config.js");
 const {LOCATIES}=require("./seo-locations.config.js");
 const {TITLE_NIEUW,TITLE_WRITERS}=require("./apply-seo-location-h1.js");
@@ -23,12 +24,28 @@ function vervangExact(bron,oud,nieuw,label){
   if(aantal!==1)throw new Error(`${label}: verwacht exact één anker, gevonden ${aantal}.`);
   return bron.replace(oud,nieuw);
 }
+function hash12(v){return crypto.createHash("sha256").update(String(v)).digest("hex").slice(0,12);}
 
-function voegBootstrapHerstelToe(html){
+function watchdogBron(){
+  return `(function(){\n"use strict";\nconst READY=${JSON.stringify(READY_EVENT)},APP=/\\/app-[0-9a-f]{12}\\.min\\.js(?:$|\\?)/;\nlet gefaald=false;\nfunction onderdelen(){return Array.from(document.querySelectorAll(".tools input,.tools button"));}\nfunction bediening(uit){\n  onderdelen().forEach(el=>{el.disabled=!!uit;el.setAttribute("aria-disabled",uit?"true":"false");});\n  const tools=document.querySelector(".tools");\n  if(tools){tools.style.opacity=uit?".55":"";tools.style.pointerEvents=uit?"none":"";}\n}\nfunction foutUi(){\n  document.documentElement.dataset.appBootstrap="failed";bediening(true);\n  const state=document.getElementById("state");\n  if(state){if(state.style.display!=="none")state.dataset.bootstrapHidden="1";state.style.display="none";}\n  const fout=document.getElementById(${JSON.stringify(FAILURE_ID)});if(fout)fout.hidden=false;\n}\nfunction herstel(){\n  gefaald=false;document.documentElement.dataset.appBootstrap="ready";bediening(false);\n  const fout=document.getElementById(${JSON.stringify(FAILURE_ID)});if(fout)fout.hidden=true;\n  const state=document.getElementById("state");\n  if(state&&state.dataset.bootstrapHidden==="1"){state.style.display="block";delete state.dataset.bootstrapHidden;}\n}\nfunction mislukt(){\n  if(window.__WEATHERNOW_APP_READY__)return;\n  gefaald=true;document.documentElement.dataset.appBootstrap="failed";\n  if(document.readyState==="loading")return;\n  foutUi();\n}\nfunction pending(){\n  if(window.__WEATHERNOW_APP_READY__){herstel();return;}\n  if(gefaald){foutUi();return;}\n  document.documentElement.dataset.appBootstrap="pending";bediening(true);\n}\nwindow.addEventListener(READY,herstel);\nwindow.addEventListener("error",e=>{const t=e&&e.target;if(t&&t.tagName==="SCRIPT"&&APP.test(String(t.src||"")))mislukt();},true);\ndocument.addEventListener("DOMContentLoaded",pending,{once:true});\nsetTimeout(mislukt,30000);\n})();`;
+}
+function schrijfWatchdogBundle(){
+  const bron=watchdogBron();
+  const naam=`bootstrap-${hash12(bron)}.js`;
+  fs.writeFileSync(path.join(OUT,naam),bron,"utf8");
+  return naam;
+}
+
+function voegBootstrapHerstelToe(html,watchdogNaam){
   let bron=String(html||"");
   if(bron.includes(`id=\"${WATCHDOG_ID}\"`)||bron.includes(`id='${WATCHDOG_ID}'`))return bron;
+  if(!/^bootstrap-[0-9a-f]{12}\.js$/.test(String(watchdogNaam||"")))throw new Error("Ongeldige watchdog-bundlenaam.");
 
-  const watchdog=`<script id="${WATCHDOG_ID}">(function(){\n"use strict";\nconst READY=${JSON.stringify(READY_EVENT)},APP=/\\/app-[0-9a-f]{12}\\.min\\.js(?:$|\\?)/;\nfunction onderdelen(){return Array.from(document.querySelectorAll(".tools input,.tools button"));}\nfunction bediening(uit){\n  onderdelen().forEach(el=>{el.disabled=!!uit;el.setAttribute("aria-disabled",uit?"true":"false");});\n  const tools=document.querySelector(".tools");\n  if(tools){tools.style.opacity=uit?".55":"";tools.style.pointerEvents=uit?"none":"";}\n}\nfunction herstel(){\n  document.documentElement.dataset.appBootstrap="ready";bediening(false);\n  const fout=document.getElementById(${JSON.stringify(FAILURE_ID)});if(fout)fout.hidden=true;\n  const state=document.getElementById("state");\n  if(state&&state.dataset.bootstrapHidden==="1"){state.style.display="block";delete state.dataset.bootstrapHidden;}\n}\nfunction mislukt(){\n  if(window.__WEATHERNOW_APP_READY__)return;\n  document.documentElement.dataset.appBootstrap="failed";bediening(true);\n  const state=document.getElementById("state");\n  if(state){if(state.style.display!=="none")state.dataset.bootstrapHidden="1";state.style.display="none";}\n  const fout=document.getElementById(${JSON.stringify(FAILURE_ID)});if(fout)fout.hidden=false;\n}\nfunction pending(){\n  if(window.__WEATHERNOW_APP_READY__){herstel();return;}\n  document.documentElement.dataset.appBootstrap="pending";bediening(true);\n}\nwindow.addEventListener(READY,herstel);\nwindow.addEventListener("error",e=>{const t=e&&e.target;if(t&&t.tagName==="SCRIPT"&&APP.test(String(t.src||"")))mislukt();},true);\nif(document.readyState==="loading")document.addEventListener("DOMContentLoaded",pending,{once:true});else pending();\nsetTimeout(mislukt,30000);\n})();</script>\n`;
+  /* De watchdog is bewust een eigen, zeer kleine first-party resource. Hij moet
+     al luisteren vóór de hoofdapp wordt aangevraagd, zodat een geblokkeerde
+     app-bundle aantoonbaar een foutstate oplevert. Hij wordt niet in de main
+     app gebundeld en ook niet als delivery early-*.js behandeld. */
+  const watchdog=`<script id="${WATCHDOG_ID}" src="/${watchdogNaam}"></script>\n`;
   const eersteStijl=bron.search(/<style\b/i);
   if(eersteStijl<0)throw new Error("Bootstrap-watchdog kan niet vóór het eerste stijlblok worden geplaatst.");
   bron=bron.slice(0,eersteStijl)+watchdog+bron.slice(eersteStijl);
@@ -78,6 +95,7 @@ function voegGedeeldeRouteRuntimeToe(html,label){
 function isDataScript(attrs){
   return /\btype\s*=\s*["'](?:application\/ld\+json|application\/json)["']/i.test(String(attrs||""));
 }
+function isExternScript(attrs){return /\bsrc\s*=/i.test(String(attrs||""));}
 function isRouteBootstrap(body){return /^\s*window\.__WEATHERNOW_ROUTE_LOCATION__=Object\.freeze\(/.test(String(body||""));}
 function executableScripts(html,routeBootstrapOverslaan){
   const uit=[];
@@ -108,21 +126,24 @@ function voegRootRouteDataToe(html){
   return bron.replace("</head>",bootstrap+"\n</head>");
 }
 
-function verifieerVoorDelivery(rootHtml){
+function verifieerVoorDelivery(rootHtml,watchdogNaam){
   const vereist=[
-    `id="${WATCHDOG_ID}"`,`id="${FAILURE_ID}"`,`id="${NOSCRIPT_ID}"`,
+    `id="${WATCHDOG_ID}"`,`src="/${watchdogNaam}"`,`id="${FAILURE_ID}"`,`id="${NOSCRIPT_ID}"`,
     'window.addEventListener("pageshow"','klokBijwerken();','stempel();',
     'window.__WEATHERNOW_APP_READY__=true',READY_EVENT,ROOT_ROUTE_MARKER,
     'const routeGeldig=route&&Number.isFinite(Number(route.lat))'
   ];
   for(const marker of vereist)if(!rootHtml.includes(marker))throw new Error("Release-herstelmarker ontbreekt vóór delivery: "+marker);
   if(!rootHtml.includes("AbortController")||!rootHtml.includes("laadTeller")||!rootHtml.includes("zoekGeneratie"))throw new Error("Bestaande request/race-hardening ontbreekt na release-herstel.");
+  const watchdogPad=path.join(OUT,watchdogNaam);
+  if(!fs.existsSync(watchdogPad)||fs.readFileSync(watchdogPad,"utf8")!==watchdogBron())throw new Error("Watchdog-bundle ontbreekt of hoort niet bij de actuele herstelcode.");
 }
 
 function finaliseerRelease(){
   if(!fs.existsSync(ROOT_HTML))throw new Error("public/index.html ontbreekt voor release-herstel.");
+  const watchdogNaam=schrijfWatchdogBundle();
   const finaleRoot=fs.readFileSync(ROOT_HTML,"utf8");
-  const rootHersteld=voegBootstrapHerstelToe(finaleRoot);
+  const rootHersteld=voegBootstrapHerstelToe(finaleRoot,watchdogNaam);
   const gedeeld=voegGedeeldeRouteRuntimeToe(rootHersteld,"release-root");
 
   for(const loc of LOCATIES){
@@ -130,21 +151,22 @@ function finaliseerRelease(){
     if(!fs.existsSync(routePad))throw new Error(`${loc.slug}: finale plaatsroute ontbreekt vóór release-herstel.`);
     const routeBestaand=fs.readFileSync(routePad,"utf8");
     if(!routeBestaand.includes("<!-- WEATHER NOW PLAATSROUTE -->"))throw new Error(`${loc.slug}: routebootstrap ontbreekt in finale plaatsroute.`);
-    const routeHersteld=voegBootstrapHerstelToe(routeBestaand);
+    const routeHersteld=voegBootstrapHerstelToe(routeBestaand,watchdogNaam);
     const routeMetGedeeldeRuntime=normaliseerRouteScripts(routeHersteld,gedeeld,loc.slug);
     fs.writeFileSync(routePad,routeMetGedeeldeRuntime,"utf8");
   }
 
   const rootMetRouteData=voegRootRouteDataToe(gedeeld);
   fs.writeFileSync(ROOT_HTML,rootMetRouteData,"utf8");
-  verifieerVoorDelivery(rootMetRouteData);
+  verifieerVoorDelivery(rootMetRouteData,watchdogNaam);
   const cache=vernieuwServiceworkerCache(OUT,"release-recovery-finalize");
-  console.log(`Release-herstel gefinaliseerd: ${LOCATIES.length} bestaande finale plaatsroutes delen nu exact de finale root-runtime; no/failed-JS en BFCache-freshness actief; cache ${cache}.`);
-  return {routes:LOCATIES.length,cache};
+  console.log(`Release-herstel gefinaliseerd: ${LOCATIES.length} bestaande finale plaatsroutes delen nu exact de finale root-runtime; onafhankelijke ${watchdogNaam}, no/failed-JS en BFCache-freshness actief; cache ${cache}.`);
+  return {routes:LOCATIES.length,cache,watchdogNaam};
 }
 
 if(require.main===module)finaliseerRelease();
 module.exports={
-  voegBootstrapHerstelToe,voegGedeeldRouteUrlBeleidToe,voegGedeeldTitelBeleidToe,voegGedeeldeRouteRuntimeToe,
-  normaliseerRouteScripts,voegRootRouteDataToe,finaliseerRelease,WATCHDOG_ID,FAILURE_ID,NOSCRIPT_ID,ROOT_ROUTE_MARKER
+  watchdogBron,schrijfWatchdogBundle,voegBootstrapHerstelToe,voegGedeeldRouteUrlBeleidToe,voegGedeeldTitelBeleidToe,
+  voegGedeeldeRouteRuntimeToe,normaliseerRouteScripts,voegRootRouteDataToe,finaliseerRelease,
+  WATCHDOG_ID,FAILURE_ID,NOSCRIPT_ID,ROOT_ROUTE_MARKER
 };
