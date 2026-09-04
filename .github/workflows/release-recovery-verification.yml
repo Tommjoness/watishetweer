@@ -24,6 +24,13 @@ jobs:
         run: npm install --ignore-scripts
       - name: Installeer Chromium-driver voor gerichte hersteltest
         run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Controleer recovery- en productiescripts syntactisch
+        run: |
+          node --check browser-release-recovery-20260904.test.js
+          node --check browser-serviceworker-upgrade.test.js
+          node --check scripts/production-release-recovery.js
+          node --check scripts/production-release-recovery-browser.js
+          node --check scripts/production-release-recovery-navigation.js
       - name: Bouw exact herstelartifact
         env:
           WEATHER_BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
