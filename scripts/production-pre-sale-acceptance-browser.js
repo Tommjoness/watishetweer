@@ -217,44 +217,84 @@ async function historyFlow(profile,browser){
 
 async function requestedLocationMatrix(browser){
   const results=[];
-  for(const loc of requestedLocations){
-    let success=null,lastFailure=null;
-    for(let attempt=1;attempt<=2&&!success;attempt++){
-      const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2,locale:"nl-NL",serviceWorkers:"block"});
-      const page=await context.newPage(),consoleErrors=[],pageErrors=[];
-      page.on("console",m=>{if(m.type()==="error")consoleErrors.push(m.text());});
-      page.on("pageerror",e=>pageErrors.push(String(e)));
+  const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  const isVolledigeForecast=url=>{
+    try{
+      const u=new URL(url);
+      return u.hostname==="api.open-meteo.com"&&u.pathname==="/v1/forecast"&&u.searchParams.get("forecast_hours")==="170"&&u.searchParams.get("past_hours")==="24"&&u.searchParams.has("hourly")&&u.searchParams.has("daily");
+    }catch(_){return false;}
+  };
+  const isVolledigeBron=bron=>!!(bron&&bron.timezone&&bron.current&&bron.hourly&&bron.daily);
+  const query=loc=>new URLSearchParams({lat:String(loc.lat),lon:String(loc.lon),plaats:loc.name,land:loc.land});
+  const ontdekVolledigeForecastUrl=async loc=>{
+    const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2,locale:"nl-NL",serviceWorkers:"block"});
+    const page=await context.newPage();
+    let resolveUrl,rejectUrl,klaar=false;
+    const belofte=new Promise((resolve,reject)=>{resolveUrl=resolve;rejectUrl=reject;});
+    const timer=setTimeout(()=>{if(!klaar){klaar=true;rejectUrl(new Error(`${loc.name}: volledige forecast-URL niet binnen 8000 ms opgebouwd`));}},8000);
+    await page.route("**://api.open-meteo.com/v1/forecast**",async route=>{
+      const url=route.request().url();
+      if(!klaar&&isVolledigeForecast(url)){klaar=true;clearTimeout(timer);resolveUrl(url);}
+      await route.fulfill({status:503,contentType:"application/json",body:'{"error":true}'});
+    });
+    try{
+      const response=await page.goto(ROOT+"/?"+query(loc),{waitUntil:"domcontentloaded",timeout:30000});
+      assert(response&&response.ok(),`${loc.name}: bronontdekking HTTP ${response&&response.status()}`);
+      return await belofte;
+    }finally{clearTimeout(timer);await context.close();}
+  };
+  const haalLiveForecast=async (url,loc)=>{
+    let laatsteFout=null;
+    for(let poging=1;poging<=3;poging++){
       try{
-        const q=new URLSearchParams({lat:String(loc.lat),lon:String(loc.lon),plaats:loc.name,land:loc.land,locationcheck:`${loc.name}-${attempt}-${Date.now()}`});
-        const start=Date.now(),response=await page.goto(ROOT+"/?"+q,{waitUntil:"domcontentloaded",timeout:30000});
-        assert(response&&response.ok(),`${loc.name}: HTTP ${response&&response.status()}`);
-        const terminal=await waitTerminal(page,start,15000);let x=terminal.state;
-        if(!kernGereed(x)){
-          lastFailure=new Error(`${loc.name}: poging ${attempt} gaf geen bruikbare forecast; terminal=${x.error?"error":"loading"}, status=${x.status}`);
-          continue;
-        }
-        x=await waitNachtKlaar(page,5000);
-        assert.equal(x.sha,EXPECTED,`${loc.name}: verkeerde build ${x.sha}`);
-        assertIdentity(x,loc);
-        const u=new URL(x.href);assert.equal(u.searchParams.get("plaats"),loc.name,`${loc.name}: URL-plaats mismatch`);
-        assert(/^\d{2}:\d{2}$/.test(x.localClock),`${loc.name}: lokale klok ontbreekt of is ongeldig (${x.localClock})`);
-        assert(/^\d{4}-\d{2}-\d{2}$/.test(x.localDate),`${loc.name}: lokale datum ontbreekt of is ongeldig (${x.localDate})`);
-        assert(x.s&&typeof x.s.timezone==="string"&&x.s.timezone.length>0,`${loc.name}: timezone ontbreekt`);
-        assert(x.temp&&!/^(?:--|–)$/.test(x.temp),`${loc.name}: actuele temperatuur ontbreekt`);
-        assert(x.hero.length>0,`${loc.name}: huidig-weerblok leeg`);
-        assert.equal(x.days,7,`${loc.name}: weekverwachting heeft ${x.days} rijen`);
-        assert(x.chartTexts>=4,`${loc.name}: grafiek niet bruikbaar`);
-        assert(x.brief.length>0,`${loc.name}: briefing leeg`);
-        assert(nachtGereed(x),`${loc.name}: Nachtzicht heeft geen bruikbare of eerlijke lege state`);
-        assert(x.sun.length>0,`${loc.name}: zonsopkomst/zonsondergang ontbreekt`);
-        assert.deepEqual(pageErrors,[],`${loc.name}: pageerrors ${pageErrors.join(" | ")}`);
-        assert.deepEqual(consoleErrors,[],`${loc.name}: console-errors ${consoleErrors.join(" | ")}`);
-        success={name:loc.name,attempt,ms:Date.now()-start,label:x.s.label,land:x.s.land,timezone:x.s.timezone,localDate:x.localDate,localClock:x.localClock};
-      }catch(e){lastFailure=e;}
-      finally{await context.close();}
+        const response=await fetch(url,{headers:{accept:"application/json","user-agent":"watishetweer-pre-sale-location-matrix/1.0"},signal:AbortSignal.timeout(15000)});
+        if(!response.ok)throw new Error(`HTTP ${response.status}`);
+        const bron=await response.json();
+        if(!isVolledigeBron(bron))throw new Error("onvolledige forecastrespons");
+        return {bron,poging};
+      }catch(e){
+        laatsteFout=String(e&&e.message||e);
+        if(poging<3)await slaap(500*poging);
+      }
     }
-    if(!success)throw lastFailure||new Error(`${loc.name}: locatie-regressie mislukte`);
-    results.push(success);console.log("PRE_SALE_LOCATION "+JSON.stringify(success));
+    throw new Error(`${loc.name}: live Open-Meteo-bron niet bereikbaar na drie begrensde pogingen: ${laatsteFout}`);
+  };
+
+  for(const loc of requestedLocations){
+    const sourceUrl=await ontdekVolledigeForecastUrl(loc);
+    const live=await haalLiveForecast(sourceUrl,loc);
+    console.log(`PRE_SALE_LOCATION_SOURCE ${loc.name}: echte volledige forecast opgehaald op bronpoging ${live.poging}.`);
+    const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2,locale:"nl-NL",serviceWorkers:"block"});
+    const page=await context.newPage(),consoleErrors=[],pageErrors=[];
+    page.on("console",m=>{if(m.type()==="error")consoleErrors.push(m.text());});
+    page.on("pageerror",e=>pageErrors.push(String(e)));
+    await page.route("**://api.open-meteo.com/v1/forecast**",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(live.bron)}));
+    try{
+      const q=query(loc);q.set("locationcheck",`${loc.name}-${Date.now()}`);
+      const start=Date.now(),response=await page.goto(ROOT+"/?"+q,{waitUntil:"domcontentloaded",timeout:30000});
+      assert(response&&response.ok(),`${loc.name}: HTTP ${response&&response.status()}`);
+      const terminal=await waitTerminal(page,start,15000);let x=terminal.state;
+      assert(kernGereed(x),`${loc.name}: echte bronfixture gaf geen bruikbare forecast; terminal=${x.error?"error":"loading"}, status=${x.status}`);
+      x=await waitNachtKlaar(page,5000);
+      assert.equal(x.sha,EXPECTED,`${loc.name}: verkeerde build ${x.sha}`);
+      assertIdentity(x,loc);
+      const u=new URL(x.href);assert.equal(u.searchParams.get("plaats"),loc.name,`${loc.name}: URL-plaats mismatch`);
+      assert(/^\d{2}:\d{2}$/.test(x.localClock),`${loc.name}: lokale klok ontbreekt of is ongeldig (${x.localClock})`);
+      assert(/^\d{4}-\d{2}-\d{2}$/.test(x.localDate),`${loc.name}: lokale datum ontbreekt of is ongeldig (${x.localDate})`);
+      assert(x.s&&typeof x.s.timezone==="string"&&x.s.timezone.length>0,`${loc.name}: timezone ontbreekt`);
+      assert.equal(x.s.timezone,live.bron.timezone,`${loc.name}: UI-timezone ${x.s.timezone} wijkt af van echte bron ${live.bron.timezone}`);
+      assert(x.temp&&!/^(?:--|–)$/.test(x.temp),`${loc.name}: actuele temperatuur ontbreekt`);
+      assert(x.hero.length>0,`${loc.name}: huidig-weerblok leeg`);
+      assert.equal(x.days,7,`${loc.name}: weekverwachting heeft ${x.days} rijen`);
+      assert(x.chartTexts>=4,`${loc.name}: grafiek niet bruikbaar`);
+      assert(x.brief.length>0,`${loc.name}: briefing leeg`);
+      assert(nachtGereed(x),`${loc.name}: Nachtzicht heeft geen bruikbare of eerlijke lege state`);
+      assert(x.sun.length>0,`${loc.name}: zonsopkomst/zonsondergang ontbreekt`);
+      assert.deepEqual(pageErrors,[],`${loc.name}: pageerrors ${pageErrors.join(" | ")}`);
+      assert.deepEqual(consoleErrors,[],`${loc.name}: console-errors ${consoleErrors.join(" | ")}`);
+      const success={name:loc.name,sourceAttempt:live.poging,ms:Date.now()-start,label:x.s.label,land:x.s.land,timezone:x.s.timezone,localDate:x.localDate,localClock:x.localClock};
+      results.push(success);console.log("PRE_SALE_LOCATION "+JSON.stringify(success));
+    }finally{await context.close();}
   }
   return results;
 }
