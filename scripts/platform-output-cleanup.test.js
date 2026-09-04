@@ -1,9 +1,10 @@
 "use strict";
 
 const assert=require("assert");
+const path=require("path");
 const vm=require("vm");
 const {
-  hardenRuntime,cssMinify,verzamelRuntime,minifyRuntime,hash12
+  hardenRuntime,cssMinify,verzamelRuntime,minifyRuntime,hash12,isWeatherAppBestand
 }=require("./platform-output-cleanup.js");
 
 (async()=>{
@@ -59,5 +60,11 @@ groep.setAttribute("aria-label","Neerslagperioden met tijdvak en hoeveelheid per
   const vroegMin=await minifyRuntime([vroeg.earlyScripts[0].body],null);
   assert(vroegMin.code.includes("weerbriefing.thema"),"minificatie verwijderde de vroege themalogica");
 
-  console.log("Platform-output-cleanup: ARIA-hardening, drie vroege fontpreloads, CSS/JS-minificatie, echt pre-paintscriptbehoud en routebootstrap-migratie geslaagd.");
+  const publicDir=path.resolve(__dirname,"..","public");
+  assert.equal(isWeatherAppBestand(path.join(publicDir,"index.html")),true,"homepage moet weather-app ownership hebben");
+  assert.equal(isWeatherAppBestand(path.join(publicDir,"weer","amsterdam","index.html")),true,"plaatsroute moet weather-app ownership hebben");
+  assert.equal(isWeatherAppBestand(path.join(publicDir,"privacy.html")),false,"privacy-runtime mag nooit als weather-app worden geclassificeerd");
+  assert.equal(isWeatherAppBestand(path.join(publicDir,"weer","index.html")),false,"statische weerhub mag nooit als weather-app worden geclassificeerd");
+
+  console.log("Platform-output-cleanup: ARIA/font/CSS/JS-hardening, echt pre-paintscriptbehoud, routebootstrap-migratie en app-versus-page ownership geslaagd.");
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
