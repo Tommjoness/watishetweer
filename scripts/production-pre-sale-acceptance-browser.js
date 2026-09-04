@@ -141,7 +141,7 @@ async function dubaiRepeats(profile,browser,count){
 
 function bewezenWebKitAnnulering(profile,errors,failed){
   if(profile.engine!==webkit||errors.length===0||failed.length===0)return false;
-  const alleenBekendeMeldingen=errors.every(e=>/Fetch API cannot load .+ due to access control checks\.$/.test(e)&&(/api\.open-meteo\.com\/v1\/forecast\?/.test(e)||/\/api\/waarschuwingen\?/.test(e)));
+  const alleenBekendeMeldingen=errors.every(e=>/^(?:Fetch API|XMLHttpRequest) cannot load .+ due to access control checks\.$/.test(e)&&(/api\.open-meteo\.com\/v1\/forecast\?/.test(e)||/\/api\/waarschuwingen\?/.test(e)||/\/cdn-cgi\/rum\?/.test(e)));
   const alleenAnnuleringen=failed.every(r=>r.error==="Load request cancelled");
   const heeftForecastAnnulering=failed.some(r=>/api\.open-meteo\.com\/v1\/forecast\?/.test(r.url));
   const heeftWaarschuwingAnnulering=failed.some(r=>/\/api\/waarschuwingen\?/.test(r.url));
