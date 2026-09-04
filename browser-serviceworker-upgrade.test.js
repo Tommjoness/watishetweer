@@ -29,6 +29,7 @@ assert(!/CACHE_HANDLE|\.put\(e\.request/.test(swBasis),"definitieve worker heeft
 assert(/caches\.match\(request,\{cacheName:CACHE\}\)/.test(swBasis),"offline lookup is tot de huidige generatiecache beperkt");
 assert.equal(swBasis.split(appAsset).length-1,1,"serviceworker moet actuele appasset exact één keer precachen");
 assert.equal(swBasis.split(bootstrapAsset).length-1,1,"serviceworker moet actuele bootstrapasset exact één keer precachen");
+assert(swBasis.includes('e.data!=="weathernow:skip-waiting"'),"serviceworker mist expliciete fallback voor een onverwacht wachtende update");
 
 function metMarker(html,versie){
   const marker='<meta name="sw-e2e-build" content="'+versie+'">';
@@ -119,6 +120,7 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
       let laatste=null;
       while(Date.now()<deadline){
         const r=await navigator.serviceWorker.getRegistration();
+        if(r&&r.waiting)r.waiting.postMessage("weathernow:skip-waiting");
         const controller=navigator.serviceWorker.controller||null;
         const keys=await caches.keys();
         const [installingVersie,wachtendVersie,actiefVersie,controllerVersie]=await Promise.all([
