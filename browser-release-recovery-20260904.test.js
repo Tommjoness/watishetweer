@@ -87,7 +87,6 @@ async function snapshot(page){
   const base=`http://127.0.0.1:${server.address().port}`;
   const browser=await chromium.launch({headless:true});
   try{
-    /* WIW-002: volledig zonder JavaScript op root en statische plaatsroute. */
     for(const route of ["/","/weer/amsterdam/"]){
       const context=await browser.newContext({javaScriptEnabled:false,serviceWorkers:"block"});
       const page=await context.newPage();
@@ -98,7 +97,6 @@ async function snapshot(page){
       await context.close();
     }
 
-    /* WIW-002: hoofdapp blokkeren; onafhankelijke deferred bootstrap blijft draaien. */
     for(const route of ["/","/weer/amsterdam/"]){
       const context=await browser.newContext({serviceWorkers:"block"});
       const page=await context.newPage();
@@ -113,7 +111,6 @@ async function snapshot(page){
       await context.close();
     }
 
-    /* Echte watchdoggrens: eerst timeout-failure, daarna dezelfde apprequest late success zonder reload. */
     {
       const context=await browser.newContext({serviceWorkers:"block"});
       const page=await context.newPage(),errors=[];page.on("pageerror",e=>errors.push(String(e)));
@@ -138,7 +135,6 @@ async function snapshot(page){
       await context.close();
     }
 
-    /* WIW-001: dezelfde plaatsroute + brondata blijft vóór/na refresh inhoudelijk identiek. */
     {
       const context=await browser.newContext({serviceWorkers:"block"});
       await context.addInitScript(fetchFixtureScript(),{weather:fixture,air});
@@ -156,7 +152,6 @@ async function snapshot(page){
       await context.close();
     }
 
-    /* WIW-003: BFCache-terugkeer rendert freshness meteen zonder fetch of intervalherstart. */
     {
       const context=await browser.newContext({serviceWorkers:"block"});
       await context.addInitScript(fetchFixtureScript(),{weather:fixture,air});
@@ -165,8 +160,9 @@ async function snapshot(page){
       await page.waitForSelector("#app",{state:"visible",timeout:10000});
       await page.waitForFunction(()=>/Gegevens opgehaald om/.test(document.getElementById("stamp")?.textContent||""));
       const voor=await page.evaluate(()=>({fetches:window.__wiwFetchCount,intervals:window.__wiwActiveIntervalMs()}));
-      assert.equal(voor.intervals.filter(ms=>ms===30000).length,1,"voor BFCache moet exact één actieve freshnessinterval van 30s bestaan");
-      assert.equal(voor.intervals.filter(ms=>ms===60000).length,1,"voor BFCache moet exact één actieve forecasttick van 60s bestaan");
+      console.log("BFCache actieve timerbasis vóór navigatie:",JSON.stringify(voor.intervals));
+      assert.equal(voor.intervals.filter(ms=>ms===30000).length,1,`voor BFCache moet exact één actieve freshnessinterval van 30s bestaan; actief=${JSON.stringify(voor.intervals)}`);
+      assert.equal(voor.intervals.filter(ms=>ms===60000).length,1,`voor BFCache moet exact één actieve forecasttick van 60s bestaan; actief=${JSON.stringify(voor.intervals)}`);
       await page.goto(base+"/weer/",{waitUntil:"load"});
       await page.evaluate(()=>localStorage.setItem("__wiw_clock_offset","125000"));
       await page.goBack({waitUntil:"commit"});
@@ -178,13 +174,14 @@ async function snapshot(page){
         plaatsTijd:document.getElementById("plaatstijd")?.textContent||"",
         intervals:window.__wiwActiveIntervalMs()
       }));
+      console.log("BFCache actieve timerbasis na terugkeer:",JSON.stringify(bfcache.intervals));
       assert.equal(bfcache.persisted,true,"Chromium moet deze terugkeer werkelijk uit BFCache herstellen");
       assert(/2 min geleden/.test(bfcache.stamp),`freshnesslabel moet direct 2 min geleden tonen, kreeg: ${bfcache.stamp}`);
       assert(/^\d{2}:\d{2}$/.test(bfcache.plaatsTijd.trim()),"locatieklok moet direct geldig zijn na BFCache");
       assert.equal(bfcache.fetches,voor.fetches,"pageshow-freshnessfix mag geen extra weatherrequest starten");
       assert.deepEqual(bfcache.intervals,voor.intervals,"BFCache-pageshow mag de actieve intervalset niet wijzigen");
-      assert.equal(bfcache.intervals.filter(ms=>ms===30000).length,1,"na BFCache moet exact één actieve freshnessinterval van 30s bestaan");
-      assert.equal(bfcache.intervals.filter(ms=>ms===60000).length,1,"na BFCache moet exact één actieve forecasttick van 60s bestaan");
+      assert.equal(bfcache.intervals.filter(ms=>ms===30000).length,1,`na BFCache moet exact één actieve freshnessinterval van 30s bestaan; actief=${JSON.stringify(bfcache.intervals)}`);
+      assert.equal(bfcache.intervals.filter(ms=>ms===60000).length,1,`na BFCache moet exact één actieve forecasttick van 60s bestaan; actief=${JSON.stringify(bfcache.intervals)}`);
       await context.close();
     }
 
