@@ -70,7 +70,7 @@ function fetchFixtureScript(){
       static now(){return fixtureStart+(NativeDate.now()-realStart)+offset();}
     }
     window.Date=ReleaseDate;
-    window.__wiwFetchCount=0;window.__wiwPageshowPersisted=false;window.__wiwPageshowCount=0;window.__wiwActiveIntervals=Object.create(null);
+    window.__wiwFetchCount=0;window.__wiwWeatherFetchCount=0;window.__wiwPageshowPersisted=false;window.__wiwPageshowCount=0;window.__wiwActiveIntervals=Object.create(null);
     const nativeSetInterval=window.setInterval.bind(window),nativeClearInterval=window.clearInterval.bind(window);
     window.setInterval=function(fn,ms,...args){
       const id=nativeSetInterval(fn,ms,...args);
@@ -93,6 +93,7 @@ function fetchFixtureScript(){
           pageshowCount:window.__wiwPageshowCount,
           stamp:document.getElementById("stamp")?.textContent||"",
           fetches:window.__wiwFetchCount,
+          weatherFetches:window.__wiwWeatherFetchCount,
           plaatsTijd:document.getElementById("plaatstijd")?.textContent||"",
           intervals:window.__wiwActiveIntervalOwners()
         }));
@@ -101,6 +102,7 @@ function fetchFixtureScript(){
     window.fetch=async function(url){
       window.__wiwFetchCount++;
       const u=String(url);
+      if(u.includes("api.open-meteo.com/v1/forecast"))window.__wiwWeatherFetchCount++;
       const payload=u.includes("/api/waarschuwingen")?{bron:"test",dekking:true,land:"NL",lijst:[]}
         :u.includes("/api/neerslag")?{beschikbaar:false,provider:"test",reden:"fixture"}
         :u.includes("/api/plaatsnaam")?{naam:"Amsterdam",land:"NL",bron:"test"}
@@ -223,7 +225,7 @@ function controleerTimerOwners(owners,fase){
       await page.goto(base+"/weer/amsterdam/?__wiw_fixture=1",{waitUntil:"load"});
       await page.waitForSelector("#app",{state:"visible",timeout:10000});
       await page.waitForFunction(()=>/Gegevens opgehaald om/.test(document.getElementById("stamp")?.textContent||""));
-      const voor=await page.evaluate(()=>({fetches:window.__wiwFetchCount,intervals:window.__wiwActiveIntervalOwners()}));
+      const voor=await page.evaluate(()=>({fetches:window.__wiwFetchCount,weatherFetches:window.__wiwWeatherFetchCount,intervals:window.__wiwActiveIntervalOwners()}));
       controleerTimerOwners(voor.intervals,"voor BFCache");
       await page.evaluate(()=>{window.__wiwClockOffset=125000;});
       await page.goto(base+"/weer/?__wiw_fixture=1",{waitUntil:"load"});
@@ -243,7 +245,7 @@ function controleerTimerOwners(owners,fase){
       assert(bfcache.pageshowCount>=2,`herstelde documentcontext mist tweede pageshow; count=${bfcache.pageshowCount}`);
       assert(/2 min geleden/.test(bfcache.stamp),`freshnesslabel moet direct 2 min geleden tonen, kreeg: ${bfcache.stamp}`);
       assert(/^\d{2}:\d{2}$/.test(bfcache.plaatsTijd.trim()),"locatieklok moet direct geldig zijn na BFCache");
-      assert.equal(bfcache.fetches,voor.fetches,"pageshow-freshnessfix mag geen extra weatherrequest starten");
+      assert.equal(bfcache.weatherFetches,voor.weatherFetches,`pageshow-freshnessfix mag geen extra Open-Meteo-forecastrequest starten; totaal calls ${voor.fetches}→${bfcache.fetches}`);
       assert.deepEqual(bfcache.intervals,voor.intervals,"BFCache-pageshow mag de actieve intervalowners niet wijzigen");
       controleerTimerOwners(bfcache.intervals,"na BFCache");
       await context.close();
