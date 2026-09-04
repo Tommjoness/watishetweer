@@ -149,4 +149,4 @@ jobs:
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
           COLD_LOAD_RUNS_PER_PROFILE: 15
           COLD_LOAD_OBSERVATION_MS: 12000
-        run: node scripts/production-pre-sale-acceptance-browser.js
+        run: node scripts/run-production-pre-sale-acceptance-browser.js

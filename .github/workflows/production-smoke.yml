@@ -137,7 +137,7 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
           COLD_LOAD_RUNS_PER_PROFILE: 15
           COLD_LOAD_OBSERVATION_MS: 12000
-        run: node scripts/production-pre-sale-acceptance-browser.js
+        run: node scripts/run-production-pre-sale-acceptance-browser.js
       - name: Bewaar screenshots en bewijsrapport
         if: always()
         uses: actions/upload-artifact@v4
