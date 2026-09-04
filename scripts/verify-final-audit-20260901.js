@@ -35,8 +35,8 @@ const sitemap=fs.readFileSync(path.join(OUT,"sitemap.xml"),"utf8");
 eis(sitemap.includes("<loc>https://watishetweer.nl/privacy</loc>"),"privacy ontbreekt in sitemap");
 
 const headers=fs.readFileSync(path.join(ROOT,"cloudflare","_headers"),"utf8");
-eis(/\/app-\*\.min\.js[\s\S]*max-age=31536000, immutable/.test(headers),"immutable cacheheader voor app-hash ontbreekt");
-eis(/\/early-\*\.min\.js[\s\S]*max-age=31536000, immutable/.test(headers),"immutable cacheheader voor early-hash ontbreekt");
+for(const soort of ["app","bootstrap","page","early"])
+  eis(new RegExp("/"+soort+"-\\*\\.min\\.js[\\s\\S]*max-age=31536000, immutable").test(headers),`immutable cacheheader voor ${soort}-hash ontbreekt`);
 eis(/\/sw\.js[\s\S]*max-age=0, must-revalidate/.test(headers),"serviceworker is niet hervalidatiegericht");
 
-console.log("Finale auditartifact groen: 2×4 desktop-topgrid, beschreven Vandaag-rij, zichtbare horizonuitleg, NWS-structuur, herstelde luchtdruk, bronprovenance, contrast, privacycanonical en immutable hashes zijn geborgd.");
+console.log("Finale auditartifact groen: bestaande auditinvarianten blijven geborgd; app/bootstrap/page/early hashes zijn immutable en de serviceworker blijft hervalidatiegericht.");
