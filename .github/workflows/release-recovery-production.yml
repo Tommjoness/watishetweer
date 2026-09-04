@@ -46,3 +46,7 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/production-release-recovery-browser.js
+      - name: Test hard refresh, nieuw tabblad, Back/Forward en SW-cachegeneratie
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node scripts/production-release-recovery-navigation.js
