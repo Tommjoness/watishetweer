@@ -149,12 +149,18 @@ async function historyFlowAttempt(profile,browser){
       const error=!!((state&&state.className.includes("err")&&getComputedStyle(state).display!=="none")||(compact&&compact.hidden===false&&compact.classList.contains("fout")));
       let target=false;
       try{target=!!(S.d&&S.label===name&&Math.abs(Number(S.lat)-lat)<.0011&&Math.abs(Number(S.lon)-lon)<.0011);}catch(_){ }
-      return target||error;
+      if(error)return true;
+      if(!target)return false;
+      const app=document.getElementById("app"),temp=(document.getElementById("t")?.textContent||"").trim();
+      const data=!!(app&&getComputedStyle(app).display!=="none"&&temp&&!/^(?:--|–)$/.test(temp));
+      const brief=(document.getElementById("brief")?.textContent||"").trim();
+      const chartTexts=document.querySelectorAll("#chart text").length;
+      const days=document.querySelectorAll("#days .row.day:not(.kop)").length;
+      return data&&brief.length>0&&chartTexts>=4&&days===7;
     },{name:loc.name,lat:loc.lat,lon:loc.lon},{timeout:15000});
     let x=await read(page);
     if(x.error)throw new Error(`${profile.name}/${loc.name}: gecontroleerde providerfout tijdens historyflow: ${x.status}`);
-    await page.waitForTimeout(150);
-    x=await read(page);assertIdentity(x,loc);assert(kernGereed(x),`${profile.name}/${loc.name}: hoofdinterface incoherent`);
+    assertIdentity(x,loc);assert(kernGereed(x),`${profile.name}/${loc.name}: hoofdinterface incoherent`);
     x=await waitNachtKlaar(page,5000);assert(nachtGereed(x),`${profile.name}/${loc.name}: Nachtzicht niet gereed`);
     const u=new URL(x.href);assert.equal(u.searchParams.get("plaats"),loc.name,`${profile.name}/${loc.name}: URL-plaats mismatch`);
     return {name:loc.name,href:x.href,title:x.title,land:x.s.land,timezone:x.s.timezone};
