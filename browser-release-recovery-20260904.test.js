@@ -17,11 +17,30 @@ const fixture=bouw({tempNu:17,wcNu:2,ccNu:55,pp:()=>35,som:1.2});
 fixture.latitude=52.3676;fixture.longitude=4.9041;fixture.timezone="Europe/Amsterdam";fixture.utc_offset_seconds=7200;
 fixture.daily.sunshine_duration=fixture.daily.time.map(()=>6*3600);
 const air={current:{european_aqi:28,us_aqi:42},hourly:{time:[fixture.current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[1],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}};
+let bfcacheEvidence=null,bfcacheEvidenceResolve=null;
+function wachtBfcacheEvidence(timeout=7000){
+  if(bfcacheEvidence)return Promise.resolve(bfcacheEvidence);
+  return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>{bfcacheEvidenceResolve=null;reject(new Error("Geen persisted BFCache-evidencebeacon ontvangen."));},timeout);
+    bfcacheEvidenceResolve=value=>{clearTimeout(timer);bfcacheEvidenceResolve=null;resolve(value);};
+  });
+}
 
 const mime={".html":"text/html; charset=utf-8",".js":"application/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".woff2":"font/woff2",".png":"image/png",".xml":"application/xml; charset=utf-8",".txt":"text/plain; charset=utf-8"};
 const server=http.createServer((req,res)=>{
   const requestUrl=new URL(req.url||"/","http://127.0.0.1");
   let pathname=requestUrl.pathname;
+  if(pathname==="/__wiw_bfcache_evidence"&&req.method==="POST"){
+    let body="";
+    req.setEncoding("utf8");
+    req.on("data",chunk=>{body+=chunk;if(body.length>65536)req.destroy();});
+    req.on("end",()=>{
+      try{bfcacheEvidence=JSON.parse(body);if(bfcacheEvidenceResolve)bfcacheEvidenceResolve(bfcacheEvidence);}
+      catch(_){bfcacheEvidence={parseError:true,body:body.slice(0,500)};if(bfcacheEvidenceResolve)bfcacheEvidenceResolve(bfcacheEvidence);}
+      res.writeHead(204);res.end();
+    });
+    return;
+  }
   try{pathname=decodeURIComponent(pathname);}catch(_){ }
   let rel=pathname.replace(/^\/+/,"");
   if(!rel||pathname.endsWith("/"))rel=path.join(rel,"index.html");
@@ -66,7 +85,19 @@ function fetchFixtureScript(){
       ms:Number(x.ms),
       owner:x.name==="stempel"?"freshness":x.name==="weatherNowVerversTick"?"forecast":x.name||"anonymous"
     })).sort((a,b)=>a.ms-b.ms||a.owner.localeCompare(b.owner));
-    window.addEventListener("pageshow",e=>{window.__wiwPageshowCount++;window.__wiwPageshowPersisted=!!e.persisted;});
+    window.addEventListener("pageshow",e=>{
+      window.__wiwPageshowCount++;window.__wiwPageshowPersisted=!!e.persisted;
+      if(e.persisted)setTimeout(()=>{
+        navigator.sendBeacon("/__wiw_bfcache_evidence",JSON.stringify({
+          persisted:true,
+          pageshowCount:window.__wiwPageshowCount,
+          stamp:document.getElementById("stamp")?.textContent||"",
+          fetches:window.__wiwFetchCount,
+          plaatsTijd:document.getElementById("plaatstijd")?.textContent||"",
+          intervals:window.__wiwActiveIntervalOwners()
+        }));
+      },0);
+    });
     window.fetch=async function(url){
       window.__wiwFetchCount++;
       const u=String(url);
@@ -186,26 +217,20 @@ function controleerTimerOwners(owners,fase){
       controleerTimerOwners(voor.intervals,"voor BFCache");
       await page.evaluate(()=>{window.__wiwClockOffset=125000;});
       await page.goto(base+"/weer/?__wiw_fixture=1",{waitUntil:"load"});
-      await page.goBack({waitUntil:"commit"});
-      await page.waitForSelector("#stamp",{state:"attached",timeout:5000});
+      await page.evaluate(()=>history.back());
+      let bfcache;
       try{
-        await page.waitForFunction(()=>window.__wiwPageshowCount>=2&&window.__wiwPageshowPersisted===true,null,{timeout:5000});
-      }catch(_){ }
-      const bfcache=await page.evaluate(()=>{
-        const nav=performance.getEntriesByType("navigation")[0];
-        let notRestoredReasons=null;
-        try{notRestoredReasons=nav&&"notRestoredReasons" in nav?JSON.parse(JSON.stringify(nav.notRestoredReasons)):null;}catch(_){notRestoredReasons="unavailable";}
-        return {
-          persisted:window.__wiwPageshowPersisted,
-          pageshowCount:window.__wiwPageshowCount,
-          stamp:document.getElementById("stamp")?.textContent||"",
-          fetches:window.__wiwFetchCount,
-          plaatsTijd:document.getElementById("plaatstijd")?.textContent||"",
-          intervals:window.__wiwActiveIntervalOwners(),
-          notRestoredReasons
-        };
-      });
-      assert.equal(bfcache.persisted,true,`Chromium moet deze terugkeer werkelijk uit BFCache herstellen; pageshowCount=${bfcache.pageshowCount}; notRestoredReasons=${JSON.stringify(bfcache.notRestoredReasons)}`);
+        bfcache=await wachtBfcacheEvidence();
+      }catch(e){
+        const diagnose=await page.evaluate(()=>{
+          const nav=performance.getEntriesByType("navigation")[0];
+          try{return nav&&"notRestoredReasons" in nav?JSON.parse(JSON.stringify(nav.notRestoredReasons)):null;}
+          catch(_){return "unavailable";}
+        }).catch(()=>"page-unavailable");
+        throw new Error(`${e.message} notRestoredReasons=${JSON.stringify(diagnose)}`);
+      }
+      assert.equal(bfcache.persisted,true,"BFCache-evidence moet uitsluitend uit een pageshow.persisted=true event komen");
+      assert(bfcache.pageshowCount>=2,`herstelde documentcontext mist tweede pageshow; count=${bfcache.pageshowCount}`);
       assert(/2 min geleden/.test(bfcache.stamp),`freshnesslabel moet direct 2 min geleden tonen, kreeg: ${bfcache.stamp}`);
       assert(/^\d{2}:\d{2}$/.test(bfcache.plaatsTijd.trim()),"locatieklok moet direct geldig zijn na BFCache");
       assert.equal(bfcache.fetches,voor.fetches,"pageshow-freshnessfix mag geen extra weatherrequest starten");
