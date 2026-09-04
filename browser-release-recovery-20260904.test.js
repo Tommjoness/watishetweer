@@ -9,6 +9,9 @@ const {bouw}=require("./data.js");
 
 const ROOT=__dirname,PUBLIC=path.join(ROOT,"public");
 if(!fs.existsSync(path.join(PUBLIC,"index.html")))throw new Error("Definitieve public-artifact ontbreekt voor release-herstel-E2E.");
+const solarRuntime=fs.readFileSync(path.join(ROOT,"scripts","final-consumer-polish-20260831-runtime.js"),"utf8");
+const solarInterval='setInterval(()=>{zetZontegel();},30000);';
+assert.equal(solarRuntime.split(solarInterval).length-1,1,"zonnecyclus moet in de canonieke bron exact één 30s-intervalowner hebben");
 
 const fixture=bouw({tempNu:17,wcNu:2,ccNu:55,pp:()=>35,som:1.2});
 fixture.latitude=52.3676;fixture.longitude=4.9041;fixture.timezone="Europe/Amsterdam";fixture.utc_offset_seconds=7200;
@@ -42,8 +45,7 @@ function fetchFixtureScript(){
     const nativeSetInterval=window.setInterval.bind(window),nativeClearInterval=window.clearInterval.bind(window);
     window.setInterval=function(fn,ms,...args){
       const id=nativeSetInterval(fn,ms,...args);
-      const source=typeof fn==="function"?Function.prototype.toString.call(fn):String(fn||"");
-      window.__wiwActiveIntervals[String(id)]={ms:Number(ms),name:typeof fn==="function"?String(fn.name||""):"",source};
+      window.__wiwActiveIntervals[String(id)]={ms:Number(ms),name:typeof fn==="function"?String(fn.name||""):""};
       return id;
     };
     window.clearInterval=function(id){
@@ -52,7 +54,7 @@ function fetchFixtureScript(){
     };
     window.__wiwActiveIntervalOwners=()=>Object.values(window.__wiwActiveIntervals).map(x=>({
       ms:Number(x.ms),
-      owner:x.name==="stempel"?"freshness":x.name==="weatherNowVerversTick"?"forecast":String(x.source||"").includes("zetZontegel")?"solar":x.name||"anonymous"
+      owner:x.name==="stempel"?"freshness":x.name==="weatherNowVerversTick"?"forecast":x.name||"anonymous"
     })).sort((a,b)=>a.ms-b.ms||a.owner.localeCompare(b.owner));
     window.addEventListener("pageshow",e=>{window.__wiwPageshowPersisted=!!e.persisted;});
     window.fetch=async function(url){
@@ -86,8 +88,9 @@ async function snapshot(page){
   }));
 }
 function controleerTimerOwners(owners,fase){
-  assert.equal(owners.filter(x=>x.ms===30000&&x.owner==="freshness").length,1,`${fase}: exact één actieve freshness/stempel-interval van 30s vereist; actief=${JSON.stringify(owners)}`);
-  assert.equal(owners.filter(x=>x.ms===30000&&x.owner==="solar").length,1,`${fase}: exact één actieve zonnecyclusinterval van 30s vereist; actief=${JSON.stringify(owners)}`);
+  const dertig=owners.filter(x=>x.ms===30000);
+  assert.equal(dertig.filter(x=>x.owner==="freshness").length,1,`${fase}: exact één actieve freshness/stempel-interval van 30s vereist; actief=${JSON.stringify(owners)}`);
+  assert.equal(dertig.length,2,`${fase}: exact twee actieve 30s-intervals vereist: één freshness-owner plus de statisch geborgde zonnecyclusowner; actief=${JSON.stringify(owners)}`);
   assert.equal(owners.filter(x=>x.ms===60000&&x.owner==="forecast").length,1,`${fase}: exact één actieve forecast/ververs-tick van 60s vereist; actief=${JSON.stringify(owners)}`);
 }
 
