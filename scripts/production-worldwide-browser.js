@@ -83,7 +83,10 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
       const app=document.getElementById("app"),label=document.getElementById("place")?.getAttribute("aria-label")||"";
       const data=typeof S!=="undefined"&&S.d;
       const volledig=!!(data&&data.current&&data.hourly&&data.daily&&Array.isArray(data.hourly.time)&&data.hourly.time.length>=23&&Array.isArray(data.daily.time)&&data.daily.time.length>=7);
-      return !!app&&getComputedStyle(app).display!=="none"&&volledig&&(vrij?!!label:label===naam)&&document.querySelectorAll("#days .row.day:not(.kop)").length===7;
+      const nachten=document.querySelectorAll("#nights .row.night:not(.kop)").length;
+      const nachtTekst=(document.getElementById("nights")?.textContent||"").trim();
+      const nachtKlaar=nachten>0||/geen nachtdata beschikbaar/i.test(nachtTekst);
+      return !!app&&getComputedStyle(app).display!=="none"&&volledig&&(vrij?!!label:label===naam)&&document.querySelectorAll("#days .row.day:not(.kop)").length===7&&nachtKlaar;
     },{naam:locatie.naam,vrij:!!locatie.plaatsnaamVrij},{timeout});
   }catch(e){
     const diagnose=await page.evaluate(()=>({
@@ -96,9 +99,11 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
       dataCurrent:!!(typeof S!=="undefined"&&S.d&&S.d.current),
       hourly:typeof S!=="undefined"&&S.d&&S.d.hourly&&Array.isArray(S.d.hourly.time)?S.d.hourly.time.length:0,
       daily:typeof S!=="undefined"&&S.d&&S.d.daily&&Array.isArray(S.d.daily.time)?S.d.daily.time.length:0,
-      dayRows:document.querySelectorAll("#days .row.day:not(.kop)").length
+      dayRows:document.querySelectorAll("#days .row.day:not(.kop)").length,
+      nightRows:document.querySelectorAll("#nights .row.night:not(.kop)").length,
+      nightText:(document.getElementById("nights")?.textContent||"").trim()
     }));
-    throw new Error(`${locatie.naam}: weer-UI niet dataready binnen ${timeout} ms; diagnose=${JSON.stringify(diagnose)}; oorzaak=${e&&e.message||e}`);
+    throw new Error(`${locatie.naam}: weer-UI niet volledig dataready binnen ${timeout} ms; diagnose=${JSON.stringify(diagnose)}; oorzaak=${e&&e.message||e}`);
   }
 }
 
