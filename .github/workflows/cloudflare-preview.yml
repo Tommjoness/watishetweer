@@ -113,6 +113,7 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
       options: --ipc=host
+    timeout-minutes: 20
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       PREVIEW_ROOT: ${{ needs.preview.outputs.preview_url }}
@@ -130,9 +131,6 @@ jobs:
       - name: Installeer Playwright
         run: npm install --no-save --package-lock=false playwright@1.62.1
 
-      # Deze visuele gate gebruikt live deployed HTML/CSS/JS en live weerdata,
-      # maar een gecontroleerde zoekfixture. Draai hem vóór de zware live
-      # wereldmatrix zodat externe providerbursts de layouttest niet beïnvloeden.
       - name: Echte responsive preview met tijdelijke screenshots
         env:
           PREVIEW_ROOT: ${{ env.PREVIEW_ROOT }}
@@ -145,33 +143,10 @@ jobs:
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
         run: node scripts/run-production-worldwide-browser.js
 
-  pre-fix-production-cold-load:
-    runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
-      options: --ipc=host
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-      - name: Installeer Chromium-monitor
-        run: npm install --no-save --package-lock=false playwright@1.62.1
-      - name: Instrumenteer twintig onafhankelijke productie-cold-loads vóór de fix
+      - name: Finale locatie- en cold-loadacceptatie op deployed preview
         env:
-          PRODUCTION_ROOT: https://watishetweer.nl
-          EXPECTED_SHA: 1398a76360caf2ded85ea35fe9573d7c8eade501
-          COLD_LOAD_RUNS: 20
+          PRODUCTION_ROOT: ${{ env.PREVIEW_ROOT }}
+          EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+          COLD_LOAD_RUNS_PER_PROFILE: 15
           COLD_LOAD_OBSERVATION_MS: 12000
-          COLD_LOAD_ARTIFACT: artifacts/cold-load-baseline.json
-        run: node scripts/production-cold-load-diagnostic-browser.js
-      - name: Bewaar baseline-artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cold-load-baseline-${{ github.event.pull_request.head.sha || github.sha }}
-          path: artifacts/cold-load-baseline.json
-          if-no-files-found: warn
-          retention-days: 14
+        run: node scripts/production-pre-sale-acceptance-browser.js
