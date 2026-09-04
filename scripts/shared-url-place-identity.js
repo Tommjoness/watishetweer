@@ -1,8 +1,9 @@
 /* Gedeelde URL-plaatsidentiteit.
-   Coördinaten blijven de autoriteit. Een meegestuurde naam blijft alleen staan
-   wanneer een onafhankelijke voorwaartse geocode die naam op vrijwel dezelfde
-   plek vindt. Zo blijft "Tokio" herkenbaar, maar wordt een gespoofte naam als
-   "Amsterdam" bij coördinaten van New York verworpen. */
+   Eén eigendomsregel voor de zichtbare naam:
+   expliciete gebruikers-/URL-naam > opgeslagen/history-naam > reverse fallback.
+   Reverse geocoding mag dus metadata aanvullen of een naam leveren wanneer er
+   géén expliciete naam bestaat, maar mag een expliciete identiteit nooit
+   stilzwijgend vervangen. */
 (function(root){
 "use strict";
 
@@ -18,12 +19,12 @@ function naamPastBijCoordinaten(resultaten,lat,lon,maxKm){
   const grens=Number.isFinite(maxKm)?maxKm:30;
   return Array.isArray(resultaten)&&resultaten.some(r=>r&&afstandKm(lat,lon,r.latitude,r.longitude)<=grens);
 }
+/* Behouden als diagnostische/helper-API voor bestaande tests en tooling. Deze
+   forward-geocode mag niet meer de zichtbare expliciete URL-naam bezitten. */
 async function valideerGedeeldeNaam(naam,lat,lon,opt){
   const n=canoniekeNaam(naam);
   if(!n)return null;
   const timeoutMs=opt&&Number.isFinite(opt.timeoutMs)?opt.timeoutMs:2500;
-  /* Houd de centrale zoek-URL-owner uniek; j() past op runtime hetzelfde
-     deduplicatie-, fallbacktaal- en timeoutbeleid toe als bij handmatig zoeken. */
   const d=await j("https://geocoding-api.open-meteo.com"+"/v1/search?name="+encodeURIComponent(n)+"&count=12&language=nl&format=json",{timeoutMs});
   return naamPastBijCoordinaten(d&&d.results,lat,lon,opt&&opt.maxKm)?n:null;
 }
@@ -33,39 +34,113 @@ async function plaatsnaamUitCoordinaten(lat,lon,opt){
   const timeoutMs=opt&&Number.isFinite(opt.timeoutMs)?opt.timeoutMs:10000;
   return j("/api/plaatsnaam?lat="+la.toFixed(4)+"&lon="+lo.toFixed(4),{timeoutMs});
 }
-const api={canoniekeNaam,afstandKm,naamPastBijCoordinaten,valideerGedeeldeNaam,plaatsnaamUitCoordinaten};
+function urlLocatie(search){
+  try{
+    const p=new URLSearchParams(String(search||""));
+    const lat=Number(p.get("lat")),lon=Number(p.get("lon"));
+    if(!Number.isFinite(lat)||lat< -90||lat>90||!Number.isFinite(lon)||lon< -180||lon>180)return null;
+    return {lat,lon,naam:canoniekeNaam(p.get("plaats")),land:/^[A-Z]{2}$/.test(String(p.get("land")||"").toUpperCase())?String(p.get("land")).toUpperCase():null};
+  }catch(_){return null;}
+}
+function zelfdeLocatie(a,b){
+  return !!a&&!!b&&Math.abs(Number(a.lat)-Number(b.lat))<0.000001&&Math.abs(Number(a.lon)-Number(b.lon))<0.000001&&canoniekeNaam(a.naam)===canoniekeNaam(b.naam)&&(a.land||null)===(b.land||null);
+}
+const api={canoniekeNaam,afstandKm,naamPastBijCoordinaten,valideerGedeeldeNaam,plaatsnaamUitCoordinaten,urlLocatie,zelfdeLocatie};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowSharedUrlPlaceIdentity=api;
 
 if(typeof document==="undefined"||typeof j!=="function"||typeof load!=="function")return;
 
 const basisLoad=load;
-let generatie=0;
+let generatie=0,historyNavigatie=0;
+function snapshot(){
+  try{
+    return S&&S.d&&Number.isFinite(Number(S.lat))&&Number.isFinite(Number(S.lon))
+      ?{lat:Number(S.lat),lon:Number(S.lon),naam:canoniekeNaam(S.label),land:typeof normLand==="function"?normLand(S.land):S.land||null}
+      :null;
+  }catch(_){return null;}
+}
+function stateVoor(loc,opslaan){
+  return {weatherLocation:{lat:Number(loc.lat),lon:Number(loc.lon),plaats:canoniekeNaam(loc.naam)||"Gedeelde locatie",land:loc.land||null,opslaan:opslaan!==false}};
+}
+function schrijfHistoryNaSucces(voorHref,voorState,voorLoc,naLoc,opslaan,stil){
+  if(typeof history==="undefined"||typeof location==="undefined"||!naLoc)return;
+  const naHref=location.href,nieuweState=stateVoor(naLoc,opslaan);
+  if(historyNavigatie>0){history.replaceState(nieuweState,"",naHref);return;}
+  const echteKeuze=!!voorLoc&&stil!==true&&opslaan!==false&&voorHref!==naHref&&!zelfdeLocatie(voorLoc,naLoc);
+  if(echteKeuze){
+    history.replaceState(voorState||stateVoor(voorLoc,true),"",voorHref);
+    history.pushState(nieuweState,"",naHref);
+  }else{
+    history.replaceState(nieuweState,"",naHref);
+  }
+}
+function vulLandOpAchtergrond(beurt,lat,lon){
+  plaatsnaamUitCoordinaten(lat,lon,{timeoutMs:2500}).then(g=>{
+    if(beurt!==generatie||!g||!g.land)return;
+    let gelijk=false,heeftLand=false;
+    try{
+      gelijk=Math.abs(Number(S.lat)-Number(lat))<0.000001&&Math.abs(Number(S.lon)-Number(lon))<0.000001;
+      heeftLand=!!(typeof normLand==="function"?normLand(S.land):S.land);
+    }catch(_){return;}
+    if(!gelijk||heeftLand)return;
+    try{
+      if(typeof onthoudLand==="function")onthoudLand(g.land);
+      else S.land=typeof normLand==="function"?normLand(g.land):g.land;
+      if(typeof urlBij==="function")urlBij();
+    }catch(_){ }
+  }).catch(()=>{});
+}
+
 load=async function(lat,lon,label,stil,opslaan,land){
   const beurt=++generatie;
+  const voorHref=typeof location!=="undefined"?location.href:"";
+  const voorState=typeof history!=="undefined"?history.state:null;
+  const voorLoc=snapshot();
   const hard=root.WeatherNowGlobalLocationHardening;
   const gedeeld=stil!==true&&opslaan===false&&hard&&typeof hard.gedeeldeUrlCoordinaten==="function"&&typeof location!=="undefined"
     ?hard.gedeeldeUrlCoordinaten(location.search):null;
 
   if(gedeeld&&gedeeld.aanwezig&&gedeeld.geldig){
-    let naam="Gedeelde locatie";
     let meegestuurd=null;
     try{meegestuurd=canoniekeNaam(new URLSearchParams(location.search).get("plaats"));}catch(_){ }
-    const q=document.getElementById("q");
-    if(q)q.value=naam;
-    try{
-      const [gevalideerd,g]=await Promise.all([
-        valideerGedeeldeNaam(meegestuurd,gedeeld.latitude,gedeeld.longitude,{timeoutMs:2500,maxKm:30}).catch(()=>null),
-        plaatsnaamUitCoordinaten(gedeeld.latitude,gedeeld.longitude,{timeoutMs:2500}).catch(()=>null)
-      ]);
-      naam=gevalideerd||canoniekeNaam(g&&g.naam)||naam;
-    }catch(_){ }
+    let naam=meegestuurd;
+    let doelLand=land;
+    /* Alleen wanneer géén expliciete identiteit bestaat, mag reverse geocoding
+       de zichtbare naam bepalen. Een expliciete naam start de forecast direct;
+       ontbrekende landmetadata wordt desgewenst los en niet-blokkerend gevuld. */
+    if(!naam){
+      try{
+        const g=await plaatsnaamUitCoordinaten(gedeeld.latitude,gedeeld.longitude,{timeoutMs:2500});
+        if(beurt!==generatie)return false;
+        naam=canoniekeNaam(g&&g.naam)||"Gedeelde locatie";
+        if(!doelLand&&g&&g.land)doelLand=g.land;
+      }catch(_){naam="Gedeelde locatie";}
+    }else if(!doelLand){
+      vulLandOpAchtergrond(beurt,gedeeld.latitude,gedeeld.longitude);
+    }
     if(beurt!==generatie)return false;
-    if(q)q.value=naam;
-    return basisLoad(gedeeld.latitude,gedeeld.longitude,naam,stil,opslaan,land);
+    const q=document.getElementById("q");if(q)q.value=naam;
+    const result=await basisLoad(gedeeld.latitude,gedeeld.longitude,naam,stil,opslaan,doelLand);
+    if(beurt!==generatie)return result;
+    schrijfHistoryNaSucces(voorHref,voorState,voorLoc,snapshot(),opslaan,stil);
+    return result;
   }
 
-  return basisLoad(lat,lon,label,stil,opslaan,land);
+  const result=await basisLoad(lat,lon,label,stil,opslaan,land);
+  if(beurt===generatie)schrijfHistoryNaSucces(voorHref,voorState,voorLoc,snapshot(),opslaan,stil);
+  return result;
 };
+
+if(typeof addEventListener==="function")addEventListener("popstate",event=>{
+  const doel=urlLocatie(typeof location!=="undefined"?location.search:"");
+  if(!doel)return;
+  const uitState=event&&event.state&&event.state.weatherLocation;
+  const naam=canoniekeNaam(uitState&&uitState.plaats)||doel.naam||"Gedeelde locatie";
+  const land=(uitState&&uitState.land)||doel.land||null;
+  const opslaan=!(uitState&&uitState.opslaan===false);
+  historyNavigatie++;
+  Promise.resolve(load(doel.lat,doel.lon,naam,false,opslaan,land)).finally(()=>{historyNavigatie=Math.max(0,historyNavigatie-1);});
+});
 
 })(typeof globalThis!=="undefined"?globalThis:this);
