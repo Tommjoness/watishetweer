@@ -28,14 +28,18 @@ const server=http.createServer((req,res)=>{
   if(!bestand.startsWith(PUBLIC+path.sep)||!fs.existsSync(bestand)||!fs.statSync(bestand).isFile()){
     res.writeHead(404,{"content-type":"text/plain; charset=utf-8"});res.end("not found");return;
   }
-  res.writeHead(200,{"content-type":mime[path.extname(bestand).toLowerCase()]||"application/octet-stream","cache-control":"no-store"});
+  const naam=path.basename(bestand);
+  const immutable=/^(?:app|bootstrap|page|early)-[0-9a-f]{12}\.min\.js$/.test(naam);
+  const cacheControl=immutable?"public, max-age=31536000, immutable":"public, max-age=0, must-revalidate";
+  res.writeHead(200,{"content-type":mime[path.extname(bestand).toLowerCase()]||"application/octet-stream","cache-control":cacheControl});
   fs.createReadStream(bestand).pipe(res);
 });
 
 function fetchFixtureScript(){
   return ({weather,air})=>{
     const NativeDate=Date,realStart=NativeDate.now(),fixtureStart=NativeDate.parse("2026-07-22T12:30:00Z");
-    const offset=()=>{try{return Number(localStorage.getItem("__wiw_clock_offset")||0)||0;}catch(_){return 0;}};
+    window.__wiwClockOffset=0;
+    const offset=()=>Number(window.__wiwClockOffset||0)||0;
     class ReleaseDate extends NativeDate{
       constructor(...args){super(...(args.length?args:[fixtureStart+(NativeDate.now()-realStart)+offset()]));}
       static now(){return fixtureStart+(NativeDate.now()-realStart)+offset();}
@@ -173,18 +177,24 @@ function controleerTimerOwners(owners,fase){
       await page.waitForFunction(()=>/Gegevens opgehaald om/.test(document.getElementById("stamp")?.textContent||""));
       const voor=await page.evaluate(()=>({fetches:window.__wiwFetchCount,intervals:window.__wiwActiveIntervalOwners()}));
       controleerTimerOwners(voor.intervals,"voor BFCache");
+      await page.evaluate(()=>{window.__wiwClockOffset=125000;});
       await page.goto(base+"/weer/",{waitUntil:"load"});
-      await page.evaluate(()=>localStorage.setItem("__wiw_clock_offset","125000"));
       await page.goBack({waitUntil:"commit"});
       await page.waitForSelector("#stamp",{state:"attached",timeout:5000});
-      const bfcache=await page.evaluate(()=>({
-        persisted:window.__wiwPageshowPersisted,
-        stamp:document.getElementById("stamp")?.textContent||"",
-        fetches:window.__wiwFetchCount,
-        plaatsTijd:document.getElementById("plaatstijd")?.textContent||"",
-        intervals:window.__wiwActiveIntervalOwners()
-      }));
-      assert.equal(bfcache.persisted,true,"Chromium moet deze terugkeer werkelijk uit BFCache herstellen");
+      const bfcache=await page.evaluate(()=>{
+        const nav=performance.getEntriesByType("navigation")[0];
+        let notRestoredReasons=null;
+        try{notRestoredReasons=nav&&"notRestoredReasons" in nav?JSON.parse(JSON.stringify(nav.notRestoredReasons)):null;}catch(_){notRestoredReasons="unavailable";}
+        return {
+          persisted:window.__wiwPageshowPersisted,
+          stamp:document.getElementById("stamp")?.textContent||"",
+          fetches:window.__wiwFetchCount,
+          plaatsTijd:document.getElementById("plaatstijd")?.textContent||"",
+          intervals:window.__wiwActiveIntervalOwners(),
+          notRestoredReasons
+        };
+      });
+      assert.equal(bfcache.persisted,true,`Chromium moet deze terugkeer werkelijk uit BFCache herstellen; notRestoredReasons=${JSON.stringify(bfcache.notRestoredReasons)}`);
       assert(/2 min geleden/.test(bfcache.stamp),`freshnesslabel moet direct 2 min geleden tonen, kreeg: ${bfcache.stamp}`);
       assert(/^\d{2}:\d{2}$/.test(bfcache.plaatsTijd.trim()),"locatieklok moet direct geldig zijn na BFCache");
       assert.equal(bfcache.fetches,voor.fetches,"pageshow-freshnessfix mag geen extra weatherrequest starten");
