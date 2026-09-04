@@ -36,6 +36,7 @@ function verifieerGeenPressureQuery(url,naam){
 }
 function isVolledigeBron(bron){return !!(bron&&bron.timezone&&bron.current&&bron.hourly&&bron.daily);}
 const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const BRON_PACING_MS=500;
 const query=locatie=>new URLSearchParams({lat:String(locatie.lat),lon:String(locatie.lon),plaats:locatie.naam,land:locatie.land});
 
 async function ontdekVolledigeForecastUrl(browser,locatie){
@@ -115,7 +116,8 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
        viewports. Daarmee blijft bronwaarheid live, terwijl een ontbrekend
        browser-response-event de bewijsrun niet meer kan laten flappen. */
     const liveBronnen=new Map();
-    for(const locatie of locaties){
+    for(const [index,locatie] of locaties.entries()){
+      if(index>0)await slaap(BRON_PACING_MS);
       const sourceUrl=await ontdekVolledigeForecastUrl(browser,locatie);
       verifieerGeenPressureQuery(sourceUrl,locatie.naam);
       const live=await haalLiveForecast(sourceUrl,locatie.naam);
