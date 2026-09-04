@@ -3,7 +3,11 @@
    expliciete gebruikers-/URL-naam > opgeslagen/history-naam > reverse fallback.
    Reverse geocoding mag dus metadata aanvullen of een naam leveren wanneer er
    géén expliciete naam bestaat, maar mag een expliciete identiteit nooit
-   stilzwijgend vervangen. */
+   stilzwijgend vervangen.
+
+   Deze laag bezit bewust GEEN browser-history. De staff-audit history-owner is
+   de enige eigenaar van pushState/replaceState/popstate. Zo kan één bewuste
+   locatiekeuze nooit door twee wrappers als twee history-entries worden geboekt. */
 (function(root){
 "use strict";
 
@@ -52,29 +56,7 @@ root.WeatherNowSharedUrlPlaceIdentity=api;
 if(typeof document==="undefined"||typeof j!=="function"||typeof load!=="function")return;
 
 const basisLoad=load;
-let generatie=0,historyNavigatie=0;
-function snapshot(){
-  try{
-    return S&&S.d&&Number.isFinite(Number(S.lat))&&Number.isFinite(Number(S.lon))
-      ?{lat:Number(S.lat),lon:Number(S.lon),naam:canoniekeNaam(S.label),land:typeof normLand==="function"?normLand(S.land):S.land||null}
-      :null;
-  }catch(_){return null;}
-}
-function stateVoor(loc,opslaan){
-  return {weatherLocation:{lat:Number(loc.lat),lon:Number(loc.lon),plaats:canoniekeNaam(loc.naam)||"Gedeelde locatie",land:loc.land||null,opslaan:opslaan!==false}};
-}
-function schrijfHistoryNaSucces(voorHref,voorState,voorLoc,naLoc,opslaan,stil){
-  if(typeof history==="undefined"||typeof location==="undefined"||!naLoc)return;
-  const naHref=location.href,nieuweState=stateVoor(naLoc,opslaan);
-  if(historyNavigatie>0){history.replaceState(nieuweState,"",naHref);return;}
-  const echteKeuze=!!voorLoc&&stil!==true&&opslaan!==false&&voorHref!==naHref&&!zelfdeLocatie(voorLoc,naLoc);
-  if(echteKeuze){
-    history.replaceState(voorState||stateVoor(voorLoc,true),"",voorHref);
-    history.pushState(nieuweState,"",naHref);
-  }else{
-    history.replaceState(nieuweState,"",naHref);
-  }
-}
+let generatie=0;
 function vulLandOpAchtergrond(beurt,lat,lon){
   plaatsnaamUitCoordinaten(lat,lon,{timeoutMs:2500}).then(g=>{
     if(beurt!==generatie||!g||!g.land)return;
@@ -87,6 +69,8 @@ function vulLandOpAchtergrond(beurt,lat,lon){
     try{
       if(typeof onthoudLand==="function")onthoudLand(g.land);
       else S.land=typeof normLand==="function"?normLand(g.land):g.land;
+      /* Alleen de canonieke URL-owner mag hieruit eventueel een replaceState
+         afleiden; deze identiteitslaag schrijft zelf nooit browser-history. */
       if(typeof urlBij==="function")urlBij();
     }catch(_){ }
   }).catch(()=>{});
@@ -94,9 +78,6 @@ function vulLandOpAchtergrond(beurt,lat,lon){
 
 load=async function(lat,lon,label,stil,opslaan,land){
   const beurt=++generatie;
-  const voorHref=typeof location!=="undefined"?location.href:"";
-  const voorState=typeof history!=="undefined"?history.state:null;
-  const voorLoc=snapshot();
   const hard=root.WeatherNowGlobalLocationHardening;
   const kandidaat=stil!==true&&opslaan===false&&hard&&typeof hard.gedeeldeUrlCoordinaten==="function"&&typeof location!=="undefined"
     ?hard.gedeeldeUrlCoordinaten(location.search):null;
@@ -124,26 +105,10 @@ load=async function(lat,lon,label,stil,opslaan,land){
     }
     if(beurt!==generatie)return false;
     const q=document.getElementById("q");if(q)q.value=naam;
-    const result=await basisLoad(gedeeld.latitude,gedeeld.longitude,naam,stil,opslaan,doelLand);
-    if(beurt!==generatie)return result;
-    schrijfHistoryNaSucces(voorHref,voorState,voorLoc,snapshot(),opslaan,stil);
-    return result;
+    return basisLoad(gedeeld.latitude,gedeeld.longitude,naam,stil,opslaan,doelLand);
   }
 
-  const result=await basisLoad(lat,lon,label,stil,opslaan,land);
-  if(beurt===generatie)schrijfHistoryNaSucces(voorHref,voorState,voorLoc,snapshot(),opslaan,stil);
-  return result;
+  return basisLoad(lat,lon,label,stil,opslaan,land);
 };
-
-if(typeof addEventListener==="function")addEventListener("popstate",event=>{
-  const doel=urlLocatie(typeof location!=="undefined"?location.search:"");
-  if(!doel)return;
-  const uitState=event&&event.state&&event.state.weatherLocation;
-  const naam=canoniekeNaam(uitState&&uitState.plaats)||doel.naam||"Gedeelde locatie";
-  const land=(uitState&&uitState.land)||doel.land||null;
-  const opslaan=!(uitState&&uitState.opslaan===false);
-  historyNavigatie++;
-  Promise.resolve(load(doel.lat,doel.lon,naam,false,opslaan,land)).finally(()=>{historyNavigatie=Math.max(0,historyNavigatie-1);});
-});
 
 })(typeof globalThis!=="undefined"?globalThis:this);
