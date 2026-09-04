@@ -51,11 +51,11 @@ function gedeeldeUrlCoordinaten(zoek){
     :{aanwezig:true,geldig:false,latitude:null,longitude:null};
 }
 
-/* De URL is alleen eigenaar van een load die diezelfde URL-positie probeert te
-   laden. Na een bewuste client-side locatiekeuze kan de adresbalk nog heel kort
-   de vorige deel-URL bevatten; die oude URL mag de nieuwe aanroep dan nooit
-   terugtrekken. De 0,0011-grens dekt uitsluitend de bestaande 3-decimaal-share-
-   afronding af en is geen geografische plaatsmatching. */
+/* In een reeds actieve client-side sessie mag een oude URL alleen nog eigenaar
+   zijn wanneer de nieuwe load werkelijk dezelfde afgeronde positie betreft. Op
+   de initiële share-load blijft de strikt gelezen ruwe URL altijd leidend boven
+   historische startup-parsing. De 0,0011-grens dekt uitsluitend de bestaande
+   3-decimaal-shareafronding af en is geen geografische plaatsmatching. */
 function gedeeldeUrlPastBijAanroep(gedeeld,lat,lon){
   const positie=normaliseerLaadCoordinaten(lat,lon);
   if(!gedeeld||gedeeld.geldig!==true||!positie)return false;
@@ -175,12 +175,9 @@ if(typeof load==="function"){
     let bestaandeLocatie=false;
     try{bestaandeLocatie=!!(typeof S!=="undefined"&&S&&S.d&&Number.isFinite(Number(S.lat))&&Number.isFinite(Number(S.lon)));}catch(_){ }
 
-    /* Alleen de gedeelde-URL-start die werkelijk dezelfde URL-coördinaten laadt
-       mag die URL als autoriteit gebruiken. Een oude query in een reeds actieve
-       client-side sessie mag een latere bewuste load niet terugdraaien. Een
-       malforme initiële deep link blijft echter altijd raw fail-closed, ook als
-       historische startupcode met parseFloat nog een schijnbaar geldig getal
-       uit die beschadigde query wist te halen. */
+    /* Eerste deep link: de raw URL is eigenaar. Actieve sessie: een oude query
+       mag uitsluitend nog meedoen wanneer hij dezelfde load beschrijft. Zo
+       blijven zowel raw share-validatie als client-side plaatswissels correct. */
     if(stil!==true&&opslaan===false&&typeof location!=="undefined"){
       const gedeeld=gedeeldeUrlCoordinaten(location.search);
       if(gedeeld.aanwezig){
@@ -194,7 +191,7 @@ if(typeof load==="function"){
             }
             return false;
           }
-        }else if(gedeeldeUrlPastBijAanroep(gedeeld,lat,lon)){
+        }else if(!bestaandeLocatie||gedeeldeUrlPastBijAanroep(gedeeld,lat,lon)){
           positie={latitude:gedeeld.latitude,longitude:gedeeld.longitude};
           gedeeldePositie=positie;
           effectiefLand=null;
