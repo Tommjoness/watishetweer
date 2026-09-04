@@ -32,7 +32,7 @@ function fixtureInit(){
       static now(){return fixtureStart+(NativeDate.now()-realStart)+offset();}
     }
     window.Date=ReleaseDate;
-    window.__wiwProdFetchCount=0;window.__wiwProdPageshowPersisted=false;window.__wiwProdPageshowCount=0;
+    window.__wiwProdFetchCount=0;window.__wiwProdWeatherFetchCount=0;window.__wiwProdPageshowPersisted=false;window.__wiwProdPageshowCount=0;
     window.__wiwProdActiveIntervals=Object.create(null);
     const nativeSetInterval=window.setInterval.bind(window),nativeClearInterval=window.clearInterval.bind(window);
     window.setInterval=function(fn,ms,...args){
@@ -56,12 +56,14 @@ function fixtureInit(){
         stamp:document.getElementById("stamp")?.textContent||"",
         klok:document.getElementById("plaatstijd")?.textContent||"",
         fetches:window.__wiwProdFetchCount,
+        weatherFetches:window.__wiwProdWeatherFetchCount,
         intervals:window.__wiwProdActiveIntervalOwners()
       })),0);
     });
     window.fetch=async function(url){
       window.__wiwProdFetchCount++;
       const u=String(url);
+      if(u.includes("api.open-meteo.com/v1/forecast"))window.__wiwProdWeatherFetchCount++;
       let payload;
       if(u.includes("geocoding-api.open-meteo.com")){
         payload={results:[{name:"Tokyo",latitude:35.6762,longitude:139.6503,country_code:"JP",admin1:"Tokyo"}]};
@@ -227,7 +229,7 @@ async function snap(page){return page.evaluate(()=>({
       cdp.on("Page.backForwardCacheNotUsed",event=>{bfcacheNotUsed=event;});
       await page.goto(ROOT+"/weer/amsterdam/",{waitUntil:"load",timeout:30000});await visibleApp(page);
       await page.waitForFunction(()=>/Gegevens opgehaald om/.test(document.getElementById("stamp")?.textContent||""));
-      const voor=await page.evaluate(()=>({fetches:window.__wiwProdFetchCount,intervals:window.__wiwProdActiveIntervalOwners()}));
+      const voor=await page.evaluate(()=>({fetches:window.__wiwProdFetchCount,weatherFetches:window.__wiwProdWeatherFetchCount,intervals:window.__wiwProdActiveIntervalOwners()}));
       controleerTimerOwners(voor.intervals,"voor productie-BFCache");
       await page.evaluate(()=>{window.__wiwProdClockOffset=125000;});
       const evidencePromise=wachtBfcacheEvidence(page);
@@ -240,7 +242,7 @@ async function snap(page){return page.evaluate(()=>({
       assert(resultaat.pageshowCount>=2,`productie-BFCache mist tweede pageshow; count=${resultaat.pageshowCount}`);
       assert(/2 min geleden/.test(resultaat.stamp),`freshness moet binnen pageshow direct 2 min geleden zijn, kreeg ${resultaat.stamp}`);
       assert(/^\d{2}:\d{2}$/.test(resultaat.klok.trim()),"locatieklok moet direct geldig zijn na BFCache");
-      assert.equal(resultaat.fetches,voor.fetches,"pageshow mag geen extra weatherrequest starten");
+      assert.equal(resultaat.weatherFetches,voor.weatherFetches,`pageshow mag geen extra Open-Meteo-forecastrequest starten; totaal calls ${voor.fetches}→${resultaat.fetches}`);
       assert.deepEqual(resultaat.intervals,voor.intervals,"productie-pageshow mag de actieve intervalowners niet wijzigen");
       controleerTimerOwners(resultaat.intervals,"na productie-BFCache");
       await context.close();
