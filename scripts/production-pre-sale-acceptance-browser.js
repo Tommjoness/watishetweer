@@ -58,6 +58,7 @@ async function read(page){return page.evaluate(()=>{
    kerninterface die we direct hierna beoordelen ook echt coherent is. Een echte
    fout blijft onmiddellijk terminaal en de harde observatiegrens blijft gelijk. */
 const kernGereed=x=>!!(x&&x.data&&x.brief.length>0&&x.chartTexts>=4&&x.days===7);
+const nachtGereed=x=>!!(x&&(x.nights>0||/geen nachtdata beschikbaar/i.test(x.nightText||"")));
 async function waitTerminal(page,start,limit=OBSERVATION_MS){
   let last=await read(page);
   while(Date.now()-start<limit){
@@ -66,6 +67,14 @@ async function waitTerminal(page,start,limit=OBSERVATION_MS){
     await page.waitForTimeout(50);
   }
   return {state:await read(page),ms:Date.now()-start};
+}
+async function waitNachtKlaar(page,timeout=5000){
+  await page.waitForFunction(()=>{
+    const rijen=document.querySelectorAll("#nights .row.night:not(.kop)").length;
+    const tekst=(document.getElementById("nights")?.textContent||"").trim();
+    return rijen>0||/geen nachtdata beschikbaar/i.test(tekst);
+  },null,{timeout});
+  return read(page);
 }
 function assertIdentity(x,expected){
   assert.equal(x.q,expected.name,`${expected.name}: zoekveld werd ${x.q}`);
@@ -130,14 +139,23 @@ async function dubaiRepeats(profile,browser,count){
   return results;
 }
 
-async function historyFlow(profile,browser){
+async function historyFlowAttempt(profile,browser){
   const context=await browser.newContext({...profile.options,locale:"nl-NL",serviceWorkers:"block"});
   const page=await context.newPage(),errors=[];page.on("pageerror",e=>errors.push(String(e)));
   const A={name:"Amsterdam",lat:52.3676,lon:4.9041,land:"NL"},B={name:"Dubai",lat:25.2048,lon:55.2708,land:"AE"},C={name:"Kathmandu",lat:27.7172,lon:85.3240,land:"NP"};
   const waitName=async loc=>{
-    await page.waitForFunction(({name,lat,lon})=>typeof S!=="undefined"&&S.d&&S.label===name&&Math.abs(Number(S.lat)-lat)<.0011&&Math.abs(Number(S.lon)-lon)<.0011,{name:loc.name,lat:loc.lat,lon:loc.lon},{timeout:15000});
+    await page.waitForFunction(({name,lat,lon})=>{
+      const state=document.getElementById("state"),compact=document.getElementById("locatie-laadstatus");
+      const error=!!((state&&state.className.includes("err")&&getComputedStyle(state).display!=="none")||(compact&&compact.hidden===false&&compact.classList.contains("fout")));
+      let target=false;
+      try{target=!!(S.d&&S.label===name&&Math.abs(Number(S.lat)-lat)<.0011&&Math.abs(Number(S.lon)-lon)<.0011);}catch(_){ }
+      return target||error;
+    },{name:loc.name,lat:loc.lat,lon:loc.lon},{timeout:15000});
+    let x=await read(page);
+    if(x.error)throw new Error(`${profile.name}/${loc.name}: gecontroleerde providerfout tijdens historyflow: ${x.status}`);
     await page.waitForTimeout(150);
-    const x=await read(page);assertIdentity(x,loc);assert(kernGereed(x),`${profile.name}/${loc.name}: hoofdinterface incoherent`);
+    x=await read(page);assertIdentity(x,loc);assert(kernGereed(x),`${profile.name}/${loc.name}: hoofdinterface incoherent`);
+    x=await waitNachtKlaar(page,5000);assert(nachtGereed(x),`${profile.name}/${loc.name}: Nachtzicht niet gereed`);
     const u=new URL(x.href);assert.equal(u.searchParams.get("plaats"),loc.name,`${profile.name}/${loc.name}: URL-plaats mismatch`);
     return {name:loc.name,href:x.href,title:x.title,land:x.s.land,timezone:x.s.timezone};
   };
@@ -156,6 +174,21 @@ async function historyFlow(profile,browser){
   }finally{await context.close();}
 }
 
+async function historyFlow(profile,browser){
+  let laatsteFout=null;
+  for(let attempt=1;attempt<=2;attempt++){
+    try{
+      const states=await historyFlowAttempt(profile,browser);
+      if(attempt>1)console.log(`PRE_SALE_HISTORY_RETRY ${profile.name}: volledige historyflow geslaagd op poging ${attempt}.`);
+      return states;
+    }catch(e){
+      laatsteFout=e;
+      if(attempt<2)console.log(`PRE_SALE_HISTORY_RETRY ${profile.name}: poging ${attempt} afgebroken; volledige nieuwe context volgt. Oorzaak: ${e&&e.message||e}`);
+    }
+  }
+  throw laatsteFout||new Error(`${profile.name}: historyflow mislukte`);
+}
+
 async function requestedLocationMatrix(browser){
   const results=[];
   for(const loc of requestedLocations){
@@ -169,11 +202,12 @@ async function requestedLocationMatrix(browser){
         const q=new URLSearchParams({lat:String(loc.lat),lon:String(loc.lon),plaats:loc.name,land:loc.land,locationcheck:`${loc.name}-${attempt}-${Date.now()}`});
         const start=Date.now(),response=await page.goto(ROOT+"/?"+q,{waitUntil:"domcontentloaded",timeout:30000});
         assert(response&&response.ok(),`${loc.name}: HTTP ${response&&response.status()}`);
-        const terminal=await waitTerminal(page,start,15000),x=terminal.state;
+        const terminal=await waitTerminal(page,start,15000);let x=terminal.state;
         if(!kernGereed(x)){
           lastFailure=new Error(`${loc.name}: poging ${attempt} gaf geen bruikbare forecast; terminal=${x.error?"error":"loading"}, status=${x.status}`);
           continue;
         }
+        x=await waitNachtKlaar(page,5000);
         assert.equal(x.sha,EXPECTED,`${loc.name}: verkeerde build ${x.sha}`);
         assertIdentity(x,loc);
         const u=new URL(x.href);assert.equal(u.searchParams.get("plaats"),loc.name,`${loc.name}: URL-plaats mismatch`);
@@ -185,11 +219,11 @@ async function requestedLocationMatrix(browser){
         assert.equal(x.days,7,`${loc.name}: weekverwachting heeft ${x.days} rijen`);
         assert(x.chartTexts>=4,`${loc.name}: grafiek niet bruikbaar`);
         assert(x.brief.length>0,`${loc.name}: briefing leeg`);
-        assert(x.nights>0||/geen nachtdata beschikbaar/i.test(x.nightText),`${loc.name}: Nachtzicht heeft geen bruikbare of eerlijke lege state`);
+        assert(nachtGereed(x),`${loc.name}: Nachtzicht heeft geen bruikbare of eerlijke lege state`);
         assert(x.sun.length>0,`${loc.name}: zonsopkomst/zonsondergang ontbreekt`);
         assert.deepEqual(pageErrors,[],`${loc.name}: pageerrors ${pageErrors.join(" | ")}`);
         assert.deepEqual(consoleErrors,[],`${loc.name}: console-errors ${consoleErrors.join(" | ")}`);
-        success={name:loc.name,attempt,ms:terminal.ms,label:x.s.label,land:x.s.land,timezone:x.s.timezone,localDate:x.localDate,localClock:x.localClock};
+        success={name:loc.name,attempt,ms:Date.now()-start,label:x.s.label,land:x.s.land,timezone:x.s.timezone,localDate:x.localDate,localClock:x.localClock};
       }catch(e){lastFailure=e;}
       finally{await context.close();}
     }
