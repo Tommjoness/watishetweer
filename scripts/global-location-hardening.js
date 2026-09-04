@@ -172,17 +172,20 @@ if(typeof load==="function"){
   load=async function(lat,lon,label,stil,opslaan,land){
     let positie=null,effectiefLand=land;
     const aanroepPositie=normaliseerLaadCoordinaten(lat,lon);
+    let bestaandeLocatie=false;
+    try{bestaandeLocatie=!!(typeof S!=="undefined"&&S&&S.d&&Number.isFinite(Number(S.lat))&&Number.isFinite(Number(S.lon)));}catch(_){ }
 
     /* Alleen de gedeelde-URL-start die werkelijk dezelfde URL-coördinaten laadt
-       mag die URL als autoriteit gebruiken. Een oude query in de adresbalk is
-       geen reden om een latere bewuste load terug te draaien. Een corrupte
-       initiële deep link blijft wel fail-closed wanneer ook de load zelf geen
-       geldige positie heeft. */
+       mag die URL als autoriteit gebruiken. Een oude query in een reeds actieve
+       client-side sessie mag een latere bewuste load niet terugdraaien. Een
+       malforme initiële deep link blijft echter altijd raw fail-closed, ook als
+       historische startupcode met parseFloat nog een schijnbaar geldig getal
+       uit die beschadigde query wist te halen. */
     if(stil!==true&&opslaan===false&&typeof location!=="undefined"){
       const gedeeld=gedeeldeUrlCoordinaten(location.search);
       if(gedeeld.aanwezig){
         if(!gedeeld.geldig){
-          if(!aanroepPositie){
+          if(!bestaandeLocatie){
             const st=document.getElementById("state");
             if(st){
               st.style.display="block";
