@@ -13,12 +13,12 @@ const locaties=[
   {naam:"Kansas City",lat:39.0997,lon:-94.5786,land:"US"},
   {naam:"Kathmandu",lat:27.7172,lon:85.3240,land:"NP"},
   {naam:"Dubai",lat:25.2048,lon:55.2708,land:"AE"},
-  {naam:"Longyearbyen",lat:78.2232,lon:15.6469,land:"SJ"},
+  {naam:"Longyearbyen",lat:78.2232,lon:15.6469,land:"NO"},
   {naam:"Ushuaia",lat:-54.8019,lon:-68.3030,land:"AR"},
   {naam:"Zuidpool",lat:-90,lon:0,land:"AQ",vrijeNaam:true}
 ];
 const viewports=[[1100,900],[1280,800],[1363,936],[1440,900],[1600,900],[1920,1080],[320,844],[360,844],[390,844],[430,932]];
-const COORD_TOL=0.001;
+const COORD_TOL=0.0011;
 const rond=v=>Number.isFinite(Number(v))?Math.round(Number(v)):null;
 const params=l=>new URLSearchParams({lat:String(l.lat),lon:String(l.lon),plaats:l.naam,land:l.land}).toString();
 function isForecast(url){try{const u=new URL(url);return u.hostname==="api.open-meteo.com"&&u.pathname==="/v1/forecast"&&u.searchParams.has("current")&&u.searchParams.has("hourly");}catch(e){return false;}}
