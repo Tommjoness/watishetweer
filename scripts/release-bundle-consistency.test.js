@@ -32,6 +32,15 @@ function geenExecutableInline(html,label){
   });
   assert.equal(inline.length,0,`${label}: executable inline script bleef achter na delivery`);
 }
+function htmlBestanden(dir){
+  const uit=[];
+  for(const ent of fs.readdirSync(dir,{withFileTypes:true})){
+    const p=path.join(dir,ent.name);
+    if(ent.isDirectory())uit.push(...htmlBestanden(p));
+    else if(ent.isFile()&&ent.name.endsWith(".html"))uit.push(p);
+  }
+  return uit;
+}
 
 const scenarios=[
   {label:"/",rel:"index.html",canonical:"https://watishetweer.nl/"},
@@ -56,8 +65,19 @@ for(const s of scenarios){
 
 const bundlePad=path.join(PUBLIC,verwachtBundle.slice(1));
 assert(fs.existsSync(bundlePad),`Actieve hoofdclient ontbreekt op disk: ${verwachtBundle}`);
-const appBestanden=fs.readdirSync(PUBLIC).filter(n=>/^app-[0-9a-f]{12}\.min\.js$/.test(n));
-assert.deepEqual(appBestanden,[path.basename(verwachtBundle)],"public mag na delivery exact één actuele hoofdclientbundle bevatten");
+
+/* platform-output-cleanup noemt ook kleine scripts van zelfstandige informatiepagina's
+   app-<hash>.min.js. Dat zijn geen WeatherNow-hoofdclients. Borg daarom precies wat
+   WIW-001 vereist: iedere HTML-route die de weerapp-shell draagt verwijst uitsluitend
+   naar dezelfde hoofdclient. Een tweede, niet-door-de-weerapp-gebruikte pageruntime
+   is geen functionele bundledivergentie en mag deze guard niet vals laten falen. */
+for(const bestand of htmlBestanden(PUBLIC)){
+  const html=fs.readFileSync(bestand,"utf8");
+  const isWeerApp=html.includes('id="weather-now-route"')&&html.includes('id="app"');
+  if(!isWeerApp)continue;
+  const label="/"+path.relative(PUBLIC,bestand).replace(/\\/g,"/");
+  assert.equal(hoofdscript(html,label),verwachtBundle,`${label}: weerapp-shell gebruikt een afwijkende hoofdclient`);
+}
 
 const sw=lees("sw.js");
 const swApps=[...sw.matchAll(/app-[0-9a-f]{12}\.min\.js/g)].map(m=>m[0]);
@@ -69,4 +89,4 @@ for(const marker of [
   "weathernow:app-ready","pageshow","AbortController","laadTeller","zoekGeneratie"
 ])assert(bundel.includes(marker),`Actieve hoofdclient mist release-/race-invariant: ${marker}`);
 
-console.log(`Release-bundleconsistentie geslaagd: ${scenarios.length} app-routes delen build ${verwachtBuild} en ${verwachtBundle}; serviceworker verwijst uitsluitend naar dezelfde client.`);
+console.log(`Release-bundleconsistentie geslaagd: ${scenarios.length} app-routes delen build ${verwachtBuild} en ${verwachtBundle}; iedere weerapp-shell en de serviceworker verwijzen uitsluitend naar dezelfde client.`);
