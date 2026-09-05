@@ -1,10 +1,15 @@
 "use strict";
 
 const assert=require("assert");
+const {execFile}=require("child_process");
+const {promisify}=require("util");
 const {chromium}=require("playwright");
 
 const ROOT=(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/+$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
+const HEADLESS=process.env.HEADLESS!=="false";
+const NATIVE_BROWSER_RELOAD=process.env.NATIVE_BROWSER_RELOAD==="true";
+const execFileAsync=promisify(execFile);
 
 async function ready(page,timeout=20000){
   await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="ready",null,{timeout});
@@ -35,6 +40,7 @@ function assertRelease(s,label){
   assert(/^\/bootstrap-[0-9a-f]{12}\.min\.js$/.test(s.bootstrap||""),`${label}: actuele bootstrap ontbreekt`);
 }
 async function offlineReloadViaServiceworker(page,cdp){
+  assert(!HEADLESS&&NATIVE_BROWSER_RELOAD,"deployed offline-reloadbewijs vereist zichtbare Chromium + native browserreload");
   const fouten=[];
   for(let poging=1;poging<=3;poging++){
     const gestart=[];
@@ -45,11 +51,17 @@ async function offlineReloadViaServiceworker(page,cdp){
     cdp.on("Network.responseReceived",noteerResponse);
     try{
       const vorigeOrigin=await page.evaluate(()=>performance.timeOrigin);
-      const opdracht=await cdp.send("Page.navigate",{url:page.url(),transitionType:"reload"});
-      if(opdracht.errorText)throw new Error(`Page.navigate: ${opdracht.errorText}`);
+      const vensters=await execFileAsync("xdotool",[
+        "search","--sync","--onlyvisible","--maxdepth","1","--class",".*[Cc]hrom(e|ium).*"
+      ],{timeout:5000});
+      const venster=String(vensters.stdout||"").trim().split(/\s+/).filter(Boolean).at(-1);
+      assert(venster,`geen zichtbaar Chromium-venster gevonden: ${String(vensters.stderr||"").trim()}`);
+      await page.bringToFront();
+      await execFileAsync("xdotool",["windowfocus","--sync",venster],{timeout:5000});
+      await execFileAsync("xdotool",["key","--clearmodifiers","F5"],{timeout:5000});
       await page.waitForFunction(vorige=>performance.timeOrigin!==vorige&&document.documentElement.dataset.appBootstrap==="ready",vorigeOrigin,{timeout:15000});
-      const hoofdStart=gestart.find(event=>event.frameId===opdracht.frameId);
-      const documentResponse=[...documenten].reverse().find(event=>event.frameId===opdracht.frameId)||null;
+      const hoofdStart=gestart.find(event=>event.navigationType==="reload")||null;
+      const documentResponse=[...documenten].reverse().find(event=>event.frameId===hoofdStart?.frameId)||null;
       if(!hoofdStart||hoofdStart.navigationType!=="reload"){
         fouten.push(`poging ${poging}: CDP rapporteerde geen reload-start (${JSON.stringify(hoofdStart||null)})`);
       }else if(documentResponse&&documentResponse.response&&documentResponse.response.fromServiceWorker){
@@ -172,7 +184,7 @@ async function maakStaleCache(page,naam){
 }
 
 (async()=>{
-  const browser=await chromium.launch({headless:true});
+  const browser=await chromium.launch({headless:HEADLESS});
   try{
     /* Hard refresh: Chromium-cache expliciet uit, dezelfde live release moet terugkomen. */
     {
