@@ -137,9 +137,9 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
           COLD_LOAD_RUNS_PER_PROFILE: 5
           COLD_LOAD_OBSERVATION_MS: 12000
-          COLD_LOAD_PACING_MS: 5000
+          COLD_LOAD_PACING_MS: 15000
           COLD_LOAD_ATTEMPTS: 3
-          COLD_LOAD_PROFILE_COOLDOWN_MS: 15000
+          COLD_LOAD_PROFILE_COOLDOWN_MS: 45000
         run: node scripts/run-production-pre-sale-acceptance-browser.js
       - name: Bewaar screenshots en bewijsrapport
         if: always()
