@@ -34,15 +34,27 @@ function assertRelease(s,label){
   assert(/^\/app-[0-9a-f]{12}\.min\.js$/.test(s.app||""),`${label}: actuele app-bundle ontbreekt`);
   assert(/^\/bootstrap-[0-9a-f]{12}\.min\.js$/.test(s.bootstrap||""),`${label}: actuele bootstrap ontbreekt`);
 }
-async function offlineReloadViaServiceworker(page){
+async function offlineReloadViaServiceworker(page,cdp){
   const fouten=[];
   for(let poging=1;poging<=3;poging++){
+    const gestart=[];
+    const noteerStart=event=>gestart.push(event);
+    cdp.on("Page.frameStartedNavigating",noteerStart);
     try{
-      const response=await page.reload({waitUntil:"domcontentloaded",timeout:15000});
-      if(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker())return response;
-      fouten.push(`poging ${poging}: geen serviceworker-response`);
+      const navigatie=page.waitForNavigation({waitUntil:"domcontentloaded",timeout:15000});
+      const opdracht=await cdp.send("Page.navigate",{url:page.url(),transitionType:"reload"});
+      if(opdracht.errorText)throw new Error(`Page.navigate: ${opdracht.errorText}`);
+      const response=await navigatie;
+      const hoofdStart=gestart.find(event=>event.frameId===opdracht.frameId);
+      if(!hoofdStart||hoofdStart.navigationType!=="reload"){
+        fouten.push(`poging ${poging}: CDP rapporteerde geen reload-start (${JSON.stringify(hoofdStart||null)})`);
+      }else if(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker()){
+        return {response,cdpNavigationType:hoofdStart.navigationType};
+      }else fouten.push(`poging ${poging}: geen serviceworker-response`);
     }catch(err){
       fouten.push(`poging ${poging}: ${String(err&&err.message||err).split("\n")[0]}`);
+    }finally{
+      cdp.off("Page.frameStartedNavigating",noteerStart);
     }
     if(poging<3)await new Promise(resolve=>setTimeout(resolve,500*poging));
   }
@@ -223,7 +235,7 @@ async function maakStaleCache(page,naam){
       const staleCache=`watishetweer-e2e-stale-${Date.now()}`;
       let workerNetwerk=null;
       try{
-        await page.goto(ROOT+"/",{waitUntil:"load",timeout:30000});
+        await page.goto(ROOT+"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL",{waitUntil:"load",timeout:30000});
         await weatherReady(page);
         await page.evaluate(async()=>{await navigator.serviceWorker.ready;});
         if(!await page.evaluate(()=>!!navigator.serviceWorker.controller)){
@@ -284,8 +296,9 @@ async function maakStaleCache(page,naam){
         assert(indexResponse.fromServiceWorker(),"offline index-preflight moet aantoonbaar uit de actieve serviceworker komen");
         assert(offlineProbe.ok&&offlineProbe.lengte>0,`actieve serviceworker leverde geen gecachete index terwijl netwerk offline was: ${JSON.stringify(offlineProbe)}`);
         console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),workerTarget:{scriptURL:workerNetwerk.scriptURL,targetId:workerNetwerk.targetId},workerNetworkFailureInjected:true,netwerkProbe,offlineProbe,indexFromServiceWorker:indexResponse.fromServiceWorker()}));
-        const response=await offlineReloadViaServiceworker(page);
+        const {response,cdpNavigationType}=await offlineReloadViaServiceworker(page,cdp);
         assert(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker(),"offline reload moet door de actieve serviceworker worden geleverd");
+        assert.equal(cdpNavigationType,"reload","browserprotocol moet de offline navigatie als reload rapporteren");
         await ready(page,10000);
         const navigationType=await page.evaluate(()=>performance.getEntriesByType("navigation").at(-1)?.type||null);
         assert.equal(navigationType,"reload","offline serviceworker-navigatie moet aantoonbaar een echte reload zijn");
