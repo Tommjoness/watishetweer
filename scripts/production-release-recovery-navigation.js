@@ -325,7 +325,7 @@ async function maakStaleCache(page,naam){
 
         workerNetwerk=await koppelActieveWorkerNetwerk(browser,page);
         const injectie=await workerNetwerk.child.send("Runtime.evaluate",{
-          expression:'(()=>{if(typeof globalThis.__WIW_E2E_ORIGINAL_FETCH__!=="function")globalThis.__WIW_E2E_ORIGINAL_FETCH__=globalThis.fetch.bind(globalThis);globalThis.fetch=()=>Promise.reject(new TypeError("WIW E2E network unavailable"));return true;})()',
+          expression:'(()=>{const trace=[];globalThis.__WIW_E2E_TRACE__=trace;if(typeof globalThis.__WIW_E2E_ORIGINAL_FETCH__!=="function")globalThis.__WIW_E2E_ORIGINAL_FETCH__=globalThis.fetch.bind(globalThis);globalThis.fetch=input=>{trace.push({soort:"network",url:String(input&&input.url||input),mode:input&&input.mode||null,cache:input&&input.cache||null});return Promise.reject(new TypeError("WIW E2E network unavailable"));};if(!globalThis.__WIW_E2E_ORIGINAL_CACHE_MATCH__){globalThis.__WIW_E2E_ORIGINAL_CACHE_MATCH__=CacheStorage.prototype.match;CacheStorage.prototype.match=async function(request,options){try{const response=await globalThis.__WIW_E2E_ORIGINAL_CACHE_MATCH__.call(this,request,options);trace.push({soort:"cache",url:String(request&&request.url||request),cacheName:options&&options.cacheName||null,hit:!!response,status:response&&response.status||null,responseUrl:response&&response.url||null});return response;}catch(error){trace.push({soort:"cache-error",fout:String(error)});throw error;}};}if(!globalThis.__WIW_E2E_ORIGINAL_RESPOND_WITH__){globalThis.__WIW_E2E_ORIGINAL_RESPOND_WITH__=FetchEvent.prototype.respondWith;FetchEvent.prototype.respondWith=function(value){const request=this.request;trace.push({soort:"respondWith",url:request&&request.url||null,mode:request&&request.mode||null});return globalThis.__WIW_E2E_ORIGINAL_RESPOND_WITH__.call(this,Promise.resolve(value).then(response=>{trace.push({soort:"response",status:response&&response.status||null,url:response&&response.url||null,type:response&&response.type||null});return response;},error=>{trace.push({soort:"response-error",fout:String(error)});throw error;}));};}return true;})()',
           returnByValue:true
         });
         assert.equal(injectie&&injectie.result&&injectie.result.value,true,"worker-netwerkfoutinjectie kon niet worden geactiveerd");
@@ -357,7 +357,18 @@ async function maakStaleCache(page,naam){
           }catch(e){return {gefaald:true,fout:String(e)};}
         },Date.now());
         assert(losgekoppeldeProbe.gefaald,`worker-netwerkfout bleef na debugontkoppeling niet actief: ${JSON.stringify(losgekoppeldeProbe)}`);
-        const {documentResponse,cdpNavigationType}=await offlineReloadViaServiceworker(page,cdp);
+        let reloadBewijs;
+        try{
+          reloadBewijs=await offlineReloadViaServiceworker(page,cdp);
+        }catch(error){
+          workerNetwerk=await koppelActieveWorkerNetwerk(browser,witness).catch(()=>null);
+          const trace=workerNetwerk?await workerNetwerk.child.send("Runtime.evaluate",{
+            expression:'globalThis.__WIW_E2E_TRACE__||[]',returnByValue:true
+          }).catch(()=>null):null;
+          console.error("Offline serviceworker-trace:",JSON.stringify(trace&&trace.result&&trace.result.value||null));
+          throw error;
+        }
+        const {documentResponse,cdpNavigationType}=reloadBewijs;
         assert(documentResponse&&documentResponse.response&&documentResponse.response.fromServiceWorker,"offline reload moet door de actieve serviceworker worden geleverd");
         assert.equal(cdpNavigationType,"reload","browserprotocol moet de offline navigatie als reload rapporteren");
         await ready(page,10000);
@@ -383,7 +394,7 @@ async function maakStaleCache(page,naam){
         }
         if(workerNetwerk){
           await workerNetwerk.child.send("Runtime.evaluate",{
-            expression:'(()=>{if(typeof globalThis.__WIW_E2E_ORIGINAL_FETCH__==="function"){globalThis.fetch=globalThis.__WIW_E2E_ORIGINAL_FETCH__;delete globalThis.__WIW_E2E_ORIGINAL_FETCH__;}return true;})()',
+            expression:'(()=>{if(typeof globalThis.__WIW_E2E_ORIGINAL_FETCH__==="function"){globalThis.fetch=globalThis.__WIW_E2E_ORIGINAL_FETCH__;delete globalThis.__WIW_E2E_ORIGINAL_FETCH__;}if(globalThis.__WIW_E2E_ORIGINAL_CACHE_MATCH__){CacheStorage.prototype.match=globalThis.__WIW_E2E_ORIGINAL_CACHE_MATCH__;delete globalThis.__WIW_E2E_ORIGINAL_CACHE_MATCH__;}if(globalThis.__WIW_E2E_ORIGINAL_RESPOND_WITH__){FetchEvent.prototype.respondWith=globalThis.__WIW_E2E_ORIGINAL_RESPOND_WITH__;delete globalThis.__WIW_E2E_ORIGINAL_RESPOND_WITH__;}delete globalThis.__WIW_E2E_TRACE__;return true;})()',
             returnByValue:true
           }).catch(()=>{});
           await workerNetwerk.child.close().catch(()=>{});
