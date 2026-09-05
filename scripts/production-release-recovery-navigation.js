@@ -45,7 +45,7 @@ async function offlineReloadViaServiceworker(page){
         return request.url()===url&&request.isNavigationRequest()&&request.frame()===page.mainFrame();
       },{timeout:15000});
       const documentPromise=page.waitForFunction(v=>performance.timeOrigin!==v,timeOrigin,{timeout:15000});
-      await page.keyboard.press("F5");
+      await page.evaluate(()=>{setTimeout(()=>location.reload(),0);});
       const [responseResult,documentResult]=await Promise.allSettled([responsePromise,documentPromise]);
       const state=await page.evaluate(()=>({
         timeOrigin:performance.timeOrigin,
