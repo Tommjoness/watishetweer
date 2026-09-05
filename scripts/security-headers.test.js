@@ -54,5 +54,8 @@ const middleware=fs.readFileSync(path.join(root,"functions","_middleware.js"),"u
 assert(middleware.includes('"Cross-Origin-Opener-Policy":"same-origin"'),"API-middleware mist COOP");
 assert(middleware.includes('"Content-Security-Policy":"default-src \'self\'; script-src \'self\' https://static.cloudflareinsights.com; script-src-attr \'none\';'),"API-middleware loopt achter op strikt scriptbeleid plus versiecompatibele analytics-origin");
 assert(!middleware.includes("https://static.cloudflareinsights.com/beacon.min.js"),"API-middleware mag versiegebonden Cloudflare-beacons niet blokkeren met een exact bestandspad");
+assert(middleware.includes('new URL(context.request.url).pathname==="/sw.js"'),"middleware moet de serviceworkerroute exact afbakenen");
+assert(middleware.includes("context.env.ASSETS.fetch(context.request)"),"serviceworkerresponse moet uit de gebouwde asset komen");
+assert(middleware.includes('headers.set("Cache-Control","public, max-age=0, must-revalidate")'),"serviceworkerresponse moet op de publieke custom domain direct revalideren");
 
 console.log("security-headers: strikte CSP met Cloudflare Insights-origin voor versiebeacons, COOP, HSTS en compressievriendelijke HTML-cacheheaders OK");
