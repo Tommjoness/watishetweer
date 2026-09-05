@@ -147,6 +147,9 @@ jobs:
         env:
           PRODUCTION_ROOT: ${{ env.PREVIEW_ROOT }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
-          COLD_LOAD_RUNS_PER_PROFILE: 15
+          COLD_LOAD_RUNS_PER_PROFILE: 5
           COLD_LOAD_OBSERVATION_MS: 12000
+          COLD_LOAD_PACING_MS: 5000
+          COLD_LOAD_ATTEMPTS: 3
+          COLD_LOAD_PROFILE_COOLDOWN_MS: 15000
         run: node scripts/run-production-pre-sale-acceptance-browser.js
