@@ -141,6 +141,8 @@ jobs:
         env:
           PRODUCTION_ROOT: ${{ env.PREVIEW_ROOT }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+          WORLDWIDE_SOURCE_PACING_MS: 5000
+          WORLDWIDE_SOURCE_RETRY_BACKOFF_MS: 5000
         run: node scripts/run-production-worldwide-browser.js
 
       - name: Finale locatie- en cold-loadacceptatie op deployed preview
@@ -152,6 +154,9 @@ jobs:
           COLD_LOAD_PACING_MS: 15000
           COLD_LOAD_ATTEMPTS: 3
           COLD_LOAD_PROFILE_COOLDOWN_MS: 45000
+          HISTORY_SOURCE_INITIAL_COOLDOWN_MS: 30000
+          HISTORY_SOURCE_PACING_MS: 15000
+          HISTORY_SOURCE_RETRY_BACKOFF_MS: 10000
         run: node scripts/run-production-pre-sale-acceptance-browser.js
 
   preview-release-navigation:
