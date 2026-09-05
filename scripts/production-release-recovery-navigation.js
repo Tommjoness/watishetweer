@@ -38,7 +38,19 @@ async function offlineReloadViaServiceworker(page){
   const fouten=[];
   for(let poging=1;poging<=3;poging++){
     try{
-      const response=await page.reload({waitUntil:"domcontentloaded",timeout:15000});
+      const url=page.url();
+      const responsePromise=page.waitForResponse(response=>{
+        const request=response.request();
+        return response.url()===url&&request.isNavigationRequest()&&request.frame()===page.mainFrame();
+      },{timeout:15000});
+      /* page.reload() gebruikt in Chromium een browser-automation reloadpad dat
+         onder context-offline vóór de actieve serviceworker kan stranden. Laat
+         het document daarom zelf dezelfde echte reload starten en observeer de
+         navigatieresponse afzonderlijk. De assertions hieronder blijven eisen
+         dat die response werkelijk uit de serviceworker komt. */
+      await page.evaluate(()=>{setTimeout(()=>location.reload(),0);});
+      const response=await responsePromise;
+      await page.waitForLoadState("domcontentloaded",{timeout:15000});
       if(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker())return response;
       fouten.push(`poging ${poging}: geen serviceworker-response`);
     }catch(err){
@@ -193,9 +205,12 @@ async function maakStaleCache(page,naam){
           }catch(e){return {ok:false,status:0,lengte:0,fout:String(e)};}
         });
         assert(offlineProbe.ok&&offlineProbe.lengte>0,`actieve serviceworker leverde geen gecachete index terwijl netwerk offline was: ${JSON.stringify(offlineProbe)}`);
+        console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),offlineProbe}));
         const response=await offlineReloadViaServiceworker(page);
         assert(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker(),"offline reload moet door de actieve serviceworker worden geleverd");
         await ready(page,10000);
+        const navigationType=await page.evaluate(()=>performance.getEntriesByType("navigation").at(-1)?.type||null);
+        assert.equal(navigationType,"reload","offline serviceworker-navigatie moet aantoonbaar een echte reload zijn");
         const offline=await snap(page);assertRelease(offline,"SW offline");
         assert.equal(offline.stale,null,"offline navigatie koos de kunstmatig oude cachegeneratie");
         assert.equal(offline.build,actief.build,"offline shell wijkt af van actuele build");
