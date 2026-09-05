@@ -1,12 +1,39 @@
 "use strict";
 
 const assert=require("assert");
-const http=require("http");
-const net=require("net");
+const {execFile}=require("child_process");
+const {promisify}=require("util");
 const {chromium}=require("playwright");
 
 const ROOT=(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/+$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
+const HEADLESS=process.env.HEADLESS!=="false";
+const NATIVE_BROWSER_RELOAD=process.env.NATIVE_BROWSER_RELOAD==="true";
+const execFileAsync=promisify(execFile);
+
+async function chromiumVenster(page){
+  await page.bringToFront();
+  const titel=await page.title();
+  const gevonden=await execFileAsync("xdotool",[
+    "search","--sync","--onlyvisible","--class",".*[Cc]hrom(e|ium).*"
+  ],{timeout:5000});
+  const ids=[...new Set(String(gevonden.stdout||"").trim().split(/\s+/).filter(Boolean))];
+  const vensters=[];
+  for(const id of ids){
+    const [naam,klasse]=await Promise.all([
+      execFileAsync("xdotool",["getwindowname",id],{timeout:2000}).catch(()=>({stdout:""})),
+      execFileAsync("xdotool",["getwindowclassname",id],{timeout:2000}).catch(()=>({stdout:""}))
+    ]);
+    vensters.push({id,naam:String(naam.stdout||"").trim(),klasse:String(klasse.stdout||"").trim()});
+  }
+  const gekozen=vensters.find(item=>item.naam===titel)
+    ||vensters.find(item=>/watishetweer|wat is het weer/i.test(item.naam))
+    ||vensters.find(item=>item.naam)
+    ||vensters.at(-1);
+  assert(gekozen,`geen zichtbaar Chromium-venster gevonden: ${String(gevonden.stderr||"").trim()}`);
+  console.log("Native browserreload-venster:",JSON.stringify({titel,vensters,gekozen}));
+  return gekozen.id;
+}
 
 async function ready(page,timeout=20000){
   await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="ready",null,{timeout});
@@ -36,73 +63,121 @@ function assertRelease(s,label){
   assert(/^\/app-[0-9a-f]{12}\.min\.js$/.test(s.app||""),`${label}: actuele app-bundle ontbreekt`);
   assert(/^\/bootstrap-[0-9a-f]{12}\.min\.js$/.test(s.bootstrap||""),`${label}: actuele bootstrap ontbreekt`);
 }
-async function startBrowserNetworkGate(){
-  let offline=false;
-  const tunnels=new Set();
-  const server=http.createServer((request,response)=>{
-    response.writeHead(405,{"content-type":"text/plain; charset=utf-8","connection":"close"});
-    response.end("CONNECT required");
-  });
-  server.on("connect",(request,client,head)=>{
-    if(offline){
-      client.end("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
-      return;
-    }
-    const scheiding=request.url.lastIndexOf(":");
-    const host=scheiding>0?request.url.slice(0,scheiding):request.url;
-    const port=scheiding>0?Number(request.url.slice(scheiding+1)):443;
-    const upstream=net.connect(port,host);
-    const tunnel={client,upstream};
-    tunnels.add(tunnel);
-    const opruimen=()=>tunnels.delete(tunnel);
-    client.once("close",opruimen);
-    upstream.once("close",opruimen);
-    client.on("error",()=>{});
-    upstream.on("error",()=>client.destroy());
-    upstream.once("connect",()=>{
-      client.write("HTTP/1.1 200 Connection Established\r\nProxy-Agent: WIW-release-recovery\r\n\r\n");
-      if(head.length)upstream.write(head);
-      client.pipe(upstream);
-      upstream.pipe(client);
-    });
-  });
-  await new Promise((resolve,reject)=>{
-    server.once("error",reject);
-    server.listen(0,"127.0.0.1",resolve);
-  });
-  const adres=server.address();
-  return {
-    proxy:`http://127.0.0.1:${adres.port}`,
-    offline(){
-      offline=true;
-      for(const {client,upstream} of [...tunnels]){
-        client.destroy();
-        upstream.destroy();
-      }
-      tunnels.clear();
-    },
-    async close(){
-      for(const {client,upstream} of [...tunnels]){
-        client.destroy();
-        upstream.destroy();
-      }
-      await new Promise(resolve=>server.close(resolve));
-    }
-  };
-}
-async function offlineReloadViaServiceworker(page){
+async function offlineReloadViaServiceworker(page,cdp){
+  assert(!HEADLESS&&NATIVE_BROWSER_RELOAD,"deployed offline-reloadbewijs vereist zichtbare Chromium + native browserreload");
   const fouten=[];
   for(let poging=1;poging<=3;poging++){
+    const gestart=[];
+    const documenten=[];
+    const noteerStart=event=>gestart.push(event);
+    const noteerResponse=event=>{if(event.type==="Document")documenten.push(event);};
+    cdp.on("Page.frameStartedNavigating",noteerStart);
+    cdp.on("Network.responseReceived",noteerResponse);
     try{
-      const response=await page.reload({waitUntil:"domcontentloaded",timeout:15000});
-      if(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker())return response;
-      fouten.push(`poging ${poging}: geen serviceworker-response`);
+      const vorigeOrigin=await page.evaluate(()=>performance.timeOrigin);
+      const venster=await chromiumVenster(page);
+      await execFileAsync("xdotool",["windowfocus","--sync",venster],{timeout:5000});
+      const focus=String((await execFileAsync("xdotool",["getwindowfocus"],{timeout:2000})).stdout||"").trim();
+      const [vensterPid,focusPid]=await Promise.all([
+        execFileAsync("xdotool",["getwindowpid",venster],{timeout:2000}),
+        execFileAsync("xdotool",["getwindowpid",focus],{timeout:2000})
+      ]);
+      assert.equal(String(focusPid.stdout||"").trim(),String(vensterPid.stdout||"").trim(),`Chromium kreeg geen native focus (venster ${venster}, focus ${focus||"niets"})`);
+      await execFileAsync("xdotool",["key","--clearmodifiers","ctrl+r"],{timeout:5000});
+      await page.waitForFunction(vorige=>performance.timeOrigin!==vorige&&document.documentElement.dataset.appBootstrap==="ready",vorigeOrigin,{timeout:15000});
+      const hoofdStart=gestart.find(event=>event.navigationType==="reload")||null;
+      const documentResponse=[...documenten].reverse().find(event=>event.frameId===hoofdStart?.frameId)||null;
+      if(!hoofdStart||hoofdStart.navigationType!=="reload"){
+        fouten.push(`poging ${poging}: CDP rapporteerde geen reload-start (${JSON.stringify(hoofdStart||null)})`);
+      }else if(documentResponse&&documentResponse.response&&documentResponse.response.fromServiceWorker){
+        return {documentResponse,cdpNavigationType:hoofdStart.navigationType};
+      }else fouten.push(`poging ${poging}: geen serviceworker-response`);
     }catch(err){
-      fouten.push(`poging ${poging}: ${String(err&&err.message||err).split("\n")[0]}`);
+      const toestand=await page.evaluate(()=>({
+        timeOrigin:performance.timeOrigin,url:location.href,title:document.title,
+        ready:document.documentElement.dataset.appBootstrap||null,
+        navigationType:performance.getEntriesByType("navigation").at(-1)?.type||null
+      })).catch(e=>({evaluatieFout:String(e&&e.message||e).split("\n")[0]}));
+      fouten.push(`poging ${poging}: ${String(err&&err.message||err).split("\n")[0]}; starts=${JSON.stringify(gestart)}; documenten=${JSON.stringify(documenten.map(x=>({frameId:x.frameId,url:x.response&&x.response.url,fromServiceWorker:x.response&&x.response.fromServiceWorker,status:x.response&&x.response.status})))}; toestand=${JSON.stringify(toestand)}`);
+    }finally{
+      cdp.off("Page.frameStartedNavigating",noteerStart);
+      cdp.off("Network.responseReceived",noteerResponse);
     }
     if(poging<3)await new Promise(resolve=>setTimeout(resolve,500*poging));
   }
   throw new Error(`offline reload leverde na 3 pogingen geen serviceworker-response; ${fouten.join(" | ")}`);
+}
+function childCdpSession(root,sessionId){
+  let volgnummer=0,gesloten=false;
+  const wachtend=new Map();
+  const ontvang=event=>{
+    if(event.sessionId!==sessionId)return;
+    let bericht;
+    try{bericht=JSON.parse(event.message);}catch(_){return;}
+    const item=wachtend.get(bericht.id);
+    if(!item)return;
+    wachtend.delete(bericht.id);
+    clearTimeout(item.timer);
+    if(bericht.error)item.reject(new Error(`${item.method}: ${bericht.error.message||JSON.stringify(bericht.error)}`));
+    else item.resolve(bericht.result||{});
+  };
+  root.on("Target.receivedMessageFromTarget",ontvang);
+  return {
+    send(method,params={}){
+      if(gesloten)return Promise.reject(new Error(`CDP-workersessie is gesloten voor ${method}`));
+      const id=++volgnummer;
+      return new Promise((resolve,reject)=>{
+        const timer=setTimeout(()=>{
+          wachtend.delete(id);
+          reject(new Error(`${method}: geen worker-CDP-antwoord binnen 5000 ms`));
+        },5000);
+        wachtend.set(id,{resolve,reject,timer,method});
+        root.send("Target.sendMessageToTarget",{sessionId,message:JSON.stringify({id,method,params})})
+          .catch(err=>{
+            const item=wachtend.get(id);
+            if(!item)return;
+            wachtend.delete(id);clearTimeout(item.timer);reject(err);
+          });
+      });
+    },
+    async close(){
+      if(gesloten)return;
+      gesloten=true;
+      root.off("Target.receivedMessageFromTarget",ontvang);
+      for(const item of wachtend.values()){
+        clearTimeout(item.timer);
+        item.reject(new Error(`CDP-workersessie gesloten tijdens ${item.method}`));
+      }
+      wachtend.clear();
+      await root.send("Target.detachFromTarget",{sessionId}).catch(()=>{});
+      await root.detach().catch(()=>{});
+    }
+  };
+}
+async function koppelActieveWorkerNetwerk(browser,page){
+  const root=await browser.newBrowserCDPSession();
+  try{
+    await root.send("Target.setDiscoverTargets",{discover:true});
+    const scriptURL=await page.evaluate(()=>navigator.serviceWorker.controller&&navigator.serviceWorker.controller.scriptURL||null);
+    assert(scriptURL,"actieve serviceworker-URL ontbreekt vóór worker-netwerkproef");
+    let doel=null,laatste=[];
+    const deadline=Date.now()+5000;
+    while(Date.now()<deadline&&!doel){
+      await page.evaluate(()=>fetch("/index.html",{cache:"reload"}).then(r=>r.arrayBuffer())).catch(()=>{});
+      const targets=await root.send("Target.getTargets");
+      laatste=(targets.targetInfos||[]).filter(x=>x.type==="service_worker").map(x=>({url:x.url,targetId:x.targetId}));
+      doel=(targets.targetInfos||[]).find(x=>x.type==="service_worker"&&x.url===scriptURL)||null;
+      if(!doel)await new Promise(resolve=>setTimeout(resolve,50));
+    }
+    assert(doel,`actieve sw.js-target ontbreekt; verwacht=${scriptURL}; targets=${JSON.stringify(laatste)}`);
+    const gekoppeld=await root.send("Target.attachToTarget",{targetId:doel.targetId,flatten:false});
+    const child=childCdpSession(root,gekoppeld.sessionId);
+    await Promise.all([child.send("Network.enable"),child.send("Runtime.enable")]);
+    return {child,scriptURL,targetId:doel.targetId};
+  }catch(err){
+    await root.detach().catch(()=>{});
+    throw err;
+  }
 }
 async function serviceworkerStabiel(page){
   return page.evaluate(async()=>{
@@ -139,14 +214,8 @@ async function maakStaleCache(page,naam){
 }
 
 (async()=>{
-  const networkGate=await startBrowserNetworkGate();
-  let browser;
+  const browser=await chromium.launch({headless:HEADLESS});
   try{
-    browser=await chromium.launch({
-      headless:true,
-      proxy:{server:networkGate.proxy},
-      args:["--disable-quic"]
-    });
     /* Hard refresh: Chromium-cache expliciet uit, dezelfde live release moet terugkomen. */
     {
       const context=await browser.newContext({serviceWorkers:"block"});
@@ -208,7 +277,10 @@ async function maakStaleCache(page,naam){
     {
       const context=await browser.newContext({serviceWorkers:"allow"});
       const page=await context.newPage();
+      const cdp=await context.newCDPSession(page);
+      await Promise.all([cdp.send("Network.enable"),cdp.send("Page.enable")]);
       const staleCache=`watishetweer-e2e-stale-${Date.now()}`;
+      let workerNetwerk=null,witness=null,workerNetwerkfoutActief=false;
       try{
         await page.goto(ROOT+"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL",{waitUntil:"load",timeout:30000});
         await weatherReady(page);
@@ -247,7 +319,17 @@ async function maakStaleCache(page,naam){
         assert((await serviceworkerStabiel(page)).ok,"serviceworker lifecycle verloor stabiliteit na online herlaad");
         await maakStaleCache(page,staleCache);
 
-        networkGate.offline();
+        witness=await context.newPage();
+        await witness.goto(ROOT+"/weer/",{waitUntil:"load",timeout:30000});
+        await witness.waitForFunction(()=>!!navigator.serviceWorker.controller,null,{timeout:10000});
+
+        workerNetwerk=await koppelActieveWorkerNetwerk(browser,page);
+        const injectie=await workerNetwerk.child.send("Runtime.evaluate",{
+          expression:'(()=>{if(typeof globalThis.__WIW_E2E_ORIGINAL_FETCH__!=="function")globalThis.__WIW_E2E_ORIGINAL_FETCH__=globalThis.fetch.bind(globalThis);globalThis.fetch=()=>Promise.reject(new TypeError("WIW E2E network unavailable"));return true;})()',
+          returnByValue:true
+        });
+        assert.equal(injectie&&injectie.result&&injectie.result.value,true,"worker-netwerkfoutinjectie kon niet worden geactiveerd");
+        workerNetwerkfoutActief=true;
         const netwerkProbe=await page.evaluate(async token=>{
           try{
             const response=await fetch(`/__wiw_network_must_fail_${token}`,{cache:"no-store"});
@@ -265,10 +347,28 @@ async function maakStaleCache(page,naam){
         const [indexResponse,offlineProbe]=await Promise.all([indexResponsePromise,offlineProbePromise]);
         assert(indexResponse.fromServiceWorker(),"offline index-preflight moet aantoonbaar uit de actieve serviceworker komen");
         assert(offlineProbe.ok&&offlineProbe.lengte>0,`actieve serviceworker leverde geen gecachete index terwijl netwerk offline was: ${JSON.stringify(offlineProbe)}`);
-        console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),netwerkProbe,offlineProbe,indexFromServiceWorker:indexResponse.fromServiceWorker()}));
-        const response=await offlineReloadViaServiceworker(page);
-        assert(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker(),"offline reload moet door de actieve serviceworker worden geleverd");
+        console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),workerTarget:{scriptURL:workerNetwerk.scriptURL,targetId:workerNetwerk.targetId},workerNetworkFailureInjected:true,netwerkProbe,offlineProbe,indexFromServiceWorker:indexResponse.fromServiceWorker()}));
+        await workerNetwerk.child.close();
+        workerNetwerk=null;
+        const losgekoppeldeProbe=await witness.evaluate(async token=>{
+          try{
+            const response=await fetch(`/__wiw_detached_network_must_fail_${token}`,{cache:"no-store"});
+            return {gefaald:false,status:response.status};
+          }catch(e){return {gefaald:true,fout:String(e)};}
+        },Date.now());
+        assert(losgekoppeldeProbe.gefaald,`worker-netwerkfout bleef na debugontkoppeling niet actief: ${JSON.stringify(losgekoppeldeProbe)}`);
+        const reloadBewijs=await offlineReloadViaServiceworker(page,cdp);
+        const {documentResponse,cdpNavigationType}=reloadBewijs;
+        assert(documentResponse&&documentResponse.response&&documentResponse.response.fromServiceWorker,"offline reload moet door de actieve serviceworker worden geleverd");
+        assert.equal(cdpNavigationType,"reload","browserprotocol moet de offline navigatie als reload rapporteren");
         await ready(page,10000);
+        const witnessProbe=await witness.evaluate(async token=>{
+          try{
+            const response=await fetch(`/__wiw_post_reload_network_must_fail_${token}`,{cache:"no-store"});
+            return {gefaald:false,status:response.status};
+          }catch(e){return {gefaald:true,fout:String(e)};}
+        },Date.now());
+        assert(witnessProbe.gefaald,`worker-netwerkfout was na offline reload niet meer actief: ${JSON.stringify(witnessProbe)}`);
         const navigationType=await page.evaluate(()=>performance.getEntriesByType("navigation").at(-1)?.type||null);
         assert.equal(navigationType,"reload","offline serviceworker-navigatie moet aantoonbaar een echte reload zijn");
         const offline=await snap(page);assertRelease(offline,"SW offline");
@@ -279,6 +379,16 @@ async function maakStaleCache(page,naam){
         for(const id of ["q","here","ververs","thema"])
           assert.equal(await page.locator("#"+id).isDisabled(),false,`offline actuele appstart moet ${id} activeren`);
       }finally{
+        if(!workerNetwerk&&workerNetwerkfoutActief&&witness){
+          workerNetwerk=await koppelActieveWorkerNetwerk(browser,witness).catch(()=>null);
+        }
+        if(workerNetwerk){
+          await workerNetwerk.child.send("Runtime.evaluate",{
+            expression:'(()=>{if(typeof globalThis.__WIW_E2E_ORIGINAL_FETCH__==="function"){globalThis.fetch=globalThis.__WIW_E2E_ORIGINAL_FETCH__;delete globalThis.__WIW_E2E_ORIGINAL_FETCH__;}return true;})()',
+            returnByValue:true
+          }).catch(()=>{});
+          await workerNetwerk.child.close().catch(()=>{});
+        }
         await page.evaluate(naam=>caches.delete(naam),staleCache).catch(()=>{});
         await context.close().catch(()=>{});
       }
@@ -286,7 +396,6 @@ async function maakStaleCache(page,naam){
 
     console.log("Productie navigatie/cache-herstel geslaagd: hard refresh, nieuw tabblad, Back/Forward en adversarial stale-SW-cache kiezen dezelfde actuele releasegeneratie.");
   }finally{
-    if(browser)await browser.close();
-    await networkGate.close();
+    await browser.close();
   }
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});

@@ -36,7 +36,12 @@ function verifieerGeenPressureQuery(url,naam){
 }
 function isVolledigeBron(bron){return !!(bron&&bron.timezone&&bron.current&&bron.hourly&&bron.daily);}
 const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const BRON_PACING_MS=500;
+const begrensdeMs=(naam,standaard,min,max)=>{
+  const waarde=Number(process.env[naam]||standaard);
+  return Number.isFinite(waarde)?Math.min(max,Math.max(min,Math.round(waarde))):standaard;
+};
+const BRON_PACING_MS=begrensdeMs("WORLDWIDE_SOURCE_PACING_MS",5000,1000,30000);
+const BRON_RETRY_BACKOFF_MS=begrensdeMs("WORLDWIDE_SOURCE_RETRY_BACKOFF_MS",5000,1000,30000);
 const query=locatie=>new URLSearchParams({lat:String(locatie.lat),lon:String(locatie.lon),plaats:locatie.naam,land:locatie.land});
 
 async function ontdekVolledigeForecastUrl(browser,locatie){
@@ -68,7 +73,7 @@ async function haalLiveForecast(url,naam){
       return {bron,poging};
     }catch(e){
       laatsteFout=String(e&&e.message||e);
-      if(poging<3)await slaap(500*poging);
+      if(poging<3)await slaap(BRON_RETRY_BACKOFF_MS*poging);
     }
   }
   throw new Error(`${naam}: live Open-Meteo-bron niet bereikbaar na drie begrensde pogingen: ${laatsteFout}`);

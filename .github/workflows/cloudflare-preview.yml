@@ -141,6 +141,8 @@ jobs:
         env:
           PRODUCTION_ROOT: ${{ env.PREVIEW_ROOT }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+          WORLDWIDE_SOURCE_PACING_MS: 5000
+          WORLDWIDE_SOURCE_RETRY_BACKOFF_MS: 5000
         run: node scripts/run-production-worldwide-browser.js
 
       - name: Finale locatie- en cold-loadacceptatie op deployed preview
@@ -152,4 +154,42 @@ jobs:
           COLD_LOAD_PACING_MS: 15000
           COLD_LOAD_ATTEMPTS: 3
           COLD_LOAD_PROFILE_COOLDOWN_MS: 45000
+          HISTORY_SOURCE_INITIAL_COOLDOWN_MS: 30000
+          HISTORY_SOURCE_PACING_MS: 15000
+          HISTORY_SOURCE_RETRY_BACKOFF_MS: 10000
         run: node scripts/run-production-pre-sale-acceptance-browser.js
+
+  preview-release-navigation:
+    needs: preview
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    timeout-minutes: 10
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      PREVIEW_ROOT: ${{ needs.preview.outputs.preview_url }}
+    steps:
+      - name: Checkout exacte bron-SHA
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Installeer Chromium-driver
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+
+      - name: Installeer native browserreload-driver
+        run: apt-get update && apt-get install -y --no-install-recommends xdotool
+
+      - name: Bewijs release-navigatie en echte offline serviceworker-reload
+        env:
+          PRODUCTION_ROOT: ${{ env.PREVIEW_ROOT }}
+          EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+          HEADLESS: "false"
+          NATIVE_BROWSER_RELOAD: "true"
+        run: xvfb-run --auto-servernum node scripts/production-release-recovery-navigation.js

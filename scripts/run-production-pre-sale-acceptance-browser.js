@@ -21,6 +21,13 @@ async function bouwHistoryForecastFixtures(browser){
     {name:"Kathmandu",lat:27.7172,lon:85.3240,land:"NP"}
   ];
   const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  const begrensdeMs=(naam,standaard,min,max)=>{
+    const waarde=Number(process.env[naam]||standaard);
+    return Number.isFinite(waarde)?Math.min(max,Math.max(min,Math.round(waarde))):standaard;
+  };
+  const initieleAfkoeling=begrensdeMs("HISTORY_SOURCE_INITIAL_COOLDOWN_MS",30000,0,120000);
+  const bronPacing=begrensdeMs("HISTORY_SOURCE_PACING_MS",15000,1000,60000);
+  const retryBackoff=begrensdeMs("HISTORY_SOURCE_RETRY_BACKOFF_MS",10000,1000,60000);
   const isVolledigeForecast=url=>{
     try{
       const u=new URL(url);
@@ -57,18 +64,22 @@ async function bouwHistoryForecastFixtures(browser){
         return {bron,poging};
       }catch(e){
         laatsteFout=String(e&&e.message||e);
-        if(poging<3)await slaap(5000*poging);
+        if(poging<3)await slaap(retryBackoff*poging);
       }
     }
     throw new Error(`${loc.name}: history-fixture live bron niet bereikbaar na drie begrensde pogingen: ${laatsteFout}`);
   };
   const fixtures=[];
+  if(initieleAfkoeling>0){
+    console.log(`PRE_SALE_HISTORY_SOURCE: begrensde upstream-afkoeling ${initieleAfkoeling} ms.`);
+    await slaap(initieleAfkoeling);
+  }
   for(let index=0;index<locaties.length;index++){
     const loc=locaties[index];
     const sourceUrl=await ontdek(loc),live=await haal(sourceUrl,loc);
     fixtures.push({loc,bron:live.bron});
     console.log(`PRE_SALE_HISTORY_SOURCE ${loc.name}: echte forecast eenmalig opgehaald op bronpoging ${live.poging}.`);
-    if(index<locaties.length-1)await slaap(5000);
+    if(index<locaties.length-1)await slaap(bronPacing);
   }
   return fixtures;
 }
