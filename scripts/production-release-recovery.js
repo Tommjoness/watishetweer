@@ -69,7 +69,10 @@ async function wachtOpSha(){
   assert(bootstrapTekst.includes("12000"),"actieve productiebootstrap mist de 12s watchdogtimeout");
   assert(bootstrapTekst.includes("weathernow:app-ready"),"actieve productiebootstrap mist app-ready recovery");
 
-  const sw=await tekst(ROOT+"/sw.js");
+  const swResponse=await fetch(ROOT+"/sw.js",{headers:{"cache-control":"no-cache","pragma":"no-cache"}});
+  assert(swResponse.ok,`productie-serviceworker is niet bereikbaar: HTTP ${swResponse.status}`);
+  assert.equal(swResponse.headers.get("cache-control"),"public, max-age=0, must-revalidate","productie-serviceworker moet bij ieder bezoek hervalideren");
+  const sw=await swResponse.text();
   const swApps=[...sw.matchAll(/app-[0-9a-f]{12}\.min\.js/g)].map(m=>m[0]);
   const swBoots=[...sw.matchAll(/bootstrap-[0-9a-f]{12}\.min\.js/g)].map(m=>m[0]);
   assert.equal(swApps.length,1,"productie-serviceworker moet exact één app-bundlereferentie bevatten");

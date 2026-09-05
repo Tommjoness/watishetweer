@@ -80,6 +80,33 @@ jobs:
           echo "Cloudflare production branch: $production_branch"
           test "$production_branch" = main
 
+      - name: Borg dat custom domains deploymentheaders respecteren
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl -fsS -G "https://api.cloudflare.com/client/v4/zones" \
+            "${auth[@]}" \
+            --data-urlencode 'name=watishetweer.nl' \
+            --data-urlencode "account.id=$CLOUDFLARE_ACCOUNT_ID" \
+            -o /tmp/cloudflare-zones.json
+          jq -e '.success == true and (.result | length) == 1' /tmp/cloudflare-zones.json >/dev/null
+          zone_id="$(jq -r '.result[0].id // ""' /tmp/cloudflare-zones.json)"
+          test -n "$zone_id"
+          setting_api="https://api.cloudflare.com/client/v4/zones/$zone_id/settings/browser_cache_ttl"
+          curl -fsS "${auth[@]}" "$setting_api" -o /tmp/browser-cache-before.json
+          jq -e '.success == true' /tmp/browser-cache-before.json >/dev/null
+          vorige="$(jq -r '.result.value' /tmp/browser-cache-before.json)"
+          echo "Browser Cache TTL voor wijziging: $vorige"
+          if [ "$vorige" != 0 ]; then
+            curl -fsS "${auth[@]}" -X PATCH "$setting_api" \
+              --data '{"value":0}' -o /tmp/browser-cache-update.json
+            jq -e '.success == true and .result.value == 0' /tmp/browser-cache-update.json >/dev/null
+          fi
+          curl -fsS "${auth[@]}" "$setting_api" -o /tmp/browser-cache-after.json
+          jq -e '.success == true and .result.value == 0' /tmp/browser-cache-after.json >/dev/null
+          echo 'Browser Cache TTL: Respect Existing Headers (0).'
+
       - name: Borg Cloudflare API rate limit
         run: node scripts/cloudflare-api-rate-limit.js
 
@@ -194,6 +221,9 @@ jobs:
             html="$(curl -fsSL --max-time 30 "$ROOT/")"
             printf '%s' "$html" | grep -F "$SOURCE_SHA" >/dev/null
           done
+          sw_cache="$(curl -fsSIL --max-time 30 https://watishetweer.nl/sw.js | tr -d '\r' | awk -F': ' 'tolower($1)=="cache-control"{value=$2} END{print value}')"
+          echo "Publieke /sw.js Cache-Control: $sw_cache"
+          test "$sw_cache" = 'public, max-age=0, must-revalidate'
 
       - name: Bewijs echte API edge-cache op publieke domeinen
         if: steps.domains.outputs.all_active == 'true'

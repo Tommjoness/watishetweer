@@ -48,6 +48,39 @@ async function offlineReloadViaServiceworker(page){
   }
   throw new Error(`offline reload leverde na 3 pogingen geen serviceworker-response; ${fouten.join(" | ")}`);
 }
+async function serviceworkerStabiel(page){
+  return page.evaluate(async()=>{
+    const deadline=Date.now()+15000;
+    let laatst=null;
+    while(Date.now()<deadline){
+      const registratie=await navigator.serviceWorker.getRegistration("/");
+      if(registratie&&registratie.waiting)registratie.waiting.postMessage("weathernow:skip-waiting");
+      const controller=navigator.serviceWorker.controller;
+      laatst={
+        controller:!!controller,
+        controllerState:controller&&controller.state||null,
+        controllerUrl:controller&&controller.scriptURL||null,
+        activeState:registratie&&registratie.active&&registratie.active.state||null,
+        installingState:registratie&&registratie.installing&&registratie.installing.state||null,
+        waitingState:registratie&&registratie.waiting&&registratie.waiting.state||null
+      };
+      if(controller&&controller.state==="activated"&&registratie&&registratie.active&&registratie.active.state==="activated"&&!registratie.installing&&!registratie.waiting)return {ok:true,...laatst};
+      await new Promise(resolve=>setTimeout(resolve,50));
+    }
+    return {ok:false,...laatst};
+  });
+}
+async function maakStaleCache(page,naam){
+  await page.evaluate(async ({naam})=>{
+    const c=await caches.open(naam);
+    const stale='<!doctype html><html><head><meta name="wiw-stale-cache-fixture" content="old"><meta name="weather-build-sha" content="stale-old"></head><body>STALE OLD SHELL</body></html>';
+    const headers={"content-type":"text/html; charset=utf-8"};
+    await Promise.all([
+      c.put(new URL("/",location.href).href,new Response(stale,{status:200,headers})),
+      c.put(new URL("/index.html",location.href).href,new Response(stale,{status:200,headers}))
+    ]);
+  },{naam});
+}
 
 (async()=>{
   const browser=await chromium.launch({headless:true});
@@ -122,6 +155,8 @@ async function offlineReloadViaServiceworker(page){
           await page.reload({waitUntil:"load",timeout:30000});await ready(page);
           await page.waitForFunction(()=>!!navigator.serviceWorker.controller,null,{timeout:10000});
         }
+        const stabiel=await serviceworkerStabiel(page);
+        assert(stabiel.ok,`serviceworker lifecycle werd niet stabiel vóór cacheproef: ${JSON.stringify(stabiel)}`);
         const actief=await snap(page);assertRelease(actief,"SW online");
         const cacheInfo=await page.evaluate(async ({app,bootstrap})=>{
           const keys=await caches.keys(),matches=[];
@@ -138,18 +173,26 @@ async function offlineReloadViaServiceworker(page){
         },{app:actief.app,bootstrap:actief.bootstrap});
         assert(cacheInfo.matches.length>=1,`geen huidige SW-cache bevat index + app + bootstrap; caches=${JSON.stringify(cacheInfo.keys)}`);
 
-        await page.evaluate(async ({naam})=>{
-          const c=await caches.open(naam);
-          const stale='<!doctype html><html><head><meta name="wiw-stale-cache-fixture" content="old"><meta name="weather-build-sha" content="stale-old"></head><body>STALE OLD SHELL</body></html>';
-          const headers={"content-type":"text/html; charset=utf-8"};
-          await Promise.all([
-            c.put(new URL("/",location.href).href,new Response(stale,{status:200,headers})),
-            c.put(new URL("/index.html",location.href).href,new Response(stale,{status:200,headers}))
-          ]);
-        },{naam:staleCache});
+        await maakStaleCache(page,staleCache);
         assert((await page.evaluate(naam=>caches.keys().then(x=>x.includes(naam)),staleCache)),"adversarial stale cache kon niet worden aangemaakt");
 
+        const onlineResponse=await page.reload({waitUntil:"load",timeout:30000});
+        assert(onlineResponse&&onlineResponse.ok(),"online netwerk-eerst-herlaad vóór offlineproef moet slagen");
+        await ready(page,10000);
+        const online=await snap(page);assertRelease(online,"SW online herlaad");
+        assert.equal(online.stale,null,"online netwerk-eerst-herlaad koos de kunstmatig oude cachegeneratie");
+        assert.equal(online.build,actief.build,"online netwerk-eerst-herlaad wijzigde de actieve build");
+        assert((await serviceworkerStabiel(page)).ok,"serviceworker lifecycle verloor stabiliteit na online herlaad");
+        await maakStaleCache(page,staleCache);
+
         await context.setOffline(true);
+        const offlineProbe=await page.evaluate(async()=>{
+          try{
+            const response=await fetch("/index.html",{cache:"reload"});
+            return {ok:response.ok,status:response.status,lengte:(await response.text()).length};
+          }catch(e){return {ok:false,status:0,lengte:0,fout:String(e)};}
+        });
+        assert(offlineProbe.ok&&offlineProbe.lengte>0,`actieve serviceworker leverde geen gecachete index terwijl netwerk offline was: ${JSON.stringify(offlineProbe)}`);
         const response=await offlineReloadViaServiceworker(page);
         assert(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker(),"offline reload moet door de actieve serviceworker worden geleverd");
         await ready(page,10000);

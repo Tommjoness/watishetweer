@@ -15,6 +15,7 @@ function vervangEen(bron,zoek,vervang,label){
 
 async function bouwHistoryForecastFixtures(browser){
   const locaties=[
+    {name:"Almere",lat:52.3508,lon:5.2647,land:"NL"},
     {name:"Amsterdam",lat:52.3676,lon:4.9041,land:"NL"},
     {name:"Dubai",lat:25.2048,lon:55.2708,land:"AE"},
     {name:"Kathmandu",lat:27.7172,lon:85.3240,land:"NP"}
@@ -56,21 +57,37 @@ async function bouwHistoryForecastFixtures(browser){
         return {bron,poging};
       }catch(e){
         laatsteFout=String(e&&e.message||e);
-        if(poging<3)await slaap(500*poging);
+        if(poging<3)await slaap(5000*poging);
       }
     }
     throw new Error(`${loc.name}: history-fixture live bron niet bereikbaar na drie begrensde pogingen: ${laatsteFout}`);
   };
   const fixtures=[];
-  for(const loc of locaties){
+  for(let index=0;index<locaties.length;index++){
+    const loc=locaties[index];
     const sourceUrl=await ontdek(loc),live=await haal(sourceUrl,loc);
     fixtures.push({loc,bron:live.bron});
     console.log(`PRE_SALE_HISTORY_SOURCE ${loc.name}: echte forecast eenmalig opgehaald op bronpoging ${live.poging}.`);
+    if(index<locaties.length-1)await slaap(5000);
   }
   return fixtures;
 }
 
 let bron=fs.readFileSync(target,"utf8");
+bron=vervangEen(bron,"async function coldLoads(profile,browser){","async function coldLoads(profile,browser,coldFixture){","cold-load fixture-signatuur");
+const coldPageAnchor='      const page=await context.newPage(),consoleErrors=[],pageErrors=[],failed=[],requests=[];';
+const coldRouteInject=`      const page=await context.newPage(),consoleErrors=[],pageErrors=[],failed=[],requests=[];
+      if(!coldFixture||!coldFixture.bron)throw new Error("Almere cold-loadbron ontbreekt");
+      await page.route("**://api.open-meteo.com/v1/forecast**",async route=>{
+        let isAlmere=false;
+        try{
+          const u=new URL(route.request().url()),lat=Number(u.searchParams.get("latitude")),lon=Number(u.searchParams.get("longitude"));
+          isAlmere=coordOk(lat,coldFixture.loc.lat)&&coordOk(lon,coldFixture.loc.lon);
+        }catch(_){ }
+        if(isAlmere)return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(coldFixture.bron)});
+        return route.continue();
+      });`;
+bron=vervangEen(bron,coldPageAnchor,coldRouteInject,"cold-load fixture-route");
 const attemptAnchor='async function historyFlowAttempt(profile,browser){\n  const context=await browser.newContext({...profile.options,locale:"nl-NL",serviceWorkers:"block"});\n  const page=await context.newPage(),errors=[],failed=[];';
 const routeInject=`async function historyFlowAttempt(profile,browser,historyFixtures){\n  const context=await browser.newContext({...profile.options,locale:"nl-NL",serviceWorkers:"block"});\n  const page=await context.newPage(),errors=[],failed=[];\n  await page.route("**://api.open-meteo.com/v1/forecast**",async route=>{\n    let fixture=null;\n    try{\n      const u=new URL(route.request().url()),lat=Number(u.searchParams.get("latitude")),lon=Number(u.searchParams.get("longitude"));\n      fixture=historyFixtures.find(item=>coordOk(lat,item.loc.lat)&&coordOk(lon,item.loc.lon))||null;\n    }catch(_){ }\n    if(fixture)return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(fixture.bron)});\n    return route.continue();\n  });`;
 bron=vervangEen(bron,attemptAnchor,bouwHistoryForecastFixtures.toString()+"\n\n"+routeInject,"history fixture-injectie");
@@ -81,6 +98,7 @@ const mainAnchor='(async()=>{\n  const report={expectedSha:EXPECTED,cold:[],duba
 const mainInject='(async()=>{\n  const report={expectedSha:EXPECTED,cold:[],dubai:[],history:{},locations:[]};\n  const historyFixtureBrowser=await chromium.launch({headless:true});\n  let historyFixtures;\n  try{historyFixtures=await bouwHistoryForecastFixtures(historyFixtureBrowser);}\n  finally{await historyFixtureBrowser.close();}\n  for(let profileIndex=0;profileIndex<profiles.length;profileIndex++){\n    const profile=profiles[profileIndex];';
 bron=vervangEen(bron,mainAnchor,mainInject,"history fixture-bootstrap");
 bron=vervangEen(bron,"report.history[profile.name]=await historyFlow(profile,browser);","report.history[profile.name]=await historyFlow(profile,browser,historyFixtures);","history fixture-doorvoer");
+bron=vervangEen(bron,"report.cold.push(...await coldLoads(profile,browser));","report.cold.push(...await coldLoads(profile,browser,historyFixtures.find(item=>item.loc.name===\"Almere\")));","cold-load fixture-doorvoer");
 
 try{
   fs.writeFileSync(temp,bron,"utf8");
