@@ -42,7 +42,7 @@ assert.ok(middleware.includes("X-Content-Type-Options"));
 assert.ok(middleware.includes("Content-Security-Policy"));
 assert.ok(middleware.includes('new URL(context.request.url).pathname==="/sw.js"'), "middleware herkent uitsluitend de serviceworkerroute");
 assert.ok(middleware.includes("context.env.ASSETS.fetch(context.request)"), "serviceworker moet de exact gebouwde Pages-asset serveren");
-assert.ok(middleware.includes('headers.set("Cache-Control","public, max-age=0, must-revalidate")'), "serviceworker mist een function-level revalidatiecontract");
+assert.ok(middleware.includes('headers.set("Cache-Control","public, no-store, max-age=0, must-revalidate")'), "serviceworker mist een function-level bypass- en revalidatiecontract");
 
 const routes = JSON.parse(lees("cloudflare/_routes.json"));
 assert.deepStrictEqual(routes, { version: 1, include: ["/api/*", "/sw.js"], exclude: [] });
