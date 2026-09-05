@@ -48,6 +48,78 @@ async function offlineReloadViaServiceworker(page){
   }
   throw new Error(`offline reload leverde na 3 pogingen geen serviceworker-response; ${fouten.join(" | ")}`);
 }
+function childCdpSession(root,sessionId){
+  let volgnummer=0,gesloten=false;
+  const wachtend=new Map();
+  const ontvang=event=>{
+    if(event.sessionId!==sessionId)return;
+    let bericht;
+    try{bericht=JSON.parse(event.message);}catch(_){return;}
+    const item=wachtend.get(bericht.id);
+    if(!item)return;
+    wachtend.delete(bericht.id);
+    clearTimeout(item.timer);
+    if(bericht.error)item.reject(new Error(`${item.method}: ${bericht.error.message||JSON.stringify(bericht.error)}`));
+    else item.resolve(bericht.result||{});
+  };
+  root.on("Target.receivedMessageFromTarget",ontvang);
+  return {
+    send(method,params={}){
+      if(gesloten)return Promise.reject(new Error(`CDP-workersessie is gesloten voor ${method}`));
+      const id=++volgnummer;
+      return new Promise((resolve,reject)=>{
+        const timer=setTimeout(()=>{
+          wachtend.delete(id);
+          reject(new Error(`${method}: geen worker-CDP-antwoord binnen 5000 ms`));
+        },5000);
+        wachtend.set(id,{resolve,reject,timer,method});
+        root.send("Target.sendMessageToTarget",{sessionId,message:JSON.stringify({id,method,params})})
+          .catch(err=>{
+            const item=wachtend.get(id);
+            if(!item)return;
+            wachtend.delete(id);clearTimeout(item.timer);reject(err);
+          });
+      });
+    },
+    async close(){
+      if(gesloten)return;
+      gesloten=true;
+      root.off("Target.receivedMessageFromTarget",ontvang);
+      for(const item of wachtend.values()){
+        clearTimeout(item.timer);
+        item.reject(new Error(`CDP-workersessie gesloten tijdens ${item.method}`));
+      }
+      wachtend.clear();
+      await root.send("Target.detachFromTarget",{sessionId}).catch(()=>{});
+      await root.detach().catch(()=>{});
+    }
+  };
+}
+async function koppelActieveWorkerNetwerk(browser,page){
+  const root=await browser.newBrowserCDPSession();
+  try{
+    await root.send("Target.setDiscoverTargets",{discover:true});
+    const scriptURL=await page.evaluate(()=>navigator.serviceWorker.controller&&navigator.serviceWorker.controller.scriptURL||null);
+    assert(scriptURL,"actieve serviceworker-URL ontbreekt vóór worker-netwerkproef");
+    let doel=null,laatste=[];
+    const deadline=Date.now()+5000;
+    while(Date.now()<deadline&&!doel){
+      await page.evaluate(()=>fetch("/index.html",{cache:"reload"}).then(r=>r.arrayBuffer())).catch(()=>{});
+      const targets=await root.send("Target.getTargets");
+      laatste=(targets.targetInfos||[]).filter(x=>x.type==="service_worker").map(x=>({url:x.url,targetId:x.targetId}));
+      doel=(targets.targetInfos||[]).find(x=>x.type==="service_worker"&&x.url===scriptURL)||null;
+      if(!doel)await new Promise(resolve=>setTimeout(resolve,50));
+    }
+    assert(doel,`actieve sw.js-target ontbreekt; verwacht=${scriptURL}; targets=${JSON.stringify(laatste)}`);
+    const gekoppeld=await root.send("Target.attachToTarget",{targetId:doel.targetId,flatten:false});
+    const child=childCdpSession(root,gekoppeld.sessionId);
+    await child.send("Network.enable");
+    return {child,scriptURL,targetId:doel.targetId};
+  }catch(err){
+    await root.detach().catch(()=>{});
+    throw err;
+  }
+}
 async function serviceworkerStabiel(page){
   return page.evaluate(async()=>{
     const deadline=Date.now()+15000;
@@ -149,6 +221,7 @@ async function maakStaleCache(page,naam){
       const cdp=await context.newCDPSession(page);
       await Promise.all([cdp.send("Network.enable"),cdp.send("Page.enable")]);
       const staleCache=`watishetweer-e2e-stale-${Date.now()}`;
+      let workerNetwerk=null;
       try{
         await page.goto(ROOT+"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL",{waitUntil:"load",timeout:30000});
         await weatherReady(page);
@@ -187,11 +260,9 @@ async function maakStaleCache(page,naam){
         assert((await serviceworkerStabiel(page)).ok,"serviceworker lifecycle verloor stabiliteit na online herlaad");
         await maakStaleCache(page,staleCache);
 
-        const offlineEmulation=await cdp.send("Network.emulateNetworkConditionsByRule",{
-          emulateOfflineServiceWorker:true,
-          matchedNetworkConditions:[{
-            urlPattern:"",latency:0,downloadThroughput:-1,uploadThroughput:-1,offline:true
-          }]
+        workerNetwerk=await koppelActieveWorkerNetwerk(browser,page);
+        await workerNetwerk.child.send("Network.emulateNetworkConditions",{
+          offline:true,latency:0,downloadThroughput:-1,uploadThroughput:-1
         });
         await cdp.send("Network.overrideNetworkState",{
           offline:true,latency:0,downloadThroughput:-1,uploadThroughput:-1
@@ -214,7 +285,7 @@ async function maakStaleCache(page,naam){
         const [indexResponse,offlineProbe]=await Promise.all([indexResponsePromise,offlineProbePromise]);
         assert(indexResponse.fromServiceWorker(),"offline index-preflight moet aantoonbaar uit de actieve serviceworker komen");
         assert(offlineProbe.ok&&offlineProbe.lengte>0,`actieve serviceworker leverde geen gecachete index terwijl netwerk offline was: ${JSON.stringify(offlineProbe)}`);
-        console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),offlineEmulation,navigatorOnline:await page.evaluate(()=>navigator.onLine),netwerkProbe,offlineProbe,indexFromServiceWorker:indexResponse.fromServiceWorker()}));
+        console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),workerTarget:{scriptURL:workerNetwerk.scriptURL,targetId:workerNetwerk.targetId},navigatorOnline:await page.evaluate(()=>navigator.onLine),netwerkProbe,offlineProbe,indexFromServiceWorker:indexResponse.fromServiceWorker()}));
         const response=await offlineReloadViaServiceworker(page);
         assert(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker(),"offline reload moet door de actieve serviceworker worden geleverd");
         await ready(page,10000);
@@ -228,10 +299,12 @@ async function maakStaleCache(page,naam){
         for(const id of ["q","here","ververs","thema"])
           assert.equal(await page.locator("#"+id).isDisabled(),false,`offline actuele appstart moet ${id} activeren`);
       }finally{
-        await cdp.send("Network.emulateNetworkConditionsByRule",{
-          emulateOfflineServiceWorker:false,
-          matchedNetworkConditions:[]
-        }).catch(()=>{});
+        if(workerNetwerk){
+          await workerNetwerk.child.send("Network.emulateNetworkConditions",{
+            offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1
+          }).catch(()=>{});
+          await workerNetwerk.child.close().catch(()=>{});
+        }
         await cdp.send("Network.overrideNetworkState",{
           offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1
         }).catch(()=>{});
