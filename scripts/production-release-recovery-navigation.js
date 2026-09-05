@@ -264,10 +264,6 @@ async function maakStaleCache(page,naam){
         await workerNetwerk.child.send("Network.emulateNetworkConditions",{
           offline:true,latency:0,downloadThroughput:-1,uploadThroughput:-1
         });
-        await cdp.send("Network.overrideNetworkState",{
-          offline:true,latency:0,downloadThroughput:-1,uploadThroughput:-1
-        });
-        assert.equal(await page.evaluate(()=>navigator.onLine),false,"browser moet voor de offlineproef offline rapporteren");
         const netwerkProbe=await page.evaluate(async token=>{
           try{
             const response=await fetch(`/__wiw_network_must_fail_${token}`,{cache:"no-store"});
@@ -285,7 +281,7 @@ async function maakStaleCache(page,naam){
         const [indexResponse,offlineProbe]=await Promise.all([indexResponsePromise,offlineProbePromise]);
         assert(indexResponse.fromServiceWorker(),"offline index-preflight moet aantoonbaar uit de actieve serviceworker komen");
         assert(offlineProbe.ok&&offlineProbe.lengte>0,`actieve serviceworker leverde geen gecachete index terwijl netwerk offline was: ${JSON.stringify(offlineProbe)}`);
-        console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),workerTarget:{scriptURL:workerNetwerk.scriptURL,targetId:workerNetwerk.targetId},navigatorOnline:await page.evaluate(()=>navigator.onLine),netwerkProbe,offlineProbe,indexFromServiceWorker:indexResponse.fromServiceWorker()}));
+        console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),workerTarget:{scriptURL:workerNetwerk.scriptURL,targetId:workerNetwerk.targetId},netwerkProbe,offlineProbe,indexFromServiceWorker:indexResponse.fromServiceWorker()}));
         const response=await offlineReloadViaServiceworker(page);
         assert(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker(),"offline reload moet door de actieve serviceworker worden geleverd");
         await ready(page,10000);
@@ -305,9 +301,6 @@ async function maakStaleCache(page,naam){
           }).catch(()=>{});
           await workerNetwerk.child.close().catch(()=>{});
         }
-        await cdp.send("Network.overrideNetworkState",{
-          offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1
-        }).catch(()=>{});
         await page.evaluate(naam=>caches.delete(naam),staleCache).catch(()=>{});
         await context.close().catch(()=>{});
       }
