@@ -32,7 +32,11 @@ async function wachtOpSha(){
     try{
       const html=await tekst(ROOT+"/");
       laatste=marker(html);
-      if(!EXPECTED_SHA||laatste===EXPECTED_SHA)return html;
+      if(!EXPECTED_SHA||laatste===EXPECTED_SHA){
+        const bundle=app(html,"/"),boot=bootstrap(html,"/");
+        await Promise.all([tekst(ROOT+bundle),tekst(ROOT+boot)]);
+        return html;
+      }
     }catch(e){laatste=String(e&&e.message||e);}
     if(poging<ATTEMPTS)await slaap(POLL_MS);
   }
