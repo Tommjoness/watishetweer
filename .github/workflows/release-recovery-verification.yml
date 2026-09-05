@@ -1,0 +1,63 @@
+name: Release recovery verification
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recovery-build-browser:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Installeer builddependencies
+        run: npm install --ignore-scripts
+      - name: Installeer Chromium-driver voor gerichte hersteltest
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Controleer recovery- en productiescripts syntactisch
+        run: |
+          node --check browser-release-recovery-20260904.test.js
+          node --check browser-serviceworker-upgrade.test.js
+          node --check scripts/production-release-recovery.js
+          node --check scripts/production-release-recovery-browser.js
+          node --check scripts/production-release-recovery-navigation.js
+      - name: Bouw exact herstelartifact
+        env:
+          WEATHER_BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build:cloudflare 2>&1 | tee release-recovery-build.log
+      - name: Controleer één hoofdclient op alle app-routes
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/release-bundle-consistency.test.js 2>&1 | tee release-recovery-static.log
+      - name: Test no-JS, failed-JS, refresh en BFCache
+        shell: bash
+        run: |
+          set -o pipefail
+          xvfb-run --auto-servernum node browser-release-recovery-20260904.test.js 2>&1 | tee release-recovery-browser.log
+      - name: Test actuele offline serviceworker-generatie
+        shell: bash
+        run: |
+          set -o pipefail
+          node browser-serviceworker-upgrade.test.js 2>&1 | tee release-recovery-serviceworker.log
+      - name: Bewaar hersteltestdiagnostiek
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-recovery-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}
+          path: release-recovery-*.log
+          if-no-files-found: warn
+          retention-days: 7

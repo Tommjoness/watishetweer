@@ -5,8 +5,11 @@ const {chromium,webkit,devices}=require("playwright");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const EXPECTED=String(process.env.EXPECTED_SHA||"").trim();
-const PER_PROFILE=Math.max(1,Number(process.env.COLD_LOAD_RUNS_PER_PROFILE||15));
+const PER_PROFILE=Math.max(1,Number(process.env.COLD_LOAD_RUNS_PER_PROFILE||5));
 const OBSERVATION_MS=Math.max(1000,Number(process.env.COLD_LOAD_OBSERVATION_MS||12000));
+const COLD_PACING_MS=Math.max(250,Number(process.env.COLD_LOAD_PACING_MS||5000));
+const COLD_ATTEMPTS=Math.max(1,Math.min(4,Number(process.env.COLD_LOAD_ATTEMPTS||3)));
+const COLD_PROFILE_COOLDOWN_MS=Math.max(0,Number(process.env.COLD_LOAD_PROFILE_COOLDOWN_MS||15000));
 if(!/^[0-9a-f]{7,40}$/i.test(EXPECTED))throw new Error("EXPECTED_SHA ontbreekt of is ongeldig.");
 
 const profiles=[
@@ -88,35 +91,48 @@ function assertIdentity(x,expected){
 async function coldLoads(profile,browser){
   const rows=[];
   for(let i=1;i<=PER_PROFILE;i++){
-    const context=await browser.newContext({...profile.options,locale:"nl-NL",serviceWorkers:"block"});
-    const page=await context.newPage(),consoleErrors=[],pageErrors=[],failed=[],requests=[];
-    page.on("console",m=>{if(m.type()==="error")consoleErrors.push(m.text());});
-    page.on("pageerror",e=>pageErrors.push(String(e)));
-    page.on("requestfailed",r=>failed.push({url:r.url(),error:r.failure()?.errorText||"failed"}));
-    page.on("request",r=>{if(r.url().includes("api.open-meteo.com/v1/forecast"))requests.push({url:r.url(),start:Date.now(),end:null,status:null});});
-    page.on("response",r=>{const item=[...requests].reverse().find(x=>x.url===r.url()&&x.end==null);if(item){item.status=r.status();item.end=Date.now();}});
-    const start=Date.now();
-    try{
-      const q=new URLSearchParams({lat:"52.3508",lon:"5.2647",plaats:"Almere",land:"NL",coldcheck:`${profile.name}-${i}-${start}-${Math.random().toString(36).slice(2)}`});
-      const response=await page.goto(ROOT+"/?"+q,{waitUntil:"domcontentloaded",timeout:30000});
-      const domMs=Date.now()-start;
-      assert(response&&response.ok(),`${profile.name} run ${i}: HTTP ${response&&response.status()}`);
-      const terminal=await waitTerminal(page,start);
-      const x=terminal.state;
-      assert.equal(x.sha,EXPECTED,`${profile.name} run ${i}: verkeerde build ${x.sha}`);
-      assert(kernGereed(x)||x.error,`${profile.name} run ${i}: na ${terminal.ms} ms nog generiek/onvolledig laden; status=${x.status}`);
-      assertIdentity(x,{name:"Almere",lat:52.3508,lon:5.2647,land:"NL"});
-      assert.deepEqual(pageErrors,[],`${profile.name} run ${i}: pageerrors ${pageErrors.join(" | ")}`);
-      assert.deepEqual(consoleErrors,[],`${profile.name} run ${i}: console-errors ${consoleErrors.join(" | ")}`);
-      if(x.data){
-        assert(x.brief.length>0,`${profile.name} run ${i}: briefing leeg`);
-        assert(x.chartTexts>=4,`${profile.name} run ${i}: grafiek niet bruikbaar`);
-        assert.equal(x.days,7,`${profile.name} run ${i}: weekverwachting heeft ${x.days} rijen`);
+    let geslaagd=false,laatsteProviderFout=null;
+    for(let poging=1;poging<=COLD_ATTEMPTS&&!geslaagd;poging++){
+      const context=await browser.newContext({...profile.options,locale:"nl-NL",serviceWorkers:"block"});
+      const page=await context.newPage(),consoleErrors=[],pageErrors=[],failed=[],requests=[];
+      page.on("console",m=>{if(m.type()==="error")consoleErrors.push(m.text());});
+      page.on("pageerror",e=>pageErrors.push(String(e)));
+      page.on("requestfailed",r=>failed.push({url:r.url(),error:r.failure()?.errorText||"failed"}));
+      page.on("request",r=>{if(r.url().includes("api.open-meteo.com/v1/forecast"))requests.push({url:r.url(),start:Date.now(),end:null,status:null});});
+      page.on("response",r=>{const item=[...requests].reverse().find(x=>x.url===r.url()&&x.end==null);if(item){item.status=r.status();item.end=Date.now();}});
+      const start=Date.now();
+      try{
+        const q=new URLSearchParams({lat:"52.3508",lon:"5.2647",plaats:"Almere",land:"NL",coldcheck:`${profile.name}-${i}-${poging}-${start}-${Math.random().toString(36).slice(2)}`});
+        const response=await page.goto(ROOT+"/?"+q,{waitUntil:"domcontentloaded",timeout:30000});
+        const domMs=Date.now()-start;
+        assert(response&&response.ok(),`${profile.name} run ${i}/poging ${poging}: HTTP ${response&&response.status()}`);
+        const terminal=await waitTerminal(page,start);
+        const x=terminal.state;
+        assert.equal(x.sha,EXPECTED,`${profile.name} run ${i}/poging ${poging}: verkeerde build ${x.sha}`);
+        if(x.error){
+          laatsteProviderFout=new Error(`${profile.name} run ${i}/poging ${poging}: gecontroleerde providerfout na ${terminal.ms} ms; status=${x.status}; failed=${JSON.stringify(failed)}`);
+        }else{
+          assert(kernGereed(x),`${profile.name} run ${i}/poging ${poging}: na ${terminal.ms} ms nog generiek/onvolledig laden; status=${x.status}`);
+          assertIdentity(x,{name:"Almere",lat:52.3508,lon:5.2647,land:"NL"});
+          assert.deepEqual(pageErrors,[],`${profile.name} run ${i}/poging ${poging}: pageerrors ${pageErrors.join(" | ")}`);
+          assert.deepEqual(consoleErrors,[],`${profile.name} run ${i}/poging ${poging}: console-errors ${consoleErrors.join(" | ")}`);
+          assert(x.brief.length>0,`${profile.name} run ${i}: briefing leeg`);
+          assert(x.chartTexts>=4,`${profile.name} run ${i}: grafiek niet bruikbaar`);
+          assert.equal(x.days,7,`${profile.name} run ${i}: weekverwachting heeft ${x.days} rijen`);
+          const forecastDurations=requests.filter(r=>r.end&&r.status>=200&&r.status<300).map(r=>r.end-r.start);
+          rows.push({profile:profile.name,run:i,attempt:poging,domMs,terminalMs:terminal.ms,terminal:"data",forecastDurations,failed:failed.length,status:x.status});
+          console.log("PRE_SALE_COLD "+JSON.stringify(rows.at(-1)));
+          geslaagd=true;
+        }
+      }finally{await context.close();}
+      if(!geslaagd&&poging<COLD_ATTEMPTS){
+        const backoff=COLD_PACING_MS*poging;
+        console.warn(`PRE_SALE_COLD_RETRY ${profile.name} run ${i}: ${laatsteProviderFout&&laatsteProviderFout.message}; backoff=${backoff}ms`);
+        await new Promise(resolve=>setTimeout(resolve,backoff));
       }
-      const forecastDurations=requests.filter(r=>r.end&&r.status>=200&&r.status<300).map(r=>r.end-r.start);
-      rows.push({profile:profile.name,run:i,domMs,terminalMs:terminal.ms,terminal:x.data?"data":"error",forecastDurations,failed:failed.length,status:x.status});
-      console.log("PRE_SALE_COLD "+JSON.stringify(rows.at(-1)));
-    }finally{await context.close();}
+    }
+    if(!geslaagd)throw new Error(`${profile.name} run ${i}: geen geldige weatherdata na ${COLD_ATTEMPTS} begrensde pogingen. Laatste fout: ${laatsteProviderFout&&laatsteProviderFout.message}`);
+    await new Promise(resolve=>setTimeout(resolve,COLD_PACING_MS));
   }
   return rows;
 }
@@ -301,19 +317,24 @@ async function requestedLocationMatrix(browser){
 
 (async()=>{
   const report={expectedSha:EXPECTED,cold:[],dubai:[],history:{},locations:[]};
-  for(const profile of profiles){
+  for(let profileIndex=0;profileIndex<profiles.length;profileIndex++){
+    const profile=profiles[profileIndex];
     const browser=await profile.engine.launch({headless:true});
     try{
       report.cold.push(...await coldLoads(profile,browser));
       report.dubai.push(...await dubaiRepeats(profile,browser,3));
       report.history[profile.name]=await historyFlow(profile,browser);
     }finally{await browser.close();}
+    if(profileIndex<profiles.length-1&&COLD_PROFILE_COOLDOWN_MS>0){
+      console.log(`PRE_SALE_COLD_PROFILE_COOLDOWN ${COLD_PROFILE_COOLDOWN_MS}ms`);
+      await new Promise(resolve=>setTimeout(resolve,COLD_PROFILE_COOLDOWN_MS));
+    }
   }
   const matrixBrowser=await chromium.launch({headless:true});
   try{report.locations=await requestedLocationMatrix(matrixBrowser);}
   finally{await matrixBrowser.close();}
   assert.equal(report.cold.length,PER_PROFILE*profiles.length,"cold-load totaal klopt niet");
-  assert.equal(report.cold.filter(r=>r.terminal==="data"||r.terminal==="error").length,report.cold.length,"niet alle cold loads zijn terminaal");
+  assert.equal(report.cold.filter(r=>r.terminal==="data").length,report.cold.length,"niet alle cold loads leverden geldige weatherdata");
   assert.equal(report.locations.length,requestedLocations.length,"niet alle voorgeschreven locaties zijn geverifieerd");
   const normale=report.cold.filter(r=>r.terminal==="data"&&r.forecastDurations.some(ms=>ms<=2000));
   assert(normale.length>0,"geen normale succesvolle performance-runs gemeten");

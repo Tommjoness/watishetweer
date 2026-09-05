@@ -77,8 +77,8 @@ bron=vervangEen(bron,attemptAnchor,bouwHistoryForecastFixtures.toString()+"\n\n"
 bron=vervangEen(bron,"async function historyFlow(profile,browser){","async function historyFlow(profile,browser,historyFixtures){","historyFlow-signatuur");
 bron=vervangEen(bron,"const states=await historyFlowAttempt(profile,browser);","const states=await historyFlowAttempt(profile,browser,historyFixtures);","historyFlow-aanroep");
 bron=vervangEen(bron,"return alleenBekendeMeldingen&&alleenAnnuleringen&&heeftForecastAnnulering&&heeftWaarschuwingAnnulering;","return alleenBekendeMeldingen&&alleenAnnuleringen&&heeftWaarschuwingAnnulering;","WebKit-classifier voor fixture-history");
-const mainAnchor='(async()=>{\n  const report={expectedSha:EXPECTED,cold:[],dubai:[],history:{},locations:[]};\n  for(const profile of profiles){';
-const mainInject='(async()=>{\n  const report={expectedSha:EXPECTED,cold:[],dubai:[],history:{},locations:[]};\n  const historyFixtureBrowser=await chromium.launch({headless:true});\n  let historyFixtures;\n  try{historyFixtures=await bouwHistoryForecastFixtures(historyFixtureBrowser);}\n  finally{await historyFixtureBrowser.close();}\n  for(const profile of profiles){';
+const mainAnchor='(async()=>{\n  const report={expectedSha:EXPECTED,cold:[],dubai:[],history:{},locations:[]};\n  for(let profileIndex=0;profileIndex<profiles.length;profileIndex++){\n    const profile=profiles[profileIndex];';
+const mainInject='(async()=>{\n  const report={expectedSha:EXPECTED,cold:[],dubai:[],history:{},locations:[]};\n  const historyFixtureBrowser=await chromium.launch({headless:true});\n  let historyFixtures;\n  try{historyFixtures=await bouwHistoryForecastFixtures(historyFixtureBrowser);}\n  finally{await historyFixtureBrowser.close();}\n  for(let profileIndex=0;profileIndex<profiles.length;profileIndex++){\n    const profile=profiles[profileIndex];';
 bron=vervangEen(bron,mainAnchor,mainInject,"history fixture-bootstrap");
 bron=vervangEen(bron,"report.history[profile.name]=await historyFlow(profile,browser);","report.history[profile.name]=await historyFlow(profile,browser,historyFixtures);","history fixture-doorvoer");
 

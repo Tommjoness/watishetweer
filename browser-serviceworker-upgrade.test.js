@@ -13,6 +13,11 @@ const swPad=path.join(PUBLIC,"sw.js");
 if(!fs.existsSync(indexPad)||!fs.existsSync(swPad))throw new Error("Definitieve public-artifact ontbreekt voor serviceworker-E2E.");
 
 const indexNieuw=fs.readFileSync(indexPad,"utf8");
+const appMatch=/src="\/(app-[0-9a-f]{12}\.min\.js)"/.exec(indexNieuw);
+const bootstrapMatch=/src="\/(bootstrap-[0-9a-f]{12}\.min\.js)"[^>]*\bdefer\b[^>]*\bdata-weather-bootstrap\b/.exec(indexNieuw);
+if(!appMatch||!bootstrapMatch)throw new Error("Definitieve HTML mist actuele app- of deferred bootstrapasset voor SW-E2E.");
+const appAsset=appMatch[1],bootstrapAsset=bootstrapMatch[1];
+if(!fs.existsSync(path.join(PUBLIC,appAsset))||!fs.existsSync(path.join(PUBLIC,bootstrapAsset)))throw new Error("Actuele app/bootstrap ontbreekt op disk voor SW-E2E.");
 const swBasis=fs.readFileSync(swPad,"utf8");
 const cacheMatch=/const CACHE = "([^"]+)";/.exec(swBasis);
 if(!cacheMatch)throw new Error("Definitieve serviceworker-cache-id ontbreekt.");
@@ -22,6 +27,9 @@ if(cacheNieuw===cacheOud)throw new Error("Testcache botst met definitieve cache-
 assert.equal((swBasis.match(/caches\.open\(CACHE\)/g)||[]).length,1,"definitieve worker opent zijn generatiecache alleen tijdens install");
 assert(!/CACHE_HANDLE|\.put\(e\.request/.test(swBasis),"definitieve worker heeft geen runtime-schrijfpad naar zijn generatiecache");
 assert(/caches\.match\(request,\{cacheName:CACHE\}\)/.test(swBasis),"offline lookup is tot de huidige generatiecache beperkt");
+assert.equal(swBasis.split(appAsset).length-1,1,"serviceworker moet actuele appasset exact één keer precachen");
+assert.equal(swBasis.split(bootstrapAsset).length-1,1,"serviceworker moet actuele bootstrapasset exact één keer precachen");
+assert(swBasis.includes('e.data!=="weathernow:skip-waiting"'),"serviceworker mist expliciete fallback voor een onverwacht wachtende update");
 
 function metMarker(html,versie){
   const marker='<meta name="sw-e2e-build" content="'+versie+'">';
@@ -93,13 +101,7 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
     /* 2. Normale updatecheck naar exact de definitieve worker. De worker mag pas
        activeren nadat zijn install-waitUntil klaar is. Chromium kan de zojuist
        gecommitte CacheStorage-entries vanuit de page-context echter een fractie
-       later zichtbaar maken dan active/controller.
-
-       De observatie blijft read-only: caches.open() wordt pas gebruikt nadat
-       caches.keys() de nieuwe generatiecache al heeft aangetoond. Bij een timeout
-       retourneert dezelfde browser-evaluatie de laatste lifecycle-, versie- en
-       cachestatus. Daarmee kan CI een echte workerfout onderscheiden van een
-       observatierace zonder de 15 s grens of de inhoudelijke eisen te versoepelen. */
+       later zichtbaar maken dan active/controller. */
     fase="new";
     await page.evaluate(async()=>{
       const r=await navigator.serviceWorker.getRegistration();
@@ -118,6 +120,7 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
       let laatste=null;
       while(Date.now()<deadline){
         const r=await navigator.serviceWorker.getRegistration();
+        if(r&&r.waiting)r.waiting.postMessage("weathernow:skip-waiting");
         const controller=navigator.serviceWorker.controller||null;
         const keys=await caches.keys();
         const [installingVersie,wachtendVersie,actiefVersie,controllerVersie]=await Promise.all([
@@ -150,6 +153,8 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
     assert.equal(installInfo.marker,"new","nieuwe install-cache bevat de nieuwe index vóór online reload; "+JSON.stringify(installInfo));
     assert.equal(installInfo.heeftIndex,true,"geslaagde install-observatie moet de canonieke index bevatten");
     assert(installInfo.lengte>0,"geslaagde install-observatie moet niet-lege index-HTML bevatten");
+    assert(installInfo.urls.some(u=>u.endsWith("/"+appAsset)),"huidige install-cache mist actuele appasset "+appAsset);
+    assert(installInfo.urls.some(u=>u.endsWith("/"+bootstrapAsset)),"huidige install-cache mist actuele bootstrapasset "+bootstrapAsset);
 
     /* 3. Maak daarna expres een kwaadaardige oude cache terug met oude HTML.
        Dit bootst het slechtste CacheStorage-randgeval na. De actieve worker mag
@@ -175,22 +180,28 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
       await c.put("./index.html",new Response(oudeHtml,{status:200,headers}));
     },{naam:cacheOud,oudeHtml:'<!doctype html><html><head><meta name="sw-e2e-build" content="old"></head><body>STALE OLD SHELL</body></html>'});
 
-    /* 4. Netwerk volledig uit. Juist nu bewijst de marker dat de fallback alleen
-       de huidige generation-scoped CACHE leest, zelfs als een oude cache bestaat. */
+    /* 4. Netwerk volledig uit. De HTML én beide executable runtime-assets moeten
+       uit de huidige generatiecache komen. De bootstrap mag controls pas weer
+       activeren nadat de gecachete app haar ready-signaal heeft afgegeven. */
     await context.setOffline(true);
     const offline=await page.reload({waitUntil:"domcontentloaded",timeout:10000});
     assert(offline,"offline navigatie moet een response uit de serviceworker ontvangen");
     assert.equal(typeof offline.fromServiceWorker,"function");
     assert.equal(offline.fromServiceWorker(),true,"offline navigatie moet werkelijk door de serviceworker worden afgehandeld");
     assert.equal(await marker(page),"new","offline fallback moet de nieuwe install-shell kiezen en nooit de oude cache");
-    const shell=await page.evaluate(async()=>{
-      const [manifest,icoon]=await Promise.all([fetch("manifest.json"),fetch("icon-192.png")]);
-      return {manifest:manifest.ok,icoon:icoon.ok};
-    });
-    assert.deepEqual(shell,{manifest:true,icoon:true},"definitieve shellassets moeten offline uit de huidige cache beschikbaar blijven");
+    await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="ready",null,{timeout:5000});
+    for(const id of ["q","here","ververs","thema"])assert.equal(await page.locator("#"+id).isDisabled(),false,`offline appstart moet ${id} na ready activeren`);
+    const shell=await page.evaluate(async ({cacheNaam,app,bootstrap})=>{
+      const c=await caches.open(cacheNaam);
+      const [manifest,icoon,appHit,bootstrapHit]=await Promise.all([
+        fetch("manifest.json"),fetch("icon-192.png"),c.match(new URL("/"+app,location.href).href),c.match(new URL("/"+bootstrap,location.href).href)
+      ]);
+      return {manifest:manifest.ok,icoon:icoon.ok,app:!!appHit,bootstrap:!!bootstrapHit};
+    },{cacheNaam:cacheNieuw,app:appAsset,bootstrap:bootstrapAsset});
+    assert.deepEqual(shell,{manifest:true,icoon:true,app:true,bootstrap:true},"offline shell moet manifest, icoon, actuele app en actuele bootstrap uit de huidige cache bevatten");
     assert.deepEqual(pageErrors,[],"serviceworker-upgrade/offlinepad mag geen pageerror veroorzaken");
 
-    console.log("Serviceworker-E2E geslaagd: nieuwe worker/controller + install-shell; opzettelijk aanwezige stale cache kan online noch offline oude HTML lekken.");
+    console.log(`Serviceworker-E2E geslaagd: huidige generatie bevat ${appAsset} + ${bootstrapAsset}; stale cache lekt niet en offline appstart activeert de controls.`);
   }finally{
     await context.setOffline(false).catch(()=>{});
     await page.evaluate(async naam=>{try{await caches.delete(naam);}catch(_){}},cacheOud).catch(()=>{});

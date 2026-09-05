@@ -45,6 +45,14 @@ self.addEventListener("install", e => {
   ]));
 });
 
+/* Normaal activeert skipWaiting hierboven de nieuwe generatie direct na een
+   volledige install. Als Chromium de worker desondanks kort in waiting houdt,
+   mag de app exact dezelfde activatie-intentie nogmaals expliciet bevestigen. */
+self.addEventListener("message", e => {
+  if(e.data!=="weathernow:skip-waiting")return;
+  e.waitUntil(self.skipWaiting());
+});
+
 /* Oude generaties worden op activate opgeruimd. CacheStorage kan tijdens een
    browsertransitie kort een oude naam blijven rapporteren; fetches vertrouwen
    daarom nooit op globale CacheStorage-volgorde maar uitsluitend op CACHE. */

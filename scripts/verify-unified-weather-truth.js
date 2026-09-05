@@ -32,6 +32,7 @@ bevat('const radarDroog=!!(actueel&&num(actueel.waarde)!==null&&num(actueel.waar
 bevat('const currentHeroCode=radarDroog&&modelCode!==null&&modelCode>=51&&modelCode<=99&&cc!==null',"hero neutraliseert conflicterende modelregen niet");
 bevat("weatherNowHadController","serviceworker-updatebewustzijn ontbreekt");
 bevat('navigator.serviceWorker.addEventListener("controllerchange"',"nieuwe appcontroller leidt niet tot gecontroleerde reload");
+bevat('reg.waiting.postMessage("weathernow:skip-waiting")',"wachtende appcontroller krijgt geen expliciete activatiefallback");
 bevat('window.addEventListener("pageshow",weatherNowSwUpdate)',"terugkerende tab controleert appupdate niet");
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);

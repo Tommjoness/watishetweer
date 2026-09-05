@@ -1,0 +1,52 @@
+name: Release recovery production smoke
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-recovery-production
+  cancel-in-progress: false
+
+jobs:
+  static-production-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Wacht op exacte productie-SHA en controleer routebundles
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          RECOVERY_SMOKE_ATTEMPTS: 60
+          RECOVERY_SMOKE_POLL_MS: 5000
+        run: node scripts/production-release-recovery.js
+
+  browser-production-contract:
+    needs: static-production-contract
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Installeer Chromium-driver
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Test actieve productie no-JS, failed-JS, refresh en BFCache
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: xvfb-run --auto-servernum node scripts/production-release-recovery-browser.js
+      - name: Test hard refresh, nieuw tabblad, Back/Forward en SW-cachegeneratie
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node scripts/production-release-recovery-navigation.js
