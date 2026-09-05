@@ -53,7 +53,7 @@ async function weatherReady(page,timeout=20000){
     const temp=(document.getElementById("t")?.textContent||"").trim();
     return !!plaats&&!!temp;
   },null,{timeout});
-} 
+}
 async function openWeather(page,url,label,{reloadOnly=false}={}){
   let laatsteFout=null,laatsteToestand=null;
   for(let poging=1;poging<=3;poging++){
