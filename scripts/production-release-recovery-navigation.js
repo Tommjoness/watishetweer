@@ -280,7 +280,7 @@ async function maakStaleCache(page,naam){
       const cdp=await context.newCDPSession(page);
       await Promise.all([cdp.send("Network.enable"),cdp.send("Page.enable")]);
       const staleCache=`watishetweer-e2e-stale-${Date.now()}`;
-      let workerNetwerk=null;
+      let workerNetwerk=null,witness=null,workerNetwerkfoutActief=false;
       try{
         await page.goto(ROOT+"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL",{waitUntil:"load",timeout:30000});
         await weatherReady(page);
@@ -319,12 +319,17 @@ async function maakStaleCache(page,naam){
         assert((await serviceworkerStabiel(page)).ok,"serviceworker lifecycle verloor stabiliteit na online herlaad");
         await maakStaleCache(page,staleCache);
 
+        witness=await context.newPage();
+        await witness.goto(ROOT+"/weer/",{waitUntil:"load",timeout:30000});
+        await witness.waitForFunction(()=>!!navigator.serviceWorker.controller,null,{timeout:10000});
+
         workerNetwerk=await koppelActieveWorkerNetwerk(browser,page);
         const injectie=await workerNetwerk.child.send("Runtime.evaluate",{
           expression:'(()=>{if(typeof globalThis.__WIW_E2E_ORIGINAL_FETCH__!=="function")globalThis.__WIW_E2E_ORIGINAL_FETCH__=globalThis.fetch.bind(globalThis);globalThis.fetch=()=>Promise.reject(new TypeError("WIW E2E network unavailable"));return true;})()',
           returnByValue:true
         });
         assert.equal(injectie&&injectie.result&&injectie.result.value,true,"worker-netwerkfoutinjectie kon niet worden geactiveerd");
+        workerNetwerkfoutActief=true;
         const netwerkProbe=await page.evaluate(async token=>{
           try{
             const response=await fetch(`/__wiw_network_must_fail_${token}`,{cache:"no-store"});
@@ -343,10 +348,26 @@ async function maakStaleCache(page,naam){
         assert(indexResponse.fromServiceWorker(),"offline index-preflight moet aantoonbaar uit de actieve serviceworker komen");
         assert(offlineProbe.ok&&offlineProbe.lengte>0,`actieve serviceworker leverde geen gecachete index terwijl netwerk offline was: ${JSON.stringify(offlineProbe)}`);
         console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),workerTarget:{scriptURL:workerNetwerk.scriptURL,targetId:workerNetwerk.targetId},workerNetworkFailureInjected:true,netwerkProbe,offlineProbe,indexFromServiceWorker:indexResponse.fromServiceWorker()}));
+        await workerNetwerk.child.close();
+        workerNetwerk=null;
+        const losgekoppeldeProbe=await witness.evaluate(async token=>{
+          try{
+            const response=await fetch(`/__wiw_detached_network_must_fail_${token}`,{cache:"no-store"});
+            return {gefaald:false,status:response.status};
+          }catch(e){return {gefaald:true,fout:String(e)};}
+        },Date.now());
+        assert(losgekoppeldeProbe.gefaald,`worker-netwerkfout bleef na debugontkoppeling niet actief: ${JSON.stringify(losgekoppeldeProbe)}`);
         const {documentResponse,cdpNavigationType}=await offlineReloadViaServiceworker(page,cdp);
         assert(documentResponse&&documentResponse.response&&documentResponse.response.fromServiceWorker,"offline reload moet door de actieve serviceworker worden geleverd");
         assert.equal(cdpNavigationType,"reload","browserprotocol moet de offline navigatie als reload rapporteren");
         await ready(page,10000);
+        const witnessProbe=await witness.evaluate(async token=>{
+          try{
+            const response=await fetch(`/__wiw_post_reload_network_must_fail_${token}`,{cache:"no-store"});
+            return {gefaald:false,status:response.status};
+          }catch(e){return {gefaald:true,fout:String(e)};}
+        },Date.now());
+        assert(witnessProbe.gefaald,`worker-netwerkfout was na offline reload niet meer actief: ${JSON.stringify(witnessProbe)}`);
         const navigationType=await page.evaluate(()=>performance.getEntriesByType("navigation").at(-1)?.type||null);
         assert.equal(navigationType,"reload","offline serviceworker-navigatie moet aantoonbaar een echte reload zijn");
         const offline=await snap(page);assertRelease(offline,"SW offline");
@@ -357,6 +378,9 @@ async function maakStaleCache(page,naam){
         for(const id of ["q","here","ververs","thema"])
           assert.equal(await page.locator("#"+id).isDisabled(),false,`offline actuele appstart moet ${id} activeren`);
       }finally{
+        if(!workerNetwerk&&workerNetwerkfoutActief&&witness){
+          workerNetwerk=await koppelActieveWorkerNetwerk(browser,witness).catch(()=>null);
+        }
         if(workerNetwerk){
           await workerNetwerk.child.send("Runtime.evaluate",{
             expression:'(()=>{if(typeof globalThis.__WIW_E2E_ORIGINAL_FETCH__==="function"){globalThis.fetch=globalThis.__WIW_E2E_ORIGINAL_FETCH__;delete globalThis.__WIW_E2E_ORIGINAL_FETCH__;}return true;})()',
