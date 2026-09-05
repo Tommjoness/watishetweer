@@ -244,7 +244,7 @@ async function maakStaleCache(page,naam){
       const staleCache=`watishetweer-e2e-stale-${Date.now()}`;
       let workerNetwerk=null;
       try{
-        await page.goto(ROOT+"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL",{waitUntil:"load",timeout:30000});
+        await page.goto(ROOT+"/",{waitUntil:"load",timeout:30000});
         await weatherReady(page);
         await page.evaluate(async()=>{await navigator.serviceWorker.ready;});
         if(!await page.evaluate(()=>!!navigator.serviceWorker.controller)){
