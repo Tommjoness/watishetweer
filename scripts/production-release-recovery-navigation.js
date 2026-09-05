@@ -1,6 +1,8 @@
 "use strict";
 
 const assert=require("assert");
+const http=require("http");
+const net=require("net");
 const {chromium}=require("playwright");
 
 const ROOT=(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/+$/,"");
@@ -34,23 +36,65 @@ function assertRelease(s,label){
   assert(/^\/app-[0-9a-f]{12}\.min\.js$/.test(s.app||""),`${label}: actuele app-bundle ontbreekt`);
   assert(/^\/bootstrap-[0-9a-f]{12}\.min\.js$/.test(s.bootstrap||""),`${label}: actuele bootstrap ontbreekt`);
 }
+async function startBrowserNetworkGate(){
+  let offline=false;
+  const tunnels=new Set();
+  const server=http.createServer((request,response)=>{
+    response.writeHead(405,{"content-type":"text/plain; charset=utf-8","connection":"close"});
+    response.end("CONNECT required");
+  });
+  server.on("connect",(request,client,head)=>{
+    if(offline){
+      client.end("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
+      return;
+    }
+    const scheiding=request.url.lastIndexOf(":");
+    const host=scheiding>0?request.url.slice(0,scheiding):request.url;
+    const port=scheiding>0?Number(request.url.slice(scheiding+1)):443;
+    const upstream=net.connect(port,host);
+    const tunnel={client,upstream};
+    tunnels.add(tunnel);
+    const opruimen=()=>tunnels.delete(tunnel);
+    client.once("close",opruimen);
+    upstream.once("close",opruimen);
+    client.on("error",()=>{});
+    upstream.on("error",()=>client.destroy());
+    upstream.once("connect",()=>{
+      client.write("HTTP/1.1 200 Connection Established\r\nProxy-Agent: WIW-release-recovery\r\n\r\n");
+      if(head.length)upstream.write(head);
+      client.pipe(upstream);
+      upstream.pipe(client);
+    });
+  });
+  await new Promise((resolve,reject)=>{
+    server.once("error",reject);
+    server.listen(0,"127.0.0.1",resolve);
+  });
+  const adres=server.address();
+  return {
+    proxy:`http://127.0.0.1:${adres.port}`,
+    offline(){
+      offline=true;
+      for(const {client,upstream} of [...tunnels]){
+        client.destroy();
+        upstream.destroy();
+      }
+      tunnels.clear();
+    },
+    async close(){
+      for(const {client,upstream} of [...tunnels]){
+        client.destroy();
+        upstream.destroy();
+      }
+      await new Promise(resolve=>server.close(resolve));
+    }
+  };
+}
 async function offlineReloadViaServiceworker(page){
   const fouten=[];
   for(let poging=1;poging<=3;poging++){
     try{
-      const url=page.url();
-      const responsePromise=page.waitForResponse(response=>{
-        const request=response.request();
-        return response.url()===url&&request.isNavigationRequest()&&request.frame()===page.mainFrame();
-      },{timeout:15000});
-      /* page.reload() gebruikt in Chromium een browser-automation reloadpad dat
-         onder context-offline vóór de actieve serviceworker kan stranden. Laat
-         het document daarom zelf dezelfde echte reload starten en observeer de
-         navigatieresponse afzonderlijk. De assertions hieronder blijven eisen
-         dat die response werkelijk uit de serviceworker komt. */
-      await page.evaluate(()=>{setTimeout(()=>location.reload(),0);});
-      const response=await responsePromise;
-      await page.waitForLoadState("domcontentloaded",{timeout:15000});
+      const response=await page.reload({waitUntil:"domcontentloaded",timeout:15000});
       if(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker())return response;
       fouten.push(`poging ${poging}: geen serviceworker-response`);
     }catch(err){
@@ -95,8 +139,14 @@ async function maakStaleCache(page,naam){
 }
 
 (async()=>{
-  const browser=await chromium.launch({headless:true});
+  const networkGate=await startBrowserNetworkGate();
+  let browser;
   try{
+    browser=await chromium.launch({
+      headless:true,
+      proxy:{server:networkGate.proxy},
+      args:["--disable-quic"]
+    });
     /* Hard refresh: Chromium-cache expliciet uit, dezelfde live release moet terugkomen. */
     {
       const context=await browser.newContext({serviceWorkers:"block"});
@@ -197,15 +247,25 @@ async function maakStaleCache(page,naam){
         assert((await serviceworkerStabiel(page)).ok,"serviceworker lifecycle verloor stabiliteit na online herlaad");
         await maakStaleCache(page,staleCache);
 
-        await context.setOffline(true);
-        const offlineProbe=await page.evaluate(async()=>{
+        networkGate.offline();
+        const netwerkProbe=await page.evaluate(async token=>{
+          try{
+            const response=await fetch(`/__wiw_network_must_fail_${token}`,{cache:"no-store"});
+            return {gefaald:false,status:response.status};
+          }catch(e){return {gefaald:true,fout:String(e)};}
+        },Date.now());
+        assert(netwerkProbe.gefaald,`browsernetwerk bleef bereikbaar na offline-schakeling: ${JSON.stringify(netwerkProbe)}`);
+        const indexResponsePromise=page.waitForResponse(response=>new URL(response.url()).pathname==="/index.html",{timeout:10000});
+        const offlineProbePromise=page.evaluate(async()=>{
           try{
             const response=await fetch("/index.html",{cache:"reload"});
             return {ok:response.ok,status:response.status,lengte:(await response.text()).length};
           }catch(e){return {ok:false,status:0,lengte:0,fout:String(e)};}
         });
+        const [indexResponse,offlineProbe]=await Promise.all([indexResponsePromise,offlineProbePromise]);
+        assert(indexResponse.fromServiceWorker(),"offline index-preflight moet aantoonbaar uit de actieve serviceworker komen");
         assert(offlineProbe.ok&&offlineProbe.lengte>0,`actieve serviceworker leverde geen gecachete index terwijl netwerk offline was: ${JSON.stringify(offlineProbe)}`);
-        console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),offlineProbe}));
+        console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),netwerkProbe,offlineProbe,indexFromServiceWorker:indexResponse.fromServiceWorker()}));
         const response=await offlineReloadViaServiceworker(page);
         assert(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker(),"offline reload moet door de actieve serviceworker worden geleverd");
         await ready(page,10000);
@@ -219,7 +279,6 @@ async function maakStaleCache(page,naam){
         for(const id of ["q","here","ververs","thema"])
           assert.equal(await page.locator("#"+id).isDisabled(),false,`offline actuele appstart moet ${id} activeren`);
       }finally{
-        await context.setOffline(false).catch(()=>{});
         await page.evaluate(naam=>caches.delete(naam),staleCache).catch(()=>{});
         await context.close().catch(()=>{});
       }
@@ -227,6 +286,7 @@ async function maakStaleCache(page,naam){
 
     console.log("Productie navigatie/cache-herstel geslaagd: hard refresh, nieuw tabblad, Back/Forward en adversarial stale-SW-cache kiezen dezelfde actuele releasegeneratie.");
   }finally{
-    await browser.close();
+    if(browser)await browser.close();
+    await networkGate.close();
   }
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
