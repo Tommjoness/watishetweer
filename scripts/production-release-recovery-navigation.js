@@ -189,7 +189,9 @@ async function maakStaleCache(page,naam){
 
         const offlineEmulation=await cdp.send("Network.emulateNetworkConditionsByRule",{
           emulateOfflineServiceWorker:true,
-          matchedNetworkConditions:[]
+          matchedNetworkConditions:[{
+            urlPattern:"",latency:0,downloadThroughput:-1,uploadThroughput:-1,offline:true
+          }]
         });
         await cdp.send("Network.overrideNetworkState",{
           offline:true,latency:0,downloadThroughput:-1,uploadThroughput:-1
