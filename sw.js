@@ -65,6 +65,7 @@ self.addEventListener("activate", e => {
 });
 
 const uitHuidigeCache = request => caches.match(request,{cacheName:CACHE});
+const INDEX_FALLBACK_URL = new URL("./index.html",self.location.href).href;
 
 self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
@@ -80,7 +81,7 @@ self.addEventListener("fetch", e => {
   if (e.request.mode === "navigate" || url.pathname.endsWith("index.html")) {
     e.respondWith(
       fetch(e.request).catch(() => uitHuidigeCache(e.request)
-          .then(hit => hit || uitHuidigeCache("./index.html"))
+          .then(hit => hit || uitHuidigeCache(INDEX_FALLBACK_URL))
           // komt ook daar niets uit, dan een leesbare melding in plaats van een
           // lege belofte, want respondWith(undefined) is opnieuw een netwerkfout
           .then(hit => hit || new Response(
