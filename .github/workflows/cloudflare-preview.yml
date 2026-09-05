@@ -178,8 +178,13 @@ jobs:
       - name: Installeer Chromium-driver
         run: npm install --no-save --package-lock=false playwright@1.62.1
 
+      - name: Installeer native browserreload-driver
+        run: apt-get update && apt-get install -y --no-install-recommends xdotool
+
       - name: Bewijs release-navigatie en echte offline serviceworker-reload
         env:
           PRODUCTION_ROOT: ${{ env.PREVIEW_ROOT }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
-        run: node scripts/production-release-recovery-navigation.js
+          HEADLESS: "false"
+          NATIVE_BROWSER_RELOAD: "true"
+        run: xvfb-run --auto-servernum node scripts/production-release-recovery-navigation.js
