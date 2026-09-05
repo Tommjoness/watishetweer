@@ -90,16 +90,30 @@ async function startBrowserNetworkGate(){
     }
   };
 }
-async function offlineReloadViaServiceworker(page){
+function wachtOpCdpDocumentResponse(cdp,frameId,timeout=15000){
+  return new Promise((resolve,reject)=>{
+    const klaar=response=>{
+      clearTimeout(timer);
+      cdp.off("Network.responseReceived",ontvang);
+      resolve(response);
+    };
+    const ontvang=event=>{
+      if(event.type==="Document"&&event.frameId===frameId)klaar(event.response);
+    };
+    const timer=setTimeout(()=>{
+      cdp.off("Network.responseReceived",ontvang);
+      reject(new Error(`CDP ontving binnen ${timeout}ms geen Document-response voor hoofdframe ${frameId}`));
+    },timeout);
+    cdp.on("Network.responseReceived",ontvang);
+  });
+}
+async function offlineReloadViaServiceworker(page,cdp){
   const fouten=[];
   for(let poging=1;poging<=3;poging++){
     try{
-      const url=page.url();
       const timeOrigin=await page.evaluate(()=>performance.timeOrigin);
-      const responsePromise=page.waitForResponse(response=>{
-        const request=response.request();
-        return request.url()===url&&request.isNavigationRequest()&&request.frame()===page.mainFrame();
-      },{timeout:15000});
+      const frameTree=await cdp.send("Page.getFrameTree");
+      const responsePromise=wachtOpCdpDocumentResponse(cdp,frameTree.frameTree.frame.id);
       const documentPromise=page.waitForFunction(v=>performance.timeOrigin!==v,timeOrigin,{timeout:15000});
       /* Playwrights Page.reload-CDP-pad levert bij een afgesloten netwerk direct
          ERR_FAILED op vóór Chromium de gecontroleerde documentnavigatie aan de
@@ -109,8 +123,8 @@ async function offlineReloadViaServiceworker(page){
       await page.evaluate(()=>{setTimeout(()=>location.reload(),0);});
       const [response]=await Promise.all([responsePromise,documentPromise]);
       const type=await page.evaluate(()=>performance.getEntriesByType("navigation").at(-1)?.type||null);
-      if(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker()&&type==="reload")return response;
-      fouten.push(`poging ${poging}: response/serviceworker/reloadbewijs onvolledig (fromSW=${response&&response.fromServiceWorker()}, type=${type})`);
+      if(response&&response.fromServiceWorker===true&&type==="reload")return response;
+      fouten.push(`poging ${poging}: response/serviceworker/reloadbewijs onvolledig (fromSW=${response&&response.fromServiceWorker}, type=${type})`);
     }catch(err){
       fouten.push(`poging ${poging}: ${String(err&&err.message||err).split("\n")[0]}`);
     }
@@ -222,6 +236,8 @@ async function maakStaleCache(page,naam){
     {
       const context=await browser.newContext({serviceWorkers:"allow"});
       const page=await context.newPage();
+      const cdp=await context.newCDPSession(page);
+      await Promise.all([cdp.send("Network.enable"),cdp.send("Page.enable")]);
       const staleCache=`watishetweer-e2e-stale-${Date.now()}`;
       try{
         await page.goto(ROOT+"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL",{waitUntil:"load",timeout:30000});
@@ -280,8 +296,8 @@ async function maakStaleCache(page,naam){
         assert(indexResponse.fromServiceWorker(),"offline index-preflight moet aantoonbaar uit de actieve serviceworker komen");
         assert(offlineProbe.ok&&offlineProbe.lengte>0,`actieve serviceworker leverde geen gecachete index terwijl netwerk offline was: ${JSON.stringify(offlineProbe)}`);
         console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),netwerkProbe,offlineProbe,indexFromServiceWorker:indexResponse.fromServiceWorker()}));
-        const response=await offlineReloadViaServiceworker(page);
-        assert(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker(),"offline reload moet door de actieve serviceworker worden geleverd");
+        const response=await offlineReloadViaServiceworker(page,cdp);
+        assert(response&&response.fromServiceWorker===true,"offline reload moet door de actieve serviceworker worden geleverd");
         await ready(page,10000);
         const navigationType=await page.evaluate(()=>performance.getEntriesByType("navigation").at(-1)?.type||null);
         assert.equal(navigationType,"reload","offline serviceworker-navigatie moet aantoonbaar een echte reload zijn");
