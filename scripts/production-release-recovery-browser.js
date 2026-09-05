@@ -7,6 +7,8 @@ const {bouw}=require("../data.js");
 const ROOT=(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/+$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
 const LIVE_ROUTE_PACE_MS=Math.max(1000,Number(process.env.PRODUCTION_LIVE_ROUTE_PACE_MS)||5000);
+const LIVE_ROUTE_ATTEMPTS=Math.min(3,Math.max(1,Number(process.env.PRODUCTION_LIVE_ROUTE_ATTEMPTS)||3));
+const LIVE_ROUTE_RETRY_MS=Math.min(10000,Math.max(1000,Number(process.env.PRODUCTION_LIVE_ROUTE_RETRY_MS)||2500));
 const BFCACHE_MARKER="__WIW_PRODUCTION_BFCACHE_EVIDENCE__";
 const LIVE_ROUTES=[
   {label:"/",url:"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL",canonical:ROOT+"/",plaats:"Amsterdam"},
@@ -80,6 +82,29 @@ function fixtureInit(){
 
 async function ready(page){await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="ready",null,{timeout:15000});}
 async function visibleApp(page){await page.waitForSelector("#app",{state:"visible",timeout:15000});}
+async function liveWeatherPage(browser,scenario){
+  const fouten=[];
+  for(let poging=1;poging<=LIVE_ROUTE_ATTEMPTS;poging++){
+    const context=await browser.newContext({serviceWorkers:"block"}),page=await context.newPage(),consoleErrors=[];
+    page.on("console",msg=>{if(msg.type()==="error")consoleErrors.push(msg.text());});
+    page.on("pageerror",e=>consoleErrors.push("pageerror: "+String(e)));
+    try{
+      await page.goto(ROOT+scenario.url,{waitUntil:"load",timeout:30000});
+      await ready(page);await visibleApp(page);
+      await page.waitForFunction(()=>{
+        const brief=(document.getElementById("brief")?.textContent||"").trim();
+        const temp=(document.getElementById("t")?.textContent||"").trim();
+        return !!brief&&!!temp&&!!document.getElementById("chart")?.getAttribute("aria-label")&&(document.querySelectorAll("#days .row.day:not(.kop)").length>=7);
+      },null,{timeout:20000});
+      return {context,page,consoleErrors,poging};
+    }catch(err){
+      fouten.push(`poging ${poging}: ${String(err&&err.message||err).split("\n")[0]}`);
+      await context.close().catch(()=>{});
+      if(poging<LIVE_ROUTE_ATTEMPTS)await new Promise(resolve=>setTimeout(resolve,LIVE_ROUTE_RETRY_MS*poging));
+    }
+  }
+  throw new Error(`${scenario.label}: geen volledige geldige live weatherstate na ${LIVE_ROUTE_ATTEMPTS} pogingen; ${fouten.join(" | ")}`);
+}
 function wachtBfcacheEvidence(page,timeout=10000){
   return new Promise((resolve,reject)=>{
     const onConsole=msg=>{
@@ -142,16 +167,7 @@ async function snap(page){return page.evaluate(()=>({
     for(let index=0;index<LIVE_ROUTES.length;index++){
       if(index>0)await new Promise(resolve=>setTimeout(resolve,LIVE_ROUTE_PACE_MS));
       const scenario=LIVE_ROUTES[index];
-      const context=await browser.newContext({serviceWorkers:"block"}),page=await context.newPage(),consoleErrors=[];
-      page.on("console",msg=>{if(msg.type()==="error")consoleErrors.push(msg.text());});
-      page.on("pageerror",e=>consoleErrors.push("pageerror: "+String(e)));
-      await page.goto(ROOT+scenario.url,{waitUntil:"load",timeout:30000});
-      await ready(page);await visibleApp(page);
-      await page.waitForFunction(()=>{
-        const brief=(document.getElementById("brief")?.textContent||"").trim();
-        const temp=(document.getElementById("t")?.textContent||"").trim();
-        return !!brief&&!!temp&&!!document.getElementById("chart")?.getAttribute("aria-label")&&(document.querySelectorAll("#days .row.day:not(.kop)").length>=7);
-      },null,{timeout:20000});
+      const {context,page,consoleErrors,poging}=await liveWeatherPage(browser,scenario);
       const s=await snap(page);
       if(EXPECTED_SHA)assert.equal(s.build,EXPECTED_SHA,`${scenario.label}: live buildmarker wijkt af van deployment-SHA`);
       assert.equal(s.canonical,scenario.canonical,`${scenario.label}: live canonical wijkt af`);
@@ -162,7 +178,7 @@ async function snap(page){return page.evaluate(()=>({
       if(gedeeldeApp===null)gedeeldeApp=s.script;else assert.equal(s.script,gedeeldeApp,`${scenario.label}: live app-bundle divergeert`);
       if(gedeeldeBootstrap===null)gedeeldeBootstrap=s.bootstrap;else assert.equal(s.bootstrap,gedeeldeBootstrap,`${scenario.label}: live bootstrap divergeert`);
       assert.deepEqual(consoleErrors,[],`${scenario.label}: console/page errors in live release-evidence: ${JSON.stringify(consoleErrors)}`);
-      liveEvidence.push({route:scenario.label,build:s.build,app:s.script,bootstrap:s.bootstrap,url:s.url,selectedLocation:s.plaats,briefing:s.briefing,temperature:s.temp,hourlyState:s.uur,dailyState:s.dag,weeklyState:s.week,canonical:s.canonical,consoleErrors});
+      liveEvidence.push({route:scenario.label,attempt:poging,build:s.build,app:s.script,bootstrap:s.bootstrap,url:s.url,selectedLocation:s.plaats,briefing:s.briefing,temperature:s.temp,hourlyState:s.uur,dailyState:s.dag,weeklyState:s.week,canonical:s.canonical,consoleErrors});
       await context.close();
     }
     console.log("PRODUCTION_ROUTE_EVIDENCE\n"+JSON.stringify(liveEvidence,null,2));
