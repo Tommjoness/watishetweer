@@ -49,6 +49,9 @@ for(const route of ["/","/weer/*"]){
   assert(/^[ \t]+Cache-Control:\s*public, max-age=0, must-revalidate\s*$/mi.test(blok[1]),`${route} mist revalidatiecache zonder no-transform`);
   assert(!/no-transform/i.test(blok[1]),`${route} blokkeert onbedoeld edge-compressie/analytics-injectie met no-transform`);
 }
+const swBlok=/(?:^|\\n)\\/sw\\.js\\r?\\n((?:[ \\t]+[^\\r\\n]+\\r?\\n?)*)/.exec(bron);
+assert(swBlok,"Cloudflare serviceworker-headerblok ontbreekt");
+assert(/^[ \\t]+Cache-Control:\\s*public, no-store, max-age=0, must-revalidate\\s*$/mi.test(swBlok[1]),"serviceworker mist zonecache-bypass plus directe revalidatie");
 
 const middleware=fs.readFileSync(path.join(root,"functions","_middleware.js"),"utf8");
 assert(middleware.includes('"Cross-Origin-Opener-Policy":"same-origin"'),"API-middleware mist COOP");
@@ -56,6 +59,6 @@ assert(middleware.includes('"Content-Security-Policy":"default-src \'self\'; scr
 assert(!middleware.includes("https://static.cloudflareinsights.com/beacon.min.js"),"API-middleware mag versiegebonden Cloudflare-beacons niet blokkeren met een exact bestandspad");
 assert(middleware.includes('new URL(context.request.url).pathname==="/sw.js"'),"middleware moet de serviceworkerroute exact afbakenen");
 assert(middleware.includes("context.env.ASSETS.fetch(context.request)"),"serviceworkerresponse moet uit de gebouwde asset komen");
-assert(middleware.includes('headers.set("Cache-Control","public, max-age=0, must-revalidate")'),"serviceworkerresponse moet op de publieke custom domain direct revalideren");
+assert(middleware.includes('headers.set("Cache-Control","public, no-store, max-age=0, must-revalidate")'),"serviceworkerresponse moet de zonecache omzeilen en op de publieke custom domain direct revalideren");
 
 console.log("security-headers: strikte CSP met Cloudflare Insights-origin voor versiebeacons, COOP, HSTS en compressievriendelijke HTML-cacheheaders OK");
