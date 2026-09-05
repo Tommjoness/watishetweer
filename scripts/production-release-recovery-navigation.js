@@ -38,9 +38,18 @@ async function offlineReloadViaServiceworker(page){
   const fouten=[];
   for(let poging=1;poging<=3;poging++){
     try{
-      const response=await page.reload({waitUntil:"domcontentloaded",timeout:15000});
-      if(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker())return response;
-      fouten.push(`poging ${poging}: geen serviceworker-response`);
+      const url=page.url();
+      const timeOrigin=await page.evaluate(()=>performance.timeOrigin);
+      const responsePromise=page.waitForResponse(response=>{
+        const request=response.request();
+        return request.url()===url&&request.isNavigationRequest()&&request.frame()===page.mainFrame();
+      },{timeout:15000});
+      const documentPromise=page.waitForFunction(v=>performance.timeOrigin!==v,timeOrigin,{timeout:15000});
+      await page.evaluate(()=>{setTimeout(()=>location.reload(),0);});
+      const [response]=await Promise.all([responsePromise,documentPromise]);
+      const type=await page.evaluate(()=>performance.getEntriesByType("navigation").at(-1)?.type||null);
+      if(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker()&&type==="reload")return response;
+      fouten.push(`poging ${poging}: reloadbewijs onvolledig (fromSW=${response&&response.fromServiceWorker()}, type=${type})`);
     }catch(err){
       fouten.push(`poging ${poging}: ${String(err&&err.message||err).split("\n")[0]}`);
     }
