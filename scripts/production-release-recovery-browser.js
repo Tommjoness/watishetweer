@@ -6,6 +6,7 @@ const {bouw}=require("../data.js");
 
 const ROOT=(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/+$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
+const LIVE_ROUTE_PACE_MS=Math.max(1000,Number(process.env.PRODUCTION_LIVE_ROUTE_PACE_MS)||5000);
 const BFCACHE_MARKER="__WIW_PRODUCTION_BFCACHE_EVIDENCE__";
 const LIVE_ROUTES=[
   {label:"/",url:"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL",canonical:ROOT+"/",plaats:"Amsterdam"},
@@ -138,7 +139,9 @@ async function snap(page){return page.evaluate(()=>({
        Geen fixture hier: dit bewijst dat de gedeployde app werkelijk kan starten en
        zichtbare weatherstate opbouwen. */
     const liveEvidence=[];let gedeeldeApp=null,gedeeldeBootstrap=null,gedeeldeBuild=null;
-    for(const scenario of LIVE_ROUTES){
+    for(let index=0;index<LIVE_ROUTES.length;index++){
+      if(index>0)await new Promise(resolve=>setTimeout(resolve,LIVE_ROUTE_PACE_MS));
+      const scenario=LIVE_ROUTES[index];
       const context=await browser.newContext({serviceWorkers:"block"}),page=await context.newPage(),consoleErrors=[];
       page.on("console",msg=>{if(msg.type()==="error")consoleErrors.push(msg.text());});
       page.on("pageerror",e=>consoleErrors.push("pageerror: "+String(e)));
@@ -158,7 +161,7 @@ async function snap(page){return page.evaluate(()=>({
       if(gedeeldeBuild===null)gedeeldeBuild=s.build;else assert.equal(s.build,gedeeldeBuild,`${scenario.label}: live buildmarker divergeert`);
       if(gedeeldeApp===null)gedeeldeApp=s.script;else assert.equal(s.script,gedeeldeApp,`${scenario.label}: live app-bundle divergeert`);
       if(gedeeldeBootstrap===null)gedeeldeBootstrap=s.bootstrap;else assert.equal(s.bootstrap,gedeeldeBootstrap,`${scenario.label}: live bootstrap divergeert`);
-      assert.deepEqual(consoleErrors,[],`${scenario.label}: console/page errors in live release-evidence`);
+      assert.deepEqual(consoleErrors,[],`${scenario.label}: console/page errors in live release-evidence: ${JSON.stringify(consoleErrors)}`);
       liveEvidence.push({route:scenario.label,build:s.build,app:s.script,bootstrap:s.bootstrap,url:s.url,selectedLocation:s.plaats,briefing:s.briefing,temperature:s.temp,hourlyState:s.uur,dailyState:s.dag,weeklyState:s.week,canonical:s.canonical,consoleErrors});
       await context.close();
     }
