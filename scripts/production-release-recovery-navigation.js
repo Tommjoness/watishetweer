@@ -11,6 +11,30 @@ const HEADLESS=process.env.HEADLESS!=="false";
 const NATIVE_BROWSER_RELOAD=process.env.NATIVE_BROWSER_RELOAD==="true";
 const execFileAsync=promisify(execFile);
 
+async function chromiumVenster(page){
+  await page.bringToFront();
+  const titel=await page.title();
+  const gevonden=await execFileAsync("xdotool",[
+    "search","--sync","--onlyvisible","--class",".*[Cc]hrom(e|ium).*"
+  ],{timeout:5000});
+  const ids=[...new Set(String(gevonden.stdout||"").trim().split(/\s+/).filter(Boolean))];
+  const vensters=[];
+  for(const id of ids){
+    const [naam,klasse]=await Promise.all([
+      execFileAsync("xdotool",["getwindowname",id],{timeout:2000}).catch(()=>({stdout:""})),
+      execFileAsync("xdotool",["getwindowclassname",id],{timeout:2000}).catch(()=>({stdout:""}))
+    ]);
+    vensters.push({id,naam:String(naam.stdout||"").trim(),klasse:String(klasse.stdout||"").trim()});
+  }
+  const gekozen=vensters.find(item=>item.naam===titel)
+    ||vensters.find(item=>/watishetweer|wat is het weer/i.test(item.naam))
+    ||vensters.find(item=>item.naam)
+    ||vensters.at(-1);
+  assert(gekozen,`geen zichtbaar Chromium-venster gevonden: ${String(gevonden.stderr||"").trim()}`);
+  console.log("Native browserreload-venster:",JSON.stringify({titel,vensters,gekozen}));
+  return gekozen.id;
+}
+
 async function ready(page,timeout=20000){
   await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="ready",null,{timeout});
 }
@@ -51,14 +75,15 @@ async function offlineReloadViaServiceworker(page,cdp){
     cdp.on("Network.responseReceived",noteerResponse);
     try{
       const vorigeOrigin=await page.evaluate(()=>performance.timeOrigin);
-      const vensters=await execFileAsync("xdotool",[
-        "search","--sync","--onlyvisible","--maxdepth","1","--class",".*[Cc]hrom(e|ium).*"
-      ],{timeout:5000});
-      const venster=String(vensters.stdout||"").trim().split(/\s+/).filter(Boolean).at(-1);
-      assert(venster,`geen zichtbaar Chromium-venster gevonden: ${String(vensters.stderr||"").trim()}`);
-      await page.bringToFront();
+      const venster=await chromiumVenster(page);
       await execFileAsync("xdotool",["windowfocus","--sync",venster],{timeout:5000});
-      await execFileAsync("xdotool",["key","--clearmodifiers","F5"],{timeout:5000});
+      const focus=String((await execFileAsync("xdotool",["getwindowfocus"],{timeout:2000})).stdout||"").trim();
+      const [vensterPid,focusPid]=await Promise.all([
+        execFileAsync("xdotool",["getwindowpid",venster],{timeout:2000}),
+        execFileAsync("xdotool",["getwindowpid",focus],{timeout:2000})
+      ]);
+      assert.equal(String(focusPid.stdout||"").trim(),String(vensterPid.stdout||"").trim(),`Chromium kreeg geen native focus (venster ${venster}, focus ${focus||"niets"})`);
+      await execFileAsync("xdotool",["key","--clearmodifiers","ctrl+r"],{timeout:5000});
       await page.waitForFunction(vorige=>performance.timeOrigin!==vorige&&document.documentElement.dataset.appBootstrap==="ready",vorigeOrigin,{timeout:15000});
       const hoofdStart=gestart.find(event=>event.navigationType==="reload")||null;
       const documentResponse=[...documenten].reverse().find(event=>event.frameId===hoofdStart?.frameId)||null;
@@ -68,7 +93,12 @@ async function offlineReloadViaServiceworker(page,cdp){
         return {documentResponse,cdpNavigationType:hoofdStart.navigationType};
       }else fouten.push(`poging ${poging}: geen serviceworker-response`);
     }catch(err){
-      fouten.push(`poging ${poging}: ${String(err&&err.message||err).split("\n")[0]}`);
+      const toestand=await page.evaluate(()=>({
+        timeOrigin:performance.timeOrigin,url:location.href,title:document.title,
+        ready:document.documentElement.dataset.appBootstrap||null,
+        navigationType:performance.getEntriesByType("navigation").at(-1)?.type||null
+      })).catch(e=>({evaluatieFout:String(e&&e.message||e).split("\n")[0]}));
+      fouten.push(`poging ${poging}: ${String(err&&err.message||err).split("\n")[0]}; starts=${JSON.stringify(gestart)}; documenten=${JSON.stringify(documenten.map(x=>({frameId:x.frameId,url:x.response&&x.response.url,fromServiceWorker:x.response&&x.response.fromServiceWorker,status:x.response&&x.response.status})))}; toestand=${JSON.stringify(toestand)}`);
     }finally{
       cdp.off("Page.frameStartedNavigating",noteerStart);
       cdp.off("Network.responseReceived",noteerResponse);
