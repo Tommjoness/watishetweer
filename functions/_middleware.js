@@ -9,8 +9,12 @@ const SECURITY_HEADERS=Object.freeze({
 });
 
 export async function onRequest(context){
-  const response=await context.next();
+  const isServiceWorker=new URL(context.request.url).pathname==="/sw.js";
+  const response=isServiceWorker
+    ?await context.env.ASSETS.fetch(context.request)
+    :await context.next();
   const headers=new Headers(response.headers);
   for(const [name,value] of Object.entries(SECURITY_HEADERS))headers.set(name,value);
+  if(isServiceWorker)headers.set("Cache-Control","public, max-age=0, must-revalidate");
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }

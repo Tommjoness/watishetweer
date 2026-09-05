@@ -80,33 +80,6 @@ jobs:
           echo "Cloudflare production branch: $production_branch"
           test "$production_branch" = main
 
-      - name: Borg dat custom domains deploymentheaders respecteren
-        shell: bash
-        run: |
-          set -euo pipefail
-          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
-          curl -fsS -G "https://api.cloudflare.com/client/v4/zones" \
-            "${auth[@]}" \
-            --data-urlencode 'name=watishetweer.nl' \
-            --data-urlencode "account.id=$CLOUDFLARE_ACCOUNT_ID" \
-            -o /tmp/cloudflare-zones.json
-          jq -e '.success == true and (.result | length) == 1' /tmp/cloudflare-zones.json >/dev/null
-          zone_id="$(jq -r '.result[0].id // ""' /tmp/cloudflare-zones.json)"
-          test -n "$zone_id"
-          setting_api="https://api.cloudflare.com/client/v4/zones/$zone_id/settings/browser_cache_ttl"
-          curl -fsS "${auth[@]}" "$setting_api" -o /tmp/browser-cache-before.json
-          jq -e '.success == true' /tmp/browser-cache-before.json >/dev/null
-          vorige="$(jq -r '.result.value' /tmp/browser-cache-before.json)"
-          echo "Browser Cache TTL voor wijziging: $vorige"
-          if [ "$vorige" != 0 ]; then
-            curl -fsS "${auth[@]}" -X PATCH "$setting_api" \
-              --data '{"value":0}' -o /tmp/browser-cache-update.json
-            jq -e '.success == true and .result.value == 0' /tmp/browser-cache-update.json >/dev/null
-          fi
-          curl -fsS "${auth[@]}" "$setting_api" -o /tmp/browser-cache-after.json
-          jq -e '.success == true and .result.value == 0' /tmp/browser-cache-after.json >/dev/null
-          echo 'Browser Cache TTL: Respect Existing Headers (0).'
-
       - name: Borg Cloudflare API rate limit
         run: node scripts/cloudflare-api-rate-limit.js
 
