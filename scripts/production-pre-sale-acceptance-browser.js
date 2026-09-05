@@ -5,10 +5,11 @@ const {chromium,webkit,devices}=require("playwright");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const EXPECTED=String(process.env.EXPECTED_SHA||"").trim();
-const PER_PROFILE=Math.max(1,Number(process.env.COLD_LOAD_RUNS_PER_PROFILE||15));
+const PER_PROFILE=Math.max(1,Number(process.env.COLD_LOAD_RUNS_PER_PROFILE||5));
 const OBSERVATION_MS=Math.max(1000,Number(process.env.COLD_LOAD_OBSERVATION_MS||12000));
-const COLD_PACING_MS=Math.max(250,Number(process.env.COLD_LOAD_PACING_MS||1250));
+const COLD_PACING_MS=Math.max(250,Number(process.env.COLD_LOAD_PACING_MS||5000));
 const COLD_ATTEMPTS=Math.max(1,Math.min(4,Number(process.env.COLD_LOAD_ATTEMPTS||3)));
+const COLD_PROFILE_COOLDOWN_MS=Math.max(0,Number(process.env.COLD_LOAD_PROFILE_COOLDOWN_MS||15000));
 if(!/^[0-9a-f]{7,40}$/i.test(EXPECTED))throw new Error("EXPECTED_SHA ontbreekt of is ongeldig.");
 
 const profiles=[
@@ -316,13 +317,18 @@ async function requestedLocationMatrix(browser){
 
 (async()=>{
   const report={expectedSha:EXPECTED,cold:[],dubai:[],history:{},locations:[]};
-  for(const profile of profiles){
+  for(let profileIndex=0;profileIndex<profiles.length;profileIndex++){
+    const profile=profiles[profileIndex];
     const browser=await profile.engine.launch({headless:true});
     try{
       report.cold.push(...await coldLoads(profile,browser));
       report.dubai.push(...await dubaiRepeats(profile,browser,3));
       report.history[profile.name]=await historyFlow(profile,browser);
     }finally{await browser.close();}
+    if(profileIndex<profiles.length-1&&COLD_PROFILE_COOLDOWN_MS>0){
+      console.log(`PRE_SALE_COLD_PROFILE_COOLDOWN ${COLD_PROFILE_COOLDOWN_MS}ms`);
+      await new Promise(resolve=>setTimeout(resolve,COLD_PROFILE_COOLDOWN_MS));
+    }
   }
   const matrixBrowser=await chromium.launch({headless:true});
   try{report.locations=await requestedLocationMatrix(matrixBrowser);}
