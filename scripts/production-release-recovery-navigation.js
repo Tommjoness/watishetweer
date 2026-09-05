@@ -121,10 +121,21 @@ async function offlineReloadViaServiceworker(page,cdp){
          volgt wel het normale browserpad. Observeer zowel de nieuwe documenttijd
          als de navigatieresponse; beide bewijzen blijven verplicht. */
       await page.evaluate(()=>{setTimeout(()=>location.reload(),0);});
-      const [response]=await Promise.all([responsePromise,documentPromise]);
-      const type=await page.evaluate(()=>performance.getEntriesByType("navigation").at(-1)?.type||null);
-      if(response&&response.fromServiceWorker===true&&type==="reload")return response;
-      fouten.push(`poging ${poging}: response/serviceworker/reloadbewijs onvolledig (fromSW=${response&&response.fromServiceWorker}, type=${type})`);
+      const [responseResult,documentResult]=await Promise.allSettled([responsePromise,documentPromise]);
+      const documentState=await page.evaluate(()=>({
+        timeOrigin:performance.timeOrigin,
+        type:performance.getEntriesByType("navigation").at(-1)?.type||null,
+        ready:document.documentElement.dataset.appBootstrap||null
+      })).catch(err=>({evaluatiefout:String(err&&err.message||err)}));
+      const response=responseResult.status==="fulfilled"?responseResult.value:null;
+      if(response&&response.fromServiceWorker===true&&documentResult.status==="fulfilled"&&documentState.type==="reload")return response;
+      const responseBewijs=responseResult.status==="fulfilled"
+        ?`fromSW=${responseResult.value&&responseResult.value.fromServiceWorker}`
+        :`fout=${String(responseResult.reason&&responseResult.reason.message||responseResult.reason).split("\n")[0]}`;
+      const documentBewijs=documentResult.status==="fulfilled"
+        ?"nieuwe-documenttijd=true"
+        :`fout=${String(documentResult.reason&&documentResult.reason.message||documentResult.reason).split("\n")[0]}`;
+      fouten.push(`poging ${poging}: CDP(${responseBewijs}), document(${documentBewijs}), state=${JSON.stringify(documentState)}, vorigeTimeOrigin=${timeOrigin}`);
     }catch(err){
       fouten.push(`poging ${poging}: ${String(err&&err.message||err).split("\n")[0]}`);
     }
