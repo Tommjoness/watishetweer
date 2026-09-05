@@ -87,7 +87,7 @@ async function wachtOpExacteDeployment(){
   const sw=await haal(ROOT+"/sw.js");
   assert(sw.response.ok,"serviceworker is niet 2xx");
   controleerCloudflare(sw.response,"serviceworker");
-  assert.equal(sw.response.headers.get("cache-control"),"public, max-age=0, must-revalidate","publieke serviceworker moet bij ieder bezoek hervalideren");
+  assert.equal(sw.response.headers.get("cache-control"),"public, no-store, max-age=0, must-revalidate","publieke serviceworker moet de zonecache omzeilen en bij ieder bezoek hervalideren");
 
   const robots=await haal(ROOT+"/robots.txt");
   assert(robots.response.ok,"robots.txt is niet 2xx");
