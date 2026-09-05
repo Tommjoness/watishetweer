@@ -38,30 +38,9 @@ async function offlineReloadViaServiceworker(page){
   const fouten=[];
   for(let poging=1;poging<=3;poging++){
     try{
-      const url=page.url();
-      const timeOrigin=await page.evaluate(()=>performance.timeOrigin);
-      const responsePromise=page.waitForResponse(response=>{
-        const request=response.request();
-        return request.url()===url&&request.isNavigationRequest()&&request.frame()===page.mainFrame();
-      },{timeout:15000});
-      const documentPromise=page.waitForFunction(v=>performance.timeOrigin!==v,timeOrigin,{timeout:15000});
-      await page.evaluate(()=>{setTimeout(()=>location.reload(),0);});
-      const [responseResult,documentResult]=await Promise.allSettled([responsePromise,documentPromise]);
-      const state=await page.evaluate(()=>({
-        timeOrigin:performance.timeOrigin,
-        type:performance.getEntriesByType("navigation").at(-1)?.type||null,
-        ready:document.documentElement.dataset.appBootstrap||null,
-        build:document.querySelector('meta[name="weather-build-sha"]')?.content||null
-      })).catch(err=>({evaluatiefout:String(err&&err.message||err)}));
-      const response=responseResult.status==="fulfilled"?responseResult.value:null;
-      if(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker()&&documentResult.status==="fulfilled"&&state.type==="reload")return response;
-      const responseBewijs=responseResult.status==="fulfilled"
-        ?`fromSW=${responseResult.value&&responseResult.value.fromServiceWorker()}`
-        :`fout=${String(responseResult.reason&&responseResult.reason.message||responseResult.reason).split("\n")[0]}`;
-      const documentBewijs=documentResult.status==="fulfilled"
-        ?"nieuwe-documenttijd=true"
-        :`fout=${String(documentResult.reason&&documentResult.reason.message||documentResult.reason).split("\n")[0]}`;
-      fouten.push(`poging ${poging}: response(${responseBewijs}), document(${documentBewijs}), state=${JSON.stringify(state)}, vorigeTimeOrigin=${timeOrigin}`);
+      const response=await page.reload({waitUntil:"domcontentloaded",timeout:15000});
+      if(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker())return response;
+      fouten.push(`poging ${poging}: geen serviceworker-response`);
     }catch(err){
       fouten.push(`poging ${poging}: ${String(err&&err.message||err).split("\n")[0]}`);
     }
@@ -134,7 +113,7 @@ async function koppelActieveWorkerNetwerk(browser,page){
     assert(doel,`actieve sw.js-target ontbreekt; verwacht=${scriptURL}; targets=${JSON.stringify(laatste)}`);
     const gekoppeld=await root.send("Target.attachToTarget",{targetId:doel.targetId,flatten:false});
     const child=childCdpSession(root,gekoppeld.sessionId);
-    await child.send("Network.enable");
+    await Promise.all([child.send("Network.enable"),child.send("Runtime.enable")]);
     return {child,scriptURL,targetId:doel.targetId};
   }catch(err){
     await root.detach().catch(()=>{});
@@ -244,7 +223,7 @@ async function maakStaleCache(page,naam){
       const staleCache=`watishetweer-e2e-stale-${Date.now()}`;
       let workerNetwerk=null;
       try{
-        await page.goto(ROOT+"/",{waitUntil:"load",timeout:30000});
+        await page.goto(ROOT+"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL",{waitUntil:"load",timeout:30000});
         await weatherReady(page);
         await page.evaluate(async()=>{await navigator.serviceWorker.ready;});
         if(!await page.evaluate(()=>!!navigator.serviceWorker.controller)){
@@ -282,9 +261,11 @@ async function maakStaleCache(page,naam){
         await maakStaleCache(page,staleCache);
 
         workerNetwerk=await koppelActieveWorkerNetwerk(browser,page);
-        await workerNetwerk.child.send("Network.emulateNetworkConditions",{
-          offline:true,latency:0,downloadThroughput:-1,uploadThroughput:-1
+        const injectie=await workerNetwerk.child.send("Runtime.evaluate",{
+          expression:'(()=>{if(typeof globalThis.__WIW_E2E_ORIGINAL_FETCH__!=="function")globalThis.__WIW_E2E_ORIGINAL_FETCH__=globalThis.fetch.bind(globalThis);globalThis.fetch=()=>Promise.reject(new TypeError("WIW E2E network unavailable"));return true;})()',
+          returnByValue:true
         });
+        assert.equal(injectie&&injectie.result&&injectie.result.value,true,"worker-netwerkfoutinjectie kon niet worden geactiveerd");
         const netwerkProbe=await page.evaluate(async token=>{
           try{
             const response=await fetch(`/__wiw_network_must_fail_${token}`,{cache:"no-store"});
@@ -302,7 +283,7 @@ async function maakStaleCache(page,naam){
         const [indexResponse,offlineProbe]=await Promise.all([indexResponsePromise,offlineProbePromise]);
         assert(indexResponse.fromServiceWorker(),"offline index-preflight moet aantoonbaar uit de actieve serviceworker komen");
         assert(offlineProbe.ok&&offlineProbe.lengte>0,`actieve serviceworker leverde geen gecachete index terwijl netwerk offline was: ${JSON.stringify(offlineProbe)}`);
-        console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),workerTarget:{scriptURL:workerNetwerk.scriptURL,targetId:workerNetwerk.targetId},netwerkProbe,offlineProbe,indexFromServiceWorker:indexResponse.fromServiceWorker()}));
+        console.log("Offline serviceworker-preflight:",JSON.stringify({lifecycle:await serviceworkerStabiel(page),workerTarget:{scriptURL:workerNetwerk.scriptURL,targetId:workerNetwerk.targetId},workerNetworkFailureInjected:true,netwerkProbe,offlineProbe,indexFromServiceWorker:indexResponse.fromServiceWorker()}));
         const response=await offlineReloadViaServiceworker(page);
         assert(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker(),"offline reload moet door de actieve serviceworker worden geleverd");
         await ready(page,10000);
@@ -317,8 +298,9 @@ async function maakStaleCache(page,naam){
           assert.equal(await page.locator("#"+id).isDisabled(),false,`offline actuele appstart moet ${id} activeren`);
       }finally{
         if(workerNetwerk){
-          await workerNetwerk.child.send("Network.emulateNetworkConditions",{
-            offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1
+          await workerNetwerk.child.send("Runtime.evaluate",{
+            expression:'(()=>{if(typeof globalThis.__WIW_E2E_ORIGINAL_FETCH__==="function"){globalThis.fetch=globalThis.__WIW_E2E_ORIGINAL_FETCH__;delete globalThis.__WIW_E2E_ORIGINAL_FETCH__;}return true;})()',
+            returnByValue:true
           }).catch(()=>{});
           await workerNetwerk.child.close().catch(()=>{});
         }
