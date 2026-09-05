@@ -120,7 +120,7 @@ async function wachtOpExacteDeployment(){
   assert(almere.text.includes('<link rel="canonical" href="https://watishetweer.nl/weer/almere/">'),"Almere-route mist unieke canonical");
   assert(!almere.text.includes('<base href="/">'),"Almere-route mag geen door productie-CSP geblokkeerde root-base bevatten");
   assert((almere.response.headers.get("content-security-policy")||"").includes("base-uri 'none'"),"Almere-route mist strikte base-uri 'none' in de productieheader");
-  for(const asset of ["/manifest.json","/icon-192.png","/privacy.html"])assert(almere.text.includes(`href="${asset}"`),`Almere-route mist root-absoluut asset ${asset}`);
+  for(const asset of ["/manifest.json","/icon-192.png","/privacy"])assert(almere.text.includes(`href="${asset}"`),`Almere-route mist root-absoluut asset ${asset}`);
   assert(!/url\(['"]?(?:bodoni-moda|instrument-sans|dm-mono)-latin-/.test(almere.text),"Almere-route bevat relatief fontpad");
   assert(almere.text.includes("WEATHER NOW PLAATSROUTE")&&almere.text.includes('"slug":"almere"'),"Almere-route mist routebootstrap");
   assert(almere.text.includes("Weer in Almere"),"Almere-route mist zichtbare prerendercontext");
