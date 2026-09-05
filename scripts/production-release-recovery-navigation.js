@@ -46,10 +46,22 @@ async function offlineReloadViaServiceworker(page){
       },{timeout:15000});
       const documentPromise=page.waitForFunction(v=>performance.timeOrigin!==v,timeOrigin,{timeout:15000});
       await page.evaluate(()=>{setTimeout(()=>location.reload(),0);});
-      const [response]=await Promise.all([responsePromise,documentPromise]);
-      const type=await page.evaluate(()=>performance.getEntriesByType("navigation").at(-1)?.type||null);
-      if(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker()&&type==="reload")return response;
-      fouten.push(`poging ${poging}: reloadbewijs onvolledig (fromSW=${response&&response.fromServiceWorker()}, type=${type})`);
+      const [responseResult,documentResult]=await Promise.allSettled([responsePromise,documentPromise]);
+      const state=await page.evaluate(()=>({
+        timeOrigin:performance.timeOrigin,
+        type:performance.getEntriesByType("navigation").at(-1)?.type||null,
+        ready:document.documentElement.dataset.appBootstrap||null,
+        build:document.querySelector('meta[name="weather-build-sha"]')?.content||null
+      })).catch(err=>({evaluatiefout:String(err&&err.message||err)}));
+      const response=responseResult.status==="fulfilled"?responseResult.value:null;
+      if(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker()&&documentResult.status==="fulfilled"&&state.type==="reload")return response;
+      const responseBewijs=responseResult.status==="fulfilled"
+        ?`fromSW=${responseResult.value&&responseResult.value.fromServiceWorker()}`
+        :`fout=${String(responseResult.reason&&responseResult.reason.message||responseResult.reason).split("\n")[0]}`;
+      const documentBewijs=documentResult.status==="fulfilled"
+        ?"nieuwe-documenttijd=true"
+        :`fout=${String(documentResult.reason&&documentResult.reason.message||documentResult.reason).split("\n")[0]}`;
+      fouten.push(`poging ${poging}: response(${responseBewijs}), document(${documentBewijs}), state=${JSON.stringify(state)}, vorigeTimeOrigin=${timeOrigin}`);
     }catch(err){
       fouten.push(`poging ${poging}: ${String(err&&err.message||err).split("\n")[0]}`);
     }
