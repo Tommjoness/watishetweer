@@ -15,6 +15,6 @@ export async function onRequest(context){
     :await context.next();
   const headers=new Headers(response.headers);
   for(const [name,value] of Object.entries(SECURITY_HEADERS))headers.set(name,value);
-  if(isServiceWorker)headers.set("Cache-Control","public, max-age=0, must-revalidate");
+  if(isServiceWorker)headers.set("Cache-Control","public, no-store, max-age=0, must-revalidate");
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }

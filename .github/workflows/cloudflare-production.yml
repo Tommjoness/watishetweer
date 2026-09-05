@@ -196,7 +196,7 @@ jobs:
           done
           sw_cache="$(curl -fsSIL --max-time 30 https://watishetweer.nl/sw.js | tr -d '\r' | awk -F': ' 'tolower($1)=="cache-control"{value=$2} END{print value}')"
           echo "Publieke /sw.js Cache-Control: $sw_cache"
-          test "$sw_cache" = 'public, max-age=0, must-revalidate'
+          test "$sw_cache" = 'public, no-store, max-age=0, must-revalidate'
 
       - name: Bewijs echte API edge-cache op publieke domeinen
         if: steps.domains.outputs.all_active == 'true'

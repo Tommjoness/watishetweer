@@ -71,7 +71,7 @@ async function wachtOpSha(){
 
   const swResponse=await fetch(ROOT+"/sw.js",{headers:{"cache-control":"no-cache","pragma":"no-cache"}});
   assert(swResponse.ok,`productie-serviceworker is niet bereikbaar: HTTP ${swResponse.status}`);
-  assert.equal(swResponse.headers.get("cache-control"),"public, max-age=0, must-revalidate","productie-serviceworker moet bij ieder bezoek hervalideren");
+  assert.equal(swResponse.headers.get("cache-control"),"public, no-store, max-age=0, must-revalidate","productie-serviceworker moet de zonecache omzeilen en bij ieder bezoek hervalideren");
   const sw=await swResponse.text();
   const swApps=[...sw.matchAll(/app-[0-9a-f]{12}\.min\.js/g)].map(m=>m[0]);
   const swBoots=[...sw.matchAll(/bootstrap-[0-9a-f]{12}\.min\.js/g)].map(m=>m[0]);
