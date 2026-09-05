@@ -74,6 +74,9 @@ for(const s of scenarios){
   assert(html.includes('id="weather-js-required"'),`${s.label}: noscript-herstel ontbreekt`);
   assert(html.includes('id="bootstrap-failure"'),`${s.label}: failed-JS-herstel ontbreekt`);
   assert(html.includes('id="weather-now-route"'),`${s.label}: route-data ontbreekt, ook root moet expliciet leeg route-object hebben`);
+  assert(!html.includes('<base href="/">'),`${s.label}: productie-CSP verbiedt base-elementen; assets moeten root-absoluut zijn`);
+  for(const asset of ["/manifest.json","/icon-192.png","/privacy"])assert(html.includes(`href="${asset}"`),`${s.label}: root-absoluut asset ontbreekt: ${asset}`);
+  assert(!/url\(['"]?(?:bodoni-moda|instrument-sans|dm-mono)-latin-/.test(html),`${s.label}: relatief fontpad lekt naar geneste route`);
   assert(new RegExp(`<script\\b[^>]*src=["']${bootstrap.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}["'][^>]*\\bdefer\\b[^>]*\\bdata-weather-bootstrap\\b[^>]*><\\/script>`,`i`).test(html),`${s.label}: bootstrap moet afzonderlijk, deferred en als weather-bootstrap gemarkeerd zijn`);
   for(const id of CONTROL_IDS)controleerControlStandaardUit(html,id,s.label);
   geenExecutableInline(html,s.label);

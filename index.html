@@ -9,16 +9,16 @@
 <meta name="theme-color" content="#F4F5F3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Wat is het weer?">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <style>
-  @font-face{font-family:'Bodoni Moda';src:url('bodoni-moda-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
-  @font-face{font-family:'Bodoni Moda';src:url('bodoni-moda-latin-500-normal.woff2') format('woff2');font-weight:500;font-display:swap}
-  @font-face{font-family:'Instrument Sans';src:url('instrument-sans-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
-  @font-face{font-family:'Instrument Sans';src:url('instrument-sans-latin-500-normal.woff2') format('woff2');font-weight:500;font-display:swap}
-  @font-face{font-family:'Instrument Sans';src:url('instrument-sans-latin-600-normal.woff2') format('woff2');font-weight:600;font-display:swap}
-  @font-face{font-family:'DM Mono';src:url('dm-mono-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
-  @font-face{font-family:'DM Mono';src:url('dm-mono-latin-500-normal.woff2') format('woff2');font-weight:500;font-display:swap}
+  @font-face{font-family:'Bodoni Moda';src:url('/bodoni-moda-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
+  @font-face{font-family:'Bodoni Moda';src:url('/bodoni-moda-latin-500-normal.woff2') format('woff2');font-weight:500;font-display:swap}
+  @font-face{font-family:'Instrument Sans';src:url('/instrument-sans-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
+  @font-face{font-family:'Instrument Sans';src:url('/instrument-sans-latin-500-normal.woff2') format('woff2');font-weight:500;font-display:swap}
+  @font-face{font-family:'Instrument Sans';src:url('/instrument-sans-latin-600-normal.woff2') format('woff2');font-weight:600;font-display:swap}
+  @font-face{font-family:'DM Mono';src:url('/dm-mono-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
+  @font-face{font-family:'DM Mono';src:url('/dm-mono-latin-500-normal.woff2') format('woff2');font-weight:500;font-display:swap}
 
   :root{
     --paper:#F4F5F3;
@@ -644,7 +644,7 @@
 
     <footer>
       <span class="bron"><b>Bronnen</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> / <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener">CAMS</a> · <a href="https://meteoalarm.org" target="_blank" rel="noopener">MeteoAlarm</a> · <a href="https://www.weather.gov" target="_blank" rel="noopener">National Weather Service</a> · <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener">BigDataCloud</a> / <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap-bijdragers</a></span>
-      <span class="bron"><a href="privacy.html">Privacy &amp; gegevens</a></span>
+      <span class="bron"><a href="/privacy.html">Privacy &amp; gegevens</a></span>
       <details class="bron footer-details"><summary>Technische locatiegegevens</summary><span id="coords"></span></details>
     </footer>
   </div>
@@ -3002,7 +3002,7 @@ window.addEventListener("resize",()=>{
 });
 
 if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+  window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
 }
 </script>
 </body>

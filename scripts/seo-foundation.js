@@ -91,7 +91,7 @@ function pasSeoFoundationToe(html){
      merk-SEO en bronattributie onafhankelijk van elkaar blijven functioneren. */
   const footerMatches=[...bron.matchAll(/<footer>/g)];
   if(footerMatches.length!==1)throw new Error("SEO verwacht exact één footer voor de merkverwijzing; gevonden: "+footerMatches.length);
-  const privacyAnker='<span class="bron"><a href="privacy.html">Privacy &amp; gegevens</a></span>';
+  const privacyAnker='<span class="bron"><a href="/privacy.html">Privacy &amp; gegevens</a></span>';
   if(tel(bron,privacyAnker)!==1)throw new Error("SEO verwacht exact één privacyregel als veilig footeranker voor de merkverwijzing.");
   const brandLink=`${BRAND_LINK_MARKER}\n      <span class="bron"><a href="/over/"><b>${attr(SEO.siteName)}</b> · Over deze site</a></span>`;
   bron=bron.replace(privacyAnker,brandLink+"\n      "+privacyAnker);

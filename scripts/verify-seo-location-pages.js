@@ -47,8 +47,10 @@ for(const loc of LOCATIES){
   if(!html.includes(`property="og:site_name" content="${SEO.siteName}"`))throw new Error(`${loc.slug}: og:site_name wijkt af van de vaste merknaam.`);
   const escaped=desc.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   if(!html.includes(`name="description" content="${escaped}"`))throw new Error(`${loc.slug}: unieke description ontbreekt.`);
-  if(tel(html,'<base href="/">')!==1)throw new Error(`${loc.slug}: root-base ontbreekt of is dubbel.`);
-  if(!html.includes("base-uri 'self'" )||html.includes("base-uri 'none'"))throw new Error(`${loc.slug}: CSP staat root-base niet veilig toe.`);
+  if(tel(html,'<base href="/">')!==0)throw new Error(`${loc.slug}: CSP-verboden base-element mag niet aanwezig zijn.`);
+  if(!html.includes("base-uri 'none'")||html.includes("base-uri 'self'"))throw new Error(`${loc.slug}: strikte base-uri 'none' ontbreekt.`);
+  for(const asset of ["/manifest.json","/icon-192.png","/privacy.html"])if(!html.includes(`href="${asset}"`))throw new Error(`${loc.slug}: root-absoluut asset ontbreekt: ${asset}.`);
+  if(/url\(['"]?(?:bodoni-moda|instrument-sans|dm-mono)-latin-/.test(html))throw new Error(`${loc.slug}: relatief fontpad lekt naar geneste route.`);
   if(!html.includes(`\"slug\":\"${loc.slug}\"`)||!html.includes(`\"name\":\"${loc.naam.replace(/"/g,'\\"')}\"`))throw new Error(`${loc.slug}: routebootstrap bevat niet de bewezen plaatsidentiteit.`);
   if(!html.includes("load(route.lat,route.lon,route.name,false,false,normLand(route.country));"))throw new Error(`${loc.slug}: runtime start niet via de bestaande load-keten.`);
   if(!html.includes(`<h2 id="seo-route-title">Weer in ${loc.naam}</h2>`))throw new Error(`${loc.slug}: zichtbare prerendercontext ontbreekt.`);
