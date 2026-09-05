@@ -53,4 +53,6 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
           HEADLESS: "false"
           NATIVE_BROWSER_RELOAD: "true"
+          NAVIGATION_INITIAL_COOLDOWN_MS: 15000
+          NAVIGATION_WEATHER_RETRY_BACKOFF_MS: 5000
         run: xvfb-run --auto-servernum node scripts/production-release-recovery-navigation.js
