@@ -10,7 +10,7 @@ let html=fs.readFileSync(bestand,"utf8");
 const PRECONNECT='<link rel="preconnect" href="https://api.open-meteo.com" crossorigin>';
 const DNS_PREFETCH='<link rel="dns-prefetch" href="//api.open-meteo.com">';
 if(!html.includes(PRECONNECT)){
-  const anker='<link rel="apple-touch-icon" href="icon-192.png">';
+  const anker='<link rel="apple-touch-icon" href="/icon-192.png">';
   if(!html.includes(anker))throw new Error("Apple-touch-icon anker ontbreekt voor forecast-preconnect.");
   html=html.replace(anker,anker+"\n"+PRECONNECT+"\n"+DNS_PREFETCH);
 }else if(!html.includes(DNS_PREFETCH)){
