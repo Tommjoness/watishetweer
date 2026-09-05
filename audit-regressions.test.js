@@ -31,7 +31,8 @@ ok(!/\.put\(e\.request/.test(sw),"oude serviceworker kan zijn verwijderde genera
 ok(!/setTimeout\(resolve,\s*\d+\)/.test(sw),"serviceworker-upgrade steunt niet op een tijdgebaseerde activate-uitlooptijd");
 ok(/const uitHuidigeCache = request => caches\.match\(request,\{cacheName:CACHE\}\);/.test(sw),"offline cachelookup is expliciet tot de huidige worker-generatie beperkt");
 ok(!/caches\.match\([^,\n]+\)(?:\.|\s)/.test(sw),"serviceworker gebruikt geen globale onbegrensde CacheStorage-match voor shellfallbacks");
-ok(/fetch\(e\.request\)\.catch\(\(\) => uitHuidigeCache\(e\.request\)/.test(sw),"navigatie blijft netwerk-eerst met huidige install-cache als offline fallback");
+ok(/const hit=await uitHuidigeCache\(request\)\|\|await uitHuidigeCache\("\.\/index\.html"\);/.test(sw)&&/fetch\(e\.request\)\.catch\(\(\) => navigatieUitHuidigeCache\(e\.request\)/.test(sw),"navigatie blijft netwerk-eerst met uitsluitend de huidige install-cache als offline fallback");
+ok(/headers\.delete\("content-encoding"\);/.test(sw)&&/headers\.delete\("content-length"\);/.test(sw)&&/new Response\(hit\.body,\{status:hit\.status,statusText:hit\.statusText,headers\}\)/.test(sw),"offline documentfallback normaliseert installatie-URL en transportheaders");
 
 const gebouwd=fs.readFileSync(path.join(PUBLIC,"index.html"),"utf8");
 ok(gebouwd.includes("S.actieveWaarschuwingen=[];"),"waarschuwingen van een vorige locatie worden direct gewist");
