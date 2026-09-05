@@ -49,9 +49,9 @@ for(const route of ["/","/weer/*"]){
   assert(/^[ \t]+Cache-Control:\s*public, max-age=0, must-revalidate\s*$/mi.test(blok[1]),`${route} mist revalidatiecache zonder no-transform`);
   assert(!/no-transform/i.test(blok[1]),`${route} blokkeert onbedoeld edge-compressie/analytics-injectie met no-transform`);
 }
-const swBlok=/(?:^|\\n)\\/sw\\.js\\r?\\n((?:[ \\t]+[^\\r\\n]+\\r?\\n?)*)/.exec(bron);
+const swBlok=/(?:^|\n)\/sw\.js\r?\n((?:[ \t]+[^\r\n]+\r?\n?)*)/.exec(bron);
 assert(swBlok,"Cloudflare serviceworker-headerblok ontbreekt");
-assert(/^[ \\t]+Cache-Control:\\s*public, no-store, max-age=0, must-revalidate\\s*$/mi.test(swBlok[1]),"serviceworker mist zonecache-bypass plus directe revalidatie");
+assert(/^[ \t]+Cache-Control:\s*public, no-store, max-age=0, must-revalidate\s*$/mi.test(swBlok[1]),"serviceworker mist zonecache-bypass plus directe revalidatie");
 
 const middleware=fs.readFileSync(path.join(root,"functions","_middleware.js"),"utf8");
 assert(middleware.includes('"Cross-Origin-Opener-Policy":"same-origin"'),"API-middleware mist COOP");
