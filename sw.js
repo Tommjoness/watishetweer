@@ -66,6 +66,19 @@ self.addEventListener("activate", e => {
 
 const uitHuidigeCache = request => caches.match(request,{cacheName:CACHE});
 
+/* De install-fetch gebruikt bewust een generatiequery, waardoor een CacheStorage-
+   response die oorspronkelijke URL behoudt. Maak van een offline documenthit een
+   nieuwe response: zo krijgt de hoofdnavigatie geen installatie-URL mee. De body
+   is al gedecomprimeerd; transportheaders mogen daarom niet worden hergebruikt. */
+async function navigatieUitHuidigeCache(request){
+  const hit=await uitHuidigeCache(request)||await uitHuidigeCache("./index.html");
+  if(!hit)return null;
+  const headers=new Headers(hit.headers);
+  headers.delete("content-encoding");
+  headers.delete("content-length");
+  return new Response(hit.body,{status:hit.status,statusText:hit.statusText,headers});
+}
+
 self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET") return;
@@ -79,8 +92,7 @@ self.addEventListener("fetch", e => {
      een eventueel nog zichtbare oude cache kan dus geen oude pagina teruggeven. */
   if (e.request.mode === "navigate" || url.pathname.endsWith("index.html")) {
     e.respondWith(
-      fetch(e.request).catch(() => uitHuidigeCache(e.request)
-          .then(hit => hit || uitHuidigeCache("./index.html"))
+      fetch(e.request).catch(() => navigatieUitHuidigeCache(e.request)
           // komt ook daar niets uit, dan een leesbare melding in plaats van een
           // lege belofte, want respondWith(undefined) is opnieuw een netwerkfout
           .then(hit => hit || new Response(
