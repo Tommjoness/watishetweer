@@ -10,6 +10,13 @@ const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
 const HEADLESS=process.env.HEADLESS!=="false";
 const NATIVE_BROWSER_RELOAD=process.env.NATIVE_BROWSER_RELOAD==="true";
 const execFileAsync=promisify(execFile);
+const begrensdeMs=(naam,standaard,min,max)=>{
+  const waarde=Number(process.env[naam]||standaard);
+  return Number.isFinite(waarde)?Math.min(max,Math.max(min,Math.round(waarde))):standaard;
+};
+const NAVIGATION_INITIAL_COOLDOWN_MS=begrensdeMs("NAVIGATION_INITIAL_COOLDOWN_MS",0,0,60000);
+const NAVIGATION_WEATHER_RETRY_BACKOFF_MS=begrensdeMs("NAVIGATION_WEATHER_RETRY_BACKOFF_MS",5000,1000,30000);
+const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 async function chromiumVenster(page){
   await page.bringToFront();
@@ -46,6 +53,32 @@ async function weatherReady(page,timeout=20000){
     const temp=(document.getElementById("t")?.textContent||"").trim();
     return !!plaats&&!!temp;
   },null,{timeout});
+} 
+async function openWeather(page,url,label,{reloadOnly=false}={}){
+  let laatsteFout=null,laatsteToestand=null;
+  for(let poging=1;poging<=3;poging++){
+    try{
+      if(reloadOnly||poging>1)await page.reload({waitUntil:"load",timeout:30000});
+      else await page.goto(url,{waitUntil:"load",timeout:30000});
+      await weatherReady(page);
+      if(poging>1)console.log(`${label}: geldige weatherdata op begrensde poging ${poging}.`);
+      return poging;
+    }catch(err){
+      laatsteFout=String(err&&err.message||err).split("\n")[0];
+      laatsteToestand=await page.evaluate(()=>({
+        href:location.href,
+        bootstrap:document.documentElement.dataset.appBootstrap||null,
+        appVisible:!!document.getElementById("app")&&getComputedStyle(document.getElementById("app")).display!=="none",
+        status:(document.getElementById("locatie-laadstatus")?.textContent||document.getElementById("state")?.textContent||"").trim()
+      })).catch(e=>({evaluatieFout:String(e&&e.message||e).split("\n")[0]}));
+      if(poging<3){
+        const backoff=NAVIGATION_WEATHER_RETRY_BACKOFF_MS*poging;
+        console.warn(`${label}: geen geldige weatherdata op poging ${poging}; backoff=${backoff}ms; fout=${laatsteFout}; toestand=${JSON.stringify(laatsteToestand)}`);
+        await slaap(backoff);
+      }
+    }
+  }
+  throw new Error(`${label}: geen geldige weatherdata na 3 begrensde pogingen; fout=${laatsteFout}; toestand=${JSON.stringify(laatsteToestand)}`);
 }
 async function snap(page){
   return page.evaluate(()=>({
@@ -216,19 +249,21 @@ async function maakStaleCache(page,naam){
 (async()=>{
   const browser=await chromium.launch({headless:HEADLESS});
   try{
+    if(NAVIGATION_INITIAL_COOLDOWN_MS>0){
+      console.log(`Navigatiecontract: begrensde upstream-afkoeling ${NAVIGATION_INITIAL_COOLDOWN_MS} ms.`);
+      await slaap(NAVIGATION_INITIAL_COOLDOWN_MS);
+    }
     /* Hard refresh: Chromium-cache expliciet uit, dezelfde live release moet terugkomen. */
     {
       const context=await browser.newContext({serviceWorkers:"block"});
       const page=await context.newPage();
-      await page.goto(ROOT+"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL",{waitUntil:"load",timeout:30000});
-      await weatherReady(page);
+      await openWeather(page,ROOT+"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL","hard-refresh voor");
       const voor=await snap(page);assertRelease(voor,"hard-refresh voor");
       assert.equal(voor.plaats,"Amsterdam","hard-refresh uitgangspunt moet Amsterdam zijn");
       const cdp=await context.newCDPSession(page);
       await cdp.send("Network.enable");
       await cdp.send("Network.setCacheDisabled",{cacheDisabled:true});
-      await page.reload({waitUntil:"load",timeout:30000});
-      await weatherReady(page);
+      await openWeather(page,null,"hard-refresh na",{reloadOnly:true});
       const na=await snap(page);assertRelease(na,"hard-refresh na");
       for(const sleutel of ["build","app","bootstrap","plaats","canonical"])
         assert.equal(na[sleutel],voor[sleutel],`hard refresh wijzigde release-identiteit/state voor ${sleutel}`);
@@ -240,10 +275,10 @@ async function maakStaleCache(page,naam){
     {
       const context=await browser.newContext({serviceWorkers:"block"});
       const eerste=await context.newPage();
-      await eerste.goto(ROOT+"/weer/amsterdam/",{waitUntil:"load",timeout:30000});await weatherReady(eerste);
+      await openWeather(eerste,ROOT+"/weer/amsterdam/","nieuw tabblad eerste");
       const a=await snap(eerste);assertRelease(a,"nieuw-tabblad eerste");
       const tweede=await context.newPage();
-      await tweede.goto(ROOT+"/weer/amsterdam/",{waitUntil:"load",timeout:30000});await weatherReady(tweede);
+      await openWeather(tweede,ROOT+"/weer/amsterdam/","nieuw tabblad tweede");
       const b=await snap(tweede);assertRelease(b,"nieuw-tabblad tweede");
       for(const sleutel of ["build","app","bootstrap","plaats","canonical"])
         assert.equal(b[sleutel],a[sleutel],`nieuw tabblad divergeert voor ${sleutel}`);
@@ -254,7 +289,7 @@ async function maakStaleCache(page,naam){
     {
       const context=await browser.newContext({serviceWorkers:"block"});
       const page=await context.newPage();
-      await page.goto(ROOT+"/weer/amsterdam/",{waitUntil:"load",timeout:30000});await weatherReady(page);
+      await openWeather(page,ROOT+"/weer/amsterdam/","Back/Forward uitgangspunt");
       const start=await snap(page);assertRelease(start,"history start");
       await page.goto(ROOT+"/weer/",{waitUntil:"load",timeout:30000});
       assert.equal(new URL(page.url()).pathname,"/weer/","history hubnavigatie wijkt af");
@@ -282,8 +317,7 @@ async function maakStaleCache(page,naam){
       const staleCache=`watishetweer-e2e-stale-${Date.now()}`;
       let workerNetwerk=null,witness=null,workerNetwerkfoutActief=false;
       try{
-        await page.goto(ROOT+"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL",{waitUntil:"load",timeout:30000});
-        await weatherReady(page);
+        await openWeather(page,ROOT+"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL","serviceworker uitgangspunt");
         await page.evaluate(async()=>{await navigator.serviceWorker.ready;});
         if(!await page.evaluate(()=>!!navigator.serviceWorker.controller)){
           await page.reload({waitUntil:"load",timeout:30000});await ready(page);
