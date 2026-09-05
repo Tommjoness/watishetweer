@@ -27,6 +27,7 @@ if(cacheNieuw===cacheOud)throw new Error("Testcache botst met definitieve cache-
 assert.equal((swBasis.match(/caches\.open\(CACHE\)/g)||[]).length,1,"definitieve worker opent zijn generatiecache alleen tijdens install");
 assert(!/CACHE_HANDLE|\.put\(e\.request/.test(swBasis),"definitieve worker heeft geen runtime-schrijfpad naar zijn generatiecache");
 assert(/caches\.match\(request,\{cacheName:CACHE\}\)/.test(swBasis),"offline lookup is tot de huidige generatiecache beperkt");
+assert(/new URL\("\.\/index\.html",self\.location\.href\)\.href/.test(swBasis),"offline navigatiefallback moet een expliciete absolute index-cachekey gebruiken");
 assert.equal(swBasis.split(appAsset).length-1,1,"serviceworker moet actuele appasset exact één keer precachen");
 assert.equal(swBasis.split(bootstrapAsset).length-1,1,"serviceworker moet actuele bootstrapasset exact één keer precachen");
 assert(swBasis.includes('e.data!=="weathernow:skip-waiting"'),"serviceworker mist expliciete fallback voor een onverwacht wachtende update");
@@ -179,6 +180,11 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
       const c=await caches.open(naam),headers={"content-type":"text/html; charset=utf-8"};
       await c.put("./index.html",new Response(oudeHtml,{status:200,headers}));
     },{naam:cacheOud,oudeHtml:'<!doctype html><html><head><meta name="sw-e2e-build" content="old"></head><body>STALE OLD SHELL</body></html>'});
+
+    /* Gebruik bewust een niet-gecachete query-URL. De worker moet bij offline
+       reload via de expliciete absolute indexkey op de huidige shell uitkomen. */
+    await page.goto(url+"?sw-e2e-route-fallback=1",{waitUntil:"load"});
+    assert.equal(await marker(page),"new","online querynavigatie vóór offline fallback moet de nieuwe shell tonen");
 
     /* 4. Netwerk volledig uit. De HTML én beide executable runtime-assets moeten
        uit de huidige generatiecache komen. De bootstrap mag controls pas weer
