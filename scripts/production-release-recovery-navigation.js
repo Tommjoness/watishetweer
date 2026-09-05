@@ -34,6 +34,20 @@ function assertRelease(s,label){
   assert(/^\/app-[0-9a-f]{12}\.min\.js$/.test(s.app||""),`${label}: actuele app-bundle ontbreekt`);
   assert(/^\/bootstrap-[0-9a-f]{12}\.min\.js$/.test(s.bootstrap||""),`${label}: actuele bootstrap ontbreekt`);
 }
+async function offlineReloadViaServiceworker(page){
+  const fouten=[];
+  for(let poging=1;poging<=3;poging++){
+    try{
+      const response=await page.reload({waitUntil:"domcontentloaded",timeout:15000});
+      if(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker())return response;
+      fouten.push(`poging ${poging}: geen serviceworker-response`);
+    }catch(err){
+      fouten.push(`poging ${poging}: ${String(err&&err.message||err).split("\n")[0]}`);
+    }
+    if(poging<3)await new Promise(resolve=>setTimeout(resolve,500*poging));
+  }
+  throw new Error(`offline reload leverde na 3 pogingen geen serviceworker-response; ${fouten.join(" | ")}`);
+}
 
 (async()=>{
   const browser=await chromium.launch({headless:true});
@@ -136,7 +150,7 @@ function assertRelease(s,label){
         assert((await page.evaluate(naam=>caches.keys().then(x=>x.includes(naam)),staleCache)),"adversarial stale cache kon niet worden aangemaakt");
 
         await context.setOffline(true);
-        const response=await page.reload({waitUntil:"domcontentloaded",timeout:15000});
+        const response=await offlineReloadViaServiceworker(page);
         assert(response&&typeof response.fromServiceWorker==="function"&&response.fromServiceWorker(),"offline reload moet door de actieve serviceworker worden geleverd");
         await ready(page,10000);
         const offline=await snap(page);assertRelease(offline,"SW offline");
