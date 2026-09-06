@@ -104,11 +104,16 @@ for(const tekst of [
   "?j(a,{timeoutMs:7000,signal:luchtController.signal})",
   "const WEER_HEDGE_MS=5000;",
   "const WEER_FALLBACK_TIMEOUT_MS=5000;",
-  "const volledigeBelofte=j(f,{timeoutMs:10000,signal:weerController.signal});",
-  "fallbackBelofte=j(fmin,{timeoutMs:WEER_FALLBACK_TIMEOUT_MS,signal:weerController.signal})",
+  "const volledigeRequest=weatherNowChildRequest(weerController.signal);",
+  "const volledigeBelofte=weatherNowEisGeldigeForecast(j(f,{timeoutMs:10000,signal:volledigeRequest.signal}))",
+  "const openMeteoRequest=weatherNowChildRequest(weerController.signal);",
+  "const weatherApiRequest=weatherNowChildRequest(weerController.signal);",
+  "weatherNowEisGeldigeForecast(j(fmin,{timeoutMs:WEER_FALLBACK_TIMEOUT_MS,signal:openMeteoRequest.signal}))",
+  "weatherNowEisGeldigeForecast(j(w,{timeoutMs:WEER_FALLBACK_TIMEOUT_MS,signal:weatherApiRequest.signal}))",
   "hedgeTimer=setTimeout(()=>resolve({soort:\"traag\"}),WEER_HEDGE_MS);",
-  "volledigeBelofte.then(geslaagd,mislukt);",
-  "fallback.then(geslaagd,mislukt);",
+  "volledigeBelofte.then(",
+  "weatherNowEersteGeslaagdeForecast([",
+  "annuleerFallback",
   "if(mijnBeurt!==laadTeller) return",
   "if(mijnBeurt!==laadTeller||S.d!==vol) return;",
   "if(mijnBeurt!==waarschuwingTeller||S.lat!==lat||S.lon!==lon) return;",
@@ -116,12 +121,14 @@ for(const tekst of [
   "const basisJ=j,zoekCache=new Map();"
 ])vereist(tekst);
 verboden("try{vol=await j(f,{timeoutMs:10000,signal:weerController.signal});}","oude sequentiële full-forecastwait");
-const luchtStart=html.indexOf("const luchtBelofte=luchtVerversen"),weerStart=html.indexOf("const volledigeBelofte=j(f,{timeoutMs:10000"),waarschuwingStart=html.indexOf("waarschuwingen();");
+const luchtStart=html.indexOf("const luchtBelofte=luchtVerversen"),weerStart=html.indexOf("const volledigeBelofte=weatherNowEisGeldigeForecast(j(f,{timeoutMs:10000"),waarschuwingStart=html.indexOf("waarschuwingen();");
 if(luchtStart<0||weerStart<0||luchtStart>weerStart)throw new Error("Luchtkwaliteit start niet aantoonbaar parallel vóór het wachten op de hoofdforecast.");
 if(waarschuwingStart<0)throw new Error("Waarschuwingen worden niet vanuit de renderketen gestart.");
 
 /* Externe request-eigenaars moeten expliciet blijven. */
 exactEen('const basis="https://api.open-meteo.com/v1/forecast?latitude="','hoofdforecast-URL-eigenaar');
+exactEen('const w="/api/forecast?lat="','same-origin WeatherAPI-fallback-eigenaar');
+verboden("https://api.weatherapi.com","WeatherAPI-secret in browserruntime");
 exactEen('return "https://api.open-meteo.com/v1/forecast?latitude="+encodeURIComponent(a)','current-only previewforecast-eigenaar');
 for(const tekst of [
   "WeatherNowProgressiveLocation","const SNEL_START_VERTRAGING_MS=120","const SNEL_TIMEOUT_MS=3000",
