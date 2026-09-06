@@ -68,7 +68,7 @@ async function wachtTotGereed(root,fetchImpl=fetch,nu=Date.now,wachtImpl=wacht){
     }
     await wachtImpl(intervalMs);
   }
-  throw new Error(`Cloudflare Pages Functions zijn na 90 seconden niet stabiel alle vier gereed op ${root}.`);
+  throw new Error(`Cloudflare Pages Functions zijn na 90 seconden niet stabiel alle ${ROUTES.length} gereed op ${root}.`);
 }
 
 if(require.main===module){
