@@ -27,7 +27,10 @@ for (const naam of ["forecast", "neerslag", "plaatsnaam", "waarschuwingen"]) {
   if (naam === "forecast") assert.ok(wrapper.includes("context.env"), "WeatherAPI-key moet uitsluitend via de Cloudflare-secretbinding lopen");
   assert.ok(wrapper.includes("../../lib/cloudflare-edge-cache.mjs"));
   assert.ok(wrapper.includes("export async function onRequest(context)"));
-  assert.ok(wrapper.includes(`metEdgeCache(context, "${naam}", () => worker.fetch(context.request))`), `${naam}-wrapper omzeilt de veilige edge-cache of de bestaande handler`);
+  const aanroep=naam==="forecast"
+    ? `metEdgeCache(context, "${naam}", () => worker.fetch(context.request, context.env))`
+    : `metEdgeCache(context, "${naam}", () => worker.fetch(context.request))`;
+  assert.ok(wrapper.includes(aanroep), `${naam}-wrapper omzeilt de veilige edge-cache of de bestaande handler`);
   assert.ok(!wrapper.includes("Vercel-CDN-Cache-Control"), `${naam}-wrapper bevat nog Vercel-vertaling`);
 }
 
