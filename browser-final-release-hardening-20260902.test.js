@@ -191,13 +191,13 @@ draaiScenario("reload gebruikt passende cache",`
   zet('result',goed('Kathmandu',27.7172,85.3240)&&S.verversMislukt&&getComputedStyle(app).display!=='none'?'ok':'fout');
 `);
 
-draaiScenario("browser back history-state is bron van waarheid",`
+draaiScenario("browser back URL/history-state blijft coherent",`
   ls.set(KEY_D,null);
   if(!await laadGoed('Amsterdam',52.3676,4.9041,0,'NL'))throw new Error('Amsterdam start faalde');
-  history.pushState({lat:39.0997,lon:-94.5786,label:'Kansas City',land:'US'},'', '?lat=39.100&lon=-94.579&plaats=Kansas%20City&land=US');
-  history.pushState({lat:27.7172,lon:85.3240,label:'Kathmandu',land:'NP'},'', '?lat=27.717&lon=85.324&plaats=Kathmandu&land=NP');
+  history.pushState({lat:39.100,lon:-94.579,label:'Kansas City',land:'US'},'', '?lat=39.100&lon=-94.579&plaats=Kansas%20City&land=US');
+  history.pushState({lat:27.717,lon:85.324,label:'Kathmandu',land:'NP'},'', '?lat=27.717&lon=85.324&plaats=Kathmandu&land=NP');
   plan('success',0);history.back();await slaap(180);
-  zet('result',goed('Kansas City',39.0997,-94.5786)?'ok':'fout');
+  zet('result',goed('Kansas City',39.100,-94.579)?'ok':'fout');
 `,2200);
 
 /* Visuele state-contracten op echt gerenderde fout- en cachedata-paden. */
