@@ -100,7 +100,24 @@ jobs:
       - name: Mobiele horizontale overflow op 320, 375, 390 en 430 px
         run: node browser-mobile-overflow.test.js
       - name: Checkpoint 75% in Chromium en WebKit
-        run: node browser-q3-checkpoint.test.js
+        shell: bash
+        run: |
+          set +e
+          node browser-q3-checkpoint.test.js > /tmp/q3-checkpoint.log 2>&1
+          code=$?
+          cat /tmp/q3-checkpoint.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 60 /tmp/q3-checkpoint.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=browser-q3-checkpoint.test.js,line=1::$msg"
+            exit "$code"
+          fi
+      - name: Bewaar Q3-foutdiagnose
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: q3-checkpoint-failure
+          path: /tmp/q3-checkpoint.log
+          if-no-files-found: error
       - name: Consumentencijfers zonder slashed zero in Chromium en WebKit
         run: node browser-consumer-numerals.test.js
       - name: Checkpoint 100% in Chromium en WebKit
