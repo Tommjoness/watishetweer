@@ -133,5 +133,5 @@ function cloudflareCache(r,label){
   assert.equal(head.status,200,"HEAD op plaatsnaam-API is niet 200");
   assert.equal((await head.text()).length,0,"HEAD bevat onverwacht een responsebody");
 
-  console.log(`CLOUDFLARE PREVIEW SMOKE GESLAAGD: ${ROOT}; SHA ${EXPECTED_SHA}; statisch, compressie, strikt securitybeleid, versiecompatibele Analytics-CSP, CDN-cache en vier API-contracten groen.`);
+  console.log(`CLOUDFLARE PREVIEW SMOKE GESLAAGD: ${ROOT}; SHA ${EXPECTED_SHA}; statisch, compressie, strikt securitybeleid, versiecompatibele Analytics-CSP, CDN-cache en vijf API-contracten groen.`);
 })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});
