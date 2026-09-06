@@ -31,7 +31,9 @@ function maakScenario(naam){
     zonduur(d,0);air=nulAir(d.current.time);now=Date.UTC(2026,6,22,12,0);
   }else if(naam==="missing"){
     d=bouw({geenKwartier:true});
-    delete d.current.temperature_2m;delete d.current.apparent_temperature;delete d.current.relative_humidity_2m;
+    // De laadguard vereist een huidige temperatuur; de ontbrekende temperatuur
+    // toetsen we hieronder rechtstreeks aan de renderer na een geldige load.
+    delete d.current.apparent_temperature;delete d.current.relative_humidity_2m;
     delete d.current.cloud_cover;delete d.current.pressure_msl;delete d.current.wind_speed_10m;delete d.current.wind_direction_10m;delete d.current.wind_gusts_10m;
     d.hourly.visibility=d.hourly.visibility.map(()=>null);d.hourly.uv_index=d.hourly.uv_index.map(()=>null);d.daily.uv_index_max=d.daily.uv_index_max.map(()=>null);
     zonduur(d,null);air=legeAir(d.current.time);now=Date.UTC(2026,6,22,12,0);
@@ -101,6 +103,18 @@ async function controleer(page,browserNaam,scenario,breedte){
   await page.waitForSelector("#app",{state:"visible"});
   await page.waitForFunction(()=>document.querySelectorAll("#aq .stat").length>0);
   await page.evaluate(()=>document.fonts&&document.fonts.ready);
+
+  if(scenario==="missing"){
+    const guard=await page.evaluate(()=>{
+      const geldigVoor=weatherNowGeldigeForecast(S.d);
+      delete S.d.current.temperature_2m;
+      const geldigZonderTemperatuur=weatherNowGeldigeForecast(S.d);
+      tekenAlles();
+      return {geldigVoor,geldigZonderTemperatuur};
+    });
+    assert.equal(guard.geldigVoor,true,`${browserNaam}: missing-fixture laadt via de ongewijzigde forecastguard`);
+    assert.equal(guard.geldigZonderTemperatuur,false,`${browserNaam}: provider zonder huidige temperatuur blijft afgewezen`);
+  }
 
   const r=await page.evaluate(()=>{
     const txt=id=>((document.getElementById(id)||{}).textContent||"").trim();
