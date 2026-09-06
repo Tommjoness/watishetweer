@@ -258,7 +258,17 @@
 }
 
 @media(max-width:900px){
-  #aq.aq-cols-1 .stat,#aq.aq-cols-3 .stat:last-child{grid-column:1 / -1}
+  /* Bij een oneven aantal lucht/pollentegels vult de laatste kaart altijd de
+     volledige rij. De structurele odd-child fallback voorkomt dat een
+     browserlayout of een latere classupdate de derde kaart in een halve kolom
+     laat staan; inhoud en databronnen veranderen hierdoor niet. */
+  #aq.aq-cols-1 .stat,
+  #aq.aq-cols-3 .stat:last-child,
+  #aq > .stat:last-child:nth-child(odd){
+    grid-column:1 / -1;
+    justify-self:stretch;
+    width:100%;
+  }
 }
 
 @media(min-width:1500px){
