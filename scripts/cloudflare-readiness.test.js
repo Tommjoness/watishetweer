@@ -12,6 +12,10 @@ assert.strictEqual(pkg.scripts["build:cloudflare"], "npm run build && node scrip
 assert.ok(pkg.scripts.postbuild.includes("scripts/platform-output-cleanup.js"));
 assert.ok(pkg.scripts["test:prebuild"].includes("scripts/cloudflare-readiness.test.js"));
 assert.ok(!fs.existsSync(path.join(root, "vercel.json")), "vercel.json hoort niet meer in de Cloudflare-only repository");
+const buildWeather=lees("build-weather.js");
+for(const platformMap of ["cloudflare","functions"]){
+  assert.ok(buildWeather.includes(`\"${platformMap}\"`),`${platformMap}/ moet buiten het statische public-artifact blijven`);
+}
 
 const wrangler = JSON.parse(lees("wrangler.jsonc"));
 assert.strictEqual(wrangler.name, "watishetweer");
