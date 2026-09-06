@@ -10,31 +10,46 @@ const OUT=path.join(ROOT,"public");
 const htmlPad=path.join(OUT,"index.html");
 
 const BRON=`    let vol=null;
-    try{vol=await j(f,{timeoutMs:10000,signal:weerController.signal});}
+    try{vol=await weatherNowEisGeldigeForecast(j(f,{timeoutMs:10000,signal:weerController.signal}));}
     catch(e){
       if(mijnBeurt!==laadTeller) return;
-      vol=await j(fmin,{timeoutMs:10000,signal:weerController.signal});
+      try{vol=await weatherNowEisGeldigeForecast(j(fmin,{timeoutMs:10000,signal:weerController.signal}));}
+      catch(e2){
+        if(mijnBeurt!==laadTeller) return;
+        vol=await weatherNowEisGeldigeForecast(j(w,{timeoutMs:10000,signal:weerController.signal}));
+      }
     }`;
 
 const PRODUCTIE=`    let vol=null;
     const WEER_HEDGE_MS=5000;
     const WEER_FALLBACK_TIMEOUT_MS=5000;
-    let hedgeTimer=null,fallbackBelofte=null;
+    let hedgeTimer=null,fallbackBelofte=null,fallbackVerzoeken=null;
+    const volledigeRequest=weatherNowChildRequest(weerController.signal);
+    const volledigeBelofte=weatherNowEisGeldigeForecast(j(f,{timeoutMs:10000,signal:volledigeRequest.signal}))
+      .finally(volledigeRequest.ontkoppel);
     const startFallback=()=>{
-      if(!fallbackBelofte)fallbackBelofte=j(fmin,{timeoutMs:WEER_FALLBACK_TIMEOUT_MS,signal:weerController.signal});
+      if(!fallbackBelofte){
+        const openMeteoRequest=weatherNowChildRequest(weerController.signal);
+        const weatherApiRequest=weatherNowChildRequest(weerController.signal);
+        fallbackVerzoeken=[openMeteoRequest,weatherApiRequest];
+        fallbackBelofte=weatherNowEersteGeslaagdeForecast([
+          {belofte:weatherNowEisGeldigeForecast(j(fmin,{timeoutMs:WEER_FALLBACK_TIMEOUT_MS,signal:openMeteoRequest.signal})),annuleer:openMeteoRequest.annuleer},
+          {belofte:weatherNowEisGeldigeForecast(j(w,{timeoutMs:WEER_FALLBACK_TIMEOUT_MS,signal:weatherApiRequest.signal})),annuleer:weatherApiRequest.annuleer}
+        ]).finally(()=>fallbackVerzoeken.forEach(verzoek=>verzoek.ontkoppel()));
+      }
       return fallbackBelofte;
     };
-    const volledigeBelofte=j(f,{timeoutMs:10000,signal:weerController.signal});
+    const annuleerFallback=()=>{if(fallbackVerzoeken)fallbackVerzoeken.forEach(verzoek=>verzoek.annuleer());};
     try{
       const eerste=await new Promise(resolve=>{
-        hedgeTimer=setTimeout(()=>resolve({soort:\"traag\"}),WEER_HEDGE_MS);
+        hedgeTimer=setTimeout(()=>resolve({soort:"traag"}),WEER_HEDGE_MS);
         volledigeBelofte.then(
-          value=>resolve({soort:\"volledig\",ok:true,value}),
-          error=>resolve({soort:\"volledig\",ok:false,error})
+          value=>resolve({soort:"volledig",ok:true,value}),
+          error=>resolve({soort:"volledig",ok:false,error})
         );
       });
       if(hedgeTimer!==null){clearTimeout(hedgeTimer);hedgeTimer=null;}
-      if(eerste.soort===\"volledig\"){
+      if(eerste.soort==="volledig"){
         if(eerste.ok)vol=eerste.value;
         else{
           if(mijnBeurt!==laadTeller) return;
@@ -43,19 +58,14 @@ const PRODUCTIE=`    let vol=null;
       }else{
         if(mijnBeurt!==laadTeller) return;
         const fallback=startFallback();
-        vol=await new Promise((resolve,reject)=>{
-          let fouten=0,laatsteFout=null,klaar=false;
-          const geslaagd=value=>{if(klaar)return;klaar=true;resolve(value);};
-          const mislukt=error=>{
-            laatsteFout=error;fouten++;
-            if(!klaar&&fouten===2){klaar=true;reject(laatsteFout);}
-          };
-          volledigeBelofte.then(geslaagd,mislukt);
-          fallback.then(geslaagd,mislukt);
-        });
+        vol=await weatherNowEersteGeslaagdeForecast([
+          {belofte:volledigeBelofte,annuleer:volledigeRequest.annuleer},
+          {belofte:fallback,annuleer:annuleerFallback}
+        ]);
       }
     }finally{
       if(hedgeTimer!==null)clearTimeout(hedgeTimer);
+      volledigeRequest.ontkoppel();
     }`;
 
 function pasToe(html){
@@ -74,7 +84,7 @@ if(require.main===module){
   scripts.forEach((code,i)=>new vm.Script(code,{filename:"public/index.html:weather-fallback-"+(i+1)}));
   fs.writeFileSync(htmlPad,html,"utf8");
   const versie=vernieuwServiceworkerCache(OUT,"weather-fallback-hedge");
-  console.log("Trage volledige forecast krijgt na 5 s een lichte hedged fallback met eigen 5 s cap; dubbele providerhang eindigt rond 10 s zodat retry/fallback vóór 12 s zichtbaar kan worden; normale snelle loads blijven enkelvoudig; cache "+versie+".");
+  console.log("Trage volledige Open-Meteo-forecast krijgt na 5 s een begrensde race tussen lichte Open-Meteo en WeatherAPI; eerste volledige geldige bron wint en verliezende fallbackrequests worden afgebroken; cache "+versie+".");
 }
 
 module.exports={BRON,PRODUCTIE,pasToe};
