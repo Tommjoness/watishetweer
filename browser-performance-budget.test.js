@@ -37,6 +37,8 @@ function maakForecast(){
   d.current.snowfall=0;
   d.current.visibility=20000;
   d.daily.sunshine_duration=d.daily.time.map(()=>6*3600);
+  d.latitude=52.35;
+  d.longitude=5.26;
 
   /* Productie vraagt 24 uur historie + 170 uur toekomst. Twee extra uur boven
      exact zeven etmalen bewaren het volgende-00:00-grenspunt en een eventuele
