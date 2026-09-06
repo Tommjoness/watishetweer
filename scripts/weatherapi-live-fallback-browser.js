@@ -14,6 +14,14 @@ function timeout(promise,ms,label){
   ]).finally(()=>{if(timer!==null)clearTimeout(timer);});
 }
 
+function volledigeForecastDekking(payload){
+  const uren=payload&&payload.hourly&&payload.hourly.time,dagen=payload&&payload.daily&&payload.daily.time;
+  return Array.isArray(uren)&&Array.isArray(dagen)&&dagen.length===7&&dagen.every(dag=>{
+    const aantal=uren.filter(uur=>typeof uur==="string"&&uur.startsWith(dag+"T")).length;
+    return aantal>=23&&aantal<=25;
+  });
+}
+
 (async()=>{
   assert(EXPECTED_SHA,"EXPECTED_SHA ontbreekt voor WeatherAPI live-fallbackbewijs");
   const browser=await chromium.launch({headless:true});
@@ -49,7 +57,7 @@ function timeout(promise,ms,label){
     const payload=await response.json();
     assert.equal(payload&&payload.provider,"weatherapi","fallbackpayload mist provider");
     assert.equal(payload&&payload.daily&&payload.daily.time&&payload.daily.time.length,7,"fallbackpayload mist zeven volledige dagen");
-    assert(payload&&payload.hourly&&payload.hourly.time&&payload.hourly.time.length>=168,"fallbackpayload mist volledige uurverwachting");
+    assert(volledigeForecastDekking(payload),"fallbackpayload mist volledige uurdekking voor een of meer kalenderdagen");
 
     await page.waitForFunction(()=>{
       const app=document.getElementById("app"),temp=document.getElementById("t"),brief=document.getElementById("brief");
