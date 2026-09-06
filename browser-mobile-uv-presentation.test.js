@@ -9,6 +9,8 @@ const {bouw}=require("./data.js");
 
 const PUBLIC=path.join(__dirname,"public");
 const d=bouw({som:0,pp:()=>0,pr:()=>0});
+d.latitude=52.35;
+d.longitude=5.26;
 d.current.time="2026-07-22T14:17";
 d.current.interval=900;
 d.daily.sunshine_duration=d.daily.time.map(()=>9.5*3600);
