@@ -49,6 +49,13 @@ function compressed(r,label){
 function cloudflareCache(r,label){
   assert(/^s-maxage=\d+/.test(r.headers.get("cloudflare-cdn-cache-control")||""),`${label}: Cloudflare CDN-cachecontract ontbreekt`);
 }
+function volledigeForecastDekking(body){
+  const uren=body&&body.hourly&&body.hourly.time,dagen=body&&body.daily&&body.daily.time;
+  return Array.isArray(uren)&&Array.isArray(dagen)&&dagen.length===7&&dagen.every(dag=>{
+    const aantal=uren.filter(uur=>typeof uur==="string"&&uur.startsWith(dag+"T")).length;
+    return aantal>=23&&aantal<=25;
+  });
+}
 
 (async()=>{
   const home=await request("/",{headers:{"accept-encoding":"br, gzip"}});
@@ -87,7 +94,7 @@ function cloudflareCache(r,label){
   assert.equal(forecast.r.headers.get("x-wiw-weather-source"),"weatherapi","WeatherAPI-fallbackroute mist bronbewijs");
   assert.equal(forecast.body&&forecast.body.provider,"weatherapi","WeatherAPI-fallbackpayload mist provider");
   assert.equal(forecast.body&&forecast.body.daily&&forecast.body.daily.time&&forecast.body.daily.time.length,7,"WeatherAPI-fallback is niet volledig zeven dagen");
-  assert(forecast.body&&forecast.body.hourly&&forecast.body.hourly.time&&forecast.body.hourly.time.length>=168,"WeatherAPI-fallback mist de volledige uurverwachting");
+  assert(volledigeForecastDekking(forecast.body),"WeatherAPI-fallback mist volledige uurdekking voor een of meer kalenderdagen");
   assert(forecast.body&&forecast.body.current&&Number.isFinite(Number(forecast.body.current.temperature_2m)),"WeatherAPI-fallback mist een geldige actuele temperatuur");
   assert.equal(typeof (forecast.body&&forecast.body.timezone),"string","WeatherAPI-fallback mist de geselecteerde locatietijdzone");
 
