@@ -25,6 +25,8 @@ for(const invariant of [
   "function weatherNowChildRequest(parentSignal)",
   "const w=\"/api/forecast?lat=\"",
   ">WeatherAPI.com</a>",
+  "weatherApi=pak(\"WeatherAPI.com\")",
+  "weatherApi.outerHTML",
   "Weersinformatie is algemeen en probabilistisch."
 ]){
   if(!html.includes(invariant))throw new Error("Weerfallback-invariant ontbreekt: "+invariant);
@@ -36,4 +38,4 @@ if((html.match(/\/api\/forecast\?lat=/g)||[]).length!==1)throw new Error("Weathe
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime in definitief artifact.");
 scripts.forEach((code,i)=>new vm.Script(code,{filename:"public/index.html:verify-weather-fallback-"+(i+1)}));
-console.log("Weather fallback artifact: normale Open-Meteo-load enkelvoudig, 5s hedge, geldige lichte Open-Meteo/WeatherAPI-race, loser-abort, stale-load guards, same-origin keybescherming en bronvermelding aanwezig.");
+console.log("Weather fallback artifact: normale Open-Meteo-load enkelvoudig, 5s hedge, geldige lichte Open-Meteo/WeatherAPI-race, loser-abort, stale-load guards, same-origin keybescherming en blijvende WeatherAPI-bronvermelding aanwezig.");
