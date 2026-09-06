@@ -17,7 +17,7 @@ const {vernieuwServiceworkerCache}=require("./scripts/postbuild-cache.js");
 /* CACHE_BRONNEN en het hashrecept zijn uitsluitend eigendom van postbuild-cache.js. */
 const ROOT=__dirname,OUT=path.join(ROOT,"public"),BRON_SNAPSHOT=path.join(ROOT,".weather-runtime-source.tmp");
 const NIET_PUBLICEREN=new Set([
-  ".git",".github","api","lib","node_modules","public","scripts",".weather-runtime-source.tmp",
+  ".git",".github","api","functions","lib","node_modules","public","scripts",".weather-runtime-source.tmp",
   "build-weather.js","interpretatie-engine.js","interpretatie-engine.test.js","nederlandse-weergrammatica.js","senior-correctness-v2.js","neerslagkans-policy-v3.js","live-polish.css","live-polish-v2.js","senior-semantiek-20260810.css","senior-semantiek-20260810.js","product-config.js",
   "run.js","run-built-matrix.js","kern.js","data.js","package.json","package-lock.json","vercel.json"
 ]);
@@ -216,6 +216,7 @@ const vereist=[
   "forecastMomentZinsdeel","Globale indicatie:","kop.textContent=\"Neerslag\"","senior-zoninfo","tooltipCompactMaten",
   "window.addEventListener(\"scroll\",plan,{passive:true})","r.bottom<=0","timer=setTimeout(zet,16)","senior-verstopt","verschil>0","(max-width:900px)",
   "Verwachting wordt aangevuld.","current=temperature_2m,apparent_temperature,is_day,weather_code",
+  "weatherNowGeldigeForecast","weatherNowEisGeldigeForecast","weatherNowChildRequest","weatherNowEersteGeslaagdeForecast","/api/forecast?lat=",
   "geen plaats-specifieke dekking","dedupliceerZoekresultaten","grid-template-areas:","informatie informatie","overflow-wrap:anywhere",
   "Officiële weerwaarschuwingen controleren…","Geen officiële weerwaarschuwingen voor deze locatie.",
   "De luchtdruk is in de afgelopen drie uur licht ","De luchtdruk is in de afgelopen drie uur ",
@@ -227,6 +228,7 @@ const vereist=[
   "load(52.3676,4.9041,\"Amsterdam\",false,true,\"NL\")"
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);
+if(html.includes("https://api.weatherapi.com"))throw new Error("WeatherAPI-secretgrens geschonden: de browserruntime mag de provider niet rechtstreeks aanroepen.");
 if(html.includes("De officiële waarschuwing heeft voorrang op de modelverwachting."))throw new Error("Redundante waarschuwing-voorrangzin heeft de base briefingowner overleefd.");
 
 /* SEO-fundering is productmetadata en hoort net als de overige canonieke
