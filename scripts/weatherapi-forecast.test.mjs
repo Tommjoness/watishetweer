@@ -106,10 +106,33 @@ assert.equal(genormaliseerd.hourly.precipitation_probability.length, genormalise
 assert.equal(genormaliseerd.hourly.wind_gusts_10m.length, genormaliseerd.hourly.time.length);
 assert.equal(genormaliseerd.hourly.visibility[0], 12000);
 assert.equal(new Set(genormaliseerd.hourly.time).size, genormaliseerd.hourly.time.length);
+{
+  const overgang=payload();
+  overgang.forecast.forecastday[2].hour.splice(2,1);
+  const dst=normaliseerWeatherApi(overgang);
+  assert.equal(dst.hourly.time.length,7*24-1,"een geldige 23-uurs DST-kalenderdag blijft een volledige zevendaagse verwachting");
+  assert.equal(geldigeGenormaliseerdeForecast(dst),true);
+}
 assert.equal(geldigeGenormaliseerdeForecast({ ...genormaliseerd, latitude: null }), false,"ontbrekende coördinaten mogen niet stil als nul gelden");
 assert.equal(geldigeGenormaliseerdeForecast({ ...genormaliseerd, utc_offset_seconds: null }), false,"ontbrekende UTC-offset mag niet stil als nul gelden");
 assert.equal(geldigeGenormaliseerdeForecast({ ...genormaliseerd, timezone: "Geen/Geldige_Zone" }), false,"ongeldige IANA-timezone moet fail-closed zijn");
 assert.equal(geldigeGenormaliseerdeForecast({ ...genormaliseerd, current: { ...genormaliseerd.current, temperature_2m: null } }), false,"ontbrekende actuele temperatuur mag niet stil als nul gelden");
+{
+  const zonderOptioneleWaarden=payload();
+  delete zonderOptioneleWaarden.forecast.forecastday[0].hour[0].chance_of_rain;
+  delete zonderOptioneleWaarden.forecast.forecastday[0].hour[0].chance_of_snow;
+  delete zonderOptioneleWaarden.forecast.forecastday[0].hour[0].precip_mm;
+  delete zonderOptioneleWaarden.forecast.forecastday[0].hour[0].vis_km;
+  const zonder=normaliseerWeatherApi(zonderOptioneleWaarden);
+  assert.equal(zonder.hourly.precipitation_probability[0],null,"ontbrekende neerslagkans mag niet nul worden");
+  assert.equal(zonder.hourly.precipitation[0],null,"ontbrekende neerslaghoeveelheid mag niet nul worden");
+  assert.equal(zonder.hourly.visibility[0],null,"ontbrekend zicht mag niet nul worden");
+}
+{
+  const zonderOffset=payload();
+  delete zonderOffset.location.localtime_epoch;
+  assert.throws(()=>normaliseerWeatherApi(zonderOffset),/onvolledige weerdata/,"ontbrekende provider-offset mag niet als UTC worden aangenomen");
+}
 assert.throws(() => normaliseerWeatherApi(payload(3)), /zevendaagse/, "gratis driedaagse payload mag niet als volledige fallback doorgaan");
 assert.equal(adapterIntern.wmoCode(1276), 99);
 assert.equal(adapterIntern.wmoCode(999999), null);
