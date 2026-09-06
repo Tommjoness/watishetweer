@@ -22,6 +22,15 @@ function volledigeForecastDekking(payload){
   });
 }
 
+function verwachteOpenMeteo503(msg){
+  if(!msg||msg.type()!=="error")return false;
+  const tekst=String(msg.text()||"");
+  const locatie=msg.location&&msg.location();
+  const url=String(locatie&&locatie.url||"");
+  return /^https:\/\/api\.open-meteo\.com\/v1\/forecast(?:\?|$)/i.test(url)
+    && /Failed to load resource: the server responded with a status of 503/i.test(tekst);
+}
+
 (async()=>{
   assert(EXPECTED_SHA,"EXPECTED_SHA ontbreekt voor WeatherAPI live-fallbackbewijs");
   const browser=await chromium.launch({headless:true});
@@ -34,8 +43,17 @@ function volledigeForecastDekking(payload){
     });
     const page=await context.newPage();
     const consoleErrors=[],pageErrors=[];
-    let openMeteoForecasts=0;
-    page.on("console",msg=>{if(msg.type()==="error")consoleErrors.push(msg.text());});
+    let openMeteoForecasts=0,verwachteOpenMeteoErrors=0;
+    page.on("console",msg=>{
+      if(msg.type()!=="error")return;
+      if(verwachteOpenMeteo503(msg)){
+        verwachteOpenMeteoErrors++;
+        return;
+      }
+      const locatie=msg.location&&msg.location();
+      const url=String(locatie&&locatie.url||"");
+      consoleErrors.push(msg.text()+(url?` @ ${url}`:""));
+    });
     page.on("pageerror",error=>pageErrors.push(error&&error.message||String(error)));
     await page.route(/^https:\/\/api\.open-meteo\.com\/v1\/forecast(?:\?|$)/,async route=>{
       openMeteoForecasts++;
@@ -84,9 +102,9 @@ function volledigeForecastDekking(payload){
     assert.equal(bewijs.ready,true,"app-readycontract ontbreekt na WeatherAPI fallback");
     assert(openMeteoForecasts>=2,"gerichte test heeft niet zowel volledige als lichte Open-Meteo-aanvraag laten falen");
     assert.deepEqual(pageErrors,[],"page errors tijdens fallback: "+pageErrors.join(" | "));
-    assert.deepEqual(consoleErrors,[],"console errors tijdens fallback: "+consoleErrors.join(" | "));
+    assert.deepEqual(consoleErrors,[],"onverwachte console errors tijdens fallback: "+consoleErrors.join(" | "));
 
-    console.log(JSON.stringify({ok:true,root:ROOT,openMeteoForecasts,provider:payload.provider,bewijs},null,2));
+    console.log(JSON.stringify({ok:true,root:ROOT,openMeteoForecasts,verwachteOpenMeteoErrors,provider:payload.provider,bewijs},null,2));
     await context.close();
   }finally{
     await browser.close();
