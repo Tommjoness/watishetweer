@@ -123,8 +123,9 @@ assert(![...sw.matchAll(/app-[0-9a-f]{12}\.min\.js/g)].some(m=>m[0]!==appNaam),"
 assert(![...sw.matchAll(/bootstrap-[0-9a-f]{12}\.min\.js/g)].some(m=>m[0]!==bootstrapNaam),"serviceworker mag geen oude bootstrap-generatie noemen");
 
 const bundel=fs.readFileSync(bundlePad,"utf8");
-for(const marker of ["weathernow:app-ready","AbortController","laadTeller","zoekGeneratie"])
+for(const marker of ["weathernow:app-ready","AbortController","laadTeller","zoekGeneratie","weatherNowGeldigeForecast","weatherNowChildRequest","weatherNowEersteGeslaagdeForecast","/api/forecast?lat="])
   assert(bundel.includes(marker),`Actieve hoofdclient mist release-/race-invariant: ${marker}`);
+assert(!bundel.includes("https://api.weatherapi.com"),"actieve hoofdclient mag WeatherAPI nooit rechtstreeks met een browsersleutel aanroepen");
 const bootstrapBron=fs.readFileSync(bootstrapPad,"utf8");
 assert(bootstrapBron.includes("12000"),"bootstrap-watchdog moet de afgesproken 12s timeout bevatten");
 assert(!bootstrapBron.includes("30000"),"oude 30s watchdogtimeout mag niet meer actief zijn");
