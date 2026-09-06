@@ -980,24 +980,27 @@ async function j(url,opt){
   }
 }
 
-const WEATHER_NOW_UURVELDEN=Object.freeze(["temperature_2m","apparent_temperature","relative_humidity_2m","dew_point_2m","precipitation_probability","precipitation","rain","showers","snowfall","weather_code","cloud_cover","wind_speed_10m","wind_direction_10m","wind_gusts_10m","uv_index","pressure_msl","is_day"]);
+const WEATHER_NOW_UURVELDEN=Object.freeze(["temperature_2m","apparent_temperature","relative_humidity_2m","dew_point_2m","precipitation_probability","precipitation","rain","showers","snowfall","weather_code","cloud_cover","wind_speed_10m","wind_direction_10m","wind_gusts_10m","uv_index","is_day"]);
 const WEATHER_NOW_DAGVELDEN=Object.freeze(["weather_code","temperature_2m_max","temperature_2m_min","sunrise","sunset","precipitation_probability_max","precipitation_sum","uv_index_max","wind_speed_10m_max","wind_gusts_10m_max","wind_direction_10m_dominant","sunshine_duration"]);
 function weatherNowGeldigeForecast(data){
   if(!data||typeof data!=="object"||!data.current||!data.hourly||!data.daily)return false;
+  if(data.latitude==null||data.longitude==null||data.latitude===""||data.longitude==="")return false;
   if(!Number.isFinite(Number(data.latitude))||!Number.isFinite(Number(data.longitude)))return false;
-  if(!String(data.timezone||"").trim()||!Number.isFinite(Number(data.utc_offset_seconds)))return false;
+  if(Number(data.latitude)<-90||Number(data.latitude)>90||Number(data.longitude)<-180||Number(data.longitude)>180)return false;
+  if(!String(data.timezone||"").trim()||data.utc_offset_seconds==null||data.utc_offset_seconds===""||!Number.isFinite(Number(data.utc_offset_seconds)))return false;
   const c=data.current,h=data.hourly,d=data.daily;
-  if(!String(c.time||"")||!Number.isFinite(Number(c.temperature_2m))||!Number.isFinite(Number(c.weather_code)))return false;
+  if(!String(c.time||"")||c.temperature_2m==null||c.temperature_2m===""||c.weather_code==null||c.weather_code===""||!Number.isFinite(Number(c.temperature_2m))||!Number.isFinite(Number(c.weather_code)))return false;
   const uren=Array.isArray(h.time)?h.time:[],dagen=Array.isArray(d.time)?d.time:[];
-  if(uren.length<24||dagen.length<7)return false;
+  if(uren.length<7*24||dagen.length<7)return false;
   if(new Set(uren).size!==uren.length||new Set(dagen).size!==dagen.length)return false;
   if(!uren.every(t=>typeof t==="string"&&t.length>=13))return false;
   if(!dagen.every(t=>/^\d{4}-\d{2}-\d{2}$/.test(String(t))))return false;
   if(WEATHER_NOW_UURVELDEN.some(veld=>!Array.isArray(h[veld])||h[veld].length!==uren.length))return false;
   if(WEATHER_NOW_DAGVELDEN.some(veld=>!Array.isArray(d[veld])||d[veld].length!==dagen.length))return false;
-  if(!h.temperature_2m.slice(0,24).every(v=>Number.isFinite(Number(v))))return false;
-  if(!h.weather_code.slice(0,24).every(v=>Number.isFinite(Number(v))))return false;
-  if(!d.temperature_2m_max.every(v=>Number.isFinite(Number(v)))||!d.temperature_2m_min.every(v=>Number.isFinite(Number(v))))return false;
+  if(!h.temperature_2m.slice(0,7*24).every(v=>v!==null&&v!==""&&Number.isFinite(Number(v))))return false;
+  if(!h.weather_code.slice(0,7*24).every(v=>v!==null&&v!==""&&Number.isFinite(Number(v))))return false;
+  if(!d.temperature_2m_max.every(v=>v!==null&&v!==""&&Number.isFinite(Number(v)))||!d.temperature_2m_min.every(v=>v!==null&&v!==""&&Number.isFinite(Number(v))))return false;
+  if(!d.weather_code.every(v=>v!==null&&v!==""&&Number.isFinite(Number(v))))return false;
   try{new Intl.DateTimeFormat("en",{timeZone:String(data.timezone)}).format(new Date());}catch(e){return false;}
   return true;
 }
