@@ -37,7 +37,7 @@ function antwoord(status,body){
     return antwoord(200,{ok:true});
   });
   assert.equal(allesGroen,true,"alle vijf geldige routes moeten één readinessmeting groen maken");
-  assert.equal(gezien.length,4,"iedere poging moet alle vijf routes controleren");
+  assert.equal(gezien.length,5,"iedere poging moet alle vijf routes controleren");
   assert(gezien.some(url=>url.includes("/api/neerslag?")),"neerslag moet live worden gecontroleerd");
   assert(gezien.some(url=>url.includes("/api/luchtkwaliteit?")),"luchtkwaliteit moet live worden gecontroleerd");
 
@@ -71,7 +71,7 @@ function antwoord(status,body){
       ()=>klok,
       async ms=>{klok+=ms;}
     ),
-    /niet stabiel alle vier gereed/,
+    /niet stabiel alle 5 gereed/,
     "readiness moet begrensd falen als een route niet stabiel actief wordt"
   );
   assert.equal(klok,readinessTimeoutMs,"timeout moet exact binnen het afgesproken 90s-venster blijven");
