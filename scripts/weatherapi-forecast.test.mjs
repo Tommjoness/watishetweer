@@ -106,6 +106,10 @@ assert.equal(genormaliseerd.hourly.precipitation_probability.length, genormalise
 assert.equal(genormaliseerd.hourly.wind_gusts_10m.length, genormaliseerd.hourly.time.length);
 assert.equal(genormaliseerd.hourly.visibility[0], 12000);
 assert.equal(new Set(genormaliseerd.hourly.time).size, genormaliseerd.hourly.time.length);
+assert.equal(geldigeGenormaliseerdeForecast({ ...genormaliseerd, latitude: null }), false,"ontbrekende coördinaten mogen niet stil als nul gelden");
+assert.equal(geldigeGenormaliseerdeForecast({ ...genormaliseerd, utc_offset_seconds: null }), false,"ontbrekende UTC-offset mag niet stil als nul gelden");
+assert.equal(geldigeGenormaliseerdeForecast({ ...genormaliseerd, timezone: "Geen/Geldige_Zone" }), false,"ongeldige IANA-timezone moet fail-closed zijn");
+assert.equal(geldigeGenormaliseerdeForecast({ ...genormaliseerd, current: { ...genormaliseerd.current, temperature_2m: null } }), false,"ontbrekende actuele temperatuur mag niet stil als nul gelden");
 assert.throws(() => normaliseerWeatherApi(payload(3)), /zevendaagse/, "gratis driedaagse payload mag niet als volledige fallback doorgaan");
 assert.equal(adapterIntern.wmoCode(1276), 99);
 assert.equal(adapterIntern.wmoCode(999999), null);
