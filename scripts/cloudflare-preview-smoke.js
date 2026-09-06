@@ -80,6 +80,17 @@ function cloudflareCache(r,label){
   assert(plaats.body&&typeof plaats.body==="object","plaatsnaam-API heeft geen objectpayload");
   assert("naam" in plaats.body&&"land" in plaats.body,"plaatsnaam-API mist contractvelden");
 
+  const forecast=await json("/api/forecast?lat=52.3508&lon=5.2647");
+  assert.equal(forecast.r.status,200,"WeatherAPI-fallbackroute is niet 200; controleer de WEATHERAPI_KEY-secret en het vereiste zevendaagse abonnement");
+  security(forecast.r,"WeatherAPI-forecast");
+  cloudflareCache(forecast.r,"WeatherAPI-forecast");
+  assert.equal(forecast.r.headers.get("x-wiw-weather-source"),"weatherapi","WeatherAPI-fallbackroute mist bronbewijs");
+  assert.equal(forecast.body&&forecast.body.provider,"weatherapi","WeatherAPI-fallbackpayload mist provider");
+  assert.equal(forecast.body&&forecast.body.daily&&forecast.body.daily.time&&forecast.body.daily.time.length,7,"WeatherAPI-fallback is niet volledig zeven dagen");
+  assert(forecast.body&&forecast.body.hourly&&forecast.body.hourly.time&&forecast.body.hourly.time.length>=168,"WeatherAPI-fallback mist de volledige uurverwachting");
+  assert(forecast.body&&forecast.body.current&&Number.isFinite(Number(forecast.body.current.temperature_2m)),"WeatherAPI-fallback mist een geldige actuele temperatuur");
+  assert.equal(typeof (forecast.body&&forecast.body.timezone),"string","WeatherAPI-fallback mist de geselecteerde locatietijdzone");
+
   const neerslag=await json("/api/neerslag?lat=52.3508&lon=5.2647&land=NL");
   assert.equal(neerslag.r.status,200,"neerslag-API is niet 200");
   security(neerslag.r,"neerslag-API");
