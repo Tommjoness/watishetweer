@@ -66,10 +66,17 @@ async function installeerForecastFixture(page,bron){
   await page.route("**://api.open-meteo.com/v1/forecast**",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(bron)}));
 }
 async function installeerForecastScenario(page,bron){
-  const toestand={fail:false};
-  await page.route("**://api.open-meteo.com/v1/forecast**",route=>toestand.fail
-    ?route.fulfill({status:503,contentType:"application/json",body:'{"error":true}'})
-    :route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(bron)}));
+  const toestand={fail:false,failed:{openMeteo:0,weatherApi:0}};
+  const antwoord=provider=>route=>{
+    if(toestand.fail){
+      toestand.failed[provider]++;
+      return route.fulfill({status:503,contentType:"application/json",body:'{"error":true}'});
+    }
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(bron)});
+  };
+  // Totale provideruitval omvat ook de same-origin WeatherAPI-fallback.
+  await page.route("**://api.open-meteo.com/v1/forecast**",antwoord("openMeteo"));
+  await page.route(ROOT+"/api/forecast**",antwoord("weatherApi"));
   return toestand;
 }
 
@@ -219,7 +226,8 @@ async function lees(page){return page.evaluate(()=>{
       await page.goto(ROOT+"/?"+params(locaties[1]),{waitUntil:"domcontentloaded",timeout:30000});
       await page.waitForFunction(()=>{const compact=document.querySelector('.locatie-status-retry');return !!((compact&&!compact.hidden)||document.querySelector('.wiw-location-retry'));},null,{timeout:10000});const u=await lees(page);
       assert.equal(u.query,"Kansas City","direct mismatch: zoekveld niet Kansas City");assert(u.title.startsWith("Kansas City · "),"direct mismatch: titel niet Kansas City");assert(!u.appVisible,"direct mismatch: weerapp van andere locatie bleef zichtbaar");assert(/Kansas City/i.test(u.state)&&/niet geladen|kon niet worden opgehaald|geen weergegevens/i.test(u.state),"direct mismatch: veilige melding ontbreekt");assert(u.retry,"direct mismatch: retry ontbreekt");
-      rapport.failureSafety.directWrongCache={ok:true,state:u.state};await context.close();
+      assert(scenario.failed.openMeteo>0&&scenario.failed.weatherApi>0,"directWrongCache: totale provideruitval moet beide forecastpaden raken");
+      rapport.failureSafety.directWrongCache={ok:true,state:u.state,failedRequests:scenario.failed};await context.close();
     }
     /* Exact dezelfde cache mag bij providerfout wél als stale data terugkomen. */
     {
@@ -229,7 +237,8 @@ async function lees(page){return page.evaluate(()=>{
       scenario.fail=true;await page.reload({waitUntil:"domcontentloaded",timeout:30000});
       await page.waitForFunction(()=>{const compact=document.querySelector('.locatie-status-retry');return !!((compact&&!compact.hidden)||document.querySelector('.wiw-location-retry'));},null,{timeout:10000});const u=await lees(page);
       assert(u.appVisible&&u.label==="Kansas City"&&u.query==="Kansas City"&&u.title.startsWith("Kansas City · "),"same-cache: identiteit niet volledig Kansas City");assert(/Kansas City/i.test(u.state)&&/niet vernieuwd|laatst opgehaalde gegevens/i.test(u.state),"same-cache: stale melding ontbreekt");assert(u.retry,"same-cache: retry ontbreekt");
-      rapport.failureSafety.sameCache={ok:true,state:u.state};await context.close();
+      assert(scenario.failed.openMeteo>0&&scenario.failed.weatherApi>0,"sameCache: totale provideruitval moet beide forecastpaden raken");
+      rapport.failureSafety.sameCache={ok:true,state:u.state,failedRequests:scenario.failed};await context.close();
     }
 
     /* 1920 en 390, beide expliciet licht en donker. */
