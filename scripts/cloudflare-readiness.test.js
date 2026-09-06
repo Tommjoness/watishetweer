@@ -12,21 +12,29 @@ assert.strictEqual(pkg.scripts["build:cloudflare"], "npm run build && node scrip
 assert.ok(pkg.scripts.postbuild.includes("scripts/platform-output-cleanup.js"));
 assert.ok(pkg.scripts["test:prebuild"].includes("scripts/cloudflare-readiness.test.js"));
 assert.ok(!fs.existsSync(path.join(root, "vercel.json")), "vercel.json hoort niet meer in de Cloudflare-only repository");
+const buildWeather=lees("build-weather.js");
+for(const platformMap of ["cloudflare","functions"]){
+  assert.ok(buildWeather.includes(`\"${platformMap}\"`),`${platformMap}/ moet buiten het statische public-artifact blijven`);
+}
 
 const wrangler = JSON.parse(lees("wrangler.jsonc"));
 assert.strictEqual(wrangler.name, "watishetweer");
 assert.strictEqual(wrangler.pages_build_output_dir, "./public");
 assert.ok(wrangler.compatibility_date >= "2026-08-04", "Node-compatibele Workers-runtime vereist");
 
-for (const naam of ["neerslag", "plaatsnaam", "waarschuwingen"]) {
+for (const naam of ["forecast", "neerslag", "plaatsnaam", "waarschuwingen"]) {
   const bron = lees(`api/${naam}.mjs`);
   const wrapper = lees(`functions/api/${naam}.js`);
   assert.ok(bron.includes("Cloudflare-CDN-Cache-Control"), `${naam} mist Cloudflare CDN-cachecontract`);
   assert.ok(!bron.includes("Vercel-CDN-Cache-Control"), `${naam} bevat nog Vercel-cachelogica`);
   assert.ok(wrapper.includes(`../../api/${naam}.mjs`));
+  if (naam === "forecast") assert.ok(wrapper.includes("context.env"), "WeatherAPI-key moet uitsluitend via de Cloudflare-secretbinding lopen");
   assert.ok(wrapper.includes("../../lib/cloudflare-edge-cache.mjs"));
   assert.ok(wrapper.includes("export async function onRequest(context)"));
-  assert.ok(wrapper.includes(`metEdgeCache(context, "${naam}", () => worker.fetch(context.request))`), `${naam}-wrapper omzeilt de veilige edge-cache of de bestaande handler`);
+  const aanroep=naam==="forecast"
+    ? `metEdgeCache(context, "${naam}", () => worker.fetch(context.request, context.env))`
+    : `metEdgeCache(context, "${naam}", () => worker.fetch(context.request))`;
+  assert.ok(wrapper.includes(aanroep), `${naam}-wrapper omzeilt de veilige edge-cache of de bestaande handler`);
   assert.ok(!wrapper.includes("Vercel-CDN-Cache-Control"), `${naam}-wrapper bevat nog Vercel-vertaling`);
 }
 

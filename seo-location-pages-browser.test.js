@@ -14,6 +14,7 @@ if(!fs.existsSync(routePad)||!fs.existsSync(hubPad))throw new Error("SEO-plaatsa
 
 const d=bouw();
 d.latitude=52.3508;d.longitude=5.2647;d.timezone="Europe/Amsterdam";d.utc_offset_seconds=7200;
+d.daily.sunshine_duration=d.daily.time.map(()=>6*3600);
 d.minutely_15=d.minutely_15||{time:[],precipitation:[]};
 for(const sleutel of ["rain","showers","snowfall","weather_code"]){if(!Array.isArray(d.minutely_15[sleutel]))d.minutely_15[sleutel]=d.minutely_15.time.map(()=>0);}
 const air={current:{european_aqi:22,us_aqi:45},hourly:{time:[d.current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[0],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}};

@@ -6,7 +6,8 @@ const origineelLees=fs.readFileSync;
 const origineelBestaat=fs.existsSync;
 const redirects=new Map([
   [path.resolve(__dirname,"api","waarschuwingen.js"),path.resolve(__dirname,"lib","waarschuwingen.cjs")],
-  [path.resolve(__dirname,"api","plaatsnaam.js"),path.resolve(__dirname,"lib","plaatsnaam.cjs")]
+  [path.resolve(__dirname,"api","plaatsnaam.js"),path.resolve(__dirname,"lib","plaatsnaam.cjs")],
+  [path.resolve(__dirname,"api","forecast.js"),path.resolve(__dirname,"api","forecast.mjs")]
 ]);
 
 function compatPad(bestand){

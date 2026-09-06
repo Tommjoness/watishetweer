@@ -48,6 +48,7 @@ d.minutely_15=null;
 d.daily.precipitation_probability_max=d.daily.time.map(()=>12);
 d.daily.precipitation_sum=d.daily.time.map(()=>0);
 d.daily.weather_code=d.daily.time.map(()=>3);
+d.daily.sunshine_duration=d.daily.time.map(()=>6*3600);
 
 const knmi={
   beschikbaar:true,

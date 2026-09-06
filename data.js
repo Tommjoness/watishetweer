@@ -2,13 +2,15 @@
 function bouw(o){
   o=o||{};
   // De app vraagt 24 uur historie op; het uurblok begint daarom een dag eerder dan het dagblok.
-  const dagen=7, uur=[],T=[],AP=[],RH=[],DP=[],PP=[],PR=[],WC=[],CC=[],WS=[],WD=[],WG=[],VIS=[],UV=[],PM=[],ISD=[];
+  const dagen=7, uur=[],T=[],AP=[],RH=[],DP=[],PP=[],PR=[],RAIN=[],SHOWERS=[],SNOW=[],WC=[],CC=[],WS=[],WD=[],WG=[],VIS=[],UV=[],PM=[],ISD=[];
   for(let d=-1;d<dagen;d++) for(let u=0;u<24;u++){
     const dag="2026-07-"+String(22+d).padStart(2,"0");
     uur.push(dag+"T"+String(u).padStart(2,"0")+":00");
     const t=o.temp?o.temp(u,d):+(16+4*Math.sin((u-4)/24*2*Math.PI)).toFixed(1);
     T.push(t); AP.push(t-1); RH.push(o.rh??75); DP.push(+(t-(o.spreiding??5)).toFixed(1));
-    PP.push(o.pp?o.pp(u,d):5); PR.push(o.pr?o.pr(u,d):0);
+    PP.push(o.pp?o.pp(u,d):5);
+    const neerslag=o.pr?o.pr(u,d):0;
+    PR.push(neerslag); RAIN.push(neerslag); SHOWERS.push(0); SNOW.push(0);
     WC.push(o.wc?o.wc(u,d):3); CC.push(o.cc?o.cc(u,d):40);
     WS.push(o.ws??14); WD.push(315); WG.push(o.wg?o.wg(u,d):26);
     VIS.push(o.zicht===undefined?20000:o.zicht); UV.push(Math.max(0,+(4.5*Math.sin((u-6)/12*Math.PI)).toFixed(1)));
@@ -23,7 +25,7 @@ function bouw(o){
     uvm.push(4.5); wsm.push(20); wgm.push(30); wdm.push(315);
   }
   const hourly={time:uur,temperature_2m:T,apparent_temperature:AP,relative_humidity_2m:RH,dew_point_2m:DP,
-    precipitation_probability:PP,precipitation:PR,weather_code:WC,cloud_cover:CC,wind_speed_10m:WS,
+    precipitation_probability:PP,precipitation:PR,rain:RAIN,showers:SHOWERS,snowfall:SNOW,weather_code:WC,cloud_cover:CC,wind_speed_10m:WS,
     wind_direction_10m:WD,wind_gusts_10m:WG,uv_index:UV,pressure_msl:PM,is_day:ISD};
   if(o.zicht!==null) hourly.visibility=VIS;
   // Het huidige weer hoort bij hetzelfde moment als de uurreeks, anders kan de app

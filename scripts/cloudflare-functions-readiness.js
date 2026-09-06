@@ -2,6 +2,7 @@
 
 const ROUTES=Object.freeze([
   Object.freeze({naam:"plaatsnaam",pad:"/api/plaatsnaam?lat=52.3508&lon=5.2647"}),
+  Object.freeze({naam:"forecast",pad:"/api/forecast?lat=52.3508&lon=5.2647"}),
   Object.freeze({naam:"neerslag",pad:"/api/neerslag?lat=52.3508&lon=5.2647&land=NL"}),
   Object.freeze({naam:"luchtkwaliteit",pad:"/api/luchtkwaliteit?lat=50.8503&lon=4.3517&land=BE"}),
   Object.freeze({naam:"waarschuwingen",pad:"/api/waarschuwingen?lat=52.3508&lon=5.2647&land=NL"})
@@ -67,7 +68,7 @@ async function wachtTotGereed(root,fetchImpl=fetch,nu=Date.now,wachtImpl=wacht){
     }
     await wachtImpl(intervalMs);
   }
-  throw new Error(`Cloudflare Pages Functions zijn na 90 seconden niet stabiel alle vier gereed op ${root}.`);
+  throw new Error(`Cloudflare Pages Functions zijn na 90 seconden niet stabiel alle ${ROUTES.length} gereed op ${root}.`);
 }
 
 if(require.main===module){

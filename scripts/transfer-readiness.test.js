@@ -29,7 +29,7 @@ for(const onderdeel of [
   "## Overdrachtschecklist"
 ])assert(runbook.includes(onderdeel),`overdrachtsrunbook mist ${onderdeel}`);
 
-for(const naam of ["CLOUDFLARE_API_TOKEN","CLOUDFLARE_ACCOUNT_ID","NOMINATIM_BASE_URL"]){
+for(const naam of ["CLOUDFLARE_API_TOKEN","CLOUDFLARE_ACCOUNT_ID","WEATHERAPI_KEY","NOMINATIM_BASE_URL"]){
   assert(runbook.includes(`\`${naam}\``),`overdrachtsrunbook mist configuratienaam ${naam}`);
 }
 assert(!/Authorization:\s*Bearer\s+[^<\s`]+/i.test(runbook),"overdrachtsrunbook mag geen Bearer-token bevatten");
@@ -41,6 +41,7 @@ assert(!preview.includes("pr-164"),"previewworkflow mag geen oude PR-preview har
 assert(preview.includes("CLOUDFLARE_PREVIEW_BRANCH: pr-${{ github.event.pull_request.number || github.run_id }}"),"previewworkflow moet per PR of handmatige run een eigen branch gebruiken");
 assert(preview.includes("cancel-in-progress: true"),"verouderde previewruns moeten worden geannuleerd");
 assert(preview.includes("node scripts/run-production-worldwide-browser.js"),"preview moet de wereldwijde browsercontrole via de gecontroleerde retry-runner behouden");
+assert(preview.includes("node scripts/weatherapi-live-fallback-browser.js"),"preview moet de echte WeatherAPI-fallback met geblokkeerde Open-Meteo bewijzen");
 
 /* Analytics is een aparte, idempotente accountmutatie. De normale productieflow
    mag die instelling niet bij iedere deploy terug uitzetten of opnieuw schrijven. */

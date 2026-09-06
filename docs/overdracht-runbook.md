@@ -26,7 +26,7 @@ flowchart TD
   D --> E[watishetweer.nl]
   E --> F[Open-Meteo en publieke databronnen]
   E --> G[Pages Functions onder /api]
-  G --> H[KNMI, MeteoAlarm, NWS en geocoding]
+  G --> H[WeatherAPI, KNMI, MeteoAlarm, NWS en geocoding]
 ```
 
 Belangrijkste onderdelen:
@@ -50,7 +50,7 @@ Belangrijkste onderdelen:
 
 | Functie | Bron | Sleutel in deze repository |
 |---|---|---|
-| actueel weer, uur- en dagverwachting | Open-Meteo | geen |
+| actueel weer, uur- en dagverwachting | Open-Meteo primair; WeatherAPI fallback | `WEATHERAPI_KEY` alleen als Cloudflare Pages-secret |
 | luchtkwaliteit en pollen | Open-Meteo Air Quality / CAMS | geen |
 | plaats zoeken | Open-Meteo Geocoding | geen |
 | reverse geocoding | BigDataCloud, daarna Nominatim-compatible fallback | geen; optionele basis-URL |
@@ -71,6 +71,14 @@ GitHub Actions heeft exact deze twee geheime waarden nodig:
 | `CLOUDFLARE_API_TOKEN` | Pages deployen, projectinstellingen lezen, custom domains controleren, de bedoelde zone-rate-limit beheren en de aparte Web Analytics-setup uitvoeren | GitHub repository Actions secrets |
 | `CLOUDFLARE_ACCOUNT_ID` | het juiste Cloudflare-account selecteren | GitHub repository Actions secrets |
 
+De runtime heeft daarnaast één providersecret nodig:
+
+| Naam | Doel | Waar instellen |
+|---|---|---|
+| `WEATHERAPI_KEY` | beschermde zevendaagse forecastfallback wanneer Open-Meteo faalt of te traag is | Cloudflare Pages > Settings > Variables and Secrets, versleuteld in zowel Preview als Production |
+
+De huidige zeven-dageninterface vereist WeatherAPI Starter of hoger. De Free-respons met drie forecastdagen faalt bewust gesloten. De key hoort niet als GitHub Actions-secret naar de build te gaan: alleen de Pages Function leest `context.env.WEATHERAPI_KEY` tijdens runtime.
+
 Voor de normale productieflow moet de token minimaal de acties uit `.github/workflows/cloudflare-production.yml` en `scripts/cloudflare-api-rate-limit.js` mogen uitvoeren. De geïsoleerde Web Analytics-setup vraagt daarnaast Cloudflare Account Settings Read/Write om het Web Analytics-siteobject te lezen/schrijven en Zone > Config Rules > Edit om uitsluitend de historische eigen `watishetweer_disable_rum`-regel te verwijderen. Het setupscript schrijft pas aan die Configuration Rule nadat de Analytics-site aantoonbaar actief is. Bij ontbrekende rechten stopt de setup met een gerichte fout zonder de productiecode of de bestaande blokkade onveilig te wijzigen. Geef geen ruimere accountrechten dan nodig.
 
 Niet-geheime configuratie:
@@ -80,7 +88,7 @@ Niet-geheime configuratie:
 - `WEATHER_BUILD_SHA` wordt tijdens de build vanuit de exacte bron-SHA gezet.
 - `EXPECTED_SHA`, `PRODUCTION_ROOT` en de smoke-timeouts zijn alleen verificatie-invoer.
 
-Plaats nooit tokens, account-ID's, registrarcodes of Search Console-verificatiegegevens in broncode, documentatie, issues of workflowlogs. Roteer de Cloudflare-token bij iedere eigendomsoverdracht.
+Plaats nooit tokens, providerkeys, account-ID's, registrarcodes of Search Console-verificatiegegevens in broncode, documentatie, issues of workflowlogs. Roteer de Cloudflare-token en WeatherAPI-key bij iedere eigendomsoverdracht.
 
 ## Ontwikkelen, testen en deployen
 
@@ -115,7 +123,7 @@ De build laat uitsluitend de officiële Cloudflare-beaconbron toe in `script-src
 `WeatherNow production smoke` draait na iedere push naar `main`, handmatig en ieder uur. De workflow bewaakt onder meer:
 
 - exacte live SHA en Cloudflare-responses;
-- apex/www-gedrag, securityheaders, robots, sitemap, 404 en de drie publieke API-contracten;
+- apex/www-gedrag, securityheaders, robots, sitemap, 404 en de vijf publieke API-contracten;
 - Amsterdam, New York, Tokio, Sydney, Singapore en Longyearbyen op mobiel en desktop, inclusief vergelijking met de echte forecastrespons;
 - interacties, foutstates, toetsenbordbediening, mobiele touch targets en metadata;
 - Chromium desktop en WebKit iPhone, requestaantallen, grafiektijd en horizontale overflow;
@@ -132,6 +140,7 @@ De repository bevat geen facturen en bewijst daarom geen exact maandbedrag. Leg 
 - domeinregistrar: eigenaar, verlengdatum, jaarlijkse prijs en autorisatiecodeprocedure;
 - GitHub: Actions-verbruik en eventueel betaald plan;
 - databronnen: actuele commerciële voorwaarden, fair use en eventuele toekomstige sleutel- of betaalplicht;
+- WeatherAPI: Starter-of-hoger abonnement, maandverbruik, limietmeldingen, factuur en betaalmethode;
 - Search Console of andere externe SEO-tools: eigenaar en toegang, niet kosten uit de repository afleiden.
 
 De rate-limitimplementatie gebruikt bewust één Free-planregel-slot: 60 requests per 10 seconden per IP voor `/api/*`, met een blokkade van 10 seconden. Voeg niet stil een tweede zone-rate-limitregel toe; het deployscript weigert een vreemde regel te overschrijven.
@@ -187,6 +196,7 @@ Controleer eerst welke bron faalt. De hoofdforecast heeft een begrensde fallback
 - [ ] Cloudflare-account/zone/Pages-project en facturatie overgedragen.
 - [ ] Nieuwe minimale Cloudflare-token geplaatst; oude token ingetrokken.
 - [ ] Cloudflare Web Analytics-site en de afwezigheid van de historische eigen `disable_rum`-regel via de setupworkflow geverifieerd.
+- [ ] WeatherAPI Starter-of-hoger account, facturatie en versleutelde `WEATHERAPI_KEY` voor Cloudflare Preview en Production overgedragen en live getest.
 - [ ] Registrar-eigendom, contactgegevens, DNSSEC, verlengdatum en betaalmethode gecontroleerd.
 - [ ] `watishetweer.nl` en `www.watishetweer.nl` actief en TLS geldig.
 - [ ] Google Search Console-eigendom en sitemap onder de nieuwe eigenaar gecontroleerd.

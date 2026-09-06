@@ -29,11 +29,18 @@ Belangrijke ingangen:
 
 De huidige publieke serverroutes zijn:
 
+- `api/forecast.mjs` — beschermde WeatherAPI-fallback voor actuele, uur- en zevendaagse forecastdata.
 - `api/plaatsnaam.mjs` — reverse geocoding voor `Mijn locatie` wanneer de directe BigDataCloud-resolutie niet genoeg oplevert.
 - `api/neerslag.mjs` — actuele en korte-termijnneerslag via de beschikbare providerlaag.
 - `api/waarschuwingen.mjs` — officiële weerwaarschuwingen op basis van de gekozen locatie.
 
-Serverlogica staat in `lib/`. De drie `functions/api/*.js`-bestanden zijn alleen de Cloudflare-ingangen en horen geen tweede implementatie van de route te bevatten.
+Serverlogica staat in `lib/`. De `functions/api/*.js`-bestanden zijn alleen de Cloudflare-ingangen en horen geen tweede implementatie van de route te bevatten.
+
+### WeatherAPI-fallback
+
+Open-Meteo blijft de primaire forecastbron. Alleen bij een fout of wanneer de volledige Open-Meteo-request na vijf seconden nog niet gereed is, starten de lichte Open-Meteo-fallback en de same-origin WeatherAPI-route binnen hetzelfde begrensde fallbackvenster. De eerste volledige, gevalideerde zevendaagse dataset wint; verliezende requests worden afgebroken.
+
+De WeatherAPI-sleutel mag uitsluitend als versleutelde Cloudflare Pages-secret `WEATHERAPI_KEY` in zowel preview als production worden ingesteld. Zet de sleutel nooit in browsercode, GitHub Actions-output of een repositorybestand. Omdat de app zeven dagen toont, is een WeatherAPI Starter-abonnement of hoger vereist; een driedaagse Free-response faalt bewust gesloten.
 
 ### Reverse geocoding
 
@@ -59,7 +66,7 @@ Een waarschuwing wordt alleen als plaatsgebonden kaart doorgegeven wanneer de se
 
 | Onderdeel | Bron |
 |---|---|
-| actuele, uur- en dagverwachting | Open-Meteo |
+| actuele, uur- en dagverwachting | Open-Meteo primair; WeatherAPI server-side fallback |
 | locatie zoeken | Open-Meteo Geocoding |
 | luchtkwaliteit en pollen | Open-Meteo Air Quality |
 | reverse geocoding | BigDataCloud, met Nominatim-compatible serverfallback |

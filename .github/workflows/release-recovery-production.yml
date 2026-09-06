@@ -48,6 +48,10 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: xvfb-run --auto-servernum node scripts/production-release-recovery-browser.js
+      - name: Bewijs WeatherAPI-fallback met geblokkeerde Open-Meteo
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node scripts/weatherapi-live-fallback-browser.js
       - name: Test hard refresh, nieuw tabblad, Back/Forward en SW-cachegeneratie
         env:
           EXPECTED_SHA: ${{ github.sha }}

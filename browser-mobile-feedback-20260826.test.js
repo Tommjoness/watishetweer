@@ -10,6 +10,9 @@ const {bouw}=require("./data.js");
 /* Reproduceert de fysieke iPhone-feedback van 26 augustus 2026 om 01:55 in
    Amsterdam: vandaag heeft 6% neerslagkans en een bekende dagsom van 0,0 mm. */
 const d=bouw({temp:(u)=>13+13*Math.max(0,Math.sin((u-6)/24*Math.PI)),tempNu:15,pp:(u,dag)=>dag===0?6:5,som:0});
+d.latitude=52.3676;
+d.longitude=4.9041;
+d.daily.sunshine_duration=d.daily.time.map(()=>6*3600);
 function verschuifIso(waarde,dagen){
   const s=String(waarde||""),m=/^(\d{4})-(\d{2})-(\d{2})(T.*)?$/.exec(s);if(!m)return waarde;
   const dt=new Date(Date.UTC(+m[1],+m[2]-1,+m[3]+dagen));

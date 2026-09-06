@@ -43,6 +43,10 @@ window.fetch=function(url){
   if(u.includes('/api/waarschuwingen'))return Promise.resolve({ok:true,status:200,json:async()=>({bron:'test',dekking:true,lijst:[]}),text:async()=>''});
   if(u.includes('/api/plaatsnaam'))return Promise.resolve({ok:true,status:200,json:async()=>({naam:'Amsterdam',land:'NL',bron:'test'}),text:async()=>''});
   if(u.includes('geocoding-api.open-meteo.com'))return Promise.resolve({ok:true,status:200,json:async()=>({results:[]}),text:async()=>''});
+  // De fetch-foutcase geldt voor de volledige forecastketen. Sinds WeatherAPI als
+  // server-side fallback bestaat moet ook die route dezelfde gesimuleerde fout
+  // geven; een lege 200-respons zou anders een kunstmatige validatiefout toevoegen.
+  if(u.includes('/api/forecast'))return Promise.reject(${geval.fout});
   if(u.includes('open-meteo.com'))return Promise.reject(${geval.fout});
   return Promise.resolve({ok:true,status:200,json:async()=>({}),text:async()=>''});
 };

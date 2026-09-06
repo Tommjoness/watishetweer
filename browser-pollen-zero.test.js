@@ -7,7 +7,8 @@ const {spawnSync}=require("child_process");
 const {bouw}=require("./data.js");
 
 const browser=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
-const bron=path.join(__dirname,"public","index.html");
+const publicDir=path.join(__dirname,"public");
+const bron=path.join(publicDir,"index.html");
 if(!fs.existsSync(bron))throw new Error("public/index.html ontbreekt; voer eerst de postbuild uit");
 let html=fs.readFileSync(bron,"utf8");
 
@@ -30,17 +31,39 @@ const lucht={
 const stub=`<script>
 const POLLEN_WEER=${JSON.stringify(weer)};
 const POLLEN_LUCHT=${JSON.stringify(lucht)};
+const POLLEN_FETCHES=[];
+/* De fixturedata staat bewust op 22 juli 2026. Houd ook de browserklok op dat
+   lokale uur, anders wordt een geldige expliciete modelnul maanden later door
+   de actuele systeemdatum terecht als niet-actueel behandeld. */
+const POLLEN_NATIVE_DATE=Date;
+const POLLEN_NATIVE_START=POLLEN_NATIVE_DATE.now();
+const POLLEN_FIXTURE_START=POLLEN_NATIVE_DATE.parse('2026-07-22T12:30:00Z');
+class PollenFixtureDate extends POLLEN_NATIVE_DATE{
+  constructor(...args){
+    super(...(args.length?args:[POLLEN_FIXTURE_START+(POLLEN_NATIVE_DATE.now()-POLLEN_NATIVE_START)]));
+  }
+  static now(){return POLLEN_FIXTURE_START+(POLLEN_NATIVE_DATE.now()-POLLEN_NATIVE_START);}
+}
+window.Date=PollenFixtureDate;
 window.fetch=async function(url){
-  const u=String(url);
+  const u=String(url);POLLEN_FETCHES.push(u);
   const payload=u.includes('/api/waarschuwingen')?{bron:'test',dekking:true,land:'NL',lijst:[]}
     :u.includes('/api/neerslag')?{beschikbaar:false,provider:'knmi',reden:'niet beschikbaar'}
     :u.includes('/api/plaatsnaam')?{naam:'Almere',land:'NL',bron:'test'}
+    :u.includes('/api/luchtkwaliteit')?{beschikbaar:false,provider:'luchtmeetnet',reden:'testfixture gebruikt CAMS voor pollen'}
     :u.includes('air-quality-api.open-meteo.com')?POLLEN_LUCHT:POLLEN_WEER;
   return {ok:true,status:200,json:async()=>payload,text:async()=>JSON.stringify(payload)};
 };
 try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}
 </script>`;
-html=html.replace("</head>",stub+"</head>");
+/* De delivery-build gebruikt externe content-hashed JS-bundles. Deze echte
+   browsertest draait vanaf file://, dus kopieer de volledige delivery-output en
+   maak uitsluitend root-relatieve lokale scripts relatief aan de fixturemap.
+   Zo test Chromium dezelfde geleverde runtime in plaats van een lege HTML-shell. */
+html=html.replace(/\bsrc=(["'])\/([^"']+\.js(?:\?[^"']*)?)\1/gi,(m,q,p)=>`src=${q}./${p}${q}`);
+const headOpen=/<head(?:\s[^>]*)?>/i.exec(html);
+if(!headOpen)throw new Error("Pollen-zero browserfixture mist <head>");
+html=html.slice(0,headOpen.index+headOpen[0].length)+stub+html.slice(headOpen.index+headOpen[0].length);
 
 const reporter=`<script>
 (function(){
@@ -56,6 +79,9 @@ const reporter=`<script>
       document.body.dataset.pollenZeroResult=ok?'ok':'fout';
       document.body.dataset.pollenZeroValue=waarde;
       document.body.dataset.pollenZeroSub=uitleg;
+      document.body.dataset.pollenZeroAq=(document.getElementById('aq')?.textContent||'').replace(/\\s+/g,' ').trim().slice(0,500);
+      document.body.dataset.pollenZeroReady=String(window.__WEATHERNOW_APP_READY__===true);
+      document.body.dataset.pollenZeroFetches=POLLEN_FETCHES.join(' | ').slice(0,1200);
     }catch(e){
       document.body.dataset.pollenZeroResult='exception';
       document.body.dataset.pollenZeroException=String(e&&e.message||e);
@@ -68,6 +94,7 @@ html=html.replace("</body>",reporter+"</body>");
 
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"weathernow-pollen-zero-"));
 const fixture=path.join(dir,"index.html");
+fs.cpSync(publicDir,dir,{recursive:true});
 fs.writeFileSync(fixture,html,"utf8");
 try{
   const url="file://"+fixture+"?lat=52.396&lon=5.280&plaats=Almere&land=NL";
@@ -79,7 +106,7 @@ try{
   const dom=r.stdout||"";
   const veld=naam=>{const m=new RegExp('data-'+naam+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(veld("pollen-zero-result")!=="ok"){
-    throw new Error("Pollen-zero browser fout: resultaat="+veld("pollen-zero-result")+", waarde="+veld("pollen-zero-value")+", sub="+veld("pollen-zero-sub")+", exception="+veld("pollen-zero-exception"));
+    throw new Error("Pollen-zero browser fout: resultaat="+veld("pollen-zero-result")+", waarde="+veld("pollen-zero-value")+", sub="+veld("pollen-zero-sub")+", ready="+veld("pollen-zero-ready")+", aq="+veld("pollen-zero-aq")+", fetches="+veld("pollen-zero-fetches")+", exception="+veld("pollen-zero-exception"));
   }
   console.log("Echte Chromium-pollencheck geslaagd: expliciete modelnul toont zichtbaar 0 korrels/m³ en blijft onderscheiden van ontbrekende data.");
 }finally{

@@ -643,7 +643,8 @@
     <div class="stats" id="aq"></div>
 
     <footer>
-      <span class="bron"><b>Bronnen</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> / <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener">CAMS</a> · <a href="https://meteoalarm.org" target="_blank" rel="noopener">MeteoAlarm</a> · <a href="https://www.weather.gov" target="_blank" rel="noopener">National Weather Service</a> · <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener">BigDataCloud</a> / <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap-bijdragers</a></span>
+      <span class="bron"><b>Bronnen</b> <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> / <a href="https://www.weatherapi.com/" target="_blank" rel="noopener">WeatherAPI.com</a> / <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener">CAMS</a> · <a href="https://meteoalarm.org" target="_blank" rel="noopener">MeteoAlarm</a> · <a href="https://www.weather.gov" target="_blank" rel="noopener">National Weather Service</a> · <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener">BigDataCloud</a> / <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap-bijdragers</a></span>
+      <span class="bron">Weersinformatie is algemeen en probabilistisch. Gebruik deze niet als enige basis voor persoonlijke veiligheid, luchtvaart, scheepvaart of noodplanning; raadpleeg daarvoor officiële meteorologische diensten en autoriteiten.</span>
       <span class="bron"><a href="/privacy.html">Privacy &amp; gegevens</a></span>
       <details class="bron footer-details"><summary>Technische locatiegegevens</summary><span id="coords"></span></details>
     </footer>
@@ -979,6 +980,76 @@ async function j(url,opt){
   }
 }
 
+const WEATHER_NOW_UURVELDEN=Object.freeze(["temperature_2m","apparent_temperature","relative_humidity_2m","dew_point_2m","precipitation_probability","precipitation","rain","showers","snowfall","weather_code","cloud_cover","wind_speed_10m","wind_direction_10m","wind_gusts_10m","uv_index","is_day"]);
+const WEATHER_NOW_DAGVELDEN=Object.freeze(["weather_code","temperature_2m_max","temperature_2m_min","sunrise","sunset","precipitation_probability_max","precipitation_sum","uv_index_max","wind_speed_10m_max","wind_gusts_10m_max","wind_direction_10m_dominant","sunshine_duration"]);
+function weatherNowGeldigeForecast(data){
+  if(!data||typeof data!=="object"||!data.current||!data.hourly||!data.daily)return false;
+  if(data.latitude==null||data.longitude==null||data.latitude===""||data.longitude==="")return false;
+  if(!Number.isFinite(Number(data.latitude))||!Number.isFinite(Number(data.longitude)))return false;
+  if(Number(data.latitude)<-90||Number(data.latitude)>90||Number(data.longitude)<-180||Number(data.longitude)>180)return false;
+  if(!String(data.timezone||"").trim()||data.utc_offset_seconds==null||data.utc_offset_seconds===""||!Number.isFinite(Number(data.utc_offset_seconds)))return false;
+  if(Math.abs(Number(data.utc_offset_seconds))>15*3600)return false;
+  const c=data.current,h=data.hourly,d=data.daily;
+  if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(c.time||""))||c.temperature_2m==null||c.temperature_2m===""||c.weather_code==null||c.weather_code===""||!Number.isFinite(Number(c.temperature_2m))||!Number.isFinite(Number(c.weather_code)))return false;
+  const uren=Array.isArray(h.time)?h.time:[],dagen=Array.isArray(d.time)?d.time:[];
+  if(uren.length<7*23||dagen.length!==7)return false;
+  if(new Set(uren).size!==uren.length||new Set(dagen).size!==dagen.length)return false;
+  if(!uren.every(t=>typeof t==="string"&&t.length>=13))return false;
+  if(!dagen.every(t=>/^\d{4}-\d{2}-\d{2}$/.test(String(t))))return false;
+  if(WEATHER_NOW_UURVELDEN.some(veld=>!Array.isArray(h[veld])||h[veld].length!==uren.length))return false;
+  if(WEATHER_NOW_DAGVELDEN.some(veld=>!Array.isArray(d[veld])||d[veld].length!==dagen.length))return false;
+  const forecastUurIndexen=[];
+  for(const dag of dagen){
+    const indexen=[];for(let i=0;i<uren.length;i++)if(uren[i].startsWith(dag+"T"))indexen.push(i);
+    if(indexen.length<23||indexen.length>25)return false;
+    forecastUurIndexen.push(...indexen);
+  }
+  if(!forecastUurIndexen.every(i=>h.temperature_2m[i]!==null&&h.temperature_2m[i]!==""&&Number.isFinite(Number(h.temperature_2m[i]))))return false;
+  if(!forecastUurIndexen.every(i=>h.weather_code[i]!==null&&h.weather_code[i]!==""&&Number.isFinite(Number(h.weather_code[i]))))return false;
+  if(!d.temperature_2m_max.every(v=>v!==null&&v!==""&&Number.isFinite(Number(v)))||!d.temperature_2m_min.every(v=>v!==null&&v!==""&&Number.isFinite(Number(v))))return false;
+  if(!d.weather_code.every(v=>v!==null&&v!==""&&Number.isFinite(Number(v))))return false;
+  try{new Intl.DateTimeFormat("en",{timeZone:String(data.timezone)}).format(new Date());}catch(e){return false;}
+  return true;
+}
+function weatherNowEisGeldigeForecast(belofte){
+  return Promise.resolve(belofte).then(data=>{
+    if(!weatherNowGeldigeForecast(data))throw new Error("weerservice leverde onvolledige gegevens");
+    return data;
+  });
+}
+function weatherNowChildRequest(parentSignal){
+  const controller=new AbortController();
+  let gekoppeld=false;
+  const parentAbort=()=>controller.abort();
+  if(parentSignal){
+    if(parentSignal.aborted)controller.abort();
+    else{parentSignal.addEventListener("abort",parentAbort,{once:true});gekoppeld=true;}
+  }
+  const ontkoppel=()=>{
+    if(gekoppeld&&parentSignal){parentSignal.removeEventListener("abort",parentAbort);gekoppeld=false;}
+  };
+  const annuleer=()=>{controller.abort();ontkoppel();};
+  return {signal:controller.signal,annuleer,ontkoppel};
+}
+function weatherNowEersteGeslaagdeForecast(items){
+  return new Promise((resolve,reject)=>{
+    let resterend=items.length,klaar=false,laatsteFout=null;
+    if(!resterend){reject(new Error("geen weerbronnen beschikbaar"));return;}
+    items.forEach(item=>{
+      Promise.resolve(item.belofte).then(value=>{
+        if(klaar)return;
+        klaar=true;
+        items.forEach(ander=>{if(ander!==item&&typeof ander.annuleer==="function")ander.annuleer();});
+        resolve(value);
+      },error=>{
+        if(klaar)return;
+        laatsteFout=error;resterend--;
+        if(resterend===0){klaar=true;reject(laatsteFout||new Error("weerbronnen niet beschikbaar"));}
+      });
+    });
+  });
+}
+
 /* ---------- ophalen ---------- */
 let laadTeller=0,waarschuwingTeller=0,actieveWeerController=null,actieveLuchtController=null,actieveWaarschuwingController=null;
 /* opslaan=false is uitsluitend voor een gedeelde URL-locatie: die moet wel
@@ -1024,6 +1095,7 @@ async function load(lat,lon,label,stil,opslaan,land){
   const fmin=basis+"&past_hours=24&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,"
     +"precipitation_probability,precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,"
     +"wind_gusts_10m,uv_index,pressure_msl,is_day";
+  const w="/api/forecast?lat="+encodeURIComponent(nieuweLat)+"&lon="+encodeURIComponent(nieuweLon);
   const a="https://air-quality-api.open-meteo.com/v1/air-quality?latitude="+lat+"&longitude="+lon
     +"&current=european_aqi,us_aqi&hourly=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,"
     +"ragweed_pollen,olive_pollen&forecast_days=1&timezone=auto";
@@ -1042,10 +1114,14 @@ async function load(lat,lon,label,stil,opslaan,land){
     :Promise.resolve({ok:null,value:S.air});
   try{
     let vol=null;
-    try{vol=await j(f,{timeoutMs:10000,signal:weerController.signal});}
+    try{vol=await weatherNowEisGeldigeForecast(j(f,{timeoutMs:10000,signal:weerController.signal}));}
     catch(e){
       if(mijnBeurt!==laadTeller) return;
-      vol=await j(fmin,{timeoutMs:10000,signal:weerController.signal});
+      try{vol=await weatherNowEisGeldigeForecast(j(fmin,{timeoutMs:10000,signal:weerController.signal}));}
+      catch(e2){
+        if(mijnBeurt!==laadTeller) return;
+        vol=await weatherNowEisGeldigeForecast(j(w,{timeoutMs:10000,signal:weerController.signal}));
+      }
     }
     if(mijnBeurt!==laadTeller) return;   // er is inmiddels een nieuwere plaats gekozen
     S.d=vol;if(luchtVerversen)S.air=null;

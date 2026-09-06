@@ -37,6 +37,7 @@ for(const contract of [
 assert(!csp.includes("script-src 'self' 'unsafe-inline'"),"Executable inline scripts horen na delivery-externalisatie niet meer toegestaan te zijn");
 assert(!csp.includes("https://static.cloudflareinsights.com/beacon.min.js"),"CSP mag de Analytics-beacon niet meer tot het onversieerde bestandspad beperken; Cloudflare injecteert een versiepad");
 assert(!csp.includes("cloudflareinsights.com/cdn-cgi/rum"),"Proxied Web Analytics hoort via same-origin /cdn-cgi/rum te posten, niet via een extra connect-src origin");
+assert(!csp.includes("api.weatherapi.com"),"WeatherAPI hoort uitsluitend achter de same-origin Cloudflare Function; de CSP mag geen browserverbinding naar de provider toelaten");
 
 /* no-transform zette bij Cloudflare ook gzip/Brotli uit. HTML mag nog steeds
    direct revalideren, maar moet transformeerbaar blijven zodat de edge de grote
@@ -57,6 +58,7 @@ const middleware=fs.readFileSync(path.join(root,"functions","_middleware.js"),"u
 assert(middleware.includes('"Cross-Origin-Opener-Policy":"same-origin"'),"API-middleware mist COOP");
 assert(middleware.includes('"Content-Security-Policy":"default-src \'self\'; script-src \'self\' https://static.cloudflareinsights.com; script-src-attr \'none\';'),"API-middleware loopt achter op strikt scriptbeleid plus versiecompatibele analytics-origin");
 assert(!middleware.includes("https://static.cloudflareinsights.com/beacon.min.js"),"API-middleware mag versiegebonden Cloudflare-beacons niet blokkeren met een exact bestandspad");
+assert(!middleware.includes("api.weatherapi.com"),"API-middleware mag geen directe browsertoegang tot WeatherAPI toestaan");
 assert(middleware.includes('new URL(context.request.url).pathname==="/sw.js"'),"middleware moet de serviceworkerroute exact afbakenen");
 assert(middleware.includes("context.env.ASSETS.fetch(context.request)"),"serviceworkerresponse moet uit de gebouwde asset komen");
 assert(middleware.includes('headers.set("Cache-Control","public, no-store, max-age=0, must-revalidate")'),"serviceworkerresponse moet de zonecache omzeilen en op de publieke custom domain direct revalideren");
