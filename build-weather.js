@@ -17,7 +17,7 @@ const {vernieuwServiceworkerCache}=require("./scripts/postbuild-cache.js");
 /* CACHE_BRONNEN en het hashrecept zijn uitsluitend eigendom van postbuild-cache.js. */
 const ROOT=__dirname,OUT=path.join(ROOT,"public"),BRON_SNAPSHOT=path.join(ROOT,".weather-runtime-source.tmp");
 const NIET_PUBLICEREN=new Set([
-  ".git",".github","api","functions","lib","node_modules","public","scripts",".weather-runtime-source.tmp",
+  ".git",".github","api","cloudflare","functions","lib","node_modules","public","scripts",".weather-runtime-source.tmp",
   "build-weather.js","interpretatie-engine.js","interpretatie-engine.test.js","nederlandse-weergrammatica.js","senior-correctness-v2.js","neerslagkans-policy-v3.js","live-polish.css","live-polish-v2.js","senior-semantiek-20260810.css","senior-semantiek-20260810.js","product-config.js",
   "run.js","run-built-matrix.js","kern.js","data.js","package.json","package-lock.json","vercel.json"
 ]);
