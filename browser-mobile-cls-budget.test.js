@@ -25,6 +25,7 @@ function maakForecast(){
   h.snowfall=Array(h.time.length).fill(0);
   d.current.rain=d.current.precipitation;
   d.current.showers=0;d.current.snowfall=0;d.current.visibility=20000;
+  d.latitude=52.35;d.longitude=5.26;
   d.daily.sunshine_duration=d.daily.time.map(()=>6*3600);
   const velden=Object.keys(h).filter(k=>Array.isArray(h[k]));
   while(h.time.length<194){
