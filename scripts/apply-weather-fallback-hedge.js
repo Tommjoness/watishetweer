@@ -68,12 +68,34 @@ const PRODUCTIE=`    let vol=null;
       volledigeRequest.ontkoppel();
     }`;
 
+/* De bestaande mobiele bronowner structureert de losse attributielinks pas in
+   de browser. WeatherAPI is later aan de ruwe footer toegevoegd; zonder deze
+   gerichte integratie zou die link bij structureerBronnen() weer verdwijnen.
+   Houd alle bestaande bronitems ongewijzigd en voeg alleen de nieuwe forecast-
+   provider direct naast Open-Meteo toe. */
+const BRONNEN_DECLARATIE='    const open=pak("Open-Meteo"),cams=pak("CAMS"),alarm=pak("MeteoAlarm"),nws=pak("National Weather Service"),bdc=pak("BigDataCloud"),osm=pak("© OpenStreetMap-bijdragers");';
+const BRONNEN_DECLARATIE_PRODUCTIE='    const open=pak("Open-Meteo"),weatherApi=pak("WeatherAPI.com"),cams=pak("CAMS"),alarm=pak("MeteoAlarm"),nws=pak("National Weather Service"),bdc=pak("BigDataCloud"),osm=pak("© OpenStreetMap-bijdragers");';
+const BRONNEN_GUARD='    if(!open||!cams||!alarm||!nws||!bdc||!osm)return false;';
+const BRONNEN_GUARD_PRODUCTIE='    if(!open||!weatherApi||!cams||!alarm||!nws||!bdc||!osm)return false;';
+const BRONNEN_OPEN_ITEM="      +'<span class=\"bronitem\">'+open.outerHTML+'</span>'";
+const BRONNEN_OPEN_ITEM_PRODUCTIE="      +'<span class=\"bronitem\">'+open.outerHTML+'</span>'\n      +'<span class=\"bronitem\">'+weatherApi.outerHTML+'</span>'";
+
+function vervangEenmaal(html,bron,productie,label){
+  const aantal=html.split(bron).length-1;
+  if(aantal!==1)throw new Error(label+" ontbreekt of is dubbel: "+aantal);
+  return html.replace(bron,productie);
+}
+
 function pasToe(html){
   const bronAantal=html.split(BRON).length-1;
   const productieAantal=html.split(PRODUCTIE).length-1;
   if(bronAantal!==1)throw new Error("Sequentieel weerfallbackblok ontbreekt of is dubbel: "+bronAantal);
   if(productieAantal!==0)throw new Error("Hedged weerfallback staat al in artifact: "+productieAantal);
-  return html.replace(BRON,PRODUCTIE);
+  let uit=html.replace(BRON,PRODUCTIE);
+  uit=vervangEenmaal(uit,BRONNEN_DECLARATIE,BRONNEN_DECLARATIE_PRODUCTIE,"WeatherAPI-brondeclaratieanker");
+  uit=vervangEenmaal(uit,BRONNEN_GUARD,BRONNEN_GUARD_PRODUCTIE,"WeatherAPI-bronguardanker");
+  uit=vervangEenmaal(uit,BRONNEN_OPEN_ITEM,BRONNEN_OPEN_ITEM_PRODUCTIE,"WeatherAPI-bronitemanker");
+  return uit;
 }
 
 if(require.main===module){
@@ -84,7 +106,7 @@ if(require.main===module){
   scripts.forEach((code,i)=>new vm.Script(code,{filename:"public/index.html:weather-fallback-"+(i+1)}));
   fs.writeFileSync(htmlPad,html,"utf8");
   const versie=vernieuwServiceworkerCache(OUT,"weather-fallback-hedge");
-  console.log("Trage volledige Open-Meteo-forecast krijgt na 5 s een begrensde race tussen lichte Open-Meteo en WeatherAPI; eerste volledige geldige bron wint en verliezende fallbackrequests worden afgebroken; cache "+versie+".");
+  console.log("Trage volledige Open-Meteo-forecast krijgt na 5 s een begrensde race tussen lichte Open-Meteo en WeatherAPI; eerste volledige geldige bron wint, verliezende fallbackrequests worden afgebroken en WeatherAPI-attributie blijft in de gestructureerde footer behouden; cache "+versie+".");
 }
 
-module.exports={BRON,PRODUCTIE,pasToe};
+module.exports={BRON,PRODUCTIE,BRONNEN_DECLARATIE,BRONNEN_DECLARATIE_PRODUCTIE,BRONNEN_GUARD,BRONNEN_GUARD_PRODUCTIE,BRONNEN_OPEN_ITEM,BRONNEN_OPEN_ITEM_PRODUCTIE,pasToe};
