@@ -30,6 +30,19 @@ const lucht={
 const stub=`<script>
 const POLLEN_WEER=${JSON.stringify(weer)};
 const POLLEN_LUCHT=${JSON.stringify(lucht)};
+/* De fixturedata staat bewust op 22 juli 2026. Houd ook de browserklok op dat
+   lokale uur, anders wordt een geldige expliciete modelnul maanden later door
+   de actuele systeemdatum terecht als niet-actueel behandeld. */
+const POLLEN_NATIVE_DATE=Date;
+const POLLEN_NATIVE_START=POLLEN_NATIVE_DATE.now();
+const POLLEN_FIXTURE_START=POLLEN_NATIVE_DATE.parse('2026-07-22T12:30:00Z');
+class PollenFixtureDate extends POLLEN_NATIVE_DATE{
+  constructor(...args){
+    super(...(args.length?args:[POLLEN_FIXTURE_START+(POLLEN_NATIVE_DATE.now()-POLLEN_NATIVE_START)]));
+  }
+  static now(){return POLLEN_FIXTURE_START+(POLLEN_NATIVE_DATE.now()-POLLEN_NATIVE_START);}
+}
+window.Date=PollenFixtureDate;
 window.fetch=async function(url){
   const u=String(url);
   const payload=u.includes('/api/waarschuwingen')?{bron:'test',dekking:true,land:'NL',lijst:[]}
