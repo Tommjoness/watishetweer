@@ -63,9 +63,10 @@ async function wachtOpSha(){
   }
 
   const [bundleTekst,bootstrapTekst]=await Promise.all([tekst(ROOT+gedeeldeBundle),tekst(ROOT+gedeeldeBootstrap)]);
-  for(const invariant of ["weathernow:app-ready","pageshow","AbortController","laadTeller","zoekGeneratie"]){
+  for(const invariant of ["weathernow:app-ready","pageshow","AbortController","laadTeller","zoekGeneratie","weatherNowGeldigeForecast","weatherNowChildRequest","weatherNowEersteGeslaagdeForecast","/api/forecast?lat="]){
     assert(bundleTekst.includes(invariant),`actieve productieclient mist invariant ${invariant}`);
   }
+  assert(!bundleTekst.includes("https://api.weatherapi.com"),"actieve productieclient mag WeatherAPI niet rechtstreeks aanroepen");
   assert(bootstrapTekst.includes("12000"),"actieve productiebootstrap mist de 12s watchdogtimeout");
   assert(bootstrapTekst.includes("weathernow:app-ready"),"actieve productiebootstrap mist app-ready recovery");
 
