@@ -92,6 +92,8 @@ async function run(){
         if(u.hostname==="air-quality-api.open-meteo.com")return r.fulfill({json:{current:{european_aqi:22},hourly:{time:["2026-07-22T14:00"],grass_pollen:[0],birch_pollen:[0],alder_pollen:[0],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}}});
         if(u.pathname==="/api/waarschuwingen"){await sleep(1100);return r.fulfill({json:{bron:"test",dekking:true,land:"NL",lijst:[]}});}
         if(u.pathname==="/api/neerslag")return r.fulfill({json:{nowcast:null,actueel:null,bron:"test"}});
+        if(u.pathname==="/api/luchtkwaliteit")return r.fulfill({json:{beschikbaar:false,provider:"luchtmeetnet",reden:"testfixture gebruikt CAMS voor pollen"}});
+        if(u.pathname==="/api/plaatsnaam")return r.fulfill({json:{beschikbaar:false}});
         if(u.origin!==root)return r.fulfill({json:{}});
         return r.continue();
       });
@@ -103,9 +105,9 @@ async function run(){
           const rect=s=>{const e=document.querySelector(s);return e?e.getBoundingClientRect().toJSON():null;};
           return {...window.__cwv,geometry:{main:rect(".wiw-chart-main"),graph:rect("#chart"),hours:rect("#wiw-hour-panel"),table:rect("#wiw-hour-table"),rain:rect(".wiw-rain-section"),days:rect(".dashrow-days")},rows:document.querySelectorAll("#wiw-hour-table tbody tr").length,overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,sha:document.querySelector('meta[name="weather-build-sha"]')?.content};
         });
-        result.route=route;result.width=width;result.scenario=scenario;result.cls=cls(result.shifts);
+        result.route=route;result.width=width;result.scenario=scenario;result.cls=cls(result.shifts);result.errors=errors.slice();
         reports.push(result);
-        assert.deepEqual(errors,[],"Runtime/console: "+route);
+        assert.deepEqual(errors,[],"Runtime/console: "+route+" "+JSON.stringify(errors));
         assert(result.overflow<=1,"Horizontale overflow: "+JSON.stringify({route,width,overflow:result.overflow}));
         console.log("CWV_BASELINE "+JSON.stringify({route,width,scenario,cls:result.cls,rows:result.rows,geometry:result.geometry,shifts:result.shifts}));
       }
