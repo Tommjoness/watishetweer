@@ -988,17 +988,24 @@ function weatherNowGeldigeForecast(data){
   if(!Number.isFinite(Number(data.latitude))||!Number.isFinite(Number(data.longitude)))return false;
   if(Number(data.latitude)<-90||Number(data.latitude)>90||Number(data.longitude)<-180||Number(data.longitude)>180)return false;
   if(!String(data.timezone||"").trim()||data.utc_offset_seconds==null||data.utc_offset_seconds===""||!Number.isFinite(Number(data.utc_offset_seconds)))return false;
+  if(Math.abs(Number(data.utc_offset_seconds))>15*3600)return false;
   const c=data.current,h=data.hourly,d=data.daily;
-  if(!String(c.time||"")||c.temperature_2m==null||c.temperature_2m===""||c.weather_code==null||c.weather_code===""||!Number.isFinite(Number(c.temperature_2m))||!Number.isFinite(Number(c.weather_code)))return false;
+  if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(c.time||""))||c.temperature_2m==null||c.temperature_2m===""||c.weather_code==null||c.weather_code===""||!Number.isFinite(Number(c.temperature_2m))||!Number.isFinite(Number(c.weather_code)))return false;
   const uren=Array.isArray(h.time)?h.time:[],dagen=Array.isArray(d.time)?d.time:[];
-  if(uren.length<7*24||dagen.length<7)return false;
+  if(uren.length<7*23||dagen.length!==7)return false;
   if(new Set(uren).size!==uren.length||new Set(dagen).size!==dagen.length)return false;
   if(!uren.every(t=>typeof t==="string"&&t.length>=13))return false;
   if(!dagen.every(t=>/^\d{4}-\d{2}-\d{2}$/.test(String(t))))return false;
   if(WEATHER_NOW_UURVELDEN.some(veld=>!Array.isArray(h[veld])||h[veld].length!==uren.length))return false;
   if(WEATHER_NOW_DAGVELDEN.some(veld=>!Array.isArray(d[veld])||d[veld].length!==dagen.length))return false;
-  if(!h.temperature_2m.slice(0,7*24).every(v=>v!==null&&v!==""&&Number.isFinite(Number(v))))return false;
-  if(!h.weather_code.slice(0,7*24).every(v=>v!==null&&v!==""&&Number.isFinite(Number(v))))return false;
+  const forecastUurIndexen=[];
+  for(const dag of dagen){
+    const indexen=[];for(let i=0;i<uren.length;i++)if(uren[i].startsWith(dag+"T"))indexen.push(i);
+    if(indexen.length<23||indexen.length>25)return false;
+    forecastUurIndexen.push(...indexen);
+  }
+  if(!forecastUurIndexen.every(i=>h.temperature_2m[i]!==null&&h.temperature_2m[i]!==""&&Number.isFinite(Number(h.temperature_2m[i]))))return false;
+  if(!forecastUurIndexen.every(i=>h.weather_code[i]!==null&&h.weather_code[i]!==""&&Number.isFinite(Number(h.weather_code[i]))))return false;
   if(!d.temperature_2m_max.every(v=>v!==null&&v!==""&&Number.isFinite(Number(v)))||!d.temperature_2m_min.every(v=>v!==null&&v!==""&&Number.isFinite(Number(v))))return false;
   if(!d.weather_code.every(v=>v!==null&&v!==""&&Number.isFinite(Number(v))))return false;
   try{new Intl.DateTimeFormat("en",{timeZone:String(data.timezone)}).format(new Date());}catch(e){return false;}
