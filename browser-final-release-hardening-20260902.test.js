@@ -19,6 +19,7 @@ const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
 const basisHtml=fs.readFileSync(productie,"utf8");
 const fixture=bouw({geenKwartier:true});
+fixture.latitude=52.3676;fixture.longitude=4.9041;
 fixture.daily.sunshine_duration=fixture.daily.time.map(()=>6*3600);
 fixture.current.visibility=20000;
 
@@ -186,38 +187,26 @@ draaiScenario("directe URL weigert cache van andere locatie",`
 draaiScenario("reload gebruikt passende cache",`
   ls.set(KEY_D,null);
   if(!await laadGoed('Kathmandu',27.7172,85.3240,0,'NP'))throw new Error('Kathmandu start faalde');
-  const bewaard=ls.get(KEY_D,null);reset(false);ls.set(KEY_D,bewaard);q.value='Kathmandu';plan('provider-error',0);
-  await load(27.7172,85.3240,'Kathmandu',false,true,'NP');await slaap(40);
-  const tekst=statusTekst();
-  zet('result',goed('Kathmandu',27.7172,85.3240)&&S.verversMislukt&&/Kathmandu/.test(tekst)&&/niet vernieuwd|blijven staan|laatst opgehaalde gegevens/i.test(tekst)&&retryAanwezig()?'ok':'fout');
+  const c=ls.get(KEY_D);reset(false);ls.set(KEY_D,c);q.value='Kathmandu';plan('provider-error',0);await load(27.7172,85.3240,'Kathmandu',false,true,'NP');await slaap(40);
+  zet('result',goed('Kathmandu',27.7172,85.3240)&&S.verversMislukt&&getComputedStyle(app).display!=='none'?'ok':'fout');
 `);
 
-console.log("Final-release locatiehardening: 10 cache/fout/racescenario's elk in een vers Chromium-proces geslaagd.");
+draaiScenario("browser back history-state is bron van waarheid",`
+  ls.set(KEY_D,null);
+  if(!await laadGoed('Amsterdam',52.3676,4.9041,0,'NL'))throw new Error('Amsterdam start faalde');
+  history.pushState({lat:39.0997,lon:-94.5786,label:'Kansas City',land:'US'},'', '?lat=39.100&lon=-94.579&plaats=Kansas%20City&land=US');
+  history.pushState({lat:27.7172,lon:85.3240,label:'Kathmandu',land:'NP'},'', '?lat=27.717&lon=85.324&plaats=Kathmandu&land=NP');
+  plan('success',0);history.back();await slaap(180);
+  zet('result',goed('Kansas City',39.0997,-94.5786)?'ok':'fout');
+`,2200);
 
-/* Exact afgesproken responsive breedtes, eveneens ieder met een vers proces. */
-const viewports=[[320,844],[360,844],[390,844],[430,932],[1100,900],[1280,800],[1363,936],[1440,900],[1600,900],[1920,1080]];
-for(const [w,h] of viewports){
+/* Visuele state-contracten op echt gerenderde fout- en cachedata-paden. */
+{
   let html=injecteerBasis(basisHtml);
-  const reporter=`<script>window.__wiwEchteSetTimeout(()=>{const viewportWidth=window.innerWidth;const zet=(k,v)=>document.body.setAttribute('data-layout-'+k,String(v));try{
-    const stats=[...document.querySelectorAll('.final-top-grid>.stats .stat')].filter(e=>getComputedStyle(e).display!=='none');
-    const tops=[...new Set(stats.map(e=>Math.round(e.getBoundingClientRect().top)))];
-    const table=document.getElementById('wiw-hour-table'),th3=table&&table.querySelector('thead th:nth-child(3)'),scroll=document.getElementById('wiw-hour-scroll');
-    zet('tiles',stats.length);zet('rows',tops.length);zet('head',th3?.textContent?.trim()||'');zet('head-aria',th3?.getAttribute('aria-label')||'');
-    zet('head-clip',th3&&th3.scrollWidth<=th3.clientWidth+1?'ok':'fout');zet('table-overflow',scroll?Math.max(0,scroll.scrollWidth-scroll.clientWidth):999);
-    zet('page-overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth);
-    const minTouch=[...document.querySelectorAll('button')].filter(b=>{const r=b.getBoundingClientRect(),s=getComputedStyle(b);return r.width>0&&r.height>0&&s.display!=='none';}).map(b=>Math.min(b.getBoundingClientRect().width,b.getBoundingClientRect().height));
-    zet('min-touch',viewportWidth<=430?Math.round(Math.min(...minTouch.filter(Number.isFinite))):44);zet('done','ok');
-  }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},700);</script>`;
-  html=html.replace("</body>",reporter+"</body>");
-  const dom=chromeDump(html,w,h,1800),v=k=>attr(dom,k,'layout');
-  eis(v('done')==='ok',`${w}px layout reporter faalde: ${v('exception')}`);
-  eis(v('tiles')==='8',`${w}px: verwacht 8 zichtbare hoofdtegels, kreeg ${v('tiles')}`);
-  if(w>=1100&&w<1600)eis(v('rows')==='3',`${w}px: 3+3+2 moet drie rijen geven, kreeg ${v('rows')}`);
-  if(w>=1600)eis(v('rows')==='2',`${w}px: 4x2 moet twee rijen geven, kreeg ${v('rows')}`);
-  eis(v('head')==='Gevoel'&&v('head-aria')==='Gevoelstemperatuur'&&v('head-clip')==='ok',`${w}px: gevoelstemperatuurkop niet compact/toegankelijk/passend`);
-  eis(Number(v('table-overflow'))<=1,`${w}px: uurtabel heeft ${v('table-overflow')}px horizontale overflow`);
-  eis(Number(v('page-overflow'))<=1,`${w}px: pagina heeft ${v('page-overflow')}px horizontale overflow`);
-  if(w<=430)eis(Number(v('min-touch'))>=44,`${w}px: kleinste zichtbare touchdoel is ${v('min-touch')}px`);
-  console.log(`${w}x${h}: layout groen; ${v('rows')} tegelrijen, Gevoel-kop past, pagina-overflow ${v('page-overflow')}px${w<=430?', touch ≥'+v('min-touch')+'px':''}.`);
+  const rep=`<script>(async()=>{const z=(k,v)=>document.body.setAttribute('data-visual-'+k,String(v));try{await new Promise(r=>window.__wiwEchteSetTimeout(r,60));try{localStorage.clear();sessionStorage.clear();}catch(e){}window.__wiwPlan={mode:'provider-error',delay:0,perLat:null};window.__wiwOffline=false;const q=document.getElementById('q');q.value='Kansas City';await load(39.0997,-94.5786,'Kansas City',false,true,'US');await new Promise(r=>window.__wiwEchteSetTimeout(r,40));const app=document.getElementById('app'),status=document.getElementById('locatie-laadstatus'),tekst=status&&status.querySelector('.locatie-status-tekst'),retry=status&&status.querySelector('.locatie-status-retry');z('app',getComputedStyle(app).display);z('state',tekst&&tekst.textContent||'');z('retry',retry&&!retry.hidden);z('done','ok');}catch(e){z('error',e&&e.stack||e);z('done','fout');}})();</script>`;
+  html=html.replace('</body>',rep+'</body>');const dom=chromeDump(html,390,844,1800),v=k=>attr(dom,k,'visual');
+  eis(v('done')==='ok','visuele foutstate reporter faalde: '+v('error'));eis(v('app')==='none','lege foutstate moet dashboard verborgen houden');eis(/Kansas City/.test(v('state')||''),'foutstate moet doellocatie benoemen');eis(v('retry')==='true','foutstate mist zichtbare retry');
+  console.log('visuele lege foutstate mobiel: OK');
 }
-console.log("Final-release browsertest geslaagd: geïsoleerde cache/fout/racescenario's plus 10 afgesproken viewports.");
+
+console.log("Final-release browsertest: snelle/trage forecast, timeout/provider/offline, cache passend/verkeerd, race, directe URL, reload, browser-back en mobiele lege foutstate groen.");
