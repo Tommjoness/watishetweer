@@ -16,7 +16,8 @@ function antwoord(status,body){
 }
 
 (async()=>{
-  assert.deepStrictEqual(ROUTES.map(x=>x.naam),["plaatsnaam","neerslag","luchtkwaliteit","waarschuwingen"],"readiness moet alle vier productie-API's afwachten");
+  assert.deepStrictEqual(ROUTES.map(x=>x.naam),["plaatsnaam","forecast","neerslag","luchtkwaliteit","waarschuwingen"],"readiness moet alle vijf productie-API's afwachten");
+  assert(ROUTES.some(x=>x.pad.startsWith("/api/forecast?")),"WeatherAPI-forecastroute ontbreekt uit readiness");
   assert(ROUTES.some(x=>x.pad.startsWith("/api/neerslag?")),"neerslagroute ontbreekt uit readiness");
   assert(ROUTES.some(x=>x.pad.startsWith("/api/luchtkwaliteit?")),"luchtkwaliteitroute ontbreekt uit readiness");
   assert(ROUTES.some(x=>x.pad.startsWith("/api/waarschuwingen?")),"waarschuwingenroute ontbreekt uit readiness");
@@ -35,8 +36,8 @@ function antwoord(status,body){
     gezien.push(url);
     return antwoord(200,{ok:true});
   });
-  assert.equal(allesGroen,true,"alle vier geldige routes moeten één readinessmeting groen maken");
-  assert.equal(gezien.length,4,"iedere poging moet alle vier routes controleren");
+  assert.equal(allesGroen,true,"alle vijf geldige routes moeten één readinessmeting groen maken");
+  assert.equal(gezien.length,4,"iedere poging moet alle vijf routes controleren");
   assert(gezien.some(url=>url.includes("/api/neerslag?")),"neerslag moet live worden gecontroleerd");
   assert(gezien.some(url=>url.includes("/api/luchtkwaliteit?")),"luchtkwaliteit moet live worden gecontroleerd");
 
@@ -76,5 +77,5 @@ function antwoord(status,body){
   assert.equal(klok,readinessTimeoutMs,"timeout moet exact binnen het afgesproken 90s-venster blijven");
   assert(pogingen>=4,"readiness moet opnieuw proberen vóór hij opgeeft");
 
-  console.log("Cloudflare Functions-readiness: vier routes, stabiele propagatie, 404-blokkade, degradatie en timeout geslaagd.");
+  console.log("Cloudflare Functions-readiness: vijf routes inclusief WeatherAPI-fallback, stabiele propagatie, 404-blokkade, degradatie en timeout geslaagd.");
 })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});
