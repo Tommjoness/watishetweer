@@ -70,6 +70,8 @@ async function run(context,route,fn){
 {
   assert.equal(canoniekeCacheUrl(new Request(BASE+"/api/plaatsnaam?lat=91&lon=4"),"plaatsnaam"),null);
   assert.equal(canoniekeCacheUrl(new Request(BASE+"/api/plaatsnaam?lat=abc&lon=4"),"plaatsnaam"),null);
+  assert.equal(canoniekeCacheUrl(new Request(BASE+"/api/plaatsnaam?lat=&lon=4"),"plaatsnaam"),null);
+  assert.equal(canoniekeCacheUrl(new Request(BASE+"/api/plaatsnaam?lon=4"),"plaatsnaam"),null);
 }
 
 {
@@ -93,11 +95,12 @@ async function run(context,route,fn){
 
 {
   const cache=new MemoryCache();
+  const dagen=Array.from({length:7},(_,i)=>`2026-09-${String(6+i).padStart(2,"0")}`);
   const geldig={
     provider:"weatherapi",
     current:{temperature_2m:14},
-    hourly:{time:Array.from({length:168},(_,i)=>String(i))},
-    daily:{time:Array.from({length:7},(_,i)=>String(i))}
+    hourly:{time:dagen.flatMap(dag=>Array.from({length:24},(_,i)=>`${dag}T${String(i).padStart(2,"0")}:00`))},
+    daily:{time:dagen}
   };
   let calls=0;
   const eerste=await run({request:new Request(BASE+"/api/forecast?lat=52.3702&lon=4.8952"),cache},"forecast",async()=>{
@@ -111,6 +114,20 @@ async function run(context,route,fn){
   assert.equal(tweede.headers.get("x-wiw-edge-cache"),"HIT");
   assert.equal(calls,1);
   assert.equal((await tweede.json()).provider,"weatherapi");
+}
+
+{
+  const cache=new MemoryCache();
+  const dagen=Array.from({length:7},(_,i)=>`2026-09-${String(6+i).padStart(2,"0")}`);
+  const incompleet={
+    provider:"weatherapi",
+    current:{temperature_2m:14},
+    hourly:{time:dagen.flatMap((dag,dagIndex)=>Array.from({length:dagIndex===3?22:24},(_,i)=>`${dag}T${String(i).padStart(2,"0")}:00`))},
+    daily:{time:dagen}
+  };
+  const r=await run({request:new Request(BASE+"/api/forecast?lat=52.37&lon=4.89"),cache},"forecast",async()=>jsonResponse(incompleet));
+  assert.equal(r.headers.get("x-wiw-edge-cache"),"BYPASS","onvolledige kalenderdag mag niet als WeatherAPI-fallback worden gecachet");
+  assert.equal(cache.puts,0);
 }
 
 {
