@@ -18,12 +18,13 @@ assert.strictEqual(wrangler.name, "watishetweer");
 assert.strictEqual(wrangler.pages_build_output_dir, "./public");
 assert.ok(wrangler.compatibility_date >= "2026-08-04", "Node-compatibele Workers-runtime vereist");
 
-for (const naam of ["neerslag", "plaatsnaam", "waarschuwingen"]) {
+for (const naam of ["forecast", "neerslag", "plaatsnaam", "waarschuwingen"]) {
   const bron = lees(`api/${naam}.mjs`);
   const wrapper = lees(`functions/api/${naam}.js`);
   assert.ok(bron.includes("Cloudflare-CDN-Cache-Control"), `${naam} mist Cloudflare CDN-cachecontract`);
   assert.ok(!bron.includes("Vercel-CDN-Cache-Control"), `${naam} bevat nog Vercel-cachelogica`);
   assert.ok(wrapper.includes(`../../api/${naam}.mjs`));
+  if (naam === "forecast") assert.ok(wrapper.includes("context.env"), "WeatherAPI-key moet uitsluitend via de Cloudflare-secretbinding lopen");
   assert.ok(wrapper.includes("../../lib/cloudflare-edge-cache.mjs"));
   assert.ok(wrapper.includes("export async function onRequest(context)"));
   assert.ok(wrapper.includes(`metEdgeCache(context, "${naam}", () => worker.fetch(context.request))`), `${naam}-wrapper omzeilt de veilige edge-cache of de bestaande handler`);
