@@ -19,6 +19,7 @@ if(!browser){
 const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt voor pending-state regressie.");
 const fixture=bouw({geenKwartier:true});
+fixture.latitude=52.3676;fixture.longitude=4.9041;
 fixture.daily.sunshine_duration=fixture.daily.time.map(()=>6*3600);
 fixture.current.visibility=20000;
 
