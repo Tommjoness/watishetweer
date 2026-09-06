@@ -4,6 +4,12 @@ const fs=require("fs"),path=require("path"),os=require("os"),assert=require("ass
 const browser=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
 
 const d=bouw({temp:()=>18,tempNu:18,pp:()=>5,pr:()=>0,som:0,ws:9,wsNu:9,cc:()=>85,ccNu:85,wg:()=>12,wc:()=>3,wcNu:3});
+// Houd de browserfixture gelijk aan een echte gevalideerde forecastrespons. De
+// WeatherAPI/Open-Meteo fallback accepteert sinds de release recovery alleen
+// complete providerdata, inclusief coördinaten en sunshine_duration.
+d.latitude=52.35;
+d.longitude=5.26;
+d.daily.sunshine_duration=d.daily.time.map(()=>6*3600);
 d.current.time="2026-07-22T20:10";
 d.current.temperature_2m=18;
 d.current.apparent_temperature=18;
