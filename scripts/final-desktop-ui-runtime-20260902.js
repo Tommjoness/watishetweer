@@ -218,7 +218,7 @@ function werkUurTabelBij(){
     if(desktop)tr.dataset.sourceIndex=String(r.bronIndex);
     if(r.marker){const m=document.createElement("span");m.className="wiw-hour-marker";m.textContent=r.marker;tijd.appendChild(m);}
     if(r.datumLabel){const d=document.createElement("span");d.className="wiw-hour-date";d.textContent=r.datumLabel;tijd.appendChild(d);}
-    const t=document.createElement("td");t.textContent=formatTemp(r.temp);const k=document.createElement("td");k.textContent=formatPct(r.kans)||"–";const mm=document.createElement("td");mm.textContent=formatMm(r.hoeveelheid)||"–";tr.append(tijd,t,k,mm);tbody.appendChild(tr);
+    const t=document.createElement("td");t.textContent=formatTemp(r.temp);const k=document.createElement("td");k.textContent=formatPct(r.kans)||"–";const mm=document.createElement("td");mm.textContent=num(r.hoeveelheid)===0&&(num(r.kans)===null||num(r.kans)<=0)?"–":formatMm(r.hoeveelheid)||"–";tr.append(tijd,t,k,mm);tbody.appendChild(tr);
   }
   vindVolledigeGrafiekTabel();planHoogteSync();
 }
