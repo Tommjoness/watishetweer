@@ -298,6 +298,7 @@ async function visueleStress(browser,naam){
           return {overflow:document.documentElement.scrollWidth-window.innerWidth,tekst:document.body.innerText,dubbel,
             dagen:document.querySelectorAll('#days .row.day:not(.kop)').length,nachten:document.querySelectorAll('#nights .row.night:not(.kop)').length,
             weeknotities:document.querySelectorAll('#days .dag-neerslagnotitie').length,
+            uurMm:[...document.querySelectorAll('#wiw-hour-table tbody tr td:last-child')].map(x=>String(x.textContent||'').trim()),
             viewBox:(document.getElementById('chart')||{}).getAttribute?.('viewBox')||'',cloudsub:(document.getElementById('cloudsub')||{}).textContent||'',vis:(document.getElementById('vis')||{}).textContent||''};
         });
         assert(r.overflow<=2,`${naam} ${scenario} ${breedte}px: geen horizontale overflow (${r.overflow}px)`);
@@ -309,7 +310,10 @@ async function visueleStress(browser,naam){
         assert(r.nachten>=1,`${naam} ${scenario}: Nachtzicht blijft renderen`);
         assert(!/Het wordt maximaal \d+ graden/i.test(r.tekst),`${naam} ${scenario}: geen tijdloze oude maximumtemperatuurclaim`);
         assert.equal(r.weeknotities,0,`${naam} ${scenario}: lange technische weeknotities blijven wereldwijd weg`);
-        if(scenario==='dry')assert(!/0,0\s*mm/i.test(r.tekst),`${naam} droog: nutteloze 0,0 mm blijft verborgen`);
+        if(scenario==='dry'){
+          assert(r.uurMm.length>0,`${naam} droog ${breedte}px: uurtabel bevat neerslagwaarden`);
+          assert(r.uurMm.every(v=>v==='0,0 mm'),`${naam} droog ${breedte}px: bekende numerieke nul blijft als 0,0 mm zichtbaar`);
+        }
         if(scenario==='smallchance'){
           assert(/25%/.test(r.tekst),`${naam}: echte 25%-kans blijft zichtbaar`);
           assert(/0,0\s*mm/i.test(r.tekst),`${naam}: bekende 0,0 mm blijft naast niet-nul kans zichtbaar`);
