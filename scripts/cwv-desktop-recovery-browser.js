@@ -79,7 +79,7 @@ async function run(){
   const browser=await chromium.launch({headless:true});
   const reports=[];
   try{
-    for(const width of [390,1660])for(const route of routes){
+    for(const width of [390,1024,1100,1366,1660,1920])for(const route of ([390,1660].includes(width)?routes:[routes[5]])){
       const context=await browser.newContext({viewport:{width,height:width===390?844:1000},locale:"nl-NL",timezoneId:"America/Los_Angeles",serviceWorkers:"block"});
       const page=await context.newPage(),errors=[];page.on("pageerror",e=>errors.push(String(e)));
       page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});
@@ -103,13 +103,29 @@ async function run(){
         await page.waitForTimeout(1600);
         const result=await page.evaluate(()=>{
           const rect=s=>{const e=document.querySelector(s);return e?e.getBoundingClientRect().toJSON():null;};
-          return {...window.__cwv,geometry:{main:rect(".wiw-chart-main"),graph:rect("#chart"),hours:rect("#wiw-hour-panel"),table:rect("#wiw-hour-table"),rain:rect(".wiw-rain-section"),days:rect(".dashrow-days")},rows:document.querySelectorAll("#wiw-hour-table tbody tr").length,overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,sha:document.querySelector('meta[name="weather-build-sha"]')?.content};
+          const rows=[...document.querySelectorAll("#wiw-hour-table tbody tr")],scroll=document.querySelector("#wiw-hour-scroll"),panel=document.querySelector("#wiw-hour-panel");
+          return {...window.__cwv,geometry:{main:rect(".wiw-chart-main"),graph:rect("#chart"),hours:rect("#wiw-hour-panel"),table:rect("#wiw-hour-table"),rain:rect(".wiw-rain-section"),days:rect(".dashrow-days")},rows:rows.length,hourRows:rows.map(r=>({instant:r.querySelector("time")?.dateTime,time:r.querySelector("time")?.textContent,sourceIndex:Number(r.dataset.sourceIndex),rect:r.getBoundingClientRect().toJSON(),visible:getComputedStyle(r).display!=="none"})),hourOverflow:scroll&&getComputedStyle(scroll).overflowY,hourButtons:panel&&[...panel.querySelectorAll("button")].filter(e=>e.getClientRects().length>0).length,copy:document.body.innerText,overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,sha:document.querySelector('meta[name="weather-build-sha"]')?.content};
         });
         result.route=route;result.width=width;result.scenario=scenario;result.cls=cls(result.shifts);result.errors=errors.slice();
         reports.push(result);
         assert.deepEqual(errors,[],"Runtime/console: "+route+" "+JSON.stringify(errors));
         assert(result.overflow<=1,"Horizontale overflow: "+JSON.stringify({route,width,overflow:result.overflow}));
-        console.log("CWV_BASELINE "+JSON.stringify({route,width,scenario,cls:result.cls,rows:result.rows,geometry:result.geometry,shifts:result.shifts}));
+        assert(result.cls<0.1,"Route-CLS buiten budget: "+JSON.stringify({route,width,scenario,cls:result.cls,shifts:result.shifts}));
+        assert(!result.copy.includes("Vandaag: neerslag geldt vanaf nu; minimum en maximum gelden voor de volledige dag."),"verwijderde Vandaag-copy keert terug");
+        if(width>=1100){
+          const g=result.geometry;
+          assert(Math.abs(g.main.height-g.hours.height)<=1,"grafiek en uurkolom eindigen ongelijk");
+          assert(g.main.height-g.graph.height<80,"uurkolom rekt de grafiekrij uit");
+          assert(result.rows>=4&&result.rows<=10,"volledige desktopuren buiten begrensd bereik: "+result.rows);
+          assert.equal(result.hourOverflow,"visible");assert.equal(result.hourButtons,0,"geen extra uurbediening");
+          for(const r of result.hourRows){assert(r.visible);assert(r.rect.height>=30,"uurregels mogen niet worden gepropt");assert(r.rect.bottom<=g.hours.bottom+1,"geen afgesneden laatste uurregel");}
+          for(let i=1;i<result.hourRows.length;i++){
+            assert.equal(Date.parse(result.hourRows[i].instant)-Date.parse(result.hourRows[i-1].instant),3600000,"unieke opeenvolgende instants, ook bij gelijke DST-labels");
+            assert.equal(result.hourRows[i].sourceIndex,result.hourRows[i-1].sourceIndex+1,"geen bronuren overslaan");
+          }
+          assert(!/Eerstkomend|Eerstvolgend/.test(await page.locator("#wiw-hour-panel").innerText()),"overbodige uurtoevoeging blijft weg");
+        }
+        console.log("CWV_MEASUREMENT "+JSON.stringify({route,width,scenario,cls:result.cls,rows:result.rows,geometry:result.geometry,shifts:result.shifts}));
       }
       if(route==="/weer/amsterdam/"){
         const session=await context.newCDPSession(page);

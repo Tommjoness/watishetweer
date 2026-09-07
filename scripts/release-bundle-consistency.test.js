@@ -70,6 +70,9 @@ for(const s of scenarios){
   const html=lees(s.rel);
   const bundle=hoofdscript(html,s.label),bootstrap=bootstrapScript(html,s.label),build=buildmarker(html,s.label);
   const canonical=(CANONICAL_RE.exec(html)||[])[1];
+  const appTags=html.match(/<main\b[^>]*\bid=["']app["'][^>]*>/gi)||[];
+  assert.equal(appTags.length,1,`${s.label}: verwacht één main#app`);
+  assert(/\bstyle=["']visibility:hidden["']/.test(appTags[0]),`${s.label}: app moet vanaf first paint geometrie reserveren, zonder ongeldige data zichtbaar te maken`);
   assert.equal(canonical,s.canonical,`${s.label}: canonical wijkt af`);
   assert(html.includes('id="weather-js-required"'),`${s.label}: noscript-herstel ontbreekt`);
   assert(html.includes('id="bootstrap-failure"'),`${s.label}: failed-JS-herstel ontbreekt`);

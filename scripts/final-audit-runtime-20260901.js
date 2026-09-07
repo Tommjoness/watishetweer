@@ -76,12 +76,8 @@ function verduidelijkVandaag(){
   if(i<0)return;
   const rij=document.querySelector('#days .row.day[data-i="'+i+'"]'),drain=rij&&rij.querySelector(".drain");
   if(!rij||!drain)return;
-  let zichtbaar=document.getElementById("final-today-window-note");
-  if(!zichtbaar){
-    zichtbaar=document.createElement("p");zichtbaar.id="final-today-window-note";zichtbaar.className="final-today-window-note";
-    zichtbaar.textContent="Vandaag: neerslag geldt vanaf nu; minimum en maximum gelden voor de volledige dag.";
-    if(hint&&hint.parentNode)hint.insertAdjacentElement("afterend",zichtbaar);else rij.insertAdjacentElement("afterend",zichtbaar);
-  }
+  // Geen extra zichtbare uitleg boven de weektabel. De bestaande rijgebonden
+  // schermlezerbeschrijving en alle datum-/neerslagberekeningen blijven intact.
   let beschrijving=document.getElementById("final-today-row-description");
   if(!beschrijving){beschrijving=document.createElement("span");beschrijving.id="final-today-row-description";beschrijving.className="sr-only";rij.insertAdjacentElement("afterend",beschrijving);}
   const neerslag=gesprokenNeerslag(drain.textContent);

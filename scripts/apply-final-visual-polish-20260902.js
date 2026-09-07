@@ -90,7 +90,8 @@ function synchroniseerUren(){
   }else{
     rijen.forEach(function(rij){rij.classList.remove("wiw-hour-mobile-hidden");});
     knop.hidden=true;knop.setAttribute("aria-expanded","false");
-    scroll.tabIndex=0;scroll.setAttribute("role","region");scroll.setAttribute("aria-label","Temperatuur per uur, verticaal scrollbaar");
+    if(window.innerWidth>=1100){scroll.removeAttribute("tabindex");scroll.removeAttribute("role");scroll.removeAttribute("aria-label");}
+    else{scroll.tabIndex=0;scroll.setAttribute("role","region");scroll.setAttribute("aria-label","Temperatuur per uur, verticaal scrollbaar");}
   }
 }
 

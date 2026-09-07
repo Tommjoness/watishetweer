@@ -126,7 +126,7 @@ async function controleer(browserType,naam){
     assert(/6%/.test(voor.neerslag)&&/0,0 mm/.test(voor.neerslag),`${naam}: 6% en bekende 0,0 mm staan samen zichtbaar (${voor.neerslag})`);
     assert(/42%/.test(voor.neerslagRijen[1])&&/88%/.test(voor.neerslagRijen[2])&&/75%/.test(voor.neerslagRijen[3]),`${naam}: neerslagkansen van bijzondere vervolgdagen blijven in de tabel zichtbaar (${voor.neerslagRijen.join(" | ")})`);
     assert.equal(voor.dagenHint,"Kies een dag om die verwachting in de grafiek te bekijken.",`${naam}: weekbedieningshint blijft een korte instructie (${voor.dagenHint})`);
-    assert.equal(voor.todayNote,"Vandaag: neerslag geldt vanaf nu; minimum en maximum gelden voor de volledige dag.",`${naam}: zichtbare Vandaag-uitleg ontbreekt of wijkt af (${voor.todayNote})`);
+    assert.equal(voor.todayNote,"",`${naam}: verwijderde zichtbare Vandaag-uitleg mag niet terugkomen (${voor.todayNote})`);
     assert.equal(voor.losseUitleg,false,`${naam}: de oude algemene neerslaguitleg staat niet meer los boven de tabel`);
     assert.deepEqual(voor.notities,[],`${naam}: lange daggebonden neerslagnotities zijn volledig uit de weektabel verwijderd`);
     assert(!!voor.describedBy[0],`${naam}: Vandaag heeft aanvullende aria-describedby-uitleg`);

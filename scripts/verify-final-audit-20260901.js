@@ -13,7 +13,7 @@ eis(html.includes("grid-template-columns:minmax(0,.95fr) minmax(480px,1.05fr)"),
 eis(html.includes("#chart g[data-q4-rain-periods]{display:none!important}"),"oude regenbrackets zijn niet visueel uitgezet");
 eis(html.includes("Verwachte meetbare neerslag:"),"nieuwe broncorrecte regenperiodecopy ontbreekt");
 eis(html.includes("Kies een dag om die verwachting in de grafiek te bekijken."),"weekhint is niet kort en consumentgericht");
-eis(html.includes("Vandaag: neerslag geldt vanaf nu; minimum en maximum gelden voor de volledige dag."),"zichtbare Vandaag-horizon ontbreekt");
+eis(!html.includes("Vandaag: neerslag geldt vanaf nu; minimum en maximum gelden voor de volledige dag."),"verwijderde zichtbare Vandaag-copy is teruggekeerd");
 eis(html.includes('rij.setAttribute("aria-describedby"'),"Vandaag-horizon is niet via aria-describedby aan de rij gekoppeld");
 eis(!html.includes('rij.setAttribute("aria-label",bestaand?bestaand+". "+uitleg:uitleg)'),"oude Vandaag aria-label-regressie staat nog in artifact");
 eis(html.includes("Neerslag vandaag vanaf nu:"),"gestructureerde schermlezeruitleg voor Vandaag ontbreekt");
