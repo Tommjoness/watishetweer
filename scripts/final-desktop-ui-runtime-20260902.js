@@ -13,17 +13,23 @@ const hhmm=t=>{const m=/T(\d{2}):(\d{2})/.exec(String(t||""));return m?m[1]+":"+
 const datum=t=>String(t||"").slice(0,10);
 const dagLabel=t=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(t||""));if(!m)return "";const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));return ["zo","ma","di","wo","do","vr","za"][d.getUTCDay()]+" "+Number(m[3])+" "+["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"][Number(m[2])-1];};
 
-function uurRijenUitGeo(g,currentTime,dagGeselecteerd){
+function uurRijenUitGeo(g,currentTime,dagGeselecteerd,hourly){
   const tijden=g&&Array.isArray(g.TI)?g.TI:[],T=g&&Array.isArray(g.T)?g.T:[],A=g&&Array.isArray(g.A)?g.A:[];
+  const P=g&&Array.isArray(g.P)?g.P:[],MM=g&&Array.isArray(g.MM)?g.MM:[];
+  const hourlyTijden=hourly&&Array.isArray(hourly.time)?hourly.time:null;
   const n=Math.min(24,tijden.length,T.length||tijden.length,A.length||tijden.length),rijen=[];
   let mark=-1;
   if(!dagGeselecteerd&&currentTime&&tijden.length){mark=tijden.findIndex(t=>String(t)>=String(currentTime));if(mark<0&&String(currentTime)<=String(tijden[tijden.length-1]))mark=tijden.length-1;}
   for(let i=0;i<n;i++){
     const tijd=tijden[i],temp=num(T[i]),gevoel=num(A[i]);
     if(!tijd||temp===null||gevoel===null)continue;
+    const bronIndex=hourlyTijden?hourlyTijden.indexOf(tijd):-1;
+    const fallbackIndex=bronIndex>=0?bronIndex:i;
+    const kans=P.length?num(P[i]):num(hourly&&hourly.precipitation_probability&&hourly.precipitation_probability[fallbackIndex]);
+    const hoeveelheid=MM.length?num(MM[i]):num(hourly&&hourly.precipitation&&hourly.precipitation[fallbackIndex]);
     const vorige=i>0?datum(tijden[i-1]):null,nieuweDag=i>0&&datum(tijd)!==vorige;
     const zelfdeUur=mark===i&&String(currentTime||"").slice(0,13)===String(tijd).slice(0,13);
-    rijen.push({tijd,temp,gevoel,datumLabel:nieuweDag?dagLabel(tijd):"",marker:mark===i?(zelfdeUur?"Nu":"Eerstvolgend"):""});
+    rijen.push({tijd,temp,gevoel,kans,hoeveelheid,datumLabel:nieuweDag?dagLabel(tijd):"",marker:mark===i?(zelfdeUur?"Nu":"Eerstvolgend"):""});
   }
   return rijen;
 }
@@ -40,7 +46,9 @@ function komendeUurRijen(data,nuMs,aantal=MAX_DESKTOP_UREN){
     vorige=minuut;
     if(minuut*60000<nuMs||rijen.length>=aantal)continue;
     const tijd=interpretatie.minutenNaarLokaal(minuut,data.timezone,offset);
-    rijen.push({tijd,instant:new Date(minuut*60000).toISOString(),bronIndex:i,temp:num(h.temperature_2m&&h.temperature_2m[i]),gevoel:num(h.apparent_temperature&&h.apparent_temperature[i]),datumLabel:datum(tijd)!==vorigeDatum?dagLabel(tijd):"",marker:""});
+    const temp=num(h.temperature_2m&&h.temperature_2m[i]),kans=num(h.precipitation_probability&&h.precipitation_probability[i]),hoeveelheid=num(h.precipitation&&h.precipitation[i]);
+    if(temp===null&&kans===null&&hoeveelheid===null)continue;
+    rijen.push({tijd,instant:new Date(minuut*60000).toISOString(),bronIndex:i,temp,gevoel:num(h.apparent_temperature&&h.apparent_temperature[i]),kans,hoeveelheid,datumLabel:datum(tijd)!==vorigeDatum?dagLabel(tijd):"",marker:""});
     vorigeDatum=datum(tijd);
   }
   return rijen;
@@ -79,7 +87,7 @@ function voegStijlToe(){
 .wiw-chart-main .dagmod{max-width:none!important;width:100%;margin-left:0!important;margin-right:0!important}
 .wiw-chart-main #chart{margin-bottom:-14px}
 .wiw-hour-panel{border-left:1px solid var(--rule);padding-left:24px;display:flex;flex-direction:column;box-sizing:border-box;min-height:0}
-.wiw-hour-panel h3{font-family:var(--serif);font-weight:400;font-size:20px;line-height:1.2;margin:0 0 10px;color:var(--ink)}
+.wiw-hour-panel h3{font-family:var(--serif);font-weight:400;font-size:20px;line-height:1.2;margin:4px 0 10px;color:var(--ink)}
 .wiw-hour-table-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;border-top:1px solid var(--ink);border-bottom:1px solid var(--rule);outline-offset:3px}
 .wiw-hour-table{width:100%;border-collapse:collapse;table-layout:fixed;font-family:var(--sans);font-size:12.5px;font-variant-numeric:tabular-nums}
 .wiw-hour-table caption{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
@@ -94,7 +102,7 @@ function voegStijlToe(){
 .wiw-full-chart-data{grid-column:1/-1;margin-top:4px}
 .wiw-full-chart-data>details{max-width:100%;margin:0}
 .wiw-full-chart-data>details>summary{max-width:920px;margin-left:auto;margin-right:auto;text-align:center}
-.wiw-rain-section{margin-top:var(--s4)}
+.wiw-rain-section{margin-top:var(--s4)}.wiw-rain-section[hidden]{display:none!important}
 .wiw-rain-section>h2{margin-top:0}
 .wiw-rain-layout{display:grid;grid-template-columns:minmax(0,1.86fr) minmax(250px,1fr);gap:32px;align-items:stretch;min-width:0}
 .wiw-rain-main,.wiw-rain-summary{min-width:0}
@@ -176,47 +184,45 @@ function maakUurPaneel(){
   const grid=document.createElement("div");grid.className="wiw-chart-layout";grid.id="wiw-chart-layout";
   const main=document.createElement("div");main.className="wiw-chart-main";
   paneel=document.createElement("aside");paneel.className="wiw-hour-panel";paneel.id="wiw-hour-panel";paneel.setAttribute("aria-labelledby","wiw-hour-title");
-  const h=document.createElement("h3");h.id="wiw-hour-title";h.textContent="Temperatuur per uur";
-  const scroll=document.createElement("div");scroll.className="wiw-hour-table-scroll";scroll.id="wiw-hour-scroll";scroll.tabIndex=0;scroll.setAttribute("role","region");scroll.setAttribute("aria-label","Temperatuur per uur, verticaal scrollbaar");
+  const h=document.createElement("h3");h.id="wiw-hour-title";h.textContent="Temperatuur en neerslag per uur";
+  const scroll=document.createElement("div");scroll.className="wiw-hour-table-scroll";scroll.id="wiw-hour-scroll";scroll.tabIndex=0;scroll.setAttribute("role","region");scroll.setAttribute("aria-label","Temperatuur en neerslag per uur");
   const table=document.createElement("table");table.className="wiw-hour-table";table.id="wiw-hour-table";
-  table.innerHTML='<caption>Temperatuur en gevoelstemperatuur per uur voor de uren in de grafiek</caption><thead><tr><th scope="col">Tijd</th><th scope="col">Temperatuur</th><th scope="col">Gevoelstemperatuur</th></tr></thead><tbody></tbody>';
+  table.innerHTML='<caption>Temperatuur, neerslagkans en neerslaghoeveelheid per uur voor de uren in de grafiek</caption><thead><tr><th scope="col">Tijd</th><th scope="col">Temperatuur</th><th scope="col">Kans</th><th scope="col">Neerslag</th></tr></thead><tbody></tbody>';
   scroll.appendChild(table);
-  const knop=document.createElement("button");knop.type="button";knop.className="wiw-all-data-button";knop.id="wiw-all-data-button";knop.textContent="Alle grafiekgegevens bekijken";knop.hidden=true;
-  paneel.append(h,scroll,knop);
+  paneel.append(h,scroll);
   dagmod.parentNode.insertBefore(grid,dagmod);main.appendChild(dagmod);grid.append(main,paneel);
-  const volledig=document.createElement("div");volledig.className="wiw-full-chart-data";volledig.id="wiw-full-chart-data";grid.insertAdjacentElement("afterend",volledig);
-  knop.addEventListener("click",()=>{const d=volledig.querySelector("details");if(!d)return;d.open=!d.open;knop.setAttribute("aria-expanded",String(d.open));if(d.open){const s=d.querySelector("summary");if(s)s.focus({preventScroll:true});}});
   return paneel;
 }
 
 function vindVolledigeGrafiekTabel(){
-  const houder=document.getElementById("wiw-full-chart-data"),knop=document.getElementById("wiw-all-data-button");if(!houder||!knop)return;
-  let details=houder.querySelector("details");
-  if(!details){
-    details=[...document.querySelectorAll("details")].find(d=>{const s=d.querySelector(":scope > summary");return s&&/grafiekgegevens.*tabel|gegevens.*grafiek.*tabel/i.test(String(s.textContent||""));});
-    if(details){details.id=details.id||"wiw-complete-chart-data";houder.appendChild(details);}
-  }
-  if(details){knop.hidden=window.innerWidth>=1100;knop.setAttribute("aria-controls",details.id||"wiw-complete-chart-data");knop.setAttribute("aria-expanded",String(!!details.open));const s=details.querySelector(":scope > summary");if(s)s.classList.add("wiw-short-copy","wiw-short-center");}
-  else knop.hidden=true;
+  const details=[...document.querySelectorAll("details")].find(d=>{const s=d.querySelector(":scope > summary");return s&&/grafiekgegevens.*tabel|gegevens.*grafiek.*tabel/i.test(String(s.textContent||""));});
+  if(details)details.remove();
+  const houder=document.getElementById("wiw-full-chart-data");if(houder)houder.remove();
+  const knop=document.getElementById("wiw-all-data-button");if(knop)knop.remove();
 }
 
 function werkUurTabelBij(){
   const paneel=maakUurPaneel(),tbody=document.querySelector("#wiw-hour-table tbody");if(!paneel||!tbody||typeof S==="undefined")return;
   const desktop=window.innerWidth>=1100;
   const nu=S.klokInstantOverride&&typeof S.klokInstantOverride.getTime==="function"?S.klokInstantOverride.getTime():Date.now();
-  const rijen=desktop?komendeUurRijen(S.d,nu):uurRijenUitGeo(S.geo,S.d&&S.d.current&&S.d.current.time,S.dag!=null);tbody.replaceChildren();
+  const rijen=desktop?komendeUurRijen(S.d,nu):uurRijenUitGeo(S.geo,S.d&&S.d.current&&S.d.current.time,S.dag!=null,S.d&&S.d.hourly);tbody.replaceChildren();
   const scroll=document.getElementById("wiw-hour-scroll"),caption=document.querySelector("#wiw-hour-table caption");
   if(desktop&&scroll){scroll.removeAttribute("tabindex");scroll.removeAttribute("role");scroll.removeAttribute("aria-label");}
-  if(caption)caption.textContent=desktop?"Temperatuur en gevoelstemperatuur voor de aankomende uren in de lokale tijd van de geselecteerde plaats":"Temperatuur en gevoelstemperatuur per uur voor de uren in de grafiek";
+  if(caption)caption.textContent=desktop?"Temperatuur en neerslag per uur voor de aankomende uren in de lokale tijd van de geselecteerde plaats":"Temperatuur, neerslagkans en neerslaghoeveelheid per uur voor de uren in de grafiek";
   for(const r of rijen){
     const tr=document.createElement("tr");if(r.marker){tr.dataset.current="1";tr.setAttribute("aria-current","time");}
     const tijd=document.createElement("td"),tm=document.createElement("time");tm.dateTime=r.instant||r.tijd;tm.textContent=hhmm(r.tijd);tijd.appendChild(tm);
     if(desktop)tr.dataset.sourceIndex=String(r.bronIndex);
     if(r.marker){const m=document.createElement("span");m.className="wiw-hour-marker";m.textContent=r.marker;tijd.appendChild(m);}
     if(r.datumLabel){const d=document.createElement("span");d.className="wiw-hour-date";d.textContent=r.datumLabel;tijd.appendChild(d);}
-    const t=document.createElement("td");t.textContent=formatTemp(r.temp);const a=document.createElement("td");a.textContent=formatTemp(r.gevoel);tr.append(tijd,t,a);tbody.appendChild(tr);
+    const t=document.createElement("td");t.textContent=formatTemp(r.temp);const k=document.createElement("td");k.textContent=formatPct(r.kans)||"–";const mm=document.createElement("td");mm.textContent=formatMm(r.hoeveelheid)||"–";tr.append(tijd,t,k,mm);tbody.appendChild(tr);
   }
   vindVolledigeGrafiekTabel();planHoogteSync();
+}
+
+function verbergNeerslagSectie(){
+  const section=document.getElementById("wiw-rain-section");if(!section)return;
+  section.hidden=true;section.setAttribute("aria-hidden","true");
 }
 
 function maakRegenLayout(){
@@ -231,7 +237,7 @@ function maakRegenLayout(){
 }
 
 function werkRegenSamenvattingBij(){
-  const aside=maakRegenLayout();if(!aside)return;
+  const aside=maakRegenLayout();verbergNeerslagSectie();if(!aside)return;
   const p=root.WeatherNowNeerslagPresentatieV2;let a=null,isNat=false;
   try{a=p&&typeof p.analyse==="function"?p.analyse(120):null;isNat=!!(p&&typeof p.meetbareNeerslagNu==="function"&&p.meetbareNeerslagNu(a));}catch(_){a=null;}
   const velden=regenVelden(a,isNat);aside.replaceChildren();
@@ -254,15 +260,17 @@ function syncHoogte(){
   aside.style.height=h+"px";
   // Alleen volledige rijen bestaan in de desktop-DOM. Niet verstoppen of
   // afknippen: verwijder de laatste rij zolang deze buiten de grafiekhoogte valt.
-  const tbody=document.querySelector("#wiw-hour-table tbody"),grens=aside.getBoundingClientRect().bottom-1;
-  while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens)tbody.lastElementChild.remove();
+  const tbody=document.querySelector("#wiw-hour-table tbody"),grens=aside.getBoundingClientRect().bottom;
+  const legeRij=rij=>[...rij.cells].every(cell=>!String(cell.textContent||"").trim());
+  while(tbody&&tbody.lastElementChild&&legeRij(tbody.lastElementChild))tbody.lastElementChild.remove();
+  while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
   aside.dataset.visibleHours=String(tbody?tbody.children.length:0);
 }
 function planHoogteSync(){const t=++hoogteToken;const run=()=>{if(t===hoogteToken)syncHoogte();};if(typeof requestAnimationFrame==="function")requestAnimationFrame(run);else setTimeout(run,0);}
 
 function naRender(basis,fn){return function(){const r=basis.apply(this,arguments);fn();return r;};}
 function installeer(){
-  voegStijlToe();herstelVerborgenDruk();maakUurPaneel();maakRegenLayout();centraliseerKorteTeksten();
+  voegStijlToe();herstelVerborgenDruk();maakUurPaneel();maakRegenLayout();verbergNeerslagSectie();centraliseerKorteTeksten();
   if(typeof etmaal==="function"&&!etmaal.__finalDesktop20260902){const w=naRender(etmaal,()=>{werkUurTabelBij();centraliseerKorteTeksten();vindVolledigeGrafiekTabel();});w.__finalDesktop20260902=true;etmaal=w;}
   if(typeof nowcast==="function"&&!nowcast.__finalDesktop20260902){const w=naRender(nowcast,()=>{werkRegenSamenvattingBij();centraliseerKorteTeksten();});w.__finalDesktop20260902=true;nowcast=w;}
   if(typeof dagen==="function"&&!dagen.__finalDesktop20260902){const w=naRender(dagen,centraliseerKorteTeksten);w.__finalDesktop20260902=true;dagen=w;}
