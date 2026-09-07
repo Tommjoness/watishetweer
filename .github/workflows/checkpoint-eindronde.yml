@@ -104,23 +104,7 @@ jobs:
       - name: Consumentencijfers zonder slashed zero in Chromium en WebKit
         run: node browser-consumer-numerals.test.js
       - name: Checkpoint 100% in Chromium en WebKit
-        id: q4_checkpoint
-        shell: bash
-        run: |
-          set +e
-          node browser-q4-checkpoint.test.js > /tmp/q4-checkpoint.log 2>&1
-          code=$?
-          cat /tmp/q4-checkpoint.log
-          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-          exit "$code"
-      - name: Upload Q4-checkpointdiagnostiek
-        if: always() && steps.q4_checkpoint.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: q4-checkpoint-log
-          path: /tmp/q4-checkpoint.log
-          if-no-files-found: error
-          retention-days: 1
+        run: node browser-q4-checkpoint.test.js
       - name: Zichtbare neerslagwaarheid in Chromium en WebKit
         shell: bash
         run: |
