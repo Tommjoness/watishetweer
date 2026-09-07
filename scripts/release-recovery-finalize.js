@@ -135,6 +135,19 @@ function normaliseerRouteScripts(routeHtml,gedeeldHtml,slug){
   if(index!==gedeeld.length)throw new Error(`${slug}: route bevat ${index} gedeelde executable scripts, verwacht ${gedeeld.length}.`);
   return uit;
 }
+function normaliseerRouteAppStart(routeHtml,gedeeldHtml,slug){
+  // Plaatsroutes worden vóór de LCP-laag gegenereerd. Scripts delen was niet
+  // genoeg: display:none in hun oude shell liet SEO-content eerst bovenaan
+  // schilderen en ontnam de desktopgrafiek zijn meetbare beginhoogte.
+  const opening=html=>String(html).match(/<main\b[^>]*\bid=["']app["'][^>]*>/gi)||[];
+  const rootTags=opening(gedeeldHtml),routeTags=opening(routeHtml);
+  if(rootTags.length!==1||routeTags.length!==1)throw new Error(`${slug}: verwacht één main#app in root en route.`);
+  const stijl=/\bstyle=(["'])(.*?)\1/i;
+  const rootStijl=stijl.exec(rootTags[0]);
+  if(!rootStijl||rootStijl[2]!=="visibility:hidden")throw new Error(`${slug}: gereserveerde root-startgeometrie ontbreekt.`);
+  if(!stijl.test(routeTags[0]))throw new Error(`${slug}: route-startstijl ontbreekt.`);
+  return String(routeHtml).replace(routeTags[0],routeTags[0].replace(stijl,rootStijl[0]));
+}
 
 function voegRootRouteDataToe(html){
   let bron=String(html||"");
@@ -174,7 +187,8 @@ function finaliseerRelease(){
     const routeBestaand=fs.readFileSync(routePad,"utf8");
     if(!routeBestaand.includes("<!-- WEATHER NOW PLAATSROUTE -->"))throw new Error(`${loc.slug}: routebootstrap ontbreekt in finale plaatsroute.`);
     const routeHersteld=voegBootstrapHerstelToe(routeBestaand,watchdogNaam);
-    const routeMetGedeeldeRuntime=normaliseerRouteScripts(routeHersteld,gedeeld,loc.slug);
+    const routeShell=normaliseerRouteAppStart(routeHersteld,gedeeld,loc.slug);
+    const routeMetGedeeldeRuntime=normaliseerRouteScripts(routeShell,gedeeld,loc.slug);
     fs.writeFileSync(routePad,routeMetGedeeldeRuntime,"utf8");
   }
 
@@ -189,6 +203,6 @@ function finaliseerRelease(){
 if(require.main===module)finaliseerRelease();
 module.exports={
   watchdogBron,schrijfWatchdogBundle,voegBootstrapHerstelToe,voegGedeeldRouteUrlBeleidToe,voegGedeeldTitelBeleidToe,
-  voegGedeeldeRouteRuntimeToe,normaliseerRouteScripts,voegRootRouteDataToe,finaliseerRelease,
+  voegGedeeldeRouteRuntimeToe,normaliseerRouteScripts,normaliseerRouteAppStart,voegRootRouteDataToe,finaliseerRelease,
   WATCHDOG_ID,FAILURE_ID,NOSCRIPT_ID,ROOT_ROUTE_MARKER,CONTROL_IDS
 };

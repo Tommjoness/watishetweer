@@ -78,7 +78,8 @@ try{
       if(v('night-mobile-wide')!=='ok')throw new Error(`${w}px: mobiele Nachtzicht-flow is geraakt`);
       if(v('compact-media')==='ja'&&(Number(v('body-pad-left'))>8.5||Math.abs(Number(v('sheet-pad-left'))-16)>.5))throw new Error(`${w}px: mobiele horizontale ruimte niet optimaal (body=${v('body-pad-left')}, sheet=${v('sheet-pad-left')})`);
     }else{
-      if(v('hour-overflow-y')!=='auto'||v('hour-role')!=='region'||v('hour-tabindex')!=='ja'||v('hour-toggle')!=='verborgen')throw new Error(`${w}px: desktop uurtabelgedrag is geraakt (overflow=${v('hour-overflow-y')}, role=${v('hour-role')}, tabindex=${v('hour-tabindex')}, toggle=${v('hour-toggle')})`);
+      const vastDesktop=actualW>=1100;
+      if(v('hour-overflow-y')!==(vastDesktop?'visible':'auto')||v('hour-role')!==(vastDesktop?'':'region')||v('hour-tabindex')!==(vastDesktop?'nee':'ja')||v('hour-toggle')!=='verborgen')throw new Error(`${w}px: desktop uurtabelgedrag is geraakt (overflow=${v('hour-overflow-y')}, role=${v('hour-role')}, tabindex=${v('hour-tabindex')}, toggle=${v('hour-toggle')})`);
       if(v('night-wide-style')!=='ok'||v('night-wide-axis')!=='ok'||v('night-cloud-axis')!=='ok'||v('night-advice-axis')!=='ok'||v('night-right-edge')!=='ok')throw new Error(`${w}px: Nachtzicht-uitlijning fout wide=${v('night-wide-style')}/${v('night-wide-axis')} cloud=${v('night-cloud-axis')} advice=${v('night-advice-axis')} edge=${v('night-right-edge')}`);
       if(v('night-advice-align')!=='left')throw new Error(`${w}px: lange Nachtzicht-uitleg niet links uitgelijnd (${v('night-advice-align')})`);
       if(Number(v('night-wide-width'))<280)throw new Error(`${w}px: Beste zichtperiode te smal (${v('night-wide-width')}px)`);

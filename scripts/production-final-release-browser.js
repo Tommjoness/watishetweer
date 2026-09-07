@@ -38,7 +38,10 @@ async function wachtKlaar(page,naam,timeout=26000){
       const bronKlaar=!!(d&&d.current&&Array.isArray(d.hourly?.time)&&d.hourly.time.length>=23&&Array.isArray(d.daily?.time)&&d.daily.time.length>=7);
       const dagen=document.querySelectorAll("#days .row.day:not(.kop)").length;
       const uren=document.querySelectorAll("#wiw-hour-table tbody tr").length;
-      return app&&getComputedStyle(app).display!=="none"&&label&&bronKlaar&&dagen>=7&&uren>=23;
+      const desktop=innerWidth>=1100;
+      // Volledige brondekking blijft hierboven verplicht. De desktop toont
+      // bewust alleen de volledige uurregels die naast de grafiek passen.
+      return app&&getComputedStyle(app).display!=="none"&&label&&bronKlaar&&dagen>=7&&(desktop?uren>=4&&uren<=10:uren>=23);
     },null,{timeout});
   }catch(e){
     const diagnose=await page.evaluate(()=>{
@@ -142,6 +145,9 @@ async function lees(page){return page.evaluate(()=>{
     humidity:document.getElementById("hum")?.textContent||"",
     dagen:document.querySelectorAll("#days .row.day:not(.kop)").length,
     hourRows:hour?hour.querySelectorAll("tbody tr").length:0,
+    boundedHours:innerWidth>=1100,
+    hourInstants:hour?[...hour.querySelectorAll("tbody time")].map(e=>e.dateTime):[],
+    hourFits:hour&&scroll?[...hour.querySelectorAll("tbody tr")].every(e=>e.getClientRects().length>0&&e.getBoundingClientRect().bottom<=document.getElementById("wiw-hour-panel").getBoundingClientRect().bottom+1):false,
     hourHead:th?.textContent?.trim()||"",hourHeadAria:th?.getAttribute("aria-label")||"",
     hourClip:th?th.scrollWidth<=th.clientWidth+1:false,
     hourOverflow:scroll?Math.max(0,scroll.scrollWidth-scroll.clientWidth):999,
@@ -187,7 +193,10 @@ async function lees(page){return page.evaluate(()=>{
         assert.equal(getal(uit.wind),rond(bron.current&&bron.current.wind_speed_10m),`${l.naam}: wind wijkt af`);
         assert.equal(getal(uit.humidity),rond(bron.current&&bron.current.relative_humidity_2m),`${l.naam}: luchtvochtigheid wijkt af`);
         assert.equal(uit.dagen,7,`${l.naam}: geen zeven dagrijen`);
-        assert(uit.hourRows>=23,`${l.naam}: verticale uurtabel te kort (${uit.hourRows})`);
+        if(uit.boundedHours){
+          assert(uit.hourRows>=4&&uit.hourRows<=10&&uit.hourFits,`${l.naam}: desktopuren zijn niet volledig binnen de grafiekhoogte begrensd (${uit.hourRows})`);
+          for(let i=1;i<uit.hourInstants.length;i++)assert.equal(Date.parse(uit.hourInstants[i])-Date.parse(uit.hourInstants[i-1]),3600000,`${l.naam}: uurinstanties moeten uniek en opeenvolgend zijn`);
+        }else assert(uit.hourRows>=23,`${l.naam}: mobiele bronuurtabel te kort (${uit.hourRows})`);
         assert.equal(uit.hourHead,"Gevoel",`${l.naam}: compacte uurkop ontbreekt`);assert.equal(uit.hourHeadAria,"Gevoelstemperatuur",`${l.naam}: volledige toegankelijke uurkop ontbreekt`);
         assert(uit.hourClip&&uit.hourOverflow<=1&&uit.pageOverflow<=1,`${l.naam}: clipping/overflow hour=${uit.hourOverflow} page=${uit.pageOverflow}`);
         assert.deepEqual(uit.duplicateIds,[],`${l.naam}: dubbele ids ${uit.duplicateIds.join(',')}`);assert.deepEqual(uit.missingAriaRefs,[],`${l.naam}: ontbrekende ARIA refs ${uit.missingAriaRefs.join(',')}`);

@@ -199,3 +199,31 @@ jobs:
           HEADLESS: "false"
           NATIVE_BROWSER_RELOAD: "true"
         run: xvfb-run --auto-servernum node scripts/production-release-recovery-navigation.js
+
+  preview-cwv:
+    needs: preview
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Verifieer route-CLS, desktoplayout en lokale uurwissels op preview
+        env:
+          CWV_ROOT: ${{ needs.preview.outputs.preview_url }}
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/cwv-desktop-recovery-browser.js
+      - name: Bewaar deployed CWV-bewijs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-cwv-${{ github.event.pull_request.head.sha || github.sha }}
+          path: cwv-evidence/
+          retention-days: 14

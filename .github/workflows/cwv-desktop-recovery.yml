@@ -1,0 +1,39 @@
+name: CWV desktop recovery
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  measure-final-artifact:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: npm install --ignore-scripts
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Test uurselectie, DST en gereserveerde routeshell
+        run: node scripts/cwv-hour-selection.test.js
+      - name: Bouw finale CWV-recoveryartifact
+        env:
+          WEATHER_BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: npm run build:cloudflare
+      - name: Meet routes, shifts, desktopgeometrie en interacties
+        run: node scripts/cwv-desktop-recovery-browser.js
+      - name: Bewaar reproduceerbare CWV-metingen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cwv-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: cwv-evidence/
+          retention-days: 14
