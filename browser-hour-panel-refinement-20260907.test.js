@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded',async()=>{const zet=(k,v)=>document
  const pr=panel?.getBoundingClientRect(),lr=last?.getBoundingClientRect();
  const finalPlace=document.getElementById('place'),placeStyle=finalPlace?getComputedStyle(finalPlace):null;
  const seoStyle=getComputedStyle(seo),wide=document.querySelector('#nights .row.night .nmeta.wide'),advies=document.querySelector('#nights .nachtadvies'),maan=document.querySelector('#nights .nachtmaan'),wr=wide?.getBoundingClientRect(),ar=advies?.getBoundingClientRect(),mr=maan?.getBoundingClientRect();
- zet('candidates',kandidaten.length);zet('candidate-first',kandidaten[0]?String(kandidaten[0].tijd).slice(11,16):'');zet('candidate-last',kandidaten.at(-1)?String(kandidaten.at(-1].tijd).slice(11,16):'');
+ zet('candidates',kandidaten.length);zet('candidate-first',kandidaten[0]?String(kandidaten[0].tijd).slice(11,16):'');zet('candidate-last',kandidaten.at(-1)?String(kandidaten.at(-1).tijd).slice(11,16):'');
  zet('rows',rows.length);zet('first',tijden[0]||'');zet('last',tijden.at(-1)||'');zet('zero-first',mm[0]||'');zet('missing-second',mm[1]||'');zet('fits',pr&&lr&&lr.bottom<=pr.bottom+1?'ok':'fout');zet('panel-bottom',pr?pr.bottom.toFixed(1):'');zet('last-bottom',lr?lr.bottom.toFixed(1):'');
  zet('place-left-inset',placeStyle?parseFloat(placeStyle.paddingLeft)||0:0);zet('place-right-inset',placeStyle?parseFloat(placeStyle.paddingRight)||0:0);zet('seo-left-padding',parseFloat(seoStyle.paddingLeft)||0);zet('seo-right-padding',parseFloat(seoStyle.paddingRight)||0);
  zet('night-display',wide?getComputedStyle(wide).display:'');zet('night-moon-right-gap',wr&&mr?(wr.right-mr.right).toFixed(1):'999');zet('night-separated',ar&&mr&&ar.right<=mr.left+1?'ok':'fout');zet('done','ok');
