@@ -1,0 +1,49 @@
+"use strict";
+
+const fs=require("fs");
+const os=require("os");
+const path=require("path");
+const {spawnSync}=require("child_process");
+
+function vindBrowser(){
+  for(const n of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){
+    const r=spawnSync(n,["--version"],{encoding:"utf8"});if(r.status===0)return n;
+  }
+  return null;
+}
+const browser=vindBrowser();
+if(!browser){
+  if(process.env.CI){console.error("FOUT uurpaneelrefinement browsertest: Chrome/Chromium ontbreekt.");process.exit(1);}
+  console.log("SKIP uurpaneelrefinement browsertest: lokaal geen Chrome/Chromium.");process.exit(0);
+}
+const productie=path.join(__dirname,"public","index.html");
+if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
+let html=fs.readFileSync(productie,"utf8");
+html=html.replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
+const stub=`<script>try{localStorage.clear();sessionStorage.clear();}catch(e){}window.fetch=()=>new Promise(()=>{});window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()),16);window.cancelAnimationFrame=clearTimeout;try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}</script>`;
+html=html.replace("</head>",stub+"</head>");
+const reporter=`<script>
+document.addEventListener('DOMContentLoaded',async()=>{const zet=(k,v)=>document.body.setAttribute('data-hour-refine-'+k,String(v));try{
+ document.documentElement.classList.remove('wn-progressief');const app=document.getElementById('app');if(app){app.classList.remove('wn-progressief');app.removeAttribute('aria-busy');app.style.display='block';app.style.visibility='visible';}const state=document.getElementById('state');if(state)state.style.display='none';
+ const TI=Array.from({length:24},(_,i)=>i<11?'2026-09-02T'+String(i+13).padStart(2,'0')+':00':'2026-09-03T'+String(i-11).padStart(2,'0')+':00');
+ const precipitation=TI.map(()=>0);precipitation[12]=null;
+ S.d={timezone:'Europe/Amsterdam',utc_offset_seconds:7200,current:{time:'2026-09-02T13:27'},hourly:{time:TI,temperature_2m:TI.map((_,i)=>18-i*.1),apparent_temperature:TI.map((_,i)=>18-i*.1),precipitation_probability:TI.map(()=>0),precipitation}};
+ S.klokInstantOverride=new Date('2026-09-02T11:27:00Z');S.geo={TI,T:S.d.hourly.temperature_2m,A:S.d.hourly.apparent_temperature,P:S.d.hourly.precipitation_probability,MM:S.d.hourly.precipitation};S.dag=null;
+ WeatherNowFinalDesktopUI20260902.render();await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+ const rows=[...document.querySelectorAll('#wiw-hour-table tbody tr')];const panel=document.getElementById('wiw-hour-panel');const last=rows.at(-1);const tijden=rows.map(r=>r.querySelector('time')?.textContent.trim()||'');const mm=rows.map(r=>r.children[3]?.textContent.trim()||'');
+ zet('rows',rows.length);zet('first',tijden[0]||'');zet('last',tijden.at(-1)||'');zet('zero-count',mm.filter(v=>v==='0,0 mm').length);zet('missing-last',mm.at(-1)||'');zet('fits',panel&&last&&last.getBoundingClientRect().bottom<=panel.getBoundingClientRect().bottom+1?'ok':'fout');zet('done','ok');
+}catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},{once:true});
+</script>`;
+const bodyEinde=/<\/body>\s*<\/html>\s*$/i;if(!bodyEinde.test(html))throw new Error("public/index.html heeft geen afgesloten body voor browserfixture");html=html.replace(bodyEinde,reporter+"</body>\n</html>");
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-hour-refine-"));
+try{
+  const pad=path.join(dir,"index.html");fs.writeFileSync(pad,html);
+  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1920,1080","--virtual-time-budget=2500","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:36*1024*1024});
+  if(r.status!==0)throw new Error(`browser exit ${r.status}: `+String(r.stderr||"").slice(-800));
+  const dom=r.stdout||"",v=k=>{const m=new RegExp('data-hour-refine-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
+  if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
+  if(v('rows')!=='12'||v('first')!=='14:00'||v('last')!=='01:00')throw new Error(`verwacht 12 opeenvolgende passende uren 14:00–01:00; kreeg rows=${v('rows')} first=${v('first')} last=${v('last')}`);
+  if(v('zero-count')!=='11'||v('missing-last')!=='–')throw new Error(`0 mm/missing-semantiek fout: zero-count=${v('zero-count')} missing-last=${v('missing-last')}`);
+  if(v('fits')!=='ok')throw new Error("laatste uurregel valt buiten de grafiekhoogte");
+  console.log("Uurpaneel browsertest groen op 1920×1080: 12 volledige uren passen, numerieke nul toont 0,0 mm en alleen ontbrekende neerslag toont –.");
+}finally{fs.rmSync(dir,{recursive:true,force:true});}
