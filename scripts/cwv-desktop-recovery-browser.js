@@ -118,6 +118,9 @@ async function run(){
           const g=result.geometry;
           assert(Math.abs(g.main.height-g.hours.height)<=1,"grafiek en uurkolom eindigen ongelijk");
           assert(g.main.height-g.graph.height<80,"uurkolom rekt de grafiekrij uit");
+          assert(g.graph.bottom<=g.main.bottom+1,"grafiek mag niet buiten de gemeten kolomhoogte vallen");
+          const week=await page.evaluate(()=>{const hint=document.getElementById("dagenhint"),head=hint.previousElementSibling;return {hint:hint.getBoundingClientRect().left,head:head.getBoundingClientRect().left};});
+          assert(Math.abs(week.hint-week.head)<=1,"weekinstructie hoort bij de kop, zonder gecentreerd los tekstblok");
           assert(result.rows>=4&&result.rows<=10,"volledige desktopuren buiten begrensd bereik: "+result.rows);
           assert.equal(result.hourOverflow,"visible");assert.equal(result.hourButtons,0,"geen extra uurbediening");
           for(const r of result.hourRows){assert(r.visible);assert(r.rect.height>=30,"uurregels mogen niet worden gepropt");assert(r.rect.bottom<=g.hours.bottom+1,"geen afgesneden laatste uurregel");}
@@ -141,7 +144,7 @@ async function run(){
           await page.locator("#q").fill(name);
           await page.locator("#res div[data-lat]").first().waitFor({state:"visible"});
           await page.locator("#res div[data-lat]").first().click();
-          await page.waitForFunction(name=>document.getElementById("place")?.getAttribute("aria-label")===name,name);
+          await page.waitForFunction(name=>document.getElementById("place")?.getAttribute("aria-label")===name,name,{timeout:10000});
           await page.waitForTimeout(700);
         }
         const chart=await page.locator("#chart").boundingBox();

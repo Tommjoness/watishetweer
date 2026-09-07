@@ -35,6 +35,8 @@ const fixture=`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta 
  out.barWidth=rr(bar).width;out.bestWidth=rr(wide).width;
  out.mastAxis=Math.abs(rr(mastRight).left-rr(topStats).left);out.mastWidthDelta=Math.abs(rr(mastRight).width-rr(topStats).width);out.searchWidth=rr(search).width;
  out.dagenMargin=parseFloat(cs(document.getElementById('dagen-kop')).marginTop)||0;out.nachtMargin=parseFloat(cs(document.getElementById('nacht-kop')).marginTop)||0;out.aqMargin=parseFloat(cs(document.getElementById('aq-kop')).marginTop)||0;
+ out.sectionToken=parseFloat(cs(document.documentElement).getPropertyValue('--s3'));out.smallToken=parseFloat(cs(document.documentElement).getPropertyValue('--s1'));
+ out.dagenBottom=parseFloat(cs(document.getElementById('dagen-kop')).marginBottom);out.dagenHintBottom=parseFloat(cs(document.getElementById('dagenhint')).marginBottom);
  out.hintTop=parseFloat(cs(document.getElementById('nachthint')).marginTop)||0;out.hintBottom=parseFloat(cs(document.getElementById('nachthint')).marginBottom)||0;
  out.footerMargin=parseFloat(cs(footer).marginTop)||0;out.footerPadding=parseFloat(cs(footer).paddingTop)||0;out.footerHeight=rr(footer).height;out.aqFooterGap=rr(footer).top-rr(aq).bottom;
  out.sourceWhite=cs(source).whiteSpace;out.sourceHeight=rr(source).height;
@@ -57,7 +59,9 @@ try{
     if(v('wide-align')!=="left"||v('wide-items')!=="flex-start"||v('advies-align')!=="left"||v('maan-align')!=="left")throw new Error(`${w}px: Beste zichtperiode niet op één linkeras (${v('wide-align')}/${v('wide-items')}/${v('advies-align')}/${v('maan-align')})`);
     if(n('bar-width')>625)throw new Error(`${w}px: Nachtzicht-scorebalk nog te breed (${n('bar-width')}px)`);
     if(n('best-width')<330)throw new Error(`${w}px: Beste zichtperiode te smal (${n('best-width')}px)`);
-    for(const k of ['dagen-margin','nacht-margin','aq-margin'])if(!(n(k)>=26&&n(k)<=30))throw new Error(`${w}px: sectieritme ${k}=${n(k)}px, verwacht circa 28px`);
+    if(!(n('section-token')>0&&Math.abs(n('dagen-margin')-n('section-token'))<.1))throw new Error(`${w}px: Zeven dagen moet de bestaande sectieafstandtoken gebruiken`);
+    if(!(n('small-token')>0&&Math.abs(n('dagen-bottom')-n('small-token'))<.1&&Math.abs(n('dagen-hint-bottom')-n('small-token'))<.1))throw new Error(`${w}px: weekkop, instructie en tabel sluiten niet compact aan`);
+    for(const k of ['nacht-margin','aq-margin'])if(!(n(k)>=26&&n(k)<=30))throw new Error(`${w}px: sectieritme ${k}=${n(k)}px, verwacht circa 28px`);
     if(!(n('hint-top')>=5&&n('hint-top')<=7&&n('hint-bottom')>=7&&n('hint-bottom')<=9))throw new Error(`${w}px: hintmarges niet compact (${n('hint-top')}/${n('hint-bottom')}px)`);
     if(n('footer-margin')>11||n('footer-padding')>8||n('aq-footer-gap')>12)throw new Error(`${w}px: footer staat nog te los (margin ${n('footer-margin')}, padding ${n('footer-padding')}, gap ${n('aq-footer-gap')})`);
     if(n('footer-height')>58)throw new Error(`${w}px: footer nog te hoog (${n('footer-height')}px)`);

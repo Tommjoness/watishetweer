@@ -122,6 +122,7 @@ footer details #coords{margin:2px 0 0 8px!important}
 @media(min-width:1100px){
  /* De grafiek meet zijn eigen inhoud, nooit de door de uurkolom uitgerekte rij. */
  .wiw-chart-main{align-self:start}
+ .wiw-chart-main #chart{margin-bottom:0}
  .wiw-hour-table-scroll{overflow:visible!important;scrollbar-gutter:auto!important;overscroll-behavior:auto}
  .wiw-hour-table thead th{position:static}
  .wiw-hour-date{display:inline;margin-left:6px;margin-top:0;white-space:nowrap}
