@@ -76,7 +76,10 @@ async function controleer(type,naam,breedte){
     await page.goto(`http://127.0.0.1:${server.address().port}/?lat=52.35&lon=5.26&plaats=Overflowtest&land=NL`,{waitUntil:"load"});
     await page.waitForSelector("#app",{state:"visible"});
     await page.waitForFunction(()=>document.querySelector("#chart g[data-q4-rain-periods]")&&document.querySelectorAll("#days .row.day").length>2&&document.querySelectorAll("#nights .row.night").length>1,null,{timeout:10000});
-    await page.locator("#chartdata > summary").click();
+    const chartdataSummary=page.locator("#chartdata > summary");
+    await chartdataSummary.focus();
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(()=>document.getElementById("chartdata")?.open===true);
 
     const resultaat=await page.evaluate(()=>{
       const vw=document.documentElement.clientWidth;

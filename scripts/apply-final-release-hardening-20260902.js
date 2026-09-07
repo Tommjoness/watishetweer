@@ -8,8 +8,7 @@ const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const OUT=path.join(__dirname,"..","public");
 const MARKER="/* ===== FINAL RELEASE HARDENING 20260902 ===== */";
 const LOAD_HELPER_MARKER="weatherNowCachePastBij";
-const GEVOEL_OUD='<th scope="col">Gevoelstemperatuur</th>';
-const GEVOEL_NIEUW='<th scope="col" aria-label="Gevoelstemperatuur">Gevoel</th>';
+const UURKOP='<th scope="col">Kans</th><th scope="col">Neerslag</th>';
 const PREVIEW_OUD=`function progressievePreviewToegestaan(stil,wissel,dataVoorLoad){
   return !stil&&!!wissel&&!!dataVoorLoad;
 }`;
@@ -27,9 +26,10 @@ ${MARKER}
 .wiw-location-state{display:flex!important;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap}
 .wiw-location-state p{margin:0;flex:1 1 280px;color:inherit}
 .wiw-location-state .wiw-location-retry{flex:0 0 auto;min-height:44px}
-.wiw-hour-table th:nth-child(1),.wiw-hour-table td:nth-child(1){width:32%}
+.wiw-hour-table th:nth-child(1),.wiw-hour-table td:nth-child(1){width:20%}
 .wiw-hour-table th:nth-child(2),.wiw-hour-table td:nth-child(2){width:34%}
-.wiw-hour-table th:nth-child(3),.wiw-hour-table td:nth-child(3){width:34%}
+.wiw-hour-table th:nth-child(3),.wiw-hour-table td:nth-child(3){width:20%}
+.wiw-hour-table th:nth-child(4),.wiw-hour-table td:nth-child(4){width:26%}
 @media(min-width:1100px) and (max-width:1599px){
   .final-top-grid>.stats{grid-template-columns:repeat(6,minmax(0,1fr))!important}
   .final-top-grid>.stats .stat{grid-column:span 2;padding-left:14px!important;padding-right:14px!important;border-right:1px solid var(--rule)!important;min-height:118px!important}
@@ -201,9 +201,8 @@ function pasToe(pad){
   if(!html.includes("WeatherNowFinalDesktopUI20260902")||!html.includes("async function load(lat,lon,label,stil,opslaan,land){"))return false;
   html=hardenLoad(html);
   html=schakelProgressievePreviewUit(html);
-  const gevoelAantal=html.split(GEVOEL_OUD).length-1;
-  if(gevoelAantal!==1)throw new Error(path.basename(pad)+": Gevoelstemperatuurkop verwacht exact één keer; gevonden "+gevoelAantal);
-  html=html.replace(GEVOEL_OUD,GEVOEL_NIEUW);
+  const uurKopAantal=html.split(UURKOP).length-1;
+  if(uurKopAantal!==1)throw new Error(path.basename(pad)+": uurkoppen Kans/Neerslag verwacht exact één keer; gevonden "+uurKopAantal);
   html=voegStijlToe(html);
   const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:path.basename(pad)+":final-release-"+(i+1)}));
@@ -226,8 +225,8 @@ function main(){
   for(const p of htmlBestanden(OUT))if(pasToe(p))n++;
   if(!n)throw new Error("Geen weerartifacts gevonden voor final release hardening.");
   const cache=vernieuwServiceworkerCache(OUT,"final-release-hardening-20260902");
-  console.log(`Final release hardening toegepast op ${n} weerpagina's: cache-identiteit geborgd, gedeeltelijke locatiepreview uitgeschakeld, coherente laad-/retry-state toegevoegd, uurkop ingekort en desktopgrid uitgebalanceerd; cache ${cache}.`);
+  console.log(`Final release hardening toegepast op ${n} weerpagina's: cache-identiteit geborgd, gedeeltelijke locatiepreview uitgeschakeld, coherente laad-/retry-state toegevoegd, uurtemperatuur/neerslagkolommen en desktopgrid uitgebalanceerd; cache ${cache}.`);
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER,STYLE,HELPERS,GEVOEL_OUD,GEVOEL_NIEUW,PREVIEW_OUD,PREVIEW_NIEUW,hardenLoad,schakelProgressievePreviewUit,voegStijlToe,pasToe,main};
+module.exports={OUT,MARKER,STYLE,HELPERS,UURKOP,PREVIEW_OUD,PREVIEW_NIEUW,hardenLoad,schakelProgressievePreviewUit,voegStijlToe,pasToe,main};

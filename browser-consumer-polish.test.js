@@ -248,8 +248,7 @@ async function controleer(page, naam, modus) {
   assert.match(resultaat.trend, /^-?\d+\s*→\s*-?\d+\s*°C$/, `${naam} ${modus}: temperatuurtrend toont uitsluitend huidige en toekomstige temperatuur`);
   assert.ok(["Het wordt de komende uren warmer.","Het wordt de komende uren koeler.","De temperatuur verandert de komende uren nauwelijks."].includes(resultaat.trendSub), `${naam} ${modus}: temperatuurtrend gebruikt één natuurlijke richtingstekst`);
   assert.ok(!/neerslag|wind|gevoel/i.test(resultaat.trend+" "+resultaat.trendSub), `${naam} ${modus}: temperatuurtrend bevat geen andere weerinformatie`);
-  assert.equal(resultaat.neerslagSectieZichtbaar, true, `${naam} ${modus}: het finale twee-uurspaneel blijft ook bij droog weer zichtbaar`);
-  assert.match(resultaat.neerslagSamenvatting, /Huidige status\s*Droog/i, `${naam} ${modus}: droog twee-uurspaneel toont een eenduidige droge samenvatting`);
+  assert.equal(resultaat.neerslagSectieZichtbaar, false, `${naam} ${modus}: het oude twee-uurspaneel blijft niet zichtbaar`);
 
   assert.ok(resultaat.nachtAdvies > 0 && resultaat.nachtMaan > 0, `${naam} ${modus}: Nachtzicht heeft rustige aparte advies- en maanregels`);
   assert.ok(resultaat.nachtRijen.length > 0, `${naam} ${modus}: Nachtzicht heeft beoordeelde nachten`);

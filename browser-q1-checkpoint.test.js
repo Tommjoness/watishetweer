@@ -106,7 +106,7 @@ async function controleer(type,naam){
     assert.notEqual(basis.popDisplay,"none",naam+": droge korte termijn bewaart dezelfde negende tegelpositie");
     assert.equal(basis.popAria,"false",naam+": droge tegel blijft toegankelijk");
     assert.doesNotMatch(basis.gridClass,/q1-pop-hidden/,naam+": raster verandert niet meer tussen droge en natte steden");
-    assert.notEqual(basis.neerslagSectieDisplay,"none",naam+": finale 65/35-twee-uurssectie blijft ook bij droog weer zichtbaar");
+    assert.equal(basis.neerslagSectieDisplay,"none",naam+": finale twee-uurssectie blijft uit de consumentenlayout");
     assert.match(basis.neerslagSamenvatting,/Huidige status\s*Droog/i,naam+": droge twee-uurssectie toont een eenduidige droge samenvatting");
     assert.equal(basis.dag[0].kans,"65%",naam+": vandaag gebruikt de hoogste kans binnen de resterende lokale daghorizon");
     assert.equal(basis.dag[0].mm,"1,4 mm",naam+": vandaag gebruikt alleen hoeveelheid binnen de resterende lokale daghorizon");
@@ -154,7 +154,7 @@ async function controleer(type,naam){
       return uit;
     });
     assert.notEqual(popNat.display,"none",naam+": relevante neerslag toont tegel");
-    assert.notEqual(popNat.sectie,"none",naam+": relevante neerslag houdt twee-uurssectie zichtbaar");
+    assert.equal(popNat.sectie,"none",naam+": relevante neerslag houdt twee-uurssectie uit de consumentenlayout");
     assert.match(popNat.samenvatting,/Huidige status\s*Droog/i,naam+": toekomstige neerslag verandert de actuele status niet ten onrechte in Neerslag");
     assert.match(popNat.samenvatting,/Hoogste neerslagkans\s*65%/i,naam+": toekomstige neerslag werkt de twee-uursverwachting bij");
     assert.equal(popNat.kop,"Neerslagverwachting komend uur",naam+": zichtbare tegel benoemt kans en verwacht totaal expliciet");
