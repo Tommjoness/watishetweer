@@ -279,6 +279,6 @@ function installeer(){
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(werkUurTabelBij);
 }
 
-root.WeatherNowFinalDesktopUI20260902={uurRijenUitGeo,komendeUurRijen,regenVelden,werkUurTabelBij,werkRegenSamenvattingBij,centraliseerKorteTeksten,herstelVerborgenDruk,render:()=>{werkUurTabelBij();werkRegenSamenvattingBij();centraliseerKorteTeksten();vindVolledigeGrafiekTabel();planHoogteSync();}};
+root.WeatherNowFinalDesktopUI20260902={uurRijenUitGeo,komendeUurRijen,regenVelden,werkUurTabelBij,werkRegenSamenvattingBij,centraliseerKorteTeksten,herstelVerborgenDruk,render:()=>{werkUurTabelBij();werkRegenSamenvattingBij();centraliseerKorteTeksten();vindVolledigeGrafiekTabel();syncHoogte();planHoogteSync();}};
 installeer();
 })(typeof globalThis!=="undefined"?globalThis:this);
