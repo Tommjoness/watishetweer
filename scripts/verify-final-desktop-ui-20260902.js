@@ -7,11 +7,12 @@ eis(html.includes("/* ===== FINAL DESKTOP UI 20260902 ===== */"),"buildmarker on
 eis(html.includes('const MARKER="final-desktop-ui-20260902"'),"runtime/stijlmarker ontbreekt");
 eis(html.includes('grid-template-columns:minmax(0,2.125fr) minmax(280px,1fr)'),"24-uurs desktopverhouding ontbreekt");
 eis(html.includes('grid-template-columns:minmax(0,1.86fr) minmax(250px,1fr)'),"twee-uurs desktopverhouding ontbreekt");
-eis(html.includes('Temperatuur per uur'),"compacte uurtabeltitel ontbreekt");
-eis(html.includes('<th scope="col">Tijd</th><th scope="col">Temperatuur</th><th scope="col">Gevoelstemperatuur</th>'),"semantische kolomkoppen ontbreken");
+eis(html.includes('Temperatuur en neerslag per uur'),"nieuwe uurtabeltitel ontbreekt");
+eis(html.includes('<th scope="col">Tijd</th><th scope="col">Temperatuur</th><th scope="col">Kans</th><th scope="col">Neerslag</th>'),"semantische neerslagkolomkoppen ontbreken");
 eis(html.includes('scroll.tabIndex=0'),"scrollbare uurtabel is niet toetsenbordfocusbaar");
 eis(html.includes('aria-current","time"'),"actuele/eerstvolgende uurmarkering mist semantiek");
-eis(html.includes('Alle grafiekgegevens bekijken'),"bediening volledige grafiekdata ontbreekt");
+eis(!html.includes('Alle grafiekgegevens bekijken'),"verouderde bediening volledige grafiekdata is nog aanwezig");
+eis(html.includes('verbergNeerslagSectie'),"neerslagsectie wordt niet expliciet verborgen");
 eis(html.includes('herstelVerborgenDruk'),"drukdiagnostiek wordt niet terug verborgen");
 eis(html.includes('diag=document.createElement("div");diag.id="wiw-pressure-diagnostic"'),"ontbrekende verborgen drukdiagnostiek wordt niet fail-safe hersteld");
 eis(html.includes('const veiligVerplaatst=!!(stat&&diag&&diag.contains(stat))'),"druktegel wordt niet aantoonbaar verplaatst vóór verwijdering");
@@ -27,4 +28,4 @@ eis(!html.includes('rij.setAttribute("aria-label",bestaand?bestaand+". "+uitleg:
 const markerAantal=html.split("/* ===== FINAL DESKTOP UI 20260902 ===== */").length-1;eis(markerAantal===1,"buildmarker staat "+markerAantal+" keer in homepage");
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);scripts.forEach((s,i)=>new vm.Script(s,{filename:"final-desktop-ui-verifier-"+i}));
 for(const p of [path.join(OUT,"weer","amsterdam","index.html"),path.join(OUT,"weer","rotterdam","index.html")])if(fs.existsSync(p))eis(fs.readFileSync(p,"utf8").includes("/* ===== FINAL DESKTOP UI 20260902 ===== */"),path.relative(OUT,p)+" mist desktop-UI-laag");
-console.log("Finale desktop-UI artifact groen: druk onzichtbaar met behouden renderer-owner, 8 gecentreerde tegels, 68/32 uurpaneel, 65/35 neerslagpaneel, semantische tabel, compacte footer en responsive stacking geborgd.");
+console.log("Finale desktop-UI artifact groen: drukowner behouden, semantische uurtemperatuur/neerslagtabel, verwijderde grafiektabelbediening, verborgen korte-neerslagblok, compacte footer en responsive stacking geborgd.");
