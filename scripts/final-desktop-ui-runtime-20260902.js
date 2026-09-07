@@ -101,6 +101,10 @@ function voegStijlToe(){
 .wiw-full-chart-data{grid-column:1/-1;margin-top:4px}
 .wiw-full-chart-data>details{max-width:100%;margin:0}
 .wiw-full-chart-data>details>summary{max-width:920px;margin-left:auto;margin-right:auto;text-align:center}
+/* Behoud de alternatieve grafiektabel voor toetsenbord/screenreader, maar toon de bediening niet in de gewone layout. Op focus blijft de toegang zichtbaar. */
+#chartdata:not([open]){margin:0!important}
+#chartdata:not([open])>summary.wiw-chartdata-summary{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#chartdata:not([open])>summary.wiw-chartdata-summary:focus-visible{position:relative;width:auto;height:auto;padding:4px 8px;margin:0;overflow:visible;clip:auto;white-space:normal}
 .wiw-rain-section{margin-top:var(--s4)}.wiw-rain-section[hidden]{display:none!important}
 .wiw-rain-section>h2{margin-top:0}
 .wiw-rain-layout{display:grid;grid-template-columns:minmax(0,1.86fr) minmax(250px,1fr);gap:32px;align-items:stretch;min-width:0}
@@ -195,7 +199,7 @@ function maakUurPaneel(){
 
 function vindVolledigeGrafiekTabel(){
   const details=[...document.querySelectorAll("details")].find(d=>{const s=d.querySelector(":scope > summary");return s&&/grafiekgegevens.*tabel|gegevens.*grafiek.*tabel/i.test(String(s.textContent||""));});
-  if(details)details.remove();
+  if(details){details.classList.add("wiw-chartdata-accessible");const summary=details.querySelector(":scope > summary");if(summary)summary.classList.add("wiw-chartdata-summary");}
   const houder=document.getElementById("wiw-full-chart-data");if(houder)houder.remove();
   const knop=document.getElementById("wiw-all-data-button");if(knop)knop.remove();
 }
