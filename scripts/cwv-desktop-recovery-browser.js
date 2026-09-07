@@ -98,7 +98,7 @@ async function run(){
         if(u.pathname==="/api/neerslag")return r.fulfill({json:{nowcast:null,actueel:null,bron:"test"}});
         if(u.pathname==="/api/luchtkwaliteit")return r.fulfill({json:{beschikbaar:false,provider:"luchtmeetnet",reden:"testfixture gebruikt CAMS voor pollen"}});
         if(u.pathname==="/api/plaatsnaam")return r.fulfill({json:{beschikbaar:false}});
-        if(u.origin!==root)return r.fulfill({json:{}});
+        if(u.origin!==root)return process.env.CWV_ROOT?r.continue():r.fulfill({json:{}});
         return r.continue();
       });
       for(const scenario of ["cold","reload"]){

@@ -41,7 +41,7 @@ assert(/^  staff-audit-browser:/m.test(workflow),"production-smoke mist aparte s
 assert(/^  live-performance-browser:/m.test(workflow),"production-smoke mist aparte live-performancejob");
 assert(/^  mobile-cls-browser:/m.test(workflow),"production-smoke mist aparte mobiele CLS-job");
 assert(/^  final-release-browser:/m.test(workflow),"production-smoke mist aparte finale release-evidencejob");
-assert.equal((workflow.match(/^    needs: production-contract$/gm)||[]).length,5,"alle vijf browserjobs moeten pas na het exacte productiecontract starten");
+assert.equal((workflow.match(/^    needs: production-contract$/gm)||[]).length,6,"alle zes browserjobs moeten pas na het exacte productiecontract starten");
 assert(finalRelease.includes('"artifacts","final-release"')&&finalRelease.includes('"report.json"'),"finale releasebrowser moet evidence-artifacts en een bewijsrapport schrijven");
 assert(finalRelease.includes("Kansas City")&&finalRelease.includes("Kathmandu"),"finale releasebrowser mist de twee kritieke trage locaties");
 assert(finalRelease.includes("directWrongCache")&&finalRelease.includes("sameCache"),"finale releasebrowser moet verkeerde en juiste cache afzonderlijk bewijzen");
@@ -113,4 +113,4 @@ assert(cls.includes("Beschikbaarheid wordt apart bewaakt"),"CLS-monitor moet bes
 require("./pressure-retirement.test.js");
 require("./production-source-truth.test.js");
 
-console.log("production-monitoring-config: deploymentcontract, volledige 11-locatiematrix, één gerichte provider-timeoutretry, vijf gescheiden browsergates inclusief finale release-evidence, pressure-retirement, gecontroleerde Cloudflare Web Analytics, vaste mobiele CLS-vensters en strikt sitemapcontract OK");
+console.log("production-monitoring-config: deploymentcontract, volledige 11-locatiematrix, één gerichte provider-timeoutretry, zes gescheiden browsergates inclusief finale release-evidence, pressure-retirement, gecontroleerde Cloudflare Web Analytics, vaste mobiele CLS-vensters en strikt sitemapcontract OK");
