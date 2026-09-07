@@ -23,6 +23,11 @@ const bron={
   }
 };
 assert.equal(uvPiekVandaag(bron),5);
+assert.equal(uvPiekVandaag(bron,"2026-08-27T23:59"),5,"dezelfde lokale dag blijft exact tegen de bron getoetst");
+assert.equal(uvPiekVandaag(bron,"2026-08-28T00:01"),null,"stale UV van gisteren blijft fail-closed, zoals Q3 vereist");
+assert.equal(uvPiekVandaag({...bron,current:{time:"2026-08-28T00:00"}},"2026-08-28T00:01"),7,"verse huidige dag vereist zijn eigen piek");
+assert.equal(uvPiekVandaag({...bron,hourly:{time:["2026-08-27T12:00"],uv_index:[0]}},"2026-08-27T23:59"),0,"echte nul blijft nul");
+assert.equal(uvPiekVandaag({...bron,hourly:{time:["2026-08-27T12:00"],uv_index:[null]}},"2026-08-27T23:59"),null,"ontbrekend is geen nul");
 assert.equal(zonDagIndex(bron),1);
 assert.deepEqual(zonVerwachting(bron).op,["06:30"]);
 assert.deepEqual(zonVerwachting(bron).onder,["20:30"]);

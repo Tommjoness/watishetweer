@@ -220,8 +220,9 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
         for(const [i,r] of uit.rijen.entries())assert(String(r.neerslagHoofd||r.neerslagHoeveelheid||r.neerslagAria).trim(),`${scherm.naam}/${locatie.naam}: dagrij ${i+1} heeft leeg neerslagveld`);
         /* De providerresponse blijft exact zoals live ontvangen. Alleen de horizon
            voor de resterende huidige dag volgt dezelfde actuele lokale klok
-           als de pagina; temperatuur, wind, UV, thema en bronvelden blijven
-           rechtstreeks tegen die ongewijzigde live response gecontroleerd. */
+           als de pagina. UV volgt de bestaande Q3-guard voor een stale lokale
+           kalenderdag; temperatuur, wind, thema en alle overige bronvelden
+           blijven tegen de ongewijzigde live response gecontroleerd. */
         const bronUit=verifieerBronwaarheid(bron,uit,`${scherm.naam}/${locatie.naam}`,uit.actueleLokaleTijd);
         const klokVerwacht=new Intl.DateTimeFormat("nl-NL",{timeZone:bron.timezone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());
         assert(klokVerschil(uit.klok,klokVerwacht)<=1,`${scherm.naam}/${locatie.naam}: lokale klok ${uit.klok} wijkt af van ${bron.timezone} (${klokVerwacht})`);

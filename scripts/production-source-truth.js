@@ -29,8 +29,11 @@ function dagNeerslag(kans,mm){
     hoeveelheid:hoeveelheidUi
   };
 }
-function uvPiekVandaag(bron){
+function uvPiekVandaag(bron,nuOverride){
   const dag=String(bron?.current?.time||"").slice(0,10),tijden=bron?.hourly?.time||[],waarden=bron?.hourly?.uv_index||[];
+  // De bestaande Q3-guard toont geen piek van de vorige lokale kalenderdag.
+  // Een live bron kan rond middernacht nog current.time van gisteren leveren.
+  if(nuOverride&&String(nuOverride).slice(0,10)!==dag)return null;
   let max=null;
   for(let i=0;i<tijden.length;i++){
     if(String(tijden[i]).slice(0,10)!==dag)continue;
@@ -107,7 +110,7 @@ function verifieerBronwaarheid(bron,ui,label,nuOverride){
   assert(bron&&bron.current&&bron.daily&&bron.hourly,`${label}: onvolledige Open-Meteo-bronrespons`);
   gelijk(ui.temperatuur,Math.round(Number(bron.current.temperature_2m)),`${label}: actuele temperatuur wijkt af van bron`);
   gelijk(ui.wind,Math.round(Number(bron.current.wind_speed_10m)),`${label}: actuele wind wijkt af van bron`);
-  gelijk(ui.uv,uvPiekVandaag(bron),`${label}: UV-piek wijkt af van bron`);
+  gelijk(ui.uv,uvPiekVandaag(bron,nuOverride),`${label}: UV-piek wijkt af van bron (current=${bron.current.time}, lokaal=${nuOverride||bron.current.time})`);
   gelijk(ui.thema,Number(bron.current.is_day)===0?"donker":"licht",`${label}: dag/nachtthema wijkt af van current.is_day`);
 
   const verwacht=verwachtDagRijen(bron,nuOverride);

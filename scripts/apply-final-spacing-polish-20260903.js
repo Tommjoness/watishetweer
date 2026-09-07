@@ -36,7 +36,7 @@ ${MARKER}
      maakt Zeven dagen -> Nachtzicht -> Luchtkwaliteit optisch te los. */
   .dashrow-days h2,.dashrow-days + h2{margin-top:28px!important}
   #dagenhint,#nachthint,#pollenhint{margin-top:6px!important;margin-bottom:8px!important}
-  .dashrow-days h2{margin-top:var(--s3)!important;margin-bottom:var(--s1)!important;padding-bottom:0!important;border-bottom:0!important}
+  .dashrow-days .dashcol:first-child>h2{margin-top:var(--s3)!important;margin-bottom:var(--s1)!important;padding-bottom:0!important;border-bottom:0!important}
   #dagenhint{margin-top:0!important;margin-bottom:var(--s1)!important;margin-left:0!important;margin-right:0!important;max-width:none!important;text-align:left!important}
 
   /* Nachtzicht: de scorebalk krijgt een echte bovengrens. Op brede desktops
