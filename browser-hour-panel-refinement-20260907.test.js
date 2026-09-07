@@ -38,10 +38,10 @@ document.addEventListener('DOMContentLoaded',async()=>{const zet=(k,v)=>document
  const rows=[...document.querySelectorAll('#wiw-hour-table tbody tr')];const panel=document.getElementById('wiw-hour-panel');const last=rows.at(-1);const tijden=rows.map(r=>r.querySelector('time')?.textContent.trim()||'');const mm=rows.map(r=>r.children[3]?.textContent.trim()||'');
  const pr=panel?.getBoundingClientRect(),lr=last?.getBoundingClientRect();
  const finalPlace=document.getElementById('place'),placeStyle=finalPlace?getComputedStyle(finalPlace):null;
- const seoStyle=getComputedStyle(seo),wide=document.querySelector('#nights .row.night .nmeta.wide'),advies=document.querySelector('#nights .nachtadvies'),maan=document.querySelector('#nights .nachtmaan'),wr=wide?.getBoundingClientRect(),ar=advies?.getBoundingClientRect(),mr=maan?.getBoundingClientRect();
+ const finalSeo=document.querySelector('.seo-plaatsnav'),seoStyle=finalSeo?getComputedStyle(finalSeo):null,wide=document.querySelector('#nights .row.night .nmeta.wide'),advies=document.querySelector('#nights .nachtadvies'),maan=document.querySelector('#nights .nachtmaan'),wr=wide?.getBoundingClientRect(),ar=advies?.getBoundingClientRect(),mr=maan?.getBoundingClientRect();
  zet('candidates',kandidaten.length);zet('candidate-first',kandidaten[0]?String(kandidaten[0].tijd).slice(11,16):'');zet('candidate-last',kandidaten.at(-1)?String(kandidaten.at(-1).tijd).slice(11,16):'');
  zet('rows',rows.length);zet('first',tijden[0]||'');zet('last',tijden.at(-1)||'');zet('zero-first',mm[0]||'');zet('missing-second',mm[1]||'');zet('fits',pr&&lr&&lr.bottom<=pr.bottom+1?'ok':'fout');zet('panel-bottom',pr?pr.bottom.toFixed(1):'');zet('last-bottom',lr?lr.bottom.toFixed(1):'');
- zet('place-left-inset',placeStyle?parseFloat(placeStyle.paddingLeft)||0:0);zet('place-right-inset',placeStyle?parseFloat(placeStyle.paddingRight)||0:0);zet('seo-left-padding',parseFloat(seoStyle.paddingLeft)||0);zet('seo-right-padding',parseFloat(seoStyle.paddingRight)||0);
+ zet('place-left-inset',placeStyle?parseFloat(placeStyle.paddingLeft)||0:0);zet('place-right-inset',placeStyle?parseFloat(placeStyle.paddingRight)||0:0);zet('seo-left-padding',seoStyle?parseFloat(seoStyle.paddingLeft)||0:0);zet('seo-right-padding',seoStyle?parseFloat(seoStyle.paddingRight)||0:0);
  zet('night-display',wide?getComputedStyle(wide).display:'');zet('night-moon-right-gap',wr&&mr?(wr.right-mr.right).toFixed(1):'999');zet('night-separated',ar&&mr&&ar.right<=mr.left+1?'ok':'fout');zet('done','ok');
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},{once:true});
 </script>`;
@@ -60,9 +60,8 @@ try{
   const zichtbaar=Number(v('rows'));if(!(zichtbaar>=1&&zichtbaar<=12)||v('first')!=='14:00')throw new Error(`zichtbare uurselectie fout: rows=${v('rows')} first=${v('first')} last=${v('last')}`);
   if(v('zero-first')!=='0,0 mm'||v('missing-second')!=='–')throw new Error(`0 mm/missing-semantiek fout: first=${v('zero-first')} second=${v('missing-second')}`);
   if(v('fits')!=='ok')throw new Error(`laatste volledige uurregel valt buiten paneel: row=${v('last-bottom')} panel=${v('panel-bottom')}`);
-  // De final-runtimes kunnen de plaatskop tijdens render vervangen. Meet daarom
-  // de berekende padding van de uiteindelijke #place-node en niet een stale
-  // DOM-referentie van vóór de render.
+  // Finale runtimes kunnen zowel de plaatskop als route-/SEO-navigatie vervangen.
+  // Meet daarom steeds de node die na alle renderpasses werkelijk in de DOM staat.
   const plaatsLinks=Number(v('place-left-inset')),plaatsRechts=Number(v('place-right-inset'));
   if(plaatsLinks<26||plaatsRechts<26||Math.abs(plaatsLinks-plaatsRechts)>1)throw new Error(`plaats/tijd missen symmetrische binnenruimte: links=${v('place-left-inset')} rechts=${v('place-right-inset')}`);
   if(Number(v('seo-left-padding'))<24||Number(v('seo-right-padding'))<24)throw new Error(`SEO-plaatsnavigatie mist veilige inset: links=${v('seo-left-padding')} rechts=${v('seo-right-padding')}`);
