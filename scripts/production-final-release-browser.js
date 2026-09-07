@@ -197,7 +197,10 @@ async function lees(page){return page.evaluate(()=>{
           assert(uit.hourRows>=4&&uit.hourRows<=10&&uit.hourFits,`${l.naam}: desktopuren zijn niet volledig binnen de grafiekhoogte begrensd (${uit.hourRows})`);
           for(let i=1;i<uit.hourInstants.length;i++)assert.equal(Date.parse(uit.hourInstants[i])-Date.parse(uit.hourInstants[i-1]),3600000,`${l.naam}: uurinstanties moeten uniek en opeenvolgend zijn`);
         }else assert(uit.hourRows>=23,`${l.naam}: mobiele bronuurtabel te kort (${uit.hourRows})`);
-        assert.equal(uit.hourHead,"Gevoel",`${l.naam}: compacte uurkop ontbreekt`);assert.equal(uit.hourHeadAria,"Gevoelstemperatuur",`${l.naam}: volledige toegankelijke uurkop ontbreekt`);
+        const hourHeaders=await page.locator("#wiw-hour-table thead th").allTextContents();
+        assert.deepEqual(hourHeaders.map(s=>s.trim()),["Tijd","Temperatuur","Kans","Neerslag"],`${l.naam}: uurkolommen wijken af`);
+        const hourScopes=await page.locator("#wiw-hour-table thead th").evaluateAll(ths=>ths.map(th=>th.getAttribute("scope")||""));
+        assert.deepEqual(hourScopes,["col","col","col","col"],`${l.naam}: uurkolommen missen scope=col`);
         assert(uit.hourClip&&uit.hourOverflow<=1&&uit.pageOverflow<=1,`${l.naam}: clipping/overflow hour=${uit.hourOverflow} page=${uit.pageOverflow}`);
         assert.deepEqual(uit.duplicateIds,[],`${l.naam}: dubbele ids ${uit.duplicateIds.join(',')}`);assert.deepEqual(uit.missingAriaRefs,[],`${l.naam}: ontbrekende ARIA refs ${uit.missingAriaRefs.join(',')}`);
         assert.deepEqual(pageErrors,[],`${l.naam}: pageerrors ${pageErrors.join(' | ')}`);
