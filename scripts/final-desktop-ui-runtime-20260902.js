@@ -47,7 +47,6 @@ function komendeUurRijen(data,nuMs,aantal=MAX_DESKTOP_UREN){
     if(minuut*60000<nuMs||rijen.length>=aantal)continue;
     const tijd=interpretatie.minutenNaarLokaal(minuut,data.timezone,offset);
     const temp=num(h.temperature_2m&&h.temperature_2m[i]),kans=num(h.precipitation_probability&&h.precipitation_probability[i]),hoeveelheid=num(h.precipitation&&h.precipitation[i]);
-    if(temp===null&&kans===null&&hoeveelheid===null)continue;
     rijen.push({tijd,instant:new Date(minuut*60000).toISOString(),bronIndex:i,temp,gevoel:num(h.apparent_temperature&&h.apparent_temperature[i]),kans,hoeveelheid,datumLabel:datum(tijd)!==vorigeDatum?dagLabel(tijd):"",marker:""});
     vorigeDatum=datum(tijd);
   }
