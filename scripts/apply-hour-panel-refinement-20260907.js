@@ -88,6 +88,23 @@ function vervangEen(bron,oud,nieuw,label){
   if(oudN===0&&nieuwN===1)return bron;
   throw new Error(`${label}: verwacht precies één oude of nieuwe variant; oud=${oudN}, nieuw=${nieuwN}.`);
 }
+function voegStijlInHeadToe(bron,label){
+  const headEinde=bron.indexOf("</head>");
+  if(headEinde<0)throw new Error(`${label}: </head> ontbreekt voor desktopafronding.`);
+  const bestaand=bron.indexOf(STYLE_MARKER);
+  if(bestaand>=0){
+    if(bestaand>headEinde)throw new Error(`${label}: desktop-finishing-stijl staat buiten de actieve <head>.`);
+    return bron;
+  }
+  /* release-recovery-finalize voegt later in de body een <noscript><style>
+     toe. Een globale lastIndexOf('</style>') koos daardoor dat niet-actieve
+     stijlblok en liet de desktopregels bij normale JavaScript-runs ongemerkt
+     buiten werking. Zoek daarom uitsluitend vóór </head> naar het laatste
+     echte head-stijlblok. */
+  const stylePos=bron.lastIndexOf("</style>",headEinde);
+  if(stylePos<0)throw new Error(`${label}: geen actief stijlblok in <head> gevonden voor desktopafronding.`);
+  return bron.slice(0,stylePos)+STYLE+"\n"+bron.slice(stylePos);
+}
 function pasTekstAan(html,label="artifact"){
   let bron=String(html||"");
   if(!bron.includes("WeatherNowFinalDesktopUI20260902"))return {html:bron,geraakt:false};
@@ -98,11 +115,7 @@ function pasTekstAan(html,label="artifact"){
     if(tel(bron,anker)!==1)throw new Error(`${label}: runtime-marker ontbreekt of is dubbel.`);
     bron=bron.replace(anker,`${MARKER}\n${anker}`);
   }
-  if(!bron.includes(STYLE_MARKER)){
-    const stylePos=bron.lastIndexOf("</style>");
-    if(stylePos<0)throw new Error(`${label}: geen stijlblok gevonden voor desktopafronding.`);
-    bron=bron.slice(0,stylePos)+STYLE+"\n"+bron.slice(stylePos);
-  }
+  bron=voegStijlInHeadToe(bron,label);
   return {html:bron,geraakt:true};
 }
 function main(){
@@ -119,4 +132,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,tel,htmlBestanden,vervangEen,pasTekstAan,main};
+module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};
