@@ -13,7 +13,12 @@ for(const p of htmlBestanden(OUT)){
   geraakt++;
   const rel=path.relative(OUT,p);
   eis(html.includes(MARKER),`${rel}: uurpaneelrefinement-marker ontbreekt`);
-  eis(html.includes(STYLE_MARKER),`${rel}: desktop-finishing-marker ontbreekt`);
+  const headEinde=html.indexOf("</head>"),stijlPos=html.indexOf(STYLE_MARKER);
+  eis(stijlPos>=0,`${rel}: desktop-finishing-marker ontbreekt`);
+  eis(headEinde>=0&&stijlPos<headEinde,`${rel}: desktop-finishing-stijl staat niet in de actieve head`);
+  const openStyle=html.lastIndexOf("<style",stijlPos),dichtStyle=html.lastIndexOf("</style>",stijlPos);
+  eis(openStyle>=0&&openStyle>dichtStyle,`${rel}: desktop-finishing-marker staat niet binnen een actief style-element`);
+  eis(!html.slice(headEinde).includes(STYLE_MARKER),`${rel}: desktop-finishing-stijl lekt naar body/noscript`);
   eis(html.includes(UREN_NIEUW)&&!html.includes(UREN_OUD),`${rel}: desktoplimiet is niet exact 12 uur`);
   eis(html.includes(MM_NIEUW)&&!html.includes(MM_OUD),`${rel}: numerieke 0 mm wordt nog als ontbrekende waarde behandeld`);
   eis(/#place\{[\s\S]*?padding-left:clamp\(28px,3\.5vw,56px\)!important;[\s\S]*?padding-right:clamp\(28px,3\.5vw,56px\)!important/.test(html),`${rel}: masthead-inset ontbreekt`);
@@ -24,4 +29,4 @@ for(const p of htmlBestanden(OUT)){
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:`${rel}:hour-panel-${i+1}`}));
 }
 eis(geraakt>0,"Geen WeatherNow-artifacts gevonden om uurpaneelrefinement te verifiëren.");
-console.log(`Uurpaneelrefinement geverifieerd op ${geraakt} weerartifacts: maximaal 12 desktopuren, 0 mm blijft 0 mm, masthead/footer hebben veilige insets en Nachtzicht gebruikt brede ruimte.`);
+console.log(`Uurpaneelrefinement geverifieerd op ${geraakt} weerartifacts: maximaal 12 desktopuren, 0 mm blijft 0 mm, desktop-CSS staat actief in head, masthead/footer hebben veilige insets en Nachtzicht gebruikt brede ruimte.`);
