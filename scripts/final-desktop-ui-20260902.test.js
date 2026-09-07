@@ -1,12 +1,19 @@
 "use strict";
 const assert=require("assert");
-const {uurRijenUitGeo,regenVelden,formatTemp}=require("./final-desktop-ui-runtime-20260902.js");
+const {uurRijenUitGeo,komendeUurRijen,regenVelden,formatTemp}=require("./final-desktop-ui-runtime-20260902.js");
 const {RUNTIME,herstelDrukOwnerRuntime,PRESSURE_OLD}=require("./apply-final-desktop-ui-20260902.js");
 const TI=Array.from({length:24},(_,i)=>i<11?`2026-09-02T${String(i+13).padStart(2,"0")}:00`:`2026-09-03T${String(i-11).padStart(2,"0")}:00`);
 const T=TI.map((_,i)=>-8.5+i*.7),A=TI.map((_,i)=>-14.2+i*.55);
-let r=uurRijenUitGeo({TI,T,A},"2026-09-02T13:27",false);
+let r=uurRijenUitGeo({TI,T,A,P:TI.map((_,i)=>i),MM:TI.map((_,i)=>i/10)},"2026-09-02T13:27",false);
 assert.equal(r.length,24);assert.equal(r[1].marker,"Eerstvolgend");assert.equal(r[11].datumLabel,"do 3 sep");assert.equal(r[0].tijd,"2026-09-02T13:00");assert.equal(formatTemp(-8.5),"-8,5 °C");
-r=uurRijenUitGeo({TI,T,A},"2026-09-02T13:27",true);assert.equal(r.some(x=>x.marker),false,"geselecteerde kalenderdag mag geen misleidende Nu-markering krijgen");
+r=uurRijenUitGeo({TI,T,A,P:TI.map((_,i)=>i),MM:TI.map((_,i)=>i/10)},"2026-09-02T13:27",true);assert.equal(r.some(x=>x.marker),false,"geselecteerde kalenderdag mag geen misleidende Nu-markering krijgen");
+assert.equal(r[0].kans,0);assert.equal(r[0].hoeveelheid,0);assert.equal(r[1].hoeveelheid,0.1);
+const data={timezone:"Europe/Amsterdam",utc_offset_seconds:7200,current:{time:"2026-09-02T13:27"},hourly:{time:TI,temperature_2m:T,apparent_temperature:A,precipitation_probability:TI.map((_,i)=>i+10),precipitation:TI.map((_,i)=>i/10)}};
+const upcoming=komendeUurRijen(data,Date.parse("2026-09-02T11:27:00Z"),10);
+assert.equal(upcoming.length,10,"desktop toont maximaal tien opeenvolgende uren");
+assert.equal(upcoming[0].tijd,"2026-09-02T14:00");
+assert.equal(upcoming[0].kans,11);assert.equal(upcoming[0].hoeveelheid,0.1);
+for(let i=1;i<upcoming.length;i++)assert.equal(Date.parse(upcoming[i].instant)-Date.parse(upcoming[i-1].instant),3600000,"desktopuren blijven opeenvolgend");
 let v=regenVelden({genoeg:true,kans:87,hoeveelheid:2.36,eersteTijd:"14:15",soort:"regen"},false);
 assert.deepEqual(v.map(x=>x.label),["Huidige status","Verwacht begin rond","Hoogste neerslagkans","Verwachte totale hoeveelheid","Neerslagtype"]);assert.equal(v[3].waarde,"2,4 mm");
 v=regenVelden({genoeg:false,kans:20,hoeveelheid:4.2},false);assert.equal(v.some(x=>x.label.includes("hoeveelheid")),false,"onvoldoende gedekte hoeveelheid mag niet worden getoond");
@@ -16,4 +23,4 @@ assert.ok(RUNTIME.includes('diag=document.createElement("div");diag.id="wiw-pres
 assert.ok(RUNTIME.includes('const veiligVerplaatst=!!(stat&&diag&&diag.contains(stat))'),"drukowner mag pas verdwijnen nadat #pres aantoonbaar veilig is verplaatst");
 assert.ok(RUNTIME.includes('else if(details){details.hidden=true;details.setAttribute("aria-hidden","true");}'),"bij mislukte verplaatsing moet de sectie onzichtbaar blijven zonder #pres te vernietigen");
 assert.throws(()=>herstelDrukOwnerRuntime(PRESSURE_OLD+"\n"+PRESSURE_OLD),/exact één keer/,"dubbel drukowneranker moet fail-fast stoppen");
-console.log("Finale desktop-UI helpers groen: 24 lokale uren, datumovergang, negatieve temperaturen, huidige rij, brongebonden neerslagsamenvatting, droge nulonderdrukking en behouden drukrenderer-owner.");
+console.log("Finale desktop-UI helpers groen: opeenvolgende lokale uren, per-uur neerslagvelden, datumovergang, negatieve temperaturen, droge nulonderdrukking en behouden drukrenderer-owner.");
