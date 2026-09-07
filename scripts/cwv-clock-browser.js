@@ -12,8 +12,15 @@ module.exports=async function clockChecks(browser,root,fixture,reportDir){
     // Device time deliberately differs from every selected location. The real
     // app timers run under Playwright's clock; no render helper is invoked.
     const context=await browser.newContext({viewport:{width:1660,height:1000},timezoneId:"America/Los_Angeles",serviceWorkers:"block"});
-    const page=await context.newPage(),errors=[];let primary=0,fallback=0;
-    page.on("pageerror",e=>errors.push(String(e)));page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});
+    const page=await context.newPage(),errors=[],externalErrors=[];let primary=0,fallback=0;
+    // Cloudflare Web Analytics injects beacon.min.js at the production edge.
+    // Chromium can report a deployment-specific SRI mismatch for that
+    // third-party resource while the application itself remains error-free.
+    // Keep the message in the evidence, but reserve the runtime-error gate
+    // for errors emitted by the application under test.
+    const isKnownAnalyticsIntegrityError=message=>/Failed to find a valid digest in the 'integrity' attribute for resource 'https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js\//.test(message);
+    const captureError=message=>(isKnownAnalyticsIntegrityError(message)?externalErrors:errors).push(message);
+    page.on("pageerror",e=>captureError(String(e)));page.on("console",m=>{if(m.type()==="error")captureError(m.text());});
     const start=Date.parse("2026-07-22T22:59:30Z")-location.offset*1000;
     await page.clock.install({time:new Date(start)});
     await page.route("**/*",async r=>{
@@ -57,7 +64,7 @@ module.exports=async function clockChecks(browser,root,fixture,reportDir){
     assert.equal(Date.parse(midnight.rows[0].instant)-Date.parse(hour.rows[0].instant),3600000);
     for(const width of [1099,1100,1366,1660]){await page.setViewportSize({width,height:1000});await page.waitForTimeout(150);if(width>=1100)check(await read());}
     assert.equal(fallback,0,"klok/layout mag geen extra WeatherAPI-fallback veroorzaken");assert.deepEqual(errors,[]);
-    const result={location:location.name,timezone:location.zone,deviceTimezone:"America/Los_Angeles",before,hour,midnight,primary,fallback,errors};reports.push(result);
+    const result={location:location.name,timezone:location.zone,deviceTimezone:"America/Los_Angeles",before,hour,midnight,primary,fallback,errors,externalErrors};reports.push(result);
     console.log("CWV_CLOCK "+JSON.stringify(result));
     await context.close();
   }
