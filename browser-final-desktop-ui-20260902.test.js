@@ -5,7 +5,7 @@ const browser=vindBrowser();if(!browser){if(process.env.CI){console.error("FOUT 
 const productie=path.join(__dirname,"public","index.html");if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
 let html=fs.readFileSync(productie,"utf8");
 // De fixture injecteert inline testcode; de productie-CSP blijft ongewijzigd.
-html=html.replace(/<meta\\b[^>]*http-equiv=["\']Content-Security-Policy["\'][^>]*>/i,"");
+html=html.replace(/<meta\b[^>]*http-equiv=["\']Content-Security-Policy["\'][^>]*>/i,"");
 const stub=`<script>try{localStorage.clear();sessionStorage.clear();}catch(e){}window.fetch=()=>new Promise(()=>{});window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()),16);window.cancelAnimationFrame=clearTimeout;try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}</script>`;html=html.replace("</head>",stub+"</head>");
 const reporter=`<script>
 (()=>{const zet=(k,v)=>document.body.setAttribute('data-final-desktop-'+k,String(v));try{
