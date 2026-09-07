@@ -22,6 +22,7 @@ function fixture(url){
   const u=new URL(url),d=bouw({som:0,pp:()=>0,pr:()=>0});
   d.latitude=Number(u.searchParams.get("latitude")||u.searchParams.get("lat")||52.35);
   d.longitude=Number(u.searchParams.get("longitude")||u.searchParams.get("lon")||5.26);
+  if(d.longitude>130){d.timezone="Asia/Tokyo";d.utc_offset_seconds=32400;d.current.time="2026-07-22T21:00";}
   d.daily.sunshine_duration=d.daily.time.map(()=>21600);
   const h=d.hourly;
   while(h.time.length<194){
@@ -89,6 +90,7 @@ async function run(){
         if(u.hostname==="api.open-meteo.com"||u.pathname==="/api/forecast"){
           await sleep(700);return r.fulfill({json:fixture(u.href)});
         }
+        if(u.hostname==="geocoding-api.open-meteo.com")return r.fulfill({json:{results:[/tok/i.test(u.searchParams.get("name")||"")?{name:"Tokyo",latitude:35.6762,longitude:139.6503,country_code:"JP"}:{name:"Amsterdam",latitude:52.3676,longitude:4.9041,country_code:"NL"}]}});
         if(u.hostname==="air-quality-api.open-meteo.com")return r.fulfill({json:{current:{european_aqi:22},hourly:{time:["2026-07-22T14:00"],grass_pollen:[0],birch_pollen:[0],alder_pollen:[0],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}}});
         if(u.pathname==="/api/waarschuwingen"){await sleep(1100);return r.fulfill({json:{bron:"test",dekking:true,land:"NL",lijst:[]}});}
         if(u.pathname==="/api/neerslag")return r.fulfill({json:{nowcast:null,actueel:null,bron:"test"}});
@@ -135,8 +137,16 @@ async function run(){
           await page.locator("#days .row.day:not(.kop)").nth(i).click();
           await page.waitForTimeout(600);
         }
-        await page.locator("#q").fill("Tokyo");await page.waitForTimeout(700);
-        await page.locator("#q").fill("");
+        for(const name of ["Tokyo","Amsterdam"]){
+          await page.locator("#q").fill(name);
+          await page.locator("#res div[data-lat]").first().waitFor({state:"visible"});
+          await page.locator("#res div[data-lat]").first().click();
+          await page.waitForFunction(name=>document.getElementById("place")?.getAttribute("aria-label")===name,name);
+          await page.waitForTimeout(700);
+        }
+        const chart=await page.locator("#chart").boundingBox();
+        for(let i=1;i<=8;i++)await page.mouse.move(chart.x+chart.width*i/10,chart.y+chart.height/2,{steps:2});
+        await page.waitForTimeout(600);
         await page.locator("#thema").click();await page.waitForTimeout(600);
         const profile=(await session.send("Profiler.stop")).profile;
         fs.writeFileSync(path.join(REPORT,"interactions-"+width+".cpuprofile"),JSON.stringify(profile));
@@ -144,10 +154,12 @@ async function run(){
         fs.writeFileSync(path.join(REPORT,"interactions-"+width+".json"),JSON.stringify(metrics,null,2));
         console.log("CWV_INTERACTIONS "+JSON.stringify({width,cpuRate:4,events:metrics.events,frames:metrics.frames.slice(-12)}));
         await session.send("Emulation.setCPUThrottlingRate",{rate:1});
+        await page.locator("#thema").click();
         await page.screenshot({path:path.join(REPORT,"amsterdam-"+width+".png"),fullPage:true});
       }
       await context.close();
     }
+    await require("./cwv-clock-browser.js")(browser,root,fixture,REPORT);
   }finally{
     fs.writeFileSync(path.join(REPORT,"measurements.json"),JSON.stringify(reports,null,2));
     await browser.close();server.close();

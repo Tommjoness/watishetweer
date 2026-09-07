@@ -86,7 +86,6 @@ function verduidelijkVandaag(){
   bestaand.push(beschrijving.id);rij.setAttribute("aria-describedby",bestaand.join(" "));
   /* Bewust géén aria-label op de rij: de bestaande rij-inhoud/naam blijft
      daardoor verwachting, wind, minimum, maximum, kans en hoeveelheid bevatten. */
-  drain.title=zichtbaar.textContent;
 }
 
 function finaliseerWeekNaRender(){herstelWeekNeerslagEindstate();verduidelijkVandaag();}
