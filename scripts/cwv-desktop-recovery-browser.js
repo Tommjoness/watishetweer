@@ -76,7 +76,9 @@ async function instrumentation(page){
 async function run(){
   fs.mkdirSync(REPORT,{recursive:true});
   await new Promise(r=>server.listen(0,"127.0.0.1",r));
-  const root="http://127.0.0.1:"+server.address().port;
+  const root=String(process.env.CWV_ROOT||("http://127.0.0.1:"+server.address().port)).replace(/\/$/,"");
+  const expected=String(process.env.EXPECTED_SHA||"");
+  if(process.env.CWV_ROOT&&!/^[0-9a-f]{40}$/.test(expected))throw new Error("Live CWV-verificatie vereist exacte EXPECTED_SHA");
   const browser=await chromium.launch({headless:true});
   const reports=[];
   try{
@@ -110,6 +112,7 @@ async function run(){
         });
         result.route=route;result.width=width;result.scenario=scenario;result.cls=cls(result.shifts);result.errors=errors.slice();
         reports.push(result);
+        if(expected)assert.equal(result.sha,expected,"CWV-scenario moet op exacte release-SHA draaien");
         assert.deepEqual(errors,[],"Runtime/console: "+route+" "+JSON.stringify(errors));
         assert(result.overflow<=1,"Horizontale overflow: "+JSON.stringify({route,width,overflow:result.overflow}));
         assert(result.cls<0.1,"Route-CLS buiten budget: "+JSON.stringify({route,width,scenario,cls:result.cls,shifts:result.shifts}));
