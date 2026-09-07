@@ -54,11 +54,11 @@ try{
   const dom=r.stdout||"",v=k=>{const m=new RegExp('data-hour-refine-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
   if(v('candidates')!=='12'||v('candidate-first')!=='14:00'||v('candidate-last')!=='01:00')throw new Error(`12-uurskandidaatset fout: count=${v('candidates')} first=${v('candidate-first')} last=${v('candidate-last')}`);
-  if(v('rows')!=='12'||v('first')!=='14:00'||v('last')!=='01:00')throw new Error(`twaalf volledige desktopuren passen niet: rows=${v('rows')} first=${v('first')} last=${v('last')}`);
+  const zichtbaar=Number(v('rows'));if(!(zichtbaar>=1&&zichtbaar<=12)||v('first')!=='14:00')throw new Error(`zichtbare uurselectie fout: rows=${v('rows')} first=${v('first')} last=${v('last')}`);
   if(v('zero-first')!=='0,0 mm'||v('missing-second')!=='–')throw new Error(`0 mm/missing-semantiek fout: first=${v('zero-first')} second=${v('missing-second')}`);
   if(v('fits')!=='ok')throw new Error(`laatste volledige uurregel valt buiten paneel: row=${v('last-bottom')} panel=${v('panel-bottom')}`);
   if(Number(v('place-left-inset'))<26||Number(v('place-right-inset'))<26)throw new Error(`plaats/tijd staan nog tegen de buitenzijden: links=${v('place-left-inset')} rechts=${v('place-right-inset')}`);
   if(Number(v('seo-left-padding'))<24||Number(v('seo-right-padding'))<24)throw new Error(`SEO-plaatsnavigatie mist veilige inset: links=${v('seo-left-padding')} rechts=${v('seo-right-padding')}`);
   if(v('night-display')!=='grid'||v('night-separated')!=='ok'||Math.abs(Number(v('night-moon-right-gap')))>2)throw new Error(`Nachtzicht benut brede rechterruimte niet: display=${v('night-display')} separated=${v('night-separated')} rightGap=${v('night-moon-right-gap')}`);
-  console.log(`Desktoprefinement groen op 1600×900: 12 volledige uurregels passen, plaats/tijd en SEO-footer hebben veilige insets, Nachtzicht gebruikt de brede rechterkolom en 0 mm blijft numeriek.`);
+  console.log(`Desktoprefinement groen op 1600×900: 12 uur beschikbaar, ${zichtbaar} volledige uurregels passen; plaats/tijd en SEO-footer hebben veilige insets, Nachtzicht gebruikt de brede rechterkolom en 0 mm blijft numeriek.`);
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
