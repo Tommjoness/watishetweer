@@ -108,7 +108,28 @@ async function run(){
         const result=await page.evaluate(()=>{
           const rect=s=>{const e=document.querySelector(s);return e?e.getBoundingClientRect().toJSON():null;};
           const rows=[...document.querySelectorAll("#wiw-hour-table tbody tr")],scroll=document.querySelector("#wiw-hour-scroll"),panel=document.querySelector("#wiw-hour-panel");
-          return {...window.__cwv,maxHours:WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN,graphTimes:S.geo.TI,placeLayout:{justify:getComputedStyle(document.getElementById("place")).justifyContent,gap:parseFloat(getComputedStyle(document.getElementById("place")).gap)},sourceTimes:rows.map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]),geometry:{main:rect(".wiw-chart-main"),graph:rect("#chart"),hours:rect("#wiw-hour-panel"),table:rect("#wiw-hour-table"),rain:rect(".wiw-rain-section"),days:rect(".dashrow-days")},rows:rows.length,hourRows:rows.map(r=>({instant:r.querySelector("time")?.dateTime,time:r.querySelector("time")?.textContent,sourceIndex:Number(r.dataset.sourceIndex),rect:r.getBoundingClientRect().toJSON(),visible:getComputedStyle(r).display!=="none"})),hourHeaders:[...document.querySelectorAll("#wiw-hour-table thead th")].map(th=>th.textContent.trim()),hourCells:[...rows].every(r=>r.children.length===4&&/^(?:\d+%|–)$/.test(r.children[2].textContent.trim())&&/^(?:<0,1 mm|\d+(?:,\d+)? mm|–)$/.test(r.children[3].textContent.trim())),rainVisible:document.getElementById("wiw-rain-section")?.getClientRects().length>0,chartDataVisible:[...document.querySelectorAll("details")].some(d=>/grafiekgegevens.*tabel/i.test(d.querySelector("summary")?.textContent||"")&&d.open&&d.getClientRects().length>0),hourOverflow:scroll&&getComputedStyle(scroll).overflowY,hourPanelVisibility:panel&&getComputedStyle(panel).visibility,hourButtons:panel&&[...panel.querySelectorAll("button")].filter(e=>e.getClientRects().length>0).length,copy:document.body.innerText,overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,sha:document.querySelector('meta[name="weather-build-sha"]')?.content};
+          const night=document.querySelector("#nights .row.night:not(.kop)"),nightCells=night?[...night.children].map(e=>e.getBoundingClientRect().toJSON()):[];
+          return {
+            ...window.__cwv,
+            maxHours:WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN,
+            graphTimes:S.geo.TI,
+            placeLayout:{justify:getComputedStyle(document.getElementById("place")).justifyContent,gap:parseFloat(getComputedStyle(document.getElementById("place")).gap)},
+            sourceTimes:rows.map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]),
+            geometry:{layout:rect("#wiw-chart-layout"),main:rect(".wiw-chart-main"),graph:rect("#chart"),hours:rect("#wiw-hour-panel"),table:rect("#wiw-hour-table"),rain:rect(".wiw-rain-section"),days:rect(".dashrow-days"),night:rect("#nights .row.night:not(.kop)")},
+            rows:rows.length,
+            hourRows:rows.map(r=>({instant:r.querySelector("time")?.dateTime,time:r.querySelector("time")?.textContent,sourceIndex:Number(r.dataset.sourceIndex),rect:r.getBoundingClientRect().toJSON(),visible:getComputedStyle(r).display!=="none"})),
+            hourHeaders:[...document.querySelectorAll("#wiw-hour-table thead th")].map(th=>th.textContent.trim()),
+            hourCells:rows.every(r=>r.children.length===5&&!!r.querySelector(".wiw-hour-weather-icon svg")&&!!r.querySelector(".wiw-hour-temp .wiw-hour-secondary")&&!!r.querySelector(".wiw-hour-rain .wiw-hour-secondary")&&!!r.querySelector(".wiw-hour-wind .wiw-hour-secondary")),
+            nightCells,
+            rainVisible:document.getElementById("wiw-rain-section")?.getClientRects().length>0,
+            chartDataVisible:[...document.querySelectorAll("details")].some(d=>/grafiekgegevens.*tabel/i.test(d.querySelector("summary")?.textContent||"")&&d.open&&d.getClientRects().length>0),
+            hourOverflow:scroll&&getComputedStyle(scroll).overflowY,
+            hourPanelVisibility:panel&&getComputedStyle(panel).visibility,
+            hourButtons:panel&&[...panel.querySelectorAll("button")].filter(e=>e.getClientRects().length>0).length,
+            copy:document.body.innerText,
+            overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,
+            sha:document.querySelector('meta[name="weather-build-sha"]')?.content
+          };
         });
         result.route=route;result.width=width;result.scenario=scenario;result.cls=cls(result.shifts);result.errors=errors.slice();
         reports.push(result);
@@ -122,24 +143,27 @@ async function run(){
           assert(Math.abs(g.hours.bottom-g.main.bottom)<=1,"uurpaneel en grafiekkolom eindigen niet gelijk");
           assert(Math.abs(g.table.bottom-result.hourRows.at(-1).rect.bottom)<=2,"geen lege onderste tabelregel");
           assert(Math.abs(g.table.bottom-g.hours.bottom)<=2,"geen loos ondervlak onder de laatste uurregel");
-          const inclusiefRechtergrens=result.sourceTimes.length===result.maxHours&&result.graphTimes.length===result.sourceTimes.length+1;
-          assert(result.graphTimes.length===result.sourceTimes.length||inclusiefRechtergrens,"grafiekbron heeft onverwachte lengte ten opzichte van de uurintervallen");
-          for(let i=0;i<result.sourceTimes.length;i++)assert.equal(result.graphTimes[i],result.sourceTimes[i],`grafiek en uurintervalbron verschillen op bronuur ${i}`);
-          if(inclusiefRechtergrens)assert.equal(Date.parse(result.graphTimes.at(-1)+"Z")-Date.parse(result.sourceTimes.at(-1)+"Z"),3600000,"24-uursgrafiek moet exact één rechter grenspunt na het laatste uurinterval hebben");
+          assert.equal(result.graphTimes.length,25,"standaardgrafiek moet 24 intervallen plus één rechter grenspunt houden");
+          assert.equal(result.graphTimes[0],result.sourceTimes[0],"grafiek en tabel moeten bij hetzelfde lokale uur beginnen");
+          for(let i=0;i<result.sourceTimes.length;i++)assert.equal(result.graphTimes[i],result.sourceTimes[i],`tabeluur ${i} komt niet overeen met hetzelfde grafiekpunt`);
+          assert.equal(Date.parse(result.graphTimes.at(-1)+"Z")-Date.parse(result.graphTimes.at(-2)+"Z"),3600000,"rechter grafiekgrens ligt niet exact één uur na het laatste interval");
           assert.equal(result.placeLayout.justify,"center","plaats en tijd vormen een compacte kopgroep");
           assert(result.placeLayout.gap>=12&&result.placeLayout.gap<=24,"afstand plaats/tijd buiten compacte band");
-          if(width>=1366)assert(result.rows>=10,"desktop moet meer uren tonen dan de oude acht rijen");
+          if(width>=1366)assert(result.rows>=8&&result.rows<=12,"desktop toont geen comfortabele 8–12 volledige uurregels");
+          const grafiekAandeel=g.main.width/(g.main.width+g.hours.width);
+          assert(grafiekAandeel>=.65&&grafiekAandeel<=.72,"grafiek/tabelverhouding valt buiten 65–72% / 28–35%");
           assert(g.main.height-g.graph.height<80,"uurkolom rekt de grafiekrij uit");
           assert(g.graph.bottom<=g.main.bottom+1,"grafiek mag niet buiten de gemeten kolomhoogte vallen");
           const week=await page.evaluate(()=>{const hint=document.getElementById("dagenhint"),head=hint.previousElementSibling;return {hint:hint.getBoundingClientRect().left,head:head.getBoundingClientRect().left};});
           assert(Math.abs(week.hint-week.head)<=1,"weekinstructie hoort bij de kop, zonder gecentreerd los tekstblok");
           assert(result.rows>=4&&result.rows<=result.maxHours,"volledige desktopuren buiten begrensd bereik: "+result.rows);
-          assert.deepEqual(result.hourHeaders,["Tijd","Temperatuur","Kans","Neerslag"],"uurkolommen zijn niet per-uur neerslaggericht");
-          assert.equal(result.hourCells,true,"uurregels bevatten geen kans en mm");
+          assert.deepEqual(result.hourHeaders,["Tijd","Weer","Temp.","Neerslag","Wind"],"rijke uurkolommen ontbreken");
+          assert.equal(result.hourCells,true,"uurregels missen weericoon, gevoel, neerslagkans of wind");
           assert.equal(result.rainVisible,false,"korte neerslagsectie is nog zichtbaar");
           assert.equal(result.chartDataVisible,false,"grafiektabelbediening is nog zichtbaar");
-          assert.equal(result.hourOverflow,"visible");assert.equal(result.hourPanelVisibility,"hidden","technische uurbron mag op desktop niet zichtbaar zijn");assert.equal(result.hourButtons,0,"geen extra uurbediening");
-          for(const r of result.hourRows){assert(r.visible);assert(r.rect.height>0,"technische uurbron moet meetbare volledige rijen houden");assert(r.rect.bottom<=g.hours.bottom+1,"geen afgesneden laatste uurregel");}
+          assert.equal(result.hourOverflow,"visible");assert.equal(result.hourPanelVisibility,"visible","rijke uurkolom is niet zichtbaar");assert.equal(result.hourButtons,0,"geen extra uurbediening");
+          for(const r of result.hourRows){assert(r.visible);assert(r.rect.height>=29&&r.rect.height<=46,"uurregel valt buiten comfortabele hoogte");assert(r.rect.bottom<=g.hours.bottom+1,"geen afgesneden laatste uurregel");}
+          if(result.nightCells.length===5){assert(result.nightCells[2].width<=261,"Nachtzicht-scorebalk is nog onnodig breed");assert(result.nightCells[4].width<=481,"Nachtzicht-toelichting is niet leesbaar begrensd");}
           for(let i=1;i<result.hourRows.length;i++){
             assert.equal(Date.parse(result.hourRows[i].instant)-Date.parse(result.hourRows[i-1].instant),3600000,"unieke opeenvolgende instants, ook bij gelijke DST-labels");
             assert.equal(result.hourRows[i].sourceIndex,result.hourRows[i-1].sourceIndex+1,"geen bronuren overslaan");

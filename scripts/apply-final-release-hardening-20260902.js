@@ -202,7 +202,9 @@ function pasToe(pad){
   html=hardenLoad(html);
   html=schakelProgressievePreviewUit(html);
   const uurKopAantal=html.split(UURKOP).length-1;
-  if(uurKopAantal!==1)throw new Error(path.basename(pad)+": uurkoppen Kans/Neerslag verwacht exact één keer; gevonden "+uurKopAantal);
+  /* De mobiele vierkolomskop staat zowel in de initiële tabelmarkup als in de
+     responsieve runtimefallback. Beide moeten exact één keer aanwezig blijven. */
+  if(uurKopAantal!==2)throw new Error(path.basename(pad)+": initiële en mobiele uurkoppen Kans/Neerslag verwacht exact twee keer; gevonden "+uurKopAantal);
   html=voegStijlToe(html);
   const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:path.basename(pad)+":final-release-"+(i+1)}));

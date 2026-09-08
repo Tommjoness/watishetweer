@@ -50,7 +50,7 @@ const fixture=`<!doctype html><html><head><meta charset="utf-8">${stijlen}</head
   const sheetOk=Math.abs(sr.width-viewport)<=1.5&&linksLeeg<=1.5&&rechtsSheetLeeg<=1.5;
   const sectiesOk=dagenStijl.display==='block'&&dr.width>=1279&&Math.abs(zr.width-dr.width)<=1.5&&Math.abs(nkr.width-dr.width)<=1.5&&Math.abs(dyr.width-dr.width)<=1.5&&Math.abs(nsr.width-dr.width)<=1.5;
   const rechtsLeeg=Math.max(0,rr.right-lr.right);
-  const nachtOk=stijl.display==='grid'&&rr.width>=1279&&mr.width>=219&&mr.width<=321&&lr.width>=359&&lr.width<=521&&rechtsLeeg>=50;
+  const nachtOk=stijl.display==='grid'&&rr.width>=1279&&mr.width>=189&&mr.width<=261&&lr.width>=319&&lr.width<=481&&rechtsLeeg>=100;
   document.body.dataset.sheetBreedteResult=sheetOk?'ok':'fout';
   document.body.dataset.sheetBreedte=sr.width.toFixed(2);
   document.body.dataset.sheetViewport=viewport.toFixed(2);
