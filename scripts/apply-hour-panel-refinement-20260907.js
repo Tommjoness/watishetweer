@@ -156,6 +156,15 @@ ${STYLE_MARKER}
   }
 }
 
+@media(min-width:1366px){
+  /* Vanaf de contractbreedte voor de rijke desktopmodule is 2.5px de
+     minimale basispadding. De bestaande hoogte-sync verdeelt resterende
+     ruimte daarna weer gelijkmatig over alleen de volledig passende rijen. */
+  .wiw-hour-table td{
+    padding:calc(2.5px + var(--wiw-hour-row-pad-extra,0px)) 4px!important
+  }
+}
+
 @media(min-width:1500px){
   /* Op brede desktops is de laatste Nachtzicht-kolom al volledig breed, maar
      de maantijd stond direct onder het advies waardoor rechts visueel leeg
