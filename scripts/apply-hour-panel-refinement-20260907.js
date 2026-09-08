@@ -80,6 +80,8 @@ const NU_NIEUW=`    let nuIdx = plaatsNuIndex(TI);
     }`;
 const KOP_OUD='if(kop&&S.dag==null&&rows.length)kop.textContent="De komende "+rows.length+" uur";';
 const KOP_NIEUW='if(kop&&S.dag==null&&S.bereik===24)kop.textContent="Komende uren";';
+const EERSTVOLGEND_OUD='if(r.marker){const m=document.createElement("span");m.className="wiw-hour-marker";m.textContent=r.marker;tijd.appendChild(m);}';
+const EERSTVOLGEND_NIEUW='if(r.marker&&r.marker!=="Eerstvolgend"){const m=document.createElement("span");m.className="wiw-hour-marker";m.textContent=r.marker;tijd.appendChild(m);}';
 const STYLE=`
 ${STYLE_MARKER}
 /* Gerichte desktopafronding op basis van productiebeelden. Mobiele layout,
@@ -135,7 +137,7 @@ ${STYLE_MARKER}
   }
 
   /* Vijf visuele kolommen houden zeven betrouwbare waarden leesbaar: gevoel
-     staat onder temperatuur en kans onder de hoeveelheid. */
+     staat compact naast temperatuur; kans blijft onder de hoeveelheid. */
   .wiw-visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
   #wiw-hour-panel h3{
     margin-top:0!important;
@@ -144,11 +146,11 @@ ${STYLE_MARKER}
     line-height:1.15!important
   }
   .wiw-hour-table{table-layout:fixed!important;font-size:12px!important}
-  .wiw-hour-table th:nth-child(1),.wiw-hour-table td:nth-child(1){width:16%!important}
-  .wiw-hour-table th:nth-child(2),.wiw-hour-table td:nth-child(2){width:10%!important;text-align:center!important}
-  .wiw-hour-table th:nth-child(3),.wiw-hour-table td:nth-child(3){width:21%!important}
-  .wiw-hour-table th:nth-child(4),.wiw-hour-table td:nth-child(4){width:29%!important}
-  .wiw-hour-table th:nth-child(5),.wiw-hour-table td:nth-child(5){width:24%!important}
+  .wiw-hour-table th:nth-child(1),.wiw-hour-table td:nth-child(1){width:15%!important}
+  .wiw-hour-table th:nth-child(2),.wiw-hour-table td:nth-child(2){width:9%!important;text-align:center!important}
+  .wiw-hour-table th:nth-child(3),.wiw-hour-table td:nth-child(3){width:29%!important}
+  .wiw-hour-table th:nth-child(4),.wiw-hour-table td:nth-child(4){width:25%!important}
+  .wiw-hour-table th:nth-child(5),.wiw-hour-table td:nth-child(5){width:22%!important}
   .wiw-hour-table td{
     padding:calc(4px + var(--wiw-hour-row-pad-extra,0px)) 4px!important;
     line-height:1.12!important
@@ -160,6 +162,10 @@ ${STYLE_MARKER}
   .wiw-hour-table tbody tr:last-child td{border-bottom:0!important}
   .wiw-hour-time time,.wiw-hour-primary{display:block;color:var(--ink);font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
   .wiw-hour-secondary{display:block;margin-top:2px;color:var(--ink-45);font-size:9.5px;line-height:1.1;white-space:nowrap}
+  .wiw-hour-temp{white-space:nowrap!important}
+  .wiw-hour-temp .wiw-hour-primary,.wiw-hour-temp .wiw-hour-secondary{display:inline!important}
+  .wiw-hour-temp .wiw-hour-secondary{margin-top:0!important}
+  .wiw-hour-temp .wiw-hour-secondary::before{content:" · "}
   .wiw-hour-date{display:block!important;margin:2px 0 0!important;font-size:9px!important;white-space:nowrap}
   .wiw-hour-weather-icon{display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center}
   .wiw-hour-weather-icon svg{display:block;width:22px!important;height:22px!important}
@@ -176,11 +182,18 @@ ${STYLE_MARKER}
 
 @media(min-width:1366px){
   /* Acht rijke regels moeten op de kleinste contractdesktop binnen de
-     natuurlijke grafiekhoogte passen. 2px blijft boven de bestaande
-     browsertest-comfortgrens; eventuele resthoogte wordt daarna verdeeld. */
+     natuurlijke grafiekhoogte passen. De 1px basispadding houdt de bestaande
+     typografie intact; eventuele resthoogte wordt daarna verdeeld. */
   .wiw-hour-table td{
-    padding:calc(2px + var(--wiw-hour-row-pad-extra,0px)) 4px!important
+    padding:calc(1px + var(--wiw-hour-row-pad-extra,0px)) 4px!important
   }
+}
+
+@media(min-width:1366px) and (max-width:1499px){
+  /* Op de kleinste desktopbreedtes winnen we de resterende vaste hoogte terug
+     uit kop en tabelkop, niet uit de inhoudsregels. */
+  #wiw-hour-panel h3{margin-bottom:5px!important}
+  .wiw-hour-table th{padding:3px 4px!important}
 }
 
 @media(min-width:1500px){
@@ -259,6 +272,7 @@ function pasTekstAan(html,label="artifact"){
   bron=vervangEen(bron,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,`${label} hoogtegestuurd uurpaneel`);
   bron=vervangEen(bron,NU_OUD,NU_NIEUW,`${label} desktop-nucontext`);
   bron=vervangEen(bron,KOP_OUD,KOP_NIEUW,`${label} komende-uren-kop`);
+  bron=vervangEen(bron,EERSTVOLGEND_OUD,EERSTVOLGEND_NIEUW,`${label} mobiel-eerstvolgend-label`);
   if(!bron.includes(MARKER)){
     const anker='const MARKER="final-desktop-ui-20260902";';
     if(tel(bron,anker)!==1)throw new Error(`${label}: runtime-marker ontbreekt of is dubbel.`);
@@ -281,4 +295,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,NU_OUD,NU_NIEUW,KOP_OUD,KOP_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};
+module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,NU_OUD,NU_NIEUW,KOP_OUD,KOP_NIEUW,EERSTVOLGEND_OUD,EERSTVOLGEND_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};
