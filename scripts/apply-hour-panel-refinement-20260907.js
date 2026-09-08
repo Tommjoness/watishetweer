@@ -24,9 +24,11 @@ ${STYLE_MARKER}
     padding-right:clamp(28px,3.5vw,56px)!important
   }
 
-  /* De SEO-plaatsnavigatie is viewportbreed; geef de kop en links dezelfde
-     veilige desktop-inset als de hoofdinhoud in plaats van tegen de rand. */
-  .seo-plaatsnav{
+  /* De buitenste SEO-navigatie blijft bewust viewportbreed zodat de bestaande
+     scheidingslijn en achtergrond full-bleed blijven. Alleen de echte inhoud
+     krijgt de veilige desktop-inset; latere shorthand-padding op de wrapper kan
+     deze inhoudsruimte daardoor niet meer ongedaan maken. */
+  .seo-plaatsnav-inner{
     padding-left:clamp(24px,3.5vw,56px)!important;
     padding-right:clamp(24px,3.5vw,56px)!important;
     box-sizing:border-box!important
