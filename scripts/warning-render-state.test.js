@@ -6,6 +6,7 @@ const path=require("path");
 const {
   START_BRON,START_PRODUCTIE,DEKKING_BRON,DEKKING_PRODUCTIE,
   EIND_BRON,EIND_PRODUCTIE,FOUT_BRON,FOUT_PRODUCTIE,
+  BRIEFING_EIND_BRON,BRIEFING_EIND_PRODUCTIE,
   CSS_BRON,CSS_PRODUCTIE,pasWarningRenderStateToe
 }=require("./warning-render-state.js");
 
@@ -13,6 +14,7 @@ const bron=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
 for(const [label,anker] of [
   ["oude laadstatus",START_BRON],["oude dekkingpresentatie",DEKKING_BRON],
   ["oude kaartpresentatie",EIND_BRON],["oude foutpresentatie",FOUT_BRON],
+  ["oude briefing-hertekenbeleid",BRIEFING_EIND_BRON],
   ["oude warningstijl",CSS_BRON]
 ])assert.equal(bron.split(anker).length-1,1,"ontwikkeltemplate moet exact één "+label+"-anker hebben");
 assert(!bron.includes(CSS_PRODUCTIE),"ontwikkeltemplate mag finale warningstijl nog niet bevatten");
@@ -21,12 +23,14 @@ const uit=pasWarningRenderStateToe(bron);
 for(const [label,productie] of [
   ["laadstatus",START_PRODUCTIE],["dekkingpresentatie",DEKKING_PRODUCTIE],
   ["kaartpresentatie",EIND_PRODUCTIE],["foutpresentatie",FOUT_PRODUCTIE],
+  ["briefing-hertekenbeleid",BRIEFING_EIND_PRODUCTIE],
   ["warningstijl",CSS_PRODUCTIE]
 ])assert.equal(uit.split(productie).length-1,1,"base-build moet exact één finale "+label+" bezitten");
-for(const oud of [START_BRON,DEKKING_BRON,EIND_BRON,FOUT_BRON,CSS_BRON])assert(!uit.includes(oud),"oude waarschuwingpresentatie mag niet in het base-artifact blijven");
+for(const oud of [START_BRON,DEKKING_BRON,EIND_BRON,FOUT_BRON,BRIEFING_EIND_BRON,CSS_BRON])assert(!uit.includes(oud),"oude waarschuwingpresentatie mag niet in het base-artifact blijven");
 
 /* Request-, scope- en selectiegedrag blijft eigendom van dezelfde bestaande
-   renderer. Alleen de uiteindelijke DOM/copy/CSS verandert van eigenaar. */
+   renderer. Alleen de uiteindelijke DOM/copy/CSS en het briefing-hertekenmoment
+   veranderen van eigenaar. */
 for(const invariant of [
   'const d=await j("/api/waarschuwingen?lat="+lat+"&lon="+lon+landParam,{timeoutMs:7000,signal:waarschuwingController.signal});',
   'if(mijnBeurt!==waarschuwingTeller||S.lat!==lat||S.lon!==lon) return;',
@@ -37,6 +41,15 @@ for(const invariant of [
   'lijst.slice(0,3).map(w=>',
   'waarschuwingGeldigTot(w.tot)'
 ])assert(uit.includes(invariant),"waarschuwingowner veranderde bestaand request/selectiecontract: "+invariant);
+
+/* De forecastbriefing wordt al synchroon door tekenAlles() gezet. Afronding van
+   de trage waarschuwingrequest mag daarom alleen nog een tweede briefingrender
+   doen wanneer die request werkelijk een relevante waarschuwing oplevert. */
+assert(!DEKKING_PRODUCTIE.includes('briefing()'),"geen waarschuwingdekking mag de briefing niet opnieuw tekenen");
+assert(BRIEFING_EIND_PRODUCTIE.includes('Array.isArray(S.actieveWaarschuwingen)&&S.actieveWaarschuwingen.length>0'),
+  "async briefing-hertekenen moet expliciet door een niet-lege waarschuwinglijst worden bewaakt");
+assert(!uit.includes('if(S.d&&typeof briefing==="function") briefing();\n}\n\n/** Vertaalt een maanfase'),
+  "onvoorwaardelijke tweede briefingrender mag niet in het base-artifact blijven");
 
 for(const zichtbaar of [
   'data-ui-warning-loading="1">Officiële weerwaarschuwingen controleren…',
@@ -79,4 +92,4 @@ assert(!uit.includes('.waarsch{border-left:3px solid var(--carmine);padding:10px
 /* De owner mag niet stil nogmaals op een reeds gemigreerd artifact muteren. */
 assert.throws(()=>pasWarningRenderStateToe(uit),/bronanker ontbreekt of is dubbel/);
 
-console.log("Warning-render contract groen: requeststates, kaartpresentatie en finale CSS hebben één base-build owner; bron, scope, filtering en sortering blijven ongewijzigd.");
+console.log("Warning-render contract groen: requeststates, kaartpresentatie, stabiele briefing en finale CSS hebben één base-build owner; bron, scope, filtering en sortering blijven ongewijzigd.");
