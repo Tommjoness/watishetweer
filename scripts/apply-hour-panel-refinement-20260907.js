@@ -11,6 +11,22 @@ const UREN_OUD="const MAX_DESKTOP_UREN=10;";
 const UREN_NIEUW="const MAX_DESKTOP_UREN=17;";
 const MM_OUD='mm.textContent=num(r.hoeveelheid)===0&&(num(r.kans)===null||num(r.kans)<=0)?"–":formatMm(r.hoeveelheid)||"–";';
 const MM_NIEUW='mm.textContent=formatMm(r.hoeveelheid)||"–";';
+const UURMODUS_OUD='  const desktop=window.innerWidth>=1100;\n  const rijen=desktop?desktopUurRijen():uurRijenUitGeo(S.geo,S.d&&S.d.current&&S.d.current.time,S.dag!=null,S.d&&S.d.hourly);tbody.replaceChildren();';
+const UURMODUS_NIEUW=`  const desktop=window.innerWidth>=1100;
+  /* De compacte, exact gedeelde uurweergave hoort bij het standaardbereik en
+     een bewust gekozen dag. Een expliciete 48-uurs-/zevendagenkeuze behoudt
+     de bestaande lange grafiek; op desktop verdwijnt de compacte uurkolom dan
+     zodat twee verschillende tijdranges nooit naast elkaar worden gepresenteerd. */
+  const langBereik=desktop&&S.dag==null&&S.bereik!==24;
+  const layout=document.getElementById("wiw-chart-layout");
+  if(layout)layout.dataset.hourPaired=langBereik?"0":"1";
+  if(langBereik){paneel.style.height="";tbody.replaceChildren();return;}
+  const rijen=desktop?desktopUurRijen():uurRijenUitGeo(S.geo,S.d&&S.d.current&&S.d.current.time,S.dag!=null,S.d&&S.d.hourly);tbody.replaceChildren();`;
+const HOOGTE_OUD='  if(window.innerWidth<1100){aside.style.height="";return;}';
+const HOOGTE_NIEUW=`  if(window.innerWidth<1100){aside.style.height="";return;}
+  /* Een eerder geplande hoogte-sync mag een zojuist gekozen lange grafiek niet
+     alsnog terugbrengen naar het aantal passende uurregels. */
+  if(S.dag==null&&S.bereik!==24){aside.style.height="";return;}`;
 const NU_OUD="    const nuIdx = plaatsNuIndex(TI);";
 const NU_NIEUW=`    let nuIdx = plaatsNuIndex(TI);
     /* De gedeelde desktoprange begint bij het eerstvolgende volledige forecastuur.
@@ -37,6 +53,16 @@ ${STYLE_MARKER}
     padding-right:clamp(28px,3.5vw,56px)!important
   }
   #place #plaatstijd{margin-left:0!important;flex:0 0 auto!important}
+
+  /* Een expliciete 48-uurs-/zevendagenkeuze is een grafiekmodus, niet de
+     compacte gedeelde uurweergave. Geef de grafiek dan zijn volledige breedte
+     en toon geen uurkolom met een afwijkende kortere range. */
+  .wiw-chart-layout[data-hour-paired="0"]{
+    grid-template-columns:minmax(0,1fr)!important
+  }
+  .wiw-chart-layout[data-hour-paired="0"] .wiw-hour-panel{
+    display:none!important
+  }
 
   /* De buitenste SEO-navigatie blijft bewust viewportbreed zodat de bestaande
      scheidingslijn en achtergrond full-bleed blijven. Alleen de echte inhoud
@@ -144,6 +170,8 @@ function pasTekstAan(html,label="artifact"){
   const stapNieuw='const stap = !M&&window.innerWidth>=1100&&n<=globalThis.WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN ? 1 : n<=24 ? 3 : n<=48 ? 6 : (M?18:12);';
   bron=vervangEen(bron,stapOud,stapNieuw,`${label} desktop-uurmarkeringen`);
   bron=vervangEen(bron,MM_OUD,MM_NIEUW,`${label} neerslagnul`);
+  bron=vervangEen(bron,UURMODUS_OUD,UURMODUS_NIEUW,`${label} desktop-bereikmodus`);
+  bron=vervangEen(bron,HOOGTE_OUD,HOOGTE_NIEUW,`${label} lange-bereikhoogte`);
   bron=vervangEen(bron,NU_OUD,NU_NIEUW,`${label} desktop-nucontext`);
   if(!bron.includes(MARKER)){
     const anker='const MARKER="final-desktop-ui-20260902";';
@@ -163,7 +191,7 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen WeatherNow-artifacts gevonden voor uurpaneelrefinement.");
   const cache=vernieuwServiceworkerCache(OUT,"hour-panel-refinement-20260907");
-  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): maximaal 17 passende desktopuren, actuele Nu-context behouden, numerieke 0 mm blijft zichtbaar en desktopspacing is aangescherpt; cache ${cache}.`);
+  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): maximaal 17 passende desktopuren, expliciete lange grafiekbereiken behouden, actuele Nu-context behouden, numerieke 0 mm blijft zichtbaar en desktopspacing is aangescherpt; cache ${cache}.`);
 }
 
 if(require.main===module)main();
