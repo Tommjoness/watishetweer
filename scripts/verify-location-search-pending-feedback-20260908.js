@@ -18,12 +18,12 @@ const pending='zoekMeldingToon("Plaatsen zoeken…");';
 const guard='if(generatie!==zoekGeneratie)return;';
 const cleanup='zoekMelding.classList.remove("on");zoekMelding.textContent="";';
 const resultaten='const resultaten=Array.isArray(d.results)?d.results:[];';
+const succesPad=guard+'\n      '+cleanup+'\n      '+resultaten;
 
 eis(tel(sectie,apply.MARKER)===1,"Pending-feedbackmarker ontbreekt of is dubbel.");
 eis(tel(sectie,pending)===1,"Plaatsen zoeken-wachtstatus ontbreekt of is dubbel.");
-eis(tel(sectie,cleanup)===1,"Succes-cleanup van de zoekmelding ontbreekt of is dubbel.");
+eis(tel(sectie,succesPad)===1,"Latest-wins guard, succes-cleanup en result-rendering staan niet exact één keer in de vereiste volgorde.");
 eis(sectie.indexOf(pending)>sectie.indexOf("timer=setTimeout(async()=>{"),"Wachtstatus staat niet binnen de bestaande debouncecallback.");
-eis(sectie.indexOf(guard)<sectie.indexOf(cleanup)&&sectie.indexOf(cleanup)<sectie.indexOf(resultaten),"Latest-wins guard moet vóór cleanup staan en cleanup vóór result-rendering.");
 eis(sectie.includes('zoekMeldingToon("Niets gevonden")'),"Bestaande niets-gevondenstatus is verdwenen.");
 eis(sectie.includes('zoekMeldingToon("Zoeken is niet gelukt. Probeer het opnieuw.")'),"Bestaande zoekfoutstatus is verdwenen.");
 eis(sectie.includes('zoekPanelenSluit(true);zoekStatus.textContent="";'),"Nieuwe invoer ruimt oude zoekstatus/resultaten niet meer direct op.");
