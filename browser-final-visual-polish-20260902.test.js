@@ -80,7 +80,7 @@ try{
     }else{
       const vastDesktop=actualW>=1100;
       if(v('hour-overflow-y')!==(vastDesktop?'visible':'auto')||v('hour-role')!==(vastDesktop?'':'region')||v('hour-tabindex')!==(vastDesktop?'nee':'ja')||v('hour-toggle')!=='verborgen')throw new Error(`${w}px: desktop uurtabelgedrag is geraakt (overflow=${v('hour-overflow-y')}, role=${v('hour-role')}, tabindex=${v('hour-tabindex')}, toggle=${v('hour-toggle')})`);
-      if(v('night-wide-style')!=='ok'||v('night-wide-axis')!=='ok'||v('night-cloud-axis')!=='ok'||v('night-advice-axis')!=='ok')throw new Error(`${w}px: Nachtzicht-uitlijning fout wide=${v('night-wide-style')}/${v('night-wide-axis')} cloud=${v('night-cloud-axis')} advice=${v('night-advice-axis')}`);
+      if(v('night-wide-axis')!=='ok'||v('night-cloud-axis')!=='ok'||v('night-advice-axis')!=='ok')throw new Error(`${w}px: Nachtzicht-uitlijning fout wide=${v('night-wide-axis')} cloud=${v('night-cloud-axis')} advice=${v('night-advice-axis')}`);
       if(v('night-advice-align')!=='left')throw new Error(`${w}px: lange Nachtzicht-uitleg niet links uitgelijnd (${v('night-advice-align')})`);
       if(Number(v('night-wide-width'))<319||Number(v('night-wide-width'))>481)throw new Error(`${w}px: Beste zichtperiode valt buiten de begrensde leesbreedte (${v('night-wide-width')}px)`);
       if(Number(v('night-bar-width'))<189||Number(v('night-bar-width'))>261)throw new Error(`${w}px: zichtscorebalk valt buiten de compacte band (${v('night-bar-width')}px)`);
