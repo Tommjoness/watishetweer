@@ -182,10 +182,10 @@ ${STYLE_MARKER}
 
 @media(min-width:1366px){
   /* Acht rijke regels moeten op de kleinste contractdesktop binnen de
-     natuurlijke grafiekhoogte passen. 2px blijft boven de bestaande
-     browsertest-comfortgrens; eventuele resthoogte wordt daarna verdeeld. */
+     natuurlijke grafiekhoogte passen. De 1px basispadding houdt de bestaande
+     typografie intact; eventuele resthoogte wordt daarna verdeeld. */
   .wiw-hour-table td{
-    padding:calc(2px + var(--wiw-hour-row-pad-extra,0px)) 4px!important
+    padding:calc(1px + var(--wiw-hour-row-pad-extra,0px)) 4px!important
   }
 }
 
