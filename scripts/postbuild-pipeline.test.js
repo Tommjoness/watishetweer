@@ -49,6 +49,7 @@ const verwacht=[
   "verify-lcp-final-mile-20260828.js",
   "apply-location-search-pending-feedback-20260908.js",
   "verify-location-search-pending-feedback-20260908.js",
+  "browser-location-search-pending-feedback-20260908.test.js",
   "apply-build-provenance.js",
   "verify-build-provenance.js",
   "verify-final-27.js"
@@ -78,6 +79,7 @@ assert(fs.existsSync(path.join(__dirname,"apply-moon-a11y-template-20260828.js")
 assert(fs.existsSync(path.join(__dirname,"verify-lcp-final-mile-20260828.js")),"LCP-final-mile moet direct verifieerbaar zijn");
 assert(fs.existsSync(path.join(__dirname,"apply-location-search-pending-feedback-20260908.js")),"location-search pending feedback moet een expliciete applystap hebben");
 assert(fs.existsSync(path.join(__dirname,"verify-location-search-pending-feedback-20260908.js")),"location-search pending feedback moet direct verifieerbaar zijn");
+assert(fs.existsSync(path.join(__dirname,"browser-location-search-pending-feedback-20260908.test.js")),"location-search pending feedback moet een echte browserguard hebben");
 
 /* Bewolkingscopy hoort uitsluitend bij de canonieke senior-semantiekbron. Q3 mag
    de bewezen 100%/95%-grenzen controleren, maar geen compatibiliteitsfallback
@@ -130,7 +132,8 @@ assert(positie("apply-lcp-final-mile-20260828.js")<positie("apply-moon-a11y-temp
 assert(positie("apply-moon-a11y-template-20260828.js")<positie("verify-lcp-final-mile-20260828.js"),"LCP-verifier moet de definitieve maanrol zien");
 assert(positie("verify-lcp-final-mile-20260828.js")<positie("apply-location-search-pending-feedback-20260908.js"),"location-search feedback mag pas na de bewezen LCP-laag muteren");
 assert(positie("apply-location-search-pending-feedback-20260908.js")<positie("verify-location-search-pending-feedback-20260908.js"),"location-search feedback moet direct na toepassing worden geverifieerd");
-assert(positie("verify-location-search-pending-feedback-20260908.js")<positie("apply-build-provenance.js"),"build-SHA wordt pas na bewezen location-search feedback gestempeld");
+assert(positie("verify-location-search-pending-feedback-20260908.js")<positie("browser-location-search-pending-feedback-20260908.test.js"),"location-search browserguard moet de statisch geverifieerde artifact testen");
+assert(positie("browser-location-search-pending-feedback-20260908.test.js")<positie("apply-build-provenance.js"),"build-SHA wordt pas na bewezen location-search browsergedrag gestempeld");
 assert(positie("apply-build-provenance.js")<positie("verify-build-provenance.js"),"build-provenance moet direct na toepassing worden geverifieerd");
 assert(positie("verify-build-provenance.js")<positie("verify-final-27.js"),"finale artifactguard moet routes en provenance meenemen");
 assert.equal(POSTBUILD_STAPPEN.at(-1),"verify-final-27.js","finale artifactguard moet laatste stap zijn");
@@ -141,4 +144,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde inclusief location-search pending feedback, kortetermijn-metric clarity, staff-audit, mobiele state-UX, mobiele weather-truth-UX, LCP-final-mile, maan-templatefix, finale presentatieguard, canonieke owners, SEO-routes, provenance en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde inclusief location-search pending feedback + browserguard, kortetermijn-metric clarity, staff-audit, mobiele state-UX, mobiele weather-truth-UX, LCP-final-mile, maan-templatefix, finale presentatieguard, canonieke owners, SEO-routes, provenance en fail-fast gedrag geslaagd.");
