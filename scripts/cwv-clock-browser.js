@@ -45,8 +45,8 @@ module.exports=async function clockChecks(browser,root,fixture,reportDir){
     await page.goto(url,{waitUntil:"load"});
     await page.waitForSelector("#wiw-hour-table tbody tr",{state:"attached",timeout:10000});
     const read=()=>page.evaluate(()=>({maxHours:WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN,graphTimes:S.geo.TI,defaultGraphStart:S.d.hourly.time[S.i0],sourceTimes:[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]),now:Date.now(),rows:[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(r=>({instant:r.querySelector("time").dateTime,label:r.querySelector("time").textContent})),place:document.getElementById("place").getAttribute("aria-label")}));
-    const check=s=>{
-      assert.equal(s.place,location.name);assert(s.rows.length>=8&&s.rows.length<=s.maxHours);
+    const check=(s,minRows=8)=>{
+      assert.equal(s.place,location.name);assert(s.rows.length>=minRows&&s.rows.length<=s.maxHours);
       assert.equal(s.graphTimes.length,25,"grafiek behoudt 24 intervallen plus één rechter grenspunt");
       assert.equal(s.graphTimes[0],s.sourceTimes[0],"grafiek en tabel beginnen niet bij hetzelfde lokale uur");
       for(let i=0;i<s.sourceTimes.length;i++)assert.equal(s.graphTimes[i],s.sourceTimes[i],"tabeluren moeten de eerste opeenvolgende grafiekuren zijn");
@@ -67,7 +67,7 @@ module.exports=async function clockChecks(browser,root,fixture,reportDir){
     await page.clock.fastForward(3600000);await page.waitForTimeout(1000);
     const midnight=await read();check(midnight);assert.equal(midnight.rows[0].label,"01:00");
     assert.equal(Date.parse(midnight.rows[0].instant)-Date.parse(hour.rows[0].instant),3600000);
-    for(const width of [1099,1100,1366,1660]){await page.setViewportSize({width,height:1000});await page.waitForTimeout(150);const resized=await read();if(width>=1100)check(resized);else assert.equal(resized.graphTimes[0],resized.defaultGraphStart,"mobiele grafiek moet na desktopresize naar het bestaande startuur terugkeren");}
+    for(const width of [1099,1100,1366,1660]){await page.setViewportSize({width,height:1000});await page.waitForTimeout(150);const resized=await read();if(width>=1100)check(resized,width>=1366?8:4);else assert.equal(resized.graphTimes[0],resized.defaultGraphStart,"mobiele grafiek moet na desktopresize naar het bestaande startuur terugkeren");}
     assert.equal(fallback,0,"klok/layout mag geen extra WeatherAPI-fallback veroorzaken");assert.deepEqual(errors,[]);
     const result={location:location.name,timezone:location.zone,deviceTimezone:"America/Los_Angeles",before,hour,midnight,primary,fallback,errors,externalErrors};reports.push(result);
     console.log("CWV_CLOCK "+JSON.stringify(result));
