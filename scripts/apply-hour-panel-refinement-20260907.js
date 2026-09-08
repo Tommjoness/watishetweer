@@ -32,12 +32,7 @@ const HOOGTE_NIEUW=`  if(window.innerWidth<1100){aside.style.height="";aside.sty
   aside.style.removeProperty("--wiw-hour-row-pad-extra");
   /* Een eerder geplande hoogte-sync mag een zojuist gekozen lange grafiek niet
      alsnog terugbrengen naar het aantal passende uurregels. */
-  if(S.dag==null&&S.bereik!==24){aside.style.height="";return;}
-  /* Cruciaal: verwijder een eerder gezette paneelhoogte vóór de grafiek wordt
-     gemeten. Anders kan de vorige tabelhoogte via de gridrij opnieuw als
-     'beschikbare grafiekhoogte' worden teruggelezen en ontstaat een
-     zelfversterkende meetlus. */
-  aside.style.height="";`;
+  if(S.dag==null&&S.bereik!==24){aside.style.height="";return;}`;
 const PANEL_HOOGTE_OUD=`  while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
   aside.dataset.visibleHours=String(tbody?tbody.children.length:0);`;
 const PANEL_HOOGTE_NIEUW=`  while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
@@ -66,6 +61,8 @@ const NU_NIEUW=`    let nuIdx = plaatsNuIndex(TI);
       const eersteMs=naarUTC(TI[0]),afstand=eersteMs-nuMs;
       if(Number.isFinite(eersteMs)&&Number.isFinite(nuMs)&&afstand>=0&&afstand<3600000)nuIdx=0;
     }`;
+const KOP_OUD='if(kop&&S.dag==null&&rows.length)kop.textContent="De komende "+rows.length+" uur";';
+const KOP_NIEUW='if(kop&&S.dag==null&&S.bereik===24)kop.textContent="Komende uren";';
 const STYLE=`
 ${STYLE_MARKER}
 /* Gerichte desktopafronding op basis van productiebeelden. Mobiele layout,
@@ -82,20 +79,34 @@ ${STYLE_MARKER}
   }
   #place #plaatstijd{margin-left:0!important;flex:0 0 auto!important}
 
-  /* Een expliciete 48-uurs-/zevendagenkeuze is een grafiekmodus, niet de
-     compacte gedeelde uurweergave. Geef de grafiek dan zijn volledige breedte
-     en toon geen uurkolom met een afwijkende kortere range. */
+  /* De standaard desktopweergave is voortaan één brede 'Komende uren'-grafiek.
+     De uurtabel blijft buiten beeld als technische bron voor exact dezelfde
+     urenrange en regressiecontrole, maar reserveert geen layoutbreedte meer. */
+  .wiw-chart-layout{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:0!important;
+    align-items:start!important;
+    position:relative!important
+  }
+  .wiw-chart-main{width:100%!important;min-width:0!important;align-self:start!important}
+  .wiw-hour-panel{
+    position:absolute!important;
+    top:0!important;
+    right:0!important;
+    width:min(34%,420px)!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+    align-self:start!important
+  }
+
+  /* Een expliciete 48-uurs-/zevendagenkeuze is een grafiekmodus. De verborgen
+     technische uurkolom is daar niet nodig en wordt volledig uitgeschakeld. */
   .wiw-chart-layout[data-hour-paired="0"]{
     grid-template-columns:minmax(0,1fr)!important
   }
   .wiw-chart-layout[data-hour-paired="0"] .wiw-hour-panel{
     display:none!important
   }
-
-  /* De grafiek is de bron van waarheid voor de hoogte. De uurkolom mag de
-     gridrij nooit uitrekken; beide items beginnen op hun natuurlijke hoogte. */
-  .wiw-chart-layout{align-items:start!important}
-  .wiw-chart-main,.wiw-hour-panel{align-self:start!important}
 
   /* De buitenste SEO-navigatie blijft bewust viewportbreed zodat de bestaande
      scheidingslijn en achtergrond full-bleed blijven. Alleen de echte inhoud
@@ -107,30 +118,31 @@ ${STYLE_MARKER}
     box-sizing:border-box!important
   }
 
-  /* Compact maar niet gepropt: circa 24px is de praktische minimumhoogte.
-     Eventuele sub-rij resthoogte wordt runtime gelijkmatig verdeeld, zonder het
-     aantal zichtbare uren kunstmatig vast te zetten. */
+  /* De technische uurbron blijft compact en volledig meetbaar, maar is op
+     desktop visueel verborgen. Zo kan de grafiek exact dezelfde bronuren
+     blijven gebruiken zonder een tweede informatiekolom in beeld. */
   #wiw-hour-panel h3{
     margin-top:0!important;
     margin-bottom:4px!important;
     line-height:1.15!important
   }
   .wiw-hour-table td{
-    padding-top:calc(5px + var(--wiw-hour-row-pad-extra,0px))!important;
-    padding-bottom:calc(5px + var(--wiw-hour-row-pad-extra,0px))!important;
+    padding-top:calc(2px + var(--wiw-hour-row-pad-extra,0px))!important;
+    padding-bottom:calc(2px + var(--wiw-hour-row-pad-extra,0px))!important;
     line-height:14px!important
   }
   .wiw-hour-table th{
-    padding-top:3px!important;
-    padding-bottom:3px!important;
+    padding-top:2px!important;
+    padding-bottom:2px!important;
     line-height:12px!important
   }
 }
 
 @media(min-width:1500px){
-  /* Op brede desktops wordt de bestaande laatste Nachtzicht-kolom intern in
-     advies en maaninfo verdeeld. De kolom zelf wordt elders bewust begrensd,
-     zodat deze verdeling niet opnieuw over de hele viewport uitwaaiert. */
+  /* Op brede desktops is de laatste Nachtzicht-kolom al volledig breed, maar
+     de maantijd stond direct onder het advies waardoor rechts visueel leeg
+     bleef. Gebruik die bestaande kolom in twee delen: advies links, maaninfo
+     rechts. Er wordt geen nieuwe informatie toegevoegd. */
   #nights .row.night:not(.kop) .nmeta.wide{
     display:grid!important;
     grid-template-columns:minmax(0,1fr) minmax(180px,230px)!important;
@@ -201,6 +213,7 @@ function pasTekstAan(html,label="artifact"){
   bron=vervangEen(bron,HOOGTE_OUD,HOOGTE_NIEUW,`${label} lange-bereikhoogte`);
   bron=vervangEen(bron,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,`${label} hoogtegestuurd uurpaneel`);
   bron=vervangEen(bron,NU_OUD,NU_NIEUW,`${label} desktop-nucontext`);
+  bron=vervangEen(bron,KOP_OUD,KOP_NIEUW,`${label} komende-uren-kop`);
   if(!bron.includes(MARKER)){
     const anker='const MARKER="final-desktop-ui-20260902";';
     if(tel(bron,anker)!==1)throw new Error(`${label}: runtime-marker ontbreekt of is dubbel.`);
@@ -219,8 +232,8 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen WeatherNow-artifacts gevonden voor uurpaneelrefinement.");
   const cache=vernieuwServiceworkerCache(OUT,"hour-panel-refinement-20260907");
-  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): zichtbare desktopuren worden uit de natuurlijke grafiekhoogte bepaald binnen de 24-uurs bronhorizon; eerdere paneelhoogte wordt vóór hermeting gewist, uurregels houden circa 24px minimumhoogte en resterende sub-rijhoogte wordt gelijkmatig verdeeld; expliciete lange grafiekbereiken blijven behouden, actuele Nu-context blijft behouden en 0 mm blijft numeriek; cache ${cache}.`);
+  console.log(`Desktopgrafiekrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): standaard 24-uursweergave heet Komende uren en gebruikt de volle desktopbreedte; de technische uurrange blijft verborgen exact gekoppeld aan de grafiek, lange grafiekbereiken blijven behouden, actuele Nu-context blijft behouden en 0 mm blijft numeriek; cache ${cache}.`);
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,NU_OUD,NU_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};
+module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,NU_OUD,NU_NIEUW,KOP_OUD,KOP_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};
