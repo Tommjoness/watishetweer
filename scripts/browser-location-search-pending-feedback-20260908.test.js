@@ -20,26 +20,28 @@ if(!fs.existsSync(p))throw new Error("public/index.html ontbreekt voor location-
 let html=fs.readFileSync(p,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
 
 const antwoord=payload=>`{ok:true,status:200,json:async()=>(${JSON.stringify(payload)}),text:async()=>JSON.stringify(${JSON.stringify(payload)})}`;
-const geocoderAntwoord=antwoord({results:[{name:"Amsterdam",latitude:52.3676,longitude:4.9041,country_code:"NL",admin1:"Noord-Holland"}]});
-const stub=`<script>
+const headStub=`<script>
 try{localStorage.clear();sessionStorage.clear();}catch(e){}
-window.__resolveSearch=null;
-window.fetch=function(url){
-  const u=String(url);
-  if(u.includes('geocoding-api.open-meteo.com')){
-    return new Promise(resolve=>{window.__resolveSearch=()=>resolve(${geocoderAntwoord});});
-  }
-  return Promise.resolve(${antwoord({})});
-};
+window.fetch=function(){return Promise.resolve(${antwoord({})});};
 try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}
 </script>`;
-html=html.replace("</head>",stub+"</head>");
+html=html.replace("</head>",headStub+"</head>");
 
+const geocoderPayload={results:[{name:"Amsterdam",latitude:52.3676,longitude:4.9041,country_code:"NL",admin1:"Noord-Holland"}]};
 const reporter=`<script>
 document.addEventListener('DOMContentLoaded',()=>{
   const zet=(k,v)=>document.body.setAttribute('data-search-pending-'+k,String(v));
   const q=document.getElementById('q'),melding=document.getElementById('zoekmelding'),res=document.getElementById('res'),status=document.getElementById('zoekstatus');
-  let resultaatGezien=false;
+  const origineleJ=window.j;
+  let zoekResolver=null,zoekRequests=0,resultaatGezien=false;
+  zet('j-global',typeof origineleJ==='function'?'ok':'fout');
+  window.j=function(url,opt){
+    if(String(url).includes('geocoding-api.open-meteo.com')){
+      zoekRequests++;
+      return new Promise(resolve=>{zoekResolver=resolve;});
+    }
+    return typeof origineleJ==='function'?origineleJ(url,opt):Promise.resolve({});
+  };
   const controleerResultaat=()=>{
     if(resultaatGezien)return;
     try{
@@ -63,11 +65,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   }catch(e){zet('start','exception:'+e.message);}
   setTimeout(()=>{
     try{
-      const requestOpen=typeof window.__resolveSearch==='function';
+      const requestOpen=typeof zoekResolver==='function'&&zoekRequests===1;
       const ok=requestOpen&&melding&&melding.classList.contains('on')&&melding.textContent.trim()==='Plaatsen zoeken…'
         &&res&&!res.classList.contains('on')&&q.getAttribute('aria-expanded')==='false';
-      zet('pending',ok?'ok':'fout');zet('pending-text',melding&&melding.textContent.trim());zet('request-open',requestOpen?'ok':'fout');
-      if(requestOpen)window.__resolveSearch();
+      zet('pending',ok?'ok':'fout');zet('pending-text',melding&&melding.textContent.trim());zet('request-open',requestOpen?'ok':'fout');zet('request-count',zoekRequests);
+      if(requestOpen)zoekResolver(${JSON.stringify(geocoderPayload)});
       queueMicrotask(controleerResultaat);
     }catch(e){zet('pending','exception:'+e.message);}
   },470);
@@ -91,8 +93,8 @@ try{
   if(r.status!==0)throw new Error("browser exit "+r.status+" "+String(r.stderr||"").slice(-1200));
   const dom=r.stdout||"";
   const waarde=k=>{const m=new RegExp('data-search-pending-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
-  if(waarde("done")!=="ok"||waarde("request-open")!=="ok"||waarde("pending")!=="ok"||waarde("result")!=="ok"||waarde("short-query-clean")!=="ok"){
-    throw new Error(`Location-search browsercheck fout: request=${waarde("request-open")} pending=${waarde("pending")} pendingText=${waarde("pending-text")} result=${waarde("result")} resultMessage=${waarde("result-message")} panel=${waarde("result-panel")} count=${waarde("result-count")} expanded=${waarde("result-expanded")} status=${waarde("result-status")} short=${waarde("short-query-clean")} done=${waarde("done")}`);
+  if(waarde("done")!=="ok"||waarde("j-global")!=="ok"||waarde("request-open")!=="ok"||waarde("pending")!=="ok"||waarde("result")!=="ok"||waarde("short-query-clean")!=="ok"){
+    throw new Error(`Location-search browsercheck fout: j=${waarde("j-global")} request=${waarde("request-open")} requests=${waarde("request-count")} pending=${waarde("pending")} pendingText=${waarde("pending-text")} result=${waarde("result")} resultMessage=${waarde("result-message")} panel=${waarde("result-panel")} count=${waarde("result-count")} expanded=${waarde("result-expanded")} status=${waarde("result-status")} short=${waarde("short-query-clean")} done=${waarde("done")}`);
   }
-  console.log("Location-search browser 390px: open geocoderrequest toont Plaatsen zoeken, DOM-resultaat verschijnt binnen begrensde deadline en korte query ruimt alles direct op.");
+  console.log("Location-search browser 390px: één open geocoderrequest toont Plaatsen zoeken, opgelost j()-resultaat verschijnt en korte query ruimt alles direct op.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
