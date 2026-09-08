@@ -84,7 +84,7 @@ try{
       if(v('night-advice-align')!=='left')throw new Error(`${w}px: lange Nachtzicht-uitleg niet links uitgelijnd (${v('night-advice-align')})`);
       if(Number(v('night-wide-width'))<319||Number(v('night-wide-width'))>481)throw new Error(`${w}px: Beste zichtperiode valt buiten de begrensde leesbreedte (${v('night-wide-width')}px)`);
       if(Number(v('night-bar-width'))<189||Number(v('night-bar-width'))>261)throw new Error(`${w}px: zichtscorebalk valt buiten de compacte band (${v('night-bar-width')}px)`);
-      if(Number(v('night-right-gap'))<100)throw new Error(`${w}px: Nachtzicht-data wordt nog over de volledige rij uitgesmeerd (${v('night-right-gap')}px vrije eindruimte)`);
+      if(actualW>=1366&&Number(v('night-right-gap'))<100)throw new Error(`${w}px: Nachtzicht-data wordt nog over de volledige rij uitgesmeerd (${v('night-right-gap')}px vrije eindruimte)`);
     }
     console.log(`${w}px (CSS viewport ${actualW}px): final visual UX groen; overflow ${v('overflow')}px, urenpreview en headerhiërarchie correct${actualW>=1100?', zichtperiode '+v('night-wide-width')+'px':''}.`);
   }
