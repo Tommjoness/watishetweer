@@ -8,20 +8,60 @@ const OUT=path.join(__dirname,"..","public");
 const MARKER="/* ===== HOUR PANEL REFINEMENT 20260907 ===== */";
 const STYLE_MARKER="/* ===== DESKTOP FINISHING 20260907 ===== */";
 const UREN_OUD="const MAX_DESKTOP_UREN=10;";
-const UREN_NIEUW="const MAX_DESKTOP_UREN=12;";
+const UREN_NIEUW="const MAX_DESKTOP_UREN=17;";
 const MM_OUD='mm.textContent=num(r.hoeveelheid)===0&&(num(r.kans)===null||num(r.kans)<=0)?"–":formatMm(r.hoeveelheid)||"–";';
 const MM_NIEUW='mm.textContent=formatMm(r.hoeveelheid)||"–";';
+const UURMODUS_OUD='  const desktop=window.innerWidth>=1100;\n  const rijen=desktop?desktopUurRijen():uurRijenUitGeo(S.geo,S.d&&S.d.current&&S.d.current.time,S.dag!=null,S.d&&S.d.hourly);tbody.replaceChildren();';
+const UURMODUS_NIEUW=`  const desktop=window.innerWidth>=1100;
+  /* De compacte, exact gedeelde uurweergave hoort bij het standaardbereik en
+     een bewust gekozen dag. Een expliciete 48-uurs-/zevendagenkeuze behoudt
+     de bestaande lange grafiek; op desktop verdwijnt de compacte uurkolom dan
+     zodat twee verschillende tijdranges nooit naast elkaar worden gepresenteerd. */
+  const langBereik=desktop&&S.dag==null&&S.bereik!==24;
+  const layout=document.getElementById("wiw-chart-layout");
+  if(layout)layout.dataset.hourPaired=langBereik?"0":"1";
+  if(langBereik){paneel.style.height="";tbody.replaceChildren();return;}
+  const rijen=desktop?desktopUurRijen():uurRijenUitGeo(S.geo,S.d&&S.d.current&&S.d.current.time,S.dag!=null,S.d&&S.d.hourly);tbody.replaceChildren();`;
+const HOOGTE_OUD='  if(window.innerWidth<1100){aside.style.height="";return;}';
+const HOOGTE_NIEUW=`  if(window.innerWidth<1100){aside.style.height="";return;}
+  /* Een eerder geplande hoogte-sync mag een zojuist gekozen lange grafiek niet
+     alsnog terugbrengen naar het aantal passende uurregels. */
+  if(S.dag==null&&S.bereik!==24){aside.style.height="";return;}`;
+const NU_OUD="    const nuIdx = plaatsNuIndex(TI);";
+const NU_NIEUW=`    let nuIdx = plaatsNuIndex(TI);
+    /* De gedeelde desktoprange begint bij het eerstvolgende volledige forecastuur.
+       Als 'nu' daardoor hooguit één uur vóór de eerste bronwaarde valt, blijft de
+       actuele meting als context exact op de linker grafiekgrens zichtbaar. De
+       forecastpunten zelf blijven ongewijzigd en dus gelijk aan de uurtabel. */
+    if(nuIdx==null&&S.dag==null&&!M&&window.innerWidth>=1100&&TI.length){
+      const nuMs=S.klokInstantOverride&&typeof S.klokInstantOverride.getTime==="function"?S.klokInstantOverride.getTime():Date.now();
+      const eersteMs=naarUTC(TI[0]),afstand=eersteMs-nuMs;
+      if(Number.isFinite(eersteMs)&&Number.isFinite(nuMs)&&afstand>=0&&afstand<3600000)nuIdx=0;
+    }`;
 const STYLE=`
 ${STYLE_MARKER}
 /* Gerichte desktopafronding op basis van productiebeelden. Mobiele layout,
    data-interpretatie en providerlogica blijven onaangeraakt. */
 @media(min-width:1100px){
-  /* De plaats en lokale tijd blijven aan weerszijden van dezelfde kopregel,
-     maar krijgen aan beide kanten dezelfde binnenruimte. De onderstreping van
-     de kop blijft daardoor over de volledige mastkolom lopen. */
+  /* Plaats en tijd vormen samen één compacte, gecentreerde kopgroep. */
   #place{
+    display:flex!important;
+    justify-content:center!important;
+    align-items:baseline!important;
+    gap:18px!important;
     padding-left:clamp(28px,3.5vw,56px)!important;
     padding-right:clamp(28px,3.5vw,56px)!important
+  }
+  #place #plaatstijd{margin-left:0!important;flex:0 0 auto!important}
+
+  /* Een expliciete 48-uurs-/zevendagenkeuze is een grafiekmodus, niet de
+     compacte gedeelde uurweergave. Geef de grafiek dan zijn volledige breedte
+     en toon geen uurkolom met een afwijkende kortere range. */
+  .wiw-chart-layout[data-hour-paired="0"]{
+    grid-template-columns:minmax(0,1fr)!important
+  }
+  .wiw-chart-layout[data-hour-paired="0"] .wiw-hour-panel{
+    display:none!important
   }
 
   /* De buitenste SEO-navigatie blijft bewust viewportbreed zodat de bestaande
@@ -34,13 +74,28 @@ ${STYLE_MARKER}
     box-sizing:border-box!important
   }
 
-  /* De bestaande hoogte-sync blijft leidend en verwijdert nog steeds iedere
-     rij die niet volledig naast de grafiek past. Eén pixel minder verticale
-     celpadding per zijde maakt op de normale desktophoogtes de twaalfde
-     volledige rij passend zonder de grafiek kunstmatig hoger te maken. */
-  .wiw-hour-table th,.wiw-hour-table td{
-    padding-top:7px!important;
-    padding-bottom:7px!important
+  /* Zeventien uur passen op brede desktops zonder de grafieksectie hoger te
+     maken. De bodyregels blijven op 12,5px staan. Door collapsed borders kan
+     uitsluitend de eerste bodyrij een halve pixel verliezen; die eerste rij
+     krijgt daarom een halve pixel extra line-height zonder alle 17 rijen hoger
+     te maken. */
+  #wiw-hour-panel h3{
+    margin-top:0!important;
+    margin-bottom:1px!important;
+    line-height:1.1!important
+  }
+  .wiw-hour-table td{
+    padding-top:1px!important;
+    padding-bottom:1px!important;
+    line-height:14px!important
+  }
+  .wiw-hour-table tbody tr:first-child td{
+    line-height:14.5px!important
+  }
+  .wiw-hour-table th{
+    padding-top:1px!important;
+    padding-bottom:1px!important;
+    line-height:12px!important
   }
 }
 
@@ -111,7 +166,13 @@ function pasTekstAan(html,label="artifact"){
   let bron=String(html||"");
   if(!bron.includes("WeatherNowFinalDesktopUI20260902"))return {html:bron,geraakt:false};
   bron=vervangEen(bron,UREN_OUD,UREN_NIEUW,`${label} desktopuren`);
+  const stapOud='const stap = n<=24 ? 3 : n<=48 ? 6 : (M?18:12);';
+  const stapNieuw='const stap = !M&&window.innerWidth>=1100&&n<=globalThis.WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN ? 1 : n<=24 ? 3 : n<=48 ? 6 : (M?18:12);';
+  bron=vervangEen(bron,stapOud,stapNieuw,`${label} desktop-uurmarkeringen`);
   bron=vervangEen(bron,MM_OUD,MM_NIEUW,`${label} neerslagnul`);
+  bron=vervangEen(bron,UURMODUS_OUD,UURMODUS_NIEUW,`${label} desktop-bereikmodus`);
+  bron=vervangEen(bron,HOOGTE_OUD,HOOGTE_NIEUW,`${label} lange-bereikhoogte`);
+  bron=vervangEen(bron,NU_OUD,NU_NIEUW,`${label} desktop-nucontext`);
   if(!bron.includes(MARKER)){
     const anker='const MARKER="final-desktop-ui-20260902";';
     if(tel(bron,anker)!==1)throw new Error(`${label}: runtime-marker ontbreekt of is dubbel.`);
@@ -130,8 +191,8 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen WeatherNow-artifacts gevonden voor uurpaneelrefinement.");
   const cache=vernieuwServiceworkerCache(OUT,"hour-panel-refinement-20260907");
-  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): maximaal 12 passende desktopuren, numerieke 0 mm blijft zichtbaar en desktopspacing is aangescherpt; cache ${cache}.`);
+  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): maximaal 17 passende desktopuren, expliciete lange grafiekbereiken behouden, actuele Nu-context behouden, numerieke 0 mm blijft zichtbaar en desktopspacing is aangescherpt; cache ${cache}.`);
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};
+module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,NU_OUD,NU_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};

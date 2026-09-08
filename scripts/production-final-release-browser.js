@@ -41,7 +41,7 @@ async function wachtKlaar(page,naam,timeout=26000){
       const desktop=innerWidth>=1100;
       // Volledige brondekking blijft hierboven verplicht. De desktop toont
       // bewust alleen de volledige uurregels die naast de grafiek passen.
-      return app&&getComputedStyle(app).display!=="none"&&label&&bronKlaar&&dagen>=7&&(desktop?uren>=4&&uren<=12:uren>=23);
+      return app&&getComputedStyle(app).display!=="none"&&label&&bronKlaar&&dagen>=7&&(desktop?uren>=4&&uren<=WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN:uren>=23);
     },null,{timeout});
   }catch(e){
     const diagnose=await page.evaluate(()=>{
@@ -144,6 +144,9 @@ async function lees(page){return page.evaluate(()=>{
     wind:document.getElementById("wind")?.textContent||"",
     humidity:document.getElementById("hum")?.textContent||"",
     dagen:document.querySelectorAll("#days .row.day:not(.kop)").length,
+    maxHours:WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN,
+    graphTimes:S.geo&&S.geo.TI,
+    tableSourceTimes:hour?[...hour.querySelectorAll("tbody tr")].map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]):[],
     hourRows:hour?hour.querySelectorAll("tbody tr").length:0,
     boundedHours:innerWidth>=1100,
     hourInstants:hour?[...hour.querySelectorAll("tbody time")].map(e=>e.dateTime):[],
@@ -194,7 +197,8 @@ async function lees(page){return page.evaluate(()=>{
         assert.equal(getal(uit.humidity),rond(bron.current&&bron.current.relative_humidity_2m),`${l.naam}: luchtvochtigheid wijkt af`);
         assert.equal(uit.dagen,7,`${l.naam}: geen zeven dagrijen`);
         if(uit.boundedHours){
-          assert(uit.hourRows>=4&&uit.hourRows<=12&&uit.hourFits,`${l.naam}: desktopuren zijn niet volledig binnen de grafiekhoogte begrensd (${uit.hourRows})`);
+          assert.deepEqual(uit.graphTimes,uit.tableSourceTimes,`${l.naam}: grafiek en tabel tonen verschillende uren`);
+          assert(uit.hourRows>=4&&uit.hourRows<=uit.maxHours&&uit.hourFits,`${l.naam}: desktopuren zijn niet volledig binnen de grafiekhoogte begrensd (${uit.hourRows})`);
           for(let i=1;i<uit.hourInstants.length;i++)assert.equal(Date.parse(uit.hourInstants[i])-Date.parse(uit.hourInstants[i-1]),3600000,`${l.naam}: uurinstanties moeten uniek en opeenvolgend zijn`);
         }else assert(uit.hourRows>=23,`${l.naam}: mobiele bronuurtabel te kort (${uit.hourRows})`);
         const hourHeaders=await page.locator("#wiw-hour-table thead th").allTextContents();
