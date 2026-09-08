@@ -59,7 +59,7 @@ ${STYLE_MARKER}
   .wiw-hour-table td{
     padding-top:1px!important;
     padding-bottom:1px!important;
-    line-height:14px!important
+    line-height:14.5px!important
   }
   .wiw-hour-table th{
     padding-top:1px!important;
