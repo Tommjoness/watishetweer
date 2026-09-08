@@ -189,6 +189,13 @@ ${STYLE_MARKER}
   }
 }
 
+@media(min-width:1366px) and (max-width:1499px){
+  /* Op de kleinste desktopbreedtes winnen we de resterende vaste hoogte terug
+     uit kop en tabelkop, niet uit de inhoudsregels. */
+  #wiw-hour-panel h3{margin-bottom:5px!important}
+  .wiw-hour-table th{padding:3px 4px!important}
+}
+
 @media(min-width:1500px){
   /* Op brede desktops is de laatste Nachtzicht-kolom al volledig breed, maar
      de maantijd stond direct onder het advies waardoor rechts visueel leeg
