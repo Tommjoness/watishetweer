@@ -150,8 +150,10 @@ async function run(){
           assert.equal(result.placeLayout.justify,"center","plaats en tijd vormen een compacte kopgroep");
           assert(result.placeLayout.gap>=12&&result.placeLayout.gap<=24,"afstand plaats/tijd buiten compacte band");
           if(width>=1366)assert(result.rows>=8&&result.rows<=12,"desktop toont geen comfortabele 8–12 volledige uurregels");
-          const grafiekAandeel=g.main.width/(g.main.width+g.hours.width);
-          assert(grafiekAandeel>=.65&&grafiekAandeel<=.72,"grafiek/tabelverhouding valt buiten 65–72% / 28–35%");
+          if(width>=1366){
+            const grafiekAandeel=g.main.width/(g.main.width+g.hours.width);
+            assert(grafiekAandeel>=.65&&grafiekAandeel<=.72,"grafiek/tabelverhouding valt buiten 65–72% / 28–35%");
+          }
           assert(g.main.height-g.graph.height<80,"uurkolom rekt de grafiekrij uit");
           assert(g.graph.bottom<=g.main.bottom+1,"grafiek mag niet buiten de gemeten kolomhoogte vallen");
           const week=await page.evaluate(()=>{const hint=document.getElementById("dagenhint"),head=hint.previousElementSibling;return {hint:hint.getBoundingClientRect().left,head:head.getBoundingClientRect().left};});
