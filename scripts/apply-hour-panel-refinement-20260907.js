@@ -180,7 +180,7 @@ ${STYLE_MARKER}
   }
 }
 
-@media(min-width:1366px){
+@media(min-width:1360px){
   /* Acht rijke regels moeten op de kleinste contractdesktop binnen de
      natuurlijke grafiekhoogte passen. De 1px basispadding houdt de bestaande
      typografie intact; eventuele resthoogte wordt daarna verdeeld. */
@@ -189,7 +189,7 @@ ${STYLE_MARKER}
   }
 }
 
-@media(min-width:1366px) and (max-width:1499px){
+@media(min-width:1360px) and (max-width:1499px){
   /* Op de kleinste desktopbreedtes winnen we de resterende vaste hoogte terug
      uit kop en tabelkop, niet uit de inhoudsregels. */
   #wiw-hour-panel h3{margin-bottom:5px!important}
