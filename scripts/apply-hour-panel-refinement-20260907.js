@@ -49,16 +49,21 @@ ${STYLE_MARKER}
   }
 
   /* Zeventien uur passen op brede desktops zonder de grafieksectie hoger te
-     maken. De bodyregels blijven op 12,5px staan; line-height, verticale
-     padding en kopruimte benutten de bestaande hoogte zonder gepropte tekst. */
+     maken. De bodyregels blijven op 12,5px staan. Door collapsed borders kan
+     uitsluitend de eerste bodyrij een halve pixel verliezen; die eerste rij
+     krijgt daarom een halve pixel extra line-height zonder alle 17 rijen hoger
+     te maken. */
   #wiw-hour-panel h3{
     margin-top:0!important;
-    margin-bottom:2px!important;
+    margin-bottom:1px!important;
     line-height:1.1!important
   }
   .wiw-hour-table td{
     padding-top:1px!important;
     padding-bottom:1px!important;
+    line-height:14px!important
+  }
+  .wiw-hour-table tbody tr:first-child td{
     line-height:14.5px!important
   }
   .wiw-hour-table th{
