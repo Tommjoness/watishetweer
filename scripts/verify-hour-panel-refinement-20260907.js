@@ -23,12 +23,12 @@ for(const p of htmlBestanden(OUT)){
   eis(html.includes(MM_NIEUW)&&!html.includes(MM_OUD),`${rel}: numerieke 0 mm wordt nog als ontbrekende waarde behandeld`);
   eis(/#place\{[\s\S]*?padding-left:clamp\(28px,3\.5vw,56px\)!important;[\s\S]*?padding-right:clamp\(28px,3\.5vw,56px\)!important/.test(html),`${rel}: masthead-inset ontbreekt`);
   eis(/\.seo-plaatsnav-inner\{[\s\S]*?padding-left:clamp\(24px,3\.5vw,56px\)!important;[\s\S]*?padding-right:clamp\(24px,3\.5vw,56px\)!important/.test(html),`${rel}: SEO-inhoudsinset ontbreekt`);
-  eis(/#wiw-hour-panel h3\{[\s\S]*?margin-top:0!important;[\s\S]*?margin-bottom:4px!important/.test(html),`${rel}: compacte uurpaneelkop ontbreekt`);
-  eis(/\.wiw-hour-table td\{[\s\S]*?padding-top:2px!important;[\s\S]*?padding-bottom:2px!important;[\s\S]*?line-height:16px!important/.test(html),`${rel}: compacte desktop-uurrij ontbreekt`);
-  eis(/\.wiw-hour-table th\{[\s\S]*?padding-top:2px!important;[\s\S]*?padding-bottom:2px!important;[\s\S]*?line-height:13px!important/.test(html),`${rel}: compacte desktop-uurkop ontbreekt`);
+  eis(/#wiw-hour-panel h3\{[\s\S]*?margin-top:0!important;[\s\S]*?margin-bottom:2px!important;[\s\S]*?line-height:1\.1!important/.test(html),`${rel}: compacte uurpaneelkop ontbreekt`);
+  eis(/\.wiw-hour-table td\{[\s\S]*?padding-top:1px!important;[\s\S]*?padding-bottom:1px!important;[\s\S]*?line-height:15px!important/.test(html),`${rel}: compacte desktop-uurrij ontbreekt`);
+  eis(/\.wiw-hour-table th\{[\s\S]*?padding-top:1px!important;[\s\S]*?padding-bottom:1px!important;[\s\S]*?line-height:12px!important/.test(html),`${rel}: compacte desktop-uurkop ontbreekt`);
   eis(/#nights \.row\.night:not\(\.kop\) \.nmeta\.wide\{[\s\S]*?grid-template-columns:minmax\(0,1fr\) minmax\(180px,230px\)!important/.test(html),`${rel}: brede Nachtzicht-verdeling ontbreekt`);
   const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:`${rel}:hour-panel-${i+1}`}));
 }
 eis(geraakt>0,"Geen WeatherNow-artifacts gevonden om uurpaneelrefinement te verifiëren.");
-console.log(`Uurpaneelrefinement geverifieerd op ${geraakt} weerartifacts: maximaal 17 desktopuren, 0 mm blijft 0 mm, desktop-CSS staat actief in head, masthead/SEO-inhoud hebben veilige insets en Nachtzicht gebruikt brede ruimte.`);
+console.log(`Uurpaneelrefinement geverifieerd op ${geraakt} weerartifacts: maximaal 17 desktopuren, compacte leesbare 18px-uurrijen, 0 mm blijft 0 mm, desktop-CSS staat actief in head, masthead/SEO-inhoud hebben veilige insets en Nachtzicht gebruikt brede ruimte.`);

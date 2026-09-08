@@ -38,22 +38,22 @@ ${STYLE_MARKER}
   }
 
   /* Zeventien uur passen op brede desktops zonder de grafieksectie hoger te
-     maken. De bodyregels blijven op 12,5px staan; alleen line-height, verticale
-     padding en de kopruimte worden compact genoeg gemaakt om de bestaande
-     hoogte beter te benutten. */
+     maken. De bodyregels blijven op 12,5px staan; line-height, verticale
+     padding en kopruimte benutten de bestaande hoogte zonder gepropte tekst. */
   #wiw-hour-panel h3{
     margin-top:0!important;
-    margin-bottom:4px!important
+    margin-bottom:2px!important;
+    line-height:1.1!important
   }
   .wiw-hour-table td{
-    padding-top:2px!important;
-    padding-bottom:2px!important;
-    line-height:16px!important
+    padding-top:1px!important;
+    padding-bottom:1px!important;
+    line-height:15px!important
   }
   .wiw-hour-table th{
-    padding-top:2px!important;
-    padding-bottom:2px!important;
-    line-height:13px!important
+    padding-top:1px!important;
+    padding-bottom:1px!important;
+    line-height:12px!important
   }
 }
 
