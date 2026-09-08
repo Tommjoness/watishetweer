@@ -1,7 +1,7 @@
 "use strict";
 const assert=require("assert"),fs=require("fs"),path=require("path");
 const locations=[
-  {name:"Amsterdam",lat:52.3676,lon:4.9041,land:"NL",zone:"Europe/Amsterdam",offset:7200},
+  {name:"Almere",lat:52.396,lon:5.280,land:"NL",zone:"Europe/Amsterdam",offset:7200},
   {name:"New York",lat:40.7128,lon:-74.006,land:"US",zone:"America/New_York",offset:-14400},
   {name:"Tokyo",lat:35.6762,lon:139.6503,land:"JP",zone:"Asia/Tokyo",offset:32400},
   {name:"Kathmandu",lat:27.7172,lon:85.324,land:"NP",zone:"Asia/Kathmandu",offset:20700}
@@ -44,15 +44,17 @@ module.exports=async function clockChecks(browser,root,fixture,reportDir){
     const url=root+"/?"+new URLSearchParams({lat:location.lat,lon:location.lon,plaats:location.name,land:location.land});
     await page.goto(url,{waitUntil:"load"});
     await page.waitForSelector("#wiw-hour-table tbody tr",{timeout:10000});
-    const read=()=>page.evaluate(()=>({now:Date.now(),rows:[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(r=>({instant:r.querySelector("time").dateTime,label:r.querySelector("time").textContent})),place:document.getElementById("place").getAttribute("aria-label")}));
+    const read=()=>page.evaluate(()=>({maxHours:WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN,graphTimes:S.geo.TI,sourceTimes:[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]),now:Date.now(),rows:[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(r=>({instant:r.querySelector("time").dateTime,label:r.querySelector("time").textContent})),place:document.getElementById("place").getAttribute("aria-label")}));
     const check=s=>{
-      assert.equal(s.place,location.name);assert(s.rows.length>=4&&s.rows.length<=10);
+      assert.equal(s.place,location.name);assert(s.rows.length>=4&&s.rows.length<=s.maxHours);
+      assert.deepEqual(s.graphTimes,s.sourceTimes,"grafiek en tabel schuiven met dezelfde uren door");
       for(let i=0;i<s.rows.length;i++){
         const row=s.rows[i],expected=new Intl.DateTimeFormat("en-GB",{timeZone:location.zone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(row.instant));
         assert.equal(row.label,expected,"label moet bij selected-location timezone horen");
         if(i)assert.equal(Date.parse(row.instant)-Date.parse(s.rows[i-1].instant),3600000);
       }
     };
+    await page.screenshot({path:path.join(reportDir,"desktop-hours-"+location.name.replace(/ /g,"-")+".png"),fullPage:true});
     const before=await read();check(before);assert.equal(before.rows[0].label,"23:00");
     await page.clock.fastForward(62000);await page.waitForTimeout(100);
     const hour=await read();check(hour);assert.equal(hour.rows[0].label,"00:00");

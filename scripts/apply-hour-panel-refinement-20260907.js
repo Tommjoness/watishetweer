@@ -8,7 +8,7 @@ const OUT=path.join(__dirname,"..","public");
 const MARKER="/* ===== HOUR PANEL REFINEMENT 20260907 ===== */";
 const STYLE_MARKER="/* ===== DESKTOP FINISHING 20260907 ===== */";
 const UREN_OUD="const MAX_DESKTOP_UREN=10;";
-const UREN_NIEUW="const MAX_DESKTOP_UREN=12;";
+const UREN_NIEUW="const MAX_DESKTOP_UREN=14;";
 const MM_OUD='mm.textContent=num(r.hoeveelheid)===0&&(num(r.kans)===null||num(r.kans)<=0)?"–":formatMm(r.hoeveelheid)||"–";';
 const MM_NIEUW='mm.textContent=formatMm(r.hoeveelheid)||"–";';
 const STYLE=`
@@ -16,13 +16,17 @@ ${STYLE_MARKER}
 /* Gerichte desktopafronding op basis van productiebeelden. Mobiele layout,
    data-interpretatie en providerlogica blijven onaangeraakt. */
 @media(min-width:1100px){
-  /* De plaats en lokale tijd blijven aan weerszijden van dezelfde kopregel,
-     maar krijgen aan beide kanten dezelfde binnenruimte. De onderstreping van
-     de kop blijft daardoor over de volledige mastkolom lopen. */
+  /* Plaats en tijd vormen samen één compacte, gecentreerde kopgroep. */
   #place{
+    display:flex!important;
+    justify-content:center!important;
+    align-items:baseline!important;
+    gap:18px!important;
     padding-left:clamp(28px,3.5vw,56px)!important;
     padding-right:clamp(28px,3.5vw,56px)!important
   }
+  #place #plaatstijd{margin-left:0!important;flex:0 0 auto!important}
+
 
   /* De buitenste SEO-navigatie blijft bewust viewportbreed zodat de bestaande
      scheidingslijn en achtergrond full-bleed blijven. Alleen de echte inhoud
@@ -34,13 +38,10 @@ ${STYLE_MARKER}
     box-sizing:border-box!important
   }
 
-  /* De bestaande hoogte-sync blijft leidend en verwijdert nog steeds iedere
-     rij die niet volledig naast de grafiek past. Eén pixel minder verticale
-     celpadding per zijde maakt op de normale desktophoogtes de twaalfde
-     volledige rij passend zonder de grafiek kunstmatig hoger te maken. */
+  /* Compactere cellen geven meer volledige uren binnen dezelfde grafiekhoogte. */
   .wiw-hour-table th,.wiw-hour-table td{
-    padding-top:7px!important;
-    padding-bottom:7px!important
+    padding-top:4px!important;
+    padding-bottom:4px!important
   }
 }
 
@@ -111,6 +112,9 @@ function pasTekstAan(html,label="artifact"){
   let bron=String(html||"");
   if(!bron.includes("WeatherNowFinalDesktopUI20260902"))return {html:bron,geraakt:false};
   bron=vervangEen(bron,UREN_OUD,UREN_NIEUW,`${label} desktopuren`);
+  const stapOud='const stap = n<=24 ? 3 : n<=48 ? 6 : (M?18:12);';
+  const stapNieuw='const stap = !M&&window.innerWidth>=1100&&n<=globalThis.WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN ? 1 : n<=24 ? 3 : n<=48 ? 6 : (M?18:12);';
+  bron=vervangEen(bron,stapOud,stapNieuw,`${label} desktop-uurmarkeringen`);
   bron=vervangEen(bron,MM_OUD,MM_NIEUW,`${label} neerslagnul`);
   if(!bron.includes(MARKER)){
     const anker='const MARKER="final-desktop-ui-20260902";';
@@ -130,7 +134,7 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen WeatherNow-artifacts gevonden voor uurpaneelrefinement.");
   const cache=vernieuwServiceworkerCache(OUT,"hour-panel-refinement-20260907");
-  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): maximaal 12 passende desktopuren, numerieke 0 mm blijft zichtbaar en desktopspacing is aangescherpt; cache ${cache}.`);
+  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): maximaal 14 passende desktopuren, numerieke 0 mm blijft zichtbaar en desktopspacing is aangescherpt; cache ${cache}.`);
 }
 
 if(require.main===module)main();
