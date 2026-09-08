@@ -295,8 +295,9 @@ async function visueleStress(browser,naam){
         await page.setViewportSize({width:breedte,height:900});await page.waitForTimeout(25);
         const r=await page.evaluate(()=>{
           const ids=[...document.querySelectorAll('[id]')].map(x=>x.id),dubbel=[...new Set(ids.filter((id,i)=>ids.indexOf(id)!==i))];
-          const uurMm=[...document.querySelectorAll('#wiw-hour-table tbody tr td:last-child')].map(x=>String(x.textContent||'').trim());
-          const geoMm=typeof S!=='undefined'&&S.geo&&Array.isArray(S.geo.MM)?S.geo.MM.slice(0,uurMm.length):[];
+          const uurRijen=[...document.querySelectorAll('#wiw-hour-table tbody tr')],desktop=innerWidth>=1100;
+          const uurMm=uurRijen.map(r=>String((desktop?r.querySelector('.wiw-hour-rain .wiw-hour-primary'):r.querySelector('td:last-child'))?.textContent||'').trim());
+          const geoMm=typeof S!=='undefined'&&S.geo&&Array.isArray(S.geo.MM)?uurRijen.map((r,i)=>desktop?S.d.hourly.precipitation[Number(r.dataset.sourceIndex)]:S.geo.MM[i]):[];
           return {overflow:document.documentElement.scrollWidth-window.innerWidth,tekst:document.body.innerText,dubbel,
             dagen:document.querySelectorAll('#days .row.day:not(.kop)').length,nachten:document.querySelectorAll('#nights .row.night:not(.kop)').length,
             weeknotities:document.querySelectorAll('#days .dag-neerslagnotitie').length,

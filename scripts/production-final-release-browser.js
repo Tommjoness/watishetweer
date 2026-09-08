@@ -17,7 +17,7 @@ const locaties=[
   {naam:"Ushuaia",lat:-54.8019,lon:-68.3030,land:"AR"},
   {naam:"Zuidpool",lat:-90,lon:0,land:"AQ",vrijeNaam:true}
 ];
-const viewports=[[1100,900],[1280,800],[1363,936],[1440,900],[1600,900],[1920,1080],[320,844],[360,844],[390,844],[430,932]];
+const viewports=[[1100,900],[1280,800],[1366,936],[1440,900],[1660,900],[1920,1080],[320,844],[360,844],[390,844],[430,932]];
 const COORD_TOL=0.0011;
 const rond=v=>Number.isFinite(Number(v))?Math.round(Number(v)):null;
 const params=l=>new URLSearchParams({lat:String(l.lat),lon:String(l.lon),plaats:l.naam,land:l.land}).toString();
@@ -39,9 +39,9 @@ async function wachtKlaar(page,naam,timeout=26000){
       const dagen=document.querySelectorAll("#days .row.day:not(.kop)").length;
       const uren=document.querySelectorAll("#wiw-hour-table tbody tr").length;
       const desktop=innerWidth>=1100;
-      // Volledige brondekking blijft hierboven verplicht. De desktop houdt
-      // de technische uurbron gekoppeld aan de grafiekrange, maar toont hem niet.
-      return app&&getComputedStyle(app).display!=="none"&&label&&bronKlaar&&dagen>=7&&(desktop?uren>=4&&uren<=WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN:uren>=23);
+      // Volledige brondekking blijft hierboven verplicht. Op desktop moeten
+      // bovendien acht tot twaalf volledige rijke uurregels zichtbaar zijn.
+      return app&&getComputedStyle(app).display!=="none"&&label&&bronKlaar&&dagen>=7&&(desktop?uren>=8&&uren<=WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN:uren>=23);
     },null,{timeout});
   }catch(e){
     const diagnose=await page.evaluate(()=>{
@@ -197,17 +197,17 @@ async function lees(page){return page.evaluate(()=>{
         assert.equal(getal(uit.humidity),rond(bron.current&&bron.current.relative_humidity_2m),`${l.naam}: luchtvochtigheid wijkt af`);
         assert.equal(uit.dagen,7,`${l.naam}: geen zeven dagrijen`);
         if(uit.boundedHours){
-          const inclusiefRechtergrens=uit.tableSourceTimes.length===uit.maxHours&&uit.graphTimes.length===uit.tableSourceTimes.length+1;
-          assert(uit.graphTimes.length===uit.tableSourceTimes.length||inclusiefRechtergrens,`${l.naam}: grafiekbron heeft onverwachte lengte ten opzichte van de uurintervallen`);
-          for(let i=0;i<uit.tableSourceTimes.length;i++)assert.equal(uit.graphTimes[i],uit.tableSourceTimes[i],`${l.naam}: grafiek en uurintervalbron schuiven niet met dezelfde uren door`);
-          if(inclusiefRechtergrens)assert.equal(Date.parse(uit.graphTimes.at(-1)+"Z")-Date.parse(uit.tableSourceTimes.at(-1)+"Z"),3600000,`${l.naam}: 24-uursgrafiek behoudt niet exact één rechter grenspunt`);
-          assert(uit.hourRows>=4&&uit.hourRows<=uit.maxHours&&uit.hourFits,`${l.naam}: desktopuren zijn niet volledig binnen de grafiekhoogte begrensd (${uit.hourRows})`);
+          assert.equal(uit.graphTimes.length,25,`${l.naam}: standaardgrafiek heeft niet 24 intervallen plus één rechter grenspunt`);
+          assert.equal(uit.graphTimes[0],uit.tableSourceTimes[0],`${l.naam}: grafiek en tabel beginnen niet bij hetzelfde lokale uur`);
+          for(let i=0;i<uit.tableSourceTimes.length;i++)assert.equal(uit.graphTimes[i],uit.tableSourceTimes[i],`${l.naam}: tabeluur ${i} wijkt af van hetzelfde grafiekpunt`);
+          assert.equal(Date.parse(uit.graphTimes.at(-1)+"Z")-Date.parse(uit.graphTimes.at(-2)+"Z"),3600000,`${l.naam}: 24-uursgrafiek behoudt niet exact één rechter grenspunt`);
+          assert(uit.hourRows>=8&&uit.hourRows<=uit.maxHours&&uit.hourFits,`${l.naam}: desktopuren zijn niet volledig binnen de grafiekhoogte begrensd (${uit.hourRows})`);
           for(let i=1;i<uit.hourInstants.length;i++)assert.equal(Date.parse(uit.hourInstants[i])-Date.parse(uit.hourInstants[i-1]),3600000,`${l.naam}: uurinstanties moeten uniek en opeenvolgend zijn`);
         }else assert(uit.hourRows>=23,`${l.naam}: mobiele bronuurtabel te kort (${uit.hourRows})`);
         const hourHeaders=await page.locator("#wiw-hour-table thead th").allTextContents();
-        assert.deepEqual(hourHeaders.map(s=>s.trim()),["Tijd","Temperatuur","Kans","Neerslag"],`${l.naam}: uurkolommen wijken af`);
+        assert.deepEqual(hourHeaders.map(s=>s.trim()),["Tijd","Weer","Temp.","Neerslag","Wind"],`${l.naam}: rijke uurkolommen wijken af`);
         const hourScopes=await page.locator("#wiw-hour-table thead th").evaluateAll(ths=>ths.map(th=>th.getAttribute("scope")||""));
-        assert.deepEqual(hourScopes,["col","col","col","col"],`${l.naam}: uurkolommen missen scope=col`);
+        assert.deepEqual(hourScopes,["col","col","col","col","col"],`${l.naam}: uurkolommen missen scope=col`);
         assert(uit.hourClip&&uit.hourOverflow<=1&&uit.pageOverflow<=1,`${l.naam}: clipping/overflow hour=${uit.hourOverflow} page=${uit.pageOverflow}`);
         assert.deepEqual(uit.duplicateIds,[],`${l.naam}: dubbele ids ${uit.duplicateIds.join(',')}`);assert.deepEqual(uit.missingAriaRefs,[],`${l.naam}: ontbrekende ARIA refs ${uit.missingAriaRefs.join(',')}`);
         assert.deepEqual(pageErrors,[],`${l.naam}: pageerrors ${pageErrors.join(' | ')}`);

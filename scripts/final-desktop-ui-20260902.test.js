@@ -1,6 +1,6 @@
 "use strict";
 const assert=require("assert");
-const {uurRijenUitGeo,komendeUurRijen,regenVelden,formatTemp}=require("./final-desktop-ui-runtime-20260902.js");
+const {uurRijenUitGeo,komendeUurRijen,MAX_DESKTOP_UREN,regenVelden,formatTemp}=require("./final-desktop-ui-runtime-20260902.js");
 const {RUNTIME,herstelDrukOwnerRuntime,PRESSURE_OLD}=require("./apply-final-desktop-ui-20260902.js");
 const TI=Array.from({length:24},(_,i)=>i<11?`2026-09-02T${String(i+13).padStart(2,"0")}:00`:`2026-09-03T${String(i-11).padStart(2,"0")}:00`);
 const T=TI.map((_,i)=>-8.5+i*.7),A=TI.map((_,i)=>-14.2+i*.55);
@@ -8,11 +8,15 @@ let r=uurRijenUitGeo({TI,T,A,P:TI.map((_,i)=>i),MM:TI.map((_,i)=>i/10)},"2026-09
 assert.equal(r.length,24);assert.equal(r[1].marker,"Eerstvolgend");assert.equal(r[11].datumLabel,"do 3 sep");assert.equal(r[0].tijd,"2026-09-02T13:00");assert.equal(formatTemp(-8.5),"-8,5 °C");
 r=uurRijenUitGeo({TI,T,A,P:TI.map((_,i)=>i),MM:TI.map((_,i)=>i/10)},"2026-09-02T13:27",true);assert.equal(r.some(x=>x.marker),false,"geselecteerde kalenderdag mag geen misleidende Nu-markering krijgen");
 assert.equal(r[0].kans,0);assert.equal(r[0].hoeveelheid,0);assert.equal(r[1].hoeveelheid,0.1);
-const data={timezone:"Europe/Amsterdam",utc_offset_seconds:7200,current:{time:"2026-09-02T13:27"},hourly:{time:TI,temperature_2m:T,apparent_temperature:A,precipitation_probability:TI.map((_,i)=>i+10),precipitation:TI.map((_,i)=>i/10)}};
+const data={timezone:"Europe/Amsterdam",utc_offset_seconds:7200,current:{time:"2026-09-02T13:27"},hourly:{time:TI,temperature_2m:T,apparent_temperature:A,precipitation_probability:TI.map((_,i)=>i+10),precipitation:TI.map((_,i)=>i/10),weather_code:TI.map(()=>3),is_day:TI.map((_,i)=>i<8?1:0),wind_speed_10m:TI.map((_,i)=>12+i),wind_direction_10m:TI.map(()=>225)}};
 const upcoming=komendeUurRijen(data,Date.parse("2026-09-02T11:27:00Z"),10);
 assert.equal(upcoming.length,10,"desktop toont maximaal tien opeenvolgende uren");
 assert.equal(upcoming[0].tijd,"2026-09-02T14:00");
 assert.equal(upcoming[0].kans,11);assert.equal(upcoming[0].hoeveelheid,0.1);
+assert.equal(upcoming[0].code,3);assert.equal(upcoming[0].isDag,1);assert.equal(upcoming[0].wind,13);assert.equal(upcoming[0].windrichting,225);
+const overMiddernacht=komendeUurRijen(data,Date.parse("2026-09-02T11:27:00Z"),12);
+assert.equal(overMiddernacht.length,12);assert.equal(overMiddernacht.at(-1).tijd,"2026-09-03T01:00");assert.equal(overMiddernacht[10].datumLabel,"do 3 sep");
+assert.equal(MAX_DESKTOP_UREN,10,"baseruntime behoudt zijn bestaande begrensde desktopvenster; de finale refinement verruimt dit tot twaalf");
 for(let i=1;i<upcoming.length;i++)assert.equal(Date.parse(upcoming[i].instant)-Date.parse(upcoming[i-1].instant),3600000,"desktopuren blijven opeenvolgend");
 let v=regenVelden({genoeg:true,kans:87,hoeveelheid:2.36,eersteTijd:"14:15",soort:"regen"},false);
 assert.deepEqual(v.map(x=>x.label),["Huidige status","Verwacht begin rond","Hoogste neerslagkans","Verwachte totale hoeveelheid","Neerslagtype"]);assert.equal(v[3].waarde,"2,4 mm");

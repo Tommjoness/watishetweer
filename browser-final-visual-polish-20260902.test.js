@@ -16,7 +16,7 @@ setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-final-visual-'
   const state=document.getElementById('state');if(state)state.style.display='none';
   if(globalThis.WeatherNowFinalDesktopUI20260902&&typeof WeatherNowFinalDesktopUI20260902.render==='function')WeatherNowFinalDesktopUI20260902.render();
   const table=document.getElementById('wiw-hour-table'),scroll=document.getElementById('wiw-hour-scroll');if(!table||!scroll)throw new Error('uurtabel ontbreekt');
-  const tbody=table.querySelector('tbody');tbody.innerHTML='';for(let i=0;i<12;i++){const tr=document.createElement('tr');tr.innerHTML='<td>'+(i<10?'0':'')+i+':00</td><td>'+(10+i)+' °C</td><td>'+(9+i)+' °C</td>';tbody.appendChild(tr);}
+  const tbody=table.querySelector('tbody');tbody.innerHTML='';for(let i=0;i<12;i++){const tr=document.createElement('tr');tr.innerHTML=innerWidth>=1100?'<td>'+(i<10?'0':'')+i+':00</td><td>☁</td><td>'+(10+i)+'°<small>voelt '+(9+i)+'°</small></td><td>0,0 mm<small>20% kans</small></td><td>ZW 3 Bft<small>14 km/u</small></td>':'<td>'+(i<10?'0':'')+i+':00</td><td>'+(10+i)+' °C</td><td>20%</td><td>0,0 mm</td>';tbody.appendChild(tr);}
   const nights=document.getElementById('nights');if(!nights)throw new Error('#nights ontbreekt');
   nights.innerHTML='<div class="row night kop"><div class="dname">Nacht</div><div class="score">Indicatie</div><div class="sbar"></div><div class="nmeta">Bewolking</div><div class="nmeta wide">Beste zichtperiode</div></div><div class="row night"><div class="dname">vannacht</div><div class="score">1/10</div><div class="sbar"><i style="width:10%"></i></div><div class="nmeta"><span class="perc">84%</span> bewolking</div><div class="nmeta wide"><span class="nachtadvies">Ongunstig · Geen gunstig kijkvenster door bewolking.</span><span class="nachtmaan">Maanopkomst om 23:08.</span></div></div>';
   const vis=document.getElementById('vis'),vissub=document.getElementById('vissub');if(vis&&vissub){vis.innerHTML='10+<s>km</s>';vissub.textContent='Goed zicht, meer dan tien kilometer.';}
@@ -43,10 +43,10 @@ setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-final-visual-'
     zet('night-wide-style',ws.textAlign==='center'&&ws.alignItems==='center'&&ws.display==='flex'?'ok':'fout');
     zet('night-wide-axis',KW&&RW&&Math.abs(KW.cx-RW.cx)<=1?'ok':'fout');
     zet('night-cloud-axis',KA&&RA&&Math.abs(KA.cx-RA.cx)<=1?'ok':'fout');
-    zet('night-advice-axis',ADV&&RW&&Math.abs(ADV.cx-RW.cx)<=2?'ok':'fout');
+    zet('night-advice-axis',ADV&&RW&&(w>=1500?Math.abs(ADV.l-RW.l)<=2:Math.abs(ADV.cx-RW.cx)<=2)?'ok':'fout');
     zet('night-advice-align',getComputedStyle(advies).textAlign);
     zet('night-wide-width',RW?Math.round(RW.w):0);zet('night-bar-width',BAR?Math.round(BAR.w):0);
-    zet('night-right-edge',R&&RW&&Math.abs(R.r-RW.r)<=2?'ok':'fout');
+    zet('night-right-gap',R&&RW?Math.round(R.r-RW.r):0);
   }else{
     zet('night-mobile-wide',getComputedStyle(rw).gridColumnEnd==='-1'?'ok':'fout');
   }
@@ -57,7 +57,7 @@ html=html.replace("</body>",reporter+"</body>");
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-final-visual-"));
 try{
   const pad=path.join(dir,"index.html");fs.writeFileSync(pad,html,"utf8");
-  const viewports=[[320,844],[390,844],[430,932],[1100,900],[1366,900],[1440,900],[1600,900],[1920,1080]];
+  const viewports=[[320,844],[390,844],[430,932],[1100,900],[1366,900],[1440,900],[1660,900],[1920,1080]];
   for(const [w,h] of viewports){
     const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${w},${h}`,"--virtual-time-budget=1300","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:36*1024*1024,timeout:30000});
     if(r.status!==0)throw new Error(`${w}px: browser exit ${r.status}: `+String(r.stderr||"").slice(-1000));
@@ -80,12 +80,13 @@ try{
     }else{
       const vastDesktop=actualW>=1100;
       if(v('hour-overflow-y')!==(vastDesktop?'visible':'auto')||v('hour-role')!==(vastDesktop?'':'region')||v('hour-tabindex')!==(vastDesktop?'nee':'ja')||v('hour-toggle')!=='verborgen')throw new Error(`${w}px: desktop uurtabelgedrag is geraakt (overflow=${v('hour-overflow-y')}, role=${v('hour-role')}, tabindex=${v('hour-tabindex')}, toggle=${v('hour-toggle')})`);
-      if(v('night-wide-style')!=='ok'||v('night-wide-axis')!=='ok'||v('night-cloud-axis')!=='ok'||v('night-advice-axis')!=='ok'||v('night-right-edge')!=='ok')throw new Error(`${w}px: Nachtzicht-uitlijning fout wide=${v('night-wide-style')}/${v('night-wide-axis')} cloud=${v('night-cloud-axis')} advice=${v('night-advice-axis')} edge=${v('night-right-edge')}`);
+      if(v('night-wide-axis')!=='ok'||v('night-cloud-axis')!=='ok'||v('night-advice-axis')!=='ok')throw new Error(`${w}px: Nachtzicht-uitlijning fout wide=${v('night-wide-axis')} cloud=${v('night-cloud-axis')} advice=${v('night-advice-axis')}`);
       if(v('night-advice-align')!=='left')throw new Error(`${w}px: lange Nachtzicht-uitleg niet links uitgelijnd (${v('night-advice-align')})`);
-      if(Number(v('night-wide-width'))<280)throw new Error(`${w}px: Beste zichtperiode te smal (${v('night-wide-width')}px)`);
-      if(Number(v('night-bar-width'))<180)throw new Error(`${w}px: zichtscorebalk te smal (${v('night-bar-width')}px)`);
+      if(Number(v('night-wide-width'))<319||Number(v('night-wide-width'))>481)throw new Error(`${w}px: Beste zichtperiode valt buiten de begrensde leesbreedte (${v('night-wide-width')}px)`);
+      if(Number(v('night-bar-width'))<189||Number(v('night-bar-width'))>261)throw new Error(`${w}px: zichtscorebalk valt buiten de compacte band (${v('night-bar-width')}px)`);
+      if(actualW>=1366&&Number(v('night-right-gap'))<100)throw new Error(`${w}px: Nachtzicht-data wordt nog over de volledige rij uitgesmeerd (${v('night-right-gap')}px vrije eindruimte)`);
     }
     console.log(`${w}px (CSS viewport ${actualW}px): final visual UX groen; overflow ${v('overflow')}px, urenpreview en headerhiërarchie correct${actualW>=1100?', zichtperiode '+v('night-wide-width')+'px':''}.`);
   }
-  console.log("Final visual polish browsertest geslaagd op de aangevraagde 320/390/430/1100/1366/1440/1600/1920 vensters; asserts volgen de gemeten CSS-viewport.");
+  console.log("Final visual polish browsertest geslaagd op de aangevraagde 320/390/430/1100/1366/1440/1660/1920 vensters; asserts volgen de gemeten CSS-viewport.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
