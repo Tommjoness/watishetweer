@@ -11,6 +11,17 @@ const UREN_OUD="const MAX_DESKTOP_UREN=10;";
 const UREN_NIEUW="const MAX_DESKTOP_UREN=17;";
 const MM_OUD='mm.textContent=num(r.hoeveelheid)===0&&(num(r.kans)===null||num(r.kans)<=0)?"–":formatMm(r.hoeveelheid)||"–";';
 const MM_NIEUW='mm.textContent=formatMm(r.hoeveelheid)||"–";';
+const NU_OUD="    const nuIdx = plaatsNuIndex(TI);";
+const NU_NIEUW=`    let nuIdx = plaatsNuIndex(TI);
+    /* De gedeelde desktoprange begint bij het eerstvolgende volledige forecastuur.
+       Als 'nu' daardoor hooguit één uur vóór de eerste bronwaarde valt, blijft de
+       actuele meting als context exact op de linker grafiekgrens zichtbaar. De
+       forecastpunten zelf blijven ongewijzigd en dus gelijk aan de uurtabel. */
+    if(nuIdx==null&&S.dag==null&&!M&&window.innerWidth>=1100&&TI.length){
+      const nuMs=S.klokInstantOverride&&typeof S.klokInstantOverride.getTime==="function"?S.klokInstantOverride.getTime():Date.now();
+      const eersteMs=naarUTC(TI[0]),afstand=eersteMs-nuMs;
+      if(Number.isFinite(eersteMs)&&Number.isFinite(nuMs)&&afstand>=0&&afstand<3600000)nuIdx=0;
+    }`;
 const STYLE=`
 ${STYLE_MARKER}
 /* Gerichte desktopafronding op basis van productiebeelden. Mobiele layout,
@@ -48,7 +59,7 @@ ${STYLE_MARKER}
   .wiw-hour-table td{
     padding-top:1px!important;
     padding-bottom:1px!important;
-    line-height:15px!important
+    line-height:14px!important
   }
   .wiw-hour-table th{
     padding-top:1px!important;
@@ -128,6 +139,7 @@ function pasTekstAan(html,label="artifact"){
   const stapNieuw='const stap = !M&&window.innerWidth>=1100&&n<=globalThis.WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN ? 1 : n<=24 ? 3 : n<=48 ? 6 : (M?18:12);';
   bron=vervangEen(bron,stapOud,stapNieuw,`${label} desktop-uurmarkeringen`);
   bron=vervangEen(bron,MM_OUD,MM_NIEUW,`${label} neerslagnul`);
+  bron=vervangEen(bron,NU_OUD,NU_NIEUW,`${label} desktop-nucontext`);
   if(!bron.includes(MARKER)){
     const anker='const MARKER="final-desktop-ui-20260902";';
     if(tel(bron,anker)!==1)throw new Error(`${label}: runtime-marker ontbreekt of is dubbel.`);
@@ -146,8 +158,8 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen WeatherNow-artifacts gevonden voor uurpaneelrefinement.");
   const cache=vernieuwServiceworkerCache(OUT,"hour-panel-refinement-20260907");
-  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): maximaal 17 passende desktopuren, numerieke 0 mm blijft zichtbaar en desktopspacing is aangescherpt; cache ${cache}.`);
+  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): maximaal 17 passende desktopuren, actuele Nu-context behouden, numerieke 0 mm blijft zichtbaar en desktopspacing is aangescherpt; cache ${cache}.`);
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};
+module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,NU_OUD,NU_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};
