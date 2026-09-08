@@ -8,7 +8,7 @@ const OUT=path.join(__dirname,"..","public");
 const MARKER="/* ===== HOUR PANEL REFINEMENT 20260907 ===== */";
 const STYLE_MARKER="/* ===== DESKTOP FINISHING 20260907 ===== */";
 const UREN_OUD="const MAX_DESKTOP_UREN=10;";
-const UREN_NIEUW="const MAX_DESKTOP_UREN=17;";
+const UREN_NIEUW="const MAX_DESKTOP_UREN=24;/* kandidaatvenster, niet het zichtbare desktopaantal */";
 const MM_OUD='mm.textContent=num(r.hoeveelheid)===0&&(num(r.kans)===null||num(r.kans)<=0)?"–":formatMm(r.hoeveelheid)||"–";';
 const MM_NIEUW='mm.textContent=formatMm(r.hoeveelheid)||"–";';
 const UURMODUS_OUD='  const desktop=window.innerWidth>=1100;\n  const rijen=desktop?desktopUurRijen():uurRijenUitGeo(S.geo,S.d&&S.d.current&&S.d.current.time,S.dag!=null,S.d&&S.d.hourly);tbody.replaceChildren();';
@@ -27,6 +27,14 @@ const HOOGTE_NIEUW=`  if(window.innerWidth<1100){aside.style.height="";return;}
   /* Een eerder geplande hoogte-sync mag een zojuist gekozen lange grafiek niet
      alsnog terugbrengen naar het aantal passende uurregels. */
   if(S.dag==null&&S.bereik!==24){aside.style.height="";return;}`;
+const PANEL_HOOGTE_OUD=`  while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
+  aside.dataset.visibleHours=String(tbody?tbody.children.length:0);`;
+const PANEL_HOOGTE_NIEUW=`  while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
+  /* Het paneel volgt exact de gemeten grafiekhoogte. Het zichtbare aantal uren
+     komt uitsluitend uit de volledige DOM-rijen die fysiek binnen die hoogte
+     passen; het 24-uursvenster hierboven is alleen de bronhorizon. */
+  aside.style.height=h+"px";
+  aside.dataset.visibleHours=String(tbody?tbody.children.length:0);`;
 const NU_OUD="    const nuIdx = plaatsNuIndex(TI);";
 const NU_NIEUW=`    let nuIdx = plaatsNuIndex(TI);
     /* De gedeelde desktoprange begint bij het eerstvolgende volledige forecastuur.
@@ -74,27 +82,22 @@ ${STYLE_MARKER}
     box-sizing:border-box!important
   }
 
-  /* Zeventien uur passen op brede desktops zonder de grafieksectie hoger te
-     maken. De bodyregels blijven op 12,5px staan. Door collapsed borders kan
-     uitsluitend de eerste bodyrij een halve pixel verliezen; die eerste rij
-     krijgt daarom een halve pixel extra line-height zonder alle 17 rijen hoger
-     te maken. */
+  /* Compact maar niet gepropt: de rijhoogte blijft leesbaar en bepaalt samen
+     met de echte grafiekhoogte hoeveel volledige uren zichtbaar zijn. CSS
+     forceert bewust geen vast aantal uurregels. */
   #wiw-hour-panel h3{
     margin-top:0!important;
-    margin-bottom:1px!important;
-    line-height:1.1!important
+    margin-bottom:4px!important;
+    line-height:1.15!important
   }
   .wiw-hour-table td{
-    padding-top:1px!important;
-    padding-bottom:1px!important;
+    padding-top:2px!important;
+    padding-bottom:2px!important;
     line-height:14px!important
   }
-  .wiw-hour-table tbody tr:first-child td{
-    line-height:14.5px!important
-  }
   .wiw-hour-table th{
-    padding-top:1px!important;
-    padding-bottom:1px!important;
+    padding-top:2px!important;
+    padding-bottom:2px!important;
     line-height:12px!important
   }
 }
@@ -172,6 +175,7 @@ function pasTekstAan(html,label="artifact"){
   bron=vervangEen(bron,MM_OUD,MM_NIEUW,`${label} neerslagnul`);
   bron=vervangEen(bron,UURMODUS_OUD,UURMODUS_NIEUW,`${label} desktop-bereikmodus`);
   bron=vervangEen(bron,HOOGTE_OUD,HOOGTE_NIEUW,`${label} lange-bereikhoogte`);
+  bron=vervangEen(bron,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,`${label} hoogtegestuurd uurpaneel`);
   bron=vervangEen(bron,NU_OUD,NU_NIEUW,`${label} desktop-nucontext`);
   if(!bron.includes(MARKER)){
     const anker='const MARKER="final-desktop-ui-20260902";';
@@ -191,8 +195,8 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen WeatherNow-artifacts gevonden voor uurpaneelrefinement.");
   const cache=vernieuwServiceworkerCache(OUT,"hour-panel-refinement-20260907");
-  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): maximaal 17 passende desktopuren, expliciete lange grafiekbereiken behouden, actuele Nu-context behouden, numerieke 0 mm blijft zichtbaar en desktopspacing is aangescherpt; cache ${cache}.`);
+  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): zichtbare desktopuren worden uit de gemeten grafiekhoogte bepaald binnen de 24-uurs bronhorizon, expliciete lange grafiekbereiken blijven behouden, actuele Nu-context blijft behouden, 0 mm blijft numeriek en desktopspacing blijft compact leesbaar; cache ${cache}.`);
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,NU_OUD,NU_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};
+module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,NU_OUD,NU_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};
