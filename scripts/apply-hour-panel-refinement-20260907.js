@@ -19,6 +19,10 @@ const UURMODUS_NIEUW=`  const desktop=window.innerWidth>=1100;
   const langBereik=desktop&&(S.dag!=null||S.bereik!==24);
   const layout=document.getElementById("wiw-chart-layout");
   if(layout)layout.dataset.hourPaired=langBereik?"0":"1";
+  /* Elke echte tabelrender begint met een nieuwe kandidaatset. syncHoogte mag
+     daarna tijdelijk rijen verwijderen, maar bewaart zelf de volledige set
+     zodat een latere, stabielere grafiekhoogte die kandidaten kan herstellen. */
+  delete paneel.__wiwHourCandidateRows;
   if(langBereik){paneel.style.height="";tbody.replaceChildren();return;}
   const rijen=desktop?desktopUurRijen():uurRijenUitGeo(S.geo,S.d&&S.d.current&&S.d.current.time,S.dag!=null,S.d&&S.d.hourly);
   if(desktop)paneel.dataset.candidateHours=String(rijen.length);
@@ -36,12 +40,19 @@ const HOOGTE_NIEUW=`  if(window.innerWidth<1100){aside.style.height="";aside.sty
      een vorige render mag dus nooit bepalen hoeveel nieuwe volledige rijen
      passen. */
   aside.style.removeProperty("--wiw-hour-row-pad-extra");
-  /* Een eerder geplande hoogte-sync mag een zojuist gekozen lange grafiek niet
-     alsnog terugbrengen naar het aantal passende uurregels. */
-  if(S.dag==null&&S.bereik!==24){aside.style.height="";return;}`;
+  /* Een eerder geplande hoogte-sync mag een zojuist gekozen lange grafiek of
+     kalenderdag niet alsnog terugbrengen naar de compacte komende-urenmodus. */
+  if(S.dag!=null||S.bereik!==24){aside.style.height="";return;}`;
 const PANEL_HOOGTE_OUD=`  while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
   aside.dataset.visibleHours=String(tbody?tbody.children.length:0);`;
-const PANEL_HOOGTE_NIEUW=`  while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
+const PANEL_HOOGTE_NIEUW=`  /* Hoogtefiltering is reversibel: de eerste meting bewaart alle kandidaatrijen;
+     elke volgende meting zet diezelfde nodes terug vóór opnieuw wordt bepaald
+     hoeveel volledige regels binnen de actuele natuurlijke grafiekhoogte passen. */
+  if(tbody){
+    if(!Array.isArray(aside.__wiwHourCandidateRows))aside.__wiwHourCandidateRows=[...tbody.children];
+    else tbody.replaceChildren(...aside.__wiwHourCandidateRows);
+  }
+  while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
   /* Het paneel volgt exact de onafhankelijk gemeten grafiekhoogte. Eerst wordt met de vaste,
      leesbare minimumrijhoogte het maximale aantal volledige uren gekozen.
      Alleen de kleine resthoogte die te klein is voor nóg een volledige rij
@@ -160,6 +171,15 @@ ${STYLE_MARKER}
     grid-template-columns:96px 58px minmax(190px,260px) 92px minmax(320px,480px)!important;
     column-gap:clamp(14px,1.45vw,20px)!important;
     justify-content:start!important
+  }
+}
+
+@media(min-width:1366px){
+  /* Acht rijke regels moeten op de kleinste contractdesktop binnen de
+     natuurlijke grafiekhoogte passen. 2.5px blijft boven de bestaande
+     browsertest-comfortgrens; eventuele resthoogte wordt daarna verdeeld. */
+  .wiw-hour-table td{
+    padding:calc(2.5px + var(--wiw-hour-row-pad-extra,0px)) 4px!important
   }
 }
 
