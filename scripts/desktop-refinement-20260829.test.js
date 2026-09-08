@@ -30,7 +30,7 @@ assert.ok(STIJL.includes(".sheet,.seo-plaatsnav")&&STIJL.includes("width:100%!im
 assert.ok(STIJL.includes(".dashrow-chart,.dashrow-days")&&STIJL.includes("display:block!important"),"grafiek, Zeven dagen en Nachtzicht mogen niet in een historische tweekolomscontext blijven hangen");
 assert.ok(STIJL.includes(".dashrow-chart>.dashcol,.dashrow-days>.dashcol,#days,#nights"),"onderste desktopsecties moeten hun eigen breedteoverride krijgen");
 assert.ok(STIJL.includes("#days .row.day")&&STIJL.includes("minmax(260px,1.4fr)"),"weekverwachting moet extra breedte over meerdere informatiekolommen verdelen");
-assert.ok(STIJL.includes("#nights .row.night")&&STIJL.includes("minmax(300px,.72fr)"),"Nachtzicht moet ook de zichttekst laten meegroeien");
+assert.ok(STIJL.includes("#nights .row.night")&&STIJL.includes("minmax(220px,320px)")&&STIJL.includes("minmax(360px,520px)"),"Nachtzicht moet zijn data in begrensde leesbare desktopkolommen groeperen");
 assert.ok(STIJL.includes(".data-uitleg p{max-width:min(110ch,100%)}"),"bronuitleg mag niet in de oude halve-kolombreedte blijven steken");
 assert.ok(STIJL.includes("footer{")&&STIJL.includes("grid-template-columns:minmax(0,1fr) max-content max-content"),"desktopfooter moet de breedte als drie rustige kolommen benutten");
 assert.ok(STIJL.includes(".dashrow-hero>.hero")&&STIJL.includes("align-self:start!important"),"hero mag niet onnodig laag naast de metriekentabel hangen");
@@ -88,4 +88,4 @@ assert.throws(()=>pasDesktopRefinementToe(bron.replace(NAV_MARKER,""),"zonder-na
 assert.throws(()=>pasDesktopRefinementToe(bron.replace(MOTREGEN_BRON,""),"zonder-codes"),/motregencodetabel ontbreekt of is dubbel/);
 assert.throws(()=>pasDesktopRefinementToe(bron.replace(START_MARKER,""),"zonder-start"),/startmarker ontbreekt of is dubbel/);
 
-console.log("Finale productverfijning unit-test geslaagd: locatiebewuste zonnecyclus, dauwpuntgestuurd vochtcomfort, compactere grafiektypografie, brede broncopy, uitgebalanceerde week/Nachtzicht-layout en desktopfooter zijn geborgd.");
+console.log("Finale productverfijning unit-test geslaagd: locatiebewuste zonnecyclus, dauwpuntgestuurd vochtcomfort, compactere grafiektypografie, brede broncopy, compacte Nachtzicht-kolommen en desktopfooter zijn geborgd.");
