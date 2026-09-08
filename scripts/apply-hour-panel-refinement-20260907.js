@@ -61,6 +61,8 @@ const NU_NIEUW=`    let nuIdx = plaatsNuIndex(TI);
       const eersteMs=naarUTC(TI[0]),afstand=eersteMs-nuMs;
       if(Number.isFinite(eersteMs)&&Number.isFinite(nuMs)&&afstand>=0&&afstand<3600000)nuIdx=0;
     }`;
+const KOP_OUD='if(kop&&S.dag==null&&rows.length)kop.textContent="De komende "+rows.length+" uur";';
+const KOP_NIEUW='if(kop&&S.dag==null&&S.bereik===24)kop.textContent="Komende uren";';
 const STYLE=`
 ${STYLE_MARKER}
 /* Gerichte desktopafronding op basis van productiebeelden. Mobiele layout,
@@ -77,9 +79,28 @@ ${STYLE_MARKER}
   }
   #place #plaatstijd{margin-left:0!important;flex:0 0 auto!important}
 
-  /* Een expliciete 48-uurs-/zevendagenkeuze is een grafiekmodus, niet de
-     compacte gedeelde uurweergave. Geef de grafiek dan zijn volledige breedte
-     en toon geen uurkolom met een afwijkende kortere range. */
+  /* De standaard desktopweergave is voortaan één brede 'Komende uren'-grafiek.
+     De uurtabel blijft buiten beeld als technische bron voor exact dezelfde
+     urenrange en regressiecontrole, maar reserveert geen layoutbreedte meer. */
+  .wiw-chart-layout{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:0!important;
+    align-items:start!important;
+    position:relative!important
+  }
+  .wiw-chart-main{width:100%!important;min-width:0!important;align-self:start!important}
+  .wiw-hour-panel{
+    position:absolute!important;
+    top:0!important;
+    right:0!important;
+    width:min(34%,420px)!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+    align-self:start!important
+  }
+
+  /* Een expliciete 48-uurs-/zevendagenkeuze is een grafiekmodus. De verborgen
+     technische uurkolom is daar niet nodig en wordt volledig uitgeschakeld. */
   .wiw-chart-layout[data-hour-paired="0"]{
     grid-template-columns:minmax(0,1fr)!important
   }
@@ -97,9 +118,9 @@ ${STYLE_MARKER}
     box-sizing:border-box!important
   }
 
-  /* Compact maar niet gepropt: 18px is de praktische minimumhoogte. Eventuele
-     sub-rij resthoogte wordt runtime gelijkmatig verdeeld, zonder het aantal
-     zichtbare uren kunstmatig vast te zetten. */
+  /* De technische uurbron blijft compact en volledig meetbaar, maar is op
+     desktop visueel verborgen. Zo kan de grafiek exact dezelfde bronuren
+     blijven gebruiken zonder een tweede informatiekolom in beeld. */
   #wiw-hour-panel h3{
     margin-top:0!important;
     margin-bottom:4px!important;
@@ -192,6 +213,7 @@ function pasTekstAan(html,label="artifact"){
   bron=vervangEen(bron,HOOGTE_OUD,HOOGTE_NIEUW,`${label} lange-bereikhoogte`);
   bron=vervangEen(bron,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,`${label} hoogtegestuurd uurpaneel`);
   bron=vervangEen(bron,NU_OUD,NU_NIEUW,`${label} desktop-nucontext`);
+  bron=vervangEen(bron,KOP_OUD,KOP_NIEUW,`${label} komende-uren-kop`);
   if(!bron.includes(MARKER)){
     const anker='const MARKER="final-desktop-ui-20260902";';
     if(tel(bron,anker)!==1)throw new Error(`${label}: runtime-marker ontbreekt of is dubbel.`);
@@ -210,8 +232,8 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen WeatherNow-artifacts gevonden voor uurpaneelrefinement.");
   const cache=vernieuwServiceworkerCache(OUT,"hour-panel-refinement-20260907");
-  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): zichtbare desktopuren worden uit de gemeten grafiekhoogte bepaald binnen de 24-uurs bronhorizon; resterende sub-rijhoogte wordt gelijkmatig verdeeld zodat tabel en grafiek optisch gelijk eindigen zonder gepropte regels, expliciete lange grafiekbereiken blijven behouden, actuele Nu-context blijft behouden en 0 mm blijft numeriek; cache ${cache}.`);
+  console.log(`Desktopgrafiekrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): standaard 24-uursweergave heet Komende uren en gebruikt de volle desktopbreedte; de technische uurrange blijft verborgen exact gekoppeld aan de grafiek, lange grafiekbereiken blijven behouden, actuele Nu-context blijft behouden en 0 mm blijft numeriek; cache ${cache}.`);
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,NU_OUD,NU_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};
+module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,NU_OUD,NU_NIEUW,KOP_OUD,KOP_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};

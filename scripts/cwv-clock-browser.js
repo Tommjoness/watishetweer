@@ -43,11 +43,14 @@ module.exports=async function clockChecks(browser,root,fixture,reportDir){
     });
     const url=root+"/?"+new URLSearchParams({lat:location.lat,lon:location.lon,plaats:location.name,land:location.land});
     await page.goto(url,{waitUntil:"load"});
-    await page.waitForSelector("#wiw-hour-table tbody tr",{timeout:10000});
+    await page.waitForSelector("#wiw-hour-table tbody tr",{state:"attached",timeout:10000});
     const read=()=>page.evaluate(()=>({maxHours:WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN,graphTimes:S.geo.TI,sourceTimes:[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]),now:Date.now(),rows:[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(r=>({instant:r.querySelector("time").dateTime,label:r.querySelector("time").textContent})),place:document.getElementById("place").getAttribute("aria-label")}));
     const check=s=>{
       assert.equal(s.place,location.name);assert(s.rows.length>=4&&s.rows.length<=s.maxHours);
-      assert.deepEqual(s.graphTimes,s.sourceTimes,"grafiek en tabel schuiven met dezelfde uren door");
+      const inclusiefRechtergrens=s.sourceTimes.length===s.maxHours&&s.graphTimes.length===s.sourceTimes.length+1;
+      assert(s.graphTimes.length===s.sourceTimes.length||inclusiefRechtergrens,"grafiekbron heeft onverwachte lengte ten opzichte van de uurintervallen");
+      for(let i=0;i<s.sourceTimes.length;i++)assert.equal(s.graphTimes[i],s.sourceTimes[i],"grafiek en uurintervalbron schuiven met dezelfde uren door");
+      if(inclusiefRechtergrens)assert.equal(Date.parse(s.graphTimes.at(-1)+"Z")-Date.parse(s.sourceTimes.at(-1)+"Z"),3600000,"24-uursgrafiek behoudt exact één rechter grenspunt");
       for(let i=0;i<s.rows.length;i++){
         const row=s.rows[i],expected=new Intl.DateTimeFormat("en-GB",{timeZone:location.zone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(row.instant));
         assert.equal(row.label,expected,"label moet bij selected-location timezone horen");

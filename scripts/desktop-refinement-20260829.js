@@ -91,9 +91,14 @@ const STIJL=`<style id="${MARKER}">
     gap:16px
   }
 
+  /* Nachtzicht blijft als sectie viewportbreed, maar de inhoudskolommen
+     worden niet meer over die hele breedte uitgesmeerd. De scorebalk en de
+     toelichting krijgen een leesbare bovengrens; de overblijvende ruimte zit
+     aan het einde van de rij in plaats van tussen de gegevens. */
   #nights .row.night{
-    grid-template-columns:104px 64px minmax(280px,1fr) 110px minmax(300px,.72fr);
-    gap:18px
+    grid-template-columns:104px 64px minmax(220px,320px) 110px minmax(360px,520px);
+    gap:18px;
+    justify-content:start
   }
   #nights .night .nmeta.wide{
     box-sizing:border-box;
@@ -162,7 +167,7 @@ function main(){
     fs.writeFileSync(doel.pad,pasDesktopRefinementToe(bron,doel.label),"utf8");
   }
   const versie=vernieuwServiceworkerCache(OUT,"desktop-refinement-20260831");
-  console.log(`Finale productverfijning toegepast op ${doelen.length} weerpagina's: volgende lokale zonnegebeurtenis, neutrale vochtigheidscopy, compactere grafiektypografie, uitgebalanceerde week/Nachtzicht-layout, ruimere broncopy en desktopfooter; cache ${versie}.`);
+  console.log(`Finale productverfijning toegepast op ${doelen.length} weerpagina's: volgende lokale zonnegebeurtenis, neutrale vochtigheidscopy, compactere grafiektypografie, uitgebalanceerde week/Nachtzicht-layout met begrensde desktopkolommen, ruimere broncopy en desktopfooter; cache ${versie}.`);
 }
 
 if(require.main===module)main();
