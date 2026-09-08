@@ -32,7 +32,12 @@ const HOOGTE_NIEUW=`  if(window.innerWidth<1100){aside.style.height="";aside.sty
   aside.style.removeProperty("--wiw-hour-row-pad-extra");
   /* Een eerder geplande hoogte-sync mag een zojuist gekozen lange grafiek niet
      alsnog terugbrengen naar het aantal passende uurregels. */
-  if(S.dag==null&&S.bereik!==24){aside.style.height="";return;}`;
+  if(S.dag==null&&S.bereik!==24){aside.style.height="";return;}
+  /* Cruciaal: verwijder een eerder gezette paneelhoogte vóór de grafiek wordt
+     gemeten. Anders kan de vorige tabelhoogte via de gridrij opnieuw als
+     'beschikbare grafiekhoogte' worden teruggelezen en ontstaat een
+     zelfversterkende meetlus. */
+  aside.style.height="";`;
 const PANEL_HOOGTE_OUD=`  while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
   aside.dataset.visibleHours=String(tbody?tbody.children.length:0);`;
 const PANEL_HOOGTE_NIEUW=`  while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
@@ -87,6 +92,11 @@ ${STYLE_MARKER}
     display:none!important
   }
 
+  /* De grafiek is de bron van waarheid voor de hoogte. De uurkolom mag de
+     gridrij nooit uitrekken; beide items beginnen op hun natuurlijke hoogte. */
+  .wiw-chart-layout{align-items:start!important}
+  .wiw-chart-main,.wiw-hour-panel{align-self:start!important}
+
   /* De buitenste SEO-navigatie blijft bewust viewportbreed zodat de bestaande
      scheidingslijn en achtergrond full-bleed blijven. Alleen de echte inhoud
      krijgt de veilige desktop-inset; latere shorthand-padding op de wrapper kan
@@ -97,31 +107,30 @@ ${STYLE_MARKER}
     box-sizing:border-box!important
   }
 
-  /* Compact maar niet gepropt: 18px is de praktische minimumhoogte. Eventuele
-     sub-rij resthoogte wordt runtime gelijkmatig verdeeld, zonder het aantal
-     zichtbare uren kunstmatig vast te zetten. */
+  /* Compact maar niet gepropt: circa 24px is de praktische minimumhoogte.
+     Eventuele sub-rij resthoogte wordt runtime gelijkmatig verdeeld, zonder het
+     aantal zichtbare uren kunstmatig vast te zetten. */
   #wiw-hour-panel h3{
     margin-top:0!important;
     margin-bottom:4px!important;
     line-height:1.15!important
   }
   .wiw-hour-table td{
-    padding-top:calc(2px + var(--wiw-hour-row-pad-extra,0px))!important;
-    padding-bottom:calc(2px + var(--wiw-hour-row-pad-extra,0px))!important;
+    padding-top:calc(5px + var(--wiw-hour-row-pad-extra,0px))!important;
+    padding-bottom:calc(5px + var(--wiw-hour-row-pad-extra,0px))!important;
     line-height:14px!important
   }
   .wiw-hour-table th{
-    padding-top:2px!important;
-    padding-bottom:2px!important;
+    padding-top:3px!important;
+    padding-bottom:3px!important;
     line-height:12px!important
   }
 }
 
 @media(min-width:1500px){
-  /* Op brede desktops is de laatste Nachtzicht-kolom al volledig breed, maar
-     de maantijd stond direct onder het advies waardoor rechts visueel leeg
-     bleef. Gebruik die bestaande kolom in twee delen: advies links, maaninfo
-     rechts. Er wordt geen nieuwe informatie toegevoegd. */
+  /* Op brede desktops wordt de bestaande laatste Nachtzicht-kolom intern in
+     advies en maaninfo verdeeld. De kolom zelf wordt elders bewust begrensd,
+     zodat deze verdeling niet opnieuw over de hele viewport uitwaaiert. */
   #nights .row.night:not(.kop) .nmeta.wide{
     display:grid!important;
     grid-template-columns:minmax(0,1fr) minmax(180px,230px)!important;
@@ -210,7 +219,7 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen WeatherNow-artifacts gevonden voor uurpaneelrefinement.");
   const cache=vernieuwServiceworkerCache(OUT,"hour-panel-refinement-20260907");
-  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): zichtbare desktopuren worden uit de gemeten grafiekhoogte bepaald binnen de 24-uurs bronhorizon; resterende sub-rijhoogte wordt gelijkmatig verdeeld zodat tabel en grafiek optisch gelijk eindigen zonder gepropte regels, expliciete lange grafiekbereiken blijven behouden, actuele Nu-context blijft behouden en 0 mm blijft numeriek; cache ${cache}.`);
+  console.log(`Uurpaneelrefinement toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): zichtbare desktopuren worden uit de natuurlijke grafiekhoogte bepaald binnen de 24-uurs bronhorizon; eerdere paneelhoogte wordt vóór hermeting gewist, uurregels houden circa 24px minimumhoogte en resterende sub-rijhoogte wordt gelijkmatig verdeeld; expliciete lange grafiekbereiken blijven behouden, actuele Nu-context blijft behouden en 0 mm blijft numeriek; cache ${cache}.`);
 }
 
 if(require.main===module)main();
