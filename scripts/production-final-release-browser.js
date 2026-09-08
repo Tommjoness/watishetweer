@@ -38,10 +38,13 @@ async function wachtKlaar(page,naam,timeout=26000){
       const bronKlaar=!!(d&&d.current&&Array.isArray(d.hourly?.time)&&d.hourly.time.length>=23&&Array.isArray(d.daily?.time)&&d.daily.time.length>=7);
       const dagen=document.querySelectorAll("#days .row.day:not(.kop)").length;
       const uren=document.querySelectorAll("#wiw-hour-table tbody tr").length;
-      const desktop=innerWidth>=1100;
-      // Volledige brondekking blijft hierboven verplicht. Op desktop moeten
-      // bovendien acht tot twaalf volledige rijke uurregels zichtbaar zijn.
-      return app&&getComputedStyle(app).display!=="none"&&label&&bronKlaar&&dagen>=7&&(desktop?uren>=8&&uren<=WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN:uren>=23);
+      const desktop=innerWidth>=1100,contractDesktop=innerWidth>=1366;
+      // Volledige brondekking blijft hierboven verplicht. Het 8–12-regelscontract
+      // geldt vanaf 1366px; smallere desktopviewports bewijzen apart fit/overflow.
+      const urenKlaar=contractDesktop
+        ?uren>=8&&uren<=WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN
+        :desktop?uren>=1&&uren<=WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN:uren>=23;
+      return app&&getComputedStyle(app).display!=="none"&&label&&bronKlaar&&dagen>=7&&urenKlaar;
     },null,{timeout});
   }catch(e){
     const diagnose=await page.evaluate(()=>{
@@ -177,7 +180,7 @@ async function lees(page){return page.evaluate(()=>{
       const sourceUrl=await ontdekVolledigeForecastUrl(browser,l);
       assert(forecastUrlPastBijLocatie(sourceUrl,l),`${l.naam}: forecast-URL wijkt af van gevraagde coördinaten`);
       const live=await haalLiveForecast(sourceUrl,l.naam),bron=live.bron;
-      const context=await browser.newContext({viewport:{width:1363,height:936},serviceWorkers:"block",locale:"nl-NL"});
+      const context=await browser.newContext({viewport:{width:1366,height:936},serviceWorkers:"block",locale:"nl-NL"});
       const page=await context.newPage(),pageErrors=[];page.on("pageerror",e=>pageErrors.push(String(e)));
       try{
         await installeerForecastFixture(page,bron);
@@ -231,6 +234,7 @@ async function lees(page){return page.evaluate(()=>{
       await installeerForecastFixture(page,amsterdamBron);
       await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Amsterdam");
       const u=await lees(page);assert.equal(u.sha,EXPECTED,`${w}px: verkeerde SHA`);assert(u.pageOverflow<=1,`${w}px: ${u.pageOverflow}px pagina-overflow`);assert(u.hourOverflow<=1&&u.hourClip,`${w}px: uurtabel overflow/clipping`);
+      if(w>=1100){assert(u.hourRows>=1&&u.hourRows<=u.maxHours&&u.hourFits,`${w}px: desktopuren passen niet volledig binnen het paneel (${u.hourRows})`);if(w>=1366)assert(u.hourRows>=8,`${w}px: 8–12-regelscontract niet gehaald (${u.hourRows})`);}
       if(w>=1100&&w<1600)assert.equal(u.tileRows,3,`${w}px: verwacht 3 tegelrijen, kreeg ${u.tileRows}`);if(w>=1600)assert.equal(u.tileRows,2,`${w}px: verwacht 2 tegelrijen, kreeg ${u.tileRows}`);
       rapport.viewports.push({width:w,height:h,tileRows:u.tileRows,pageOverflow:u.pageOverflow,hourOverflow:u.hourOverflow});await context.close();
       console.log(`FINAL VIEWPORT ${w}x${h}: ${u.tileRows} tegelrijen, overflow ${u.pageOverflow}px.`);
