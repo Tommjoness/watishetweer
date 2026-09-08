@@ -122,7 +122,8 @@ async function run(){
           assert(Math.abs(g.hours.bottom-g.main.bottom)<=1,"uurpaneel en grafiekkolom eindigen niet gelijk");
           assert(Math.abs(g.table.bottom-result.hourRows.at(-1).rect.bottom)<=2,"geen lege onderste tabelregel");
           assert(Math.abs(g.table.bottom-g.hours.bottom)<=2,"geen loos ondervlak onder de laatste uurregel");
-          assert.deepEqual(result.graphTimes,result.sourceTimes,"grafiek en tabel moeten exact dezelfde bronuren tonen");
+          assert.equal(result.graphTimes.length,result.sourceTimes.length,"grafiek en tabel moeten exact evenveel bronuren tonen");
+          for(let i=0;i<result.graphTimes.length;i++)assert.equal(result.graphTimes[i],result.sourceTimes[i],`grafiek en tabel verschillen op bronuur ${i}`);
           assert.equal(result.placeLayout.justify,"center","plaats en tijd vormen een compacte kopgroep");
           assert(result.placeLayout.gap>=12&&result.placeLayout.gap<=24,"afstand plaats/tijd buiten compacte band");
           if(width>=1366)assert(result.rows>=10,"desktop moet meer uren tonen dan de oude acht rijen");
