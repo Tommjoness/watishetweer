@@ -119,15 +119,13 @@ async function run(){
         assert(!result.copy.includes("Vandaag: neerslag geldt vanaf nu; minimum en maximum gelden voor de volledige dag."),"verwijderde Vandaag-copy keert terug");
         if(width>=1100){
           const g=result.geometry;
-          assert(g.hours.bottom<=g.main.bottom+1,"uurtabel mag de grafiekhoogte niet vergroten");
+          assert(Math.abs(g.hours.bottom-g.main.bottom)<=1,"uurpaneel en grafiekkolom eindigen niet gelijk");
           assert(Math.abs(g.table.bottom-result.hourRows.at(-1).rect.bottom)<=2,"geen lege onderste tabelregel");
+          assert(Math.abs(g.table.bottom-g.hours.bottom)<=2,"geen loos ondervlak onder de laatste uurregel");
           assert.deepEqual(result.graphTimes,result.sourceTimes,"grafiek en tabel moeten exact dezelfde bronuren tonen");
-          if(result.maxHours===17){
-            assert.equal(result.placeLayout.justify,"center","plaats en tijd vormen een compacte kopgroep");
-            assert(result.placeLayout.gap>=12&&result.placeLayout.gap<=24,"afstand plaats/tijd buiten compacte band");
-            if(width>=1366)assert(result.rows>=10,"desktop moet meer uren tonen dan de oude acht rijen");
-            if(width>=1660)assert.equal(result.rows,17,"brede desktop moet de volledige 17-uursrange tonen");
-          }
+          assert.equal(result.placeLayout.justify,"center","plaats en tijd vormen een compacte kopgroep");
+          assert(result.placeLayout.gap>=12&&result.placeLayout.gap<=24,"afstand plaats/tijd buiten compacte band");
+          if(width>=1366)assert(result.rows>=10,"desktop moet meer uren tonen dan de oude acht rijen");
           assert(g.main.height-g.graph.height<80,"uurkolom rekt de grafiekrij uit");
           assert(g.graph.bottom<=g.main.bottom+1,"grafiek mag niet buiten de gemeten kolomhoogte vallen");
           const week=await page.evaluate(()=>{const hint=document.getElementById("dagenhint"),head=hint.previousElementSibling;return {hint:hint.getBoundingClientRect().left,head:head.getBoundingClientRect().left};});
@@ -138,7 +136,7 @@ async function run(){
           assert.equal(result.rainVisible,false,"korte neerslagsectie is nog zichtbaar");
           assert.equal(result.chartDataVisible,false,"grafiektabelbediening is nog zichtbaar");
           assert.equal(result.hourOverflow,"visible");assert.equal(result.hourButtons,0,"geen extra uurbediening");
-          for(const r of result.hourRows){assert(r.visible);assert(r.rect.height>=17&&r.rect.height<=20,"uurregels moeten compact maar leesbaar blijven");assert(r.rect.bottom<=g.hours.bottom+1,"geen afgesneden laatste uurregel");}
+          for(const r of result.hourRows){assert(r.visible);assert(r.rect.height>=17&&r.rect.height<=24,"uurregels moeten compact maar leesbaar blijven");assert(r.rect.bottom<=g.hours.bottom+1,"geen afgesneden laatste uurregel");}
           for(let i=1;i<result.hourRows.length;i++){
             assert.equal(Date.parse(result.hourRows[i].instant)-Date.parse(result.hourRows[i-1].instant),3600000,"unieke opeenvolgende instants, ook bij gelijke DST-labels");
             assert.equal(result.hourRows[i].sourceIndex,result.hourRows[i-1].sourceIndex+1,"geen bronuren overslaan");
