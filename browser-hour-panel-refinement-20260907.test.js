@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded',async()=>{const zet=(k,v)=>document
  const precipitation=TI.map(()=>0);precipitation[2]=null;
  S.d={timezone:'Europe/Amsterdam',utc_offset_seconds:7200,current:{time:'2026-09-02T13:27'},hourly:{time:TI,temperature_2m:TI.map((_,i)=>18-i*.1),apparent_temperature:TI.map((_,i)=>18-i*.1),precipitation_probability:TI.map(()=>0),precipitation}};
  S.klokInstantOverride=new Date('2026-09-02T11:27:00Z');S.geo={TI,T:S.d.hourly.temperature_2m,A:S.d.hourly.apparent_temperature,P:S.d.hourly.precipitation_probability,MM:S.d.hourly.precipitation};S.dag=null;
- const kandidaten=WeatherNowFinalDesktopUI20260902.komendeUurRijen(S.d,S.klokInstantOverride.getTime(),14);
+ const kandidaten=WeatherNowFinalDesktopUI20260902.komendeUurRijen(S.d,S.klokInstantOverride.getTime(),17);
  WeatherNowFinalDesktopUI20260902.render();
  await new Promise(resolve=>setTimeout(resolve,160));WeatherNowFinalDesktopUI20260902.render();await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
  const rows=[...document.querySelectorAll('#wiw-hour-table tbody tr')];const panel=document.getElementById('wiw-hour-panel');const last=rows.at(-1);const tijden=rows.map(r=>r.querySelector('time')?.textContent.trim()||'');const mm=rows.map(r=>r.children[3]?.textContent.trim()||'');
@@ -53,11 +53,10 @@ try{
   if(r.status!==0)throw new Error(`browser exit ${r.status}: `+String(r.stderr||"").slice(-800));
   const dom=r.stdout||"",v=k=>{const m=new RegExp('data-hour-refine-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
-  if(v('candidates')!=='14'||v('candidate-first')!=='14:00'||v('candidate-last')!=='03:00')throw new Error(`14-uurskandidaatset fout: count=${v('candidates')} first=${v('candidate-first')} last=${v('candidate-last')}`);
-  // De kandidaatset is exact veertien uur; de bestaande hoogtesync bepaalt daarna
-  // hoeveel volledige rijen werkelijk naast de grafiek passen. Geen halve rij
-  // en geen geforceerde paneelhoogte om kunstmatig alle veertien zichtbaar te maken.
-  const zichtbaar=Number(v('rows'));if(!(zichtbaar>=1&&zichtbaar<=14)||v('first')!=='14:00')throw new Error(`zichtbare uurselectie fout: rows=${v('rows')} first=${v('first')} last=${v('last')}`);
+  if(v('candidates')!=='17'||v('candidate-first')!=='14:00'||v('candidate-last')!=='06:00')throw new Error(`17-uurskandidaatset fout: count=${v('candidates')} first=${v('candidate-first')} last=${v('candidate-last')}`);
+  // Op een brede 1600×900-desktop moet de afgesproken volledige 17-uursrange
+  // binnen dezelfde grafiekhoogte passen. Geen halve rij of interne scrollbar.
+  const zichtbaar=Number(v('rows'));if(zichtbaar!==17||v('first')!=='14:00'||v('last')!=='06:00')throw new Error(`zichtbare 17-uursselectie fout: rows=${v('rows')} first=${v('first')} last=${v('last')}`);
   if(v('zero-first')!=='0,0 mm'||v('missing-second')!=='–')throw new Error(`0 mm/missing-semantiek fout: first=${v('zero-first')} second=${v('missing-second')}`);
   if(v('fits')!=='ok')throw new Error(`laatste volledige uurregel valt buiten paneel: row=${v('last-bottom')} panel=${v('panel-bottom')}`);
   // Finale runtimes kunnen de plaatskop en route-/SEO-navigatie vervangen.
@@ -67,5 +66,5 @@ try{
   const seoLinks=Number(v('seo-left-padding')),seoRechts=Number(v('seo-right-padding')),seoContentLinks=Number(v('seo-content-left-gap')),seoContentRechts=Number(v('seo-content-right-gap'));
   if(seoLinks<24||seoRechts<24||seoContentLinks<24||seoContentRechts<24)throw new Error(`SEO-plaatsnavigatie mist veilige inhoudsinset: padding=${v('seo-left-padding')}/${v('seo-right-padding')} content=${v('seo-content-left-gap')}/${v('seo-content-right-gap')}`);
   if(v('night-display')!=='grid'||v('night-separated')!=='ok'||Math.abs(Number(v('night-moon-right-gap')))>2)throw new Error(`Nachtzicht benut brede rechterruimte niet: display=${v('night-display')} separated=${v('night-separated')} rightGap=${v('night-moon-right-gap')}`);
-  console.log(`Desktoprefinement groen op 1600×900: 14 uur beschikbaar, ${zichtbaar} volledige uurregels passen; plaats/tijd en SEO-footer hebben veilige insets, Nachtzicht gebruikt de brede rechterkolom en 0 mm blijft numeriek.`);
+  console.log(`Desktoprefinement groen op 1600×900: alle 17 volledige uurregels passen; plaats/tijd en SEO-footer hebben veilige insets, Nachtzicht gebruikt de brede rechterkolom en 0 mm blijft numeriek.`);
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
