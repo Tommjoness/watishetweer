@@ -13,12 +13,10 @@ const html=fs.readFileSync(artifact,"utf8");
 const stijlen=(html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi)||[]).join("\n");
 if(!stijlen.includes("weather-now-desktop-refinement-20260829"))throw new Error("Desktopverfijningsstijl ontbreekt in de finale artifact.");
 
-/* Deze browserregressie is bewust datavrij. De fout was puur geometrisch:
-   de desktopoverride begrensde eerst Nachtzicht en het volledige .sheet-vlak,
-   en later bleef de onderste dashrow op brede productie alsnog in een halve
-   dashboardkolom hangen. Een minimale fixture met de echte finale CSS bewijst
-   nu het viewportbrede hoofdvlak, de gestapelde volle breedte van Zeven dagen
-   en Nachtzicht én het interne Nachtzicht-grid. */
+/* De buitenste secties blijven bewust viewportbreed, maar de Nachtzicht-data
+   mag niet opnieuw als losse eilanden over die hele breedte worden uitgerekt.
+   Deze fixture bewaakt daarom beide invarianten tegelijk: volle sectiebreedte
+   én begrensde, inhoudsgerichte kolommen binnen de rij. */
 const fixture=`<!doctype html><html><head><meta charset="utf-8">${stijlen}</head><body>
 <div class="sheet" id="sheet-breedte-fixture" style="height:1px;padding-top:0;padding-bottom:0"></div>
 <div class="dashrow dashrow-days" id="dagen-breedte-fixture" style="width:1280px">
@@ -27,9 +25,9 @@ const fixture=`<!doctype html><html><head><meta charset="utf-8">${stijlen}</head
     <div id="nights">
       <div class="row night" id="nacht-breedte-rij">
         <div>vannacht</div>
-        <div>5/10</div>
+        <div id="nacht-score">5/10</div>
         <div id="nacht-breedte-midden"><div class="sbar"></div></div>
-        <div>68%</div>
+        <div id="nacht-bewolking">68%</div>
         <div id="nacht-breedte-laatste" class="nmeta wide">Redelijke omstandigheden. Maanondergang om 21:06.</div>
       </div>
     </div>
@@ -52,7 +50,7 @@ const fixture=`<!doctype html><html><head><meta charset="utf-8">${stijlen}</head
   const sheetOk=Math.abs(sr.width-viewport)<=1.5&&linksLeeg<=1.5&&rechtsSheetLeeg<=1.5;
   const sectiesOk=dagenStijl.display==='block'&&dr.width>=1279&&Math.abs(zr.width-dr.width)<=1.5&&Math.abs(nkr.width-dr.width)<=1.5&&Math.abs(dyr.width-dr.width)<=1.5&&Math.abs(nsr.width-dr.width)<=1.5;
   const rechtsLeeg=Math.max(0,rr.right-lr.right);
-  const nachtOk=stijl.display==='grid'&&rr.width>=1279&&mr.width>420&&rechtsLeeg<=1.5&&lr.width>=220;
+  const nachtOk=stijl.display==='grid'&&rr.width>=1279&&mr.width>=219&&mr.width<=321&&lr.width>=359&&lr.width<=521&&rechtsLeeg>=50;
   document.body.dataset.sheetBreedteResult=sheetOk?'ok':'fout';
   document.body.dataset.sheetBreedte=sr.width.toFixed(2);
   document.body.dataset.sheetViewport=viewport.toFixed(2);
@@ -105,14 +103,14 @@ try{
   }
   if(veld("nacht-breedte-result")!=="ok"){
     throw new Error(
-      "Nachtzicht laat op desktop nog lege rechterruimte: rij="+veld("nacht-breedte-rij")+
-      ", midden="+veld("nacht-breedte-midden")+
-      ", laatste="+veld("nacht-breedte-laatste")+
-      ", leeg="+veld("nacht-breedte-leeg")+
+      "Nachtzicht-kolommen zijn nog te ver uitgesmeerd of te krap: rij="+veld("nacht-breedte-rij")+
+      ", scorebalk="+veld("nacht-breedte-midden")+
+      ", toelichting="+veld("nacht-breedte-laatste")+
+      ", vrije eindruimte="+veld("nacht-breedte-leeg")+
       ", grid="+veld("nacht-breedte-grid")
     );
   }
-  console.log("Desktopbreedte geslaagd: hoofdvlak vult de viewport; Zeven dagen en Nachtzicht zijn gestapeld en vullen ieder de volledige inhoudsbreedte; Nachtzicht sluit intern aan op de rechterrand.");
+  console.log("Desktopbreedte geslaagd: hoofdvlak en onderste secties blijven volledig breed; Nachtzicht groepeert de inhoud in begrensde leesbare kolommen in plaats van data over de hele viewport uit te smeren.");
 }finally{
   fs.rmSync(dir,{recursive:true,force:true});
 }
