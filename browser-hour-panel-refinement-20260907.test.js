@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded',async()=>{const zet=(k,v)=>document
  if(main)main.style.height='';WeatherNowFinalDesktopUI20260902.render();await wacht();
  const finalPlace=document.getElementById('place'),placeStyle=finalPlace?getComputedStyle(finalPlace):null;
  const finalSeoInner=document.querySelector('.seo-plaatsnav-inner'),seoInnerStyle=finalSeoInner?getComputedStyle(finalSeoInner):null,seoKop=finalSeoInner?.querySelector('.seo-plaatsnav-kop'),seoLinks=finalSeoInner?.querySelector('.seo-plaatsnav-links'),sir=finalSeoInner?.getBoundingClientRect(),skr=seoKop?.getBoundingClientRect(),slr=seoLinks?.getBoundingClientRect(),wide=document.querySelector('#nights .row.night .nmeta.wide'),advies=document.querySelector('#nights .nachtadvies'),maan=document.querySelector('#nights .nachtmaan'),wr=wide?.getBoundingClientRect(),ar=advies?.getBoundingClientRect(),moonr=maan?.getBoundingClientRect();
- zet('candidates',kandidaten.length);zet('candidate-first',kandidaten[0]?String(kandidaten[0].tijd).slice(11,16):'');zet('candidate-last',kandidaten.at(-1)?String(kandidaten.at(-1).tijd).slice(11,16):'');
+ zet('candidates',kandidaten.length);zet('candidate-first',kandidaten[0]?String(kandidaten[0].tijd).slice(11,16):'');zet('candidate-last',kandidaten.at(-1)?String(kandidaten.at(-1].tijd).slice(11,16):'');
  for(const [prefix,m] of [['base',basis],['grown',groter]]){zet(prefix+'-rows',m.count);zet(prefix+'-first',m.first);zet(prefix+'-last',m.last);zet(prefix+'-panel-height',m.panelHeight.toFixed(1));zet(prefix+'-main-height',m.mainHeight.toFixed(1));zet(prefix+'-layout-width',m.layoutWidth.toFixed(1));zet(prefix+'-main-width',m.mainWidth.toFixed(1));zet(prefix+'-panel-width',m.panelWidth.toFixed(1));zet(prefix+'-fits',m.lastBottom<=m.panelBottom+1?'ok':'fout');zet(prefix+'-table-tight',Math.abs(m.tableBottom-m.lastBottom)<=2?'ok':'fout');zet(prefix+'-panel-fill',Math.abs(m.panelBottom-m.tableBottom)<=3?'ok':'fout');zet(prefix+'-row-min',m.rowHeights.length?Math.min(...m.rowHeights).toFixed(1):'0');zet(prefix+'-row-max',m.rowHeights.length?Math.max(...m.rowHeights).toFixed(1):'0');zet(prefix+'-overflow',m.overflow);zet(prefix+'-panel-title',m.panelTitle);zet(prefix+'-panel-visibility',m.panelVisibility);zet(prefix+'-layout-columns',m.layoutColumns);zet(prefix+'-chart-title',m.chartTitle);zet(prefix+'-headers',m.headers);zet(prefix+'-row-shape',m.rowShape?'ok':'fout');zet(prefix+'-icons',m.icons);zet(prefix+'-rich',m.rich?'ok':'fout');zet(prefix+'-graph-count',m.graphCount);zet(prefix+'-graph-first',m.graphFirst||'');}
  zet('zero-first',basis.mm[0]||'');zet('missing-second',basis.mm[1]||'');
  zet('place-left-inset',placeStyle?parseFloat(placeStyle.paddingLeft)||0:0);zet('place-right-inset',placeStyle?parseFloat(placeStyle.paddingRight)||0:0);zet('seo-left-padding',seoInnerStyle?parseFloat(seoInnerStyle.paddingLeft)||0:0);zet('seo-right-padding',seoInnerStyle?parseFloat(seoInnerStyle.paddingRight)||0:0);zet('seo-content-left-gap',sir&&skr?(skr.left-sir.left).toFixed(1):'0');zet('seo-content-right-gap',sir&&slr?(sir.right-slr.right).toFixed(1):'0');
@@ -86,3 +86,45 @@ try{
   if(v('night-display')!=='grid'||v('night-separated')!=='ok'||Math.abs(Number(v('night-moon-right-gap')))>2)throw new Error(`Nachtzicht-meta is intern niet stabiel: display=${v('night-display')} separated=${v('night-separated')} rightGap=${v('night-moon-right-gap')}`);
   console.log(`Desktoprefinement groen op 1600×900: natuurlijke grafiek links en rijke Komende-uren-tabel rechts met ${basis} volledige regels (${groter} bij +80px), echte weer/gevoel/neerslag/winddata en compacte Nachtzicht-groepering.`);
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
+
+/* Gerichte eindmatrix voor de twee UI-correcties van 2026-09-08. De bestaande
+   1600px-regressie hierboven blijft ongewijzigd; deze matrix voegt uitsluitend
+   de gevraagde contractbreedtes toe. */
+let matrixHtml=fs.readFileSync(productie,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
+matrixHtml=matrixHtml.replace("</head>",stub+"</head>");
+const matrixReporter=`<script>
+document.addEventListener('DOMContentLoaded',async()=>{const zet=(k,v)=>document.body.setAttribute('data-hour-matrix-'+k,String(v));try{
+ document.documentElement.classList.remove('wn-progressief');const app=document.getElementById('app');if(app){app.classList.remove('wn-progressief');app.removeAttribute('aria-busy');app.style.display='block';app.style.visibility='visible';}const state=document.getElementById('state');if(state)state.style.display='none';
+ const TI=Array.from({length:24},(_,i)=>i<11?'2026-09-02T'+String(i+13).padStart(2,'0')+':00':'2026-09-03T'+String(i-11).padStart(2,'0')+':00');
+ S.d={timezone:'Europe/Amsterdam',utc_offset_seconds:7200,current:{time:'2026-09-02T13:27'},hourly:{time:TI,temperature_2m:TI.map((_,i)=>18.2-i*.1),apparent_temperature:TI.map((_,i)=>16.6-i*.1),precipitation_probability:TI.map((_,i)=>i%4?35:0),precipitation:TI.map(()=>0),weather_code:TI.map((_,i)=>i%3?3:61),is_day:TI.map((_,i)=>i<8?1:0),wind_speed_10m:TI.map((_,i)=>12+i),wind_direction_10m:TI.map(()=>225)}};
+ S.klokInstantOverride=new Date('2026-09-02T11:27:00Z');S.geo={TI,T:S.d.hourly.temperature_2m,A:S.d.hourly.apparent_temperature,P:S.d.hourly.precipitation_probability,MM:S.d.hourly.precipitation};S.dag=null;S.bereik=24;
+ WeatherNowFinalDesktopUI20260902.render();await new Promise(resolve=>setTimeout(resolve,160));WeatherNowFinalDesktopUI20260902.render();await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+ const desktop=innerWidth>=1100,rows=[...document.querySelectorAll('#wiw-hour-table tbody tr')],scroll=document.getElementById('wiw-hour-scroll'),panel=document.getElementById('wiw-hour-panel'),last=rows.at(-1),lr=last?.getBoundingClientRect(),pr=panel?.getBoundingClientRect(),temp=rows[0]?.querySelector('.wiw-hour-temp'),prim=temp?.querySelector('.wiw-hour-primary'),sec=temp?.querySelector('.wiw-hour-secondary'),rr=prim?.getBoundingClientRect(),sr=sec?.getBoundingClientRect();
+ zet('desktop',desktop?'1':'0');zet('rows',rows.length);zet('first',rows[0]?.querySelector('time')?.textContent.trim()||'');zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('internal-overflow',scroll?getComputedStyle(scroll).overflowY:'');zet('current',rows.filter(r=>r.dataset.current==='1').length);zet('marker',document.body.innerText.toUpperCase().includes('EERSTVOLGEND')?'visible':'absent');
+ zet('fits',!desktop||!lr||!pr||lr.bottom<=pr.bottom+1?'ok':'fout');zet('temp-nowrap',desktop&&temp&&getComputedStyle(temp).whiteSpace==='nowrap'?'ok':desktop?'fout':'nvt');zet('temp-inline',desktop&&rr&&sr&&Math.abs(rr.top-sr.top)<=1?'ok':desktop?'fout':'nvt');zet('temp-overflow',desktop&&temp?Math.max(0,temp.scrollWidth-temp.clientWidth):0);zet('done','ok');
+}catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},{once:true});
+</script>`;
+if(!bodyEinde.test(matrixHtml))throw new Error("public/index.html heeft geen afgesloten body voor uurcorrectiematrix");matrixHtml=matrixHtml.replace(bodyEinde,matrixReporter+"</body>\n</html>");
+const matrixDir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-hour-matrix-"));
+try{
+  const pad=path.join(matrixDir,"index.html");fs.writeFileSync(pad,matrixHtml);
+  for(const [w,h] of [[320,900],[360,900],[390,900],[400,900],[430,932],[1366,768],[1660,900],[1920,1080]]){
+    const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${w},${h}`,"--virtual-time-budget=4000","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:36*1024*1024});
+    if(r.status!==0)throw new Error(`${w}px matrix browser exit ${r.status}: `+String(r.stderr||"").slice(-800));
+    const dom=r.stdout||"",v=k=>{const m=new RegExp('data-hour-matrix-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
+    if(v('done')!=='ok')throw new Error(`${w}px matrix reporter: ${v('exception')}`);
+    if(Number(v('overflow'))>2)throw new Error(`${w}px: ${v('overflow')}px horizontale overflow`);
+    if(v('marker')!=='absent')throw new Error(`${w}px: EERSTVOLGEND is nog zichtbaar`);
+    if(w>=1100){
+      const n=Number(v('rows'));if(!(n>=8&&n<=12))throw new Error(`${w}px: ${n} volledige desktopregels, verwacht 8–12`);
+      if(v('first')!=='14:00')throw new Error(`${w}px: eerste tabeluur ${v('first')} i.p.v. 14:00`);
+      if(v('internal-overflow')!=='visible')throw new Error(`${w}px: interne desktopscrollbar niet uitgeschakeld (${v('internal-overflow')})`);
+      if(v('fits')!=='ok')throw new Error(`${w}px: onderste uurregel valt buiten het paneel`);
+      if(v('temp-nowrap')!=='ok'||v('temp-inline')!=='ok'||Number(v('temp-overflow'))>1)throw new Error(`${w}px: gevoelstemperatuur is niet één regel zonder celoverflow (nowrap=${v('temp-nowrap')} inline=${v('temp-inline')} overflow=${v('temp-overflow')})`);
+    }else{
+      if(v('rows')!=='24')throw new Error(`${w}px: mobiele uurtabel wijzigde inhoudelijk (${v('rows')} regels)`);
+      if(v('current')!=='1')throw new Error(`${w}px: bestaande nadruk op eerste relevante mobiele uurregel ging verloren`);
+    }
+    console.log(`${w}px uurcorrectiematrix groen: ${v('rows')} rijen, overflow ${v('overflow')}px, Eerstvolgend ${v('marker')}.`);
+  }
+}finally{fs.rmSync(matrixDir,{recursive:true,force:true});}
