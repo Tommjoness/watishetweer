@@ -26,7 +26,6 @@ const DEKKING_PRODUCTIE=`    if(!d||d.dekking!==true){
         ?"Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald."
         :"Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.";
       el.innerHTML='<div class="msg">'+melding+'</div>';
-      if(S.d&&typeof briefing==="function") briefing();
       return;
     }`;
 
@@ -56,6 +55,20 @@ const EIND_PRODUCTIE=`    el.innerHTML=lijst.slice(0,3).map(w=>{
 const FOUT_BRON=`    el.innerHTML='<div class="msg">Officiële weerwaarschuwingen konden niet worden gecontroleerd.</div>';`;
 const FOUT_PRODUCTIE=`    el.innerHTML='<div class="msg">Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald.</div>';`;
 
+/* De normale briefing is al direct na de forecast-render definitief. Een
+   asynchrone waarschuwingrequest mag die tekst daarom alleen opnieuw opbouwen
+   wanneer er daadwerkelijk ten minste één relevante, plaatsgebonden waarschuwing
+   is gevonden. Geen dekking, een lege lijst en een requestfout veranderen de
+   briefinginhoud niet en mogen dus ook geen zichtbare tweede render veroorzaken. */
+const BRIEFING_EIND_BRON=`  if(S.d&&typeof briefing==="function") briefing();
+}
+
+/** Vertaalt een maanfase`;
+const BRIEFING_EIND_PRODUCTIE=`  if(S.d&&Array.isArray(S.actieveWaarschuwingen)&&S.actieveWaarschuwingen.length>0&&typeof briefing==="function") briefing();
+}
+
+/** Vertaalt een maanfase`;
+
 /* De ontwikkeltemplate heeft nog de historische warningstijl. De productiestijl
    hieronder is exact de al zichtbare UI-polish-uitkomst: normale advisories
    rustig, rood expliciet en NWS-details compact. Alleen de eigenaar verandert. */
@@ -82,6 +95,7 @@ function pasWarningRenderStateToe(html){
     ["waarschuwing-dekkingpresentatie",DEKKING_BRON,DEKKING_PRODUCTIE],
     ["waarschuwing-kaartpresentatie",EIND_BRON,EIND_PRODUCTIE],
     ["waarschuwing-foutpresentatie",FOUT_BRON,FOUT_PRODUCTIE],
+    ["waarschuwing-briefing-hertekenbeleid",BRIEFING_EIND_BRON,BRIEFING_EIND_PRODUCTIE],
     ["waarschuwing-stijl",CSS_BRON,CSS_PRODUCTIE]
   ]){
     const aantal=bron.split(oud).length-1;
@@ -93,6 +107,7 @@ function pasWarningRenderStateToe(html){
     ["waarschuwing-dekkingpresentatie",DEKKING_PRODUCTIE],
     ["waarschuwing-kaartpresentatie",EIND_PRODUCTIE],
     ["waarschuwing-foutpresentatie",FOUT_PRODUCTIE],
+    ["waarschuwing-briefing-hertekenbeleid",BRIEFING_EIND_PRODUCTIE],
     ["waarschuwing-stijl",CSS_PRODUCTIE]
   ]){
     if((bron.split(productie).length-1)!==1)throw new Error(label+" ontbreekt of is dubbel na base-build.");
@@ -103,5 +118,6 @@ function pasWarningRenderStateToe(html){
 module.exports=Object.freeze({
   START_BRON,START_PRODUCTIE,DEKKING_BRON,DEKKING_PRODUCTIE,
   EIND_BRON,EIND_PRODUCTIE,FOUT_BRON,FOUT_PRODUCTIE,
+  BRIEFING_EIND_BRON,BRIEFING_EIND_PRODUCTIE,
   CSS_BRON,CSS_PRODUCTIE,pasWarningRenderStateToe
 });
