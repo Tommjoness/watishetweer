@@ -43,7 +43,7 @@ setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-final-visual-'
     zet('night-wide-style',ws.textAlign==='center'&&ws.alignItems==='center'&&ws.display==='flex'?'ok':'fout');
     zet('night-wide-axis',KW&&RW&&Math.abs(KW.cx-RW.cx)<=1?'ok':'fout');
     zet('night-cloud-axis',KA&&RA&&Math.abs(KA.cx-RA.cx)<=1?'ok':'fout');
-    zet('night-advice-axis',ADV&&RW&&Math.abs(ADV.cx-RW.cx)<=2?'ok':'fout');
+    zet('night-advice-axis',ADV&&RW&&(w>=1500?Math.abs(ADV.l-RW.l)<=2:Math.abs(ADV.cx-RW.cx)<=2)?'ok':'fout');
     zet('night-advice-align',getComputedStyle(advies).textAlign);
     zet('night-wide-width',RW?Math.round(RW.w):0);zet('night-bar-width',BAR?Math.round(BAR.w):0);
     zet('night-right-gap',R&&RW?Math.round(R.r-RW.r):0);

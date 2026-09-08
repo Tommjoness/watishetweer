@@ -22,6 +22,7 @@ for(const p of htmlBestanden(OUT)){
   eis(html.includes(UREN_NIEUW)&&!html.includes(UREN_OUD),`${rel}: begrensd 12-uurs kandidaatvenster ontbreekt`);
   eis(html.includes(PANEL_HOOGTE_NIEUW)&&!html.includes(PANEL_HOOGTE_OUD),`${rel}: zichtbare desktopuren worden niet door de gemeten grafiekhoogte bepaald`);
   eis(html.includes('aside.style.removeProperty("--wiw-hour-row-pad-extra")'),`${rel}: eerdere dynamische rijpadding wordt niet vóór hermeting gereset`);
+  eis(html.includes('if(desktop&&rijen.length&&basisGrafiek&&S.geo&&typeof S.geo.x==="function")')&&html.includes('if(Number.isInteger(start)&&S.chartStart!==start){basisGrafiek(start,24);desktopGrafiek=true;}'),`${rel}: grafiek wordt niet vóór de hoogtefiltering met het eerste komende tabeluur uitgelijnd`);
   eis(html.includes(MM_NIEUW)&&!html.includes(MM_OUD),`${rel}: numerieke 0 mm wordt nog als ontbrekende waarde behandeld`);
   eis(html.includes(NU_NIEUW)&&!html.includes(NU_OUD),`${rel}: actuele Nu-context ontbreekt aan de gedeelde desktoprange`);
   eis(html.includes(KOP_NIEUW)&&!html.includes(KOP_OUD),`${rel}: standaard desktopgrafiek heet niet Komende uren`);

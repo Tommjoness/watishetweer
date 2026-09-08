@@ -22,6 +22,13 @@ const UURMODUS_NIEUW=`  const desktop=window.innerWidth>=1100;
   if(langBereik){paneel.style.height="";tbody.replaceChildren();return;}
   const rijen=desktop?desktopUurRijen():uurRijenUitGeo(S.geo,S.d&&S.d.current&&S.d.current.time,S.dag!=null,S.d&&S.d.hourly);
   if(desktop)paneel.dataset.candidateHours=String(rijen.length);
+  /* Lijn de 24-uursgrafiek uit vóór de hoogtefiltering. Anders kan syncHoogte
+     kandidaten verwijderen op basis van de oude grafiekgeometrie en kunnen
+     die rijen na de grafiekhertekening niet meer terugkomen. */
+  if(desktop&&rijen.length&&basisGrafiek&&S.geo&&typeof S.geo.x==="function"){
+    const start=Number(rijen[0].bronIndex);
+    if(Number.isInteger(start)&&S.chartStart!==start){basisGrafiek(start,24);desktopGrafiek=true;}
+  }
   tbody.replaceChildren();`;
 const HOOGTE_OUD='  if(window.innerWidth<1100){aside.style.height="";return;}';
 const HOOGTE_NIEUW=`  if(window.innerWidth<1100){aside.style.height="";aside.style.removeProperty("--wiw-hour-row-pad-extra");return;}
@@ -153,15 +160,6 @@ ${STYLE_MARKER}
     grid-template-columns:96px 58px minmax(190px,260px) 92px minmax(320px,480px)!important;
     column-gap:clamp(14px,1.45vw,20px)!important;
     justify-content:start!important
-  }
-}
-
-@media(min-width:1366px){
-  /* Vanaf de contractbreedte voor de rijke desktopmodule is 2.5px de
-     minimale basispadding. De bestaande hoogte-sync verdeelt resterende
-     ruimte daarna weer gelijkmatig over alleen de volledig passende rijen. */
-  .wiw-hour-table td{
-    padding:calc(2.5px + var(--wiw-hour-row-pad-extra,0px)) 4px!important
   }
 }
 
