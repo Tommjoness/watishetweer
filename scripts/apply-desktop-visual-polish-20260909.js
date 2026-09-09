@@ -8,12 +8,6 @@ const OUT=path.join(__dirname,"..","public");
 const BASIS_MARKER="/* ===== HOUR PANEL CLEANUP 20260909 ===== */";
 const MARKER="/* ===== DESKTOP VISUAL POLISH 20260909 ===== */";
 const RUNTIME_ID="desktop-visual-polish-runtime-20260909";
-const UREN_OUD="const MAX_DESKTOP_UREN=12;/* maximaal venster; de grafiekhoogte kiest 8–12 volledige rijen */";
-const UREN_NIEUW="const MAX_DESKTOP_UREN=11;/* rustig desktopvenster: maximaal 11 uren; hoogtefilter synchroniseert de zichtbare reeks */";
-const GRAFIEK_START_OUD='if(Number.isInteger(start)&&S.chartStart!==start){basisGrafiek(start,24);desktopGrafiek=true;}';
-const GRAFIEK_START_NIEUW='if(Number.isInteger(start)&&(S.chartStart!==start||S.chartBereik!==MAX_DESKTOP_UREN)){basisGrafiek(start,MAX_DESKTOP_UREN);desktopGrafiek=true;}';
-const GRAFIEK_SYNC_OUD='if(basisGrafiek&&S.geo&&typeof S.geo.x==="function"&&Number.isInteger(start)&&S.chartStart!==start){\n    basisGrafiek(start,24);desktopGrafiek=true;\n  }';
-const GRAFIEK_SYNC_NIEUW='const grafiekUren=Math.max(1,Math.min(MAX_DESKTOP_UREN,rows.length));\n  if(basisGrafiek&&S.geo&&typeof S.geo.x==="function"&&Number.isInteger(start)&&rows.length&&(S.chartStart!==start||S.chartBereik!==grafiekUren)){\n    basisGrafiek(start,grafiekUren);desktopGrafiek=true;\n  }';
 
 const STYLE=`
 ${MARKER}
@@ -22,9 +16,8 @@ ${MARKER}
 @media(min-width:1100px){
   :root{--wiw-section-gap:28px}
 
-  /* Tot elf uren vullen dezelfde natuurlijke grafiekhoogte. De bestaande
-     hoogte-owner blijft de rijpadding/resthoogte beheren; deze polish verhoogt
-     alleen de primaire leesregel licht. */
+  /* De uurhoogte en het aantal zichtbare uren worden volledig beheerd door
+     apply-hour-panel-refinement-20260907. Deze laag wijzigt alleen typografie. */
   .wiw-hour-table .wiw-hour-primary{line-height:1.15!important}
 
   /* De verwachtingskolom krijgt een begrensde breedte. De vijf metriekvelden
@@ -47,9 +40,7 @@ ${MARKER}
   .dashrow-days .nachtkop h2{margin-top:0!important}
 
   /* Expliciete vijfkoloms Nachtzicht-structuur:
-     Nacht | Zichtscore | Bewolking | Beoordeling | Beste zichtperiode.
-     Score en balk delen de scorekolom zonder overlap; maan-/zichtdetails vormen
-     de tweede regel in de rechter kolom. Alle primaire waarden delen één baseline. */
+     Nacht | Zichtscore | Bewolking | Beoordeling | Beste zichtperiode. */
   #nights .row.night{
     grid-template-columns:
       112px minmax(140px,180px) 112px minmax(118px,148px) minmax(360px,1fr)!important;
@@ -92,10 +83,7 @@ ${MARKER}
   #nights .row.night:not(.kop)>.score,
   #nights .row.night:not(.kop)>.nmeta:not(.wide){line-height:20px!important}
 
-  #nights .row.night.kop{
-    grid-template-rows:auto!important;
-    align-items:end!important
-  }
+  #nights .row.night.kop{grid-template-rows:auto!important;align-items:end!important}
   #nights .row.night.kop>.dname{grid-column:1;grid-row:1}
   #nights .row.night.kop>.score{grid-column:2;grid-row:1;text-align:left!important}
   #nights .row.night.kop>.nmeta:not(.wide){grid-column:3;grid-row:1;text-align:left!important}
@@ -112,16 +100,7 @@ ${MARKER}
   .wiw-night-assessment-head{display:block}
 }
 
-/* De hoogte-owner kiest hoeveel volledige regels echt passen. Op contractdesktop
-   blijft iedere uurregel minimaal 29px hoog; we winnen dus nooit extra uren door
-   de inhoud zelf onder de afgesproken leesbaarheid te drukken. */
-@media(min-width:1366px){
-  .wiw-hour-table tbody tr{height:29px!important}
-}
-
 @media(max-width:1099px){
-  /* De lege bestaande scorebalkkop behoudt zijn mobiele gridplaats; alleen het
-     nieuwe desktoplabel verdwijnt. Daardoor schuift geen mobiele kolom op. */
   .wiw-night-assessment-head{display:none!important}
 }
 `;
@@ -157,9 +136,7 @@ function synchroniseerNachtrijen(){
     if(!wide)continue;
     if(desktop){
       const onderdelen=[".nachtadvies",".nachtvenster",".nachtmaan"].map(selector=>wide.querySelector(selector));
-      for(const el of onderdelen){
-        if(el)rij.insertBefore(el,wide);
-      }
+      for(const el of onderdelen){if(el)rij.insertBefore(el,wide);}
     }else{
       for(const selector of [".nachtadvies",".nachtvenster",".nachtmaan"]){
         const el=rij.querySelector(":scope > "+selector);
@@ -185,7 +162,6 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
 })();
 </script>`;
 
-function tel(bron,zoek){return String(bron).split(zoek).length-1;}
 function htmlBestanden(dir){
   const uit=[];
   for(const ent of fs.readdirSync(dir,{withFileTypes:true})){
@@ -195,18 +171,9 @@ function htmlBestanden(dir){
   }
   return uit;
 }
-function vervangEen(bron,oud,nieuw,label){
-  const oudN=tel(bron,oud),nieuwN=tel(bron,nieuw);
-  if(oudN===1&&nieuwN===0)return bron.replace(oud,nieuw);
-  if(oudN===0&&nieuwN===1)return bron;
-  throw new Error(`${label}: verwacht precies één oude of nieuwe variant; oud=${oudN}, nieuw=${nieuwN}.`);
-}
 function pasTekstAan(html,label="artifact"){
   let bron=String(html||"");
   if(!bron.includes(BASIS_MARKER))return {html:bron,geraakt:false};
-  bron=vervangEen(bron,UREN_OUD,UREN_NIEUW,`${label} desktopuren`);
-  bron=vervangEen(bron,GRAFIEK_START_OUD,GRAFIEK_START_NIEUW,`${label} eerste grafiekrange`);
-  bron=vervangEen(bron,GRAFIEK_SYNC_OUD,GRAFIEK_SYNC_NIEUW,`${label} gesynchroniseerde grafiekrange`);
   const headEinde=bron.indexOf("</head>");
   if(headEinde<0)throw new Error(`${label}: </head> ontbreekt voor desktop-polish.`);
   if(bron.includes(MARKER)){
@@ -239,12 +206,8 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen finale weerartifacts gevonden voor desktop-polish.");
   const cache=vernieuwServiceworkerCache(OUT,"desktop-visual-polish-20260909");
-  console.log(`Desktop-polish toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): maximaal 11 gedeelde uren, compactere weekmetriekgroep, vijf expliciete Nachtzicht-kolommen en één sectieritme; cache ${cache}.`);
+  console.log(`Desktop-polish toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): compacte weekmetriekgroep, vijf expliciete Nachtzicht-kolommen en één sectieritme; uurhoogte blijft eigendom van hour-panel-refinement; cache ${cache}.`);
 }
 
 if(require.main===module)main();
-module.exports={
-  OUT,BASIS_MARKER,MARKER,RUNTIME_ID,STYLE,RUNTIME,
-  UREN_OUD,UREN_NIEUW,GRAFIEK_START_OUD,GRAFIEK_START_NIEUW,GRAFIEK_SYNC_OUD,GRAFIEK_SYNC_NIEUW,
-  tel,htmlBestanden,vervangEen,pasTekstAan,main
-};
+module.exports={OUT,BASIS_MARKER,MARKER,RUNTIME_ID,STYLE,RUNTIME,htmlBestanden,pasTekstAan,main};
