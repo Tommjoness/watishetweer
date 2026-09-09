@@ -96,7 +96,7 @@ async function controleer(type,naam){
         });
         const kansLabels=[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).map(el=>(el.textContent||"").trim());
         return {
-          n:g&&g.n,mobiel:g&&g.M,
+          n:g&&g.n,mobiel:g&&g.M,W:g&&g.W,cw:g&&g.cw,chartStart:S.chartStart,chartBereik:S.chartBereik,
           starts:startEls.map(el=>(el.textContent||"").trim()),
           ends:endEls.map(el=>(el.textContent||"").trim()),
           ranges:rangeEls.map(el=>(el.textContent||"").trim()),
@@ -113,7 +113,7 @@ async function controleer(type,naam){
         assert.deepEqual(uur24.ends,[],`${naam} ${breedte}: krappe mobiele perioden forceren geen losse eindtijden`);
         assert.deepEqual(uur24.ranges,["15:00–18:00","21:00–22:00"],`${naam} ${breedte}: mobiele perioden vallen generiek terug op compacte tijdvakken`);
       }else{
-        assert.deepEqual(uur24.starts,["15:00"],`${naam} ${breedte}: brede desktopperiode houdt een losse begintijd`);
+        assert.deepEqual(uur24.starts,["15:00"],`${naam} ${breedte}: brede desktopperiode houdt een losse begintijd; kreeg ${JSON.stringify({starts:uur24.starts,ends:uur24.ends,ranges:uur24.ranges,n:uur24.n,W:uur24.W,cw:uur24.cw,chartStart:uur24.chartStart,chartBereik:uur24.chartBereik,tijdBinnen:uur24.tijdBinnen})}`);
         assert.deepEqual(uur24.ends,["18:00"],`${naam} ${breedte}: brede desktopperiode houdt een losse eindtijd`);
         assert.deepEqual(uur24.ranges,["21:00–22:00"],`${naam} ${breedte}: één-uursperiode gebruikt ook op desktop de compacte range`);
       }
