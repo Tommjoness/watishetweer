@@ -140,7 +140,8 @@ async function controleer(page,naam,breedte){
     const nu=teksten.filter(x=>/^nu(?:\s-?\d+°)?$/i.test(x.tekst));
     const nuEl=[...chart.querySelectorAll("text")].find(el=>/^nu(?:\s-?\d+°)?$/i.test((el.textContent||"").trim()));
     const nuX=nuEl?Number(nuEl.getAttribute("x"))-8:null;
-    const tempSource=S.geo?{n:S.geo.n,cw:S.geo.cw,nuX,tijden:[...S.geo.TI],temperaturen:[...S.geo.T],x:S.geo.T.map((_,i)=>S.geo.x(i))}:null;
+    const grafiekBron=typeof grafiek==="function"?String(grafiek):"";
+    const tempSource=S.geo?{n:S.geo.n,cw:S.geo.cw,nuX,runtime055:(grafiekBron.match(/(?:^|[^\\d])(?:0?\\.55)(?!\\d)/g)||[]).length,runtime105:(grafiekBron.match(/(?:^|[^\\d])1\\.05(?!\\d)/g)||[]).length,functieLengte:grafiekBron.length,tijden:[...S.geo.TI],temperaturen:[...S.geo.T],x:S.geo.T.map((_,i)=>S.geo.x(i))}:null;
     const vb=chart.viewBox.baseVal;
     const chartRect=rect(chart);
     const tempBuiten=gewone.filter(x=>x.box.l<chartRect.l-1||x.box.r>chartRect.r+1||x.box.t<chartRect.t-1||x.box.b>chartRect.b+1).map(x=>x.tekst);
