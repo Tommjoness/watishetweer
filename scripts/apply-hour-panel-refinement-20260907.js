@@ -8,7 +8,7 @@ const OUT=path.join(__dirname,"..","public");
 const MARKER="/* ===== HOUR PANEL REFINEMENT 20260907 ===== */";
 const STYLE_MARKER="/* ===== DESKTOP FINISHING 20260907 ===== */";
 const UREN_OUD="const MAX_DESKTOP_UREN=10;";
-const UREN_NIEUW="const MAX_DESKTOP_UREN=12;/* maximaal venster; de grafiekhoogte kiest 8–12 volledige rijen */";
+const UREN_NIEUW="const MAX_DESKTOP_UREN=11;/* maximaal rustig venster; de natuurlijke grafiekhoogte kiest volledige rijen */";
 const MM_OUD='mm.textContent=num(r.hoeveelheid)===0&&(num(r.kans)===null||num(r.kans)<=0)?"–":formatMm(r.hoeveelheid)||"–";';
 const MM_NIEUW='mm.textContent=formatMm(r.hoeveelheid)||"–";';
 const UURMODUS_OUD='  const desktop=window.innerWidth>=1100;\n  const rijen=desktop?desktopUurRijen():uurRijenUitGeo(S.geo,S.d&&S.d.current&&S.d.current.time,S.dag!=null,S.d&&S.d.hourly);tbody.replaceChildren();';
@@ -31,9 +31,11 @@ const UURMODUS_NIEUW=`  const desktop=window.innerWidth>=1100;
      die rijen na de grafiekhertekening niet meer terugkomen. */
   if(desktop&&rijen.length&&basisGrafiek&&S.geo&&typeof S.geo.x==="function"){
     const start=Number(rijen[0].bronIndex);
-    if(Number.isInteger(start)&&S.chartStart!==start){basisGrafiek(start,24);desktopGrafiek=true;}
+    if(Number.isInteger(start)&&(S.chartStart!==start||S.chartBereik!==MAX_DESKTOP_UREN)){basisGrafiek(start,MAX_DESKTOP_UREN);desktopGrafiek=true;}
   }
   tbody.replaceChildren();`;
+const GRAFIEK_SYNC_OUD='if(basisGrafiek&&S.geo&&typeof S.geo.x==="function"&&Number.isInteger(start)&&S.chartStart!==start){\n    basisGrafiek(start,24);desktopGrafiek=true;\n  }';
+const GRAFIEK_SYNC_NIEUW='const grafiekUren=Math.max(1,Math.min(MAX_DESKTOP_UREN,rows.length));\n  if(basisGrafiek&&S.geo&&typeof S.geo.x==="function"&&Number.isInteger(start)&&rows.length&&(S.chartStart!==start||S.chartBereik!==grafiekUren)){\n    basisGrafiek(start,grafiekUren);desktopGrafiek=true;\n  }';
 const HOOGTE_OUD='  if(window.innerWidth<1100){aside.style.height="";return;}';
 const HOOGTE_NIEUW=`  if(window.innerWidth<1100){aside.style.height="";aside.style.removeProperty("--wiw-hour-row-pad-extra");return;}
   /* Meet elke sync vanuit de vaste leesbare minimumrijhoogte. Resthoogte uit
@@ -56,15 +58,27 @@ const PANEL_HOOGTE_NIEUW=`  /* Hoogtefiltering is reversibel: de eerste meting b
   /* Het paneel volgt exact de onafhankelijk gemeten grafiekhoogte. Eerst wordt met de vaste,
      leesbare minimumrijhoogte het maximale aantal volledige uren gekozen.
      Alleen de kleine resthoogte die te klein is voor nóg een volledige rij
-     wordt daarna gelijkmatig over de zichtbare regels verdeeld. Daardoor geen
-     halve rij, geen gepropte tabel en geen circulaire grafiekmeting. */
+     wordt daarna gelijkmatig over de zichtbare regels verdeeld. */
   aside.style.height=h+"px";
   const zichtbareRijen=tbody?[...tbody.children]:[];
   if(zichtbareRijen.length){
-    const laatste=zichtbareRijen[zichtbareRijen.length-1].getBoundingClientRect();
-    const rest=Math.max(0,grens-laatste.bottom-0.5);
-    const extraPerZijde=Math.min(4.5,rest/(zichtbareRijen.length*2));
-    if(extraPerZijde>0.01)aside.style.setProperty("--wiw-hour-row-pad-extra",extraPerZijde+"px");
+    const laatste=zichtbareRijen[zichtbareRijen.length-1];
+    let laatsteRect=laatste.getBoundingClientRect();
+    let rest=Math.max(0,grens-laatsteRect.bottom-0.5);
+    let extraPerZijde=Math.min(4.5,rest/(zichtbareRijen.length*2));
+    if(extraPerZijde>0.01){
+      aside.style.setProperty("--wiw-hour-row-pad-extra",extraPerZijde.toFixed(3)+"px");
+      /* Tabellen ronden subpixels per rij af. Meet één keer na het toepassen en
+         absorbeer alleen de resterende fractie; zo blijft er geen los ondervlak
+         zonder een extra rij te forceren of de grafiekhoogte te veranderen. */
+      document.documentElement.getBoundingClientRect();
+      laatsteRect=laatste.getBoundingClientRect();
+      rest=Math.max(0,grens-laatsteRect.bottom-0.5);
+      if(rest>0.25&&extraPerZijde<4.5){
+        extraPerZijde=Math.min(4.5,extraPerZijde+rest/(zichtbareRijen.length*2));
+        aside.style.setProperty("--wiw-hour-row-pad-extra",extraPerZijde.toFixed(3)+"px");
+      }
+    }
   }
   aside.dataset.visibleHours=String(zichtbareRijen.length);`;
 const NU_OUD="    const nuIdx = plaatsNuIndex(TI);";
@@ -87,7 +101,6 @@ ${STYLE_MARKER}
 /* Gerichte desktopafronding op basis van productiebeelden. Mobiele layout,
    data-interpretatie en providerlogica blijven onaangeraakt. */
 @media(min-width:1100px){
-  /* Plaats en tijd vormen samen één compacte, gecentreerde kopgroep. */
   #place{
     display:flex!important;
     justify-content:center!important;
@@ -97,9 +110,6 @@ ${STYLE_MARKER}
     padding-right:clamp(28px,3.5vw,56px)!important
   }
   #place #plaatstijd{margin-left:0!important;flex:0 0 auto!important}
-
-  /* Grafiek en rijke uurweergave vormen samen één rustige module. De grafiek
-     behoudt zijn natuurlijke hoogte; alleen het paneel volgt die hoogte. */
   .wiw-chart-layout{
     grid-template-columns:minmax(0,2.125fr) minmax(360px,1fr)!important;
     gap:clamp(22px,2.35vw,32px)!important;
@@ -116,49 +126,23 @@ ${STYLE_MARKER}
     padding-left:clamp(18px,1.7vw,24px)!important;
     align-self:start!important
   }
-
-  /* Een expliciete 48-uurs-/zevendagenkeuze is een grafiekmodus. De verborgen
-     technische uurkolom is daar niet nodig en wordt volledig uitgeschakeld. */
-  .wiw-chart-layout[data-hour-paired="0"]{
-    grid-template-columns:minmax(0,1fr)!important
-  }
-  .wiw-chart-layout[data-hour-paired="0"] .wiw-hour-panel{
-    display:none!important
-  }
-
-  /* De buitenste SEO-navigatie blijft bewust viewportbreed zodat de bestaande
-     scheidingslijn en achtergrond full-bleed blijven. Alleen de echte inhoud
-     krijgt de veilige desktop-inset; latere shorthand-padding op de wrapper kan
-     deze inhoudsruimte daardoor niet meer ongedaan maken. */
+  .wiw-chart-layout[data-hour-paired="0"]{grid-template-columns:minmax(0,1fr)!important}
+  .wiw-chart-layout[data-hour-paired="0"] .wiw-hour-panel{display:none!important}
   .seo-plaatsnav-inner{
     padding-left:clamp(24px,3.5vw,56px)!important;
     padding-right:clamp(24px,3.5vw,56px)!important;
     box-sizing:border-box!important
   }
-
-  /* Vijf visuele kolommen houden zeven betrouwbare waarden leesbaar: gevoel
-     staat compact naast temperatuur; kans blijft onder de hoeveelheid. */
   .wiw-visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
-  #wiw-hour-panel h3{
-    margin-top:0!important;
-    margin-bottom:9px!important;
-    font-size:20px!important;
-    line-height:1.15!important
-  }
+  #wiw-hour-panel h3{margin-top:0!important;margin-bottom:9px!important;font-size:20px!important;line-height:1.15!important}
   .wiw-hour-table{table-layout:fixed!important;font-size:12px!important}
   .wiw-hour-table th:nth-child(1),.wiw-hour-table td:nth-child(1){width:15%!important}
   .wiw-hour-table th:nth-child(2),.wiw-hour-table td:nth-child(2){width:9%!important;text-align:center!important}
   .wiw-hour-table th:nth-child(3),.wiw-hour-table td:nth-child(3){width:29%!important}
   .wiw-hour-table th:nth-child(4),.wiw-hour-table td:nth-child(4){width:25%!important}
   .wiw-hour-table th:nth-child(5),.wiw-hour-table td:nth-child(5){width:22%!important}
-  .wiw-hour-table td{
-    padding:calc(4px + var(--wiw-hour-row-pad-extra,0px)) 4px!important;
-    line-height:1.12!important
-  }
-  .wiw-hour-table th{
-    padding:5px 4px!important;
-    line-height:1.1!important
-  }
+  .wiw-hour-table td{padding:calc(4px + var(--wiw-hour-row-pad-extra,0px)) 4px!important;line-height:1.12!important}
+  .wiw-hour-table th{padding:5px 4px!important;line-height:1.1!important}
   .wiw-hour-table tbody tr:last-child td{border-bottom:0!important}
   .wiw-hour-time time,.wiw-hour-primary{display:block;color:var(--ink);font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
   .wiw-hour-secondary{display:block;margin-top:2px;color:var(--ink-45);font-size:9.5px;line-height:1.1;white-space:nowrap}
@@ -170,9 +154,6 @@ ${STYLE_MARKER}
   .wiw-hour-weather-icon{display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center}
   .wiw-hour-weather-icon svg{display:block;width:22px!important;height:22px!important}
   .wiw-hour-rain .wiw-hour-primary{color:var(--teal)}
-
-  /* Nachtzicht blijft breed als sectie, maar de echte gegevens vormen één
-     compacte leeslijn. Geen flexkolom mag de tussenruimte opslokken. */
   #nights .row.night{
     grid-template-columns:96px 58px minmax(190px,260px) 92px minmax(320px,480px)!important;
     column-gap:clamp(14px,1.45vw,20px)!important;
@@ -181,48 +162,23 @@ ${STYLE_MARKER}
 }
 
 @media(min-width:1366px){
-  /* Acht rijke regels moeten op de kleinste contractdesktop binnen de
-     natuurlijke grafiekhoogte passen. De 1px basispadding houdt de bestaande
-     typografie intact; eventuele resthoogte wordt daarna verdeeld. */
-  .wiw-hour-table td{
-    padding:calc(1px + var(--wiw-hour-row-pad-extra,0px)) 4px!important
-  }
+  .wiw-hour-table td{padding:calc(1px + var(--wiw-hour-row-pad-extra,0px)) 4px!important}
 }
 
 @media(min-width:1366px) and (max-width:1499px){
-  /* Op de kleinste desktopbreedtes winnen we de resterende vaste hoogte terug
-     uit kop en tabelkop, niet uit de inhoudsregels. */
   #wiw-hour-panel h3{margin-bottom:5px!important}
   .wiw-hour-table th{padding:3px 4px!important}
 }
 
 @media(min-width:1500px){
-  /* Op brede desktops is de laatste Nachtzicht-kolom al volledig breed, maar
-     de maantijd stond direct onder het advies waardoor rechts visueel leeg
-     bleef. Gebruik die bestaande kolom in twee delen: advies links, maaninfo
-     rechts. Er wordt geen nieuwe informatie toegevoegd. */
   #nights .row.night:not(.kop) .nmeta.wide{
     display:grid!important;
     grid-template-columns:minmax(0,1fr) minmax(180px,230px)!important;
     column-gap:24px!important;
     align-items:center!important
   }
-  #nights .row.night:not(.kop) .nachtadvies{
-    grid-column:1!important;
-    width:100%!important;
-    max-width:none!important;
-    margin:0!important;
-    text-align:left!important
-  }
-  #nights .row.night:not(.kop) .nachtmaan{
-    grid-column:2!important;
-    width:100%!important;
-    max-width:none!important;
-    margin:0!important;
-    justify-self:end!important;
-    text-align:right!important;
-    white-space:normal!important
-  }
+  #nights .row.night:not(.kop) .nachtadvies{grid-column:1!important;width:100%!important;max-width:none!important;margin:0!important;text-align:left!important}
+  #nights .row.night:not(.kop) .nachtmaan{grid-column:2!important;width:100%!important;max-width:none!important;margin:0!important;justify-self:end!important;text-align:right!important;white-space:normal!important}
 }
 `;
 
@@ -250,11 +206,6 @@ function voegStijlInHeadToe(bron,label){
     if(bestaand>headEinde)throw new Error(`${label}: desktop-finishing-stijl staat buiten de actieve <head>.`);
     return bron;
   }
-  /* release-recovery-finalize voegt later in de body een <noscript><style>
-     toe. Een globale lastIndexOf('</style>') koos daardoor dat niet-actieve
-     stijlblok en liet de desktopregels bij normale JavaScript-runs ongemerkt
-     buiten werking. Zoek daarom uitsluitend vóór </head> naar het laatste
-     echte head-stijlblok. */
   const stylePos=bron.lastIndexOf("</style>",headEinde);
   if(stylePos<0)throw new Error(`${label}: geen actief stijlblok in <head> gevonden voor desktopafronding.`);
   return bron.slice(0,stylePos)+STYLE+"\n"+bron.slice(stylePos);
@@ -268,6 +219,7 @@ function pasTekstAan(html,label="artifact"){
   bron=vervangEen(bron,stapOud,stapNieuw,`${label} desktop-uurmarkeringen`);
   bron=vervangEen(bron,MM_OUD,MM_NIEUW,`${label} neerslagnul`);
   bron=vervangEen(bron,UURMODUS_OUD,UURMODUS_NIEUW,`${label} desktop-bereikmodus`);
+  bron=vervangEen(bron,GRAFIEK_SYNC_OUD,GRAFIEK_SYNC_NIEUW,`${label} gesynchroniseerde grafiekrange`);
   bron=vervangEen(bron,HOOGTE_OUD,HOOGTE_NIEUW,`${label} lange-bereikhoogte`);
   bron=vervangEen(bron,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,`${label} hoogtegestuurd uurpaneel`);
   bron=vervangEen(bron,NU_OUD,NU_NIEUW,`${label} desktop-nucontext`);
@@ -295,4 +247,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,NU_OUD,NU_NIEUW,KOP_OUD,KOP_NIEUW,EERSTVOLGEND_OUD,EERSTVOLGEND_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};
+module.exports={OUT,MARKER,STYLE_MARKER,STYLE,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,UURMODUS_OUD,UURMODUS_NIEUW,GRAFIEK_SYNC_OUD,GRAFIEK_SYNC_NIEUW,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,NU_OUD,NU_NIEUW,KOP_OUD,KOP_NIEUW,EERSTVOLGEND_OUD,EERSTVOLGEND_NIEUW,tel,htmlBestanden,vervangEen,voegStijlInHeadToe,pasTekstAan,main};
