@@ -72,8 +72,23 @@ document.addEventListener('DOMContentLoaded',()=>{
       const brief=document.getElementById('brief'),temp=document.getElementById('t');
       const eersteTekst=(brief&&brief.textContent||'').replace(/\\s+/g,' ').trim();
       const eersteTemp=(temp&&temp.textContent||'').trim();
+
       window.__briefFase=0;window.__briefDelay=0;
       await load(52.35,5.26,'Tussen B',false,true,'NL');
+      const tussenTemp=(temp&&temp.textContent||'').trim();
+
+      /* Deze guard test bewust de presentatie van een geldige Q1-cachehit, niet
+         nogmaals het vullen van die cache. Het bestaande Q1-browsercheckpoint
+         bewijst A→B→A en bewaarCache al end-to-end. Hier leggen we exact één
+         geldige entry vast via dezelfde ls-opslag en hetzelfde Q1-dataformaat,
+         zodat de briefingasserties niet van een tweede verantwoordelijkheid
+         afhankelijk zijn. */
+      const sleutel=WeatherNowQ1.cacheSleutel(51.92,4.48);
+      const cacheItem={d:__briefCached,air:__briefAir,airOp:Date.now(),label:'Cache A',lat:51.92,lon:4.48,land:'NL',op:Date.now()};
+      ls.set('weerbriefing.plaatscache.q1',{[sleutel]:cacheItem});
+      zet('seed-usable',WeatherNowQ1.cacheIsDirectBruikbaar(cacheItem,Date.now())?'ok':'fout');
+      zet('tussen-temp',tussenTemp);
+
       const hitsVoor=window.WeatherNowQ1Performance?WeatherNowQ1Performance.cacheHits:0;
       window.__briefFase=2;window.__briefDelay=700;
       const verversing=load(51.92,4.48,'Cache A',false,true,'NL');
@@ -110,13 +125,15 @@ try{
   if(r.status!==0)throw new Error("browser exit "+r.status+" "+String(r.stderr||"").slice(-1200));
   const dom=r.stdout||"";
   const waarde=k=>{const m=new RegExp('data-brief-stable-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
-  const fout=`done=${waarde('done')} error=${waarde('error')} firstTemp=${waarde('first-temp')} firstLen=${waarde('first-len')} cache=${waarde('pending-cachehit')} pendingTemp=${waarde('pending-temp')} pendingVis=${waarde('pending-visibility')} pendingHidden=${waarde('pending-hidden')} pendingBusy=${waarde('pending-busy')} pendingOwner=${waarde('pending-owner')} finalTemp=${waarde('final-temp')} finalLen=${waarde('final-len')} changed=${waarde('copy-changed')} finalVis=${waarde('final-visibility')} finalHidden=${waarde('final-hidden')} finalBusy=${waarde('final-busy')} finalOwner=${waarde('final-owner')}`;
+  const fout=`done=${waarde('done')} error=${waarde('error')} firstTemp=${waarde('first-temp')} firstLen=${waarde('first-len')} tussenTemp=${waarde('tussen-temp')} seed=${waarde('seed-usable')} cache=${waarde('pending-cachehit')} pendingTemp=${waarde('pending-temp')} pendingVis=${waarde('pending-visibility')} pendingHidden=${waarde('pending-hidden')} pendingBusy=${waarde('pending-busy')} pendingOwner=${waarde('pending-owner')} finalTemp=${waarde('final-temp')} finalLen=${waarde('final-len')} changed=${waarde('copy-changed')} finalVis=${waarde('final-visibility')} finalHidden=${waarde('final-hidden')} finalBusy=${waarde('final-busy')} finalOwner=${waarde('final-owner')}`;
   if(waarde('done')!=="ok")throw new Error("Briefing-stability browser niet afgerond: "+fout);
-  if(waarde('first-temp')!=="12"||!Number(waarde('first-len')))throw new Error("Briefing-stability kon Cache A niet betrouwbaar primen: "+fout);
+  if(waarde('first-temp')!=="12"||!Number(waarde('first-len')))throw new Error("Briefing-stability kon Cache A niet betrouwbaar opbouwen: "+fout);
+  if(waarde('tussen-temp')!=="18")throw new Error("Briefing-stability kon tussenplaats B niet aantoonbaar tonen: "+fout);
+  if(waarde('seed-usable')!=="ok")throw new Error("Briefing-stability testfixture leverde geen direct bruikbare Q1-cache-entry: "+fout);
   if(waarde('pending-cachehit')!=="ok"||waarde('pending-temp')!=="12")throw new Error("Briefing-stability raakte de plaatscache niet als directe tussenweergave: "+fout);
   if(waarde('pending-visibility')!=="hidden"||waarde('pending-hidden')!=="true"||waarde('pending-busy')!=="true"||!waarde('pending-owner'))throw new Error("Cached briefing was tijdens refresh nog zichtbaar/aankondigbaar: "+fout);
   if(waarde('final-temp')!=="31")throw new Error("Verse forecast heeft de zichtbare hero niet vervangen: "+fout);
   if(!Number(waarde('final-len'))||waarde('copy-changed')!=="ja")throw new Error("Testscenario onderscheidt cached en verse briefing niet aantoonbaar: "+fout);
   if(waarde('final-visibility')==="hidden"||waarde('final-hidden')==="true"||waarde('final-busy')==="true"||waarde('final-owner'))throw new Error("Definitieve briefing bleef in voorlopige toestand hangen: "+fout);
-  console.log("Briefing-stability browser 1366px: A→B→A raakt de echte Q1-plaatscache; cached hero verschijnt direct, cached briefing blijft verborgen/a11y-stil en alleen de definitieve refreshbriefing wordt zichtbaar.");
+  console.log("Briefing-stability browser 1366px: echte Q1-cachehit toont cached hero direct, houdt cached briefing visueel/a11y stil en geeft alleen de definitieve refreshbriefing vrij.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
