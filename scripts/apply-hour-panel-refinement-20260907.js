@@ -217,6 +217,9 @@ function pasTekstAan(html,label="artifact"){
   const stapOud='const stap = n<=24 ? 3 : n<=48 ? 6 : (M?18:12);';
   const stapNieuw='const stap = !M&&window.innerWidth>=1100&&n<=globalThis.WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN ? 1 : n<=24 ? 3 : n<=48 ? 6 : (M?18:12);';
   bron=vervangEen(bron,stapOud,stapNieuw,`${label} desktop-uurmarkeringen`);
+  const nuStraalOud='if(Math.abs(x(idx)-nuX)<cw*1.05) kandKaart.delete(idx);';
+  const nuStraalNieuw='if(Math.abs(x(idx)-nuX)<((!M&&window.innerWidth>=1100&&n<=globalThis.WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN)?cw*0.55:cw*1.05)) kandKaart.delete(idx);';
+  bron=vervangEen(bron,nuStraalOud,nuStraalNieuw,`${label} compacte desktop-nuafstand`);
   bron=vervangEen(bron,MM_OUD,MM_NIEUW,`${label} neerslagnul`);
   bron=vervangEen(bron,UURMODUS_OUD,UURMODUS_NIEUW,`${label} desktop-bereikmodus`);
   bron=vervangEen(bron,GRAFIEK_SYNC_OUD,GRAFIEK_SYNC_NIEUW,`${label} gesynchroniseerde grafiekrange`);
