@@ -138,15 +138,9 @@ async function controleer(page,naam,breedte){
     }
     const gewone=teksten.filter(x=>/^-?\d+°$/.test(x.tekst)&&/Bodoni/i.test(x.font));
     const nu=teksten.filter(x=>/^nu(?:\s-?\d+°)?$/i.test(x.tekst));
-    const nuEl=[...chart.querySelectorAll("text")].find(el=>/^nu(?:\s-?\d+°)?$/i.test((el.textContent||"").trim()));
-    const nuX=nuEl?Number(nuEl.getAttribute("x"))-8:null;
-    const grafiekBron=typeof grafiek==="function"?String(grafiek):"";
-    const tempSource=S.geo?{n:S.geo.n,cw:S.geo.cw,nuX,runtime055:(grafiekBron.match(/(?:^|[^\\d])(?:0?\\.55)(?!\\d)/g)||[]).length,runtime105:(grafiekBron.match(/(?:^|[^\\d])1\\.05(?!\\d)/g)||[]).length,functieLengte:grafiekBron.length,tijden:[...S.geo.TI],temperaturen:[...S.geo.T],x:S.geo.T.map((_,i)=>S.geo.x(i))}:null;
     const vb=chart.viewBox.baseVal;
     const chartRect=rect(chart);
     const tempBuiten=gewone.filter(x=>x.box.l<chartRect.l-1||x.box.r>chartRect.r+1||x.box.t<chartRect.t-1||x.box.b>chartRect.b+1).map(x=>x.tekst);
-    const tempDots=[...chart.querySelectorAll("circle[data-temp-index]")].map(el=>{const i=Number(el.getAttribute("data-temp-index"));return {i,tijd:S.geo&&S.geo.TI&&S.geo.TI[i],temp:S.geo&&S.geo.T&&S.geo.T[i],x:Number(el.getAttribute("cx")),y:Number(el.getAttribute("cy"))};});
-    const tempLabelBoxes=gewone.map(x=>({tekst:x.tekst,l:+x.box.l.toFixed(2),r:+x.box.r.toFixed(2),t:+x.box.t.toFixed(2),b:+x.box.b.toFixed(2)}));
     return {
       overflow:document.documentElement.scrollWidth-window.innerWidth,
       nightRows:rijen,nachtRight:nachtRect.r,
@@ -158,7 +152,7 @@ async function controleer(page,naam,breedte){
         source:moonlab&&moonlab.getAttribute("data-maan-fase")!==null?Number(moonlab.getAttribute("data-maan-fase")):null,
         rendered:moonlabSvg&&moonlabSvg.getAttribute("data-fase")!==null?Number(moonlabSvg.getAttribute("data-fase")):null
       },
-      viewBox:{w:vb.width,h:vb.height},bots,nu:nu.map(x=>x.tekst),tempLabels:gewone.length,tempDots,tempLabelBoxes,tempSource,tempBuiten,
+      viewBox:{w:vb.width,h:vb.height},bots,nu:nu.map(x=>x.tekst),tempLabels:gewone.length,tempBuiten,
       canonicalBeste:[...nights.querySelectorAll(".nachtadvies")].filter(x=>/Beste periode\s+\d{2}:\d{2}/i.test(x.textContent||"")).length
     };
   });
@@ -203,7 +197,7 @@ async function controleer(page,naam,breedte){
   assert.ok(r.viewBox.h>=basisH&&r.viewBox.h<=basisH+100,`${naam} ${breedte}px: grafiekhoogte blijft binnen basis + gereserveerde onderruimte (${r.viewBox.h}px)`);
   assert.deepEqual(r.nu,["nu 21°"],`${naam} ${breedte}px: exact één actuele temperatuur in grafiek`);
   if(mobiel)assert.ok(r.tempLabels>=4,`${naam} ${breedte}px: mobiel houdt meerdere temperatuurreferenties naast het actuele punt (${r.tempLabels})`);
-  else assert.ok(r.tempLabels>=6,`${naam} ${breedte}px: desktop houdt voldoende zichtbare temperatuurreferenties (${r.tempLabels}; ${JSON.stringify({bron:r.tempSource,punten:r.tempDots,labels:r.tempLabelBoxes})})`);
+  else assert.ok(r.tempLabels>=6,`${naam} ${breedte}px: desktop houdt voldoende zichtbare temperatuurreferenties`);
   assert.deepEqual(r.tempBuiten,[],`${naam} ${breedte}px: temperatuurcijfers blijven binnen grafiek`);
   assert.deepEqual(r.bots,[],`${naam} ${breedte}px: zichtbare grafiekteksten botsen niet; botsingen: ${JSON.stringify(r.bots)}`);
 }
