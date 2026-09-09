@@ -9,11 +9,11 @@ const BASIS_MARKER="/* ===== HOUR PANEL CLEANUP 20260909 ===== */";
 const MARKER="/* ===== DESKTOP VISUAL POLISH 20260909 ===== */";
 const RUNTIME_ID="desktop-visual-polish-runtime-20260909";
 const UREN_OUD="const MAX_DESKTOP_UREN=12;/* maximaal venster; de grafiekhoogte kiest 8–12 volledige rijen */";
-const UREN_NIEUW="const MAX_DESKTOP_UREN=11;/* rustig desktopvenster: grafiek en tabel delen exact 11 volledige uren */";
+const UREN_NIEUW="const MAX_DESKTOP_UREN=11;/* rustig desktopvenster: maximaal 11 uren; hoogtefilter synchroniseert de zichtbare reeks */";
 const GRAFIEK_START_OUD='if(Number.isInteger(start)&&S.chartStart!==start){basisGrafiek(start,24);desktopGrafiek=true;}';
 const GRAFIEK_START_NIEUW='if(Number.isInteger(start)&&(S.chartStart!==start||S.chartBereik!==MAX_DESKTOP_UREN)){basisGrafiek(start,MAX_DESKTOP_UREN);desktopGrafiek=true;}';
 const GRAFIEK_SYNC_OUD='if(basisGrafiek&&S.geo&&typeof S.geo.x==="function"&&Number.isInteger(start)&&S.chartStart!==start){\n    basisGrafiek(start,24);desktopGrafiek=true;\n  }';
-const GRAFIEK_SYNC_NIEUW='if(basisGrafiek&&S.geo&&typeof S.geo.x==="function"&&Number.isInteger(start)&&(S.chartStart!==start||S.chartBereik!==MAX_DESKTOP_UREN)){\n    basisGrafiek(start,MAX_DESKTOP_UREN);desktopGrafiek=true;\n  }';
+const GRAFIEK_SYNC_NIEUW='const grafiekUren=Math.max(1,Math.min(MAX_DESKTOP_UREN,rows.length));\n  if(basisGrafiek&&S.geo&&typeof S.geo.x==="function"&&Number.isInteger(start)&&rows.length&&(S.chartStart!==start||S.chartBereik!==grafiekUren)){\n    basisGrafiek(start,grafiekUren);desktopGrafiek=true;\n  }';
 
 const STYLE=`
 ${MARKER}
@@ -22,7 +22,7 @@ ${MARKER}
 @media(min-width:1100px){
   :root{--wiw-section-gap:28px}
 
-  /* Elf uren vullen dezelfde natuurlijke grafiekhoogte met rustiger regels. */
+  /* Tot elf uren vullen dezelfde natuurlijke grafiekhoogte met rustiger regels. */
   .wiw-hour-table td{
     min-height:0!important;
     padding:calc(0px + var(--wiw-hour-row-pad-extra,0px)) 4px!important
@@ -231,7 +231,7 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen finale weerartifacts gevonden voor desktop-polish.");
   const cache=vernieuwServiceworkerCache(OUT,"desktop-visual-polish-20260909");
-  console.log(`Desktop-polish toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): 11 gedeelde uren, compactere weekmetriekgroep, vijf expliciete Nachtzicht-kolommen en één sectieritme; cache ${cache}.`);
+  console.log(`Desktop-polish toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): maximaal 11 gedeelde uren, compactere weekmetriekgroep, vijf expliciete Nachtzicht-kolommen en één sectieritme; cache ${cache}.`);
 }
 
 if(require.main===module)main();
