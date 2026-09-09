@@ -22,11 +22,9 @@ ${MARKER}
 @media(min-width:1100px){
   :root{--wiw-section-gap:28px}
 
-  /* Tot elf uren vullen dezelfde natuurlijke grafiekhoogte met rustiger regels. */
-  .wiw-hour-table td{
-    min-height:0!important;
-    padding:calc(0px + var(--wiw-hour-row-pad-extra,0px)) 4px!important
-  }
+  /* Tot elf uren vullen dezelfde natuurlijke grafiekhoogte. De bestaande
+     hoogte-owner blijft de rijpadding/resthoogte beheren; deze polish verhoogt
+     alleen de primaire leesregel licht. */
   .wiw-hour-table .wiw-hour-primary{line-height:1.15!important}
 
   /* De verwachtingskolom krijgt een begrensde breedte. De vijf metriekvelden
@@ -50,8 +48,8 @@ ${MARKER}
 
   /* Expliciete vijfkoloms Nachtzicht-structuur:
      Nacht | Zichtscore | Bewolking | Beoordeling | Beste zichtperiode.
-     De scorebalk en de maan-/zichtdetails vormen de tweede regel binnen hun
-     eigen kolom; alle primaire waarden delen daardoor één echte baseline. */
+     Score en balk delen de scorekolom zonder overlap; maan-/zichtdetails vormen
+     de tweede regel in de rechter kolom. Alle primaire waarden delen één baseline. */
   #nights .row.night{
     grid-template-columns:
       112px minmax(140px,180px) 112px minmax(118px,148px) minmax(360px,1fr)!important;
@@ -63,7 +61,10 @@ ${MARKER}
   }
   #nights .row.night:not(.kop)>.dname{grid-column:1;grid-row:1}
   #nights .row.night:not(.kop)>.score{grid-column:2;grid-row:1;justify-self:start!important;text-align:left!important}
-  #nights .row.night:not(.kop)>.sbar{grid-column:2;grid-row:2;width:100%!important;align-self:center!important}
+  #nights .row.night:not(.kop)>.sbar{
+    grid-column:2;grid-row:1;width:88px!important;
+    justify-self:end!important;align-self:center!important
+  }
   #nights .row.night:not(.kop)>.nmeta:not(.wide){grid-column:3;grid-row:1;justify-self:start!important;text-align:left!important}
   #nights .row.night:not(.kop)>.nmeta.wide{display:none!important}
   #nights .row.night:not(.kop)>.nachtadvies{
@@ -109,6 +110,18 @@ ${MARKER}
     align-items:initial!important;text-align:left!important
   }
   .wiw-night-assessment-head{display:block}
+}
+
+/* Op de kleinste contractdesktop ontbreekt slechts enkele pixels voor elf
+   comfortabele regels. Win die terug uit de vaste titel-/tabelkopchrome, niet
+   uit de inhoudsregels en niet door de natuurlijke grafiekhoogte te vergroten. */
+@media(min-width:1366px) and (max-width:1499px){
+  #wiw-hour-panel h3{margin-bottom:2px!important}
+  .wiw-hour-table th{padding:1px 4px!important}
+}
+@media(min-width:1500px){
+  #wiw-hour-panel h3{margin-bottom:8px!important}
+  .wiw-hour-table th{padding:4px 4px!important}
 }
 
 @media(max-width:1099px){
