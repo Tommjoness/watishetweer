@@ -65,7 +65,7 @@ html=html.replace("</head>",headStub+"</head>");
 
 const reporter=`<script>
 document.addEventListener('DOMContentLoaded',()=>{
-  const zet=(k,v)=>document.body.setAttribute('data-brief-stable-'+k,String(v));
+  const zet=(k,v)=>document.body.setAttribute('data-brief-stable-'+k,v==null?'':String(v));
   setTimeout(async()=>{
     try{
       await load(51.92,4.48,'Cache A',false,true,'NL');
