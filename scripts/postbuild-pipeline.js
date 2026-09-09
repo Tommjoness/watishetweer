@@ -59,6 +59,9 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "apply-location-search-pending-feedback-20260908.js",
   "verify-location-search-pending-feedback-20260908.js",
   "browser-location-search-pending-feedback-20260908.test.js",
+  "apply-briefing-stability-20260909.js",
+  "verify-briefing-stability-20260909.js",
+  "browser-briefing-stability-20260909.test.js",
   "apply-build-provenance.js",
   "verify-build-provenance.js",
   "verify-final-27.js"
