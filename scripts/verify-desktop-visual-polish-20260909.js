@@ -15,8 +15,8 @@ for(const p of htmlBestanden(OUT)){
   if(!html.includes(MARKER))continue;
   geraakt++;
   const rel=path.relative(OUT,p);
-  eis(html.includes(UREN_NIEUW),rel+": desktopvenster is niet exact 11 uur");
-  eis(html.includes(GRAFIEK_START_NIEUW)&&html.includes(GRAFIEK_SYNC_NIEUW),rel+": grafiek en tabel delen niet dezelfde 11-uursrange");
+  eis(html.includes(UREN_NIEUW),rel+": desktopvenster is niet begrensd op maximaal 11 uur");
+  eis(html.includes(GRAFIEK_START_NIEUW)&&html.includes(GRAFIEK_SYNC_NIEUW),rel+": grafiek en tabel delen niet dezelfde passende desktopuren");
   eis(html.includes('grid-template-columns:\n      100px 26px minmax(260px,380px)'),rel+": weekmetriekgroep is niet gericht begrensd");
   eis(html.includes('112px minmax(140px,180px) 112px minmax(118px,148px) minmax(360px,1fr)'),rel+": vijf Nachtzicht-kolommen ontbreken");
   eis(html.includes('.wiw-hour-table .wiw-hour-primary{line-height:1.15!important}'),rel+": elf comfortabele uurregels zijn niet hoogteveilig");
@@ -31,4 +31,4 @@ for(const p of htmlBestanden(OUT)){
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:rel+":desktop-polish-"+(i+1)}));
 }
 eis(geraakt>0,"Geen desktop-polishartifacts gevonden.");
-console.log(`Desktop-polish geverifieerd op ${geraakt} weerartifacts: 11 identieke grafiek-/tabeluren, compacte weekmetriekgroep, expliciete Nachtzicht-header en gelijk sectieritme.`);
+console.log(`Desktop-polish geverifieerd op ${geraakt} weerartifacts: maximaal 11 gedeelde grafiek-/tabeluren, compacte weekmetriekgroep, expliciete Nachtzicht-header en gelijk sectieritme.`);
