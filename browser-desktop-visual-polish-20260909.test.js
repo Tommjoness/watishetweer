@@ -112,8 +112,8 @@ function meet(){
     zet("days-head-align",Math.max(...dPos.map((x,i)=>Math.abs(x-drPos[i]))));
     zet("days-group-start",dPos[0]-R(dHead).left);zet("days-last-right",R(dHead.children[7]).right-R(dHead).left);
     zet("night-columns",C(nRow).gridTemplateColumns.split(" ").length);
-    zet("night-head",[...nHead.children].filter(e=>C(e).display!=="none").sort((a,b)=>R(a).left-R(b).left).map(e=>e.innerText.replace(/\\s+/g," ").trim()).filter(Boolean).join(" "));
-    zet("night-dom-head",[...nHead.children].filter(e=>C(e).display!=="none").map(e=>e.innerText.replace(/\\s+/g," ").trim()).filter(Boolean).join(" "));
+    zet("night-head",[...nHead.children].filter(e=>C(e).display!=="none").sort((a,b)=>R(a).left-R(b).left).map(e=>e.innerText.replace(/\s+/g," ").trim()).filter(Boolean).join(" "));
+    zet("night-dom-head",[...nHead.children].filter(e=>C(e).display!=="none").map(e=>e.innerText.replace(/\s+/g," ").trim()).filter(Boolean).join(" "));
     zet("night-baseline",Math.max(...prim)-Math.min(...prim));
     zet("night-baselines",prim.join("/"));zet("night-primary-parents",primEls.map(e=>e.className+">"+e.parentElement.className).join("/"));
     const venster=nRow.querySelector(".nachtvenster"),maan=nRow.querySelector(".nachtmaan");
@@ -141,7 +141,9 @@ try{
     if(v("done")!=="ok")throw new Error(`${w}px reporter: ${v("exception")}; injected=${v("injected")}`);
     if(n("overflow")>2)throw new Error(`${w}px: ${n("overflow")}px horizontale overflow`);
     if(w>=1100){
-      if(n("rows")!==11||n("chart-count")!==11)throw new Error(`${w}px: grafiek/tabel delen geen 11 uren (${v("chart-count")}/${v("rows")}); paneel=${v("panel-height")}, tabeltop=${v("table-top")}, rij=${v("row-height")}, kandidaten=${v("candidate-hours")}`);
+      const rows=n("rows"),chart=n("chart-count");
+      if(rows<8||rows>11||chart!==rows)throw new Error(`${w}px: grafiek/tabel delen geen 8–11 hoogtegestuurde uren (${chart}/${rows}); paneel=${v("panel-height")}, tabeltop=${v("table-top")}, rij=${v("row-height")}, kandidaten=${v("candidate-hours")}`);
+      if(n("row-height")<29)throw new Error(`${w}px: uurregel is lager dan 29px (${v("row-height")}px)`);
       if(v("first")!==v("chart-first")||v("first")!=="15:00")throw new Error(`${w}px: eerste uur verschoof of verschilt (${v("chart-first")}/${v("first")})`);
       if(v("internal")!=="visible"||v("last-fit")!=="ok")throw new Error(`${w}px: interne scrollbar of onvolledige laatste rij (${v("internal")}/${v("last-fit")})`);
       if(n("panel-balance")>1)throw new Error(`${w}px: grafiek/paneelhoogte uit balans (${v("panel-balance")}px)`);
@@ -161,7 +163,7 @@ try{
       if(n("assessment-visible")!==0)throw new Error(`${w}px: desktopheader lekt naar mobiel`);
       if(n("all-rows")!==24)throw new Error(`${w}px: mobiele uurtabel wijzigde inhoudelijk (${v("all-rows")} rijen)`);
     }
-    console.log(`${w}px desktop-polish groen: overflow ${v("overflow")}px${w>=1100?", 11 gedeelde uren, vijf Nachtzicht-kolommen en sectiegap "+v("gap-chart-days")+"px":", mobiele layout intact"}.`);
+    console.log(`${w}px desktop-polish groen: overflow ${v("overflow")}px${w>=1100?`, ${v("rows")} gedeelde hoogtegestuurde uren, vijf Nachtzicht-kolommen en sectiegap ${v("gap-chart-days")}px`:", mobiele layout intact"}.`);
   }
   console.log("Desktop-polish browsematrix geslaagd op 320/360/390/400/430/1366/1600/1920 px.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
