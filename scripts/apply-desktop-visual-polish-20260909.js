@@ -125,6 +125,7 @@ let gepland=false;
 function synchroniseerNachtkop(){
   const kop=document.querySelector("#nights .row.night.kop");
   if(!kop)return;
+  const desktop=window.matchMedia("(min-width:1100px)").matches;
   const score=kop.querySelector(":scope > .score");
   if(score&&score.textContent.trim()!=="Zichtscore")score.textContent="Zichtscore";
   const vak=kop.querySelector(":scope > .sbar");
@@ -133,6 +134,12 @@ function synchroniseerNachtkop(){
     label.className="wiw-night-assessment-head";
     label.textContent="Beoordeling";
     vak.appendChild(label);
+  }
+  const bewolking=kop.querySelector(":scope > .nmeta:not(.wide)");
+  const periode=kop.querySelector(":scope > .nmeta.wide");
+  if(vak&&bewolking&&periode){
+    if(desktop&&vak.nextElementSibling!==periode)kop.insertBefore(vak,periode);
+    else if(!desktop&&vak.nextElementSibling!==bewolking)kop.insertBefore(vak,bewolking);
   }
 }
 function synchroniseerNachtrijen(){

@@ -113,6 +113,7 @@ function meet(){
     zet("days-group-start",dPos[0]-R(dHead).left);zet("days-last-right",R(dHead.children[7]).right-R(dHead).left);
     zet("night-columns",C(nRow).gridTemplateColumns.split(" ").length);
     zet("night-head",[...nHead.children].filter(e=>C(e).display!=="none").sort((a,b)=>R(a).left-R(b).left).map(e=>e.innerText.replace(/\\s+/g," ").trim()).filter(Boolean).join(" "));
+    zet("night-dom-head",[...nHead.children].filter(e=>C(e).display!=="none").map(e=>e.innerText.replace(/\\s+/g," ").trim()).filter(Boolean).join(" "));
     zet("night-baseline",Math.max(...prim)-Math.min(...prim));
     zet("night-baselines",prim.join("/"));zet("night-primary-parents",primEls.map(e=>e.className+">"+e.parentElement.className).join("/"));
     const venster=nRow.querySelector(".nachtvenster"),maan=nRow.querySelector(".nachtmaan");
@@ -149,6 +150,7 @@ try{
       if(n("days-last-right")>=w-100)throw new Error(`${w}px: weekmetriekgroep wordt nog over de hele rij uitgerekt`);
       if(n("night-columns")!==5)throw new Error(`${w}px: Nachtzicht heeft ${v("night-columns")} kolommen i.p.v. vijf`);
       if(v("night-head")!=="NACHT ZICHTSCORE BEWOLKING BEOORDELING BESTE ZICHTPERIODE")throw new Error(`${w}px: Nachtzicht-header onjuist: ${v("night-head")}`);
+      if(v("night-dom-head")!==v("night-head"))throw new Error(`${w}px: semantische Nachtzicht-kopvolgorde wijkt visueel af (${v("night-dom-head")})`);
       if(n("assessment-visible")!==1)throw new Error(`${w}px: Beoordeling-header is niet zichtbaar`);
       if(n("night-baseline")>1.1)throw new Error(`${w}px: primaire Nachtzicht-baseline wijkt ${v("night-baseline")}px af (${v("night-baselines")}; ${v("night-primary-parents")})`);
       if(n("night-detail-axis")>1)throw new Error(`${w}px: rechter Nachtzicht-details starten ${v("night-detail-axis")}px ongelijk (${v("night-detail-debug")})`);

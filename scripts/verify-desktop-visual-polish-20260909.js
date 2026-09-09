@@ -25,6 +25,7 @@ for(const p of htmlBestanden(OUT)){
   eis(html.includes('.wiw-night-assessment-head{display:block}'),rel+": zichtbare Beoordeling-header ontbreekt");
   eis(html.includes('id="'+RUNTIME_ID+'"'),rel+": Nachtzicht-header-runtime ontbreekt");
   eis(html.includes('label.textContent="Beoordeling"'),rel+": Nachtzicht-headercopy ontbreekt");
+  eis(html.includes('if(desktop&&vak.nextElementSibling!==periode)kop.insertBefore(vak,periode)'),rel+": semantische Nachtzicht-kopvolgorde is niet gelijk aan de visuele kolomvolgorde");
   eis(html.includes('--wiw-section-gap:28px'),rel+": gedeeld sectieritme ontbreekt");
   const scripts=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).filter(Boolean);
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:rel+":desktop-polish-"+(i+1)}));
