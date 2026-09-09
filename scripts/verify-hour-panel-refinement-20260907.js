@@ -3,7 +3,12 @@
 const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
-const {OUT,MARKER,STYLE_MARKER,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,NU_OUD,NU_NIEUW,KOP_OUD,KOP_NIEUW,EERSTVOLGEND_OUD,EERSTVOLGEND_NIEUW,htmlBestanden}=require("./apply-hour-panel-refinement-20260907.js");
+const {
+  OUT,MARKER,STYLE_MARKER,UREN_OUD,UREN_NIEUW,MM_OUD,MM_NIEUW,
+  UURMODUS_NIEUW,GRAFIEK_SYNC_NIEUW,
+  PANEL_HOOGTE_OUD,PANEL_HOOGTE_NIEUW,NU_OUD,NU_NIEUW,KOP_OUD,KOP_NIEUW,
+  EERSTVOLGEND_OUD,EERSTVOLGEND_NIEUW,htmlBestanden
+}=require("./apply-hour-panel-refinement-20260907.js");
 
 function eis(ok,msg){if(!ok)throw new Error(msg);}
 let geraakt=0;
@@ -19,10 +24,12 @@ for(const p of htmlBestanden(OUT)){
   const openStyle=html.lastIndexOf("<style",stijlPos),dichtStyle=html.lastIndexOf("</style>",stijlPos);
   eis(openStyle>=0&&openStyle>dichtStyle,`${rel}: desktop-finishing-marker staat niet binnen een actief style-element`);
   eis(!html.slice(headEinde).includes(STYLE_MARKER),`${rel}: desktop-finishing-stijl lekt naar body/noscript`);
-  eis(html.includes(UREN_NIEUW)&&!html.includes(UREN_OUD),`${rel}: begrensd 12-uurs kandidaatvenster ontbreekt`);
+  eis(html.includes(UREN_NIEUW)&&!html.includes(UREN_OUD),`${rel}: begrensd 11-uurs kandidaatvenster ontbreekt`);
+  eis(html.includes(UURMODUS_NIEUW),`${rel}: grafiek wordt niet vóór de hoogtefiltering met het eerste komende tabeluur en het 11-uurs kandidaatvenster uitgelijnd`);
+  eis(html.includes(GRAFIEK_SYNC_NIEUW),`${rel}: grafiek wordt na hoogtefiltering niet exact met de zichtbare tabelrange gesynchroniseerd`);
   eis(html.includes(PANEL_HOOGTE_NIEUW)&&!html.includes(PANEL_HOOGTE_OUD),`${rel}: zichtbare desktopuren worden niet door de gemeten grafiekhoogte bepaald`);
   eis(html.includes('aside.style.removeProperty("--wiw-hour-row-pad-extra")'),`${rel}: eerdere dynamische rijpadding wordt niet vóór hermeting gereset`);
-  eis(html.includes('if(desktop&&rijen.length&&basisGrafiek&&S.geo&&typeof S.geo.x==="function")')&&html.includes('if(Number.isInteger(start)&&S.chartStart!==start){basisGrafiek(start,24);desktopGrafiek=true;}'),`${rel}: grafiek wordt niet vóór de hoogtefiltering met het eerste komende tabeluur uitgelijnd`);
+  eis(html.includes('document.documentElement.getBoundingClientRect();')&&html.includes('rest>0.25&&extraPerZijde<4.5'),`${rel}: subpixel-resthoogte wordt niet begrensd nagemeten en geabsorbeerd`);
   eis(html.includes(MM_NIEUW)&&!html.includes(MM_OUD),`${rel}: numerieke 0 mm wordt nog als ontbrekende waarde behandeld`);
   eis(html.includes(NU_NIEUW)&&!html.includes(NU_OUD),`${rel}: actuele Nu-context ontbreekt aan de gedeelde desktoprange`);
   eis(html.includes(KOP_NIEUW)&&!html.includes(KOP_OUD),`${rel}: standaard desktopgrafiek heet niet Komende uren`);
@@ -43,4 +50,4 @@ for(const p of htmlBestanden(OUT)){
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:`${rel}:hour-panel-${i+1}`}));
 }
 eis(geraakt>0,"Geen WeatherNow-artifacts gevonden om uurpaneelrefinement te verifiëren.");
-console.log(`Komende-urenrefinement geverifieerd op ${geraakt} weerartifacts: natuurlijke 24-uursgrafiek links, rijke zichtbare 8–12-uurtabel rechts, gevoelstemperatuur inline zonder wrapping, mobiel zonder Eerstvolgend-label, echte weer/neerslag/winddata, compacte Nachtzicht-kolommen en ongewijzigde data-interpretatie.`);
+console.log(`Komende-urenrefinement geverifieerd op ${geraakt} weerartifacts: natuurlijke desktopgrafiek links, rijke zichtbare 8–11-uurtabel rechts, één hoogte-owner met begrensde subpixelrest, gevoelstemperatuur inline zonder wrapping, mobiel zonder Eerstvolgend-label, echte weer/neerslag/winddata, compacte Nachtzicht-kolommen en ongewijzigde data-interpretatie.`);
