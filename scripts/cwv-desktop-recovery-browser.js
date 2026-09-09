@@ -143,10 +143,12 @@ async function run(){
           assert(Math.abs(g.hours.bottom-g.main.bottom)<=1,"uurpaneel en grafiekkolom eindigen niet gelijk");
           assert(Math.abs(g.table.bottom-result.hourRows.at(-1).rect.bottom)<=2,"geen lege onderste tabelregel");
           assert(Math.abs(g.table.bottom-g.hours.bottom)<=2,"geen loos ondervlak onder de laatste uurregel");
-          assert.equal(result.graphTimes.length,25,"standaardgrafiek moet 24 intervallen plus één rechter grenspunt houden");
+          assert.equal(result.graphTimes.length,result.sourceTimes.length,"grafiek en tabel moeten exact evenveel desktopuren tonen");
+          assert.deepEqual(result.graphTimes,result.sourceTimes,"grafiek en tabel moeten exact dezelfde desktopurenreeks tonen");
+          if(width>=1366)assert.equal(result.rows,11,"desktop vanaf 1366 px moet precies 11 volledige comfortabele uurregels tonen");
           assert.equal(result.graphTimes[0],result.sourceTimes[0],"grafiek en tabel moeten bij hetzelfde lokale uur beginnen");
           for(let i=0;i<result.sourceTimes.length;i++)assert.equal(result.graphTimes[i],result.sourceTimes[i],`tabeluur ${i} komt niet overeen met hetzelfde grafiekpunt`);
-          assert.equal(Date.parse(result.graphTimes.at(-1)+"Z")-Date.parse(result.graphTimes.at(-2)+"Z"),3600000,"rechter grafiekgrens ligt niet exact één uur na het laatste interval");
+          assert.equal(Date.parse(result.graphTimes.at(-1)+"Z")-Date.parse(result.graphTimes.at(-2)+"Z"),3600000,"opeenvolgende grafiekpunten moeten exact één uur verschillen");
           assert.equal(result.placeLayout.justify,"center","plaats en tijd vormen een compacte kopgroep");
           assert(result.placeLayout.gap>=12&&result.placeLayout.gap<=24,"afstand plaats/tijd buiten compacte band");
           if(width>=1366)assert(result.rows>=8&&result.rows<=12,"desktop toont geen comfortabele 8–12 volledige uurregels");
