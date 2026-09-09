@@ -112,8 +112,8 @@ function meet(){
     zet("days-head-align",Math.max(...dPos.map((x,i)=>Math.abs(x-drPos[i]))));
     zet("days-group-start",dPos[0]-R(dHead).left);zet("days-last-right",R(dHead.children[7]).right-R(dHead).left);
     zet("night-columns",C(nRow).gridTemplateColumns.split(" ").length);
-    zet("night-head",[...nHead.children].filter(e=>C(e).display!=="none").sort((a,b)=>R(a).left-R(b).left).map(e=>e.innerText.replace(/\s+/g," ").trim()).filter(Boolean).join(" "));
-    zet("night-dom-head",[...nHead.children].filter(e=>C(e).display!=="none").map(e=>e.innerText.replace(/\s+/g," ").trim()).filter(Boolean).join(" "));
+    zet("night-head",[...nHead.children].filter(e=>C(e).display!=="none").sort((a,b)=>R(a).left-R(b).left).map(e=>e.innerText.replace(/\\s+/g," ").trim()).filter(Boolean).join(" "));
+    zet("night-dom-head",[...nHead.children].filter(e=>C(e).display!=="none").map(e=>e.innerText.replace(/\\s+/g," ").trim()).filter(Boolean).join(" "));
     zet("night-baseline",Math.max(...prim)-Math.min(...prim));
     zet("night-baselines",prim.join("/"));zet("night-primary-parents",primEls.map(e=>e.className+">"+e.parentElement.className).join("/"));
     const venster=nRow.querySelector(".nachtvenster"),maan=nRow.querySelector(".nachtmaan");
