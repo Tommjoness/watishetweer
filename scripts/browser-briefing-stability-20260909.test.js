@@ -22,6 +22,11 @@ let html=fs.readFileSync(p,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[
 
 const cached=bouw({temp:()=>12,tempNu:12,wc:()=>3,wcNu:3,cc:()=>100,ccNu:100,pp:()=>0,pr:()=>0,som:0});
 const vers=bouw({temp:()=>31,tempNu:31,wc:()=>0,wcNu:0,cc:()=>0,ccNu:0,pp:()=>0,pr:()=>0,som:0});
+for(const d of [cached,vers]){
+  d.latitude=51.92;d.longitude=4.48;d.elevation=3;
+  d.current.visibility=16000;
+  d.daily.sunshine_duration=d.daily.time.map(()=>7*3600);
+}
 vers.daily.temperature_2m_min=vers.daily.temperature_2m_min.map(()=>29);
 vers.daily.temperature_2m_max=vers.daily.temperature_2m_max.map(()=>34);
 vers.daily.weather_code=vers.daily.weather_code.map(()=>0);
