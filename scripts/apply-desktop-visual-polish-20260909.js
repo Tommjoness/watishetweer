@@ -112,16 +112,11 @@ ${MARKER}
   .wiw-night-assessment-head{display:block}
 }
 
-/* Op de kleinste contractdesktop ontbreekt slechts enkele pixels voor elf
-   comfortabele regels. Win die terug uit de vaste titel-/tabelkopchrome, niet
-   uit de inhoudsregels en niet door de natuurlijke grafiekhoogte te vergroten. */
-@media(min-width:1366px) and (max-width:1499px){
-  #wiw-hour-panel h3{margin-bottom:2px!important}
-  .wiw-hour-table th{padding:1px 4px!important}
-}
-@media(min-width:1500px){
-  #wiw-hour-panel h3{margin-bottom:8px!important}
-  .wiw-hour-table th{padding:4px 4px!important}
+/* De hoogte-owner kiest hoeveel volledige regels echt passen. Op contractdesktop
+   blijft iedere uurregel minimaal 29px hoog; we winnen dus nooit extra uren door
+   de inhoud zelf onder de afgesproken leesbaarheid te drukken. */
+@media(min-width:1366px){
+  .wiw-hour-table tbody tr{height:29px!important}
 }
 
 @media(max-width:1099px){
