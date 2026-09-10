@@ -35,9 +35,11 @@ assert(r.html.includes(`id="${STYLE_ID}"`));
 assert(r.html.includes(RIJ_FILTER_PRODUCTIE));
 assert(r.html.includes(UURKLOK_PRODUCTIE));
 assert(!r.html.includes(UURKLOK_BRON));
+assert(STYLE.includes("@media(max-width:900px)"));
 assert(STYLE.includes("#minibar.aan::after"));
 assert(STYLE.includes("linear-gradient(to bottom,var(--sheet),transparent)"));
-assert(STYLE.includes("#wiw-hour-title{font-size:18px!important"));
+assert(STYLE.includes("#wiw-hour-title{font-size:18px!important;line-height:1.18!important;scroll-margin-top:64px}"));
+assert(!STYLE.includes("@media(max-width:430px)"),"uurtitel hoort bij de bestaande mobiele breakpoint, niet bij een ontestbare extra sub-breakpoint");
 
 const tweede=pasTekstAan(r.html,"synthetisch-tweede");
 assert.equal(tweede.html,r.html,"transform moet idempotent zijn");
