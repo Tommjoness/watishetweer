@@ -19,6 +19,7 @@ for(const p of htmlBestanden(OUT)){
   eis(!html.includes('.wiw-hour-table tbody tr{height:29px!important}'),rel+": desktop-polish forceert opnieuw een tweede rijhoogte-owner");
   eis(html.includes('grid-template-columns:\n      100px 26px minmax(260px,380px)'),rel+": weekmetriekgroep is niet gericht begrensd");
   eis(html.includes('112px minmax(140px,180px) 112px minmax(118px,148px) minmax(360px,1fr)'),rel+": vijf Nachtzicht-kolommen ontbreken");
+  eis(/#nights \.row\.night:not\(\.kop\)>\.nachtvenster\{[^}]*white-space:normal!important[^}]*\}/.test(html),rel+": zichtperiode mag op desktop niet meer buiten de eigen kolom doorlopen");
   eis(html.includes('@media(min-width:1600px)'),rel+": brede Nachtzicht-breakpoint is niet 1600px");
   eis(html.includes('minmax(320px,.9fr) minmax(220px,.65fr)'),rel+": brede Nachtzicht-verdeling over zes kolommen ontbreekt");
   eis(html.includes('grid-column:5!important;grid-row:1!important;\n    white-space:normal!important'),rel+": brede zichtperiode kan tekst niet veilig binnen de eigen kolom wrappen");
