@@ -98,10 +98,33 @@ ${MARKER}
     align-items:initial!important;text-align:left!important
   }
   .wiw-night-assessment-head{display:block}
+  .wiw-night-moon-head{display:none}
+}
+
+/* Op brede desktops gebruikt de bestaande maancontext de anders lege
+   rechterzone. De 1100–1365px-layout houdt bewust het bewezen vijfkolomsraster;
+   vanaf 1366px krijgt Maan een eigen, semantisch gelabelde zesde kolom. */
+@media(min-width:1366px){
+  #nights .row.night{
+    grid-template-columns:
+      112px minmax(140px,180px) 112px minmax(118px,148px)
+      minmax(320px,.9fr) minmax(220px,.65fr)!important
+  }
+  #nights .row.night:not(.kop)>.nachtvenster{grid-column:5!important;grid-row:1!important}
+  #nights .row.night:not(.kop)>.nachtmaan{
+    grid-column:6!important;grid-row:1!important;
+    width:100%!important;align-self:baseline!important;justify-self:stretch!important;
+    text-align:left!important
+  }
+  #nights .row.night.kop>.nmeta.wide{grid-column:5}
+  #nights .row.night.kop>.wiw-night-moon-head{
+    grid-column:6;grid-row:1;display:block;
+    text-align:left!important
+  }
 }
 
 @media(max-width:1099px){
-  .wiw-night-assessment-head{display:none!important}
+  .wiw-night-assessment-head,.wiw-night-moon-head{display:none!important}
 }
 `;
 
@@ -127,6 +150,12 @@ function synchroniseerNachtkop(){
   if(vak&&bewolking&&periode){
     if(desktop&&vak.nextElementSibling!==periode)kop.insertBefore(vak,periode);
     else if(!desktop&&vak.nextElementSibling!==bewolking)kop.insertBefore(vak,bewolking);
+  }
+  if(!kop.querySelector(":scope > .wiw-night-moon-head")){
+    const label=document.createElement("span");
+    label.className="wiw-night-moon-head";
+    label.textContent="Maan";
+    kop.appendChild(label);
   }
 }
 function synchroniseerNachtrijen(){
@@ -206,7 +235,7 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen finale weerartifacts gevonden voor desktop-polish.");
   const cache=vernieuwServiceworkerCache(OUT,"desktop-visual-polish-20260909");
-  console.log(`Desktop-polish toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): compacte weekmetriekgroep, vijf expliciete Nachtzicht-kolommen en één sectieritme; uurhoogte blijft eigendom van hour-panel-refinement; cache ${cache}.`);
+  console.log(`Desktop-polish toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): compacte weekmetriekgroep, brede Nachtzicht-maanverdeling en één sectieritme; uurhoogte blijft eigendom van hour-panel-refinement; cache ${cache}.`);
 }
 
 if(require.main===module)main();
