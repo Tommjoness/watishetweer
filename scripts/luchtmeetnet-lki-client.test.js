@@ -40,14 +40,12 @@ assert.equal(context.WeatherNowLuchtmeetnetLki.ondersteund("BE"),false);
   assert.equal(urls.length,1,"Nederlandse locatie moet één aanvullende LKI-request starten");
   assert(urls[0].includes("/api/luchtkwaliteit?"));
   assert(urls[0].includes("land=NL"));
-  assert.equal(kinderen.length,1);
-  assert.equal(kinderen[0].textContent,"Nederlandse LKI 3/11 · RIVM/Luchtmeetnet");
-  assert.match(kinderen[0].title,/aparte schaal van de Europese AQI/);
+  assert.equal(S.__luchtmeetnetLki.lki,3,"LKI-payload blijft beschikbaar zonder extra zichtbare schaalregel");
+  assert.equal(kinderen.length,0,"de overbodige Nederlandse LKI-subcopy wordt niet meer toegevoegd");
   assert.equal(kaart.bestaandeWaarde,"42 · Europese AQI","bestaande AQI mag niet worden vervangen");
-  assert.doesNotMatch(kinderen[0].textContent,/meting/i,"LKI mag niet als rauwe meting worden gelabeld");
 
   context.lucht();
-  assert.equal(kinderen.length,1,"hertekenen van de basis-AQI mag de LKI-regel niet dupliceren");
+  assert.equal(kinderen.length,0,"hertekenen van de basis-AQI mag de verwijderde LKI-regel niet terugbrengen");
 
   urls=[];
   await context.load(50.85,4.35,"Brussel",false,true,"BE");
@@ -55,5 +53,5 @@ assert.equal(context.WeatherNowLuchtmeetnetLki.ondersteund("BE"),false);
   assert.equal(urls.length,0,"buiten Nederland mag geen Luchtmeetnet-request starten");
   assert.equal(kinderen.length,0,"oude Nederlandse LKI moet bij locatie wisselen verdwijnen");
 
-  console.log("Luchtmeetnet LKI-client: NL-scope, aparte schaal en niet-blokkerende presentatie geslaagd.");
+  console.log("Luchtmeetnet LKI-client: NL-scope en requestcyclus behouden; overbodige zichtbare LKI-subcopy verwijderd.");
 })().catch(e=>{console.error(e.stack||e);process.exitCode=1;});

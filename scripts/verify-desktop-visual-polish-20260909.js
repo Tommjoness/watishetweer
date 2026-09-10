@@ -3,7 +3,7 @@
 const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
-const {OUT,MARKER,RUNTIME_ID,htmlBestanden}=require("./apply-desktop-visual-polish-20260909.js");
+const {OUT,MARKER,RUNTIME_ID,LATE_STYLE_ID,htmlBestanden}=require("./apply-desktop-visual-polish-20260909.js");
 const {UREN_NIEUW,GRAFIEK_SYNC_NIEUW}=require("./apply-hour-panel-refinement-20260907.js");
 
 function eis(ok,bericht){if(!ok)throw new Error(bericht);}
@@ -24,6 +24,15 @@ for(const p of htmlBestanden(OUT)){
   eis(html.includes('minmax(300px,.82fr) minmax(240px,.68fr)'),rel+": finale brede Nachtzicht-verdeling over zes kolommen ontbreekt");
   eis(html.includes('grid-column:5!important;grid-row:1!important;\n    white-space:normal!important'),rel+": brede zichtperiode kan tekst niet veilig binnen de eigen kolom wrappen");
   eis(html.includes('.wiw-hour-table .wiw-hour-primary{line-height:1.15!important}'),rel+": uurtypografie ontbreekt");
+  eis(html.includes(LATE_STYLE_ID),rel+": finale runtime-cascadeowner voor desktoppolish ontbreekt");
+  eis(html.includes('#t,.deg,#minitemp,.sval,.score,'),rel+": gedeelde selector voor consumentencijfers ontbreekt");
+  eis(html.includes('font-variant-numeric:lining-nums tabular-nums!important'),rel+": consumentencijfers missen lining/tabular nums");
+  eis(html.includes('font-feature-settings:\\"lnum\\" 1,\\"tnum\\" 1!important'),rel+": consumentencijfers missen expliciete OpenType-normalisatie");
+  eis(html.includes('footer{font-size:12px!important;color:var(--ink-70)!important}'),rel+": desktopbronnen zijn niet subtiel leesbaarder gemaakt");
+  eis(html.includes('.dashrow-days .nachtkop,.dashrow-days + h2{margin-top:24px!important}'),rel+": brede onderste secties missen het compactere ritme");
+  eis(html.includes('.sheet{padding-bottom:32px!important}'),rel+": brede overgang naar plaatsnavigatie blijft te ruim");
+  eis(html.includes('.seo-plaatsnav{margin-top:0!important;padding:1px 0!important;min-height:54px!important}'),rel+": brede plaatsnavigatie blijft onnodig hoog");
+  eis(!html.includes('regel.textContent=\"Nederlandse LKI '),rel+": verwijderde Nederlandse LKI-subcopy staat nog in de artifact");
   eis(html.includes('.wiw-night-assessment-head{display:block}'),rel+": zichtbare Beoordeling-header ontbreekt");
   eis(html.includes('.wiw-night-moon-head{')&&html.includes('grid-column:6'),rel+": brede Maan-kolom ontbreekt");
   eis(html.includes('.wiw-night-visibility-detail{display:none!important}'),rel+": dubbele zichtregel wordt niet uit de brede Maan-kolom gehouden");
