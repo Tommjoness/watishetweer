@@ -21,11 +21,14 @@ for(const p of htmlBestanden(OUT)){
   eis(html.includes('112px minmax(140px,180px) 112px minmax(118px,148px) minmax(360px,1fr)'),rel+": vijf Nachtzicht-kolommen ontbreken");
   eis(/#nights \.row\.night:not\(\.kop\)>\.nachtvenster\{[^}]*white-space:normal!important[^}]*\}/.test(html),rel+": zichtperiode mag op desktop niet meer buiten de eigen kolom doorlopen");
   eis(html.includes('@media(min-width:1600px)'),rel+": brede Nachtzicht-breakpoint is niet 1600px");
-  eis(html.includes('minmax(320px,.9fr) minmax(220px,.65fr)'),rel+": brede Nachtzicht-verdeling over zes kolommen ontbreekt");
+  eis(html.includes('minmax(300px,.82fr) minmax(240px,.68fr)'),rel+": finale brede Nachtzicht-verdeling over zes kolommen ontbreekt");
   eis(html.includes('grid-column:5!important;grid-row:1!important;\n    white-space:normal!important'),rel+": brede zichtperiode kan tekst niet veilig binnen de eigen kolom wrappen");
   eis(html.includes('.wiw-hour-table .wiw-hour-primary{line-height:1.15!important}'),rel+": uurtypografie ontbreekt");
   eis(html.includes('.wiw-night-assessment-head{display:block}'),rel+": zichtbare Beoordeling-header ontbreekt");
   eis(html.includes('.wiw-night-moon-head{')&&html.includes('grid-column:6'),rel+": brede Maan-kolom ontbreekt");
+  eis(html.includes('.wiw-night-visibility-detail{display:none!important}'),rel+": dubbele zichtregel wordt niet uit de brede Maan-kolom gehouden");
+  eis(html.includes('markeerDubbelZichtInMaan()'),rel+": semantische markering van de dubbele zichtregel ontbreekt");
+  eis(html.includes('#aq{width:min(1320px,100%)!important;margin-left:auto!important;margin-right:auto!important}'),rel+": brede luchtkwaliteit-/pollengroep is niet compact gecentreerd");
   eis(html.includes('id="'+RUNTIME_ID+'"'),rel+": Nachtzicht-header-runtime ontbreekt");
   eis(html.includes('label.textContent="Beoordeling"'),rel+": Nachtzicht-headercopy ontbreekt");
   eis(html.includes('label.textContent="Maan"'),rel+": Nachtzicht-maankop ontbreekt");
@@ -34,4 +37,4 @@ for(const p of htmlBestanden(OUT)){
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:rel+":desktop-polish-"+(i+1)}));
 }
 eis(geraakt>0,"Geen desktop-polishartifacts gevonden.");
-console.log(`Desktop-polish geverifieerd op ${geraakt} weerartifacts: één uurhoogte-owner, maximaal 11 gedeelde uren, compacte weekmetriekgroep, brede Nachtzicht-maanverdeling zonder tekstuitloop en gelijk sectieritme.`);
+console.log(`Desktop-polish geverifieerd op ${geraakt} weerartifacts: één uurhoogte-owner, maximaal 11 gedeelde uren, compacte weekmetriekgroep, finale brede Nachtzicht-maanverdeling zonder dubbele zichtregel of tekstuitloop, compacte brede pollenrij en gelijk sectieritme.`);
