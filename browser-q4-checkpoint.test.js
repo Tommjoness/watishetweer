@@ -297,11 +297,17 @@ async function visueleStress(browser,naam){
           const ids=[...document.querySelectorAll('[id]')].map(x=>x.id),dubbel=[...new Set(ids.filter((id,i)=>ids.indexOf(id)!==i))];
           const uurRijen=[...document.querySelectorAll('#wiw-hour-table tbody tr')],desktop=innerWidth>=1100;
           const uurMm=uurRijen.map(r=>String((desktop?r.querySelector('.wiw-hour-rain .wiw-hour-primary'):r.querySelector('td:last-child'))?.textContent||'').trim());
-          const geoMm=typeof S!=='undefined'&&S.geo&&Array.isArray(S.geo.MM)?uurRijen.map((r,i)=>desktop?S.d.hourly.precipitation[Number(r.dataset.sourceIndex)]:S.geo.MM[i]):[];
+          const uurTijden=uurRijen.map(r=>r.querySelector('time')?.dateTime||'');
+          const geoMm=typeof S!=='undefined'&&S.geo&&Array.isArray(S.geo.MM)?uurRijen.map(r=>{
+            if(desktop)return S.d.hourly.precipitation[Number(r.dataset.sourceIndex)];
+            const tijd=r.querySelector('time')?.dateTime||'',i=Array.isArray(S.geo.TI)?S.geo.TI.indexOf(tijd):-1;
+            return i>=0?S.geo.MM[i]:undefined;
+          }):[];
+          const providerNu=typeof S!=='undefined'&&S.d?new Date(Date.now()+Number(S.d.utc_offset_seconds||0)*1000).toISOString().slice(0,16):'';
           return {overflow:document.documentElement.scrollWidth-window.innerWidth,tekst:document.body.innerText,dubbel,
             dagen:document.querySelectorAll('#days .row.day:not(.kop)').length,nachten:document.querySelectorAll('#nights .row.night:not(.kop)').length,
             weeknotities:document.querySelectorAll('#days .dag-neerslagnotitie').length,
-            uurMm,geoMm,
+            uurMm,geoMm,uurTijden,providerNu,
             viewBox:(document.getElementById('chart')||{}).getAttribute?.('viewBox')||'',cloudsub:(document.getElementById('cloudsub')||{}).textContent||'',vis:(document.getElementById('vis')||{}).textContent||''};
         });
         assert(r.overflow<=2,`${naam} ${scenario} ${breedte}px: geen horizontale overflow (${r.overflow}px)`);
@@ -313,15 +319,15 @@ async function visueleStress(browser,naam){
         assert(r.nachten>=1,`${naam} ${scenario}: Nachtzicht blijft renderen`);
         assert(!/Het wordt maximaal \d+ graden/i.test(r.tekst),`${naam} ${scenario}: geen tijdloze oude maximumtemperatuurclaim`);
         assert.equal(r.weeknotities,0,`${naam} ${scenario}: lange technische weeknotities blijven wereldwijd weg`);
+        if(breedte<1100)assert(r.uurTijden.every(t=>t&&t>r.providerNu),`${naam} ${scenario} ${breedte}px: komende-uurtabel bevat geen volledig verstreken uur (${r.uurTijden[0]||'geen rij'} <= ${r.providerNu})`);
         if(scenario==='dry'){
           assert(r.uurMm.length>0,`${naam} droog ${breedte}px: uurtabel bevat neerslagwaarden`);
           if(breedte>=1100){
             assert(r.uurMm.every(v=>v==='0,0 mm'),`${naam} droog ${breedte}px: bekende toekomstige numerieke nul blijft als 0,0 mm zichtbaar`);
           }else{
             const verwacht=r.geoMm.map(v=>v===null||v===undefined||v===''||!Number.isFinite(Number(v))?'–':Number(v).toFixed(1).replace('.',',')+' mm');
-            assert(verwacht.includes('0,0 mm'),`${naam} droog ${breedte}px: fixture bevat bekende toekomstige numerieke nullen`);
-            assert(verwacht.includes('–'),`${naam} droog ${breedte}px: verlopen intervallen blijven bewust zonder forecastwaarde`);
-            assert.deepEqual(r.uurMm,verwacht,`${naam} droog ${breedte}px: numerieke nul en ontbrekende/verlopen intervallen blijven semantisch onderscheiden`);
+            assert(verwacht.includes('0,0 mm'),`${naam} droog ${breedte}px: bekende toekomstige numerieke nul blijft als 0,0 mm zichtbaar`);
+            assert.deepEqual(r.uurMm,verwacht,`${naam} droog ${breedte}px: zichtbare toekomstige rijen blijven exact aan hun bronneerslag gekoppeld`);
           }
         }
         if(scenario==='smallchance'){
