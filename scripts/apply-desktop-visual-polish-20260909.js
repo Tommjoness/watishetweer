@@ -173,7 +173,7 @@ function markeerDubbelZichtInMaan(){
     if(maan.querySelector(".wiw-night-visibility-detail"))continue;
     let gemarkeerd=false;
     for(const kind of Array.from(maan.children)){
-      const tekst=String(kind.textContent||"").replace(/\s+/g," ").trim();
+      const tekst=String(kind.textContent||"").replace(/\\s+/g," ").trim();
       if(/^Gemiddeld zicht:/i.test(tekst)&&!/[Mm]aan/.test(tekst)){
         kind.classList.add("wiw-night-visibility-detail");
         gemarkeerd=true;
@@ -183,7 +183,7 @@ function markeerDubbelZichtInMaan(){
     if(gemarkeerd)continue;
     const walker=document.createTreeWalker(maan,NodeFilter.SHOW_TEXT);let node;
     while((node=walker.nextNode())){
-      const match=/^(\s*Gemiddeld zicht:\s*[<>]?\s*\d+(?:[.,]\d+)?\+?\s*km\s*)/i.exec(String(node.nodeValue||""));
+      const match=/^(\\s*Gemiddeld zicht:\\s*[<>]?\\s*\\d+(?:[.,]\\d+)?\\+?\\s*km\\s*)/i.exec(String(node.nodeValue||""));
       if(!match)continue;
       const span=document.createElement("span");
       span.className="wiw-night-visibility-detail";
