@@ -130,21 +130,7 @@ jobs:
             exit "$code"
           fi
       - name: Regenperioden exact per tijdvak in Chromium en WebKit
-        id: rain_period_details
-        shell: bash
-        run: |
-          set +e
-          node browser-rain-period-details.test.js > /tmp/rain-period-details-e2e.log 2>&1
-          code=$?
-          cat /tmp/rain-period-details-e2e.log
-          exit "$code"
-      - name: Bewaar regenperioden-diagnostiek
-        if: failure() && steps.rain_period_details.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: rain-period-details-diagnostic
-          path: /tmp/rain-period-details-e2e.log
-          if-no-files-found: error
+        run: node browser-rain-period-details.test.js
       - name: Regendatumlabels in Chromium en WebKit
         run: node browser-rain-date-labels.test.js
       - name: Serviceworker upgrade en offline in Chromium
