@@ -101,16 +101,19 @@ ${MARKER}
   .wiw-night-moon-head{display:none}
 }
 
-/* Op brede desktops gebruikt de bestaande maancontext de anders lege
-   rechterzone. De 1100–1365px-layout houdt bewust het bewezen vijfkolomsraster;
-   vanaf 1366px krijgt Maan een eigen, semantisch gelabelde zesde kolom. */
-@media(min-width:1366px){
+/* Op echt brede desktops gebruikt de bestaande maancontext de anders lege
+   rechterzone. De 1100–1599px-layout houdt bewust het bewezen vijfkolomsraster;
+   vanaf 1600px krijgt Maan een eigen, semantisch gelabelde zesde kolom. */
+@media(min-width:1600px){
   #nights .row.night{
     grid-template-columns:
       112px minmax(140px,180px) 112px minmax(118px,148px)
       minmax(320px,.9fr) minmax(220px,.65fr)!important
   }
-  #nights .row.night:not(.kop)>.nachtvenster{grid-column:5!important;grid-row:1!important}
+  #nights .row.night:not(.kop)>.nachtvenster{
+    grid-column:5!important;grid-row:1!important;
+    white-space:normal!important
+  }
   #nights .row.night:not(.kop)>.nachtmaan{
     grid-column:6!important;grid-row:1!important;
     width:100%!important;align-self:baseline!important;justify-self:stretch!important;
