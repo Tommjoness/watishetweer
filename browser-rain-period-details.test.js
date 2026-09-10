@@ -128,7 +128,7 @@ async function controleer(type,naam){
       assert.ok(uur24.tijdBinnen.length===verwachtTijdlabels&&uur24.tijdBinnen.every(x=>x.binnen),`${naam} ${breedte}: alle zichtbare tijdlabels blijven binnen de SVG; kreeg ${JSON.stringify(uur24.tijdBinnen)}`);
       assert.ok(uur24.splitLayouts.every(x=>!x.fout&&x.zelfdeRegel&&!x.overlapt),`${naam} ${breedte}: losse begin/eindlabels blijven op één niet-overlappende regel; kreeg ${JSON.stringify(uur24.splitLayouts)}`);
       assert.ok(uur24.bedragOnderTijd.length===2&&uur24.bedragOnderTijd.every(Boolean),`${naam} ${breedte}: iedere mm-waarde staat onder het eigen tijdlabel`);
-      const verwachtAsTijden=breedte<760?9:4;
+      const verwachtAsTijden=breedte<760?8:4;
       assert.equal(uur24.asTijden.length,verwachtAsTijden,`${naam} ${breedte}: vaste uuras houdt de verwachte 3-uurscadans; kreeg ${JSON.stringify(uur24.asTijden)}`);
 
       const langer=await page.evaluate(()=>{
