@@ -21,8 +21,9 @@ for(const p of htmlBestanden(OUT)){
   eis(!html.includes(UURKLOK_BRON),`${rel}: oude provider-current klokroute staat nog actief in de mobiele uurtabel`);
   eis(html.includes("#minibar.aan::after"),`${rel}: zachte overgang onder de fixed mobiele locatiebalk ontbreekt`);
   eis(html.includes("linear-gradient(to bottom,var(--sheet),transparent)"),`${rel}: mobiele headerfade is niet thema-eigen`);
-  eis(html.includes("#wiw-hour-title{font-size:18px!important"),`${rel}: subtiel compactere mobiele uurtabeltitel ontbreekt`);
-  eis(html.includes("@media(max-width:900px)")&&html.includes("@media(max-width:430px)"),`${rel}: mobiele polish is niet tot mobiele breakpoints begrensd`);
+  eis(html.includes("#wiw-hour-title{font-size:18px!important;line-height:1.18!important;scroll-margin-top:64px}"),`${rel}: subtiel compactere mobiele uurtabeltitel ontbreekt`);
+  eis(html.includes("@media(max-width:900px)"),`${rel}: mobiele polish is niet tot de bestaande mobiele breakpoint begrensd`);
+  eis(!html.includes("@media(max-width:430px){\n  #wiw-hour-title"),`${rel}: extra smalle titelbreakpoint hoort niet meer actief te zijn`);
 }
 
 eis(gecontroleerd>0,"Geen finale weerartifacts gevonden om mobiele final-polish te verifiëren.");
