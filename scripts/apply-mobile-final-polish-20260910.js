@@ -28,7 +28,8 @@ const UURKLOK_PRODUCTIE=`  const actueleLokaleTijd=typeof weatherNowActueleLokal
    layoutfeedback gaan schakelen tijdens scrollen. We veranderen die bewezen
    keuze niet. Alleen de harde onderrand krijgt een korte thema-eigen fade zodat
    content er visueel onder verdwijnt in plaats van halverwege een letter hard te
-   worden afgesneden. De uurtabelkop wordt op smalle telefoons één stap rustiger. */
+   worden afgesneden. De uurtabelkop wordt binnen de bestaande mobiele breakpoint
+   één stap rustiger; desktop behoudt exact de bestaande 20px-hiërarchie. */
 const STYLE=`
 ${MARKER}
 @media(max-width:900px){
@@ -40,10 +41,7 @@ ${MARKER}
     pointer-events:none;
     background:linear-gradient(to bottom,var(--sheet),transparent)
   }
-  #wiw-hour-title{scroll-margin-top:64px}
-}
-@media(max-width:430px){
-  #wiw-hour-title{font-size:18px!important;line-height:1.18!important}
+  #wiw-hour-title{font-size:18px!important;line-height:1.18!important;scroll-margin-top:64px}
 }
 `;
 
