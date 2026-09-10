@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body
   const TI=Array.from({length:24},(_,i)=>i<11?'2026-09-02T'+String(i+13).padStart(2,'0')+':00':'2026-09-03T'+String(i-11).padStart(2,'0')+':00');
   const T=TI.map((_,i)=>17+i/10),A=TI.map((_,i)=>16+i/10),P=TI.map((_,i)=>10+i),MM=TI.map((_,i)=>i/10);
   S.d={timezone:'Europe/Amsterdam',utc_offset_seconds:7200,current:{time:'2026-09-02T13:27'},hourly:{time:TI,temperature_2m:T,apparent_temperature:A,precipitation_probability:P,precipitation:MM,weather_code:TI.map(()=>3),is_day:TI.map(()=>1),wind_speed_10m:TI.map(()=>8),wind_direction_10m:TI.map(()=>180)}};
-  S.geo={TI,T,A,P,MM};S.dag=null;S.bereik=24;S.klokInstantOverride=new Date('2026-09-02T11:27:00Z');
+  S.geo={TI,T,A,P,MM};S.dag=null;S.bereik=24;S.klokOverride=new Date('2026-09-02T11:27:00Z');S.klokInstantOverride=new Date('2026-09-02T11:27:00Z');
   WeatherNowFinalDesktopUI20260902.render();
   const rows=[...document.querySelectorAll('#wiw-hour-table tbody tr')],first=rows[0];
   zet('rows',rows.length);zet('first-time',first?.querySelector('time')?.textContent||'');zet('first-chance',first?.children[2]?.textContent.trim()||'');zet('first-rain',first?.children[3]?.textContent.trim()||'');zet('current',document.querySelectorAll('#wiw-hour-table tr[data-current="1"]').length);zet('marker',document.querySelector('#wiw-hour-table tr[data-current="1"] .wiw-hour-marker')?.textContent||'');
