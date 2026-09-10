@@ -70,7 +70,7 @@ ${MARKER}
     display:block!important;
     width:100%!important;min-width:0;margin:0!important;justify-self:stretch!important;
     color:var(--ink-70);font-size:13px;line-height:20px!important;
-    text-align:left!important;white-space:nowrap
+    text-align:left!important;white-space:normal!important
   }
   #nights .row.night:not(.kop)>.nachtmaan{
     grid-column:5!important;grid-row:2!important;
