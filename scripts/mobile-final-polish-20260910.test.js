@@ -44,6 +44,8 @@ assert(STYLE.includes("@media(max-width:900px)"));
 assert(STYLE.includes("#minibar.aan::after"));
 assert(STYLE.includes("linear-gradient(to bottom,var(--sheet),transparent)"));
 assert(STYLE.includes("#wiw-hour-title{font-size:18px!important;line-height:1.18!important;scroll-margin-top:64px}"));
+assert(STYLE.includes('footer a[href="/over/"]{white-space:nowrap}'));
+assert(STYLE.includes('footer a[href="/over/"] b{display:inline-block;margin-right:3px}'));
 assert(!STYLE.includes("@media(max-width:430px)"),"uurtitel hoort bij de bestaande mobiele breakpoint, niet bij een ontestbare extra sub-breakpoint");
 
 const tweede=pasTekstAan(r.html,"synthetisch-tweede");
@@ -79,4 +81,4 @@ function providerKlok(iso,offset){return new Date(new Date(iso).getTime()+offset
 assert.equal(providerKlok("2026-10-25T01:30:00Z",7200),"2026-10-25T03:30");
 assert.equal(providerKlok("2026-10-25T01:30:00Z",3600),"2026-10-25T02:30");
 
-console.log("Mobiele final-polish unitcontract groen: provider-as uurgrens, verstreken rijen, gekozen dag en fixed-headerfade/uurtitelstijl zijn geborgd.");
+console.log("Mobiele final-polish unitcontract groen: provider-as uurgrens, verstreken rijen, gekozen dag, fixed-headerfade/uurtitelstijl en footermerkseparator zijn geborgd.");

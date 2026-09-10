@@ -35,7 +35,10 @@ const UURKLOK_PRODUCTIE=`  /* Vergelijk niet met een civiele IANA-klokstring: Op
    keuze niet. Alleen de harde onderrand krijgt een korte thema-eigen fade zodat
    content er visueel onder verdwijnt in plaats van halverwege een letter hard te
    worden afgesneden. De uurtabelkop wordt binnen de bestaande mobiele breakpoint
-   één stap rustiger; desktop behoudt exact de bestaande 20px-hiërarchie. */
+   één stap rustiger; desktop behoudt exact de bestaande 20px-hiërarchie.
+   De merkregel in de footer is één SEO-link; mobiel krijgt alleen iets meer
+   visuele ruimte rond de bestaande middelpunt-separator, zonder tekst, linkdoel
+   of footerstructuur te wijzigen. */
 const STYLE=`
 ${MARKER}
 @media(max-width:900px){
@@ -48,6 +51,8 @@ ${MARKER}
     background:linear-gradient(to bottom,var(--sheet),transparent)
   }
   #wiw-hour-title{font-size:18px!important;line-height:1.18!important;scroll-margin-top:64px}
+  footer a[href="/over/"]{white-space:nowrap}
+  footer a[href="/over/"] b{display:inline-block;margin-right:3px}
 }
 `;
 
@@ -99,7 +104,7 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen finale weerartifacts gevonden voor mobiele final-polish.");
   const cache=vernieuwServiceworkerCache(OUT,"mobile-final-polish-20260910");
-  console.log(`Mobiele final-polish toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): verstreken uurstempels uit komende-uurtabel, DST-veilige providerklokgrens, zachtere fixed-headerovergang en compactere uurtabelkop; cache ${cache}.`);
+  console.log(`Mobiele final-polish toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): verstreken uurstempels uit komende-uurtabel, DST-veilige providerklokgrens, zachtere fixed-headerovergang, compactere uurtabelkop en ruimere footermerkseparator; cache ${cache}.`);
 }
 
 if(require.main===module)main();
