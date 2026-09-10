@@ -13,16 +13,22 @@ const STYLE_ID="mobile-final-polish-style-20260910";
    staan. Daardoor bleef bijvoorbeeld om 20:31 de volledig verstreken rij 20:00
    zichtbaar, terwijl etmaal() de neerslagvelden van die rij terecht al op null
    had gezet. Het resultaat was de misleidende combinatie temperatuur + “– / –”.
-   De tabel is een komende-uurtabel: gebruik dezelfde actuele lokale klok als de
-   grafiek en sla uitsluitend uren over die niet meer in de toekomst liggen.
-   Een expliciet gekozen kalenderdag blijft volledig en ongewijzigd. */
+   De tabel is een komende-uurtabel: sla uitsluitend uurstempels over die op de
+   provider-tijdas niet meer in de toekomst liggen. Een expliciet gekozen
+   kalenderdag blijft volledig en ongewijzigd. */
 const RIJ_FILTER_BRON='    if(!tijd||temp===null||gevoel===null)continue;';
 const RIJ_FILTER_PRODUCTIE=`    if(!tijd||temp===null||gevoel===null)continue;
     if(!dagGeselecteerd&&currentTime&&String(tijd)<=String(currentTime))continue;`;
 
 const UURKLOK_BRON='  const rijen=desktop?desktopUurRijen():uurRijenUitGeo(S.geo,S.d&&S.d.current&&S.d.current.time,S.dag!=null,S.d&&S.d.hourly);';
-const UURKLOK_PRODUCTIE=`  const actueleLokaleTijd=typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():S.d&&S.d.current&&S.d.current.time;
-  const rijen=desktop?desktopUurRijen():uurRijenUitGeo(S.geo,actueleLokaleTijd,S.dag!=null,S.d&&S.d.hourly);`;
+const UURKLOK_PRODUCTIE=`  /* Vergelijk niet met een civiele IANA-klokstring: Open-Meteo levert de
+     hourly-as met één vaste response-offset. Rond een DST-wissel moet de grens
+     daarom op diezelfde provider-as liggen. Het instant is universeel; de
+     response-offset maakt daar exact de vergelijkbare providerklok van. */
+  const nuMs=S.klokInstantOverride&&typeof S.klokInstantOverride.getTime==="function"?S.klokInstantOverride.getTime():Date.now();
+  const providerOffset=num(S.d&&S.d.utc_offset_seconds);
+  const actueleProviderTijd=Number.isFinite(nuMs)&&providerOffset!==null?new Date(nuMs+providerOffset*1000).toISOString().slice(0,16):S.d&&S.d.current&&S.d.current.time;
+  const rijen=desktop?desktopUurRijen():uurRijenUitGeo(S.geo,actueleProviderTijd,S.dag!=null,S.d&&S.d.hourly);`;
 
 /* De vaste mobiele locatiebalk blijft fixed: de eerdere sticky-variant kon door
    layoutfeedback gaan schakelen tijdens scrollen. We veranderen die bewezen
@@ -60,7 +66,7 @@ function pasTekstAan(html,label="artifact"){
 
   const rijN=tel(bron,RIJ_FILTER_BRON),klokN=tel(bron,UURKLOK_BRON);
   if(rijN!==1)throw new Error(`${label}: mobiel uurfilter-anker ontbreekt of is dubbel: ${rijN}`);
-  if(klokN!==1)throw new Error(`${label}: mobiele lokale-klokanker ontbreekt of is dubbel: ${klokN}`);
+  if(klokN!==1)throw new Error(`${label}: mobiele provider-klokanker ontbreekt of is dubbel: ${klokN}`);
   if(bron.includes(RIJ_FILTER_PRODUCTIE)||bron.includes(UURKLOK_PRODUCTIE))
     throw new Error(`${label}: mobiele runtime is deels aangepast zonder final-polishmarker.`);
 
@@ -93,7 +99,7 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen finale weerartifacts gevonden voor mobiele final-polish.");
   const cache=vernieuwServiceworkerCache(OUT,"mobile-final-polish-20260910");
-  console.log(`Mobiele final-polish toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): verstreken lopend uur uit komende-uurtabel, zachtere fixed-headerovergang en compactere uurtabelkop; cache ${cache}.`);
+  console.log(`Mobiele final-polish toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): verstreken uurstempels uit komende-uurtabel, DST-veilige providerklokgrens, zachtere fixed-headerovergang en compactere uurtabelkop; cache ${cache}.`);
 }
 
 if(require.main===module)main();
