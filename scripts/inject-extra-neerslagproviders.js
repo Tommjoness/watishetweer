@@ -40,7 +40,7 @@ if(!html.includes("WeatherNowNeerslagPresentatieV2"))throw new Error("Neerslagpr
 if(!html.includes("Neerslagkans komend uur"))throw new Error("Expliciet neerslagkanslabel ontbreekt uit buildartifact.");
 if(!html.includes("Neerslag nu"))throw new Error("Actuele neerslagkaart ontbreekt uit buildartifact.");
 if(!html.includes("WeatherNowLuchtmeetnetLki"))throw new Error("Luchtmeetnet LKI-client ontbreekt uit buildartifact.");
-if(!html.includes("Nederlandse LKI "))throw new Error("Expliciet Nederlands LKI-label ontbreekt uit buildartifact.");
+if(html.includes('regel.textContent="Nederlandse LKI '))throw new Error("Verwijderde Nederlandse LKI-subcopy staat opnieuw in het buildartifact.");
 if(!html.includes("/api/luchtkwaliteit?lat="))throw new Error("Luchtkwaliteitroute ontbreekt uit buildartifact.");
 
 fs.writeFileSync(htmlPad,html,"utf8");

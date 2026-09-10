@@ -8,6 +8,34 @@ const OUT=path.join(__dirname,"..","public");
 const BASIS_MARKER="/* ===== HOUR PANEL CLEANUP 20260909 ===== */";
 const MARKER="/* ===== DESKTOP VISUAL POLISH 20260909 ===== */";
 const RUNTIME_ID="desktop-visual-polish-runtime-20260909";
+const LATE_STYLE_ID="desktop-final-polish-style-20260910";
+
+/* final-desktop-ui voegt zijn stylesheet pas tijdens DOMContentLoaded toe. Een
+   gewone late buildregel staat daardoor visueel toch eerder in de cascade. Dit
+   kleine runtimeblad wordt ná die bestaande owner geplaatst en bezit uitsluitend
+   de hier gevraagde desktoptypografie en onderste spacing. */
+const LATE_STYLE=`
+@media(min-width:1100px){
+  #t,.deg,#minitemp,.sval,.score,
+  .wiw-hour-temp .wiw-hour-primary,#days .dmin,#days .dmax{
+    font-family:var(--sans)!important;
+    font-variant-numeric:lining-nums tabular-nums!important;
+    font-feature-settings:"lnum" 1,"tnum" 1!important;
+    font-synthesis:none
+  }
+  #t,.deg{font-weight:400!important}
+  footer{font-size:12px!important;color:var(--ink-70)!important}
+  footer .bron,footer .bron b,footer details summary,footer a{color:var(--ink-70)!important}
+}
+@media(min-width:1360px){
+  .dashrow-days .nachtkop,.dashrow-days + h2{margin-top:24px!important}
+  #nachthint,#pollenhint{margin-top:5px!important;margin-bottom:7px!important}
+  #aq{padding-top:8px!important;padding-bottom:8px!important}
+  footer{margin-top:8px!important;padding-top:5px!important;padding-bottom:0!important;gap:2px 14px!important}
+  .sheet{padding-bottom:32px!important}
+  .seo-plaatsnav{margin-top:0!important;padding:1px 0!important;min-height:54px!important}
+}
+`;
 
 const STYLE=`
 ${MARKER}
@@ -142,6 +170,11 @@ const RUNTIME=`<script id="${RUNTIME_ID}">
 (function(){
 "use strict";
 let gepland=false;
+function borgLateStijl(){
+  let stijl=document.getElementById("${LATE_STYLE_ID}");
+  if(!stijl){stijl=document.createElement("style");stijl.id="${LATE_STYLE_ID}";document.head.appendChild(stijl);}
+  stijl.textContent=${JSON.stringify(LATE_STYLE)};
+}
 function synchroniseerNachtkop(){
   const kop=document.querySelector("#nights .row.night.kop");
   if(!kop)return;
@@ -217,6 +250,7 @@ function plan(){
   queueMicrotask(function(){gepland=false;synchroniseerNachtkop();synchroniseerNachtrijen();});
 }
 function start(){
+  borgLateStijl();
   synchroniseerNachtkop();
   synchroniseerNachtrijen();
   const nights=document.getElementById("nights");
@@ -276,4 +310,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={OUT,BASIS_MARKER,MARKER,RUNTIME_ID,STYLE,RUNTIME,htmlBestanden,pasTekstAan,main};
+module.exports={OUT,BASIS_MARKER,MARKER,RUNTIME_ID,LATE_STYLE_ID,LATE_STYLE,STYLE,RUNTIME,htmlBestanden,pasTekstAan,main};

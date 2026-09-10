@@ -75,7 +75,7 @@ window.fetch=async function(url){
   const u=String(url);
   const payload=u.includes('/api/waarschuwingen')?${JSON.stringify({bron:"test",dekking:true,lijst:[],land:"NL"})}
     :u.includes('air-quality-api.open-meteo.com')?${JSON.stringify(air)}
-    :u.includes('/api/luchtkwaliteit')?${JSON.stringify(air)}
+    :u.includes('/api/luchtkwaliteit')?${JSON.stringify({beschikbaar:true,provider:"luchtmeetnet",type:"actuele_lki",lki:4,bron:"RIVM / Luchtmeetnet"})}
     :u.includes('/api/plaatsnaam')?${JSON.stringify({naam:"Almere",land:"NL",bron:"test"})}
     :${JSON.stringify(d)};
   return {ok:true,status:200,json:async()=>payload,text:async()=>JSON.stringify(payload),headers:{get:()=>null}};
@@ -94,12 +94,14 @@ function baseline(el){
 }
 function meet(){
   try{
+    const modus=new URLSearchParams(location.search).get("modus");
+    if(modus==="donker")document.documentElement.setAttribute("data-thema","donker");
     if(window.WeatherNowFinalDesktopUI20260902)window.WeatherNowFinalDesktopUI20260902.render();
     if(window.WeatherNowDesktopVisualPolish20260909)window.WeatherNowDesktopVisualPolish20260909.sync();
     document.documentElement.getBoundingClientRect();
     const R=e=>e.getBoundingClientRect(),C=e=>getComputedStyle(e);
     const layout=document.getElementById("wiw-chart-layout"),main=layout.querySelector(".wiw-chart-main"),panel=document.getElementById("wiw-hour-panel"),scroll=document.getElementById("wiw-hour-scroll"),allRows=[...document.querySelectorAll("#wiw-hour-table tbody tr")],rows=allRows.filter(e=>R(e).height>0);
-    const days=document.getElementById("days"),nights=document.getElementById("nights"),dHead=days.querySelector(".row.kop"),dRow=days.querySelector(".row:not(.kop)"),nHead=nights.querySelector(".row.kop"),nRow=nights.querySelector(".row:not(.kop)"),dTitle=document.querySelector(".dashrow-days .dashcol:first-child>h2"),nTitle=document.querySelector(".nachtkop"),aqTitle=document.querySelector(".dashrow-days + h2"),aq=document.getElementById("aq");
+    const days=document.getElementById("days"),nights=document.getElementById("nights"),dHead=days.querySelector(".row.kop"),dRow=days.querySelector(".row:not(.kop)"),nHead=nights.querySelector(".row.kop"),nRow=nights.querySelector(".row:not(.kop)"),dTitle=document.querySelector(".dashrow-days .dashcol:first-child>h2"),nTitle=document.querySelector(".nachtkop"),aqTitle=document.querySelector(".dashrow-days + h2"),aq=document.getElementById("aq"),footer=document.querySelector("footer"),nav=document.querySelector(".seo-plaatsnav"),sheet=document.querySelector(".sheet");
     const primEls=[nRow.querySelector(".dname"),nRow.querySelector(".score"),nRow.querySelector(".nmeta:not(.wide)"),nRow.querySelector(".nachtoordeel"),nRow.querySelector(".nachtvenster")].filter(Boolean),prim=primEls.map(baseline);
     const dPos=[...dHead.children].slice(3,8).map(e=>R(e).left),drPos=[...dRow.children].slice(3,8).map(e=>R(e).left);
     zet("desktop",innerWidth>=1100?1:0);
@@ -125,6 +127,13 @@ function meet(){
     zet("night-wrap",R(nRow.querySelector(".nachtvenster")).height>22?1:0);
     const aqBox=R(aq),aqParent=R(aq.parentElement);zet("aq-width",aqBox.width);zet("aq-center-delta",Math.abs((aqBox.left+aqBox.right-aqParent.left-aqParent.right)/2));
     zet("gap-chart-days",R(dTitle).top-R(layout).bottom);zet("gap-days-night",R(nTitle).top-R(days).bottom);zet("gap-night-air",R(aqTitle).top-R(nights).bottom);
+    const numerieken=[document.getElementById("t"),document.getElementById("minitemp"),document.querySelector(".sval"),nRow.querySelector(".score"),document.querySelector(".wiw-hour-temp .wiw-hour-primary"),dRow.querySelector(".dmin"),dRow.querySelector(".dmax")].filter(Boolean);
+    const numeriekGoed=numerieken.length===7&&numerieken.every(el=>{const s=C(el);return /Instrument Sans/i.test(s.fontFamily)&&/tabular-nums/i.test(s.fontVariantNumeric)&&(/lining-nums/i.test(s.fontVariantNumeric)||/lnum/i.test(s.fontFeatureSettings));});
+    zet("numerals",numeriekGoed?"ok":numerieken.map(el=>[el.id||el.className,C(el).fontFamily,C(el).fontVariantNumeric,C(el).fontFeatureSettings].join("/")).join("|"));
+    zet("hero-family",C(document.getElementById("t")).fontFamily);zet("mini-family",C(document.getElementById("minitemp")).fontFamily);
+    zet("footer-font",parseFloat(C(footer).fontSize));zet("footer-margin",parseFloat(C(footer).marginTop)||0);zet("footer-padding",parseFloat(C(footer).paddingTop)||0);zet("aq-footer-gap",R(footer).top-R(aq).bottom);
+    zet("sheet-padding-bottom",parseFloat(C(sheet).paddingBottom)||0);zet("footer-nav-gap",R(nav).top-R(footer).bottom);zet("nav-margin",parseFloat(C(nav).marginTop)||0);zet("nav-padding",parseFloat(C(nav).paddingTop)||0);zet("nav-height",R(nav).height);
+    zet("aq-label",aq.querySelector(".stat .eyebrow")?.textContent.trim()||"");zet("nav-label",nav.querySelector(".seo-plaatsnav-kop")?.textContent.trim()||"");zet("lki-copy",document.querySelector(".luchtmeetnet-lki")?"aanwezig":"afwezig");zet("theme",document.documentElement.getAttribute("data-thema")||"");
     zet("assessment-visible",C(nHead.querySelector(".wiw-night-assessment-head")).display!=="none"?1:0);
     zet("done","ok");
   }catch(e){zet("exception",e&&e.stack||e);zet("done","fout");}
@@ -139,13 +148,21 @@ html=html.replace(bodyEinde,reporter+"</body>\n</html>");
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-desktop-polish-"));
 try{
   const pad=path.join(dir,"index.html");fs.writeFileSync(pad,html,"utf8");
-  for(const [w,h] of [[320,900],[360,900],[390,900],[400,900],[430,932],[1280,900],[1366,900],[1600,900],[1920,1080]]){
-    const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${w},${h}`,"--virtual-time-budget=12000","--dump-dom","file://"+pad+"?lat=52.35&lon=5.26&plaats=Almere&land=NL"],{encoding:"utf8",maxBuffer:40*1024*1024});
+  const scenarios=[...[[320,900],[360,900],[390,900],[400,900],[430,932],[1280,900],[1366,900],[1600,900],[1920,1080]].map(([w,h])=>({w,h,land:"NL",plaats:"Almere",modus:"licht"})),{w:1366,h:900,land:"US",plaats:"New York",modus:"donker"}];
+  for(const {w,h,land,plaats,modus} of scenarios){
+    const zoek=new URLSearchParams({lat:land==="US"?"40.714":"52.35",lon:land==="US"?"-74.006":"5.26",plaats,land,modus}).toString();
+    const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${w},${h}`,"--virtual-time-budget=12000","--dump-dom","file://"+pad+"?"+zoek],{encoding:"utf8",maxBuffer:40*1024*1024});
     if(r.status!==0)throw new Error(`${w}px browser exit ${r.status}: `+String(r.stderr||"").slice(-800));
     const dom=r.stdout||"",v=k=>{const m=new RegExp('data-polish-'+k+'="([^"]*)"').exec(dom);return m&&m[1];},n=k=>Number(v(k));
     if(v("done")!=="ok")throw new Error(`${w}px reporter: ${v("exception")}; injected=${v("injected")}`);
     if(n("overflow")>2)throw new Error(`${w}px: ${n("overflow")}px horizontale overflow`);
+    if(v("lki-copy")!=="afwezig")throw new Error(`${w}px ${land}: verwijderde Nederlandse LKI-subcopy staat nog in de AQI-tegel`);
+    if(v("nav-label")!=="Populaire plaatsen in Nederland")throw new Error(`${w}px ${land}: vaste Nederlandse plaatsnavigatie is onbedoeld gewijzigd (${v("nav-label")})`);
+    if(v("aq-label")!==(land==="US"?"AQI (VS-schaal)":"Europese AQI"))throw new Error(`${w}px ${land}: inhoudelijk AQI-schaallabel onjuist (${v("aq-label")})`);
+    if(modus==="donker"&&v("theme")!=="donker")throw new Error(`${w}px ${land}: donkere productcontrole activeerde het donkere thema niet`);
     if(w>=1100){
+      if(v("numerals")!=="ok")throw new Error(`${w}px: consumentencijfers zijn typografisch niet geharmoniseerd (${v("numerals")})`);
+      if(n("footer-font")<11.9)throw new Error(`${w}px: bronnen/disclaimer blijft te klein (${v("footer-font")}px)`);
       const rows=n("rows"),chart=n("chart-count");
       if(rows<8||rows>11||chart!==rows)throw new Error(`${w}px: grafiek/tabel delen geen 8–11 hoogtegestuurde uren (${chart}/${rows}); paneel=${v("panel-height")}, tabeltop=${v("table-top")}, rij=${v("row-height")}, kandidaten=${v("candidate-hours")}`);
       if(n("row-height")<29)throw new Error(`${w}px: uurregel is lager dan 29px (${v("row-height")}px)`);
@@ -174,10 +191,15 @@ try{
         if(n("night-compact-detail-gap")<-.5)throw new Error(`${w}px: compacte Nachtzicht-details overlappen verticaal (${v("night-compact-detail-gap")}px)`);
       }
       const gaps=["gap-chart-days","gap-days-night","gap-night-air"].map(n);
-      if(Math.max(...gaps)-Math.min(...gaps)>1.1||gaps.some(g=>g<27||g>29))throw new Error(`${w}px: sectieritme ongelijk (${gaps.join("/")})`);
+      if(w>=1360){
+        if(gaps[0]<27||gaps[0]>29||gaps.slice(1).some(g=>g<23||g>25))throw new Error(`${w}px: onderste sectieritme niet gericht compacter (${gaps.join("/")})`);
+        if(n("footer-margin")>8.1||n("footer-padding")>5.1||n("aq-footer-gap")>10)throw new Error(`${w}px: luchtkwaliteit/footer blijft te los (${v("footer-margin")}/${v("footer-padding")}/${v("aq-footer-gap")}px)`);
+        if(n("sheet-padding-bottom")>32.1||n("footer-nav-gap")>34||n("nav-margin")>.1||n("nav-padding")>1.1||n("nav-height")>70)throw new Error(`${w}px: overgang naar plaatsnavigatie blijft te ruim (${v("sheet-padding-bottom")}/${v("footer-nav-gap")}/${v("nav-margin")}/${v("nav-padding")}/${v("nav-height")}px)`);
+      }else if(Math.max(...gaps)-Math.min(...gaps)>1.1||gaps.some(g=>g<27||g>29))throw new Error(`${w}px: bestaand sectieritme gewijzigd (${gaps.join("/")})`);
     }else{
       if(n("assessment-visible")!==0)throw new Error(`${w}px: desktopheader lekt naar mobiel`);
       if(n("all-rows")!==24)throw new Error(`${w}px: mobiele uurtabel wijzigde inhoudelijk (${v("all-rows")} rijen)`);
+      if(!/Bodoni Moda/i.test(v("hero-family"))||!/DM Mono/i.test(v("mini-family")))throw new Error(`${w}px: desktopcijferpolish lekt naar mobiele typografie (${v("hero-family")}/${v("mini-family")})`);
     }
     console.log(`${w}px desktop-polish groen: overflow ${v("overflow")}px${w>=1100?`, ${v("rows")} gedeelde hoogtegestuurde uren, ${w>=1600?"zes":"vijf"} Nachtzicht-kolommen en sectiegap ${v("gap-chart-days")}px`:", mobiele layout intact"}.`);
   }

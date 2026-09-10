@@ -1,6 +1,7 @@
 /* Nederlandse luchtkwaliteitscontext uit Luchtmeetnet.
- * De bestaande Open-Meteo/CAMS AQI blijft de hoofdwaarde. Deze laag voegt
- * alleen de aparte Nederlandse LKI toe en verandert geen schaal of pollenbron.
+ * De bestaande Open-Meteo/CAMS AQI blijft de zichtbare hoofdwaarde. De aparte
+ * LKI-payload blijft beschikbaar voor de bestaande requestcyclus, maar krijgt
+ * geen tweede schaalregel meer in de AQI-tegel.
  */
 (function(root){
 "use strict";
@@ -17,17 +18,6 @@ function wis(){
 
 function toon(){
   wis();
-  const payload=S.__luchtmeetnetLki;
-  if(!ondersteund(S.land)||!payload||payload.beschikbaar!==true||payload.type!=="actuele_lki")return;
-  const lki=Number(payload.lki);
-  if(!Number.isFinite(lki)||lki<1||lki>11)return;
-  const kaart=document.querySelector&&document.querySelector("#aq .stat:first-child");
-  if(!kaart||typeof document.createElement!=="function")return;
-  const regel=document.createElement("div");
-  regel.className="ssub luchtmeetnet-lki";
-  regel.textContent="Nederlandse LKI "+Math.round(lki)+"/11 · RIVM/Luchtmeetnet";
-  regel.setAttribute("title","Officiële Nederlandse luchtkwaliteitsindex van RIVM/Luchtmeetnet; aparte schaal van de Europese AQI.");
-  kaart.appendChild(regel);
 }
 
 function stop(){
