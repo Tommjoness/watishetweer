@@ -90,7 +90,7 @@ const zet=(k,v)=>document.body.setAttribute("data-polish-"+k,String(v));
 zet("injected","1");
 function baseline(el){
   const m=document.createElement("i");m.style.cssText="display:inline-block;width:0;height:0;padding:0;margin:0;border:0";
-  el.appendChild(m);const y=m.getBoundingClientRect().top;m.remove();return y;
+  el.insertBefore(m,el.firstChild);const y=m.getBoundingClientRect().top;m.remove();return y;
 }
 function meet(){
   try{
@@ -120,6 +120,7 @@ function meet(){
     zet("night-detail-axis",Math.abs(R(venster).left-R(maan).left));zet("night-detail-debug",[R(venster).left,R(maan).left,R(venster).width,R(maan).width,C(venster).gridColumnStart,C(maan).gridColumnStart,C(venster).gridColumnEnd,C(maan).gridColumnEnd,C(venster).gridRowStart,C(maan).gridRowStart,C(maan).marginLeft,C(maan).order,C(maan).position,C(maan).transform,C(venster.parentElement).display,C(venster.parentElement).direction,C(venster.parentElement).gridTemplateColumns].join("/"));
     zet("night-moon-separated",R(maan).left>=R(venster).right+19?"ok":"fout");zet("night-moon-right-gap",Math.max(0,R(nRow).right-R(maan).right));zet("night-period-width",R(venster).width);zet("night-moon-width",R(maan).width);
     zet("night-period-overflow",Math.max(0,venster.scrollWidth-venster.clientWidth));zet("night-moon-overflow",Math.max(0,maan.scrollWidth-maan.clientWidth));
+    zet("night-compact-detail-gap",R(maan).top-R(venster).bottom);
     zet("night-wrap",R(nRow.querySelector(".nachtvenster")).height>22?1:0);
     zet("gap-chart-days",R(dTitle).top-R(layout).bottom);zet("gap-days-night",R(nTitle).top-R(days).bottom);zet("gap-night-air",R(aqTitle).top-R(nights).bottom);
     zet("assessment-visible",C(nHead.querySelector(".wiw-night-assessment-head")).display!=="none"?1:0);
@@ -165,7 +166,7 @@ try{
         if(n("night-period-width")<320||n("night-moon-width")<220)throw new Error(`${w}px: brede Nachtzicht-detailkolommen zijn te smal (${v("night-period-width")}/${v("night-moon-width")}px)`);
       }else{
         if(n("night-detail-axis")>1)throw new Error(`${w}px: compacte Nachtzicht-details starten ${v("night-detail-axis")}px ongelijk (${v("night-detail-debug")})`);
-        if(n("night-wrap")!==0)throw new Error(`${w}px: compacte zichtperiode wrapt onnodig`);
+        if(n("night-compact-detail-gap")<-.5)throw new Error(`${w}px: compacte Nachtzicht-details overlappen verticaal (${v("night-compact-detail-gap")}px)`);
       }
       const gaps=["gap-chart-days","gap-days-night","gap-night-air"].map(n);
       if(Math.max(...gaps)-Math.min(...gaps)>1.1||gaps.some(g=>g<27||g>29))throw new Error(`${w}px: sectieritme ongelijk (${gaps.join("/")})`);
