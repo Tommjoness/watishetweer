@@ -119,6 +119,7 @@ function meet(){
     const venster=nRow.querySelector(".nachtvenster"),maan=nRow.querySelector(".nachtmaan");
     zet("night-detail-axis",Math.abs(R(venster).left-R(maan).left));zet("night-detail-debug",[R(venster).left,R(maan).left,R(venster).width,R(maan).width,C(venster).gridColumnStart,C(maan).gridColumnStart,C(venster).gridColumnEnd,C(maan).gridColumnEnd,C(venster).gridRowStart,C(maan).gridRowStart,C(maan).marginLeft,C(maan).order,C(maan).position,C(maan).transform,C(venster.parentElement).display,C(venster.parentElement).direction,C(venster.parentElement).gridTemplateColumns].join("/"));
     zet("night-moon-separated",R(maan).left>=R(venster).right+19?"ok":"fout");zet("night-moon-right-gap",Math.max(0,R(nRow).right-R(maan).right));zet("night-period-width",R(venster).width);zet("night-moon-width",R(maan).width);
+    zet("night-period-overflow",Math.max(0,venster.scrollWidth-venster.clientWidth));zet("night-moon-overflow",Math.max(0,maan.scrollWidth-maan.clientWidth));
     zet("night-wrap",R(nRow.querySelector(".nachtvenster")).height>22?1:0);
     zet("gap-chart-days",R(dTitle).top-R(layout).bottom);zet("gap-days-night",R(nTitle).top-R(days).bottom);zet("gap-night-air",R(aqTitle).top-R(nights).bottom);
     zet("assessment-visible",C(nHead.querySelector(".wiw-night-assessment-head")).display!=="none"?1:0);
@@ -151,25 +152,28 @@ try{
       if(n("days-head-align")>1)throw new Error(`${w}px: weekkop en waarden niet uitgelijnd (${v("days-head-align")}px)`);
       if(n("days-group-start")>620)throw new Error(`${w}px: weekmetriekgroep staat nog te ver rechts (${v("days-group-start")}px)`);
       if(n("days-last-right")>=w-100)throw new Error(`${w}px: weekmetriekgroep wordt nog over de hele rij uitgerekt`);
-      const breedNacht=w>=1366;
+      const breedNacht=w>=1600;
       if(n("night-columns")!==(breedNacht?6:5))throw new Error(`${w}px: Nachtzicht heeft ${v("night-columns")} kolommen i.p.v. ${breedNacht?"zes":"vijf"}`);
       const verwachteNachtKop="NACHT ZICHTSCORE BEWOLKING BEOORDELING BESTE ZICHTPERIODE"+(breedNacht?" MAAN":"");
       if(v("night-head")!==verwachteNachtKop)throw new Error(`${w}px: Nachtzicht-header onjuist: ${v("night-head")}`);
       if(v("night-dom-head")!==v("night-head"))throw new Error(`${w}px: semantische Nachtzicht-kopvolgorde wijkt visueel af (${v("night-dom-head")})`);
       if(n("assessment-visible")!==1)throw new Error(`${w}px: Beoordeling-header is niet zichtbaar`);
       if(n("night-baseline")>1.1)throw new Error(`${w}px: primaire Nachtzicht-baseline wijkt ${v("night-baseline")}px af (${v("night-baselines")}; ${v("night-primary-parents")})`);
+      if(n("night-period-overflow")>1||n("night-moon-overflow")>1)throw new Error(`${w}px: Nachtzicht-tekst loopt buiten de eigen kolom (${v("night-period-overflow")}/${v("night-moon-overflow")}px)`);
       if(breedNacht){
         if(v("night-moon-separated")!=="ok"||n("night-moon-right-gap")>1)throw new Error(`${w}px: maancontext benut de rechter Nachtzicht-zone niet (${v("night-detail-debug")}; rechts ${v("night-moon-right-gap")}px)`);
         if(n("night-period-width")<320||n("night-moon-width")<220)throw new Error(`${w}px: brede Nachtzicht-detailkolommen zijn te smal (${v("night-period-width")}/${v("night-moon-width")}px)`);
-      }else if(n("night-detail-axis")>1)throw new Error(`${w}px: compacte Nachtzicht-details starten ${v("night-detail-axis")}px ongelijk (${v("night-detail-debug")})`);
-      if(n("night-wrap")!==0)throw new Error(`${w}px: zichtperiode wrapt onnodig`);
+      }else{
+        if(n("night-detail-axis")>1)throw new Error(`${w}px: compacte Nachtzicht-details starten ${v("night-detail-axis")}px ongelijk (${v("night-detail-debug")})`);
+        if(n("night-wrap")!==0)throw new Error(`${w}px: compacte zichtperiode wrapt onnodig`);
+      }
       const gaps=["gap-chart-days","gap-days-night","gap-night-air"].map(n);
       if(Math.max(...gaps)-Math.min(...gaps)>1.1||gaps.some(g=>g<27||g>29))throw new Error(`${w}px: sectieritme ongelijk (${gaps.join("/")})`);
     }else{
       if(n("assessment-visible")!==0)throw new Error(`${w}px: desktopheader lekt naar mobiel`);
       if(n("all-rows")!==24)throw new Error(`${w}px: mobiele uurtabel wijzigde inhoudelijk (${v("all-rows")} rijen)`);
     }
-    console.log(`${w}px desktop-polish groen: overflow ${v("overflow")}px${w>=1100?`, ${v("rows")} gedeelde hoogtegestuurde uren, ${w>=1366?"zes":"vijf"} Nachtzicht-kolommen en sectiegap ${v("gap-chart-days")}px`:", mobiele layout intact"}.`);
+    console.log(`${w}px desktop-polish groen: overflow ${v("overflow")}px${w>=1100?`, ${v("rows")} gedeelde hoogtegestuurde uren, ${w>=1600?"zes":"vijf"} Nachtzicht-kolommen en sectiegap ${v("gap-chart-days")}px`:", mobiele layout intact"}.`);
   }
   console.log("Desktop-polish browsematrix geslaagd op 320/360/390/400/430/1280/1366/1600/1920 px.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
