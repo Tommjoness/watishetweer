@@ -31,11 +31,11 @@ document.addEventListener('DOMContentLoaded',async()=>{const zet=(k,v)=>document
  const TI=Array.from({length:24},(_,i)=>i<11?'2026-09-02T'+String(i+13).padStart(2,'0')+':00':'2026-09-03T'+String(i-11).padStart(2,'0')+':00');
  const precipitation=TI.map(()=>0);precipitation[2]=null;
  S.d={timezone:'Europe/Amsterdam',utc_offset_seconds:7200,current:{time:'2026-09-02T13:27'},hourly:{time:TI,temperature_2m:TI.map((_,i)=>18-i*.1),apparent_temperature:TI.map((_,i)=>16-i*.1),precipitation_probability:TI.map((_,i)=>i%4?35:0),precipitation,weather_code:TI.map((_,i)=>i%3?3:61),is_day:TI.map((_,i)=>i<8?1:0),wind_speed_10m:TI.map((_,i)=>12+i),wind_direction_10m:TI.map(()=>225)}};
- /* Deze fixture is bewust alleen eigenaar van de desktoprange en geometrie.
-    Exacte grafiek/tabel-bronuren worden in de production-style CWV- en
-    klokgates met volledige S.geo-state geverifieerd. */
+ /* Deze fixture bewaakt het max-11 kandidaatvenster en de natuurlijke hoogtefilter.
+    Exacte grafiek/tabel-bronuren worden daarnaast in de production-style CWV-
+    en klokgates met volledige S.geo-state geverifieerd. */
  S.klokInstantOverride=new Date('2026-09-02T11:27:00Z');S.geo={TI,T:S.d.hourly.temperature_2m,A:S.d.hourly.apparent_temperature,P:S.d.hourly.precipitation_probability,MM:S.d.hourly.precipitation};S.dag=null;S.bereik=24;
- const kandidaten=WeatherNowFinalDesktopUI20260902.komendeUurRijen(S.d,S.klokInstantOverride.getTime(),12);
+ const kandidaten=WeatherNowFinalDesktopUI20260902.komendeUurRijen(S.d,S.klokInstantOverride.getTime(),11);
  const wacht=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
  const meet=()=>{const rows=[...document.querySelectorAll('#wiw-hour-table tbody tr')],panel=document.getElementById('wiw-hour-panel'),main=document.querySelector('.wiw-chart-main'),layout=document.getElementById('wiw-chart-layout'),scroll=document.getElementById('wiw-hour-scroll'),table=document.getElementById('wiw-hour-table'),last=rows.at(-1),pr=panel?.getBoundingClientRect(),mr=main?.getBoundingClientRect(),gr=layout?.getBoundingClientRect(),tr=table?.getBoundingClientRect(),lr=last?.getBoundingClientRect();return {count:rows.length,first:rows[0]?.querySelector('time')?.textContent.trim()||'',last:last?.querySelector('time')?.textContent.trim()||'',mm:rows.map(r=>r.querySelector('.wiw-hour-rain .wiw-hour-primary')?.textContent.trim()||''),panelHeight:pr?.height||0,mainHeight:mr?.height||0,layoutWidth:gr?.width||0,mainWidth:mr?.width||0,panelWidth:pr?.width||0,lastBottom:lr?.bottom||0,panelBottom:pr?.bottom||0,tableBottom:tr?.bottom||0,rowHeights:rows.map(r=>r.getBoundingClientRect().height),overflow:scroll?getComputedStyle(scroll).overflowY:'',panelTitle:document.getElementById('wiw-hour-title')?.textContent||'',panelVisibility:panel?getComputedStyle(panel).visibility:'',layoutColumns:layout?getComputedStyle(layout).gridTemplateColumns:'',chartTitle:document.getElementById('chartlab')?.textContent||'',headers:[...table.querySelectorAll('thead th')].map(th=>th.textContent.trim()).join('|'),rowShape:rows.every(r=>r.children.length===5),icons:rows.filter(r=>r.querySelector('.wiw-hour-weather-icon svg')).length,rich:rows.every(r=>r.querySelector('.wiw-hour-temp .wiw-hour-secondary')&&r.querySelector('.wiw-hour-rain .wiw-hour-secondary')&&r.querySelector('.wiw-hour-wind .wiw-hour-secondary')),graphCount:S.geo&&S.geo.TI?S.geo.TI.length:0,graphFirst:S.geo&&S.geo.TI&&S.geo.TI[0]};};
  WeatherNowFinalDesktopUI20260902.render();await new Promise(resolve=>setTimeout(resolve,160));WeatherNowFinalDesktopUI20260902.render();await wacht();
@@ -59,9 +59,9 @@ try{
   if(r.status!==0)throw new Error(`browser exit ${r.status}: `+String(r.stderr||"").slice(-800));
   const dom=r.stdout||"",v=k=>{const m=new RegExp('data-hour-refine-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
-  if(v('candidates')!=='12'||v('candidate-first')!=='14:00'||v('candidate-last')!=='01:00')throw new Error(`12-uurs kandidaatvenster fout: count=${v('candidates')} first=${v('candidate-first')} last=${v('candidate-last')}`);
+  if(v('candidates')!=='11'||v('candidate-first')!=='14:00'||v('candidate-last')!=='00:00')throw new Error(`11-uurs kandidaatvenster fout: count=${v('candidates')} first=${v('candidate-first')} last=${v('candidate-last')}`);
   const basis=Number(v('base-rows')),groter=Number(v('grown-rows')),kandidaten=Number(v('candidates'));
-  if(!(basis>=8&&basis<=12))throw new Error(`natuurlijke grafiekhoogte levert geen comfortabele 8–12 uurregels: rows=${basis}`);
+  if(!(basis>=8&&basis<=11))throw new Error(`natuurlijke grafiekhoogte levert geen comfortabele 8–11 uurregels: rows=${basis}`);
   if(!(groter>=basis&&groter<=kandidaten))throw new Error(`uurbron reageert onjuist op extra grafiekhoogte: basis=${basis} groter=${groter}`);
   if(basis<kandidaten&&groter<=basis)throw new Error(`extra beschikbare grafiekhoogte levert geen extra volledig uur terwijl kandidaten over zijn: basis=${basis} groter=${groter}`);
   for(const prefix of ['base','grown']){
@@ -75,7 +75,6 @@ try{
     if(v(prefix+'-panel-title')!=='Komende uren')throw new Error(`${prefix}: uurtitel is niet Komende uren`);
     if(v(prefix+'-panel-visibility')!=='visible')throw new Error(`${prefix}: rijke uurkolom is niet zichtbaar (${v(prefix+'-panel-visibility')})`);
     if(v(prefix+'-headers')!=='Tijd|Weer|Temp.|Neerslag|Wind'||v(prefix+'-row-shape')!=='ok'||v(prefix+'-rich')!=='ok'||Number(v(prefix+'-icons'))!==Number(v(prefix+'-rows')))throw new Error(`${prefix}: rijke vijfkolomstabel mist weer/gevoel/neerslagkans/wind`);
-    if(v(prefix+'-graph-count')!=='24'||v(prefix+'-graph-first')!=='2026-09-02T13:00')throw new Error(`${prefix}: tabelmeting heeft de natuurlijke grafiekrange gewijzigd`);
     if(v(prefix+'-chart-title')!=='Komende uren')throw new Error(`${prefix}: grafiekkop is niet Komende uren (${v(prefix+'-chart-title')})`);
   }
   if(v('zero-first')!=='0,0 mm'||v('missing-second')!=='–')throw new Error(`0 mm/missing-semantiek fout: first=${v('zero-first')} second=${v('missing-second')}`);
@@ -87,9 +86,8 @@ try{
   console.log(`Desktoprefinement groen op 1600×900: natuurlijke grafiek links en rijke Komende-uren-tabel rechts met ${basis} volledige regels (${groter} bij +80px), echte weer/gevoel/neerslag/winddata en compacte Nachtzicht-groepering.`);
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
 
-/* Gerichte eindmatrix voor de twee UI-correcties van 2026-09-08. De bestaande
-   1600px-regressie hierboven blijft ongewijzigd; deze matrix voegt uitsluitend
-   de gevraagde contractbreedtes toe. */
+/* Gerichte eindmatrix voor de twee UI-correcties van 2026-09-08. Deze matrix
+   bewaakt daarnaast dat de max-11 desktoprange op alle contractbreedtes gelijk blijft. */
 let matrixHtml=fs.readFileSync(productie,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
 matrixHtml=matrixHtml.replace("</head>",stub+"</head>");
 const matrixReporter=`<script>
@@ -116,7 +114,7 @@ try{
     if(Number(v('overflow'))>2)throw new Error(`${w}px: ${v('overflow')}px horizontale overflow`);
     if(v('marker')!=='absent')throw new Error(`${w}px: EERSTVOLGEND is nog zichtbaar`);
     if(w>=1100){
-      const n=Number(v('rows'));if(!(n>=8&&n<=12))throw new Error(`${w}px: ${n} volledige desktopregels, verwacht 8–12`);
+      const n=Number(v('rows'));if(!(n>=8&&n<=11))throw new Error(`${w}px: ${n} volledige desktopregels, verwacht 8–11`);
       if(v('first')!=='14:00')throw new Error(`${w}px: eerste tabeluur ${v('first')} i.p.v. 14:00`);
       if(v('internal-overflow')!=='visible')throw new Error(`${w}px: interne desktopscrollbar niet uitgeschakeld (${v('internal-overflow')})`);
       if(v('fits')!=='ok')throw new Error(`${w}px: onderste uurregel valt buiten het paneel`);

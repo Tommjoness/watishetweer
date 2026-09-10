@@ -47,10 +47,9 @@ module.exports=async function clockChecks(browser,root,fixture,reportDir){
     const read=()=>page.evaluate(()=>({maxHours:WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN,graphTimes:S.geo.TI,defaultGraphStart:S.d.hourly.time[S.i0],sourceTimes:[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]),now:Date.now(),rows:[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(r=>({instant:r.querySelector("time").dateTime,label:r.querySelector("time").textContent})),place:document.getElementById("place").getAttribute("aria-label")}));
     const check=(s,minRows=8)=>{
       assert.equal(s.place,location.name);assert(s.rows.length>=minRows&&s.rows.length<=s.maxHours);
-      assert.equal(s.graphTimes.length,25,"grafiek behoudt 24 intervallen plus één rechter grenspunt");
-      assert.equal(s.graphTimes[0],s.sourceTimes[0],"grafiek en tabel beginnen niet bij hetzelfde lokale uur");
-      for(let i=0;i<s.sourceTimes.length;i++)assert.equal(s.graphTimes[i],s.sourceTimes[i],"tabeluren moeten de eerste opeenvolgende grafiekuren zijn");
-      assert.equal(Date.parse(s.graphTimes.at(-1)+"Z")-Date.parse(s.graphTimes.at(-2)+"Z"),3600000,"24-uursgrafiek behoudt exact één rechter grenspunt");
+      assert.equal(s.sourceTimes.length,s.rows.length,"tabelbron en zichtbare uurregels moeten dezelfde range hebben");
+      assert.deepEqual(s.graphTimes,s.sourceTimes,"grafiek en tabel moeten exact dezelfde zichtbare uurreeks tonen");
+      for(let i=1;i<s.graphTimes.length;i++)assert.equal(Date.parse(s.graphTimes[i]+"Z")-Date.parse(s.graphTimes[i-1]+"Z"),3600000,"zichtbare grafiekuren moeten exact opeenvolgend blijven");
       for(let i=0;i<s.rows.length;i++){
         const row=s.rows[i],expected=new Intl.DateTimeFormat("en-GB",{timeZone:location.zone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(row.instant));
         assert.equal(row.label,expected,"label moet bij selected-location timezone horen");

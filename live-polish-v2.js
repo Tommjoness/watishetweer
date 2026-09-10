@@ -233,7 +233,9 @@ function ruimEtmaalExtraTemperaturenOp(svg){
     const i=temperatuurPuntIndex({text,x},punten,S.geo.T,Math.max(72,cw*2.5));
     return {el,i};
   }).filter(x=>x.i!==null);
-  const weg=new Set(etmaalExtraTemperaturenWeg(S.geo.T,labels.map(x=>x.i),3));
+  const maxCompactUren=eindig(root.WeatherNowFinalDesktopUI20260902&&root.WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN);
+  const rasterStap=!S.geo.M&&window.innerWidth>=1100&&maxCompactUren!==null&&S.geo.n<=maxCompactUren?1:3;
+  const weg=new Set(etmaalExtraTemperaturenWeg(S.geo.T,labels.map(x=>x.i),rasterStap));
   labels.forEach(({el,i})=>{
     if(!weg.has(i))return;
     const punt=punten.find(p=>p.i===i);if(punt&&punt.el)punt.el.remove();
