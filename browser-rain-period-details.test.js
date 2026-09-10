@@ -115,7 +115,7 @@ async function controleer(type,naam){
         assert.deepEqual(uur24.ranges,["15:00–18:00","21:00–22:00"],`${naam} ${breedte}: mobiele perioden vallen generiek terug op compacte tijdvakken`);
       }else{
         assert.equal(uur24.chartBereik,11,`${naam} ${breedte}: gekoppelde desktopmodus bewaakt exact het 11-uurs grafiek/tabelvenster`);
-        assert.equal(uur24.n,12,`${naam} ${breedte}: 11 uur bevat exact twaalf grenspunten in de SVG-geometrie`);
+        assert.equal(uur24.n,11,`${naam} ${breedte}: 11-uursmodus bevat exact elf uurpunten in de SVG-geometrie`);
         assert.deepEqual(uur24.starts,["15:00","21:00"],`${naam} ${breedte}: beide perioden zijn bij de brede 11-uursdesktopgeometrie ruim genoeg voor losse begintijden; kreeg ${JSON.stringify({starts:uur24.starts,ends:uur24.ends,ranges:uur24.ranges,n:uur24.n,W:uur24.W,cw:uur24.cw,chartStart:uur24.chartStart,chartBereik:uur24.chartBereik,tijdBinnen:uur24.tijdBinnen})}`);
         assert.deepEqual(uur24.ends,["18:00","22:00"],`${naam} ${breedte}: beide perioden houden bij de gekoppelde desktopgeometrie een losse eindtijd`);
         assert.deepEqual(uur24.ranges,[],`${naam} ${breedte}: de 11-uursdesktopgeometrie forceert geen compacte range wanneer begin en eind zonder overlap passen`);
