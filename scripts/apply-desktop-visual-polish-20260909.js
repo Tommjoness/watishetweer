@@ -108,7 +108,7 @@ ${MARKER}
   #nights .row.night{
     grid-template-columns:
       112px minmax(140px,180px) 112px minmax(118px,148px)
-      minmax(320px,.9fr) minmax(220px,.65fr)!important
+      minmax(300px,.82fr) minmax(240px,.68fr)!important
   }
   #nights .row.night:not(.kop)>.nachtvenster{
     grid-column:5!important;grid-row:1!important;
@@ -124,6 +124,13 @@ ${MARKER}
     grid-column:6;grid-row:1;display:block;
     text-align:left!important
   }
+  /* Zicht staat al als primaire metriek bovenaan. In de afzonderlijke
+     maankolom verbergen we daarom alleen de gemarkeerde duplicaatregel. */
+  #nights .nachtmaan .wiw-night-visibility-detail{display:none!important}
+
+  /* Op ultrabrede schermen blijven de vier lucht-/pollentegels één compacte,
+     gecentreerde groep in plaats van mee te rekken tot de viewportbreedte. */
+  #aq{width:min(1320px,100%)!important;margin-left:auto!important;margin-right:auto!important}
 }
 
 @media(max-width:1099px){
@@ -161,8 +168,35 @@ function synchroniseerNachtkop(){
     kop.appendChild(label);
   }
 }
+function markeerDubbelZichtInMaan(){
+  for(const maan of document.querySelectorAll("#nights .nachtmaan")){
+    if(maan.querySelector(".wiw-night-visibility-detail"))continue;
+    let gemarkeerd=false;
+    for(const kind of Array.from(maan.children)){
+      const tekst=String(kind.textContent||"").replace(/\\s+/g," ").trim();
+      if(/^Gemiddeld zicht:/i.test(tekst)&&!/[Mm]aan/.test(tekst)){
+        kind.classList.add("wiw-night-visibility-detail");
+        gemarkeerd=true;
+        break;
+      }
+    }
+    if(gemarkeerd)continue;
+    const walker=document.createTreeWalker(maan,NodeFilter.SHOW_TEXT);let node;
+    while((node=walker.nextNode())){
+      const match=/^(\\s*Gemiddeld zicht:\\s*[<>]?\\s*\\d+(?:[.,]\\d+)?\\+?\\s*km\\s*)/i.exec(String(node.nodeValue||""));
+      if(!match)continue;
+      const span=document.createElement("span");
+      span.className="wiw-night-visibility-detail";
+      span.textContent=match[1].trim();
+      node.parentNode.insertBefore(span,node);
+      node.nodeValue=String(node.nodeValue||"").slice(match[1].length);
+      break;
+    }
+  }
+}
 function synchroniseerNachtrijen(){
   const desktop=window.matchMedia("(min-width:1100px)").matches;
+  markeerDubbelZichtInMaan();
   for(const rij of document.querySelectorAll("#nights .row.night:not(.kop)")){
     const wide=rij.querySelector(":scope > .nmeta.wide");
     if(!wide)continue;
