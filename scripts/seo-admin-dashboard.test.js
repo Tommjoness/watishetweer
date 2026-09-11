@@ -20,6 +20,7 @@ assert(html.includes('meta name="robots" content="noindex,nofollow,noarchive"'),
 assert(html.includes('src="/admin/seo/seo-dashboard.js"'),"SEO admin mist extern script.");
 assert(html.includes('href="/admin/seo/seo-dashboard.css"'),"SEO admin mist stylesheet.");
 assert(!/<script(?![^>]*\ssrc=)[^>]*>/i.test(html),"SEO admin bevat inline script en botst met CSP.");
+assert.doesNotThrow(()=>new Function(js),"SEO dashboard JavaScript bevat een syntaxfout.");
 assert(html.includes('data-sort-table="queries"'),"Topzoektermen missen sorteerbare kolommen.");
 assert(html.includes('data-sort-table="pages"'),"Toppagina's missen sorteerbare kolommen.");
 assert(html.includes("Slimme selectie"),"SEO-kansenuitleg mist de nieuwe selectiecopy.");
