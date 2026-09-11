@@ -42,11 +42,18 @@
           <p class="eyebrow">Prioriteit</p>
           <h2>SEO-kansen</h2>
         </div>
-        <p class="muted">Zoektermen met ≥10 impressies en gemiddelde positie 4–20.</p>
+        <p class="muted">Slimme selectie: bijna pagina 1, lage CTR en veel zichtbaarheid op positie 15–40.</p>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap opportunity-table">
         <table>
-          <thead><tr><th>Zoekterm</th><th>Impressies</th><th>Klikken</th><th>CTR</th><th>Positie</th></tr></thead>
+          <thead><tr>
+            <th><button class="sort-button" type="button" data-sort-table="opportunities" data-sort-key="query">Zoekterm <span class="sort-indicator" aria-hidden="true"></span></button></th>
+            <th>Kans</th>
+            <th><button class="sort-button" type="button" data-sort-table="opportunities" data-sort-key="impressions">Impressies <span class="sort-indicator" aria-hidden="true"></span></button></th>
+            <th><button class="sort-button" type="button" data-sort-table="opportunities" data-sort-key="clicks">Klikken <span class="sort-indicator" aria-hidden="true"></span></button></th>
+            <th><button class="sort-button" type="button" data-sort-table="opportunities" data-sort-key="ctr">CTR <span class="sort-indicator" aria-hidden="true"></span></button></th>
+            <th><button class="sort-button" type="button" data-sort-table="opportunities" data-sort-key="position">Positie <span class="sort-indicator" aria-hidden="true"></span></button></th>
+          </tr></thead>
           <tbody id="opportunities"></tbody>
         </table>
       </div>
@@ -57,7 +64,12 @@
         <div class="panel-head"><div><p class="eyebrow">Google</p><h2>Topzoektermen</h2></div></div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Zoekterm</th><th>Imp.</th><th>Klikken</th><th>Pos.</th></tr></thead>
+            <thead><tr>
+              <th><button class="sort-button" type="button" data-sort-table="queries" data-sort-key="query">Zoekterm <span class="sort-indicator" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort-table="queries" data-sort-key="impressions">Imp. <span class="sort-indicator" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort-table="queries" data-sort-key="clicks">Klikken <span class="sort-indicator" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort-table="queries" data-sort-key="position">Pos. <span class="sort-indicator" aria-hidden="true"></span></button></th>
+            </tr></thead>
             <tbody id="queries"></tbody>
           </table>
         </div>
@@ -67,7 +79,12 @@
         <div class="panel-head"><div><p class="eyebrow">Landing pages</p><h2>Toppagina's</h2></div></div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Pagina</th><th>Imp.</th><th>Klikken</th><th>Pos.</th></tr></thead>
+            <thead><tr>
+              <th><button class="sort-button" type="button" data-sort-table="pages" data-sort-key="page">Pagina <span class="sort-indicator" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort-table="pages" data-sort-key="impressions">Imp. <span class="sort-indicator" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort-table="pages" data-sort-key="clicks">Klikken <span class="sort-indicator" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort-table="pages" data-sort-key="position">Pos. <span class="sort-indicator" aria-hidden="true"></span></button></th>
+            </tr></thead>
             <tbody id="pages"></tbody>
           </table>
         </div>
