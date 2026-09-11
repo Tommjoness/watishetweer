@@ -13,6 +13,7 @@ const css=read("admin/seo/seo-dashboard.css");
 const api=read("functions/api/admin/seo.js");
 const headers=read("cloudflare/_headers");
 const workflow=read(".github/workflows/cloudflare-preview.yml");
+const productionWorkflow=read(".github/workflows/cloudflare-production.yml");
 const preload=read("scripts/cloudflare-access-preload.cjs");
 const accessHelper=read("scripts/cloudflare-access-service-token.js");
 
@@ -23,6 +24,8 @@ assert(!/<script(?![^>]*\ssrc=)[^>]*>/i.test(html),"SEO admin bevat inline scrip
 assert.doesNotThrow(()=>new Function(js),"SEO dashboard JavaScript bevat een syntaxfout.");
 assert(html.includes('data-sort-table="queries"'),"Topzoektermen missen sorteerbare kolommen.");
 assert(html.includes('data-sort-table="pages"'),"Toppagina's missen sorteerbare kolommen.");
+assert(html.includes('class="data-table rank-table"'),"Topzoektermen/toppagina's missen vaste gedeelde kolomlayout.");
+assert(html.includes('class="data-table opportunity-data-table"'),"SEO-kansen missen vaste kolomlayout.");
 assert(html.includes("Slimme selectie"),"SEO-kansenuitleg mist de nieuwe selectiecopy.");
 assert(js.includes("/api/admin/seo?days="),"Dashboard praat niet met de afgeschermde admin-API.");
 assert(js.includes('cache:"no-store"'),"Dashboardrequest moet no-store zijn.");
@@ -35,6 +38,9 @@ assert(js.includes("percent.format(share)"),"Apparaten/landen missen impressiepe
 assert(js.includes("3 dagen vertraging voor stabiele data"),"Dashboard moet de bewuste GSC-vertraging uitleggen.");
 assert(css.includes(".sort-button"),"Dashboard mist styling voor sorteerbare kolommen.");
 assert(css.includes(".page-link"),"Dashboard mist styling voor klikbare landingspagina's.");
+assert(css.includes("table-layout:fixed"),"Dashboardtabellen moeten vaste kolomgeometrie gebruiken.");
+assert(css.includes("font-variant-numeric:tabular-nums"),"Dashboardcijfers moeten tabulair uitlijnen.");
+assert(css.includes("minmax(145px,auto) 72px"),"Verdelingsrijen missen vaste metriektracks.");
 assert(css.length>1000,"Dashboardstylesheet lijkt onvolledig.");
 
 for(const required of [
@@ -76,6 +82,9 @@ assert(accessHelper.includes("await addPreviewRoute(page,headers)"),"Pagina-inte
 assert(preload.includes("cloudflare-access-service-token.js"),"CI-preload mist centrale Access-helper.");
 for(const required of ["CF_ACCESS_CLIENT_ID","CF_ACCESS_CLIENT_SECRET","cloudflare-access-preload.cjs"]){
   assert(workflow.includes(required),`Cloudflare previewworkflow mist service-tokencontract: ${required}`);
+  assert(productionWorkflow.includes(required),`Cloudflare productionworkflow mist service-tokencontract: ${required}`);
 }
+assert.equal((productionWorkflow.match(/NODE_OPTIONS: --require=\.\/scripts\/cloudflare-access-preload\.cjs/g)||[]).length,2,"Production moet readiness en immutable smoke via de host-begrensde Access-preload uitvoeren.");
+assert(productionWorkflow.includes("Cloudflare Access service token is onvolledig."),"Production moet een half Access service token fail-closed weigeren.");
 
 console.log("SEO admin dashboard contract OK");
