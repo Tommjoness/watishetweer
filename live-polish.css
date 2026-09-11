@@ -289,3 +289,39 @@
    bronresolutie blijft beschikbaar onder 'Over deze gegevens'. */
 #nchint{display:none}
 #nchint + .data-uitleg{margin-top:8px}
+
+/* Desktop-readability pass 2026-09-11. Alleen presentatie: minder dominante
+   huidige temperatuur, geen dubbele sunrise/sunset-copy in de grafiekkop,
+   iets ruimere kleine tekst en geen loze bodyruimte onder de plaatsnavigatie. */
+@media(min-width:1100px){
+  body{font-size:16px!important;padding-bottom:0!important}
+  .dashrow-hero #t{font-size:clamp(88px,6vw,102px)!important;line-height:.82!important}
+  .dashrow-hero .deg{font-size:28px!important;margin-top:5px!important}
+  #stamp{font-size:12px!important}
+  .ssub{font-size:13px!important;line-height:1.45!important}
+  .hint{font-size:13px!important}
+
+  /* Met een dagaanduiding zijn sunrise/sunset het tweede en derde span; zonder
+     dagaanduiding zijn het de eerste twee van precies drie spans. Bij ontbrekende
+     zondata (slechts daglabel + daglengte) blijft het daglabel dus zichtbaar. */
+  #suntimes .zondag + span,
+  #suntimes .zondag + span + span,
+  #suntimes > span:first-child:nth-last-child(3),
+  #suntimes > span:first-child:nth-last-child(3) + span{display:none!important}
+  #suntimes{display:flex!important;align-items:center!important;gap:14px!important;text-align:right!important}
+  #suntimes .zondag{margin:0!important;text-align:right!important}
+
+  .wiw-hour-table{font-size:13.25px!important}
+  .wiw-hour-table thead th{font-size:10.5px!important}
+  .wiw-hour-date{font-size:11px!important;color:var(--ink-70)!important;margin-left:7px!important}
+
+  #days .row.kop>*,#nights .row.kop>*{font-size:10.5px!important}
+  #days .dcond{font-size:14px!important}
+  #days .dwind,#days .drain,#nights .nmeta{font-size:13px!important}
+  #nights .row.night:not(.kop)>.nachtadvies,
+  #nights .row.night:not(.kop)>.nachtvenster{font-size:13.5px!important}
+  #nights .row.night:not(.kop)>.nachtmaan{font-size:12.25px!important}
+
+  html body footer{font-size:13px!important}
+  body > .seo-plaatsnav{font-size:13.5px!important}
+}
