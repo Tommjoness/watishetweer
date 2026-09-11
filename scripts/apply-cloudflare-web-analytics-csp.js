@@ -92,13 +92,7 @@ function pasArtifactAan(root=path.join(__dirname,"..","public")){
 }
 
 if(require.main===module){
-  try{
-    pasArtifactAan();
-    /* De bestaande analytics-postbuild is het centrale punt waar CSP en
-       publieke HTML al samenkomen. Voeg hier direct daarna de privacygerichte
-       PostHog-laag toe, zodat package- en postbuildvolgorde niet dupliceren. */
-    require("./apply-posthog-analytics.js").pasArtifactAan();
-  }
+  try{pasArtifactAan();}
   catch(e){console.error(e&&e.stack||e);process.exit(1);}
 }
 
