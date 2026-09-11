@@ -14,6 +14,7 @@ const api=read("functions/api/admin/seo.js");
 const headers=read("cloudflare/_headers");
 const workflow=read(".github/workflows/cloudflare-preview.yml");
 const preload=read("scripts/cloudflare-access-preload.cjs");
+const accessHelper=read("scripts/cloudflare-access-service-token.js");
 
 assert(html.includes('meta name="robots" content="noindex,nofollow,noarchive"'),"SEO admin mist noindex-meta.");
 assert(html.includes('src="/admin/seo/seo-dashboard.js"'),"SEO admin mist extern script.");
@@ -53,6 +54,9 @@ assert.deepEqual(accessHeaders({CF_ACCESS_CLIENT_ID:"id",CF_ACCESS_CLIENT_SECRET
 assert.equal(protectedPreviewUrl("https://pr-321.watishetweer.pages.dev/"),true,"Branch-preview wordt niet herkend als beschermd.");
 assert.equal(protectedPreviewUrl("https://abc123.watishetweer.pages.dev/api/forecast"),true,"Immutable preview wordt niet herkend als beschermd.");
 assert.equal(protectedPreviewUrl("https://watishetweer.nl/"),false,"Productiedomein mag geen CI-service-tokenheaders krijgen.");
+assert.equal(protectedPreviewUrl("https://api.open-meteo.com/v1/forecast"),false,"CI-service-token mag niet naar externe providers lekken.");
+assert(!accessHelper.includes("extraHTTPHeaders"),"Browserauth mag Access-secrets niet als globale headers naar externe providers sturen.");
+assert(accessHelper.includes("route.fallback"),"Browserauth mist host-begrensde requestinjectie.");
 assert(preload.includes("cloudflare-access-service-token.js"),"CI-preload mist centrale Access-helper.");
 for(const required of ["CF_ACCESS_CLIENT_ID","CF_ACCESS_CLIENT_SECRET","cloudflare-access-preload.cjs"]){
   assert(workflow.includes(required),`Cloudflare previewworkflow mist service-tokencontract: ${required}`);
