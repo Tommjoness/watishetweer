@@ -14,11 +14,10 @@ const POSTPASS_MARKER="/* ===== LOCAL MINIMUM LABEL ABOVE-PASS 20260911 ===== */
 const RENDER_NIEUW=`    gezet.push({i:i,v:v,cx:cx,cy:cy,bw:bw,rang:k.rang});
   });
   ${POSTPASS_MARKER}
-  /* Houd de bestaande selectie- en botsingsvolgorde volledig intact. Alleen
-     lokale minima die door de historische voorkeur onder hun lijnpunt staan,
-     mogen ná de definitieve selectie naar een vrije laag erboven verhuizen.
-     Daardoor blijft het vaste drie-uursraster onaangeraakt; als boven geen
-     botsingsvrije plek bestaat, blijft het label veilig onder de lijn staan. */
+  /* Houd de bestaande kandidaatselectie en prioriteiten intact. Alleen lokale
+     minima die door de historische voorkeur onder hun lijnpunt staan, mogen na
+     de definitieve selectie naar een vrije laag erboven verhuizen. Als daar
+     geen botsingsvrije plek bestaat, blijft het label veilig onder de lijn. */
   gezet.forEach(g=>{
     if(soort[g.i]!==-1 || g.cy<y(g.v))return;
     const stapHoogte=labelHoogte+4;
@@ -33,6 +32,34 @@ const RENDER_NIEUW=`    gezet.push({i:i,v:v,cx:cx,cy:cy,bw:bw,rang:k.rang});
       break;
     }
   });
+
+  /* Een verplaatsing mag nooit ten koste gaan van het vaste drie-uursraster.
+     De bestaande placer kan in een uitzonderlijk druk etmaal een rang-1
+     rasterpunt laten vallen nadat omliggende extrema eerst zijn geplaatst.
+     Herstel daarom uitsluitend ontbrekende rasterkandidaten uit kandKaart en
+     alleen wanneer de bestaande collisionplacer er nog een veilige positie voor
+     vindt. Geen test- of overlapcontract wordt afgezwakt: zonder veilige plek
+     blijft de bestaande browserstresscheck gewoon rood. */
+  if(T.length<=25){
+    for(let i=0;i<T.length;i++){
+      if(!geldig(i)||i%stap!==0||!kandKaart.has(i)||gezet.some(g=>g.i===i))continue;
+      const v=T[i],bw=labelBreed(v);
+      let cx=x(i);
+      if(cx-bw/2<pl-2)cx=pl-2+bw/2;
+      if(cx+bw/2>W-pr)cx=W-pr-bw/2;
+      let poging=probeerLagen(cx,v,true,null);
+      if(!poging){
+        const schuif=bw/2+6;
+        for(const rcx of [cx+schuif,cx-schuif,cx+2*schuif,cx-2*schuif]){
+          if(rcx-bw/2<pl-2||rcx+bw/2>W-pr)continue;
+          poging=probeerLagen(rcx,v,true,null);
+          if(poging){cx=rcx;break;}
+        }
+      }
+      if(!poging)continue;
+      gezet.push({i:i,v:v,cx:cx,cy:poging.cy,bw:bw,rang:kandKaart.get(i)||1});
+    }
+  }
   // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:`;
 
 function htmlBestanden(dir){
@@ -72,7 +99,7 @@ function main(){
   if(!relevant)throw new Error("Geen weergrafiek-artifact gevonden voor temperatuur-labelconsistentie.");
   if(geraakt){
     const cache=vernieuwServiceworkerCache(OUT,"chart-label-consistency-20260911");
-    console.log(`Lokale minimumlabels krijgen waar veilig een vrije laag boven de lijn op ${geraakt}/${relevant} weergrafiek-artifacts; selectie, raster en collisionfallback blijven intact. Cache ${cache}.`);
+    console.log(`Lokale minimumlabels krijgen waar veilig een vrije laag boven de lijn op ${geraakt}/${relevant} weergrafiek-artifacts; het vaste 24-uursraster wordt na de verplaatsing collisionvrij hersteld. Cache ${cache}.`);
   }else{
     console.log(`Minimumlabel-pass stond al correct op ${reeds}/${relevant} weergrafiek-artifacts.`);
   }
