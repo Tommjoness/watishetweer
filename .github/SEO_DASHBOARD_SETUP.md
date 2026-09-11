@@ -22,6 +22,21 @@ Configureer in Cloudflare Pages voor productie én previews waar gewenst:
 
 De Function verifieert de `Cf-Access-Jwt-Assertion` cryptografisch tegen de Cloudflare Access JWKS. Alleen de e-mailheader vertrouwen is bewust niet voldoende.
 
+### Beschermde Pages-previews en GitHub Actions
+
+Als Cloudflare Pages preview-deployments via Access zijn afgeschermd, moeten de CI-smoke- en browsertests zich ook expliciet authenticeren. Gebruik daarvoor een aparte Cloudflare Access **Service Token** voor GitHub Actions; zet de gebruikerspolicy niet uit en behandel een Access-redirect niet als een geslaagde test.
+
+1. Maak in Zero Trust onder **Access controls → Service credentials → Service Tokens** een token voor GitHub Actions.
+2. Voeg aan de bestaande Pages-preview Access application een **Service Auth** policy toe met selector **Service Token** en uitsluitend dat token.
+3. Bewaar in GitHub Actions repository secrets:
+   - `CF_ACCESS_CLIENT_ID`
+   - `CF_ACCESS_CLIENT_SECRET`
+4. Commit deze waarden nooit en zet ze niet in `wrangler.toml`.
+
+De previewworkflow laadt `scripts/cloudflare-access-preload.cjs`. Die injecteert de twee Access-headers uitsluitend richting `*.watishetweer.pages.dev`; het productiedomein krijgt deze CI-credentials niet. Een half geconfigureerd token faalt hard.
+
+Deze CI-token is alleen bedoeld om de buitenste preview-Accesslaag te passeren. De SEO-admin-API blijft intern de gebruikers-JWT en e-mailallowlist controleren; de service-tokenroute verzwakt die controle niet.
+
 ## 2. Google service account
 
 Maak in Google Cloud één service-account aan. Download de JSON-key **niet naar de repository** en commit hem nooit.
@@ -55,7 +70,8 @@ Minimaal:
 - `node scripts/seo-admin-dashboard.test.js`
 - bestaande `npm run test:prebuild`
 - Cloudflare preview: zonder Access-config moet `/api/admin/seo` fail-closed antwoorden;
-- na Access-config: niet-toegestane accounts 403/Access-deny, toegestaan beheeraccount krijgt data;
+- beschermde preview: CI passeert Access alleen met het aparte service token en voert daarna de bestaande inhoudelijke tests ongewijzigd uit;
+- na Access-config: niet-toegestane gebruikers 403/Access-deny, toegestaan beheeraccount krijgt data;
 - bevestig dat responses `no-store` en `noindex` dragen.
 
-Merge pas nadat productie-secrets en Access-policy expliciet zijn gecontroleerd.
+Merge pas nadat productie-secrets, preview-service-token, Access-policies en een echte ingelogde dashboardcontrole expliciet zijn gecontroleerd.
