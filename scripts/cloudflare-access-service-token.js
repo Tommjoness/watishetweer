@@ -48,13 +48,18 @@ function installFetch(env=process.env){
   return true;
 }
 
+async function addPreviewRoute(context,headers){
+  await context.route(/^https:\/\/(?:[a-z0-9-]+\.)?watishetweer\.pages\.dev(?:\/|$)/i,async route=>{
+    const merged=mergeHeaders(route.request().headers(),headers);
+    await route.fallback({headers:Object.fromEntries(merged.entries())});
+  });
+  return context;
+}
+
 function decorateBrowser(browser,headers){
   if(!browser||browser.__wiwCloudflareAccessPatched)return browser;
   const original=browser.newContext.bind(browser);
-  browser.newContext=(options={})=>original({
-    ...options,
-    extraHTTPHeaders:{...headers,...(options.extraHTTPHeaders||{})}
-  });
+  browser.newContext=async(options={})=>addPreviewRoute(await original(options),headers);
   Object.defineProperty(browser,"__wiwCloudflareAccessPatched",{value:true});
   return browser;
 }
@@ -80,4 +85,4 @@ function install(env=process.env){
   installPlaywright(env);
 }
 
-module.exports={serviceToken,accessHeaders,protectedPreviewUrl,mergeHeaders,installFetch,decorateBrowser,installPlaywright,install};
+module.exports={serviceToken,accessHeaders,protectedPreviewUrl,mergeHeaders,installFetch,addPreviewRoute,decorateBrowser,installPlaywright,install};
