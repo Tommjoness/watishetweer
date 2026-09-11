@@ -45,7 +45,10 @@
         <p class="muted">Slimme selectie: bijna pagina 1, lage CTR en veel zichtbaarheid op positie 15–40.</p>
       </div>
       <div class="table-wrap opportunity-table">
-        <table>
+        <table class="data-table opportunity-data-table">
+          <colgroup>
+            <col class="col-query"><col class="col-opportunity"><col class="col-impressions"><col class="col-clicks"><col class="col-ctr"><col class="col-position">
+          </colgroup>
           <thead><tr>
             <th><button class="sort-button" type="button" data-sort-table="opportunities" data-sort-key="query">Zoekterm <span class="sort-indicator" aria-hidden="true"></span></button></th>
             <th>Kans</th>
@@ -63,7 +66,10 @@
       <article class="panel">
         <div class="panel-head"><div><p class="eyebrow">Google</p><h2>Topzoektermen</h2></div></div>
         <div class="table-wrap">
-          <table>
+          <table class="data-table rank-table">
+            <colgroup>
+              <col class="col-label"><col class="col-imp"><col class="col-clicks"><col class="col-pos">
+            </colgroup>
             <thead><tr>
               <th><button class="sort-button" type="button" data-sort-table="queries" data-sort-key="query">Zoekterm <span class="sort-indicator" aria-hidden="true"></span></button></th>
               <th><button class="sort-button" type="button" data-sort-table="queries" data-sort-key="impressions">Imp. <span class="sort-indicator" aria-hidden="true"></span></button></th>
@@ -78,7 +84,10 @@
       <article class="panel">
         <div class="panel-head"><div><p class="eyebrow">Landing pages</p><h2>Toppagina's</h2></div></div>
         <div class="table-wrap">
-          <table>
+          <table class="data-table rank-table">
+            <colgroup>
+              <col class="col-label"><col class="col-imp"><col class="col-clicks"><col class="col-pos">
+            </colgroup>
             <thead><tr>
               <th><button class="sort-button" type="button" data-sort-table="pages" data-sort-key="page">Pagina <span class="sort-indicator" aria-hidden="true"></span></button></th>
               <th><button class="sort-button" type="button" data-sort-table="pages" data-sort-key="impressions">Imp. <span class="sort-indicator" aria-hidden="true"></span></button></th>
