@@ -48,18 +48,40 @@ function installFetch(env=process.env){
   return true;
 }
 
-async function addPreviewRoute(context,headers){
-  await context.route(/^https:\/\/(?:[a-z0-9-]+\.)?watishetweer\.pages\.dev(?:\/|$)/i,async route=>{
+async function addPreviewRoute(target,headers){
+  await target.route(/^https:\/\/(?:[a-z0-9-]+\.)?watishetweer\.pages\.dev(?:\/|$)/i,async route=>{
     const merged=mergeHeaders(route.request().headers(),headers);
     await route.fallback({headers:Object.fromEntries(merged.entries())});
   });
-  return context;
+  return target;
+}
+
+function decoratePage(page,headers){
+  if(!page||page.__wiwCloudflareAccessPatched)return page;
+  const goto=page.goto.bind(page);
+  let pageRouteReady=false;
+  page.goto=async(...args)=>{
+    if(!pageRouteReady){
+      await addPreviewRoute(page,headers);
+      pageRouteReady=true;
+    }
+    return goto(...args);
+  };
+  Object.defineProperty(page,"__wiwCloudflareAccessPatched",{value:true});
+  return page;
 }
 
 function decorateBrowser(browser,headers){
   if(!browser||browser.__wiwCloudflareAccessPatched)return browser;
   const original=browser.newContext.bind(browser);
-  browser.newContext=async(options={})=>addPreviewRoute(await original(options),headers);
+  browser.newContext=async(options={})=>{
+    const context=await addPreviewRoute(await original(options),headers);
+    if(context.__wiwCloudflareAccessPatched)return context;
+    const newPage=context.newPage.bind(context);
+    context.newPage=async(...args)=>decoratePage(await newPage(...args),headers);
+    Object.defineProperty(context,"__wiwCloudflareAccessPatched",{value:true});
+    return context;
+  };
   Object.defineProperty(browser,"__wiwCloudflareAccessPatched",{value:true});
   return browser;
 }
@@ -85,4 +107,4 @@ function install(env=process.env){
   installPlaywright(env);
 }
 
-module.exports={serviceToken,accessHeaders,protectedPreviewUrl,mergeHeaders,installFetch,addPreviewRoute,decorateBrowser,installPlaywright,install};
+module.exports={serviceToken,accessHeaders,protectedPreviewUrl,mergeHeaders,installFetch,addPreviewRoute,decoratePage,decorateBrowser,installPlaywright,install};
