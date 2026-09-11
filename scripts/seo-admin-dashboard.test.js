@@ -20,8 +20,20 @@ assert(html.includes('meta name="robots" content="noindex,nofollow,noarchive"'),
 assert(html.includes('src="/admin/seo/seo-dashboard.js"'),"SEO admin mist extern script.");
 assert(html.includes('href="/admin/seo/seo-dashboard.css"'),"SEO admin mist stylesheet.");
 assert(!/<script(?![^>]*\ssrc=)[^>]*>/i.test(html),"SEO admin bevat inline script en botst met CSP.");
+assert(html.includes('data-sort-table="queries"'),"Topzoektermen missen sorteerbare kolommen.");
+assert(html.includes('data-sort-table="pages"'),"Toppagina's missen sorteerbare kolommen.");
+assert(html.includes("Slimme selectie"),"SEO-kansenuitleg mist de nieuwe selectiecopy.");
 assert(js.includes("/api/admin/seo?days="),"Dashboard praat niet met de afgeschermde admin-API.");
 assert(js.includes('cache:"no-store"'),"Dashboardrequest moet no-store zijn.");
+assert(js.includes("function buildOpportunities"),"Dashboard mist slimme SEO-kansenclassificatie.");
+assert(js.includes('opportunityType:"near"'),"Dashboard mist bijna-pagina-1-kansen.");
+assert(js.includes('opportunityType:"ctr"'),"Dashboard mist CTR-kansen.");
+assert(js.includes('opportunityType:"visibility"'),"Dashboard mist zichtbaarheidkansen.");
+assert(js.includes('target="_blank" rel="noopener noreferrer"'),"Toppagina's missen veilige doorklik naar productie.");
+assert(js.includes("percent.format(share)"),"Apparaten/landen missen impressiepercentages.");
+assert(js.includes("3 dagen vertraging voor stabiele data"),"Dashboard moet de bewuste GSC-vertraging uitleggen.");
+assert(css.includes(".sort-button"),"Dashboard mist styling voor sorteerbare kolommen.");
+assert(css.includes(".page-link"),"Dashboard mist styling voor klikbare landingspagina's.");
 assert(css.length>1000,"Dashboardstylesheet lijkt onvolledig.");
 
 for(const required of [
