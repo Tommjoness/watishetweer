@@ -13,6 +13,7 @@ new vm.Script(analytics,{filename:"posthog-analytics.js"});
 
 assert.equal(CONNECT_SOURCE,"https://eu.i.posthog.com","PostHog capture moet uitsluitend de EU-ingestion origin gebruiken");
 assert(analytics.includes('const ENDPOINT="https://eu.i.posthog.com/i/v0/e/"'),"capture endpoint moet de officiële EU single-event endpoint zijn");
+assert(analytics.includes('"$geoip_disable":true'),"PostHog mag events niet automatisch met GeoIP-locatie verrijken");
 assert(analytics.includes('"$process_person_profile":false'),"events moeten anoniem blijven zonder person profile");
 assert(analytics.includes('credentials:"omit"'),"PostHog-request mag geen browsercredentials meesturen");
 assert(analytics.includes('referrerPolicy:"no-referrer"'),"PostHog-request mag geen Referer lekken");
@@ -91,4 +92,4 @@ for(const tekst of ["PostHog Cloud EU","geen PostHog-SDK","querystring","URL-has
   assert(privacy.includes(tekst),"privacyverklaring mist PostHog-uitleg: "+tekst);
 }
 
-console.log("posthog-analytics-contract: EU capture, anonieme allowlist, geen persistence/replay/SDK, route-redactie, CSP, post-delivery injectie, cachevernieuwing en privacytekst OK");
+console.log("posthog-analytics-contract: EU capture, anonieme allowlist, GeoIP-uit, geen persistence/replay/SDK, route-redactie, CSP, post-delivery injectie, cachevernieuwing en privacytekst OK");

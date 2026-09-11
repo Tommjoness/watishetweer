@@ -45,6 +45,7 @@
   function stuur(event,extra){
     const pathname=veiligPad(location.pathname);
     const properties=Object.assign({
+      "$geoip_disable":true,
       "$process_person_profile":false,
       "$current_url":location.origin+pathname,
       "$host":location.hostname,
