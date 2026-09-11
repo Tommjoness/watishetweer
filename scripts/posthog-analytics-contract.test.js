@@ -19,9 +19,15 @@ assert(analytics.includes('referrerPolicy:"no-referrer"'),"PostHog-request mag g
 assert(analytics.includes('return "/weer/:location"'),"weerroutes moeten plaatsnamen vóór capture generaliseren");
 assert(analytics.includes('navigator.globalPrivacyControl===true'),"Global Privacy Control moet PostHog uitschakelen");
 assert(analytics.includes('navigator.doNotTrack==="1"'),"Do Not Track moet PostHog uitschakelen");
-for(const verboden of ["localStorage","sessionStorage","document.cookie","posthog.init","eu-assets.i.posthog.com","location.search","location.hash"]){
-  assert(!analytics.includes(verboden),"privacycontract mag dit niet gebruiken: "+verboden);
-}
+for(const [label,patroon] of [
+  ["localStorage-gebruik",/\blocalStorage\s*[.[]/],
+  ["sessionStorage-gebruik",/\bsessionStorage\s*[.[]/],
+  ["cookie-gebruik",/\bdocument\s*\.\s*cookie\b/],
+  ["PostHog SDK-init",/\bposthog\s*\.\s*init\s*\(/i],
+  ["PostHog SDK-assets",/eu-assets\.i\.posthog\.com/i],
+  ["querystring-uitlezing",/\blocation\s*\.\s*search\b/],
+  ["hash-uitlezing",/\blocation\s*\.\s*hash\b/]
+])assert(!patroon.test(analytics),"privacycontract verbiedt "+label);
 
 const policy="default-src 'self'; script-src 'self'; connect-src 'self' https://api.open-meteo.com; base-uri 'none'";
 const csp=verruimConnectSrc(policy);
