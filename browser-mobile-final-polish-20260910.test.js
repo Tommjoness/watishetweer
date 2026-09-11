@@ -36,6 +36,8 @@ document.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body
   const title=document.getElementById('wiw-hour-title'),mini=document.getElementById('minibar');mini?.classList.add('aan');
   zet('title-size',parseFloat(getComputedStyle(title).fontSize));zet('mini-overflow',mini?getComputedStyle(mini).overflow:'');
   const after=mini?getComputedStyle(mini,'::after'):null;zet('fade-height',after?parseFloat(after.height):0);zet('fade-bg',after?.backgroundImage||'');
+  const brand=document.querySelector('footer a[href="/over/"]'),brandName=brand?.querySelector('b');
+  zet('brand-nowrap',brand?getComputedStyle(brand).whiteSpace:'');zet('brand-gap',brandName?parseFloat(getComputedStyle(brandName).marginRight):0);zet('brand-text',brand?.textContent.trim()||'');
   zet('overflow',Math.round(Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth));
   S.dag=0;WeatherNowFinalDesktopUI20260902.render();const dagRows=[...document.querySelectorAll('#wiw-hour-table tbody tr')];zet('day-rows',dagRows.length);zet('day-first',dagRows[0]?.querySelector('time')?.textContent||'');
   zet('done','ok');
@@ -58,9 +60,11 @@ try{
     if(v('current')!=='1'||v('marker')!=='')throw new Error(`${w}px: eerstvolgend uur moet semantisch actueel blijven zonder zichtbare marker (${v('current')} / ${v('marker')})`);
     if(Number(v('title-size'))>18.1)throw new Error(`${w}px: uurtabeltitel blijft te groot (${v('title-size')}px)`);
     if(v('mini-overflow')!=='visible'||Number(v('fade-height'))<11.9||!/linear-gradient/i.test(v('fade-bg')||''))throw new Error(`${w}px: fixed locatiebalk heeft geen zachte onderovergang (${v('mini-overflow')} / ${v('fade-height')} / ${v('fade-bg')})`);
+    if(v('brand-nowrap')!=='nowrap'||Number(v('brand-gap'))<2.9)throw new Error(`${w}px: footermerkseparator blijft te krap of kan afbreken (${v('brand-nowrap')} / ${v('brand-gap')}px)`);
+    if(v('brand-text')!=='watishetweer.nl · Over deze site')throw new Error(`${w}px: footermerklabel of separatorsemantiek is gewijzigd (${v('brand-text')})`);
     if(v('day-rows')!=='24'||v('day-first')!=='13:00')throw new Error(`${w}px: expliciet gekozen kalenderdag is onbedoeld ingekort (${v('day-rows')} / ${v('day-first')})`);
     if(Number(v('overflow'))>2)throw new Error(`${w}px: ${v('overflow')}px horizontale overflow`);
-    console.log(`${w}px mobiele final-polish groen: eerste komende uur 14:00, 23 rijen, gekozen dag 24 rijen, titel ${v('title-size')}px, headerfade ${v('fade-height')}px.`);
+    console.log(`${w}px mobiele final-polish groen: eerste komende uur 14:00, 23 rijen, gekozen dag 24 rijen, titel ${v('title-size')}px, headerfade ${v('fade-height')}px, footermerkgap ${v('brand-gap')}px.`);
   }
-  console.log("Mobiele final-polish browsertest geslaagd op 320/390/430 px.");
+  console.log("Mobiele final-polish browsertest geslaagd op 320/390/430 px, inclusief footermerkseparator zonder overflow.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}

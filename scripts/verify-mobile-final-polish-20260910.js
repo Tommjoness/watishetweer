@@ -24,9 +24,11 @@ for(const p of htmlBestanden(OUT)){
   eis(html.includes("#minibar.aan::after"),`${rel}: zachte overgang onder de fixed mobiele locatiebalk ontbreekt`);
   eis(html.includes("linear-gradient(to bottom,var(--sheet),transparent)"),`${rel}: mobiele headerfade is niet thema-eigen`);
   eis(html.includes("#wiw-hour-title{font-size:18px!important;line-height:1.18!important;scroll-margin-top:64px}"),`${rel}: subtiel compactere mobiele uurtabeltitel ontbreekt`);
+  eis(html.includes('footer a[href="/over/"]{white-space:nowrap}'),`${rel}: footermerklink kan mobiel nog onrustig afbreken`);
+  eis(html.includes('footer a[href="/over/"] b{display:inline-block;margin-right:3px}'),`${rel}: footermerkseparator heeft mobiel niet de bedoelde subtiele tussenruimte`);
   eis(html.includes("@media(max-width:900px)"),`${rel}: mobiele polish is niet tot de bestaande mobiele breakpoint begrensd`);
   eis(!html.includes("@media(max-width:430px){\n  #wiw-hour-title"),`${rel}: extra smalle titelbreakpoint hoort niet meer actief te zijn`);
 }
 
 eis(gecontroleerd>0,"Geen finale weerartifacts gevonden om mobiele final-polish te verifiëren.");
-console.log(`Mobiele final-polish geverifieerd in ${gecontroleerd} artifacts: DST-veilige providerklokgrens, geen verstreken uurstempels, zachte fixed-headerovergang en compactere uurtitel.`);
+console.log(`Mobiele final-polish geverifieerd in ${gecontroleerd} artifacts: DST-veilige providerklokgrens, geen verstreken uurstempels, zachte fixed-headerovergang, compactere uurtitel en nette footermerkseparator.`);
