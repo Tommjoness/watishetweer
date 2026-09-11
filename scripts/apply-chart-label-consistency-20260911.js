@@ -28,7 +28,7 @@ const RENDER_NIEUW=`    /* Het vaste desktop-drie-uursraster is een presentatiec
        wegwerpbare achtergrondlaag. Bescherm uitsluitend die reeds geselecteerde
        rasterpunten tegen latere evictie door extra extrema; de kandidaatselectie,
        collisionplacer en mobiele dichtheid blijven verder ongewijzigd. */
-    const plaatsRang=!M&&n<=24&&i%stap===0?Math.max(3,k.rang):k.rang;
+    const plaatsRang=!M&&n<=24&&i%stap===0?Math.max(4,k.rang):k.rang;
     gezet.push({i:i,v:v,cx:cx,cy:cy,bw:bw,rang:plaatsRang});
   });
   ${POSTPASS_MARKER}
@@ -49,6 +49,49 @@ const RENDER_NIEUW=`    /* Het vaste desktop-drie-uursraster is een presentatiec
       break;
     }
   });
+
+  /* De stressfixture liet nog één reëel desktoprandgeval zien: een rasterpunt
+     kan al vóór de extra extrema geen vrije laag vinden, waarna twee nabije
+     lokale extrema (rang 2) de ruimte bezetten. Herstel daarom alleen op
+     desktop en alleen ontbrekende 24-uursrasterpunten die nog in kandKaart
+     staan. Eerst proberen we zonder iets te verwijderen. Alleen als dat niet
+     lukt mag een rasterpunt een botsend lokaal extra-label met rang < 3 laten
+     wijken. Globale extrema (rang 3), andere rasterpunten (rang 4) en mobiel
+     blijven onaangeraakt. */
+  if(!M&&n<=24){
+    for(let i=stap;i<T.length;i+=stap){
+      if(!geldig(i)||!kandKaart.has(i)||gezet.some(g=>g.i===i))continue;
+      const v=T[i],bw=labelBreed(v);
+      let cx=x(i);
+      if(cx-bw/2<pl-2)cx=pl-2+bw/2;
+      if(cx+bw/2>W-pr)cx=W-pr-bw/2;
+
+      const probeerRaster=(minRang)=>{
+        let p=probeerLagen(cx,v,true,minRang),px=cx;
+        if(p)return {poging:p,cx:px};
+        const schuif=bw/2+6;
+        for(const rcx of [cx+schuif,cx-schuif,cx+2*schuif,cx-2*schuif]){
+          if(rcx-bw/2<pl-2||rcx+bw/2>W-pr)continue;
+          p=probeerLagen(rcx,v,true,minRang);
+          if(p)return {poging:p,cx:rcx};
+        }
+        return null;
+      };
+
+      let herstel=probeerRaster(null);
+      if(!herstel)herstel=probeerRaster(3);
+      if(!herstel)continue;
+
+      for(const blokkeerder of herstel.poging.verwijderd||[]){
+        const pos=gezet.indexOf(blokkeerder);
+        if(pos>=0)gezet.splice(pos,1);
+      }
+      gezet.push({
+        i:i,v:v,cx:herstel.cx,cy:herstel.poging.cy,bw:bw,
+        rang:Math.max(4,kandKaart.get(i)||1)
+      });
+    }
+  }
   // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:`;
 
 function htmlBestanden(dir){
@@ -92,7 +135,7 @@ function main(){
   if(!relevant)throw new Error("Geen weergrafiek-artifact gevonden voor temperatuur-labelconsistentie.");
   if(geraakt){
     const cache=vernieuwServiceworkerCache(OUT,"chart-label-consistency-20260911");
-    console.log(`Temperatuurlabels aangepast op ${geraakt}/${relevant} weergrafiek-artifacts: lokale minima gaan waar veilig boven de lijn; desktop 24 uur plaatst en beschermt eerst het vaste drie-uursraster. Cache ${cache}.`);
+    console.log(`Temperatuurlabels aangepast op ${geraakt}/${relevant} weergrafiek-artifacts: lokale minima gaan waar veilig boven de lijn; desktop 24 uur beschermt en herstelt het vaste drie-uursraster zonder mobiele dichtheidswijziging. Cache ${cache}.`);
   }else{
     console.log(`Temperatuur-labelpass stond al correct op ${reeds}/${relevant} weergrafiek-artifacts.`);
   }
