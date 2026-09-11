@@ -5,12 +5,35 @@ const path=require("path");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 
 const OUT=path.join(__dirname,"..","public");
-const OUD="    const eersteBoven = soort[i]!==-1;";
-const NIEUW="    const eersteBoven = true; // Temperatuurlabels beginnen consequent boven de lijn.";
-const RASTER_OUD="    if(!kandKaart.has(i)) kandKaart.set(i,1);";
-const RASTER_NIEUW="    if(n<=24) zet(i,4); else if(!kandKaart.has(i)) kandKaart.set(i,1); // Vast etmaalraster eerst; extrema blijven extra.";
-const PLAATSINGSANKER="    let poging=probeerLagen(cx,v,eersteBoven,null);";
+const PLAATSINGSANKER="    const eersteBoven = soort[i]!==-1;";
 const FALLBACKANKER="    if(!eersteBoven) opties.reverse();";
+const RENDERANKER=`    gezet.push({i:i,v:v,cx:cx,cy:cy,bw:bw,rang:k.rang});
+  });
+  // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:`;
+const POSTPASS_MARKER="/* ===== LOCAL MINIMUM LABEL ABOVE-PASS 20260911 ===== */";
+const RENDER_NIEUW=`    gezet.push({i:i,v:v,cx:cx,cy:cy,bw:bw,rang:k.rang});
+  });
+  ${POSTPASS_MARKER}
+  /* Houd de bestaande selectie- en botsingsvolgorde volledig intact. Alleen
+     lokale minima die door de historische voorkeur onder hun lijnpunt staan,
+     mogen ná de definitieve selectie naar een vrije laag erboven verhuizen.
+     Daardoor blijft het vaste drie-uursraster onaangeraakt; als boven geen
+     botsingsvrije plek bestaat, blijft het label veilig onder de lijn staan. */
+  gezet.forEach(g=>{
+    if(soort[g.i]!==-1 || g.cy<y(g.v))return;
+    const stapHoogte=labelHoogte+4;
+    for(let laag=0;laag<MAXLAAG;laag++){
+      const kandidaat=y(g.v)-((M?13:14)+laag*stapHoogte);
+      if(kandidaat-F.temp<by+bh+6)continue;
+      const botst=gezet.some(andere=>andere!==g
+        && Math.abs(andere.cx-g.cx)<(andere.bw+g.bw)/2+5
+        && Math.abs(andere.cy-kandidaat)<labelHoogte+3);
+      if(botst)continue;
+      g.cy=kandidaat;
+      break;
+    }
+  });
+  // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:`;
 
 function htmlBestanden(dir){
   const uit=[];
@@ -22,24 +45,16 @@ function htmlBestanden(dir){
   return uit;
 }
 
-function vervangContract(bron,oud,nieuw,label){
-  const oudAantal=bron.split(oud).length-1;
-  const nieuwAantal=bron.split(nieuw).length-1;
-  if(oudAantal===1&&nieuwAantal===0)return {html:bron.replace(oud,nieuw),geraakt:true};
-  if(oudAantal===0&&nieuwAantal===1)return {html:bron,geraakt:false};
-  throw new Error(`${label}: onverwacht contract (oud=${oudAantal}, nieuw=${nieuwAantal}).`);
-}
-
 function pasHtmlToe(html,label="artifact"){
   const bron=String(html||"");
-  const relevant=bron.includes(PLAATSINGSANKER)||bron.includes(OUD)||bron.includes(NIEUW);
+  const relevant=bron.includes(PLAATSINGSANKER)||bron.includes(POSTPASS_MARKER);
   if(!relevant)return {html:bron,relevant:false,geraakt:false,reeds:false};
-  if(!bron.includes(FALLBACKANKER))throw new Error(`${label}: grafiekfallback boven/onder ontbreekt.`);
-
-  const zijde=vervangContract(bron,OUD,NIEUW,`${label}: labelzijde`);
-  const raster=vervangContract(zijde.html,RASTER_OUD,RASTER_NIEUW,`${label}: etmaalraster`);
-  const geraakt=zijde.geraakt||raster.geraakt;
-  return {html:raster.html,relevant:true,geraakt,reeds:!geraakt};
+  if(!bron.includes(FALLBACKANKER))throw new Error(`${label}: bestaande boven/onder-fallback ontbreekt.`);
+  const oudAantal=bron.split(RENDERANKER).length-1;
+  const nieuwAantal=bron.split(POSTPASS_MARKER).length-1;
+  if(oudAantal===1&&nieuwAantal===0)return {html:bron.replace(RENDERANKER,RENDER_NIEUW),relevant:true,geraakt:true,reeds:false};
+  if(oudAantal===0&&nieuwAantal===1)return {html:bron,relevant:true,geraakt:false,reeds:true};
+  throw new Error(`${label}: onverwacht minimumlabel-contract (oud=${oudAantal}, nieuw=${nieuwAantal}).`);
 }
 
 function main(){
@@ -57,11 +72,11 @@ function main(){
   if(!relevant)throw new Error("Geen weergrafiek-artifact gevonden voor temperatuur-labelconsistentie.");
   if(geraakt){
     const cache=vernieuwServiceworkerCache(OUT,"chart-label-consistency-20260911");
-    console.log(`Temperatuurlabels aangepast op ${geraakt}/${relevant} weergrafiek-artifacts: boven heeft voorkeur en het vaste etmaalraster blijft beschermd; onder de lijn blijft collision/rand-fallback. Cache ${cache}.`);
+    console.log(`Lokale minimumlabels krijgen waar veilig een vrije laag boven de lijn op ${geraakt}/${relevant} weergrafiek-artifacts; selectie, raster en collisionfallback blijven intact. Cache ${cache}.`);
   }else{
-    console.log(`Temperatuurlabels en etmaalraster waren al consistent op ${reeds}/${relevant} weergrafiek-artifacts.`);
+    console.log(`Minimumlabel-pass stond al correct op ${reeds}/${relevant} weergrafiek-artifacts.`);
   }
 }
 
 if(require.main===module)main();
-module.exports={OUT,OUD,NIEUW,RASTER_OUD,RASTER_NIEUW,PLAATSINGSANKER,FALLBACKANKER,htmlBestanden,vervangContract,pasHtmlToe,main};
+module.exports={OUT,PLAATSINGSANKER,FALLBACKANKER,RENDERANKER,POSTPASS_MARKER,RENDER_NIEUW,htmlBestanden,pasHtmlToe,main};
