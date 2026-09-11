@@ -9,7 +9,7 @@ const pad2=n=>String(n).padStart(2,"0");
 function parseLokaleIso(iso){const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(String(iso||""));return m?{jaar:+m[1],maand:+m[2],dag:+m[3],uur:+m[4],minuut:+m[5],seconde:+(m[6]||0)}:null;}
 function datumUitDelen(p){return p?`${p.jaar}-${pad2(p.maand)}-${pad2(p.dag)}`:null;}
 function datumPlus(datum,dagen){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(datum||""));if(!m)return null;const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3]+Number(dagen||0)));return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())}`;}
-function zoneDelen(ms,tijdzone){if(!tijdzone||typeof Intl==="undefined"&& !Intl.DateTimeFormat)return null;try{const fmt=new Intl.DateTimeFormat("en-CA",{timeZone:tijdzone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"});const p=Object.fromEntries(fmt.formatToParts(new Date(ms)).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));return {jaar:+p.year,maand:+p.month,dag:+p.day,uur:+p.hour,minuut:+p.minute,seconde:+p.second};}catch(_){return null;}}
+function zoneDelen(ms,tijdzone){if(!tijdzone||typeof Intl==="undefined"||!Intl.DateTimeFormat)return null;try{const fmt=new Intl.DateTimeFormat("en-CA",{timeZone:tijdzone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"});const p=Object.fromEntries(fmt.formatToParts(new Date(ms)).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));return {jaar:+p.year,maand:+p.month,dag:+p.day,uur:+p.hour,minuut:+p.minute,seconde:+p.second};}catch(_){return null;}}
 function zoneOffsetMs(ms,tijdzone){const p=zoneDelen(ms,tijdzone);if(!p)return null;const heel=Math.floor(ms/1000)*1000;return Date.UTC(p.jaar,p.maand-1,p.dag,p.uur,p.minuut,p.seconde)-heel;}
 function lokaleIsoNaarUtcMs(iso,tijdzone,utcOffsetSeconden){const p=parseLokaleIso(iso);if(!p)return null;const doel=Date.UTC(p.jaar,p.maand-1,p.dag,p.uur,p.minuut,p.seconde);if(tijdzone){let gok=doel;for(let i=0;i<3;i++){const off=zoneOffsetMs(gok,tijdzone);if(off===null)break;gok=doel-off;}if(Number.isFinite(gok))return gok;}const off=getal(utcOffsetSeconden);return off===null?doel:doel-off*1000;}
 function lokaleDatumNu(data,nuMs){const d=data||{},zone=zoneDelen(nuMs,d.timezone);if(zone)return datumUitDelen(zone);const off=getal(d.utc_offset_seconds)||0;return new Date(nuMs+off*1000).toISOString().slice(0,10);}
@@ -74,7 +74,7 @@ function verfijnGrafiekLabelPosities(){
   }
   const boxes=alleTemp.map(b=>({...b}));
   for(const paar of paren){
-    const box=boxes.find(b=>b.el===paar.label.el),c=paar.cirkel;if(!box||box.y<c.y)return;
+    const box=boxes.find(b=>b.el===paar.label.el),c=paar.cirkel;if(!box||box.y<c.y)continue;
     const bovengrens=mobiel?37:44,afstand=mobiel?13:14,stap=box.h+4;
     for(let laag=0;laag<3;laag++){
       const kandidaat=c.y-(afstand+laag*stap);if(kandidaat-box.h<bovengrens)continue;
