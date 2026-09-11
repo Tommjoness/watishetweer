@@ -11,22 +11,23 @@ const RENDERANKER=`    gezet.push({i:i,v:v,cx:cx,cy:cy,bw:bw,rang:k.rang});
   });
   // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:`;
 const POSTPASS_MARKER="/* ===== LOCAL MINIMUM LABEL ABOVE-PASS 20260911 ===== */";
+const LABEL_Y_OUD='    labs+=`<text x="${g.cx.toFixed(1)}" y="${g.cy.toFixed(1)}" text-anchor="middle" fill="${INK}"';
+const LABEL_Y_NIEUW='    labs+=`<text x="${g.cx.toFixed(1)}" y="${(labelY.get(g.i)??g.cy).toFixed(1)}" text-anchor="middle" fill="${INK}"';
 const RENDER_NIEUW=`    gezet.push({i:i,v:v,cx:cx,cy:cy,bw:bw,rang:k.rang});
   });
   ${POSTPASS_MARKER}
-  /* Dit is bewust uitsluitend een positioneringscorrectie. De bestaande
-     kandidaatselectie, prioriteiten, rasterdichtheid en evictielogica blijven
-     volledig ongemoeid. Alleen een lokaal minimum dat uiteindelijk onder zijn
-     datapunt staat, mag naar een vrije laag erboven verhuizen. Is boven geen
-     botsingsvrije plek beschikbaar, dan blijft de bestaande veilige positie
-     onder de lijn staan. */
-  gezet.forEach(g=>{
+  /* De kandidaatset en de definitieve 'gezet'-objecten blijven bewust exact
+     onaangeraakt. We maken uitsluitend een losse presentatielaag voor de
+     tekst-y-posities. Daardoor kunnen latere owners en rasterchecks nooit een
+     gewijzigde placement-state erven van deze cosmetische correctie. */
+  const labelPlaatsingen=gezet.map(g=>({...g}));
+  labelPlaatsingen.forEach(g=>{
     if(soort[g.i]!==-1 || g.cy<y(g.v))return;
     const stapHoogte=labelHoogte+4;
     for(let laag=0;laag<MAXLAAG;laag++){
       const kandidaat=y(g.v)-((M?13:14)+laag*stapHoogte);
       if(kandidaat-F.temp<by+bh+6)continue;
-      const botst=gezet.some(andere=>andere!==g
+      const botst=labelPlaatsingen.some(andere=>andere!==g
         && Math.abs(andere.cx-g.cx)<(andere.bw+g.bw)/2+5
         && Math.abs(andere.cy-kandidaat)<labelHoogte+3);
       if(botst)continue;
@@ -34,6 +35,7 @@ const RENDER_NIEUW=`    gezet.push({i:i,v:v,cx:cx,cy:cy,bw:bw,rang:k.rang});
       break;
     }
   });
+  const labelY=new Map(labelPlaatsingen.map(g=>[g.i,g.cy]));
   // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:`;
 
 function htmlBestanden(dir){
@@ -47,15 +49,20 @@ function htmlBestanden(dir){
 }
 
 function pasHtmlToe(html,label="artifact"){
-  const bron=String(html||"");
+  let bron=String(html||"");
   const relevant=bron.includes(PLAATSINGSANKER)||bron.includes(POSTPASS_MARKER);
   if(!relevant)return {html:bron,relevant:false,geraakt:false,reeds:false};
   if(!bron.includes(FALLBACKANKER))throw new Error(`${label}: bestaande boven/onder-fallback ontbreekt.`);
   const oudAantal=bron.split(RENDERANKER).length-1;
   const nieuwAantal=bron.split(POSTPASS_MARKER).length-1;
-  if(oudAantal===1&&nieuwAantal===0)return {html:bron.replace(RENDERANKER,RENDER_NIEUW),relevant:true,geraakt:true,reeds:false};
-  if(oudAantal===0&&nieuwAantal===1)return {html:bron,relevant:true,geraakt:false,reeds:true};
-  throw new Error(`${label}: onverwacht minimumlabel-contract (oud=${oudAantal}, nieuw=${nieuwAantal}).`);
+  const labelOud=bron.split(LABEL_Y_OUD).length-1;
+  const labelNieuw=bron.split(LABEL_Y_NIEUW).length-1;
+  if(oudAantal===1&&nieuwAantal===0&&labelOud===1&&labelNieuw===0){
+    bron=bron.replace(RENDERANKER,RENDER_NIEUW).replace(LABEL_Y_OUD,LABEL_Y_NIEUW);
+    return {html:bron,relevant:true,geraakt:true,reeds:false};
+  }
+  if(oudAantal===0&&nieuwAantal===1&&labelOud===0&&labelNieuw===1)return {html:bron,relevant:true,geraakt:false,reeds:true};
+  throw new Error(`${label}: onverwacht minimumlabel-contract (oud=${oudAantal}, nieuw=${nieuwAantal}, labelOud=${labelOud}, labelNieuw=${labelNieuw}).`);
 }
 
 function main(){
@@ -73,11 +80,11 @@ function main(){
   if(!relevant)throw new Error("Geen weergrafiek-artifact gevonden voor temperatuur-labelconsistentie.");
   if(geraakt){
     const cache=vernieuwServiceworkerCache(OUT,"chart-label-consistency-20260911");
-    console.log(`Lokale minimumlabels krijgen waar veilig een vrije laag boven de lijn op ${geraakt}/${relevant} weergrafiek-artifacts; kandidaatselectie en raster blijven onaangeraakt. Cache ${cache}.`);
+    console.log(`Lokale minimumteksten krijgen waar veilig een vrije laag boven de lijn op ${geraakt}/${relevant} weergrafiek-artifacts; kandidaatset en gezet-state blijven byte-for-byte logisch onaangeraakt. Cache ${cache}.`);
   }else{
-    console.log(`Minimumlabel-pass stond al correct op ${reeds}/${relevant} weergrafiek-artifacts.`);
+    console.log(`Minimumlabel-presentatie stond al correct op ${reeds}/${relevant} weergrafiek-artifacts.`);
   }
 }
 
 if(require.main===module)main();
-module.exports={OUT,PLAATSINGSANKER,FALLBACKANKER,RENDERANKER,POSTPASS_MARKER,RENDER_NIEUW,htmlBestanden,pasHtmlToe,main};
+module.exports={OUT,PLAATSINGSANKER,FALLBACKANKER,RENDERANKER,POSTPASS_MARKER,LABEL_Y_OUD,LABEL_Y_NIEUW,RENDER_NIEUW,htmlBestanden,pasHtmlToe,main};
