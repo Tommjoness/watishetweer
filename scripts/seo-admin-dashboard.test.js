@@ -5,12 +5,15 @@ const path=require("path");
 const assert=require("assert");
 const root=path.join(__dirname,"..");
 const read=file=>fs.readFileSync(path.join(root,file),"utf8");
+const {serviceToken,accessHeaders,protectedPreviewUrl}=require("./cloudflare-access-service-token.js");
 
 const html=read("admin/seo/index.html");
 const js=read("admin/seo/seo-dashboard.js");
 const css=read("admin/seo/seo-dashboard.css");
 const api=read("functions/api/admin/seo.js");
 const headers=read("cloudflare/_headers");
+const workflow=read(".github/workflows/cloudflare-preview.yml");
+const preload=read("scripts/cloudflare-access-preload.cjs");
 
 assert(html.includes('meta name="robots" content="noindex,nofollow,noarchive"'),"SEO admin mist noindex-meta.");
 assert(html.includes('src="/admin/seo/seo-dashboard.js"'),"SEO admin mist extern script.");
@@ -40,5 +43,19 @@ assert(!api.includes("GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:"),"API mag de private-
 assert(headers.includes("/admin/seo/*"),"Cloudflare headers missen adminroute.");
 assert(headers.includes("/api/admin/seo"),"Cloudflare headers missen SEO admin API-route.");
 assert(headers.includes("X-Robots-Tag: noindex, nofollow, noarchive"),"Cloudflare headers missen noindex voor admin.");
+
+assert.equal(serviceToken({}),null,"Ontbrekend CI-service-token moet optioneel blijven.");
+assert.throws(()=>serviceToken({CF_ACCESS_CLIENT_ID:"alleen-id"}),/onvolledig/i,"Half service-token moet hard falen.");
+assert.deepEqual(accessHeaders({CF_ACCESS_CLIENT_ID:"id",CF_ACCESS_CLIENT_SECRET:"secret"}),{
+  "CF-Access-Client-Id":"id",
+  "CF-Access-Client-Secret":"secret"
+},"Service-tokenheaders wijken af.");
+assert.equal(protectedPreviewUrl("https://pr-321.watishetweer.pages.dev/"),true,"Branch-preview wordt niet herkend als beschermd.");
+assert.equal(protectedPreviewUrl("https://abc123.watishetweer.pages.dev/api/forecast"),true,"Immutable preview wordt niet herkend als beschermd.");
+assert.equal(protectedPreviewUrl("https://watishetweer.nl/"),false,"Productiedomein mag geen CI-service-tokenheaders krijgen.");
+assert(preload.includes("cloudflare-access-service-token.js"),"CI-preload mist centrale Access-helper.");
+for(const required of ["CF_ACCESS_CLIENT_ID","CF_ACCESS_CLIENT_SECRET","cloudflare-access-preload.cjs"]){
+  assert(workflow.includes(required),`Cloudflare previewworkflow mist service-tokencontract: ${required}`);
+}
 
 console.log("SEO admin dashboard contract OK");
