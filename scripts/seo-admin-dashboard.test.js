@@ -57,6 +57,9 @@ assert.equal(protectedPreviewUrl("https://watishetweer.nl/"),false,"Productiedom
 assert.equal(protectedPreviewUrl("https://api.open-meteo.com/v1/forecast"),false,"CI-service-token mag niet naar externe providers lekken.");
 assert(!accessHelper.includes("extraHTTPHeaders"),"Browserauth mag Access-secrets niet als globale headers naar externe providers sturen.");
 assert(accessHelper.includes("route.fallback"),"Browserauth mist host-begrensde requestinjectie.");
+assert(accessHelper.includes("function decoratePage"),"Browserauth moet pagina-routes veilig kunnen overbruggen.");
+assert(accessHelper.includes("page.goto=async"),"Browserauth moet de previewroute vlak voor navigatie opnieuw bovenop pagina-interceptie leggen.");
+assert(accessHelper.includes("await addPreviewRoute(page,headers)"),"Pagina-interceptie mag de Access-route niet meer omzeilen.");
 assert(preload.includes("cloudflare-access-service-token.js"),"CI-preload mist centrale Access-helper.");
 for(const required of ["CF_ACCESS_CLIENT_ID","CF_ACCESS_CLIENT_SECRET","cloudflare-access-preload.cjs"]){
   assert(workflow.includes(required),`Cloudflare previewworkflow mist service-tokencontract: ${required}`);
