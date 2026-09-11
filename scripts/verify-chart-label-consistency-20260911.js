@@ -27,12 +27,19 @@ function main(){
     assert(bron.includes("const ar=a.i%stap===0?0:1,br=b.i%stap===0?0:1;"),`${label}: desktop-raster wordt niet vóór extra extrema geplaatst.`);
     assert(bron.includes("if(ar!==br)return ar-br;"),`${label}: vaste rastervolgorde wordt niet toegepast.`);
     assert(bron.includes("return b.rang-a.rang||a.i-b.i;"),`${label}: bestaande prioriteitsvolgorde voor overige kandidaten ontbreekt.`);
-    assert(bron.includes("const plaatsRang=!M&&n<=24&&i%stap===0?Math.max(3,k.rang):k.rang;"),`${label}: vaste desktop-rasterpunten zijn niet beschermd tegen latere evictie.`);
+    assert(bron.includes("const plaatsRang=!M&&n<=24&&i%stap===0?Math.max(4,k.rang):k.rang;"),`${label}: vaste desktop-rasterpunten zijn niet beschermd tegen latere evictie.`);
     assert(bron.includes("rang:plaatsRang"),`${label}: beschermde plaatsingsrang wordt niet in de definitieve labelset gebruikt.`);
-    assert(!bron.includes("if(T.length<=25){"),`${label}: oude na-de-feiten rasterherstelroute staat nog actief.`);
+
+    assert(bron.includes("for(let i=stap;i<T.length;i+=stap){"),`${label}: gerichte desktop-rasterreconciliatie ontbreekt.`);
+    assert(bron.includes("!kandKaart.has(i)||gezet.some(g=>g.i===i)"),`${label}: rasterreconciliatie is niet beperkt tot werkelijk ontbrekende kandidaatpunten.`);
+    assert(bron.includes("let herstel=probeerRaster(null);"),`${label}: rasterherstel probeert niet eerst collisionvrij zonder labels te verwijderen.`);
+    assert(bron.includes("if(!herstel)herstel=probeerRaster(3);"),`${label}: rasterherstel kan lokale extra-labels niet gecontroleerd laten wijken.`);
+    assert(bron.includes("for(const blokkeerder of herstel.poging.verwijderd||[])"),`${label}: door collisionplacer vrijgegeven lagere-ranglabels worden niet gericht verwijderd.`);
+    assert(bron.includes("rang:Math.max(4,kandKaart.get(i)||1)"),`${label}: hersteld rasterpunt krijgt geen blijvende rasterbescherming.`);
+    assert(!bron.includes("if(T.length<=25){"),`${label}: oude mobiel-meerakende rasterherstelroute staat nog actief.`);
   }
   assert(gecontroleerd>0,"Geen gebouwde weergrafiek gevonden om labelplaatsing te verifiëren.");
-  console.log(`Temperatuur-labelcontract OK op ${gecontroleerd} weergrafiek-artifacts: lokale minima verhuizen alleen collisionvrij naar boven; desktop 24 uur plaatst en beschermt het vaste drie-uursraster vóór extra extrema, zonder mobiele dichtheidswijziging.`);
+  console.log(`Temperatuur-labelcontract OK op ${gecontroleerd} weergrafiek-artifacts: lokale minima verhuizen alleen collisionvrij naar boven; desktop 24 uur plaatst, beschermt en zo nodig herstelt het vaste drie-uursraster zonder mobiele dichtheidswijziging.`);
 }
 
 if(require.main===module)main();
