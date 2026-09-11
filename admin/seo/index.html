@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="color-scheme" content="light">
+  <title>SEO cockpit | watishetweer.nl</title>
+  <link rel="stylesheet" href="/admin/seo/seo-dashboard.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">watishetweer.nl</p>
+        <h1>SEO cockpit</h1>
+        <p class="muted">Search Console en optioneel GA4, rechtstreeks uit Google.</p>
+      </div>
+      <div class="controls">
+        <label for="range">Periode</label>
+        <select id="range" name="range">
+          <option value="28" selected>28 dagen</option>
+          <option value="56">56 dagen</option>
+          <option value="90">90 dagen</option>
+        </select>
+        <button id="refresh" type="button">Vernieuwen</button>
+      </div>
+    </header>
+
+    <section id="status" class="status" aria-live="polite">Data laden…</section>
+
+    <section class="kpis" aria-label="Belangrijkste Search Console cijfers">
+      <article class="card"><span>Klikken</span><strong id="kpi-clicks">—</strong><small id="delta-clicks"></small></article>
+      <article class="card"><span>Impressies</span><strong id="kpi-impressions">—</strong><small id="delta-impressions"></small></article>
+      <article class="card"><span>CTR</span><strong id="kpi-ctr">—</strong><small id="delta-ctr"></small></article>
+      <article class="card"><span>Gem. positie</span><strong id="kpi-position">—</strong><small id="delta-position"></small></article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Prioriteit</p>
+          <h2>SEO-kansen</h2>
+        </div>
+        <p class="muted">Slimme selectie: bijna pagina 1, lage CTR en veel zichtbaarheid op positie 15–40.</p>
+      </div>
+      <div class="table-wrap opportunity-table">
+        <table>
+          <thead><tr>
+            <th><button class="sort-button" type="button" data-sort-table="opportunities" data-sort-key="query">Zoekterm <span class="sort-indicator" aria-hidden="true"></span></button></th>
+            <th>Kans</th>
+            <th><button class="sort-button" type="button" data-sort-table="opportunities" data-sort-key="impressions">Impressies <span class="sort-indicator" aria-hidden="true"></span></button></th>
+            <th><button class="sort-button" type="button" data-sort-table="opportunities" data-sort-key="clicks">Klikken <span class="sort-indicator" aria-hidden="true"></span></button></th>
+            <th><button class="sort-button" type="button" data-sort-table="opportunities" data-sort-key="ctr">CTR <span class="sort-indicator" aria-hidden="true"></span></button></th>
+            <th><button class="sort-button" type="button" data-sort-table="opportunities" data-sort-key="position">Positie <span class="sort-indicator" aria-hidden="true"></span></button></th>
+          </tr></thead>
+          <tbody id="opportunities"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="grid-two">
+      <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">Google</p><h2>Topzoektermen</h2></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th><button class="sort-button" type="button" data-sort-table="queries" data-sort-key="query">Zoekterm <span class="sort-indicator" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort-table="queries" data-sort-key="impressions">Imp. <span class="sort-indicator" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort-table="queries" data-sort-key="clicks">Klikken <span class="sort-indicator" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort-table="queries" data-sort-key="position">Pos. <span class="sort-indicator" aria-hidden="true"></span></button></th>
+            </tr></thead>
+            <tbody id="queries"></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">Landing pages</p><h2>Toppagina's</h2></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th><button class="sort-button" type="button" data-sort-table="pages" data-sort-key="page">Pagina <span class="sort-indicator" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort-table="pages" data-sort-key="impressions">Imp. <span class="sort-indicator" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort-table="pages" data-sort-key="clicks">Klikken <span class="sort-indicator" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort-table="pages" data-sort-key="position">Pos. <span class="sort-indicator" aria-hidden="true"></span></button></th>
+            </tr></thead>
+            <tbody id="pages"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid-two">
+      <article class="panel compact">
+        <div class="panel-head"><div><p class="eyebrow">Verdeling</p><h2>Apparaten</h2></div></div>
+        <div id="devices" class="stack"></div>
+      </article>
+      <article class="panel compact">
+        <div class="panel-head"><div><p class="eyebrow">Verdeling</p><h2>Landen</h2></div></div>
+        <div id="countries" class="stack"></div>
+      </article>
+    </section>
+
+    <section class="panel" id="ga4-panel">
+      <div class="panel-head">
+        <div><p class="eyebrow">Google Analytics 4</p><h2>Gedrag na de klik</h2></div>
+        <span id="ga4-badge" class="badge">Controleren…</span>
+      </div>
+      <div id="ga4-content" class="ga4-placeholder">GA4-status laden…</div>
+    </section>
+
+    <footer>
+      <span id="generated">—</span>
+      <span>Privé adminweergave · noindex · no-store</span>
+    </footer>
+  </main>
+  <script src="/admin/seo/seo-dashboard.js" defer></script>
+</body>
+</html>
