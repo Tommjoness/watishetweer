@@ -18,6 +18,8 @@ env:
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
   CLOUDFLARE_PROJECT: watishetweer
   SOURCE_SHA: ${{ github.sha }}
+  CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+  CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
 
 jobs:
   deploy-production:
@@ -65,6 +67,10 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           test -n "$SOURCE_SHA"
+          if { test -n "$CF_ACCESS_CLIENT_ID" && test -z "$CF_ACCESS_CLIENT_SECRET"; } || { test -z "$CF_ACCESS_CLIENT_ID" && test -n "$CF_ACCESS_CLIENT_SECRET"; }; then
+            echo "Cloudflare Access service token is onvolledig." >&2
+            exit 1
+          fi
 
       - name: Controleer Pages-projectconfig
         shell: bash
@@ -119,12 +125,14 @@ jobs:
       - name: Wacht tot Pages Functions actief zijn
         env:
           CLOUDFLARE_ROOT: ${{ steps.production_url.outputs.url }}
+          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/cloudflare-functions-readiness.js
 
       - name: Smoke immutable deployment voor domeinkoppeling
         env:
           PREVIEW_ROOT: ${{ steps.production_url.outputs.url }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/cloudflare-preview-smoke.js
 
       - name: Koppel custom domains idempotent
