@@ -244,9 +244,20 @@ async function optimaliseerPublic(publicDir=PUBLIC){
   return {htmlBestanden:bestanden.length,bundles:bundleCache.size,appBundles:appBundles.size,pageBundles:pageBundles.size,earlyBundles:earlyCache.size,rootBundle,bootstrapBundle};
 }
 
-if(require.main===module){
-  optimaliseerPublic().then(r=>console.log(`Platform/delivery cleanup: ${r.htmlBestanden} HTML-bestanden, ${r.appBundles} gedeelde app-bundle, ${r.pageBundles} page-bundles, ${r.earlyBundles} vroege bundles; bootstrap ${r.bootstrapBundle}; pressure-retired; homepage ${r.rootBundle}.`))
-    .catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
+function voegPostHogNaDeliveryToe(){
+  /* Analytics komt bewust pas ná de semantische runtime-/deliveryguards. Zo
+     blijft de WeatherNow-runtime strikt gesloten voor onbekende scripts, terwijl
+     de afzonderlijke privacygerichte analyticslaag de definitieve HTML krijgt. */
+  const resultaat=require("./apply-posthog-analytics.js").pasArtifactAan(PUBLIC);
+  const cache=vernieuwServiceworkerCache(PUBLIC,"delivery-posthog-analytics");
+  return {...resultaat,cache};
 }
 
-module.exports={hardenRuntime,cssMinify,verzamelRuntime,minifyRuntime,hash12,isWeatherAppBestand,bootstrapUitRoot,migreerCspNaarHeader,optimaliseerPublic,BRON_SNAPSHOT};
+if(require.main===module){
+  optimaliseerPublic().then(r=>{
+    const posthog=voegPostHogNaDeliveryToe();
+    console.log(`Platform/delivery cleanup: ${r.htmlBestanden} HTML-bestanden, ${r.appBundles} gedeelde app-bundle, ${r.pageBundles} page-bundles, ${r.earlyBundles} vroege bundles; bootstrap ${r.bootstrapBundle}; pressure-retired; homepage ${r.rootBundle}; PostHog na delivery op ${posthog.scripts} HTML-bestanden; cache ${posthog.cache}.`);
+  }).catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
+}
+
+module.exports={hardenRuntime,cssMinify,verzamelRuntime,minifyRuntime,hash12,isWeatherAppBestand,bootstrapUitRoot,migreerCspNaarHeader,optimaliseerPublic,voegPostHogNaDeliveryToe,BRON_SNAPSHOT};

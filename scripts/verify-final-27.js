@@ -164,19 +164,27 @@ const deliveryActief=paginaHtml.includes('<meta name="weather-delivery" content=
 const appPatroon=/^\/app-[0-9a-f]{12}\.min\.js$/;
 const earlyPatroon=/^\/early-[0-9a-f]{12}\.min\.js$/;
 const bootstrapPatroon=/^\/bootstrap-[0-9a-f]{12}(?:\.min)?\.js$/;
+const posthogPatroon=/^\/posthog-analytics\.js$/;
+const posthogTag='<script src="/posthog-analytics.js" defer data-analytics="posthog"></script>';
 const hoofdBundles=externePaden.filter(src=>appPatroon.test(src));
 const bootstrapBundles=externePaden.filter(src=>bootstrapPatroon.test(src));
+const posthogBundles=externePaden.filter(src=>posthogPatroon.test(src));
 if(bootstrapBundles.length>1)throw new Error("Homepage mag maximaal één onafhankelijke bootstrapbundle hebben; gevonden "+bootstrapBundles.length+".");
 if(deliveryActief){
   if(hoofdBundles.length!==1)throw new Error("Definitief homepage-artifact moet exact één app-hoofdbundle hebben; gevonden "+hoofdBundles.length+".");
+  if(posthogBundles.length!==1)throw new Error("Definitief delivery-artifact moet exact één lokale PostHog-analyticsfile hebben; gevonden "+posthogBundles.length+".");
+  const posthogTags=paginaHtml.split(posthogTag).length-1;
+  if(posthogTags!==1)throw new Error("Definitief delivery-artifact moet exact de verwachte privacygerichte PostHog-scripttag bevatten; gevonden "+posthogTags+".");
   if(inlineRuntime.length)throw new Error("Definitief delivery-artifact mag geen executable inline runtime meer bevatten.");
 }else{
   if(hoofdBundles.length)throw new Error("App-hoofdbundle staat extern vóór de deliverymarker actief is.");
+  if(posthogBundles.length)throw new Error("PostHog analytics mag pas na succesvolle delivery-cleanup worden toegevoegd.");
   const onverwacht=externePaden.filter(src=>!bootstrapPatroon.test(src));
   if(onverwacht.length)throw new Error("Onverwachte externe pre-delivery runtime: "+onverwacht.join(", "));
   if(!inlineRuntime.length)throw new Error("Pre-delivery artifact mist de inline WeatherNow-runtime.");
 }
-const externeRuntime=externePaden.map(src=>{
+const externeRuntimePaden=externePaden.filter(src=>!posthogPatroon.test(src));
+const externeRuntime=externeRuntimePaden.map(src=>{
   if(!(appPatroon.test(src)||earlyPatroon.test(src)||bootstrapPatroon.test(src)))throw new Error("Onverwachte externe runtime in definitief artifact: "+src);
   const p=path.join(OUT,src.replace(/^\//,""));
   if(!fs.existsSync(p))throw new Error("Externe runtime ontbreekt: "+src);
@@ -185,6 +193,11 @@ const externeRuntime=externePaden.map(src=>{
 const runtimeScripts=deliveryActief?externeRuntime:inlineRuntime.concat(externeRuntime);
 if(!runtimeScripts.length)throw new Error("Geen WeatherNow-runtime gevonden.");
 runtimeScripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/runtime-final-27-"+(i+1)+".js"}));
+if(deliveryActief){
+  const posthogPad=path.join(OUT,"posthog-analytics.js");
+  if(!fs.existsSync(posthogPad))throw new Error("Lokale PostHog-analyticsfile ontbreekt in definitief artifact.");
+  new vm.Script(fs.readFileSync(posthogPad,"utf8"),{filename:"public/posthog-analytics.js"});
+}
 jsonLdScripts.forEach((bron,i)=>{try{JSON.parse(bron);}catch(e){throw new Error("Ongeldige JSON-LD in definitief artifact #"+(i+1)+": "+e.message);}});
 if(deliveryActief){
   if(/http-equiv="Content-Security-Policy"/i.test(paginaHtml))throw new Error("CSP-meta hoort na delivery niet meer in het document.");

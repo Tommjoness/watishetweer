@@ -51,3 +51,7 @@ try{
 }finally{fs.rmSync(tmp,{recursive:true,force:true});}
 
 console.log("cloudflare-web-analytics-csp: effectieve scriptdirective, versiebeacon-origin, default-src-fallback, onbeperkte noop en idempotentie OK");
+
+/* Deze prebuildtest is al onderdeel van iedere build. Koppel de nieuwe analytics-
+   privacyguard hieraan zonder de historische package/postbuildvolgorde te dupliceren. */
+require("./posthog-analytics-contract.test.js");
