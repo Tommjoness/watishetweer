@@ -29,12 +29,19 @@ const regionNames=typeof Intl.DisplayNames==="function"?new Intl.DisplayNames(["
 const deviceLabels={MOBILE:"Mobiel",DESKTOP:"Desktop",TABLET:"Tablet"};
 const countryAlpha3ToAlpha2={ABW:"AW",AFG:"AF",AGO:"AO",AIA:"AI",ALA:"AX",ALB:"AL",AND:"AD",ARE:"AE",ARG:"AR",ARM:"AM",ASM:"AS",ATA:"AQ",ATF:"TF",ATG:"AG",AUS:"AU",AUT:"AT",AZE:"AZ",BDI:"BI",BEL:"BE",BEN:"BJ",BES:"BQ",BFA:"BF",BGD:"BD",BGR:"BG",BHR:"BH",BHS:"BS",BIH:"BA",BLM:"BL",BLR:"BY",BLZ:"BZ",BMU:"BM",BOL:"BO",BRA:"BR",BRB:"BB",BRN:"BN",BTN:"BT",BVT:"BV",BWA:"BW",CAF:"CF",CAN:"CA",CCK:"CC",CHE:"CH",CHL:"CL",CHN:"CN",CIV:"CI",CMR:"CM",COD:"CD",COG:"CG",COK:"CK",COL:"CO",COM:"KM",CPV:"CV",CRI:"CR",CUB:"CU",CUW:"CW",CXR:"CX",CYM:"KY",CYP:"CY",CZE:"CZ",DEU:"DE",DJI:"DJ",DMA:"DM",DNK:"DK",DOM:"DO",DZA:"DZ",ECU:"EC",EGY:"EG",ERI:"ER",ESH:"EH",ESP:"ES",EST:"EE",ETH:"ET",FIN:"FI",FJI:"FJ",FLK:"FK",FRA:"FR",FRO:"FO",FSM:"FM",GAB:"GA",GBR:"GB",GEO:"GE",GGY:"GG",GHA:"GH",GIB:"GI",GIN:"GN",GLP:"GP",GMB:"GM",GNB:"GW",GNQ:"GQ",GRC:"GR",GRD:"GD",GRL:"GL",GTM:"GT",GUF:"GF",GUM:"GU",GUY:"GY",HKG:"HK",HMD:"HM",HND:"HN",HRV:"HR",HTI:"HT",HUN:"HU",IDN:"ID",IMN:"IM",IND:"IN",IOT:"IO",IRL:"IE",IRN:"IR",IRQ:"IQ",ISL:"IS",ISR:"IL",ITA:"IT",JAM:"JM",JEY:"JE",JOR:"JO",JPN:"JP",KAZ:"KZ",KEN:"KE",KGZ:"KG",KHM:"KH",KIR:"KI",KNA:"KN",KOR:"KR",KWT:"KW",LAO:"LA",LBN:"LB",LBR:"LR",LBY:"LY",LCA:"LC",LIE:"LI",LKA:"LK",LSO:"LS",LTU:"LT",LUX:"LU",LVA:"LV",MAC:"MO",MAF:"MF",MAR:"MA",MCO:"MC",MDA:"MD",MDG:"MG",MDV:"MV",MEX:"MX",MHL:"MH",MKD:"MK",MLI:"ML",MLT:"MT",MMR:"MM",MNE:"ME",MNG:"MN",MNP:"MP",MOZ:"MZ",MRT:"MR",MSR:"MS",MTQ:"MQ",MUS:"MU",MWI:"MW",MYS:"MY",MYT:"YT",NAM:"NA",NCL:"NC",NER:"NE",NFK:"NF",NGA:"NG",NIC:"NI",NIU:"NU",NLD:"NL",NOR:"NO",NPL:"NP",NRU:"NR",NZL:"NZ",OMN:"OM",PAK:"PK",PAN:"PA",PCN:"PN",PER:"PE",PHL:"PH",PLW:"PW",PNG:"PG",POL:"PL",PRI:"PR",PRK:"KP",PRT:"PT",PRY:"PY",PSE:"PS",PYF:"PF",QAT:"QA",REU:"RE",ROU:"RO",RUS:"RU",RWA:"RW",SAU:"SA",SDN:"SD",SEN:"SN",SGP:"SG",SGS:"GS",SHN:"SH",SJM:"SJ",SLB:"SB",SLE:"SL",SLV:"SV",SMR:"SM",SOM:"SO",SPM:"PM",SRB:"RS",SSD:"SS",STP:"ST",SUR:"SR",SVK:"SK",SVN:"SI",SWE:"SE",SWZ:"SZ",SXM:"SX",SYC:"SC",SYR:"SY",TCA:"TC",TCD:"TD",TGO:"TG",THA:"TH",TJK:"TJ",TKL:"TK",TKM:"TM",TLS:"TL",TON:"TO",TTO:"TT",TUN:"TN",TUR:"TR",TUV:"TV",TWN:"TW",TZA:"TZ",UGA:"UG",UKR:"UA",UMI:"UM",URY:"UY",USA:"US",UZB:"UZ",VAT:"VA",VCT:"VC",VEN:"VE",VGB:"VG",VIR:"VI",VNM:"VN",VUT:"VU",WLF:"WF",WSM:"WS",YEM:"YE",ZAF:"ZA",ZMB:"ZM",ZWE:"ZW"};
 
+const sortState={
+  opportunities:{key:"priority",direction:"desc"},
+  queries:{key:"impressions",direction:"desc"},
+  pages:{key:"impressions",direction:"desc"}
+};
+let currentSearchConsole=null;
+
 function escapeHtml(value){
   return String(value??"").replace(/[&<>'"]/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[char]);
 }
 
 function formatDelta(value,{invert=false,points=false}={}){
-  if(value===null||value===undefined||Number.isNaN(value))return {text:"geen vergelijkbare basis",className:""};
+  if(value===null||value===undefined||Number.isNaN(value))return {text:"Nog onvoldoende historische data",className:""};
   const favorable=invert?value<0:value>0;
   const unfavorable=invert?value>0:value<0;
   const magnitude=points?`${value>0?"+":""}${decimal.format(value)} pos.`:`${value>0?"+":""}${percent.format(value)}`;
@@ -47,15 +54,66 @@ function setDelta(element,delta,options){
   element.className=formatted.className;
 }
 
-function queryRow(item,columns="full"){
-  if(columns==="compact")return `<tr><td>${escapeHtml(item.query)}</td><td>${number.format(item.impressions)}</td><td>${number.format(item.clicks)}</td><td>${decimal.format(item.position)}</td></tr>`;
-  return `<tr><td>${escapeHtml(item.query)}</td><td>${number.format(item.impressions)}</td><td>${number.format(item.clicks)}</td><td>${percent.format(item.ctr)}</td><td>${decimal.format(item.position)}</td></tr>`;
+function classifyOpportunity(item){
+  const impressions=Number(item.impressions)||0;
+  const ctr=Number(item.ctr)||0;
+  const position=Number(item.position)||0;
+  if(impressions>=10&&position>=8&&position<=15)return {...item,opportunityType:"near",opportunityLabel:"Bijna pagina 1",priority:3};
+  if(impressions>=25&&position>=4&&position<=20&&ctr<0.01)return {...item,opportunityType:"ctr",opportunityLabel:"CTR-kans",priority:2};
+  if(impressions>=25&&position>15&&position<=40)return {...item,opportunityType:"visibility",opportunityLabel:"Veel zichtbaarheid",priority:1};
+  return null;
+}
+
+function buildOpportunities(sc){
+  const seen=new Set();
+  const combined=[...(sc.topQueries||[]),...(sc.opportunities||[])];
+  return combined
+    .filter(item=>{
+      const key=String(item.query||"").trim().toLowerCase();
+      if(!key||seen.has(key))return false;
+      seen.add(key);
+      return true;
+    })
+    .map(classifyOpportunity)
+    .filter(Boolean)
+    .sort((a,b)=>b.priority-a.priority||b.impressions-a.impressions||a.position-b.position)
+    .slice(0,12);
+}
+
+function sortRows(table,rows){
+  const state=sortState[table];
+  if(!state)return [...rows];
+  const direction=state.direction==="asc"?1:-1;
+  return [...rows].sort((a,b)=>{
+    const av=a[state.key];
+    const bv=b[state.key];
+    if(typeof av==="number"||typeof bv==="number")return ((Number(av)||0)-(Number(bv)||0))*direction;
+    return String(av??"").localeCompare(String(bv??""),"nl",{numeric:true,sensitivity:"base"})*direction;
+  });
+}
+
+function queryRow(item){
+  return `<tr><td>${escapeHtml(item.query)}</td><td>${number.format(item.impressions)}</td><td>${number.format(item.clicks)}</td><td>${decimal.format(item.position)}</td></tr>`;
+}
+
+function opportunityRow(item){
+  return `<tr><td>${escapeHtml(item.query)}</td><td><span class="opportunity-badge ${escapeHtml(item.opportunityType)}">${escapeHtml(item.opportunityLabel)}</span></td><td>${number.format(item.impressions)}</td><td>${number.format(item.clicks)}</td><td>${percent.format(item.ctr)}</td><td>${decimal.format(item.position)}</td></tr>`;
+}
+
+function pageLink(item){
+  try{
+    const url=new URL(item.page);
+    if(url.protocol!=="https:"||!["watishetweer.nl","www.watishetweer.nl"].includes(url.hostname))return null;
+    return `https://watishetweer.nl${url.pathname||"/"}`;
+  }catch{return null;}
 }
 
 function pageRow(item){
   let label=item.page;
   try{const url=new URL(item.page);label=url.pathname||"/";}catch{}
-  return `<tr><td title="${escapeHtml(item.page)}">${escapeHtml(label)}</td><td>${number.format(item.impressions)}</td><td>${number.format(item.clicks)}</td><td>${decimal.format(item.position)}</td></tr>`;
+  const href=pageLink(item);
+  const pageCell=href?`<a class="page-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" title="Open ${escapeHtml(label)} op watishetweer.nl">${escapeHtml(label)}</a>`:escapeHtml(label);
+  return `<tr><td title="${escapeHtml(item.page)}">${pageCell}</td><td>${number.format(item.impressions)}</td><td>${number.format(item.clicks)}</td><td>${decimal.format(item.position)}</td></tr>`;
 }
 
 function emptyRow(colspan,message){
@@ -74,14 +132,37 @@ function splitLabel(key,value){
   return code;
 }
 
-function renderSplit(target,rows,key){
+function renderSplit(target,rows,key,totalImpressions){
   if(!rows.length){target.innerHTML='<p class="muted">Geen data in deze periode.</p>';return;}
+  const total=Number(totalImpressions)||0;
   target.innerHTML=rows.map(item=>{
     const raw=String(item[key]??"").trim().toUpperCase();
     const label=splitLabel(key,raw);
     const title=key==="country"&&label!==raw?` title="${escapeHtml(raw)}"`:"";
-    return `<div class="split-row"><strong${title}>${escapeHtml(label)}</strong><span>${number.format(item.impressions)} imp.</span><span>${number.format(item.clicks)} klikken</span></div>`;
+    const share=total>0?(Number(item.impressions)||0)/total:0;
+    return `<div class="split-row"><strong${title}>${escapeHtml(label)}</strong><span>${number.format(item.impressions)} imp. · ${percent.format(share)}</span><span>${number.format(item.clicks)} klikken</span></div>`;
   }).join("");
+}
+
+function renderTables(sc){
+  const opportunities=sortRows("opportunities",buildOpportunities(sc));
+  const queries=sortRows("queries",sc.topQueries||[]);
+  const pages=sortRows("pages",sc.topPages||[]);
+  els.opportunities.innerHTML=opportunities.length?opportunities.map(opportunityRow).join(""):emptyRow(6,"Nog geen duidelijke kansen volgens deze selectie.");
+  els.queries.innerHTML=queries.length?queries.map(queryRow).join(""):emptyRow(4,"Geen zoektermdata.");
+  els.pages.innerHTML=pages.length?pages.map(pageRow).join(""):emptyRow(4,"Geen paginadata.");
+  updateSortButtons();
+}
+
+function updateSortButtons(){
+  document.querySelectorAll("[data-sort-table][data-sort-key]").forEach(button=>{
+    const state=sortState[button.dataset.sortTable];
+    const active=Boolean(state&&state.key===button.dataset.sortKey);
+    button.dataset.active=active?"true":"false";
+    button.setAttribute("aria-pressed",active?"true":"false");
+    const indicator=button.querySelector(".sort-indicator");
+    if(indicator)indicator.textContent=active?(state.direction==="asc"?"↑":"↓"):"";
+  });
 }
 
 function renderGa4(ga4){
@@ -112,6 +193,7 @@ function renderGa4(ga4){
 function render(data){
   const sc=data.searchConsole;
   const s=sc.summary;
+  currentSearchConsole=sc;
   els.clicks.textContent=number.format(s.clicks);
   els.impressions.textContent=number.format(s.impressions);
   els.ctr.textContent=percent.format(s.ctr);
@@ -121,15 +203,13 @@ function render(data){
   setDelta(els.deltaCtr,s.change.ctr);
   setDelta(els.deltaPosition,s.change.position,{invert:true,points:true});
 
-  els.opportunities.innerHTML=sc.opportunities.length?sc.opportunities.map(item=>queryRow(item)).join(""):emptyRow(5,"Nog geen duidelijke positie-4-t/m-20-kansen in deze periode.");
-  els.queries.innerHTML=sc.topQueries.length?sc.topQueries.map(item=>queryRow(item,"compact")).join(""):emptyRow(4,"Geen zoektermdata.");
-  els.pages.innerHTML=sc.topPages.length?sc.topPages.map(pageRow).join(""):emptyRow(4,"Geen paginadata.");
-  renderSplit(els.devices,sc.devices,"device");
-  renderSplit(els.countries,sc.countries,"country");
+  renderTables(sc);
+  renderSplit(els.devices,sc.devices||[],"device",s.impressions);
+  renderSplit(els.countries,sc.countries||[],"country",s.impressions);
   renderGa4(data.ga4);
 
   const generated=new Date(data.generatedAt);
-  els.generated.textContent=`Bijgewerkt ${generated.toLocaleString("nl-NL")} · GSC t/m ${data.range.current.endDate}`;
+  els.generated.textContent=`Bijgewerkt ${generated.toLocaleString("nl-NL")} · GSC t/m ${data.range.current.endDate} · 3 dagen vertraging voor stabiele data`;
   els.status.className="status";
   els.status.textContent=`${sc.siteUrl} · ${data.range.current.startDate} t/m ${data.range.current.endDate}`;
 }
@@ -154,4 +234,19 @@ async function load(){
 
 els.refresh.addEventListener("click",load);
 els.range.addEventListener("change",load);
+document.addEventListener("click",event=>{
+  const button=event.target.closest("[data-sort-table][data-sort-key]");
+  if(!button||!currentSearchConsole)return;
+  const table=button.dataset.sortTable;
+  const key=button.dataset.sortKey;
+  const state=sortState[table];
+  if(!state)return;
+  if(state.key===key)state.direction=state.direction==="asc"?"desc":"asc";
+  else{
+    state.key=key;
+    state.direction=key==="query"||key==="page"?"asc":"desc";
+  }
+  renderTables(currentSearchConsole);
+});
+
 load();
