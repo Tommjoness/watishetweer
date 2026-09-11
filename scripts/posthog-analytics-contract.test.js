@@ -20,8 +20,8 @@ assert(analytics.includes('return "/weer/:location"'),"weerroutes moeten plaatsn
 assert(analytics.includes('navigator.globalPrivacyControl===true'),"Global Privacy Control moet PostHog uitschakelen");
 assert(analytics.includes('navigator.doNotTrack==="1"'),"Do Not Track moet PostHog uitschakelen");
 for(const [label,patroon] of [
-  ["localStorage-gebruik",/\blocalStorage\s*[.[]/],
-  ["sessionStorage-gebruik",/\bsessionStorage\s*[.[]/],
+  ["localStorage-gebruik",/\blocalStorage\s*(?:\.|\[)/],
+  ["sessionStorage-gebruik",/\bsessionStorage\s*(?:\.|\[)/],
   ["cookie-gebruik",/\bdocument\s*\.\s*cookie\b/],
   ["PostHog SDK-init",/\bposthog\s*\.\s*init\s*\(/i],
   ["PostHog SDK-assets",/eu-assets\.i\.posthog\.com/i],
