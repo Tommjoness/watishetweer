@@ -9,7 +9,7 @@ const pad2=n=>String(n).padStart(2,"0");
 function parseLokaleIso(iso){const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(String(iso||""));return m?{jaar:+m[1],maand:+m[2],dag:+m[3],uur:+m[4],minuut:+m[5],seconde:+(m[6]||0)}:null;}
 function datumUitDelen(p){return p?`${p.jaar}-${pad2(p.maand)}-${pad2(p.dag)}`:null;}
 function datumPlus(datum,dagen){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(datum||""));if(!m)return null;const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3]+Number(dagen||0)));return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())}`;}
-function zoneDelen(ms,tijdzone){if(!tijdzone||typeof Intl==="undefined"||!Intl.DateTimeFormat)return null;try{const fmt=new Intl.DateTimeFormat("en-CA",{timeZone:tijdzone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"});const p=Object.fromEntries(fmt.formatToParts(new Date(ms)).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));return {jaar:+p.year,maand:+p.month,dag:+p.day,uur:+p.hour,minuut:+p.minute,seconde:+p.second};}catch(_){return null;}}
+function zoneDelen(ms,tijdzone){if(!tijdzone||typeof Intl==="undefined"&& !Intl.DateTimeFormat)return null;try{const fmt=new Intl.DateTimeFormat("en-CA",{timeZone:tijdzone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"});const p=Object.fromEntries(fmt.formatToParts(new Date(ms)).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));return {jaar:+p.year,maand:+p.month,dag:+p.day,uur:+p.hour,minuut:+p.minute,seconde:+p.second};}catch(_){return null;}}
 function zoneOffsetMs(ms,tijdzone){const p=zoneDelen(ms,tijdzone);if(!p)return null;const heel=Math.floor(ms/1000)*1000;return Date.UTC(p.jaar,p.maand-1,p.dag,p.uur,p.minuut,p.seconde)-heel;}
 function lokaleIsoNaarUtcMs(iso,tijdzone,utcOffsetSeconden){const p=parseLokaleIso(iso);if(!p)return null;const doel=Date.UTC(p.jaar,p.maand-1,p.dag,p.uur,p.minuut,p.seconde);if(tijdzone){let gok=doel;for(let i=0;i<3;i++){const off=zoneOffsetMs(gok,tijdzone);if(off===null)break;gok=doel-off;}if(Number.isFinite(gok))return gok;}const off=getal(utcOffsetSeconden);return off===null?doel:doel-off*1000;}
 function lokaleDatumNu(data,nuMs){const d=data||{},zone=zoneDelen(nuMs,d.timezone);if(zone)return datumUitDelen(zone);const off=getal(d.utc_offset_seconds)||0;return new Date(nuMs+off*1000).toISOString().slice(0,10);}
@@ -52,9 +52,41 @@ function zetZontegel(){if(!S.d)return;const waarde=document.getElementById("gust
 function zetVochtigheid(){if(!S.d||!S.d.current)return;const sub=document.getElementById("humsub");if(!sub)return;const h=S.d.hourly||{},i=Number.isInteger(S.i0)?S.i0:-1;const dp=i>=0&&Array.isArray(h.dew_point_2m)?getal(h.dew_point_2m[i]):null;const temp=getal(S.d.current.temperature_2m)!==null?getal(S.d.current.temperature_2m):(i>=0&&Array.isArray(h.temperature_2m)?getal(h.temperature_2m[i]):null);const input=Object.assign({},S.d.current,{dew_point_2m:dp,temperature_2m:temp});sub.textContent=vochtigheidPresentatie(input);}
 function verfijnWeekKop(){const bereik=document.querySelector("#days .row.day.kop .bar");if(bereik)bereik.textContent="Temp.bereik";}
 function verfijnGrafiekTypografie(){const svg=document.getElementById("chart");if(!svg)return;const mobiel=window.innerWidth<760;svg.querySelectorAll("text[font-size]").forEach(el=>{const fs=Number(el.getAttribute("font-size"));if(!Number.isFinite(fs)||fs<=0)return;const tekst=String(el.textContent||"").trim();const temp=/^-?\d+°$/.test(tekst)||/^nu\s+-?\d+°$/i.test(tekst);const factor=temp?(mobiel?0.72:window.innerWidth<1100?0.78:0.80):(mobiel?0.84:0.88);el.setAttribute("font-size",String(Math.max(7.5,Math.round(fs*factor*10)/10)));if(temp){el.setAttribute("opacity",mobiel?"0.76":"0.82");if(el.hasAttribute("stroke-width"))el.setAttribute("stroke-width",mobiel?"2":"2.4");}});svg.querySelectorAll("circle[data-temp-index]").forEach(el=>el.setAttribute("opacity",mobiel?"0.5":"0.62"));svg.dataset.desktopTypography=mobiel?"calm-mobile":"compact";}
+function attribuutGetal(el,naam){const n=Number(el&&el.getAttribute&&el.getAttribute(naam));return Number.isFinite(n)?n:null;}
+function grafiekTemperatuurBox(el){const x=attribuutGetal(el,"x"),y=attribuutGetal(el,"y"),fs=attribuutGetal(el,"font-size"),tekst=String(el&&el.textContent||"").trim();if(x===null||y===null||fs===null)return null;return {el,x,y,fs,tekst,w:Math.max(fs*1.7,tekst.length*fs*.56),h:fs*1.15};}
+function verfijnGrafiekLabelPosities(){
+  const svg=document.getElementById("chart");if(!svg)return;
+  const mobiel=window.innerWidth<760;
+  const alleTemp=Array.from(svg.querySelectorAll('text[text-anchor="middle"][font-size]')).filter(el=>/^(?:nu\s+)?-?\d+°$/i.test(String(el.textContent||"").trim())).map(grafiekTemperatuurBox).filter(Boolean);
+  const modelLabels=alleTemp.filter(b=>!/^[Nn]u\s/.test(b.tekst));
+  const cirkels=Array.from(svg.querySelectorAll("circle[data-temp-index]")).map(el=>({el,x:attribuutGetal(el,"cx"),y:attribuutGetal(el,"cy")})).filter(c=>c.x!==null&&c.y!==null);
+  if(!modelLabels.length||!cirkels.length)return;
+  const gebruikt=new Set(),paren=[];
+  for(const label of modelLabels){
+    let beste=null,besteScore=Infinity;
+    for(const c of cirkels){
+      if(gebruikt.has(c.el))continue;
+      const dx=Math.abs(label.x-c.x),dy=Math.abs(label.y-c.y);
+      if(dx>(mobiel?18:24)||dy>(mobiel?48:54))continue;
+      const score=dx*2+dy;if(score<besteScore){beste=c;besteScore=score;}
+    }
+    if(!beste)continue;gebruikt.add(beste.el);paren.push({label,cirkel:beste});
+  }
+  const boxes=alleTemp.map(b=>({...b}));
+  for(const paar of paren){
+    const box=boxes.find(b=>b.el===paar.label.el),c=paar.cirkel;if(!box||box.y<c.y)return;
+    const bovengrens=mobiel?37:44,afstand=mobiel?13:14,stap=box.h+4;
+    for(let laag=0;laag<3;laag++){
+      const kandidaat=c.y-(afstand+laag*stap);if(kandidaat-box.h<bovengrens)continue;
+      const botst=boxes.some(andere=>andere!==box&&Math.abs(andere.x-box.x)<(andere.w+box.w)/2+5&&Math.abs(andere.y-kandidaat)<Math.max(andere.h,box.h)+3);
+      if(botst)continue;box.y=kandidaat;box.el.setAttribute("y",kandidaat.toFixed(1));break;
+    }
+  }
+  svg.dataset.minimumLabels="above-when-free";
+}
 function herordeneerNeerslagContext(){const tekst=document.getElementById("nctext"),details=document.querySelector("details.data-uitleg");if(tekst&&details&&details.parentNode===tekst.parentNode&&details.nextElementSibling===tekst)details.before(tekst);}
 if(typeof meters==="function"){const basisMetersFinal=meters;meters=function(){const r=basisMetersFinal.apply(this,arguments);zetZontegel();zetVochtigheid();return r;};}
 if(typeof dagen==="function"){const basisDagenFinal=dagen;dagen=function(){const r=basisDagenFinal.apply(this,arguments);verfijnWeekKop();return r;};}
-if(typeof etmaal==="function"){const basisEtmaalFinal=etmaal;etmaal=function(){const r=basisEtmaalFinal.apply(this,arguments);verfijnGrafiekTypografie();return r;};}
+if(typeof etmaal==="function"){const basisEtmaalFinal=etmaal;etmaal=function(){const r=basisEtmaalFinal.apply(this,arguments);verfijnGrafiekTypografie();verfijnGrafiekLabelPosities();return r;};}
 herordeneerNeerslagContext();let zonTimer=null;function startZonTimer(){if(zonTimer!==null)return;zonTimer=setInterval(()=>{zetZontegel();},30000);}startZonTimer();window.addEventListener("resize",()=>{if(S.d&&S.chartStart!=null&&S.chartBereik!=null&&typeof etmaal==="function")etmaal(S.chartStart,S.chartBereik);},{passive:true});
 })(typeof globalThis!=="undefined"?globalThis:this);
