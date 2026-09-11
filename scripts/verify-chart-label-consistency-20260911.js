@@ -22,9 +22,14 @@ function main(){
     assert(bron.includes("if(botst)continue;"),`${label}: botsende bovenposities worden niet veilig overgeslagen.`);
     assert(bron.includes("g.cy=kandidaat;"),`${label}: vrije bovenpositie wordt niet toegepast.`);
     assert(bron.includes("if(k.rang<=1) return;"),`${label}: bestaande raster-/extreemselectie is onbedoeld gewijzigd.`);
+    assert(bron.includes("if(T.length<=25){"),`${label}: 24-uursrasterherstel ontbreekt.`);
+    assert(bron.includes("i%stap!==0||!kandKaart.has(i)||gezet.some(g=>g.i===i)"),`${label}: rasterherstel is niet beperkt tot werkelijk bedoelde ontbrekende rasterkandidaten.`);
+    assert(bron.includes("poging=probeerLagen(cx,v,true,null);"),`${label}: rasterherstel gebruikt de bestaande collisionplacer niet.`);
+    assert(bron.includes("if(!poging)continue;"),`${label}: rasterherstel mag geen botsend label forceren.`);
+    assert(bron.includes("rang:kandKaart.get(i)||1"),`${label}: rasterherstel bewaart de bestaande kandidaatprioriteit niet.`);
   }
   assert(gecontroleerd>0,"Geen gebouwde weergrafiek gevonden om labelplaatsing te verifiëren.");
-  console.log(`Temperatuur-labelcontract OK op ${gecontroleerd} weergrafiek-artifacts: selectie/raster blijft origineel; lokale minima verhuizen alleen collisionvrij naar boven.`);
+  console.log(`Temperatuur-labelcontract OK op ${gecontroleerd} weergrafiek-artifacts: lokale minima verhuizen alleen collisionvrij naar boven en ontbrekende 24-uursrasterkandidaten worden uitsluitend via de bestaande collisionplacer hersteld.`);
 }
 
 if(require.main===module)main();
