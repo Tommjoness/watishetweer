@@ -6,6 +6,7 @@ const path=require("path");
 const CONNECT_SOURCE="https://eu.i.posthog.com";
 const SCRIPT_SRC="/posthog-analytics.js";
 const SCRIPT_TAG=`<script src="${SCRIPT_SRC}" defer data-analytics="posthog"></script>`;
+const DELIVERY_META='<meta name="weather-delivery" content="external-minified-v1">';
 
 function ontleedRichtlijn(deel){
   const trim=String(deel||"").trim();
@@ -65,6 +66,12 @@ function htmlBestanden(root){
   return uit;
 }
 
+function productieHeaderStaatToe(){
+  const headerPad=path.join(__dirname,"..","cloudflare","_headers");
+  if(!fs.existsSync(headerPad))return false;
+  return fs.readFileSync(headerPad,"utf8").includes(CONNECT_SOURCE);
+}
+
 function pasArtifactAan(root=path.join(__dirname,"..","public")){
   const asset=path.join(root,"posthog-analytics.js");
   if(!fs.existsSync(asset))throw new Error("posthog-analytics.js ontbreekt in publieke buildoutput.");
@@ -84,10 +91,16 @@ function pasArtifactAan(root=path.join(__dirname,"..","public")){
   if(!fs.existsSync(index))throw new Error("public/index.html ontbreekt.");
   const indexHtml=fs.readFileSync(index,"utf8");
   if(!indexHtml.includes(SCRIPT_TAG))throw new Error("PostHog analytics-script ontbreekt na artifactbewerking in index.html.");
-  if(!indexHtml.includes(CONNECT_SOURCE))throw new Error("PostHog EU capture-origin ontbreekt in de meta-CSP van index.html.");
+
+  const deliveryActief=indexHtml.includes(DELIVERY_META);
+  const metaStaatToe=indexHtml.includes(CONNECT_SOURCE);
+  if(!metaStaatToe){
+    if(!deliveryActief)throw new Error("PostHog EU capture-origin ontbreekt in de meta-CSP van index.html.");
+    if(!productieHeaderStaatToe())throw new Error("PostHog EU capture-origin ontbreekt in de productie-CSP-header na deliverymigratie.");
+  }
 
   console.log(`posthog-analytics: ${bestanden.length} HTML-bestanden gecontroleerd, ${scripts} scripts actief, ${metas} meta-CSP's gezien, ${gewijzigd} bestanden aangepast.`);
-  return {bestanden:bestanden.length,scripts,metas,gewijzigd};
+  return {bestanden:bestanden.length,scripts,metas,gewijzigd,deliveryActief};
 }
 
 if(require.main===module){
@@ -95,4 +108,4 @@ if(require.main===module){
   catch(e){console.error(e&&e.stack||e);process.exit(1);}
 }
 
-module.exports={CONNECT_SOURCE,SCRIPT_SRC,SCRIPT_TAG,ontleedRichtlijn,verruimConnectSrc,pasHtmlAan,htmlBestanden,pasArtifactAan};
+module.exports={CONNECT_SOURCE,SCRIPT_SRC,SCRIPT_TAG,DELIVERY_META,ontleedRichtlijn,verruimConnectSrc,pasHtmlAan,htmlBestanden,productieHeaderStaatToe,pasArtifactAan};
