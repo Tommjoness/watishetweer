@@ -14,17 +14,22 @@ const MARKER_RAIN="LIVE Q4 CHART COMPACTION 20260912";
    eisen per weerartifact exact één match. */
 const LABEL_RE=/if\s*\(nuX\s*!=\s*null\)\s*\{\s*for\s*\(const\s*\[idx\]\s*of\s*\[\.\.\.kandKaart\.entries\(\)\]\)\s*\{\s*if\s*\(Math\.abs\(x\(idx\)\s*-\s*nuX\)\s*<\s*cw\s*\*\s*1\.05\)\s*kandKaart\.delete\(idx\);\s*\}\s*\}/g;
 const LABEL_NIEUW=`/* ${MARKER_LABEL} */
-  if(nuX!=null){
-    /* Het eerste volledige modeluur ná de rode nu-positie is de eerstvolgende
-       concrete forecastwaarde. Geef die daarom een eigen hoogste prioriteit:
-       hij mag niet later door de algemene collisionselectie verdwijnen ten
-       gunste van een verder weg liggend extreem of rasterpunt. */
-    let eersteToekomst=null;
+  /* De gekoppelde komende-urenweergave mag het lopende modeluur al vóór de
+     grafiek afsnijden. Dan begint TI bijvoorbeeld om 18:00 terwijl de echte
+     lokale klok 17:35 is en bestaat nuX binnen deze zichtbare deelreeks niet.
+     Bepaal het eerste toekomstige modeluur daarom uit de provider-lokale
+     tijdstrings zelf. ISO-lokale waarden hebben binnen dezelfde provider-as
+     een chronologische lexicografische volgorde. */
+  const nuLokaleTijd=String(S.d&&S.d.current&&S.d.current.time||"");
+  let eersteToekomst=null;
+  if(!M&&n<=24&&nuLokaleTijd){
     for(let i=0;i<T.length;i++){
-      if(geldig(i)&&x(i)>nuX){eersteToekomst=i;break;}
+      if(geldig(i)&&String(TI[i]||"")>nuLokaleTijd){eersteToekomst=i;break;}
     }
-    if(eersteToekomst!==null) zet(eersteToekomst,4);
+  }
+  if(eersteToekomst!==null) zet(eersteToekomst,4);
 
+  if(nuX!=null){
     /* Alleen het modelpunt van het lopende uur is redundant met het rode
        actuele label. Kies daarom het laatste niet-toekomstige modelpunt, niet
        simpelweg het geometrisch dichtstbijzijnde punt: na het halve uur kan
