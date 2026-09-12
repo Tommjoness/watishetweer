@@ -28,7 +28,8 @@ for(const p of htmlBestanden(OUT)){
   assert.ok(html.includes('#chart g[data-q4-rain-periods]{transform:none!important}'),rel+": historische -6px regen-transform wordt niet geneutraliseerd");
   assert.ok(html.includes('.chips{margin-top:12px!important}'),rel+": compacte mast/chipspacing ontbreekt");
   assert.ok(html.includes('.brief{margin-top:18px!important;padding-top:18px!important}'),rel+": compacte briefingovergang ontbreekt");
-  assert.ok(html.includes('footer{font-size:13px!important;line-height:1.5!important;gap:4px 16px!important}'),rel+": footerleesbaarheid ontbreekt");
+  assert.ok(html.includes('html body footer:nth-of-type(n){font-size:13px!important;line-height:20px!important;gap:4px 16px!important}'),rel+": robuuste footerleesbaarheid ontbreekt");
+  assert.ok(html.includes('html body footer:nth-of-type(n) .bron'),rel+": footer-kindregels krijgen de leesbare regelhoogte niet mee");
   assert.ok(html.includes('body > .seo-plaatsnav{margin-top:10px!important}'),rel+": dunnere zachte plaatsnavigatie-overgang ontbreekt");
   assert.strictEqual(tel(html,CAMS),1,rel+": bestaande CAMS-copy moet exact behouden blijven");
   assert.ok(html.includes('#aq{')&&html.includes('padding-inline:18px'),rel+": bestaande AQI-layout uit vorige finale polish ontbreekt");
