@@ -16,10 +16,9 @@ const LABEL_RE=/if\s*\(nuX\s*!=\s*null\)\s*\{\s*for\s*\(const\s*\[idx\]\s*of\s*\
 const LABEL_NIEUW=`/* ${MARKER_LABEL} */
   /* De gekoppelde komende-urenweergave mag het lopende modeluur al vóór de
      grafiek afsnijden. Dan begint TI bijvoorbeeld om 18:00 terwijl de echte
-     lokale klok 17:35 is en bestaat nuX binnen deze zichtbare deelreeks niet.
-     Bepaal het eerste toekomstige modeluur daarom uit de provider-lokale
-     tijdstrings zelf. ISO-lokale waarden hebben binnen dezelfde provider-as
-     een chronologische lexicografische volgorde. */
+     lokale klok 17:35 is. Bepaal het eerste toekomstige modeluur daarom uit
+     de provider-lokale tijdstrings zelf. ISO-lokale waarden hebben binnen
+     dezelfde provider-as een chronologische lexicografische volgorde. */
   const nuLokaleTijd=String(S.d&&S.d.current&&S.d.current.time||"");
   let eersteToekomst=null;
   if(!M&&n<=24&&nuLokaleTijd){
@@ -30,14 +29,17 @@ const LABEL_NIEUW=`/* ${MARKER_LABEL} */
   if(eersteToekomst!==null) zet(eersteToekomst,4);
 
   if(nuX!=null){
-    /* Alleen het modelpunt van het lopende uur is redundant met het rode
-       actuele label. Kies daarom het laatste niet-toekomstige modelpunt, niet
-       simpelweg het geometrisch dichtstbijzijnde punt: na het halve uur kan
-       het volgende uur immers dichter bij nu liggen. */
+    /* De gekoppelde desktopgrafiek kan de rode nu-lijn naar de linkergrens
+       snappen wanneer het lopende uur al uit TI is gesneden. Geometrie alleen
+       mag dan niet doen alsof het eerste toekomstige uur (bijv. 18:00 om
+       17:35) een redundant huidig modelpunt is. Kandidaten ná current.time
+       worden daarom expliciet uitgesloten van de suppressie. */
     let huidigModel=null,afstand=Infinity;
     for(const [idx] of kandKaart.entries()){
-      const d=nuX-x(idx);
-      if(d>=0&&d<afstand){afstand=d;huidigModel=idx;}
+      const modelTijd=String(TI[idx]||"");
+      if(nuLokaleTijd&&(!modelTijd||modelTijd>nuLokaleTijd)) continue;
+      const d=Math.abs(nuX-x(idx));
+      if(d<afstand){afstand=d;huidigModel=idx;}
     }
     if(huidigModel!==null&&afstand<cw*1.05) kandKaart.delete(huidigModel);
   }`;
