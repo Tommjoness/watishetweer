@@ -28,9 +28,12 @@ function main(){
       "body > .seo-plaatsnav{margin-top:18px!important}",
       "footer .footer-details>summary{",
       "box-shadow:inset 0 -1px 0 var(--rule)",
-      "footer > .bron:nth-of-type(2){",
-      "flex-basis:100%",
-      "justify-content:center",
+      "grid-template-columns:max-content max-content max-content",
+      "footer > span.bron:not(:nth-last-of-type(-n+2)){",
+      "grid-column:1 / -1",
+      "footer > span.bron:nth-last-of-type(2){grid-column:1}",
+      "footer > span.bron:last-of-type{grid-column:2}",
+      "footer > details.footer-details{grid-column:3}",
       "#aq.aq-cols-3 .stat:nth-child(3n)",
       "body > .seo-plaatsnav{margin-top:14px!important}"
     ];
@@ -42,9 +45,9 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen finale UI-polish-artifacts gevonden.");
   if(!CSS.includes("#aq")||!CSS.includes("#chart g[data-q4-rain-periods]")||!CSS.includes("transform:translateY(-6px)"))throw new Error("CSS-export wijkt af van verifiercontract.");
-  if(!CSS.includes("footer .footer-details>summary")||!CSS.includes("footer > .bron:nth-of-type(2)"))throw new Error("CSS-export mist footerhulprijcontract.");
+  if(!CSS.includes("footer .footer-details>summary")||!CSS.includes("grid-template-columns:max-content max-content max-content")||!CSS.includes("footer > span.bron:nth-last-of-type(2)")||!CSS.includes("footer > details.footer-details{grid-column:3}"))throw new Error("CSS-export mist deterministisch footerhulprijcontract.");
   if(CSS.includes("margin-bottom:-6px!important"))throw new Error("CSS-export bevat nog de afgekeurde negatieve grafiekmarge.");
-  console.log("Finale UI-polish geverifieerd op "+geraakt+" weerartifacts; footerhulplinks staan als compacte desktoprij met onderstreepte technische details, grafiekbox blijft onaangeroerd.");
+  console.log("Finale UI-polish geverifieerd op "+geraakt+" weerartifacts; footerhulplinks staan deterministisch als compacte desktoprij met onderstreepte technische details, grafiekbox blijft onaangeroerd.");
   return {geraakt};
 }
 
