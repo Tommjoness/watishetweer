@@ -57,7 +57,7 @@ const gelijk=context("2026-08-13T12:00",250);
 const gras=vind(gelijk,"Graspollen");
 assert(gras,"exact uur moet een gras-pollenrij tonen: "+JSON.stringify(gelijk));
 assert(/250/.test(gras.val),"exact uur moet echte pollenwaarde blijven tonen: "+JSON.stringify(gelijk));
-assert.equal(gras.sub,"Modelverwachting voor dit uur.");
+assert.equal(gras.sub,"Veel pollen verwacht voor dit uur.");
 assert(!/^(?:laag|matig|hoog|zeer hoog)$/.test(gras.sub),"productie mag geen universele pollen-ernstcategorie tonen: "+JSON.stringify(gelijk));
 
 const klein=context("2026-08-13T12:00",0.4);
@@ -65,12 +65,12 @@ const kleinGras=vind(klein,"Graspollen");
 assert(kleinGras,"positieve sub-1 pollenwaarde moet een rij houden: "+JSON.stringify(klein));
 assert(/(?:&lt;|<)1/.test(kleinGras.val),"positieve sub-1 pollenwaarde mag niet als nul worden getoond: "+JSON.stringify(kleinGras));
 assert(kleinGras.val.includes("korrel/m³"),"sub-1 pollen gebruikt de enkelvoudige eenheid: "+JSON.stringify(kleinGras));
-assert.equal(kleinGras.sub,"Modelverwachting voor dit uur.");
+assert.equal(kleinGras.sub,"Weinig pollen verwacht voor dit uur.");
 
 const nul=context("2026-08-13T12:00",0);
 const nulPollen=vind(nul,"Pollen");
 assert(nulPollen,nul);
-assert.equal(nulPollen.sub,"Model verwacht geen pollen voor dit uur.");
+assert.equal(nulPollen.sub,"Geen pollen verwacht voor dit uur.");
 assert(/0/.test(nulPollen.valHtml)&&nulPollen.valHtml.includes("korrels/m³"),"expliciete modelnul moet als 0 korrels/m³ in de runtime-DOM staan: "+JSON.stringify(nulPollen));
 assert(!/^–$/.test(nulPollen.valHtml),"expliciete modelnul mag in de runtime-DOM niet op ontbrekende data lijken: "+JSON.stringify(nulPollen));
 
@@ -97,7 +97,7 @@ const zuidBuiten=context("2026-08-13T12:00",250,29.99,20);
 assert.equal(vind(zuidBuiten,"Luchtkwaliteit").sub,"goed · AQI (VS-schaal)","onder 30N moet de globale AQI worden gebruikt");
 assert.equal(vind(zuidBuiten,"Pollen").sub,"Voor deze locatie niet beschikbaar","onder 30N mag Europese pollenfixture niet worden getoond en moet de modeldekking eerlijk worden benoemd");
 
-console.log("Lucht/pollenregressie: CAMS-Europe-randen, uurmismatch, expliciete nul in runtime-DOM, exact uur, natuurlijke kop en sub-1 concentraties blijven correct.");
+console.log("Lucht/pollenregressie: CAMS-Europe-randen, uurmismatch, expliciete nul in runtime-DOM, exact uur, natuurlijke hoeveelheidscopy en sub-1 concentraties blijven correct.");
 `;
 let status=1;
 try{
