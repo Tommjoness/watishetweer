@@ -106,7 +106,7 @@ const REGEN_NIEUW=`/* ${MARKER_RAIN} */
   const y=pb+(compactDesktop?30:48),randFont=g.M?8.3:8.9,bedragFont=g.M?8.8:9.4;`;
 
 const HOOGTE_RE=/const\s+nieuwH\s*=\s*Math\.max\(basisH\s*,\s*laatsteBedragY\s*\+\s*17\s*\+\s*8\s*\)\s*;/g;
-const HOOGTE_NIEUW='const nieuwH=Math.max(basisH,laatsteBedragY+(compactDesktop?14:25));';
+const HOOGTE_NIEUW='const nieuwH=Math.max(basisH,laatsteBedragY+(compactDesktop?15:25));';
 
 function htmlBestanden(dir){
   const uit=[];
