@@ -54,11 +54,12 @@ const PANEL_HOOGTE_NIEUW=`  /* Hoogtefiltering is reversibel: de eerste meting b
     if(!Array.isArray(aside.__wiwHourCandidateRows))aside.__wiwHourCandidateRows=[...tbody.children];
     else tbody.replaceChildren(...aside.__wiwHourCandidateRows);
   }
-  /* De productbelofte is 8–11 volledige desktopuren. Laat een regenannotatie
-     daarom nooit via de SVG-aspectratio de zichtbare horizon onder acht uur
-     duwen. Als de achtste rij slechts enkele pixels mist, verdelen we dat
-     tekort over de bestaande celpadding, met 29px als harde leesbaarheidsvloer. */
-  const minimumUren=Math.min(8,tbody&&tbody.children.length||0);
+  /* Gebruik de echte ruimte onder de tabelkop om te bepalen hoeveel van de
+     gewenste acht uren op minimaal 29px volledig passen. Zo blijft de
+     regen-horizon op ruime desktops intact, zonder acht rijen in de smallere
+     1100px-layout buiten het grafiekpaneel te forceren. */
+  const beschikbareRijhoogte=tbody?Math.max(0,grens-tbody.getBoundingClientRect().top):0;
+  const minimumUren=Math.min(8,Math.floor((beschikbareRijhoogte+0.5)/29),tbody&&tbody.children.length||0);
   while(tbody&&tbody.lastElementChild&&tbody.children.length>minimumUren&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
   let rijPadAanpassing=0;
   let zichtbareRijen=tbody?[...tbody.children]:[];
