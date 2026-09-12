@@ -129,6 +129,14 @@ jobs:
             echo "::error file=browser-q4-rain-periods.test.js,line=1::$msg"
             exit "$code"
           fi
+      - name: Bewaar regenperioden-diagnose bij failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rain-e2e-diagnose
+          path: /tmp/rain-e2e.log
+          if-no-files-found: error
+          retention-days: 1
       - name: Regenperioden exact per tijdvak in Chromium en WebKit
         run: node browser-rain-period-details.test.js
       - name: Regendatumlabels in Chromium en WebKit
