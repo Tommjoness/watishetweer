@@ -7,6 +7,7 @@ const {verifieerServiceworkerCache}=require("./postbuild-cache.js");
 const OUT=path.join(__dirname,"..","public");
 const MARKER_LABEL="LIVE CHART LABEL FIX 20260912";
 const MARKER_RAIN="LIVE Q4 CHART COMPACTION 20260912";
+const MARKER_LATE_NU="LIVE FUTURE LABEL NU-GUARD 20260912";
 
 function htmlBestanden(dir){
   const uit=[];
@@ -22,10 +23,11 @@ function tel(s,q){return String(s).split(q).length-1;}
 let gezien=0;
 for(const p of htmlBestanden(OUT)){
   const html=fs.readFileSync(p,"utf8");
-  if(!html.includes(MARKER_LABEL)&&!html.includes(MARKER_RAIN))continue;
+  if(!html.includes(MARKER_LABEL)&&!html.includes(MARKER_RAIN)&&!html.includes(MARKER_LATE_NU))continue;
   const rel=path.relative(OUT,p);
   assert.strictEqual(tel(html,MARKER_LABEL),1,rel+": label-fixmarker niet exact eenmaal aanwezig");
   assert.strictEqual(tel(html,MARKER_RAIN),1,rel+": Q4-compactiemarker niet exact eenmaal aanwezig");
+  assert.strictEqual(tel(html,MARKER_LATE_NU),1,rel+": late nu-guardmarker niet exact eenmaal aanwezig");
   assert.ok(html.includes('const nuLokaleTijd=String(S.d&&S.d.current&&S.d.current.time||"");'),rel+": provider-lokale actuele tijd ontbreekt voor toekomstuurselectie");
   assert.ok(html.includes('if(!M&&n<=24&&nuLokaleTijd){'),rel+": eerste toekomstuur is niet tot desktop-etmaal begrensd");
   assert.ok(html.includes('if(geldig(i)&&String(TI[i]||"")>nuLokaleTijd){eersteToekomst=i;break;}'),rel+": eerste zichtbare toekomstige modeluur volgt niet de provider-lokale tijdas");
@@ -45,6 +47,14 @@ for(const p of htmlBestanden(OUT)){
   assert.ok(html.includes('poging.verwijderd.forEach(g=>{const pos=gezet.indexOf(g);if(pos>=0)gezet.splice(pos,1);});'),rel+": finale fallback verwijdert verdrongen lagere prioriteitslabels niet via de bestaande gezet-lijst");
   assert.ok(html.includes('gezet.push({i:i,v:v,cx:vrijeX,cy:poging.cy,bw:bw,rang:5});'),rel+": eerste toekomstige uur wordt niet als finale hoogste-prioriteitsplaatsing bewaard");
 
+  assert.ok(html.includes('const nuLokaleTijdPolish=String(S.d&&S.d.current&&S.d.current.time||"");'),rel+": late nu-cleanup kent de provider-lokale actuele tijd niet");
+  assert.ok(html.includes('const tijdenPolish=Array.isArray(S.geo.TI)?S.geo.TI:[];'),rel+": late nu-cleanup gebruikt de zichtbare provider-as niet");
+  assert.ok(html.includes('if(modelTijd&&modelTijd>nuLokaleTijdPolish){eersteToekomstPolish=i;break;}'),rel+": eerste toekomstige zichtbare modelindex wordt laat niet bepaald");
+  assert.ok(html.includes('const tempPuntenPolish=[...svg.querySelectorAll("circle[data-temp-index]")].map(p=>({'),rel+": late nu-cleanup kan label niet terugkoppelen aan datapuntindex");
+  assert.ok(html.includes('if(!nuLabelConcurreert({x:px,y:py},label,S.geo.cw,!!S.geo.M)) return;'),rel+": bestaande collisionzone blijft niet intact");
+  assert.ok(html.includes('if(i!==null&&i===eersteToekomstPolish) return;'),rel+": eerste toekomstige modeluur is niet beschermd tegen late collision-cleanup");
+  assert.ok(html.includes('verwijderTemperatuurMarkering(svg,el);'),rel+": overige concurrerende modelmarkeringen worden niet meer via bestaande owner verwijderd");
+
   assert.ok(html.includes('const compactDesktop=typeof window!=="undefined"&&window.innerWidth>=1100&&!g.M&&g.n<=25;'),rel+": desktop-only Q4 compactcontract ontbreekt");
   assert.ok(html.includes('const y=pb+(compactDesktop?30:48)'),rel+": regenbracket gebruikt niet de compacte desktopoffset");
   assert.ok(html.includes('const nieuwH=Math.max(basisH,laatsteBedragY+(compactDesktop?14:25));'),rel+": viewBox-onderreserve gebruikt niet het compacte desktopcontract");
@@ -53,4 +63,4 @@ for(const p of htmlBestanden(OUT)){
 assert.ok(gezien>0,"Geen pre-cleanup weerartifact met live chart/layout-fix gevonden.");
 const cache=verifieerServiceworkerCache(OUT,"live-chart-layout-fix-20260912");
 assert.ok(/^watishetweer-[0-9a-f]{12}$/.test(cache),"serviceworker-cache hoort bij pre-cleanup chart/layout-artifact");
-console.log("Live chart/layout pre-cleanup verifier groen voor "+gezien+" weerartifacts; eerste zichtbare toekomstuur blijft beschermd tegen gesnapte nu-lijn én krijgt een finale collisionfallback; cache "+cache+".");
+console.log("Live chart/layout pre-cleanup verifier groen voor "+gezien+" weerartifacts; eerste zichtbare toekomstuur blijft beschermd tegen zowel de gesnapte nu-lijn als de late nu-cleanup en krijgt een finale collisionfallback; cache "+cache+".");
