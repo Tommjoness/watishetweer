@@ -23,10 +23,10 @@ const CSS=`
   .brief{margin-top:18px!important;padding-top:18px!important}
 
   /* De bron/disclaimerregels waren op grote desktop kleiner dan de rest van de
-     informatieve microcopy. Een halve stap groter + iets meer regelritme, zonder
-     een extra footerblok of nieuwe visuele hiërarchie. */
-  footer{font-size:13px!important;line-height:1.5!important;gap:4px 16px!important}
-  footer .bron,footer .bron b,footer details,footer details summary,footer a{line-height:1.5!important}
+     informatieve microcopy. Gebruik een expliciete 20px regelhoogte en iets
+     specifiekere selector zodat oudere footer-shorthands dit niet terugdrukken. */
+  html body footer:nth-of-type(n){font-size:13px!important;line-height:20px!important;gap:4px 16px!important}
+  html body footer:nth-of-type(n) .bron,html body footer:nth-of-type(n) .bron b,html body footer:nth-of-type(n) details,html body footer:nth-of-type(n) details summary,html body footer:nth-of-type(n) a{line-height:20px!important}
 
   /* Behoud de zachte overgang, maar maak de resterende lichte strook subtieler. */
   body > .seo-plaatsnav{margin-top:10px!important}
