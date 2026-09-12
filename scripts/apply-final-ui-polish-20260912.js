@@ -56,6 +56,27 @@ const CSS=`
 body > .sheet{border-bottom-color:var(--rule-soft)}
 body > .seo-plaatsnav{margin-top:18px!important}
 
+/* Footerhulplinks horen als één compacte afsluitende rij te lezen. De lange
+   veiligheidsdisclaimer krijgt op desktop daarom zijn eigen regel; vervolgens
+   passen Over, Privacy en Technische locatiegegevens samen op de volgende rij.
+   De summary krijgt exact dezelfde subtiele onderstreping als gewone footerlinks. */
+footer .footer-details>summary{
+  color:inherit;
+  box-shadow:inset 0 -1px 0 var(--rule);
+}
+footer .footer-details>summary:hover,
+footer .footer-details>summary:focus-visible{
+  color:var(--ink);
+  box-shadow:inset 0 -1px 0 var(--ink);
+}
+
+@media(min-width:901px){
+  footer > .bron:nth-of-type(2){
+    flex-basis:100%;
+    justify-content:center;
+  }
+}
+
 @media(min-width:901px){
   #aq .stat .ssub{min-height:2.8em}
   #aq.aq-cols-1 .stat:nth-child(n),
