@@ -29,7 +29,10 @@ for(const p of htmlBestanden(OUT)){
   eis(html.includes(GRAFIEK_SYNC_NIEUW),`${rel}: grafiek wordt na hoogtefiltering niet exact met de zichtbare tabelrange gesynchroniseerd`);
   eis(html.includes(PANEL_HOOGTE_NIEUW)&&!html.includes(PANEL_HOOGTE_OUD),`${rel}: zichtbare desktopuren worden niet door de gemeten grafiekhoogte bepaald`);
   eis(html.includes('aside.style.removeProperty("--wiw-hour-row-pad-extra")'),`${rel}: eerdere dynamische rijpadding wordt niet vóór hermeting gereset`);
-  eis(html.includes('document.documentElement.getBoundingClientRect();')&&html.includes('rest>0.25&&extraPerZijde<4.5'),`${rel}: subpixel-resthoogte wordt niet begrensd nagemeten en geabsorbeerd`);
+  eis(html.includes('const minimumUren=Math.min(8,tbody&&tbody.children.length||0);'),`${rel}: minimale desktopuurscope van acht volledige rijen ontbreekt`);
+  eis(html.includes('tbody.children.length>minimumUren'),`${rel}: hoogtefilter kan de desktopuurscope nog onder acht rijen inkorten`);
+  eis(html.includes('const maximaleKrimp=Math.max(0,(kleinsteRij-29)/2);'),`${rel}: begrensde paddingcorrectie bewaakt de 29px-leesbaarheidsvloer niet`);
+  eis(html.includes('document.documentElement.getBoundingClientRect();')&&html.includes('rest>0.25&&rijPadAanpassing<4.5'),`${rel}: subpixel-resthoogte wordt niet begrensd nagemeten en geabsorbeerd`);
   eis(html.includes(MM_NIEUW)&&!html.includes(MM_OUD),`${rel}: numerieke 0 mm wordt nog als ontbrekende waarde behandeld`);
   eis(html.includes(NU_NIEUW)&&!html.includes(NU_OUD),`${rel}: actuele Nu-context ontbreekt aan de gedeelde desktoprange`);
   eis(html.includes(KOP_NIEUW)&&!html.includes(KOP_OUD),`${rel}: standaard desktopgrafiek heet niet Komende uren`);
