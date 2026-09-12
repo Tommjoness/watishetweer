@@ -6,7 +6,7 @@ const vm=require("vm");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 
 const OUT=path.join(__dirname,"..","public");
-const MARK="/* ===== MOBILE GRAFIEK + POLLEN POLISH 20260912 ===== */";
+const MARK="<!-- ===== MOBILE GRAFIEK + POLLEN POLISH 20260912 ===== -->";
 
 /* Mobiel was in de finale presentatielaag bewust teruggebracht naar één vast
    temperatuurcijfer per zes uur. Op een echte iPhone leest de curve daardoor
