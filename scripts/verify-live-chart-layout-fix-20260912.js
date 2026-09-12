@@ -53,7 +53,7 @@ for(const p of htmlBestanden(OUT)){
 
   assert.ok(html.includes('const compactDesktop=typeof window!=="undefined"&&window.innerWidth>=1100&&!g.M&&g.n<=25;'),rel+": desktop-only Q4 compactcontract ontbreekt");
   assert.ok(html.includes('const y=pb+(compactDesktop?30:48)'),rel+": regenbracket gebruikt niet de compacte desktopoffset");
-  assert.ok(html.includes('const nieuwH=Math.max(basisH,laatsteBedragY+(compactDesktop?15:25));'),rel+": viewBox-onderreserve gebruikt niet het compacte desktopcontract");
+  assert.ok(html.includes('const nieuwH=Math.max(basisH,laatsteBedragY+(compactDesktop?29:25));'),rel+": viewBox-onderreserve gebruikt niet het compacte desktopcontract");
   gezien++;
 }
 assert.ok(gezien>0,"Geen pre-cleanup weerartifact met live chart/layout-fix gevonden.");
