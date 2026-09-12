@@ -26,6 +26,11 @@ function main(){
       "@media(min-width:1100px)",
       "body > .sheet{border-bottom-color:var(--rule-soft)}",
       "body > .seo-plaatsnav{margin-top:18px!important}",
+      "footer .footer-details>summary{",
+      "box-shadow:inset 0 -1px 0 var(--rule)",
+      "footer > .bron:nth-of-type(2){",
+      "flex-basis:100%",
+      "justify-content:center",
       "#aq.aq-cols-3 .stat:nth-child(3n)",
       "body > .seo-plaatsnav{margin-top:14px!important}"
     ];
@@ -37,8 +42,9 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen finale UI-polish-artifacts gevonden.");
   if(!CSS.includes("#aq")||!CSS.includes("#chart g[data-q4-rain-periods]")||!CSS.includes("transform:translateY(-6px)"))throw new Error("CSS-export wijkt af van verifiercontract.");
+  if(!CSS.includes("footer .footer-details>summary")||!CSS.includes("footer > .bron:nth-of-type(2)"))throw new Error("CSS-export mist footerhulprijcontract.");
   if(CSS.includes("margin-bottom:-6px!important"))throw new Error("CSS-export bevat nog de afgekeurde negatieve grafiekmarge.");
-  console.log("Finale UI-polish geverifieerd op "+geraakt+" weerartifacts; grafiekbox blijft onaangeroerd en regenannotatie compacteert alleen op desktop.");
+  console.log("Finale UI-polish geverifieerd op "+geraakt+" weerartifacts; footerhulplinks staan als compacte desktoprij met onderstreepte technische details, grafiekbox blijft onaangeroerd.");
   return {geraakt};
 }
 
