@@ -64,7 +64,8 @@ for(const p of htmlBestanden(OUT)){
   html=exactEen(html,POLLEN_TRUE_OUD,POLLEN_TRUE_NIEUW,"positieve pollencopy",rel);
   html=exactEen(html,POLLEN_FALSE_OUD,POLLEN_FALSE_NIEUW,"nul-pollencopy",rel);
   html=exactEen(html,POLLEN_RUNTIME_OUD,POLLEN_RUNTIME_NIEUW,"pollen hoeveelheidscopy",rel);
-  const scripts=[...html.matchAll(/<script(?![^>]*\\ssrc=)[^>]*>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]);
+  const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+  if(!scripts.length)throw new Error(rel+": geen inline runtime voor syntaxcontrole.");
   scripts.forEach((code,i)=>new vm.Script(code,{filename:rel+":mobile-pollen-polish-"+(i+1)}));
   html=html.replace("</body>","\n"+MARK+"\n</body>");
   fs.writeFileSync(p,html,"utf8");
