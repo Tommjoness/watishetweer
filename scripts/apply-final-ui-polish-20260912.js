@@ -39,11 +39,16 @@ const CSS=`
   line-height:1.4;
 }
 
-/* De actieve desktopowner zet deze marge op nul. Zes pixels is genoeg om de
-   tekst onder de grafiek optisch dichterbij te halen zonder de x-as te knellen. */
-.wiw-chart-main #chart,
-.dagmod #chart{
-  margin-bottom:-6px!important;
+/* De grafiekbox zelf blijft exact binnen .wiw-chart-main. Alleen de visuele
+   regenannotatie onder de x-as schuift op desktop zes pixels omhoog. Daardoor
+   wordt de bedoelde interne gap compacter zonder overflow of hoogtecontracten
+   van grafiek en uurpaneel te veranderen. Mobiel behoudt zijn bestaande ritme. */
+@media(min-width:1100px){
+  #chart g[data-q4-rain-periods]{
+    transform:translateY(-6px);
+    transform-box:view-box;
+    transform-origin:0 0;
+  }
 }
 
 /* De overgang naar de plaatsnavigatie gebruikt dezelfde rand, maar zachter en
