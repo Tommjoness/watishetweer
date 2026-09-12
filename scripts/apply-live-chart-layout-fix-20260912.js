@@ -14,15 +14,26 @@ const MARKER_RAIN="LIVE Q4 CHART COMPACTION 20260912";
    eisen per weerartifact exact één match. */
 const LABEL_RE=/if\s*\(nuX\s*!=\s*null\)\s*\{\s*for\s*\(const\s*\[idx\]\s*of\s*\[\.\.\.kandKaart\.entries\(\)\]\)\s*\{\s*if\s*\(Math\.abs\(x\(idx\)\s*-\s*nuX\)\s*<\s*cw\s*\*\s*1\.05\)\s*kandKaart\.delete\(idx\);\s*\}\s*\}/g;
 const LABEL_NIEUW=`/* ${MARKER_LABEL} */
-  if(nuX!=null&&kandKaart.size){
-    let dichtst=null,afstand=Infinity;
-    for(const [idx] of kandKaart.entries()){
-      const d=Math.abs(x(idx)-nuX);
-      if(d<afstand){afstand=d;dichtst=idx;}
+  if(nuX!=null){
+    /* Het eerste volledige modeluur ná de rode nu-positie is nuttige
+       forecastinformatie, ook wanneer het niet op het vaste drie-uursraster
+       of op een lokaal extreem valt. */
+    let eersteToekomst=null;
+    for(let i=0;i<T.length;i++){
+      if(geldig(i)&&x(i)>nuX){eersteToekomst=i;break;}
     }
-    /* Alleen het modelpunt dat werkelijk met de rode nu-positie samenvalt is
-       redundant. Het aangrenzende toekomstige uur blijft forecastinformatie. */
-    if(dichtst!==null&&afstand<cw*.6) kandKaart.delete(dichtst);
+    if(eersteToekomst!==null) zet(eersteToekomst,2);
+
+    /* Alleen het modelpunt van het lopende uur is redundant met het rode
+       actuele label. Kies daarom het laatste niet-toekomstige modelpunt, niet
+       simpelweg het geometrisch dichtstbijzijnde punt: na het halve uur kan
+       het volgende uur immers dichter bij nu liggen. */
+    let huidigModel=null,afstand=Infinity;
+    for(const [idx] of kandKaart.entries()){
+      const d=nuX-x(idx);
+      if(d>=0&&d<afstand){afstand=d;huidigModel=idx;}
+    }
+    if(huidigModel!==null&&afstand<cw*1.05) kandKaart.delete(huidigModel);
   }`;
 
 const REGEN_RE=/const\s+pb\s*=\s*g\.pt\s*\+\s*g\.ih\s*,\s*y\s*=\s*pb\s*\+\s*48\s*,\s*randFont\s*=\s*g\.M\s*\?\s*8\.3\s*:\s*8\.9\s*,\s*bedragFont\s*=\s*g\.M\s*\?\s*8\.8\s*:\s*9\.4\s*;/g;
