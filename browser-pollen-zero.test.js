@@ -75,7 +75,7 @@ const reporter=`<script>
       const val=pollen&&pollen.querySelector('.sval'),sub=pollen&&pollen.querySelector('.ssub');
       const waarde=val?(val.textContent||'').replace(/\\s+/g,' ').trim():'';
       const uitleg=sub?(sub.textContent||'').replace(/\\s+/g,' ').trim():'';
-      const ok=!!pollen&&/^0\\s*korrels\\/m³$/.test(waarde)&&uitleg==='Model verwacht geen pollen voor dit uur.';
+      const ok=!!pollen&&/^0\\s*korrels\\/m³$/.test(waarde)&&uitleg==='Geen pollen verwacht voor dit uur.';
       document.body.dataset.pollenZeroResult=ok?'ok':'fout';
       document.body.dataset.pollenZeroValue=waarde;
       document.body.dataset.pollenZeroSub=uitleg;
@@ -108,7 +108,7 @@ try{
   if(veld("pollen-zero-result")!=="ok"){
     throw new Error("Pollen-zero browser fout: resultaat="+veld("pollen-zero-result")+", waarde="+veld("pollen-zero-value")+", sub="+veld("pollen-zero-sub")+", ready="+veld("pollen-zero-ready")+", aq="+veld("pollen-zero-aq")+", fetches="+veld("pollen-zero-fetches")+", exception="+veld("pollen-zero-exception"));
   }
-  console.log("Echte Chromium-pollencheck geslaagd: expliciete modelnul toont zichtbaar 0 korrels/m³ en blijft onderscheiden van ontbrekende data.");
+  console.log("Echte Chromium-pollencheck geslaagd: expliciete modelnul toont zichtbaar 0 korrels/m³ met natuurlijke copy en blijft onderscheiden van ontbrekende data.");
 }finally{
   fs.rmSync(dir,{recursive:true,force:true});
 }
