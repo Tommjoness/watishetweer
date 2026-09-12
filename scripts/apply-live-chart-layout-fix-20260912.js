@@ -15,14 +15,15 @@ const MARKER_RAIN="LIVE Q4 CHART COMPACTION 20260912";
 const LABEL_RE=/if\s*\(nuX\s*!=\s*null\)\s*\{\s*for\s*\(const\s*\[idx\]\s*of\s*\[\.\.\.kandKaart\.entries\(\)\]\)\s*\{\s*if\s*\(Math\.abs\(x\(idx\)\s*-\s*nuX\)\s*<\s*cw\s*\*\s*1\.05\)\s*kandKaart\.delete\(idx\);\s*\}\s*\}/g;
 const LABEL_NIEUW=`/* ${MARKER_LABEL} */
   if(nuX!=null){
-    /* Het eerste volledige modeluur ná de rode nu-positie is nuttige
-       forecastinformatie, ook wanneer het niet op het vaste drie-uursraster
-       of op een lokaal extreem valt. */
+    /* Het eerste volledige modeluur ná de rode nu-positie is de eerstvolgende
+       concrete forecastwaarde. Geef die daarom een eigen hoogste prioriteit:
+       hij mag niet later door de algemene collisionselectie verdwijnen ten
+       gunste van een verder weg liggend extreem of rasterpunt. */
     let eersteToekomst=null;
     for(let i=0;i<T.length;i++){
       if(geldig(i)&&x(i)>nuX){eersteToekomst=i;break;}
     }
-    if(eersteToekomst!==null) zet(eersteToekomst,2);
+    if(eersteToekomst!==null) zet(eersteToekomst,4);
 
     /* Alleen het modelpunt van het lopende uur is redundant met het rode
        actuele label. Kies daarom het laatste niet-toekomstige modelpunt, niet
