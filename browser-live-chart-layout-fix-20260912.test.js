@@ -16,39 +16,57 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
   if(typeof S==='undefined'||typeof etmaal!=='function')throw new Error('pre-cleanup runtimeglobals ontbreken');
   const uren=['17','18','19','20','21','22','23','00','01','02','03'];
   const tijden=uren.map((u,i)=>(i<7?'2026-09-12T':'2026-09-13T')+u+':00');
-  const temp=[20,19.2,18.7,18.5,18.4,17.5,17.3,17.4,17.4,17.6,17.7];
+  /* Unieke hele graden maken de contracttest streng: ieder toekomstig uur heeft
+     precies één herkenbaar label en een ontbrekend/verwisseld uur kan niet door
+     een toevallig gelijke afgeronde temperatuur worden gemaskeerd. */
+  const temp=[20,19,18,17,16,15,14,13,12,11,10];
   const wind=tijden.map(()=>20),richting=tijden.map(()=>225),code=tijden.map((_,i)=>i>=5?61:3),dag=tijden.map((_,i)=>i<4?1:0);
   const kans=[2,2,3,10,26,48,63,66,63,61,62],mm=[0,0,0,0,0,2.1,0,0.1,0.5,0.5,0.5];
-  S.d={timezone:'Europe/Amsterdam',utc_offset_seconds:7200,current:{time:'2026-09-12T17:35',temperature_2m:20,is_day:1},hourly:{time:tijden,temperature_2m:temp,apparent_temperature:temp.map(v=>v-.4),precipitation_probability:kans,precipitation:mm,wind_speed_10m:wind,wind_gusts_10m:wind.map(v=>v+5),cloud_cover:tijden.map(()=>90),weather_code:code,is_day:dag,wind_direction_10m:richting},daily:{time:['2026-09-12','2026-09-13'],sunrise:['2026-09-12T07:05','2026-09-13T07:07'],sunset:['2026-09-12T20:01','2026-09-13T19:59']}};
+  const huidig='2026-09-12T17:35';
+  S.d={timezone:'Europe/Amsterdam',utc_offset_seconds:7200,current:{time:huidig,temperature_2m:20,is_day:1},hourly:{time:tijden,temperature_2m:temp,apparent_temperature:temp.map(v=>v-.4),precipitation_probability:kans,precipitation:mm,wind_speed_10m:wind,wind_gusts_10m:wind.map(v=>v+5),cloud_cover:tijden.map(()=>90),weather_code:code,is_day:dag,wind_direction_10m:richting},daily:{time:['2026-09-12','2026-09-13'],sunrise:['2026-09-12T07:05','2026-09-13T07:07'],sunset:['2026-09-12T20:01','2026-09-13T19:59']}};
   S.dag=null;S.bereik=24;S.i0=0;S.klokInstantOverride=new Date('2026-09-12T15:35:00Z');
   etmaal(0,11);
   const svg=document.getElementById('chart'),geoTijden=S.geo&&Array.isArray(S.geo.TI)?S.geo.TI:[];
   const idx18=geoTijden.indexOf('2026-09-12T18:00'),idx17=geoTijden.indexOf('2026-09-12T17:00');
-  const dot18=idx18>=0?svg.querySelector('circle[data-temp-index="'+idx18+'"]'):null;
   const dot17=idx17>=0?svg.querySelector('circle[data-temp-index="'+idx17+'"]'):null;
+  const toekomstigeIndices=geoTijden.map((t,i)=>String(t||'')>huidig?i:-1).filter(i=>i>=0);
+  const dotIndices=[...svg.querySelectorAll('circle[data-temp-index]')].map(x=>Number(x.getAttribute('data-temp-index'))).filter(Number.isInteger);
+  const dotSet=new Set(dotIndices),missend=toekomstigeIndices.filter(i=>!dotSet.has(i));
+  const tekstEls=[...svg.querySelectorAll('text')],forecastEls=tekstEls.filter(el=>/^-?\\d+°$/.test(String(el.textContent||'').trim()));
+  const forecastLabels=forecastEls.map(el=>String(el.textContent||'').trim());
+  const verwacht=toekomstigeIndices.map(i=>Math.round(S.geo.T[i])+'°');
+  const tempEls=tekstEls.filter(el=>/^(?:nu )?-?\\d+°$/.test(String(el.textContent||'').trim()));
+  const dozen=tempEls.map(el=>{const b=el.getBBox();return {t:String(el.textContent||'').trim(),x:b.x,y:b.y,w:b.width,h:b.height};});
+  const botsingen=[];
+  for(let i=0;i<dozen.length;i++)for(let j=i+1;j<dozen.length;j++){
+    const a=dozen[i],b=dozen[j],pad=2;
+    if(a.x<a.x+a.w&&a.x<b.x+b.w+pad&&a.x+a.w+pad>b.x&&a.y<b.y+b.h+pad&&a.y+a.h+pad>b.y) botsingen.push(a.t+'↔'+b.t);
+  }
   const rain=svg.querySelector('g[data-q4-rain-periods]');
   const vb=(svg.getAttribute('viewBox')||'').trim().split(/\\s+/).map(Number),h=vb[3]||0;
-  const labels=[...svg.querySelectorAll('text')].map(x=>String(x.textContent||'').trim());
-  const indices=[...svg.querySelectorAll('circle[data-temp-index]')].map(x=>x.getAttribute('data-temp-index')).join(',');
-  zet('idx18',idx18);zet('idx17',idx17);zet('indices',indices||'geen');zet('geon',S.geo&&S.geo.n);zet('geoti0',geoTijden[0]||'geen');
-  zet('dot18',dot18?'ja':'nee');zet('dot17',dot17?'ja':'nee');zet('label19',labels.includes('19°')?'ja':'nee');zet('current',labels.includes('nu 20°')?'ja':'nee');zet('height',h);zet('rain',rain?'ja':'nee');zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
-}catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},180),{once:true});
+  const labels=tekstEls.map(x=>String(x.textContent||'').trim());
+  zet('idx18',idx18);zet('idx17',idx17);zet('indices',dotIndices.join(',')||'geen');zet('geon',S.geo&&S.geo.n);zet('geoti0',geoTijden[0]||'geen');
+  zet('dot17',dot17?'ja':'nee');zet('current',labels.includes('nu 20°')?'ja':'nee');zet('future-count',toekomstigeIndices.length);zet('forecast-count',forecastLabels.length);zet('missing',missend.length?missend.join(','):'geen');zet('forecast-labels',forecastLabels.join(','));zet('expected-labels',verwacht.join(','));zet('collision',botsingen.length?botsingen.join('|'):'geen');
+  zet('height',h);zet('rain',rain?'ja':'nee');zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
+}catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},220),{once:true});
 </script>`;
 html=html.replace("</body>",reporter+"</body>");
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-live-chart-"));
 try{
   const pad=path.join(dir,"index.html");fs.writeFileSync(pad,html,"utf8");
-  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1660,900","--virtual-time-budget=2500","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:36*1024*1024,timeout:30000});
+  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1660,900","--virtual-time-budget=2800","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:36*1024*1024,timeout:30000});
   if(r.status!==0)throw new Error("browser exit "+r.status+": "+String(r.stderr||"").slice(-1200));
   const dom=r.stdout||"",v=k=>{const m=new RegExp('data-live-chart-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
   if(v('current')!=='ja')throw new Error("rode actuele temperatuur nu 20° ontbreekt");
   if(Number(v('idx18'))<0)throw new Error("18:00 ontbreekt uit de zichtbare provider-as; geo.TI0="+v('geoti0'));
-  if(v('dot18')!=='ja')throw new Error("18:00-modelpunt/temperatuurlabel ontbreekt als eerste zichtbare toekomstige uur na 17:35; idx18="+v('idx18')+", indices="+v('indices')+", geo.n="+v('geon')+", geo.TI0="+v('geoti0'));
   if(v('dot17')!=='nee')throw new Error("17:00-modeluur wordt niet als redundante actuele waarde onderdrukt");
-  if(v('label19')!=='ja')throw new Error("18:00-temperatuur rondt niet zichtbaar af naar 19°");
+  if(v('missing')!=='geen')throw new Error("niet ieder toekomstig desktopuur heeft een temperatuurpunt/label; ontbrekende indices="+v('missing')+", aanwezig="+v('indices'));
+  if(Number(v('forecast-count'))!==Number(v('future-count')))throw new Error("aantal zichtbare temperatuurcijfers is niet gelijk aan aantal toekomstige uren: "+v('forecast-count')+" vs "+v('future-count'));
+  if(v('forecast-labels')!==v('expected-labels'))throw new Error("uurlijkse temperatuurcijfers zijn onvolledig of in verkeerde volgorde: kreeg "+v('forecast-labels')+", verwacht "+v('expected-labels'));
+  if(v('collision')!=='geen')throw new Error("temperatuurcijfers botsen visueel: "+v('collision'));
   const h=Number(v('height'));if(!(h>=296&&h<=310))throw new Error("desktopgrafiek reserveert nog te veel/te weinig onderruimte: viewBox-hoogte="+h);
   if(v('rain')!=='ja')throw new Error("Q4-regenannotatie ontbreekt in de regenfixture");
   if(Number(v('overflow'))>2)throw new Error("pre-cleanup desktopfixture heeft horizontale overflow: "+v('overflow')+"px");
-  console.log("Live chart/layout browserregressie groen vóór bundling: om 17:35 staat het zichtbare 18:00-punt gelabeld, 17:00 concurreert niet met nu en chart viewBox="+h+".");
+  console.log("Live chart/layout browserregressie groen vóór bundling: ieder volledig toekomstig desktopuur heeft exact één temperatuurcijfer, zonder onderlinge/nu-labelbotsing; chart viewBox="+h+".");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
