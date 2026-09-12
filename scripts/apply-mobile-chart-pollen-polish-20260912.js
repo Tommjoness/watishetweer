@@ -25,9 +25,14 @@ const POLLEN_TRUE_NIEUW='if(aanwezig===true)return {tekst:"Pollen verwacht voor 
 const POLLEN_FALSE_OUD='if(aanwezig===false)return {tekst:"Model verwacht geen pollen voor dit uur.",kleur:"ink45"};';
 const POLLEN_FALSE_NIEUW='if(aanwezig===false)return {tekst:"Geen pollen verwacht voor dit uur.",kleur:"ink45"};';
 
-const POLLEN_RUNTIME_OUD=`      }else if(/^Pollen\\s+/i.test(kop.textContent)){
+/* apply-final-presentation-consistency verwijdert vóór deze stap de aparte
+   Zonuren-tak uit de senior-runtime. De pollen-tak is in de definitieve artifact
+   daardoor een zelfstandige `if`, niet langer een `}else if`. Target bewust de
+   finale owner zodat deze late polish fail-closed blijft in plaats van een
+   oudere tussenartifact te verwachten. */
+const POLLEN_RUNTIME_OUD=`      if(/^Pollen\\s+/i.test(kop.textContent)){
         const o=pollenPresentatieGetoond(true);sub.textContent=o.tekst;val.style.color=kleurToken(o.kleur);`;
-const POLLEN_RUNTIME_NIEUW=`      }else if(/^Pollen\\s+/i.test(kop.textContent)){
+const POLLEN_RUNTIME_NIEUW=`      if(/^Pollen\\s+/i.test(kop.textContent)){
         const o=pollenPresentatieGetoond(true);
         const ruwe=String(val.textContent||"").replace(",",".");
         const minderDanEen=/<\\s*1/.test(ruwe),match=ruwe.match(/\\d+(?:\\.\\d+)?/);
