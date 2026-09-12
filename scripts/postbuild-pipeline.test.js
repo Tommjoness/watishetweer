@@ -53,11 +53,13 @@ const verwacht=[
   "apply-briefing-stability-20260909.js",
   "verify-briefing-stability-20260909.js",
   "browser-briefing-stability-20260909.test.js",
+  "apply-mobile-chart-pollen-polish-20260912.js",
+  "verify-mobile-chart-pollen-polish-20260912.js",
   "apply-build-provenance.js",
   "verify-build-provenance.js",
   "verify-final-27.js"
 ];
-assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten plus gerichte location-search feedback, briefing-stability, kortetermijn-metric clarity, staff-audit, LCP-final-mile en maan-templatefix");
+assert.deepStrictEqual([...POSTBUILD_STAPPEN],verwacht,"postbuildvolgorde moet exact gelijk blijven aan de bewezen keten plus gerichte location-search feedback, briefing-stability, mobiele grafiek/pollencopy, kortetermijn-metric clarity, staff-audit, LCP-final-mile en maan-templatefix");
 assert.equal(new Set(POSTBUILD_STAPPEN).size,POSTBUILD_STAPPEN.length,"postbuild mag geen stap dubbel uitvoeren");
 for(const stap of POSTBUILD_STAPPEN){assert(fs.existsSync(path.join(__dirname,stap)),"postbuild verwijst naar ontbrekend script: "+stap);}
 assert(!fs.existsSync(path.join(__dirname,"apply-cache-fallback-country.js")),"oude misleidende cachefallback-owner moet verwijderd zijn");
@@ -86,6 +88,8 @@ assert(fs.existsSync(path.join(__dirname,"browser-location-search-pending-feedba
 assert(fs.existsSync(path.join(__dirname,"apply-briefing-stability-20260909.js")),"briefing-stability moet een expliciete applystap hebben");
 assert(fs.existsSync(path.join(__dirname,"verify-briefing-stability-20260909.js")),"briefing-stability moet direct verifieerbaar zijn");
 assert(fs.existsSync(path.join(__dirname,"browser-briefing-stability-20260909.test.js")),"briefing-stability moet een echte browserguard hebben");
+assert(fs.existsSync(path.join(__dirname,"apply-mobile-chart-pollen-polish-20260912.js")),"mobiele grafiek/pollencopy moet een expliciete late applystap hebben");
+assert(fs.existsSync(path.join(__dirname,"verify-mobile-chart-pollen-polish-20260912.js")),"mobiele grafiek/pollencopy moet direct verifieerbaar zijn");
 
 /* Bewolkingscopy hoort uitsluitend bij de canonieke senior-semantiekbron. Q3 mag
    de bewezen 100%/95%-grenzen controleren, maar geen compatibiliteitsfallback
@@ -142,7 +146,9 @@ assert(positie("verify-location-search-pending-feedback-20260908.js")<positie("b
 assert(positie("browser-location-search-pending-feedback-20260908.test.js")<positie("apply-briefing-stability-20260909.js"),"briefing-stability mag pas na de bewezen location-search laag muteren");
 assert(positie("apply-briefing-stability-20260909.js")<positie("verify-briefing-stability-20260909.js"),"briefing-stability moet direct na toepassing worden geverifieerd");
 assert(positie("verify-briefing-stability-20260909.js")<positie("browser-briefing-stability-20260909.test.js"),"briefing-stability browserguard moet de statisch geverifieerde artifact testen");
-assert(positie("browser-briefing-stability-20260909.test.js")<positie("apply-build-provenance.js"),"build-SHA wordt pas na bewezen briefing-stability browsergedrag gestempeld");
+assert(positie("browser-briefing-stability-20260909.test.js")<positie("apply-mobile-chart-pollen-polish-20260912.js"),"mobiele grafiek/pollencopy mag pas na de bewezen briefing-stability browserlaag muteren");
+assert(positie("apply-mobile-chart-pollen-polish-20260912.js")<positie("verify-mobile-chart-pollen-polish-20260912.js"),"mobiele grafiek/pollencopy moet direct na toepassing worden geverifieerd");
+assert(positie("verify-mobile-chart-pollen-polish-20260912.js")<positie("apply-build-provenance.js"),"build-SHA wordt pas na bewezen mobiele grafiek/pollencopy gestempeld");
 assert(positie("apply-build-provenance.js")<positie("verify-build-provenance.js"),"build-provenance moet direct na toepassing worden geverifieerd");
 assert(positie("verify-build-provenance.js")<positie("verify-final-27.js"),"finale artifactguard moet routes en provenance meenemen");
 assert.equal(POSTBUILD_STAPPEN.at(-1),"verify-final-27.js","finale artifactguard moet laatste stap zijn");
@@ -153,4 +159,4 @@ assert(gezien.every(x=>x.node==="node-test"&&x.opt.stdio==="inherit"));
 const foutGezien=[];
 assert.throws(()=>voerPostbuildUit({execPath:"node-test",scriptsDir:"/scripts-test",spawnSync:(node,args)=>{const naam=path.basename(args[0]);foutGezien.push(naam);return {status:naam==="apply-q3-senior-polish.js"?7:0};}}),e=>e&&e.status===7&&e.stap==="apply-q3-senior-polish.js","pipeline moet de eerste niet-groene stap doorgeven");
 assert.deepStrictEqual(foutGezien,verwacht.slice(0,4),"na een fout mogen latere artifactmutaties niet draaien");
-console.log("Postbuild-pipeline: exacte volgorde inclusief location-search pending feedback + browserguard, briefing-stability + browserguard, kortetermijn-metric clarity, staff-audit, mobiele state-UX, mobiele weather-truth-UX, LCP-final-mile, maan-templatefix, finale presentatieguard, canonieke owners, SEO-routes, provenance en fail-fast gedrag geslaagd.");
+console.log("Postbuild-pipeline: exacte volgorde inclusief location-search pending feedback + browserguard, briefing-stability + browserguard, mobiele grafiek/pollencopy, kortetermijn-metric clarity, staff-audit, mobiele state-UX, mobiele weather-truth-UX, LCP-final-mile, maan-templatefix, finale presentatieguard, canonieke owners, SEO-routes, provenance en fail-fast gedrag geslaagd.");

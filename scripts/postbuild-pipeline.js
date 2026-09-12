@@ -62,6 +62,8 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "apply-briefing-stability-20260909.js",
   "verify-briefing-stability-20260909.js",
   "browser-briefing-stability-20260909.test.js",
+  "apply-mobile-chart-pollen-polish-20260912.js",
+  "verify-mobile-chart-pollen-polish-20260912.js",
   "apply-build-provenance.js",
   "verify-build-provenance.js",
   "verify-final-27.js"
