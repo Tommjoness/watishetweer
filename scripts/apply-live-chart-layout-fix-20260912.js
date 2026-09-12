@@ -7,6 +7,7 @@ const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const OUT=path.join(__dirname,"..","public");
 const MARKER_LABEL="LIVE CHART LABEL FIX 20260912";
 const MARKER_RAIN="LIVE Q4 CHART COMPACTION 20260912";
+const MARKER_LATE_NU="LIVE FUTURE LABEL NU-GUARD 20260912";
 
 /* Deze runtimepatch moet vóór platform-output-cleanup draaien: daarna is de
    hoofdclient uit de HTML gehaald en in de gedeelde/minified app-bundle gezet.
@@ -65,6 +66,39 @@ const FALLBACK_NIEUW=`  /* Het eerste toekomstige desktopuur is semantisch belan
   }
   // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:`;
 
+/* live-polish-v2 positioneert het rode nu-label ná de basisgrafiek en verwijdert
+   daarbij zwarte modelmarkeringen in een geometrische collisionzone. Als de
+   desktoprange om 17:35 al bij 18:00 begint, ligt juist het eerste toekomstige
+   uur in die zone. Bescherm daarom alleen dat eerste echte toekomstige uur;
+   overige concurrerende markeringen blijven onder de bestaande cleanup vallen. */
+const LATE_NU_OUD=`  gewoneLabels.forEach(el=>{
+    const label={x:eindig(el.getAttribute("x")),y:eindig(el.getAttribute("y"))};
+    if(nuLabelConcurreert({x:px,y:py},label,S.geo.cw,!!S.geo.M)) verwijderTemperatuurMarkering(svg,el);
+  });`;
+const LATE_NU_NIEUW=`  /* ${MARKER_LATE_NU} */
+  const nuLokaleTijdPolish=String(S.d&&S.d.current&&S.d.current.time||"");
+  const tijdenPolish=Array.isArray(S.geo.TI)?S.geo.TI:[];
+  let eersteToekomstPolish=null;
+  if(!S.geo.M&&nuLokaleTijdPolish){
+    for(let i=0;i<tijdenPolish.length;i++){
+      const modelTijd=String(tijdenPolish[i]||"");
+      if(modelTijd&&modelTijd>nuLokaleTijdPolish){eersteToekomstPolish=i;break;}
+    }
+  }
+  const tempPuntenPolish=[...svg.querySelectorAll("circle[data-temp-index]")].map(p=>({
+    i:Number(p.getAttribute("data-temp-index")),x:eindig(p.getAttribute("cx"))
+  })).filter(p=>Number.isInteger(p.i)&&p.x!==null);
+  gewoneLabels.forEach(el=>{
+    const label={x:eindig(el.getAttribute("x")),y:eindig(el.getAttribute("y"))};
+    if(!nuLabelConcurreert({x:px,y:py},label,S.geo.cw,!!S.geo.M)) return;
+    const i=temperatuurPuntIndex(
+      {text:String(el.textContent||"").trim(),x:label.x},
+      tempPuntenPolish,S.geo.T,Math.max(72,(Number.isFinite(S.geo.cw)?S.geo.cw:36)*2.5)
+    );
+    if(i!==null&&i===eersteToekomstPolish) return;
+    verwijderTemperatuurMarkering(svg,el);
+  });`;
+
 const REGEN_RE=/const\s+pb\s*=\s*g\.pt\s*\+\s*g\.ih\s*,\s*y\s*=\s*pb\s*\+\s*48\s*,\s*randFont\s*=\s*g\.M\s*\?\s*8\.3\s*:\s*8\.9\s*,\s*bedragFont\s*=\s*g\.M\s*\?\s*8\.8\s*:\s*9\.4\s*;/g;
 const REGEN_NIEUW=`/* ${MARKER_RAIN} */
   const pb=g.pt+g.ih;
@@ -102,9 +136,10 @@ function main(){
     let html=fs.readFileSync(p,"utf8");
     if(!html.includes('id="chart"')||!html.includes('data-q4-rain-periods'))continue;
     const rel=path.relative(OUT,p);
-    if(html.includes(MARKER_LABEL)||html.includes(MARKER_RAIN))throw new Error(rel+": live chart/layout-fix staat al in artifact.");
+    if(html.includes(MARKER_LABEL)||html.includes(MARKER_RAIN)||html.includes(MARKER_LATE_NU))throw new Error(rel+": live chart/layout-fix staat al in artifact.");
     html=vervangRegexExactEen(html,LABEL_RE,LABEL_NIEUW,"nu/modeluur-labelsuppressie",rel);
     html=vervangTekstExactEen(html,FALLBACK_OUD,FALLBACK_NIEUW,"eerste toekomstuur placement fallback",rel);
+    html=vervangTekstExactEen(html,LATE_NU_OUD,LATE_NU_NIEUW,"late nu-labelcleanup guard",rel);
     html=vervangRegexExactEen(html,REGEN_RE,REGEN_NIEUW,"Q4 desktop regenoffset",rel);
     html=vervangRegexExactEen(html,HOOGTE_RE,HOOGTE_NIEUW,"Q4 desktop grafiekhoogte",rel);
     fs.writeFileSync(p,html,"utf8");
@@ -117,4 +152,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER_LABEL,MARKER_RAIN,LABEL_RE,LABEL_NIEUW,FALLBACK_OUD,FALLBACK_NIEUW,REGEN_RE,REGEN_NIEUW,HOOGTE_RE,HOOGTE_NIEUW,htmlBestanden,vervangRegexExactEen,vervangTekstExactEen,main};
+module.exports={OUT,MARKER_LABEL,MARKER_RAIN,MARKER_LATE_NU,LABEL_RE,LABEL_NIEUW,FALLBACK_OUD,FALLBACK_NIEUW,LATE_NU_OUD,LATE_NU_NIEUW,REGEN_RE,REGEN_NIEUW,HOOGTE_RE,HOOGTE_NIEUW,htmlBestanden,vervangRegexExactEen,vervangTekstExactEen,main};
