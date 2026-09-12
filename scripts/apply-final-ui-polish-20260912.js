@@ -56,10 +56,8 @@ const CSS=`
 body > .sheet{border-bottom-color:var(--rule-soft)}
 body > .seo-plaatsnav{margin-top:18px!important}
 
-/* Footerhulplinks horen als één compacte afsluitende rij te lezen. De lange
-   veiligheidsdisclaimer krijgt op desktop daarom zijn eigen regel; vervolgens
-   passen Over, Privacy en Technische locatiegegevens samen op de volgende rij.
-   De summary krijgt exact dezelfde subtiele onderstreping als gewone footerlinks. */
+/* Footerhulplinks horen als één compacte afsluitende rij te lezen. De summary
+   krijgt exact dezelfde subtiele onderstreping als gewone footerlinks. */
 footer .footer-details>summary{
   color:inherit;
   box-shadow:inset 0 -1px 0 var(--rule);
@@ -71,8 +69,28 @@ footer .footer-details>summary:focus-visible{
 }
 
 @media(min-width:901px){
-  footer > .bron:nth-of-type(2){
-    flex-basis:100%;
+  /* Gebruik voor desktop een deterministisch drie-koloms slot in plaats van
+     flex-wrap. De laatste twee span.bron-items zijn door het bestaande
+     SEO-contract altijd Over en Privacy; alle eerdere bron-/disclaimerregels
+     krijgen hun eigen volle rij. Technische locatiegegevens sluit als derde
+     kolom aan en kan bij openen weer over de volle breedte uitklappen. */
+  footer{
+    display:grid!important;
+    grid-template-columns:max-content max-content max-content;
+    justify-content:center!important;
+    align-items:center!important;
+    column-gap:16px!important;
+    row-gap:2px!important;
+  }
+  footer > span.bron:not(:nth-last-of-type(-n+2)){
+    grid-column:1 / -1;
+    justify-content:center;
+  }
+  footer > span.bron:nth-last-of-type(2){grid-column:1}
+  footer > span.bron:last-of-type{grid-column:2}
+  footer > details.footer-details{grid-column:3}
+  footer > details.footer-details[open]{
+    grid-column:1 / -1;
     justify-content:center;
   }
 }
