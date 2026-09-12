@@ -21,8 +21,9 @@ function main(){
     const vereisten=[
       "#aq{",
       "padding-inline:18px",
-      ".wiw-chart-main #chart",
-      "margin-bottom:-6px!important",
+      "#chart g[data-q4-rain-periods]",
+      "transform:translateY(-6px)",
+      "@media(min-width:1100px)",
       "body > .sheet{border-bottom-color:var(--rule-soft)}",
       "body > .seo-plaatsnav{margin-top:18px!important}",
       "#aq.aq-cols-3 .stat:nth-child(3n)",
@@ -31,11 +32,13 @@ function main(){
     for(const fragment of vereisten){
       if(!html.includes(fragment))throw new Error(rel+": UI-contract ontbreekt: "+fragment);
     }
+    if(html.includes("margin-bottom:-6px!important"))throw new Error(rel+": afgekeurde negatieve grafiekmarge staat nog in artifact.");
     geraakt++;
   }
   if(!geraakt)throw new Error("Geen finale UI-polish-artifacts gevonden.");
-  if(!CSS.includes("#aq")||!CSS.includes("margin-bottom:-6px!important"))throw new Error("CSS-export wijkt af van verifiercontract.");
-  console.log("Finale UI-polish geverifieerd op "+geraakt+" weerartifacts.");
+  if(!CSS.includes("#aq")||!CSS.includes("#chart g[data-q4-rain-periods]")||!CSS.includes("transform:translateY(-6px)"))throw new Error("CSS-export wijkt af van verifiercontract.");
+  if(CSS.includes("margin-bottom:-6px!important"))throw new Error("CSS-export bevat nog de afgekeurde negatieve grafiekmarge.");
+  console.log("Finale UI-polish geverifieerd op "+geraakt+" weerartifacts; grafiekbox blijft onaangeroerd en regenannotatie compacteert alleen op desktop.");
   return {geraakt};
 }
 
