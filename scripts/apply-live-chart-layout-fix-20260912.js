@@ -44,6 +44,27 @@ const LABEL_NIEUW=`/* ${MARKER_LABEL} */
     if(huidigModel!==null&&afstand<cw*1.05) kandKaart.delete(huidigModel);
   }`;
 
+const FALLBACK_OUD='  // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:';
+const FALLBACK_NIEUW=`  /* Het eerste toekomstige desktopuur is semantisch belangrijker dan gewone
+     rasterlabels. Als de normale collision-layout het alsnog laat vallen,
+     probeer het één keer opnieuw rechts van de gesnapte nu-lijn. Dit gebruikt
+     dezelfde placement helper en mag alleen lager geprioriteerde labels wijken.
+     De datapuntcirkel blijft op de echte x-positie; alleen het cijfer mag voor
+     leesbaarheid zijwaarts uitwijken. */
+  if(eersteToekomst!==null&&!gezet.some(g=>g.i===eersteToekomst)){
+    const i=eersteToekomst,v=T[i],bw=labelBreed(v),eersteBoven=soort[i]!==-1;
+    const basisX=x(i);
+    const vrijeX=Math.min(W-pr-bw/2,
+      Math.max(pl-2+bw/2,basisX+Math.max(28,Math.min(42,cw*.45))));
+    let poging=probeerLagen(vrijeX,v,eersteBoven,5);
+    if(!poging)poging=probeerLagen(vrijeX,v,!eersteBoven,5);
+    if(poging){
+      poging.verwijderd.forEach(g=>{const pos=gezet.indexOf(g);if(pos>=0)gezet.splice(pos,1);});
+      gezet.push({i:i,v:v,cx:vrijeX,cy:poging.cy,bw:bw,rang:5});
+    }
+  }
+  // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:`;
+
 const REGEN_RE=/const\s+pb\s*=\s*g\.pt\s*\+\s*g\.ih\s*,\s*y\s*=\s*pb\s*\+\s*48\s*,\s*randFont\s*=\s*g\.M\s*\?\s*8\.3\s*:\s*8\.9\s*,\s*bedragFont\s*=\s*g\.M\s*\?\s*8\.8\s*:\s*9\.4\s*;/g;
 const REGEN_NIEUW=`/* ${MARKER_RAIN} */
   const pb=g.pt+g.ih;
@@ -69,6 +90,11 @@ function vervangRegexExactEen(bron,re,nieuw,label,rel){
   re.lastIndex=0;
   return bron.replace(re,nieuw);
 }
+function vervangTekstExactEen(bron,oud,nieuw,label,rel){
+  const hits=String(bron).split(oud).length-1;
+  if(hits!==1)throw new Error(rel+": "+label+" ontbreekt of is dubbel: "+hits);
+  return bron.replace(oud,nieuw);
+}
 
 function main(){
   let geraakt=0;
@@ -78,6 +104,7 @@ function main(){
     const rel=path.relative(OUT,p);
     if(html.includes(MARKER_LABEL)||html.includes(MARKER_RAIN))throw new Error(rel+": live chart/layout-fix staat al in artifact.");
     html=vervangRegexExactEen(html,LABEL_RE,LABEL_NIEUW,"nu/modeluur-labelsuppressie",rel);
+    html=vervangTekstExactEen(html,FALLBACK_OUD,FALLBACK_NIEUW,"eerste toekomstuur placement fallback",rel);
     html=vervangRegexExactEen(html,REGEN_RE,REGEN_NIEUW,"Q4 desktop regenoffset",rel);
     html=vervangRegexExactEen(html,HOOGTE_RE,HOOGTE_NIEUW,"Q4 desktop grafiekhoogte",rel);
     fs.writeFileSync(p,html,"utf8");
@@ -90,4 +117,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER_LABEL,MARKER_RAIN,LABEL_RE,LABEL_NIEUW,REGEN_RE,REGEN_NIEUW,HOOGTE_RE,HOOGTE_NIEUW,htmlBestanden,vervangRegexExactEen,main};
+module.exports={OUT,MARKER_LABEL,MARKER_RAIN,LABEL_RE,LABEL_NIEUW,FALLBACK_OUD,FALLBACK_NIEUW,REGEN_RE,REGEN_NIEUW,HOOGTE_RE,HOOGTE_NIEUW,htmlBestanden,vervangRegexExactEen,vervangTekstExactEen,main};
