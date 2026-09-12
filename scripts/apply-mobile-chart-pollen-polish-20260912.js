@@ -59,25 +59,34 @@ function exactEen(bron,oud,nieuw,label,rel){
   return bron.replace(oud,nieuw);
 }
 
-let geraakt=0;
-for(const p of htmlBestanden(OUT)){
-  let html=fs.readFileSync(p,"utf8");
-  if(!html.includes(GRAFIEK_OUD)&&!html.includes(POLLEN_TRUE_OUD))continue;
-  const rel=path.relative(OUT,p);
-  if(html.includes(MARK))throw new Error(rel+": polishmarker staat al in artifact.");
-  html=exactEen(html,GRAFIEK_OUD,GRAFIEK_NIEUW,"mobiele drie-uurslabelselectie",rel);
-  html=exactEen(html,POLLEN_TRUE_OUD,POLLEN_TRUE_NIEUW,"positieve pollencopy",rel);
-  html=exactEen(html,POLLEN_FALSE_OUD,POLLEN_FALSE_NIEUW,"nul-pollencopy",rel);
-  html=exactEen(html,POLLEN_RUNTIME_OUD,POLLEN_RUNTIME_NIEUW,"pollen hoeveelheidscopy",rel);
-  const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
-  if(!scripts.length)throw new Error(rel+": geen inline runtime voor syntaxcontrole.");
-  scripts.forEach((code,i)=>new vm.Script(code,{filename:rel+":mobile-pollen-polish-"+(i+1)}));
-  html=html.replace("</body>","\n"+MARK+"\n</body>");
-  fs.writeFileSync(p,html,"utf8");
-  geraakt++;
+/* De verifier importeert dezelfde constanten om exact dezelfde contracten te
+   controleren. Daarom mag importeren geen tweede mutatieronde starten: de apply
+   draait uitsluitend wanneer dit bestand rechtstreeks door de postbuild wordt
+   uitgevoerd. */
+function main(){
+  let geraakt=0;
+  for(const p of htmlBestanden(OUT)){
+    let html=fs.readFileSync(p,"utf8");
+    if(!html.includes(GRAFIEK_OUD)&&!html.includes(POLLEN_TRUE_OUD))continue;
+    const rel=path.relative(OUT,p);
+    if(html.includes(MARK))throw new Error(rel+": polishmarker staat al in artifact.");
+    html=exactEen(html,GRAFIEK_OUD,GRAFIEK_NIEUW,"mobiele drie-uurslabelselectie",rel);
+    html=exactEen(html,POLLEN_TRUE_OUD,POLLEN_TRUE_NIEUW,"positieve pollencopy",rel);
+    html=exactEen(html,POLLEN_FALSE_OUD,POLLEN_FALSE_NIEUW,"nul-pollencopy",rel);
+    html=exactEen(html,POLLEN_RUNTIME_OUD,POLLEN_RUNTIME_NIEUW,"pollen hoeveelheidscopy",rel);
+    const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+    if(!scripts.length)throw new Error(rel+": geen inline runtime voor syntaxcontrole.");
+    scripts.forEach((code,i)=>new vm.Script(code,{filename:rel+":mobile-pollen-polish-"+(i+1)}));
+    html=html.replace("</body>","\n"+MARK+"\n</body>");
+    fs.writeFileSync(p,html,"utf8");
+    geraakt++;
+  }
+  if(!geraakt)throw new Error("Geen weerartifact geraakt door mobile/pollen-polish.");
+  const cache=vernieuwServiceworkerCache(OUT,"mobile-chart-pollen-polish");
+  console.log("Mobile/pollen-polish toegepast op "+geraakt+" weerartifacts: drie-uurs temperatuurreferenties en natuurlijke pollencopy; cache "+cache+".");
+  return {geraakt,cache};
 }
-if(!geraakt)throw new Error("Geen weerartifact geraakt door mobile/pollen-polish.");
-const cache=vernieuwServiceworkerCache(OUT,"mobile-chart-pollen-polish");
-console.log("Mobile/pollen-polish toegepast op "+geraakt+" weerartifacts: drie-uurs temperatuurreferenties en natuurlijke pollencopy; cache "+cache+".");
 
-module.exports={MARK,GRAFIEK_OUD,GRAFIEK_NIEUW,POLLEN_TRUE_OUD,POLLEN_TRUE_NIEUW,POLLEN_FALSE_OUD,POLLEN_FALSE_NIEUW,POLLEN_RUNTIME_OUD,POLLEN_RUNTIME_NIEUW,htmlBestanden};
+if(require.main===module)main();
+
+module.exports={MARK,GRAFIEK_OUD,GRAFIEK_NIEUW,POLLEN_TRUE_OUD,POLLEN_TRUE_NIEUW,POLLEN_FALSE_OUD,POLLEN_FALSE_NIEUW,POLLEN_RUNTIME_OUD,POLLEN_RUNTIME_NIEUW,htmlBestanden,main};
