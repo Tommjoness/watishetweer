@@ -25,6 +25,10 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
   const svg=document.getElementById('chart'),dot18=svg.querySelector('circle[data-temp-index="1"]'),dot17=svg.querySelector('circle[data-temp-index="0"]'),rain=svg.querySelector('g[data-q4-rain-periods]');
   const vb=(svg.getAttribute('viewBox')||'').trim().split(/\\s+/).map(Number),h=vb[3]||0;
   const labels=[...svg.querySelectorAll('text')].map(x=>String(x.textContent||'').trim());
+  const indices=[...svg.querySelectorAll('circle[data-temp-index]')].map(x=>x.getAttribute('data-temp-index')).join(',');
+  const tempLabels=labels.filter(t=>/^-?\\d+°$/.test(t)).join(',');
+  const nuIndex=typeof plaatsNuIndex==='function'?plaatsNuIndex(tijden):'geen-helper';
+  zet('indices',indices||'geen');zet('templabels',tempLabels||'geen');zet('nuindex',nuIndex);zet('geon',S.geo&&S.geo.n);zet('geoti0',S.geo&&S.geo.TI&&S.geo.TI[0]);
   zet('dot18',dot18?'ja':'nee');zet('dot17',dot17?'ja':'nee');zet('label19',labels.includes('19°')?'ja':'nee');zet('current',labels.includes('nu 20°')?'ja':'nee');zet('height',h);zet('rain',rain?'ja':'nee');zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},180),{once:true});
 </script>`;
@@ -37,7 +41,7 @@ try{
   const dom=r.stdout||"",v=k=>{const m=new RegExp('data-live-chart-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
   if(v('current')!=='ja')throw new Error("rode actuele temperatuur nu 20° ontbreekt");
-  if(v('dot18')!=='ja')throw new Error("18:00-modelpunt/temperatuurlabel ontbreekt nog als eerste toekomstige uur na 17:35");
+  if(v('dot18')!=='ja')throw new Error("18:00-modelpunt/temperatuurlabel ontbreekt nog als eerste toekomstige uur na 17:35; indices="+v('indices')+", labels="+v('templabels')+", nuIndex="+v('nuindex')+", geo.n="+v('geon')+", geo.TI0="+v('geoti0'));
   if(v('dot17')!=='nee')throw new Error("17:00-modeluur wordt niet als redundante actuele waarde onderdrukt");
   if(v('label19')!=='ja')throw new Error("18:00-temperatuur rondt niet zichtbaar af naar 19°");
   const h=Number(v('height'));if(!(h>=296&&h<=310))throw new Error("desktopgrafiek reserveert nog te veel/te weinig onderruimte: viewBox-hoogte="+h);
