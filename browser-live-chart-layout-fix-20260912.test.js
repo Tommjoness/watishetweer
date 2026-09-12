@@ -30,23 +30,36 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
   const idx18=geoTijden.indexOf('2026-09-12T18:00'),idx17=geoTijden.indexOf('2026-09-12T17:00');
   const dot17=idx17>=0?svg.querySelector('circle[data-temp-index="'+idx17+'"]'):null;
   const toekomstigeIndices=geoTijden.map((t,i)=>String(t||'')>huidig?i:-1).filter(i=>i>=0);
-  const dotIndices=[...svg.querySelectorAll('circle[data-temp-index]')].map(x=>Number(x.getAttribute('data-temp-index'))).filter(Number.isInteger);
-  const dotSet=new Set(dotIndices),missend=toekomstigeIndices.filter(i=>!dotSet.has(i));
-  const tekstEls=[...svg.querySelectorAll('text')],forecastEls=tekstEls.filter(el=>/^-?\\d+°$/.test(String(el.textContent||'').trim()));
-  const forecastLabels=forecastEls.map(el=>String(el.textContent||'').trim());
-  const verwacht=toekomstigeIndices.map(i=>Math.round(S.geo.T[i])+'°');
-  const tempEls=tekstEls.filter(el=>/^(?:nu )?-?\\d+°$/.test(String(el.textContent||'').trim()));
+  const puntEls=[...svg.querySelectorAll('circle[data-temp-index]')].map(el=>({el,i:Number(el.getAttribute('data-temp-index')),cx:Number(el.getAttribute('cx')),cy:Number(el.getAttribute('cy'))})).filter(p=>Number.isInteger(p.i)&&Number.isFinite(p.cx)&&Number.isFinite(p.cy));
+  const dotIndices=puntEls.map(p=>p.i),dotSet=new Set(dotIndices),missend=toekomstigeIndices.filter(i=>!dotSet.has(i));
+  const tekstEls=[...svg.querySelectorAll('text')],numeriekeLabels=tekstEls.filter(el=>/^-?\\d+°$/.test(String(el.textContent||'').trim()));
+  const verwacht=toekomstigeIndices.map(i=>Math.round(S.geo.T[i])+'°'),gebruikt=new Set(),gekoppeldeLabels=[],labelMissend=[];
+  const maxAfstand=Math.max(90,((S.geo&&Number.isFinite(S.geo.cw))?S.geo.cw:36)*3);
+  toekomstigeIndices.forEach((i,pos)=>{
+    const punt=puntEls.find(p=>p.i===i),doel=verwacht[pos];
+    if(!punt){labelMissend.push(i);return;}
+    let beste=null,besteD=Infinity;
+    numeriekeLabels.forEach(el=>{
+      if(gebruikt.has(el)||String(el.textContent||'').trim()!==doel)return;
+      const b=el.getBBox(),cx=b.x+b.width/2,cy=b.y+b.height/2,d=Math.hypot(cx-punt.cx,cy-punt.cy);
+      if(d<besteD){beste=el;besteD=d;}
+    });
+    if(!beste||besteD>maxAfstand){labelMissend.push(i);return;}
+    gebruikt.add(beste);gekoppeldeLabels.push(beste);
+  });
+  const currentEl=tekstEls.find(el=>String(el.textContent||'').trim()==='nu 20°')||null;
+  const tempEls=[...gekoppeldeLabels,...(currentEl?[currentEl]:[])];
   const dozen=tempEls.map(el=>{const b=el.getBBox();return {t:String(el.textContent||'').trim(),x:b.x,y:b.y,w:b.width,h:b.height};});
   const botsingen=[];
   for(let i=0;i<dozen.length;i++)for(let j=i+1;j<dozen.length;j++){
     const a=dozen[i],b=dozen[j],pad=2;
-    if(a.x<a.x+a.w&&a.x<b.x+b.w+pad&&a.x+a.w+pad>b.x&&a.y<b.y+b.h+pad&&a.y+a.h+pad>b.y) botsingen.push(a.t+'↔'+b.t);
+    if(a.x<b.x+b.w+pad&&a.x+a.w+pad>b.x&&a.y<b.y+b.h+pad&&a.y+a.h+pad>b.y) botsingen.push(a.t+'↔'+b.t);
   }
   const rain=svg.querySelector('g[data-q4-rain-periods]');
   const vb=(svg.getAttribute('viewBox')||'').trim().split(/\\s+/).map(Number),h=vb[3]||0;
   const labels=tekstEls.map(x=>String(x.textContent||'').trim());
   zet('idx18',idx18);zet('idx17',idx17);zet('indices',dotIndices.join(',')||'geen');zet('geon',S.geo&&S.geo.n);zet('geoti0',geoTijden[0]||'geen');
-  zet('dot17',dot17?'ja':'nee');zet('current',labels.includes('nu 20°')?'ja':'nee');zet('future-count',toekomstigeIndices.length);zet('forecast-count',forecastLabels.length);zet('missing',missend.length?missend.join(','):'geen');zet('forecast-labels',forecastLabels.join(','));zet('expected-labels',verwacht.join(','));zet('collision',botsingen.length?botsingen.join('|'):'geen');
+  zet('dot17',dot17?'ja':'nee');zet('current',currentEl?'ja':'nee');zet('future-count',toekomstigeIndices.length);zet('paired-count',gekoppeldeLabels.length);zet('missing',missend.length?missend.join(','):'geen');zet('label-missing',labelMissend.length?labelMissend.join(','):'geen');zet('paired-labels',gekoppeldeLabels.map(el=>String(el.textContent||'').trim()).join(','));zet('expected-labels',verwacht.join(','));zet('collision',botsingen.length?botsingen.join('|'):'geen');
   zet('height',h);zet('rain',rain?'ja':'nee');zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},220),{once:true});
 </script>`;
@@ -62,11 +75,12 @@ try{
   if(Number(v('idx18'))<0)throw new Error("18:00 ontbreekt uit de zichtbare provider-as; geo.TI0="+v('geoti0'));
   if(v('dot17')!=='nee')throw new Error("17:00-modeluur wordt niet als redundante actuele waarde onderdrukt");
   if(v('missing')!=='geen')throw new Error("niet ieder toekomstig desktopuur heeft een temperatuurpunt/label; ontbrekende indices="+v('missing')+", aanwezig="+v('indices'));
-  if(Number(v('forecast-count'))!==Number(v('future-count')))throw new Error("aantal zichtbare temperatuurcijfers is niet gelijk aan aantal toekomstige uren: "+v('forecast-count')+" vs "+v('future-count'));
-  if(v('forecast-labels')!==v('expected-labels'))throw new Error("uurlijkse temperatuurcijfers zijn onvolledig of in verkeerde volgorde: kreeg "+v('forecast-labels')+", verwacht "+v('expected-labels'));
+  if(v('label-missing')!=='geen')throw new Error("niet ieder toekomstig desktopuur heeft een koppelbaar zichtbaar temperatuurcijfer; ontbrekende indices="+v('label-missing'));
+  if(Number(v('paired-count'))!==Number(v('future-count')))throw new Error("aantal gekoppelde zichtbare temperatuurcijfers is niet gelijk aan aantal toekomstige uren: "+v('paired-count')+" vs "+v('future-count'));
+  if(v('paired-labels')!==v('expected-labels'))throw new Error("uurlijkse temperatuurcijfers zijn onvolledig of in verkeerde volgorde: kreeg "+v('paired-labels')+", verwacht "+v('expected-labels'));
   if(v('collision')!=='geen')throw new Error("temperatuurcijfers botsen visueel: "+v('collision'));
   const h=Number(v('height'));if(!(h>=296&&h<=310))throw new Error("desktopgrafiek reserveert nog te veel/te weinig onderruimte: viewBox-hoogte="+h);
   if(v('rain')!=='ja')throw new Error("Q4-regenannotatie ontbreekt in de regenfixture");
   if(Number(v('overflow'))>2)throw new Error("pre-cleanup desktopfixture heeft horizontale overflow: "+v('overflow')+"px");
-  console.log("Live chart/layout browserregressie groen vóór bundling: ieder volledig toekomstig desktopuur heeft exact één temperatuurcijfer, zonder onderlinge/nu-labelbotsing; chart viewBox="+h+".");
+  console.log("Live chart/layout browserregressie groen vóór bundling: ieder volledig toekomstig desktopuur heeft exact één gekoppeld temperatuurcijfer, zonder onderlinge/nu-labelbotsing; chart viewBox="+h+".");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
