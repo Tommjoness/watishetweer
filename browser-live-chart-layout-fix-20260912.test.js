@@ -22,13 +22,15 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
   S.d={timezone:'Europe/Amsterdam',utc_offset_seconds:7200,current:{time:'2026-09-12T17:35',temperature_2m:20,is_day:1},hourly:{time:tijden,temperature_2m:temp,apparent_temperature:temp.map(v=>v-.4),precipitation_probability:kans,precipitation:mm,wind_speed_10m:wind,wind_gusts_10m:wind.map(v=>v+5),cloud_cover:tijden.map(()=>90),weather_code:code,is_day:dag,wind_direction_10m:richting},daily:{time:['2026-09-12','2026-09-13'],sunrise:['2026-09-12T07:05','2026-09-13T07:07'],sunset:['2026-09-12T20:01','2026-09-13T19:59']}};
   S.dag=null;S.bereik=24;S.i0=0;S.klokInstantOverride=new Date('2026-09-12T15:35:00Z');
   etmaal(0,11);
-  const svg=document.getElementById('chart'),dot18=svg.querySelector('circle[data-temp-index="1"]'),dot17=svg.querySelector('circle[data-temp-index="0"]'),rain=svg.querySelector('g[data-q4-rain-periods]');
+  const svg=document.getElementById('chart'),geoTijden=S.geo&&Array.isArray(S.geo.TI)?S.geo.TI:[];
+  const idx18=geoTijden.indexOf('2026-09-12T18:00'),idx17=geoTijden.indexOf('2026-09-12T17:00');
+  const dot18=idx18>=0?svg.querySelector('circle[data-temp-index="'+idx18+'"]'):null;
+  const dot17=idx17>=0?svg.querySelector('circle[data-temp-index="'+idx17+'"]'):null;
+  const rain=svg.querySelector('g[data-q4-rain-periods]');
   const vb=(svg.getAttribute('viewBox')||'').trim().split(/\\s+/).map(Number),h=vb[3]||0;
   const labels=[...svg.querySelectorAll('text')].map(x=>String(x.textContent||'').trim());
   const indices=[...svg.querySelectorAll('circle[data-temp-index]')].map(x=>x.getAttribute('data-temp-index')).join(',');
-  const tempLabels=labels.filter(t=>/^-?\\d+°$/.test(t)).join(',');
-  const nuIndex=typeof plaatsNuIndex==='function'?plaatsNuIndex(tijden):'geen-helper';
-  zet('indices',indices||'geen');zet('templabels',tempLabels||'geen');zet('nuindex',nuIndex);zet('geon',S.geo&&S.geo.n);zet('geoti0',S.geo&&S.geo.TI&&S.geo.TI[0]);
+  zet('idx18',idx18);zet('idx17',idx17);zet('indices',indices||'geen');zet('geon',S.geo&&S.geo.n);zet('geoti0',geoTijden[0]||'geen');
   zet('dot18',dot18?'ja':'nee');zet('dot17',dot17?'ja':'nee');zet('label19',labels.includes('19°')?'ja':'nee');zet('current',labels.includes('nu 20°')?'ja':'nee');zet('height',h);zet('rain',rain?'ja':'nee');zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},180),{once:true});
 </script>`;
@@ -41,11 +43,12 @@ try{
   const dom=r.stdout||"",v=k=>{const m=new RegExp('data-live-chart-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
   if(v('current')!=='ja')throw new Error("rode actuele temperatuur nu 20° ontbreekt");
-  if(v('dot18')!=='ja')throw new Error("18:00-modelpunt/temperatuurlabel ontbreekt nog als eerste toekomstige uur na 17:35; indices="+v('indices')+", labels="+v('templabels')+", nuIndex="+v('nuindex')+", geo.n="+v('geon')+", geo.TI0="+v('geoti0'));
+  if(Number(v('idx18'))<0)throw new Error("18:00 ontbreekt uit de zichtbare provider-as; geo.TI0="+v('geoti0'));
+  if(v('dot18')!=='ja')throw new Error("18:00-modelpunt/temperatuurlabel ontbreekt als eerste zichtbare toekomstige uur na 17:35; idx18="+v('idx18')+", indices="+v('indices')+", geo.n="+v('geon')+", geo.TI0="+v('geoti0'));
   if(v('dot17')!=='nee')throw new Error("17:00-modeluur wordt niet als redundante actuele waarde onderdrukt");
   if(v('label19')!=='ja')throw new Error("18:00-temperatuur rondt niet zichtbaar af naar 19°");
   const h=Number(v('height'));if(!(h>=296&&h<=310))throw new Error("desktopgrafiek reserveert nog te veel/te weinig onderruimte: viewBox-hoogte="+h);
   if(v('rain')!=='ja')throw new Error("Q4-regenannotatie ontbreekt in de regenfixture");
   if(Number(v('overflow'))>2)throw new Error("pre-cleanup desktopfixture heeft horizontale overflow: "+v('overflow')+"px");
-  console.log("Live chart/layout browserregressie groen vóór bundling: om 17:35 staat 18:00 zichtbaar, 17:00 is redundant onderdrukt en chart viewBox="+h+".");
+  console.log("Live chart/layout browserregressie groen vóór bundling: om 17:35 staat het zichtbare 18:00-punt gelabeld, 17:00 concurreert niet met nu en chart viewBox="+h+".");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
