@@ -27,14 +27,28 @@ const LABEL_NIEUW=`/* ${MARKER_LABEL} */
       if(geldig(i)&&String(TI[i]||"")>nuLokaleTijd){eersteToekomst=i;break;}
     }
   }
-  if(eersteToekomst!==null) zet(eersteToekomst,4);
+
+  /* Op de compacte desktop-etmaalgrafiek is ieder volledig toekomstig uur een
+     primaire informatiewaarde, niet slechts een optioneel rasterlabel. Geef dus
+     ieder geldig modeluur ná current.time dezelfde hoge prioriteit. Het lopende
+     of laatste verstreken modeluur blijft hieronder bewust vervangbaar door het
+     rode actuele nu-label. Mobiel, 48 uur en week blijven bij hun bestaande
+     selectieve labeldichtheid. */
+  const desktopUurLabels=!M&&n<=24;
+  if(desktopUurLabels){
+    for(let i=0;i<T.length;i++){
+      const modelTijd=String(TI[i]||"");
+      if(geldig(i)&&(!nuLokaleTijd||(modelTijd&&modelTijd>nuLokaleTijd))) zet(i,4);
+    }
+  }else if(eersteToekomst!==null){
+    zet(eersteToekomst,4);
+  }
 
   if(nuX!=null){
     /* De gekoppelde desktopgrafiek kan de rode nu-lijn naar de linkergrens
        snappen wanneer het lopende uur al uit TI is gesneden. Geometrie alleen
-       mag dan niet doen alsof het eerste toekomstige uur (bijv. 18:00 om
-       17:35) een redundant huidig modelpunt is. Kandidaten ná current.time
-       worden daarom expliciet uitgesloten van de suppressie. */
+       mag dan niet doen alsof toekomstige uren redundante actuele modelpunten
+       zijn. Alleen de dichtstbijzijnde niet-toekomstige kandidaat mag wijken. */
     let huidigModel=null,afstand=Infinity;
     for(const [idx] of kandKaart.entries()){
       const modelTijd=String(TI[idx]||"");
@@ -46,31 +60,39 @@ const LABEL_NIEUW=`/* ${MARKER_LABEL} */
   }`;
 
 const FALLBACK_OUD='  // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:';
-const FALLBACK_NIEUW=`  /* Het eerste toekomstige desktopuur is semantisch belangrijker dan gewone
-     rasterlabels. Als de normale collision-layout het alsnog laat vallen,
-     probeer het één keer opnieuw rechts van de gesnapte nu-lijn. Dit gebruikt
-     dezelfde placement helper en mag alleen lager geprioriteerde labels wijken.
-     De datapuntcirkel blijft op de echte x-positie; alleen het cijfer mag voor
-     leesbaarheid zijwaarts uitwijken. */
-  if(eersteToekomst!==null&&!gezet.some(g=>g.i===eersteToekomst)){
-    const i=eersteToekomst,v=T[i],bw=labelBreed(v),eersteBoven=soort[i]!==-1;
-    const basisX=x(i);
-    const vrijeX=Math.min(W-pr-bw/2,
-      Math.max(pl-2+bw/2,basisX+Math.max(28,Math.min(42,cw*.45))));
-    let poging=probeerLagen(vrijeX,v,eersteBoven,5);
-    if(!poging)poging=probeerLagen(vrijeX,v,!eersteBoven,5);
-    if(poging){
-      poging.verwijderd.forEach(g=>{const pos=gezet.indexOf(g);if(pos>=0)gezet.splice(pos,1);});
-      gezet.push({i:i,v:v,cx:vrijeX,cy:poging.cy,bw:bw,rang:5});
+const FALLBACK_NIEUW=`  /* Op desktop moeten alle volledige toekomstige uren de collision-pass
+     overleven. De normale owner krijgt eerst alle ruimte om ze te plaatsen.
+     Alleen als zo'n verplicht uur nog ontbreekt, proberen we extra veilige
+     horizontale posities via exact dezelfde laag- en botsingscontrole. Er is
+     géén geforceerde overlap en er wordt geen ander verplicht uur weggevaagd. */
+  if(desktopUurLabels){
+    const verplichteUren=[];
+    for(let i=0;i<T.length;i++){
+      const modelTijd=String(TI[i]||"");
+      if(geldig(i)&&(!nuLokaleTijd||(modelTijd&&modelTijd>nuLokaleTijd))) verplichteUren.push(i);
+    }
+    for(const i of verplichteUren){
+      if(gezet.some(g=>g.i===i)) continue;
+      const v=T[i],bw=labelBreed(v),eersteBoven=soort[i]!==-1,basisX=x(i);
+      const stap=Math.max(8,bw/2+6);
+      const offsets=[0,stap,-stap,2*stap,-2*stap];
+      let poging=null,vrijeX=basisX;
+      for(const off of offsets){
+        const kandidaatX=basisX+off;
+        if(kandidaatX-bw/2<pl-2||kandidaatX+bw/2>W-pr) continue;
+        poging=probeerLagen(kandidaatX,v,eersteBoven,null);
+        if(!poging)poging=probeerLagen(kandidaatX,v,!eersteBoven,null);
+        if(poging){vrijeX=kandidaatX;break;}
+      }
+      if(poging) gezet.push({i:i,v:v,cx:vrijeX,cy:poging.cy,bw:bw,rang:5});
     }
   }
   // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:`;
 
 /* live-polish-v2 positioneert het rode nu-label ná de basisgrafiek en verwijdert
-   daarbij zwarte modelmarkeringen in een geometrische collisionzone. Als de
-   desktoprange om 17:35 al bij 18:00 begint, ligt juist het eerste toekomstige
-   uur in die zone. Bescherm daarom alleen dat eerste echte toekomstige uur;
-   overige concurrerende markeringen blijven onder de bestaande cleanup vallen. */
+   daarbij zwarte modelmarkeringen in een geometrische collisionzone. Op de
+   compacte desktop-etmaalgrafiek moeten alle toekomstige uurlabels intact
+   blijven; alleen niet-toekomstige modelmarkeringen mogen door nu wijken. */
 const LATE_NU_OUD=`  gewoneLabels.forEach(el=>{
     const label={x:eindig(el.getAttribute("x")),y:eindig(el.getAttribute("y"))};
     if(nuLabelConcurreert({x:px,y:py},label,S.geo.cw,!!S.geo.M)) verwijderTemperatuurMarkering(svg,el);
@@ -78,13 +100,6 @@ const LATE_NU_OUD=`  gewoneLabels.forEach(el=>{
 const LATE_NU_NIEUW=`  /* ${MARKER_LATE_NU} */
   const nuLokaleTijdPolish=String(S.d&&S.d.current&&S.d.current.time||"");
   const tijdenPolish=Array.isArray(S.geo.TI)?S.geo.TI:[];
-  let eersteToekomstPolish=null;
-  if(!S.geo.M&&nuLokaleTijdPolish){
-    for(let i=0;i<tijdenPolish.length;i++){
-      const modelTijd=String(tijdenPolish[i]||"");
-      if(modelTijd&&modelTijd>nuLokaleTijdPolish){eersteToekomstPolish=i;break;}
-    }
-  }
   const tempPuntenPolish=[...svg.querySelectorAll("circle[data-temp-index]")].map(p=>({
     i:Number(p.getAttribute("data-temp-index")),x:eindig(p.getAttribute("cx"))
   })).filter(p=>Number.isInteger(p.i)&&p.x!==null);
@@ -95,7 +110,9 @@ const LATE_NU_NIEUW=`  /* ${MARKER_LATE_NU} */
       {text:String(el.textContent||"").trim(),x:label.x},
       tempPuntenPolish,S.geo.T,Math.max(72,(Number.isFinite(S.geo.cw)?S.geo.cw:36)*2.5)
     );
-    if(i!==null&&i===eersteToekomstPolish) return;
+    const modelTijd=i!==null?String(tijdenPolish[i]||""):"";
+    const verplichtToekomstuur=!S.geo.M&&S.geo.n<=24&&modelTijd&&(!nuLokaleTijdPolish||modelTijd>nuLokaleTijdPolish);
+    if(verplichtToekomstuur) return;
     verwijderTemperatuurMarkering(svg,el);
   });`;
 
@@ -138,7 +155,7 @@ function main(){
     const rel=path.relative(OUT,p);
     if(html.includes(MARKER_LABEL)||html.includes(MARKER_RAIN)||html.includes(MARKER_LATE_NU))throw new Error(rel+": live chart/layout-fix staat al in artifact.");
     html=vervangRegexExactEen(html,LABEL_RE,LABEL_NIEUW,"nu/modeluur-labelsuppressie",rel);
-    html=vervangTekstExactEen(html,FALLBACK_OUD,FALLBACK_NIEUW,"eerste toekomstuur placement fallback",rel);
+    html=vervangTekstExactEen(html,FALLBACK_OUD,FALLBACK_NIEUW,"verplichte desktop-uurlabel fallback",rel);
     html=vervangTekstExactEen(html,LATE_NU_OUD,LATE_NU_NIEUW,"late nu-labelcleanup guard",rel);
     html=vervangRegexExactEen(html,REGEN_RE,REGEN_NIEUW,"Q4 desktop regenoffset",rel);
     html=vervangRegexExactEen(html,HOOGTE_RE,HOOGTE_NIEUW,"Q4 desktop grafiekhoogte",rel);
