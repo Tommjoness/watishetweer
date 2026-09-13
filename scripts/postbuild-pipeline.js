@@ -49,6 +49,8 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-short-term-metric-clarity.js",
   "verify-seo-foundation.js",
   "generate-seo-location-pages.js",
+  "apply-theme-toggle-persistence-20260913.js",
+  "verify-theme-toggle-persistence-20260913.js",
   "apply-seo-location-h1.js",
   "verify-seo-location-h1.js",
   "verify-seo-location-pages.js",
