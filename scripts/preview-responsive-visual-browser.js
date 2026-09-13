@@ -10,6 +10,7 @@ const {bouw}=require("../data.js");
 
 const ROOT=String(process.env.PREVIEW_ROOT||process.env.PRODUCTION_ROOT||"").replace(/\/$/,"");
 const verwacht=String(process.env.EXPECTED_SHA||"").trim();
+const FOOTER_DISCLAIMER="Weersinformatie is algemeen en probabilistisch. Gebruik deze niet als enige basis voor persoonlijke veiligheid, luchtvaart, scheepvaart of noodplanning; raadpleeg daarvoor officiële meteorologische diensten en autoriteiten.";
 if(!/^https:\/\//.test(ROOT))throw new Error("PREVIEW_ROOT/PRODUCTION_ROOT ontbreekt of is ongeldig.");
 if(!/^[0-9a-f]{7,40}$/i.test(verwacht))throw new Error("EXPECTED_SHA ontbreekt of is ongeldig.");
 
@@ -75,6 +76,13 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length===7,null,{timeout:10000});
 
       const basis=await page.evaluate(()=>{
+        const footer=(()=>{
+          const root=document.querySelector("footer"),source=root&&[...root.children].find(x=>x.matches("span.bron")&&x.querySelector("b")?.textContent.trim()==="Bronnen"),disclaimerRow=root?.querySelector(":scope > .footer-disclaimer-row"),utilityRow=root?.querySelector(":scope > .footer-utility-row");
+          const disclaimer=disclaimerRow?.querySelector(":scope > span.bron"),over=utilityRow?.querySelector('a[href="/over/"]'),privacy=utilityRow?.querySelector('a[href="/privacy"],a[href="/privacy.html"]'),technical=utilityRow?.querySelector(":scope > details.footer-details > summary");
+          if(!root||!source||!disclaimerRow||!utilityRow||!disclaimer||!over||!privacy||!technical)return {compleet:false};
+          const sr=source.getBoundingClientRect(),dr=disclaimerRow.getBoundingClientRect(),ur=utilityRow.getBoundingClientRect(),or=over.getBoundingClientRect(),pr=privacy.getBoundingClientRect(),tr=technical.getBoundingClientRect();
+          return {compleet:true,sourceBottom:sr.bottom,disclaimerTop:dr.top,disclaimerBottom:dr.bottom,utilityTop:ur.top,overTop:or.top,privacyTop:pr.top,technicalTop:tr.top,disclaimer:(disclaimer.textContent||"").trim(),over:(over.textContent||"").trim(),privacy:(privacy.textContent||"").trim(),technical:(technical.textContent||"").trim(),samengesteld:(root.textContent||"").includes("watishetweer.nl · Over deze site")};
+        })();
         return {
           sha:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
           overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,
@@ -84,7 +92,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
             .filter(el=>el.getClientRects().length>0&&getComputedStyle(el).visibility!=="hidden")
             .map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width,height:r.height,label:el.getAttribute("aria-label")||el.textContent||el.id||el.tagName};}),
           legeNeerslag:[...document.querySelectorAll("#days .row.day:not(.kop) .drain")].filter(el=>!(el.textContent||el.getAttribute("aria-label")||"").trim()).length,
-          appText:document.getElementById("app")?.textContent||""
+          appText:document.getElementById("app")?.textContent||"",
+          footer
         };
       });
       assert.equal(basis.sha,verwacht,`${vp.naam}: verkeerde preview-SHA ${basis.sha}`);
@@ -94,6 +103,18 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert(!/(?:^|[^\d])-?1\s+graden\b/i.test(basis.appText),`${vp.naam}: enkelvoudtemperatuur gebruikt 'graden'`);
       assert(binnenViewport(basis.searchRect,vp.width),`${vp.naam}: zoekveld valt buiten viewport`);
       for(const r of basis.topRects)assert(binnenViewport(r,vp.width),`${vp.naam}: zichtbare bovenste bediening '${String(r.label).trim()}' valt buiten viewport`);
+      assert.equal(basis.footer.compleet,true,`${vp.naam}: gedeployde preview mist de structurele footerlagen of utility-items`);
+      assert.equal(basis.footer.disclaimer,FOOTER_DISCLAIMER,`${vp.naam}: disclaimertekst wijkt af in gedeployde preview`);
+      assert.equal(basis.footer.over,"Over deze site",`${vp.naam}: Over-copy wijkt af in gedeployde preview`);
+      assert.equal(basis.footer.privacy,"Privacy & gegevens",`${vp.naam}: Privacy-copy wijkt af in gedeployde preview`);
+      assert.equal(basis.footer.technical,"Technische locatiegegevens",`${vp.naam}: technische utility-copy wijkt af in gedeployde preview`);
+      assert.equal(basis.footer.samengesteld,false,`${vp.naam}: oude samengestelde Over-copy staat nog in gedeployde preview`);
+      assert(basis.footer.sourceBottom<=basis.footer.disclaimerTop+.5,`${vp.naam}: bronnen staan niet vóór de disclaimer in gedeployde preview`);
+      assert(basis.footer.utilityTop>=basis.footer.disclaimerBottom-.5,`${vp.naam}: utilityrij staat niet fysiek onder de disclaimer in gedeployde preview`);
+      if(vp.width>=901){
+        assert(Math.abs(basis.footer.overTop-basis.footer.privacyTop)<=1,`${vp.naam}: Over en Privacy delen niet dezelfde utilityrij in gedeployde preview`);
+        assert(Math.abs(basis.footer.overTop-basis.footer.technicalTop)<=1,`${vp.naam}: Technische locatiegegevens deelt niet dezelfde utilityrij in gedeployde preview`);
+      }
 
       const thema=page.locator("#thema"),themaMenu=page.locator("#themamenu");
       await thema.click();
@@ -129,11 +150,11 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       await page.screenshot({path:png,fullPage:true});
       assert(fs.existsSync(png)&&fs.statSync(png).size>5000,`${vp.naam}: screenshot ontbreekt of is verdacht klein`);
       const hash=crypto.createHash("sha256").update(fs.readFileSync(png)).digest("hex").slice(0,12);
-      console.log(`${vp.naam}: gedeployde preview zonder overflow; topcontrols/Weergave/zoeklijst/pressure-retirement/neerslag/a11y correct; screenshot sha256 ${hash}.`);
+      console.log(`${vp.naam}: gedeployde preview zonder overflow; footerlagen/topcontrols/Weergave/zoeklijst/pressure-retirement/neerslag/a11y correct; screenshot sha256 ${hash}.`);
       assert.deepEqual(pageErrors,[],`${vp.naam}: pageerrors ${pageErrors.join(" | ")}`);
       await context.close();
     }
-    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 8 echte viewports met gecontroleerde data en tijdelijke screenshots.`);
+    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 8 echte viewports met structureel gemeten footerlagen, gecontroleerde data en tijdelijke screenshots.`);
   }finally{
     fs.rmSync(tmp,{recursive:true,force:true});
     await browser.close();
