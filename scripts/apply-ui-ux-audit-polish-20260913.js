@@ -16,12 +16,20 @@ const CSS=`
 .results .zoekresultaat-naam{display:block;color:var(--ink)}
 .results .zoekresultaat-detail{display:block;margin-top:1px;color:var(--ink-45);font-size:12.5px;line-height:1.35}
 button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-visible,summary:focus-visible{outline:2px solid var(--ink)!important;outline-offset:2px!important}
-#thema{opacity:1!important;color:var(--ink-70)!important}
+#thema{display:inline-flex!important;align-items:center!important;justify-content:center!important;opacity:1!important;color:var(--ink-70)!important}
+#thema .thema-status{vertical-align:0!important}
 @media(min-width:901px){
   .chip.add{border-style:solid!important;background:var(--sheet);color:var(--ink-70)}
   #days .row.day:not(.kop){padding-right:24px!important}
   #days .row.day:not(.kop)::after{content:"›";position:absolute;right:7px;top:50%;transform:translateY(-52%);color:var(--ink-25);font-family:var(--sans);font-size:20px;line-height:1;transition:color .15s ease,transform .15s ease}
   #days .row.day:not(.kop):hover::after,#days .row.day:not(.kop):focus-visible::after{color:var(--ink);transform:translate(2px,-52%)}
+  /* Houd de twee publieke hulplinks en technische locatiegegevens expliciet op
+     één afsluitende rij onder disclaimer en bronnen. De expliciete gridrij
+     voorkomt dat lange disclaimercopy de hulplinks op dezelfde regel trekt. */
+  footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important}
+  footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important}
+  footer > details.footer-details{grid-column:3!important;grid-row:3!important}
+  footer > details.footer-details[open]{grid-column:1 / -1!important;grid-row:4!important}
 }
 @media(max-width:900px){
   .mobile-section-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:18px 0 4px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}

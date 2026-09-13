@@ -37,8 +37,9 @@ if(SEO.siteName!=="watishetweer.nl")throw new Error("De vaste merk- en sitenaam 
 if(Object.prototype.hasOwnProperty.call(SEO,"productName"))throw new Error("De generieke vraag mag niet meer als tweede officiële product-/merknaam worden geconfigureerd.");
 if(JSON.stringify(SEO.alternateNames)!==JSON.stringify(["watishetweer"]))throw new Error("Alleen de schrijfwijze zonder .nl mag als alternatieve merknaam worden gepubliceerd.");
 if(tel(html,MARKER)!==1)throw new Error("SEO-marker moet exact één keer aanwezig zijn.");
-if(tel(html,BRAND_LINK_MARKER)!==1)throw new Error("Zichtbare merkverwijzing moet exact één keer aanwezig zijn.");
-if(!html.includes(`<a href="/over/"><b>${SEO.siteName}</b> · Over deze site</a>`))throw new Error("Homepage koppelt de vaste merknaam niet zichtbaar aan de Over-pagina.");
+if(tel(html,BRAND_LINK_MARKER)!==1)throw new Error("Zichtbare Over-verwijzing moet exact één keer aanwezig zijn.");
+if(!html.includes('<a href="/over/">Over deze site</a>'))throw new Error("Homepage koppelt niet compact en zichtbaar aan de Over-pagina.");
+if(html.includes(`<a href="/over/"><b>${SEO.siteName}</b> · Over deze site</a>`))throw new Error("Footer herhaalt de merknaam nog onnodig in de Over-link.");
 if(tel(html,MERK_H1)!==1||html.includes(BRON_H1))throw new Error("Homepage-H1 publiceert niet eenduidig de vaste merknaam.");
 if(tel(html,MERK_APP_TITLE)!==1||html.includes(BRON_APP_TITLE))throw new Error("Apple-webappmetadata publiceert niet eenduidig de vaste merknaam.");
 if(tel(html,`<link rel="canonical" href="${SEO.canonical}">`)!==1)throw new Error("Canonical ontbreekt of is dubbel.");
