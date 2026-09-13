@@ -568,6 +568,13 @@
     <p class="brief" id="brief"></p>
     <div id="waarschuwingen"></div>
 
+    <nav class="mobile-section-nav" aria-label="Snel naar weersinformatie">
+      <a href="#chart">Uren</a>
+      <a href="#days">7 dagen</a>
+      <a href="#nights">Nacht</a>
+      <a href="#aq">Lucht</a>
+    </nav>
+
     <!-- v68: dashrow is een minimale layoutwrapper (display:contents tot 1100px,
          dus op mobiel/tablet functioneel onzichtbaar en zonder enig effect op de
          DOM-volgorde). Vanaf 1100px wordt hij een tweekoloms grid. Geen van de
@@ -2790,6 +2797,27 @@ function urlBij(){
 const q=document.getElementById("q"),res=document.getElementById("res"),zoekMelding=document.getElementById("zoekmelding"),zoekStatus=document.getElementById("zoekstatus");
 let timer=null,zoekGeneratie=0,zoekIndex=-1;
 const zoekOpties=()=>Array.from(res.querySelectorAll("div[data-lat]"));
+function zoekResultaatDetail(r){
+  const naam=String(r&&r.name||"").trim().toLocaleLowerCase("nl"),gezien=new Set([naam]);
+  return [r&&r.admin2,r&&r.admin1,r&&(r.country||r.country_code)].map(v=>String(v||"").trim()).filter(v=>{
+    const sleutel=v.toLocaleLowerCase("nl");
+    if(!sleutel||gezien.has(sleutel))return false;
+    gezien.add(sleutel);return true;
+  }).join(", ");
+}
+function uniekeZoekResultaten(lijst){
+  const gezien=new Set();
+  return lijst.filter(r=>{
+    const naam=String(r&&r.name||"").trim(),lat=Number(r&&r.latitude),lon=Number(r&&r.longitude);
+    if(!naam||!Number.isFinite(lat)||!Number.isFinite(lon))return false;
+    /* Alleen identieke coördinaten zijn dubbel. Gelijknamige plaatsen met een
+       ander district blijven bewust beschikbaar en worden hieronder expliciet
+       van elkaar onderscheiden. */
+    const sleutel=[naam.toLocaleLowerCase("nl"),lat.toFixed(5),lon.toFixed(5)].join("|");
+    if(gezien.has(sleutel))return false;
+    gezien.add(sleutel);return true;
+  });
+}
 function zoekPanelenSluit(wisOpties=false){
   res.classList.remove("on");
   if(wisOpties)res.innerHTML="";
@@ -2823,9 +2851,12 @@ q.addEventListener("input",()=>{
     try{
       const d=await j("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(v)+"&count=6&language=nl&format=json");
       if(generatie!==zoekGeneratie)return;
-      const resultaten=Array.isArray(d.results)?d.results:[];
+      const resultaten=uniekeZoekResultaten(Array.isArray(d.results)?d.results:[]);
       if(!resultaten.length){zoekMeldingToon("Niets gevonden");return;}
-      res.innerHTML=resultaten.map((r,i)=>`<div id="zoekopt-${i}" role="option" aria-selected="false" data-lat="${r.latitude}" data-lon="${r.longitude}" data-nm="${esc(r.name)}" data-land="${esc(normLand(r.country_code)||"")}">${esc(r.name)}<span style="color:${INK45}"> · ${esc(r.admin1||"")} ${esc(r.country_code||"")}</span></div>`).join("");
+      res.innerHTML=resultaten.map((r,i)=>{
+        const detail=zoekResultaatDetail(r);
+        return `<div id="zoekopt-${i}" role="option" aria-selected="false" data-lat="${r.latitude}" data-lon="${r.longitude}" data-nm="${esc(r.name)}" data-land="${esc(normLand(r.country_code)||"")}"><span class="zoekresultaat-naam">${esc(r.name)}</span>${detail?`<span class="zoekresultaat-detail">${esc(detail)}</span>`:""}</div>`;
+      }).join("");
       zoekStatus.textContent=resultaten.length===1?"1 plaats gevonden.":resultaten.length+" plaatsen gevonden.";
       q.setAttribute("aria-expanded","true");res.classList.add("on");
     }catch(e){if(generatie!==zoekGeneratie)return;zoekMeldingToon("Zoeken is niet gelukt. Probeer het opnieuw.");}

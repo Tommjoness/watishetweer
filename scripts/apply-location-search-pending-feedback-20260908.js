@@ -9,8 +9,8 @@ const SECTIE_START="/* ---------- zoeken ---------- */";
 const SECTIE_EIND="/* ---------- actuele locatie ---------- */";
 const TIMER_OUD='  timer=setTimeout(async()=>{\n    try{';
 const TIMER_NIEUW=`  timer=setTimeout(async()=>{\n    ${MARKER}\n    zoekMeldingToon("Plaatsen zoeken…");\n    try{`;
-const SUCCES_OUD='      if(generatie!==zoekGeneratie)return;\n      const resultaten=Array.isArray(d.results)?d.results:[];';
-const SUCCES_NIEUW='      if(generatie!==zoekGeneratie)return;\n      zoekMelding.classList.remove("on");zoekMelding.textContent="";\n      const resultaten=Array.isArray(d.results)?d.results:[];';
+const SUCCES_OUD='      if(generatie!==zoekGeneratie)return;\n      const resultaten=uniekeZoekResultaten(Array.isArray(d.results)?d.results:[]);';
+const SUCCES_NIEUW='      if(generatie!==zoekGeneratie)return;\n      zoekMelding.classList.remove("on");zoekMelding.textContent="";\n      const resultaten=uniekeZoekResultaten(Array.isArray(d.results)?d.results:[]);';
 
 function exactEen(bron,oud,nieuw,label){
   const n=String(bron).split(oud).length-1;
