@@ -32,7 +32,7 @@ function verwachteOpenMeteo503(msg){
 }
 
 (async()=>{
-  assert(EXPECTED_SHA,"EXPECTED_SHA ontbreekt voor WeatherAPI live-fallbackbewijs");
+  assert(EXPECTED_SHA,"EXPECTED_SHA ontbreekt voor Visual Crossing live-fallbackbewijs");
   const browser=await chromium.launch({headless:true});
   try{
     const context=await browser.newContext({
@@ -68,12 +68,12 @@ function verwachteOpenMeteo503(msg){
       try{return new URL(response.url()).pathname==="/api/forecast";}
       catch{return false;}
     });
-    await page.goto(ROOT+"/?weatherapi-fallback-proof="+Date.now(),{waitUntil:"domcontentloaded",timeout:30000});
-    const response=await timeout(fallbackResponse,20000,"WeatherAPI fallbackresponse");
-    assert.equal(response.status(),200,"WeatherAPI fallbackroute is niet 200");
-    assert.equal(response.headers()["x-wiw-weather-source"],"weatherapi","fallbackroute mist bronbewijs");
+    await page.goto(ROOT+"/?visualcrossing-fallback-proof="+Date.now(),{waitUntil:"domcontentloaded",timeout:30000});
+    const response=await timeout(fallbackResponse,20000,"Visual Crossing fallbackresponse");
+    assert.equal(response.status(),200,"providerfallbackroute is niet 200");
+    assert.equal(response.headers()["x-wiw-weather-source"],"visualcrossing","providerfallbackroute gebruikt Visual Crossing niet als eerste serverfallback");
     const payload=await response.json();
-    assert.equal(payload&&payload.provider,"weatherapi","fallbackpayload mist provider");
+    assert.equal(payload&&payload.provider,"visualcrossing","fallbackpayload mist Visual Crossing-providerbewijs");
     assert.equal(payload&&payload.daily&&payload.daily.time&&payload.daily.time.length,7,"fallbackpayload mist zeven volledige dagen");
     assert(volledigeForecastDekking(payload),"fallbackpayload mist volledige uurdekking voor een of meer kalenderdagen");
 
@@ -91,15 +91,17 @@ function verwachteOpenMeteo503(msg){
       briefing:(document.getElementById("brief")?.textContent||"").trim(),
       days:document.querySelectorAll("#days .day:not(.kop)").length,
       chartNodes:document.getElementById("chart")?.childElementCount||0,
+      attribution:[...document.querySelectorAll("footer a")].some(a=>(a.textContent||"").trim()==="Weather Data Provided by Visual Crossing"&&/^https:\/\/(?:www\.)?visualcrossing\.com\/?/.test(a.href)),
       ready:window.__WEATHERNOW_APP_READY__===true&&document.documentElement.dataset.appBootstrap==="ready",
       expectedSha
     }),EXPECTED_SHA);
     assert.equal(bewijs.build,EXPECTED_SHA,"pagina serveert niet de verwachte SHA");
-    assert(bewijs.place,"geselecteerde locatie ontbreekt na WeatherAPI fallback");
-    assert(/^-?\d+/.test(bewijs.temp),"zichtbare temperatuur ontbreekt na WeatherAPI fallback");
+    assert(bewijs.place,"geselecteerde locatie ontbreekt na Visual Crossing fallback");
+    assert(/^-?\d+/.test(bewijs.temp),"zichtbare temperatuur ontbreekt na Visual Crossing fallback");
     assert.equal(bewijs.days,7,"weekweergave bevat niet zeven dagen");
-    assert(bewijs.chartNodes>=1,"uur-/etmaalgrafiek ontbreekt na WeatherAPI fallback");
-    assert.equal(bewijs.ready,true,"app-readycontract ontbreekt na WeatherAPI fallback");
+    assert(bewijs.chartNodes>=1,"uur-/etmaalgrafiek ontbreekt na Visual Crossing fallback");
+    assert.equal(bewijs.attribution,true,"verplichte Visual Crossing-attributie ontbreekt in de live footer");
+    assert.equal(bewijs.ready,true,"app-readycontract ontbreekt na Visual Crossing fallback");
     assert(openMeteoForecasts>=2,"gerichte test heeft niet zowel volledige als lichte Open-Meteo-aanvraag laten falen");
     assert.deepEqual(pageErrors,[],"page errors tijdens fallback: "+pageErrors.join(" | "));
     assert.deepEqual(consoleErrors,[],"onverwachte console errors tijdens fallback: "+consoleErrors.join(" | "));
