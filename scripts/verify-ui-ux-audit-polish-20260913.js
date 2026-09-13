@@ -27,7 +27,7 @@ assert(BRON.includes('class="zoekresultaat-detail"'),"zoekresultaatdetail mist e
 assert(BRON.includes('class="mobile-section-nav" aria-label="Snel naar weersinformatie"'),"mobiele sectienavigatie ontbreekt in de semantische bron");
 for(const doel of ["#chart","#days","#nights","#aq"])assert(BRON.includes(`href="${doel}"`),"mobiele sectienavigatie mist "+doel);
 
-let gezien=0;
+let gezien=0,footerRijen=0;
 for(const p of htmlBestanden(OUT)){
   const html=fs.readFileSync(p,"utf8");
   if(!html.includes('id="weather-now-route"')||!html.includes('id="app"'))continue;
@@ -44,9 +44,17 @@ for(const p of htmlBestanden(OUT)){
   assert(html.includes('.hint,.data-uitleg{font-size:13px!important'),rel+": mobiele toelichting blijft te klein");
   assert(html.includes(':root{--warning-yellow:#856000;--warning-orange:#A34712}'),rel+": waarschuwingsernst mist lichte themakleuren");
   assert(/\.waarsch\[data-ui-severity=(?:"oranje"|oranje)\]\{border-left:3px solid var\(--warning-orange\)\}/.test(html),rel+": oranje waarschuwing mist accent");
+  assert(!html.includes('footer > span.bron:nth-last-of-type(2)'),rel+": verouderde late footer-gridselector is teruggekomen");
+  assert(!html.includes('footer > details.footer-details{grid-column:3'),rel+": verouderde late technische-details-gridselector is teruggekomen");
+  if(html.includes('href="/over/">Over deze site</a>')){
+    assert.strictEqual(tel(html,'class="footer-disclaimer-row"'),1,rel+": disclaimer mist eigen structurele rij");
+    assert.strictEqual(tel(html,'class="footer-utility-row"'),1,rel+": utility-links missen eigen structurele rij");
+    footerRijen++;
+  }
   gezien++;
 }
 assert(gezien>0,"Geen finale weerartifacts gevonden voor UI/UX-auditcontrole.");
+assert(footerRijen>0,"Geen finale footer met structureel gescheiden disclaimer- en utilityrij gevonden.");
 const cache=verifieerServiceworkerCache(OUT,"ui-ux-audit-polish-20260913");
 assert(/^watishetweer-[0-9a-f]{12}$/.test(cache),"serviceworker-cache hoort bij de gewijzigde artifact");
-console.log("UI/UX-auditcontrole groen voor "+gezien+" weerartifacts: locatie-identiteit, mobiel ritme, waarschuwingsernst en interactie-affordances geborgd; cache "+cache+".");
+console.log("UI/UX-auditcontrole groen voor "+gezien+" weerartifacts: locatie-identiteit, mobiel ritme, waarschuwingsernst en interactie-affordances geborgd; footerstructuur blijft bij één owner; cache "+cache+".");
