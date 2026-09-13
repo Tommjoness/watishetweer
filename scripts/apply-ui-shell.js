@@ -50,6 +50,7 @@ const menuCss=`
    iets lichter; primaire tekst, grafieken en semantische kleuren blijven gelijk. */
 html[data-thema="donker"]{--ink-45:#A8A8A8;--ink-25:#959595}
 #thema{letter-spacing:.08em}
+#thema .thema-status{display:inline-grid;place-items:center;min-width:16px;height:16px;margin-left:5px;border:1px solid var(--rule);font-family:var(--mono);font-size:9.5px;line-height:1;letter-spacing:0;vertical-align:-1px}
 #themamenu{position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:236px;background:var(--sheet);border:1px solid var(--rule);box-shadow:0 10px 26px rgba(0,0,0,.14);text-align:left}
 html[data-thema="donker"] #themamenu{box-shadow:0 12px 30px rgba(0,0,0,.38)}
 #themamenu[hidden]{display:none}
@@ -109,7 +110,9 @@ function themaToepassen(){
     actief==="donker"?"#0B120F":"#F4F5F3");
   const knop=document.getElementById("thema"),menu=document.getElementById("themamenu");
   if(knop){
-    knop.textContent="Weergave";
+    const zichtbaar=keuze==="auto"?"A":keuze==="licht"?"☀":"◐";
+    knop.innerHTML='Weergave <span class="thema-status" aria-hidden="true">'+zichtbaar+"</span>";
+    knop.dataset.themaKeuze=keuze;
     knop.title=keuze==="auto"
       ?"Weergave kiezen. Automatisch volgt dag en nacht (nu "+actief+")."
       :"Weergave kiezen. Huidige voorkeur: "+keuze+".";
@@ -171,4 +174,4 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-she
 
 fs.writeFileSync(pad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"UI-shell");
-console.log("UI-shell toegepast: drie duidelijke weergavestanden, dark-mode contrast, weekinset en één crawlbare/dynamische favicon zonder renderblokkerende early-runtime; serviceworker "+versie+".");
+console.log("UI-shell toegepast: drie duidelijke weergavestanden met zichtbare status, dark-mode contrast, weekinset en één crawlbare/dynamische favicon zonder renderblokkerende early-runtime; serviceworker "+versie+".");

@@ -17,7 +17,7 @@ function tel(bron,zoek){return String(bron).split(zoek).length-1;}
 const pending='zoekMeldingToon("Plaatsen zoeken…");';
 const guard='if(generatie!==zoekGeneratie)return;';
 const cleanup='zoekMelding.classList.remove("on");zoekMelding.textContent="";';
-const resultaten='const resultaten=Array.isArray(d.results)?d.results:[];';
+const resultaten='const resultaten=uniekeZoekResultaten(Array.isArray(d.results)?d.results:[]);';
 const succesPad=guard+'\n      '+cleanup+'\n      '+resultaten;
 
 eis(tel(sectie,apply.MARKER)===1,"Pending-feedbackmarker ontbreekt of is dubbel.");

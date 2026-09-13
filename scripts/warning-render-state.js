@@ -70,19 +70,25 @@ const BRIEFING_EIND_PRODUCTIE=`  if(S.d&&Array.isArray(S.actieveWaarschuwingen)&
 /** Vertaalt een maanfase`;
 
 /* De ontwikkeltemplate heeft nog de historische warningstijl. De productiestijl
-   hieronder is exact de al zichtbare UI-polish-uitkomst: normale advisories
-   rustig, rood expliciet en NWS-details compact. Alleen de eigenaar verandert. */
+   houdt advisories rustig, maar maakt geel, oranje en rood wel direct visueel
+   onderscheidbaar zonder een zwaar waarschuwingsvlak toe te voegen. */
 const CSS_BRON=`  /* waarschuwingen */
   .waarsch{border-left:3px solid var(--carmine);padding:10px 0 10px 14px;margin-top:var(--s2)}
   .waarsch h3{font-family:var(--serif);font-weight:400;font-size:18px;margin:0 0 2px;color:var(--carmine)}
   .waarsch p{margin:0;font-size:14px;color:var(--ink-70)}`;
 const CSS_PRODUCTIE=`  /* waarschuwingen */
+  :root{--warning-yellow:#856000;--warning-orange:#A34712}
+  html[data-thema="donker"]{--warning-yellow:#E0BD62;--warning-orange:#F09A67}
   #waarschuwingen>.msg{font-size:12.5px;color:var(--ink-45);padding:7px 0}
   .waarsch{border-left:1px solid var(--rule);padding:8px 0 8px 12px;margin-top:var(--s2)}
   .waarsch h3{font-family:var(--sans);font-weight:500;font-size:14px;line-height:1.35;margin:0 0 3px;color:var(--ink)}
   .waarsch p{margin:0;font-size:13px;line-height:1.45;color:var(--ink-70)}
+  .waarsch[data-ui-severity="geel"]{border-left:3px solid var(--warning-yellow)}
+  .waarsch[data-ui-severity="geel"] h3{color:var(--warning-yellow);font-weight:600}
+  .waarsch[data-ui-severity="oranje"]{border-left:3px solid var(--warning-orange)}
+  .waarsch[data-ui-severity="oranje"] h3{color:var(--warning-orange);font-weight:600}
   .waarsch[data-ui-severity="rood"]{border-left:3px solid var(--carmine)}
-  .waarsch[data-ui-severity="rood"] h3{color:var(--carmine)}
+  .waarsch[data-ui-severity="rood"] h3{color:var(--carmine);font-weight:600}
   .waarsch-details{margin-top:6px;font-size:12px;color:var(--ink-45)}
   .waarsch-details summary{display:inline;cursor:pointer;color:var(--ink-45);box-shadow:inset 0 -1px 0 var(--rule)}
   .waarsch-details summary:hover{color:var(--ink)}
