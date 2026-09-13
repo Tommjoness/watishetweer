@@ -72,10 +72,11 @@ const PRODUCTIE=`    let vol=null;
    gebruiken. Visual Crossing zit server-side vóór WeatherAPI en krijgt daarom
    alleen een bronvermelding in het artifact; de bestaande race-, request-ID-
    en AbortControllerlogica hierboven blijft ongewijzigd. */
+const VISUAL_CROSSING_LABEL="Weather Data Provided by Visual Crossing";
 const VISUAL_CROSSING_BRON_ANCHOR='<a href="https://www.weatherapi.com/" target="_blank" rel="noopener">WeatherAPI.com</a>';
-const VISUAL_CROSSING_BRON_PRODUCTIE='<a href="https://www.visualcrossing.com/" target="_blank" rel="noopener">Visual Crossing</a> / '+VISUAL_CROSSING_BRON_ANCHOR;
+const VISUAL_CROSSING_BRON_PRODUCTIE='<a href="https://www.visualcrossing.com/" target="_blank" rel="noopener">'+VISUAL_CROSSING_LABEL+'</a> / '+VISUAL_CROSSING_BRON_ANCHOR;
 const BRONNEN_DECLARATIE='    const open=pak("Open-Meteo"),cams=pak("CAMS"),alarm=pak("MeteoAlarm"),nws=pak("National Weather Service"),bdc=pak("BigDataCloud"),osm=pak("© OpenStreetMap-bijdragers");';
-const BRONNEN_DECLARATIE_PRODUCTIE='    const open=pak("Open-Meteo"),visualCrossing=pak("Visual Crossing"),weatherApi=pak("WeatherAPI.com"),cams=pak("CAMS"),alarm=pak("MeteoAlarm"),nws=pak("National Weather Service"),bdc=pak("BigDataCloud"),osm=pak("© OpenStreetMap-bijdragers");';
+const BRONNEN_DECLARATIE_PRODUCTIE='    const open=pak("Open-Meteo"),visualCrossing=pak("'+VISUAL_CROSSING_LABEL+'"),weatherApi=pak("WeatherAPI.com"),cams=pak("CAMS"),alarm=pak("MeteoAlarm"),nws=pak("National Weather Service"),bdc=pak("BigDataCloud"),osm=pak("© OpenStreetMap-bijdragers");';
 const BRONNEN_GUARD='    if(!open||!cams||!alarm||!nws||!bdc||!osm)return false;';
 const BRONNEN_GUARD_PRODUCTIE='    if(!open||!visualCrossing||!weatherApi||!cams||!alarm||!nws||!bdc||!osm)return false;';
 const BRONNEN_OPEN_ITEM="      +'<span class=\"bronitem\">'+open.outerHTML+'</span>'";
@@ -111,4 +112,4 @@ if(require.main===module){
   console.log("Trage volledige Open-Meteo-forecast krijgt na 5 s een begrensde race tussen lichte Open-Meteo en de same-origin providerroute; die route probeert Visual Crossing en gebruikt WeatherAPI alleen als noodfallback. Verliezende clientrequests worden afgebroken en beide fallbackbronnen blijven zichtbaar geattribueerd; cache "+versie+".");
 }
 
-module.exports={BRON,PRODUCTIE,VISUAL_CROSSING_BRON_ANCHOR,VISUAL_CROSSING_BRON_PRODUCTIE,BRONNEN_DECLARATIE,BRONNEN_DECLARATIE_PRODUCTIE,BRONNEN_GUARD,BRONNEN_GUARD_PRODUCTIE,BRONNEN_OPEN_ITEM,BRONNEN_OPEN_ITEM_PRODUCTIE,pasToe};
+module.exports={BRON,PRODUCTIE,VISUAL_CROSSING_LABEL,VISUAL_CROSSING_BRON_ANCHOR,VISUAL_CROSSING_BRON_PRODUCTIE,BRONNEN_DECLARATIE,BRONNEN_DECLARATIE_PRODUCTIE,BRONNEN_GUARD,BRONNEN_GUARD_PRODUCTIE,BRONNEN_OPEN_ITEM,BRONNEN_OPEN_ITEM_PRODUCTIE,pasToe};
