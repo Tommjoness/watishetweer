@@ -54,29 +54,48 @@ const PANEL_HOOGTE_NIEUW=`  /* Hoogtefiltering is reversibel: de eerste meting b
     if(!Array.isArray(aside.__wiwHourCandidateRows))aside.__wiwHourCandidateRows=[...tbody.children];
     else tbody.replaceChildren(...aside.__wiwHourCandidateRows);
   }
-  while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
-  /* Het paneel volgt exact de onafhankelijk gemeten grafiekhoogte. Eerst wordt met de vaste,
-     leesbare minimumrijhoogte het maximale aantal volledige uren gekozen.
-     Alleen de kleine resthoogte die te klein is voor nóg een volledige rij
-     wordt daarna gelijkmatig over de zichtbare regels verdeeld. */
+  /* Gebruik de echte ruimte onder de tabelkop om te bepalen hoeveel van de
+     gewenste acht uren op minimaal 29px volledig passen. Zo blijft de
+     regen-horizon op ruime desktops intact, zonder acht rijen in de smallere
+     1100px-layout buiten het grafiekpaneel te forceren. */
+  const beschikbareRijhoogte=tbody?Math.max(0,grens-tbody.getBoundingClientRect().top):0;
+  const minimumUren=Math.min(8,Math.floor((beschikbareRijhoogte+0.5)/29),tbody&&tbody.children.length||0);
+  while(tbody&&tbody.lastElementChild&&tbody.children.length>minimumUren&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
+  let rijPadAanpassing=0;
+  let zichtbareRijen=tbody?[...tbody.children]:[];
+  if(zichtbareRijen.length&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01){
+    const laatste=tbody.lastElementChild,tekort=laatste.getBoundingClientRect().bottom-grens+0.5;
+    const kleinsteRij=Math.min(...zichtbareRijen.map(r=>r.getBoundingClientRect().height));
+    const maximaleKrimp=Math.max(0,(kleinsteRij-29)/2);
+    const krimpPerZijde=Math.min(maximaleKrimp,tekort/(zichtbareRijen.length*2)+0.02);
+    if(krimpPerZijde>0.01){
+      rijPadAanpassing=-krimpPerZijde;
+      aside.style.setProperty("--wiw-hour-row-pad-extra",rijPadAanpassing.toFixed(3)+"px");
+      document.documentElement.getBoundingClientRect();
+    }
+  }
+  /* Het paneel volgt exact de onafhankelijk gemeten grafiekhoogte. Alleen de
+     kleine resthoogte die te klein is voor nog een volledige rij wordt daarna
+     gelijkmatig over de zichtbare regels verdeeld. */
   aside.style.height=h+"px";
-  const zichtbareRijen=tbody?[...tbody.children]:[];
+  zichtbareRijen=tbody?[...tbody.children]:[];
   if(zichtbareRijen.length){
     const laatste=zichtbareRijen[zichtbareRijen.length-1];
     let laatsteRect=laatste.getBoundingClientRect();
     let rest=Math.max(0,grens-laatsteRect.bottom-0.5);
-    let extraPerZijde=Math.min(4.5,rest/(zichtbareRijen.length*2));
+    let extraPerZijde=Math.min(4.5-rijPadAanpassing,rest/(zichtbareRijen.length*2));
     if(extraPerZijde>0.01){
-      aside.style.setProperty("--wiw-hour-row-pad-extra",extraPerZijde.toFixed(3)+"px");
+      rijPadAanpassing+=extraPerZijde;
+      aside.style.setProperty("--wiw-hour-row-pad-extra",rijPadAanpassing.toFixed(3)+"px");
       /* Tabellen ronden subpixels per rij af. Meet één keer na het toepassen en
          absorbeer alleen de resterende fractie; zo blijft er geen los ondervlak
          zonder een extra rij te forceren of de grafiekhoogte te veranderen. */
       document.documentElement.getBoundingClientRect();
       laatsteRect=laatste.getBoundingClientRect();
       rest=Math.max(0,grens-laatsteRect.bottom-0.5);
-      if(rest>0.25&&extraPerZijde<4.5){
-        extraPerZijde=Math.min(4.5,extraPerZijde+rest/(zichtbareRijen.length*2));
-        aside.style.setProperty("--wiw-hour-row-pad-extra",extraPerZijde.toFixed(3)+"px");
+      if(rest>0.25&&rijPadAanpassing<4.5){
+        rijPadAanpassing=Math.min(4.5,rijPadAanpassing+rest/(zichtbareRijen.length*2));
+        aside.style.setProperty("--wiw-hour-row-pad-extra",rijPadAanpassing.toFixed(3)+"px");
       }
     }
   }

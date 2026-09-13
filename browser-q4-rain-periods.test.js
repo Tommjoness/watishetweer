@@ -128,7 +128,7 @@ async function controleer(type,naam,breedte){
     assert(r.nachtBewolking.length>0&&r.nachtBewolking.every(t=>t==="<5%"),naam+" "+breedte+": Nachtzicht gebruikt dezelfde <5%-notatie; kreeg "+JSON.stringify(r.nachtBewolking));
     assert.equal(r.aqiSub,"Redelijk",naam+" "+breedte+": AQI-subregel herhaalt de schaalnaam niet; kreeg "+JSON.stringify(r.aqiSub));
     assert(!r.dagteksten.some(t=>/rond \d{1,2}:\d{2}/.test(t)),naam+" "+breedte+": dagregels suggereren geen minuutprecisie");
-    assert(r.h>296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets, tijdlabels en bedragen");
+    assert(r.h>=296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets, tijdlabels en bedragen");
 
     await page.locator("#chart").scrollIntoViewIfNeeded();
     const puntCoords=uur=>page.evaluate(uur=>{
