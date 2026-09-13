@@ -29,7 +29,7 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   const disclaimer=disclaimerRow?.querySelector(':scope > span.bron'),overLink=utilityRow?.querySelector('a[href="/over/"]'),privacyLink=utilityRow?.querySelector('a[href="/privacy"],a[href="/privacy.html"]'),details=utilityRow?.querySelector(':scope > details.footer-details'),summary=details?.querySelector(':scope > summary');
   if(!source||!disclaimerRow||!utilityRow||!disclaimer||!overLink||!privacyLink||!details||!summary)throw new Error('structurele footerlagen of utility-items ontbreken');
   const cs=x=>getComputedStyle(x),pseudo=getComputedStyle(row,'::after'),midden=x=>{const r=x.getBoundingClientRect();return (r.top+r.bottom)/2;};
-  const rgba=s=>{const m=String(s).match(/[\d.]+/g);if(!m||m.length<3)return null;return [Number(m[0]),Number(m[1]),Number(m[2]),m.length>3?Number(m[3]):1];};
+  const rgba=s=>{const m=String(s).match(/[\\d.]+/g);if(!m||m.length<3)return null;return [Number(m[0]),Number(m[1]),Number(m[2]),m.length>3?Number(m[3]):1];};
   const rgbTekst=el=>{const k=rgba(cs(el).color);if(!k||k[3]<.999)throw new Error('geen dekkende tekstkleur voor '+el.tagName);return k.slice(0,3);};
   const rgbAchtergrond=el=>{for(let n=el;n;n=n.parentElement){const k=rgba(cs(n).backgroundColor);if(k&&k[3]>=.999)return k.slice(0,3);}throw new Error('geen dekkende gerenderde achtergrond gevonden');};
   const lum=rgbv=>{const c=rgbv.map(v=>{v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*c[0]+.7152*c[1]+.0722*c[2];},contrastRgb=(a,b)=>{a=lum(a);b=lum(b);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);};
