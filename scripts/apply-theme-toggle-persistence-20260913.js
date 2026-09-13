@@ -144,9 +144,9 @@ function patchHubHtml(html){
   if(bron.includes(`id="${STYLE_ID}"`))throw new Error("/weer/-hub theme-togglepatch staat al in artifact.");
   if(tel(bron,'<a class="brand" href="/">Wat is het weer?</a>')!==1)throw new Error("/weer/-hub mist uniek merkanker.");
   if(tel(bron,"</style>")!==1)throw new Error("/weer/-hub verwacht exact één stijlblok.");
-  const stylesheet=/<link\b[^>]*\brel=["']stylesheet["'][^>]*>/i;
-  if(!stylesheet.test(bron))throw new Error("/weer/-hub mist stylesheetanker voor vroege themaruntime.");
-  bron=bron.replace(stylesheet,'<meta name="theme-color" content="#F4F5F3">\n<script src="/'+HUB_SCRIPT+'"></script>\n$&');
+  const stijlOpeners=bron.match(/<style(?:\s[^>]*)?>/gi)||[];
+  if(stijlOpeners.length!==1)throw new Error("/weer/-hub verwacht exact één stijlanker voor vroege themaruntime.");
+  bron=bron.replace(stijlOpeners[0],'<meta name="theme-color" content="#F4F5F3">\n<script src="/'+HUB_SCRIPT+'"></script>\n'+stijlOpeners[0]);
   bron=bron.replace("</style>",HUB_CSS+"\n/* "+STYLE_ID+" */\n</style>");
   bron=bron.replace('<a class="brand" href="/">Wat is het weer?</a>',`<div class="hub-top"><a class="brand" href="/">Wat is het weer?</a>${SWITCH_HTML}</div>`);
   return bron;
