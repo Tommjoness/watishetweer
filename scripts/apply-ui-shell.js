@@ -112,7 +112,7 @@ function themaToepassen(){
   if(knop){
     const zichtbaar=keuze==="auto"?"A":keuze==="licht"?"☀":"◐";
     knop.innerHTML='Weergave <span class="thema-status" aria-hidden="true">'+zichtbaar+"</span>";
-    knop.dataset.themaKeuze=keuze;
+    knop.dataset.actieveThemakeuze=keuze;
     knop.title=keuze==="auto"
       ?"Weergave kiezen. Automatisch volgt dag en nacht (nu "+actief+")."
       :"Weergave kiezen. Huidige voorkeur: "+keuze+".";
