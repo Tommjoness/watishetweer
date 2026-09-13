@@ -40,7 +40,8 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
     const pad=path.join(dir,"index.html");fs.writeFileSync(pad,html,"utf8");
     const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${breedte},${hoogte}`,"--virtual-time-budget=1200","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:24*1024*1024,timeout:20000});
     if(r.status!==0)throw new Error("browser exit "+r.status+": "+String(r.stderr||"").slice(-1200));
-    const dom=r.stdout||"",v=k=>{const m=new RegExp('data-audit-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
+    const decode=s=>s&&s.replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">");
+    const dom=r.stdout||"",v=k=>{const m=new RegExp('data-audit-'+k+'="([^"]*)"').exec(dom);return m&&decode(m[1]);};
     if(v("done")!=="ok")throw new Error("reporter "+breedte+"px: "+v("exception"));
     if(Number(v("nav-links"))!==4)throw new Error("sectienavigatie mist doelen op "+breedte+"px");
     if(Number(v("focus-width"))<1.9)throw new Error("focusring is dunner dan 2px op "+breedte+"px");
