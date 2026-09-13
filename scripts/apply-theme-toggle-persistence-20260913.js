@@ -82,7 +82,7 @@ const HUB_SCRIPT_BRON=`(()=>{"use strict";
   const lees=(key,fallback)=>{try{const raw=localStorage.getItem(key);return raw==null?fallback:JSON.parse(raw);}catch(e){return fallback;}};
   const schrijf=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));}catch(e){}};
   const voorkeur=lees(PREF,"auto");
-  const fallback=lees(ACTIEF,(matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches)?"donker":"licht");
+  const fallback=lees(ACTIEF,(typeof matchMedia==="function"&&matchMedia("(prefers-color-scheme: dark)").matches)?"donker":"licht");
   const begin=voorkeur==="donker"?"donker":voorkeur==="licht"?"licht":fallback==="donker"?"donker":"licht";
   const zet=(actief,bewaar)=>{
     if(actief==="donker")document.documentElement.setAttribute("data-thema","donker");else document.documentElement.removeAttribute("data-thema");
@@ -144,7 +144,9 @@ function patchHubHtml(html){
   if(bron.includes(`id="${STYLE_ID}"`))throw new Error("/weer/-hub theme-togglepatch staat al in artifact.");
   if(tel(bron,'<a class="brand" href="/">Wat is het weer?</a>')!==1)throw new Error("/weer/-hub mist uniek merkanker.");
   if(tel(bron,"</style>")!==1)throw new Error("/weer/-hub verwacht exact één stijlblok.");
-  bron=bron.replace('<meta name="twitter:card" content="summary">','<meta name="twitter:card" content="summary">\n<meta name="theme-color" content="#F4F5F3">\n<script src="/'+HUB_SCRIPT+'"></script>');
+  const stylesheet=/<link\b[^>]*\brel=["']stylesheet["'][^>]*>/i;
+  if(!stylesheet.test(bron))throw new Error("/weer/-hub mist stylesheetanker voor vroege themaruntime.");
+  bron=bron.replace(stylesheet,'<meta name="theme-color" content="#F4F5F3">\n<script src="/'+HUB_SCRIPT+'"></script>\n$&');
   bron=bron.replace("</style>",HUB_CSS+"\n/* "+STYLE_ID+" */\n</style>");
   bron=bron.replace('<a class="brand" href="/">Wat is het weer?</a>',`<div class="hub-top"><a class="brand" href="/">Wat is het weer?</a>${SWITCH_HTML}</div>`);
   return bron;
