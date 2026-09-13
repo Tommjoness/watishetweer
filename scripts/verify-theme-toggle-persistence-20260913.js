@@ -40,8 +40,13 @@ assert(hub.includes(`src="/${HUB_SCRIPT}"`),"/weer/ laadt de vroege themapersist
 assert(hub.includes('class="hub-top"'),"/weer/ mist koprij met weergaveswitch");
 assert(hub.includes('id="thema" type="button" class="wiw-theme-switch" role="switch"'),"/weer/ mist dezelfde licht/donker-switch");
 assert(hub.includes('<meta name="theme-color" content="#F4F5F3">'),"/weer/ mist theme-color metadata");
-const hubScriptPos=hub.indexOf(`src="/${HUB_SCRIPT}"`),hubSheetPos=hub.search(/<link\b[^>]*\brel=["']stylesheet["'][^>]*>/i);
-assert(hubScriptPos>=0&&hubSheetPos>=0&&hubScriptPos<hubSheetPos,"/weer/ themaruntime moet vóór de eerste stylesheet staan om een verkeerde eerste paint te voorkomen");
+const hubScriptPos=hub.indexOf(`src="/${HUB_SCRIPT}"`);
+const hubStylePos=hub.search(/<style(?:\s[^>]*)?>/i);
+const hubSheetPos=hub.search(/<link\b[^>]*\brel=["']stylesheet["'][^>]*>/i);
+const cssPosities=[hubStylePos,hubSheetPos].filter(pos=>pos>=0);
+assert(cssPosities.length>0,"/weer/ mist CSS waarop de vroege themaruntime kan voorgaan");
+const eersteCssPos=Math.min(...cssPosities);
+assert(hubScriptPos>=0&&hubScriptPos<eersteCssPos,"/weer/ themaruntime moet vóór de eerste inline of externe CSS staan om een verkeerde eerste paint te voorkomen");
 
 const hubScriptPath=path.join(OUT,HUB_SCRIPT);
 assert(fs.existsSync(hubScriptPath),"Hub-themascript ontbreekt uit public.");
@@ -54,4 +59,4 @@ assert(script.includes('typeof matchMedia==="function"'),"Hub-themascript moet o
 
 const cache=verifieerServiceworkerCache(OUT,"theme-toggle-persistence-verifier");
 assert(/^watishetweer-[0-9a-f]{12}$/.test(cache),"serviceworker-cache hoort bij de gewijzigde artifact");
-console.log(`Themapersistentie geverifieerd voor ${weer} weerartifacts + /weer/: echte licht/donker-switch, bewaarde keuze, prepaint-runtime vóór stylesheet en consistente aria-state; cache ${cache}.`);
+console.log(`Themapersistentie geverifieerd voor ${weer} weerartifacts + /weer/: echte licht/donker-switch, bewaarde keuze, prepaint-runtime vóór de eerste CSS en consistente aria-state; cache ${cache}.`);
