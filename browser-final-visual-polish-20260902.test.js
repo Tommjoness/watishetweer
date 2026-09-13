@@ -36,6 +36,8 @@ setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-final-visual-'
   zet('night-label',kop.querySelector('.score').textContent.trim());zet('visibility-copy',vissub?vissub.textContent.trim():'');
   const here=document.getElementById('here'),ververs=document.getElementById('ververs'),thema=document.getElementById('thema');zet('here-opacity',here?getComputedStyle(here).opacity:'');zet('refresh-opacity',ververs?getComputedStyle(ververs).opacity:'');zet('theme-opacity',thema?getComputedStyle(thema).opacity:'');
   zet('theme-menu',document.getElementById('themamenu')?'ja':'nee');
+  zet('theme-switch',thema&&thema.getAttribute('role')==='switch'&&thema.querySelector('.wiw-theme-track')&&thema.querySelector('.wiw-theme-thumb')?'ja':'nee');
+  zet('theme-checked',thema?thema.getAttribute('aria-checked'):'');
   const bodyStyle=getComputedStyle(document.body),sheet=document.querySelector('.sheet'),sheetStyle=sheet&&getComputedStyle(sheet);zet('body-pad-left',parseFloat(bodyStyle.paddingLeft)||0);zet('sheet-pad-left',sheetStyle?parseFloat(sheetStyle.paddingLeft)||0:0);
   zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);
   if(w>=1100){
@@ -68,7 +70,7 @@ try{
     if(v('hour-scrollbar')!=='thin'||v('page-scrollbar')!=='thin')throw new Error(`${w}px: scrollbar styling niet actief (hour=${v('hour-scrollbar')}, page=${v('page-scrollbar')})`);
     if(v('night-label')!=='Zichtscore')throw new Error(`${w}px: Nachtzicht gebruikt nog geen duidelijke Zichtscore-label (${v('night-label')})`);
     if(v('visibility-copy')!=='Goed zicht.')throw new Error(`${w}px: redundante zichttekst niet ingekort (${v('visibility-copy')})`);
-    if(v('theme-menu')!=='ja')throw new Error(`${w}px: ondersteunde Auto/Licht/Donker-weergave ontbreekt`);
+    if(v('theme-switch')!=='ja'||v('theme-menu')!=='nee'||!['true','false'].includes(v('theme-checked')))throw new Error(`${w}px: licht/donker-switchcontract ontbreekt (switch=${v('theme-switch')}, oud-menu=${v('theme-menu')}, checked=${v('theme-checked')})`);
     if(!(Number(v('refresh-opacity'))<Number(v('here-opacity'))&&Number(v('theme-opacity'))<Number(v('here-opacity'))))throw new Error(`${w}px: headerhiërarchie ontbreekt (locatie=${v('here-opacity')}, ververs=${v('refresh-opacity')}, weergave=${v('theme-opacity')})`);
     if(Number(v('overflow'))>2)throw new Error(`${w}px: ${v('overflow')}px horizontale overflow`);
     if(actualW<=900){
@@ -86,7 +88,7 @@ try{
       if(Number(v('night-bar-width'))<189||Number(v('night-bar-width'))>261)throw new Error(`${w}px: zichtscorebalk valt buiten de compacte band (${v('night-bar-width')}px)`);
       if(actualW>=1366&&Number(v('night-right-gap'))<100)throw new Error(`${w}px: Nachtzicht-data wordt nog over de volledige rij uitgesmeerd (${v('night-right-gap')}px vrije eindruimte)`);
     }
-    console.log(`${w}px (CSS viewport ${actualW}px): final visual UX groen; overflow ${v('overflow')}px, urenpreview en headerhiërarchie correct${actualW>=1100?', zichtperiode '+v('night-wide-width')+'px':''}.`);
+    console.log(`${w}px (CSS viewport ${actualW}px): final visual UX groen; overflow ${v('overflow')}px, urenpreview, licht/donker-switch en headerhiërarchie correct${actualW>=1100?', zichtperiode '+v('night-wide-width')+'px':''}.`);
   }
-  console.log("Final visual polish browsertest geslaagd op de aangevraagde 320/390/430/1100/1366/1440/1660/1920 vensters; asserts volgen de gemeten CSS-viewport.");
+  console.log("Final visual polish browsertest geslaagd op de aangevraagde 320/390/430/1100/1366/1440/1660/1920 vensters; asserts volgen de gemeten CSS-viewport en het finale licht/donker-switchcontract.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
