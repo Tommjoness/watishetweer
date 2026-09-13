@@ -95,21 +95,71 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert(binnenViewport(basis.searchRect,vp.width),`${vp.naam}: zoekveld valt buiten viewport`);
       for(const r of basis.topRects)assert(binnenViewport(r,vp.width),`${vp.naam}: zichtbare bovenste bediening '${String(r.label).trim()}' valt buiten viewport`);
 
-      const thema=page.locator("#thema"),themaMenu=page.locator("#themamenu");
-      await thema.click();
-      await themaMenu.waitFor({state:"visible",timeout:3000});
-      const themaUit=await page.evaluate(()=>{
-        const menu=document.getElementById("themamenu"),r=menu?.getBoundingClientRect();
-        const opties=[...document.querySelectorAll('#themamenu [role="menuitemradio"]')].filter(el=>el.getClientRects().length>0).map(el=>{const b=el.getBoundingClientRect();return {left:b.left,right:b.right,width:b.width,label:(el.textContent||"").trim()};});
-        return {rect:r?{left:r.left,right:r.right,width:r.width}:null,opties,expanded:document.getElementById("thema")?.getAttribute("aria-expanded")||""};
+      const thema=page.locator("#thema");
+      const themaVoor=await page.evaluate(()=>{
+        const knop=document.getElementById("thema"),r=knop?.getBoundingClientRect();
+        return {
+          role:knop?.getAttribute("role")||"",
+          checked:knop?.getAttribute("aria-checked")||"",
+          actief:document.documentElement.getAttribute("data-thema")||"",
+          menu:!!document.getElementById("themamenu"),
+          track:!!knop?.querySelector(".wiw-theme-track"),
+          thumb:!!knop?.querySelector(".wiw-theme-thumb"),
+          rect:r?{left:r.left,right:r.right,width:r.width}:null
+        };
       });
-      assert.equal(themaUit.expanded,"true",`${vp.naam}: Weergave-menu meldt geopend niet`);
-      assert(binnenViewport(themaUit.rect,vp.width),`${vp.naam}: Weergave-menu valt buiten viewport`);
-      assert.equal(themaUit.opties.length,3,`${vp.naam}: Weergave-menu toont niet exact drie keuzes`);
-      for(const r of themaUit.opties)assert(binnenViewport(r,vp.width),`${vp.naam}: zichtbare Weergave-keuze '${r.label}' valt buiten viewport`);
-      await page.keyboard.press("Escape");
-      assert.equal(await thema.getAttribute("aria-expanded"),"false",`${vp.naam}: Escape sluit Weergave-menu niet`);
-      assert.equal(await themaMenu.isHidden(),true,`${vp.naam}: Weergave-menu blijft zichtbaar na Escape`);
+      assert.equal(themaVoor.role,"switch",`${vp.naam}: Weergave is geen semantische switch`);
+      assert(["true","false"].includes(themaVoor.checked),`${vp.naam}: Weergave-switch mist geldige aria-checked`);
+      assert.equal(themaVoor.menu,false,`${vp.naam}: oud Weergave-menu staat nog in deployed artifact`);
+      assert(themaVoor.track&&themaVoor.thumb,`${vp.naam}: switch-track of thumb ontbreekt`);
+      assert(binnenViewport(themaVoor.rect,vp.width),`${vp.naam}: Weergave-switch valt buiten viewport`);
+
+      await thema.click();
+      const themaNa=await page.evaluate(()=>{
+        const lees=key=>{try{const raw=localStorage.getItem(key);return raw==null?null:JSON.parse(raw);}catch(e){return null;}};
+        const knop=document.getElementById("thema");
+        return {
+          checked:knop?.getAttribute("aria-checked")||"",
+          actief:document.documentElement.getAttribute("data-thema")||"",
+          voorkeur:lees("weerbriefing.thema"),
+          actiefBewaar:lees("weerbriefing.actiefThema"),
+          label:knop?.getAttribute("aria-label")||"",
+          title:knop?.getAttribute("title")||""
+        };
+      });
+      assert.notEqual(themaNa.checked,themaVoor.checked,`${vp.naam}: klik schakelt aria-checked niet om`);
+      assert.notEqual(themaNa.actief,themaVoor.actief,`${vp.naam}: klik schakelt gerenderd thema niet om`);
+      assert(["licht","donker"].includes(themaNa.actief),`${vp.naam}: ongeldig actief thema na klik ${themaNa.actief}`);
+      assert.equal(themaNa.voorkeur,themaNa.actief,`${vp.naam}: expliciete themakeuze wordt niet persistent opgeslagen`);
+      assert.equal(themaNa.actiefBewaar,themaNa.actief,`${vp.naam}: actieve themastaat wordt niet persistent opgeslagen`);
+      assert(themaNa.label&&themaNa.title,`${vp.naam}: switch mist toegankelijke toestandstekst`);
+
+      const hub=await context.newPage(),hubErrors=[];
+      hub.on("pageerror",e=>hubErrors.push(String(e)));
+      const hubResponse=await hub.goto(ROOT+"/weer/",{waitUntil:"domcontentloaded",timeout:30000});
+      assert(hubResponse&&hubResponse.ok(),`${vp.naam}: /weer/ HTTP ${hubResponse&&hubResponse.status()}`);
+      await hub.waitForSelector("#thema",{state:"visible",timeout:5000});
+      const hubState=await hub.evaluate(()=>{
+        const knop=document.getElementById("thema"),r=knop?.getBoundingClientRect(),script=document.querySelector('script[src="/theme-hub.js"]'),sheet=document.querySelector('link[rel="stylesheet"]');
+        return {
+          actief:document.documentElement.getAttribute("data-thema")||"licht",
+          checked:knop?.getAttribute("aria-checked")||"",
+          role:knop?.getAttribute("role")||"",
+          menu:!!document.getElementById("themamenu"),
+          rect:r?{left:r.left,right:r.right,width:r.width}:null,
+          scriptVoorStylesheet:!!script&&!!sheet&&!!(script.compareDocumentPosition(sheet)&Node.DOCUMENT_POSITION_FOLLOWING)
+        };
+      });
+      assert.equal(hubState.actief,themaNa.actief,`${vp.naam}: thema valt terug bij navigatie naar /weer/`);
+      assert.equal(hubState.checked,themaNa.actief==="donker"?"true":"false",`${vp.naam}: /weer/-switch weerspiegelt opgeslagen thema niet`);
+      assert.equal(hubState.role,"switch",`${vp.naam}: /weer/ gebruikt geen semantische switch`);
+      assert.equal(hubState.menu,false,`${vp.naam}: /weer/ bevat nog oud themamenu`);
+      assert(binnenViewport(hubState.rect,vp.width),`${vp.naam}: /weer/-switch valt buiten viewport`);
+      assert.equal(hubState.scriptVoorStylesheet,true,`${vp.naam}: /weer/ themascript staat niet vóór stylesheet`);
+      await hub.reload({waitUntil:"domcontentloaded",timeout:30000});
+      assert.equal(await hub.evaluate(()=>document.documentElement.getAttribute("data-thema")||"licht"),themaNa.actief,`${vp.naam}: thema blijft niet behouden na reload van /weer/`);
+      assert.deepEqual(hubErrors,[],`${vp.naam}: /weer/ pageerrors ${hubErrors.join(" | ")}`);
+      await hub.close();
 
       const q=page.locator("#q");
       await q.fill("Singapore");
@@ -129,11 +179,11 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       await page.screenshot({path:png,fullPage:true});
       assert(fs.existsSync(png)&&fs.statSync(png).size>5000,`${vp.naam}: screenshot ontbreekt of is verdacht klein`);
       const hash=crypto.createHash("sha256").update(fs.readFileSync(png)).digest("hex").slice(0,12);
-      console.log(`${vp.naam}: gedeployde preview zonder overflow; topcontrols/Weergave/zoeklijst/pressure-retirement/neerslag/a11y correct; screenshot sha256 ${hash}.`);
+      console.log(`${vp.naam}: gedeployde preview zonder overflow; topcontrols/licht-donker-switch/themapersistentie/zoeklijst/pressure-retirement/neerslag/a11y correct; screenshot sha256 ${hash}.`);
       assert.deepEqual(pageErrors,[],`${vp.naam}: pageerrors ${pageErrors.join(" | ")}`);
       await context.close();
     }
-    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 8 echte viewports met gecontroleerde data en tijdelijke screenshots.`);
+    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 8 echte viewports met gecontroleerde data, switch-navigatiepersistentie en tijdelijke screenshots.`);
   }finally{
     fs.rmSync(tmp,{recursive:true,force:true});
     await browser.close();
