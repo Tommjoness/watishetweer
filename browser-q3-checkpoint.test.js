@@ -140,8 +140,8 @@ async function controleer(page,browserNaam,scenario,breedte){
 
   assert.deepEqual(fouten,[],`${browserNaam} ${scenario} ${breedte}px: geen runtime/consolefouten`);
   assert.ok(r.overflow<=2,`${browserNaam} ${scenario} ${breedte}px: geen horizontale overflow (${r.overflow}px)`);
-  assert.equal(r.footerItems,7,`${browserNaam} ${scenario}: zeven zelfstandige bronitems blijven zichtbaar`);
-  for(const bron of ["Open-Meteo","WeatherAPI.com","CAMS","MeteoAlarm","National Weather Service","BigDataCloud","OpenStreetMap"]){
+  assert.equal(r.footerItems,8,`${browserNaam} ${scenario}: acht zelfstandige bronitems blijven zichtbaar`);
+  for(const bron of ["Open-Meteo","Weather Data Provided by Visual Crossing","WeatherAPI.com","CAMS","MeteoAlarm","National Weather Service","BigDataCloud","OpenStreetMap"]){
     assert(r.footerText.includes(bron),`${browserNaam} ${scenario}: bron ${bron} blijft zichtbaar`);
   }
 
