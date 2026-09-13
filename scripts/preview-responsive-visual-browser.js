@@ -140,14 +140,14 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert(hubResponse&&hubResponse.ok(),`${vp.naam}: /weer/ HTTP ${hubResponse&&hubResponse.status()}`);
       await hub.waitForSelector("#thema",{state:"visible",timeout:5000});
       const hubState=await hub.evaluate(()=>{
-        const knop=document.getElementById("thema"),r=knop?.getBoundingClientRect(),script=document.querySelector('script[src="/theme-hub.js"]'),sheet=document.querySelector('link[rel="stylesheet"]');
+        const knop=document.getElementById("thema"),r=knop?.getBoundingClientRect(),script=document.querySelector('script[src="/theme-hub.js"]'),eersteCss=document.querySelector('style,link[rel="stylesheet"]');
         return {
           actief:document.documentElement.getAttribute("data-thema")||"licht",
           checked:knop?.getAttribute("aria-checked")||"",
           role:knop?.getAttribute("role")||"",
           menu:!!document.getElementById("themamenu"),
           rect:r?{left:r.left,right:r.right,width:r.width}:null,
-          scriptVoorStylesheet:!!script&&!!sheet&&!!(script.compareDocumentPosition(sheet)&Node.DOCUMENT_POSITION_FOLLOWING)
+          scriptVoorCss:!!script&&!!eersteCss&&!!(script.compareDocumentPosition(eersteCss)&Node.DOCUMENT_POSITION_FOLLOWING)
         };
       });
       assert.equal(hubState.actief,themaNa.actief,`${vp.naam}: thema valt terug bij navigatie naar /weer/`);
@@ -155,7 +155,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert.equal(hubState.role,"switch",`${vp.naam}: /weer/ gebruikt geen semantische switch`);
       assert.equal(hubState.menu,false,`${vp.naam}: /weer/ bevat nog oud themamenu`);
       assert(binnenViewport(hubState.rect,vp.width),`${vp.naam}: /weer/-switch valt buiten viewport`);
-      assert.equal(hubState.scriptVoorStylesheet,true,`${vp.naam}: /weer/ themascript staat niet vóór stylesheet`);
+      assert.equal(hubState.scriptVoorCss,true,`${vp.naam}: /weer/ themascript staat niet vóór de eerste inline of externe CSS`);
       await hub.reload({waitUntil:"domcontentloaded",timeout:30000});
       assert.equal(await hub.evaluate(()=>document.documentElement.getAttribute("data-thema")||"licht"),themaNa.actief,`${vp.naam}: thema blijft niet behouden na reload van /weer/`);
       assert.deepEqual(hubErrors,[],`${vp.naam}: /weer/ pageerrors ${hubErrors.join(" | ")}`);
