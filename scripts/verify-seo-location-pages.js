@@ -16,7 +16,7 @@ const root=fs.readFileSync(rootPath,"utf8");
 if(tel(root,'<div class="sheet" data-nosnippet>')!==1)throw new Error("Homepage moet de dynamische weerinterface exact één keer uit zoeksnippets houden.");
 if(tel(root,MARKER_NAV)!==1)throw new Error("Homepage moet exact één crawlbare plaatsnavigatie bevatten.");
 if(!root.includes('href="/weer/"'))throw new Error("Homepage linkt niet naar de volledige plaatsindex.");
-if(!root.includes('href="/over/"><b>watishetweer.nl</b> · Over deze site</a>'))throw new Error("Homepage mist de crawlbare vaste merkverwijzing naar de Over-pagina.");
+if(!root.includes('href="/over/">Over deze site</a>'))throw new Error("Homepage mist de crawlbare verwijzing naar de Over-pagina.");
 for(const loc of POPULAIR){
   if(tel(root,`href="/weer/${loc.slug}/"`)!==1)throw new Error(`Homepage moet populaire plaats ${loc.slug} exact één keer linken.`);
 }
