@@ -47,5 +47,11 @@ for(const loc of LOCATIES){
   controleerNav(html,loc.slug);
 }
 
+/* Deze verifier draait direct na de route/H1-owner en controleert daarom ook de
+   themalaag die bewust in diezelfde stap wordt toegepast. Zo blijft de centrale
+   postbuildvolgorde ongewijzigd en is de donker->Meer plaatsen regressie toch
+   gekoppeld aan exact het gegenereerde route-artifact. */
+require("./verify-theme-toggle-persistence-20260913.js");
+
 const cache=verifieerServiceworkerCache(OUT,"seo-location-h1-verifier");
-console.log(`SEO-plaats-H1 geverifieerd: ${LOCATIES.length} unieke locatiekoppen, vaste homepage-merknaam, merkgebonden dynamische titels, hub, route-exit-reset en Nederlandse plaatsnavigatie; cache ${cache}.`);
+console.log(`SEO-plaats-H1 geverifieerd: ${LOCATIES.length} unieke locatiekoppen, vaste homepage-merknaam, merkgebonden dynamische titels, hub, route-exit-reset, themapersistentie en Nederlandse plaatsnavigatie; cache ${cache}.`);

@@ -5,6 +5,7 @@ const path=require("path");
 const {LOCATIES}=require("./seo-locations.config.js");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const {pasDesktopRefinementToe}=require("./desktop-refinement-20260829.js");
+const {main:pasThemaToggleToe}=require("./apply-theme-toggle-persistence-20260913.js");
 
 const OUT=path.join(__dirname,"..","public");
 const MERK_H1="<h1>watishetweer.nl</h1>";
@@ -82,6 +83,13 @@ function pasHubMerkToe(html){
 function main(){
   const rootPad=path.join(OUT,"index.html");
   if(!fs.existsSync(rootPad))throw new Error("public/index.html ontbreekt vóór plaats-H1-stap.");
+
+  /* De plaatsindex en alle statische plaatsroutes zijn direct hiervoor
+     gegenereerd. Pas de gedeelde weergaveswitch nu toe, vóór deze stap de
+     zichtbare merknaam/titels herschrijft; zo hoeft de themalaag geen kennis
+     van SEO-copy te hebben en blijft de bestaande postbuildvolgorde intact. */
+  pasThemaToggleToe();
+
   let root=fs.readFileSync(rootPad,"utf8");
   if(tel(root,MERK_H1)!==1)throw new Error("Homepage-H1 moet exact 'watishetweer.nl' zijn.");
   if(root.includes(H1_RESET))throw new Error("Homepage mag geen routegebonden H1-reset bevatten.");
@@ -111,7 +119,7 @@ function main(){
   if(tel(rootNa,NAV_KOP_NIEUW)!==1)throw new Error("Homepage mist het contextuele Nederlandse plaatsnavlabel.");
   if(tel(rootNa,TITLE_NIEUW)!==TITLE_WRITERS)throw new Error("Homepage mist merkgebonden dynamische titels.");
   const versie=vernieuwServiceworkerCache(OUT,"seo-location-h1");
-  console.log(`SEO-plaats-H1, merkpresentatie en desktopverfijning toegepast voor ${LOCATIES.length} routes; homepage, dynamische titels, hub, route-exit en Nederlandse navigatiecontext correct; cache ${versie}.`);
+  console.log(`SEO-plaats-H1, merkpresentatie, themapersistentie en desktopverfijning toegepast voor ${LOCATIES.length} routes; homepage, dynamische titels, hub, route-exit en Nederlandse navigatiecontext correct; cache ${versie}.`);
 }
 
 if(require.main===module)main();
