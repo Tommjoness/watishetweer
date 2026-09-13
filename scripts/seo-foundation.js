@@ -84,16 +84,16 @@ function pasSeoFoundationToe(html){
   ].join("\n");
   bron=bron.replace(nieuweDescription,nieuweDescription+"\n"+blok);
 
-  /* De footer herhaalt de vaste merknaam en koppelt die aan een transparante
-     Over-pagina. De bestaande bronpresentatie heeft daarnaast een runtime-owner
-     die de eerste providerregel met class .bron omzet naar zelfstandige items.
-     Plaats de merkregel daarom bewust ná de providerregel en vóór Privacy, zodat
-     merk-SEO en bronattributie onafhankelijk van elkaar blijven functioneren. */
+  /* De footer koppelt compact naar de transparante Over-pagina. De vaste
+     merknaam blijft al eenduidig aanwezig in H1, metadata en structured data;
+     in deze hulplink is de korte functienaam daarom rustiger en duidelijker.
+     Plaats de link bewust vóór Privacy zodat beide footerhulplinks samen kunnen
+     worden gepresenteerd zonder bronattributie of SEO-identiteit te vermengen. */
   const footerMatches=[...bron.matchAll(/<footer>/g)];
   if(footerMatches.length!==1)throw new Error("SEO verwacht exact één footer voor de merkverwijzing; gevonden: "+footerMatches.length);
   const privacyAnker='<span class="bron"><a href="/privacy.html">Privacy &amp; gegevens</a></span>';
   if(tel(bron,privacyAnker)!==1)throw new Error("SEO verwacht exact één privacyregel als veilig footeranker voor de merkverwijzing.");
-  const brandLink=`${BRAND_LINK_MARKER}\n      <span class="bron"><a href="/over/"><b>${attr(SEO.siteName)}</b> · Over deze site</a></span>`;
+  const brandLink=`${BRAND_LINK_MARKER}\n      <span class="bron"><a href="/over/">Over deze site</a></span>`;
   bron=bron.replace(privacyAnker,brandLink+"\n      "+privacyAnker);
 
   return bron;
