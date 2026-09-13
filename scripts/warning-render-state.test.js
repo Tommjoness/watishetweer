@@ -64,16 +64,21 @@ for(const zichtbaar of [
   '/\\*\\s*(?:WHAT|WHERE|WHEN|IMPACTS)\\.\\.\\./i.test(nwsTekst)'
 ])assert(uit.includes(zichtbaar),"finale waarschuwingpresentatie ontbreekt: "+zichtbaar);
 
-/* De CSS-migratie bevriest letterlijk de al zichtbare productiestijl. Geen
-   selector, maat, font, kleur, border of NWS-detailpresentatie mag hier stiekem
-   mee veranderen: alleen de eigenaar verhuist naar de warning-base-owner. */
+/* De CSS-owner bewaakt zowel de rustige basiskaart als het zichtbare onderscheid
+   tussen geel, oranje en rood. */
 for(const regel of [
+  ':root{--warning-yellow:#856000;--warning-orange:#A34712}',
+  'html[data-thema="donker"]{--warning-yellow:#E0BD62;--warning-orange:#F09A67}',
   '#waarschuwingen>.msg{font-size:12.5px;color:var(--ink-45);padding:7px 0}',
   '.waarsch{border-left:1px solid var(--rule);padding:8px 0 8px 12px;margin-top:var(--s2)}',
   '.waarsch h3{font-family:var(--sans);font-weight:500;font-size:14px;line-height:1.35;margin:0 0 3px;color:var(--ink)}',
   '.waarsch p{margin:0;font-size:13px;line-height:1.45;color:var(--ink-70)}',
+  '.waarsch[data-ui-severity="geel"]{border-left:3px solid var(--warning-yellow)}',
+  '.waarsch[data-ui-severity="geel"] h3{color:var(--warning-yellow);font-weight:600}',
+  '.waarsch[data-ui-severity="oranje"]{border-left:3px solid var(--warning-orange)}',
+  '.waarsch[data-ui-severity="oranje"] h3{color:var(--warning-orange);font-weight:600}',
   '.waarsch[data-ui-severity="rood"]{border-left:3px solid var(--carmine)}',
-  '.waarsch[data-ui-severity="rood"] h3{color:var(--carmine)}',
+  '.waarsch[data-ui-severity="rood"] h3{color:var(--carmine);font-weight:600}',
   '.waarsch-details{margin-top:6px;font-size:12px;color:var(--ink-45)}',
   '.waarsch-details summary{display:inline;cursor:pointer;color:var(--ink-45);box-shadow:inset 0 -1px 0 var(--rule)}',
   '.waarsch-details summary:hover{color:var(--ink)}',
