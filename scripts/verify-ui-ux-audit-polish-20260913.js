@@ -39,6 +39,7 @@ for(const p of htmlBestanden(OUT)){
   assert(html.includes('#thema .thema-status{'),rel+": zichtbare themastatus mist styling");
   assert(html.includes('.chip.add{border-style:solid!important'),rel+": plaats opslaan oogt op desktop nog als tijdelijke toestand");
   assert(html.includes('#days .row.day:not(.kop)::after{content:"›"'),rel+": weekrij mist desktop-affordance");
+  assert(html.includes('html body footer:nth-of-type(n){display:grid!important;grid-template-columns:max-content max-content max-content!important'),rel+": finale runtime-flex wordt niet door de desktopgrid-owner overstemd");
   assert(html.includes('footer > span.bron:first-of-type{grid-column:1 / -1!important;grid-row:1!important'),rel+": bronnenregel heeft geen vaste eerste footerrij");
   assert(html.includes('footer > span.bron:nth-of-type(2){grid-column:1 / -1!important;grid-row:2!important'),rel+": disclaimer heeft geen vaste tweede footerrij");
   assert(html.includes('footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important'),rel+": Over-link heeft geen vaste utilityrij");
