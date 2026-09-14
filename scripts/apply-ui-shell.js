@@ -34,37 +34,63 @@ vervangEen(
 const faviconRuntime='<script>!function(){const f=document.querySelector("link[rel=icon]");if(f)f.setAttribute("href","'+faviconHref+'")}();</script>';
 vervangEen("</body>",faviconRuntime+"\n</body>","body-einde voor uitgestelde tabicoonruntime");
 
-/* De oude themaknop cyclde blind door auto -> licht -> donker -> rood. In de
-   avond is auto zelf al donker, waardoor donker visueel twee keer in dezelfde
-   cyclus voorkwam. Het expliciete menu houdt alleen de drie nuttige standen:
-   automatisch, licht en donker. Rood licht is geen productkeuze meer. */
+/* De vorige themabediening was een uitklapmenu. De finale shell toont nu
+   Auto als aparte resetkeuze en een compacte zon/maan-toggle voor handmatig
+   Licht/Donker. Auto blijft de standaard wanneer er geen geldige voorkeur is;
+   bestaande expliciete Licht/Donker-keuzes blijven behouden. */
 vervangEen(
-  '<button id="thema" title="Wissel tussen licht, donker en rood licht">Auto</button>',
-  '<button id="thema" type="button" title="Verander de weergave" aria-haspopup="menu" aria-expanded="false">Weergave</button>\n        <div id="themamenu" role="menu" aria-label="Weergave kiezen" hidden>\n          <button type="button" role="menuitemradio" data-thema-keuze="auto" aria-checked="true">Automatisch (dag/nacht)</button>\n          <button type="button" role="menuitemradio" data-thema-keuze="licht" aria-checked="false">Licht</button>\n          <button type="button" role="menuitemradio" data-thema-keuze="donker" aria-checked="false">Donker</button>\n        </div>',
+  "<button id=\"thema\" title=\"Wissel tussen licht, donker en rood licht\">Auto</button>",
+  "<div id=\"thema\" class=\"wiw-theme-control\" role=\"group\" aria-label=\"Weergave kiezen\">\n          <button type=\"button\" id=\"thema-auto\" class=\"wiw-theme-auto\" data-thema-keuze=\"auto\" aria-pressed=\"true\" aria-label=\"Automatisch (dag/nacht)\" title=\"Automatisch (dag/nacht)\">Auto</button>\n          <button type=\"button\" id=\"thema-switch\" class=\"wiw-theme-switch\" role=\"switch\" aria-checked=\"false\" aria-label=\"Schakel donkere weergave in\" title=\"Schakel donkere weergave in\">\n            <span class=\"wiw-theme-icon wiw-theme-sun\" data-thema-handmatig=\"licht\" aria-hidden=\"true\">☀</span>\n            <span class=\"wiw-theme-track\" aria-hidden=\"true\"><span class=\"wiw-theme-thumb\"></span></span>\n            <span class=\"wiw-theme-icon wiw-theme-moon\" data-thema-handmatig=\"donker\" aria-hidden=\"true\">☾</span>\n            <span class=\"sr-only\">Licht of donker</span>\n          </button>\n        </div>",
   "oude cyclische themaknop"
 );
-
-const menuCss=`
+const toggleCss=`
 <style id="ui-shell-controls">
 /* Donkere modus blijft rustig, maar secundaire tekst mag niet wegvallen op
    schermen met lager contrast. Alleen de twee secundaire tekstniveaus worden
    iets lichter; primaire tekst, grafieken en semantische kleuren blijven gelijk. */
 html[data-thema="donker"]{--ink-45:#A8A8A8;--ink-25:#959595}
-#thema{letter-spacing:.08em}
-#thema .thema-status{display:inline-grid;place-items:center;min-width:16px;height:16px;margin-left:5px;border:1px solid var(--rule);font-family:var(--mono);font-size:9.5px;line-height:1;letter-spacing:0;vertical-align:-1px}
-#themamenu{position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:236px;background:var(--sheet);border:1px solid var(--rule);box-shadow:0 10px 26px rgba(0,0,0,.14);text-align:left}
-html[data-thema="donker"] #themamenu{box-shadow:0 12px 30px rgba(0,0,0,.38)}
-#themamenu[hidden]{display:none}
-#themamenu button{display:flex;flex:none;align-items:center;justify-content:space-between;width:100%;margin:0;padding:10px 12px;border:0;border-bottom:1px solid var(--rule-soft);background:var(--sheet);color:var(--ink-70);font-family:var(--sans);font-size:13px;font-weight:400;letter-spacing:0;text-transform:none;text-align:left;white-space:normal;overflow:visible;text-overflow:clip}
-#themamenu button:last-child{border-bottom:0}
-#themamenu button:hover,#themamenu button:focus-visible{background:var(--paper);color:var(--ink)}
-#themamenu button[aria-checked="true"]{background:var(--paper);font-weight:600;color:var(--ink)}
-#themamenu button[aria-checked="true"]::after{content:"✓";margin-left:12px;flex:0 0 auto}
+
+/* De bediening blijft compact in de bestaande header, maar maakt de drie
+   mogelijke voorkeuren begrijpelijk: Auto reset de voorkeur, de zon/maan-
+   schakelaar kiest of wisselt de handmatige stand. */
+#thema.wiw-theme-control{display:inline-flex;align-items:stretch;min-height:32px;border:1px solid var(--rule);border-radius:999px;overflow:hidden;background:var(--sheet);vertical-align:middle}
+#thema .wiw-theme-auto{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border:0;border-right:1px solid var(--rule);background:transparent;color:var(--ink-45);font-family:var(--sans);font-size:9.5px;font-weight:500;letter-spacing:.08em;line-height:1;text-transform:uppercase;white-space:nowrap}
+#thema .wiw-theme-auto:hover,#thema .wiw-theme-auto:focus-visible{background:var(--paper);color:var(--ink)}
+#thema[data-actieve-thema-keuze="auto"] .wiw-theme-auto{background:var(--ink);color:var(--sheet);font-weight:600}
+#thema[data-actieve-thema-keuze="auto"] .wiw-theme-auto:hover,#thema[data-actieve-thema-keuze="auto"] .wiw-theme-auto:focus-visible{background:var(--ink);color:var(--sheet)}
+#thema #thema-switch{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:78px;padding:6px 9px;border:0;background:var(--sheet);color:var(--ink-25);font-family:var(--sans);font-size:13px;letter-spacing:0;line-height:1;text-transform:none}
+#thema #thema-switch:hover,#thema #thema-switch:focus-visible{background:var(--paper);color:var(--ink)}
+#thema .wiw-theme-icon{display:inline-grid;place-items:center;width:13px;height:18px;flex:0 0 auto;color:var(--ink-25);font-family:var(--serif);font-size:14px;line-height:1}
+#thema .wiw-theme-track{position:relative;display:inline-block;width:32px;height:18px;border:1px solid var(--rule);border-radius:999px;background:var(--paper);flex:0 0 auto}
+#thema .wiw-theme-thumb{position:absolute;top:2px;left:2px;width:12px;height:12px;border:0;border-radius:50%;background:var(--ink-45);transform:translateX(0);transition:transform .16s ease,background-color .16s ease}
+#thema[data-effectieve-thema="donker"] .wiw-theme-thumb{transform:translateX(14px);background:var(--ink)}
+#thema[data-effectieve-thema="licht"] .wiw-theme-thumb{transform:translateX(0);background:var(--ink-45)}
+#thema[data-effectieve-thema="licht"] .wiw-theme-sun,#thema[data-effectieve-thema="donker"] .wiw-theme-moon{color:var(--ink)}
+#thema[data-actieve-thema-keuze="auto"] #thema-switch{background:var(--paper)}
+#thema[data-actieve-thema-keuze="auto"] #thema-switch:hover,#thema[data-actieve-thema-keuze="auto"] #thema-switch:focus-visible{background:var(--paper)}
+#thema .wiw-theme-icon[data-thema-handmatig]{cursor:pointer}
+@media(max-width:430px){
+  #thema.wiw-theme-control{flex:1 1 0;min-width:0}
+  #thema .wiw-theme-auto{padding-inline:8px}
+  #thema #thema-switch{flex:1 1 auto;min-width:0;gap:3px;padding-inline:6px}
+  #thema .wiw-theme-icon{width:12px;font-size:13px}
+  #thema .wiw-theme-track{width:28px}
+  #thema[data-effectieve-thema="donker"] .wiw-theme-thumb{transform:translateX(12px)}
+}
+@media(max-width:340px){
+  #thema .wiw-theme-auto{padding-inline:6px;font-size:9px}
+  #thema #thema-switch{padding-inline:4px}
+  #thema .wiw-theme-track{width:26px}
+  #thema[data-effectieve-thema="donker"] .wiw-theme-thumb{transform:translateX(10px)}
+}
+@media(prefers-reduced-motion:reduce){#thema .wiw-theme-thumb{transition:none}}
+
 /* De weektabel houdt op desktop een kleine veilige rechterinset. Percentages
    en mm-waarden staan daardoor niet strak tegen de rand van de module. */
 @media(min-width:901px){#days .row.day,#days .row.kop{padding-right:8px}}
-@media(max-width:430px){#themamenu{left:0;right:0;width:auto}}
 </style>`;
+vervangEen("</head>",toggleCss+"\n</head>","headafsluiting voor weergavetoggle");
+
 vervangEen("</head>",menuCss+"\n</head>","headafsluiting voor weergavemenu");
 
 const themaBron=`/* ---------- thema ---------- */
@@ -97,81 +123,67 @@ ${autoThemaRuntime}
 function themaKeuze(){
   const keuze=ls.get("weerbriefing.thema","auto");
   if(THEMA_KEUZES.includes(keuze))return keuze;
-  /* Oude opgeslagen waarden (waaronder de verwijderde rode stand) mogen geen
-     verborgen vierde toestand achterlaten. Migreer ze één keer naar auto. */
+  /* Oude of ongeldige opgeslagen waarden (waaronder de verwijderde rode
+     stand) migreren één keer naar de veilige standaard Auto. */
   ls.set("weerbriefing.thema","auto");
   return "auto";
 }
-function themaMenuSluit(){
-  const menu=document.getElementById("themamenu"),knop=document.getElementById("thema");
-  if(menu)menu.hidden=true;
-  if(knop)knop.setAttribute("aria-expanded","false");
+function themaActief(keuze){
+  if(keuze==="licht"||keuze==="donker")return keuze;
+  return autoThemaOpZon(S.d,weatherNowActueleLokaleTijd());
+}
+function themaStatusBijwerken(keuze,actief){
+  const groep=document.getElementById("thema");
+  if(!groep)return;
+  const autoKnop=document.getElementById("thema-auto"),schakelaar=document.getElementById("thema-switch");
+  groep.dataset.actieveThemaKeuze=keuze;
+  groep.dataset.effectieveThema=actief;
+  const stand=actief==="donker"?"Donker":"Licht";
+  groep.setAttribute("aria-label","Weergave kiezen. Huidige stand: "+(keuze==="auto"?"automatisch ("+stand+")":stand)+".");
+  if(autoKnop)autoKnop.setAttribute("aria-pressed",keuze==="auto"?"true":"false");
+  if(schakelaar){
+    const donker=actief==="donker";
+    schakelaar.setAttribute("aria-checked",donker?"true":"false");
+    schakelaar.setAttribute("aria-label",keuze==="auto"
+      ?"Automatisch; nu "+stand+". Klik op de zon of maan voor een handmatige keuze."
+      :stand+". Klik om "+(donker?"Licht":"Donker")+" te kiezen.");
+    schakelaar.title=keuze==="auto"
+      ?"Automatisch; nu "+stand+". Klik om handmatig te wisselen."
+      :"Huidige handmatige keuze: "+stand+". Klik om te wisselen.";
+  }
 }
 function themaToepassen(){
-  const keuze=themaKeuze();
-  let actief=keuze;
-  if(keuze==="auto") actief=autoThemaOpZon(S.d,weatherNowActueleLokaleTijd());
+  const keuze=themaKeuze(),actief=themaActief(keuze);
   document.documentElement.setAttribute("data-thema",actief);
-  document.querySelector('meta[name="theme-color"]').setAttribute("content",
-    actief==="donker"?"#0B120F":"#F4F5F3");
-  const knop=document.getElementById("thema"),menu=document.getElementById("themamenu");
-  if(knop){
-    const zichtbaar=keuze==="auto"?"A":keuze==="licht"?"☀":"◐";
-    knop.innerHTML='Weergave <span class="thema-status" aria-hidden="true">'+zichtbaar+"</span>";
-    knop.dataset.actieveThemakeuze=keuze;
-    knop.title=keuze==="auto"
-      ?"Weergave kiezen. Automatisch volgt zonsopkomst en zonsondergang (nu "+actief+")."
-      :"Weergave kiezen. Huidige voorkeur: "+keuze+".";
-    knop.setAttribute("aria-label",knop.title);
-  }
-  if(menu)menu.querySelectorAll("[data-thema-keuze]").forEach(optie=>{
-    optie.setAttribute("aria-checked",optie.dataset.themaKeuze===keuze?"true":"false");
-  });
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.setAttribute("content",actief==="donker"?"#0B120F":"#F4F5F3");
+  themaStatusBijwerken(keuze,actief);
 }
-const themaKnop=document.getElementById("thema"),themaMenu=document.getElementById("themamenu");
-if(themaKnop&&themaMenu){
-  themaKnop.addEventListener("click",e=>{
-    e.stopPropagation();
-    const openen=themaMenu.hidden;
-    if(openen){
-      const zoekpanelen=document.querySelectorAll("#res.on,#zoekmelding.on"),invoer=document.getElementById("q");
-      zoekpanelen.forEach(paneel=>paneel.classList.remove("on"));
-      if(invoer)invoer.setAttribute("aria-expanded","false");
-    }
-    themaMenu.hidden=!openen;
-    themaKnop.setAttribute("aria-expanded",openen?"true":"false");
-    if(openen){
-      const gekozen=themaMenu.querySelector('[aria-checked="true"]')||themaMenu.querySelector("button");
-      if(gekozen)gekozen.focus();
-    }
-  });
-  themaMenu.addEventListener("click",e=>{
-    const optie=e.target.closest("[data-thema-keuze]");
-    if(!optie)return;
-    const keuze=optie.dataset.themaKeuze;
-    if(!THEMA_KEUZES.includes(keuze))return;
-    ls.set("weerbriefing.thema",keuze);
+const themaGroep=document.getElementById("thema"),themaAutoKnop=document.getElementById("thema-auto"),themaSchakelaar=document.getElementById("thema-switch");
+if(themaGroep&&themaAutoKnop&&themaSchakelaar){
+  themaAutoKnop.addEventListener("click",()=>{
+    ls.set("weerbriefing.thema","auto");
     themaToepassen();
-    themaMenuSluit();
-    themaKnop.focus();
+    themaAutoKnop.focus();
   });
-  themaMenu.addEventListener("keydown",e=>{
-    const opties=[...themaMenu.querySelectorAll("[data-thema-keuze]")],i=opties.indexOf(document.activeElement);
-    let volgende=null;
-    if(e.key==="ArrowDown")volgende=opties[(i+1+opties.length)%opties.length];
-    else if(e.key==="ArrowUp")volgende=opties[(i-1+opties.length)%opties.length];
-    else if(e.key==="Home")volgende=opties[0];
-    else if(e.key==="End")volgende=opties[opties.length-1];
-    if(volgende){e.preventDefault();volgende.focus();}
+  themaSchakelaar.addEventListener("click",e=>{
+    const expliciet=e.target.closest("[data-thema-handmatig]");
+    const handmatig=expliciet?expliciet.dataset.themaHandmatig:null;
+    const huidig=themaActief(themaKeuze());
+    ls.set("weerbriefing.thema",handmatig|| (huidig==="donker"?"licht":"donker"));
+    themaToepassen();
   });
-  document.addEventListener("click",e=>{
-    if(!e.target.closest("#thema")&&!e.target.closest("#themamenu"))themaMenuSluit();
-  });
-  document.addEventListener("keydown",e=>{
-    if(e.key==="Escape"&&!themaMenu.hidden){themaMenuSluit();themaKnop.focus();}
+  themaGroep.addEventListener("keydown",e=>{
+    const opties=[themaAutoKnop,themaSchakelaar],i=opties.indexOf(document.activeElement);
+    if(i<0)return;
+    if(e.key==="ArrowLeft"||e.key==="ArrowRight"){
+      e.preventDefault();
+      opties[(i+(e.key==="ArrowRight"?1:-1)+opties.length)%opties.length].focus();
+    }else if(e.key==="Home"){e.preventDefault();opties[0].focus();
+    }else if(e.key==="End"){e.preventDefault();opties[opties.length-1].focus();}
   });
 }
-themaToepassen();`;
+themaToepassen();`
 vervangEen(themaBron,themaNieuw,"oude cyclische themalogica");
 
 /* De plaatsklok is al uitgelijnd op iedere lokale minuutgrens. Auto gebruikt
@@ -204,4 +216,4 @@ scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-she
 
 fs.writeFileSync(pad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"UI-shell");
-console.log("UI-shell toegepast: drie duidelijke weergavestanden met exacte lokale zonnegrenzen, dark-mode contrast, weekinset en één crawlbare/dynamische favicon zonder renderblokkerende early-runtime; serviceworker "+versie+".");
+console.log("UI-shell toegepast: Auto/Licht/Donker-toggle met exacte lokale zonnegrenzen, dark-mode contrast, weekinset en één crawlbare/dynamische favicon zonder renderblokkerende early-runtime; serviceworker "+versie+".");
