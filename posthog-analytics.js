@@ -30,7 +30,7 @@
     const p=String(pad||"/");
     if(/^\/weer(?:\/|$)/i.test(p))return "/weer/:location";
     if(p==="/"||p==="/index.html")return "/";
-    if(p==="/privacy.html")return "/privacy.html";
+    if(p==="/privacy"||p==="/privacy.html")return "/privacy";
     if(p==="/over"||p==="/over/")return "/over/";
     return "/_other";
   }
