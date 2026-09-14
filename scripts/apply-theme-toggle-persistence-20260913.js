@@ -10,13 +10,15 @@ const STYLE_ID="wiw-theme-toggle-persistence-20260913";
 const HUB_SCRIPT="theme-hub.js";
 const THEMA_START="/* ---------- thema ---------- */";
 const THEMA_EIND="/* ---------- stempel en verversen ---------- */";
+const THEMA_KEUZES_HAAK='const THEMA_KEUZES=["auto","licht","donker"];';
+const THEMA_ACTIEF_CONST='const THEMA_ACTIEF_KEY="weerbriefing.actiefThema";';
+const THEMA_SET_HAAK='document.documentElement.setAttribute("data-thema",actief);';
+const THEMA_PERSIST_HAAK='try{localStorage.setItem(THEMA_ACTIEF_KEY,JSON.stringify(actief));}catch(e){}';
 
-/* De bestaande weergaveknop was functioneel een menu met drie standen. Voor de
-   primaire bediening is een echte licht/donker-switch duidelijker: de knop
-   toont beide kanten visueel en aria-checked beschrijft dezelfde toestand voor
-   assistieve technologie. Een bestaande 'auto'-voorkeur blijft gerespecteerd
-   totdat de gebruiker de switch gebruikt; daarna wordt expliciet licht of
-   donker opgeslagen. */
+/* De weerapp heeft sinds de UI-shell één canonieke bediening met Auto, Licht en
+   Donker. Deze late laag mag die bediening niet meer herschrijven. Zij bewaart
+   alleen het werkelijk actieve thema, zodat de statische /weer/-hub bij een
+   Auto-voorkeur zonder flits kan aansluiten op de laatst bekeken weerpagina. */
 const SWITCH_HTML=`<button id="thema" type="button" class="wiw-theme-switch" role="switch" aria-checked="false" aria-label="Donkere weergave" title="Schakel donkere weergave in">
           <span class="wiw-theme-icon wiw-theme-sun" aria-hidden="true">☀</span>
           <span class="wiw-theme-track" aria-hidden="true"><span class="wiw-theme-thumb thema-status"></span></span>
@@ -24,60 +26,10 @@ const SWITCH_HTML=`<button id="thema" type="button" class="wiw-theme-switch" rol
           <span class="sr-only">Weergave</span>
         </button>`;
 
-const CSS=`
-#thema.wiw-theme-switch{
-  display:inline-flex;align-items:center;justify-content:center;gap:5px;
-  min-width:78px;padding:7px 9px;letter-spacing:0;text-transform:none;
-  color:var(--ink-70);background:var(--sheet)
-}
-#thema .wiw-theme-icon{display:inline-grid;place-items:center;width:13px;height:18px;font-size:13px;line-height:1;color:var(--ink-25)}
-#thema .wiw-theme-sun{margin-right:4px}
-#thema .wiw-theme-moon{margin-left:6px}
-#thema .wiw-theme-track{position:relative;display:inline-block;width:32px;height:18px;border:1px solid var(--rule);border-radius:999px;background:var(--paper);flex:0 0 auto}
-#thema .wiw-theme-thumb{position:absolute;top:2px;left:2px;width:12px;height:12px;min-width:0;margin:0;border:0;border-radius:50%;background:var(--ink-70);transform:translateX(0);transition:transform .16s ease,background-color .16s ease}
-#thema[aria-checked="true"] .wiw-theme-thumb{transform:translateX(14px);background:var(--ink)}
-#thema[aria-checked="false"] .wiw-theme-sun,#thema[aria-checked="true"] .wiw-theme-moon{color:var(--ink)}
-#thema:hover .wiw-theme-track{border-color:var(--ink)}
-@media(max-width:430px){#thema.wiw-theme-switch{min-width:72px;padding-inline:7px;gap:4px}}
-@media(prefers-reduced-motion:reduce){#thema .wiw-theme-thumb{transition:none}}
-`;
-
-const WEATHER_RUNTIME=`/* ---------- thema ---------- */
-const THEMA_KEUZES=["auto","licht","donker"];
-const THEMA_ACTIEF_KEY="weerbriefing.actiefThema";
-function themaKeuze(){
-  const keuze=ls.get("weerbriefing.thema","auto");
-  if(THEMA_KEUZES.includes(keuze))return keuze;
-  ls.set("weerbriefing.thema","auto");
-  return "auto";
-}
-function themaActief(keuze){
-  if(keuze==="licht"||keuze==="donker")return keuze;
-  return (S.d&&S.d.current&&S.d.current.is_day===0)?"donker":"licht";
-}
-function themaSchakelaarBij(actief){
-  const knop=document.getElementById("thema");if(!knop)return;
-  const donker=actief==="donker";
-  knop.setAttribute("aria-checked",donker?"true":"false");
-  knop.dataset.actieveThemakeuze=themaKeuze();
-  knop.title=donker?"Schakel lichte weergave in":"Schakel donkere weergave in";
-  knop.setAttribute("aria-label",donker?"Donkere weergave, schakel licht in":"Lichte weergave, schakel donker in");
-}
-function themaToepassen(){
-  const keuze=themaKeuze(),actief=themaActief(keuze);
-  document.documentElement.setAttribute("data-thema",actief);
-  try{localStorage.setItem(THEMA_ACTIEF_KEY,JSON.stringify(actief));}catch(e){}
-  document.querySelector('meta[name="theme-color"]').setAttribute("content",actief==="donker"?"#0B120F":"#F4F5F3");
-  themaSchakelaarBij(actief);
-}
-document.getElementById("thema").addEventListener("click",()=>{
-  const actief=document.documentElement.getAttribute("data-thema")==="donker"?"donker":"licht";
-  ls.set("weerbriefing.thema",actief==="donker"?"licht":"donker");
-  themaToepassen();
-});
-themaToepassen();
-
-`;
+/* Alleen de statische /weer/-hub gebruikt nog de compacte binaire switch. De
+   echte weerpagina's krijgen geen CSS of bediening uit deze late laag. */
+const CSS="";
+const WEATHER_RUNTIME="";
 
 const HUB_SCRIPT_BRON=`(()=>{"use strict";
   const PREF="weerbriefing.thema",ACTIEF="weerbriefing.actiefThema";
@@ -127,19 +79,24 @@ function htmlBestanden(dir){
 
 function patchWeatherHtml(html,rel){
   let bron=String(html||"");
-  if(!bron.includes('id="thema"')||!bron.includes('id="themamenu"'))return {html:bron,geraakt:false};
-  if(bron.includes(`id="${STYLE_ID}"`))throw new Error(rel+": theme-togglepatch staat al in artifact.");
+  if(!bron.includes('id="app"')||!bron.includes('id="thema"'))return {html:bron,geraakt:false};
+  if(!bron.includes('id="themamenu"')||!bron.includes('data-thema-keuze="auto"'))throw new Error(rel+": finale Auto/Licht/Donker-bediening ontbreekt vóór themapersistentie.");
+  if(bron.includes('class="wiw-theme-switch"'))throw new Error(rel+": verouderde binaire weather-switch mag de UI-shell niet meer bezitten.");
   if(tel(bron,THEMA_START)!==1||tel(bron,THEMA_EIND)!==1)throw new Error(rel+": themaruntime-ankers ontbreken of zijn dubbel.");
-  const bediening=/<button id="thema"[\s\S]*?<\/button>\s*<div id="themamenu"[\s\S]*?<\/div>/;
-  const matches=bron.match(bediening);
-  if(!matches)throw new Error(rel+": bestaande weergavemenu-opbouw niet gevonden.");
-  bron=bron.replace(bediening,SWITCH_HTML);
-  const start=bron.indexOf(THEMA_START),eind=bron.indexOf(THEMA_EIND,start);
-  if(start<0||eind<=start)throw new Error(rel+": themaruntimebereik ongeldig.");
-  bron=bron.slice(0,start)+WEATHER_RUNTIME+bron.slice(eind);
-  if(tel(bron,"</head>")!==1)throw new Error(rel+": head-einde ontbreekt voor switchstijl.");
-  bron=bron.replace("</head>",`<style id="${STYLE_ID}">\n${CSS}\n</style>\n</head>`);
-  return {html:bron,geraakt:true};
+  if(!bron.includes("autoThemaOpZon")||!bron.includes("weatherNowActueleLokaleTijd()"))throw new Error(rel+": locatiegebonden zonne-Auto ontbreekt vóór themapersistentie.");
+
+  let gewijzigd=false;
+  if(!bron.includes(THEMA_ACTIEF_CONST)){
+    if(tel(bron,THEMA_KEUZES_HAAK)!==1)throw new Error(rel+": THEMA_KEUZES-haak ontbreekt of is dubbel.");
+    bron=bron.replace(THEMA_KEUZES_HAAK,THEMA_KEUZES_HAAK+"\n"+THEMA_ACTIEF_CONST);
+    gewijzigd=true;
+  }
+  if(!bron.includes(THEMA_PERSIST_HAAK)){
+    if(tel(bron,THEMA_SET_HAAK)!==1)throw new Error(rel+": actieve-themahaak ontbreekt of is dubbel.");
+    bron=bron.replace(THEMA_SET_HAAK,THEMA_SET_HAAK+"\n  "+THEMA_PERSIST_HAAK);
+    gewijzigd=true;
+  }
+  return {html:bron,geraakt:gewijzigd};
 }
 
 function patchHubHtml(html){
@@ -158,7 +115,7 @@ function patchHubHtml(html){
 
 function valideerScripts(html,rel){
   const scripts=[...String(html).matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
-  scripts.forEach((bron,i)=>new vm.Script(bron,{filename:rel+":theme-toggle-"+(i+1)}));
+  scripts.forEach((bron,i)=>new vm.Script(bron,{filename:rel+":theme-persistence-"+(i+1)}));
 }
 
 function main(){
@@ -168,16 +125,17 @@ function main(){
     if(!r.geraakt)continue;
     valideerScripts(r.html,rel);fs.writeFileSync(p,r.html,"utf8");weer++;
   }
-  if(!weer)throw new Error("Geen weerartifacts met bestaand weergavemenu gevonden.");
+  if(!weer)throw new Error("Geen weerartifacts kregen actieve Auto-themastaat voor subnavigatie.");
+
   const hub=path.join(OUT,"weer","index.html");
   if(!fs.existsSync(hub))throw new Error("public/weer/index.html ontbreekt voor themapersistentie.");
   fs.writeFileSync(hub,patchHubHtml(fs.readFileSync(hub,"utf8")),"utf8");
   fs.writeFileSync(path.join(OUT,HUB_SCRIPT),HUB_SCRIPT_BRON,"utf8");
   new vm.Script(HUB_SCRIPT_BRON,{filename:HUB_SCRIPT});
   const cache=vernieuwServiceworkerCache(OUT,"theme-toggle-persistence-20260913");
-  console.log(`Weergaveswitch toegepast op ${weer} weerartifacts en /weer/: licht/donker-toggle en themapersistentie over navigatie geborgd; cache ${cache}.`);
+  console.log(`Themapersistentie toegepast op ${weer} weerartifacts zonder Auto-menu te overschrijven; /weer/ behoudt zijn compacte licht/donker-switch; cache ${cache}.`);
   return {weer,cache};
 }
 
 if(require.main===module)main();
-module.exports={OUT,STYLE_ID,HUB_SCRIPT,SWITCH_HTML,CSS,WEATHER_RUNTIME,HUB_SCRIPT_BRON,HUB_CSS,tel,htmlBestanden,patchWeatherHtml,patchHubHtml,valideerScripts,main};
+module.exports={OUT,STYLE_ID,HUB_SCRIPT,SWITCH_HTML,CSS,WEATHER_RUNTIME,HUB_SCRIPT_BRON,HUB_CSS,THEMA_ACTIEF_CONST,THEMA_PERSIST_HAAK,tel,htmlBestanden,patchWeatherHtml,patchHubHtml,valideerScripts,main};
