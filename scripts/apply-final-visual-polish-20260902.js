@@ -14,7 +14,7 @@ ${MARKER}
 .final-top-grid>.stats .stat .sval{justify-content:center!important;align-items:baseline!important;margin-left:auto!important;margin-right:auto!important}
 
 /* Zoek + locatie blijven primaire taken; handmatig verversen en weergave zijn secundair. */
-.tools #here{color:var(--ink);border-color:var(--ink);font-weight:600}
+.tools #here{color:var(--ink);border-color:var(--rule);font-weight:600}
 .tools #ververs,.tools #thema{color:var(--ink-45);opacity:.72;font-size:9.5px;letter-spacing:.1em}
 .tools #ververs:hover,.tools #ververs:focus-visible,.tools #thema:hover,.tools #thema:focus-visible{color:var(--ink);opacity:1}
 
