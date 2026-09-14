@@ -50,7 +50,7 @@ ok(html.includes('autoKnop.setAttribute("aria-pressed",keuze==="auto"?"true":"fa
 ok(html.includes('schakelaar.setAttribute("aria-checked",donker?"true":"false")'),"zon/maan-toggle toont de effectieve licht/donker-stand");
 ok(html.includes('themaAutoKnop.addEventListener("click"')&&html.includes('themaSchakelaar.addEventListener("click"'),"Auto-reset en handmatige toggle hebben eigen bediening");
 ok(html.includes('if(typeof themaKeuze==="function"&&themaKeuze()==="auto")themaToepassen();'),"bestaande minuutklok herberekent alleen Auto op een zonnegrens");
-ok((html.match(/klokMinuutTimer=setInterval\\(klokBijwerken,60000\\)/g)||[]).length===1,"Auto hergebruikt exact één bestaande minuutklok zonder extra timer");
+ok((html.match(/klokMinuutTimer=setInterval\(klokBijwerken,60000\)/g)||[]).length===1,"Auto hergebruikt exact één bestaande minuutklok zonder extra timer");
 ok(!html.includes('if(keuze==="auto") actief=(S.d&&S.d.current&&S.d.current.is_day===0)?"donker":"licht";'),"finale UI-shell gebruikt current.is_day niet meer als normale Auto-omschakelgrens");
 ok(html.includes('#thema.wiw-theme-control{')&&html.includes('#thema .wiw-theme-track{')&&html.includes('#thema .wiw-theme-thumb{'),"toggle gebruikt een rustige passende track/thumb-vorm");
 ok(html.includes('#thema[data-effectieve-thema="donker"] .wiw-theme-thumb{transform:translateX(14px)'),"donkere effectieve stand schuift de thumb zichtbaar naar de maan");
