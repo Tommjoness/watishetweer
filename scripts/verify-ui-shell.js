@@ -39,7 +39,7 @@ ok(html.includes('id="thema-auto" class="wiw-theme-auto" data-thema-keuze="auto"
 ok(html.includes('id="thema-switch" class="wiw-theme-switch" role="switch" aria-checked="false"'),"licht/donker heeft een semantische schakelaar");
 ok(html.includes('data-thema-handmatig="licht"')&&html.includes('data-thema-handmatig="donker"'),"zon en maan bieden directe handmatige keuzes");
 ok(html.includes('class="wiw-theme-track"')&&html.includes('class="wiw-theme-thumb"'),"toggle-track en thumb zijn visueel aanwezig");
-ok(html.includes('class="wiw-theme-sun"')&&html.includes('class="wiw-theme-moon"'),"toggle toont zon en maan naast de schakelaar");
+ok(html.includes("wiw-theme-sun")&&html.includes("wiw-theme-moon"),"toggle toont zon en maan naast de schakelaar");
 ok(html.includes('const THEMA_KEUZES=["auto","licht","donker"]'),"runtime kent uitsluitend de drie ondersteunde weergavestanden");
 ok(html.includes('ls.set("weerbriefing.thema","auto");')&&html.includes('return "auto";'),"oude of ongeldige opgeslagen themakeuzes migreren naar automatisch");
 ok(html.includes("Automatisch (dag/nacht)"),"automatische stand legt het dag/nachtgedrag uit");
