@@ -30,7 +30,9 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('focus-width',parseFloat(cs(focusDoel).outlineWidth)||0);zet('day-arrow',pseudo.content);zet('add-border',cs(add).borderStyle);
   zet('warning-width',parseFloat(cs(warning).borderLeftWidth)||0);zet('warning-color',cs(warning).borderLeftColor);zet('warning-title-weight',cs(warning.querySelector('h3')).fontWeight);
   zet('detail-display',cs(detail).display);zet('detail-size',parseFloat(cs(detail).fontSize)||0);zet('theme-status-width',status.getBoundingClientRect().width);zet('theme-center-delta',Math.abs(midden(status)-midden(thema)).toFixed(3));
-  zet('over-text',(over.textContent||'').trim());zet('privacy-text',(privacy.textContent||'').trim());zet('over-top',over.getBoundingClientRect().top.toFixed(3));zet('privacy-top',privacy.getBoundingClientRect().top.toFixed(3));zet('details-top',details.getBoundingClientRect().top.toFixed(3));zet('disclaimer-bottom',disclaimer.getBoundingClientRect().bottom.toFixed(3));
+  const footerRect=footer.getBoundingClientRect(),overRect=over.getBoundingClientRect(),privacyRect=privacy.getBoundingClientRect(),detailsRect=details.getBoundingClientRect(),disclaimerRect=disclaimer.getBoundingClientRect();
+  zet('over-text',(over.textContent||'').trim());zet('privacy-text',(privacy.textContent||'').trim());zet('over-top',overRect.top.toFixed(3));zet('privacy-top',privacyRect.top.toFixed(3));zet('details-top',detailsRect.top.toFixed(3));zet('disclaimer-bottom',disclaimerRect.bottom.toFixed(3));
+  zet('utility-center-delta',Math.abs(((overRect.left+detailsRect.right)/2)-((footerRect.left+footerRect.right)/2)).toFixed(3));
   zet('header-size',parseFloat(cs(kop).fontSize)||0);zet('secondary-size',parseFloat(cs(sec).fontSize)||0);zet('hint-size',parseFloat(cs(hint).fontSize)||0);
   zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}}, {once:true});
@@ -63,10 +65,11 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(v("add-border")!=="solid")throw new Error("bewaaractie oogt op desktop nog tijdelijk: "+v("add-border"));
       if(Math.abs(Number(v("over-top"))-Number(v("privacy-top")))>1)throw new Error("Over en Privacy staan niet op dezelfde afsluitende rij");
       if(Math.abs(Number(v("over-top"))-Number(v("details-top")))>1)throw new Error("technische locatiegegevens sluit niet aan op de hulplinkrij");
-      if(Number(v("over-top"))<Number(v("disclaimer-bottom"))-0.5)throw new Error("footerhulplinks staan nog naast de disclaimer in plaats van eronder");
+      if(Number(v("over-top"))<Number(v("disclaimer-bottom"))+1)throw new Error("footerhulplinks staan niet als aparte regel onder de disclaimer");
+      if(Number(v("utility-center-delta"))>1.5)throw new Error("footerhulplinks zijn als groep niet gecentreerd: delta "+v("utility-center-delta")+"px");
     }
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 }
 
 for(const [w,h] of [[360,900],[390,900],[1440,1000]])voerUit(w,h);
-console.log("UI/UX-auditbrowserregressie groen op 360px, 390px en 1440px: navigatie, leesbaarheid, focus, waarschuwingsernst, locatie-identiteit, themastatus en footerhulplinks gemeten zonder overflow.");
+console.log("UI/UX-auditbrowserregressie groen op 360px, 390px en 1440px: navigatie, leesbaarheid, focus, waarschuwingsernst, locatie-identiteit, themastatus en aparte gecentreerde footerhulplinkrij gemeten zonder overflow.");
