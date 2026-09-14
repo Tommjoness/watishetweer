@@ -31,6 +31,8 @@ const CSS=`
   color:var(--ink-70);background:var(--sheet)
 }
 #thema .wiw-theme-icon{display:inline-grid;place-items:center;width:13px;height:18px;font-size:13px;line-height:1;color:var(--ink-25)}
+#thema .wiw-theme-sun{margin-right:4px}
+#thema .wiw-theme-moon{margin-left:6px}
 #thema .wiw-theme-track{position:relative;display:inline-block;width:32px;height:18px;border:1px solid var(--rule);border-radius:999px;background:var(--paper);flex:0 0 auto}
 #thema .wiw-theme-thumb{position:absolute;top:2px;left:2px;width:12px;height:12px;min-width:0;margin:0;border:0;border-radius:50%;background:var(--ink-70);transform:translateX(0);transition:transform .16s ease,background-color .16s ease}
 #thema[aria-checked="true"] .wiw-theme-thumb{transform:translateX(14px);background:var(--ink)}
@@ -102,6 +104,8 @@ html[data-thema="donker"]{--paper:#0A0A0A;--sheet:#141414;--ink:#EDEDED;--muted:
 .wiw-theme-switch{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:78px;padding:7px 9px;border:1px solid var(--rule);background:var(--sheet);color:var(--muted);cursor:pointer}
 .wiw-theme-switch:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .wiw-theme-icon{display:inline-grid;place-items:center;width:13px;height:18px;font-size:13px;line-height:1;color:var(--muted)}
+.wiw-theme-sun{margin-right:4px}
+.wiw-theme-moon{margin-left:6px}
 .wiw-theme-track{position:relative;display:inline-block;width:32px;height:18px;border:1px solid var(--rule);border-radius:999px;background:var(--paper);flex:0 0 auto}
 .wiw-theme-thumb{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--muted);transform:translateX(0);transition:transform .16s ease,background-color .16s ease}
 .wiw-theme-switch[aria-checked="true"] .wiw-theme-thumb{transform:translateX(14px);background:var(--ink)}
