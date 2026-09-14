@@ -80,4 +80,5 @@ for (const script of ["scripts/platform-output-cleanup.js", "scripts/cloudflare-
   assert.ok(fs.existsSync(path.join(root, script)), `${script} ontbreekt`);
 }
 
+require("./pwa-manifest-contract.test.js");
 console.log("Cloudflare-only migratiecontract klopt.");
