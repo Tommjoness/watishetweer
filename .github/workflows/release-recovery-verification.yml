@@ -55,7 +55,7 @@ jobs:
           node browser-serviceworker-upgrade.test.js 2>&1 | tee release-recovery-serviceworker.log
       - name: Bewaar hersteltestdiagnostiek
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: release-recovery-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}
           path: release-recovery-*.log
