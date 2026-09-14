@@ -32,7 +32,7 @@ jobs:
         run: node scripts/cwv-desktop-recovery-browser.js
       - name: Bewaar reproduceerbare CWV-metingen
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cwv-evidence-${{ github.event.pull_request.head.sha || github.sha }}
           path: cwv-evidence/
