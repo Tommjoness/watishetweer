@@ -193,11 +193,11 @@ async function snap(page){return page.evaluate(()=>({
       await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="failed",null,{timeout:15000});
       assert(await page.locator("#bootstrap-failure").isVisible(),`${route}: productie moet failed-JS-herstel tonen`);
       assert.equal(await page.locator("#state").isVisible(),false,`${route}: eindeloze laadstate moet verdwijnen bij geblokkeerde hoofdclient`);
-      for(const id of ["q","here","ververs","thema"])assert.equal(await page.locator("#"+id).isDisabled(),true,`${route}: ${id} moet disabled zijn bij appstartfout`);
+      for(const id of ["q","here","ververs","thema-auto","thema-switch"])assert.equal(await page.locator("#"+id).isDisabled(),true,`${route}: ${id} moet disabled zijn bij appstartfout`);
       await page.unroute(patroon);
       await page.reload({waitUntil:"load",timeout:30000});await ready(page);
       assert.equal(await page.locator("#bootstrap-failure").isVisible(),false,`${route}: reload moet failed-JS-state opruimen`);
-      for(const id of ["q","here","ververs","thema"])assert.equal(await page.locator("#"+id).isDisabled(),false,`${route}: ${id} moet na recovery actief zijn`);
+      for(const id of ["q","here","ververs","thema-auto","thema-switch"])assert.equal(await page.locator("#"+id).isDisabled(),false,`${route}: ${id} moet na recovery actief zijn`);
       await context.close();
     }
 

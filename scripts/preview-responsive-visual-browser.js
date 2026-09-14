@@ -95,55 +95,71 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert(binnenViewport(basis.searchRect,vp.width),`${vp.naam}: zoekveld valt buiten viewport`);
       for(const r of basis.topRects)assert(binnenViewport(r,vp.width),`${vp.naam}: zichtbare bovenste bediening '${String(r.label).trim()}' valt buiten viewport`);
 
-      const thema=page.locator("#thema");
       const themaVoor=await page.evaluate(()=>{
-        const knop=document.getElementById("thema"),menu=document.getElementById("themamenu"),r=knop?.getBoundingClientRect();
+        const groep=document.getElementById("thema"),auto=document.getElementById("thema-auto"),schakelaar=document.getElementById("thema-switch"),r=groep?.getBoundingClientRect(),track=schakelaar?.querySelector(".wiw-theme-track")?.getBoundingClientRect(),thumb=schakelaar?.querySelector(".wiw-theme-thumb")?.getBoundingClientRect();
         return {
-          popup:knop?.getAttribute("aria-haspopup")||"",
-          expanded:knop?.getAttribute("aria-expanded")||"",
-          keuze:knop?.dataset.actieveThemakeuze||"",
+          role:groep?.getAttribute("role")||"",
+          popup:groep?.getAttribute("aria-haspopup")||"",
+          expanded:groep?.getAttribute("aria-expanded")||"",
+          keuze:groep?.dataset.actieveThemaKeuze||"",
           actief:document.documentElement.getAttribute("data-thema")||"",
-          menu:!!menu,
-          menuHidden:menu?menu.hidden:null,
-          opties:menu?.querySelectorAll("[data-thema-keuze]").length||0,
-          autoChecked:menu?.querySelector('[data-thema-keuze="auto"]')?.getAttribute("aria-checked")||"",
+          autoPressed:auto?.getAttribute("aria-pressed")||"",
+          switchRole:schakelaar?.getAttribute("role")||"",
+          checked:schakelaar?.getAttribute("aria-checked")||"",
+          menu:!!document.getElementById("themamenu"),
+          icons:!!schakelaar?.querySelector(".wiw-theme-sun")&&!!schakelaar?.querySelector(".wiw-theme-moon"),
+          toggleWidth:schakelaar?.getBoundingClientRect().width||0,
+          trackWidth:track?.width||0,
+          thumbWidth:thumb?.width||0,
           rect:r?{left:r.left,right:r.right,width:r.width}:null
         };
       });
-      assert.equal(themaVoor.popup,"menu",`${vp.naam}: Weergave kondigt het keuzemenu niet aan`);
-      assert.equal(themaVoor.expanded,"false",`${vp.naam}: Weergavemenu hoort initieel gesloten te zijn`);
+      assert.equal(themaVoor.role,"group",`${vp.naam}: Weergavegroep heeft niet de verwachte semantische group-rol`);
+      assert.equal(themaVoor.popup,"",`${vp.naam}: Weergave kondigt nog een uitklapmenu aan`);
+      assert.equal(themaVoor.expanded,"",`${vp.naam}: Weergavegroep draagt nog een menu-expanded-status`);
       assert.equal(themaVoor.keuze,"auto",`${vp.naam}: verse sessie start niet in Auto`);
-      assert.equal(themaVoor.menu,true,`${vp.naam}: Auto/Licht/Donker-menu ontbreekt`);
-      assert.equal(themaVoor.menuHidden,true,`${vp.naam}: Weergavemenu is initieel niet verborgen`);
-      assert.equal(themaVoor.opties,3,`${vp.naam}: Weergavemenu heeft niet exact drie keuzes`);
-      assert.equal(themaVoor.autoChecked,"true",`${vp.naam}: Auto is initieel niet gemarkeerd`);
-      assert(binnenViewport(themaVoor.rect,vp.width),`${vp.naam}: Weergaveknop valt buiten viewport`);
+      assert.equal(themaVoor.autoPressed,"true",`${vp.naam}: Auto is initieel niet als actieve keuze gemarkeerd`);
+      assert.equal(themaVoor.switchRole,"switch",`${vp.naam}: Licht/donker-bediening heeft geen switch-rol`);
+      assert(["true","false"].includes(themaVoor.checked),`${vp.naam}: Licht/donker-bediening heeft geen geldige checked-status`);
+      assert.equal(themaVoor.menu,false,`${vp.naam}: oude Auto/Licht/Donker-menu is nog aanwezig`);
+      assert.equal(themaVoor.icons,true,`${vp.naam}: zon- en maansymbool ontbreken in de toggle`);
+      assert(themaVoor.toggleWidth>=60,`${vp.naam}: Licht/donker-toggle is te smal (${themaVoor.toggleWidth}px)`);
+      assert(themaVoor.trackWidth>=24&&themaVoor.trackWidth<=34,`${vp.naam}: toggle-track heeft onverwachte breedte (${themaVoor.trackWidth}px)`);
+      assert(themaVoor.thumbWidth>=10&&themaVoor.thumbWidth<=16,`${vp.naam}: toggle-thumb heeft onverwachte breedte (${themaVoor.thumbWidth}px)`);
+      assert(binnenViewport(themaVoor.rect,vp.width),`${vp.naam}: Weergavegroep valt buiten viewport`);
 
-      await thema.click();
-      assert.equal(await thema.getAttribute("aria-expanded"),"true",`${vp.naam}: klik opent Weergavemenu niet`);
-      const donkerOptie=page.locator('#themamenu [data-thema-keuze="donker"]');
-      await donkerOptie.click();
+      await page.evaluate(()=>{ls.set("weerbriefing.thema","licht");themaToepassen();});
+      await page.locator("#thema-switch").click();
       const themaNa=await page.evaluate(()=>{
         const lees=key=>{try{const raw=localStorage.getItem(key);return raw==null?null:JSON.parse(raw);}catch(e){return null;}};
-        const knop=document.getElementById("thema"),menu=document.getElementById("themamenu");
+        const groep=document.getElementById("thema"),schakelaar=document.getElementById("thema-switch");
         return {
-          expanded:knop?.getAttribute("aria-expanded")||"",
-          keuze:knop?.dataset.actieveThemakeuze||"",
+          keuze:groep?.dataset.actieveThemaKeuze||"",
           actief:document.documentElement.getAttribute("data-thema")||"",
+          autoPressed:document.getElementById("thema-auto")?.getAttribute("aria-pressed")||"",
+          checked:schakelaar?.getAttribute("aria-checked")||"",
           voorkeur:lees("weerbriefing.thema"),
           actiefBewaar:lees("weerbriefing.actiefThema"),
-          donkerChecked:menu?.querySelector('[data-thema-keuze="donker"]')?.getAttribute("aria-checked")||"",
-          label:knop?.getAttribute("aria-label")||"",
-          title:knop?.getAttribute("title")||""
+          label:schakelaar?.getAttribute("aria-label")||"",
+          title:schakelaar?.getAttribute("title")||""
         };
       });
-      assert.equal(themaNa.expanded,"false",`${vp.naam}: menu sluit niet na themakeuze`);
       assert.equal(themaNa.keuze,"donker",`${vp.naam}: expliciete Donker-keuze wordt niet actief`);
       assert.equal(themaNa.actief,"donker",`${vp.naam}: gerenderd thema volgt Donker-keuze niet`);
+      assert.equal(themaNa.autoPressed,"false",`${vp.naam}: Auto blijft actief na handmatige Donker-keuze`);
+      assert.equal(themaNa.checked,"true",`${vp.naam}: Donker-stand wordt niet zichtbaar aangezet`);
       assert.equal(themaNa.voorkeur,"donker",`${vp.naam}: expliciete themakeuze wordt niet persistent opgeslagen`);
       assert.equal(themaNa.actiefBewaar,"donker",`${vp.naam}: actieve themastaat wordt niet persistent opgeslagen`);
-      assert.equal(themaNa.donkerChecked,"true",`${vp.naam}: Donker-keuze wordt niet gemarkeerd`);
-      assert(themaNa.label&&themaNa.title,`${vp.naam}: Weergaveknop mist toegankelijke toestandstekst`);
+      assert(themaNa.label&&themaNa.title,`${vp.naam}: Licht/donker-toggle mist toegankelijke toestandstekst`);
+
+      await page.locator("#thema-auto").click();
+      const autoNa=await page.evaluate(()=>{
+        const groep=document.getElementById("thema"),auto=document.getElementById("thema-auto");
+        let voorkeur=null;try{voorkeur=JSON.parse(localStorage.getItem("weerbriefing.thema"));}catch(e){}
+        return {keuze:groep?.dataset.actieveThemaKeuze||"",autoPressed:auto?.getAttribute("aria-pressed")||"",voorkeur};
+      });
+      assert.deepEqual(autoNa,{keuze:"auto",autoPressed:"true",voorkeur:"auto"},`${vp.naam}: Auto-knop zet de automatische standaard niet terug`);
+      await page.evaluate(()=>{ls.set("weerbriefing.thema","donker");themaToepassen();});
 
       const hub=await context.newPage(),hubErrors=[];
       hub.on("pageerror",e=>hubErrors.push(String(e)));
@@ -195,7 +211,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       await page.screenshot({path:png,fullPage:true});
       assert(fs.existsSync(png)&&fs.statSync(png).size>5000,`${vp.naam}: screenshot ontbreekt of is verdacht klein`);
       const hash=crypto.createHash("sha256").update(fs.readFileSync(png)).digest("hex").slice(0,12);
-      console.log(`${vp.naam}: gedeployde preview zonder overflow; topcontrols/Auto-Licht-Donker-menu/themapersistentie/zoeklijst/pressure-retirement/neerslag/a11y correct; screenshot sha256 ${hash}.`);
+      console.log(`${vp.naam}: gedeployde preview zonder overflow; topcontrols/Auto-Licht-Donker-toggle/themapersistentie/zoeklijst/pressure-retirement/neerslag/a11y correct; screenshot sha256 ${hash}.`);
       assert.deepEqual(pageErrors,[],`${vp.naam}: pageerrors ${pageErrors.join(" | ")}`);
       await context.close();
     }

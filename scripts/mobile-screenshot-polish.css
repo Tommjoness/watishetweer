@@ -185,6 +185,12 @@ footer .bron-bronnen .bronitem{
     text-overflow:clip;
   }
   .tools > #thema{border-right:0}
+  /* #thema is sinds de nieuwe weergavetoggle een groep met twee echte knoppen.
+     Houd niet alleen de gridcel maar ook beide interactieve doelen op minimaal
+     44px, zonder de oude knop-padding op de groep zelf te laten stapelen. */
+  .tools > #thema.wiw-theme-control{min-height:44px;padding:0}
+  .tools > #thema .wiw-theme-auto,
+  .tools > #thema #thema-switch{min-height:44px}
   .results{top:46px;left:-1px;right:-1px}
   #stamp{padding:0 1px;line-height:1.35}
 

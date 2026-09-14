@@ -170,7 +170,7 @@ function controleerTimerOwners(owners,fase){
       await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="failed",null,{timeout:5000});
       assert(await page.locator("#bootstrap-failure").isVisible(),`${route}: geblokkeerde hoofdapp moet duidelijke herstelstate tonen`);
       assert.equal(await page.locator("#state").isVisible(),false,`${route}: oude eindeloze laadstate moet bij appstartfout verdwijnen`);
-      for(const id of ["q","here","ververs","thema"])assert.equal(await page.locator("#"+id).isDisabled(),true,`${route}: ${id} moet bij appstartfout disabled zijn`);
+      for(const id of ["q","here","ververs","thema-auto","thema-switch"])assert.equal(await page.locator("#"+id).isDisabled(),true,`${route}: ${id} moet bij appstartfout disabled zijn`);
       assert.deepEqual(errors,[],`${route}: blocked-main-pad mag geen pageerror veroorzaken`);
       await context.close();
     }
@@ -187,11 +187,11 @@ function controleerTimerOwners(owners,fase){
       await page.goto(base+"/",{waitUntil:"commit"});
       await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="failed",null,{timeout:15000});
       assert(await page.locator("#bootstrap-failure").isVisible(),"12s watchdogfailure moet vóór late app-success zichtbaar worden");
-      for(const id of ["q","here","ververs","thema"])assert.equal(await page.locator("#"+id).isDisabled(),true,`timeout-failure: ${id} moet disabled blijven`);
+      for(const id of ["q","here","ververs","thema-auto","thema-switch"])assert.equal(await page.locator("#"+id).isDisabled(),true,`timeout-failure: ${id} moet disabled blijven`);
       await wachtReady(page,6000);
       assert.equal(appRequests,1,"late-successpad moet exact dezelfde ene apprequest afmaken");
       assert.equal(await page.locator("#bootstrap-failure").isVisible(),false,"late app-success moet foutmelding zonder reload verwijderen");
-      for(const id of ["q","here","ververs","thema"])assert.equal(await page.locator("#"+id).isDisabled(),false,`late success: ${id} moet zonder reload actief worden`);
+      for(const id of ["q","here","ververs","thema-auto","thema-switch"])assert.equal(await page.locator("#"+id).isDisabled(),false,`late success: ${id} moet zonder reload actief worden`);
       const nav=await page.evaluate(()=>({type:performance.getEntriesByType("navigation")[0]?.type||"",ready:window.__WEATHERNOW_APP_READY__===true}));
       assert.equal(nav.type,"navigate","late-successherstel mag geen reload hebben uitgevoerd");
       assert.equal(nav.ready,true,"app-ready-signaal ontbreekt na late success");
