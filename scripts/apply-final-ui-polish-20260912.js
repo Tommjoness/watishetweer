@@ -13,6 +13,11 @@ const POLLEN_NIEUW="Pollenwaarden zijn een verwachting van CAMS; de werkelijke b
    interactielogica. Deze late laag wint bewust van eerdere gedateerde UI-owners
    zonder hun functionele contracten te wijzigen. */
 const CSS=`
+/* De themabediening volgt dezelfde hoekige vormtaal als de overige headercontrols.
+   Alleen de buitenste groep wordt recht; de interne switchtrack blijft herkenbaar
+   als schakelaar. */
+#thema.wiw-theme-control{border-radius:0}
+
 /* Luchtkwaliteit/pollen: één rustige rij met echte buitenruimte en gelijk ritme. */
 #aq{
   box-sizing:border-box;
