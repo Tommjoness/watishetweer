@@ -13,11 +13,6 @@ const OWNER_ID="wiw-final-ui-polish-20260912";
    delivery-cleanup door apply-live-chart-layout-fix-20260912.js aangepast. */
 const CSS=`
 @media(min-width:1100px){
-  /* De echte Q4-layout bezit nu zelf de compacte hoogte. Neutraliseer uitsluitend
-     de historische visuele -6px-transform zodat geometrie en pixels weer één
-     bron van waarheid hebben. */
-  #chart g[data-q4-rain-periods]{transform:none!important}
-
   /* Bovenaan iets minder lucht, zonder de rustige masthead te comprimeren. */
   .chips{margin-top:12px!important}
   .brief{margin-top:18px!important;padding-top:18px!important}

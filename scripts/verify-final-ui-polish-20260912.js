@@ -21,9 +21,6 @@ function main(){
     const vereisten=[
       "#aq{",
       "padding-inline:18px",
-      "#chart g[data-q4-rain-periods]",
-      "transform:translateY(-6px)",
-      "@media(min-width:1100px)",
       "body > .sheet{border-bottom-color:var(--rule-soft)}",
       "body > .seo-plaatsnav{margin-top:18px!important}",
       "footer .footer-details>summary{",
@@ -40,14 +37,16 @@ function main(){
     for(const fragment of vereisten){
       if(!html.includes(fragment))throw new Error(rel+": UI-contract ontbreekt: "+fragment);
     }
+    if(html.includes("transform:translateY(-6px)"))throw new Error(rel+": historische Q4 regen-transform staat nog in finale UI-polish.");
     if(html.includes("margin-bottom:-6px!important"))throw new Error(rel+": afgekeurde negatieve grafiekmarge staat nog in artifact.");
     geraakt++;
   }
   if(!geraakt)throw new Error("Geen finale UI-polish-artifacts gevonden.");
-  if(!CSS.includes("#aq")||!CSS.includes("#chart g[data-q4-rain-periods]")||!CSS.includes("transform:translateY(-6px)"))throw new Error("CSS-export wijkt af van verifiercontract.");
+  if(!CSS.includes("#aq"))throw new Error("CSS-export wijkt af van verifiercontract.");
+  if(CSS.includes("transform:translateY(-6px)"))throw new Error("CSS-export bevat nog de historische Q4 regen-transform.");
   if(!CSS.includes("footer .footer-details>summary")||!CSS.includes("grid-template-columns:max-content max-content max-content")||!CSS.includes("footer > span.bron:nth-last-of-type(2)")||!CSS.includes("footer > details.footer-details{grid-column:3}"))throw new Error("CSS-export mist deterministisch footerhulprijcontract.");
   if(CSS.includes("margin-bottom:-6px!important"))throw new Error("CSS-export bevat nog de afgekeurde negatieve grafiekmarge.");
-  console.log("Finale UI-polish geverifieerd op "+geraakt+" weerartifacts; footerhulplinks staan deterministisch als compacte desktoprij met onderstreepte technische details, grafiekbox blijft onaangeroerd.");
+  console.log("Finale UI-polish geverifieerd op "+geraakt+" weerartifacts; footerhulplinks staan deterministisch als compacte desktoprij, Q4-regenpositie blijft bij de geometrie-owner en grafiekbox blijft onaangeroerd.");
   return {geraakt};
 }
 
