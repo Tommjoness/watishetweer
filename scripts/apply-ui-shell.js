@@ -4,6 +4,7 @@ const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
+const {autoThemaOpZon}=require("./theme-solar.js");
 
 const OUT=path.join(__dirname,"..","public");
 const pad=path.join(OUT,"index.html");
@@ -86,8 +87,13 @@ document.getElementById("thema").addEventListener("click",()=>{
 });
 themaToepassen();`;
 
+/* Eén pure bron voor de zonnegrens: dezelfde functie wordt in Node getest en
+   hier letterlijk in de finale browserruntime opgenomen. Zo kan de UI-shell
+   niet ongemerkt een andere dag/nachtdefinitie krijgen dan de verifier. */
+const autoThemaRuntime=autoThemaOpZon.toString();
 const themaNieuw=`/* ---------- thema ---------- */
 const THEMA_KEUZES=["auto","licht","donker"];
+${autoThemaRuntime}
 function themaKeuze(){
   const keuze=ls.get("weerbriefing.thema","auto");
   if(THEMA_KEUZES.includes(keuze))return keuze;
@@ -104,7 +110,7 @@ function themaMenuSluit(){
 function themaToepassen(){
   const keuze=themaKeuze();
   let actief=keuze;
-  if(keuze==="auto") actief=(S.d&&S.d.current&&S.d.current.is_day===0)?"donker":"licht";
+  if(keuze==="auto") actief=autoThemaOpZon(S.d,weatherNowActueleLokaleTijd());
   document.documentElement.setAttribute("data-thema",actief);
   document.querySelector('meta[name="theme-color"]').setAttribute("content",
     actief==="donker"?"#0B120F":"#F4F5F3");
@@ -114,7 +120,7 @@ function themaToepassen(){
     knop.innerHTML='Weergave <span class="thema-status" aria-hidden="true">'+zichtbaar+"</span>";
     knop.dataset.actieveThemakeuze=keuze;
     knop.title=keuze==="auto"
-      ?"Weergave kiezen. Automatisch volgt dag en nacht (nu "+actief+")."
+      ?"Weergave kiezen. Automatisch volgt zonsopkomst en zonsondergang (nu "+actief+")."
       :"Weergave kiezen. Huidige voorkeur: "+keuze+".";
     knop.setAttribute("aria-label",knop.title);
   }
@@ -168,10 +174,34 @@ if(themaKnop&&themaMenu){
 themaToepassen();`;
 vervangEen(themaBron,themaNieuw,"oude cyclische themalogica");
 
+/* De plaatsklok is al uitgelijnd op iedere lokale minuutgrens. Auto gebruikt
+   precies die bestaande tik om een open pagina op de minuut van zonsopkomst of
+   zonsondergang om te schakelen; er komt dus geen tweede timer bij. */
+const klokBron=`function klokBijwerken(){
+  const tijd=plaatsKlok(),dag=plaatsVandaag();
+  const pt=document.getElementById("plaatstijd"); if(pt) pt.textContent=tijd;
+  const mt=document.getElementById("minitijd"); if(mt) mt.textContent=tijd;
+  const plaatsSleutel=String(S.lat)+","+String(S.lon);
+  if(klokPlaatsSleutel!==plaatsSleutel){klokPlaatsSleutel=plaatsSleutel;klokKalenderdag=dag;return;}
+  if(klokKalenderdag===null){klokKalenderdag=dag;return;}
+  if(dag!==klokKalenderdag){klokKalenderdag=dag;if(S.lat!=null&&S.d)load(S.lat,S.lon,S.label,true,false);}
+}`;
+const klokNieuw=`function klokBijwerken(){
+  const tijd=plaatsKlok(),dag=plaatsVandaag();
+  const pt=document.getElementById("plaatstijd"); if(pt) pt.textContent=tijd;
+  const mt=document.getElementById("minitijd"); if(mt) mt.textContent=tijd;
+  if(typeof themaKeuze==="function"&&themaKeuze()==="auto")themaToepassen();
+  const plaatsSleutel=String(S.lat)+","+String(S.lon);
+  if(klokPlaatsSleutel!==plaatsSleutel){klokPlaatsSleutel=plaatsSleutel;klokKalenderdag=dag;return;}
+  if(klokKalenderdag===null){klokKalenderdag=dag;return;}
+  if(dag!==klokKalenderdag){klokKalenderdag=dag;if(S.lat!=null&&S.d)load(S.lat,S.lon,S.label,true,false);}
+}`;
+vervangEen(klokBron,klokNieuw,"bestaande minuutklok voor automatische zonnegrens");
+
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline WeatherNow-runtime gevonden na UI-shellcorrectie.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:ui-shell-"+(i+1)}));
 
 fs.writeFileSync(pad,html,"utf8");
 const versie=vernieuwServiceworkerCache(OUT,"UI-shell");
-console.log("UI-shell toegepast: drie duidelijke weergavestanden met zichtbare status, dark-mode contrast, weekinset en één crawlbare/dynamische favicon zonder renderblokkerende early-runtime; serviceworker "+versie+".");
+console.log("UI-shell toegepast: drie duidelijke weergavestanden met exacte lokale zonnegrenzen, dark-mode contrast, weekinset en één crawlbare/dynamische favicon zonder renderblokkerende early-runtime; serviceworker "+versie+".");
