@@ -42,7 +42,7 @@ setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-final-visual-'
   zet('theme-switch-checked',themaSwitch?themaSwitch.getAttribute('aria-checked')||'':'');
   zet('theme-choice',thema?thema.dataset.actieveThemaKeuze||'':'');
   zet('theme-effective',thema?thema.dataset.effectieveThema||'':'');
-  zet('theme-icons',themaSwitch&&themaSwitch.querySelector('.wiw-theme-sun')&&themaSwitch.querySelector('.wiw-theme-moon')?'ja':'nee');zet('theme-disabled',themaAuto&&themaSwitch&&(themaAuto.disabled||themaSwitch.disabled)?'ja':'nee');zet('theme-bootstrap',document.documentElement.dataset.appBootstrap||'');zet('theme-ready-flag',globalThis.__WEATHERNOW_APP_READY__===true?'ja':'nee');
+  zet('theme-icons',themaSwitch&&themaSwitch.querySelector('.wiw-theme-sun')&&themaSwitch.querySelector('.wiw-theme-moon')?'ja':'nee');
   if(thema&&themaAuto&&themaSwitch&&typeof themaToepassen==='function'){
     ls.set("weerbriefing.thema","auto");themaToepassen();
     zet('theme-default',thema.dataset.actieveThemaKeuze||'');
@@ -71,8 +71,13 @@ setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-final-visual-'
 </script>`;
 html=html.replace("</body>",reporter+"</body>");
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-final-visual-"));
+const bootstrapTag=/<script\b[^>]*\bsrc=["']\/(bootstrap-[0-9a-f]{12}\.min\.js)["'][^>]*\bdata-weather-bootstrap\b[^>]*><\/script>/i.exec(html);
+if(!bootstrapTag)throw new Error("final visual fixture mist de actuele release-bootstrap.");
+const bootstrapNaam=bootstrapTag[1],bootstrapBron=path.join(__dirname,"public",bootstrapNaam);
+if(!fs.existsSync(bootstrapBron))throw new Error("final visual fixture mist bootstrapasset "+bootstrapNaam+".");
+html=html.replace('src="/'+bootstrapNaam+'"','src="./'+bootstrapNaam+'"');
 try{
-  const pad=path.join(dir,"index.html");fs.writeFileSync(pad,html,"utf8");
+  const pad=path.join(dir,"index.html");fs.copyFileSync(bootstrapBron,path.join(dir,bootstrapNaam));fs.writeFileSync(pad,html,"utf8");
   const viewports=[[320,844],[390,844],[430,932],[1100,900],[1366,900],[1440,900],[1660,900],[1920,1080]];
   for(const [w,h] of viewports){
     const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${w},${h}`,"--virtual-time-budget=1300","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:36*1024*1024,timeout:30000});
@@ -84,7 +89,7 @@ try{
     if(v('hour-scrollbar')!=='thin'||v('page-scrollbar')!=='thin')throw new Error(`${w}px: scrollbar styling niet actief (hour=${v('hour-scrollbar')}, page=${v('page-scrollbar')})`);
     if(v('night-label')!=='Zichtscore')throw new Error(`${w}px: Nachtzicht gebruikt nog geen duidelijke Zichtscore-label (${v('night-label')})`);
     if(v('visibility-copy')!=='Goed zicht.')throw new Error(`${w}px: redundante zichttekst niet ingekort (${v('visibility-copy')})`);
-    if(v('theme-control')!=='ja'||v('theme-auto-pressed')!=='true'||v('theme-switch-role')!=='switch'||v('theme-switch-checked')!=='false'||v('theme-icons')!=='ja'||v('theme-choice')!=='auto'||v('theme-default')!=='auto'||v('theme-manual')!=='donker'||v('theme-return-auto')!=='auto'||v('theme-return-choice')!=='auto')throw new Error(`${w}px: Auto/Licht/Donker-togglecontract ontbreekt (group=${v('theme-control')}, auto=${v('theme-auto-pressed')}, role=${v('theme-switch-role')}, checked=${v('theme-switch-checked')}, icons=${v('theme-icons')}, keuze=${v('theme-choice')}, default=${v('theme-default')}, manual=${v('theme-manual')}, reset=${v('theme-return-auto')}, disabled=${v('theme-disabled')}, bootstrap=${v('theme-bootstrap')}, ready=${v('theme-ready-flag')})`);
+    if(v('theme-control')!=='ja'||v('theme-auto-pressed')!=='true'||v('theme-switch-role')!=='switch'||v('theme-switch-checked')!=='false'||v('theme-icons')!=='ja'||v('theme-choice')!=='auto'||v('theme-default')!=='auto'||v('theme-manual')!=='donker'||v('theme-return-auto')!=='auto'||v('theme-return-choice')!=='auto')throw new Error(`${w}px: Auto/Licht/Donker-togglecontract ontbreekt (group=${v('theme-control')}, auto=${v('theme-auto-pressed')}, role=${v('theme-switch-role')}, checked=${v('theme-switch-checked')}, icons=${v('theme-icons')}, keuze=${v('theme-choice')}, default=${v('theme-default')}, manual=${v('theme-manual')}, reset=${v('theme-return-auto')})`);
     if(!(Number(v('refresh-opacity'))<Number(v('here-opacity'))&&Number(v('theme-opacity'))<Number(v('here-opacity'))))throw new Error(`${w}px: headerhiërarchie ontbreekt (locatie=${v('here-opacity')}, ververs=${v('refresh-opacity')}, weergave=${v('theme-opacity')})`);
     if(v('divider-light')!=='ok'||v('divider-dark')!=='ok')throw new Error(`${w}px: locatie-divider wijkt af van de controlerij (licht=${v('divider-light')}, donker=${v('divider-dark')})`);
     if(Number(v('overflow'))>2)throw new Error(`${w}px: ${v('overflow')}px horizontale overflow`);
