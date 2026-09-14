@@ -17,7 +17,7 @@ const WATCHDOG_ID="weather-bootstrap-watchdog";
 const FAILURE_ID="bootstrap-failure";
 const NOSCRIPT_ID="weather-js-required";
 const READY_EVENT="weathernow:app-ready";
-const CONTROL_IDS=["q","here","ververs","thema"];
+const CONTROL_IDS=["q","here","ververs","thema-auto","thema-switch"];
 
 function tel(tekst,zoek){return String(tekst).split(zoek).length-1;}
 function vervangExact(bron,oud,nieuw,label){
