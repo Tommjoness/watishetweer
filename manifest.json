@@ -2,8 +2,9 @@
   "name": "Wat is het weer?",
   "short_name": "Weer",
   "description": "Actuele weersverwachting met neerslag, weekverwachting, luchtkwaliteit en nachtzicht.",
-  "start_url": "./index.html",
-  "scope": "./",
+  "id": "/index.html",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#F4F5F3",
@@ -37,7 +38,7 @@
     {
       "name": "Mijn locatie",
       "short_name": "Hier",
-      "url": "./index.html?hier=1",
+      "url": "/?hier=1",
       "description": "Weer voor je huidige positie"
     }
   ]
