@@ -143,7 +143,7 @@ jobs:
         run: node scripts/run-production-pre-sale-acceptance-browser.js
       - name: Bewaar screenshots en bewijsrapport
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: final-release-evidence-${{ github.sha }}
           path: artifacts/final-release
@@ -172,7 +172,7 @@ jobs:
         run: node scripts/cwv-desktop-recovery-browser.js
       - name: Bewaar productie-CWV-bewijs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: production-cwv-${{ github.sha }}
           path: cwv-evidence/
