@@ -9,6 +9,13 @@ if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
 let basis=fs.readFileSync(productie,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
 if(!basis.includes('id="wiw-ui-ux-audit-polish-20260913"'))throw new Error("UI/UX-auditstylesheet ontbreekt in finale artifact");
 basis=basis.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,"").replace(/<script\b[^>]*\/>/gi,"");
+/* De productieruntime voegt na DOMContentLoaded een footerregel met
+   display:flex!important toe. Neem precies die bronregel als late stylesheet
+   mee, zodat deze test dezelfde cascade test als de echte browser. */
+const runtimeBron=fs.readFileSync(path.join(__dirname,"scripts","final-desktop-ui-runtime-20260902.js"),"utf8");
+const lateFooterRegel=/footer\{[^{}]*display:flex!important[^{}]*\}/.exec(runtimeBron);
+if(!lateFooterRegel)throw new Error("Late finale runtime-footerregel ontbreekt.");
+const lateRuntimeStijl='<style id="audit-late-runtime-footer">'+lateFooterRegel[0]+'</style>';
 
 function voerUit(breedte,hoogte){
   const reporter=`<script>
@@ -31,13 +38,13 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('warning-width',parseFloat(cs(warning).borderLeftWidth)||0);zet('warning-color',cs(warning).borderLeftColor);zet('warning-title-weight',cs(warning.querySelector('h3')).fontWeight);
   zet('detail-display',cs(detail).display);zet('detail-size',parseFloat(cs(detail).fontSize)||0);zet('theme-status-width',status.getBoundingClientRect().width);zet('theme-center-delta',Math.abs(midden(status)-midden(thema)).toFixed(3));
   const footerRect=footer.getBoundingClientRect(),overRect=over.getBoundingClientRect(),privacyRect=privacy.getBoundingClientRect(),detailsRect=details.getBoundingClientRect(),disclaimerRect=disclaimer.getBoundingClientRect();
-  zet('over-text',(over.textContent||'').trim());zet('privacy-text',(privacy.textContent||'').trim());zet('over-top',overRect.top.toFixed(3));zet('privacy-top',privacyRect.top.toFixed(3));zet('details-top',detailsRect.top.toFixed(3));zet('disclaimer-bottom',disclaimerRect.bottom.toFixed(3));
+  zet('footer-display',cs(footer).display);zet('over-text',(over.textContent||'').trim());zet('privacy-text',(privacy.textContent||'').trim());zet('over-top',overRect.top.toFixed(3));zet('privacy-top',privacyRect.top.toFixed(3));zet('details-top',detailsRect.top.toFixed(3));zet('disclaimer-bottom',disclaimerRect.bottom.toFixed(3));
   zet('utility-center-delta',Math.abs(((overRect.left+detailsRect.right)/2)-((footerRect.left+footerRect.right)/2)).toFixed(3));
   zet('header-size',parseFloat(cs(kop).fontSize)||0);zet('secondary-size',parseFloat(cs(sec).fontSize)||0);zet('hint-size',parseFloat(cs(hint).fontSize)||0);
   zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}}, {once:true});
 </script>`;
-  const html=basis.replace("</body>",reporter+"</body>"),dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-ui-ux-audit-"));
+  const html=basis.replace("</body>",lateRuntimeStijl+reporter+"</body>"),dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-ui-ux-audit-"));
   try{
     const pad=path.join(dir,"index.html");fs.writeFileSync(pad,html,"utf8");
     const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${breedte},${hoogte}`,"--virtual-time-budget=1200","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:24*1024*1024,timeout:20000});
@@ -61,6 +68,7 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(v("day-arrow")!=="none")throw new Error("desktopchevron lekt naar mobiel op "+breedte+"px");
     }else{
       if(v("nav-display")!=="none")throw new Error("mobiele sectienavigatie lekt naar desktop");
+      if(v("footer-display")!=="grid")throw new Error("late finale runtime zet desktopfooter terug naar "+v("footer-display"));
       if(!/[›]/.test(v("day-arrow")||""))throw new Error("weekrij mist desktopchevron: "+v("day-arrow"));
       if(v("add-border")!=="solid")throw new Error("bewaaractie oogt op desktop nog tijdelijk: "+v("add-border"));
       if(Math.abs(Number(v("over-top"))-Number(v("privacy-top")))>1)throw new Error("Over en Privacy staan niet op dezelfde afsluitende rij");
@@ -71,5 +79,5 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 }
 
-for(const [w,h] of [[360,900],[390,900],[1440,1000]])voerUit(w,h);
-console.log("UI/UX-auditbrowserregressie groen op 360px, 390px en 1440px: navigatie, leesbaarheid, focus, waarschuwingsernst, locatie-identiteit, themastatus en aparte gecentreerde footerhulplinkrij gemeten zonder overflow.");
+for(const [w,h] of [[360,900],[390,900],[1440,1000],[1920,1080]])voerUit(w,h);
+console.log("UI/UX-auditbrowserregressie groen op 360px, 390px, 1440px en 1920px: navigatie, leesbaarheid, focus, waarschuwingsernst, locatie-identiteit, themastatus en aparte gecentreerde footerhulplinkrij inclusief late runtimecascade gemeten zonder overflow.");
