@@ -69,7 +69,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       await page.route("**/api/luchtkwaliteit**",route=>antwoord(route,{beschikbaar:false,provider:"luchtmeetnet",reden:"niet beschikbaar"}));
 
       const params=new URLSearchParams({lat:"52.3676",lon:"4.9041",plaats:"Amsterdam",land:"NL"});
-      const response=await page.goto(ROOT+"/?"+params,{waitUntil:"domcontentloaded",timeout:30000});
+      const weatherUrl=ROOT+"/?"+params;
+      const response=await page.goto(weatherUrl,{waitUntil:"domcontentloaded",timeout:30000});
       assert(response&&response.ok(),`${vp.naam}: homepage HTTP ${response&&response.status()}`);
       await page.waitForSelector("#app",{state:"visible",timeout:10000});
       await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length===7,null,{timeout:10000});
@@ -96,7 +97,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       for(const r of basis.topRects)assert(binnenViewport(r,vp.width),`${vp.naam}: zichtbare bovenste bediening '${String(r.label).trim()}' valt buiten viewport`);
 
       const themaVoor=await page.evaluate(()=>{
-        const groep=document.getElementById("thema"),auto=document.getElementById("thema-auto"),schakelaar=document.getElementById("thema-switch"),r=groep?.getBoundingClientRect(),track=schakelaar?.querySelector(".wiw-theme-track")?.getBoundingClientRect(),thumb=schakelaar?.querySelector(".wiw-theme-thumb")?.getBoundingClientRect();
+        const groep=document.getElementById("thema"),auto=document.getElementById("thema-auto"),schakelaar=document.getElementById("thema-switch"),zon=schakelaar?.querySelector(".wiw-theme-sun"),maan=schakelaar?.querySelector(".wiw-theme-moon"),r=groep?.getBoundingClientRect(),track=schakelaar?.querySelector(".wiw-theme-track")?.getBoundingClientRect(),thumb=schakelaar?.querySelector(".wiw-theme-thumb")?.getBoundingClientRect();
+        const ar=auto?.getBoundingClientRect(),zr=zon?.getBoundingClientRect(),mr=maan?.getBoundingClientRect();
         return {
           role:groep?.getAttribute("role")||"",
           popup:groep?.getAttribute("aria-haspopup")||"",
@@ -107,11 +109,16 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           switchRole:schakelaar?.getAttribute("role")||"",
           checked:schakelaar?.getAttribute("aria-checked")||"",
           menu:!!document.getElementById("themamenu"),
-          icons:!!schakelaar?.querySelector(".wiw-theme-sun")&&!!schakelaar?.querySelector(".wiw-theme-moon"),
+          icons:!!zon&&!!maan,
           toggleWidth:schakelaar?.getBoundingClientRect().width||0,
           trackWidth:track?.width||0,
           thumbWidth:thumb?.width||0,
-          rect:r?{left:r.left,right:r.right,width:r.width}:null
+          rect:r?{left:r.left,right:r.right,width:r.width,height:r.height,top:r.top}:null,
+          segmenten:ar&&zr&&mr?{
+            auto:{left:ar.left,width:ar.width,height:ar.height,top:ar.top},
+            licht:{left:zr.left,width:zr.width,height:zr.height,top:zr.top,label:getComputedStyle(zon,"::after").content},
+            donker:{left:mr.left,width:mr.width,height:mr.height,top:mr.top,label:getComputedStyle(maan,"::after").content}
+          }:null
         };
       });
       assert.equal(themaVoor.role,"group",`${vp.naam}: Weergavegroep heeft niet de verwachte semantische group-rol`);
@@ -127,18 +134,30 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert(themaVoor.trackWidth>=24&&themaVoor.trackWidth<=34,`${vp.naam}: toggle-track heeft onverwachte breedte (${themaVoor.trackWidth}px)`);
       assert(themaVoor.thumbWidth>=10&&themaVoor.thumbWidth<=16,`${vp.naam}: toggle-thumb heeft onverwachte breedte (${themaVoor.thumbWidth}px)`);
       assert(binnenViewport(themaVoor.rect,vp.width),`${vp.naam}: Weergavegroep valt buiten viewport`);
+      if(vp.width<=430){
+        const s=themaVoor.segmenten;
+        assert(s,`${vp.naam}: mobiele driewegsegmenten ontbreken`);
+        assert(themaVoor.rect.height>=45.5,`${vp.naam}: themarij is te laag (${themaVoor.rect.height}px)`);
+        for(const [naam,seg] of Object.entries(s))assert(seg.height>=43.5,`${vp.naam}: ${naam}-touchdoel is te laag (${seg.height}px)`);
+        const breedtes=[s.auto.width,s.licht.width,s.donker.width];
+        assert(Math.max(...breedtes)-Math.min(...breedtes)<=2,`${vp.naam}: Auto/Licht/Donker zijn niet gelijk verdeeld (${breedtes.map(x=>x.toFixed(1)).join("/")}px)`);
+        assert(Math.max(Math.abs(s.auto.top-s.licht.top),Math.abs(s.auto.top-s.donker.top))<=1,`${vp.naam}: thema-opties delen niet één rij`);
+        assert(/Licht/i.test(s.licht.label),`${vp.naam}: zichtbaar Licht-label ontbreekt`);
+        assert(/Donker/i.test(s.donker.label),`${vp.naam}: zichtbaar Donker-label ontbreekt`);
+      }
 
-      await page.evaluate(()=>{ls.set("weerbriefing.thema","licht");themaToepassen();});
-      await page.locator("#thema-switch").click();
+      await page.locator('[data-thema-handmatig="donker"]').click();
       const themaNa=await page.evaluate(()=>{
         const lees=key=>{try{const raw=localStorage.getItem(key);return raw==null?null:JSON.parse(raw);}catch(e){return null;}};
+        const leesSessie=key=>{try{const raw=sessionStorage.getItem(key);return raw==null?null:JSON.parse(raw);}catch(e){return null;}};
         const groep=document.getElementById("thema"),schakelaar=document.getElementById("thema-switch");
         return {
           keuze:groep?.dataset.actieveThemaKeuze||"",
           actief:document.documentElement.getAttribute("data-thema")||"",
           autoPressed:document.getElementById("thema-auto")?.getAttribute("aria-pressed")||"",
           checked:schakelaar?.getAttribute("aria-checked")||"",
-          voorkeur:lees("weerbriefing.thema"),
+          sessie:leesSessie("weerbriefing.thema.sessie"),
+          legacyMirror:lees("weerbriefing.thema"),
           actiefBewaar:lees("weerbriefing.actiefThema"),
           label:schakelaar?.getAttribute("aria-label")||"",
           title:schakelaar?.getAttribute("title")||""
@@ -148,25 +167,18 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert.equal(themaNa.actief,"donker",`${vp.naam}: gerenderd thema volgt Donker-keuze niet`);
       assert.equal(themaNa.autoPressed,"false",`${vp.naam}: Auto blijft actief na handmatige Donker-keuze`);
       assert.equal(themaNa.checked,"true",`${vp.naam}: Donker-stand wordt niet zichtbaar aangezet`);
-      assert.equal(themaNa.voorkeur,"donker",`${vp.naam}: expliciete themakeuze wordt niet persistent opgeslagen`);
-      assert.equal(themaNa.actiefBewaar,"donker",`${vp.naam}: actieve themastaat wordt niet persistent opgeslagen`);
+      assert.equal(themaNa.sessie,"donker",`${vp.naam}: expliciete themakeuze wordt niet sessiegebonden opgeslagen`);
+      assert.equal(themaNa.legacyMirror,"donker",`${vp.naam}: compatibiliteitsmirror volgt de sessiekeuze niet`);
+      assert.equal(themaNa.actiefBewaar,"donker",`${vp.naam}: actieve themastaat wordt niet opgeslagen`);
       assert(themaNa.label&&themaNa.title,`${vp.naam}: Licht/donker-toggle mist toegankelijke toestandstekst`);
 
-      await page.locator("#thema-auto").click();
-      const autoNa=await page.evaluate(()=>{
-        const groep=document.getElementById("thema"),auto=document.getElementById("thema-auto");
-        let voorkeur=null;try{voorkeur=JSON.parse(localStorage.getItem("weerbriefing.thema"));}catch(e){}
-        return {keuze:groep?.dataset.actieveThemaKeuze||"",autoPressed:auto?.getAttribute("aria-pressed")||"",voorkeur};
-      });
-      assert.deepEqual(autoNa,{keuze:"auto",autoPressed:"true",voorkeur:"auto"},`${vp.naam}: Auto-knop zet de automatische standaard niet terug`);
-      await page.evaluate(()=>{ls.set("weerbriefing.thema","donker");themaToepassen();});
-
-      const hub=await context.newPage(),hubErrors=[];
-      hub.on("pageerror",e=>hubErrors.push(String(e)));
-      const hubResponse=await hub.goto(ROOT+"/weer/",{waitUntil:"domcontentloaded",timeout:30000});
+      /* Navigatie in dezelfde tab houdt sessionStorage bewust vast. Daarmee
+         bewijzen we het nieuwe contract zonder de oude permanente localStorage-
+         voorkeur opnieuw tot bron van waarheid te maken. */
+      const hubResponse=await page.goto(ROOT+"/weer/",{waitUntil:"domcontentloaded",timeout:30000});
       assert(hubResponse&&hubResponse.ok(),`${vp.naam}: /weer/ HTTP ${hubResponse&&hubResponse.status()}`);
-      await hub.waitForSelector("#thema",{state:"visible",timeout:5000});
-      const hubState=await hub.evaluate(()=>{
+      await page.waitForSelector("#thema",{state:"visible",timeout:5000});
+      const hubState=await page.evaluate(()=>{
         const knop=document.getElementById("thema"),r=knop?.getBoundingClientRect(),script=document.querySelector('script[src="/theme-hub.js"]'),eersteCss=document.querySelector('style,link[rel="stylesheet"]');
         const zon=knop?.querySelector(".wiw-theme-sun")?.getBoundingClientRect(),track=knop?.querySelector(".wiw-theme-track")?.getBoundingClientRect(),maan=knop?.querySelector(".wiw-theme-moon")?.getBoundingClientRect();
         return {
@@ -180,18 +192,44 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           scriptVoorCss:!!script&&!!eersteCss&&!!(script.compareDocumentPosition(eersteCss)&Node.DOCUMENT_POSITION_FOLLOWING)
         };
       });
-      assert.equal(hubState.actief,themaNa.actief,`${vp.naam}: thema valt terug bij navigatie naar /weer/`);
-      assert.equal(hubState.checked,themaNa.actief==="donker"?"true":"false",`${vp.naam}: /weer/-switch weerspiegelt opgeslagen thema niet`);
+      assert.equal(hubState.actief,"donker",`${vp.naam}: sessiegebonden Donker-keuze valt terug bij navigatie naar /weer/`);
+      assert.equal(hubState.checked,"true",`${vp.naam}: /weer/-switch weerspiegelt de sessiegebonden Donker-keuze niet`);
       assert.equal(hubState.role,"switch",`${vp.naam}: /weer/ gebruikt geen semantische switch`);
       assert.equal(hubState.menu,false,`${vp.naam}: /weer/ bevat ten onrechte het weather-themamenu`);
       assert(hubState.zonNaarTrack>=7.5&&hubState.zonNaarTrack<=10.5,`${vp.naam}: /weer/ zon-switchafstand ${hubState.zonNaarTrack}px valt buiten 8–10px richtlijn`);
       assert(hubState.trackNaarMaan>=9.5&&hubState.trackNaarMaan<=12.5,`${vp.naam}: /weer/ switch-maanafstand ${hubState.trackNaarMaan}px valt buiten 10–12px richtlijn`);
       assert(binnenViewport(hubState.rect,vp.width),`${vp.naam}: /weer/-switch valt buiten viewport`);
       assert.equal(hubState.scriptVoorCss,true,`${vp.naam}: /weer/ themascript staat niet vóór de eerste inline of externe CSS`);
-      await hub.reload({waitUntil:"domcontentloaded",timeout:30000});
-      assert.equal(await hub.evaluate(()=>document.documentElement.getAttribute("data-thema")||"licht"),themaNa.actief,`${vp.naam}: thema blijft niet behouden na reload van /weer/`);
-      assert.deepEqual(hubErrors,[],`${vp.naam}: /weer/ pageerrors ${hubErrors.join(" | ")}`);
-      await hub.close();
+      await page.reload({waitUntil:"domcontentloaded",timeout:30000});
+      assert.equal(await page.evaluate(()=>document.documentElement.getAttribute("data-thema")||"licht"),"donker",`${vp.naam}: sessiegebonden thema blijft niet behouden na reload van /weer/`);
+
+      const terug=await page.goto(weatherUrl,{waitUntil:"domcontentloaded",timeout:30000});
+      assert(terug&&terug.ok(),`${vp.naam}: terugkeer naar weatherpagina HTTP ${terug&&terug.status()}`);
+      await page.waitForSelector("#app",{state:"visible",timeout:10000});
+      await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length===7,null,{timeout:10000});
+      assert.equal(await page.evaluate(()=>document.getElementById("thema")?.dataset.actieveThemaKeuze||""),"donker",`${vp.naam}: weatherpagina verliest sessiegebonden Donker-keuze na terugnavigatie`);
+
+      await page.locator("#thema-auto").click();
+      const autoNa=await page.evaluate(()=>{
+        const lees=(store,key)=>{try{const raw=store.getItem(key);return raw==null?null:JSON.parse(raw);}catch(e){return null;}};
+        const groep=document.getElementById("thema"),auto=document.getElementById("thema-auto");
+        return {keuze:groep?.dataset.actieveThemaKeuze||"",actief:document.documentElement.getAttribute("data-thema")||"",autoPressed:auto?.getAttribute("aria-pressed")||"",sessie:lees(sessionStorage,"weerbriefing.thema.sessie"),legacyMirror:lees(localStorage,"weerbriefing.thema")};
+      });
+      assert.equal(autoNa.keuze,"auto",`${vp.naam}: Auto-knop zet de automatische standaard niet terug`);
+      assert.equal(autoNa.autoPressed,"true",`${vp.naam}: Auto-knop markeert Auto niet als actief`);
+      assert.equal(autoNa.sessie,"auto",`${vp.naam}: Auto-reset wordt niet in de sessie opgeslagen`);
+      assert.equal(autoNa.legacyMirror,"auto",`${vp.naam}: legacy mirror volgt Auto-reset niet`);
+      /* Een oude/per ongeluk geschreven localStorage-voorkeur mag de sessiestand
+         niet meer overnemen; dit is precies de nachtelijke 'blind door Licht'-regressie. */
+      const legacyGenegeerd=await page.evaluate(()=>{
+        localStorage.setItem("weerbriefing.thema",JSON.stringify("donker"));
+        themaToepassen();
+        let sessie=null;try{sessie=JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie"));}catch(e){}
+        return {keuze:document.getElementById("thema")?.dataset.actieveThemaKeuze||"",actief:document.documentElement.getAttribute("data-thema")||"",sessie};
+      });
+      assert.equal(legacyGenegeerd.keuze,"auto",`${vp.naam}: legacy localStorage overschrijft de Auto-sessiestand`);
+      assert.equal(legacyGenegeerd.sessie,"auto",`${vp.naam}: legacy localStorage verandert sessionStorage`);
+      assert.equal(legacyGenegeerd.actief,autoNa.actief,`${vp.naam}: legacy localStorage verandert het effectieve Auto-thema`);
 
       const q=page.locator("#q");
       await q.fill("Singapore");
@@ -211,11 +249,11 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       await page.screenshot({path:png,fullPage:true});
       assert(fs.existsSync(png)&&fs.statSync(png).size>5000,`${vp.naam}: screenshot ontbreekt of is verdacht klein`);
       const hash=crypto.createHash("sha256").update(fs.readFileSync(png)).digest("hex").slice(0,12);
-      console.log(`${vp.naam}: gedeployde preview zonder overflow; topcontrols/Auto-Licht-Donker-toggle/themapersistentie/zoeklijst/pressure-retirement/neerslag/a11y correct; screenshot sha256 ${hash}.`);
+      console.log(`${vp.naam}: gedeployde preview zonder overflow; topcontrols/Auto-Licht-Donker-segmenten/sessiethema/zoeklijst/pressure-retirement/neerslag/a11y correct; screenshot sha256 ${hash}.`);
       assert.deepEqual(pageErrors,[],`${vp.naam}: pageerrors ${pageErrors.join(" | ")}`);
       await context.close();
     }
-    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 8 echte viewports met gecontroleerde data, thema-navigatiepersistentie en tijdelijke screenshots.`);
+    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 8 echte viewports met gecontroleerde data, sessiegebonden thema-navigatie en tijdelijke screenshots.`);
   }finally{
     fs.rmSync(tmp,{recursive:true,force:true});
     await browser.close();
