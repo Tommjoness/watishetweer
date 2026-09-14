@@ -39,6 +39,11 @@ for(const p of htmlBestanden(OUT)){
   assert(html.includes('#thema .thema-status{'),rel+": zichtbare themastatus mist styling");
   assert(html.includes('.chip.add{border-style:solid!important'),rel+": plaats opslaan oogt op desktop nog als tijdelijke toestand");
   assert(html.includes('#days .row.day:not(.kop)::after{content:"›"'),rel+": weekrij mist desktop-affordance");
+  assert(html.includes('footer > span.bron:first-of-type{grid-column:1 / -1!important;grid-row:1!important'),rel+": bronnenregel heeft geen vaste eerste footerrij");
+  assert(html.includes('footer > span.bron:nth-of-type(2){grid-column:1 / -1!important;grid-row:2!important'),rel+": disclaimer heeft geen vaste tweede footerrij");
+  assert(html.includes('footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important'),rel+": Over-link heeft geen vaste utilityrij");
+  assert(html.includes('footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important'),rel+": Privacy-link heeft geen vaste utilityrij");
+  assert(html.includes('footer > details.footer-details{grid-column:3!important;grid-row:3!important'),rel+": technische locatiegegevens hebben geen vaste utilityrij");
   assert(html.includes('.mobile-section-nav{display:grid;grid-template-columns:repeat(4'),rel+": mobiele sectienavigatie wordt niet compact zichtbaar");
   assert(html.includes('.row.kop>*{font-size:11px!important'),rel+": mobiele tabelkoppen blijven te klein");
   assert(html.includes('.hint,.data-uitleg{font-size:13px!important'),rel+": mobiele toelichting blijft te klein");
@@ -49,4 +54,4 @@ for(const p of htmlBestanden(OUT)){
 assert(gezien>0,"Geen finale weerartifacts gevonden voor UI/UX-auditcontrole.");
 const cache=verifieerServiceworkerCache(OUT,"ui-ux-audit-polish-20260913");
 assert(/^watishetweer-[0-9a-f]{12}$/.test(cache),"serviceworker-cache hoort bij de gewijzigde artifact");
-console.log("UI/UX-auditcontrole groen voor "+gezien+" weerartifacts: locatie-identiteit, mobiel ritme, waarschuwingsernst en interactie-affordances geborgd; cache "+cache+".");
+console.log("UI/UX-auditcontrole groen voor "+gezien+" weerartifacts: locatie-identiteit, mobiel ritme, waarschuwingsernst, vaste footerrijen en interactie-affordances geborgd; cache "+cache+".");
