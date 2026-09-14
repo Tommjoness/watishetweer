@@ -54,7 +54,7 @@ ok((html.match(/klokMinuutTimer=setInterval\(klokBijwerken,60000\)/g)||[]).lengt
 ok(!html.includes('if(keuze==="auto") actief=(S.d&&S.d.current&&S.d.current.is_day===0)?"donker":"licht";'),"finale UI-shell gebruikt current.is_day niet meer als normale Auto-omschakelgrens");
 ok(html.includes('#thema.wiw-theme-control{')&&html.includes('#thema .wiw-theme-track{')&&html.includes('#thema .wiw-theme-thumb{'),"toggle gebruikt een rustige passende track/thumb-vorm");
 ok(html.includes('#thema[data-effectieve-thema="donker"] .wiw-theme-thumb{transform:translateX(14px)'),"donkere effectieve stand schuift de thumb zichtbaar naar de maan");
-ok(html.includes('@media(max-width:430px){\\n  #thema.wiw-theme-control'),"toggle schaalt mee op compacte mobiele viewports");
+ok(html.includes('@media(max-width:430px){\n  #thema.wiw-theme-control'),"toggle schaalt mee op compacte mobiele viewports");
 ok(html.includes('html[data-thema="donker"]{--ink-45:#A8A8A8;--ink-25:#959595}'),"secundaire dark-mode tekst heeft versterkt contrast");
 ok(html.includes('@media(min-width:901px){#days .row.day,#days .row.kop{padding-right:8px}}'),"weekneerslag houdt op desktop afstand tot de rechterrand");
 ok(html.includes('e.key==="ArrowLeft"')&&html.includes('e.key==="ArrowRight"')&&html.includes('e.key==="Home"')&&html.includes('e.key==="End"'),"toggle ondersteunt standaard toetsenbordnavigatie");
