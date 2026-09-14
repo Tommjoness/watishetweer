@@ -13,7 +13,7 @@ const BOOTSTRAP_RE=/\/bootstrap-([0-9a-f]{12})\.min\.js/g;
 const HASHED_RE=/^(?:app|bootstrap|page|early)-[0-9a-f]{12}\.min\.js$/;
 const BUILD_RE=/<meta name="weather-build-sha" content="([^"]+)">/;
 const CANONICAL_RE=/<link rel="canonical" href="([^"]+)">/;
-const CONTROL_IDS=["q","here","ververs","thema"];
+const CONTROL_IDS=["q","here","ververs","thema-auto","thema-switch"];
 const FRESHNESS_OWNER=`window.addEventListener("pageshow",()=>{\n  if(!S.d)return;\n  klokBijwerken();\n  stempel();\n});`;
 
 function lees(rel){
