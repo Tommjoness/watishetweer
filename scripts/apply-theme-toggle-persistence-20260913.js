@@ -80,8 +80,10 @@ function htmlBestanden(dir){
 function patchWeatherHtml(html,rel){
   let bron=String(html||"");
   if(!bron.includes('id="app"')||!bron.includes('id="thema"'))return {html:bron,geraakt:false};
-  if(!bron.includes('id="themamenu"')||!bron.includes('data-thema-keuze="auto"'))throw new Error(rel+": finale Auto/Licht/Donker-bediening ontbreekt vóór themapersistentie.");
-  if(bron.includes('class="wiw-theme-switch"'))throw new Error(rel+": verouderde binaire weather-switch mag de UI-shell niet meer bezitten.");
+  const heeftAutoToggle=bron.includes('id="thema-auto"')&&bron.includes('data-thema-keuze="auto"')&&bron.includes('id="thema-switch"')&&bron.includes('role="switch"');
+  const heeftOudMenu=bron.includes('id="themamenu"')||bron.includes('aria-haspopup="menu"');
+  if(heeftOudMenu||!heeftAutoToggle)throw new Error(rel+": finale Auto/Licht/Donker-bediening ontbreekt vóór themapersistentie.");
+  if(/<button[^>]*id="thema"[^>]*class="wiw-theme-switch"/.test(bron))throw new Error(rel+": verouderde binaire weather-switch mag de UI-shell niet meer bezitten.");
   if(tel(bron,THEMA_START)!==1||tel(bron,THEMA_EIND)!==1)throw new Error(rel+": themaruntime-ankers ontbreken of zijn dubbel.");
   if(!bron.includes("autoThemaOpZon")||!bron.includes("weatherNowActueleLokaleTijd()"))throw new Error(rel+": locatiegebonden zonne-Auto ontbreekt vóór themapersistentie.");
 
