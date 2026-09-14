@@ -295,7 +295,7 @@ function patchHub(){
   if(!fs.existsSync(p))return false;
   const oud=fs.readFileSync(p,"utf8");
   if(oud===HUB_RUNTIME)return false;
-  if(!oud.includes('const PREF="weerbriefing.thema"')||!oud.includes('id="thema"'))throw new Error("theme-hub.js heeft een onbekend contract.");
+  if(!oud.includes('const PREF="weerbriefing.thema"')||!oud.includes('getElementById("thema")'))throw new Error("theme-hub.js heeft een onbekend contract.");
   new vm.Script(HUB_RUNTIME,{filename:"theme-hub.js"});
   fs.writeFileSync(p,HUB_RUNTIME,"utf8");
   return true;
