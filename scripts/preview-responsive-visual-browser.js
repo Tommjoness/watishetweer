@@ -211,7 +211,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       await page.screenshot({path:png,fullPage:true});
       assert(fs.existsSync(png)&&fs.statSync(png).size>5000,`${vp.naam}: screenshot ontbreekt of is verdacht klein`);
       const hash=crypto.createHash("sha256").update(fs.readFileSync(png)).digest("hex").slice(0,12);
-      console.log(`${vp.naam}: gedeployde preview zonder overflow; topcontrols/Auto-Licht-Donker-menu/themapersistentie/zoeklijst/pressure-retirement/neerslag/a11y correct; screenshot sha256 ${hash}.`);
+      console.log(`${vp.naam}: gedeployde preview zonder overflow; topcontrols/Auto-Licht-Donker-toggle/themapersistentie/zoeklijst/pressure-retirement/neerslag/a11y correct; screenshot sha256 ${hash}.`);
       assert.deepEqual(pageErrors,[],`${vp.naam}: pageerrors ${pageErrors.join(" | ")}`);
       await context.close();
     }
