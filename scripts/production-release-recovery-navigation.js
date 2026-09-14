@@ -410,7 +410,7 @@ async function maakStaleCache(page,naam){
         assert.equal(offline.build,actief.build,"offline shell wijkt af van actuele build");
         assert.equal(offline.app,actief.app,"offline shell wijkt af van actuele app-bundle");
         assert.equal(offline.bootstrap,actief.bootstrap,"offline shell wijkt af van actuele bootstrap-bundle");
-        for(const id of ["q","here","ververs","thema"])
+        for(const id of ["q","here","ververs","thema-auto","thema-switch"])
           assert.equal(await page.locator("#"+id).isDisabled(),false,`offline actuele appstart moet ${id} activeren`);
       }finally{
         if(!workerNetwerk&&workerNetwerkfoutActief&&witness){
