@@ -26,7 +26,7 @@ for(const p of weer){
   eis(html.includes('#minibar{top:env(safe-area-inset-top)!important'),rel+": minibar respecteert de top-safe-area niet");
   eis(html.includes('.sheet{padding-left:16px!important;padding-right:16px!important}'),rel+": compacte mobiele sheet-padding ontbreekt");
   eis(html.includes('.tools #ververs,.tools #thema{color:var(--ink-45);opacity:.72'),rel+": secundaire headeracties missen hiërarchie");
-  eis(html.includes('.tools #here{color:var(--ink);border-color:var(--ink);font-weight:600}'),rel+": primaire locatieactie mist nadruk");
+  eis(html.includes('.tools #here{color:var(--ink);border-color:var(--rule);font-weight:600}'),rel+": primaire locatieactie mist tekstnadruk of subtiele divider");
   eis(html.includes('kop.textContent="Zichtscore"'),rel+": Nachtzicht-label is niet semantisch aangescherpt");
   eis(html.includes('sub.textContent="Goed zicht."'),rel+": redundante zicht-helpertekst is niet aangescherpt");
   eis(html.includes('if(knop.textContent!==label)knop.textContent=label'),rel+": mobiele urenruntime kan onnodige observer-mutaties veroorzaken");
