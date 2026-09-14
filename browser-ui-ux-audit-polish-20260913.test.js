@@ -9,6 +9,13 @@ if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
 let basis=fs.readFileSync(productie,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
 if(!basis.includes('id="wiw-ui-ux-audit-polish-20260913"'))throw new Error("UI/UX-auditstylesheet ontbreekt in finale artifact");
 basis=basis.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,"").replace(/<script\b[^>]*\/>/gi,"");
+/* De productieruntime voegt na DOMContentLoaded een footerregel met
+   display:flex!important toe. Neem precies die bronregel als late stylesheet
+   mee, zodat deze test dezelfde cascade test als de echte browser. */
+const runtimeBron=fs.readFileSync(path.join(__dirname,"scripts","final-desktop-ui-runtime-20260902.js"),"utf8");
+const lateFooterRegel=/footer\{[^{}]*display:flex!important[^{}]*\}/.exec(runtimeBron);
+if(!lateFooterRegel)throw new Error("Late finale runtime-footerregel ontbreekt.");
+const lateRuntimeStijl='<style id="audit-late-runtime-footer">'+lateFooterRegel[0]+'</style>';
 
 function voerUit(breedte,hoogte){
   const reporter=`<script>
@@ -22,22 +29,22 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   thema.innerHTML='Weergave <span class="thema-status" aria-hidden="true">A</span>';thema.dataset.actieveThemakeuze='auto';
   const hour=document.createElement('table');hour.className='wiw-hour-table';hour.innerHTML='<thead><tr><th>Tijd</th><th>Weer</th><th>Temperatuur</th></tr></thead><tbody><tr><td><time>18:00</time><span class="wiw-hour-date">ma 14</span></td><td>Helder</td><td><span class="wiw-hour-primary">18°</span><span class="wiw-hour-secondary">voelt 17°</span></td></tr></tbody>';app.appendChild(hour);
   const nav=document.querySelector('.mobile-section-nav'),links=[...nav.querySelectorAll('a')],row=days.querySelector('[role="button"]'),warning=warnings.firstElementChild,detail=results.querySelector('.zoekresultaat-detail'),add=chips.querySelector('.chip.add'),kop=hour.querySelector('th'),sec=hour.querySelector('.wiw-hour-secondary'),hint=document.querySelector('.hint'),status=thema.querySelector('.thema-status');
-  const footer=document.querySelector('footer'),directe=[...footer.querySelectorAll(':scope > span.bron')],over=directe.find(x=>x.querySelector('a[href="/over/"]')),privacy=directe.find(x=>x.querySelector('a[href="/privacy"]')),disclaimer=directe.find(x=>/Weersinformatie is algemeen/.test(x.textContent||'')),details=footer.querySelector(':scope > details.footer-details');
-  if(!over||!privacy||!disclaimer||!details)throw new Error('footerhulplinks of disclaimer ontbreken');
+  const footer=document.querySelector('footer'),directe=[...footer.querySelectorAll(':scope > span.bron')],bronnen=directe.find(x=>x.querySelector('a[href*="open-meteo.com"]')),over=directe.find(x=>x.querySelector('a[href="/over/"]')),privacy=directe.find(x=>x.querySelector('a[href="/privacy"]')),disclaimer=directe.find(x=>/Weersinformatie is algemeen/.test(x.textContent||'')),details=footer.querySelector(':scope > details.footer-details');
+  if(!bronnen||!over||!privacy||!disclaimer||!details)throw new Error('footerbronnen, hulplinks of disclaimer ontbreken');
   const cs=x=>getComputedStyle(x),pseudo=getComputedStyle(row,'::after'),midden=x=>{const r=x.getBoundingClientRect();return (r.top+r.bottom)/2;};
   const focusDoel=cs(nav).display==='none'?row:links[0];focusDoel.focus();
   zet('nav-display',cs(nav).display);zet('nav-links',links.length);zet('nav-min-height',Math.min(...links.map(x=>x.getBoundingClientRect().height)));
   zet('focus-width',parseFloat(cs(focusDoel).outlineWidth)||0);zet('day-arrow',pseudo.content);zet('add-border',cs(add).borderStyle);
   zet('warning-width',parseFloat(cs(warning).borderLeftWidth)||0);zet('warning-color',cs(warning).borderLeftColor);zet('warning-title-weight',cs(warning.querySelector('h3')).fontWeight);
   zet('detail-display',cs(detail).display);zet('detail-size',parseFloat(cs(detail).fontSize)||0);zet('theme-status-width',status.getBoundingClientRect().width);zet('theme-center-delta',Math.abs(midden(status)-midden(thema)).toFixed(3));
-  const footerRect=footer.getBoundingClientRect(),overRect=over.getBoundingClientRect(),privacyRect=privacy.getBoundingClientRect(),detailsRect=details.getBoundingClientRect(),disclaimerRect=disclaimer.getBoundingClientRect();
-  zet('over-text',(over.textContent||'').trim());zet('privacy-text',(privacy.textContent||'').trim());zet('over-top',overRect.top.toFixed(3));zet('privacy-top',privacyRect.top.toFixed(3));zet('details-top',detailsRect.top.toFixed(3));zet('disclaimer-bottom',disclaimerRect.bottom.toFixed(3));
+  const footerRect=footer.getBoundingClientRect(),bronnenRect=bronnen.getBoundingClientRect(),overRect=over.getBoundingClientRect(),privacyRect=privacy.getBoundingClientRect(),detailsRect=details.getBoundingClientRect(),disclaimerRect=disclaimer.getBoundingClientRect();
+  zet('source-overflow',Math.max(0,footerRect.left-bronnenRect.left,bronnenRect.right-footerRect.right).toFixed(3));zet('footer-display',cs(footer).display);zet('over-text',(over.textContent||'').trim());zet('privacy-text',(privacy.textContent||'').trim());zet('over-top',overRect.top.toFixed(3));zet('privacy-top',privacyRect.top.toFixed(3));zet('details-top',detailsRect.top.toFixed(3));zet('disclaimer-bottom',disclaimerRect.bottom.toFixed(3));
   zet('utility-center-delta',Math.abs(((overRect.left+detailsRect.right)/2)-((footerRect.left+footerRect.right)/2)).toFixed(3));
   zet('header-size',parseFloat(cs(kop).fontSize)||0);zet('secondary-size',parseFloat(cs(sec).fontSize)||0);zet('hint-size',parseFloat(cs(hint).fontSize)||0);
   zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}}, {once:true});
 </script>`;
-  const html=basis.replace("</body>",reporter+"</body>"),dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-ui-ux-audit-"));
+  const html=basis.replace("</body>",lateRuntimeStijl+reporter+"</body>"),dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-ui-ux-audit-"));
   try{
     const pad=path.join(dir,"index.html");fs.writeFileSync(pad,html,"utf8");
     const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${breedte},${hoogte}`,"--virtual-time-budget=1200","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:24*1024*1024,timeout:20000});
@@ -61,6 +68,8 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(v("day-arrow")!=="none")throw new Error("desktopchevron lekt naar mobiel op "+breedte+"px");
     }else{
       if(v("nav-display")!=="none")throw new Error("mobiele sectienavigatie lekt naar desktop");
+      if(v("footer-display")!=="grid")throw new Error("late finale runtime zet desktopfooter terug naar "+v("footer-display"));
+      if(Number(v("source-overflow"))>1)throw new Error("bronnenregel steekt buiten de desktopfooter op "+breedte+"px: "+v("source-overflow")+"px");
       if(!/[›]/.test(v("day-arrow")||""))throw new Error("weekrij mist desktopchevron: "+v("day-arrow"));
       if(v("add-border")!=="solid")throw new Error("bewaaractie oogt op desktop nog tijdelijk: "+v("add-border"));
       if(Math.abs(Number(v("over-top"))-Number(v("privacy-top")))>1)throw new Error("Over en Privacy staan niet op dezelfde afsluitende rij");
@@ -71,5 +80,5 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 }
 
-for(const [w,h] of [[360,900],[390,900],[1440,1000]])voerUit(w,h);
-console.log("UI/UX-auditbrowserregressie groen op 360px, 390px en 1440px: navigatie, leesbaarheid, focus, waarschuwingsernst, locatie-identiteit, themastatus en aparte gecentreerde footerhulplinkrij gemeten zonder overflow.");
+for(const [w,h] of [[360,900],[390,900],[1280,1000],[1440,1000],[1920,1080]])voerUit(w,h);
+console.log("UI/UX-auditbrowserregressie groen op 360px, 390px, 1280px, 1440px en 1920px: navigatie, leesbaarheid, focus, waarschuwingsernst, locatie-identiteit, themastatus, begrensde bronnenregel en aparte gecentreerde footerhulplinkrij inclusief late runtimecascade gemeten zonder overflow.");

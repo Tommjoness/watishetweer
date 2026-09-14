@@ -23,15 +23,17 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   #days .row.day:not(.kop){padding-right:24px!important}
   #days .row.day:not(.kop)::after{content:"›";position:absolute;right:7px;top:50%;transform:translateY(-52%);color:var(--ink-25);font-family:var(--sans);font-size:20px;line-height:1;transition:color .15s ease,transform .15s ease}
   #days .row.day:not(.kop):hover::after,#days .row.day:not(.kop):focus-visible::after{color:var(--ink);transform:translate(2px,-52%)}
-  /* Maak de desktopfooter volledig deterministisch: bronnen op rij 1,
-     disclaimer op rij 2 en de drie utility-items gecentreerd naast elkaar op
-     rij 3. Zonder expliciete rijen voor de eerste twee items kon CSS-grid ze
-     bij latere ownerlagen opnieuw auto-plaatsen. */
+  /* De finale desktopruntime voegt na DOMContentLoaded nog een flex-footerregel
+     toe. Deze laatste presentatielaag moet daarom met hogere specificiteit ook
+     display en het grid zelf bezitten; alleen grid-row op de kinderen is niet
+     genoeg zodra die runtime actief is. */
+  html body footer:nth-of-type(n){display:grid!important;grid-template-columns:minmax(0,1fr) max-content max-content max-content minmax(0,1fr)!important;justify-content:center!important;align-items:center!important;column-gap:16px!important;row-gap:2px!important}
+  html body footer:nth-of-type(n) > span.bron:first-of-type{white-space:normal!important;min-width:0!important;max-width:100%!important}
   footer > span.bron:first-of-type{grid-column:1 / -1!important;grid-row:1!important;justify-self:center!important;text-align:center}
   footer > span.bron:nth-of-type(2){grid-column:1 / -1!important;grid-row:2!important;justify-self:center!important;text-align:center}
-  footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important;justify-self:center!important}
-  footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important;justify-self:center!important}
-  footer > details.footer-details{grid-column:3!important;grid-row:3!important;justify-self:center!important}
+  footer > span.bron:nth-last-of-type(2){grid-column:2!important;grid-row:3!important;justify-self:center!important}
+  footer > span.bron:last-of-type{grid-column:3!important;grid-row:3!important;justify-self:center!important}
+  footer > details.footer-details{grid-column:4!important;grid-row:3!important;justify-self:center!important}
   footer > details.footer-details[open]{grid-column:1 / -1!important;grid-row:4!important;justify-self:center!important}
 }
 @media(max-width:900px){
