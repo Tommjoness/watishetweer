@@ -23,13 +23,16 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   #days .row.day:not(.kop){padding-right:24px!important}
   #days .row.day:not(.kop)::after{content:"›";position:absolute;right:7px;top:50%;transform:translateY(-52%);color:var(--ink-25);font-family:var(--sans);font-size:20px;line-height:1;transition:color .15s ease,transform .15s ease}
   #days .row.day:not(.kop):hover::after,#days .row.day:not(.kop):focus-visible::after{color:var(--ink);transform:translate(2px,-52%)}
-  /* Houd de twee publieke hulplinks en technische locatiegegevens expliciet op
-     één afsluitende rij onder disclaimer en bronnen. De expliciete gridrij
-     voorkomt dat lange disclaimercopy de hulplinks op dezelfde regel trekt. */
-  footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important}
-  footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important}
-  footer > details.footer-details{grid-column:3!important;grid-row:3!important}
-  footer > details.footer-details[open]{grid-column:1 / -1!important;grid-row:4!important}
+  /* Maak de desktopfooter volledig deterministisch: bronnen op rij 1,
+     disclaimer op rij 2 en de drie utility-items gecentreerd naast elkaar op
+     rij 3. Zonder expliciete rijen voor de eerste twee items kon CSS-grid ze
+     bij latere ownerlagen opnieuw auto-plaatsen. */
+  footer > span.bron:first-of-type{grid-column:1 / -1!important;grid-row:1!important;justify-self:center!important;text-align:center}
+  footer > span.bron:nth-of-type(2){grid-column:1 / -1!important;grid-row:2!important;justify-self:center!important;text-align:center}
+  footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important;justify-self:center!important}
+  footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important;justify-self:center!important}
+  footer > details.footer-details{grid-column:3!important;grid-row:3!important;justify-self:center!important}
+  footer > details.footer-details[open]{grid-column:1 / -1!important;grid-row:4!important;justify-self:center!important}
 }
 @media(max-width:900px){
   .mobile-section-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:18px 0 4px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}

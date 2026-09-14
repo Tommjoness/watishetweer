@@ -34,11 +34,14 @@ setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-final-visual-'
   const kop=nights.querySelector('.row.night.kop'),rij=nights.querySelector('.row.night:not(.kop)'),kw=kop.querySelector('.nmeta.wide'),rw=rij.querySelector('.nmeta.wide'),ka=kop.querySelector('.nmeta:not(.wide)'),ra=rij.querySelector('.nmeta:not(.wide)'),advies=rij.querySelector('.nachtadvies'),bar=rij.querySelector('.sbar');
   const R=rr(rij),KW=rr(kw),RW=rr(rw),KA=rr(ka),RA=rr(ra),ADV=rr(advies),BAR=rr(bar),w=innerWidth;
   zet('night-label',kop.querySelector('.score').textContent.trim());zet('visibility-copy',vissub?vissub.textContent.trim():'');
-  const here=document.getElementById('here'),ververs=document.getElementById('ververs'),thema=document.getElementById('thema');zet('here-opacity',here?getComputedStyle(here).opacity:'');zet('refresh-opacity',ververs?getComputedStyle(ververs).opacity:'');zet('theme-opacity',thema?getComputedStyle(thema).opacity:'');
+  const here=document.getElementById('here'),ververs=document.getElementById('ververs'),thema=document.getElementById('thema'),themaMenu=document.getElementById('themamenu');zet('here-opacity',here?getComputedStyle(here).opacity:'');zet('refresh-opacity',ververs?getComputedStyle(ververs).opacity:'');zet('theme-opacity',thema?getComputedStyle(thema).opacity:'');
   const actiefThema=document.documentElement.getAttribute('data-thema'),dividerKleur=()=>here&&ververs&&getComputedStyle(here).borderRightColor===getComputedStyle(ververs).borderRightColor?'ok':'fout';document.documentElement.setAttribute('data-thema','licht');zet('divider-light',dividerKleur());document.documentElement.setAttribute('data-thema','donker');zet('divider-dark',dividerKleur());if(actiefThema===null)document.documentElement.removeAttribute('data-thema');else document.documentElement.setAttribute('data-thema',actiefThema);
-  zet('theme-menu',document.getElementById('themamenu')?'ja':'nee');
-  zet('theme-switch',thema&&thema.getAttribute('role')==='switch'&&thema.querySelector('.wiw-theme-track')&&thema.querySelector('.wiw-theme-thumb')?'ja':'nee');
-  zet('theme-checked',thema?thema.getAttribute('aria-checked'):'');
+  zet('theme-menu',themaMenu?'ja':'nee');
+  zet('theme-haspopup',thema?thema.getAttribute('aria-haspopup')||'':'');
+  zet('theme-expanded',thema?thema.getAttribute('aria-expanded')||'':'');
+  zet('theme-choice',thema?thema.dataset.actieveThemakeuze||'':'');
+  zet('theme-options',themaMenu?themaMenu.querySelectorAll('[data-thema-keuze]').length:0);
+  zet('theme-auto-checked',themaMenu?themaMenu.querySelector('[data-thema-keuze="auto"]')?.getAttribute('aria-checked')||'':'');
   const bodyStyle=getComputedStyle(document.body),sheet=document.querySelector('.sheet'),sheetStyle=sheet&&getComputedStyle(sheet);zet('body-pad-left',parseFloat(bodyStyle.paddingLeft)||0);zet('sheet-pad-left',sheetStyle?parseFloat(sheetStyle.paddingLeft)||0:0);
   zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);
   if(w>=1100){
@@ -71,7 +74,7 @@ try{
     if(v('hour-scrollbar')!=='thin'||v('page-scrollbar')!=='thin')throw new Error(`${w}px: scrollbar styling niet actief (hour=${v('hour-scrollbar')}, page=${v('page-scrollbar')})`);
     if(v('night-label')!=='Zichtscore')throw new Error(`${w}px: Nachtzicht gebruikt nog geen duidelijke Zichtscore-label (${v('night-label')})`);
     if(v('visibility-copy')!=='Goed zicht.')throw new Error(`${w}px: redundante zichttekst niet ingekort (${v('visibility-copy')})`);
-    if(v('theme-switch')!=='ja'||v('theme-menu')!=='nee'||!['true','false'].includes(v('theme-checked')))throw new Error(`${w}px: licht/donker-switchcontract ontbreekt (switch=${v('theme-switch')}, oud-menu=${v('theme-menu')}, checked=${v('theme-checked')})`);
+    if(v('theme-menu')!=='ja'||v('theme-haspopup')!=='menu'||v('theme-expanded')!=='false'||v('theme-choice')!=='auto'||v('theme-options')!=='3'||v('theme-auto-checked')!=='true')throw new Error(`${w}px: Auto/Licht/Donker-menucontract ontbreekt (menu=${v('theme-menu')}, popup=${v('theme-haspopup')}, expanded=${v('theme-expanded')}, keuze=${v('theme-choice')}, opties=${v('theme-options')}, auto=${v('theme-auto-checked')})`);
     if(!(Number(v('refresh-opacity'))<Number(v('here-opacity'))&&Number(v('theme-opacity'))<Number(v('here-opacity'))))throw new Error(`${w}px: headerhiërarchie ontbreekt (locatie=${v('here-opacity')}, ververs=${v('refresh-opacity')}, weergave=${v('theme-opacity')})`);
     if(v('divider-light')!=='ok'||v('divider-dark')!=='ok')throw new Error(`${w}px: locatie-divider wijkt af van de controlerij (licht=${v('divider-light')}, donker=${v('divider-dark')})`);
     if(Number(v('overflow'))>2)throw new Error(`${w}px: ${v('overflow')}px horizontale overflow`);
@@ -90,7 +93,7 @@ try{
       if(Number(v('night-bar-width'))<189||Number(v('night-bar-width'))>261)throw new Error(`${w}px: zichtscorebalk valt buiten de compacte band (${v('night-bar-width')}px)`);
       if(actualW>=1366&&Number(v('night-right-gap'))<100)throw new Error(`${w}px: Nachtzicht-data wordt nog over de volledige rij uitgesmeerd (${v('night-right-gap')}px vrije eindruimte)`);
     }
-    console.log(`${w}px (CSS viewport ${actualW}px): final visual UX groen; overflow ${v('overflow')}px, urenpreview, licht/donker-switch en headerhiërarchie correct${actualW>=1100?', zichtperiode '+v('night-wide-width')+'px':''}.`);
+    console.log(`${w}px (CSS viewport ${actualW}px): final visual UX groen; overflow ${v('overflow')}px, urenpreview, Auto/Licht/Donker-menu en headerhiërarchie correct${actualW>=1100?', zichtperiode '+v('night-wide-width')+'px':''}.`);
   }
-  console.log("Final visual polish browsertest geslaagd op de aangevraagde 320/390/430/1100/1366/1440/1660/1920 vensters; asserts volgen de gemeten CSS-viewport en het finale licht/donker-switchcontract.");
+  console.log("Final visual polish browsertest geslaagd op de aangevraagde 320/390/430/1100/1366/1440/1660/1920 vensters; asserts volgen de gemeten CSS-viewport en het finale Auto/Licht/Donker-menucontract.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
