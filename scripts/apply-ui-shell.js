@@ -91,7 +91,6 @@ html[data-thema="donker"]{--ink-45:#A8A8A8;--ink-25:#959595}
 </style>`;
 vervangEen("</head>",toggleCss+"\n</head>","headafsluiting voor weergavetoggle");
 
-vervangEen("</head>",menuCss+"\n</head>","headafsluiting voor weergavemenu");
 
 const themaBron=`/* ---------- thema ---------- */
 const THEMAS=["auto","licht","donker","rood"];
