@@ -26,8 +26,8 @@ for(const p of htmlBestanden(OUT)){
   assert(html.includes('id="thema-switch"')&&html.includes('role="switch"'),rel+": Licht/donker-schakelaar ontbreekt na late SEO/themapersistentielaag");
   assert(!html.includes('id="themamenu"'),rel+": oud uitklapmenu lekt terug in de finale weather UI");
   assert(html.includes('data-thema-keuze="auto"'),rel+": Auto-keuze ontbreekt in finale weather UI");
-  assert(html.includes('data-thema-keuze="licht"'),rel+": Licht-keuze ontbreekt in finale weather UI");
-  assert(html.includes('data-thema-keuze="donker"'),rel+": Donker-keuze ontbreekt in finale weather UI");
+  assert(html.includes('data-thema-handmatig="licht"'),rel+": Licht-keuze ontbreekt in finale weather UI");
+  assert(html.includes('data-thema-handmatig="donker"'),rel+": Donker-keuze ontbreekt in finale weather UI");
   assert(html.includes('autoThemaOpZon'),rel+": exacte zonnegrenshelper is uit finale weather runtime verdwenen");
   assert(html.includes('autoThemaOpZon(S.d,weatherNowActueleLokaleTijd())'),rel+": Auto gebruikt niet meer de lokale tijd van de gekozen plaats");
   assert(html.includes(THEMA_ACTIEF_CONST),rel+": actieve Auto-uitkomst wordt niet bewaard voor subnavigatie");
