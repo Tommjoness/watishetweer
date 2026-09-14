@@ -138,6 +138,9 @@ test("tablet en desktop houden compacte weercontext vast tijdens scrollen",()=>{
   assert(css.includes("position:fixed"));
   assert(css.includes("transform:translateX(-50%)"));
   assert(css.includes("width:min(calc(100% - 44px),1440px)"));
+  assert(css.includes("#minibar.aan{overflow:visible}"),"desktop fixed-minibalk laat de zachte onderovergang niet vrij");
+  assert(css.includes("#minibar.aan::after"),"desktop fixed-minibalk mist de zachte onderovergang");
+  assert(css.includes("linear-gradient(to bottom,var(--sheet),transparent)"),"desktop headerfade is niet thema-eigen");
 });
 
 test("mobiele weercontext verbergt zich neerwaarts zonder sticky-regressie",()=>{

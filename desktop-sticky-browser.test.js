@@ -22,6 +22,9 @@ assertBronInvariant(html,"translateY(calc(-100% - 2px))","mobiele minibalk schui
 assertBronInvariant(html,"opacity:0","verborgen mobiele minibalk wordt visueel transparant");
 assertBronInvariant(html,"pointer-events:none","verborgen mobiele minibalk onderschept geen interactie");
 assertBronInvariant(html,"background:var(--rule-soft)","maanfase heeft een zichtbare subtiele schijf");
+assertBronInvariant(html,"#minibar.aan{overflow:visible}","desktop minibalk laat de zachte onderovergang vrij");
+assertBronInvariant(html,"#minibar.aan::after","desktop minibalk heeft een zachte onderovergang");
+assertBronInvariant(html,"linear-gradient(to bottom,var(--sheet),transparent)","desktop headerfade gebruikt de themakleur");
 
 /* Deze fixture test uitsluitend de scroll-state-machine, niet het laadpad. De
    fetch blijft expres eindeloos wachten zodat geen forecast-render de DOM kan
@@ -49,11 +52,12 @@ setTimeout(()=>{
     window.scrollTo(0,doel);
     window.dispatchEvent(new Event('scroll'));
     setTimeout(()=>{
-      const bs=getComputedStyle(bar),br=bar.getBoundingClientRect(),sr=sheet.getBoundingClientRect(),hr=hero.getBoundingClientRect();
+      const bs=getComputedStyle(bar),fade=getComputedStyle(bar,"::after"),br=bar.getBoundingClientRect(),sr=sheet.getBoundingClientRect(),hr=hero.getBoundingClientRect();
       const heroVoorbij=hr.bottom<=0,heroOk=hs.alignSelf==='start'&&hs.marginTop==='0px';
       if(!mobiel){
         const breedteOk=Math.abs(br.width-sr.width)<=2,bovenOk=Math.abs(br.top)<=1;
-        const balkOk=bar.classList.contains('aan')&&!bar.classList.contains('senior-verstopt')&&bs.display==='flex'&&bs.position==='fixed'&&breedteOk&&bovenOk&&heroVoorbij;
+        const fadeOk=bs.overflow==='visible'&&fade.position==='absolute'&&parseFloat(fade.height)>=11.9&&/linear-gradient/i.test(fade.backgroundImage||'');
+        const balkOk=bar.classList.contains('aan')&&!bar.classList.contains('senior-verstopt')&&bs.display==='flex'&&bs.position==='fixed'&&breedteOk&&bovenOk&&heroVoorbij&&fadeOk;
         document.body.dataset.desktopStickyResult=(balkOk&&heroOk)?'ok':'fout';
         document.body.dataset.desktopStickyAan=String(bar.classList.contains('aan'));
         document.body.dataset.desktopStickyVerstopt=String(bar.classList.contains('senior-verstopt'));
@@ -63,6 +67,8 @@ setTimeout(()=>{
         document.body.dataset.desktopStickyBoven=String(bovenOk);
         document.body.dataset.desktopStickyHero=String(heroOk);
         document.body.dataset.desktopStickyHeroVoorbij=String(heroVoorbij);
+        document.body.dataset.desktopStickyFade=String(fadeOk);
+        document.body.dataset.desktopStickyFadeHeight=String(parseFloat(fade.height)||0);
         return;
       }
 
@@ -106,7 +112,7 @@ function waarde(dom,veld){const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom
 
 try{
   const desktop=draai(1440,1000,2800);
-  if(waarde(desktop,"desktop-sticky-result")!=="ok") throw new Error("desktop resultaat="+waarde(desktop,"desktop-sticky-result")+", aan="+waarde(desktop,"desktop-sticky-aan")+", verstopt="+waarde(desktop,"desktop-sticky-verstopt")+", display="+waarde(desktop,"desktop-sticky-display")+", position="+waarde(desktop,"desktop-sticky-position")+", breedte="+waarde(desktop,"desktop-sticky-breedte")+", boven="+waarde(desktop,"desktop-sticky-boven")+", hero="+waarde(desktop,"desktop-sticky-hero")+", heroVoorbij="+waarde(desktop,"desktop-sticky-hero-voorbij")+", exception="+waarde(desktop,"desktop-sticky-exception"));
+  if(waarde(desktop,"desktop-sticky-result")!=="ok") throw new Error("desktop resultaat="+waarde(desktop,"desktop-sticky-result")+", aan="+waarde(desktop,"desktop-sticky-aan")+", verstopt="+waarde(desktop,"desktop-sticky-verstopt")+", display="+waarde(desktop,"desktop-sticky-display")+", position="+waarde(desktop,"desktop-sticky-position")+", breedte="+waarde(desktop,"desktop-sticky-breedte")+", boven="+waarde(desktop,"desktop-sticky-boven")+", hero="+waarde(desktop,"desktop-sticky-hero")+", heroVoorbij="+waarde(desktop,"desktop-sticky-hero-voorbij")+", fade="+waarde(desktop,"desktop-sticky-fade")+", fadeHeight="+waarde(desktop,"desktop-sticky-fade-height")+", exception="+waarde(desktop,"desktop-sticky-exception"));
 
   const mobiel=draai(390,844,3600);
   if(waarde(mobiel,"mobile-sticky-result")!=="ok") throw new Error("mobiel resultaat="+waarde(mobiel,"mobile-sticky-result")+", neer="+waarde(mobiel,"mobile-sticky-neer")+", aanNeer="+waarde(mobiel,"mobile-sticky-aan-neer")+", verstoptNeer="+waarde(mobiel,"mobile-sticky-verstopt-neer")+", pointerNeer="+waarde(mobiel,"mobile-sticky-pointer-neer")+", omhoog="+waarde(mobiel,"mobile-sticky-omhoog")+", aanOmhoog="+waarde(mobiel,"mobile-sticky-aan-omhoog")+", verstoptOmhoog="+waarde(mobiel,"mobile-sticky-verstopt-omhoog")+", pointerOmhoog="+waarde(mobiel,"mobile-sticky-pointer-omhoog")+", exception="+waarde(mobiel,"mobile-sticky-exception"));

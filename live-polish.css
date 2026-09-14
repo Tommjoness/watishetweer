@@ -30,6 +30,18 @@
     overflow:hidden;
   }
   #minibar.aan{display:flex}
+  /* De desktop/tablet-minibalk blijft fixed wanneer de hero uit beeld is.
+     Een korte fade onder de balk voorkomt dat een scrollende sectiekop precies
+     op de harde onderrand wordt afgesneden; inhoud, hoogte en interactie blijven
+     verder ongewijzigd. */
+  #minibar.aan{overflow:visible}
+  #minibar.aan::after{
+    content:"";
+    position:absolute;
+    left:0;right:0;bottom:-12px;height:12px;
+    pointer-events:none;
+    background:linear-gradient(to bottom,var(--sheet),transparent)
+  }
   #miniplaats{
     font-family:var(--serif);
     font-size:18px;
