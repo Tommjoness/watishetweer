@@ -12,6 +12,10 @@ function uurUitIso(tijd){
   const m=/T(\d{2}):/.exec(String(tijd||""));
   return m?Number(m[1]):null;
 }
+function uurAsLabelTekst(tekst){
+  const m=/^([01]?\d|2[0-3])(?::00)?$/.exec(String(tekst||"").trim());
+  return m?String(Number(m[1])).padStart(2,"0")+":00":"";
+}
 function kiesUurLabelIndices(tijden,minimaal=4){
   const T=Array.isArray(tijden)?tijden:[],min=Math.max(1,Math.floor(Number(minimaal)||4));
   if(T.length<3)return [];
@@ -28,8 +32,8 @@ function kiesUurLabelIndices(tijden,minimaal=4){
   return uit;
 }
 function isUurAsLabel(tekst,y,plotOnder,fontFamilie){
-  const t=String(tekst||"").trim(),py=Number(y),onder=Number(plotOnder),font=String(fontFamilie||"");
-  return /^(?:[01]?\d|2[0-3])$/.test(t)&&Number.isFinite(py)&&Number.isFinite(onder)&&py>=onder+6&&!/Bodoni/i.test(font);
+  const t=uurAsLabelTekst(tekst),py=Number(y),onder=Number(plotOnder),font=String(fontFamilie||"");
+  return !!t&&Number.isFinite(py)&&Number.isFinite(onder)&&py>=onder+6&&!/Bodoni/i.test(font);
 }
 function waarschuwingBronnenVoorLand(land){
   const code=String(land||"").trim().toUpperCase();
@@ -88,7 +92,7 @@ function svgTekstBoxUitElement(el){
   return geschatteSvgTekstBox(el.textContent,x,y,anker,Number.isFinite(font)&&font>0?font:12);
 }
 
-const api={uurUitIso,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox};
+const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -107,6 +111,7 @@ function herstelUurAs(){
   const svg=document.getElementById("chart"),g=S.geo;
   if(!svg||!g||Number(g.n)>48||!Array.isArray(g.TI)||typeof g.x!=="function")return;
   const minimum=4,alle=bestaandeUurLabels(svg,g),fallback=alle.filter(el=>el.hasAttribute("data-mobile-hour-axis")),canoniek=alle.filter(el=>!el.hasAttribute("data-mobile-hour-axis"));
+  alle.forEach(el=>{const expliciet=uurAsLabelTekst(el.textContent);if(expliciet)el.textContent=expliciet;});
   if(canoniek.length>=minimum){fallback.forEach(el=>el.remove());return;}
   if(alle.length>=minimum)return;
   const posities=alle.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite);
@@ -121,7 +126,7 @@ function herstelUurAs(){
     el.setAttribute("x",String(x));el.setAttribute("y",String(y));
     el.setAttribute("text-anchor","middle");el.setAttribute("fill",kleur);
     el.setAttribute("font-family","DM Mono,monospace");el.setAttribute("font-size","8.5");
-    el.setAttribute("data-mobile-hour-axis","1");el.textContent=String(uur).padStart(2,"0");
+    el.setAttribute("data-mobile-hour-axis","1");el.textContent=uurAsLabelTekst(String(uur));
     const regen=svg.querySelector('g[data-q4-rain-periods]'),scrub=svg.querySelector("#scrub");
     svg.insertBefore(el,regen||scrub||null);posities.push(x);
   }

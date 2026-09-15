@@ -54,6 +54,10 @@ function regenSamenvatting(perioden,max=2){
   const limiet=Math.max(1,Math.floor(num(max)||2));
   const delen=p.slice(0,limiet).map(x=>regenPeriodeTijdvak(x)+" · "+mmTekst(x.som));
   const rest=p.length-delen.length;
+  if(rest===1){
+    const volgende=p[delen.length],detail=regenPeriodeTijdvak(volgende)+" · "+mmTekst(volgende&&volgende.som);
+    if(!/^\s*·\s*$/.test(detail))return "Verwachte meetbare neerslag: "+delen.join("; ")+"; daarna "+detail+".";
+  }
   return "Verwachte meetbare neerslag: "+delen.join("; ")+(rest>0?"; plus "+rest+" latere "+(rest===1?"periode":"perioden"):"")+".";
 }
 
