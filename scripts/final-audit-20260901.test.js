@@ -12,6 +12,17 @@ assert.equal(p[0].tot,"2026-09-01T09:00");
 assert.equal(Math.round(p[0].som*10)/10,1.2);
 assert.equal(a.regenSamenvatting(p),"Verwachte meetbare neerslag: 07:00–09:00 · 1,2 mm.");
 
+/* Als exact één periode achter de compacte tweeregelgrens valt, toon die periode
+   concreet in plaats van de vage tekst 'plus 1 latere periode'. */
+const driePerioden=[
+  {van:"2026-09-01T21:00",tot:"2026-09-02T00:00",som:0.3},
+  {van:"2026-09-02T02:00",tot:"2026-09-02T04:00",som:2.1},
+  {van:"2026-09-02T10:00",tot:"2026-09-02T13:00",som:3.8}
+];
+const drieSamenvatting=a.regenSamenvatting(driePerioden,2);
+assert.equal(drieSamenvatting,"Verwachte meetbare neerslag: di 21:00–wo 00:00 · 0,3 mm; 02:00–04:00 · 2,1 mm; daarna 10:00–13:00 · 3,8 mm.");
+assert(!/plus 1 latere periode/.test(drieSamenvatting),"Een bekende derde periode mag niet als vage resttelling worden verborgen.");
+
 /* Verstreken uurwaarden horen niet in de standaard vooruitkijkende grafiektekst. */
 p=a.regenperiodenVoorGrafiek({grafiekTijden:tijden,bronTijden:tijden,neerslag:[0,0.7,0.8,0,0],bronStart:0,actueelBronIndex:2});
 assert.equal(p.length,0);
@@ -55,4 +66,4 @@ assert.equal(zp.waardeTekst,"1 min");
 assert.match(zp.aria,/over 1 minuut,/);
 assert(!/1 minuten/.test(zp.aria));
 
-console.log("Finale audithelpers groen: regeninterval, Dubai/Longyearbyen/Ushuaia/Zuidpool, 1 minuut en consistente NWS titel/metrische uitleg zijn geborgd.");
+console.log("Finale audithelpers groen: regeninterval/-samenvatting, Dubai/Longyearbyen/Ushuaia/Zuidpool, 1 minuut en consistente NWS titel/metrische uitleg zijn geborgd.");
