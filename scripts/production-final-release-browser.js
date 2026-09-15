@@ -266,7 +266,7 @@ async function lees(page){return page.evaluate(()=>{
     /* 1920 en 390, beide expliciet licht en donker. */
     for(const [w,h] of [[1920,1080],[390,844]])for(const theme of ["licht","donker"]){
       const context=await browser.newContext({viewport:{width:w,height:h},serviceWorkers:"block",locale:"nl-NL"});
-      await context.addInitScript(t=>{try{localStorage.setItem("weerbriefing.thema",JSON.stringify(t));}catch(e){}},theme);
+      await context.addInitScript(t=>{try{sessionStorage.setItem("weerbriefing.thema.sessie",JSON.stringify(t));}catch(e){}},theme);
       const page=await context.newPage();await installeerForecastFixture(page,amsterdamBron);
       await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Amsterdam");
       const actief=await page.evaluate(()=>document.documentElement.getAttribute("data-thema"));assert.equal(actief,theme,`${w}px ${theme}: thema niet actief`);
