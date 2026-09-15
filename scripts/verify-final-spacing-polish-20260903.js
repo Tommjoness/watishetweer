@@ -32,4 +32,5 @@ for(const p of weer){
 const pkg=JSON.parse(fs.readFileSync(path.join(ROOT,"package.json"),"utf8"));
 eis(pkg.scripts.test.includes("apply-final-spacing-polish-20260903.js")&&pkg.scripts.test.includes("browser-final-spacing-polish-20260903.test.js"),"testscript is niet volledig bedraad");
 eis(pkg.scripts.postbuild.includes("apply-final-spacing-polish-20260903.js")&&pkg.scripts.postbuild.includes("verify-final-spacing-polish-20260903.js"),"postbuild is niet volledig bedraad");
-console.log(`Final spacing polish artifact groen op ${weer.length} weerpagina's: mast/grid-as, begrensd Nachtzicht, compacte footer en mobiele 44px touchdoelen geborgd.`);
+require("./theme-mobile-session-20260915.test.js");
+console.log(`Final spacing polish artifact groen op ${weer.length} weerpagina's: mast/grid-as, begrensd Nachtzicht, compacte footer, mobiele 44px touchdoelen en sessieveilige themakeuze geborgd.`);
