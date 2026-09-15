@@ -136,22 +136,22 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert(themaVoor.trackWidth>=24&&themaVoor.trackWidth<=34,`${vp.naam}: toggle-track heeft onverwachte breedte (${themaVoor.trackWidth}px)`);
       assert(themaVoor.thumbWidth>=10&&themaVoor.thumbWidth<=16,`${vp.naam}: toggle-thumb heeft onverwachte breedte (${themaVoor.thumbWidth}px)`);
       assert(binnenViewport(themaVoor.rect,vp.width),`${vp.naam}: Weergavegroep valt buiten viewport`);
-      if(vp.width<=430){
-        const s=themaVoor.segmenten;
-        assert(s,`${vp.naam}: mobiele driewegsegmenten ontbreken`);
-        assert(themaVoor.rect.height>=45.5,`${vp.naam}: themarij is te laag (${themaVoor.rect.height}px)`);
-        for(const [naam,seg] of [["licht",s.licht],["auto",s.auto],["donker",s.donker]])assert(seg.height>=43.5,`${vp.naam}: ${naam}-touchdoel is te laag (${seg.height}px)`);
-        const breedtes=[s.auto.width,s.licht.width,s.donker.width];
-        assert(Math.max(...breedtes)-Math.min(...breedtes)<=2,`${vp.naam}: Auto/Licht/Donker zijn niet gelijk verdeeld (${breedtes.map(x=>x.toFixed(1)).join("/")}px)`);
-        assert(s.licht.left<s.auto.left&&s.auto.left<s.donker.left,`${vp.naam}: mobiele volgorde is niet Licht | Auto | Donker`);
-        assert(Math.max(Math.abs(s.auto.top-s.licht.top),Math.abs(s.auto.top-s.donker.top))<=1,`${vp.naam}: thema-opties delen niet één rij`);
-        assert(/Licht/i.test(s.licht.label),`${vp.naam}: zichtbaar Licht-label ontbreekt`);
-        assert(/Donker/i.test(s.donker.label),`${vp.naam}: zichtbaar Donker-label ontbreekt`);
-        assert(parseFloat(s.licht.icoonLabelGap)>=6&&parseFloat(s.donker.icoonLabelGap)>=6,`${vp.naam}: icoon-labelafstand is te klein (${s.licht.icoonLabelGap}/${s.donker.icoonLabelGap})`);
-        for(const eigenschap of ["fontFamily","fontSize","fontWeight","lineHeight","letterSpacing","alignItems"]){
-          const waarden=[s.stijlen.auto[eigenschap],s.stijlen.licht[eigenschap],s.stijlen.donker[eigenschap]];
-          assert.equal(new Set(waarden).size,1,`${vp.naam}: typografische basis '${eigenschap}' verschilt (${waarden.join(" / ")})`);
-        }
+      const s=themaVoor.segmenten;
+      assert(s,`${vp.naam}: driewegsegmenten ontbreken`);
+      const minimaleHoogte=vp.width<=430?45.5:vp.width<=900?43.5:35.5;
+      const minimaleSegmentHoogte=vp.width<=430?43.5:vp.width<=900?43.5:35;
+      assert(themaVoor.rect.height>=minimaleHoogte,`${vp.naam}: themarij is te laag (${themaVoor.rect.height}px)`);
+      for(const [naam,seg] of [["licht",s.licht],["auto",s.auto],["donker",s.donker]])assert(seg.height>=minimaleSegmentHoogte,`${vp.naam}: ${naam}-touchdoel is te laag (${seg.height}px)`);
+      const breedtes=[s.auto.width,s.licht.width,s.donker.width];
+      assert(Math.max(...breedtes)-Math.min(...breedtes)<=2,`${vp.naam}: Auto/Licht/Donker zijn niet gelijk verdeeld (${breedtes.map(x=>x.toFixed(1)).join("/")}px)`);
+      assert(s.licht.left<s.auto.left&&s.auto.left<s.donker.left,`${vp.naam}: volgorde is niet Licht | Auto | Donker`);
+      assert(Math.max(Math.abs(s.auto.top-s.licht.top),Math.abs(s.auto.top-s.donker.top))<=1,`${vp.naam}: thema-opties delen niet één rij`);
+      assert(/Licht/i.test(s.licht.label),`${vp.naam}: zichtbaar Licht-label ontbreekt`);
+      assert(/Donker/i.test(s.donker.label),`${vp.naam}: zichtbaar Donker-label ontbreekt`);
+      assert(parseFloat(s.licht.icoonLabelGap)>=6&&parseFloat(s.donker.icoonLabelGap)>=6,`${vp.naam}: icoon-labelafstand is te klein (${s.licht.icoonLabelGap}/${s.donker.icoonLabelGap})`);
+      for(const eigenschap of ["fontFamily","fontSize","fontWeight","lineHeight","letterSpacing","alignItems"]){
+        const waarden=[s.stijlen.auto[eigenschap],s.stijlen.licht[eigenschap],s.stijlen.donker[eigenschap]];
+        assert.equal(new Set(waarden).size,1,`${vp.naam}: typografische basis '${eigenschap}' verschilt (${waarden.join(" / ")})`);
       }
 
       await page.locator('[data-thema-handmatig="licht"]').click();
@@ -161,7 +161,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       });
       assert.equal(lichtNa.keuze,"licht",`${vp.naam}: expliciete Licht-keuze wordt niet actief`);
       assert.equal(lichtNa.actief,"licht",`${vp.naam}: gerenderd thema volgt Licht-keuze niet`);
-      if(vp.width<=430)assert.equal(new Set(lichtNa.gewichten).size,1,`${vp.naam}: actieve Licht-keuze verandert de typografische zwaarte`);
+      assert.equal(new Set(lichtNa.gewichten).size,1,`${vp.naam}: actieve Licht-keuze verandert de typografische zwaarte`);
 
       await page.locator('[data-thema-handmatig="donker"]').click();
       const themaNa=await page.evaluate(()=>{
@@ -189,7 +189,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert.equal(themaNa.legacyMirror,"donker",`${vp.naam}: compatibiliteitsmirror volgt de sessiekeuze niet`);
       assert.equal(themaNa.actiefBewaar,"donker",`${vp.naam}: actieve themastaat wordt niet opgeslagen`);
       assert(themaNa.label&&themaNa.title,`${vp.naam}: Licht/donker-toggle mist toegankelijke toestandstekst`);
-      if(vp.width<=430)assert.equal(new Set(themaNa.gewichten).size,1,`${vp.naam}: actieve Donker-keuze verandert de typografische zwaarte`);
+      assert.equal(new Set(themaNa.gewichten).size,1,`${vp.naam}: actieve Donker-keuze verandert de typografische zwaarte`);
 
       /* Navigatie in dezelfde tab houdt sessionStorage bewust vast. Daarmee
          bewijzen we het nieuwe contract zonder de oude permanente localStorage-

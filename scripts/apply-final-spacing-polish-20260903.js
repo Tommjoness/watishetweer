@@ -2,7 +2,7 @@
 
 const fs=require("fs"),path=require("path");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
-const {main:pasMobielThemaToe}=require("./apply-theme-mobile-session-20260915.js");
+const {main:pasThemaControlToe}=require("./apply-theme-mobile-session-20260915.js");
 
 const OUT=path.join(__dirname,"..","public");
 const MARKER="/* ===== FINAL SPACING POLISH 20260903 ===== */";
@@ -141,8 +141,8 @@ function main(){
   for(const p of htmlBestanden(OUT))if(pasToe(p))n++;
   if(!n)throw new Error("Geen finale weerartifacts gevonden voor spacing polish.");
   const cache=vernieuwServiceworkerCache(OUT,"final-spacing-polish-20260903");
-  const thema=pasMobielThemaToe();
-  console.log(`Final spacing polish toegepast op ${n} weerpagina's: masthead/grid-as, Nachtzicht-breedte, onderritme en footerwrap aangescherpt; cache ${cache}; mobiele themalaag ${thema.geraakt} pagina's.`);
+  const thema=pasThemaControlToe();
+  console.log(`Final spacing polish toegepast op ${n} weerpagina's: masthead/grid-as, Nachtzicht-breedte, onderritme en footerwrap aangescherpt; cache ${cache}; gedeelde themacontrol ${thema.geraakt} pagina's.`);
 }
 
 if(require.main===module)main();
