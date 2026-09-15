@@ -99,6 +99,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       const themaVoor=await page.evaluate(()=>{
         const groep=document.getElementById("thema"),auto=document.getElementById("thema-auto"),schakelaar=document.getElementById("thema-switch"),zon=schakelaar?.querySelector(".wiw-theme-sun"),maan=schakelaar?.querySelector(".wiw-theme-moon"),r=groep?.getBoundingClientRect(),track=schakelaar?.querySelector(".wiw-theme-track")?.getBoundingClientRect(),thumb=schakelaar?.querySelector(".wiw-theme-thumb")?.getBoundingClientRect();
         const ar=auto?.getBoundingClientRect(),zr=zon?.getBoundingClientRect(),mr=maan?.getBoundingClientRect();
+        const stijl=el=>{if(!el)return null;const s=getComputedStyle(el);return {fontFamily:s.fontFamily,fontSize:s.fontSize,fontWeight:s.fontWeight,lineHeight:s.lineHeight,letterSpacing:s.letterSpacing,alignItems:s.alignItems,color:s.color,background:s.backgroundColor};};
         return {
           role:groep?.getAttribute("role")||"",
           popup:groep?.getAttribute("aria-haspopup")||"",
@@ -116,8 +117,9 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           rect:r?{left:r.left,right:r.right,width:r.width,height:r.height,top:r.top}:null,
           segmenten:ar&&zr&&mr?{
             auto:{left:ar.left,width:ar.width,height:ar.height,top:ar.top},
-            licht:{left:zr.left,width:zr.width,height:zr.height,top:zr.top,label:getComputedStyle(zon,"::after").content},
-            donker:{left:mr.left,width:mr.width,height:mr.height,top:mr.top,label:getComputedStyle(maan,"::after").content}
+            licht:{left:zr.left,width:zr.width,height:zr.height,top:zr.top,label:getComputedStyle(zon,"::after").content,icoonLabelGap:getComputedStyle(zon,"::after").marginLeft},
+            donker:{left:mr.left,width:mr.width,height:mr.height,top:mr.top,label:getComputedStyle(maan,"::after").content,icoonLabelGap:getComputedStyle(maan,"::after").marginLeft},
+            stijlen:{auto:stijl(auto),licht:stijl(zon),donker:stijl(maan)}
           }:null
         };
       });
@@ -138,13 +140,28 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         const s=themaVoor.segmenten;
         assert(s,`${vp.naam}: mobiele driewegsegmenten ontbreken`);
         assert(themaVoor.rect.height>=45.5,`${vp.naam}: themarij is te laag (${themaVoor.rect.height}px)`);
-        for(const [naam,seg] of Object.entries(s))assert(seg.height>=43.5,`${vp.naam}: ${naam}-touchdoel is te laag (${seg.height}px)`);
+        for(const [naam,seg] of [["licht",s.licht],["auto",s.auto],["donker",s.donker]])assert(seg.height>=43.5,`${vp.naam}: ${naam}-touchdoel is te laag (${seg.height}px)`);
         const breedtes=[s.auto.width,s.licht.width,s.donker.width];
         assert(Math.max(...breedtes)-Math.min(...breedtes)<=2,`${vp.naam}: Auto/Licht/Donker zijn niet gelijk verdeeld (${breedtes.map(x=>x.toFixed(1)).join("/")}px)`);
+        assert(s.licht.left<s.auto.left&&s.auto.left<s.donker.left,`${vp.naam}: mobiele volgorde is niet Licht | Auto | Donker`);
         assert(Math.max(Math.abs(s.auto.top-s.licht.top),Math.abs(s.auto.top-s.donker.top))<=1,`${vp.naam}: thema-opties delen niet één rij`);
         assert(/Licht/i.test(s.licht.label),`${vp.naam}: zichtbaar Licht-label ontbreekt`);
         assert(/Donker/i.test(s.donker.label),`${vp.naam}: zichtbaar Donker-label ontbreekt`);
+        assert(parseFloat(s.licht.icoonLabelGap)>=6&&parseFloat(s.donker.icoonLabelGap)>=6,`${vp.naam}: icoon-labelafstand is te klein (${s.licht.icoonLabelGap}/${s.donker.icoonLabelGap})`);
+        for(const eigenschap of ["fontFamily","fontSize","fontWeight","lineHeight","letterSpacing","alignItems"]){
+          const waarden=[s.stijlen.auto[eigenschap],s.stijlen.licht[eigenschap],s.stijlen.donker[eigenschap]];
+          assert.equal(new Set(waarden).size,1,`${vp.naam}: typografische basis '${eigenschap}' verschilt (${waarden.join(" / ")})`);
+        }
       }
+
+      await page.locator('[data-thema-handmatig="licht"]').click();
+      const lichtNa=await page.evaluate(()=>{
+        const groep=document.getElementById("thema"),auto=document.getElementById("thema-auto"),zon=document.querySelector('[data-thema-handmatig="licht"]'),maan=document.querySelector('[data-thema-handmatig="donker"]');
+        return {keuze:groep?.dataset.actieveThemaKeuze||"",actief:document.documentElement.getAttribute("data-thema")||"",gewichten:[auto,zon,maan].map(el=>getComputedStyle(el).fontWeight)};
+      });
+      assert.equal(lichtNa.keuze,"licht",`${vp.naam}: expliciete Licht-keuze wordt niet actief`);
+      assert.equal(lichtNa.actief,"licht",`${vp.naam}: gerenderd thema volgt Licht-keuze niet`);
+      if(vp.width<=430)assert.equal(new Set(lichtNa.gewichten).size,1,`${vp.naam}: actieve Licht-keuze verandert de typografische zwaarte`);
 
       await page.locator('[data-thema-handmatig="donker"]').click();
       const themaNa=await page.evaluate(()=>{
@@ -160,7 +177,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           legacyMirror:lees("weerbriefing.thema"),
           actiefBewaar:lees("weerbriefing.actiefThema"),
           label:schakelaar?.getAttribute("aria-label")||"",
-          title:schakelaar?.getAttribute("title")||""
+          title:schakelaar?.getAttribute("title")||"",
+          gewichten:[document.getElementById("thema-auto"),document.querySelector('[data-thema-handmatig="licht"]'),document.querySelector('[data-thema-handmatig="donker"]')].map(el=>getComputedStyle(el).fontWeight)
         };
       });
       assert.equal(themaNa.keuze,"donker",`${vp.naam}: expliciete Donker-keuze wordt niet actief`);
@@ -171,6 +189,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert.equal(themaNa.legacyMirror,"donker",`${vp.naam}: compatibiliteitsmirror volgt de sessiekeuze niet`);
       assert.equal(themaNa.actiefBewaar,"donker",`${vp.naam}: actieve themastaat wordt niet opgeslagen`);
       assert(themaNa.label&&themaNa.title,`${vp.naam}: Licht/donker-toggle mist toegankelijke toestandstekst`);
+      if(vp.width<=430)assert.equal(new Set(themaNa.gewichten).size,1,`${vp.naam}: actieve Donker-keuze verandert de typografische zwaarte`);
 
       /* Navigatie in dezelfde tab houdt sessionStorage bewust vast. Daarmee
          bewijzen we het nieuwe contract zonder de oude permanente localStorage-
