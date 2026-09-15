@@ -14,11 +14,11 @@ const THEMA_SESSIE_KEY="weerbriefing.thema.sessie";
 const THEMA_LEGACY_KEY="weerbriefing.thema";
 
 /*
- * De bestaande Auto + licht/donker-switch blijft semantisch intact voor desktop
- * en voor bestaande release-/toegankelijkheidscontracten. Op compacte telefoons
- * wordt dezelfde bediening visueel als één duidelijke driewegkeuze gepresenteerd:
- * ☀ LICHT | AUTO | ☾ DONKER. De zon- en maanhelft zijn al afzonderlijk klikbaar
- * via data-thema-handmatig; de verborgen track blijft alleen het bestaande
+ * De bestaande Auto + licht/donker-switch blijft semantisch intact voor alle
+ * viewports en voor bestaande release-/toegankelijkheidscontracten. De bediening
+ * wordt visueel als één duidelijke driewegkeuze gepresenteerd: ☀ LICHT | AUTO |
+ * ☾ DONKER. De zon- en maanhelft zijn al afzonderlijk klikbaar via
+ * data-thema-handmatig; de verborgen track blijft alleen het bestaande
  * switchcontract dragen.
  *
  * Een handmatige keuze is voortaan sessiegebonden. De oude localStorage-key wordt
@@ -30,6 +30,146 @@ const THEMA_LEGACY_KEY="weerbriefing.thema";
  * documentstart eerst verwijderd.
  */
 const CSS=`
+/* Desktop en tablet krijgen dezelfde rustige driewegcompositie als mobiel. De
+   bestaande DOM/runtime blijft bewust ongewijzigd: Auto blijft een eigen knop,
+   Licht en Donker blijven de twee klikzones binnen de semantische switch. */
+@media(min-width:431px){
+  html body #thema.wiw-theme-control.wiw-theme-segmented-20260915{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    align-items:stretch!important;
+    justify-content:stretch!important;
+    width:192px!important;
+    min-width:0!important;
+    min-height:36px!important;
+    padding:0!important;
+    border:1px solid var(--rule)!important;
+    border-radius:0!important;
+    overflow:hidden!important;
+    background:var(--sheet)!important;
+    vertical-align:middle!important;
+  }
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-auto{
+    grid-column:2!important;
+    grid-row:1!important;
+    z-index:2!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    min-width:0!important;
+    min-height:36px!important;
+    padding:0 6px!important;
+    border:0!important;
+    border-left:1px solid var(--rule)!important;
+    border-right:1px solid var(--rule)!important;
+    background:transparent!important;
+    color:var(--ink-45)!important;
+    font-family:var(--sans)!important;
+    font-size:10px!important;
+    font-weight:500!important;
+    letter-spacing:.055em!important;
+    line-height:1!important;
+    text-align:center!important;
+    text-transform:uppercase!important;
+    white-space:nowrap!important;
+    box-shadow:none!important;
+  }
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-auto:hover,
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-auto:focus-visible{
+    background:var(--paper)!important;
+    color:var(--ink)!important;
+  }
+  #thema.wiw-theme-segmented-20260915 #thema-switch{
+    grid-column:1 / 4!important;
+    grid-row:1!important;
+    display:grid!important;
+    grid-template-columns:subgrid!important;
+    position:relative!important;
+    align-items:stretch!important;
+    justify-content:stretch!important;
+    min-width:0!important;
+    min-height:36px!important;
+    padding:0!important;
+    gap:0!important;
+    border:0!important;
+    background:transparent!important;
+    color:var(--ink-45)!important;
+    font-family:var(--sans)!important;
+    font-size:10px!important;
+    font-weight:500!important;
+    letter-spacing:.055em!important;
+    line-height:1!important;
+    text-align:center!important;
+    text-transform:uppercase!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    box-shadow:none!important;
+  }
+  #thema.wiw-theme-segmented-20260915 #thema-switch:hover,
+  #thema.wiw-theme-segmented-20260915 #thema-switch:focus-visible{
+    background:transparent!important;
+    color:var(--ink)!important;
+  }
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:auto!important;
+    height:36px!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0 6px!important;
+    color:var(--ink-45)!important;
+    font-family:var(--sans)!important;
+    font-size:10px!important;
+    font-weight:500!important;
+    letter-spacing:.055em!important;
+    line-height:1!important;
+    text-transform:uppercase!important;
+    white-space:nowrap!important;
+    box-shadow:none!important;
+  }
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-icon:hover{
+    background:var(--paper)!important;
+    color:var(--ink)!important;
+  }
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-sun{grid-column:1!important}
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon{grid-column:3!important}
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:8px}
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:8px}
+  /* De track blijft meetbaar voor het bestaande switch-/a11y-contract, maar is
+     visueel niet meer nodig zodra de twee expliciete segmenten zichtbaar zijn. */
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-track{
+    position:absolute!important;
+    left:50%!important;
+    top:50%!important;
+    width:32px!important;
+    height:18px!important;
+    margin:0!important;
+    transform:translate(-50%,-50%)!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+  #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="auto"] .wiw-theme-auto,
+  #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="licht"] .wiw-theme-sun,
+  #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="donker"] .wiw-theme-moon{
+    background:var(--paper)!important;
+    color:var(--ink)!important;
+    font-weight:500!important;
+    box-shadow:inset 0 -1px 0 var(--ink-45)!important;
+  }
+}
+@media(min-width:431px) and (max-width:900px){
+  /* Tabletbreedtes blijven volwaardig tappable, zonder de compacte desktopmaat
+     te laten terugvallen op een krappe 36px-rij. */
+  html body #thema.wiw-theme-control.wiw-theme-segmented-20260915{
+    width:180px!important;
+    min-height:44px!important;
+  }
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-auto,
+  #thema.wiw-theme-segmented-20260915 #thema-switch{min-height:44px!important}
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{height:44px!important}
+}
 @media(max-width:430px){
   .tools{
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
@@ -298,6 +438,9 @@ function valideerWeatherHtml(html,rel){
     'grid-column:1 / -1!important',
     'grid-template-columns:repeat(3,minmax(0,1fr))!important',
     'grid-template-columns:subgrid!important',
+    '@media(min-width:431px)',
+    'width:192px!important',
+    'grid-column:1 / 4!important',
     '.wiw-theme-auto{\n    grid-column:2!important',
     '.wiw-theme-moon{\n    grid-column:3!important',
     '.wiw-theme-sun::after{content:"Licht";margin-left:8px}',
@@ -329,7 +472,7 @@ function main(){
   if(!geraakt)throw new Error("Geen weerartifact geraakt door mobiele themalaag.");
   const hub=patchHub();
   const cache=vernieuwServiceworkerCache(OUT,"theme-mobile-session-20260915");
-  console.log(`Mobiele themakeuze toegepast op ${geraakt} weerpagina's: LICHT | AUTO | DONKER als volle telefoonrij; handmatige voorkeur sessiegebonden${hub?", /weer/-hub sessieveilig":""}; cache ${cache}.`);
+  console.log(`Themakeuze toegepast op ${geraakt} weerpagina's: LICHT | AUTO | DONKER als gedeelde segmented control voor desktop en mobiel; handmatige voorkeur sessiegebonden${hub?", /weer/-hub sessieveilig":""}; cache ${cache}.`);
   return {geraakt,hub,cache};
 }
 

@@ -17,6 +17,9 @@ assert.equal(THEMA_LEGACY_KEY,"weerbriefing.thema");
 assert(CSS.includes("grid-template-columns:repeat(2,minmax(0,1fr))!important"),"mobiele tools moeten twee actie-kolommen gebruiken");
 assert(CSS.includes("grid-template-columns:repeat(3,minmax(0,1fr))!important"),"themakeuze moet visueel drie gelijke segmenten hebben");
 assert(CSS.includes("grid-template-columns:subgrid!important"),"Licht en Donker delen niet exact de drie kolommen van de hoofdcontrol");
+assert(CSS.includes("@media(min-width:431px)"),"desktop/tablet moeten dezelfde segmented-controlpresentatie krijgen");
+assert(CSS.includes("width:192px!important"),"desktop segmented control mist een compacte, expliciete breedte");
+assert(CSS.includes("grid-column:1 / 4!important"),"desktop Licht/Auto/Donker delen geen volledige driekolomscontrol");
 assert(CSS.includes(".wiw-theme-auto{\n    grid-column:2!important"),"Auto staat niet in het middelste segment");
 assert(CSS.includes(".wiw-theme-moon{\n    grid-column:3!important"),"Donker staat niet in het rechtersegment");
 assert(CSS.includes('.wiw-theme-sun::after{content:"Licht";margin-left:8px}'),"Licht-label of icoonafstand ontbreekt");
@@ -41,4 +44,4 @@ assert(r.html.includes("wiw-theme-segmented-20260915"),"segmented class ontbreek
 assert(!r.html.includes("const oud=true"),"oude themaruntime bleef staan");
 assert(r.html.includes("const later=true"),"runtime na thema-anker werd geraakt");
 
-console.log("Theme mobile/session regressies groen: mobiele 3-segmentpresentatie, sessieopslag, legacy-neutralisatie en runtimepatch geborgd.");
+console.log("Theme control/session regressies groen: desktop en mobiel delen de 3-segmentpresentatie; sessieopslag, legacy-neutralisatie en runtimepatch geborgd.");
