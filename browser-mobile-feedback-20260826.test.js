@@ -77,7 +77,7 @@ async function telUurAs(page){
     if(!chart||!Number.isFinite(plotOnder))return 0;
     return [...chart.querySelectorAll("text")].filter(el=>{
       const tekst=String(el.textContent||"").trim(),y=Number(el.getAttribute("y"));
-      return /^(?:[01]?\d|2[0-3])$/.test(tekst)&&Number.isFinite(y)&&y>=plotOnder+6&&!(el.closest&&el.closest('g[data-q4-rain-periods]'));
+      return /^(?:[01]\d|2[0-3]):00$/.test(tekst)&&Number.isFinite(y)&&y>=plotOnder+6&&!(el.closest&&el.closest('g[data-q4-rain-periods]'));
     }).length;
   });
 }
@@ -139,17 +139,17 @@ async function controleer(browserType,naam){
     }
     assert(voor.pressed.every(v=>v==="false"),`${naam}: vóór selectie is geen dag als actief aangekondigd`);
     assert.ok(voor.tempLabels>=4,`${naam}: etmaalgrafiek toont meer dan alleen minimum en maximum (${voor.tempLabels})`);
-    assert.ok(await telUurAs(page)>=4,`${naam}: eerste mobiele render toont minimaal vier gewone tijdlabels`);
+    assert.ok(await telUurAs(page)>=4,`${naam}: eerste mobiele render toont minimaal vier expliciete HH:00-tijdlabels`);
     assert.ok(voor.overflow<=2,`${naam}: geen horizontale overflow (${voor.overflow}px)`);
 
     const dagRijen=page.locator("#days .row.day:not(.kop)");
     await dagRijen.nth(1).click();
     await page.waitForTimeout(400);
-    assert.ok(await telUurAs(page)>=4,`${naam}: tijdlabels blijven zichtbaar na wisselen naar een andere dag`);
+    assert.ok(await telUurAs(page)>=4,`${naam}: expliciete HH:00-tijdlabels blijven zichtbaar na wisselen naar een andere dag`);
 
     await dagRijen.first().click();
     await page.waitForTimeout(400);
-    assert.ok(await telUurAs(page)>=4,`${naam}: tijdlabels blijven zichtbaar na terugkeer naar Vandaag`);
+    assert.ok(await telUurAs(page)>=4,`${naam}: expliciete HH:00-tijdlabels blijven zichtbaar na terugkeer naar Vandaag`);
     const na=await page.evaluate(()=>({
       kop:(document.getElementById("chartlab").textContent||"").trim(),
       hint:(document.getElementById("charthint").textContent||"").trim(),
@@ -171,6 +171,6 @@ async function controleer(browserType,naam){
   try{
     await controleer(chromium,"Chromium");
     await controleer(webkit,"WebKit");
-    console.log("Mobiele feedback 26-08 groen: compacte weektabel, zichtbare Vandaag-uitleg, beschreven kans/hoeveelheid, mobiele tijdas, actieve dagstate en grafieklabels in Chromium/WebKit.");
+    console.log("Mobiele feedback 26-08 groen: compacte weektabel, zichtbare Vandaag-uitleg, beschreven kans/hoeveelheid, expliciete mobiele HH:00-tijdas, actieve dagstate en grafieklabels in Chromium/WebKit.");
   }finally{server.close();}
 })().catch(err=>{console.error(err);process.exit(1);});
