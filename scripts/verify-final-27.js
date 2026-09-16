@@ -155,7 +155,10 @@ for(const tekst of ["CACHEPERF","DEELPERF","window.__q4","console.log(\"DIAG "])
 /* release-recovery-finalize mag vóór de delivery-cleanup al één onafhankelijke
    bootstrapresource toevoegen. Dat is bewust nog géén app-delivery: de hoofdapp
    staat op dit moment inline en wordt pas daarna geëxternaliseerd. De finale
-   deliveryguard blijft strikt zodra de deliverymarker aanwezig is. */
+   deliveryguard blijft strikt zodra de deliverymarker aanwezig is. Analytics-
+   assets zijn aparte, expliciet toegestane deliverylagen en tellen niet als
+   WeatherNow-runtime; beide moeten wel exact eenmaal aanwezig en syntactisch
+   geldig zijn zodra delivery actief is. */
 const inlineBlokken=[...paginaHtml.matchAll(/<script(?![^>]*\ssrc=)([^>]*)>([\s\S]*?)<\/script>/g)];
 const inlineRuntime=inlineBlokken.filter(m=>!/\btype\s*=\s*["'](?:application\/ld\+json|application\/json)["']/i.test(m[1])).map(m=>m[2]);
 const jsonLdScripts=inlineBlokken.filter(m=>/\btype\s*=\s*["']application\/ld\+json["']/i.test(m[1])).map(m=>m[2]);
@@ -165,25 +168,32 @@ const appPatroon=/^\/app-[0-9a-f]{12}\.min\.js$/;
 const earlyPatroon=/^\/early-[0-9a-f]{12}\.min\.js$/;
 const bootstrapPatroon=/^\/bootstrap-[0-9a-f]{12}(?:\.min)?\.js$/;
 const posthogPatroon=/^\/posthog-analytics\.js$/;
+const plausiblePatroon=/^\/plausible-analytics\.js$/;
 const posthogTag='<script src="/posthog-analytics.js" defer data-analytics="posthog"></script>';
+const plausibleTag='<script src="/plausible-analytics.js" defer data-analytics="plausible"></script>';
 const hoofdBundles=externePaden.filter(src=>appPatroon.test(src));
 const bootstrapBundles=externePaden.filter(src=>bootstrapPatroon.test(src));
 const posthogBundles=externePaden.filter(src=>posthogPatroon.test(src));
+const plausibleBundles=externePaden.filter(src=>plausiblePatroon.test(src));
 if(bootstrapBundles.length>1)throw new Error("Homepage mag maximaal één onafhankelijke bootstrapbundle hebben; gevonden "+bootstrapBundles.length+".");
 if(deliveryActief){
   if(hoofdBundles.length!==1)throw new Error("Definitief homepage-artifact moet exact één app-hoofdbundle hebben; gevonden "+hoofdBundles.length+".");
   if(posthogBundles.length!==1)throw new Error("Definitief delivery-artifact moet exact één lokale PostHog-analyticsfile hebben; gevonden "+posthogBundles.length+".");
+  if(plausibleBundles.length!==1)throw new Error("Definitief delivery-artifact moet exact één lokale Plausible-analyticsfile hebben; gevonden "+plausibleBundles.length+".");
   const posthogTags=paginaHtml.split(posthogTag).length-1;
+  const plausibleTags=paginaHtml.split(plausibleTag).length-1;
   if(posthogTags!==1)throw new Error("Definitief delivery-artifact moet exact de verwachte privacygerichte PostHog-scripttag bevatten; gevonden "+posthogTags+".");
+  if(plausibleTags!==1)throw new Error("Definitief delivery-artifact moet exact de verwachte privacygerichte Plausible-scripttag bevatten; gevonden "+plausibleTags+".");
   if(inlineRuntime.length)throw new Error("Definitief delivery-artifact mag geen executable inline runtime meer bevatten.");
 }else{
   if(hoofdBundles.length)throw new Error("App-hoofdbundle staat extern vóór de deliverymarker actief is.");
   if(posthogBundles.length)throw new Error("PostHog analytics mag pas na succesvolle delivery-cleanup worden toegevoegd.");
+  if(plausibleBundles.length)throw new Error("Plausible analytics mag pas na succesvolle delivery-cleanup worden toegevoegd.");
   const onverwacht=externePaden.filter(src=>!bootstrapPatroon.test(src));
   if(onverwacht.length)throw new Error("Onverwachte externe pre-delivery runtime: "+onverwacht.join(", "));
   if(!inlineRuntime.length)throw new Error("Pre-delivery artifact mist de inline WeatherNow-runtime.");
 }
-const externeRuntimePaden=externePaden.filter(src=>!posthogPatroon.test(src));
+const externeRuntimePaden=externePaden.filter(src=>!posthogPatroon.test(src)&&!plausiblePatroon.test(src));
 const externeRuntime=externeRuntimePaden.map(src=>{
   if(!(appPatroon.test(src)||earlyPatroon.test(src)||bootstrapPatroon.test(src)))throw new Error("Onverwachte externe runtime in definitief artifact: "+src);
   const p=path.join(OUT,src.replace(/^\//,""));
@@ -195,8 +205,11 @@ if(!runtimeScripts.length)throw new Error("Geen WeatherNow-runtime gevonden.");
 runtimeScripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/runtime-final-27-"+(i+1)+".js"}));
 if(deliveryActief){
   const posthogPad=path.join(OUT,"posthog-analytics.js");
+  const plausiblePad=path.join(OUT,"plausible-analytics.js");
   if(!fs.existsSync(posthogPad))throw new Error("Lokale PostHog-analyticsfile ontbreekt in definitief artifact.");
+  if(!fs.existsSync(plausiblePad))throw new Error("Lokale Plausible-analyticsfile ontbreekt in definitief artifact.");
   new vm.Script(fs.readFileSync(posthogPad,"utf8"),{filename:"public/posthog-analytics.js"});
+  new vm.Script(fs.readFileSync(plausiblePad,"utf8"),{filename:"public/plausible-analytics.js"});
 }
 jsonLdScripts.forEach((bron,i)=>{try{JSON.parse(bron);}catch(e){throw new Error("Ongeldige JSON-LD in definitief artifact #"+(i+1)+": "+e.message);}});
 if(deliveryActief){
@@ -204,4 +217,4 @@ if(deliveryActief){
 }
 
 const verwacht=verifieerServiceworkerCache(OUT,"finale");
-console.log("Finale 27-punten artifactguard geslaagd: één Nachtzicht-owner met kalendergrens en maanvenster, gewone nullen, één Q3-UV-copy-owner, geconsolideerde copy-eigenaars inclusief zonuren, zeven-dagenpresentatie en briefingcopy, requestarchitectuur, syntactische geleverde runtime, geldige JSON-LD en serviceworker "+verwacht+".");
+console.log("Finale 27-punten artifactguard geslaagd: één Nachtzicht-owner met kalendergrens en maanvenster, gewone nullen, één Q3-UV-copy-owner, geconsolideerde copy-eigenaars inclusief zonuren, zeven-dagenpresentatie en briefingcopy, requestarchitectuur, syntactische geleverde runtime plus analyticsassets, geldige JSON-LD en serviceworker "+verwacht+".");
