@@ -17,7 +17,7 @@ assert(over.includes("geen gebruikersaccount of advertentietracking"),"Over-pagi
 assert(over.includes("privacygerichte bezoekstatistieken"),"Over-pagina moet bezoekstatistieken transparant benoemen");
 assert(privacy.includes("geen account of advertentietracking"),"Privacyverklaring moet het ontbreken van account en advertentietracking blijven benoemen");
 assert(privacy.includes("privacygerichte bezoekstatistieken"),"Privacyverklaring moet privacygerichte bezoekstatistieken blijven benoemen");
-for(const provider of ["PostHog Cloud EU","Cloudflare Web Analytics"]){
+for(const provider of ["PostHog Cloud EU","Cloudflare Web Analytics","Plausible Analytics"]){
   assert(privacy.includes(provider),"Privacyverklaring mist analyticsprovider: "+provider);
 }
 
@@ -101,4 +101,4 @@ assert.equal(voerAnalyticsUit({pathname:"/privacy",gpc:true}).length,0,"GPC moet
 assert.equal(voerAnalyticsUit({pathname:"/privacy",navigatorDnt:"1"}).length,0,"navigator DNT moet alle PostHog-capture blokkeren");
 assert.equal(voerAnalyticsUit({pathname:"/privacy",windowDnt:"1"}).length,0,"window DNT moet alle PostHog-capture blokkeren");
 
-console.log("privacy-analytics-consistency: over/privacy-copy, canonieke privacyroute, URL-/locatieredactie en GPC/DNT OK");
+console.log("privacy-analytics-consistency: over/privacy-copy, analyticsproviders, canonieke privacyroute, URL-/locatieredactie en GPC/DNT OK");
