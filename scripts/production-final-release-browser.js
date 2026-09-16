@@ -271,7 +271,7 @@ async function lees(page){return page.evaluate(()=>{
       await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Amsterdam");
       const actief=await page.evaluate(()=>document.documentElement.getAttribute("data-thema"));assert.equal(actief,theme,`${w}px ${theme}: thema niet actief`);
       const naam=`watishetweer-${w}-${theme}.png`;await page.screenshot({path:path.join(OUT,naam),fullPage:true});rapport.screenshots.push({width:w,height:h,theme,file:naam});
-      if(w===1920){const u=await lees(page);rapport.liveProof={sha:u.sha,delivery:u.delivery,assets:u.assets,url:page.url()};
+      if(w===1920){const u=await lees(page);rapport.liveProof={sha:u.sha,delivery:u.delivery,assets:u.assets,url:page.url()};}
       await context.close();
     }
 
