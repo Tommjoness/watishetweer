@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}
+  CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN }}
   CLOUDFLARE_DEPLOY_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
   CLOUDFLARE_PROJECT: watishetweer
@@ -36,20 +36,20 @@ jobs:
         with:
           node-version: 24
 
-      - name: Selecteer minimaal bevoegde Analytics-token
+      - name: Selecteer setup-token voor Analytics-writes
         shell: bash
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          if [ -n "${CLOUDFLARE_ANALYTICS_API_TOKEN:-}" ]; then
-            echo "CLOUDFLARE_API_TOKEN=$CLOUDFLARE_ANALYTICS_API_TOKEN" >> "$GITHUB_ENV"
-            echo "ANALYTICS_TOKEN_SOURCE=dedicated" >> "$GITHUB_ENV"
+          if [ -n "${CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN:-}" ]; then
+            echo "CLOUDFLARE_API_TOKEN=$CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN" >> "$GITHUB_ENV"
+            echo "ANALYTICS_TOKEN_SOURCE=dedicated-setup" >> "$GITHUB_ENV"
           elif [ -n "${CLOUDFLARE_DEPLOY_API_TOKEN:-}" ]; then
             echo "CLOUDFLARE_API_TOKEN=$CLOUDFLARE_DEPLOY_API_TOKEN" >> "$GITHUB_ENV"
-            echo "ANALYTICS_TOKEN_SOURCE=legacy-fallback" >> "$GITHUB_ENV"
-            echo 'Waarschuwing: dedicated CLOUDFLARE_ANALYTICS_API_TOKEN ontbreekt; tijdelijke fallback naar deploytoken.'
+            echo "ANALYTICS_TOKEN_SOURCE=deploy-fallback" >> "$GITHUB_ENV"
+            echo 'Waarschuwing: CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN ontbreekt; fallback naar deploytoken voor setup-writes.'
           else
-            echo 'Geen Cloudflare-token beschikbaar.' >&2
+            echo 'Geen Cloudflare-token met setup/write-rechten beschikbaar.' >&2
             exit 1
           fi
 
