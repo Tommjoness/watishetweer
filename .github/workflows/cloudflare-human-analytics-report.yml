@@ -9,11 +9,19 @@ on:
         default: '1,7,30'
   push:
     branches:
+      - main
       - feat/cloudflare-human-analytics-20260916
     paths:
       - '.github/workflows/cloudflare-human-analytics-report.yml'
       - 'scripts/cloudflare-human-analytics-report.js'
       - 'scripts/cloudflare-human-analytics-report.test.js'
+      - 'scripts/cloudflare-admin-analytics-runtime.js'
+      - 'scripts/cloudflare-admin-analytics-runtime.test.js'
+      - 'scripts/cloudflare-admin-dashboard.test.js'
+      - 'functions/api/admin/seo/cloudflare.js'
+      - 'admin/seo/index.html'
+      - 'admin/seo/cloudflare-dashboard.js'
+      - 'admin/seo/cloudflare-dashboard.css'
 
 permissions:
   contents: read
@@ -25,7 +33,9 @@ concurrency:
 env:
   CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}
   CLOUDFLARE_DEPLOY_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_PROJECT: watishetweer
   CLOUDFLARE_ANALYTICS_WINDOWS: ${{ github.event.inputs.windows || '1,7,30' }}
 
 jobs:
@@ -45,5 +55,14 @@ jobs:
       - name: Test bot-gefilterd rapportcontract
         run: node scripts/cloudflare-human-analytics-report.test.js
 
+      - name: Test admin-dashboardcontract
+        run: node scripts/cloudflare-admin-dashboard.test.js
+
+      - name: Test veilige production-runtime-sync
+        run: node scripts/cloudflare-admin-analytics-runtime.test.js
+
       - name: Haal Cloudflare RUM op met botfilter
         run: node scripts/cloudflare-human-analytics-report.js
+
+      - name: Sync read-only analytics naar Pages production runtime
+        run: node scripts/cloudflare-admin-analytics-runtime.js
