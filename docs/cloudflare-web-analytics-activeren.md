@@ -2,44 +2,57 @@
 
 ## Status
 
-De productiesite en productie-smoke kunnen volledig groen zijn terwijl Cloudflare Web Analytics nog uit staat. De Analytics-setup is bewust apart gehouden van de normale deploy.
+Cloudflare Web Analytics draait voor `watishetweer.nl` via de officiële Cloudflare RUM-laag. De normale Pages-deploy, de Analytics-setup en de read-only rapportage zijn bewust van elkaar gescheiden.
 
-De setupworkflow gebruikt bij voorkeur een afzonderlijke GitHub Actions-secret `CLOUDFLARE_ANALYTICS_API_TOKEN`. Alleen wanneer die ontbreekt, valt de workflow tijdelijk terug op de bestaande `CLOUDFLARE_API_TOKEN`. Voor verkoopbaarheid en least privilege is een aparte Analytics-token de voorkeursroute.
+## Tokenrollen
 
-## Minimale tokenrechten
+Er zijn nu twee verschillende rollen. Gebruik ze niet door elkaar.
 
-Maak in Cloudflare een API-token voor het account van `watishetweer.nl` met uitsluitend de rechten die deze workflow nodig heeft:
+### 1. Read-only rapportage en admincockpit
 
-### Account
+GitHub Actions-secret:
+
+`CLOUDFLARE_ANALYTICS_API_TOKEN`
+
+Minimale Cloudflare-permissie:
+
+- **Account → Account Analytics → Read**
+
+Deze token wordt gebruikt voor:
+
+- de workflow `Cloudflare human analytics report`;
+- de bot-gefilterde 1/7/30-dagenrapportage;
+- de afgeschermde Cloudflare-sectie op `/admin/seo/`.
+
+De workflow synchroniseert deze token uitsluitend als `secret_text` naar de **production** Pages Functions-runtime. Previewdeployments krijgen hem niet. De browser krijgt de token nooit te zien.
+
+### 2. Web Analytics activeren of herstellen
+
+Optionele GitHub Actions-secret:
+
+`CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN`
+
+Deze token is alleen nodig wanneer de setupworkflow zelfstandig Web Analytics moet kunnen aanmaken/activeren en de historische eigen `disable_rum`-regel moet kunnen verwijderen.
+
+Benodigde setuprechten:
+
+#### Account
 
 - `Account Settings Read`
 - `Account Settings Write` / `Edit`
 - `Cloudflare Pages Read` / `Pages Read`
 
-### Zone: watishetweer.nl
+#### Zone: watishetweer.nl
 
 - `Config Rules Edit`
 
-Beperk de account- en zoneresources tot het juiste Cloudflare-account en, waar de Cloudflare-tokeneditor dat ondersteunt, uitsluitend de zone `watishetweer.nl`.
+Als `CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN` ontbreekt, gebruikt de setupworkflow als fallback de bestaande `CLOUDFLARE_API_TOKEN`. De read-only `CLOUDFLARE_ANALYTICS_API_TOKEN` wordt **nooit** voor setup-writes geselecteerd.
 
-Waarom deze rechten nodig zijn:
-
-- Pages Read: de setup leest de custom domains van het Pages-project om de juiste `zone_tag` vast te stellen.
-- Account Settings Read: Cloudflare vereist dit voor het opvragen/lijsten van Web Analytics-sites.
-- Account Settings Write: Cloudflare vereist dit voor het aanmaken of activeren van de Web Analytics-site.
-- Config Rules Edit: de setup verwijdert pas ná succesvolle Analytics-activatie uitsluitend de historische eigen `watishetweer_disable_rum`-regel.
-
-## GitHub-secret
-
-Plaats de nieuwe token in de repository als Actions-secret:
-
-`CLOUDFLARE_ANALYTICS_API_TOKEN`
-
-Laat `CLOUDFLARE_API_TOKEN` staan voor de normale Cloudflare Pages-deploy. Deel of log geen tokenwaarde.
+Beperk tokens waar mogelijk tot het juiste Cloudflare-account en de zone `watishetweer.nl`.
 
 ## Setup uitvoeren
 
-Start daarna de GitHub Actions-workflow:
+Start alleen wanneer activatie/herstel nodig is de GitHub Actions-workflow:
 
 `Cloudflare Web Analytics setup`
 
@@ -47,15 +60,32 @@ De workflow:
 
 1. checkt de exacte bron-SHA uit;
 2. wacht totdat exact die SHA publiek live staat;
-3. selecteert de dedicated Analytics-token als die bestaat;
+3. selecteert de dedicated setup-token of de deployfallback;
 4. maakt/activeert de Web Analytics-site idempotent;
 5. leest de site opnieuw terug en verifieert `auto_install` en de zone;
 6. verwijdert alleen daarna de eigen historische RUM-blokkaderegel indien die nog bestaat.
 
-De workflow moet volledig groen eindigen voordat de commerciële T0-baseline start.
+Een permissiefout in deze setup is geen reden om de read-only rapportagetoken ruimer te maken.
 
-## Verificatie
+## Admincockpit
 
-Na een groene setup hoort de volgende production-smoke of handmatige browsercontrole de officiële Cloudflare Web Analytics-beacon en de same-origin `/cdn-cgi/rum`-route te kunnen zien. De site mag geen handmatig hardcoded Analytics-token of externe tracking-snippet nodig hebben.
+De afgeschermde pagina `/admin/seo/` toont naast Search Console ook Cloudflare Web Analytics voor alleen `watishetweer.nl`:
 
-Als de setup opnieuw HTTP 403 geeft, verruim niet willekeurig de token. Controleer eerst welk endpoint faalt en vergelijk dat met bovenstaande minimale permissies.
+- laatste 24 uur;
+- laatste 7 dagen;
+- laatste 30 dagen;
+- bot-gefilterde visits (`bot: 0`);
+- bot-gefilterde pageviews;
+- uitgesloten bot-pageviews;
+- bot-aandeel op basis van pageviews;
+- samplingstatus van de Cloudflare RUM-query.
+
+De route `/api/admin/seo/cloudflare` voert de GraphQL-query server-side uit en gebruikt dezelfde Cloudflare Access-validatie en e-mailallowlist als de bestaande SEO-cockpit. Responses zijn `private, no-store` en `noindex`.
+
+`*.pages.dev` preview- en QA-hosts worden niet in deze rapportage meegenomen doordat de GraphQL-query expliciet op `requestHost: watishetweer.nl` filtert.
+
+## Interpretatie
+
+`Visits` zijn Cloudflare-bezoeken/sessies, geen unieke personen. `bot: 0` betekent dat Cloudflare het verkeer niet als bot classificeerde; het is geen sluitend bewijs dat achter elk bezoek een mens zat.
+
+Langere vensters kunnen door Cloudflare worden gesampled. De cockpit toont daarom ook de samplingstatus; gesamplede 7- en 30-dagenwaarden moeten als schattingen worden gelezen.
