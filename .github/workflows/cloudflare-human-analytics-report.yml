@@ -1,0 +1,49 @@
+name: Cloudflare human analytics report
+
+on:
+  workflow_dispatch:
+    inputs:
+      windows:
+        description: 'Komma-gescheiden rapportvensters in dagen (1-30)'
+        required: false
+        default: '1,7,30'
+  push:
+    branches:
+      - feat/cloudflare-human-analytics-20260916
+    paths:
+      - '.github/workflows/cloudflare-human-analytics-report.yml'
+      - 'scripts/cloudflare-human-analytics-report.js'
+      - 'scripts/cloudflare-human-analytics-report.test.js'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: watishetweer-cloudflare-human-analytics
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}
+  CLOUDFLARE_DEPLOY_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_ANALYTICS_WINDOWS: ${{ github.event.inputs.windows || '1,7,30' }}
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exacte bron-SHA
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Test bot-gefilterd rapportcontract
+        run: node scripts/cloudflare-human-analytics-report.test.js
+
+      - name: Haal Cloudflare RUM op met botfilter
+        run: node scripts/cloudflare-human-analytics-report.js
