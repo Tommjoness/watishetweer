@@ -7,6 +7,7 @@
   <meta name="color-scheme" content="light">
   <title>SEO cockpit | watishetweer.nl</title>
   <link rel="stylesheet" href="/admin/seo/seo-dashboard.css">
+  <link rel="stylesheet" href="/admin/seo/cloudflare-dashboard.css">
 </head>
 <body>
   <main class="shell">
@@ -14,7 +15,7 @@
       <div>
         <p class="eyebrow">watishetweer.nl</p>
         <h1>SEO cockpit</h1>
-        <p class="muted">Search Console en optioneel GA4, rechtstreeks uit Google.</p>
+        <p class="muted">Search Console, Cloudflare Web Analytics en optioneel GA4 in één overzicht.</p>
       </div>
       <div class="controls">
         <label for="range">Periode</label>
@@ -34,6 +35,18 @@
       <article class="card"><span>Impressies</span><strong id="kpi-impressions">—</strong><small id="delta-impressions"></small></article>
       <article class="card"><span>CTR</span><strong id="kpi-ctr">—</strong><small id="delta-ctr"></small></article>
       <article class="card"><span>Gem. positie</span><strong id="kpi-position">—</strong><small id="delta-position"></small></article>
+    </section>
+
+    <section class="panel" id="cloudflare-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Cloudflare Web Analytics</p>
+          <h2>Bezoekers & bots</h2>
+          <p class="muted">Bot-gefilterd browser-RUM voor watishetweer.nl, los van onze preview- en QA-hosts.</p>
+        </div>
+        <span id="cloudflare-badge" class="badge">Laden…</span>
+      </div>
+      <div id="cloudflare-content" aria-live="polite"><p class="cf-message">Cloudflare-data laden…</p></div>
     </section>
 
     <section class="panel">
@@ -125,5 +138,6 @@
     </footer>
   </main>
   <script src="/admin/seo/seo-dashboard.js" defer></script>
+  <script src="/admin/seo/cloudflare-dashboard.js" defer></script>
 </body>
 </html>
