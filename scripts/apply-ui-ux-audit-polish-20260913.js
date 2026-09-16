@@ -7,6 +7,7 @@ const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const OUT=path.join(__dirname,"..","public");
 const STYLE_ID="wiw-ui-ux-audit-polish-20260913";
 const OWNER_ID="wiw-live-screenshot-polish-20260912";
+const SUPPORT_CONTACT='<p class="footer-contact">Opmerkingen, vragen of feedback? Mail naar <a href="mailto:support@watishetweer.nl">support@watishetweer.nl</a>.</p>';
 
 /* Deze laatste presentatielaag draait na delivery-cleanup. De selectors raken
    alleen leesbaarheid en interactie-affordance; data, grafiekgeometrie, runtime,
@@ -18,6 +19,7 @@ const CSS=`
 button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-visible,summary:focus-visible{outline:2px solid var(--ink)!important;outline-offset:2px!important}
 #thema{display:inline-flex!important;align-items:center!important;justify-content:center!important;opacity:1!important;color:var(--ink-70)!important}
 #thema .thema-status{vertical-align:0!important}
+.footer-contact{grid-column:1 / -1;justify-self:center;margin:6px 0 0;text-align:center;color:var(--ink-25);font:inherit}
 @media(min-width:901px){
   .chip.add{border-style:solid!important;background:var(--sheet);color:var(--ink-70)}
   #days .row.day:not(.kop){padding-right:24px!important}
@@ -74,10 +76,13 @@ function main(){
     if(!html.includes(`id="${OWNER_ID}"`))continue;
     const rel=path.relative(OUT,p);
     if(html.includes(`id="${STYLE_ID}"`))throw new Error(rel+": UI/UX-auditpolish staat al in artifact.");
+    if(html.includes('class="footer-contact"'))throw new Error(rel+": supportcontact staat al in artifact.");
     for(const hook of ['class="mobile-section-nav"','id="thema"','id="days"','id="aq"']){
       if(!html.includes(hook))throw new Error(rel+": verwachte UI-hook ontbreekt: "+hook);
     }
+    if((html.split("</footer>").length-1)!==1)throw new Error(rel+": footereinde ontbreekt of is dubbel.");
     if(!html.includes("</head>"))throw new Error(rel+": headafsluiting ontbreekt.");
+    html=html.replace("</footer>",`${SUPPORT_CONTACT}\n    </footer>`);
     html=html.replace("</head>",`<style id="${STYLE_ID}">\n${CSS}\n</style>\n</head>`);
     fs.writeFileSync(p,html,"utf8");
     geraakt++;
@@ -89,4 +94,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={OUT,STYLE_ID,OWNER_ID,CSS,htmlBestanden,main};
+module.exports={OUT,STYLE_ID,OWNER_ID,SUPPORT_CONTACT,CSS,htmlBestanden,main};
