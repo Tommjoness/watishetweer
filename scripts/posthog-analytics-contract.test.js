@@ -128,7 +128,7 @@ const posthogPos=deliveryCleanup.indexOf("voegPostHogNaDeliveryToe();",optimalis
 assert(optimaliseerPos>=0&&posthogPos>optimaliseerPos,"analytics moet aantoonbaar pas na succesvolle delivery-optimalisatie worden toegepast");
 
 const privacy=fs.readFileSync(path.join(root,"privacy.html"),"utf8");
-for(const tekst of ["PostHog Cloud EU","geen PostHog-SDK","querystring","URL-hash","IP-anonimisering","Google Analytics 4 (GA4) is optioneel","pas geladen nadat je daar expliciet toestemming voor geeft","Advertentieopslag","Google Analytics uitschakelen"]){
+for(const tekst of ["PostHog Cloud EU","geen PostHog-SDK","querystring","URL-hash","IP-anonimisering","Google Analytics 4 (GA4) is optioneel","pas geladen nadat je daar expliciet toestemming voor geeft","Advertentieopslag","data-ga4-consent-toggle","Je kunt toestemming hier altijd weer intrekken"]){
   assert(privacy.includes(tekst),"privacyverklaring mist analytics-uitleg: "+tekst);
 }
 
