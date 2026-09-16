@@ -207,7 +207,7 @@ async function lees(page){return page.evaluate(()=>{
           for(let i=1;i<uit.hourInstants.length;i++)assert.equal(Date.parse(uit.hourInstants[i])-Date.parse(uit.hourInstants[i-1]),3600000,`${l.naam}: uurinstanties moeten uniek en opeenvolgend zijn`);
         }else assert(uit.hourRows>=23,`${l.naam}: mobiele bronuurtabel te kort (${uit.hourRows})`);
         const hourHeaders=await page.locator("#wiw-hour-table thead th").allTextContents();
-        assert.deepEqual(hourHeaders.map(s=>s.trim()),["Tijd","Weer","Temp.","Neerslag","Wind"],`${l.naam}: rijke uurkolommen wijken af`);
+        assert.deepEqual(hourHeaders.map(s=>s.trim()),["Tijd","Weer","Temperatuur","Neerslag","Wind"],`${l.naam}: rijke uurkolommen wijken af`);
         const hourScopes=await page.locator("#wiw-hour-table thead th").evaluateAll(ths=>ths.map(th=>th.getAttribute("scope")||""));
         assert.deepEqual(hourScopes,["col","col","col","col","col"],`${l.naam}: uurkolommen missen scope=col`);
         assert(uit.hourClip&&uit.hourOverflow<=1&&uit.pageOverflow<=1,`${l.naam}: clipping/overflow hour=${uit.hourOverflow} page=${uit.pageOverflow}`);
@@ -271,7 +271,7 @@ async function lees(page){return page.evaluate(()=>{
       await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Amsterdam");
       const actief=await page.evaluate(()=>document.documentElement.getAttribute("data-thema"));assert.equal(actief,theme,`${w}px ${theme}: thema niet actief`);
       const naam=`watishetweer-${w}-${theme}.png`;await page.screenshot({path:path.join(OUT,naam),fullPage:true});rapport.screenshots.push({width:w,height:h,theme,file:naam});
-      if(w===1920){const u=await lees(page);rapport.liveProof={sha:u.sha,delivery:u.delivery,assets:u.assets,url:page.url()};}
+      if(w===1920){const u=await lees(page);rapport.liveProof={sha:u.sha,delivery:u.delivery,assets:u.assets,url:page.url()};
       await context.close();
     }
 
