@@ -2,6 +2,7 @@
 
 const API_ROOT="https://api.cloudflare.com/client/v4";
 const PROJECT="watishetweer";
+const GA4_PROPERTY_ID="554692576";
 
 function id(value,label){
   const cleaned=String(value||"").trim();
@@ -12,6 +13,12 @@ function id(value,label){
 function token(value,label){
   const cleaned=String(value||"").trim();
   if(!cleaned)throw new Error(`${label} ontbreekt.`);
+  return cleaned;
+}
+
+function propertyId(value=GA4_PROPERTY_ID){
+  const cleaned=String(value||"").trim();
+  if(!/^\d{6,20}$/.test(cleaned))throw new Error("GA4_PROPERTY_ID ontbreekt of is ongeldig.");
   return cleaned;
 }
 
@@ -27,10 +34,11 @@ async function cfJson(url,options={},fetchImpl=fetch){
   return body.result;
 }
 
-async function syncRuntime({accountId,deployToken,analyticsToken,project=PROJECT,fetchImpl=fetch}){
+async function syncRuntime({accountId,deployToken,analyticsToken,ga4PropertyId=GA4_PROPERTY_ID,project=PROJECT,fetchImpl=fetch}){
   const account=id(accountId,"CLOUDFLARE_ACCOUNT_ID");
   const writer=token(deployToken,"CLOUDFLARE_API_TOKEN");
   const analytics=token(analyticsToken,"CLOUDFLARE_ANALYTICS_API_TOKEN");
+  const ga4=propertyId(ga4PropertyId);
   const endpoint=`${API_ROOT}/accounts/${account}/pages/projects/${encodeURIComponent(project)}`;
   const headers={Authorization:`Bearer ${writer}`,"Content-Type":"application/json"};
 
@@ -43,7 +51,8 @@ async function syncRuntime({accountId,deployToken,analyticsToken,project=PROJECT
       production:{
         env_vars:{
           CLOUDFLARE_ANALYTICS_API_TOKEN:{type:"secret_text",value:analytics},
-          CLOUDFLARE_ACCOUNT_ID:{type:"secret_text",value:account}
+          CLOUDFLARE_ACCOUNT_ID:{type:"secret_text",value:account},
+          GA4_PROPERTY_ID:{type:"plain_text",value:ga4}
         }
       }
     }
@@ -62,8 +71,11 @@ async function syncRuntime({accountId,deployToken,analyticsToken,project=PROJECT
   if(!afterVars.CLOUDFLARE_ACCOUNT_ID||afterVars.CLOUDFLARE_ACCOUNT_ID.type!=="secret_text"){
     throw new Error("Cloudflare account-id staat na sync niet als secret_text in production runtime.");
   }
+  if(!afterVars.GA4_PROPERTY_ID||afterVars.GA4_PROPERTY_ID.type!=="plain_text"||String(afterVars.GA4_PROPERTY_ID.value||"")!==ga4){
+    throw new Error("GA4 property-id staat na sync niet correct in production runtime.");
+  }
 
-  return {project,productionEnvKeys:afterKeys};
+  return {project,ga4PropertyId:ga4,productionEnvKeys:afterKeys};
 }
 
 async function main(){
@@ -71,6 +83,7 @@ async function main(){
     accountId:process.env.CLOUDFLARE_ACCOUNT_ID,
     deployToken:process.env.CLOUDFLARE_API_TOKEN,
     analyticsToken:process.env.CLOUDFLARE_ANALYTICS_API_TOKEN,
+    ga4PropertyId:process.env.GA4_PROPERTY_ID||GA4_PROPERTY_ID,
     project:process.env.CLOUDFLARE_PROJECT||PROJECT
   });
   console.log(JSON.stringify({analyticsRuntime:"gesynchroniseerd",...result},null,2));
@@ -83,4 +96,4 @@ if(require.main===module){
   });
 }
 
-module.exports={API_ROOT,PROJECT,id,token,cfJson,syncRuntime};
+module.exports={API_ROOT,PROJECT,GA4_PROPERTY_ID,id,token,propertyId,cfJson,syncRuntime};
