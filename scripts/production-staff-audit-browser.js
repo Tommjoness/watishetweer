@@ -158,7 +158,7 @@ async function kiesZoekresultaat(page,naam){
     await page.evaluate(()=>document.fonts&&document.fonts.ready);
     const eerste=await page.evaluate(()=>({
       sha:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
-      uur:[...document.querySelectorAll("#chart text")].filter(el=>/^\d{2}$/.test((el.textContent||"").trim())).length,
+      uur:[...document.querySelectorAll("#chart text")].filter(el=>/^\d{2}:00$/.test((el.textContent||"").trim())).length,
       tabel:document.querySelectorAll("#chartdata tbody tr").length,
       main:document.querySelectorAll("main#app").length,
       skip:!!document.querySelector('.skiplink[href="#app"]'),
