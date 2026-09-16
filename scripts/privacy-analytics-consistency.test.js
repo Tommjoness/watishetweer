@@ -17,7 +17,7 @@ assert(over.includes("geen gebruikersaccount of advertentietracking"),"Over-pagi
 assert(over.includes("privacygerichte bezoekstatistieken"),"Over-pagina moet bezoekstatistieken transparant benoemen");
 assert(privacy.includes("geen account of advertentietracking"),"Privacyverklaring moet het ontbreken van account en advertentietracking blijven benoemen");
 assert(privacy.includes("privacygerichte bezoekstatistieken"),"Privacyverklaring moet privacygerichte bezoekstatistieken blijven benoemen");
-for(const provider of ["PostHog Cloud EU","Cloudflare Web Analytics"]){
+for(const provider of ["PostHog Cloud EU","Cloudflare Web Analytics","Google Analytics 4"]){
   assert(privacy.includes(provider),"Privacyverklaring mist analyticsprovider: "+provider);
 }
 
@@ -27,6 +27,13 @@ function voerAnalyticsUit(opt={}){
   const q={
     value:String(opt.typedValue||""),
     addEventListener(type,fn){handlers["q:"+type]=fn;}
+  };
+  const local={
+    getItem(key){
+      if(key==="weerbriefing.ga4.consent.v1")return opt.ga4Consent||"denied";
+      return null;
+    },
+    setItem(){}
   };
   const context={
     location:{
@@ -41,12 +48,14 @@ function voerAnalyticsUit(opt={}){
       globalPrivacyControl:opt.gpc===true,
       doNotTrack:opt.navigatorDnt||"0"
     },
+    localStorage:local,
     window:{
       doNotTrack:opt.windowDnt||"0",
       innerWidth:1280
     },
     document:{
-      getElementById(id){return id==="q"&&opt.withSearchInput?q:null;}
+      getElementById(id){return id==="q"&&opt.withSearchInput?q:null;},
+      querySelector(){return null;}
     },
     crypto:{randomUUID(){return "privacy-contract-test";}},
     fetch(url,fetchOpt){
@@ -101,4 +110,4 @@ assert.equal(voerAnalyticsUit({pathname:"/privacy",gpc:true}).length,0,"GPC moet
 assert.equal(voerAnalyticsUit({pathname:"/privacy",navigatorDnt:"1"}).length,0,"navigator DNT moet alle PostHog-capture blokkeren");
 assert.equal(voerAnalyticsUit({pathname:"/privacy",windowDnt:"1"}).length,0,"window DNT moet alle PostHog-capture blokkeren");
 
-console.log("privacy-analytics-consistency: over/privacy-copy, canonieke privacyroute, URL-/locatieredactie en GPC/DNT OK");
+console.log("privacy-analytics-consistency: over/privacy-copy, canonieke privacyroute, URL-/locatieredactie, GA4-vermelding en GPC/DNT OK");
