@@ -109,6 +109,7 @@ async function run(){
           const rect=s=>{const e=document.querySelector(s);return e?e.getBoundingClientRect().toJSON():null;};
           const rows=[...document.querySelectorAll("#wiw-hour-table tbody tr")],scroll=document.querySelector("#wiw-hour-scroll"),panel=document.querySelector("#wiw-hour-panel");
           const night=document.querySelector("#nights .row.night:not(.kop)"),nightCells=night?[...night.children].map(e=>e.getBoundingClientRect().toJSON()):[];
+          const temp=document.getElementById("t"),tempHead=document.querySelector("#wiw-hour-table thead th:nth-child(3)"),sunDay=document.querySelector("#suntimes .zondag");
           return {
             ...window.__cwv,
             maxHours:WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN,
@@ -119,7 +120,10 @@ async function run(){
             rows:rows.length,
             hourRows:rows.map(r=>({instant:r.querySelector("time")?.dateTime,time:r.querySelector("time")?.textContent,sourceIndex:Number(r.dataset.sourceIndex),rect:r.getBoundingClientRect().toJSON(),visible:getComputedStyle(r).display!=="none"})),
             hourHeaders:[...document.querySelectorAll("#wiw-hour-table thead th")].map(th=>th.textContent.trim()),
+            hourHeaderFits:tempHead?tempHead.scrollWidth<=tempHead.clientWidth+1:false,
             hourCells:rows.every(r=>r.children.length===5&&!!r.querySelector(".wiw-hour-weather-icon svg")&&!!r.querySelector(".wiw-hour-temp .wiw-hour-secondary")&&!!r.querySelector(".wiw-hour-rain .wiw-hour-secondary")&&!!r.querySelector(".wiw-hour-wind .wiw-hour-secondary")),
+            heroTempSize:temp?parseFloat(getComputedStyle(temp).fontSize):null,
+            sunDayVisible:!!(sunDay&&sunDay.getClientRects().length),
             nightCells,
             rainVisible:document.getElementById("wiw-rain-section")?.getClientRects().length>0,
             chartDataVisible:[...document.querySelectorAll("details")].some(d=>/grafiekgegevens.*tabel/i.test(d.querySelector("summary")?.textContent||"")&&d.open&&d.getClientRects().length>0),
@@ -160,7 +164,10 @@ async function run(){
           const week=await page.evaluate(()=>{const hint=document.getElementById("dagenhint"),head=hint.previousElementSibling;return {hint:hint.getBoundingClientRect().left,head:head.getBoundingClientRect().left};});
           assert(Math.abs(week.hint-week.head)<=1,"weekinstructie hoort bij de kop, zonder gecentreerd los tekstblok");
           assert(result.rows>=4&&result.rows<=result.maxHours,"volledige desktopuren buiten begrensd bereik: "+result.rows);
-          assert.deepEqual(result.hourHeaders,["Tijd","Weer","Temp.","Neerslag","Wind"],"rijke uurkolommen ontbreken");
+          assert.deepEqual(result.hourHeaders,["Tijd","Weer","Temperatuur","Neerslag","Wind"],"rijke uurkolommen ontbreken");
+          assert.equal(result.hourHeaderFits,true,"Temperatuur-kop wrapt of clipt in de desktop-uurtabel");
+          assert(result.heroTempSize>=93.5&&result.heroTempSize<=108.5,"actuele temperatuur valt buiten de rustige desktopmaat: "+result.heroTempSize);
+          assert.equal(result.sunDayVisible,false,"los Vandaag/Morgen-label staat nog boven de grafiek");
           assert.equal(result.hourCells,true,"uurregels missen weericoon, gevoel, neerslagkans of wind");
           assert.equal(result.rainVisible,false,"korte neerslagsectie is nog zichtbaar");
           assert.equal(result.chartDataVisible,false,"grafiektabelbediening is nog zichtbaar");
