@@ -56,11 +56,12 @@ assert(/^[ \t]+Cache-Control:\s*public, no-store, max-age=0, must-revalidate\s*$
 
 const middleware=fs.readFileSync(path.join(root,"functions","_middleware.js"),"utf8");
 assert(middleware.includes('"Cross-Origin-Opener-Policy":"same-origin"'),"API-middleware mist COOP");
-assert(middleware.includes('"Content-Security-Policy":"default-src \'self\'; script-src \'self\' https://static.cloudflareinsights.com; script-src-attr \'none\';'),"API-middleware loopt achter op strikt scriptbeleid plus versiecompatibele analytics-origin");
+assert(middleware.includes("script-src 'self' https://static.cloudflareinsights.com https://www.googletagmanager.com;"),"API-middleware mist strikt scriptbeleid met Cloudflare Insights en consent-gated Google-tag");
+assert(middleware.includes("script-src-attr 'none'"),"API-middleware moet inline script-attributen blijven blokkeren");
 assert(!middleware.includes("https://static.cloudflareinsights.com/beacon.min.js"),"API-middleware mag versiegebonden Cloudflare-beacons niet blokkeren met een exact bestandspad");
 assert(!middleware.includes("api.weatherapi.com"),"API-middleware mag geen directe browsertoegang tot WeatherAPI toestaan");
 assert(middleware.includes('new URL(context.request.url).pathname==="/sw.js"'),"middleware moet de serviceworkerroute exact afbakenen");
 assert(middleware.includes("context.env.ASSETS.fetch(context.request)"),"serviceworkerresponse moet uit de gebouwde asset komen");
 assert(middleware.includes('headers.set("Cache-Control","public, no-store, max-age=0, must-revalidate")'),"serviceworkerresponse moet de zonecache omzeilen en op de publieke custom domain direct revalideren");
 
-console.log("security-headers: strikte CSP met Cloudflare Insights-origin voor versiebeacons, COOP, HSTS en compressievriendelijke HTML-cacheheaders OK");
+console.log("security-headers: strikte CSP met Cloudflare Insights-origin voor versiebeacons, consent-gated Google-tag, COOP, HSTS en compressievriendelijke HTML-cacheheaders OK");
