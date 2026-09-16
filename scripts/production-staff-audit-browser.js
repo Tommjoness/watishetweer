@@ -156,6 +156,7 @@ async function kiesZoekresultaat(page,naam){
     assert(response&&response.ok(),`Sydney start HTTP ${response&&response.status()}`);
     await wachtVolledig(page,"Sydney");
     await page.evaluate(()=>document.fonts&&document.fonts.ready);
+    await page.waitForFunction(()=>[...document.querySelectorAll("#chart text")].some(el=>/^(?:[01]\d|2[0-3]):00$/.test((el.textContent||"").trim())),null,{timeout:5000}).catch(()=>{});
     const eerste=await page.evaluate(()=>({
       sha:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
       uur:[...document.querySelectorAll("#chart text")].filter(el=>/^\d{2}:00$/.test((el.textContent||"").trim())).length,
