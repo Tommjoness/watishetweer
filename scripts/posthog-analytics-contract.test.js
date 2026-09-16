@@ -9,7 +9,9 @@ const {CONNECT_SOURCE,SCRIPT_TAG,DELIVERY_META,verruimConnectSrc,pasHtmlAan,pasA
 
 const root=path.join(__dirname,"..");
 const analytics=fs.readFileSync(path.join(root,"posthog-analytics.js"),"utf8");
+const plausibleAnalytics=fs.readFileSync(path.join(root,"plausible-analytics.js"),"utf8");
 new vm.Script(analytics,{filename:"posthog-analytics.js"});
+new vm.Script(plausibleAnalytics,{filename:"plausible-analytics.js"});
 
 assert.equal(CONNECT_SOURCE,"https://eu.i.posthog.com","PostHog capture moet uitsluitend de EU-ingestion origin gebruiken");
 assert(analytics.includes('const ENDPOINT="https://eu.i.posthog.com/i/v0/e/"'),"capture endpoint moet de officiële EU single-event endpoint zijn");
@@ -54,6 +56,7 @@ assert.equal(pasHtmlAan(deliveryResultaat.html).html,deliveryResultaat.html,"del
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"watishetweer-posthog-"));
 try{
   fs.writeFileSync(path.join(tmp,"posthog-analytics.js"),analytics);
+  fs.writeFileSync(path.join(tmp,"plausible-analytics.js"),plausibleAnalytics);
   fs.writeFileSync(path.join(tmp,"index.html"),html);
   fs.mkdirSync(path.join(tmp,"weer","almere"),{recursive:true});
   fs.writeFileSync(path.join(tmp,"weer","almere","index.html"),html);
@@ -61,35 +64,41 @@ try{
   assert.equal(eerste.bestanden,2);
   assert.equal(eerste.scripts,2);
   assert.equal(eerste.deliveryActief,false);
+  assert(eerste.plausible&&eerste.plausible.scripts===2,"finale analytics-entrypoint moet Plausible op dezelfde HTML-bestanden toepassen");
   const tweede=pasArtifactAan(tmp);
   assert.equal(tweede.gewijzigd,0,"tweede PostHog artifactpass moet noop zijn");
+  assert.equal(tweede.plausible.gewijzigd,0,"tweede Plausible artifactpass moet noop zijn");
 
   fs.writeFileSync(path.join(tmp,"index.html"),deliveryHtml);
   fs.writeFileSync(path.join(tmp,"weer","almere","index.html"),deliveryHtml);
   const delivery=pasArtifactAan(tmp);
   assert.equal(delivery.deliveryActief,true,"deliverymarker moet de header-CSP-route activeren");
   assert.equal(delivery.metas,0,"deliverypass mag geen verwijderde meta-CSP vereisen of terugzetten");
-  assert.equal(delivery.scripts,2,"deliverypass moet beide HTML-bestanden van de lokale analyticsfile voorzien");
+  assert.equal(delivery.scripts,2,"deliverypass moet beide HTML-bestanden van de lokale PostHog-file voorzien");
+  assert.equal(delivery.plausible.scripts,2,"deliverypass moet beide HTML-bestanden ook van de lokale Plausible-file voorzien");
 }finally{fs.rmSync(tmp,{recursive:true,force:true});}
 
 const headers=fs.readFileSync(path.join(root,"cloudflare","_headers"),"utf8");
 const middleware=fs.readFileSync(path.join(root,"functions","_middleware.js"),"utf8");
-assert(headers.includes("connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://geocoding-api.open-meteo.com https://api.bigdatacloud.net https://eu.i.posthog.com"),"Cloudflare CSP moet PostHog EU capture expliciet toestaan");
-assert(middleware.includes("https://eu.i.posthog.com; object-src 'none'"),"middleware-CSP moet exact dezelfde PostHog EU-origin toestaan");
+assert(headers.includes("connect-src 'self' https://api.open-meteo.com https://air-quality-api.open-meteo.com https://geocoding-api.open-meteo.com https://api.bigdatacloud.net https://eu.i.posthog.com https://plausible.io"),"Cloudflare CSP moet PostHog en Plausible expliciet toestaan");
+assert(middleware.includes("https://eu.i.posthog.com https://plausible.io; object-src 'none'"),"middleware-CSP moet dezelfde analytics-origins toestaan");
 assert(!headers.includes("eu-assets.i.posthog.com"),"CSP mag geen externe PostHog SDK-assets toestaan");
 
 const cloudflareCspScript=fs.readFileSync(path.join(root,"scripts","apply-cloudflare-web-analytics-csp.js"),"utf8");
 const deliveryCleanup=fs.readFileSync(path.join(root,"scripts","platform-output-cleanup.js"),"utf8");
+const posthogInjector=fs.readFileSync(path.join(root,"scripts","apply-posthog-analytics.js"),"utf8");
 assert(!cloudflareCspScript.includes("apply-posthog-analytics.js"),"PostHog mag niet meer vóór de finale deliveryguard vanuit de Cloudflare-CSP-stap worden geïnjecteerd");
-assert(deliveryCleanup.includes('require("./apply-posthog-analytics.js").pasArtifactAan(PUBLIC)'),"finale delivery-cleanup moet eigenaar zijn van de PostHog-injectie");
-assert(deliveryCleanup.includes('vernieuwServiceworkerCache(PUBLIC,"delivery-posthog-analytics")'),"cachehash moet na de finale PostHog-HTML-mutatie opnieuw worden vernieuwd");
+assert(deliveryCleanup.includes('require("./apply-posthog-analytics.js").pasArtifactAan(PUBLIC)'),"finale delivery-cleanup moet eigenaar zijn van de analytics-injectie");
+assert(posthogInjector.includes('require("./apply-plausible-analytics.js").pasArtifactAan(root)'),"Plausible moet via dezelfde post-delivery analytics-entrypoint worden toegepast");
+assert(deliveryCleanup.includes('vernieuwServiceworkerCache(PUBLIC,"delivery-posthog-analytics")'),"cachehash moet na de finale analytics-HTML-mutatie opnieuw worden vernieuwd");
 const optimaliseerPos=deliveryCleanup.indexOf("optimaliseerPublic().then");
 const posthogPos=deliveryCleanup.indexOf("voegPostHogNaDeliveryToe();",optimaliseerPos);
-assert(optimaliseerPos>=0&&posthogPos>optimaliseerPos,"PostHog moet aantoonbaar pas na succesvolle delivery-optimalisatie worden toegepast");
+assert(optimaliseerPos>=0&&posthogPos>optimaliseerPos,"analytics moet aantoonbaar pas na succesvolle delivery-optimalisatie worden toegepast");
 
 const privacy=fs.readFileSync(path.join(root,"privacy.html"),"utf8");
-for(const tekst of ["PostHog Cloud EU","geen PostHog-SDK","querystring","URL-hash","IP-anonimisering"]){
-  assert(privacy.includes(tekst),"privacyverklaring mist PostHog-uitleg: "+tekst);
+for(const tekst of ["PostHog Cloud EU","geen PostHog-SDK","querystring","URL-hash","IP-anonimisering","Plausible Analytics"]){
+  assert(privacy.includes(tekst),"privacyverklaring mist analytics-uitleg: "+tekst);
 }
 
-console.log("posthog-analytics-contract: EU capture, anonieme allowlist, GeoIP-uit, geen persistence/replay/SDK, route-redactie, CSP, post-delivery injectie, cachevernieuwing en privacytekst OK");
+console.log("posthog-analytics-contract: EU capture, anonieme allowlist, GeoIP-uit, geen persistence/replay/SDK, route-redactie, gedeelde post-delivery analytics-injectie, cachevernieuwing en privacytekst OK");
+require("./plausible-analytics-contract.test.js");
