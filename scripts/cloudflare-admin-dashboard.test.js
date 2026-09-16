@@ -12,6 +12,7 @@ const css=read("admin/seo/cloudflare-dashboard.css");
 const api=read("functions/api/admin/seo/cloudflare.js");
 const reportWorkflow=read(".github/workflows/cloudflare-human-analytics-report.yml");
 const setupWorkflow=read(".github/workflows/cloudflare-web-analytics.yml");
+const productionWorkflow=read(".github/workflows/cloudflare-production.yml");
 const docs=read("docs/cloudflare-web-analytics-activeren.md");
 
 assert(html.includes('id="cloudflare-panel"'),"SEO cockpit mist Cloudflare-paneel.");
@@ -52,6 +53,11 @@ assert(reportWorkflow.includes("if: github.ref == 'refs/heads/main'"),"Productio
 assert(reportWorkflow.includes("cancel-in-progress: true"),"Een nieuw analyticsrapport moet oudere branchruns vervangen.");
 assert(setupWorkflow.includes("CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN }}"),"Setupworkflow mist aparte setup/write-secret.");
 assert(!setupWorkflow.includes("secrets.CLOUDFLARE_ANALYTICS_API_TOKEN"),"Setupworkflow mag de read-only rapportagetoken niet gebruiken voor writes.");
+assert(productionWorkflow.includes("CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}"),"Production deploy mist read-only analytics-secret voor runtime-sync.");
+assert(productionWorkflow.includes("Sync Cloudflare admin analytics-bindings"),"Production deploy moet analytics-bindings vóór deploy synchroniseren.");
+assert(productionWorkflow.indexOf("Sync Cloudflare admin analytics-bindings")<productionWorkflow.indexOf("Deploy exact naar Cloudflare Pages production"),"Analytics-bindings moeten vóór de Pages-deploy worden gesynchroniseerd.");
+assert(productionWorkflow.includes("Verifieer Analytics-bindings na deploy"),"Production deploy moet bindings na Wrangler-deploy verifiëren.");
+assert(productionWorkflow.includes('CLOUDFLARE_ACCOUNT_ID.type == "secret_text"'),"Production guard moet account-id als secret_text bewaken.");
 assert(docs.includes("Account Analytics → Read"),"Documentatie mist read-only analytics-permissie.");
 assert(docs.includes("CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN"),"Documentatie mist gescheiden setup-tokenrol.");
 
