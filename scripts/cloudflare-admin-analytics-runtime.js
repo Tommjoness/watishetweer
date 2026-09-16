@@ -43,7 +43,7 @@ async function syncRuntime({accountId,deployToken,analyticsToken,project=PROJECT
       production:{
         env_vars:{
           CLOUDFLARE_ANALYTICS_API_TOKEN:{type:"secret_text",value:analytics},
-          CLOUDFLARE_ACCOUNT_ID:{type:"plain_text",value:account}
+          CLOUDFLARE_ACCOUNT_ID:{type:"secret_text",value:account}
         }
       }
     }
@@ -59,8 +59,8 @@ async function syncRuntime({accountId,deployToken,analyticsToken,project=PROJECT
   if(!afterVars.CLOUDFLARE_ANALYTICS_API_TOKEN||afterVars.CLOUDFLARE_ANALYTICS_API_TOKEN.type!=="secret_text"){
     throw new Error("Analytics-token staat na sync niet als secret_text in production runtime.");
   }
-  if(!afterVars.CLOUDFLARE_ACCOUNT_ID||afterVars.CLOUDFLARE_ACCOUNT_ID.type!=="plain_text"){
-    throw new Error("Cloudflare account-id staat na sync niet als plain_text in production runtime.");
+  if(!afterVars.CLOUDFLARE_ACCOUNT_ID||afterVars.CLOUDFLARE_ACCOUNT_ID.type!=="secret_text"){
+    throw new Error("Cloudflare account-id staat na sync niet als secret_text in production runtime.");
   }
 
   return {project,productionEnvKeys:afterKeys};
