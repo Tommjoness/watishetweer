@@ -27,7 +27,7 @@ for(const p of htmlBestanden(OUT)){
   eis(html.includes(LATE_STYLE_ID),rel+": finale runtime-cascadeowner voor desktoppolish ontbreekt");
   eis(html.includes('#t,.deg,#minitemp,.sval,.score,'),rel+": gedeelde selector voor consumentencijfers ontbreekt");
   eis(html.includes('font-variant-numeric:lining-nums tabular-nums!important'),rel+": consumentencijfers missen lining/tabular nums");
-  eis(html.includes('font-feature-settings:\"lnum\" 1,\"tnum\" 1!important'),rel+": consumentencijfers missen expliciete OpenType-normalisatie");
+  eis(html.includes('font-feature-settings:\\"lnum\\" 1,\\"tnum\\" 1!important'),rel+": consumentencijfers missen expliciete OpenType-normalisatie");
   eis(html.includes('footer{font-size:12px!important;color:var(--ink-70)!important}'),rel+": basis desktopbronnenstijl ontbreekt");
   eis(html.includes('.dashrow-days .nachtkop,.dashrow-days + h2{margin-top:24px!important}'),rel+": brede onderste secties missen het compactere ritme");
   eis(html.includes('.sheet{padding-bottom:32px!important}'),rel+": brede overgang naar plaatsnavigatie blijft te ruim");
