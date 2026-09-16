@@ -28,7 +28,7 @@ permissions:
 
 concurrency:
   group: watishetweer-cloudflare-human-analytics
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}
@@ -65,4 +65,5 @@ jobs:
         run: node scripts/cloudflare-human-analytics-report.js
 
       - name: Sync read-only analytics naar Pages production runtime
+        if: github.ref == 'refs/heads/main'
         run: node scripts/cloudflare-admin-analytics-runtime.js
