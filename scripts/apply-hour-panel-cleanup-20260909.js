@@ -16,9 +16,9 @@ ${MARKER}
   #wiw-hour-panel h3{text-align:center!important}
   .wiw-hour-table th:nth-child(1),.wiw-hour-table td:nth-child(1){width:14%!important}
   .wiw-hour-table th:nth-child(2),.wiw-hour-table td:nth-child(2){width:7%!important;text-align:center!important}
-  .wiw-hour-table th:nth-child(3),.wiw-hour-table td:nth-child(3){width:25%!important}
-  .wiw-hour-table th:nth-child(4),.wiw-hour-table td:nth-child(4){width:29%!important}
-  .wiw-hour-table th:nth-child(5),.wiw-hour-table td:nth-child(5){width:25%!important}
+  .wiw-hour-table th:nth-child(3),.wiw-hour-table td:nth-child(3){width:29%!important}
+  .wiw-hour-table th:nth-child(4),.wiw-hour-table td:nth-child(4){width:28%!important}
+  .wiw-hour-table th:nth-child(5),.wiw-hour-table td:nth-child(5){width:22%!important}
   .wiw-hour-table thead th:nth-child(3){white-space:nowrap!important}
   .wiw-hour-temp .wiw-hour-secondary{display:none!important}
 
