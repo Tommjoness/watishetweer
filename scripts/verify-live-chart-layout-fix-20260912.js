@@ -8,6 +8,7 @@ const OUT=path.join(__dirname,"..","public");
 const MARKER_LABEL="LIVE CHART LABEL FIX 20260912";
 const MARKER_RAIN="LIVE Q4 CHART COMPACTION 20260912";
 const MARKER_LATE_NU="LIVE FUTURE LABEL NU-GUARD 20260912";
+const MARKER_COPY="LIVE CHART COPY CLEANUP 20260916";
 
 function htmlBestanden(dir){
   const uit=[];
@@ -23,11 +24,12 @@ function tel(s,q){return String(s).split(q).length-1;}
 let gezien=0;
 for(const p of htmlBestanden(OUT)){
   const html=fs.readFileSync(p,"utf8");
-  if(!html.includes(MARKER_LABEL)&&!html.includes(MARKER_RAIN)&&!html.includes(MARKER_LATE_NU))continue;
+  if(!html.includes(MARKER_LABEL)&&!html.includes(MARKER_RAIN)&&!html.includes(MARKER_LATE_NU)&&!html.includes(MARKER_COPY))continue;
   const rel=path.relative(OUT,p);
   assert.strictEqual(tel(html,MARKER_LABEL),1,rel+": label-fixmarker niet exact eenmaal aanwezig");
   assert.strictEqual(tel(html,MARKER_RAIN),1,rel+": Q4-compactiemarker niet exact eenmaal aanwezig");
   assert.strictEqual(tel(html,MARKER_LATE_NU),1,rel+": late nu-guardmarker niet exact eenmaal aanwezig");
+  assert.strictEqual(tel(html,MARKER_COPY),1,rel+": chart-copy-cleanupmarker niet exact eenmaal aanwezig");
 
   assert.ok(html.includes('const nuLokaleTijd=String(S.d&&S.d.current&&S.d.current.time||"");'),rel+": provider-lokale actuele tijd ontbreekt");
   assert.ok(html.includes('const desktopUurLabels=!M&&n<=24;'),rel+": desktop-etmaalcontract voor elk uurlabel ontbreekt");
@@ -50,6 +52,12 @@ for(const p of htmlBestanden(OUT)){
   assert.ok(html.includes('const verplichtToekomstuur=!S.geo.M&&S.geo.n<=24&&modelTijd&&(!nuLokaleTijdPolish||modelTijd>nuLokaleTijdPolish);'),rel+": alle toekomstige desktop-uurlabels worden laat niet beschermd");
   assert.ok(html.includes('if(verplichtToekomstuur) return;'),rel+": toekomstige desktop-uurlabels kunnen nog door nu-cleanup verdwijnen");
   assert.ok(html.includes('verwijderTemperatuurMarkering(svg,el);'),rel+": niet-toekomstige concurrerende markeringen blijven niet opruimbaar");
+  assert.ok(html.includes('tekst.textContent="nu";'),rel+": actuele grafiekmarkering bevat nog redundante temperatuurcopy");
+
+  assert.ok(html.includes('const rijenZichtbaar=rijen.map(r=>({'),rel+": zoninformatie wordt niet door een aparte presentatiefilter geleid");
+  assert.ok(html.includes('if(t==="0 uur daglicht"||t==="24 uur daglicht") return true;'),rel+": pooldag/poolnacht verliezen hun betekenisvolle daglichtstatus");
+  assert.ok(html.includes('return !/^\\d+ uur(?: en \\d+ minu(?:ut|ten))? daglicht$/i.test(t);'),rel+": gewone numerieke daglengte wordt niet uit de grafiekkop gefilterd");
+  assert.ok(html.includes('el.innerHTML=rijenZichtbaar.map(r=>'),rel+": grafiekkop rendert niet de gefilterde zoninformatie");
 
   assert.ok(html.includes('const compactDesktop=typeof window!=="undefined"&&window.innerWidth>=1100&&!g.M&&g.n<=25;'),rel+": desktop-only Q4 compactcontract ontbreekt");
   assert.ok(html.includes('const y=pb+(compactDesktop?30:48)'),rel+": regenbracket gebruikt niet de compacte desktopoffset");
@@ -60,4 +68,4 @@ for(const p of htmlBestanden(OUT)){
 assert.ok(gezien>0,"Geen pre-cleanup weerartifact met live chart/layout-fix gevonden.");
 const cache=verifieerServiceworkerCache(OUT,"live-chart-layout-fix-20260912");
 assert.ok(/^watishetweer-[0-9a-f]{12}$/.test(cache),"serviceworker-cache hoort bij pre-cleanup chart/layout-artifact");
-console.log("Live chart/layout pre-cleanup verifier groen voor "+gezien+" weerartifacts; elk volledig toekomstig desktopuur krijgt een beschermd temperatuurlabel met collision-safe fallback; cache "+cache+".");
+console.log("Live chart/layout pre-cleanup verifier groen voor "+gezien+" weerartifacts; nu-markering is copy-arm, gewone daglengte is uit de grafiekkop, poolstatus blijft intact en elk toekomstig desktopuur behoudt zijn temperatuurlabel; cache "+cache+".");
