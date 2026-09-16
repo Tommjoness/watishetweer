@@ -10,6 +10,9 @@ const html=read("admin/seo/index.html");
 const js=read("admin/seo/cloudflare-dashboard.js");
 const css=read("admin/seo/cloudflare-dashboard.css");
 const api=read("functions/api/admin/seo/cloudflare.js");
+const reportWorkflow=read(".github/workflows/cloudflare-human-analytics-report.yml");
+const setupWorkflow=read(".github/workflows/cloudflare-web-analytics.yml");
+const docs=read("docs/cloudflare-web-analytics-activeren.md");
 
 assert(html.includes('id="cloudflare-panel"'),"SEO cockpit mist Cloudflare-paneel.");
 assert(html.includes('id="cloudflare-badge"'),"SEO cockpit mist Cloudflare-statusbadge.");
@@ -43,5 +46,13 @@ for(const required of [
 assert(api.includes('"Cache-Control":"private, no-store, max-age=0"'),"Cloudflare admin API mist no-store.");
 assert(api.includes('status:503,code:"access_not_configured"'),"Cloudflare admin API moet Access fail-closed afdwingen.");
 assert(!api.includes("CLOUDFLARE_ANALYTICS_API_TOKEN:"),"Cloudflare admin API mag de token niet serialiseren.");
+
+assert(reportWorkflow.includes("CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}"),"Rapportworkflow moet de read-only analytics-secret gebruiken.");
+assert(reportWorkflow.includes("if: github.ref == 'refs/heads/main'"),"Production runtime-sync mag alleen op main draaien.");
+assert(reportWorkflow.includes("cancel-in-progress: true"),"Een nieuw analyticsrapport moet oudere branchruns vervangen.");
+assert(setupWorkflow.includes("CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN }}"),"Setupworkflow mist aparte setup/write-secret.");
+assert(!setupWorkflow.includes("secrets.CLOUDFLARE_ANALYTICS_API_TOKEN"),"Setupworkflow mag de read-only rapportagetoken niet gebruiken voor writes.");
+assert(docs.includes("Account Analytics → Read"),"Documentatie mist read-only analytics-permissie.");
+assert(docs.includes("CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN"),"Documentatie mist gescheiden setup-tokenrol.");
 
 console.log("cloudflare-admin-dashboard.test.js: ok");
