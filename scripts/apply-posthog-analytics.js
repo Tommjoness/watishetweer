@@ -99,8 +99,13 @@ function pasArtifactAan(root=path.join(__dirname,"..","public")){
     if(!productieHeaderStaatToe())throw new Error("PostHog EU capture-origin ontbreekt in de productie-CSP-header na deliverymigratie.");
   }
 
-  console.log(`posthog-analytics: ${bestanden.length} HTML-bestanden gecontroleerd, ${scripts} scripts actief, ${metas} meta-CSP's gezien, ${gewijzigd} bestanden aangepast.`);
-  return {bestanden:bestanden.length,scripts,metas,gewijzigd,deliveryActief};
+  /* Deze bestaande final-delivery entrypoint blijft eigenaar van analytics-
+     injectie. Plausible wordt direct erna toegepast zodat de grote delivery-
+     pipeline en alle semantische runtimeguards ongewijzigd blijven. */
+  const plausible=require("./apply-plausible-analytics.js").pasArtifactAan(root);
+
+  console.log(`posthog-analytics: ${bestanden.length} HTML-bestanden gecontroleerd, ${scripts} scripts actief, ${metas} meta-CSP's gezien, ${gewijzigd} bestanden aangepast; Plausible op ${plausible.scripts} HTML-bestanden.`);
+  return {bestanden:bestanden.length,scripts,metas,gewijzigd,deliveryActief,plausible};
 }
 
 if(require.main===module){
