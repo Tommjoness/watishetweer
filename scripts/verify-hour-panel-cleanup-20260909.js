@@ -19,9 +19,9 @@ for(const p of htmlBestanden(OUT)){
   eis(/#wiw-hour-panel h3\{text-align:center!important\}/.test(html),`${rel}: Komende-uren-kop is niet gecentreerd`);
   eis(/\.wiw-hour-table th:nth-child\(1\),\.wiw-hour-table td:nth-child\(1\)\{width:14%!important\}/.test(html),`${rel}: tijdkolom is niet compact genoeg`);
   eis(/\.wiw-hour-table th:nth-child\(2\),\.wiw-hour-table td:nth-child\(2\)\{width:7%!important;text-align:center!important\}/.test(html),`${rel}: weerkolom is niet compact genoeg`);
-  eis(/\.wiw-hour-table th:nth-child\(3\),\.wiw-hour-table td:nth-child\(3\)\{width:25%!important\}/.test(html),`${rel}: temperatuurkolom heeft niet genoeg ruimte voor de volledige kop`);
-  eis(/\.wiw-hour-table th:nth-child\(4\),\.wiw-hour-table td:nth-child\(4\)\{width:29%!important\}/.test(html),`${rel}: neerslagkolom heeft niet de gebalanceerde breedte`);
-  eis(/\.wiw-hour-table th:nth-child\(5\),\.wiw-hour-table td:nth-child\(5\)\{width:25%!important\}/.test(html),`${rel}: windkolom heeft niet de gebalanceerde breedte`);
+  eis(/\.wiw-hour-table th:nth-child\(3\),\.wiw-hour-table td:nth-child\(3\)\{width:29%!important\}/.test(html),`${rel}: temperatuurkolom heeft niet genoeg ruimte voor de volledige kop`);
+  eis(/\.wiw-hour-table th:nth-child\(4\),\.wiw-hour-table td:nth-child\(4\)\{width:28%!important\}/.test(html),`${rel}: neerslagkolom heeft niet de gebalanceerde breedte`);
+  eis(/\.wiw-hour-table th:nth-child\(5\),\.wiw-hour-table td:nth-child\(5\)\{width:22%!important\}/.test(html),`${rel}: windkolom heeft niet de gebalanceerde breedte`);
   eis(/\.wiw-hour-table thead th:nth-child\(3\)\{white-space:nowrap!important\}/.test(html),`${rel}: volledige temperatuurkop kan nog afbreken`);
   eis(/\.wiw-hour-temp \.wiw-hour-secondary\{display:none!important\}/.test(html),`${rel}: zichtbare gevoelstemperatuur is niet verwijderd uit de uurregels`);
   eis(html.includes('.final-top-grid #t{font-size:clamp(94px,7vw,108px)!important;line-height:.86!important}'),`${rel}: actuele temperatuur gebruikt niet de echte final-top-grid-selector of de rustigere maat`);
