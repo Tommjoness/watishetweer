@@ -27,7 +27,7 @@ for(const p of htmlBestanden(OUT)){
   eis(html.includes(LATE_STYLE_ID),rel+": finale runtime-cascadeowner voor desktoppolish ontbreekt");
   eis(html.includes('#t,.deg,#minitemp,.sval,.score,'),rel+": gedeelde selector voor consumentencijfers ontbreekt");
   eis(html.includes('font-variant-numeric:lining-nums tabular-nums!important'),rel+": consumentencijfers missen lining/tabular nums");
-  eis(html.includes('font-feature-settings:\\"lnum\\" 1,\\"tnum\\" 1!important'),rel+": consumentencijfers missen expliciete OpenType-normalisatie");
+  eis(html.includes('font-feature-settings:\"lnum\" 1,\"tnum\" 1!important'),rel+": consumentencijfers missen expliciete OpenType-normalisatie");
   eis(html.includes('footer{font-size:12px!important;color:var(--ink-70)!important}'),rel+": basis desktopbronnenstijl ontbreekt");
   eis(html.includes('.dashrow-days .nachtkop,.dashrow-days + h2{margin-top:24px!important}'),rel+": brede onderste secties missen het compactere ritme");
   eis(html.includes('.sheet{padding-bottom:32px!important}'),rel+": brede overgang naar plaatsnavigatie blijft te ruim");
@@ -43,10 +43,10 @@ for(const p of htmlBestanden(OUT)){
   eis(html.includes('label.textContent="Maan"'),rel+": Nachtzicht-maankop ontbreekt");
   eis(html.includes('--wiw-section-gap:28px'),rel+": gedeeld sectieritme ontbreekt");
 
-  /* Laatste desktop-readability pass: borg precies de vijf visuele klachten uit
+  /* Laatste desktop-readability pass: borg precies de visuele klachten uit
      de live screenshots zonder mobiele layout of weerdata te muteren. */
   eis(html.includes('body{font-size:16px!important;padding-bottom:0!important}'),rel+": loze desktop-bodyruimte of leesbaarheidsoverride ontbreekt");
-  eis(html.includes('.dashrow-hero #t{font-size:clamp(88px,6vw,102px)!important;line-height:.82!important}'),rel+": huidige temperatuur is nog te dominant op desktop");
+  eis(html.includes('.final-top-grid #t{font-size:clamp(94px,7vw,108px)!important;line-height:.86!important}'),rel+": huidige temperatuur wordt niet via de actuele final-top-grid-selector begrensd");
   eis(html.includes('#suntimes .zondag + span,')&&html.includes('#suntimes > span:first-child:nth-last-child(3)'),rel+": redundante zonsopkomst/-ondergangcopy naast de grafiek wordt niet veilig verborgen");
   eis(html.includes('.wiw-hour-date{font-size:11px!important;color:var(--ink-70)!important'),rel+": datumlabel in de uurtabel blijft te klein");
   eis(html.includes('.wiw-hour-table{font-size:13.25px!important}')&&html.includes('#days .dcond{font-size:14px!important}'),rel+": kerngegevens op desktop hebben geen leesbaarheidspass gekregen");
@@ -56,4 +56,4 @@ for(const p of htmlBestanden(OUT)){
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:rel+":desktop-polish-"+(i+1)}));
 }
 eis(geraakt>0,"Geen desktop-polishartifacts gevonden.");
-console.log(`Desktop-polish geverifieerd op ${geraakt} weerartifacts: één uurhoogte-owner, maximaal 11 gedeelde uren, compacte weekmetriekgroep, finale brede Nachtzicht-maanverdeling zonder dubbele zichtregel of tekstuitloop, compactere huidige temperatuur, ruimere kleine tekst en geen loze desktopondermarge.`);
+console.log(`Desktop-polish geverifieerd op ${geraakt} weerartifacts: één uurhoogte-owner, maximaal 11 gedeelde uren, compacte weekmetriekgroep, finale brede Nachtzicht-maanverdeling zonder dubbele zichtregel of tekstuitloop, rustigere huidige temperatuur op de actuele hero-selector, ruimere kleine tekst en geen loze desktopondermarge.`);
