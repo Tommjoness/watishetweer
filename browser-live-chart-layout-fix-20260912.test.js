@@ -7,7 +7,7 @@ if(!browser){if(process.env.CI){console.error("FOUT live-chart-layout browsertes
 const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
 let html=fs.readFileSync(productie,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
-if(!html.includes("LIVE CHART LABEL FIX 20260912")||!html.includes("LIVE Q4 CHART COMPACTION 20260912"))throw new Error("pre-cleanup chart/layout-fix ontbreekt in het te testen artifact");
+if(!html.includes("LIVE CHART LABEL FIX 20260912")||!html.includes("LIVE Q4 CHART COMPACTION 20260912")||!html.includes("LIVE CHART COPY CLEANUP 20260916"))throw new Error("pre-cleanup chart/layout-copy-fix ontbreekt in het te testen artifact");
 const stub=`<script>try{localStorage.clear();sessionStorage.clear();}catch(e){}window.fetch=()=>new Promise(()=>{});window.requestAnimationFrame=cb=>setTimeout(()=>cb(performance.now()),16);try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}</script>`;
 html=html.replace("</head>",stub+"</head>");
 const reporter=`<script>
@@ -47,7 +47,7 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
     if(!beste||besteD>maxAfstand){labelMissend.push(i);return;}
     gebruikt.add(beste);gekoppeldeLabels.push(beste);
   });
-  const currentEl=tekstEls.find(el=>String(el.textContent||'').trim()==='nu 20°')||null;
+  const currentEl=tekstEls.find(el=>String(el.textContent||'').trim()==='nu')||null;
   const tempEls=[...gekoppeldeLabels,...(currentEl?[currentEl]:[])];
   const dozen=tempEls.map(el=>{const b=el.getBBox();return {t:String(el.textContent||'').trim(),x:b.x,y:b.y,w:b.width,h:b.height};});
   const botsingen=[];
@@ -58,9 +58,10 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
   const rain=svg.querySelector('g[data-q4-rain-periods]');
   const vb=(svg.getAttribute('viewBox')||'').trim().split(/\\s+/).map(Number),h=vb[3]||0;
   const labels=tekstEls.map(x=>String(x.textContent||'').trim());
+  const zonEl=document.getElementById('suntimes'),zonTekst=String(zonEl&&zonEl.textContent||'').replace(/\\s+/g,' ').trim();
   zet('idx18',idx18);zet('idx17',idx17);zet('indices',dotIndices.join(',')||'geen');zet('geon',S.geo&&S.geo.n);zet('geoti0',geoTijden[0]||'geen');
   zet('dot17',dot17?'ja':'nee');zet('current',currentEl?'ja':'nee');zet('future-count',toekomstigeIndices.length);zet('paired-count',gekoppeldeLabels.length);zet('missing',missend.length?missend.join(','):'geen');zet('label-missing',labelMissend.length?labelMissend.join(','):'geen');zet('paired-labels',gekoppeldeLabels.map(el=>String(el.textContent||'').trim()).join(','));zet('expected-labels',verwacht.join(','));zet('collision',botsingen.length?botsingen.join('|'):'geen');
-  zet('height',h);zet('rain',rain?'ja':'nee');zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
+  zet('sun-copy',zonTekst);zet('height',h);zet('rain',rain?'ja':'nee');zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},220),{once:true});
 </script>`;
 html=html.replace("</body>",reporter+"</body>");
@@ -71,7 +72,7 @@ try{
   if(r.status!==0)throw new Error("browser exit "+r.status+": "+String(r.stderr||"").slice(-1200));
   const dom=r.stdout||"",v=k=>{const m=new RegExp('data-live-chart-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
-  if(v('current')!=='ja')throw new Error("rode actuele temperatuur nu 20° ontbreekt");
+  if(v('current')!=='ja')throw new Error("rode actuele nu-markering ontbreekt of bevat nog temperatuurcopy");
   if(Number(v('idx18'))<0)throw new Error("18:00 ontbreekt uit de zichtbare provider-as; geo.TI0="+v('geoti0'));
   if(v('dot17')!=='nee')throw new Error("17:00-modeluur wordt niet als redundante actuele waarde onderdrukt");
   if(v('missing')!=='geen')throw new Error("niet ieder toekomstig desktopuur heeft een temperatuurpunt/label; ontbrekende indices="+v('missing')+", aanwezig="+v('indices'));
@@ -79,8 +80,11 @@ try{
   if(Number(v('paired-count'))!==Number(v('future-count')))throw new Error("aantal gekoppelde zichtbare temperatuurcijfers is niet gelijk aan aantal toekomstige uren: "+v('paired-count')+" vs "+v('future-count'));
   if(v('paired-labels')!==v('expected-labels'))throw new Error("uurlijkse temperatuurcijfers zijn onvolledig of in verkeerde volgorde: kreeg "+v('paired-labels')+", verwacht "+v('expected-labels'));
   if(v('collision')!=='geen')throw new Error("temperatuurcijfers botsen visueel: "+v('collision'));
+  const zon=v('sun-copy')||'';
+  if(/\b\d+ uur(?: en \d+ minu(?:ut|ten))? daglicht\b/i.test(zon))throw new Error("gewone numerieke daglengte staat nog boven de grafiek: "+zon);
+  if(!/zon onder 20:01/i.test(zon)||!/zon op 07:07/i.test(zon))throw new Error("relevante zonsopkomst/-ondergangcopy is bij daglengtecleanup verloren gegaan: "+zon);
   const h=Number(v('height'));if(!(h>=296&&h<=310))throw new Error("desktopgrafiek reserveert nog te veel/te weinig onderruimte: viewBox-hoogte="+h);
   if(v('rain')!=='ja')throw new Error("Q4-regenannotatie ontbreekt in de regenfixture");
   if(Number(v('overflow'))>2)throw new Error("pre-cleanup desktopfixture heeft horizontale overflow: "+v('overflow')+"px");
-  console.log("Live chart/layout browserregressie groen vóór bundling: ieder volledig toekomstig desktopuur heeft exact één gekoppeld temperatuurcijfer, zonder onderlinge/nu-labelbotsing; chart viewBox="+h+".");
+  console.log("Live chart/layout browserregressie groen vóór bundling: nu-markering is copy-arm, gewone daglengte is uit de grafiekkop en ieder volledig toekomstig desktopuur houdt exact één gekoppeld temperatuurcijfer; chart viewBox="+h+".");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
