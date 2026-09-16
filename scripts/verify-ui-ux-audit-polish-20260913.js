@@ -46,6 +46,10 @@ for(const p of htmlBestanden(OUT)){
   assert(html.includes('footer > span.bron:nth-last-of-type(2){grid-column:2!important;grid-row:3!important'),rel+": Over-link heeft geen vaste utilityrij");
   assert(html.includes('footer > span.bron:last-of-type{grid-column:3!important;grid-row:3!important'),rel+": Privacy-link heeft geen vaste utilityrij");
   assert(html.includes('footer > details.footer-details{grid-column:4!important;grid-row:3!important'),rel+": technische locatiegegevens hebben geen vaste utilityrij");
+  assert.strictEqual(tel(html,'class="footer-contact"'),1,rel+": supportcontact moet exact één losse footerregel zijn");
+  assert(html.includes('<p class="footer-contact">Opmerkingen, vragen of feedback? Mail naar <a href="mailto:support@watishetweer.nl">support@watishetweer.nl</a>.</p>'),rel+": supportcontact mist exacte tekst of klikbare mailto-link");
+  assert(html.includes('.footer-contact{grid-column:1 / -1;justify-self:center;margin:6px 0 0;text-align:center'),rel+": supportcontact is niet als eigen gecentreerde footerrij vastgelegd");
+  assert(!html.includes('<span class="bron footer-contact"'),rel+": supportcontact mag de bestaande Over/Privacy utilityselectors niet verstoren");
   assert(html.includes('.mobile-section-nav{display:grid;grid-template-columns:repeat(4'),rel+": mobiele sectienavigatie wordt niet compact zichtbaar");
   assert(html.includes('.row.kop>*{font-size:11px!important'),rel+": mobiele tabelkoppen blijven te klein");
   assert(html.includes('.hint,.data-uitleg{font-size:13px!important'),rel+": mobiele toelichting blijft te klein");
@@ -56,4 +60,4 @@ for(const p of htmlBestanden(OUT)){
 assert(gezien>0,"Geen finale weerartifacts gevonden voor UI/UX-auditcontrole.");
 const cache=verifieerServiceworkerCache(OUT,"ui-ux-audit-polish-20260913");
 assert(/^watishetweer-[0-9a-f]{12}$/.test(cache),"serviceworker-cache hoort bij de gewijzigde artifact");
-console.log("UI/UX-auditcontrole groen voor "+gezien+" weerartifacts: locatie-identiteit, mobiel ritme, waarschuwingsernst, vaste footerrijen en interactie-affordances geborgd; cache "+cache+".");
+console.log("UI/UX-auditcontrole groen voor "+gezien+" weerartifacts: locatie-identiteit, mobiel ritme, waarschuwingsernst, vaste footerrijen, losse supportregel en interactie-affordances geborgd; cache "+cache+".");
