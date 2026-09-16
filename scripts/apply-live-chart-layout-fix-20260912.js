@@ -8,6 +8,7 @@ const OUT=path.join(__dirname,"..","public");
 const MARKER_LABEL="LIVE CHART LABEL FIX 20260912";
 const MARKER_RAIN="LIVE Q4 CHART COMPACTION 20260912";
 const MARKER_LATE_NU="LIVE FUTURE LABEL NU-GUARD 20260912";
+const MARKER_COPY="LIVE CHART COPY CLEANUP 20260916";
 
 /* Deze runtimepatch moet vóór platform-output-cleanup draaien: daarna is de
    hoofdclient uit de HTML gehaald en in de gedeelde/minified app-bundle gezet.
@@ -114,7 +115,30 @@ const LATE_NU_NIEUW=`  /* ${MARKER_LATE_NU} */
     const verplichtToekomstuur=!S.geo.M&&S.geo.n<=24&&modelTijd&&(!nuLokaleTijdPolish||modelTijd>nuLokaleTijdPolish);
     if(verplichtToekomstuur) return;
     verwijderTemperatuurMarkering(svg,el);
-  });`;
+  });
+  /* De actuele temperatuur staat al prominent in het hoofdblok. In de grafiek
+     blijft alleen de temporele aanwijzer over; zo kan dezelfde 15° niet dubbel
+     naast de rode nu-lijn verschijnen. */
+  tekst.textContent="nu";`;
+
+/* De daglengte blijft onderdeel van de zondata en de semantische helper, maar
+   de gewone numerieke daglengte is boven de grafiek redundante microcopy.
+   Pooldag/poolnacht blijven wél zichtbaar omdat 0/24 uur daar betekenis draagt. */
+const ZONINFO_OUD=`  el.classList.add("senior-zoninfo");
+  el.innerHTML=rijen.map(r=>'<span class="zonregel"><span class="zondag">'+escapeHtml(r.label)+'</span>'
+    +r.items.map(x=>'<span>'+escapeHtml(x)+'</span>').join("")+'</span>').join("");`;
+const ZONINFO_NIEUW=`  /* ${MARKER_COPY} */
+  const rijenZichtbaar=rijen.map(r=>({
+    label:r.label,
+    items:(Array.isArray(r.items)?r.items:[]).filter(x=>{
+      const t=String(x||"").trim();
+      if(t==="0 uur daglicht"||t==="24 uur daglicht") return true;
+      return !/^\\d+ uur(?: en \\d+ minu(?:ut|ten))? daglicht$/i.test(t);
+    })
+  })).filter(r=>r.items.length);
+  el.classList.add("senior-zoninfo");
+  el.innerHTML=rijenZichtbaar.map(r=>'<span class="zonregel"><span class="zondag">'+escapeHtml(r.label)+'</span>'
+    +r.items.map(x=>'<span>'+escapeHtml(x)+'</span>').join("")+'</span>').join("");`;
 
 const REGEN_RE=/const\s+pb\s*=\s*g\.pt\s*\+\s*g\.ih\s*,\s*y\s*=\s*pb\s*\+\s*48\s*,\s*randFont\s*=\s*g\.M\s*\?\s*8\.3\s*:\s*8\.9\s*,\s*bedragFont\s*=\s*g\.M\s*\?\s*8\.8\s*:\s*9\.4\s*;/g;
 const REGEN_NIEUW=`/* ${MARKER_RAIN} */
@@ -156,10 +180,11 @@ function main(){
     let html=fs.readFileSync(p,"utf8");
     if(!html.includes('id="chart"')||!html.includes('data-q4-rain-periods'))continue;
     const rel=path.relative(OUT,p);
-    if(html.includes(MARKER_LABEL)||html.includes(MARKER_RAIN)||html.includes(MARKER_LATE_NU))throw new Error(rel+": live chart/layout-fix staat al in artifact.");
+    if(html.includes(MARKER_LABEL)||html.includes(MARKER_RAIN)||html.includes(MARKER_LATE_NU)||html.includes(MARKER_COPY))throw new Error(rel+": live chart/layout-fix staat al in artifact.");
     html=vervangRegexExactEen(html,LABEL_RE,LABEL_NIEUW,"nu/modeluur-labelsuppressie",rel);
     html=vervangTekstExactEen(html,FALLBACK_OUD,FALLBACK_NIEUW,"verplichte desktop-uurlabel fallback",rel);
     html=vervangTekstExactEen(html,LATE_NU_OUD,LATE_NU_NIEUW,"late nu-labelcleanup guard",rel);
+    html=vervangTekstExactEen(html,ZONINFO_OUD,ZONINFO_NIEUW,"grafiekkop zonder gewone daglengte",rel);
     html=vervangRegexExactEen(html,REGEN_RE,REGEN_NIEUW,"Q4 desktop regenoffset",rel);
     html=vervangRegexExactEen(html,HOOGTE_RE,HOOGTE_NIEUW,"Q4 desktop grafiekhoogte",rel);
     fs.writeFileSync(p,html,"utf8");
@@ -172,4 +197,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={OUT,MARKER_LABEL,MARKER_RAIN,MARKER_LATE_NU,LABEL_RE,LABEL_NIEUW,FALLBACK_OUD,FALLBACK_NIEUW,LATE_NU_OUD,LATE_NU_NIEUW,REGEN_RE,REGEN_NIEUW,HOOGTE_RE,HOOGTE_NIEUW,htmlBestanden,vervangRegexExactEen,vervangTekstExactEen,main};
+module.exports={OUT,MARKER_LABEL,MARKER_RAIN,MARKER_LATE_NU,MARKER_COPY,LABEL_RE,LABEL_NIEUW,FALLBACK_OUD,FALLBACK_NIEUW,LATE_NU_OUD,LATE_NU_NIEUW,ZONINFO_OUD,ZONINFO_NIEUW,REGEN_RE,REGEN_NIEUW,HOOGTE_RE,HOOGTE_NIEUW,htmlBestanden,vervangRegexExactEen,vervangTekstExactEen,main};
