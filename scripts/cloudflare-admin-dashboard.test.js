@@ -38,8 +38,8 @@ for(const required of [
   "CLOUDFLARE_ANALYTICS_API_TOKEN",
   "CLOUDFLARE_ACCOUNT_ID",
   "rumPageloadEventsAdaptiveGroups",
-  "{bot:0}",
-  "{bot:1}",
+  "buildFilter({start,end,bot:0})",
+  "buildFilter({start,end,bot:1})",
   'requestHost:${gqlString(DOMAIN)}'
 ])assert(api.includes(required),`Cloudflare admin API mist contract: ${required}`);
 
