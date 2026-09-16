@@ -5,6 +5,7 @@ const assert=require("assert");
 const ROOT=String(process.env.PREVIEW_ROOT||"").replace(/\/$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
 const ANALYTICS_SOURCE="https://static.cloudflareinsights.com";
+const GOOGLE_TAG_SOURCE="https://www.googletagmanager.com";
 const TE_STRIKT_ANALYTICS_PAD="https://static.cloudflareinsights.com/beacon.min.js";
 if(!/^https:\/\/[a-z0-9-]+\.watishetweer\.pages\.dev$/i.test(ROOT))throw new Error("PREVIEW_ROOT ontbreekt of is geen watishetweer.pages.dev-preview.");
 if(!/^[0-9a-f]{40}$/i.test(EXPECTED_SHA))throw new Error("EXPECTED_SHA ontbreekt of is geen volledige commit-SHA.");
@@ -36,8 +37,9 @@ function security(r,label){
   const bronnen=script[2].trim().split(/\s+/).filter(Boolean);
   assert(bronnen.includes("'self'"),`${label}: script-src mist self`);
   assert(bronnen.includes(ANALYTICS_SOURCE),`${label}: officiële Cloudflare Insights-origin ontbreekt`);
+  assert(bronnen.includes(GOOGLE_TAG_SOURCE),`${label}: consent-gated Google-tag-origin ontbreekt`);
   assert(!bronnen.includes(TE_STRIKT_ANALYTICS_PAD),`${label}: CSP beperkt Cloudflare Analytics nog tot het onversieerde beacon.min.js-pad`);
-  const toegestaan=new Set(["'self'",ANALYTICS_SOURCE]);
+  const toegestaan=new Set(["'self'",ANALYTICS_SOURCE,GOOGLE_TAG_SOURCE]);
   assert(bronnen.every(bron=>toegestaan.has(bron)),`${label}: script-src bevat een onverwachte executable bron`);
   assert(!bronnen.includes("'unsafe-inline'"),`${label}: executable inline script blijft toegestaan`);
   assert(/script-src-attr 'none'/.test(csp),`${label}: inline eventhandlers zijn niet expliciet geblokkeerd`);
