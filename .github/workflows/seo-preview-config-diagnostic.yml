@@ -1,0 +1,43 @@
+name: Temporary SEO preview config diagnostic
+
+on:
+  push:
+    branches:
+      - fix/seo-preview-access-aud-20260917
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose-preview-config:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_PROJECT: watishetweer
+      TARGET_EMAIL: maitri.polwatteg@gmail.com
+    steps:
+      - name: Inspect preview config without exposing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT"
+          AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+
+          curl -fsS -H "$AUTH" -H 'Content-Type: application/json' "$API" -o /tmp/project.json
+          jq -e '.success == true' /tmp/project.json >/dev/null
+          test "$(jq -r '.result.production_branch // ""' /tmp/project.json)" = main
+
+          jq -n \
+            --argjson teamDomainPresent "$(jq -e '.result.deployment_configs.preview.env_vars.CF_ACCESS_TEAM_DOMAIN.value // "" | length > 0' /tmp/project.json)" \
+            --arg teamDomainType "$(jq -r '.result.deployment_configs.preview.env_vars.CF_ACCESS_TEAM_DOMAIN.type // "missing"' /tmp/project.json)" \
+            --argjson audPresent "$(jq -e '.result.deployment_configs.preview.env_vars.CF_ACCESS_AUD.value // "" | length > 0' /tmp/project.json)" \
+            --arg audType "$(jq -r '.result.deployment_configs.preview.env_vars.CF_ACCESS_AUD.type // "missing"' /tmp/project.json)" \
+            --argjson allowlistPresent "$(jq -e '.result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAILS.value // .result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAIL.value // "" | length > 0' /tmp/project.json)" \
+            --arg allowlistType "$(jq -r '(.result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAILS.type // .result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAIL.type // "missing")' /tmp/project.json)" \
+            --argjson allowlistMatches "$(jq -e --arg email "$TARGET_EMAIL" '((.result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAILS.value // .result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAIL.value // "") | ascii_downcase | gsub("^\\s+|\\s+$"; "")) == ($email | ascii_downcase)' /tmp/project.json)" \
+            --argjson productionTeamDomainPresent "$(jq -e '.result.deployment_configs.production.env_vars.CF_ACCESS_TEAM_DOMAIN.value // "" | length > 0' /tmp/project.json)" \
+            --argjson productionAllowlistPresent "$(jq -e '.result.deployment_configs.production.env_vars.SEO_ADMIN_EMAILS.value // .result.deployment_configs.production.env_vars.SEO_ADMIN_EMAIL.value // "" | length > 0' /tmp/project.json)" \
+            '{teamDomainPresent:$teamDomainPresent,teamDomainType:$teamDomainType,audPresent:$audPresent,audType:$audType,allowlistPresent:$allowlistPresent,allowlistType:$allowlistType,allowlistMatchesTarget:$allowlistMatches,productionTeamDomainPresent:$productionTeamDomainPresent,productionAllowlistPresent:$productionAllowlistPresent}'
