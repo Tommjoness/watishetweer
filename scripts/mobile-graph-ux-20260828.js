@@ -92,7 +92,35 @@ function svgTekstBoxUitElement(el){
   return geschatteSvgTekstBox(el.textContent,x,y,anker,Number.isFinite(font)&&font>0?font:12);
 }
 
-const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox};
+/* Mobiele SVG-tekst mag nooit buiten de eigen viewBox vallen. Vooral het laatste
+   HH:00-label stond op het laatste datapunt gecentreerd en liep daardoor rechts
+   uit de grafiek. Deze pure helper geeft alleen bij echte randoverschrijding een
+   nieuwe x/anchor terug; labels die al veilig staan blijven onaangeraakt. */
+function randCorrectieVoorTekstBox(box,svgBreedte,marge=4){
+  if(!box)return null;
+  const x=Number(box.x),breed=Number(box.width),w=Number(svgBreedte),m=Math.max(0,Number(marge)||0);
+  if(![x,breed,w].every(Number.isFinite)||breed<0||w<=0)return null;
+  if(x<m)return {x:m,anker:"start"};
+  if(x+breed>w-m)return {x:w-m,anker:"end"};
+  return null;
+}
+
+/* Een temperatuurcijfer hoort visueel bij zijn datapunt. De collision-lagen van
+   de basisgrafiek mogen een label iets laten verspringen, maar op mobiel niet
+   zo ver dat het als een los zwevend getal oogt. Alleen buitensporige verticale
+   afwijkingen worden begrensd; normale labelplaatsing blijft exact intact. */
+function begrensTemperatuurLabelY(labelY,puntY,plotTop,plotBottom,maxAfstand=42){
+  const ly=Number(labelY),py=Number(puntY),top=Number(plotTop),bottom=Number(plotBottom),lim=Math.max(1,Number(maxAfstand)||42);
+  if(![ly,py,top,bottom].every(Number.isFinite)||bottom<=top)return null;
+  if(Math.abs(ly-py)<=lim)return ly;
+  const marge=10,boven=py-18,onder=py+24;
+  let doel=ly<=py?boven:onder;
+  if(doel<top+marge)doel=onder;
+  if(doel>bottom-marge)doel=boven;
+  return Math.max(top+marge,Math.min(bottom-marge,doel));
+}
+
+const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -131,10 +159,64 @@ function herstelUurAs(){
     svg.insertBefore(el,regen||scrub||null);posities.push(x);
   }
 }
+
+function polishMobieleGrafiekRanden(){
+  if(!mobiel())return;
+  const svg=document.getElementById("chart"),g=S.geo;
+  if(!svg||!g||!g.M||!Number.isFinite(Number(g.W)))return;
+  const W=Number(g.W),top=Number(g.pt),bottom=top+Number(g.ih),marge=5;
+  if(![W,top,bottom].every(Number.isFinite)||bottom<=top)return;
+
+  /* De uur-as wordt eerst volledig opgebouwd en pas daarna tegen de viewBox
+     begrensd. Zo blijft ook een fallback-label op het laatste uur volledig leesbaar. */
+  bestaandeUurLabels(svg,g).forEach(el=>{
+    const correctie=randCorrectieVoorTekstBox(svgTekstBoxUitElement(el),W,marge);
+    if(!correctie)return;
+    el.setAttribute("x",String(correctie.x));
+    el.setAttribute("text-anchor",correctie.anker);
+    el.setAttribute("data-mobile-edge-adjusted","1");
+  });
+
+  const temperaturen=Array.isArray(g.T)?g.T:[];
+  const punten=[...svg.querySelectorAll("circle[data-temp-index]")].map(el=>({
+    el,i:Number(el.getAttribute("data-temp-index")),x:Number(el.getAttribute("cx")),y:Number(el.getAttribute("cy"))
+  })).filter(p=>Number.isInteger(p.i)&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&Number.isFinite(Number(temperaturen[p.i])));
+  const labels=[...svg.querySelectorAll("text")].filter(el=>{
+    const ff=String(el.getAttribute("font-family")||"");
+    return /Bodoni/i.test(ff)&&/^-?\d+°$/.test(String(el.textContent||"").trim());
+  }).sort((a,b)=>Number(a.getAttribute("x"))-Number(b.getAttribute("x")));
+  const gebruikt=new Set(),maxDx=Math.max(54,(Number(g.cw)||0)*3);
+
+  labels.forEach(el=>{
+    const m=/^(-?\d+)°$/.exec(String(el.textContent||"").trim()),lx=Number(el.getAttribute("x"));
+    if(!m||!Number.isFinite(lx))return;
+    const doel=Number(m[1]);
+    let beste=null,afstand=Infinity;
+    for(const p of punten){
+      if(gebruikt.has(p.i)||Math.round(Number(temperaturen[p.i]))!==doel)continue;
+      const d=Math.abs(p.x-lx);
+      if(d<afstand){beste=p;afstand=d;}
+    }
+    if(!beste||afstand>maxDx)return;
+    gebruikt.add(beste.i);
+    const huidigY=Number(el.getAttribute("y")),nieuwY=begrensTemperatuurLabelY(huidigY,beste.y,top,bottom,42);
+    if(Number.isFinite(nieuwY)&&nieuwY!==huidigY){
+      el.setAttribute("y",String(nieuwY));
+      el.setAttribute("data-mobile-detached-temp-fixed","1");
+    }
+    const correctie=randCorrectieVoorTekstBox(svgTekstBoxUitElement(el),W,marge);
+    if(correctie){
+      el.setAttribute("x",String(correctie.x));
+      el.setAttribute("text-anchor",correctie.anker);
+      el.setAttribute("data-mobile-edge-adjusted","1");
+    }
+  });
+}
+
 let uurAsToken=0;
 function planUurAsHerstel(){
   const token=++uurAsToken;
-  const voer=()=>{if(token===uurAsToken)herstelUurAs();};
+  const voer=()=>{if(token===uurAsToken){herstelUurAs();polishMobieleGrafiekRanden();}};
   const start=()=>{
     const r1=()=>{const r2=()=>voer();if(typeof requestAnimationFrame==="function")requestAnimationFrame(r2);else setTimeout(r2,0);};
     if(typeof requestAnimationFrame==="function")requestAnimationFrame(r1);else setTimeout(r1,0);
