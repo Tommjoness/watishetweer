@@ -192,7 +192,7 @@ async function loadCloudflare(env){
   const accountId=validAccountId(env.CLOUDFLARE_ACCOUNT_ID);
   const token=String(env.CLOUDFLARE_ANALYTICS_API_TOKEN||"").trim();
   if(!accountId||!token){
-    return {configured:false,reason:"Cloudflare Analytics is nog niet gekoppeld aan de productie-runtime."};
+    return {configured:false,reason:"Cloudflare Analytics is nog niet gekoppeld aan deze runtime."};
   }
   const now=new Date();
   try{
