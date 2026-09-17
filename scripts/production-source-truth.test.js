@@ -1,7 +1,7 @@
 "use strict";
 
 const assert=require("assert");
-const {bft,dagNeerslag,uvPiekVandaag,zonDagIndex,zonVerwachting,verwachtDagRijen}=require("./production-source-truth.js");
+const {bft,dagNeerslag,uvPiekVandaag,verwachtThema,zonDagIndex,zonVerwachting,verwachtDagRijen}=require("./production-source-truth.js");
 
 assert.equal(bft(0),0);assert.equal(bft(1),1);assert.equal(bft(12),3);assert.equal(bft(117),11);assert.equal(bft(118),12);
 assert.deepEqual(dagNeerslag(0,0),{hoofd:"Droog",hoeveelheid:""});
@@ -57,5 +57,20 @@ const rondZonsopkomst={
 assert.deepEqual(zonVerwachting(rondZonsopkomst).op,["06:19"],"zonder live override volgt de bronhorizon vóór zonsopkomst");
 assert.deepEqual(zonVerwachting(rondZonsopkomst,"2026-08-28T06:22").op,["06:20"],"met live lokale horizon verwacht de monitor na zonsopkomst alleen de volgende opkomst");
 assert.deepEqual(zonVerwachting(rondZonsopkomst,"2026-08-28T06:22").onder,["19:31"],"met live lokale horizon blijft de komende zonsondergang van vandaag zichtbaar");
+
+const themaZon={
+  current:{time:"2026-09-14T06:57",is_day:1},
+  daily:{
+    time:["2026-09-14"],
+    sunrise:["2026-09-14T06:58"],
+    sunset:["2026-09-14T19:02"]
+  }
+};
+assert.equal(verwachtThema(themaZon,"2026-09-14T06:57"),"donker","lokale zonsgrens wint vóór zonsopkomst van een reeds lichte providerflag");
+assert.equal(verwachtThema(themaZon,"2026-09-14T06:58"),"licht","thema schakelt exact op lokale zonsopkomst naar licht");
+assert.equal(verwachtThema(themaZon,"2026-09-14T19:01"),"licht","thema blijft licht tot vlak vóór lokale zonsondergang");
+assert.equal(verwachtThema(themaZon,"2026-09-14T19:02"),"donker","thema schakelt exact op lokale zonsondergang naar donker");
+assert.equal(verwachtThema({current:{time:"2026-12-21T12:00",is_day:0},daily:{time:["2026-12-21"],sunrise:[null],sunset:[null]}}),"donker","ontbrekende/polaire zonsdata valt terug op current.is_day");
+assert.equal(verwachtThema({current:{time:"2026-06-21T12:00",is_day:1},daily:{time:["2026-06-21"],sunrise:["2026-06-21T00:00"],sunset:["2026-06-21T00:00"]}}),"licht","ongeldige 00:00/00:00-sentinel valt terug op current.is_day");
 
 console.log("production-source-truth: bron-naar-UI-contracten OK");
