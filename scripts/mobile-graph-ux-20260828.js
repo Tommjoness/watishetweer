@@ -16,13 +16,14 @@ function uurAsLabelTekst(tekst){
   const m=/^([01]?\d|2[0-3])(?::00)?$/.exec(String(tekst||"").trim());
   return m?String(Number(m[1])).padStart(2,"0")+":00":"";
 }
-function kiesUurLabelIndices(tijden,minimaal=4){
+function kiesUurLabelIndices(tijden,minimaal=4,cadans=3,rand=2){
   const T=Array.isArray(tijden)?tijden:[],min=Math.max(1,Math.floor(Number(minimaal)||4));
+  const stap=Math.max(1,Math.floor(Number(cadans)||3)),inzet=Math.max(0,Math.floor(Number(rand)||0));
   if(T.length<3)return [];
   let basis=T.map((tijd,i)=>({i,uur:uurUitIso(tijd)}))
-    .filter(x=>x.i>=2&&x.i<=T.length-3&&Number.isInteger(x.uur)&&x.uur%3===0)
+    .filter(x=>x.i>=inzet&&x.i<=T.length-1-inzet&&Number.isInteger(x.uur)&&x.uur%stap===0)
     .map(x=>x.i);
-  if(basis.length<min)basis=T.map((_,i)=>i).filter(i=>i>=2&&i<=T.length-3);
+  if(basis.length<min)basis=T.map((_,i)=>i).filter(i=>i>=inzet&&i<=T.length-1-inzet);
   if(basis.length<=min)return basis;
   const uit=[];
   for(let k=0;k<min;k++){
@@ -134,26 +135,47 @@ function bestaandeUurLabels(svg,g){
     return isUurAsLabel(el.textContent,el.getAttribute("y"),plotOnder,el.getAttribute("font-family"));
   }):[];
 }
+function stileerUurAsLabel(el){
+  if(!el)return;
+  el.setAttribute("font-family","Instrument Sans,ui-sans-serif,system-ui,sans-serif");
+  el.setAttribute("font-style","normal");
+  el.setAttribute("font-weight","400");
+  el.setAttribute("letter-spacing","0");
+  if(el.style)el.style.fontVariantNumeric="tabular-nums";
+}
 function herstelUurAs(){
   if(!mobiel())return;
   const svg=document.getElementById("chart"),g=S.geo;
   if(!svg||!g||Number(g.n)>48||!Array.isArray(g.TI)||typeof g.x!=="function")return;
-  const minimum=4,alle=bestaandeUurLabels(svg,g),fallback=alle.filter(el=>el.hasAttribute("data-mobile-hour-axis")),canoniek=alle.filter(el=>!el.hasAttribute("data-mobile-hour-axis"));
+  const compact24=Number(g.n)<=24&&window.innerWidth<=430,cadans=compact24?4:3,rand=compact24?1:2,minimum=compact24?6:4;
+  let alle=bestaandeUurLabels(svg,g);
   alle.forEach(el=>{const expliciet=uurAsLabelTekst(el.textContent);if(expliciet)el.textContent=expliciet;});
+  if(compact24){
+    /* Acht volledige drie-uurslabels zijn technisch passend maar ogen op een
+       iPhone onrustig. Op <=430 px houden we daarom een stabiel vier-uursritme:
+       zes kloktijden over 24 uur, zonder iets aan de forecastpunten te wijzigen. */
+    alle.forEach(el=>{
+      const uur=Number(String(el.textContent||"").slice(0,2));
+      if(!Number.isInteger(uur)||uur%cadans!==0)el.remove();
+    });
+    alle=bestaandeUurLabels(svg,g);
+  }
+  let fallback=alle.filter(el=>el.hasAttribute("data-mobile-hour-axis")),canoniek=alle.filter(el=>!el.hasAttribute("data-mobile-hour-axis"));
+  alle.forEach(stileerUurAsLabel);
   if(canoniek.length>=minimum){fallback.forEach(el=>el.remove());return;}
   if(alle.length>=minimum)return;
   const posities=alle.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite);
   const y=Number(g.pt)+Number(g.ih)+20;
   if(!Number.isFinite(y))return;
   const kleur=getComputedStyle(document.documentElement).getPropertyValue("--ink-45").trim()||"currentColor";
-  for(const i of kiesUurLabelIndices(g.TI,Math.max(minimum,6))){
+  for(const i of kiesUurLabelIndices(g.TI,minimum,cadans,rand)){
     if(bestaandeUurLabels(svg,g).length>=minimum)break;
     const x=Number(g.x(i)),uur=uurUitIso(g.TI[i]);
     if(!Number.isFinite(x)||!Number.isInteger(uur)||posities.some(p=>Math.abs(p-x)<18))continue;
     const el=document.createElementNS(SVG_NS,"text");
     el.setAttribute("x",String(x));el.setAttribute("y",String(y));
     el.setAttribute("text-anchor","middle");el.setAttribute("fill",kleur);
-    el.setAttribute("font-family","DM Mono,monospace");el.setAttribute("font-size","8.5");
+    el.setAttribute("font-size","8.5");stileerUurAsLabel(el);
     el.setAttribute("data-mobile-hour-axis","1");el.textContent=uurAsLabelTekst(String(uur));
     const regen=svg.querySelector('g[data-q4-rain-periods]'),scrub=svg.querySelector("#scrub");
     svg.insertBefore(el,regen||scrub||null);posities.push(x);
