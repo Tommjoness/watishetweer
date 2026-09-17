@@ -37,6 +37,10 @@ ok(ux.dagNeerslagTitel(57,"66%\n2,2 mm","Vandaag",true)==="66% is de hoogste nee
 ok(ux.dagNeerslagTitel(57,"66%\n2,2 mm","vr 28",false)==="57% is de hoogste neerslagkans in één uur op vr 28.","toekomstige dagtooltip blijft het daily-maximum van die kalenderdag gebruiken");
 ok(ux.dagNeerslagTitel(57,"Droog","Vandaag",true)==="","droge resterende Vandaag-rij krijgt geen misleidende raw-daily-tooltip");
 
+ok(html.includes('const nuLokaal=typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():S.d&&S.d.current&&S.d.current.time;'),"Vandaag-neerslag gebruikt dezelfde live lokale horizon als de centrale weather-truth-owner");
+ok(html.includes('analyse(S.d,i,nuLokaal)'),"Vandaag-kans en hoeveelheid delen dezelfde resterende-daghorizon");
+ok(!html.includes('analyse(S.d,i,S.d.current.time)'),"provider-current-time mag de live Vandaag-horizon niet meer overschrijven");
+
 for(const vereist of [
   "/* ===== MOBILE STATE UX 20260826 ===== */",
   "/* ===== MOBILE STATE UX 20260826 CSS ===== */",

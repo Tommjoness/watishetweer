@@ -181,7 +181,8 @@ function verbindWeekNeerslagAanRijen(){
     const dag=dagLabelUitRij(rij,i,daily),datum=Array.isArray(daily.time)?String(daily.time[i]||""):"";
     const vandaag=!!datum&&datum===String(S.d&&S.d.current&&S.d.current.time||"").slice(0,10);
     const analyse=root.WeatherNowInterpretatie&&root.WeatherNowInterpretatie.analyseerDagData;
-    const resterend=vandaag&&typeof analyse==="function"?analyse(S.d,i,S.d.current.time):null;
+    const nuLokaal=typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():S.d&&S.d.current&&S.d.current.time;
+    const resterend=vandaag&&typeof analyse==="function"?analyse(S.d,i,nuLokaal):null;
     const nuance=dagNeerslagNuanceVoorRij(kans,mm,dag,spoor,vandaag,resterend);
     const drain=rij.querySelector(".drain");
     if(drain){
