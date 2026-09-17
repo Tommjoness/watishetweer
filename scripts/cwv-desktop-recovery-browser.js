@@ -166,7 +166,8 @@ async function run(){
           assert(result.rows>=4&&result.rows<=result.maxHours,"volledige desktopuren buiten begrensd bereik: "+result.rows);
           assert.deepEqual(result.hourHeaders,["Tijd","Weer","Temperatuur","Neerslag","Wind"],"rijke uurkolommen ontbreken");
           assert.equal(result.hourHeaderFits,true,"Temperatuur-kop wrapt of clipt in de desktop-uurtabel");
-          assert(result.heroTempSize>=93.5&&result.heroTempSize<=108.5,"actuele temperatuur valt buiten de rustige desktopmaat: "+result.heroTempSize);
+          const expectedHeroTemp=Math.max(90,Math.min(width*.065,102));
+          assert(Math.abs(result.heroTempSize-expectedHeroTemp)<=.75,"actuele temperatuur valt buiten de bedoelde desktopmaat: "+result.heroTempSize+" (verwacht circa "+expectedHeroTemp+")");
           assert.equal(result.sunDayVisible,false,"los Vandaag/Morgen-label staat nog boven de grafiek");
           assert.equal(result.hourCells,true,"uurregels missen weericoon, gevoel, neerslagkans of wind");
           assert.equal(result.rainVisible,false,"korte neerslagsectie is nog zichtbaar");
