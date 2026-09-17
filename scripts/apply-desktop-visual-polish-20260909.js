@@ -99,8 +99,8 @@ ${MARKER}
   #nights .row.night>*{box-sizing:border-box;min-width:0}
   #nights .row.night:not(.kop)>.dname{grid-column:1;grid-row:1;padding-right:6px!important}
   #nights .row.night:not(.kop)>.score{
-    grid-column:2;grid-row:1;justify-self:stretch!important;text-align:left!important;
-    padding-left:8px!important;padding-right:96px!important
+    grid-column:2;grid-row:1;justify-self:start!important;text-align:left!important;
+    padding-left:8px!important
   }
   #nights .row.night:not(.kop)>.sbar{
     grid-column:2;grid-row:1;width:80px!important;
@@ -242,7 +242,7 @@ function markeerDubbelZichtInMaan(){
     if(maan.querySelector(".wiw-night-visibility-detail"))continue;
     let gemarkeerd=false;
     for(const kind of Array.from(maan.children)){
-      const tekst=String(kind.textContent||"").replace(/\\s+/g," ").trim();
+      const tekst=String(kind.textContent||"").replace(/\s+/g," ").trim();
       if(/^Gemiddeld zicht:/i.test(tekst)&&!/[Mm]aan/.test(tekst)){
         kind.classList.add("wiw-night-visibility-detail");
         gemarkeerd=true;
@@ -252,7 +252,7 @@ function markeerDubbelZichtInMaan(){
     if(gemarkeerd)continue;
     const walker=document.createTreeWalker(maan,NodeFilter.SHOW_TEXT);let node;
     while((node=walker.nextNode())){
-      const match=/^(\\s*Gemiddeld zicht:\\s*[<>]?\\s*\\d+(?:[.,]\\d+)?\\+?\\s*km\\s*)/i.exec(String(node.nodeValue||""));
+      const match=/^(\s*Gemiddeld zicht:\s*[<>]?\s*\d+(?:[.,]\d+)?\+?\s*km\s*)/i.exec(String(node.nodeValue||""));
       if(!match)continue;
       const span=document.createElement("span");
       span.className="wiw-night-visibility-detail";
