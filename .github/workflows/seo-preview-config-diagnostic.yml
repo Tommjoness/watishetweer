@@ -17,7 +17,7 @@ jobs:
       CLOUDFLARE_PROJECT: watishetweer
       TARGET_EMAIL: maitri.polwatteg@gmail.com
     steps:
-      - name: Inspect preview config without exposing values
+      - name: Repair once, then inspect preview config without exposing values
         shell: bash
         run: |
           set -euo pipefail
@@ -26,18 +26,27 @@ jobs:
           API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT"
           AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
 
+          if [ "${GITHUB_RUN_ATTEMPT:-1}" = "1" ]; then
+            jq -n --arg email "$TARGET_EMAIL" '{deployment_configs:{preview:{env_vars:{SEO_ADMIN_EMAILS:{type:"secret_text",value:$email}}}}}' > /tmp/patch.json
+            curl -fsS -X PATCH -H "$AUTH" -H 'Content-Type: application/json' --data-binary @/tmp/patch.json "$API" -o /tmp/patch-response.json
+            jq -e '.success == true' /tmp/patch-response.json >/dev/null
+            echo 'Attempt 1: preview allowlist als secret_text gezet.'
+          else
+            echo 'Rerun: alleen inspectie; config wordt niet gewijzigd.'
+          fi
+
           curl -fsS -H "$AUTH" -H 'Content-Type: application/json' "$API" -o /tmp/project.json
           jq -e '.success == true' /tmp/project.json >/dev/null
           test "$(jq -r '.result.production_branch // ""' /tmp/project.json)" = main
 
           jq -n \
-            --argjson teamDomainPresent "$(jq -e '.result.deployment_configs.preview.env_vars.CF_ACCESS_TEAM_DOMAIN.value // "" | length > 0' /tmp/project.json)" \
             --arg teamDomainType "$(jq -r '.result.deployment_configs.preview.env_vars.CF_ACCESS_TEAM_DOMAIN.type // "missing"' /tmp/project.json)" \
-            --argjson audPresent "$(jq -e '.result.deployment_configs.preview.env_vars.CF_ACCESS_AUD.value // "" | length > 0' /tmp/project.json)" \
             --arg audType "$(jq -r '.result.deployment_configs.preview.env_vars.CF_ACCESS_AUD.type // "missing"' /tmp/project.json)" \
-            --argjson allowlistPresent "$(jq -e '.result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAILS.value // .result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAIL.value // "" | length > 0' /tmp/project.json)" \
             --arg allowlistType "$(jq -r '(.result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAILS.type // .result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAIL.type // "missing")' /tmp/project.json)" \
-            --argjson allowlistMatches "$(jq -e --arg email "$TARGET_EMAIL" '((.result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAILS.value // .result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAIL.value // "") | ascii_downcase | gsub("^\\s+|\\s+$"; "")) == ($email | ascii_downcase)' /tmp/project.json)" \
-            --argjson productionTeamDomainPresent "$(jq -e '.result.deployment_configs.production.env_vars.CF_ACCESS_TEAM_DOMAIN.value // "" | length > 0' /tmp/project.json)" \
-            --argjson productionAllowlistPresent "$(jq -e '.result.deployment_configs.production.env_vars.SEO_ADMIN_EMAILS.value // .result.deployment_configs.production.env_vars.SEO_ADMIN_EMAIL.value // "" | length > 0' /tmp/project.json)" \
-            '{teamDomainPresent:$teamDomainPresent,teamDomainType:$teamDomainType,audPresent:$audPresent,audType:$audType,allowlistPresent:$allowlistPresent,allowlistType:$allowlistType,allowlistMatchesTarget:$allowlistMatches,productionTeamDomainPresent:$productionTeamDomainPresent,productionAllowlistPresent:$productionAllowlistPresent}'
+            --arg productionTeamDomainType "$(jq -r '.result.deployment_configs.production.env_vars.CF_ACCESS_TEAM_DOMAIN.type // "missing"' /tmp/project.json)" \
+            --arg productionAllowlistType "$(jq -r '(.result.deployment_configs.production.env_vars.SEO_ADMIN_EMAILS.type // .result.deployment_configs.production.env_vars.SEO_ADMIN_EMAIL.type // "missing")' /tmp/project.json)" \
+            '{runAttempt:env.GITHUB_RUN_ATTEMPT,teamDomainType:$teamDomainType,audType:$audType,allowlistType:$allowlistType,productionTeamDomainType:$productionTeamDomainType,productionAllowlistType:$productionAllowlistType}'
+
+          test "$(jq -r '.result.deployment_configs.preview.env_vars.CF_ACCESS_TEAM_DOMAIN.type // "missing"' /tmp/project.json)" = secret_text
+          test "$(jq -r '.result.deployment_configs.preview.env_vars.CF_ACCESS_AUD.type // "missing"' /tmp/project.json)" = secret_text
+          test "$(jq -r '(.result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAILS.type // .result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAIL.type // "missing")' /tmp/project.json)" = secret_text
