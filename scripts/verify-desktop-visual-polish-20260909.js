@@ -46,7 +46,7 @@ for(const p of htmlBestanden(OUT)){
   /* Laatste desktop-readability pass: borg precies de visuele klachten uit
      de live screenshots zonder mobiele layout of weerdata te muteren. */
   eis(html.includes('body{font-size:16px!important;padding-bottom:0!important}'),rel+": loze desktop-bodyruimte of leesbaarheidsoverride ontbreekt");
-  eis(html.includes('.final-top-grid #t{font-size:clamp(90px,6.5vw,102px)!important;line-height:.86!important}'),rel+": huidige temperatuur wordt niet via de actuele final-top-grid-selector rustig begrensd");
+  eis(html.includes('.final-top-grid #t{font-size:clamp(78px,5.5vw,88px)!important;line-height:.86!important}'),rel+": huidige temperatuur wordt niet via de actuele final-top-grid-selector rustig begrensd");
   eis(html.includes('#suntimes .zondag + span,')&&html.includes('#suntimes > span:first-child:nth-last-child(3)'),rel+": redundante zonsopkomst/-ondergangcopy naast de grafiek wordt niet veilig verborgen");
   eis(html.includes('.wiw-hour-date{font-size:11px!important;color:var(--ink-70)!important'),rel+": datumlabel in de uurtabel blijft te klein");
   eis(html.includes('.wiw-hour-table{font-size:13.25px!important}')&&html.includes('#days .dcond{font-size:14px!important}'),rel+": kerngegevens op desktop hebben geen leesbaarheidspass gekregen");
@@ -56,4 +56,4 @@ for(const p of htmlBestanden(OUT)){
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:rel+":desktop-polish-"+(i+1)}));
 }
 eis(geraakt>0,"Geen desktop-polishartifacts gevonden.");
-console.log(`Desktop-polish geverifieerd op ${geraakt} weerartifacts: één uurhoogte-owner, maximaal 11 gedeelde uren, compacte weekmetriekgroep, finale brede Nachtzicht-maanverdeling zonder dubbele zichtregel of tekstuitloop, rustigere huidige temperatuur op de actuele hero-selector, ruimere kleine tekst en geen loze desktopondermarge.`);
+console.log(`Desktop-polish geverifieerd op ${geraakt} weerartifacts: één uurhoogte-owner, maximaal 11 gedeelde uren, compacte weekmetriekgroep, finale brede Nachtzicht-maanverdeling zonder dubbele zichtregel of tekstuitloop, rustiger geschaalde huidige temperatuur op de actuele hero-selector, ruimere kleine tekst en geen loze desktopondermarge.`);
