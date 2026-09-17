@@ -71,7 +71,7 @@ function hhmm(tijd){const m=/(?:T|^)(\d{2}):(\d{2})/.exec(String(tijd||""));retu
 function datumDagenVerschil(van,naar){
   const p=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s||""));return m?[+m[1],+m[2],+m[3]]:null;};
   const a=p(van),b=p(naar);if(!a||!b)return null;
-  return Math.round((Date.UTC(b[0],b[1]-1,b[2])-Date.UTC(a[0],a[1]-1,b[2]))/86400000);
+  return Math.round((Date.UTC(b[0],b[1]-1,b[2])-Date.UTC(a[0],a[1]-1,a[2]))/86400000);
 }
 function poolDaglichtStatus(daily,index){
   const sr=daily?.sunrise?.[index],ss=daily?.sunset?.[index],srt=hhmm(sr),sst=hhmm(ss);
