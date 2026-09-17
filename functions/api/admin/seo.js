@@ -196,6 +196,15 @@ function dateRanges(days){
   };
 }
 
+function ga4Range(days){
+  const safeDays=Math.max(7,Math.min(90,Math.round(Number(days)||28)));
+  const currentEnd=new Date();
+  currentEnd.setUTCHours(0,0,0,0);
+  const currentStart=new Date(currentEnd);
+  currentStart.setUTCDate(currentStart.getUTCDate()-(safeDays-1));
+  return {startDate:isoDate(currentStart),endDate:isoDate(currentEnd)};
+}
+
 async function gscQuery(token,siteUrl,startDate,endDate,dimensions=[],rowLimit=25000){
   const response=await fetch(`https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,{
     method:"POST",
@@ -269,7 +278,8 @@ async function loadGa4(token,env,ranges){
   const propertyId=String(env.GA4_PROPERTY_ID||"").trim();
   if(!propertyId)return {configured:false,reason:"GA4_PROPERTY_ID ontbreekt; Search Console werkt wel."};
   try{
-    const dateRanges=[ranges.current];
+    const currentRange=ga4Range(ranges.days);
+    const dateRanges=[currentRange];
     const [overview,landingPages]=await Promise.all([
       ga4Report(token,propertyId,{
         dateRanges,
@@ -292,6 +302,7 @@ async function loadGa4(token,env,ranges){
     return {
       configured:true,
       propertyId:propertyId.replace(/^properties\//,""),
+      range:currentRange,
       summary:metricMap(overview),
       landingPages:ga4Rows(landingPages,"landingPage")
     };

@@ -63,6 +63,10 @@ assert(css.includes(".page-link"),"Dashboard mist styling voor klikbare landings
 assert(css.includes("table-layout:fixed"),"Dashboardtabellen moeten vaste kolomgeometrie gebruiken.");
 assert(css.includes("font-variant-numeric:tabular-nums"),"Dashboardcijfers moeten tabulair uitlijnen.");
 assert(css.includes("minmax(145px,auto) 72px"),"Verdelingsrijen missen vaste metriektracks.");
+assert(css.includes(".card,.panel{min-width:0"),"Dashboardcards moeten op smalle viewports kunnen krimpen.");
+assert(css.includes(".grid-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)"),"Tweekoloms dashboardgrid mist shrink-safe tracks.");
+assert(css.includes(".table-wrap{min-width:0;max-width:100%;overflow:auto"),"Brede tabellen moeten binnen hun eigen kaart scrollen in plaats van de pagina te verbreden.");
+assert(css.includes(".kpis,.grid-two,.ga4-kpis{grid-template-columns:minmax(0,1fr)}"),"Mobiele dashboardgrids moeten één shrink-safe kolom gebruiken.");
 assert(css.length>1000,"Dashboardstylesheet lijkt onvolledig.");
 
 for(const required of [
@@ -80,6 +84,11 @@ for(const required of [
 assert(api.includes('status:503,code:"access_not_configured"'),"API moet fail-closed zijn zolang Cloudflare Access niet is ingesteld.");
 assert(api.includes('status:403,code:"access_denied"'),"API mist expliciete allowlist-deny.");
 assert(api.includes('"Cache-Control":"private, no-store, max-age=0"'),"API-response mist no-store.");
+assert(api.includes('grant_type:"urn:ietf:params:oauth:grant-type:jwt-bearer"'),"Google OAuth grant type wijkt af van het werkende service-accountcontract.");
+assert(api.includes("function ga4Range(days)"),"GA4 mist een eigen actuele datumrange.");
+assert(api.includes("const currentRange=ga4Range(ranges.days);"),"GA4 gebruikt niet de actuele eigen datumrange.");
+assert(api.includes("range:currentRange"),"GA4-response rapporteert zijn eigen datumrange niet.");
+assert(!api.includes("const dateRanges=[ranges.current];"),"GA4 mag niet de drie dagen vertraagde Search Console-range hergebruiken.");
 assert(!api.includes("GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:"),"API mag de private-key-variabele niet serialiseren.");
 
 for(const required of ["CLOUDFLARE_ACCOUNT_ID","CLOUDFLARE_ANALYTICS_API_TOKEN","rumPageloadEventsAdaptiveGroups","bot:0","bot:1"]){

@@ -57,11 +57,14 @@ De private key mag de gebruikelijke PEM met echte newlines bevatten; ook een sec
 
 ## 3. GA4
 
-De dashboard-API kan GA4 al server-side uitlezen via de Analytics Data API. Om de kaart **Gedrag na de klik** echt te vullen zijn drie dingen nodig:
+De dashboard-API kan GA4 server-side uitlezen via de Google Analytics Data API. Om de kaart **Gedrag na de klik** echt te vullen zijn vier dingen nodig:
 
 1. een GA4-property voor `watishetweer.nl` met een web data stream;
-2. het bestaande Google service-account als **Viewer** op die GA4-property;
-3. `GA4_PROPERTY_ID` als numerieke property-id in Cloudflare Pages voor productie en preview, gevolgd door een nieuwe deployment.
+2. de **Google Analytics Data API** (`analyticsdata.googleapis.com`) ingeschakeld in hetzelfde Google Cloud-project als het service-account;
+3. het bestaande Google service-account als **Viewer** op die GA4-property;
+4. `GA4_PROPERTY_ID` als numerieke property-id in Cloudflare Pages voor productie en preview, gevolgd door een nieuwe deployment wanneer die binding is gewijzigd.
+
+Als Google meldt dat de Analytics Data API nog niet eerder in het project is gebruikt of is uitgeschakeld, schakel `analyticsdata.googleapis.com` eerst in voor het project van het service-account. Een nieuwe Pages-deployment is daarvoor niet nodig; na inschakelen kan Google enkele minuten nodig hebben voordat de wijziging overal actief is.
 
 Zonder `GA4_PROPERTY_ID` blijft Search Console volledig werken en toont het dashboard bewust "Nog niet gekoppeld".
 
