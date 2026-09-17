@@ -30,7 +30,7 @@ assert.deepEqual(api.randCorrectieVoorTekstBox({x:1,y:0,width:28,height:10},380,
 assert.strictEqual(api.randCorrectieVoorTekstBox({x:120,y:0,width:28,height:10},380,5),null,"Veilig label mag niet onnodig verschuiven.");
 assert.equal(api.begrensTemperatuurLabelY(118,136,59,204,42),118,"Normale temperatuur-labelafstand blijft intact.");
 assert.equal(api.begrensTemperatuurLabelY(62,150,59,204,42),132,"Los zwevend label boven het datapunt wordt teruggebracht naar de curve.");
-assert.equal(api.begrensTemperatuurLabelY(198,120,59,204,42),102,"Los zwevend label onder het datapunt wordt teruggebracht naar de curve wanneer onderruimte ontbreekt.");
+assert.equal(api.begrensTemperatuurLabelY(203,180,59,204,18),162,"Los zwevend label onder het datapunt wijkt naar boven uit wanneer onderruimte ontbreekt.");
 
 const runtime=fs.readFileSync(path.join(__dirname,"mobile-graph-ux-20260828.js"),"utf8");
 assert(!/\.getBBox\s*\(/.test(runtime),"Mobiele grafiekpolish mag geen uitvoerbare SVG getBBox-layoutread meer bevatten.");
@@ -39,7 +39,7 @@ assert(runtime.includes("alle.forEach(el=>{const expliciet=uurAsLabelTekst(el.te
 assert(runtime.includes("el.textContent=uurAsLabelTekst(String(uur));"),"Ook fallback-uurlabels moeten expliciete HH:00-kloktijden gebruiken.");
 assert(runtime.includes("function polishMobieleGrafiekRanden()"),"Mobiele grafiek mist de gerichte rechterrand-/zwevend-labelpolish.");
 assert(runtime.includes("data-mobile-edge-adjusted"),"Mobiele randcorrectie is niet traceerbaar in de SVG.");
-assert(runtime.includes("data-mobile-detached-temp-fixed"),"Mobiele zwevende temperatuurlabelcorrectie is niet traceerbaar in de SVG.");
+assert(runtime.includes("data-mobile-detached-temp-fixed"),"Mobiele zwevende-temperatuurcorrectie is niet traceerbaar in de SVG.");
 assert(runtime.includes("herstelUurAs();polishMobieleGrafiekRanden();"),"Randpolish moet na de definitieve mobiele uuras lopen.");
 
 const checkpoint=fs.readFileSync(path.join(__dirname,"apply-mobile-screenshot-polish.js"),"utf8");
