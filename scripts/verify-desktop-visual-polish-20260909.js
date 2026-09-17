@@ -18,11 +18,17 @@ for(const p of htmlBestanden(OUT)){
   eis(html.includes(GRAFIEK_SYNC_NIEUW),rel+": uur-owner synchroniseert grafiek niet met de zichtbare tabelrange");
   eis(!html.includes('.wiw-hour-table tbody tr{height:29px!important}'),rel+": desktop-polish forceert opnieuw een tweede rijhoogte-owner");
   eis(html.includes('grid-template-columns:\n      100px 26px minmax(260px,380px)'),rel+": weekmetriekgroep is niet gericht begrensd");
-  eis(html.includes('112px minmax(140px,180px) 112px minmax(118px,148px) minmax(360px,1fr)'),rel+": vijf Nachtzicht-kolommen ontbreken");
+  eis(html.includes('112px minmax(140px,180px) 112px minmax(118px,148px) minmax(360px,1fr)'),rel+": compacte vijf Nachtzicht-kolommen ontbreken");
   eis(/#nights \.row\.night:not\(\.kop\)>\.nachtvenster\{[^}]*white-space:normal!important[^}]*\}/.test(html),rel+": zichtperiode mag op desktop niet meer buiten de eigen kolom doorlopen");
-  eis(html.includes('@media(min-width:1600px)'),rel+": brede Nachtzicht-breakpoint is niet 1600px");
+  eis(html.includes('@media(min-width:1360px)'),rel+": brede Nachtzicht-breakpoint is niet 1360px");
   eis(html.includes('minmax(300px,.82fr) minmax(240px,.68fr)'),rel+": finale brede Nachtzicht-verdeling over zes kolommen ontbreekt");
   eis(html.includes('grid-column:5!important;grid-row:1!important;\n    white-space:normal!important'),rel+": brede zichtperiode kan tekst niet veilig binnen de eigen kolom wrappen");
+  eis(html.includes('#nights .row.night>*{box-sizing:border-box;min-width:0}'),rel+": Nachtzicht-cellen delen geen voorspelbaar boxmodel");
+  eis(html.includes('padding-inline:8px!important')&&html.includes('padding:0 10px 0 14px!important'),rel+": gedeelde Nachtzicht-inner padding ontbreekt");
+  eis(html.includes('.dashrow-days .nachtkop{align-items:center!important;padding-bottom:9px!important}'),rel+": Nachtzicht-header/meta zijn niet verticaal geharmoniseerd");
+  eis(html.includes('#moonlab{justify-content:flex-end!important;text-align:right!important}'),rel+": maanstatus is niet aan de rechter sectie-as verankerd");
+  eis(html.includes('#nachthint{\n    width:100%!important;max-width:none!important;')&&html.includes('text-align:center!important'),rel+": Nachtzicht-toelichting is niet over de volle sectiebreedte gecentreerd");
+  eis(html.includes('@media(min-width:1600px){\n  /* Op ultrabrede schermen blijven de vier lucht-/pollentegels'),rel+": bestaande 1600px-owner voor luchtkwaliteit/pollen is onbedoeld verplaatst");
   eis(html.includes('.wiw-hour-table .wiw-hour-primary{line-height:1.15!important}'),rel+": uurtypografie ontbreekt");
   eis(html.includes(LATE_STYLE_ID),rel+": finale runtime-cascadeowner voor desktoppolish ontbreekt");
   eis(html.includes('#t,.deg,#minitemp,.sval,.score,'),rel+": gedeelde selector voor consumentencijfers ontbreekt");
@@ -56,4 +62,4 @@ for(const p of htmlBestanden(OUT)){
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:rel+":desktop-polish-"+(i+1)}));
 }
 eis(geraakt>0,"Geen desktop-polishartifacts gevonden.");
-console.log(`Desktop-polish geverifieerd op ${geraakt} weerartifacts: één uurhoogte-owner, maximaal 11 gedeelde uren, compacte weekmetriekgroep, finale brede Nachtzicht-maanverdeling zonder dubbele zichtregel of tekstuitloop, huidige temperatuur vast op 60px op de actuele hero-selector, ruimere kleine tekst en geen loze desktopondermarge.`);
+console.log(`Desktop-polish geverifieerd op ${geraakt} weerartifacts: één uurhoogte-owner, maximaal 11 gedeelde uren, compacte weekmetriekgroep, Nachtzicht vanaf 1360px verdeeld over zes kolommen met gedeelde celankers, huidige temperatuur vast op 60px op de actuele hero-selector, ruimere kleine tekst en geen loze desktopondermarge.`);
