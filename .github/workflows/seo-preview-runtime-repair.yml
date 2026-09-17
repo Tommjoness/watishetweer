@@ -1,0 +1,59 @@
+name: Temporary SEO preview allowlist repair
+
+on:
+  push:
+    branches:
+      - fix/seo-preview-access-aud-20260917
+
+permissions:
+  contents: read
+
+jobs:
+  repair-preview-allowlist:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_PROJECT: watishetweer
+      TARGET_EMAIL: maitri.polwatteg@gmail.com
+    steps:
+      - name: Repair preview SEO admin allowlist safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test "$TARGET_EMAIL" = "maitri.polwatteg@gmail.com"
+
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT"
+          AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+
+          curl -fsS -H "$AUTH" -H 'Content-Type: application/json' "$API" -o /tmp/before.json
+          jq -e '.success == true' /tmp/before.json >/dev/null
+          test "$(jq -r '.result.production_branch // ""' /tmp/before.json)" = main
+
+          jq -r '.result.deployment_configs.preview.env_vars // {} | keys[]' /tmp/before.json | sort > /tmp/before-preview-keys.txt
+          jq -cS '.result.deployment_configs.production.env_vars // {}' /tmp/before.json | sha256sum | cut -d' ' -f1 > /tmp/before-production.sha
+
+          jq -n --arg email "$TARGET_EMAIL" '{deployment_configs:{preview:{env_vars:{SEO_ADMIN_EMAILS:{type:"plain_text",value:$email}}}}}' > /tmp/patch.json
+          curl -fsS -X PATCH -H "$AUTH" -H 'Content-Type: application/json' --data-binary @/tmp/patch.json "$API" -o /tmp/patch-response.json
+          jq -e '.success == true' /tmp/patch-response.json >/dev/null
+
+          curl -fsS -H "$AUTH" -H 'Content-Type: application/json' "$API" -o /tmp/after.json
+          jq -e '.success == true' /tmp/after.json >/dev/null
+          jq -e --arg email "$TARGET_EMAIL" '.result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAILS.type == "plain_text" and .result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAILS.value == $email' /tmp/after.json >/dev/null
+
+          jq -r '.result.deployment_configs.preview.env_vars // {} | keys[]' /tmp/after.json | sort > /tmp/after-preview-keys.txt
+          comm -23 /tmp/before-preview-keys.txt /tmp/after-preview-keys.txt > /tmp/missing-preview-keys.txt
+          if [ -s /tmp/missing-preview-keys.txt ]; then
+            echo 'Cloudflare preview-env verloor bestaande variabelen; repair wordt afgekeurd.' >&2
+            exit 1
+          fi
+
+          jq -cS '.result.deployment_configs.production.env_vars // {}' /tmp/after.json | sha256sum | cut -d' ' -f1 > /tmp/after-production.sha
+          cmp -s /tmp/before-production.sha /tmp/after-production.sha || {
+            echo 'Production env veranderde onverwacht; repair wordt afgekeurd.' >&2
+            exit 1
+          }
+
+          echo 'SEO preview allowlist is gecorrigeerd; overige preview-keys behouden en production env ongewijzigd.'
