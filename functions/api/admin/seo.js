@@ -2,6 +2,7 @@ const GOOGLE_TOKEN_URL="https://oauth2.googleapis.com/token";
 const GSC_SCOPE="https://www.googleapis.com/auth/webmasters.readonly";
 const GA4_SCOPE="https://www.googleapis.com/auth/analytics.readonly";
 const JWKS_TTL_MS=60*60*1000;
+const PAGES_ACCESS_AUD="ea551fbedaa6efc3ad82569d11df8f0880dc3e54406af51d648aad5ccbb38cec";
 
 let jwksCache={url:null,expiresAt:0,keys:[]};
 let tokenCache={key:null,expiresAt:0,token:null};
@@ -49,6 +50,14 @@ function allowedEmails(env){
     .filter(Boolean);
 }
 
+function accessAudience(env,requestUrl){
+  const configured=String(env.CF_ACCESS_AUD||"").trim();
+  let hostname="";
+  try{hostname=new URL(requestUrl).hostname.toLowerCase();}catch{}
+  const pagesHost=hostname==="watishetweer.pages.dev"||hostname.endsWith(".watishetweer.pages.dev");
+  return pagesHost?PAGES_ACCESS_AUD:configured;
+}
+
 async function fetchAccessJwks(teamDomain){
   const url=`https://${teamDomain}/cdn-cgi/access/certs`;
   if(jwksCache.url===url&&jwksCache.expiresAt>Date.now()&&jwksCache.keys.length)return jwksCache.keys;
@@ -64,7 +73,7 @@ async function fetchAccessJwks(teamDomain){
 async function verifyAccess(context){
   const env=context.env||{};
   const teamDomain=normalizeTeamDomain(env.CF_ACCESS_TEAM_DOMAIN);
-  const expectedAud=String(env.CF_ACCESS_AUD||"").trim();
+  const expectedAud=accessAudience(env,context.request.url);
   const allowlist=allowedEmails(env);
   if(!teamDomain||!expectedAud||!allowlist.length){
     return {ok:false,status:503,code:"access_not_configured",message:"SEO-dashboard is nog niet gekoppeld aan Cloudflare Access."};
