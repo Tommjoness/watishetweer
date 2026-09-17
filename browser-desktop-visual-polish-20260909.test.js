@@ -99,9 +99,9 @@ function meet(){
     if(window.WeatherNowFinalDesktopUI20260902)window.WeatherNowFinalDesktopUI20260902.render();
     if(window.WeatherNowDesktopVisualPolish20260909)window.WeatherNowDesktopVisualPolish20260909.sync();
     document.documentElement.getBoundingClientRect();
-    const R=e=>e.getBoundingClientRect(),C=e=>getComputedStyle(e);
+    const R=e=>e.getBoundingClientRect(),C=e=>getComputedStyle(e),A=e=>R(e).left+(parseFloat(C(e).paddingLeft)||0),H=e=>(R(e).left+R(e).right)/2,V=e=>(R(e).top+R(e).bottom)/2;
     const layout=document.getElementById("wiw-chart-layout"),main=layout.querySelector(".wiw-chart-main"),panel=document.getElementById("wiw-hour-panel"),scroll=document.getElementById("wiw-hour-scroll"),allRows=[...document.querySelectorAll("#wiw-hour-table tbody tr")],rows=allRows.filter(e=>R(e).height>0);
-    const days=document.getElementById("days"),nights=document.getElementById("nights"),dHead=days.querySelector(".row.kop"),dRow=days.querySelector(".row:not(.kop)"),nHead=nights.querySelector(".row.kop"),nRow=nights.querySelector(".row:not(.kop)"),dTitle=document.querySelector(".dashrow-days .dashcol:first-child>h2"),nTitle=document.querySelector(".nachtkop"),aqTitle=document.querySelector(".dashrow-days + h2"),aq=document.getElementById("aq"),footer=document.querySelector("footer"),nav=document.querySelector(".seo-plaatsnav"),sheet=document.querySelector(".sheet");
+    const days=document.getElementById("days"),nights=document.getElementById("nights"),dHead=days.querySelector(".row.kop"),dRow=days.querySelector(".row:not(.kop)"),nHead=nights.querySelector(".row.kop"),nRow=nights.querySelector(".row:not(.kop)"),dTitle=document.querySelector(".dashrow-days .dashcol:first-child>h2"),nTitle=document.querySelector(".nachtkop"),nHint=document.getElementById("nachthint"),moonlab=document.getElementById("moonlab"),aqTitle=document.querySelector(".dashrow-days + h2"),aq=document.getElementById("aq"),footer=document.querySelector("footer"),nav=document.querySelector(".seo-plaatsnav"),sheet=document.querySelector(".sheet");
     const primEls=[nRow.querySelector(".dname"),nRow.querySelector(".score"),nRow.querySelector(".nmeta:not(.wide)"),nRow.querySelector(".nachtoordeel"),nRow.querySelector(".nachtvenster")].filter(Boolean),prim=primEls.map(baseline);
     const dPos=[...dHead.children].slice(3,8).map(e=>R(e).left),drPos=[...dRow.children].slice(3,8).map(e=>R(e).left);
     zet("desktop",innerWidth>=1100?1:0);
@@ -118,7 +118,11 @@ function meet(){
     zet("night-dom-head",[...nHead.children].filter(e=>C(e).display!=="none").map(e=>e.innerText.replace(/\\s+/g," ").trim()).filter(Boolean).join(" "));
     zet("night-baseline",Math.max(...prim)-Math.min(...prim));
     zet("night-baselines",prim.join("/"));zet("night-primary-parents",primEls.map(e=>e.className+">"+e.parentElement.className).join("/"));
-    const venster=nRow.querySelector(".nachtvenster"),maan=nRow.querySelector(".nachtmaan");
+    const scoreHead=nHead.querySelector(":scope>.score"),scoreRow=nRow.querySelector(":scope>.score"),cloudHead=nHead.querySelector(":scope>.nmeta:not(.wide)"),cloudRow=nRow.querySelector(":scope>.nmeta:not(.wide)"),assessmentHead=nHead.querySelector(":scope>.sbar"),assessmentRow=nRow.querySelector(":scope>.nachtadvies"),periodHead=nHead.querySelector(":scope>.nmeta.wide"),venster=nRow.querySelector(".nachtvenster"),moonHead=nHead.querySelector(":scope>.wiw-night-moon-head"),maan=nRow.querySelector(".nachtmaan");
+    if(innerWidth>=1100){
+      zet("night-score-anchor",Math.abs(A(scoreHead)-A(scoreRow)));zet("night-cloud-axis",Math.abs(H(cloudHead)-H(cloudRow)));zet("night-assessment-anchor",Math.abs(A(assessmentHead)-A(assessmentRow)));zet("night-period-anchor",Math.abs(A(periodHead)-A(venster)));zet("night-moon-anchor",moonHead&&C(moonHead).display!=="none"?Math.abs(A(moonHead)-A(maan)):0);
+      zet("night-meta-vcenter",Math.abs(V(nTitle.querySelector("h2"))-V(moonlab)));zet("night-meta-right",Math.abs(R(nTitle).right-R(moonlab).right));zet("night-hint-center",Math.abs(H(nTitle)-H(nHint)));
+    }
     zet("night-detail-axis",Math.abs(R(venster).left-R(maan).left));zet("night-detail-debug",[R(venster).left,R(maan).left,R(venster).width,R(maan).width,C(venster).gridColumnStart,C(maan).gridColumnStart,C(venster).gridColumnEnd,C(maan).gridColumnEnd,C(venster).gridRowStart,C(maan).gridRowStart,C(maan).marginLeft,C(maan).order,C(maan).position,C(maan).transform,C(venster.parentElement).display,C(venster.parentElement).direction,C(venster.parentElement).gridTemplateColumns].join("/"));
     zet("night-moon-separated",R(maan).left>=R(venster).right+19?"ok":"fout");zet("night-moon-right-gap",Math.max(0,R(nRow).right-R(maan).right));zet("night-period-width",R(venster).width);zet("night-moon-width",R(maan).width);
     zet("night-period-overflow",Math.max(0,venster.scrollWidth-venster.clientWidth));zet("night-moon-overflow",Math.max(0,maan.scrollWidth-maan.clientWidth));
@@ -148,7 +152,7 @@ html=html.replace(bodyEinde,reporter+"</body>\n</html>");
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-desktop-polish-"));
 try{
   const pad=path.join(dir,"index.html");fs.writeFileSync(pad,html,"utf8");
-  const scenarios=[...[[320,900],[360,900],[390,900],[400,900],[430,932],[1280,900],[1366,900],[1600,900],[1920,1080]].map(([w,h])=>({w,h,land:"NL",plaats:"Almere",modus:"licht"})),{w:1366,h:900,land:"US",plaats:"New York",modus:"donker"}];
+  const scenarios=[...[[320,900],[360,900],[390,900],[400,900],[430,932],[1280,900],[1366,900],[1440,900],[1600,900],[1920,1080]].map(([w,h])=>({w,h,land:"NL",plaats:"Almere",modus:"licht"})),{w:1366,h:900,land:"US",plaats:"New York",modus:"donker"}];
   for(const {w,h,land,plaats,modus} of scenarios){
     const zoek=new URLSearchParams({lat:land==="US"?"40.714":"52.35",lon:land==="US"?"-74.006":"5.26",plaats,land,modus}).toString();
     const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${w},${h}`,"--virtual-time-budget=12000","--dump-dom","file://"+pad+"?"+zoek],{encoding:"utf8",maxBuffer:40*1024*1024});
@@ -172,20 +176,23 @@ try{
       if(n("days-head-align")>1)throw new Error(`${w}px: weekkop en waarden niet uitgelijnd (${v("days-head-align")}px)`);
       if(n("days-group-start")>620)throw new Error(`${w}px: weekmetriekgroep staat nog te ver rechts (${v("days-group-start")}px)`);
       if(n("days-last-right")>=w-100)throw new Error(`${w}px: weekmetriekgroep wordt nog over de hele rij uitgerekt`);
-      const breedNacht=w>=1600;
+      const breedNacht=w>=1360;
       if(n("night-columns")!==(breedNacht?6:5))throw new Error(`${w}px: Nachtzicht heeft ${v("night-columns")} kolommen i.p.v. ${breedNacht?"zes":"vijf"}`);
       const verwachteNachtKop="NACHT ZICHTSCORE BEWOLKING BEOORDELING BESTE ZICHTPERIODE"+(breedNacht?" MAAN":"");
       if(v("night-head")!==verwachteNachtKop)throw new Error(`${w}px: Nachtzicht-header onjuist: ${v("night-head")}`);
       if(v("night-dom-head")!==v("night-head"))throw new Error(`${w}px: semantische Nachtzicht-kopvolgorde wijkt visueel af (${v("night-dom-head")})`);
       if(n("assessment-visible")!==1)throw new Error(`${w}px: Beoordeling-header is niet zichtbaar`);
       if(n("night-baseline")>1.1)throw new Error(`${w}px: primaire Nachtzicht-baseline wijkt ${v("night-baseline")}px af (${v("night-baselines")}; ${v("night-primary-parents")})`);
+      if(n("night-score-anchor")>1.1||n("night-cloud-axis")>1.1||n("night-assessment-anchor")>1.1||n("night-period-anchor")>1.1)throw new Error(`${w}px: Nachtzicht-kop en waarden delen niet dezelfde kolomankers (${v("night-score-anchor")}/${v("night-cloud-axis")}/${v("night-assessment-anchor")}/${v("night-period-anchor")}px)`);
+      if(n("night-meta-vcenter")>2.1||n("night-meta-right")>1.1||n("night-hint-center")>1.1)throw new Error(`${w}px: Nachtzicht-header/meta/toelichting vormen geen coherent assysteem (${v("night-meta-vcenter")}/${v("night-meta-right")}/${v("night-hint-center")}px)`);
       if(n("night-period-overflow")>1||n("night-moon-overflow")>1)throw new Error(`${w}px: Nachtzicht-tekst loopt buiten de eigen kolom (${v("night-period-overflow")}/${v("night-moon-overflow")}px)`);
       if(breedNacht){
+        if(n("night-moon-anchor")>1.1)throw new Error(`${w}px: Maan-header en maaninhoud delen niet hetzelfde anker (${v("night-moon-anchor")}px)`);
         if(v("night-moon-separated")!=="ok"||n("night-moon-right-gap")>1)throw new Error(`${w}px: maancontext benut de rechter Nachtzicht-zone niet (${v("night-detail-debug")}; rechts ${v("night-moon-right-gap")}px)`);
         if(n("night-period-width")<300||n("night-moon-width")<240)throw new Error(`${w}px: brede Nachtzicht-detailkolommen zijn te smal (${v("night-period-width")}/${v("night-moon-width")}px)`);
         if(n("night-period-width")/n("night-moon-width")>1.4)throw new Error(`${w}px: zichtperiode domineert de maankolom nog te sterk (${v("night-period-width")}/${v("night-moon-width")}px)`);
         if(n("night-moon-has-visibility")!==0)throw new Error(`${w}px: Maan-kolom bevat nog de dubbele regel Gemiddeld zicht`);
-        if(n("aq-width")>1321||n("aq-center-delta")>1.1)throw new Error(`${w}px: luchtkwaliteit/pollen is niet compact gecentreerd (${v("aq-width")}px, delta ${v("aq-center-delta")}px)`);
+        if(w>=1600&&(n("aq-width")>1321||n("aq-center-delta")>1.1))throw new Error(`${w}px: luchtkwaliteit/pollen is niet compact gecentreerd (${v("aq-width")}px, delta ${v("aq-center-delta")}px)`);
       }else{
         if(n("night-detail-axis")>1)throw new Error(`${w}px: compacte Nachtzicht-details starten ${v("night-detail-axis")}px ongelijk (${v("night-detail-debug")})`);
         if(n("night-compact-detail-gap")<-.5)throw new Error(`${w}px: compacte Nachtzicht-details overlappen verticaal (${v("night-compact-detail-gap")}px)`);
@@ -201,7 +208,7 @@ try{
       if(n("all-rows")!==24)throw new Error(`${w}px: mobiele uurtabel wijzigde inhoudelijk (${v("all-rows")} rijen)`);
       if(!/Bodoni Moda/i.test(v("hero-family"))||!/DM Mono/i.test(v("mini-family")))throw new Error(`${w}px: desktopcijferpolish lekt naar mobiele typografie (${v("hero-family")}/${v("mini-family")})`);
     }
-    console.log(`${w}px desktop-polish groen: overflow ${v("overflow")}px${w>=1100?`, ${v("rows")} gedeelde hoogtegestuurde uren, ${w>=1600?"zes":"vijf"} Nachtzicht-kolommen en sectiegap ${v("gap-chart-days")}px`:", mobiele layout intact"}.`);
+    console.log(`${w}px desktop-polish groen: overflow ${v("overflow")}px${w>=1100?`, ${v("rows")} gedeelde hoogtegestuurde uren, ${w>=1360?"zes":"vijf"} Nachtzicht-kolommen en sectiegap ${v("gap-chart-days")}px`:", mobiele layout intact"}.`);
   }
-  console.log("Desktop-polish browsematrix geslaagd op 320/360/390/400/430/1280/1366/1600/1920 px.");
+  console.log("Desktop-polish browsematrix geslaagd op 320/360/390/400/430/1280/1366/1440/1600/1920 px.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}

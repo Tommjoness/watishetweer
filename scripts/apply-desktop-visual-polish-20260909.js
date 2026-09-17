@@ -67,8 +67,26 @@ ${MARKER}
   .dashrow-days + h2{margin-top:var(--wiw-section-gap)!important}
   .dashrow-days .nachtkop h2{margin-top:0!important}
 
-  /* Expliciete vijfkoloms Nachtzicht-structuur:
-     Nacht | Zichtscore | Bewolking | Beoordeling | Beste zichtperiode. */
+  /* De sectiekop, maanstatus en toelichting delen op desktop één horizontaal
+     systeem. De generic .chartkop blijft onaangeraakt; alleen Nachtzicht krijgt
+     een gecentreerde meta-regel en een toelichting over de volle sectiebreedte. */
+  .dashrow-days .nachtkop{align-items:center!important;padding-bottom:9px!important}
+  .dashrow-days .nachtkop>.r{
+    margin-left:auto!important;
+    justify-content:flex-end!important;
+    text-align:right!important;
+    line-height:1.25!important
+  }
+  #moonlab{justify-content:flex-end!important;text-align:right!important}
+  #nachthint{
+    width:100%!important;max-width:none!important;
+    margin-left:auto!important;margin-right:auto!important;
+    text-align:center!important
+  }
+
+  /* Compacte vijfkoloms Nachtzicht-structuur onder 1360px:
+     Nacht | Zichtscore | Bewolking | Beoordeling | Beste zichtperiode.
+     Kop en waarden gebruiken per kolom exact dezelfde interne ankers. */
   #nights .row.night{
     grid-template-columns:
       112px minmax(140px,180px) 112px minmax(118px,148px) minmax(360px,1fr)!important;
@@ -78,18 +96,26 @@ ${MARKER}
     justify-content:stretch!important;
     align-items:baseline!important
   }
-  #nights .row.night:not(.kop)>.dname{grid-column:1;grid-row:1}
-  #nights .row.night:not(.kop)>.score{grid-column:2;grid-row:1;justify-self:start!important;text-align:left!important}
-  #nights .row.night:not(.kop)>.sbar{
-    grid-column:2;grid-row:1;width:88px!important;
-    justify-self:end!important;align-self:center!important
+  #nights .row.night>*{box-sizing:border-box;min-width:0}
+  #nights .row.night:not(.kop)>.dname{grid-column:1;grid-row:1;padding-right:6px!important}
+  #nights .row.night:not(.kop)>.score{
+    grid-column:2;grid-row:1;justify-self:start!important;text-align:left!important;
+    padding-left:8px!important
   }
-  #nights .row.night:not(.kop)>.nmeta:not(.wide){grid-column:3;grid-row:1;justify-self:start!important;text-align:left!important}
+  #nights .row.night:not(.kop)>.sbar{
+    grid-column:2;grid-row:1;width:80px!important;
+    justify-self:end!important;align-self:center!important;margin-right:8px!important
+  }
+  #nights .row.night:not(.kop)>.nmeta:not(.wide){
+    grid-column:3;grid-row:1;justify-self:stretch!important;text-align:center!important;
+    padding-inline:8px!important
+  }
   #nights .row.night:not(.kop)>.nmeta.wide{display:none!important}
   #nights .row.night:not(.kop)>.nachtadvies{
     grid-column:4!important;grid-row:1!important;
     display:block!important;
-    width:auto!important;max-width:none!important;margin:0!important;
+    width:100%!important;max-width:none!important;margin:0!important;
+    padding-inline:8px!important;
     color:var(--ink);font-size:13px;line-height:20px!important;
     text-align:left!important;white-space:nowrap
   }
@@ -97,6 +123,7 @@ ${MARKER}
     grid-column:5!important;grid-row:1!important;
     display:block!important;
     width:100%!important;min-width:0;margin:0!important;justify-self:stretch!important;
+    padding:0 10px 0 14px!important;
     color:var(--ink-70);font-size:13px;line-height:20px!important;
     text-align:left!important;white-space:normal!important
   }
@@ -104,7 +131,8 @@ ${MARKER}
     grid-column:5!important;grid-row:2!important;
     display:block!important;
     width:100%!important;max-width:none!important;min-width:0;justify-self:stretch!important;
-    margin:0!important;color:var(--ink-25);font-size:11.5px;line-height:1.35!important;
+    margin:0!important;padding:0 10px 0 14px!important;
+    color:var(--ink-25);font-size:11.5px;line-height:1.35!important;
     text-align:left!important;white-space:normal!important
   }
   #nights .row.night:not(.kop)>.dname,
@@ -112,27 +140,33 @@ ${MARKER}
   #nights .row.night:not(.kop)>.nmeta:not(.wide){line-height:20px!important}
 
   #nights .row.night.kop{grid-template-rows:auto!important;align-items:end!important}
-  #nights .row.night.kop>.dname{grid-column:1;grid-row:1}
-  #nights .row.night.kop>.score{grid-column:2;grid-row:1;text-align:left!important}
-  #nights .row.night.kop>.nmeta:not(.wide){grid-column:3;grid-row:1;text-align:left!important}
+  #nights .row.night.kop>.dname{grid-column:1;grid-row:1;padding-right:6px!important}
+  #nights .row.night.kop>.score{
+    grid-column:2;grid-row:1;text-align:left!important;
+    padding-left:8px!important;padding-right:8px!important
+  }
+  #nights .row.night.kop>.nmeta:not(.wide){
+    grid-column:3;grid-row:1;text-align:center!important;padding-inline:8px!important
+  }
   #nights .row.night.kop>.sbar{
     grid-column:4;grid-row:1;
     display:block!important;height:auto!important;background:none!important;
-    text-align:left!important
+    padding-inline:8px!important;text-align:left!important
   }
   #nights .row.night.kop>.nmeta.wide{
     grid-column:5;grid-row:1;
-    display:block!important;width:auto!important;
+    display:block!important;width:100%!important;
+    padding:0 10px 0 14px!important;
     align-items:initial!important;text-align:left!important
   }
   .wiw-night-assessment-head{display:block}
   .wiw-night-moon-head{display:none}
 }
 
-/* Op echt brede desktops gebruikt de bestaande maancontext de anders lege
-   rechterzone. De 1100–1599px-layout houdt bewust het bewezen vijfkolomsraster;
-   vanaf 1600px krijgt Maan een eigen, semantisch gelabelde zesde kolom. */
-@media(min-width:1600px){
+/* Vanaf 1360px is er aantoonbaar genoeg breedte voor de reeds bestaande zesde
+   maankolom. Daardoor benut Nachtzicht de rij eerder en hoeven maancontext en
+   beste zichtperiode niet tot 1600px in dezelfde linkse tekstzone te stapelen. */
+@media(min-width:1360px){
   #nights .row.night{
     grid-template-columns:
       112px minmax(140px,180px) 112px minmax(118px,148px)
@@ -145,17 +179,19 @@ ${MARKER}
   #nights .row.night:not(.kop)>.nachtmaan{
     grid-column:6!important;grid-row:1!important;
     width:100%!important;align-self:baseline!important;justify-self:stretch!important;
-    text-align:left!important
+    padding:0 0 0 14px!important;text-align:left!important
   }
   #nights .row.night.kop>.nmeta.wide{grid-column:5}
   #nights .row.night.kop>.wiw-night-moon-head{
     grid-column:6;grid-row:1;display:block;
-    text-align:left!important
+    padding:0 0 0 14px!important;text-align:left!important
   }
   /* Zicht staat al als primaire metriek bovenaan. In de afzonderlijke
      maankolom verbergen we daarom alleen de gemarkeerde duplicaatregel. */
   #nights .nachtmaan .wiw-night-visibility-detail{display:none!important}
+}
 
+@media(min-width:1600px){
   /* Op ultrabrede schermen blijven de vier lucht-/pollentegels één compacte,
      gecentreerde groep in plaats van mee te rekken tot de viewportbreedte. */
   #aq{width:min(1320px,100%)!important;margin-left:auto!important;margin-right:auto!important}
