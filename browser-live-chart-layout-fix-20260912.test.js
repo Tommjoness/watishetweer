@@ -107,8 +107,11 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
   S.dag=null;S.bereik=24;S.i0=0;S.klokInstantOverride=new Date('2026-09-17T18:44:00Z');
   etmaal(0,24);
   const svg=document.getElementById('chart'),g=S.geo;if(!svg||!g||!g.M)throw new Error('mobiele grafiekgeometrie ontbreekt');
-  const pb=Number(g.pt)+Number(g.ih),uren=[...svg.querySelectorAll('text')].filter(el=>/^\\d{2}:00$/.test(String(el.textContent||'').trim())&&Number(el.getAttribute('y'))>=pb+6);
-  const laatste=uren.sort((a,b)=>Number(a.getAttribute('x'))-Number(b.getAttribute('x'))).at(-1);if(!laatste)throw new Error('mobiel laatste uur-aslabel ontbreekt');
+  /* De basisrender kan vóór de async mobiele post-renderpass nog kale uren (20)
+     bevatten. Dat is juist de lifecycle die we willen testen: forceer de fout
+     vóór normalisatie, zodat de resterende +120/+350ms-passes hem moeten herstellen. */
+  const pb=Number(g.pt)+Number(g.ih),uren=[...svg.querySelectorAll('text')].filter(el=>/^(?:[01]?\\d|2[0-3])(?::00)?$/.test(String(el.textContent||'').trim())&&Number(el.getAttribute('y'))>=pb+6);
+  const laatste=uren.sort((a,b)=>Number(a.getAttribute('x'))-Number(b.getAttribute('x'))).at(-1);if(!laatste)throw new Error('mobiel laatste uur-aslabel ontbreekt vóór post-rendernormalisatie');
   laatste.setAttribute('x',String(Number(g.W)-1));laatste.setAttribute('text-anchor','middle');
   const temps=[...svg.querySelectorAll('text')].filter(el=>/Bodoni Moda/.test(String(el.getAttribute('font-family')||''))&&/^-?\\d+°$/.test(String(el.textContent||'').trim())).sort((a,b)=>Number(a.getAttribute('x'))-Number(b.getAttribute('x')));
   const zwevend=temps.at(-1);if(!zwevend)throw new Error('mobiel temperatuurlabel ontbreekt');
