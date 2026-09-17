@@ -89,22 +89,9 @@ jobs:
           NODE
 
       - name: Sync Cloudflare admin analytics preview-bindings
-        shell: bash
-        run: |
-          set -euo pipefail
-          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT"
-          jq -n \
-            --arg analytics "$CLOUDFLARE_ANALYTICS_API_TOKEN" \
-            --arg account "$CLOUDFLARE_ACCOUNT_ID" \
-            '{deployment_configs:{preview:{env_vars:{CLOUDFLARE_ANALYTICS_API_TOKEN:{type:"secret_text",value:$analytics},CLOUDFLARE_ACCOUNT_ID:{type:"secret_text",value:$account}}}}}' \
-            > /tmp/cloudflare-preview-analytics.json
-          curl -fsS -X PATCH \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            -H 'Content-Type: application/json' \
-            --data-binary @/tmp/cloudflare-preview-analytics.json \
-            "$API" -o /tmp/cloudflare-preview-analytics-response.json
-          jq -e '.success == true' /tmp/cloudflare-preview-analytics-response.json >/dev/null
-          echo "Cloudflare Analytics preview-bindings zijn gesynchroniseerd."
+        env:
+          CLOUDFLARE_DEPLOYMENT_ENV: preview
+        run: node scripts/cloudflare-admin-analytics-runtime.js
 
       - name: Bouw Cloudflare artifact
         env:
@@ -137,7 +124,8 @@ jobs:
           jq -e '.result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAILS.type == "secret_text"' /tmp/cloudflare-project-after-preview.json >/dev/null
           jq -e '.result.deployment_configs.preview.env_vars.CLOUDFLARE_ANALYTICS_API_TOKEN.type == "secret_text"' /tmp/cloudflare-project-after-preview.json >/dev/null
           jq -e '.result.deployment_configs.preview.env_vars.CLOUDFLARE_ACCOUNT_ID.type == "secret_text"' /tmp/cloudflare-project-after-preview.json >/dev/null
-          echo "SEO Access- en Analytics-previewconfig is na deploy compleet aanwezig."
+          jq -e '.result.deployment_configs.preview.env_vars.GA4_PROPERTY_ID.type == "secret_text"' /tmp/cloudflare-project-after-preview.json >/dev/null
+          echo "SEO Access-, Analytics- en GA4-previewconfig is na deploy compleet aanwezig."
 
       - name: Noteer preview-URL
         id: preview_url
