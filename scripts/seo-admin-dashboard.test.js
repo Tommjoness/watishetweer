@@ -11,11 +11,33 @@ const html=read("admin/seo/index.html");
 const js=read("admin/seo/seo-dashboard.js");
 const css=read("admin/seo/seo-dashboard.css");
 const api=read("functions/api/admin/seo.js");
+const cloudflareApi=read("functions/api/admin/seo/cloudflare.js");
 const headers=read("cloudflare/_headers");
 const workflow=read(".github/workflows/cloudflare-preview.yml");
 const productionWorkflow=read(".github/workflows/cloudflare-production.yml");
 const preload=read("scripts/cloudflare-access-preload.cjs");
 const accessHelper=read("scripts/cloudflare-access-service-token.js");
+const PAGES_ACCESS_AUD="ea551fbedaa6efc3ad82569d11df8f0880dc3e54406af51d648aad5ccbb38cec";
+
+function accessAudienceFrom(source,label){
+  const constant=source.match(/const PAGES_ACCESS_AUD="([^"]+)";/);
+  assert(constant,`${label} mist de vaste Pages Access audience.`);
+  assert.equal(constant[1],PAGES_ACCESS_AUD,`${label} gebruikt niet de verwachte Pages Access audience.`);
+  const functionMatch=source.match(/function accessAudience\(env,requestUrl\)\{[\s\S]*?\n\}/);
+  assert(functionMatch,`${label} mist hostgebonden Access-audience-selectie.`);
+  return new Function(`const PAGES_ACCESS_AUD=${JSON.stringify(PAGES_ACCESS_AUD)};${functionMatch[0]};return accessAudience;`)();
+}
+
+for(const [label,source] of [["Search Console admin API",api],["Cloudflare admin API",cloudflareApi]]){
+  const accessAudience=accessAudienceFrom(source,label);
+  assert.equal(accessAudience({CF_ACCESS_AUD:"production-aud"},"https://abc123.watishetweer.pages.dev/api/admin/seo"),PAGES_ACCESS_AUD,`${label} kiest op immutable Pages-host niet de Pages audience.`);
+  assert.equal(accessAudience({CF_ACCESS_AUD:"production-aud"},"https://watishetweer.pages.dev/api/admin/seo"),PAGES_ACCESS_AUD,`${label} kiest op de Pages-projecthost niet de Pages audience.`);
+  assert.equal(accessAudience({CF_ACCESS_AUD:"production-aud"},"https://watishetweer.nl/api/admin/seo"),"production-aud",`${label} mag het productie-AUD-contract niet wijzigen.`);
+  assert.equal(accessAudience({CF_ACCESS_AUD:"production-aud"},"https://www.watishetweer.nl/api/admin/seo"),"production-aud",`${label} mag www niet als Pages-host behandelen.`);
+  assert.equal(accessAudience({CF_ACCESS_AUD:"production-aud"},"https://watishetweer.pages.dev.evil.example/api/admin/seo"),"production-aud",`${label} mag een suffix-lookalike niet als Pages-host vertrouwen.`);
+  assert(source.includes("const expectedAud=accessAudience(env,context.request.url);"),`${label} gebruikt de hostgebonden audience niet in JWT-validatie.`);
+  assert(source.includes("audiences.includes(expectedAud)"),`${label} moet de geselecteerde audience exact in de JWT-audclaim eisen.`);
+}
 
 assert(html.includes('meta name="robots" content="noindex,nofollow,noarchive"'),"SEO admin mist noindex-meta.");
 assert(html.includes('src="/admin/seo/seo-dashboard.js"'),"SEO admin mist extern script.");
