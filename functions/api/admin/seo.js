@@ -162,7 +162,7 @@ async function getGoogleAccessToken(env){
   const response=await fetch(GOOGLE_TOKEN_URL,{
     method:"POST",
     headers:{"Content-Type":"application/x-www-form-urlencoded"},
-    body:new URLSearchParams({grant_type:"urn:ietf:params:oauth:grant-type:jwt-bearer",assertion})
+    body:new URLSearchParams({grant_type:"urn:ietf:params:oauth2:grant-type:jwt-bearer",assertion})
   });
   const payload=await response.json();
   if(!response.ok||!payload.access_token){
@@ -194,6 +194,15 @@ function dateRanges(days){
     current:{startDate:isoDate(currentStart),endDate:isoDate(settledEnd)},
     previous:{startDate:isoDate(previousStart),endDate:isoDate(previousEnd)}
   };
+}
+
+function ga4Range(days){
+  const safeDays=Math.max(7,Math.min(90,Math.round(Number(days)||28)));
+  const currentEnd=new Date();
+  currentEnd.setUTCHours(0,0,0,0);
+  const currentStart=new Date(currentEnd);
+  currentStart.setUTCDate(currentStart.getUTCDate()-(safeDays-1));
+  return {startDate:isoDate(currentStart),endDate:isoDate(currentEnd)};
 }
 
 async function gscQuery(token,siteUrl,startDate,endDate,dimensions=[],rowLimit=25000){
@@ -269,7 +278,8 @@ async function loadGa4(token,env,ranges){
   const propertyId=String(env.GA4_PROPERTY_ID||"").trim();
   if(!propertyId)return {configured:false,reason:"GA4_PROPERTY_ID ontbreekt; Search Console werkt wel."};
   try{
-    const dateRanges=[ranges.current];
+    const currentRange=ga4Range(ranges.days);
+    const dateRanges=[currentRange];
     const [overview,landingPages]=await Promise.all([
       ga4Report(token,propertyId,{
         dateRanges,
@@ -292,6 +302,7 @@ async function loadGa4(token,env,ranges){
     return {
       configured:true,
       propertyId:propertyId.replace(/^properties\//,""),
+      range:currentRange,
       summary:metricMap(overview),
       landingPages:ga4Rows(landingPages,"landingPage")
     };
