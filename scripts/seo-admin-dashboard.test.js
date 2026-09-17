@@ -11,11 +11,33 @@ const html=read("admin/seo/index.html");
 const js=read("admin/seo/seo-dashboard.js");
 const css=read("admin/seo/seo-dashboard.css");
 const api=read("functions/api/admin/seo.js");
+const cloudflareApi=read("functions/api/admin/seo/cloudflare.js");
 const headers=read("cloudflare/_headers");
 const workflow=read(".github/workflows/cloudflare-preview.yml");
 const productionWorkflow=read(".github/workflows/cloudflare-production.yml");
 const preload=read("scripts/cloudflare-access-preload.cjs");
 const accessHelper=read("scripts/cloudflare-access-service-token.js");
+const PAGES_ACCESS_AUD="ea551fbedaa6efc3ad82569d11df8f0880dc3e54406af51d648aad5ccbb38cec";
+
+function accessAudienceFrom(source,label){
+  const constant=source.match(/const PAGES_ACCESS_AUD="([^"]+)";/);
+  assert(constant,`${label} mist de vaste Pages Access audience.`);
+  assert.equal(constant[1],PAGES_ACCESS_AUD,`${label} gebruikt niet de verwachte Pages Access audience.`);
+  const functionMatch=source.match(/function accessAudience\(env,requestUrl\)\{[\s\S]*?\n\}/);
+  assert(functionMatch,`${label} mist hostgebonden Access-audience-selectie.`);
+  return new Function(`const PAGES_ACCESS_AUD=${JSON.stringify(PAGES_ACCESS_AUD)};${functionMatch[0]};return accessAudience;`)();
+}
+
+for(const [label,source] of [["Search Console admin API",api],["Cloudflare admin API",cloudflareApi]]){
+  const accessAudience=accessAudienceFrom(source,label);
+  assert.equal(accessAudience({CF_ACCESS_AUD:"production-aud"},"https://abc123.watishetweer.pages.dev/api/admin/seo"),PAGES_ACCESS_AUD,`${label} kiest op immutable Pages-host niet de Pages audience.`);
+  assert.equal(accessAudience({CF_ACCESS_AUD:"production-aud"},"https://watishetweer.pages.dev/api/admin/seo"),PAGES_ACCESS_AUD,`${label} kiest op de Pages-projecthost niet de Pages audience.`);
+  assert.equal(accessAudience({CF_ACCESS_AUD:"production-aud"},"https://watishetweer.nl/api/admin/seo"),"production-aud",`${label} mag het productie-AUD-contract niet wijzigen.`);
+  assert.equal(accessAudience({CF_ACCESS_AUD:"production-aud"},"https://www.watishetweer.nl/api/admin/seo"),"production-aud",`${label} mag www niet als Pages-host behandelen.`);
+  assert.equal(accessAudience({CF_ACCESS_AUD:"production-aud"},"https://watishetweer.pages.dev.evil.example/api/admin/seo"),"production-aud",`${label} mag een suffix-lookalike niet als Pages-host vertrouwen.`);
+  assert(source.includes("const expectedAud=accessAudience(env,context.request.url);"),`${label} gebruikt de hostgebonden audience niet in JWT-validatie.`);
+  assert(source.includes("audiences.includes(expectedAud)"),`${label} moet de geselecteerde audience exact in de JWT-audclaim eisen.`);
+}
 
 assert(html.includes('meta name="robots" content="noindex,nofollow,noarchive"'),"SEO admin mist noindex-meta.");
 assert(html.includes('src="/admin/seo/seo-dashboard.js"'),"SEO admin mist extern script.");
@@ -60,6 +82,10 @@ assert(api.includes('status:403,code:"access_denied"'),"API mist expliciete allo
 assert(api.includes('"Cache-Control":"private, no-store, max-age=0"'),"API-response mist no-store.");
 assert(!api.includes("GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:"),"API mag de private-key-variabele niet serialiseren.");
 
+for(const required of ["CLOUDFLARE_ACCOUNT_ID","CLOUDFLARE_ANALYTICS_API_TOKEN","rumPageloadEventsAdaptiveGroups","bot:0","bot:1"]){
+  assert(cloudflareApi.includes(required),`Cloudflare admin API mist analytics-contract: ${required}`);
+}
+
 assert(headers.includes("/admin/seo/*"),"Cloudflare headers missen adminroute.");
 assert(headers.includes("/api/admin/seo"),"Cloudflare headers missen SEO admin API-route.");
 assert(headers.includes("X-Robots-Tag: noindex, nofollow, noarchive"),"Cloudflare headers missen noindex voor admin.");
@@ -84,6 +110,15 @@ for(const required of ["CF_ACCESS_CLIENT_ID","CF_ACCESS_CLIENT_SECRET","cloudfla
   assert(workflow.includes(required),`Cloudflare previewworkflow mist service-tokencontract: ${required}`);
   assert(productionWorkflow.includes(required),`Cloudflare productionworkflow mist service-tokencontract: ${required}`);
 }
+
+assert(workflow.includes('CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}'),"Previewworkflow mist de dedicated Analytics-secret.");
+assert(workflow.includes('token:process.env.CLOUDFLARE_ANALYTICS_API_TOKEN'),"Previewworkflow moet de dedicated Analytics-token read-only bewijzen zonder deploytokenfallback.");
+assert(workflow.includes('Sync Cloudflare admin analytics preview-bindings'),"Previewworkflow synchroniseert Analytics-bindings niet vóór deploy.");
+assert(workflow.includes('CLOUDFLARE_ANALYTICS_API_TOKEN:{type:"secret_text",value:$analytics}'),"Analytics-token moet als secret_text naar de preview-runtime.");
+assert(workflow.includes('CLOUDFLARE_ACCOUNT_ID:{type:"secret_text",value:$account}'),"Cloudflare account-id moet als secret_text naar de preview-runtime.");
+assert(workflow.includes('.result.deployment_configs.preview.env_vars.CLOUDFLARE_ANALYTICS_API_TOKEN.type == "secret_text"'),"Post-deploy gate mist de Analytics-tokenbinding.");
+assert(workflow.includes('.result.deployment_configs.preview.env_vars.CLOUDFLARE_ACCOUNT_ID.type == "secret_text"'),"Post-deploy gate mist de account-idbinding.");
+
 assert.equal((productionWorkflow.match(/NODE_OPTIONS: --require=\.\/scripts\/cloudflare-access-preload\.cjs/g)||[]).length,2,"Production moet readiness en immutable smoke via de host-begrensde Access-preload uitvoeren.");
 assert(productionWorkflow.includes("Cloudflare Access service token is onvolledig."),"Production moet een half Access service token fail-closed weigeren.");
 
