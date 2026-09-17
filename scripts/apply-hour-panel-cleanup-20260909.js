@@ -16,7 +16,7 @@ ${MARKER}
   #wiw-hour-panel h3{text-align:center!important}
   .wiw-hour-table th:nth-child(1),.wiw-hour-table td:nth-child(1){width:14%!important}
   .wiw-hour-table th:nth-child(2),.wiw-hour-table td:nth-child(2){width:7%!important;text-align:center!important}
-  .wiw-hour-table th:nth-child(3),.wiw-hour-table td:nth-child(3){width:29%!important}
+  .wiw-hour-table th:nth-child(3),.wiw-hour-table td:nth-child(3){width:29%!important;text-align:center!important}
   .wiw-hour-table th:nth-child(4),.wiw-hour-table td:nth-child(4){width:28%!important}
   .wiw-hour-table th:nth-child(5),.wiw-hour-table td:nth-child(5){width:22%!important}
   .wiw-hour-table thead th:nth-child(3){white-space:nowrap!important}
@@ -24,9 +24,9 @@ ${MARKER}
 
   /* De eerdere readability-regel wees nog naar de verwijderde .dashrow-hero-
      structuur. Richt de maat nu op de actuele final-top-grid hero: duidelijk
-     hoofdgegeven, maar niet meer bijna even hoog als het volledige metriekblok. */
-  .final-top-grid #t{font-size:clamp(94px,7vw,108px)!important;line-height:.86!important}
-  .final-top-grid .deg{font-size:28px!important;margin-top:4px!important}
+     hoofdgegeven, maar één stap rustiger ten opzichte van briefing en metrics. */
+  .final-top-grid #t{font-size:clamp(90px,6.5vw,102px)!important;line-height:.86!important}
+  .final-top-grid .deg{font-size:26px!important;margin-top:4px!important}
 
   /* De dagcontext zit al in de lokale tijden en grafiek. Het losse Vandaag/Morgen-
      label boven de grafiek voegt daar op desktop geen bruikbare context meer toe. */
@@ -74,7 +74,7 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen uurpaneel-artifacts gevonden voor desktopcleanup.");
   const cache=vernieuwServiceworkerCache(OUT,"hour-panel-cleanup-20260909");
-  console.log(`Uurpaneelcleanup toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): volledige temperatuurkop, rustigere actuele temperatuur, verwijderd los daglabel en compacte desktopkolommen; cache ${cache}.`);
+  console.log(`Uurpaneelcleanup toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): volledige temperatuurkop, gecentreerde temperatuurkolom, rustigere actuele temperatuur, verwijderd los daglabel en compacte desktopkolommen; cache ${cache}.`);
 }
 
 if(require.main===module)main();
