@@ -109,7 +109,7 @@ async function controleer(type,naam){
     const overgangPagina=await page.locator("body").innerText();
     assert(/zon onder 23:00/i.test(overgang),naam+": lange overgangsdag verliest conventionele zonsondergang: "+overgang);
     assert(/zon onder 23:00/i.test(overgangPagina),naam+": gewone zonsondergang moet zichtbaar blijven op de pagina/grafiek: "+overgangPagina);
-    assert(/22 uur en 0 minuten daglicht/i.test(overgang),naam+": lange overgangsdag heeft verkeerde daglengte: "+overgang);
+    assert(!/\b\d+ uur(?: en \d+ minu(?:ut|ten))? daglicht\b/i.test(overgang),naam+": gewone numerieke daglengte hoort niet meer in de compacte grafiekkop: "+overgang);
     assert(!/Zon gaat niet onder|Zon komt niet op/i.test(overgang),naam+": overgangsdag is ten onrechte als poolstatus gelabeld: "+overgang);
     assert.deepEqual(errors,[],naam+": page errors");
   }finally{await browser.close();}
@@ -119,7 +119,7 @@ server.listen(0,"127.0.0.1",async()=>{
   try{
     await controleer(chromium,"Chromium");
     await controleer(webkit,"WebKit");
-    console.log("Pooldag/poolnacht groen in Chromium en WebKit: zoninformatie én 24-uurgrafiek tonen geen 00:00-sentinels; overgangsdag blijft intact.");
+    console.log("Pooldag/poolnacht groen in Chromium en WebKit: polarstatus blijft expliciet, conventionele daglengte blijft uit de grafiekkop en overgangsdag behoudt zijn zonsmomenten.");
   }catch(e){console.error(e.stack||e);process.exitCode=1;}
   finally{server.close();}
 });
