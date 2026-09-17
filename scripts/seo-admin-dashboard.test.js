@@ -114,11 +114,14 @@ for(const required of ["CF_ACCESS_CLIENT_ID","CF_ACCESS_CLIENT_SECRET","cloudfla
 assert(workflow.includes('CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}'),"Previewworkflow mist de dedicated Analytics-secret.");
 assert(workflow.includes('token:process.env.CLOUDFLARE_ANALYTICS_API_TOKEN'),"Previewworkflow moet de dedicated Analytics-token read-only bewijzen zonder deploytokenfallback.");
 assert(workflow.includes('Sync Cloudflare admin analytics preview-bindings'),"Previewworkflow synchroniseert Analytics-bindings niet vóór deploy.");
-assert(workflow.includes('CLOUDFLARE_ANALYTICS_API_TOKEN:{type:"secret_text",value:$analytics}'),"Analytics-token moet als secret_text naar de preview-runtime.");
-assert(workflow.includes('CLOUDFLARE_ACCOUNT_ID:{type:"secret_text",value:$account}'),"Cloudflare account-id moet als secret_text naar de preview-runtime.");
+assert(workflow.includes('CLOUDFLARE_DEPLOYMENT_ENV: preview'),"Previewworkflow moet de gedeelde runtime-sync expliciet op preview richten.");
+assert(workflow.includes('run: node scripts/cloudflare-admin-analytics-runtime.js'),"Previewworkflow gebruikt niet de gedeelde veilige runtime-sync.");
 assert(workflow.includes('.result.deployment_configs.preview.env_vars.CLOUDFLARE_ANALYTICS_API_TOKEN.type == "secret_text"'),"Post-deploy gate mist de Analytics-tokenbinding.");
 assert(workflow.includes('.result.deployment_configs.preview.env_vars.CLOUDFLARE_ACCOUNT_ID.type == "secret_text"'),"Post-deploy gate mist de account-idbinding.");
+assert(workflow.includes('.result.deployment_configs.preview.env_vars.GA4_PROPERTY_ID.type == "secret_text"'),"Post-deploy gate mist de duurzame GA4-binding.");
 
+assert(productionWorkflow.includes('run: node scripts/cloudflare-admin-analytics-runtime.js'),"Productionworkflow gebruikt niet de gedeelde veilige runtime-sync.");
+assert(productionWorkflow.includes('.result.deployment_configs.production.env_vars.GA4_PROPERTY_ID.type == "secret_text"'),"Production post-deploy gate mist de duurzame GA4-binding.");
 assert.equal((productionWorkflow.match(/NODE_OPTIONS: --require=\.\/scripts\/cloudflare-access-preload\.cjs/g)||[]).length,2,"Production moet readiness en immutable smoke via de host-begrensde Access-preload uitvoeren.");
 assert(productionWorkflow.includes("Cloudflare Access service token is onvolledig."),"Production moet een half Access service token fail-closed weigeren.");
 
