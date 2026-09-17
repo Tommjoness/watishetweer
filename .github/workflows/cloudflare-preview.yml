@@ -21,6 +21,7 @@ jobs:
       preview_url: ${{ steps.preview_url.outputs.url }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_PROJECT: watishetweer
       CLOUDFLARE_PREVIEW_BRANCH: pr-${{ github.event.pull_request.number || github.run_id }}
@@ -46,6 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ANALYTICS_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           test -n "$SOURCE_SHA"
           if { test -n "$CF_ACCESS_CLIENT_ID" && test -z "$CF_ACCESS_CLIENT_SECRET"; } || { test -z "$CF_ACCESS_CLIENT_ID" && test -n "$CF_ACCESS_CLIENT_SECRET"; }; then
@@ -67,6 +69,43 @@ jobs:
           echo "Cloudflare production branch: $production_branch"
           test "$production_branch" = main
 
+      - name: Controleer dedicated Analytics-token read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const {haalRapport}=require('./scripts/cloudflare-human-analytics-report.js');
+          (async()=>{
+            const report=await haalRapport({
+              accountId:process.env.CLOUDFLARE_ACCOUNT_ID,
+              token:process.env.CLOUDFLARE_ANALYTICS_API_TOKEN,
+              vensters:[1]
+            });
+            if(!report||!Array.isArray(report.vensters)||report.vensters.length!==1){
+              throw new Error('Dedicated Cloudflare Analytics-token gaf geen geldig RUM-rapport.');
+            }
+            console.log('Dedicated Cloudflare Analytics-token kan RUM read-only lezen.');
+          })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});
+          NODE
+
+      - name: Sync Cloudflare admin analytics preview-bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT"
+          jq -n \
+            --arg analytics "$CLOUDFLARE_ANALYTICS_API_TOKEN" \
+            --arg account "$CLOUDFLARE_ACCOUNT_ID" \
+            '{deployment_configs:{preview:{env_vars:{CLOUDFLARE_ANALYTICS_API_TOKEN:{type:"secret_text",value:$analytics},CLOUDFLARE_ACCOUNT_ID:{type:"secret_text",value:$account}}}}}' \
+            > /tmp/cloudflare-preview-analytics.json
+          curl -fsS -X PATCH \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/cloudflare-preview-analytics.json \
+            "$API" -o /tmp/cloudflare-preview-analytics-response.json
+          jq -e '.success == true' /tmp/cloudflare-preview-analytics-response.json >/dev/null
+          echo "Cloudflare Analytics preview-bindings zijn gesynchroniseerd."
+
       - name: Bouw Cloudflare artifact
         env:
           WEATHER_BUILD_SHA: ${{ env.SOURCE_SHA }}
@@ -83,7 +122,7 @@ jobs:
             --commit-message="Cloudflare preview $SOURCE_SHA" \
             --commit-dirty=true | tee /tmp/cloudflare-deploy.log
 
-      - name: Verifieer SEO Access previewconfig na deploy
+      - name: Verifieer SEO previewconfig na deploy
         shell: bash
         run: |
           set -euo pipefail
@@ -96,7 +135,9 @@ jobs:
           jq -e '.result.deployment_configs.preview.env_vars.CF_ACCESS_TEAM_DOMAIN.type == "secret_text"' /tmp/cloudflare-project-after-preview.json >/dev/null
           jq -e '.result.deployment_configs.preview.env_vars.CF_ACCESS_AUD.type == "secret_text"' /tmp/cloudflare-project-after-preview.json >/dev/null
           jq -e '.result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAILS.type == "secret_text"' /tmp/cloudflare-project-after-preview.json >/dev/null
-          echo "SEO Access previewconfig is na deploy compleet aanwezig."
+          jq -e '.result.deployment_configs.preview.env_vars.CLOUDFLARE_ANALYTICS_API_TOKEN.type == "secret_text"' /tmp/cloudflare-project-after-preview.json >/dev/null
+          jq -e '.result.deployment_configs.preview.env_vars.CLOUDFLARE_ACCOUNT_ID.type == "secret_text"' /tmp/cloudflare-project-after-preview.json >/dev/null
+          echo "SEO Access- en Analytics-previewconfig is na deploy compleet aanwezig."
 
       - name: Noteer preview-URL
         id: preview_url
