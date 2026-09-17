@@ -185,7 +185,7 @@ function polishMobieleGrafiekRanden(){
     const ff=String(el.getAttribute("font-family")||"");
     return /Bodoni/i.test(ff)&&/^-?\d+°$/.test(String(el.textContent||"").trim());
   }).sort((a,b)=>Number(a.getAttribute("x"))-Number(b.getAttribute("x")));
-  const gebruikt=new Set(),maxDx=Math.max(54,Number(g.cw)||0*3);
+  const gebruikt=new Set(),maxDx=Math.max(54,(Number(g.cw)||0)*3);
 
   labels.forEach(el=>{
     const m=/^(-?\d+)°$/.exec(String(el.textContent||"").trim()),lx=Number(el.getAttribute("x"));
