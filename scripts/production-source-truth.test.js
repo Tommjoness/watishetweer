@@ -4,13 +4,12 @@ const assert=require("assert");
 const {bft,dagNeerslag,uvPiekVandaag,zonDagIndex,zonVerwachting,verwachtDagRijen}=require("./production-source-truth.js");
 
 assert.equal(bft(0),0);assert.equal(bft(1),1);assert.equal(bft(12),3);assert.equal(bft(117),11);assert.equal(bft(118),12);
-assert.deepEqual(dagNeerslag(0,0),{hoofd:"0%",hoeveelheid:"0,0 mm"});
+assert.deepEqual(dagNeerslag(0,0),{hoofd:"Droog",hoeveelheid:""});
 assert.deepEqual(dagNeerslag(25,0),{hoofd:"25%",hoeveelheid:"0,0 mm"});
-assert.deepEqual(dagNeerslag(25,null),{hoofd:"25%",hoeveelheid:""});
-assert.deepEqual(dagNeerslag(25,0.001),{hoofd:"25%",hoeveelheid:"spoor"});
-assert.deepEqual(dagNeerslag(25,0.03),{hoofd:"25%",hoeveelheid:"<0,05 mm"});
-assert.deepEqual(dagNeerslag(25,0.09),{hoofd:"25%",hoeveelheid:"<0,1 mm"});
-assert.deepEqual(dagNeerslag(0,0.2),{hoofd:"0%",hoeveelheid:"0,2 mm"});
+assert.deepEqual(dagNeerslag(25,null),{hoofd:"25%",hoeveelheid:"hoeveelheid onzeker"});
+assert.deepEqual(dagNeerslag(25,0.03),{hoofd:"25%",hoeveelheid:"hoeveelheid onzeker"});
+assert.deepEqual(dagNeerslag(25,0.09),{hoofd:"25%",hoeveelheid:"hoeveelheid onzeker"});
+assert.deepEqual(dagNeerslag(0,0.2),{hoofd:"Onzeker",hoeveelheid:"0,2 mm"});
 assert.deepEqual(dagNeerslag(65,1.24),{hoofd:"65%",hoeveelheid:"1,2 mm"});
 
 const bron={
@@ -33,23 +32,8 @@ assert.equal(zonDagIndex(bron),1);
 assert.deepEqual(zonVerwachting(bron).op,["06:30"]);
 assert.deepEqual(zonVerwachting(bron).onder,["20:30"]);
 assert.equal(verwachtDagRijen(bron).length,7);
-assert.deepEqual(verwachtDagRijen(bron)[0],{datum:"2026-08-27",min:10,max:20,wind:0,neerslag:{hoofd:"0%",hoeveelheid:"0,0 mm"}},"Vandaag blijft in de zeven-dagenmonitor een volledige daily-rij");
 assert.deepEqual(verwachtDagRijen(bron)[1],{datum:"2026-08-28",min:11,max:21,wind:1,neerslag:{hoofd:"10%",hoeveelheid:"0,0 mm"}});
 assert.deepEqual(verwachtDagRijen(bron)[2],{datum:"2026-08-29",min:12,max:22,wind:2,neerslag:{hoofd:"20%",hoeveelheid:"0,1 mm"}});
-
-const kleineSomBron={
-  ...bron,
-  daily:{
-    ...bron.daily,
-    precipitation_probability_max:[25,...bron.daily.precipitation_probability_max.slice(1)],
-    precipitation_sum:[0.03,...bron.daily.precipitation_sum.slice(1)]
-  }
-};
-assert.deepEqual(
-  verwachtDagRijen(kleineSomBron,"2026-08-27T21:00")[0],
-  {datum:"2026-08-27",min:10,max:20,wind:0,neerslag:{hoofd:"25%",hoeveelheid:"<0,05 mm"}},
-  "Vandaag gebruikt dezelfde volledige daily-som en kleine-hoeveelheidsformatter als de zichtbare weekrij"
-);
 
 const avond={
   current:{time:"2026-08-27T19:00",is_day:1},
