@@ -83,6 +83,21 @@ jobs:
             --commit-message="Cloudflare preview $SOURCE_SHA" \
             --commit-dirty=true | tee /tmp/cloudflare-deploy.log
 
+      - name: Verifieer SEO Access previewconfig na deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT"
+          curl -fsS \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            "$API" -o /tmp/cloudflare-project-after-preview.json
+          jq -e '.success == true' /tmp/cloudflare-project-after-preview.json >/dev/null
+          jq -e '.result.deployment_configs.preview.env_vars.CF_ACCESS_TEAM_DOMAIN.type == "secret_text"' /tmp/cloudflare-project-after-preview.json >/dev/null
+          jq -e '.result.deployment_configs.preview.env_vars.CF_ACCESS_AUD.type == "secret_text"' /tmp/cloudflare-project-after-preview.json >/dev/null
+          jq -e '.result.deployment_configs.preview.env_vars.SEO_ADMIN_EMAILS.type == "secret_text"' /tmp/cloudflare-project-after-preview.json >/dev/null
+          echo "SEO Access previewconfig is na deploy compleet aanwezig."
+
       - name: Noteer preview-URL
         id: preview_url
         shell: bash
