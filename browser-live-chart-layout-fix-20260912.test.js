@@ -88,3 +88,52 @@ try{
   if(Number(v('overflow'))>2)throw new Error("pre-cleanup desktopfixture heeft horizontale overflow: "+v('overflow')+"px");
   console.log("Live chart/layout browserregressie groen vóór bundling: nu-markering is copy-arm, gewone daglengte is uit de grafiekkop en ieder volledig toekomstig desktopuur houdt exact één gekoppeld temperatuurcijfer; chart viewBox="+h+".");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
+
+/* Mobiele regressie uit live screenshot 17 september: het laatste tijdlabel mag
+   niet buiten de SVG vallen en een temperatuurcijfer mag door collision-lagen
+   nooit los van zijn eigen datapunt komen te zweven. We forceren beide slechte
+   geometrieën direct na etmaal(); de bestaande async mobiele polish moet ze
+   daarna zelfstandig herstellen. */
+let mobielHtml=fs.readFileSync(productie,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
+mobielHtml=mobielHtml.replace("</head>",stub+"</head>");
+const mobielReporter=`<script>
+window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-mobile-edge-'+k,String(v));try{
+  document.documentElement.classList.remove('wn-progressief');const app=document.getElementById('app');if(app){app.style.display='block';app.style.visibility='visible';app.classList.remove('wn-progressief');}const state=document.getElementById('state');if(state)state.style.display='none';
+  if(typeof S==='undefined'||typeof etmaal!=='function')throw new Error('mobiele runtimeglobals ontbreken');
+  const tijden=['2026-09-17T21:00','2026-09-17T22:00','2026-09-17T23:00','2026-09-18T00:00','2026-09-18T01:00','2026-09-18T02:00','2026-09-18T03:00','2026-09-18T04:00','2026-09-18T05:00','2026-09-18T06:00','2026-09-18T07:00','2026-09-18T08:00','2026-09-18T09:00','2026-09-18T10:00','2026-09-18T11:00','2026-09-18T12:00','2026-09-18T13:00','2026-09-18T14:00','2026-09-18T15:00','2026-09-18T16:00','2026-09-18T17:00','2026-09-18T18:00','2026-09-18T19:00','2026-09-18T20:00'];
+  const temp=[15.3,15.4,14.9,14.5,14.1,14.0,14.1,13.7,13.2,14.0,14.8,15.4,15.8,16.4,17.0,17.6,18.0,18.2,18.4,18.2,17.8,17.1,17.1,16.7];
+  const wind=tijden.map(()=>12),richting=tijden.map(()=>220),code=tijden.map(()=>3),dag=tijden.map((_,i)=>i>=10&&i<=21?1:0),kans=tijden.map((_,i)=>i===1?75:i===0?86:20),mm=tijden.map((_,i)=>i===1?4:0);
+  S.d={timezone:'Europe/Amsterdam',utc_offset_seconds:7200,current:{time:'2026-09-17T20:44',temperature_2m:15.5,is_day:0},hourly:{time:tijden,temperature_2m:temp,apparent_temperature:temp.map(v=>v-.3),precipitation_probability:kans,precipitation:mm,wind_speed_10m:wind,wind_gusts_10m:wind.map(v=>v+4),cloud_cover:tijden.map(()=>55),weather_code:code,is_day:dag,wind_direction_10m:richting},daily:{time:['2026-09-17','2026-09-18'],sunrise:['2026-09-17T07:17','2026-09-18T07:19'],sunset:['2026-09-17T19:51','2026-09-18T19:48']}};
+  S.dag=null;S.bereik=24;S.i0=0;S.klokInstantOverride=new Date('2026-09-17T18:44:00Z');
+  etmaal(0,24);
+  const svg=document.getElementById('chart'),g=S.geo;if(!svg||!g||!g.M)throw new Error('mobiele grafiekgeometrie ontbreekt');
+  const pb=Number(g.pt)+Number(g.ih),uren=[...svg.querySelectorAll('text')].filter(el=>/^\\d{2}:00$/.test(String(el.textContent||'').trim())&&Number(el.getAttribute('y'))>=pb+6);
+  const laatste=uren.sort((a,b)=>Number(a.getAttribute('x'))-Number(b.getAttribute('x'))).at(-1);if(!laatste)throw new Error('mobiel laatste uur-aslabel ontbreekt');
+  laatste.setAttribute('x',String(Number(g.W)-1));laatste.setAttribute('text-anchor','middle');
+  const temps=[...svg.querySelectorAll('text')].filter(el=>/Bodoni Moda/.test(String(el.getAttribute('font-family')||''))&&/^-?\\d+°$/.test(String(el.textContent||'').trim())).sort((a,b)=>Number(a.getAttribute('x'))-Number(b.getAttribute('x')));
+  const zwevend=temps.at(-1);if(!zwevend)throw new Error('mobiel temperatuurlabel ontbreekt');
+  zwevend.setAttribute('y',String(Number(g.pt)+2));zwevend.setAttribute('x',String(Number(g.W)-1));zwevend.setAttribute('text-anchor','middle');
+  setTimeout(()=>{try{
+    const W=Number(g.W),aslabels=[...svg.querySelectorAll('text')].filter(el=>/^\\d{2}:00$/.test(String(el.textContent||'').trim())&&Number(el.getAttribute('y'))>=pb+6);
+    const buiten=aslabels.filter(el=>{const b=el.getBBox();return b.x<-.5||b.x+b.width>W+.5;});
+    const punten=[...svg.querySelectorAll('circle[data-temp-index]')].map(el=>({i:Number(el.getAttribute('data-temp-index')),x:Number(el.getAttribute('cx')),y:Number(el.getAttribute('cy'))})).filter(p=>Number.isInteger(p.i)&&Number.isFinite(p.x)&&Number.isFinite(p.y));
+    const tlabels=[...svg.querySelectorAll('text')].filter(el=>/Bodoni Moda/.test(String(el.getAttribute('font-family')||''))&&/^-?\\d+°$/.test(String(el.textContent||'').trim()));
+    let maxDy=0;for(const el of tlabels){const m=/^(-?\\d+)°$/.exec(String(el.textContent||'').trim()),x=Number(el.getAttribute('x')),y=Number(el.getAttribute('y'));if(!m||!Number.isFinite(x)||!Number.isFinite(y))continue;const doel=Number(m[1]);let beste=null,d=Infinity;for(const p of punten){if(Math.round(Number(g.T[p.i]))!==doel)continue;const dx=Math.abs(p.x-x);if(dx<d){d=dx;beste=p;}}if(beste)maxDy=Math.max(maxDy,Math.abs(y-beste.y));}
+    zet('axis-overflow',buiten.length?buiten.map(el=>el.textContent).join(','):'geen');zet('max-temp-dy',maxDy.toFixed(1));zet('edge-adjusted',svg.querySelectorAll('[data-mobile-edge-adjusted="1"]').length);zet('detached-fixed',svg.querySelectorAll('[data-mobile-detached-temp-fixed="1"]').length);zet('done','ok');
+  }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},650);
+}catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},180),{once:true});
+</script>`;
+mobielHtml=mobielHtml.replace("</body>",mobielReporter+"</body>");
+const mobielDir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-mobile-chart-edge-"));
+try{
+  const pad=path.join(mobielDir,"index.html");fs.writeFileSync(pad,mobielHtml,"utf8");
+  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=402,900","--virtual-time-budget=3600","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:36*1024*1024,timeout:30000});
+  if(r.status!==0)throw new Error("mobiele browser exit "+r.status+": "+String(r.stderr||"").slice(-1200));
+  const dom=r.stdout||"",v=k=>{const m=new RegExp('data-mobile-edge-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
+  if(v('done')!=='ok')throw new Error("mobiele reporter: "+v('exception'));
+  if(v('axis-overflow')!=='geen')throw new Error("mobiel uur-aslabel valt buiten de chart-viewBox: "+v('axis-overflow'));
+  if(Number(v('max-temp-dy'))>42.5)throw new Error("mobiel temperatuurcijfer raakt visueel los van datapunt; max dy="+v('max-temp-dy'));
+  if(Number(v('edge-adjusted'))<1)throw new Error("mobiele rechterrandcorrectie is niet uitgevoerd");
+  if(Number(v('detached-fixed'))<1)throw new Error("mobiele zwevende-temperatuurcorrectie is niet uitgevoerd");
+  console.log("Mobiele chart-edge regressie groen: laatste HH:00-label blijft volledig binnen de SVG en temperatuurcijfers blijven binnen 42 px van hun datapunt.");
+}finally{fs.rmSync(mobielDir,{recursive:true,force:true});}
