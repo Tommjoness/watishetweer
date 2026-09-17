@@ -57,10 +57,10 @@ try{
     if(Number(v('temp-axis-offset'))>1.5)throw new Error(`${breedte}px: temperatuurheader en waarde liggen niet op dezelfde verticale as (offset ${v('temp-axis-offset')}px)`);
     if(v('feels-display')!=='none'||v('feels-visible')!=='no')throw new Error(`${breedte}px: gevoelstemperatuur is nog zichtbaar (${v('feels-display')}/${v('feels-visible')})`);
     if(!v('temp-primary')||v('rain-secondary')==='none'||v('wind-secondary')==='none')throw new Error(`${breedte}px: primaire temperatuur, neerslagkans of winddetail is onbedoeld geraakt`);
-    const verwachteHero=Math.max(90,Math.min(breedte*.065,102));
+    const verwachteHero=Math.max(78,Math.min(breedte*.055,88));
     if(Math.abs(Number(v('hero-size'))-verwachteHero)>.75)throw new Error(`${breedte}px: hero-temperatuur heeft onverwachte maat ${v('hero-size')}px; verwacht circa ${verwachteHero.toFixed(2)}px`);
-    if(Math.abs(Number(v('hero-deg-size'))-26)>.25)throw new Error(`${breedte}px: hero-eenheid heeft onverwachte maat ${v('hero-deg-size')}px`);
+    if(Math.abs(Number(v('hero-deg-size'))-23)>.25)throw new Error(`${breedte}px: hero-eenheid heeft onverwachte maat ${v('hero-deg-size')}px`);
     if(Number(v('overflow'))>1)throw new Error(`${breedte}px: horizontale overflow ${v('overflow')}px`);
   }
-  console.log("Uurpaneelcleanup browsergroen op 1366, 1440 en 1920px: hero rustiger, Temperatuur exact gecentreerd boven de waarden, kolombreedtes stabiel, geen overflow en overige detaildata intact.");
+  console.log("Uurpaneelcleanup browsergroen op 1366, 1440 en 1920px: hero rustiger geschaald, Temperatuur exact gecentreerd boven de waarden, kolombreedtes stabiel, geen overflow en overige detaildata intact.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
