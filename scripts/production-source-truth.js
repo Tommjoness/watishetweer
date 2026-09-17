@@ -1,8 +1,7 @@
 "use strict";
 
 const assert=require("assert");
-const {kansHoofd,hoeveelheidTekst}=require("../neerslagkans-policy-v3.js");
-const {analyseerDagData}=require("../interpretatie-engine.js");
+const {dagNeerslagTekst,dagNeerslagMmTekst}=require("./daily-forecast-owner.js");
 const {zonInfoRijen}=require("../senior-semantiek-20260810.js");
 
 const BFT=[1,6,12,20,29,39,50,62,75,89,103,117.000001];
@@ -11,22 +10,12 @@ function getal(v){return v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number
 function bft(k){const n=getal(k);if(n===null||n<0)return null;let uit=0;for(const grens of BFT)if(n>=grens)uit++;return uit;}
 function zichtbaarGetal(tekst){const m=/-?\d+(?:[.,]\d+)?/.exec(String(tekst||""));return m?Number(m[0].replace(",",".")):null;}
 function dagNeerslag(kans,mm){
-  const k=getal(kans),hoeveelheid=getal(mm),genoeg=k!==null||hoeveelheid!==null;
-  /* Volg exact de definitieve postbuild-presentatie:
-     - expliciete 0 + kans >0 blijft zichtbaar als 0,0 mm;
-     - >=0,1 mm blijft een concrete hoeveelheid;
-     - een positieve maar sub-0,1-mm dagsom wordt door Q1 niet als getal getoond
-       en krijgt daarna bij kans >0 de finale zichtbare staat "hoeveelheid onzeker";
-     - ontbrekende hoeveelheid bij kans >0 krijgt dezelfde eerlijke staat. */
-  let hoeveelheidUi="";
-  if(hoeveelheid!==null&&(hoeveelheid>=0.1||(hoeveelheid===0&&k!==null&&k>0))){
-    hoeveelheidUi=hoeveelheid===0?"0,0 mm":hoeveelheidTekst(hoeveelheid);
-  }else if(k!==null&&k>0&&(hoeveelheid===null||hoeveelheid>0)){
-    hoeveelheidUi="hoeveelheid onzeker";
-  }
+  /* De productie-monitor volgt exact dezelfde presentatie-owner als de zichtbare
+     zeven-dagenrijen. Zo blijven spoor, <0,05 mm en <0,1 mm bronwaarheid in
+     plaats van een tweede, afwijkende monitorsemantiek. */
   return {
-    hoofd:String(kansHoofd({genoeg,kans:k,hoeveelheid})||"–"),
-    hoeveelheid:hoeveelheidUi
+    hoofd:dagNeerslagTekst(kans,mm),
+    hoeveelheid:dagNeerslagMmTekst(mm)
   };
 }
 function uvPiekVandaag(bron,nuOverride){
@@ -85,18 +74,19 @@ function zonVerwachting(bron,nuOverride){
 }
 function verwachtDagRijen(bron,nuOverride){
   const d=bron?.daily||{},a=[];
-  const horizon=String(nuOverride||bron?.current?.time||"");
-  const vandaag=horizon.slice(0,10);
+  /* De zichtbare zeven-dagenrenderer toont voor alle rijen de volledige daily
+     precipitation_probability_max en precipitation_sum. De monitor mag voor
+     Vandaag daarom niet stil overschakelen naar een resterende-dagberekening. */
+  void nuOverride;
   for(let i=0;i<Math.min(7,(d.time||[]).length);i++){
-    const resterend=String(d.time[i]||"")===vandaag?analyseerDagData(bron,i,horizon):null;
-    const kans=resterend?resterend.kans:d.precipitation_probability_max?.[i];
-    const hoeveelheid=resterend?resterend.hoeveelheid:d.precipitation_sum?.[i];
+    const kans=d.precipitation_probability_max?.[i];
+    const hoeveelheid=d.precipitation_sum?.[i];
     a.push({
       datum:String(d.time[i]||""),
       min:getal(d.temperature_2m_min?.[i])===null?null:Math.round(Number(d.temperature_2m_min[i])),
       max:getal(d.temperature_2m_max?.[i])===null?null:Math.round(Number(d.temperature_2m_max[i])),
       wind:bft(d.wind_speed_10m_max?.[i]),
-      neerslag:resterend&&!resterend.genoeg?{hoofd:"–",hoeveelheid:""}:dagNeerslag(kans,hoeveelheid)
+      neerslag:dagNeerslag(kans,hoeveelheid)
     });
   }
   return a;
