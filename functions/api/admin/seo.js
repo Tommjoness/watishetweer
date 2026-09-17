@@ -162,7 +162,7 @@ async function getGoogleAccessToken(env){
   const response=await fetch(GOOGLE_TOKEN_URL,{
     method:"POST",
     headers:{"Content-Type":"application/x-www-form-urlencoded"},
-    body:new URLSearchParams({grant_type:"urn:ietf:params:oauth2:grant-type:jwt-bearer",assertion})
+    body:new URLSearchParams({grant_type:"urn:ietf:params:oauth:grant-type:jwt-bearer",assertion})
   });
   const payload=await response.json();
   if(!response.ok||!payload.access_token){
