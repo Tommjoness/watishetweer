@@ -122,6 +122,7 @@ jobs:
           jq -e '.success == true' /tmp/cloudflare-project-after-deploy.json >/dev/null
           jq -e '.result.deployment_configs.production.env_vars.CLOUDFLARE_ANALYTICS_API_TOKEN.type == "secret_text"' /tmp/cloudflare-project-after-deploy.json >/dev/null
           jq -e '.result.deployment_configs.production.env_vars.CLOUDFLARE_ACCOUNT_ID.type == "secret_text"' /tmp/cloudflare-project-after-deploy.json >/dev/null
+          jq -e '.result.deployment_configs.production.env_vars.GA4_PROPERTY_ID.type == "secret_text"' /tmp/cloudflare-project-after-deploy.json >/dev/null
 
       - name: Noteer immutable production-URL
         id: production_url
