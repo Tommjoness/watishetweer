@@ -34,19 +34,26 @@ vers.daily.temperature_2m_min=vers.daily.temperature_2m_min.map(()=>29);
 vers.daily.temperature_2m_max=vers.daily.temperature_2m_max.map(()=>34);
 vers.daily.weather_code=vers.daily.weather_code.map(()=>0);
 const air={current:{european_aqi:25,us_aqi:35},hourly:{time:[cached.current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[0],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}};
+const knmiNat={beschikbaar:true,opgehaaldOp:"2026-07-22T12:17:00Z",actueel:{waarde:1.2,tijd:"2026-07-22T12:15:00Z"},nowcast:null};
 
 const headStub=`<script>
 try{localStorage.clear();sessionStorage.clear();}catch(e){}
 window.__briefNu=Date.UTC(2026,6,22,12,17,0);
 Date.now=()=>window.__briefNu;
 window.__briefFase=1;window.__briefDelay=0;
+window.__knmiFase=0;window.__knmiDelay=0;
 const __briefCached=${JSON.stringify(cached)};
 const __briefTussen=${JSON.stringify(tussen)};
 const __briefVers=${JSON.stringify(vers)};
 const __briefAir=${JSON.stringify(air)};
+const __knmiNat=${JSON.stringify(knmiNat)};
 const __briefAntwoord=payload=>({ok:true,status:200,headers:{get:()=>null},json:async()=>payload,text:async()=>JSON.stringify(payload)});
 window.fetch=async function(url,opt){
   const u=String(url||'');
+  if(u.includes('/api/neerslag')){
+    if(window.__knmiDelay)await new Promise(r=>setTimeout(r,window.__knmiDelay));
+    return __briefAntwoord(window.__knmiFase===1?__knmiNat:{beschikbaar:false});
+  }
   if((u.includes('api.open-meteo.com/v1/forecast')||u.includes('/api/forecast'))&&window.__briefDelay){
     await new Promise(r=>setTimeout(r,window.__briefDelay));
   }
@@ -69,12 +76,14 @@ document.addEventListener('DOMContentLoaded',()=>{
   setTimeout(async()=>{
     try{
       await load(51.92,4.48,'Cache A',false,true,'NL');
+      await new Promise(r=>setTimeout(r,20));
       const brief=document.getElementById('brief'),temp=document.getElementById('t');
       const eersteTekst=(brief&&brief.textContent||'').replace(/\\s+/g,' ').trim();
       const eersteTemp=(temp&&temp.textContent||'').trim();
 
       window.__briefFase=0;window.__briefDelay=0;
       await load(52.35,5.26,'Tussen B',false,true,'NL');
+      await new Promise(r=>setTimeout(r,20));
       const tussenTemp=(temp&&temp.textContent||'').trim();
 
       /* Deze guard test bewust de presentatie van een geldige Q1-cachehit, niet
@@ -91,6 +100,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
       const hitsVoor=window.WeatherNowQ1Performance?WeatherNowQ1Performance.cacheHits:0;
       window.__briefFase=2;window.__briefDelay=700;
+      window.__knmiFase=1;window.__knmiDelay=700;
       const verversing=load(51.92,4.48,'Cache A',false,true,'NL');
       await new Promise(r=>setTimeout(r,100));
       const pendingOwner=brief&&brief.getAttribute('data-q1-briefing-pending');
@@ -102,15 +112,26 @@ document.addEventListener('DOMContentLoaded',()=>{
       zet('pending-busy',brief&&brief.getAttribute('aria-busy'));
       zet('pending-owner',pendingOwner||'');
       zet('pending-cachehit',window.WeatherNowQ1Performance&&WeatherNowQ1Performance.cacheHits>hitsVoor?'ok':'fout');
+
       await verversing;
+      const voorKnmiTekst=(brief&&brief.textContent||'').replace(/\\s+/g,' ').trim();
+      zet('knmi-pending-visibility',brief?getComputedStyle(brief).visibility:'missing');
+      zet('knmi-pending-hidden',brief&&brief.getAttribute('aria-hidden'));
+      zet('knmi-pending-busy',brief&&brief.getAttribute('aria-busy'));
+      zet('knmi-pending-owner',brief&&brief.getAttribute('data-knmi-briefing-pending'));
+      zet('q1-owner-after-load',brief&&brief.getAttribute('data-q1-briefing-pending'));
+
+      await new Promise(r=>setTimeout(r,900));
       const finaleTekst=(brief&&brief.textContent||'').replace(/\\s+/g,' ').trim();
       zet('final-temp',(temp&&temp.textContent||'').trim());
       zet('final-len',finaleTekst.length);
       zet('copy-changed',finaleTekst!==eersteTekst?'ja':'nee');
+      zet('knmi-copy-changed',finaleTekst!==voorKnmiTekst?'ja':'nee');
       zet('final-visibility',brief?getComputedStyle(brief).visibility:'missing');
       zet('final-hidden',brief&&brief.getAttribute('aria-hidden'));
       zet('final-busy',brief&&brief.getAttribute('aria-busy'));
       zet('final-owner',brief&&brief.getAttribute('data-q1-briefing-pending'));
+      zet('final-knmi-owner',brief&&brief.getAttribute('data-knmi-briefing-pending'));
       zet('done','ok');
     }catch(e){zet('error',e&&e.message||e);zet('done','fout');}
   },120);
@@ -121,19 +142,21 @@ html=html.replace("</body>",reporter+"</body>");
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-brief-stable-"));
 try{
   const bestand=path.join(dir,"index.html");fs.writeFileSync(bestand,html);
-  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1366,900","--virtual-time-budget=3500","--dump-dom","file://"+bestand],{encoding:"utf8",maxBuffer:30*1024*1024});
+  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1366,900","--virtual-time-budget=5000","--dump-dom","file://"+bestand],{encoding:"utf8",maxBuffer:30*1024*1024});
   if(r.status!==0)throw new Error("browser exit "+r.status+" "+String(r.stderr||"").slice(-1200));
   const dom=r.stdout||"";
   const waarde=k=>{const m=new RegExp('data-brief-stable-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
-  const fout=`done=${waarde('done')} error=${waarde('error')} firstTemp=${waarde('first-temp')} firstLen=${waarde('first-len')} tussenTemp=${waarde('tussen-temp')} seed=${waarde('seed-usable')} cache=${waarde('pending-cachehit')} pendingTemp=${waarde('pending-temp')} pendingVis=${waarde('pending-visibility')} pendingHidden=${waarde('pending-hidden')} pendingBusy=${waarde('pending-busy')} pendingOwner=${waarde('pending-owner')} finalTemp=${waarde('final-temp')} finalLen=${waarde('final-len')} changed=${waarde('copy-changed')} finalVis=${waarde('final-visibility')} finalHidden=${waarde('final-hidden')} finalBusy=${waarde('final-busy')} finalOwner=${waarde('final-owner')}`;
+  const fout=`done=${waarde('done')} error=${waarde('error')} firstTemp=${waarde('first-temp')} firstLen=${waarde('first-len')} tussenTemp=${waarde('tussen-temp')} seed=${waarde('seed-usable')} cache=${waarde('pending-cachehit')} pendingTemp=${waarde('pending-temp')} pendingVis=${waarde('pending-visibility')} pendingHidden=${waarde('pending-hidden')} pendingBusy=${waarde('pending-busy')} pendingOwner=${waarde('pending-owner')} knmiVis=${waarde('knmi-pending-visibility')} knmiHidden=${waarde('knmi-pending-hidden')} knmiBusy=${waarde('knmi-pending-busy')} knmiOwner=${waarde('knmi-pending-owner')} q1After=${waarde('q1-owner-after-load')} finalTemp=${waarde('final-temp')} finalLen=${waarde('final-len')} changed=${waarde('copy-changed')} knmiChanged=${waarde('knmi-copy-changed')} finalVis=${waarde('final-visibility')} finalHidden=${waarde('final-hidden')} finalBusy=${waarde('final-busy')} finalOwner=${waarde('final-owner')} finalKnmi=${waarde('final-knmi-owner')}`;
   if(waarde('done')!=="ok")throw new Error("Briefing-stability browser niet afgerond: "+fout);
   if(waarde('first-temp')!=="12"||!Number(waarde('first-len')))throw new Error("Briefing-stability kon Cache A niet betrouwbaar opbouwen: "+fout);
   if(waarde('tussen-temp')!=="18")throw new Error("Briefing-stability kon tussenplaats B niet aantoonbaar tonen: "+fout);
   if(waarde('seed-usable')!=="ok")throw new Error("Briefing-stability testfixture leverde geen direct bruikbare Q1-cache-entry: "+fout);
   if(waarde('pending-cachehit')!=="ok"||waarde('pending-temp')!=="12")throw new Error("Briefing-stability raakte de plaatscache niet als directe tussenweergave: "+fout);
-  if(waarde('pending-visibility')!=="hidden"||waarde('pending-hidden')!=="true"||waarde('pending-busy')!=="true"||!waarde('pending-owner'))throw new Error("Cached briefing was tijdens refresh nog zichtbaar/aankondigbaar: "+fout);
+  if(waarde('pending-visibility')!=="hidden"||waarde('pending-hidden')!=="true"||waarde('pending-busy')!=="true"||!waarde('pending-owner'))throw new Error("Cached briefing was tijdens forecastrefresh nog zichtbaar/aankondigbaar: "+fout);
+  if(waarde('q1-owner-after-load'))throw new Error("Q1-owner had na de verse forecast vrijgegeven moeten zijn: "+fout);
+  if(waarde('knmi-pending-visibility')!=="hidden"||waarde('knmi-pending-hidden')!=="true"||waarde('knmi-pending-busy')!=="true"||!waarde('knmi-pending-owner'))throw new Error("Forecast-only briefing werd zichtbaar vóór de eerste KNMI-verrijking klaar was: "+fout);
   if(waarde('final-temp')!=="31")throw new Error("Verse forecast heeft de zichtbare hero niet vervangen: "+fout);
-  if(!Number(waarde('final-len'))||waarde('copy-changed')!=="ja")throw new Error("Testscenario onderscheidt cached en verse briefing niet aantoonbaar: "+fout);
-  if(waarde('final-visibility')==="hidden"||waarde('final-hidden')==="true"||waarde('final-busy')==="true"||waarde('final-owner'))throw new Error("Definitieve briefing bleef in voorlopige toestand hangen: "+fout);
-  console.log("Briefing-stability browser 1366px: echte Q1-cachehit toont cached hero direct, houdt cached briefing visueel/a11y stil en geeft alleen de definitieve refreshbriefing vrij.");
+  if(!Number(waarde('final-len'))||waarde('copy-changed')!=="ja"||waarde('knmi-copy-changed')!=="ja")throw new Error("Testscenario onderscheidt cached, forecast-only en KNMI-verrijkte briefing niet aantoonbaar: "+fout);
+  if(waarde('final-visibility')==="hidden"||waarde('final-hidden')==="true"||waarde('final-busy')==="true"||waarde('final-owner')||waarde('final-knmi-owner'))throw new Error("Definitieve briefing bleef in voorlopige toestand hangen: "+fout);
+  console.log("Briefing-stability browser 1366px: cached hero blijft snel, forecast-only briefing blijft verborgen tijdens de eerste KNMI-verrijking en alleen de definitieve briefing wordt zichtbaar.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
