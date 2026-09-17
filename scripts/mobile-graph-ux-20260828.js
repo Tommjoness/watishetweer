@@ -147,7 +147,7 @@ function herstelUurAs(){
   if(!mobiel())return;
   const svg=document.getElementById("chart"),g=S.geo;
   if(!svg||!g||Number(g.n)>48||!Array.isArray(g.TI)||typeof g.x!=="function")return;
-  const compact24=Number(g.n)<=24&&window.innerWidth<=430,cadans=compact24?4:3,rand=compact24?1:2,minimum=compact24?6:4;
+  const compact24=Number(g.n)<=25&&window.innerWidth<=430,cadans=compact24?4:3,rand=compact24?1:2,minimum=compact24?6:4;
   let alle=bestaandeUurLabels(svg,g);
   alle.forEach(el=>{const expliciet=uurAsLabelTekst(el.textContent);if(expliciet)el.textContent=expliciet;});
   if(compact24){
