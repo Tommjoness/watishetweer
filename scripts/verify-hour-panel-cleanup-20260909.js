@@ -24,12 +24,12 @@ for(const p of htmlBestanden(OUT)){
   eis(/\.wiw-hour-table th:nth-child\(5\),\.wiw-hour-table td:nth-child\(5\)\{width:22%!important\}/.test(html),`${rel}: windkolom heeft niet de gebalanceerde breedte`);
   eis(/\.wiw-hour-table thead th:nth-child\(3\)\{white-space:nowrap!important\}/.test(html),`${rel}: volledige temperatuurkop kan nog afbreken`);
   eis(/\.wiw-hour-temp \.wiw-hour-secondary\{display:none!important\}/.test(html),`${rel}: zichtbare gevoelstemperatuur is niet verwijderd uit de uurregels`);
-  eis(html.includes('.final-top-grid #t{font-size:clamp(78px,5.5vw,88px)!important;line-height:.86!important}'),`${rel}: actuele temperatuur gebruikt niet de actuele final-top-grid-selector of de rustigere maat`);
-  eis(html.includes('.final-top-grid .deg{font-size:23px!important;margin-top:4px!important}'),`${rel}: temperatuurunit sluit niet aan op de rustigere hero`);
+  eis(html.includes('.final-top-grid #t{font-size:60px!important;line-height:.86!important}'),`${rel}: actuele temperatuur staat niet vast op de bedoelde 60px-desktopmaat`);
+  eis(html.includes('.final-top-grid .deg{font-size:18px!important;margin-top:4px!important}'),`${rel}: temperatuurunit sluit niet aan op de compacte 60px-hero`);
   eis(html.includes('#suntimes.senior-zoninfo .zonregel .zondag{display:none!important}'),`${rel}: los Vandaag/Morgen-label is op desktop nog zichtbaar`);
   eis(html.includes('tempSub.className="wiw-hour-secondary"'),`${rel}: bronwaarde voor gevoelstemperatuur is onbedoeld uit de runtime verwijderd`);
   eis(html.includes('regenSub.className="wiw-hour-secondary"')&&html.includes('windSub.className="wiw-hour-secondary"'),`${rel}: neerslagkans of windsnelheid is onbedoeld geraakt`);
 }
 
 eis(geraakt>0,"Geen uurpaneel-artifacts gevonden voor cleanupverificatie.");
-console.log(`Uurpaneelcleanup geverifieerd op ${geraakt} weerartifacts: volledige Temperatuur-kop, geometrisch gecentreerde temperatuurkolom, rustiger geschaalde actuele temperatuur op de actuele hero-selector, geen los Vandaag/Morgen-label en overige rijke data intact.`);
+console.log(`Uurpaneelcleanup geverifieerd op ${geraakt} weerartifacts: volledige Temperatuur-kop, geometrisch gecentreerde temperatuurkolom, actuele temperatuur vast op 60px op de actuele hero-selector, geen los Vandaag/Morgen-label en overige rijke data intact.`);

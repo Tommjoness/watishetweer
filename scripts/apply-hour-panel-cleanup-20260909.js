@@ -23,10 +23,10 @@ ${MARKER}
   .wiw-hour-temp .wiw-hour-secondary{display:none!important}
 
   /* De eerdere readability-regel wees nog naar de verwijderde .dashrow-hero-
-     structuur. Richt de maat nu op de actuele final-top-grid hero: duidelijk
-     hoofdgegeven zonder de briefing en metriekblokken te overstemmen. */
-  .final-top-grid #t{font-size:clamp(78px,5.5vw,88px)!important;line-height:.86!important}
-  .final-top-grid .deg{font-size:23px!important;margin-top:4px!important}
+     structuur. Richt de maat nu op de actuele final-top-grid hero en houd het
+     hoofdgegeven bewust compact naast de briefing en metriekblokken. */
+  .final-top-grid #t{font-size:60px!important;line-height:.86!important}
+  .final-top-grid .deg{font-size:18px!important;margin-top:4px!important}
 
   /* De dagcontext zit al in de lokale tijden en grafiek. Het losse Vandaag/Morgen-
      label boven de grafiek voegt daar op desktop geen bruikbare context meer toe. */
@@ -74,7 +74,7 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen uurpaneel-artifacts gevonden voor desktopcleanup.");
   const cache=vernieuwServiceworkerCache(OUT,"hour-panel-cleanup-20260909");
-  console.log(`Uurpaneelcleanup toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): volledige temperatuurkop, gecentreerde temperatuurkolom, rustiger geschaalde actuele temperatuur, verwijderd los daglabel en compacte desktopkolommen; cache ${cache}.`);
+  console.log(`Uurpaneelcleanup toegepast op ${geraakt} weerartifacts (${geschreven} gewijzigd): volledige temperatuurkop, gecentreerde temperatuurkolom, actuele temperatuur vast op 60px, verwijderd los daglabel en compacte desktopkolommen; cache ${cache}.`);
 }
 
 if(require.main===module)main();
