@@ -53,7 +53,8 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   /* Populaire plaatsen blijft gewone indexeerbare linknavigatie — geen cards of
      app-pills — maar krijgt mobiel een consistente twee-koloms leesas en zachte
      scheiders. De bestaande korte selectie (zes + Meer plaatsen) blijft intact. */
-  body > .seo-plaatsnav{padding-top:14px!important;padding-bottom:4px!important}
+  body{padding-bottom:env(safe-area-inset-bottom,0px)!important}
+  body > .seo-plaatsnav{padding-top:14px!important;padding-bottom:0!important}
   .seo-plaatsnav-inner{gap:8px!important}
   .seo-plaatsnav-kop{font-size:19px!important;line-height:1.2!important;letter-spacing:-.01em}
   .seo-plaatsnav-links{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px!important;row-gap:0!important;width:100%}

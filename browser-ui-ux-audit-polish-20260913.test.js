@@ -49,6 +49,10 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('place-link-min-height',Math.min(...zichtbarePlaatslinks.map(x=>x.getBoundingClientRect().height)).toFixed(3));
   zet('place-heading-size',parseFloat(cs(plaatskop).fontSize)||0);
   zet('place-overflow',Math.max(0,plaatsnav.getBoundingClientRect().right-innerWidth,-plaatsnav.getBoundingClientRect().left).toFixed(3));
+  const pageBottom=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight);
+  zet('page-end-gap',Math.max(0,pageBottom-plaatsnav.getBoundingClientRect().bottom-window.scrollY).toFixed(3));
+  zet('body-padding-bottom',parseFloat(cs(document.body).paddingBottom)||0);
+  zet('place-padding-bottom',parseFloat(cs(plaatsnav).paddingBottom)||0);
   zet('place-bg',cs(plaatsnav).backgroundColor);zet('sheet-bg',cs(document.querySelector('.sheet')).backgroundColor);zet('mode',document.documentElement.dataset.thema||'');
   zet('header-size',parseFloat(cs(kop).fontSize)||0);zet('secondary-size',parseFloat(cs(sec).fontSize)||0);zet('hint-size',parseFloat(cs(hint).fontSize)||0);
   zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
@@ -87,6 +91,9 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(Number(v("place-link-min-height"))<43.5)throw new Error("populaire-plaatsenlink is te laag op "+breedte+"px: "+v("place-link-min-height")+"px");
       if(Number(v("place-heading-size"))<18.9)throw new Error("populaire-plaatsenkop blijft te klein op "+breedte+"px");
       if(Number(v("place-overflow"))>1)throw new Error("populaire plaatsen loopt buiten viewport op "+breedte+"px: "+v("place-overflow")+"px");
+      if(Number(v("place-padding-bottom"))>0.5)throw new Error("populaire plaatsen houdt nog loze onderpadding op "+breedte+"px: "+v("place-padding-bottom")+"px");
+      if(Number(v("page-end-gap"))>1.5)throw new Error("mobiele pagina houdt buiten de safe-area nog loze eindruimte op "+breedte+"px: "+v("page-end-gap")+"px");
+      if(Number(v("body-padding-bottom"))>1.5)throw new Error("headless mobiel houdt nog basis-bodypadding onder de laatste sectie op "+breedte+"px: "+v("body-padding-bottom")+"px");
       if(modus==="donker"&&(v("mode")!=="donker"||v("place-bg")==="rgb(255, 255, 255)"||v("sheet-bg")==="rgb(255, 255, 255)"))throw new Error("donkere mobiele afsluiting valt terug naar witte achtergrond op "+breedte+"px");
     }else{
       if(v("nav-display")!=="none")throw new Error("mobiele sectienavigatie lekt naar desktop");
