@@ -92,6 +92,7 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(v("nav-display")!=="grid"||Number(v("nav-min-height"))<43.5)throw new Error("mobiele sectienavigatie is niet zichtbaar/aanraakbaar op "+breedte+"px");
       if(Number(v("header-size"))<10.9||Number(v("secondary-size"))<11.4||Number(v("hint-size"))<12.9)throw new Error("mobiele microcopy blijft te klein op "+breedte+"px");
       if(v("day-arrow")!=="none")throw new Error("desktopchevron lekt naar mobiel op "+breedte+"px");
+      const cssWidth=Number(v("css-width"))||breedte;
       if(Number(v("utility-hit-height"))<43.5)throw new Error("footerhulplink heeft geen 44px tap-zone op "+breedte+"px: "+v("utility-hit-height")+"px");
       if(cssWidth>=390&&cssWidth<=430&&Number(v("utility-row-delta"))>1)throw new Error("footerhulplinks staan op "+breedte+"px / CSS "+cssWidth+"px nog over meerdere rijen: delta "+v("utility-row-delta")+"px");
       if(cssWidth>=390&&cssWidth<=430)console.log("footer-meting "+modus+" "+breedte+"px / CSS "+cssWidth+"px: hoogte="+v("footer-height")+"px, utility-delta="+v("utility-row-delta")+"px, hitbox="+v("utility-hit-height")+"px");
@@ -100,7 +101,6 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(Number(v("footer-row-gap"))>0.5||Number(v("source-row-gap"))>0.5)throw new Error("mobiele footer/bronnen houden verticale row-gap op "+breedte+"px");
       if(Number(v("contact-margin-top"))>0.5)throw new Error("mobiele contactregel houdt nog extra bovenmarge op "+breedte+"px");
       if(Number(v("sheet-padding-bottom"))>6.5)throw new Error("mobiele sheet houdt te veel ruimte onder footercontact op "+breedte+"px: "+v("sheet-padding-bottom")+"px");
-      const cssWidth=Number(v("css-width"))||breedte;
       const expectedColumns=cssWidth>=600?3:2;
       if(v("place-display")!=="grid")throw new Error("populaire plaatsen is "+v("place-display")+" in plaats van grid op request "+breedte+"px / CSS "+cssWidth+"px");
       if(Number(v("place-columns"))!==expectedColumns)throw new Error("populaire plaatsen gebruikt "+v("place-columns")+" kolommen op request "+breedte+"px / CSS "+cssWidth+"px, verwacht "+expectedColumns);
