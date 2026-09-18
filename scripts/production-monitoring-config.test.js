@@ -13,6 +13,8 @@ const performance=fs.readFileSync(path.join(root,"scripts","production-live-perf
 const cls=fs.readFileSync(path.join(root,"scripts","production-mobile-cls-browser.js"),"utf8");
 const finalRelease=fs.readFileSync(path.join(root,"scripts","production-final-release-browser.js"),"utf8");
 const sitemapContract=require("./production-sitemap-contract.js");
+const {LOCATIES}=require("./seo-locations.config.js");
+const verwachtSitemapAantal=LOCATIES.length+4;
 
 assert(/push:\s*\n\s*branches:\s*\[main\]/.test(workflow),"production-smoke moet na merges/pushes naar main draaien");
 assert(/schedule:\s*\n\s*- cron: ["']\d+ \* \* \* \*["']/.test(workflow),"production-smoke moet ieder uur gepland staan");
@@ -61,7 +63,7 @@ assert(smoke.includes("/api/neerslag?lat=52.3508&lon=5.2647&land=NL"),"productio
 assert(smoke.includes("/api/waarschuwingen?lat=52.3508&lon=5.2647&land=NL"),"production-smoke mist waarschuwingen-API-contract");
 assert(smoke.includes("item.plaatsSpecifiek===true"),"waarschuwingencontract moet plaatsgebonden filtering bewaken");
 
-assert.equal(sitemapContract.VERWACHTE_URLS.length,38,"huidig sitemapcontract moet exact 38 canonieke URLs bevatten");
+assert.equal(sitemapContract.VERWACHTE_URLS.length,verwachtSitemapAantal,`huidig sitemapcontract moet exact ${verwachtSitemapAantal} canonieke URLs bevatten`);
 assert.equal(new Set(sitemapContract.VERWACHTE_URLS).size,sitemapContract.VERWACHTE_URLS.length,"verwacht sitemapcontract mag geen duplicaten bevatten");
 assert(sitemapContract.VERWACHTE_URLS.includes("https://watishetweer.nl/over/"),"verwacht sitemapcontract moet /over/ bevatten");
 assert(sitemapContract.VERWACHTE_URLS.includes("https://watishetweer.nl/privacy"),"verwacht sitemapcontract moet de canonieke /privacy-route bevatten");
@@ -70,8 +72,8 @@ assert.deepEqual(sitemapContract.controleerSitemap(testXml),sitemapContract.VERW
 const omgekeerd=[...sitemapContract.VERWACHTE_URLS].reverse();
 const omgekeerdXml=`<?xml version="1.0"?><urlset>${omgekeerd.map(url=>`<url><loc>${url}</loc></url>`).join("")}</urlset>`;
 assert.deepEqual(sitemapContract.controleerSitemap(omgekeerdXml),omgekeerd,"sitemapcontract mag niet onnodig van URL-volgorde afhangen");
-assert.throws(()=>sitemapContract.controleerSitemap(testXml.replace("<url><loc>https://watishetweer.nl/over/</loc></url>","")),/exact 38/,"sitemapcontract moet een ontbrekende /over/ afwijzen");
-assert.throws(()=>sitemapContract.controleerSitemap(testXml.replace("<url><loc>https://watishetweer.nl/privacy</loc></url>","")),/exact 38/,"sitemapcontract moet een ontbrekende /privacy afwijzen");
+assert.throws(()=>sitemapContract.controleerSitemap(testXml.replace("<url><loc>https://watishetweer.nl/over/</loc></url>","")),new RegExp(`exact ${verwachtSitemapAantal}`),"sitemapcontract moet een ontbrekende /over/ afwijzen");
+assert.throws(()=>sitemapContract.controleerSitemap(testXml.replace("<url><loc>https://watishetweer.nl/privacy</loc></url>","")),new RegExp(`exact ${verwachtSitemapAantal}`),"sitemapcontract moet een ontbrekende /privacy afwijzen");
 
 const verplichteWereldmatrix=["Amsterdam","Singapore","Ushuaia","La Paz","Longyearbyen","Zuidpool","Dubai","Reykjavik","Punta Arenas","Miami","Tokio"];
 for(const plek of verplichteWereldmatrix)assert(wereldwijd.includes(`naam:\"${plek}\"`),`wereldwijde monitor mist ${plek}`);
