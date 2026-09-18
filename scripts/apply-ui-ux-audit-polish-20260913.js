@@ -7,7 +7,7 @@ const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const OUT=path.join(__dirname,"..","public");
 const STYLE_ID="wiw-ui-ux-audit-polish-20260913";
 const OWNER_ID="wiw-live-screenshot-polish-20260912";
-const SUPPORT_CONTACT='<p class="footer-contact"><span class="footer-contact-question">Opmerkingen, vragen of feedback?</span> <span class="footer-contact-mail">Mail naar <a href="mailto:support@watishetweer.nl">support@watishetweer.nl</a></span></p>';
+const SUPPORT_CONTACT='<p class="footer-contact"><span class="footer-contact-question">Vragen of feedback?</span> <span class="footer-contact-mail">Mail naar <a href="mailto:support@watishetweer.nl">support@watishetweer.nl</a></span></p>';
 
 /* Deze laatste presentatielaag draait na delivery-cleanup. De selectors raken
    alleen leesbaarheid en interactie-affordance; data, grafiekgeometrie, runtime,
@@ -45,7 +45,7 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
      in twee rustige rijen kunnen blijven staan. */
   html body footer:nth-of-type(n){margin-top:6px!important;padding-top:0!important;padding-bottom:0!important;display:grid!important;grid-template-columns:minmax(0,1fr) max-content max-content max-content minmax(0,1fr)!important;justify-content:center!important;align-items:start!important;column-gap:4px!important;row-gap:0!important}
   footer > span.bron:first-of-type{grid-column:1 / -1!important;grid-row:1!important;justify-self:center!important;width:calc(100% + 42px);max-width:calc(100vw - 8px)}
-  footer .bron-bronnen{display:grid!important;grid-template-columns:minmax(0,.9fr) minmax(0,1.75fr) minmax(0,1fr) minmax(0,.55fr)!important;align-items:stretch!important;width:100%;column-gap:6px!important;row-gap:0!important}
+  html body footer:nth-of-type(n) > span.bron.bron-bronnen{display:grid!important;grid-template-columns:minmax(0,.9fr) minmax(0,1.75fr) minmax(0,1fr) minmax(0,.55fr)!important;align-items:stretch!important;width:100%;column-gap:6px!important;row-gap:0!important}
   footer .bron-bronnen .bronlabel{grid-column:1 / -1;margin:0!important;text-align:center}
   footer .bron-bronnen .bronitem{min-width:0}
   footer .bron-bronnen .bronitem a{display:flex!important;align-items:center!important;justify-content:center!important;width:100%;min-height:44px!important;margin:0!important;padding:0!important;line-height:1.2!important;text-align:center}
@@ -103,7 +103,7 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
 }
 @media(max-width:370px){
   html body footer:nth-of-type(n){grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
-  footer .bron-bronnen{grid-template-columns:repeat(2,minmax(0,1fr))!important;column-gap:12px!important}
+  html body footer:nth-of-type(n) > span.bron.bron-bronnen{grid-template-columns:repeat(2,minmax(0,1fr))!important;column-gap:12px!important}
   .footer-contact{flex-wrap:wrap}
   .footer-contact-mail{margin-top:-10px}
   footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important}
