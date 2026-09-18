@@ -39,16 +39,26 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   footer > details.footer-details[open]{grid-column:1 / -1!important;grid-row:4!important;justify-self:center!important}
 }
 @media(max-width:900px){
-  /* Finale mobiele afsluiting: houd bronnen, hulplinks en contact semantisch
-     hetzelfde, maar laat de utilityrij als één rustig ritme lezen. De links
-     zelf houden een echte 44px tap-zone; niet alleen hun parent. */
-  html body footer:nth-of-type(n){margin-top:10px!important;padding-top:4px!important;column-gap:4px!important;row-gap:0!important}
-  footer .bron-bronnen{row-gap:0!important}
-  footer .bron-bronnen .bronlabel{margin-bottom:0!important}
+  /* Finale mobiele afsluiting: één expliciete grid-owner voorkomt dat oude
+     flex-, gap- en touchregels samen een ongelijk ritme maken. De bronlinks
+     blijven echte 44px doelen, maar worden in vaste kolommen uitgelijnd. */
+  html body footer:nth-of-type(n){margin-top:8px!important;padding-top:2px!important;padding-bottom:0!important;display:grid!important;grid-template-columns:minmax(0,1fr) max-content max-content max-content minmax(0,1fr)!important;justify-content:center!important;align-items:start!important;column-gap:4px!important;row-gap:0!important}
+  footer > span.bron:first-of-type{grid-column:1 / -1!important;grid-row:1!important;justify-self:stretch!important}
+  footer .bron-bronnen{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:stretch!important;width:100%;column-gap:16px!important;row-gap:0!important}
+  footer .bron-bronnen .bronlabel{grid-column:1 / -1;margin:0 0 1px!important}
+  footer .bron-bronnen .bronitem{min-width:0}
+  footer .bron-bronnen .bronitem a{display:flex!important;align-items:center!important;justify-content:flex-start!important;min-height:44px!important;margin:0!important;padding:0!important}
+  footer > span.bron:nth-of-type(2){grid-column:1 / -1!important;grid-row:2!important;justify-self:center!important;width:calc(100% + 24px);max-width:calc(100vw - 40px);min-height:0!important;margin:2px 0 0!important;line-height:1.45!important}
+  footer > span.bron:nth-last-of-type(2){grid-column:2!important;grid-row:3!important;justify-self:center!important}
+  footer > span.bron:last-of-type{grid-column:3!important;grid-row:3!important;justify-self:center!important}
+  footer > details.footer-details{grid-column:4!important;grid-row:3!important;justify-self:center!important}
+  footer > span.bron:nth-last-of-type(2),
+  footer > span.bron:last-of-type,
+  footer > details.footer-details{min-height:44px!important;margin:0!important}
   footer > span.bron:nth-last-of-type(2) a,
   footer > span.bron:last-of-type a,
   footer > details.footer-details>summary{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0;margin-right:0}
-  .footer-contact{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0;margin-top:0!important;line-height:1.35}
+  .footer-contact{grid-column:1 / -1;justify-self:center;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0;margin-top:0!important;line-height:1.3}
   .footer-contact-question,.footer-contact-mail{display:inline-flex;align-items:center;justify-content:center}
   .footer-contact-mail{white-space:nowrap}
 
@@ -56,8 +66,8 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
      app-pills — maar krijgt mobiel een consistente twee-koloms leesas en zachte
      scheiders. De bestaande korte selectie (zes + Meer plaatsen) blijft intact. */
   body{padding-bottom:env(safe-area-inset-bottom,0px)!important}
-  body > .sheet{padding-bottom:6px!important}
-  body > .seo-plaatsnav{padding-top:14px!important;padding-bottom:0!important}
+  body > .sheet{padding-bottom:4px!important}
+  body > .seo-plaatsnav{margin-top:10px!important;padding-top:12px!important;padding-bottom:0!important}
   .seo-plaatsnav-inner{gap:8px!important}
   .seo-plaatsnav-kop{font-size:19px!important;line-height:1.2!important;letter-spacing:-.01em}
   .seo-plaatsnav-links{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px!important;row-gap:0!important;width:100%}
@@ -81,7 +91,7 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   .mobile-section-nav a:active,.seo-plaatsnav a:active,footer a:active,footer summary:active{background:var(--paper)}
 }
 @media(max-width:600px){
-  .footer-contact-mail{margin-top:-8px}
+  .footer-contact-mail{margin-top:-10px}
 }
 @media(min-width:600px) and (max-width:900px){
   .seo-plaatsnav-links{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -91,6 +101,10 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   .mobile-section-nav a,.seo-plaatsnav a,footer a,footer summary{transition:color .15s ease,background-color .15s ease,border-color .15s ease}
 }
 @media(max-width:370px){
+  html body footer:nth-of-type(n){grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+  footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important}
+  footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important}
+  footer > details.footer-details{grid-column:1 / -1!important;grid-row:4!important}
   .mobile-section-nav{grid-template-columns:repeat(2,minmax(0,1fr))}
   .mobile-section-nav a:nth-child(3),.mobile-section-nav a:nth-child(4){border-top:1px solid var(--rule)}
   .mobile-section-nav a:nth-child(3){border-left:0}
