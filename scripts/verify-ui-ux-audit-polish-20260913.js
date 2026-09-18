@@ -50,13 +50,15 @@ for(const p of htmlBestanden(OUT)){
   assert(html.includes('<p class="footer-contact"><span class="footer-contact-question">Opmerkingen, vragen of feedback?</span> <span class="footer-contact-mail">Mail naar <a href="mailto:support@watishetweer.nl">support@watishetweer.nl</a></span></p>'),rel+": supportcontact mist gegroepeerde vraag/mailregel of klikbare mailto-link");
   assert(html.includes('.footer-contact{grid-column:1 / -1;justify-self:center;margin:6px 0 0;text-align:center'),rel+": supportcontact is niet als eigen gecentreerde footerrij vastgelegd");
   assert(!html.includes('<span class="bron footer-contact"'),rel+": supportcontact mag de bestaande Over/Privacy utilityselectors niet verstoren");
-  assert(html.includes('html body footer:nth-of-type(n){column-gap:14px!important;row-gap:0!important}'),rel+": mobiele footerutilityrij houdt geen compact horizontaal ritme");
-  assert(html.includes('footer > span.bron:nth-last-of-type(2) a,')&&html.includes('footer > details.footer-details>summary{display:inline-flex;align-items:center;justify-content:center;min-height:44px}'),rel+": footerhulplinks hebben niet zelf een 44px tap-zone");
-  assert(html.includes('.footer-contact{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0;line-height:1.35}'),rel+": mobiel supportcontact groepeert de twee tekstsegmenten niet");
+  assert(html.includes('html body footer:nth-of-type(n){margin-top:10px!important;padding-top:4px!important;column-gap:4px!important;row-gap:0!important}'),rel+": mobiele footer houdt nog te veel externe/interne bovenruimte");
+  assert(html.includes('footer .bron-bronnen{row-gap:0!important}')&&html.includes('footer .bron-bronnen .bronlabel{margin-bottom:0!important}'),rel+": mobiele bronlijst houdt nog onnodige verticale tussenruimte");
+  assert(html.includes('footer > span.bron:nth-last-of-type(2) a,')&&html.includes('footer > details.footer-details>summary{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0;margin-right:0}'),rel+": footerhulplinks hebben niet zelf een 44px tap-zone");
+  assert(html.includes('.footer-contact{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0;margin-top:0!important;line-height:1.35}'),rel+": mobiel supportcontact houdt nog extra bovenmarge of groepeert niet");
   assert(html.includes('.footer-contact-mail{white-space:nowrap}'),rel+": 'Mail naar' en het e-mailadres kunnen mobiel nog los van elkaar afbreken");
   assert(html.includes('@media(max-width:600px){\n  .footer-contact-mail{margin-top:-8px}\n}'),rel+": smalle mobielweergave houdt nog te veel visuele ruimte tussen contactvraag en mailregel");
   assert(!html.includes('support@watishetweer.nl</a>.</p>'),rel+": losse afsluitende punt staat nog achter het supportadres");
   assert(html.includes('body{padding-bottom:env(safe-area-inset-bottom,0px)!important}'),rel+": mobiel document houdt nog extra basisruimte onder de laatste sectie");
+  assert(html.includes('body > .sheet{padding-bottom:6px!important}'),rel+": mobiele sheet houdt onder het footercontact nog te veel loze ruimte");
   assert(html.includes('body > .seo-plaatsnav{padding-top:14px!important;padding-bottom:0!important}'),rel+": populaire-plaatsenblok houdt nog loze onderpadding");
   assert(html.includes('.seo-plaatsnav-kop{font-size:19px!important;line-height:1.2!important;letter-spacing:-.01em}'),rel+": populaire-plaatsenkop mist mobiele typografiepolish");
   assert(html.includes('.seo-plaatsnav-links{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px!important;row-gap:0!important;width:100%}'),rel+": populaire plaatsen missen de mobiele tweekolomsgrid");
