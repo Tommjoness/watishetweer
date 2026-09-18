@@ -277,6 +277,92 @@ async function load(){
   }
 }
 
+const fxToggle=document.getElementById("fx-toggle");
+const finePointer=window.matchMedia("(pointer:fine)");
+const reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)");
+
+function fxEnabled(){
+  return !document.body.classList.contains("fx-off")&&finePointer.matches&&!reducedMotion.matches;
+}
+
+function setFxState(enabled){
+  document.body.classList.toggle("fx-off",!enabled);
+  if(fxToggle){
+    fxToggle.setAttribute("aria-pressed",enabled?"true":"false");
+    fxToggle.textContent=enabled?"3D FX aan":"3D FX uit";
+  }
+  if(!enabled){
+    document.querySelectorAll("[data-fx-tilt]").forEach(node=>{
+      node.style.setProperty("--tilt-x","0deg");
+      node.style.setProperty("--tilt-y","0deg");
+      node.style.setProperty("--spot-x","50%");
+      node.style.setProperty("--spot-y","50%");
+    });
+  }
+  try{sessionStorage.setItem("seoCockpitFx",enabled?"on":"off");}catch{}
+}
+
+function wireTilt(node){
+  if(!(node instanceof HTMLElement)||node.dataset.fxTilt==="1")return;
+  node.dataset.fxTilt="1";
+  node.setAttribute("data-fx-tilt","");
+  node.addEventListener("pointermove",event=>{
+    if(!fxEnabled())return;
+    const rect=node.getBoundingClientRect();
+    if(!rect.width||!rect.height)return;
+    const x=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));
+    const y=Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height));
+    const strength=node.classList.contains("card")?7:node.classList.contains("panel")?3.4:5;
+    node.style.setProperty("--tilt-x",\`\${((0.5-y)*strength).toFixed(2)}deg\`);
+    node.style.setProperty("--tilt-y",\`\${((x-0.5)*strength).toFixed(2)}deg\`);
+    node.style.setProperty("--spot-x",\`\${(x*100).toFixed(1)}%\`);
+    node.style.setProperty("--spot-y",\`\${(y*100).toFixed(1)}%\`);
+  });
+  node.addEventListener("pointerleave",()=>{
+    node.style.setProperty("--tilt-x","0deg");
+    node.style.setProperty("--tilt-y","0deg");
+    node.style.setProperty("--spot-x","50%");
+    node.style.setProperty("--spot-y","50%");
+  });
+}
+
+function wireFxSurfaces(root=document){
+  root.querySelectorAll(".card,.panel,.cohort-mini,.ga4-mini").forEach(wireTilt);
+}
+
+function initCockpitFx(){
+  let enabled=!reducedMotion.matches;
+  try{
+    const stored=sessionStorage.getItem("seoCockpitFx");
+    if(stored==="off")enabled=false;
+    if(stored==="on"&&!reducedMotion.matches)enabled=true;
+  }catch{}
+  setFxState(enabled);
+  wireFxSurfaces();
+
+  document.addEventListener("pointermove",event=>{
+    if(!fxEnabled())return;
+    document.documentElement.style.setProperty("--cursor-x",\`\${event.clientX}px\`);
+    document.documentElement.style.setProperty("--cursor-y",\`\${event.clientY}px\`);
+  },{passive:true});
+
+  const observer=new MutationObserver(records=>{
+    for(const record of records){
+      for(const node of record.addedNodes){
+        if(!(node instanceof HTMLElement))continue;
+        if(node.matches(".card,.panel,.cohort-mini,.ga4-mini"))wireTilt(node);
+        wireFxSurfaces(node);
+      }
+    }
+  });
+  observer.observe(document.querySelector(".shell"),{subtree:true,childList:true});
+
+  if(fxToggle)fxToggle.addEventListener("click",()=>setFxState(document.body.classList.contains("fx-off")));
+  reducedMotion.addEventListener?.("change",event=>{if(event.matches)setFxState(false);});
+}
+
+initCockpitFx();
+
 els.refresh.addEventListener("click",load);
 els.range.addEventListener("change",load);
 document.addEventListener("click",event=>{
