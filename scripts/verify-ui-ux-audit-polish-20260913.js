@@ -52,6 +52,7 @@ for(const p of htmlBestanden(OUT)){
   assert(!html.includes('<span class="bron footer-contact"'),rel+": supportcontact mag de bestaande Over/Privacy utilityselectors niet verstoren");
   assert(html.includes('.footer-contact{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0}'),rel+": mobiel supportcontact groepeert de twee tekstsegmenten niet");
   assert(html.includes('.footer-contact-mail{white-space:nowrap}'),rel+": 'Mail naar' en het e-mailadres kunnen mobiel nog los van elkaar afbreken");
+  assert(html.includes('@media(max-width:600px){\n    .footer-contact-mail{margin-top:-8px}\n  }'),rel+": smalle mobielweergave houdt nog te veel visuele ruimte tussen contactvraag en mailregel");
   assert(!html.includes('support@watishetweer.nl</a>.</p>'),rel+": losse afsluitende punt staat nog achter het supportadres");
   assert(html.includes('.mobile-section-nav{display:grid;grid-template-columns:repeat(4'),rel+": mobiele sectienavigatie wordt niet compact zichtbaar");
   assert(html.includes('.row.kop>*{font-size:11px!important'),rel+": mobiele tabelkoppen blijven te klein");

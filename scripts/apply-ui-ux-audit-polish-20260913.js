@@ -42,6 +42,9 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   .footer-contact{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0}
   .footer-contact-question,.footer-contact-mail{display:inline-flex;align-items:center;justify-content:center}
   .footer-contact-mail{white-space:nowrap}
+  @media(max-width:600px){
+    .footer-contact-mail{margin-top:-8px}
+  }
   .mobile-section-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:18px 0 4px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
   .mobile-section-nav a{display:flex;align-items:center;justify-content:center;min-width:0;min-height:44px;padding:0 5px;color:var(--ink-70);font-family:var(--sans);font-size:12.5px;font-weight:500;line-height:1.2;text-decoration:none}
   .mobile-section-nav a+a{border-left:1px solid var(--rule)}
