@@ -7,7 +7,7 @@ const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const OUT=path.join(__dirname,"..","public");
 const STYLE_ID="wiw-ui-ux-audit-polish-20260913";
 const OWNER_ID="wiw-live-screenshot-polish-20260912";
-const SUPPORT_CONTACT='<p class="footer-contact">Opmerkingen, vragen of feedback? Mail naar <a href="mailto:support@watishetweer.nl">support@watishetweer.nl</a>.</p>';
+const SUPPORT_CONTACT='<p class="footer-contact"><span class="footer-contact-question">Opmerkingen, vragen of feedback?</span> <span class="footer-contact-mail">Mail naar <a href="mailto:support@watishetweer.nl">support@watishetweer.nl</a></span></p>';
 
 /* Deze laatste presentatielaag draait na delivery-cleanup. De selectors raken
    alleen leesbaarheid en interactie-affordance; data, grafiekgeometrie, runtime,
@@ -39,6 +39,9 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   footer > details.footer-details[open]{grid-column:1 / -1!important;grid-row:4!important;justify-self:center!important}
 }
 @media(max-width:900px){
+  .footer-contact{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0}
+  .footer-contact-question,.footer-contact-mail{display:inline-flex;align-items:center;justify-content:center}
+  .footer-contact-mail{white-space:nowrap}
   .mobile-section-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:18px 0 4px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
   .mobile-section-nav a{display:flex;align-items:center;justify-content:center;min-width:0;min-height:44px;padding:0 5px;color:var(--ink-70);font-family:var(--sans);font-size:12.5px;font-weight:500;line-height:1.2;text-decoration:none}
   .mobile-section-nav a+a{border-left:1px solid var(--rule)}

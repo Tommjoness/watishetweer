@@ -47,9 +47,12 @@ for(const p of htmlBestanden(OUT)){
   assert(html.includes('footer > span.bron:last-of-type{grid-column:3!important;grid-row:3!important'),rel+": Privacy-link heeft geen vaste utilityrij");
   assert(html.includes('footer > details.footer-details{grid-column:4!important;grid-row:3!important'),rel+": technische locatiegegevens hebben geen vaste utilityrij");
   assert.strictEqual(tel(html,'class="footer-contact"'),1,rel+": supportcontact moet exact één losse footerregel zijn");
-  assert(html.includes('<p class="footer-contact">Opmerkingen, vragen of feedback? Mail naar <a href="mailto:support@watishetweer.nl">support@watishetweer.nl</a>.</p>'),rel+": supportcontact mist exacte tekst of klikbare mailto-link");
+  assert(html.includes('<p class="footer-contact"><span class="footer-contact-question">Opmerkingen, vragen of feedback?</span> <span class="footer-contact-mail">Mail naar <a href="mailto:support@watishetweer.nl">support@watishetweer.nl</a></span></p>'),rel+": supportcontact mist gegroepeerde vraag/mailregel of klikbare mailto-link");
   assert(html.includes('.footer-contact{grid-column:1 / -1;justify-self:center;margin:6px 0 0;text-align:center'),rel+": supportcontact is niet als eigen gecentreerde footerrij vastgelegd");
   assert(!html.includes('<span class="bron footer-contact"'),rel+": supportcontact mag de bestaande Over/Privacy utilityselectors niet verstoren");
+  assert(html.includes('.footer-contact{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0}'),rel+": mobiel supportcontact groepeert de twee tekstsegmenten niet");
+  assert(html.includes('.footer-contact-mail{white-space:nowrap}'),rel+": 'Mail naar' en het e-mailadres kunnen mobiel nog los van elkaar afbreken");
+  assert(!html.includes('support@watishetweer.nl</a>.</p>'),rel+": losse afsluitende punt staat nog achter het supportadres");
   assert(html.includes('.mobile-section-nav{display:grid;grid-template-columns:repeat(4'),rel+": mobiele sectienavigatie wordt niet compact zichtbaar");
   assert(html.includes('.row.kop>*{font-size:11px!important'),rel+": mobiele tabelkoppen blijven te klein");
   assert(html.includes('.hint,.data-uitleg{font-size:13px!important'),rel+": mobiele toelichting blijft te klein");
