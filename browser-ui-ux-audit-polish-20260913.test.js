@@ -43,7 +43,9 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('source-overflow',Math.max(0,footerRect.left-bronnenRect.left,bronnenRect.right-footerRect.right).toFixed(3));zet('footer-display',cs(footer).display);zet('over-text',(over.textContent||'').trim());zet('privacy-text',(privacy.textContent||'').trim());zet('over-top',overRect.top.toFixed(3));zet('privacy-top',privacyRect.top.toFixed(3));zet('details-top',detailsRect.top.toFixed(3));zet('disclaimer-bottom',disclaimerRect.bottom.toFixed(3));
   zet('utility-center-delta',Math.abs(((overRect.left+detailsRect.right)/2)-((footerRect.left+footerRect.right)/2)).toFixed(3));
   zet('utility-hit-height',Math.min(...utilityTargets.map(x=>x.getBoundingClientRect().height)).toFixed(3));
-  zet('place-columns',(cs(plaatsgrid).gridTemplateColumns||'').split(/\s+/).filter(Boolean).length);
+  zet('place-display',cs(plaatsgrid).display);
+  zet('place-columns',cs(plaatsgrid).display==='grid'?(cs(plaatsgrid).gridTemplateColumns||'').split(/\s+/).filter(Boolean).length:0);
+  zet('css-width',innerWidth);
   zet('place-link-min-height',Math.min(...zichtbarePlaatslinks.map(x=>x.getBoundingClientRect().height)).toFixed(3));
   zet('place-heading-size',parseFloat(cs(plaatskop).fontSize)||0);
   zet('place-overflow',Math.max(0,plaatsnav.getBoundingClientRect().right-innerWidth,-plaatsnav.getBoundingClientRect().left).toFixed(3));
@@ -78,8 +80,10 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(Number(v("header-size"))<10.9||Number(v("secondary-size"))<11.4||Number(v("hint-size"))<12.9)throw new Error("mobiele microcopy blijft te klein op "+breedte+"px");
       if(v("day-arrow")!=="none")throw new Error("desktopchevron lekt naar mobiel op "+breedte+"px");
       if(Number(v("utility-hit-height"))<43.5)throw new Error("footerhulplink heeft geen 44px tap-zone op "+breedte+"px: "+v("utility-hit-height")+"px");
-      const expectedColumns=breedte>=600?3:2;
-      if(Number(v("place-columns"))!==expectedColumns)throw new Error("populaire plaatsen gebruikt "+v("place-columns")+" kolommen op "+breedte+"px, verwacht "+expectedColumns);
+      const cssWidth=Number(v("css-width"))||breedte;
+      const expectedColumns=cssWidth>=600?3:2;
+      if(v("place-display")!=="grid")throw new Error("populaire plaatsen is "+v("place-display")+" in plaats van grid op request "+breedte+"px / CSS "+cssWidth+"px");
+      if(Number(v("place-columns"))!==expectedColumns)throw new Error("populaire plaatsen gebruikt "+v("place-columns")+" kolommen op request "+breedte+"px / CSS "+cssWidth+"px, verwacht "+expectedColumns);
       if(Number(v("place-link-min-height"))<43.5)throw new Error("populaire-plaatsenlink is te laag op "+breedte+"px: "+v("place-link-min-height")+"px");
       if(Number(v("place-heading-size"))<18.9)throw new Error("populaire-plaatsenkop blijft te klein op "+breedte+"px");
       if(Number(v("place-overflow"))>1)throw new Error("populaire plaatsen loopt buiten viewport op "+breedte+"px: "+v("place-overflow")+"px");
