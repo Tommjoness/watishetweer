@@ -12,6 +12,13 @@ const OWNER_ID="wiw-final-ui-polish-20260912";
    finale HTML/CSS-presentatie raken. Grafiekruntime en Q4-geometrie worden vóór
    delivery-cleanup door apply-live-chart-layout-fix-20260912.js aangepast. */
 const CSS=`
+@media(max-width:900px){
+  /* Mobiel stapelden de onderste sheet-padding en de overgang naar de
+     plaatsnavigatie visueel op. Houd beide aanwezig, maar compacter. */
+  body > .sheet{padding-bottom:14px!important}
+  body > .seo-plaatsnav{margin-top:10px!important}
+}
+
 @media(min-width:1100px){
   /* Bovenaan iets minder lucht, zonder de rustige masthead te comprimeren. */
   .chips{margin-top:12px!important}
