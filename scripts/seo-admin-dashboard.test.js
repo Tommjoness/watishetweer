@@ -75,7 +75,7 @@ assert(css.includes("minmax(145px,auto) 72px"),"Verdelingsrijen missen vaste met
 assert(css.includes(".card,.panel{min-width:0"),"Dashboardcards moeten op smalle viewports kunnen krimpen.");
 assert(css.includes(".grid-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)"),"Tweekoloms dashboardgrid mist shrink-safe tracks.");
 assert(css.includes(".table-wrap{min-width:0;max-width:100%;overflow:auto"),"Brede tabellen moeten binnen hun eigen kaart scrollen in plaats van de pagina te verbreden.");
-assert(css.includes(".kpis,.grid-two,.ga4-kpis{grid-template-columns:minmax(0,1fr)}"),"Mobiele dashboardgrids moeten één shrink-safe kolom gebruiken.");
+assert(css.includes(".kpis,.grid-two,.cohort-kpis,.ga4-kpis{grid-template-columns:minmax(0,1fr)}"),"Mobiele dashboardgrids, inclusief het nieuwe-routecohort, moeten één shrink-safe kolom gebruiken.");
 assert(css.length>1000,"Dashboardstylesheet lijkt onvolledig.");
 
 for(const required of [
