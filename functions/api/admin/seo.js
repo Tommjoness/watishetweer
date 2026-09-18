@@ -3,6 +3,37 @@ const GSC_SCOPE="https://www.googleapis.com/auth/webmasters.readonly";
 const GA4_SCOPE="https://www.googleapis.com/auth/analytics.readonly";
 const JWKS_TTL_MS=60*60*1000;
 const PAGES_ACCESS_AUD="ea551fbedaa6efc3ad82569d11df8f0880dc3e54406af51d648aad5ccbb38cec";
+const NEW_LOCATION_COHORT=Object.freeze({
+  launchDate:"2026-09-18",
+  routes:Object.freeze([
+    {slug:"almelo",name:"Almelo"},
+    {slug:"amstelveen",name:"Amstelveen"},
+    {slug:"bergen-op-zoom",name:"Bergen op Zoom"},
+    {slug:"capelle-aan-den-ijssel",name:"Capelle aan den IJssel"},
+    {slug:"den-helder",name:"Den Helder"},
+    {slug:"doetinchem",name:"Doetinchem"},
+    {slug:"drachten",name:"Drachten"},
+    {slug:"harderwijk",name:"Harderwijk"},
+    {slug:"heerenveen",name:"Heerenveen"},
+    {slug:"heerlen",name:"Heerlen"},
+    {slug:"helmond",name:"Helmond"},
+    {slug:"hengelo",name:"Hengelo"},
+    {slug:"hilversum",name:"Hilversum"},
+    {slug:"hoorn",name:"Hoorn"},
+    {slug:"kampen",name:"Kampen"},
+    {slug:"nieuwegein",name:"Nieuwegein"},
+    {slug:"oss",name:"Oss"},
+    {slug:"purmerend",name:"Purmerend"},
+    {slug:"roosendaal",name:"Roosendaal"},
+    {slug:"schiedam",name:"Schiedam"},
+    {slug:"sittard",name:"Sittard"},
+    {slug:"spijkenisse",name:"Spijkenisse"},
+    {slug:"veenendaal",name:"Veenendaal"},
+    {slug:"vlaardingen",name:"Vlaardingen"},
+    {slug:"weert",name:"Weert"},
+    {slug:"zaandam",name:"Zaandam"}
+  ])
+});
 
 let jwksCache={url:null,expiresAt:0,keys:[]};
 let tokenCache={key:null,expiresAt:0,token:null};
@@ -244,6 +275,50 @@ function mapRows(rows,keyName){
   }));
 }
 
+function pagePath(value){
+  try{
+    const path=new URL(String(value||"")).pathname||"/";
+    return path.endsWith("/")?path:`${path}/`;
+  }catch{return "";}
+}
+
+function summarizeRouteCohort(rows,startDate,endDate){
+  const byPath=new Map(mapRows(rows,"page").map(row=>[pagePath(row.page),row]));
+  const routeRows=NEW_LOCATION_COHORT.routes.map(route=>{
+    const page=`https://watishetweer.nl/weer/${route.slug}/`;
+    const row=byPath.get(`/weer/${route.slug}/`);
+    return {
+      slug:route.slug,
+      name:route.name,
+      page,
+      clicks:row?row.clicks:0,
+      impressions:row?row.impressions:0,
+      ctr:row?row.ctr:0,
+      position:row&&row.impressions>0?row.position:null
+    };
+  });
+  const visible=routeRows.filter(row=>row.impressions>0);
+  const impressions=visible.reduce((sum,row)=>sum+row.impressions,0);
+  const clicks=visible.reduce((sum,row)=>sum+row.clicks,0);
+  const weightedPosition=impressions>0
+    ?visible.reduce((sum,row)=>sum+(row.position||0)*row.impressions,0)/impressions
+    :null;
+  return {
+    launchDate:NEW_LOCATION_COHORT.launchDate,
+    totalRoutes:routeRows.length,
+    visibleRoutes:visible.length,
+    dataAvailable:endDate>=NEW_LOCATION_COHORT.launchDate,
+    range:{startDate,endDate},
+    summary:{
+      impressions,
+      clicks,
+      ctr:impressions>0?clicks/impressions:0,
+      position:weightedPosition
+    },
+    routes:routeRows
+  };
+}
+
 async function ga4Report(token,propertyId,body){
   const id=String(propertyId).replace(/^properties\//,"");
   const response=await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${encodeURIComponent(id)}:runReport`,{
@@ -321,13 +396,16 @@ export async function onRequestGet(context){
 
   try{
     const token=await getGoogleAccessToken(context.env);
-    const [currentRows,previousRows,queryRows,pageRows,deviceRows,countryRows]=await Promise.all([
+    const cohortStart=ranges.current.startDate>NEW_LOCATION_COHORT.launchDate?ranges.current.startDate:NEW_LOCATION_COHORT.launchDate;
+    const cohortDataAvailable=ranges.current.endDate>=NEW_LOCATION_COHORT.launchDate;
+    const [currentRows,previousRows,queryRows,pageRows,deviceRows,countryRows,cohortPageRows]=await Promise.all([
       gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,[],1),
       gscQuery(token,siteUrl,ranges.previous.startDate,ranges.previous.endDate,[],1),
       gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,["query"],100),
       gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,["page"],100),
       gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,["device"],10),
-      gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,["country"],25)
+      gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,["country"],25),
+      cohortDataAvailable?gscQuery(token,siteUrl,cohortStart,ranges.current.endDate,["page"],250):Promise.resolve([])
     ]);
     const current=summaryFromRows(currentRows);
     const previous=summaryFromRows(previousRows);
@@ -335,6 +413,7 @@ export async function onRequestGet(context){
     const pages=mapRows(pageRows,"page");
     const devices=mapRows(deviceRows,"device");
     const countries=mapRows(countryRows,"country");
+    const newLocationCohort=summarizeRouteCohort(cohortPageRows,cohortStart,ranges.current.endDate);
     const opportunities=queries
       .filter(item=>item.impressions>=10&&item.position>=4&&item.position<=20)
       .sort((a,b)=>(b.impressions/Math.max(b.position,1))-(a.impressions/Math.max(a.position,1)))
@@ -360,6 +439,7 @@ export async function onRequestGet(context){
         opportunities,
         topQueries:queries.slice(0,25),
         topPages:pages.slice(0,25),
+        newLocationCohort,
         devices,
         countries:countries.slice(0,10)
       },
