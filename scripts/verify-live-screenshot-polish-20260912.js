@@ -27,6 +27,9 @@ for(const p of htmlBestanden(OUT)){
   assert.strictEqual(tel(html,`id="${STYLE_ID}"`),1,rel+": follow-up stylesheet niet exact eenmaal aanwezig");
   assert.ok(!html.includes('#chart g[data-q4-rain-periods]{transform:none!important}'),rel+": overbodige Q4 transform-neutralizer staat nog in de late stylesheet");
   assert.ok(!html.includes('transform:translateY(-6px)'),rel+": historische -6px Q4 regen-transform staat nog in het finale artifact");
+  assert.ok(html.includes('@media(max-width:900px){'),rel+": mobiele footerspacing mist viewportbegrenzing");
+  assert.ok(html.includes('body > .sheet{padding-bottom:14px!important}'),rel+": mobiele sheet houdt onder de footer nog te veel lege ruimte");
+  assert.ok(html.includes('body > .seo-plaatsnav{margin-top:10px!important}'),rel+": mobiele overgang naar populaire plaatsen blijft te ruim");
   assert.ok(html.includes('.chips{margin-top:12px!important}'),rel+": compacte mast/chipspacing ontbreekt");
   assert.ok(html.includes('.brief{margin-top:18px!important;padding-top:18px!important}'),rel+": compacte briefingovergang ontbreekt");
   assert.ok(html.includes('html body footer:nth-of-type(n){font-size:13px!important;line-height:20px!important;gap:4px 16px!important}'),rel+": robuuste footerleesbaarheid ontbreekt");
