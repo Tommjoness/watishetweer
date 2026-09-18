@@ -40,15 +40,16 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
 }
 @media(max-width:900px){
   /* Finale mobiele afsluiting: één expliciete grid-owner voorkomt dat oude
-     flex-, gap- en touchregels samen een ongelijk ritme maken. De bronlinks
-     blijven echte 44px doelen, maar worden in vaste kolommen uitgelijnd. */
-  html body footer:nth-of-type(n){margin-top:8px!important;padding-top:2px!important;padding-bottom:0!important;display:grid!important;grid-template-columns:minmax(0,1fr) max-content max-content max-content minmax(0,1fr)!important;justify-content:center!important;align-items:start!important;column-gap:4px!important;row-gap:0!important}
-  footer > span.bron:first-of-type{grid-column:1 / -1!important;grid-row:1!important;justify-self:stretch!important}
-  footer .bron-bronnen{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:stretch!important;width:100%;column-gap:16px!important;row-gap:0!important}
-  footer .bron-bronnen .bronlabel{grid-column:1 / -1;margin:0 0 1px!important}
+     flex-, gap- en touchregels samen een ongelijk ritme maken. Bronnen houden
+     44px tapzones, maar benutten de beschikbare breedte zodat actieve providers
+     in twee rustige rijen kunnen blijven staan. */
+  html body footer:nth-of-type(n){margin-top:6px!important;padding-top:0!important;padding-bottom:0!important;display:grid!important;grid-template-columns:minmax(0,1fr) max-content max-content max-content minmax(0,1fr)!important;justify-content:center!important;align-items:start!important;column-gap:4px!important;row-gap:0!important}
+  footer > span.bron:first-of-type{grid-column:1 / -1!important;grid-row:1!important;justify-self:center!important;width:calc(100% + 34px);max-width:calc(100vw - 16px)}
+  footer .bron-bronnen{display:flex!important;flex-wrap:wrap!important;align-items:stretch!important;justify-content:space-between!important;width:100%;column-gap:12px!important;row-gap:0!important}
+  footer .bron-bronnen .bronlabel{flex:0 0 100%;margin:0!important;text-align:center}
   footer .bron-bronnen .bronitem{min-width:0}
-  footer .bron-bronnen .bronitem a{display:flex!important;align-items:center!important;justify-content:flex-start!important;min-height:44px!important;margin:0!important;padding:0!important}
-  footer > span.bron:nth-of-type(2){grid-column:1 / -1!important;grid-row:2!important;justify-self:center!important;width:calc(100% + 24px);max-width:calc(100vw - 40px);min-height:0!important;margin:2px 0 0!important;line-height:1.45!important}
+  footer .bron-bronnen .bronitem a{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:44px!important;margin:0!important;padding:0!important}
+  footer > span.bron:nth-of-type(2){grid-column:1 / -1!important;grid-row:2!important;justify-self:center!important;width:calc(100% + 34px);max-width:calc(100vw - 16px);min-height:0!important;margin:0!important;line-height:1.42!important}
   footer > span.bron:nth-last-of-type(2){grid-column:2!important;grid-row:3!important;justify-self:center!important}
   footer > span.bron:last-of-type{grid-column:3!important;grid-row:3!important;justify-self:center!important}
   footer > details.footer-details{grid-column:4!important;grid-row:3!important;justify-self:center!important}
@@ -58,16 +59,15 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   footer > span.bron:nth-last-of-type(2) a,
   footer > span.bron:last-of-type a,
   footer > details.footer-details>summary{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0;margin-right:0}
-  .footer-contact{grid-column:1 / -1;justify-self:center;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0;margin-top:0!important;line-height:1.3}
-  .footer-contact-question,.footer-contact-mail{display:inline-flex;align-items:center;justify-content:center}
-  .footer-contact-mail{white-space:nowrap}
+  .footer-contact{grid-column:1 / -1;justify-self:center;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;width:calc(100% + 34px);max-width:calc(100vw - 16px);column-gap:4px;row-gap:0;margin-top:0!important;line-height:1.3}
+  .footer-contact-question,.footer-contact-mail{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
 
   /* Populaire plaatsen blijft gewone indexeerbare linknavigatie — geen cards of
      app-pills — maar krijgt mobiel een consistente twee-koloms leesas en zachte
      scheiders. De bestaande korte selectie (zes + Meer plaatsen) blijft intact. */
   body{padding-bottom:env(safe-area-inset-bottom,0px)!important}
   body > .sheet{padding-bottom:4px!important}
-  body > .seo-plaatsnav{margin-top:10px!important;padding-top:12px!important;padding-bottom:0!important}
+  body > .seo-plaatsnav{margin-top:8px!important;padding-top:8px!important;padding-bottom:0!important}
   .seo-plaatsnav-inner{gap:8px!important}
   .seo-plaatsnav-kop{font-size:19px!important;line-height:1.2!important;letter-spacing:-.01em}
   .seo-plaatsnav-links{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px!important;row-gap:0!important;width:100%}
@@ -90,8 +90,9 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   #nights .nacht-meer{font-size:12px!important}
   .mobile-section-nav a:active,.seo-plaatsnav a:active,footer a:active,footer summary:active{background:var(--paper)}
 }
-@media(max-width:600px){
-  .footer-contact-mail{margin-top:-10px}
+@media(min-width:371px) and (max-width:900px){
+  .footer-contact{flex-wrap:nowrap}
+  .footer-contact-mail{margin-top:0}
 }
 @media(min-width:600px) and (max-width:900px){
   .seo-plaatsnav-links{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -102,6 +103,8 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
 }
 @media(max-width:370px){
   html body footer:nth-of-type(n){grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+  .footer-contact{flex-wrap:wrap}
+  .footer-contact-mail{margin-top:-10px}
   footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important}
   footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important}
   footer > details.footer-details{grid-column:1 / -1!important;grid-row:4!important}
