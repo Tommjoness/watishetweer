@@ -313,10 +313,10 @@ function wireTilt(node){
     const x=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));
     const y=Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height));
     const strength=node.classList.contains("card")?7:node.classList.contains("panel")?3.4:5;
-    node.style.setProperty("--tilt-x",\`\${((0.5-y)*strength).toFixed(2)}deg\`);
-    node.style.setProperty("--tilt-y",\`\${((x-0.5)*strength).toFixed(2)}deg\`);
-    node.style.setProperty("--spot-x",\`\${(x*100).toFixed(1)}%\`);
-    node.style.setProperty("--spot-y",\`\${(y*100).toFixed(1)}%\`);
+    node.style.setProperty("--tilt-x",`${((0.5-y)*strength).toFixed(2)}deg`);
+    node.style.setProperty("--tilt-y",`${((x-0.5)*strength).toFixed(2)}deg`);
+    node.style.setProperty("--spot-x",`${(x*100).toFixed(1)}%`);
+    node.style.setProperty("--spot-y",`${(y*100).toFixed(1)}%`);
   });
   node.addEventListener("pointerleave",()=>{
     node.style.setProperty("--tilt-x","0deg");
@@ -342,8 +342,8 @@ function initCockpitFx(){
 
   document.addEventListener("pointermove",event=>{
     if(!fxEnabled())return;
-    document.documentElement.style.setProperty("--cursor-x",\`\${event.clientX}px\`);
-    document.documentElement.style.setProperty("--cursor-y",\`\${event.clientY}px\`);
+    document.documentElement.style.setProperty("--cursor-x",`${event.clientX}px`);
+    document.documentElement.style.setProperty("--cursor-y",`${event.clientY}px`);
   },{passive:true});
 
   const observer=new MutationObserver(records=>{
