@@ -120,11 +120,15 @@ function voegRouteToe(html,loc){
   return bron.replace(START_HAAK,routeStart);
 }
 
+function routeIntro(loc){
+  return loc.seoIntro||`Bekijk het actuele weer in ${loc.naam}, ${loc.provincie}, met neerslag voor de komende uren en de 7-daagse verwachting. Alle tijden volgen de lokale tijd van de gekozen plaats.`;
+}
+
 function voegRouteContextToe(html,loc){
   const gerelateerd=gerelateerdePlaatsen(loc);
   const links=gerelateerd.map(andere=>`<a href="/weer/${andere.slug}/">${escHtml(andere.naam)}</a>`).join("\n      ");
   const breadcrumb=`<nav class="seo-breadcrumb" aria-label="Broodkruimelnavigatie">\n    <a href="/">${escHtml(SEO.siteName)}</a>\n    <span class="seo-breadcrumb-sep" aria-hidden="true">›</span>\n    <a href="/weer/">Weer per plaats</a>\n    <span class="seo-breadcrumb-sep" aria-hidden="true">›</span>\n    <span aria-current="page">${escHtml(loc.naam)}</span>\n  </nav>`;
-  const blok=`<section class="seo-route-context" aria-labelledby="seo-route-title">\n  ${breadcrumb}\n  <h2 id="seo-route-title">Weer in ${escHtml(loc.naam)}</h2>\n  <p>Bekijk het actuele weer in ${escHtml(loc.naam)}, ${escHtml(loc.provincie)}, met neerslag voor de komende uren en de 7-daagse verwachting. Alle tijden volgen de lokale tijd van de gekozen plaats.</p>\n  <div class="seo-route-nearby" aria-label="Plaatsen in de buurt">\n    <div class="seo-route-nearby-kop">Plaatsen in de buurt</div>\n    <div class="seo-route-nearby-links">\n      ${links}\n    </div>\n  </div>\n</section>`;
+  const blok=`<section class="seo-route-context" aria-labelledby="seo-route-title">\n  ${breadcrumb}\n  <h2 id="seo-route-title">Weer in ${escHtml(loc.naam)}</h2>\n  <p>${escHtml(routeIntro(loc))}</p>\n  <div class="seo-route-nearby" aria-label="Plaatsen in de buurt">\n    <div class="seo-route-nearby-kop">Plaatsen in de buurt</div>\n    <div class="seo-route-nearby-links">\n      ${links}\n    </div>\n  </div>\n</section>`;
   if(tel(html,"</body>")!==1)throw new Error(`${loc.slug}: body-einde ontbreekt of is dubbel.`);
   return html.replace(navHtml(),blok+"\n"+navHtml());
 }
@@ -176,4 +180,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={MARKER_NAV,MARKER_ROUTE,TITLE_SYNC_HAKEN,TITLE_SYNC_WRITERS,actieveTitleHaak,afstandKm,gerelateerdePlaatsen,voegPlaatsNavigatieToe,voegRouteUrlBeleidToe,voegRouteTitelBeleidToe,maakPlaatsPagina,maakPlaatsIndex,maakSitemap};
+module.exports={MARKER_NAV,MARKER_ROUTE,TITLE_SYNC_HAKEN,TITLE_SYNC_WRITERS,actieveTitleHaak,afstandKm,gerelateerdePlaatsen,routeIntro,voegPlaatsNavigatieToe,voegRouteUrlBeleidToe,voegRouteTitelBeleidToe,maakPlaatsPagina,maakPlaatsIndex,maakSitemap};
