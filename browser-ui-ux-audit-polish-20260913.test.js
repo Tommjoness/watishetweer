@@ -42,7 +42,10 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   const zichtbarePlaatslinks=[...plaatsgrid.querySelectorAll('a')].filter(x=>cs(x).display!=='none'),utilityTargets=[over.querySelector('a'),privacy.querySelector('a'),details.querySelector('summary')].filter(Boolean);
   zet('source-overflow',Math.max(0,footerRect.left-bronnenRect.left,bronnenRect.right-footerRect.right).toFixed(3));zet('footer-display',cs(footer).display);zet('over-text',(over.textContent||'').trim());zet('privacy-text',(privacy.textContent||'').trim());zet('over-top',overRect.top.toFixed(3));zet('privacy-top',privacyRect.top.toFixed(3));zet('details-top',detailsRect.top.toFixed(3));zet('disclaimer-bottom',disclaimerRect.bottom.toFixed(3));
   zet('utility-center-delta',Math.abs(((overRect.left+detailsRect.right)/2)-((footerRect.left+footerRect.right)/2)).toFixed(3));
-  zet('utility-hit-height',Math.min(...utilityTargets.map(x=>x.getBoundingClientRect().height)).toFixed(3));
+  const utilityRects=utilityTargets.map(x=>x.getBoundingClientRect());
+  zet('utility-hit-height',Math.min(...utilityRects.map(r=>r.height)).toFixed(3));
+  zet('utility-row-delta',(Math.max(...utilityRects.map(r=>r.top))-Math.min(...utilityRects.map(r=>r.top))).toFixed(3));
+  zet('footer-height',footerRect.height.toFixed(3));
   zet('footer-margin-top',parseFloat(cs(footer).marginTop)||0);
   zet('footer-padding-top',parseFloat(cs(footer).paddingTop)||0);
   zet('footer-row-gap',parseFloat(cs(footer).rowGap)||0);
@@ -90,6 +93,8 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(Number(v("header-size"))<10.9||Number(v("secondary-size"))<11.4||Number(v("hint-size"))<12.9)throw new Error("mobiele microcopy blijft te klein op "+breedte+"px");
       if(v("day-arrow")!=="none")throw new Error("desktopchevron lekt naar mobiel op "+breedte+"px");
       if(Number(v("utility-hit-height"))<43.5)throw new Error("footerhulplink heeft geen 44px tap-zone op "+breedte+"px: "+v("utility-hit-height")+"px");
+      if(cssWidth>=390&&cssWidth<=430&&Number(v("utility-row-delta"))>1)throw new Error("footerhulplinks staan op "+breedte+"px / CSS "+cssWidth+"px nog over meerdere rijen: delta "+v("utility-row-delta")+"px");
+      if(cssWidth>=390&&cssWidth<=430)console.log("footer-meting "+modus+" "+breedte+"px / CSS "+cssWidth+"px: hoogte="+v("footer-height")+"px, utility-delta="+v("utility-row-delta")+"px, hitbox="+v("utility-hit-height")+"px");
       if(Number(v("footer-margin-top"))>10.5)throw new Error("mobiele footer houdt te veel bovenmarge op "+breedte+"px: "+v("footer-margin-top")+"px");
       if(Number(v("footer-padding-top"))>4.5)throw new Error("mobiele footer houdt te veel bovenpadding op "+breedte+"px: "+v("footer-padding-top")+"px");
       if(Number(v("footer-row-gap"))>0.5||Number(v("source-row-gap"))>0.5)throw new Error("mobiele footer/bronnen houden verticale row-gap op "+breedte+"px");
