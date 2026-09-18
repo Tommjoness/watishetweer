@@ -39,12 +39,32 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   footer > details.footer-details[open]{grid-column:1 / -1!important;grid-row:4!important;justify-self:center!important}
 }
 @media(max-width:900px){
-  .footer-contact{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0}
+  /* Finale mobiele afsluiting: houd bronnen, hulplinks en contact semantisch
+     hetzelfde, maar laat de utilityrij als één rustig ritme lezen. De links
+     zelf houden een echte 44px tap-zone; niet alleen hun parent. */
+  html body footer:nth-of-type(n){column-gap:14px!important;row-gap:0!important}
+  footer > span.bron:nth-last-of-type(2) a,
+  footer > span.bron:last-of-type a,
+  footer > details.footer-details>summary{display:inline-flex;align-items:center;justify-content:center;min-height:44px}
+  .footer-contact{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0;line-height:1.35}
   .footer-contact-question,.footer-contact-mail{display:inline-flex;align-items:center;justify-content:center}
   .footer-contact-mail{white-space:nowrap}
   @media(max-width:600px){
     .footer-contact-mail{margin-top:-8px}
   }
+
+  /* Populaire plaatsen blijft gewone indexeerbare linknavigatie — geen cards of
+     app-pills — maar krijgt mobiel een consistente twee-koloms leesas en zachte
+     scheiders. De bestaande korte selectie (zes + Meer plaatsen) blijft intact. */
+  body > .seo-plaatsnav{padding-top:14px!important;padding-bottom:4px!important}
+  .seo-plaatsnav-inner{gap:8px!important}
+  .seo-plaatsnav-kop{font-size:19px!important;line-height:1.2!important;letter-spacing:-.01em}
+  .seo-plaatsnav-links{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px!important;row-gap:0!important;width:100%}
+  .seo-plaatsnav-links a{display:flex!important;align-items:center;justify-content:flex-start;min-width:0;min-height:44px!important;padding:4px 0;line-height:1.25!important;border-bottom:1px solid var(--rule-soft)!important}
+  .seo-plaatsnav-links a:nth-child(n+7):not(.seo-plaatsnav-alles){display:none!important}
+  .seo-plaatsnav-links .seo-plaatsnav-alles{grid-column:1 / -1;border-bottom-color:transparent!important}
+  html[data-thema="donker"] body > .seo-plaatsnav{background:var(--sheet)!important}
+
   .mobile-section-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:18px 0 4px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
   .mobile-section-nav a{display:flex;align-items:center;justify-content:center;min-width:0;min-height:44px;padding:0 5px;color:var(--ink-70);font-family:var(--sans);font-size:12.5px;font-weight:500;line-height:1.2;text-decoration:none}
   .mobile-section-nav a+a{border-left:1px solid var(--rule)}
@@ -57,6 +77,14 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   .wiw-hour-date{font-size:11px!important}
   .hint,.data-uitleg{font-size:13px!important;line-height:1.45!important}
   #nights .nacht-meer{font-size:12px!important}
+  .mobile-section-nav a:active,.seo-plaatsnav a:active,footer a:active,footer summary:active{background:var(--paper)}
+}
+@media(min-width:600px) and (max-width:900px){
+  .seo-plaatsnav-links{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .seo-plaatsnav-links .seo-plaatsnav-alles{grid-column:1 / -1}
+}
+@media(prefers-reduced-motion:no-preference){
+  .mobile-section-nav a,.seo-plaatsnav a,footer a,footer summary{transition:color .15s ease,background-color .15s ease,border-color .15s ease}
 }
 @media(max-width:370px){
   .mobile-section-nav{grid-template-columns:repeat(2,minmax(0,1fr))}
