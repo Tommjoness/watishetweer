@@ -17,7 +17,7 @@ const lateFooterRegel=/footer\{[^{}]*display:flex!important[^{}]*\}/.exec(runtim
 if(!lateFooterRegel)throw new Error("Late finale runtime-footerregel ontbreekt.");
 const lateRuntimeStijl='<style id="audit-late-runtime-footer">'+lateFooterRegel[0]+'</style>';
 
-function voerUit(breedte,hoogte){
+function voerUit(breedte,hoogte,modus="licht"){
   const reporter=`<script>
 window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.setAttribute('data-audit-'+k,String(v));try{
   const app=document.getElementById('app'),chips=document.getElementById('chips'),days=document.getElementById('days'),warnings=document.getElementById('waarschuwingen'),results=document.getElementById('res'),thema=document.getElementById('thema');
@@ -29,8 +29,9 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   thema.innerHTML='<button type="button" id="thema-auto" class="wiw-theme-auto" data-thema-keuze="auto" aria-pressed="true">Auto</button><button type="button" id="thema-switch" class="wiw-theme-switch" role="switch" aria-checked="false" aria-label="Automatisch; nu Licht"><span class="wiw-theme-icon wiw-theme-sun" data-thema-handmatig="licht" aria-hidden="true">☀</span><span class="wiw-theme-track" aria-hidden="true"><span class="wiw-theme-thumb"></span></span><span class="wiw-theme-icon wiw-theme-moon" data-thema-handmatig="donker" aria-hidden="true">☾</span></button>';thema.dataset.actieveThemaKeuze='auto';thema.dataset.effectieveThema='licht';
   const hour=document.createElement('table');hour.className='wiw-hour-table';hour.innerHTML='<thead><tr><th>Tijd</th><th>Weer</th><th>Temperatuur</th></tr></thead><tbody><tr><td><time>18:00</time><span class="wiw-hour-date">ma 14</span></td><td>Helder</td><td><span class="wiw-hour-primary">18°</span><span class="wiw-hour-secondary">voelt 17°</span></td></tr></tbody>';app.appendChild(hour);
   const nav=document.querySelector('.mobile-section-nav'),links=[...nav.querySelectorAll('a')],row=days.querySelector('[role="button"]'),warning=warnings.firstElementChild,detail=results.querySelector('.zoekresultaat-detail'),add=chips.querySelector('.chip.add'),kop=hour.querySelector('th'),sec=hour.querySelector('.wiw-hour-secondary'),hint=document.querySelector('.hint'),schakelaar=thema.querySelector('#thema-switch'),track=thema.querySelector('.wiw-theme-track'),thumb=thema.querySelector('.wiw-theme-thumb');
-  const footer=document.querySelector('footer'),directe=[...footer.querySelectorAll(':scope > span.bron')],bronnen=directe.find(x=>x.querySelector('a[href*="open-meteo.com"]')),over=directe.find(x=>x.querySelector('a[href="/over/"]')),privacy=directe.find(x=>x.querySelector('a[href="/privacy"]')),disclaimer=directe.find(x=>/Weersinformatie is algemeen/.test(x.textContent||'')),details=footer.querySelector(':scope > details.footer-details');
-  if(!bronnen||!over||!privacy||!disclaimer||!details)throw new Error('footerbronnen, hulplinks of disclaimer ontbreken');
+  const footer=document.querySelector('footer'),directe=[...footer.querySelectorAll(':scope > span.bron')],bronnen=directe.find(x=>x.querySelector('a[href*="open-meteo.com"]')),over=directe.find(x=>x.querySelector('a[href="/over/"]')),privacy=directe.find(x=>x.querySelector('a[href="/privacy"]')),disclaimer=directe.find(x=>/Weersinformatie is algemeen/.test(x.textContent||'')),details=footer.querySelector(':scope > details.footer-details'),plaatsnav=document.querySelector('.seo-plaatsnav'),plaatsgrid=plaatsnav&&plaatsnav.querySelector('.seo-plaatsnav-links'),plaatskop=plaatsnav&&plaatsnav.querySelector('.seo-plaatsnav-kop');
+  if(!bronnen||!over||!privacy||!disclaimer||!details||!plaatsnav||!plaatsgrid||!plaatskop)throw new Error('footerbronnen, hulplinks, disclaimer of plaatsnavigatie ontbreken');
+  plaatsnav.classList.add('weer-klaar');
   const cs=x=>getComputedStyle(x),pseudo=getComputedStyle(row,'::after'),midden=x=>{const r=x.getBoundingClientRect();return (r.top+r.bottom)/2;};
   const focusDoel=cs(nav).display==='none'?row:links[0];focusDoel.focus();
   zet('nav-display',cs(nav).display);zet('nav-links',links.length);zet('nav-min-height',Math.min(...links.map(x=>x.getBoundingClientRect().height)));
@@ -38,13 +39,24 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('warning-width',parseFloat(cs(warning).borderLeftWidth)||0);zet('warning-color',cs(warning).borderLeftColor);zet('warning-title-weight',cs(warning.querySelector('h3')).fontWeight);
   zet('detail-display',cs(detail).display);zet('detail-size',parseFloat(cs(detail).fontSize)||0);zet('theme-role',thema.getAttribute('role'));zet('theme-choice',thema.dataset.actieveThemaKeuze||'');zet('theme-auto-pressed',thema.querySelector('#thema-auto')?.getAttribute('aria-pressed')||'');zet('theme-toggle-width',schakelaar.getBoundingClientRect().width);zet('theme-track-width',track.getBoundingClientRect().width);zet('theme-thumb-width',thumb.getBoundingClientRect().width);zet('theme-center-delta',Math.abs(midden(track)-midden(thema)).toFixed(3));
   const footerRect=footer.getBoundingClientRect(),bronnenRect=bronnen.getBoundingClientRect(),overRect=over.getBoundingClientRect(),privacyRect=privacy.getBoundingClientRect(),detailsRect=details.getBoundingClientRect(),disclaimerRect=disclaimer.getBoundingClientRect();
+  const zichtbarePlaatslinks=[...plaatsgrid.querySelectorAll('a')].filter(x=>cs(x).display!=='none'),utilityTargets=[over.querySelector('a'),privacy.querySelector('a'),details.querySelector('summary')].filter(Boolean);
   zet('source-overflow',Math.max(0,footerRect.left-bronnenRect.left,bronnenRect.right-footerRect.right).toFixed(3));zet('footer-display',cs(footer).display);zet('over-text',(over.textContent||'').trim());zet('privacy-text',(privacy.textContent||'').trim());zet('over-top',overRect.top.toFixed(3));zet('privacy-top',privacyRect.top.toFixed(3));zet('details-top',detailsRect.top.toFixed(3));zet('disclaimer-bottom',disclaimerRect.bottom.toFixed(3));
   zet('utility-center-delta',Math.abs(((overRect.left+detailsRect.right)/2)-((footerRect.left+footerRect.right)/2)).toFixed(3));
+  zet('utility-hit-height',Math.min(...utilityTargets.map(x=>x.getBoundingClientRect().height)).toFixed(3));
+  zet('place-display',cs(plaatsgrid).display);
+  zet('place-columns',cs(plaatsgrid).display==='grid'?(cs(plaatsgrid).gridTemplateColumns||'').split(/\\s+/).filter(Boolean).length:0);
+  zet('css-width',innerWidth);
+  zet('place-link-min-height',Math.min(...zichtbarePlaatslinks.map(x=>x.getBoundingClientRect().height)).toFixed(3));
+  zet('place-heading-size',parseFloat(cs(plaatskop).fontSize)||0);
+  zet('place-overflow',Math.max(0,plaatsnav.getBoundingClientRect().right-innerWidth,-plaatsnav.getBoundingClientRect().left).toFixed(3));
+  zet('place-bg',cs(plaatsnav).backgroundColor);zet('sheet-bg',cs(document.querySelector('.sheet')).backgroundColor);zet('mode',document.documentElement.dataset.thema||'');
   zet('header-size',parseFloat(cs(kop).fontSize)||0);zet('secondary-size',parseFloat(cs(sec).fontSize)||0);zet('hint-size',parseFloat(cs(hint).fontSize)||0);
   zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}}, {once:true});
 </script>`;
-  const html=basis.replace("</body>",lateRuntimeStijl+reporter+"</body>"),dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-ui-ux-audit-"));
+  if(!basis.includes('<html lang="nl">'))throw new Error("verwachte html-root ontbreekt");
+  const themed=basis.replace('<html lang="nl">',`<html lang="nl" data-thema="${modus==="donker"?"donker":"licht"}">`);
+  const html=themed.replace("</body>",lateRuntimeStijl+reporter+"</body>"),dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-ui-ux-audit-"));
   try{
     const pad=path.join(dir,"index.html");fs.writeFileSync(pad,html,"utf8");
     const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${breedte},${hoogte}`,"--virtual-time-budget=1200","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:24*1024*1024,timeout:20000});
@@ -67,6 +79,15 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(v("nav-display")!=="grid"||Number(v("nav-min-height"))<43.5)throw new Error("mobiele sectienavigatie is niet zichtbaar/aanraakbaar op "+breedte+"px");
       if(Number(v("header-size"))<10.9||Number(v("secondary-size"))<11.4||Number(v("hint-size"))<12.9)throw new Error("mobiele microcopy blijft te klein op "+breedte+"px");
       if(v("day-arrow")!=="none")throw new Error("desktopchevron lekt naar mobiel op "+breedte+"px");
+      if(Number(v("utility-hit-height"))<43.5)throw new Error("footerhulplink heeft geen 44px tap-zone op "+breedte+"px: "+v("utility-hit-height")+"px");
+      const cssWidth=Number(v("css-width"))||breedte;
+      const expectedColumns=cssWidth>=600?3:2;
+      if(v("place-display")!=="grid")throw new Error("populaire plaatsen is "+v("place-display")+" in plaats van grid op request "+breedte+"px / CSS "+cssWidth+"px");
+      if(Number(v("place-columns"))!==expectedColumns)throw new Error("populaire plaatsen gebruikt "+v("place-columns")+" kolommen op request "+breedte+"px / CSS "+cssWidth+"px, verwacht "+expectedColumns);
+      if(Number(v("place-link-min-height"))<43.5)throw new Error("populaire-plaatsenlink is te laag op "+breedte+"px: "+v("place-link-min-height")+"px");
+      if(Number(v("place-heading-size"))<18.9)throw new Error("populaire-plaatsenkop blijft te klein op "+breedte+"px");
+      if(Number(v("place-overflow"))>1)throw new Error("populaire plaatsen loopt buiten viewport op "+breedte+"px: "+v("place-overflow")+"px");
+      if(modus==="donker"&&(v("mode")!=="donker"||v("place-bg")==="rgb(255, 255, 255)"||v("sheet-bg")==="rgb(255, 255, 255)"))throw new Error("donkere mobiele afsluiting valt terug naar witte achtergrond op "+breedte+"px");
     }else{
       if(v("nav-display")!=="none")throw new Error("mobiele sectienavigatie lekt naar desktop");
       if(v("footer-display")!=="grid")throw new Error("late finale runtime zet desktopfooter terug naar "+v("footer-display"));
@@ -81,5 +102,6 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 }
 
-for(const [w,h] of [[360,900],[390,900],[1280,1000],[1440,1000],[1920,1080]])voerUit(w,h);
-console.log("UI/UX-auditbrowserregressie groen op 360px, 390px, 1280px, 1440px en 1920px: navigatie, leesbaarheid, focus, waarschuwingsernst, locatie-identiteit, zon/maan-toggle, begrensde bronnenregel en aparte gecentreerde footerhulplinkrij inclusief late runtimecascade gemeten zonder overflow.");
+for(const [w,h] of [[320,844],[360,900],[390,844],[430,932],[768,1024],[1280,1000],[1440,1000],[1920,1080]])voerUit(w,h,"licht");
+for(const [w,h] of [[390,844],[430,932]])voerUit(w,h,"donker");
+console.log("UI/UX-auditbrowserregressie groen op 320/360/390/430/768px plus brede desktop en aparte donkere 390/430px-runs: navigatie, typografie, 44px tap-zones, populaire-plaatsengrid, dark mode, focus, waarschuwingsernst en footeruitlijning gemeten zonder overflow.");

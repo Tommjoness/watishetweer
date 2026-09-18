@@ -190,17 +190,26 @@ function renderNewRoutes(cohort){
 
   const launch=new Date(`${cohort.launchDate}T12:00:00Z`);
   const launchLabel=Number.isNaN(launch.getTime())?cohort.launchDate:launch.toLocaleDateString("nl-NL");
+  const settledEnd=cohort.range&&cohort.range.endDate?new Date(`${cohort.range.endDate}T12:00:00Z`):null;
+  const settledDays=settledEnd&&!Number.isNaN(launch.getTime())&&!Number.isNaN(settledEnd.getTime())
+    ?Math.max(0,Math.floor((settledEnd-launch)/86400000)+1)
+    :0;
   if(!cohort.dataAvailable){
     els.newRoutesBadge.textContent="Wachten op GSC";
     els.newRoutesBadge.className="badge warn";
-    els.newRoutesNote.textContent=`Live sinds ${launchLabel}. GSC-data loopt t/m ${cohort.range&&cohort.range.endDate?cohort.range.endDate:"—"}; de livegang zit dus nog niet in de stabiele dataset.`;
+    els.newRoutesNote.textContent=`Live sinds ${launchLabel}. GSC-data loopt t/m ${cohort.range&&cohort.range.endDate?cohort.range.endDate:"—"}; de livegang zit dus nog niet in de stabiele dataset. Eerst meten zodra de settled data de livegang bevat; daarna volgen een 7- en 14-dagencheck vóór een gecontroleerd title/meta-experiment.`;
     els.newRoutes.innerHTML=emptyRow(4,"Nog geen post-launch Search Console-data beschikbaar.");
     return;
   }
 
+  const meetfase=settledDays<7
+    ?`${settledDays} settled post-launch dag${settledDays===1?"":"en"}; nog observeren tot de 7-dagencheck.`
+    :settledDays<14
+      ?`${settledDays} settled post-launch dagen; 7-dagencheck beschikbaar, 14-dagencheck nog laten rijpen.`
+      :`${settledDays} settled post-launch dagen; 7- en 14-dagenchecks zijn beschikbaar voor een gecontroleerd experiment.`;
   els.newRoutesBadge.textContent=`${number.format(cohort.visibleRoutes||0)}/${number.format(cohort.totalRoutes||0)} zichtbaar`;
   els.newRoutesBadge.className=cohort.visibleRoutes>0?"badge ok":"badge";
-  els.newRoutesNote.textContent=`Gemeten vanaf ${cohort.range.startDate} t/m ${cohort.range.endDate}; uitsluitend data sinds livegang.`;
+  els.newRoutesNote.textContent=`Gemeten vanaf ${cohort.range.startDate} t/m ${cohort.range.endDate}; uitsluitend data sinds livegang. ${meetfase}`;
   const visible=(cohort.routes||[])
     .filter(row=>Number(row.impressions)>0)
     .sort((a,b)=>b.impressions-a.impressions||a.position-b.position);
