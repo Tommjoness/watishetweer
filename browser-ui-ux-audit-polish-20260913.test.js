@@ -31,6 +31,17 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   const nav=document.querySelector('.mobile-section-nav'),links=[...nav.querySelectorAll('a')],row=days.querySelector('[role="button"]'),warning=warnings.firstElementChild,detail=results.querySelector('.zoekresultaat-detail'),add=chips.querySelector('.chip.add'),kop=hour.querySelector('th'),sec=hour.querySelector('.wiw-hour-secondary'),hint=document.querySelector('.hint'),schakelaar=thema.querySelector('#thema-switch'),track=thema.querySelector('.wiw-theme-track'),thumb=thema.querySelector('.wiw-theme-thumb');
   const footer=document.querySelector('footer'),directe=[...footer.querySelectorAll(':scope > span.bron')],bronnen=directe.find(x=>x.querySelector('a[href*="open-meteo.com"]')),over=directe.find(x=>x.querySelector('a[href="/over/"]')),privacy=directe.find(x=>x.querySelector('a[href="/privacy"]')),disclaimer=directe.find(x=>/Weersinformatie is algemeen/.test(x.textContent||'')),details=footer.querySelector(':scope > details.footer-details'),contact=footer.querySelector('.footer-contact'),plaatsnav=document.querySelector('.seo-plaatsnav'),plaatsgrid=plaatsnav&&plaatsnav.querySelector('.seo-plaatsnav-links'),plaatskop=plaatsnav&&plaatsnav.querySelector('.seo-plaatsnav-kop'),sheet=document.querySelector('.sheet');
   if(!bronnen||!over||!privacy||!disclaimer||!details||!contact||!plaatsnav||!plaatsgrid||!plaatskop||!sheet)throw new Error('footerbronnen, hulplinks, contact, disclaimer of plaatsnavigatie ontbreken');
+  /* De fixture verwijdert product-JS expres om alleen de finale cascade te meten.
+     Bouw daarom hier dezelfde semantische bronitems op die structureerBronnen()
+     in de echte runtime maakt; anders meten we niet-bestaande .bronitem-nodes. */
+  if(!bronnen.classList.contains('bron-bronnen')){
+    const bronlinks=[...bronnen.querySelectorAll('a')];
+    if(bronlinks.length<4)throw new Error('te weinig bronlinks voor mobiele footerfixture');
+    bronnen.classList.add('bron-bronnen');
+    bronnen.replaceChildren();
+    const bronlabel=document.createElement('span');bronlabel.className='bronlabel';bronlabel.textContent='Bronnen voor deze weergave';bronnen.appendChild(bronlabel);
+    bronlinks.forEach(a=>{const item=document.createElement('span');item.className='bronitem';item.appendChild(a);bronnen.appendChild(item);});
+  }
   plaatsnav.classList.add('weer-klaar');
   const cs=x=>getComputedStyle(x),pseudo=getComputedStyle(row,'::after'),midden=x=>{const r=x.getBoundingClientRect();return (r.top+r.bottom)/2;};
   const focusDoel=cs(nav).display==='none'?row:links[0];focusDoel.focus();
