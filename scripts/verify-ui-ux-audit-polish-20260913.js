@@ -56,7 +56,8 @@ for(const p of htmlBestanden(OUT)){
   assert(html.includes('.footer-contact-mail{white-space:nowrap}'),rel+": 'Mail naar' en het e-mailadres kunnen mobiel nog los van elkaar afbreken");
   assert(html.includes('@media(max-width:600px){\n  .footer-contact-mail{margin-top:-8px}\n}'),rel+": smalle mobielweergave houdt nog te veel visuele ruimte tussen contactvraag en mailregel");
   assert(!html.includes('support@watishetweer.nl</a>.</p>'),rel+": losse afsluitende punt staat nog achter het supportadres");
-  assert(html.includes('body > .seo-plaatsnav{padding-top:14px!important;padding-bottom:4px!important}'),rel+": populaire-plaatsenblok mist compacte mobiele afsluiting");
+  assert(html.includes('body{padding-bottom:env(safe-area-inset-bottom,0px)!important}'),rel+": mobiel document houdt nog extra basisruimte onder de laatste sectie");
+  assert(html.includes('body > .seo-plaatsnav{padding-top:14px!important;padding-bottom:0!important}'),rel+": populaire-plaatsenblok houdt nog loze onderpadding");
   assert(html.includes('.seo-plaatsnav-kop{font-size:19px!important;line-height:1.2!important;letter-spacing:-.01em}'),rel+": populaire-plaatsenkop mist mobiele typografiepolish");
   assert(html.includes('.seo-plaatsnav-links{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px!important;row-gap:0!important;width:100%}'),rel+": populaire plaatsen missen de mobiele tweekolomsgrid");
   assert(html.includes('.seo-plaatsnav-links a:nth-child(n+7):not(.seo-plaatsnav-alles){display:none!important}'),rel+": finale polish mag de compacte populaire-plaatsenselectie niet onbedoeld weer tonen");
