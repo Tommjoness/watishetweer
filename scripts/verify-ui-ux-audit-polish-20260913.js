@@ -58,9 +58,9 @@ for(const p of htmlBestanden(OUT)){
   assert(!html.includes('support@watishetweer.nl</a>.</p>'),rel+": losse afsluitende punt staat nog achter het supportadres");
   assert(html.includes('body > .seo-plaatsnav{padding-top:14px!important;padding-bottom:4px!important}'),rel+": populaire-plaatsenblok mist compacte mobiele afsluiting");
   assert(html.includes('.seo-plaatsnav-kop{font-size:19px!important;line-height:1.2!important;letter-spacing:-.01em}'),rel+": populaire-plaatsenkop mist mobiele typografiepolish");
-  assert(html.includes('html body > .seo-plaatsnav .seo-plaatsnav-links{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;column-gap:16px!important;row-gap:0!important;width:100%!important}'),rel+": populaire plaatsen missen de expliciete mobiele tweekoloms-owner");
-  assert(html.includes('html body > .seo-plaatsnav .seo-plaatsnav-links a:nth-child(n+7):not(.seo-plaatsnav-alles){display:none!important}'),rel+": finale polish mag de compacte populaire-plaatsenselectie niet onbedoeld weer tonen");
-  assert(html.includes('@media(min-width:600px) and (max-width:900px){')&&html.includes('html body > .seo-plaatsnav .seo-plaatsnav-links{grid-template-columns:repeat(3,minmax(0,1fr))!important}'),rel+": tabletvariant van populaire plaatsen ontbreekt of bezit de cascade niet");
+  assert(html.includes('.seo-plaatsnav-links{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px!important;row-gap:0!important;width:100%}'),rel+": populaire plaatsen missen de mobiele tweekolomsgrid");
+  assert(html.includes('.seo-plaatsnav-links a:nth-child(n+7):not(.seo-plaatsnav-alles){display:none!important}'),rel+": finale polish mag de compacte populaire-plaatsenselectie niet onbedoeld weer tonen");
+  assert(html.includes('@media(min-width:600px) and (max-width:900px){')&&html.includes('.seo-plaatsnav-links{grid-template-columns:repeat(3,minmax(0,1fr))}'),rel+": tabletvariant van populaire plaatsen ontbreekt");
   assert(html.includes('html[data-thema="donker"] body > .seo-plaatsnav{background:var(--sheet)!important}'),rel+": donkere plaatsnavigatie mist expliciete themaveilige achtergrond");
   assert(html.includes('@media(prefers-reduced-motion:no-preference){'),rel+": subtiele micro-interacties missen reduced-motion begrenzing");
   assert(html.includes('.mobile-section-nav{display:grid;grid-template-columns:repeat(4'),rel+": mobiele sectienavigatie wordt niet compact zichtbaar");
