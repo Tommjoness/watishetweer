@@ -15,6 +15,10 @@ const els={
   opportunities:document.getElementById("opportunities"),
   queries:document.getElementById("queries"),
   pages:document.getElementById("pages"),
+  newRoutesBadge:document.getElementById("new-routes-badge"),
+  newRoutesSummary:document.getElementById("new-routes-summary"),
+  newRoutesNote:document.getElementById("new-routes-note"),
+  newRoutes:document.getElementById("new-routes"),
   devices:document.getElementById("devices"),
   countries:document.getElementById("countries"),
   ga4Badge:document.getElementById("ga4-badge"),
@@ -165,6 +169,46 @@ function updateSortButtons(){
   });
 }
 
+function renderNewRoutes(cohort){
+  if(!cohort){
+    els.newRoutesBadge.textContent="Niet beschikbaar";
+    els.newRoutesBadge.className="badge warn";
+    els.newRoutesSummary.innerHTML="";
+    els.newRoutesNote.textContent="De API leverde geen cohortdata.";
+    els.newRoutes.innerHTML=emptyRow(4,"Geen cohortdata.");
+    return;
+  }
+
+  const s=cohort.summary||{};
+  const position=s.position===null||s.position===undefined?"—":decimal.format(s.position);
+  els.newRoutesSummary.innerHTML=`
+    <div class="cohort-mini"><span>Routes zichtbaar</span><strong>${number.format(cohort.visibleRoutes||0)}/${number.format(cohort.totalRoutes||0)}</strong></div>
+    <div class="cohort-mini"><span>Impressies</span><strong>${number.format(s.impressions||0)}</strong></div>
+    <div class="cohort-mini"><span>Klikken</span><strong>${number.format(s.clicks||0)}</strong></div>
+    <div class="cohort-mini"><span>Gem. positie</span><strong>${position}</strong></div>
+  `;
+
+  const launch=new Date(`${cohort.launchDate}T12:00:00Z`);
+  const launchLabel=Number.isNaN(launch.getTime())?cohort.launchDate:launch.toLocaleDateString("nl-NL");
+  if(!cohort.dataAvailable){
+    els.newRoutesBadge.textContent="Wachten op GSC";
+    els.newRoutesBadge.className="badge warn";
+    els.newRoutesNote.textContent=`Live sinds ${launchLabel}. GSC-data loopt t/m ${cohort.range&&cohort.range.endDate?cohort.range.endDate:"—"}; de livegang zit dus nog niet in de stabiele dataset.`;
+    els.newRoutes.innerHTML=emptyRow(4,"Nog geen post-launch Search Console-data beschikbaar.");
+    return;
+  }
+
+  els.newRoutesBadge.textContent=`${number.format(cohort.visibleRoutes||0)}/${number.format(cohort.totalRoutes||0)} zichtbaar`;
+  els.newRoutesBadge.className=cohort.visibleRoutes>0?"badge ok":"badge";
+  els.newRoutesNote.textContent=`Gemeten vanaf ${cohort.range.startDate} t/m ${cohort.range.endDate}; uitsluitend data sinds livegang.`;
+  const visible=(cohort.routes||[])
+    .filter(row=>Number(row.impressions)>0)
+    .sort((a,b)=>b.impressions-a.impressions||a.position-b.position);
+  els.newRoutes.innerHTML=visible.length
+    ?visible.map(row=>`<tr><td><a class="page-link" href="${escapeHtml(row.page)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.name)}</a></td><td>${number.format(row.impressions)}</td><td>${number.format(row.clicks)}</td><td>${row.position===null?"—":decimal.format(row.position)}</td></tr>`).join("")
+    :emptyRow(4,"Nog geen nieuwe route met impressies in de post-launch periode.");
+}
+
 function renderGa4(ga4){
   if(!ga4||!ga4.configured){
     els.ga4Badge.textContent="Nog niet gekoppeld";
@@ -204,6 +248,7 @@ function render(data){
   setDelta(els.deltaPosition,s.change.position,{invert:true,points:true});
 
   renderTables(sc);
+  renderNewRoutes(sc.newLocationCohort);
   renderSplit(els.devices,sc.devices||[],"device",s.impressions);
   renderSplit(els.countries,sc.countries||[],"country",s.impressions);
   renderGa4(data.ga4);

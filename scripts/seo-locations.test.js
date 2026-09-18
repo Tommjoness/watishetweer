@@ -2,7 +2,7 @@
 
 const assert=require("assert");
 const {LOCATIES,POPULAIR,plaatsUrl,plaatsTitel,plaatsBeschrijving}=require("./seo-locations.config.js");
-const {afstandKm,gerelateerdePlaatsen,voegPlaatsNavigatieToe,voegRouteUrlBeleidToe,voegRouteTitelBeleidToe,maakPlaatsIndex}=require("./generate-seo-location-pages.js");
+const {afstandKm,gerelateerdePlaatsen,routeIntro,voegPlaatsNavigatieToe,voegRouteUrlBeleidToe,voegRouteTitelBeleidToe,maakPlaatsIndex}=require("./generate-seo-location-pages.js");
 
 assert(LOCATIES.length>=30,"SEO-kernset moet minimaal 30 echte Nederlandse plaatsen bevatten");
 assert(LOCATIES.length<=60,"SEO-kernset mag niet ongemerkt uitgroeien tot massale thin-page generatie");
@@ -32,6 +32,20 @@ assert.equal(gerelateerdePlaatsen(LOCATIES[0],99).length,4,"routecontext mag noo
 assert.equal(gerelateerdePlaatsen(LOCATIES[0],0).length,0,"expliciete nul levert geen nabijgelegen links op");
 assert(POPULAIR.length>=8&&POPULAIR.length<=16,"homepage moet een compacte populaire-plaatsenselectie houden");
 assert(POPULAIR.every(x=>LOCATIES.includes(x)&&x.populair),"populaire set moet rechtstreeks uit de kernset komen");
+
+const focusRoutes=LOCATIES.filter(x=>x.seoFocus);
+assert.deepEqual(
+  focusRoutes.map(x=>x.slug).sort(),
+  ["apeldoorn","leeuwarden","tilburg","utrecht"],
+  "gerichte contentpass moet exact de vier huidige GSC-kansroutes raken"
+);
+for(const loc of focusRoutes){
+  assert(typeof loc.seoIntro==="string"&&loc.seoIntro.length>=150&&loc.seoIntro.length<=320,`${loc.slug}: gerichte routecontext mist bruikbare compacte copy`);
+  assert(loc.seoIntro.includes(loc.naam),`${loc.slug}: gerichte routecontext mist plaatsnaam`);
+  assert.equal(routeIntro(loc),loc.seoIntro,`${loc.slug}: generator gebruikt niet de expliciete routecontext`);
+}
+const gewoneRoute=LOCATIES.find(x=>!x.seoFocus);
+assert(gewoneRoute&&routeIntro(gewoneRoute).includes(`actuele weer in ${gewoneRoute.naam}`),"niet-geselecteerde routes moeten de bestaande generieke context behouden");
 
 const plaatsNav=voegPlaatsNavigatieToe("<html><head></head><body></body></html>");
 assert(plaatsNav.includes('<a class="seo-plaatsnav-alles" href="/weer/">Meer plaatsen</a>'),"homepage moet de aanvullende plaatsindex eerlijk als Meer plaatsen labelen");
