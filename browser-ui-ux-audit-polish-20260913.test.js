@@ -44,7 +44,7 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('utility-center-delta',Math.abs(((overRect.left+detailsRect.right)/2)-((footerRect.left+footerRect.right)/2)).toFixed(3));
   zet('utility-hit-height',Math.min(...utilityTargets.map(x=>x.getBoundingClientRect().height)).toFixed(3));
   zet('place-display',cs(plaatsgrid).display);
-  zet('place-columns',cs(plaatsgrid).display==='grid'?(cs(plaatsgrid).gridTemplateColumns||'').split(/\s+/).filter(Boolean).length:0);
+  zet('place-columns',cs(plaatsgrid).display==='grid'?(cs(plaatsgrid).gridTemplateColumns||'').split(/\\s+/).filter(Boolean).length:0);
   zet('css-width',innerWidth);
   zet('place-link-min-height',Math.min(...zichtbarePlaatslinks.map(x=>x.getBoundingClientRect().height)).toFixed(3));
   zet('place-heading-size',parseFloat(cs(plaatskop).fontSize)||0);
