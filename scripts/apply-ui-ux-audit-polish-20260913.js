@@ -49,9 +49,6 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   .footer-contact{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0;line-height:1.35}
   .footer-contact-question,.footer-contact-mail{display:inline-flex;align-items:center;justify-content:center}
   .footer-contact-mail{white-space:nowrap}
-  @media(max-width:600px){
-    .footer-contact-mail{margin-top:-8px}
-  }
 
   /* Populaire plaatsen blijft gewone indexeerbare linknavigatie — geen cards of
      app-pills — maar krijgt mobiel een consistente twee-koloms leesas en zachte
@@ -59,10 +56,10 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   body > .seo-plaatsnav{padding-top:14px!important;padding-bottom:4px!important}
   .seo-plaatsnav-inner{gap:8px!important}
   .seo-plaatsnav-kop{font-size:19px!important;line-height:1.2!important;letter-spacing:-.01em}
-  .seo-plaatsnav-links{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px!important;row-gap:0!important;width:100%}
-  .seo-plaatsnav-links a{display:flex!important;align-items:center;justify-content:flex-start;min-width:0;min-height:44px!important;padding:4px 0;line-height:1.25!important;border-bottom:1px solid var(--rule-soft)!important}
-  .seo-plaatsnav-links a:nth-child(n+7):not(.seo-plaatsnav-alles){display:none!important}
-  .seo-plaatsnav-links .seo-plaatsnav-alles{grid-column:1 / -1;border-bottom-color:transparent!important}
+  html body > .seo-plaatsnav .seo-plaatsnav-links{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;column-gap:16px!important;row-gap:0!important;width:100%!important}
+  html body > .seo-plaatsnav .seo-plaatsnav-links a{display:flex!important;align-items:center;justify-content:flex-start;min-width:0;min-height:44px!important;padding:4px 0;line-height:1.25!important;border-bottom:1px solid var(--rule-soft)!important}
+  html body > .seo-plaatsnav .seo-plaatsnav-links a:nth-child(n+7):not(.seo-plaatsnav-alles){display:none!important}
+  html body > .seo-plaatsnav .seo-plaatsnav-links .seo-plaatsnav-alles{grid-column:1 / -1;border-bottom-color:transparent!important}
   html[data-thema="donker"] body > .seo-plaatsnav{background:var(--sheet)!important}
 
   .mobile-section-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:18px 0 4px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
@@ -79,9 +76,12 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   #nights .nacht-meer{font-size:12px!important}
   .mobile-section-nav a:active,.seo-plaatsnav a:active,footer a:active,footer summary:active{background:var(--paper)}
 }
+@media(max-width:600px){
+  .footer-contact-mail{margin-top:-8px}
+}
 @media(min-width:600px) and (max-width:900px){
-  .seo-plaatsnav-links{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .seo-plaatsnav-links .seo-plaatsnav-alles{grid-column:1 / -1}
+  html body > .seo-plaatsnav .seo-plaatsnav-links{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  html body > .seo-plaatsnav .seo-plaatsnav-links .seo-plaatsnav-alles{grid-column:1 / -1}
 }
 @media(prefers-reduced-motion:no-preference){
   .mobile-section-nav a,.seo-plaatsnav a,footer a,footer summary{transition:color .15s ease,background-color .15s ease,border-color .15s ease}
