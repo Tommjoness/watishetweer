@@ -62,7 +62,7 @@ const scenarios=[
   {label:"/",rel:"index.html",canonical:"https://watishetweer.nl/"},
   ...LOCATIES.map(loc=>({label:`/weer/${loc.slug}/`,rel:path.join("weer",loc.slug,"index.html"),canonical:`https://watishetweer.nl/weer/${loc.slug}/`}))
 ];
-assert.equal(scenarios.length,35,"releasegate verwacht root plus exact 34 plaatsroutes");
+assert.equal(scenarios.length,LOCATIES.length+1,`releasegate verwacht root plus exact ${LOCATIES.length} plaatsroutes`);
 
 let verwachtBundle=null,verwachtBootstrap=null,verwachtBuild=null;
 const verwezenAssets=new Set();
