@@ -44,12 +44,12 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
      44px tapzones, maar benutten de beschikbare breedte zodat actieve providers
      in twee rustige rijen kunnen blijven staan. */
   html body footer:nth-of-type(n){margin-top:6px!important;padding-top:0!important;padding-bottom:0!important;display:grid!important;grid-template-columns:minmax(0,1fr) max-content max-content max-content minmax(0,1fr)!important;justify-content:center!important;align-items:start!important;column-gap:4px!important;row-gap:0!important}
-  footer > span.bron:first-of-type{grid-column:1 / -1!important;grid-row:1!important;justify-self:center!important;width:calc(100% + 34px);max-width:calc(100vw - 16px)}
-  footer .bron-bronnen{display:flex!important;flex-wrap:wrap!important;align-items:stretch!important;justify-content:space-between!important;width:100%;column-gap:12px!important;row-gap:0!important}
-  footer .bron-bronnen .bronlabel{flex:0 0 100%;margin:0!important;text-align:center}
+  footer > span.bron:first-of-type{grid-column:1 / -1!important;grid-row:1!important;justify-self:center!important;width:calc(100% + 42px);max-width:calc(100vw - 8px)}
+  footer .bron-bronnen{display:grid!important;grid-template-columns:minmax(0,.9fr) minmax(0,1.75fr) minmax(0,1fr) minmax(0,.55fr)!important;align-items:stretch!important;width:100%;column-gap:6px!important;row-gap:0!important}
+  footer .bron-bronnen .bronlabel{grid-column:1 / -1;margin:0!important;text-align:center}
   footer .bron-bronnen .bronitem{min-width:0}
-  footer .bron-bronnen .bronitem a{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:44px!important;margin:0!important;padding:0!important}
-  footer > span.bron:nth-of-type(2){grid-column:1 / -1!important;grid-row:2!important;justify-self:center!important;width:calc(100% + 34px);max-width:calc(100vw - 16px);min-height:0!important;margin:0!important;line-height:1.42!important}
+  footer .bron-bronnen .bronitem a{display:flex!important;align-items:center!important;justify-content:center!important;width:100%;min-height:44px!important;margin:0!important;padding:0!important;line-height:1.2!important;text-align:center}
+  footer > span.bron:nth-of-type(2){grid-column:1 / -1!important;grid-row:2!important;justify-self:center!important;width:calc(100% + 42px);max-width:calc(100vw - 8px);min-height:0!important;margin:0!important;line-height:1.35!important}
   footer > span.bron:nth-last-of-type(2){grid-column:2!important;grid-row:3!important;justify-self:center!important}
   footer > span.bron:last-of-type{grid-column:3!important;grid-row:3!important;justify-self:center!important}
   footer > details.footer-details{grid-column:4!important;grid-row:3!important;justify-self:center!important}
@@ -59,7 +59,7 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   footer > span.bron:nth-last-of-type(2) a,
   footer > span.bron:last-of-type a,
   footer > details.footer-details>summary{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0;margin-right:0}
-  .footer-contact{grid-column:1 / -1;justify-self:center;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;width:calc(100% + 34px);max-width:calc(100vw - 16px);column-gap:4px;row-gap:0;margin-top:0!important;line-height:1.3}
+  .footer-contact{grid-column:1 / -1;justify-self:center;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;width:calc(100% + 42px);max-width:calc(100vw - 8px);column-gap:0;row-gap:0;margin-top:0!important;line-height:1.3}
   .footer-contact-question,.footer-contact-mail{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
 
   /* Populaire plaatsen blijft gewone indexeerbare linknavigatie — geen cards of
@@ -103,6 +103,7 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
 }
 @media(max-width:370px){
   html body footer:nth-of-type(n){grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+  footer .bron-bronnen{grid-template-columns:repeat(2,minmax(0,1fr))!important;column-gap:12px!important}
   .footer-contact{flex-wrap:wrap}
   .footer-contact-mail{margin-top:-10px}
   footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important}
