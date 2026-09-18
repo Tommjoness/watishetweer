@@ -81,7 +81,7 @@ assert(css.includes(".cohort-mini"),"Dashboard mist metriekkaarten voor nieuwe-r
 assert(css.includes(".cockpit-grid"),"Dashboardstylesheet mist het perspectivische grid.");
 assert(css.includes(".holo-core"),"Dashboardstylesheet mist de holografische core.");
 assert(css.includes("--tilt-x"),"Dashboardstylesheet mist 3D tilt-variabelen.");
-assert(css.includes("perspective:1200px"),"Dashboardkaarten missen echte perspectiefdiepte.");
+assert(css.includes("transform:perspective(1200px)"),"Dashboardkaarten missen echte perspectiefdiepte.");
 assert(css.includes("@media(prefers-reduced-motion:reduce)"),"Dashboardstylesheet mist reduced-motion fallback.");
 assert(css.includes("body.fx-off"),"Dashboardstylesheet mist handmatige FX-off fallback.");
 assert(css.includes("table-layout:fixed"),"Dashboardtabellen moeten vaste kolomgeometrie gebruiken.");
