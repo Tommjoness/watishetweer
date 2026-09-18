@@ -41,6 +41,25 @@ function uvPiekVandaag(bron,nuOverride){
   }
   return max===null?null:Math.round(max);
 }
+function verwachtThema(bron,nuOverride){
+  /* Productie gebruikt bij geldige lokale zonsdata de exacte sunrise/sunset-
+     grenzen van de gekozen plaats. current.is_day is uitsluitend fallback voor
+     ontbrekende, ongeldige of polaire zonsdata. Bereken dat hier onafhankelijk
+     opnieuw zodat de bronmonitor het productcontract controleert in plaats van
+     een oudere providerflag onvoorwaardelijk af te dwingen. */
+  const fallback=bron?.current?.is_day===0?"donker":"licht";
+  const daily=bron?.daily;
+  const nu=String(nuOverride||bron?.current?.time||"").slice(0,16);
+  const lokaalPatroon=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+  if(!daily||!Array.isArray(daily.time)||!Array.isArray(daily.sunrise)||!Array.isArray(daily.sunset)||!lokaalPatroon.test(nu))return fallback;
+  const dag=nu.slice(0,10),i=daily.time.indexOf(dag);
+  if(i<0)return fallback;
+  const op=typeof daily.sunrise[i]==="string"?daily.sunrise[i].slice(0,16):"";
+  const onder=typeof daily.sunset[i]==="string"?daily.sunset[i].slice(0,16):"";
+  const geldig=t=>lokaalPatroon.test(t)&&t.slice(0,10)===dag;
+  if(!geldig(op)||!geldig(onder)||op>=onder)return fallback;
+  return nu>=op&&nu<onder?"licht":"donker";
+}
 function zonDagIndex(bron){
   const daily=bron?.daily||{},datum=String(bron?.current?.time||"").slice(0,10);
   let i=Array.isArray(daily.time)?daily.time.indexOf(datum):-1;if(i<0)i=0;
@@ -111,7 +130,7 @@ function verifieerBronwaarheid(bron,ui,label,nuOverride){
   gelijk(ui.temperatuur,Math.round(Number(bron.current.temperature_2m)),`${label}: actuele temperatuur wijkt af van bron`);
   gelijk(ui.wind,Math.round(Number(bron.current.wind_speed_10m)),`${label}: actuele wind wijkt af van bron`);
   gelijk(ui.uv,uvPiekVandaag(bron,nuOverride),`${label}: UV-piek wijkt af van bron (current=${bron.current.time}, lokaal=${nuOverride||bron.current.time})`);
-  gelijk(ui.thema,Number(bron.current.is_day)===0?"donker":"licht",`${label}: dag/nachtthema wijkt af van current.is_day`);
+  gelijk(ui.thema,verwachtThema(bron,nuOverride),`${label}: dag/nachtthema wijkt af van lokale zonsgrens`);
 
   const verwacht=verwachtDagRijen(bron,nuOverride);
   assert.equal(verwacht.length,7,`${label}: bron levert geen zeven dagprognoses`);
@@ -135,4 +154,4 @@ function verifieerBronwaarheid(bron,ui,label,nuOverride){
   return {dagen:verwacht.length,zonRijen:zon.rijen.length};
 }
 
-module.exports={BFT,getal,bft,zichtbaarGetal,dagNeerslag,uvPiekVandaag,zonDagIndex,hhmm,datumDagenVerschil,poolDaglichtStatus,zonVerwachting,verwachtDagRijen,verifieerBronwaarheid};
+module.exports={BFT,getal,bft,zichtbaarGetal,dagNeerslag,uvPiekVandaag,verwachtThema,zonDagIndex,hhmm,datumDagenVerschil,poolDaglichtStatus,zonVerwachting,verwachtDagRijen,verifieerBronwaarheid};
