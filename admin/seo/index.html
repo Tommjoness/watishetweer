@@ -11,12 +11,27 @@
   <link rel="stylesheet" href="/admin/seo/cloudflare-dashboard.css">
 </head>
 <body>
+  <div class="cockpit-scene" aria-hidden="true">
+    <div class="cockpit-aurora cockpit-aurora-a"></div>
+    <div class="cockpit-aurora cockpit-aurora-b"></div>
+    <div class="cursor-aura"></div>
+    <div class="cockpit-grid"></div>
+    <div class="scan-beam"></div>
+  </div>
   <main class="shell">
     <header class="topbar">
       <div>
         <p class="eyebrow">watishetweer.nl</p>
         <h1>SEO cockpit</h1>
         <p class="muted">Search Console, Cloudflare Web Analytics en optioneel GA4 in één overzicht.</p>
+      </div>
+      <div class="holo-core" aria-hidden="true">
+        <span class="holo-ring holo-ring-a"></span>
+        <span class="holo-ring holo-ring-b"></span>
+        <span class="holo-ring holo-ring-c"></span>
+        <span class="holo-sphere"></span>
+        <span class="holo-ping"></span>
+        <span class="holo-caption">SEO SIGNAL</span>
       </div>
       <div class="controls">
         <label for="range">Periode</label>
@@ -26,6 +41,7 @@
           <option value="90">90 dagen</option>
         </select>
         <button id="refresh" type="button">Vernieuwen</button>
+        <button id="fx-toggle" class="fx-toggle" type="button" aria-pressed="true">3D FX aan</button>
       </div>
     </header>
 
