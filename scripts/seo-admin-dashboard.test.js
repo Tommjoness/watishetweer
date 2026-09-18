@@ -63,6 +63,9 @@ assert(js.includes("function buildOpportunities"),"Dashboard mist slimme SEO-kan
 assert(js.includes("function renderNewRoutes"),"Dashboard mist renderer voor het nieuwe-routecohort.");
 assert(js.includes('"Wachten op GSC"'),"Dashboard moet pre-launch/lag-data expliciet als nog niet meetbaar tonen.");
 assert(js.includes("uitsluitend data sinds livegang"),"Dashboard moet duidelijk maken dat cohortcijfers post-launch zijn.");
+assert(js.includes("settledDays"),"Dashboard moet het aantal settled post-launch dagen bepalen.");
+assert(js.includes("7-dagencheck")&&js.includes("14-dagencheck"),"Dashboard mist de gecontroleerde SEO-meetcheckpoints.");
+assert(js.includes("gecontroleerd title/meta-experiment"),"Dashboard mag title/meta niet als onmiddellijke globale rewrite behandelen.");
 assert(js.includes('opportunityType:"near"'),"Dashboard mist bijna-pagina-1-kansen.");
 assert(js.includes('opportunityType:"ctr"'),"Dashboard mist CTR-kansen.");
 assert(js.includes('opportunityType:"visibility"'),"Dashboard mist zichtbaarheidkansen.");
