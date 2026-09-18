@@ -42,11 +42,13 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   /* Finale mobiele afsluiting: houd bronnen, hulplinks en contact semantisch
      hetzelfde, maar laat de utilityrij als één rustig ritme lezen. De links
      zelf houden een echte 44px tap-zone; niet alleen hun parent. */
-  html body footer:nth-of-type(n){column-gap:14px!important;row-gap:0!important}
+  html body footer:nth-of-type(n){margin-top:10px!important;padding-top:4px!important;column-gap:12px!important;row-gap:0!important}
+  footer .bron-bronnen{row-gap:0!important}
+  footer .bron-bronnen .bronlabel{margin-bottom:0!important}
   footer > span.bron:nth-last-of-type(2) a,
   footer > span.bron:last-of-type a,
   footer > details.footer-details>summary{display:inline-flex;align-items:center;justify-content:center;min-height:44px}
-  .footer-contact{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0;line-height:1.35}
+  .footer-contact{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:6px;row-gap:0;margin-top:0!important;line-height:1.35}
   .footer-contact-question,.footer-contact-mail{display:inline-flex;align-items:center;justify-content:center}
   .footer-contact-mail{white-space:nowrap}
 
@@ -54,6 +56,7 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
      app-pills — maar krijgt mobiel een consistente twee-koloms leesas en zachte
      scheiders. De bestaande korte selectie (zes + Meer plaatsen) blijft intact. */
   body{padding-bottom:env(safe-area-inset-bottom,0px)!important}
+  body > .sheet{padding-bottom:6px!important}
   body > .seo-plaatsnav{padding-top:14px!important;padding-bottom:0!important}
   .seo-plaatsnav-inner{gap:8px!important}
   .seo-plaatsnav-kop{font-size:19px!important;line-height:1.2!important;letter-spacing:-.01em}
