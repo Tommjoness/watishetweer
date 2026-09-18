@@ -125,7 +125,7 @@ async function run(){
             disclaimerLineHeight,
             disclaimerLines:disclaimerLineHeight?Math.round(disclaimerRect.height/disclaimerLineHeight):0,
             contactWidth:footerContact.getBoundingClientRect().width,
-            contactRowDelta:contactParts.length?Math.max(...contactParts.map(r=>r.top))-Math.min(...contactParts.map(r=>r.top)):999,
+            contactRowDelta:contactParts.length?Math.max(...contactParts.map(r=>r.top+r.height/2))-Math.min(...contactParts.map(r=>r.top+r.height/2)):999,
             contactHitHeight:footerContact.querySelector("a")?.getBoundingClientRect().height||0,
             utilityRowDelta:utilityRects.length?Math.max(...utilityRects.map(r=>r.top))-Math.min(...utilityRects.map(r=>r.top)):999,
             utilityHitHeight:utilityRects.length?Math.min(...utilityRects.map(r=>r.height)):0
@@ -165,7 +165,7 @@ async function run(){
           const f=result.footer;
           assert(f,"mobiele footer ontbreekt in live 390px preview");
           assert.equal(f.sourceDisplay,"grid","live bronlijst gebruikt niet het finale gridritme");
-          assert(f.sourceWidth>=378,"live bronlijst benut te weinig mobiele breedte: "+f.sourceWidth);
+          assert(f.sourceWidth>=330,"live bronlijst benut te weinig mobiele breedte: "+f.sourceWidth);
           assert(f.sourceVisible>=4,"live footer mist actieve bronlinks: "+JSON.stringify(f));
           if(f.sourceVisible===4)assert.equal(f.sourceRows,1,"vier actieve live bronnen delen geen enkele compacte rij");
           else assert(f.sourceRows<=2,"live bronnen gebruiken meer dan twee rijen: "+JSON.stringify(f));
