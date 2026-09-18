@@ -66,7 +66,7 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('disclaimer-line-height',parseFloat(cs(disclaimer).lineHeight)||0);
   zet('disclaimer-line-count',Math.round(disclaimerRect.height/(parseFloat(cs(disclaimer).lineHeight)||1)));
   zet('disclaimer-width',disclaimerRect.width.toFixed(3));
-  zet('contact-row-delta',contactRects.length?(Math.max(...contactRects.map(r=>r.top))-Math.min(...contactRects.map(r=>r.top))).toFixed(3):'999');
+  zet('contact-row-delta',contactRects.length?(Math.max(...contactRects.map(r=>r.top+r.height/2))-Math.min(...contactRects.map(r=>r.top+r.height/2))).toFixed(3):'999');
   zet('source-disclaimer-gap',Math.max(0,disclaimerRect.top-bronnenRect.bottom).toFixed(3));
   zet('utility-contact-gap',Math.max(0,contactRect.top-Math.max(...utilityRects.map(r=>r.bottom))).toFixed(3));
   zet('contact-hit-height',contactMail?contactMail.getBoundingClientRect().height.toFixed(3):'0');
