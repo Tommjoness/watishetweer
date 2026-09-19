@@ -191,10 +191,11 @@ async function controleer(page,naam,breedte){
 
   const basisH=mobiel?250:296;
   assert.equal(r.viewBox.w,mobiel?380:900,`${naam} ${breedte}px: grafiekbreedte blijft canoniek`);
-  /* Checkpoint 50 bewaakt de basisgrafiek. Latere lagen mogen uitsluitend onder
-     die basis extra gereserveerde informatieruimte toevoegen (Q4 regenperioden),
-     maar de grafiek mag nooit krimpen of onbeheerst doorgroeien. */
-  assert.ok(r.viewBox.h>=basisH&&r.viewBox.h<=basisH+100,`${naam} ${breedte}px: grafiekhoogte blijft binnen basis + gereserveerde onderruimte (${r.viewBox.h}px)`);
+  /* Checkpoint 50 bewaakt de basisgrafiek. De expliciete mobiele compact-pass mag
+     de oude 250px-basis gecontroleerd verkleinen om de lege onderruimte weg te
+     nemen; desktop blijft op de oorspronkelijke basis of hoger. */
+  const minH=mobiel?220:basisH,maxH=mobiel?basisH:basisH+100;
+  assert.ok(r.viewBox.h>=minH&&r.viewBox.h<=maxH,`${naam} ${breedte}px: grafiekhoogte blijft binnen het bedoelde ${mobiel?"mobiele compact":"desktop"}-budget (${r.viewBox.h}px)`);
   assert.deepEqual(r.nu,["nu"],`${naam} ${breedte}px: exact één actuele nu-markering zonder dubbele temperatuur`);
   if(mobiel)assert.ok(r.tempLabels>=4,`${naam} ${breedte}px: mobiel houdt meerdere temperatuurreferenties naast het actuele punt (${r.tempLabels})`);
   else assert.ok(r.tempLabels>=6,`${naam} ${breedte}px: desktop houdt voldoende zichtbare temperatuurreferenties`);
