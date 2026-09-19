@@ -31,6 +31,18 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   const nav=document.querySelector('.mobile-section-nav'),links=[...nav.querySelectorAll('a')],row=days.querySelector('[role="button"]'),warning=warnings.firstElementChild,detail=results.querySelector('.zoekresultaat-detail'),add=chips.querySelector('.chip.add'),kop=hour.querySelector('th'),sec=hour.querySelector('.wiw-hour-secondary'),hint=document.querySelector('.hint'),schakelaar=thema.querySelector('#thema-switch'),track=thema.querySelector('.wiw-theme-track'),thumb=thema.querySelector('.wiw-theme-thumb');
   const footer=document.querySelector('footer'),directe=[...footer.querySelectorAll(':scope > span.bron')],bronnen=directe.find(x=>x.querySelector('a[href*="open-meteo.com"]')),over=directe.find(x=>x.querySelector('a[href="/over/"]')),privacy=directe.find(x=>x.querySelector('a[href="/privacy"]')),disclaimer=directe.find(x=>/Weersinformatie is algemeen/.test(x.textContent||'')),details=footer.querySelector(':scope > details.footer-details'),contact=footer.querySelector('.footer-contact'),plaatsnav=document.querySelector('.seo-plaatsnav'),plaatsgrid=plaatsnav&&plaatsnav.querySelector('.seo-plaatsnav-links'),plaatskop=plaatsnav&&plaatsnav.querySelector('.seo-plaatsnav-kop'),sheet=document.querySelector('.sheet');
   if(!bronnen||!over||!privacy||!disclaimer||!details||!contact||!plaatsnav||!plaatsgrid||!plaatskop||!sheet)throw new Error('footerbronnen, hulplinks, contact, disclaimer of plaatsnavigatie ontbreken');
+  /* De fixture verwijdert product-JS expres om alleen de finale cascade te meten.
+     Bouw daarom hier dezelfde semantische bronitems op die structureerBronnen()
+     in de echte runtime maakt; anders meten we niet-bestaande .bronitem-nodes. */
+  if(!bronnen.classList.contains('bron-bronnen')){
+    const bronlinks=[...bronnen.querySelectorAll('a')];
+    if(bronlinks.length<4)throw new Error('te weinig bronlinks voor mobiele footerfixture');
+    bronnen.classList.add('bron-bronnen');
+    bronnen.replaceChildren();
+    const bronlabel=document.createElement('span');bronlabel.className='bronlabel';bronlabel.textContent='Bronnen voor deze weergave';bronnen.appendChild(bronlabel);
+    bronlinks.forEach(a=>{const item=document.createElement('span');item.className='bronitem';item.appendChild(a);bronnen.appendChild(item);});
+    [...bronnen.querySelectorAll('.bronitem')].forEach(item=>{if(/National Weather Service|BigDataCloud|OpenStreetMap/i.test(item.textContent||''))item.hidden=true;});
+  }
   plaatsnav.classList.add('weer-klaar');
   const cs=x=>getComputedStyle(x),pseudo=getComputedStyle(row,'::after'),midden=x=>{const r=x.getBoundingClientRect();return (r.top+r.bottom)/2;};
   const focusDoel=cs(nav).display==='none'?row:links[0];focusDoel.focus();
@@ -39,12 +51,25 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('warning-width',parseFloat(cs(warning).borderLeftWidth)||0);zet('warning-color',cs(warning).borderLeftColor);zet('warning-title-weight',cs(warning.querySelector('h3')).fontWeight);
   zet('detail-display',cs(detail).display);zet('detail-size',parseFloat(cs(detail).fontSize)||0);zet('theme-role',thema.getAttribute('role'));zet('theme-choice',thema.dataset.actieveThemaKeuze||'');zet('theme-auto-pressed',thema.querySelector('#thema-auto')?.getAttribute('aria-pressed')||'');zet('theme-toggle-width',schakelaar.getBoundingClientRect().width);zet('theme-track-width',track.getBoundingClientRect().width);zet('theme-thumb-width',thumb.getBoundingClientRect().width);zet('theme-center-delta',Math.abs(midden(track)-midden(thema)).toFixed(3));
   const footerRect=footer.getBoundingClientRect(),bronnenRect=bronnen.getBoundingClientRect(),overRect=over.getBoundingClientRect(),privacyRect=privacy.getBoundingClientRect(),detailsRect=details.getBoundingClientRect(),disclaimerRect=disclaimer.getBoundingClientRect();
-  const zichtbarePlaatslinks=[...plaatsgrid.querySelectorAll('a')].filter(x=>cs(x).display!=='none'),utilityTargets=[over.querySelector('a'),privacy.querySelector('a'),details.querySelector('summary')].filter(Boolean);
+  const zichtbarePlaatslinks=[...plaatsgrid.querySelectorAll('a')].filter(x=>cs(x).display!=='none'),utilityTargets=[over.querySelector('a'),privacy.querySelector('a'),details.querySelector('summary')].filter(Boolean),sourceTargets=[...bronnen.querySelectorAll('.bronitem:not([hidden]) a')],contactMail=contact.querySelector('a'),contactParts=[contact.querySelector('.footer-contact-question'),contact.querySelector('.footer-contact-mail')].filter(Boolean);
   zet('source-overflow',Math.max(0,footerRect.left-bronnenRect.left,bronnenRect.right-footerRect.right).toFixed(3));zet('footer-display',cs(footer).display);zet('over-text',(over.textContent||'').trim());zet('privacy-text',(privacy.textContent||'').trim());zet('over-top',overRect.top.toFixed(3));zet('privacy-top',privacyRect.top.toFixed(3));zet('details-top',detailsRect.top.toFixed(3));zet('disclaimer-bottom',disclaimerRect.bottom.toFixed(3));
   zet('utility-center-delta',Math.abs(((overRect.left+detailsRect.right)/2)-((footerRect.left+footerRect.right)/2)).toFixed(3));
-  const utilityRects=utilityTargets.map(x=>x.getBoundingClientRect());
+  const utilityRects=utilityTargets.map(x=>x.getBoundingClientRect()),sourceRects=sourceTargets.map(x=>x.getBoundingClientRect()),contactRects=contactParts.map(x=>x.getBoundingClientRect()),contactRect=contact.getBoundingClientRect();
+  const uniekeBronRijen=[...new Set(sourceRects.map(r=>Math.round(r.top)))];
   zet('utility-hit-height',Math.min(...utilityRects.map(r=>r.height)).toFixed(3));
   zet('utility-row-delta',(Math.max(...utilityRects.map(r=>r.top))-Math.min(...utilityRects.map(r=>r.top))).toFixed(3));
+  zet('source-hit-height',(sourceRects.length?Math.min(...sourceRects.map(r=>r.height)):0).toFixed(3));
+  zet('source-visible-count',sourceRects.length);
+  zet('source-row-count',uniekeBronRijen.length);
+  zet('source-layout',cs(bronnen).display);
+  zet('source-width',bronnenRect.width.toFixed(3));
+  zet('disclaimer-line-height',parseFloat(cs(disclaimer).lineHeight)||0);
+  zet('disclaimer-line-count',Math.round(disclaimerRect.height/(parseFloat(cs(disclaimer).lineHeight)||1)));
+  zet('disclaimer-width',disclaimerRect.width.toFixed(3));
+  zet('contact-row-delta',contactRects.length?(Math.max(...contactRects.map(r=>r.top+r.height/2))-Math.min(...contactRects.map(r=>r.top+r.height/2))).toFixed(3):'999');
+  zet('source-disclaimer-gap',Math.max(0,disclaimerRect.top-bronnenRect.bottom).toFixed(3));
+  zet('utility-contact-gap',Math.max(0,contactRect.top-Math.max(...utilityRects.map(r=>r.bottom))).toFixed(3));
+  zet('contact-hit-height',contactMail?contactMail.getBoundingClientRect().height.toFixed(3):'0');
   zet('footer-height',footerRect.height.toFixed(3));
   zet('footer-margin-top',parseFloat(cs(footer).marginTop)||0);
   zet('footer-padding-top',parseFloat(cs(footer).paddingTop)||0);
@@ -62,6 +87,8 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('page-end-gap',Math.max(0,pageBottom-plaatsnav.getBoundingClientRect().bottom-window.scrollY).toFixed(3));
   zet('body-padding-bottom',parseFloat(cs(document.body).paddingBottom)||0);
   zet('place-padding-bottom',parseFloat(cs(plaatsnav).paddingBottom)||0);
+  zet('place-margin-top',parseFloat(cs(plaatsnav).marginTop)||0);
+  zet('place-padding-top',parseFloat(cs(plaatsnav).paddingTop)||0);
   zet('place-bg',cs(plaatsnav).backgroundColor);zet('sheet-bg',cs(document.querySelector('.sheet')).backgroundColor);zet('mode',document.documentElement.dataset.thema||'');
   zet('header-size',parseFloat(cs(kop).fontSize)||0);zet('secondary-size',parseFloat(cs(sec).fontSize)||0);zet('hint-size',parseFloat(cs(hint).fontSize)||0);
   zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
@@ -93,14 +120,24 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(Number(v("header-size"))<10.9||Number(v("secondary-size"))<11.4||Number(v("hint-size"))<12.9)throw new Error("mobiele microcopy blijft te klein op "+breedte+"px");
       if(v("day-arrow")!=="none")throw new Error("desktopchevron lekt naar mobiel op "+breedte+"px");
       const cssWidth=Number(v("css-width"))||breedte;
+      if(v("footer-display")!=="grid")throw new Error("mobiele footer is "+v("footer-display")+" in plaats van één expliciete grid op "+breedte+"px");
       if(Number(v("utility-hit-height"))<43.5)throw new Error("footerhulplink heeft geen 44px tap-zone op "+breedte+"px: "+v("utility-hit-height")+"px");
+      if(Number(v("source-hit-height"))<43.5)throw new Error("bronlink heeft geen 44px tap-zone op "+breedte+"px: "+v("source-hit-height")+"px");
+      if(Number(v("contact-hit-height"))<43.5)throw new Error("contactmail heeft geen 44px tap-zone op "+breedte+"px: "+v("contact-hit-height")+"px");
+      if(v("source-layout")!=="grid")throw new Error("bronlinks gebruiken geen gridritme op "+breedte+"px: "+v("source-layout"));
+      if(Number(v("source-visible-count"))<4)throw new Error("te weinig zichtbare bronlinks in footerfixture op "+breedte+"px: "+v("source-visible-count"));
+      if(cssWidth>=371&&Number(v("source-visible-count"))===4&&Number(v("source-row-count"))!==1)throw new Error("vier actieve bronlinks delen geen enkele compacte rij op "+breedte+"px / CSS "+cssWidth+"px: "+v("source-row-count")+" rijen");
+      if(cssWidth<371&&Number(v("source-row-count"))>2)throw new Error("smalle bronfallback gebruikt meer dan twee rijen op "+breedte+"px: "+v("source-row-count"));
+      if(Number(v("disclaimer-line-height"))>15.1)throw new Error("disclaimer houdt een te ruime regelhoogte op "+breedte+"px: "+v("disclaimer-line-height")+"px");
+      if(cssWidth>=371&&Number(v("contact-row-delta"))>1)throw new Error("contactvraag en mail staan niet op één compacte rij op "+breedte+"px / CSS "+cssWidth+"px: delta "+v("contact-row-delta")+"px");
       if(cssWidth>=390&&cssWidth<=430&&Number(v("utility-row-delta"))>1)throw new Error("footerhulplinks staan op "+breedte+"px / CSS "+cssWidth+"px nog over meerdere rijen: delta "+v("utility-row-delta")+"px");
-      if(cssWidth>=390&&cssWidth<=430)console.log("footer-meting "+modus+" "+breedte+"px / CSS "+cssWidth+"px: hoogte="+v("footer-height")+"px, utility-delta="+v("utility-row-delta")+"px, hitbox="+v("utility-hit-height")+"px");
-      if(Number(v("footer-margin-top"))>10.5)throw new Error("mobiele footer houdt te veel bovenmarge op "+breedte+"px: "+v("footer-margin-top")+"px");
-      if(Number(v("footer-padding-top"))>4.5)throw new Error("mobiele footer houdt te veel bovenpadding op "+breedte+"px: "+v("footer-padding-top")+"px");
+      if(breedte>=390&&breedte<=430)console.log("footer-meting "+modus+" "+breedte+"px / CSS "+cssWidth+"px: hoogte="+v("footer-height")+"px, bronnen="+v("source-visible-count")+" in "+v("source-row-count")+" rij(en), bronhit="+v("source-hit-height")+"px, disclaimer="+v("disclaimer-width")+"px / "+v("disclaimer-line-count")+" regels, contact-delta="+v("contact-row-delta")+"px, utility-delta="+v("utility-row-delta")+"px");
+      if(Number(v("footer-margin-top"))>6.5)throw new Error("mobiele footer houdt te veel bovenmarge op "+breedte+"px: "+v("footer-margin-top")+"px");
+      if(Number(v("footer-padding-top"))>0.5)throw new Error("mobiele footer houdt te veel bovenpadding op "+breedte+"px: "+v("footer-padding-top")+"px");
       if(Number(v("footer-row-gap"))>0.5||Number(v("source-row-gap"))>0.5)throw new Error("mobiele footer/bronnen houden verticale row-gap op "+breedte+"px");
       if(Number(v("contact-margin-top"))>0.5)throw new Error("mobiele contactregel houdt nog extra bovenmarge op "+breedte+"px");
-      if(Number(v("sheet-padding-bottom"))>6.5)throw new Error("mobiele sheet houdt te veel ruimte onder footercontact op "+breedte+"px: "+v("sheet-padding-bottom")+"px");
+      if(Number(v("sheet-padding-bottom"))>4.5)throw new Error("mobiele sheet houdt te veel ruimte onder footercontact op "+breedte+"px: "+v("sheet-padding-bottom")+"px");
+      if(Number(v("place-margin-top"))>8.5||Number(v("place-padding-top"))>8.5)throw new Error("overgang naar populaire plaatsen blijft te ruim op "+breedte+"px: margin "+v("place-margin-top")+"px, padding "+v("place-padding-top")+"px");
       const expectedColumns=cssWidth>=600?3:2;
       if(v("place-display")!=="grid")throw new Error("populaire plaatsen is "+v("place-display")+" in plaats van grid op request "+breedte+"px / CSS "+cssWidth+"px");
       if(Number(v("place-columns"))!==expectedColumns)throw new Error("populaire plaatsen gebruikt "+v("place-columns")+" kolommen op request "+breedte+"px / CSS "+cssWidth+"px, verwacht "+expectedColumns);

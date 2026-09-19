@@ -110,6 +110,26 @@ async function run(){
           const rows=[...document.querySelectorAll("#wiw-hour-table tbody tr")],scroll=document.querySelector("#wiw-hour-scroll"),panel=document.querySelector("#wiw-hour-panel");
           const night=document.querySelector("#nights .row.night:not(.kop)"),nightCells=night?[...night.children].map(e=>e.getBoundingClientRect().toJSON()):[];
           const temp=document.getElementById("t"),tempHead=document.querySelector("#wiw-hour-table thead th:nth-child(3)"),sunDay=document.querySelector("#suntimes .zondag");
+          const footer=document.querySelector("footer"),footerChildren=footer?[...footer.children]:[],footerSources=footer&&footer.querySelector(".bron-bronnen"),footerDisclaimer=footerChildren.find(el=>el.classList&&el.classList.contains("bron")&&/Weersinformatie is algemeen/.test(el.textContent||"")),footerContact=footer&&footer.querySelector(".footer-contact");
+          const visibleSourceLinks=footerSources?[...footerSources.querySelectorAll(".bronitem:not([hidden]) a")].filter(a=>a.getClientRects().length):[],sourceRects=visibleSourceLinks.map(a=>a.getBoundingClientRect()),sourceRows=[...new Set(sourceRects.map(r=>Math.round(r.top)))],contactParts=footerContact?[...footerContact.querySelectorAll(".footer-contact-question,.footer-contact-mail")].map(e=>e.getBoundingClientRect()):[];
+          const utilityTargets=footer?[footer.querySelector('a[href="/over/"]'),footer.querySelector('a[href="/privacy"]'),footer.querySelector("details.footer-details>summary")].filter(Boolean):[],utilityRects=utilityTargets.map(e=>e.getBoundingClientRect());
+          const disclaimerRect=footerDisclaimer&&footerDisclaimer.getBoundingClientRect(),disclaimerLineHeight=footerDisclaimer?parseFloat(getComputedStyle(footerDisclaimer).lineHeight)||0:0;
+          const footerMetrics=footer&&footerSources&&footerDisclaimer&&footerContact?{
+            rect:footer.getBoundingClientRect().toJSON(),
+            sourceDisplay:getComputedStyle(footerSources).display,
+            sourceWidth:footerSources.getBoundingClientRect().width,
+            sourceVisible:visibleSourceLinks.length,
+            sourceRows:sourceRows.length,
+            sourceHitHeight:sourceRects.length?Math.min(...sourceRects.map(r=>r.height)):0,
+            disclaimerWidth:disclaimerRect.width,
+            disclaimerLineHeight,
+            disclaimerLines:disclaimerLineHeight?Math.round(disclaimerRect.height/disclaimerLineHeight):0,
+            contactWidth:footerContact.getBoundingClientRect().width,
+            contactRowDelta:contactParts.length?Math.max(...contactParts.map(r=>r.top+r.height/2))-Math.min(...contactParts.map(r=>r.top+r.height/2)):999,
+            contactHitHeight:footerContact.querySelector("a")?.getBoundingClientRect().height||0,
+            utilityRowDelta:utilityRects.length?Math.max(...utilityRects.map(r=>r.top))-Math.min(...utilityRects.map(r=>r.top)):999,
+            utilityHitHeight:utilityRects.length?Math.min(...utilityRects.map(r=>r.height)):0
+          }:null;
           return {
             ...window.__cwv,
             maxHours:WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN,
@@ -132,6 +152,7 @@ async function run(){
             hourButtons:panel&&[...panel.querySelectorAll("button")].filter(e=>e.getClientRects().length>0).length,
             copy:document.body.innerText,
             overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,
+            footer:footerMetrics,
             sha:document.querySelector('meta[name="weather-build-sha"]')?.content
           };
         });
@@ -140,6 +161,22 @@ async function run(){
         if(expected)assert.equal(result.sha,expected,"CWV-scenario moet op exacte release-SHA draaien");
         assert.deepEqual(errors,[],"Runtime/console: "+route+" "+JSON.stringify(errors));
         assert(result.overflow<=1,"Horizontale overflow: "+JSON.stringify({route,width,overflow:result.overflow}));
+        if(width===390&&route==="/weer/amsterdam/"){
+          const f=result.footer;
+          assert(f,"mobiele footer ontbreekt in live 390px preview");
+          assert.equal(f.sourceDisplay,"grid","live bronlijst gebruikt niet het finale gridritme");
+          assert(f.sourceWidth>=330,"live bronlijst benut te weinig mobiele breedte: "+f.sourceWidth);
+          assert(f.sourceVisible>=4,"live footer mist actieve bronlinks: "+JSON.stringify(f));
+          if(f.sourceVisible===4)assert.equal(f.sourceRows,1,"vier actieve live bronnen delen geen enkele compacte rij");
+          else assert(f.sourceRows<=2,"live bronnen gebruiken meer dan twee rijen: "+JSON.stringify(f));
+          assert(f.sourceHitHeight>=43.5,"live bronlink verliest 44px tapdoel: "+f.sourceHitHeight);
+          assert(f.disclaimerWidth>=378&&f.disclaimerLines<=4&&f.disclaimerLineHeight<=15.1,"live disclaimer blijft onnodig smal/ruim: "+JSON.stringify(f));
+          assert(f.contactWidth>=378&&f.contactRowDelta<=1,"live contactvraag en mail delen geen compacte rij: "+JSON.stringify(f));
+          assert(f.contactHitHeight>=43.5,"live contactmail verliest 44px tapdoel: "+f.contactHitHeight);
+          assert(f.utilityRowDelta<=1&&f.utilityHitHeight>=43.5,"live utilitylinks verliezen rijritme/tapdoel: "+JSON.stringify(f));
+          assert(f.rect.height<=215,"live 390px-footer is nog niet betekenisvol compacter dan de gemeten 253,9px-baseline: "+f.rect.height);
+          console.log("FOOTER_390 "+JSON.stringify({scenario,height:f.rect.height,sourceWidth:f.sourceWidth,sourceVisible:f.sourceVisible,sourceRows:f.sourceRows,disclaimerWidth:f.disclaimerWidth,disclaimerLines:f.disclaimerLines,disclaimerLineHeight:f.disclaimerLineHeight,contactWidth:f.contactWidth,contactRowDelta:f.contactRowDelta,sourceHitHeight:f.sourceHitHeight,contactHitHeight:f.contactHitHeight,utilityHitHeight:f.utilityHitHeight}));
+        }
         assert(result.cls<0.1,"Route-CLS buiten budget: "+JSON.stringify({route,width,scenario,cls:result.cls,shifts:result.shifts}));
         assert(!result.copy.includes("Vandaag: neerslag geldt vanaf nu; minimum en maximum gelden voor de volledige dag."),"verwijderde Vandaag-copy keert terug");
         if(width>=1100){
