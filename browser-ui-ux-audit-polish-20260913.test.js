@@ -22,14 +22,14 @@ function voerUit(breedte,hoogte,modus="licht"){
 window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.setAttribute('data-audit-'+k,String(v));try{
   const app=document.getElementById('app'),chips=document.getElementById('chips'),days=document.getElementById('days'),warnings=document.getElementById('waarschuwingen'),results=document.getElementById('res'),thema=document.getElementById('thema');
   app.style.display='block';app.style.visibility='visible';
-  chips.innerHTML='<div class="chipskop">Bewaarde plaatsen</div><div class="chiprij"><button class="chip add">+ Deze plaats bewaren</button></div>';
+  chips.innerHTML='<div class="chipskop">Bewaarde plaatsen</div><div class="chiprij"><button class="chip on"><span class="chipplaats">Vianen</span></button><button class="chip add">+ Deze plaats bewaren</button></div>';
   days.innerHTML='<div class="row day" role="button" tabindex="0"><div class="dname">ma 14</div><div class="dico"></div><div class="dcond">Half bewolkt</div><div class="dwind">3 Bft</div><div class="dmin">12°</div><div class="bar"></div><div class="dmax">19°</div><div class="drain">20%</div></div>';
   warnings.innerHTML='<div class="waarsch" data-ui-severity="oranje"><h3>Waakzaamheid voor overstromingen</h3><p>Volg de officiële aanwijzingen.</p></div>';
   results.innerHTML='<div role="option"><span class="zoekresultaat-naam">Dubai</span><span class="zoekresultaat-detail">Siddharthnagar, Uttar Pradesh, India</span></div>';results.classList.add('on');
   thema.innerHTML='<button type="button" id="thema-auto" class="wiw-theme-auto" data-thema-keuze="auto" aria-pressed="true">Auto</button><button type="button" id="thema-switch" class="wiw-theme-switch" role="switch" aria-checked="false" aria-label="Automatisch; nu Licht"><span class="wiw-theme-icon wiw-theme-sun" data-thema-handmatig="licht" aria-hidden="true">☀</span><span class="wiw-theme-track" aria-hidden="true"><span class="wiw-theme-thumb"></span></span><span class="wiw-theme-icon wiw-theme-moon" data-thema-handmatig="donker" aria-hidden="true">☾</span></button>';thema.dataset.actieveThemaKeuze='auto';thema.dataset.effectieveThema='licht';
   const hour=document.createElement('table');hour.className='wiw-hour-table';hour.innerHTML='<thead><tr><th>Tijd</th><th>Weer</th><th>Temperatuur</th></tr></thead><tbody><tr><td><time>18:00</time><span class="wiw-hour-date">ma 14</span></td><td>Helder</td><td><span class="wiw-hour-primary">18°</span><span class="wiw-hour-secondary">voelt 17°</span></td></tr></tbody>';app.appendChild(hour);
   const nav=document.querySelector('.mobile-section-nav'),links=[...nav.querySelectorAll('a')],row=days.querySelector('[role="button"]'),warning=warnings.firstElementChild,detail=results.querySelector('.zoekresultaat-detail'),add=chips.querySelector('.chip.add'),kop=hour.querySelector('th'),sec=hour.querySelector('.wiw-hour-secondary'),hint=document.querySelector('.hint'),schakelaar=thema.querySelector('#thema-switch'),track=thema.querySelector('.wiw-theme-track'),thumb=thema.querySelector('.wiw-theme-thumb');
-  const footer=document.querySelector('footer'),directe=[...footer.querySelectorAll(':scope > span.bron')],bronnen=directe.find(x=>x.querySelector('a[href*="open-meteo.com"]')),over=directe.find(x=>x.querySelector('a[href="/over/"]')),privacy=directe.find(x=>x.querySelector('a[href="/privacy"]')),disclaimer=directe.find(x=>/Weersinformatie is algemeen/.test(x.textContent||'')),details=footer.querySelector(':scope > details.footer-details'),contact=footer.querySelector('.footer-contact'),plaatsnav=document.querySelector('.seo-plaatsnav'),plaatsgrid=plaatsnav&&plaatsnav.querySelector('.seo-plaatsnav-links'),plaatskop=plaatsnav&&plaatsnav.querySelector('.seo-plaatsnav-kop'),sheet=document.querySelector('.sheet');
+  const footer=document.querySelector('footer'),directe=[...footer.querySelectorAll(':scope > span.bron')],bronnen=directe.find(x=>x.querySelector('a[href*="open-meteo.com"]')),over=directe.find(x=>x.querySelector('a[href="/over/"]')),privacy=directe.find(x=>x.querySelector('a[href="/privacy"]')),disclaimer=directe.find(x=>/Weersinformatie is algemeen/.test(x.textContent||'')),details=footer.querySelector(':scope > details.footer-details'),contact=footer.querySelector('.footer-contact'),plaatsnav=document.querySelector('.seo-plaatsnav'),plaatsgrid=plaatsnav&&plaatsnav.querySelector('.seo-plaatsnav-links'),plaatskop=plaatsnav&&plaatsnav.querySelector('.seo-plaatsnav-kop'),sheet=document.querySelector('.sheet'),activeChip=chips.querySelector('.chip.on');
   if(!bronnen||!over||!privacy||!disclaimer||!details||!contact||!plaatsnav||!plaatsgrid||!plaatskop||!sheet)throw new Error('footerbronnen, hulplinks, contact, disclaimer of plaatsnavigatie ontbreken');
   /* De fixture verwijdert product-JS expres om alleen de finale cascade te meten.
      Bouw daarom hier dezelfde semantische bronitems op die structureerBronnen()
@@ -43,6 +43,10 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
     bronlinks.forEach(a=>{const item=document.createElement('span');item.className='bronitem';item.appendChild(a);bronnen.appendChild(item);});
     [...bronnen.querySelectorAll('.bronitem')].forEach(item=>{if(/National Weather Service|BigDataCloud|OpenStreetMap/i.test(item.textContent||''))item.hidden=true;});
   }
+  const zichtbareBronitems=[...bronnen.querySelectorAll('.bronitem:not([hidden])')];
+  zichtbareBronitems.forEach(item=>item.classList.remove('wiw-source-last-odd'));
+  if(zichtbareBronitems.length%2===1&&zichtbareBronitems.length)zichtbareBronitems[zichtbareBronitems.length-1].classList.add('wiw-source-last-odd');
+  const metricKop=document.querySelector('.dashrow-hero .stats .eyebrow');if(metricKop)metricKop.textContent='TIJD TOT ZONSONDERGANG';
   plaatsnav.classList.add('weer-klaar');
   const cs=x=>getComputedStyle(x),pseudo=getComputedStyle(row,'::after'),midden=x=>{const r=x.getBoundingClientRect();return (r.top+r.bottom)/2;},tekstMidden=x=>{const range=document.createRange();range.selectNodeContents(x);const r=range.getBoundingClientRect();return (r.left+r.right)/2;};
   const focusDoel=cs(nav).display==='none'?row:links[0];focusDoel.focus();
@@ -51,11 +55,12 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('warning-width',parseFloat(cs(warning).borderLeftWidth)||0);zet('warning-color',cs(warning).borderLeftColor);zet('warning-title-weight',cs(warning.querySelector('h3')).fontWeight);
   zet('detail-display',cs(detail).display);zet('detail-size',parseFloat(cs(detail).fontSize)||0);zet('theme-role',thema.getAttribute('role'));zet('theme-choice',thema.dataset.actieveThemaKeuze||'');zet('theme-auto-pressed',thema.querySelector('#thema-auto')?.getAttribute('aria-pressed')||'');zet('theme-toggle-width',schakelaar.getBoundingClientRect().width);zet('theme-track-width',track.getBoundingClientRect().width);zet('theme-thumb-width',thumb.getBoundingClientRect().width);zet('theme-center-delta',Math.abs(midden(track)-midden(thema)).toFixed(3));
   const footerRect=footer.getBoundingClientRect(),bronnenRect=bronnen.getBoundingClientRect(),overRect=over.getBoundingClientRect(),privacyRect=privacy.getBoundingClientRect(),detailsRect=details.getBoundingClientRect(),disclaimerRect=disclaimer.getBoundingClientRect();
-  const zichtbarePlaatslinks=[...plaatsgrid.querySelectorAll('a')].filter(x=>cs(x).display!=='none'),plaatsMeer=plaatsgrid.querySelector('.seo-plaatsnav-alles'),regulierePlaatslinks=zichtbarePlaatslinks.filter(x=>x!==plaatsMeer).slice(0,6),utilityTargets=[over.querySelector('a'),privacy.querySelector('a'),details.querySelector('summary')].filter(Boolean),sourceTargets=[...bronnen.querySelectorAll('.bronitem:not([hidden]) a')],contactMail=contact.querySelector('a'),contactParts=[contact.querySelector('.footer-contact-question'),contact.querySelector('.footer-contact-mail')].filter(Boolean);
+  const zichtbarePlaatslinks=[...plaatsgrid.querySelectorAll('a')].filter(x=>cs(x).display!=='none'),plaatsMeer=plaatsgrid.querySelector('.seo-plaatsnav-alles'),regulierePlaatslinks=zichtbarePlaatslinks.filter(x=>x!==plaatsMeer).slice(0,6),utilityTargets=[over.querySelector('a'),privacy.querySelector('a'),details.querySelector('summary')].filter(Boolean),sourceItems=[...bronnen.querySelectorAll('.bronitem:not([hidden])')],sourceTargets=sourceItems.map(item=>item.querySelector('a')).filter(Boolean),contactMail=contact.querySelector('a'),contactParts=[contact.querySelector('.footer-contact-question'),contact.querySelector('.footer-contact-mail')].filter(Boolean);
   zet('source-overflow',Math.max(0,footerRect.left-bronnenRect.left,bronnenRect.right-footerRect.right).toFixed(3));zet('footer-display',cs(footer).display);zet('over-text',(over.textContent||'').trim());zet('privacy-text',(privacy.textContent||'').trim());zet('over-top',overRect.top.toFixed(3));zet('privacy-top',privacyRect.top.toFixed(3));zet('details-top',detailsRect.top.toFixed(3));zet('disclaimer-bottom',disclaimerRect.bottom.toFixed(3));
   zet('utility-center-delta',Math.abs(((overRect.left+detailsRect.right)/2)-((footerRect.left+footerRect.right)/2)).toFixed(3));
-  const utilityRects=utilityTargets.map(x=>x.getBoundingClientRect()),sourceRects=sourceTargets.map(x=>x.getBoundingClientRect()),contactRects=contactParts.map(x=>x.getBoundingClientRect()),contactRect=contact.getBoundingClientRect();
-  const uniekeBronRijen=[...new Set(sourceRects.map(r=>Math.round(r.top)))];
+  const utilityRects=utilityTargets.map(x=>x.getBoundingClientRect()),sourceRects=sourceTargets.map(x=>x.getBoundingClientRect()),sourceItemRects=sourceItems.map(x=>x.getBoundingClientRect()),contactRects=contactParts.map(x=>x.getBoundingClientRect()),contactRect=contact.getBoundingClientRect();
+  const uniekeBronRijen=[...new Set(sourceRects.map(r=>Math.round(r.top)))],laatsteBron=sourceItems[sourceItems.length-1]||null,laatsteBronRect=laatsteBron&&laatsteBron.getBoundingClientRect();
+  const accentProbe=document.createElement('i');accentProbe.style.color='var(--accent-active)';document.body.appendChild(accentProbe);const accentColor=cs(accentProbe).color;accentProbe.remove();
   zet('utility-hit-height',Math.min(...utilityRects.map(r=>r.height)).toFixed(3));
   zet('utility-row-delta',(Math.max(...utilityRects.map(r=>r.top))-Math.min(...utilityRects.map(r=>r.top))).toFixed(3));
   zet('source-hit-height',(sourceRects.length?Math.min(...sourceRects.map(r=>r.height)):0).toFixed(3));
@@ -75,7 +80,18 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('footer-padding-top',parseFloat(cs(footer).paddingTop)||0);
   zet('footer-row-gap',parseFloat(cs(footer).rowGap)||0);
   zet('source-row-gap',parseFloat(cs(bronnen).rowGap)||0);
+  zet('source-line-widths',sourceTargets.map(x=>cs(x).borderBottomWidth).join(','));
+  zet('source-line-colors',sourceTargets.map(x=>cs(x).borderBottomColor).join('|'));
+  zet('source-odd-last',laatsteBron&&laatsteBron.classList.contains('wiw-source-last-odd')?'ja':'nee');
+  zet('source-last-center-delta',laatsteBronRect?Math.abs(((laatsteBronRect.left+laatsteBronRect.right)/2)-((bronnenRect.left+bronnenRect.right)/2)).toFixed(3):'999');
+  zet('source-last-text',laatsteBron?(laatsteBron.textContent||'').trim():'');
   zet('contact-margin-top',parseFloat(cs(contact).marginTop)||0);
+  zet('active-chip-border',activeChip?cs(activeChip).borderColor:'');
+  zet('active-chip-shadow',activeChip?cs(activeChip).boxShadow:'');
+  zet('accent-color',accentColor);
+  zet('metric-line-height',metricKop?parseFloat(cs(metricKop).lineHeight)||0:0);
+  zet('metric-font-size',metricKop?parseFloat(cs(metricKop).fontSize)||0:0);
+  zet('metric-min-height',metricKop?parseFloat(cs(metricKop).minHeight)||0:0);
   zet('sheet-padding-bottom',parseFloat(cs(sheet).paddingBottom)||0);
   zet('place-display',cs(plaatsgrid).display);
   zet('place-columns',cs(plaatsgrid).display==='grid'?(cs(plaatsgrid).gridTemplateColumns||'').split(/\\s+/).filter(Boolean).length:0);
@@ -147,7 +163,16 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(Number(v("footer-margin-top"))>6.5)throw new Error("mobiele footer houdt te veel bovenmarge op "+breedte+"px: "+v("footer-margin-top")+"px");
       if(Number(v("footer-padding-top"))>0.5)throw new Error("mobiele footer houdt te veel bovenpadding op "+breedte+"px: "+v("footer-padding-top")+"px");
       if(Number(v("footer-row-gap"))>0.5||Number(v("source-row-gap"))>4.5)throw new Error("mobiele footer/bronnen overschrijden het afgesproken verticale ritme op "+breedte+"px");
-      if(Number(v("contact-margin-top"))>0.5)throw new Error("mobiele contactregel houdt nog extra bovenmarge op "+breedte+"px");
+      if(Number(v("contact-margin-top"))<7.5||Number(v("contact-margin-top"))>8.5)throw new Error("mobiele contactregel mist het bedoelde 8px ademritme op "+breedte+"px: "+v("contact-margin-top")+"px");
+      if(Number(v("utility-contact-gap"))<7)throw new Error("supportregel staat te dicht op de utilitylinks op "+breedte+"px: "+v("utility-contact-gap")+"px");
+      if(Number(v("source-disclaimer-gap"))<3)throw new Error("disclaimer landt te dicht op de bronnen op "+breedte+"px: "+v("source-disclaimer-gap")+"px");
+      const lineWidths=String(v("source-line-widths")||"").split(",").filter(Boolean),lineColors=String(v("source-line-colors")||"").split("|").filter(Boolean);
+      if(!lineWidths.length||lineWidths.some(x=>Math.abs(parseFloat(x)-1)>.1)||new Set(lineColors).size!==1)throw new Error("bronscheidingslijnen zijn niet uniform op "+breedte+"px: "+v("source-line-widths")+" / "+v("source-line-colors"));
+      if(sourceCount%2===1){
+        if(v("source-odd-last")!=="ja"||Number(v("source-last-center-delta"))>1)throw new Error("oneven laatste bron spant/centreert niet over beide kolommen op "+breedte+"px");
+        if(/^[·/]/.test(String(v("source-last-text")||"").trim()))throw new Error("laatste bron bevat nog een middot/slash-rest op "+breedte+"px: "+v("source-last-text"));
+      }
+      if(v("active-chip-border")===v("accent-color")||v("active-chip-shadow")==="none")throw new Error("actieve bewaarde plaats oogt mobiel nog als rode warning of mist selectie-indicatie op "+breedte+"px");
       if(Number(v("sheet-padding-bottom"))>4.5)throw new Error("mobiele sheet houdt te veel ruimte onder footercontact op "+breedte+"px: "+v("sheet-padding-bottom")+"px");
       if(Number(v("place-margin-top"))>8.5||Number(v("place-padding-top"))>8.5)throw new Error("overgang naar populaire plaatsen blijft te ruim op "+breedte+"px: margin "+v("place-margin-top")+"px, padding "+v("place-padding-top")+"px");
       const expectedColumns=cssWidth>=600?3:2;
@@ -165,6 +190,7 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(modus==="donker"&&(v("mode")!=="donker"||v("place-bg")==="rgb(255, 255, 255)"||v("sheet-bg")==="rgb(255, 255, 255)"))throw new Error("donkere mobiele afsluiting valt terug naar witte achtergrond op "+breedte+"px");
     }else{
       if(v("nav-display")!=="none")throw new Error("mobiele sectienavigatie lekt naar desktop");
+      if(v("active-chip-border")!==v("accent-color"))throw new Error("desktop actieve chip is onbedoeld door de mobiele neutralisatie gewijzigd");
       if(v("footer-display")!=="grid")throw new Error("late finale runtime zet desktopfooter terug naar "+v("footer-display"));
       if(Number(v("source-overflow"))>1)throw new Error("bronnenregel steekt buiten de desktopfooter op "+breedte+"px: "+v("source-overflow")+"px");
       if(!/[›]/.test(v("day-arrow")||""))throw new Error("weekrij mist desktopchevron: "+v("day-arrow"));

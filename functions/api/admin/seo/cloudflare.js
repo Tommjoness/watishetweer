@@ -1,6 +1,7 @@
 const GRAPHQL_URL="https://api.cloudflare.com/client/v4/graphql";
 const DOMAIN="watishetweer.nl";
 const WINDOWS=[1,7,30];
+const DASHBOARD_WINDOWS=new Map([["24h",1],["7",7],["14",14],["28",28],["56",56],["90",90]]);
 const JWKS_TTL_MS=60*60*1000;
 const PAGES_ACCESS_AUD="ea551fbedaa6efc3ad82569d11df8f0880dc3e54406af51d648aad5ccbb38cec";
 
@@ -188,7 +189,12 @@ async function loadWindow(accountId,token,days,now){
   };
 }
 
-async function loadCloudflare(env){
+function requestedWindows(value){
+  const raw=String(value||"").trim().toLowerCase();
+  return DASHBOARD_WINDOWS.has(raw)?[DASHBOARD_WINDOWS.get(raw)]:WINDOWS;
+}
+
+async function loadCloudflare(env,windows=WINDOWS){
   const accountId=validAccountId(env.CLOUDFLARE_ACCOUNT_ID);
   const token=String(env.CLOUDFLARE_ANALYTICS_API_TOKEN||"").trim();
   if(!accountId||!token){
@@ -196,14 +202,14 @@ async function loadCloudflare(env){
   }
   const now=new Date();
   try{
-    const windows=await Promise.all(WINDOWS.map(days=>loadWindow(accountId,token,days,now)));
+    const loadedWindows=await Promise.all(windows.map(days=>loadWindow(accountId,token,days,now)));
     return {
       configured:true,
       source:"Cloudflare Web Analytics RUM",
       host:DOMAIN,
       botFilter:"bot: 0",
       generatedAt:now.toISOString(),
-      windows
+      windows:loadedWindows
     };
   }catch(error){
     return {configured:true,error:error instanceof Error?error.message:"Cloudflare Analytics kon niet worden geladen."};
@@ -213,7 +219,8 @@ async function loadCloudflare(env){
 export async function onRequestGet(context){
   const access=await verifyAccess(context);
   if(!access.ok)return json({error:access.code,message:access.message},access.status);
-  return json(await loadCloudflare(context.env||{}));
+  const requestUrl=new URL(context.request.url);
+  return json(await loadCloudflare(context.env||{},requestedWindows(requestUrl.searchParams.get("scope"))));
 }
 
 export async function onRequest(context){

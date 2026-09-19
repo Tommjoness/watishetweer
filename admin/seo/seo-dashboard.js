@@ -219,6 +219,12 @@ function renderNewRoutes(cohort){
 }
 
 function renderGa4(ga4){
+  if(ga4&&ga4.scopeUnsupported){
+    els.ga4Badge.textContent="Niet voor 24 uur";
+    els.ga4Badge.className="badge";
+    els.ga4Content.textContent=ga4.reason||"GA4 wordt in de 24-uursweergave niet als rolling periode weergegeven.";
+    return;
+  }
   if(!ga4||!ga4.configured){
     els.ga4Badge.textContent="Nog niet gekoppeld";
     els.ga4Badge.className="badge warn";
@@ -263,9 +269,19 @@ function render(data){
   renderGa4(data.ga4);
 
   const generated=new Date(data.generatedAt);
-  els.generated.textContent=`Bijgewerkt ${generated.toLocaleString("nl-NL")} · GSC t/m ${data.range.current.endDate} · 3 dagen vertraging voor stabiele data`;
-  els.status.className="status";
-  els.status.textContent=`${sc.siteUrl} · ${data.range.current.startDate} t/m ${data.range.current.endDate}`;
+  const hourly=data.range&&data.range.mode==="hourly";
+  if(hourly){
+    const start=new Date(data.range.current.startDateTime);
+    const end=new Date(data.range.current.endDateTime);
+    const format=value=>value.toLocaleString("nl-NL",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+    els.generated.textContent=`Bijgewerkt ${generated.toLocaleString("nl-NL")} · GSC laatste 24 voltooide uren`;
+    els.status.className="status";
+    els.status.textContent=`${sc.siteUrl} · ${format(start)} t/m ${format(end)} · uurlijkse GSC-data · onvoltooide uren uitgesloten`;
+  }else{
+    els.generated.textContent=`Bijgewerkt ${generated.toLocaleString("nl-NL")} · GSC t/m ${data.range.current.endDate} · 3 dagen vertraging voor stabiele data`;
+    els.status.className="status";
+    els.status.textContent=`${sc.siteUrl} · ${data.range.current.startDate} t/m ${data.range.current.endDate}`;
+  }
 }
 
 async function load(){
@@ -273,8 +289,8 @@ async function load(){
   els.status.className="status";
   els.status.textContent="Data laden…";
   try{
-    const days=encodeURIComponent(els.range.value);
-    const response=await fetch(`/api/admin/seo?days=${days}`,{headers:{Accept:"application/json"},cache:"no-store"});
+    const scope=encodeURIComponent(els.range.value);
+    const response=await fetch(`/api/admin/seo?scope=${scope}`,{headers:{Accept:"application/json"},cache:"no-store"});
     const payload=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(payload.message||`SEO-data kon niet worden geladen (${response.status}).`);
     render(payload);

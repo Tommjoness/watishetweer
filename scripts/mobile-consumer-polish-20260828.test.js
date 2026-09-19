@@ -12,7 +12,7 @@ assert(/@media\(max-width:430px\)[\s\S]*?#t\{font-size:78px\}/.test(css),"mobiel
 assert(/#chart \[data-q4-rain-period-range\],[\s\S]*?opacity:\.76;[\s\S]*?font-size:9\.5px!important/.test(css),"regenperioden blijven zichtbaar maar krijgen een rustiger labelgewicht");
 assert(/#chart g\[data-q4-rain-periods\] line\{opacity:\.72\}/.test(css),"regenbrackets blijven zichtbaar met lagere visuele nadruk");
 assert(/#nights \.row\.night:not\(\.kop\)\{[\s\S]*?padding-top:10px!important;[\s\S]*?padding-bottom:10px!important;[\s\S]*?row-gap:3px!important/.test(css),"Nachtzicht is mobiel compacter zonder rijen of data te verwijderen");
-assert(/\.dashrow-hero \.stats \.eyebrow\{font-size:9\.5px;letter-spacing:\.10em;line-height:1\.3\}/.test(css),"metrieklabels zijn compacter en wrappen minder snel");
+assert(/\.stats \.eyebrow\{font-size:9\.5px;letter-spacing:\.075em;line-height:1\.15\}/.test(css),"metrieklabels houden hun compacte regelhoogte ook nadat de finale runtime het statistiekgrid uit dashrow-hero heeft verplaatst");
 assert(css.includes('.seo-plaatsnav-links a:nth-child(n+7):not(.seo-plaatsnav-alles){display:none}'),"mobiele hoofdweergave toont een korte plaatsselectie terwijl Meer plaatsen zichtbaar blijft");
 assert(css.includes(".seo-plaatsnav p{display:none}"),"SEO-uitleg neemt op de mobiele hoofdweergave geen extra schermhoogte in");
 assert(css.includes('footer .bron-bronnen .bronitem[hidden]{display:none!important}'),"dynamische bronprovenance wordt op mobiel en desktop echt verborgen");
@@ -52,4 +52,21 @@ assert.equal(ux.rechthoekenBotsen({x:10,y:10,width:20,height:10},{x:28,y:12,widt
 assert.equal(ux.rechthoekenBotsen({x:10,y:10,width:20,height:10},{x:40,y:12,width:15,height:10},3),false,"gescheiden labels blijven ongemoeid");
 assert(js.includes('data-now-collision-adjusted'),"Nu-label krijgt alleen bij echte overlap een expliciete correctiemarker");
 
-console.log("Finale consumentenpolish 20260828: mobiel, desktop, bronprovenance, Nu-collision en wrapperarchitectuur geborgd.");
+const temp=[18,18,19,20,21,22,22,21,20,19,18,18,17,16,16,17,18,19,20,21,22,22,21,20];
+const kandidaten=[0,3,6,9,12,15,18,21,23];
+const gekozen=ux.kiesMobieleTemperatuurLabelIndices(temp,kandidaten,5);
+assert(gekozen.length<=5,"mobiele 24-uursgrafiek toont maximaal vijf vaste temperatuurankers");
+assert(gekozen.includes(13)===false,"alleen werkelijk bestaande labelkandidaten mogen gekozen worden");
+assert(gekozen.includes(12),"zichtbaar minimum blijft als betekenisvol label behouden");
+assert(gekozen.includes(3)||gekozen.includes(6)||gekozen.includes(18)||gekozen.includes(21),"zichtbaar maximum blijft als betekenisvol label behouden");
+assert.deepEqual(ux.kiesMobieleTemperatuurLabelIndices([null,18,19],[0,1,2],5),[1,2],"null wordt niet als kunstmatige 0 °C-extreme behandeld");
+assert.equal(ux.mobieleGrafiekCompactHoogte(220,340,246),256,"mobiele SVG-reserve wordt tot zichtbare inhoud plus veilige ondermarge teruggebracht");
+assert.equal(ux.mobieleGrafiekCompactHoogte(220,250,246),250,"een al compactere grafiek wordt nooit opnieuw vergroot");
+assert.equal(ux.mobieleGrafiekCompactHoogte(220,296,286),296,"zichtbare regenperiode-labels behouden hun benodigde mobiele SVG-reserve");
+assert(js.includes('if(el.closest("#scrub"))return;')&&!js.includes("el.closest('g[data-q4-rain-periods]')||el.closest(\"#scrub\")"),"mobiele compactie telt regenperiode-tijden en -bedragen mee in de zichtbare onderrand");
+assert(js.includes("if(svg.querySelector(\'g[data-q4-rain-periods] text\'))zichtbaarOnder=Math.max(zichtbaarOnder,286);"),"natte mobiele grafiek bewaart exact de canonieke 296px-reserve voor bracketlabels");
+assert(js.includes('data-mobile-temp-index')&&js.includes('rechthoekenBotsen(k.box,box,4)'),"mobiele temperatuurselectie heeft een echte geometrische collision-pass");
+assert(js.includes('data-mobile-compact-height'),"mobiele grafiekhoogte krijgt een expliciete post-render compactiemarker");
+assert(js.includes('WeatherNowMobileScreenshotPolish.structureerBronnen')&&js.includes('wiw-source-last-odd'),"dynamische bronnen worden na providerupdates genormaliseerd en oneven gecentreerd");
+
+console.log("Finale consumentenpolish 20260828: mobiel, desktop, bronprovenance, temperatuurcollision/compactie, Nu-collision en wrapperarchitectuur geborgd.");

@@ -333,7 +333,7 @@ const api={
   maanFaseUitBeschrijving,maanFaseSvgV2,pollenEenheid,pollenKop,nachtOordeelGetoond,
   nachtBalkPercentageGetoond,nachtHorizonIndex,nachtLabelVarianten,nachtAdviesMetHorizon,nachtzichtCompactAantal,
   corrigeerNachtVensterBron,dagdeelVanUur,datumVerschuif,normaliseerNachtDagdata,
-  nachtIsActiefNu,formatteerMaanTekst,nachtMetaDelen,nachtVensterTekst
+  nachtIsActiefNu,formatteerMaanTekst,nachtMetaDelen,nachtVensterTekst,structureerBronnen
 };
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileScreenshotPolish=api;

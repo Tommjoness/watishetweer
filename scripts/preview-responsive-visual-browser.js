@@ -75,6 +75,20 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert(response&&response.ok(),`${vp.naam}: homepage HTTP ${response&&response.status()}`);
       await page.waitForSelector("#app",{state:"visible",timeout:10000});
       await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length===7,null,{timeout:10000});
+      if(vp.width<=430){
+        /* Reproduceer de live regressie waarin KNMI als late " · KNMI"-tekst
+           naast de reeds gestructureerde bronnen belandt. De echte runtime-owner
+           moet dit weer naar één bronitem normaliseren en, bij oneven aantallen,
+           de laatste bron over beide kolommen centreren. */
+        await page.evaluate(()=>{
+          const bron=document.querySelector("footer .bron-bronnen");
+          if(bron&&!/[\s>]KNMI(?:[\s<]|$)/i.test(bron.innerHTML))bron.appendChild(document.createTextNode(" · KNMI"));
+          if(globalThis.WeatherNowMobileScreenshotPolish?.structureerBronnen)globalThis.WeatherNowMobileScreenshotPolish.structureerBronnen();
+          if(typeof meters==="function")meters();
+        });
+        const add=page.locator("#chipadd");if(await add.count()&&await add.isVisible())await add.click();
+        await page.waitForTimeout(500);
+      }
 
       const basis=await page.evaluate(()=>{
         const plaats=(()=>{
@@ -101,8 +115,29 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
             background:cs(nav).backgroundColor
           };
         })();
+        const mobilePolish=innerWidth<=430?(()=>{
+          const svg=document.getElementById("chart"),g=typeof S!=="undefined"&&S.geo,summary=document.getElementById("final-rain-summary");
+          const tempLabels=svg?[...svg.querySelectorAll('text[data-mobile-temp-index]')].filter(el=>!el.closest("#scrub")):[],tempBoxes=tempLabels.map(el=>el.getBoundingClientRect()),tempOverlap=[];
+          for(let i=0;i<tempBoxes.length;i++)for(let j=i+1;j<tempBoxes.length;j++){const a=tempBoxes[i],b=tempBoxes[j];if(a.left<b.right+1&&a.right+1>b.left&&a.top<b.bottom&&a.bottom>b.top)tempOverlap.push(i+"-"+j);}
+          const bron=document.querySelector("footer .bron-bronnen"),items=bron?[...bron.querySelectorAll(".bronitem:not([hidden])")]:[],last=items[items.length-1]||null,br=bron&&bron.getBoundingClientRect(),lr=last&&last.getBoundingClientRect();
+          const lines=items.map(el=>{const st=getComputedStyle(el.querySelector("a")||el);return {w:st.borderBottomWidth,c:st.borderBottomColor};});
+          const footer=document.querySelector("footer"),direct=[...footer.querySelectorAll(":scope > span.bron")],disclaimer=direct.find(el=>/Weersinformatie is algemeen/.test(el.textContent||"")),contact=footer.querySelector(".footer-contact"),utilities=[direct.find(el=>el.querySelector('a[href="/over/"]')),direct.find(el=>el.querySelector('a[href="/privacy"]')),footer.querySelector(":scope > details.footer-details")].filter(Boolean);
+          const utilityBottom=utilities.length?Math.max(...utilities.map(el=>el.getBoundingClientRect().bottom)):0;
+          const chip=document.querySelector(".chip.on"),probe=document.createElement("i");probe.style.color="var(--accent-active)";document.body.appendChild(probe);const accent=getComputedStyle(probe).color;probe.remove();
+          const metric=["gust","pop"].map(id=>document.getElementById(id)?.closest(".stat")?.querySelector(".eyebrow")).filter(Boolean).map(el=>{const st=getComputedStyle(el),rect=el.getBoundingClientRect();return {text:(el.textContent||"").trim(),lineHeight:parseFloat(st.lineHeight)||0,fontSize:parseFloat(st.fontSize)||0,minHeight:parseFloat(st.minHeight)||0,width:rect.width,scrollWidth:el.scrollWidth};});
+          const sr=svg&&svg.getBoundingClientRect(),rr=summary&&!summary.hidden&&summary.getBoundingClientRect();
+          return {
+            tempCount:tempLabels.length,tempOverlap:tempOverlap.length,compact:svg?.getAttribute("data-mobile-compact-height")||"",
+            chartSummaryGap:sr&&rr?rr.top-sr.bottom:null,viewBox:svg?.getAttribute("viewBox")||"",plotBottom:g?Number(g.pt)+Number(g.ih):null,
+            sourceCount:items.length,lastOdd:!!last&&last.classList.contains("wiw-source-last-odd"),lastText:last?(last.textContent||"").trim():"",
+            lastCenterDelta:br&&lr?Math.abs((lr.left+lr.right-br.left-br.right)/2):999,lineWidths:lines.map(x=>x.w),lineColors:lines.map(x=>x.c),
+            sourceDisclaimerGap:br&&disclaimer?disclaimer.getBoundingClientRect().top-br.bottom:0,utilityContactGap:contact?contact.getBoundingClientRect().top-utilityBottom:0,
+            chipBorder:chip?getComputedStyle(chip).borderColor:"",chipShadow:chip?getComputedStyle(chip).boxShadow:"",accent,
+            metric
+          };
+        })():null;
         return {
-          plaats,
+          plaats,mobilePolish,
           sha:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
           overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,
           pressureRetired:!document.getElementById("pres")&&!document.getElementById("pressub")&&!document.getElementById("wiw-pressure-diagnostic")&&!/\bLuchtdruk\b/i.test(document.body.innerText||""),
@@ -137,6 +172,30 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert(p.moreCenterDelta<=1,`${vp.naam}: Meer plaatsen staat ${p.moreCenterDelta}px uit het midden`);
         assert(p.headingCenterDelta<=1.5,`${vp.naam}: sectietitel verspringt ${p.headingCenterDelta}px uit het midden`);
         assert(p.overflow<=1,`${vp.naam}: populaire plaatsen veroorzaakt ${p.overflow}px overflow`);
+        const m=basis.mobilePolish;
+        assert(m,`${vp.naam}: mobile-polishmeting ontbreekt`);
+        assert(m.tempCount<=(vp.width<=360?4:5),`${vp.naam}: te veel vaste temperatuurlabels (${m.tempCount})`);
+        assert.equal(m.tempOverlap,0,`${vp.naam}: temperatuurlabels overlappen geometrisch`);
+        assert.equal(m.compact,"1",`${vp.naam}: grafiekhoogte is niet mobiel gecompacteerd`);
+        if(m.chartSummaryGap!==null)assert(m.chartSummaryGap>=0&&m.chartSummaryGap<=18,`${vp.naam}: grafiek-samenvatting heeft ${m.chartSummaryGap}px tussenruimte`);
+        assert(m.sourceCount>=3,`${vp.naam}: te weinig zichtbare bronitems (${m.sourceCount})`);
+        assert(m.lineWidths.every(x=>Math.abs(parseFloat(x)-1)<=.1),`${vp.naam}: bronlijnen zijn niet overal 1px (${m.lineWidths.join("/")})`);
+        assert.equal(new Set(m.lineColors).size,1,`${vp.naam}: bronlijnen gebruiken verschillende kleuren (${m.lineColors.join(" / ")})`);
+        if(m.sourceCount%2===1){
+          assert.equal(m.lastOdd,true,`${vp.naam}: laatste oneven bron spant niet over beide kolommen`);
+          assert(m.lastCenterDelta<=1.5,`${vp.naam}: laatste oneven bron staat ${m.lastCenterDelta}px uit het midden`);
+        }
+        assert(!/^[·/]/.test(m.lastText),`${vp.naam}: losse middot/slash staat nog vóór laatste bron: ${m.lastText}`);
+        assert(m.sourceDisclaimerGap>=3,`${vp.naam}: disclaimer staat te dicht op bronnen (${m.sourceDisclaimerGap}px)`);
+        assert(m.utilityContactGap>=7,`${vp.naam}: supportregel staat te dicht op utilitylinks (${m.utilityContactGap}px)`);
+        assert(m.chipBorder&&m.chipBorder!==m.accent,`${vp.naam}: actieve opgeslagen plaats gebruikt nog warning-accent`);
+        assert(m.chipShadow&&m.chipShadow!=="none",`${vp.naam}: actieve opgeslagen plaats is niet meer herkenbaar als selectie`);
+        assert(m.metric.length>=2,`${vp.naam}: lange metrieklabels ontbreken in fixture`);
+        for(const metric of m.metric){
+          assert(metric.lineHeight<=metric.fontSize*1.25,`${vp.naam}: metrieklabel '${metric.text}' heeft te ruime regelhoogte`);
+          assert(metric.minHeight>=metric.lineHeight*1.9,`${vp.naam}: metrieklabel '${metric.text}' heeft geen stabiele tweeregelige kopruimte`);
+          assert(metric.scrollWidth<=metric.width+1,`${vp.naam}: metrieklabel '${metric.text}' veroorzaakt interne overflow`);
+        }
       }
 
       const themaVoor=await page.evaluate(()=>{
@@ -244,6 +303,13 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert.equal(donkerPlaats.textAlign,"center",`${vp.naam}: plaatsnamen verliezen text-align in dark mode`);
         assert.equal(donkerPlaats.moreJustify,"center",`${vp.naam}: Meer plaatsen verliest centrering in dark mode`);
         assert.equal(donkerPlaats.moreTextAlign,"center",`${vp.naam}: Meer plaatsen verliest text-align in dark mode`);
+        const donkerPolish=await page.evaluate(()=>{
+          const bron=document.querySelector("footer .bron-bronnen"),items=bron?[...bron.querySelectorAll(".bronitem:not([hidden])")]:[],chip=document.querySelector(".chip.on");
+          return {lineColors:items.map(el=>getComputedStyle(el.querySelector("a")||el).borderBottomColor),chipBorder:chip?getComputedStyle(chip).borderColor:"",overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth};
+        });
+        assert.equal(new Set(donkerPolish.lineColors).size,1,`${vp.naam}: bronlijnen worden inconsistent in dark mode`);
+        assert(donkerPolish.chipBorder,`${vp.naam}: actieve opgeslagen plaats verliest dark-mode selectie`);
+        assert(donkerPolish.overflow<=1,`${vp.naam}: dark mode introduceert horizontale overflow (${donkerPolish.overflow}px)`);
       }
 
       /* Navigatie in dezelfde tab houdt sessionStorage bewust vast. Daarmee
@@ -327,7 +393,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert.deepEqual(pageErrors,[],`${vp.naam}: pageerrors ${pageErrors.join(" | ")}`);
       await context.close();
     }
-    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 9 echte viewports, inclusief 320/360/375/390/430px met geometrisch gecontroleerde populaire-plaatsennavigatie, dark mode en tijdelijke screenshots.`);
+    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 9 echte viewports, inclusief 320/360/375/390/430px met collision-vrije compacte grafiek, bron/footerpolish, neutrale actieve plaats, metriekritme, dark mode en tijdelijke screenshots.`);
   }finally{
     fs.rmSync(tmp,{recursive:true,force:true});
     await browser.close();

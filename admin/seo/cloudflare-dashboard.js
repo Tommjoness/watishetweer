@@ -3,7 +3,8 @@
 const cfEls={
   badge:document.getElementById("cloudflare-badge"),
   content:document.getElementById("cloudflare-content"),
-  refresh:document.getElementById("refresh")
+  refresh:document.getElementById("refresh"),
+  range:document.getElementById("range")
 };
 
 const cfNumber=new Intl.NumberFormat("nl-NL");
@@ -81,7 +82,8 @@ async function loadCloudflare(){
   cfEls.badge.textContent="Laden…";
   cfEls.badge.className="badge";
   try{
-    const response=await fetch("/api/admin/seo/cloudflare",{headers:{Accept:"application/json"},cache:"no-store"});
+    const scope=encodeURIComponent(cfEls.range&&cfEls.range.value||"28");
+    const response=await fetch(`/api/admin/seo/cloudflare?scope=${scope}`,{headers:{Accept:"application/json"},cache:"no-store"});
     const payload=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(payload.message||`Cloudflare-data kon niet worden geladen (${response.status}).`);
     renderCloudflare(payload);
@@ -93,4 +95,5 @@ async function loadCloudflare(){
 }
 
 if(cfEls.refresh)cfEls.refresh.addEventListener("click",loadCloudflare);
+if(cfEls.range)cfEls.range.addEventListener("change",loadCloudflare);
 loadCloudflare();

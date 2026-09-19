@@ -152,7 +152,7 @@ async function controleer(page,naam,breedte){
         source:moonlab&&moonlab.getAttribute("data-maan-fase")!==null?Number(moonlab.getAttribute("data-maan-fase")):null,
         rendered:moonlabSvg&&moonlabSvg.getAttribute("data-fase")!==null?Number(moonlabSvg.getAttribute("data-fase")):null
       },
-      viewBox:{w:vb.width,h:vb.height},bots,nu:nu.map(x=>x.tekst),tempLabels:gewone.length,tempBuiten,
+      viewBox:{w:vb.width,h:vb.height},regenPeriodeLabels:chart.querySelectorAll('g[data-q4-rain-periods] text').length,bots,nu:nu.map(x=>x.tekst),tempLabels:gewone.length,tempBuiten,
       canonicalBeste:[...nights.querySelectorAll(".nachtadvies")].filter(x=>/Beste periode\s+\d{2}:\d{2}/i.test(x.textContent||"")).length
     };
   });
@@ -191,10 +191,13 @@ async function controleer(page,naam,breedte){
 
   const basisH=mobiel?250:296;
   assert.equal(r.viewBox.w,mobiel?380:900,`${naam} ${breedte}px: grafiekbreedte blijft canoniek`);
-  /* Checkpoint 50 bewaakt de basisgrafiek. Latere lagen mogen uitsluitend onder
-     die basis extra gereserveerde informatieruimte toevoegen (Q4 regenperioden),
-     maar de grafiek mag nooit krimpen of onbeheerst doorgroeien. */
-  assert.ok(r.viewBox.h>=basisH&&r.viewBox.h<=basisH+100,`${naam} ${breedte}px: grafiekhoogte blijft binnen basis + gereserveerde onderruimte (${r.viewBox.h}px)`);
+  /* Droge mobiele grafieken mogen tot het compacte 220–250px-budget krimpen.
+     Zodra Q4 vaste regenperiode-labels tekent, zijn die labels inhoud in plaats
+     van witruimte en blijft de canonieke 296px-reserve toegestaan. */
+  const natMetPeriodeLabels=mobiel&&r.regenPeriodeLabels>0;
+  const minH=mobiel?(natMetPeriodeLabels?296:220):basisH;
+  const maxH=mobiel?(natMetPeriodeLabels?296:basisH):basisH+100;
+  assert.ok(r.viewBox.h>=minH&&r.viewBox.h<=maxH,`${naam} ${breedte}px: grafiekhoogte blijft binnen het bedoelde ${mobiel?(natMetPeriodeLabels?"natte mobiele labelreserve":"mobiele compact"):"desktop"}-budget (${r.viewBox.h}px)`);
   assert.deepEqual(r.nu,["nu"],`${naam} ${breedte}px: exact één actuele nu-markering zonder dubbele temperatuur`);
   if(mobiel)assert.ok(r.tempLabels>=4,`${naam} ${breedte}px: mobiel houdt meerdere temperatuurreferenties naast het actuele punt (${r.tempLabels})`);
   else assert.ok(r.tempLabels>=6,`${naam} ${breedte}px: desktop houdt voldoende zichtbare temperatuurreferenties`);

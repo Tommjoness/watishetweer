@@ -38,6 +38,7 @@ assert(/\.tools > #here,\.tools > #ververs,\.tools > #thema\{[\s\S]*?min-height:
 assert(/\.results\{top:46px;left:-1px;right:-1px\}/.test(mobileCss),"Zoekresultaten blijven direct onder de zoekinvoer verankerd");
 assert(/\.chip\.add\{[\s\S]*?min-height:44px;[\s\S]*?border:0;[\s\S]*?box-shadow:inset 0 -1px 0 var\(--rule\);/.test(mobileCss),"Plaats bewaren is een rustige 44px-tekstactie in plaats van een gestippelde chip");
 
+assert.equal(typeof p.structureerBronnen,"function","bron-normalizer is beschikbaar voor late providerupdates");
 assert.equal(p.nachtzichtCompactAantal(6,true),3);
 assert.equal(p.nachtzichtCompactAantal(2,true),2);
 assert.equal(p.nachtzichtCompactAantal(6,false),6);

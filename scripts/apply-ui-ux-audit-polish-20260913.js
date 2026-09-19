@@ -45,11 +45,13 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
      in twee rustige rijen kunnen blijven staan. */
   html body footer:nth-of-type(n){margin-top:6px!important;padding-top:0!important;padding-bottom:0!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;justify-content:center!important;align-items:start!important;column-gap:12px!important;row-gap:0!important}
   footer > span.bron:first-of-type{grid-column:1 / -1!important;grid-row:1!important;justify-self:center!important;width:calc(100% + 42px);max-width:calc(100vw - 8px)}
-  html body footer:nth-of-type(n) > span.bron.bron-bronnen{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-flow:row!important;align-items:stretch!important;width:100%;column-gap:16px!important;row-gap:4px!important}
+  html body footer:nth-of-type(n) > span.bron.bron-bronnen{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-flow:row!important;align-items:stretch!important;width:100%;column-gap:16px!important;row-gap:1px!important}
   footer .bron-bronnen .bronlabel{grid-column:1 / -1;margin:0!important;text-align:center}
   footer .bron-bronnen .bronitem{min-width:0}
-  footer .bron-bronnen .bronitem a{display:flex!important;align-items:center!important;justify-content:center!important;width:100%;min-height:44px!important;margin:0!important;padding:0!important;line-height:1.2!important;text-align:center}
-  footer > span.bron:nth-of-type(2){grid-column:1 / -1!important;grid-row:2!important;justify-self:center!important;width:calc(100% + 42px);max-width:calc(100vw - 8px);min-height:0!important;margin:0!important;line-height:1.35!important}
+  footer .bron-bronnen .bronitem.wiw-source-last-odd{grid-column:1 / -1!important;justify-self:stretch}
+  footer .bron-bronnen .bronitem.wiw-source-last-odd a{width:calc(50% - 8px)!important;margin-inline:auto!important}
+  footer .bron-bronnen .bronitem a{display:flex!important;align-items:center!important;justify-content:center!important;width:100%;min-height:44px!important;margin:0!important;padding:0!important;line-height:1.2!important;text-align:center;border:0!important;border-bottom:1px solid var(--rule-soft)!important;box-shadow:none!important;background:transparent!important}
+  footer > span.bron:nth-of-type(2){grid-column:1 / -1!important;grid-row:2!important;justify-self:center!important;width:calc(100% + 42px);max-width:calc(100vw - 8px);min-height:0!important;margin:4px 0 0!important;padding:2px 0!important;line-height:1.35!important}
   footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important;justify-self:center!important}
   footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important;justify-self:center!important}
   footer > details.footer-details{grid-column:1 / -1!important;grid-row:4!important;justify-self:center!important}
@@ -59,8 +61,13 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   footer > span.bron:nth-last-of-type(2) a,
   footer > span.bron:last-of-type a,
   footer > details.footer-details>summary{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0;margin-right:0}
-  .footer-contact{grid-column:1 / -1;justify-self:center;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;width:calc(100% + 42px);max-width:calc(100vw - 8px);column-gap:8px;row-gap:0;margin-top:0!important;line-height:1.3}
+  .footer-contact{grid-column:1 / -1;justify-self:center;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;width:calc(100% + 42px);max-width:calc(100vw - 8px);column-gap:8px;row-gap:0;margin-top:8px!important;line-height:1.3}
   .footer-contact-question,.footer-contact-mail{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+
+  /* Een bewaarde actieve plaats is selectie, geen waarschuwing. De semantische
+     .on-state blijft gelijk; alleen mobiel gebruikt hij een neutrale onderstreep
+     en regelkleur in plaats van het bordeauxrode foutachtige accent. */
+  .chip.on{border-color:var(--rule)!important;background:var(--sheet)!important;color:var(--ink)!important;box-shadow:inset 0 -2px 0 var(--ink-45)!important}
 
   /* Populaire plaatsen blijft gewone indexeerbare linknavigatie — geen cards of
      app-pills — maar krijgt mobiel een consistente twee-koloms leesas en zachte
@@ -100,6 +107,11 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
 }
 @media(prefers-reduced-motion:no-preference){
   .mobile-section-nav a,.seo-plaatsnav a,footer a,footer summary{transition:color .15s ease,background-color .15s ease,border-color .15s ease}
+}
+@media(max-width:430px){
+  /* Lange metrieklabels krijgen overal dezelfde rustige tweeregelige kopruimte.
+     De kaartstructuur en inhoud blijven ongewijzigd. */
+  .stats .eyebrow{font-size:9.5px!important;letter-spacing:.075em!important;line-height:1.15!important;min-height:2.3em!important}
 }
 @media(max-width:370px){
   html body footer:nth-of-type(n) > span.bron.bron-bronnen{column-gap:12px!important}
