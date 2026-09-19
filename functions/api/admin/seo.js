@@ -35,6 +35,9 @@ const NEW_LOCATION_COHORT=Object.freeze({
   ])
 });
 
+const DAY_SCOPE_VALUES=new Set([7,14,28,56,90]);
+const HOUR_MS=60*60*1000;
+
 let jwksCache={url:null,expiresAt:0,keys:[]};
 let tokenCache={key:null,expiresAt:0,token:null};
 
@@ -209,8 +212,16 @@ function isoDate(date){
   return date.toISOString().slice(0,10);
 }
 
+function dashboardScope(value){
+  const raw=String(value||"28").trim().toLowerCase();
+  if(raw==="24h"||raw==="24")return {kind:"hours",hours:24,key:"24h"};
+  const parsed=Math.round(Number(raw));
+  const days=DAY_SCOPE_VALUES.has(parsed)?parsed:28;
+  return {kind:"days",days,key:String(days)};
+}
+
 function dateRanges(days){
-  const safeDays=Math.max(7,Math.min(90,Math.round(Number(days)||28)));
+  const safeDays=DAY_SCOPE_VALUES.has(Number(days))?Number(days):28;
   const settledEnd=new Date();
   settledEnd.setUTCHours(0,0,0,0);
   settledEnd.setUTCDate(settledEnd.getUTCDate()-3);
@@ -221,6 +232,8 @@ function dateRanges(days){
   const previousStart=new Date(previousEnd);
   previousStart.setUTCDate(previousStart.getUTCDate()-(safeDays-1));
   return {
+    mode:"days",
+    scope:String(safeDays),
     days:safeDays,
     current:{startDate:isoDate(currentStart),endDate:isoDate(settledEnd)},
     previous:{startDate:isoDate(previousStart),endDate:isoDate(previousEnd)}
@@ -228,7 +241,7 @@ function dateRanges(days){
 }
 
 function ga4Range(days){
-  const safeDays=Math.max(7,Math.min(90,Math.round(Number(days)||28)));
+  const safeDays=DAY_SCOPE_VALUES.has(Number(days))?Number(days):28;
   const currentEnd=new Date();
   currentEnd.setUTCHours(0,0,0,0);
   const currentStart=new Date(currentEnd);
@@ -236,11 +249,80 @@ function ga4Range(days){
   return {startDate:isoDate(currentStart),endDate:isoDate(currentEnd)};
 }
 
-async function gscQuery(token,siteUrl,startDate,endDate,dimensions=[],rowLimit=25000){
+function hourlyRequestRange(now=new Date()){
+  const end=new Date(now);
+  end.setUTCHours(0,0,0,0);
+  const start=new Date(end);
+  start.setUTCDate(start.getUTCDate()-4);
+  return {startDate:isoDate(start),endDate:isoDate(end)};
+}
+
+function hourTimestamp(row){
+  const raw=String(row&&row.keys&&row.keys[0]||"");
+  const value=Date.parse(raw);
+  return Number.isFinite(value)?value:null;
+}
+
+function hourlyWindow(rows,hours=24){
+  const stamps=(rows||[]).map(hourTimestamp).filter(Number.isFinite);
+  if(!stamps.length)return null;
+  const latest=Math.max(...stamps);
+  const currentEnd=latest+HOUR_MS;
+  const currentStart=currentEnd-hours*HOUR_MS;
+  const previousStart=currentStart-hours*HOUR_MS;
+  return {currentStart,currentEnd,previousStart,previousEnd:currentStart};
+}
+
+function rowsInHourlyWindow(rows,start,end){
+  return (rows||[]).filter(row=>{
+    const t=hourTimestamp(row);
+    return t!==null&&t>=start&&t<end;
+  });
+}
+
+function summaryFromMetricRows(rows){
+  let clicks=0,impressions=0,weightedPosition=0;
+  for(const row of rows||[]){
+    const rowClicks=Number(row.clicks)||0;
+    const rowImpressions=Number(row.impressions)||0;
+    clicks+=rowClicks;
+    impressions+=rowImpressions;
+    weightedPosition+=(Number(row.position)||0)*rowImpressions;
+  }
+  return {
+    clicks,
+    impressions,
+    ctr:impressions>0?clicks/impressions:0,
+    position:impressions>0?weightedPosition/impressions:0
+  };
+}
+
+function aggregateHourlyDimension(rows,keyName,start,end){
+  const grouped=new Map();
+  for(const row of rowsInHourlyWindow(rows,start,end)){
+    const key=String(row&&row.keys&&row.keys[1]||"");
+    if(!key)continue;
+    const current=grouped.get(key)||{clicks:0,impressions:0,weightedPosition:0};
+    const rowImpressions=Number(row.impressions)||0;
+    current.clicks+=Number(row.clicks)||0;
+    current.impressions+=rowImpressions;
+    current.weightedPosition+=(Number(row.position)||0)*rowImpressions;
+    grouped.set(key,current);
+  }
+  return [...grouped.entries()].map(([key,value])=>({
+    [keyName]:key,
+    clicks:value.clicks,
+    impressions:value.impressions,
+    ctr:value.impressions>0?value.clicks/value.impressions:0,
+    position:value.impressions>0?value.weightedPosition/value.impressions:0
+  })).sort((a,b)=>b.clicks-a.clicks||b.impressions-a.impressions);
+}
+
+async function gscQuery(token,siteUrl,startDate,endDate,dimensions=[],rowLimit=25000,dataState="final"){
   const response=await fetch(`https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,{
     method:"POST",
     headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},
-    body:JSON.stringify({startDate,endDate,dimensions,rowLimit,startRow:0,type:"web",dataState:"final"})
+    body:JSON.stringify({startDate,endDate,dimensions,rowLimit,startRow:0,type:"web",dataState})
   });
   const payload=await response.json();
   if(!response.ok){
@@ -248,6 +330,49 @@ async function gscQuery(token,siteUrl,startDate,endDate,dimensions=[],rowLimit=2
     throw new Error(`Search Console-query mislukt: ${detail}`);
   }
   return Array.isArray(payload.rows)?payload.rows:[];
+}
+
+async function loadHourlySearchConsole(token,siteUrl){
+  const requestRange=hourlyRequestRange();
+  const [hours,queryRows,pageRows,deviceRows,countryRows]=await Promise.all([
+    gscQuery(token,siteUrl,requestRange.startDate,requestRange.endDate,["hour"],250,"hourly_all"),
+    gscQuery(token,siteUrl,requestRange.startDate,requestRange.endDate,["hour","query"],25000,"hourly_all"),
+    gscQuery(token,siteUrl,requestRange.startDate,requestRange.endDate,["hour","page"],25000,"hourly_all"),
+    gscQuery(token,siteUrl,requestRange.startDate,requestRange.endDate,["hour","device"],2500,"hourly_all"),
+    gscQuery(token,siteUrl,requestRange.startDate,requestRange.endDate,["hour","country"],5000,"hourly_all")
+  ]);
+  const window=hourlyWindow(hours,24);
+  if(!window)throw new Error("Search Console leverde geen uurlijkse data voor de 24-uursweergave.");
+  const current=summaryFromMetricRows(rowsInHourlyWindow(hours,window.currentStart,window.currentEnd));
+  const previous=summaryFromMetricRows(rowsInHourlyWindow(hours,window.previousStart,window.previousEnd));
+  const queries=aggregateHourlyDimension(queryRows,"query",window.currentStart,window.currentEnd);
+  const pages=aggregateHourlyDimension(pageRows,"page",window.currentStart,window.currentEnd);
+  const devices=aggregateHourlyDimension(deviceRows,"device",window.currentStart,window.currentEnd);
+  const countries=aggregateHourlyDimension(countryRows,"country",window.currentStart,window.currentEnd);
+  const currentStart=new Date(window.currentStart);
+  const currentEnd=new Date(window.currentEnd);
+  const previousStart=new Date(window.previousStart);
+  const previousEnd=new Date(window.previousEnd);
+  const ranges={
+    mode:"hourly",
+    scope:"24h",
+    hours:24,
+    days:1,
+    partial:true,
+    current:{
+      startDate:isoDate(currentStart),
+      endDate:isoDate(new Date(window.currentEnd-1)),
+      startDateTime:currentStart.toISOString(),
+      endDateTime:currentEnd.toISOString()
+    },
+    previous:{
+      startDate:isoDate(previousStart),
+      endDate:isoDate(new Date(window.previousEnd-1)),
+      startDateTime:previousStart.toISOString(),
+      endDateTime:previousEnd.toISOString()
+    }
+  };
+  return {ranges,current,previous,queries,pages,devices,countries};
 }
 
 function summaryFromRows(rows){
@@ -352,6 +477,9 @@ function ga4Rows(report,dimensionName){
 async function loadGa4(token,env,ranges){
   const propertyId=String(env.GA4_PROPERTY_ID||"").trim();
   if(!propertyId)return {configured:false,reason:"GA4_PROPERTY_ID ontbreekt; Search Console werkt wel."};
+  if(ranges&&ranges.mode==="hourly"){
+    return {configured:true,scopeUnsupported:true,reason:"GA4 wordt hier niet als rolling 24 uur getoond, omdat de bestaande cockpit dagaggregaties gebruikt. Search Console en Cloudflare volgen de 24-uursselectie wel exact."};
+  }
   try{
     const currentRange=ga4Range(ranges.days);
     const dateRanges=[currentRange];
@@ -392,28 +520,36 @@ export async function onRequestGet(context){
 
   const siteUrl=String(context.env.GSC_SITE_URL||"sc-domain:watishetweer.nl").trim();
   const requestUrl=new URL(context.request.url);
-  const ranges=dateRanges(requestUrl.searchParams.get("days"));
+  const scope=dashboardScope(requestUrl.searchParams.get("scope")||requestUrl.searchParams.get("days"));
 
   try{
     const token=await getGoogleAccessToken(context.env);
-    const cohortStart=ranges.current.startDate>NEW_LOCATION_COHORT.launchDate?ranges.current.startDate:NEW_LOCATION_COHORT.launchDate;
-    const cohortDataAvailable=ranges.current.endDate>=NEW_LOCATION_COHORT.launchDate;
-    const [currentRows,previousRows,queryRows,pageRows,deviceRows,countryRows,cohortPageRows]=await Promise.all([
-      gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,[],1),
-      gscQuery(token,siteUrl,ranges.previous.startDate,ranges.previous.endDate,[],1),
-      gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,["query"],100),
-      gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,["page"],100),
-      gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,["device"],10),
-      gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,["country"],25),
-      cohortDataAvailable?gscQuery(token,siteUrl,cohortStart,ranges.current.endDate,["page"],250):Promise.resolve([])
-    ]);
-    const current=summaryFromRows(currentRows);
-    const previous=summaryFromRows(previousRows);
-    const queries=mapRows(queryRows,"query");
-    const pages=mapRows(pageRows,"page");
-    const devices=mapRows(deviceRows,"device");
-    const countries=mapRows(countryRows,"country");
-    const newLocationCohort=summarizeRouteCohort(cohortPageRows,cohortStart,ranges.current.endDate);
+    let ranges,current,previous,queries,pages,devices,countries,newLocationCohort;
+    if(scope.kind==="hours"){
+      const hourly=await loadHourlySearchConsole(token,siteUrl);
+      ({ranges,current,previous,queries,pages,devices,countries}=hourly);
+      newLocationCohort=summarizeRouteCohort(pages,ranges.current.startDate,ranges.current.endDate);
+    }else{
+      ranges=dateRanges(scope.days);
+      const cohortStart=ranges.current.startDate>NEW_LOCATION_COHORT.launchDate?ranges.current.startDate:NEW_LOCATION_COHORT.launchDate;
+      const cohortDataAvailable=ranges.current.endDate>=NEW_LOCATION_COHORT.launchDate;
+      const [currentRows,previousRows,queryRows,pageRows,deviceRows,countryRows,cohortPageRows]=await Promise.all([
+        gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,[],1),
+        gscQuery(token,siteUrl,ranges.previous.startDate,ranges.previous.endDate,[],1),
+        gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,["query"],100),
+        gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,["page"],100),
+        gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,["device"],10),
+        gscQuery(token,siteUrl,ranges.current.startDate,ranges.current.endDate,["country"],25),
+        cohortDataAvailable?gscQuery(token,siteUrl,cohortStart,ranges.current.endDate,["page"],250):Promise.resolve([])
+      ]);
+      current=summaryFromRows(currentRows);
+      previous=summaryFromRows(previousRows);
+      queries=mapRows(queryRows,"query");
+      pages=mapRows(pageRows,"page");
+      devices=mapRows(deviceRows,"device");
+      countries=mapRows(countryRows,"country");
+      newLocationCohort=summarizeRouteCohort(cohortPageRows,cohortStart,ranges.current.endDate);
+    }
     const opportunities=queries
       .filter(item=>item.impressions>=10&&item.position>=4&&item.position<=20)
       .sort((a,b)=>(b.impressions/Math.max(b.position,1))-(a.impressions/Math.max(a.position,1)))
