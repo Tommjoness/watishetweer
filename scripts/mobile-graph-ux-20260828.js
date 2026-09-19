@@ -32,6 +32,21 @@ function kiesUurLabelIndices(tijden,minimaal=4,cadans=3,rand=2){
   }
   return uit;
 }
+/* Voor de compacte mobiele 24-uursas is de klok zelf de bron van het ritme:
+   00/04/08/12/16/20. Bij een rollend venster kan één zo'n klokuur twee keer
+   voorkomen (linker- en rechtergrens); toon dan alleen de eerste zichtbare
+   instantie. Zo blijven precies zes kalenderankers over, onafhankelijk van het
+   toevallige startuur van de forecast. */
+function kiesKalenderUurLabelIndices(tijden,cadans=4){
+  const T=Array.isArray(tijden)?tijden:[],stap=Math.max(1,Math.floor(Number(cadans)||4)),gezien=new Set(),uit=[];
+  T.forEach((tijd,i)=>{
+    const uur=uurUitIso(tijd);
+    if(!Number.isInteger(uur)||uur%stap!==0||gezien.has(uur))return;
+    gezien.add(uur);uit.push(i);
+  });
+  return uit;
+}
+
 function isUurAsLabel(tekst,y,plotOnder,fontFamilie){
   const t=uurAsLabelTekst(tekst),py=Number(y),onder=Number(plotOnder),font=String(fontFamilie||"");
   return !!t&&Number.isFinite(py)&&Number.isFinite(onder)&&py>=onder+6&&!/Bodoni/i.test(font);
@@ -150,7 +165,7 @@ function mobieleGrafiekCompactHoogte(plotBottom,huidigeHoogte,zichtbareOnderkant
   return Math.min(h,doel);
 }
 
-const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,kiesMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
+const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,kiesMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -185,14 +200,14 @@ function herstelUurAs(){
        alleen kalendergebonden vier-uursankers (00/04/08/12/16/20), zodat de
        tijdas niet afhankelijk is van het toevallige startuur van de forecast. */
     alle.forEach(el=>el.remove());
-    const indices=kiesUurLabelIndices(g.TI,6,4,1),y=Number(g.pt)+Number(g.ih)+20;
+    const indices=kiesKalenderUurLabelIndices(g.TI,4),y=Number(g.pt)+Number(g.ih)+20;
     if(!Number.isFinite(y))return;
     const kleur=getComputedStyle(document.documentElement).getPropertyValue("--ink-45").trim()||"currentColor";
     indices.forEach((i,pos)=>{
       const x=Number(g.x(i)),uur=uurUitIso(g.TI[i]);if(!Number.isFinite(x)||!Number.isInteger(uur))return;
       const el=document.createElementNS(SVG_NS,"text");
       el.setAttribute("x",String(x));el.setAttribute("y",String(y));
-      el.setAttribute("text-anchor",pos===0?"start":pos===indices.length-1?"end":"middle");
+      el.setAttribute("text-anchor","middle");
       el.setAttribute("fill",kleur);el.setAttribute("font-size","9");el.setAttribute("opacity",".82");
       stileerUurAsLabel(el);
       el.setAttribute("data-mobile-hour-axis","1");el.setAttribute("data-mobile-hour-index",String(i));

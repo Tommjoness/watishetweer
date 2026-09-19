@@ -15,9 +15,12 @@ const etmaalVanaf22=Array.from({length:24},(_,i)=>{
   return dag+"T"+String(uur).padStart(2,"0")+":00";
 });
 const etmaalMetRechtergrens=[...etmaalVanaf22,"2026-09-18T22:00"];
-const rustigeIndices=api.kiesUurLabelIndices(etmaalMetRechtergrens,6,4,1);
+const rustigeIndices=api.kiesKalenderUurLabelIndices(etmaalMetRechtergrens,4);
 assert.deepEqual(rustigeIndices,[2,6,10,14,18,22],"Smalle 25-punts etmaalgrafiek moet exact zes kalendergebonden vier-uursankers kiezen.");
 assert.deepEqual(rustigeIndices.map(i=>api.uurUitIso(etmaalMetRechtergrens[i])),[0,4,8,12,16,20],"Vier-uursritme blijft onafhankelijk van het startuur van de forecast.");
+const etmaalVanaf20=Array.from({length:25},(_,i)=>"2026-09-"+String(i<4?17:18).padStart(2,"0")+"T"+String((20+i)%24).padStart(2,"0")+":00");
+assert.deepEqual(api.kiesKalenderUurLabelIndices(etmaalVanaf20,4),[0,4,8,12,16,20],"Een kalenderanker op de linkergrens blijft behouden zonder fallback naar willekeurige uren.");
+assert.deepEqual(api.kiesKalenderUurLabelIndices(etmaalVanaf20,4).map(i=>api.uurUitIso(etmaalVanaf20[i])),[20,0,4,8,12,16],"Dubbele 20:00 op de rechtergrens wordt niet nogmaals getoond.");
 
 const start=api.geschatteSvgTekstBox("nu 19°",100,80,"start",12);
 assert(start&&start.x===100,"Start-anchor moet op de opgegeven x beginnen.");
@@ -45,7 +48,7 @@ const runtime=fs.readFileSync(path.join(__dirname,"mobile-graph-ux-20260828.js")
 assert(!/\.getBBox\s*\(/.test(runtime),"Mobiele grafiekpolish mag geen uitvoerbare SVG getBBox-layoutread meer bevatten.");
 assert(runtime.includes("svgTekstBoxUitElement"),"Mobiele grafiekpolish moet de attribuutgebaseerde boxhelper gebruiken.");
 assert(runtime.includes("const compact24=Number(g.n)<=25&&window.innerWidth<=430"),"Vier-uursritme moet uitsluitend de smalle mobiele 24-uursweergave raken, inclusief de 25e rechtergrens.");
-assert(runtime.includes("alle.forEach(el=>el.remove())")&&runtime.includes("kiesUurLabelIndices(g.TI,6,4,1)"),"Smalle mobiele uur-as moet oude basis/fallbacklabels volledig vervangen door één deterministische vier-uurslaag.");
+assert(runtime.includes("alle.forEach(el=>el.remove())")&&runtime.includes("kiesKalenderUurLabelIndices(g.TI,4)"),"Smalle mobiele uur-as moet oude basis/fallbacklabels volledig vervangen door één deterministische kalendergebonden vier-uurslaag.");
 assert(runtime.includes("Instrument Sans,ui-sans-serif,system-ui,sans-serif"),"Mobiele uuras moet een rustig recht sans-letterbeeld gebruiken.");
 assert(runtime.includes("el.setAttribute(\"font-style\",\"normal\")"),"Mobiele uur-as mag geen schuin letterbeeld erven.");
 assert(runtime.includes("alle.forEach(el=>{const expliciet=uurAsLabelTekst(el.textContent);if(expliciet)el.textContent=expliciet;});"),"Bestaande canonieke mobiele uurlabels moeten na render naar HH:00 worden genormaliseerd.");

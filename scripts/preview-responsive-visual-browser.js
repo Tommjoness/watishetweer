@@ -120,7 +120,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const tempLabels=svg?[...svg.querySelectorAll('text[data-mobile-temp-index]')].filter(el=>!el.closest("#scrub")):[],tempBoxes=tempLabels.map(el=>el.getBoundingClientRect()),tempOverlap=[];
           for(let i=0;i<tempBoxes.length;i++)for(let j=i+1;j<tempBoxes.length;j++){const a=tempBoxes[i],b=tempBoxes[j];if(a.left<b.right+1&&a.right+1>b.left&&a.top<b.bottom&&a.bottom>b.top)tempOverlap.push(i+"-"+j);}
           const tempPointDx=tempLabels.map(el=>{const i=el.getAttribute("data-mobile-temp-index"),p=svg.querySelector(`circle[data-temp-index="${i}"]`);return p?Math.abs(Number(el.getAttribute("x"))-Number(p.getAttribute("cx"))):999;});
-          const hourLabels=svg?[...svg.querySelectorAll('text[data-mobile-hour-axis="1"]')]:[],hourX=hourLabels.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite),hourGaps=hourX.slice(1).map((x,i)=>x-hourX[i]);
+          const hourLabels=svg?[...svg.querySelectorAll('text[data-mobile-hour-axis="1"]')]:[],hourX=hourLabels.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite),hourGaps=hourX.slice(1).map((x,i)=>x-hourX[i]),hourIndices=hourLabels.map(el=>Number(el.getAttribute("data-mobile-hour-index"))).filter(Number.isInteger);
           const sunInChart=svg?[...svg.querySelectorAll("text")].filter(el=>/^zon (?:op|onder) \\d{2}:\\d{2}$/i.test(String(el.textContent||"").trim())).length:999;
           const bron=document.querySelector("footer .bron-bronnen"),items=bron?[...bron.querySelectorAll(".bronitem:not([hidden])")]:[],last=items[items.length-1]||null,br=bron&&bron.getBoundingClientRect(),lr=last&&last.getBoundingClientRect();
           const lines=items.map(el=>{const st=getComputedStyle(el.querySelector("a")||el);return {w:st.borderBottomWidth,c:st.borderBottomColor};});
@@ -131,7 +131,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const sr=svg&&svg.getBoundingClientRect(),rr=summary&&!summary.hidden&&summary.getBoundingClientRect();
           return {
             tempCount:tempLabels.length,tempOverlap:tempOverlap.length,tempPointDx,
-            hourCount:hourLabels.length,hourTexts:hourLabels.map(el=>(el.textContent||"").trim()),hourGaps,sunInChart,
+            hourCount:hourLabels.length,hourTexts:hourLabels.map(el=>(el.textContent||"").trim()),hourGaps,hourIndices,sunInChart,
             compact:svg?.getAttribute("data-mobile-compact-height")||"",
             chartSummaryGap:sr&&rr?rr.top-sr.bottom:null,viewBox:svg?.getAttribute("viewBox")||"",plotBottom:g?Number(g.pt)+Number(g.ih):null,
             sourceCount:items.length,lastOdd:!!last&&last.classList.contains("wiw-source-last-odd"),lastText:last?(last.textContent||"").trim():"",
@@ -183,8 +183,10 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert.equal(m.tempOverlap,0,`${vp.naam}: temperatuurlabels overlappen geometrisch`);
         assert(m.tempPointDx.every(dx=>dx<=0.1),`${vp.naam}: temperatuurcijfer zweeft horizontaal los van datapunt (${m.tempPointDx.join("/")})`);
         assert.equal(m.hourCount,6,`${vp.naam}: mobiele uuras gebruikt ${m.hourCount} in plaats van zes vier-uursankers`);
-        assert.deepEqual(m.hourTexts,["00:00","04:00","08:00","12:00","16:00","20:00"],`${vp.naam}: mobiele uuras volgt niet de vaste kalendercadans`);
-        assert(m.hourGaps.length===5&&Math.max(...m.hourGaps)-Math.min(...m.hourGaps)<=0.2,`${vp.naam}: zes vier-uurslabels zijn niet gelijkmatig verdeeld (${m.hourGaps.join("/")})`);
+        assert(m.hourTexts.every(t=>{const h=Number(String(t).slice(0,2));return /^\\d{2}:00$/.test(t)&&Number.isInteger(h)&&h%4===0;}),`${vp.naam}: mobiele uuras volgt niet de vaste kalendercadans (${m.hourTexts.join("/")})`);
+        assert.equal(new Set(m.hourTexts).size,6,`${vp.naam}: mobiele uuras bevat een dubbel klokanker (${m.hourTexts.join("/")})`);
+        const hourIndexGaps=m.hourIndices.slice(1).map((x,i)=>x-m.hourIndices[i]);
+        assert(hourIndexGaps.length===5&&hourIndexGaps.every(g=>g===4),`${vp.naam}: vier-uursankers zijn niet gelijkmatig over de echte forecastreeks verdeeld (${hourIndexGaps.join("/")})`);
         assert.equal(m.sunInChart,0,`${vp.naam}: dubbele zon-op/zon-ondertekst staat nog in de SVG`);
         assert.equal(m.compact,"1",`${vp.naam}: grafiekhoogte is niet mobiel gecompacteerd`);
         if(m.chartSummaryGap!==null)assert(m.chartSummaryGap>=0&&m.chartSummaryGap<=18,`${vp.naam}: grafiek-samenvatting heeft ${m.chartSummaryGap}px tussenruimte`);
