@@ -57,7 +57,9 @@ assert(html.includes('class="cockpit-scene"'),"SEO cockpit mist de futuristische
 assert(html.includes('class="cockpit-grid"'),"SEO cockpit mist het perspectivische achtergrondgrid.");
 assert(html.includes('class="holo-core"'),"SEO cockpit mist de holografische headercore.");
 assert(html.includes('id="fx-toggle"'),"SEO cockpit mist de expliciete 3D FX-schakelaar.");
-assert(js.includes("/api/admin/seo?days="),"Dashboard praat niet met de afgeschermde admin-API.");
+assert(js.includes("/api/admin/seo?scope="),"Dashboard praat niet met de afgeschermde admin-API via de geselecteerde scope.");
+for(const option of ['value="24h">24 uur','value="7">7 dagen','value="14">14 dagen','value="28" selected>28 dagen','value="56">56 dagen','value="90">90 dagen'])assert(html.includes(option),`SEO cockpit mist periodeselectie: ${option}`);
+assert(html.includes('rel="apple-touch-icon" sizes="180x180" href="/admin/seo/apple-touch-icon.png"'),"SEO cockpit mist eigen homescreen-icon.");
 assert(js.includes('cache:"no-store"'),"Dashboardrequest moet no-store zijn.");
 assert(js.includes("function buildOpportunities"),"Dashboard mist slimme SEO-kansenclassificatie.");
 assert(js.includes("function renderNewRoutes"),"Dashboard mist renderer voor het nieuwe-routecohort.");
@@ -113,6 +115,10 @@ assert(api.includes('status:403,code:"access_denied"'),"API mist expliciete allo
 assert(api.includes('"Cache-Control":"private, no-store, max-age=0"'),"API-response mist no-store.");
 assert(api.includes('grant_type:"urn:ietf:params:oauth:grant-type:jwt-bearer"'),"Google OAuth grant type wijkt af van het werkende service-accountcontract.");
 assert(api.includes("function ga4Range(days)"),"GA4 mist een eigen actuele datumrange.");
+assert(api.includes('raw==="24h"')&&api.includes("DAY_SCOPE_VALUES=new Set([7,14,28,56,90])"),"SEO admin API mist 24 uur/7/14/28/56/90 scopecontract.");
+assert(api.includes('["hour","query"]')&&api.includes('"hourly_all"'),"24-uursweergave gebruikt niet de officiële uurlijkse Search Console-data.");
+assert(api.includes("aggregateHourlyDimension"),"24-uursweergave mist dimensieaggregatie over het rolling venster.");
+assert(api.includes('scopeUnsupported:true'),"GA4 moet de 24-uursbeperking expliciet melden in plaats van dagdata als rolling 24 uur te tonen.");
 assert(api.includes('const NEW_LOCATION_COHORT=Object.freeze({'),"SEO admin API mist historisch cohort voor de nieuwe routes.");
 assert(api.includes('launchDate:"2026-09-18"'),"Nieuwe-routecohort gebruikt niet de echte livegangdatum.");
 assert(api.includes("function summarizeRouteCohort"),"SEO admin API mist cohortaggregatie.");
