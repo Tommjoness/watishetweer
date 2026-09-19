@@ -9,6 +9,8 @@ const manifestPad=path.join(ROOT,"manifest.json");
 const swPad=path.join(ROOT,"sw.js");
 const manifest=JSON.parse(fs.readFileSync(manifestPad,"utf8"));
 const sw=fs.readFileSync(swPad,"utf8");
+const index=fs.readFileSync(path.join(ROOT,"index.html"),"utf8");
+const iconSvg=fs.readFileSync(path.join(ROOT,"icon.svg"),"utf8");
 const manifestUrl=new URL("https://watishetweer.nl/manifest.json");
 const resolve=v=>new URL(v,manifestUrl);
 
@@ -20,6 +22,8 @@ assert.equal(manifest.id,"/index.html","PWA-id moet de bestaande impliciete /ind
 assert.equal(manifest.start_url,"/","PWA moet direct op de canonieke root starten zonder index.html-redirect");
 assert.equal(manifest.scope,"/","PWA-scope moet expliciet de volledige site-root omvatten");
 assert.equal(manifest.display,"standalone","PWA-displaymodus mag niet wijzigen");
+assert(index.includes('<link rel="apple-touch-icon" href="/icon.svg">'),"iOS homescreen moet het moderne weericoon gebruiken");
+assert(iconSvg.includes("<svg")&&iconSvg.includes('aria-label="Wat is het weer"')&&iconSvg.includes(">W</text>"),"Modern homescreen-SVG mist herkenbare weermerkmarkering");
 
 assert.equal(resolve(manifest.id).href,"https://watishetweer.nl/index.html","PWA-id resolveert niet naar de historische identiteit");
 assert.equal(resolve(manifest.start_url).href,"https://watishetweer.nl/","PWA-start_url resolveert niet naar de canonieke root");
