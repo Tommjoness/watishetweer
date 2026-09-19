@@ -12,7 +12,7 @@ assert(/@media\(max-width:430px\)[\s\S]*?#t\{font-size:78px\}/.test(css),"mobiel
 assert(/#chart \[data-q4-rain-period-range\],[\s\S]*?opacity:\.76;[\s\S]*?font-size:9\.5px!important/.test(css),"regenperioden blijven zichtbaar maar krijgen een rustiger labelgewicht");
 assert(/#chart g\[data-q4-rain-periods\] line\{opacity:\.72\}/.test(css),"regenbrackets blijven zichtbaar met lagere visuele nadruk");
 assert(/#nights \.row\.night:not\(\.kop\)\{[\s\S]*?padding-top:10px!important;[\s\S]*?padding-bottom:10px!important;[\s\S]*?row-gap:3px!important/.test(css),"Nachtzicht is mobiel compacter zonder rijen of data te verwijderen");
-assert(/\.dashrow-hero \.stats \.eyebrow\{font-size:9\.5px;letter-spacing:\.075em;line-height:1\.15\}/.test(css),"metrieklabels hebben expliciet compacte regelhoogte en letterafstand voor smalle mobiele breedtes");
+assert(/\.stats \.eyebrow\{font-size:9\.5px;letter-spacing:\.075em;line-height:1\.15\}/.test(css),"metrieklabels houden hun compacte regelhoogte ook nadat de finale runtime het statistiekgrid uit dashrow-hero heeft verplaatst");
 assert(css.includes('.seo-plaatsnav-links a:nth-child(n+7):not(.seo-plaatsnav-alles){display:none}'),"mobiele hoofdweergave toont een korte plaatsselectie terwijl Meer plaatsen zichtbaar blijft");
 assert(css.includes(".seo-plaatsnav p{display:none}"),"SEO-uitleg neemt op de mobiele hoofdweergave geen extra schermhoogte in");
 assert(css.includes('footer .bron-bronnen .bronitem[hidden]{display:none!important}'),"dynamische bronprovenance wordt op mobiel en desktop echt verborgen");
