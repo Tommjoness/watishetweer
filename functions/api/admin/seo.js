@@ -249,12 +249,23 @@ function ga4Range(days){
   return {startDate:isoDate(currentStart),endDate:isoDate(currentEnd)};
 }
 
+function searchConsoleDate(date=new Date()){
+  const parts=new Intl.DateTimeFormat("en-US",{
+    timeZone:"America/Los_Angeles",year:"numeric",month:"2-digit",day:"2-digit"
+  }).formatToParts(date);
+  const pick=type=>parts.find(part=>part.type===type)?.value;
+  return `${pick("year")}-${pick("month")}-${pick("day")}`;
+}
+
+function shiftIsoDate(value,days){
+  const date=new Date(`${value}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate()+days);
+  return isoDate(date);
+}
+
 function hourlyRequestRange(now=new Date()){
-  const end=new Date(now);
-  end.setUTCHours(0,0,0,0);
-  const start=new Date(end);
-  start.setUTCDate(start.getUTCDate()-4);
-  return {startDate:isoDate(start),endDate:isoDate(end)};
+  const endDate=searchConsoleDate(now);
+  return {startDate:shiftIsoDate(endDate,-4),endDate};
 }
 
 function hourTimestamp(row){
