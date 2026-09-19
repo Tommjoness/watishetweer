@@ -415,7 +415,8 @@ function pagePath(value){
 }
 
 function summarizeRouteCohort(rows,startDate,endDate){
-  const byPath=new Map(mapRows(rows,"page").map(row=>[pagePath(row.page),row]));
+  const mapped=Array.isArray(rows)&&rows.some(row=>row&&typeof row.page==="string")?rows:mapRows(rows,"page");
+  const byPath=new Map(mapped.map(row=>[pagePath(row.page),row]));
   const routeRows=NEW_LOCATION_COHORT.routes.map(route=>{
     const page=`https://watishetweer.nl/weer/${route.slug}/`;
     const row=byPath.get(`/weer/${route.slug}/`);
