@@ -52,4 +52,18 @@ assert.equal(ux.rechthoekenBotsen({x:10,y:10,width:20,height:10},{x:28,y:12,widt
 assert.equal(ux.rechthoekenBotsen({x:10,y:10,width:20,height:10},{x:40,y:12,width:15,height:10},3),false,"gescheiden labels blijven ongemoeid");
 assert(js.includes('data-now-collision-adjusted'),"Nu-label krijgt alleen bij echte overlap een expliciete correctiemarker");
 
-console.log("Finale consumentenpolish 20260828: mobiel, desktop, bronprovenance, Nu-collision en wrapperarchitectuur geborgd.");
+const temp=[18,18,19,20,21,22,22,21,20,19,18,18,17,16,16,17,18,19,20,21,22,22,21,20];
+const kandidaten=[0,3,6,9,12,15,18,21,23];
+const gekozen=ux.kiesMobieleTemperatuurLabelIndices(temp,kandidaten,5);
+assert(gekozen.length<=5,"mobiele 24-uursgrafiek toont maximaal vijf vaste temperatuurankers");
+assert(gekozen.includes(13)===false,"alleen werkelijk bestaande labelkandidaten mogen gekozen worden");
+assert(gekozen.includes(12),"zichtbaar minimum blijft als betekenisvol label behouden");
+assert(gekozen.includes(3)||gekozen.includes(6)||gekozen.includes(18)||gekozen.includes(21),"zichtbaar maximum blijft als betekenisvol label behouden");
+assert.deepEqual(ux.kiesMobieleTemperatuurLabelIndices([null,18,19],[0,1,2],5),[1,2],"null wordt niet als kunstmatige 0 °C-extreme behandeld");
+assert.equal(ux.mobieleGrafiekCompactHoogte(220,340,246),256,"mobiele SVG-reserve wordt tot zichtbare inhoud plus veilige ondermarge teruggebracht");
+assert.equal(ux.mobieleGrafiekCompactHoogte(220,250,246),250,"een al compactere grafiek wordt nooit opnieuw vergroot");
+assert(js.includes('data-mobile-temp-index')&&js.includes('rechthoekenBotsen(k.box,box,4)'),"mobiele temperatuurselectie heeft een echte geometrische collision-pass");
+assert(js.includes('data-mobile-compact-height'),"mobiele grafiekhoogte krijgt een expliciete post-render compactiemarker");
+assert(js.includes('WeatherNowMobileScreenshotPolish.structureerBronnen')&&js.includes('wiw-source-last-odd'),"dynamische bronnen worden na providerupdates genormaliseerd en oneven gecentreerd");
+
+console.log("Finale consumentenpolish 20260828: mobiel, desktop, bronprovenance, temperatuurcollision/compactie, Nu-collision en wrapperarchitectuur geborgd.");
