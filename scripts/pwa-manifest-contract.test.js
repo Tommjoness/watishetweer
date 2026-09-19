@@ -22,7 +22,10 @@ assert.equal(manifest.id,"/index.html","PWA-id moet de bestaande impliciete /ind
 assert.equal(manifest.start_url,"/","PWA moet direct op de canonieke root starten zonder index.html-redirect");
 assert.equal(manifest.scope,"/","PWA-scope moet expliciet de volledige site-root omvatten");
 assert.equal(manifest.display,"standalone","PWA-displaymodus mag niet wijzigen");
-assert(index.includes('<link rel="apple-touch-icon" href="/icon.svg">'),"iOS homescreen moet het moderne weericoon gebruiken");
+assert(index.includes('<link rel="apple-touch-icon" href="/icon-192.png">'),"iOS homescreen moet het PNG-weericoon gebruiken");
+const weatherPng=fs.readFileSync(path.join(ROOT,"icon-192.png"));
+assert.equal(weatherPng.readUInt32BE(16),192,"iOS weericoon moet 192px breed zijn");
+assert.equal(weatherPng.readUInt32BE(20),192,"iOS weericoon moet 192px hoog zijn");
 assert(iconSvg.includes("<svg")&&iconSvg.includes('aria-label="Wat is het weer"')&&iconSvg.includes(">W</text>"),"Modern homescreen-SVG mist herkenbare weermerkmarkering");
 
 assert.equal(resolve(manifest.id).href,"https://watishetweer.nl/index.html","PWA-id resolveert niet naar de historische identiteit");
