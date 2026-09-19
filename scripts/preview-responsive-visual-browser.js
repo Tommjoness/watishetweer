@@ -91,7 +91,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
             minHeight:zichtbaar.length?Math.min(...zichtbaar.map(x=>x.getBoundingClientRect().height)):0,
             justify:regulier.length?cs(regulier[0]).justifyContent:"",
             textAlign:regulier.length?cs(regulier[0]).textAlign:"",
-            textDelta,
+            textDelta:tekstDelta,
             moreWidthDelta:Math.max(Math.abs(mr.left-gr.left),Math.abs(mr.right-gr.right)),
             moreCenterDelta:Math.abs(tekstMidden(meer)-((mr.left+mr.right)/2)),
             moreJustify:cs(meer).justifyContent,
