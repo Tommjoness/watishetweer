@@ -307,6 +307,10 @@ function compactMobieleGrafiekHoogte(){
     if(el.closest("#scrub"))return;
     const box=svgTekstBoxUitElement(el);if(box)zichtbaarOnder=Math.max(zichtbaarOnder,box.y+box.height);
   });
+  /* Een natte grafiek heeft vaste bracket-tijden en periodetotalen onder de
+     temperatuurplot. Die zijn inhoud, geen lege witruimte: behoud daarvoor de
+     canonieke 296px-reserve. Een droge grafiek mag wel verder comprimeren. */
+  if(svg.querySelector('g[data-q4-rain-periods] text'))zichtbaarOnder=Math.max(zichtbaarOnder,286);
   const doel=mobieleGrafiekCompactHoogte(plotOnder,delen[3],zichtbaarOnder);
   if(doel!==null&&doel<delen[3]-4){
     svg.setAttribute("viewBox",[delen[0],delen[1],delen[2],doel].join(" "));
