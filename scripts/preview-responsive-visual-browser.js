@@ -120,11 +120,11 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const tempLabels=svg?[...svg.querySelectorAll('text[data-mobile-temp-index]')].filter(el=>!el.closest("#scrub")):[],tempBoxes=tempLabels.map(el=>el.getBoundingClientRect()),tempOverlap=[];
           for(let i=0;i<tempBoxes.length;i++)for(let j=i+1;j<tempBoxes.length;j++){const a=tempBoxes[i],b=tempBoxes[j];if(a.left<b.right+1&&a.right+1>b.left&&a.top<b.bottom&&a.bottom>b.top)tempOverlap.push(i+"-"+j);}
           const bron=document.querySelector("footer .bron-bronnen"),items=bron?[...bron.querySelectorAll(".bronitem:not([hidden])")]:[],last=items[items.length-1]||null,br=bron&&bron.getBoundingClientRect(),lr=last&&last.getBoundingClientRect();
-          const lines=items.map(el=>{const st=getComputedStyle(el);return {w:st.borderBottomWidth,c:st.borderBottomColor};});
+          const lines=items.map(el=>{const st=getComputedStyle(el.querySelector("a")||el);return {w:st.borderBottomWidth,c:st.borderBottomColor};});
           const footer=document.querySelector("footer"),direct=[...footer.querySelectorAll(":scope > span.bron")],disclaimer=direct.find(el=>/Weersinformatie is algemeen/.test(el.textContent||"")),contact=footer.querySelector(".footer-contact"),utilities=[direct.find(el=>el.querySelector('a[href="/over/"]')),direct.find(el=>el.querySelector('a[href="/privacy"]')),footer.querySelector(":scope > details.footer-details")].filter(Boolean);
           const utilityBottom=utilities.length?Math.max(...utilities.map(el=>el.getBoundingClientRect().bottom)):0;
           const chip=document.querySelector(".chip.on"),probe=document.createElement("i");probe.style.color="var(--accent-active)";document.body.appendChild(probe);const accent=getComputedStyle(probe).color;probe.remove();
-          const metric=[...document.querySelectorAll(".dashrow-hero .stats .eyebrow")].filter(el=>/TIJD TOT ZONSONDERGANG|NEERSLAGKANS KOMEND UUR/i.test((el.textContent||"").trim())).map(el=>{const st=getComputedStyle(el),rect=el.getBoundingClientRect();return {text:(el.textContent||"").trim(),lineHeight:parseFloat(st.lineHeight)||0,fontSize:parseFloat(st.fontSize)||0,minHeight:parseFloat(st.minHeight)||0,width:rect.width,scrollWidth:el.scrollWidth};});
+          const metric=[...document.querySelectorAll(".dashrow-hero .stats .eyebrow")].filter(el=>/TIJD TOT ZONSONDERGANG|NEERSLAG(?:KANS|VERWACHTING)? KOMEND UUR|VERWACHTE NEERSLAG KOMEND UUR/i.test((el.textContent||"").trim())).map(el=>{const st=getComputedStyle(el),rect=el.getBoundingClientRect();return {text:(el.textContent||"").trim(),lineHeight:parseFloat(st.lineHeight)||0,fontSize:parseFloat(st.fontSize)||0,minHeight:parseFloat(st.minHeight)||0,width:rect.width,scrollWidth:el.scrollWidth};});
           const sr=svg&&svg.getBoundingClientRect(),rr=summary&&!summary.hidden&&summary.getBoundingClientRect();
           return {
             tempCount:tempLabels.length,tempOverlap:tempOverlap.length,compact:svg?.getAttribute("data-mobile-compact-height")||"",
@@ -305,7 +305,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert.equal(donkerPlaats.moreTextAlign,"center",`${vp.naam}: Meer plaatsen verliest text-align in dark mode`);
         const donkerPolish=await page.evaluate(()=>{
           const bron=document.querySelector("footer .bron-bronnen"),items=bron?[...bron.querySelectorAll(".bronitem:not([hidden])")]:[],chip=document.querySelector(".chip.on");
-          return {lineColors:items.map(el=>getComputedStyle(el).borderBottomColor),chipBorder:chip?getComputedStyle(chip).borderColor:"",overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth};
+          return {lineColors:items.map(el=>getComputedStyle(el.querySelector("a")||el).borderBottomColor),chipBorder:chip?getComputedStyle(chip).borderColor:"",overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth};
         });
         assert.equal(new Set(donkerPolish.lineColors).size,1,`${vp.naam}: bronlijnen worden inconsistent in dark mode`);
         assert(donkerPolish.chipBorder,`${vp.naam}: actieve opgeslagen plaats verliest dark-mode selectie`);
