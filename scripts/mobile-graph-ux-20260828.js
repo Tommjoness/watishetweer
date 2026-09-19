@@ -299,8 +299,12 @@ function compactMobieleGrafiekHoogte(){
   if(delen.length!==4||!delen.every(Number.isFinite))return;
   const plotOnder=Number(g.pt)+Number(g.ih);if(!Number.isFinite(plotOnder))return;
   let zichtbaarOnder=plotOnder+24;
+  /* Ook regenperiode-labels tellen mee voor de zichtbare onderrand. Anders kan
+     een natte mobiele grafiek juist de bracket-tijden/bedragen afsnijden wanneer
+     de algemene witruimte wordt gecompacteerd. Alleen de interactieve scrubtekst
+     hoort niet bij de vaste layoutreserve. */
   [...svg.querySelectorAll("text")].forEach(el=>{
-    if(el.closest('g[data-q4-rain-periods]')||el.closest("#scrub"))return;
+    if(el.closest("#scrub"))return;
     const box=svgTekstBoxUitElement(el);if(box)zichtbaarOnder=Math.max(zichtbaarOnder,box.y+box.height);
   });
   const doel=mobieleGrafiekCompactHoogte(plotOnder,delen[3],zichtbaarOnder);
