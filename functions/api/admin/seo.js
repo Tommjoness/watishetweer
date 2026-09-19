@@ -263,14 +263,17 @@ function hourTimestamp(row){
   return Number.isFinite(value)?value:null;
 }
 
-function hourlyWindow(rows,hours=24){
+function hourlyWindow(rows,hours=24,firstIncompleteHour=null){
   const stamps=(rows||[]).map(hourTimestamp).filter(Number.isFinite);
   if(!stamps.length)return null;
-  const latest=Math.max(...stamps);
-  const currentEnd=latest+HOUR_MS;
+  const incomplete=Date.parse(String(firstIncompleteHour||""));
+  const completeStamps=Number.isFinite(incomplete)?stamps.filter(timestamp=>timestamp<incomplete):stamps;
+  if(!completeStamps.length)return null;
+  const latestComplete=Math.max(...completeStamps);
+  const currentEnd=latestComplete+HOUR_MS;
   const currentStart=currentEnd-hours*HOUR_MS;
   const previousStart=currentStart-hours*HOUR_MS;
-  return {currentStart,currentEnd,previousStart,previousEnd:currentStart};
+  return {currentStart,currentEnd,previousStart,previousEnd:currentStart,firstIncompleteHour:Number.isFinite(incomplete)?new Date(incomplete).toISOString():null};
 }
 
 function rowsInHourlyWindow(rows,start,end){
@@ -318,7 +321,7 @@ function aggregateHourlyDimension(rows,keyName,start,end){
   })).sort((a,b)=>b.clicks-a.clicks||b.impressions-a.impressions);
 }
 
-async function gscQuery(token,siteUrl,startDate,endDate,dimensions=[],rowLimit=25000,dataState="final"){
+async function gscQuery(token,siteUrl,startDate,endDate,dimensions=[],rowLimit=25000,dataState="final",withMetadata=false){
   const response=await fetch(`https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,{
     method:"POST",
     headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},
@@ -329,20 +332,23 @@ async function gscQuery(token,siteUrl,startDate,endDate,dimensions=[],rowLimit=2
     const detail=payload&&payload.error&&payload.error.message?payload.error.message:`HTTP ${response.status}`;
     throw new Error(`Search Console-query mislukt: ${detail}`);
   }
-  return Array.isArray(payload.rows)?payload.rows:[];
+  const rows=Array.isArray(payload.rows)?payload.rows:[];
+  return withMetadata?{rows,metadata:payload&&payload.metadata||{}}:rows;
 }
 
 async function loadHourlySearchConsole(token,siteUrl){
   const requestRange=hourlyRequestRange();
-  const [hours,queryRows,pageRows,deviceRows,countryRows]=await Promise.all([
-    gscQuery(token,siteUrl,requestRange.startDate,requestRange.endDate,["hour"],250,"hourly_all"),
+  const [hourResult,queryRows,pageRows,deviceRows,countryRows]=await Promise.all([
+    gscQuery(token,siteUrl,requestRange.startDate,requestRange.endDate,["hour"],250,"hourly_all",true),
     gscQuery(token,siteUrl,requestRange.startDate,requestRange.endDate,["hour","query"],25000,"hourly_all"),
     gscQuery(token,siteUrl,requestRange.startDate,requestRange.endDate,["hour","page"],25000,"hourly_all"),
     gscQuery(token,siteUrl,requestRange.startDate,requestRange.endDate,["hour","device"],2500,"hourly_all"),
     gscQuery(token,siteUrl,requestRange.startDate,requestRange.endDate,["hour","country"],5000,"hourly_all")
   ]);
-  const window=hourlyWindow(hours,24);
-  if(!window)throw new Error("Search Console leverde geen uurlijkse data voor de 24-uursweergave.");
+  const hours=hourResult.rows;
+  const firstIncompleteHour=hourResult.metadata&&hourResult.metadata.first_incomplete_hour||null;
+  const window=hourlyWindow(hours,24,firstIncompleteHour);
+  if(!window)throw new Error("Search Console leverde geen 24 voltooide uren voor de 24-uursweergave.");
   const current=summaryFromMetricRows(rowsInHourlyWindow(hours,window.currentStart,window.currentEnd));
   const previous=summaryFromMetricRows(rowsInHourlyWindow(hours,window.previousStart,window.previousEnd));
   const queries=aggregateHourlyDimension(queryRows,"query",window.currentStart,window.currentEnd);
@@ -358,7 +364,8 @@ async function loadHourlySearchConsole(token,siteUrl){
     scope:"24h",
     hours:24,
     days:1,
-    partial:true,
+    partial:false,
+    firstIncompleteHour:window.firstIncompleteHour,
     current:{
       startDate:isoDate(currentStart),
       endDate:isoDate(new Date(window.currentEnd-1)),
