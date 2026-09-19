@@ -121,7 +121,36 @@ function begrensTemperatuurLabelY(labelY,puntY,plotTop,plotBottom,maxAfstand=42)
   return Math.max(top+marge,Math.min(bottom-marge,doel));
 }
 
-const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY};
+/* Op een telefoon hoeft de 24-uurslijn niet ieder bestaand temperatuurcijfer
+   te herhalen. Houd maximaal vijf betekenisvolle ankers: begin, midden, einde
+   en de zichtbare minimum-/maximumtemperatuur. Forecastpunten en bronwaarden
+   blijven volledig intact; dit kiest uitsluitend welke tekstlabels zichtbaar
+   blijven. */
+function kiesMobieleTemperatuurLabelIndices(temperaturen,gelabeldeIndices,maxLabels=5){
+  const T=Array.isArray(temperaturen)?temperaturen:[],lim=Math.max(2,Math.floor(Number(maxLabels)||5));
+  const ids=[...new Set((Array.isArray(gelabeldeIndices)?gelabeldeIndices:[]).map(Number)
+    .filter(i=>Number.isInteger(i)&&i>=0&&i<T.length&&Number.isFinite(Number(T[i]))))].sort((a,b)=>a-b);
+  if(ids.length<=lim)return ids;
+  const gekozen=[],voeg=i=>{if(Number.isInteger(i)&&ids.includes(i)&&!gekozen.includes(i)&&gekozen.length<lim)gekozen.push(i);};
+  const waarden=ids.map(i=>Number(T[i])),min=Math.min(...waarden),max=Math.max(...waarden);
+  const dichtst=doel=>ids.reduce((beste,i)=>Math.abs(i-doel)<Math.abs(beste-doel)?i:beste,ids[0]);
+  voeg(ids.find(i=>Number(T[i])===min));
+  voeg(ids.find(i=>Number(T[i])===max));
+  for(const doel of [ids[0],(ids[0]+ids[ids.length-1])/2,ids[ids.length-1]])voeg(dichtst(doel));
+  if(gekozen.length<lim){
+    for(let k=1;k<lim*2&&gekozen.length<lim;k++)voeg(dichtst(ids[0]+(ids[ids.length-1]-ids[0])*(k/(lim*2))));
+  }
+  return gekozen.sort((a,b)=>a-b);
+}
+
+function mobieleGrafiekCompactHoogte(plotBottom,huidigeHoogte,zichtbareOnderkant){
+  const pb=Number(plotBottom),h=Number(huidigeHoogte),zicht=Number(zichtbareOnderkant);
+  if(![pb,h,zicht].every(Number.isFinite)||pb<=0||h<=0)return null;
+  const doel=Math.ceil(Math.max(pb+36,zicht+10));
+  return Math.min(h,doel);
+}
+
+const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,kiesMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -221,6 +250,7 @@ function polishMobieleGrafiekRanden(){
     }
     if(!beste||afstand>maxDx)return;
     gebruikt.add(beste.i);
+    el.setAttribute("data-mobile-temp-index",String(beste.i));
     const huidigY=Number(el.getAttribute("y")),nieuwY=begrensTemperatuurLabelY(huidigY,beste.y,top,bottom,42);
     if(Number.isFinite(nieuwY)&&nieuwY!==huidigY){
       el.setAttribute("y",String(nieuwY));
@@ -235,10 +265,55 @@ function polishMobieleGrafiekRanden(){
   });
 }
 
+function verminderMobieleTemperatuurlabels(){
+  if(!mobiel()||window.innerWidth>430)return;
+  const svg=document.getElementById("chart"),g=S.geo;
+  if(!svg||!g||!g.M||Number(g.n)>25||!Array.isArray(g.T))return;
+  const labels=[...svg.querySelectorAll("text[data-mobile-temp-index]")].filter(el=>!el.closest("#scrub"));
+  const maxLabels=window.innerWidth<=360?4:5;
+  const gekozen=new Set(kiesMobieleTemperatuurLabelIndices(g.T,labels.map(el=>Number(el.getAttribute("data-mobile-temp-index"))),maxLabels));
+  labels.forEach(el=>{if(!gekozen.has(Number(el.getAttribute("data-mobile-temp-index"))))el.remove();});
+
+  /* Een laatste geometrische pass borgt ook bij scherpe extrema dat twee
+     overgebleven cijfers niet fysiek over elkaar heen vallen. Bij een conflict
+     krijgt een echt minimum/maximum voorrang boven een gewoon anker. */
+  const over=[...svg.querySelectorAll("text[data-mobile-temp-index]")].filter(el=>!el.closest("#scrub"))
+    .sort((a,b)=>Number(a.getAttribute("x"))-Number(b.getAttribute("x")));
+  const geldig=g.T.map(Number).filter(Number.isFinite),min=geldig.length?Math.min(...geldig):null,max=geldig.length?Math.max(...geldig):null,gehouden=[];
+  for(const el of over){
+    const i=Number(el.getAttribute("data-mobile-temp-index")),box=svgTekstBoxUitElement(el);
+    const bots=gehouden.find(k=>rechthoekenBotsen(k.box,box,4));
+    if(!bots){gehouden.push({el,box,i});continue;}
+    const v=Number(g.T[i]),bv=Number(g.T[bots.i]),extreem=v===min||v===max,bExtreem=bv===min||bv===max;
+    if(extreem&&!bExtreem){
+      bots.el.remove();gehouden.splice(gehouden.indexOf(bots),1,{el,box,i});
+    }else el.remove();
+  }
+}
+
+function compactMobieleGrafiekHoogte(){
+  if(!mobiel()||window.innerWidth>430)return;
+  const svg=document.getElementById("chart"),g=S.geo;
+  if(!svg||!g||!g.M||Number(g.n)>25)return;
+  const delen=String(svg.getAttribute("viewBox")||"").trim().split(/\s+/).map(Number);
+  if(delen.length!==4||!delen.every(Number.isFinite))return;
+  const plotOnder=Number(g.pt)+Number(g.ih);if(!Number.isFinite(plotOnder))return;
+  let zichtbaarOnder=plotOnder+24;
+  [...svg.querySelectorAll("text")].forEach(el=>{
+    if(el.closest('g[data-q4-rain-periods]')||el.closest("#scrub"))return;
+    const box=svgTekstBoxUitElement(el);if(box)zichtbaarOnder=Math.max(zichtbaarOnder,box.y+box.height);
+  });
+  const doel=mobieleGrafiekCompactHoogte(plotOnder,delen[3],zichtbaarOnder);
+  if(doel!==null&&doel<delen[3]-4){
+    svg.setAttribute("viewBox",[delen[0],delen[1],delen[2],doel].join(" "));
+    svg.setAttribute("data-mobile-compact-height","1");
+  }
+}
+
 let uurAsToken=0;
 function planUurAsHerstel(){
   const token=++uurAsToken;
-  const voer=()=>{if(token===uurAsToken){herstelUurAs();polishMobieleGrafiekRanden();}};
+  const voer=()=>{if(token===uurAsToken){herstelUurAs();polishMobieleGrafiekRanden();verminderMobieleTemperatuurlabels();compactMobieleGrafiekHoogte();}};
   const start=()=>{
     const r1=()=>{const r2=()=>voer();if(typeof requestAnimationFrame==="function")requestAnimationFrame(r2);else setTimeout(r2,0);};
     if(typeof requestAnimationFrame==="function")requestAnimationFrame(r1);else setTimeout(r1,0);
@@ -281,10 +356,16 @@ function resourceEntries(){
   try{return typeof performance!=="undefined"&&typeof performance.getEntriesByType==="function"?performance.getEntriesByType("resource"):[];}catch(_){return [];}
 }
 function werkBronnenBij(){
+  /* Providerlagen kunnen KNMI pas ná de eerste footeropbouw toevoegen. Laat de
+     structurele owner eerst losse middot/slash-tekst normaliseren naar een echt
+     bronitem; daarna pas bepalen we zichtbaarheid en het oneven-gridritme. */
+  const structureer=root.WeatherNowMobileScreenshotPolish&&root.WeatherNowMobileScreenshotPolish.structureerBronnen;
+  if(typeof structureer==="function")structureer();
   const bron=document.querySelector("footer .bron-bronnen");if(!bron)return;
   const label=bron.querySelector(".bronlabel");if(label)label.textContent="Bronnen voor deze weergave";
   const gebruik=bronGebruikUitResources(resourceEntries(),S.land,{forecastBeschikbaar:!!S.d,airBeschikbaar:false});
-  [...bron.querySelectorAll(".bronitem")].forEach(item=>{
+  const items=[...bron.querySelectorAll(".bronitem")];
+  items.forEach(item=>{
     const naam=String(item.textContent||"").replace(/\s+/g," ").trim();
     let actief=true;
     if(naam==="Open-Meteo")actief=gebruik.openmeteo;
@@ -295,7 +376,10 @@ function werkBronnenBij(){
     else if(/OpenStreetMap/i.test(naam))actief=gebruik.osm;
     else if(naam==="KNMI")actief=gebruik.knmi;
     item.hidden=!actief;
+    item.classList.remove("wiw-source-last-odd");
   });
+  const zichtbaar=items.filter(item=>!item.hidden);
+  if(zichtbaar.length%2===1&&zichtbaar.length)zichtbaar[zichtbaar.length-1].classList.add("wiw-source-last-odd");
 }
 /* Windstootkop en -subtekst hebben één eigenaar in de base-build. Deze mobiele
    grafiek-/bronlaag raakt die tegel bewust niet meer aan. */
