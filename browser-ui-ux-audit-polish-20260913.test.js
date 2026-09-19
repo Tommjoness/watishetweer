@@ -44,14 +44,14 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
     [...bronnen.querySelectorAll('.bronitem')].forEach(item=>{if(/National Weather Service|BigDataCloud|OpenStreetMap/i.test(item.textContent||''))item.hidden=true;});
   }
   plaatsnav.classList.add('weer-klaar');
-  const cs=x=>getComputedStyle(x),pseudo=getComputedStyle(row,'::after'),midden=x=>{const r=x.getBoundingClientRect();return (r.top+r.bottom)/2;};
+  const cs=x=>getComputedStyle(x),pseudo=getComputedStyle(row,'::after'),midden=x=>{const r=x.getBoundingClientRect();return (r.top+r.bottom)/2;},tekstMidden=x=>{const range=document.createRange();range.selectNodeContents(x);const r=range.getBoundingClientRect();return (r.left+r.right)/2;};
   const focusDoel=cs(nav).display==='none'?row:links[0];focusDoel.focus();
   zet('nav-display',cs(nav).display);zet('nav-links',links.length);zet('nav-min-height',Math.min(...links.map(x=>x.getBoundingClientRect().height)));
   zet('focus-width',parseFloat(cs(focusDoel).outlineWidth)||0);zet('day-arrow',pseudo.content);zet('add-border',cs(add).borderStyle);
   zet('warning-width',parseFloat(cs(warning).borderLeftWidth)||0);zet('warning-color',cs(warning).borderLeftColor);zet('warning-title-weight',cs(warning.querySelector('h3')).fontWeight);
   zet('detail-display',cs(detail).display);zet('detail-size',parseFloat(cs(detail).fontSize)||0);zet('theme-role',thema.getAttribute('role'));zet('theme-choice',thema.dataset.actieveThemaKeuze||'');zet('theme-auto-pressed',thema.querySelector('#thema-auto')?.getAttribute('aria-pressed')||'');zet('theme-toggle-width',schakelaar.getBoundingClientRect().width);zet('theme-track-width',track.getBoundingClientRect().width);zet('theme-thumb-width',thumb.getBoundingClientRect().width);zet('theme-center-delta',Math.abs(midden(track)-midden(thema)).toFixed(3));
   const footerRect=footer.getBoundingClientRect(),bronnenRect=bronnen.getBoundingClientRect(),overRect=over.getBoundingClientRect(),privacyRect=privacy.getBoundingClientRect(),detailsRect=details.getBoundingClientRect(),disclaimerRect=disclaimer.getBoundingClientRect();
-  const zichtbarePlaatslinks=[...plaatsgrid.querySelectorAll('a')].filter(x=>cs(x).display!=='none'),utilityTargets=[over.querySelector('a'),privacy.querySelector('a'),details.querySelector('summary')].filter(Boolean),sourceTargets=[...bronnen.querySelectorAll('.bronitem:not([hidden]) a')],contactMail=contact.querySelector('a'),contactParts=[contact.querySelector('.footer-contact-question'),contact.querySelector('.footer-contact-mail')].filter(Boolean);
+  const zichtbarePlaatslinks=[...plaatsgrid.querySelectorAll('a')].filter(x=>cs(x).display!=='none'),plaatsMeer=plaatsgrid.querySelector('.seo-plaatsnav-alles'),regulierePlaatslinks=zichtbarePlaatslinks.filter(x=>x!==plaatsMeer).slice(0,6),utilityTargets=[over.querySelector('a'),privacy.querySelector('a'),details.querySelector('summary')].filter(Boolean),sourceTargets=[...bronnen.querySelectorAll('.bronitem:not([hidden]) a')],contactMail=contact.querySelector('a'),contactParts=[contact.querySelector('.footer-contact-question'),contact.querySelector('.footer-contact-mail')].filter(Boolean);
   zet('source-overflow',Math.max(0,footerRect.left-bronnenRect.left,bronnenRect.right-footerRect.right).toFixed(3));zet('footer-display',cs(footer).display);zet('over-text',(over.textContent||'').trim());zet('privacy-text',(privacy.textContent||'').trim());zet('over-top',overRect.top.toFixed(3));zet('privacy-top',privacyRect.top.toFixed(3));zet('details-top',detailsRect.top.toFixed(3));zet('disclaimer-bottom',disclaimerRect.bottom.toFixed(3));
   zet('utility-center-delta',Math.abs(((overRect.left+detailsRect.right)/2)-((footerRect.left+footerRect.right)/2)).toFixed(3));
   const utilityRects=utilityTargets.map(x=>x.getBoundingClientRect()),sourceRects=sourceTargets.map(x=>x.getBoundingClientRect()),contactRects=contactParts.map(x=>x.getBoundingClientRect()),contactRect=contact.getBoundingClientRect();
@@ -81,6 +81,16 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('place-columns',cs(plaatsgrid).display==='grid'?(cs(plaatsgrid).gridTemplateColumns||'').split(/\\s+/).filter(Boolean).length:0);
   zet('css-width',innerWidth);
   zet('place-link-min-height',Math.min(...zichtbarePlaatslinks.map(x=>x.getBoundingClientRect().height)).toFixed(3));
+  const plaatsgridRect=plaatsgrid.getBoundingClientRect(),plaatsMeerRect=plaatsMeer&&plaatsMeer.getBoundingClientRect();
+  const plaatsTekstDelta=regulierePlaatslinks.length?Math.max(...regulierePlaatslinks.map(x=>{const r=x.getBoundingClientRect();return Math.abs(tekstMidden(x)-((r.left+r.right)/2));})):999;
+  zet('place-regular-count',regulierePlaatslinks.length);
+  zet('place-link-justify',regulierePlaatslinks.length?cs(regulierePlaatslinks[0]).justifyContent:'');
+  zet('place-link-text-align',regulierePlaatslinks.length?cs(regulierePlaatslinks[0]).textAlign:'');
+  zet('place-text-center-delta',plaatsTekstDelta.toFixed(3));
+  zet('place-more-width-delta',plaatsMeerRect?Math.max(Math.abs(plaatsMeerRect.left-plaatsgridRect.left),Math.abs(plaatsMeerRect.right-plaatsgridRect.right)).toFixed(3):'999');
+  zet('place-more-center-delta',plaatsMeerRect?Math.abs(tekstMidden(plaatsMeer)-((plaatsMeerRect.left+plaatsMeerRect.right)/2)).toFixed(3):'999');
+  zet('place-more-justify',plaatsMeer?cs(plaatsMeer).justifyContent:'');
+  zet('place-more-text-align',plaatsMeer?cs(plaatsMeer).textAlign:'');
   zet('place-heading-size',parseFloat(cs(plaatskop).fontSize)||0);
   zet('place-overflow',Math.max(0,plaatsnav.getBoundingClientRect().right-innerWidth,-plaatsnav.getBoundingClientRect().left).toFixed(3));
   const pageBottom=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight);
@@ -142,6 +152,9 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(v("place-display")!=="grid")throw new Error("populaire plaatsen is "+v("place-display")+" in plaats van grid op request "+breedte+"px / CSS "+cssWidth+"px");
       if(Number(v("place-columns"))!==expectedColumns)throw new Error("populaire plaatsen gebruikt "+v("place-columns")+" kolommen op request "+breedte+"px / CSS "+cssWidth+"px, verwacht "+expectedColumns);
       if(Number(v("place-link-min-height"))<43.5)throw new Error("populaire-plaatsenlink is te laag op "+breedte+"px: "+v("place-link-min-height")+"px");
+      if(Number(v("place-regular-count"))!==6)throw new Error("mobiele populaire-plaatsenselectie bevat niet exact zes reguliere links op "+breedte+"px: "+v("place-regular-count"));
+      if(v("place-link-justify")!=="center"||v("place-link-text-align")!=="center"||Number(v("place-text-center-delta"))>1)throw new Error("plaatsnamen staan niet optisch gecentreerd in hun gridkolom op "+breedte+"px: justify="+v("place-link-justify")+", text-align="+v("place-link-text-align")+", delta="+v("place-text-center-delta")+"px");
+      if(v("place-more-justify")!=="center"||v("place-more-text-align")!=="center"||Number(v("place-more-width-delta"))>1.5||Number(v("place-more-center-delta"))>1)throw new Error("Meer plaatsen spant/centreert niet over beide kolommen op "+breedte+"px: width-delta="+v("place-more-width-delta")+"px, center-delta="+v("place-more-center-delta")+"px");
       if(Number(v("place-heading-size"))<18.9)throw new Error("populaire-plaatsenkop blijft te klein op "+breedte+"px");
       if(Number(v("place-overflow"))>1)throw new Error("populaire plaatsen loopt buiten viewport op "+breedte+"px: "+v("place-overflow")+"px");
       if(Number(v("place-padding-bottom"))>0.5)throw new Error("populaire plaatsen houdt nog loze onderpadding op "+breedte+"px: "+v("place-padding-bottom")+"px");
@@ -162,6 +175,6 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 }
 
-for(const [w,h] of [[320,844],[360,900],[390,844],[430,932],[768,1024],[1280,1000],[1440,1000],[1920,1080]])voerUit(w,h,"licht");
-for(const [w,h] of [[390,844],[430,932]])voerUit(w,h,"donker");
-console.log("UI/UX-auditbrowserregressie groen op 320/360/390/430/768px plus brede desktop en aparte donkere 390/430px-runs: navigatie, typografie, 44px tap-zones, populaire-plaatsengrid, dark mode, focus, waarschuwingsernst en footeruitlijning gemeten zonder overflow.");
+for(const [w,h] of [[320,844],[360,900],[375,900],[390,844],[430,932],[768,1024],[1280,1000],[1440,1000],[1920,1080]])voerUit(w,h,"licht");
+for(const [w,h] of [[320,844],[360,900],[375,900],[390,844],[430,932]])voerUit(w,h,"donker");
+console.log("UI/UX-auditbrowserregressie groen op 320/360/375/390/430px in licht en donker, plus 768px/tablet en brede desktop: populaire-plaatsnamen en Meer plaatsen geometrisch gecentreerd, 44px tap-zones behouden, zonder overflow of desktoplekkage.");

@@ -16,6 +16,7 @@ if(!/^[0-9a-f]{7,40}$/i.test(verwacht))throw new Error("EXPECTED_SHA ontbreekt o
 const viewports=[
   {naam:"mobiel-320",width:320,height:844},
   {naam:"mobiel-360",width:360,height:844},
+  {naam:"mobiel-375",width:375,height:844},
   {naam:"mobiel-390",width:390,height:844},
   {naam:"mobiel-430",width:430,height:932},
   {naam:"tablet-820",width:820,height:1180},
@@ -76,7 +77,32 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length===7,null,{timeout:10000});
 
       const basis=await page.evaluate(()=>{
+        const plaats=(()=>{
+          const nav=document.querySelector(".seo-plaatsnav"),grid=nav&&nav.querySelector(".seo-plaatsnav-links"),kop=nav&&nav.querySelector(".seo-plaatsnav-kop"),meer=grid&&grid.querySelector(".seo-plaatsnav-alles");
+          if(!nav||!grid||!kop||!meer)return null;
+          const cs=x=>getComputedStyle(x),zichtbaar=[...grid.querySelectorAll("a")].filter(x=>cs(x).display!=="none"),regulier=zichtbaar.filter(x=>x!==meer).slice(0,6);
+          const tekstMidden=x=>{const range=document.createRange();range.selectNodeContents(x);const r=range.getBoundingClientRect();return (r.left+r.right)/2;};
+          const gr=grid.getBoundingClientRect(),nr=nav.getBoundingClientRect(),mr=meer.getBoundingClientRect();
+          const tekstDelta=regulier.length?Math.max(...regulier.map(x=>{const r=x.getBoundingClientRect();return Math.abs(tekstMidden(x)-((r.left+r.right)/2));})):999;
+          return {
+            display:cs(grid).display,
+            columns:cs(grid).display==="grid"?(cs(grid).gridTemplateColumns||"").split(/\s+/).filter(Boolean).length:0,
+            regularCount:regulier.length,
+            minHeight:zichtbaar.length?Math.min(...zichtbaar.map(x=>x.getBoundingClientRect().height)):0,
+            justify:regulier.length?cs(regulier[0]).justifyContent:"",
+            textAlign:regulier.length?cs(regulier[0]).textAlign:"",
+            textDelta:tekstDelta,
+            moreWidthDelta:Math.max(Math.abs(mr.left-gr.left),Math.abs(mr.right-gr.right)),
+            moreCenterDelta:Math.abs(tekstMidden(meer)-((mr.left+mr.right)/2)),
+            moreJustify:cs(meer).justifyContent,
+            moreTextAlign:cs(meer).textAlign,
+            headingCenterDelta:Math.abs(tekstMidden(kop)-((nr.left+nr.right)/2)),
+            overflow:Math.max(0,nr.right-innerWidth,-nr.left),
+            background:cs(nav).backgroundColor
+          };
+        })();
         return {
+          plaats,
           sha:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
           overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,
           pressureRetired:!document.getElementById("pres")&&!document.getElementById("pressub")&&!document.getElementById("wiw-pressure-diagnostic")&&!/\bLuchtdruk\b/i.test(document.body.innerText||""),
@@ -95,6 +121,23 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert(!/(?:^|[^\d])-?1\s+graden\b/i.test(basis.appText),`${vp.naam}: enkelvoudtemperatuur gebruikt 'graden'`);
       assert(binnenViewport(basis.searchRect,vp.width),`${vp.naam}: zoekveld valt buiten viewport`);
       for(const r of basis.topRects)assert(binnenViewport(r,vp.width),`${vp.naam}: zichtbare bovenste bediening '${String(r.label).trim()}' valt buiten viewport`);
+      if(vp.width<=430){
+        const p=basis.plaats;
+        assert(p,`${vp.naam}: populaire-plaatsennavigatie ontbreekt op gedeployde preview`);
+        assert.equal(p.display,"grid",`${vp.naam}: populaire plaatsen gebruikt geen grid`);
+        assert.equal(p.columns,2,`${vp.naam}: populaire plaatsen gebruikt ${p.columns} in plaats van 2 kolommen`);
+        assert.equal(p.regularCount,6,`${vp.naam}: compacte mobiele selectie bevat ${p.regularCount} in plaats van 6 plaatsen`);
+        assert(p.minHeight>=43.5,`${vp.naam}: plaatslink verliest 44px touch target (${p.minHeight}px)`);
+        assert.equal(p.justify,"center",`${vp.naam}: plaatslink justify-content is ${p.justify}`);
+        assert.equal(p.textAlign,"center",`${vp.naam}: plaatslink text-align is ${p.textAlign}`);
+        assert(p.textDelta<=1,`${vp.naam}: plaatsnaam staat ${p.textDelta}px uit het midden van zijn kolom`);
+        assert.equal(p.moreJustify,"center",`${vp.naam}: Meer plaatsen justify-content is ${p.moreJustify}`);
+        assert.equal(p.moreTextAlign,"center",`${vp.naam}: Meer plaatsen text-align is ${p.moreTextAlign}`);
+        assert(p.moreWidthDelta<=1.5,`${vp.naam}: Meer plaatsen spant niet over beide kolommen (delta ${p.moreWidthDelta}px)`);
+        assert(p.moreCenterDelta<=1,`${vp.naam}: Meer plaatsen staat ${p.moreCenterDelta}px uit het midden`);
+        assert(p.headingCenterDelta<=1.5,`${vp.naam}: sectietitel verspringt ${p.headingCenterDelta}px uit het midden`);
+        assert(p.overflow<=1,`${vp.naam}: populaire plaatsen veroorzaakt ${p.overflow}px overflow`);
+      }
 
       const themaVoor=await page.evaluate(()=>{
         const groep=document.getElementById("thema"),auto=document.getElementById("thema-auto"),schakelaar=document.getElementById("thema-switch"),zon=schakelaar?.querySelector(".wiw-theme-sun"),maan=schakelaar?.querySelector(".wiw-theme-moon"),r=groep?.getBoundingClientRect(),track=schakelaar?.querySelector(".wiw-theme-track")?.getBoundingClientRect(),thumb=schakelaar?.querySelector(".wiw-theme-thumb")?.getBoundingClientRect();
@@ -190,6 +233,18 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert.equal(themaNa.actiefBewaar,"donker",`${vp.naam}: actieve themastaat wordt niet opgeslagen`);
       assert(themaNa.label&&themaNa.title,`${vp.naam}: Licht/donker-toggle mist toegankelijke toestandstekst`);
       assert.equal(new Set(themaNa.gewichten).size,1,`${vp.naam}: actieve Donker-keuze verandert de typografische zwaarte`);
+      if(vp.width<=430){
+        const donkerPlaats=await page.evaluate(()=>{
+          const nav=document.querySelector(".seo-plaatsnav"),grid=nav&&nav.querySelector(".seo-plaatsnav-links"),meer=grid&&grid.querySelector(".seo-plaatsnav-alles"),eerste=grid&&[...grid.querySelectorAll("a")].find(x=>x!==meer&&getComputedStyle(x).display!=="none");
+          return nav&&grid&&meer&&eerste?{background:getComputedStyle(nav).backgroundColor,justify:getComputedStyle(eerste).justifyContent,textAlign:getComputedStyle(eerste).textAlign,moreJustify:getComputedStyle(meer).justifyContent,moreTextAlign:getComputedStyle(meer).textAlign}:null;
+        });
+        assert(donkerPlaats,`${vp.naam}: donkere populaire-plaatsennavigatie ontbreekt`);
+        assert.notEqual(donkerPlaats.background,"rgb(255, 255, 255)",`${vp.naam}: donkere populaire-plaatsensectie valt terug naar wit`);
+        assert.equal(donkerPlaats.justify,"center",`${vp.naam}: plaatsnamen verliezen centrering in dark mode`);
+        assert.equal(donkerPlaats.textAlign,"center",`${vp.naam}: plaatsnamen verliezen text-align in dark mode`);
+        assert.equal(donkerPlaats.moreJustify,"center",`${vp.naam}: Meer plaatsen verliest centrering in dark mode`);
+        assert.equal(donkerPlaats.moreTextAlign,"center",`${vp.naam}: Meer plaatsen verliest text-align in dark mode`);
+      }
 
       /* Navigatie in dezelfde tab houdt sessionStorage bewust vast. Daarmee
          bewijzen we het nieuwe contract zonder de oude permanente localStorage-
@@ -272,7 +327,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert.deepEqual(pageErrors,[],`${vp.naam}: pageerrors ${pageErrors.join(" | ")}`);
       await context.close();
     }
-    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 8 echte viewports met gecontroleerde data, sessiegebonden thema-navigatie en tijdelijke screenshots.`);
+    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 9 echte viewports, inclusief 320/360/375/390/430px met geometrisch gecontroleerde populaire-plaatsennavigatie, dark mode en tijdelijke screenshots.`);
   }finally{
     fs.rmSync(tmp,{recursive:true,force:true});
     await browser.close();
