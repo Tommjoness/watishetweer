@@ -64,9 +64,10 @@ async function controleer(type,naam){
         S.dag=null;S.bereik=24;etmaal(S.i0,24);
         const svg=document.getElementById("chart"),groep=svg.querySelector('g[data-q4-rain-periods="1"]'),g=S.geo;
         const asY=g.pt+g.ih+(g.M?20:22);
-        const asTijden=[...svg.querySelectorAll("text")]
-          .filter(el=>Math.abs(Number(el.getAttribute("y"))-asY)<0.1&&/^\d{2}$/.test((el.textContent||"").trim()))
-          .map(el=>(el.textContent||"").trim());
+        const asEls=g&&g.M?[...svg.querySelectorAll('text[data-mobile-hour-axis="1"]')]:[...svg.querySelectorAll("text")]
+          .filter(el=>Math.abs(Number(el.getAttribute("y"))-asY)<0.1&&/^\d{2}$/.test((el.textContent||"").trim()));
+        const asTijden=asEls.map(el=>(el.textContent||"").trim());
+        const asX=asEls.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite);
         const startEls=groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')]:[];
         const endEls=groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')]:[];
         const rangeEls=groep?[...groep.querySelectorAll('text[data-q4-rain-period-range]')]:[];
@@ -103,7 +104,7 @@ async function controleer(type,naam){
           details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
           samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0,
           totalen:bedragenEls.map(el=>(el.textContent||"").trim()),
-          tijdBinnen,splitLayouts,bedragOnderTijd,kansLabels,asTijden
+          tijdBinnen,splitLayouts,bedragOnderTijd,kansLabels,asTijden,asX
         };
       });
       assert.ok(uur24.n<=25,`${naam} ${breedte}: rollende 24-uursmodus gebruikt geen lange 48-uursgeometrie`);
@@ -128,8 +129,12 @@ async function controleer(type,naam){
       assert.ok(uur24.tijdBinnen.length===verwachtTijdlabels&&uur24.tijdBinnen.every(x=>x.binnen),`${naam} ${breedte}: alle zichtbare tijdlabels blijven binnen de SVG; kreeg ${JSON.stringify(uur24.tijdBinnen)}`);
       assert.ok(uur24.splitLayouts.every(x=>!x.fout&&x.zelfdeRegel&&!x.overlapt),`${naam} ${breedte}: losse begin/eindlabels blijven op één niet-overlappende regel; kreeg ${JSON.stringify(uur24.splitLayouts)}`);
       assert.ok(uur24.bedragOnderTijd.length===2&&uur24.bedragOnderTijd.every(Boolean),`${naam} ${breedte}: iedere mm-waarde staat onder het eigen tijdlabel`);
-      if(breedte<760)assert.equal(uur24.asTijden.length,8,`${naam} ${breedte}: mobiele uuras houdt acht labels in de bestaande 3-uurscadans; kreeg ${JSON.stringify(uur24.asTijden)}`);
-      else assert.deepEqual(uur24.asTijden,["16","17","18","19","20","21","22"],`${naam} ${breedte}: compacte desktopuuras toont exact ieder zichtbaar uur`);
+      if(breedte<760){
+        assert.equal(uur24.asTijden.length,5,`${naam} ${breedte}: mobiele uuras gebruikt exact vijf rustige ankers; kreeg ${JSON.stringify(uur24.asTijden)}`);
+        assert.ok(uur24.asTijden.every(t=>/^\\d{2}:00$/.test(t)),`${naam} ${breedte}: mobiele uuras gebruikt uitsluitend expliciete HH:00-labels`);
+        const gaten=uur24.asX.slice(1).map((x,i)=>x-uur24.asX[i]);
+        assert.ok(gaten.length===4&&Math.max(...gaten)-Math.min(...gaten)<=0.2,`${naam} ${breedte}: vijf mobiele uurankers zijn niet gelijkmatig verdeeld: ${JSON.stringify(gaten)}`);
+      }else assert.deepEqual(uur24.asTijden,["16","17","18","19","20","21","22"],`${naam} ${breedte}: compacte desktopuuras toont exact ieder zichtbaar uur`);
 
       const langer=await page.evaluate(()=>{
         S.dag=null;S.bereik=48;etmaal(S.i0,48);

@@ -14,11 +14,10 @@ const etmaalVanaf22=Array.from({length:24},(_,i)=>{
   const uur=(22+i)%24,dag=i<2?"2026-09-17":"2026-09-18";
   return dag+"T"+String(uur).padStart(2,"0")+":00";
 });
-const rustigeIndices=api.kiesUurLabelIndices(etmaalVanaf22,6,4,1);
-assert.deepEqual(rustigeIndices,[2,6,10,14,18,22],"Smalle 24-uursas moet exact zes gelijkmatige vier-uurslabels kiezen.");
-assert.deepEqual(rustigeIndices.map(i=>api.uurUitIso(etmaalVanaf22[i])),[0,4,8,12,16,20],"Vier-uursritme moet kalenderkloktijden 00/04/08/12/16/20 behouden.");
 const etmaalMetRechtergrens=[...etmaalVanaf22,"2026-09-18T22:00"];
-assert.deepEqual(api.kiesUurLabelIndices(etmaalMetRechtergrens,6,4,1).map(i=>api.uurUitIso(etmaalMetRechtergrens[i])),[0,4,8,12,16,20],"Ook een 25-punts 24-uursgrafiek met rechtergrens houdt hetzelfde rustige vier-uursritme.");
+const rustigeIndices=api.kiesCompacteMobieleUurIndices(etmaalMetRechtergrens,5);
+assert.deepEqual(rustigeIndices,[0,6,12,18,24],"Smalle 25-punts etmaalgrafiek moet exact vijf gelijkmatig verdeelde uurankers kiezen.");
+assert.deepEqual(rustigeIndices.map(i=>api.uurUitIso(etmaalMetRechtergrens[i])),[22,4,10,16,22],"Vijf-ankerritme verdeelt de volledige 24 uur in vier gelijke zes-uursvakken.");
 
 const start=api.geschatteSvgTekstBox("nu 19°",100,80,"start",12);
 assert(start&&start.x===100,"Start-anchor moet op de opgegeven x beginnen.");
@@ -45,19 +44,19 @@ assert.equal(api.begrensTemperatuurLabelY(203,180,59,204,18),162,"Los zwevend la
 const runtime=fs.readFileSync(path.join(__dirname,"mobile-graph-ux-20260828.js"),"utf8");
 assert(!/\.getBBox\s*\(/.test(runtime),"Mobiele grafiekpolish mag geen uitvoerbare SVG getBBox-layoutread meer bevatten.");
 assert(runtime.includes("svgTekstBoxUitElement"),"Mobiele grafiekpolish moet de attribuutgebaseerde boxhelper gebruiken.");
-assert(runtime.includes("const compact24=Number(g.n)<=25&&window.innerWidth<=430"),"Vier-uursritme moet uitsluitend de smalle mobiele 24-uursweergave raken, inclusief de 25e rechtergrens.");
-assert(runtime.includes("uur%cadans!==0"),"Smalle mobiele uur-as moet bestaande tussenliggende drie-uurslabels opruimen.");
+assert(runtime.includes("const compact24=Number(g.n)<=25&&window.innerWidth<=430"),"Vijf-ankerritme moet uitsluitend de smalle mobiele 24-uursweergave raken, inclusief de 25e rechtergrens.");
+assert(runtime.includes("alle.forEach(el=>el.remove())")&&runtime.includes("kiesCompacteMobieleUurIndices(g.TI,5)"),"Smalle mobiele uur-as moet oude basis/fallbacklabels volledig vervangen door één deterministische vijf-ankerlaag.");
 assert(runtime.includes("Instrument Sans,ui-sans-serif,system-ui,sans-serif"),"Mobiele uuras moet een rustig recht sans-letterbeeld gebruiken.");
 assert(runtime.includes("el.setAttribute(\"font-style\",\"normal\")"),"Mobiele uur-as mag geen schuin letterbeeld erven.");
 assert(runtime.includes("alle.forEach(el=>{const expliciet=uurAsLabelTekst(el.textContent);if(expliciet)el.textContent=expliciet;});"),"Bestaande canonieke mobiele uurlabels moeten na render naar HH:00 worden genormaliseerd.");
 assert(runtime.includes("el.textContent=uurAsLabelTekst(String(uur));"),"Ook fallback-uurlabels moeten expliciete HH:00-kloktijden gebruiken.");
 assert(runtime.includes("function polishMobieleGrafiekRanden()"),"Mobiele grafiek mist de gerichte rechterrand-/zwevend-labelpolish.");
 assert(runtime.includes("data-mobile-edge-adjusted"),"Mobiele randcorrectie is niet traceerbaar in de SVG.");
-assert(runtime.includes("data-mobile-detached-temp-fixed"),"Mobiele zwevende-temperatuurcorrectie is niet traceerbaar in de SVG.");
-assert(runtime.includes("herstelUurAs();polishMobieleGrafiekRanden();"),"Randpolish moet na de definitieve mobiele uuras lopen.");
+assert(runtime.includes("data-mobile-point-aligned"),"Mobiele temperatuurcijfers zijn niet aantoonbaar exact aan hun datapunt teruggekoppeld.");
+assert(runtime.includes("herstelUurAs();polishMobieleGrafiekRanden();verminderMobieleTemperatuurlabels();vereenvoudigMobieleZonband();"),"Mobiele eindpass moet uuras, puntuitlijning en compacte zonband in vaste volgorde toepassen.");
 
 const checkpoint=fs.readFileSync(path.join(__dirname,"apply-mobile-screenshot-polish.js"),"utf8");
 assert(!/['\"]\s*const A=a\.getBBox\s*\(/.test(checkpoint),"Checkpoint-50 owner mag geen SVG-fontboxmeting meer injecteren.");
 assert(checkpoint.includes("geschatteTekstBox=el=>"),"Checkpoint-50 owner moet de attribuutgebaseerde tekstbox injecteren.");
 assert(checkpoint.includes("const fs=Number.isFinite(attrFont)&&attrFont>0?attrFont:(/Bodoni Moda/.test(familie)?F.temp:F.uur);"),"Checkpoint-50 tekstbox gebruikt de bestaande grafiekfontmaten als veilige fallback.");
-console.log("Mobiele grafiek reflow-test groen: rustige vier-uursas op smalle 24-uursweergave inclusief 25-punts rechtergrens, expliciete HH:00-kloktijden, begrensde rechterrand en temperatuurcijfers die visueel aan hun datapunt gekoppeld blijven.");
+console.log("Mobiele grafiek reflow-test groen: vijf gelijkmatige uurankers op de smalle 24-uursweergave, expliciete HH:00-kloktijden en maximaal vier temperatuurcijfers die exact aan hun datapunt gekoppeld blijven.");
