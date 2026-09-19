@@ -111,7 +111,7 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
 @media(max-width:430px){
   /* Lange metrieklabels krijgen overal dezelfde rustige tweeregelige kopruimte.
      De kaartstructuur en inhoud blijven ongewijzigd. */
-  .dashrow-hero .stats .eyebrow{letter-spacing:.075em!important;line-height:1.2!important;min-height:2.4em}
+  .dashrow-hero .stats .eyebrow{letter-spacing:.075em!important;line-height:1.15!important;min-height:2.3em}
 }
 @media(max-width:370px){
   html body footer:nth-of-type(n) > span.bron.bron-bronnen{column-gap:12px!important}
