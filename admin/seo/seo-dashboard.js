@@ -274,9 +274,9 @@ function render(data){
     const start=new Date(data.range.current.startDateTime);
     const end=new Date(data.range.current.endDateTime);
     const format=value=>value.toLocaleString("nl-NL",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
-    els.generated.textContent=`Bijgewerkt ${generated.toLocaleString("nl-NL")} · GSC laatste beschikbare 24 uur · recente uren kunnen nog wijzigen`;
+    els.generated.textContent=`Bijgewerkt ${generated.toLocaleString("nl-NL")} · GSC laatste 24 voltooide uren`;
     els.status.className="status";
-    els.status.textContent=`${sc.siteUrl} · ${format(start)} t/m ${format(end)} · uurlijkse GSC-data`;
+    els.status.textContent=`${sc.siteUrl} · ${format(start)} t/m ${format(end)} · uurlijkse GSC-data · onvoltooide uren uitgesloten`;
   }else{
     els.generated.textContent=`Bijgewerkt ${generated.toLocaleString("nl-NL")} · GSC t/m ${data.range.current.endDate} · 3 dagen vertraging voor stabiele data`;
     els.status.className="status";
