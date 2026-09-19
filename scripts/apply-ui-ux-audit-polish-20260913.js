@@ -71,9 +71,9 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   .seo-plaatsnav-inner{gap:8px!important}
   .seo-plaatsnav-kop{font-size:19px!important;line-height:1.2!important;letter-spacing:-.01em}
   .seo-plaatsnav-links{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px!important;row-gap:0!important;width:100%}
-  .seo-plaatsnav-links a{display:flex!important;align-items:center;justify-content:flex-start;min-width:0;min-height:44px!important;padding:4px 0;line-height:1.25!important;border-bottom:1px solid var(--rule-soft)!important}
+  .seo-plaatsnav-links a{display:flex!important;align-items:center;justify-content:center;min-width:0;min-height:44px!important;padding:4px 0;line-height:1.25!important;text-align:center;border-bottom:1px solid var(--rule-soft)!important}
   .seo-plaatsnav-links a:nth-child(n+7):not(.seo-plaatsnav-alles){display:none!important}
-  .seo-plaatsnav-links .seo-plaatsnav-alles{grid-column:1 / -1;border-bottom-color:transparent!important}
+  .seo-plaatsnav-links .seo-plaatsnav-alles{grid-column:1 / -1;justify-content:center;text-align:center;border-bottom-color:transparent!important}
   html[data-thema="donker"] body > .seo-plaatsnav{background:var(--sheet)!important}
 
   .mobile-section-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:18px 0 4px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
