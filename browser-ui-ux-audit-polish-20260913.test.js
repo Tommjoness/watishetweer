@@ -136,11 +136,13 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(Number(v("contact-hit-height"))<43.5)throw new Error("contactmail heeft geen 44px tap-zone op "+breedte+"px: "+v("contact-hit-height")+"px");
       if(v("source-layout")!=="grid")throw new Error("bronlinks gebruiken geen gridritme op "+breedte+"px: "+v("source-layout"));
       if(Number(v("source-visible-count"))<4)throw new Error("te weinig zichtbare bronlinks in footerfixture op "+breedte+"px: "+v("source-visible-count"));
-      if(Number(v("source-visible-count"))===4&&Number(v("source-row-count"))!==2)throw new Error("vier actieve bronlinks vormen niet de bedoelde rustige 2×2-grid op "+breedte+"px / CSS "+cssWidth+"px: "+v("source-row-count")+" rijen");
-      if(cssWidth<371&&Number(v("source-row-count"))>2)throw new Error("smalle bronfallback gebruikt meer dan twee rijen op "+breedte+"px: "+v("source-row-count"));
+      const sourceCount=Number(v("source-visible-count")),expectedSourceRows=Math.ceil(sourceCount/2);
+      if(Number(v("source-row-count"))!==expectedSourceRows)throw new Error("actieve bronlinks volgen niet exact de tweekoloms row-flow op "+breedte+"px / CSS "+cssWidth+"px: "+v("source-row-count")+" rijen voor "+sourceCount+" bronnen, verwacht "+expectedSourceRows);
       if(Number(v("disclaimer-line-height"))>15.1)throw new Error("disclaimer houdt een te ruime regelhoogte op "+breedte+"px: "+v("disclaimer-line-height")+"px");
       if(cssWidth>=371&&Number(v("contact-row-delta"))>1)throw new Error("contactvraag en mail staan niet op één compacte rij op "+breedte+"px / CSS "+cssWidth+"px: delta "+v("contact-row-delta")+"px");
-      if(cssWidth>=390&&cssWidth<=430&&Number(v("utility-row-delta"))>1)throw new Error("footerhulplinks staan op "+breedte+"px / CSS "+cssWidth+"px nog over meerdere rijen: delta "+v("utility-row-delta")+"px");
+      if(Math.abs(Number(v("over-top"))-Number(v("privacy-top")))>1)throw new Error("Over en Privacy delen mobiel niet dezelfde utilityrij op "+breedte+"px");
+      const utilitySecondRowDelta=Number(v("details-top"))-Number(v("over-top"));
+      if(utilitySecondRowDelta<43||utilitySecondRowDelta>46)throw new Error("Technische locatiegegevens staat mobiel niet als nette tweede utilityrij op "+breedte+"px: delta "+utilitySecondRowDelta+"px");
       if(breedte>=390&&breedte<=430)console.log("footer-meting "+modus+" "+breedte+"px / CSS "+cssWidth+"px: hoogte="+v("footer-height")+"px, bronnen="+v("source-visible-count")+" in "+v("source-row-count")+" rij(en), bronhit="+v("source-hit-height")+"px, disclaimer="+v("disclaimer-width")+"px / "+v("disclaimer-line-count")+" regels, contact-delta="+v("contact-row-delta")+"px, utility-delta="+v("utility-row-delta")+"px");
       if(Number(v("footer-margin-top"))>6.5)throw new Error("mobiele footer houdt te veel bovenmarge op "+breedte+"px: "+v("footer-margin-top")+"px");
       if(Number(v("footer-padding-top"))>0.5)throw new Error("mobiele footer houdt te veel bovenpadding op "+breedte+"px: "+v("footer-padding-top")+"px");
@@ -177,4 +179,4 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
 
 for(const [w,h] of [[320,844],[360,900],[375,900],[390,844],[430,932],[768,1024],[1280,1000],[1440,1000],[1920,1080]])voerUit(w,h,"licht");
 for(const [w,h] of [[320,844],[360,900],[375,900],[390,844],[430,932]])voerUit(w,h,"donker");
-console.log("UI/UX-auditbrowserregressie groen op 320/360/375/390/430px in licht en donker, plus 768px/tablet en brede desktop: populaire-plaatsnamen en Meer plaatsen geometrisch gecentreerd, 44px tap-zones behouden, zonder overflow of desktoplekkage.");
+console.log("UI/UX-auditbrowserregressie groen op 320/360/375/390/430px in licht en donker, plus 768px/tablet en brede desktop: footerbronnen volgen exact twee kolommen, utilitylinks 2+1, populaire plaatsen blijven gecentreerd, 44px tap-zones behouden, zonder overflow of desktoplekkage.");
