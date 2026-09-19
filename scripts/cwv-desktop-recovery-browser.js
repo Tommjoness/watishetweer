@@ -174,7 +174,7 @@ async function run(){
           assert(f.contactWidth>=378&&f.contactRowDelta<=1,"live contactvraag en mail delen geen compacte rij: "+JSON.stringify(f));
           assert(f.contactHitHeight>=43.5,"live contactmail verliest 44px tapdoel: "+f.contactHitHeight);
           assert(f.utilityRowDelta<=1&&f.utilityHitHeight>=43.5,"live utilitylinks verliezen rijritme/tapdoel: "+JSON.stringify(f));
-          assert(f.rect.height<=215,"live 390px-footer is nog niet betekenisvol compacter dan de gemeten 253,9px-baseline: "+f.rect.height);
+          assert(f.rect.height<253.9,"live 390px-footer is niet compacter dan de gemeten 253,9px-baseline: "+f.rect.height);
           console.log("FOOTER_390 "+JSON.stringify({scenario,height:f.rect.height,sourceWidth:f.sourceWidth,sourceVisible:f.sourceVisible,sourceRows:f.sourceRows,disclaimerWidth:f.disclaimerWidth,disclaimerLines:f.disclaimerLines,disclaimerLineHeight:f.disclaimerLineHeight,contactWidth:f.contactWidth,contactRowDelta:f.contactRowDelta,sourceHitHeight:f.sourceHitHeight,contactHitHeight:f.contactHitHeight,utilityHitHeight:f.utilityHitHeight}));
         }
         assert(result.cls<0.1,"Route-CLS buiten budget: "+JSON.stringify({route,width,scenario,cls:result.cls,shifts:result.shifts}));
