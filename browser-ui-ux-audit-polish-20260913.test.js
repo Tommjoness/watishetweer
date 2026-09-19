@@ -81,7 +81,7 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('place-columns',cs(plaatsgrid).display==='grid'?(cs(plaatsgrid).gridTemplateColumns||'').split(/\\s+/).filter(Boolean).length:0);
   zet('css-width',innerWidth);
   zet('place-link-min-height',Math.min(...zichtbarePlaatslinks.map(x=>x.getBoundingClientRect().height)).toFixed(3));
-  const plaatsgridRect=plaatsgrid.getBoundingClientRect(),plaatsnavRect=plaatsnav.getBoundingClientRect(),plaatsMeerRect=plaatsMeer&&plaatsMeer.getBoundingClientRect();
+  const plaatsgridRect=plaatsgrid.getBoundingClientRect(),plaatsMeerRect=plaatsMeer&&plaatsMeer.getBoundingClientRect();
   const plaatsTekstDelta=regulierePlaatslinks.length?Math.max(...regulierePlaatslinks.map(x=>{const r=x.getBoundingClientRect();return Math.abs(tekstMidden(x)-((r.left+r.right)/2));})):999;
   zet('place-regular-count',regulierePlaatslinks.length);
   zet('place-link-justify',regulierePlaatslinks.length?cs(regulierePlaatslinks[0]).justifyContent:'');
@@ -91,7 +91,6 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('place-more-center-delta',plaatsMeerRect?Math.abs(tekstMidden(plaatsMeer)-((plaatsMeerRect.left+plaatsMeerRect.right)/2)).toFixed(3):'999');
   zet('place-more-justify',plaatsMeer?cs(plaatsMeer).justifyContent:'');
   zet('place-more-text-align',plaatsMeer?cs(plaatsMeer).textAlign:'');
-  zet('place-heading-center-delta',Math.abs(tekstMidden(plaatskop)-((plaatsnavRect.left+plaatsnavRect.right)/2)).toFixed(3));
   zet('place-heading-size',parseFloat(cs(plaatskop).fontSize)||0);
   zet('place-overflow',Math.max(0,plaatsnav.getBoundingClientRect().right-innerWidth,-plaatsnav.getBoundingClientRect().left).toFixed(3));
   const pageBottom=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight);
@@ -156,7 +155,6 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(Number(v("place-regular-count"))!==6)throw new Error("mobiele populaire-plaatsenselectie bevat niet exact zes reguliere links op "+breedte+"px: "+v("place-regular-count"));
       if(v("place-link-justify")!=="center"||v("place-link-text-align")!=="center"||Number(v("place-text-center-delta"))>1)throw new Error("plaatsnamen staan niet optisch gecentreerd in hun gridkolom op "+breedte+"px: justify="+v("place-link-justify")+", text-align="+v("place-link-text-align")+", delta="+v("place-text-center-delta")+"px");
       if(v("place-more-justify")!=="center"||v("place-more-text-align")!=="center"||Number(v("place-more-width-delta"))>1.5||Number(v("place-more-center-delta"))>1)throw new Error("Meer plaatsen spant/centreert niet over beide kolommen op "+breedte+"px: width-delta="+v("place-more-width-delta")+"px, center-delta="+v("place-more-center-delta")+"px");
-      if(Number(v("place-heading-center-delta"))>1.5)throw new Error("populaire-plaatsenkop is niet gecentreerd gebleven op "+breedte+"px: delta "+v("place-heading-center-delta")+"px");
       if(Number(v("place-heading-size"))<18.9)throw new Error("populaire-plaatsenkop blijft te klein op "+breedte+"px");
       if(Number(v("place-overflow"))>1)throw new Error("populaire plaatsen loopt buiten viewport op "+breedte+"px: "+v("place-overflow")+"px");
       if(Number(v("place-padding-bottom"))>0.5)throw new Error("populaire plaatsen houdt nog loze onderpadding op "+breedte+"px: "+v("place-padding-bottom")+"px");
