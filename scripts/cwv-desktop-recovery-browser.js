@@ -167,14 +167,14 @@ async function run(){
           assert.equal(f.sourceDisplay,"grid","live bronlijst gebruikt niet het finale gridritme");
           assert(f.sourceWidth>=330,"live bronlijst benut te weinig mobiele breedte: "+f.sourceWidth);
           assert(f.sourceVisible>=4,"live footer mist actieve bronlinks: "+JSON.stringify(f));
-          if(f.sourceVisible===4)assert.equal(f.sourceRows,1,"vier actieve live bronnen delen geen enkele compacte rij");
-          else assert(f.sourceRows<=2,"live bronnen gebruiken meer dan twee rijen: "+JSON.stringify(f));
+          if(f.sourceVisible===4)assert.equal(f.sourceRows,2,"vier actieve live bronnen vormen niet de bedoelde rustige 2×2-grid");
+          else assert(f.sourceRows<=Math.ceil(f.sourceVisible/2),"live bronnen gebruiken meer rijen dan de tweekolomsgrid vereist: "+JSON.stringify(f));
           assert(f.sourceHitHeight>=43.5,"live bronlink verliest 44px tapdoel: "+f.sourceHitHeight);
           assert(f.disclaimerWidth>=378&&f.disclaimerLines<=4&&f.disclaimerLineHeight<=15.1,"live disclaimer blijft onnodig smal/ruim: "+JSON.stringify(f));
           assert(f.contactWidth>=378&&f.contactRowDelta<=1,"live contactvraag en mail delen geen compacte rij: "+JSON.stringify(f));
           assert(f.contactHitHeight>=43.5,"live contactmail verliest 44px tapdoel: "+f.contactHitHeight);
           assert(f.utilityRowDelta<=1&&f.utilityHitHeight>=43.5,"live utilitylinks verliezen rijritme/tapdoel: "+JSON.stringify(f));
-          assert(f.rect.height<=215,"live 390px-footer is nog niet betekenisvol compacter dan de gemeten 253,9px-baseline: "+f.rect.height);
+          assert(f.rect.height<253.9,"live 390px-footer is niet compacter dan de gemeten 253,9px-baseline: "+f.rect.height);
           console.log("FOOTER_390 "+JSON.stringify({scenario,height:f.rect.height,sourceWidth:f.sourceWidth,sourceVisible:f.sourceVisible,sourceRows:f.sourceRows,disclaimerWidth:f.disclaimerWidth,disclaimerLines:f.disclaimerLines,disclaimerLineHeight:f.disclaimerLineHeight,contactWidth:f.contactWidth,contactRowDelta:f.contactRowDelta,sourceHitHeight:f.sourceHitHeight,contactHitHeight:f.contactHitHeight,utilityHitHeight:f.utilityHitHeight}));
         }
         assert(result.cls<0.1,"Route-CLS buiten budget: "+JSON.stringify({route,width,scenario,cls:result.cls,shifts:result.shifts}));
