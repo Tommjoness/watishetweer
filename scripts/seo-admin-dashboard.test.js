@@ -123,6 +123,7 @@ assert(api.includes("function ga4Range(days)"),"GA4 mist een eigen actuele datum
 assert(api.includes('raw==="24h"')&&api.includes("DAY_SCOPE_VALUES=new Set([7,14,28,56,90])"),"SEO admin API mist 24 uur/7/14/28/56/90 scopecontract.");
 assert(api.includes('["hour","query"]')&&api.includes('"hourly_all"'),"24-uursweergave gebruikt niet de officiële uurlijkse Search Console-data.");
 assert(api.includes("first_incomplete_hour")&&api.includes("timestamp<incomplete"),"24-uursweergave moet Search Console-onvoltooide uren uitsluiten.");
+assert(api.includes('timeZone:"America/Los_Angeles"')&&api.includes("function searchConsoleDate"),"24-uursquery moet Search Console-datumgrenzen in Pacific Time berekenen.");
 assert(api.includes("aggregateHourlyDimension"),"24-uursweergave mist dimensieaggregatie over het rolling venster.");
 assert(js.includes("GSC laatste 24 voltooide uren")&&js.includes("onvoltooide uren uitgesloten"),"Dashboard moet expliciet tonen dat de 24-uursweergave alleen voltooide uren gebruikt.");
 assert(api.includes('scopeUnsupported:true'),"GA4 moet de 24-uursbeperking expliciet melden in plaats van dagdata als rolling 24 uur te tonen.");
