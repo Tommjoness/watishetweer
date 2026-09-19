@@ -59,7 +59,8 @@ assert(html.includes('class="holo-core"'),"SEO cockpit mist de holografische hea
 assert(html.includes('id="fx-toggle"'),"SEO cockpit mist de expliciete 3D FX-schakelaar.");
 assert(js.includes("/api/admin/seo?scope="),"Dashboard praat niet met de afgeschermde admin-API via de geselecteerde scope.");
 for(const option of ['value="24h">24 uur','value="7">7 dagen','value="14">14 dagen','value="28" selected>28 dagen','value="56">56 dagen','value="90">90 dagen'])assert(html.includes(option),`SEO cockpit mist periodeselectie: ${option}`);
-assert(html.includes('rel="apple-touch-icon" sizes="180x180" href="/admin/seo/apple-touch-icon.png"'),"SEO cockpit mist eigen homescreen-icon.");
+assert(html.includes('rel="apple-touch-icon" href="/admin/seo/icon.svg"'),"SEO cockpit mist eigen homescreen-icon.");
+assert(fs.existsSync(path.join(root,"admin/seo/icon.svg")),"SEO cockpit SVG-icon ontbreekt.");
 assert(js.includes('cache:"no-store"'),"Dashboardrequest moet no-store zijn.");
 assert(js.includes("function buildOpportunities"),"Dashboard mist slimme SEO-kansenclassificatie.");
 assert(js.includes("function renderNewRoutes"),"Dashboard mist renderer voor het nieuwe-routecohort.");
