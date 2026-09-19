@@ -80,8 +80,8 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   zet('footer-padding-top',parseFloat(cs(footer).paddingTop)||0);
   zet('footer-row-gap',parseFloat(cs(footer).rowGap)||0);
   zet('source-row-gap',parseFloat(cs(bronnen).rowGap)||0);
-  zet('source-line-widths',sourceItems.map(x=>cs(x).borderBottomWidth).join(','));
-  zet('source-line-colors',sourceItems.map(x=>cs(x).borderBottomColor).join('|'));
+  zet('source-line-widths',sourceTargets.map(x=>cs(x).borderBottomWidth).join(','));
+  zet('source-line-colors',sourceTargets.map(x=>cs(x).borderBottomColor).join('|'));
   zet('source-odd-last',laatsteBron&&laatsteBron.classList.contains('wiw-source-last-odd')?'ja':'nee');
   zet('source-last-center-delta',laatsteBronRect?Math.abs(((laatsteBronRect.left+laatsteBronRect.right)/2)-((bronnenRect.left+bronnenRect.right)/2)).toFixed(3):'999');
   zet('source-last-text',laatsteBron?(laatsteBron.textContent||'').trim():'');
