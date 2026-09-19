@@ -43,16 +43,16 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
      flex-, gap- en touchregels samen een ongelijk ritme maken. Bronnen houden
      44px tapzones, maar benutten de beschikbare breedte zodat actieve providers
      in twee rustige rijen kunnen blijven staan. */
-  html body footer:nth-of-type(n){margin-top:6px!important;padding-top:0!important;padding-bottom:0!important;display:grid!important;grid-template-columns:minmax(0,1fr) max-content max-content max-content minmax(0,1fr)!important;justify-content:center!important;align-items:start!important;column-gap:4px!important;row-gap:0!important}
+  html body footer:nth-of-type(n){margin-top:6px!important;padding-top:0!important;padding-bottom:0!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;justify-content:center!important;align-items:start!important;column-gap:12px!important;row-gap:0!important}
   footer > span.bron:first-of-type{grid-column:1 / -1!important;grid-row:1!important;justify-self:center!important;width:calc(100% + 42px);max-width:calc(100vw - 8px)}
-  html body footer:nth-of-type(n) > span.bron.bron-bronnen{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:stretch!important;width:100%;column-gap:16px!important;row-gap:4px!important}
+  html body footer:nth-of-type(n) > span.bron.bron-bronnen{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-flow:row!important;align-items:stretch!important;width:100%;column-gap:16px!important;row-gap:4px!important}
   footer .bron-bronnen .bronlabel{grid-column:1 / -1;margin:0!important;text-align:center}
   footer .bron-bronnen .bronitem{min-width:0}
   footer .bron-bronnen .bronitem a{display:flex!important;align-items:center!important;justify-content:center!important;width:100%;min-height:44px!important;margin:0!important;padding:0!important;line-height:1.2!important;text-align:center}
   footer > span.bron:nth-of-type(2){grid-column:1 / -1!important;grid-row:2!important;justify-self:center!important;width:calc(100% + 42px);max-width:calc(100vw - 8px);min-height:0!important;margin:0!important;line-height:1.35!important}
-  footer > span.bron:nth-last-of-type(2){grid-column:2!important;grid-row:3!important;justify-self:center!important}
-  footer > span.bron:last-of-type{grid-column:3!important;grid-row:3!important;justify-self:center!important}
-  footer > details.footer-details{grid-column:4!important;grid-row:3!important;justify-self:center!important}
+  footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important;justify-self:center!important}
+  footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important;justify-self:center!important}
+  footer > details.footer-details{grid-column:1 / -1!important;grid-row:4!important;justify-self:center!important}
   footer > span.bron:nth-last-of-type(2),
   footer > span.bron:last-of-type,
   footer > details.footer-details{min-height:44px!important;margin:0!important}
@@ -102,13 +102,9 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   .mobile-section-nav a,.seo-plaatsnav a,footer a,footer summary{transition:color .15s ease,background-color .15s ease,border-color .15s ease}
 }
 @media(max-width:370px){
-  html body footer:nth-of-type(n){grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
-  html body footer:nth-of-type(n) > span.bron.bron-bronnen{grid-template-columns:repeat(2,minmax(0,1fr))!important;column-gap:12px!important}
+  html body footer:nth-of-type(n) > span.bron.bron-bronnen{column-gap:12px!important}
   .footer-contact{flex-wrap:wrap}
   .footer-contact-mail{margin-top:-10px}
-  footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important}
-  footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important}
-  footer > details.footer-details{grid-column:1 / -1!important;grid-row:4!important}
   .mobile-section-nav{grid-template-columns:repeat(2,minmax(0,1fr))}
   .mobile-section-nav a:nth-child(3),.mobile-section-nav a:nth-child(4){border-top:1px solid var(--rule)}
   .mobile-section-nav a:nth-child(3){border-left:0}
