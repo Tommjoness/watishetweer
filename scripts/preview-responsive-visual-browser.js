@@ -182,9 +182,9 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert(m.tempCount>=3&&m.tempCount<=4,`${vp.naam}: mobiele grafiek gebruikt geen rustige set van drie à vier temperatuurankers (${m.tempCount})`);
         assert.equal(m.tempOverlap,0,`${vp.naam}: temperatuurlabels overlappen geometrisch`);
         assert(m.tempPointDx.every(dx=>dx<=0.1),`${vp.naam}: temperatuurcijfer zweeft horizontaal los van datapunt (${m.tempPointDx.join("/")})`);
-        assert.equal(m.hourCount,5,`${vp.naam}: mobiele uuras gebruikt ${m.hourCount} in plaats van vijf ankers`);
-        assert(m.hourTexts.every(t=>/^\\d{2}:00$/.test(t)),`${vp.naam}: mobiele uuras bevat geen zuivere HH:00-labels (${m.hourTexts.join("/")})`);
-        assert(m.hourGaps.length===4&&Math.max(...m.hourGaps)-Math.min(...m.hourGaps)<=0.2,`${vp.naam}: vijf uurlabels zijn niet gelijkmatig verdeeld (${m.hourGaps.join("/")})`);
+        assert.equal(m.hourCount,6,`${vp.naam}: mobiele uuras gebruikt ${m.hourCount} in plaats van zes vier-uursankers`);
+        assert.deepEqual(m.hourTexts,["00:00","04:00","08:00","12:00","16:00","20:00"],`${vp.naam}: mobiele uuras volgt niet de vaste kalendercadans`);
+        assert(m.hourGaps.length===5&&Math.max(...m.hourGaps)-Math.min(...m.hourGaps)<=0.2,`${vp.naam}: zes vier-uurslabels zijn niet gelijkmatig verdeeld (${m.hourGaps.join("/")})`);
         assert.equal(m.sunInChart,0,`${vp.naam}: dubbele zon-op/zon-ondertekst staat nog in de SVG`);
         assert.equal(m.compact,"1",`${vp.naam}: grafiekhoogte is niet mobiel gecompacteerd`);
         if(m.chartSummaryGap!==null)assert(m.chartSummaryGap>=0&&m.chartSummaryGap<=18,`${vp.naam}: grafiek-samenvatting heeft ${m.chartSummaryGap}px tussenruimte`);
@@ -403,7 +403,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert.deepEqual(pageErrors,[],`${vp.naam}: pageerrors ${pageErrors.join(" | ")}`);
       await context.close();
     }
-    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 9 echte viewports, inclusief 320/360/375/390/430px met vijf gelijkmatige uurankers, puntvaste temperatuurcijfers, compacte zonband, bron/footerpolish, neutrale actieve plaats, metriekritme, dark mode en tijdelijke screenshots.`);
+    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 9 echte viewports, inclusief 320/360/375/390/430px met zes rustige vier-uursankers, puntvaste temperatuurcijfers, compacte zonband, bron/footerpolish, neutrale actieve plaats, metriekritme, dark mode en tijdelijke screenshots.`);
   }finally{
     fs.rmSync(tmp,{recursive:true,force:true});
     await browser.close();

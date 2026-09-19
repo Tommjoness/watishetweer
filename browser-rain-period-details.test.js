@@ -130,10 +130,9 @@ async function controleer(type,naam){
       assert.ok(uur24.splitLayouts.every(x=>!x.fout&&x.zelfdeRegel&&!x.overlapt),`${naam} ${breedte}: losse begin/eindlabels blijven op één niet-overlappende regel; kreeg ${JSON.stringify(uur24.splitLayouts)}`);
       assert.ok(uur24.bedragOnderTijd.length===2&&uur24.bedragOnderTijd.every(Boolean),`${naam} ${breedte}: iedere mm-waarde staat onder het eigen tijdlabel`);
       if(breedte<760){
-        assert.equal(uur24.asTijden.length,5,`${naam} ${breedte}: mobiele uuras gebruikt exact vijf rustige ankers; kreeg ${JSON.stringify(uur24.asTijden)}`);
-        assert.ok(uur24.asTijden.every(t=>/^\\d{2}:00$/.test(t)),`${naam} ${breedte}: mobiele uuras gebruikt uitsluitend expliciete HH:00-labels`);
+        assert.deepEqual(uur24.asTijden,["00:00","04:00","08:00","12:00","16:00","20:00"],`${naam} ${breedte}: mobiele uuras gebruikt niet de vaste vier-uurscadans; kreeg ${JSON.stringify(uur24.asTijden)}`);
         const gaten=uur24.asX.slice(1).map((x,i)=>x-uur24.asX[i]);
-        assert.ok(gaten.length===4&&Math.max(...gaten)-Math.min(...gaten)<=0.2,`${naam} ${breedte}: vijf mobiele uurankers zijn niet gelijkmatig verdeeld: ${JSON.stringify(gaten)}`);
+        assert.ok(gaten.length===5&&Math.max(...gaten)-Math.min(...gaten)<=0.2,`${naam} ${breedte}: zes mobiele vier-uursankers zijn niet gelijkmatig verdeeld: ${JSON.stringify(gaten)}`);
       }else assert.deepEqual(uur24.asTijden,["16","17","18","19","20","21","22"],`${naam} ${breedte}: compacte desktopuuras toont exact ieder zichtbaar uur`);
 
       const langer=await page.evaluate(()=>{

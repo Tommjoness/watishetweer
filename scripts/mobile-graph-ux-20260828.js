@@ -32,23 +32,6 @@ function kiesUurLabelIndices(tijden,minimaal=4,cadans=3,rand=2){
   }
   return uit;
 }
-/* De smalle 24-uursas krijgt exact vijf gelijkmatig verdeelde ankers.
-   Anders kunnen basislabels en fallbacklabels door elkaar heen een grillig ritme
-   vormen (bijvoorbeeld 21:00, 01:00, 06:00, 08:00...). De forecastreeks zelf
-   blijft onaangeraakt; alleen de zichtbare asselectie wordt hier bepaald. */
-function kiesCompacteMobieleUurIndices(tijden,aantal=5){
-  const T=Array.isArray(tijden)?tijden:[],geldig=T.map((t,i)=>Number.isInteger(uurUitIso(t))?i:null).filter(i=>i!==null);
-  const n=Math.min(geldig.length,Math.max(2,Math.floor(Number(aantal)||5)));
-  if(!geldig.length)return [];
-  if(geldig.length<=n)return geldig;
-  const uit=[];
-  for(let k=0;k<n;k++){
-    const pos=Math.round(k*(geldig.length-1)/(n-1)),i=geldig[pos];
-    if(!uit.includes(i))uit.push(i);
-  }
-  return uit;
-}
-
 function isUurAsLabel(tekst,y,plotOnder,fontFamilie){
   const t=uurAsLabelTekst(tekst),py=Number(y),onder=Number(plotOnder),font=String(fontFamilie||"");
   return !!t&&Number.isFinite(py)&&Number.isFinite(onder)&&py>=onder+6&&!/Bodoni/i.test(font);
@@ -167,7 +150,7 @@ function mobieleGrafiekCompactHoogte(plotBottom,huidigeHoogte,zichtbareOnderkant
   return Math.min(h,doel);
 }
 
-const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesCompacteMobieleUurIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,kiesMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
+const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,kiesMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -198,11 +181,11 @@ function herstelUurAs(){
   alle.forEach(el=>{const expliciet=uurAsLabelTekst(el.textContent);if(expliciet)el.textContent=expliciet;});
 
   if(compact24){
-    /* Op de smalle etmaalgrafiek is er één eigenaar van de klokas: alle
-       bestaande basis-/fallbacklabels gaan weg en vijf gelijkmatige ankers
-       worden opnieuw uit de echte zichtbare TI-reeks opgebouwd. */
+    /* Op de smalle etmaalgrafiek is er één eigenaar van de klokas. We tonen
+       alleen kalendergebonden vier-uursankers (00/04/08/12/16/20), zodat de
+       tijdas niet afhankelijk is van het toevallige startuur van de forecast. */
     alle.forEach(el=>el.remove());
-    const indices=kiesCompacteMobieleUurIndices(g.TI,5),y=Number(g.pt)+Number(g.ih)+20;
+    const indices=kiesUurLabelIndices(g.TI,6,4,1),y=Number(g.pt)+Number(g.ih)+20;
     if(!Number.isFinite(y))return;
     const kleur=getComputedStyle(document.documentElement).getPropertyValue("--ink-45").trim()||"currentColor";
     indices.forEach((i,pos)=>{
@@ -217,7 +200,7 @@ function herstelUurAs(){
       const regen=svg.querySelector('g[data-q4-rain-periods]'),scrub=svg.querySelector("#scrub");
       svg.insertBefore(el,regen||scrub||null);
     });
-    svg.setAttribute("data-mobile-hour-rhythm","five-anchor");
+    svg.setAttribute("data-mobile-hour-rhythm","four-hour");
     return;
   }
 
