@@ -125,6 +125,7 @@ assert(api.includes('scopeUnsupported:true'),"GA4 moet de 24-uursbeperking expli
 assert(api.includes('const NEW_LOCATION_COHORT=Object.freeze({'),"SEO admin API mist historisch cohort voor de nieuwe routes.");
 assert(api.includes('launchDate:"2026-09-18"'),"Nieuwe-routecohort gebruikt niet de echte livegangdatum.");
 assert(api.includes("function summarizeRouteCohort"),"SEO admin API mist cohortaggregatie.");
+assert(api.includes('typeof row.page==="string"')&&api.includes('?rows:mapRows(rows,"page")'),"Routecohort moet zowel dagquery-rows als reeds geaggregeerde 24-uurs-paginarows accepteren.");
 assert(api.includes("newLocationCohort"),"SEO admin response mist nieuwe-routecohort.");
 const cohortBlock=(api.match(/const NEW_LOCATION_COHORT=Object\.freeze\(\{[\s\S]*?\n\}\);/)||[])[0]||"";
 assert(cohortBlock,"Nieuwe-routecohort kon niet uit de API-bron worden gelezen.");
