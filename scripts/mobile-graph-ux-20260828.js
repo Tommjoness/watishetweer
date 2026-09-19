@@ -129,7 +129,7 @@ function begrensTemperatuurLabelY(labelY,puntY,plotTop,plotBottom,maxAfstand=42)
 function kiesMobieleTemperatuurLabelIndices(temperaturen,gelabeldeIndices,maxLabels=5){
   const T=Array.isArray(temperaturen)?temperaturen:[],lim=Math.max(2,Math.floor(Number(maxLabels)||5));
   const ids=[...new Set((Array.isArray(gelabeldeIndices)?gelabeldeIndices:[]).map(Number)
-    .filter(i=>Number.isInteger(i)&&i>=0&&i<T.length&&Number.isFinite(Number(T[i]))))].sort((a,b)=>a-b);
+    .filter(i=>Number.isInteger(i)&&i>=0&&i<T.length&&T[i]!==null&&T[i]!==undefined&&T[i]!==""&&Number.isFinite(Number(T[i]))))].sort((a,b)=>a-b);
   if(ids.length<=lim)return ids;
   const gekozen=[],voeg=i=>{if(Number.isInteger(i)&&ids.includes(i)&&!gekozen.includes(i)&&gekozen.length<lim)gekozen.push(i);};
   const waarden=ids.map(i=>Number(T[i])),min=Math.min(...waarden),max=Math.max(...waarden);
@@ -279,7 +279,7 @@ function verminderMobieleTemperatuurlabels(){
      krijgt een echt minimum/maximum voorrang boven een gewoon anker. */
   const over=[...svg.querySelectorAll("text[data-mobile-temp-index]")].filter(el=>!el.closest("#scrub"))
     .sort((a,b)=>Number(a.getAttribute("x"))-Number(b.getAttribute("x")));
-  const geldig=g.T.map(Number).filter(Number.isFinite),min=geldig.length?Math.min(...geldig):null,max=geldig.length?Math.max(...geldig):null,gehouden=[];
+  const geldig=g.T.filter(v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))).map(Number),min=geldig.length?Math.min(...geldig):null,max=geldig.length?Math.max(...geldig):null,gehouden=[];
   for(const el of over){
     const i=Number(el.getAttribute("data-mobile-temp-index")),box=svgTekstBoxUitElement(el);
     const bots=gehouden.find(k=>rechthoekenBotsen(k.box,box,4));
