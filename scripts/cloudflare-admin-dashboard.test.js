@@ -23,6 +23,8 @@ assert(html.includes('/admin/seo/cloudflare-dashboard.js'),"SEO cockpit mist Clo
 assert(html.includes("Bezoekers & bots"),"SEO cockpit mist bezoekers/bots-kop.");
 assert.doesNotThrow(()=>new Function(js),"Cloudflare dashboard-JS bevat een syntaxfout.");
 assert(js.includes('/api/admin/seo/cloudflare'),"Cloudflare dashboard gebruikt niet de beschermde adminroute.");
+assert(js.includes('?scope=${scope}'),"Cloudflare dashboard volgt de geselecteerde cockpitperiode niet.");
+assert(js.includes('cfEls.range.addEventListener("change",loadCloudflare)'),"Cloudflare dashboard herlaadt niet bij een periodewissel.");
 assert(js.includes('cache:"no-store"'),"Cloudflare dashboardrequest moet no-store zijn.");
 assert(js.includes("bot-gefilterde visits"),"Cloudflare dashboard mist duidelijke visit-benaming.");
 assert(js.includes("geen unieke personen"),"Cloudflare dashboard moet visits als sessies duiden.");
@@ -47,6 +49,8 @@ for(const required of [
 assert(api.includes('"Cache-Control":"private, no-store, max-age=0"'),"Cloudflare admin API mist no-store.");
 assert(api.includes('status:503,code:"access_not_configured"'),"Cloudflare admin API moet Access fail-closed afdwingen.");
 assert(!api.includes("CLOUDFLARE_ANALYTICS_API_TOKEN:"),"Cloudflare admin API mag de token niet serialiseren.");
+assert(api.includes('["24h",1]')&&api.includes('["14",14]'),"Cloudflare admin API mist 24 uur/14 dagen scopes.");
+assert(api.includes('requestedWindows(requestUrl.searchParams.get("scope"))'),"Cloudflare admin API gebruikt de cockpitperiode niet.");
 
 assert(reportWorkflow.includes("CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}"),"Rapportworkflow moet de read-only analytics-secret gebruiken.");
 assert(reportWorkflow.includes("if: github.ref == 'refs/heads/main'"),"Production runtime-sync mag alleen op main draaien.");
