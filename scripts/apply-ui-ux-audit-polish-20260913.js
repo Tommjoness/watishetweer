@@ -45,7 +45,7 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
      in twee rustige rijen kunnen blijven staan. */
   html body footer:nth-of-type(n){margin-top:6px!important;padding-top:0!important;padding-bottom:0!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;justify-content:center!important;align-items:start!important;column-gap:12px!important;row-gap:0!important}
   footer > span.bron:first-of-type{grid-column:1 / -1!important;grid-row:1!important;justify-self:center!important;width:calc(100% + 42px);max-width:calc(100vw - 8px)}
-  html body footer:nth-of-type(n) > span.bron.bron-bronnen{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-flow:row!important;align-items:stretch!important;width:100%;column-gap:16px!important;row-gap:2px!important}
+  html body footer:nth-of-type(n) > span.bron.bron-bronnen{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-flow:row!important;align-items:stretch!important;width:100%;column-gap:16px!important;row-gap:1px!important}
   footer .bron-bronnen .bronlabel{grid-column:1 / -1;margin:0!important;text-align:center}
   footer .bron-bronnen .bronitem{min-width:0}
   footer .bron-bronnen .bronitem.wiw-source-last-odd{grid-column:1 / -1!important;justify-self:stretch}
