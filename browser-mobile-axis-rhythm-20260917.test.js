@@ -30,7 +30,11 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
     const pb=Number(g.pt)+Number(g.ih),labels=[...svg.querySelectorAll('text')].filter(el=>/^\\d{2}:00$/.test(String(el.textContent||'').trim())&&Number(el.getAttribute('y'))>=pb+6).sort((a,b)=>Number(a.getAttribute('x'))-Number(b.getAttribute('x')));
     const teksten=labels.map(el=>String(el.textContent||'').trim()),fonts=labels.map(el=>String(el.getAttribute('font-family')||'')),stijlen=labels.map(el=>String(el.getAttribute('font-style')||''));
     const W=Number(g.W),buiten=labels.filter(el=>{const b=el.getBBox();return b.x<-.5||b.x+b.width>W+.5;});
-    zet('labels',teksten.join(','));zet('count',labels.length);zet('inner-width',window.innerWidth);zet('geo-n',g.n);zet('font-ok',fonts.every(v=>/Instrument Sans/.test(v))?'ja':'nee');zet('style-ok',stijlen.every(v=>v==='normal')?'ja':'nee');zet('overflow',buiten.length?buiten.map(el=>el.textContent).join(','):'geen');zet('done','ok');
+    const tempLabels=[...svg.querySelectorAll('text[data-mobile-temp-index]')].filter(el=>!el.closest('#scrub')),tempBoxes=tempLabels.map(el=>({el,b:el.getBBox()})),tempBots=[];
+    for(let i=0;i<tempBoxes.length;i++)for(let j=i+1;j<tempBoxes.length;j++){const a=tempBoxes[i].b,b=tempBoxes[j].b;if(a.x<b.x+b.width+2&&a.x+a.width+2>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y)tempBots.push(tempBoxes[i].el.textContent+'|'+tempBoxes[j].el.textContent);}
+    const vb=svg.viewBox.baseVal,onderruimte=vb.height-pb;
+    zet('labels',teksten.join(','));zet('count',labels.length);zet('inner-width',window.innerWidth);zet('geo-n',g.n);zet('font-ok',fonts.every(v=>/Instrument Sans/.test(v))?'ja':'nee');zet('style-ok',stijlen.every(v=>v==='normal')?'ja':'nee');zet('overflow',buiten.length?buiten.map(el=>el.textContent).join(','):'geen');
+    zet('temp-count',tempLabels.length);zet('temp-overlap',tempBots.length?tempBots.join(','):'geen');zet('compact-height',svg.getAttribute('data-mobile-compact-height')||'');zet('under-space',onderruimte.toFixed(2));zet('done','ok');
   }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},700);
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},180),{once:true});
 </script>`;
@@ -49,5 +53,9 @@ try{
   if(Number(v('count'))!==6)throw new Error("mobiele 24-uursas moet exact zes tijdlabels tonen; kreeg "+v('count'));
   if(v('font-ok')!=='ja'||v('style-ok')!=='ja')throw new Error("mobiele uuras gebruikt niet overal het rechte Instrument Sans-letterbeeld");
   if(v('overflow')!=='geen')throw new Error("mobiele uuras valt buiten de SVG: "+v('overflow'));
-  console.log("Mobiele uuras-regressie groen: echte 402px runtime toont zes rustige vier-uurslabels in recht Instrument Sans zonder randoverflow; geo.n="+v('geo-n')+".");
+  if(Number(v('temp-count'))>5)throw new Error("mobiele grafiek houdt te veel vaste temperatuurwaarden: "+v('temp-count'));
+  if(v('temp-overlap')!=='geen')throw new Error("mobiele temperatuurlabels overlappen nog: "+v('temp-overlap'));
+  if(v('compact-height')!=='1')throw new Error("mobiele 24-uursgrafiek is niet post-render gecompacteerd");
+  if(Number(v('under-space'))>50)throw new Error("mobiele grafiek houdt nog te veel reserve onder de plot: "+v('under-space')+" SVG-px");
+  console.log("Mobiele uuras-regressie groen: echte 402px runtime toont zes rustige vier-uurslabels, maximaal vijf collision-vrije temperatuurankers en compacte onderruimte; geo.n="+v('geo-n')+".");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
