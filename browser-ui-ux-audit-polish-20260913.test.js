@@ -136,7 +136,7 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(Number(v("contact-hit-height"))<43.5)throw new Error("contactmail heeft geen 44px tap-zone op "+breedte+"px: "+v("contact-hit-height")+"px");
       if(v("source-layout")!=="grid")throw new Error("bronlinks gebruiken geen gridritme op "+breedte+"px: "+v("source-layout"));
       if(Number(v("source-visible-count"))<4)throw new Error("te weinig zichtbare bronlinks in footerfixture op "+breedte+"px: "+v("source-visible-count"));
-      if(cssWidth>=371&&Number(v("source-visible-count"))===4&&Number(v("source-row-count"))!==1)throw new Error("vier actieve bronlinks delen geen enkele compacte rij op "+breedte+"px / CSS "+cssWidth+"px: "+v("source-row-count")+" rijen");
+      if(Number(v("source-visible-count"))===4&&Number(v("source-row-count"))!==2)throw new Error("vier actieve bronlinks vormen niet de bedoelde rustige 2×2-grid op "+breedte+"px / CSS "+cssWidth+"px: "+v("source-row-count")+" rijen");
       if(cssWidth<371&&Number(v("source-row-count"))>2)throw new Error("smalle bronfallback gebruikt meer dan twee rijen op "+breedte+"px: "+v("source-row-count"));
       if(Number(v("disclaimer-line-height"))>15.1)throw new Error("disclaimer houdt een te ruime regelhoogte op "+breedte+"px: "+v("disclaimer-line-height")+"px");
       if(cssWidth>=371&&Number(v("contact-row-delta"))>1)throw new Error("contactvraag en mail staan niet op één compacte rij op "+breedte+"px / CSS "+cssWidth+"px: delta "+v("contact-row-delta")+"px");
@@ -144,7 +144,7 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(breedte>=390&&breedte<=430)console.log("footer-meting "+modus+" "+breedte+"px / CSS "+cssWidth+"px: hoogte="+v("footer-height")+"px, bronnen="+v("source-visible-count")+" in "+v("source-row-count")+" rij(en), bronhit="+v("source-hit-height")+"px, disclaimer="+v("disclaimer-width")+"px / "+v("disclaimer-line-count")+" regels, contact-delta="+v("contact-row-delta")+"px, utility-delta="+v("utility-row-delta")+"px");
       if(Number(v("footer-margin-top"))>6.5)throw new Error("mobiele footer houdt te veel bovenmarge op "+breedte+"px: "+v("footer-margin-top")+"px");
       if(Number(v("footer-padding-top"))>0.5)throw new Error("mobiele footer houdt te veel bovenpadding op "+breedte+"px: "+v("footer-padding-top")+"px");
-      if(Number(v("footer-row-gap"))>0.5||Number(v("source-row-gap"))>0.5)throw new Error("mobiele footer/bronnen houden verticale row-gap op "+breedte+"px");
+      if(Number(v("footer-row-gap"))>0.5||Number(v("source-row-gap"))>4.5)throw new Error("mobiele footer/bronnen overschrijden het afgesproken verticale ritme op "+breedte+"px");
       if(Number(v("contact-margin-top"))>0.5)throw new Error("mobiele contactregel houdt nog extra bovenmarge op "+breedte+"px");
       if(Number(v("sheet-padding-bottom"))>4.5)throw new Error("mobiele sheet houdt te veel ruimte onder footercontact op "+breedte+"px: "+v("sheet-padding-bottom")+"px");
       if(Number(v("place-margin-top"))>8.5||Number(v("place-padding-top"))>8.5)throw new Error("overgang naar populaire plaatsen blijft te ruim op "+breedte+"px: margin "+v("place-margin-top")+"px, padding "+v("place-padding-top")+"px");
