@@ -47,7 +47,7 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
     if(!beste||besteD>maxAfstand){labelMissend.push(i);return;}
     gebruikt.add(beste);gekoppeldeLabels.push(beste);
   });
-  const currentEl=tekstEls.find(el=>String(el.textContent||'').trim()==='nu')||null;
+  const currentEl=tekstEls.find(el=>String(el.textContent||'').trim()==='nu 20°')||null;
   const tempEls=[...gekoppeldeLabels,...(currentEl?[currentEl]:[])];
   const dozen=tempEls.map(el=>{const b=el.getBBox();return {t:String(el.textContent||'').trim(),x:b.x,y:b.y,w:b.width,h:b.height};});
   const botsingen=[];
@@ -72,7 +72,7 @@ try{
   if(r.status!==0)throw new Error("browser exit "+r.status+": "+String(r.stderr||"").slice(-1200));
   const dom=r.stdout||"",v=k=>{const m=new RegExp('data-live-chart-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
-  if(v('current')!=='ja')throw new Error("rode actuele nu-markering ontbreekt of bevat nog temperatuurcopy");
+  if(v('current')!=='ja')throw new Error("rode actuele nu-markering ontbreekt of mist de actuele temperatuur");
   if(Number(v('idx18'))<0)throw new Error("18:00 ontbreekt uit de zichtbare provider-as; geo.TI0="+v('geoti0'));
   if(v('dot17')!=='nee')throw new Error("17:00-modeluur wordt niet als redundante actuele waarde onderdrukt");
   if(v('missing')!=='geen')throw new Error("niet ieder toekomstig desktopuur heeft een temperatuurpunt/label; ontbrekende indices="+v('missing')+", aanwezig="+v('indices'));
@@ -86,7 +86,7 @@ try{
   const h=Number(v('height'));if(!(h>=296&&h<=310))throw new Error("desktopgrafiek reserveert nog te veel/te weinig onderruimte: viewBox-hoogte="+h);
   if(v('rain')!=='ja')throw new Error("Q4-regenannotatie ontbreekt in de regenfixture");
   if(Number(v('overflow'))>2)throw new Error("pre-cleanup desktopfixture heeft horizontale overflow: "+v('overflow')+"px");
-  console.log("Live chart/layout browserregressie groen vóór bundling: nu-markering is copy-arm, gewone daglengte is uit de grafiekkop en ieder volledig toekomstig desktopuur houdt exact één gekoppeld temperatuurcijfer; chart viewBox="+h+".");
+  console.log("Live chart/layout browserregressie groen vóór bundling: nu-markering houdt de actuele temperatuur, gewone daglengte is uit de grafiekkop en ieder volledig toekomstig desktopuur houdt exact één gekoppeld temperatuurcijfer; chart viewBox="+h+".");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
 
 /* Mobiele regressie uit live screenshot 17 september: het laatste tijdlabel mag

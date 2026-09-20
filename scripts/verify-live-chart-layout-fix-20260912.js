@@ -52,7 +52,8 @@ for(const p of htmlBestanden(OUT)){
   assert.ok(html.includes('const verplichtToekomstuur=!S.geo.M&&S.geo.n<=24&&modelTijd&&(!nuLokaleTijdPolish||modelTijd>nuLokaleTijdPolish);'),rel+": alle toekomstige desktop-uurlabels worden laat niet beschermd");
   assert.ok(html.includes('if(verplichtToekomstuur) return;'),rel+": toekomstige desktop-uurlabels kunnen nog door nu-cleanup verdwijnen");
   assert.ok(html.includes('verwijderTemperatuurMarkering(svg,el);'),rel+": niet-toekomstige concurrerende markeringen blijven niet opruimbaar");
-  assert.ok(html.includes('tekst.textContent="nu";'),rel+": actuele grafiekmarkering bevat nog redundante temperatuurcopy");
+  assert.ok(html.includes('const actueleGrafiekTemperatuur=S.d&&S.d.current&&S.d.current.temperature_2m;'),rel+": actuele grafiekmarkering leest de bestaande current-temperatuur niet");
+  assert.ok(html.includes('?"nu "+Math.round(Number(actueleGrafiekTemperatuur))+"°":"nu";'),rel+": actuele grafiekmarkering toont de current-temperatuur niet naast nu");
 
   assert.ok(html.includes('const rijenZichtbaar=rijen.map(r=>({'),rel+": zoninformatie wordt niet door een aparte presentatiefilter geleid");
   assert.ok(html.includes('if(t==="0 uur daglicht"||t==="24 uur daglicht") return true;'),rel+": pooldag/poolnacht verliezen hun betekenisvolle daglichtstatus");
@@ -68,4 +69,4 @@ for(const p of htmlBestanden(OUT)){
 assert.ok(gezien>0,"Geen pre-cleanup weerartifact met live chart/layout-fix gevonden.");
 const cache=verifieerServiceworkerCache(OUT,"live-chart-layout-fix-20260912");
 assert.ok(/^watishetweer-[0-9a-f]{12}$/.test(cache),"serviceworker-cache hoort bij pre-cleanup chart/layout-artifact");
-console.log("Live chart/layout pre-cleanup verifier groen voor "+gezien+" weerartifacts; nu-markering is copy-arm, gewone daglengte is uit de grafiekkop, poolstatus blijft intact en elk toekomstig desktopuur behoudt zijn temperatuurlabel; cache "+cache+".");
+console.log("Live chart/layout pre-cleanup verifier groen voor "+gezien+" weerartifacts; nu-markering houdt de actuele temperatuur, gewone daglengte is uit de grafiekkop, poolstatus blijft intact en elk toekomstig desktopuur behoudt zijn temperatuurlabel; cache "+cache+".");

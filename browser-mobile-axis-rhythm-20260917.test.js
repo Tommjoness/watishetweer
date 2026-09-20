@@ -20,10 +20,13 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
   document.documentElement.classList.remove('wn-progressief');const app=document.getElementById('app');if(app){app.style.display='block';app.style.visibility='visible';app.classList.remove('wn-progressief');}const state=document.getElementById('state');if(state)state.style.display='none';
   if(typeof S==='undefined'||typeof etmaal!=='function')throw new Error('grafiekruntime ontbreekt');
   const tijden=Array.from({length:25},(_,i)=>{const uur=(22+i)%24,dag=i<2?'2026-09-17':'2026-09-18';return dag+'T'+String(uur).padStart(2,'0')+':00';});
-  const temp=[15.4,15.0,14.8,14.6,14.3,14.1,14.2,13.7,13.2,14.0,14.8,15.4,15.8,16.4,17.0,17.6,18.0,18.2,18.4,18.2,17.8,17.1,17.1,16.2,15.8];
+  /* Late-avondvorm uit de productie-screenshot: dicht minimum in de nacht,
+     steile ochtendstijging en een breed middagmaximum. Juist deze vorm liet
+     de oude post-pass van zeven kandidaten naar vier zichtbare labels zakken. */
+  const temp=[13.0,12.2,11.6,11.3,11.1,11.0,11.2,12.0,12.1,12.2,12.3,12.8,14.6,16.6,18.0,19.0,19.1,19.6,20.0,20.0,19.5,18.8,17.8,16.0,15.0];
   const zeros=tijden.map(()=>0),wind=tijden.map(()=>12),richting=tijden.map(()=>220),code=tijden.map(()=>3),daglicht=tijden.map((_,i)=>i>=9&&i<=20?1:0);
-  S.d={timezone:'Europe/Amsterdam',utc_offset_seconds:7200,current:{time:'2026-09-17T21:33',temperature_2m:15.5,is_day:0},hourly:{time:tijden,temperature_2m:temp,apparent_temperature:temp.map(v=>v-.3),precipitation_probability:zeros,precipitation:zeros,wind_speed_10m:wind,wind_gusts_10m:wind.map(v=>v+4),cloud_cover:tijden.map(()=>55),weather_code:code,is_day:daglicht,wind_direction_10m:richting},daily:{time:['2026-09-17','2026-09-18'],sunrise:['2026-09-17T07:17','2026-09-18T07:19'],sunset:['2026-09-17T19:51','2026-09-18T19:48']}};
-  S.dag=null;S.bereik=24;S.i0=0;S.klokInstantOverride=new Date('2026-09-17T19:33:00Z');
+  S.d={timezone:'Europe/Amsterdam',utc_offset_seconds:7200,current:{time:'2026-09-17T22:06',temperature_2m:13.0,is_day:0},hourly:{time:tijden,temperature_2m:temp,apparent_temperature:temp.map(v=>v-.3),precipitation_probability:zeros,precipitation:zeros,wind_speed_10m:wind,wind_gusts_10m:wind.map(v=>v+4),cloud_cover:tijden.map(()=>55),weather_code:code,is_day:daglicht,wind_direction_10m:richting},daily:{time:['2026-09-17','2026-09-18'],sunrise:['2026-09-17T07:17','2026-09-18T07:19'],sunset:['2026-09-17T19:51','2026-09-18T19:48']}};
+  S.dag=null;S.bereik=24;S.i0=0;S.klokInstantOverride=new Date('2026-09-17T20:06:00Z');
   etmaal(0,24);
   setTimeout(()=>{try{
     const svg=document.getElementById('chart'),g=S.geo;if(!svg||!g)throw new Error('chart/geometrie ontbreekt');
@@ -34,7 +37,9 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
     for(let i=0;i<tempBoxes.length;i++)for(let j=i+1;j<tempBoxes.length;j++){const a=tempBoxes[i].b,b=tempBoxes[j].b;if(a.x<b.x+b.width+2&&a.x+a.width+2>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y)tempBots.push(tempBoxes[i].el.textContent+'|'+tempBoxes[j].el.textContent);}
     const vb=svg.viewBox.baseVal,onderruimte=vb.height-pb;
     zet('labels',teksten.join(','));zet('count',labels.length);zet('inner-width',window.innerWidth);zet('geo-n',g.n);zet('font-ok',fonts.every(v=>/Instrument Sans/.test(v))?'ja':'nee');zet('style-ok',stijlen.every(v=>v==='normal')?'ja':'nee');zet('overflow',buiten.length?buiten.map(el=>el.textContent).join(','):'geen');
-    zet('temp-count',tempLabels.length);zet('temp-overlap',tempBots.length?tempBots.join(','):'geen');zet('compact-height',svg.getAttribute('data-mobile-compact-height')||'');zet('under-space',onderruimte.toFixed(2));zet('done','ok');
+    const nuTekst=[...svg.querySelectorAll('text')].find(el=>/^nu(?:\\s|$)/i.test(String(el.textContent||'').trim()));
+    const zonTeksten=[...svg.querySelectorAll('text')].filter(el=>/^zon (?:op|onder) \\d{2}:\\d{2}$/i.test(String(el.textContent||'').trim()));
+    zet('temp-count',tempLabels.length);zet('temp-overlap',tempBots.length?tempBots.join(','):'geen');zet('now-text',nuTekst?String(nuTekst.textContent||'').trim():'');zet('sun-count',zonTeksten.length);zet('compact-height',svg.getAttribute('data-mobile-compact-height')||'');zet('under-space',onderruimte.toFixed(2));zet('done','ok');
   }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},700);
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},180),{once:true});
 </script>`;
@@ -55,6 +60,8 @@ try{
   if(v('overflow')!=='geen')throw new Error("mobiele uuras valt buiten de SVG: "+v('overflow'));
   if(Number(v('temp-count'))<5||Number(v('temp-count'))>8)throw new Error("mobiele grafiek houdt niet de beoogde vijf tot acht temperatuurwaarden: "+v('temp-count'));
   if(v('temp-overlap')!=='geen')throw new Error("mobiele temperatuurlabels overlappen nog: "+v('temp-overlap'));
+  if(v('now-text')!=='nu 13°')throw new Error("actuele rode markering mist de temperatuurwaarde: "+v('now-text'));
+  if(Number(v('sun-count'))!==0)throw new Error("dubbele zonlabels staan nog in de mobiele SVG: "+v('sun-count'));
   if(v('compact-height')!=='1')throw new Error("mobiele 24-uursgrafiek is niet post-render gecompacteerd");
   if(Number(v('under-space'))>50)throw new Error("mobiele grafiek houdt nog te veel reserve onder de plot: "+v('under-space')+" SVG-px");
   console.log("Mobiele uuras-regressie groen: echte 402px runtime toont zes rustige vier-uurslabels, vijf tot acht collision-vrije temperatuurankers en compacte onderruimte; geo.n="+v('geo-n')+".");

@@ -56,8 +56,9 @@ assert(runtime.includes("el.textContent=uurAsLabelTekst(String(uur));"),"Ook fal
 assert(runtime.includes("function polishMobieleGrafiekRanden()"),"Mobiele grafiek mist de gerichte rechterrand-/zwevend-labelpolish.");
 assert(runtime.includes("data-mobile-edge-adjusted"),"Mobiele randcorrectie is niet traceerbaar in de SVG.");
 assert(runtime.includes("data-mobile-point-aligned"),"Mobiele temperatuurcijfers zijn niet aantoonbaar exact aan hun datapunt teruggekoppeld.");
-assert(runtime.includes("herstelUurAs();polishMobieleGrafiekRanden();verminderMobieleTemperatuurlabels();vereenvoudigMobieleZonband();"),"Mobiele eindpass moet uuras, puntuitlijning en compacte zonband in vaste volgorde toepassen.");
+assert(runtime.includes("herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();verminderMobieleTemperatuurlabels();"),"Mobiele eindpass moet de dubbele zontekst vóór de temperatuurcollision-pass verwijderen.");
 assert(runtime.includes("mobieleTemperatuurLabelLimiet(window.innerWidth)"),"Mobiele temperatuurselectie moet tussen vijf en acht labels met de echte viewportbreedte schalen.");
+assert(runtime.includes('const xKandidaten=[px,bestaandX,px+schuif,px-schuif]'),"Mobiele temperatuurwaarden moeten naast verticale lagen ook lichte horizontale uitwijking proberen.");
 
 const checkpoint=fs.readFileSync(path.join(__dirname,"apply-mobile-screenshot-polish.js"),"utf8");
 assert(!/['\"]\s*const A=a\.getBBox\s*\(/.test(checkpoint),"Checkpoint-50 owner mag geen SVG-fontboxmeting meer injecteren.");
