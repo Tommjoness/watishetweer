@@ -32,6 +32,21 @@ function kiesUurLabelIndices(tijden,minimaal=4,cadans=3,rand=2){
   }
   return uit;
 }
+/* Voor de compacte mobiele 24-uursas is de klok zelf de bron van het ritme:
+   00/04/08/12/16/20. Bij een rollend venster kan één zo'n klokuur twee keer
+   voorkomen (linker- en rechtergrens); toon dan alleen de eerste zichtbare
+   instantie. Zo blijven precies zes kalenderankers over, onafhankelijk van het
+   toevallige startuur van de forecast. */
+function kiesKalenderUurLabelIndices(tijden,cadans=4){
+  const T=Array.isArray(tijden)?tijden:[],stap=Math.max(1,Math.floor(Number(cadans)||4)),gezien=new Set(),uit=[];
+  T.forEach((tijd,i)=>{
+    const uur=uurUitIso(tijd);
+    if(!Number.isInteger(uur)||uur%stap!==0||gezien.has(uur))return;
+    gezien.add(uur);uit.push(i);
+  });
+  return uit;
+}
+
 function isUurAsLabel(tekst,y,plotOnder,fontFamilie){
   const t=uurAsLabelTekst(tekst),py=Number(y),onder=Number(plotOnder),font=String(fontFamilie||"");
   return !!t&&Number.isFinite(py)&&Number.isFinite(onder)&&py>=onder+6&&!/Bodoni/i.test(font);
@@ -150,7 +165,7 @@ function mobieleGrafiekCompactHoogte(plotBottom,huidigeHoogte,zichtbareOnderkant
   return Math.min(h,doel);
 }
 
-const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,kiesMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
+const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,kiesMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -176,19 +191,35 @@ function herstelUurAs(){
   if(!mobiel())return;
   const svg=document.getElementById("chart"),g=S.geo;
   if(!svg||!g||Number(g.n)>48||!Array.isArray(g.TI)||typeof g.x!=="function")return;
-  const compact24=Number(g.n)<=25&&window.innerWidth<=430,cadans=compact24?4:3,rand=compact24?1:2,minimum=compact24?6:4;
+  const compact24=Number(g.n)<=25&&window.innerWidth<=430;
   let alle=bestaandeUurLabels(svg,g);
   alle.forEach(el=>{const expliciet=uurAsLabelTekst(el.textContent);if(expliciet)el.textContent=expliciet;});
+
   if(compact24){
-    /* Acht volledige drie-uurslabels zijn technisch passend maar ogen op een
-       iPhone onrustig. Op <=430 px houden we daarom een stabiel vier-uursritme:
-       zes kloktijden over 24 uur, zonder iets aan de forecastpunten te wijzigen. */
-    alle.forEach(el=>{
-      const uur=Number(String(el.textContent||"").slice(0,2));
-      if(!Number.isInteger(uur)||uur%cadans!==0)el.remove();
+    /* Op de smalle etmaalgrafiek is er één eigenaar van de klokas. We tonen
+       alleen kalendergebonden vier-uursankers (00/04/08/12/16/20), zodat de
+       tijdas niet afhankelijk is van het toevallige startuur van de forecast. */
+    alle.forEach(el=>el.remove());
+    const indices=kiesKalenderUurLabelIndices(g.TI,4),y=Number(g.pt)+Number(g.ih)+20;
+    if(!Number.isFinite(y))return;
+    const kleur=getComputedStyle(document.documentElement).getPropertyValue("--ink-45").trim()||"currentColor";
+    indices.forEach((i,pos)=>{
+      const x=Number(g.x(i)),uur=uurUitIso(g.TI[i]);if(!Number.isFinite(x)||!Number.isInteger(uur))return;
+      const el=document.createElementNS(SVG_NS,"text");
+      el.setAttribute("x",String(x));el.setAttribute("y",String(y));
+      el.setAttribute("text-anchor","middle");
+      el.setAttribute("fill",kleur);el.setAttribute("font-size","9");el.setAttribute("opacity",".82");
+      stileerUurAsLabel(el);
+      el.setAttribute("data-mobile-hour-axis","1");el.setAttribute("data-mobile-hour-index",String(i));
+      el.textContent=uurAsLabelTekst(String(uur));
+      const regen=svg.querySelector('g[data-q4-rain-periods]'),scrub=svg.querySelector("#scrub");
+      svg.insertBefore(el,regen||scrub||null);
     });
-    alle=bestaandeUurLabels(svg,g);
+    svg.setAttribute("data-mobile-hour-rhythm","four-hour");
+    return;
   }
+
+  const minimum=4,cadans=3,rand=2;
   let fallback=alle.filter(el=>el.hasAttribute("data-mobile-hour-axis")),canoniek=alle.filter(el=>!el.hasAttribute("data-mobile-hour-axis"));
   alle.forEach(stileerUurAsLabel);
   if(canoniek.length>=minimum){fallback.forEach(el=>el.remove());return;}
@@ -269,26 +300,78 @@ function verminderMobieleTemperatuurlabels(){
   if(!mobiel()||window.innerWidth>430)return;
   const svg=document.getElementById("chart"),g=S.geo;
   if(!svg||!g||!g.M||Number(g.n)>25||!Array.isArray(g.T))return;
-  const labels=[...svg.querySelectorAll("text[data-mobile-temp-index]")].filter(el=>!el.closest("#scrub"));
-  const maxLabels=window.innerWidth<=360?4:5;
-  const gekozen=new Set(kiesMobieleTemperatuurLabelIndices(g.T,labels.map(el=>Number(el.getAttribute("data-mobile-temp-index"))),maxLabels));
-  labels.forEach(el=>{if(!gekozen.has(Number(el.getAttribute("data-mobile-temp-index"))))el.remove();});
 
-  /* Een laatste geometrische pass borgt ook bij scherpe extrema dat twee
-     overgebleven cijfers niet fysiek over elkaar heen vallen. Bij een conflict
-     krijgt een echt minimum/maximum voorrang boven een gewoon anker. */
+  /* Verwijder modelcijfers die de eerdere matching niet aan een echt punt kon
+     koppelen. Zo kan geen los Bodoni-cijfer blijven zweven nadat de compacte
+     mobiele selectie is opgebouwd. */
+  [...svg.querySelectorAll("text")].filter(el=>{
+    const ff=String(el.getAttribute("font-family")||"");
+    return !el.closest("#scrub")&&/Bodoni/i.test(ff)&&/^-?\\d+°$/.test(String(el.textContent||"").trim())&&!el.hasAttribute("data-mobile-temp-index");
+  }).forEach(el=>el.remove());
+
+  const labels=[...svg.querySelectorAll("text[data-mobile-temp-index]")].filter(el=>!el.closest("#scrub"));
+  if(labels.length<2)return;
+  const gekozen=new Set(kiesMobieleTemperatuurLabelIndices(g.T,labels.map(el=>Number(el.getAttribute("data-mobile-temp-index"))),4));
+
+  labels.forEach(el=>{
+    const i=Number(el.getAttribute("data-mobile-temp-index"));
+    if(!gekozen.has(i))el.remove();
+  });
+  [...svg.querySelectorAll("circle[data-temp-index]")].forEach(el=>{
+    if(!gekozen.has(Number(el.getAttribute("data-temp-index"))))el.remove();
+  });
+
+  const top=Number(g.pt),bottom=top+Number(g.ih),W=Number(g.W),gehouden=[];
+  const nu=[...svg.querySelectorAll("text")].find(el=>/^nu(?:\\s|$)/i.test(String(el.textContent||"").trim()));
+  const vaste=nu?[svgTekstBoxUitElement(nu)].filter(Boolean):[];
   const over=[...svg.querySelectorAll("text[data-mobile-temp-index]")].filter(el=>!el.closest("#scrub"))
-    .sort((a,b)=>Number(a.getAttribute("x"))-Number(b.getAttribute("x")));
-  const geldig=g.T.filter(v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))).map(Number),min=geldig.length?Math.min(...geldig):null,max=geldig.length?Math.max(...geldig):null,gehouden=[];
+    .sort((a,b)=>Number(a.getAttribute("data-mobile-temp-index"))-Number(b.getAttribute("data-mobile-temp-index")));
+
   for(const el of over){
-    const i=Number(el.getAttribute("data-mobile-temp-index")),box=svgTekstBoxUitElement(el);
-    const bots=gehouden.find(k=>rechthoekenBotsen(k.box,box,4));
-    if(!bots){gehouden.push({el,box,i});continue;}
-    const v=Number(g.T[i]),bv=Number(g.T[bots.i]),extreem=v===min||v===max,bExtreem=bv===min||bv===max;
-    if(extreem&&!bExtreem){
-      bots.el.remove();gehouden.splice(gehouden.indexOf(bots),1,{el,box,i});
-    }else el.remove();
+    const i=Number(el.getAttribute("data-mobile-temp-index")),punt=svg.querySelector(`circle[data-temp-index="${i}"]`);
+    const px=Number(punt&&punt.getAttribute("cx")),py=Number(punt&&punt.getAttribute("cy"));
+    if(!Number.isFinite(px)||!Number.isFinite(py)){el.remove();if(punt)punt.remove();continue;}
+
+    el.setAttribute("x",String(px));el.setAttribute("font-size","9");el.setAttribute("opacity",".80");
+    el.setAttribute("stroke-width","2");el.setAttribute("paint-order","stroke");el.setAttribute("stroke-linejoin","round");
+    el.removeAttribute("dy");el.removeAttribute("data-mobile-detached-temp-fixed");el.removeAttribute("data-mobile-edge-adjusted");
+
+    const fs=9,probe=geschatteSvgTekstBox(el.textContent,px,py-13,"middle",fs);
+    let anker="middle";
+    if(probe&&probe.x<5)anker="start";
+    else if(probe&&probe.x+probe.width>W-5)anker="end";
+    el.setAttribute("text-anchor",anker);
+
+    const boven=py-13,onder=py+19,kandidaten=[];
+    if(boven-fs>=top+4)kandidaten.push(boven);
+    if(onder<=bottom-4)kandidaten.push(onder);
+    if(!kandidaten.length)kandidaten.push(Math.max(top+fs+4,Math.min(bottom-4,boven)));
+
+    let gekozenY=null,box=null;
+    for(const y of kandidaten){
+      const b=geschatteSvgTekstBox(el.textContent,px,y,anker,fs);
+      if(!b)continue;
+      if([...vaste,...gehouden].some(k=>rechthoekenBotsen(k,b,4)))continue;
+      gekozenY=y;box=b;break;
+    }
+    if(gekozenY===null){
+      el.remove();if(punt)punt.remove();continue;
+    }
+    el.setAttribute("y",String(gekozenY));el.setAttribute("data-mobile-point-aligned","1");
+    if(punt){punt.setAttribute("r","1.7");punt.setAttribute("opacity",".55");}
+    gehouden.push(box);
   }
+}
+
+function vereenvoudigMobieleZonband(){
+  if(!mobiel()||window.innerWidth>430)return;
+  const svg=document.getElementById("chart"),g=S.geo;
+  if(!svg||!g||!g.M||Number(g.n)>25)return;
+  /* #suntimes boven de grafiek noemt opkomst/ondergang al volledig. De tweede
+     tekstlaag ín de SVG voegde vooral drukte toe; de nachtband en exacte
+     overgangslijnen blijven gewoon zichtbaar. */
+  [...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!el.closest('g[data-q4-rain-periods]')&&/^zon (?:op|onder) \\d{2}:\\d{2}$/i.test(String(el.textContent||"").trim())).forEach(el=>el.remove());
+  svg.setAttribute("data-mobile-sun-band-compact","1");
 }
 
 function compactMobieleGrafiekHoogte(){
@@ -321,7 +404,7 @@ function compactMobieleGrafiekHoogte(){
 let uurAsToken=0;
 function planUurAsHerstel(){
   const token=++uurAsToken;
-  const voer=()=>{if(token===uurAsToken){herstelUurAs();polishMobieleGrafiekRanden();verminderMobieleTemperatuurlabels();compactMobieleGrafiekHoogte();}};
+  const voer=()=>{if(token===uurAsToken){herstelUurAs();polishMobieleGrafiekRanden();verminderMobieleTemperatuurlabels();vereenvoudigMobieleZonband();compactMobieleGrafiekHoogte();}};
   const start=()=>{
     const r1=()=>{const r2=()=>voer();if(typeof requestAnimationFrame==="function")requestAnimationFrame(r2);else setTimeout(r2,0);};
     if(typeof requestAnimationFrame==="function")requestAnimationFrame(r1);else setTimeout(r1,0);

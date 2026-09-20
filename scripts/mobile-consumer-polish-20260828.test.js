@@ -54,19 +54,23 @@ assert(js.includes('data-now-collision-adjusted'),"Nu-label krijgt alleen bij ec
 
 const temp=[18,18,19,20,21,22,22,21,20,19,18,18,17,16,16,17,18,19,20,21,22,22,21,20];
 const kandidaten=[0,3,6,9,12,15,18,21,23];
-const gekozen=ux.kiesMobieleTemperatuurLabelIndices(temp,kandidaten,5);
-assert(gekozen.length<=5,"mobiele 24-uursgrafiek toont maximaal vijf vaste temperatuurankers");
+const gekozen=ux.kiesMobieleTemperatuurLabelIndices(temp,kandidaten,4);
+assert(gekozen.length<=4,"mobiele 24-uursgrafiek toont maximaal vier rustige temperatuurankers");
 assert(gekozen.includes(13)===false,"alleen werkelijk bestaande labelkandidaten mogen gekozen worden");
 assert(gekozen.includes(12),"zichtbaar minimum blijft als betekenisvol label behouden");
 assert(gekozen.includes(3)||gekozen.includes(6)||gekozen.includes(18)||gekozen.includes(21),"zichtbaar maximum blijft als betekenisvol label behouden");
 assert.deepEqual(ux.kiesMobieleTemperatuurLabelIndices([null,18,19],[0,1,2],5),[1,2],"null wordt niet als kunstmatige 0 °C-extreme behandeld");
+const uren25=Array.from({length:25},(_,i)=>"2026-09-"+String(i<2?19:20).padStart(2,"0")+"T"+String((22+i)%24).padStart(2,"0")+":00");
+assert.deepEqual(ux.kiesKalenderUurLabelIndices(uren25,4).map(i=>ux.uurUitIso(uren25[i])),[0,4,8,12,16,20],"smalle etmaalgrafiek gebruikt exact de kalendergebonden 00/04/08/12/16/20-as");
 assert.equal(ux.mobieleGrafiekCompactHoogte(220,340,246),256,"mobiele SVG-reserve wordt tot zichtbare inhoud plus veilige ondermarge teruggebracht");
 assert.equal(ux.mobieleGrafiekCompactHoogte(220,250,246),250,"een al compactere grafiek wordt nooit opnieuw vergroot");
 assert.equal(ux.mobieleGrafiekCompactHoogte(220,296,286),296,"zichtbare regenperiode-labels behouden hun benodigde mobiele SVG-reserve");
 assert(js.includes('if(el.closest("#scrub"))return;')&&!js.includes("el.closest('g[data-q4-rain-periods]')||el.closest(\"#scrub\")"),"mobiele compactie telt regenperiode-tijden en -bedragen mee in de zichtbare onderrand");
 assert(js.includes("if(svg.querySelector(\'g[data-q4-rain-periods] text\'))zichtbaarOnder=Math.max(zichtbaarOnder,286);"),"natte mobiele grafiek bewaart exact de canonieke 296px-reserve voor bracketlabels");
-assert(js.includes('data-mobile-temp-index')&&js.includes('rechthoekenBotsen(k.box,box,4)'),"mobiele temperatuurselectie heeft een echte geometrische collision-pass");
+assert(js.includes('data-mobile-temp-index')&&js.includes('data-mobile-point-aligned')&&js.includes('rechthoekenBotsen(k,b,4)'),"mobiele temperatuurselectie wordt exact aan echte datapunten gekoppeld en houdt een geometrische collision-pass");
+assert(js.includes('kiesKalenderUurLabelIndices(g.TI,4)')&&js.includes('data-mobile-hour-rhythm')&&js.includes('four-hour'),"smalle mobiele uuras wordt vanuit één deterministische kalendergebonden vier-uursowner opgebouwd");
+assert(js.includes('data-mobile-sun-band-compact')&&js.includes('^zon (?:op|onder)'),"dubbele zonsopkomst/-ondergangtekst wordt alleen binnen de mobiele SVG opgeruimd");
 assert(js.includes('data-mobile-compact-height'),"mobiele grafiekhoogte krijgt een expliciete post-render compactiemarker");
 assert(js.includes('WeatherNowMobileScreenshotPolish.structureerBronnen')&&js.includes('wiw-source-last-odd'),"dynamische bronnen worden na providerupdates genormaliseerd en oneven gecentreerd");
 
-console.log("Finale consumentenpolish 20260828: mobiel, desktop, bronprovenance, temperatuurcollision/compactie, Nu-collision en wrapperarchitectuur geborgd.");
+console.log("Finale consumentenpolish 20260828: mobiel, desktop, bronprovenance, vier-uursas, puntvaste temperatuurselectie, compacte zonband, Nu-collision en wrapperarchitectuur geborgd.");

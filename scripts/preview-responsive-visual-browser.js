@@ -119,6 +119,9 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const svg=document.getElementById("chart"),g=typeof S!=="undefined"&&S.geo,summary=document.getElementById("final-rain-summary");
           const tempLabels=svg?[...svg.querySelectorAll('text[data-mobile-temp-index]')].filter(el=>!el.closest("#scrub")):[],tempBoxes=tempLabels.map(el=>el.getBoundingClientRect()),tempOverlap=[];
           for(let i=0;i<tempBoxes.length;i++)for(let j=i+1;j<tempBoxes.length;j++){const a=tempBoxes[i],b=tempBoxes[j];if(a.left<b.right+1&&a.right+1>b.left&&a.top<b.bottom&&a.bottom>b.top)tempOverlap.push(i+"-"+j);}
+          const tempPointDx=tempLabels.map(el=>{const i=el.getAttribute("data-mobile-temp-index"),p=svg.querySelector(`circle[data-temp-index="${i}"]`);return p?Math.abs(Number(el.getAttribute("x"))-Number(p.getAttribute("cx"))):999;});
+          const hourLabels=svg?[...svg.querySelectorAll('text[data-mobile-hour-axis="1"]')]:[],hourX=hourLabels.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite),hourGaps=hourX.slice(1).map((x,i)=>x-hourX[i]),hourIndices=hourLabels.map(el=>Number(el.getAttribute("data-mobile-hour-index"))).filter(Number.isInteger);
+          const sunInChart=svg?[...svg.querySelectorAll("text")].filter(el=>/^zon (?:op|onder) \\d{2}:\\d{2}$/i.test(String(el.textContent||"").trim())).length:999;
           const bron=document.querySelector("footer .bron-bronnen"),items=bron?[...bron.querySelectorAll(".bronitem:not([hidden])")]:[],last=items[items.length-1]||null,br=bron&&bron.getBoundingClientRect(),lr=last&&last.getBoundingClientRect();
           const lines=items.map(el=>{const st=getComputedStyle(el.querySelector("a")||el);return {w:st.borderBottomWidth,c:st.borderBottomColor};});
           const footer=document.querySelector("footer"),direct=[...footer.querySelectorAll(":scope > span.bron")],disclaimer=direct.find(el=>/Weersinformatie is algemeen/.test(el.textContent||"")),contact=footer.querySelector(".footer-contact"),utilities=[direct.find(el=>el.querySelector('a[href="/over/"]')),direct.find(el=>el.querySelector('a[href="/privacy"]')),footer.querySelector(":scope > details.footer-details")].filter(Boolean);
@@ -127,7 +130,9 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const metric=["gust","pop"].map(id=>document.getElementById(id)?.closest(".stat")?.querySelector(".eyebrow")).filter(Boolean).map(el=>{const st=getComputedStyle(el),rect=el.getBoundingClientRect();return {text:(el.textContent||"").trim(),lineHeight:parseFloat(st.lineHeight)||0,fontSize:parseFloat(st.fontSize)||0,minHeight:parseFloat(st.minHeight)||0,width:rect.width,scrollWidth:el.scrollWidth};});
           const sr=svg&&svg.getBoundingClientRect(),rr=summary&&!summary.hidden&&summary.getBoundingClientRect();
           return {
-            tempCount:tempLabels.length,tempOverlap:tempOverlap.length,compact:svg?.getAttribute("data-mobile-compact-height")||"",
+            tempCount:tempLabels.length,tempOverlap:tempOverlap.length,tempPointDx,
+            hourCount:hourLabels.length,hourTexts:hourLabels.map(el=>(el.textContent||"").trim()),hourGaps,hourIndices,sunInChart,
+            compact:svg?.getAttribute("data-mobile-compact-height")||"",
             chartSummaryGap:sr&&rr?rr.top-sr.bottom:null,viewBox:svg?.getAttribute("viewBox")||"",plotBottom:g?Number(g.pt)+Number(g.ih):null,
             sourceCount:items.length,lastOdd:!!last&&last.classList.contains("wiw-source-last-odd"),lastText:last?(last.textContent||"").trim():"",
             lastCenterDelta:br&&lr?Math.abs((lr.left+lr.right-br.left-br.right)/2):999,lineWidths:lines.map(x=>x.w),lineColors:lines.map(x=>x.c),
@@ -174,8 +179,15 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert(p.overflow<=1,`${vp.naam}: populaire plaatsen veroorzaakt ${p.overflow}px overflow`);
         const m=basis.mobilePolish;
         assert(m,`${vp.naam}: mobile-polishmeting ontbreekt`);
-        assert(m.tempCount<=(vp.width<=360?4:5),`${vp.naam}: te veel vaste temperatuurlabels (${m.tempCount})`);
+        assert(m.tempCount>=3&&m.tempCount<=4,`${vp.naam}: mobiele grafiek gebruikt geen rustige set van drie à vier temperatuurankers (${m.tempCount})`);
         assert.equal(m.tempOverlap,0,`${vp.naam}: temperatuurlabels overlappen geometrisch`);
+        assert(m.tempPointDx.every(dx=>dx<=0.1),`${vp.naam}: temperatuurcijfer zweeft horizontaal los van datapunt (${m.tempPointDx.join("/")})`);
+        assert.equal(m.hourCount,6,`${vp.naam}: mobiele uuras gebruikt ${m.hourCount} in plaats van zes vier-uursankers`);
+        assert(m.hourTexts.every(t=>{const h=Number(String(t).slice(0,2));return /^\d{2}:00$/.test(t)&&Number.isInteger(h)&&h%4===0;}),`${vp.naam}: mobiele uuras volgt niet de vaste kalendercadans (${m.hourTexts.join("/")})`);
+        assert.equal(new Set(m.hourTexts).size,6,`${vp.naam}: mobiele uuras bevat een dubbel klokanker (${m.hourTexts.join("/")})`);
+        const hourIndexGaps=m.hourIndices.slice(1).map((x,i)=>x-m.hourIndices[i]);
+        assert(hourIndexGaps.length===5&&hourIndexGaps.every(g=>g===4),`${vp.naam}: vier-uursankers zijn niet gelijkmatig over de echte forecastreeks verdeeld (${hourIndexGaps.join("/")})`);
+        assert.equal(m.sunInChart,0,`${vp.naam}: dubbele zon-op/zon-ondertekst staat nog in de SVG`);
         assert.equal(m.compact,"1",`${vp.naam}: grafiekhoogte is niet mobiel gecompacteerd`);
         if(m.chartSummaryGap!==null)assert(m.chartSummaryGap>=0&&m.chartSummaryGap<=18,`${vp.naam}: grafiek-samenvatting heeft ${m.chartSummaryGap}px tussenruimte`);
         assert(m.sourceCount>=3,`${vp.naam}: te weinig zichtbare bronitems (${m.sourceCount})`);
@@ -393,7 +405,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert.deepEqual(pageErrors,[],`${vp.naam}: pageerrors ${pageErrors.join(" | ")}`);
       await context.close();
     }
-    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 9 echte viewports, inclusief 320/360/375/390/430px met collision-vrije compacte grafiek, bron/footerpolish, neutrale actieve plaats, metriekritme, dark mode en tijdelijke screenshots.`);
+    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 9 echte viewports, inclusief 320/360/375/390/430px met zes rustige vier-uursankers, puntvaste temperatuurcijfers, compacte zonband, bron/footerpolish, neutrale actieve plaats, metriekritme, dark mode en tijdelijke screenshots.`);
   }finally{
     fs.rmSync(tmp,{recursive:true,force:true});
     await browser.close();
