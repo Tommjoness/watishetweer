@@ -15,6 +15,8 @@ assert(/#nights \.row\.night:not\(\.kop\)\{[\s\S]*?padding-top:10px!important;[\
 assert(/\.stats \.eyebrow\{font-size:9\.5px;letter-spacing:\.075em;line-height:1\.15\}/.test(css),"metrieklabels houden hun compacte regelhoogte ook nadat de finale runtime het statistiekgrid uit dashrow-hero heeft verplaatst");
 assert(css.includes('.seo-plaatsnav-links a:nth-child(n+7):not(.seo-plaatsnav-alles){display:none}'),"mobiele hoofdweergave toont een korte plaatsselectie terwijl Meer plaatsen zichtbaar blijft");
 assert(css.includes(".seo-plaatsnav p{display:none}"),"SEO-uitleg neemt op de mobiele hoofdweergave geen extra schermhoogte in");
+assert(css.includes(".dashrow-chart #charthint{margin:0 0 3px;text-align:center}"),"grafiekhint krijgt een rustige, gecentreerde mobiele overgang");
+assert(css.includes(".wiw-chart-layout{gap:16px!important}")&&css.includes(".wiw-hour-panel{padding-top:14px!important}"),"grafiek en uurtabel sluiten mobiel met één compact sectieritme op elkaar aan");
 assert(css.includes('footer .bron-bronnen .bronitem[hidden]{display:none!important}'),"dynamische bronprovenance wordt op mobiel en desktop echt verborgen");
 assert(/@media\(min-width:901px\)[\s\S]*?\.brief\{max-width:72ch\}/.test(css),"desktopbriefing houdt een leesbare regellengte");
 assert(js.includes('const zichtbareSleutel=tekst==="kans · verwachte hoeveelheid"?"kans · totaal komend uur":tekst;'),"zichtbare uurtegel benoemt mm expliciet als totaal voor het komende uur");
@@ -54,11 +56,19 @@ assert(js.includes('data-now-collision-adjusted'),"Nu-label krijgt alleen bij ec
 
 const temp=[18,18,19,20,21,22,22,21,20,19,18,18,17,16,16,17,18,19,20,21,22,22,21,20];
 const kandidaten=[0,3,6,9,12,15,18,21,23];
-const gekozen=ux.kiesMobieleTemperatuurLabelIndices(temp,kandidaten,4);
-assert(gekozen.length<=4,"mobiele 24-uursgrafiek toont maximaal vier rustige temperatuurankers");
+assert.equal(ux.mobieleTemperatuurLabelLimiet(320),5,"smalste telefoon houdt vijf temperatuurankers");
+assert.equal(ux.mobieleTemperatuurLabelLimiet(390),7,"gangbare iPhone-breedte houdt zeven temperatuurankers");
+assert.equal(ux.mobieleTemperatuurLabelLimiet(430),8,"breedste compacte mobiele plot houdt acht temperatuurankers");
+const gekozen=ux.kiesMobieleTemperatuurLabelIndices(temp,kandidaten,7);
+assert.equal(gekozen.length,7,"mobiele 24-uursgrafiek benut zeven rustige temperatuurankers waar kandidaten beschikbaar zijn");
 assert(gekozen.includes(13)===false,"alleen werkelijk bestaande labelkandidaten mogen gekozen worden");
 assert(gekozen.includes(12),"zichtbaar minimum blijft als betekenisvol label behouden");
 assert(gekozen.includes(3)||gekozen.includes(6)||gekozen.includes(18)||gekozen.includes(21),"zichtbaar maximum blijft als betekenisvol label behouden");
+assert(gekozen.includes(23),"laatste zichtbare punt blijft als vaste prioriteit behouden");
+const prioriteit=ux.prioriteerMobieleTemperatuurLabelIndices(temp,gekozen);
+assert.equal(prioriteit[0],12,"minimum wordt vóór aanvullende tussenlabels geplaatst");
+assert([3,6,18,21].includes(prioriteit[1]),"maximum wordt vóór aanvullende tussenlabels geplaatst");
+assert.equal(prioriteit[2],23,"eindpunt wordt vóór aanvullende tussenlabels geplaatst");
 assert.deepEqual(ux.kiesMobieleTemperatuurLabelIndices([null,18,19],[0,1,2],5),[1,2],"null wordt niet als kunstmatige 0 °C-extreme behandeld");
 const uren25=Array.from({length:25},(_,i)=>"2026-09-"+String(i<2?19:20).padStart(2,"0")+"T"+String((22+i)%24).padStart(2,"0")+":00");
 assert.deepEqual(ux.kiesKalenderUurLabelIndices(uren25,4).map(i=>ux.uurUitIso(uren25[i])),[0,4,8,12,16,20],"smalle etmaalgrafiek gebruikt exact de kalendergebonden 00/04/08/12/16/20-as");

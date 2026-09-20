@@ -179,7 +179,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert(p.overflow<=1,`${vp.naam}: populaire plaatsen veroorzaakt ${p.overflow}px overflow`);
         const m=basis.mobilePolish;
         assert(m,`${vp.naam}: mobile-polishmeting ontbreekt`);
-        assert(m.tempCount>=3&&m.tempCount<=4,`${vp.naam}: mobiele grafiek gebruikt geen rustige set van drie à vier temperatuurankers (${m.tempCount})`);
+        assert(m.tempCount>=5&&m.tempCount<=8,`${vp.naam}: mobiele grafiek gebruikt geen rustige set van vijf tot acht temperatuurankers (${m.tempCount})`);
         assert.equal(m.tempOverlap,0,`${vp.naam}: temperatuurlabels overlappen geometrisch`);
         assert(m.tempPointDx.every(dx=>dx<=0.1),`${vp.naam}: temperatuurcijfer zweeft horizontaal los van datapunt (${m.tempPointDx.join("/")})`);
         assert.equal(m.hourCount,6,`${vp.naam}: mobiele uuras gebruikt ${m.hourCount} in plaats van zes vier-uursankers`);

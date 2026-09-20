@@ -136,11 +136,19 @@ function begrensTemperatuurLabelY(labelY,puntY,plotTop,plotBottom,maxAfstand=42)
   return Math.max(top+marge,Math.min(bottom-marge,doel));
 }
 
-/* Op een telefoon hoeft de 24-uurslijn niet ieder bestaand temperatuurcijfer
-   te herhalen. Houd maximaal vijf betekenisvolle ankers: begin, midden, einde
-   en de zichtbare minimum-/maximumtemperatuur. Forecastpunten en bronwaarden
-   blijven volledig intact; dit kiest uitsluitend welke tekstlabels zichtbaar
-   blijven. */
+function mobieleTemperatuurLabelLimiet(breedte){
+  const w=Number(breedte);
+  if(!Number.isFinite(w))return 5;
+  if(w<=340)return 5;
+  if(w<=375)return 6;
+  if(w<=410)return 7;
+  return 8;
+}
+
+/* Minimum, maximum en het laatste zichtbare punt worden eerst vastgezet. De
+   resterende plekken gaan telkens naar de kandidaat met de meeste horizontale
+   ruimte ten opzichte van de al gekozen punten. Zo blijft de hele lijn
+   leesbaar zonder ieder uur een cijfer te geven. */
 function kiesMobieleTemperatuurLabelIndices(temperaturen,gelabeldeIndices,maxLabels=5){
   const T=Array.isArray(temperaturen)?temperaturen:[],lim=Math.max(2,Math.floor(Number(maxLabels)||5));
   const ids=[...new Set((Array.isArray(gelabeldeIndices)?gelabeldeIndices:[]).map(Number)
@@ -148,14 +156,33 @@ function kiesMobieleTemperatuurLabelIndices(temperaturen,gelabeldeIndices,maxLab
   if(ids.length<=lim)return ids;
   const gekozen=[],voeg=i=>{if(Number.isInteger(i)&&ids.includes(i)&&!gekozen.includes(i)&&gekozen.length<lim)gekozen.push(i);};
   const waarden=ids.map(i=>Number(T[i])),min=Math.min(...waarden),max=Math.max(...waarden);
-  const dichtst=doel=>ids.reduce((beste,i)=>Math.abs(i-doel)<Math.abs(beste-doel)?i:beste,ids[0]);
   voeg(ids.find(i=>Number(T[i])===min));
   voeg(ids.find(i=>Number(T[i])===max));
-  for(const doel of [ids[0],(ids[0]+ids[ids.length-1])/2,ids[ids.length-1]])voeg(dichtst(doel));
-  if(gekozen.length<lim){
-    for(let k=1;k<lim*2&&gekozen.length<lim;k++)voeg(dichtst(ids[0]+(ids[ids.length-1]-ids[0])*(k/(lim*2))));
+  voeg(ids.includes(T.length-1)?T.length-1:ids[ids.length-1]);
+  while(gekozen.length<lim){
+    const over=ids.filter(i=>!gekozen.includes(i));
+    if(!over.length)break;
+    const afstand=i=>gekozen.length?Math.min(...gekozen.map(j=>Math.abs(i-j))):Infinity;
+    const prominentie=i=>{
+      const v=Number(T[i]),l=i>0&&Number.isFinite(Number(T[i-1]))?Number(T[i-1]):v,r=i+1<T.length&&Number.isFinite(Number(T[i+1]))?Number(T[i+1]):v;
+      return Math.abs(v-(l+r)/2);
+    };
+    const beste=over.reduce((a,b)=>afstand(b)!==afstand(a)?(afstand(b)>afstand(a)?b:a):(prominentie(b)>prominentie(a)?b:a),over[0]);
+    voeg(beste);
   }
   return gekozen.sort((a,b)=>a-b);
+}
+
+function prioriteerMobieleTemperatuurLabelIndices(temperaturen,indices){
+  const T=Array.isArray(temperaturen)?temperaturen:[],ids=[...new Set((Array.isArray(indices)?indices:[]).map(Number).filter(Number.isInteger))].filter(i=>i>=0&&i<T.length&&Number.isFinite(Number(T[i])));
+  if(!ids.length)return [];
+  const waarden=ids.map(i=>Number(T[i])),min=Math.min(...waarden),max=Math.max(...waarden),uit=[];
+  const voeg=i=>{if(Number.isInteger(i)&&ids.includes(i)&&!uit.includes(i))uit.push(i);};
+  voeg(ids.find(i=>Number(T[i])===min));
+  voeg(ids.find(i=>Number(T[i])===max));
+  voeg(ids.includes(T.length-1)?T.length-1:Math.max(...ids));
+  ids.forEach(voeg);
+  return uit;
 }
 
 function mobieleGrafiekCompactHoogte(plotBottom,huidigeHoogte,zichtbareOnderkant){
@@ -165,7 +192,7 @@ function mobieleGrafiekCompactHoogte(plotBottom,huidigeHoogte,zichtbareOnderkant
   return Math.min(h,doel);
 }
 
-const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,kiesMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
+const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,mobieleTemperatuurLabelLimiet,kiesMobieleTemperatuurLabelIndices,prioriteerMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -311,7 +338,8 @@ function verminderMobieleTemperatuurlabels(){
 
   const labels=[...svg.querySelectorAll("text[data-mobile-temp-index]")].filter(el=>!el.closest("#scrub"));
   if(labels.length<2)return;
-  const gekozen=new Set(kiesMobieleTemperatuurLabelIndices(g.T,labels.map(el=>Number(el.getAttribute("data-mobile-temp-index"))),4));
+  const limiet=mobieleTemperatuurLabelLimiet(window.innerWidth);
+  const gekozen=new Set(kiesMobieleTemperatuurLabelIndices(g.T,labels.map(el=>Number(el.getAttribute("data-mobile-temp-index"))),limiet));
 
   labels.forEach(el=>{
     const i=Number(el.getAttribute("data-mobile-temp-index"));
@@ -322,30 +350,35 @@ function verminderMobieleTemperatuurlabels(){
   });
 
   const top=Number(g.pt),bottom=top+Number(g.ih),W=Number(g.W),gehouden=[];
-  const nu=[...svg.querySelectorAll("text")].find(el=>/^nu(?:\\s|$)/i.test(String(el.textContent||"").trim()));
-  const vaste=nu?[svgTekstBoxUitElement(nu)].filter(Boolean):[];
-  const over=[...svg.querySelectorAll("text[data-mobile-temp-index]")].filter(el=>!el.closest("#scrub"))
-    .sort((a,b)=>Number(a.getAttribute("data-mobile-temp-index"))-Number(b.getAttribute("data-mobile-temp-index")));
+  const vaste=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!el.hasAttribute("data-mobile-temp-index"))
+    .map(svgTekstBoxUitElement).filter(Boolean);
+  const nuPunt=[...svg.querySelectorAll("circle")].find(el=>String(el.getAttribute("fill")||"")===String(CARMINE)&&Math.abs(Number(el.getAttribute("r"))-3)<.2);
+  const nuX=nuPunt?Number(nuPunt.getAttribute("cx")):NaN;
+  if(Number.isFinite(nuX))vaste.push({x:nuX-4,y:top,width:8,height:bottom-top});
+  const volgorde=prioriteerMobieleTemperatuurLabelIndices(g.T,[...gekozen]);
+  const labelPerIndex=new Map([...svg.querySelectorAll("text[data-mobile-temp-index]")].filter(el=>!el.closest("#scrub"))
+    .map(el=>[Number(el.getAttribute("data-mobile-temp-index")),el]));
+  const over=volgorde.map(i=>labelPerIndex.get(i)).filter(Boolean);
 
   for(const el of over){
     const i=Number(el.getAttribute("data-mobile-temp-index")),punt=svg.querySelector(`circle[data-temp-index="${i}"]`);
     const px=Number(punt&&punt.getAttribute("cx")),py=Number(punt&&punt.getAttribute("cy"));
     if(!Number.isFinite(px)||!Number.isFinite(py)){el.remove();if(punt)punt.remove();continue;}
 
-    el.setAttribute("x",String(px));el.setAttribute("font-size","9");el.setAttribute("opacity",".80");
+    el.setAttribute("x",String(px));el.setAttribute("font-size","10");el.setAttribute("opacity",".86");
     el.setAttribute("stroke-width","2");el.setAttribute("paint-order","stroke");el.setAttribute("stroke-linejoin","round");
     el.removeAttribute("dy");el.removeAttribute("data-mobile-detached-temp-fixed");el.removeAttribute("data-mobile-edge-adjusted");
 
-    const fs=9,probe=geschatteSvgTekstBox(el.textContent,px,py-13,"middle",fs);
+    const fs=10,probe=geschatteSvgTekstBox(el.textContent,px,py-14,"middle",fs);
     let anker="middle";
     if(probe&&probe.x<5)anker="start";
     else if(probe&&probe.x+probe.width>W-5)anker="end";
     el.setAttribute("text-anchor",anker);
 
-    const boven=py-13,onder=py+19,kandidaten=[];
-    if(boven-fs>=top+4)kandidaten.push(boven);
-    if(onder<=bottom-4)kandidaten.push(onder);
-    if(!kandidaten.length)kandidaten.push(Math.max(top+fs+4,Math.min(bottom-4,boven)));
+    const waarde=Number(g.T[i]),alleWaarden=[...gekozen].map(j=>Number(g.T[j])).filter(Number.isFinite),min=Math.min(...alleWaarden),max=Math.max(...alleWaarden);
+    const boven=[py-14,py-28],onder=[py+20,py+34],eerstBoven=waarde===max?true:waarde===min?false:i%2===0;
+    const kandidaten=(eerstBoven?[...boven,...onder]:[...onder,...boven]).filter(y=>y-fs>=top+4&&y<=bottom-4);
+    if(!kandidaten.length)kandidaten.push(Math.max(top+fs+4,Math.min(bottom-4,py-14)));
 
     let gekozenY=null,box=null;
     for(const y of kandidaten){
@@ -358,9 +391,10 @@ function verminderMobieleTemperatuurlabels(){
       el.remove();if(punt)punt.remove();continue;
     }
     el.setAttribute("y",String(gekozenY));el.setAttribute("data-mobile-point-aligned","1");
-    if(punt){punt.setAttribute("r","1.7");punt.setAttribute("opacity",".55");}
+    if(punt){punt.setAttribute("r","1.8");punt.setAttribute("opacity",".62");}
     gehouden.push(box);
   }
+  svg.setAttribute("data-mobile-temp-target",String(limiet));
 }
 
 function vereenvoudigMobieleZonband(){

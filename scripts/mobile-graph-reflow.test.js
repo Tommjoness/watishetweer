@@ -57,9 +57,10 @@ assert(runtime.includes("function polishMobieleGrafiekRanden()"),"Mobiele grafie
 assert(runtime.includes("data-mobile-edge-adjusted"),"Mobiele randcorrectie is niet traceerbaar in de SVG.");
 assert(runtime.includes("data-mobile-point-aligned"),"Mobiele temperatuurcijfers zijn niet aantoonbaar exact aan hun datapunt teruggekoppeld.");
 assert(runtime.includes("herstelUurAs();polishMobieleGrafiekRanden();verminderMobieleTemperatuurlabels();vereenvoudigMobieleZonband();"),"Mobiele eindpass moet uuras, puntuitlijning en compacte zonband in vaste volgorde toepassen.");
+assert(runtime.includes("mobieleTemperatuurLabelLimiet(window.innerWidth)"),"Mobiele temperatuurselectie moet tussen vijf en acht labels met de echte viewportbreedte schalen.");
 
 const checkpoint=fs.readFileSync(path.join(__dirname,"apply-mobile-screenshot-polish.js"),"utf8");
 assert(!/['\"]\s*const A=a\.getBBox\s*\(/.test(checkpoint),"Checkpoint-50 owner mag geen SVG-fontboxmeting meer injecteren.");
 assert(checkpoint.includes("geschatteTekstBox=el=>"),"Checkpoint-50 owner moet de attribuutgebaseerde tekstbox injecteren.");
 assert(checkpoint.includes("const fs=Number.isFinite(attrFont)&&attrFont>0?attrFont:(/Bodoni Moda/.test(familie)?F.temp:F.uur);"),"Checkpoint-50 tekstbox gebruikt de bestaande grafiekfontmaten als veilige fallback.");
-console.log("Mobiele grafiek reflow-test groen: zes rustige kalendergebonden vier-uursankers op de smalle 24-uursweergave, expliciete HH:00-kloktijden en maximaal vier temperatuurcijfers die exact aan hun datapunt gekoppeld blijven.");
+console.log("Mobiele grafiek reflow-test groen: zes rustige kalendergebonden vier-uursankers en vijf tot acht geprioriteerde, collision-aware temperatuurwaarden.");

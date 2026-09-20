@@ -53,9 +53,9 @@ try{
   if(Number(v('count'))!==6)throw new Error("mobiele 24-uursas moet exact zes tijdlabels tonen; kreeg "+v('count'));
   if(v('font-ok')!=='ja'||v('style-ok')!=='ja')throw new Error("mobiele uuras gebruikt niet overal het rechte Instrument Sans-letterbeeld");
   if(v('overflow')!=='geen')throw new Error("mobiele uuras valt buiten de SVG: "+v('overflow'));
-  if(Number(v('temp-count'))>5)throw new Error("mobiele grafiek houdt te veel vaste temperatuurwaarden: "+v('temp-count'));
+  if(Number(v('temp-count'))<5||Number(v('temp-count'))>8)throw new Error("mobiele grafiek houdt niet de beoogde vijf tot acht temperatuurwaarden: "+v('temp-count'));
   if(v('temp-overlap')!=='geen')throw new Error("mobiele temperatuurlabels overlappen nog: "+v('temp-overlap'));
   if(v('compact-height')!=='1')throw new Error("mobiele 24-uursgrafiek is niet post-render gecompacteerd");
   if(Number(v('under-space'))>50)throw new Error("mobiele grafiek houdt nog te veel reserve onder de plot: "+v('under-space')+" SVG-px");
-  console.log("Mobiele uuras-regressie groen: echte 402px runtime toont zes rustige vier-uurslabels, maximaal vijf collision-vrije temperatuurankers en compacte onderruimte; geo.n="+v('geo-n')+".");
+  console.log("Mobiele uuras-regressie groen: echte 402px runtime toont zes rustige vier-uurslabels, vijf tot acht collision-vrije temperatuurankers en compacte onderruimte; geo.n="+v('geo-n')+".");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
