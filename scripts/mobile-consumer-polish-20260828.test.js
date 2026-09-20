@@ -77,7 +77,9 @@ assert.equal(ux.mobieleGrafiekCompactHoogte(220,250,246),250,"een al compactere 
 assert.equal(ux.mobieleGrafiekCompactHoogte(220,296,286),296,"zichtbare regenperiode-labels behouden hun benodigde mobiele SVG-reserve");
 assert(js.includes('if(el.closest("#scrub"))return;')&&!js.includes("el.closest('g[data-q4-rain-periods]')||el.closest(\"#scrub\")"),"mobiele compactie telt regenperiode-tijden en -bedragen mee in de zichtbare onderrand");
 assert(js.includes("if(svg.querySelector(\'g[data-q4-rain-periods] text\'))zichtbaarOnder=Math.max(zichtbaarOnder,286);"),"natte mobiele grafiek bewaart exact de canonieke 296px-reserve voor bracketlabels");
-assert(js.includes('data-mobile-temp-index')&&js.includes('data-mobile-point-aligned')&&js.includes('rechthoekenBotsen(k,b,4)'),"mobiele temperatuurselectie wordt exact aan echte datapunten gekoppeld en houdt een geometrische collision-pass");
+assert(js.includes('data-mobile-temp-index')&&js.includes('data-mobile-point-aligned')&&js.includes('data-mobile-point-shifted')&&js.includes('rechthoekenBotsen(k,b,3)'),"mobiele temperatuurselectie blijft aan echte datapunten gekoppeld, mag licht uitwijken en houdt een geometrische collision-pass");
+assert(js.includes('const volgorde=[...primair,...alleIndices.filter(i=>!gekozen.has(i))]')&&js.includes('data-mobile-temp-visible'),"afgevallen mobiele temperatuurwaarden worden met resterende kandidaten aangevuld tot het breedte-afhankelijke doel");
+assert(js.includes('nuTekst.textContent="nu "+Math.round(Number(actueleTemperatuur))+"°"'),"de rode huidige markering houdt zijn actuele temperatuurwaarde");
 assert(js.includes('kiesKalenderUurLabelIndices(g.TI,4)')&&js.includes('data-mobile-hour-rhythm')&&js.includes('four-hour'),"smalle mobiele uuras wordt vanuit één deterministische kalendergebonden vier-uursowner opgebouwd");
 assert(js.includes('data-mobile-sun-band-compact')&&js.includes('^zon (?:op|onder)'),"dubbele zonsopkomst/-ondergangtekst wordt alleen binnen de mobiele SVG opgeruimd");
 assert(js.includes('data-mobile-compact-height'),"mobiele grafiekhoogte krijgt een expliciete post-render compactiemarker");

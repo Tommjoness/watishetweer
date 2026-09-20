@@ -116,10 +116,12 @@ const LATE_NU_NIEUW=`  /* ${MARKER_LATE_NU} */
     if(verplichtToekomstuur) return;
     verwijderTemperatuurMarkering(svg,el);
   });
-  /* De actuele temperatuur staat al prominent in het hoofdblok. In de grafiek
-     blijft alleen de temporele aanwijzer over; zo kan dezelfde 15° niet dubbel
-     naast de rode nu-lijn verschijnen. */
-  tekst.textContent="nu";`;
+  /* De actuele waarde is in de 24-uurslijn een vaste informatieprioriteit.
+     Houd haar daarom bij de rode temporele aanwijzer; zwarte modelmarkeringen
+     in dezelfde collisionzone zijn hierboven al opgeruimd. */
+  const actueleGrafiekTemperatuur=S.d&&S.d.current&&S.d.current.temperature_2m;
+  tekst.textContent=actueleGrafiekTemperatuur!==null&&actueleGrafiekTemperatuur!==undefined&&Number.isFinite(Number(actueleGrafiekTemperatuur))
+    ?"nu "+Math.round(Number(actueleGrafiekTemperatuur))+"°":"nu";`;
 
 /* De daglengte blijft onderdeel van de zondata en de semantische helper, maar
    de gewone numerieke daglengte is boven de grafiek redundante microcopy.
