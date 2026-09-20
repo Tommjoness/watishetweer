@@ -183,7 +183,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert.equal(m.tempOverlap,0,`${vp.naam}: temperatuurlabels overlappen geometrisch`);
         assert(m.tempPointDx.every(dx=>dx<=0.1),`${vp.naam}: temperatuurcijfer zweeft horizontaal los van datapunt (${m.tempPointDx.join("/")})`);
         assert.equal(m.hourCount,6,`${vp.naam}: mobiele uuras gebruikt ${m.hourCount} in plaats van zes vier-uursankers`);
-        assert(m.hourTexts.every(t=>{const h=Number(String(t).slice(0,2));return /^\\d{2}:00$/.test(t)&&Number.isInteger(h)&&h%4===0;}),`${vp.naam}: mobiele uuras volgt niet de vaste kalendercadans (${m.hourTexts.join("/")})`);
+        assert(m.hourTexts.every(t=>{const h=Number(String(t).slice(0,2));return /^\d{2}:00$/.test(t)&&Number.isInteger(h)&&h%4===0;}),`${vp.naam}: mobiele uuras volgt niet de vaste kalendercadans (${m.hourTexts.join("/")})`);
         assert.equal(new Set(m.hourTexts).size,6,`${vp.naam}: mobiele uuras bevat een dubbel klokanker (${m.hourTexts.join("/")})`);
         const hourIndexGaps=m.hourIndices.slice(1).map((x,i)=>x-m.hourIndices[i]);
         assert(hourIndexGaps.length===5&&hourIndexGaps.every(g=>g===4),`${vp.naam}: vier-uursankers zijn niet gelijkmatig over de echte forecastreeks verdeeld (${hourIndexGaps.join("/")})`);

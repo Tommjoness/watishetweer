@@ -133,7 +133,7 @@ async function controleer(type,naam){
       assert.ok(uur24.bedragOnderTijd.length===2&&uur24.bedragOnderTijd.every(Boolean),`${naam} ${breedte}: iedere mm-waarde staat onder het eigen tijdlabel`);
       if(breedte<760){
         assert.equal(uur24.asTijden.length,6,`${naam} ${breedte}: mobiele uuras gebruikt niet exact zes kalenderankers; kreeg ${JSON.stringify(uur24.asTijden)}`);
-        assert.ok(uur24.asTijden.every(t=>{const h=Number(String(t).slice(0,2));return /^\\d{2}:00$/.test(t)&&Number.isInteger(h)&&h%4===0;}),`${naam} ${breedte}: mobiele uuras bevat een niet-kalendergebonden vier-uurslabel: ${JSON.stringify(uur24.asTijden)}`);
+        assert.ok(uur24.asTijden.every(t=>{const h=Number(String(t).slice(0,2));return /^\d{2}:00$/.test(t)&&Number.isInteger(h)&&h%4===0;}),`${naam} ${breedte}: mobiele uuras bevat een niet-kalendergebonden vier-uurslabel: ${JSON.stringify(uur24.asTijden)}`);
         assert.equal(new Set(uur24.asTijden).size,6,`${naam} ${breedte}: mobiele uuras bevat een dubbel klokanker: ${JSON.stringify(uur24.asTijden)}`);
         const indexGaten=uur24.asIndices.slice(1).map((x,i)=>x-uur24.asIndices[i]);
         assert.ok(indexGaten.length===5&&indexGaten.every(g=>g===4),`${naam} ${breedte}: mobiele vier-uursankers volgen de echte uurreeks niet gelijkmatig: ${JSON.stringify(indexGaten)}`);
