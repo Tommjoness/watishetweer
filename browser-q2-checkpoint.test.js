@@ -198,7 +198,7 @@ async function controleer(page,naam,breedte){
   const minH=mobiel?(natMetPeriodeLabels?296:220):basisH;
   const maxH=mobiel?(natMetPeriodeLabels?296:basisH):basisH+100;
   assert.ok(r.viewBox.h>=minH&&r.viewBox.h<=maxH,`${naam} ${breedte}px: grafiekhoogte blijft binnen het bedoelde ${mobiel?(natMetPeriodeLabels?"natte mobiele labelreserve":"mobiele compact"):"desktop"}-budget (${r.viewBox.h}px)`);
-  assert.deepEqual(r.nu,["nu"],`${naam} ${breedte}px: exact één actuele nu-markering zonder dubbele temperatuur`);
+  assert.deepEqual(r.nu,["nu 21°"],`${naam} ${breedte}px: exact één actuele nu-markering met de juiste afgeronde temperatuur`);
   if(mobiel)assert.ok(r.tempLabels>=4,`${naam} ${breedte}px: mobiel houdt meerdere temperatuurreferenties naast het actuele punt (${r.tempLabels})`);
   else assert.ok(r.tempLabels>=6,`${naam} ${breedte}px: desktop houdt voldoende zichtbare temperatuurreferenties`);
   assert.deepEqual(r.tempBuiten,[],`${naam} ${breedte}px: temperatuurcijfers blijven binnen grafiek`);
