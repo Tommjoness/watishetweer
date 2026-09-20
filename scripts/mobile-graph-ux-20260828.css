@@ -50,6 +50,20 @@ footer .bron-bronnen .bronitem[hidden]{display:none!important}
 }
 
 @media(max-width:430px){
+  .dashrow-chart .chartkop{
+    gap:6px;
+    margin-top:22px;
+    padding-bottom:8px;
+  }
+  .dashrow-chart .chartkop h2{line-height:1.2}
+  .dashrow-chart #suntimes.senior-zoninfo{gap:3px}
+  .dashrow-chart #suntimes.senior-zoninfo .zonregel{gap:2px 10px;line-height:1.35}
+  .dashrow-chart .dagmod{padding-top:9px}
+  .dashrow-chart #charthint{margin:0 0 3px;text-align:center}
+  .wiw-chart-layout{gap:16px!important}
+  .wiw-hour-panel{padding-top:14px!important}
+  .wiw-hour-panel h3{margin-top:0!important;margin-bottom:8px!important;line-height:1.2}
+
   .mast{gap:14px}
   .mastright{gap:5px}
   .chips{margin-top:6px}
