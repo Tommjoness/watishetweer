@@ -183,11 +183,21 @@ const reporter=`<script>
     const dagen=document.querySelectorAll('#days .row.day:not(.kop)').length;
     const gridOk=desktop?cols===3:cols===2;
     const briefingDagOk=!/Morgen wordt het maximaal/i.test(brief);
-    /* Desktop houdt de rijkere drie-uursreferenties. Mobiel toont een rustiger
-       middenniveau: zes-uursreferenties plus echte lokale/globale extrema. Dat
-       moet duidelijk meer context geven dan alleen min/max, zonder weer tien
-       permanente cijfers op een smalle grafiek te zetten. */
-    const labelDichtheidOk=desktop?labels.length>=5:(labels.length>=4&&labels.length<=8&&labels.length===tempPunten.length);
+    const graphUx=globalThis.WeatherNowMobileGraphUX20260828;
+    const mobileAnchors=!desktop&&graphUx&&S.geo?graphUx.kiesKalenderUurLabelIndices(S.geo.TI,3,24):[];
+    const nowAnchorRaw=nuLabel&&nuLabel.getAttribute('data-mobile-temp-anchor-index'),nowAnchor=nowAnchorRaw==null?NaN:Number(nowAnchorRaw);
+    const anchorLabels=new Map(labels.map(el=>[Number(el.getAttribute('data-mobile-temp-index')),el]));
+    const anchorOk=desktop||mobileAnchors.every(i=>{
+      if(Number.isInteger(nowAnchor)&&nowAnchor===i)return true;
+      const el=anchorLabels.get(i),verwacht=Number.isFinite(Number(S.geo&&S.geo.T&&S.geo.T[i]))?Math.round(Number(S.geo.T[i]))+'°':'';
+      return !!el&&(el.textContent||'').trim()===verwacht&&el.getAttribute('data-mobile-temp-priority')==='anchor';
+    });
+    const missingAnchors=!desktop?(chart.getAttribute('data-mobile-temp-missing-anchors')||''):'';
+
+    /* Desktop behoudt de bestaande rijke labelset. Mobiel heeft geen willekeurige
+       dichtheidslimiet meer: ieder forecasttijd-gedreven drie-uursanker moet
+       aantoonbaar dezelfde temperatuur dragen; extra extrema zijn bonuslabels. */
+    const labelDichtheidOk=desktop?labels.length>=5:(anchorOk&&!missingAnchors&&labels.length===tempPunten.length);
     document.body.dataset.browserTestResult=(brief&&briefingDagOk&&dagen>=7&&labelDichtheidOk&&botsingen===0&&dubbelNabij===0&&buiten===0&&lossePunten===0&&nuRustig&&scrubOk&&scrubKort&&neerslagkansVast&&tooltipCompact&&klokOk&&gridOk&&!statOverflow&&statsStabiel&&statsCentraal&&dagenLijnOk&&dagMmLeesbaar&&aqVult&&nightAligned&&nightRuim&&nightCompact&&nightExpand&&mobileKopOk&&uvOk&&zonSemantiekOk)?'ok':'fout';
     document.body.dataset.browserLabels=String(labels.length);
     document.body.dataset.browserPunten=String(tempPunten.length);
@@ -221,6 +231,8 @@ const reporter=`<script>
     document.body.dataset.browserMobileKop=String(mobileKopOk);
     document.body.dataset.browserUv=String(uvOk);
     document.body.dataset.browserZon=String(zonSemantiekOk);
+    document.body.dataset.browserAnchors=String(anchorOk);
+    document.body.dataset.browserMissingAnchors=missingAnchors;
   }catch(e){document.body.dataset.browserTestResult='exception';document.body.dataset.browserException=String(e&&e.message||e);}
   }
   /* Meet na de deterministische fixture-render rechtstreeks de echte UI-state.
@@ -242,7 +254,7 @@ function voerBrowserUit(maat,naam){
   if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
   const dom=r.stdout||"";
   const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
-  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", punten="+waarde("browser-punten")+", lossePunten="+waarde("browser-losse-punten")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", neerslagkans="+waarde("browser-kans")+", scrubTekst="+waarde("browser-scrub-debug")+", tooltip="+waarde("browser-tooltip")+", tooltipW="+waarde("browser-tooltip-w")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", statsStabiel="+waarde("browser-stats-stabiel")+", statsCentraal="+waarde("browser-stats-centraal")+", dagenLijn="+waarde("browser-dagen-lijn")+", dagMm="+waarde("browser-dag-mm")+", aq="+waarde("browser-aq")+", night="+waarde("browser-night")+", nightRuim="+waarde("browser-night-ruim")+", nightCompact="+waarde("browser-night-compact")+", nightExpand="+waarde("browser-night-expand")+", briefingDag="+waarde("browser-briefing-dag")+", mobileKop="+waarde("browser-mobile-kop")+", uv="+waarde("browser-uv")+", zon="+waarde("browser-zon")+", exception="+waarde("browser-exception"));
+  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", punten="+waarde("browser-punten")+", lossePunten="+waarde("browser-losse-punten")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", neerslagkans="+waarde("browser-kans")+", scrubTekst="+waarde("browser-scrub-debug")+", tooltip="+waarde("browser-tooltip")+", tooltipW="+waarde("browser-tooltip-w")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", statsStabiel="+waarde("browser-stats-stabiel")+", statsCentraal="+waarde("browser-stats-centraal")+", dagenLijn="+waarde("browser-dagen-lijn")+", dagMm="+waarde("browser-dag-mm")+", aq="+waarde("browser-aq")+", night="+waarde("browser-night")+", nightRuim="+waarde("browser-night-ruim")+", nightCompact="+waarde("browser-night-compact")+", nightExpand="+waarde("browser-night-expand")+", briefingDag="+waarde("browser-briefing-dag")+", mobileKop="+waarde("browser-mobile-kop")+", uv="+waarde("browser-uv")+", zon="+waarde("browser-zon")+", anchors="+waarde("browser-anchors")+", missingAnchors="+waarde("browser-missing-anchors")+", exception="+waarde("browser-exception"));
   console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" temperatuurmarkeringen zonder losse stippen, rustige nu-markering, daggebonden zoninformatie, compacte tooltip, vast neerslagkanslabel, compact uitklapbaar Nachtzicht en minuutprecieze lokale klok correct.");
 }
 try{voerBrowserUit("390,844","mobiel Chromium");voerBrowserUit("1440,1000","desktop Chromium");}
