@@ -39,8 +39,9 @@ const CSS=`
     grid-template-columns:repeat(3,minmax(0,1fr))!important;
     align-items:stretch!important;
     justify-content:stretch!important;
+    flex:0 0 216px!important;
     width:216px!important;
-    min-width:0!important;
+    min-width:216px!important;
     min-height:36px!important;
     padding:0!important;
     border:1px solid var(--rule)!important;
@@ -458,6 +459,8 @@ function valideerWeatherHtml(html,rel){
     'grid-template-columns:minmax(0,1fr)!important',
     '@media(min-width:431px)',
     'width:216px!important',
+    'flex:0 0 216px!important',
+    'min-width:216px!important',
     '#thema-switch{\n    grid-column:1!important',
     '.wiw-theme-auto{\n    grid-column:2!important',
     '.wiw-theme-moon{\n    position:absolute!important;\n    left:200%!important',
