@@ -523,8 +523,13 @@ function planUurAsHerstel(){
     if(typeof requestAnimationFrame==="function")requestAnimationFrame(r1);else setTimeout(r1,0);
     setTimeout(voer,120);setTimeout(voer,350);
   };
+  /* De geometrie gebruikt conservatieve attribuutboxen en mag daarom direct
+     worden opgebouwd. Wacht niet exclusief op webfonts: file/offline/browser-
+     smokes kunnen document.fonts.ready later of niet afronden. Na fontload volgt
+     nog één idempotente hercontrole voor echte browserlayout. */
+  start();
   const fonts=document.fonts&&document.fonts.ready;
-  if(fonts&&typeof fonts.then==="function")fonts.then(start).catch(start);else start();
+  if(fonts&&typeof fonts.then==="function")fonts.then(()=>{if(token===uurAsToken)voer();}).catch(()=>{});
 }
 
 function polishNuLabel(){
