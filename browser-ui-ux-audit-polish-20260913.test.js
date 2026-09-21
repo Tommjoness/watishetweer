@@ -157,8 +157,7 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(Number(v("disclaimer-line-height"))>15.1)throw new Error("disclaimer houdt een te ruime regelhoogte op "+breedte+"px: "+v("disclaimer-line-height")+"px");
       if(cssWidth>=371&&Number(v("contact-row-delta"))>1)throw new Error("contactvraag en mail staan niet op één compacte rij op "+breedte+"px / CSS "+cssWidth+"px: delta "+v("contact-row-delta")+"px");
       if(Math.abs(Number(v("over-top"))-Number(v("privacy-top")))>1)throw new Error("Over en Privacy delen mobiel niet dezelfde utilityrij op "+breedte+"px");
-      const utilitySecondRowDelta=Number(v("details-top"))-Number(v("over-top"));
-      if(utilitySecondRowDelta<43||utilitySecondRowDelta>46)throw new Error("Technische locatiegegevens staat mobiel niet als nette tweede utilityrij op "+breedte+"px: delta "+utilitySecondRowDelta+"px");
+      if(Number(v("utility-row-delta"))>1||Math.abs(Number(v("details-top"))-Number(v("over-top")))>1)throw new Error("Over, Privacy en Technische locatiegegevens delen mobiel niet één rustige utilityrij op "+breedte+"px: delta "+v("utility-row-delta")+"px");
       if(breedte>=390&&breedte<=430)console.log("footer-meting "+modus+" "+breedte+"px / CSS "+cssWidth+"px: hoogte="+v("footer-height")+"px, bronnen="+v("source-visible-count")+" in "+v("source-row-count")+" rij(en), bronhit="+v("source-hit-height")+"px, disclaimer="+v("disclaimer-width")+"px / "+v("disclaimer-line-count")+" regels, contact-delta="+v("contact-row-delta")+"px, utility-delta="+v("utility-row-delta")+"px");
       if(Number(v("footer-margin-top"))>6.5)throw new Error("mobiele footer houdt te veel bovenmarge op "+breedte+"px: "+v("footer-margin-top")+"px");
       if(Number(v("footer-padding-top"))>0.5)throw new Error("mobiele footer houdt te veel bovenpadding op "+breedte+"px: "+v("footer-padding-top")+"px");
