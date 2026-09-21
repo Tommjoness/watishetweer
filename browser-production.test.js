@@ -1,6 +1,7 @@
 "use strict";
 const fs=require("fs"),path=require("path"),os=require("os"),{chromium}=require("playwright-core"),{bouw}=require("./data.js");
-const browserPad=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
+const browserNaam=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
+const browserPad=browserNaam.includes(path.sep)?browserNaam:(process.env.PATH||"").split(path.delimiter).map(dir=>path.join(dir,browserNaam)).find(p=>fs.existsSync(p))||browserNaam;
 const bron=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(bron))throw new Error("public/index.html ontbreekt; voer eerst de build uit");
 let html=fs.readFileSync(bron,"utf8");
