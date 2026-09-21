@@ -2,7 +2,6 @@
 
 const assert=require("assert");
 const fs=require("fs");
-const os=require("os");
 const path=require("path");
 const crypto=require("crypto");
 const {chromium}=require("playwright");
@@ -69,7 +68,9 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
 
 (async()=>{
   const browser=await chromium.launch({headless:true});
-  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-preview-visual-"));
+  const evidence=path.join(process.cwd(),"preview-evidence");
+  fs.rmSync(evidence,{recursive:true,force:true});
+  fs.mkdirSync(evidence,{recursive:true});
   try{
     for(const vp of viewports){
       const context=await browser.newContext({viewport:{width:vp.width,height:vp.height},serviceWorkers:"block",locale:"nl-NL",reducedMotion:"reduce"});
@@ -151,16 +152,19 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           for(let i=0;i<tempBoxes.length;i++)for(let j=i+1;j<tempBoxes.length;j++)if(raakt(tempBoxes[i],tempBoxes[j],1))tempOverlap.push(i+"-"+j);
           const tempPointDx=tempLabels.map(el=>{const i=el.getAttribute("data-mobile-temp-index"),p=svg.querySelector(`circle[data-temp-index="${i}"]`);return p?Math.abs(Number(el.getAttribute("x"))-Number(p.getAttribute("cx"))):999;});
           const hourLabels=svg?[...svg.querySelectorAll('text[data-mobile-hour-axis="1"]')]:[],hourX=hourLabels.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite),hourGaps=hourX.slice(1).map((x,i)=>x-hourX[i]),hourIndices=hourLabels.map(el=>Number(el.getAttribute("data-mobile-hour-index"))).filter(Number.isInteger);
+          const ux=globalThis.WeatherNowMobileGraphUX20260828,expectedHourIndices=ux&&g?ux.kiesKalenderUurLabelIndices(g.TI,3,24):[];
+          const expectedHourTexts=expectedHourIndices.map(i=>String(g.TI[i]||"").slice(11,13)+":00");
           const svgRect=svg&&svg.getBoundingClientRect(),binnenSvg=r=>!!svgRect&&r.left>=svgRect.left-1&&r.right<=svgRect.right+1&&r.top>=svgRect.top-1&&r.bottom<=svgRect.bottom+1;
           const tempInfo=tempLabels.map((el,k)=>({i:Number(el.getAttribute("data-mobile-temp-index")),tekst:(el.textContent||"").trim(),priority:el.getAttribute("data-mobile-temp-priority")||"",extremum:el.getAttribute("data-mobile-temp-extremum")||"",binnen:binnenSvg(tempBoxes[k])}));
           const nowText=svg?[...svg.querySelectorAll("text")].find(el=>/^nu(?:\s|$)/i.test(String(el.textContent||"").trim())):null,nowBox=nowText&&nowText.getBoundingClientRect();
           const nowOverlap=tempBoxes.filter(r=>raakt(r,nowBox,1)).length,nowAnchorRaw=nowText&&nowText.getAttribute("data-mobile-temp-anchor-index"),nowAnchor=nowAnchorRaw===null||nowAnchorRaw===undefined?NaN:Number(nowAnchorRaw);
-          const anchorState=hourIndices.map(i=>{
+          const anchorState=expectedHourIndices.map(i=>{
             const info=tempInfo.find(x=>x.i===i),verwacht=Number.isFinite(Number(g&&g.T&&g.T[i]))?Math.round(Number(g.T[i])):null;
             return {i,verwacht,tekst:info?info.tekst:"",priority:info?info.priority:"",viaNow:Number.isInteger(nowAnchor)&&nowAnchor===i};
           });
-          const ux=globalThis.WeatherNowMobileGraphUX20260828,alleExtrema=ux&&g?ux.lokaleTemperatuurExtrema(g.T,24):[];
-          const extraExtrema=alleExtrema.filter(e=>!hourIndices.includes(e.i)),extremaState=extraExtrema.map(e=>({i:e.i,type:e.type,gelabeld:tempInfo.some(x=>x.i===e.i&&x.priority==="extremum")}));
+          const alleExtrema=ux&&g?ux.lokaleTemperatuurExtrema(g.T,24):[];
+          const extraExtrema=alleExtrema.filter(e=>!expectedHourIndices.includes(e.i)),extremaState=extraExtrema.map(e=>({i:e.i,type:e.type,gelabeld:tempInfo.some(x=>x.i===e.i&&x.priority==="extremum")}));
+          const missingAnchors=svg?.getAttribute("data-mobile-temp-missing-anchors")||"",droppedExtrema=svg?.getAttribute("data-mobile-temp-dropped-extrema")||"";
           const hourBoxes=hourLabels.map(el=>el.getBoundingClientRect()),hourOverlap=[];
           for(let i=0;i<hourBoxes.length;i++)for(let j=i+1;j<hourBoxes.length;j++)if(raakt(hourBoxes[i],hourBoxes[j],0))hourOverlap.push(i+"-"+j);
           const sunInChart=svg?[...svg.querySelectorAll("text")].filter(el=>/^zon (?:op|onder) \\d{2}:\\d{2}$/i.test(String(el.textContent||"").trim())).length:999;
@@ -174,9 +178,9 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const disclosure=sel=>{const el=document.querySelector(sel);if(!el||el.hidden||getComputedStyle(el).display==="none")return null;const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {height:r.height,width:r.width,expanded:el.getAttribute("aria-expanded")||"",controls:el.getAttribute("aria-controls")||"",display:getComputedStyle(el).display,hit:hit===el||el.contains(hit),after:getComputedStyle(el,"::after").content};};
           const nightRow=document.querySelector("#nights .row.night:not(.kop):not([hidden])");
           return {
-            tempCount:tempLabels.length,tempOverlap:tempOverlap.length,tempPointDx,tempInfo,nowOverlap,anchorState,extremaState,
+            tempCount:tempLabels.length,tempOverlap:tempOverlap.length,tempPointDx,tempInfo,nowOverlap,anchorState,extremaState,missingAnchors,droppedExtrema,
             tempClipped:tempInfo.filter(x=>!x.binnen).length,hourClipped:hourBoxes.filter(r=>!binnenSvg(r)).length,hourOverlap:hourOverlap.length,
-            hourCount:hourLabels.length,hourTexts:hourLabels.map(el=>(el.textContent||"").trim()),hourTimes:hourIndices.map(i=>String(g&&g.TI&&g.TI[i]||"")),hourGaps,hourIndices,sunInChart,
+            hourCount:hourLabels.length,hourTexts:hourLabels.map(el=>(el.textContent||"").trim()),hourTimes:hourIndices.map(i=>String(g&&g.TI&&g.TI[i]||"")),hourGaps,hourIndices,expectedHourIndices,expectedHourTexts,sunInChart,
             disclosures:{hours:disclosure(".wiw-hour-toggle"),nights:disclosure("#nights .nacht-meer")},
             nightOverflow:nightRow?Math.max(0,nightRow.scrollWidth-nightRow.clientWidth):0,nightHeight:nightRow?nightRow.getBoundingClientRect().height:0,
             compact:svg?.getAttribute("data-mobile-compact-height")||"",
@@ -213,6 +217,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         const u=basis.hourTable;assert(u,`${vp.naam}: desktop-uurtabel ontbreekt`);
         assert(u.fontSize>=13.4,`${vp.naam}: desktop-uurtabel blijft te klein (${u.fontSize}px)`);
         assert(u.rowCount>=8&&u.rowCount<=11,`${vp.naam}: desktop-uurtabel toont geen 8–11 volledige hoogtegestuurde uren (${u.rowCount})`);
+        if(vp.width>=1440)assert(u.rowCount>=10,`${vp.naam}: ruime desktop toont minder dan circa 10 volledige uren (${u.rowCount})`);
         assert.equal(u.overflowY,"visible",`${vp.naam}: desktop-uurtabel heeft opnieuw een interne verticale scrollbar (${u.overflowY})`);
         assert.equal(u.lastFit,true,`${vp.naam}: laatste desktop-uurregel is niet volledig zichtbaar`);
       }
@@ -241,16 +246,15 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert.equal(m.hourClipped,0,`${vp.naam}: uurtekst valt buiten de SVG-rand`);
         assert.equal(m.hourOverlap,0,`${vp.naam}: drie-uurslabels overlappen geometrisch`);
         assert(m.tempPointDx.every(dx=>dx<=18),`${vp.naam}: temperatuurcijfer wijkt meer dan licht horizontaal van het datapunt af (${m.tempPointDx.join("/")})`);
-        assert.equal(m.hourCount,8,`${vp.naam}: mobiele uuras gebruikt ${m.hourCount} in plaats van acht drie-uursankers`);
-        assert(m.hourTexts.every(t=>/^\d{2}:00$/.test(t)),`${vp.naam}: mobiele uuras bevat geen expliciete lokale kloktijden (${m.hourTexts.join("/")})`);
-        assert(m.hourTexts.every((t,i)=>t===String(m.hourTimes[i]||"").slice(11,16)),`${vp.naam}: uurlabel hoort niet bij het eigen echte forecastpunt (${m.hourTexts.join("/")} versus ${m.hourTimes.join("/")})`);
-        const hourIndexGaps=m.hourIndices.slice(1).map((x,i)=>x-m.hourIndices[i]);
-        assert(hourIndexGaps.length===7&&hourIndexGaps.every(g=>g===3),`${vp.naam}: drie-uursankers volgen in de gewone uurfixture niet de echte +3-uursreeks (${hourIndexGaps.join("/")})`);
+        assert.equal(m.hourCount,m.expectedHourIndices.length,`${vp.naam}: mobiele uuras heeft ${m.hourCount} labels, verwacht ${m.expectedHourIndices.length} echte drie-uursankers`);
+        assert.deepEqual(m.hourIndices,m.expectedHourIndices,`${vp.naam}: mobiele uuras volgt niet exact de forecasttijd-gedreven drie-uurscadans`);
+        assert.deepEqual(m.hourTexts,m.expectedHourTexts,`${vp.naam}: zichtbare kloklabels horen niet bij dezelfde forecastpunten`);
+        assert.equal(m.missingAnchors,"",`${vp.naam}: verplicht temperatuurlabel kon niet collisionvrij worden geplaatst (${m.missingAnchors})`);
         for(const a of m.anchorState){
           assert(a.viaNow||a.priority==="anchor",`${vp.naam}: verplicht drie-uursanker ${a.i} mist een temperatuurlabel`);
           if(!a.viaNow)assert.equal(a.tekst,String(a.verwacht)+"°",`${vp.naam}: temperatuur bij anker ${a.i} hoort niet bij hetzelfde forecastpunt (${a.tekst}/${a.verwacht}°)`);
         }
-        assert(m.extremaState.every(e=>e.gelabeld),`${vp.naam}: lokaal extremum ontbreekt terwijl de browsergeometrie ruimte biedt (${JSON.stringify(m.extremaState)})`);
+        assert(m.extremaState.every(e=>e.gelabeld),`${vp.naam}: lokaal extremum ontbreekt terwijl de browsergeometrie ruimte biedt (${JSON.stringify(m.extremaState)}; vervallen=${m.droppedExtrema})`);
         assert.equal(m.sunInChart,0,`${vp.naam}: dubbele zon-op/zon-ondertekst staat nog in de SVG`);
         assert.equal(m.compact,"1",`${vp.naam}: grafiekhoogte is niet mobiel gecompacteerd`);
         if(m.chartSummaryGap!==null)assert(m.chartSummaryGap>=0&&m.chartSummaryGap<=18,`${vp.naam}: grafiek-samenvatting heeft ${m.chartSummaryGap}px tussenruimte`);
@@ -422,6 +426,9 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert.equal(new Set(donkerPolish.lineColors).size,1,`${vp.naam}: bronlijnen worden inconsistent in dark mode`);
         assert(donkerPolish.chipBorder,`${vp.naam}: actieve opgeslagen plaats verliest dark-mode selectie`);
         assert(donkerPolish.overflow<=1,`${vp.naam}: dark mode introduceert horizontale overflow (${donkerPolish.overflow}px)`);
+        const darkPng=path.join(evidence,`preview-${vp.width}-dark.png`);
+        await page.screenshot({path:darkPng,fullPage:true});
+        assert(fs.existsSync(darkPng)&&fs.statSync(darkPng).size>5000,`${vp.naam}: dark-mode screenshot ontbreekt of is verdacht klein`);
       }
 
       /* Navigatie in dezelfde tab houdt sessionStorage bewust vast. Daarmee
@@ -497,7 +504,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       const actief=await q.getAttribute("aria-activedescendant");
       assert(actief&&await page.locator("#"+actief).getAttribute("aria-selected")==="true",`${vp.naam}: ArrowDown activeert geen optie`);
 
-      const png=path.join(tmp,`preview-${vp.width}.png`);
+      const png=path.join(evidence,`preview-${vp.width}-auto.png`);
       await page.screenshot({path:png,fullPage:true});
       assert(fs.existsSync(png)&&fs.statSync(png).size>5000,`${vp.naam}: screenshot ontbreekt of is verdacht klein`);
       const hash=crypto.createHash("sha256").update(fs.readFileSync(png)).digest("hex").slice(0,12);
@@ -505,9 +512,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert.deepEqual(pageErrors,[],`${vp.naam}: pageerrors ${pageErrors.join(" | ")}`);
       await context.close();
     }
-    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 9 echte viewports, inclusief 320/360/375/390/430px met acht lokale drie-uursankers, verplichte temperaturen, plateau-veilige extrema, bbox-collisionchecks, compacte Nachtzicht/disclosures/footer, desktop-uurtabel, dark mode en tijdelijke full-page screenshots.`);
+    console.log(`PREVIEW RESPONSIVE VISUAL GESLAAGD: ${verwacht}; 9 echte viewports, inclusief 320/360/375/390/430px met forecasttijd-gedreven drie-uursankers, verplichte temperaturen, plateau-veilige extrema, bbox-collisionchecks, compacte Nachtzicht/disclosures/footer, desktop-uurtabel, dark mode en bewaarde full-page screenshots.`);
   }finally{
-    fs.rmSync(tmp,{recursive:true,force:true});
     await browser.close();
   }
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
