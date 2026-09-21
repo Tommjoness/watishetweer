@@ -462,7 +462,7 @@ function valideerWeatherHtml(html,rel){
     'grid-template-columns:repeat(2,minmax(0,1fr))!important',
     'grid-column:1 / -1!important',
     'grid-template-columns:repeat(3,minmax(0,1fr))!important',
-    'grid-template-columns:repeat(3,minmax(0,1fr))!important',
+    'overflow:visible!important',
     '@media(min-width:431px)',
     'width:216px!important',
     'flex:0 0 216px!important',
