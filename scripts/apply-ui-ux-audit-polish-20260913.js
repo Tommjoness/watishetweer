@@ -157,7 +157,7 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
 
   /* Footerhiërarchie: bronnen/disclaimer, utilitygroep en support blijven
      afzonderlijk leesbaar zonder extra separators of extra footerhoogte. */
-  footer > span.bron:nth-of-type(2){font-size:11.5px!important;color:var(--ink-25)!important}
+  footer > span.bron:nth-of-type(2){font-size:11.5px!important;line-height:1.3!important;color:var(--ink-25)!important}
   footer > span.bron:nth-last-of-type(2),
   footer > span.bron:last-of-type,
   footer > details.footer-details{font-size:12.5px!important;font-weight:500;color:var(--ink-70)}
@@ -167,7 +167,7 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important}
   footer > details.footer-details{grid-column:3!important;grid-row:3!important;min-width:0!important;text-align:center}
   footer > details.footer-details>summary{color:inherit;white-space:normal;text-align:center;line-height:1.2}
-  .footer-contact{grid-column:1 / -1!important;grid-row:4!important;margin-top:6px!important;padding-top:2px!important;color:var(--ink-25)}
+  .footer-contact{grid-column:1 / -1!important;grid-row:4!important;margin-top:8px!important;padding-top:0!important;color:var(--ink-25)}
   footer > span.bron:nth-of-type(2),.footer-contact{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;margin-left:0!important;margin-right:0!important}
   .footer-contact-question{color:var(--ink-45);font-weight:500}
   .footer-contact-mail a{white-space:nowrap}
