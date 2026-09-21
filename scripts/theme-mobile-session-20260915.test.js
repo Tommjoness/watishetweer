@@ -17,6 +17,8 @@ assert.equal(THEMA_LEGACY_KEY,"weerbriefing.thema");
 assert(CSS.includes("grid-template-columns:repeat(2,minmax(0,1fr))!important"),"mobiele tools moeten twee actie-kolommen gebruiken");
 assert(CSS.includes("grid-template-columns:repeat(3,minmax(0,1fr))!important"),"themakeuze moet visueel drie gelijke segmenten hebben");
 assert(CSS.includes("grid-template-columns:subgrid!important"),"Licht en Donker delen niet exact de drie kolommen van de hoofdcontrol");
+assert.equal((CSS.match(/display:contents!important/g)||[]).length,2,"de switchcontainer mag Auto niet geometrisch overlappen op desktop of mobiel");
+assert.equal((CSS.match(/:has\(#thema-switch:focus-visible\)/g)||[]).length,2,"de inhoudsloze switchcontainer mist een zichtbare groepsfocus");
 assert(CSS.includes("@media(min-width:431px)"),"desktop/tablet moeten dezelfde segmented-controlpresentatie krijgen");
 assert(CSS.includes("width:192px!important"),"desktop segmented control mist een compacte, expliciete breedte");
 assert(CSS.includes("grid-column:1 / 4!important"),"desktop Licht/Auto/Donker delen geen volledige driekolomscontrol");

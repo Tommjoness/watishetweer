@@ -115,6 +115,14 @@ function temperatuurProminentie(temperaturen,index){
   return p;
 }
 
+function grafiekPuntBeschrijving(geo,index){
+  const G=geo&&typeof geo==="object"?geo:null,i=Number(index);
+  if(!G||!Number.isInteger(i)||i<0||i>=Number(G.n)||!Array.isArray(G.TI)||!G.TI[i])return "";
+  const tijd=String(G.TI[i]).slice(11,16),temp=Array.isArray(G.T)?eindig(G.T[i]):null;
+  const kans=Array.isArray(G.P)?eindig(G.P[i]):null;
+  return tijd+(temp===null?"":", "+Math.round(temp)+" graden")+(kans===null?"":", "+Math.round(kans)+" procent neerslagkans");
+}
+
 /* Desktop houdt alle vaste drie-uursreferenties. Extra extrema zijn bonuscontext
    en mogen verdwijnen als ze vrijwel dezelfde afgeronde temperatuur tonen vlak
    naast zo'n vaste referentie. Twee resterende extra's met vrijwel dezelfde
@@ -136,7 +144,7 @@ function etmaalExtraTemperaturenWeg(temperaturen,gelabeldeIndices,rasterStap){
 
 const api={
   tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan,
-  dauwpuntCelsius,luchtvochtigheidDuiding,temperatuurProminentie,etmaalExtraTemperaturenWeg
+  dauwpuntCelsius,luchtvochtigheidDuiding,temperatuurProminentie,etmaalExtraTemperaturenWeg,grafiekPuntBeschrijving
 };
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowPolishV2=api;
@@ -166,7 +174,7 @@ meters=function(){
 const basisScrubKoppel=scrubKoppel;
 scrubKoppel=function(){
   basisScrubKoppel();
-  const hit=document.getElementById("hit");
+  const hit=document.getElementById("hit"),svg=document.getElementById("chart");
   if(!hit) return;
   const maakKort=()=>{
     const g=document.getElementById("scrub");if(!g)return;
@@ -177,6 +185,44 @@ scrubKoppel=function(){
   };
   hit.addEventListener("pointermove",maakKort);
   hit.addEventListener("pointerdown",maakKort);
+
+  /* De grafiek was alleen met muis/aanraking te bedienen. Eén focusbaar
+     scrubdoel houdt de DOM compact en laat de gebruiker met links/rechts exact
+     dezelfde bestaande tooltip doorlopen. Data en selectie blijven eigendom
+     van de basisrenderer; toetsenbordbediening simuleert alleen dezelfde
+     pointerpositie en voegt een actuele gesproken waarde toe. */
+  hit.setAttribute("tabindex","0");
+  hit.setAttribute("role","slider");
+  hit.setAttribute("aria-orientation","horizontal");
+  hit.setAttribute("aria-label","Uur in de temperatuurgrafiek");
+  hit.setAttribute("aria-valuemin","1");
+  hit.setAttribute("aria-valuemax",String(Math.max(1,S.geo&&S.geo.n||1)));
+  hit.setAttribute("aria-valuenow","1");
+  hit.setAttribute("aria-valuetext",grafiekPuntBeschrijving(S.geo,0));
+  if(svg){svg.setAttribute("role","group");svg.setAttribute("aria-describedby","charthint");}
+  const wijsIndexAan=index=>{
+    const G=S.geo;if(!G||!svg||!Number.isFinite(G.n)||G.n<1)return;
+    const i=clamp(Math.round(index),0,G.n-1),r=svg.getBoundingClientRect();
+    if(!r.width)return;
+    hit.dataset.keyboardIndex=String(i);
+    hit.setAttribute("aria-valuenow",String(i+1));
+    hit.setAttribute("aria-valuetext",grafiekPuntBeschrijving(G,i));
+    const schaal=r.width/(G.W||900),clientX=r.left+G.x(i)*schaal,clientY=r.top+G.y(G.T[i])*schaal;
+    hit.dispatchEvent(new PointerEvent("pointerdown",{clientX,clientY,pointerType:"mouse"}));
+  };
+  hit.addEventListener("focus",()=>wijsIndexAan(Number(hit.dataset.keyboardIndex||0)));
+  hit.addEventListener("keydown",ev=>{
+    const G=S.geo;if(!G||!G.n)return;
+    let i=clamp(Number(hit.dataset.keyboardIndex||0),0,G.n-1),volgende=null;
+    if(ev.key==="ArrowRight"||ev.key==="ArrowUp")volgende=i+1;
+    else if(ev.key==="ArrowLeft"||ev.key==="ArrowDown")volgende=i-1;
+    else if(ev.key==="Home")volgende=0;
+    else if(ev.key==="End")volgende=G.n-1;
+    else if(ev.key==="Enter"||ev.key===" ")volgende=i;
+    if(volgende===null)return;
+    ev.preventDefault();wijsIndexAan(clamp(volgende,0,G.n-1));
+  });
+  hit.addEventListener("blur",()=>{const g=document.getElementById("scrub");if(g)g.style.display="none";});
 };
 
 function verwijderTemperatuurMarkering(svg,el){

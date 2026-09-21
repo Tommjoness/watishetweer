@@ -48,6 +48,7 @@ const CSS=`
     overflow:hidden!important;
     background:var(--sheet)!important;
     vertical-align:middle!important;
+    position:relative!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-auto{
     grid-column:2!important;
@@ -82,7 +83,7 @@ const CSS=`
   #thema.wiw-theme-segmented-20260915 #thema-switch{
     grid-column:1 / 4!important;
     grid-row:1!important;
-    display:grid!important;
+    display:contents!important;
     grid-template-columns:subgrid!important;
     position:relative!important;
     align-items:stretch!important;
@@ -109,6 +110,10 @@ const CSS=`
   #thema.wiw-theme-segmented-20260915 #thema-switch:focus-visible{
     background:transparent!important;
     color:var(--ink)!important;
+  }
+  #thema.wiw-theme-segmented-20260915:has(#thema-switch:focus-visible){
+    outline:2px solid var(--ink)!important;
+    outline-offset:2px!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{
     display:flex!important;
@@ -192,6 +197,7 @@ const CSS=`
     border-radius:0!important;
     overflow:hidden!important;
     background:var(--sheet)!important;
+    position:relative!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-auto{
     grid-column:2!important;
@@ -217,7 +223,7 @@ const CSS=`
   #thema.wiw-theme-segmented-20260915 #thema-switch{
     grid-column:1 / 4!important;
     grid-row:1!important;
-    display:grid!important;
+    display:contents!important;
     grid-template-columns:subgrid!important;
     position:relative!important;
     min-width:0!important;
@@ -246,6 +252,10 @@ const CSS=`
     text-transform:uppercase!important;
     white-space:nowrap!important;
     box-shadow:none!important;
+  }
+  #thema.wiw-theme-segmented-20260915:has(#thema-switch:focus-visible){
+    outline:2px solid var(--ink)!important;
+    outline-offset:2px!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun{grid-column:1!important}
   #thema.wiw-theme-segmented-20260915 .wiw-theme-moon{
