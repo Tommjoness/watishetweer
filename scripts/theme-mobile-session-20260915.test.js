@@ -21,7 +21,8 @@ assert.equal((CSS.match(/#thema-switch\{[\s\S]*?grid-column:1!important;[\s\S]*?
 assert.equal((CSS.match(/\.wiw-theme-moon\{[\s\S]*?position:absolute!important;[\s\S]*?left:200%!important/g)||[]).length,2,"Donker moet zonder overlap vanuit het Licht-segment in kolom drie staan");
 assert.equal((CSS.match(/:has\(#thema-switch:focus-visible\)/g)||[]).length,2,"de switch mist een zichtbare groepsfocus");
 assert(CSS.includes("@media(min-width:431px)"),"desktop/tablet moeten dezelfde segmented-controlpresentatie krijgen");
-assert(CSS.includes("width:192px!important"),"desktop segmented control mist een compacte, expliciete breedte");
+assert(CSS.includes("width:216px!important"),"desktop segmented control mist drie meetbare segmenten van 72px");
+assert(CSS.includes("width:210px!important"),"tablet segmented control mist drie meetbare segmenten van 70px");
 assert(!CSS.includes("#thema-switch{\n    grid-column:1 / 4!important"),"de switch mag Auto niet geometrisch overlappen");
 assert(CSS.includes(".wiw-theme-auto{\n    grid-column:2!important"),"Auto staat niet in het middelste segment");
 assert(CSS.includes(".wiw-theme-moon{\n    position:absolute!important;\n    left:200%!important"),"Donker staat niet in het rechtersegment");
