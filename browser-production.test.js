@@ -64,11 +64,15 @@ const reporter=`<script>
       const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
       return ra.width&&rb.width&&ra.left<rb.right&&ra.right>rb.left&&ra.top<rb.bottom&&ra.bottom>rb.top;
     })).length;
-    const dubbelNabij=labels.filter((a,i)=>labels.slice(i+1).some(b=>{
-      if((a.textContent||'').trim()!==(b.textContent||'').trim())return false;
-      const ax=Number(a.getAttribute('x')),ay=Number(a.getAttribute('y')),bx=Number(b.getAttribute('x')),by=Number(b.getAttribute('y'));
-      return [ax,ay,bx,by].every(Number.isFinite)&&Math.abs(ax-bx)<=Math.max(38,(S.geo&&S.geo.cw||36)*1.3)&&Math.abs(ay-by)<=34;
-    })).length;
+    /* Gelijke afgeronde temperaturen op naburige echte forecastpunten zijn
+       inhoudelijk geldig. Bewaak de eerdere idempotencyregressie daarom via de
+       stabiele data-index (en op desktop via exacte positie), niet via alleen
+       gelijke tekst binnen een willekeurige afstand. */
+    const labelSleutels=labels.map(el=>{
+      const i=el.getAttribute('data-mobile-temp-index');
+      return i!==null?'i:'+i:'p:'+el.getAttribute('x')+':'+el.getAttribute('y')+':'+(el.textContent||'').trim();
+    });
+    const dubbelNabij=labelSleutels.length-new Set(labelSleutels).size;
     const buiten=labels.filter(el=>{const r=el.getBoundingClientRect();return r.left<svgBox.left-1||r.right>svgBox.right+1||r.top<svgBox.top-1||r.bottom>svgBox.bottom+1;}).length;
 
     const nuLabel=[...chart.querySelectorAll('text')].find(el=>/^nu\\s+-?\\d+°$/i.test((el.textContent||'').trim()));
@@ -177,7 +181,7 @@ const reporter=`<script>
       const uvCols=uvStijl?uvStijl.gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length:0;
       const kopBreed=chartKop&&chartKop.getBoundingClientRect().width,sunBreed=sun&&sun.getBoundingClientRect().width;
       mobileKopOk=!!(chartKop&&sun&&kopStijl&&kopStijl.display==='grid'&&kopCols===1&&sunCols===1&&Math.abs(kopBreed-sunBreed)<=2&&sun.scrollWidth<=sun.clientWidth+1);
-      uvOk=!!(uv&&uvStijl&&uvStijl.display==='grid'&&uvCols===3);
+      uvOk=!!(uv&&uvStijl&&uvStijl.display==='grid'&&uvCols===2&&uvStijl.gridTemplateAreas==='"label value" "sub sub"');
     }
 
     const brief=(document.getElementById('brief')||{}).textContent||'';
