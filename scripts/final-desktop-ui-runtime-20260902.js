@@ -294,7 +294,20 @@ function centraliseerKorteTeksten(){
   const waarschuwingen=document.getElementById("waarschuwingen");if(waarschuwingen&&!waarschuwingen.querySelector(".waarsch")){const msg=waarschuwingen.querySelector(".msg");if(msg&&String(msg.textContent||"").trim().length<=180)msg.classList.add("wiw-short-copy","wiw-short-center");}
 }
 
-let hoogteToken=0;
+let hoogteToken=0,hoogteObserver=null,laatsteGeobserveerdeMainHoogte=null;
+function observeerGrafiekHoogte(){
+  const main=document.querySelector(".wiw-chart-main");
+  if(!main||typeof ResizeObserver!=="function")return;
+  if(hoogteObserver)hoogteObserver.disconnect();
+  laatsteGeobserveerdeMainHoogte=main.getBoundingClientRect().height;
+  hoogteObserver=new ResizeObserver(()=>{
+    const h=main.getBoundingClientRect().height;
+    if(!Number.isFinite(h)||Math.abs(h-laatsteGeobserveerdeMainHoogte)<.5)return;
+    laatsteGeobserveerdeMainHoogte=h;
+    planHoogteSync();
+  });
+  hoogteObserver.observe(main);
+}
 function syncHoogte(){
   const main=document.querySelector(".wiw-chart-main"),aside=document.getElementById("wiw-hour-panel");if(!main||!aside)return;
   if(window.innerWidth<1100){aside.style.height="";return;}
@@ -328,7 +341,7 @@ function installeer(){
   };w.__finalDesktop20260902=true;etmaal=w;}
   if(typeof nowcast==="function"&&!nowcast.__finalDesktop20260902){const w=naRender(nowcast,()=>{werkRegenSamenvattingBij();centraliseerKorteTeksten();});w.__finalDesktop20260902=true;nowcast=w;}
   if(typeof dagen==="function"&&!dagen.__finalDesktop20260902){const w=naRender(dagen,centraliseerKorteTeksten);w.__finalDesktop20260902=true;dagen=w;}
-  werkUurTabelBij();werkRegenSamenvattingBij();vindVolledigeGrafiekTabel();planHoogteSync();
+  werkUurTabelBij();werkRegenSamenvattingBij();vindVolledigeGrafiekTabel();observeerGrafiekHoogte();planHoogteSync();
   window.addEventListener("resize",werkUurTabelBij,{passive:true});
   window.addEventListener("pageshow",werkUurTabelBij,{passive:true});
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(werkUurTabelBij);
