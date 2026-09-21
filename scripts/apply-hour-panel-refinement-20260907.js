@@ -55,18 +55,18 @@ const PANEL_HOOGTE_NIEUW=`  /* Hoogtefiltering is reversibel: de eerste meting b
     else tbody.replaceChildren(...aside.__wiwHourCandidateRows);
   }
   /* Gebruik de echte ruimte onder de tabelkop om te bepalen hoeveel van de
-     gewenste acht uren op minimaal 29px volledig passen. Zo blijft de
+     gewenste acht uren op minimaal 29,5px intern volledig passen. Zo blijft de
      regen-horizon op ruime desktops intact, zonder acht rijen in de smallere
      1100px-layout buiten het grafiekpaneel te forceren. */
   const beschikbareRijhoogte=tbody?Math.max(0,grens-tbody.getBoundingClientRect().top):0;
-  const gewensteMinimumUren=window.innerWidth>=1440?10:8;\n  const minimumUren=Math.min(gewensteMinimumUren,Math.floor((beschikbareRijhoogte+0.5)/29),tbody&&tbody.children.length||0);
+  const gewensteMinimumUren=window.innerWidth>=1440?10:8;\n  const minimumUren=Math.min(gewensteMinimumUren,Math.floor((beschikbareRijhoogte+0.5)/29.5),tbody&&tbody.children.length||0);
   while(tbody&&tbody.lastElementChild&&tbody.children.length>minimumUren&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
   let rijPadAanpassing=0;
   let zichtbareRijen=tbody?[...tbody.children]:[];
   if(zichtbareRijen.length&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01){
     const laatste=tbody.lastElementChild,tekort=laatste.getBoundingClientRect().bottom-grens+0.5;
     const kleinsteRij=Math.min(...zichtbareRijen.map(r=>r.getBoundingClientRect().height));
-    const maximaleKrimp=Math.max(0,(kleinsteRij-29)/2);
+    const maximaleKrimp=Math.max(0,(kleinsteRij-29.5)/2);
     const krimpPerZijde=Math.min(maximaleKrimp,tekort/(zichtbareRijen.length*2)+0.02);
     if(krimpPerZijde>0.01){
       rijPadAanpassing=-krimpPerZijde;
