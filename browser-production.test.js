@@ -1,6 +1,6 @@
 "use strict";
-const fs=require("fs"),path=require("path"),os=require("os"),{spawnSync}=require("child_process"),{bouw}=require("./data.js");
-const browser=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
+const fs=require("fs"),path=require("path"),os=require("os"),{chromium}=require("playwright-core"),{bouw}=require("./data.js");
+const browserPad=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
 const bron=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(bron))throw new Error("public/index.html ontbreekt; voer eerst de build uit");
 let html=fs.readFileSync(bron,"utf8");
@@ -250,16 +250,27 @@ html=html.replace("</body>",reporter+"</body>");
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"weathernow-browser-"));
 const fixture=path.join(dir,"index.html");fs.writeFileSync(fixture,html);
 const url="file://"+fixture+"?lat=52.3500&lon=5.2600&plaats=Browsertest";
-function voerBrowserUit(maat,naam){
-  const r=spawnSync(browser,[
-    "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",
-    "--window-size="+maat,"--virtual-time-budget=12000","--dump-dom",url
-  ],{encoding:"utf8",maxBuffer:16*1024*1024});
-  if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
-  const dom=r.stdout||"";
+async function voerBrowserUit(breedte,hoogte,naam){
+  /* Chromium handhaaft sinds recente runner-versies een minimale native
+     vensterbreedte van 500px. Playwrights CDP-viewport houdt deze browser-smoke
+     daarom deterministisch op de bedoelde CSS-viewport, inclusief 390px. */
+  const browser=await chromium.launch({executablePath:browserPad,headless:true,args:[
+    "--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files"
+  ]});
+  let dom="";
+  try{
+    const page=await browser.newPage({viewport:{width:breedte,height:hoogte}});
+    await page.goto(url,{waitUntil:"load"});
+    await page.waitForFunction(()=>!!document.body.dataset.browserTestResult,null,{timeout:15000});
+    dom=await page.content();
+  }finally{
+    await browser.close();
+  }
   const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", punten="+waarde("browser-punten")+", lossePunten="+waarde("browser-losse-punten")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", neerslagkans="+waarde("browser-kans")+", scrubTekst="+waarde("browser-scrub-debug")+", tooltip="+waarde("browser-tooltip")+", tooltipW="+waarde("browser-tooltip-w")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", statsStabiel="+waarde("browser-stats-stabiel")+", statsCentraal="+waarde("browser-stats-centraal")+", dagenLijn="+waarde("browser-dagen-lijn")+", dagMm="+waarde("browser-dag-mm")+", aq="+waarde("browser-aq")+", night="+waarde("browser-night")+", nightRuim="+waarde("browser-night-ruim")+", nightCompact="+waarde("browser-night-compact")+", nightExpand="+waarde("browser-night-expand")+", briefingDag="+waarde("browser-briefing-dag")+", mobileKop="+waarde("browser-mobile-kop")+", uv="+waarde("browser-uv")+", zon="+waarde("browser-zon")+", compactMobile="+waarde("browser-compact-mobile")+", innerWidth="+waarde("browser-inner-width")+", anchors="+waarde("browser-anchors")+", missingAnchors="+waarde("browser-missing-anchors")+", exception="+waarde("browser-exception"));
   console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" temperatuurmarkeringen zonder losse stippen, rustige nu-markering, daggebonden zoninformatie, compacte tooltip, vast neerslagkanslabel, compact uitklapbaar Nachtzicht en minuutprecieze lokale klok correct.");
 }
-try{voerBrowserUit("390,844","mobiel Chromium");voerBrowserUit("1440,1000","desktop Chromium");}
-finally{fs.rmSync(dir,{recursive:true,force:true});}
+Promise.resolve().then(async()=>{
+  await voerBrowserUit(390,844,"mobiel Chromium");
+  await voerBrowserUit(1440,1000,"desktop Chromium");
+}).finally(()=>fs.rmSync(dir,{recursive:true,force:true})).catch(err=>{console.error(err&&err.stack||err);process.exit(1);});
