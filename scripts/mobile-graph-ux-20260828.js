@@ -368,8 +368,12 @@ function verminderMobieleTemperatuurlabels(){
   if(![top,bottom,W].every(Number.isFinite)||bottom<=top)return;
 
   const alleTemperatuurTeksten=[...svg.querySelectorAll("text")].filter(el=>{
-    const ff=String(el.getAttribute("font-family")||"");
-    return !el.closest("#scrub")&&/Bodoni/i.test(ff)&&/^-?\\d+°$/.test(String(el.textContent||"").trim());
+    const ff=String(el.getAttribute("font-family")||""),tekst=String(el.textContent||"").trim();
+    /* Gegenereerde labels worden primair via hun owner-attribuut herkend. Zo is
+       deze post-pass idempotent bij rAF/timer/font-hercontroles en kunnen oude
+       labels altijd worden gededupliceerd. Alleen basislabels vallen terug op
+       het zichtbare Bodoni + temperatuurpatroon. */
+    return !el.closest("#scrub")&&(el.hasAttribute("data-mobile-temp-index")||(/Bodoni/i.test(ff)&&/^-?\d+°$/.test(tekst)));
   });
   const tekstSjabloon=alleTemperatuurTeksten[0]||null,puntSjabloon=svg.querySelector("circle[data-temp-index]");
   const labelPerIndex=new Map();
@@ -409,6 +413,7 @@ function verminderMobieleTemperatuurlabels(){
     if(!el||!el.isConnected){
       el=puntSjabloon?puntSjabloon.cloneNode(false):document.createElementNS(SVG_NS,"circle");
       svg.insertBefore(el,invoegVoor());
+      puntPerIndex.set(i,el);
     }
     el.setAttribute("data-temp-index",String(i));el.setAttribute("data-mobile-temp-point","1");
     el.setAttribute("cx",String(Number(g.x(i))));el.setAttribute("cy",String(Number(g.y(Number(g.T[i])))));
@@ -420,6 +425,7 @@ function verminderMobieleTemperatuurlabels(){
     if(!el||!el.isConnected){
       el=tekstSjabloon?tekstSjabloon.cloneNode(false):document.createElementNS(SVG_NS,"text");
       svg.insertBefore(el,invoegVoor());
+      labelPerIndex.set(i,el);
     }
     el.textContent=Math.round(Number(g.T[i]))+"°";
     el.setAttribute("data-mobile-temp-index",String(i));
