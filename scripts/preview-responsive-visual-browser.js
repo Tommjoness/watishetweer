@@ -202,7 +202,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
             .filter(el=>el.getClientRects().length>0&&getComputedStyle(el).visibility!=="hidden")
             .map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width,height:r.height,label:el.getAttribute("aria-label")||el.textContent||el.id||el.tagName};}),
           legeNeerslag:[...document.querySelectorAll("#days .row.day:not(.kop) .drain")].filter(el=>!(el.textContent||el.getAttribute("aria-label")||"").trim()).length,
-          hourTable:(()=>{const table=document.getElementById("wiw-hour-table"),panel=document.getElementById("wiw-hour-panel"),scroll=document.getElementById("wiw-hour-scroll");if(!table||!panel||!scroll)return null;const rows=[...table.querySelectorAll("tbody tr")].filter(el=>el.getBoundingClientRect().height>0),tr=table.getBoundingClientRect(),pr=panel.getBoundingClientRect();return {fontSize:parseFloat(getComputedStyle(table).fontSize)||0,lineHeight:parseFloat(getComputedStyle(table).lineHeight)||0,rowCount:rows.length,overflowY:getComputedStyle(scroll).overflowY,lastFit:!rows.length||rows.at(-1).getBoundingClientRect().bottom<=pr.bottom+1,tableWidth:tr.width,panelWidth:pr.width};})(),
+          hourTable:(()=>{const table=document.getElementById("wiw-hour-table"),panel=document.getElementById("wiw-hour-panel"),scroll=document.getElementById("wiw-hour-scroll"),main=document.querySelector(".wiw-chart-main");if(!table||!panel||!scroll||!main)return null;const rows=[...table.querySelectorAll("tbody tr")].filter(el=>el.getBoundingClientRect().height>0),tr=table.getBoundingClientRect(),pr=panel.getBoundingClientRect(),mr=main.getBoundingClientRect(),tbody=table.querySelector("tbody"),tbr=tbody&&tbody.getBoundingClientRect();return {fontSize:parseFloat(getComputedStyle(table).fontSize)||0,lineHeight:parseFloat(getComputedStyle(table).lineHeight)||0,rowCount:rows.length,overflowY:getComputedStyle(scroll).overflowY,lastFit:!rows.length||rows.at(-1).getBoundingClientRect().bottom<=pr.bottom+1,tableWidth:tr.width,panelWidth:pr.width,panelHeight:pr.height,mainHeight:mr.height,tableTop:rows.length?rows[0].getBoundingClientRect().top-pr.top:null,tbodyTop:tbr?tbr.top-pr.top:null,rowHeights:rows.map(r=>r.getBoundingClientRect().height),candidateHours:Number(panel.dataset.candidateHours||0),rowPad:getComputedStyle(panel).getPropertyValue("--wiw-hour-row-pad-extra").trim()};})(),
           appText:document.getElementById("app")?.textContent||""
         };
       });
@@ -218,7 +218,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         const u=basis.hourTable;assert(u,`${vp.naam}: desktop-uurtabel ontbreekt`);
         assert(u.fontSize>=13.4,`${vp.naam}: desktop-uurtabel blijft te klein (${u.fontSize}px)`);
         assert(u.rowCount>=8&&u.rowCount<=11,`${vp.naam}: desktop-uurtabel toont geen 8–11 volledige hoogtegestuurde uren (${u.rowCount})`);
-        if(vp.width>=1440)assert(u.rowCount>=10,`${vp.naam}: ruime desktop toont minder dan circa 10 volledige uren (${u.rowCount})`);
+        if(vp.width>=1440&&u.rowCount<10)console.log(`${vp.naam}: desktop-hour-diagnose ${JSON.stringify(u)}`);
+        if(vp.width>=1440)assert(u.rowCount>=10,`${vp.naam}: ruime desktop toont minder dan circa 10 volledige uren (${u.rowCount}); ${JSON.stringify(u)}`);
         assert.equal(u.overflowY,"visible",`${vp.naam}: desktop-uurtabel heeft opnieuw een interne verticale scrollbar (${u.overflowY})`);
         assert.equal(u.lastFit,true,`${vp.naam}: laatste desktop-uurregel is niet volledig zichtbaar`);
       }
