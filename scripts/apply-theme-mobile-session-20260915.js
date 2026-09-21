@@ -173,7 +173,7 @@ const CSS=`
   /* Tabletbreedtes blijven volwaardig tappable, zonder de compacte desktopmaat
      te laten terugvallen op een krappe 36px-rij. */
   html body #thema.wiw-theme-control.wiw-theme-segmented-20260915{
-    width:210px!important;
+    width:216px!important;
     min-height:44px!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-auto,
@@ -458,7 +458,6 @@ function valideerWeatherHtml(html,rel){
     'grid-template-columns:minmax(0,1fr)!important',
     '@media(min-width:431px)',
     'width:216px!important',
-    'width:210px!important',
     '#thema-switch{\n    grid-column:1!important',
     '.wiw-theme-auto{\n    grid-column:2!important',
     '.wiw-theme-moon{\n    position:absolute!important;\n    left:200%!important',
