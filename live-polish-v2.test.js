@@ -24,9 +24,10 @@ test("verwijderd temperatuurcijfer koppelt aan het juiste zwarte datapunt",()=>{
   assert.equal(temperatuurPuntIndex({text:"16°",x:260},punten,temperaturen,72),null);
 });
 
-test("nu-label krijgt duidelijk een eigen zone onder de rode stip",()=>{
+test("nu-label blijft op mobiel compact bij de rode stip",()=>{
   assert.deepEqual(nuLabelPositie(100,50,200,false),{y:130,onder:true});
-  assert.deepEqual(nuLabelPositie(100,50,200,true),{y:128,onder:true});
+  assert.deepEqual(nuLabelPositie(100,50,200,true),{y:121,onder:true});
+  assert.deepEqual(nuLabelPositie(195,50,200,true),{y:177,onder:false});
   assert.deepEqual(nuLabelPositie(190,50,200,false),{y:166,onder:false});
   assert.equal(nuLabelPositie(null,50,200,false),null);
 });
