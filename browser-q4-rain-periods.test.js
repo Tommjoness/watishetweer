@@ -71,13 +71,17 @@ async function controleer(type,naam,breedte){
     await page.goto(url,{waitUntil:"load"});
     await page.waitForFunction(()=>typeof S!=="undefined"&&S.d&&S.d.current&&S.d.current.time==="2026-07-22T14:00",null,{timeout:10000});
 
-    await page.evaluate(()=>{
-      S.dag=null;S.bereik=24;
+    await page.evaluate(isBredeDesktop=>{
+      /* Deze test verifieert bewust de volledige 24-uursregenlaag. Op brede
+         desktop gebruikt de gewone nuldagmodus inmiddels de gekoppelde korte
+         Komende-urenrange; kies daar daarom de bestaande kalenderdagmodus,
+         die contractueel de volledige daggrafiek behoudt. */
+      S.dag=isBredeDesktop?0:null;S.bereik=24;
       etmaal(S.i0,24);
       if(typeof chartHint!=="function")throw new Error("Actieve chartHint()-owner ontbreekt.");
       chartHint();
       meters();
-    });
+    },breedte>=1100);
     await page.waitForFunction(()=>document.querySelector('#chart g[data-q4-rain-periods]')&&S.geo&&Array.isArray(S.geo.MM),null,{timeout:5000});
     /* De initiële startup-render kan vlak vóór de expliciete fixture-render al
        een geldige, maar nog onvolledige regenlaag hebben geplaatst. Wacht op
