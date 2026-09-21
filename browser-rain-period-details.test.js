@@ -61,7 +61,7 @@ async function controleer(type,naam){
       await page.evaluate(()=>document.fonts&&document.fonts.ready);
 
       await page.evaluate(()=>{S.dag=null;S.bereik=24;etmaal(S.i0,24);});
-      if(breedte<760)await page.waitForFunction(()=>document.querySelectorAll('#chart text[data-mobile-hour-axis="1"]').length===6,null,{timeout:2500});
+      if(breedte<760)await page.waitForFunction(()=>document.querySelectorAll('#chart text[data-mobile-hour-axis="1"]').length===8,null,{timeout:2500});
       const uur24=await page.evaluate(()=>{
         const svg=document.getElementById("chart"),groep=svg.querySelector('g[data-q4-rain-periods="1"]'),g=S.geo;
         const asY=g.pt+g.ih+(g.M?20:22);
@@ -132,11 +132,10 @@ async function controleer(type,naam){
       assert.ok(uur24.splitLayouts.every(x=>!x.fout&&x.zelfdeRegel&&!x.overlapt),`${naam} ${breedte}: losse begin/eindlabels blijven op één niet-overlappende regel; kreeg ${JSON.stringify(uur24.splitLayouts)}`);
       assert.ok(uur24.bedragOnderTijd.length===2&&uur24.bedragOnderTijd.every(Boolean),`${naam} ${breedte}: iedere mm-waarde staat onder het eigen tijdlabel`);
       if(breedte<760){
-        assert.equal(uur24.asTijden.length,6,`${naam} ${breedte}: mobiele uuras gebruikt niet exact zes kalenderankers; kreeg ${JSON.stringify(uur24.asTijden)}`);
-        assert.ok(uur24.asTijden.every(t=>{const h=Number(String(t).slice(0,2));return /^\d{2}:00$/.test(t)&&Number.isInteger(h)&&h%4===0;}),`${naam} ${breedte}: mobiele uuras bevat een niet-kalendergebonden vier-uurslabel: ${JSON.stringify(uur24.asTijden)}`);
-        assert.equal(new Set(uur24.asTijden).size,6,`${naam} ${breedte}: mobiele uuras bevat een dubbel klokanker: ${JSON.stringify(uur24.asTijden)}`);
+        assert.equal(uur24.asTijden.length,8,`${naam} ${breedte}: mobiele uuras gebruikt niet exact acht drie-uursankers; kreeg ${JSON.stringify(uur24.asTijden)}`);
+        assert.ok(uur24.asTijden.every(t=>{const h=Number(String(t).slice(0,2));return /^\d{2}:00$/.test(t)&&Number.isInteger(h)&&h%3===0;}),`${naam} ${breedte}: mobiele uuras bevat een niet-kalendergebonden drie-uurslabel: ${JSON.stringify(uur24.asTijden)}`);
         const indexGaten=uur24.asIndices.slice(1).map((x,i)=>x-uur24.asIndices[i]);
-        assert.ok(indexGaten.length===5&&indexGaten.every(g=>g===4),`${naam} ${breedte}: mobiele vier-uursankers volgen de echte uurreeks niet gelijkmatig: ${JSON.stringify(indexGaten)}`);
+        assert.ok(indexGaten.length===7&&indexGaten.every(g=>g===3),`${naam} ${breedte}: mobiele drie-uursankers volgen de echte uurreeks niet gelijkmatig: ${JSON.stringify(indexGaten)}`);
       }else assert.deepEqual(uur24.asTijden,["16","17","18","19","20","21","22"],`${naam} ${breedte}: compacte desktopuuras toont exact ieder zichtbaar uur`);
 
       const langer=await page.evaluate(()=>{
