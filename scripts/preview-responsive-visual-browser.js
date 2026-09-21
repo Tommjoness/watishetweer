@@ -175,7 +175,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const chip=document.querySelector(".chip.on"),probe=document.createElement("i");probe.style.color="var(--accent-active)";document.body.appendChild(probe);const accent=getComputedStyle(probe).color;probe.remove();
           const metric=["gust","pop"].map(id=>document.getElementById(id)?.closest(".stat")?.querySelector(".eyebrow")).filter(Boolean).map(el=>{const st=getComputedStyle(el),rect=el.getBoundingClientRect();return {text:(el.textContent||"").trim(),lineHeight:parseFloat(st.lineHeight)||0,fontSize:parseFloat(st.fontSize)||0,minHeight:parseFloat(st.minHeight)||0,width:rect.width,scrollWidth:el.scrollWidth};});
           const sr=svg&&svg.getBoundingClientRect(),rr=summary&&!summary.hidden&&summary.getBoundingClientRect();
-          const disclosure=sel=>{const el=document.querySelector(sel);if(!el||el.hidden||getComputedStyle(el).display==="none")return null;const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {height:r.height,width:r.width,expanded:el.getAttribute("aria-expanded")||"",controls:el.getAttribute("aria-controls")||"",display:getComputedStyle(el).display,hit:hit===el||el.contains(hit),after:getComputedStyle(el,"::after").content};};
+          const disclosure=sel=>{const el=document.querySelector(sel);if(!el||el.hidden||getComputedStyle(el).display==="none")return null;const r=el.getBoundingClientRect(),st=getComputedStyle(el);return {height:r.height,width:r.width,expanded:el.getAttribute("aria-expanded")||"",controls:el.getAttribute("aria-controls")||"",display:st.display,pointerEvents:st.pointerEvents,visibility:st.visibility,after:getComputedStyle(el,"::after").content};};
           const nightRow=document.querySelector("#nights .row.night:not(.kop):not([hidden])");
           return {
             tempCount:tempLabels.length,tempOverlap:tempOverlap.length,tempOverlapPairs:tempOverlap,tempPointDx,tempInfo,nowOverlap,anchorState,extremaState,missingAnchors,droppedExtrema,
@@ -275,7 +275,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           assert(d.height>=43.5,`${vp.naam}: disclosure '${naam}' verliest 44px touch target (${d.height}px)`);
           assert.equal(d.display,"flex",`${vp.naam}: disclosure '${naam}' gebruikt niet het gedeelde flexpatroon`);
           assert(["true","false"].includes(d.expanded),`${vp.naam}: disclosure '${naam}' mist aria-expanded`);
-          assert.equal(d.hit,true,`${vp.naam}: disclosure '${naam}' is visueel aanwezig maar niet hit-testbaar`);
+          assert.notEqual(d.pointerEvents,"none",`${vp.naam}: disclosure '${naam}' accepteert geen pointer-events`);
+          assert.notEqual(d.visibility,"hidden",`${vp.naam}: disclosure '${naam}' is verborgen`);
           assert(/›/.test(d.after),`${vp.naam}: disclosure '${naam}' mist de subtiele chevron`);
         }
         assert(m.disclosures.hours.controls,`${vp.naam}: Alle uren bekijken mist aria-controls`);
@@ -286,8 +287,11 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
            maar niet horizontaal verschuiven of de actie laten springen. */
         for(const [naam,selector] of [["uren",".wiw-hour-toggle"],["nachten","#nights .nacht-meer"]]){
           const knop=page.locator(selector);
+          await knop.scrollIntoViewIfNeeded();
           const voor=await knop.boundingBox(),begin=await knop.getAttribute("aria-expanded");
+          const pointerHit=await page.evaluate(sel=>{const el=document.querySelector(sel);if(!el)return false;const r=el.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;if(x<0||x>innerWidth||y<0||y>innerHeight)return false;const hit=document.elementFromPoint(x,y);return hit===el||el.contains(hit);},selector);
           assert(voor&&["true","false"].includes(begin||""),`${vp.naam}: ${naam}-disclosure is niet toetsenbordklaar`);
+          assert.equal(pointerHit,true,`${vp.naam}: ${naam}-disclosure is na scrollIntoView niet werkelijk raakbaar in het midden`);
           await knop.focus();await knop.press("Enter");
           const naEnter=await knop.getAttribute("aria-expanded"),boxEnter=await knop.boundingBox();
           assert.notEqual(naEnter,begin,`${vp.naam}: Enter toggelt ${naam}-disclosure niet`);
