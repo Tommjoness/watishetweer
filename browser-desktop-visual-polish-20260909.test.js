@@ -96,7 +96,9 @@ function meet(){
   try{
     const modus=new URLSearchParams(location.search).get("modus");
     if(modus==="donker")document.documentElement.setAttribute("data-thema","donker");
-    if(window.WeatherNowFinalDesktopUI20260902)window.WeatherNowFinalDesktopUI20260902.render();
+    /* Meet de echte runtime-eindstaat. Geen handmatige FinalDesktopUI.render()
+       vlak vóór de meting: late SVG-/regenhoogtewijzigingen moeten door de
+       productowner zelf worden opgepakt. */
     if(window.WeatherNowDesktopVisualPolish20260909)window.WeatherNowDesktopVisualPolish20260909.sync();
     document.documentElement.getBoundingClientRect();
     const R=e=>e.getBoundingClientRect(),C=e=>getComputedStyle(e),A=e=>R(e).left+(parseFloat(C(e).paddingLeft)||0),H=e=>(R(e).left+R(e).right)/2,V=e=>(R(e).top+R(e).bottom)/2;
