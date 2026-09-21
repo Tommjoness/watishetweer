@@ -274,6 +274,26 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           assert(/›/.test(d.after),`${vp.naam}: disclosure '${naam}' mist de subtiele chevron`);
         }
         assert(m.disclosures.hours.controls,`${vp.naam}: Alle uren bekijken mist aria-controls`);
+
+        /* Native buttons moeten niet alleen bestaan: Enter/Space moeten de echte
+           disclosure activeren, aria-expanded synchroniseren en de knop zelf
+           geometrisch stabiel laten. De inhoud mag de pagina langer maken,
+           maar niet horizontaal verschuiven of de actie laten springen. */
+        for(const [naam,selector] of [["uren",".wiw-hour-toggle"],["nachten","#nights .nacht-meer"]]){
+          const knop=page.locator(selector);
+          const voor=await knop.boundingBox(),begin=await knop.getAttribute("aria-expanded");
+          assert(voor&&["true","false"].includes(begin||""),`${vp.naam}: ${naam}-disclosure is niet toetsenbordklaar`);
+          await knop.focus();await knop.press("Enter");
+          const naEnter=await knop.getAttribute("aria-expanded"),boxEnter=await knop.boundingBox();
+          assert.notEqual(naEnter,begin,`${vp.naam}: Enter toggelt ${naam}-disclosure niet`);
+          assert(boxEnter&&Math.abs(boxEnter.width-voor.width)<=1&&Math.abs(boxEnter.height-voor.height)<=1,`${vp.naam}: ${naam}-disclosure verandert van afmeting bij openen`);
+          assert((await page.evaluate(()=>Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth))<=1,`${vp.naam}: ${naam}-disclosure introduceert horizontale overflow`);
+          await knop.press("Space");
+          const terug=await knop.getAttribute("aria-expanded"),boxTerug=await knop.boundingBox();
+          assert.equal(terug,begin,`${vp.naam}: Space herstelt ${naam}-disclosure niet`);
+          assert(boxTerug&&Math.abs(boxTerug.width-voor.width)<=1&&Math.abs(boxTerug.height-voor.height)<=1,`${vp.naam}: ${naam}-disclosure is geometrisch niet stabiel na sluiten`);
+        }
+
         assert(m.chipBorder&&m.chipBorder!==m.accent,`${vp.naam}: actieve opgeslagen plaats gebruikt nog warning-accent`);
         assert(m.chipShadow&&m.chipShadow!=="none",`${vp.naam}: actieve opgeslagen plaats is niet meer herkenbaar als selectie`);
         assert(m.metric.length>=2,`${vp.naam}: lange metrieklabels ontbreken in fixture`);
