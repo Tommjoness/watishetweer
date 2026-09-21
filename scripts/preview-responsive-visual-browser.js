@@ -48,10 +48,11 @@ function weerFixtureVoorViewport(breedte){
     patroon=Array.from({length:lengte},(_,i)=>13+i*.03);
     for(const [i,v] of [[4,15],[5,15],[6,14],[11,11],[12,11],[13,13]])if(i<lengte)patroon[i]=v; // vlakke top + vlak dal
   }else if(breedte===430){
-    const ankers=[];
-    for(let j=0;j<lengte;j++){const m=/T(\d{2}):/.exec(String(tijden[start+j]||""));const uur=m?Number(m[1]):NaN;if(Number.isInteger(uur)&&uur%3===0)ankers.push(j);}
-    const a=ankers[2]??3;
-    if(a>0&&a+2<lengte){patroon[a-1]=13;patroon[a]=17;patroon[a+1]=11;patroon[a+2]=14;} // extremum op anker + direct ernaast
+    /* De productowner ankert op het eerste zichtbare forecastpunt en daarna op
+       echte +3-uursforecastpunten. In deze gewone (niet-DST) fixture zijn dat
+       indices 0/3/6/...; zet bewust één extremum op zo'n anker en één ernaast. */
+    const a=6;
+    if(a>0&&a+2<lengte){patroon[a-1]=13;patroon[a]=17;patroon[a+1]=11;patroon[a+2]=14;}
   }
   for(let j=0;j<lengte;j++){
     const i=start+j,v=patroon[j];
@@ -153,7 +154,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const svgRect=svg&&svg.getBoundingClientRect(),binnenSvg=r=>!!svgRect&&r.left>=svgRect.left-1&&r.right<=svgRect.right+1&&r.top>=svgRect.top-1&&r.bottom<=svgRect.bottom+1;
           const tempInfo=tempLabels.map((el,k)=>({i:Number(el.getAttribute("data-mobile-temp-index")),tekst:(el.textContent||"").trim(),priority:el.getAttribute("data-mobile-temp-priority")||"",extremum:el.getAttribute("data-mobile-temp-extremum")||"",binnen:binnenSvg(tempBoxes[k])}));
           const nowText=svg?[...svg.querySelectorAll("text")].find(el=>/^nu(?:\s|$)/i.test(String(el.textContent||"").trim())):null,nowBox=nowText&&nowText.getBoundingClientRect();
-          const nowOverlap=tempBoxes.filter(r=>raakt(r,nowBox,1)).length,nowAnchor=Number(nowText&&nowText.getAttribute("data-mobile-temp-anchor-index"));
+          const nowOverlap=tempBoxes.filter(r=>raakt(r,nowBox,1)).length,nowAnchorRaw=nowText&&nowText.getAttribute("data-mobile-temp-anchor-index"),nowAnchor=nowAnchorRaw===null||nowAnchorRaw===undefined?NaN:Number(nowAnchorRaw);
           const anchorState=hourIndices.map(i=>{
             const info=tempInfo.find(x=>x.i===i),verwacht=Number.isFinite(Number(g&&g.T&&g.T[i]))?Math.round(Number(g.T[i])):null;
             return {i,verwacht,tekst:info?info.tekst:"",priority:info?info.priority:"",viaNow:Number.isInteger(nowAnchor)&&nowAnchor===i};
@@ -175,7 +176,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           return {
             tempCount:tempLabels.length,tempOverlap:tempOverlap.length,tempPointDx,tempInfo,nowOverlap,anchorState,extremaState,
             tempClipped:tempInfo.filter(x=>!x.binnen).length,hourClipped:hourBoxes.filter(r=>!binnenSvg(r)).length,hourOverlap:hourOverlap.length,
-            hourCount:hourLabels.length,hourTexts:hourLabels.map(el=>(el.textContent||"").trim()),hourGaps,hourIndices,sunInChart,
+            hourCount:hourLabels.length,hourTexts:hourLabels.map(el=>(el.textContent||"").trim()),hourTimes:hourIndices.map(i=>String(g&&g.TI&&g.TI[i]||"")),hourGaps,hourIndices,sunInChart,
             disclosures:{hours:disclosure(".wiw-hour-toggle"),nights:disclosure("#nights .nacht-meer")},
             nightOverflow:nightRow?Math.max(0,nightRow.scrollWidth-nightRow.clientWidth):0,nightHeight:nightRow?nightRow.getBoundingClientRect().height:0,
             compact:svg?.getAttribute("data-mobile-compact-height")||"",
@@ -241,9 +242,10 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert.equal(m.hourOverlap,0,`${vp.naam}: drie-uurslabels overlappen geometrisch`);
         assert(m.tempPointDx.every(dx=>dx<=18),`${vp.naam}: temperatuurcijfer wijkt meer dan licht horizontaal van het datapunt af (${m.tempPointDx.join("/")})`);
         assert.equal(m.hourCount,8,`${vp.naam}: mobiele uuras gebruikt ${m.hourCount} in plaats van acht drie-uursankers`);
-        assert(m.hourTexts.every(t=>{const h=Number(String(t).slice(0,2));return /^\d{2}:00$/.test(t)&&Number.isInteger(h)&&h%3===0;}),`${vp.naam}: mobiele uuras volgt niet de vaste lokale drie-uurscadans (${m.hourTexts.join("/")})`);
+        assert(m.hourTexts.every(t=>/^\d{2}:00$/.test(t)),`${vp.naam}: mobiele uuras bevat geen expliciete lokale kloktijden (${m.hourTexts.join("/")})`);
+        assert(m.hourTexts.every((t,i)=>t===String(m.hourTimes[i]||"").slice(11,16)),`${vp.naam}: uurlabel hoort niet bij het eigen echte forecastpunt (${m.hourTexts.join("/")} versus ${m.hourTimes.join("/")})`);
         const hourIndexGaps=m.hourIndices.slice(1).map((x,i)=>x-m.hourIndices[i]);
-        assert(hourIndexGaps.length===7&&hourIndexGaps.every(g=>g===3),`${vp.naam}: drie-uursankers volgen niet de echte uurreeks (${hourIndexGaps.join("/")})`);
+        assert(hourIndexGaps.length===7&&hourIndexGaps.every(g=>g===3),`${vp.naam}: drie-uursankers volgen in de gewone uurfixture niet de echte +3-uursreeks (${hourIndexGaps.join("/")})`);
         for(const a of m.anchorState){
           assert(a.viaNow||a.priority==="anchor",`${vp.naam}: verplicht drie-uursanker ${a.i} mist een temperatuurlabel`);
           if(!a.viaNow)assert.equal(a.tekst,String(a.verwacht)+"°",`${vp.naam}: temperatuur bij anker ${a.i} hoort niet bij hetzelfde forecastpunt (${a.tekst}/${a.verwacht}°)`);
