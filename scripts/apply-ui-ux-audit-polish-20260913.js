@@ -148,7 +148,7 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   /* Mobiel Nachtzicht behoudt alle inhoud, maar primaire waarden en secundaire
      uitleg krijgen een strakker ritme en natuurlijke woordafbreking. */
   #nights .row.night:not(.kop){padding-top:8px!important;padding-bottom:8px!important;row-gap:2px!important}
-  #nights .row.night .nmeta.wide{margin-top:0!important;overflow-wrap:break-word!important;word-break:normal!important}
+  #nights .row.night .nmeta.wide{grid-column:1 / -1!important;margin-top:0!important;overflow-wrap:break-word!important;word-break:normal!important}
   #nights .row.night .nachtadvies{margin-bottom:2px!important;line-height:1.3!important}
   #nights .row.night .nachtvenster{margin-top:1px!important;color:var(--ink-45)!important;line-height:1.28!important}
   #nights .row.night .nachtmaan{margin-top:0!important;line-height:1.28!important}
@@ -161,8 +161,13 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   footer > span.bron:nth-last-of-type(2),
   footer > span.bron:last-of-type,
   footer > details.footer-details{font-size:12.5px!important;font-weight:500;color:var(--ink-70)}
-  footer > details.footer-details>summary{color:inherit}
-  .footer-contact{margin-top:6px!important;padding-top:2px!important;color:var(--ink-25)}
+  html body footer:nth-of-type(n){grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  footer > span.bron:first-of-type,footer > span.bron:nth-of-type(2){grid-column:1 / -1!important}
+  footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important}
+  footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important}
+  footer > details.footer-details{grid-column:3!important;grid-row:3!important;min-width:0!important;text-align:center}
+  footer > details.footer-details>summary{color:inherit;white-space:normal;text-align:center;line-height:1.2}
+  .footer-contact{grid-column:1 / -1!important;grid-row:4!important;margin-top:6px!important;padding-top:2px!important;color:var(--ink-25)}
   .footer-contact-question{color:var(--ink-45);font-weight:500}
   .footer-contact-mail a{white-space:nowrap}
 }
@@ -173,7 +178,6 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   /* Eén kleine leesbaarheidsstap zonder nieuwe rijhoogte-owner: de bestaande
      hoogtefilter blijft bepalen hoeveel volledige uren naast de grafiek passen. */
   .wiw-hour-table{font-size:13.5px!important;line-height:1.2!important}
-  .wiw-hour-table tbody td{padding-top:7px!important;padding-bottom:7px!important}
   .wiw-hour-table .wiw-hour-primary{line-height:1.2!important}
   .wiw-hour-table .wiw-hour-secondary{line-height:1.2!important}
 }
