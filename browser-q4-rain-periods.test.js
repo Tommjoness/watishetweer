@@ -79,6 +79,14 @@ async function controleer(type,naam,breedte){
       meters();
     });
     await page.waitForFunction(()=>document.querySelector('#chart g[data-q4-rain-periods]')&&S.geo&&Array.isArray(S.geo.MM),null,{timeout:5000});
+    /* De initiële startup-render kan vlak vóór de expliciete fixture-render al
+       een geldige, maar nog onvolledige regenlaag hebben geplaatst. Wacht op
+       het volledige fixturecontract in plaats van alleen op het bestaan van
+       de groep; de inhoudelijke asserts hieronder blijven ongewijzigd. */
+    await page.waitForFunction(()=>{
+      const regen=document.querySelector('#chart g[data-q4-rain-periods]');
+      return !!regen&&regen.querySelectorAll('line').length===6&&regen.querySelectorAll('text[data-q4-rain-period-amount]').length===2;
+    },null,{timeout:5000});
     await page.waitForFunction(()=>{
       const el=document.querySelector("#aq .stat:first-child .sval");
       return el&&(el.textContent||"").trim()==="22";
