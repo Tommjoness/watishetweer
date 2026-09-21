@@ -81,10 +81,10 @@ const CSS=`
     color:var(--ink)!important;
   }
   #thema.wiw-theme-segmented-20260915 #thema-switch{
-    grid-column:1 / 4!important;
+    grid-column:1!important;
     grid-row:1!important;
-    display:contents!important;
-    grid-template-columns:subgrid!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
     position:relative!important;
     align-items:stretch!important;
     justify-content:stretch!important;
@@ -139,7 +139,12 @@ const CSS=`
     color:var(--ink)!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun{grid-column:1!important}
-  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon{grid-column:3!important}
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon{
+    position:absolute!important;
+    left:200%!important;
+    top:0!important;
+    width:100%!important;
+  }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:8px}
   #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:8px}
   /* De track blijft meetbaar voor het bestaande switch-/a11y-contract, maar is
@@ -221,10 +226,10 @@ const CSS=`
     box-shadow:none!important;
   }
   #thema.wiw-theme-segmented-20260915 #thema-switch{
-    grid-column:1 / 4!important;
+    grid-column:1!important;
     grid-row:1!important;
-    display:contents!important;
-    grid-template-columns:subgrid!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
     position:relative!important;
     min-width:0!important;
     min-height:46px!important;
@@ -259,7 +264,10 @@ const CSS=`
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun{grid-column:1!important}
   #thema.wiw-theme-segmented-20260915 .wiw-theme-moon{
-    grid-column:3!important;
+    position:absolute!important;
+    left:200%!important;
+    top:0!important;
+    width:100%!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:8px}
   #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:8px}
