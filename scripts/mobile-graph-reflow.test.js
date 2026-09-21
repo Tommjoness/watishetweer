@@ -15,8 +15,8 @@ const etmaalVanaf22=Array.from({length:25},(_,i)=>{
   return dag+"T"+String(uur).padStart(2,"0")+":00";
 });
 const drieUursIndices=api.kiesKalenderUurLabelIndices(etmaalVanaf22,3,24);
-assert.deepEqual(drieUursIndices,[2,5,8,11,14,17,20,23],"Smalle etmaalgrafiek moet alle acht echte lokale drie-uursankers kiezen.");
-assert.deepEqual(drieUursIndices.map(i=>api.uurUitIso(etmaalVanaf22[i])),[0,3,6,9,12,15,18,21],"Drie-uursritme blijft aan de lokale klok gekoppeld.");
+assert.deepEqual(drieUursIndices,[0,3,6,9,12,15,18,21],"Smalle etmaalgrafiek moet vanaf het eerste echte forecastpunt acht drie-uursankers kiezen.");
+assert.deepEqual(drieUursIndices.map(i=>api.uurUitIso(etmaalVanaf22[i])),[22,1,4,7,10,13,16,19],"Drie-uursritme volgt het eerste zichtbare lokale forecastpunt en niet vaste modulo-klokuren.");
 assert(!drieUursIndices.includes(24),"De 25e rechtergrens mag geen negende etmaalanker worden.");
 
 const etmaalVanaf18=Array.from({length:25},(_,i)=>{
@@ -31,8 +31,10 @@ const dstVoorjaar=[
   "2026-03-29T05:00","2026-03-29T06:00","2026-03-29T07:00","2026-03-29T08:00",
   "2026-03-29T09:00","2026-03-29T10:00","2026-03-29T11:00","2026-03-29T12:00"
 ];
-assert.deepEqual(api.kiesKalenderUurLabelIndices(dstVoorjaar,3,24),[0,2,5,8,11],"DST-sprong kiest alleen werkelijk aanwezige lokale forecastpunten.");
+assert.deepEqual(api.kiesKalenderUurLabelIndices(dstVoorjaar,3,24),[0,2,5,8,11],"DST-sprong kiest alleen werkelijk aanwezige lokale forecastpunten op de civiele drie-uurscadans.");
 assert(!api.kiesKalenderUurLabelIndices(dstVoorjaar,3,24).some(i=>dstVoorjaar[i].includes("T02:")),"DST-logica mag geen ontbrekend lokaal uur synthetiseren.");
+const dstNajaar=["2026-10-25T00:00","2026-10-25T01:00","2026-10-25T02:00","2026-10-25T02:00","2026-10-25T03:00","2026-10-25T04:00","2026-10-25T05:00","2026-10-25T06:00","2026-10-25T07:00","2026-10-25T08:00","2026-10-25T09:00"];
+assert.deepEqual(api.kiesKalenderUurLabelIndices(dstNajaar,3,24),[0,4,7,10],"Dubbel lokaal najaarsuur wordt niet dubbel gelabeld en de echte 03/06/09-punten blijven de cadans dragen.");
 
 assert.deepEqual(api.lokaleTemperatuurExtrema([20,19,18,17],24),[],"Monotoon dalende curve heeft geen lokale extrema.");
 assert.deepEqual(api.lokaleTemperatuurExtrema([17,18,19,20],24),[],"Monotoon stijgende curve heeft geen lokale extrema.");
@@ -71,7 +73,7 @@ const runtime=fs.readFileSync(path.join(__dirname,"mobile-graph-ux-20260828.js")
 assert(!/\.getBBox\s*\(/.test(runtime),"Mobiele grafiekpolish mag geen uitvoerbare SVG getBBox-layoutread meer bevatten.");
 assert(runtime.includes("svgTekstBoxUitElement"),"Mobiele grafiekpolish moet de attribuutgebaseerde boxhelper gebruiken.");
 assert(runtime.includes("const compact24=Number(g.n)<=25&&window.innerWidth<=430"),"Drie-uursritme moet uitsluitend de smalle mobiele 24-uursweergave raken, inclusief de 25e rechtergrens.");
-assert(runtime.includes("alle.forEach(el=>el.remove())")&&runtime.includes("kiesKalenderUurLabelIndices(g.TI,3,24)"),"Smalle mobiele uur-as moet oude basis/fallbacklabels volledig vervangen door echte lokale drie-uursankers.");
+assert(runtime.includes("alle.forEach(el=>el.remove())")&&runtime.includes("kiesKalenderUurLabelIndices(g.TI,3,24)"),"Smalle mobiele uur-as moet oude basis/fallbacklabels volledig vervangen door vanaf het eerste zichtbare forecastpunt bepaalde drie-uursankers.");
 assert(runtime.includes('data-mobile-hour-rhythm","three-hour"'),"Mobiele uur-as moet zijn drie-uurscontract expliciet markeren.");
 assert(runtime.includes("Instrument Sans,ui-sans-serif,system-ui,sans-serif"),"Mobiele uuras moet een rustig recht sans-letterbeeld gebruiken.");
 assert(runtime.includes("el.setAttribute(\"font-style\",\"normal\")"),"Mobiele uur-as mag geen schuin letterbeeld erven.");
@@ -84,6 +86,7 @@ assert(runtime.includes("herstelUurAs();polishMobieleGrafiekRanden();vereenvoudi
 assert(runtime.includes("mobieleTemperatuurLabelPlan(g.TI,g.T,24)"),"Mobiele temperatuurselectie moet verplichte drie-uursankers en extra extrema uit één deterministisch plan halen.");
 assert(runtime.includes('data-mobile-temp-priority",verplicht?"anchor":"extremum"'),"Temperatuurlabels moeten hun collision-prioriteit expliciet markeren.");
 assert(runtime.includes("plan.ankers.forEach")&&runtime.includes("plan.extrema.forEach"),"Verplichte ankers moeten vóór optionele extrema worden geplaatst.");
+assert(runtime.includes('data-mobile-temp-missing-anchors')&&runtime.includes('data-mobile-temp-dropped-extrema'),"Runtime moet onplaatsbare verplichte ankers en optionele extrema afzonderlijk traceerbaar maken.");
 assert(runtime.includes("const xKandidaten=[px,px+12,px-12,px+18,px-18]"),"Mobiele temperatuurwaarden mogen alleen licht horizontaal uitwijken.");
 assert(!runtime.includes("mobieleTemperatuurLabelLimiet(window.innerWidth)"),"De mobiele 24-uursgrafiek mag verplichte ankers niet langer via een viewport-limiet uitdunnen.");
 
