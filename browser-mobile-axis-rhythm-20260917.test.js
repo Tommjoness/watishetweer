@@ -39,7 +39,7 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
     zet('labels',teksten.join(','));zet('count',labels.length);zet('inner-width',window.innerWidth);zet('geo-n',g.n);zet('font-ok',fonts.every(v=>/Instrument Sans/.test(v))?'ja':'nee');zet('style-ok',stijlen.every(v=>v==='normal')?'ja':'nee');zet('overflow',buiten.length?buiten.map(el=>el.textContent).join(','):'geen');
     const nuTekst=[...svg.querySelectorAll('text')].find(el=>/^nu(?:\\s|$)/i.test(String(el.textContent||'').trim()));
     const zonTeksten=[...svg.querySelectorAll('text')].filter(el=>/^zon (?:op|onder) \\d{2}:\\d{2}$/i.test(String(el.textContent||'').trim()));
-    zet('temp-count',tempLabels.length);zet('temp-overlap',tempBots.length?tempBots.join(','):'geen');zet('now-text',nuTekst?String(nuTekst.textContent||'').trim():'');zet('sun-count',zonTeksten.length);zet('compact-height',svg.getAttribute('data-mobile-compact-height')||'');zet('under-space',onderruimte.toFixed(2));zet('done','ok');
+    zet('temp-count',tempLabels.length);zet('temp-overlap',tempBots.length?tempBots.join(','):'geen');zet('temp-missing',svg.getAttribute('data-mobile-temp-missing-anchors')||'');zet('temp-visible',svg.getAttribute('data-mobile-temp-visible')||'');zet('hour-rhythm',svg.getAttribute('data-mobile-hour-rhythm')||'');zet('now-text',nuTekst?String(nuTekst.textContent||'').trim():'');zet('sun-count',zonTeksten.length);zet('compact-height',svg.getAttribute('data-mobile-compact-height')||'');zet('under-space',onderruimte.toFixed(2));zet('done','ok');
   }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},700);
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},180),{once:true});
 </script>`;
@@ -53,16 +53,19 @@ try{
   if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
   if(Number(v('inner-width'))!==402)throw new Error("fixture emuleert geen echte 402px runtimebreedte: "+v('inner-width'));
   if(Number(v('geo-n'))>25)throw new Error("fixture is geen 24-uursgrafiek/rechtergrensgeval: geo.n="+v('geo-n'));
-  const verwacht='00:00,04:00,08:00,12:00,16:00,20:00';
-  if(v('labels')!==verwacht)throw new Error("mobiele uuras heeft geen rustig vier-uursritme: kreeg "+v('labels')+", verwacht "+verwacht);
-  if(Number(v('count'))!==6)throw new Error("mobiele 24-uursas moet exact zes tijdlabels tonen; kreeg "+v('count'));
+  const verwacht='22:00,01:00,04:00,07:00,10:00,13:00,16:00,19:00';
+  if(v('labels')!==verwacht)throw new Error("mobiele uuras volgt niet de forecasttijd-gedreven drie-uurscadans: kreeg "+v('labels')+", verwacht "+verwacht);
+  if(Number(v('count'))!==8)throw new Error("mobiele 24-uursas moet exact acht echte drie-uursankers tonen; kreeg "+v('count'));
+  if(v('hour-rhythm')!=='three-hour')throw new Error("mobiele uuras mist de three-hour owner-marker: "+v('hour-rhythm'));
   if(v('font-ok')!=='ja'||v('style-ok')!=='ja')throw new Error("mobiele uuras gebruikt niet overal het rechte Instrument Sans-letterbeeld");
   if(v('overflow')!=='geen')throw new Error("mobiele uuras valt buiten de SVG: "+v('overflow'));
-  if(Number(v('temp-count'))<5||Number(v('temp-count'))>8)throw new Error("mobiele grafiek houdt niet de beoogde vijf tot acht temperatuurwaarden: "+v('temp-count'));
+  if(v('temp-missing'))throw new Error("mobiele grafiek mist verplichte drie-uurs-temperatuurankers: "+v('temp-missing'));
+  if(Number(v('temp-count'))<7)throw new Error("mobiele grafiek toont te weinig vaste drie-uurs-temperatuurwaarden: "+v('temp-count'));
+  if(Number(v('temp-count'))>10)throw new Error("mobiele grafiek bevat onverwacht veel vaste/extrema-temperatuurlabels: "+v('temp-count'));
   if(v('temp-overlap')!=='geen')throw new Error("mobiele temperatuurlabels overlappen nog: "+v('temp-overlap'));
   if(v('now-text')!=='nu 13°')throw new Error("actuele rode markering mist de temperatuurwaarde: "+v('now-text'));
   if(Number(v('sun-count'))!==0)throw new Error("dubbele zonlabels staan nog in de mobiele SVG: "+v('sun-count'));
   if(v('compact-height')!=='1')throw new Error("mobiele 24-uursgrafiek is niet post-render gecompacteerd");
   if(Number(v('under-space'))>50)throw new Error("mobiele grafiek houdt nog te veel reserve onder de plot: "+v('under-space')+" SVG-px");
-  console.log("Mobiele uuras-regressie groen: echte 402px runtime toont zes rustige vier-uurslabels, vijf tot acht collision-vrije temperatuurankers en compacte onderruimte; geo.n="+v('geo-n')+".");
+  console.log("Mobiele uuras-regressie groen: echte 402px runtime toont acht forecasttijd-gedreven drie-uurslabels, alle verplichte temperatuurankers collision-vrij en compacte onderruimte; geo.n="+v('geo-n')+".");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
