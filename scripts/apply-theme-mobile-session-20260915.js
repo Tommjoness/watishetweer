@@ -39,8 +39,9 @@ const CSS=`
     grid-template-columns:repeat(3,minmax(0,1fr))!important;
     align-items:stretch!important;
     justify-content:stretch!important;
-    width:192px!important;
-    min-width:0!important;
+    flex:0 0 216px!important;
+    width:216px!important;
+    min-width:216px!important;
     min-height:36px!important;
     padding:0!important;
     border:1px solid var(--rule)!important;
@@ -48,6 +49,7 @@ const CSS=`
     overflow:hidden!important;
     background:var(--sheet)!important;
     vertical-align:middle!important;
+    position:relative!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-auto{
     grid-column:2!important;
@@ -80,10 +82,10 @@ const CSS=`
     color:var(--ink)!important;
   }
   #thema.wiw-theme-segmented-20260915 #thema-switch{
-    grid-column:1 / 4!important;
+    grid-column:1!important;
     grid-row:1!important;
     display:grid!important;
-    grid-template-columns:subgrid!important;
+    grid-template-columns:minmax(0,1fr)!important;
     position:relative!important;
     align-items:stretch!important;
     justify-content:stretch!important;
@@ -110,6 +112,10 @@ const CSS=`
     background:transparent!important;
     color:var(--ink)!important;
   }
+  #thema.wiw-theme-segmented-20260915:has(#thema-switch:focus-visible){
+    outline:2px solid var(--ink)!important;
+    outline-offset:2px!important;
+  }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{
     display:flex!important;
     align-items:center!important;
@@ -134,7 +140,12 @@ const CSS=`
     color:var(--ink)!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun{grid-column:1!important}
-  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon{grid-column:3!important}
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon{
+    position:absolute!important;
+    left:200%!important;
+    top:0!important;
+    width:100%!important;
+  }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:8px}
   #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:8px}
   /* De track blijft meetbaar voor het bestaande switch-/a11y-contract, maar is
@@ -163,7 +174,7 @@ const CSS=`
   /* Tabletbreedtes blijven volwaardig tappable, zonder de compacte desktopmaat
      te laten terugvallen op een krappe 36px-rij. */
   html body #thema.wiw-theme-control.wiw-theme-segmented-20260915{
-    width:180px!important;
+    width:216px!important;
     min-height:44px!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-auto,
@@ -192,6 +203,7 @@ const CSS=`
     border-radius:0!important;
     overflow:hidden!important;
     background:var(--sheet)!important;
+    position:relative!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-auto{
     grid-column:2!important;
@@ -215,10 +227,10 @@ const CSS=`
     box-shadow:none!important;
   }
   #thema.wiw-theme-segmented-20260915 #thema-switch{
-    grid-column:1 / 4!important;
+    grid-column:1!important;
     grid-row:1!important;
     display:grid!important;
-    grid-template-columns:subgrid!important;
+    grid-template-columns:minmax(0,1fr)!important;
     position:relative!important;
     min-width:0!important;
     min-height:46px!important;
@@ -247,9 +259,16 @@ const CSS=`
     white-space:nowrap!important;
     box-shadow:none!important;
   }
+  #thema.wiw-theme-segmented-20260915:has(#thema-switch:focus-visible){
+    outline:2px solid var(--ink)!important;
+    outline-offset:2px!important;
+  }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun{grid-column:1!important}
   #thema.wiw-theme-segmented-20260915 .wiw-theme-moon{
-    grid-column:3!important;
+    position:absolute!important;
+    left:200%!important;
+    top:0!important;
+    width:100%!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:8px}
   #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:8px}
@@ -437,12 +456,14 @@ function valideerWeatherHtml(html,rel){
     'grid-template-columns:repeat(2,minmax(0,1fr))!important',
     'grid-column:1 / -1!important',
     'grid-template-columns:repeat(3,minmax(0,1fr))!important',
-    'grid-template-columns:subgrid!important',
+    'grid-template-columns:minmax(0,1fr)!important',
     '@media(min-width:431px)',
-    'width:192px!important',
-    'grid-column:1 / 4!important',
+    'width:216px!important',
+    'flex:0 0 216px!important',
+    'min-width:216px!important',
+    '#thema-switch{\n    grid-column:1!important',
     '.wiw-theme-auto{\n    grid-column:2!important',
-    '.wiw-theme-moon{\n    grid-column:3!important',
+    '.wiw-theme-moon{\n    position:absolute!important;\n    left:200%!important',
     '.wiw-theme-sun::after{content:"Licht";margin-left:8px}',
     '.wiw-theme-moon::after{content:"Donker";margin-left:8px}',
     'min-height:46px!important'

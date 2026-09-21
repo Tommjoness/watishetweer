@@ -2,7 +2,7 @@
 const assert=require("assert"),fs=require("fs"),path=require("path");
 const {
   tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan,
-  dauwpuntCelsius,luchtvochtigheidDuiding,etmaalExtraTemperaturenWeg
+  dauwpuntCelsius,luchtvochtigheidDuiding,etmaalExtraTemperaturenWeg,grafiekPuntBeschrijving
 }=require("./live-polish-v2.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 
@@ -13,6 +13,17 @@ test("tooltip houdt links altijd hetzelfde label voor neerslagkans",()=>{
   assert.equal(tooltipWaardeKort("kans 18:00-19:00"),"neerslagkans");
   assert.equal(tooltipWaardeKort("kans 15–16u"),"neerslagkans");
   assert.equal(tooltipWaardeKort("27%"),"27%");
+});
+
+test("toetsenbordpunt krijgt een compacte volledige gesproken waarde",()=>{
+  const G={n:2,TI:["2026-09-21T10:00","2026-09-21T11:00"],T:[15.7,17.6],P:[0,25]};
+  assert.equal(grafiekPuntBeschrijving(G,0),"10:00, 16 graden, 0 procent neerslagkans");
+  assert.equal(grafiekPuntBeschrijving(G,1),"11:00, 18 graden, 25 procent neerslagkans");
+  assert.equal(grafiekPuntBeschrijving(G,8),"");
+  const js=fs.readFileSync(path.join(__dirname,"live-polish-v2.js"),"utf8");
+  assert(js.includes('hit.setAttribute("role","slider")'));
+  assert(js.includes('hit.setAttribute("aria-valuenow","1")'));
+  assert(js.includes('ev.key==="ArrowRight"'));
 });
 
 test("verwijderd temperatuurcijfer koppelt aan het juiste zwarte datapunt",()=>{

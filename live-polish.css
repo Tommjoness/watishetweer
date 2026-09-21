@@ -90,6 +90,23 @@
   margin-bottom:2px;
 }
 
+/* Tijdens de bestaande stabiele cache-/KNMI-render blijft de briefing bewust
+   in de layout staan om verschuiving te voorkomen. De gereserveerde ruimte is
+   niet langer leeg: een rustige status maakt duidelijk dat de definitieve
+   samenvatting wordt bijgewerkt, zonder voorlopige weerclaims te tonen. */
+#brief[data-q1-briefing-pending],#brief[data-knmi-briefing-pending]{position:relative;min-height:3.2em}
+#brief[data-q1-briefing-pending]::after,#brief[data-knmi-briefing-pending]::after{
+  content:"Verwachting wordt bijgewerkt…";
+  position:absolute;inset:0 auto auto 0;
+  visibility:visible;
+  color:var(--ink-45);
+  font-family:var(--sans);
+  font-size:13px;
+  font-style:normal;
+  letter-spacing:.01em;
+}
+#chart:has(#hit:focus-visible){outline:2px solid var(--ink);outline-offset:3px}
+
 @media(max-width:900px){
   /* De lokale klok is context bij de plaatsnaam, geen onderdeel van de naam.
      Op een smal scherm krijgt hij daarom een eigen, niet-afbreekbare regel.
@@ -337,4 +354,14 @@
   html body footer{font-size:13px!important;line-height:1.35!important}
   html body footer .bron,html body footer .footer-details{min-height:24px!important}
   body > .seo-plaatsnav{font-size:13.5px!important}
+}
+
+/* De tussenbreedtes kregen alle headerbediening nog op één te krappe regel.
+   Laat de zoekgroep daar voorspelbaar binnen de rechterkolom blijven en geef
+   secundaire acties een leesbare ondergrens. */
+@media(min-width:901px) and (max-width:1450px){
+  .mast>.mastright{min-width:min(100%,620px)}
+  .mast>.mastright .tools{width:100%;min-width:0}
+  .mast>.mastright .tools input[type=text]{flex:1 1 180px;min-width:140px;width:auto}
+  .tools #ververs{font-size:10.5px!important;letter-spacing:.075em!important}
 }

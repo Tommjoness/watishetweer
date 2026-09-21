@@ -13,6 +13,9 @@ const {
 const root=path.join(__dirname,"..");
 const analytics=fs.readFileSync(path.join(root,"posthog-analytics.js"),"utf8");
 new vm.Script(analytics,{filename:"posthog-analytics.js"});
+assert(analytics.includes("grid-template-columns:minmax(0,1fr) auto"),"toestemmingsbanner mist compacte desktopcompositie");
+assert(analytics.includes("width:min(620px,calc(100% - 24px))"),"toestemmingsbanner is op desktop nog onnodig breed");
+assert(analytics.includes("min-height:44px"),"mobiele toestemmingsacties missen een ruim touchdoel");
 
 assert.equal(CONNECT_SOURCE,"https://eu.i.posthog.com","PostHog capture moet uitsluitend de EU-ingestion origin gebruiken");
 assert(analytics.includes('const ENDPOINT="https://eu.i.posthog.com/i/v0/e/"'),"capture endpoint moet de officiële EU single-event endpoint zijn");
