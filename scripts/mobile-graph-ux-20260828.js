@@ -32,17 +32,28 @@ function kiesUurLabelIndices(tijden,minimaal=4,cadans=3,rand=2){
   }
   return uit;
 }
-/* De compacte mobiele etmaalgrafiek volgt de echte lokale klok uit de
-   forecastreeks. We nemen alleen bestaande punten waarvan het lokale uur op de
-   gevraagde cadans valt; er worden dus geen synthetische/UTC-uren verzonnen.
-   De 25e rechtergrens van een 24-uursplot telt niet als extra etmaalpunt. */
+/* De compacte mobiele etmaalgrafiek ankert op het eerste echte zichtbare
+   forecastpunt en vervolgt daarna iedere drie lokale klokuren. De providerreeks
+   zelf bepaalt welke punten bestaan: geen indexmodulo, geen UTC-verschuiving en
+   geen synthetische DST-uren. De 25e rechtergrens valt buiten het rollende etmaal. */
+function lokaleForecastMinuten(tijd){
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(tijd||""));
+  if(!m)return null;
+  const ms=Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]),Number(m[4]),Number(m[5]));
+  return Number.isFinite(ms)?Math.round(ms/60000):null;
+}
 function kiesKalenderUurLabelIndices(tijden,cadans=3,maxPunten=24){
-  const T=Array.isArray(tijden)?tijden:[],stap=Math.max(1,Math.floor(Number(cadans)||3));
-  const limiet=Math.min(T.length,Math.max(0,Math.floor(Number(maxPunten)||24))),gezien=new Set(),uit=[];
+  const T=Array.isArray(tijden)?tijden:[],stap=Math.max(1,Math.floor(Number(cadans)||3))*60;
+  const limiet=Math.min(T.length,Math.max(0,Math.floor(Number(maxPunten)||24)));
+  let eerste=null;
+  for(let i=0;i<limiet;i++){const m=lokaleForecastMinuten(T[i]);if(Number.isFinite(m)){eerste=m;break;}}
+  if(!Number.isFinite(eerste))return [];
+  const gezien=new Set(),uit=[];
   for(let i=0;i<limiet;i++){
-    const tijd=String(T[i]||""),uur=uurUitIso(tijd);
-    if(!Number.isInteger(uur)||uur%stap!==0||gezien.has(tijd))continue;
-    gezien.add(tijd);uit.push(i);
+    const minuut=lokaleForecastMinuten(T[i]);if(!Number.isFinite(minuut)||gezien.has(minuut))continue;
+    const delta=minuut-eerste;
+    if(delta<0||delta>=24*60||delta%stap!==0)continue;
+    gezien.add(minuut);uit.push(i);
   }
   return uit;
 }
@@ -219,7 +230,7 @@ function mobieleGrafiekCompactHoogte(plotBottom,huidigeHoogte,zichtbareOnderkant
   return Math.min(h,doel);
 }
 
-const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,lokaleTemperatuurExtrema,mobieleTemperatuurLabelPlan,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,mobieleTemperatuurLabelLimiet,kiesMobieleTemperatuurLabelIndices,prioriteerMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
+const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,lokaleForecastMinuten,lokaleTemperatuurExtrema,mobieleTemperatuurLabelPlan,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,mobieleTemperatuurLabelLimiet,kiesMobieleTemperatuurLabelIndices,prioriteerMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -250,8 +261,8 @@ function herstelUurAs(){
   alle.forEach(el=>{const expliciet=uurAsLabelTekst(el.textContent);if(expliciet)el.textContent=expliciet;});
 
   if(compact24){
-    /* Eén mobiele eigenaar: echte lokale forecastpunten op 00/03/06/09/12/15/18/21.
-       De rollende 25e rechtergrens wordt niet nogmaals gelabeld. */
+    /* Eén mobiele eigenaar: het eerste echte zichtbare forecastpunt en daarna
+       iedere drie lokale klokuren; de 25e rechtergrens telt niet nogmaals mee. */
     alle.forEach(el=>el.remove());
     const indices=kiesKalenderUurLabelIndices(g.TI,3,24),y=Number(g.pt)+Number(g.ih)+20;
     if(!Number.isFinite(y))return;
@@ -444,20 +455,8 @@ function verminderMobieleTemperatuurlabels(){
       if(gekozen)break;
     }
     if(!gekozen){
-      if(!verplicht){el.remove();punt.remove();return false;}
-      /* Acht drie-uursankers liggen horizontaal ruim uit elkaar. Deze laatste
-         lane is uitsluitend een fail-safe tegen andere vaste SVG-copy; hij
-         blijft binnen de plot en maximaal licht horizontaal verschoven. */
-      for(const y of [top+fs+5,bottom-5]){
-        for(const x of xKandidaten){
-          const box=geschatteSvgTekstBox(el.textContent,x,y,"middle",fs);
-          if(!box||gehouden.some(b=>rechthoekenBotsen(b,box,minAfstand)))continue;
-          gekozen={x,y,box};break;
-        }
-        if(gekozen)break;
-      }
+      el.remove();punt.remove();return false;
     }
-    if(!gekozen){el.remove();punt.remove();return false;}
     el.setAttribute("x",String(gekozen.x));el.setAttribute("y",String(gekozen.y));
     el.setAttribute("data-mobile-temp-priority",verplicht?"anchor":"extremum");
     if(type)el.setAttribute("data-mobile-temp-extremum",type);else el.removeAttribute("data-mobile-temp-extremum");
@@ -466,13 +465,16 @@ function verminderMobieleTemperatuurlabels(){
     gehouden.push(gekozen.box);behouden.add(i);return true;
   };
 
-  plan.ankers.forEach((i,pos)=>{if(i!==nuAnker)plaats(i,true,pos);});
-  plan.extrema.forEach((e,pos)=>{if(e.i!==nuAnker)plaats(e.i,false,plan.ankers.length+pos);});
+  const ontbrekendeAnkers=[],vervallenExtrema=[];
+  plan.ankers.forEach((i,pos)=>{if(i!==nuAnker&&!plaats(i,true,pos))ontbrekendeAnkers.push(i);});
+  plan.extrema.forEach((e,pos)=>{if(e.i!==nuAnker&&!plaats(e.i,false,plan.ankers.length+pos))vervallenExtrema.push(e.i);});
   [...svg.querySelectorAll("text[data-mobile-temp-index]")].forEach(el=>{if(!behouden.has(Number(el.getAttribute("data-mobile-temp-index"))))el.remove();});
   [...svg.querySelectorAll("circle[data-mobile-temp-point]")].forEach(el=>{if(!behouden.has(Number(el.getAttribute("data-temp-index"))))el.remove();});
   svg.setAttribute("data-mobile-temp-anchor-count",String(plan.ankers.length));
   svg.setAttribute("data-mobile-temp-extrema-count",String(plan.extrema.length));
   svg.setAttribute("data-mobile-temp-visible",String(behouden.size+(Number.isInteger(nuAnker)?1:0)));
+  if(ontbrekendeAnkers.length)svg.setAttribute("data-mobile-temp-missing-anchors",ontbrekendeAnkers.join(","));else svg.removeAttribute("data-mobile-temp-missing-anchors");
+  if(vervallenExtrema.length)svg.setAttribute("data-mobile-temp-dropped-extrema",vervallenExtrema.join(","));else svg.removeAttribute("data-mobile-temp-dropped-extrema");
 }
 function vereenvoudigMobieleZonband(){
   if(!mobiel()||window.innerWidth>430)return;
