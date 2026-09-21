@@ -32,7 +32,7 @@ for(const p of htmlBestanden(OUT)){
   eis(html.includes('const beschikbareRijhoogte=tbody?Math.max(0,grens-tbody.getBoundingClientRect().top):0;'),`${rel}: capaciteit voor volledige desktopuurrijen wordt niet uit de echte paneelruimte gemeten`);
   eis(html.includes('const gewensteMinimumUren=window.innerWidth>=1440?10:8;')&&html.includes('const minimumUren=Math.min(gewensteMinimumUren,Math.floor((beschikbareRijhoogte+0.5)/29.5),tbody&&tbody.children.length||0);')&&html.includes('const maximaleKrimp=Math.max(0,(kleinsteRij-29.5)/2);'),`${rel}: 1440px tienurenhorizon of smallere achturenvloer respecteert de browserveilige 29,5px-internevloer niet`);
   eis(html.includes('tbody.children.length>minimumUren'),`${rel}: hoogtefilter kan de beschikbare achturenhorizon nog inkorten`);
-  eis(html.includes('const maximaleKrimp=Math.max(0,(kleinsteRij-29)/2);'),`${rel}: begrensde paddingcorrectie bewaakt de 29px-leesbaarheidsvloer niet`);
+  eis(html.includes('const maximaleKrimp=Math.max(0,(kleinsteRij-29.5)/2);'),`${rel}: begrensde paddingcorrectie bewaakt de browserveilige 29,5px-internevloer niet`);
   eis(html.includes('document.documentElement.getBoundingClientRect();')&&html.includes('rest>0.25&&rijPadAanpassing<4.5'),`${rel}: subpixel-resthoogte wordt niet begrensd nagemeten en geabsorbeerd`);
   eis(html.includes(MM_NIEUW)&&!html.includes(MM_OUD),`${rel}: numerieke 0 mm wordt nog als ontbrekende waarde behandeld`);
   eis(html.includes(NU_NIEUW)&&!html.includes(NU_OUD),`${rel}: actuele Nu-context ontbreekt aan de gedeelde desktoprange`);
@@ -55,4 +55,4 @@ for(const p of htmlBestanden(OUT)){
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:`${rel}:hour-panel-${i+1}`}));
 }
 eis(geraakt>0,"Geen WeatherNow-artifacts gevonden om uurpaneelrefinement te verifiëren.");
-console.log(`Komende-urenrefinement geverifieerd op ${geraakt} weerartifacts: natuurlijke desktopgrafiek links, capaciteitsgestuurde rijke uurtabel rechts met 8–11 zichtbare uren en vanaf 1440px minimaal circa tien, één hoogte-owner met 29px-vloer en begrensde subpixelrest, gevoelstemperatuur inline zonder wrapping, mobiel zonder Eerstvolgend-label, echte weer/neerslag/winddata, compacte Nachtzicht-kolommen en ongewijzigde data-interpretatie.`);
+console.log(`Komende-urenrefinement geverifieerd op ${geraakt} weerartifacts: natuurlijke desktopgrafiek links, capaciteitsgestuurde rijke uurtabel rechts met 8–11 zichtbare uren en vanaf 1440px minimaal circa tien, één hoogte-owner met browserveilige 29,5px-internevloer en begrensde subpixelrest, gevoelstemperatuur inline zonder wrapping, mobiel zonder Eerstvolgend-label, echte weer/neerslag/winddata, compacte Nachtzicht-kolommen en ongewijzigde data-interpretatie.`);
