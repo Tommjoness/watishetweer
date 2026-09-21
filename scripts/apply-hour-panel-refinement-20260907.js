@@ -195,7 +195,7 @@ ${STYLE_MARKER}
   .wiw-hour-table td{padding:calc(1.25px + var(--wiw-hour-row-pad-extra,0px)) 4px!important}
 }
 
-/* Ruime desktops houden genoeg gedeelde grafiekhoogte voor tien volledige\n   29px-uurregels, zonder tekstverkleining of interne scrollbar. */\n@media(min-width:1440px){\n  .wiw-chart-main{min-height:346px!important}\n}\n\n@media(min-width:1366px) and (max-width:1499px){
+/* Ruime desktops houden genoeg gedeelde grafiekhoogte voor tien volledige\n   werkelijk gerenderde uurregels, zonder tekstverkleining of interne scrollbar. */\n@media(min-width:1440px){\n  .wiw-chart-main{min-height:384px!important}\n}\n\n@media(min-width:1366px) and (max-width:1499px){
   #wiw-hour-panel h3{margin-bottom:5px!important}
   .wiw-hour-table th{padding:3px 4px!important}
 }
