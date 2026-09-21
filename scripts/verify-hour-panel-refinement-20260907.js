@@ -44,6 +44,7 @@ for(const p of htmlBestanden(OUT)){
   eis(/\.seo-plaatsnav-inner\{[\s\S]*?padding-left:clamp\(24px,3\.5vw,56px\)!important;[\s\S]*?padding-right:clamp\(24px,3\.5vw,56px\)!important/.test(html),`${rel}: SEO-inhoudsinset ontbreekt`);
   eis(/#wiw-hour-panel h3\{[\s\S]*?margin-top:0!important;[\s\S]*?margin-bottom:9px!important;[\s\S]*?line-height:1\.15!important/.test(html),`${rel}: leesbare Komende-uren-kop ontbreekt`);
   eis(/\.wiw-hour-table td\{[\s\S]*?padding:calc\(4px \+ var\(--wiw-hour-row-pad-extra,0px\)\) 4px!important/.test(html),`${rel}: dynamisch verdeelde rijke uurrij ontbreekt`);
+  eis(/@media\(min-width:1366px\)\{[\s\S]*?\.wiw-hour-table td\{padding:calc\(1\.25px \+ var\(--wiw-hour-row-pad-extra,0px\)\) 4px!important\}/.test(html),`${rel}: desktoprijen missen de subpixelveiligheidsmarge voor de zichtbare 29px-vloer`);
   eis(/@media\(min-width:1440px\)\{[\s\S]*?\.wiw-chart-main\{min-height:346px!important\}/.test(html),`${rel}: ruime desktop mist de minimale grafiekhoogte voor tien leesbare uurregels`);
   eis(/\.wiw-hour-table th:nth-child\(3\),\.wiw-hour-table td:nth-child\(3\)\{width:29%!important\}/.test(html),`${rel}: temperatuurkolom heeft onvoldoende ruimte voor inline gevoelstemperatuur`);
   eis(/\.wiw-hour-temp\{white-space:nowrap!important\}/.test(html)&&/\.wiw-hour-temp \.wiw-hour-primary,\.wiw-hour-temp \.wiw-hour-secondary\{display:inline!important\}/.test(html)&&/\.wiw-hour-temp \.wiw-hour-secondary::before\{content:" · "\}/.test(html),`${rel}: desktop gevoelstemperatuur staat niet gegarandeerd inline en zonder wrapping`);
