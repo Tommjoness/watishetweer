@@ -213,6 +213,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       const themaVoor=await page.evaluate(()=>{
         const groep=document.getElementById("thema"),auto=document.getElementById("thema-auto"),schakelaar=document.getElementById("thema-switch"),zon=schakelaar?.querySelector(".wiw-theme-sun"),maan=schakelaar?.querySelector(".wiw-theme-moon"),r=groep?.getBoundingClientRect(),track=schakelaar?.querySelector(".wiw-theme-track")?.getBoundingClientRect(),thumb=schakelaar?.querySelector(".wiw-theme-thumb")?.getBoundingClientRect();
         const ar=auto?.getBoundingClientRect(),zr=zon?.getBoundingClientRect(),mr=maan?.getBoundingClientRect();
+        const raakbaar=el=>{if(!el)return false;const q=el.getBoundingClientRect(),hit=document.elementFromPoint(q.left+q.width/2,q.top+q.height/2);return hit===el||el.contains(hit);};
         const stijl=el=>{if(!el)return null;const s=getComputedStyle(el);return {fontFamily:s.fontFamily,fontSize:s.fontSize,fontWeight:s.fontWeight,lineHeight:s.lineHeight,letterSpacing:s.letterSpacing,alignItems:s.alignItems,color:s.color,background:s.backgroundColor};};
         return {
           role:groep?.getAttribute("role")||"",
@@ -226,6 +227,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           menu:!!document.getElementById("themamenu"),
           icons:!!zon&&!!maan,
           toggleWidth:schakelaar?.getBoundingClientRect().width||0,
+          segmentHit:{licht:raakbaar(zon),auto:raakbaar(auto),donker:raakbaar(maan)},
           trackWidth:track?.width||0,
           thumbWidth:thumb?.width||0,
           rect:r?{left:r.left,right:r.right,width:r.width,height:r.height,top:r.top}:null,
@@ -247,6 +249,10 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert.equal(themaVoor.menu,false,`${vp.naam}: oude Auto/Licht/Donker-menu is nog aanwezig`);
       assert.equal(themaVoor.icons,true,`${vp.naam}: zon- en maansymbool ontbreken in de toggle`);
       assert(themaVoor.toggleWidth>=60,`${vp.naam}: Licht/donker-toggle is te smal (${themaVoor.toggleWidth}px)`);
+      assert(Math.abs(themaVoor.toggleWidth-themaVoor.rect.width)<=2,`${vp.naam}: Licht/donker-switch spant niet over de volledige driewegbediening (${themaVoor.toggleWidth}/${themaVoor.rect.width}px)`);
+      assert.equal(themaVoor.segmentHit.licht,true,`${vp.naam}: Licht-segment is geometrisch aanwezig maar niet raakbaar/zichtbaar`);
+      assert.equal(themaVoor.segmentHit.auto,true,`${vp.naam}: Auto-segment is geometrisch aanwezig maar niet raakbaar/zichtbaar`);
+      assert.equal(themaVoor.segmentHit.donker,true,`${vp.naam}: Donker-segment is geometrisch aanwezig maar niet raakbaar/zichtbaar`);
       assert(themaVoor.trackWidth>=24&&themaVoor.trackWidth<=34,`${vp.naam}: toggle-track heeft onverwachte breedte (${themaVoor.trackWidth}px)`);
       assert(themaVoor.thumbWidth>=10&&themaVoor.thumbWidth<=16,`${vp.naam}: toggle-thumb heeft onverwachte breedte (${themaVoor.thumbWidth}px)`);
       assert(binnenViewport(themaVoor.rect,vp.width),`${vp.naam}: Weergavegroep valt buiten viewport`);

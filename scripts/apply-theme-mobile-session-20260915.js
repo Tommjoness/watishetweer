@@ -82,10 +82,11 @@ const CSS=`
     color:var(--ink)!important;
   }
   #thema.wiw-theme-segmented-20260915 #thema-switch{
-    grid-column:1!important;
+    grid-column:1 / -1!important;
     grid-row:1!important;
+    z-index:1!important;
     display:grid!important;
-    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
     position:relative!important;
     align-items:stretch!important;
     justify-content:stretch!important;
@@ -104,7 +105,7 @@ const CSS=`
     text-align:center!important;
     text-transform:uppercase!important;
     white-space:nowrap!important;
-    overflow:hidden!important;
+    overflow:visible!important;
     box-shadow:none!important;
   }
   #thema.wiw-theme-segmented-20260915 #thema-switch:hover,
@@ -139,12 +140,14 @@ const CSS=`
     background:var(--paper)!important;
     color:var(--ink)!important;
   }
-  #thema.wiw-theme-segmented-20260915 .wiw-theme-sun{grid-column:1!important}
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-sun{grid-column:1!important;grid-row:1!important}
   #thema.wiw-theme-segmented-20260915 .wiw-theme-moon{
-    position:absolute!important;
-    left:200%!important;
-    top:0!important;
-    width:100%!important;
+    grid-column:3!important;
+    grid-row:1!important;
+    position:static!important;
+    left:auto!important;
+    top:auto!important;
+    width:auto!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:8px}
   #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:8px}
@@ -227,10 +230,11 @@ const CSS=`
     box-shadow:none!important;
   }
   #thema.wiw-theme-segmented-20260915 #thema-switch{
-    grid-column:1!important;
+    grid-column:1 / -1!important;
     grid-row:1!important;
+    z-index:1!important;
     display:grid!important;
-    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
     position:relative!important;
     min-width:0!important;
     min-height:46px!important;
@@ -238,7 +242,7 @@ const CSS=`
     gap:0!important;
     border:0!important;
     background:transparent!important;
-    overflow:hidden!important;
+    overflow:visible!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{
     display:flex!important;
@@ -263,12 +267,14 @@ const CSS=`
     outline:2px solid var(--ink)!important;
     outline-offset:2px!important;
   }
-  #thema.wiw-theme-segmented-20260915 .wiw-theme-sun{grid-column:1!important}
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-sun{grid-column:1!important;grid-row:1!important}
   #thema.wiw-theme-segmented-20260915 .wiw-theme-moon{
-    position:absolute!important;
-    left:200%!important;
-    top:0!important;
-    width:100%!important;
+    grid-column:3!important;
+    grid-row:1!important;
+    position:static!important;
+    left:auto!important;
+    top:auto!important;
+    width:auto!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:8px}
   #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:8px}
@@ -456,14 +462,14 @@ function valideerWeatherHtml(html,rel){
     'grid-template-columns:repeat(2,minmax(0,1fr))!important',
     'grid-column:1 / -1!important',
     'grid-template-columns:repeat(3,minmax(0,1fr))!important',
-    'grid-template-columns:minmax(0,1fr)!important',
+    'overflow:visible!important',
     '@media(min-width:431px)',
     'width:216px!important',
     'flex:0 0 216px!important',
     'min-width:216px!important',
-    '#thema-switch{\n    grid-column:1!important',
+    '#thema-switch{\n    grid-column:1 / -1!important',
     '.wiw-theme-auto{\n    grid-column:2!important',
-    '.wiw-theme-moon{\n    position:absolute!important;\n    left:200%!important',
+    '.wiw-theme-moon{\n    grid-column:3!important;\n    grid-row:1!important;\n    position:static!important',
     '.wiw-theme-sun::after{content:"Licht";margin-left:8px}',
     '.wiw-theme-moon::after{content:"Donker";margin-left:8px}',
     'min-height:46px!important'
