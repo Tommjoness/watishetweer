@@ -168,6 +168,7 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   footer > details.footer-details{grid-column:3!important;grid-row:3!important;min-width:0!important;text-align:center}
   footer > details.footer-details>summary{color:inherit;white-space:normal;text-align:center;line-height:1.2}
   .footer-contact{grid-column:1 / -1!important;grid-row:4!important;margin-top:6px!important;padding-top:2px!important;color:var(--ink-25)}
+  footer > span.bron:nth-of-type(2),.footer-contact{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;margin-left:0!important;margin-right:0!important}
   .footer-contact-question{color:var(--ink-45);font-weight:500}
   .footer-contact-mail a{white-space:nowrap}
 }
