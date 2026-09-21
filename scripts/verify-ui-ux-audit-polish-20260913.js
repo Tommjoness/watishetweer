@@ -84,10 +84,10 @@ for(const p of htmlBestanden(OUT)){
   assert(html.includes('.wiw-hour-toggle[aria-expanded="true"]::after,#nights .nacht-meer[aria-expanded="true"]::after{transform:rotate(-90deg)}'),rel+": disclosure-chevron weerspiegelt de expanded-status niet");
   assert(html.includes('#nights .row.night:not(.kop){padding-top:8px!important;padding-bottom:8px!important;row-gap:2px!important}'),rel+": Nachtzicht is mobiel niet gericht gecompacteerd");
   assert(html.includes('#nights .row.night .nmeta.wide{grid-column:1 / -1!important;margin-top:0!important;overflow-wrap:break-word!important;word-break:normal!important}'),rel+": Nachtzicht gebruikt nog agressieve woordafbreking of benut mobiel niet de volle breedte");
-  assert(html.includes('footer > span.bron:nth-of-type(2){font-size:11.5px!important;color:var(--ink-25)!important}'),rel+": footerdisclaimer mist de finale secundaire hiërarchie");
+  assert(html.includes('footer > span.bron:nth-of-type(2){font-size:11.5px!important;line-height:1.3!important;color:var(--ink-25)!important}'),rel+": footerdisclaimer mist de finale secundaire hiërarchie of compacte regelhoogte");
   assert(html.includes('html body footer:nth-of-type(n){grid-template-columns:repeat(3,minmax(0,1fr))!important}'),rel+": mobiele utilitylinks vormen geen samenhangende driekolomsgroep");
   assert(html.includes('footer > details.footer-details{grid-column:3!important;grid-row:3!important;min-width:0!important;text-align:center}'),rel+": technische locatiegegevens staan niet in dezelfde utilityrij");
-  assert(html.includes('.footer-contact{grid-column:1 / -1!important;grid-row:4!important;margin-top:6px!important;padding-top:2px!important;color:var(--ink-25)}'),rel+": supportregel is niet duidelijk maar compact van utilities gescheiden");
+  assert(html.includes('.footer-contact{grid-column:1 / -1!important;grid-row:4!important;margin-top:8px!important;padding-top:0!important;color:var(--ink-25)}'),rel+": supportregel is niet duidelijk maar compact van utilities gescheiden");
   assert(html.includes('.wiw-hour-table{font-size:13.5px!important;line-height:1.2!important}'),rel+": desktop-uurtabel mist de kleine leesbaarheidsstap");
     assert(html.includes(':root{--warning-yellow:#856000;--warning-orange:#A34712}'),rel+": waarschuwingsernst mist lichte themakleuren");
   assert(/\.waarsch\[data-ui-severity=(?:"oranje"|oranje)\]\{border-left:3px solid var\(--warning-orange\)\}/.test(html),rel+": oranje waarschuwing mist accent");
