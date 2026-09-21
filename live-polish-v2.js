@@ -47,7 +47,7 @@ function temperatuurPuntIndex(label,punten,temperaturen,maxDx){
 function nuLabelPositie(puntY,plotTop,plotBottom,mobiel){
   const py=eindig(puntY),top=eindig(plotTop),bottom=eindig(plotBottom);
   if([py,top,bottom].some(v=>v===null)||bottom<=top) return null;
-  const onderAfstand=mobiel?28:30,bovenAfstand=mobiel?22:24,marge=mobiel?8:10;
+  const onderAfstand=mobiel?21:30,bovenAfstand=mobiel?18:24,marge=mobiel?8:10;
   const onder=py+onderAfstand;
   if(onder<=bottom-marge) return {y:onder,onder:true};
   return {y:Math.max(top+marge+3,py-bovenAfstand),onder:false};
@@ -278,9 +278,10 @@ function positioneerNuLabel(svg){
   try{const b=tekst.getComputedTextLength();if(Number.isFinite(b)&&b>0)breed=b;}catch(e){}
   const links=Number.isFinite(S.geo.pl)?S.geo.pl:2;
   const rechts=Number.isFinite(S.geo.W)&&Number.isFinite(S.geo.pr)?S.geo.W-S.geo.pr:null;
-  const pastRechts=rechts===null||px+10+breed<=rechts;
-  const naarRechts=pastRechts||px-10-breed<links;
-  tekst.setAttribute("x",String(px+(naarRechts?10:-10)));
+  const zijAfstand=S.geo.M?8:10;
+  const pastRechts=rechts===null||px+zijAfstand+breed<=rechts;
+  const naarRechts=pastRechts||px-zijAfstand-breed<links;
+  tekst.setAttribute("x",String(px+(naarRechts?zijAfstand:-zijAfstand)));
   tekst.setAttribute("y",String(pos.y));
   tekst.setAttribute("text-anchor",naarRechts?"start":"end");
 }
