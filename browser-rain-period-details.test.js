@@ -120,7 +120,7 @@ async function controleer(type,naam){
         assert.deepEqual(uur24.ends,[],`${naam} ${breedte}: krappe mobiele perioden forceren geen losse eindtijden`);
         assert.deepEqual(uur24.ranges,["15:00–18:00","21:00–22:00"],`${naam} ${breedte}: mobiele perioden vallen generiek terug op compacte tijdvakken`);
       }else{
-        assert.equal(uur24.chartBereik,8,`${naam} ${breedte}: gekoppelde desktopmodus kiest bij de vaste 1280×900-fixture exact acht volledig passende uren`);
+        assert.equal(uur24.chartBereik,8,`${naam} ${breedte}: gekoppelde desktopmodus kiest bij de vaste 1280×900-fixture exact acht volledig passende uren; kreeg ${JSON.stringify({chartBereik:uur24.chartBereik,n:uur24.n,chartStart:uur24.chartStart,W:uur24.W,cw:uur24.cw,starts:uur24.starts,ends:uur24.ends})}`);
         assert.equal(uur24.n,8,`${naam} ${breedte}: SVG-geometrie blijft exact gekoppeld aan de acht zichtbare uurregels`);
         assert.deepEqual(uur24.starts,["15:00","21:00"],`${naam} ${breedte}: beide perioden hebben in de gekoppelde desktopgeometrie een losse begintijd; kreeg ${JSON.stringify({starts:uur24.starts,ends:uur24.ends,ranges:uur24.ranges,n:uur24.n,W:uur24.W,cw:uur24.cw,chartStart:uur24.chartStart,chartBereik:uur24.chartBereik,tijdBinnen:uur24.tijdBinnen})}`);
         assert.deepEqual(uur24.ends,["18:00","22:00"],`${naam} ${breedte}: beide perioden hebben in de gekoppelde desktopgeometrie een losse eindtijd`);
