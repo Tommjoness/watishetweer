@@ -102,7 +102,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4 pages deploy public \
+          npx --yes wrangler@4.136.1 pages deploy public \
             --project-name="$CLOUDFLARE_PROJECT" \
             --branch="$CLOUDFLARE_PREVIEW_BRANCH" \
             --commit-hash="$SOURCE_SHA" \
