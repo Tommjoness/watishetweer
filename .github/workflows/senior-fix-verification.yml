@@ -22,7 +22,7 @@ jobs:
           node-version: 22
           package-manager-cache: false
       - name: Installeer builddependencies
-        run: npm install --ignore-scripts --package-lock=false
+        run: npm ci --ignore-scripts
       - name: Volledige niet-browser suite
         run: npm run build
       - name: Installeer Playwright-pakket
