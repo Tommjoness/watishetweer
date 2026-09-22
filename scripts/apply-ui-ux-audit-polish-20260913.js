@@ -121,6 +121,67 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   .mobile-section-nav a:nth-child(3),.mobile-section-nav a:nth-child(4){border-top:1px solid var(--rule)}
   .mobile-section-nav a:nth-child(3){border-left:0}
 }
+
+/* Definitieve kleine polish 2026-09-21. Geen nieuwe componenten: bestaande
+   disclosure-, Nachtzicht-, uur- en footerowners krijgen één laatste cascade. */
+@media(max-width:900px){
+  /* Uren en nachten gebruiken exact hetzelfde rustige disclosurepatroon.
+     Native buttons + aria-expanded blijven de semantische/interactieve owner. */
+  .wiw-hour-toggle,#nights .nacht-meer{
+    display:flex!important;align-items:center;justify-content:space-between;gap:12px;
+    width:100%;min-height:44px;margin:4px 0 0!important;padding:10px 2px!important;
+    border:0!important;background:transparent!important;color:var(--ink-70)!important;
+    font-family:var(--sans)!important;font-size:12.5px!important;font-weight:500!important;
+    line-height:1.25!important;letter-spacing:.01em!important;text-transform:none!important;
+    text-align:left!important;cursor:pointer
+  }
+  .wiw-hour-toggle::after,#nights .nacht-meer::after{
+    content:"›";display:inline-flex;align-items:center;justify-content:center;
+    flex:0 0 20px;width:20px;height:20px;font-size:18px;line-height:1;
+    transform:rotate(90deg);transform-origin:center;transition:transform .15s ease,color .15s ease
+  }
+  .wiw-hour-toggle[aria-expanded="true"]::after,#nights .nacht-meer[aria-expanded="true"]::after{transform:rotate(-90deg)}
+  .wiw-hour-toggle:hover,#nights .nacht-meer:hover,
+  .wiw-hour-toggle:focus-visible,#nights .nacht-meer:focus-visible{color:var(--ink)!important;background:var(--paper)!important}
+  .wiw-hour-toggle:active,#nights .nacht-meer:active{transform:translateY(1px)}
+
+  /* Mobiel Nachtzicht behoudt alle inhoud, maar primaire waarden en secundaire
+     uitleg krijgen een strakker ritme en natuurlijke woordafbreking. */
+  #nights .row.night:not(.kop){padding-top:8px!important;padding-bottom:8px!important;row-gap:2px!important}
+  #nights .row.night .nmeta.wide{grid-column:1 / -1!important;margin-top:0!important;overflow-wrap:break-word!important;word-break:normal!important}
+  #nights .row.night .nachtadvies{margin-bottom:2px!important;line-height:1.3!important}
+  #nights .row.night .nachtvenster{margin-top:1px!important;color:var(--ink-45)!important;line-height:1.28!important}
+  #nights .row.night .nachtmaan{margin-top:0!important;line-height:1.28!important}
+  #nights .row.night .nachtzichtregel{color:var(--ink-45)!important}
+  #nights .row.night .nachtmaanregel{margin-top:0!important;color:var(--ink-25)!important}
+
+  /* Footerhiërarchie: bronnen/disclaimer, utilitygroep en support blijven
+     afzonderlijk leesbaar zonder extra separators of extra footerhoogte. */
+  footer > span.bron:nth-of-type(2){font-size:11.5px!important;line-height:1.3!important;color:var(--ink-25)!important}
+  footer > span.bron:nth-last-of-type(2),
+  footer > span.bron:last-of-type,
+  footer > details.footer-details{font-size:12.5px!important;font-weight:500;color:var(--ink-70)}
+  html body footer:nth-of-type(n){grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  footer > span.bron:first-of-type,footer > span.bron:nth-of-type(2){grid-column:1 / -1!important}
+  footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important}
+  footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important}
+  footer > details.footer-details{grid-column:3!important;grid-row:3!important;min-width:0!important;text-align:center}
+  footer > details.footer-details>summary{color:inherit;white-space:normal;text-align:center;line-height:1.2}
+  .footer-contact{grid-column:1 / -1!important;grid-row:4!important;margin-top:8px!important;padding-top:0!important;color:var(--ink-25)}
+  footer > span.bron:nth-of-type(2),.footer-contact{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;margin-left:0!important;margin-right:0!important}
+  .footer-contact-question{color:var(--ink-45);font-weight:500}
+  .footer-contact-mail a{white-space:nowrap}
+}
+@media(prefers-reduced-motion:reduce){
+  .wiw-hour-toggle::after,#nights .nacht-meer::after{transition:none}
+}
+@media(min-width:1100px){
+  /* Eén kleine leesbaarheidsstap zonder nieuwe rijhoogte-owner: de bestaande
+     hoogtefilter blijft bepalen hoeveel volledige uren naast de grafiek passen. */
+  .wiw-hour-table{font-size:13.5px!important;line-height:1.2!important}
+  .wiw-hour-table .wiw-hour-primary{line-height:1.2!important}
+  .wiw-hour-table .wiw-hour-secondary{line-height:1.2!important}
+}
 `;
 
 function htmlBestanden(dir){

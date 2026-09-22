@@ -55,18 +55,24 @@ const PANEL_HOOGTE_NIEUW=`  /* Hoogtefiltering is reversibel: de eerste meting b
     else tbody.replaceChildren(...aside.__wiwHourCandidateRows);
   }
   /* Gebruik de echte ruimte onder de tabelkop om te bepalen hoeveel van de
-     gewenste acht uren op minimaal 29px volledig passen. Zo blijft de
+     gewenste acht uren op minimaal 29,5px intern volledig passen. Zo blijft de
      regen-horizon op ruime desktops intact, zonder acht rijen in de smallere
      1100px-layout buiten het grafiekpaneel te forceren. */
   const beschikbareRijhoogte=tbody?Math.max(0,grens-tbody.getBoundingClientRect().top):0;
-  const minimumUren=Math.min(8,Math.floor((beschikbareRijhoogte+0.5)/29),tbody&&tbody.children.length||0);
+  /* Baseer de capaciteit op de werkelijk gerenderde ongewijzigde rijen. De
+     tabelcelinhoud kan hoger zijn dan een theoretische paddingvloer; daardoor
+     mag de owner nooit meer rijen vasthouden dan fysiek volledig passen. */
+  const basisRijen=tbody?[...tbody.children]:[];
+  const basisMinimum=window.innerWidth>=1440?29.5:29;
+  const gemetenRijvloer=basisRijen.length?Math.max(basisMinimum,Math.max(...basisRijen.map(r=>r.getBoundingClientRect().height))):basisMinimum;
+  const gewensteMinimumUren=window.innerWidth>=1440?10:8;\n  const minimumUren=Math.min(gewensteMinimumUren,Math.floor((beschikbareRijhoogte+0.5)/gemetenRijvloer),tbody&&tbody.children.length||0);
   while(tbody&&tbody.lastElementChild&&tbody.children.length>minimumUren&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
   let rijPadAanpassing=0;
   let zichtbareRijen=tbody?[...tbody.children]:[];
   if(zichtbareRijen.length&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01){
     const laatste=tbody.lastElementChild,tekort=laatste.getBoundingClientRect().bottom-grens+0.5;
     const kleinsteRij=Math.min(...zichtbareRijen.map(r=>r.getBoundingClientRect().height));
-    const maximaleKrimp=Math.max(0,(kleinsteRij-29)/2);
+    const maximaleKrimp=Math.max(0,(kleinsteRij-basisMinimum)/2);
     const krimpPerZijde=Math.min(maximaleKrimp,tekort/(zichtbareRijen.length*2)+0.02);
     if(krimpPerZijde>0.01){
       rijPadAanpassing=-krimpPerZijde;
@@ -180,11 +186,16 @@ ${STYLE_MARKER}
   }
 }
 
-@media(min-width:1366px){
-  .wiw-hour-table td{padding:calc(1px + var(--wiw-hour-row-pad-extra,0px)) 4px!important}
+@media(min-width:1280px){
+  /* De natuurlijke grafiekhoogte is op de smallere desktopmatrix net te laag voor acht
+     volledige leesbare uurregels. Reserveer alleen in deze gekoppelde
+  desktopweergave de minimale gedeelde hoogte; de tabel blijft vervolgens
+  zelf bepalen hoeveel volledige rijen werkelijk passen. */
+  .wiw-chart-main{min-height:340px!important}
+  .wiw-hour-table td{padding:calc(1.25px + var(--wiw-hour-row-pad-extra,0px)) 4px!important}
 }
 
-@media(min-width:1366px) and (max-width:1499px){
+/* Ruime desktops houden genoeg gedeelde grafiekhoogte voor tien volledige\n   werkelijk gerenderde uurregels, zonder tekstverkleining of interne scrollbar. */\n@media(min-width:1440px){\n  .wiw-chart-main{min-height:384px!important}\n}\n\n@media(min-width:1366px) and (max-width:1499px){
   #wiw-hour-panel h3{margin-bottom:5px!important}
   .wiw-hour-table th{padding:3px 4px!important}
 }

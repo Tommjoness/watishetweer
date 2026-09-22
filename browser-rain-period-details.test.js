@@ -61,7 +61,7 @@ async function controleer(type,naam){
       await page.evaluate(()=>document.fonts&&document.fonts.ready);
 
       await page.evaluate(()=>{S.dag=null;S.bereik=24;etmaal(S.i0,24);});
-      if(breedte<760)await page.waitForFunction(()=>document.querySelectorAll('#chart text[data-mobile-hour-axis="1"]').length===6,null,{timeout:2500});
+      if(breedte<760)await page.waitForFunction(()=>document.querySelectorAll('#chart text[data-mobile-hour-axis="1"]').length>0,null,{timeout:2500});
       const uur24=await page.evaluate(()=>{
         const svg=document.getElementById("chart"),groep=svg.querySelector('g[data-q4-rain-periods="1"]'),g=S.geo;
         const asY=g.pt+g.ih+(g.M?20:22);
@@ -106,7 +106,10 @@ async function controleer(type,naam){
           samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0,
           totalen:bedragenEls.map(el=>(el.textContent||"").trim()),
           tijdBinnen,splitLayouts,bedragOnderTijd,kansLabels,asTijden,asX,
-          asIndices:asEls.map(el=>Number(el.getAttribute("data-mobile-hour-index"))).filter(Number.isInteger)
+          asIndices:asEls.map(el=>Number(el.getAttribute("data-mobile-hour-index"))).filter(Number.isInteger),
+          asBronTijden:asEls.map(el=>{const i=Number(el.getAttribute("data-mobile-hour-index"));return Number.isInteger(i)&&g.TI&&g.TI[i]?String(g.TI[i]).slice(11,16):"";}),
+          verwachtAsIndices:g&&g.M&&globalThis.WeatherNowMobileGraphUX20260828?globalThis.WeatherNowMobileGraphUX20260828.kiesKalenderUurLabelIndices(g.TI,3,24):[],
+          verwachtAsTijden:g&&g.M&&globalThis.WeatherNowMobileGraphUX20260828?globalThis.WeatherNowMobileGraphUX20260828.kiesKalenderUurLabelIndices(g.TI,3,24).map(i=>String(g.TI[i]||"").slice(11,16)):[]
         };
       });
       assert.ok(uur24.n<=25,`${naam} ${breedte}: rollende 24-uursmodus gebruikt geen lange 48-uursgeometrie`);
@@ -117,7 +120,7 @@ async function controleer(type,naam){
         assert.deepEqual(uur24.ends,[],`${naam} ${breedte}: krappe mobiele perioden forceren geen losse eindtijden`);
         assert.deepEqual(uur24.ranges,["15:00–18:00","21:00–22:00"],`${naam} ${breedte}: mobiele perioden vallen generiek terug op compacte tijdvakken`);
       }else{
-        assert.equal(uur24.chartBereik,8,`${naam} ${breedte}: gekoppelde desktopmodus kiest bij de vaste 1280×900-fixture exact acht volledig passende uren`);
+        assert.equal(uur24.chartBereik,8,`${naam} ${breedte}: gekoppelde desktopmodus kiest bij de vaste 1280×900-fixture exact acht volledig passende uren; kreeg ${JSON.stringify({chartBereik:uur24.chartBereik,n:uur24.n,chartStart:uur24.chartStart,W:uur24.W,cw:uur24.cw,starts:uur24.starts,ends:uur24.ends})}`);
         assert.equal(uur24.n,8,`${naam} ${breedte}: SVG-geometrie blijft exact gekoppeld aan de acht zichtbare uurregels`);
         assert.deepEqual(uur24.starts,["15:00","21:00"],`${naam} ${breedte}: beide perioden hebben in de gekoppelde desktopgeometrie een losse begintijd; kreeg ${JSON.stringify({starts:uur24.starts,ends:uur24.ends,ranges:uur24.ranges,n:uur24.n,W:uur24.W,cw:uur24.cw,chartStart:uur24.chartStart,chartBereik:uur24.chartBereik,tijdBinnen:uur24.tijdBinnen})}`);
         assert.deepEqual(uur24.ends,["18:00","22:00"],`${naam} ${breedte}: beide perioden hebben in de gekoppelde desktopgeometrie een losse eindtijd`);
@@ -132,11 +135,10 @@ async function controleer(type,naam){
       assert.ok(uur24.splitLayouts.every(x=>!x.fout&&x.zelfdeRegel&&!x.overlapt),`${naam} ${breedte}: losse begin/eindlabels blijven op één niet-overlappende regel; kreeg ${JSON.stringify(uur24.splitLayouts)}`);
       assert.ok(uur24.bedragOnderTijd.length===2&&uur24.bedragOnderTijd.every(Boolean),`${naam} ${breedte}: iedere mm-waarde staat onder het eigen tijdlabel`);
       if(breedte<760){
-        assert.equal(uur24.asTijden.length,6,`${naam} ${breedte}: mobiele uuras gebruikt niet exact zes kalenderankers; kreeg ${JSON.stringify(uur24.asTijden)}`);
-        assert.ok(uur24.asTijden.every(t=>{const h=Number(String(t).slice(0,2));return /^\d{2}:00$/.test(t)&&Number.isInteger(h)&&h%4===0;}),`${naam} ${breedte}: mobiele uuras bevat een niet-kalendergebonden vier-uurslabel: ${JSON.stringify(uur24.asTijden)}`);
-        assert.equal(new Set(uur24.asTijden).size,6,`${naam} ${breedte}: mobiele uuras bevat een dubbel klokanker: ${JSON.stringify(uur24.asTijden)}`);
-        const indexGaten=uur24.asIndices.slice(1).map((x,i)=>x-uur24.asIndices[i]);
-        assert.ok(indexGaten.length===5&&indexGaten.every(g=>g===4),`${naam} ${breedte}: mobiele vier-uursankers volgen de echte uurreeks niet gelijkmatig: ${JSON.stringify(indexGaten)}`);
+        assert.deepEqual(uur24.asIndices,uur24.verwachtAsIndices,`${naam} ${breedte}: mobiele uuras volgt niet de forecasttijd-gedreven drie-uursindices`);
+        assert.deepEqual(uur24.asTijden,uur24.verwachtAsTijden,`${naam} ${breedte}: mobiele kloklabels volgen niet de forecasttijd-gedreven drie-uurscadans`);
+        assert.ok(uur24.asTijden.every(t=>/^\d{2}:00$/.test(t)),`${naam} ${breedte}: mobiele uuras bevat geen expliciete lokale kloktijd: ${JSON.stringify(uur24.asTijden)}`);
+        assert.deepEqual(uur24.asTijden,uur24.asBronTijden,`${naam} ${breedte}: mobiele uuras hoort niet bij de echte forecastpunten`);
       }else assert.deepEqual(uur24.asTijden,["16","17","18","19","20","21","22"],`${naam} ${breedte}: compacte desktopuuras toont exact ieder zichtbaar uur`);
 
       const langer=await page.evaluate(()=>{

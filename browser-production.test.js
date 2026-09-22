@@ -1,6 +1,7 @@
 "use strict";
-const fs=require("fs"),path=require("path"),os=require("os"),{spawnSync}=require("child_process"),{bouw}=require("./data.js");
-const browser=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
+const fs=require("fs"),path=require("path"),os=require("os"),{chromium}=require("playwright-core"),{bouw}=require("./data.js");
+const browserNaam=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
+const browserPad=browserNaam.includes(path.sep)?browserNaam:(process.env.PATH||"").split(path.delimiter).map(dir=>path.join(dir,browserNaam)).find(p=>fs.existsSync(p))||browserNaam;
 const bron=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(bron))throw new Error("public/index.html ontbreekt; voer eerst de build uit");
 let html=fs.readFileSync(bron,"utf8");
@@ -63,11 +64,15 @@ const reporter=`<script>
       const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
       return ra.width&&rb.width&&ra.left<rb.right&&ra.right>rb.left&&ra.top<rb.bottom&&ra.bottom>rb.top;
     })).length;
-    const dubbelNabij=labels.filter((a,i)=>labels.slice(i+1).some(b=>{
-      if((a.textContent||'').trim()!==(b.textContent||'').trim())return false;
-      const ax=Number(a.getAttribute('x')),ay=Number(a.getAttribute('y')),bx=Number(b.getAttribute('x')),by=Number(b.getAttribute('y'));
-      return [ax,ay,bx,by].every(Number.isFinite)&&Math.abs(ax-bx)<=Math.max(38,(S.geo&&S.geo.cw||36)*1.3)&&Math.abs(ay-by)<=34;
-    })).length;
+    /* Gelijke afgeronde temperaturen op naburige echte forecastpunten zijn
+       inhoudelijk geldig. Bewaak de eerdere idempotencyregressie daarom via de
+       stabiele data-index (en op desktop via exacte positie), niet via alleen
+       gelijke tekst binnen een willekeurige afstand. */
+    const labelSleutels=labels.map(el=>{
+      const i=el.getAttribute('data-mobile-temp-index');
+      return i!==null?'i:'+i:'p:'+el.getAttribute('x')+':'+el.getAttribute('y')+':'+(el.textContent||'').trim();
+    });
+    const dubbelNabij=labelSleutels.length-new Set(labelSleutels).size;
     const buiten=labels.filter(el=>{const r=el.getBoundingClientRect();return r.left<svgBox.left-1||r.right>svgBox.right+1||r.top<svgBox.top-1||r.bottom>svgBox.bottom+1;}).length;
 
     const nuLabel=[...chart.querySelectorAll('text')].find(el=>/^nu\\s+-?\\d+°$/i.test((el.textContent||'').trim()));
@@ -176,18 +181,30 @@ const reporter=`<script>
       const uvCols=uvStijl?uvStijl.gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length:0;
       const kopBreed=chartKop&&chartKop.getBoundingClientRect().width,sunBreed=sun&&sun.getBoundingClientRect().width;
       mobileKopOk=!!(chartKop&&sun&&kopStijl&&kopStijl.display==='grid'&&kopCols===1&&sunCols===1&&Math.abs(kopBreed-sunBreed)<=2&&sun.scrollWidth<=sun.clientWidth+1);
-      uvOk=!!(uv&&uvStijl&&uvStijl.display==='grid'&&uvCols===3);
+      uvOk=!!(uv&&uvStijl&&uvStijl.display==='grid'&&uvCols===2&&uvStijl.gridTemplateAreas==='"label value" "sub sub"');
     }
 
     const brief=(document.getElementById('brief')||{}).textContent||'';
     const dagen=document.querySelectorAll('#days .row.day:not(.kop)').length;
     const gridOk=desktop?cols===3:cols===2;
     const briefingDagOk=!/Morgen wordt het maximaal/i.test(brief);
-    /* Desktop houdt de rijkere drie-uursreferenties. Mobiel toont een rustiger
-       middenniveau: zes-uursreferenties plus echte lokale/globale extrema. Dat
-       moet duidelijk meer context geven dan alleen min/max, zonder weer tien
-       permanente cijfers op een smalle grafiek te zetten. */
-    const labelDichtheidOk=desktop?labels.length>=5:(labels.length>=4&&labels.length<=8&&labels.length===tempPunten.length);
+    const graphUx=globalThis.WeatherNowMobileGraphUX20260828,compactMobile=window.innerWidth<=430;
+    const mobileAnchors=compactMobile&&graphUx&&S.geo?graphUx.kiesKalenderUurLabelIndices(S.geo.TI,3,24):[];
+    const nowAnchorRaw=nuLabel&&nuLabel.getAttribute('data-mobile-temp-anchor-index'),nowAnchor=nowAnchorRaw==null?NaN:Number(nowAnchorRaw);
+    const anchorLabels=new Map(labels.map(el=>[Number(el.getAttribute('data-mobile-temp-index')),el]));
+    const anchorOk=!compactMobile||mobileAnchors.every(i=>{
+      if(Number.isInteger(nowAnchor)&&nowAnchor===i)return true;
+      const el=anchorLabels.get(i),verwacht=Number.isFinite(Number(S.geo&&S.geo.T&&S.geo.T[i]))?Math.round(Number(S.geo.T[i]))+'°':'';
+      return !!el&&(el.textContent||'').trim()===verwacht&&el.getAttribute('data-mobile-temp-priority')==='anchor';
+    });
+    const missingAnchors=compactMobile?(chart.getAttribute('data-mobile-temp-missing-anchors')||''):'';
+
+    /* Het nieuwe vaste drie-uurscontract geldt voor de compacte 320–430px
+       grafiekowner en wordt daar hard afgedwongen. Tussen 431–1099px blijft de
+       bestaande responsieve selectie gelden; desktop houdt zijn rijke labelset. */
+    const labelDichtheidOk=desktop?labels.length>=5:compactMobile
+      ?(anchorOk&&!missingAnchors&&labels.length===tempPunten.length)
+      :(labels.length>=4&&labels.length===tempPunten.length);
     document.body.dataset.browserTestResult=(brief&&briefingDagOk&&dagen>=7&&labelDichtheidOk&&botsingen===0&&dubbelNabij===0&&buiten===0&&lossePunten===0&&nuRustig&&scrubOk&&scrubKort&&neerslagkansVast&&tooltipCompact&&klokOk&&gridOk&&!statOverflow&&statsStabiel&&statsCentraal&&dagenLijnOk&&dagMmLeesbaar&&aqVult&&nightAligned&&nightRuim&&nightCompact&&nightExpand&&mobileKopOk&&uvOk&&zonSemantiekOk)?'ok':'fout';
     document.body.dataset.browserLabels=String(labels.length);
     document.body.dataset.browserPunten=String(tempPunten.length);
@@ -221,6 +238,10 @@ const reporter=`<script>
     document.body.dataset.browserMobileKop=String(mobileKopOk);
     document.body.dataset.browserUv=String(uvOk);
     document.body.dataset.browserZon=String(zonSemantiekOk);
+    document.body.dataset.browserAnchors=String(anchorOk);
+    document.body.dataset.browserCompactMobile=String(compactMobile);
+    document.body.dataset.browserInnerWidth=String(window.innerWidth);
+    document.body.dataset.browserMissingAnchors=missingAnchors;
   }catch(e){document.body.dataset.browserTestResult='exception';document.body.dataset.browserException=String(e&&e.message||e);}
   }
   /* Meet na de deterministische fixture-render rechtstreeks de echte UI-state.
@@ -234,16 +255,27 @@ html=html.replace("</body>",reporter+"</body>");
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"weathernow-browser-"));
 const fixture=path.join(dir,"index.html");fs.writeFileSync(fixture,html);
 const url="file://"+fixture+"?lat=52.3500&lon=5.2600&plaats=Browsertest";
-function voerBrowserUit(maat,naam){
-  const r=spawnSync(browser,[
-    "--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",
-    "--window-size="+maat,"--virtual-time-budget=12000","--dump-dom",url
-  ],{encoding:"utf8",maxBuffer:16*1024*1024});
-  if(r.status!==0)throw new Error(naam+": browser exit "+r.status+" "+(r.stderr||"").slice(-1000));
-  const dom=r.stdout||"";
+async function voerBrowserUit(breedte,hoogte,naam){
+  /* Chromium handhaaft sinds recente runner-versies een minimale native
+     vensterbreedte van 500px. Playwrights CDP-viewport houdt deze browser-smoke
+     daarom deterministisch op de bedoelde CSS-viewport, inclusief 390px. */
+  const browser=await chromium.launch({executablePath:browserPad,headless:true,args:[
+    "--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files"
+  ]});
+  let dom="";
+  try{
+    const page=await browser.newPage({viewport:{width:breedte,height:hoogte}});
+    await page.goto(url,{waitUntil:"load"});
+    await page.waitForFunction(()=>!!document.body.dataset.browserTestResult,null,{timeout:15000});
+    dom=await page.content();
+  }finally{
+    await browser.close();
+  }
   const waarde=veld=>{const m=new RegExp('data-'+veld+'="([^"]*)"').exec(dom);return m&&m[1];};
-  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", punten="+waarde("browser-punten")+", lossePunten="+waarde("browser-losse-punten")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", neerslagkans="+waarde("browser-kans")+", scrubTekst="+waarde("browser-scrub-debug")+", tooltip="+waarde("browser-tooltip")+", tooltipW="+waarde("browser-tooltip-w")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", statsStabiel="+waarde("browser-stats-stabiel")+", statsCentraal="+waarde("browser-stats-centraal")+", dagenLijn="+waarde("browser-dagen-lijn")+", dagMm="+waarde("browser-dag-mm")+", aq="+waarde("browser-aq")+", night="+waarde("browser-night")+", nightRuim="+waarde("browser-night-ruim")+", nightCompact="+waarde("browser-night-compact")+", nightExpand="+waarde("browser-night-expand")+", briefingDag="+waarde("browser-briefing-dag")+", mobileKop="+waarde("browser-mobile-kop")+", uv="+waarde("browser-uv")+", zon="+waarde("browser-zon")+", exception="+waarde("browser-exception"));
+  if(waarde("browser-test-result")!=="ok")throw new Error(naam+": resultaat="+waarde("browser-test-result")+", labels="+waarde("browser-labels")+", punten="+waarde("browser-punten")+", lossePunten="+waarde("browser-losse-punten")+", botsingen="+waarde("browser-botsingen")+", dubbel="+waarde("browser-dubbel")+", buiten="+waarde("browser-buiten")+", nu="+waarde("browser-nu")+", nuAfstand="+waarde("browser-nu-afstand")+", nuBotst="+waarde("browser-nu-botst")+", nuHalo="+waarde("browser-nu-halo")+", scrub="+waarde("browser-scrub")+", scrubKort="+waarde("browser-scrub-kort")+", neerslagkans="+waarde("browser-kans")+", scrubTekst="+waarde("browser-scrub-debug")+", tooltip="+waarde("browser-tooltip")+", tooltipW="+waarde("browser-tooltip-w")+", klok="+waarde("browser-klok")+", grid="+waarde("browser-grid")+", overflow="+waarde("browser-overflow")+", statsStabiel="+waarde("browser-stats-stabiel")+", statsCentraal="+waarde("browser-stats-centraal")+", dagenLijn="+waarde("browser-dagen-lijn")+", dagMm="+waarde("browser-dag-mm")+", aq="+waarde("browser-aq")+", night="+waarde("browser-night")+", nightRuim="+waarde("browser-night-ruim")+", nightCompact="+waarde("browser-night-compact")+", nightExpand="+waarde("browser-night-expand")+", briefingDag="+waarde("browser-briefing-dag")+", mobileKop="+waarde("browser-mobile-kop")+", uv="+waarde("browser-uv")+", zon="+waarde("browser-zon")+", compactMobile="+waarde("browser-compact-mobile")+", innerWidth="+waarde("browser-inner-width")+", anchors="+waarde("browser-anchors")+", missingAnchors="+waarde("browser-missing-anchors")+", exception="+waarde("browser-exception"));
   console.log("Echte browserproductietest "+naam+" geslaagd: "+waarde("browser-labels")+" temperatuurmarkeringen zonder losse stippen, rustige nu-markering, daggebonden zoninformatie, compacte tooltip, vast neerslagkanslabel, compact uitklapbaar Nachtzicht en minuutprecieze lokale klok correct.");
 }
-try{voerBrowserUit("390,844","mobiel Chromium");voerBrowserUit("1440,1000","desktop Chromium");}
-finally{fs.rmSync(dir,{recursive:true,force:true});}
+Promise.resolve().then(async()=>{
+  await voerBrowserUit(390,844,"mobiel Chromium");
+  await voerBrowserUit(1440,1000,"desktop Chromium");
+}).finally(()=>fs.rmSync(dir,{recursive:true,force:true})).catch(err=>{console.error(err&&err.stack||err);process.exit(1);});
