@@ -52,8 +52,12 @@ const NACHT_HORIZON_OUD=`const horizon=nachtHorizonIndex(rij.dataset&&rij.datase
 const NACHT_HORIZON_NIEUW=`const horizon=Math.max(h,nachtHorizonIndex(rij.dataset&&rij.dataset.d,h));if(rij.dataset)rij.dataset.d=String(horizon);`;
 const NACHT_CALL_OUD=`const detail=venster?corrigeerNachtVensterBron(venster,horizon,zichtbaar,{zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal)}):"";`;
 const NACHT_CALL_NIEUW=`const detail=venster?(()=>{
-  const optiesNacht={zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal),nuDatumTijd:nuLokaal,nachtDatum:Array.isArray(day.time)?day.time[horizon]:null,tijdzone:S.d&&S.d.timezone,nuEpochMs:Date.now()};
   const beleid=globalThis.WeatherNowFinalGlobalCorrectness;
+  const avondDatum=Array.isArray(day.time)?day.time[horizon]:null;
+  const zonsondergang=Array.isArray(day.sunset)?day.sunset[horizon]:null;
+  const nachtDatum=beleid&&typeof beleid.nachtVensterStartDatum==="function"
+    ?beleid.nachtVensterStartDatum(venster,avondDatum,zonsondergang):avondDatum;
+  const optiesNacht={zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal),nuDatumTijd:nuLokaal,nachtDatum,tijdzone:S.d&&S.d.timezone,nuEpochMs:Date.now()};
   let lokaal=corrigeerNachtVensterBron(venster,horizon,zichtbaar,optiesNacht);
   const geen=/^Geen (?:gunstig|goed) kijkvenster door (.+?)[.!?]*$/i.exec(String(lokaal||"").trim());
   if(beleid&&geen&&typeof beleid.nachtAdvies==="function")lokaal=beleid.nachtAdvies(zichtbaar,geen[1]);

@@ -28,6 +28,15 @@ assert.equal(nacht("Beste periode: 20:00–23:00.","2026-09-01T21:15","2026-09-0
 assert.equal(nacht("Beste periode: 20:00–23:00.","2026-09-01T23:15","2026-09-01","Asia/Singapore"),"Beste periode was 20:00–23:00.","volledig verstreken venster gebruikt was");
 assert.equal(nacht("Beste periode: 22:00–02:00.","2026-09-02T00:30","2026-09-01","Europe/Amsterdam"),"Beste periode: nu tot 02:00.","venster over middernacht blijft actief");
 assert.equal(nacht("Beste periode: 22:00–02:00.","2026-09-02T03:00","2026-09-01","Europe/Amsterdam"),"Beste periode was 22:00–02:00.","venster over middernacht wordt pas na echte einddatum verleden");
+const rotterdamDatum=G.nachtVensterStartDatum("Beste periode 02:00–06:00","2026-09-22","2026-09-22T19:32");
+assert.equal(rotterdamDatum,"2026-09-23","02:00 na zonsondergang valt op de volgende kalenderdag");
+assert.equal(nacht("Beste periode: 02:00–05:00.","2026-09-22T22:49",rotterdamDatum,"Europe/Amsterdam"),"Beste periode: 02:00–05:00.","Rotterdam 22:49: het komende venster mag niet als verstreken gelden");
+assert.equal(nacht("Beste periode: 02:00–05:00.","2026-09-23T02:30",rotterdamDatum,"Europe/Amsterdam"),"Beste periode: nu tot 05:00.","venster na middernacht is actief tussen start en einde");
+assert.equal(nacht("Beste periode: 02:00–05:00.","2026-09-23T05:10",rotterdamDatum,"Europe/Amsterdam"),"Beste periode was 02:00–05:00.","venster wordt pas na 05:00 verleden");
+assert.equal(G.nachtVensterStartDatum("Beste periode 21:00–23:00","2026-09-22","2026-09-22T19:32"),"2026-09-22","avondvenster blijft op de dag van zonsondergang");
+assert.equal(G.nachtVensterStartDatum("Beste periode 22:00–02:00","2026-09-22","2026-09-22T19:32"),"2026-09-22","venster dat middernacht kruist begint op de avond ervoor");
+assert.equal(G.nachtVensterStartDatum("Beste periode 01:00–03:00","2026-10-24","2026-10-24T18:20"),"2026-10-25","wintertijdnacht behoudt de juiste kalenderdatum");
+assert.equal(G.nachtVensterStartDatum("Relatief beste periode 02:00–04:00","2026-09-22","2026-09-22T19:32"),"2026-09-23","relatieve vensters volgen dezelfde daggrens");
 const herfstRef=Date.parse("2026-10-25T01:30:00Z");
 assert.equal(nacht("Beste periode: 01:00–03:00.","2026-10-25T02:30","2026-10-25","Europe/Amsterdam",0,herfstRef),"Beste periode: nu tot 03:00.","DST-herfstnacht gebruikt de juiste herhaalde lokale tijd");
 assert(G.tijdzoneKandidaten("2026-10-25T02:30","Europe/Amsterdam").length>=2,"herhaalde DST-tijd moet als ambigu worden herkend");
@@ -75,4 +84,4 @@ assert(!/geen (?:aaneengesloten )?gunstig kijkvenster/i.test(G.nachtAdvies(8,"ve
 assert(/redelijk/i.test(G.nachtAdvies(6,"wisselende bewolking")));
 assert(/^Geen gunstig kijkvenster/i.test(G.nachtAdvies(3,"dichte bewolking")));
 
-console.log("Finale wereldwijde correctheidsregels: 45 regressiechecks geslaagd.");
+console.log("Finale wereldwijde correctheidsregels en Nachtzicht-datumgrens: regressiechecks geslaagd.");

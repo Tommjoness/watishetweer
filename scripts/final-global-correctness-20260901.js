@@ -66,6 +66,13 @@ function intervalEpoch(startIso,eindIso,tijdzone,referentieMs){
 }
 function huidigEpoch(nuIso,tijdzone,referentieMs){const ks=tijdzoneKandidaten(nuIso,tijdzone);if(!ks.length)return null;if(Number.isFinite(Number(referentieMs))){const r=Number(referentieMs);return ks.reduce((a,b)=>Math.abs(b-r)<Math.abs(a-r)?b:a);}return ks[0];}
 function vensterDelen(tekst){const t=String(tekst||"").trim(),m=/^(Relatief beste periode|Beste periode)(?:\s+was|:)?\s*(\d{2}:\d{2})[–-](\d{2}:\d{2})[.!?]*$/i.exec(t);return m?{label:m[1],start:m[2],eind:m[3]}:null;}
+function nachtVensterStartDatum(tekst,nachtDatum,zonsondergang){
+  const d=vensterDelen(tekst),sunset=parseLokaal(zonsondergang),datum=String(nachtDatum||"").slice(0,10);
+  if(!d||!sunset||sunset.datum!==datum)return datum;
+  // De nacht begint op de dag van zonsondergang; een venster met een vroegere
+  // kloktijd dan die zonsondergang ligt op de volgende kalenderdag.
+  return d.start<sunset.tijd?datumVerschuif(datum,1):datum;
+}
 function nachtVensterTijdsvorm(tekst,opt={}){
   const d=vensterDelen(tekst);if(!d)return String(tekst||"");const h=num(opt.horizonDagen);if(h!==null&&h>0)return d.label+": "+d.start+"–"+d.eind+".";
   const datum=String(opt.nachtDatum||"").slice(0,10),nu=parseLokaal(opt.nuDatumTijd);if(!/^\d{4}-\d{2}-\d{2}$/.test(datum)||!nu)return d.label+": "+d.start+"–"+d.eind+".";
@@ -107,5 +114,5 @@ function nachtAdvies(score,reden){
   if(s>=5){if(r)return "De omstandigheden zijn redelijk, maar "+r+" onderbreekt een langer gunstig kijkvenster.";return "De omstandigheden zijn redelijk.";}return r?"Geen gunstig kijkvenster door "+r+".":"Geen gunstig kijkvenster in deze periode.";
 }
 
-return {zoekSleutel,dedupliceerZoekresultaten,datumVerschuif,parseLokaal,tijdzoneKandidaten,nachtVensterTijdsvorm,temperatuurEenheid,temperatuurTekst,corrigeerGradenTekst,dagBasis,dagKansTekst,dagHoeveelheidStatus,modelRisicos,nachtAdvies};
+return {zoekSleutel,dedupliceerZoekresultaten,datumVerschuif,parseLokaal,tijdzoneKandidaten,nachtVensterStartDatum,nachtVensterTijdsvorm,temperatuurEenheid,temperatuurTekst,corrigeerGradenTekst,dagBasis,dagKansTekst,dagHoeveelheidStatus,modelRisicos,nachtAdvies};
 });

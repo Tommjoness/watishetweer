@@ -39,7 +39,7 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
     zet('labels',teksten.join(','));zet('count',labels.length);zet('inner-width',window.innerWidth);zet('geo-n',g.n);zet('font-ok',fonts.every(v=>/Instrument Sans/.test(v))?'ja':'nee');zet('style-ok',stijlen.every(v=>v==='normal')?'ja':'nee');zet('overflow',buiten.length?buiten.map(el=>el.textContent).join(','):'geen');
     const nuTekst=[...svg.querySelectorAll('text')].find(el=>/^nu(?:\\s|$)/i.test(String(el.textContent||'').trim()));
     const zonTeksten=[...svg.querySelectorAll('text')].filter(el=>/^zon (?:op|onder) \\d{2}:\\d{2}$/i.test(String(el.textContent||'').trim()));
-    zet('temp-count',tempLabels.length);zet('temp-overlap',tempBots.length?tempBots.join(','):'geen');zet('temp-missing',svg.getAttribute('data-mobile-temp-missing-anchors')||'');zet('temp-visible',svg.getAttribute('data-mobile-temp-visible')||'');zet('hour-rhythm',svg.getAttribute('data-mobile-hour-rhythm')||'');zet('now-text',nuTekst?String(nuTekst.textContent||'').trim():'');zet('sun-count',zonTeksten.length);zet('compact-height',svg.getAttribute('data-mobile-compact-height')||'');zet('under-space',onderruimte.toFixed(2));zet('done','ok');
+    zet('temp-count',tempLabels.length);zet('temp-overlap',tempBots.length?tempBots.join(','):'geen');zet('temp-missing',svg.getAttribute('data-mobile-temp-missing-anchors')||'');zet('temp-visible',svg.getAttribute('data-mobile-temp-visible')||'');zet('hour-rhythm',svg.getAttribute('data-mobile-hour-rhythm')||'');zet('now-text',nuTekst?String(nuTekst.textContent||'').trim():'');zet('sun-count',zonTeksten.length);zet('compact-height',svg.getAttribute('data-mobile-compact-height')||'');zet('under-space',onderruimte.toFixed(2));zet('chart-aria',svg.getAttribute('aria-label')||'');zet('done','ok');
   }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},700);
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},180),{once:true});
 </script>`;
@@ -57,6 +57,7 @@ try{
   if(v('labels')!==verwacht)throw new Error("mobiele uuras volgt niet de forecasttijd-gedreven drie-uurscadans: kreeg "+v('labels')+", verwacht "+verwacht);
   if(Number(v('count'))!==8)throw new Error("mobiele 24-uursas moet exact acht echte drie-uursankers tonen; kreeg "+v('count'));
   if(v('hour-rhythm')!=='three-hour')throw new Error("mobiele uuras mist de three-hour owner-marker: "+v('hour-rhythm'));
+  if(!v('chart-aria').includes('Verloop van 17 september 2026 om 22:00 tot 18 september 2026 om 22:00'))throw new Error('toegankelijk grafieklabel mist kalenderdatums over middernacht: '+v('chart-aria'));
   if(v('font-ok')!=='ja'||v('style-ok')!=='ja')throw new Error("mobiele uuras gebruikt niet overal het rechte Instrument Sans-letterbeeld");
   if(v('overflow')!=='geen')throw new Error("mobiele uuras valt buiten de SVG: "+v('overflow'));
   if(v('temp-missing'))throw new Error("mobiele grafiek mist verplichte drie-uurs-temperatuurankers: "+v('temp-missing'));
