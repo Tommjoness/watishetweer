@@ -186,12 +186,15 @@ ${STYLE_MARKER}
   }
 }
 
-@media(min-width:1366px){
-  /* De natuurlijke grafiekhoogte is rond 1366px net te laag voor acht
+@media(min-width:1280px){
+  /* De natuurlijke grafiekhoogte is op de smallere desktopmatrix net te laag voor acht
      volledige leesbare uurregels. Reserveer alleen in deze gekoppelde
      desktopweergave de minimale gedeelde hoogte; de tabel blijft vervolgens
      zelf bepalen hoeveel volledige rijen werkelijk passen. */
   .wiw-chart-main{min-height:340px!important}
+}
+
+@media(min-width:1366px){
   .wiw-hour-table td{padding:calc(1.25px + var(--wiw-hour-row-pad-extra,0px)) 4px!important}
 }
 
