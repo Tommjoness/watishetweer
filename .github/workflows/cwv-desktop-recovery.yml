@@ -21,7 +21,6 @@ jobs:
         with:
           node-version: 24
       - run: npm ci --ignore-scripts
-      - run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Test uurselectie, DST en gereserveerde routeshell
         run: node scripts/cwv-hour-selection.test.js
       - name: Bouw finale CWV-recoveryartifact

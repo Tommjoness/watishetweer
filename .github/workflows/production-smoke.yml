@@ -46,7 +46,7 @@ jobs:
         with:
           node-version: 22
       - name: Installeer Chromium-monitor
-        run: npm install --no-save --package-lock=false playwright@1.62.1
+        run: npm ci --ignore-scripts
       - name: Controleer wereldwijd op mobiel en desktop
         env:
           EXPECTED_SHA: ${{ github.sha }}
@@ -65,7 +65,7 @@ jobs:
         with:
           node-version: 22
       - name: Installeer Chromium-monitor
-        run: npm install --no-save --package-lock=false playwright@1.62.1
+        run: npm ci --ignore-scripts
       - name: Controleer staff-audit interacties op productie
         env:
           EXPECTED_SHA: ${{ github.sha }}
@@ -88,7 +88,7 @@ jobs:
         with:
           node-version: 22
       - name: Installeer Chromium- en WebKit-monitor
-        run: npm install --no-save --package-lock=false playwright@1.62.1
+        run: npm ci --ignore-scripts
       - name: Meet live laadtijd, verzoekketen en grafiekinteractie
         env:
           EXPECTED_SHA: ${{ github.sha }}
@@ -107,7 +107,7 @@ jobs:
         with:
           node-version: 22
       - name: Installeer Chromium-monitor
-        run: npm install --no-save --package-lock=false playwright@1.62.1
+        run: npm ci --ignore-scripts
       - name: Meet vijf koude mobiele CLS-runs op exacte productie-SHA
         env:
           EXPECTED_SHA: ${{ github.sha }}
@@ -126,7 +126,7 @@ jobs:
         with:
           node-version: 22
       - name: Installeer Chromium- en WebKit-monitor
-        run: npm install --no-save --package-lock=false playwright@1.62.1
+        run: npm ci --ignore-scripts
       - name: Verzamel finale live releasebewijzen
         env:
           EXPECTED_SHA: ${{ github.sha }}
@@ -164,7 +164,7 @@ jobs:
         with:
           node-version: 24
       - name: Installeer Chromium-monitor
-        run: npm install --no-save --package-lock=false playwright@1.62.1
+        run: npm ci --ignore-scripts
       - name: Verifieer route-CLS, desktoplayout en lokale uurwissels op productie
         env:
           CWV_ROOT: https://watishetweer.nl
