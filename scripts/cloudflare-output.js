@@ -19,4 +19,15 @@ for (const naam of ["functions", "cloudflare"]) {
   if (fs.existsSync(ongewenst)) throw new Error(`Platformbroncode staat nog in public/: ${naam}`);
 }
 
+function verifieerPublicatie(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const naam = entry.name;
+    if (naam.startsWith(".") || /\.(?:key|pem|p12|pfx)$/i.test(naam) || naam === "wrangler.jsonc") {
+      throw new Error(`Gevoelig bestand mag niet in public/: ${path.relative(publicDir, path.join(dir, naam))}`);
+    }
+    if (entry.isDirectory()) verifieerPublicatie(path.join(dir, naam));
+  }
+}
+
+verifieerPublicatie(publicDir);
 console.log("Cloudflare buildoutput gereed.");
