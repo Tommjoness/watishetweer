@@ -14,8 +14,22 @@ const root=path.join(__dirname,"..");
 const analytics=fs.readFileSync(path.join(root,"posthog-analytics.js"),"utf8");
 new vm.Script(analytics,{filename:"posthog-analytics.js"});
 assert(analytics.includes("grid-template-columns:minmax(0,1fr) auto"),"toestemmingsbanner mist compacte desktopcompositie");
-assert(analytics.includes("width:min(620px,calc(100% - 24px))"),"toestemmingsbanner is op desktop nog onnodig breed");
+assert(analytics.includes("width:min(760px,calc(100% - 24px))"),"toestemmingsbanner gebruikt niet de lage, brede desktopcompositie");
 assert(analytics.includes("min-height:44px"),"mobiele toestemmingsacties missen een ruim touchdoel");
+for(const tekst of [
+  'aria-modal","false',
+  'aria-labelledby","analytics-toestemming-titel',
+  'aria-describedby","analytics-toestemming-uitleg',
+  'href="/privacy"',
+  'weather_view_ready',
+  'weather_view_failed',
+  'saved_location_added',
+  'forecast_day_selected',
+  'hourly_details_toggled',
+  'night_details_toggled',
+  'load_time_bucket',
+  'failure_type'
+])assert(analytics.includes(tekst),"analytics UX-contract mist: "+tekst);
 
 assert.equal(CONNECT_SOURCE,"https://eu.i.posthog.com","PostHog capture moet uitsluitend de EU-ingestion origin gebruiken");
 assert(analytics.includes('const ENDPOINT="https://eu.i.posthog.com/i/v0/e/"'),"capture endpoint moet de officiële EU single-event endpoint zijn");
@@ -131,7 +145,7 @@ const posthogPos=deliveryCleanup.indexOf("voegPostHogNaDeliveryToe();",optimalis
 assert(optimaliseerPos>=0&&posthogPos>optimaliseerPos,"analytics moet aantoonbaar pas na succesvolle delivery-optimalisatie worden toegepast");
 
 const privacy=fs.readFileSync(path.join(root,"privacy.html"),"utf8");
-for(const tekst of ["PostHog Cloud EU","geen PostHog-SDK","querystring","URL-hash","IP-anonimisering","Google Analytics 4 (GA4) is optioneel","pas geladen nadat je daar expliciet toestemming voor geeft","Advertentieopslag","data-ga4-consent-toggle","Je kunt toestemming hier altijd weer intrekken"]){
+for(const tekst of ["PostHog Cloud EU","geen PostHog-SDK","querystring","URL-hash","IP-anonimisering","grove laadduurgroep","generieke taakuitkomsten","concrete weerwaarden","Google Analytics 4 (GA4) is optioneel","pas geladen nadat je daar expliciet toestemming voor geeft","Advertentieopslag","data-ga4-consent-toggle","Je kunt toestemming hier altijd weer intrekken"]){
   assert(privacy.includes(tekst),"privacyverklaring mist analytics-uitleg: "+tekst);
 }
 
