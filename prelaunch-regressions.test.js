@@ -2,7 +2,7 @@
 const assert=require("assert"),fs=require("fs"),path=require("path"),cp=require("child_process");
 const R=__dirname,lees=p=>fs.readFileSync(path.join(R,p),"utf8");let n=0;
 const ok=(c,m)=>{assert.ok(c,m);n++;console.log("OK  "+m);};
-const index=lees("index.html"),privacy=lees("privacy.html"),engine=lees("interpretatie-engine.js"),waars=lees("lib/waarschuwingen.cjs"),plaats=lees("lib/plaatsnaam.cjs"),build=lees("build-weather.js"),cacheContract=lees("scripts/postbuild-cache.js");
+const index=lees("index.html"),privacy=lees("privacy.html"),engine=lees("interpretatie-engine.js"),waars=lees("lib/waarschuwingen.cjs"),plaats=lees("lib/plaatsnaam.cjs"),build=lees("build-weather.js"),cacheContract=lees("scripts/postbuild-cache.js"),preSale=lees("scripts/production-pre-sale-acceptance-browser.js"),preSaleRunner=lees("scripts/run-production-pre-sale-acceptance-browser.js");
 const workflowDir=path.join(R,".github","workflows");
 const workflowBestanden=fs.readdirSync(workflowDir).filter(f=>/\.ya?ml$/i.test(f));
 const workflows=workflowBestanden.map(f=>lees(path.join(".github","workflows",f))).join("\n");
@@ -41,6 +41,7 @@ ok(index.includes('type="button" class="x"')&&index.includes('aria-label="Verwij
 ok(cacheContract.includes("CACHE_BRONNEN")&&cacheContract.includes('"manifest.json"')&&cacheContract.includes('"icon-192.png"')&&cacheContract.includes('instrument-sans-latin-600-normal.woff2')&&build.includes('vernieuwServiceworkerCache(OUT,"build-weather")'),"cachehash omvat de volledige app-shell via één gedeeld contract");
 const gelockteDev=packageLock.packages&&packageLock.packages[""]&&packageLock.packages[""].devDependencies||{};
 ok(!/actions\/(?:checkout|setup-node)@v[1-5]\b/.test(workflows)&&workflows.includes("actions/checkout@v6")&&workflows.includes("actions/setup-node@v6")&&workflows.includes("node-version: 24")&&packageJson.devDependencies.playwright==="1.62.1"&&gelockteDev.playwright==="1.62.1"&&packageJson.devDependencies.wrangler==="4.136.1"&&gelockteDev.wrangler==="4.136.1"&&workflows.includes("npm ci --ignore-scripts")&&!workflows.includes("npm install --no-save --package-lock=false playwright@")&&!workflows.includes("playwright@latest")&&!workflows.includes("npx --yes wrangler@")&&workflows.includes("npx --no-install wrangler"),"vaste CI-workflows gebruiken moderne Actions en gelockte Playwright/Wrangler-tooling");
+ok(preSale.includes("httpErrors=[]")&&preSale.includes("kritiekeHttpErrors")&&preSale.includes("isCloudflarePlatformHttpError")&&preSale.includes("isReportOnlyCspConsoleError")&&preSale.includes("anonieme WebKit-resourcefout zonder HTTP-responsebewijs")&&preSaleRunner.includes("requests=[],httpErrors=[]"),"production cold-loadgate gebruikt URL/status-netwerkbewijs en laat alleen bewezen Cloudflare platform-noise buiten de app-foutset");
 function nepRes(){return{statusCode:200,headers:{},body:null,setHeader(k,v){this.headers[String(k).toLowerCase()]=v;},status(c){this.statusCode=c;return this;},json(b){this.body=b;return this;}};}
 async function roep(moduleNaam,query,fetchImpl){const oud=global.fetch,p=require.resolve(moduleNaam);delete require.cache[p];global.fetch=fetchImpl;try{const h=require(p),r=nepRes();await h({query},r);return r;}finally{global.fetch=oud;delete require.cache[p];}}
 (async()=>{

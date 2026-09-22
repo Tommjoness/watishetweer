@@ -86,8 +86,8 @@ async function bouwHistoryForecastFixtures(browser){
 
 let bron=fs.readFileSync(target,"utf8");
 bron=vervangEen(bron,"async function coldLoads(profile,browser){","async function coldLoads(profile,browser,coldFixture){","cold-load fixture-signatuur");
-const coldPageAnchor='      const page=await context.newPage(),consoleErrors=[],pageErrors=[],failed=[],requests=[];';
-const coldRouteInject=`      const page=await context.newPage(),consoleErrors=[],pageErrors=[],failed=[],requests=[];
+const coldPageAnchor='      const page=await context.newPage(),consoleErrors=[],pageErrors=[],failed=[],requests=[],httpErrors=[];';
+const coldRouteInject=`      const page=await context.newPage(),consoleErrors=[],pageErrors=[],failed=[],requests=[],httpErrors=[];
       if(!coldFixture||!coldFixture.bron)throw new Error("Almere cold-loadbron ontbreekt");
       await page.route("**://api.open-meteo.com/v1/forecast**",async route=>{
         let isAlmere=false;
