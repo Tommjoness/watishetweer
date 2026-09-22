@@ -21,9 +21,7 @@ jobs:
         with:
           node-version: 24
       - name: Installeer builddependencies
-        run: npm install --ignore-scripts
-      - name: Installeer Chromium-driver voor gerichte hersteltest
-        run: npm install --no-save --package-lock=false playwright@1.62.1
+        run: npm ci --ignore-scripts
       - name: Controleer recovery- en productiescripts syntactisch
         run: |
           node --check browser-release-recovery-20260904.test.js

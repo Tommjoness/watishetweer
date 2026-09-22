@@ -19,9 +19,9 @@ const ROOT=__dirname,OUT=path.join(ROOT,"public"),BRON_SNAPSHOT=path.join(ROOT,"
 const NIET_PUBLICEREN=new Set([
   ".git",".github","api","cloudflare","functions","lib","node_modules","public","scripts",".weather-runtime-source.tmp",
   "build-weather.js","interpretatie-engine.js","interpretatie-engine.test.js","nederlandse-weergrammatica.js","senior-correctness-v2.js","neerslagkans-policy-v3.js","live-polish.css","live-polish-v2.js","senior-semantiek-20260810.css","senior-semantiek-20260810.js","product-config.js",
-  "run.js","run-built-matrix.js","kern.js","data.js","package.json","package-lock.json","vercel.json"
+  "run.js","run-built-matrix.js","kern.js","data.js","package.json","package-lock.json","vercel.json","wrangler.jsonc"
 ]);
-function intern(n){return NIET_PUBLICEREN.has(n)||n.endsWith(".test.js");}
+function intern(n){return n.startsWith(".")||/\.(?:key|pem|p12|pfx)$/i.test(n)||NIET_PUBLICEREN.has(n)||n.endsWith(".test.js");}
 function kopieer(bron,doel){
   const st=fs.statSync(bron);
   if(st.isDirectory()){

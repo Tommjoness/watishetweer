@@ -59,7 +59,7 @@ jobs:
           node-version: 24
 
       - name: Installeer dependencies
-        run: npm install --ignore-scripts
+        run: npm ci --ignore-scripts
 
       - name: Controleer Cloudflare credentials
         shell: bash
@@ -103,7 +103,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4 pages deploy public \
+          npx --no-install wrangler pages deploy public \
             --project-name="$CLOUDFLARE_PROJECT" \
             --branch=main \
             --commit-hash="$SOURCE_SHA" \

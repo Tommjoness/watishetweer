@@ -6,7 +6,7 @@ const index=lees("index.html"),privacy=lees("privacy.html"),engine=lees("interpr
 const workflowDir=path.join(R,".github","workflows");
 const workflowBestanden=fs.readdirSync(workflowDir).filter(f=>/\.ya?ml$/i.test(f));
 const workflows=workflowBestanden.map(f=>lees(path.join(".github","workflows",f))).join("\n");
-const manifest=JSON.parse(lees("manifest.json"));
+const manifest=JSON.parse(lees("manifest.json")),packageJson=JSON.parse(lees("package.json")),packageLock=JSON.parse(lees("package-lock.json"));
 ok(index.includes("Wat is het weer?")&&manifest.name==="Wat is het weer?","publieke merknaam is consequent Nederlands");
 ok(index.includes("privacy.html")&&fs.existsSync(path.join(R,"privacy.html")),"privacy-informatie is direct bereikbaar");
 ok(!privacy.includes("—"),"zichtbare privacycopy gebruikt geen em dash");
@@ -39,8 +39,8 @@ ok(index.includes("data-land=")&&index.includes("&land=")&&index.includes("land:
 ok(index.includes("© OpenStreetMap-bijdragers")&&index.includes("MeteoAlarm")&&index.includes("National Weather Service"),"relevante databronnen zijn zichtbaar geattribueerd");
 ok(index.includes('type="button" class="x"')&&index.includes('aria-label="Verwijder'),"verwijderen van bewaarde plaats is keyboard- en screenreaderbereikbaar");
 ok(cacheContract.includes("CACHE_BRONNEN")&&cacheContract.includes('"manifest.json"')&&cacheContract.includes('"icon-192.png"')&&cacheContract.includes('instrument-sans-latin-600-normal.woff2')&&build.includes('vernieuwServiceworkerCache(OUT,"build-weather")'),"cachehash omvat de volledige app-shell via één gedeeld contract");
-const playwrightPins=workflows.match(/playwright@[^\s"']+/g)||[];
-ok(!/actions\/(?:checkout|setup-node)@v[1-5]\b/.test(workflows)&&workflows.includes("actions/checkout@v6")&&workflows.includes("actions/setup-node@v6")&&workflows.includes("node-version: 24")&&playwrightPins.length>=2&&playwrightPins.every(x=>x==="playwright@1.62.1")&&!workflows.includes("playwright@latest"),"vaste CI-workflows gebruiken moderne Actions en een reproduceerbare Playwright-pin");
+const gelockteDev=packageLock.packages&&packageLock.packages[""]&&packageLock.packages[""].devDependencies||{};
+ok(!/actions\/(?:checkout|setup-node)@v[1-5]\b/.test(workflows)&&workflows.includes("actions/checkout@v6")&&workflows.includes("actions/setup-node@v6")&&workflows.includes("node-version: 24")&&packageJson.devDependencies.playwright==="1.62.1"&&gelockteDev.playwright==="1.62.1"&&packageJson.devDependencies.wrangler==="4.136.1"&&gelockteDev.wrangler==="4.136.1"&&workflows.includes("npm ci --ignore-scripts")&&!workflows.includes("npm install --no-save --package-lock=false playwright@")&&!workflows.includes("playwright@latest")&&!workflows.includes("npx --yes wrangler@")&&workflows.includes("npx --no-install wrangler"),"vaste CI-workflows gebruiken moderne Actions en gelockte Playwright/Wrangler-tooling");
 function nepRes(){return{statusCode:200,headers:{},body:null,setHeader(k,v){this.headers[String(k).toLowerCase()]=v;},status(c){this.statusCode=c;return this;},json(b){this.body=b;return this;}};}
 async function roep(moduleNaam,query,fetchImpl){const oud=global.fetch,p=require.resolve(moduleNaam);delete require.cache[p];global.fetch=fetchImpl;try{const h=require(p),r=nepRes();await h({query},r);return r;}finally{global.fetch=oud;delete require.cache[p];}}
 (async()=>{
