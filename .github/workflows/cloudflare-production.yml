@@ -103,7 +103,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4.136.1 pages deploy public \
+          npx --no-install wrangler pages deploy public \
             --project-name="$CLOUDFLARE_PROJECT" \
             --branch=main \
             --commit-hash="$SOURCE_SHA" \

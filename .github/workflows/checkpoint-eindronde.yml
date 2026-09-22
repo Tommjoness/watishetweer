@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: 22
       - name: Installeer Playwright-pakket
-        run: npm install --no-save --package-lock=false playwright@1.62.1
+        run: npm ci --ignore-scripts
       - name: Koppel Chromium voor directe browsertests
         run: |
           CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"

@@ -102,7 +102,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4.136.1 pages deploy public \
+          npx --no-install wrangler pages deploy public \
             --project-name="$CLOUDFLARE_PROJECT" \
             --branch="$CLOUDFLARE_PREVIEW_BRANCH" \
             --commit-hash="$SOURCE_SHA" \
@@ -183,7 +183,7 @@ jobs:
           node-version: 22
 
       - name: Installeer Playwright
-        run: npm install --no-save --package-lock=false playwright@1.62.1
+        run: npm ci --ignore-scripts
 
       - name: Echte responsive preview met bewaarde screenshots
         env:
@@ -256,7 +256,7 @@ jobs:
           node-version: 24
 
       - name: Installeer Chromium-driver
-        run: npm install --no-save --package-lock=false playwright@1.62.1
+        run: npm ci --ignore-scripts
 
       - name: Installeer native browserreload-driver
         run: apt-get update && apt-get install -y --no-install-recommends xdotool
@@ -287,7 +287,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - run: npm ci --ignore-scripts
       - name: Verifieer route-CLS, desktoplayout en lokale uurwissels op preview
         env:
           CWV_ROOT: ${{ needs.preview.outputs.preview_url }}
