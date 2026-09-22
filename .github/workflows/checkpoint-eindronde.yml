@@ -67,6 +67,8 @@ jobs:
             echo "::error file=browser-accessibility.test.js,line=1::$msg"
             exit "$code"
           fi
+      - name: Consent-UX en privacyveilige taakmeting in Chromium en WebKit
+        run: node browser-analytics-consent.test.js
       - name: Officiële waarschuwingstatus in Chromium en WebKit
         shell: bash
         run: |

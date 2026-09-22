@@ -93,6 +93,67 @@
   const thema=document.getElementById("thema");
   if(thema)thema.addEventListener("click",()=>stuur("theme_control_used"),{passive:true});
 
+  /* Meet alleen generieke taakuitkomsten. Deze events bevatten bewust geen
+     plaatsnaam, positie, zoekterm, grafiekwaarde of andere weerinhoud. Ze maken
+     wel zichtbaar of de kernervaring werkelijk bruikbaar wordt en welke
+     hoofdonderdelen worden gebruikt. */
+  const interactieEenmaal=new Set();
+  const interacties=[
+    ["#chipadd","saved_location_added"],
+    ["#days .row.day:not(.kop)","forecast_day_selected"],
+    [".wiw-hour-toggle","hourly_details_toggled"],
+    ["#nights .nacht-meer","night_details_toggled"]
+  ];
+  if(typeof document.addEventListener==="function"){
+    document.addEventListener("click",event=>{
+      const doel=event.target&&event.target.closest?event.target:null;
+      if(!doel)return;
+      for(const [selector,naam] of interacties){
+        if(interactieEenmaal.has(naam)||!doel.closest(selector))continue;
+        interactieEenmaal.add(naam);stuur(naam);break;
+      }
+    },{passive:true});
+  }
+
+  function laadduurBand(ms){
+    if(ms<1000)return "under_1s";
+    if(ms<2000)return "1_to_2s";
+    if(ms<5000)return "2_to_5s";
+    if(ms<10000)return "5_to_10s";
+    return "over_10s";
+  }
+
+  function bewaakWeerUitkomst(){
+    const app=document.getElementById("app"),state=document.getElementById("state"),temp=document.getElementById("t"),stamp=document.getElementById("stamp");
+    if(!app||!state||!temp||!stamp||typeof MutationObserver!=="function")return;
+    const start=globalThis.performance&&typeof globalThis.performance.now==="function"?globalThis.performance.now():Date.now();
+    let klaar=false,observer=null;
+    const stop=()=>{if(observer)observer.disconnect();};
+    const controleer=()=>{
+      if(klaar)return;
+      const temperatuur=String(temp.textContent||"").trim();
+      const stempel=String(stamp.textContent||"");
+      const zichtbaar=getComputedStyle(app).display!=="none"&&getComputedStyle(app).visibility!=="hidden";
+      if(zichtbaar&&!/^(?:--|–)$/.test(temperatuur)&&/^Gegevens opgehaald om \d{2}:\d{2}/.test(stempel)){
+        klaar=true;stop();
+        const nu=globalThis.performance&&typeof globalThis.performance.now==="function"?globalThis.performance.now():Date.now();
+        stuur("weather_view_ready",{load_time_bucket:laadduurBand(Math.max(0,nu-start))});
+        return;
+      }
+      if(state.classList.contains("err")){
+        klaar=true;stop();
+        const tekst=String(state.textContent||"").toLocaleLowerCase("nl-NL");
+        const foutsoort=tekst.includes("internet")?"offline":tekst.includes("duurde te lang")?"timeout":"fetch";
+        stuur("weather_view_failed",{failure_type:foutsoort});
+      }
+    };
+    observer=new MutationObserver(controleer);
+    for(const el of [app,state,temp,stamp])observer.observe(el,{attributes:true,attributeFilter:["class","style","hidden"],childList:true,characterData:true,subtree:true});
+    controleer();
+    setTimeout(()=>{if(!klaar)stop();},30000);
+  }
+  bewaakWeerUitkomst();
+
   /* Google Analytics draait in basic consent mode: de Google-tag wordt pas na
      expliciete toestemming geladen. Voor toestemming gaat er dus geen request,
      cookieless ping of consentstatus naar Google. Advertentiesignalen blijven
@@ -189,13 +250,15 @@
     if(document.getElementById("analytics-toestemming")||/^\/admin(?:\/|$)/i.test(location.pathname))return;
     const style=document.createElement("style");
     style.id="analytics-toestemming-stijl";
-    style.textContent="#analytics-toestemming{position:fixed;z-index:2147483000;left:50%;bottom:12px;transform:translateX(-50%);display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;width:min(620px,calc(100% - 24px));box-sizing:border-box;padding:12px 14px;border:1px solid color-mix(in srgb,CanvasText 22%,transparent);border-radius:12px;background:Canvas;color:CanvasText;box-shadow:0 10px 28px rgba(0,0,0,.17);font:14px/1.4 system-ui,-apple-system,sans-serif}#analytics-toestemming p{margin:0}#analytics-toestemming a{color:inherit;text-underline-offset:2px}#analytics-toestemming .analytics-acties{display:flex;gap:8px;flex-wrap:nowrap}#analytics-toestemming button{appearance:none;min-height:40px;border:1px solid color-mix(in srgb,CanvasText 35%,transparent);border-radius:8px;background:Canvas;color:CanvasText;padding:8px 11px;font:600 13px/1.2 system-ui,-apple-system,sans-serif;cursor:pointer}#analytics-toestemming button:focus-visible{outline:2px solid Highlight;outline-offset:2px}@media(max-width:620px){#analytics-toestemming{bottom:max(8px,env(safe-area-inset-bottom));grid-template-columns:1fr;gap:10px;width:calc(100% - 16px);padding:11px 12px;font-size:13.5px}#analytics-toestemming p br{display:none}#analytics-toestemming .analytics-acties{width:100%}#analytics-toestemming .analytics-acties button{flex:1;min-height:44px}}";
+    style.textContent="#analytics-toestemming{position:fixed;z-index:2147483000;left:50%;bottom:10px;transform:translateX(-50%);display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;width:min(760px,calc(100% - 24px));box-sizing:border-box;padding:10px 12px;border:1px solid color-mix(in srgb,CanvasText 24%,transparent);border-radius:10px;background:Canvas;color:CanvasText;box-shadow:0 8px 24px rgba(0,0,0,.16);font:13.5px/1.35 system-ui,-apple-system,sans-serif;max-height:calc(100dvh - 20px);overflow:auto}#analytics-toestemming p{margin:0}#analytics-toestemming strong{font-weight:700}#analytics-toestemming a{color:inherit;text-underline-offset:2px}#analytics-toestemming .analytics-acties{display:flex;gap:8px;flex-wrap:nowrap}#analytics-toestemming button{appearance:none;min-width:88px;min-height:40px;border:1px solid color-mix(in srgb,CanvasText 35%,transparent);border-radius:8px;background:Canvas;color:CanvasText;padding:8px 11px;font:600 13px/1.2 system-ui,-apple-system,sans-serif;cursor:pointer}#analytics-toestemming button:focus-visible{outline:2px solid Highlight;outline-offset:2px}@media(max-width:620px){#analytics-toestemming{bottom:max(8px,env(safe-area-inset-bottom));grid-template-columns:1fr;gap:8px;width:calc(100% - 16px);padding:10px 11px;font-size:13px;max-height:calc(100dvh - 16px)}#analytics-toestemming .analytics-acties{width:100%}#analytics-toestemming .analytics-acties button{flex:1;min-width:0;min-height:44px}}";
     document.head.appendChild(style);
     const banner=document.createElement("aside");
     banner.id="analytics-toestemming";
     banner.setAttribute("role","dialog");
-    banner.setAttribute("aria-label","Toestemming voor Google Analytics");
-    banner.innerHTML='<p><b>Bezoekstatistieken</b><br>Mag Google Analytics meten hoe de site wordt gebruikt? De Google-tag wordt pas geladen nadat je toestemming geeft. <a href="/privacy.html">Lees meer</a>.</p><div class="analytics-acties"><button type="button" data-keuze="denied">Weigeren</button><button type="button" data-keuze="granted">Toestaan</button></div>';
+    banner.setAttribute("aria-modal","false");
+    banner.setAttribute("aria-labelledby","analytics-toestemming-titel");
+    banner.setAttribute("aria-describedby","analytics-toestemming-uitleg");
+    banner.innerHTML='<p><strong id="analytics-toestemming-titel">Bezoekstatistieken</strong><span id="analytics-toestemming-uitleg"> — Mag Google Analytics meten hoe de site wordt gebruikt? De Google-tag laadt pas na toestemming. <a href="/privacy">Privacy</a>.</span></p><div class="analytics-acties"><button type="button" data-keuze="denied">Weigeren</button><button type="button" data-keuze="granted">Toestaan</button></div>';
     banner.addEventListener("click",event=>{
       const knop=event.target&&event.target.closest&&event.target.closest("button[data-keuze]");
       if(!knop)return;
