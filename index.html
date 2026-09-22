@@ -2046,8 +2046,9 @@ function etmaal(start,n){
   const kansVoorlezer=geldigeKansen.length
     ? "hoogste neerslagkans "+Math.max(...geldigeKansen)+" procent"
     : "neerslagkans niet beschikbaar";
+  const grafiekMoment=t=>new Date(t.slice(0,10)+"T12:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"})+" om "+t.slice(11,16);
   svg.setAttribute("aria-label",
-    "Verloop van "+TI[0].slice(11,16)+" tot "+TI[TI.length-1].slice(11,16)
+    "Verloop van "+grafiekMoment(TI[0])+" tot "+grafiekMoment(TI[TI.length-1])
     +", temperatuur tussen "+mn+" en "+mx+" graden, "+kansVoorlezer+".");
   S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,H:H,M:M};
   scrubKoppel(); chartHint();
