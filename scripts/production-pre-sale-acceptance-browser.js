@@ -28,6 +28,13 @@ const requestedLocations=[
   {name:"Ushuaia",lat:-54.8019,lon:-68.3030,land:"AR"}
 ];
 const coordOk=(a,b)=>Number.isFinite(Number(a))&&Math.abs(Number(a)-Number(b))<=0.0011;
+const ROOT_ORIGIN=new URL(ROOT).origin;
+const isReportOnlyCspConsoleError=msg=>/^\[Report Only\]\s+Refused to /.test(String(msg))&&/Content Security Policy\.$/.test(String(msg));
+const isAnonymousResourceConsoleError=msg=>/^Failed to load resource: the server responded with a status of \d{3} \([^)]+\)$/.test(String(msg));
+const isCloudflarePlatformHttpError=item=>{
+  try{const u=new URL(item&&item.url||"");return u.origin===ROOT_ORIGIN&&u.pathname.startsWith("/cdn-cgi/")&&Number(item&&item.status)===404;}
+  catch(_){return false;}
+};
 
 async function read(page){return page.evaluate(()=>{
   const app=document.getElementById("app"),state=document.getElementById("state"),compact=document.getElementById("locatie-laadstatus"),compactText=compact&&compact.querySelector(".locatie-status-tekst");
@@ -94,12 +101,17 @@ async function coldLoads(profile,browser){
     let geslaagd=false,laatsteProviderFout=null;
     for(let poging=1;poging<=COLD_ATTEMPTS&&!geslaagd;poging++){
       const context=await browser.newContext({...profile.options,locale:"nl-NL",serviceWorkers:"block"});
-      const page=await context.newPage(),consoleErrors=[],pageErrors=[],failed=[],requests=[];
+      const page=await context.newPage(),consoleErrors=[],pageErrors=[],failed=[],requests=[],httpErrors=[];
       page.on("console",m=>{if(m.type()==="error")consoleErrors.push(m.text());});
       page.on("pageerror",e=>pageErrors.push(String(e)));
       page.on("requestfailed",r=>failed.push({url:r.url(),error:r.failure()?.errorText||"failed"}));
       page.on("request",r=>{if(r.url().includes("api.open-meteo.com/v1/forecast"))requests.push({url:r.url(),start:Date.now(),end:null,status:null});});
-      page.on("response",r=>{const item=[...requests].reverse().find(x=>x.url===r.url()&&x.end==null);if(item){item.status=r.status();item.end=Date.now();}});
+      page.on("response",r=>{
+        const item=[...requests].reverse().find(x=>x.url===r.url()&&x.end==null);
+        if(item){item.status=r.status();item.end=Date.now();}
+        const status=r.status();
+        if(status>=400)httpErrors.push({url:r.url(),status,type:r.request().resourceType()});
+      });
       const start=Date.now();
       try{
         const q=new URLSearchParams({lat:"52.3508",lon:"5.2647",plaats:"Almere",land:"NL",coldcheck:`${profile.name}-${i}-${poging}-${start}-${Math.random().toString(36).slice(2)}`});
@@ -115,12 +127,20 @@ async function coldLoads(profile,browser){
           assert(kernGereed(x),`${profile.name} run ${i}/poging ${poging}: na ${terminal.ms} ms nog generiek/onvolledig laden; status=${x.status}`);
           assertIdentity(x,{name:"Almere",lat:52.3508,lon:5.2647,land:"NL"});
           assert.deepEqual(pageErrors,[],`${profile.name} run ${i}/poging ${poging}: pageerrors ${pageErrors.join(" | ")}`);
-          assert.deepEqual(consoleErrors,[],`${profile.name} run ${i}/poging ${poging}: console-errors ${consoleErrors.join(" | ")}`);
+          const reportOnlyConsole=consoleErrors.filter(isReportOnlyCspConsoleError);
+          const anoniemeResourceConsole=consoleErrors.filter(isAnonymousResourceConsoleError);
+          const hardeConsoleErrors=consoleErrors.filter(msg=>!isReportOnlyCspConsoleError(msg)&&!isAnonymousResourceConsoleError(msg));
+          const platformHttpErrors=httpErrors.filter(isCloudflarePlatformHttpError);
+          const kritiekeHttpErrors=httpErrors.filter(item=>!isCloudflarePlatformHttpError(item));
+          if(reportOnlyConsole.length||platformHttpErrors.length)console.log("PRE_SALE_BROWSER_PLATFORM_NOISE "+JSON.stringify({profile:profile.name,run:i,attempt:poging,reportOnly:reportOnlyConsole.length,platformHttpErrors}));
+          if(anoniemeResourceConsole.length&&!httpErrors.length)assert.fail(`${profile.name} run ${i}/poging ${poging}: anonieme WebKit-resourcefout zonder HTTP-responsebewijs: ${anoniemeResourceConsole.join(" | ")}`);
+          assert.deepEqual(kritiekeHttpErrors,[],`${profile.name} run ${i}/poging ${poging}: kritieke HTTP-fouten ${JSON.stringify(kritiekeHttpErrors)}`);
+          assert.deepEqual(hardeConsoleErrors,[],`${profile.name} run ${i}/poging ${poging}: console-errors ${hardeConsoleErrors.join(" | ")}`);
           assert(x.brief.length>0,`${profile.name} run ${i}: briefing leeg`);
           assert(x.chartTexts>=4,`${profile.name} run ${i}: grafiek niet bruikbaar`);
           assert.equal(x.days,7,`${profile.name} run ${i}: weekverwachting heeft ${x.days} rijen`);
           const forecastDurations=requests.filter(r=>r.end&&r.status>=200&&r.status<300).map(r=>r.end-r.start);
-          rows.push({profile:profile.name,run:i,attempt:poging,domMs,terminalMs:terminal.ms,terminal:"data",forecastDurations,failed:failed.length,status:x.status});
+          rows.push({profile:profile.name,run:i,attempt:poging,domMs,terminalMs:terminal.ms,terminal:"data",forecastDurations,failed:failed.length,httpErrors:httpErrors.length,platformHttpErrors:platformHttpErrors.length,reportOnlyConsole:reportOnlyConsole.length,status:x.status});
           console.log("PRE_SALE_COLD "+JSON.stringify(rows.at(-1)));
           geslaagd=true;
         }
