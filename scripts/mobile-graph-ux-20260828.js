@@ -79,9 +79,19 @@ function lokaleTemperatuurExtrema(temperaturen,maxPunten=24){
   }
   return uit;
 }
+/* Het mobiele plan toont iedere drie uur een temperatuur. Daarnaast krijgen
+   hooguit twee punten een eigen label: de hoogste piek en het laagste dal van
+   het zichtbare etmaal. Zo'n extra label vervalt zodra een drie-uursanker op
+   of vlak naast dat plateau (binnen twee uur) dezelfde afgeronde waarde al
+   toont; anders stapelen gelijke waarden zich op ("15° 15° 15°"). */
+const EXTREMUM_ANKER_BEREIK=2;
 function mobieleTemperatuurLabelPlan(tijden,temperaturen,maxPunten=24){
   const ankers=kiesKalenderUurLabelIndices(tijden,3,maxPunten),ankerSet=new Set(ankers);
-  const extrema=lokaleTemperatuurExtrema(temperaturen,maxPunten).filter(e=>!ankerSet.has(e.i));
+  const T=Array.isArray(temperaturen)?temperaturen:[],waarde=i=>Number(T[i]),afgerond=i=>Math.round(waarde(i));
+  const alle=lokaleTemperatuurExtrema(T,maxPunten);
+  const uiterste=(type,beter)=>alle.filter(e=>e.type===type).reduce((best,e)=>!best||beter(waarde(e.i),waarde(best.i))?e:best,null);
+  const alAfgelezen=e=>ankerSet.has(e.i)||ankers.some(a=>a>=e.start-EXTREMUM_ANKER_BEREIK&&a<=e.eind+EXTREMUM_ANKER_BEREIK&&afgerond(a)===afgerond(e.i));
+  const extrema=[uiterste("piek",(a,b)=>a>b),uiterste("dal",(a,b)=>a<b)].filter(e=>e&&!alAfgelezen(e)).sort((a,b)=>a.i-b.i);
   return {ankers,extrema};
 }
 

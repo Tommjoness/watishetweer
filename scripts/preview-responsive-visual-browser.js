@@ -166,8 +166,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
             const info=tempInfo.find(x=>x.i===i),verwacht=Number.isFinite(Number(g&&g.T&&g.T[i]))?Math.round(Number(g.T[i])):null;
             return {i,verwacht,tekst:info?info.tekst:"",priority:info?info.priority:"",viaNow:Number.isInteger(nowAnchor)&&nowAnchor===i};
           });
-          const alleExtrema=ux&&g?ux.lokaleTemperatuurExtrema(g.T,24):[];
-          const extraExtrema=alleExtrema.filter(e=>!expectedHourIndices.includes(e.i)),extremaState=extraExtrema.map(e=>({i:e.i,type:e.type,gelabeld:tempInfo.some(x=>x.i===e.i&&x.priority==="extremum")}));
+          const extraExtrema=ux&&g?ux.mobieleTemperatuurLabelPlan(g.TI,g.T,24).extrema:[],extremaState=extraExtrema.map(e=>({i:e.i,type:e.type,gelabeld:tempInfo.some(x=>x.i===e.i&&x.priority==="extremum")}));
           const missingAnchors=svg?.getAttribute("data-mobile-temp-missing-anchors")||"",droppedExtrema=svg?.getAttribute("data-mobile-temp-dropped-extrema")||"";
           const hourBoxes=hourLabels.map(el=>el.getBoundingClientRect()),hourOverlap=[];
           for(let i=0;i<hourBoxes.length;i++)for(let j=i+1;j<hourBoxes.length;j++)if(raakt(hourBoxes[i],hourBoxes[j],0))hourOverlap.push(i+"-"+j);
@@ -261,7 +260,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           assert(a.viaNow||a.priority==="anchor",`${vp.naam}: verplicht drie-uursanker ${a.i} mist een temperatuurlabel`);
           if(!a.viaNow)assert.equal(a.tekst,String(a.verwacht)+"°",`${vp.naam}: temperatuur bij anker ${a.i} hoort niet bij hetzelfde forecastpunt (${a.tekst}/${a.verwacht}°)`);
         }
-        assert(m.extremaState.every(e=>e.gelabeld),`${vp.naam}: lokaal extremum ontbreekt terwijl de browsergeometrie ruimte biedt (${JSON.stringify(m.extremaState)}; vervallen=${m.droppedExtrema})`);
+        assert(m.extremaState.every(e=>e.gelabeld),`${vp.naam}: geplande piek/dal ontbreekt terwijl de browsergeometrie ruimte biedt (${JSON.stringify(m.extremaState)}; vervallen=${m.droppedExtrema})`);
         assert.equal(m.sunInChart,0,`${vp.naam}: dubbele zon-op/zon-ondertekst staat nog in de SVG`);
         assert.equal(m.compact,"1",`${vp.naam}: grafiekhoogte is niet mobiel gecompacteerd`);
         if(m.chartSummaryGap!==null)assert(m.chartSummaryGap>=0&&m.chartSummaryGap<=18,`${vp.naam}: grafiek-samenvatting heeft ${m.chartSummaryGap}px tussenruimte`);

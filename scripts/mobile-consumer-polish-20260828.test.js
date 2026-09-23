@@ -8,7 +8,7 @@ const ux=require("./mobile-graph-ux-20260828.js");
 const css=fs.readFileSync(path.join(__dirname,"mobile-graph-ux-20260828.css"),"utf8");
 const js=fs.readFileSync(path.join(__dirname,"mobile-graph-ux-20260828.js"),"utf8");
 
-assert(/@media\(max-width:430px\)[\s\S]*?#t\{font-size:78px\}/.test(css),"mobiele hero-temperatuur is bewust teruggebracht naar 78px");
+assert(/@media\(max-width:430px\)[\s\S]*?#t\{font-size:50px\}/.test(css),"mobiele hero-temperatuur staat bewust op 50px, onder de 60px van desktop");
 assert(/#chart \[data-q4-rain-period-range\],[\s\S]*?opacity:\.76;[\s\S]*?font-size:9\.5px!important/.test(css),"regenperioden blijven zichtbaar maar krijgen een rustiger labelgewicht");
 assert(/#chart g\[data-q4-rain-periods\] line\{opacity:\.72\}/.test(css),"regenbrackets blijven zichtbaar met lagere visuele nadruk");
 assert(/#nights \.row\.night:not\(\.kop\)\{[\s\S]*?padding-top:10px!important;[\s\S]*?padding-bottom:10px!important;[\s\S]*?row-gap:3px!important/.test(css),"Nachtzicht is mobiel compacter zonder rijen of data te verwijderen");

@@ -47,6 +47,15 @@ const planTijden=Array.from({length:8},(_,i)=>"2026-09-17T"+String(18+i).padStar
 const plan=api.mobieleTemperatuurLabelPlan(planTijden,[10,11,12,14,13,15,16,17],8);
 assert.deepEqual(plan.ankers,[0,3,6],"Plan bewaart alle verplichte drie-uursankers.");
 assert.deepEqual(plan.extrema.map(e=>[e.i,e.type]),[[4,"dal"]],"Een extremum op een drie-uursanker wordt niet dubbel opgenomen; een buur-extremum wel.");
+const piekenPlan=api.mobieleTemperatuurLabelPlan(Array.from({length:7},(_,i)=>"2026-09-17T"+String(10+i).padStart(2,"0")+":00"),[10,12,11,9,10,13,12],7);
+assert.deepEqual(piekenPlan.extrema.map(e=>[e.i,e.type]),[[5,"piek"]],"Alleen de hoogste piek en het laagste dal krijgen een extra label; een dal op een anker en een lagere piek niet.");
+/* Praktijkcurve: 20° rond 16-17 uur en een nachtplateau van 15°. De drie-uursankers
+   tonen die waarden al (17:00 = 20°, 02:00 en 05:00 = 15°), dus geen extra labels. */
+const etmaalTijden=Array.from({length:24},(_,i)=>{const d=new Date(Date.UTC(2026,6,22,14+i));return d.toISOString().slice(0,13)+":00";});
+const etmaalTemp=etmaalTijden.map(t=>{const u=Number(t.slice(11,13));return u<=7?15:u<=17?Math.round(15+5*Math.sin((u-7)/10*Math.PI/2)):Math.round(20-5*(u-17)/7);});
+const etmaalPlan=api.mobieleTemperatuurLabelPlan(etmaalTijden,etmaalTemp,24);
+assert.deepEqual(etmaalPlan.ankers,[0,3,6,9,12,15,18,21],"Het etmaal houdt acht drie-uursankers.");
+assert.deepEqual(etmaalPlan.extrema,[],"Piek en dal met dezelfde waarde als een nabij drie-uursanker worden niet herhaald.");
 const start=api.geschatteSvgTekstBox("nu 19°",100,80,"start",12);
 assert(start&&start.x===100,"Start-anchor moet op de opgegeven x beginnen.");
 assert(start.y<80&&start.height>12,"Tekstbox moet de SVG-baseline conservatief omvatten.");

@@ -66,7 +66,7 @@ async function controleer(type,naam){
         const svg=document.getElementById("chart"),groep=svg.querySelector('g[data-q4-rain-periods="1"]'),g=S.geo;
         const asY=g.pt+g.ih+(g.M?20:22);
         const asEls=g&&g.M?[...svg.querySelectorAll('text[data-mobile-hour-axis="1"]')]:[...svg.querySelectorAll("text")]
-          .filter(el=>Math.abs(Number(el.getAttribute("y"))-asY)<0.1&&/^\d{2}$/.test((el.textContent||"").trim()));
+          .filter(el=>Math.abs(Number(el.getAttribute("y"))-asY)<0.1&&/^\d{2}:00$/.test((el.textContent||"").trim()));
         const asTijden=asEls.map(el=>(el.textContent||"").trim());
         const asX=asEls.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite);
         const startEls=groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')]:[];
@@ -139,7 +139,7 @@ async function controleer(type,naam){
         assert.deepEqual(uur24.asTijden,uur24.verwachtAsTijden,`${naam} ${breedte}: mobiele kloklabels volgen niet de forecasttijd-gedreven drie-uurscadans`);
         assert.ok(uur24.asTijden.every(t=>/^\d{2}:00$/.test(t)),`${naam} ${breedte}: mobiele uuras bevat geen expliciete lokale kloktijd: ${JSON.stringify(uur24.asTijden)}`);
         assert.deepEqual(uur24.asTijden,uur24.asBronTijden,`${naam} ${breedte}: mobiele uuras hoort niet bij de echte forecastpunten`);
-      }else assert.deepEqual(uur24.asTijden,["16","17","18","19","20","21","22"],`${naam} ${breedte}: compacte desktopuuras toont exact ieder zichtbaar uur`);
+      }else assert.deepEqual(uur24.asTijden,["16:00","17:00","18:00","19:00","20:00","21:00","22:00"],`${naam} ${breedte}: compacte desktopuuras toont exact ieder zichtbaar uur als HH:00`);
 
       const langer=await page.evaluate(()=>{
         S.dag=null;S.bereik=48;etmaal(S.i0,48);
