@@ -300,6 +300,9 @@ function positioneerNuLabel(svg){
     String(el.getAttribute("fill")||"")===String(CARMINE)
     &&Math.abs((eindig(el.getAttribute("r"))||0)-3)<0.2);
   if(!tekst||!punt) return;
+  // Desktop toont de huidige temperatuur al in de hero en bij het eerste
+  // grafiekpunt. De rode tijdlijn en stip blijven als aanwijzer zichtbaar.
+  if(!S.geo.M){tekst.remove();return;}
   const px=eindig(punt.getAttribute("cx")),py=eindig(punt.getAttribute("cy"));
   const top=eindig(S.geo.pt),bottom=top===null||!Number.isFinite(S.geo.ih)?null:top+S.geo.ih;
   const pos=nuLabelPositie(py,top,bottom,!!S.geo.M);

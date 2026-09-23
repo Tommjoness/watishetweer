@@ -77,7 +77,7 @@ const reporter=`<script>
 
     const nuLabel=[...chart.querySelectorAll('text')].find(el=>/^nu\\s+-?\\d+°$/i.test((el.textContent||'').trim()));
     const nuPunt=[...chart.querySelectorAll('circle')].find(el=>String(el.getAttribute('fill')||'')==='var(--carmine)'&&Math.abs(Number(el.getAttribute('r'))-3)<0.2);
-    let nuRustig=false,nuAfstand=null,nuBotst=null,nuHalo=null;
+    let nuRustig=desktop?!nuLabel&&!!nuPunt:false,nuAfstand=null,nuBotst=null,nuHalo=null;
     if(nuLabel&&nuPunt){
       const ny=Number(nuLabel.getAttribute('y')),cy=Number(nuPunt.getAttribute('cy'));
       const nr=nuLabel.getBoundingClientRect();
@@ -146,7 +146,11 @@ const reporter=`<script>
     const nightRijen=[...document.querySelectorAll('#nights .row.night:not(.kop)')],nightKnop=document.querySelector('#nights .nacht-meer');
     const nightZichtbaar=nightRijen.filter(el=>!el.hidden&&getComputedStyle(el).display!=='none');
     const nightWide=nightZichtbaar.map(el=>el.querySelector('.nmeta.wide')).filter(Boolean);
-    let nightAligned=true,nightRuim=true,nightCompact=true,nightExpand=true;
+    let nightAligned=true,nightRuim=true,nightCompact=true,nightExpand=true,nightDividerOk=true;
+    if(nightKnop&&nightZichtbaar.length){
+      nightDividerOk=parseFloat(getComputedStyle(nightKnop).borderTopWidth)===0
+        &&parseFloat(getComputedStyle(nightZichtbaar[nightZichtbaar.length-1]).borderBottomWidth)>0;
+    }
     if(desktop&&nightWide.length>1){
       const r0=nightWide[0].getBoundingClientRect();
       nightAligned=nightWide.slice(1).every(el=>{const r=el.getBoundingClientRect();return Math.abs(r.left-r0.left)<=1&&Math.abs(r.width-r0.width)<=1;});
@@ -205,7 +209,7 @@ const reporter=`<script>
     const labelDichtheidOk=desktop?labels.length>=5:compactMobile
       ?(anchorOk&&!missingAnchors&&labels.length===tempPunten.length)
       :(labels.length>=4&&labels.length===tempPunten.length);
-    document.body.dataset.browserTestResult=(brief&&briefingDagOk&&dagen>=7&&labelDichtheidOk&&botsingen===0&&dubbelNabij===0&&buiten===0&&lossePunten===0&&nuRustig&&scrubOk&&scrubKort&&neerslagkansVast&&tooltipCompact&&klokOk&&gridOk&&!statOverflow&&statsStabiel&&statsCentraal&&dagenLijnOk&&dagMmLeesbaar&&aqVult&&nightAligned&&nightRuim&&nightCompact&&nightExpand&&mobileKopOk&&uvOk&&zonSemantiekOk)?'ok':'fout';
+    document.body.dataset.browserTestResult=(brief&&briefingDagOk&&dagen>=7&&labelDichtheidOk&&botsingen===0&&dubbelNabij===0&&buiten===0&&lossePunten===0&&nuRustig&&scrubOk&&scrubKort&&neerslagkansVast&&tooltipCompact&&klokOk&&gridOk&&!statOverflow&&statsStabiel&&statsCentraal&&dagenLijnOk&&dagMmLeesbaar&&aqVult&&nightAligned&&nightRuim&&nightCompact&&nightExpand&&nightDividerOk&&mobileKopOk&&uvOk&&zonSemantiekOk)?'ok':'fout';
     document.body.dataset.browserLabels=String(labels.length);
     document.body.dataset.browserPunten=String(tempPunten.length);
     document.body.dataset.browserLossePunten=String(lossePunten);
