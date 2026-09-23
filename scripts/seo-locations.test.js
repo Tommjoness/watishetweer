@@ -16,8 +16,9 @@ for(const loc of LOCATIES){
   const url=plaatsUrl(loc),titel=plaatsTitel(loc),desc=plaatsBeschrijving(loc);
   assert.equal(url,`https://watishetweer.nl/weer/${loc.slug}/`);
   assert(titel.startsWith(`Weer ${loc.naam} vandaag`),`${loc.slug}: titel mist plaats/intentie`);
-  assert(titel.length<=70,`${loc.slug}: titel te lang (${titel.length})`);
-  assert(desc.includes(loc.naam)&&desc.includes("7-daagse verwachting"),`${loc.slug}: description mist kerninhoud`);
+  assert(titel.length<=65,`${loc.slug}: titel te lang voor weergave in Google (${titel.length})`);
+  assert(titel.includes("per uur"),`${loc.slug}: titel mist de zoekintentie "per uur"`);
+  assert(desc.includes(loc.naam)&&desc.includes("7-daagse verwachting")&&desc.includes("temperatuur")&&desc.includes("graden"),`${loc.slug}: description mist kerninhoud of zoekintentie`);
   assert(desc.length>=100&&desc.length<=170,`${loc.slug}: description ongeschikte lengte (${desc.length})`);
 
   const gerelateerd=gerelateerdePlaatsen(loc);

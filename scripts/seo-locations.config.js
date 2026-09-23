@@ -73,7 +73,12 @@ const POPULAIR=Object.freeze(LOCATIES.filter(x=>x.populair));
 const BASIS_URL="https://watishetweer.nl";
 
 function plaatsUrl(loc){return `${BASIS_URL}/weer/${loc.slug}/`;}
-function plaatsTitel(loc){return `Weer ${loc.naam} vandaag | watishetweer.nl`;}
-function plaatsBeschrijving(loc){return `Bekijk het actuele weer in ${loc.naam}, neerslag voor de komende uren en de 7-daagse verwachting. Met lokale tijden, luchtkwaliteit en nachtzicht.`;}
+/* Titel en beschrijving volgen de zoekvragen waarop plaatspagina's al het
+   dichtst bij pagina 1 staan (Search Console, aug–sep 2026): "vandaag",
+   "per uur", "graden" en "temperatuur" scoorden ruim beter dan alleen
+   "weer <plaats>". De titel blijft ook voor de langste plaatsnaam binnen
+   ongeveer 64 tekens, zodat Google hem niet afkapt. */
+function plaatsTitel(loc){return `Weer ${loc.naam} vandaag en per uur | watishetweer.nl`;}
+function plaatsBeschrijving(loc){return `Actuele temperatuur en het weer per uur in ${loc.naam}: hoeveel graden het nu is, neerslag voor de komende uren en de 7-daagse verwachting.`;}
 
 module.exports={LOCATIES,POPULAIR,BASIS_URL,plaatsUrl,plaatsTitel,plaatsBeschrijving};
