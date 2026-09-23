@@ -45,6 +45,7 @@ const reporter=`<script>
 (function(){
   function meet(){
   try{
+    const desktop=window.innerWidth>=1100;
     const chart=document.getElementById('chart'),svgBox=chart.getBoundingClientRect();
     const labels=[...chart.querySelectorAll('text')].filter(el=>{
       const ff=String(el.getAttribute('font-family')||'');
@@ -118,7 +119,7 @@ const reporter=`<script>
     }
     const klok=((document.getElementById('plaatstijd')||{}).textContent||'').trim();
     const klokOk=/^\\d{2}:\\d{2}$/.test(klok);
-    const desktop=window.innerWidth>=1100,stats=document.querySelector('.dashrow-hero .stats');
+    const stats=document.querySelector('.dashrow-hero .stats');
     const cols=stats?getComputedStyle(stats).gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length:0;
     const statOverflow=desktop&&stats?[...stats.querySelectorAll('.stat')].some(el=>el.scrollWidth>el.clientWidth+1):false;
     const zichtbareStats=stats?[...stats.querySelectorAll('.stat')].filter(el=>getComputedStyle(el).display!=='none'):[];
