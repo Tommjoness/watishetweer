@@ -443,6 +443,32 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert(fs.existsSync(darkPng)&&fs.statSync(darkPng).size>5000,`${vp.naam}: dark-mode screenshot ontbreekt of is verdacht klein`);
       }
 
+      if([320,375,390].includes(vp.width)){
+        /* Text-only zoom: vergroot de werkelijk zichtbare HTML-tekst met 125%,
+           terwijl viewport en kaarten gelijk blijven. SVG-labels zijn al op
+           hun eigen geometrie gecontroleerd. Bewaar een apart bewijsbeeld. */
+        const zoom=await page.evaluate(()=>{
+          const wortel=document.querySelector(".sheet"),walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+          const elementen=new Set();let tekst;
+          while((tekst=walker.nextNode())){
+            const el=tekst.parentElement;
+            if(!el||!tekst.textContent.trim()||el.closest("svg,script,style")||!(wortel?.contains(el)||el.closest(".seo-plaatsnav")))continue;
+            if(el.getClientRects().length)elementen.add(el);
+          }
+          const fonts=[...elementen].map(el=>({el,size:parseFloat(getComputedStyle(el).fontSize)})).filter(x=>Number.isFinite(x.size)&&x.size>0);
+          fonts.forEach(x=>x.el.style.setProperty("font-size",`${(x.size*1.25).toFixed(2)}px`,"important"));
+          const selectors=[".wiw-hour-toggle","#nights .nacht-meer","footer .footer-contact a",".seo-plaatsnav-alles"];
+          return {count:fonts.length,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,
+            doelen:selectors.map(selector=>{const r=document.querySelector(selector)?.getBoundingClientRect();return {selector,width:r?.width||0,left:r?.left??-1,right:r?.right??Infinity};})};
+        });
+        assert(zoom.count>60,`${vp.naam}: tekstzoom raakte te weinig zichtbare tekst (${zoom.count})`);
+        assert(zoom.overflow<=1,`${vp.naam}: 125% tekstzoom introduceert ${zoom.overflow}px horizontale overflow`);
+        for(const doel of zoom.doelen)assert(doel.width>=43.5&&doel.left>=-1&&doel.right<=vp.width+1,`${vp.naam}: 125% tekstzoom duwt ${doel.selector} buiten beeld (${JSON.stringify(doel)})`);
+        const zoomPng=path.join(evidence,`preview-${vp.width}-dark-textzoom-125.png`);
+        await page.screenshot({path:zoomPng,fullPage:true});
+        assert(fs.existsSync(zoomPng)&&fs.statSync(zoomPng).size>5000,`${vp.naam}: tekstzoom-screenshot ontbreekt`);
+      }
+
       /* Navigatie in dezelfde tab houdt sessionStorage bewust vast. Daarmee
          bewijzen we het nieuwe contract zonder de oude permanente localStorage-
          voorkeur opnieuw tot bron van waarheid te maken. */
