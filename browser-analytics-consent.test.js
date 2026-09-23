@@ -39,8 +39,13 @@ async function maakPagina(browserType,opt={}){
     viewport:opt.viewport||{width:390,height:844},
     colorScheme:opt.colorScheme||"light",
     locale:"nl-NL",
-    serviceWorkers:"block"
+    serviceWorkers:"block",
+    /* Playwright is zelf een geautomatiseerde browser; de productie-analytics
+       sluit die bewust uit. Deze fixture speelt daarom een gewone bezoeker,
+       tenzij de test juist de uitsluiting controleert. */
+    userAgent:opt.automatisering?undefined:"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
   });
+  if(!opt.automatisering)await context.addInitScript(()=>Object.defineProperty(Navigator.prototype,"webdriver",{configurable:true,get:()=>false}));
   if(opt.gpc)await context.addInitScript(()=>Object.defineProperty(navigator,"globalPrivacyControl",{configurable:true,value:true}));
   const events=[],google=[];
   await context.route("https://watishetweer.nl/**",async route=>{
@@ -198,6 +203,16 @@ async function controleerHerkomst(){
   }
 }
 
+async function controleerAutomatisering(){
+  const sessie=await maakPagina(chromium,{automatisering:true});
+  const {browser,page,events}=sessie;
+  try{
+    assert.equal(await page.evaluate(()=>navigator.webdriver),true,"fixture draait niet als geautomatiseerde browser");
+    await page.waitForTimeout(300);
+    assert.deepEqual(events,[],"eigen geautomatiseerde controles horen geen PostHog-data te sturen");
+  }finally{await browser.close();}
+}
+
 async function controleerGpc(){
   const sessie=await maakPagina(chromium,{gpc:true});
   const {browser,page,events,google}=sessie;
@@ -217,6 +232,7 @@ async function controleerGpc(){
   await controleerTaakmetingEnKeuze();
   await controleerToestaan();
   await controleerHerkomst();
+  await controleerAutomatisering();
   await controleerGpc();
-  console.log("Analytics-consentbrowsercontract groen: compacte toegankelijke banner, gelijke keuzes, GPC, vooraf geblokkeerde GA4, privacyveilige taakuitkomsten en herkomstcategorie zonder verwijzer in Chromium en WebKit.");
+  console.log("Analytics-consentbrowsercontract groen: compacte toegankelijke banner, gelijke keuzes, GPC, vooraf geblokkeerde GA4, privacyveilige taakuitkomsten, herkomstcategorie zonder verwijzer en uitsluiting van geautomatiseerde browsers in Chromium en WebKit.");
 })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});

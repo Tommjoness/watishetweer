@@ -49,6 +49,8 @@ assert(analytics.includes('[".chipplaats","saved_location_opened"]'),"openen van
 assert(analytics.includes('saved_locations:bewaard')&&analytics.includes('?"some":"none"'),"bewaarde plaatsen gaan alleen als ja/nee mee");
 assert(analytics.includes('window.addEventListener("appinstalled",()=>stuur("app_installed"),{once:true})'),"app-installatie hoort als generieke gebeurtenis te tellen");
 assert(analytics.includes('navigator.globalPrivacyControl===true'),"Global Privacy Control moet analytics uitschakelen");
+assert(analytics.includes('if(navigator.webdriver===true||GEAUTOMATISEERD.test(String(navigator.userAgent||"")))return;'),"geautomatiseerde browsers (eigen productiecontroles) mogen niet als bezoek tellen");
+assert(analytics.indexOf("GEAUTOMATISEERD.test")<analytics.indexOf("function stuur("),"automatiseringsuitsluiting moet vóór iedere capture gelden");
 assert(analytics.includes('navigator.doNotTrack==="1"'),"Do Not Track moet analytics uitschakelen");
 
 const ga4Marker="/* Google Analytics draait in basic consent mode";

@@ -15,6 +15,13 @@
      noch Google Analytics en wordt ook geen analytics-toestemming gevraagd. */
   if(navigator.globalPrivacyControl===true||navigator.doNotTrack==="1"||window.doNotTrack==="1")return;
 
+  /* Geautomatiseerde browsers zijn geen bezoekers. Onze eigen release- en
+     uurlijkse productiecontroles draaien tegen de echte site; zonder deze regel
+     bestond het grootste deel van de PostHog-data uit die testbezoeken. Ook
+     Lighthouse en bekende zoekmachinecrawlers tellen niet mee. */
+  const GEAUTOMATISEERD=/HeadlessChrome|Chrome-Lighthouse|Googlebot|bingbot|YandexBot|DuckDuckBot|Applebot|crawler|spider/i;
+  if(navigator.webdriver===true||GEAUTOMATISEERD.test(String(navigator.userAgent||"")))return;
+
   function tijdelijkId(){
     try{
       if(globalThis.crypto&&typeof globalThis.crypto.randomUUID==="function")return "anon_"+globalThis.crypto.randomUUID();

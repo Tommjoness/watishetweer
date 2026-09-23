@@ -48,7 +48,9 @@ function voerAnalyticsUit(opt={}){
     },
     navigator:{
       globalPrivacyControl:opt.gpc===true,
-      doNotTrack:opt.navigatorDnt||"0"
+      doNotTrack:opt.navigatorDnt||"0",
+      webdriver:opt.webdriver===true,
+      userAgent:opt.userAgent||"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
     },
     localStorage:local,
     window:{
@@ -136,6 +138,20 @@ for(const [referrer,verwacht] of [
 }
 assert.equal(voerAnalyticsUit({pathname:"/"})[0].payload.properties.launch_mode,"browser","zonder app-weergave hoort de startmodus browser te zijn");
 assert.equal(voerAnalyticsUit({pathname:"/",standalone:true})[0].payload.properties.launch_mode,"app","geïnstalleerde app-weergave hoort als app te tellen");
+
+/* Geautomatiseerde browsers (eigen productiecontroles, Lighthouse, crawlers)
+   tellen niet als bezoek; gewone browsers wel. */
+assert.equal(voerAnalyticsUit({pathname:"/",webdriver:true}).length,0,"navigator.webdriver (Playwright/Selenium) moet PostHog-capture blokkeren");
+for(const ua of [
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 Chrome-Lighthouse",
+  "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+  "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)"
+])assert.equal(voerAnalyticsUit({pathname:"/",userAgent:ua}).length,0,"geautomatiseerde user-agent hoort niet te tellen: "+ua);
+for(const ua of [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Linux; Android 10; Cubot X30) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"
+])assert(voerAnalyticsUit({pathname:"/",userAgent:ua}).length>=1,"gewone browser hoort wel te tellen: "+ua);
 
 assert.equal(voerAnalyticsUit({pathname:"/privacy",gpc:true}).length,0,"GPC moet alle PostHog-capture blokkeren");
 assert.equal(voerAnalyticsUit({pathname:"/privacy",navigatorDnt:"1"}).length,0,"navigator DNT moet alle PostHog-capture blokkeren");
