@@ -99,6 +99,50 @@ jobs:
           WEATHER_BUILD_SHA: ${{ env.SOURCE_SHA }}
         run: npm run build:cloudflare
 
+      # Eerst exact hetzelfde artifact als releasekandidaat (Pages-preview) uitrollen
+      # en volledig smoken. Pas als dat groen is, gaat hetzelfde public/ naar
+      # production; een rode kandidaat laat de live site dus ongemoeid.
+      - name: Deploy releasekandidaat naar Cloudflare Pages preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --no-install wrangler pages deploy public \
+            --project-name="$CLOUDFLARE_PROJECT" \
+            --branch=release-candidate \
+            --commit-hash="$SOURCE_SHA" \
+            --commit-message="Cloudflare releasekandidaat $SOURCE_SHA" \
+            --commit-dirty=true | tee /tmp/cloudflare-candidate.log
+
+      - name: Noteer releasekandidaat-URL
+        id: candidate_url
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="$(grep -Eo 'https://[[:alnum:]-]+\.watishetweer\.pages\.dev' /tmp/cloudflare-candidate.log | head -1)"
+          test -n "$URL"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          {
+            echo '## Cloudflare releasekandidaat'
+            echo
+            echo "Immutable: $URL"
+            echo
+            echo "Bron-SHA: $SOURCE_SHA"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Releasekandidaat: $URL"
+
+      - name: Wacht tot Pages Functions van de releasekandidaat actief zijn
+        env:
+          CLOUDFLARE_ROOT: ${{ steps.candidate_url.outputs.url }}
+          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+        run: node scripts/cloudflare-functions-readiness.js
+
+      - name: Smoke releasekandidaat vóór productie
+        env:
+          PREVIEW_ROOT: ${{ steps.candidate_url.outputs.url }}
+          EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+        run: node scripts/cloudflare-preview-smoke.js
+
       - name: Deploy exact naar Cloudflare Pages production
         shell: bash
         run: |

@@ -86,6 +86,24 @@ for (const naam of ["docs", "README.md"]) {
 assert.ok(/\|md\)\$\/i\.test\(n\)/.test(buildWeather), "build-weather.js moet Markdown op rootniveau uitsluiten");
 assert.ok(lees("scripts/cloudflare-output.js").includes("Interne documentatie mag niet in public/"), "cloudflare-output.js moet Markdown en docs/ in public/ weigeren");
 
+/* Productie krijgt pas het artifact nadat exact dezelfde build als releasekandidaat
+   (Pages-preview) readiness en de volledige smoke heeft doorstaan. */
+const productie = lees(".github/workflows/cloudflare-production.yml");
+const plek = naam => {
+  const i = productie.indexOf(`- name: ${naam}`);
+  assert.ok(i >= 0, `productieworkflow mist stap: ${naam}`);
+  return i;
+};
+const kandidaatDeploy = plek("Deploy releasekandidaat naar Cloudflare Pages preview");
+const kandidaatReady = plek("Wacht tot Pages Functions van de releasekandidaat actief zijn");
+const kandidaatSmoke = plek("Smoke releasekandidaat vóór productie");
+const productieDeploy = plek("Deploy exact naar Cloudflare Pages production");
+assert.ok(plek("Bouw Cloudflare productie-artifact") < kandidaatDeploy, "releasekandidaat gebruikt het zojuist gebouwde artifact");
+assert.ok(kandidaatDeploy < kandidaatReady && kandidaatReady < kandidaatSmoke && kandidaatSmoke < productieDeploy,
+  "releasekandidaat moet volledig gesmoked zijn vóórdat production wordt gedeployed");
+assert.ok(/--branch=release-candidate\b/.test(productie), "releasekandidaat gaat naar een vaste preview-branch, nooit naar main");
+assert.equal((productie.match(/--branch=main\b/g) || []).length, 1, "er is precies één productiedeploy");
+
 for (const script of ["scripts/platform-output-cleanup.js", "scripts/cloudflare-output.js", "scripts/cloudflare-preview-smoke.js", "scripts/cloudflare-edge-cache-smoke.js"]) {
   assert.ok(fs.existsSync(path.join(root, script)), `${script} ontbreekt`);
 }
