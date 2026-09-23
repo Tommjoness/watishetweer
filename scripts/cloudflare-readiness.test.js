@@ -76,6 +76,16 @@ assert.ok(nietGevonden.includes("Pagina niet gevonden"));
 assert.ok(nietGevonden.includes("href=\"/\""));
 assert.ok(lees("scripts/cloudflare-output.js").includes("404.html"));
 
+/* Interne repositorydocumentatie mag nooit via de productie-URL bereikbaar zijn:
+   de build kopieert haar niet en de Cloudflare-output weigert Markdown. */
+const nietPubliceren = /const NIET_PUBLICEREN=new Set\(\[([\s\S]*?)\]\);/.exec(buildWeather);
+assert.ok(nietPubliceren, "build-weather.js mist de NIET_PUBLICEREN-lijst");
+for (const naam of ["docs", "README.md"]) {
+  assert.ok(nietPubliceren[1].includes(`"${naam}"`), `build-weather.js moet ${naam} uitsluiten van public/`);
+}
+assert.ok(/\|md\)\$\/i\.test\(n\)/.test(buildWeather), "build-weather.js moet Markdown op rootniveau uitsluiten");
+assert.ok(lees("scripts/cloudflare-output.js").includes("Interne documentatie mag niet in public/"), "cloudflare-output.js moet Markdown en docs/ in public/ weigeren");
+
 for (const script of ["scripts/platform-output-cleanup.js", "scripts/cloudflare-output.js", "scripts/cloudflare-preview-smoke.js", "scripts/cloudflare-edge-cache-smoke.js"]) {
   assert.ok(fs.existsSync(path.join(root, script)), `${script} ontbreekt`);
 }
