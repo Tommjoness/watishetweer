@@ -3,7 +3,7 @@
 const fs=require("fs");
 const path=require("path");
 const SEO=require("./seo-foundation.config.js");
-const {MARKER,BRAND_LINK_MARKER,SHARE_IMAGE,BRON_H1,MERK_H1,BRON_APP_TITLE,MERK_APP_TITLE,maakBrandStructuredData}=require("./seo-foundation.js");
+const {MARKER,BRAND_LINK_MARKER,SHARE_IMAGE,SHARE_IMAGE_ALT,BRON_H1,MERK_H1,BRON_APP_TITLE,MERK_APP_TITLE,maakBrandStructuredData}=require("./seo-foundation.js");
 
 const ROOT=path.join(__dirname,"..");
 const OUT=path.join(ROOT,"public");
@@ -52,14 +52,14 @@ if(tel(html,`property="og:url" content="${SEO.canonical}"`)!==1)throw new Error(
 if(!html.includes(`property="og:site_name" content="${SEO.siteName}"`))throw new Error("og:site_name ontbreekt.");
 for(const tag of [
   `<meta property="og:image" content="${SHARE_IMAGE}">`,
-  '<meta property="og:image:width" content="512">',
-  '<meta property="og:image:height" content="512">',
-  `<meta property="og:image:alt" content="${SEO.siteName}">`,
-  '<meta name="twitter:card" content="summary">',
+  '<meta property="og:image:width" content="1200">',
+  '<meta property="og:image:height" content="630">',
+  `<meta property="og:image:alt" content="${SHARE_IMAGE_ALT}">`,
+  '<meta name="twitter:card" content="summary_large_image">',
   `<meta name="twitter:title" content="${SEO.title}">`,
   `<meta name="twitter:description" content="${SEO.description.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}">`,
   `<meta name="twitter:image" content="${SHARE_IMAGE}">`,
-  `<meta name="twitter:image:alt" content="${SEO.siteName}">`
+  `<meta name="twitter:image:alt" content="${SHARE_IMAGE_ALT}">`
 ])if(!html.includes(tag))throw new Error("Share-metadata ontbreekt: "+tag);
 
 const ld=[...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];

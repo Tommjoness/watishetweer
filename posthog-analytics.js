@@ -139,6 +139,7 @@
   const interacties=[
     ["#chipadd","saved_location_added"],
     [".chipplaats","saved_location_opened"],
+    ["#chipdeel","location_share_requested"],
     ["#days .row.day:not(.kop)","forecast_day_selected"],
     [".wiw-hour-toggle","hourly_details_toggled"],
     ["#nights .nacht-meer","night_details_toggled"]

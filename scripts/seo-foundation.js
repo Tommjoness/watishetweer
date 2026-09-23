@@ -3,7 +3,10 @@
 const SEO=require("./seo-foundation.config.js");
 const MARKER="<!-- WEATHER NOW SEO FOUNDATION -->";
 const BRAND_LINK_MARKER="<!-- WEATHER NOW BRAND LINK -->";
-const SHARE_IMAGE="https://watishetweer.nl/icon-512.png";
+/* Deelkaart 1200×630 (scripts/generate-share-card.js). Plaatsroutes erven deze
+   metadata van de homepage, dus iedere gedeelde weerpagina toont dezelfde kaart. */
+const SHARE_IMAGE="https://watishetweer.nl/share-card.png";
+const SHARE_IMAGE_ALT="watishetweer.nl: het weer per uur en voor 7 dagen";
 const BRON_H1="<h1>Wat is het weer?</h1>";
 const MERK_H1=`<h1>${SEO.siteName}</h1>`;
 const BRON_APP_TITLE='<meta name="apple-mobile-web-app-title" content="Wat is het weer?">';
@@ -72,14 +75,14 @@ function pasSeoFoundationToe(html){
     `<meta property="og:description" content="${attr(SEO.description)}">`,
     `<meta property="og:url" content="${attr(SEO.canonical)}">`,
     `<meta property="og:image" content="${SHARE_IMAGE}">`,
-    `<meta property="og:image:width" content="512">`,
-    `<meta property="og:image:height" content="512">`,
-    `<meta property="og:image:alt" content="${attr(SEO.siteName)}">`,
-    `<meta name="twitter:card" content="summary">`,
+    `<meta property="og:image:width" content="1200">`,
+    `<meta property="og:image:height" content="630">`,
+    `<meta property="og:image:alt" content="${attr(SHARE_IMAGE_ALT)}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${attr(SEO.title)}">`,
     `<meta name="twitter:description" content="${attr(SEO.description)}">`,
     `<meta name="twitter:image" content="${SHARE_IMAGE}">`,
-    `<meta name="twitter:image:alt" content="${attr(SEO.siteName)}">`,
+    `<meta name="twitter:image:alt" content="${attr(SHARE_IMAGE_ALT)}">`,
     `<script type="application/ld+json">${websiteJson}</script>`
   ].join("\n");
   bron=bron.replace(nieuweDescription,nieuweDescription+"\n"+blok);
@@ -99,4 +102,4 @@ function pasSeoFoundationToe(html){
   return bron;
 }
 
-module.exports={MARKER,BRAND_LINK_MARKER,SHARE_IMAGE,BRON_H1,MERK_H1,BRON_APP_TITLE,MERK_APP_TITLE,maakBrandStructuredData,pasSeoFoundationToe};
+module.exports={MARKER,BRAND_LINK_MARKER,SHARE_IMAGE,SHARE_IMAGE_ALT,BRON_H1,MERK_H1,BRON_APP_TITLE,MERK_APP_TITLE,maakBrandStructuredData,pasSeoFoundationToe};

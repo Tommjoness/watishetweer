@@ -2666,6 +2666,7 @@ function chips(){
   const zelfde=p=>Math.abs(p.lat-S.lat)<0.02&&Math.abs(p.lon-S.lon)<0.02;
   let rij=lijst.map((p,i)=>`<span class="chip${zelfde(p)?" on":""}"><button type="button" class="chipplaats" data-i="${i}" title="Toon het weer voor ${esc(p.label)}">${esc(p.label)}</button><button type="button" class="x" data-x="${i}" title="Verwijderen" aria-label="Verwijder ${esc(p.label)} uit bewaarde plaatsen">×</button></span>`).join("");
   if(!lijst.some(zelfde)&&S.lat!=null) rij+=`<button type="button" class="chip add" id="chipadd" title="Voeg deze plaats toe aan je lijst">+ ${esc(S.label)} bewaren</button>`;
+  if(S.lat!=null) rij+=`<button type="button" class="chip add deel" id="chipdeel" title="Deel het weer voor ${esc(S.label)}">Delen</button>`;
   const c=document.getElementById("chips");
   /* v67: kop en chiprij zijn twee losse elementen in plaats van één platte
      rij spans, zodat de kop nooit meer op dezelfde regel als een chip kan
@@ -2691,6 +2692,39 @@ function chips(){
     };
     add.addEventListener("click",bewaar);
   }
+  const deel=document.getElementById("chipdeel");
+  if(deel) deel.addEventListener("click",()=>deelPlaats(deel));
+}
+
+/* ---------- delen ---------- */
+/* Op een eigen plaatspagina (/weer/amsterdam/) delen we die schone URL. Anders
+   de homepage met plaatsnaam en coördinaten op twee decimalen, ongeveer 1 km:
+   genoeg voor het weer. De adresbalk houdt drie decimalen (~100 m), en wie via
+   "Mijn locatie" deelt, zou daarmee vrijwel het eigen adres meesturen. */
+function deelUrl(){
+  const route=window.__WEATHERNOW_ROUTE_LOCATION__;
+  const basis=/^https?:$/i.test(location.protocol)?location.origin:"https://watishetweer.nl";
+  if(route&&route.slug&&Number(S.lat)===Number(route.lat)&&Number(S.lon)===Number(route.lon))
+    return basis+"/weer/"+route.slug+"/";
+  const u=new URL("/",basis);
+  u.searchParams.set("lat",Number(S.lat).toFixed(2));u.searchParams.set("lon",Number(S.lon).toFixed(2));
+  u.searchParams.set("plaats",S.label);
+  if(S.land) u.searchParams.set("land",S.land);
+  return u.href;
+}
+async function deelPlaats(knop){
+  const url=deelUrl(),titel="Weer in "+S.label+" | watishetweer.nl";
+  if(navigator.share){
+    try{await navigator.share({title:titel,text:"Het weer in "+S.label+", per uur en voor 7 dagen.",url});}
+    catch(e){/* annuleren in het deelmenu is geen fout */}
+    return;
+  }
+  let gekopieerd=false;
+  try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(url);gekopieerd=true;}}catch(e){}
+  if(!gekopieerd){window.prompt("Kopieer deze link:",url);return;}
+  knop.textContent="Link gekopieerd";
+  clearTimeout(deelPlaats.timer);
+  deelPlaats.timer=setTimeout(()=>{if(knop.isConnected)knop.textContent="Delen";},2500);
 }
 
 /* ---------- meeschuivende balk ---------- */

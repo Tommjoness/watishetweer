@@ -23,8 +23,8 @@ for(const [naam,html] of [["root",rootHtml],["Amsterdam-route",routeHtml]]){
     'Officiële titel:','National Weather Service'
   ])if(!html.includes(vereist))throw new Error(naam+": staff-invariant ontbreekt: "+vereist);
   if(html.includes('id="weekbron-uitleg"'))throw new Error(naam+": losse weekbrede neerslaguitleg is teruggekeerd");
-  if(!html.includes('property="og:image" content="https://watishetweer.nl/icon-512.png"'))throw new Error(naam+": og:image ontbreekt");
-  if(!html.includes('name="twitter:image" content="https://watishetweer.nl/icon-512.png"'))throw new Error(naam+": twitter:image ontbreekt");
+  if(!html.includes('property="og:image" content="https://watishetweer.nl/share-card.png"'))throw new Error(naam+": og:image ontbreekt");
+  if(!html.includes('name="twitter:image" content="https://watishetweer.nl/share-card.png"'))throw new Error(naam+": twitter:image ontbreekt");
 }
 
 if(!rootHtml.includes('hard.gedeeldeUrlCoordinaten(p)'))throw new Error("Root-startup gebruikt niet de bestaande centrale coordinate-validator.");

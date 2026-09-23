@@ -171,8 +171,8 @@ async function kiesZoekresultaat(page,naam){
     assert(eerste.tabel>0,"toegankelijke grafiektabel is leeg");
     assert.equal(eerste.main,1,"productie heeft niet exact één main-landmark");
     assert(eerste.skip,"skiplink ontbreekt op productie");
-    assert.equal(eerste.og,ROOT+"/icon-512.png","og:image wijkt af");
-    assert.equal(eerste.twitter,ROOT+"/icon-512.png","twitter:image wijkt af");
+    assert.equal(eerste.og,ROOT+"/share-card.png","og:image wijkt af");
+    assert.equal(eerste.twitter,ROOT+"/share-card.png","twitter:image wijkt af");
 
     const grafiekSummary=page.locator("#chartdata > summary");
     await grafiekSummary.focus();await page.keyboard.press("Enter");
