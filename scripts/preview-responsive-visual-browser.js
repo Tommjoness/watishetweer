@@ -458,11 +458,13 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const fonts=[...elementen].map(el=>({el,size:parseFloat(getComputedStyle(el).fontSize)})).filter(x=>Number.isFinite(x.size)&&x.size>0);
           fonts.forEach(x=>x.el.style.setProperty("font-size",`${(x.size*1.25).toFixed(2)}px`,"important"));
           const selectors=[".wiw-hour-toggle","#nights .nacht-meer","footer .footer-contact a",".seo-plaatsnav-alles"];
-          return {count:fonts.length,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,
+          const headers=[...document.querySelectorAll("#wiw-hour-table thead th")].map(el=>({text:el.textContent.trim(),scroll:el.scrollWidth,client:el.clientWidth}));
+          return {count:fonts.length,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,headers,
             doelen:selectors.map(selector=>{const r=document.querySelector(selector)?.getBoundingClientRect();return {selector,width:r?.width||0,left:r?.left??-1,right:r?.right??Infinity};})};
         });
         assert(zoom.count>60,`${vp.naam}: tekstzoom raakte te weinig zichtbare tekst (${zoom.count})`);
         assert(zoom.overflow<=1,`${vp.naam}: 125% tekstzoom introduceert ${zoom.overflow}px horizontale overflow`);
+        assert(zoom.headers.length===4&&zoom.headers.every(h=>h.scroll<=h.client+1),`${vp.naam}: uurtabelkop wordt bij 125% tekstzoom afgeknipt (${JSON.stringify(zoom.headers)})`);
         for(const doel of zoom.doelen)assert(doel.width>=43.5&&doel.left>=-1&&doel.right<=vp.width+1,`${vp.naam}: 125% tekstzoom duwt ${doel.selector} buiten beeld (${JSON.stringify(doel)})`);
         const zoomPng=path.join(evidence,`preview-${vp.width}-dark-textzoom-125.png`);
         await page.screenshot({path:zoomPng,fullPage:true});

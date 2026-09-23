@@ -192,6 +192,7 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
    regelruimte; de aparte SEO-plaatsnavigatie blijft onaangeraakt. */
 @media(max-width:430px){
   html body footer:nth-of-type(n){margin-top:16px!important;padding-top:10px!important;border-top:1px solid var(--rule-soft);grid-template-columns:repeat(2,minmax(0,1fr))!important;row-gap:4px!important}
+  .wiw-hour-table thead th{white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.2!important}
   footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important}
   footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important}
   footer > details.footer-details{grid-column:1 / -1!important;grid-row:4!important}
