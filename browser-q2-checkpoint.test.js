@@ -152,7 +152,8 @@ async function controleer(page,naam,breedte){
         source:moonlab&&moonlab.getAttribute("data-maan-fase")!==null?Number(moonlab.getAttribute("data-maan-fase")):null,
         rendered:moonlabSvg&&moonlabSvg.getAttribute("data-fase")!==null?Number(moonlabSvg.getAttribute("data-fase")):null
       },
-      viewBox:{w:vb.width,h:vb.height},regenPeriodeLabels:chart.querySelectorAll('g[data-q4-rain-periods] text').length,bots,nu:nu.map(x=>x.tekst),tempLabels:gewone.length,tempBuiten,
+      viewBox:{w:vb.width,h:vb.height},regenPeriodeLabels:chart.querySelectorAll('g[data-q4-rain-periods] text').length,bots,nu:nu.map(x=>x.tekst),
+      nuMarkering:!!chart.querySelector('line[stroke="var(--carmine)"]')&&!!chart.querySelector('circle[fill="var(--carmine)"]'),tempLabels:gewone.length,tempBuiten,
       canonicalBeste:[...nights.querySelectorAll(".nachtadvies")].filter(x=>/Beste periode\s+\d{2}:\d{2}/i.test(x.textContent||"")).length
     };
   });
@@ -198,7 +199,8 @@ async function controleer(page,naam,breedte){
   const minH=mobiel?(natMetPeriodeLabels?296:220):basisH;
   const maxH=mobiel?(natMetPeriodeLabels?296:basisH):basisH+100;
   assert.ok(r.viewBox.h>=minH&&r.viewBox.h<=maxH,`${naam} ${breedte}px: grafiekhoogte blijft binnen het bedoelde ${mobiel?(natMetPeriodeLabels?"natte mobiele labelreserve":"mobiele compact"):"desktop"}-budget (${r.viewBox.h}px)`);
-  assert.deepEqual(r.nu,["nu 21°"],`${naam} ${breedte}px: exact één actuele nu-markering met de juiste afgeronde temperatuur`);
+  assert.deepEqual(r.nu,mobiel?["nu 21°"]:[],`${naam} ${breedte}px: mobiel één actuele waarde, desktop geen herhaling`);
+  assert.equal(r.nuMarkering,true,`${naam} ${breedte}px: verticale nu-lijn en stip blijven zichtbaar`);
   if(mobiel)assert.ok(r.tempLabels>=4,`${naam} ${breedte}px: mobiel houdt meerdere temperatuurreferenties naast het actuele punt (${r.tempLabels})`);
   else assert.ok(r.tempLabels>=6,`${naam} ${breedte}px: desktop houdt voldoende zichtbare temperatuurreferenties`);
   assert.deepEqual(r.tempBuiten,[],`${naam} ${breedte}px: temperatuurcijfers blijven binnen grafiek`);

@@ -48,6 +48,7 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
     gebruikt.add(beste);gekoppeldeLabels.push(beste);
   });
   const currentEl=tekstEls.find(el=>String(el.textContent||'').trim()==='nu 20°')||null;
+  const currentMarker=!!svg.querySelector('line[stroke="var(--carmine)"]')&&!!svg.querySelector('circle[fill="var(--carmine)"]');
   const tempEls=[...gekoppeldeLabels,...(currentEl?[currentEl]:[])];
   const dozen=tempEls.map(el=>{const b=el.getBBox();return {t:String(el.textContent||'').trim(),x:b.x,y:b.y,w:b.width,h:b.height};});
   const botsingen=[];
@@ -60,7 +61,7 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
   const labels=tekstEls.map(x=>String(x.textContent||'').trim());
   const zonEl=document.getElementById('suntimes'),zonTekst=String(zonEl&&zonEl.textContent||'').replace(/\\s+/g,' ').trim();
   zet('idx18',idx18);zet('idx17',idx17);zet('indices',dotIndices.join(',')||'geen');zet('geon',S.geo&&S.geo.n);zet('geoti0',geoTijden[0]||'geen');
-  zet('dot17',dot17?'ja':'nee');zet('current',currentEl?'ja':'nee');zet('future-count',toekomstigeIndices.length);zet('paired-count',gekoppeldeLabels.length);zet('missing',missend.length?missend.join(','):'geen');zet('label-missing',labelMissend.length?labelMissend.join(','):'geen');zet('paired-labels',gekoppeldeLabels.map(el=>String(el.textContent||'').trim()).join(','));zet('expected-labels',verwacht.join(','));zet('collision',botsingen.length?botsingen.join('|'):'geen');
+  zet('dot17',dot17?'ja':'nee');zet('current',currentEl?'ja':'nee');zet('marker',currentMarker?'ja':'nee');zet('future-count',toekomstigeIndices.length);zet('paired-count',gekoppeldeLabels.length);zet('missing',missend.length?missend.join(','):'geen');zet('label-missing',labelMissend.length?labelMissend.join(','):'geen');zet('paired-labels',gekoppeldeLabels.map(el=>String(el.textContent||'').trim()).join(','));zet('expected-labels',verwacht.join(','));zet('collision',botsingen.length?botsingen.join('|'):'geen');
   zet('sun-copy',zonTekst);zet('height',h);zet('rain',rain?'ja':'nee');zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},220),{once:true});
 </script>`;
@@ -72,7 +73,7 @@ try{
   if(r.status!==0)throw new Error("browser exit "+r.status+": "+String(r.stderr||"").slice(-1200));
   const dom=r.stdout||"",v=k=>{const m=new RegExp('data-live-chart-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
-  if(v('current')!=='ja')throw new Error("rode actuele nu-markering ontbreekt of mist de actuele temperatuur");
+  if(v('current')!=='nee'||v('marker')!=='ja')throw new Error("desktop herhaalt de actuele temperatuur of mist de rode tijdlijn/stip");
   if(Number(v('idx18'))<0)throw new Error("18:00 ontbreekt uit de zichtbare provider-as; geo.TI0="+v('geoti0'));
   if(v('dot17')!=='nee')throw new Error("17:00-modeluur wordt niet als redundante actuele waarde onderdrukt");
   if(v('missing')!=='geen')throw new Error("niet ieder toekomstig desktopuur heeft een temperatuurpunt/label; ontbrekende indices="+v('missing')+", aanwezig="+v('indices'));

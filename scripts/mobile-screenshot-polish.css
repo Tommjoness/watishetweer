@@ -122,7 +122,6 @@ footer .bron-bronnen .bronitem{
     margin:4px 0 0;
     padding:12px 0 3px;
     border:0;
-    border-top:1px solid var(--rule);
     text-align:left;
     color:var(--ink-70);
     background:transparent;
@@ -132,7 +131,7 @@ footer .bron-bronnen .bronitem{
     letter-spacing:.1em;
     text-transform:uppercase;
   }
-  #nights .nacht-meer:hover{color:var(--ink);border-top-color:var(--ink)}
+  #nights .nacht-meer:hover{color:var(--ink)}
 
   /* "Vandaag" is op mobiel bewust langer dan de overige korte dagnamen. De
      naamkolom krijgt daarom de 56 px die de eerdere maatvoering al veronderstelde;
