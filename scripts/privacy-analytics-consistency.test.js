@@ -17,6 +17,8 @@ assert(over.includes("geen gebruikersaccount of advertentietracking"),"Over-pagi
 assert(over.includes("privacygerichte bezoekstatistieken"),"Over-pagina moet bezoekstatistieken transparant benoemen");
 assert(privacy.includes("geen account of advertentietracking"),"Privacyverklaring moet het ontbreken van account en advertentietracking blijven benoemen");
 assert(privacy.includes("privacygerichte bezoekstatistieken"),"Privacyverklaring moet privacygerichte bezoekstatistieken blijven benoemen");
+assert(privacy.includes("herkomstcategorie")&&privacy.includes("dat adres zelf, de domeinnaam en eventuele zoektermen worden niet verstuurd"),"Privacyverklaring moet de grove herkomstcategorie en het niet-versturen van de verwijzer uitleggen");
+assert(privacy.includes("als app of in de browser")&&privacy.includes("Welke plaatsen je hebt bewaard, gaat nooit mee."),"Privacyverklaring moet startmodus en het ja/nee-signaal voor bewaarde plaatsen uitleggen");
 for(const provider of ["PostHog Cloud EU","Cloudflare Web Analytics","Google Analytics 4"]){
   assert(privacy.includes(provider),"Privacyverklaring mist analyticsprovider: "+provider);
 }
@@ -46,14 +48,18 @@ function voerAnalyticsUit(opt={}){
     },
     navigator:{
       globalPrivacyControl:opt.gpc===true,
-      doNotTrack:opt.navigatorDnt||"0"
+      doNotTrack:opt.navigatorDnt||"0",
+      webdriver:opt.webdriver===true,
+      userAgent:opt.userAgent||"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
     },
     localStorage:local,
     window:{
       doNotTrack:opt.windowDnt||"0",
-      innerWidth:1280
+      innerWidth:1280,
+      matchMedia:opt.standalone?(media=>({matches:media==="(display-mode: standalone)"})):undefined
     },
     document:{
+      referrer:opt.referrer||"",
       getElementById(id){return id==="q"&&opt.withSearchInput?q:null;},
       querySelector(){return null;}
     },
@@ -105,6 +111,47 @@ assert.equal(zoekCaptures.length,2,"een ingevuld zoekveld hoort alleen pageview 
 assert.equal(zoekCaptures[1].payload.event,"weather_search_started");
 assert(!JSON.stringify(zoekCaptures[1].payload).includes("Almere"),"ingetypte plaatsnaam mag geen eventproperty worden");
 assert(!JSON.stringify(zoekCaptures[1].payload).includes("52.3702"),"ingetypte coördinaten mogen geen eventproperty worden");
+
+/* Herkomst en startmodus: alleen vaste categorieën, nooit het verwijzende adres,
+   het domein of een zoekterm. */
+for(const [referrer,verwacht] of [
+  ["","none"],
+  ["niet-een-url","none"],
+  ["https://www.google.nl/search?q=weer+almere","search"],
+  ["https://www.bing.com/search?q=weer%20utrecht","search"],
+  ["https://duckduckgo.com/?q=regen+zwolle","search"],
+  ["https://chatgpt.com/c/abc123","ai_assistant"],
+  ["https://www.perplexity.ai/search/weer-almere","ai_assistant"],
+  ["https://gemini.google.com/app/xyz","ai_assistant"],
+  ["https://watishetweer.nl/weer/almere/","internal"],
+  ["https://www.watishetweer.nl/","internal"],
+  ["https://nieuws.example.org/artikel?id=7","other"],
+  ["https://google.evil.example/","other"]
+]){
+  const pv=voerAnalyticsUit({pathname:"/weer/almere/",referrer})[0];
+  assert.equal(pv.payload.properties.entry_source,verwacht,"herkomstcategorie voor "+JSON.stringify(referrer));
+  assert(["search","ai_assistant","internal","other","none"].includes(pv.payload.properties.entry_source),"alleen vaste herkomstcategorieën zijn toegestaan");
+  const serialized=JSON.stringify(pv.payload);
+  for(const geheim of ["google","bing","duckduckgo","chatgpt","perplexity","gemini","example","almere","utrecht","zwolle","abc123","q="]){
+    assert(!serialized.toLowerCase().includes(geheim),"herkomst lekt verwijzer-inhoud naar analytics: "+geheim+" (bron "+referrer+")");
+  }
+}
+assert.equal(voerAnalyticsUit({pathname:"/"})[0].payload.properties.launch_mode,"browser","zonder app-weergave hoort de startmodus browser te zijn");
+assert.equal(voerAnalyticsUit({pathname:"/",standalone:true})[0].payload.properties.launch_mode,"app","geïnstalleerde app-weergave hoort als app te tellen");
+
+/* Geautomatiseerde browsers (eigen productiecontroles, Lighthouse, crawlers)
+   tellen niet als bezoek; gewone browsers wel. */
+assert.equal(voerAnalyticsUit({pathname:"/",webdriver:true}).length,0,"navigator.webdriver (Playwright/Selenium) moet PostHog-capture blokkeren");
+for(const ua of [
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 Chrome-Lighthouse",
+  "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+  "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)"
+])assert.equal(voerAnalyticsUit({pathname:"/",userAgent:ua}).length,0,"geautomatiseerde user-agent hoort niet te tellen: "+ua);
+for(const ua of [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Linux; Android 10; Cubot X30) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"
+])assert(voerAnalyticsUit({pathname:"/",userAgent:ua}).length>=1,"gewone browser hoort wel te tellen: "+ua);
 
 assert.equal(voerAnalyticsUit({pathname:"/privacy",gpc:true}).length,0,"GPC moet alle PostHog-capture blokkeren");
 assert.equal(voerAnalyticsUit({pathname:"/privacy",navigatorDnt:"1"}).length,0,"navigator DNT moet alle PostHog-capture blokkeren");

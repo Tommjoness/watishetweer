@@ -15,7 +15,7 @@ const html=`<!doctype html>
 <div id="state" class="msg">Gegevens ophalen.</div>
 <main id="app" style="display:none;visibility:hidden">
   <span id="t">–</span><span id="stamp"></span>
-  <button id="chipadd" class="chip add" type="button">Plaats bewaren</button>
+  <div id="chips"><span class="chip"><button class="chipplaats" type="button">Utrecht</button></span><button id="chipadd" class="chip add" type="button">Plaats bewaren</button></div>
   <div id="days"><button class="row day" type="button">Morgen</button></div>
   <button class="wiw-hour-toggle" type="button">Alle uren bekijken</button>
   <div id="nights"><button class="nacht-meer" type="button">Meer nachten bekijken</button></div>
@@ -39,8 +39,13 @@ async function maakPagina(browserType,opt={}){
     viewport:opt.viewport||{width:390,height:844},
     colorScheme:opt.colorScheme||"light",
     locale:"nl-NL",
-    serviceWorkers:"block"
+    serviceWorkers:"block",
+    /* Playwright is zelf een geautomatiseerde browser; de productie-analytics
+       sluit die bewust uit. Deze fixture speelt daarom een gewone bezoeker,
+       tenzij de test juist de uitsluiting controleert. */
+    userAgent:opt.automatisering?undefined:"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
   });
+  if(!opt.automatisering)await context.addInitScript(()=>Object.defineProperty(Navigator.prototype,"webdriver",{configurable:true,get:()=>false}));
   if(opt.gpc)await context.addInitScript(()=>Object.defineProperty(navigator,"globalPrivacyControl",{configurable:true,value:true}));
   const events=[],google=[];
   await context.route("https://watishetweer.nl/**",async route=>{
@@ -68,7 +73,7 @@ async function maakPagina(browserType,opt={}){
     await route.fulfill({status:200,contentType:"application/javascript",body:""});
   });
   const page=await context.newPage();
-  await page.goto("https://watishetweer.nl/",{waitUntil:"load"});
+  await page.goto("https://watishetweer.nl/",{waitUntil:"load",referer:opt.referer});
   return {browser,context,page,events,google};
 }
 
@@ -150,14 +155,20 @@ async function controleerTaakmetingEnKeuze(){
     await page.locator("#q").fill("Niet meesturen");
     await page.locator("#res button").click();
     await page.locator("#chipadd").click();
+    await page.locator("#chips .chipplaats").click();
     await page.locator("#days .row.day").click();
     await page.locator(".wiw-hour-toggle").click();
     await page.locator("#nights .nacht-meer").click();
-    for(const naam of ["weather_search_started","weather_search_result_selected","saved_location_added","forecast_day_selected","hourly_details_toggled","night_details_toggled"])await wachtOpEvent(events,naam);
+    for(const naam of ["weather_search_started","weather_search_result_selected","saved_location_added","saved_location_opened","forecast_day_selected","hourly_details_toggled","night_details_toggled"])await wachtOpEvent(events,naam);
     const klaar=events.find(event=>event.event==="weather_view_ready");
+    assert.equal(klaar.properties.saved_locations,"some","zichtbare bewaarde plaatsen horen alleen als ja/nee-signaal mee te gaan");
+    for(const event of events){
+      assert.equal(event.properties.entry_source,"none","direct geopende pagina hoort herkomst none te hebben");
+      assert.equal(event.properties.launch_mode,"browser","browserweergave hoort startmodus browser te hebben");
+    }
     assert(["under_1s","1_to_2s","2_to_5s","5_to_10s","over_10s"].includes(klaar.properties.load_time_bucket),"weeruitkomst mist begrensde laadduurgroep");
     const serialisatie=JSON.stringify(events);
-    for(const verboden of ["Niet meesturen","52.35","Almere","19 graden"]){
+    for(const verboden of ["Niet meesturen","52.35","Almere","19 graden","Utrecht"]){
       assert(!serialisatie.includes(verboden),`analytics lekt verboden inhoud: ${verboden}`);
     }
     await page.locator('[data-keuze="denied"]').click();
@@ -175,6 +186,30 @@ async function controleerToestaan(){
     const start=Date.now();while(!google.length&&Date.now()-start<2000)await wacht(25);
     assert.equal(await page.evaluate(()=>localStorage.getItem("weerbriefing.ga4.consent.v1")),"granted","toestemming wordt niet lokaal bewaard");
     assert.equal(google.length,1,"Google-tag wordt na toestemming niet exact één keer geladen");
+  }finally{await browser.close();}
+}
+
+async function controleerHerkomst(){
+  for(const [referer,verwacht] of [["https://www.google.nl/search?q=weer+almere","search"],["https://chatgpt.com/c/geheim123","ai_assistant"]]){
+    const sessie=await maakPagina(chromium,{referer});
+    const {browser,page,events}=sessie;
+    try{
+      await wachtOpEvent(events,"$pageview");
+      assert.equal(await page.evaluate(()=>document.referrer),referer,"browserfixture zet de verwijzer niet echt");
+      assert.equal(events[0].properties.entry_source,verwacht,"echte browser: herkomstcategorie voor "+referer);
+      const serialisatie=JSON.stringify(events).toLowerCase();
+      for(const verboden of ["google","chatgpt","almere","geheim123","q="])assert(!serialisatie.includes(verboden),"echte browser lekt verwijzer-inhoud: "+verboden);
+    }finally{await browser.close();}
+  }
+}
+
+async function controleerAutomatisering(){
+  const sessie=await maakPagina(chromium,{automatisering:true});
+  const {browser,page,events}=sessie;
+  try{
+    assert.equal(await page.evaluate(()=>navigator.webdriver),true,"fixture draait niet als geautomatiseerde browser");
+    await page.waitForTimeout(300);
+    assert.deepEqual(events,[],"eigen geautomatiseerde controles horen geen PostHog-data te sturen");
   }finally{await browser.close();}
 }
 
@@ -196,6 +231,8 @@ async function controleerGpc(){
   await meetBanner(webkit,"WebKit 390 licht",{width:390,height:844},"light");
   await controleerTaakmetingEnKeuze();
   await controleerToestaan();
+  await controleerHerkomst();
+  await controleerAutomatisering();
   await controleerGpc();
-  console.log("Analytics-consentbrowsercontract groen: compacte toegankelijke banner, gelijke keuzes, GPC, vooraf geblokkeerde GA4 en privacyveilige taakuitkomsten in Chromium en WebKit.");
+  console.log("Analytics-consentbrowsercontract groen: compacte toegankelijke banner, gelijke keuzes, GPC, vooraf geblokkeerde GA4, privacyveilige taakuitkomsten, herkomstcategorie zonder verwijzer en uitsluiting van geautomatiseerde browsers in Chromium en WebKit.");
 })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});

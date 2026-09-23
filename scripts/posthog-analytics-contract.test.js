@@ -38,7 +38,19 @@ assert(analytics.includes('"$process_person_profile":false'),"events moeten anon
 assert(analytics.includes('credentials:"omit"'),"PostHog-request mag geen browsercredentials meesturen");
 assert(analytics.includes('referrerPolicy:"no-referrer"'),"PostHog-request mag geen Referer lekken");
 assert(analytics.includes('return "/weer/:location"'),"weerroutes moeten plaatsnamen vóór PostHog-capture generaliseren");
+/* Herkomst en startmodus: de verwijzer wordt uitsluitend in de categoriefunctie
+   gelezen en alleen als vaste categorie verstuurd. */
+assert.equal((analytics.match(/document\.referrer/g)||[]).length,1,"document.referrer mag maar op één plek worden gelezen");
+assert(analytics.includes("const entrySource=herkomstCategorie(document.referrer);"),"verwijzer moet direct naar een categorie worden omgezet");
+assert(analytics.includes('const HERKOMST_CATEGORIEEN=Object.freeze(["search","ai_assistant","internal","other","none"]);'),"vaste set herkomstcategorieën ontbreekt");
+assert(analytics.includes('"entry_source":entrySource,')&&analytics.includes('"launch_mode":launchMode,'),"herkomst en startmodus horen als vaste eigenschappen mee te gaan");
+assert(!/referrer\s*:/.test(analytics.slice(0,analytics.indexOf("/* Google Analytics draait in basic consent mode")))&&!analytics.includes('"$referrer"')&&!analytics.includes('"$referring_domain"'),"PostHog mag nooit de ruwe verwijzer of het verwijzende domein ontvangen");
+assert(analytics.includes('[".chipplaats","saved_location_opened"]'),"openen van een bewaarde plaats hoort als generieke taakuitkomst te tellen");
+assert(analytics.includes('saved_locations:bewaard')&&analytics.includes('?"some":"none"'),"bewaarde plaatsen gaan alleen als ja/nee mee");
+assert(analytics.includes('window.addEventListener("appinstalled",()=>stuur("app_installed"),{once:true})'),"app-installatie hoort als generieke gebeurtenis te tellen");
 assert(analytics.includes('navigator.globalPrivacyControl===true'),"Global Privacy Control moet analytics uitschakelen");
+assert(analytics.includes('if(navigator.webdriver===true||GEAUTOMATISEERD.test(String(navigator.userAgent||"")))return;'),"geautomatiseerde browsers (eigen productiecontroles) mogen niet als bezoek tellen");
+assert(analytics.indexOf("GEAUTOMATISEERD.test")<analytics.indexOf("function stuur("),"automatiseringsuitsluiting moet vóór iedere capture gelden");
 assert(analytics.includes('navigator.doNotTrack==="1"'),"Do Not Track moet analytics uitschakelen");
 
 const ga4Marker="/* Google Analytics draait in basic consent mode";

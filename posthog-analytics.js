@@ -15,6 +15,13 @@
      noch Google Analytics en wordt ook geen analytics-toestemming gevraagd. */
   if(navigator.globalPrivacyControl===true||navigator.doNotTrack==="1"||window.doNotTrack==="1")return;
 
+  /* Geautomatiseerde browsers zijn geen bezoekers. Onze eigen release- en
+     uurlijkse productiecontroles draaien tegen de echte site; zonder deze regel
+     bestond het grootste deel van de PostHog-data uit die testbezoeken. Ook
+     Lighthouse en bekende zoekmachinecrawlers tellen niet mee. */
+  const GEAUTOMATISEERD=/HeadlessChrome|Chrome-Lighthouse|Googlebot|bingbot|YandexBot|DuckDuckBot|Applebot|crawler|spider/i;
+  if(navigator.webdriver===true||GEAUTOMATISEERD.test(String(navigator.userAgent||"")))return;
+
   function tijdelijkId(){
     try{
       if(globalThis.crypto&&typeof globalThis.crypto.randomUUID==="function")return "anon_"+globalThis.crypto.randomUUID();
@@ -42,7 +49,36 @@
     return breedte<768?"mobile":breedte<1100?"tablet":"desktop";
   }
 
+  /* Herkomst uitsluitend als grove categorie. Het verwijzende adres, het domein
+     en eventuele zoektermen worden nooit verstuurd: alleen een van de vaste
+     waarden uit HERKOMST_CATEGORIEEN. AI-assistenten vóór zoekmachines, omdat
+     bijvoorbeeld gemini.google.com anders als Google-zoekopdracht zou tellen. */
+  const HERKOMST_CATEGORIEEN=Object.freeze(["search","ai_assistant","internal","other","none"]);
+  const AI_ASSISTENTEN=/(?:^|\.)(?:chatgpt\.com|openai\.com|perplexity\.ai|gemini\.google\.com|copilot\.microsoft\.com|claude\.ai|you\.com|phind\.com)$/i;
+  const ZOEKMACHINES=/(?:^|\.)(?:google\.[a-z]{2,3}(?:\.[a-z]{2})?|bing\.com|duckduckgo\.com|ecosia\.org|yahoo\.com|startpage\.com|qwant\.com|search\.brave\.com|yandex\.[a-z]{2,3}|baidu\.com)$/i;
+  function herkomstCategorie(verwijzer){
+    const m=/^https?:\/\/(?:[^@\/?#]*@)?([^\/?#:]+)/i.exec(String(verwijzer||""));
+    const host=m?m[1].toLowerCase():"";
+    if(!host)return "none";
+    if(host===String(location.hostname||"").toLowerCase()||PRODUCTIE_HOSTS.has(host))return "internal";
+    if(AI_ASSISTENTEN.test(host))return "ai_assistant";
+    if(ZOEKMACHINES.test(host))return "search";
+    return "other";
+  }
+
+  /* Geopend als geïnstalleerde app (beginscherm) of in de browser. Alleen deze
+     twee waarden; een vaste gebruiker herkennen zonder iets op te slaan. */
+  function startmodus(){
+    try{
+      const mm=typeof window.matchMedia==="function"?media=>window.matchMedia(media).matches:()=>false;
+      if(mm("(display-mode: standalone)")||mm("(display-mode: fullscreen)")||mm("(display-mode: minimal-ui)"))return "app";
+    }catch(e){}
+    return navigator.standalone===true?"app":"browser";
+  }
+
   const distinctId=tijdelijkId();
+  const entrySource=herkomstCategorie(document.referrer);
+  const launchMode=startmodus();
 
   function stuur(event,extra){
     const pathname=veiligPad(location.pathname);
@@ -53,6 +89,8 @@
       "$host":location.hostname,
       "$pathname":pathname,
       "viewport_group":schermgroep(),
+      "entry_source":entrySource,
+      "launch_mode":launchMode,
       "analytics_contract":"privacy-safe-v1"
     },extra||{});
     const payload={api_key:PROJECT_TOKEN,event,distinct_id:distinctId,properties};
@@ -100,6 +138,7 @@
   const interactieEenmaal=new Set();
   const interacties=[
     ["#chipadd","saved_location_added"],
+    [".chipplaats","saved_location_opened"],
     ["#days .row.day:not(.kop)","forecast_day_selected"],
     [".wiw-hour-toggle","hourly_details_toggled"],
     ["#nights .nacht-meer","night_details_toggled"]
@@ -137,7 +176,10 @@
       if(zichtbaar&&!/^(?:--|–)$/.test(temperatuur)&&/^Gegevens opgehaald om \d{2}:\d{2}/.test(stempel)){
         klaar=true;stop();
         const nu=globalThis.performance&&typeof globalThis.performance.now==="function"?globalThis.performance.now():Date.now();
-        stuur("weather_view_ready",{load_time_bucket:laadduurBand(Math.max(0,nu-start))});
+        /* Alleen ja/nee: zijn er bewaarde plaatsen zichtbaar. Afgelezen uit de
+           pagina, niet uit opslag; welke plaatsen het zijn gaat nooit mee. */
+        const bewaard=document.querySelector("#chips .chipplaats")?"some":"none";
+        stuur("weather_view_ready",{load_time_bucket:laadduurBand(Math.max(0,nu-start)),saved_locations:bewaard});
         return;
       }
       if(state.classList.contains("err")){
@@ -153,6 +195,10 @@
     setTimeout(()=>{if(!klaar)stop();},30000);
   }
   bewaakWeerUitkomst();
+
+  /* Iemand zet de site als app op het beginscherm: een sterk signaal van vast
+     gebruik. De browser meldt dit zelf; er wordt niets opgeslagen. */
+  if(typeof window.addEventListener==="function")window.addEventListener("appinstalled",()=>stuur("app_installed"),{once:true});
 
   /* Google Analytics draait in basic consent mode: de Google-tag wordt pas na
      expliciete toestemming geladen. Voor toestemming gaat er dus geen request,
