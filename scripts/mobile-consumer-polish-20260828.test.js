@@ -66,8 +66,10 @@ assert.equal(ux.mobieleGrafiekCompactHoogte(220,250,246),250,"een al compactere 
 assert.equal(ux.mobieleGrafiekCompactHoogte(220,296,286),296,"zichtbare regenperiode-labels behouden hun benodigde mobiele SVG-reserve");
 assert(js.includes('if(el.closest("#scrub"))return;')&&!js.includes("el.closest('g[data-q4-rain-periods]')||el.closest(\"#scrub\")"),"mobiele compactie telt regenperiode-tijden en -bedragen mee in de zichtbare onderrand");
 assert(js.includes("if(svg.querySelector(\'g[data-q4-rain-periods] text\'))zichtbaarOnder=Math.max(zichtbaarOnder,286);"),"natte mobiele grafiek bewaart exact de canonieke 296px-reserve voor bracketlabels");
-assert(js.includes('data-mobile-temp-index')&&js.includes('data-mobile-temp-row')&&js.includes('const rijY=bottom+MOBIELE_TEMP_RIJ_Y;'),"mobiele temperatuurwaarden staan in een vaste rij boven de uuras, gekoppeld aan echte datapunten");
-assert(js.includes('kiesKalenderUurLabelIndices(g.TI,3,24).filter(')&&js.includes('data-mobile-temp-priority')&&js.includes('data-mobile-temp-visible'),"de temperatuurrij volgt exact dezelfde drie-uursankers als de uuras");
+assert(js.includes('data-mobile-temp-index')&&js.includes('el.setAttribute("data-mobile-temp-label","1")')&&js.includes('const pos=plaats(tekst,[[x,y-9,"middle"]'),"mobiele temperatuurwaarden staan op de lijn, boven het echte datapunt van hun drie-uursanker");
+assert(js.includes('kiesKalenderUurLabelIndices(g.TI,3,24).filter(')&&js.includes('data-mobile-temp-priority')&&js.includes('data-mobile-temp-visible')&&js.includes('data-mobile-temp-covered')&&js.includes('data-mobile-temp-missing-anchors'),"de lijnlabels volgen de drie-uursankers van de uuras; gedekte en ontbrekende ankers zijn traceerbaar");
+assert(js.includes('data-mobile-temp-area')&&js.includes('url(#mobielTempVlak)'),"mobiele grafiek heeft een zacht vlak onder de temperatuurlijn");
+assert(js.includes('data-mobile-weather-icon')&&js.includes('icon(Number(code),dag,MOBIEL_ICOON_GROOTTE)'),"mobiele grafiek toont per drie-uursanker het weericoon van dat uur");
 assert(js.includes('data-mobile-temp-markers')&&js.includes('data-mobile-temp-dropped-markers'),"getoonde en bij ruimtegebrek vervallen max/min-markeringen zijn traceerbaar");
 assert(js.includes('nuTekst.textContent="nu "+Math.round(Number(actueel))+"°"'),"de rode huidige markering houdt zijn actuele temperatuurwaarde");
 assert(js.includes('kiesKalenderUurLabelIndices(g.TI,3,24)')&&js.includes('data-mobile-hour-rhythm')&&js.includes('three-hour'),"smalle mobiele uuras wordt vanuit één deterministische lokale drie-uursowner opgebouwd");
@@ -75,4 +77,4 @@ assert(js.includes('data-mobile-sun-band-compact')&&js.includes('^zon (?:op|onde
 assert(js.includes('data-mobile-compact-height'),"mobiele grafiekhoogte krijgt een expliciete post-render compactiemarker");
 assert(js.includes('WeatherNowMobileScreenshotPolish.structureerBronnen')&&js.includes('wiw-source-last-odd'),"dynamische bronnen worden na providerupdates genormaliseerd en oneven gecentreerd");
 
-console.log("Finale consumentenpolish 20260828: mobiel, desktop, bronprovenance, drie-uursas, vaste temperatuurrij, max/min-markeringen, compacte zonband, Nu-collision en wrapperarchitectuur geborgd.");
+console.log("Finale consumentenpolish 20260828: mobiel, desktop, bronprovenance, drie-uursas, temperaturen op de lijn met vlak en weericonen, max/min-markeringen, compacte zonband, Nu-collision en wrapperarchitectuur geborgd.");

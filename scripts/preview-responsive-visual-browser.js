@@ -164,7 +164,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const nowOverlap=tempBoxes.filter(r=>raakt(r,nowBox,1)).length,nowAnchorRaw=nowText&&nowText.getAttribute("data-mobile-temp-anchor-index"),nowAnchor=nowAnchorRaw===null||nowAnchorRaw===undefined?NaN:Number(nowAnchorRaw);
           const anchorState=expectedHourIndices.map(i=>{
             const info=tempInfo.find(x=>x.i===i),verwacht=Number.isFinite(Number(g&&g.T&&g.T[i]))?Math.round(Number(g.T[i])):null;
-            return {i,verwacht,tekst:info?info.tekst:"",priority:info?info.priority:"",viaNow:Number.isInteger(nowAnchor)&&nowAnchor===i};
+            const viaMarker=!!svg&&[...svg.querySelectorAll("text[data-mobile-temp-marker]")].some(el=>Number(el.getAttribute("data-mobile-temp-covers-anchor"))===i);
+            return {i,verwacht,tekst:info?info.tekst:"",priority:info?info.priority:"",viaNow:Number.isInteger(nowAnchor)&&nowAnchor===i,viaMarker};
           });
           const markerEls=svg?[...svg.querySelectorAll("text[data-mobile-temp-marker]")]:[],markerBoxes=markerEls.map(el=>el.getBoundingClientRect());
           const markerState={count:markerEls.length,teksten:markerEls.map(el=>(el.textContent||"").trim()),nowOverlap:markerBoxes.filter(r=>raakt(r,nowBox,1)).length,tempOverlap:markerBoxes.filter(r=>tempBoxes.some(t=>raakt(r,t,1))).length,clipped:markerBoxes.filter(r=>!binnenSvg(r)).length};
@@ -246,7 +247,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert(p.overflow<=1,`${vp.naam}: populaire plaatsen veroorzaakt ${p.overflow}px overflow`);
         const m=basis.mobilePolish;
         assert(m,`${vp.naam}: mobile-polishmeting ontbreekt`);
-        assert(m.tempCount>=m.hourCount-1,`${vp.naam}: mobiele grafiek mist verplichte temperatuurankers (${m.tempCount}/${m.hourCount})`);
+        const ankersMetTemperatuur=m.anchorState.filter(a=>a.viaNow||a.viaMarker||a.priority==="anchor").length;
+        assert(ankersMetTemperatuur>=m.hourCount-1,`${vp.naam}: mobiele grafiek mist verplichte temperatuurankers (${ankersMetTemperatuur}/${m.hourCount}; ${m.tempCount} lijnlabels)`);
         assert.equal(m.tempOverlap,0,`${vp.naam}: temperatuurlabels overlappen geometrisch ${JSON.stringify(m.tempOverlapPairs)}`);
         assert.equal(m.nowOverlap,0,`${vp.naam}: temperatuurlabel botst met de actuele nu-markering`);
         assert.equal(m.tempClipped,0,`${vp.naam}: temperatuurtekst valt buiten de SVG-rand`);
@@ -258,8 +260,9 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert.deepEqual(m.hourTexts,m.expectedHourTexts,`${vp.naam}: zichtbare kloklabels horen niet bij dezelfde forecastpunten`);
         assert.equal(m.missingAnchors,"",`${vp.naam}: verplicht temperatuurlabel kon niet collisionvrij worden geplaatst (${m.missingAnchors})`);
         for(const a of m.anchorState){
-          assert(a.viaNow||a.priority==="anchor",`${vp.naam}: verplicht drie-uursanker ${a.i} mist een temperatuurlabel`);
-          if(!a.viaNow)assert.equal(a.tekst,String(a.verwacht)+"°",`${vp.naam}: temperatuur bij anker ${a.i} hoort niet bij hetzelfde forecastpunt (${a.tekst}/${a.verwacht}°)`);
+          /* Temperaturen staan op de lijn; naast piek, dal of nu staat daar al een temperatuur. */
+          assert(a.viaNow||a.viaMarker||a.priority==="anchor",`${vp.naam}: verplicht drie-uursanker ${a.i} mist een temperatuurlabel`);
+          if(!a.viaNow&&!a.viaMarker)assert.equal(a.tekst,String(a.verwacht)+"°",`${vp.naam}: temperatuur bij anker ${a.i} hoort niet bij hetzelfde forecastpunt (${a.tekst}/${a.verwacht}°)`);
         }
         assert(m.markerState.count<=2&&m.markerState.teksten.every(t=>/^-?\d+°$/.test(t)),`${vp.naam}: de lijn draagt meer dan alleen max/min (${JSON.stringify(m.markerState.teksten)})`);
         assert.equal(m.markerState.nowOverlap+m.markerState.tempOverlap+m.markerState.clipped,0,`${vp.naam}: max/min-markering botst of valt buiten de SVG (${JSON.stringify(m.markerState)})`);
