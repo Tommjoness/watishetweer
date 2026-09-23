@@ -10,7 +10,9 @@
    Volgorde: een expliciet CHROME_PATH/CHROMIUM_PATH wint altijd (ook als het
    pad niet bestaat, zodat een verkeerde CI-configuratie luid faalt). Daarna
    wordt PATH zelf doorzocht, zonder shell, in dezelfde naamvolgorde als de
-   oude detectie. */
+   oude detectie. Als laatste volgt de Chromium die Playwright zelf meelevert:
+   in de Playwright-CI-container staat die niet op PATH, waardoor browsertests
+   zonder expliciet CHROME_PATH daar voorheen stil werden overgeslagen. */
 const fs=require("fs");
 const path=require("path");
 
@@ -25,7 +27,15 @@ function uitvoerbaar(pad){
   }
 }
 
-function vindBrowser(env=process.env){
+function playwrightChromium(){
+  try{
+    return require("playwright-core").chromium.executablePath()||null;
+  }catch{
+    return null;
+  }
+}
+
+function vindBrowser(env=process.env,{playwrightPad=playwrightChromium}={}){
   for(const expliciet of [env.CHROME_PATH,env.CHROMIUM_PATH]){
     if(String(expliciet||"").trim())return String(expliciet).trim();
   }
@@ -36,6 +46,9 @@ function vindBrowser(env=process.env){
       if(uitvoerbaar(kandidaat))return kandidaat;
     }
   }
+  let playwright=null;
+  try{playwright=playwrightPad();}catch{}
+  if(playwright&&uitvoerbaar(playwright))return playwright;
   return null;
 }
 
