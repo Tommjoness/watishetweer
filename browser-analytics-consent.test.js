@@ -15,7 +15,7 @@ const html=`<!doctype html>
 <div id="state" class="msg">Gegevens ophalen.</div>
 <main id="app" style="display:none;visibility:hidden">
   <span id="t">–</span><span id="stamp"></span>
-  <div id="chips"><span class="chip"><button class="chipplaats" type="button">Utrecht</button></span><button id="chipadd" class="chip add" type="button">Plaats bewaren</button></div>
+  <div id="chips"><span class="chip"><button class="chipplaats" type="button">Utrecht</button></span><button id="chipadd" class="chip add" type="button">Plaats bewaren</button><button id="chipdeel" class="chip add deel" type="button">Delen</button></div>
   <div id="days"><button class="row day" type="button">Morgen</button></div>
   <button class="wiw-hour-toggle" type="button">Alle uren bekijken</button>
   <div id="nights"><button class="nacht-meer" type="button">Meer nachten bekijken</button></div>
@@ -156,10 +156,11 @@ async function controleerTaakmetingEnKeuze(){
     await page.locator("#res button").click();
     await page.locator("#chipadd").click();
     await page.locator("#chips .chipplaats").click();
+    await page.locator("#chipdeel").click();
     await page.locator("#days .row.day").click();
     await page.locator(".wiw-hour-toggle").click();
     await page.locator("#nights .nacht-meer").click();
-    for(const naam of ["weather_search_started","weather_search_result_selected","saved_location_added","saved_location_opened","forecast_day_selected","hourly_details_toggled","night_details_toggled"])await wachtOpEvent(events,naam);
+    for(const naam of ["weather_search_started","weather_search_result_selected","saved_location_added","saved_location_opened","location_share_requested","forecast_day_selected","hourly_details_toggled","night_details_toggled"])await wachtOpEvent(events,naam);
     const klaar=events.find(event=>event.event==="weather_view_ready");
     assert.equal(klaar.properties.saved_locations,"some","zichtbare bewaarde plaatsen horen alleen als ja/nee-signaal mee te gaan");
     for(const event of events){
