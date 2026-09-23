@@ -570,6 +570,8 @@ function polishNuLabel(){
   const oorspronkelijkX=Number(nu.getAttribute("data-now-base-x")),oorspronkelijkY=Number(nu.getAttribute("data-now-base-y"));
   const g=typeof S!=="undefined"&&S.geo,breed=svg.viewBox.baseVal.width;
   if(!Number.isFinite(oorspronkelijkX)||!Number.isFinite(oorspronkelijkY)||!g)return;
+  const punt=svg.querySelector('circle[fill="var(--carmine)"][r="3"]');
+  const puntY=punt?Number(punt.getAttribute("cy")):NaN;
   const vast=teksten.filter(el=>el!==nu&&!el.closest("#scrub")).map(svgTekstBoxUitElement).filter(Boolean);
   const lijnen=[...svg.querySelectorAll("polyline")].filter(el=>!el.closest("#scrub"))
     .map(el=>String(el.getAttribute("points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
@@ -577,10 +579,11 @@ function polishNuLabel(){
     const box=geschatteSvgTekstBox(nu.textContent,x,y,"start",Number(nu.getAttribute("font-size"))||10);
     return box&&box.x>=g.pl-2&&box.x+box.width<=breed-g.pr+3
       &&box.y>=g.pt-18&&box.y+box.height<=g.pt+g.ih-3
+      &&(!Number.isFinite(puntY)||Math.abs(y-puntY)>=12)
       &&!vast.some(b=>rechthoekenBotsen(box,b,3))
       &&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box));
   };
-  const posities=[[0,0],[0,-16],[0,16],[12,-16],[12,16],[-12,-16],[-12,16],[0,-30],[0,30]];
+  const posities=[[0,0],[0,-16],[0,16],[0,-24],[0,24],[12,-16],[12,16],[-12,-16],[-12,16],[0,-30],[0,30]];
   const gevonden=posities.find(([dx,dy])=>vrij(oorspronkelijkX+dx,oorspronkelijkY+dy));
   if(gevonden){
     nu.setAttribute("x",String(oorspronkelijkX+gevonden[0]));nu.setAttribute("y",String(oorspronkelijkY+gevonden[1]));

@@ -88,6 +88,8 @@ for(const p of htmlBestanden(OUT)){
   assert(html.includes('html body footer:nth-of-type(n){grid-template-columns:repeat(3,minmax(0,1fr))!important}'),rel+": mobiele utilitylinks vormen geen samenhangende driekolomsgroep");
   assert(html.includes('footer > details.footer-details{grid-column:3!important;grid-row:3!important;min-width:0!important;text-align:center}'),rel+": technische locatiegegevens staan niet in dezelfde utilityrij");
   assert(html.includes('.footer-contact{grid-column:1 / -1!important;grid-row:4!important;margin-top:8px!important;padding-top:0!important;color:var(--ink-25)}'),rel+": supportregel is niet duidelijk maar compact van utilities gescheiden");
+  assert(html.includes('html body footer:nth-of-type(n){margin-top:16px!important;padding-top:10px!important;border-top:1px solid var(--rule-soft);grid-template-columns:repeat(2,minmax(0,1fr))!important;row-gap:4px!important}'),rel+": smalle footer mist de rustige overgang en tweekoloms utilitygroep");
+  assert(html.includes('footer > details.footer-details{grid-column:1 / -1!important;grid-row:4!important}')&&html.includes('.footer-contact{grid-row:5!important;flex-wrap:wrap!important;row-gap:4px!important;margin:8px 0 10px!important}'),rel+": technische gegevens of feedback missen hun afzonderlijke mobiele rij");
   assert(html.includes('.wiw-hour-table{font-size:13.5px!important;line-height:1.2!important}'),rel+": desktop-uurtabel mist de kleine leesbaarheidsstap");
     assert(html.includes(':root{--warning-yellow:#856000;--warning-orange:#A34712}'),rel+": waarschuwingsernst mist lichte themakleuren");
   assert(/\.waarsch\[data-ui-severity=(?:"oranje"|oranje)\]\{border-left:3px solid var\(--warning-orange\)\}/.test(html),rel+": oranje waarschuwing mist accent");
