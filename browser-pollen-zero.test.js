@@ -6,7 +6,7 @@ const os=require("os");
 const {spawnSync}=require("child_process");
 const {bouw}=require("./data.js");
 
-const browser=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
+const browser=require("./scripts/vind-browser.js").vindBrowser()||"google-chrome";
 const publicDir=path.join(__dirname,"public");
 const bron=path.join(publicDir,"index.html");
 if(!fs.existsSync(bron))throw new Error("public/index.html ontbreekt; voer eerst de postbuild uit");

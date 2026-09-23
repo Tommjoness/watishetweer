@@ -22,7 +22,7 @@ assert.strictEqual(wrangler.name, "watishetweer");
 assert.strictEqual(wrangler.pages_build_output_dir, "./public");
 assert.ok(wrangler.compatibility_date >= "2026-08-04", "Node-compatibele Workers-runtime vereist");
 
-for (const naam of ["forecast", "neerslag", "plaatsnaam", "waarschuwingen"]) {
+for (const naam of ["forecast", "neerslag", "plaatsnaam", "luchtkwaliteit", "waarschuwingen"]) {
   const bron = lees(`api/${naam}.mjs`);
   const wrapper = lees(`functions/api/${naam}.js`);
   assert.ok(bron.includes("Cloudflare-CDN-Cache-Control"), `${naam} mist Cloudflare CDN-cachecontract`);

@@ -40,6 +40,12 @@ function routesVoorProbe(id){
       tijdelijkeStatus:(status,b)=>status===503&&Boolean(b&&b.beschikbaar===false)
     },
     {
+      naam:"luchtkwaliteit",
+      pad:`/api/luchtkwaliteit?lat=${vaste(forecastLat,3)}&lon=${vaste(forecastLon,3)}&land=NL`,
+      cachebaar:b=>Boolean(b&&b.beschikbaar===true&&b.provider==="luchtmeetnet"&&Number.isFinite(Number(b.lki))),
+      tijdelijk:b=>Boolean(b&&b.beschikbaar===false&&b.provider==="luchtmeetnet")
+    },
+    {
       naam:"waarschuwingen",
       pad:`/api/waarschuwingen?lat=${vaste(jpLat,6)}&lon=${vaste(jpLon,6)}&land=JP`,
       cachebaar:b=>Boolean(b&&(b.dekking===true||(b.dekking===false&&b.bron==null&&String(b.reden||"").startsWith("geen waarschuwingsbron voor "))))

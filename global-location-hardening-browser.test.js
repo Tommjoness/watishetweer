@@ -12,13 +12,7 @@
    Het daadwerkelijke afwijzen van land-/onbewezen waarschuwingen wordt apart
    aan de servergrens getest in scripts/api-waarschuwing-scope.test.mjs. */
 const fs=require("fs"),os=require("os"),path=require("path"),{spawnSync}=require("child_process");
-function vindBrowser(){
-  for(const naam of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){
-    const r=spawnSync("sh",["-lc","command -v "+naam],{encoding:"utf8"});
-    if(r.status===0&&r.stdout.trim())return r.stdout.trim();
-  }
-  return null;
-}
+function vindBrowser(){return require("./scripts/vind-browser.js").vindBrowser();}
 const browser=vindBrowser();
 if(!browser){
   if(process.env.CI){console.error("FOUT wereldwijde locatiehardening: Chrome/Chromium ontbreekt op CI.");process.exit(1);}

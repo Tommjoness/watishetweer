@@ -5,13 +5,7 @@ const os=require("os");
 const path=require("path");
 const {spawnSync}=require("child_process");
 
-function vindBrowser(){
-  for(const n of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){
-    const r=spawnSync(n,["--version"],{encoding:"utf8"});
-    if(r.status===0)return n;
-  }
-  return null;
-}
+function vindBrowser(){return require("./scripts/vind-browser.js").vindBrowser();}
 const browser=vindBrowser();
 if(!browser){
   if(process.env.CI){console.error("FOUT uurpaneelcleanup browsertest: Chrome/Chromium ontbreekt.");process.exit(1);}

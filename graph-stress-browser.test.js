@@ -1,7 +1,7 @@
 "use strict";
 
 const fs=require("fs"),path=require("path"),os=require("os"),{spawnSync}=require("child_process"),{bouw}=require("./data.js");
-const browser=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
+const browser=require("./scripts/vind-browser.js").vindBrowser()||"google-chrome";
 const bron=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(bron))throw new Error("public/index.html ontbreekt; voer eerst de postbuild uit");
 let html=fs.readFileSync(bron,"utf8");
