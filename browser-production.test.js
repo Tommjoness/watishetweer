@@ -47,10 +47,14 @@ const reporter=`<script>
   try{
     const desktop=window.innerWidth>=1100;
     const chart=document.getElementById('chart'),svgBox=chart.getBoundingClientRect();
-    const labels=[...chart.querySelectorAll('text')].filter(el=>{
+    const alleLabels=[...chart.querySelectorAll('text')].filter(el=>{
       const ff=String(el.getAttribute('font-family')||'');
       return ff.includes('Bodoni Moda')&&/^-?\\d+°$/.test((el.textContent||'').trim());
     });
+    /* Piek en dal hebben een eigen stip (data-mobile-temp-marker-dot); alleen de
+       gewone temperatuurlabels horen één op één bij een forecastpunt. Botsingen,
+       randen en het nu-label worden wel over alle labels bewaakt. */
+    const labels=alleLabels.filter(el=>!el.hasAttribute('data-mobile-temp-marker'));
     const tempPunten=[...chart.querySelectorAll('circle[data-temp-index]')];
     const lossePunten=tempPunten.filter(p=>{
       const i=Number(p.getAttribute('data-temp-index'));
@@ -61,7 +65,7 @@ const reporter=`<script>
         return Number.isFinite(x)&&Number.isFinite(px)&&Math.abs(x-px)<=Math.max(72,(S.geo&&S.geo.cw||36)*2.5);
       });
     }).length;
-    const botsingen=labels.filter((a,i)=>labels.slice(i+1).some(b=>{
+    const botsingen=alleLabels.filter((a,i)=>alleLabels.slice(i+1).some(b=>{
       const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
       return ra.width&&rb.width&&ra.left<rb.right&&ra.right>rb.left&&ra.top<rb.bottom&&ra.bottom>rb.top;
     })).length;
@@ -74,7 +78,7 @@ const reporter=`<script>
       return i!==null?'i:'+i:'p:'+el.getAttribute('x')+':'+el.getAttribute('y')+':'+(el.textContent||'').trim();
     });
     const dubbelNabij=labelSleutels.length-new Set(labelSleutels).size;
-    const buiten=labels.filter(el=>{const r=el.getBoundingClientRect();return r.left<svgBox.left-1||r.right>svgBox.right+1||r.top<svgBox.top-1||r.bottom>svgBox.bottom+1;}).length;
+    const buiten=alleLabels.filter(el=>{const r=el.getBoundingClientRect();return r.left<svgBox.left-1||r.right>svgBox.right+1||r.top<svgBox.top-1||r.bottom>svgBox.bottom+1;}).length;
 
     const nuLabel=[...chart.querySelectorAll('text')].find(el=>/^nu\\s+-?\\d+°$/i.test((el.textContent||'').trim()));
     const nuPunt=[...chart.querySelectorAll('circle')].find(el=>String(el.getAttribute('fill')||'')==='var(--carmine)'&&Math.abs(Number(el.getAttribute('r'))-3)<0.2);
@@ -82,7 +86,7 @@ const reporter=`<script>
     if(nuLabel&&nuPunt){
       const ny=Number(nuLabel.getAttribute('y')),cy=Number(nuPunt.getAttribute('cy'));
       const nr=nuLabel.getBoundingClientRect();
-      nuBotst=labels.some(el=>{const r=el.getBoundingClientRect();return nr.width&&r.width&&nr.left<r.right&&nr.right>r.left&&nr.top<r.bottom&&nr.bottom>r.top;});
+      nuBotst=alleLabels.some(el=>{const r=el.getBoundingClientRect();return nr.width&&r.width&&nr.left<r.right&&nr.right>r.left&&nr.top<r.bottom&&nr.bottom>r.top;});
       nuAfstand=Number.isFinite(ny)&&Number.isFinite(cy)?Math.abs(ny-cy):null;
       nuHalo=nuLabel.getAttribute('paint-order')==='stroke';
       nuRustig=nuAfstand!==null&&nuAfstand>=12&&!nuBotst&&nuHalo;
@@ -199,8 +203,12 @@ const reporter=`<script>
     const mobileAnchors=compactMobile&&graphUx&&S.geo?graphUx.kiesKalenderUurLabelIndices(S.geo.TI,3,24):[];
     const nowAnchorRaw=nuLabel&&nuLabel.getAttribute('data-mobile-temp-anchor-index'),nowAnchor=nowAnchorRaw==null?NaN:Number(nowAnchorRaw);
     const anchorLabels=new Map(labels.map(el=>[Number(el.getAttribute('data-mobile-temp-index')),el]));
+    /* Een anker naast piek, dal of nu heeft daar al een temperatuur staan: dat
+       moet dan ook echt zo zijn (nu-label of markering wijst naar dit anker). */
+    const gedektDoor=i=>(Number.isInteger(nowAnchor)&&nowAnchor===i)
+      ||[...chart.querySelectorAll('text[data-mobile-temp-marker]')].some(el=>Number(el.getAttribute('data-mobile-temp-covers-anchor'))===i);
     const anchorOk=!compactMobile||mobileAnchors.every(i=>{
-      if(Number.isInteger(nowAnchor)&&nowAnchor===i)return true;
+      if(gedektDoor(i))return true;
       const el=anchorLabels.get(i),verwacht=Number.isFinite(Number(S.geo&&S.geo.T&&S.geo.T[i]))?Math.round(Number(S.geo.T[i]))+'°':'';
       return !!el&&(el.textContent||'').trim()===verwacht&&el.getAttribute('data-mobile-temp-priority')==='anchor';
     });

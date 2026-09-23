@@ -100,15 +100,16 @@ assert(runtime.includes("el.textContent=uurAsLabelTekst(String(uur));"),"Ook fal
 assert(runtime.includes("function polishMobieleGrafiekRanden()"),"Mobiele grafiek mist de gerichte rechterrand-/zwevend-labelpolish.");
 assert(runtime.includes("data-mobile-edge-adjusted"),"Mobiele randcorrectie is niet traceerbaar in de SVG.");
 assert(runtime.includes("herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();bouwMobieleTemperatuurRij();"),"Mobiele eindpass moet de dubbele zontekst vóór de temperatuurrij verwijderen.");
-assert(runtime.includes("const rijY=bottom+MOBIELE_TEMP_RIJ_Y;")&&runtime.includes("y=Number(g.pt)+Number(g.ih)+MOBIELE_UURAS_Y;"),"Temperatuurrij staat vast direct boven de mobiele uuras.");
-assert(api.MOBIELE_TEMP_RIJ_Y<api.MOBIELE_UURAS_Y,"De temperatuurrij staat boven de uuras.");
-assert(runtime.includes('el.setAttribute("data-mobile-temp-row","1")')&&runtime.includes('el.setAttribute("data-mobile-temp-priority","anchor")'),"Rijlabels zijn traceerbaar als vaste drie-uursankers.");
+assert(runtime.includes("${bottom+MOBIEL_ICOON_Y}")&&runtime.includes("y=Number(g.pt)+Number(g.ih)+MOBIELE_UURAS_Y;"),"Weericonen staan tussen plot en mobiele uuras.");
+assert(api.MOBIEL_ICOON_Y+api.MOBIEL_ICOON_GROOTTE<api.MOBIELE_UURAS_Y-8,"De weericonen blijven vrij van de uurlabels.");
+assert(runtime.includes('el.setAttribute("data-mobile-temp-label","1")')&&runtime.includes('el.setAttribute("data-mobile-temp-priority","anchor")'),"Lijnlabels zijn traceerbaar als drie-uursankers.");
+assert(runtime.includes("Math.abs(m.i-i)<=1")&&runtime.includes("Math.abs(i-nuIndex)<1.5"),"Een anker naast piek, dal of nu krijgt geen tweede temperatuur.");
 assert(runtime.includes("mobieleGrafiekMarkeringen(g.T,24,")&&runtime.includes('data-mobile-temp-marker'),"Max/min op de lijn komen uit het pure markeringenplan.");
-assert(runtime.includes('const tekst=m.waarde+"°"')&&!runtime.includes('m.type+" "+m.waarde'),"Max/min-markering toont alleen de waarde: \"min 3°\" leest als -3°.");
-assert(runtime.includes("const asKolom=Number(g.x(0))-4;")&&runtime.includes("if(box&&box.x<asKolom)continue;"),"Een kale markering staat nooit in de kolom van de asgetallen.");
+assert(runtime.includes('plaats(m.waarde+"°",')&&!runtime.includes('m.type+" "+m.waarde'),"Max/min-markering toont alleen de waarde: \"min 3°\" leest als -3°.");
+assert(runtime.includes("const asKolom=Number(g.x(0))-4;")&&runtime.includes("if(box&&box.x<asKolom){if(!schuif)continue;"),"Een kale markering staat nooit in de kolom van de asgetallen; een ankerlabel schuift ervan weg.");
 assert(runtime.includes("monotoonPad(")&&runtime.includes('data-mobile-line-points'),"Mobiele lijn is vloeiend en houdt haar punten beschikbaar voor botsingscontrole.");
 assert(runtime.includes('path[data-mobile-line-points]'),"Nu-labelpolish controleert ook tegen de vloeiende lijn.");
-assert(runtime.includes('!el.hasAttribute("data-mobile-temp-row")&&/Bodoni/i'),"Randpolish mag de vaste rij niet naar de lijn terugtrekken.");
+assert(runtime.includes('!el.hasAttribute("data-mobile-temp-label")&&!el.hasAttribute("data-mobile-temp-marker")&&/Bodoni/i'),"Randpolish mag de geplaatste lijnlabels en markeringen niet verschuiven.");
 assert(!runtime.includes("verminderMobieleTemperatuurlabels"),"De oude op-de-lijn-labelplaatser is volledig vervangen.");
 assert(!runtime.includes("mobieleTemperatuurLabelLimiet(window.innerWidth)"),"De mobiele 24-uursgrafiek mag verplichte ankers niet langer via een viewport-limiet uitdunnen.");
 
@@ -116,4 +117,4 @@ const checkpoint=fs.readFileSync(path.join(__dirname,"apply-mobile-screenshot-po
 assert(!/['\"]\s*const A=a\.getBBox\s*\(/.test(checkpoint),"Checkpoint-50 owner mag geen SVG-fontboxmeting meer injecteren.");
 assert(checkpoint.includes("geschatteTekstBox=el=>"),"Checkpoint-50 owner moet de attribuutgebaseerde tekstbox injecteren.");
 assert(checkpoint.includes("const fs=Number.isFinite(attrFont)&&attrFont>0?attrFont:(/Bodoni Moda/.test(familie)?F.temp:F.uur);"),"Checkpoint-50 tekstbox gebruikt de bestaande grafiekfontmaten als veilige fallback.");
-console.log("Mobiele grafiek reflow-test groen: echte lokale drie-uursankers, vaste temperatuurrij, max/min-markeringen en monotone vloeiende lijn.");
+console.log("Mobiele grafiek reflow-test groen: echte lokale drie-uursankers, temperaturen op de lijn, weericonen, max/min-markeringen en monotone vloeiende lijn.");

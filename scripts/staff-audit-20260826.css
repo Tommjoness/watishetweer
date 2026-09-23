@@ -4,6 +4,10 @@
 
 /* Het kruis blijft visueel compact; alleen het echte interactieve vlak groeit. */
 .chip{gap:4px;padding:2px 3px 2px 11px;min-height:44px}
+/* Rechts maar 3px, omdat de ×-knop van een bewaarde plaats daar de lucht geeft.
+   Knoppen zonder × (bewaren, Delen) krijgen links en rechts evenveel ruimte.
+   Mobiel (≤900px) zijn ze een onderstreepte tekstlink met eigen padding. */
+@media(min-width:901px){.chip.add{padding-right:11px}}
 .chipplaats{min-height:40px;display:inline-flex;align-items:center}
 .chip .x{inline-size:40px;block-size:40px;min-inline-size:40px;min-block-size:40px;display:inline-grid;place-items:center;padding:0;font-size:15px;line-height:1}
 .chip .x:focus-visible,.chipplaats:focus-visible{outline:2px solid var(--ink);outline-offset:2px}

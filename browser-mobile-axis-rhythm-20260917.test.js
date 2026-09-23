@@ -33,13 +33,18 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>
     const pb=Number(g.pt)+Number(g.ih),labels=[...svg.querySelectorAll('text')].filter(el=>/^\\d{2}:00$/.test(String(el.textContent||'').trim())&&Number(el.getAttribute('y'))>=pb+6).sort((a,b)=>Number(a.getAttribute('x'))-Number(b.getAttribute('x')));
     const teksten=labels.map(el=>String(el.textContent||'').trim()),fonts=labels.map(el=>String(el.getAttribute('font-family')||'')),stijlen=labels.map(el=>String(el.getAttribute('font-style')||''));
     const W=Number(g.W),buiten=labels.filter(el=>{const b=el.getBBox();return b.x<-.5||b.x+b.width>W+.5;});
-    const tempLabels=[...svg.querySelectorAll('text[data-mobile-temp-index]')].filter(el=>!el.closest('#scrub')),tempBoxes=tempLabels.map(el=>({el,b:el.getBBox()})),tempBots=[];
+    /* Temperaturen staan op de lijn: per drie-uursanker een label, tenzij piek,
+       dal of nu daar al een temperatuur toont (data-mobile-temp-covered). De
+       overlapcontrole omvat ook piek en dal. */
+    const tempLabels=[...svg.querySelectorAll('text[data-mobile-temp-index]')].filter(el=>!el.closest('#scrub')),markeringen=[...svg.querySelectorAll('text[data-mobile-temp-marker]')];
+    const gedekt=String(svg.getAttribute('data-mobile-temp-covered')||'').split(',').filter(Boolean);
+    const tempBoxes=[...tempLabels,...markeringen].map(el=>({el,b:el.getBBox()})),tempBots=[];
     for(let i=0;i<tempBoxes.length;i++)for(let j=i+1;j<tempBoxes.length;j++){const a=tempBoxes[i].b,b=tempBoxes[j].b;if(a.x<b.x+b.width+2&&a.x+a.width+2>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y)tempBots.push(tempBoxes[i].el.textContent+'|'+tempBoxes[j].el.textContent);}
     const vb=svg.viewBox.baseVal,onderruimte=vb.height-pb;
     zet('labels',teksten.join(','));zet('count',labels.length);zet('inner-width',window.innerWidth);zet('geo-n',g.n);zet('font-ok',fonts.every(v=>/Instrument Sans/.test(v))?'ja':'nee');zet('style-ok',stijlen.every(v=>v==='normal')?'ja':'nee');zet('overflow',buiten.length?buiten.map(el=>el.textContent).join(','):'geen');
     const nuTekst=[...svg.querySelectorAll('text')].find(el=>/^nu(?:\\s|$)/i.test(String(el.textContent||'').trim()));
     const zonTeksten=[...svg.querySelectorAll('text')].filter(el=>/^zon (?:op|onder) \\d{2}:\\d{2}$/i.test(String(el.textContent||'').trim()));
-    zet('temp-count',tempLabels.length);zet('temp-overlap',tempBots.length?tempBots.join(','):'geen');zet('temp-missing',svg.getAttribute('data-mobile-temp-missing-anchors')||'');zet('temp-visible',svg.getAttribute('data-mobile-temp-visible')||'');zet('hour-rhythm',svg.getAttribute('data-mobile-hour-rhythm')||'');zet('now-text',nuTekst?String(nuTekst.textContent||'').trim():'');zet('sun-count',zonTeksten.length);zet('compact-height',svg.getAttribute('data-mobile-compact-height')||'');zet('under-space',onderruimte.toFixed(2));zet('chart-aria',svg.getAttribute('aria-label')||'');zet('done','ok');
+    zet('temp-count',tempLabels.length+gedekt.length);zet('temp-overlap',tempBots.length?tempBots.join(','):'geen');zet('temp-missing',svg.getAttribute('data-mobile-temp-missing-anchors')||'');zet('temp-visible',svg.getAttribute('data-mobile-temp-visible')||'');zet('hour-rhythm',svg.getAttribute('data-mobile-hour-rhythm')||'');zet('now-text',nuTekst?String(nuTekst.textContent||'').trim():'');zet('sun-count',zonTeksten.length);zet('compact-height',svg.getAttribute('data-mobile-compact-height')||'');zet('under-space',onderruimte.toFixed(2));zet('chart-aria',svg.getAttribute('aria-label')||'');zet('done','ok');
   }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},700);
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},180),{once:true});
 </script>`;
@@ -61,7 +66,7 @@ try{
   if(v('font-ok')!=='ja'||v('style-ok')!=='ja')throw new Error("mobiele uuras gebruikt niet overal het rechte Instrument Sans-letterbeeld");
   if(v('overflow')!=='geen')throw new Error("mobiele uuras valt buiten de SVG: "+v('overflow'));
   if(v('temp-missing'))throw new Error("mobiele grafiek mist verplichte drie-uurs-temperatuurankers: "+v('temp-missing'));
-  if(Number(v('temp-count'))<7)throw new Error("mobiele grafiek toont te weinig vaste drie-uurs-temperatuurwaarden: "+v('temp-count'));
+  if(Number(v('temp-count'))<7)throw new Error("mobiele grafiek toont te weinig drie-uurs-temperaturen (label of gedekt door piek, dal of nu): "+v('temp-count'));
   if(Number(v('temp-count'))>10)throw new Error("mobiele grafiek bevat onverwacht veel vaste/extrema-temperatuurlabels: "+v('temp-count'));
   if(v('temp-overlap')!=='geen')throw new Error("mobiele temperatuurlabels overlappen nog: "+v('temp-overlap'));
   if(v('now-text')!=='nu 13°')throw new Error("actuele rode markering mist de temperatuurwaarde: "+v('now-text'));

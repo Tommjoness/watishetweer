@@ -63,7 +63,7 @@ function kiesKalenderUurLabelIndices(tijden,cadans=3,maxPunten=24){
    zelf draagt alleen de nu-markering en hooguit twee markeringen: het hoogste
    en het laagste punt van het zichtbare etmaal. Zo kan geen getal met de lijn
    of met een ander getal botsen, bij welk weerverloop dan ook. */
-const MOBIELE_TEMP_RIJ_Y=19,MOBIELE_UURAS_Y=34,NU_MARKERING_BEREIK_UREN=3;
+const MOBIEL_ICOON_Y=4,MOBIEL_ICOON_GROOTTE=16,MOBIEL_LIJNLABEL_GROOTTE=12,MOBIELE_UURAS_Y=34,NU_MARKERING_BEREIK_UREN=3;
 function mobieleGrafiekMarkeringen(temperaturen,maxPunten=24,nu=null){
   const T=Array.isArray(temperaturen)?temperaturen:[],n=Math.min(T.length,Math.max(0,Math.floor(Number(maxPunten)||24)));
   const geldig=[];for(let i=0;i<n;i++)if(Number.isFinite(Number(T[i])))geldig.push(i);
@@ -270,7 +270,7 @@ function mobieleGrafiekCompactHoogte(plotBottom,huidigeHoogte,zichtbareOnderkant
   return Math.min(h,doel);
 }
 
-const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,lokaleForecastMinuten,mobieleGrafiekMarkeringen,monotoonPad,MOBIELE_TEMP_RIJ_Y,MOBIELE_UURAS_Y,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,lijnRaaktTekstBox,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,mobieleTemperatuurLabelLimiet,kiesMobieleTemperatuurLabelIndices,prioriteerMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
+const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,lokaleForecastMinuten,mobieleGrafiekMarkeringen,monotoonPad,MOBIEL_ICOON_Y,MOBIEL_ICOON_GROOTTE,MOBIEL_LIJNLABEL_GROOTTE,MOBIELE_UURAS_Y,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,lijnRaaktTekstBox,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,mobieleTemperatuurLabelLimiet,kiesMobieleTemperatuurLabelIndices,prioriteerMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -369,7 +369,7 @@ function polishMobieleGrafiekRanden(){
   })).filter(p=>Number.isInteger(p.i)&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&Number.isFinite(Number(temperaturen[p.i])));
   const labels=[...svg.querySelectorAll("text")].filter(el=>{
     const ff=String(el.getAttribute("font-family")||"");
-    return !el.hasAttribute("data-mobile-temp-row")&&/Bodoni/i.test(ff)&&/^-?\d+°$/.test(String(el.textContent||"").trim());
+    return !el.hasAttribute("data-mobile-temp-label")&&!el.hasAttribute("data-mobile-temp-marker")&&/Bodoni/i.test(ff)&&/^-?\d+°$/.test(String(el.textContent||"").trim());
   }).sort((a,b)=>Number(a.getAttribute("x"))-Number(b.getAttribute("x")));
   const gebruikt=new Set(),maxDx=Math.max(54,(Number(g.cw)||0)*3);
 
@@ -410,22 +410,21 @@ function bouwMobieleTemperatuurRij(){
   const ink=wortel.getPropertyValue("--ink").trim()||"currentColor",sheet=wortel.getPropertyValue("--sheet").trim()||"white";
   const voorScrub=el=>svg.insertBefore(el,svg.querySelector('g[data-q4-rain-periods]')||svg.querySelector("#scrub")||null);
 
-  /* Idempotent: iedere pass (rAF, timers, fontload) bouwt rij en markeringen
-     opnieuw op. Temperatuurcijfers van de basisgrafiek op de lijn verdwijnen. */
+  /* Idempotent: iedere pass (rAF, timers, fontload) bouwt labels, markeringen,
+     vlak en iconen opnieuw op. Temperatuurcijfers van de basisgrafiek verdwijnen. */
   [...svg.querySelectorAll("text")].filter(el=>{
     if(el.closest("#scrub"))return false;
     const ff=String(el.getAttribute("font-family")||""),tekst=String(el.textContent||"").trim();
     return el.hasAttribute("data-mobile-temp-index")||el.hasAttribute("data-mobile-temp-marker")||(/Bodoni/i.test(ff)&&/^-?\d+°$/.test(tekst));
   }).forEach(el=>el.remove());
-  svg.querySelectorAll("circle[data-mobile-temp-marker-dot]").forEach(el=>el.remove());
+  svg.querySelectorAll("circle[data-mobile-temp-marker-dot],[data-mobile-temp-area],[data-mobile-weather-icon]").forEach(el=>el.remove());
 
-  const ankers=kiesKalenderUurLabelIndices(g.TI,3,24).filter(i=>Number.isFinite(Number(g.T[i]))),ankerSet=new Set(ankers);
+  const ankers=kiesKalenderUurLabelIndices(g.TI,3,24).filter(i=>Number.isFinite(Number(g.T[i])));
   const puntSjabloon=svg.querySelector("circle[data-temp-index]");
   const puntPerIndex=new Map([...svg.querySelectorAll("circle[data-temp-index]")].map(el=>[Number(el.getAttribute("data-temp-index")),el]));
-  puntPerIndex.forEach((el,i)=>{if(!ankerSet.has(i))el.remove();});
 
   /* Vloeiende lijn: dezelfde punten, monotone curve. De punten blijven als
-     attribuut beschikbaar voor de botsingscontrole van het nu-label. */
+     attribuut beschikbaar voor de botsingscontrole van labels en nu-label. */
   [...svg.querySelectorAll("polyline")].filter(el=>!el.closest("#scrub")).forEach(lijn=>{
     const punten=String(lijn.getAttribute("points")||"").trim();
     const d=monotoonPad(punten.split(/\s+/).map(p=>p.split(",").map(Number)));
@@ -437,27 +436,37 @@ function bouwMobieleTemperatuurRij(){
     lijn.replaceWith(pad);
   });
 
-  /* Vaste temperatuurrij: exact boven het bijbehorende uur op de as. */
-  const rijY=bottom+MOBIELE_TEMP_RIJ_Y;
-  ankers.forEach(i=>{
-    const x=Number(g.x(i)),y=Number(g.y(Number(g.T[i])));if(!Number.isFinite(x)||!Number.isFinite(y))return;
-    let punt=puntPerIndex.get(i);
-    if(!punt||!punt.isConnected){
-      punt=puntSjabloon?puntSjabloon.cloneNode(false):document.createElementNS(SVG_NS,"circle");
-      voorScrub(punt);
+  /* Zacht vlak onder de lijn: inktkleur die naar onderen wegvalt. Zo werkt het
+     in licht, donker en rood nachtlicht zonder eigen kleur. */
+  const hoofdlijn=svg.querySelector("path[data-mobile-smooth-line]");
+  if(hoofdlijn){
+    const punten=String(hoofdlijn.getAttribute("data-mobile-line-points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)).filter(p=>p.length===2&&p.every(Number.isFinite));
+    if(punten.length>1){
+      const defs=document.createElementNS(SVG_NS,"defs");defs.setAttribute("data-mobile-temp-area","defs");
+      const verloop=document.createElementNS(SVG_NS,"linearGradient");
+      verloop.setAttribute("id","mobielTempVlak");verloop.setAttribute("x1","0");verloop.setAttribute("y1","0");verloop.setAttribute("x2","0");verloop.setAttribute("y2","1");
+      [["0",".13"],["1","0"]].forEach(([offset,dekking])=>{const stop=document.createElementNS(SVG_NS,"stop");stop.setAttribute("offset",offset);stop.setAttribute("stop-color",ink);stop.setAttribute("stop-opacity",dekking);verloop.appendChild(stop);});
+      defs.appendChild(verloop);svg.insertBefore(defs,svg.firstChild);
+      const vlak=document.createElementNS(SVG_NS,"path");
+      vlak.setAttribute("d",hoofdlijn.getAttribute("d")+` L${punten[punten.length-1][0]},${bottom} L${punten[0][0]},${bottom} Z`);
+      vlak.setAttribute("fill","url(#mobielTempVlak)");vlak.setAttribute("stroke","none");vlak.setAttribute("data-mobile-temp-area","1");
+      hoofdlijn.parentNode.insertBefore(vlak,hoofdlijn);
     }
-    punt.setAttribute("data-temp-index",String(i));punt.setAttribute("data-mobile-temp-point","1");
-    punt.setAttribute("cx",String(x));punt.setAttribute("cy",String(y));
-    punt.setAttribute("r","1.5");punt.setAttribute("fill",ink);punt.setAttribute("opacity",".45");
-    const el=document.createElementNS(SVG_NS,"text");
-    el.textContent=Math.round(Number(g.T[i]))+"°";
-    el.setAttribute("x",String(x));el.setAttribute("y",String(rijY));el.setAttribute("text-anchor","middle");
-    el.setAttribute("font-family","Bodoni Moda,Georgia,serif");el.setAttribute("font-size","11");
-    el.setAttribute("fill",ink);el.setAttribute("opacity",".9");
-    el.setAttribute("data-mobile-temp-index",String(i));el.setAttribute("data-mobile-temp-row","1");el.setAttribute("data-mobile-temp-priority","anchor");
-    const correctie=randCorrectieVoorTekstBox(svgTekstBoxUitElement(el),W,marge);
-    if(correctie){el.setAttribute("x",String(correctie.x));el.setAttribute("text-anchor",correctie.anker);el.setAttribute("data-mobile-edge-adjusted","1");}
-    voorScrub(el);
+  }
+
+  /* Weericoon per drie-uursanker, tussen plot en uuras. Dezelfde lijniconen
+     als bovenaan de pagina; zonder weercode voor dat uur geen icoon. */
+  const uren=S.d&&S.d.hourly,uurIndex=new Map(uren&&Array.isArray(uren.time)?uren.time.map((t,k)=>[t,k]):[]);
+  if(typeof icon==="function"&&uren&&Array.isArray(uren.weather_code))ankers.forEach(i=>{
+    const k=uurIndex.get(g.TI[i]),code=k===undefined?null:uren.weather_code[k];
+    if(code===null||code===undefined||!Number.isFinite(Number(code)))return;
+    const dag=!Array.isArray(uren.is_day)||uren.is_day[k]!==0;
+    const markup=String(icon(Number(code),dag,MOBIEL_ICOON_GROOTTE)).replace(/^<svg[^>]*>/,"").replace(/<\/svg>$/,"");
+    const x=Math.min(Math.max(Number(g.x(i)),Number(g.x(0))),W-marge-MOBIEL_ICOON_GROOTTE/2);
+    const groep=document.createElementNS(SVG_NS,"g");groep.innerHTML=markup;
+    groep.setAttribute("transform",`translate(${x-MOBIEL_ICOON_GROOTTE/2},${bottom+MOBIEL_ICOON_Y}) scale(${MOBIEL_ICOON_GROOTTE/24})`);
+    groep.setAttribute("color",ink);groep.setAttribute("opacity",".78");groep.setAttribute("aria-hidden","true");
+    groep.setAttribute("data-mobile-weather-icon",String(i));voorScrub(groep);
   });
 
   /* Nu-markering: waarde en (fractionele) uurpositie van de rode lijn. */
@@ -471,55 +480,95 @@ function bouwMobieleTemperatuurRij(){
   const uurBreedte=Number(g.x(1))-Number(g.x(0));
   const nuIndex=Number.isFinite(nuX)&&uurBreedte>0?(nuX-Number(g.x(0)))/uurBreedte:null;
 
-  /* Max en min op de lijn. Eerst recht boven (max) of onder (min) het punt,
-     dan licht verschoven, dan links of rechts ernaast. Een positie telt alleen
-     als ze vrij is van de lijn, de nu-lijn en alle bestaande tekst (nu-label,
-     asgetallen, regenperiodes); past ze nergens, dan vervalt de markering
-     liever dan te botsen. Zonder "max"/"min" lijkt een markering anders op een
-     asgetal wanneer ze ernaast staat. */
+  /* Alle temperatuurlabels op de lijn delen één stijl met de grote temperatuur
+     bovenaan. Een positie telt alleen als ze vrij is van de lijn, de nu-lijn en
+     alle bestaande tekst (nu-label, asgetallen, regenperiodes); past ze nergens,
+     dan vervalt het label liever dan te botsen. */
   const vast=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")).map(svgTekstBoxUitElement).filter(Boolean);
   if(Number.isFinite(nuX))vast.push({x:nuX-3,y:top,width:6,height:bottom-top});
-  /* Links van het eerste uur staan de asgetallen; een kale "20°" daar leest als asgetal. */
+  /* Links van het eerste uur staan de asgetallen; een label daar leest als asgetal. */
   const asKolom=Number(g.x(0))-4;
   const lijnen=[...svg.querySelectorAll("path[data-mobile-line-points]")]
     .map(el=>String(el.getAttribute("data-mobile-line-points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
-  const getoond=[],vervallen=[];
-  mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null}).forEach(m=>{
-    const px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
-    /* Alleen de waarde: "min 3°" leest als min 3 graden (-3°). Stip en
-       plaats boven of onder de lijn maken al duidelijk dat het piek of dal is. */
-    const tekst=m.waarde+"°",fs=9.5,boven=py-8,onder=py+15,naast=py+3.5;
-    const verticaal=y=>[[px,y,"middle"],[px+14,y,"middle"],[px-14,y,"middle"]];
-    const kandidaten=[...verticaal(m.type==="max"?boven:onder),[px+7,naast,"start"],[px-7,naast,"end"],...verticaal(m.type==="max"?onder:boven)];
-    let gekozen=null;
+  const fs=MOBIEL_LIJNLABEL_GROOTTE;
+  const plaats=(tekst,kandidaten,schuif)=>{
     for(const [x0,y,anker] of kandidaten){
       if(y-fs<top+2||y>bottom-3)continue;
       let box=geschatteSvgTekstBox(tekst,x0,y,anker,fs);if(!box)continue;
       let x=x0;
       if(box.x<marge)x+=marge-box.x;else if(box.x+box.width>W-marge)x-=box.x+box.width-(W-marge);
       box=geschatteSvgTekstBox(tekst,x,y,anker,fs);
-      if(box&&box.x<asKolom)continue;
-      if(box&&!vast.some(b=>rechthoekenBotsen(b,box,4))&&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box,1))){gekozen={x,y,anker,box};break;}
+      if(box&&box.x<asKolom){if(!schuif)continue;x+=asKolom-box.x;box=geschatteSvgTekstBox(tekst,x,y,anker,fs);}
+      if(box&&!vast.some(b=>rechthoekenBotsen(b,box,3))&&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box,1)))return {x,y,anker,box};
     }
-    if(!gekozen){vervallen.push(m.type);return;}
+    return null;
+  };
+  const label=(tekst,pos)=>{
+    const el=document.createElementNS(SVG_NS,"text");el.textContent=tekst;
+    el.setAttribute("x",String(pos.x));el.setAttribute("y",String(pos.y));el.setAttribute("text-anchor",pos.anker);
+    el.setAttribute("font-family","Bodoni Moda,Georgia,serif");el.setAttribute("font-size",String(fs));el.setAttribute("fill",ink);
+    el.setAttribute("stroke",sheet);el.setAttribute("stroke-width","3");el.setAttribute("paint-order","stroke");el.setAttribute("stroke-linejoin","round");
+    vast.push(pos.box);return el;
+  };
+
+  /* 1. Piek en dal gaan voor: eerst recht boven (piek) of onder (dal) het punt,
+     dan licht verschoven, dan links of rechts ernaast. Alleen de waarde: "min 3°"
+     leest als min 3 graden (-3°); stip en plaats zeggen al wat het is. */
+  const getoond=[],vervallen=[],markeringen=[];
+  mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null}).forEach(m=>{
+    const px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
+    const boven=py-9,onder=py+18,naast=py+4;
+    const verticaal=y=>[[px,y,"middle"],[px+14,y,"middle"],[px-14,y,"middle"]];
+    const pos=plaats(m.waarde+"°",[...verticaal(m.type==="max"?boven:onder),[px+7,naast,"start"],[px-7,naast,"end"],...verticaal(m.type==="max"?onder:boven)],false);
+    if(!pos){vervallen.push(m.type);return;}
     const dot=document.createElementNS(SVG_NS,"circle");
     dot.setAttribute("cx",String(px));dot.setAttribute("cy",String(py));dot.setAttribute("r","2.2");dot.setAttribute("fill",ink);
     dot.setAttribute("data-mobile-temp-marker-dot",m.type);voorScrub(dot);
-    const el=document.createElementNS(SVG_NS,"text");el.textContent=tekst;
-    el.setAttribute("x",String(gekozen.x));el.setAttribute("y",String(gekozen.y));el.setAttribute("text-anchor",gekozen.anker);
-    el.setAttribute("font-family","DM Mono,monospace");el.setAttribute("font-size",String(fs));
-    el.setAttribute("fill",ink);el.setAttribute("opacity",".72");
-    el.setAttribute("stroke",sheet);el.setAttribute("stroke-width","3");el.setAttribute("paint-order","stroke");el.setAttribute("stroke-linejoin","round");
+    const el=label(m.waarde+"°",pos);
     el.setAttribute("data-mobile-temp-marker",m.type);el.setAttribute("data-mobile-temp-marker-index",String(m.i));
-    voorScrub(el);vast.push(gekozen.box);getoond.push(m.type+":"+m.i);
+    voorScrub(el);getoond.push(m.type+":"+m.i);markeringen.push({i:m.i,el});
   });
 
-  svg.setAttribute("data-mobile-temp-row","1");
+  /* 2. Temperatuur per drie-uursanker, boven het punt op de lijn. Een anker
+     binnen een uur van piek of dal, of binnen anderhalf uur van "nu", heeft
+     daar al een temperatuur staan en krijgt geen tweede label. */
+  const gelabeld=[],gedekt=[],ontbrekend=[];
+  ankers.forEach(i=>{
+    const x=Number(g.x(i)),y=Number(g.y(Number(g.T[i])));
+    let punt=puntPerIndex.get(i);
+    const zonderPunt=()=>{if(punt&&punt.isConnected)punt.remove();};
+    if(!Number.isFinite(x)||!Number.isFinite(y)){zonderPunt();return;}
+    const markering=markeringen.find(m=>Math.abs(m.i-i)<=1);
+    if(markering){markering.el.setAttribute("data-mobile-temp-covers-anchor",String(i));gedekt.push(i);zonderPunt();return;}
+    if(nuTekst&&Number.isFinite(nuIndex)&&Math.abs(i-nuIndex)<1.5){nuTekst.setAttribute("data-mobile-temp-anchor-index",String(i));gedekt.push(i);zonderPunt();return;}
+    const tekst=Math.round(Number(g.T[i]))+"°";
+    /* Boven het punt; loopt de lijn daar steil, dan schuin ernaast aan de open
+       kant (stijgend: linksboven, dalend: rechtsboven); anders eronder. */
+    const pos=plaats(tekst,[[x,y-9,"middle"],[x,y-15,"middle"],[x+6,y-5,"start"],[x-6,y-5,"end"],[x+8,y-9,"middle"],[x-8,y-9,"middle"],
+      [x,y+19,"middle"],[x,y+25,"middle"],[x+6,y+15,"start"],[x-6,y+15,"end"]],true);
+    if(!pos){ontbrekend.push(i);zonderPunt();return;}
+    if(!punt||!punt.isConnected){
+      punt=puntSjabloon?puntSjabloon.cloneNode(false):document.createElementNS(SVG_NS,"circle");
+      voorScrub(punt);
+    }
+    punt.setAttribute("data-temp-index",String(i));punt.setAttribute("data-mobile-temp-point","1");
+    punt.setAttribute("cx",String(x));punt.setAttribute("cy",String(y));
+    punt.setAttribute("r","1.5");punt.setAttribute("fill",ink);punt.setAttribute("opacity",".45");
+    const el=label(tekst,pos);
+    el.setAttribute("data-mobile-temp-index",String(i));el.setAttribute("data-mobile-temp-label","1");el.setAttribute("data-mobile-temp-priority","anchor");
+    if(pos.x!==x)el.setAttribute("data-mobile-edge-adjusted","1");
+    voorScrub(el);gelabeld.push(i);
+  });
+  puntPerIndex.forEach((el,i)=>{if(el.isConnected&&!gelabeld.includes(i))el.remove();});
+
+  svg.setAttribute("data-mobile-temp-line-labels","1");
   svg.setAttribute("data-mobile-temp-anchor-count",String(ankers.length));
-  svg.setAttribute("data-mobile-temp-visible",String(ankers.length));
+  svg.setAttribute("data-mobile-temp-visible",String(gelabeld.length));
+  svg.setAttribute("data-mobile-temp-covered",gedekt.join(","));
   svg.setAttribute("data-mobile-temp-markers",getoond.join(","));
   if(vervallen.length)svg.setAttribute("data-mobile-temp-dropped-markers",vervallen.join(","));else svg.removeAttribute("data-mobile-temp-dropped-markers");
-  ["data-mobile-temp-missing-anchors","data-mobile-temp-dropped-extrema","data-mobile-temp-extrema-count"].forEach(a=>svg.removeAttribute(a));
+  if(ontbrekend.length)svg.setAttribute("data-mobile-temp-missing-anchors",ontbrekend.join(","));else svg.removeAttribute("data-mobile-temp-missing-anchors");
+  ["data-mobile-temp-row","data-mobile-temp-dropped-extrema","data-mobile-temp-extrema-count"].forEach(a=>svg.removeAttribute(a));
 }
 function vereenvoudigMobieleZonband(){
   if(!mobiel()||window.innerWidth>430)return;
