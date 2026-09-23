@@ -25,6 +25,11 @@ function verifieerPublicatie(dir) {
     if (naam.startsWith(".") || /\.(?:key|pem|p12|pfx)$/i.test(naam) || naam === "wrangler.jsonc") {
       throw new Error(`Gevoelig bestand mag niet in public/: ${path.relative(publicDir, path.join(dir, naam))}`);
     }
+    /* Repositorydocumentatie (runbooks, audits, commerciële baseline) hoort niet
+       op het productiedomein. Geen enkele publieke route serveert Markdown. */
+    if ((entry.isFile() && /\.md$/i.test(naam)) || (entry.isDirectory() && dir === publicDir && naam === "docs")) {
+      throw new Error(`Interne documentatie mag niet in public/: ${path.relative(publicDir, path.join(dir, naam))}`);
+    }
     if (entry.isDirectory()) verifieerPublicatie(path.join(dir, naam));
   }
 }

@@ -29,18 +29,20 @@ Belangrijke ingangen:
 
 De huidige publieke serverroutes zijn:
 
-- `api/forecast.mjs` — beschermde WeatherAPI-fallback voor actuele, uur- en zevendaagse forecastdata.
+- `api/forecast.mjs` — beschermde server-side forecastfallback (Visual Crossing, met WeatherAPI als noodfallback) voor actuele, uur- en zevendaagse forecastdata.
 - `api/plaatsnaam.mjs` — reverse geocoding voor `Mijn locatie` wanneer de directe BigDataCloud-resolutie niet genoeg oplevert.
 - `api/neerslag.mjs` — actuele en korte-termijnneerslag via de beschikbare providerlaag.
 - `api/waarschuwingen.mjs` — officiële weerwaarschuwingen op basis van de gekozen locatie.
+- `api/luchtkwaliteit.mjs` — actuele Nederlandse luchtkwaliteitsindex (LKI) van RIVM/Luchtmeetnet; buiten Nederland expliciet niet beschikbaar.
+- `functions/api/admin/seo.js` — privé SEO-dashboard-API achter Cloudflare Access; zie `.github/SEO_DASHBOARD_SETUP.md`.
 
 Serverlogica staat in `lib/`. De `functions/api/*.js`-bestanden zijn alleen de Cloudflare-ingangen en horen geen tweede implementatie van de route te bevatten.
 
-### WeatherAPI-fallback
+### Forecastfallback (Visual Crossing en WeatherAPI)
 
-Open-Meteo blijft de primaire forecastbron. Alleen bij een fout of wanneer de volledige Open-Meteo-request na vijf seconden nog niet gereed is, starten de lichte Open-Meteo-fallback en de same-origin WeatherAPI-route binnen hetzelfde begrensde fallbackvenster. De eerste volledige, gevalideerde zevendaagse dataset wint; verliezende requests worden afgebroken.
+Open-Meteo blijft de primaire forecastbron. Alleen bij een fout of wanneer de volledige Open-Meteo-request na vijf seconden nog niet gereed is, starten de lichte Open-Meteo-fallback en de same-origin route `/api/forecast` binnen hetzelfde begrensde fallbackvenster. Die route probeert eerst Visual Crossing en valt daarna terug op WeatherAPI; geldige volledige antwoorden van beide providers worden tien minuten in de Cloudflare edge-cache bewaard. De eerste volledige, gevalideerde zevendaagse dataset wint; verliezende requests worden afgebroken.
 
-De WeatherAPI-sleutel mag uitsluitend als versleutelde Cloudflare Pages-secret `WEATHERAPI_KEY` in zowel preview als production worden ingesteld. Zet de sleutel nooit in browsercode, GitHub Actions-output of een repositorybestand. Omdat de app zeven dagen toont, is een WeatherAPI Starter-abonnement of hoger vereist; een driedaagse Free-response faalt bewust gesloten.
+De providersleutels mogen uitsluitend als versleutelde Cloudflare Pages-secrets `VISUAL_CROSSING_API_KEY` en `WEATHERAPI_KEY` in zowel preview als production worden ingesteld. Zet een sleutel nooit in browsercode, GitHub Actions-output of een repositorybestand. Omdat de app zeven dagen toont, is een WeatherAPI Starter-abonnement of hoger vereist; een driedaagse Free-response faalt bewust gesloten.
 
 ### Reverse geocoding
 
@@ -66,9 +68,9 @@ Een waarschuwing wordt alleen als plaatsgebonden kaart doorgegeven wanneer de se
 
 | Onderdeel | Bron |
 |---|---|
-| actuele, uur- en dagverwachting | Open-Meteo primair; WeatherAPI server-side fallback |
+| actuele, uur- en dagverwachting | Open-Meteo primair; Visual Crossing en WeatherAPI als server-side fallback |
 | locatie zoeken | Open-Meteo Geocoding |
-| luchtkwaliteit en pollen | Open-Meteo Air Quality |
+| luchtkwaliteit en pollen | Open-Meteo Air Quality; RIVM/Luchtmeetnet (LKI) in Nederland |
 | reverse geocoding | BigDataCloud, met Nominatim-compatible serverfallback |
 | waarschuwingen VS | National Weather Service |
 | waarschuwingen Europa | MeteoAlarm |

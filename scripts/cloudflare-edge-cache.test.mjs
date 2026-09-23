@@ -117,6 +117,59 @@ async function run(context,route,fn){
 }
 
 {
+  /* Visual Crossing is de eerste server-fallback. Deze regressie loopt bewust
+     door de echte forecastroute en normalisatie: een geldige Visual Crossing-
+     response moet net als WeatherAPI één keer upstream gaan en daarna HIT zijn. */
+  const { default: forecastWorker } = await import("../api/forecast.mjs");
+  const cache=new MemoryCache();
+  const env={VISUAL_CROSSING_API_KEY:"test-key"};
+  const dagen=Array.from({length:7},(_,d)=>{
+    const datum=new Date(Date.UTC(2026,8,23+d)).toISOString().slice(0,10);
+    const start=Date.parse(`${datum}T00:00:00Z`)/1000;
+    return {
+      datetime:datum,datetimeEpoch:start,tempmax:20,tempmin:10,precip:0,precipprob:0,windgust:10,windspeed:5,winddir:180,uvindex:3,
+      icon:"clear-day",conditions:"Clear",sunrise:"07:30:00",sunset:"19:30:00",sunriseEpoch:start+5.5*3600,sunsetEpoch:start+17.5*3600,
+      hours:Array.from({length:24},(_,h)=>({
+        datetime:`${String(h).padStart(2,"0")}:00:00`,datetimeEpoch:start+h*3600,temp:15,feelslike:15,humidity:70,dew:9,precip:0,precipprob:0,
+        snow:0,windgust:10,windspeed:5,winddir:180,pressure:1015,cloudcover:20,visibility:20,uvindex:2,conditions:"Clear",icon:"clear-day"
+      }))
+    };
+  });
+  const upstream={latitude:52.3702,longitude:4.8952,timezone:"UTC",tzoffset:0,
+    currentConditions:{...dagen[0].hours[12],sunrise:"07:30:00",sunset:"19:30:00"},days:dagen};
+  const origineleFetch=globalThis.fetch;
+  let upstreamCalls=0;
+  globalThis.fetch=async()=>{upstreamCalls+=1;return new Response(JSON.stringify(upstream),{status:200,headers:{"Content-Type":"application/json"}});};
+  try{
+    const aanvraag=()=>{
+      const request=new Request(BASE+"/api/forecast?lat=52.3702&lon=4.8952");
+      return run({request,cache,env},"forecast",()=>forecastWorker.fetch(request,env));
+    };
+    const eerste=await aanvraag();
+    assert.equal(eerste.headers.get("x-wiw-weather-source"),"visualcrossing");
+    assert.equal(eerste.headers.get("x-wiw-edge-cache"),"MISS","geldige Visual Crossing-fallback moet in caches.default worden opgeslagen");
+    const tweede=await aanvraag();
+    assert.equal(tweede.headers.get("x-wiw-edge-cache"),"HIT");
+    assert.equal((await tweede.json()).provider,"visualcrossing");
+    assert.equal(upstreamCalls,1,"Visual Crossing-cachehit mag de betaalde upstream niet opnieuw raken");
+  }finally{
+    globalThis.fetch=origineleFetch;
+  }
+}
+
+{
+  const cache=new MemoryCache();
+  const dagen=Array.from({length:7},(_,i)=>`2026-09-${String(6+i).padStart(2,"0")}`);
+  const r=await run({request:new Request(BASE+"/api/forecast?lat=52.37&lon=4.89"),cache},"forecast",async()=>
+    jsonResponse({provider:"onbekend",current:{temperature_2m:14},
+      hourly:{time:dagen.flatMap(dag=>Array.from({length:24},(_,i)=>`${dag}T${String(i).padStart(2,"0")}:00`))},daily:{time:dagen}},
+    "s-maxage=600, stale-while-revalidate=300")
+  );
+  assert.equal(r.headers.get("x-wiw-edge-cache"),"BYPASS","alleen bekende forecastproviders zijn cachebaar");
+  assert.equal(cache.puts,0);
+}
+
+{
   const cache=new MemoryCache();
   const dagen=Array.from({length:7},(_,i)=>`2026-09-${String(6+i).padStart(2,"0")}`);
   const incompleet={

@@ -15,6 +15,11 @@ function routesVoorProbe(id){
   const plaatsLon=5.2647+offset(h>>>5,0.000001);
   const jpLat=35.6812+offset(h>>>9,0.000001);
   const jpLon=139.7671+offset(h>>>13,0.000001);
+  /* Forecast cachet op drie decimalen; een grovere probe-offset geeft iedere
+     deploy zo een eigen sleutel. Dit kost bewust één betaalde fallbackcall per
+     domein en bewijst dat een geldige providerfallback werkelijk HIT wordt. */
+  const forecastLat=52.37+offset(h>>>17,0.00001);
+  const forecastLon=4.895+offset(h>>>21,0.00001);
   return [
     {
       naam:"plaatsnaam",
@@ -26,6 +31,13 @@ function routesVoorProbe(id){
       naam:"neerslag",
       pad:`/api/neerslag?lat=${vaste(jpLat,5)}&lon=${vaste(jpLon,5)}&land=JP`,
       cachebaar:b=>Boolean(b&&(b.beschikbaar===true||(b.beschikbaar===false&&b.provider==null&&b.reden==="geen actuele neerslagprovider voor deze locatie")))
+    },
+    {
+      naam:"forecast",
+      pad:`/api/forecast?lat=${vaste(forecastLat,3)}&lon=${vaste(forecastLon,3)}`,
+      cachebaar:b=>Boolean(b&&["visualcrossing","weatherapi"].includes(b.provider)&&!b.reden
+        &&b.daily&&Array.isArray(b.daily.time)&&b.daily.time.length===7),
+      tijdelijkeStatus:(status,b)=>status===503&&Boolean(b&&b.beschikbaar===false)
     },
     {
       naam:"waarschuwingen",
@@ -66,6 +78,10 @@ function variant(root,pad){
 
 async function controleer(root,route){
   const eerste=await haal(root+route.pad);
+  if(eerste.status!==200&&route.tijdelijkeStatus&&route.tijdelijkeStatus(eerste.status,eerste.body)){
+    console.warn(`${route.naam} ${root}: tijdelijke upstreamdegradatie (HTTP ${eerste.status}), live cacheprobe overgeslagen.`);
+    return {overgeslagen:true};
+  }
   if(eerste.status!==200)throw new Error(`${route.naam} ${root}: eerste request HTTP ${eerste.status}`);
   if(!route.cachebaar(eerste.body)){
     if(route.tijdelijk&&route.tijdelijk(eerste.body)){

@@ -1,0 +1,5 @@
+node_modules/
+public/
+.weather-runtime-source.tmp
+.dev.vars
+.wrangler/
