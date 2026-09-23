@@ -82,7 +82,7 @@ async function controleer(type,naam){
     assert.equal(staat.search,"",`${naam}: plaatsroute lekt terug naar query-URL`);
     assert.equal(staat.canonical,"https://watishetweer.nl/weer/almere/",`${naam}: canonical wijkt af`);
     assert.equal(staat.base,basis+"/weer/almere/",`${naam}: zonder CSP-verboden base-element moet baseURI de canonieke route blijven`);
-    assert.equal(staat.title,"Weer Almere vandaag | watishetweer.nl",`${naam}: unieke titel ontbreekt`);
+    assert.equal(staat.title,"Weer Almere vandaag en per uur | watishetweer.nl",`${naam}: unieke titel ontbreekt`);
     assert(staat.context.includes("Weer in Almere")&&staat.context.includes("Flevoland")&&staat.context.includes("Plaatsen in de buurt"),`${naam}: zichtbare prerendercontext ontbreekt`);
     assert.deepEqual(staat.breadcrumb,[
       {text:"watishetweer.nl",href:"/",current:null},
