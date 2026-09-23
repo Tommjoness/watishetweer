@@ -166,9 +166,9 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
             const info=tempInfo.find(x=>x.i===i),verwacht=Number.isFinite(Number(g&&g.T&&g.T[i]))?Math.round(Number(g.T[i])):null;
             return {i,verwacht,tekst:info?info.tekst:"",priority:info?info.priority:"",viaNow:Number.isInteger(nowAnchor)&&nowAnchor===i};
           });
-          const alleExtrema=ux&&g?ux.lokaleTemperatuurExtrema(g.T,24):[];
-          const extraExtrema=alleExtrema.filter(e=>!expectedHourIndices.includes(e.i)),extremaState=extraExtrema.map(e=>({i:e.i,type:e.type,gelabeld:tempInfo.some(x=>x.i===e.i&&x.priority==="extremum")}));
-          const missingAnchors=svg?.getAttribute("data-mobile-temp-missing-anchors")||"",droppedExtrema=svg?.getAttribute("data-mobile-temp-dropped-extrema")||"";
+          const markerEls=svg?[...svg.querySelectorAll("text[data-mobile-temp-marker]")]:[],markerBoxes=markerEls.map(el=>el.getBoundingClientRect());
+          const markerState={count:markerEls.length,teksten:markerEls.map(el=>(el.textContent||"").trim()),nowOverlap:markerBoxes.filter(r=>raakt(r,nowBox,1)).length,tempOverlap:markerBoxes.filter(r=>tempBoxes.some(t=>raakt(r,t,1))).length,clipped:markerBoxes.filter(r=>!binnenSvg(r)).length};
+          const missingAnchors=svg?.getAttribute("data-mobile-temp-missing-anchors")||"";
           const hourBoxes=hourLabels.map(el=>el.getBoundingClientRect()),hourOverlap=[];
           for(let i=0;i<hourBoxes.length;i++)for(let j=i+1;j<hourBoxes.length;j++)if(raakt(hourBoxes[i],hourBoxes[j],0))hourOverlap.push(i+"-"+j);
           const sunInChart=svg?[...svg.querySelectorAll("text")].filter(el=>/^zon (?:op|onder) \\d{2}:\\d{2}$/i.test(String(el.textContent||"").trim())).length:999;
@@ -182,7 +182,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const disclosure=sel=>{const el=document.querySelector(sel);if(!el||el.hidden||getComputedStyle(el).display==="none")return null;const r=el.getBoundingClientRect(),st=getComputedStyle(el);return {height:r.height,width:r.width,expanded:el.getAttribute("aria-expanded")||"",controls:el.getAttribute("aria-controls")||"",display:st.display,pointerEvents:st.pointerEvents,visibility:st.visibility,after:getComputedStyle(el,"::after").content};};
           const nightRow=document.querySelector("#nights .row.night:not(.kop):not([hidden])");
           return {
-            tempCount:tempLabels.length,tempOverlap:tempOverlap.length,tempOverlapPairs:tempOverlap,tempPointDx,tempInfo,nowOverlap,anchorState,extremaState,missingAnchors,droppedExtrema,
+            tempCount:tempLabels.length,tempOverlap:tempOverlap.length,tempOverlapPairs:tempOverlap,tempPointDx,tempInfo,nowOverlap,anchorState,markerState,missingAnchors,
             tempClipped:tempInfo.filter(x=>!x.binnen).length,hourClipped:hourBoxes.filter(r=>!binnenSvg(r)).length,hourOverlap:hourOverlap.length,
             hourCount:hourLabels.length,hourTexts:hourLabels.map(el=>(el.textContent||"").trim()),hourTimes:hourIndices.map(i=>String(g&&g.TI&&g.TI[i]||"")),hourGaps,hourIndices,expectedHourIndices,expectedHourTexts,sunInChart,
             disclosures:{hours:disclosure(".wiw-hour-toggle"),nights:disclosure("#nights .nacht-meer")},
@@ -261,7 +261,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           assert(a.viaNow||a.priority==="anchor",`${vp.naam}: verplicht drie-uursanker ${a.i} mist een temperatuurlabel`);
           if(!a.viaNow)assert.equal(a.tekst,String(a.verwacht)+"°",`${vp.naam}: temperatuur bij anker ${a.i} hoort niet bij hetzelfde forecastpunt (${a.tekst}/${a.verwacht}°)`);
         }
-        assert(m.extremaState.every(e=>e.gelabeld),`${vp.naam}: lokaal extremum ontbreekt terwijl de browsergeometrie ruimte biedt (${JSON.stringify(m.extremaState)}; vervallen=${m.droppedExtrema})`);
+        assert(m.markerState.count<=2&&m.markerState.teksten.every(t=>/^(?:max|min) -?\d+°$/.test(t)),`${vp.naam}: de lijn draagt meer dan alleen max/min (${JSON.stringify(m.markerState.teksten)})`);
+        assert.equal(m.markerState.nowOverlap+m.markerState.tempOverlap+m.markerState.clipped,0,`${vp.naam}: max/min-markering botst of valt buiten de SVG (${JSON.stringify(m.markerState)})`);
         assert.equal(m.sunInChart,0,`${vp.naam}: dubbele zon-op/zon-ondertekst staat nog in de SVG`);
         assert.equal(m.compact,"1",`${vp.naam}: grafiekhoogte is niet mobiel gecompacteerd`);
         if(m.chartSummaryGap!==null)assert(m.chartSummaryGap>=0&&m.chartSummaryGap<=18,`${vp.naam}: grafiek-samenvatting heeft ${m.chartSummaryGap}px tussenruimte`);

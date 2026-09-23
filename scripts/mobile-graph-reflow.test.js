@@ -36,17 +36,31 @@ assert(!api.kiesKalenderUurLabelIndices(dstVoorjaar,3,24).some(i=>dstVoorjaar[i]
 const dstNajaar=["2026-10-25T00:00","2026-10-25T01:00","2026-10-25T02:00","2026-10-25T02:00","2026-10-25T03:00","2026-10-25T04:00","2026-10-25T05:00","2026-10-25T06:00","2026-10-25T07:00","2026-10-25T08:00","2026-10-25T09:00"];
 assert.deepEqual(api.kiesKalenderUurLabelIndices(dstNajaar,3,24),[0,4,7,10],"Dubbel lokaal najaarsuur wordt niet dubbel gelabeld en de echte 03/06/09-punten blijven de cadans dragen.");
 
-assert.deepEqual(api.lokaleTemperatuurExtrema([20,19,18,17],24),[],"Monotoon dalende curve heeft geen lokale extrema.");
-assert.deepEqual(api.lokaleTemperatuurExtrema([17,18,19,20],24),[],"Monotoon stijgende curve heeft geen lokale extrema.");
-assert.deepEqual(api.lokaleTemperatuurExtrema([10,12,11,9,10,13,12],24).map(e=>[e.i,e.type]),[[1,"piek"],[3,"dal"],[5,"piek"]],"Meerdere echte pieken en dalen worden deterministisch gevonden.");
-assert.deepEqual(api.lokaleTemperatuurExtrema([10,12,12,11],24).map(e=>[e.i,e.type,e.start,e.eind]),[[1,"piek",1,2]],"Een vlakke top krijgt exact één label op het linker middenpunt.");
-assert.deepEqual(api.lokaleTemperatuurExtrema([12,10,10,11],24).map(e=>[e.i,e.type,e.start,e.eind]),[[1,"dal",1,2]],"Een vlak dal krijgt exact één label op het linker middenpunt.");
-assert.deepEqual(api.lokaleTemperatuurExtrema([10,11,11,12],24),[],"Een gelijk plateau in een doorlopende stijging is geen vals extremum.");
+/* Mobiele markeringen: alleen het hoogste en laagste punt van het zichtbare
+   etmaal, elk één keer (midden van het eerste plateau met die waarde). */
+const mk=(T,n=24,nu=null)=>api.mobieleGrafiekMarkeringen(T,n,nu).map(m=>[m.type,m.waarde,m.i]);
+assert.deepEqual(mk([10,12,11,9,10,13,12]),[["min",9,3],["max",13,5]],"Alleen het hoogste en het laagste punt krijgen een markering, niet iedere lokale piek.");
+assert.deepEqual(mk([15,15,15,15]),[],"Een volledig vlak etmaal krijgt geen max/min-markering.");
+assert.deepEqual(mk([12,10,10,10,11]),[["max",12,0],["min",10,2]],"Een plateau krijgt één markering op het middenpunt.");
+assert.deepEqual(mk([20,19,18,17]),[["max",20,0],["min",17,3]],"Ook randpunten tellen als hoogste of laagste waarde.");
+assert.deepEqual(mk([19.6,20,20,20,19,18,17,16,15,15,15,15],24,{index:.5,waarde:20.2}),[["min",15,9]],"Een max gelijk aan 'nu' vlak naast de nu-lijn vervalt; 'nu 20°' zegt het al.");
+assert.deepEqual(mk([19.6,20,20,20,19,18,17,16,15,15,15,15],24,{index:.5,waarde:19}),[["max",20,1],["min",15,9]],"Wijkt de nu-waarde af, dan blijft de max staan (19,6 rondt af op 20: plateau 0-3, midden 1).");
+assert.deepEqual(mk([14,15,null,18,16],24).map(m=>m[0]),["min","max"],"Ontbrekende uren worden overgeslagen, niet als nul gelezen.");
 
-const planTijden=Array.from({length:8},(_,i)=>"2026-09-17T"+String(18+i).padStart(2,"0")+":00");
-const plan=api.mobieleTemperatuurLabelPlan(planTijden,[10,11,12,14,13,15,16,17],8);
-assert.deepEqual(plan.ankers,[0,3,6],"Plan bewaart alle verplichte drie-uursankers.");
-assert.deepEqual(plan.extrema.map(e=>[e.i,e.type]),[[4,"dal"]],"Een extremum op een drie-uursanker wordt niet dubbel opgenomen; een buur-extremum wel.");
+/* Vloeiende lijn: loopt door exact dezelfde punten en schiet nergens voorbij. */
+const lijnPunten=[[0,100],[10,80],[20,80],[30,40],[40,60],[50,60]];
+const pad=api.monotoonPad(lijnPunten);
+assert(pad.startsWith("M0,100 C"),"Pad begint op het eerste datapunt.");
+const segmenten=pad.slice(pad.indexOf("C")+1).split(" C").map(seg=>seg.trim().split(/\s+/).map(p=>p.split(",").map(Number)));
+assert.equal(segmenten.length,lijnPunten.length-1,"Eén curvestuk per interval.");
+segmenten.forEach(([c1,c2,eind],k)=>{
+  const [a,b]=[lijnPunten[k],lijnPunten[k+1]],lo=Math.min(a[1],b[1]),hi=Math.max(a[1],b[1]);
+  assert.deepEqual(eind,b,"Elk curvestuk eindigt exact op het volgende datapunt.");
+  assert(c1[1]>=lo-1e-9&&c1[1]<=hi+1e-9&&c2[1]>=lo-1e-9&&c2[1]<=hi+1e-9,"Controlepunten blijven tussen de twee datapunten: geen verzonnen pieken of dalen (interval "+k+").");
+});
+assert(segmenten[1].every(p=>p[1]===80),"Een vlak stuk in de data blijft vlak.");
+assert.equal(api.monotoonPad([[0,1]]),"","Eén punt levert geen lijn.");
+assert.equal(api.monotoonPad([[0,1],[5,3]]),"M0,1 L5,3","Twee punten worden een rechte lijn.");
 const start=api.geschatteSvgTekstBox("nu 19°",100,80,"start",12);
 assert(start&&start.x===100,"Start-anchor moet op de opgegeven x beginnen.");
 assert(start.y<80&&start.height>12,"Tekstbox moet de SVG-baseline conservatief omvatten.");
@@ -85,17 +99,19 @@ assert(runtime.includes("alle.forEach(el=>{const expliciet=uurAsLabelTekst(el.te
 assert(runtime.includes("el.textContent=uurAsLabelTekst(String(uur));"),"Ook fallback-uurlabels moeten expliciete HH:00-kloktijden gebruiken.");
 assert(runtime.includes("function polishMobieleGrafiekRanden()"),"Mobiele grafiek mist de gerichte rechterrand-/zwevend-labelpolish.");
 assert(runtime.includes("data-mobile-edge-adjusted"),"Mobiele randcorrectie is niet traceerbaar in de SVG.");
-assert(runtime.includes("data-mobile-point-aligned"),"Mobiele temperatuurcijfers zijn niet aantoonbaar exact aan hun datapunt teruggekoppeld.");
-assert(runtime.includes("herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();verminderMobieleTemperatuurlabels();"),"Mobiele eindpass moet de dubbele zontekst vóór de temperatuurcollision-pass verwijderen.");
-assert(runtime.includes("mobieleTemperatuurLabelPlan(g.TI,g.T,24)"),"Mobiele temperatuurselectie moet verplichte drie-uursankers en extra extrema uit één deterministisch plan halen.");
-assert(runtime.includes('data-mobile-temp-priority",verplicht?"anchor":"extremum"'),"Temperatuurlabels moeten hun collision-prioriteit expliciet markeren.");
-assert(runtime.includes("plan.ankers.forEach")&&runtime.includes("plan.extrema.forEach"),"Verplichte ankers moeten vóór optionele extrema worden geplaatst.");
-assert(runtime.includes('data-mobile-temp-missing-anchors')&&runtime.includes('data-mobile-temp-dropped-extrema'),"Runtime moet onplaatsbare verplichte ankers en optionele extrema afzonderlijk traceerbaar maken.");
-assert(runtime.includes("const xKandidaten=[px,px+12,px-12,px+18,px-18]"),"Mobiele temperatuurwaarden mogen alleen licht horizontaal uitwijken.");
+assert(runtime.includes("herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();bouwMobieleTemperatuurRij();"),"Mobiele eindpass moet de dubbele zontekst vóór de temperatuurrij verwijderen.");
+assert(runtime.includes("const rijY=bottom+MOBIELE_TEMP_RIJ_Y;")&&runtime.includes("y=Number(g.pt)+Number(g.ih)+MOBIELE_UURAS_Y;"),"Temperatuurrij staat vast direct boven de mobiele uuras.");
+assert(api.MOBIELE_TEMP_RIJ_Y<api.MOBIELE_UURAS_Y,"De temperatuurrij staat boven de uuras.");
+assert(runtime.includes('el.setAttribute("data-mobile-temp-row","1")')&&runtime.includes('el.setAttribute("data-mobile-temp-priority","anchor")'),"Rijlabels zijn traceerbaar als vaste drie-uursankers.");
+assert(runtime.includes("mobieleGrafiekMarkeringen(g.T,24,")&&runtime.includes('data-mobile-temp-marker'),"Max/min op de lijn komen uit het pure markeringenplan.");
+assert(runtime.includes("monotoonPad(")&&runtime.includes('data-mobile-line-points'),"Mobiele lijn is vloeiend en houdt haar punten beschikbaar voor botsingscontrole.");
+assert(runtime.includes('path[data-mobile-line-points]'),"Nu-labelpolish controleert ook tegen de vloeiende lijn.");
+assert(runtime.includes('!el.hasAttribute("data-mobile-temp-row")&&/Bodoni/i'),"Randpolish mag de vaste rij niet naar de lijn terugtrekken.");
+assert(!runtime.includes("verminderMobieleTemperatuurlabels"),"De oude op-de-lijn-labelplaatser is volledig vervangen.");
 assert(!runtime.includes("mobieleTemperatuurLabelLimiet(window.innerWidth)"),"De mobiele 24-uursgrafiek mag verplichte ankers niet langer via een viewport-limiet uitdunnen.");
 
 const checkpoint=fs.readFileSync(path.join(__dirname,"apply-mobile-screenshot-polish.js"),"utf8");
 assert(!/['\"]\s*const A=a\.getBBox\s*\(/.test(checkpoint),"Checkpoint-50 owner mag geen SVG-fontboxmeting meer injecteren.");
 assert(checkpoint.includes("geschatteTekstBox=el=>"),"Checkpoint-50 owner moet de attribuutgebaseerde tekstbox injecteren.");
 assert(checkpoint.includes("const fs=Number.isFinite(attrFont)&&attrFont>0?attrFont:(/Bodoni Moda/.test(familie)?F.temp:F.uur);"),"Checkpoint-50 tekstbox gebruikt de bestaande grafiekfontmaten als veilige fallback.");
-console.log("Mobiele grafiek reflow-test groen: echte lokale drie-uursankers, plateau-veilige extrema en verplichte anchor-first collisionprioriteit.");
+console.log("Mobiele grafiek reflow-test groen: echte lokale drie-uursankers, vaste temperatuurrij, max/min-markeringen en monotone vloeiende lijn.");

@@ -58,31 +58,57 @@ function kiesKalenderUurLabelIndices(tijden,cadans=3,maxPunten=24){
   return uit;
 }
 
-/* Gelijke opeenvolgende temperaturen vormen één plateau. Zo'n plateau telt
-   alleen als extremum wanneer de waarde aan beide kanten strikt lager (piek)
-   of strikt hoger (dal) is. We labelen exact één echt forecastpunt: het
-   middelste punt van het plateau, bij een even lengte het linker middenpunt. */
-function lokaleTemperatuurExtrema(temperaturen,maxPunten=24){
-  const T=Array.isArray(temperaturen)?temperaturen:[],n=Math.min(T.length,Math.max(0,Math.floor(Number(maxPunten)||24))),uit=[];
-  let i=1;
-  while(i<n-1){
-    if(!Number.isFinite(Number(T[i]))){i++;continue;}
-    const waarde=Number(T[i]);let start=i,eind=i;
-    while(eind+1<n&&Number.isFinite(Number(T[eind+1]))&&Number(T[eind+1])===waarde)eind++;
-    const links=start-1,rechts=eind+1;
-    if(links>=0&&rechts<n&&Number.isFinite(Number(T[links]))&&Number.isFinite(Number(T[rechts]))){
-      const lv=Number(T[links]),rv=Number(T[rechts]);
-      const type=lv<waarde&&rv<waarde?"piek":lv>waarde&&rv>waarde?"dal":null;
-      if(type)uit.push({i:Math.floor((start+eind)/2),type,start,eind});
-    }
-    i=eind+1;
-  }
-  return uit;
+/* Mobiele etmaalgrafiek (<=430px): getallen en lijn zijn gescheiden. Iedere
+   drie uur staat de temperatuur in een vaste rij direct boven de uuras. De lijn
+   zelf draagt alleen de nu-markering en hooguit twee markeringen: het hoogste
+   en het laagste punt van het zichtbare etmaal. Zo kan geen getal met de lijn
+   of met een ander getal botsen, bij welk weerverloop dan ook. */
+const MOBIELE_TEMP_RIJ_Y=19,MOBIELE_UURAS_Y=34,NU_MARKERING_BEREIK_UREN=3;
+function mobieleGrafiekMarkeringen(temperaturen,maxPunten=24,nu=null){
+  const T=Array.isArray(temperaturen)?temperaturen:[],n=Math.min(T.length,Math.max(0,Math.floor(Number(maxPunten)||24)));
+  const geldig=[];for(let i=0;i<n;i++)if(Number.isFinite(Number(T[i])))geldig.push(i);
+  if(!geldig.length)return [];
+  const r=i=>Math.round(Number(T[i]));
+  const hoog=Math.max(...geldig.map(r)),laag=Math.min(...geldig.map(r));
+  if(hoog===laag)return [];
+  /* Een plateau (gelijke afgeronde waarden achter elkaar) krijgt één markering
+     op het middelste punt van het eerste plateau met die waarde. */
+  const midden=v=>{
+    const begin=geldig.find(i=>r(i)===v);let eind=begin;
+    while(eind+1<n&&Number.isFinite(Number(T[eind+1]))&&r(eind+1)===v)eind++;
+    return Math.floor((begin+eind)/2);
+  };
+  const nuIndex=nu&&nu.index!==null&&nu.index!==undefined&&Number.isFinite(Number(nu.index))?Number(nu.index):null;
+  const nuWaarde=nu&&nu.waarde!==null&&nu.waarde!==undefined&&Number.isFinite(Number(nu.waarde))?Math.round(Number(nu.waarde)):null;
+  return [{type:"max",waarde:hoog,i:midden(hoog)},{type:"min",waarde:laag,i:midden(laag)}]
+    /* "nu 20°" maakt een max of min van 20° vlak ernaast overbodig. */
+    .filter(m=>!(nuIndex!==null&&nuWaarde===m.waarde&&Math.abs(m.i-nuIndex)<=NU_MARKERING_BEREIK_UREN))
+    .sort((a,b)=>a.i-b.i);
 }
-function mobieleTemperatuurLabelPlan(tijden,temperaturen,maxPunten=24){
-  const ankers=kiesKalenderUurLabelIndices(tijden,3,maxPunten),ankerSet=new Set(ankers);
-  const extrema=lokaleTemperatuurExtrema(temperaturen,maxPunten).filter(e=>!ankerSet.has(e.i));
-  return {ankers,extrema};
+
+/* Vloeiende lijn door exact dezelfde datapunten (monotone kubische interpolatie,
+   Fritsch-Carlson). Tussen twee punten blijft de curve binnen hun waarden: er
+   ontstaan geen verzonnen pieken of dalen, en een vlak stuk blijft vlak. */
+function monotoonPad(punten){
+  const P=(Array.isArray(punten)?punten:[]).filter(p=>Array.isArray(p)&&Number.isFinite(p[0])&&Number.isFinite(p[1]));
+  if(P.length<2)return "";
+  const f=v=>String(Math.round(v*100)/100);
+  if(P.length===2)return `M${f(P[0][0])},${f(P[0][1])} L${f(P[1][0])},${f(P[1][1])}`;
+  const n=P.length,d=[],m=new Array(n);
+  for(let k=0;k<n-1;k++){const dx=P[k+1][0]-P[k][0];d.push(dx?(P[k+1][1]-P[k][1])/dx:0);}
+  m[0]=d[0];m[n-1]=d[n-2];
+  for(let k=1;k<n-1;k++)m[k]=d[k-1]*d[k]<=0?0:(d[k-1]+d[k])/2;
+  for(let k=0;k<n-1;k++){
+    if(d[k]===0){m[k]=0;m[k+1]=0;continue;}
+    const a=m[k]/d[k],b=m[k+1]/d[k],som=a*a+b*b;
+    if(som>9){const t=3/Math.sqrt(som);m[k]=t*a*d[k];m[k+1]=t*b*d[k];}
+  }
+  let pad=`M${f(P[0][0])},${f(P[0][1])}`;
+  for(let k=0;k<n-1;k++){
+    const h=P[k+1][0]-P[k][0];
+    pad+=` C${f(P[k][0]+h/3)},${f(P[k][1]+m[k]*h/3)} ${f(P[k+1][0]-h/3)},${f(P[k+1][1]-m[k+1]*h/3)} ${f(P[k+1][0])},${f(P[k+1][1])}`;
+  }
+  return pad;
 }
 
 function isUurAsLabel(tekst,y,plotOnder,fontFamilie){
@@ -244,7 +270,7 @@ function mobieleGrafiekCompactHoogte(plotBottom,huidigeHoogte,zichtbareOnderkant
   return Math.min(h,doel);
 }
 
-const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,lokaleForecastMinuten,lokaleTemperatuurExtrema,mobieleTemperatuurLabelPlan,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,lijnRaaktTekstBox,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,mobieleTemperatuurLabelLimiet,kiesMobieleTemperatuurLabelIndices,prioriteerMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
+const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,lokaleForecastMinuten,mobieleGrafiekMarkeringen,monotoonPad,MOBIELE_TEMP_RIJ_Y,MOBIELE_UURAS_Y,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,lijnRaaktTekstBox,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,mobieleTemperatuurLabelLimiet,kiesMobieleTemperatuurLabelIndices,prioriteerMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -278,7 +304,7 @@ function herstelUurAs(){
     /* Eén mobiele eigenaar: het eerste echte zichtbare forecastpunt en daarna
        iedere drie lokale klokuren; de 25e rechtergrens telt niet nogmaals mee. */
     alle.forEach(el=>el.remove());
-    const indices=kiesKalenderUurLabelIndices(g.TI,3,24),y=Number(g.pt)+Number(g.ih)+20;
+    const indices=kiesKalenderUurLabelIndices(g.TI,3,24),y=Number(g.pt)+Number(g.ih)+MOBIELE_UURAS_Y;
     if(!Number.isFinite(y))return;
     const kleur=getComputedStyle(document.documentElement).getPropertyValue("--ink-45").trim()||"currentColor";
     indices.forEach(i=>{
@@ -343,7 +369,7 @@ function polishMobieleGrafiekRanden(){
   })).filter(p=>Number.isInteger(p.i)&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&Number.isFinite(Number(temperaturen[p.i])));
   const labels=[...svg.querySelectorAll("text")].filter(el=>{
     const ff=String(el.getAttribute("font-family")||"");
-    return /Bodoni/i.test(ff)&&/^-?\d+°$/.test(String(el.textContent||"").trim());
+    return !el.hasAttribute("data-mobile-temp-row")&&/Bodoni/i.test(ff)&&/^-?\d+°$/.test(String(el.textContent||"").trim());
   }).sort((a,b)=>Number(a.getAttribute("x"))-Number(b.getAttribute("x")));
   const gebruikt=new Set(),maxDx=Math.max(54,(Number(g.cw)||0)*3);
 
@@ -374,127 +400,120 @@ function polishMobieleGrafiekRanden(){
   });
 }
 
-function verminderMobieleTemperatuurlabels(){
+function bouwMobieleTemperatuurRij(){
   if(!mobiel()||window.innerWidth>430)return;
   const svg=document.getElementById("chart"),g=S.geo;
   if(!svg||!g||!g.M||Number(g.n)>25||!Array.isArray(g.T)||!Array.isArray(g.TI)||typeof g.x!=="function"||typeof g.y!=="function")return;
-  const top=Number(g.pt),bottom=top+Number(g.ih),W=Number(g.W);
+  const top=Number(g.pt),bottom=top+Number(g.ih),W=Number(g.W),marge=5;
   if(![top,bottom,W].every(Number.isFinite)||bottom<=top)return;
+  const wortel=getComputedStyle(document.documentElement);
+  const ink=wortel.getPropertyValue("--ink").trim()||"currentColor",sheet=wortel.getPropertyValue("--sheet").trim()||"white";
+  const voorScrub=el=>svg.insertBefore(el,svg.querySelector('g[data-q4-rain-periods]')||svg.querySelector("#scrub")||null);
 
-  const alleTemperatuurTeksten=[...svg.querySelectorAll("text")].filter(el=>{
+  /* Idempotent: iedere pass (rAF, timers, fontload) bouwt rij en markeringen
+     opnieuw op. Temperatuurcijfers van de basisgrafiek op de lijn verdwijnen. */
+  [...svg.querySelectorAll("text")].filter(el=>{
+    if(el.closest("#scrub"))return false;
     const ff=String(el.getAttribute("font-family")||""),tekst=String(el.textContent||"").trim();
-    /* Gegenereerde labels worden primair via hun owner-attribuut herkend. Zo is
-       deze post-pass idempotent bij rAF/timer/font-hercontroles en kunnen oude
-       labels altijd worden gededupliceerd. Alleen basislabels vallen terug op
-       het zichtbare Bodoni + temperatuurpatroon. */
-    return !el.closest("#scrub")&&(el.hasAttribute("data-mobile-temp-index")||(/Bodoni/i.test(ff)&&/^-?\d+°$/.test(tekst)));
-  });
-  const tekstSjabloon=alleTemperatuurTeksten[0]||null,puntSjabloon=svg.querySelector("circle[data-temp-index]");
-  const labelPerIndex=new Map();
-  alleTemperatuurTeksten.forEach(el=>{
-    const i=Number(el.getAttribute("data-mobile-temp-index"));
-    if(Number.isInteger(i)&&!labelPerIndex.has(i))labelPerIndex.set(i,el);
-  });
-  const puntPerIndex=new Map([...svg.querySelectorAll("circle[data-temp-index]")].map(el=>[Number(el.getAttribute("data-temp-index")),el]).filter(([i])=>Number.isInteger(i)));
-  const plan=mobieleTemperatuurLabelPlan(g.TI,g.T,24),ankerSet=new Set(plan.ankers);
-  const extremaAlle=lokaleTemperatuurExtrema(g.T,24),extremumPerIndex=new Map(extremaAlle.map(e=>[e.i,e.type]));
+    return el.hasAttribute("data-mobile-temp-index")||el.hasAttribute("data-mobile-temp-marker")||(/Bodoni/i.test(ff)&&/^-?\d+°$/.test(tekst));
+  }).forEach(el=>el.remove());
+  svg.querySelectorAll("circle[data-mobile-temp-marker-dot]").forEach(el=>el.remove());
 
+  const ankers=kiesKalenderUurLabelIndices(g.TI,3,24).filter(i=>Number.isFinite(Number(g.T[i]))),ankerSet=new Set(ankers);
+  const puntSjabloon=svg.querySelector("circle[data-temp-index]");
+  const puntPerIndex=new Map([...svg.querySelectorAll("circle[data-temp-index]")].map(el=>[Number(el.getAttribute("data-temp-index")),el]));
+  puntPerIndex.forEach((el,i)=>{if(!ankerSet.has(i))el.remove();});
+
+  /* Vloeiende lijn: dezelfde punten, monotone curve. De punten blijven als
+     attribuut beschikbaar voor de botsingscontrole van het nu-label. */
+  [...svg.querySelectorAll("polyline")].filter(el=>!el.closest("#scrub")).forEach(lijn=>{
+    const punten=String(lijn.getAttribute("points")||"").trim();
+    const d=monotoonPad(punten.split(/\s+/).map(p=>p.split(",").map(Number)));
+    if(!d)return;
+    const pad=document.createElementNS(SVG_NS,"path");
+    for(const a of [...lijn.attributes])if(a.name!=="points")pad.setAttribute(a.name,a.value);
+    pad.setAttribute("d",d);pad.setAttribute("stroke-linecap","round");
+    pad.setAttribute("data-mobile-line-points",punten);pad.setAttribute("data-mobile-smooth-line","1");
+    lijn.replaceWith(pad);
+  });
+
+  /* Vaste temperatuurrij: exact boven het bijbehorende uur op de as. */
+  const rijY=bottom+MOBIELE_TEMP_RIJ_Y;
+  ankers.forEach(i=>{
+    const x=Number(g.x(i)),y=Number(g.y(Number(g.T[i])));if(!Number.isFinite(x)||!Number.isFinite(y))return;
+    let punt=puntPerIndex.get(i);
+    if(!punt||!punt.isConnected){
+      punt=puntSjabloon?puntSjabloon.cloneNode(false):document.createElementNS(SVG_NS,"circle");
+      voorScrub(punt);
+    }
+    punt.setAttribute("data-temp-index",String(i));punt.setAttribute("data-mobile-temp-point","1");
+    punt.setAttribute("cx",String(x));punt.setAttribute("cy",String(y));
+    punt.setAttribute("r","1.5");punt.setAttribute("fill",ink);punt.setAttribute("opacity",".45");
+    const el=document.createElementNS(SVG_NS,"text");
+    el.textContent=Math.round(Number(g.T[i]))+"°";
+    el.setAttribute("x",String(x));el.setAttribute("y",String(rijY));el.setAttribute("text-anchor","middle");
+    el.setAttribute("font-family","Bodoni Moda,Georgia,serif");el.setAttribute("font-size","11");
+    el.setAttribute("fill",ink);el.setAttribute("opacity",".9");
+    el.setAttribute("data-mobile-temp-index",String(i));el.setAttribute("data-mobile-temp-row","1");el.setAttribute("data-mobile-temp-priority","anchor");
+    const correctie=randCorrectieVoorTekstBox(svgTekstBoxUitElement(el),W,marge);
+    if(correctie){el.setAttribute("x",String(correctie.x));el.setAttribute("text-anchor",correctie.anker);el.setAttribute("data-mobile-edge-adjusted","1");}
+    voorScrub(el);
+  });
+
+  /* Nu-markering: waarde en (fractionele) uurpositie van de rode lijn. */
   const nuPunt=[...svg.querySelectorAll("circle")].find(el=>String(el.getAttribute("fill")||"")===String(CARMINE)&&Math.abs(Number(el.getAttribute("r"))-3)<.2);
   const nuX=nuPunt?Number(nuPunt.getAttribute("cx")):NaN;
   const nuTekst=[...svg.querySelectorAll("text")].find(el=>/^nu(?:\s|$)/i.test(String(el.textContent||"").trim()));
-  const actueleTemperatuur=S.d&&S.d.current&&S.d.current.temperature_2m;
-  if(nuPunt&&nuTekst&&actueleTemperatuur!==null&&actueleTemperatuur!==undefined&&Number.isFinite(Number(actueleTemperatuur))){
-    nuTekst.textContent="nu "+Math.round(Number(actueleTemperatuur))+"°";
-  }
-  const nuAnker=Number.isFinite(nuX)?plan.ankers.find(i=>Math.abs(Number(g.x(i))-nuX)<=.75):undefined;
-  if(nuTekst){
-    if(Number.isInteger(nuAnker))nuTekst.setAttribute("data-mobile-temp-anchor-index",String(nuAnker));
-    else nuTekst.removeAttribute("data-mobile-temp-anchor-index");
-  }
+  const actueel=S.d&&S.d.current&&S.d.current.temperature_2m;
+  const actueelGeldig=actueel!==null&&actueel!==undefined&&Number.isFinite(Number(actueel));
+  if(nuPunt&&nuTekst&&actueelGeldig)nuTekst.textContent="nu "+Math.round(Number(actueel))+"°";
+  if(nuTekst)nuTekst.removeAttribute("data-mobile-temp-anchor-index");
+  const uurBreedte=Number(g.x(1))-Number(g.x(0));
+  const nuIndex=Number.isFinite(nuX)&&uurBreedte>0?(nuX-Number(g.x(0)))/uurBreedte:null;
 
-  const gewenste=[...plan.ankers.filter(i=>i!==nuAnker),...plan.extrema.map(e=>e.i).filter(i=>i!==nuAnker)],gewenstSet=new Set(gewenste);
-  alleTemperatuurTeksten.forEach(el=>{
-    const i=Number(el.getAttribute("data-mobile-temp-index"));
-    if(!Number.isInteger(i)||!gewenstSet.has(i)||labelPerIndex.get(i)!==el)el.remove();
-  });
-  [...puntPerIndex].forEach(([i,el])=>{if(!gewenstSet.has(i))el.remove();});
-
-  const ink=getComputedStyle(document.documentElement).getPropertyValue("--ink").trim()||"currentColor";
-  const sheet=getComputedStyle(document.documentElement).getPropertyValue("--sheet").trim()||"white";
-  const invoegVoor=()=>svg.querySelector('g[data-q4-rain-periods]')||svg.querySelector("#scrub")||null;
-  const zorgPunt=i=>{
-    let el=puntPerIndex.get(i);
-    if(!el||!el.isConnected){
-      el=puntSjabloon?puntSjabloon.cloneNode(false):document.createElementNS(SVG_NS,"circle");
-      svg.insertBefore(el,invoegVoor());
-      puntPerIndex.set(i,el);
-    }
-    el.setAttribute("data-temp-index",String(i));el.setAttribute("data-mobile-temp-point","1");
-    el.setAttribute("cx",String(Number(g.x(i))));el.setAttribute("cy",String(Number(g.y(Number(g.T[i])))));
-    el.setAttribute("r","1.8");el.setAttribute("fill",el.getAttribute("fill")||ink);el.setAttribute("opacity",".62");
-    return el;
-  };
-  const zorgLabel=i=>{
-    let el=labelPerIndex.get(i);
-    if(!el||!el.isConnected){
-      el=tekstSjabloon?tekstSjabloon.cloneNode(false):document.createElementNS(SVG_NS,"text");
-      svg.insertBefore(el,invoegVoor());
-      labelPerIndex.set(i,el);
-    }
-    el.textContent=Math.round(Number(g.T[i]))+"°";
-    el.setAttribute("data-mobile-temp-index",String(i));
-    el.setAttribute("font-family",el.getAttribute("font-family")||"Bodoni Moda,Georgia,serif");
-    el.setAttribute("font-size","10");el.setAttribute("opacity",".86");
-    el.setAttribute("fill",el.getAttribute("fill")||ink);el.setAttribute("stroke",el.getAttribute("stroke")||sheet);
-    el.setAttribute("stroke-width","2");el.setAttribute("paint-order","stroke");el.setAttribute("stroke-linejoin","round");
-    el.setAttribute("text-anchor","middle");el.removeAttribute("dy");el.removeAttribute("data-mobile-detached-temp-fixed");el.removeAttribute("data-mobile-edge-adjusted");
-    return el;
-  };
-
-  const vaste=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!el.hasAttribute("data-mobile-temp-index"))
-    .map(svgTekstBoxUitElement).filter(Boolean);
-  if(Number.isFinite(nuX))vaste.push({x:nuX-3,y:top,width:6,height:bottom-top});
-  const gehouden=[],behouden=new Set(),marge=5,minAfstand=3;
-  const plaats=(i,verplicht,volgnummer)=>{
-    if(!Number.isFinite(Number(g.T[i])))return false;
-    const punt=zorgPunt(i),px=Number(punt.getAttribute("cx")),py=Number(punt.getAttribute("cy")),el=zorgLabel(i);
-    const type=extremumPerIndex.get(i)||"",fs=10,probe=geschatteSvgTekstBox(el.textContent,px,py-14,"middle",fs),half=probe?probe.width/2:10;
-    const klemX=x=>Math.max(marge+half,Math.min(W-marge-half,x));
-    const xKandidaten=[px,px+12,px-12,px+18,px-18].map(klemX).filter((x,pos,arr)=>arr.findIndex(v=>Math.abs(v-x)<.1)===pos);
-    const boven=[py-14,py-28,py-42,top+fs+5],onder=[py+20,py+34,py+48,bottom-5];
-    const eerstBoven=type==="piek"?true:type==="dal"?false:volgnummer%2===0;
-    const yKandidaten=(eerstBoven?[...boven,...onder]:[...onder,...boven])
-      .filter((y,pos,arr)=>y-fs>=top+4&&y<=bottom-4&&arr.findIndex(v=>Math.abs(v-y)<.1)===pos);
+  /* Max en min op de lijn. Eerst recht boven (max) of onder (min) het punt,
+     dan licht verschoven, dan links of rechts ernaast. Een positie telt alleen
+     als ze vrij is van de lijn, het nu-label en de nu-lijn; past ze nergens,
+     dan vervalt de markering liever dan te botsen. */
+  const vast=[];
+  if(nuTekst){const b=svgTekstBoxUitElement(nuTekst);if(b)vast.push(b);}
+  if(Number.isFinite(nuX))vast.push({x:nuX-3,y:top,width:6,height:bottom-top});
+  const lijnen=[...svg.querySelectorAll("path[data-mobile-line-points]")]
+    .map(el=>String(el.getAttribute("data-mobile-line-points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
+  const getoond=[],vervallen=[];
+  mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null}).forEach(m=>{
+    const px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
+    const tekst=m.type+" "+m.waarde+"°",fs=9.5,boven=py-8,onder=py+15,naast=py+3.5;
+    const verticaal=y=>[[px,y,"middle"],[px+14,y,"middle"],[px-14,y,"middle"],[px+24,y,"middle"],[px-24,y,"middle"]];
+    const kandidaten=[...verticaal(m.type==="max"?boven:onder),[px+7,naast,"start"],[px-7,naast,"end"],...verticaal(m.type==="max"?onder:boven)];
     let gekozen=null;
-    for(const y of yKandidaten){
-      for(const x of xKandidaten){
-        const box=geschatteSvgTekstBox(el.textContent,x,y,"middle",fs);
-        if(!box||[...vaste,...gehouden].some(b=>rechthoekenBotsen(b,box,minAfstand)))continue;
-        gekozen={x,y,box};break;
-      }
-      if(gekozen)break;
+    for(const [x0,y,anker] of kandidaten){
+      if(y-fs<top+2||y>bottom-3)continue;
+      let box=geschatteSvgTekstBox(tekst,x0,y,anker,fs);if(!box)continue;
+      let x=x0;
+      if(box.x<marge)x+=marge-box.x;else if(box.x+box.width>W-marge)x-=box.x+box.width-(W-marge);
+      box=geschatteSvgTekstBox(tekst,x,y,anker,fs);
+      if(box&&!vast.some(b=>rechthoekenBotsen(b,box,2))&&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box,1))){gekozen={x,y,anker,box};break;}
     }
-    if(!gekozen){
-      el.remove();punt.remove();return false;
-    }
-    el.setAttribute("x",String(gekozen.x));el.setAttribute("y",String(gekozen.y));
-    el.setAttribute("data-mobile-temp-priority",verplicht?"anchor":"extremum");
-    if(type)el.setAttribute("data-mobile-temp-extremum",type);else el.removeAttribute("data-mobile-temp-extremum");
-    if(Math.abs(gekozen.x-px)<.1){el.setAttribute("data-mobile-point-aligned","1");el.removeAttribute("data-mobile-point-shifted");}
-    else{el.removeAttribute("data-mobile-point-aligned");el.setAttribute("data-mobile-point-shifted","1");}
-    gehouden.push(gekozen.box);behouden.add(i);return true;
-  };
+    if(!gekozen){vervallen.push(m.type);return;}
+    const dot=document.createElementNS(SVG_NS,"circle");
+    dot.setAttribute("cx",String(px));dot.setAttribute("cy",String(py));dot.setAttribute("r","2.2");dot.setAttribute("fill",ink);
+    dot.setAttribute("data-mobile-temp-marker-dot",m.type);voorScrub(dot);
+    const el=document.createElementNS(SVG_NS,"text");el.textContent=tekst;
+    el.setAttribute("x",String(gekozen.x));el.setAttribute("y",String(gekozen.y));el.setAttribute("text-anchor",gekozen.anker);
+    el.setAttribute("font-family","DM Mono,monospace");el.setAttribute("font-size",String(fs));
+    el.setAttribute("fill",ink);el.setAttribute("opacity",".72");
+    el.setAttribute("stroke",sheet);el.setAttribute("stroke-width","3");el.setAttribute("paint-order","stroke");el.setAttribute("stroke-linejoin","round");
+    el.setAttribute("data-mobile-temp-marker",m.type);el.setAttribute("data-mobile-temp-marker-index",String(m.i));
+    voorScrub(el);vast.push(gekozen.box);getoond.push(m.type+":"+m.i);
+  });
 
-  const ontbrekendeAnkers=[],vervallenExtrema=[];
-  plan.ankers.forEach((i,pos)=>{if(i!==nuAnker&&!plaats(i,true,pos))ontbrekendeAnkers.push(i);});
-  plan.extrema.forEach((e,pos)=>{if(e.i!==nuAnker&&!plaats(e.i,false,plan.ankers.length+pos))vervallenExtrema.push(e.i);});
-  [...svg.querySelectorAll("text[data-mobile-temp-index]")].forEach(el=>{if(!behouden.has(Number(el.getAttribute("data-mobile-temp-index"))))el.remove();});
-  [...svg.querySelectorAll("circle[data-mobile-temp-point]")].forEach(el=>{if(!behouden.has(Number(el.getAttribute("data-temp-index"))))el.remove();});
-  svg.setAttribute("data-mobile-temp-anchor-count",String(plan.ankers.length));
-  svg.setAttribute("data-mobile-temp-extrema-count",String(plan.extrema.length));
-  svg.setAttribute("data-mobile-temp-visible",String(behouden.size+(Number.isInteger(nuAnker)?1:0)));
-  if(ontbrekendeAnkers.length)svg.setAttribute("data-mobile-temp-missing-anchors",ontbrekendeAnkers.join(","));else svg.removeAttribute("data-mobile-temp-missing-anchors");
-  if(vervallenExtrema.length)svg.setAttribute("data-mobile-temp-dropped-extrema",vervallenExtrema.join(","));else svg.removeAttribute("data-mobile-temp-dropped-extrema");
+  svg.setAttribute("data-mobile-temp-row","1");
+  svg.setAttribute("data-mobile-temp-anchor-count",String(ankers.length));
+  svg.setAttribute("data-mobile-temp-visible",String(ankers.length));
+  svg.setAttribute("data-mobile-temp-markers",getoond.join(","));
+  if(vervallen.length)svg.setAttribute("data-mobile-temp-dropped-markers",vervallen.join(","));else svg.removeAttribute("data-mobile-temp-dropped-markers");
+  ["data-mobile-temp-missing-anchors","data-mobile-temp-dropped-extrema","data-mobile-temp-extrema-count"].forEach(a=>svg.removeAttribute(a));
 }
 function vereenvoudigMobieleZonband(){
   if(!mobiel()||window.innerWidth>430)return;
@@ -528,16 +547,20 @@ function compactMobieleGrafiekHoogte(){
      canonieke 296px-reserve. Een droge grafiek mag wel verder comprimeren. */
   if(svg.querySelector('g[data-q4-rain-periods] text'))zichtbaarOnder=Math.max(zichtbaarOnder,286);
   const doel=mobieleGrafiekCompactHoogte(plotOnder,delen[3],zichtbaarOnder);
-  if(doel!==null&&doel<delen[3]-4){
-    svg.setAttribute("viewBox",[delen[0],delen[1],delen[2],doel].join(" "));
-    svg.setAttribute("data-mobile-compact-height","1");
-  }
+  if(doel===null)return;
+  const hoogte=doel<delen[3]-4?doel:delen[3];
+  if(hoogte!==delen[3])svg.setAttribute("viewBox",[delen[0],delen[1],delen[2],hoogte].join(" "));
+  /* De marker betekent: de hoogte sluit aan op de zichtbare inhoud en alle
+     inhoud valt erbinnen. Dat geldt ook wanneer de inhoud (bijv. met de
+     temperatuurrij) de canonieke hoogte al vult en er niets in te korten viel. */
+  if(zichtbaarOnder<=hoogte)svg.setAttribute("data-mobile-compact-height","1");
+  else svg.removeAttribute("data-mobile-compact-height");
 }
 
 let uurAsToken=0;
 function planUurAsHerstel(){
   const token=++uurAsToken;
-  const voer=()=>{if(token===uurAsToken){herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();verminderMobieleTemperatuurlabels();polishNuLabel();compactMobieleGrafiekHoogte();}};
+  const voer=()=>{if(token===uurAsToken){herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();bouwMobieleTemperatuurRij();polishNuLabel();compactMobieleGrafiekHoogte();}};
   const start=()=>{
     const r1=()=>{const r2=()=>voer();if(typeof requestAnimationFrame==="function")requestAnimationFrame(r2);else setTimeout(r2,0);};
     if(typeof requestAnimationFrame==="function")requestAnimationFrame(r1);else setTimeout(r1,0);
@@ -573,8 +596,8 @@ function polishNuLabel(){
   const punt=svg.querySelector('circle[fill="var(--carmine)"][r="3"]');
   const puntY=punt?Number(punt.getAttribute("cy")):NaN;
   const vast=teksten.filter(el=>el!==nu&&!el.closest("#scrub")).map(svgTekstBoxUitElement).filter(Boolean);
-  const lijnen=[...svg.querySelectorAll("polyline")].filter(el=>!el.closest("#scrub"))
-    .map(el=>String(el.getAttribute("points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
+  const lijnen=[...svg.querySelectorAll("polyline,path[data-mobile-line-points]")].filter(el=>!el.closest("#scrub"))
+    .map(el=>String(el.getAttribute("points")||el.getAttribute("data-mobile-line-points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
   const vrij=(x,y)=>{
     const box=geschatteSvgTekstBox(nu.textContent,x,y,"start",Number(nu.getAttribute("font-size"))||10);
     return box&&box.x>=g.pl-2&&box.x+box.width<=breed-g.pr+3
@@ -583,7 +606,9 @@ function polishNuLabel(){
       &&!vast.some(b=>rechthoekenBotsen(box,b,3))
       &&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box));
   };
-  const posities=[[0,0],[0,-16],[0,16],[0,-24],[0,24],[12,-16],[12,16],[-12,-16],[-12,16],[0,-30],[0,30]];
+  /* Laatste uitwijkplek: bovenaan de rode nu-lijn, net boven de plot. Die plek
+     is vrij van de temperatuurlijn wanneer die vlak naast "nu" steil loopt. */
+  const posities=[[0,0],[0,-16],[0,16],[0,-24],[0,24],[12,-16],[12,16],[-12,-16],[-12,16],[0,-30],[0,30],[0,Number(g.pt)-4-oorspronkelijkY]];
   const gevonden=posities.find(([dx,dy])=>vrij(oorspronkelijkX+dx,oorspronkelijkY+dy));
   if(gevonden){
     nu.setAttribute("x",String(oorspronkelijkX+gevonden[0]));nu.setAttribute("y",String(oorspronkelijkY+gevonden[1]));

@@ -1648,7 +1648,7 @@ function etmaal(start,n){
       &&globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(h.time[i])<=globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(weatherNowActueleLokaleTijd());
     P.push(intervalVerlopen||kans===null||kans<0?null:clamp(kans,0,100));
     MM.push(intervalVerlopen||hoeveelheid===null||hoeveelheid<0?null:hoeveelheid);
-    L.push(h.time[i].slice(11,13));
+    L.push(h.time[i].slice(11,16));
     W_.push(h.wind_speed_10m[i]);G.push(h.wind_gusts_10m[i]);C.push(h.cloud_cover[i]);
     D.push(h.weather_code[i]);ND.push(h.is_day[i]);WD.push(h.wind_direction_10m[i]);
   }
@@ -1820,7 +1820,7 @@ function etmaal(start,n){
     if(v==null||!isFinite(v)){ pts.push(null); return; }
     pts.push(x(i)+","+y(v));
     // bij een week loopt de as per dag, daarbinnen per paar uur
-    const toonAs = n>48 ? L[i]==="12" : (i%stap===0);
+    const toonAs = n>48 ? L[i]==="12:00" : (i%stap===0);
     if(toonAs){
       ticks+=`<text x="${x(i)}" y="${pb+(M?20:22)}" text-anchor="middle" fill="${INK45}" font-family="DM Mono,monospace" font-size="${F.uur}">${n>48?DAGEN[new Date(TI[i].slice(0,10)+"T12:00:00").getDay()]:L[i]}</text>`;
       if(P[i]>0) ticks+=`<text x="${x(i)}" y="${pb+(M?35:37)}" text-anchor="middle" fill="${TEAL}" font-family="DM Mono,monospace" font-size="${F.pre}">${P[i]}%</text>`;

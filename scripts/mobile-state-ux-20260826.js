@@ -14,7 +14,7 @@ function getal(v){
 function grafiekHeeftUurlabels(items){
   return Array.from(items||[]).some(item=>{
     const tekst=tekstVan(item);
-    if(!/^\d{2}$/.test(tekst))return false;
+    if(!/^\d{2}(?::00)?$/.test(tekst))return false;
     if(typeof item==="string")return true;
     const familie=String(item&&item.getAttribute&&item.getAttribute("font-family")||"");
     return !familie||/DM Mono/i.test(familie);
@@ -81,7 +81,7 @@ const mobiel=()=>typeof window.matchMedia==="function"
   :window.innerWidth<=900;
 
 function chartUurTeksten(svg){
-  return svg?[...svg.querySelectorAll("text")].filter(el=>/^\d{2}$/.test(tekstVan(el))):[];
+  return svg?[...svg.querySelectorAll("text")].filter(el=>/^\d{2}(?::00)?$/.test(tekstVan(el))):[];
 }
 function pasEtmaalContextToe(){
   const back=document.getElementById("back");

@@ -18,6 +18,8 @@ ok(ux.grafiekHerstelNodig(true,48,[]),"lege eerste mobiele 48-uursas wordt na fo
 ok(!ux.grafiekHerstelNodig(false,24,[]),"desktop krijgt geen onnodige fontload-hertekening");
 ok(!ux.grafiekHerstelNodig(true,168,[]),"weekgrafiek gebruikt niet de uur-asherstelroute");
 ok(!ux.grafiekHerstelNodig(true,24,["00"]),"bestaande mobiele uuras wordt niet opnieuw getekend");
+ok(ux.grafiekHeeftUurlabels(["21:00","00:00"]),"uurlabeldetector herkent ook de volledige HH:00-notatie van de as");
+ok(!ux.grafiekHerstelNodig(true,24,["00:00"]),"een HH:00-uuras wordt niet opnieuw getekend");
 ok(ux.terugNaarBereikLabel(24)==="Komende 24 uur","resetknop benoemt de rollende 24-uursmodus");
 ok(ux.terugNaarBereikLabel(48)==="Komende 48 uur","resetknop benoemt ook de rollende 48-uursmodus");
 ok(ux.terugNaarBereikLabel(168)==="Komende zeven dagen","resetknop benoemt het langere bereik zonder 'terug naar nu'-ambiguïteit");
