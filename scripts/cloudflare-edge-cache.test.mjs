@@ -229,4 +229,44 @@ async function run(context,route,fn){
   assert.equal(_intern.edgeTtl(jsonResponse({},"s-maxage=999999, stale-while-revalidate=1")),86400,"cache-TTL is defensief begrensd");
 }
 
+{
+  /* Luchtkwaliteit loopt door de echte route en Luchtmeetnet-provider. Een verse
+     LKI wordt één keer upstream opgehaald en is daarna een edge-HIT; het ~110 m-
+     raster (3 decimalen) deelt die HIT met een buurcoördinaat. */
+  const { default: luchtWorker } = await import("../api/luchtkwaliteit.mjs");
+  const lki = (await import("../lib/luchtmeetnet-lki.cjs")).default;
+  const cache=new MemoryCache();
+  const origineleFetch=globalThis.fetch;
+  let upstreamCalls=0;
+  const nu=new Date(Date.now()-10*60*1000).toISOString();
+  globalThis.fetch=async()=>{upstreamCalls+=1;return new Response(JSON.stringify({data:[{formula:"LKI",value:3.4,timestamp_measured:nu}]}),{status:200,headers:{"Content-Type":"application/json"}});};
+  try{
+    lki._intern.leegCache();
+    const aanvraag=pad=>{
+      const request=new Request(BASE+pad);
+      return run({request,cache},"luchtkwaliteit",()=>luchtWorker.fetch(request));
+    };
+    const eerste=await aanvraag("/api/luchtkwaliteit?lat=52.37021&lon=4.89521&land=NL");
+    assert.equal(eerste.headers.get("x-wiw-edge-cache"),"MISS","verse Nederlandse LKI moet in caches.default komen");
+    lki._intern.leegCache();
+    const tweede=await aanvraag("/api/luchtkwaliteit?land=nl&lon=4.8953&lat=52.3703");
+    assert.equal(tweede.headers.get("x-wiw-edge-cache"),"HIT");
+    assert.equal((await tweede.json()).lki,3);
+    assert.equal(upstreamCalls,1,"luchtkwaliteit-cachehit mag Luchtmeetnet niet opnieuw raken");
+
+    lki._intern.leegCache();
+    globalThis.fetch=async()=>new Response("storing",{status:503});
+    const storing=await aanvraag("/api/luchtkwaliteit?lat=51.9244&lon=4.4777&land=NL");
+    assert.equal(storing.status,200);
+    assert.equal((await storing.json()).beschikbaar,false);
+    assert.equal(storing.headers.get("x-wiw-edge-cache"),"BYPASS","een Luchtmeetnet-storing mag nooit worden gecachet");
+
+    const buitenland=await aanvraag("/api/luchtkwaliteit?lat=50.85&lon=4.35&land=BE");
+    assert.equal(buitenland.headers.get("x-wiw-edge-cache"),"MISS","de vaste niet-Nederland-uitkomst is veilig cachebaar");
+  }finally{
+    globalThis.fetch=origineleFetch;
+    lki._intern.leegCache();
+  }
+}
+
 console.log("Cloudflare edge-cache regressies: ok");

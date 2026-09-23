@@ -1,7 +1,7 @@
 "use strict";
 
 const fs=require("fs"),path=require("path"),os=require("os"),assert=require("assert"),{spawnSync}=require("child_process"),{bouw}=require("./data.js");
-const browser=process.env.CHROME_PATH||process.env.CHROMIUM_PATH||"google-chrome";
+const browser=require("./scripts/vind-browser.js").vindBrowser()||"google-chrome";
 
 const d=bouw({temp:()=>18,tempNu:18,pp:()=>5,pr:()=>0,som:0,ws:9,wsNu:9,cc:()=>85,ccNu:85,wg:()=>12,wc:()=>3,wcNu:3});
 // Houd de browserfixture gelijk aan een echte gevalideerde forecastrespons. De

@@ -3,15 +3,10 @@
 const fs=require("fs"),os=require("os"),path=require("path"),{spawnSync}=require("child_process");
 const {bouw}=require("../data.js");
 
-function vindBrowser(){
-  for(const naam of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){
-    const r=spawnSync("sh",["-lc","command -v "+naam],{encoding:"utf8"});
-    if(r.status===0&&r.stdout.trim())return r.stdout.trim();
-  }
-  return null;
-}
+function vindBrowser(){return require("./vind-browser.js").vindBrowser();}
 const browser=vindBrowser();
 if(!browser){
+  if(process.env.CI){console.error("FOUT briefing-stability browser: Chrome/Chromium ontbreekt op CI.");process.exit(1);}
   console.log("SKIP briefing-stability browser: lokaal geen Chrome/Chromium gevonden.");
   process.exit(0);
 }

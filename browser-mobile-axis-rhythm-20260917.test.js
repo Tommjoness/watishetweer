@@ -1,7 +1,7 @@
 "use strict";
 
 const fs=require("fs"),os=require("os"),path=require("path"),{spawnSync}=require("child_process");
-function vindBrowser(){for(const n of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){const r=spawnSync(n,["--version"],{encoding:"utf8"});if(r.status===0)return n;}return null;}
+function vindBrowser(){return require("./scripts/vind-browser.js").vindBrowser();}
 const browser=vindBrowser();
 if(!browser){if(process.env.CI){console.error("FOUT mobile-axis-rhythm: Chrome/Chromium ontbreekt.");process.exit(1);}console.log("SKIP mobile-axis-rhythm: lokaal geen Chrome/Chromium.");process.exit(0);}
 

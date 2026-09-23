@@ -1,7 +1,7 @@
 "use strict";
 
 const fs=require("fs"),path=require("path"),os=require("os"),{spawnSync}=require("child_process");
-function vindBrowser(){for(const n of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){const r=spawnSync("sh",["-lc","command -v "+n],{encoding:"utf8"});if(r.status===0&&r.stdout.trim())return r.stdout.trim();}return null;}
+function vindBrowser(){return require("./scripts/vind-browser.js").vindBrowser();}
 const browser=vindBrowser();
 if(!browser){if(process.env.CI){console.error("FOUT spacing-polish browsertest: Chrome/Chromium ontbreekt.");process.exit(1);}console.log("SKIP spacing-polish browsertest: lokaal geen Chrome/Chromium.");process.exit(0);}
 const artifact=path.join(__dirname,"public","index.html");

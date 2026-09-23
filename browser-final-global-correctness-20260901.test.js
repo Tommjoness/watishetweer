@@ -1,7 +1,7 @@
 "use strict";
 
 const fs=require("fs"),os=require("os"),path=require("path"),crypto=require("crypto"),{spawnSync}=require("child_process");
-function vindBrowser(){for(const n of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){const r=spawnSync("sh",["-lc","command -v "+n],{encoding:"utf8"});if(r.status===0&&r.stdout.trim())return r.stdout.trim();}return null;}
+function vindBrowser(){return require("./scripts/vind-browser.js").vindBrowser();}
 const browser=vindBrowser();
 if(!browser){if(process.env.CI){console.error("FOUT finale wereldwijde browseraudit: Chrome/Chromium ontbreekt.");process.exit(1);}console.log("SKIP finale wereldwijde browseraudit: lokaal geen Chrome/Chromium.");process.exit(0);}
 const productie=path.join(__dirname,"public","index.html");if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");

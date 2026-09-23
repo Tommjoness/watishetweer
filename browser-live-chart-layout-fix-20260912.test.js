@@ -1,7 +1,7 @@
 "use strict";
 
 const fs=require("fs"),os=require("os"),path=require("path"),{spawnSync}=require("child_process");
-function vindBrowser(){for(const n of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){const r=spawnSync(n,["--version"],{encoding:"utf8"});if(r.status===0)return n;}return null;}
+function vindBrowser(){return require("./scripts/vind-browser.js").vindBrowser();}
 const browser=vindBrowser();
 if(!browser){if(process.env.CI){console.error("FOUT live-chart-layout browsertest: Chrome/Chromium ontbreekt.");process.exit(1);}console.log("SKIP live-chart-layout browsertest: lokaal geen Chrome/Chromium.");process.exit(0);}
 const productie=path.join(__dirname,"public","index.html");

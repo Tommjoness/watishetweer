@@ -1,6 +1,6 @@
 "use strict";
 const fs=require("fs"),os=require("os"),path=require("path"),{spawnSync}=require("child_process"),{bouw}=require("../data.js");
-function browser(){for(const n of ["google-chrome","google-chrome-stable","chromium","chromium-browser"]){const r=spawnSync("sh",["-lc","command -v "+n],{encoding:"utf8"});if(r.status===0&&r.stdout.trim())return r.stdout.trim();}return null;}
+function browser(){return require("./vind-browser.js").vindBrowser();}
 const chrome=browser();if(!chrome){if(process.env.CI)throw new Error("Chrome/Chromium ontbreekt voor delivery-startup-gate.");console.log("SKIP delivery-startup-gate: lokaal geen Chrome/Chromium.");process.exit(0);}
 const root=path.join(__dirname,".."),publicDir=path.join(root,"public"),bron=fs.readFileSync(path.join(publicDir,"index.html"),"utf8");
 if(!/weather-delivery/.test(bron)||!/<script src="\/app-[0-9a-f]{12}\.min\.js" defer><\/script>/.test(bron))throw new Error("Delivery-startup-gate verwacht het definitieve external-minified artifact.");
