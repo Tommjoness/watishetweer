@@ -182,6 +182,10 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   .wiw-hour-table .wiw-hour-primary{line-height:1.2!important}
   .wiw-hour-table .wiw-hour-secondary{line-height:1.2!important}
 }
+@media(min-width:1300px){
+  /* De lange plaatsenkop mag de eerste desktoplink niet raken. */
+  .seo-plaatsnav-inner{grid-template-columns:275px minmax(0,1fr)!important}
+}
 /* Fysieke iPhone: de bronlijst sluit los ingevoegde KNMI-attributie nu als
    normaal bronitem in. Geef de disclaimer en drie informatielinks hun eigen
    regelruimte; de aparte SEO-plaatsnavigatie blijft onaangeraakt. */

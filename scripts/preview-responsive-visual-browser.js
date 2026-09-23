@@ -127,6 +127,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const cs=x=>getComputedStyle(x),zichtbaar=[...grid.querySelectorAll("a")].filter(x=>cs(x).display!=="none"),regulier=zichtbaar.filter(x=>x!==meer).slice(0,6);
           const tekstMidden=x=>{const range=document.createRange();range.selectNodeContents(x);const r=range.getBoundingClientRect();return (r.left+r.right)/2;};
           const gr=grid.getBoundingClientRect(),nr=nav.getBoundingClientRect(),mr=meer.getBoundingClientRect();
+          const kr=kop.getBoundingClientRect(),eerste=regulier[0]&&regulier[0].getBoundingClientRect();
           const tekstDelta=regulier.length?Math.max(...regulier.map(x=>{const r=x.getBoundingClientRect();return Math.abs(tekstMidden(x)-((r.left+r.right)/2));})):999;
           return {
             display:cs(grid).display,
@@ -141,6 +142,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
             moreJustify:cs(meer).justifyContent,
             moreTextAlign:cs(meer).textAlign,
             headingCenterDelta:Math.abs(tekstMidden(kop)-((nr.left+nr.right)/2)),
+            headingLinkGap:eerste?eerste.left-kr.right:null,
             overflow:Math.max(0,nr.right-innerWidth,-nr.left),
             background:cs(nav).backgroundColor
           };
@@ -215,6 +217,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert(binnenViewport(basis.searchRect,vp.width),`${vp.naam}: zoekveld valt buiten viewport`);
       for(const r of basis.topRects)assert(binnenViewport(r,vp.width),`${vp.naam}: zichtbare bovenste bediening '${String(r.label).trim()}' valt buiten viewport`);
       if(vp.width>=1100){
+        if(vp.width>=1300)assert(basis.plaats&&basis.plaats.headingLinkGap>=8,`${vp.naam}: plaatsenkop raakt de eerste link (${basis.plaats?.headingLinkGap}px)`);
         const u=basis.hourTable;assert(u,`${vp.naam}: desktop-uurtabel ontbreekt`);
         assert(u.fontSize>=13.4,`${vp.naam}: desktop-uurtabel blijft te klein (${u.fontSize}px)`);
         assert(u.rowCount>=8&&u.rowCount<=11,`${vp.naam}: desktop-uurtabel toont geen 8–11 volledige hoogtegestuurde uren (${u.rowCount})`);
