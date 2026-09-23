@@ -155,13 +155,16 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       const sourceCount=Number(v("source-visible-count")),expectedSourceRows=Math.ceil(sourceCount/2);
       if(Number(v("source-row-count"))!==expectedSourceRows)throw new Error("actieve bronlinks volgen niet exact de tweekoloms row-flow op "+breedte+"px / CSS "+cssWidth+"px: "+v("source-row-count")+" rijen voor "+sourceCount+" bronnen, verwacht "+expectedSourceRows);
       if(Number(v("disclaimer-line-height"))>15.1)throw new Error("disclaimer houdt een te ruime regelhoogte op "+breedte+"px: "+v("disclaimer-line-height")+"px");
-      if(cssWidth>=371&&Number(v("contact-row-delta"))>1)throw new Error("contactvraag en mail staan niet op één compacte rij op "+breedte+"px / CSS "+cssWidth+"px: delta "+v("contact-row-delta")+"px");
+      if(cssWidth>430&&Number(v("contact-row-delta"))>1)throw new Error("contactvraag en mail staan niet op één compacte rij op "+breedte+"px / CSS "+cssWidth+"px: delta "+v("contact-row-delta")+"px");
       if(Math.abs(Number(v("over-top"))-Number(v("privacy-top")))>1)throw new Error("Over en Privacy delen mobiel niet dezelfde utilityrij op "+breedte+"px");
-      if(Number(v("utility-row-delta"))>1||Math.abs(Number(v("details-top"))-Number(v("over-top")))>1)throw new Error("Over, Privacy en Technische locatiegegevens delen mobiel niet één rustige utilityrij op "+breedte+"px: delta "+v("utility-row-delta")+"px");
+      if(cssWidth<=430){
+        if(Number(v("details-top"))-Number(v("over-top"))<43||Number(v("details-top"))-Number(v("over-top"))>53)throw new Error("Technische locatiegegevens mist eigen volle utilityrij op "+breedte+"px");
+      }else if(Number(v("utility-row-delta"))>1||Math.abs(Number(v("details-top"))-Number(v("over-top")))>1)throw new Error("Over, Privacy en Technische locatiegegevens delen mobiel niet één rustige utilityrij op "+breedte+"px: delta "+v("utility-row-delta")+"px");
       if(breedte>=390&&breedte<=430)console.log("footer-meting "+modus+" "+breedte+"px / CSS "+cssWidth+"px: hoogte="+v("footer-height")+"px, bronnen="+v("source-visible-count")+" in "+v("source-row-count")+" rij(en), bronhit="+v("source-hit-height")+"px, disclaimer="+v("disclaimer-width")+"px / "+v("disclaimer-line-count")+" regels, contact-delta="+v("contact-row-delta")+"px, utility-delta="+v("utility-row-delta")+"px");
-      if(Number(v("footer-margin-top"))>6.5)throw new Error("mobiele footer houdt te veel bovenmarge op "+breedte+"px: "+v("footer-margin-top")+"px");
-      if(Number(v("footer-padding-top"))>0.5)throw new Error("mobiele footer houdt te veel bovenpadding op "+breedte+"px: "+v("footer-padding-top")+"px");
-      if(Number(v("footer-row-gap"))>0.5||Number(v("source-row-gap"))>4.5)throw new Error("mobiele footer/bronnen overschrijden het afgesproken verticale ritme op "+breedte+"px");
+      if(cssWidth<=430){
+        if(Number(v("footer-margin-top"))<15.5||Number(v("footer-margin-top"))>16.5||Number(v("footer-padding-top"))<9.5||Number(v("footer-padding-top"))>10.5||Number(v("footer-row-gap"))<3.5||Number(v("footer-row-gap"))>4.5)throw new Error("mobiele footer mist de rustige sectieovergang op "+breedte+"px");
+      }else if(Number(v("footer-margin-top"))>6.5||Number(v("footer-padding-top"))>0.5||Number(v("footer-row-gap"))>0.5)throw new Error("tabletfooter wijkt af van het bestaande compacte ritme op "+breedte+"px");
+      if(Number(v("source-row-gap"))>4.5)throw new Error("mobiele bronnen houden te veel rijruimte op "+breedte+"px");
       if(Number(v("contact-margin-top"))<7.5||Number(v("contact-margin-top"))>8.5)throw new Error("mobiele contactregel mist het bedoelde 8px ademritme op "+breedte+"px: "+v("contact-margin-top")+"px");
       if(Number(v("utility-contact-gap"))<7)throw new Error("supportregel staat te dicht op de utilitylinks op "+breedte+"px: "+v("utility-contact-gap")+"px");
       if(Number(v("source-disclaimer-gap"))<3)throw new Error("disclaimer landt te dicht op de bronnen op "+breedte+"px: "+v("source-disclaimer-gap")+"px");

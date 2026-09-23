@@ -61,6 +61,10 @@ const dichtbij=api.geschatteSvgTekstBox("20°",118,80,"middle",12);
 const verweg=api.geschatteSvgTekstBox("20°",220,80,"middle",12);
 assert.strictEqual(api.rechthoekenBotsen(start,dichtbij,3),true,"Nabije temperatuurlabels moeten als botsing gelden.");
 assert.strictEqual(api.rechthoekenBotsen(start,verweg,3),false,"Verre temperatuurlabels mogen niet als botsing gelden.");
+const rood={x:48,y:115,width:36,height:12};
+assert.strictEqual(api.lijnRaaktTekstBox([[34,100],[84,140]],rood),true,"Dalende temperatuurcurve door het rode nu-label moet als botsing tellen.");
+assert.strictEqual(api.lijnRaaktTekstBox([[34,80],[84,90]],rood),false,"Vrije ruimte boven de curve mag het nu-label behouden.");
+assert.strictEqual(api.lijnRaaktTekstBox([[34,100],[34,140]],rood),false,"Een segment buiten het tekstvak mag geen valse botsing geven.");
 
 assert.deepEqual(api.randCorrectieVoorTekstBox({x:360,y:0,width:28,height:10},380,5),{x:375,anker:"end"},"Rechter tijdlabel moet volledig binnen de mobiele SVG worden getrokken.");
 assert.deepEqual(api.randCorrectieVoorTekstBox({x:1,y:0,width:28,height:10},380,5),{x:5,anker:"start"},"Linker randlabel moet volledig binnen de mobiele SVG worden getrokken.");

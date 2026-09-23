@@ -319,11 +319,17 @@ function structureerBronnen(){
   [...bron.childNodes].filter(n=>n.nodeType===3).forEach(n=>{
     if(/\bKNMI\b/i.test(n.nodeValue||"")){knmi=true;n.nodeValue=String(n.nodeValue||"").replace(/\s*[·/]?\s*KNMI\s*/ig," ");}
   });
+  /* De KNMI-provider kan later een inline span mét link toevoegen. Een grid
+     behandelt die anders als een los restje buiten de bronitemkolommen. */
+  const inline=bron.querySelector(":scope > #knmi-bron-inline");
+  const inlineLink=inline&&inline.querySelector("a");
+  if(inline){knmi=true;inline.remove();}
   const los=[...footer.children].find(el=>el!==bron&&el.classList&&el.classList.contains("bron")&&/^\s*[·/]?\s*KNMI\s*$/i.test(el.textContent||""));
   if(los){knmi=true;los.remove();}
   if(knmi&&! [...bron.querySelectorAll(".bronitem")].some(el=>/^KNMI$/i.test((el.textContent||"").trim()))){
     const item=document.createElement("span");item.className="bronitem";
-    item.innerHTML='<a href="https://www.knmi.nl/" target="_blank" rel="noopener">KNMI</a>';
+    if(inlineLink)item.appendChild(inlineLink);
+    else item.innerHTML='<a href="https://www.knmi.nl/" target="_blank" rel="noopener">KNMI</a>';
     bron.appendChild(item);
   }
   return true;

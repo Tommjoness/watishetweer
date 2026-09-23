@@ -182,6 +182,25 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   .wiw-hour-table .wiw-hour-primary{line-height:1.2!important}
   .wiw-hour-table .wiw-hour-secondary{line-height:1.2!important}
 }
+@media(min-width:1300px){
+  /* De lange plaatsenkop mag de eerste desktoplink niet raken. */
+  html body > .seo-plaatsnav .seo-plaatsnav-inner{grid-template-columns:275px minmax(0,1fr)!important}
+  html body > .seo-plaatsnav .seo-plaatsnav-links{gap:4px 8px!important}
+}
+/* Fysieke iPhone: de bronlijst sluit los ingevoegde KNMI-attributie nu als
+   normaal bronitem in. Geef de disclaimer en drie informatielinks hun eigen
+   regelruimte; de aparte SEO-plaatsnavigatie blijft onaangeraakt. */
+@media(max-width:430px){
+  html body footer:nth-of-type(n){margin-top:16px!important;padding-top:10px!important;border-top:1px solid var(--rule-soft);grid-template-columns:repeat(2,minmax(0,1fr))!important;row-gap:4px!important}
+  .wiw-hour-table thead th{white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.2!important}
+  footer > span.bron:nth-last-of-type(2){grid-column:1!important;grid-row:3!important}
+  footer > span.bron:last-of-type{grid-column:2!important;grid-row:3!important}
+  footer > details.footer-details{grid-column:1 / -1!important;grid-row:4!important}
+  footer > details.footer-details>summary{width:100%;min-height:44px!important}
+  .footer-contact{grid-row:5!important;flex-wrap:wrap!important;row-gap:4px!important;margin:8px 0 10px!important}
+  .footer-contact-mail{margin-top:0!important;white-space:normal!important;flex-wrap:wrap;column-gap:4px}
+  .footer-contact-mail a{min-height:44px;display:inline-flex;align-items:center;overflow-wrap:anywhere;white-space:normal}
+}
 `;
 
 function htmlBestanden(dir){

@@ -124,6 +124,20 @@ function rechthoekenBotsen(a,b,padding=0){
   if(![ax,ay,aw,ah,bx,by,bw,bh].every(Number.isFinite))return false;
   return ax-p<bx+bw&&ax+aw+p>bx&&ay-p<by+bh&&ay+ah+p>by;
 }
+function lijnRaaktTekstBox(punten,box,marge=3){
+  if(!box||!Array.isArray(punten))return false;
+  for(let i=1;i<punten.length;i++){
+    const a=punten[i-1],b=punten[i];
+    if(!Array.isArray(a)||!Array.isArray(b)||![...a,...b].every(Number.isFinite))continue;
+    const links=Math.max(box.x-marge,Math.min(a[0],b[0]));
+    const rechts=Math.min(box.x+box.width+marge,Math.max(a[0],b[0]));
+    if(links>rechts)continue;
+    const yLinks=a[1]+(b[1]-a[1])*(links-a[0])/(b[0]-a[0]||1);
+    const yRechts=a[1]+(b[1]-a[1])*(rechts-a[0])/(b[0]-a[0]||1);
+    if(Math.min(yLinks,yRechts)<=box.y+box.height+marge&&Math.max(yLinks,yRechts)>=box.y-marge)return true;
+  }
+  return false;
+}
 
 /* Alleen voor de botsingsbeslissing van korte SVG-temperatuurlabels is een
    browsergedreven getBBox()-meting onnodig duur: zo'n read kan na SVG-mutaties
@@ -230,7 +244,7 @@ function mobieleGrafiekCompactHoogte(plotBottom,huidigeHoogte,zichtbareOnderkant
   return Math.min(h,doel);
 }
 
-const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,lokaleForecastMinuten,lokaleTemperatuurExtrema,mobieleTemperatuurLabelPlan,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,mobieleTemperatuurLabelLimiet,kiesMobieleTemperatuurLabelIndices,prioriteerMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
+const api={uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,lokaleForecastMinuten,lokaleTemperatuurExtrema,mobieleTemperatuurLabelPlan,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,lijnRaaktTekstBox,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,mobieleTemperatuurLabelLimiet,kiesMobieleTemperatuurLabelIndices,prioriteerMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -523,7 +537,7 @@ function compactMobieleGrafiekHoogte(){
 let uurAsToken=0;
 function planUurAsHerstel(){
   const token=++uurAsToken;
-  const voer=()=>{if(token===uurAsToken){herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();verminderMobieleTemperatuurlabels();compactMobieleGrafiekHoogte();}};
+  const voer=()=>{if(token===uurAsToken){herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();verminderMobieleTemperatuurlabels();polishNuLabel();compactMobieleGrafiekHoogte();}};
   const start=()=>{
     const r1=()=>{const r2=()=>voer();if(typeof requestAnimationFrame==="function")requestAnimationFrame(r2);else setTimeout(r2,0);};
     if(typeof requestAnimationFrame==="function")requestAnimationFrame(r1);else setTimeout(r1,0);
@@ -543,10 +557,42 @@ function polishNuLabel(){
   const teksten=[...svg.querySelectorAll("text")],nu=teksten.find(el=>/^nu(?:\s|$)/i.test(String(el.textContent||"").trim()));
   if(!nu)return;
   nu.removeAttribute("data-now-collision-adjusted");nu.removeAttribute("dy");
-  const vak=svgTekstBoxUitElement(nu);if(!vak)return;
-  const temperatuurLabels=teksten.filter(el=>el!==nu&&/^-?\d+(?:[.,]\d+)?°$/.test(String(el.textContent||"").trim()));
-  const botst=temperatuurLabels.some(el=>rechthoekenBotsen(vak,svgTekstBoxUitElement(el),3));
-  if(botst){nu.setAttribute("dy","12");nu.setAttribute("data-now-collision-adjusted","1");}
+  if(!mobiel()||window.innerWidth>430){
+    const vak=svgTekstBoxUitElement(nu);
+    if(vak&&teksten.some(el=>el!==nu&&/^-?\d+(?:[.,]\d+)?°$/.test(String(el.textContent||"").trim())&&rechthoekenBotsen(vak,svgTekstBoxUitElement(el),3))){
+      nu.setAttribute("dy","12");nu.setAttribute("data-now-collision-adjusted","1");
+    }
+    return;
+  }
+  if(!nu.hasAttribute("data-now-base-x")){
+    nu.setAttribute("data-now-base-x",nu.getAttribute("x"));nu.setAttribute("data-now-base-y",nu.getAttribute("y"));
+  }
+  const oorspronkelijkX=Number(nu.getAttribute("data-now-base-x")),oorspronkelijkY=Number(nu.getAttribute("data-now-base-y"));
+  const g=typeof S!=="undefined"&&S.geo,breed=svg.viewBox.baseVal.width;
+  if(!Number.isFinite(oorspronkelijkX)||!Number.isFinite(oorspronkelijkY)||!g)return;
+  const punt=svg.querySelector('circle[fill="var(--carmine)"][r="3"]');
+  const puntY=punt?Number(punt.getAttribute("cy")):NaN;
+  const vast=teksten.filter(el=>el!==nu&&!el.closest("#scrub")).map(svgTekstBoxUitElement).filter(Boolean);
+  const lijnen=[...svg.querySelectorAll("polyline")].filter(el=>!el.closest("#scrub"))
+    .map(el=>String(el.getAttribute("points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
+  const vrij=(x,y)=>{
+    const box=geschatteSvgTekstBox(nu.textContent,x,y,"start",Number(nu.getAttribute("font-size"))||10);
+    return box&&box.x>=g.pl-2&&box.x+box.width<=breed-g.pr+3
+      &&box.y>=g.pt-18&&box.y+box.height<=g.pt+g.ih-3
+      &&(!Number.isFinite(puntY)||Math.abs(y-puntY)>=12)
+      &&!vast.some(b=>rechthoekenBotsen(box,b,3))
+      &&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box));
+  };
+  const posities=[[0,0],[0,-16],[0,16],[0,-24],[0,24],[12,-16],[12,16],[-12,-16],[-12,16],[0,-30],[0,30]];
+  const gevonden=posities.find(([dx,dy])=>vrij(oorspronkelijkX+dx,oorspronkelijkY+dy));
+  if(gevonden){
+    nu.setAttribute("x",String(oorspronkelijkX+gevonden[0]));nu.setAttribute("y",String(oorspronkelijkY+gevonden[1]));
+    if(gevonden[0]||gevonden[1])nu.setAttribute("data-now-collision-adjusted","1");
+  }
+  /* Bij een uitzonderlijk volle curve blijft tekst ook zonder vrije positie
+     leesbaar doordat de achtergrond de onderliggende lijn vrijhoudt. */
+  nu.setAttribute("stroke",getComputedStyle(document.documentElement).getPropertyValue("--sheet").trim()||"white");
+  nu.setAttribute("stroke-width","3");nu.setAttribute("paint-order","stroke");nu.setAttribute("stroke-linejoin","round");
 }
 let nuPolishToken=0;
 function planNuLabelPolish(){
@@ -614,5 +660,13 @@ if(typeof lucht==="function"){
 }
 werkContextBij();planUurAsHerstel();planNuLabelPolish();
 setTimeout(werkBronnenBij,450);setTimeout(werkBronnenBij,1400);
+/* De KNMI-attributie komt soms pas na deze timers vanuit de providerlaag. */
+const bronFooter=document.querySelector("footer .bron-bronnen");
+if(bronFooter&&typeof MutationObserver!=="undefined"){
+  const bronObserver=new MutationObserver(()=>{
+    if(bronFooter.querySelector(":scope > #knmi-bron-inline"))werkBronnenBij();
+  });
+  bronObserver.observe(bronFooter,{childList:true});
+}
 
 })(typeof globalThis!=="undefined"?globalThis:this);

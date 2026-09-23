@@ -127,6 +127,9 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const cs=x=>getComputedStyle(x),zichtbaar=[...grid.querySelectorAll("a")].filter(x=>cs(x).display!=="none"),regulier=zichtbaar.filter(x=>x!==meer).slice(0,6);
           const tekstMidden=x=>{const range=document.createRange();range.selectNodeContents(x);const r=range.getBoundingClientRect();return (r.left+r.right)/2;};
           const gr=grid.getBoundingClientRect(),nr=nav.getBoundingClientRect(),mr=meer.getBoundingClientRect();
+          const kopTekst=document.createRange(),eersteTekst=document.createRange();
+          kopTekst.selectNodeContents(kop);
+          if(regulier[0])eersteTekst.selectNodeContents(regulier[0]);
           const tekstDelta=regulier.length?Math.max(...regulier.map(x=>{const r=x.getBoundingClientRect();return Math.abs(tekstMidden(x)-((r.left+r.right)/2));})):999;
           return {
             display:cs(grid).display,
@@ -141,6 +144,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
             moreJustify:cs(meer).justifyContent,
             moreTextAlign:cs(meer).textAlign,
             headingCenterDelta:Math.abs(tekstMidden(kop)-((nr.left+nr.right)/2)),
+            headingLinkGap:regulier[0]?eersteTekst.getBoundingClientRect().left-kopTekst.getBoundingClientRect().right:null,
             overflow:Math.max(0,nr.right-innerWidth,-nr.left),
             background:cs(nav).backgroundColor
           };
@@ -215,6 +219,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert(binnenViewport(basis.searchRect,vp.width),`${vp.naam}: zoekveld valt buiten viewport`);
       for(const r of basis.topRects)assert(binnenViewport(r,vp.width),`${vp.naam}: zichtbare bovenste bediening '${String(r.label).trim()}' valt buiten viewport`);
       if(vp.width>=1100){
+        if(vp.width>=1300)assert(basis.plaats&&basis.plaats.headingLinkGap>=8,`${vp.naam}: plaatsenkop raakt de eerste link (${basis.plaats?.headingLinkGap}px)`);
         const u=basis.hourTable;assert(u,`${vp.naam}: desktop-uurtabel ontbreekt`);
         assert(u.fontSize>=13.4,`${vp.naam}: desktop-uurtabel blijft te klein (${u.fontSize}px)`);
         assert(u.rowCount>=8&&u.rowCount<=11,`${vp.naam}: desktop-uurtabel toont geen 8–11 volledige hoogtegestuurde uren (${u.rowCount})`);
@@ -436,6 +441,34 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         const darkPng=path.join(evidence,`preview-${vp.width}-dark.png`);
         await page.screenshot({path:darkPng,fullPage:true});
         assert(fs.existsSync(darkPng)&&fs.statSync(darkPng).size>5000,`${vp.naam}: dark-mode screenshot ontbreekt of is verdacht klein`);
+      }
+
+      if([320,375,390].includes(vp.width)){
+        /* Text-only zoom: vergroot de werkelijk zichtbare HTML-tekst met 125%,
+           terwijl viewport en kaarten gelijk blijven. SVG-labels zijn al op
+           hun eigen geometrie gecontroleerd. Bewaar een apart bewijsbeeld. */
+        const zoom=await page.evaluate(()=>{
+          const wortel=document.querySelector(".sheet"),walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+          const elementen=new Set();let tekst;
+          while((tekst=walker.nextNode())){
+            const el=tekst.parentElement;
+            if(!el||!tekst.textContent.trim()||el.closest("svg,script,style")||!(wortel?.contains(el)||el.closest(".seo-plaatsnav")))continue;
+            if(el.getClientRects().length)elementen.add(el);
+          }
+          const fonts=[...elementen].map(el=>({el,size:parseFloat(getComputedStyle(el).fontSize)})).filter(x=>Number.isFinite(x.size)&&x.size>0);
+          fonts.forEach(x=>x.el.style.setProperty("font-size",`${(x.size*1.25).toFixed(2)}px`,"important"));
+          const selectors=[".wiw-hour-toggle","#nights .nacht-meer","footer .footer-contact a",".seo-plaatsnav-alles"];
+          const headers=[...document.querySelectorAll("#wiw-hour-table thead th")].map(el=>({text:el.textContent.trim(),scroll:el.scrollWidth,client:el.clientWidth}));
+          return {count:fonts.length,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,headers,
+            doelen:selectors.map(selector=>{const r=document.querySelector(selector)?.getBoundingClientRect();return {selector,width:r?.width||0,left:r?.left??-1,right:r?.right??Infinity};})};
+        });
+        assert(zoom.count>60,`${vp.naam}: tekstzoom raakte te weinig zichtbare tekst (${zoom.count})`);
+        assert(zoom.overflow<=1,`${vp.naam}: 125% tekstzoom introduceert ${zoom.overflow}px horizontale overflow`);
+        assert(zoom.headers.length===4&&zoom.headers.every(h=>h.scroll<=h.client+1),`${vp.naam}: uurtabelkop wordt bij 125% tekstzoom afgeknipt (${JSON.stringify(zoom.headers)})`);
+        for(const doel of zoom.doelen)assert(doel.width>=43.5&&doel.left>=-1&&doel.right<=vp.width+1,`${vp.naam}: 125% tekstzoom duwt ${doel.selector} buiten beeld (${JSON.stringify(doel)})`);
+        const zoomPng=path.join(evidence,`preview-${vp.width}-dark-textzoom-125.png`);
+        await page.screenshot({path:zoomPng,fullPage:true});
+        assert(fs.existsSync(zoomPng)&&fs.statSync(zoomPng).size>5000,`${vp.naam}: tekstzoom-screenshot ontbreekt`);
       }
 
       /* Navigatie in dezelfde tab houdt sessionStorage bewust vast. Daarmee

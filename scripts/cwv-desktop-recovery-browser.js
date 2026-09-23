@@ -175,8 +175,8 @@ async function run(){
           assert(Math.abs(f.disclaimerWidth-f.rect.width)<=1&&f.disclaimerLines<=4&&f.disclaimerLineHeight<=15.6,"live disclaimer benut niet rustig de footerbreedte: "+JSON.stringify(f));
           assert(Math.abs(f.contactWidth-f.rect.width)<=1&&f.contactRowDelta<=1,"live contactvraag en mail delen geen compacte volle rij: "+JSON.stringify(f));
           assert(f.contactHitHeight>=43.5,"live contactmail verliest 44px tapdoel: "+f.contactHitHeight);
-          assert(f.utilityRows===1&&f.utilityRowDelta<=1&&f.utilityPairDelta<=1&&Math.abs(f.utilityDetailsDelta)<=1&&f.utilityHitHeight>=43.5,"live utilitylinks volgen niet de bedoelde ene utilityrij/tapdoelen: "+JSON.stringify(f));
-          assert(f.rect.height<300,"live 390px-footer overschrijdt de compacte mobiele hoogteband: "+f.rect.height);
+          assert(f.utilityRows===2&&f.utilityPairDelta<=1&&f.utilityDetailsDelta>=43&&f.utilityDetailsDelta<=53&&f.utilityHitHeight>=43.5,"live utilitylinks volgen niet de bedoelde 2+1-indeling/tapdoelen: "+JSON.stringify(f));
+          assert(f.rect.height<360,"live 390px-footer overschrijdt de leesbare mobiele hoogteband: "+f.rect.height);
           console.log("FOOTER_390 "+JSON.stringify({scenario,height:f.rect.height,sourceWidth:f.sourceWidth,sourceVisible:f.sourceVisible,sourceRows:f.sourceRows,disclaimerWidth:f.disclaimerWidth,disclaimerLines:f.disclaimerLines,disclaimerLineHeight:f.disclaimerLineHeight,contactWidth:f.contactWidth,contactRowDelta:f.contactRowDelta,sourceHitHeight:f.sourceHitHeight,contactHitHeight:f.contactHitHeight,utilityRows:f.utilityRows,utilityPairDelta:f.utilityPairDelta,utilityDetailsDelta:f.utilityDetailsDelta,utilityHitHeight:f.utilityHitHeight}));
         }
         assert(result.cls<0.1,"Route-CLS buiten budget: "+JSON.stringify({route,width,scenario,cls:result.cls,shifts:result.shifts}));
