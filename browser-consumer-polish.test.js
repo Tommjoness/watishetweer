@@ -231,7 +231,8 @@ async function controleer(page, naam, modus) {
     };
   });
 
-  assert.equal(resultaat.nuTeksten.length, 1, `${naam} ${modus}: exact één Nu-label in de grafiek`);
+  assert.equal(resultaat.nuTeksten.length, modus === "desktop" ? 0 : 1,
+    `${naam} ${modus}: mobiel één Nu-label, desktop geen herhaalde actuele temperatuur`);
   assert.equal(resultaat.bots, 0, `${naam} ${modus}: temperatuurwaarden botsen niet`);
   assert.ok(/zon onder 21:30/i.test(resultaat.sunTekst), `${naam} ${modus}: exacte zonsondergang van morgen blijft zichtbaar`);
   assert.ok(!/Vandaag/i.test(resultaat.sunTekst), `${naam} ${modus}: geen verstreken vandaag-momenten na zonsondergang`);

@@ -109,11 +109,11 @@ const NACHT_COMPACT_IF_NIEUW='  if(rijen.length<=zichtbaar){';
 const NACHT_COMPACT_CSS_OUD='#nights .nacht-meer{display:none}';
 const NACHT_COMPACT_CSS_NIEUW=`#nights .row.night[hidden]{display:none!important}
 #nights .nacht-meer{
-  display:block;width:100%;margin:4px 0 0;padding:12px 0 3px;border:0;border-top:1px solid var(--rule);
+  display:block;width:100%;margin:4px 0 0;padding:12px 0 3px;border:0;
   text-align:left;color:var(--ink-70);background:transparent;font-family:var(--sans);font-size:11px;
   font-weight:500;letter-spacing:.1em;text-transform:uppercase
 }
-#nights .nacht-meer:hover{color:var(--ink);border-top-color:var(--ink)}`;
+#nights .nacht-meer:hover{color:var(--ink)}`;
 
 const AQI_OUD='  const schaalIndex = euro ? "Europese AQI" : "Amerikaanse AQI";';
 const AQI_NIEUW='  const schaalIndex = euro ? "Europese AQI" : "AQI (VS-schaal)";';
