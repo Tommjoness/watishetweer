@@ -12,6 +12,7 @@ Deze afspraken zijn vastgelegd door de eigenaar en gelden voor iedere sessie.
 ## Werkwijze in deze codebase
 
 - Communiceer met de eigenaar in het Nederlands: gedetailleerd, duidelijk, feitelijk en goed gestructureerd.
+- Noem tijden altijd in Nederlandse tijd (Europe/Amsterdam: CEST in de zomer, CET in de winter), ook voor CI-runs, deploys en geplande controles. GitHub en de sandbox rapporteren in UTC: reken dat om.
 - Lees eerst `README.md` en `docs/overdracht-runbook.md` voor architectuur, deploy en beheer.
 - Bewerk nooit handmatig bestanden in `public/`. Die map wordt bij iedere build opnieuw opgebouwd.
 - Draai vóór iedere push `npm test` (Node 22). Voor de productie-artifact: `npm run build:cloudflare`.
