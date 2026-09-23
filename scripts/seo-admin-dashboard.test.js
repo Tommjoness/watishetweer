@@ -180,7 +180,7 @@ assert(workflow.includes('.result.deployment_configs.preview.env_vars.GA4_PROPER
 
 assert(productionWorkflow.includes('run: node scripts/cloudflare-admin-analytics-runtime.js'),"Productionworkflow gebruikt niet de gedeelde veilige runtime-sync.");
 assert(productionWorkflow.includes('.result.deployment_configs.production.env_vars.GA4_PROPERTY_ID.type == "secret_text"'),"Production post-deploy gate mist de duurzame GA4-binding.");
-assert.equal((productionWorkflow.match(/NODE_OPTIONS: --require=\.\/scripts\/cloudflare-access-preload\.cjs/g)||[]).length,2,"Production moet readiness en immutable smoke via de host-begrensde Access-preload uitvoeren.");
+assert.equal((productionWorkflow.match(/NODE_OPTIONS: --require=\.\/scripts\/cloudflare-access-preload\.cjs/g)||[]).length,4,"Production moet readiness en immutable smoke van zowel de releasekandidaat als de productiedeployment via de host-begrensde Access-preload uitvoeren.");
 assert(productionWorkflow.includes("Cloudflare Access service token is onvolledig."),"Production moet een half Access service token fail-closed weigeren.");
 
 console.log("SEO admin dashboard contract OK");

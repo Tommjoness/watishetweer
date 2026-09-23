@@ -107,7 +107,7 @@ Werk via een branch en pull request. De normale route is:
 3. open een PR naar `main`;
 4. wacht op quality, checkpoint en de dynamische Cloudflare-preview;
 5. controleer de immutable preview en laat alleen groen werk mergen;
-6. na merge bouwt en deployt `Cloudflare production` exact de `main`-SHA;
+6. na merge bouwt `Cloudflare production` exact de `main`-SHA, rolt die eerst uit als releasekandidaat (Pages-preview, branch `release-candidate`) en zet hetzelfde artifact pas na een groene readiness en smoke op production;
 7. `WeatherNow production smoke` moet de exacte live SHA, routes, API's en wereldmatrix groen bevestigen.
 
 Een lokaal ontbrekende Chromium/WebKit-installatie is geen productfout. Gebruik in dat geval de vaste Playwright-container uit de GitHub-workflows; merge nooit op basis van alleen een lokaal overgeslagen browserdeel.

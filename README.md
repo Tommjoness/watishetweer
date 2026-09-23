@@ -10,7 +10,7 @@ Cloudflare Pages is het enige productieplatform. De productieflow draait vanuit 
 npm run build:cloudflare
 ```
 
-De build assembleert de canonieke bronbestanden en gecontroleerde buildlagen tot `public/`. Daarna voegt `scripts/cloudflare-output.js` de Cloudflare Pages-configuratie toe en deployt `.github/workflows/cloudflare-production.yml` exact de `main`-SHA. Wijzig daarom niet handmatig bestanden in `public/`; die map wordt opnieuw opgebouwd.
+De build assembleert de canonieke bronbestanden en gecontroleerde buildlagen tot `public/`. Daarna voegt `scripts/cloudflare-output.js` de Cloudflare Pages-configuratie toe en deployt `.github/workflows/cloudflare-production.yml` exact de `main`-SHA: eerst als releasekandidaat (Pages-preview op branch `release-candidate`) met readiness en volledige smoke, en pas daarna hetzelfde artifact naar production. Een rode kandidaat laat de live site ongemoeid. Wijzig daarom niet handmatig bestanden in `public/`; die map wordt opnieuw opgebouwd.
 
 Belangrijke ingangen:
 
