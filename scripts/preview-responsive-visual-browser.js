@@ -261,7 +261,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           assert(a.viaNow||a.priority==="anchor",`${vp.naam}: verplicht drie-uursanker ${a.i} mist een temperatuurlabel`);
           if(!a.viaNow)assert.equal(a.tekst,String(a.verwacht)+"°",`${vp.naam}: temperatuur bij anker ${a.i} hoort niet bij hetzelfde forecastpunt (${a.tekst}/${a.verwacht}°)`);
         }
-        assert(m.markerState.count<=2&&m.markerState.teksten.every(t=>/^(?:max|min) -?\d+°$/.test(t)),`${vp.naam}: de lijn draagt meer dan alleen max/min (${JSON.stringify(m.markerState.teksten)})`);
+        assert(m.markerState.count<=2&&m.markerState.teksten.every(t=>/^-?\d+°$/.test(t)),`${vp.naam}: de lijn draagt meer dan alleen max/min (${JSON.stringify(m.markerState.teksten)})`);
         assert.equal(m.markerState.nowOverlap+m.markerState.tempOverlap+m.markerState.clipped,0,`${vp.naam}: max/min-markering botst of valt buiten de SVG (${JSON.stringify(m.markerState)})`);
         assert.equal(m.sunInChart,0,`${vp.naam}: dubbele zon-op/zon-ondertekst staat nog in de SVG`);
         assert.equal(m.compact,"1",`${vp.naam}: grafiekhoogte is niet mobiel gecompacteerd`);

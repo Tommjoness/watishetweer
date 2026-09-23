@@ -104,6 +104,8 @@ assert(runtime.includes("const rijY=bottom+MOBIELE_TEMP_RIJ_Y;")&&runtime.includ
 assert(api.MOBIELE_TEMP_RIJ_Y<api.MOBIELE_UURAS_Y,"De temperatuurrij staat boven de uuras.");
 assert(runtime.includes('el.setAttribute("data-mobile-temp-row","1")')&&runtime.includes('el.setAttribute("data-mobile-temp-priority","anchor")'),"Rijlabels zijn traceerbaar als vaste drie-uursankers.");
 assert(runtime.includes("mobieleGrafiekMarkeringen(g.T,24,")&&runtime.includes('data-mobile-temp-marker'),"Max/min op de lijn komen uit het pure markeringenplan.");
+assert(runtime.includes('const tekst=m.waarde+"°"')&&!runtime.includes('m.type+" "+m.waarde'),"Max/min-markering toont alleen de waarde: \"min 3°\" leest als -3°.");
+assert(runtime.includes("const asKolom=Number(g.x(0))-4;")&&runtime.includes("if(box&&box.x<asKolom)continue;"),"Een kale markering staat nooit in de kolom van de asgetallen.");
 assert(runtime.includes("monotoonPad(")&&runtime.includes('data-mobile-line-points'),"Mobiele lijn is vloeiend en houdt haar punten beschikbaar voor botsingscontrole.");
 assert(runtime.includes('path[data-mobile-line-points]'),"Nu-labelpolish controleert ook tegen de vloeiende lijn.");
 assert(runtime.includes('!el.hasAttribute("data-mobile-temp-row")&&/Bodoni/i'),"Randpolish mag de vaste rij niet naar de lijn terugtrekken.");
