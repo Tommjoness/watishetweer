@@ -116,7 +116,7 @@ Een lokaal ontbrekende Chromium/WebKit-installatie is geen productfout. Gebruik 
 
 Web Analytics wordt niet door iedere productiedeploy aan- of uitgezet. De aparte workflow `.github/workflows/cloudflare-web-analytics.yml` wacht eerst totdat exact dezelfde bron-SHA publiek live staat en voert daarna `scripts/cloudflare-web-analytics-setup.js` idempotent uit. Het script maakt of activeert één Analytics-site voor de watishetweer-zone, verifieert die via de Cloudflare API en verwijdert daarna alleen de historische eigen `disable_rum`-regel als die nog bestaat. De normale productiedeploy raakt deze instelling niet meer aan.
 
-De build laat uitsluitend de officiële Cloudflare-beaconbron toe in `script-src`; Web Analytics gebruikt de same-origin `/cdn-cgi/rum`-route. Er wordt geen handmatige analytics-snippet of analytics-token in de repository geplaatst. Zie `docs/commerciele-baseline-2026-08-31.md` voor de nulmeting en meetcyclus.
+De build laat uitsluitend de officiële Cloudflare-beaconbron toe in `script-src`; Web Analytics gebruikt de same-origin `/cdn-cgi/rum`-route. Er wordt geen handmatige analytics-snippet of analytics-token in de repository geplaatst. De commerciële nulmeting en meetcyclus worden bewust buiten deze publieke repository bijgehouden.
 
 ## Monitoring en alarmen
 

@@ -9,7 +9,6 @@ const lees=bestand=>fs.readFileSync(path.join(root,bestand),"utf8");
 const readme=lees("README.md");
 const runbook=lees("docs/overdracht-runbook.md");
 const audit=lees("docs/sale-readiness-audit-2026-08-31.md");
-const baseline=lees("docs/commerciele-baseline-2026-08-31.md");
 const preview=lees(".github/workflows/cloudflare-preview.yml");
 const analyticsWorkflow=lees(".github/workflows/cloudflare-web-analytics.yml");
 const production=lees(".github/workflows/cloudflare-production.yml");
@@ -48,7 +47,9 @@ assert(preview.includes("node scripts/weatherapi-live-fallback-browser.js"),"pre
 assert(runbook.includes(".github/workflows/cloudflare-web-analytics.yml"),"runbook mist de aparte Web Analytics-workflow");
 assert(runbook.includes("scripts/cloudflare-web-analytics-setup.js"),"runbook mist het idempotente Web Analytics-setupscript");
 assert(runbook.includes("Account Settings Read/Write"),"runbook mist de minimale aanvullende Cloudflare analyticsrechten");
-assert(runbook.includes("docs/commerciele-baseline-2026-08-31.md"),"runbook mist de commerciële baseline");
+/* Commerciële doelen en onderhandelingsinformatie horen niet in de publieke repository. */
+assert(!fs.existsSync(path.join(root,"docs","commerciele-baseline-2026-08-31.md")),"commerciële baseline hoort niet in de publieke repository");
+assert(!runbook.includes("commerciele-baseline"),"runbook mag niet naar een commerciële baseline in de repository verwijzen");
 assert(analyticsWorkflow.includes("node scripts/cloudflare-web-analytics-setup.js"),"analyticsworkflow voert setupscript niet uit");
 assert(analyticsWorkflow.includes("Wacht tot dezelfde SHA publiek live staat"),"analyticsworkflow mag accountconfig niet voor de bijbehorende productie activeren");
 assert(!production.includes("cloudflare-disable-web-analytics.js"),"productiedeploy mag Web Analytics niet meer terug uitzetten");
@@ -56,16 +57,5 @@ assert(!production.includes("cloudflare-disable-rum.js"),"productiedeploy mag ge
 assert(packageJson.scripts["test:prebuild"].includes("cloudflare-web-analytics-setup.test.js"),"prebuild mist analytics-setupregressietest");
 assert(packageJson.scripts.postbuild.includes("apply-cloudflare-web-analytics-csp.js"),"postbuild mist analytics-CSP-artifactstap");
 
-for(const contract of [
-  "historische 90-dagenbezoekersbaseline kan",
-  "18 van 37",
-  "28 augustus 2026",
-  "T0 + 7 dagen",
-  "T0 + 30 dagen",
-  "T0 + 60 dagen",
-  "T0 + 90 dagen",
-  "minimaal €250 aantoonbare nettowinst per maand",
-  "Geen historische analytics betekent geen historische nul"
-])assert(baseline.includes(contract),`commerciële baseline mist contract: ${contract}`);
 
-console.log("Transfer-readiness: runbook, auditbewijs, commerciële baseline, generieke Cloudflare-preview en fail-safe Web Analytics-setup zijn geborgd.");
+console.log("Transfer-readiness: runbook, auditbewijs, geen commerciële baseline in de publieke repo, generieke Cloudflare-preview en fail-safe Web Analytics-setup zijn geborgd.");
