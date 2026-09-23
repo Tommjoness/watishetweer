@@ -473,18 +473,23 @@ function bouwMobieleTemperatuurRij(){
 
   /* Max en min op de lijn. Eerst recht boven (max) of onder (min) het punt,
      dan licht verschoven, dan links of rechts ernaast. Een positie telt alleen
-     als ze vrij is van de lijn, het nu-label en de nu-lijn; past ze nergens,
-     dan vervalt de markering liever dan te botsen. */
-  const vast=[];
-  if(nuTekst){const b=svgTekstBoxUitElement(nuTekst);if(b)vast.push(b);}
+     als ze vrij is van de lijn, de nu-lijn en alle bestaande tekst (nu-label,
+     asgetallen, regenperiodes); past ze nergens, dan vervalt de markering
+     liever dan te botsen. Zonder "max"/"min" lijkt een markering anders op een
+     asgetal wanneer ze ernaast staat. */
+  const vast=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")).map(svgTekstBoxUitElement).filter(Boolean);
   if(Number.isFinite(nuX))vast.push({x:nuX-3,y:top,width:6,height:bottom-top});
+  /* Links van het eerste uur staan de asgetallen; een kale "20°" daar leest als asgetal. */
+  const asKolom=Number(g.x(0))-4;
   const lijnen=[...svg.querySelectorAll("path[data-mobile-line-points]")]
     .map(el=>String(el.getAttribute("data-mobile-line-points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
   const getoond=[],vervallen=[];
   mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null}).forEach(m=>{
     const px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
-    const tekst=m.type+" "+m.waarde+"°",fs=9.5,boven=py-8,onder=py+15,naast=py+3.5;
-    const verticaal=y=>[[px,y,"middle"],[px+14,y,"middle"],[px-14,y,"middle"],[px+24,y,"middle"],[px-24,y,"middle"]];
+    /* Alleen de waarde: "min 3°" leest als min 3 graden (-3°). Stip en
+       plaats boven of onder de lijn maken al duidelijk dat het piek of dal is. */
+    const tekst=m.waarde+"°",fs=9.5,boven=py-8,onder=py+15,naast=py+3.5;
+    const verticaal=y=>[[px,y,"middle"],[px+14,y,"middle"],[px-14,y,"middle"]];
     const kandidaten=[...verticaal(m.type==="max"?boven:onder),[px+7,naast,"start"],[px-7,naast,"end"],...verticaal(m.type==="max"?onder:boven)];
     let gekozen=null;
     for(const [x0,y,anker] of kandidaten){
@@ -493,7 +498,8 @@ function bouwMobieleTemperatuurRij(){
       let x=x0;
       if(box.x<marge)x+=marge-box.x;else if(box.x+box.width>W-marge)x-=box.x+box.width-(W-marge);
       box=geschatteSvgTekstBox(tekst,x,y,anker,fs);
-      if(box&&!vast.some(b=>rechthoekenBotsen(b,box,2))&&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box,1))){gekozen={x,y,anker,box};break;}
+      if(box&&box.x<asKolom)continue;
+      if(box&&!vast.some(b=>rechthoekenBotsen(b,box,4))&&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box,1))){gekozen={x,y,anker,box};break;}
     }
     if(!gekozen){vervallen.push(m.type);return;}
     const dot=document.createElementNS(SVG_NS,"circle");
