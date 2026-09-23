@@ -184,7 +184,8 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
 }
 @media(min-width:1300px){
   /* De lange plaatsenkop mag de eerste desktoplink niet raken. */
-  .seo-plaatsnav-inner{grid-template-columns:275px minmax(0,1fr)!important}
+  html body > .seo-plaatsnav .seo-plaatsnav-inner{grid-template-columns:275px minmax(0,1fr)!important}
+  html body > .seo-plaatsnav .seo-plaatsnav-links{gap:4px 8px!important}
 }
 /* Fysieke iPhone: de bronlijst sluit los ingevoegde KNMI-attributie nu als
    normaal bronitem in. Geef de disclaimer en drie informatielinks hun eigen

@@ -127,7 +127,9 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           const cs=x=>getComputedStyle(x),zichtbaar=[...grid.querySelectorAll("a")].filter(x=>cs(x).display!=="none"),regulier=zichtbaar.filter(x=>x!==meer).slice(0,6);
           const tekstMidden=x=>{const range=document.createRange();range.selectNodeContents(x);const r=range.getBoundingClientRect();return (r.left+r.right)/2;};
           const gr=grid.getBoundingClientRect(),nr=nav.getBoundingClientRect(),mr=meer.getBoundingClientRect();
-          const kr=kop.getBoundingClientRect(),eerste=regulier[0]&&regulier[0].getBoundingClientRect();
+          const kopTekst=document.createRange(),eersteTekst=document.createRange();
+          kopTekst.selectNodeContents(kop);
+          if(regulier[0])eersteTekst.selectNodeContents(regulier[0]);
           const tekstDelta=regulier.length?Math.max(...regulier.map(x=>{const r=x.getBoundingClientRect();return Math.abs(tekstMidden(x)-((r.left+r.right)/2));})):999;
           return {
             display:cs(grid).display,
@@ -142,7 +144,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
             moreJustify:cs(meer).justifyContent,
             moreTextAlign:cs(meer).textAlign,
             headingCenterDelta:Math.abs(tekstMidden(kop)-((nr.left+nr.right)/2)),
-            headingLinkGap:eerste?eerste.left-kr.right:null,
+            headingLinkGap:regulier[0]?eersteTekst.getBoundingClientRect().left-kopTekst.getBoundingClientRect().right:null,
             overflow:Math.max(0,nr.right-innerWidth,-nr.left),
             background:cs(nav).backgroundColor
           };
