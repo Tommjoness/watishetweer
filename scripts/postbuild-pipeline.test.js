@@ -45,7 +45,7 @@ const verwacht=[
   "verify-seo-location-pages.js",
   "verify-staff-audit-20260826.js",
   "apply-lcp-final-mile-20260828.js",
-  "apply-moon-a11y-template-20260828.js",
+  "verify-moon-a11y-template.js",
   "verify-lcp-final-mile-20260828.js",
   "apply-location-search-pending-feedback-20260908.js",
   "verify-location-search-pending-feedback-20260908.js",
@@ -80,7 +80,8 @@ assert(fs.existsSync(path.join(__dirname,"verify-mobile-truth-ux-20260828.js")),
 assert(fs.existsSync(path.join(__dirname,"apply-short-term-metric-clarity.js")),"kortetermijn-metric clarity moet een expliciete late applystap hebben");
 assert(fs.existsSync(path.join(__dirname,"verify-short-term-metric-clarity.js")),"kortetermijn-metric clarity moet direct verifieerbaar zijn");
 assert(fs.existsSync(path.join(__dirname,"apply-lcp-final-mile-20260828.js")),"LCP-final-mile moet een expliciete late applystap hebben");
-assert(fs.existsSync(path.join(__dirname,"apply-moon-a11y-template-20260828.js")),"maan-templatefix moet een expliciete late applystap hebben");
+assert(fs.existsSync(path.join(__dirname,"verify-moon-a11y-template.js")),"maanrol moet door een owner-verifier worden bewaakt");
+assert(!fs.existsSync(path.join(__dirname,"apply-moon-a11y-template-20260828.js")),"maanrol staat in de bron-templates; de oude late tekstpatch hoort weg");
 assert(fs.existsSync(path.join(__dirname,"verify-lcp-final-mile-20260828.js")),"LCP-final-mile moet direct verifieerbaar zijn");
 assert(fs.existsSync(path.join(__dirname,"apply-location-search-pending-feedback-20260908.js")),"location-search pending feedback moet een expliciete applystap hebben");
 assert(fs.existsSync(path.join(__dirname,"verify-location-search-pending-feedback-20260908.js")),"location-search pending feedback moet direct verifieerbaar zijn");
@@ -138,8 +139,8 @@ assert(positie("apply-seo-location-h1.js")<positie("verify-seo-location-h1.js"),
 assert(positie("verify-seo-location-h1.js")<positie("verify-seo-location-pages.js"),"brede SEO-verifier moet de geverifieerde lokale H1 zien");
 assert(positie("verify-seo-location-pages.js")<positie("verify-staff-audit-20260826.js"),"staff-audit-verifier moet ook gegenereerde routes controleren");
 assert(positie("verify-staff-audit-20260826.js")<positie("apply-lcp-final-mile-20260828.js"),"LCP-final-mile mag pas na alle inhoudelijke staff/routeverificatie muteren");
-assert(positie("apply-lcp-final-mile-20260828.js")<positie("apply-moon-a11y-template-20260828.js"),"maan-templatefix moet de complete LCP-final-mile-artifact zien");
-assert(positie("apply-moon-a11y-template-20260828.js")<positie("verify-lcp-final-mile-20260828.js"),"LCP-verifier moet de definitieve maanrol zien");
+assert(positie("apply-lcp-final-mile-20260828.js")<positie("verify-moon-a11y-template.js"),"maan-verifier moet de complete LCP-final-mile-artifact zien");
+assert(positie("verify-moon-a11y-template.js")<positie("verify-lcp-final-mile-20260828.js"),"LCP-verifier moet de definitieve maanrol zien");
 assert(positie("verify-lcp-final-mile-20260828.js")<positie("apply-location-search-pending-feedback-20260908.js"),"location-search feedback mag pas na de bewezen LCP-laag muteren");
 assert(positie("apply-location-search-pending-feedback-20260908.js")<positie("verify-location-search-pending-feedback-20260908.js"),"location-search feedback moet direct na toepassing worden geverifieerd");
 assert(positie("verify-location-search-pending-feedback-20260908.js")<positie("browser-location-search-pending-feedback-20260908.test.js"),"location-search browserguard moet de statisch geverifieerde artifact testen");

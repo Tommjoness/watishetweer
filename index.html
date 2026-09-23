@@ -2472,7 +2472,7 @@ function nachten(){
       <div class="sbar"><i style="width:${sc*10}%;background:${kleur}"></i></div>
       <div class="nmeta"><span class="perc">${Math.round(cw)}%</span> bewolking</div>
       <div class="nmeta wide"><span class="nachtadvies">${sc>=8.5?"Uitstekend":sc>=7?"Goed":sc>=5?"Redelijk":sc>=3.5?"Matig":"Ongunstig"} · ${venster}</span>${maanTekst
-        ? `<span class="nachtmaan"><span class="maanbij" title="${esc(maanTitel)}">${maanIcoon}</span> ${maanTekst.charAt(0).toUpperCase()+maanTekst.slice(1)}</span>`
+        ? `<span class="nachtmaan"><span class="maanbij" role="img" title="${esc(maanTitel)}">${maanIcoon}</span> ${maanTekst.charAt(0).toUpperCase()+maanTekst.slice(1)}</span>`
         : ""}</div></div>`;
   }
   const kopN=`<div class="row night kop">
