@@ -547,10 +547,14 @@ function compactMobieleGrafiekHoogte(){
      canonieke 296px-reserve. Een droge grafiek mag wel verder comprimeren. */
   if(svg.querySelector('g[data-q4-rain-periods] text'))zichtbaarOnder=Math.max(zichtbaarOnder,286);
   const doel=mobieleGrafiekCompactHoogte(plotOnder,delen[3],zichtbaarOnder);
-  if(doel!==null&&doel<delen[3]-4){
-    svg.setAttribute("viewBox",[delen[0],delen[1],delen[2],doel].join(" "));
-    svg.setAttribute("data-mobile-compact-height","1");
-  }
+  if(doel===null)return;
+  const hoogte=doel<delen[3]-4?doel:delen[3];
+  if(hoogte!==delen[3])svg.setAttribute("viewBox",[delen[0],delen[1],delen[2],hoogte].join(" "));
+  /* De marker betekent: de hoogte sluit aan op de zichtbare inhoud en alle
+     inhoud valt erbinnen. Dat geldt ook wanneer de inhoud (bijv. met de
+     temperatuurrij) de canonieke hoogte al vult en er niets in te korten viel. */
+  if(zichtbaarOnder<=hoogte)svg.setAttribute("data-mobile-compact-height","1");
+  else svg.removeAttribute("data-mobile-compact-height");
 }
 
 let uurAsToken=0;
