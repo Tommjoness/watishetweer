@@ -331,7 +331,7 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
       const bew=a.genoeg&&Number.isFinite(a.gemBewolking)?Math.round(a.gemBewolking)+"%":"–";
       const zicht=a.genoeg&&Number.isFinite(a.gemZicht)?(a.gemZicht>=10000?"10+ km":nl(a.gemZicht/1000)+" km"):"onbekend";
       const faseAttribuut=Number.isFinite(mi.fase)?` data-maan-fase="${mi.fase.toFixed(4)}"`:"";
-      const maanTekst=mi.tijden?` · <span class="maanbij" title="${esc(mi.titel)}"${faseAttribuut}>${mi.icoon}</span> ${esc(mi.tijden)}`:"";
+      const maanTekst=mi.tijden?` · <span class="maanbij" role="img" title="${esc(mi.titel)}"${faseAttribuut}>${mi.icoon}</span> ${esc(mi.tijden)}`:"";
       out+=`<div class="row night" data-d="${horizon}"><div class="dname">${lbl}</div><div class="score" style="color:${kleur}" title="Indicatieve modelscore voor deze nacht">${score}</div>`
         +`<div class="sbar"><i style="width:${breed}%;background:${kleur}"></i></div>`
         +`<div class="nmeta"><span class="perc">${bew}</span> bewolking</div>`

@@ -54,7 +54,7 @@ const POSTBUILD_STAPPEN=Object.freeze([
   "verify-seo-location-pages.js",
   "verify-staff-audit-20260826.js",
   "apply-lcp-final-mile-20260828.js",
-  "apply-moon-a11y-template-20260828.js",
+  "verify-moon-a11y-template.js",
   "verify-lcp-final-mile-20260828.js",
   "apply-location-search-pending-feedback-20260908.js",
   "verify-location-search-pending-feedback-20260908.js",
