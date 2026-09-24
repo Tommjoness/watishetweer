@@ -234,7 +234,7 @@ async function lees(page){return page.evaluate(()=>{
       await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Amsterdam");
       const u=await lees(page);assert.equal(u.sha,EXPECTED,`${w}px: verkeerde SHA`);assert(u.pageOverflow<=1,`${w}px: ${u.pageOverflow}px pagina-overflow`);assert(u.hourOverflow<=1&&u.hourClip,`${w}px: uurtabel overflow/clipping`);
       if(w>=1100){assert(u.hourRows>=1&&u.hourRows<=u.maxHours&&u.hourFits,`${w}px: desktopuren passen niet volledig binnen het paneel (${u.hourRows})`);if(w>=1366)assert(u.hourRows>=8,`${w}px: 8–12-regelscontract niet gehaald (${u.hourRows})`);}
-      if(w>=1100&&w<1600)assert.equal(u.tileRows,3,`${w}px: verwacht 3 tegelrijen, kreeg ${u.tileRows}`);if(w>=1600)assert.equal(u.tileRows,2,`${w}px: verwacht 2 tegelrijen, kreeg ${u.tileRows}`);
+      /* Eerste scherm (#420): vier tegels per rij vanaf 1360px, daaronder drie. */if(w>=1100&&w<1360)assert.equal(u.tileRows,3,`${w}px: verwacht 3 tegelrijen, kreeg ${u.tileRows}`);if(w>=1360)assert.equal(u.tileRows,2,`${w}px: verwacht 2 tegelrijen, kreeg ${u.tileRows}`);
       rapport.viewports.push({width:w,height:h,tileRows:u.tileRows,pageOverflow:u.pageOverflow,hourOverflow:u.hourOverflow});await context.close();
       console.log(`FINAL VIEWPORT ${w}x${h}: ${u.tileRows} tegelrijen, overflow ${u.pageOverflow}px.`);
     }

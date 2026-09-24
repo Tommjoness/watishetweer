@@ -71,6 +71,9 @@ async function check(type,naam,breedte){
     /* Auto volgt de systeeminstelling: met een donker systeem wordt Auto donker,
        ook als de gekozen plaats het overdag heeft. */
     await page.emulateMedia({colorScheme:"dark"});
+    /* WebKit geeft de nieuwe mediawaarde asynchroon door; wacht tot de pagina
+       het donkere systeem ziet voordat Auto wordt toegepast. */
+    await page.waitForFunction(()=>matchMedia("(prefers-color-scheme: dark)").matches,null,{timeout:3000});
     const oudRood=await page.evaluate(()=>{ls.set("weerbriefing.thema","rood");S.d={current:{is_day:1}};themaToepassen();const k=document.getElementById("thema"),a=document.getElementById("thema-auto"),s=document.getElementById("thema-switch");return {sessie:JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie")||'"auto"'),opgeslagen:ls.get("weerbriefing.thema",""),actief:document.documentElement.dataset.thema,actiefBewaar:ls.get("weerbriefing.actiefThema",""),keuze:k.dataset.actieveThemaKeuze,autoPressed:a.getAttribute("aria-pressed"),checked:s.getAttribute("aria-checked"),roodOptie:!!document.querySelector('[data-thema-keuze="rood"]'),menu:!!document.getElementById("themamenu")};});
     assert.deepEqual(oudRood,{sessie:"auto",opgeslagen:"auto",actief:"donker",actiefBewaar:"donker",keuze:"auto",autoPressed:"true",checked:"true",roodOptie:false,menu:false},naam+": oude rode localStorage-voorkeur wordt genegeerd en veilig overschreven door de sessiekeuze Auto");
     await page.emulateMedia({colorScheme:"light"});
