@@ -249,8 +249,12 @@ const reporter=`<script>
         stippen.forEach(d=>{if(!best||Math.abs(d.x-x)<Math.abs(best.x-x))best=d;});
         return best&&Math.abs(best.y-y)>52;
       }).length;
-      desktopAccent=zwevend===0&&vlak&&iconen.length>=Math.max(1,uurTijden.length-1)&&vrijVanPlot&&!iconOverlap&&binnen&&markersOp;
-      desktopAccentInfo=['zwevend:'+zwevend,vlak,iconen.length+'/'+uurTijden.length,vrijVanPlot,iconOverlap,binnen,markers.length+':'+markersOp].join(',');
+      /* In een tussenbuild zijn regenperiodes nog zichtbaar; dan laat de desktoplaag
+         de iconen bewust weg en blijven de uurtijden onaangeroerd. */
+      const regenSkip=chart.getAttribute('data-desktop-weather-icons-skip')==='regen';
+      const iconenOk=regenSkip?iconen.length===0&&!chart.querySelector('text[data-desktop-base-y]'):iconen.length>=Math.max(1,uurTijden.length-1);
+      desktopAccent=zwevend===0&&vlak&&iconenOk&&vrijVanPlot&&!iconOverlap&&binnen&&markersOp;
+      desktopAccentInfo=['zwevend:'+zwevend,'skip:'+regenSkip,vlak,iconen.length+'/'+uurTijden.length,vrijVanPlot,iconOverlap,binnen,markers.length+':'+markersOp].join(',');
     }
 
     /* Het nieuwe vaste drie-uurscontract geldt voor de compacte 320–430px

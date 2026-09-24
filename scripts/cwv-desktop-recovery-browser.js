@@ -156,6 +156,14 @@ async function run(){
             copy:document.body.innerText,
             overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,
             footer:footerMetrics,
+            desktopIcons:(()=>{
+              const svg=document.getElementById("chart");if(!svg)return null;
+              const iconen=[...svg.querySelectorAll("g[data-desktop-weather-icon]")].map(e=>e.getBoundingClientRect());
+              const teksten=[...svg.querySelectorAll("text")].filter(e=>!e.closest("#scrub")&&e.getClientRects().length).map(e=>e.getBoundingClientRect()).filter(r=>r.width);
+              return {n:iconen.length,skip:svg.getAttribute("data-desktop-weather-icons-skip"),
+                overlap:iconen.some(a=>teksten.some(b=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top)),
+                vlak:!!svg.querySelector('path[data-desktop-temp-area="1"]')};
+            })(),
             sha:document.querySelector('meta[name="weather-build-sha"]')?.content
           };
         });
@@ -182,6 +190,11 @@ async function run(){
         assert(result.cls<0.1,"Route-CLS buiten budget: "+JSON.stringify({route,width,scenario,cls:result.cls,shifts:result.shifts}));
         assert(!result.copy.includes("Vandaag: neerslag geldt vanaf nu; minimum en maximum gelden voor de volledige dag."),"verwijderde Vandaag-copy keert terug");
         if(width>=1100){
+          /* Desktopgrafiek: vlak onder de lijn en weericonen boven de uurtijden,
+             vrij van alle tekst (regenperiodes zijn in het finale artifact verborgen). */
+          const di=result.desktopIcons;
+          assert(di&&di.vlak,"desktopgrafiek mist het vlak onder de lijn: "+JSON.stringify({route,width,di}));
+          assert(di.skip!=="regen"&&di.n>=3&&!di.overlap,"desktopgrafiek mist weericonen of ze botsen met tekst: "+JSON.stringify({route,width,di}));
           const g=result.geometry;
           assert(Math.abs(g.hours.bottom-g.main.bottom)<=1,"uurpaneel en grafiekkolom eindigen niet gelijk");
           assert(Math.abs(g.table.bottom-result.hourRows.at(-1).rect.bottom)<=2,"geen lege onderste tabelregel");
