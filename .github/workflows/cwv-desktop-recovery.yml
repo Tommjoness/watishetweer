@@ -43,6 +43,8 @@ jobs:
         run: node scripts/onderkant-browser.test.js
       - name: Kop, knoppen onder de zoekbalk en inhoud hoger
         run: node scripts/kop-browser.test.js
+      - name: Nachtzicht, twee regels per nacht op mobiel
+        run: node scripts/nachtzicht-browser.test.js
       - name: Bewaar reproduceerbare CWV-metingen
         if: always()
         uses: actions/upload-artifact@v6
