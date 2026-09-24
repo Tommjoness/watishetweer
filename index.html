@@ -26,11 +26,13 @@
      van Nederlandse paginatekst; de overrides nemen de verticale maten van het
      webfont over, gedeeld door size-adjust. Arial, Helvetica en Roboto zijn
      vrijwel even breed; Liberation is metrisch gelijk aan Arial en Times.
-     DM Mono heeft geen reserve nodig: monospace is overal ~0,6em breed. */
+     Monospace is overal ~0,6em breed, dus DM Mono krijgt alleen zijn
+     verticale maten mee: anders verspringen de cijfertegels bij de wissel. */
   @font-face{font-family:'Instrument Sans Fallback';src:local('Arial'),local('ArialMT'),local('Helvetica'),local('Roboto'),local('Liberation Sans');size-adjust:102%;ascent-override:95.1%;descent-override:24.5%;line-gap-override:0%}
   @font-face{font-family:'Bodoni Moda Fallback Georgia';src:local('Georgia');size-adjust:103.5%;ascent-override:108.7%;descent-override:38.6%;line-gap-override:0%}
   @font-face{font-family:'Bodoni Moda Fallback';src:local('Times New Roman'),local('TimesNewRomanPSMT'),local('Liberation Serif');size-adjust:113.6%;ascent-override:99%;descent-override:35.2%;line-gap-override:0%}
   @font-face{font-family:'Bodoni Moda Fallback Noto';src:local('Noto Serif');size-adjust:95.9%;ascent-override:117.3%;descent-override:41.7%;line-gap-override:0%}
+  @font-face{font-family:'DM Mono Fallback';src:local('Menlo'),local('Courier New'),local('CourierNewPSMT'),local('Liberation Mono'),local('DejaVu Sans Mono'),local('Droid Sans Mono'),local('Roboto Mono');size-adjust:100%;ascent-override:99.2%;descent-override:31%;line-gap-override:0%}
 
   :root{
     --paper:#F4F5F3;
@@ -68,7 +70,7 @@
        de smalle dag-/nachtindicator. */
     --serif:'Bodoni Moda','Bodoni Moda Fallback Georgia','Bodoni Moda Fallback','Bodoni Moda Fallback Noto',Georgia,'Times New Roman',serif;
     --sans:'Instrument Sans','Instrument Sans Fallback',ui-sans-serif,system-ui,-apple-system,sans-serif;
-    --mono:'DM Mono',ui-monospace,'SFMono-Regular',monospace;
+    --mono:'DM Mono','DM Mono Fallback',ui-monospace,'SFMono-Regular',monospace;
     --s1:8px; --s2:16px; --s3:24px; --s4:40px;
   }
   html[data-thema="donker"]{

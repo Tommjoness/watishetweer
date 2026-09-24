@@ -6,7 +6,8 @@
    reservefonts op maat breekt de tekst na de wissel anders af: op productie
    schoof /weer/utrecht/ op 390px daardoor ~24px (CLS 0,10). Deze test houdt
    de webfonts bewust 2,5 s tegen en eist dat de wissel vrijwel niets
-   verschuift, op mobiel en desktop.
+   verschuift, op mobiel en desktop. Kleine verschillen in regelafbreking
+   blijven mogelijk; het budget laat die toe, een hele regel extra niet.
 
    Draait op het finale artifact: npm run build:cloudflare, daarna
    node scripts/font-swap-cls-browser.test.js */
@@ -25,7 +26,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* Bron en artifact: elke reserve heeft size-adjust en verticale overrides en
    staat direct na het webfont in de stapel. */
-const reserves=["Instrument Sans Fallback","Bodoni Moda Fallback Georgia","Bodoni Moda Fallback","Bodoni Moda Fallback Noto"];
+const reserves=["Instrument Sans Fallback","Bodoni Moda Fallback Georgia","Bodoni Moda Fallback","Bodoni Moda Fallback Noto","DM Mono Fallback"];
 for(const bestand of [path.join(ROOT,"index.html"),path.join(OUT,"index.html"),path.join(OUT,"weer","utrecht","index.html")]){
   const html=fs.readFileSync(bestand,"utf8"),naam=path.relative(ROOT,bestand);
   for(const familie of reserves){
@@ -37,6 +38,7 @@ for(const bestand of [path.join(ROOT,"index.html"),path.join(OUT,"index.html"),p
   }
   assert(html.includes("--sans:'Instrument Sans','Instrument Sans Fallback',"),`${naam}: --sans zet de reserve niet direct na Instrument Sans`);
   assert(html.includes("--serif:'Bodoni Moda','Bodoni Moda Fallback Georgia','Bodoni Moda Fallback','Bodoni Moda Fallback Noto',"),`${naam}: --serif zet de reserves niet direct na Bodoni Moda`);
+  assert(html.includes("--mono:'DM Mono','DM Mono Fallback',"),`${naam}: --mono zet de reserve niet direct na DM Mono`);
 }
 
 function fixture(url){
@@ -75,7 +77,11 @@ function cls(entries){
 (async()=>{
   await new Promise(r=>server.listen(0,"127.0.0.1",r));
   const root="http://127.0.0.1:"+server.address().port;
-  const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
+  /* Zonder hinting rekent Chromium met fractionele letterbreedtes, zoals
+     iOS, Android, macOS en Windows. Linux-hinting in headless Chromium rondt
+     elke letter af op hele pixels; dan is Instrument Sans op 13px ~3% breder
+     dan elk systeemfont en zegt de meting niets over echte bezoekers. */
+  const browser=await chromium.launch({headless:true,args:["--font-render-hinting=none"],...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
   try{
     for(const breedte of breedtes)for(const route of routes){
       const context=await browser.newContext({viewport:{width:breedte,height:breedte<500?844:1000},locale:"nl-NL",serviceWorkers:"block"});
@@ -118,6 +124,7 @@ function cls(entries){
         assert(voorWissel.brief>40&&!voorWissel.webfont,`${label}: de brief moet al zichtbaar zijn vóór het webfont binnen is (brief ${voorWissel.brief} tekens, webfont ${voorWissel.webfont})`);
         assert(meting.reserve.includes("Instrument Sans Fallback"),`${label}: Instrument Sans Fallback vond geen lokaal systeemfont (${JSON.stringify(meting.reserve)})`);
         assert(meting.reserve.some(f=>f.startsWith("Bodoni Moda Fallback")),`${label}: geen Bodoni-reserve geladen (${JSON.stringify(meting.reserve)})`);
+        assert(meting.reserve.includes("DM Mono Fallback"),`${label}: DM Mono Fallback vond geen lokaal systeemfont (${JSON.stringify(meting.reserve)})`);
         const waarde=cls(meting.shifts);
         const grootste=meting.shifts.slice().sort((a,b)=>b.value-a.value).slice(0,3).map(s=>({waarde:+s.value.toFixed(4),tijd:Math.round(s.startTime),bronnen:s.bronnen}));
         assert(waarde<CLS_BUDGET,`${label}: fontwissel verschuift de layout, CLS ${waarde.toFixed(4)} (budget < ${CLS_BUDGET}); ${JSON.stringify(grootste)}`);
