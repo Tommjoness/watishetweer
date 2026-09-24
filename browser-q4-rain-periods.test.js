@@ -135,7 +135,7 @@ async function controleer(type,naam,breedte){
     assert.equal(r.hint,"Selecteer een punt in de grafiek voor details.",naam+" "+breedte+": actieve grafiekhint is input-neutraal; kreeg "+JSON.stringify(r.hint));
     assert.equal(r.daghint,"Kies een dag om die verwachting in de grafiek te bekijken.",naam+" "+breedte+": daghint is input-neutraal");
     assert.equal(r.zonkop,"Tijd tot zonsondergang",naam+" "+breedte+": hoofdgrid gebruikt tijd tot zonsondergang als dagelijkse consumentwaarde");
-    assert.equal(r.neerslagKop,"Neerslagverwachting komend uur",naam+" "+breedte+": kans en hoeveelheid worden expliciet als uurverwachting gelabeld");
+    assert.equal(r.neerslagKop,"Neerslag komend uur",naam+" "+breedte+": kans en hoeveelheid worden expliciet als uurverwachting gelabeld");
     assert.equal(r.bewolking,"<5%",naam+" "+breedte+": 1% modelbewolking wordt zonder schijnprecisie als <5% gepresenteerd");
     assert(r.nachtBewolking.length>0&&r.nachtBewolking.every(t=>t==="<5%"),naam+" "+breedte+": Nachtzicht gebruikt dezelfde <5%-notatie; kreeg "+JSON.stringify(r.nachtBewolking));
     assert.equal(r.aqiSub,"Redelijk",naam+" "+breedte+": AQI-subregel herhaalt de schaalnaam niet; kreeg "+JSON.stringify(r.aqiSub));
