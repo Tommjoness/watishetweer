@@ -41,6 +41,8 @@ jobs:
         run: node scripts/uurtijden-browser.test.js
       - name: Onderkant, gebruikte bronnen en SEO-blok in de paginakolom
         run: node scripts/onderkant-browser.test.js
+      - name: Kop, knoppen onder de zoekbalk en inhoud hoger
+        run: node scripts/kop-browser.test.js
       - name: Bewaar reproduceerbare CWV-metingen
         if: always()
         uses: actions/upload-artifact@v6
