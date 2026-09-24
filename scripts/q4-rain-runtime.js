@@ -335,11 +335,111 @@ nowcast=function(){
   q4KwartierMeetbaarPresentatie();
 };
 
+/* Regen in één oogopslag: een lichtblauwe band achter de uren met meetbare
+   neerslag (0,1 mm of meer, dezelfde drempel als de regensamenvatting). g.MM[i]
+   is het uur van punt i tot punt i+1, dus de band loopt precies over die uren.
+   Zonder cijfers en achter de temperatuurlijn; de uurtabel, de tooltip en de
+   samenvatting geven de waarden. */
+/* Neerslagstaafjes: per uur één smal staafje onderin de grafiek, op het uur
+   waarin de neerslag valt (staafje 20:00-21:00 = de mm van dat uur). De hoogte
+   volgt de hoeveelheid, zodat je ziet wanneer het het hardst regent. Tot
+   2,5 mm per uur is de schaal vast; daarboven schaalt hij mee met het natste
+   uur. De staafjes blijven in het onderste derde deel, liggen achter de
+   temperatuurlijn en vangen geen muis of tik.
+   Boven ieder staafje staat de hoeveelheid van dat uur ("1,4 mm"; op de
+   smalle mobiele grafiek alleen "1,4", de eenheid staat in de samenvatting).
+   Die getallen liggen in een eigen laag bovenop, zodat het temperatuurvlak ze
+   niet vertroebelt. Ze worden één renderframe na de overige grafieklabels
+   geplaatst: raakt een getal zijn buurman of een ander label, dan schuift het
+   een regel omhoog. Past het nergens, dan blijft alleen dat getal weg; de
+   waarde staat ook in de uurtabel en de tooltip. */
+const Q4_STAAF_MIN_MM=0.1,Q4_STAAF_SCHAAL_MM=2.5,Q4_STAAF_HOOGTE=0.32;
+function q4RegenstaafStijl(){
+  if(document.getElementById("wiw-regenstaaf-stijl"))return;
+  const st=document.createElement("style");st.id="wiw-regenstaaf-stijl";
+  st.textContent='#chart .regenstaaf{fill:#4A90D9;fill-opacity:.55}html[data-thema="donker"] #chart .regenstaaf{fill:#6AA6E8;fill-opacity:.6}'
+    +'#chart .regenstaaf-mm{fill:#2F6FB0;font-weight:500}html[data-thema="donker"] #chart .regenstaaf-mm{fill:#8DBBEE}';
+  document.head.appendChild(st);
+}
+function q4TekenRegenstaven(svg,g){
+  q4RegenstaafStijl();
+  svg.querySelectorAll('g[data-regenstaven],g[data-regenstaaf-mm]').forEach(el=>el.remove());
+  const mm=Array.isArray(g.MM)?g.MM:[],top=q4Getal(g.pt),hoogte=q4Getal(g.ih);
+  if(!mm.length||top===null||hoogte===null||hoogte<=0)return;
+  const nat=[];
+  for(let i=0;i<mm.length&&i+1<g.TI.length;i++){
+    const v=q4Getal(mm[i]);
+    if(v!==null&&v>=Q4_STAAF_MIN_MM)nat.push([i,v]);
+  }
+  if(!nat.length)return;
+  const schaal=Math.max(Q4_STAAF_SCHAAL_MM,...nat.map(([,v])=>v)),maxH=hoogte*Q4_STAAF_HOOGTE,bodem=top+hoogte;
+  const ns="http://www.w3.org/2000/svg",groep=document.createElementNS(ns,"g"),labels=[];
+  groep.setAttribute("data-regenstaven","1");groep.setAttribute("aria-hidden","true");groep.setAttribute("pointer-events","none");
+  for(const [i,v] of nat){
+    const x1=Number(g.x(i)),x2=Number(g.x(i+1));
+    if(!Number.isFinite(x1)||!Number.isFinite(x2)||x2<=x1)continue;
+    const bw=Math.max(3,Math.min((x2-x1)*0.56,16)),bh=Math.max(2,v/schaal*maxH),x=(x1+x2-bw)/2,y=bodem-bh,r=Math.min(2,bw/2,bh/2);
+    const pad=document.createElementNS(ns,"path");
+    pad.setAttribute("d","M"+x.toFixed(2)+" "+bodem.toFixed(2)+"V"+(y+r).toFixed(2)+"Q"+x.toFixed(2)+" "+y.toFixed(2)+" "+(x+r).toFixed(2)+" "+y.toFixed(2)
+      +"H"+(x+bw-r).toFixed(2)+"Q"+(x+bw).toFixed(2)+" "+y.toFixed(2)+" "+(x+bw).toFixed(2)+" "+(y+r).toFixed(2)+"V"+bodem.toFixed(2)+"Z");
+    pad.setAttribute("class","regenstaaf");pad.setAttribute("data-uur",String(g.TI[i]));pad.setAttribute("data-mm",String(v));
+    groep.appendChild(pad);
+    labels.push({i,v,cx:x+bw/2,top:y,vak:x2-x1});
+  }
+  if(groep.childNodes.length)svg.insertBefore(groep,svg.firstChild);
+  const beurt=++q4RegenstaafBeurt;
+  const plaats=()=>{if(beurt===q4RegenstaafBeurt&&svg.isConnected)q4PlaatsRegenstaafLabels(svg,g,labels,top);};
+  if(typeof requestAnimationFrame==="function")requestAnimationFrame(()=>requestAnimationFrame(plaats));else plaats();
+}
+let q4RegenstaafBeurt=0;
+function q4MmTekst(v,metEenheid){
+  const getal=v>=10?String(Math.round(v)):v.toFixed(1).replace(".",",");
+  return metEenheid?getal+" mm":getal;
+}
+function q4PlaatsRegenstaafLabels(svg,g,labels,plotTop){
+  svg.querySelectorAll('g[data-regenstaaf-mm]').forEach(el=>el.remove());
+  if(!labels.length)return;
+  const ns="http://www.w3.org/2000/svg",laag=document.createElementNS(ns,"g");
+  laag.setAttribute("data-regenstaaf-mm","1");laag.setAttribute("aria-hidden","true");laag.setAttribute("pointer-events","none");
+  const smal=Number(g.W)<500,grootte=11,regel=grootte+2;
+  const scrub=svg.querySelector("#scrub");
+  svg.insertBefore(laag,scrub||null);
+  /* Andere zichtbare teksten in de grafiek (temperaturen, nu-label, tijden). */
+  const doos=el=>{try{const b=el.getBBox();return b.width>0&&b.height>0?b:null;}catch(_){return null;}};
+  const anderen=[...svg.querySelectorAll("text")].filter(el=>!el.closest("g[data-regenstaaf-mm]")&&!el.closest("#scrub")&&el.getAttribute("display")!=="none"&&getComputedStyle(el).display!=="none"&&getComputedStyle(el).visibility!=="hidden").map(doos).filter(Boolean);
+  const raakt=(a,b,m)=>a.x<b.x+b.width+m&&a.x+a.width+m>b.x&&a.y<b.y+b.height+1&&a.y+a.height+1>b.y;
+  const gezet=[];
+  for(const l of labels){
+    const t=document.createElementNS(ns,"text");
+    t.setAttribute("class","regenstaaf-mm");t.setAttribute("text-anchor","middle");t.setAttribute("font-size",String(grootte));
+    t.setAttribute("font-family","Instrument Sans,ui-sans-serif,system-ui,sans-serif");
+    t.setAttribute("data-uur",String(g.TI[l.i]));t.setAttribute("data-mm",String(l.v));
+    t.textContent=q4MmTekst(l.v,!smal);
+    laag.appendChild(t);
+    /* Eerst een paar eenheden opzij binnen het eigen uurvak, dan pas een
+       regel omhoog: zo blijft het getal bij zijn staafje. */
+    const ruimte=Math.max(0,(l.vak-1)/2),opzij=[0,1.5,-1.5,3,-3].filter(dx=>Math.abs(dx)<=ruimte||dx===0);
+    let y=l.top-3,geplaatst=false;
+    for(let stap=0;stap<6&&!geplaatst;stap++){
+      if(y-grootte<plotTop)break;
+      for(const dx of opzij){
+        t.setAttribute("x",(l.cx+dx).toFixed(2));t.setAttribute("y",y.toFixed(2));
+        const b=doos(t);
+        if(b&&!gezet.some(o=>raakt(b,o,0.5))&&!anderen.some(o=>raakt(b,o,2))){gezet.push(b);geplaatst=true;break;}
+      }
+      y-=regel;
+    }
+    if(!geplaatst)t.remove();
+  }
+  if(!laag.childNodes.length)laag.remove();
+}
+
 const q4BasisEtmaal=etmaal;
 etmaal=function(start,n){
   q4BasisEtmaal(start,n);
   const svg=document.getElementById("chart"),g=S.geo;
   if(!svg||!g||typeof g.x!=="function"||!Array.isArray(g.TI))return;
   q4TekenRegenperioden(svg,g,q4Regenperioden(g));
+  q4TekenRegenstaven(svg,g);
 };
 })();
