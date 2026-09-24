@@ -239,7 +239,8 @@ function werkGrafiekTabelBij(){
     const tr=document.createElement("tr"),hi=uurIndex.get(String(g.TI[i]));
     const code=eindig(g.D&&g.D[i]),isDag=eindig(g.ND&&g.ND[i]);
     const kans=eindig(g.P&&g.P[i]),temp=eindig(g.T&&g.T[i]),gevoel=eindig(g.A&&g.A[i]),wind=eindig(g.W_&&g.W_[i]),gust=eindig(g.G&&g.G[i]);
-    const mm=Number.isInteger(hi)?eindig(h&&h.precipitation&&h.precipitation[hi]):null;
+    /* Neerslag voor het uur dat op dit tijdstip begint: bronindex +1. */
+    const mm=Number.isInteger(hi)?eindig(h&&h.precipitation&&h.precipitation[hi+1]):null;
     const waarden=[
       lokaleTijdLabel(g.TI[i],meer),
       code===null?"–":(typeof txt==="function"?txt(code,isDag!==0):"Weercode "+code),

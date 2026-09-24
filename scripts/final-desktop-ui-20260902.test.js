@@ -12,7 +12,8 @@ const data={timezone:"Europe/Amsterdam",utc_offset_seconds:7200,current:{time:"2
 const upcoming=komendeUurRijen(data,Date.parse("2026-09-02T11:27:00Z"),10);
 assert.equal(upcoming.length,10,"desktop toont maximaal tien opeenvolgende uren");
 assert.equal(upcoming[0].tijd,"2026-09-02T14:00");
-assert.equal(upcoming[0].kans,11);assert.equal(upcoming[0].hoeveelheid,0.1);
+// Rij 14:00 toont het uur 14:00-15:00; Open-Meteo zet dat op de bronindex van 15:00.
+assert.equal(upcoming[0].kans,12);assert.equal(upcoming[0].hoeveelheid,0.2);
 assert.equal(upcoming[0].code,3);assert.equal(upcoming[0].isDag,1);assert.equal(upcoming[0].wind,13);assert.equal(upcoming[0].windrichting,225);
 const overMiddernacht=komendeUurRijen(data,Date.parse("2026-09-02T11:27:00Z"),12);
 assert.equal(overMiddernacht.length,12);assert.equal(overMiddernacht.at(-1).tijd,"2026-09-03T01:00");assert.equal(overMiddernacht[10].datumLabel,"do 3 sep");

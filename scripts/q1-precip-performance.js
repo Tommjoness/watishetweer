@@ -434,7 +434,8 @@ if(typeof etmaal==="function"){
     const G=S.geo,h=S.d&&S.d.hourly;if(!G||!h)return;
     G.Q1MM=[];
     for(let k=0;k<G.n;k++){
-      const v=getal(h.precipitation&&h.precipitation[start+k]);
+      /* Zelfde uur als G.P: het uur dat op G.TI[k] begint (bronindex +1). */
+      const v=getal(h.precipitation&&h.precipitation[start+k+1]);
       G.Q1MM.push(G.P&&G.P[k]==null?null:(v===null||v<0?null:v));
     }
   };

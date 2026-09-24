@@ -24,7 +24,8 @@ document.addEventListener('DOMContentLoaded',async()=>{const zet=(k,v)=>document
  let seo=document.querySelector('.seo-plaatsnav');if(!seo){seo=document.createElement('nav');seo.className='seo-plaatsnav';seo.innerHTML='<div class="seo-plaatsnav-inner"><strong class="seo-plaatsnav-kop">Populaire plaatsen in Nederland</strong><div class="seo-plaatsnav-links"><a href="#">Almere</a></div></div>';document.body.appendChild(seo);}
  const nights=document.getElementById('nights');if(nights)nights.innerHTML='<div class="row night"><div class="dname">vannacht</div><div class="score">0/10</div><div class="sbar"></div><div class="nmeta"><span class="perc">100%</span></div><div class="nmeta wide"><span class="nachtadvies">Ongunstig · Geen gunstig kijkvenster door bewolking.</span><span class="nachtmaan">◯ Maanopkomst om 03:08.</span></div></div>';
  const TI=Array.from({length:24},(_,i)=>i<11?'2026-09-02T'+String(i+13).padStart(2,'0')+':00':'2026-09-03T'+String(i-11).padStart(2,'0')+':00');
- const precipitation=TI.map(()=>0);precipitation[2]=null;
+ /* Rij 15:00 toont het uur 15:00-16:00; Open-Meteo zet dat op bronindex 3 (16:00). */
+ const precipitation=TI.map(()=>0);precipitation[3]=null;
  S.d={timezone:'Europe/Amsterdam',utc_offset_seconds:7200,current:{time:'2026-09-02T13:27'},hourly:{time:TI,temperature_2m:TI.map((_,i)=>18-i*.1),apparent_temperature:TI.map((_,i)=>16-i*.1),precipitation_probability:TI.map((_,i)=>i%4?35:0),precipitation,weather_code:TI.map((_,i)=>i%3?3:61),is_day:TI.map((_,i)=>i<8?1:0),wind_speed_10m:TI.map((_,i)=>12+i),wind_direction_10m:TI.map(()=>225)}};
  /* Deze fixture bewaakt het max-11 kandidaatvenster en de natuurlijke hoogtefilter.
     Exacte grafiek/tabel-bronuren worden daarnaast in de production-style CWV-

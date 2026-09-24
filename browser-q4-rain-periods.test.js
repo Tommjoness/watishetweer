@@ -13,7 +13,8 @@ const indexPad=path.join(PUBLIC,"index.html");
 if(!fs.existsSync(indexPad))throw new Error("Definitieve public/index.html ontbreekt voor Q4-browsercontrole.");
 
 const weer=bouw({
-  pp:(u,dag)=>dag===0&&u===15?19:dag===0&&((u>=16&&u<=18)||(u>=21&&u<=22))?86:8,
+  /* Bronuur 20:00 = uur 19:00-20:00: droge 19%-kans, op mobiel en desktop een grafiekpunt. */
+  pp:(u,dag)=>dag===0&&u===20?19:dag===0&&((u>=16&&u<=18)||(u>=21&&u<=22))?86:8,
   pr:(u,dag)=>dag===0?(u===16?0.2:u===17?0.4:u===18?0.1:u===21?0.3:u===22?0.2:0):0,
   wc:(u,dag)=>dag===0&&((u>=16&&u<=18)||(u>=21&&u<=22))?61:3,
   som:1.2
@@ -108,7 +109,7 @@ async function controleer(type,naam,breedte){
         oudeMm:[...svg.querySelectorAll("text")].filter(el=>/ millimeter neerslag$/.test(el.getAttribute("aria-label")||"")).length,
         brackets:regen.querySelectorAll("line").length,
         teksten,samenvattingen,periodeBedragen,kansLabels,
-        mmUitgelijnd:g.MM.every((mm,i)=>{if(i===0||mm==null)return true;const bron=S.chartStart+i;return Number.isInteger(bron)&&S.d.hourly.time[bron]===g.TI[i]&&Math.abs(Number(S.d.hourly.precipitation[bron])-Number(mm))<1e-9;}),
+        mmUitgelijnd:g.MM.every((mm,i)=>{if(i===g.MM.length-1||mm==null)return true;const bron=S.chartStart+i;/* mm[i] is het uur dat op TI[i] begint: bronindex +1. */return Number.isInteger(bron)&&S.d.hourly.time[bron]===g.TI[i]&&Math.abs(Number(S.d.hourly.precipitation[bron+1])-Number(mm))<1e-9;}),
         mmZelfdeArray:g.MM===g.Q1MM,
         regenPointerEvents:regen.getAttribute("pointer-events"),
         hint:(document.getElementById("charthint")||{}).textContent||"",
@@ -162,7 +163,8 @@ async function controleer(type,naam,breedte){
       };
     },uur);
 
-    const coords=await puntCoords("17:00");
+    /* Bronuur 17:00 (0,4 mm) geldt voor 16:00-17:00; de interactie op 16:00 toont het. */
+    const coords=await puntCoords("16:00");
     assert(!coords.fout,naam+" "+breedte+": 17:00-interactiepunt bestaat; diagnose="+JSON.stringify(coords));
 
     const leesScrub=()=>page.evaluate(()=>{
@@ -196,7 +198,7 @@ async function controleer(type,naam,breedte){
     };
 
     const interactie=await interacteer(coords);
-    assert(interactie.teksten.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": interactie op 17:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify({coords,interactie})+"; pageerrors="+JSON.stringify(fouten));
+    assert(interactie.teksten.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": interactie op 16:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify({coords,interactie})+"; pageerrors="+JSON.stringify(fouten));
     assert(/neerslagkans\s+86%/i.test(interactie.groepTekst),naam+" "+breedte+": volledige kansinformatie blijft via tooltip beschikbaar");
     assert.equal(interactie.display,"block",naam+" "+breedte+": interactie maakt tooltip zichtbaar");
     assert.equal(coords.zelfdeArray,true,naam+" "+breedte+": interactie leest dezelfde mm-array als regenstrip");
@@ -204,9 +206,9 @@ async function controleer(type,naam,breedte){
     /* Het New-York-randgeval: 19% kans maar 0 mm hoort niet als statisch label
        onder een droog stuk te staan. De kans verdwijnt echter niet uit de data:
        via mouse/touch op dat uur blijft hij volledig beschikbaar. */
-    const drogeKansCoords=await puntCoords("15:00");
+    const drogeKansCoords=await puntCoords("19:00");
     assert(!drogeKansCoords.fout,naam+" "+breedte+": droog 19%-interactiepunt bestaat; diagnose="+JSON.stringify(drogeKansCoords));
-    assert.equal(Number(drogeKansCoords.raw),0,naam+" "+breedte+": 15:00-fixture heeft aantoonbaar 0 mm");
+    assert.equal(Number(drogeKansCoords.raw),0,naam+" "+breedte+": 19:00-fixture heeft aantoonbaar 0 mm");
     const drogeKansInteractie=await interacteer(drogeKansCoords);
     assert(/neerslagkans\s+19%/i.test(drogeKansInteractie.groepTekst),naam+" "+breedte+": verborgen droge 19%-kans blijft via tooltip beschikbaar; diagnose="+JSON.stringify(drogeKansInteractie));
 

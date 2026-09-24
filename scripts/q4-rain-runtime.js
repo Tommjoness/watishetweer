@@ -98,37 +98,34 @@ function q4Regenperioden(g){
   const h=S.d&&S.d.hourly||{},tijden=Array.isArray(g&&g.TI)?g.TI:[];
   const bronStart=Number.isInteger(S.chartStart)?S.chartStart:null;
   const mm=tijden.map((tijd,i)=>{
-    /* hourly precipitation op TI[i] beschrijft het voorafgaande interval.
-       De eerste waarde ligt dus buiten het zichtbare grafiekvenster. */
-    if(i===0)return null;
+    /* Een uur leest overal als het uur dat op dat tijdstip begint: mm[i] is
+       de neerslag van TI[i] tot TI[i+1]. Open-Meteo zet die hoeveelheid op het
+       eind van het uur, dus op bronindex +1. Het uur vanaf het laatste punt
+       valt buiten het zichtbare grafiekvenster. */
+    if(i===tijden.length-1)return null;
     /* Gebruik de exacte bronindex van etmaal(), niet indexOf(tijd). Rond de
        najaars-DST-omslag kan dezelfde lokale kloktekst namelijk twee keer
        voorkomen. S.chartStart+i blijft dan één-op-één in forecastvolgorde. */
     const bron=bronStart===null?-1:bronStart+i;
-    if(bron<0||!Array.isArray(h.time)||bron>=h.time.length||h.time[bron]!==tijd)return null;
-    const waarde=q4Getal(h.precipitation&&h.precipitation[bron]);
+    if(bron<0||!Array.isArray(h.time)||bron+1>=h.time.length||h.time[bron]!==tijd)return null;
+    const waarde=q4Getal(h.precipitation&&h.precipitation[bron+1]);
     if(waarde===null||waarde<0)return null;
     if(S.dag==null&&globalThis.WeatherNowInterpretatie&&typeof globalThis.WeatherNowInterpretatie.lokaalNaarMinuten==="function"){
-      const eind=globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(tijd);
+      const eind=globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(h.time[bron+1]);
       const nu=globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(weatherNowActueleLokaleTijd());
       if(Number.isFinite(eind)&&Number.isFinite(nu)&&eind<=nu)return null;
     }
     return waarde;
   });
-  /* Q4 is vanaf dit punt eigenaar van de definitief uitgelijnde uurhoeveelheid.
-     De regenstrook gebruikt g.MM. De oudere Q1-tooltip verwacht nog Q1MM; die
-     naam blijft tijdelijk als compatibiliteitsalias bestaan, maar wijst bewust
-     naar EXACT dezelfde array. Daardoor kan tooltip en strip niet meer uit twee
-     los berekende reeksen lezen. Een latere architectuuropschoning kan de alias
-     verwijderen zonder de releasefix nu breder te maken. */
   g.MM=mm;
   g.Q1MM=mm;
   const perioden=[];let lopend=null;
-  for(let i=1;i<mm.length;i++){
+  /* Een nat uur mm[i] loopt van punt i tot punt i+1. */
+  for(let i=0;i<mm.length;i++){
     const waarde=mm[i];
     if(waarde!==null&&waarde>=0.1){
-      if(!lopend)lopend={van:i-1,tot:i,som:0,piek:i,piekMm:waarde};
-      lopend.tot=i;lopend.som+=waarde;
+      if(!lopend)lopend={van:i,tot:i+1,som:0,piek:i,piekMm:waarde};
+      lopend.tot=i+1;lopend.som+=waarde;
       if(waarde>lopend.piekMm){lopend.piek=i;lopend.piekMm=waarde;}
     }else if(lopend){perioden.push(lopend);lopend=null;}
   }

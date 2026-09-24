@@ -37,9 +37,11 @@ function regenperiodenGecorrigeerd(mm,tijden,nuTijd,drempel=0.1){
   const waarden=Array.from(mm||[]),T=Array.from(tijden||[]),grens=Math.max(0,getal(drempel)??0.1),perioden=[];
   const nu=tijdNaarSerieleMinuten(nuTijd);
   let lopend=null;
-  for(let i=1;i<waarden.length&&i<T.length;i++){
-    const ruw=getal(waarden[i]),eind=lokaleSerieleMinuten(T[i]),begin=eind===null?null:eind-60;
-    const waarde=ruw===null?null:corrigeerLopendModeluur(ruw,T[i],nuTijd);
+  /* mm[i] is het uur dat op T[i] begint en op T[i+1] eindigt (zelfde
+     indeling als tabel, grafiek en tooltip). */
+  for(let i=0;i<waarden.length&&i+1<T.length;i++){
+    const ruw=getal(waarden[i]),eind=lokaleSerieleMinuten(T[i+1]),begin=eind===null?null:eind-60;
+    const waarde=ruw===null?null:corrigeerLopendModeluur(ruw,T[i+1],nuTijd);
     const actief=waarde!==null&&eind!==null&&nu!==null&&begin<nu&&nu<eind;
     /* Het bestaan van een Q4-regenperiode volgt de ongewijzigde bronwaarde en
        dus dezelfde 0,1-mm-drempel als de bracket die al in de SVG staat. Alleen
@@ -48,8 +50,8 @@ function regenperiodenGecorrigeerd(mm,tijden,nuTijd,drempel=0.1){
        van een oorspronkelijk 0,12-mm-modeluur resteert. */
     const hoortBijPeriode=ruw!==null&&ruw>=grens&&waarde!==null;
     if(hoortBijPeriode){
-      if(!lopend)lopend={van:i-1,tot:i,som:0,actiefStart:actief};
-      lopend.tot=i;lopend.som+=Math.max(0,waarde);
+      if(!lopend)lopend={van:i,tot:i+1,som:0,actiefStart:actief};
+      lopend.tot=i+1;lopend.som+=Math.max(0,waarde);
     }else if(lopend){perioden.push(lopend);lopend=null;}
   }
   if(lopend)perioden.push(lopend);

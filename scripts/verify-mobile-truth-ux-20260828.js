@@ -50,7 +50,8 @@ ok(Math.abs(deel-(4*37/60))<1e-9,"lopend uur telt alleen het nog toekomstige dee
 ok(api.corrigeerLopendModeluur(4,"2026-08-28T00:00","2026-08-28T00:23")===null,"volledig verstreken uur telt niet mee");
 ok(api.corrigeerLopendModeluur(4,"2026-08-28T02:00","2026-08-28T00:23")===4,"volledig toekomstig uur blijft ongewijzigd");
 
-const bron=[null,4,4,2,0,1];
+/* Waarden per uur dat op T[i] begint: 00:00-01:00 = 4, enzovoort. */
+const bron=[4,4,2,0,1,null];
 const bronVoor=bron.slice();
 const perioden=api.regenperiodenGecorrigeerd(
   bron,
@@ -63,7 +64,7 @@ ok(perioden[0].actiefStart===true&&Math.abs(perioden[0].som-(4*37/60+6))<1e-9,"e
 ok(api.mmTekst(perioden[0].som)==="8,5","zichtbare regenperiodesom rondt pas na sommeren af");
 
 const rand=api.regenperiodenGecorrigeerd(
-  [null,0.12,0],
+  [0.12,0,null],
   ["2026-08-28T00:00","2026-08-28T01:00","2026-08-28T02:00"],
   "2026-08-28T00:55"
 );
