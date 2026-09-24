@@ -104,10 +104,11 @@ async function open(browser,root,w,h,colorScheme){
           const links=[...document.querySelectorAll("footer a,.seo-breadcrumb a,.seo-route-nearby-links a,.seo-plaatsnav-links a")].filter(e=>e.getClientRects().length).map(e=>({t:(e.textContent||"").trim().slice(0,30),h:Math.round(e.getBoundingClientRect().height)}));
           const meer=document.querySelector("#nights .nacht-meer"),nights=document.getElementById("nights");
           const s=meer&&getComputedStyle(meer);
-          return {links,meer:meer?{w:meer.getBoundingClientRect().width,container:nights.getBoundingClientRect().width,rand:s.borderTopWidth,transform:s.textTransform}:null,auto:document.getElementById("thema-auto")?.getAttribute("aria-label")};
+          const midden=meer&&(()=>{const b=meer.getBoundingClientRect(),rg=document.createRange();rg.selectNodeContents(meer);const t=rg.getClientRects()[0];return t?Math.abs((t.top+t.bottom)/2-(b.top+b.bottom)/2):null;})();
+          return {links,meer:meer?{w:meer.getBoundingClientRect().width,container:nights.getBoundingClientRect().width,rand:s.borderTopWidth,transform:s.textTransform,midden}:null,auto:document.getElementById("thema-auto")?.getAttribute("aria-label")};
         });
         for(const l of m.links)assert(l.h>=24,"1440px: link '"+l.t+"' is lager dan 24px ("+l.h+")");
-        assert(m.meer&&m.meer.w<m.meer.container/2&&m.meer.rand!=="0px"&&m.meer.transform==="none","1440px: Meer nachten bekijken ziet er niet uit als knop: "+JSON.stringify(m.meer));
+        assert(m.meer&&m.meer.w<m.meer.container/2&&m.meer.rand!=="0px"&&m.meer.transform==="none"&&m.meer.midden!==null&&m.meer.midden<=2,"1440px: Meer nachten bekijken ziet er niet uit als knop: "+JSON.stringify(m.meer));
         assert.equal(m.auto,"Automatisch (volgt je systeem)","1440px: Auto-knop legt het systeemgedrag niet uit");
         assert.deepEqual(fouten,[],"1440px: runtimefouten "+fouten.join(" | "));
         console.log("BEDIENING 1440px: "+m.links.length+" links van minstens 24px, Meer nachten als knop, Auto licht na zonsondergang bij een licht systeem.");

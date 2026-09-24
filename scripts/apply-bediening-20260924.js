@@ -27,7 +27,7 @@ const CSS=`
 }
 @media(min-width:901px){
   html body footer a,html body .seo-breadcrumb a,html body .seo-route-nearby-links a,html body .seo-plaatsnav-links a{display:inline-flex;align-items:center;min-height:24px}
-  html body #nights .nacht-meer{display:inline-flex!important;width:auto!important;min-height:36px;margin:12px 0 0!important;padding:0 14px!important;border:1px solid var(--rule)!important;color:var(--ink)!important;font-size:13px!important;letter-spacing:0!important;text-transform:none!important;cursor:pointer}
+  html body #nights .nacht-meer{display:inline-flex!important;align-items:center!important;width:auto!important;min-height:36px;margin:12px 0 0!important;padding:0 14px!important;border:1px solid var(--rule)!important;color:var(--ink)!important;font-size:13px!important;letter-spacing:0!important;text-transform:none!important;cursor:pointer}
   html body #nights .nacht-meer:hover,html body #nights .nacht-meer:focus-visible{border-color:var(--ink-45)!important}
 }
 `;
