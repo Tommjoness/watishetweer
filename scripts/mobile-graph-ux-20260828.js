@@ -835,7 +835,11 @@ function koppelTijdAanTemperatuur(){
     const marker=(perIndex.get(i)||[]).some(isMarker);
     if(botsers.length&&!(marker&&botsers.every(t=>!perIndex.has(tickIndex(t))))){verwijder(i);return;}
     botsers.forEach(t=>{metTijd.delete(tickIndex(t));t.remove();});
-    svg.insertBefore(el,svg.querySelector('g[data-q4-rain-periods]')||svg.querySelector("#scrub")||null);metTijd.set(i,el);
+    /* In tijdsvolgorde in de SVG: voorleessoftware leest de as dan op volgorde. */
+    const na=[...metTijd.entries()].filter(([j])=>j>i).sort((a,b)=>a[0]-b[0])[0];
+    if(na)na[1].parentNode.insertBefore(el,na[1]);
+    else{const voor=[...metTijd.entries()].sort((a,b)=>b[0]-a[0])[0];if(voor)voor[1].parentNode.insertBefore(el,voor[1].nextSibling);else svg.insertBefore(el,svg.querySelector('g[data-q4-rain-periods]')||svg.querySelector("#scrub")||null);}
+    metTijd.set(i,el);
   });
   svg.setAttribute("data-temp-time-complete",[...perIndex.keys()].every(i=>metTijd.has(i))?"1":"0");
 }
