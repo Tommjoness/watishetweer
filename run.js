@@ -2940,7 +2940,7 @@ groep("Responsive structuur (v68)");
   // 7: mobiele DOM-volgorde blijft logisch (brief -> hero -> stats -> grafiek -> neerslagtekst -> ... -> footer)
   const volgorde=["id=\"brief\"","class=\"hero\"","class=\"stats\"","id=\"chartlab\"",
     "id=\"nctext\"","<span>Zeven dagen</span>",
-    "<span>Nachtzicht</span>","<span>Luchtkwaliteit en pollen</span>","<footer>"];
+    "<span>Nachtzicht</span>","<span>Lucht, pollen en zon</span>","<footer>"];
   let vorigeIdx=-1, volgordeKlopt=true;
   for(const stuk of volgorde){
     const idx=bronD.indexOf(stuk);
