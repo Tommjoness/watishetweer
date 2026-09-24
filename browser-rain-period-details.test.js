@@ -141,7 +141,7 @@ async function controleer(type,naam){
         assert.deepEqual(uur24.asTijden,uur24.verwachtAsTijden,`${naam} ${breedte}: mobiele kloklabels volgen niet de forecasttijd-gedreven drie-uurscadans`);
         assert.ok(uur24.asTijden.every(t=>/^\d{2}:00$/.test(t)),`${naam} ${breedte}: mobiele uuras bevat geen expliciete lokale kloktijd: ${JSON.stringify(uur24.asTijden)}`);
         assert.deepEqual(uur24.asTijden,uur24.asBronTijden,`${naam} ${breedte}: mobiele uuras hoort niet bij de echte forecastpunten`);
-      }else assert.deepEqual(uur24.asTijden,["16:00","17:00","18:00","19:00","20:00","21:00","22:00"],`${naam} ${breedte}: compacte desktopuuras toont exact ieder zichtbaar uur als HH:00`);
+      }else assert.deepEqual(uur24.asTijden,["15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00"],`${naam} ${breedte}: compacte desktopuuras toont exact ieder zichtbaar uur als HH:00, ook het uur onder de nu-lijn: daar staat een temperatuur; kreeg ${JSON.stringify(uur24.asTijden)}`);
 
       const langer=await page.evaluate(()=>{
         S.dag=null;S.bereik=48;etmaal(S.i0,48);

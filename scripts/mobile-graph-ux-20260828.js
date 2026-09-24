@@ -64,7 +64,7 @@ function kiesKalenderUurLabelIndices(tijden,cadans=3,maxPunten=24){
    en het laagste punt van het zichtbare etmaal. Zo kan geen getal met de lijn
    of met een ander getal botsen, bij welk weerverloop dan ook. */
 const MOBIEL_ICOON_Y=4,MOBIEL_ICOON_GROOTTE=16,MOBIEL_LIJNLABEL_GROOTTE=12,MOBIELE_UURAS_Y=34,NU_MARKERING_BEREIK_UREN=3;
-const DESKTOP_ICOON_Y=6,DESKTOP_ICOON_GROOTTE=18;
+const DESKTOP_ICOON_Y=8,DESKTOP_ICOON_GROOTTE=18;
 function mobieleGrafiekMarkeringen(temperaturen,maxPunten=24,nu=null){
   const T=Array.isArray(temperaturen)?temperaturen:[],n=Math.min(T.length,Math.max(0,Math.floor(Number(maxPunten)||24)));
   const geldig=[];for(let i=0;i<n;i++)if(Number.isFinite(Number(T[i])))geldig.push(i);
@@ -526,7 +526,20 @@ function bouwMobieleTemperatuurRij(){
      erboven, dan hoger (een smal dal wordt naar boven toe breder). Alleen de
      waarde: "min 3°" leest als min 3 graden (-3°); de stip zegt al wat het is. */
   const getoond=[],vervallen=[],markeringen=[];
-  mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null}).forEach(m=>{
+  /* Iedere temperatuur hoort een tijd onder zich te hebben, en de mobiele uuras
+     houdt een vast drie-uursritme. Een markering komt daarom op een anker: op
+     het anker zelf of op een anker binnen hetzelfde plateau (zelfde afgeronde
+     waarde). Valt piek of dal tussen de ankers, dan tonen de ankers gewoon hun
+     eigen temperatuur. */
+  const ankerSet=new Set(ankers),afgerond=i=>Number.isFinite(Number(g.T[i]))?Math.round(Number(g.T[i])):null;
+  const opAnker=m=>{
+    if(ankerSet.has(m.i))return m;
+    let l=m.i,r=m.i;
+    while(l-1>=0&&afgerond(l-1)===m.waarde)l--;while(r+1<g.T.length&&afgerond(r+1)===m.waarde)r++;
+    let doel=null;for(let j=l;j<=r;j++)if(ankerSet.has(j)&&(doel===null||Math.abs(j-m.i)<Math.abs(doel-m.i)))doel=j;
+    return doel===null?null:{...m,i:doel};
+  };
+  mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null}).map(opAnker).filter(Boolean).forEach(m=>{
     const px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
     const verticaal=y=>[[px,y,"middle"],[px+14,y,"middle"],[px-14,y,"middle"]];
     const pos=plaats(m.waarde+"°",[...verticaal(py-9),...verticaal(py-15),[px+7,py-5,"start"],[px-7,py-5,"end"],...verticaal(py-21),...verticaal(py-27),
@@ -678,7 +691,6 @@ function bouwDesktopGrafiekAccenten(){
     const x=Number(el.getAttribute("x"));if(!Number.isFinite(x))return;
     const i=Math.round((x-Number(g.x(0)))/cw);
     if(!Number.isInteger(i)||i<0||i>=g.TI.length||Math.abs(Number(g.x(i))-x)>cw/2)return;
-    if(Number.isFinite(nuX)&&Math.abs(x-nuX)<DESKTOP_ICOON_GROOTTE/2+3)return;
     const k=uurIndex.get(g.TI[i]),code=k===undefined?null:uren.weather_code[k];
     if(code===null||code===undefined||!Number.isFinite(Number(code)))return;
     iconen.push({i,x,code:Number(code),dag:!Array.isArray(uren.is_day)||uren.is_day[k]!==0});
@@ -748,10 +760,94 @@ function bouwDesktopGrafiekAccenten(){
   svg.setAttribute("data-desktop-chart-accents","1");
 }
 
+/* Iedere temperatuur in de grafiek krijgt een tijd onder haar punt. Een piek of
+   dal op een plateau schuift eerst naar het plateaupunt dat al een tijd heeft.
+   Past een tijd niet naast de bestaande uurtijden, dan vervalt liever het cijfer
+   dan dat er een temperatuur zonder tijd staat. Alleen piek en dal mogen een
+   uurtijd zonder eigen cijfer verdringen. Geldt voor alle breedtes, tot 25 uur. */
+function koppelTijdAanTemperatuur(){
+  const svg=document.getElementById("chart"),g=S.geo;
+  if(!svg||!g||!Array.isArray(g.T)||!Array.isArray(g.TI)||typeof g.x!=="function"||typeof g.y!=="function"||Number(g.n)>25)return;
+  svg.querySelectorAll("text[data-temp-time]").forEach(el=>el.remove());
+  const W=Number(g.W),cw=Number(g.cw);if(!Number.isFinite(W)||!Number.isFinite(cw)||cw<=0)return;
+  const n=g.TI.length,x=i=>Number(g.x(i));
+  const idxVanX=px=>{let b=0;for(let i=1;i<n;i++)if(Math.abs(x(i)-px)<Math.abs(x(b)-px))b=i;return b;};
+  const ticks=bestaandeUurLabels(svg,g).filter(el=>!el.closest("#scrub"));
+  if(!ticks.length)return;
+  const tickIndex=el=>el.hasAttribute("data-mobile-hour-index")?Number(el.getAttribute("data-mobile-hour-index")):idxVanX(Number(el.getAttribute("x")));
+  const waardeVan=el=>Number(String(el.textContent||"").trim().replace("°",""));
+  const rond=i=>Number.isFinite(Number(g.T[i]))?Math.round(Number(g.T[i])):null;
+  const labels=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&/Bodoni/i.test(String(el.getAttribute("font-family")||""))&&/^-?\d+°$/.test(String(el.textContent||"").trim()));
+  const labelIndex=el=>{
+    for(const a of ["data-mobile-temp-marker-index","data-desktop-temp-marker-index","data-mobile-temp-index"]){
+      const v=el.getAttribute(a);if(v!==null&&v!==""&&Number.isInteger(Number(v)))return Number(v);
+    }
+    /* Basislabels staan soms naast hun punt (bij de nu-lijn): neem het dichtste
+       punt met dezelfde afgeronde waarde. */
+    const lx=Number(el.getAttribute("x")),w=waardeVan(el);let beste=null,d=Infinity;
+    for(let i=0;i<n;i++){if(rond(i)!==w)continue;const dx=Math.abs(x(i)-lx);if(dx<d){d=dx;beste=i;}}
+    return beste!==null&&d<=cw*2.5?beste:idxVanX(lx);
+  };
+  const isMarker=el=>el.hasAttribute("data-mobile-temp-marker")||el.hasAttribute("data-desktop-temp-marker");
+  const markerStip=i=>[...svg.querySelectorAll("circle[data-mobile-temp-marker-dot],circle[data-desktop-temp-marker-dot]")].filter(c=>Math.abs(Number(c.getAttribute("cx"))-x(i))<1);
+  const metTijd=new Map();ticks.forEach(el=>metTijd.set(tickIndex(el),el));
+  const perIndex=new Map();
+  labels.forEach(el=>{const i=labelIndex(el);if(!Number.isInteger(i))return;if(!perIndex.has(i))perIndex.set(i,[]);perIndex.get(i).push(el);});
+
+  /* 1. Piek/dal op een plateau: verplaats naar het plateaupunt met een tijd. */
+  [...perIndex.entries()].forEach(([i,els])=>{
+    /* Alleen de mobiele markering staat los van de uurlabels; op desktop draagt
+       ieder uur zijn eigen cijfer en wijst de desktoplaag alleen aan. */
+    if(metTijd.has(i)||!els.some(el=>el.hasAttribute("data-mobile-temp-marker")))return;
+    const w=rond(i);let l=i,r=i;
+    while(l-1>=0&&rond(l-1)===w)l--;while(r+1<n&&rond(r+1)===w)r++;
+    let doel=null;for(let j=l;j<=r;j++)if(metTijd.has(j)&&!perIndex.has(j)&&(doel===null||Math.abs(j-i)<Math.abs(doel-i)))doel=j;
+    if(doel===null)return;
+    const dx=x(doel)-x(i),dy=Number(g.y(Number(g.T[doel])))-Number(g.y(Number(g.T[i])));
+    els.forEach(el=>{
+      el.setAttribute("x",String(Number(el.getAttribute("x"))+dx));el.setAttribute("y",String(Number(el.getAttribute("y"))+dy));
+      for(const a of ["data-mobile-temp-marker-index","data-desktop-temp-marker-index"])if(el.hasAttribute(a))el.setAttribute(a,String(doel));
+    });
+    markerStip(i).forEach(c=>{c.setAttribute("cx",String(x(doel)));c.setAttribute("cy",String(g.y(Number(g.T[doel]))));});
+    perIndex.delete(i);perIndex.set(doel,els);
+  });
+
+  /* 2. Tijd toevoegen waar die ontbreekt; piek/dal eerst. */
+  const verwijder=i=>{
+    (perIndex.get(i)||[]).forEach(el=>el.remove());perIndex.delete(i);
+    svg.querySelectorAll(`circle[data-temp-index="${i}"]`).forEach(c=>c.remove());markerStip(i).forEach(c=>c.remove());
+  };
+  const sjabloon=ticks[0];
+  const nodig=[...perIndex.keys()].filter(i=>!metTijd.has(i)).sort((a,b)=>{
+    const ma=perIndex.get(a).some(isMarker),mb=perIndex.get(b).some(isMarker);return ma!==mb?(ma?-1:1):a-b;
+  });
+  nodig.forEach(i=>{
+    const tijd=uurAsLabelTekst(String(uurUitIso(g.TI[i])));if(!tijd){verwijder(i);return;}
+    const el=sjabloon.cloneNode(false);el.textContent=tijd;
+    ["data-mobile-edge-adjusted","data-mobile-hour-index"].forEach(a=>el.removeAttribute(a));
+    el.setAttribute("x",String(x(i)));el.setAttribute("text-anchor","middle");el.setAttribute("data-temp-time","1");
+    if(sjabloon.hasAttribute("data-mobile-hour-index"))el.setAttribute("data-mobile-hour-index",String(i));
+    let box=svgTekstBoxUitElement(el);
+    const rand=box&&randCorrectieVoorTekstBox(box,W,2);
+    if(rand){el.setAttribute("x",String(rand.x));el.setAttribute("text-anchor",rand.anker);box=svgTekstBoxUitElement(el);}
+    if(!box){verwijder(i);return;}
+    const botsers=[...metTijd.values()].filter(t=>{const b=svgTekstBoxUitElement(t);return b&&rechthoekenBotsen(box,b,2);});
+    const marker=(perIndex.get(i)||[]).some(isMarker);
+    if(botsers.length&&!(marker&&botsers.every(t=>!perIndex.has(tickIndex(t))))){verwijder(i);return;}
+    botsers.forEach(t=>{metTijd.delete(tickIndex(t));t.remove();});
+    /* In tijdsvolgorde in de SVG: voorleessoftware leest de as dan op volgorde. */
+    const na=[...metTijd.entries()].filter(([j])=>j>i).sort((a,b)=>a[0]-b[0])[0];
+    if(na)na[1].parentNode.insertBefore(el,na[1]);
+    else{const voor=[...metTijd.entries()].sort((a,b)=>b[0]-a[0])[0];if(voor)voor[1].parentNode.insertBefore(el,voor[1].nextSibling);else svg.insertBefore(el,svg.querySelector('g[data-q4-rain-periods]')||svg.querySelector("#scrub")||null);}
+    metTijd.set(i,el);
+  });
+  svg.setAttribute("data-temp-time-complete",[...perIndex.keys()].every(i=>metTijd.has(i))?"1":"0");
+}
+
 let uurAsToken=0;
 function planUurAsHerstel(){
   const token=++uurAsToken;
-  const voer=()=>{if(token===uurAsToken){herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();bouwMobieleTemperatuurRij();polishNuLabel();compactMobieleGrafiekHoogte();bouwDesktopGrafiekAccenten();}};
+  const voer=()=>{if(token===uurAsToken){herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();bouwMobieleTemperatuurRij();polishNuLabel();compactMobieleGrafiekHoogte();koppelTijdAanTemperatuur();bouwDesktopGrafiekAccenten();}};
   const start=()=>{
     const r1=()=>{const r2=()=>voer();if(typeof requestAnimationFrame==="function")requestAnimationFrame(r2);else setTimeout(r2,0);};
     if(typeof requestAnimationFrame==="function")requestAnimationFrame(r1);else setTimeout(r1,0);

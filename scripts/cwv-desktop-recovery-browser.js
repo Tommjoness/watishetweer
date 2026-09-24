@@ -156,6 +156,7 @@ async function run(){
             copy:document.body.innerText,
             overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,
             footer:footerMetrics,
+            tijdCompleet:document.getElementById("chart")?.getAttribute("data-temp-time-complete"),
             desktopIcons:(()=>{
               const svg=document.getElementById("chart");if(!svg)return null;
               const iconen=[...svg.querySelectorAll("g[data-desktop-weather-icon]")].map(e=>e.getBoundingClientRect());
@@ -187,6 +188,7 @@ async function run(){
           assert(f.rect.height<360,"live 390px-footer overschrijdt de leesbare mobiele hoogteband: "+f.rect.height);
           console.log("FOOTER_390 "+JSON.stringify({scenario,height:f.rect.height,sourceWidth:f.sourceWidth,sourceVisible:f.sourceVisible,sourceRows:f.sourceRows,disclaimerWidth:f.disclaimerWidth,disclaimerLines:f.disclaimerLines,disclaimerLineHeight:f.disclaimerLineHeight,contactWidth:f.contactWidth,contactRowDelta:f.contactRowDelta,sourceHitHeight:f.sourceHitHeight,contactHitHeight:f.contactHitHeight,utilityRows:f.utilityRows,utilityPairDelta:f.utilityPairDelta,utilityDetailsDelta:f.utilityDetailsDelta,utilityHitHeight:f.utilityHitHeight}));
         }
+        assert(result.tijdCompleet!=="0","Grafiek toont een temperatuur zonder uurtijd: "+JSON.stringify({route,width,scenario}));
         assert(result.cls<0.1,"Route-CLS buiten budget: "+JSON.stringify({route,width,scenario,cls:result.cls,shifts:result.shifts}));
         assert(!result.copy.includes("Vandaag: neerslag geldt vanaf nu; minimum en maximum gelden voor de volledige dag."),"verwijderde Vandaag-copy keert terug");
         if(width>=1100){
