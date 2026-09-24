@@ -46,6 +46,15 @@ assert.equal(bronnen.nws,false,"NWS wordt in Nederland niet getoond");
 assert.equal(bronnen.osm,true,"Nominatim/OSM-fallbackroute wordt als OSM-provenance herkend");
 assert.equal(bronnen.bigdatacloud,false,"BigDataCloud blijft verborgen zonder echte request");
 
+assert.equal(zonderTiming.visualcrossing,false,"Visual Crossing blijft verborgen bij Open-Meteo-data");
+assert.equal(zonderTiming.weatherapi,false,"WeatherAPI.com blijft verborgen bij Open-Meteo-data");
+const viaVisualCrossing=ux.bronGebruikUitResources([],"NL",{forecastProvider:"visualcrossing"});
+assert.equal(viaVisualCrossing.visualcrossing,true,"Visual Crossing wordt vermeld zodra de getoonde verwachting van Visual Crossing komt");
+assert.equal(viaVisualCrossing.weatherapi,false,"WeatherAPI.com blijft weg als Visual Crossing de data leverde");
+const viaWeatherApi=ux.bronGebruikUitResources([],"NL",{forecastProvider:"weatherapi"});
+assert.equal(viaWeatherApi.weatherapi,true,"WeatherAPI.com wordt vermeld zodra de getoonde verwachting van WeatherAPI komt");
+assert.equal(viaWeatherApi.visualcrossing,false,"Visual Crossing blijft weg als WeatherAPI de data leverde");
+
 const us=ux.bronGebruikUitResources([{name:"https://watishetweer.nl/api/waarschuwingen?lat=40&lon=-74"}],"US");
 assert.equal(us.nws,true,"NWS wordt in de VS aan de waarschuwingroute gekoppeld");
 assert.equal(us.meteoalarm,false,"MeteoAlarm wordt in de VS niet foutief getoond");

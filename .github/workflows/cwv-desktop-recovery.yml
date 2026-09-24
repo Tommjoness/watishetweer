@@ -39,6 +39,8 @@ jobs:
         run: node scripts/leesbaarheid-browser.test.js
       - name: Uurtijden, neerslag per uur vanaf het tijdstip
         run: node scripts/uurtijden-browser.test.js
+      - name: Onderkant, gebruikte bronnen en SEO-blok in de paginakolom
+        run: node scripts/onderkant-browser.test.js
       - name: Bewaar reproduceerbare CWV-metingen
         if: always()
         uses: actions/upload-artifact@v6

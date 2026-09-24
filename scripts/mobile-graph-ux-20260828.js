@@ -142,7 +142,12 @@ function bronGebruikUitResources(resources,land,opties={}){
     osm:heeft(/\/api\/plaatsnaam(?:[?#]|$)|nominatim|openstreetmap/i),
     knmi:heeft(/\/api\/neerslag(?:[?#]|$)/i),
     meteoalarm:waarschuwingen&&waarschuwing.meteoalarm,
-    nws:waarschuwingen&&waarschuwing.nws
+    nws:waarschuwingen&&waarschuwing.nws,
+    /* De serverfallback levert de weerdata met provider "visualcrossing" of
+       "weatherapi". Die bron krijgt alleen een vermelding als de getoonde
+       verwachting echt van haar komt; bij Open-Meteo-data blijven beide weg. */
+    visualcrossing:opties.forecastProvider==="visualcrossing",
+    weatherapi:opties.forecastProvider==="weatherapi"
   };
 }
 function rechthoekenBotsen(a,b,padding=0){
@@ -936,7 +941,7 @@ function werkBronnenBij(){
   if(typeof structureer==="function")structureer();
   const bron=document.querySelector("footer .bron-bronnen");if(!bron)return;
   const label=bron.querySelector(".bronlabel");if(label)label.textContent="Bronnen voor deze weergave";
-  const gebruik=bronGebruikUitResources(resourceEntries(),S.land,{forecastBeschikbaar:!!S.d,airBeschikbaar:false});
+  const gebruik=bronGebruikUitResources(resourceEntries(),S.land,{forecastBeschikbaar:!!S.d,airBeschikbaar:false,forecastProvider:S.d&&S.d.provider||""});
   const items=[...bron.querySelectorAll(".bronitem")];
   items.forEach(item=>{
     const naam=String(item.textContent||"").replace(/\s+/g," ").trim();
@@ -948,6 +953,8 @@ function werkBronnenBij(){
     else if(naam==="BigDataCloud")actief=gebruik.bigdatacloud;
     else if(/OpenStreetMap/i.test(naam))actief=gebruik.osm;
     else if(naam==="KNMI")actief=gebruik.knmi;
+    else if(/Visual Crossing/i.test(naam))actief=gebruik.visualcrossing;
+    else if(naam==="WeatherAPI.com")actief=gebruik.weatherapi;
     item.hidden=!actief;
     item.classList.remove("wiw-source-last-odd");
   });
