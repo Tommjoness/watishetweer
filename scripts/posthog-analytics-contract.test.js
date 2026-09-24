@@ -45,6 +45,7 @@ assert(analytics.includes("const entrySource=herkomstCategorie(document.referrer
 assert(analytics.includes('const HERKOMST_CATEGORIEEN=Object.freeze(["search","ai_assistant","internal","other","none"]);'),"vaste set herkomstcategorieën ontbreekt");
 assert(analytics.includes('"entry_source":entrySource,')&&analytics.includes('"launch_mode":launchMode,'),"herkomst en startmodus horen als vaste eigenschappen mee te gaan");
 assert(!/referrer\s*:/.test(analytics.slice(0,analytics.indexOf("/* Google Analytics draait in basic consent mode")))&&!analytics.includes('"$referrer"')&&!analytics.includes('"$referring_domain"'),"PostHog mag nooit de ruwe verwijzer of het verwijzende domein ontvangen");
+assert(analytics.includes("},{capture:true,passive:true});"),"taakuitkomsten horen in de capture-fase te worden gemeten: de dagenlijst wordt bij een klik opnieuw getekend");
 assert(analytics.includes('["#chipdeel","location_share_requested"]'),"op Delen tikken hoort als generieke taakuitkomst te tellen, zonder plaats of URL");
 assert(analytics.includes('[".chipplaats","saved_location_opened"]'),"openen van een bewaarde plaats hoort als generieke taakuitkomst te tellen");
 assert(analytics.includes('saved_locations:bewaard')&&analytics.includes('?"some":"none"'),"bewaarde plaatsen gaan alleen als ja/nee mee");

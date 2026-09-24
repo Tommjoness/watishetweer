@@ -144,6 +144,10 @@
     [".wiw-hour-toggle","hourly_details_toggled"],
     ["#nights .nacht-meer","night_details_toggled"]
   ];
+  /* Capture-fase: de site tekent sommige lijsten bij een klik direct opnieuw
+     (de dagen in #days). In de bubbelfase is het aangeklikte element dan al
+     losgekoppeld en vindt closest("#days …") niets meer. In de capture-fase
+     staat het element nog op zijn plek. */
   if(typeof document.addEventListener==="function"){
     document.addEventListener("click",event=>{
       const doel=event.target&&event.target.closest?event.target:null;
@@ -152,7 +156,7 @@
         if(interactieEenmaal.has(naam)||!doel.closest(selector))continue;
         interactieEenmaal.add(naam);stuur(naam);break;
       }
-    },{passive:true});
+    },{capture:true,passive:true});
   }
 
   function laadduurBand(ms){

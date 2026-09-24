@@ -21,6 +21,11 @@ const html=`<!doctype html>
   <div id="nights"><button class="nacht-meer" type="button">Meer nachten bekijken</button></div>
 </main>
 <script src="/posthog-analytics.js"></script>
+<script>
+/* Net als de echte site: een klik op een dag tekent de dagenlijst opnieuw, zodat
+   het aangeklikte element losgekoppeld is voordat de klik het document bereikt. */
+document.getElementById("days").addEventListener("click",event=>{const rij=event.target.closest(".row.day");if(rij)rij.replaceWith(rij.cloneNode(true));});
+</script>
 </body></html>`;
 
 const wacht=ms=>new Promise(resolve=>setTimeout(resolve,ms));
