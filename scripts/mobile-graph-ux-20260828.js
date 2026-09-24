@@ -526,7 +526,20 @@ function bouwMobieleTemperatuurRij(){
      erboven, dan hoger (een smal dal wordt naar boven toe breder). Alleen de
      waarde: "min 3°" leest als min 3 graden (-3°); de stip zegt al wat het is. */
   const getoond=[],vervallen=[],markeringen=[];
-  mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null}).forEach(m=>{
+  /* Iedere temperatuur hoort een tijd onder zich te hebben, en de mobiele uuras
+     houdt een vast drie-uursritme. Een markering komt daarom op een anker: op
+     het anker zelf of op een anker binnen hetzelfde plateau (zelfde afgeronde
+     waarde). Valt piek of dal tussen de ankers, dan tonen de ankers gewoon hun
+     eigen temperatuur. */
+  const ankerSet=new Set(ankers),afgerond=i=>Number.isFinite(Number(g.T[i]))?Math.round(Number(g.T[i])):null;
+  const opAnker=m=>{
+    if(ankerSet.has(m.i))return m;
+    let l=m.i,r=m.i;
+    while(l-1>=0&&afgerond(l-1)===m.waarde)l--;while(r+1<g.T.length&&afgerond(r+1)===m.waarde)r++;
+    let doel=null;for(let j=l;j<=r;j++)if(ankerSet.has(j)&&(doel===null||Math.abs(j-m.i)<Math.abs(doel-m.i)))doel=j;
+    return doel===null?null:{...m,i:doel};
+  };
+  mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null}).map(opAnker).filter(Boolean).forEach(m=>{
     const px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
     const verticaal=y=>[[px,y,"middle"],[px+14,y,"middle"],[px-14,y,"middle"]];
     const pos=plaats(m.waarde+"°",[...verticaal(py-9),...verticaal(py-15),[px+7,py-5,"start"],[px-7,py-5,"end"],...verticaal(py-21),...verticaal(py-27),

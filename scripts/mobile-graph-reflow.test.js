@@ -105,6 +105,7 @@ assert(api.MOBIEL_ICOON_Y+api.MOBIEL_ICOON_GROOTTE<api.MOBIELE_UURAS_Y-8,"De wee
 assert(runtime.includes('el.setAttribute("data-mobile-temp-label","1")')&&runtime.includes('el.setAttribute("data-mobile-temp-priority","anchor")'),"Lijnlabels zijn traceerbaar als drie-uursankers.");
 assert(runtime.includes("Math.abs(m.i-i)<=1")&&runtime.includes("Math.abs(i-nuIndex)<1.5"),"Een anker naast piek, dal of nu krijgt geen tweede temperatuur.");
 assert(runtime.includes("mobieleGrafiekMarkeringen(g.T,24,")&&runtime.includes('data-mobile-temp-marker'),"Max/min op de lijn komen uit het pure markeringenplan.");
+assert(runtime.includes(".map(opAnker).filter(Boolean)"),"Een mobiele max/min-markering staat altijd op een drie-uursanker met tijd; tussen de ankers tonen de ankers hun eigen temperatuur.");
 assert(runtime.includes('plaats(m.waarde+"°",')&&!runtime.includes('m.type+" "+m.waarde'),"Max/min-markering toont alleen de waarde: \"min 3°\" leest als -3°.");
 assert(runtime.includes("const asKolom=Number(g.x(0))-4;")&&runtime.includes("if(box&&box.x<asKolom){if(!schuif)continue;"),"Een kale markering staat nooit in de kolom van de asgetallen; een ankerlabel schuift ervan weg.");
 assert(runtime.includes("if(y-fs<plafond||y>bottom-3)continue;")&&runtime.includes("filter(b=>Number.isFinite(b)&&b<top-4)"),"Een label bij een piek vlak onder de bovenste asgrens mag boven de plotrand uitsteken tot net onder de dag/nachtband, zodat het boven zijn punt blijft.");
