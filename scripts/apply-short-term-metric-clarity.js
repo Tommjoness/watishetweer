@@ -11,8 +11,11 @@ const MARK="/* ===== SHORT TERM METRIC CLARITY 20260831 ===== */";
 
 /* De late mobile-truthlaag draait bewust op alle viewports en was daardoor de
    laatste eigenaar van de kop boven #pop. Hij maakte van een precieze kans +
-   hoeveelheid opnieuw het generieke 'Neerslag komend uur'. Vervang exact die
-   kleine presentatie-owner; brondata, kansbeleid en Q1-horizon blijven intact.
+   hoeveelheid opnieuw het generieke 'Neerslag komend uur' zonder uitleg. Vervang
+   exact die kleine presentatie-owner; brondata, kansbeleid en Q1-horizon blijven
+   intact. De kop blijft kort ('Neerslag komend uur', het langere
+   'Neerslagverwachting' paste niet in een desktoptegel van vier per rij); de
+   sleutel eronder ('kans · verwacht totaal') maakt de betekenis expliciet.
 
    Deze laag bezit bewust GEEN windstoottegel meer. De voormalige gust-slot in
    het hoofdgrid presenteert nu tijd tot zonsondergang; windstootdata blijft
@@ -57,10 +60,10 @@ function neerslagUurBetekenis(){
   const heeftKans=/%/.test(tekst),heeftMm=!actueel&&/\\bmm\\b/i.test(tekst);
   if(kop)kop.textContent=actueel||(!heeftKans&&!heeftMm&&huidigNat)
     ?"Neerslag nu"
-    :heeftKans&&heeftMm?"Neerslagverwachting komend uur"
+    :heeftKans&&heeftMm?"Neerslag komend uur"
     :heeftKans?"Neerslagkans komend uur"
     :heeftMm?"Verwachte neerslag komend uur"
-    :"Neerslagverwachting komend uur";
+    :"Neerslag komend uur";
 
   const sleutelTekst=heeftKans&&heeftMm?"kans · verwacht totaal":heeftKans?"kans":heeftMm?"verwacht totaal":"";
   sleutel.textContent=sleutelTekst;sleutel.hidden=!sleutelTekst;
@@ -83,7 +86,7 @@ function pasKortetermijnMetricClarityToe(bron){
   const sleutelAantal=html.split(GRAPH_SLEUTEL_OUD).length-1;
   if(sleutelAantal!==1)throw new Error("Neerslagsleutel-owner ontbreekt of is dubbel: "+sleutelAantal);
   html=html.replace(NEERSLAG_UUR_OUD,NEERSLAG_UUR_NIEUW).replace(GRAPH_SLEUTEL_OUD,GRAPH_SLEUTEL_NIEUW);
-  if(!html.includes('"Neerslagverwachting komend uur"'))throw new Error("Expliciete neerslagverwachting ontbreekt na clarity-laag.");
+  if(!html.includes('"Neerslag komend uur"'))throw new Error("Expliciete neerslagverwachting ontbreekt na clarity-laag.");
   if(!html.includes('"kans · verwacht totaal"'))throw new Error("Expliciete kans/hoeveelheidsleutel ontbreekt na clarity-laag.");
   return html;
 }

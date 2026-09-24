@@ -9,7 +9,7 @@ const html=fs.readFileSync(PAD,"utf8");
 for(const vereist of [
   "/* ===== SHORT TERM METRIC CLARITY 20260831 ===== */",
   '<div class="eyebrow">Tijd tot zonsondergang</div>',
-  '"Neerslagverwachting komend uur"',
+  '"Neerslag komend uur"',
   '"Neerslagkans komend uur"',
   '"Verwachte neerslag komend uur"',
   '"kans · verwacht totaal"',

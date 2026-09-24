@@ -31,6 +31,8 @@ jobs:
         run: node scripts/cwv-desktop-recovery-browser.js
       - name: Webfontwissel zonder layoutverschuiving bij trage fonts
         run: node scripts/font-swap-cls-browser.test.js
+      - name: Eerste scherm mobiel en desktop
+        run: node scripts/first-screen-browser.test.js
       - name: Bewaar reproduceerbare CWV-metingen
         if: always()
         uses: actions/upload-artifact@v6

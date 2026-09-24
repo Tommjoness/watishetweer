@@ -13,7 +13,7 @@ assert(uit.includes(NEERSLAG_UUR_NIEUW),"nieuwe neerslag-uurowner ontbreekt");
 assert(!uit.includes(NEERSLAG_UUR_OUD),"oude generieke neerslag-uurowner bleef staan");
 assert(uit.includes(GRAPH_SLEUTEL_NIEUW),"zichtbare kans/hoeveelheidsleutel is niet verduidelijkt");
 assert(!uit.includes(GRAPH_SLEUTEL_OUD),"oude sleutel bleef staan");
-assert(uit.includes('"Neerslagverwachting komend uur"'),"forecasttegel benoemt zijn betekenis niet expliciet");
+assert(uit.includes('"Neerslag komend uur"'),"forecasttegel benoemt zijn betekenis niet expliciet");
 assert(uit.includes('"Neerslagkans komend uur"'),"kans-only toestand heeft geen expliciete kop");
 assert(uit.includes('"Verwachte neerslag komend uur"'),"hoeveelheid-only toestand heeft geen expliciete kop");
 assert(uit.includes('"Neerslag nu"'),"actuele intensiteit behoudt een eigen scope");

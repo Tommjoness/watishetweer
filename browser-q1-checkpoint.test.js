@@ -157,7 +157,7 @@ async function controleer(type,naam){
     assert.equal(popNat.sectie,"none",naam+": relevante neerslag houdt twee-uurssectie uit de consumentenlayout");
     assert.match(popNat.samenvatting,/Huidige status\s*Droog/i,naam+": toekomstige neerslag verandert de actuele status niet ten onrechte in Neerslag");
     assert.match(popNat.samenvatting,/Hoogste neerslagkans\s*65%/i,naam+": toekomstige neerslag werkt de twee-uursverwachting bij");
-    assert.equal(popNat.kop,"Neerslagverwachting komend uur",naam+": zichtbare tegel benoemt kans en verwacht totaal expliciet");
+    assert.equal(popNat.kop,"Neerslag komend uur",naam+": zichtbare tegel benoemt kans en verwacht totaal expliciet");
     assert.equal(popNat.sleutel,"kans · verwacht totaal",naam+": zichtbare tegel legt de twee grootheden expliciet uit");
     assert.match(popNat.waarde,/65%/,naam+": zichtbare tegel behoudt bronkans");
     assert.match(popNat.waarde,/mm/,naam+": meetbare hoeveelheid staat naast kans");

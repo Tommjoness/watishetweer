@@ -224,7 +224,7 @@ async function run(){
           assert.equal(result.graphTimes[0],result.sourceTimes[0],"grafiek en tabel moeten bij hetzelfde lokale uur beginnen");
           for(let i=0;i<result.sourceTimes.length;i++)assert.equal(result.graphTimes[i],result.sourceTimes[i],`tabeluur ${i} komt niet overeen met hetzelfde grafiekpunt`);
           assert.equal(Date.parse(result.graphTimes.at(-1)+"Z")-Date.parse(result.graphTimes.at(-2)+"Z"),3600000,"opeenvolgende grafiekpunten moeten exact één uur verschillen");
-          assert.equal(result.placeLayout.justify,"center","plaats en tijd vormen een compacte kopgroep");
+          assert.equal(result.placeLayout.justify,"flex-start","plaats en tijd staan als compacte kopgroep op de linkerlijn van de h1");
           assert(result.placeLayout.gap>=12&&result.placeLayout.gap<=24,"afstand plaats/tijd buiten compacte band");
           if(width>=1366)assert(result.rows>=8&&result.rows<=11,"desktop toont geen comfortabele 8–11 volledige hoogtegestuurde uurregels");
           if(width>=1366){
