@@ -325,7 +325,11 @@ const THEMA_ACTIEF_KEY="weerbriefing.actiefThema";
    -ondergang van de gekozen plaats; iemand met donkere modus op de telefoon
    kreeg overdag dan toch een lichte site. */
 const THEMA_SYSTEEM_QUERY=typeof matchMedia==="function"?matchMedia("(prefers-color-scheme: dark)"):null;
-function themaSysteem(){return THEMA_SYSTEEM_QUERY&&THEMA_SYSTEEM_QUERY.matches?"donker":"licht";}
+/* Iedere keer vers opvragen: WebKit werkt .matches van een eerder gemaakte
+   MediaQueryList pas bij de volgende renderronde bij, zodat Auto na een
+   systeemwissel anders nog even het oude thema kiest. De vaste query blijft
+   alleen voor de change-listener. */
+function themaSysteem(){return typeof matchMedia==="function"&&matchMedia("(prefers-color-scheme: dark)").matches?"donker":"licht";}
 try{localStorage.removeItem(THEMA_LEGACY_KEY);}catch(e){}
 function themaKeuze(){
   let keuze="auto";
