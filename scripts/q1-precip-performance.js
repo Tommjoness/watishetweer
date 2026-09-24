@@ -419,7 +419,7 @@ function verrijkTooltip(ev){
   if(!svg||!g||!G||g.style.display==="none"||!G.n||!Number.isFinite(G.cw)||G.cw<=0)return;
   const r=svg.getBoundingClientRect();if(!r.width)return;
   const sc=(G.W||900)/r.width;
-  const i=clamp(Math.round((((ev.clientX-r.left)*sc)-G.pl)/G.cw),0,G.n-1);
+  const i=clamp(Math.round((((ev.clientX-r.left)*sc)-(typeof G.x==="function"?G.x(0):G.pl))/G.cw),0,G.n-1);
   const teksten=[...g.querySelectorAll("text")];if(teksten.length<7)return;
   const p=tooltipNeerslag(G.P&&G.P[i],G.Q1MM&&G.Q1MM[i]);
   teksten[5].textContent="neerslagkans";

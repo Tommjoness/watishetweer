@@ -960,8 +960,14 @@ function maan(d){
   const jd=d.getTime()/86400000+2440587.5;
   let f=((jd-2451550.1)/syn)%1; if(f<0)f+=1;
   const ill=(1-Math.cos(2*Math.PI*f))/2;
-  const namen=["nieuwe maan","wassende sikkel","eerste kwartier","wassende maan","volle maan","afnemende maan","laatste kwartier","afnemende sikkel"];
-  return {fase:f,ill:ill,naam:namen[Math.floor(f*8+0.5)%8]};
+  /* Nieuwe maan, eerste kwartier, volle maan en laatste kwartier zijn momenten.
+     Acht gelijke vakken noemden alles vanaf 96% al "volle maan", bijna twee
+     dagen te vroeg. Een hoofdfase heet daarom alleen zo binnen een dag van dat
+     moment; daartussen is de maan wassend of afnemend. */
+  const dag=1/syn,afstand=x=>{const a=Math.abs(f-x);return Math.min(a,1-a);};
+  const naam=afstand(0)<=dag?"nieuwe maan":afstand(0.5)<=dag?"volle maan":afstand(0.25)<=dag?"eerste kwartier":afstand(0.75)<=dag?"laatste kwartier"
+    :f<0.25?"wassende sikkel":f<0.5?"wassende maan":f<0.75?"afnemende maan":"afnemende sikkel";
+  return {fase:f,ill:ill,naam:naam};
 }
 
 /* ---------- state ---------- */
@@ -1681,8 +1687,19 @@ function etmaal(start,n){
   let mn=Math.min(...Tgeldig),mx=Math.max(...Tgeldig);
   mn=Math.floor(mn-1);mx=Math.ceil(mx+1);
   const span=(mx-mn)||1;
-  const cw=iw/(T.length-1);
-  const x=i=>pl+cw*i, y=v=>pt+ih*(1-(v-mn)/span);
+  /* Op desktop begint de reeks bij het eerstvolgende volle uur, net als de
+     uurtabel ernaast. Om 17:39 is het eerste punt dus 18:00. Zonder voorloop
+     viel de rode nu-lijn dan op 18:00. Daarom begint de tijdas bij nu: het
+     eerste punt schuift het deel van het uur dat nog komt naar rechts, zodat
+     de lijn op 17:39 staat. De uurpunten zelf blijven gelijk. */
+  let voorloop=0;
+  if(S.dag==null&&TI.length&&plaatsNuIndex(TI)==null){
+    const p=plaatsTijdDelen(),e=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(TI[0]);
+    const afstand=e?Date.UTC(+e[1],+e[2]-1,+e[3],+e[4],+e[5])-Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second||0):NaN;
+    if(Number.isFinite(afstand)&&afstand>0&&afstand<=3600000)voorloop=afstand/3600000;
+  }
+  const cw=iw/(T.length-1+voorloop);
+  const x=i=>pl+cw*(i+voorloop), y=v=>pt+ih*(1-(v-mn)/span);
 
   /* dagbalk */
   let balk=`<rect x="${pl-cw/2}" y="${by}" width="${iw+cw}" height="${bh}" fill="none" stroke="${RULE}" stroke-width="1"/>`;
@@ -1730,8 +1747,8 @@ function etmaal(start,n){
      is de hele zichtbare reeks nacht. */
   if(ND[0]===0 && !segmenten.some(s=>s[0]<=0)){
     const eersteOp=overgangen.find(o=>o.op);
-    if(eersteOp) segmenten.unshift([0,eersteOp.idx]);
-    else if(ND.every(v=>v===0)) segmenten.push([0,laatsteI]);
+    if(eersteOp) segmenten.unshift([-voorloop,eersteOp.idx]);
+    else if(ND.every(v=>v===0)) segmenten.push([-voorloop,laatsteI]);
   }
   // Eindigt de zichtbare reeks nog in de nacht (geen zichtbare zonsopkomst
   // erna, maar is_day[laatste]===0 bevestigt het), dan loopt het laatste
@@ -1742,7 +1759,7 @@ function etmaal(start,n){
   }
 
   segmenten.forEach(([f1,f2])=>{
-    const x1=x(Math.max(0,f1)), x2=x(Math.min(laatsteI,f2));
+    const x1=x(Math.max(-voorloop,f1)), x2=x(Math.min(laatsteI,f2));
     if(x2<=x1) return;
     // navy in plaats van het vorige neutrale grijs (v67); 0.92 in plaats van
     // vol dekkend, zodat de kleur duidelijk blauw blijft zonder een hard blok
@@ -1789,12 +1806,17 @@ function etmaal(start,n){
        als de rest van de grafiek. plaatsMinuutFractie() gebruikt de tijd die de
        weer-API voor die plaats teruggeeft, niet de klok van de browser. */
     const nuIdx = plaatsNuIndex(TI);
-    if(nuIdx!=null && nuIdx>=0 && nuIdx<=TI.length-1 && isFinite(nuIdx)){
+    if(nuIdx!=null && nuIdx>=-voorloop && nuIdx<=TI.length-1 && isFinite(nuIdx)){
       const xn=x(nuIdx); nuX=xn; nuTemp=eindigGetal(S.d.current&&S.d.current.temperature_2m);
       const nuStip=nuTemp===null?"":`<circle cx="${xn}" cy="${y(nuTemp)}" r="3" fill="${CARMINE}"/>`;
       const nuLabelY=nuTemp===null?by+bh+13:clamp(y(nuTemp)-10,pt+F.temp,pb-4);
       const nuLabel=nuTemp===null?"nu":"nu "+Math.round(nuTemp)+"°";
-      nu=`<line x1="${xn}" y1="${by-2}" x2="${xn}" y2="${pb+6}" stroke="${CARMINE}" stroke-width="1"/>${nuStip}
+      /* Staat nu vóór het eerste uurpunt, dan loopt een dunne stippellijn van de
+         gemeten temperatuur naar dat punt. Zo hangt de nu-stip niet los, en blijft
+         zichtbaar dat de doorgetrokken lijn pas bij het eerste forecastuur begint. */
+      const aanloop=nuIdx<0&&nuTemp!==null&&T[0]!=null&&isFinite(T[0])
+        ?`<line data-nu-aanloop="1" aria-hidden="true" x1="${xn}" y1="${y(nuTemp)}" x2="${x(0)}" y2="${y(T[0])}" stroke="${INK}" stroke-width="1.2" stroke-dasharray="2 3" stroke-opacity=".55" stroke-linecap="round" pointer-events="none"/>`:"";
+      nu=`${aanloop}<line x1="${xn}" y1="${by-2}" x2="${xn}" y2="${pb+6}" stroke="${CARMINE}" stroke-width="1"/>${nuStip}
           <text x="${xn+8}" y="${nuLabelY}" fill="${CARMINE}" font-family="DM Mono,monospace" font-size="${F.nu}">${nuLabel}</text>`;
     }
   }
@@ -2135,7 +2157,7 @@ function scrubKoppel(){
     const G=S.geo;
     if(!G.n||!isFinite(G.n)||G.n<1){ g.style.display="none"; return; }
     const r=svg.getBoundingClientRect(), sc=(G.W||900)/r.width;
-    let i=Math.round(((ev.clientX-r.left)*sc-G.pl)/G.cw);
+    let i=Math.round(((ev.clientX-r.left)*sc-G.x(0))/G.cw);
     i=clamp(i,0,G.n-1);
     if(!Number.isFinite(i)||!G.T||!Number.isFinite(G.T[i])||!G.TI||!G.TI[i]){
       g.style.display="none"; return;
