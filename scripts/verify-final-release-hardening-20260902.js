@@ -50,9 +50,10 @@ for(const p of weer){
 
 const over=fs.readFileSync(path.join(ROOT,"over","index.html"),"utf8");
 const privacy=fs.readFileSync(path.join(ROOT,"privacy.html"),"utf8");
-eis(over.includes("https://github.com/Tommjoness/watishetweer"),"Over-pagina verwijst niet naar uiteindelijke repository.");
-eis(!over.includes("https://github.com/Tommjoness/weathernow"),"Over-pagina bevat nog oude repository-URL.");
-eis(privacy.includes("https://github.com/Tommjoness/watishetweer"),"Privacypagina verwijst niet naar uiteindelijke repository.");
+/* De eigenaar wil geen verwijzing naar de broncode of GitHub op de publieke
+   Over- en privacypagina's. */
+eis(!/github\.com/i.test(over),"Over-pagina verwijst weer naar GitHub.");
+eis(!/github\.com/i.test(privacy),"Privacypagina verwijst weer naar GitHub.");
 for(const p of htmlBestanden(OUT)){
   const html=fs.readFileSync(p,"utf8");
   eis(!html.includes("https://github.com/Tommjoness/weathernow"),path.relative(OUT,p)+": oude GitHub-URL bleef in public artifact staan");
