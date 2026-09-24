@@ -66,7 +66,9 @@ async function controleer(type,naam){
         const svg=document.getElementById("chart"),groep=svg.querySelector('g[data-q4-rain-periods="1"]'),g=S.geo;
         const asY=g.pt+g.ih+(g.M?20:22);
         const asEls=g&&g.M?[...svg.querySelectorAll('text[data-mobile-hour-axis="1"]')]:[...svg.querySelectorAll("text")]
-          .filter(el=>Math.abs(Number(el.getAttribute("y"))-asY)<0.1&&/^\d{2}:00$/.test((el.textContent||"").trim()));
+          /* Desktop schuift de uurtijden omlaag voor de weericonen en bewaart de
+             oorspronkelijke hoogte in data-desktop-base-y. */
+          .filter(el=>Math.abs(Number(el.getAttribute("data-desktop-base-y")||el.getAttribute("y"))-asY)<0.1&&/^\d{2}:00$/.test((el.textContent||"").trim()));
         const asTijden=asEls.map(el=>(el.textContent||"").trim());
         const asX=asEls.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite);
         const startEls=groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')]:[];
