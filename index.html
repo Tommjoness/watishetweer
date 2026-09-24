@@ -1936,7 +1936,11 @@ function etmaal(start,n){
      dezelfde hoogte aan als de browser werkelijk reserveert. */
   const labelHoogte=F.temp*2;
   const gezet=[];
-  const MAXLAAG=M&&n<=24?4:3;
+  /* Desktop: hooguit twee lagen (~48px boven of onder het punt). Op de derde
+     laag (82px) zweefde een cijfer zo ver boven zijn punt dat het bij een
+     ander punt leek te horen. Past het niet dichterbij, dan vervalt het; de
+     buururen tonen hun waarde en de tooltip blijft exact. */
+  const MAXLAAG=M?(n<=24?4:3):2;
   /* Botst een kandidaat op cx op elke laag, dan gaf de oude code een piek/dal
      alsnog een geforceerde positie zonder te kijken of daar al iets anders
      stond: twee cijfers konden zo exact over elkaar heen belanden, en dan is

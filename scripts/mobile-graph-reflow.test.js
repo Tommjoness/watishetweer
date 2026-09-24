@@ -114,8 +114,19 @@ assert(runtime.includes('!el.hasAttribute("data-mobile-temp-label")&&!el.hasAttr
 assert(!runtime.includes("verminderMobieleTemperatuurlabels"),"De oude op-de-lijn-labelplaatser is volledig vervangen.");
 assert(!runtime.includes("mobieleTemperatuurLabelLimiet(window.innerWidth)"),"De mobiele 24-uursgrafiek mag verplichte ankers niet langer via een viewport-limiet uitdunnen.");
 
+/* Desktop: dezelfde accenten, met behoud van het uurcijfer. */
+assert(/compactMobieleGrafiekHoogte\(\);bouwDesktopGrafiekAccenten\(\);\}/.test(runtime),"De desktopaccenten draaien in dezelfde idempotente grafiekpass.");
+assert(runtime.includes("function bouwDesktopGrafiekAccenten(){\n  if(mobiel())return;"),"Desktopaccenten gelden alleen boven 900px; mobiel en tablet houden hun eigen owner.");
+assert(runtime.includes('data-desktop-temp-area')&&runtime.includes('url(#desktopTempVlak)'),"Desktop krijgt het zachte vlak onder de lijn.");
+assert(runtime.includes('data-desktop-weather-icon')&&runtime.includes("bestaandeUurLabels(svg,g)")&&runtime.includes("<=H-2"),"Desktopiconen staan bij de bestaande uurtijden en alleen als alles binnen de viewBox past.");
+assert(runtime.includes('mobieleGrafiekMarkeringen(g.T,g.T.length,')&&runtime.includes('data-desktop-temp-marker-dot'),"Desktop licht hoogste en laagste punt uit met hetzelfde markeringenplan als mobiel.");
+assert(runtime.includes('circle[data-temp-index]")')&&runtime.includes("De stip hoort bij het punt"),"Op een plateau staat de desktopstip bij het punt dat het cijfer draagt.");
+
+const basisGrafiek=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
+assert(basisGrafiek.includes("const MAXLAAG=M?(n<=24?4:3):2;"),"Een desktopcijfer zweeft hooguit twee lagen van zijn punt; verder weg leest het als een ander punt.");
+
 const checkpoint=fs.readFileSync(path.join(__dirname,"apply-mobile-screenshot-polish.js"),"utf8");
 assert(!/['\"]\s*const A=a\.getBBox\s*\(/.test(checkpoint),"Checkpoint-50 owner mag geen SVG-fontboxmeting meer injecteren.");
 assert(checkpoint.includes("geschatteTekstBox=el=>"),"Checkpoint-50 owner moet de attribuutgebaseerde tekstbox injecteren.");
 assert(checkpoint.includes("const fs=Number.isFinite(attrFont)&&attrFont>0?attrFont:(/Bodoni Moda/.test(familie)?F.temp:F.uur);"),"Checkpoint-50 tekstbox gebruikt de bestaande grafiekfontmaten als veilige fallback.");
-console.log("Mobiele grafiek reflow-test groen: echte lokale drie-uursankers, temperaturen op de lijn, weericonen, max/min-markeringen en monotone vloeiende lijn.");
+console.log("Mobiele grafiek reflow-test groen: echte lokale drie-uursankers, temperaturen op de lijn, weericonen, max/min-markeringen en monotone vloeiende lijn; desktop met vlak, iconen en uitgelichte piek/dal.");
