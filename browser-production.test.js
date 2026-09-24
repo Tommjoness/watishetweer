@@ -242,8 +242,15 @@ const reporter=`<script>
         const i=el.getAttribute('data-desktop-temp-marker-index'),dot=chart.querySelector('circle[data-desktop-temp-marker-dot][data-desktop-temp-marker-index="'+i+'"]');
         return dot&&Math.round(Number(g.T[Number(i)]))===Number((el.textContent||'').trim().replace('°',''))&&Math.abs(Number(dot.getAttribute('cx'))-Number(el.getAttribute('x')))<=Number(g.cw)*1.2;
       });
-      desktopAccent=vlak&&iconen.length>=Math.max(1,uurTijden.length-1)&&vrijVanPlot&&!iconOverlap&&binnen&&markersOp;
-      desktopAccentInfo=[vlak,iconen.length+'/'+uurTijden.length,vrijVanPlot,iconOverlap,binnen,markers.length+':'+markersOp].join(',');
+      /* Geen cijfer zweeft los van zijn punt (derde laag = 82px). */
+      const stippen=[...chart.querySelectorAll('circle[data-temp-index]')].map(c=>({x:Number(c.getAttribute('cx')),y:Number(c.getAttribute('cy'))}));
+      const zwevend=alleLabels.filter(el=>{
+        const x=Number(el.getAttribute('x')),y=Number(el.getAttribute('y'));let best=null;
+        stippen.forEach(d=>{if(!best||Math.abs(d.x-x)<Math.abs(best.x-x))best=d;});
+        return best&&Math.abs(best.y-y)>52;
+      }).length;
+      desktopAccent=zwevend===0&&vlak&&iconen.length>=Math.max(1,uurTijden.length-1)&&vrijVanPlot&&!iconOverlap&&binnen&&markersOp;
+      desktopAccentInfo=['zwevend:'+zwevend,vlak,iconen.length+'/'+uurTijden.length,vrijVanPlot,iconOverlap,binnen,markers.length+':'+markersOp].join(',');
     }
 
     /* Het nieuwe vaste drie-uurscontract geldt voor de compacte 320–430px

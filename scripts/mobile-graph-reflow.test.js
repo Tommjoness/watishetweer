@@ -122,6 +122,9 @@ assert(runtime.includes('data-desktop-weather-icon')&&runtime.includes("bestaand
 assert(runtime.includes('mobieleGrafiekMarkeringen(g.T,g.T.length,')&&runtime.includes('data-desktop-temp-marker-dot'),"Desktop licht hoogste en laagste punt uit met hetzelfde markeringenplan als mobiel.");
 assert(runtime.includes('circle[data-temp-index]")')&&runtime.includes("De stip hoort bij het punt"),"Op een plateau staat de desktopstip bij het punt dat het cijfer draagt.");
 
+const basisGrafiek=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
+assert(basisGrafiek.includes("const MAXLAAG=M?(n<=24?4:3):2;"),"Een desktopcijfer zweeft hooguit twee lagen van zijn punt; verder weg leest het als een ander punt.");
+
 const checkpoint=fs.readFileSync(path.join(__dirname,"apply-mobile-screenshot-polish.js"),"utf8");
 assert(!/['\"]\s*const A=a\.getBBox\s*\(/.test(checkpoint),"Checkpoint-50 owner mag geen SVG-fontboxmeting meer injecteren.");
 assert(checkpoint.includes("geschatteTekstBox=el=>"),"Checkpoint-50 owner moet de attribuutgebaseerde tekstbox injecteren.");
