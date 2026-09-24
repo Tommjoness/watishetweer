@@ -131,7 +131,10 @@ async function controleer(page,naam,breedte){
     const cloudKopRect=cloudKop?rect(cloudKop):null;
     const moonlab=document.getElementById("moonlab"),moonlabSvg=moonlab&&moonlab.querySelector(".maan-fase-svg-v2");
 
-    const teksten=[...chart.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&rect(el).w>0&&rect(el).h>0).map(el=>({tekst:(el.textContent||"").trim(),box:rect(el),font:el.getAttribute("font-family")||"",fill:el.getAttribute("fill")||""}));
+    /* WebKit geeft SVG-tekst in een verborgen groep (display:none) toch een
+       box; alleen werkelijk getoonde tekst telt. */
+    const getoond=el=>{for(let n=el;n&&n!==chart;n=n.parentElement){const st=getComputedStyle(n);if(st.display==="none"||st.visibility==="hidden")return false;}return true;};
+    const teksten=[...chart.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&getoond(el)&&rect(el).w>0&&rect(el).h>0).map(el=>({tekst:(el.textContent||"").trim(),box:rect(el),font:el.getAttribute("font-family")||"",fill:el.getAttribute("fill")||""}));
     const bots=[];
     for(let i=0;i<teksten.length;i++)for(let j=i+1;j<teksten.length;j++){
       if(overlapt(teksten[i].box,teksten[j].box))bots.push({a:teksten[i],b:teksten[j]});

@@ -687,9 +687,15 @@ function bouwDesktopGrafiekAccenten(){
   const onderPlot=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!el.closest('g[data-q4-rain-periods]')&&Number(el.getAttribute("y"))>bottom+4);
   const boxen=onderPlot.map(svgTekstBoxUitElement).filter(Boolean);
   const schuif=boxen.length?Math.max(0,icoonOnder+3-Math.min(...boxen.map(b=>b.y))):0;
-  /* Zichtbare regenperiodes onder de plot bezetten die ruimte al. */
-  const regenGroep=svg.querySelector('g[data-q4-rain-periods]');
-  const regenZichtbaar=!!(regenGroep&&regenGroep.firstElementChild&&getComputedStyle(regenGroep).display!=="none");
+  /* Zichtbare regenperiodes onder de plot bezetten die ruimte al. Die groep kan
+     ná deze pass verschijnen; vraag daarom de stylesheet zelf of hij zichtbaar
+     zou zijn, met een lege proefgroep, en ga uit van regen zodra er een kans is. */
+  const regenGroepZou=()=>{
+    const proef=document.createElementNS(SVG_NS,"g");proef.setAttribute("data-q4-rain-periods","1");svg.appendChild(proef);
+    const zichtbaar=getComputedStyle(proef).display!=="none";proef.remove();return zichtbaar;
+  };
+  const regenMogelijk=!!svg.querySelector('g[data-q4-rain-periods] *')||(Array.isArray(g.P)&&g.P.some(p=>Number(p)>0));
+  const regenZichtbaar=regenMogelijk&&regenGroepZou();
   const pastInViewBox=!regenZichtbaar&&(!boxen.length||Math.max(...boxen.map(b=>b.y+b.height))+schuif<=H-2);
   if(iconen.length&&pastInViewBox){
     if(schuif>0)onderPlot.forEach(el=>{el.setAttribute("data-desktop-base-y",el.getAttribute("y"));el.setAttribute("y",String(Number(el.getAttribute("y"))+schuif));});
@@ -702,6 +708,7 @@ function bouwDesktopGrafiekAccenten(){
     });
   }
   svg.setAttribute("data-desktop-weather-icons",String(pastInViewBox?iconen.length:0));
+  if(regenZichtbaar)svg.setAttribute("data-desktop-weather-icons-skip","regen");else svg.removeAttribute("data-desktop-weather-icons-skip");
 
   /* 3. Hoogste en laagste punt: het bestaande cijfer iets zwaarder en volledig
      dekkend, met een volle stip. Dezelfde keuze als mobiel: een plateau krijgt
