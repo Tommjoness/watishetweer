@@ -30,6 +30,13 @@ groep("Astronomie");
   check("nieuwe maan geeft bijna nul procent verlicht",m1.ill<0.03,(m1.ill*100).toFixed(1)+"%");
   check("volle maan geeft bijna honderd procent verlicht",m2.ill>0.97,(m2.ill*100).toFixed(1)+"%");
   check("maanfase heet correct bij volle maan",m2.naam==="volle maan",m2.naam);
+  /* Een hoofdfase is een moment: alleen binnen een dag ervan draagt de maan die naam. */
+  const tweeDagenVoorVol=api.maan(new Date("2024-01-23T17:54:00Z")),halveDagVoorVol=api.maan(new Date("2024-01-25T05:54:00Z"));
+  check("twee dagen voor volle maan (96%) heet de maan wassend",tweeDagenVoorVol.naam==="wassende maan"&&tweeDagenVoorVol.ill>0.93,tweeDagenVoorVol.naam+" "+(tweeDagenVoorVol.ill*100).toFixed(1)+"%");
+  check("een halve dag voor volle maan heet het volle maan",halveDagVoorVol.naam==="volle maan",halveDagVoorVol.naam);
+  const eersteKwartier=api.maan(new Date("2024-01-18T03:52:00Z")),dagErna=api.maan(new Date("2024-01-19T15:52:00Z"));
+  check("eerste kwartier heet zo op het moment zelf",eersteKwartier.naam==="eerste kwartier",eersteKwartier.naam);
+  check("anderhalve dag na eerste kwartier heet de maan wassend",dagErna.naam==="wassende maan",dagErna.naam);
 }
 
 /* 2. windkracht */

@@ -165,6 +165,14 @@ async function run(){
                 overlap:iconen.some(a=>teksten.some(b=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top)),
                 vlak:!!svg.querySelector('path[data-desktop-temp-area="1"]')};
             })(),
+            nuLijn:(()=>{
+              const svg=document.getElementById("chart"),g=typeof S!=="undefined"&&S.geo;
+              if(!svg||!g||!Array.isArray(g.TI)||!g.TI.length||typeof g.x!=="function")return null;
+              const lijn=[...svg.querySelectorAll("line")].find(e=>/carmine/i.test(e.getAttribute("stroke")||""));
+              if(!lijn)return {ontbreekt:true};
+              const x=Number(lijn.getAttribute("x1")),x0=g.x(0);
+              return {x,x0,pl:g.pl,uren:(x0-x)/g.cw,tot:(naarUTC(g.TI[0])-Date.now())/3600000,aanloop:!!svg.querySelector("line[data-nu-aanloop]")};
+            })(),
             sha:document.querySelector('meta[name="weather-build-sha"]')?.content
           };
         });
@@ -197,6 +205,16 @@ async function run(){
           const di=result.desktopIcons;
           assert(di&&di.vlak,"desktopgrafiek mist het vlak onder de lijn: "+JSON.stringify({route,width,di}));
           assert(di.skip!=="regen"&&di.n>=3&&!di.overlap,"desktopgrafiek mist weericonen of ze botsen met tekst: "+JSON.stringify({route,width,di}));
+          /* De desktopreeks begint bij het eerstvolgende volle uur. De rode nu-lijn
+             hoort dan op het echte moment te staan, zoveel vóór het eerste uurpunt
+             als er nog tot dat uur over is, en niet op dat uurpunt zelf. */
+          const nl=result.nuLijn;
+          assert(nl&&!nl.ontbreekt,"desktopgrafiek mist de rode nu-lijn: "+JSON.stringify({route,width,nl}));
+          if(nl.tot>0){
+            assert(Math.abs(nl.uren-nl.tot)<0.02,"nu-lijn staat niet op het echte moment vóór het eerste uur: "+JSON.stringify({route,width,nl}));
+            assert(nl.x>=nl.pl-0.5,"nu-lijn valt buiten de grafiek: "+JSON.stringify({route,width,nl}));
+            assert(nl.aanloop,"nu-stip is niet verbonden met het eerste uurpunt: "+JSON.stringify({route,width,nl}));
+          }
           const g=result.geometry;
           assert(Math.abs(g.hours.bottom-g.main.bottom)<=1,"uurpaneel en grafiekkolom eindigen niet gelijk");
           assert(Math.abs(g.table.bottom-result.hourRows.at(-1).rect.bottom)<=2,"geen lege onderste tabelregel");

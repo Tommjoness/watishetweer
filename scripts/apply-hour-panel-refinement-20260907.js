@@ -109,14 +109,10 @@ const PANEL_HOOGTE_NIEUW=`  /* Hoogtefiltering is reversibel: de eerste meting b
 const NU_OUD="    const nuIdx = plaatsNuIndex(TI);";
 const NU_NIEUW=`    let nuIdx = plaatsNuIndex(TI);
     /* De gedeelde desktoprange begint bij het eerstvolgende volledige forecastuur.
-       Als 'nu' daardoor hooguit één uur vóór de eerste bronwaarde valt, blijft de
-       actuele meting als context exact op de linker grafiekgrens zichtbaar. De
-       forecastpunten zelf blijven ongewijzigd en dus gelijk aan de uurtabel. */
-    if(nuIdx==null&&S.dag==null&&!M&&window.innerWidth>=1100&&TI.length){
-      const nuMs=S.klokInstantOverride&&typeof S.klokInstantOverride.getTime==="function"?S.klokInstantOverride.getTime():Date.now();
-      const eersteMs=naarUTC(TI[0]),afstand=eersteMs-nuMs;
-      if(Number.isFinite(eersteMs)&&Number.isFinite(nuMs)&&afstand>=0&&afstand<3600000)nuIdx=0;
-    }`;
+       Valt 'nu' binnen het uur daarvoor, dan begint de tijdas bij nu (voorloop in
+       etmaal) en staat de nu-lijn op het echte moment, vóór het eerste uurpunt.
+       De forecastpunten zelf blijven ongewijzigd en dus gelijk aan de uurtabel. */
+    if(nuIdx==null&&voorloop>0)nuIdx=-voorloop;`;
 const KOP_OUD='if(kop&&S.dag==null&&rows.length)kop.textContent="De komende "+rows.length+" uur";';
 const KOP_NIEUW='if(kop&&S.dag==null&&S.bereik===24)kop.textContent="Komende uren";';
 const EERSTVOLGEND_OUD='if(r.marker){const m=document.createElement("span");m.className="wiw-hour-marker";m.textContent=r.marker;tijd.appendChild(m);}';
