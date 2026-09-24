@@ -107,6 +107,7 @@ assert(runtime.includes("Math.abs(m.i-i)<=1")&&runtime.includes("Math.abs(i-nuIn
 assert(runtime.includes("mobieleGrafiekMarkeringen(g.T,24,")&&runtime.includes('data-mobile-temp-marker'),"Max/min op de lijn komen uit het pure markeringenplan.");
 assert(runtime.includes('plaats(m.waarde+"°",')&&!runtime.includes('m.type+" "+m.waarde'),"Max/min-markering toont alleen de waarde: \"min 3°\" leest als -3°.");
 assert(runtime.includes("const asKolom=Number(g.x(0))-4;")&&runtime.includes("if(box&&box.x<asKolom){if(!schuif)continue;"),"Een kale markering staat nooit in de kolom van de asgetallen; een ankerlabel schuift ervan weg.");
+assert(runtime.includes("if(y-fs<plafond||y>bottom-3)continue;")&&runtime.includes("filter(b=>Number.isFinite(b)&&b<top-4)"),"Een label bij een piek vlak onder de bovenste asgrens mag boven de plotrand uitsteken tot net onder de dag/nachtband, zodat het boven zijn punt blijft.");
 assert(runtime.includes("monotoonPad(")&&runtime.includes('data-mobile-line-points'),"Mobiele lijn is vloeiend en houdt haar punten beschikbaar voor botsingscontrole.");
 assert(runtime.includes('path[data-mobile-line-points]'),"Nu-labelpolish controleert ook tegen de vloeiende lijn.");
 assert(runtime.includes('!el.hasAttribute("data-mobile-temp-label")&&!el.hasAttribute("data-mobile-temp-marker")&&/Bodoni/i'),"Randpolish mag de geplaatste lijnlabels en markeringen niet verschuiven.");

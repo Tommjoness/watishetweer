@@ -485,7 +485,15 @@ function bouwMobieleTemperatuurRij(){
      alle bestaande tekst (nu-label, asgetallen, regenperiodes); past ze nergens,
      dan vervalt het label liever dan te botsen. */
   const vast=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")).map(svgTekstBoxUitElement).filter(Boolean);
-  if(Number.isFinite(nuX))vast.push({x:nuX-3,y:top,width:6,height:bottom-top});
+  /* Plafond: een label mag boven de plotrand uitsteken tot net onder de dag/
+     nachtband. Anders valt de temperatuur bij een piek vlak onder de bovenste
+     asgrens onder de lijn, waar ze niet meer bij haar punt hoort. Alleen wat
+     duidelijk boven de plot ligt telt als band, niet de bovenste rasterlijn. */
+  const bandOnderkanten=[...svg.querySelectorAll("rect,line")].filter(el=>!el.closest("#scrub")).map(el=>el.tagName.toLowerCase()==="rect"
+    ?Number(el.getAttribute("y"))+Number(el.getAttribute("height"))
+    :Math.max(Number(el.getAttribute("y1")),Number(el.getAttribute("y2")))).filter(b=>Number.isFinite(b)&&b<top-4);
+  const plafond=(bandOnderkanten.length?Math.max(...bandOnderkanten):0)+3;
+  if(Number.isFinite(nuX))vast.push({x:nuX-3,y:plafond,width:6,height:bottom-plafond});
   /* Links van het eerste uur staan de asgetallen; een label daar leest als asgetal. */
   const asKolom=Number(g.x(0))-4;
   const lijnen=[...svg.querySelectorAll("path[data-mobile-line-points]")]
@@ -493,7 +501,7 @@ function bouwMobieleTemperatuurRij(){
   const fs=MOBIEL_LIJNLABEL_GROOTTE;
   const plaats=(tekst,kandidaten,schuif)=>{
     for(const [x0,y,anker] of kandidaten){
-      if(y-fs<top+2||y>bottom-3)continue;
+      if(y-fs<plafond||y>bottom-3)continue;
       let box=geschatteSvgTekstBox(tekst,x0,y,anker,fs);if(!box)continue;
       let x=x0;
       if(box.x<marge)x+=marge-box.x;else if(box.x+box.width>W-marge)x-=box.x+box.width-(W-marge);
@@ -511,15 +519,17 @@ function bouwMobieleTemperatuurRij(){
     vast.push(pos.box);return el;
   };
 
-  /* 1. Piek en dal gaan voor: eerst recht boven (piek) of onder (dal) het punt,
-     dan licht verschoven, dan links of rechts ernaast. Alleen de waarde: "min 3°"
-     leest als min 3 graden (-3°); stip en plaats zeggen al wat het is. */
+  /* 1. Piek en dal gaan voor. Iedere temperatuur staat BOVEN haar punt, ook het
+     dal: onder de lijn leest een getal als de temperatuur van het vlak eronder,
+     niet van dat punt. Eerst recht erboven, dan licht verschoven, dan schuin
+     erboven, dan hoger (een smal dal wordt naar boven toe breder). Alleen de
+     waarde: "min 3°" leest als min 3 graden (-3°); de stip zegt al wat het is. */
   const getoond=[],vervallen=[],markeringen=[];
   mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null}).forEach(m=>{
     const px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
-    const boven=py-9,onder=py+18,naast=py+4;
     const verticaal=y=>[[px,y,"middle"],[px+14,y,"middle"],[px-14,y,"middle"]];
-    const pos=plaats(m.waarde+"°",[...verticaal(m.type==="max"?boven:onder),[px+7,naast,"start"],[px-7,naast,"end"],...verticaal(m.type==="max"?onder:boven)],false);
+    const pos=plaats(m.waarde+"°",[...verticaal(py-9),...verticaal(py-15),[px+7,py-5,"start"],[px-7,py-5,"end"],...verticaal(py-21),...verticaal(py-27),
+      [px,py-33,"middle"],[px,py-39,"middle"],[px,py-45,"middle"]],false);
     if(!pos){vervallen.push(m.type);return;}
     const dot=document.createElementNS(SVG_NS,"circle");
     dot.setAttribute("cx",String(px));dot.setAttribute("cy",String(py));dot.setAttribute("r","2.2");dot.setAttribute("fill",ink);
@@ -542,10 +552,11 @@ function bouwMobieleTemperatuurRij(){
     if(markering){markering.el.setAttribute("data-mobile-temp-covers-anchor",String(i));gedekt.push(i);zonderPunt();return;}
     if(nuTekst&&Number.isFinite(nuIndex)&&Math.abs(i-nuIndex)<1.5){nuTekst.setAttribute("data-mobile-temp-anchor-index",String(i));gedekt.push(i);zonderPunt();return;}
     const tekst=Math.round(Number(g.T[i]))+"°";
-    /* Boven het punt; loopt de lijn daar steil, dan schuin ernaast aan de open
-       kant (stijgend: linksboven, dalend: rechtsboven); anders eronder. */
+    /* Altijd boven het punt. Loopt de lijn daar steil, dan schuin erboven aan de
+       open kant (stijgend: linksboven, dalend: rechtsboven), en anders hoger: in
+       een smal, steil dal is er pas ruimte waar het dal naar boven breder wordt. */
     const pos=plaats(tekst,[[x,y-9,"middle"],[x,y-15,"middle"],[x+6,y-5,"start"],[x-6,y-5,"end"],[x+8,y-9,"middle"],[x-8,y-9,"middle"],
-      [x,y+19,"middle"],[x,y+25,"middle"],[x+6,y+15,"start"],[x-6,y+15,"end"]],true);
+      [x,y-21,"middle"],[x+10,y-14,"start"],[x-10,y-14,"end"],[x,y-27,"middle"],[x,y-33,"middle"],[x,y-39,"middle"],[x,y-45,"middle"]],true);
     if(!pos){ontbrekend.push(i);zonderPunt();return;}
     if(!punt||!punt.isConnected){
       punt=puntSjabloon?puntSjabloon.cloneNode(false):document.createElementNS(SVG_NS,"circle");
