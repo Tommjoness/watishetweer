@@ -58,19 +58,10 @@ assert.deepEqual(zonVerwachting(rondZonsopkomst).op,["06:19"],"zonder live overr
 assert.deepEqual(zonVerwachting(rondZonsopkomst,"2026-08-28T06:22").op,["06:20"],"met live lokale horizon verwacht de monitor na zonsopkomst alleen de volgende opkomst");
 assert.deepEqual(zonVerwachting(rondZonsopkomst,"2026-08-28T06:22").onder,["19:31"],"met live lokale horizon blijft de komende zonsondergang van vandaag zichtbaar");
 
-const themaZon={
-  current:{time:"2026-09-14T06:57",is_day:1},
-  daily:{
-    time:["2026-09-14"],
-    sunrise:["2026-09-14T06:58"],
-    sunset:["2026-09-14T19:02"]
-  }
-};
-assert.equal(verwachtThema(themaZon,"2026-09-14T06:57"),"donker","lokale zonsgrens wint vóór zonsopkomst van een reeds lichte providerflag");
-assert.equal(verwachtThema(themaZon,"2026-09-14T06:58"),"licht","thema schakelt exact op lokale zonsopkomst naar licht");
-assert.equal(verwachtThema(themaZon,"2026-09-14T19:01"),"licht","thema blijft licht tot vlak vóór lokale zonsondergang");
-assert.equal(verwachtThema(themaZon,"2026-09-14T19:02"),"donker","thema schakelt exact op lokale zonsondergang naar donker");
-assert.equal(verwachtThema({current:{time:"2026-12-21T12:00",is_day:0},daily:{time:["2026-12-21"],sunrise:[null],sunset:[null]}}),"donker","ontbrekende/polaire zonsdata valt terug op current.is_day");
-assert.equal(verwachtThema({current:{time:"2026-06-21T12:00",is_day:1},daily:{time:["2026-06-21"],sunrise:["2026-06-21T00:00"],sunset:["2026-06-21T00:00"]}}),"licht","ongeldige 00:00/00:00-sentinel valt terug op current.is_day");
+assert.equal(verwachtThema("auto","licht"),"licht","Auto volgt een licht systeem");
+assert.equal(verwachtThema("auto","donker"),"donker","Auto volgt een donker systeem, ook overdag");
+assert.equal(verwachtThema("licht","donker"),"licht","expliciete Licht-keuze wint van het systeem");
+assert.equal(verwachtThema("donker","licht"),"donker","expliciete Donker-keuze wint van het systeem");
+assert.equal(verwachtThema("auto",undefined),"licht","onbekend systeemschema valt terug op licht");
 
 console.log("production-source-truth: bron-naar-UI-contracten OK");

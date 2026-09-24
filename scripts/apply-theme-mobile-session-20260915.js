@@ -4,7 +4,6 @@ const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
-const {autoThemaOpZon}=require("./theme-solar.js");
 
 const OUT=path.join(__dirname,"..","public");
 const STYLE_ID="wiw-theme-mobile-session-20260915";
@@ -316,13 +315,21 @@ const CSS=`
 }
 `;
 
-const autoThemaRuntime=autoThemaOpZon.toString();
 const WEATHER_RUNTIME=`${THEMA_START}
 const THEMA_KEUZES=["auto","licht","donker"];
 const THEMA_SESSIE_KEY=${JSON.stringify(THEMA_SESSIE_KEY)};
 const THEMA_LEGACY_KEY=${JSON.stringify(THEMA_LEGACY_KEY)};
 const THEMA_ACTIEF_KEY="weerbriefing.actiefThema";
-${autoThemaRuntime}
+/* Auto volgt de licht/donker-instelling van het apparaat, zoals bezoekers dat
+   van andere sites en apps verwachten. Eerder schakelde Auto op zonsopkomst en
+   -ondergang van de gekozen plaats; iemand met donkere modus op de telefoon
+   kreeg overdag dan toch een lichte site. */
+const THEMA_SYSTEEM_QUERY=typeof matchMedia==="function"?matchMedia("(prefers-color-scheme: dark)"):null;
+/* Iedere keer vers opvragen: WebKit werkt .matches van een eerder gemaakte
+   MediaQueryList pas bij de volgende renderronde bij, zodat Auto na een
+   systeemwissel anders nog even het oude thema kiest. De vaste query blijft
+   alleen voor de change-listener. */
+function themaSysteem(){return typeof matchMedia==="function"&&matchMedia("(prefers-color-scheme: dark)").matches?"donker":"licht";}
 try{localStorage.removeItem(THEMA_LEGACY_KEY);}catch(e){}
 function themaKeuze(){
   let keuze="auto";
@@ -344,7 +351,7 @@ function themaKeuzeOpslaan(keuze){
 }
 function themaActief(keuze){
   if(keuze==="licht"||keuze==="donker")return keuze;
-  return autoThemaOpZon(S.d,weatherNowActueleLokaleTijd());
+  return themaSysteem();
 }
 function themaStatusBijwerken(keuze,actief){
   const groep=document.getElementById("thema");
@@ -401,6 +408,11 @@ if(themaGroep&&themaAutoKnop&&themaSchakelaar){
     }else if(e.key==="End"){e.preventDefault();opties[opties.length-1].focus();}
   });
 }
+if(THEMA_SYSTEEM_QUERY){
+  const volgSysteem=()=>{if(themaKeuze()==="auto")themaToepassen();};
+  if(typeof THEMA_SYSTEEM_QUERY.addEventListener==="function")THEMA_SYSTEEM_QUERY.addEventListener("change",volgSysteem);
+  else if(typeof THEMA_SYSTEEM_QUERY.addListener==="function")THEMA_SYSTEEM_QUERY.addListener(volgSysteem);
+}
 themaToepassen();`;
 
 const HUB_RUNTIME=`(()=>{"use strict";
@@ -443,6 +455,9 @@ function patchWeatherHtml(bron,rel){
   const groep='<div id="thema" class="wiw-theme-control" role="group" aria-label="Weergave kiezen">';
   if(tel(html,groep)!==1)throw new Error(rel+": verwachte themagroep ontbreekt of is dubbel.");
   html=html.replace(groep,'<div id="thema" class="wiw-theme-control wiw-theme-segmented-20260915" role="group" aria-label="Weergave kiezen">');
+  const autoLabel='aria-label="Automatisch (dag/nacht)" title="Automatisch (dag/nacht)"';
+  if(tel(html,autoLabel)>1)throw new Error(rel+": Auto-label is dubbel.");
+  html=html.replace(autoLabel,'aria-label="Automatisch (volgt je systeem)" title="Automatisch: volgt de licht/donker-instelling van je apparaat"');
   const s=html.indexOf(THEMA_START),e=html.indexOf(THEMA_EIND);
   if(s<0||e<=s)throw new Error(rel+": themaruntime-ankers ontbreken of staan in verkeerde volgorde.");
   if(html.indexOf(THEMA_START,s+1)!==-1||html.indexOf(THEMA_EIND,e+1)!==-1)throw new Error(rel+": themaruntime-ankers zijn dubbel.");
@@ -457,7 +472,9 @@ function valideerWeatherHtml(html,rel){
   if(!segment.includes("sessionStorage.getItem(THEMA_SESSIE_KEY)")||!segment.includes("sessionStorage.setItem(THEMA_SESSIE_KEY"))throw new Error(rel+": handmatige voorkeur is niet sessiegebonden.");
   if(segment.includes('ls.get("weerbriefing.thema"'))throw new Error(rel+": oude localStorage-voorkeur wordt nog gelezen.");
   if(!segment.includes("localStorage.removeItem(THEMA_LEGACY_KEY)"))throw new Error(rel+": oude persistente voorkeur wordt niet geneutraliseerd.");
-  if(!segment.includes("return autoThemaOpZon(S.d,weatherNowActueleLokaleTijd());"))throw new Error(rel+": Auto gebruikt niet langer locatiegebonden zonetijden.");
+  if(!segment.includes('matchMedia("(prefers-color-scheme: dark)")')||!segment.includes("return themaSysteem();"))throw new Error(rel+": Auto volgt de systeeminstelling niet.");
+  if(!segment.includes('addEventListener("change",volgSysteem)'))throw new Error(rel+": Auto reageert niet op een wisseling van de systeeminstelling.");
+  if(String(html).includes("Automatisch (dag/nacht)"))throw new Error(rel+": Auto-label beschrijft nog het oude dag/nachtgedrag.");
   for(const marker of [
     'grid-template-columns:repeat(2,minmax(0,1fr))!important',
     'grid-column:1 / -1!important',

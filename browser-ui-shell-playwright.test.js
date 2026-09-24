@@ -66,10 +66,25 @@ async function check(type,naam,breedte){
 
     await page.evaluate(()=>{S.d={current:{is_day:1}};themaKeuzeOpslaan("auto");themaToepassen();});
     const auto=await page.evaluate(()=>{const k=document.getElementById("thema"),a=document.getElementById("thema-auto"),s=document.getElementById("thema-switch");return {thema:document.documentElement.dataset.thema,keuze:k.dataset.actieveThemaKeuze,autoPressed:a.getAttribute("aria-pressed"),checked:s.getAttribute("aria-checked"),sessie:JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie")||'"auto"'),opgeslagen:ls.get("weerbriefing.thema",""),actiefBewaar:ls.get("weerbriefing.actiefThema","")};});
-    assert.deepEqual(auto,{thema:"licht",keuze:"auto",autoPressed:"true",checked:"false",sessie:"auto",opgeslagen:"auto",actiefBewaar:"licht"},naam+": Auto-reset volgt de actuele dag/nachtuitkomst zonder handmatige voorkeur");
+    assert.deepEqual(auto,{thema:"licht",keuze:"auto",autoPressed:"true",checked:"false",sessie:"auto",opgeslagen:"auto",actiefBewaar:"licht"},naam+": Auto-reset volgt de systeeminstelling (licht) zonder handmatige voorkeur");
 
-    const oudRood=await page.evaluate(()=>{ls.set("weerbriefing.thema","rood");S.d={current:{is_day:0}};themaToepassen();const k=document.getElementById("thema"),a=document.getElementById("thema-auto"),s=document.getElementById("thema-switch");return {sessie:JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie")||'"auto"'),opgeslagen:ls.get("weerbriefing.thema",""),actief:document.documentElement.dataset.thema,actiefBewaar:ls.get("weerbriefing.actiefThema",""),keuze:k.dataset.actieveThemaKeuze,autoPressed:a.getAttribute("aria-pressed"),checked:s.getAttribute("aria-checked"),roodOptie:!!document.querySelector('[data-thema-keuze="rood"]'),menu:!!document.getElementById("themamenu")};});
-    assert.deepEqual(oudRood,{sessie:"auto",opgeslagen:"auto",actief:"donker",actiefBewaar:"donker",keuze:"auto",autoPressed:"true",checked:"true",roodOptie:false,menu:false},naam+": oude rode localStorage-voorkeur wordt genegeerd en veilig overschreven door de sessiekeuze Auto");
+    /* Auto volgt de systeeminstelling: met een donker systeem wordt Auto donker,
+       ook als de gekozen plaats het overdag heeft. */
+    await page.emulateMedia({colorScheme:"dark"});
+    /* WebKit geeft de nieuwe mediawaarde asynchroon door; wacht tot de pagina
+       het donkere systeem ziet voordat Auto wordt toegepast. */
+    await page.waitForFunction(()=>matchMedia("(prefers-color-scheme: dark)").matches,null,{timeout:3000});
+    /* Een change-event op een bestaande MediaQueryList volgt pas in de volgende
+       renderronde. Laat die eerst verlopen: schakelt de test binnen hetzelfde
+       frame terug naar licht, dan ziet de browser geen wijziging en blijft het
+       live-event uit, iets wat bij een echte systeemwissel niet voorkomt. */
+    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+    const oudRood=await page.evaluate(()=>{ls.set("weerbriefing.thema","rood");S.d={current:{is_day:1}};themaToepassen();const k=document.getElementById("thema"),a=document.getElementById("thema-auto"),s=document.getElementById("thema-switch");return {sessie:JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie")||'"auto"'),opgeslagen:ls.get("weerbriefing.thema",""),actief:document.documentElement.dataset.thema,actiefBewaar:ls.get("weerbriefing.actiefThema",""),keuze:k.dataset.actieveThemaKeuze,autoPressed:a.getAttribute("aria-pressed"),checked:s.getAttribute("aria-checked"),roodOptie:!!document.querySelector('[data-thema-keuze="rood"]'),menu:!!document.getElementById("themamenu")};});
+    assert.deepEqual(oudRood,{sessie:"auto",opgeslagen:"auto",actief:"donker",actiefBewaar:"donker",keuze:"auto",autoPressed:"true",checked:"true",roodOptie:false,menu:false},naam+": oude rode localStorage-voorkeur wordt genegeerd en veilig overschreven door de sessiekeuze Auto; gemeten "+JSON.stringify(oudRood));
+    await page.emulateMedia({colorScheme:"light"});
+    const systeemLicht=await page.waitForFunction(()=>document.documentElement.dataset.thema==="licht",null,{timeout:3000}).then(()=>true,()=>false);
+    assert.equal(systeemLicht,true,naam+": Auto schakelt live mee als het systeem van donker naar licht gaat");
+    assert.equal(await page.evaluate(()=>document.getElementById("thema-auto").getAttribute("aria-label")),"Automatisch (volgt je systeem)",naam+": Auto-knop legt uit dat hij het systeem volgt");
     assert.deepEqual(errors,[],naam+": geen page errors");
   }finally{await browser.close();}
 }

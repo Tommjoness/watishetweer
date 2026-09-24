@@ -2944,6 +2944,16 @@ q.addEventListener("keydown",e=>{
   else if(e.key==="Enter"&&zoekIndex>=0){e.preventDefault();zoekKies(opties[zoekIndex]);}
   else if(e.key==="Escape"){zoekPanelenSluit();zoekIndex=-1;}
 });
+/* Het zoekveld toont de huidige plaats. Wie erin tikt, wil meestal een andere
+   plaats zoeken: selecteer dan de hele naam, zodat typen hem vervangt in plaats
+   van erachter te plakken ("UtrechtUtre"). Bij een klik of tik zet de browser
+   na de focus nog de cursor op de klikplek; de eerste click na de focus komt
+   daarna en selecteert daarom nog één keer. */
+let zoekVeldNetGefocust=false;
+const zoekVeldSelecteer=()=>{if(document.activeElement!==q)return;try{q.setSelectionRange(0,q.value.length);}catch(e){q.select();}};
+q.addEventListener("focus",()=>{zoekVeldNetGefocust=true;zoekVeldSelecteer();});
+q.addEventListener("click",()=>{if(!zoekVeldNetGefocust)return;zoekVeldNetGefocust=false;zoekVeldSelecteer();});
+q.addEventListener("blur",()=>{zoekVeldNetGefocust=false;});
 res.addEventListener("click",e=>zoekKies(e.target.closest("div[data-lat]")));
 document.addEventListener("click",e=>{if(!e.target.closest(".tools"))zoekPanelenSluit();});
 

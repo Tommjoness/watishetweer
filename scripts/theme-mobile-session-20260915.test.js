@@ -38,6 +38,9 @@ assert(WEATHER_RUNTIME.includes("localStorage.removeItem(THEMA_LEGACY_KEY)"),"ou
 assert(!WEATHER_RUNTIME.includes('ls.get("weerbriefing.thema"'),"weather runtime mag oude permanente voorkeur niet lezen");
 assert(HUB_RUNTIME.includes("sessionStorage.getItem(SESSIE)"),"hub leest niet uit dezelfde sessievoorkeur");
 assert(HUB_RUNTIME.includes("localStorage.removeItem(PREF)"),"hub neutraliseert oude permanente voorkeur niet");
+assert(WEATHER_RUNTIME.includes('matchMedia("(prefers-color-scheme: dark)")')&&WEATHER_RUNTIME.includes("return themaSysteem();"),"Auto volgt de systeeminstelling niet");
+assert(!WEATHER_RUNTIME.includes("autoThemaOpZon"),"Auto mag niet meer op zonsopkomst/-ondergang schakelen");
+assert(WEATHER_RUNTIME.includes('addEventListener("change",volgSysteem)'),"Auto reageert niet live op een wisseling van de systeeminstelling");
 new vm.Script(WEATHER_RUNTIME,{filename:"weather-theme-runtime"});
 new vm.Script(HUB_RUNTIME,{filename:"hub-theme-runtime"});
 
