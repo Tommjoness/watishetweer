@@ -485,7 +485,15 @@ function bouwMobieleTemperatuurRij(){
      alle bestaande tekst (nu-label, asgetallen, regenperiodes); past ze nergens,
      dan vervalt het label liever dan te botsen. */
   const vast=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")).map(svgTekstBoxUitElement).filter(Boolean);
-  if(Number.isFinite(nuX))vast.push({x:nuX-3,y:top,width:6,height:bottom-top});
+  /* Plafond: een label mag boven de plotrand uitsteken tot net onder de dag/
+     nachtband. Anders valt de temperatuur bij een piek vlak onder de bovenste
+     asgrens onder de lijn, waar ze niet meer bij haar punt hoort. Alleen wat
+     duidelijk boven de plot ligt telt als band, niet de bovenste rasterlijn. */
+  const bandOnderkanten=[...svg.querySelectorAll("rect,line")].filter(el=>!el.closest("#scrub")).map(el=>el.tagName.toLowerCase()==="rect"
+    ?Number(el.getAttribute("y"))+Number(el.getAttribute("height"))
+    :Math.max(Number(el.getAttribute("y1")),Number(el.getAttribute("y2")))).filter(b=>Number.isFinite(b)&&b<top-4);
+  const plafond=(bandOnderkanten.length?Math.max(...bandOnderkanten):0)+3;
+  if(Number.isFinite(nuX))vast.push({x:nuX-3,y:plafond,width:6,height:bottom-plafond});
   /* Links van het eerste uur staan de asgetallen; een label daar leest als asgetal. */
   const asKolom=Number(g.x(0))-4;
   const lijnen=[...svg.querySelectorAll("path[data-mobile-line-points]")]
@@ -493,7 +501,7 @@ function bouwMobieleTemperatuurRij(){
   const fs=MOBIEL_LIJNLABEL_GROOTTE;
   const plaats=(tekst,kandidaten,schuif)=>{
     for(const [x0,y,anker] of kandidaten){
-      if(y-fs<top+2||y>bottom-3)continue;
+      if(y-fs<plafond||y>bottom-3)continue;
       let box=geschatteSvgTekstBox(tekst,x0,y,anker,fs);if(!box)continue;
       let x=x0;
       if(box.x<marge)x+=marge-box.x;else if(box.x+box.width>W-marge)x-=box.x+box.width-(W-marge);
