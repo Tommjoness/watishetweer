@@ -89,7 +89,11 @@ const PANEL_HOOGTE_NIEUW=`  /* Hoogtefiltering is reversibel: de eerste meting b
     const laatste=zichtbareRijen[zichtbareRijen.length-1];
     let laatsteRect=laatste.getBoundingClientRect();
     let rest=Math.max(0,grens-laatsteRect.bottom-0.5);
-    let extraPerZijde=Math.min(4.5-rijPadAanpassing,rest/(zichtbareRijen.length*2));
+    /* De rest is altijd kleiner dan één rij, anders paste er nog een rij bij.
+       Het plafond groeit daarom mee met de rijhoogte (grotere tekst, weinig
+       rijen) en blijft minstens de oorspronkelijke 4,5px per zijde. */
+    const maxExtra=Math.max(4.5,laatsteRect.height/(zichtbareRijen.length*2)+0.5);
+    let extraPerZijde=Math.min(maxExtra-rijPadAanpassing,rest/(zichtbareRijen.length*2));
     if(extraPerZijde>0.01){
       rijPadAanpassing+=extraPerZijde;
       aside.style.setProperty("--wiw-hour-row-pad-extra",rijPadAanpassing.toFixed(3)+"px");
@@ -99,8 +103,8 @@ const PANEL_HOOGTE_NIEUW=`  /* Hoogtefiltering is reversibel: de eerste meting b
       document.documentElement.getBoundingClientRect();
       laatsteRect=laatste.getBoundingClientRect();
       rest=Math.max(0,grens-laatsteRect.bottom-0.5);
-      if(rest>0.25&&rijPadAanpassing<4.5){
-        rijPadAanpassing=Math.min(4.5,rijPadAanpassing+rest/(zichtbareRijen.length*2));
+      if(rest>0.25&&rijPadAanpassing<maxExtra){
+        rijPadAanpassing=Math.min(maxExtra,rijPadAanpassing+rest/(zichtbareRijen.length*2));
         aside.style.setProperty("--wiw-hour-row-pad-extra",rijPadAanpassing.toFixed(3)+"px");
       }
     }
