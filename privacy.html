@@ -24,14 +24,22 @@
 }catch(e){}})();
 </script>
 <style>
+@font-face{font-family:"Instrument Sans";src:url(/instrument-sans-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}@font-face{font-family:"Instrument Sans";src:url(/instrument-sans-latin-500-normal.woff2) format("woff2");font-weight:500 700;font-display:swap}@font-face{font-family:"Bodoni Moda";src:url(/bodoni-moda-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
 :root{--paper:#f4f5f3;--sheet:#fff;--ink:#12211c;--ink-70:#41514b;--muted:#65716c;--rule:#dce1de}
 html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70:#b8b8b8;--muted:#999;--rule:#2a2a2a}
-body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 system-ui,-apple-system,sans-serif;padding:32px 20px}.kaart{max-width:760px;margin:auto;background:var(--sheet);border:1px solid var(--rule);padding:32px}h1{font:400 36px/1.15 Georgia,serif;margin:0 0 24px}h2{font-size:17px;margin-top:28px}a{color:inherit}button{background:transparent;color:var(--ink);border:1px solid var(--ink-70);padding:10px 14px;cursor:pointer;font:inherit}.klein{color:var(--muted);font-size:14px}#wisstatus,[data-ga4-consent-status]{margin-left:10px}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 "Instrument Sans",system-ui,-apple-system,sans-serif;padding:32px 20px}.kaart{max-width:760px;margin:auto;background:var(--sheet);border:1px solid var(--rule);padding:32px}h1{font:400 36px/1.15 "Bodoni Moda",Georgia,serif;margin:0 0 24px}h2{font-size:17px;margin-top:28px}a{color:inherit}button{background:transparent;color:var(--ink);border:1px solid var(--ink-70);padding:10px 14px;cursor:pointer;font:inherit}.klein{color:var(--muted);font-size:14px}#wisstatus,[data-ga4-consent-status]{margin-left:10px}
+.kort{margin:0 0 8px;padding:16px 18px 16px 34px;border:1px solid var(--rule);color:var(--ink)}.kort li{margin:4px 0}
 </style>
 </head>
 <body><main class="kaart">
 <p><a href="/">← Terug naar het weer</a></p>
 <h1>Privacy & gegevens</h1>
+<ul class="kort" aria-label="In het kort">
+<li>Geen account, geen advertenties en geen advertentietracking.</li>
+<li>Je actuele locatie wordt alleen gebruikt als je zelf op <b>Mijn locatie</b> kiest. In je browser en in een deellink staat je positie afgerond op ongeveer honderd meter.</li>
+<li>Bezoekstatistieken werken zonder cookies. Onze productstatistieken (PostHog, EU) krijgen geen zoektermen, plaatsnamen of coördinaten.</li>
+<li>Google Analytics staat alleen aan als je daar zelf toestemming voor geeft, en is hieronder altijd weer uit te zetten.</li>
+</ul>
 <p><b>watishetweer.nl</b> heeft geen account of advertentietracking. De site verwerkt locatiegegevens om het weer voor een gekozen plaats te tonen en gebruikt privacygerichte bezoekstatistieken om te begrijpen of de site technisch en praktisch goed werkt.</p>
 <h2>Je locatie</h2>
 <p>Je browser vraagt pas om je actuele locatie nadat je zelf op <b>Mijn locatie</b> kiest. De coördinaten worden gebruikt voor weerdata, een plaatsnaam en, waar beschikbaar, officiële weerwaarschuwingen. In lokale opslag en in de deel-URL wordt de positie afgerond op drie decimalen (ongeveer honderd meter); tijdens de actuele aanvraag kan de browser nauwkeuriger coördinaten gebruiken.</p>

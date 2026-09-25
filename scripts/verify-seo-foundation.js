@@ -78,7 +78,7 @@ if(JSON.stringify(website.alternateName)!==JSON.stringify(SEO.alternateNames))th
 
 if(!about.includes("<title>Over watishetweer.nl</title>")||!about.includes(`<link rel="canonical" href="${SEO.aboutUrl}">`)||!about.includes("<h1>Over watishetweer.nl</h1>"))throw new Error("Over-pagina mist title, canonical of zichtbare merk-H1.");
 if(!about.includes('<link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">'))throw new Error("Over-pagina mist expliciet favicon.");
-if(!about.includes("watishetweer.nl</span> is de vaste merk- en sitenaam")||!about.includes('href="/privacy.html"'))throw new Error("Over-pagina mist eenduidige merkduiding of privacyverbinding.");
+if(!about.includes('<span class="merk">watishetweer.nl</span> brengt')||about.includes("Merk en sitenaam:")||!about.includes('href="/privacy.html"'))throw new Error("Over-pagina mist eenduidige merkduiding of privacyverbinding.");
 if(about.includes("Productnaam in de interface"))throw new Error("Over-pagina publiceert de generieke vraag nog als tweede officiële productnaam.");
 const aboutLd=[...about.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
 if(aboutLd.length!==1)throw new Error("Over-pagina moet exact één JSON-LD-blok bevatten.");
