@@ -56,7 +56,7 @@ async function open(browser,root,w,h){
   const root="http://127.0.0.1:"+server.address().port;
   const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
   try{
-    for(const [w,h] of [[390,844],[1440,900]]){
+    for(const [w,h] of [[320,700],[390,844],[1440,900]]){
       const {context,page,fouten}=await open(browser,root,w,h);
       try{
         const m=await page.evaluate(()=>{
@@ -71,7 +71,16 @@ async function open(browser,root,w,h){
           const vandaag=hourly.time.findIndex(t=>t.startsWith("2026-07-22T00:00"));
           const verwacht=uit.map(r=>{const i=hourly.time.indexOf("2026-07-22T"+r.tijd,vandaag);return i<0?null:hourly.precipitation[i+1];});
           const samenvatting=(document.getElementById("final-rain-summary")?.textContent||"").trim();
-          return {uit,verwacht,samenvatting};
+          const geo=S.geo,plotBodem=Number(geo.pt)+Number(geo.ih);
+          const staven=[...document.querySelectorAll("#chart g[data-regenstaven] path.regenstaaf")].map(p=>{const b=p.getBBox(),cs=getComputedStyle(p);return {uur:String(p.getAttribute("data-uur")).slice(11,16),mm:Number(p.getAttribute("data-mm")),top:b.y,bodem:b.y+b.height,hoogte:b.height,breed:b.width,vulling:cs.fill,dekking:cs.fillOpacity};});
+          const groep=document.querySelector("#chart g[data-regenstaven]"),lijnen=[...document.querySelectorAll("#chart polyline,#chart path[data-desktop-temp-area],#chart path[data-mobile-temp-area]")];
+          const stavenEerst=!!groep&&lijnen.length>0&&lijnen.every(l=>groep.compareDocumentPosition(l)&Node.DOCUMENT_POSITION_FOLLOWING);
+          const verwachtMm=staven.map(st=>{const i=hourly.time.indexOf("2026-07-22T"+st.uur,vandaag);return i<0?null:hourly.precipitation[i+1];});
+          const bb=e=>{const b=e.getBBox();return {x:b.x,y:b.y,w:b.width,h:b.height};};
+          const mmLabels=[...document.querySelectorAll("#chart g[data-regenstaaf-mm] text.regenstaaf-mm")].map(t=>({uur:String(t.getAttribute("data-uur")).slice(11,16),tekst:(t.textContent||"").trim(),box:bb(t)}));
+          const staafBoxen=[...document.querySelectorAll("#chart g[data-regenstaven] path.regenstaaf")].map(p=>({uur:String(p.getAttribute("data-uur")).slice(11,16),box:bb(p),vak:geo.x(1)-geo.x(0)}));
+          const andereTeksten=[...document.querySelectorAll("#chart text")].filter(t=>!t.closest("g[data-regenstaaf-mm]")&&!t.closest("#scrub")&&t.getClientRects().length&&getComputedStyle(t).display!=="none").map(t=>({tekst:(t.textContent||"").trim().slice(0,12),box:bb(t)})).filter(x=>x.box.w>0);
+          return {uit,verwacht,samenvatting,staven,stavenEerst,verwachtMm,plotBodem,plotHoogte:Number(geo.ih),mmLabels,staafBoxen,andereTeksten,smal:Number(geo.W)<500};
         });
         assert(m.uit.length>=5,w+"px: te weinig uurregels: "+JSON.stringify(m.uit));
         m.uit.forEach((r,k)=>{if(r.mm===null||m.verwacht[k]==null)return;assert(Math.abs(r.mm-Number(m.verwacht[k]))<0.051,w+"px: rij "+r.tijd+" toont "+r.mm+" mm, maar het uur "+r.tijd+"-"+(Number(r.tijd.slice(0,2))+1)+":00 heeft "+m.verwacht[k]+" mm");});
@@ -79,10 +88,42 @@ async function open(browser,root,w,h){
         assert(start,w+"px: samenvatting noemt geen regenperiode: "+m.samenvatting);
         const eersteNat=m.uit.find(r=>r.mm!==null&&r.mm>=0.1);
         assert(eersteNat&&eersteNat.tijd===start[1],w+"px: eerste natte uurregel ("+(eersteNat&&eersteNat.tijd)+") valt niet samen met het begin van de samenvatting ("+start[1]+")");
+        /* Neerslagstaafjes: één per nat uur binnen de regenperiode uit de
+           samenvatting, met de mm van dat uur, op de bodem van de grafiek,
+           hoogte naar hoeveelheid en achter de temperatuurlijn. */
+        const periode=/(\d{2}:\d{2})\s*[–-]\s*(\d{2}:\d{2})/.exec(m.samenvatting);
+        const uren=m.staven.map(st=>st.uur),laatste=uren[uren.length-1];
+        assert(periode&&uren[0]===periode[1]&&laatste&&String(Number(laatste.slice(0,2))+1).padStart(2,"0")+":00"===periode[2],w+"px: staafjes ("+uren.join(",")+") vallen niet samen met de regenperiode "+(periode&&periode[0]));
+        assert.equal(m.staven.length,5,w+"px: verwacht vijf natte uren als staafje: "+JSON.stringify(uren));
+        m.staven.forEach((st,k)=>{
+          assert(Math.abs(st.mm-Number(m.verwachtMm[k]))<1e-9,w+"px: staafje "+st.uur+" toont "+st.mm+" mm, het uur "+st.uur+" heeft "+m.verwachtMm[k]+" mm");
+          assert(Math.abs(st.bodem-m.plotBodem)<=0.6,w+"px: staafje "+st.uur+" staat niet op de bodem van de grafiek: "+JSON.stringify(st));
+          assert(st.hoogte>=2&&st.hoogte<=m.plotHoogte*0.33+0.5,w+"px: staafje "+st.uur+" valt buiten het onderste derde deel: "+JSON.stringify(st));
+          assert(st.breed>=3&&st.breed<=16.01,w+"px: staafje "+st.uur+" heeft een onlogische breedte: "+JSON.stringify(st));
+          assert(st.vulling!=="none"&&Number(st.dekking)>=0.3&&Number(st.dekking)<=0.7,w+"px: staafje "+st.uur+" is niet zichtbaar of te fel: "+JSON.stringify(st));
+        });
+        const volgorde=[...m.staven].sort((a,b)=>a.mm-b.mm);
+        for(let k=1;k<volgorde.length;k++)assert(volgorde[k].hoogte>=volgorde[k-1].hoogte,w+"px: hoger staafje hoort bij meer neerslag: "+JSON.stringify(volgorde));
+        assert(m.stavenEerst,w+"px: neerslagstaafjes liggen niet achter de temperatuurlijn");
+        /* Hoeveelheid per staafje: getal boven het eigen staafje, binnen het
+           uurvak, zonder botsing met elkaar of met andere grafiekteksten. */
+        const nl1=v=>v>=10?String(Math.round(v)):Number(v).toFixed(1).replace(".",",");
+        const overlap=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+        assert.equal(m.mmLabels.length,m.staven.length,w+"px: niet ieder staafje heeft een hoeveelheid: "+JSON.stringify(m.mmLabels.map(l=>l.uur)));
+        m.mmLabels.forEach((l,k)=>{
+          const st=m.staafBoxen.find(x=>x.uur===l.uur),waarde=m.staven.find(x=>x.uur===l.uur);
+          assert(st&&waarde,w+"px: hoeveelheid "+l.tekst+" hoort bij geen staafje ("+l.uur+")");
+          assert.equal(l.tekst,nl1(waarde.mm)+(m.smal?"":" mm"),w+"px: staafje "+l.uur+" toont "+l.tekst);
+          const midden=l.box.x+l.box.w/2,staafMidden=st.box.x+st.box.w/2;
+          assert(Math.abs(midden-staafMidden)<=st.vak/2+1,w+"px: hoeveelheid "+l.tekst+" staat niet boven haar staafje ("+midden+" tegen "+staafMidden+")");
+          assert(l.box.y+l.box.h<=st.box.y+1,w+"px: hoeveelheid "+l.tekst+" staat niet boven het staafje");
+          for(const ander of m.mmLabels.slice(k+1))assert(!overlap(l.box,ander.box),w+"px: hoeveelheden "+l.tekst+" en "+ander.tekst+" overlappen");
+          for(const t of m.andereTeksten)assert(!overlap(l.box,t.box),w+"px: hoeveelheid "+l.tekst+" botst met grafiektekst '"+t.tekst+"'");
+        });
         assert.deepEqual(fouten,[],w+"px: runtimefouten "+fouten.join(" | "));
-        console.log("UURTIJDEN "+w+"px: "+m.uit.length+" rijen tonen het uur dat op hun tijd begint; eerste natte rij "+eersteNat.tijd+" = begin samenvatting.");
+        console.log("UURTIJDEN "+w+"px: "+m.uit.length+" rijen tonen het uur dat op hun tijd begint; eerste natte rij "+eersteNat.tijd+" = begin samenvatting; "+m.staven.length+" neerslagstaafjes op de juiste uren, elk met hun hoeveelheid.");
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
-  console.log("Uurtijden OK op 390 en 1440px.");
+  console.log("Uurtijden OK op 320, 390 en 1440px.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});
