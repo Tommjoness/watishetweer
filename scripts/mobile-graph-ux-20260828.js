@@ -69,19 +69,21 @@ function mobieleGrafiekMarkeringen(temperaturen,maxPunten=24,nu=null){
   const T=Array.isArray(temperaturen)?temperaturen:[],n=Math.min(T.length,Math.max(0,Math.floor(Number(maxPunten)||24)));
   const geldig=[];for(let i=0;i<n;i++)if(Number.isFinite(Number(T[i])))geldig.push(i);
   if(!geldig.length)return [];
-  const r=i=>Math.round(Number(T[i]));
-  const hoog=Math.max(...geldig.map(r)),laag=Math.min(...geldig.map(r));
-  if(hoog===laag)return [];
-  /* Een plateau (gelijke afgeronde waarden achter elkaar) krijgt één markering
-     op het middelste punt van het eerste plateau met die waarde. */
-  const midden=v=>{
-    const begin=geldig.find(i=>r(i)===v);let eind=begin;
-    while(eind+1<n&&Number.isFinite(Number(T[eind+1]))&&r(eind+1)===v)eind++;
+  /* Het echte hoogste en laagste punt, op de ongeronde waarde: 16,4° en 15,6°
+     tonen allebei "16°", maar alleen 15,6° is het laagste punt van de lijn. */
+  const v=i=>Number(T[i]);
+  const hoog=Math.max(...geldig.map(v)),laag=Math.min(...geldig.map(v));
+  if(Math.round(hoog)===Math.round(laag))return [];
+  /* Een plateau (gelijke waarden achter elkaar) krijgt één markering op het
+     middelste punt van het eerste plateau met die waarde. */
+  const midden=w=>{
+    const begin=geldig.find(i=>v(i)===w);let eind=begin;
+    while(eind+1<n&&Number.isFinite(Number(T[eind+1]))&&v(eind+1)===w)eind++;
     return Math.floor((begin+eind)/2);
   };
   const nuIndex=nu&&nu.index!==null&&nu.index!==undefined&&Number.isFinite(Number(nu.index))?Number(nu.index):null;
   const nuWaarde=nu&&nu.waarde!==null&&nu.waarde!==undefined&&Number.isFinite(Number(nu.waarde))?Math.round(Number(nu.waarde)):null;
-  return [{type:"max",waarde:hoog,i:midden(hoog)},{type:"min",waarde:laag,i:midden(laag)}]
+  return [{type:"max",waarde:Math.round(hoog),i:midden(hoog)},{type:"min",waarde:Math.round(laag),i:midden(laag)}]
     /* "nu 20°" maakt een max of min van 20° vlak ernaast overbodig. */
     .filter(m=>!(nuIndex!==null&&nuWaarde===m.waarde&&Math.abs(m.i-nuIndex)<=NU_MARKERING_BEREIK_UREN))
     .sort((a,b)=>a.i-b.i);
@@ -534,14 +536,16 @@ function bouwMobieleTemperatuurRij(){
   /* Iedere temperatuur hoort een tijd onder zich te hebben, en de mobiele uuras
      houdt een vast drie-uursritme. Een markering komt daarom op een anker: op
      het anker zelf of op een anker binnen hetzelfde plateau (zelfde afgeronde
-     waarde). Valt piek of dal tussen de ankers, dan tonen de ankers gewoon hun
+     waarde); daar het anker dat het dichtst bij piek of dal ligt in waarde, dan
+     in tijd. Valt piek of dal tussen de ankers, dan tonen de ankers gewoon hun
      eigen temperatuur. */
   const ankerSet=new Set(ankers),afgerond=i=>Number.isFinite(Number(g.T[i]))?Math.round(Number(g.T[i])):null;
   const opAnker=m=>{
     if(ankerSet.has(m.i))return m;
     let l=m.i,r=m.i;
     while(l-1>=0&&afgerond(l-1)===m.waarde)l--;while(r+1<g.T.length&&afgerond(r+1)===m.waarde)r++;
-    let doel=null;for(let j=l;j<=r;j++)if(ankerSet.has(j)&&(doel===null||Math.abs(j-m.i)<Math.abs(doel-m.i)))doel=j;
+    const extremer=(a,b)=>m.type==="max"?Number(g.T[a])-Number(g.T[b]):Number(g.T[b])-Number(g.T[a]);
+    let doel=null;for(let j=l;j<=r;j++)if(ankerSet.has(j)&&(doel===null||extremer(j,doel)>0||extremer(j,doel)===0&&Math.abs(j-m.i)<Math.abs(doel-m.i)))doel=j;
     return doel===null?null:{...m,i:doel};
   };
   mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null}).map(opAnker).filter(Boolean).forEach(m=>{

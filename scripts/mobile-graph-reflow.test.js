@@ -37,14 +37,27 @@ const dstNajaar=["2026-10-25T00:00","2026-10-25T01:00","2026-10-25T02:00","2026-
 assert.deepEqual(api.kiesKalenderUurLabelIndices(dstNajaar,3,24),[0,4,7,10],"Dubbel lokaal najaarsuur wordt niet dubbel gelabeld en de echte 03/06/09-punten blijven de cadans dragen.");
 
 /* Mobiele markeringen: alleen het hoogste en laagste punt van het zichtbare
-   etmaal, elk één keer (midden van het eerste plateau met die waarde). */
+   etmaal, elk één keer (midden van het eerste plateau met die waarde). Hoogste
+   en laagste gaan op de ongeronde waarde. */
 const mk=(T,n=24,nu=null)=>api.mobieleGrafiekMarkeringen(T,n,nu).map(m=>[m.type,m.waarde,m.i]);
 assert.deepEqual(mk([10,12,11,9,10,13,12]),[["min",9,3],["max",13,5]],"Alleen het hoogste en het laagste punt krijgen een markering, niet iedere lokale piek.");
 assert.deepEqual(mk([15,15,15,15]),[],"Een volledig vlak etmaal krijgt geen max/min-markering.");
 assert.deepEqual(mk([12,10,10,10,11]),[["max",12,0],["min",10,2]],"Een plateau krijgt één markering op het middenpunt.");
 assert.deepEqual(mk([20,19,18,17]),[["max",20,0],["min",17,3]],"Ook randpunten tellen als hoogste of laagste waarde.");
 assert.deepEqual(mk([19.6,20,20,20,19,18,17,16,15,15,15,15],24,{index:.5,waarde:20.2}),[["min",15,9]],"Een max gelijk aan 'nu' vlak naast de nu-lijn vervalt; 'nu 20°' zegt het al.");
-assert.deepEqual(mk([19.6,20,20,20,19,18,17,16,15,15,15,15],24,{index:.5,waarde:19}),[["max",20,1],["min",15,9]],"Wijkt de nu-waarde af, dan blijft de max staan (19,6 rondt af op 20: plateau 0-3, midden 1).");
+assert.deepEqual(mk([19.6,20,20,20,19,18,17,16,15,15,15,15],24,{index:.5,waarde:19}),[["max",20,2],["min",15,9]],"Wijkt de nu-waarde af, dan blijft de max staan, op het midden van het echte plateau 1-3 (19,6 is lager dan 20).");
+assert.deepEqual(mk([17,16.4,16.4,16.4,17,16.2,15.6,16.4,18,21]),[["min",16,6],["max",21,9]],"Het laagste punt is 15,6° en niet het eerdere plateau van 16,4°, ook al tonen beide 16°.");
+assert.deepEqual(mk([20,21.4,20,19,21.6,20]),[["min",19,3],["max",22,4]],"Het hoogste punt is 21,6° (toont 22°), niet het eerdere 21,4°.");
+assert.deepEqual(mk([15.6,16.4,16.2,15.8]),[],"Binnen één afgeronde graad krijgt het etmaal geen max/min-markering.");
+[[12.3,11.8,11.1,11.4,12.9,14.7,16.2,17.5,18.1,18.4,18.2,17.3,15.9,14.8,14.1,13.2,12.7,12.8,12.4,12.1,11.7,11.3,11.2,11.6],
+ [16.4,16.3,16.2,16.1,16.4,15.9,15.6,15.8,16.3,17.2,18.4,19.6,20.1,20.4,20.3,19.9,19.1,18.3,17.6,17.1,16.8,16.6,16.5,16.4]].forEach((T,k)=>{
+  const plan=api.mobieleGrafiekMarkeringen(T,24);
+  plan.forEach(m=>{
+    const w=T[m.i];
+    assert(T.every(t=>m.type==="max"?t<=w:t>=w),"Reeks "+k+": de "+m.type+"-markering op "+m.i+" ("+w+"°) ligt nooit "+(m.type==="max"?"lager":"hoger")+" dan een ander punt.");
+    assert.equal(m.waarde,Math.round(w),"Reeks "+k+": het getal hoort bij het gemarkeerde punt.");
+  });
+});
 assert.deepEqual(mk([14,15,null,18,16],24).map(m=>m[0]),["min","max"],"Ontbrekende uren worden overgeslagen, niet als nul gelezen.");
 
 /* Vloeiende lijn: loopt door exact dezelfde punten en schiet nergens voorbij. */
