@@ -95,14 +95,16 @@ const VANDAAG_DAG_MM_NIEUW=`      const dagMm=num(a&&a.hoeveelheid),dagKans=num(
 
 /* De bestaande mobiele Nachtzicht-owner bevat al een toegankelijke knop en
    bewaart alle zes rijen in de DOM. De finale productpresentatie gebruikt die
-   zelfde compactheid nu ook op desktop. */
+   zelfde compactheid nu ook op desktop: drie nachten, elk op één regel. Op
+   telefoon en tablet (twee regels per nacht) staat alleen vannacht open; de
+   nachten erna lijken vaak op elkaar en staan onder "Meer nachten bekijken". */
 const NACHT_COMPACT_OUD=`function nachtzichtCompactAantal(totaal,mobiel){
   const n=Math.max(0,Math.floor(Number(totaal)||0));
   return mobiel?Math.min(3,n):n;
 }`;
 const NACHT_COMPACT_NIEUW=`function nachtzichtCompactAantal(totaal,mobiel){
   const n=Math.max(0,Math.floor(Number(totaal)||0));
-  return Math.min(3,n);
+  return Math.min(mobiel?1:3,n);
 }`;
 const NACHT_COMPACT_IF_OUD='  if(!mobiel||rijen.length<=zichtbaar){';
 const NACHT_COMPACT_IF_NIEUW='  if(rijen.length<=zichtbaar){';
@@ -232,7 +234,7 @@ if(html.includes("Amerikaanse AQI")||!html.includes("AQI (VS-schaal)"))
   throw new Error("Niet-Europese AQI-schaal wordt niet ondubbelzinnig gepresenteerd.");
 if(!html.includes('(?:Europese AQI|AQI \\(VS-schaal\\))'))
   throw new Error("Q4 herkent de nieuwe AQI-schaalnaam niet bij het opschonen van de subregel.");
-if(!html.includes('return Math.min(3,n);')||html.includes('if(!mobiel||rijen.length<=zichtbaar){'))
+if(!html.includes('return Math.min(mobiel?1:3,n);')||html.includes('if(!mobiel||rijen.length<=zichtbaar){'))
   throw new Error("Nachtzicht is niet op alle schermformaten standaard compact.");
 if(!html.includes('Windstoten kunnen "+gustMoment+" oplopen tot '))
   throw new Error("Compacte briefingcopy voor zware windstoten ontbreekt.");
