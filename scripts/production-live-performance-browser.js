@@ -2,6 +2,7 @@
 
 const assert=require("assert");
 const {chromium,webkit,devices}=require("playwright");
+const {isAlleenGemeld,logAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const verwacht=String(process.env.EXPECTED_SHA||"").trim();
@@ -38,10 +39,11 @@ function isCloudflareAnalytics(url){return isAnalyticsScript(url)||isEigenRum(ur
     try{
       const context=await browser.newContext({...profiel.opties,locale:"nl-NL",serviceWorkers:"block"});
       const page=await context.newPage(),requests=[],responses=[],mislukt=[],consoleErrors=[],pageErrors=[];
+      let alleenGemeld=0;
       page.on("request",r=>requests.push(r.url()));
       page.on("response",r=>responses.push({url:r.url(),status:r.status()}));
       page.on("requestfailed",r=>mislukt.push({url:r.url(),fout:r.failure()?.errorText||"mislukt"}));
-      page.on("console",m=>{if(m.type()==="error")consoleErrors.push(m.text());});
+      page.on("console",m=>{if(m.type()!=="error")return;if(isAlleenGemeld(m.text()))alleenGemeld++;else consoleErrors.push(m.text());});
       page.on("pageerror",e=>pageErrors.push(String(e)));
 
       const params=new URLSearchParams({lat:"52.3508",lon:"5.2647",plaats:"Almere",land:"NL"});
@@ -80,7 +82,9 @@ function isCloudflareAnalytics(url){return isAnalyticsScript(url)||isEigenRum(ur
       /* Web Analytics mag tijdens de account-cutover nog afwezig zijn. Zodra
          Cloudflare injecteert, accepteren we uitsluitend het officiële script
          en de same-origin /cdn-cgi/rum endpoint; andere analytics-origins blijven
-         een harde regressie. Console-/pageerrors blijven hieronder ongefilterd. */
+         een harde regressie. Console-/pageerrors blijven hieronder ongefilterd, op de alleen-gemelde
+         Report-Only-meldingen van Cloudflare-scriptmonitoring na (zie
+         cloudflare-scriptmonitor.js). */
       const analytics=requests.filter(isCloudflareAnalytics);
       const scripts=analytics.filter(isAnalyticsScript);
       const eigenRum=analytics.filter(isEigenRum);
@@ -107,6 +111,7 @@ function isCloudflareAnalytics(url){return isAnalyticsScript(url)||isEigenRum(ur
       assert(ui.chartWidth>250,`${profiel.naam}: grafiek niet bruikbaar na scrollen`);
       assert.equal(ui.dagen,7,`${profiel.naam}: dagtabel verloor rijen tijdens scrollen`);
       assert.deepEqual(pageErrors,[],`${profiel.naam}: pageerrors ${pageErrors.join(" | ")}`);
+      logAlleenGemeld(profiel.naam,alleenGemeld);
       assert.deepEqual(consoleErrors,[],`${profiel.naam}: console-errors ${consoleErrors.join(" | ")}`);
       const mislukteVolledige=mislukt.filter(x=>isVolledigeForecast(x.url));
       const mislukteOnbekende=mislukt.filter(x=>isForecast(x.url)&&!isVolledigeForecast(x.url)&&!isSnellePreview(x.url));

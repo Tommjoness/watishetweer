@@ -3,6 +3,7 @@
 const assert=require("assert");
 const {chromium}=require("playwright");
 const {bouw}=require("../data.js");
+const {isAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
 
 const ROOT=(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/+$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
@@ -86,7 +87,7 @@ async function liveWeatherPage(browser,scenario){
   const fouten=[];
   for(let poging=1;poging<=LIVE_ROUTE_ATTEMPTS;poging++){
     const context=await browser.newContext({serviceWorkers:"block"}),page=await context.newPage(),consoleErrors=[];
-    page.on("console",msg=>{if(msg.type()==="error")consoleErrors.push(msg.text());});
+    page.on("console",msg=>{if(msg.type()==="error"&&!isAlleenGemeld(msg.text()))consoleErrors.push(msg.text());});
     page.on("pageerror",e=>consoleErrors.push("pageerror: "+String(e)));
     try{
       await page.goto(ROOT+scenario.url,{waitUntil:"load",timeout:30000});

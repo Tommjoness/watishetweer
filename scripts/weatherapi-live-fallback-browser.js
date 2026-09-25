@@ -2,6 +2,7 @@
 
 const assert=require("assert");
 const {chromium}=require("playwright");
+const {isAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||process.env.PREVIEW_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
@@ -46,6 +47,7 @@ function verwachteOpenMeteo503(msg){
     let openMeteoForecasts=0,verwachteOpenMeteoErrors=0;
     page.on("console",msg=>{
       if(msg.type()!=="error")return;
+      if(isAlleenGemeld(msg.text()))return;
       if(verwachteOpenMeteo503(msg)){
         verwachteOpenMeteoErrors++;
         return;

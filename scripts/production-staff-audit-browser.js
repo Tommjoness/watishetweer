@@ -3,6 +3,7 @@
 const assert=require("assert");
 const {chromium}=require("playwright");
 const {bouw}=require("../data.js");
+const {isAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const verwacht=String(process.env.EXPECTED_SHA||"").trim();
@@ -148,7 +149,7 @@ async function kiesZoekresultaat(page,naam){
     page.on("console",m=>{
       if(m.type()!=="error")return;
       const tekst=m.text();
-      if(!verwachteCloudflareInsightsCspMelding(tekst))errors.push(tekst);
+      if(!verwachteCloudflareInsightsCspMelding(tekst)&&!isAlleenGemeld(tekst))errors.push(tekst);
     });
 
     const start=ROOT+"/?lat=-33.8688&lon=151.2093&plaats=Sydney&land=AU";

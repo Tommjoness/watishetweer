@@ -2,6 +2,7 @@
 
 const assert=require("assert");
 const {chromium,webkit,devices}=require("playwright");
+const {isAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const EXPECTED=String(process.env.EXPECTED_SHA||"").trim();
@@ -102,7 +103,7 @@ async function coldLoads(profile,browser){
     for(let poging=1;poging<=COLD_ATTEMPTS&&!geslaagd;poging++){
       const context=await browser.newContext({...profile.options,locale:"nl-NL",serviceWorkers:"block"});
       const page=await context.newPage(),consoleErrors=[],pageErrors=[],failed=[],requests=[],httpErrors=[];
-      page.on("console",m=>{if(m.type()==="error")consoleErrors.push(m.text());});
+      page.on("console",m=>{if(m.type()==="error"&&!isAlleenGemeld(m.text()))consoleErrors.push(m.text());});
       page.on("pageerror",e=>pageErrors.push(String(e)));
       page.on("requestfailed",r=>failed.push({url:r.url(),error:r.failure()?.errorText||"failed"}));
       page.on("request",r=>{if(r.url().includes("api.open-meteo.com/v1/forecast"))requests.push({url:r.url(),start:Date.now(),end:null,status:null});});
@@ -302,7 +303,7 @@ async function requestedLocationMatrix(browser){
     console.log(`PRE_SALE_LOCATION_SOURCE ${loc.name}: echte volledige forecast opgehaald op bronpoging ${live.poging}.`);
     const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2,locale:"nl-NL",serviceWorkers:"block"});
     const page=await context.newPage(),consoleErrors=[],pageErrors=[];
-    page.on("console",m=>{if(m.type()==="error")consoleErrors.push(m.text());});
+    page.on("console",m=>{if(m.type()==="error"&&!isAlleenGemeld(m.text()))consoleErrors.push(m.text());});
     page.on("pageerror",e=>pageErrors.push(String(e)));
     await page.route("**://api.open-meteo.com/v1/forecast**",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(live.bron)}));
     try{

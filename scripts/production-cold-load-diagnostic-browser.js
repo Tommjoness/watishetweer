@@ -4,6 +4,7 @@ const fs=require("fs");
 const path=require("path");
 const assert=require("assert");
 const {chromium}=require("playwright");
+const {isAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
@@ -60,7 +61,7 @@ async function snapshot(page){
       const key=req=>String(req._guid||req.url()+"#"+requests.size);
       page.on("domcontentloaded",()=>{if(domAt===null)domAt=now();events.push({at:rel(start,now()),type:"domcontentloaded"});});
       page.on("pageerror",e=>pageErrors.push({at:rel(start,now()),text:String(e)}));
-      page.on("console",m=>{if(m.type()==="error")consoleErrors.push({at:rel(start,now()),text:m.text()});});
+      page.on("console",m=>{if(m.type()==="error"&&!isAlleenGemeld(m.text()))consoleErrors.push({at:rel(start,now()),text:m.text()});});
       page.on("request",req=>{
         const k=key(req),r={key:k,url:req.url(),method:req.method(),kind:soort(req.url()),start:rel(start,now()),end:null,status:null,failed:null,aborted:false,fromServiceWorker:false};
         requests.set(k,r);events.push({at:r.start,type:"request",kind:r.kind,url:r.url});

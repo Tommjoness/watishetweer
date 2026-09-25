@@ -2,6 +2,7 @@
 
 const assert=require("assert");
 const {chromium}=require("playwright");
+const {isAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const verwacht=String(process.env.EXPECTED_SHA||"").trim();
@@ -30,7 +31,7 @@ function clsUit(entries){
       const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2,locale:"nl-NL",serviceWorkers:"block"});
       const page=await context.newPage(),pageErrors=[],consoleErrors=[];
       page.on("pageerror",e=>pageErrors.push(String(e)));
-      page.on("console",m=>{if(m.type()==="error")consoleErrors.push(m.text());});
+      page.on("console",m=>{if(m.type()==="error"&&!isAlleenGemeld(m.text()))consoleErrors.push(m.text());});
       await page.addInitScript(()=>{
         window.__weatherClsEntries=[];
         window.__weatherInitialScrollY=window.scrollY;
