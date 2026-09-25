@@ -8,7 +8,7 @@ const OUT=path.join(__dirname,"..","public");
 const MARKER="/* ===== HOUR PANEL REFINEMENT 20260907 ===== */";
 const STYLE_MARKER="/* ===== DESKTOP FINISHING 20260907 ===== */";
 const UREN_OUD="const MAX_DESKTOP_UREN=10;";
-const UREN_NIEUW="const MAX_DESKTOP_UREN=11;/* maximaal rustig venster; de natuurlijke grafiekhoogte kiest volledige rijen */";
+const UREN_NIEUW="const DESKTOP_GRAFIEK_UREN=24;const MAX_DESKTOP_UREN=11;/* maximaal rustig venster; de natuurlijke grafiekhoogte kiest volledige rijen */";
 const MM_OUD='mm.textContent=num(r.hoeveelheid)===0&&(num(r.kans)===null||num(r.kans)<=0)?"–":formatMm(r.hoeveelheid)||"–";';
 const MM_NIEUW='mm.textContent=formatMm(r.hoeveelheid)||"–";';
 const UURMODUS_OUD='  const desktop=window.innerWidth>=1100;\n  const rijen=desktop?desktopUurRijen():uurRijenUitGeo(S.geo,S.d&&S.d.current&&S.d.current.time,S.dag!=null,S.d&&S.d.hourly);tbody.replaceChildren();';
@@ -31,11 +31,15 @@ const UURMODUS_NIEUW=`  const desktop=window.innerWidth>=1100;
      die rijen na de grafiekhertekening niet meer terugkomen. */
   if(desktop&&rijen.length&&basisGrafiek&&S.geo&&typeof S.geo.x==="function"){
     const start=Number(rijen[0].bronIndex);
-    if(Number.isInteger(start)&&(S.chartStart!==start||S.chartBereik!==MAX_DESKTOP_UREN)){basisGrafiek(start,MAX_DESKTOP_UREN);desktopGrafiek=true;}
+    if(Number.isInteger(start)&&(S.chartStart!==start||S.chartBereik!==DESKTOP_GRAFIEK_UREN)){basisGrafiek(start,DESKTOP_GRAFIEK_UREN);desktopGrafiek=true;}
   }
   tbody.replaceChildren();`;
 const GRAFIEK_SYNC_OUD='if(basisGrafiek&&S.geo&&typeof S.geo.x==="function"&&Number.isInteger(start)&&S.chartStart!==start){\n    basisGrafiek(start,24);desktopGrafiek=true;\n  }';
-const GRAFIEK_SYNC_NIEUW='const grafiekUren=Math.max(1,Math.min(MAX_DESKTOP_UREN,rows.length));\n  if(basisGrafiek&&S.geo&&typeof S.geo.x==="function"&&Number.isInteger(start)&&rows.length&&(S.chartStart!==start||S.chartBereik!==grafiekUren)){\n    basisGrafiek(start,grafiekUren);desktopGrafiek=true;\n  }';
+/* De desktopgrafiek toont 24 uur vanaf het eerste tabeluur, net als op de
+   telefoon; de uurtabel ernaast toont de eerstvolgende uren die passen. Eerder
+   liep de grafiek maar zo ver als de tabel (9 tot 11 uur), zodat wie 's avonds
+   op een laptop keek de ochtend van morgen niet zag. */
+const GRAFIEK_SYNC_NIEUW='const grafiekUren=DESKTOP_GRAFIEK_UREN;\n  if(basisGrafiek&&S.geo&&typeof S.geo.x==="function"&&Number.isInteger(start)&&rows.length&&(S.chartStart!==start||S.chartBereik!==grafiekUren)){\n    basisGrafiek(start,grafiekUren);desktopGrafiek=true;\n  }';
 const HOOGTE_OUD='  if(window.innerWidth<1100){aside.style.height="";return;}';
 const HOOGTE_NIEUW=`  if(window.innerWidth<1100){aside.style.height="";aside.style.removeProperty("--wiw-hour-row-pad-extra");return;}
   /* Meet elke sync vanuit de vaste leesbare minimumrijhoogte. Resthoogte uit
