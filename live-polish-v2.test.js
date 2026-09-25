@@ -70,9 +70,9 @@ test("24-uursgrafiek wordt niet opnieuw uitgedund door late ontdubbeling",()=>{
 test("luchtvochtigheid krijgt dauwpunt en praktische duiding",()=>{
   const d=dauwpuntCelsius(18,86);
   assert.ok(d>15.5&&d<15.8,"18 °C / 86% hoort rond 15,6 °C dauwpunt uit te komen");
-  assert.equal(luchtvochtigheidDuiding(18,86),"Dauwpunt circa 16 °C · kan wat klam aanvoelen.");
-  assert.equal(luchtvochtigheidDuiding(25,50),"Dauwpunt circa 14 °C · meestal aangenaam.");
-  assert.equal(luchtvochtigheidDuiding(30,80),"Dauwpunt circa 26 °C · voelt zeer klam aan.");
+  assert.equal(luchtvochtigheidDuiding(18,86),"Dauwpunt circa 16\u00a0°C · kan wat klam aanvoelen.");
+  assert.equal(luchtvochtigheidDuiding(25,50),"Dauwpunt circa 14\u00a0°C · meestal aangenaam.");
+  assert.equal(luchtvochtigheidDuiding(30,80),"Dauwpunt circa 26\u00a0°C · voelt zeer klam aan.");
   assert.equal(luchtvochtigheidDuiding(null,86),"Zeer hoge relatieve luchtvochtigheid.");
   assert.equal(luchtvochtigheidDuiding(18,null),"Luchtvochtigheid niet beschikbaar.");
 });

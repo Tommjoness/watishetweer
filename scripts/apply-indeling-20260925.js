@@ -20,6 +20,22 @@ const OWNER_ID="wiw-kleur-20260925";
      hoogtes (tot 19px). Inhoud bovenaan; de runtime geeft labels in één rij
      dezelfde hoogte, met de tekst onderaan, zodat de getallen op één lijn
      staan. */
+/* Afwerking na de review van 25 september.
+   - "Komende 24 uur" (terug uit de dagweergave) stond op 9,5px en was op de
+     telefoon 21px hoog: minstens 11px en op de telefoon 44px tikhoogte.
+   - Weergave-schakelaar in de voet (vanaf 431px): drie vakjes van 72px waren
+     te krap voor "☾ Donker"; het maantje lag tegen "Auto" en de tekst tegen
+     de rand. Drie vakjes van 92px.
+   - Luchtkwaliteit "goed" en "redelijk" stonden in een grijsgroen dat zwakker
+     oogt dan "slecht" (inkt). Lucht en pollen staan in inkt; het oordeel
+     staat eronder als woord.
+   - De zoeklijst lag zonder schaduw op de tekst eronder en liep erin over.
+   - Lijnen over de volle breedte: de luchttegels sprongen 10-18px in ten
+     opzichte van hun eigen bovenlijn, en onder 1100px stopte de lijn boven
+     het modelsignaal op 720px.
+   - Geen tekst onder 11px: het label "Modelsignaal" (10px) en de tegelkoppen
+     tussen 1000 en 1099px (10,5px). */
+
 const CSS=`
 @media(min-width:1100px){
   html body #app>.final-top-grid{row-gap:0}
@@ -29,6 +45,21 @@ const CSS=`
 }
 html body .stats>.stat{justify-content:flex-start!important}
 html body .stats>.stat>.eyebrow{display:flex;align-items:flex-end;justify-content:center}
+html body .chartkop #back:not(#wiw-indeling){font-size:11px;padding:6px 12px;letter-spacing:.1em}
+@media(max-width:759px){
+  html body .chartkop #back:not(#wiw-indeling){min-height:44px;padding:0 16px;margin-top:6px}
+}
+@media(min-width:431px){
+  html body .wiw-weergave-voet #thema.wiw-theme-control.wiw-theme-segmented-20260915:not(#wiw-indeling){width:276px!important;min-width:276px!important}
+}
+html body #aq .sval[style*="--teal"]{color:var(--ink)!important}
+html body .results{box-shadow:0 10px 24px -12px rgba(0,0,0,.35)}
+html body #aq.stats:not(#wiw-indeling){padding-left:0!important;padding-right:0!important}
+html body .final-top-grid>#modelrisico:not(#wiw-indeling){max-width:none!important}
+html body #modelrisico .modelrisico-label{font-size:11px}
+@media(min-width:600px) and (max-width:1099px){
+  html body .stats>.stat>.eyebrow{font-size:11px}
+}
 `;
 
 function htmlBestanden(dir){
@@ -57,7 +88,7 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen weerartifact geraakt door indelingslaag.");
   const cache=vernieuwServiceworkerCache(OUT,"indeling-20260925");
-  console.log("Indelingslaag toegepast op "+geraakt+" weerartifacts: modelsignaal rechts onder de tegels op desktop, tegellabels en getallen op één lijn; cache "+cache+".");
+  console.log("Indelingslaag toegepast op "+geraakt+" weerartifacts: modelsignaal rechts onder de tegels op desktop, tegellabels en getallen op één lijn, terugknop, weergave-schakelaar, luchtkleur, zoeklijst en lijnen; cache "+cache+".");
   return {geraakt,cache};
 }
 

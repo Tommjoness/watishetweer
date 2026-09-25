@@ -95,7 +95,7 @@ function luchtvochtigheidDuiding(temperatuur,relatieveVochtigheid){
       :rh<=80?"Hoge relatieve luchtvochtigheid."
       :"Zeer hoge relatieve luchtvochtigheid.";
   }
-  const d=Math.round(dp),basis="Dauwpunt circa "+d+" °C · ";
+  const d=Math.round(dp),basis="Dauwpunt circa "+d+"\u00a0°C · ";
   if(dp<10)return basis+"voelt doorgaans niet klam.";
   if(dp<15)return basis+"meestal aangenaam.";
   if(dp<18)return basis+"kan wat klam aanvoelen.";

@@ -21,7 +21,8 @@ const OWNER_ID="wiw-nachtzicht-20260925";
    - De kop Temp.bereik stond in een cel van 1px hoog en daardoor lager dan
      de andere kolomkoppen.
    - Mobiel en tablet: zon onder en zon op op één links uitgelijnde regel.
-   - Tablet (600-900px): tegels in vier kolommen in plaats van twee. */
+   - Tablet en kleine laptop (600-1099px): tegels in vier kolommen in plaats
+     van twee. Vanaf 1100px staan ze naast de briefing. */
 const CSS=`
 /* Eén letter voor data: de gewone schreefloze letter met cijfers van gelijke
    breedte, zodat kolommen uitlijnen zonder monospace */
@@ -42,8 +43,8 @@ html body #days .row.kop>.bar:not(#wiw-typo){height:auto!important;align-self:ce
   html body #suntimes.senior-zoninfo .zonregel{width:auto!important;justify-content:flex-start!important;text-align:left!important}
   html body #suntimes.senior-zoninfo .zonregel .zondag{min-width:0!important;text-align:left!important;margin-right:6px!important}
 }
-/* Tablet: tegels in vier kolommen */
-@media(min-width:600px) and (max-width:900px){
+/* Tablet en kleine laptop: tegels in vier kolommen */
+@media(min-width:600px) and (max-width:1099px){
   html body #app .stats:not(#aq):not(#wiw-typo){grid-template-columns:repeat(4,minmax(0,1fr))!important}
   html body #app .stats:not(#aq):not(#wiw-typo)>.stat{border-right:1px solid var(--rule)!important}
   html body #app .stats:not(#aq):not(#wiw-typo)>.stat:nth-child(4n){border-right:0!important}
