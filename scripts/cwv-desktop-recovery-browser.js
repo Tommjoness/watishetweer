@@ -218,7 +218,7 @@ async function run(){
           const g=result.geometry;
           assert(Math.abs(g.hours.bottom-g.main.bottom)<=1,"uurpaneel en grafiekkolom eindigen niet gelijk");
           assert(Math.abs(g.table.bottom-result.hourRows.at(-1).rect.bottom)<=2,"geen lege onderste tabelregel");
-          assert(Math.abs(g.table.bottom-g.hours.bottom)<=2,"geen loos ondervlak onder de laatste uurregel");
+          assert(Math.abs(g.table.bottom-g.hours.bottom)<=2,"geen loos ondervlak onder de laatste uurregel: "+JSON.stringify({route,width,tabel:g.table.bottom,paneel:g.hours.bottom,rijen:result.rows}));
           assert.equal(result.graphTimes.length,result.sourceTimes.length,"grafiek en tabel moeten exact evenveel desktopuren tonen");
           assert.deepEqual(result.graphTimes,result.sourceTimes,"grafiek en tabel moeten exact dezelfde desktopurenreeks tonen");
           assert.equal(result.graphTimes[0],result.sourceTimes[0],"grafiek en tabel moeten bij hetzelfde lokale uur beginnen");
@@ -245,7 +245,7 @@ async function run(){
           assert.equal(result.rainVisible,false,"korte neerslagsectie is nog zichtbaar");
           assert.equal(result.chartDataVisible,false,"grafiektabelbediening is nog zichtbaar");
           assert.equal(result.hourOverflow,"visible");assert.equal(result.hourPanelVisibility,"visible","rijke uurkolom is niet zichtbaar");assert.equal(result.hourButtons,0,"geen extra uurbediening");
-          for(const r of result.hourRows){assert(r.visible);assert(r.rect.height>=29&&r.rect.height<=46,"uurregel valt buiten comfortabele hoogte");assert(r.rect.bottom<=g.hours.bottom+1,"geen afgesneden laatste uurregel");}
+          for(const r of result.hourRows){assert(r.visible);assert(r.rect.height>=29&&r.rect.height<=46,"uurregel valt buiten comfortabele hoogte: "+JSON.stringify({route,width,hoogte:r.rect.height,rijen:result.rows}));assert(r.rect.bottom<=g.hours.bottom+1,"geen afgesneden laatste uurregel");}
           if(result.nightCells.length===5){assert(result.nightCells[2].width<=261,"Nachtzicht-scorebalk is nog onnodig breed");assert(result.nightCells[4].width<=481,"Nachtzicht-toelichting is niet leesbaar begrensd");}
           for(let i=1;i<result.hourRows.length;i++){
             assert.equal(Date.parse(result.hourRows[i].instant)-Date.parse(result.hourRows[i-1].instant),3600000,"unieke opeenvolgende instants, ook bij gelijke DST-labels");

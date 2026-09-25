@@ -35,6 +35,8 @@ jobs:
         run: node scripts/first-screen-browser.test.js
       - name: Bediening, tapdoelen en Auto-thema
         run: node scripts/bediening-browser.test.js
+      - name: Leesbaarheid, minimale lettergroottes
+        run: node scripts/leesbaarheid-browser.test.js
       - name: Bewaar reproduceerbare CWV-metingen
         if: always()
         uses: actions/upload-artifact@v6
