@@ -94,6 +94,11 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
       const r=await navigator.serviceWorker.getRegistration();
       return !!(r&&r.active&&r.active.state==="activated"&&navigator.serviceWorker.controller);
     },null,{timeout:10000});
+    /* De install-cache bestaat al vóór activering, maar Chromium kan hem vanuit
+       de page-context iets later tonen dan active/controller (zie ook stap 2).
+       Wacht daarom begrensd tot hij zichtbaar is; ontbreekt hij daarna nog,
+       dan faalt de test zoals voorheen. */
+    await page.waitForFunction(naam=>caches.keys().then(k=>k.includes(naam)),cacheOud,{timeout:5000}).catch(()=>{});
     let keys=await cacheSleutels(page);
     assert(keys.includes(cacheOud),"oude serviceworker moet zijn eigen app-shellcache hebben");
     assert(!keys.includes(cacheNieuw),"nieuwe cache mag vóór update nog niet bestaan");
@@ -117,14 +122,31 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
         try{worker.postMessage("__sw-e2e-version",[kanaal.port2]);}
         catch(_){clearTimeout(timer);resolve(null);}
       });
-      let laatste=null;
+      let laatste=null,vorigeUpdate=Date.now();
       while(Date.now()<deadline){
         const r=await navigator.serviceWorker.getRegistration();
         if(r&&r.waiting)r.waiting.postMessage("weathernow:skip-waiting");
+        /* De app roept na load zelf register() en update() aan. Loopt die
+           update nog wanneer de test update() doet, dan kan de browser beide
+           samenvoegen tot de job die de oude sw.js al ophaalde: er komt dan geen
+           nieuwe worker. Zolang er niets installeert of wacht en de actieve
+           worker nog de oude is, vraagt de test daarom opnieuw een update aan,
+           zoals de app zelf ook doet bij pageshow en zichtbaarheid. */
+        if(r&&!r.installing&&!r.waiting&&Date.now()-vorigeUpdate>=1000){
+          const actief=await vraagVersie(r.active);
+          if(actief!=="new"){vorigeUpdate=Date.now();r.update().catch(()=>{});}
+        }
         const controller=navigator.serviceWorker.controller||null;
         const keys=await caches.keys();
+        /* Elk versiebericht is een event op de ontvangende worker. Chromium
+           activeert een wachtende worker pas als de actieve worker geen lopende
+           events meer heeft; berichten aan de actieve worker elke 25 ms hielden
+           de oude worker onder belasting dus zelf bezig. Zolang er een nieuwe
+           worker installeert of wacht, wordt de actieve worker niets gevraagd. */
+        const bezig=!!(r&&(r.installing||r.waiting));
         const [installingVersie,wachtendVersie,actiefVersie,controllerVersie]=await Promise.all([
-          vraagVersie(r&&r.installing),vraagVersie(r&&r.waiting),vraagVersie(r&&r.active),vraagVersie(controller)
+          vraagVersie(r&&r.installing),vraagVersie(r&&r.waiting),
+          bezig?null:vraagVersie(r&&r.active),bezig?null:vraagVersie(controller)
         ]);
         laatste={
           installingState:r&&r.installing?r.installing.state:null,
