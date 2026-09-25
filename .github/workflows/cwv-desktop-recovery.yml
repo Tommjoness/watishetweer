@@ -51,6 +51,8 @@ jobs:
         run: node scripts/uurgrens-browser.test.js
       - name: Grafiek op haar werkelijke breedte, leesbaar op tablet en desktop
         run: node scripts/grafiekbreedte-browser.test.js
+      - name: Kleur, karmijn alleen voor nu en let op
+        run: node scripts/kleur-browser.test.js
       - name: Bewaar reproduceerbare CWV-metingen
         if: always()
         uses: actions/upload-artifact@v6

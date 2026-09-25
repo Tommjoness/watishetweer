@@ -2885,8 +2885,10 @@ groep("Kleursysteem");
       && /--teal:#65716C/.test(bronK3) && /--teal:#A7AEAB/.test(bronK3));
   check("actieve chips gebruiken het actieve accent",/\.chip\.on\{[^}]*var\(--accent-active\)/.test(bronK3));
   check("bestaande waarschuwing- en foutkleuren (carmine) zijn niet overschreven",
-    /--carmine:#A02036/.test(bronK3) && /html\[data-thema="donker"\][^}]*--carmine:#E4707E/.test(bronK3)
-    && /html\[data-thema="rood"\][^}]*--carmine:#F06A5A/.test(bronK3));
+    /--carmine:#A02036/.test(bronK3) && /html\[data-thema="donker"\][^}]*--carmine:#E4707E/.test(bronK3));
+  /* De rode weergavestand is uit de themakeuze gehaald; haar CSS is ook weg. */
+  check("de CSS van de verwijderde rode weergavestand staat niet meer in de bron",
+    !/html\[data-thema="rood"\]\{/.test(bronK3));
   check("de themakeuzelogica zelf is niet gewijzigd (auto kiest nog op is_day)",
     /keuze==="auto".*is_day===0.*"donker".*"licht"/.test(bronK3.replace(/\s+/g," ")));
   /* v70: alle --surface-*-tokens (module-achtergrondtinten) zijn verwijderd;
@@ -2903,9 +2905,8 @@ groep("Kleursysteem");
 
   check("basisachtergronden (--paper, --sheet) bestaan nog onaangeroerd",
     /--paper:#F4F5F3/.test(bronK3) && /--sheet:#FFFFFF/.test(bronK3));
-  check("donker en rood thema hebben geen hardcoded witte achtergrond gekregen",
-    !/html\[data-thema="donker"\][^}]*--sheet:#FFFFFF/.test(bronK3)
-    && !/html\[data-thema="rood"\][^}]*--sheet:#FFFFFF/.test(bronK3));
+  check("het donkere thema heeft geen hardcoded witte achtergrond gekregen",
+    !/html\[data-thema="donker"\][^}]*--sheet:#FFFFFF/.test(bronK3));
 }
 
 /* 15. v68: responsive dashboardlayout. Dit toetst DOM-/CSS-structuur (delen van
