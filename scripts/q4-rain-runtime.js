@@ -358,7 +358,7 @@ function q4RegenstaafStijl(){
   if(document.getElementById("wiw-regenstaaf-stijl"))return;
   const st=document.createElement("style");st.id="wiw-regenstaaf-stijl";
   st.textContent='#chart .regenstaaf{fill:#4A90D9;fill-opacity:.55}html[data-thema="donker"] #chart .regenstaaf{fill:#6AA6E8;fill-opacity:.6}'
-    +'#chart .regenstaaf-mm{fill:#2F6FB0;font-weight:500}html[data-thema="donker"] #chart .regenstaaf-mm{fill:#8DBBEE}';
+    +'#chart .regenstaaf-mm{fill:#2F6FB0;font-weight:400}html[data-thema="donker"] #chart .regenstaaf-mm{fill:#8DBBEE}';
   document.head.appendChild(st);
 }
 function q4TekenRegenstaven(svg,g){
@@ -401,7 +401,10 @@ function q4PlaatsRegenstaafLabels(svg,g,labels,plotTop){
   if(!labels.length)return;
   const ns="http://www.w3.org/2000/svg",laag=document.createElementNS(ns,"g");
   laag.setAttribute("data-regenstaaf-mm","1");laag.setAttribute("aria-hidden","true");laag.setAttribute("pointer-events","none");
-  const smal=Number(g.W)<500,grootte=11,regel=grootte+2;
+  /* Rustig en ondergeschikt aan de temperaturen: alleen het getal, in normaal
+     gewicht; eenheid en totaal staan in de regel onder de grafiek. Op de
+     smalle telefoongrafiek (viewBox 380, iets verkleind) blijft het 11. */
+  const smal=Number(g.W)<500,grootte=smal?11:9.5,regel=grootte+2;
   const scrub=svg.querySelector("#scrub");
   svg.insertBefore(laag,scrub||null);
   /* Andere zichtbare teksten in de grafiek (temperaturen, nu-label, tijden). */
@@ -414,7 +417,7 @@ function q4PlaatsRegenstaafLabels(svg,g,labels,plotTop){
     t.setAttribute("class","regenstaaf-mm");t.setAttribute("text-anchor","middle");t.setAttribute("font-size",String(grootte));
     t.setAttribute("font-family","Instrument Sans,ui-sans-serif,system-ui,sans-serif");
     t.setAttribute("data-uur",String(g.TI[l.i]));t.setAttribute("data-mm",String(l.v));
-    t.textContent=q4MmTekst(l.v,!smal);
+    t.textContent=q4MmTekst(l.v,false);
     laag.appendChild(t);
     /* Eerst een paar eenheden opzij binnen het eigen uurvak, dan pas een
        regel omhoog: zo blijft het getal bij zijn staafje. */
