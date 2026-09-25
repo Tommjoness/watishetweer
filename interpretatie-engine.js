@@ -637,7 +637,10 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       const waars=(S.actieveWaarschuwingen||[]).filter(w=>w&&w.plaatsSpecifiek!==false);
       if(waars.length){
         const w=waars[0];
-        const waarschKop=w.niveauIsOfficieel===false
+        // Noemt de titel het niveau al ("Code geel: windstoten"), dan niet nog
+        // eens "(geel)" in de kop.
+        const titelNoemtNiveau=!!w.niveau&&String(w.titel||"").toLowerCase().split(/[^a-zà-ÿ]+/).includes(String(w.niveau).toLowerCase());
+        const waarschKop=w.niveauIsOfficieel===false||titelNoemtNiveau
           ?"Officiële weerwaarschuwing"
           :"Officiële weerwaarschuwing"+(w.niveau?" ("+esc(w.niveau)+")":"");
         voor="<b>"+waarschKop+":</b> "+esc(w.titel)+". "+voor
