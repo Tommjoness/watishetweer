@@ -162,8 +162,9 @@ async function controleer(type,naam){
     assert.match(popNat.waarde,/65%/,naam+": zichtbare tegel behoudt bronkans");
     assert.match(popNat.waarde,/mm/,naam+": meetbare hoeveelheid staat naast kans");
 
-    const nat=await tooltip(page,"18:00"),droog=await tooltip(page,"19:00"),nul=await tooltip(page,"20:00");
-    const tipBron=await page.evaluate(()=>["18:00","19:00","20:00"].map(t=>{
+    /* Tooltip bij X toont het uur dat op X begint: bronuur 18:00 (17:00-18:00) hoort bij 17:00. */
+    const nat=await tooltip(page,"17:00"),droog=await tooltip(page,"18:00"),nul=await tooltip(page,"19:00");
+    const tipBron=await page.evaluate(()=>["17:00","18:00","19:00"].map(t=>{
       const i=S.geo.TI.findIndex(x=>String(x).slice(11,16)===t);
       return {t,i,kans:i>=0&&S.geo.P?S.geo.P[i]:null,mm:i>=0&&S.geo.Q1MM?S.geo.Q1MM[i]:null};
     }));

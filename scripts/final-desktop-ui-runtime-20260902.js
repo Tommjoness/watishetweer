@@ -26,8 +26,11 @@ function uurRijenUitGeo(g,currentTime,dagGeselecteerd,hourly){
     if(!tijd||temp===null||gevoel===null)continue;
     const bronIndex=hourlyTijden?hourlyTijden.indexOf(tijd):-1;
     const fallbackIndex=bronIndex>=0?bronIndex:i;
-    const kans=P.length?num(P[i]):num(hourly&&hourly.precipitation_probability&&hourly.precipitation_probability[fallbackIndex]);
-    const hoeveelheid=MM.length?num(MM[i]):num(hourly&&hourly.precipitation&&hourly.precipitation[fallbackIndex]);
+    /* P en MM gelden al voor het uur dat op dit tijdstip begint; de bron-
+       fallback leest daarom de volgende index (Open-Meteo zet neerslag op het
+       eind van het uur). */
+    const kans=P.length?num(P[i]):num(hourly&&hourly.precipitation_probability&&hourly.precipitation_probability[fallbackIndex+1]);
+    const hoeveelheid=MM.length?num(MM[i]):num(hourly&&hourly.precipitation&&hourly.precipitation[fallbackIndex+1]);
     const vorige=i>0?datum(tijden[i-1]):null,nieuweDag=i>0&&datum(tijd)!==vorige;
     const zelfdeUur=mark===i&&String(currentTime||"").slice(0,13)===String(tijd).slice(0,13);
     rijen.push({tijd,temp,gevoel,kans,hoeveelheid,code:num(D[i]),isDag:num(ND[i]),wind:num(W[i]),windrichting:num(WD[i]),datumLabel:nieuweDag?dagLabel(tijd):"",marker:mark===i?(zelfdeUur?"Nu":"Eerstvolgend"):""});
@@ -47,7 +50,8 @@ function komendeUurRijen(data,nuMs,aantal=MAX_DESKTOP_UREN){
     vorige=minuut;
     if(minuut*60000<nuMs||rijen.length>=aantal)continue;
     const tijd=interpretatie.minutenNaarLokaal(minuut,data.timezone,offset);
-    const temp=num(h.temperature_2m&&h.temperature_2m[i]),kans=num(h.precipitation_probability&&h.precipitation_probability[i]),hoeveelheid=num(h.precipitation&&h.precipitation[i]);
+    /* Rij 18:00 toont de neerslag van 18:00 tot 19:00: bronindex +1. */
+    const temp=num(h.temperature_2m&&h.temperature_2m[i]),kans=num(h.precipitation_probability&&h.precipitation_probability[i+1]),hoeveelheid=num(h.precipitation&&h.precipitation[i+1]);
     rijen.push({tijd,instant:new Date(minuut*60000).toISOString(),bronIndex:i,temp,gevoel:num(h.apparent_temperature&&h.apparent_temperature[i]),kans,hoeveelheid,code:num(h.weather_code&&h.weather_code[i]),isDag:num(h.is_day&&h.is_day[i]),wind:num(h.wind_speed_10m&&h.wind_speed_10m[i]),windrichting:num(h.wind_direction_10m&&h.wind_direction_10m[i]),datumLabel:datum(tijd)!==vorigeDatum?dagLabel(tijd):"",marker:""});
     vorigeDatum=datum(tijd);
   }

@@ -1662,12 +1662,22 @@ function etmaal(start,n){
     TI.push(h.time[i]);
     T.push(h.temperature_2m[i]==null?null:h.temperature_2m[i]);
     A.push(h.apparent_temperature[i]==null?null:h.apparent_temperature[i]);
-    const kans=eindigGetal(h.precipitation_probability&&h.precipitation_probability[i]);
-    const hoeveelheid=eindigGetal(h.precipitation&&h.precipitation[i]);
-    const intervalVerlopen=S.dag==null&&globalThis.WeatherNowInterpretatie
-      &&globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(h.time[i])<=globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(weatherNowActueleLokaleTijd());
-    P.push(intervalVerlopen||kans===null||kans<0?null:clamp(kans,0,100));
-    MM.push(intervalVerlopen||hoeveelheid===null||hoeveelheid<0?null:hoeveelheid);
+    /* Een uur leest overal als het uur dat op dat tijdstip begint: bij 18:00
+       hoort de neerslag van 18:00 tot 19:00. Open-Meteo zet neerslag en
+       neerslagkans op het eind van hun uur (de waarde bij 19:00 geldt voor
+       18:00-19:00), dus die komen van de volgende bronindex. Temperatuur,
+       wind en bewolking zijn momentwaarden en blijven op hun eigen tijdstip.
+       Het uur is voorbij zodra het eindtijdstip is verstreken. */
+    const volgende=i+1<h.time.length?i+1:null;
+    const kans=volgende===null?null:eindigGetal(h.precipitation_probability&&h.precipitation_probability[volgende]);
+    const hoeveelheid=volgende===null?null:eindigGetal(h.precipitation&&h.precipitation[volgende]);
+    const intervalVerlopen=S.dag==null&&volgende!==null&&globalThis.WeatherNowInterpretatie
+      &&globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(h.time[volgende])<=globalThis.WeatherNowInterpretatie.lokaalNaarMinuten(weatherNowActueleLokaleTijd());
+    /* Op een gekozen kalenderdag hoort het uur vanaf de afsluitende 00:00 bij
+       de volgende dag: dat punt krijgt geen neerslagwaarde. */
+    const buitenDag=S.dag!=null&&k>0&&String(h.time[i]).slice(0,10)!==String(h.time[start]).slice(0,10);
+    P.push(intervalVerlopen||buitenDag||kans===null||kans<0?null:clamp(kans,0,100));
+    MM.push(intervalVerlopen||buitenDag||hoeveelheid===null||hoeveelheid<0?null:hoeveelheid);
     L.push(h.time[i].slice(11,16));
     W_.push(h.wind_speed_10m[i]);G.push(h.wind_gusts_10m[i]);C.push(h.cloud_cover[i]);
     D.push(h.weather_code[i]);ND.push(h.is_day[i]);WD.push(h.wind_direction_10m[i]);
@@ -2215,7 +2225,7 @@ function scrubKoppel(){
       +", "+bft(G.W_[i])+" Bft";
     const body=rij("temperatuur",num(G.T?G.T[i]:null)+"°C")
       +rij("voelt als",num(G.A?G.A[i]:null)+"°C")
-      +rij(heel(G.P&&G.P[i])&&G.P[i]>0?"kans "+weatherNowUurvak(G.TI[i]):"neerslag",heel(G.P&&G.P[i])&&G.P[i]>0?G.P[i]+"%":"geen neerslag verwacht",TEAL)
+      +rij(heel(G.P&&G.P[i])&&G.P[i]>0?"kans "+weatherNowUurvakVanaf(G.TI[i]):"neerslag",heel(G.P&&G.P[i])&&G.P[i]>0?G.P[i]+"%":"geen neerslag verwacht",TEAL)
       +rij("wind",windTekst)
       +rij("windstoten",heel(G.G&&G.G[i])?Math.round(G.G[i])+" km/u":"–")
       +rij("bewolking",(heel(G.C&&G.C[i])?G.C[i]:"–")+"%");
@@ -3115,6 +3125,14 @@ function weatherNowUurvak(tijd){
   const eind=api&&api.lokaalNaarMinuten(tijd);
   const begin=eind==null?null:api.minutenNaarLokaal(eind-60);
   return begin?begin.slice(11,16)+"–"+String(tijd).slice(11,16):"voorafgaand uur";
+}
+/* Het uur dat op dit tijdstip begint, bijvoorbeeld 18:00–19:00. Uurrijen,
+   grafiek en tooltip tonen neerslag voor dit uur. */
+function weatherNowUurvakVanaf(tijd){
+  const api=globalThis.WeatherNowInterpretatie;
+  const begin=api&&api.lokaalNaarMinuten(tijd);
+  const eind=begin==null?null:api.minutenNaarLokaal(begin+60);
+  return eind?String(tijd).slice(11,16)+"–"+eind.slice(11,16):"komend uur";
 }
 function weatherNowActueleLokaleTijd(){
   const p=typeof plaatsTijdDelen==="function"?plaatsTijdDelen():null;

@@ -74,15 +74,19 @@ function zetBasis(api,d,extra){const i=d.hourly.time.findIndex(t=>t.slice(0,13)=
  ok(api.S.geo&&api.S.geo.n===25,"komende 24 uur beslaat 25 grenspunten","n="+(api.S.geo&&api.S.geo.n));
  api.S.dag=0;
  const dagStart=d.hourly.time.findIndex(t=>t.slice(0,10)===d.daily.time[0]);
+ /* Een uur leest als het uur dat op dat tijdstip begint. Open-Meteo zet de
+    kans op het eind van het uur: bronindex dagStart+1 geldt voor 00:00-01:00. */
  d.hourly.precipitation_probability[dagStart]=99;
+ d.hourly.precipitation_probability[dagStart+1]=77;
  d.hourly.precipitation_probability[dagStart+24]=88;
  d.hourly.precipitation[dagStart]=9;
  d.hourly.precipitation[dagStart+24]=8;
  api.etmaal(dagStart,24);
  ok(api.S.geo&&api.S.geo.n===25,"gekozen kalenderdag beslaat 00:00 tot volgende 00:00 met 25 grenspunten","n="+(api.S.geo&&api.S.geo.n));
  ok(api.S.geo&&api.S.geo.TI[0].endsWith("T00:00")&&api.S.geo.TI[24].endsWith("T00:00")&&api.S.geo.TI[0].slice(0,10)!==api.S.geo.TI[24].slice(0,10),"kalenderdag bevat de rechtergrens van de volgende dag",(api.S.geo&&api.S.geo.TI||[]).join(","));
- ok(api.S.geo&&api.S.geo.P[0]===null,"00:00 links neemt het neerslaginterval van de vorige dag niet mee","P0="+(api.S.geo&&api.S.geo.P[0]));
- ok(api.S.geo&&api.S.geo.P[24]===88,"volgende 00:00 bewaart het laatste interval 23:00–00:00 van de gekozen dag","P24="+(api.S.geo&&api.S.geo.P[24]));
+ ok(api.S.geo&&api.S.geo.P[0]===77,"00:00 links toont het uur 00:00–01:00 van de gekozen dag, niet het interval van de vorige dag","P0="+(api.S.geo&&api.S.geo.P[0]));
+ ok(api.S.geo&&api.S.geo.P[23]===88,"23:00 toont het laatste uur 23:00–00:00 van de gekozen dag","P23="+(api.S.geo&&api.S.geo.P[23]));
+ ok(api.S.geo&&api.S.geo.P[24]===null,"de afsluitende 00:00 krijgt geen neerslag van de volgende dag","P24="+(api.S.geo&&api.S.geo.P[24]));
 }
 {
  const {api}=laadKern(390),d=bouw({});d.timezone="Europe/Amsterdam";d.utc_offset_seconds=7200;zetBasis(api,d);api.S.klokOverride=null;api.S.klokInstantOverride=new Date("2026-10-25T02:30:00Z");ok(api.plaatsKlok()==="03:30","plaatsklok volgt wintertijd via IANA-zone ondanks stale +02 offset",api.plaatsKlok());
