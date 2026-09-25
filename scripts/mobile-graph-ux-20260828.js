@@ -525,15 +525,7 @@ function bouwMobieleTemperatuurRij(){
      bovenaan. Een positie telt alleen als ze vrij is van de lijn, de nu-lijn en
      alle bestaande tekst (nu-label, asgetallen, regenperiodes); past ze nergens,
      dan vervalt het label liever dan te botsen. */
-  /* Een temperatuur zoekt eerst een plek vrij van de regengetallen boven de
-     staafjes. Is die er niet, dan gaat de temperatuur voor en wijkt het
-     regengetal hieronder; de hoeveelheid staat ook in de regel onder de
-     grafiek, in de uurtabel en bij aantikken. Piek en dal wijken nooit voor
-     een regengetal: hun cijfer hoort direct boven de stip. De regengetallen
-     worden aan het eind van de pass rond de temperaturen herplaatst. */
-  const isRegenGetal=el=>!!el.closest("g[data-regenstaaf-mm]");
-  const vast=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!isRegenGetal(el)).map(svgTekstBoxUitElement).filter(Boolean);
-  const regenBoxen=[...svg.querySelectorAll("g[data-regenstaaf-mm] text")].map(svgTekstBoxUitElement).filter(Boolean);
+  const vast=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")).map(svgTekstBoxUitElement).filter(Boolean);
   /* Plafond: een label mag boven de plotrand uitsteken tot net onder de dag/
      nachtband. Anders valt de temperatuur bij een piek vlak onder de bovenste
      asgrens onder de lijn, waar ze niet meer bij haar punt hoort. Alleen wat
@@ -553,8 +545,7 @@ function bouwMobieleTemperatuurRij(){
      valt dat verschil buiten de marge, dus rekenen de cijfers met de echte
      hoogte; de ruime marge die de schatting compenseerde, wordt dan 1,5. */
   const cel=b=>b&&{x:b.x,y:b.y-fs*.18,width:b.width,height:b.height+fs*.32};
-  const plaats=(tekst,kandidaten,schuif)=>plaatsMet(tekst,kandidaten,schuif,regenBoxen)||plaatsMet(tekst,kandidaten,schuif,[]);
-  const plaatsMet=(tekst,kandidaten,schuif,ontwijk)=>{
+  const plaats=(tekst,kandidaten,schuif)=>{
     for(const [x0,y,anker] of kandidaten){
       if(y-fs<plafond||y>bottom-3)continue;
       let box=geschatteSvgTekstBox(tekst,x0,y,anker,fs);if(!box)continue;
@@ -562,7 +553,7 @@ function bouwMobieleTemperatuurRij(){
       if(box.x<marge)x+=marge-box.x;else if(box.x+box.width>W-marge)x-=box.x+box.width-(W-marge);
       box=geschatteSvgTekstBox(tekst,x,y,anker,fs);
       if(box&&box.x<asKolom){if(!schuif)continue;x+=asKolom-box.x;box=geschatteSvgTekstBox(tekst,x,y,anker,fs);}
-      if(box&&!vast.some(b=>rechthoekenBotsen(b,cel(box),1.5))&&!ontwijk.some(b=>rechthoekenBotsen(b,box,2))&&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box,1)))return {x,y,anker,box};
+      if(box&&!vast.some(b=>rechthoekenBotsen(b,cel(box),1.5))&&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box,1)))return {x,y,anker,box};
     }
     return null;
   };
@@ -589,7 +580,7 @@ function bouwMobieleTemperatuurRij(){
     const verticaal=y=>[[px,y,"middle"],[px+14,y,"middle"],[px-14,y,"middle"]];
     const dichtbij=[...verticaal(py-9),...verticaal(py-15),[px+7,py-5,"start"],[px-7,py-5,"end"],...verticaal(py-21),...verticaal(py-27),
       [px,py-33,"middle"],[px,py-39,"middle"],[px,py-45,"middle"]];
-    const pos=plaatsMet(m.waarde+"°",dichtbij,false,[]);
+    const pos=plaats(m.waarde+"°",dichtbij,false);
     if(!pos){vervallen.push(m.type);return;}
     const dot=document.createElementNS(SVG_NS,"circle");
     dot.setAttribute("cx",String(px));dot.setAttribute("cy",String(py));dot.setAttribute("r","2.2");dot.setAttribute("fill",ink);
@@ -631,11 +622,6 @@ function bouwMobieleTemperatuurRij(){
     voorScrub(el);gelabeld.push(i);
   });
   puntPerIndex.forEach((el,i)=>{if(el.isConnected&&!gelabeld.includes(i))el.remove();});
-  const temperatuurBoxen=[...svg.querySelectorAll("text[data-mobile-temp-index],text[data-mobile-temp-marker]")].map(svgTekstBoxUitElement).filter(Boolean);
-  if(nuTekst){const b=svgTekstBoxUitElement(nuTekst);if(b)temperatuurBoxen.push(b);}
-  svg.querySelectorAll("g[data-regenstaaf-mm] text").forEach(el=>{
-    const b=svgTekstBoxUitElement(el);if(b&&temperatuurBoxen.some(t=>rechthoekenBotsen(b,t,1)))el.remove();
-  });
 
   svg.setAttribute("data-mobile-temp-line-labels","1");
   svg.setAttribute("data-mobile-temp-anchor-count",String(ankers.length));
@@ -1016,16 +1002,10 @@ function maakGrafiekTekstLeesbaar(){
   });
 }
 
-/* Regengetallen boven de staafjes als laatste, rond de definitieve temperaturen. */
-function herplaatsRegengetallen(){
-  const r=root.WeatherNowRegenstaafLabels;
-  if(r&&typeof r.herplaats==="function")r.herplaats();
-}
-
 let uurAsToken=0;
 function planUurAsHerstel(){
   const token=++uurAsToken;
-  const voer=()=>{if(token===uurAsToken){maakGrafiekTekstLeesbaar();herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();bouwMobieleTemperatuurRij();polishNuLabel();compactMobieleGrafiekHoogte();koppelTijdAanTemperatuur();bouwDesktopGrafiekAccenten();herplaatsRegengetallen();}};
+  const voer=()=>{if(token===uurAsToken){maakGrafiekTekstLeesbaar();herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();bouwMobieleTemperatuurRij();polishNuLabel();compactMobieleGrafiekHoogte();koppelTijdAanTemperatuur();bouwDesktopGrafiekAccenten();}};
   const start=()=>{
     const r1=()=>{const r2=()=>voer();if(typeof requestAnimationFrame==="function")requestAnimationFrame(r2);else setTimeout(r2,0);};
     if(typeof requestAnimationFrame==="function")requestAnimationFrame(r1);else setTimeout(r1,0);
