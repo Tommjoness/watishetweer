@@ -122,20 +122,19 @@ async function controleer(type,naam){
         assert.deepEqual(uur24.ends,[],`${naam} ${breedte}: krappe mobiele perioden forceren geen losse eindtijden`);
         assert.deepEqual(uur24.ranges,["15:00–18:00","21:00–22:00"],`${naam} ${breedte}: mobiele perioden vallen generiek terug op compacte tijdvakken`);
       }else{
-        /* Sinds het eerste-schermontwerp (20260924) herhaalt de uurtabel de
-           sectiekop niet meer; daardoor past er bij deze fixture één volledig
-           uur meer naast de grafiek. */
-        assert.equal(uur24.chartBereik,9,`${naam} ${breedte}: gekoppelde desktopmodus kiest bij de vaste 1280×900-fixture exact negen volledig passende uren; kreeg ${JSON.stringify({chartBereik:uur24.chartBereik,n:uur24.n,chartStart:uur24.chartStart,W:uur24.W,cw:uur24.cw,starts:uur24.starts,ends:uur24.ends})}`);
-        assert.equal(uur24.n,9,`${naam} ${breedte}: SVG-geometrie blijft exact gekoppeld aan de negen zichtbare uurregels`);
-        assert.deepEqual(uur24.starts,["15:00","21:00"],`${naam} ${breedte}: beide perioden hebben in de gekoppelde desktopgeometrie een losse begintijd; kreeg ${JSON.stringify({starts:uur24.starts,ends:uur24.ends,ranges:uur24.ranges,n:uur24.n,W:uur24.W,cw:uur24.cw,chartStart:uur24.chartStart,chartBereik:uur24.chartBereik,tijdBinnen:uur24.tijdBinnen})}`);
-        assert.deepEqual(uur24.ends,["18:00","22:00"],`${naam} ${breedte}: beide perioden hebben in de gekoppelde desktopgeometrie een losse eindtijd`);
-        assert.deepEqual(uur24.ranges,[],`${naam} ${breedte}: de negen-uursdesktopgeometrie heeft genoeg ruimte voor beide losse labelparen`);
+        /* Sinds 26 september toont ook de desktopgrafiek 24 uur (de uurtabel
+           ernaast de eerstvolgende uren). Iedere periode staat er dan als
+           losse begin- en eindtijd of als compact tijdvak. */
+        assert.equal(uur24.chartBereik,24,`${naam} ${breedte}: desktopgrafiek toont 24 uur; kreeg ${JSON.stringify({chartBereik:uur24.chartBereik,n:uur24.n})}`);
+        assert.equal(uur24.n,25,`${naam} ${breedte}: SVG-geometrie beslaat 24 uur`);
+        assert.equal(uur24.starts.length+uur24.ranges.length,2,`${naam} ${breedte}: beide perioden hebben een begintijd of tijdvak; kreeg ${JSON.stringify({starts:uur24.starts,ends:uur24.ends,ranges:uur24.ranges})}`);
+        assert.equal(uur24.ends.length+uur24.ranges.length,2,`${naam} ${breedte}: beide perioden hebben een eindtijd of tijdvak; kreeg ${JSON.stringify({starts:uur24.starts,ends:uur24.ends,ranges:uur24.ranges})}`);
       }
       assert.equal(uur24.details,0,`${naam} ${breedte}: losse dubbele perioderegels onder de grafiek zijn verwijderd`);
       assert.equal(uur24.samenvattingen,0,`${naam} ${breedte}: totaalregel en Meeste regen zijn verwijderd`);
       assert.deepEqual(uur24.totalen,["0,7 mm","0,5 mm"],`${naam} ${breedte}: bracketbedragen blijven gelijk aan de periodegegevens`);
       assert.equal(uur24.kansLabels.length,0,`${naam} ${breedte}: statische neerslagpercentages zijn volledig uit de grafiek verwijderd`);
-      const verwachtTijdlabels=breedte<760?2:4;
+      const verwachtTijdlabels=breedte<760?2:uur24.starts.length+uur24.ends.length+uur24.ranges.length;
       assert.ok(uur24.tijdBinnen.length===verwachtTijdlabels&&uur24.tijdBinnen.every(x=>x.binnen),`${naam} ${breedte}: alle zichtbare tijdlabels blijven binnen de SVG; kreeg ${JSON.stringify(uur24.tijdBinnen)}`);
       assert.ok(uur24.splitLayouts.every(x=>!x.fout&&x.zelfdeRegel&&!x.overlapt),`${naam} ${breedte}: losse begin/eindlabels blijven op één niet-overlappende regel; kreeg ${JSON.stringify(uur24.splitLayouts)}`);
       assert.ok(uur24.bedragOnderTijd.length===2&&uur24.bedragOnderTijd.every(Boolean),`${naam} ${breedte}: iedere mm-waarde staat onder het eigen tijdlabel`);
@@ -144,7 +143,11 @@ async function controleer(type,naam){
         assert.deepEqual(uur24.asTijden,uur24.verwachtAsTijden,`${naam} ${breedte}: mobiele kloklabels volgen niet de forecasttijd-gedreven drie-uurscadans`);
         assert.ok(uur24.asTijden.every(t=>/^\d{2}:00$/.test(t)),`${naam} ${breedte}: mobiele uuras bevat geen expliciete lokale kloktijd: ${JSON.stringify(uur24.asTijden)}`);
         assert.deepEqual(uur24.asTijden,uur24.asBronTijden,`${naam} ${breedte}: mobiele uuras hoort niet bij de echte forecastpunten`);
-      }else assert.deepEqual(uur24.asTijden,["15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00","23:00"],`${naam} ${breedte}: compacte desktopuuras toont exact ieder zichtbaar uur als HH:00, ook het uur onder de nu-lijn: daar staat een temperatuur; kreeg ${JSON.stringify(uur24.asTijden)}`);
+      }else{
+        /* Desktopgrafiek over 24 uur: een rustige as om de drie uur vanaf het eerste uur. */
+        const uren=uur24.asTijden.map(t=>Number(t.slice(0,2)));
+        assert.ok(uur24.asTijden.length>=8&&uur24.asTijden[0]==="15:00"&&uur24.asTijden.every(t=>/^\d{2}:00$/.test(t))&&uren.slice(1).every((u,i)=>(u-uren[i]+24)%24===3),`${naam} ${breedte}: desktopuuras loopt niet om de drie uur vanaf 15:00; kreeg ${JSON.stringify(uur24.asTijden)}`);
+      }
 
       const langer=await page.evaluate(()=>{
         S.dag=null;S.bereik=48;etmaal(S.i0,48);

@@ -253,7 +253,7 @@ async function controleer(page, naam, modus) {
 
   assert.ok(resultaat.nachtAdvies > 0 && resultaat.nachtMaan > 0, `${naam} ${modus}: Nachtzicht heeft rustige aparte advies- en maanregels`);
   assert.ok(resultaat.nachtRijen.length > 0, `${naam} ${modus}: Nachtzicht heeft beoordeelde nachten`);
-  if (modus === "mobiel") assert.equal(resultaat.nachtRijen.filter(rij => rij.visible).length, Math.min(3, resultaat.nachtRijen.length), `${naam} ${modus}: alleen de eerste drie Nachtzicht-rijen zijn standaard zichtbaar`);
+  if (modus === "mobiel") assert.equal(resultaat.nachtRijen.filter(rij => rij.visible).length, Math.min(1, resultaat.nachtRijen.length), `${naam} ${modus}: alleen vannacht is standaard zichtbaar in Nachtzicht`);
   for (const rij of resultaat.nachtRijen) {
     const m = /^(\d+)\/10$/.exec(rij.score);
     if (!m) continue;

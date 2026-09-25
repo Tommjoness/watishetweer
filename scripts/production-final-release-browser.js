@@ -200,8 +200,9 @@ async function lees(page){return page.evaluate(()=>{
         assert.equal(getal(uit.humidity),rond(bron.current&&bron.current.relative_humidity_2m),`${l.naam}: luchtvochtigheid wijkt af`);
         assert.equal(uit.dagen,7,`${l.naam}: geen zeven dagrijen`);
         if(uit.boundedHours){
-          assert.equal(uit.graphTimes.length,uit.hourRows,`${l.naam}: gekoppelde desktopgrafiek en zichtbare uurtabel hebben niet exact dezelfde range`);
-          assert.deepEqual(uit.graphTimes,uit.tableSourceTimes,`${l.naam}: grafiek- en tabeluren verschillen binnen de gekoppelde desktoprange`);
+          /* De desktopgrafiek toont 24 uur; de uurtabel ernaast is het begin daarvan. */
+          assert.equal(uit.graphTimes.length,25,`${l.naam}: desktopgrafiek toont geen 24 uur (${uit.graphTimes.length} punten)`);
+          assert.deepEqual(uit.graphTimes.slice(0,uit.tableSourceTimes.length),uit.tableSourceTimes,`${l.naam}: de uurtabel is niet het begin van de grafiekreeks`);
           assert.equal(Date.parse(uit.graphTimes.at(-1)+"Z")-Date.parse(uit.graphTimes.at(-2)+"Z"),3600000,`${l.naam}: gekoppelde desktopgrafiek eindigt niet met opeenvolgende uurpunten`);
           assert(uit.hourRows>=8&&uit.hourRows<=uit.maxHours&&uit.hourFits,`${l.naam}: desktopuren zijn niet volledig binnen de grafiekhoogte begrensd (${uit.hourRows})`);
           for(let i=1;i<uit.hourInstants.length;i++)assert.equal(Date.parse(uit.hourInstants[i])-Date.parse(uit.hourInstants[i-1]),3600000,`${l.naam}: uurinstanties moeten uniek en opeenvolgend zijn`);

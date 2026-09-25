@@ -40,11 +40,12 @@ try{
   if(r.status!==0)throw new Error(`${w}px: browser exit ${r.status}: `+String(r.stderr||"").slice(-800));
   const dom=r.stdout||"",veld=k=>{const m=new RegExp('data-final-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(veld('done')!=='ok')throw new Error(`${w}px: reporter faalde: ${veld('exception')||'onbekend'}`);
-  if(veld('grid')!=='true'||veld('count')!=='8')throw new Error(`${w}px: finale topgrid/8 tegels ontbreekt (${veld('grid')}, ${veld('count')})`);
-  if(veld('cols')!=='2'||veld('rows')!=='4')throw new Error(`${w}px: verwacht 2×4 tegelgeometrie, kreeg ${veld('cols')}×${veld('rows')}`);
+  /* Zes tegels: "Tijd tot zonsondergang" en, bij goed zicht, "Zicht" staan verborgen. */
+  if(veld('grid')!=='true'||veld('count')!=='6')throw new Error(`${w}px: finale topgrid/6 tegels ontbreekt (${veld('grid')}, ${veld('count')})`);
+  if(veld('cols')!=='2'||veld('rows')!=='3')throw new Error(`${w}px: verwacht 2×3 tegelgeometrie, kreeg ${veld('cols')}×${veld('rows')}`);
   if(Number(veld('overflow'))>2)throw new Error(`${w}px: ${veld('overflow')}px horizontale overflow`);
   if(w>=1100){if(veld('desktop-display')!=='grid'||veld('right-top')!=='ok')throw new Error(`${w}px: rechter tegelkolom begint niet bovenaan naast briefing/hero`);if(Number(veld('chart-width'))>1282)throw new Error(`${w}px: grafiek blijft te breed (${veld('chart-width')}px)`);}else if(veld('touch')!=='ok')throw new Error(`${w}px: primaire mobiele touchdoelen zijn kleiner dan 44px`);
-  console.log(`${w}px: topgrid 2×4 groen, overflow ${veld('overflow')}px${w>=1100?`, grafiek ${veld('chart-width')}px`:', touchdoelen ≥44px'}.`);
+  console.log(`${w}px: topgrid 2×3 groen, overflow ${veld('overflow')}px${w>=1100?`, grafiek ${veld('chart-width')}px`:', touchdoelen ≥44px'}.`);
  }
  console.log("Finale auditbrowsertest geslaagd op 320/360/390/430/1440/1920 px.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}

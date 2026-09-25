@@ -9,7 +9,8 @@
      dan staat er geen "(geel)" in de kop.
    - Grafiek overdag zonder nacht in het venster: geen lege omlijnde band.
    - Telefoon: het modelsignaal blijft na de tegels.
-   - Tegels van 600 tot en met 1099px in vier kolommen (ook 1024px).
+   - Zes tegels (zonder "Tijd tot zonsondergang" en, bij goed zicht, "Zicht")
+     staan vanaf 600px in drie kolommen (ook 1024px).
    - Lijnen over de volle breedte: luchttegels zonder inspringing, het
      modelsignaal even breed als de tegels.
    - Geen tekst onder 11px in tegelkoppen en het label "Modelsignaal".
@@ -128,9 +129,11 @@ function meet(){
         if(SCENARIO[naam].waarschuwing){
           assert(/Officiële weerwaarschuwing: Code geel/.test(m.brief)&&!/\(geel\)/.test(m.brief),label+": de samenvatting herhaalt het niveau: "+m.brief.slice(0,80));
         }
-        if(naam==="ochtend"&&w>=1100)assert.equal(m.band+m.nacht,0,label+": lege zonneband zonder nacht in het venster");
+        /* Een omlijnde zonneband alleen als er nacht in het venster valt. */
+        assert(!(m.band>0&&m.nacht===0),label+": lege zonneband zonder nacht in het venster");
         if(naam==="avond")assert.equal(m.band,1,label+": de zonneband met nacht ontbreekt");
-        if(w>=600&&w<=1099)assert.equal(m.kolommen,4,label+": tegels staan in "+m.kolommen+" kolommen in plaats van vier");
+        /* Zes zichtbare tegels (goed zicht in deze fixtures) staan vanaf 600px in drie kolommen. */
+        if(w>=600)assert.equal(m.kolommen,3,label+": zes tegels staan in "+m.kolommen+" kolommen in plaats van drie");
         assert.equal(m.aqInspring,0,label+": de luchttegels springen "+m.aqInspring+"px in ten opzichte van hun lijn");
         if(m.model)assert(Math.abs(m.model.w-m.stats.w)<=1,label+": het modelsignaal ("+Math.round(m.model.w)+"px) is niet even breed als de tegels ("+Math.round(m.stats.w)+"px)");
         assert.deepEqual(m.klein,[],label+": tekst kleiner dan 11px");
@@ -151,5 +154,5 @@ function meet(){
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
-  console.log("Indeling OK: modelsignaal onder de tegels, tegels op één lijn en in vier kolommen tot 1099px, lijnen over de volle breedte, luchtwaarden in inkt, geen tekst onder 11px, terugknop en weergave-schakelaar op maat, geen dubbel niveau, geen lege zonneband.");
+  console.log("Indeling OK: modelsignaal onder de tegels, zes tegels in drie kolommen, lijnen over de volle breedte, luchtwaarden in inkt, geen tekst onder 11px, terugknop en weergave-schakelaar op maat, geen dubbel niveau, geen lege zonneband.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});

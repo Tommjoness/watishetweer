@@ -221,8 +221,10 @@ async function run(){
           assert(Math.abs(g.hours.bottom-g.main.bottom)<=1,"uurpaneel en grafiekkolom eindigen niet gelijk");
           assert(Math.abs(g.table.bottom-result.hourRows.at(-1).rect.bottom)<=2,"geen lege onderste tabelregel");
           assert(Math.abs(g.table.bottom-g.hours.bottom)<=2,"geen loos ondervlak onder de laatste uurregel: "+JSON.stringify({route,width,tabel:g.table.bottom,paneel:g.hours.bottom,rijen:result.rows}));
-          assert.equal(result.graphTimes.length,result.sourceTimes.length,"grafiek en tabel moeten exact evenveel desktopuren tonen");
-          assert.deepEqual(result.graphTimes,result.sourceTimes,"grafiek en tabel moeten exact dezelfde desktopurenreeks tonen");
+          /* De desktopgrafiek toont 24 uur; de uurtabel ernaast de eerstvolgende
+             uren die passen. De tabel is dus het begin van de grafiekreeks. */
+          assert.equal(result.graphTimes.length,25,"desktopgrafiek toont 24 uur (25 punten)");
+          assert(result.sourceTimes.length>=1&&result.sourceTimes.length<result.graphTimes.length,"de uurtabel toont de eerstvolgende uren, niet de hele grafiek");
           assert.equal(result.graphTimes[0],result.sourceTimes[0],"grafiek en tabel moeten bij hetzelfde lokale uur beginnen");
           for(let i=0;i<result.sourceTimes.length;i++)assert.equal(result.graphTimes[i],result.sourceTimes[i],`tabeluur ${i} komt niet overeen met hetzelfde grafiekpunt`);
           assert.equal(Date.parse(result.graphTimes.at(-1)+"Z")-Date.parse(result.graphTimes.at(-2)+"Z"),3600000,"opeenvolgende grafiekpunten moeten exact één uur verschillen");

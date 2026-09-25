@@ -4,7 +4,8 @@
    - Iedere nacht beslaat twee regels; scores staan onder elkaar.
    - De uitklapper is een tapdoel van 44px met de naam "Zicht en maan"; openen
      laat de pijl staan en toont de details onder de tekst.
-   - Extra nachten blijven verborgen tot "Meer nachten bekijken".
+   - Telefoon en tablet tonen alleen vannacht; de andere nachten blijven
+     verborgen tot "Meer nachten bekijken".
 
    Draait na: npm run build:cloudflare */
 
@@ -73,7 +74,7 @@ async function open(browser,root,w,h,colorScheme){colorScheme=colorScheme||"ligh
         await page.evaluate(()=>document.querySelectorAll("#nights details").forEach(d=>d.open=false));
         await page.locator("#nights").scrollIntoViewIfNeeded();await sleep(200);
         const dicht=await page.evaluate(meet);
-        assert.equal(dicht.length,3,label+": verwacht drie zichtbare nachten vóór Meer nachten, kreeg "+dicht.length);
+        assert.equal(dicht.length,1,label+": verwacht alleen vannacht vóór Meer nachten, kreeg "+dicht.length);
         for(const r of dicht){
           /* Twee regels: de nacht eindigt direct na oordeel/periode en de pijl;
              geen aparte regel meer voor "Zicht en maan". */
@@ -94,8 +95,9 @@ async function open(browser,root,w,h,colorScheme){colorScheme=colorScheme||"ligh
         /* Meer nachten: extra nachten in dezelfde opbouw. */
         await page.locator("#nights .nacht-meer").click();await sleep(300);
         const alle=await page.evaluate(meet);
-        assert(alle.length>3,label+": Meer nachten toont geen extra nachten");
-        for(const r of alle.slice(3))assert(r.bottom<=Math.max(r.venster.b,r.sum.t+r.sum.h)+2,label+": extra nacht volgt de compacte opbouw niet: "+JSON.stringify(r));
+        assert(alle.length>1,label+": Meer nachten toont geen extra nachten");
+        assert(Math.max(...alle.map(r=>r.scoreL))-Math.min(...alle.map(r=>r.scoreL))<=1,label+": scores staan niet onder elkaar: "+JSON.stringify(alle.map(r=>r.scoreL)));
+        for(const r of alle.slice(1))assert(r.bottom<=Math.max(r.venster.b,r.sum.t+r.sum.h)+2,label+": extra nacht volgt de compacte opbouw niet: "+JSON.stringify(r));
         const over=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
         assert(over<=1,label+": horizontale overflow "+over+"px");
         assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));

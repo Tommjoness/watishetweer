@@ -165,7 +165,8 @@ try{
       if(v("numerals")!=="ok")throw new Error(`${w}px: consumentencijfers zijn typografisch niet geharmoniseerd (${v("numerals")})`);
       if(n("footer-font")<11.9)throw new Error(`${w}px: bronnen/disclaimer blijft te klein (${v("footer-font")}px)`);
       const rows=n("rows"),chart=n("chart-count");
-      if(rows<8||rows>11||chart!==rows)throw new Error(`${w}px: grafiek/tabel delen geen 8–11 hoogtegestuurde uren (${chart}/${rows}); paneel=${v("panel-height")}, tabeltop=${v("table-top")}, rij=${v("row-height")}, kandidaten=${v("candidate-hours")}`);
+      /* De desktopgrafiek toont 24 uur (25 punten); de uurtabel ernaast 8–11 hoogtegestuurde uren. */
+      if(rows<8||rows>11||chart!==25)throw new Error(`${w}px: grafiek toont geen 24 uur of tabel geen 8–11 hoogtegestuurde uren (${chart}/${rows}); paneel=${v("panel-height")}, tabeltop=${v("table-top")}, rij=${v("row-height")}, kandidaten=${v("candidate-hours")}`);
       if(w>=1440&&rows<10)throw new Error(`${w}px: ruime desktop houdt minder dan tien volledige uurregels (${rows}); paneel=${v("panel-height")}, tabeltop=${v("table-top")}, rij=${v("row-height")}`);
       if(n("row-height")<29)throw new Error(`${w}px: uurregel is lager dan 29px (${v("row-height")}px)`);
       if(v("first")!==v("chart-first")||v("first")!=="15:00")throw new Error(`${w}px: eerste uur verschoof of verschilt (${v("chart-first")}/${v("first")})`);

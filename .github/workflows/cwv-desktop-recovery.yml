@@ -53,6 +53,8 @@ jobs:
         run: node scripts/grafiek-interactie-browser.test.js
       - name: Indeling eerste scherm, tegels op één lijn, geen lege zonneband
         run: node scripts/indeling-browser.test.js
+      - name: Samenhang (zes tegels, avondtegels, pollenschaal, Nachtzicht, 24 uur desktop, plaatsindex, subpagina's)
+        run: node scripts/samenhang-browser.test.js
       - name: Huidig uur rond het hele uur volgt de klok
         run: node scripts/uurgrens-browser.test.js
       - name: Grafiek op haar werkelijke breedte, leesbaar op tablet en desktop

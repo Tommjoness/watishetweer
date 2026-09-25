@@ -172,7 +172,7 @@ async function controleer(page,naam,breedte){
 
   const mobiel=breedte<760;
   const zichtbareNachten=r.nightRows.filter(rij=>rij.visible).length;
-  assert.equal(zichtbareNachten,Math.min(3,r.nightRows.length),`${naam} ${breedte}px: juiste aantal Nachtzicht-rijen zichtbaar`);
+  assert.equal(zichtbareNachten,Math.min(breedte<=900?1:3,r.nightRows.length),`${naam} ${breedte}px: juiste aantal Nachtzicht-rijen zichtbaar`);
 
   for(const [i,rij] of r.nightRows.entries()){
     const m=/^(\d+)\/10$/.exec(rij.score);assert(m,`${naam} ${breedte}px nacht ${i}: zichtbare scorevorm`);

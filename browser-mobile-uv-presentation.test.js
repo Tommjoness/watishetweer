@@ -92,16 +92,18 @@ async function controleer(type,naam,breedte){
     const d=(a,b)=>Math.abs(a-b);
     assert.deepEqual(fouten,[],`${naam} ${breedte}px: geen runtime/consolefouten`);
     assert.ok(g.pageOverflow<=2,`${naam} ${breedte}px: geen horizontale pagina-overflow (${g.pageOverflow}px)`);
-    assert.equal(g.count,8,`${naam} ${breedte}px: hoofdgrid bevat exact acht zichtbare tegels`);
+    /* Zes tegels: "Tijd tot zonsondergang" en, bij goed zicht, "Zicht" staan verborgen. */
+    assert.equal(g.count,6,`${naam} ${breedte}px: hoofdgrid bevat exact zes zichtbare tegels`);
     assert.equal(g.pressureVisible,false,`${naam} ${breedte}px: luchtdruk staat niet meer in het zichtbare hoofdgrid`);
     assert.equal(g.labelText,"UV-piek vandaag",`${naam} ${breedte}px: juiste UV-tegel`);
     assert.ok(/^\d+$/.test(g.valueText),`${naam} ${breedte}px: UV-waarde blijft zichtbaar (${g.valueText})`);
     assert.ok(g.subText.length>0&&/UV|piek/i.test(g.subText),`${naam} ${breedte}px: bestaande UV-toelichting blijft zichtbaar`);
     assert.equal(g.breed,false,`${naam} ${breedte}px: UV is geen brede volle-rijtegel meer`);
     assert.ok(g.gridColumns&&g.gridColumns!=="none",`${naam} ${breedte}px: hoofdgrid heeft actieve kolommen`);
-    assert.ok(g.uv&&g.stats&&g.zicht,`${naam} ${breedte}px: UV, Zicht en hoofdgrid hebben meetbare geometrie`);
-    assert.ok(g.uv.w<=g.stats.w*0.56&&g.zicht.w<=g.stats.w*0.56,`${naam} ${breedte}px: UV en Zicht nemen ieder ongeveer één van twee kolommen in`);
-    assert.ok(d(g.uv.t,g.zicht.t)<=2&&d(g.uv.b,g.zicht.b)<=2,`${naam} ${breedte}px: Zicht en UV vormen samen de laatste rij`);
+    /* Zicht staat bij goed zicht verborgen; UV neemt één van twee kolommen in. */
+    assert.ok(g.uv&&g.stats,`${naam} ${breedte}px: UV en hoofdgrid hebben meetbare geometrie`);
+    assert.ok(!g.zicht||g.zicht.w===0,`${naam} ${breedte}px: zichttegel staat zichtbaar bij goed zicht`);
+    assert.ok(g.uv.w<=g.stats.w*0.56,`${naam} ${breedte}px: UV neemt ongeveer één van twee kolommen in`);
     assert.ok(g.zicht.l<g.uv.l,`${naam} ${breedte}px: Zicht staat links en UV rechts in de laatste rij`);
     assert.ok(d(g.uv.r,g.stats.r)<=1,`${naam} ${breedte}px: UV sluit rechts netjes aan op het raster`);
     assert.ok(g.uvOverflow<=1&&g.subOverflow<=1,`${naam} ${breedte}px: UV-inhoud loopt niet horizontaal uit`);
