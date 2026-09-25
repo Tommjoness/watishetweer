@@ -32,7 +32,7 @@ for(const p of htmlBestanden(OUT)){
   assert.strictEqual(tel(html,MARKER_COPY),1,rel+": chart-copy-cleanupmarker niet exact eenmaal aanwezig");
 
   assert.ok(html.includes('const nuLokaleTijd=String(S.d&&S.d.current&&S.d.current.time||"");'),rel+": provider-lokale actuele tijd ontbreekt");
-  assert.ok(html.includes('const desktopUurLabels=!M&&n<=24;'),rel+": desktop-etmaalcontract voor elk uurlabel ontbreekt");
+  assert.ok(html.includes('const desktopUurLabels=!M&&n<=24&&cw>=36;'),rel+": desktop-etmaalcontract voor elk uurlabel ontbreekt");
   assert.ok(html.includes('if(geldig(i)&&(!nuLokaleTijd||(modelTijd&&modelTijd>nuLokaleTijd))) zet(i,4);'),rel+": niet ieder geldig toekomstig desktopuur krijgt hoge labelprioriteit");
   assert.ok(html.includes('if(nuLokaleTijd&&(!modelTijd||modelTijd>nuLokaleTijd)) continue;'),rel+": toekomstige uren zijn niet beschermd tegen nu-suppressie");
   assert.ok(html.includes('if(huidigModel!==null&&afstand<cw*1.05) kandKaart.delete(huidigModel);'),rel+": alleen dichtstbijzijnde niet-toekomstige modeluur hoort te wijken");
@@ -49,7 +49,7 @@ for(const p of htmlBestanden(OUT)){
   assert.ok(html.includes('const nuLokaleTijdPolish=String(S.d&&S.d.current&&S.d.current.time||"");'),rel+": late nu-cleanup kent de actuele provider-tijd niet");
   assert.ok(html.includes('const tijdenPolish=Array.isArray(S.geo.TI)?S.geo.TI:[];'),rel+": late nu-cleanup gebruikt de zichtbare tijdas niet");
   assert.ok(html.includes('const modelTijd=i!==null?String(tijdenPolish[i]||""):"";'),rel+": late cleanup koppelt het label niet terug aan het modeluur");
-  assert.ok(html.includes('const verplichtToekomstuur=!S.geo.M&&S.geo.n<=24&&modelTijd&&(!nuLokaleTijdPolish||modelTijd>nuLokaleTijdPolish);'),rel+": alle toekomstige desktop-uurlabels worden laat niet beschermd");
+  assert.ok(html.includes('const verplichtToekomstuur=!S.geo.M&&S.geo.n<=24&&Number(S.geo.cw)>=36&&modelTijd&&(!nuLokaleTijdPolish||modelTijd>nuLokaleTijdPolish);'),rel+": alle toekomstige desktop-uurlabels worden laat niet beschermd");
   assert.ok(html.includes('if(verplichtToekomstuur) return;'),rel+": toekomstige desktop-uurlabels kunnen nog door nu-cleanup verdwijnen");
   assert.ok(html.includes('verwijderTemperatuurMarkering(svg,el);'),rel+": niet-toekomstige concurrerende markeringen blijven niet opruimbaar");
   assert.ok(html.includes('const actueleGrafiekTemperatuur=S.d&&S.d.current&&S.d.current.temperature_2m;'),rel+": actuele grafiekmarkering leest de bestaande current-temperatuur niet");
@@ -63,7 +63,7 @@ for(const p of htmlBestanden(OUT)){
   assert.ok(html.includes('const compactDesktop=typeof window!=="undefined"&&window.innerWidth>=1100&&!g.M&&g.n<=25;'),rel+": desktop-only Q4 compactcontract ontbreekt");
   assert.ok(html.includes('const y=pb+(compactDesktop?30:48)'),rel+": regenbracket gebruikt niet de compacte desktopoffset");
   assert.ok(html.includes('const onderreserve=compactDesktop?17:25;'),rel+": compacte desktoponderreserve ontbreekt");
-  assert.ok(html.includes('const nieuwH=Math.max(basisH,laatsteBedragY+onderreserve);'),rel+": viewBox-hoogte gebruikt niet de begrensde onderreserve");
+  assert.ok(html.includes('const nieuwH=periodenVerborgen&&!compactDesktop?basisH:Math.max(basisH,laatsteBedragY+onderreserve);'),rel+": viewBox-hoogte gebruikt niet de begrensde onderreserve");
   gezien++;
 }
 assert.ok(gezien>0,"Geen pre-cleanup weerartifact met live chart/layout-fix gevonden.");

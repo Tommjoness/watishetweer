@@ -34,8 +34,10 @@ const LABEL_NIEUW=`/* ${MARKER_LABEL} */
      ieder geldig modeluur ná current.time dezelfde hoge prioriteit. Het lopende
      of laatste verstreken modeluur blijft hieronder bewust vervangbaar door het
      rode actuele nu-label. Mobiel, 48 uur en week blijven bij hun bestaande
-     selectieve labeldichtheid. */
-  const desktopUurLabels=!M&&n<=24;
+     selectieve labeldichtheid. De grafiek wordt op haar werkelijke breedte
+     getekend; is een uur smaller dan 36px (tablet), dan passen cijfer en tijd
+     niet bij ieder uur en geldt het gewone drie-uursritme met pieken en dalen. */
+  const desktopUurLabels=!M&&n<=24&&cw>=36;
   if(desktopUurLabels){
     for(let i=0;i<T.length;i++){
       const modelTijd=String(TI[i]||"");
@@ -112,7 +114,7 @@ const LATE_NU_NIEUW=`  /* ${MARKER_LATE_NU} */
       tempPuntenPolish,S.geo.T,Math.max(72,(Number.isFinite(S.geo.cw)?S.geo.cw:36)*2.5)
     );
     const modelTijd=i!==null?String(tijdenPolish[i]||""):"";
-    const verplichtToekomstuur=!S.geo.M&&S.geo.n<=24&&modelTijd&&(!nuLokaleTijdPolish||modelTijd>nuLokaleTijdPolish);
+    const verplichtToekomstuur=!S.geo.M&&S.geo.n<=24&&Number(S.geo.cw)>=36&&modelTijd&&(!nuLokaleTijdPolish||modelTijd>nuLokaleTijdPolish);
     if(verplichtToekomstuur) return;
     verwijderTemperatuurMarkering(svg,el);
   });
@@ -152,7 +154,12 @@ const HOOGTE_RE=/const\s+nieuwH\s*=\s*Math\.max\(basisH\s*,\s*laatsteBedragY\s*\
 const HOOGTE_NIEUW=`/* De uurhorizon mag niet afhangen van deze interne SVG-reserve;
      syncHoogte borgt afzonderlijk minimaal acht volledige desktopuren. */
   const onderreserve=compactDesktop?17:25;
-  const nieuwH=Math.max(basisH,laatsteBedragY+onderreserve);`;
+  /* Op de weerpagina is de bracketgroep via CSS verborgen: tijdvak en mm staan
+     in de tekst onder de grafiek. Reserveer dan geen lege ruimte onder de as.
+     Desktop vanaf 1100px houdt zijn compacte reserve voor de weericonen. */
+  const proefPerioden=document.createElementNS(Q4_SVG_NS,"g");proefPerioden.setAttribute("data-q4-rain-periods","1");svg.appendChild(proefPerioden);
+  const periodenVerborgen=getComputedStyle(proefPerioden).display==="none";proefPerioden.remove();
+  const nieuwH=periodenVerborgen&&!compactDesktop?basisH:Math.max(basisH,laatsteBedragY+onderreserve);`;
 
 function htmlBestanden(dir){
   const uit=[];
