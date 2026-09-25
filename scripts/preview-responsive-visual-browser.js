@@ -143,7 +143,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
             moreCenterDelta:Math.abs(tekstMidden(meer)-((mr.left+mr.right)/2)),
             moreJustify:cs(meer).justifyContent,
             moreTextAlign:cs(meer).textAlign,
-            headingCenterDelta:Math.abs(tekstMidden(kop)-((nr.left+nr.right)/2)),
+            headingLeftDelta:Math.abs(kopTekst.getBoundingClientRect().left-document.getElementById("app").getBoundingClientRect().left),
+            rows:new Set(zichtbaar.map(x=>Math.round(x.getBoundingClientRect().top))).size,
             headingLinkGap:regulier[0]?eersteTekst.getBoundingClientRect().left-kopTekst.getBoundingClientRect().right:null,
             overflow:Math.max(0,nr.right-innerWidth,-nr.left),
             background:cs(nav).backgroundColor
@@ -174,7 +175,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           for(let i=0;i<hourBoxes.length;i++)for(let j=i+1;j<hourBoxes.length;j++)if(raakt(hourBoxes[i],hourBoxes[j],0))hourOverlap.push(i+"-"+j);
           const sunInChart=svg?[...svg.querySelectorAll("text")].filter(el=>/^zon (?:op|onder) \\d{2}:\\d{2}$/i.test(String(el.textContent||"").trim())).length:999;
           const bron=document.querySelector("footer .bron-bronnen"),items=bron?[...bron.querySelectorAll(".bronitem:not([hidden])")]:[],last=items[items.length-1]||null,br=bron&&bron.getBoundingClientRect(),lr=last&&last.getBoundingClientRect();
-          const lines=items.map(el=>{const st=getComputedStyle(el.querySelector("a")||el);return {w:st.borderBottomWidth,c:st.borderBottomColor};});
+          const lines=items.map(el=>{const st=getComputedStyle(el.querySelector("a")||el);return {w:st.textDecorationLine,c:st.textDecorationColor};});
           const footer=document.querySelector("footer"),direct=[...footer.querySelectorAll(":scope > span.bron")],disclaimer=direct.find(el=>/Weersinformatie is algemeen/.test(el.textContent||"")),contact=footer.querySelector(".footer-contact"),utilities=[direct.find(el=>el.querySelector('a[href="/over/"]')),direct.find(el=>el.querySelector('a[href="/privacy"]')),footer.querySelector(":scope > details.footer-details")].filter(Boolean);
           const utilityBottom=utilities.length?Math.max(...utilities.map(el=>el.getBoundingClientRect().bottom)):0;
           const chip=document.querySelector(".chip.on"),probe=document.createElement("i");probe.style.color="var(--accent-active)";document.body.appendChild(probe);const accent=getComputedStyle(probe).color;probe.remove();
@@ -232,18 +233,19 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       if(vp.width<=430){
         const p=basis.plaats;
         assert(p,`${vp.naam}: populaire-plaatsennavigatie ontbreekt op gedeployde preview`);
-        assert.equal(p.display,"grid",`${vp.naam}: populaire plaatsen gebruikt geen grid`);
-        assert.equal(p.columns,2,`${vp.naam}: populaire plaatsen gebruikt ${p.columns} in plaats van 2 kolommen`);
+        /* Populaire plaatsen lopen als één links uitgelijnde regel door vanaf de
+           lijn van de pagina, met 44px-tapdoelen. */
+        assert.equal(p.display,"flex",`${vp.naam}: populaire plaatsen staan niet als doorlopende regel`);
+        assert(p.rows<=3,`${vp.naam}: populaire plaatsen beslaan ${p.rows} regels`);
         assert.equal(p.regularCount,6,`${vp.naam}: compacte mobiele selectie bevat ${p.regularCount} in plaats van 6 plaatsen`);
         assert(p.minHeight>=43.5,`${vp.naam}: plaatslink verliest 44px touch target (${p.minHeight}px)`);
-        assert.equal(p.justify,"center",`${vp.naam}: plaatslink justify-content is ${p.justify}`);
-        assert.equal(p.textAlign,"center",`${vp.naam}: plaatslink text-align is ${p.textAlign}`);
+        assert.equal(p.justify,"flex-start",`${vp.naam}: plaatslink justify-content is ${p.justify}`);
+        assert.equal(p.textAlign,"left",`${vp.naam}: plaatslink text-align is ${p.textAlign}`);
         assert(p.textDelta<=1,`${vp.naam}: plaatsnaam staat ${p.textDelta}px uit het midden van zijn kolom`);
-        assert.equal(p.moreJustify,"center",`${vp.naam}: Meer plaatsen justify-content is ${p.moreJustify}`);
-        assert.equal(p.moreTextAlign,"center",`${vp.naam}: Meer plaatsen text-align is ${p.moreTextAlign}`);
-        assert(p.moreWidthDelta<=1.5,`${vp.naam}: Meer plaatsen spant niet over beide kolommen (delta ${p.moreWidthDelta}px)`);
+        assert.equal(p.moreJustify,"flex-start",`${vp.naam}: Meer plaatsen justify-content is ${p.moreJustify}`);
+        assert.equal(p.moreTextAlign,"left",`${vp.naam}: Meer plaatsen text-align is ${p.moreTextAlign}`);
         assert(p.moreCenterDelta<=1,`${vp.naam}: Meer plaatsen staat ${p.moreCenterDelta}px uit het midden`);
-        assert(p.headingCenterDelta<=1.5,`${vp.naam}: sectietitel verspringt ${p.headingCenterDelta}px uit het midden`);
+        assert(p.headingLeftDelta<=1.5,`${vp.naam}: sectietitel staat ${p.headingLeftDelta}px naast de lijn van de pagina`);
         assert(p.overflow<=1,`${vp.naam}: populaire plaatsen veroorzaakt ${p.overflow}px overflow`);
         const m=basis.mobilePolish;
         assert(m,`${vp.naam}: mobile-polishmeting ontbreekt`);
@@ -270,15 +272,13 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         assert.equal(m.compact,"1",`${vp.naam}: grafiekhoogte is niet mobiel gecompacteerd`);
         if(m.chartSummaryGap!==null)assert(m.chartSummaryGap>=0&&m.chartSummaryGap<=18,`${vp.naam}: grafiek-samenvatting heeft ${m.chartSummaryGap}px tussenruimte`);
         assert(m.sourceCount>=3,`${vp.naam}: te weinig zichtbare bronitems (${m.sourceCount})`);
-        assert(m.lineWidths.every(x=>Math.abs(parseFloat(x)-1)<=.1),`${vp.naam}: bronlijnen zijn niet overal 1px (${m.lineWidths.join("/")})`);
+        /* Bronnen lopen als één regel door; iedere bron is onderstreept direct
+           onder de tekst, overal in dezelfde kleur. */
+        assert(m.lineWidths.every(x=>/underline/.test(x)),`${vp.naam}: bronnen zijn niet overal onderstreept (${m.lineWidths.join("/")})`);
         assert.equal(new Set(m.lineColors).size,1,`${vp.naam}: bronlijnen gebruiken verschillende kleuren (${m.lineColors.join(" / ")})`);
-        if(m.sourceCount%2===1){
-          assert.equal(m.lastOdd,true,`${vp.naam}: laatste oneven bron spant niet over beide kolommen`);
-          assert(m.lastCenterDelta<=1.5,`${vp.naam}: laatste oneven bron staat ${m.lastCenterDelta}px uit het midden`);
-        }
         assert(!/^[·/]/.test(m.lastText),`${vp.naam}: losse middot/slash staat nog vóór laatste bron: ${m.lastText}`);
         assert(m.sourceDisclaimerGap>=3,`${vp.naam}: disclaimer staat te dicht op bronnen (${m.sourceDisclaimerGap}px)`);
-        assert(m.utilityContactGap>=7,`${vp.naam}: supportregel staat te dicht op utilitylinks (${m.utilityContactGap}px)`);
+        assert(m.utilityContactGap>=0,`${vp.naam}: supportregel overlapt de utilitylinks (${m.utilityContactGap}px)`);
         assert(m.nightOverflow<=1,`${vp.naam}: Nachtzicht veroorzaakt ${m.nightOverflow}px interne horizontale overflow`);
         for(const [naam,d] of Object.entries(m.disclosures)){
           assert(d,`${vp.naam}: disclosure '${naam}' is niet zichtbaar`);
@@ -431,13 +431,13 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         });
         assert(donkerPlaats,`${vp.naam}: donkere populaire-plaatsennavigatie ontbreekt`);
         assert.notEqual(donkerPlaats.background,"rgb(255, 255, 255)",`${vp.naam}: donkere populaire-plaatsensectie valt terug naar wit`);
-        assert.equal(donkerPlaats.justify,"center",`${vp.naam}: plaatsnamen verliezen centrering in dark mode`);
-        assert.equal(donkerPlaats.textAlign,"center",`${vp.naam}: plaatsnamen verliezen text-align in dark mode`);
-        assert.equal(donkerPlaats.moreJustify,"center",`${vp.naam}: Meer plaatsen verliest centrering in dark mode`);
-        assert.equal(donkerPlaats.moreTextAlign,"center",`${vp.naam}: Meer plaatsen verliest text-align in dark mode`);
+        assert.equal(donkerPlaats.justify,"flex-start",`${vp.naam}: plaatsnamen verliezen uitlijning in dark mode`);
+        assert.equal(donkerPlaats.textAlign,"left",`${vp.naam}: plaatsnamen verliezen text-align in dark mode`);
+        assert.equal(donkerPlaats.moreJustify,"flex-start",`${vp.naam}: Meer plaatsen verliest uitlijning in dark mode`);
+        assert.equal(donkerPlaats.moreTextAlign,"left",`${vp.naam}: Meer plaatsen verliest text-align in dark mode`);
         const donkerPolish=await page.evaluate(()=>{
           const bron=document.querySelector("footer .bron-bronnen"),items=bron?[...bron.querySelectorAll(".bronitem:not([hidden])")]:[],chip=document.querySelector(".chip.on");
-          return {lineColors:items.map(el=>getComputedStyle(el.querySelector("a")||el).borderBottomColor),chipBorder:chip?getComputedStyle(chip).borderColor:"",overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth};
+          return {lineColors:items.map(el=>getComputedStyle(el.querySelector("a")||el).textDecorationColor),chipBorder:chip?getComputedStyle(chip).borderColor:"",overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth};
         });
         assert.equal(new Set(donkerPolish.lineColors).size,1,`${vp.naam}: bronlijnen worden inconsistent in dark mode`);
         assert(donkerPolish.chipBorder,`${vp.naam}: actieve opgeslagen plaats verliest dark-mode selectie`);

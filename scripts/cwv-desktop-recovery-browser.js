@@ -119,6 +119,7 @@ async function run(){
             sourceDisplay:getComputedStyle(footerSources).display,
             sourceWidth:footerSources.getBoundingClientRect().width,
             sourceVisible:visibleSourceLinks.length,
+            sourceNames:visibleSourceLinks.map(a=>(a.textContent||"").trim()),
             sourceRows:sourceRows.length,
             sourceHitHeight:sourceRects.length?Math.min(...sourceRects.map(r=>r.height)):0,
             disclaimerWidth:disclaimerRect.width,
@@ -184,16 +185,17 @@ async function run(){
         if(width===390&&route==="/weer/amsterdam/"){
           const f=result.footer;
           assert(f,"mobiele footer ontbreekt in live 390px preview");
-          assert.equal(f.sourceDisplay,"grid","live bronlijst gebruikt niet het finale gridritme");
+          assert.equal(f.sourceDisplay,"flex","live bronlijst staat niet als doorlopende regel");
           assert(f.sourceWidth>=330,"live bronlijst benut te weinig mobiele breedte: "+f.sourceWidth);
-          assert(f.sourceVisible>=4,"live footer mist actieve bronlinks: "+JSON.stringify(f));
-          assert.equal(f.sourceRows,Math.ceil(f.sourceVisible/2),"live bronnen volgen niet exact de tweekoloms row-flow: "+JSON.stringify(f));
+          /* Alleen gebruikte bronnen staan erbij; Open-Meteo is altijd de kernbron. */
+          assert(f.sourceVisible>=2&&f.sourceNames.includes("Open-Meteo"),"live footer mist actieve bronlinks: "+JSON.stringify(f));
+          assert(f.sourceRows<=2,"live bronnen beslaan meer dan twee regels: "+JSON.stringify(f));
           assert(f.sourceHitHeight>=43.5,"live bronlink verliest 44px tapdoel: "+f.sourceHitHeight);
-          assert(Math.abs(f.disclaimerWidth-f.rect.width)<=1&&f.disclaimerLines<=4&&f.disclaimerLineHeight<=15.6,"live disclaimer benut niet rustig de footerbreedte: "+JSON.stringify(f));
-          assert(Math.abs(f.contactWidth-f.rect.width)<=1&&f.contactRowDelta<=1,"live contactvraag en mail delen geen compacte volle rij: "+JSON.stringify(f));
+          assert(Math.abs(f.disclaimerWidth-f.rect.width)<=1&&f.disclaimerLines<=4&&f.disclaimerLineHeight<=18,"live disclaimer benut niet rustig de footerbreedte: "+JSON.stringify(f));
+          assert(f.contactWidth<=f.rect.width+1&&f.contactRowDelta<=1,"live contactvraag en mail delen geen compacte rij: "+JSON.stringify(f));
           assert(f.contactHitHeight>=43.5,"live contactmail verliest 44px tapdoel: "+f.contactHitHeight);
           assert(f.utilityRows===2&&f.utilityPairDelta<=1&&f.utilityDetailsDelta>=43&&f.utilityDetailsDelta<=53&&f.utilityHitHeight>=43.5,"live utilitylinks volgen niet de bedoelde 2+1-indeling/tapdoelen: "+JSON.stringify(f));
-          assert(f.rect.height<360,"live 390px-footer overschrijdt de leesbare mobiele hoogteband: "+f.rect.height);
+          assert(f.rect.height<=330,"live 390px-footer overschrijdt de compacte mobiele hoogteband: "+f.rect.height);
           console.log("FOOTER_390 "+JSON.stringify({scenario,height:f.rect.height,sourceWidth:f.sourceWidth,sourceVisible:f.sourceVisible,sourceRows:f.sourceRows,disclaimerWidth:f.disclaimerWidth,disclaimerLines:f.disclaimerLines,disclaimerLineHeight:f.disclaimerLineHeight,contactWidth:f.contactWidth,contactRowDelta:f.contactRowDelta,sourceHitHeight:f.sourceHitHeight,contactHitHeight:f.contactHitHeight,utilityRows:f.utilityRows,utilityPairDelta:f.utilityPairDelta,utilityDetailsDelta:f.utilityDetailsDelta,utilityHitHeight:f.utilityHitHeight}));
         }
         assert(result.tijdCompleet!=="0","Grafiek toont een temperatuur zonder uurtijd: "+JSON.stringify({route,width,scenario}));

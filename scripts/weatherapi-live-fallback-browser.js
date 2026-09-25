@@ -93,7 +93,8 @@ function verwachteOpenMeteo503(msg){
       briefing:(document.getElementById("brief")?.textContent||"").trim(),
       days:document.querySelectorAll("#days .day:not(.kop)").length,
       chartNodes:document.getElementById("chart")?.childElementCount||0,
-      attribution:[...document.querySelectorAll("footer a")].some(a=>(a.textContent||"").trim()==="Weather Data Provided by Visual Crossing"&&/^https:\/\/(?:www\.)?visualcrossing\.com\/?/.test(a.href)),
+      attribution:[...document.querySelectorAll("footer a")].some(a=>(a.textContent||"").trim()==="Weather Data Provided by Visual Crossing"&&/^https:\/\/(?:www\.)?visualcrossing\.com\/?/.test(a.href)&&a.getClientRects().length>0&&!a.closest("[hidden]")),
+      weatherApiZichtbaar:[...document.querySelectorAll("footer a")].some(a=>(a.textContent||"").trim()==="WeatherAPI.com"&&a.getClientRects().length>0&&!a.closest("[hidden]")),
       ready:window.__WEATHERNOW_APP_READY__===true&&document.documentElement.dataset.appBootstrap==="ready",
       expectedSha
     }),EXPECTED_SHA);
@@ -103,6 +104,7 @@ function verwachteOpenMeteo503(msg){
     assert.equal(bewijs.days,7,"weekweergave bevat niet zeven dagen");
     assert(bewijs.chartNodes>=1,"uur-/etmaalgrafiek ontbreekt na Visual Crossing fallback");
     assert.equal(bewijs.attribution,true,"verplichte Visual Crossing-attributie ontbreekt in de live footer");
+    assert.equal(bewijs.weatherApiZichtbaar,false,"WeatherAPI.com staat als bron vermeld terwijl Visual Crossing de data leverde");
     assert.equal(bewijs.ready,true,"app-readycontract ontbreekt na Visual Crossing fallback");
     assert(openMeteoForecasts>=2,"gerichte test heeft niet zowel volledige als lichte Open-Meteo-aanvraag laten falen");
     assert.deepEqual(pageErrors,[],"page errors tijdens fallback: "+pageErrors.join(" | "));
