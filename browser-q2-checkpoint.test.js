@@ -155,7 +155,7 @@ async function controleer(page,naam,breedte){
         source:moonlab&&moonlab.getAttribute("data-maan-fase")!==null?Number(moonlab.getAttribute("data-maan-fase")):null,
         rendered:moonlabSvg&&moonlabSvg.getAttribute("data-fase")!==null?Number(moonlabSvg.getAttribute("data-fase")):null
       },
-      viewBox:{w:vb.width,h:vb.height},regenPeriodeLabels:chart.querySelectorAll('g[data-q4-rain-periods] text').length,bots,nu:nu.map(x=>x.tekst),
+      viewBox:{w:vb.width,h:vb.height},chartBreedte:chart.getBoundingClientRect().width,regenPeriodeLabels:[...chart.querySelectorAll('g[data-q4-rain-periods] text')].filter(el=>{for(let n=el;n&&n!==chart;n=n.parentElement)if(getComputedStyle(n).display==="none")return false;return true;}).length,bots,nu:nu.map(x=>x.tekst),
       nuMarkering:!!chart.querySelector('line[stroke="var(--carmine)"]')&&!!chart.querySelector('circle[fill="var(--carmine)"]'),tempLabels:gewone.length,tempBuiten,
       canonicalBeste:[...nights.querySelectorAll(".nachtadvies")].filter(x=>/Beste periode\s+\d{2}:\d{2}/i.test(x.textContent||"")).length
     };
@@ -194,10 +194,14 @@ async function controleer(page,naam,breedte){
   assert.ok(r.cloudKopRight===null||r.cloudKopRight<=r.nachtRight+1,`${naam} ${breedte}px: kop Bewolking loopt niet uit Nachtzicht`);
 
   const basisH=mobiel?250:296;
-  assert.equal(r.viewBox.w,mobiel?380:900,`${naam} ${breedte}px: grafiekbreedte blijft canoniek`);
+  /* Telefoons houden de mobiele viewBox van 380; daarboven tekent de grafiek op
+     haar werkelijke breedte (560–900), zodat letters niet meer verkleind worden. */
+  const verwachteW=mobiel?(r.chartBreedte>420?Math.min(Math.round(r.chartBreedte),760):380):Math.max(560,Math.min(Math.round(r.chartBreedte),900));
+  assert.ok(Math.abs(r.viewBox.w-verwachteW)<=1,`${naam} ${breedte}px: grafiekbreedte volgt de getekende breedte (${r.viewBox.w} tegen ${verwachteW})`);
   /* Droge mobiele grafieken mogen tot het compacte 220–250px-budget krimpen.
-     Zodra Q4 vaste regenperiode-labels tekent, zijn die labels inhoud in plaats
-     van witruimte en blijft de canonieke 296px-reserve toegestaan. */
+     Zodra Q4 zichtbare regenperiode-labels tekent, zijn die labels inhoud in
+     plaats van witruimte en blijft de canonieke 296px-reserve toegestaan.
+     Verborgen labels tellen niet: daarvoor hoort geen lege ruimte. */
   const natMetPeriodeLabels=mobiel&&r.regenPeriodeLabels>0;
   const minH=mobiel?(natMetPeriodeLabels?296:220):basisH;
   const maxH=mobiel?(natMetPeriodeLabels?296:basisH):basisH+100;

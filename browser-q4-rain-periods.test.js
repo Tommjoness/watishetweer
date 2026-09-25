@@ -120,7 +120,9 @@ async function controleer(type,naam,breedte){
         nachtBewolking:[...document.querySelectorAll("#nights .perc")].map(el=>(el.textContent||"").trim()),
         aqiSub:(document.querySelector("#aq .stat:first-child .ssub")||{}).textContent||"",
         dagteksten:[...document.querySelectorAll("#days .dcond")].map(x=>x.textContent.trim()),
-        h:Number(svg.getAttribute("viewBox").trim().split(/\s+/)[3])
+        h:Number(svg.getAttribute("viewBox").trim().split(/\s+/)[3]),
+        basisH:Number(g.M?250:296),
+        bracketsZichtbaar:getComputedStyle(regen).display!=="none"
       };
     });
 
@@ -141,7 +143,12 @@ async function controleer(type,naam,breedte){
     assert(r.nachtBewolking.length>0&&r.nachtBewolking.every(t=>t==="<5%"),naam+" "+breedte+": Nachtzicht gebruikt dezelfde <5%-notatie; kreeg "+JSON.stringify(r.nachtBewolking));
     assert.equal(r.aqiSub,"Redelijk",naam+" "+breedte+": AQI-subregel herhaalt de schaalnaam niet; kreeg "+JSON.stringify(r.aqiSub));
     assert(!r.dagteksten.some(t=>/rond \d{1,2}:\d{2}/.test(t)),naam+" "+breedte+": dagregels suggereren geen minuutprecisie");
-    assert(r.h>=296,naam+" "+breedte+": natte grafiek reserveert ruimte voor brackets, tijdlabels en bedragen");
+    /* Ruimte onder de as hoort bij zichtbare inhoud. Zijn de brackets zichtbaar,
+       dan reserveert de natte grafiek er plaats voor; zijn ze via de paginastijl
+       verborgen (tijdvak en mm staan dan in de tekst onder de grafiek), dan
+       blijft er geen lege strook achter. */
+    if(r.bracketsZichtbaar)assert(r.h>=296,naam+" "+breedte+": natte grafiek reserveert ruimte voor zichtbare brackets, tijdlabels en bedragen");
+    else assert(r.h<=Math.max(r.basisH,310),naam+" "+breedte+": verborgen brackets laten geen lege ruimte onder de grafiek (viewBox-hoogte "+r.h+")");
 
     await page.locator("#chart").scrollIntoViewIfNeeded();
     const puntCoords=uur=>page.evaluate(uur=>{

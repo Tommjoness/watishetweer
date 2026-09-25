@@ -33,8 +33,8 @@ const SENIOR_NACHT_START='const basisNachten=nachten;\nnachten=function(){';
 const SENIOR_NACHT_END='\n\n/* Verstreken uurwaarden zijn forecast/modelwaarden';
 const SENIOR_NACHT_SIGNATURE='const basisNachten=nachten;\nnachten=function(){\n  basisNachten();\n  const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")]';
 
-const GRAFIEK_MOBIEL_OUD='  const W=M?380:900, H=M?292:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?20:22, bh=M?11:16;\n  const pt=M?72:76, ih=M?166:160, pb=pt+ih;';
-const GRAFIEK_MOBIEL_NIEUW='  const W=M?380:900, H=M?250:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?18:22, bh=M?10:16;\n  const pt=M?59:76, ih=M?145:160, pb=pt+ih;';
+const GRAFIEK_MOBIEL_OUD='  const W=grafiekW, H=M?292:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?20:22, bh=M?11:16;\n  const pt=M?72:76, ih=M?166:160, pb=pt+ih;';
+const GRAFIEK_MOBIEL_NIEUW='  const W=grafiekW, H=M?250:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;\n  const by=M?18:22, bh=M?10:16;\n  const pt=M?59:76, ih=M?145:160, pb=pt+ih;';
 const GRAFIEK_LABEL_PAST_OUD='      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val<=pb-3;';
 const GRAFIEK_LABEL_PAST_NIEUW='      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val+labelHoogte/2+4<=pb;';
 const GRAFIEK_TICK_OUD='    if(toonAs){\n      ticks+=';

@@ -646,10 +646,51 @@ function compactMobieleGrafiekHoogte(){
    het cijfer per uur. Een zacht vlak onder de lijn, het weericoon boven iedere
    uurtijd op de as en een subtiel uitgelicht hoogste en laagste punt. De
    uurtijden schuiven alleen omlaag als daar binnen de viewBox ruimte is. */
+/* Een temperatuurcijfer hoort bij zijn punt. Eerdere passes stapelen een label
+   soms twee lagen hoog om een buurlabel te ontwijken dat daarna nog vervalt
+   (bijvoorbeeld omdat er geen tijd naast paste); dan zweefde het cijfer ver
+   boven zijn punt. Staat een cijfer verder dan 34px van zijn punt, dan gaat
+   het naar de dichtstbijzijnde plek die vrij is van andere tekst en van de
+   lijn: 14px boven, net onder of 32px boven het punt. Is geen enkele plek
+   vrij, dan blijft het staan. Alleen voor de niet-mobiele grafiek; de mobiele
+   grafiek heeft haar eigen temperatuurrij. */
+function trekTemperatuurLabelsNaarPunt(svg,g){
+  const top=Number(g.pt),bottom=top+Number(g.ih),cw=Number(g.cw);
+  if(![top,bottom,cw].every(Number.isFinite)||cw<=0)return;
+  const isTemp=el=>!el.closest("#scrub")&&/Bodoni/i.test(String(el.getAttribute("font-family")||""))&&/^-?\d+°$/.test(String(el.textContent||"").trim());
+  const alleTekst=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!el.closest('g[data-q4-rain-periods]'));
+  const punten=[...svg.querySelectorAll("circle[data-temp-index]")].map(c=>({i:Number(c.getAttribute("data-temp-index")),x:Number(c.getAttribute("cx")),y:Number(c.getAttribute("cy"))})).filter(p=>[p.i,p.x,p.y].every(Number.isFinite));
+  const lijnen=[...svg.querySelectorAll("polyline")].filter(el=>!el.closest("#scrub")).map(l=>String(l.getAttribute("points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
+  alleTekst.filter(isTemp).forEach(el=>{
+    const lx=Number(el.getAttribute("x")),ly=Number(el.getAttribute("y")),fs=Number(el.getAttribute("font-size"))||12;
+    const waarde=Number(String(el.textContent).trim().replace("°",""));
+    const vastIndex=Number(el.getAttribute("data-desktop-temp-marker-index"));
+    let punt=null,afstand=Infinity;
+    punten.forEach(p=>{
+      if(Number.isInteger(vastIndex)&&el.hasAttribute("data-desktop-temp-marker-index")&&p.i!==vastIndex)return;
+      if(Math.round(Number(g.T[p.i]))!==waarde)return;
+      const dx=Math.abs(p.x-lx);if(dx<=Math.max(cw*.75,24)&&dx<afstand){afstand=dx;punt=p;}
+    });
+    if(!punt)return;
+    const bovenAfstand=punt.y-ly,onderAfstand=ly-fs*.92-punt.y;
+    if(Math.max(bovenAfstand,onderAfstand)<=34)return;
+    const anderen=alleTekst.filter(t=>t!==el&&t.isConnected).map(svgTekstBoxUitElement).filter(Boolean);
+    for(const kandidaat of [punt.y-14,punt.y+fs+6,punt.y-32]){
+      if(kandidaat-fs<top-2||kandidaat>bottom-3)continue;
+      const box=geschatteSvgTekstBox(el.textContent,lx,kandidaat,el.getAttribute("text-anchor")||"middle",fs);
+      if(!box||anderen.some(b=>rechthoekenBotsen(box,b,2))||lijnen.some(pt=>lijnRaaktTekstBox(pt,box,1)))continue;
+      el.setAttribute("y",kandidaat.toFixed(1));el.setAttribute("data-label-naar-punt","1");break;
+    }
+  });
+}
+
 function bouwDesktopGrafiekAccenten(){
-  if(mobiel())return;
+  /* Volgt de grafiekmodus (g.M) en niet de paginabreedte: vanaf 760px tekent
+     de grafiek desktopgeometrie op haar werkelijke breedte, dus ook tablet
+     krijgt vlak, iconen en gemarkeerde piek en dal. */
   const svg=document.getElementById("chart"),g=S.geo;
   if(!svg||!g||g.M||!Array.isArray(g.T)||!Array.isArray(g.TI)||typeof g.x!=="function"||typeof g.y!=="function")return;
+  trekTemperatuurLabelsNaarPunt(svg,g);
   const top=Number(g.pt),bottom=top+Number(g.ih),W=Number(g.W),cw=Number(g.cw);
   const delen=String(svg.getAttribute("viewBox")||"").trim().split(/\s+/).map(Number);
   const H=delen.length===4&&Number.isFinite(delen[3])?delen[3]:Number(g.H);

@@ -113,7 +113,7 @@ async function open(browser,root,w,h){
         m.mmLabels.forEach((l,k)=>{
           const st=m.staafBoxen.find(x=>x.uur===l.uur),waarde=m.staven.find(x=>x.uur===l.uur);
           assert(st&&waarde,w+"px: hoeveelheid "+l.tekst+" hoort bij geen staafje ("+l.uur+")");
-          assert.equal(l.tekst,nl1(waarde.mm)+(m.smal?"":" mm"),w+"px: staafje "+l.uur+" toont "+l.tekst);
+          assert.equal(l.tekst,nl1(waarde.mm),w+"px: staafje "+l.uur+" toont "+l.tekst+"; verwacht alleen het getal (eenheid staat in de samenvatting)");
           const midden=l.box.x+l.box.w/2,staafMidden=st.box.x+st.box.w/2;
           assert(Math.abs(midden-staafMidden)<=st.vak/2+1,w+"px: hoeveelheid "+l.tekst+" staat niet boven haar staafje ("+midden+" tegen "+staafMidden+")");
           assert(l.box.y+l.box.h<=st.box.y+1,w+"px: hoeveelheid "+l.tekst+" staat niet boven het staafje");

@@ -118,7 +118,10 @@ assert(!runtime.includes("mobieleTemperatuurLabelLimiet(window.innerWidth)"),"De
 /* Desktop: dezelfde accenten, met behoud van het uurcijfer. */
 assert(/compactMobieleGrafiekHoogte\(\);koppelTijdAanTemperatuur\(\);bouwDesktopGrafiekAccenten\(\);\}/.test(runtime),"Tijdkoppeling en desktopaccenten draaien in dezelfde idempotente grafiekpass, de tijden vóór de iconen.");
 assert(runtime.includes("function koppelTijdAanTemperatuur(){")&&runtime.includes('data-temp-time')&&runtime.includes('data-temp-time-complete'),"Iedere temperatuur in de grafiek krijgt een tijd onder haar punt, of vervalt.");
-assert(runtime.includes("function bouwDesktopGrafiekAccenten(){\n  if(mobiel())return;"),"Desktopaccenten gelden alleen boven 900px; mobiel en tablet houden hun eigen owner.");
+{
+  const accenten=runtime.slice(runtime.indexOf("function bouwDesktopGrafiekAccenten(){"),runtime.indexOf("function koppelTijdAanTemperatuur(){"));
+  assert(accenten&&!accenten.includes("if(mobiel())return;")&&/if\(!svg\|\|!g\|\|g\.M\|\|/.test(accenten),"Desktopaccenten volgen de grafiekmodus: iedere niet-mobiele grafiek (vanaf 760px, ook tablet) krijgt ze; de mobiele grafiek houdt haar eigen owner.");
+}
 assert(runtime.includes('data-desktop-temp-area')&&runtime.includes('url(#desktopTempVlak)'),"Desktop krijgt het zachte vlak onder de lijn.");
 assert(runtime.includes('data-desktop-weather-icon')&&runtime.includes("bestaandeUurLabels(svg,g)")&&runtime.includes("<=H-2"),"Desktopiconen staan bij de bestaande uurtijden en alleen als alles binnen de viewBox past.");
 assert(runtime.includes('mobieleGrafiekMarkeringen(g.T,g.T.length,')&&runtime.includes('data-desktop-temp-marker-dot'),"Desktop licht hoogste en laagste punt uit met hetzelfde markeringenplan als mobiel.");
