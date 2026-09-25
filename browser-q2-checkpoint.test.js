@@ -155,7 +155,7 @@ async function controleer(page,naam,breedte){
         source:moonlab&&moonlab.getAttribute("data-maan-fase")!==null?Number(moonlab.getAttribute("data-maan-fase")):null,
         rendered:moonlabSvg&&moonlabSvg.getAttribute("data-fase")!==null?Number(moonlabSvg.getAttribute("data-fase")):null
       },
-      viewBox:{w:vb.width,h:vb.height},chartBreedte:chart.getBoundingClientRect().width,regenPeriodeLabels:[...chart.querySelectorAll('g[data-q4-rain-periods] text')].filter(el=>el.getClientRects().length&&getComputedStyle(el).display!=="none").length,bots,nu:nu.map(x=>x.tekst),
+      viewBox:{w:vb.width,h:vb.height},chartBreedte:chart.getBoundingClientRect().width,regenPeriodeLabels:[...chart.querySelectorAll('g[data-q4-rain-periods] text')].filter(el=>{for(let n=el;n&&n!==chart;n=n.parentElement)if(getComputedStyle(n).display==="none")return false;return true;}).length,bots,nu:nu.map(x=>x.tekst),
       nuMarkering:!!chart.querySelector('line[stroke="var(--carmine)"]')&&!!chart.querySelector('circle[fill="var(--carmine)"]'),tempLabels:gewone.length,tempBuiten,
       canonicalBeste:[...nights.querySelectorAll(".nachtadvies")].filter(x=>/Beste periode\s+\d{2}:\d{2}/i.test(x.textContent||"")).length
     };
