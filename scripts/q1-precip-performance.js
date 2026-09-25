@@ -190,8 +190,7 @@ let cacheRenderGeneratie=0;
 function cacheKernRender(wissel){
   const d=S.d||{},c=d.current||{},h=d.hourly||{};
   if(!Array.isArray(h.time))return false;
-  let i=h.time.findIndex(t=>String(t).slice(0,13)===String(c.time||"").slice(0,13));
-  S.i0=i<0?0:i;
+  S.i0=actueelUurIndex(d);
 
   if(wissel){
     ["wind","gust","prec","pop","hum","pres","cloud","vis","uv"].forEach(id=>{

@@ -1190,10 +1190,29 @@ async function load(lat,lon,label,stil,opslaan,land){
 }
 
 /* ---------- tekenen ---------- */
+/* Het huidige uur is het uur waarin de klok op de plaats staat. De actuele
+   meting van de bron loopt rond het hele uur vaak een kwartier achter (09:45
+   terwijl het al 10:00 is); grafiek, briefing en uurtabel begonnen dan een uur
+   te vroeg en de tabel liet daarna twee in plaats van één verstreken uur weg.
+   De klok telt alleen als die op de as van de bron ligt en hooguit drie uur
+   voorloopt, zodat een verkeerd ingestelde apparaatklok niets verschuift. */
+function actueelUurIndex(d){
+  const tijden=d&&d.hourly&&Array.isArray(d.hourly.time)?d.hourly.time:[];
+  const uur=t=>String(t||"").slice(0,13);
+  const meting=uur(d&&d.current&&d.current.time);
+  let i=tijden.findIndex(t=>uur(t)===meting);
+  const offset=d&&typeof d.utc_offset_seconds==="number"&&Number.isFinite(d.utc_offset_seconds)?d.utc_offset_seconds:null;
+  const nuMs=S.klokInstantOverride&&typeof S.klokInstantOverride.getTime==="function"?S.klokInstantOverride.getTime():Date.now();
+  if(i>=0&&offset!==null&&Number.isFinite(nuMs)){
+    const klok=new Date(nuMs+offset*1000).toISOString().slice(0,13);
+    const k=tijden.findIndex(t=>uur(t)===klok);
+    if(k>i&&k-i<=3)i=k;
+  }
+  return i<0?0:i;
+}
 function tekenAlles(){
   const d=S.d,c=d.current,h=d.hourly;
-  let i=h.time.findIndex(t=>t.slice(0,13)===c.time.slice(0,13));
-  S.i0=i<0?0:i;
+  S.i0=actueelUurIndex(d);
 
   /* De tijd hoort bij de plaats: alle uren in deze app staan in de tijd daar,
      dus zonder klok weet je niet waar "gunstigste modelvenster van 01:00 tot 03:00" op slaat.
