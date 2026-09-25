@@ -351,14 +351,17 @@ nowcast=function(){
    Die getallen liggen in een eigen laag bovenop, zodat het temperatuurvlak ze
    niet vertroebelt. Ze worden één renderframe na de overige grafieklabels
    geplaatst: raakt een getal zijn buurman of een ander label, dan schuift het
-   een regel omhoog. Past het nergens, dan blijft alleen dat getal weg; de
-   waarde staat ook in de uurtabel en de tooltip. */
+   hooguit twee regels omhoog (buren staan dan om en om), zodat het bij zijn
+   staafje blijft. Past het daar
+   niet, dan blijft alleen dat getal weg; de waarde staat ook in de uurtabel en
+   de tooltip. Uren achter elkaar met dezelfde hoeveelheid krijgen één getal,
+   boven het eerste staafje: de gelijke hoogte zegt de rest. */
 const Q4_STAAF_MIN_MM=0.1,Q4_STAAF_SCHAAL_MM=2.5,Q4_STAAF_HOOGTE=0.32;
 function q4RegenstaafStijl(){
   if(document.getElementById("wiw-regenstaaf-stijl"))return;
   const st=document.createElement("style");st.id="wiw-regenstaaf-stijl";
   st.textContent='#chart .regenstaaf{fill:#4A90D9;fill-opacity:.55}html[data-thema="donker"] #chart .regenstaaf{fill:#6AA6E8;fill-opacity:.6}'
-    +'#chart .regenstaaf-mm{fill:#2F6FB0;font-weight:400}html[data-thema="donker"] #chart .regenstaaf-mm{fill:#8DBBEE}';
+    +'#chart .regenstaaf-mm{fill:#2F6FB0;font-weight:400;paint-order:stroke;stroke:var(--sheet);stroke-width:3px;stroke-linejoin:round}html[data-thema="donker"] #chart .regenstaaf-mm{fill:#8DBBEE}';
   document.head.appendChild(st);
 }
 function q4TekenRegenstaven(svg,g){
@@ -389,6 +392,9 @@ function q4TekenRegenstaven(svg,g){
   if(groep.childNodes.length)svg.insertBefore(groep,svg.firstChild);
   const beurt=++q4RegenstaafBeurt;
   const plaats=()=>{if(beurt===q4RegenstaafBeurt&&svg.isConnected)q4PlaatsRegenstaafLabels(svg,g,labels,top);};
+  /* De grafieklagen plaatsen hun temperaturen en het nu-label later opnieuw;
+     daarna zetten ze de getallen opnieuw neer, rond de definitieve tekst. */
+  window.WeatherNowRegenstaafLabels={herplaats:plaats};
   if(typeof requestAnimationFrame==="function")requestAnimationFrame(()=>requestAnimationFrame(plaats));else plaats();
 }
 let q4RegenstaafBeurt=0;
@@ -404,26 +410,37 @@ function q4PlaatsRegenstaafLabels(svg,g,labels,plotTop){
   /* Rustig en ondergeschikt aan de temperaturen: alleen het getal, in normaal
      gewicht; eenheid en totaal staan in de regel onder de grafiek. Op de
      smalle telefoongrafiek (viewBox 380, iets verkleind) blijft het 11. */
-  const smal=Number(g.W)<500,grootte=smal?11:9.5,regel=grootte+2;
+  const smal=Number(g.W)<500,vb=svg.viewBox&&svg.viewBox.baseVal,breed=svg.getBoundingClientRect().width;
+  /* In de mobiele grafiek (smaller dan 760px) nooit kleiner dan 11 css-pixels
+     na schaling; op tablet en desktop blijft het rustige 9,5. */
+  const schaal=vb&&vb.width&&breed?breed/vb.width:1,basis=smal?11:9.5;
+  const grootte=window.innerWidth<760?Math.max(basis,Math.ceil(110/schaal)/10):basis,regel=grootte+2;
   const scrub=svg.querySelector("#scrub");
   svg.insertBefore(laag,scrub||null);
   /* Andere zichtbare teksten in de grafiek (temperaturen, nu-label, tijden). */
   const doos=el=>{try{const b=el.getBBox();return b.width>0&&b.height>0?b:null;}catch(_){return null;}};
   const anderen=[...svg.querySelectorAll("text")].filter(el=>!el.closest("g[data-regenstaaf-mm]")&&!el.closest("#scrub")&&el.getAttribute("display")!=="none"&&getComputedStyle(el).display!=="none"&&getComputedStyle(el).visibility!=="hidden").map(doos).filter(Boolean);
+  /* Ook de stippen van piek, dal en nu blijven vrij: de witte rand van een
+     getal zou ze anders onzichtbaar maken. */
+  [...svg.querySelectorAll("circle[data-mobile-temp-marker-dot],circle[data-desktop-temp-marker-dot],circle[fill=\"var(--carmine)\"]")].map(doos).filter(Boolean).forEach(b=>anderen.push(b));
   const raakt=(a,b,m)=>a.x<b.x+b.width+m&&a.x+a.width+m>b.x&&a.y<b.y+b.height+1&&a.y+a.height+1>b.y;
+  /* Eén getal per reeks gelijke uren; het natste uur krijgt als eerste een plek. */
+  const kandidaten=labels.filter((l,k)=>!(k>0&&labels[k-1].i===l.i-1&&q4MmTekst(labels[k-1].v,false)===q4MmTekst(l.v,false)))
+    .sort((a,b)=>b.v-a.v||a.i-b.i);
   const gezet=[];
-  for(const l of labels){
+  for(const l of kandidaten){
+    const tekst=q4MmTekst(l.v,false);
     const t=document.createElementNS(ns,"text");
     t.setAttribute("class","regenstaaf-mm");t.setAttribute("text-anchor","middle");t.setAttribute("font-size",String(grootte));
     t.setAttribute("font-family","Instrument Sans,ui-sans-serif,system-ui,sans-serif");
     t.setAttribute("data-uur",String(g.TI[l.i]));t.setAttribute("data-mm",String(l.v));
-    t.textContent=q4MmTekst(l.v,false);
+    t.textContent=tekst;
     laag.appendChild(t);
     /* Eerst een paar eenheden opzij binnen het eigen uurvak, dan pas een
        regel omhoog: zo blijft het getal bij zijn staafje. */
     const ruimte=Math.max(0,(l.vak-1)/2),opzij=[0,1.5,-1.5,3,-3].filter(dx=>Math.abs(dx)<=ruimte||dx===0);
     let y=l.top-3,geplaatst=false;
-    for(let stap=0;stap<6&&!geplaatst;stap++){
+    for(let stap=0;stap<3&&!geplaatst;stap++){
       if(y-grootte<plotTop)break;
       for(const dx of opzij){
         t.setAttribute("x",(l.cx+dx).toFixed(2));t.setAttribute("y",y.toFixed(2));
