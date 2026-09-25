@@ -528,7 +528,9 @@ function bouwMobieleTemperatuurRij(){
   /* Een temperatuur zoekt eerst een plek vrij van de regengetallen boven de
      staafjes. Is die er niet, dan gaat de temperatuur voor en wijkt het
      regengetal hieronder; de hoeveelheid staat ook in de regel onder de
-     grafiek, in de uurtabel en bij aantikken. */
+     grafiek, in de uurtabel en bij aantikken. Piek en dal wijken nooit voor
+     een regengetal: hun cijfer hoort direct boven de stip. De regengetallen
+     worden aan het eind van de pass rond de temperaturen herplaatst. */
   const isRegenGetal=el=>!!el.closest("g[data-regenstaaf-mm]");
   const vast=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!isRegenGetal(el)).map(svgTekstBoxUitElement).filter(Boolean);
   const regenBoxen=[...svg.querySelectorAll("g[data-regenstaaf-mm] text")].map(svgTekstBoxUitElement).filter(Boolean);
@@ -585,8 +587,9 @@ function bouwMobieleTemperatuurRij(){
   mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null},grafiekRandWaarden(g,Math.min(24,g.T.length))).forEach(m=>{
     const px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
     const verticaal=y=>[[px,y,"middle"],[px+14,y,"middle"],[px-14,y,"middle"]];
-    const pos=plaats(m.waarde+"°",[...verticaal(py-9),...verticaal(py-15),[px+7,py-5,"start"],[px-7,py-5,"end"],...verticaal(py-21),...verticaal(py-27),
-      [px,py-33,"middle"],[px,py-39,"middle"],[px,py-45,"middle"]],false);
+    const dichtbij=[...verticaal(py-9),...verticaal(py-15),[px+7,py-5,"start"],[px-7,py-5,"end"],...verticaal(py-21),...verticaal(py-27),
+      [px,py-33,"middle"],[px,py-39,"middle"],[px,py-45,"middle"]];
+    const pos=plaatsMet(m.waarde+"°",dichtbij,false,[]);
     if(!pos){vervallen.push(m.type);return;}
     const dot=document.createElementNS(SVG_NS,"circle");
     dot.setAttribute("cx",String(px));dot.setAttribute("cy",String(py));dot.setAttribute("r","2.2");dot.setAttribute("fill",ink);
@@ -839,6 +842,9 @@ function bouwDesktopGrafiekAccenten(){
     return beste;
   };
   const getoond=[];
+  /* Zelfde contract als de basisgrafiek (desktopUurLabels): tot 24 uur en
+     minstens 36px per uur krijgt ieder uur een eigen cijfer. */
+  const iederUurEenCijfer=g.T.length<=24&&cw>=36;
   mobieleGrafiekMarkeringen(g.T,g.T.length,{index:nuIndex,waarde:actueel!==null&&actueel!==undefined&&Number.isFinite(Number(actueel))?Number(actueel):null},grafiekRandWaarden(g,g.T.length)).forEach(m=>{
     const px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
     const tekst=m.waarde+"°",temperatuurLabels=[...svg.querySelectorAll("text")].filter(isTempLabel);
@@ -872,17 +878,20 @@ function bouwDesktopGrafiekAccenten(){
           punt.setAttribute("data-desktop-temp-added","1");puntSjabloon.parentNode.insertBefore(punt,puntSjabloon.nextSibling);
         }
       }
-      /* Net als mobiel: het cijfer binnen een uur ernaast wijkt, zodat piek of
-         dal ruimte heeft voor een eigen uurtijd. Een ander cijfer dat het raakt
-         wijkt ook. */
-      const box=svgTekstBoxUitElement(label),uurVan=el=>Math.round((Number(el.getAttribute("x"))-Number(g.x(0)))/cw);
-      if(box)[...svg.querySelectorAll("text")].filter(el=>el!==label&&isTempLabel(el)).forEach(el=>{
-        const b=svgTekstBoxUitElement(el);if(Math.abs(uurVan(el)-m.i)>1&&(!b||!rechthoekenBotsen(box,b,2)))return;
-        el.setAttribute("display","none");el.setAttribute("data-desktop-temp-yield","1");
-        const p=puntBij(Number(el.getAttribute("x")),Number(String(el.textContent).trim().replace("°","")));
-        if(p&&Number(p.getAttribute("data-temp-index"))!==m.i){p.setAttribute("display","none");p.setAttribute("data-desktop-temp-yield","1");}
-      });
     }
+    /* Net als mobiel: het cijfer binnen een uur ernaast wijkt, zodat piek of
+       dal ruimte heeft voor een eigen uurtijd. Een ander cijfer dat het raakt
+       wijkt ook. Dat geldt ook als het cijfer al op het extreem stond (tablet
+       en dagweergave, drie-uursritme); alleen de desktopgrafiek met een cijfer
+       bij ieder uur houdt haar buren. */
+    const verplaatstOfNieuw=label.hasAttribute("data-desktop-temp-moved")||label.hasAttribute("data-desktop-temp-added");
+    const box=svgTekstBoxUitElement(label),uurVan=el=>Math.round((Number(el.getAttribute("x"))-Number(g.x(0)))/cw);
+    if(box&&(verplaatstOfNieuw||!iederUurEenCijfer))[...svg.querySelectorAll("text")].filter(el=>el!==label&&isTempLabel(el)).forEach(el=>{
+      const b=svgTekstBoxUitElement(el);if(Math.abs(uurVan(el)-m.i)>1&&(!b||!rechthoekenBotsen(box,b,2)))return;
+      el.setAttribute("display","none");el.setAttribute("data-desktop-temp-yield","1");
+      const p=puntBij(Number(el.getAttribute("x")),Number(String(el.textContent).trim().replace("°","")));
+      if(p&&Number(p.getAttribute("data-temp-index"))!==m.i){p.setAttribute("display","none");p.setAttribute("data-desktop-temp-yield","1");}
+    });
     label.setAttribute("data-desktop-base-opacity",label.getAttribute("opacity")||"1");
     label.setAttribute("opacity","1");label.setAttribute("font-weight","500");label.setAttribute("data-desktop-temp-marker",m.type);
     const dot=document.createElementNS(SVG_NS,"circle");
@@ -982,13 +991,23 @@ function koppelTijdAanTemperatuur(){
     else{const voor=[...metTijd.entries()].sort((a,b)=>b[0]-a[0])[0];if(voor)voor[1].parentNode.insertBefore(el,voor[1].nextSibling);else svg.insertBefore(el,svg.querySelector('g[data-q4-rain-periods]')||svg.querySelector("#scrub")||null);}
     metTijd.set(i,el);
   });
+  /* 3. Een uurtijd zonder eigen cijfer binnen een uur van piek of dal wijkt:
+     twee tijden vlak naast elkaar ("02:00 03:00") lezen als ruis. De vaste
+     telefoonas houdt haar drie-uursritme. */
+  if(!vasteMobieleAs)[...perIndex.entries()].filter(([i,els])=>metTijd.has(i)&&els.some(isMarker)).forEach(([i])=>{
+    [i-1,i+1].forEach(j=>{
+      if(perIndex.has(j)||!metTijd.has(j))return;
+      metTijd.get(j).remove();metTijd.delete(j);
+    });
+  });
   svg.setAttribute("data-temp-time-complete",[...perIndex.keys()].every(i=>metTijd.has(i)||vrijVanTijd(perIndex.get(i)))?"1":"0");
 }
 
-/* Mobiele grafiek (smaller dan 760px): geen tekst kleiner dan 11px. Draait vóór
-   het plaatsen van labels, zodat de botsingscontroles met de echte maat rekenen. */
+/* Geen grafiektekst kleiner dan 11px op het scherm, op iedere breedte: de
+   telefoongrafiek wordt verkleind getekend, de desktop- en tabletgrafiek op
+   ware grootte met uurtijden van 9,2px. Draait vóór het plaatsen van labels,
+   zodat de botsingscontroles met de echte maat rekenen. */
 function maakGrafiekTekstLeesbaar(){
-  if(window.innerWidth>=760)return;
   const svg=document.getElementById("chart");if(!svg)return;
   svg.querySelectorAll("text[font-size]").forEach(el=>{
     if(el.closest("#scrub"))return;

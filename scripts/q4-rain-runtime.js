@@ -411,10 +411,10 @@ function q4PlaatsRegenstaafLabels(svg,g,labels,plotTop){
      gewicht; eenheid en totaal staan in de regel onder de grafiek. Op de
      smalle telefoongrafiek (viewBox 380, iets verkleind) blijft het 11. */
   const smal=Number(g.W)<500,vb=svg.viewBox&&svg.viewBox.baseVal,breed=svg.getBoundingClientRect().width;
-  /* In de mobiele grafiek (smaller dan 760px) nooit kleiner dan 11 css-pixels
-     na schaling; op tablet en desktop blijft het rustige 9,5. */
+  /* Op iedere breedte nooit kleiner dan 11 css-pixels na schaling; een grote
+     desktopgrafiek die opschaalt, houdt het rustige 9,5 in viewBox-maat. */
   const schaal=vb&&vb.width&&breed?breed/vb.width:1,basis=smal?11:9.5;
-  const grootte=window.innerWidth<760?Math.max(basis,Math.ceil(110/schaal)/10):basis,regel=grootte+2;
+  const grootte=Math.max(basis,Math.ceil(110/schaal)/10),regel=grootte+2;
   const scrub=svg.querySelector("#scrub");
   svg.insertBefore(laag,scrub||null);
   /* Andere zichtbare teksten in de grafiek (temperaturen, nu-label, tijden). */
@@ -423,7 +423,29 @@ function q4PlaatsRegenstaafLabels(svg,g,labels,plotTop){
   /* Ook de stippen van piek, dal en nu blijven vrij: de witte rand van een
      getal zou ze anders onzichtbaar maken. */
   [...svg.querySelectorAll("circle[data-mobile-temp-marker-dot],circle[data-desktop-temp-marker-dot],circle[fill=\"var(--carmine)\"]")].map(doos).filter(Boolean).forEach(b=>anderen.push(b));
-  const raakt=(a,b,m)=>a.x<b.x+b.width+m&&a.x+a.width+m>b.x&&a.y<b.y+b.height+1&&a.y+a.height+1>b.y;
+  /* Verticaal mag een getal tegen een ander label aan liggen: de tekstvakken
+     van de temperaturen (Bodoni) lopen al ruim boven de cijfers uit. */
+  /* De temperatuurlijn: een getal staat eronder en raakt haar nooit. Boven de
+     lijn leest een blauw getal als temperatuur; op de lijn is het onleesbaar.
+     Past het er niet, dan vervalt het getal: de hoeveelheid staat ook in de
+     regel onder de grafiek, in de uurtabel en bij aantikken. */
+  const mobieleLijn=[...svg.querySelectorAll("path[data-mobile-line-points]")].filter(el=>!el.closest("#scrub"));
+  const lijnen=(mobieleLijn.length?mobieleLijn.map(el=>el.getAttribute("data-mobile-line-points")):[...svg.querySelectorAll("polyline")].filter(el=>!el.closest("#scrub")).map(el=>el.getAttribute("points")))
+    .map(v=>String(v||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)).filter(p=>p.length===2&&p.every(Number.isFinite)).sort((a,b)=>a[0]-b[0])).filter(l=>l.length>1);
+  const lijnOnder=(x0,x1)=>{
+    /* Laagste punt van de lijn (grootste y) boven [x0,x1], met de hoekpunten
+       ertussen en lineair geïnterpoleerd aan de randen. */
+    let y=-Infinity;
+    for(const l of lijnen){
+      if(x1<l[0][0]||x0>l[l.length-1][0])continue;
+      const op=x=>{for(let k=1;k<l.length;k++)if(x<=l[k][0]){const [xa,ya]=l[k-1],[xb,yb]=l[k];return xb===xa?Math.max(ya,yb):ya+(yb-ya)*(x-xa)/(xb-xa);}return l[l.length-1][1];};
+      y=Math.max(y,op(Math.max(x0,l[0][0])),op(Math.min(x1,l[l.length-1][0])));
+      l.forEach(([x,py])=>{if(x>=x0&&x<=x1)y=Math.max(y,py);});
+    }
+    return y;
+  };
+  const onderLijn=b=>b.y>=lijnOnder(b.x-2,b.x+b.width+2)+3;
+  const raakt=(a,b,m,my=1)=>a.x<b.x+b.width+m&&a.x+a.width+m>b.x&&a.y<b.y+b.height+my&&a.y+a.height+my>b.y;
   /* Eén getal per reeks gelijke uren; het natste uur krijgt als eerste een plek. */
   const kandidaten=labels.filter((l,k)=>!(k>0&&labels[k-1].i===l.i-1&&q4MmTekst(labels[k-1].v,false)===q4MmTekst(l.v,false)))
     .sort((a,b)=>b.v-a.v||a.i-b.i);
@@ -445,11 +467,16 @@ function q4PlaatsRegenstaafLabels(svg,g,labels,plotTop){
       for(const dx of opzij){
         t.setAttribute("x",(l.cx+dx).toFixed(2));t.setAttribute("y",y.toFixed(2));
         const b=doos(t);
-        if(b&&!gezet.some(o=>raakt(b,o,0.5))&&!anderen.some(o=>raakt(b,o,2))){gezet.push(b);geplaatst=true;break;}
+        if(b&&onderLijn(b)&&!gezet.some(o=>raakt(b,o,0.5))&&!anderen.some(o=>raakt(b,o,2,0))){gezet.push(b);geplaatst=true;break;}
       }
       y-=regel;
     }
-    if(!geplaatst)t.remove();
+    if(!geplaatst){
+      t.remove();
+      /* Het natste uur gaat voor. Past zijn getal niet, dan geen losse
+         getallen bij kleinere staafjes: die zouden lezen als het belangrijkste. */
+      if(l===kandidaten[0])break;
+    }
   }
   if(!laag.childNodes.length)laag.remove();
 }
