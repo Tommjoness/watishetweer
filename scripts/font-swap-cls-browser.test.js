@@ -118,13 +118,16 @@ function cls(entries){
         await page.waitForTimeout(1200);
         const meting=await page.evaluate(()=>({
           shifts:window.__shifts,
-          reserve:[...document.fonts].filter(f=>/Fallback/.test(f.family)&&f.status==="loaded").map(f=>f.family.replace(/["']/g,""))
+          reserve:[...document.fonts].filter(f=>/Fallback/.test(f.family)&&f.status==="loaded").map(f=>f.family.replace(/["']/g,"")),
+          mono:[...document.fonts].filter(f=>/DM Mono/.test(f.family)&&f.status!=="unloaded").map(f=>f.family.replace(/["']/g,"")+":"+f.status)
         }));
         const label=`${route} op ${breedte}px`;
         assert(voorWissel.brief>40&&!voorWissel.webfont,`${label}: de brief moet al zichtbaar zijn vóór het webfont binnen is (brief ${voorWissel.brief} tekens, webfont ${voorWissel.webfont})`);
         assert(meting.reserve.includes("Instrument Sans Fallback"),`${label}: Instrument Sans Fallback vond geen lokaal systeemfont (${JSON.stringify(meting.reserve)})`);
         assert(meting.reserve.some(f=>f.startsWith("Bodoni Moda Fallback")),`${label}: geen Bodoni-reserve geladen (${JSON.stringify(meting.reserve)})`);
-        assert(meting.reserve.includes("DM Mono Fallback"),`${label}: DM Mono Fallback vond geen lokaal systeemfont (${JSON.stringify(meting.reserve)})`);
+        /* Data staat sinds de typografielaag in de gewone schreefloze letter:
+           DM Mono en zijn reserve horen dus niet meer geladen te worden. */
+        assert.deepEqual(meting.mono,[],`${label}: DM Mono wordt nog geladen terwijl geen tekst het gebruikt (${JSON.stringify(meting.mono)})`);
         const waarde=cls(meting.shifts);
         const grootste=meting.shifts.slice().sort((a,b)=>b.value-a.value).slice(0,3).map(s=>({waarde:+s.value.toFixed(4),tijd:Math.round(s.startTime),bronnen:s.bronnen}));
         assert(waarde<CLS_BUDGET,`${label}: fontwissel verschuift de layout, CLS ${waarde.toFixed(4)} (budget < ${CLS_BUDGET}); ${JSON.stringify(grootste)}`);
