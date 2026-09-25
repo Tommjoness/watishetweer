@@ -5,7 +5,7 @@
   --moon-lit:var(--sheet);
   --moon-outline:var(--ink-45);
 }
-html[data-thema="donker"],html[data-thema="rood"]{
+html[data-thema="donker"]{
   --moon-unlit:var(--rule-soft);
   --moon-lit:var(--ink);
   --moon-outline:var(--ink-45);
