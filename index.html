@@ -1793,6 +1793,10 @@ function etmaal(start,n){
     if(laatsteOnder) segmenten.push([laatsteOnder.idx,laatsteI]);
   }
 
+  // Valt er in het venster geen nacht en geen zonsopkomst of -ondergang, dan
+  // is de band leeg: geen lege omlijning bovenin de grafiek.
+  if(!segmenten.length&&!overgangen.some(g=>g.idx>=0&&g.idx<=laatsteI)) balk="";
+
   segmenten.forEach(([f1,f2])=>{
     const x1=x(Math.max(-voorloop,f1)), x2=x(Math.min(laatsteI,f2));
     if(x2<=x1) return;

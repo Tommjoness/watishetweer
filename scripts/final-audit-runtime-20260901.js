@@ -13,7 +13,33 @@ function bouwTopGrid(){
   brief.parentNode.insertBefore(grid,brief);
   left.appendChild(brief);left.appendChild(warnings);left.appendChild(hero);
   grid.appendChild(left);grid.appendChild(stats);
+  /* Het modelsignaal hoort bij de meetgegevens: als laatste in het raster.
+     Op mobiel blijft de volgorde gelijk (na de tegels); op desktop zet de
+     indelingslaag het rechts onder de tegels, waar anders een lege strook
+     bleef. */
+  const model=document.getElementById("modelrisico");if(model)grid.appendChild(model);
   if(dash.parentNode)dash.remove();
+}
+
+/* Tegels in één rij: labels van gelijke hoogte (de langste bepaalt), zodat
+   labels en getallen op één lijn staan, ook als één label afbreekt. */
+let tegelResizeGebonden=false,tegelFrame=0;
+function lijnTegelsUit(){
+  const stats=document.querySelector(".final-top-grid>.stats")||document.querySelector(".stats");if(!stats)return;
+  const labels=[...stats.children].filter(el=>el.classList&&el.classList.contains("stat")).map(t=>t.querySelector(":scope>.eyebrow")).filter(Boolean);
+  labels.forEach(e=>{e.style.minHeight="";});
+  const rijen=new Map();
+  labels.forEach(e=>{const r=e.parentElement.getBoundingClientRect();if(!r.height)return;const k=Math.round(r.top);if(!rijen.has(k))rijen.set(k,[]);rijen.get(k).push(e);});
+  rijen.forEach(rij=>{if(rij.length<2)return;const max=Math.max(...rij.map(e=>e.getBoundingClientRect().height));rij.forEach(e=>{if(e.getBoundingClientRect().height<max-0.5)e.style.minHeight=max+"px";});});
+  stats.setAttribute("data-tegels-uitgelijnd","1");
+}
+function planTegelUitlijning(){
+  if(typeof requestAnimationFrame!=="function"){lijnTegelsUit();return;}
+  cancelAnimationFrame(tegelFrame);tegelFrame=requestAnimationFrame(lijnTegelsUit);
+  if(!tegelResizeGebonden){
+    tegelResizeGebonden=true;window.addEventListener("resize",planTegelUitlijning,{passive:true});
+    const f=document.fonts&&document.fonts.ready;if(f&&typeof f.then==="function")f.then(planTegelUitlijning).catch(()=>{});
+  }
 }
 
 function regenSamenvattingBijwerken(){
@@ -165,7 +191,8 @@ function bouwMeetgegevens(){
 
 function naRender(basis,fn){return function(){const r=basis.apply(this,arguments);fn();return r;};}
 
-bouwTopGrid();bouwMeetgegevens();wrapWaarschuwingen();
+bouwTopGrid();bouwMeetgegevens();wrapWaarschuwingen();planTegelUitlijning();
+if(typeof meters==="function")meters=naRender(meters,planTegelUitlijning);
 if(typeof etmaal==="function")etmaal=naRender(etmaal,regenSamenvattingBijwerken);
 if(typeof dagen==="function")dagen=naRender(dagen,finaliseerWeekNaRender);
 if(typeof tekenAlles==="function")tekenAlles=naRender(tekenAlles,finaliseerWeekNaRender);
