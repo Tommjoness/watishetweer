@@ -49,6 +49,8 @@ jobs:
         run: node scripts/typografie-browser.test.js
       - name: Hoogste en laagste punt in de grafiek op het echte extreem
         run: node scripts/grafiekstippen-browser.test.js
+      - name: Grafiek aantikken, piek en dal op het echte punt, leesbare mobiele tekst
+        run: node scripts/grafiek-interactie-browser.test.js
       - name: Huidig uur rond het hele uur volgt de klok
         run: node scripts/uurgrens-browser.test.js
       - name: Grafiek op haar werkelijke breedte, leesbaar op tablet en desktop

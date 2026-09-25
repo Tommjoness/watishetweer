@@ -44,6 +44,9 @@ assert.deepEqual(mk([10,12,11,9,10,13,12]),[["min",9,3],["max",13,5]],"Alleen he
 assert.deepEqual(mk([15,15,15,15]),[],"Een volledig vlak etmaal krijgt geen max/min-markering.");
 assert.deepEqual(mk([12,10,10,10,11]),[["max",12,0],["min",10,2]],"Een plateau krijgt één markering op het middenpunt.");
 assert.deepEqual(mk([20,19,18,17]),[["max",20,0],["min",17,3]],"Ook randpunten tellen als hoogste of laagste waarde.");
+assert.deepEqual(api.mobieleGrafiekMarkeringen([20,19,18,17],24,null,{links:21,rechts:16}).map(m=>[m.type,m.i]),[],"Loopt de reeks buiten het venster verder omhoog of omlaag, dan is de rand geen piek of dal.");
+assert.deepEqual(api.mobieleGrafiekMarkeringen([20,19,18,17],24,null,{links:19,rechts:18}).map(m=>[m.type,m.i]),[["max",0],["min",3]],"Keert de reeks buiten het venster om, dan is de rand wel een piek of dal.");
+assert.deepEqual(api.mobieleGrafiekMarkeringen([14,12,11,11,13],24,null,{links:15,rechts:14}).map(m=>[m.type,m.i]),[["min",2]],"Een dal binnen het venster blijft gemarkeerd; de dalende linkerrand is geen piek.");
 assert.deepEqual(mk([19.6,20,20,20,19,18,17,16,15,15,15,15],24,{index:.5,waarde:20.2}),[["min",15,9]],"Een max gelijk aan 'nu' vlak naast de nu-lijn vervalt; 'nu 20°' zegt het al.");
 assert.deepEqual(mk([19.6,20,20,20,19,18,17,16,15,15,15,15],24,{index:.5,waarde:19}),[["max",20,2],["min",15,9]],"Wijkt de nu-waarde af, dan blijft de max staan, op het midden van het echte plateau 1-3 (19,6 is lager dan 20).");
 assert.deepEqual(mk([17,16.4,16.4,16.4,17,16.2,15.6,16.4,18,21]),[["min",16,6],["max",21,9]],"Het laagste punt is 15,6° en niet het eerdere plateau van 16,4°, ook al tonen beide 16°.");
@@ -118,7 +121,8 @@ assert(api.MOBIEL_ICOON_Y+api.MOBIEL_ICOON_GROOTTE<api.MOBIELE_UURAS_Y-8,"De wee
 assert(runtime.includes('el.setAttribute("data-mobile-temp-label","1")')&&runtime.includes('el.setAttribute("data-mobile-temp-priority","anchor")'),"Lijnlabels zijn traceerbaar als drie-uursankers.");
 assert(runtime.includes("Math.abs(m.i-i)<=1")&&runtime.includes("Math.abs(i-nuIndex)<1.5"),"Een anker naast piek, dal of nu krijgt geen tweede temperatuur.");
 assert(runtime.includes("mobieleGrafiekMarkeringen(g.T,24,")&&runtime.includes('data-mobile-temp-marker'),"Max/min op de lijn komen uit het pure markeringenplan.");
-assert(runtime.includes(".map(opAnker).filter(Boolean)"),"Een mobiele max/min-markering staat altijd op een drie-uursanker met tijd; tussen de ankers tonen de ankers hun eigen temperatuur.");
+assert(!runtime.includes("opAnker")&&runtime.includes("grafiekRandWaarden(g,Math.min(24,g.T.length))).forEach(m=>{"),"Een mobiele max/min-markering staat op het echte hoogste of laagste punt, ook tussen twee drie-uursankers; de uuras houdt haar drie-uursritme.");
+assert(runtime.includes("const vrijVanTijd=els=>vasteMobieleAs&&els.every(el=>el.hasAttribute(\"data-mobile-temp-marker\"))"),"Op de telefoon krijgt piek of dal geen eigen uurtijd die het drie-uursritme breekt.");
 assert(runtime.includes('plaats(m.waarde+"°",')&&!runtime.includes('m.type+" "+m.waarde'),"Max/min-markering toont alleen de waarde: \"min 3°\" leest als -3°.");
 assert(runtime.includes("const asKolom=Number(g.x(0))-4;")&&runtime.includes("if(box&&box.x<asKolom){if(!schuif)continue;"),"Een kale markering staat nooit in de kolom van de asgetallen; een ankerlabel schuift ervan weg.");
 assert(runtime.includes("if(y-fs<plafond||y>bottom-3)continue;")&&runtime.includes("filter(b=>Number.isFinite(b)&&b<top-4)"),"Een label bij een piek vlak onder de bovenste asgrens mag boven de plotrand uitsteken tot net onder de dag/nachtband, zodat het boven zijn punt blijft.");
@@ -129,7 +133,7 @@ assert(!runtime.includes("verminderMobieleTemperatuurlabels"),"De oude op-de-lij
 assert(!runtime.includes("mobieleTemperatuurLabelLimiet(window.innerWidth)"),"De mobiele 24-uursgrafiek mag verplichte ankers niet langer via een viewport-limiet uitdunnen.");
 
 /* Desktop: dezelfde accenten, met behoud van het uurcijfer. */
-assert(/compactMobieleGrafiekHoogte\(\);koppelTijdAanTemperatuur\(\);bouwDesktopGrafiekAccenten\(\);\}/.test(runtime),"Tijdkoppeling en desktopaccenten draaien in dezelfde idempotente grafiekpass, de tijden vóór de iconen.");
+assert(/compactMobieleGrafiekHoogte\(\);koppelTijdAanTemperatuur\(\);bouwDesktopGrafiekAccenten\(\);herplaatsRegengetallen\(\);\}/.test(runtime),"Tijdkoppeling en desktopaccenten draaien in dezelfde idempotente grafiekpass, de tijden vóór de iconen; de regengetallen komen als laatste, rond de definitieve temperaturen.");
 assert(runtime.includes("function koppelTijdAanTemperatuur(){")&&runtime.includes('data-temp-time')&&runtime.includes('data-temp-time-complete'),"Iedere temperatuur in de grafiek krijgt een tijd onder haar punt, of vervalt.");
 {
   const accenten=runtime.slice(runtime.indexOf("function bouwDesktopGrafiekAccenten(){"),runtime.indexOf("function koppelTijdAanTemperatuur(){"));
@@ -138,7 +142,7 @@ assert(runtime.includes("function koppelTijdAanTemperatuur(){")&&runtime.include
 assert(runtime.includes('data-desktop-temp-area')&&runtime.includes('url(#desktopTempVlak)'),"Desktop krijgt het zachte vlak onder de lijn.");
 assert(runtime.includes('data-desktop-weather-icon')&&runtime.includes("bestaandeUurLabels(svg,g)")&&runtime.includes("<=H-2"),"Desktopiconen staan bij de bestaande uurtijden en alleen als alles binnen de viewBox past.");
 assert(runtime.includes('mobieleGrafiekMarkeringen(g.T,g.T.length,')&&runtime.includes('data-desktop-temp-marker-dot'),"Desktop licht hoogste en laagste punt uit met hetzelfde markeringenplan als mobiel.");
-assert(runtime.includes('circle[data-temp-index]")')&&runtime.includes("De stip hoort bij het punt"),"Op een plateau staat de desktopstip bij het punt dat het cijfer draagt.");
+assert(!runtime.includes("De stip hoort bij het punt")&&runtime.includes('dot.setAttribute("cx",String(px));dot.setAttribute("cy",String(py));dot.setAttribute("r","3")')&&runtime.includes("data-desktop-temp-moved")&&runtime.includes("data-desktop-temp-added"),"De desktopstip staat op het echte hoogste of laagste punt; heeft dat uur geen cijfer, dan verhuist het gelijke cijfer mee of komt er een bij, herstelbaar per pass.");
 
 const basisGrafiek=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
 assert(basisGrafiek.includes("const MAXLAAG=M?(n<=24?4:3):2;"),"Een desktopcijfer zweeft hooguit twee lagen van zijn punt; verder weg leest het als een ander punt.");

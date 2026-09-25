@@ -2264,10 +2264,15 @@ function scrubKoppel(){
   };
   hit.addEventListener("pointermove",toon);
   hit.addEventListener("pointerdown",toon);
-  const verberg=()=>{g.style.display="none";};
-  hit.addEventListener("pointerleave",verberg);
+  /* Een vinger verlaat het vlak zodra hij loslaat: de browser stuurt dan meteen
+     pointerleave. Alleen de muis verbergt het venster bij verlaten; na een tik
+     blijft het staan tot de volgende tik, een tik ernaast of na enkele seconden. */
+  let verbergTimer=null;
+  const verberg=()=>{clearTimeout(verbergTimer);g.style.display="none";};
+  hit.addEventListener("pointerdown",()=>clearTimeout(verbergTimer));
+  hit.addEventListener("pointerleave",e=>{ if(e.pointerType==="mouse") verberg(); });
   hit.addEventListener("pointercancel",verberg);
-  hit.addEventListener("pointerup",e=>{ if(e.pointerType!=="mouse") setTimeout(verberg,1800); });
+  hit.addEventListener("pointerup",e=>{ if(e.pointerType!=="mouse"){clearTimeout(verbergTimer);verbergTimer=setTimeout(verberg,4000);} });
 }
 
 /* ---------- kwartierneerslag ---------- */

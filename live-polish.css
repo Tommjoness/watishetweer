@@ -106,6 +106,8 @@
   letter-spacing:.01em;
 }
 #chart:has(#hit:focus-visible){outline:2px solid var(--ink);outline-offset:3px}
+/* De grafiek zelf draagt de focusrand bij toetsenbordgebruik; het tikvlak niet. */
+#hit:focus{outline:none}
 
 @media(max-width:900px){
   /* De lokale klok is context bij de plaatsnaam, geen onderdeel van de naam.

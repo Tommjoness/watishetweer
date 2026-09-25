@@ -210,7 +210,27 @@ scrubKoppel=function(){
     const schaal=r.width/(G.W||900),clientX=r.left+G.x(i)*schaal,clientY=r.top+G.y(G.T[i])*schaal;
     hit.dispatchEvent(new PointerEvent("pointerdown",{clientX,clientY,pointerType:"mouse"}));
   };
-  hit.addEventListener("focus",()=>wijsIndexAan(Number(hit.dataset.keyboardIndex||0)));
+  /* Een tik of klik geeft het vlak ook focus. Dan kiest de gebruiker zelf een
+     uur: de focus mag dat niet overschrijven met het toetsenborduur. Het
+     getikte uur wordt wel het startpunt voor de pijltjestoetsen. */
+  let laatstePointer=0;
+  const onthoudPointer=ev=>{
+    if(!ev.isTrusted)return;
+    laatstePointer=Date.now();
+    const G=S.geo;if(!G||!svg||!Number.isFinite(G.n)||G.n<1||typeof G.x!=="function")return;
+    const r=svg.getBoundingClientRect();if(!r.width)return;
+    const vx=(ev.clientX-r.left)/(r.width/(G.W||900));
+    let beste=0;for(let k=1;k<G.n;k++)if(Math.abs(G.x(k)-vx)<Math.abs(G.x(beste)-vx))beste=k;
+    hit.dataset.keyboardIndex=String(beste);
+    hit.setAttribute("aria-valuenow",String(beste+1));
+    hit.setAttribute("aria-valuetext",grafiekPuntBeschrijving(G,beste));
+  };
+  hit.addEventListener("pointerdown",onthoudPointer);
+  hit.addEventListener("pointerup",ev=>{if(ev.isTrusted)laatstePointer=Date.now();});
+  hit.addEventListener("focus",()=>{
+    if(Date.now()-laatstePointer<1000)return;
+    wijsIndexAan(Number(hit.dataset.keyboardIndex||0));
+  });
   hit.addEventListener("keydown",ev=>{
     const G=S.geo;if(!G||!G.n)return;
     let i=clamp(Number(hit.dataset.keyboardIndex||0),0,G.n-1),volgende=null;
