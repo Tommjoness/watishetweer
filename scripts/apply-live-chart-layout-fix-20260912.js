@@ -141,7 +141,10 @@ const ZONINFO_NIEUW=`  /* ${MARKER_COPY} */
     })
   })).filter(r=>r.items.length);
   el.classList.add("senior-zoninfo");
-  el.innerHTML=rijenZichtbaar.map(r=>'<span class="zonregel"><span class="zondag">'+escapeHtml(r.label)+'</span>'
+  /* Een gekozen dag staat al in de kop ("Vrijdag 24 juli, per uur"); een
+     tweede "Op vrijdag" ervoor zegt niets nieuws. */
+  const zonderDag=geselecteerd!==null&&rijenZichtbaar.length===1;
+  el.innerHTML=rijenZichtbaar.map(r=>'<span class="zonregel">'+(zonderDag?'':'<span class="zondag">'+escapeHtml(r.label)+'</span>')
     +r.items.map(x=>'<span>'+escapeHtml(x)+'</span>').join("")+'</span>').join("");`;
 
 const REGEN_RE=/const\s+pb\s*=\s*g\.pt\s*\+\s*g\.ih\s*,\s*y\s*=\s*pb\s*\+\s*48\s*,\s*randFont\s*=\s*g\.M\s*\?\s*8\.3\s*:\s*8\.9\s*,\s*bedragFont\s*=\s*g\.M\s*\?\s*8\.8\s*:\s*9\.4\s*;/g;

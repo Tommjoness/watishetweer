@@ -20,7 +20,7 @@ ok(html.includes('const kwalificatie=s>=9?"Uitstekende":s>=7?"Goede":"Redelijke"
 ok(html.includes('is er geen aaneengesloten gunstig kijkvenster.'),"middelmatige/goede score kan eerlijk uitleggen dat alleen een aaneengesloten venster ontbreekt");
 ok(!html.includes('if(/^Geen gunstig kijkvenster door /i.test(t))return /[.!?]$/.test(t)?t:t+".";'),"oude kale Nachtzicht-return is uit de finale artifact verwijderd");
 ok(html.includes('function nachtzichtCompactAantal(totaal,mobiel){'),"Nachtzicht houdt één compacte presentatie-owner");
-ok(html.includes('return Math.min(3,n);'),"Nachtzicht toont standaard maximaal drie nachten op ieder schermformaat");
+ok(html.includes('return Math.min(mobiel?1:3,n);'),"Nachtzicht toont standaard vannacht op telefoon en tablet en drie nachten op desktop");
 ok(!html.includes('if(!mobiel||rijen.length<=zichtbaar){'),"desktop omzeilt de compacte Nachtzichtpresentatie niet meer");
 ok(html.includes('#nights .row.night[hidden]{display:none!important}'),"verborgen extra nachten blijven ook op desktop werkelijk verborgen");
 ok(html.includes('#nights .nacht-meer{'),"de bestaande Meer nachten-bediening is op desktop beschikbaar");

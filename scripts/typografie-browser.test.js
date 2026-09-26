@@ -106,13 +106,14 @@ function meet(){
         if(w<=900){
           assert(m.zon.length===2&&Math.abs(m.zon[0]-m.zon[1])<=2,label+": zon onder en zon op staan niet op één regel: "+JSON.stringify(m.zon));
         }
-        if(w>=600&&w<=1099)assert.equal(m.kolommen,4,label+": tegels staan niet in vier kolommen ("+m.kolommen+")");
+        /* Tot 1099px vier kolommen voor acht tegels; met zes tegels (zie de samenhanglaag) drie. */
+        if(w>=600&&w<=1099)assert.equal(m.kolommen,3,label+": zes tegels staan niet in drie kolommen ("+m.kolommen+")");
         if(w>900){
           const tops=m.kop.map(k=>k.top);
           assert(Math.max(...tops)-Math.min(...tops)<=2,label+": kolomkoppen van Zeven dagen staan niet op één lijn: "+JSON.stringify(m.kop));
         }
         assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
-        console.log("TYPOGRAFIE "+label+": geen monospace, "+m.hints.length+" rustige hints, koppen ≥11px"+(w<=900?", zon op één regel":"")+(w>=600&&w<=1099?", tegels in 4 kolommen":"")+".");
+        console.log("TYPOGRAFIE "+label+": geen monospace, "+m.hints.length+" rustige hints, koppen ≥11px"+(w<=900?", zon op één regel":"")+(w>=600&&w<=1099?", tegels in 3 kolommen":"")+".");
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}

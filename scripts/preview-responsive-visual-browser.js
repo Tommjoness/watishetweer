@@ -481,27 +481,26 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       const hubResponse=await page.goto(ROOT+"/weer/",{waitUntil:"domcontentloaded",timeout:30000});
       assert(hubResponse&&hubResponse.ok(),`${vp.naam}: /weer/ HTTP ${hubResponse&&hubResponse.status()}`);
       await page.waitForSelector("#thema",{state:"visible",timeout:5000});
+      /* /weer/ heeft dezelfde Licht | Auto | Donker-keuze als de weerpagina's. */
       const hubState=await page.evaluate(()=>{
-        const knop=document.getElementById("thema"),r=knop?.getBoundingClientRect(),script=document.querySelector('script[src="/theme-hub.js"]'),eersteCss=document.querySelector('style,link[rel="stylesheet"]');
-        const zon=knop?.querySelector(".wiw-theme-sun")?.getBoundingClientRect(),track=knop?.querySelector(".wiw-theme-track")?.getBoundingClientRect(),maan=knop?.querySelector(".wiw-theme-moon")?.getBoundingClientRect();
+        const groep=document.getElementById("thema"),r=groep?.getBoundingClientRect(),script=document.querySelector('script[src="/theme-hub.js"]'),eersteCss=document.querySelector('style,link[rel="stylesheet"]');
+        const knoppen=[...(groep?groep.querySelectorAll("[data-keuze]"):[])].map(k=>({keuze:k.getAttribute("data-keuze"),pressed:k.getAttribute("aria-pressed"),h:k.getBoundingClientRect().height}));
         return {
           actief:document.documentElement.getAttribute("data-thema")||"licht",
-          checked:knop?.getAttribute("aria-checked")||"",
-          role:knop?.getAttribute("role")||"",
+          role:groep?.getAttribute("role")||"",
+          knoppen,
           menu:!!document.getElementById("themamenu"),
-          zonNaarTrack:zon&&track?track.left-zon.right:-1,
-          trackNaarMaan:track&&maan?maan.left-track.right:-1,
           rect:r?{left:r.left,right:r.right,width:r.width}:null,
           scriptVoorCss:!!script&&!!eersteCss&&!!(script.compareDocumentPosition(eersteCss)&Node.DOCUMENT_POSITION_FOLLOWING)
         };
       });
       assert.equal(hubState.actief,"donker",`${vp.naam}: sessiegebonden Donker-keuze valt terug bij navigatie naar /weer/`);
-      assert.equal(hubState.checked,"true",`${vp.naam}: /weer/-switch weerspiegelt de sessiegebonden Donker-keuze niet`);
-      assert.equal(hubState.role,"switch",`${vp.naam}: /weer/ gebruikt geen semantische switch`);
+      assert.equal(hubState.role,"group",`${vp.naam}: /weer/ gebruikt geen weergavegroep`);
+      assert.deepEqual(hubState.knoppen.map(k=>k.keuze),["licht","auto","donker"],`${vp.naam}: /weer/ mist Licht | Auto | Donker`);
+      assert.equal(hubState.knoppen.find(k=>k.keuze==="donker").pressed,"true",`${vp.naam}: /weer/ weerspiegelt de sessiegebonden Donker-keuze niet`);
+      assert(hubState.knoppen.every(k=>k.h>=43.5),`${vp.naam}: /weer/-weergaveknoppen zijn geen 44px-tikdoel`);
       assert.equal(hubState.menu,false,`${vp.naam}: /weer/ bevat ten onrechte het weather-themamenu`);
-      assert(hubState.zonNaarTrack>=7.5&&hubState.zonNaarTrack<=10.5,`${vp.naam}: /weer/ zon-switchafstand ${hubState.zonNaarTrack}px valt buiten 8–10px richtlijn`);
-      assert(hubState.trackNaarMaan>=9.5&&hubState.trackNaarMaan<=12.5,`${vp.naam}: /weer/ switch-maanafstand ${hubState.trackNaarMaan}px valt buiten 10–12px richtlijn`);
-      assert(binnenViewport(hubState.rect,vp.width),`${vp.naam}: /weer/-switch valt buiten viewport`);
+      assert(binnenViewport(hubState.rect,vp.width),`${vp.naam}: /weer/-weergavekeuze valt buiten viewport`);
       assert.equal(hubState.scriptVoorCss,true,`${vp.naam}: /weer/ themascript staat niet vóór de eerste inline of externe CSS`);
       await page.reload({waitUntil:"domcontentloaded",timeout:30000});
       assert.equal(await page.evaluate(()=>document.documentElement.getAttribute("data-thema")||"licht"),"donker",`${vp.naam}: sessiegebonden thema blijft niet behouden na reload van /weer/`);

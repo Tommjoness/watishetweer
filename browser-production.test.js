@@ -127,7 +127,8 @@ const reporter=`<script>
     const cols=stats?getComputedStyle(stats).gridTemplateColumns.trim().split(/\\s+/).filter(Boolean).length:0;
     const statOverflow=desktop&&stats?[...stats.querySelectorAll('.stat')].some(el=>el.scrollWidth>el.clientWidth+1):false;
     const zichtbareStats=stats?[...stats.querySelectorAll('.stat')].filter(el=>getComputedStyle(el).display!=='none'):[];
-    const statsStabiel=zichtbareStats.length===9;
+    /* Negen tegels in de DOM; "Tijd tot zonsondergang" en (bij goed zicht) "Zicht" staan bewust verborgen. */
+    const statsStabiel=zichtbareStats.length+(stats?stats.querySelectorAll('.stat[data-tegel-verborgen]').length:0)===9&&zichtbareStats.length>=6;
     const statsCentraal=!desktop||zichtbareStats.every(el=>getComputedStyle(el).textAlign==='center'&&getComputedStyle(el.querySelector('.sval')).justifyContent==='center');
     const dagenKop=document.querySelector('.dashrow-days .dashcol h2'),dagenRij=document.querySelector('#days .row.day.kop');
     let dagenLijnOk=false;
@@ -163,8 +164,8 @@ const reporter=`<script>
       nightAligned=nightWide.slice(1).every(el=>{const r=el.getBoundingClientRect();return Math.abs(r.left-r0.left)<=1&&Math.abs(r.width-r0.width)<=1;});
       nightRuim=r0.width>=260;
     }
-    if(nightRijen.length>3){
-      nightCompact=nightZichtbaar.length===3&&!!nightKnop&&nightKnop.getAttribute('aria-expanded')==='false'&&getComputedStyle(nightKnop).display!=='none';
+    if(nightRijen.length>(desktop?3:1)){
+      nightCompact=nightZichtbaar.length===(desktop?3:1)&&!!nightKnop&&nightKnop.getAttribute('aria-expanded')==='false'&&getComputedStyle(nightKnop).display!=='none';
       if(nightKnop){
         nightKnop.click();
         const naUitklap=nightRijen.filter(el=>!el.hidden&&getComputedStyle(el).display!=='none');

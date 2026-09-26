@@ -48,7 +48,9 @@ module.exports=async function clockChecks(browser,root,fixture,reportDir){
     const check=(s,minRows=8)=>{
       assert.equal(s.place,location.name);assert(s.rows.length>=minRows&&s.rows.length<=s.maxHours);
       assert.equal(s.sourceTimes.length,s.rows.length,"tabelbron en zichtbare uurregels moeten dezelfde range hebben");
-      assert.deepEqual(s.graphTimes,s.sourceTimes,"grafiek en tabel moeten exact dezelfde zichtbare uurreeks tonen");
+      /* De desktopgrafiek toont 24 uur; de uurtabel is het begin daarvan. */
+      assert.equal(s.graphTimes.length,25,"desktopgrafiek toont 24 uur");
+      assert.deepEqual(s.graphTimes.slice(0,s.sourceTimes.length),s.sourceTimes,"de uurtabel moet het begin van de grafiekreeks zijn");
       for(let i=1;i<s.graphTimes.length;i++)assert.equal(Date.parse(s.graphTimes[i]+"Z")-Date.parse(s.graphTimes[i-1]+"Z"),3600000,"zichtbare grafiekuren moeten exact opeenvolgend blijven");
       for(let i=0;i<s.rows.length;i++){
         const row=s.rows[i],expected=new Intl.DateTimeFormat("en-GB",{timeZone:location.zone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(row.instant));
