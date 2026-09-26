@@ -77,10 +77,8 @@ async function open(browser,root,w,h){
           const stavenEerst=!!groep&&lijnen.length>0&&lijnen.every(l=>groep.compareDocumentPosition(l)&Node.DOCUMENT_POSITION_FOLLOWING);
           const verwachtMm=staven.map(st=>{const i=hourly.time.indexOf("2026-07-22T"+st.uur,vandaag);return i<0?null:hourly.precipitation[i+1];});
           const bb=e=>{const b=e.getBBox();return {x:b.x,y:b.y,w:b.width,h:b.height};};
-          const mmLabels=[...document.querySelectorAll("#chart g[data-regenstaaf-mm] text.regenstaaf-mm")].map(t=>({uur:String(t.getAttribute("data-uur")).slice(11,16),tekst:(t.textContent||"").trim(),box:bb(t)}));
-          const staafBoxen=[...document.querySelectorAll("#chart g[data-regenstaven] path.regenstaaf")].map(p=>({uur:String(p.getAttribute("data-uur")).slice(11,16),box:bb(p),vak:geo.x(1)-geo.x(0)}));
-          const andereTeksten=[...document.querySelectorAll("#chart text")].filter(t=>!t.closest("g[data-regenstaaf-mm]")&&!t.closest("#scrub")&&t.getClientRects().length&&getComputedStyle(t).display!=="none").map(t=>({tekst:(t.textContent||"").trim().slice(0,12),box:bb(t)})).filter(x=>x.box.w>0);
-          return {uit,verwacht,samenvatting,staven,stavenEerst,verwachtMm,plotBodem,plotHoogte:Number(geo.ih),mmLabels,staafBoxen,andereTeksten,smal:Number(geo.W)<500};
+          const mmGetallen=[...document.querySelectorAll("#chart text")].filter(t=>!t.closest("#scrub")&&/^\d+,\d$/.test((t.textContent||"").trim())).map(t=>t.textContent.trim());
+          return {uit,verwacht,samenvatting,staven,stavenEerst,verwachtMm,plotBodem,plotHoogte:Number(geo.ih),mmGetallen,smal:Number(geo.W)<500};
         });
         assert(m.uit.length>=5,w+"px: te weinig uurregels: "+JSON.stringify(m.uit));
         m.uit.forEach((r,k)=>{if(r.mm===null||m.verwacht[k]==null)return;assert(Math.abs(r.mm-Number(m.verwacht[k]))<0.051,w+"px: rij "+r.tijd+" toont "+r.mm+" mm, maar het uur "+r.tijd+"-"+(Number(r.tijd.slice(0,2))+1)+":00 heeft "+m.verwacht[k]+" mm");});
@@ -105,31 +103,13 @@ async function open(browser,root,w,h){
         const volgorde=[...m.staven].sort((a,b)=>a.mm-b.mm);
         for(let k=1;k<volgorde.length;k++)assert(volgorde[k].hoogte>=volgorde[k-1].hoogte,w+"px: hoger staafje hoort bij meer neerslag: "+JSON.stringify(volgorde));
         assert(m.stavenEerst,w+"px: neerslagstaafjes liggen niet achter de temperatuurlijn");
-        /* Hoeveelheid per staafje: getal boven het eigen staafje (hooguit twee
-           regels erboven), binnen het uurvak, zonder botsing met elkaar of met
-           andere grafiekteksten. Valt een staafje onder de stip en het cijfer
-           van het dal, of is er op een smalle telefoon met leesbare
-           11px-cijfers geen plek naast de temperaturen, dan vervalt dat ene
-           getal: het natste uur en alle uren op één na houden hun getal, en
-           alle hoeveelheden staan ook in de samenvatting en de uurtabel. */
-        const nl1=v=>v>=10?String(Math.round(v)):Number(v).toFixed(1).replace(".",",");
-        const overlap=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
-        {
-          const natste=m.staven.reduce((a,b)=>b.mm>a.mm?b:a);
-          assert(m.mmLabels.some(l=>l.uur===natste.uur)&&m.mmLabels.length>=m.staven.length-1,w+"px: te weinig hoeveelheden of het natste uur ("+natste.uur+") mist: "+JSON.stringify(m.mmLabels.map(l=>l.uur)));
-        }
-        m.mmLabels.forEach((l,k)=>{
-          const st=m.staafBoxen.find(x=>x.uur===l.uur),waarde=m.staven.find(x=>x.uur===l.uur);
-          assert(st&&waarde,w+"px: hoeveelheid "+l.tekst+" hoort bij geen staafje ("+l.uur+")");
-          assert.equal(l.tekst,nl1(waarde.mm),w+"px: staafje "+l.uur+" toont "+l.tekst+"; verwacht alleen het getal (eenheid staat in de samenvatting)");
-          const midden=l.box.x+l.box.w/2,staafMidden=st.box.x+st.box.w/2;
-          assert(Math.abs(midden-staafMidden)<=st.vak/2+1,w+"px: hoeveelheid "+l.tekst+" staat niet boven haar staafje ("+midden+" tegen "+staafMidden+")");
-          assert(l.box.y+l.box.h<=st.box.y+1,w+"px: hoeveelheid "+l.tekst+" staat niet boven het staafje");
-          for(const ander of m.mmLabels.slice(k+1))assert(!overlap(l.box,ander.box),w+"px: hoeveelheden "+l.tekst+" en "+ander.tekst+" overlappen");
-          for(const t of m.andereTeksten)assert(!overlap(l.box,t.box),w+"px: hoeveelheid "+l.tekst+" botst met grafiektekst '"+t.tekst+"'");
-        });
+        /* Alleen staafjes: de hoeveelheid per uur staat in de uurtabel (op
+           desktop ernaast), het totaal in de regel onder de grafiek en het uur
+           bij aantikken. Getallen in de grafiek botsten met de temperatuurlijn
+           en haar cijfers. */
+        assert.deepEqual(m.mmGetallen,[],w+"px: neerslaggetallen in de grafiek: "+JSON.stringify(m.mmGetallen));
         assert.deepEqual(fouten,[],w+"px: runtimefouten "+fouten.join(" | "));
-        console.log("UURTIJDEN "+w+"px: "+m.uit.length+" rijen tonen het uur dat op hun tijd begint; eerste natte rij "+eersteNat.tijd+" = begin samenvatting; "+m.staven.length+" neerslagstaafjes op de juiste uren, "+m.mmLabels.length+" met hun hoeveelheid.");
+        console.log("UURTIJDEN "+w+"px: "+m.uit.length+" rijen tonen het uur dat op hun tijd begint; eerste natte rij "+eersteNat.tijd+" = begin samenvatting; "+m.staven.length+" neerslagstaafjes op de juiste uren, zonder getallen in de grafiek.");
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}

@@ -33,8 +33,8 @@ function vochtigheidPresentatie(current){
     if(rh<45)return "Relatief lage luchtvochtigheid.";
     return "Gemiddelde relatieve luchtvochtigheid.";
   }
-  if(dp<-15)return "Extreem droge lucht. Dauwpunt circa "+Math.round(dp)+" °C.";
-  if(t!==null&&t<=7&&rh>=70)return "Hoge relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa "+Math.round(dp)+" °C.";
+  if(dp<-15)return "Extreem droge lucht. Dauwpunt circa "+Math.round(dp)+"\u00a0°C.";
+  if(t!==null&&t<=7&&rh>=70)return "Hoge relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa "+Math.round(dp)+"\u00a0°C.";
   let basis;
   if(dp>=24)basis="Zeer benauwde lucht.";
   else if(dp>=21)basis="Benauwde lucht.";
@@ -44,7 +44,7 @@ function vochtigheidPresentatie(current){
   else if(dp>=5)basis="Vrij droge lucht.";
   else if(dp>=0)basis="Droge lucht.";
   else basis="Zeer droge lucht.";
-  return basis+" Dauwpunt circa "+Math.round(dp)+" °C.";
+  return basis+" Dauwpunt circa "+Math.round(dp)+"\u00a0°C.";
 }
 const api={parseLokaleIso,datumPlus,zoneDelen,lokaleIsoNaarUtcMs,lokaleDatumNu,volgendZonmoment,zonPresentatie,vochtigheidPresentatie};if(typeof module!=="undefined"&&module.exports)module.exports=api;root.WeatherNowFinalConsumerPolish20260831=api;
 if(typeof document==="undefined"||typeof window==="undefined"||typeof S==="undefined")return;

@@ -123,7 +123,7 @@ assert(runtime.includes("Math.abs(m.i-i)<=1")&&runtime.includes("Math.abs(i-nuIn
 assert(runtime.includes("mobieleGrafiekMarkeringen(g.T,24,")&&runtime.includes('data-mobile-temp-marker'),"Max/min op de lijn komen uit het pure markeringenplan.");
 assert(!runtime.includes("opAnker")&&runtime.includes("grafiekRandWaarden(g,Math.min(24,g.T.length))).forEach(m=>{"),"Een mobiele max/min-markering staat op het echte hoogste of laagste punt, ook tussen twee drie-uursankers; de uuras houdt haar drie-uursritme.");
 assert(runtime.includes("const vrijVanTijd=els=>vasteMobieleAs&&els.every(el=>el.hasAttribute(\"data-mobile-temp-marker\"))"),"Op de telefoon krijgt piek of dal geen eigen uurtijd die het drie-uursritme breekt.");
-assert(runtime.includes('plaats(m.waarde+"°",')&&!runtime.includes('m.type+" "+m.waarde'),"Max/min-markering toont alleen de waarde: \"min 3°\" leest als -3°.");
+assert(runtime.includes('const pos=plaats(m.waarde+"°",dichtbij,false);')&&!runtime.includes('m.type+" "+m.waarde'),"Max/min-markering toont alleen de waarde: \"min 3°\" leest als -3°.");
 assert(runtime.includes("const asKolom=Number(g.x(0))-4;")&&runtime.includes("if(box&&box.x<asKolom){if(!schuif)continue;"),"Een kale markering staat nooit in de kolom van de asgetallen; een ankerlabel schuift ervan weg.");
 assert(runtime.includes("if(y-fs<plafond||y>bottom-3)continue;")&&runtime.includes("filter(b=>Number.isFinite(b)&&b<top-4)"),"Een label bij een piek vlak onder de bovenste asgrens mag boven de plotrand uitsteken tot net onder de dag/nachtband, zodat het boven zijn punt blijft.");
 assert(runtime.includes("monotoonPad(")&&runtime.includes('data-mobile-line-points'),"Mobiele lijn is vloeiend en houdt haar punten beschikbaar voor botsingscontrole.");
@@ -133,7 +133,8 @@ assert(!runtime.includes("verminderMobieleTemperatuurlabels"),"De oude op-de-lij
 assert(!runtime.includes("mobieleTemperatuurLabelLimiet(window.innerWidth)"),"De mobiele 24-uursgrafiek mag verplichte ankers niet langer via een viewport-limiet uitdunnen.");
 
 /* Desktop: dezelfde accenten, met behoud van het uurcijfer. */
-assert(/compactMobieleGrafiekHoogte\(\);koppelTijdAanTemperatuur\(\);bouwDesktopGrafiekAccenten\(\);herplaatsRegengetallen\(\);\}/.test(runtime),"Tijdkoppeling en desktopaccenten draaien in dezelfde idempotente grafiekpass, de tijden vóór de iconen; de regengetallen komen als laatste, rond de definitieve temperaturen.");
+assert(/compactMobieleGrafiekHoogte\(\);koppelTijdAanTemperatuur\(\);bouwDesktopGrafiekAccenten\(\);\}/.test(runtime),"Tijdkoppeling en desktopaccenten draaien in dezelfde idempotente grafiekpass, de tijden vóór de iconen.");
+assert(!runtime.includes("regenstaaf-mm")&&!runtime.includes("herplaatsRegengetallen"),"De grafiek toont neerslag alleen als staafjes, zonder getallen.");
 assert(runtime.includes("function koppelTijdAanTemperatuur(){")&&runtime.includes('data-temp-time')&&runtime.includes('data-temp-time-complete'),"Iedere temperatuur in de grafiek krijgt een tijd onder haar punt, of vervalt.");
 {
   const accenten=runtime.slice(runtime.indexOf("function bouwDesktopGrafiekAccenten(){"),runtime.indexOf("function koppelTijdAanTemperatuur(){"));

@@ -51,10 +51,10 @@ assert.equal(a.fahrenheitContext("Heat Advisory","Heat index values up to 41 °C
 assert.match(a.nwsUitleg("Heat Advisory","100 to 110 degrees Fahrenheit").uitleg,/38–43 °C/);
 
 /* Wereldwijde vochtigheid: relatieve waarde blijft meetwaarde, comfort volgt dauwpunt. */
-assert.equal(vochtigheidPresentatie({temperature_2m:40,relative_humidity_2m:43,dew_point_2m:25}),"Zeer benauwde lucht. Dauwpunt circa 25 °C.");
-assert.equal(vochtigheidPresentatie({temperature_2m:5,relative_humidity_2m:84,dew_point_2m:3}),"Hoge relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa 3 °C.");
-assert.equal(vochtigheidPresentatie({temperature_2m:2,relative_humidity_2m:78,dew_point_2m:-1}),"Hoge relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa -1 °C.");
-assert.equal(vochtigheidPresentatie({temperature_2m:-49,relative_humidity_2m:67,dew_point_2m:-52}),"Extreem droge lucht. Dauwpunt circa -52 °C.");
+assert.equal(vochtigheidPresentatie({temperature_2m:40,relative_humidity_2m:43,dew_point_2m:25}),"Zeer benauwde lucht. Dauwpunt circa 25\u00a0°C.");
+assert.equal(vochtigheidPresentatie({temperature_2m:5,relative_humidity_2m:84,dew_point_2m:3}),"Hoge relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa 3\u00a0°C.");
+assert.equal(vochtigheidPresentatie({temperature_2m:2,relative_humidity_2m:78,dew_point_2m:-1}),"Hoge relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa -1\u00a0°C.");
+assert.equal(vochtigheidPresentatie({temperature_2m:-49,relative_humidity_2m:67,dew_point_2m:-52}),"Extreem droge lucht. Dauwpunt circa -52\u00a0°C.");
 assert.equal(vochtigheidPresentatie({temperature_2m:20,relative_humidity_2m:87}),"Hoge relatieve luchtvochtigheid.");
 assert(!/droog/i.test(vochtigheidPresentatie({temperature_2m:40,relative_humidity_2m:43,dew_point_2m:25})),"Dubai mag nooit droog heten");
 assert(!/^Vochtige lucht/i.test(vochtigheidPresentatie({temperature_2m:-49,relative_humidity_2m:67,dew_point_2m:-52})),"poollucht mag niet simpelweg vochtig heten");

@@ -9,10 +9,15 @@
      het venster, ook tussen twee drie-uursankers (telefoon) of tussen twee
      uurcijfers (tablet). Een rand van het venster is geen piek of dal als de
      reeks daarbuiten verder stijgt of daalt. Op tablet en desktop heeft piek
-     en dal een eigen uurtijd.
-   - Telefoon: geen grafiektekst kleiner dan 11px, ieder drie-uursanker heeft
-     een temperatuur, "nu" staat bij de rode stip (binnen twee regels), en een regengetal staat bij
-     zijn staafje (hooguit twee regels erboven) en herhaalt zich niet voor uren met dezelfde hoeveelheid.
+     en dal een eigen uurtijd, zonder een tweede uurtijd binnen anderhalf uur
+     ernaast als de grafiek niet ieder uur een cijfer heeft (900 en 1024px).
+   - Het cijfer van piek en dal staat direct bij zijn stip, ook als er regen
+     onder het dal valt.
+   - Op iedere breedte: geen grafiektekst kleiner dan 11px.
+   - Telefoon: ieder drie-uursanker heeft een temperatuur en "nu" staat bij
+     de rode stip (binnen twee regels).
+   - Neerslag alleen als staafjes, zonder getallen in de grafiek: de
+     hoeveelheid staat in de uurtabel, de regel eronder en bij aantikken.
 
    Draait na: npm run build:cloudflare */
 
@@ -89,19 +94,22 @@ function meetGrafiek(){
     let i=0;for(let k=1;k<n;k++)if(Math.abs(g.x(k)-cx)<Math.abs(g.x(i)-cx))i=k;
     return {type,i,dx:Math.abs(g.x(i)-cx),dy:Math.abs(g.y(T[i])-Number(el.getAttribute("cy")))};
   });
-  const cijfers=[...svg.querySelectorAll("text[data-mobile-temp-marker],text[data-desktop-temp-marker]")].map(el=>({type:el.getAttribute("data-mobile-temp-marker")||el.getAttribute("data-desktop-temp-marker"),tekst:el.textContent.trim(),x:Number(el.getAttribute("x"))}));
+  const cijfers=[...svg.querySelectorAll("text[data-mobile-temp-marker],text[data-desktop-temp-marker]")].map(el=>{
+    const type=el.getAttribute("data-mobile-temp-marker")||el.getAttribute("data-desktop-temp-marker"),b=el.getBBox();
+    const stip=svg.querySelector(`[data-mobile-temp-marker-dot="${type}"],[data-desktop-temp-marker-dot="${type}"]`),cy=stip?Number(stip.getAttribute("cy")):null;
+    return {type,tekst:el.textContent.trim(),x:Number(el.getAttribute("x")),afstand:cy===null?null:Math.max(0,b.y-cy,cy-(b.y+b.height))};
+  });
   const tijden=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!el.closest("g[data-q4-rain-periods]")&&el.getAttribute("display")!=="none"&&/^\d{2}:00$/.test(el.textContent.trim())).map(el=>Number(el.getAttribute("x")));
   const zichtbaar=el=>{let e=el;while(e&&e!==svg){if(e.getAttribute&&e.getAttribute("display")==="none")return false;const cs=getComputedStyle(e);if(cs.display==="none"||cs.visibility==="hidden")return false;e=e.parentNode;}return el.getClientRects().length>0;};
   const klein=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&zichtbaar(el)&&el.textContent.trim()).map(el=>({t:el.textContent.trim(),px:parseFloat(getComputedStyle(el).fontSize)*schaal})).filter(x=>x.px<10.95);
   const nu=[...svg.querySelectorAll("text")].find(el=>/^nu(?:\s|$)/i.test(el.textContent.trim())),nuStip=svg.querySelector('circle[fill="var(--carmine)"][r="3"]');
   let nuAfstand=null;
   if(nu&&nuStip){const b=nu.getBBox(),cy=Number(nuStip.getAttribute("cy"));nuAfstand=Math.max(0,b.y-cy,cy-(b.y+b.height));}
-  const staven=[...svg.querySelectorAll("g[data-regenstaven] path.regenstaaf")].map(el=>({uur:el.getAttribute("data-uur"),top:el.getBBox().y}));
-  const stipBoxen=[...svg.querySelectorAll("circle[data-mobile-temp-marker-dot],circle[data-desktop-temp-marker-dot],circle[fill=\"var(--carmine)\"]")].map(c=>c.getBBox());
-  const raakt=(a,b)=>a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;
-  const regen=[...svg.querySelectorAll("g[data-regenstaaf-mm] text")].map(el=>{const b=el.getBBox(),s=staven.find(s=>s.uur===el.getAttribute("data-uur"));return {uur:el.getAttribute("data-uur"),tekst:el.textContent.trim(),boven:s?s.top-(b.y+b.height):null,fs:Number(el.getAttribute("font-size")),opStip:stipBoxen.some(st=>raakt(b,st))};});
-  return {M:!!g.M,n,van:g.TI[0],zicht,links,rechts,stippen,cijfers,tijden,x:zicht.map((_,k)=>g.x(k)),klein,nuAfstand,regen,
-    missing:svg.getAttribute("data-mobile-temp-missing-anchors")||"",compact:innerWidth<=430};
+  const staven=[...svg.querySelectorAll("g[data-regenstaven] path.regenstaaf")].map(el=>{const b=el.getBBox();return {uur:el.getAttribute("data-uur"),top:b.y,cx:b.x+b.width/2};});
+  /* Neerslaggetallen per uur in de grafiek ("1,4", "0,6"); het totaal onder de grafiek ("4,6 mm") hoort er wel. */
+  const regen=[...svg.querySelectorAll("g[data-regenstaaf-mm] text, text")].filter(el=>!el.closest("#scrub")&&/^\d+,\d$/.test(el.textContent.trim())).map(el=>el.textContent.trim());
+  return {M:!!g.M,n,van:g.TI[0],zicht,links,rechts,stippen,cijfers,tijden,x:zicht.map((_,k)=>g.x(k)),klein,nuAfstand,regen,staven:staven.length,
+    missing:svg.getAttribute("data-mobile-temp-missing-anchors")||"",compact:innerWidth<=430,iederUur:T.length<=24&&Number(g.cw)>=36,cw:Number(g.cw)};
 }
 
 /* Verwachte markeringen: echte extremen, zonder rand die buiten het venster doorloopt. */
@@ -165,9 +173,9 @@ function verwacht(m){
         console.log("GRAFIEK 1366px: toetsenbordfocus begint bij het eerste uur.");
       }finally{await context.close();}
     }
-    /* 2-4. Piek en dal, leesbaarheid, nu-label en regengetallen. */
+    /* 2-4. Piek en dal, leesbaarheid, nu-label en neerslagstaafjes. */
     for(const [naam,sc] of Object.entries(SCENARIO)){
-      for(const [w,h] of [[360,780],[390,844],[768,1024],[1366,900]]){
+      for(const [w,h] of [[360,780],[390,844],[768,1024],[900,1000],[1024,768],[1366,900]]){
         const label=naam+" "+w+"px";
         const {context,page,fouten}=await open(browser,root,sc,w,h);
         try{
@@ -180,24 +188,25 @@ function verwacht(m){
             assert(p.idx.includes(s.i)&&s.dx<1&&s.dy<1,label+": de "+p.type+"-stip staat op index "+s.i+" en niet op het echte "+(p.type==="max"?"hoogste":"laagste")+" punt ("+p.idx.join("/")+")");
             assert(c&&c.tekst===p.waarde+"°",label+": het "+p.type+"-cijfer is "+(c&&c.tekst)+", verwacht "+p.waarde+"°");
             assert(Math.abs(c.x-m.x[s.i])<=14,label+": het "+p.type+"-cijfer staat niet boven zijn stip");
+            assert(c.afstand!==null&&c.afstand<=12,label+": het "+p.type+"-cijfer staat "+c.afstand+" van zijn stip");
             if(!m.compact)assert(m.tijden.some(x=>Math.abs(x-m.x[s.i])<3),label+": de "+p.type+" heeft geen eigen uurtijd");
+            if(!m.M&&!m.iederUur){
+              const buren=m.tijden.filter(x=>Math.abs(x-m.x[s.i])>=3&&Math.abs(x-m.x[s.i])<m.cw*1.5);
+              assert.deepEqual(buren,[],label+": naast de uurtijd van de "+p.type+" staat binnen anderhalf uur nog een uurtijd");
+            }
           }
+          assert.deepEqual(m.klein,[],label+": grafiektekst kleiner dan 11px");
           if(w<760){
-            assert.deepEqual(m.klein,[],label+": grafiektekst kleiner dan 11px");
             assert.equal(m.missing,"",label+": drie-uursanker zonder temperatuur ("+m.missing+")");
             assert(m.nuAfstand!==null&&m.nuAfstand<=26,label+": het nu-label staat "+m.nuAfstand+" van de rode stip");
           }
-          for(const r of m.regen){
-            assert(r.boven!==null&&r.boven>=-1&&r.boven<=2*(r.fs+2)+3,label+": regengetal "+r.tekst+" ("+r.uur.slice(11,16)+") zweeft "+(r.boven===null?"?":r.boven.toFixed(1))+" boven zijn staafje");
-            assert(!r.opStip,label+": regengetal "+r.tekst+" ("+r.uur.slice(11,16)+") bedekt een stip van piek, dal of nu");
-            const vorige=m.regen.find(x=>Date.parse(x.uur+"Z")===Date.parse(r.uur+"Z")-3600000);
-            assert(!vorige||vorige.tekst!==r.tekst,label+": regengetal "+r.tekst+" herhaalt zich voor opeenvolgende uren");
-          }
+          assert(m.staven>0,label+": geen neerslagstaafjes");
+          assert.deepEqual(m.regen,[],label+": neerslaggetallen in de grafiek: "+JSON.stringify(m.regen));
           assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
-          console.log("GRAFIEK "+label+": "+(plan.map(p=>p.type+" "+p.waarde+"°").join(", ")||"geen piek of dal in beeld")+"; "+m.regen.length+" regengetal(len).");
+          console.log("GRAFIEK "+label+": "+(plan.map(p=>p.type+" "+p.waarde+"°").join(", ")||"geen piek of dal in beeld")+"; "+m.staven+" neerslagstaafjes, geen getallen.");
         }finally{await context.close();}
       }
     }
   }finally{await browser.close();server.close();}
-  console.log("Grafiekinteractie en piek/dal OK op 360, 390, 768 en 1366px.");
+  console.log("Grafiekinteractie en piek/dal OK op 360, 390, 768, 900, 1024 en 1366px.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});

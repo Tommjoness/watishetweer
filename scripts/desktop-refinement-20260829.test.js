@@ -71,10 +71,10 @@ const pool={timezone:"Arctic/Longyearbyen",utc_offset_seconds:7200,current:{is_d
 assert.equal(zonPresentatie(pool,Date.UTC(2026,5,21,10)).type,"pooldag","identieke pool-sentinels mogen geen nep-zonmoment opleveren");
 
 /* De procentwaarde blijft RH, maar de comfortzin volgt primair het dauwpunt. */
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:43,dew_point_2m:25,temperature_2m:40}),"Zeer benauwde lucht. Dauwpunt circa 25 °C.","Dubai mag bij hoog dauwpunt nooit droog heten");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:67,dew_point_2m:-52,temperature_2m:-49}),"Extreem droge lucht. Dauwpunt circa -52 °C.","koude poollucht mag door hoge RH niet als vochtig worden verkocht");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:87,dew_point_2m:14}),"Aangename lucht. Dauwpunt circa 14 °C.");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:52,dew_point_2m:9}),"Vrij droge lucht. Dauwpunt circa 9 °C.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:43,dew_point_2m:25,temperature_2m:40}),"Zeer benauwde lucht. Dauwpunt circa 25\u00a0°C.","Dubai mag bij hoog dauwpunt nooit droog heten");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:67,dew_point_2m:-52,temperature_2m:-49}),"Extreem droge lucht. Dauwpunt circa -52\u00a0°C.","koude poollucht mag door hoge RH niet als vochtig worden verkocht");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:87,dew_point_2m:14}),"Aangename lucht. Dauwpunt circa 14\u00a0°C.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:52,dew_point_2m:9}),"Vrij droge lucht. Dauwpunt circa 9\u00a0°C.");
 assert.equal(vochtigheidPresentatie({relative_humidity_2m:87,dew_point_2m:null}),"Hoge relatieve luchtvochtigheid.","zonder dauwpunt mag alleen relatieve vochtigheid worden geduid");
 assert.equal(vochtigheidPresentatie({relative_humidity_2m:null}),"Luchtvochtigheid niet beschikbaar.");
 

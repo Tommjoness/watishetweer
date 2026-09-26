@@ -9,6 +9,14 @@
      dan staat er geen "(geel)" in de kop.
    - Grafiek overdag zonder nacht in het venster: geen lege omlijnde band.
    - Telefoon: het modelsignaal blijft na de tegels.
+   - Tegels van 600 tot en met 1099px in vier kolommen (ook 1024px).
+   - Lijnen over de volle breedte: luchttegels zonder inspringing, het
+     modelsignaal even breed als de tegels.
+   - Geen tekst onder 11px in tegelkoppen en het label "Modelsignaal".
+   - Luchtkwaliteit in inkt, ook bij "redelijk".
+   - Dauwpunt: getal en °C breken niet over twee regels (vaste spatie).
+   - Weergave-schakelaar: ieder vakje breed genoeg voor icoon en woord.
+   - "Komende 24 uur" (dagweergave): minstens 11px, op de telefoon 44px hoog.
 
    Draait na: npm run build:cloudflare */
 
@@ -79,7 +87,15 @@ function meet(){
   const band=svg?[...svg.querySelectorAll("rect")].filter(r=>r.getAttribute("fill")==="none"&&Number(r.getAttribute("y"))<Number(g.pt)).length:0;
   const nacht=svg?[...svg.querySelectorAll("rect")].filter(r=>Number(r.getAttribute("y"))<Number(g.pt)&&r.getAttribute("fill")!=="none"&&Number(r.getAttribute("height"))<30).length:0;
   const brief=document.getElementById("brief");
+  const aq=document.getElementById("aq"),aqTegels=aq?[...aq.children].filter(el=>el.classList.contains("stat")):[];
+  const ink=getComputedStyle(document.body).color;
+  const klein=[...document.querySelectorAll(".stats>.stat>.eyebrow,#modelrisico .modelrisico-label")].filter(el=>el.getBoundingClientRect().height>0&&parseFloat(getComputedStyle(el).fontSize)<10.95).map(el=>el.textContent.trim()+" "+getComputedStyle(el).fontSize);
+  const schakelaar=[...document.querySelectorAll(".wiw-weergave-voet #thema .wiw-theme-icon, .wiw-weergave-voet #thema .wiw-theme-auto")].map(el=>Math.round(el.getBoundingClientRect().width));
   return {stats:box(stats),model:box(document.getElementById("modelrisico")),chart:box(svg),
+    kolommen:new Set(tegels.map(t=>Math.round(t.getBoundingClientRect().left))).size,
+    aqInspring:aq&&aqTegels.length?Math.round(aqTegels[0].getBoundingClientRect().left-aq.getBoundingClientRect().left):null,
+    aqKleur:aqTegels.map(t=>{const v=t.querySelector(".sval");return v?getComputedStyle(v).color:null;}).filter(Boolean),ink,klein,schakelaar,
+    dauwpunt:(document.getElementById("humsub")||{}).textContent||"",
     rijen:[...rijen.values()].filter(r=>r.length>1),band,nacht,brief:(brief&&brief.textContent||"").replace(/\s+/g," ").trim(),
     overflow:document.documentElement.scrollWidth-innerWidth};
 }
@@ -89,7 +105,7 @@ function meet(){
   const root="http://127.0.0.1:"+server.address().port;
   const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
   try{
-    for(const [naam,w,h] of [["avond",390,844],["avond",768,1024],["avond",1366,768],["avond",1920,1080],["ochtend",1366,768]]){
+    for(const [naam,w,h] of [["avond",390,844],["avond",768,1024],["avond",1024,768],["avond",1366,768],["avond",1920,1080],["ochtend",1366,768]]){
       const label=naam+" "+w+"px";
       const {context,page,fouten}=await open(browser,root,SCENARIO[naam],w,h);
       try{
@@ -114,11 +130,26 @@ function meet(){
         }
         if(naam==="ochtend"&&w>=1100)assert.equal(m.band+m.nacht,0,label+": lege zonneband zonder nacht in het venster");
         if(naam==="avond")assert.equal(m.band,1,label+": de zonneband met nacht ontbreekt");
+        if(w>=600&&w<=1099)assert.equal(m.kolommen,4,label+": tegels staan in "+m.kolommen+" kolommen in plaats van vier");
+        assert.equal(m.aqInspring,0,label+": de luchttegels springen "+m.aqInspring+"px in ten opzichte van hun lijn");
+        if(m.model)assert(Math.abs(m.model.w-m.stats.w)<=1,label+": het modelsignaal ("+Math.round(m.model.w)+"px) is niet even breed als de tegels ("+Math.round(m.stats.w)+"px)");
+        assert.deepEqual(m.klein,[],label+": tekst kleiner dan 11px");
+        assert(m.aqKleur.length&&m.aqKleur.every(k=>k===m.ink),label+": luchtwaarden niet in inkt: "+m.aqKleur.join(", "));
+        if(/Dauwpunt/.test(m.dauwpunt))assert(/\d\u00a0°C/.test(m.dauwpunt)&&!/\d °C/.test(m.dauwpunt),label+": dauwpunt zonder vaste spatie: "+m.dauwpunt);
+        if(w>430&&m.schakelaar.length)assert(m.schakelaar.every(b=>b>=86),label+": vakjes van de weergave-schakelaar te smal: "+m.schakelaar.join("/"));
+        /* Dagweergave: terugknop leesbaar en op de telefoon goed te raken. */
+        const rij=await page.$$("#days .row.day");
+        if(rij[3]){
+          await rij[3].click();await sleep(1200);
+          const terug=await page.evaluate(()=>{const k=document.getElementById("back");const r=k.getBoundingClientRect();return {h:r.height,fs:parseFloat(getComputedStyle(k).fontSize),zichtbaar:r.height>0};});
+          assert(terug.zichtbaar&&terug.fs>=11,label+": terugknop kleiner dan 11px ("+terug.fs+")");
+          if(w<760)assert(terug.h>=44,label+": terugknop maar "+terug.h+"px hoog");
+        }
         assert(m.overflow<=1,label+": horizontale overflow "+m.overflow+"px");
         assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
         console.log("INDELING "+label+": "+m.rijen.length+" tegelrijen op één lijn"+(m.model?", modelsignaal op "+Math.round(m.model.x)+","+Math.round(m.model.y):"")+", grafiek vanaf y="+Math.round(m.chart.y)+".");
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
-  console.log("Indeling OK: modelsignaal onder de tegels, tegels op één lijn, geen dubbel niveau, geen lege zonneband.");
+  console.log("Indeling OK: modelsignaal onder de tegels, tegels op één lijn en in vier kolommen tot 1099px, lijnen over de volle breedte, luchtwaarden in inkt, geen tekst onder 11px, terugknop en weergave-schakelaar op maat, geen dubbel niveau, geen lege zonneband.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});
