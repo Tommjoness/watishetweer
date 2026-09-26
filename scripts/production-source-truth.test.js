@@ -1,7 +1,7 @@
 "use strict";
 
 const assert=require("assert");
-const {bft,dagNeerslag,uvPiekVandaag,verwachtThema,zonDagIndex,zonVerwachting,verwachtDagRijen}=require("./production-source-truth.js");
+const {bft,dagNeerslag,uvPiekVandaag,uvPiekVerwacht,verwachtThema,zonDagIndex,zonVerwachting,verwachtDagRijen}=require("./production-source-truth.js");
 
 assert.equal(bft(0),0);assert.equal(bft(1),1);assert.equal(bft(12),3);assert.equal(bft(117),11);assert.equal(bft(118),12);
 assert.deepEqual(dagNeerslag(0,0),{hoofd:"Droog",hoeveelheid:""});
@@ -28,6 +28,12 @@ assert.equal(uvPiekVandaag(bron,"2026-08-28T00:01"),null,"stale UV van gisteren 
 assert.equal(uvPiekVandaag({...bron,current:{time:"2026-08-28T00:00"}},"2026-08-28T00:01"),7,"verse huidige dag vereist zijn eigen piek");
 assert.equal(uvPiekVandaag({...bron,hourly:{time:["2026-08-27T12:00"],uv_index:[0]}},"2026-08-27T23:59"),0,"echte nul blijft nul");
 assert.equal(uvPiekVandaag({...bron,hourly:{time:["2026-08-27T12:00"],uv_index:[null]}},"2026-08-27T23:59"),null,"ontbrekend is geen nul");
+/* Na zonsondergang (20:30) toont de tegel de piek van morgen, ervoor die van vandaag. */
+assert.equal(uvPiekVerwacht(bron,"2026-08-27T20:29"),5,"voor zonsondergang geldt de piek van vandaag");
+assert.equal(uvPiekVerwacht(bron,"2026-08-27T20:30"),7,"vanaf zonsondergang geldt de piek van morgen");
+assert.equal(uvPiekVerwacht(bron),7,"current.time 21:00 ligt na zonsondergang");
+assert.equal(uvPiekVerwacht({...bron,hourly:{time:["2026-08-27T12:00"],uv_index:[5]},daily:{...bron.daily,uv_index_max:[5,6.6]}},"2026-08-27T21:00"),7,"zonder uurwaarden voor morgen valt de piek terug op de dagwaarde");
+assert.equal(uvPiekVerwacht({...bron,daily:{...bron.daily,time:["2026-08-27"],sunset:["2026-08-27T20:30"]}},"2026-08-27T21:00"),5,"zonder dag van morgen blijft de piek van vandaag");
 assert.equal(zonDagIndex(bron),1);
 assert.deepEqual(zonVerwachting(bron).op,["06:30"]);
 assert.deepEqual(zonVerwachting(bron).onder,["20:30"]);
