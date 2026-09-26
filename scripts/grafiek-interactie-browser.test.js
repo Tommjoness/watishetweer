@@ -12,7 +12,8 @@
      en dal een eigen uurtijd, zonder een tweede uurtijd binnen anderhalf uur
      ernaast als de grafiek niet ieder uur een cijfer heeft (900 en 1024px).
    - Het cijfer van piek en dal staat direct bij zijn stip, ook als er regen
-     onder het dal valt.
+     onder het dal valt. Op de telefoon staat bij piek of dal tussen twee
+     drie-uursankers de tijd erbij, zonder andere grafiektekst te raken.
    - Op iedere breedte: geen grafiektekst kleiner dan 11px.
    - Telefoon: ieder drie-uursanker heeft een temperatuur en "nu" staat bij
      de rode stip (binnen twee regels).
@@ -28,8 +29,10 @@ const {bouw}=require("../data.js");
 const OUT=path.join(__dirname,"..","public");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-/* Twee dagverlopen: een natte avond (nu 17:39) en een late avond met regen na
-   middernacht (nu 22:39). Beide met het dal tussen twee drie-uursankers. */
+/* Drie dagverlopen: een natte avond (nu 17:39) en een late avond met regen na
+   middernacht (nu 22:39), beide met het dal tussen twee drie-uursankers, en
+   een middag met de piek tussen twee drie-uursankers en wat regen in de
+   avond (nu 11:58). */
 const SCENARIO={
   avondregen:{klok:"2026-07-22T15:39:00Z",meting:"2026-07-22T17:30",
     temp:(u,dag)=>+(15.5+4.5*Math.sin((u-9)/24*Math.PI*2)-dag*0.4).toFixed(1),
@@ -40,7 +43,15 @@ const SCENARIO={
     temp:(u,dag)=>+(14+3.8*Math.sin((u-9)/24*Math.PI*2)-dag*0.2).toFixed(1),
     pp:(u,dag)=>dag===1&&u>=1&&u<=5?[30,55,60,45,20][u-1]:10,
     pr:(u,dag)=>dag===1&&u>=1&&u<=5?[0.1,0.4,0.6,0.3,0.1][u-1]:0,
-    wc:(u,dag)=>dag===1&&u>=1&&u<=5?61:3}
+    wc:(u,dag)=>dag===1&&u>=1&&u<=5?61:3},
+  /* Middag (nu 11:58), regen vanavond: de warmste 20,4° om 15:00 ligt tussen de
+     asuren 14:00 en 17:00, en 17:00 rondt ook af op 20°. */
+  middagpiek:{klok:"2026-07-22T09:58:00Z",meting:"2026-07-22T11:45",
+    temp:(u,dag)=>(dag===0?[13.0,12.8,12.6,12.5,12.4,12.5,12.8,13.4,14.6,15.9,16.9,17.5,17.9,19.3,20.2,20.4,20.3,20.0,19.0,17.8,16.8,16.2,15.9,15.6]
+      :[15.3,15.0,14.6,14.1,13.6,13.2,12.4,12.1,12.3,13.5,15.0,16.2,17.0,17.4,17.5,17.2,16.6,15.6,14.8,14.2,13.8,13.5,13.2,13.0])[u]-(dag>1?dag*0.3:0),
+    pp:(u,dag)=>dag===0&&u>=21&&u<=23?[35,50,30][u-21]:5,
+    pr:(u,dag)=>dag===0&&u>=21&&u<=23?[0.2,0.5,0.1][u-21]:0,
+    wc:(u,dag)=>dag===0&&u>=21&&u<=23?61:3}
 };
 function fixture(sc){
   const d=bouw({temp:sc.temp,pp:sc.pp,pr:sc.pr,wc:sc.wc,som:2});
@@ -108,7 +119,12 @@ function meetGrafiek(){
   const staven=[...svg.querySelectorAll("g[data-regenstaven] path.regenstaaf")].map(el=>{const b=el.getBBox();return {uur:el.getAttribute("data-uur"),top:b.y,cx:b.x+b.width/2};});
   /* Neerslaggetallen per uur in de grafiek ("1,4", "0,6"); het totaal onder de grafiek ("4,6 mm") hoort er wel. */
   const regen=[...svg.querySelectorAll("g[data-regenstaaf-mm] text, text")].filter(el=>!el.closest("#scrub")&&/^\d+,\d$/.test(el.textContent.trim())).map(el=>el.textContent.trim());
-  return {M:!!g.M,n,van:g.TI[0],zicht,links,rechts,stippen,cijfers,tijden,x:zicht.map((_,k)=>g.x(k)),klein,nuAfstand,regen,staven:staven.length,
+  /* Tijd bij piek of dal op de telefoon, en welke uren de drie-uursas toont. */
+  const markerTijden=[...svg.querySelectorAll("text[data-mobile-temp-marker-time]")].map(el=>({i:Number(el.getAttribute("data-mobile-temp-marker-time")),tekst:el.textContent.trim(),x:Number(el.getAttribute("x")),anker:el.getAttribute("text-anchor")||"start",b:el.getBoundingClientRect()}));
+  const asIdx=[...svg.querySelectorAll("text[data-mobile-hour-axis]")].map(el=>Number(el.getAttribute("data-mobile-hour-index")));
+  const andereTekst=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!el.hasAttribute("data-mobile-temp-marker-time")&&el.getAttribute("display")!=="none"&&el.textContent.trim()).map(el=>el.getBoundingClientRect()).filter(r=>r.width);
+  const tijdBotst=markerTijden.filter(t=>andereTekst.some(r=>t.b.left<r.right&&t.b.right>r.left&&t.b.top<r.bottom&&t.b.bottom>r.top)).map(t=>t.tekst);
+  return {M:!!g.M,n,van:g.TI[0],TI:g.TI.slice(0,n),zicht,links,rechts,stippen,cijfers,tijden,markerTijden:markerTijden.map(({b,...t})=>t),asIdx,tijdBotst,x:zicht.map((_,k)=>g.x(k)),klein,nuAfstand,regen,staven:staven.length,
     missing:svg.getAttribute("data-mobile-temp-missing-anchors")||"",compact:innerWidth<=430,iederUur:T.length<=24&&Number(g.cw)>=36,cw:Number(g.cw)};
 }
 
@@ -190,12 +206,26 @@ function verwacht(m){
             assert(Math.abs(c.x-m.x[s.i])<=14,label+": het "+p.type+"-cijfer staat niet boven zijn stip");
             assert(c.afstand!==null&&c.afstand<=12,label+": het "+p.type+"-cijfer staat "+c.afstand+" van zijn stip");
             if(!m.compact)assert(m.tijden.some(x=>Math.abs(x-m.x[s.i])<3),label+": de "+p.type+" heeft geen eigen uurtijd");
+            /* Telefoon: valt piek of dal tussen twee drie-uursankers, dan staat de
+               tijd erbij als er dicht bij de stip plek is (anders leest de stip
+               als het anker ernaast); op een anker noemt de uuras de tijd al.
+               De middagpiek (15:00 tussen 14:00 en 17:00) heeft altijd plek. */
+            if(m.compact&&m.asIdx.length){
+              const t=m.markerTijden.find(x=>x.i===s.i);
+              if(m.asIdx.includes(s.i))assert(!t,label+": de "+p.type+" staat op de uuras en krijgt toch een extra tijd");
+              else if(naam==="middagpiek"&&p.type==="max")assert(t,label+": de "+p.type+" om "+String(m.TI[s.i]).slice(11,16)+" valt tussen twee asuren en heeft geen tijd bij de stip");
+              if(t){
+                assert.equal(t.tekst,String(m.TI[s.i]).slice(11,16),label+": verkeerde tijd bij de "+p.type);
+                assert(Math.abs(t.x-m.x[s.i])<=30,label+": de tijd van de "+p.type+" staat niet bij de stip");
+              }
+            }
             if(!m.M&&!m.iederUur){
               const buren=m.tijden.filter(x=>Math.abs(x-m.x[s.i])>=3&&Math.abs(x-m.x[s.i])<m.cw*1.5);
               assert.deepEqual(buren,[],label+": naast de uurtijd van de "+p.type+" staat binnen anderhalf uur nog een uurtijd");
             }
           }
           assert.deepEqual(m.klein,[],label+": grafiektekst kleiner dan 11px");
+          assert.deepEqual(m.tijdBotst,[],label+": de tijd bij piek of dal overlapt andere grafiektekst");
           if(w<760){
             assert.equal(m.missing,"",label+": drie-uursanker zonder temperatuur ("+m.missing+")");
             assert(m.nuAfstand!==null&&m.nuAfstand<=26,label+": het nu-label staat "+m.nuAfstand+" van de rode stip");
