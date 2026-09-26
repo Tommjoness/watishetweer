@@ -47,7 +47,10 @@ for (let i = 0; i < d.hourly.time.length; i++) {
   const uur = d.hourly.time[i].slice(11, 13);
   // 5,9 wordt zichtbaar 6. De zichtbare categorie moet daarom óók die 6 volgen:
   // UV 6 is hoog, niet het verborgen-decimaal-oordeel 'matig'.
-  if (d.hourly.time[i].slice(0, 10) === "2026-07-22" && uur === "15") {
+  // Na zonsondergang toont de tegel de piek van morgen; die ligt om 15:00.
+  const dag = d.hourly.time[i].slice(0, 10);
+  if (dag === "2026-07-23") d.hourly.uv_index[i] = Math.min(Number(d.hourly.uv_index[i]) || 0, 5.4);
+  if ((dag === "2026-07-22" || dag === "2026-07-23") && uur === "15") {
     d.hourly.uv_index[i] = 5.9;
   }
 }
@@ -241,9 +244,9 @@ async function controleer(page, naam, modus) {
 
   assert.ok(!/wind komt|draait naar/i.test(resultaat.briefing), `${naam} ${modus}: 1 Bft krijgt geen briefing over richtingsdraai`);
   assert.ok(!/het is nu\s+-?\d+/i.test(resultaat.briefing), `${naam} ${modus}: briefing herhaalt actuele temperatuur niet`);
-  assert.equal(resultaat.uvKop, "UV-piek vandaag", `${naam} ${modus}: UV is expliciet dagpiek`);
+  assert.equal(resultaat.uvKop, "UV-piek morgen", `${naam} ${modus}: na zonsondergang toont de UV-tegel de dagpiek van morgen`);
   assert.equal(resultaat.uvWaarde, "6", `${naam} ${modus}: UV-piek is consumentgericht afgerond`);
-  assert.equal(resultaat.uvSub, "Verwachte UV-piek lag rond 15:00 · hoog.", `${naam} ${modus}: verstreken UV-piek blijft expliciet modelverwachting en volgt dezelfde afgeronde grens`);
+  assert.equal(resultaat.uvSub, "Verwachte UV-piek rond 15:00 · hoog.", `${naam} ${modus}: UV-piek van morgen blijft expliciet modelverwachting en volgt dezelfde afgeronde grens`);
   assert.equal(resultaat.pressureRetired, true, `${naam} ${modus}: luchtdrukfeature is volledig uit de finale consumenten-UI verwijderd`);
   assert.equal(resultaat.trendKop, "Temperatuur komende 3 uur", `${naam} ${modus}: trendhorizon staat altijd in de tegelkop`);
   assert.match(resultaat.trend, /^-?\d+\s*→\s*-?\d+\s*°C$/, `${naam} ${modus}: temperatuurtrend toont uitsluitend huidige en toekomstige temperatuur`);
