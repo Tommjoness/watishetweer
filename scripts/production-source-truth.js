@@ -41,6 +41,23 @@ function uvPiekVandaag(bron,nuOverride){
   }
   return max===null?null:Math.round(max);
 }
+function uvPiekVerwacht(bron,nuOverride){
+  /* Na zonsondergang toont de UV-tegel de verwachte piek van morgen, net als
+     de productie (indexMorgenNaZonsondergang in de final-audit-runtime): de
+     lokale tijd staat op of na de zonsondergang van vandaag en er is een
+     volgende dag in de bron. Anders geldt de piek van vandaag. */
+  const horizon=String(nuOverride||bron?.current?.time||""),daily=bron?.daily||{},dagen=daily.time||[];
+  const i=dagen.indexOf(horizon.slice(0,10)),ss=i>=0&&Array.isArray(daily.sunset)?daily.sunset[i]:null;
+  if(!ss||i+1>=dagen.length||horizon.slice(0,16)<String(ss).slice(0,16))return uvPiekVandaag(bron,nuOverride);
+  const morgen=String(dagen[i+1]),tijden=bron?.hourly?.time||[],waarden=bron?.hourly?.uv_index||[];
+  let max=null;
+  for(let k=0;k<tijden.length;k++){
+    if(String(tijden[k]).slice(0,10)!==morgen)continue;
+    const v=getal(waarden[k]);if(v!==null&&(max===null||v>max))max=v;
+  }
+  if(max===null){const d=getal(daily.uv_index_max?.[i+1]);if(d!==null)max=d;}
+  return max===null?null:Math.round(Math.max(0,max));
+}
 function verwachtThema(keuze,systeemThema){
   /* Auto volgt de licht/donker-instelling van het apparaat. Een expliciete
      sessiekeuze Licht of Donker wint. De monitor opent een verse sessie (Auto)
@@ -117,7 +134,7 @@ function verifieerBronwaarheid(bron,ui,label,nuOverride,systeemThema="licht"){
   assert(bron&&bron.current&&bron.daily&&bron.hourly,`${label}: onvolledige Open-Meteo-bronrespons`);
   gelijk(ui.temperatuur,Math.round(Number(bron.current.temperature_2m)),`${label}: actuele temperatuur wijkt af van bron`);
   gelijk(ui.wind,Math.round(Number(bron.current.wind_speed_10m)),`${label}: actuele wind wijkt af van bron`);
-  gelijk(ui.uv,uvPiekVandaag(bron,nuOverride),`${label}: UV-piek wijkt af van bron (current=${bron.current.time}, lokaal=${nuOverride||bron.current.time})`);
+  gelijk(ui.uv,uvPiekVerwacht(bron,nuOverride),`${label}: UV-piek wijkt af van bron (current=${bron.current.time}, lokaal=${nuOverride||bron.current.time})`);
   gelijk(ui.thema,verwachtThema("auto",systeemThema),`${label}: Auto-thema volgt de systeeminstelling (${systeemThema}) niet`);
 
   const verwacht=verwachtDagRijen(bron,nuOverride);
@@ -142,4 +159,4 @@ function verifieerBronwaarheid(bron,ui,label,nuOverride,systeemThema="licht"){
   return {dagen:verwacht.length,zonRijen:zon.rijen.length};
 }
 
-module.exports={BFT,getal,bft,zichtbaarGetal,dagNeerslag,uvPiekVandaag,verwachtThema,zonDagIndex,hhmm,datumDagenVerschil,poolDaglichtStatus,zonVerwachting,verwachtDagRijen,verifieerBronwaarheid};
+module.exports={BFT,getal,bft,zichtbaarGetal,dagNeerslag,uvPiekVandaag,uvPiekVerwacht,verwachtThema,zonDagIndex,hhmm,datumDagenVerschil,poolDaglichtStatus,zonVerwachting,verwachtDagRijen,verifieerBronwaarheid};
