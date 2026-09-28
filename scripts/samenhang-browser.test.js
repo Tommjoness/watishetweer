@@ -11,7 +11,8 @@
    - Nachtzicht: telefoon toont alleen vannacht, desktop drie nachten.
    - Dagweergave: geen dubbele dagnaam voor zon op/onder.
    - Desktopgrafiek: 24 uur; de uurtabel is het begin daarvan.
-   - Plaatsindex /weer/: Licht | Auto | Donker, terug-link bovenaan, zoekveld.
+   - Plaatsindex /weer/: Licht | Auto | Donker, terug-link bovenaan, zoekveld
+     dat echt filtert (zichtbaar en focusbaar), op telefoon en desktop.
    - Uurtabel naast de desktopgrafiek (1100-1366px): ook bij storm ("WZW 10
      Bft") geen horizontaal scrollen en geen afgekapte kolom.
    - Over en Privacy: siteletters; Privacy begint met een korte samenvatting.
@@ -154,11 +155,39 @@ function meet(){
         assert(r.terugBoven&&!r.oudeSchakelaar,w+"px /weer/: terug-link niet bovenaan of oude schakelaar nog aanwezig");
         await page.click('#thema [data-keuze="donker"]');await sleep(150);
         assert.equal(await page.evaluate(()=>document.documentElement.getAttribute("data-thema")),"donker",w+"px /weer/: Donker zet het donkere thema niet");
-        await page.fill("#hub-zoek","utre");await sleep(150);
-        const gefilterd=await page.evaluate(()=>[...document.querySelectorAll(".plaatsen li")].filter(li=>!li.hidden).map(li=>li.querySelector("a").textContent.trim()));
-        assert.deepEqual(gefilterd,["Utrecht"],w+"px /weer/: zoeken op 'utre' filtert niet naar Utrecht: "+JSON.stringify(gefilterd));
-        await page.fill("#hub-zoek","xyzq");await sleep(150);
-        assert.equal(await page.evaluate(()=>document.getElementById("hub-leeg").hidden),false,w+"px /weer/: melding bij geen resultaat ontbreekt");
+        /* Zoeken: telt wat werkelijk op het scherm staat (weergegeven en
+           niet display:none), niet alleen het hidden-attribuut. Een
+           weggefilterde plaats mag ook geen focus kunnen krijgen. */
+        const totaal=await page.evaluate(()=>document.querySelectorAll(".plaatsen li").length);
+        assert(totaal>=20,w+"px /weer/: plaatsenlijst te kort ("+totaal+")");
+        const zoek=async(q,verwacht)=>{
+          await page.fill("#hub-zoek",q);
+          await page.waitForFunction(n=>[...document.querySelectorAll(".plaatsen li")].filter(li=>!li.hidden).length===n,verwacht,{timeout:5000}).catch(()=>{});
+          return page.evaluate(()=>{
+            const zichtbaar=el=>!!el&&el.getClientRects().length>0&&getComputedStyle(el).display!=="none"&&getComputedStyle(el).visibility!=="hidden";
+            const li=[...document.querySelectorAll(".plaatsen li")];
+            const verborgenFocus=li.filter(e=>!zichtbaar(e)).map(e=>e.querySelector("a")).filter(a=>{a.focus();const ja=document.activeElement===a;a.blur();return ja;}).length;
+            const leeg=document.getElementById("hub-leeg");
+            return {namen:li.filter(zichtbaar).map(e=>e.querySelector("a").textContent.trim()),verborgenFocus,leeg:zichtbaar(leeg),leegTekst:leeg?leeg.textContent.trim():""};
+          });
+        };
+        let z=await zoek("Almere",1);
+        assert.deepEqual(z.namen,["Almere"],w+"px /weer/: 'Almere' toont niet precies één resultaat: "+z.namen.length+" zichtbaar");
+        assert.equal(z.verborgenFocus,0,w+"px /weer/: "+z.verborgenFocus+" weggefilterde links zijn nog focusbaar");
+        assert(!z.leeg,w+"px /weer/: melding 'niet in de lijst' staat er bij een treffer");
+        z=await zoek("utre",1);
+        assert.deepEqual(z.namen,["Utrecht"],w+"px /weer/: zoeken op 'utre' toont niet alleen Utrecht: "+JSON.stringify(z.namen.slice(0,5)));
+        assert.equal(z.verborgenFocus,0,w+"px /weer/: weggefilterde links zijn nog focusbaar bij 'utre'");
+        /* Toetsenbord: Tab vanuit het zoekveld komt direct op Utrecht. */
+        await page.focus("#hub-zoek");await page.keyboard.press("Tab");
+        assert.equal(await page.evaluate(()=>(document.activeElement||{}).textContent||""),"Utrecht",w+"px /weer/: Tab na 'utre' komt niet op Utrecht");
+        z=await zoek("xyzq",0);
+        assert.deepEqual(z.namen,[],w+"px /weer/: onbekende term toont toch "+z.namen.length+" plaatsen");
+        assert.equal(z.verborgenFocus,0,w+"px /weer/: weggefilterde links zijn nog focusbaar bij een onbekende term");
+        assert(z.leeg&&/niet in de lijst/.test(z.leegTekst),w+"px /weer/: hulptekst bij geen resultaat ontbreekt of is niet zichtbaar");
+        z=await zoek("",totaal);
+        assert.equal(z.namen.length,totaal,w+"px /weer/: leeg zoekveld toont niet de volledige lijst ("+z.namen.length+" van "+totaal+")");
+        assert(!z.leeg,w+"px /weer/: melding 'niet in de lijst' blijft staan bij een leeg zoekveld");
         assert.deepEqual(fouten,[],w+"px /weer/: runtimefouten "+fouten.join(" | "));
         console.log("SAMENHANG /weer/ "+w+"px: Licht | Auto | Donker, terug bovenaan, zoeken filtert.");
       }finally{await context.close();}
