@@ -135,7 +135,7 @@ function finaliseerDagNeerslag(){
   document.querySelectorAll("#days .row.day:not(.kop)").forEach(r=>{
     const vak=r.querySelector(".drain");if(!vak)return;const m=/(\\d{1,3})%/.exec(vak.textContent||""),k=m?Number(m[1]):null,bekend=vak.querySelector("small,.q1-dag-mm");
     if(k!==null&&k>0&&!bekend){const small=document.createElement("small");small.className="wiw-dag-onzeker";small.textContent="hoeveelheid onzeker";vak.appendChild(small);}
-    const delen=[];if(k!==null)delen.push("Neerslagkans "+k+" procent");const small=vak.querySelector("small,.q1-dag-mm");if(small&&small.textContent.trim())delen.push(small.textContent.trim());if(!delen.length&&/^[-–—]$/.test(vak.textContent.trim()))delen.push("Neerslaggegevens niet beschikbaar");if(delen.length)vak.setAttribute("aria-label",delen.join("; "));
+    const delen=[];if(k!==null)delen.push("Hoogste neerslagkans in één uur "+k+" procent");const small=vak.querySelector("small,.q1-dag-mm");if(small&&small.textContent.trim())delen.push(small.textContent.trim());if(!delen.length&&/^[-–—]$/.test(vak.textContent.trim()))delen.push("Neerslaggegevens niet beschikbaar");if(delen.length)vak.setAttribute("aria-label",delen.join("; "));
   });
 }
 function reeks(h,naam,begin,eind){const a=h&&Array.isArray(h[naam])?h[naam]:[];return a.slice(begin,eind).map(Number).filter(Number.isFinite);}

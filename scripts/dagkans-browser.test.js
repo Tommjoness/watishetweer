@@ -60,11 +60,13 @@ const pct=t=>{const m=/(\d{1,3})\s*%/.exec(String(t||""));return m?Number(m[1]):
       try{
         await page.goto(root+"/weer/utrecht/",{waitUntil:"domcontentloaded"});
         await page.waitForFunction(()=>typeof S!=="undefined"&&S.geo&&document.querySelectorAll("#days .row.day:not(.kop)").length>=7,null,{timeout:15000});
-        const rijen=await page.evaluate(()=>[...document.querySelectorAll("#days .row.day:not(.kop)")].map(r=>{const d=r.querySelector(".drain");return {i:Number(r.dataset.i),tekst:d?d.textContent:"",titel:d?d.title:""};}));
+        const rijen=await page.evaluate(()=>[...document.querySelectorAll("#days .row.day:not(.kop)")].map(r=>{const d=r.querySelector(".drain");return {i:Number(r.dataset.i),tekst:d?d.textContent:"",titel:d?d.title:"",gesproken:d?d.getAttribute("aria-label")||"":""};}));
         const rij=i=>rijen.find(r=>r.i===i)||{};
         assert.equal(pct(rij(0).tekst),90,w+"px: vandaag (resterend) hoort het uur 23-24 mee te tellen: "+rij(0).tekst);
         assert.equal(pct(rij(1).tekst),77,w+"px: weekrij 23 juli volgt niet de uren 00-24: "+rij(1).tekst);
         assert.equal(pct(rij(1).titel),77,w+"px: tooltip 23 juli wijkt af van de rij: "+rij(1).titel);
+        /* Een schermlezer hoort dezelfde betekenis als de tooltip: de hoogste kans in één uur. */
+        assert(/^Hoogste neerslagkans in één uur 77 procent/.test(rij(1).gesproken),w+"px: schermlezertekst 23 juli noemt niet de hoogste kans in één uur: "+rij(1).gesproken);
         assert.equal(pct(rij(2).tekst),10,w+"px: weekrij 24 juli telt het uur 23-24 van 23 juli mee: "+rij(2).tekst);
         /* Dag kiezen: daghint en grafiekbeschrijving zeggen hetzelfde als de rij. */
         await page.click('#days .row.day[data-i="1"]');
