@@ -96,12 +96,12 @@ function pasEtmaalContextToe(){
   if(S.dag!=null){
     const detail=/Kans op neerslag:|verwachte hoeveelheid:/i.test(huidige)
       ?huidige.replace(/^Deze kalenderdag per uur\.\s*/i,"")
-      :"Selecteer een punt in de grafiek voor details.";
+      :"Kies een tijdstip in de grafiek voor de details van dat uur.";
     hint.textContent="Deze kalenderdag per uur. "+detail;
   }else{
     /* De resetknop benoemt hierboven al expliciet het rollende bereik. De hint
        blijft daarom invoermethode-neutraal en behoudt de bestaande Q4-copy. */
-    hint.textContent="Selecteer een punt in de grafiek voor details.";
+    hint.textContent="Kies een tijdstip in de grafiek voor de details van dat uur.";
   }
 }
 

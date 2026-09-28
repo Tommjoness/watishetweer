@@ -56,8 +56,8 @@ function weatherNowGeselecteerdeDagHint(day,index){
   const kans=dn?eindigGetal(dn.kans):eindigGetal(day&&day.precipitation_probability_max&&day.precipitation_probability_max[i]);
   const som=dn?eindigGetal(dn.hoeveelheid):eindigGetal(day&&day.precipitation_sum&&day.precipitation_sum[i]);
   const kansTekst=weatherNowDagNeerslagTekst(kans,som),mmTekst=weatherNowDagNeerslagMmTekst(som);
-  if(kansTekst==="–"&& !mmTekst)return "Selecteer een punt in de grafiek voor uurdetails.";
-  return "Kans op neerslag: "+kansTekst+(mmTekst?" · verwachte hoeveelheid: "+mmTekst:"")+". Selecteer een punt in de grafiek voor uurdetails.";
+  if(kansTekst==="–"&& !mmTekst)return "Kies een tijdstip in de grafiek voor uurdetails.";
+  return "Kans op neerslag: "+kansTekst+(mmTekst?" · verwachte hoeveelheid: "+mmTekst:"")+". Kies een tijdstip in de grafiek voor uurdetails.";
 }
 function dagen(){
 `;

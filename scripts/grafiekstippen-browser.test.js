@@ -6,6 +6,8 @@
    echte dal van 15,6°: allebei "16°". De volle stip hoort bij het echte dal,
    niet bij het eerdere plateau, en ligt dus nooit hoger (of bij de max nooit
    lager) dan een ander punt met een cijfer.
+   Elk temperatuurpunt heeft dezelfde volle stip (2,2 op de telefoon, 3 vanaf
+   tablet); piek en dal vallen op door hun cijfer, niet door een grotere stip.
 
    Draait na: npm run build:cloudflare */
 
@@ -110,8 +112,16 @@ function meet(){
         }
         /* Het eerdere plateau van 16,4° om 19-20 uur is niet het dal. */
         assert(!["19:00","20:00"].includes(m.tijden[min.i].slice(11,16)),label+": de min-stip staat op het plateau van 16,4° in plaats van bij het dal van 15,6°");
+        /* Elk temperatuurpunt heeft dezelfde volle stip; piek en dal vallen op door hun cijfer, niet door een grotere stip. */
+        const stippen=await page.evaluate(()=>[...document.querySelectorAll("#chart circle")].filter(c=>!c.closest("#scrub")&&c.getClientRects().length&&c.getAttribute("fill")!=="var(--carmine)"
+          &&(c.hasAttribute("data-temp-index")||c.hasAttribute("data-mobile-temp-marker-dot")||c.hasAttribute("data-desktop-temp-marker-dot")))
+          .map(c=>({r:Number(c.getAttribute("r")),dekking:Number(getComputedStyle(c).opacity),kleur:getComputedStyle(c).fill})));
+        assert(stippen.length>=5,label+": te weinig temperatuurstippen ("+stippen.length+")");
+        assert.deepEqual([...new Set(stippen.map(s=>s.r))],[w<760?2.2:3],label+": temperatuurstippen hebben niet overal dezelfde grootte: "+JSON.stringify(stippen.map(s=>s.r)));
+        assert(stippen.every(s=>s.dekking===1),label+": sommige temperatuurstippen zijn doorzichtig: "+JSON.stringify(stippen.map(s=>s.dekking)));
+        assert.equal(new Set(stippen.map(s=>s.kleur)).size,1,label+": temperatuurstippen hebben niet dezelfde kleur");
         assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
-        console.log("STIPPEN "+label+": min "+m.tijden[min.i].slice(11,16)+" ("+min.waarde+"°), max "+m.tijden[max.i].slice(11,16)+" ("+max.waarde+"°).");
+        console.log("STIPPEN "+label+": "+stippen.length+" gelijke stippen (r "+stippen[0].r+"), min "+m.tijden[min.i].slice(11,16)+" ("+min.waarde+"°), max "+m.tijden[max.i].slice(11,16)+" ("+max.waarde+"°).");
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}

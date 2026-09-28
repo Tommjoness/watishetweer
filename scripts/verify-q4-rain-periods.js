@@ -69,7 +69,7 @@ const q4RuntimeBegin=html.lastIndexOf(q4Marker,q4RuntimePos);
 ok(q4RuntimeBegin>=0&&q4RuntimeBegin<q4RuntimePos,"Q4 runtime-marker begrenst de actieve Q4-laag");
 const hintOwnerPos=html.indexOf('chartHint=function(){',q4RuntimeBegin);
 ok(hintOwnerPos>q4RuntimeBegin&&hintOwnerPos<q4RuntimePos,"Q4 bezit de grafiekhint binnen zijn eigen runtime vóór startup");
-const hintTekstPos=html.indexOf('el.textContent="Selecteer een punt in de grafiek voor details.";',hintOwnerPos);
+const hintTekstPos=html.indexOf('el.textContent="Kies een tijdstip in de grafiek voor de details van dat uur.";',hintOwnerPos);
 ok(hintTekstPos>hintOwnerPos&&hintTekstPos<q4RuntimePos,"Q4 grafiekhint-owner bevat de input-neutrale zichtbare tekst");
 ok(html.includes('<p class="hint" id="dagenhint">Kies een dag om die verwachting in de grafiek te bekijken.</p>'),"zichtbare daghint is invoermethode-neutraal");
 ok(html.includes('<div class="eyebrow">Tijd tot zonsondergang</div>'),"statische hoofdtegelkop benoemt tijd tot zonsondergang");

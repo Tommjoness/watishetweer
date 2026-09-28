@@ -2091,7 +2091,7 @@ function etmaal(start,n){
   // dots/labs pas hier opbouwen, uit de uiteindelijke, overlevende gezet-lijst:
   // een label dat onderweg is verwijderd (evictie) laat dan ook geen puntje na
   gezet.sort((a,b)=>a.i-b.i).forEach(g=>{
-    dots+=`<circle cx="${x(g.i)}" cy="${y(g.v)}" r="${M?1.9:2.2}" fill="${INK}" data-temp-index="${g.i}"/>`;
+    dots+=`<circle cx="${x(g.i)}" cy="${y(g.v)}" r="${M?2.2:3}" fill="${INK}" data-temp-index="${g.i}"/>`;
     // de rand in de kleur van het vel snijdt de lijn weg achter het cijfer
     labs+=`<text x="${g.cx.toFixed(1)}" y="${g.cy.toFixed(1)}" text-anchor="middle" fill="${INK}"
       stroke="${SHEET}" stroke-width="${M?3:3.4}" paint-order="stroke" stroke-linejoin="round"
