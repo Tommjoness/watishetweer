@@ -13,7 +13,8 @@
      ernaast als de grafiek niet ieder uur een cijfer heeft (900 en 1024px).
    - Het cijfer van piek en dal staat direct bij zijn stip, ook als er regen
      onder het dal valt. Op de telefoon staat bij piek of dal tussen twee
-     drie-uursankers de tijd erbij, zonder andere grafiektekst te raken.
+     drie-uursankers de tijd erbij, zonder andere grafiektekst te raken, en
+     staat ieder ankercijfer binnen 22px van zijn punt.
    - Op iedere breedte: geen grafiektekst kleiner dan 11px.
    - Telefoon: ieder drie-uursanker heeft een temperatuur en "nu" staat bij
      de rode stip (binnen twee regels).
@@ -124,7 +125,13 @@ function meetGrafiek(){
   const asIdx=[...svg.querySelectorAll("text[data-mobile-hour-axis]")].map(el=>Number(el.getAttribute("data-mobile-hour-index")));
   const andereTekst=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!el.hasAttribute("data-mobile-temp-marker-time")&&el.getAttribute("display")!=="none"&&el.textContent.trim()).map(el=>el.getBoundingClientRect()).filter(r=>r.width);
   const tijdBotst=markerTijden.filter(t=>andereTekst.some(r=>t.b.left<r.right&&t.b.right>r.left&&t.b.top<r.bottom&&t.b.bottom>r.top)).map(t=>t.tekst);
-  return {M:!!g.M,n,van:g.TI[0],TI:g.TI.slice(0,n),zicht,links,rechts,stippen,cijfers,tijden,markerTijden:markerTijden.map(({b,...t})=>t),asIdx,tijdBotst,x:zicht.map((_,k)=>g.x(k)),klein,nuAfstand,regen,staven:staven.length,
+  /* Telefoon: afstand van ieder ankercijfer tot zijn punt, in schermpixels. */
+  const ankerAfstand=[...svg.querySelectorAll("text[data-mobile-temp-index]")].map(el=>{
+    const i=Number(el.getAttribute("data-mobile-temp-index")),pt=svg.querySelector(`circle[data-temp-index="${i}"]`);
+    if(!pt)return null;const b=el.getBoundingClientRect(),c=pt.getBoundingClientRect(),cy=c.top+c.height/2;
+    return {tekst:el.textContent.trim(),uur:String(g.TI[i]).slice(11,16),px:Math.round(Math.max(0,b.top-cy,cy-b.bottom))};
+  }).filter(Boolean);
+  return {M:!!g.M,n,van:g.TI[0],TI:g.TI.slice(0,n),ankerAfstand,zicht,links,rechts,stippen,cijfers,tijden,markerTijden:markerTijden.map(({b,...t})=>t),asIdx,tijdBotst,x:zicht.map((_,k)=>g.x(k)),klein,nuAfstand,regen,staven:staven.length,
     missing:svg.getAttribute("data-mobile-temp-missing-anchors")||"",compact:innerWidth<=430,iederUur:T.length<=24&&Number(g.cw)>=36,cw:Number(g.cw)};
 }
 
@@ -226,6 +233,9 @@ function verwacht(m){
           }
           assert.deepEqual(m.klein,[],label+": grafiektekst kleiner dan 11px");
           assert.deepEqual(m.tijdBotst,[],label+": de tijd bij piek of dal overlapt andere grafiektekst");
+          /* Een ankercijfer hoort bij zijn punt: niet ver erboven zweven omdat een
+             buurcijfer schuin zijn plek innam (360px: 13° stond 36px hoog). */
+          if(m.compact){const ver=m.ankerAfstand.filter(a=>a.px>22);assert.deepEqual(ver,[],label+": ankercijfer staat meer dan 22px van zijn punt");}
           if(w<760){
             assert.equal(m.missing,"",label+": drie-uursanker zonder temperatuur ("+m.missing+")");
             assert(m.nuAfstand!==null&&m.nuAfstand<=26,label+": het nu-label staat "+m.nuAfstand+" van de rode stip");
