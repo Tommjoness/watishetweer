@@ -24,7 +24,12 @@ const WAARSCHUWING_TEKST={
   fout:"Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald."
 };
 
-function leesToestandInPagina(teksten){
+/* Draait in de pagina. Alles staat in één functie die Playwright als functie
+   doorgeeft (niet als tekst): de productiesite verbiedt eval via haar CSP, en
+   een tekstvoorwaarde voor waitForFunction zou daar direct falen. Met
+   {stabiel:true} telt de functie ook opeenvolgende gelijke layoutmetingen en
+   geeft ze true zodra de eindtoestand drie metingen lang stabiel is. */
+function toestandInPagina({teksten,stabiel}){
   const brief=document.getElementById("brief"),w=document.getElementById("waarschuwingen");
   const briefTekst=brief?String(brief.textContent||"").replace(/\s+/g," ").trim():"";
   const briefing=!brief?"ontbreekt"
@@ -39,29 +44,29 @@ function leesToestandInPagina(teksten){
     :wTekst===teksten.nietBeschikbaar?"niet-beschikbaar"
     :wTekst===teksten.fout?"fout"
     :wTekst?"onbekend":"leeg";
-  return {briefing,briefingTekst:briefTekst.slice(0,200),waarschuwingen,waarschuwingenTekst:wTekst.slice(0,200),aantalWaarschuwingen:kaarten,
+  const t={briefing,briefingTekst:briefTekst.slice(0,200),waarschuwingen,waarschuwingenTekst:wTekst.slice(0,200),aantalWaarschuwingen:kaarten,
     fonts:document.fonts?document.fonts.status:"onbekend"};
+  if(!stabiel)return t;
+  if(t.briefing!=="klaar"||!["volledig","niet-beschikbaar","fout"].includes(t.waarschuwingen)||t.fonts==="loading")return false;
+  const maat=s=>{const e=document.querySelector(s);if(!e)return "-";const r=e.getBoundingClientRect();return Math.round(r.top+scrollY)+":"+Math.round(r.height);};
+  const sig=[document.documentElement.scrollHeight,maat("#chart"),maat("#brief"),maat("#waarschuwingen"),maat("#days")].join("|");
+  const st=window.__releaseEindtoestand||(window.__releaseEindtoestand={sig:"",n:0});
+  if(st.sig===sig)st.n++;else{st.sig=sig;st.n=0;}
+  return st.n>=3;
 }
 
 async function leesEindtoestand(page){
-  return page.evaluate(leesToestandInPagina,WAARSCHUWING_TEKST);
+  return page.evaluate(toestandInPagina,{teksten:WAARSCHUWING_TEKST,stabiel:false});
 }
 
 async function wachtEindtoestand(page,naam,timeout=25000){
   try{
-    /* Als expressie, zodat de leesfunctie in de pagina beschikbaar is. */
-    await page.waitForFunction(`(()=>{
-      const t=(${leesToestandInPagina.toString()})(${JSON.stringify(WAARSCHUWING_TEKST)});
-      if(t.briefing!=="klaar"||!["volledig","niet-beschikbaar","fout"].includes(t.waarschuwingen)||t.fonts==="loading")return false;
-      const maat=s=>{const e=document.querySelector(s);if(!e)return "-";const r=e.getBoundingClientRect();return Math.round(r.top+scrollY)+":"+Math.round(r.height);};
-      const sig=[document.documentElement.scrollHeight,maat("#chart"),maat("#brief"),maat("#waarschuwingen"),maat("#days")].join("|");
-      const st=window.__releaseEindtoestand||(window.__releaseEindtoestand={sig:"",n:0});
-      if(st.sig===sig)st.n++;else{st.sig=sig;st.n=0;}
-      return st.n>=3;
-    })()`,null,{timeout,polling:200});
+    await page.waitForFunction(toestandInPagina,{teksten:WAARSCHUWING_TEKST,stabiel:true},{timeout,polling:200});
   }catch(e){
     const t=await leesEindtoestand(page).catch(()=>null);
-    throw new Error(`${naam}: geen betekenisvolle eindtoestand binnen ${timeout} ms: ${JSON.stringify(t)}`);
+    /* Alleen een echte time-out is "geen eindtoestand"; elke andere fout blijft zichtbaar. */
+    const timeoutFout=e&&e.name==="TimeoutError";
+    throw new Error(`${naam}: `+(timeoutFout?`geen betekenisvolle eindtoestand binnen ${timeout} ms`:`wachten op de eindtoestand faalde (${String(e&&e.message||e).split("\n")[0]})`)+`: ${JSON.stringify(t)}`);
   }
   return leesEindtoestand(page);
 }

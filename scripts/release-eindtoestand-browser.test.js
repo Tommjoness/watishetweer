@@ -6,7 +6,7 @@
      fout (503 en een bron die nooit antwoordt: de app stopt zelf na 7 s);
    - trage waarschuwingen en trage KNMI-neerslag: de helper wacht tot de
      laadmelding en "Verwachting wordt bijgewerkt…" weg zijn;
-   - telefoon en desktop.
+   - telefoon en desktop, met de CSP van productie.
 
    Draait na: npm run build:cloudflare */
 
@@ -26,12 +26,16 @@ function fixture(){
   return d;
 }
 const WAARSCHUWING={titel:"Code geel: windstoten",tekst:"Zware windstoten tot 80 km/u.",niveau:"geel",van:"2026-07-22T10:00:00Z",tot:"2026-07-22T23:00:00Z",gebied:"Utrecht"};
+/* Dezelfde beveiligingsheaders als productie (cloudflare/_headers), zodat de
+   helper ook onder de echte CSP werkt (geen eval): zonder deze header bleef een
+   tekstvoorwaarde lokaal groen en faalde ze pas op productie. */
+const CSP=(()=>{for(const regel of fs.readFileSync(path.join(__dirname,"..","cloudflare","_headers"),"utf8").split(/\r?\n/)){const t=regel.trim(),i=t.indexOf(":");if(/^\s/.test(regel)&&i>0&&t.slice(0,i).toLowerCase()==="content-security-policy")return t.slice(i+1).trim();}throw new Error("CSP ontbreekt in cloudflare/_headers");})();
 const types={".html":"text/html; charset=utf-8",".js":"application/javascript",".css":"text/css",".woff2":"font/woff2",".svg":"image/svg+xml",".json":"application/json",".png":"image/png"};
 const server=http.createServer((req,res)=>{
   let p=new URL(req.url,"http://localhost").pathname;if(p.endsWith("/"))p+="index.html";
   let f=path.join(OUT,p);if(!fs.existsSync(f)&&fs.existsSync(f+".html"))f+=".html";
   if(!f.startsWith(OUT+path.sep)||!fs.existsSync(f)||!fs.statSync(f).isFile()){res.writeHead(404);res.end();return;}
-  res.writeHead(200,{"content-type":types[path.extname(f)]||"application/octet-stream","cache-control":"no-store"});fs.createReadStream(f).pipe(res);
+  res.writeHead(200,{"content-type":types[path.extname(f)]||"application/octet-stream","cache-control":"no-store","content-security-policy":CSP});fs.createReadStream(f).pipe(res);
 });
 const wacht=ms=>new Promise(r=>setTimeout(r,ms));
 
