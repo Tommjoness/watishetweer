@@ -62,7 +62,7 @@ const VERBODEN=[/[?&]lat=/i,/[?&]lon=/i,/[?&]plaats=/i,/52\.0?9\d*/,/5\.12/,/52\
         return origineel?origineel(url,data):false;
       };
     });
-    const page=await context.newPage(),hits=[],paginafouten=[];let gtagGeladen=false;
+    const page=await context.newPage(),hits=[],paginafouten=[];let gtagGevraagd=false,gtagGeladen=false,gtagFout="";
     page.on("pageerror",e=>paginafouten.push(String(e)));
     await page.route("**/*",async r=>{
       const req=r.request(),u=new URL(req.url());
@@ -79,8 +79,10 @@ const VERBODEN=[/[?&]lat=/i,/[?&]lon=/i,/[?&]plaats=/i,/52\.0?9\d*/,/5\.12/,/52\
       if(u.hostname==="api.open-meteo.com")return r.fulfill({json:fixture()});
       if(u.hostname.endsWith("open-meteo.com"))return r.fulfill({json:{}});
       if(u.hostname==="www.googletagmanager.com"&&u.pathname==="/gtag/js"){
-        const resp=await r.fetch().catch(()=>null);
+        gtagGevraagd=true;
+        const resp=await r.fetch().catch(e=>{gtagFout=String(e&&e.message||e);return null;});
         if(resp&&resp.ok()){gtagGeladen=true;return r.fulfill({response:resp});}
+        if(resp)gtagFout="HTTP "+resp.status();
         return r.abort();
       }
       if(GA_HOST.test(u.hostname)||u.hostname==="www.googletagmanager.com"){
@@ -92,9 +94,12 @@ const VERBODEN=[/[?&]lat=/i,/[?&]lon=/i,/[?&]plaats=/i,/52\.0?9\d*/,/5\.12/,/52\
     });
     await page.goto(HOST+"/?lat=52.370&lon=4.900&plaats=Amsterdam&land=NL",{waitUntil:"domcontentloaded"});
     await page.waitForFunction(()=>typeof S!=="undefined"&&S.d&&document.querySelectorAll("#days .row.day").length>=7,null,{timeout:20000});
-    await page.waitForFunction(()=>!!window.google_tag_manager||!!(window.dataLayer&&window.dataLayer.some(x=>x&&x[0]==="config")),null,{timeout:20000}).catch(()=>{});
-    if(!gtagGeladen){
-      fout=new Error("EXTERN: gtag.js kon niet worden geladen vanaf www.googletagmanager.com; GA-privacy niet vast te stellen (geen productregressie).");
+    /* Wachten tot gtag.js echt geladen en uitgevoerd is (niet alleen de dataLayer van de site). */
+    await page.waitForFunction(()=>!!window.google_tag_manager,null,{timeout:20000}).catch(()=>{});
+    if(!gtagGevraagd){
+      throw new Error("GA4 start niet na toestemming: de site vroeg gtag.js niet op (productfout of te strenge emulatie).");
+    }else if(!gtagGeladen){
+      fout=new Error("EXTERN: gtag.js kon niet worden geladen vanaf www.googletagmanager.com ("+gtagFout+"); GA-privacy niet vast te stellen (geen productregressie).");
     }else{
       /* Eerste paginaweergave afwachten, dan een plaatswissel via de eigen laadfunctie
          van de app (dezelfde weg als een gekozen zoekresultaat). */
