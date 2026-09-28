@@ -651,20 +651,38 @@ function bouwMobieleTemperatuurRij(){
      binnen een uur van piek of dal, of binnen anderhalf uur van "nu", heeft
      daar al een temperatuur staan en krijgt geen tweede label. */
   const gelabeld=[],gedekt=[],ontbrekend=[];
+  /* Altijd boven het punt. Loopt de lijn daar steil, dan schuin erboven aan de
+     open kant (stijgend: linksboven, dalend: rechtsboven), en anders hoger: in
+     een smal, steil dal is er pas ruimte waar het dal naar boven breder wordt. */
+  const ankerKandidaten=(x,y)=>[[x,y-9,"middle"],[x,y-15,"middle"],[x+6,y-5,"start"],[x-6,y-5,"end"],[x+8,y-9,"middle"],[x-8,y-9,"middle"],
+    [x,y-21,"middle"],[x+10,y-14,"start"],[x-10,y-14,"end"],[x,y-27,"middle"],[x,y-33,"middle"],[x,y-39,"middle"],[x,y-45,"middle"]];
+  const gedektDoorMarkering=i=>markeringen.find(m=>Math.abs(m.i-i)<=1);
+  const gedektDoorNu=i=>nuTekst&&Number.isFinite(nuIndex)&&Math.abs(i-nuIndex)<1.5;
+  /* Op een smal scherm liggen twee drie-uursankers maar anderhalve
+     cijferbreedte uit elkaar. Een cijfer dat schuin naast zijn punt uitwijkt,
+     kan dan de plek van het volgende anker innemen, dat daardoor tot 36px
+     boven zijn punt belandt. Daarom telt de eerste vrije plek van het
+     volgende anker (als die dicht bij zijn punt ligt) als bezet; alleen als
+     dit cijfer dan niet binnen 21px van zijn eigen punt past, geldt de
+     gewone volgorde. */
+  const buurPlek=i=>{
+    const j=ankers[ankers.indexOf(i)+1];if(j===undefined||gedektDoorMarkering(j)||gedektDoorNu(j))return null;
+    const x=Number(g.x(j)),y=Number(g.y(Number(g.T[j])));if(!Number.isFinite(x)||!Number.isFinite(y))return null;
+    const p=plaats(Math.round(Number(g.T[j]))+"°",ankerKandidaten(x,y),true);
+    return p&&p.y>=y-21?p:null;
+  };
   ankers.forEach(i=>{
     const x=Number(g.x(i)),y=Number(g.y(Number(g.T[i])));
     let punt=puntPerIndex.get(i);
     const zonderPunt=()=>{if(punt&&punt.isConnected)punt.remove();};
     if(!Number.isFinite(x)||!Number.isFinite(y)){zonderPunt();return;}
-    const markering=markeringen.find(m=>Math.abs(m.i-i)<=1);
+    const markering=gedektDoorMarkering(i);
     if(markering){markering.el.setAttribute("data-mobile-temp-covers-anchor",String(i));gedekt.push(i);zonderPunt();return;}
-    if(nuTekst&&Number.isFinite(nuIndex)&&Math.abs(i-nuIndex)<1.5){nuTekst.setAttribute("data-mobile-temp-anchor-index",String(i));gedekt.push(i);zonderPunt();return;}
-    const tekst=Math.round(Number(g.T[i]))+"°";
-    /* Altijd boven het punt. Loopt de lijn daar steil, dan schuin erboven aan de
-       open kant (stijgend: linksboven, dalend: rechtsboven), en anders hoger: in
-       een smal, steil dal is er pas ruimte waar het dal naar boven breder wordt. */
-    const pos=plaats(tekst,[[x,y-9,"middle"],[x,y-15,"middle"],[x+6,y-5,"start"],[x-6,y-5,"end"],[x+8,y-9,"middle"],[x-8,y-9,"middle"],
-      [x,y-21,"middle"],[x+10,y-14,"start"],[x-10,y-14,"end"],[x,y-27,"middle"],[x,y-33,"middle"],[x,y-39,"middle"],[x,y-45,"middle"]],true);
+    if(gedektDoorNu(i)){nuTekst.setAttribute("data-mobile-temp-anchor-index",String(i));gedekt.push(i);zonderPunt();return;}
+    const tekst=Math.round(Number(g.T[i]))+"°",kandidaten=ankerKandidaten(x,y),buur=buurPlek(i);
+    let pos=null;
+    if(buur){vast.push(cel(buur.box));pos=plaats(tekst,kandidaten,true);vast.pop();if(pos&&pos.y<y-21)pos=null;}
+    if(!pos)pos=plaats(tekst,kandidaten,true);
     if(!pos){ontbrekend.push(i);zonderPunt();return;}
     if(!punt||!punt.isConnected){
       punt=puntSjabloon?puntSjabloon.cloneNode(false):document.createElementNS(SVG_NS,"circle");
