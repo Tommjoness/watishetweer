@@ -103,7 +103,21 @@ assert.equal(api.begrensTemperatuurLabelY(118,136,59,204,42),118,"Normale temper
 assert.equal(api.begrensTemperatuurLabelY(62,150,59,204,42),132,"Los zwevend label boven het datapunt wordt teruggebracht naar de curve.");
 assert.equal(api.begrensTemperatuurLabelY(203,180,59,204,18),162,"Los zwevend label onder het datapunt wijkt naar boven uit wanneer onderruimte ontbreekt.");
 
+/* Eindcontrole op de getekende vormen: de vloeiende lijn, de maat van een cijfer en de dichtstbijzijnde vrije plek. */
+const bocht=api.padPunten(api.monotoonPad([[0,0],[10,10],[20,0]]),4);
+assert.deepEqual(bocht[0],[0,0],"De lijn begint op het eerste uurpunt.");
+assert.deepEqual(bocht[bocht.length-1],[20,0],"De lijn eindigt op het laatste uurpunt.");
+assert(bocht.some(([x,y])=>x>0&&x<10&&y>x),"Tussen twee uurpunten volgt de controle de bocht, niet de rechte verbinding.");
+assert.deepEqual(api.padPunten("M0,0 L5,5"),[[0,0],[5,5]],"Een recht pad levert zijn eigen hoekpunten.");
+const cijfer=api.bewakingsTekstBox("-16°",40,100,"end",13.8);
+assert(cijfer.x<40-4*13.8*0.52&&cijfer.x+cijfer.width===40,"Een rechts uitgelijnd cijfer met minteken is minstens zo breed als het getekend wordt.");
+assert.equal(api.afstandVakTotPunt({x:0,y:0,width:10,height:10},5,5),0,"Een punt in het vak ligt op afstand 0.");
+assert.equal(api.afstandVakTotPunt({x:0,y:0,width:10,height:10},13,14),5,"Afstand van een vak tot een punt ernaast.");
+assert.deepEqual(api.kiesVrijeVerschuiving((dx,dy)=>dx===4&&dy===-3,[[0,0],[0,-3],[4,-3],[8,0]]),[4,-3],"De eerste vrije plek in volgorde van afstand wint.");
+assert.equal(api.kiesVrijeVerschuiving(()=>false,[[0,0],[0,3]]),null,"Zonder vrije plek blijft het cijfer staan.");
+
 const runtime=fs.readFileSync(path.join(__dirname,"mobile-graph-ux-20260828.js"),"utf8");
+assert(runtime.includes("bewaakGrafiekLabels();}};")&&runtime.includes("polishNuLabel();bewaakGrafiekLabels();"),"De eindcontrole draait na alle plaatsingslagen en na het nu-label.");
 assert(!/\.getBBox\s*\(/.test(runtime),"Mobiele grafiekpolish mag geen uitvoerbare SVG getBBox-layoutread meer bevatten.");
 assert(runtime.includes("svgTekstBoxUitElement"),"Mobiele grafiekpolish moet de attribuutgebaseerde boxhelper gebruiken.");
 assert(runtime.includes("const compact24=Number(g.n)<=25&&window.innerWidth<=430"),"Drie-uursritme moet uitsluitend de smalle mobiele 24-uursweergave raken, inclusief de 25e rechtergrens.");
@@ -133,7 +147,7 @@ assert(!runtime.includes("verminderMobieleTemperatuurlabels"),"De oude op-de-lij
 assert(!runtime.includes("mobieleTemperatuurLabelLimiet(window.innerWidth)"),"De mobiele 24-uursgrafiek mag verplichte ankers niet langer via een viewport-limiet uitdunnen.");
 
 /* Desktop: dezelfde accenten, met behoud van het uurcijfer. */
-assert(/compactMobieleGrafiekHoogte\(\);koppelTijdAanTemperatuur\(\);bouwDesktopGrafiekAccenten\(\);\}/.test(runtime),"Tijdkoppeling en desktopaccenten draaien in dezelfde idempotente grafiekpass, de tijden vóór de iconen.");
+assert(/compactMobieleGrafiekHoogte\(\);koppelTijdAanTemperatuur\(\);bouwDesktopGrafiekAccenten\(\);bewaakGrafiekLabels\(\);\}/.test(runtime),"Tijdkoppeling en desktopaccenten draaien in dezelfde idempotente grafiekpass, de tijden vóór de iconen, en de botsingscontrole als laatste.");
 assert(!runtime.includes("regenstaaf-mm")&&!runtime.includes("herplaatsRegengetallen"),"De grafiek toont neerslag alleen als staafjes, zonder getallen.");
 assert(runtime.includes("function koppelTijdAanTemperatuur(){")&&runtime.includes('data-temp-time')&&runtime.includes('data-temp-time-complete'),"Iedere temperatuur in de grafiek krijgt een tijd onder haar punt, of vervalt.");
 {
