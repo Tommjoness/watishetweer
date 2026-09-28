@@ -87,7 +87,9 @@ function herstelWeekNeerslagEindstate(){
       vak.appendChild(hoeveelheid);
     }
     const delen=[];
-    if(kans!==null)delen.push("Neerslagkans "+kans+" procent");
+    /* Zelfde betekenis als de tooltip en de grafiekbeschrijving: de hoogste
+       kans in één uur van die dag (vandaag: van de resterende uren). */
+    if(kans!==null)delen.push("Hoogste neerslagkans in één uur "+kans+" procent");
     if(hoeveelheid&&hoeveelheid.textContent.trim())delen.push(hoeveelheid.textContent.trim());
     if(!delen.length&&/^[-–—]$/.test(vak.textContent.trim()))delen.push("Neerslaggegevens niet beschikbaar");
     if(delen.length)vak.setAttribute("aria-label",delen.join("; "));
