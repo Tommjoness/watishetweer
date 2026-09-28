@@ -68,7 +68,7 @@ async function openWeather(page,url,label,{reloadOnly=false}={}){
       laatsteToestand=await page.evaluate(()=>({
         href:location.href,
         bootstrap:document.documentElement.dataset.appBootstrap||null,
-        appVisible:!!document.getElementById("app")&&getComputedStyle(document.getElementById("app")).display!=="none",
+        appVisible:!!document.getElementById("app")&&getComputedStyle(document.getElementById("app")).display!=="none"&&!document.getElementById("app").hasAttribute("data-zonder-data"),
         status:(document.getElementById("locatie-laadstatus")?.textContent||document.getElementById("state")?.textContent||"").trim()
       })).catch(e=>({evaluatieFout:String(e&&e.message||e).split("\n")[0]}));
       if(poging<3){

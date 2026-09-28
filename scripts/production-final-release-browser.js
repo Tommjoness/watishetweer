@@ -45,7 +45,7 @@ async function wachtKlaar(page,naam,timeout=26000){
       const urenKlaar=contractDesktop
         ?uren>=8&&uren<=WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN
         :desktop?uren>=1&&uren<=WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN:uren>=23;
-      return app&&getComputedStyle(app).display!=="none"&&label&&bronKlaar&&dagen>=7&&urenKlaar;
+      return app&&getComputedStyle(app).display!=="none"&&!app.hasAttribute("data-zonder-data")&&label&&bronKlaar&&dagen>=7&&urenKlaar;
     },null,{timeout});
   }catch(e){
     const diagnose=await page.evaluate(()=>{
@@ -57,7 +57,7 @@ async function wachtKlaar(page,naam,timeout=26000){
         href:location.href,
         state:String(compact&&compact.hidden===false&&compactTekst?compactTekst.textContent:(state&&state.textContent)||"").trim(),
         stamp:(document.getElementById("stamp")?.textContent||"").trim(),
-        appVisible:!!document.getElementById("app")&&getComputedStyle(document.getElementById("app")).display!=="none",
+        appVisible:!!document.getElementById("app")&&getComputedStyle(document.getElementById("app")).display!=="none"&&!document.getElementById("app").hasAttribute("data-zonder-data"),
         hasCurrent:!!(typeof S!=="undefined"&&S.d&&S.d.current),
         hourlyTimes:typeof S!=="undefined"&&S.d&&Array.isArray(S.d.hourly?.time)?S.d.hourly.time.length:0,
         dailyTimes:typeof S!=="undefined"&&S.d&&Array.isArray(S.d.daily?.time)?S.d.daily.time.length:0,
@@ -164,7 +164,7 @@ async function lees(page){return page.evaluate(()=>{
     headings:[...document.querySelectorAll('h1,h2,h3')].map(h=>({tag:h.tagName,text:(h.textContent||'').trim().slice(0,100)})),
     retry:!!((compactRetry&&!compactRetry.hidden)||(state&&state.querySelector('.wiw-location-retry'))),
     state:String(compact&&compact.hidden===false&&compactTekst?compactTekst.textContent:(state&&state.textContent)||'').trim(),
-    appVisible:!!document.getElementById('app')&&getComputedStyle(document.getElementById('app')).display!=='none'
+    appVisible:!!document.getElementById('app')&&getComputedStyle(document.getElementById('app')).display!=='none'&&!document.getElementById('app').hasAttribute('data-zonder-data')
   };
 });}
 

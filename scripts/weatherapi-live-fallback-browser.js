@@ -81,7 +81,7 @@ function verwachteOpenMeteo503(msg){
 
     await page.waitForFunction(()=>{
       const app=document.getElementById("app"),temp=document.getElementById("t"),brief=document.getElementById("brief");
-      return app&&getComputedStyle(app).display!=="none"
+      return app&&getComputedStyle(app).display!=="none"&&!app.hasAttribute("data-zonder-data")
         &&temp&&!/^\s*(?:--|–)?\s*$/.test(temp.textContent||"")
         &&brief&&String(brief.textContent||"").trim().length>20;
     },null,{timeout:20000});

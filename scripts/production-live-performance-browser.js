@@ -53,7 +53,7 @@ function isCloudflareAnalytics(url){return isAnalyticsScript(url)||isEigenRum(ur
       assert(response&&response.ok(),`${profiel.naam}: homepage HTTP ${response&&response.status()}`);
       await page.waitForFunction(()=>{
         const app=document.getElementById("app"),temp=document.getElementById("t"),stamp=document.getElementById("stamp");
-        return app&&getComputedStyle(app).display!=="none"&&temp&&!/^(?:--|–)$/.test(temp.textContent.trim())&&/^Gegevens opgehaald om \d{2}:\d{2}/.test(stamp?.textContent||"");
+        return app&&getComputedStyle(app).display!=="none"&&!app.hasAttribute("data-zonder-data")&&temp&&!/^(?:--|–)$/.test(temp.textContent.trim())&&/^Gegevens opgehaald om \d{2}:\d{2}/.test(stamp?.textContent||"");
       },null,{timeout:LIMIET.weer});
       const weerMs=Date.now()-start;
       await page.waitForFunction(()=>{
