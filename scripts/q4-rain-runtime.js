@@ -344,14 +344,15 @@ nowcast=function(){
    waarin de neerslag valt (staafje 20:00-21:00 = de mm van dat uur). De hoogte
    volgt de hoeveelheid, zodat je ziet wanneer het het hardst regent. Tot
    2,5 mm per uur is de schaal vast; daarboven schaalt hij mee met het natste
-   uur. De staafjes blijven in het onderste derde deel, liggen achter de
+   uur. De staafjes blijven in het onderste vijfde deel (lager dan de
+   cijfers bij een laag dal), liggen achter de
    temperatuurlijn en vangen geen muis of tik.
    Zonder getallen: de staafjes tonen wanneer en hoe hard het regent; de
    hoeveelheid per uur staat in de uurtabel (op desktop ernaast), het totaal
    in de regel onder de grafiek en het uur bij aantikken. Getallen in de
    grafiek botsten met de temperatuurlijn en haar cijfers, juist waar het
    dal boven de regen ligt. */
-const Q4_STAAF_MIN_MM=0.1,Q4_STAAF_SCHAAL_MM=2.5,Q4_STAAF_HOOGTE=0.32;
+const Q4_STAAF_MIN_MM=0.1,Q4_STAAF_SCHAAL_MM=2.5,Q4_STAAF_HOOGTE=0.2;
 function q4RegenstaafStijl(){
   if(document.getElementById("wiw-regenstaaf-stijl"))return;
   const st=document.createElement("style");st.id="wiw-regenstaaf-stijl";

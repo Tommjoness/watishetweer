@@ -15,6 +15,8 @@
      onder het dal valt. Op de telefoon staat bij piek of dal tussen twee
      drie-uursankers de tijd erbij, zonder andere grafiektekst te raken, en
      staat ieder ankercijfer binnen 22px van zijn punt.
+   - Op iedere breedte: geen grafiektekst op een neerslagstaaf, ook niet bij
+     zware regen onder een laag dal.
    - Op iedere breedte: geen grafiektekst kleiner dan 11px.
    - Telefoon: ieder drie-uursanker heeft een temperatuur en "nu" staat bij
      de rode stip (binnen twee regels).
@@ -30,10 +32,10 @@ const {bouw}=require("../data.js");
 const OUT=path.join(__dirname,"..","public");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-/* Drie dagverlopen: een natte avond (nu 17:39) en een late avond met regen na
-   middernacht (nu 22:39), beide met het dal tussen twee drie-uursankers, en
-   een middag met de piek tussen twee drie-uursankers en wat regen in de
-   avond (nu 11:58). */
+/* Vier dagverlopen: een natte avond (nu 17:39) en een late avond met regen na
+   middernacht (nu 22:39), beide met het dal tussen twee drie-uursankers; een
+   middag met de piek tussen twee drie-uursankers en wat regen in de avond (nu
+   11:58); en een nacht met zware regen onder een laag dal (nu 15:10). */
 const SCENARIO={
   avondregen:{klok:"2026-07-22T15:39:00Z",meting:"2026-07-22T17:30",
     temp:(u,dag)=>+(15.5+4.5*Math.sin((u-9)/24*Math.PI*2)-dag*0.4).toFixed(1),
@@ -52,7 +54,15 @@ const SCENARIO={
       :[15.3,15.0,14.6,14.1,13.6,13.2,12.4,12.1,12.3,13.5,15.0,16.2,17.0,17.4,17.5,17.2,16.6,15.6,14.8,14.2,13.8,13.5,13.2,13.0])[u]-(dag>1?dag*0.3:0),
     pp:(u,dag)=>dag===0&&u>=21&&u<=23?[35,50,30][u-21]:5,
     pr:(u,dag)=>dag===0&&u>=21&&u<=23?[0.2,0.5,0.1][u-21]:0,
-    wc:(u,dag)=>dag===0&&u>=21&&u<=23?61:3}
+    wc:(u,dag)=>dag===0&&u>=21&&u<=23?61:3},
+  /* Nacht (nu 15:10) met een laag dal (10° om 05:00) en zware regen eronder,
+     3 tot 10 mm per uur: de staven reiken tot vlak onder de cijfers. */
+  natdal:{klok:"2026-07-22T13:10:00Z",meting:"2026-07-22T15:00",
+    temp:(u,dag)=>(dag===0?[13.0,12.8,12.6,12.5,12.4,12.5,12.8,13.4,14.6,15.9,16.9,17.5,17.9,18.3,18.4,18.2,17.6,16.8,15.9,15.0,14.2,13.5,12.9,12.3]
+      :[11.8,11.2,10.7,10.3,10.1,10.0,10.2,10.8,12.0,13.5,15.0,16.2,17.0,17.4,17.5,17.2,16.6,15.6,14.8,14.2,13.8,13.5,13.2,13.0])[u]-(dag>1?dag*0.3:0),
+    pp:(u,dag)=>dag===1&&u>=2&&u<=6?90:5,
+    pr:(u,dag)=>dag===1&&u>=2&&u<=6?[3.2,6.5,9.8,7.4,4.1][u-2]:0,
+    wc:(u,dag)=>dag===1&&u>=2&&u<=6?63:3}
 };
 function fixture(sc){
   const d=bouw({temp:sc.temp,pp:sc.pp,pr:sc.pr,wc:sc.wc,som:2});
@@ -131,7 +141,14 @@ function meetGrafiek(){
     if(!pt)return null;const b=el.getBoundingClientRect(),c=pt.getBoundingClientRect(),cy=c.top+c.height/2;
     return {tekst:el.textContent.trim(),uur:String(g.TI[i]).slice(11,16),px:Math.round(Math.max(0,b.top-cy,cy-b.bottom))};
   }).filter(Boolean);
-  return {M:!!g.M,n,van:g.TI[0],TI:g.TI.slice(0,n),ankerAfstand,zicht,links,rechts,stippen,cijfers,tijden,markerTijden:markerTijden.map(({b,...t})=>t),asIdx,tijdBotst,x:zicht.map((_,k)=>g.x(k)),klein,nuAfstand,regen,staven:staven.length,
+  /* Grafiektekst op een neerslagstaaf (schermpixels, overlap in beide richtingen). */
+  const staafRects=[...svg.querySelectorAll("path.regenstaaf")].map(el=>el.getBoundingClientRect());
+  const opStaaf=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&el.getAttribute("display")!=="none"&&el.textContent.trim()).map(el=>{
+    const b=el.getBoundingClientRect();let d=0;
+    staafRects.forEach(q=>{const ox=Math.min(b.right,q.right)-Math.max(b.left,q.left),oy=Math.min(b.bottom,q.bottom)-Math.max(b.top,q.top);if(ox>0&&oy>0)d=Math.max(d,Math.min(ox,oy));});
+    return {t:el.textContent.trim(),d:Math.round(d*10)/10};
+  }).filter(x=>x.d>0.5).map(x=>x.t+" ("+x.d+"px)");
+  return {M:!!g.M,n,van:g.TI[0],TI:g.TI.slice(0,n),ankerAfstand,opStaaf,zicht,links,rechts,stippen,cijfers,tijden,markerTijden:markerTijden.map(({b,...t})=>t),asIdx,tijdBotst,x:zicht.map((_,k)=>g.x(k)),klein,nuAfstand,regen,staven:staven.length,
     missing:svg.getAttribute("data-mobile-temp-missing-anchors")||"",compact:innerWidth<=430,iederUur:T.length<=24&&Number(g.cw)>=36,cw:Number(g.cw)};
 }
 
@@ -211,7 +228,8 @@ function verwacht(m){
             assert(p.idx.includes(s.i)&&s.dx<1&&s.dy<1,label+": de "+p.type+"-stip staat op index "+s.i+" en niet op het echte "+(p.type==="max"?"hoogste":"laagste")+" punt ("+p.idx.join("/")+")");
             assert(c&&c.tekst===p.waarde+"°",label+": het "+p.type+"-cijfer is "+(c&&c.tekst)+", verwacht "+p.waarde+"°");
             assert(Math.abs(c.x-m.x[s.i])<=14,label+": het "+p.type+"-cijfer staat niet boven zijn stip");
-            assert(c.afstand!==null&&c.afstand<=12,label+": het "+p.type+"-cijfer staat "+c.afstand+" van zijn stip");
+            /* Afgerond op honderdsten: 12,000001 is 12 (afronding van de browser). */
+            assert(c.afstand!==null&&Math.round(c.afstand*100)/100<=12,label+": het "+p.type+"-cijfer staat "+c.afstand+" van zijn stip");
             if(!m.compact)assert(m.tijden.some(x=>Math.abs(x-m.x[s.i])<3),label+": de "+p.type+" heeft geen eigen uurtijd");
             /* Telefoon: valt piek of dal tussen twee drie-uursankers, dan staat de
                tijd erbij als er dicht bij de stip plek is (anders leest de stip
@@ -235,6 +253,7 @@ function verwacht(m){
           assert.deepEqual(m.tijdBotst,[],label+": de tijd bij piek of dal overlapt andere grafiektekst");
           /* Een ankercijfer hoort bij zijn punt: niet ver erboven zweven omdat een
              buurcijfer schuin zijn plek innam (360px: 13° stond 36px hoog). */
+          assert.deepEqual(m.opStaaf,[],label+": grafiektekst staat op een neerslagstaaf");
           if(m.compact){const ver=m.ankerAfstand.filter(a=>a.px>22);assert.deepEqual(ver,[],label+": ankercijfer staat meer dan 22px van zijn punt");}
           if(w<760){
             assert.equal(m.missing,"",label+": drie-uursanker zonder temperatuur ("+m.missing+")");

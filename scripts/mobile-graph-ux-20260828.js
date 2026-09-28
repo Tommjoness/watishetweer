@@ -565,6 +565,9 @@ function bouwMobieleTemperatuurRij(){
      valt dat verschil buiten de marge, dus rekenen de cijfers met de echte
      hoogte; de ruime marge die de schatting compenseerde, wordt dan 1,5. */
   const cel=b=>b&&{x:b.x,y:b.y-fs*.18,width:b.width,height:b.height+fs*.32};
+  /* Neerslagstaven zijn ook bezet: een temperatuur op een staaf leest als
+     een getal bij de regen, niet bij de lijn. */
+  const staven=[...svg.querySelectorAll("path.regenstaaf")].map(el=>padBox(el.getAttribute("d"))).filter(Boolean);
   const plaats=(tekst,kandidaten,schuif)=>{
     for(const [x0,y,anker] of kandidaten){
       if(y-fs<plafond||y>bottom-3)continue;
@@ -573,7 +576,7 @@ function bouwMobieleTemperatuurRij(){
       if(box.x<marge)x+=marge-box.x;else if(box.x+box.width>W-marge)x-=box.x+box.width-(W-marge);
       box=geschatteSvgTekstBox(tekst,x,y,anker,fs);
       if(box&&box.x<asKolom){if(!schuif)continue;x+=asKolom-box.x;box=geschatteSvgTekstBox(tekst,x,y,anker,fs);}
-      if(box&&!vast.some(b=>rechthoekenBotsen(b,cel(box),1.5))&&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box,1)))return {x,y,anker,box};
+      if(box&&!vast.some(b=>rechthoekenBotsen(b,cel(box),1.5))&&!staven.some(b=>rechthoekenBotsen(b,cel(box),1))&&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box,1)))return {x,y,anker,box};
     }
     return null;
   };
@@ -594,7 +597,6 @@ function bouwMobieleTemperatuurRij(){
      tijd nergens dicht bij de stip, dan vervalt ze; ze staat ook bij
      aantikken. */
   const fsTijd=leesbareGrootte(svg,9),tijdKleur=wortel.getPropertyValue("--ink-45").trim()||ink;
-  const staven=[...svg.querySelectorAll("path.regenstaaf")].map(el=>padBox(el.getAttribute("d"))).filter(Boolean);
   const zoekTijdPlek=(i,px,py,pos)=>{
     if(ankers.includes(i))return null;
     const tekst=uurAsLabelTekst(String(uurUitIso(g.TI[i])));if(!tekst)return null;
@@ -962,6 +964,29 @@ function bouwDesktopGrafiekAccenten(){
     label.setAttribute("data-desktop-temp-marker-index",String(m.i));
     getoond.push(m.type+":"+m.i);
   });
+  /* Geen temperatuurcijfer op een neerslagstaaf: zo'n cijfer leest als een
+     getal bij de regen. Een cijfer dat een staaf raakt, schuift in kleine
+     stappen omhoog (eerst per eenheid, zodat het zo dicht mogelijk bij zijn
+     punt blijft) of iets opzij, tot hooguit 18 eenheden, naar een plek vrij
+     van staven, andere tekst en de lijn. De staaf krijgt 2 eenheden marge:
+     het tekstvak van Bodoni valt onderaan ruimer uit dan de schatting. Is er
+     geen vrije plek, dan blijft het cijfer staan. */
+  const staafBoxen=[...svg.querySelectorAll("path.regenstaaf")].map(el=>padBox(el.getAttribute("d"))).filter(Boolean);
+  if(staafBoxen.length){
+    const lijnPunten=[...svg.querySelectorAll("polyline")].filter(el=>!el.closest("#scrub")).map(l=>String(l.getAttribute("points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
+    [...svg.querySelectorAll("text")].filter(isTempLabel).forEach(el=>{
+      const box0=svgTekstBoxUitElement(el);if(!box0||!staafBoxen.some(b=>rechthoekenBotsen(b,box0,2)))return;
+      const x0=Number(el.getAttribute("x")),y0=Number(el.getAttribute("y"));if(!Number.isFinite(x0)||!Number.isFinite(y0))return;
+      const anderen=[...svg.querySelectorAll("text")].filter(t=>t!==el&&!t.closest("#scrub")&&t.getAttribute("display")!=="none").map(svgTekstBoxUitElement).filter(Boolean);
+      bewaar(el,["x","y"]);
+      for(const [dx,dy] of [[0,-1],[0,-2],[0,-3],[0,-4],[0,-6],[0,-9],[8,-6],[-8,-6],[0,-12],[10,-10],[-10,-10],[0,-15],[0,-18]]){
+        el.setAttribute("x",String(x0+dx));el.setAttribute("y",String(y0+dy));
+        const box=svgTekstBoxUitElement(el);
+        if(box&&!staafBoxen.some(b=>rechthoekenBotsen(b,box,2))&&!anderen.some(b=>rechthoekenBotsen(b,box,1.5))&&!lijnPunten.some(p=>lijnRaaktTekstBox(p,box,1)))return;
+      }
+      el.setAttribute("x",String(x0));el.setAttribute("y",String(y0));
+    });
+  }
   svg.setAttribute("data-desktop-temp-markers",getoond.join(","));
   svg.setAttribute("data-desktop-chart-accents","1");
 }

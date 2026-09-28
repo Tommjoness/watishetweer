@@ -24,7 +24,8 @@ const HUB_STYLE_ID="wiw-hub-samenhang-20260926";
      van de oude aan/uit-schakelaar.
    - "Terug naar het weer" bovenaan, zoals op Over en Privacy.
    - Een zoekveld dat de lijst van plaatsen filtert; wie een andere plaats
-     zoekt, gaat naar de zoekfunctie op de weerpagina. */
+     zoekt, gaat naar de zoekfunctie op de weerpagina. Een weggefilterde
+     plaats is echt weg: niet zichtbaar en niet bereikbaar met Tab. */
 const CSS=`
 html body #app .stats>.stat[hidden]{display:none!important}
 html body #aq .sval[data-pollen-niveau="hoog"],html body #aq .sval[data-pollen-niveau="zeer hoog"]{font-weight:600!important}
@@ -61,6 +62,9 @@ const HUB_CSS=`
 .hub-zoek input{width:100%;max-width:420px;min-height:44px;padding:10px 12px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);font:15px var(--sans);border-radius:0}
 .hub-zoek input:focus{outline:0;border-color:var(--ink)}
 .hub-leeg{margin:14px 0 0}
+/* De lijst zet li op display:flex; zonder deze regel bleven gefilterde
+   plaatsen zichtbaar (en hun links focusbaar) ondanks hidden. */
+.plaatsen li[hidden]{display:none!important}
 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 @media(max-width:430px){.hub-top{flex-wrap:wrap}.hub-weergave{width:100%}}
 `;
