@@ -268,14 +268,32 @@ async function geenCacheFout(browser,naam){
         appVisibility:appStijl.visibility,
         stateDisplay:eigenaarStijl?eigenaarStijl.display:'none',
         stateVisibility:eigenaarStijl?eigenaarStijl.visibility:'hidden',
-        heeftData:!!(typeof S!=='undefined'&&S.d)
+        heeftData:!!(typeof S!=='undefined'&&S.d),
+        zonderData:app.hasAttribute('data-zonder-data'),
+        zichtbareSecties:[...app.children].filter(e=>e.tagName!=='FOOTER'&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().height>0).map(e=>e.tagName+'.'+String(e.className).split(' ')[0]),
+        voettekst:(()=>{const f=app.querySelector(':scope > footer');return !!(f&&getComputedStyle(f).display!=='none'&&f.getBoundingClientRect().height>0&&/Privacy/i.test(f.textContent));})(),
+        kop:(document.getElementById('place')?.textContent||'').trim(),
+        tekstPx:compactTekst?parseFloat(getComputedStyle(compactTekst).fontSize):0,
+        retryHoogte:compactRetry&&!compactRetry.hidden?compactRetry.getBoundingClientRect().height:0,
+        retryPx:compactRetry?parseFloat(getComputedStyle(compactRetry).fontSize):0,
+        paginaHoogte:document.documentElement.scrollHeight,schermHoogte:innerHeight
       };
     });
     assert(/Ophalen mislukt|duurt te lang|kon niet worden opgehaald|niet geladen/i.test(r.state),naam+": totale forecastfout zonder cache geeft duidelijke melding");
     assert(r.foutstatus,naam+": fout zonder cache krijgt foutstatus");
     assert(r.retry,naam+": fout zonder cache biedt retry");
-    assert.notEqual(r.appDisplay,'none',naam+": CLS-layout reserveert de app ook zonder geldige data");
-    assert.equal(r.appVisibility,'hidden',naam+": zonder geldige data blijft de gereserveerde app visueel verborgen");
+    /* Een definitieve storing zonder gegevens is een compacte foutpagina: geen
+       weersectie (dus ook geen oude of andermans data), wel de gevraagde plaats
+       in de kop, een leesbare melding met een echte knop en de voettekst. De
+       gereserveerde, lege weerpagina van enkele schermen hoog verdwijnt. */
+    assert.notEqual(r.appDisplay,'none',naam+": de app blijft in de layout voor de voettekst");
+    assert.equal(r.zonderData,true,naam+": fout zonder cache zet de compacte foutweergave aan");
+    assert.deepEqual(r.zichtbareSecties,[],naam+": zonder geldige data is geen enkele weersectie zichtbaar");
+    assert(r.voettekst,naam+": voettekst met privacy en bronnen blijft zichtbaar");
+    assert.equal(r.kop,'GeenCache',naam+": de kop noemt de gevraagde plaats");
+    assert(r.tekstPx>=14,naam+": foutmelding is leesbaar ("+r.tekstPx+"px)");
+    assert(r.retryHoogte>=44&&r.retryPx>=14,naam+": knop Opnieuw proberen is een volwaardig tikdoel ("+r.retryHoogte+"px hoog, "+r.retryPx+"px tekst)");
+    assert(r.paginaHoogte<=r.schermHoogte*2.2,naam+": geen lege gereserveerde pagina onder de melding ("+r.paginaHoogte+"px bij "+r.schermHoogte+"px scherm)");
     assert.equal(r.heeftData,false,naam+": fout zonder cache mag geen geldige of stale S.d bevatten");
     assert.notEqual(r.stateDisplay,'none',naam+": foutmelding zonder cache blijft in de layout zichtbaar");
     assert.equal(r.stateVisibility,'visible',naam+": foutmelding zonder cache blijft visueel zichtbaar");

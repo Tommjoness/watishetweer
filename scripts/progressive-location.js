@@ -83,7 +83,7 @@ function statusElement(){
   el.setAttribute("aria-live","polite");
   el.setAttribute("aria-atomic","true");
   el.hidden=true;
-  el.innerHTML='<span class="locatie-spinner" aria-hidden="true"></span><span class="locatie-status-tekst"></span><button type="button" class="locatie-status-retry" hidden>Opnieuw</button>';
+  el.innerHTML='<span class="locatie-spinner" aria-hidden="true"></span><span class="locatie-status-tekst"></span><button type="button" class="locatie-status-retry" hidden>Opnieuw proberen</button>';
   stamp.parentNode.insertBefore(el,stamp);
   return el;
 }
@@ -93,7 +93,7 @@ function statusLaden(label){
   const el=statusElement(),stamp=document.getElementById("stamp");
   if(!el)return;
   const tekst=statusTekst(el),retry=statusRetry(el);
-  el.classList.remove("fout");el.hidden=false;
+  el.classList.remove("fout","zonder-data");el.hidden=false;
   if(tekst)tekst.textContent="Weer voor "+String(label||"deze locatie")+" ophalen…";
   if(retry){retry.hidden=true;retry.onclick=null;}
   if(stamp)stamp.hidden=true;
@@ -111,7 +111,7 @@ function statusWis(){
   const el=document.getElementById("locatie-laadstatus"),stamp=document.getElementById("stamp");
   if(el){
     const retry=statusRetry(el);
-    el.hidden=true;el.classList.remove("fout");
+    el.hidden=true;el.classList.remove("fout","zonder-data");
     if(retry){retry.hidden=true;retry.onclick=null;}
   }
   if(stamp)stamp.hidden=false;
