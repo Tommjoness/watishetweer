@@ -1709,7 +1709,7 @@ function etmaal(start,n){
   const grafiekBreedte=grafiekEl?Math.round(grafiekEl.getBoundingClientRect().width):0;
   const grafiekW=M?(grafiekBreedte>420?Math.min(grafiekBreedte,760):380):(grafiekBreedte>0?Math.max(560,Math.min(grafiekBreedte,900)):900);
 
-  const W=grafiekW, H=M?292:296, pl=M?34:44, pr=M?10:20, iw=W-pl-pr;
+  const W=grafiekW, H=M?292:296, pr=M?10:20; let pl=M?34:44, iw=W-pl-pr;
   const by=M?20:22, bh=M?11:16;
   const pt=M?72:76, ih=M?166:160, pb=pt+ih;
   const F={zon:M?10:10.5, nu:M?10:10, temp:M?12.5:15, uur:M?11:10.5, pre:M?10:9.5, grid:M?9.5:10.5};
@@ -1721,6 +1721,31 @@ function etmaal(start,n){
   if(actueleGrafiekTemp!==null) Tgeldig.push(actueleGrafiekTemp);
   let mn=Math.min(...Tgeldig),mx=Math.max(...Tgeldig);
   mn=Math.floor(mn-1);mx=Math.ceil(mx+1);
+  /* Regenstaven (q4-rain-runtime) staan in het onderste vijfde deel van de
+     plot. In een uur met meetbare regen (0,1 mm of meer, dezelfde drempel als
+     de staven) houdt de schaal de temperatuur aan begin en eind van dat uur
+     boven die strook, met een kleine marge. De lijn loopt dan nooit door een
+     staaf, en de staven houden hun echte onderlinge hoogte: alleen de
+     temperatuurschaal krijgt onderin meer ruimte. Tussen twee uurpunten blijft
+     de lijn binnen hun waarden, dus begin en eind van het uur volstaan. */
+  const regenTemps=[];
+  for(let k=0;k<MM.length;k++){
+    if(!(Number(MM[k])>=0.1))continue;
+    [T[k],T[k+1]].forEach(v=>{ if(v!=null&&isFinite(v)) regenTemps.push(Number(v)); });
+  }
+  if(regenTemps.length){
+    const strook=0.2+(M?6:7)/ih, grens=(Math.min(...regenTemps)-strook*mx)/(1-strook);
+    if(mn>grens) mn=Math.floor(grens);
+  }
+  /* Ruimte links voor de aswaarden: breed genoeg voor de langste waarde, ook
+     met minteken (-16°), op de lettergrootte waarmee ze op het scherm staan
+     (minstens 11px, zie mobile-graph-ux). Met een vaste marge viel op een
+     smalle telefoon het minteken buiten beeld en las -16° als 16°. */
+  const asSchaal=grafiekBreedte>0?grafiekBreedte/W:1;
+  const asLetter=Math.max(F.grid,Math.ceil(11/asSchaal*10)/10);
+  const asTekens=Math.max(...[mx,Math.round((mn+mx)/2),mn].map(v=>String(v).length+1));
+  const plNodig=Math.ceil(9+asTekens*asLetter*0.56+2);
+  if(plNodig>pl){ pl=plNodig; iw=W-pl-pr; }
   const span=(mx-mn)||1;
   /* Op desktop begint de reeks bij het eerstvolgende volle uur, net als de
      uurtabel ernaast. Om 17:39 is het eerste punt dus 18:00. Zonder voorloop

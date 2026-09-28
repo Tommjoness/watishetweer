@@ -331,7 +331,7 @@ function mobieleGrafiekCompactHoogte(plotBottom,huidigeHoogte,zichtbareOnderkant
   return Math.min(h,doel);
 }
 
-const api={padBox,uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,lokaleForecastMinuten,mobieleGrafiekMarkeringen,monotoonPad,MOBIEL_ICOON_Y,MOBIEL_ICOON_GROOTTE,MOBIEL_LIJNLABEL_GROOTTE,MOBIELE_UURAS_Y,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,lijnRaaktTekstBox,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,mobieleTemperatuurLabelLimiet,kiesMobieleTemperatuurLabelIndices,prioriteerMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
+const api={bewakingsKandidaten,padBox,padPunten,bewakingsTekstBox,afstandVakTotPunt,kiesVrijeVerschuiving,uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,lokaleForecastMinuten,mobieleGrafiekMarkeringen,monotoonPad,MOBIEL_ICOON_Y,MOBIEL_ICOON_GROOTTE,MOBIEL_LIJNLABEL_GROOTTE,MOBIELE_UURAS_Y,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,lijnRaaktTekstBox,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,mobieleTemperatuurLabelLimiet,kiesMobieleTemperatuurLabelIndices,prioriteerMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -1109,10 +1109,217 @@ function maakGrafiekTekstLeesbaar(){
   });
 }
 
+/* Laatste botsingscontrole voor de cijfers in de grafiek. Draait na alle
+   plaatsingslagen en rekent met de vormen zoals ze getekend zijn: de vloeiende
+   temperatuurlijn (niet de rechte stukken tussen de uurpunten), de stippen, de
+   regenstaven, de nu-lijn, de weericonen, alle andere tekst en de rand van de
+   grafiek. De eerdere lagen keken elk naar een deel daarvan en konden elkaars
+   correctie terugdraaien: een cijfer aan de rand schoof terug op een steile
+   lijn, en "nu 25°" bleef op de lijn staan als geen van de vaste plekken vrij
+   was. Een temperatuurcijfer of het nu-label dat iets raakt of los van zijn
+   punt zweeft, krijgt hier de dichtstbijzijnde vrije plek bij dat punt; een
+   tijd die bij het cijfer hoort (piek of dal) schuift mee. Wat al vrij en
+   dichtbij staat, blijft staan. */
+const BEWAKING_DX=[0,-4,4,-8,8,-12,12,-16,16,-22,22,-28,28];
+const BEWAKING_DY=[0,-3,3,-6,6,-9,9,-12,12,-15,15,-19,19,-23,23];
+/* Verschuivingen rond de huidige plek, plus de andere kant van het eigen punt:
+   een cijfer aan de rand kan rechts van het laatste punt staan, en "nu 8°"
+   links van de nu-lijn als rechts de lijn of de regen in de weg zit. */
+function bewakingsKandidaten(box,punt){
+  const dxs=[...BEWAKING_DX];
+  if(box&&punt&&Number.isFinite(punt.x)){
+    [(punt.x-4)-(box.x+box.width),(punt.x+4)-box.x].forEach(d=>[d-3,d,d+3].forEach(v=>dxs.push(Math.round(v*10)/10)));
+  }
+  return [...new Set(dxs)].flatMap(dx=>BEWAKING_DY.map(dy=>[dx,dy]))
+    .sort((a,b)=>(a[0]*a[0]+a[1]*a[1])-(b[0]*b[0]+b[1]*b[1]));
+}
+/* Afstand van een tekstvak tot een punt: 0 als het punt erin ligt. */
+function afstandVakTotPunt(box,px,py){
+  if(!box)return Infinity;
+  const dx=Math.max(box.x-px,0,px-(box.x+box.width)),dy=Math.max(box.y-py,0,py-(box.y+box.height));
+  return Math.hypot(dx,dy);
+}
+/* De dichtstbijzijnde verschuiving waarbij vrij(dx,dy) klopt; null als geen enkele. */
+function kiesVrijeVerschuiving(vrij,kandidaten=bewakingsKandidaten(null,null)){
+  for(const k of kandidaten)if(vrij(k[0],k[1]))return k;
+  return null;
+}
+/* Zichtbaarheid uit attributen: geen getComputedStyle of layoutread. */
+function zichtbaarInGrafiek(el,svg){
+  for(let e=el;e&&e!==svg;e=e.parentNode){
+    if(!e.getAttribute)continue;
+    if(e.getAttribute("display")==="none"||e.getAttribute("visibility")==="hidden"||e.getAttribute("opacity")==="0")return false;
+    if(e.style&&(e.style.display==="none"||e.style.visibility==="hidden"))return false;
+  }
+  return true;
+}
+/* Tekstvak uit de attributen, op de maat van de grafiekletters: gemeten zijn
+   cijfers 0,50 tot 0,53 van de lettergrootte breed, hier ruim 0,58, plus 1
+   eenheid voor de rand in de kleur van het vel. Geen getBBox: dat dwingt een
+   layout af. */
+function bewakingsTekstBox(tekst,x,y,anker="start",fontGrootte=12){
+  const inhoud=String(tekst||"").trim(),px=Number(x),py=Number(y),fs=Number(fontGrootte);
+  if(!inhoud||![px,py,fs].every(Number.isFinite)||fs<=0)return null;
+  const breed=inhoud.length*fs*0.58+2,a=String(anker||"start").toLowerCase();
+  const links=a==="middle"?px-breed/2:a==="end"?px-breed:px;
+  return {x:links,y:py-fs*0.8-1,width:breed,height:fs*0.95+2};
+}
+function bewakingsBox(el){
+  const tag=el.tagName&&el.tagName.toLowerCase();
+  if(tag==="text"){
+    const fs=Number(el.getAttribute("font-size")),dy=Number(el.getAttribute("dy"))||0;
+    return bewakingsTekstBox(el.textContent,el.getAttribute("x"),Number(el.getAttribute("y"))+dy,el.getAttribute("text-anchor")||"start",Number.isFinite(fs)&&fs>0?fs:12);
+  }
+  /* Weericoon: translate(x,y) scale(s) op een 24-eenhedenraster. */
+  const m=/translate\(\s*(-?[\d.]+)[ ,]+(-?[\d.]+)\s*\)\s*scale\(\s*([\d.]+)\s*\)/.exec(String(el.getAttribute("transform")||""));
+  if(!m)return null;
+  const s=Number(m[3]);return {x:Number(m[1]),y:Number(m[2]),width:24*s,height:24*s};
+}
+/* Punten langs een pad met M/L/C-commando's (zoals monotoonPad ze maakt):
+   de vloeiende lijn zoals ze getekend is, niet de rechte stukken ertussen. */
+function padPunten(d,stappen=10){
+  const delen=String(d||"").match(/[MLC]|-?\d*\.?\d+(?:e-?\d+)?/gi);if(!delen)return [];
+  const uit=[];let cmd="",k=0,x=NaN,y=NaN;
+  const getal=()=>Number(delen[k++]);
+  while(k<delen.length){
+    if(/^[MLC]$/i.test(delen[k]))cmd=delen[k++].toUpperCase();
+    if(cmd==="M"||cmd==="L"){x=getal();y=getal();uit.push([x,y]);}
+    else if(cmd==="C"){
+      const x1=getal(),y1=getal(),x2=getal(),y2=getal(),x3=getal(),y3=getal();
+      for(let i=1;i<=stappen;i++){const t=i/stappen,u=1-t;
+        uit.push([u*u*u*x+3*u*u*t*x1+3*u*t*t*x2+t*t*t*x3,u*u*u*y+3*u*u*t*y1+3*u*t*t*y2+t*t*t*y3]);}
+      x=x3;y=y3;
+    }else return uit;
+    if(!Number.isFinite(x)||!Number.isFinite(y))return [];
+  }
+  return uit;
+}
+/* De temperatuurlijn en de gestippelde aanloop naar nu, als puntenreeksen. */
+function getekendeLijnPunten(svg){
+  const uit=[];
+  svg.querySelectorAll("path[data-mobile-smooth-line],polyline").forEach(el=>{
+    if(el.closest("#scrub")||!zichtbaarInGrafiek(el,svg))return;
+    const p=el.tagName.toLowerCase()==="polyline"
+      ?String(el.getAttribute("points")||"").trim().split(/\s+/).map(q=>q.split(",").map(Number)).filter(q=>q.length===2&&q.every(Number.isFinite))
+      :padPunten(el.getAttribute("d"));
+    if(p.length>1)uit.push(p);
+  });
+  svg.querySelectorAll("line[data-nu-aanloop]").forEach(el=>{
+    if(!zichtbaarInGrafiek(el,svg))return;
+    const a=["x1","y1","x2","y2"].map(k=>Number(el.getAttribute(k)));
+    if(a.every(Number.isFinite))uit.push([[a[0],a[1]],[a[2],a[3]]]);
+  });
+  return uit;
+}
+function bewaakGrafiekLabels(){
+  const svg=document.getElementById("chart"),g=typeof S!=="undefined"&&S.geo;
+  if(!svg||!g)return;
+  const vb=svg.viewBox&&svg.viewBox.baseVal,W=vb&&vb.width,H=vb&&vb.height;
+  if(!Number.isFinite(W)||!Number.isFinite(H)||W<=0||H<=0)return;
+  const teksten=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&String(el.textContent||"").trim()&&zichtbaarInGrafiek(el,svg));
+  const isWaarde=el=>/Bodoni/i.test(String(el.getAttribute("font-family")||""))&&/^-?\d+°$/.test(String(el.textContent||"").trim());
+  const isNu=el=>/^nu(?:\s|$)/i.test(String(el.textContent||"").trim());
+  const isTijd=el=>el.hasAttribute("data-temp-time")||el.hasAttribute("data-mobile-temp-marker-time");
+  const beweegbaar=teksten.filter(el=>isWaarde(el)||isNu(el));
+  if(!beweegbaar.length)return;
+  const lijnen=getekendeLijnPunten(svg);
+  const cirkels=[...svg.querySelectorAll("circle")].filter(el=>!el.closest("#scrub")&&Number(el.getAttribute("r"))>0&&zichtbaarInGrafiek(el,svg))
+    .map(el=>({el,x:Number(el.getAttribute("cx")),y:Number(el.getAttribute("cy")),r:Number(el.getAttribute("r"))})).filter(c=>[c.x,c.y,c.r].every(Number.isFinite));
+  const stipVakken=cirkels.map(c=>({x:c.x-c.r-0.5,y:c.y-c.r-0.5,width:2*c.r+1,height:2*c.r+1}));
+  const staven=[...svg.querySelectorAll("path.regenstaaf")].filter(el=>zichtbaarInGrafiek(el,svg)).map(el=>padBox(el.getAttribute("d"))).filter(Boolean);
+  const nuLijnen=[...svg.querySelectorAll("line")].filter(el=>!el.closest("#scrub")&&!el.hasAttribute("data-nu-aanloop")&&/carmine/i.test(String(el.getAttribute("stroke")||""))&&zichtbaarInGrafiek(el,svg))
+    .map(el=>{const x1=Number(el.getAttribute("x1")),y1=Number(el.getAttribute("y1")),y2=Number(el.getAttribute("y2"));return {x:x1-0.75,y:Math.min(y1,y2),width:1.5,height:Math.abs(y2-y1)};})
+    .filter(b=>Object.values(b).every(Number.isFinite));
+  const iconen=[...svg.querySelectorAll("g[data-mobile-weather-icon],g[data-desktop-weather-icon]")].filter(el=>zichtbaarInGrafiek(el,svg)).map(bewakingsBox).filter(Boolean);
+  const vakken=new Map(teksten.map(el=>[el,bewakingsBox(el)]));
+  /* Een tijd bij piek of dal hoort bij het cijfer direct eronder. */
+  const tijdBij=new Map();
+  teksten.filter(isTijd).forEach(t=>{
+    const bt=vakken.get(t);if(!bt)return;
+    let beste=null,d=Infinity;
+    beweegbaar.filter(isWaarde).forEach(v=>{
+      const bv=vakken.get(v);if(!bv)return;
+      const dx=Math.abs((bt.x+bt.width/2)-(bv.x+bv.width/2)),dy=bv.y-(bt.y+bt.height);
+      if(dx<=16&&dy>=-4&&dy<=18&&dx+Math.abs(dy)<d){d=dx+Math.abs(dy);beste=v;}
+    });
+    if(beste&&!tijdBij.has(beste))tijdBij.set(beste,t);
+  });
+  /* Het punt waar een cijfer bij hoort: de stip met dezelfde index, anders de dichtstbijzijnde. */
+  const nuStip=cirkels.find(c=>/carmine/i.test(String(c.el.getAttribute("fill")||"")));
+  const puntVan=el=>{
+    if(isNu(el))return nuStip||null;
+    for(const a of ["data-mobile-temp-marker-index","data-desktop-temp-marker-index","data-mobile-temp-index"]){
+      const v=el.getAttribute(a);if(v===null||v==="")continue;
+      const c=cirkels.find(k=>k.el.getAttribute("data-temp-index")===v||k.el.getAttribute("data-mobile-temp-marker-dot")&&k.el.getAttribute("data-mobile-temp-marker-index")===v||k.el.getAttribute("data-desktop-temp-marker-index")===v);
+      if(c)return c;
+      const i=Number(v);if(Number.isInteger(i)&&typeof g.x==="function"&&typeof g.y==="function"&&Number.isFinite(Number(g.T&&g.T[i])))return {x:Number(g.x(i)),y:Number(g.y(Number(g.T[i])))};
+    }
+    const b=vakken.get(el);if(!b)return null;
+    let beste=null,d=Infinity;
+    cirkels.forEach(c=>{if(/carmine/i.test(String(c.el.getAttribute("fill")||"")))return;const a=afstandVakTotPunt(b,c.x,c.y);if(a<d){d=a;beste=c;}});
+    return beste;
+  };
+  const verschoven=(b,dx,dy)=>b&&{x:b.x+dx,y:b.y+dy,width:b.width,height:b.height};
+  const botst=(el,box,groep)=>{
+    if(!box)return false;
+    if(box.x<1||box.x+box.width>W-1||box.y<1||box.y+box.height>H-1)return true;
+    if(lijnen.some(p=>lijnRaaktTekstBox(p,box,1)))return true;
+    if(stipVakken.some(s=>rechthoekenBotsen(box,s,0.5)))return true;
+    if(staven.some(s=>rechthoekenBotsen(box,s,1)))return true;
+    if(iconen.some(s=>rechthoekenBotsen(box,s,1)))return true;
+    if(!isNu(el)&&nuLijnen.some(s=>rechthoekenBotsen(box,s,1)))return true;
+    for(const [ander,b] of vakken){if(groep.includes(ander)||!b)continue;if(rechthoekenBotsen(box,b,1))return true;}
+    return false;
+  };
+  /* Eerst het nu-label, dan piek en dal, dan de overige cijfers. */
+  const rang=el=>isNu(el)?0:(el.hasAttribute("data-mobile-temp-marker")||el.hasAttribute("data-desktop-temp-marker"))?1:2;
+  beweegbaar.sort((a,b)=>rang(a)-rang(b)).forEach(el=>{
+    const tijd=tijdBij.get(el)||null,groep=tijd?[el,tijd]:[el];
+    const box=vakken.get(el),tbox=tijd?vakken.get(tijd):null;
+    if(!box)return;
+    const punt=puntVan(el),maxAfstand=isNu(el)?16:14;
+    /* Ook een cijfer dat vrij staat maar los van zijn punt zweeft, krijgt een
+       plek dichterbij als die er is; lukt dat niet, dan blijft het staan. */
+    const teVer=!!punt&&afstandVakTotPunt(box,punt.x,punt.y)>maxAfstand;
+    const raakt=botst(el,box,groep)||!!(tbox&&botst(tijd,tbox,groep));
+    if(!raakt&&!teVer)return;
+    const keuze=kiesVrijeVerschuiving((dx,dy)=>{
+      const nb=verschoven(box,dx,dy);
+      if(punt&&afstandVakTotPunt(nb,punt.x,punt.y)>maxAfstand)return false;
+      return !botst(el,nb,groep)&&!(tbox&&botst(tijd,verschoven(tbox,dx,dy),groep));
+    },bewakingsKandidaten(box,punt));
+    let zet=keuze;
+    /* Het nu-label mag als laatste uitwijkplek bovenaan de rode nu-lijn staan,
+       net boven de plot: daar is het nog steeds duidelijk de nu-waarde. */
+    if(!zet&&isNu(el)&&nuLijnen.length&&Number.isFinite(Number(g.pt))){
+      const lx=nuLijnen[0].x+0.75+3,basisY=Number(el.getAttribute("y"))+(Number(el.getAttribute("dy"))||0);
+      zet=[Number(g.pt)-4,Number(g.pt)-16].map(ty=>[lx-box.x,ty-basisY]).find(([dx,dy])=>!botst(el,verschoven(box,dx,dy),groep))||null;
+    }
+    /* Een gewoon tussencijfer zonder vrije plek vervalt, zoals in de basisgrafiek:
+       de waarde blijft in de lijn, het aantikken en de uurtabel. Het nu-label,
+       piek en dal en de vaste drie-uursankers op de telefoon blijven altijd. */
+    if(!zet&&!raakt)return;
+    if(!zet){
+      const vast=isNu(el)||rang(el)===1||el.hasAttribute("data-mobile-temp-label");
+      if(!vast){groep.forEach(t=>{t.setAttribute("display","none");t.setAttribute("data-label-verborgen","botsing");vakken.set(t,null);});}
+      return;
+    }
+    if(!zet[0]&&!zet[1])return;
+    const keuzeXY=zet;
+    groep.forEach(t=>{
+      const x=Number(t.getAttribute("x")),y=Number(t.getAttribute("y"));
+      if(!Number.isFinite(x)||!Number.isFinite(y))return;
+      t.setAttribute("x",String(Math.round((x+keuzeXY[0])*10)/10));t.setAttribute("y",String(Math.round((y+keuzeXY[1])*10)/10));
+      t.setAttribute("data-label-bewaakt","1");
+      vakken.set(t,verschoven(vakken.get(t),keuzeXY[0],keuzeXY[1]));
+    });
+  });
+}
+
 let uurAsToken=0;
 function planUurAsHerstel(){
   const token=++uurAsToken;
-  const voer=()=>{if(token===uurAsToken){maakGrafiekTekstLeesbaar();herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();bouwMobieleTemperatuurRij();polishNuLabel();compactMobieleGrafiekHoogte();koppelTijdAanTemperatuur();bouwDesktopGrafiekAccenten();}};
+  const voer=()=>{if(token===uurAsToken){maakGrafiekTekstLeesbaar();herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();bouwMobieleTemperatuurRij();polishNuLabel();compactMobieleGrafiekHoogte();koppelTijdAanTemperatuur();bouwDesktopGrafiekAccenten();bewaakGrafiekLabels();}};
   const start=()=>{
     const r1=()=>{const r2=()=>voer();if(typeof requestAnimationFrame==="function")requestAnimationFrame(r2);else setTimeout(r2,0);};
     if(typeof requestAnimationFrame==="function")requestAnimationFrame(r1);else setTimeout(r1,0);
@@ -1178,7 +1385,7 @@ function polishNuLabel(){
 }
 let nuPolishToken=0;
 function planNuLabelPolish(){
-  const token=++nuPolishToken,voer=()=>{if(token===nuPolishToken)polishNuLabel();};
+  const token=++nuPolishToken,voer=()=>{if(token===nuPolishToken){polishNuLabel();bewaakGrafiekLabels();}};
   if(typeof requestAnimationFrame==="function")requestAnimationFrame(()=>requestAnimationFrame(voer));else setTimeout(voer,0);
 }
 
