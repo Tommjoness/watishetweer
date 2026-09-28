@@ -19,6 +19,9 @@ assert(privacy.includes("geen account of advertentietracking"),"Privacyverklarin
 assert(privacy.includes("privacygerichte bezoekstatistieken"),"Privacyverklaring moet privacygerichte bezoekstatistieken blijven benoemen");
 assert(privacy.includes("herkomstcategorie")&&privacy.includes("dat adres zelf, de domeinnaam en eventuele zoektermen worden niet verstuurd"),"Privacyverklaring moet de grove herkomstcategorie en het niet-versturen van de verwijzer uitleggen");
 assert(privacy.includes("als app of in de browser")&&privacy.includes("Welke plaatsen je hebt bewaard, gaat nooit mee."),"Privacyverklaring moet startmodus en het ja/nee-signaal voor bewaarde plaatsen uitleggen");
+/* AVG artikel 13, lid 1a: wie verantwoordelijk is en hoe je die bereikt. */
+assert(/<h2>Wie is verantwoordelijk<\/h2>\s*<p>[^<]*<b>[^<]+<\/b>/.test(privacy),"Privacyverklaring moet de verantwoordelijke bij naam noemen");
+assert((privacy.match(/href="mailto:[^"@]+@watishetweer\.nl"/g)||[]).length>=2,"Privacyverklaring moet een contactadres geven, ook bij de rechten");
 for(const provider of ["PostHog Cloud EU","Cloudflare Web Analytics","Google Analytics 4"]){
   assert(privacy.includes(provider),"Privacyverklaring mist analyticsprovider: "+provider);
 }
