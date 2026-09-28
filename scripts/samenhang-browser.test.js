@@ -16,6 +16,10 @@
    - Uurtabel naast de desktopgrafiek (1100-1366px): ook bij storm ("WZW 10
      Bft") geen horizontaal scrollen en geen afgekapte kolom.
    - Over en Privacy: siteletters; Privacy begint met een korte samenvatting.
+   - Themawissel: de grafiek (stippen, cijfers, iconen, verloop) volgt
+     direct, in beide richtingen, op telefoon en desktop.
+   - Privacy: "Wis lokale gegevens" wist ook de weergavekeuze van de sessie
+     en houdt de GA4-toestemmingskeuze.
 
    Draait na: npm run build:cloudflare */
 
@@ -208,6 +212,29 @@ function meet(){
         console.log("SAMENHANG storm "+w+"px: uurtabel past met "+r.wind+".");
       }finally{await context.close();}
     }
+    /* Themawissel: de grafiek volgt direct, zonder opnieuw te tekenen. Na de
+       wissel mag geen grafiekelement nog een kleur hebben die alleen in het
+       vorige thema bestaat (inkt, gedempte inkt of papier). */
+    const themaKleuren=()=>["--ink","--ink-45","--sheet"].map(v=>{const el=document.createElement("span");el.style.color="var("+v+")";document.body.appendChild(el);const c=getComputedStyle(el).color;el.remove();return c;});
+    for(const w of [390,1366]){
+      const {context,page,fouten}=await open(browser,root,SCENARIO.middag,w,900);
+      try{
+        await page.waitForFunction(()=>{const k=document.getElementById("thema-switch");return k&&!k.disabled;},null,{timeout:10000});
+        for(const naar of ["donker","licht"]){
+          const oud=await page.evaluate(themaKleuren);
+          await page.evaluate(()=>document.getElementById("thema-switch").click());
+          await page.waitForFunction(t=>(document.documentElement.getAttribute("data-thema")||"licht")===t,naar,{timeout:5000});
+          const nieuw=await page.evaluate(themaKleuren),alleenOud=oud.filter(c=>!nieuw.includes(c));
+          assert(alleenOud.length>0,w+"px thema "+naar+": thema's hebben geen eigen kleuren ("+oud.join(", ")+")");
+          const blijft=await page.evaluate(oudeKleuren=>[...document.querySelectorAll("#chart *")].filter(el=>!el.closest("mask,defs,#scrub")).map(el=>{const cs=getComputedStyle(el);
+            const hit=[["fill",cs.fill],["stroke",cs.stroke],["stop-color",cs.stopColor],["color",cs.color]].find(([,c])=>oudeKleuren.includes(c));
+            return hit?el.tagName+[...el.attributes].filter(a=>/^data-/.test(a.name)).map(a=>"["+a.name+"]").join("")+" "+hit[0]+"="+hit[1]:null;}).filter(Boolean),alleenOud);
+          assert.deepEqual(blijft.slice(0,6),[],w+"px naar "+naar+": "+blijft.length+" grafiekelementen houden de kleur van het vorige thema");
+        }
+        assert.deepEqual(fouten,[],w+"px themawissel: runtimefouten "+fouten.join(" | "));
+        console.log("SAMENHANG themawissel "+w+"px: grafiek volgt licht → donker → licht direct.");
+      }finally{await context.close();}
+    }
     /* Over en Privacy. */
     for(const pad of ["/over/","/privacy.html"]){
       const {context,page}=await open(browser,root,null,390,844,pad);
@@ -217,6 +244,30 @@ function meet(){
         assert(!r.merk,pad+": merk- en sitenaamregel staat er nog");
         if(pad==="/privacy.html")assert.equal(r.kort,4,pad+": samenvatting in het kort ontbreekt");
         console.log("SAMENHANG "+pad+": siteletters"+(pad==="/privacy.html"?", samenvatting in vier punten":"")+".");
+      }finally{await context.close();}
+    }
+    /* "Wis lokale gegevens" wist ook de weergavekeuze van deze sessie; de
+       GA4-toestemmingskeuze blijft. Eigen context, dus eigen opslag. */
+    {
+      const {context,page,fouten}=await open(browser,root,null,390,844,"/privacy.html");
+      try{
+        await page.evaluate(()=>{
+          localStorage.setItem("weerbriefing.ga4.consent.v1",JSON.stringify("geweigerd"));
+          localStorage.setItem("weerbriefing.plaats",JSON.stringify({naam:"Utrecht"}));
+          localStorage.setItem("weerbriefing.actiefThema",JSON.stringify("donker"));
+          sessionStorage.setItem("weerbriefing.thema.sessie",JSON.stringify("donker"));
+          document.documentElement.setAttribute("data-thema","donker");
+        });
+        await page.click("#wis");
+        await page.waitForFunction(()=>/gewist/.test(document.getElementById("wisstatus").textContent||""),null,{timeout:5000});
+        const r=await page.evaluate(()=>({lokaal:Object.keys(localStorage).sort(),sessie:Object.keys(sessionStorage),
+          consent:localStorage.getItem("weerbriefing.ga4.consent.v1"),thema:document.documentElement.getAttribute("data-thema")}));
+        assert.deepEqual(r.lokaal,["weerbriefing.ga4.consent.v1"],"/privacy.html: wissen laat lokale gegevens staan: "+r.lokaal.join(", "));
+        assert.equal(r.consent,JSON.stringify("geweigerd"),"/privacy.html: wissen verandert de GA4-toestemmingskeuze");
+        assert.deepEqual(r.sessie,[],"/privacy.html: wissen laat de weergavekeuze van deze sessie staan: "+r.sessie.join(", "));
+        assert.equal(r.thema,null,"/privacy.html: na wissen blijft de pagina in de gekozen weergave staan");
+        assert.deepEqual(fouten,[],"/privacy.html: runtimefouten "+fouten.join(" | "));
+        console.log("SAMENHANG /privacy.html: wissen haalt plaatsen, instellingen en sessiekeuze weg en houdt de GA4-keuze.");
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
