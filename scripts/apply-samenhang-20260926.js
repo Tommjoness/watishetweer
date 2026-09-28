@@ -16,6 +16,9 @@ const HUB_STYLE_ID="wiw-hub-samenhang-20260926";
      staan boven de grafiek) en "Zicht" zolang het zicht niet beperkt is, en
      zet het aantal zichtbare tegels op de rij. Zes tegels staan vanaf 600px
      in drie kolommen (twee rijen van drie), met de randen per rij van drie.
+   - Uurtabel naast de desktopgrafiek: de kolom Neerslag (24%) staat ruimte
+     af aan Wind (26%). Bij storm ("WZW 10 Bft") liep de tabel op 1100-1366px
+     tot 7px over; "12,4 mm" en "100% kans" passen ruim in de smallere kolom.
    Plaatsindex /weer/:
    - Dezelfde Licht | Auto | Donker-keuze als op de weerpagina's, in plaats
      van de oude aan/uit-schakelaar.
@@ -30,6 +33,8 @@ html body #aq .sval[data-pollen-niveau="hoog"],html body #aq .sval[data-pollen-n
   html body #app .stats[data-tegels="6"]:not(#aq):not(#wiw-samenhang)>.stat{grid-column:auto!important;border-right:1px solid var(--rule)!important}
   html body #app .stats[data-tegels="6"]:not(#aq):not(#wiw-samenhang)>.stat:nth-child(3n){border-right:0!important}
 }
+html body .wiw-hour-table th:nth-child(4),html body .wiw-hour-table td:nth-child(4){width:24%!important}
+html body .wiw-hour-table th:nth-child(5),html body .wiw-hour-table td:nth-child(5){width:26%!important}
 `;
 
 const HUB_KNOP_OUD_START='<button id="thema" type="button" class="wiw-theme-switch" role="switch"';

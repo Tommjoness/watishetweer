@@ -12,6 +12,8 @@
    - Dagweergave: geen dubbele dagnaam voor zon op/onder.
    - Desktopgrafiek: 24 uur; de uurtabel is het begin daarvan.
    - Plaatsindex /weer/: Licht | Auto | Donker, terug-link bovenaan, zoekveld.
+   - Uurtabel naast de desktopgrafiek (1100-1366px): ook bij storm ("WZW 10
+     Bft") geen horizontaal scrollen en geen afgekapte kolom.
    - Over en Privacy: siteletters; Privacy begint met een korte samenvatting.
 
    Draait na: npm run build:cloudflare */
@@ -31,12 +33,16 @@ const SCENARIO={
     pr:(u,dag)=>dag===0&&u>=19&&u<=23?[0.2,1.4,2.1,0.8,0.1][u-19]:0},
   /* 22:40, na zonsondergang. */
   avond:{klok:"2026-07-22T20:40:00Z",meting:"2026-07-22T22:30",gras:12,
-    temp:(u,dag)=>+(14+3.8*Math.sin((u-9)/24*Math.PI*2)-dag*0.2).toFixed(1),pp:()=>8,pr:()=>0}
+    temp:(u,dag)=>+(14+3.8*Math.sin((u-9)/24*Math.PI*2)-dag*0.2).toFixed(1),pp:()=>8,pr:()=>0},
+  /* Storm: windkracht 10 uit het westzuidwesten ("WZW 10 Bft"), veel regen. */
+  storm:{klok:"2026-07-22T07:10:00Z",meting:"2026-07-22T09:00",gras:4,ws:95,wd:247.5,
+    temp:(u,dag)=>+(13+3*Math.sin((u-9)/24*Math.PI*2)-dag*0.2).toFixed(1),pp:()=>100,pr:()=>12.4}
 };
 function fixture(sc){
-  const d=bouw({temp:sc.temp,pp:sc.pp,pr:sc.pr,som:0});
+  const d=bouw({temp:sc.temp,pp:sc.pp,pr:sc.pr,som:0,...(sc.ws?{ws:sc.ws}:{})});
   d.latitude=52.09;d.longitude=5.12;d.daily.sunshine_duration=d.daily.time.map((_,i)=>[21600,12000,5000,30000,26000,18000,24000][i]);
   const h=d.hourly;
+  if(sc.wd!==undefined)h.wind_direction_10m=h.wind_direction_10m.map(()=>sc.wd);
   while(h.time.length<194){const i=h.time.length,v=h.time[i-1];for(const k of Object.keys(h))if(k!=="time"&&Array.isArray(h[k]))h[k].push(h[k][i%24]);h.time.push(new Date(Date.parse(v+"Z")+3600000).toISOString().slice(0,16));}
   const nu=h.time.indexOf(sc.meting.slice(0,14)+"00");
   d.current.time=sc.meting;d.current.temperature_2m=h.temperature_2m[nu];d.current.apparent_temperature=h.temperature_2m[nu]-1;
@@ -155,6 +161,22 @@ function meet(){
         assert.equal(await page.evaluate(()=>document.getElementById("hub-leeg").hidden),false,w+"px /weer/: melding bij geen resultaat ontbreekt");
         assert.deepEqual(fouten,[],w+"px /weer/: runtimefouten "+fouten.join(" | "));
         console.log("SAMENHANG /weer/ "+w+"px: Licht | Auto | Donker, terug bovenaan, zoeken filtert.");
+      }finally{await context.close();}
+    }
+    /* Uurtabel naast de desktopgrafiek: ook "WZW 10 Bft" past, zonder
+       horizontaal scrollen of een afgekapt kolomkopje. */
+    for(const w of [1100,1280,1366]){
+      const {context,page}=await open(browser,root,SCENARIO.storm,w,900);
+      try{
+        const r=await page.evaluate(()=>{const hour=document.getElementById("wiw-hour-table"),scroll=document.getElementById("wiw-hour-scroll");
+          const th=hour&&hour.querySelector("thead th:nth-child(3)"),wind=hour&&hour.querySelector("tbody .wiw-hour-wind .wiw-hour-primary");
+          return {tabel:!!hour,overflow:scroll?scroll.scrollWidth-scroll.clientWidth:null,kopVrij:!!th&&th.scrollWidth<=th.clientWidth+1,
+            wind:wind?wind.textContent.trim():"",windVrij:!!wind&&[...hour.querySelectorAll("tbody td.wiw-hour-wind")].every(td=>td.scrollWidth<=td.clientWidth+1)};});
+        assert(r.tabel,w+"px storm: uurtabel ontbreekt");
+        assert(/^[NOZW]{3} 1\d Bft$/.test(r.wind),w+"px storm: fixture toont geen windkracht 10+ met drieletterrichting ("+r.wind+")");
+        assert(r.overflow!==null&&r.overflow<=1,w+"px storm: uurtabel loopt "+r.overflow+"px over");
+        assert(r.kopVrij&&r.windVrij,w+"px storm: kolomkop of windcel wordt afgekapt ("+JSON.stringify(r)+")");
+        console.log("SAMENHANG storm "+w+"px: uurtabel past met "+r.wind+".");
       }finally{await context.close();}
     }
     /* Over en Privacy. */
