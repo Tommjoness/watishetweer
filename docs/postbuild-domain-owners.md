@@ -1,6 +1,22 @@
 # Postbuild-domeineigenaren
 
-Dit document is de fase-1 inventarisatie voor issue #114. Het beschrijft de huidige bewezen artifactketen zonder productgedrag te wijzigen. Doel is per volgende PR precies één domein naar een duidelijke canonieke eigenaar te verplaatsen en de oude correctielaag daarna te verwijderen.
+Dit document is de fase-1 inventarisatie voor issue #114. Het beschrijft de artifactketen zoals die bij de inventarisatie was, zonder productgedrag te wijzigen. Doel is per volgende PR precies één domein naar een duidelijke canonieke eigenaar te verplaatsen en de oude correctielaag daarna te verwijderen.
+
+## Stand van zaken (bijgewerkt 28 september 2026)
+
+De eerste migraties zijn uitgevoerd. De apply-lagen hieronder bestaan niet meer; alleen hun verifier draait nog in `scripts/postbuild-pipeline.js` en bewaakt de eigenaar die de uitvoer nu zelf levert.
+
+| Verdwenen apply-laag | Verifier die blijft | Wat de verifier nu bewaakt |
+| --- | --- | --- |
+| `apply-nederlandse-microcopy.js` | `verify-nederlandse-microcopy.js` | `neerslagkans-policy-v3.js` levert de definitieve neerslagzinnen; oude zinnen en de oude compatibilitymarker mogen niet meer in owner of artifact staan. Bewaakt ook luchtdruk-, windstoot- en briefingcopy van hun base-build owners. |
+| `apply-pollen-hour-correctness.js` | `verify-pollen-hour-correctness.js` | `scripts/pollen-hour-correctness.js`. |
+| `apply-cache-fallback-country.js` | `verify-cache-fallback-country.js` | Landcontext in `index.html`/`build-weather.js` en `apply-shared-url-place-identity.js`. |
+| `apply-fetch-error-semantics.js` | `verify-fetch-error-semantics.js` | Ophaalfouttekst uit `product-config.js` (technische tekst mag niet lekken, menselijke tekst precies één keer). |
+| `apply-polar-chart-sentinel.js` | `verify-polar-chart-sentinel.js` | Pooldag/poolnacht in `build-weather.js` en `senior-correctness-v2.js`. |
+| `apply-small-chance-consistency.js` | `verify-small-chance-consistency.js` | `scripts/q1-precip-performance.js`. |
+| `apply-seo-foundation.js` | `verify-seo-foundation.js` | `scripts/seo-foundation.js` met `seo-foundation.config.js`. |
+
+De tabel en de secties hieronder zijn het oorspronkelijke plan en blijven als achtergrond staan. Voor de actuele volgorde van de keten is `scripts/postbuild-pipeline.js` (plus de `postbuild`/`test`-scripts in `package.json`) leidend, niet dit document.
 
 ## Architectuurprincipes
 
@@ -35,20 +51,22 @@ Dit document is de fase-1 inventarisatie voor issue #114. Het beschrijft de huid
 | `generate-seo-location-pages.js` | Genereert plaatsroutes | SEO/location-page generator | Blijvende build-owner; geen runtimecorrectielaag. |
 | `apply-build-provenance.js` | Stempelt build-SHA/provenance | Build/provenance | Blijvende build-owner; hoort juist laat in de keten. |
 
-## Eerste migratie: Nederlandse neerslagcopy
+## Eerste migratie: Nederlandse neerslagcopy (afgerond)
 
-### Bewezen huidige situatie
+Deze migratie is uitgevoerd: `apply-nederlandse-microcopy.js` bestaat niet meer en `verify-nederlandse-microcopy.js` is een owner-verifier (zie "Stand van zaken"). De tekst hieronder beschrijft de situatie vóór de migratie.
 
-`apply-nederlandse-microcopy.js` zoekt letterlijke zinnen in het reeds gebouwde artifact en herschrijft onder andere:
+### Situatie bij de inventarisatie
+
+`apply-nederlandse-microcopy.js` zocht letterlijke zinnen in het reeds gebouwde artifact en herschreef onder andere:
 
 - `Neerslag wordt verwacht het komende uur.` → `Het komende uur wordt neerslag verwacht.`
 - `Enkele druppels zijn mogelijk het komende uur.` → `Het komende uur zijn enkele druppels mogelijk.`
 - `Kleine kans op neerslag het komende uur.` → `Het komende uur is er een kleine kans op neerslag.`
 - `De komende twee uur wordt geen neerslag verwacht.` → `De komende twee uur wordt er geen neerslag verwacht.`
 
-De bronzinnen worden al gegenereerd door `neerslagkans-policy-v3.js`. De late microcopylaag is daardoor geen zelfstandige domeineigenaar maar een compatibilitycorrectie over de bestaande owner.
+De bronzinnen werden al gegenereerd door `neerslagkans-policy-v3.js`. De late microcopylaag was daardoor geen zelfstandige domeineigenaar maar een compatibilitycorrectie over de bestaande owner.
 
-### Gewenste migratie in de eerstvolgende code-PR
+### Uitgevoerde migratiestappen
 
 1. Laat `neerslagkans-policy-v3.js` direct de huidige productiecopy retourneren.
 2. Breid/actualiseer de policytests zodat de uiteindelijke zinnen direct op de owner worden bewezen.
@@ -73,13 +91,13 @@ De eerste migratie verandert niet:
 
 ## Volgende kandidaten na succesvolle fase 1
 
-Op basis van afbakening en risico is de voorlopige volgorde:
+Op basis van afbakening en risico was de voorlopige volgorde:
 
-1. Nederlandse neerslagcopy compatibilitylaag → neerslagowner.
-2. Fetch-errorcopy → forecast/fallback owner.
-3. Cache/fallback-landcontext → locatie/fallback owner.
-4. Pollen-uurcorrectheid → pollenowner.
-5. Polar-chart sentinel → grafiek/astronomie-owner.
+1. Nederlandse neerslagcopy compatibilitylaag → neerslagowner (afgerond).
+2. Fetch-errorcopy → forecast/fallback owner (afgerond).
+3. Cache/fallback-landcontext → locatie/fallback owner (afgerond).
+4. Pollen-uurcorrectheid → pollenowner (afgerond).
+5. Polar-chart sentinel → grafiek/astronomie-owner (afgerond).
 6. Pas daarna de brede UI-polish/weather-truth/Q3/mobile-lagen per functie ontleden.
 
 Deze volgorde is geen toestemming om automatisch door te refactoren: iedere stap krijgt een afzonderlijke PR, eigen oorzaak-/owneranalyse en volledige relevante regressiecontrole.

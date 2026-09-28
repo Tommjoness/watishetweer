@@ -367,7 +367,7 @@ function herstelUurAs(){
     alle.forEach(el=>el.remove());
     const indices=kiesKalenderUurLabelIndices(g.TI,3,24),y=Number(g.pt)+Number(g.ih)+MOBIELE_UURAS_Y;
     if(!Number.isFinite(y))return;
-    const kleur=getComputedStyle(document.documentElement).getPropertyValue("--ink-45").trim()||"currentColor";
+    const kleur="var(--ink-45)";
     indices.forEach(i=>{
       const x=Number(g.x(i)),uur=uurUitIso(g.TI[i]);if(!Number.isFinite(x)||!Number.isInteger(uur))return;
       const el=document.createElementNS(SVG_NS,"text");
@@ -392,7 +392,7 @@ function herstelUurAs(){
   const posities=alle.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite);
   const y=Number(g.pt)+Number(g.ih)+20;
   if(!Number.isFinite(y))return;
-  const kleur=getComputedStyle(document.documentElement).getPropertyValue("--ink-45").trim()||"currentColor";
+  const kleur="var(--ink-45)";
   for(const i of kiesUurLabelIndices(g.TI,minimum,cadans,rand)){
     if(bestaandeUurLabels(svg,g).length>=minimum)break;
     const x=Number(g.x(i)),uur=uurUitIso(g.TI[i]);
@@ -467,8 +467,10 @@ function bouwMobieleTemperatuurRij(){
   if(!svg||!g||!g.M||Number(g.n)>25||!Array.isArray(g.T)||!Array.isArray(g.TI)||typeof g.x!=="function"||typeof g.y!=="function")return;
   const top=Number(g.pt),bottom=top+Number(g.ih),W=Number(g.W),marge=5;
   if(![top,bottom,W].every(Number.isFinite)||bottom<=top)return;
-  const wortel=getComputedStyle(document.documentElement);
-  const ink=wortel.getPropertyValue("--ink").trim()||"currentColor",sheet=wortel.getPropertyValue("--sheet").trim()||"white";
+  /* Kleuren als CSS-variabele, niet als eenmalig uitgelezen waarde: dan
+     volgen stippen, cijfers, iconen en verloop een themawissel direct, zonder
+     opnieuw te tekenen. */
+  const ink="var(--ink)",sheet="var(--sheet)";
   const voorScrub=el=>svg.insertBefore(el,svg.querySelector('g[data-q4-rain-periods]')||svg.querySelector("#scrub")||null);
 
   /* Idempotent: iedere pass (rAF, timers, fontload) bouwt labels, markeringen,
@@ -596,7 +598,7 @@ function bouwMobieleTemperatuurRij(){
      hun plek dicht bij hun punt en geen anker verliest zijn cijfer. Past de
      tijd nergens dicht bij de stip, dan vervalt ze; ze staat ook bij
      aantikken. */
-  const fsTijd=leesbareGrootte(svg,9),tijdKleur=wortel.getPropertyValue("--ink-45").trim()||ink;
+  const fsTijd=leesbareGrootte(svg,9),tijdKleur="var(--ink-45)";
   const zoekTijdPlek=(i,px,py,pos)=>{
     if(ankers.includes(i))return null;
     const tekst=uurAsLabelTekst(String(uurUitIso(g.TI[i])));if(!tekst)return null;
@@ -813,7 +815,7 @@ function bouwDesktopGrafiekAccenten(){
   const delen=String(svg.getAttribute("viewBox")||"").trim().split(/\s+/).map(Number);
   const H=delen.length===4&&Number.isFinite(delen[3])?delen[3]:Number(g.H);
   if(![top,bottom,W,H,cw].every(Number.isFinite)||bottom<=top||cw<=0)return;
-  const ink=getComputedStyle(document.documentElement).getPropertyValue("--ink").trim()||"currentColor";
+  const ink="var(--ink)";
   const voorScrub=el=>svg.insertBefore(el,svg.querySelector('g[data-q4-rain-periods]')||svg.querySelector("#scrub")||null);
 
   /* Idempotent: iedere pass begint vanaf de basisgrafiek. */
@@ -1169,7 +1171,7 @@ function polishNuLabel(){
   }
   /* Bij een uitzonderlijk volle curve blijft tekst ook zonder vrije positie
      leesbaar doordat de achtergrond de onderliggende lijn vrijhoudt. */
-  nu.setAttribute("stroke",getComputedStyle(document.documentElement).getPropertyValue("--sheet").trim()||"white");
+  nu.setAttribute("stroke","var(--sheet)");
   nu.setAttribute("stroke-width","3");nu.setAttribute("paint-order","stroke");nu.setAttribute("stroke-linejoin","round");
 }
 let nuPolishToken=0;
