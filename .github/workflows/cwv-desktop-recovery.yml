@@ -14,7 +14,7 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
       options: --ipc=host
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -51,6 +51,8 @@ jobs:
         run: node scripts/grafiekstippen-browser.test.js
       - name: Grafiek aantikken, piek en dal op het echte punt, leesbare mobiele tekst
         run: node scripts/grafiek-interactie-browser.test.js
+      - name: Geen botsingen in de grafiek bij vorst, stortregen, nu op piek of dal en steile randen
+        run: node scripts/grafiek-botsing-browser.test.js
       - name: Indeling eerste scherm, tegels op één lijn, geen lege zonneband
         run: node scripts/indeling-browser.test.js
       - name: Samenhang (zes tegels, avondtegels, pollenschaal, Nachtzicht, 24 uur desktop, plaatsindex, subpagina's)
