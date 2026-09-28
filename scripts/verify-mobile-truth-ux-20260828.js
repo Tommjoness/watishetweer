@@ -28,7 +28,7 @@ ok(aantal(GRAPH_JS_START)===1&&aantal(GRAPH_JS_EIND)===1,"mobile-graph runtime h
 ok(html.indexOf("/* ===== STAFF AUDIT 20260826 ===== */")<html.indexOf(JS_START),"mobile-truth runtime volgt op staff-audit");
 ok(html.indexOf(JS_START)<html.indexOf(GRAPH_JS_START)&&html.indexOf(GRAPH_JS_START)<html.indexOf("/* ---------- start ---------- */"),"mobile-graph runtime volgt mobile-truth en draait vóór startup");
 ok(html.includes("kans · verwachte hoeveelheid")&&html.includes("kans · hoeveelheid onzeker")&&html.includes("Uitleg meetwaarden"),"uurtegel onderscheidt kans, echte hoeveelheid en onzekerheid expliciet");
-ok(html.includes("Selecteer een punt in de grafiek voor details."),"canonieke Q4-grafiekhint blijft aanwezig");
+ok(html.includes("Kies een tijdstip in de grafiek voor de details van dat uur."),"canonieke Q4-grafiekhint blijft aanwezig");
 ok(!html.includes("Temperatuur boven, neerslagperioden onder"),"mobiele UX overschrijft de canonieke Q4-grafiekhint niet");
 ok(html.includes("Actieve nacht tot zonsopkomst")&&html.includes("Volgende volledige nacht"),"dubbele vannacht-labels krijgen een eenduidige fallback");
 ok(typeof api.herstelNachtlabels==="function","Nachtzicht-labelherstel is via de expliciete mobile-truth API beschikbaar");

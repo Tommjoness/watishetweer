@@ -135,7 +135,7 @@ async function controleer(type,naam,breedte){
     assert.equal(r.mmUitgelijnd,true,naam+" "+breedte+": strip gebruikt exact dezelfde uurwaarden als de grafiekbron");
     assert.equal(r.mmZelfdeArray,true,naam+" "+breedte+": tooltip en regenstrip delen letterlijk dezelfde mm-array");
     assert.equal(r.regenPointerEvents,"none",naam+" "+breedte+": regenlaag kan muis/touch niet onderscheppen");
-    assert.equal(r.hint,"Selecteer een punt in de grafiek voor details.",naam+" "+breedte+": actieve grafiekhint is input-neutraal; kreeg "+JSON.stringify(r.hint));
+    assert.equal(r.hint,"Kies een tijdstip in de grafiek voor de details van dat uur.",naam+" "+breedte+": actieve grafiekhint is input-neutraal; kreeg "+JSON.stringify(r.hint));
     assert.equal(r.daghint,"Kies een dag om die verwachting in de grafiek te bekijken.",naam+" "+breedte+": daghint is input-neutraal");
     assert.equal(r.zonkop,"Tijd tot zonsondergang",naam+" "+breedte+": hoofdgrid gebruikt tijd tot zonsondergang als dagelijkse consumentwaarde");
     assert.equal(r.neerslagKop,"Neerslag komend uur",naam+" "+breedte+": kans en hoeveelheid worden expliciet als uurverwachting gelabeld");

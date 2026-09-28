@@ -14,7 +14,7 @@ const Q4_SVG_NS="http://www.w3.org/2000/svg";
    activeert, krijgt de globale binding hier één expliciete runtime-owner. */
 chartHint=function(){
   const el=document.getElementById("charthint");
-  if(el)el.textContent="Selecteer een punt in de grafiek voor details.";
+  if(el)el.textContent="Kies een tijdstip in de grafiek voor de details van dat uur.";
 };
 
 /* Bewolkingspercentages komen uit een model en suggereren bij 0–4% meer

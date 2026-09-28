@@ -694,7 +694,9 @@ function bouwMobieleTemperatuurRij(){
     }
     punt.setAttribute("data-temp-index",String(i));punt.setAttribute("data-mobile-temp-point","1");
     punt.setAttribute("cx",String(x));punt.setAttribute("cy",String(y));
-    punt.setAttribute("r","1.5");punt.setAttribute("fill",ink);punt.setAttribute("opacity",".45");
+    /* Elk temperatuurpunt dezelfde volle stip als piek en dal (2,2 op de telefoon);
+       piek en dal onderscheiden zich met hun vette cijfer en eigen tijd. */
+    punt.setAttribute("r","2.2");punt.setAttribute("fill",ink);punt.removeAttribute("opacity");
     const el=label(tekst,pos);
     el.setAttribute("data-mobile-temp-index",String(i));el.setAttribute("data-mobile-temp-label","1");el.setAttribute("data-mobile-temp-priority","anchor");
     if(pos.x!==x)el.setAttribute("data-mobile-edge-adjusted","1");

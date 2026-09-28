@@ -42,6 +42,12 @@ d.longitude = 5.26;
 d.daily.sunshine_duration = d.daily.time.map(() => 11.5 * 3600);
 d.daily.sunset = d.daily.time.map(t => t + "T21:30");
 d.daily.sunrise = d.daily.time.map(t => t + "T06:13");
+// Weekrijen volgen de uren 00-24 van de dag uit de uurdata (het dagveld is terugval).
+// De komende dagen hebben daarom ook in de uren één uur met de dagkans van 40%.
+for (let k = 1; k < d.daily.time.length; k++) {
+  const i = d.hourly.time.indexOf(d.daily.time[k] + "T14:00");
+  if (i >= 0) d.hourly.precipitation_probability[i] = d.daily.precipitation_probability_max[k];
+}
 
 for (let i = 0; i < d.hourly.time.length; i++) {
   const uur = d.hourly.time[i].slice(11, 13);
@@ -240,7 +246,7 @@ async function controleer(page, naam, modus) {
   assert.ok(/zon onder 21:30/i.test(resultaat.sunTekst), `${naam} ${modus}: exacte zonsondergang van morgen blijft zichtbaar`);
   assert.ok(!/Vandaag/i.test(resultaat.sunTekst), `${naam} ${modus}: geen verstreken vandaag-momenten na zonsondergang`);
   assert.ok(resultaat.sunOverflow <= 1, `${naam} ${modus}: zoninformatie heeft geen horizontale overflow`);
-  assert.equal(resultaat.hint, "Selecteer een punt in de grafiek voor details.", `${naam} ${modus}: input-neutrale grafiekhint`);
+  assert.equal(resultaat.hint, "Kies een tijdstip in de grafiek voor de details van dat uur.", `${naam} ${modus}: input-neutrale grafiekhint`);
 
   assert.ok(!/wind komt|draait naar/i.test(resultaat.briefing), `${naam} ${modus}: 1 Bft krijgt geen briefing over richtingsdraai`);
   assert.ok(!/het is nu\s+-?\d+/i.test(resultaat.briefing), `${naam} ${modus}: briefing herhaalt actuele temperatuur niet`);

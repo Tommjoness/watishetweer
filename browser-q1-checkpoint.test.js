@@ -16,6 +16,12 @@ for(let i=0;i<d.hourly.time.length;i++){
   if(t==="2026-07-22T19:00"){d.hourly.precipitation_probability[i]=25;d.hourly.precipitation[i]=0;}
   if(t==="2026-07-22T20:00"){d.hourly.precipitation_probability[i]=0;d.hourly.precipitation[i]=0;}
 }
+// Weekrijen volgen de uren 00-24 van de dag uit de uurdata (het dagveld is terugval).
+// De komende dagen dragen daarom dezelfde dagkans en dagsom ook in één uur.
+for(let k=1;k<d.daily.time.length;k++){
+  const i=d.hourly.time.indexOf(d.daily.time[k]+"T14:00");
+  if(i>=0){d.hourly.precipitation_probability[i]=d.daily.precipitation_probability_max[k];d.hourly.precipitation[i]=d.daily.precipitation_sum[k];}
+}
 const air={current:{european_aqi:30,us_aqi:40},hourly:{time:[d.current.time],alder_pollen:[0],birch_pollen:[0],grass_pollen:[2],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}};
 
 let html=fs.readFileSync(path.join(__dirname,"public/index.html"),"utf8");

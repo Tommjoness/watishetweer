@@ -36,6 +36,16 @@ d.daily.precipitation_probability_max[2]=88;
 d.daily.precipitation_sum[2]=0.049;
 d.daily.precipitation_probability_max[3]=75;
 d.daily.precipitation_sum[3]=0.05;
+/* Weekrijen volgen de uren 00-24 van de dag uit de uurdata (het dagveld is terugval).
+   Zet daarom dezelfde bijzondere kans en hoeveelheid ook in de uren van die dag:
+   één uur om 14:00 met de dagkans en de dagsom, zoals een echte bron dat levert. */
+function zetDagInUren(k){
+  const datum=d.daily.time[k],i=d.hourly.time.indexOf(datum+"T14:00");
+  d.hourly.precipitation_probability[i]=d.daily.precipitation_probability_max[k];
+  d.hourly.precipitation[i]=d.daily.precipitation_sum[k];
+  if(d.hourly.rain)d.hourly.rain[i]=d.daily.precipitation_sum[k];
+}
+[1,2,3].forEach(zetDagInUren);
 d.daily.temperature_2m_min[0]=13;
 d.daily.temperature_2m_max[0]=26;
 d.daily.weather_code[0]=1;

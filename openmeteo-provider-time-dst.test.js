@@ -94,4 +94,41 @@ assert.equal(voorjaarDag.eindMin-voorjaarDag.startMin,23*60,"de civiele voorjaar
 assert.equal(voorjaarDag.genoeg,true,"23 uur providerdata moet de volledige voorjaarsdag dekken");
 assert.equal(voorjaarDag.status,"GEEN_KANS");
 
-console.log("Open-Meteo provider-time DST: provider-as en civiele daggrenzen blijven correct over beide klokomslagen.");
+/* Dagneerslag over de uren 00-24 (weekrij, daghint, grafiekbeschrijving).
+   Een uurwaarde hoort bij het uur dat op haar tijdstempel eindigt. Het uur
+   vóór middernacht hoort dus nog bij de vorige dag, en op een 25-uursdag telt
+   het laatste (extra) uur mee; op een 23-uursdag valt het uur na de omslag weg. */
+function metGrens(p,{voor,laatste,na,dagveld}){
+  const h=p.hourly,eerste=h.time[0];
+  const tijdVoor=new Date(Date.parse(eerste+":00Z")-3600000).toISOString().slice(0,16);
+  const tijdNa=new Date(Date.parse(h.time[h.time.length-1]+":00Z")+3600000).toISOString().slice(0,16);
+  const velden=Object.keys(h).filter(k=>k!=="time");
+  h.time=[tijdVoor,...h.time,tijdNa];
+  for(const k of velden)h[k]=[0,...h[k],0];
+  h.precipitation_probability=h.time.map(()=>10);
+  h.precipitation_probability[0]=voor;
+  h.precipitation_probability[h.time.length-2]=laatste;
+  h.precipitation_probability[h.time.length-1]=na;
+  p.daily.precipitation_probability_max=[dagveld];p.daily.precipitation_sum=[0];
+  return p;
+}
+const herfstUren=I.dagNeerslagUren(metGrens(dagPayload({datum:"2026-10-25",offset:7200,aantalUren:25}),{voor:90,laatste:77,na:95,dagveld:90}),0);
+assert.equal(herfstUren.bron,"uren","25-uursdag: uurdata dekt de dag");
+assert.equal(herfstUren.kans,77,"25-uursdag: het extra laatste uur telt mee, het uur voor middernacht en het uur na de dag niet");
+const voorjaarUren=I.dagNeerslagUren(metGrens(dagPayload({datum:"2026-03-29",offset:3600,aantalUren:23}),{voor:90,laatste:77,na:95,dagveld:90}),0);
+assert.equal(voorjaarUren.bron,"uren","23-uursdag: uurdata dekt de dag");
+assert.equal(voorjaarUren.kans,77,"23-uursdag: alleen de 23 uren van de kalenderdag tellen mee");
+
+/* Ontbrekende kansen: een enkel ontbrekend uur laat de uurselectie staan;
+   ontbreken ze grotendeels, dan is het dagveld de terugval (geen verzonnen 0). */
+const gat=metGrens(dagPayload({datum:"2026-10-25",offset:7200,aantalUren:25}),{voor:0,laatste:40,na:0,dagveld:66});
+gat.hourly.precipitation_probability[5]=null;
+assert.deepEqual([I.dagNeerslagUren(gat,0).bron,I.dagNeerslagUren(gat,0).kans],["uren",40],"één ontbrekend uur: uurselectie blijft");
+const leeg=metGrens(dagPayload({datum:"2026-10-25",offset:7200,aantalUren:25}),{voor:0,laatste:40,na:0,dagveld:66});
+leeg.hourly.precipitation_probability=leeg.hourly.precipitation_probability.map(()=>null);
+assert.deepEqual([I.dagNeerslagUren(leeg,0).bron,I.dagNeerslagUren(leeg,0).kans],["dagveld",66],"zonder uurkansen: terugval op het dagveld");
+const nietsBekend=metGrens(dagPayload({datum:"2026-10-25",offset:7200,aantalUren:25}),{voor:0,laatste:40,na:0,dagveld:null});
+nietsBekend.hourly.precipitation_probability=nietsBekend.hourly.precipitation_probability.map(()=>null);
+assert.equal(I.dagNeerslagUren(nietsBekend,0).kans,null,"zonder uurkansen en dagveld: geen kans, geen 0");
+
+console.log("Open-Meteo provider-time DST: provider-as en civiele daggrenzen blijven correct over beide klokomslagen; dagneerslag over de uren 00-24 ook op 23- en 25-uursdagen.");

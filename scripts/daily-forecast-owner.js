@@ -50,11 +50,14 @@ function weatherNowGeselecteerdeDagKop(datum){
   return dt.toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long"})+", per uur";
 }
 function weatherNowGeselecteerdeDagHint(day,index){
-  const i=Number(index),kans=eindigGetal(day&&day.precipitation_probability_max&&day.precipitation_probability_max[i]);
-  const som=eindigGetal(day&&day.precipitation_sum&&day.precipitation_sum[i]);
+  /* Dezelfde uren als de grafiek van deze dag (00-24); het daily veld is terugval. */
+  const i=Number(index),I=globalThis.WeatherNowInterpretatie;
+  const dn=I&&typeof I.dagNeerslagUren==="function"&&typeof S!=="undefined"&&S.d&&S.d.daily===day?I.dagNeerslagUren(S.d,i):null;
+  const kans=dn?eindigGetal(dn.kans):eindigGetal(day&&day.precipitation_probability_max&&day.precipitation_probability_max[i]);
+  const som=dn?eindigGetal(dn.hoeveelheid):eindigGetal(day&&day.precipitation_sum&&day.precipitation_sum[i]);
   const kansTekst=weatherNowDagNeerslagTekst(kans,som),mmTekst=weatherNowDagNeerslagMmTekst(som);
-  if(kansTekst==="–"&& !mmTekst)return "Selecteer een punt in de grafiek voor uurdetails.";
-  return "Kans op neerslag: "+kansTekst+(mmTekst?" · verwachte hoeveelheid: "+mmTekst:"")+". Selecteer een punt in de grafiek voor uurdetails.";
+  if(kansTekst==="–"&& !mmTekst)return "Kies een tijdstip in de grafiek voor uurdetails.";
+  return "Kans op neerslag: "+kansTekst+(mmTekst?" · verwachte hoeveelheid: "+mmTekst:"")+". Kies een tijdstip in de grafiek voor uurdetails.";
 }
 function dagen(){
 `;

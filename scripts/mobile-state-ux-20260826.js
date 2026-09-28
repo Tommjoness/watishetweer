@@ -96,12 +96,12 @@ function pasEtmaalContextToe(){
   if(S.dag!=null){
     const detail=/Kans op neerslag:|verwachte hoeveelheid:/i.test(huidige)
       ?huidige.replace(/^Deze kalenderdag per uur\.\s*/i,"")
-      :"Selecteer een punt in de grafiek voor details.";
+      :"Kies een tijdstip in de grafiek voor de details van dat uur.";
     hint.textContent="Deze kalenderdag per uur. "+detail;
   }else{
     /* De resetknop benoemt hierboven al expliciet het rollende bereik. De hint
        blijft daarom invoermethode-neutraal en behoudt de bestaande Q4-copy. */
-    hint.textContent="Selecteer een punt in de grafiek voor details.";
+    hint.textContent="Kies een tijdstip in de grafiek voor de details van dat uur.";
   }
 }
 
@@ -163,8 +163,8 @@ function centraleSpoorgrens(){
 function verbindWeekNeerslagAanRijen(){
   /* De oude uitleg stond los boven de hele weektabel. Dat suggereerde ten onrechte
      dat één percentage voor de hele week gold. Elke nuance wordt nu uitsluitend
-     bij de dag geplaatst waarop precipitation_probability_max en precipitation_sum
-     betrekking hebben. De kans is dus expliciet de hoogste uurkans van die dag. */
+     bij de dag geplaatst waarop kans en hoeveelheid betrekking hebben. De kans is
+     dus expliciet de hoogste uurkans van die dag (uren 00-24, dagNeerslagUren). */
   document.querySelectorAll("#days .dag-neerslagnotitie").forEach(el=>el.remove());
   const losseUitleg=document.getElementById("dagenneerslaguitleg");
   if(losseUitleg)losseUitleg.remove();
@@ -177,7 +177,9 @@ function verbindWeekNeerslagAanRijen(){
     rij.classList.remove("heeft-neerslagnotitie");
     rij.removeAttribute("aria-describedby");
     if(!Number.isInteger(i)||i<0)return;
-    const kans=getal(kansen&&kansen[i]),mm=getal(hoeveelheden&&hoeveelheden[i]);
+    /* Dezelfde uren 00-24 als de zichtbare rij en de grafiek; daily veld is terugval. */
+    const dn=root.WeatherNowInterpretatie&&typeof root.WeatherNowInterpretatie.dagNeerslagUren==="function"?root.WeatherNowInterpretatie.dagNeerslagUren(S.d,i):null;
+    const kans=dn?getal(dn.kans):getal(kansen&&kansen[i]),mm=dn?getal(dn.hoeveelheid):getal(hoeveelheden&&hoeveelheden[i]);
     const dag=dagLabelUitRij(rij,i,daily),datum=Array.isArray(daily.time)?String(daily.time[i]||""):"";
     const vandaag=!!datum&&datum===String(S.d&&S.d.current&&S.d.current.time||"").slice(0,10);
     const analyse=root.WeatherNowInterpretatie&&root.WeatherNowInterpretatie.analyseerDagData;
