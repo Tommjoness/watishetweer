@@ -2,6 +2,7 @@
 
 const fs=require("fs"),path=require("path"),assert=require("assert");
 const {chromium}=require("playwright");
+const {wachtEindtoestand}=require("./release-eindtoestand.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const EXPECTED=String(process.env.EXPECTED_SHA||"").trim();
@@ -271,12 +272,34 @@ async function lees(page){return page.evaluate(()=>{
       const page=await context.newPage();await installeerForecastFixture(page,amsterdamBron);
       await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Amsterdam");
       const actief=await page.evaluate(()=>document.documentElement.getAttribute("data-thema"));assert.equal(actief,theme,`${w}px ${theme}: thema niet actief`);
-      const naam=`watishetweer-${w}-${theme}.png`;await page.screenshot({path:path.join(OUT,naam),fullPage:true});rapport.screenshots.push({width:w,height:h,theme,file:naam});
+      /* Pas vastleggen na de eindtoestand: briefing bijgewerkt, waarschuwingen
+         gecontroleerd (volledig, niet beschikbaar of fout) en een stabiele layout. */
+      const eind=await wachtEindtoestand(page,`${w}px ${theme}`);
+      const naam=`watishetweer-${w}-${theme}.png`;await page.screenshot({path:path.join(OUT,naam),fullPage:true});rapport.screenshots.push({width:w,height:h,theme,file:naam,endState:{briefing:eind.briefing,warnings:eind.waarschuwingen,warningCount:eind.aantalWaarschuwingen}});
+      console.log(`FINAL SCREENSHOT ${w}px ${theme}: briefing ${eind.briefing}, waarschuwingen ${eind.waarschuwingen}.`);
       if(w===1920){const u=await lees(page);rapport.liveProof={sha:u.sha,delivery:u.delivery,assets:u.assets,url:page.url()};}
       await context.close();
     }
 
+    /* Waarschuwingsblok: de drie uitkomsten expliciet, los van wat de live
+       bron vandaag toevallig geeft. Een blijvende laadmelding faalt hier. */
+    rapport.warningEndStates={};
+    for(const [scenario,antwoord,verwacht] of [
+      ["volledig",{status:200,json:{bron:"release-monitor",dekking:true,land:"NL",lijst:[]}},"volledig"],
+      ["niet-beschikbaar",{status:200,json:{bron:"release-monitor",dekking:false,land:"NL"}},"niet-beschikbaar"],
+      ["fout",{status:503,json:{error:true}},"fout"]
+    ]){
+      const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block",locale:"nl-NL"});const page=await context.newPage();
+      await installeerForecastFixture(page,amsterdamBron);
+      await page.route(ROOT+"/api/waarschuwingen**",route=>route.fulfill({status:antwoord.status,contentType:"application/json",body:JSON.stringify(antwoord.json)}));
+      await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Amsterdam");
+      const eind=await wachtEindtoestand(page,`waarschuwingen ${scenario}`);
+      assert.equal(eind.waarschuwingen,verwacht,`waarschuwingen ${scenario}: eindtoestand ${eind.waarschuwingen} (${eind.waarschuwingenTekst})`);
+      rapport.warningEndStates[scenario]={ok:true,state:eind.waarschuwingen,briefing:eind.briefing};await context.close();
+      console.log(`FINAL WAARSCHUWINGEN ${scenario}: ${eind.waarschuwingen}.`);
+    }
+
     rapport.finishedAt=new Date().toISOString();fs.writeFileSync(path.join(OUT,"report.json"),JSON.stringify(rapport,null,2));
-    console.log(`FINAL RELEASE LIVE BEWIJS GESLAAGD: ${EXPECTED}; ${locaties.length} locaties, ${viewports.length} viewports, veilige cachefoutstates en 4 screenshots.`);
+    console.log(`FINAL RELEASE LIVE BEWIJS GESLAAGD: ${EXPECTED}; ${locaties.length} locaties, ${viewports.length} viewports, veilige cachefoutstates, 3 waarschuwingseindtoestanden en 4 screenshots in eindtoestand.`);
   }finally{await browser.close();}
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
