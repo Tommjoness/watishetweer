@@ -27,17 +27,34 @@
 .locatie-laadstatus.fout{color:var(--carmine)}
 .locatie-laadstatus.fout .locatie-spinner{display:none}
 .locatie-status-tekst{min-width:0}
+/* Minstens 11px tekst en een tikvlak van 24px hoog (WCAG 2.2 AA), ook in de
+   compacte melding naast de ophaalstempel. */
 .locatie-status-retry{
-  min-height:0!important;
-  padding:1px 5px!important;
+  min-height:24px!important;
+  padding:3px 8px!important;
   border-color:currentColor!important;
   color:inherit!important;
-  font-size:9.5px!important;
-  letter-spacing:.08em!important;
+  font-size:11px!important;
+  letter-spacing:.06em!important;
   line-height:1.35!important;
+}
+/* Storing zonder gegevens voor deze plaats: een leesbare foutpagina in plaats
+   van een lege, gereserveerde weerpagina. De weersecties verdwijnen, de
+   voettekst met privacy en bronnen blijft. */
+#app[data-zonder-data]{visibility:visible!important}
+#app[data-zonder-data]>:not(footer){display:none!important}
+.locatie-laadstatus.fout.zonder-data{
+  justify-content:flex-start;flex-wrap:wrap;gap:10px 16px;margin-top:12px;padding:14px 16px;
+  border:1px solid var(--carmine);border-left-width:3px;
+  color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;font-variant-numeric:normal;text-align:left;
+}
+.locatie-laadstatus.fout.zonder-data .locatie-status-tekst{flex:1 1 16em}
+.locatie-laadstatus.fout.zonder-data .locatie-status-retry{
+  min-height:44px!important;padding:8px 18px!important;font-size:14px!important;letter-spacing:.03em!important;color:var(--carmine)!important;
 }
 @keyframes wn-locatie-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.locatie-spinner{animation:none}}
 @media(max-width:900px){
-  .locatie-laadstatus{width:100%;font-size:10.5px;justify-content:flex-end}
+  .locatie-laadstatus{width:100%;font-size:11px;justify-content:flex-end}
+  .locatie-laadstatus.fout.zonder-data{font-size:15px;justify-content:flex-start}
 }

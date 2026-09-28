@@ -85,6 +85,8 @@ function weatherNowFoutMetRetry(st,tekst,lat,lon,label,opslaan,land,stil){
   const compactRetry=compact&&compact.querySelector(".locatie-status-retry");
   if(!stil&&compact&&compactTekst&&compactRetry){
     compact.classList.add("fout");compact.hidden=false;
+    const appNu=document.getElementById("app");
+    compact.classList.toggle("zonder-data",!!(appNu&&appNu.hasAttribute("data-zonder-data")));
     compactTekst.textContent=tekst;
     compactRetry.hidden=false;
     compactRetry.onclick=()=>load(lat,lon,label,false,opslaan,land);
@@ -138,7 +140,7 @@ function hardenLoad(html){
   bron=bron.replace(identiteitOud,identiteitNieuw);
 
   const succesOud='    if(mijnBeurt!==laadTeller) return;   // er is inmiddels een nieuwere plaats gekozen\n    S.d=vol;if(luchtVerversen)S.air=null;';
-  const succesNieuw='    if(mijnBeurt!==laadTeller) return;   // er is inmiddels een nieuwere plaats gekozen\n    S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;S.land=aangevraagdeLand;\n    document.getElementById("q").value=label;\n    S.d=vol;if(luchtVerversen)S.air=null;';
+  const succesNieuw='    if(mijnBeurt!==laadTeller) return;   // er is inmiddels een nieuwere plaats gekozen\n    document.getElementById("app").removeAttribute("data-zonder-data");\n    S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;S.land=aangevraagdeLand;\n    document.getElementById("q").value=label;\n    S.d=vol;if(luchtVerversen)S.air=null;';
   const nSucces=bron.split(succesOud).length-1;
   if(nSucces!==1)throw new Error("Succes-identiteitsanker verwacht exact één keer; gevonden "+nSucces);
   bron=bron.replace(succesOud,succesNieuw);
@@ -162,6 +164,7 @@ function hardenLoad(html){
       S.luchtOp=Number(oud.airOp)||0;S.land=normLand(oud.land)||aangevraagdeLand;S.verversMislukt=true;
       document.getElementById("q").value=label;
       tekenAlles();
+      document.getElementById("app").removeAttribute("data-zonder-data");
       document.getElementById("app").style.display="block";
       urlBij();
       const tijd=new Date(oud.op).toLocaleString("nl-NL");
@@ -171,6 +174,7 @@ function hardenLoad(html){
       weatherNowHerstelLocatie(vorigeLocatie);
       document.getElementById("q").value=String(vorigeLocatie.label||"");
       tekenAlles();
+      document.getElementById("app").removeAttribute("data-zonder-data");
       document.getElementById("app").style.display="block";
       urlBij();
       if(offline){
@@ -183,10 +187,14 @@ function hardenLoad(html){
       S.d=null;S.air=null;S.label=label;S.lat=nieuweLat;S.lon=nieuweLon;S.land=aangevraagdeLand;
       S.verversMislukt=true;S.dag=null;S.actieveWaarschuwingen=[];
       document.getElementById("q").value=label;
-      /* Zonder cache blijft alleen de bestaande gereserveerde app-geometrie
-         staan voor CLS; bij een aanwezige maar verkeerde cache verbergen we
-         het weerbericht volledig zodat nooit data van die andere locatie lekt. */
-      document.getElementById("app").style.display=oud&&oud.d?"none":"block";
+      /* Geen gegevens voor deze plaats: geen lege, gereserveerde weerpagina
+         (die liep enkele schermen door zonder inhoud, ook zonder voettekst),
+         maar een compacte foutpagina. Alle weersecties verdwijnen, dus ook
+         nooit data van een andere locatie; de voettekst met privacy en bronnen
+         blijft staan en de kop noemt de gevraagde plaats. */
+      const appZonderData=document.getElementById("app");
+      appZonderData.style.display="block";appZonderData.setAttribute("data-zonder-data","");
+      const kopZonderData=document.getElementById("place");if(kopZonderData)kopZonderData.textContent=label;
       document.title=label+" · Wat is het weer?";
       weatherNowFoutMetRetry(st,foutVoor+" Er worden geen weergegevens van een andere locatie getoond.",nieuweLat,nieuweLon,label,opslaan,land,stil);
     }

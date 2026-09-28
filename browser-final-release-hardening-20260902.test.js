@@ -94,6 +94,8 @@ function scenarioHtml(code){
   const plan=(mode,delay,perLat)=>{window.__wiwPlan={mode,delay:delay||0,perLat:perLat||null};window.__wiwOffline=false;window.__wiwAccelerateTimeouts=mode==='timeout';};
   const goed=(naam,lat,lon)=>S.d&&S.label===naam&&Math.abs(Number(S.lat)-lat)<.00001&&Math.abs(Number(S.lon)-lon)<.00001&&q.value===naam&&document.title.startsWith(naam+' · ');
   const laadGoed=async(naam,lat,lon,delay,land)=>{q.value=naam;plan('success',delay||0);await load(lat,lon,naam,false,true,land||null);await slaap(40);return goed(naam,lat,lon);};
+  /* Geen weergegevens zichtbaar: de app is weg, of staat in de compacte foutweergave waarin alleen de voettekst overblijft. */
+  const geenWeerZichtbaar=()=>getComputedStyle(app).display==='none'||(app.hasAttribute('data-zonder-data')&&[...app.children].every(e=>e.tagName==='FOOTER'||getComputedStyle(e).display==='none'));
   const snapshot=()=>{zet('label',S.label);zet('lat',S.lat);zet('lon',S.lon);zet('q',q.value);zet('title',document.title);zet('state',statusTekst());zet('retry',retryAanwezig());zet('data',!!S.d);zet('app',getComputedStyle(app).display);};
   try{
     await slaap(80);reset();
@@ -157,7 +159,7 @@ draaiScenario("verkeerde cache wordt geweigerd",`
   ls.set(KEY_D,{d:window.__wiwFixture,air:null,airOp:0,label:'Amsterdam',lat:52.368,lon:4.904,op,land:'NL'});
   q.value='Kansas City';plan('provider-error',0);await load(39.0997,-94.5786,'Kansas City',false,true,'US');await slaap(40);
   const tekst=statusTekst();
-  zet('result',S.d===null&&S.label==='Kansas City'&&q.value==='Kansas City'&&getComputedStyle(app).display==='none'&&/Kansas City/.test(tekst)&&/niet geladen|geen weergegevens/i.test(tekst)&&retryAanwezig()?'ok':'fout');
+  zet('result',S.d===null&&S.label==='Kansas City'&&q.value==='Kansas City'&&geenWeerZichtbaar()&&/Kansas City/.test(tekst)&&/niet geladen|geen weergegevens/i.test(tekst)&&retryAanwezig()?'ok':'fout');
 `);
 
 draaiScenario("race laat nieuwste locatie winnen",`
@@ -175,7 +177,7 @@ draaiScenario("directe URL weigert cache van andere locatie",`
   ls.set(KEY_D,{d:window.__wiwFixture,air:null,airOp:0,label:'Amsterdam',lat:52.368,lon:4.904,op,land:'NL'});
   history.replaceState(null,'','?lat=39.100&lon=-94.579&plaats=Kansas%20City&land=US');q.value='Kansas City';plan('provider-error',0);
   await load(39.0997,-94.5786,'Kansas City',false,false,'US');await slaap(60);
-  zet('result',S.d===null&&S.label==='Kansas City'&&q.value==='Kansas City'&&getComputedStyle(app).display==='none'&&document.title.startsWith('Kansas City · ')?'ok':'fout');
+  zet('result',S.d===null&&S.label==='Kansas City'&&q.value==='Kansas City'&&geenWeerZichtbaar()&&document.title.startsWith('Kansas City · ')?'ok':'fout');
 `,2200);
 
 draaiScenario("reload gebruikt passende cache",`
