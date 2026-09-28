@@ -40,6 +40,17 @@ assert.deepEqual(zonVerwachting(bron).onder,["20:30"]);
 assert.equal(verwachtDagRijen(bron).length,7);
 assert.deepEqual(verwachtDagRijen(bron)[1],{datum:"2026-08-28",min:11,max:21,wind:1,neerslag:{hoofd:"10%",hoeveelheid:"0,0 mm"}});
 assert.deepEqual(verwachtDagRijen(bron)[2],{datum:"2026-08-29",min:12,max:22,wind:2,neerslag:{hoofd:"20%",hoeveelheid:"0,1 mm"}});
+/* Met uurdata volgt een komende dag de uren 00-24, net als de site: het uur
+   23-24 van de vorige dag (tijdstempel 00:00, 90%) telt niet mee, het laatste
+   uur van de dag zelf (tijdstempel 00:00 van de volgende dag, 77%) wel. */
+{
+  const tijden=Array.from({length:50},(_,k)=>new Date(Date.parse("2026-08-28T00:00Z")+k*3600000).toISOString().slice(0,16));
+  const kans=tijden.map(t=>t==="2026-08-28T00:00"?90:t==="2026-08-29T00:00"?77:10);
+  const metUren={...bron,utc_offset_seconds:7200,timezone:"Europe/Amsterdam",hourly:{time:tijden,precipitation_probability:kans,precipitation:tijden.map(()=>0)},
+    daily:{...bron.daily,precipitation_probability_max:[0,90,77,30,40,50,60]}};
+  assert.equal(verwachtDagRijen(metUren)[1].neerslag.hoofd,"77%","komende dag: uren 00-24 in plaats van het daily veld (90%)");
+  assert.equal(verwachtDagRijen(metUren)[2].neerslag.hoofd,"10%","dag erna: het uur 23-24 van de vorige dag telt niet mee (daily veld 77%)");
+}
 
 const avond={
   current:{time:"2026-08-27T19:00",is_day:1},

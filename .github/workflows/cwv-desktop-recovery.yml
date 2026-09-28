@@ -63,6 +63,8 @@ jobs:
         run: node scripts/kleur-browser.test.js
       - name: Releasebewijs, eindtoestanden van briefing en waarschuwingen
         run: node scripts/release-eindtoestand-browser.test.js
+      - name: Eén neerslagkans per dag in weekrij, daghint en grafiekbeschrijving (uren 00-24)
+        run: node scripts/dagkans-browser.test.js
       - name: Google Analytics na toestemming krijgt geen plaats of coördinaten in de URL
         run: node scripts/ga4-url-privacy-browser.test.js
       - name: Open-Meteo-dagwaarden, over welk uurvenster (providercontract)

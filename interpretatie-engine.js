@@ -474,6 +474,24 @@ function analyseerDagData(data,dagIndex,nuOverride){
   };
 }
 
+/* Neerslag van een hele kalenderdag over de uren 00-24, met dezelfde
+   intervalbetekenis als grafiek en uurtabel: de uurwaarde met tijdstempel
+   01:00 hoort bij 00:00-01:00. Het dagveld van Open-Meteo rekent over de
+   tijdstempels 00:00-23:00 en schuift daardoor een uur op (het uur 23-24 van
+   de vorige dag telt mee, het laatste uur van de dag zelf niet). Dat veld is
+   alleen nog terugval als de uurdata de dag onvoldoende dekt. Een 23- of
+   25-uursdag volgt uit de echte kalenderdaggrenzen van analyseerDagData. */
+function dagNeerslagUren(data,dagIndex){
+  const daily=data&&data.daily||{};
+  const datum=daily.time&&daily.time[dagIndex];
+  const dagStart=datum?datumStartMinuten(datum,data&&data.timezone||null,data&&data.utc_offset_seconds):null;
+  const a=dagStart===null?null:analyseerDagData(data,dagIndex,dagStart);
+  if(a&&a.genoeg)return {bron:"uren",kans:a.kans,hoeveelheid:a.hoeveelheid,analyse:a};
+  const kans=veldGetal("precipitation_probability",daily.precipitation_probability_max&&daily.precipitation_probability_max[dagIndex]);
+  const hoeveelheid=veldGetal("precipitation",daily.precipitation_sum&&daily.precipitation_sum[dagIndex]);
+  return {bron:"dagveld",kans:kans===null?null:Math.round(kans),hoeveelheid,analyse:a};
+}
+
 function statusRang(status){
   return STATUS_RANG[status]===undefined?-1:STATUS_RANG[status];
 }
@@ -489,6 +507,7 @@ const publiekeApi={
   neerslagSoortUitCode,
   analyseerNeerslagData,
   analyseerDagData,
+  dagNeerslagUren,
   neerslagKorteWeergave,
   dagHoeveelheidZin,
   neerslagZin,

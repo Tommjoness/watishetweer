@@ -2,7 +2,7 @@
 
 const assert=require("assert");
 const {kansHoofd,hoeveelheidTekst}=require("../neerslagkans-policy-v3.js");
-const {analyseerDagData}=require("../interpretatie-engine.js");
+const {analyseerDagData,dagNeerslagUren}=require("../interpretatie-engine.js");
 const {zonInfoRijen}=require("../senior-semantiek-20260810.js");
 
 const BFT=[1,6,12,20,29,39,50,62,75,89,103,117.000001];
@@ -113,8 +113,10 @@ function verwachtDagRijen(bron,nuOverride){
   const vandaag=horizon.slice(0,10);
   for(let i=0;i<Math.min(7,(d.time||[]).length);i++){
     const resterend=String(d.time[i]||"")===vandaag?analyseerDagData(bron,i,horizon):null;
-    const kans=resterend?resterend.kans:d.precipitation_probability_max?.[i];
-    const hoeveelheid=resterend?resterend.hoeveelheid:d.precipitation_sum?.[i];
+    /* Komende dagen: de uren 00-24 van de kalenderdag, zoals de site (daily veld als terugval). */
+    const heleDag=resterend?null:dagNeerslagUren(bron,i);
+    const kans=resterend?resterend.kans:heleDag.kans;
+    const hoeveelheid=resterend?resterend.hoeveelheid:heleDag.hoeveelheid;
     a.push({
       datum:String(d.time[i]||""),
       min:getal(d.temperature_2m_min?.[i])===null?null:Math.round(Number(d.temperature_2m_min[i])),

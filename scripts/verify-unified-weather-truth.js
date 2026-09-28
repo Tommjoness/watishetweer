@@ -12,8 +12,13 @@ function mist(tekst,reden){if(html.includes(tekst))throw new Error(reden+": "+te
 bevat("/* ===== UNIFIED WEATHER TRUTH 20260815 ===== */","unified-weather-truth marker ontbreekt");
 bevat("Weekneerslag heeft één horizon per rij: vandaag resterend, toekomstige dagen volledig","daghorizon is niet expliciet geconsolideerd");
 bevat('if(!datum||datum===huidigeDatum)return;',"huidige dag wordt niet beschermd tegen volledige daily totalen");
-bevat('day.precipitation_probability_max&&day.precipitation_probability_max[i]','toekomstige dagkans gebruikt niet het officiële daily veld');
-bevat('day.precipitation_sum&&day.precipitation_sum[i]','toekomstige daghoeveelheid gebruikt niet het officiële daily veld');
+/* Toekomstige dagen: kans en hoeveelheid van de hele kalenderdag over de uren
+   00-24 (dezelfde intervallen als grafiek en uurtabel); het daily veld alleen
+   als terugval wanneer de uurdata de dag niet dekt. */
+bevat('root.WeatherNowInterpretatie.dagNeerslagUren(S.d,i)','toekomstige dagkans gebruikt niet de uren 00-24 van de kalenderdag');
+bevat('const kans=dn?getal(dn.kans):getal(day.precipitation_probability_max&&day.precipitation_probability_max[i])','toekomstige dagkans mist de uurselectie of de terugval op het daily veld');
+bevat('mm=dn?getal(dn.hoeveelheid):getal(day.precipitation_sum&&day.precipitation_sum[i])','toekomstige daghoeveelheid mist de uurselectie of de terugval op het daily veld');
+bevat('function dagNeerslagUren(data,dagIndex){','canonieke dagneerslag over de uren 00-24 ontbreekt in de runtime');
 bevat('const dagMm=num(a&&a.hoeveelheid);',"resterende daghoeveelheid wordt niet uit centrale analyse gelezen");
 bevat('small.className="q1-dag-mm";small.textContent=hoeveelheidTekst(dagMm)',"daghoeveelheid wordt niet uit hetzelfde analyseobject getoond");
 mist("Weekverwachting: de zichtbare kans en hoeveelheid komen beide uit de officiële","oude algemene Q1 daily-owner staat nog in runtime");

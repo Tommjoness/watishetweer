@@ -19,8 +19,12 @@ if(html.includes(MARK))throw new Error("Unified-weather-truth is al toegepast.")
    diezelfde officiële daily velden juist exact de volledige kalenderdag die de rij
    voorstelt. Vervang daarom uitsluitend de oude algemene wrapper door een
    horizonbewuste wrapper: vandaag blijft volledig eigendom van de resterende-
-   daganalyse; toekomstige dagen gebruiken kans én hoeveelheid uit dezelfde daily
-   kalenderdag. De rest van de Q1-functionaliteit blijft intact. */
+   daganalyse; toekomstige dagen gebruiken kans én hoeveelheid van dezelfde
+   kalenderdag. Sinds 28 september over de uren 00-24 uit de uurdata
+   (dagNeerslagUren), omdat het daily veld van Open-Meteo over de tijdstempels
+   00-23 rekent en daardoor een uur verschuift ten opzichte van grafiek en
+   uurtabel; het daily veld is terugval. De rest van de Q1-functionaliteit
+   blijft intact. */
 const Q1_DAG_START="/* Weekverwachting: de zichtbare kans en hoeveelheid komen beide uit de officiële";
 const Q1_DAG_END="/* De bestaande tooltip blijft compact.";
 const q1Start=html.indexOf(Q1_DAG_START),q1End=html.indexOf(Q1_DAG_END,q1Start);
@@ -39,7 +43,9 @@ const Q1_DAG_NIEUW=[
   '    document.querySelectorAll("#days .row.day:not(.kop)").forEach(rij=>{',
   '      const i=Number(rij.dataset.i),datum=day.time[i];',
   '      if(!datum||datum===huidigeDatum)return;',
-  '      const kans=getal(day.precipitation_probability_max&&day.precipitation_probability_max[i]),mm=getal(day.precipitation_sum&&day.precipitation_sum[i]);',
+  '      /* Kans en hoeveelheid van de hele kalenderdag over de uren 00-24, net als grafiek en uurtabel; het dagveld is alleen terugval. */',
+  '      const dn=root.WeatherNowInterpretatie&&typeof root.WeatherNowInterpretatie.dagNeerslagUren==="function"?root.WeatherNowInterpretatie.dagNeerslagUren(S.d,i):null;',
+  '      const kans=dn?getal(dn.kans):getal(day.precipitation_probability_max&&day.precipitation_probability_max[i]),mm=dn?getal(dn.hoeveelheid):getal(day.precipitation_sum&&day.precipitation_sum[i]);',
   '      const kansEl=rij.querySelector(".drain");if(!kansEl)return;',
   '      const presentatie=dagNeerslagPresentatie(kans,mm,beleid.kansHoofd,beleid.hoeveelheidTekst);',
   '      kansEl.textContent=presentatie.hoofd;',

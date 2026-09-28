@@ -2122,7 +2122,13 @@ function etmaal(start,n){
     <rect id="hit" x="${pl-cw/2}" y="${pt-14}" width="${iw+cw}" height="${ih+20}" fill="transparent" style="cursor:crosshair"/>`;
 
   const geldigeKansen=P.filter(v=>Number.isFinite(v));
-  const kansVoorlezer=geldigeKansen.length
+  /* Op een gekozen dag dezelfde uren 00-24 als de weekrij en de daghint (ook
+     op een 23- of 25-uursdag); anders de punten in beeld. */
+  const dagUren=S.dag!=null&&globalThis.WeatherNowInterpretatie&&typeof globalThis.WeatherNowInterpretatie.dagNeerslagUren==="function"
+    ?globalThis.WeatherNowInterpretatie.dagNeerslagUren(S.d,S.dag):null;
+  const kansVoorlezer=dagUren&&dagUren.bron==="uren"&&Number.isFinite(dagUren.kans)
+    ? "hoogste neerslagkans in één uur op deze dag "+dagUren.kans+" procent"
+    : geldigeKansen.length
     ? "hoogste neerslagkans "+Math.max(...geldigeKansen)+" procent"
     : "neerslagkans niet beschikbaar";
   const grafiekMoment=t=>new Date(t.slice(0,10)+"T12:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"})+" om "+t.slice(11,16);
