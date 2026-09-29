@@ -74,7 +74,7 @@ const TEMP_TREND_OUD=`  waarde.innerHTML=String(t.van)+" → "+String(t.naar)+"<
     :"De temperatuur verandert de komende uren nauwelijks.";`;
 const TEMP_TREND_NIEUW=`  if(t.richting==="gelijk"){
     waarde.innerHTML=String(t.van)+"<s>°C</s>";
-    sub.textContent="De temperatuur blijft de komende uren rond "+String(t.van)+" °C.";
+    sub.textContent="De temperatuur blijft de komende uren rond "+String(t.van)+"\u00a0°C.";
   }else{
     waarde.innerHTML=String(t.van)+" → "+String(t.naar)+"<s>°C</s>";
     sub.textContent=t.richting==="stijgt"?"Het wordt de komende uren warmer.":"Het wordt de komende uren koeler.";
@@ -222,7 +222,7 @@ if(!html.includes('dagMm===0?"0,0 mm":hoeveelheidTekst(dagMm)'))
   throw new Error("Vandaag-presenteerder borgt bekende 0,0 mm niet.");
 if(!html.includes('mm===0&&k!==null&&k>0'))
   throw new Error("Q1-presenteerder onderscheidt 0% droog niet van niet-nul kans bij 0,0 mm.");
-if(!html.includes('sub.textContent="De temperatuur blijft de komende uren rond "+String(t.van)+" °C.";'))
+if(!html.includes('sub.textContent="De temperatuur blijft de komende uren rond "+String(t.van)+"\u00a0°C.";'))
   throw new Error("Gelijke temperatuurtrend wordt niet als stabiele temperatuur gepresenteerd.");
 if(html.includes('De temperatuur verandert de komende uren nauwelijks.'))
   throw new Error("Oude vage copy voor gelijke temperatuurtrend staat nog in de artifact.");

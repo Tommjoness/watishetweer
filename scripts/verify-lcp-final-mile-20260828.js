@@ -54,8 +54,8 @@ assert.ok(!/meters\(\);briefing\(\);etmaal\(startIdx,S\.bereik\);nowcast\(\);dag
 assert.deepStrictEqual(waarheid.bewolkingMetLagen(82,10,15,80,false),{tekst:"Veel hoge bewolking",code:2},"veel hoge bewolking wordt niet meer automatisch zwaar bewolkt");
 assert.deepStrictEqual(waarheid.bewolkingMetLagen(82,76,20,85,false),{tekst:"Zwaar bewolkt",code:3},"substantiële lage bewolking houdt zwaar-bewolktsemantiek");
 assert.deepStrictEqual(waarheid.bewolkingMetLagen(56,10,15,50,false),{tekst:"Hoge bewolking",code:1},"dominante hoge bewolking wordt expliciet benoemd");
-assert.equal(waarheid.temperatuurTrendPresentatie(17,17,17,17).tekst,"Blijft 17 °C.","werkelijk gelijke ruwe temperatuur heet blijft");
-assert.equal(waarheid.temperatuurTrendPresentatie(16.6,17.4,17,17).tekst,"Blijft rond 17 °C.","gelijk afgeronde maar veranderende temperatuur wordt niet absoluut gelijk genoemd");
+assert.equal(waarheid.temperatuurTrendPresentatie(17,17,17,17).tekst,"Blijft 17\u00a0°C.","werkelijk gelijke ruwe temperatuur heet blijft");
+assert.equal(waarheid.temperatuurTrendPresentatie(16.6,17.4,17,17).tekst,"Blijft rond 17\u00a0°C.","gelijk afgeronde maar veranderende temperatuur wordt niet absoluut gelijk genoemd");
 assert.equal(waarheid.temperatuurTrendPresentatie(16.6,17.4,17,17).waarde,"17","gelijke zichtbare eindpunten tonen geen zinloze 17 naar 17-pijl");
 assert.equal(waarheid.vereenvoudigMorgenMaximumHtml('Het verwachte maximum ligt morgen rond 16:00 op <b>21 graden</b>.'),'Morgen wordt het ongeveer <b>21 graden</b>.',"avondbriefing houdt morgenmaximum consumentgericht");
 assert.equal(waarheid.uvPiekTekst('Verwachte UV-piek lag rond 13:00 · matig.','3'),'UV-piek vandaag: 3 (matig), rond 13:00.',"verstreken UV-piek gebruikt consequente tijdtaal");

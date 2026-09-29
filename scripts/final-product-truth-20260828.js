@@ -33,7 +33,7 @@ function temperatuurTrendPresentatie(vanRuw,naarRuw,vanAfgerond,naarAfgerond){
     return {
       compact:true,
       waarde:String(va),
-      tekst:a===b?"Blijft "+va+" °C.":"Blijft rond "+va+" °C."
+      tekst:a===b?"Blijft "+va+"\u00a0°C.":"Blijft rond "+va+"\u00a0°C."
     };
   }
   return {

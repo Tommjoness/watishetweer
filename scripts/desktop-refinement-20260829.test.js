@@ -70,47 +70,50 @@ assert.equal(lokaleIsoNaarUtcMs("2026-09-01T05:13","Asia/Tokyo",32400),Date.UTC(
 const pool={timezone:"Arctic/Longyearbyen",utc_offset_seconds:7200,current:{is_day:1},daily:{sunrise:["2026-06-21T00:00"],sunset:["2026-06-21T00:00"]}};
 assert.equal(zonPresentatie(pool,Date.UTC(2026,5,21,10)).type,"pooldag","identieke pool-sentinels mogen geen nep-zonmoment opleveren");
 
-/* De procentwaarde blijft RH, maar de comfortzin volgt primair het dauwpunt. */
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:43,dew_point_2m:25,temperature_2m:40}),"Zeer benauwde lucht. Dauwpunt circa 25\u00a0°C.","Dubai mag bij hoog dauwpunt nooit droog heten");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:67,dew_point_2m:-52,temperature_2m:-49}),"Extreem droge lucht. Dauwpunt circa -52\u00a0°C.","koude poollucht mag door hoge RH niet als vochtig worden verkocht");
-/* Vanaf 80% heet de lucht nooit aangenaam of droog, vanaf 90% zeer vochtig
-   (bijna verzadigd); een hoog dauwpunt blijft daarbij benoemd. */
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:87,dew_point_2m:14}),"Vochtige lucht. Dauwpunt circa 14\u00a0°C.","87% mag niet aangenaam heten");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:85,dew_point_2m:6.6,temperature_2m:9}),"Vochtige lucht. Dauwpunt circa 7\u00a0°C.","85% bij 9 °C mag niet vrij droog heten");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:95,dew_point_2m:15.6,temperature_2m:16.4}),"Zeer vochtige lucht. Dauwpunt circa 16\u00a0°C.","95% is bijna verzadigd");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:92,dew_point_2m:17.6,temperature_2m:19}),"Zeer vochtige, klamme lucht. Dauwpunt circa 18\u00a0°C.","klam blijft zichtbaar bij bijna verzadigde lucht");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:94,dew_point_2m:23,temperature_2m:24}),"Benauwde lucht. Dauwpunt circa 23\u00a0°C.","benauwd gaat voor zeer vochtig");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:95,dew_point_2m:1.3,temperature_2m:2}),"Zeer hoge relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa 1\u00a0°C.");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:95,dew_point_2m:null}),"Zeer hoge relatieve luchtvochtigheid.");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:79,dew_point_2m:12,temperature_2m:15.5}),"Aangename lucht. Dauwpunt circa 12\u00a0°C.","onder 80% volgt het oordeel het dauwpunt");
-/* De zin spreekt het percentage nooit tegen: koele lucht vanaf 60% is fris,
-   niet droog; strenge vorst met veel procenten krijgt de koude-luchtuitleg. */
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:75,dew_point_2m:3.8,temperature_2m:8}),"Frisse lucht. Dauwpunt circa 4\u00a0°C.","75% bij 8 °C mag niet droog heten");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:65,dew_point_2m:3.7,temperature_2m:10}),"Frisse lucht. Dauwpunt circa 4\u00a0°C.");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:82,dew_point_2m:4.6,temperature_2m:7.5}),"Vochtige lucht. Dauwpunt circa 5\u00a0°C.","82% net boven 7 °C mag niet droog heten");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:30,dew_point_2m:6.2,temperature_2m:25}),"Vrij droge lucht. Dauwpunt circa 6\u00a0°C.","lage procenten blijven droog");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:20,dew_point_2m:12.9,temperature_2m:40}),"Vrij droge lucht. Dauwpunt circa 13\u00a0°C.","20% bij 40 °C is niet aangenaam");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:25,dew_point_2m:16.6,temperature_2m:40}),"Vrij droge lucht. Dauwpunt circa 17\u00a0°C.","25% bij 40 °C is niet klam");
-/* Alle combinaties van -40 tot 45 °C en 1 tot 100%: de zin spreekt het percentage niet tegen. */
+/* De zin onder het percentage zegt in gewone taal of het plakkerig is; het
+   woord dauwpunt staat er niet in. Het dauwpunt bepaalt achter de schermen hoe
+   plakkerig warme lucht is en komt uit dezelfde temperatuur en vochtigheid. */
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:43,dew_point_2m:25,temperature_2m:40}),"Zeer benauwd en plakkerig.","Dubai mag bij hoog dauwpunt nooit droog heten");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:67,dew_point_2m:-52,temperature_2m:-49}),"IJskoude lucht.","poollucht heet niet vochtig");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:95,temperature_2m:16}),"Zeer vochtig, maar niet plakkerig.","de ochtend van de eigenaar: 16 °C en 95%");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:87,dew_point_2m:14}),"Vochtig, maar niet plakkerig.","87% mag niet aangenaam heten");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:85,temperature_2m:9}),"Vochtig, maar niet plakkerig.","85% bij 9 °C mag niet droog heten");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:82,temperature_2m:7.5}),"Vochtig, maar niet plakkerig.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:92,temperature_2m:19}),"Voelt wat plakkerig aan.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:80,temperature_2m:22}),"Voelt plakkerig aan.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:94,temperature_2m:24}),"Benauwd en plakkerig.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:90,temperature_2m:28}),"Zeer benauwd en plakkerig.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:60,temperature_2m:20}),"Aangenaam, niet plakkerig.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:40,temperature_2m:30}),"Niet plakkerig.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:75,temperature_2m:8}),"Fris, niet plakkerig.","75% bij 8 °C mag niet droog heten");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:30,temperature_2m:25}),"Droge lucht, niet plakkerig.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:20,temperature_2m:40}),"Droge hitte, niet plakkerig.","20% bij 40 °C is niet aangenaam");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:25,temperature_2m:40}),"Droge hitte, niet plakkerig.","25% bij 40 °C is niet plakkerig");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:95,temperature_2m:2}),"Koude, vochtige lucht.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:60,temperature_2m:5}),"Koude lucht.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:40,temperature_2m:0}),"Koude, droge lucht.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:90,temperature_2m:-20}),"IJskoude, vochtige lucht.","90% bij strenge vorst mag niet droog heten");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:95}),"Zeer vochtige lucht.","zonder temperatuur alleen de relatieve vochtigheid");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:87,dew_point_2m:null}),"Vochtige lucht.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:55}),"Normale luchtvochtigheid.");
+assert.equal(vochtigheidPresentatie({relative_humidity_2m:null}),"Luchtvochtigheid niet beschikbaar.");
+/* Alle combinaties van -40 tot 45 °C en 1 tot 100%: geen dauwpunt in de zin, en de zin
+   spreekt het percentage niet tegen. */
 for(let t=-40;t<=45;t+=0.5)for(let rh=1;rh<=100;rh++){
-  const z=vochtigheidPresentatie({temperature_2m:t,relative_humidity_2m:rh,dew_point_2m:dauwpuntUit(t,rh)}),b=z.split(/[.;]/)[0],m=t+" °C en "+rh+"%: "+z;
-  assert(/Dauwpunt circa -?\d+\u00a0°C\.$/.test(z),m);
-  if(rh>=80)assert(!/droog|droge|aangenaam|aangename|fris/i.test(b),m);
-  if(rh>=60&&!(t<=7&&dauwpuntUit(t,rh)<-15))assert(!/droge/i.test(b),m);
-  if(rh<50)assert(!/vochtig/i.test(b)||/benauwd/i.test(b),m);
-  if(rh<60)assert(!/hoge relatieve/i.test(b),m);
-  if(rh<30)assert(!/aangename|klam/i.test(b),m);
+  const z=vochtigheidPresentatie({temperature_2m:t,relative_humidity_2m:rh}),m=t+" °C en "+rh+"%: "+z;
+  assert(!/dauwpunt|\d/i.test(z)&&/\.$/.test(z)&&z.length<=36,m);
+  if(rh>=80)assert(!/droog|droge|aangenaam|fris/i.test(z),m);
+  if(rh>=60)assert(!/droge/i.test(z),m);
+  if(rh<50)assert(!/vochtig/i.test(z),m);
+  if(rh<30)assert(!/voelt/i.test(z),m);
+  if(t<=7)assert(!/plakkerig/i.test(z),m);
 }
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:90,dew_point_2m:-21.2,temperature_2m:-20}),"Zeer hoge relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa -21\u00a0°C.","90% bij strenge vorst mag niet extreem droog heten");
 /* Dauwpunt uit de actuele temperatuur en luchtvochtigheid (Magnus). */
 const bijna=(a,b,m)=>assert(Math.abs(a-b)<=0.15,m+": "+a+" ≠ "+b);
 bijna(dauwpuntUit(16,95),15.2,"16 °C en 95%");bijna(dauwpuntUit(20,50),9.3,"20 °C en 50%");bijna(dauwpuntUit(30,70),23.9,"30 °C en 70%");bijna(dauwpuntUit(-10,80),-12.9,"-10 °C en 80%");
 assert.equal(dauwpuntUit(16,100).toFixed(6),"16.000000","verzadigd: dauwpunt is de temperatuur");
 assert.equal(dauwpuntUit(16,0),null);assert.equal(dauwpuntUit(null,80),null);assert.equal(dauwpuntUit(16,101),null);
 for(let t=-40;t<=45;t+=5)for(let rh=5;rh<=100;rh+=5)assert(dauwpuntUit(t,rh)<=t+1e-9,"dauwpunt nooit boven de temperatuur ("+t+" °C, "+rh+"%)");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:52,dew_point_2m:9}),"Vrij droge lucht. Dauwpunt circa 9\u00a0°C.");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:87,dew_point_2m:null}),"Hoge relatieve luchtvochtigheid.","zonder dauwpunt mag alleen relatieve vochtigheid worden geduid");
-assert.equal(vochtigheidPresentatie({relative_humidity_2m:null}),"Luchtvochtigheid niet beschikbaar.");
 
 const uitvoerStap="node scripts/desktop-refinement-20260829.js";
 assert.ok(pkg.scripts.test.includes(uitvoerStap),"npm test moet de finale verfijning op de artifact uitvoeren vóór browserchecks");
