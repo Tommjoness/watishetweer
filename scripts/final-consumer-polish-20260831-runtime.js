@@ -25,7 +25,12 @@ function zonPresentatie(data,nuMs=Date.now()){const d=data||{},event=volgendZonm
    poollucht meteorologisch correct als extreem droog blijft worden benoemd.
    Vanaf 80% heet de lucht nooit aangenaam of droog: naast een groot "87 %"
    leest dat als een tegenspraak. Vanaf 90% is de lucht bijna verzadigd en heet
-   ze zeer vochtig; een hoog dauwpunt (benauwd, klam) blijft daarbij zichtbaar. */
+   ze zeer vochtig; een hoog dauwpunt (benauwd, klam) blijft daarbij zichtbaar.
+   Vanaf 60% heet koele lucht met een laag dauwpunt fris en niet droog, en
+   koude lucht met veel procenten krijgt de uitleg over weinig waterdamp, ook
+   bij strenge vorst: de zin mag het percentage ernaast nooit tegenspreken.
+   Onder 30% (woestijnhitte) is de lucht vrij droog en niet aangenaam of klam;
+   alleen een echt hoog dauwpunt (benauwd) blijft dan staan. */
 function vochtigheidPresentatie(current){
   const c=current||{},rh=getal(c.relative_humidity_2m),dp=getal(c.dew_point_2m),t=getal(c.temperature_2m);
   if(rh===null||rh<0||rh>100)return "Luchtvochtigheid niet beschikbaar.";
@@ -37,8 +42,8 @@ function vochtigheidPresentatie(current){
     if(rh<45)return "Relatief lage luchtvochtigheid.";
     return "Gemiddelde relatieve luchtvochtigheid.";
   }
-  if(dp<-15)return "Extreem droge lucht. Dauwpunt circa "+Math.round(dp)+"\u00a0°C.";
   if(t!==null&&t<=7&&rh>=70)return (rh>=90?"Zeer hoge":"Hoge")+" relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa "+Math.round(dp)+"\u00a0°C.";
+  if(dp<-15)return "Extreem droge lucht. Dauwpunt circa "+Math.round(dp)+"\u00a0°C.";
   let basis;
   if(dp>=24)basis="Zeer benauwde lucht.";
   else if(dp>=21)basis="Benauwde lucht.";
@@ -49,13 +54,21 @@ function vochtigheidPresentatie(current){
   else if(dp>=0)basis="Droge lucht.";
   else basis="Zeer droge lucht.";
   if(rh>=90&&dp<21)basis=/klam/i.test(basis)?"Zeer vochtige, klamme lucht.":"Zeer vochtige lucht.";
-  else if(rh>=80&&/droge|Aangename/.test(basis))basis="Vochtige lucht.";
+  else if(rh>=80&&/droge|aangename/i.test(basis))basis="Vochtige lucht.";
+  else if(rh>=60&&/droge/i.test(basis))basis="Frisse lucht.";
+  else if(rh<30&&/aangename|klam/i.test(basis))basis="Vrij droge lucht.";
   return basis+" Dauwpunt circa "+Math.round(dp)+"\u00a0°C.";
 }
-const api={parseLokaleIso,datumPlus,zoneDelen,lokaleIsoNaarUtcMs,lokaleDatumNu,volgendZonmoment,zonPresentatie,vochtigheidPresentatie};if(typeof module!=="undefined"&&module.exports)module.exports=api;root.WeatherNowFinalConsumerPolish20260831=api;
+/* Dauwpunt uit dezelfde actuele temperatuur en luchtvochtigheid als de tegel
+   toont (Magnus, Alduchov en Eskridge 1996; boven water, zoals weermodellen
+   het dauwpunt geven). Het uurdauwpunt hoort bij het begin van het uur of bij
+   een later klokuur en kan dan niet passen bij het getoonde percentage; zo
+   staan percentage, temperatuur en dauwpunt altijd in dezelfde verhouding. */
+function dauwpuntUit(temp,rh){const t=getal(temp),v=getal(rh);if(t===null||v===null||v<=0||v>100)return null;const g=Math.log(v/100)+17.625*t/(243.04+t);return 243.04*g/(17.625-g);}
+const api={parseLokaleIso,datumPlus,zoneDelen,lokaleIsoNaarUtcMs,lokaleDatumNu,volgendZonmoment,zonPresentatie,vochtigheidPresentatie,dauwpuntUit};if(typeof module!=="undefined"&&module.exports)module.exports=api;root.WeatherNowFinalConsumerPolish20260831=api;
 if(typeof document==="undefined"||typeof window==="undefined"||typeof S==="undefined")return;
 function zetZontegel(){if(!S.d)return;const waarde=document.getElementById("gust"),sub=document.getElementById("gustsub"),stat=waarde&&waarde.closest(".stat"),kop=stat&&stat.querySelector(".eyebrow");if(!waarde||!sub||!kop)return;const p=zonPresentatie(S.d,Date.now());kop.textContent=p.kop;if(p.type==="opkomst"||p.type==="ondergang")waarde.innerHTML=p.uren>0?`${p.uren}<s> u</s> ${pad2(p.minuten)}<s> min</s>`:`${p.minuten}<s> min</s>`;else waarde.textContent=p.waardeTekst;sub.textContent=p.sub;if(p.aria)waarde.setAttribute("aria-label",p.aria);else waarde.removeAttribute("aria-label");}
-function zetVochtigheid(){if(!S.d||!S.d.current)return;const sub=document.getElementById("humsub");if(!sub)return;const h=S.d.hourly||{},i=Number.isInteger(S.i0)?S.i0:-1;const dp=i>=0&&Array.isArray(h.dew_point_2m)?getal(h.dew_point_2m[i]):null;const temp=getal(S.d.current.temperature_2m)!==null?getal(S.d.current.temperature_2m):(i>=0&&Array.isArray(h.temperature_2m)?getal(h.temperature_2m[i]):null);const input=Object.assign({},S.d.current,{dew_point_2m:dp,temperature_2m:temp});sub.textContent=vochtigheidPresentatie(input);}
+function zetVochtigheid(){if(!S.d||!S.d.current)return;const sub=document.getElementById("humsub");if(!sub)return;const h=S.d.hourly||{},i=Number.isInteger(S.i0)?S.i0:-1;const temp=getal(S.d.current.temperature_2m)!==null?getal(S.d.current.temperature_2m):(i>=0&&Array.isArray(h.temperature_2m)?getal(h.temperature_2m[i]):null);const dpUur=i>=0&&Array.isArray(h.dew_point_2m)?getal(h.dew_point_2m[i]):null,dpNu=dauwpuntUit(temp,S.d.current.relative_humidity_2m);const dp=dpNu!==null?dpNu:dpUur;const input=Object.assign({},S.d.current,{dew_point_2m:dp,temperature_2m:temp});sub.textContent=vochtigheidPresentatie(input);}
 function verfijnWeekKop(){const bereik=document.querySelector("#days .row.day.kop .bar");if(bereik)bereik.textContent="Temp.bereik";}
 /* Tussen 431 en 759px tekent de mobiele grafiek op haar werkelijke breedte in
    plaats van 1,5 tot 1,9 keer opgeschaald; cijfers en tijden worden daar dus
