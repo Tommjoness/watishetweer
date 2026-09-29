@@ -76,11 +76,17 @@ const CSS=`
      De kolommen volgen hun inhoud. */
   html body .wiw-chart-layout:not([data-hour-paired="0"])${NIET}{grid-template-columns:minmax(0,2fr) minmax(440px,1fr)!important}
   html body #wiw-hour-table.wiw-hour-table${NIET}{table-layout:auto!important}
-  html body #wiw-hour-table th${NIET},html body #wiw-hour-table td${NIET}{width:auto!important;white-space:nowrap!important}
+  html body #wiw-hour-table th${NIET},html body #wiw-hour-table td${NIET}{width:auto!important}
+  /* Iedere waarde blijft heel ("12,4 mm", "100% kans"), maar tussen de twee
+     waarden mag de regel breken: de tweede waarde is een inline-blok, want in
+     de HTML staat er geen spatie tussen. Lange live waarden (storm, zware
+     regen) gaan zo netjes naar een tweede regel in plaats van buiten de tabel
+     te lopen; gewone waarden blijven op één regel. */
+  html body #wiw-hour-table td>span${NIET},html body #wiw-hour-table td time${NIET}{white-space:nowrap!important}
   html body #wiw-hour-table tbody td${NIET}{padding:calc(3px + var(--wiw-hour-row-pad-extra,0px)) 6px!important;line-height:1.25!important}
   html body #wiw-hour-table .wiw-hour-weather-icon svg${NIET}{width:18px!important;height:18px!important}
   html body #wiw-hour-table .wiw-hour-rain>span${NIET},html body #wiw-hour-table .wiw-hour-wind>span${NIET}{display:inline!important}
-  html body #wiw-hour-table .wiw-hour-rain>.wiw-hour-secondary${NIET},html body #wiw-hour-table .wiw-hour-wind>.wiw-hour-secondary${NIET}{margin-left:.4em!important;font-size:13px!important}
+  html body #wiw-hour-table .wiw-hour-rain>.wiw-hour-secondary${NIET},html body #wiw-hour-table .wiw-hour-wind>.wiw-hour-secondary${NIET}{display:inline-block!important;margin-left:.4em!important;font-size:13px!important}
   html body #wiw-hour-table .wiw-hour-primary${NIET},html body #wiw-hour-table time${NIET}{font-size:15px!important}
   html body #wiw-hour-table thead th${NIET}{font-size:12.5px!important}
   html body #wiw-hour-table .wiw-hour-secondary${NIET}{font-size:13px!important}
