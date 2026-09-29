@@ -97,6 +97,24 @@ const CSS=`
   /* Zeven dagen: de temperatuurbalk krijgt de ruimte, niet een lege strook
      achter de korte verwachtingstekst. */
   html body #days .row.day${NIET}{grid-template-columns:150px 28px minmax(200px,1fr) minmax(84px,.35fr) 52px minmax(200px,1.25fr) 52px 96px!important;column-gap:16px!important}
+
+  /* Nachtzicht: Beste zichtperiode en Maan staan gecentreerd, kop en tekst,
+     net als Bewolking. */
+  html body #nights .row.night.kop>.nmeta.wide${NIET},html body #nights .row.night.kop>.wiw-night-moon-head${NIET},
+  html body #nights .row.night:not(.kop)>.nachtvenster${NIET},html body #nights .row.night:not(.kop)>.nachtmaan${NIET}{text-align:center!important;padding-left:10px!important;padding-right:10px!important}
+
+  /* Voet: bronnen, disclaimer, links en de weergaveknop gecentreerd onder de
+     pagina; de disclaimer in een leesbare breedte. */
+  html body #app footer${NIET},html body #app footer>.bron${NIET},html body #app footer>.footer-contact${NIET},
+  html body .wiw-weergave-voet${NIET}{justify-content:center!important;text-align:center!important}
+  html body #app footer>span.bron:not(.bron-bronnen):not(:has(a))${NIET}{flex:0 0 100%!important;max-width:none!important;box-sizing:border-box!important;padding-left:max(0px,calc((100% - 900px) / 2))!important;padding-right:max(0px,calc((100% - 900px) / 2))!important}
+}
+@media (min-width:1360px){
+  /* Vanaf 1360px heeft Maan een eigen kolom. Iedere Nachtzicht-rij is een
+     eigen grid: met een kolom zo breed als de inhoud was de kolom in de
+     kopregel smaller dan in de nachten, zodat "Beste zichtperiode" en "Maan"
+     niet boven hun tekst stonden. Een vaste maat houdt kop en nachten gelijk. */
+  html body #nights .row.night${NIET}{grid-template-columns:112px minmax(150px,190px) 100px minmax(120px,150px) minmax(0,1fr) minmax(220px,260px)!important}
 }
 `;
 

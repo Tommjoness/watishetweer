@@ -147,7 +147,7 @@ assert(!runtime.includes("verminderMobieleTemperatuurlabels"),"De oude op-de-lij
 assert(!runtime.includes("mobieleTemperatuurLabelLimiet(window.innerWidth)"),"De mobiele 24-uursgrafiek mag verplichte ankers niet langer via een viewport-limiet uitdunnen.");
 
 /* Desktop: dezelfde accenten, met behoud van het uurcijfer. */
-assert(/compactMobieleGrafiekHoogte\(\);koppelTijdAanTemperatuur\(\);bouwDesktopGrafiekAccenten\(\);bewaakGrafiekLabels\(\);\}/.test(runtime),"Tijdkoppeling en desktopaccenten draaien in dezelfde idempotente grafiekpass, de tijden vóór de iconen, en de botsingscontrole als laatste.");
+assert(/compactMobieleGrafiekHoogte\(\);koppelTijdAanTemperatuur\(\);bouwDesktopGrafiekAccenten\(\);stippenAlleenBovenTijd\(\);bewaakGrafiekLabels\(\);\}/.test(runtime),"Tijdkoppeling en desktopaccenten draaien in dezelfde idempotente grafiekpass, de tijden vóór de iconen, daarna alleen stippen boven een astijd, en de botsingscontrole als laatste.");
 assert(!runtime.includes("regenstaaf-mm")&&!runtime.includes("herplaatsRegengetallen"),"De grafiek toont neerslag alleen als staafjes, zonder getallen.");
 assert(runtime.includes("function koppelTijdAanTemperatuur(){")&&runtime.includes('data-temp-time')&&runtime.includes('data-temp-time-complete'),"Iedere temperatuur in de grafiek krijgt een tijd onder haar punt, of vervalt.");
 {

@@ -1228,6 +1228,36 @@ function getekendeLijnPunten(svg){
   });
   return uit;
 }
+/* Iedere temperatuurstip staat boven een tijd op de as (verzoek van de
+   eigenaar, 29 september: "niet alle stippen staan boven de tijd"). Valt piek
+   of dal tussen twee astijden, dan blijft het vette cijfer bij de top van de
+   lijn staan, maar zonder stip: een stip zonder tijd eronder leest als een
+   meetpunt op een uur dat de as niet noemt. Geldt op iedere breedte en draait
+   na de desktopaccenten, die de piek/dal-stip op desktop plaatsen. De rode
+   nu-stip hoort bij de nu-lijn en blijft staan. */
+function stippenAlleenBovenTijd(){
+  const svg=document.getElementById("chart"),g=S.geo;
+  if(!svg||!g||!Array.isArray(g.TI)||typeof g.x!=="function")return;
+  const n=g.TI.length,x=i=>Number(g.x(i));
+  const ticks=bestaandeUurLabels(svg,g).filter(el=>!el.closest("#scrub")&&el.getAttribute("display")!=="none");
+  if(!ticks.length)return;
+  const dichtst=(px,past)=>{let b=null;for(let i=0;i<n;i++){if(past&&!past(i))continue;if(b===null||Math.abs(x(i)-px)<Math.abs(x(b)-px))b=i;}return b;};
+  /* Uur onder iedere astijd: de mobiele as noemt haar index; elders het uur van
+     de tekst (een venster van 25 uur noemt een uur twee keer: neem het dichtste),
+     anders het dichtste punt. */
+  const metTijd=new Set(ticks.map(el=>{
+    if(el.hasAttribute("data-mobile-hour-index"))return Number(el.getAttribute("data-mobile-hour-index"));
+    const t=String(el.textContent||"").trim(),px=Number(el.getAttribute("x"));
+    const opTekst=dichtst(px,i=>String(g.TI[i]).slice(11,16)===t);
+    return opTekst!==null?opTekst:dichtst(px);
+  }).filter(i=>Number.isInteger(i)));
+  svg.querySelectorAll("circle[data-temp-index],circle[data-mobile-temp-marker-dot],circle[data-desktop-temp-marker-dot]").forEach(c=>{
+    if(c.closest("#scrub"))return;
+    const i=dichtst(Number(c.getAttribute("cx")));
+    if(i!==null&&!metTijd.has(i))c.remove();
+  });
+}
+
 function bewaakGrafiekLabels(){
   const svg=document.getElementById("chart"),g=typeof S!=="undefined"&&S.geo;
   if(!svg||!g)return;
@@ -1336,7 +1366,7 @@ function bewaakGrafiekLabels(){
 let uurAsToken=0;
 function planUurAsHerstel(){
   const token=++uurAsToken;
-  const voer=()=>{if(token===uurAsToken){maakGrafiekTekstLeesbaar();herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();bouwMobieleTemperatuurRij();polishNuLabel();compactMobieleGrafiekHoogte();koppelTijdAanTemperatuur();bouwDesktopGrafiekAccenten();bewaakGrafiekLabels();}};
+  const voer=()=>{if(token===uurAsToken){maakGrafiekTekstLeesbaar();herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();bouwMobieleTemperatuurRij();polishNuLabel();compactMobieleGrafiekHoogte();koppelTijdAanTemperatuur();bouwDesktopGrafiekAccenten();stippenAlleenBovenTijd();bewaakGrafiekLabels();}};
   const start=()=>{
     const r1=()=>{const r2=()=>voer();if(typeof requestAnimationFrame==="function")requestAnimationFrame(r2);else setTimeout(r2,0);};
     if(typeof requestAnimationFrame==="function")requestAnimationFrame(r1);else setTimeout(r1,0);

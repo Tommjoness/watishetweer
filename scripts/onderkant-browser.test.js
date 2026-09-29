@@ -1,11 +1,16 @@
 "use strict";
 
 /* Onderkant van de pagina op het finale artifact, met de echte runtime.
-   - Bronnen: één links uitgelijnde regel met alleen de gebruikte bronnen.
-     Visual Crossing en WeatherAPI.com verschijnen alleen als de getoonde
-     verwachting van die bron komt.
-   - Voet: disclaimer, links en contact links uitgelijnd, onderstreept direct
-     onder de tekst; tapdoelen 44px op touch en 24px met muis.
+   - Bronnen: één regel met alleen de gebruikte bronnen. Visual Crossing en
+     WeatherAPI.com verschijnen alleen als de getoonde verwachting van die
+     bron komt.
+   - Voet: onderstreept direct onder de tekst; tapdoelen 44px op touch en
+     24px met muis. Op touchbreedte links uitgelijnd op de lijn van de pagina;
+     vanaf 1100px (verzoek van de eigenaar, 29 september: "de footer heeft te
+     veel uitlijning naar links") staan bronnen, disclaimer (hooguit 900px
+     breed), links en de weergaveknop gecentreerd onder de pagina.
+   - Nachtzicht vanaf 1100px: de kolommen Beste zichtperiode en Maan staan
+     gecentreerd, kop en tekst met hetzelfde midden (eigenaar, 29 september).
    - SEO-blok en populaire plaatsen beginnen op dezelfde lijn als de inhoud
      van het vel, op iedere breedte.
 
@@ -62,6 +67,9 @@ function meet(){
   const zichtbaar=e=>!!e&&e.getClientRects().length>0&&getComputedStyle(e).visibility!=="hidden";
   const rect=e=>{const r=e.getBoundingClientRect();return {l:r.left,r:r.right,t:r.top+scrollY,b:r.bottom+scrollY,w:r.width,h:r.height};};
   const tekstLinks=e=>{if(!e)return null;const rg=document.createRange();rg.selectNodeContents(e);const r=[...rg.getClientRects()].filter(x=>x.width>0);return r.length?Math.min(...r.map(x=>x.left)):null;};
+  const tekstRechts=e=>{if(!e)return null;const rg=document.createRange();rg.selectNodeContents(e);const r=[...rg.getClientRects()].filter(x=>x.width>0);return r.length?Math.max(...r.map(x=>x.right)):null;};
+  /* Midden van een groep elementen: van de meest linkse tot de meest rechtse rand. */
+  const midden=els=>{const r=els.filter(zichtbaar).map(e=>e.getBoundingClientRect());return r.length?(Math.min(...r.map(x=>x.left))+Math.max(...r.map(x=>x.right)))/2:null;};
   const app=document.getElementById("app"),footer=document.querySelector("footer"),bron=footer.querySelector(".bron-bronnen");
   const bronLinks=[...bron.querySelectorAll(".bronitem a")].filter(zichtbaar);
   const disclaimer=[...footer.querySelectorAll(":scope>span.bron")].find(e=>/Weersinformatie is algemeen/.test(e.textContent||""));
@@ -74,7 +82,14 @@ function meet(){
     bronnen:bronLinks.map(a=>({t:(a.textContent||"").trim(),l:a.getBoundingClientRect().left,top:Math.round(a.getBoundingClientRect().top),h:a.getBoundingClientRect().height})),
     bronDisplay:getComputedStyle(bron).display,
     labelLinks:tekstLinks(bron.querySelector(".bronlabel")),
-    disclaimer:disclaimer?{l:tekstLinks(disclaimer),align:getComputedStyle(disclaimer).textAlign}:null,
+    disclaimer:disclaimer?{l:tekstLinks(disclaimer),r:tekstRechts(disclaimer),align:getComputedStyle(disclaimer).textAlign}:null,
+    voetMidden:(footer.getBoundingClientRect().left+footer.getBoundingClientRect().right)/2,
+    bronMidden:midden([bron.querySelector(".bronlabel"),...bronLinks]),
+    linksMidden:midden([footer.querySelector('a[href="/over/"]'),footer.querySelector('a[href="/privacy"]'),footer.querySelector("details.footer-details>summary"),footer.querySelector(".footer-contact")]),
+    weergaveMidden:midden([...document.querySelectorAll(".wiw-weergave-voet>*")]),
+    nacht:(()=>{const kop=document.querySelector("#nights .row.night.kop"),rij=[...document.querySelectorAll("#nights .row.night:not(.kop)")].find(zichtbaar);if(!kop||!rij)return null;
+      const m=e=>{if(!zichtbaar(e))return null;const r=e.getBoundingClientRect();return {m:(r.left+r.right)/2,a:getComputedStyle(e).textAlign};};
+      return {vensterKop:m(kop.querySelector(".nmeta.wide")),venster:m(rij.querySelector(".nachtvenster")),maanKop:m(kop.querySelector(".wiw-night-moon-head")),maan:m(rij.querySelector(".nachtmaan"))};})(),
     doelen:doelen.map(e=>{const s=getComputedStyle(e);return {t:(e.textContent||"").trim().slice(0,28),h:e.getBoundingClientRect().height,l:e.getBoundingClientRect().left,deco:s.textDecorationLine,rand:s.borderBottomWidth,schaduw:s.boxShadow};}),
     seo:seo?{kruimel:tekstLinks(seo.querySelector(".seo-breadcrumb")),kop:tekstLinks(seo.querySelector("h2")),kopGrootte:parseFloat(getComputedStyle(seo.querySelector("h2")).fontSize),tekst:tekstLinks(seo.querySelector("p")),buurt:tekstLinks(seo.querySelector(".seo-route-nearby-kop"))}:null,
     plaatsen:nav?{kop:tekstLinks(nav.querySelector(".seo-plaatsnav-kop")),eerste:navLinks[0]?tekstLinks(navLinks[0]):null,aantal:navLinks.length,hoogte:Math.min(...navLinks.map(a=>a.getBoundingClientRect().height)),hoogteBlok:nav.getBoundingClientRect().height}:null,
@@ -99,20 +114,29 @@ function meet(){
         const namen=m.bronnen.map(b=>b.t);
         assert(namen.includes("Open-Meteo")&&namen.includes("CAMS"),label+": kernbronnen ontbreken: "+JSON.stringify(namen));
         assert(!namen.some(n=>/Visual Crossing|WeatherAPI/.test(n)),label+": Visual Crossing of WeatherAPI.com staat vermeld bij Open-Meteo-data: "+JSON.stringify(namen));
-        assert(Math.abs(m.labelLinks-m.appLinks)<=1.5,label+": bronlabel begint niet op de lijn van de pagina ("+m.labelLinks+" tegen "+m.appLinks+")");
+        if(touch)assert(Math.abs(m.labelLinks-m.appLinks)<=1.5,label+": bronlabel begint niet op de lijn van de pagina ("+m.labelLinks+" tegen "+m.appLinks+")");
+        else for(const [n,x] of Object.entries({bronnen:m.bronMidden,links:m.linksMidden,weergave:m.weergaveMidden}))
+          assert(x!==null&&Math.abs(x-m.voetMidden)<=3,label+": "+n+" staan niet gecentreerd onder de pagina (midden "+x+" tegen "+m.voetMidden+")");
         /* Touch: label op een eigen regel, bronnen eronder vanaf de paginalijn.
            Muis: bronnen direct achter het label op dezelfde regel. */
         if(touch)assert(Math.abs(Math.min(...m.bronnen.map(b=>b.l))-m.appLinks)<=1.5,label+": eerste bron begint niet op de lijn van de pagina: "+JSON.stringify(m.bronnen));
         else assert(m.bronnen[0].l>m.labelLinks&&m.bronnen[0].l-m.labelLinks<260,label+": bronnen staan niet direct achter het label: "+JSON.stringify(m.bronnen));
         assert(new Set(m.bronnen.map(b=>b.top)).size<=(touch?2:1),label+": bronnen beslaan te veel regels: "+JSON.stringify(m.bronnen));
         /* Voet: links uitgelijnd, onderstreept, tapdoelen. */
-        assert(m.disclaimer&&Math.abs(m.disclaimer.l-m.appLinks)<=1.5&&m.disclaimer.align!=="center",label+": disclaimer staat niet links in de kolom: "+JSON.stringify(m.disclaimer));
+        if(touch)assert(m.disclaimer&&Math.abs(m.disclaimer.l-m.appLinks)<=1.5&&m.disclaimer.align!=="center",label+": disclaimer staat niet links in de kolom: "+JSON.stringify(m.disclaimer));
+        else assert(m.disclaimer&&m.disclaimer.align==="center"&&m.disclaimer.r-m.disclaimer.l<=901&&Math.abs((m.disclaimer.l+m.disclaimer.r)/2-m.voetMidden)<=3,label+": disclaimer staat niet gecentreerd in hooguit 900px: "+JSON.stringify(m.disclaimer)+" midden voet "+m.voetMidden);
+        if(!touch){
+          const n=m.nacht;assert(n&&n.vensterKop&&n.venster,label+": Nachtzicht-kolommen niet gevonden: "+JSON.stringify(n));
+          const paren=[["Beste zichtperiode",n.vensterKop,n.venster]];if(w>=1360)paren.push(["Maan",n.maanKop,n.maan]);
+          for(const [naam,kop,tekst] of paren)
+            assert(kop&&tekst&&kop.a==="center"&&tekst.a==="center"&&Math.abs(kop.m-tekst.m)<=2,label+": Nachtzicht-kolom "+naam+" staat niet gecentreerd onder zijn kop: "+JSON.stringify({kop,tekst}));
+        }
         assert(m.doelen.length>=6,label+": te weinig voetlinks gevonden: "+JSON.stringify(m.doelen));
         for(const d of m.doelen){
           assert(d.h>=minDoel,label+": voetlink '"+d.t+"' is lager dan "+Math.ceil(minDoel)+"px ("+d.h+")");
           assert(/underline/.test(d.deco)&&d.rand==="0px"&&d.schaduw==="none",label+": voetlink '"+d.t+"' heeft geen onderstreping direct onder de tekst: "+JSON.stringify(d));
         }
-        assert(Math.abs(Math.min(...m.doelen.map(d=>d.l))-m.appLinks)<=1.5,label+": voetlinks beginnen niet op de lijn van de pagina");
+        if(touch)assert(Math.abs(Math.min(...m.doelen.map(d=>d.l))-m.appLinks)<=1.5,label+": voetlinks beginnen niet op de lijn van de pagina");
         /* SEO-blok en plaatsen op de lijn van de pagina. */
         for(const [n,x] of Object.entries({kruimelpad:m.seo.kruimel,kop:m.seo.kop,tekst:m.seo.tekst,buurt:m.seo.buurt,plaatsenkop:m.plaatsen.kop}))
           assert(x!==null&&Math.abs(x-m.appLinks)<=1.5,label+": SEO-"+n+" begint op "+x+"px in plaats van op de lijn van de pagina ("+m.appLinks+"px)");
@@ -127,7 +151,7 @@ function meet(){
           assert(m.plaatsen.hoogteBlok<=150,label+": populaire plaatsen beslaan "+Math.round(m.plaatsen.hoogteBlok)+"px");
         }
         assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
-        console.log("ONDERKANT "+label+": voet "+Math.round(m.footer.h)+"px, bronnen "+namen.join(", ")+"; alles op x="+Math.round(m.appLinks)+".");
+        console.log("ONDERKANT "+label+": voet "+Math.round(m.footer.h)+"px, bronnen "+namen.join(", ")+"; "+(touch?"alles op x="+Math.round(m.appLinks):"voet gecentreerd rond x="+Math.round(m.voetMidden)+", SEO-blok op x="+Math.round(m.appLinks))+".");
       }finally{await context.close();}
     }
     /* Visual Crossing levert: dan hoort de verplichte vermelding zichtbaar te zijn, WeatherAPI.com niet. */
