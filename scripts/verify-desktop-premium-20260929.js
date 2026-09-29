@@ -21,7 +21,7 @@ for(const p of htmlBestanden(OUT)){
     ".seo-plaatsnav-inner:not(#wiw-desktop-premium){max-width:1600px!important",
     "#nights .row.night:not(#wiw-desktop-premium){grid-template-columns:112px minmax(150px,190px) 100px minmax(120px,150px) minmax(0,1fr) max-content!important",
     "#app #aq.stats:not(#wiw-desktop-premium){max-width:none!important",
-    "minmax(0,2fr) minmax(440px,1fr)","#wiw-hour-table td>span:not(#wiw-desktop-premium),html body #wiw-hour-table td time:not(#wiw-desktop-premium){white-space:nowrap!important}",".wiw-hour-wind>.wiw-hour-secondary:not(#wiw-desktop-premium){display:inline-block!important","#wiw-hour-table.wiw-hour-table:not(#wiw-desktop-premium){table-layout:auto!important}"
+    "minmax(0,1.9fr) minmax(460px,1fr)","#wiw-hour-table td>span:not(#wiw-desktop-premium),html body #wiw-hour-table td time:not(#wiw-desktop-premium){white-space:nowrap!important}",".wiw-hour-wind>.wiw-hour-secondary:not(#wiw-desktop-premium){display:inline-block!important","#wiw-hour-table.wiw-hour-table:not(#wiw-desktop-premium){table-layout:auto!important}"
   ])if(!css.includes(vereist))throw new Error(rel+": desktoplaag mist "+vereist);
   aantal++;
 }

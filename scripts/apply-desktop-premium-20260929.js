@@ -20,7 +20,7 @@ const OWNER_ID="wiw-samenhang-20260926";
      tabelwaarden 15px; vanaf 1440px (breed scherm) 12,5, 15 en 16px. De
      uurtabel naast de grafiek houdt tot 1600px haar maat (de kolom is daar
      smal); daarboven staat ieder uur op één regel in een iets bredere kolom
-     (grafiek twee derde, tabel een derde).
+     (grafiek 1,9 : tabel 1).
    - Nachtzicht: de kolom Maan is zo breed als haar tekst, zodat er rechts
      geen lege kolom meer staat; Beste zichtperiode neemt de ruimte.
    - Lucht, pollen en zon beslaat dezelfde breedte als de rest, in plaats van
@@ -71,24 +71,26 @@ const CSS=`
   html body #app .stat .sval${NIET}{font-size:34px!important}
 }
 @media (min-width:1600px){
-  /* Uurtabel (vanaf 1600px, waar de kolom breed genoeg is): één regel per uur ("0,0 mm 0% kans", "NW 3 Bft 14 km/u") in
+  /* Uurtabel (vanaf 1600px, waar de kolom breed genoeg is): één regel per uur ("0,4 mm 45% kans", "ZZW 4 Bft 25 km/u") in
      een iets bredere kolom, zodat naast de (hogere) grafiek meer uren passen.
-     De kolommen volgen hun inhoud. */
-  html body .wiw-chart-layout:not([data-hour-paired="0"])${NIET}{grid-template-columns:minmax(0,2fr) minmax(440px,1fr)!important}
+     De kolommen volgen hun inhoud. Grafiek 1,9 : tabel 1 (grafiek ruim 65%)
+     met krappe celmarges: ook lange waarden zoals "12,4 mm 100% kans" en
+     "WZW 9 Bft 88 km/u" passen dan op één regel. */
+  html body .wiw-chart-layout:not([data-hour-paired="0"])${NIET}{grid-template-columns:minmax(0,1.9fr) minmax(460px,1fr)!important}
   html body #wiw-hour-table.wiw-hour-table${NIET}{table-layout:auto!important}
   html body #wiw-hour-table th${NIET},html body #wiw-hour-table td${NIET}{width:auto!important}
-  /* Iedere waarde blijft heel ("12,4 mm", "100% kans"), maar tussen de twee
-     waarden mag de regel breken: de tweede waarde is een inline-blok, want in
-     de HTML staat er geen spatie tussen. Lange live waarden (storm, zware
-     regen) gaan zo netjes naar een tweede regel in plaats van buiten de tabel
-     te lopen; gewone waarden blijven op één regel. */
+  /* Vangnet voor uitzonderlijk lange waarden: iedere waarde blijft heel
+     ("12,4 mm", "100% kans"), maar tussen de twee waarden mag de regel breken.
+     De tweede waarde is daarvoor een inline-blok, want in de HTML staat er
+     geen spatie tussen. Zo'n regel gaat netjes naar een tweede regel in
+     plaats van buiten de tabel te lopen. */
   html body #wiw-hour-table td>span${NIET},html body #wiw-hour-table td time${NIET}{white-space:nowrap!important}
-  html body #wiw-hour-table tbody td${NIET}{padding:calc(3px + var(--wiw-hour-row-pad-extra,0px)) 6px!important;line-height:1.25!important}
+  html body #wiw-hour-table tbody td${NIET}{padding:calc(3px + var(--wiw-hour-row-pad-extra,0px)) 4px!important;line-height:1.25!important}
   html body #wiw-hour-table .wiw-hour-weather-icon svg${NIET}{width:18px!important;height:18px!important}
   html body #wiw-hour-table .wiw-hour-rain>span${NIET},html body #wiw-hour-table .wiw-hour-wind>span${NIET}{display:inline!important}
-  html body #wiw-hour-table .wiw-hour-rain>.wiw-hour-secondary${NIET},html body #wiw-hour-table .wiw-hour-wind>.wiw-hour-secondary${NIET}{display:inline-block!important;margin-left:.4em!important;font-size:13px!important}
+  html body #wiw-hour-table .wiw-hour-rain>.wiw-hour-secondary${NIET},html body #wiw-hour-table .wiw-hour-wind>.wiw-hour-secondary${NIET}{display:inline-block!important;margin-left:.3em!important;font-size:13px!important}
   html body #wiw-hour-table .wiw-hour-primary${NIET},html body #wiw-hour-table time${NIET}{font-size:15px!important}
-  html body #wiw-hour-table thead th${NIET}{font-size:12.5px!important}
+  html body #wiw-hour-table thead th${NIET}{font-size:12.5px!important;padding-left:4px!important;padding-right:4px!important}
   html body #wiw-hour-table .wiw-hour-secondary${NIET}{font-size:13px!important}
 }
 @media (min-width:1100px){

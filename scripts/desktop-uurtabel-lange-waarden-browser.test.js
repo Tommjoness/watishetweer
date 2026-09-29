@@ -3,19 +3,25 @@
    definitieve artifact (na de desktoplaag van 29 september).
    Aanleiding: na #450 faalde de productiecontrole op 1660px omdat regels als
    "12,4 mm 100% kans" en "WZW 9 Bft 88 km/u" niet meer op één regel pasten en
-   de tabel 28px buiten haar kolom liep. Gewone waarden staan per uur op één
-   regel; lange waarden breken netjes af naar een tweede regel, zonder overloop. */
+   de tabel 28px buiten haar kolom liep; afbreken naar twee regels kostte op
+   1920px weer uren (9 i.p.v. minstens 10). Gewone en realistisch brede waarden
+   ("-17,6° voelt -18,6°", "0,4 mm 45% kans", "ZZW 4 Bft 25 km/u") staan vanaf
+   1600px per uur op één regel; nog langere waarden breken hooguit netjes af,
+   nooit buiten de kolom. */
 const fs=require("fs"),path=require("path"),{spawnSync}=require("child_process"),{bouw}=require("../data.js");
 const chrome=require("./vind-browser.js").vindBrowser();
 if(!chrome){if(process.env.CI)throw new Error("Chrome/Chromium ontbreekt voor de uurtabeltest met lange waarden.");console.log("SKIP uurtabel lange waarden: lokaal geen Chrome/Chromium.");process.exit(0);}
 const publicDir=path.join(__dirname,".."+path.sep+"public"),bron=fs.readFileSync(path.join(publicDir,"index.html"),"utf8");
 if(!bron.includes('id="wiw-desktop-premium-20260929"'))throw new Error("Uurtabeltest verwacht het artifact met de desktoplaag van 29 september.");
 
-function fixture(storm){
-  const d=bouw(storm
-    ?{tempNu:18,wcNu:65,ccNu:100,rh:95,pp:()=>100,pr:()=>12.4,wc:()=>65,cc:()=>100,ws:88,wg:()=>131,som:60}
-    :{tempNu:18,wcNu:3,ccNu:100,rh:80,pp:()=>0,pr:()=>0,wc:()=>3,cc:()=>100,som:0});
-  if(storm)d.hourly.wind_direction_10m=d.hourly.wind_direction_10m.map(()=>247);
+const SCENARIO={
+  normaal:{opties:{tempNu:18,wcNu:3,ccNu:100,rh:80,pp:()=>0,pr:()=>0,wc:()=>3,cc:()=>100,som:0},richting:315,eenRegel:true},
+  breed:{opties:{tempNu:-12,wcNu:73,ccNu:100,rh:80,temp:u=>+(-16+2*Math.sin(u/24*2*Math.PI)).toFixed(1),pp:()=>45,pr:()=>0.4,wc:()=>73,cc:()=>100,ws:25,wg:()=>40,som:5},richting:202,eenRegel:true},
+  storm:{opties:{tempNu:18,wcNu:65,ccNu:100,rh:95,pp:()=>100,pr:()=>12.4,wc:()=>65,cc:()=>100,ws:88,wg:()=>131,som:60},richting:247,eenRegel:false}
+};
+function fixture(naam){
+  const {opties,richting}=SCENARIO[naam],d=bouw(opties);
+  d.hourly.wind_direction_10m=d.hourly.wind_direction_10m.map(()=>richting);
   d.latitude=52.3676;d.longitude=4.9041;d.timezone="Europe/Amsterdam";d.utc_offset_seconds=7200;d.daily.sunshine_duration=d.daily.time.map(()=>7*3600);
   return d;
 }
@@ -40,23 +46,25 @@ function pagina(d){
 
 const tmp=fs.mkdtempSync(path.join(publicDir,".uurtabel-lang-"));
 try{
-  for(const storm of [false,true]){
-    const pad=path.join(tmp,(storm?"storm":"normaal")+".html");fs.writeFileSync(pad,pagina(fixture(storm)));
+  for(const scenario of Object.keys(SCENARIO)){
+    const pad=path.join(tmp,scenario+".html");fs.writeFileSync(pad,pagina(fixture(scenario)));
     for(const [w,h] of [[1100,900],[1366,768],[1600,900],[1660,900],[1920,1080]]){
       const r=spawnSync(chrome,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${w},${h}`,"--virtual-time-budget=4000","--dump-dom","file://"+pad+"?lat=52.3676&lon=4.9041&plaats=Amsterdam&land=NL"],{encoding:"utf8",maxBuffer:36*1024*1024});
       if(r.status!==0)throw new Error(`${w}px: Chrome exit ${r.status}: `+String(r.stderr||"").slice(-800));
       const dom=r.stdout||"",v=k=>{const m=new RegExp('data-uur-'+k+'="([^"]*)"').exec(dom);return m?m[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&'):"";};
-      const naam=`${w}px ${storm?"storm":"normaal"}`;
+      const naam=`${w}px ${scenario}`;
       if(v('klaar')!=='ok')throw new Error(`${naam}: meting mislukt: ${v('fouten')||"geen rapport"}`);
       if(v('fouten'))throw new Error(`${naam}: browserfouten: ${v('fouten')}`);
       if(!(Number(v('rows'))>=6))throw new Error(`${naam}: maar ${v('rows')} uurregels in de tabel (app: ${v('app').slice(0,200)})`);
       if(!(Number(v('overflow'))<=1))throw new Error(`${naam}: uurtabel loopt ${v('overflow')}px buiten haar kolom (${v('regen')} · ${v('wind')})`);
       if(!(Number(v('thclip'))<=1))throw new Error(`${naam}: kolomkop Temperatuur afgeknipt (${v('thclip')}px)`);
       if(!(Number(v('page'))<=1))throw new Error(`${naam}: ${v('page')}px horizontale pagina-overloop`);
-      if(storm&&!/12,4\s*mm/.test(v('regen')))throw new Error(`${naam}: stormfixture niet in de tabel (${v('regen')})`);
-      if(!storm&&w>=1600&&v('eenregel')!=='ja')throw new Error(`${naam}: gewone waarden staan niet meer op één regel per uur`);
+      if(scenario==="storm"&&!/12,4\s*mm/.test(v('regen')))throw new Error(`${naam}: stormfixture niet in de tabel (${v('regen')})`);
+      if(scenario==="breed"&&!/45%/.test(v('regen')))throw new Error(`${naam}: brede fixture niet in de tabel (${v('regen')})`);
+      if(SCENARIO[scenario].eenRegel&&w>=1600&&v('eenregel')!=='ja')throw new Error(`${naam}: waarden staan niet meer op één regel per uur (${v('regen')} · ${v('wind')})`);
+      if(SCENARIO[scenario].eenRegel&&w>=1600&&Number(v('rows'))<10)throw new Error(`${naam}: ruime desktop toont minder dan 10 uren (${v('rows')})`);
       console.log(`${naam}: ${v('rows')} uurregels, overloop ${v('overflow')}px (${v('regen')} · ${v('wind')}).`);
     }
   }
-  console.log("Uurtabel met lange waarden groen: storm- en gewone waarden blijven op 1100–1920px binnen de kolom; gewone waarden staan vanaf 1600px op één regel.");
+  console.log("Uurtabel met lange waarden groen: gewone, brede en stormwaarden blijven op 1100–1920px binnen de kolom; gewone en brede waarden staan vanaf 1600px op één regel.");
 }finally{fs.rmSync(tmp,{recursive:true,force:true});}
