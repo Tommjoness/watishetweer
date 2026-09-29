@@ -24,7 +24,9 @@
    - KNMI_EDR_API_KEY (verplicht): als GitHub Actions-secret, nooit in code.
    - DAGEN (standaard 14): hoeveel volledige dagen terug.
    - UITVOER (optioneel): pad voor het JSON-resultaat.
-   - GITHUB_STEP_SUMMARY (in GitHub Actions): de tabel komt in de samenvatting. */
+   - GITHUB_STEP_SUMMARY (in GitHub Actions): de tabel komt in de samenvatting.
+   - SAMENVATTING (optioneel): pad voor dezelfde tabel als Markdown-bestand,
+     voor de reactie in het resultatenissue. */
 
 const fs = require("fs");
 const path = require("path");
@@ -281,6 +283,7 @@ async function main() {
   const md = markdown(resultaat);
   console.log(md);
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + "\n");
+  if (process.env.SAMENVATTING) { fs.mkdirSync(path.dirname(process.env.SAMENVATTING), { recursive: true }); fs.writeFileSync(process.env.SAMENVATTING, md + "\n"); }
   if (process.env.UITVOER) { fs.mkdirSync(path.dirname(process.env.UITVOER), { recursive: true }); fs.writeFileSync(process.env.UITVOER, JSON.stringify(resultaat, null, 2)); }
   return resultaat;
 }
