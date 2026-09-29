@@ -1,0 +1,57 @@
+name: KNMI modelverificatie
+
+# Vergelijkt de modelverwachting (Open-Meteo, best_match) per heel uur met de
+# metingen van de KNMI-weerstations. Handmatig te starten; draait ook op een
+# pull request dat het script of deze workflow wijzigt. Alleen geaggregeerde
+# weerdata, geen bezoekersgegevens.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dagen:
+        description: "Aantal volledige dagen terug (1-60)"
+        required: false
+        default: "14"
+  pull_request:
+    paths:
+      - "scripts/knmi-modelverificatie*.js"
+      - ".github/workflows/knmi-modelverificatie.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: knmi-modelverificatie-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificatie:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HEEFT_SLEUTEL: ${{ secrets.KNMI_EDR_API_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Rekenkern (zonder netwerk)
+        run: node scripts/knmi-modelverificatie.test.js
+      - name: Sleutel ontbreekt nog
+        if: env.HEEFT_SLEUTEL != 'true'
+        run: echo "::notice::KNMI_EDR_API_KEY is nog niet ingesteld als Actions-secret; de vergelijking met de stations is overgeslagen."
+      - name: Model tegen KNMI-stations
+        if: env.HEEFT_SLEUTEL == 'true'
+        env:
+          KNMI_EDR_API_KEY: ${{ secrets.KNMI_EDR_API_KEY }}
+          DAGEN: ${{ inputs.dagen || '14' }}
+          UITVOER: knmi-verificatie/resultaat.json
+        run: node scripts/knmi-modelverificatie.js
+      - name: Resultaat bewaren
+        if: env.HEEFT_SLEUTEL == 'true' && always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: knmi-modelverificatie-${{ github.run_id }}
+          path: knmi-verificatie/
+          retention-days: 30
+          if-no-files-found: warn
