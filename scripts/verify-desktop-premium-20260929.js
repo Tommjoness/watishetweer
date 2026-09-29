@@ -21,7 +21,7 @@ for(const p of htmlBestanden(OUT)){
     ".seo-plaatsnav-inner:not(#wiw-desktop-premium){max-width:1600px!important",
     "#nights .row.night:not(#wiw-desktop-premium){grid-template-columns:112px minmax(150px,190px) 100px minmax(120px,150px) minmax(0,1fr) max-content!important",
     "#app #aq.stats:not(#wiw-desktop-premium){max-width:none!important",
-    "minmax(0,2fr) minmax(440px,1fr)","#wiw-hour-table.wiw-hour-table:not(#wiw-desktop-premium){table-layout:auto!important}"
+    "minmax(0,1.9fr) minmax(460px,1fr)","#wiw-hour-table td>span:not(#wiw-desktop-premium),html body #wiw-hour-table td time:not(#wiw-desktop-premium){white-space:nowrap!important}",".wiw-hour-wind>.wiw-hour-secondary:not(#wiw-desktop-premium){display:inline-block!important","#wiw-hour-table.wiw-hour-table:not(#wiw-desktop-premium){table-layout:auto!important}"
   ])if(!css.includes(vereist))throw new Error(rel+": desktoplaag mist "+vereist);
   aantal++;
 }
@@ -30,4 +30,4 @@ const app=fs.readdirSync(OUT).filter(f=>/^app-.*\.min\.js$/.test(f)).map(f=>fs.r
 for(const vereist of ["356:296","220:160","MAX_TABEL_UREN","data-desktop-temp-anker","data-basis-font-size"]){
   if(!app.includes(vereist))throw new Error("App-bundel mist "+vereist+".");
 }
-console.log("Desktoplaag geverifieerd op "+aantal+" weerpagina's: één kolom van hooguit 1600px, grotere letters, Nachtzicht zonder lege kolom, uurtabel op één regel vanaf 1600px, vaste uuras en hogere grafiek op breed scherm.");
+console.log("Desktoplaag geverifieerd op "+aantal+" weerpagina's: één kolom van hooguit 1600px, grotere letters, Nachtzicht zonder lege kolom, uurtabel op één regel vanaf 1600px (lange waarden breken netjes af), vaste uuras en hogere grafiek op breed scherm.");
