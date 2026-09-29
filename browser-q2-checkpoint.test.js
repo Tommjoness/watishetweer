@@ -206,7 +206,7 @@ async function controleer(page,naam,breedte){
   const minH=mobiel?(natMetPeriodeLabels?296:220):basisH;
   const maxH=mobiel?(natMetPeriodeLabels?296:basisH):basisH+100;
   assert.ok(r.viewBox.h>=minH&&r.viewBox.h<=maxH,`${naam} ${breedte}px: grafiekhoogte blijft binnen het bedoelde ${mobiel?(natMetPeriodeLabels?"natte mobiele labelreserve":"mobiele compact"):"desktop"}-budget (${r.viewBox.h}px)`);
-  assert.deepEqual(r.nu,mobiel?["nu 21°"]:[],`${naam} ${breedte}px: mobiel één actuele waarde, desktop geen herhaling`);
+  assert.deepEqual(r.nu,["nu 21°"],`${naam} ${breedte}px: precies één actuele waarde bij de rode stip, ook op desktop (sinds 29 september)`);
   assert.equal(r.nuMarkering,true,`${naam} ${breedte}px: verticale nu-lijn en stip blijven zichtbaar`);
   if(mobiel)assert.ok(r.tempLabels>=4,`${naam} ${breedte}px: mobiel houdt meerdere temperatuurreferenties naast het actuele punt (${r.tempLabels})`);
   else assert.ok(r.tempLabels>=6,`${naam} ${breedte}px: desktop houdt voldoende zichtbare temperatuurreferenties`);
