@@ -5,13 +5,16 @@
    - Aantikken (echte touch): het venster toont het aangetikte uur en blijft
      staan; de focus van het tikvlak kiest geen ander uur. Het toetsenbord
      begint bij het laatst aangetikte uur en loopt met de pijltjes verder.
-   - Piek en dal: de volle stip staat op het echte hoogste en laagste punt van
-     het venster, ook tussen twee drie-uursankers (telefoon) of tussen twee
+   - Piek en dal: het vette cijfer staat op het echte hoogste en laagste punt
+     van het venster, ook tussen twee drie-uursankers (telefoon) of tussen twee
      uurcijfers (tablet). Een rand van het venster is geen piek of dal als de
      reeks daarbuiten verder stijgt of daalt. Op iedere breedte houdt de uuras
      haar vaste ritme: piek en dal krijgen geen extra uurtijd ertussen (verzoek
      van de eigenaar, 29 september: "07:00 08:00" oogde rommelig).
-   - Het cijfer van piek en dal staat direct bij zijn stip, ook als er regen
+   - Iedere stip staat boven een tijd op de as (verzoek van de eigenaar,
+     29 september: "niet alle stippen staan boven de tijd"). Valt piek of dal
+     tussen twee astijden, dan staat het cijfer er zonder stip.
+   - Het cijfer van piek en dal staat direct boven de lijn, ook als er regen
      onder het dal valt. Op de telefoon staat er geen losse tijd boven piek of
      dal, en staat ieder ankercijfer binnen 22px van zijn punt.
    - Op iedere breedte: geen grafiektekst op een neerslagstaaf, ook niet bij
@@ -115,12 +118,28 @@ function meetGrafiek(){
     let i=0;for(let k=1;k<n;k++)if(Math.abs(g.x(k)-cx)<Math.abs(g.x(i)-cx))i=k;
     return {type,i,dx:Math.abs(g.x(i)-cx),dy:Math.abs(g.y(T[i])-Number(el.getAttribute("cy")))};
   });
+  const tijdEls=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!el.closest("g[data-q4-rain-periods]")&&el.getAttribute("display")!=="none"&&/^\d{2}:00$/.test(el.textContent.trim()));
+  const tijden=tijdEls.map(el=>Number(el.getAttribute("x")));
+  /* Uren met een tijd op de as: het uur van de tekst, bij twee kandidaten
+     (24 uur venster) het dichtstbijzijnde; een randtijd kan iets verschoven staan. */
+  const asUren=new Set(tijdEls.map(el=>{
+    if(el.hasAttribute("data-mobile-hour-index"))return Number(el.getAttribute("data-mobile-hour-index"));
+    const t=el.textContent.trim(),lx=Number(el.getAttribute("x"));let best=null;
+    for(let k=0;k<n;k++)if(String(g.TI[k]).slice(11,16)===t&&(best===null||Math.abs(g.x(k)-lx)<Math.abs(g.x(best)-lx)))best=k;
+    return best;
+  }).filter(k=>k!==null));
   const cijfers=[...svg.querySelectorAll("text[data-mobile-temp-marker],text[data-desktop-temp-marker]")].map(el=>{
     const type=el.getAttribute("data-mobile-temp-marker")||el.getAttribute("data-desktop-temp-marker"),b=el.getBBox();
-    const stip=svg.querySelector(`[data-mobile-temp-marker-dot="${type}"],[data-desktop-temp-marker-dot="${type}"]`),cy=stip?Number(stip.getAttribute("cy")):null;
-    return {type,tekst:el.textContent.trim(),x:Number(el.getAttribute("x")),afstand:cy===null?null:Math.max(0,b.y-cy,cy-(b.y+b.height))};
+    const v=el.getAttribute("data-mobile-temp-marker-index")??el.getAttribute("data-desktop-temp-marker-index");
+    const i=v!==null&&v!==""?Number(v):null,cy=i===null?null:Number(g.y(T[i]));
+    return {type,i,tekst:el.textContent.trim(),x:Number(el.getAttribute("x")),afstand:cy===null?null:Math.max(0,b.y-cy,cy-(b.y+b.height))};
   });
-  const tijden=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!el.closest("g[data-q4-rain-periods]")&&el.getAttribute("display")!=="none"&&/^\d{2}:00$/.test(el.textContent.trim())).map(el=>Number(el.getAttribute("x")));
+  /* Iedere temperatuurstip (niet de rode nu-stip) staat boven een tijd op de as. */
+  const stipZonderTijd=[...svg.querySelectorAll("circle")].filter(c=>!c.closest("#scrub")&&c.getAttribute("fill")!=="var(--carmine)"&&c.getAttribute("display")!=="none"&&c.getClientRects().length
+    &&(c.hasAttribute("data-temp-index")||c.hasAttribute("data-mobile-temp-marker-dot")||c.hasAttribute("data-desktop-temp-marker-dot"))).map(c=>{
+    const cx=Number(c.getAttribute("cx"));let i=0;for(let k=1;k<n;k++)if(Math.abs(g.x(k)-cx)<Math.abs(g.x(i)-cx))i=k;
+    return asUren.has(i)?null:String(g.TI[i]).slice(11,16)+" "+Math.round(T[i])+"°";
+  }).filter(Boolean);
   const zichtbaar=el=>{let e=el;while(e&&e!==svg){if(e.getAttribute&&e.getAttribute("display")==="none")return false;const cs=getComputedStyle(e);if(cs.display==="none"||cs.visibility==="hidden")return false;e=e.parentNode;}return el.getClientRects().length>0;};
   const klein=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&zichtbaar(el)&&el.textContent.trim()).map(el=>({t:el.textContent.trim(),px:parseFloat(getComputedStyle(el).fontSize)*schaal})).filter(x=>x.px<10.95);
   const nu=[...svg.querySelectorAll("text")].find(el=>/^nu(?:\s|$)/i.test(el.textContent.trim())),nuStip=svg.querySelector('circle[fill="var(--carmine)"][r="3"]');
@@ -147,7 +166,7 @@ function meetGrafiek(){
     staafRects.forEach(q=>{const ox=Math.min(b.right,q.right)-Math.max(b.left,q.left),oy=Math.min(b.bottom,q.bottom)-Math.max(b.top,q.top);if(ox>0&&oy>0)d=Math.max(d,Math.min(ox,oy));});
     return {t:el.textContent.trim(),d:Math.round(d*10)/10};
   }).filter(x=>x.d>0.5).map(x=>x.t+" ("+x.d+"px)");
-  return {M:!!g.M,n,van:g.TI[0],TI:g.TI.slice(0,n),ankerAfstand,opStaaf,zicht,links,rechts,stippen,cijfers,tijden,markerTijden:markerTijden.map(({b,...t})=>t),asIdx,tijdBotst,x:zicht.map((_,k)=>g.x(k)),klein,nuAfstand,regen,staven:staven.length,
+  return {M:!!g.M,n,van:g.TI[0],TI:g.TI.slice(0,n),ankerAfstand,opStaaf,zicht,links,rechts,stippen,cijfers,tijden,asUren:[...asUren],stipZonderTijd,markerTijden:markerTijden.map(({b,...t})=>t),asIdx,tijdBotst,x:zicht.map((_,k)=>g.x(k)),klein,nuAfstand,regen,staven:staven.length,
     missing:svg.getAttribute("data-mobile-temp-missing-anchors")||"",compact:innerWidth<=430,iederUur:T.length<=24&&Number(g.cw)>=36,cw:Number(g.cw)};
 }
 
@@ -220,19 +239,23 @@ function verwacht(m){
         try{
           const m=await page.evaluate(meetGrafiek);
           const plan=verwacht(m);
-          assert.equal(m.stippen.length,plan.length,label+": "+m.stippen.length+" stippen, verwacht "+plan.map(p=>p.type).join("+"));
+          assert.deepEqual(m.stipZonderTijd,[],label+": stip zonder tijd op de as eronder ("+m.stipZonderTijd.join(", ")+"; astijden "+m.asUren.map(k=>String(m.TI[k]).slice(11,16)).join(" ")+")");
+          assert.equal(m.cijfers.length,plan.length,label+": "+m.cijfers.length+" piek/dal-cijfers, verwacht "+plan.map(p=>p.type).join("+"));
           for(const p of plan){
-            const s=m.stippen.find(x=>x.type===p.type),c=m.cijfers.find(x=>x.type===p.type);
-            assert(s,label+": geen "+p.type+"-stip");
-            assert(p.idx.includes(s.i)&&s.dx<1&&s.dy<1,label+": de "+p.type+"-stip staat op index "+s.i+" en niet op het echte "+(p.type==="max"?"hoogste":"laagste")+" punt ("+p.idx.join("/")+")");
-            assert(c&&c.tekst===p.waarde+"°",label+": het "+p.type+"-cijfer is "+(c&&c.tekst)+", verwacht "+p.waarde+"°");
-            assert(Math.abs(c.x-m.x[s.i])<=14,label+": het "+p.type+"-cijfer staat niet boven zijn stip");
+            const c=m.cijfers.find(x=>x.type===p.type),s=m.stippen.find(x=>x.type===p.type);
+            assert(c&&Number.isInteger(c.i),label+": geen "+p.type+"-cijfer");
+            assert(p.idx.includes(c.i),label+": het "+p.type+"-cijfer staat op index "+c.i+" en niet op het echte "+(p.type==="max"?"hoogste":"laagste")+" punt ("+p.idx.join("/")+")");
+            assert(c.tekst===p.waarde+"°",label+": het "+p.type+"-cijfer is "+c.tekst+", verwacht "+p.waarde+"°");
+            assert(Math.abs(c.x-m.x[c.i])<=14,label+": het "+p.type+"-cijfer staat niet boven zijn punt");
             /* Afgerond op honderdsten: 12,000001 is 12 (afronding van de browser). */
-            assert(c.afstand!==null&&Math.round(c.afstand*100)/100<=12,label+": het "+p.type+"-cijfer staat "+c.afstand+" van zijn stip");
+            assert(c.afstand!==null&&Math.round(c.afstand*100)/100<=12,label+": het "+p.type+"-cijfer staat "+c.afstand+" van zijn punt op de lijn");
+            /* Stip precies dan als er een tijd onder het extreem staat. */
+            if(m.asUren.includes(c.i))assert(s&&s.i===c.i&&s.dx<1&&s.dy<1,label+": de "+p.type+" om "+String(m.TI[c.i]).slice(11,16)+" staat boven een astijd maar heeft geen stip op het punt");
+            else assert(!s,label+": de "+p.type+" om "+String(m.TI[c.i]).slice(11,16)+" staat tussen twee astijden maar heeft toch een stip");
             /* Telefoon: piek en dal krijgen geen losse tijd boven het cijfer (op
                verzoek van de eigenaar: "17:00" boven "27°" oogde onrustig); de tijd
                staat op de uuras en bij aantikken. */
-            if(m.compact)assert(!m.markerTijden.some(x=>x.i===s.i),label+": de "+p.type+" om "+String(m.TI[s.i]).slice(11,16)+" heeft nog een losse tijd boven het cijfer");
+            if(m.compact)assert(!m.markerTijden.some(x=>x.i===c.i),label+": de "+p.type+" om "+String(m.TI[c.i]).slice(11,16)+" heeft nog een losse tijd boven het cijfer");
           }
           assert.deepEqual(m.klein,[],label+": grafiektekst kleiner dan 11px");
           assert.deepEqual(m.tijdBotst,[],label+": de tijd bij piek of dal overlapt andere grafiektekst");
@@ -251,7 +274,7 @@ function verwacht(m){
           assert(m.staven>0,label+": geen neerslagstaafjes");
           assert.deepEqual(m.regen,[],label+": neerslaggetallen in de grafiek: "+JSON.stringify(m.regen));
           assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
-          console.log("GRAFIEK "+label+": "+(plan.map(p=>p.type+" "+p.waarde+"°").join(", ")||"geen piek of dal in beeld")+"; "+m.staven+" neerslagstaafjes, geen getallen.");
+          console.log("GRAFIEK "+label+": "+(plan.map(p=>{const c=m.cijfers.find(x=>x.type===p.type);return p.type+" "+p.waarde+"°"+(m.asUren.includes(c.i)?" (stip)":" (zonder stip)");}).join(", ")||"geen piek of dal in beeld")+"; iedere stip boven een tijd; "+m.staven+" neerslagstaafjes, geen getallen.");
         }finally{await context.close();}
       }
     }

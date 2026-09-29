@@ -72,6 +72,10 @@ function meet(){
   const temps=teksten.filter(t=>/Bodoni/i.test(t.getAttribute("font-family")||"")&&/^-?\d+°$/.test(t.textContent.trim())).map(t=>{
     const x=+t.getAttribute("x"),y=+t.getAttribute("y"),w=Number(t.textContent.trim().replace("°",""));
     let p=null,d=Infinity;punten.forEach(q=>{if(Math.round(g.T[q.i])!==w)return;const dx=Math.abs(q.x-x);if(dx<d){d=dx;p=q;}});
+    /* Piek of dal tussen twee astijden heeft geen stip (iedere stip staat
+       boven een tijd): dan telt het punt op de lijn waar het cijfer bij hoort. */
+    const mi=t.getAttribute("data-mobile-temp-marker-index")??t.getAttribute("data-desktop-temp-marker-index");
+    if(mi!==null&&mi!==""&&Number.isFinite(Number(g.T[Number(mi)]))){p={i:Number(mi),x:Number(g.x(Number(mi))),y:Number(g.y(Number(g.T[Number(mi)])))};d=Math.abs(p.x-x);}
     const b=t.getBBox();
     return {tekst:t.textContent.trim(),x,afstand:p?Math.max(p.y-(b.y+b.height),b.y-p.y,0):null,dx:p?d:null};
   });

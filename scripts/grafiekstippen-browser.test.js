@@ -8,6 +8,8 @@
    lager) dan een ander punt met een cijfer.
    Elk temperatuurpunt heeft dezelfde volle stip (2,2 op de telefoon, 3 vanaf
    tablet); piek en dal vallen op door hun cijfer, niet door een grotere stip.
+   Iedere stip staat boven een tijd op de as (eigenaar, 29 september): valt
+   piek of dal tussen twee astijden, dan staat het vette cijfer er zonder stip.
 
    Draait na: npm run build:cloudflare */
 
@@ -56,7 +58,7 @@ async function open(browser,root,w,h){
   });
   await page.goto(root+"/weer/utrecht/",{waitUntil:"domcontentloaded"});
   await page.waitForSelector("#app",{state:"visible",timeout:15000});
-  await page.waitForFunction(()=>typeof S!=="undefined"&&S.geo&&document.querySelector("#chart [data-mobile-temp-marker-dot],#chart [data-desktop-temp-marker-dot]"),null,{timeout:15000});
+  await page.waitForFunction(()=>typeof S!=="undefined"&&S.geo&&document.querySelector("#chart text[data-mobile-temp-marker],#chart text[data-desktop-temp-marker]"),null,{timeout:15000});
   await sleep(1200);
   return {context,page,fouten};
 }
@@ -72,11 +74,25 @@ function meet(){
     let i=null,d=Infinity;zichtbaar.forEach((_,k)=>{const dx=Math.abs(Number(g.x(k))-cx);if(dx<d){d=dx;i=k;}});
     return {type,cx,cy,i,dx:d,waarde:T[i],yPunt:Number(g.y(T[i]))};
   });
+  /* Het vette piek/dal-cijfer en het uur waar het bij hoort. */
+  const cijfers=[...svg.querySelectorAll("text[data-mobile-temp-marker],text[data-desktop-temp-marker]")].map(el=>{
+    const type=el.getAttribute("data-mobile-temp-marker")||el.getAttribute("data-desktop-temp-marker");
+    const v=el.getAttribute("data-mobile-temp-marker-index")??el.getAttribute("data-desktop-temp-marker-index");
+    const i=v!==null&&v!==""?Number(v):null;
+    return {type,i,tekst:el.textContent.trim(),waarde:i===null?null:T[i]};
+  });
+  /* Uren met een tijd op de as. */
+  const asUren=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!el.closest("g[data-q4-rain-periods]")&&el.getAttribute("display")!=="none"&&/^\d{2}:00$/.test(el.textContent.trim())).map(el=>{
+    if(el.hasAttribute("data-mobile-hour-index"))return Number(el.getAttribute("data-mobile-hour-index"));
+    const t=el.textContent.trim(),lx=Number(el.getAttribute("x"));let best=null;
+    zichtbaar.forEach((_,k)=>{if(String(g.TI[k]).slice(11,16)===t&&(best===null||Math.abs(g.x(k)-lx)<Math.abs(g.x(best)-lx)))best=k;});
+    return best;
+  }).filter(k=>k!==null);
   /* Punten die een cijfer dragen: op mobiel de drie-uursankers, op desktop alle uren met een label. */
   const gelabeld=g.M
     ?[...svg.querySelectorAll("[data-mobile-temp-index]")].map(el=>Number(el.getAttribute("data-mobile-temp-index")))
     :[...svg.querySelectorAll("circle[data-temp-index]")].map(el=>Number(el.getAttribute("data-temp-index")));
-  return {M:!!g.M,zichtbaar,stippen,gelabeld:[...new Set(gelabeld)].filter(i=>Number.isInteger(i)&&i<zichtbaar.length).sort((a,b)=>a-b),
+  return {M:!!g.M,zichtbaar,stippen,cijfers,asUren,gelabeld:[...new Set(gelabeld)].filter(i=>Number.isInteger(i)&&i<zichtbaar.length).sort((a,b)=>a-b),
     tijden:g.TI.slice(0,zichtbaar.length)};
 }
 
@@ -92,13 +108,17 @@ function meet(){
         const m=await page.evaluate(meet);
         const laagste=Math.min(...m.zichtbaar),hoogste=Math.max(...m.zichtbaar);
         assert.equal(laagste,15.6,label+": de testreeks moet het dal van 15,6° in beeld hebben");
-        const min=m.stippen.find(s=>s.type==="min"),max=m.stippen.find(s=>s.type==="max");
-        assert(min,label+": geen stip voor het laagste punt");
-        assert(max,label+": geen stip voor het hoogste punt");
+        const min=m.cijfers.find(s=>s.type==="min"),max=m.cijfers.find(s=>s.type==="max");
+        assert(min&&Number.isInteger(min.i),label+": geen cijfer voor het laagste punt");
+        assert(max&&Number.isInteger(max.i),label+": geen cijfer voor het hoogste punt");
         for(const s of [min,max]){
-          const tijd=m.tijden[s.i].slice(11,16);
-          assert(s.dx<=1,label+": de "+s.type+"-stip staat niet op een uurpunt");
-          assert(Math.abs(s.cy-s.yPunt)<=1,label+": de "+s.type+"-stip ligt niet op de lijn");
+          const tijd=m.tijden[s.i].slice(11,16),stip=m.stippen.find(x=>x.type===s.type);
+          assert.equal(s.tekst,Math.round(s.waarde)+"°",label+": het "+s.type+"-cijfer om "+tijd+" noemt niet de waarde van zijn punt");
+          /* Een stip precies dan als er een tijd onder het punt staat. */
+          if(m.asUren.includes(s.i)){
+            assert(stip&&stip.i===s.i&&stip.dx<=1,label+": de "+s.type+" om "+tijd+" staat boven een astijd maar heeft geen stip op het punt");
+            assert(Math.abs(stip.cy-stip.yPunt)<=1,label+": de "+s.type+"-stip ligt niet op de lijn");
+          }else assert(!stip,label+": de "+s.type+" om "+tijd+" staat tussen twee astijden maar heeft toch een stip");
           /* Het cijfer bij de stip klopt met het echte extreem. */
           assert.equal(Math.round(s.waarde),Math.round(s.type==="min"?laagste:hoogste),label+": de "+s.type+"-stip om "+tijd+" ("+s.waarde+"°) toont niet het echte "+(s.type==="min"?"laagste":"hoogste")+" punt");
           /* Geen ander punt met een cijfer ligt voorbij de stip. */
@@ -115,13 +135,22 @@ function meet(){
         /* Elk temperatuurpunt heeft dezelfde volle stip; piek en dal vallen op door hun cijfer, niet door een grotere stip. */
         const stippen=await page.evaluate(()=>[...document.querySelectorAll("#chart circle")].filter(c=>!c.closest("#scrub")&&c.getClientRects().length&&c.getAttribute("fill")!=="var(--carmine)"
           &&(c.hasAttribute("data-temp-index")||c.hasAttribute("data-mobile-temp-marker-dot")||c.hasAttribute("data-desktop-temp-marker-dot")))
-          .map(c=>({r:Number(c.getAttribute("r")),dekking:Number(getComputedStyle(c).opacity),kleur:getComputedStyle(c).fill})));
+          .map(c=>({r:Number(c.getAttribute("r")),dekking:Number(getComputedStyle(c).opacity),kleur:getComputedStyle(c).fill,cx:Number(c.getAttribute("cx"))})));
+        /* Iedere stip staat boven een tijd op de as. */
+        const zonderTijd=await page.evaluate(()=>{const g=S.geo,svg=document.getElementById("chart");
+          const tijden=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!el.closest("g[data-q4-rain-periods]")&&el.getAttribute("display")!=="none"&&/^\d{2}:00$/.test(el.textContent.trim()));
+          const n=g.M?Math.min(24,g.T.length):g.T.length,dichtst=px=>{let b=0;for(let k=1;k<n;k++)if(Math.abs(g.x(k)-px)<Math.abs(g.x(b)-px))b=k;return b;};
+          const uren=new Set(tijden.map(el=>el.hasAttribute("data-mobile-hour-index")?Number(el.getAttribute("data-mobile-hour-index")):(()=>{const t=el.textContent.trim(),lx=Number(el.getAttribute("x"));let b=null;for(let k=0;k<n;k++)if(String(g.TI[k]).slice(11,16)===t&&(b===null||Math.abs(g.x(k)-lx)<Math.abs(g.x(b)-lx)))b=k;return b;})()));
+          return [...svg.querySelectorAll("circle")].filter(c=>!c.closest("#scrub")&&c.getClientRects().length&&c.getAttribute("fill")!=="var(--carmine)"&&(c.hasAttribute("data-temp-index")||c.hasAttribute("data-mobile-temp-marker-dot")||c.hasAttribute("data-desktop-temp-marker-dot")))
+            .map(c=>dichtst(Number(c.getAttribute("cx")))).filter(k=>!uren.has(k)).map(k=>String(g.TI[k]).slice(11,16));});
+        assert.deepEqual(zonderTijd,[],label+": stippen zonder tijd op de as eronder");
         assert(stippen.length>=5,label+": te weinig temperatuurstippen ("+stippen.length+")");
         assert.deepEqual([...new Set(stippen.map(s=>s.r))],[w<760?2.2:3],label+": temperatuurstippen hebben niet overal dezelfde grootte: "+JSON.stringify(stippen.map(s=>s.r)));
         assert(stippen.every(s=>s.dekking===1),label+": sommige temperatuurstippen zijn doorzichtig: "+JSON.stringify(stippen.map(s=>s.dekking)));
         assert.equal(new Set(stippen.map(s=>s.kleur)).size,1,label+": temperatuurstippen hebben niet dezelfde kleur");
         assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
-        console.log("STIPPEN "+label+": "+stippen.length+" gelijke stippen (r "+stippen[0].r+"), min "+m.tijden[min.i].slice(11,16)+" ("+min.waarde+"°), max "+m.tijden[max.i].slice(11,16)+" ("+max.waarde+"°).");
+        const metStip=s=>m.asUren.includes(s.i)?"stip":"zonder stip";
+        console.log("STIPPEN "+label+": "+stippen.length+" gelijke stippen (r "+stippen[0].r+"), alle boven een tijd; min "+m.tijden[min.i].slice(11,16)+" ("+min.waarde+"°, "+metStip(min)+"), max "+m.tijden[max.i].slice(11,16)+" ("+max.waarde+"°, "+metStip(max)+").");
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}

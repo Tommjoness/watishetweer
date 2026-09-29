@@ -217,9 +217,10 @@ const reporter=`<script>
     /* Iedere temperatuur op de mobiele lijn staat boven haar eigen punt: onder
        de lijn leest een getal als de temperatuur van het vlak eronder. */
     const onderPunt=!compactMobile?[]:alleLabels.filter(el=>{
-      const marker=el.getAttribute('data-mobile-temp-marker'),i=el.getAttribute('data-mobile-temp-index');
+      const marker=el.getAttribute('data-mobile-temp-marker'),i=el.getAttribute('data-mobile-temp-index'),mi=el.getAttribute('data-mobile-temp-marker-index');
       const punt=marker?chart.querySelector('circle[data-mobile-temp-marker-dot="'+marker+'"]'):(i!==null?chart.querySelector('circle[data-temp-index="'+i+'"]'):null);
-      const cy=punt?Number(punt.getAttribute('cy')):NaN,y=Number(el.getAttribute('y'));
+      /* Piek of dal tussen twee astijden heeft geen stip: dan telt het punt op de lijn. */
+      const cy=punt?Number(punt.getAttribute('cy')):(marker&&mi!==null&&mi!==''?Number(S.geo.y(Number(S.geo.T[Number(mi)]))):NaN),y=Number(el.getAttribute('y'));
       return !Number.isFinite(cy)||!Number.isFinite(y)||y>=cy-2;
     }).map(el=>(el.textContent||'').trim());
 
@@ -258,12 +259,17 @@ const reporter=`<script>
       const iconOverlap=ir.some(a=>tr.some(b=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top));
       const binnen=uurTijden.every(el=>Number(el.getAttribute('y'))+3<=vb.height);
       const markers=[...chart.querySelectorAll('text[data-desktop-temp-marker]')];
+      /* Het cijfer noemt de waarde van zijn punt en staat erboven; een stip staat
+         er alleen als er een tijd op de as onder het punt staat. */
       const markersOp=markers.every(el=>{
         const i=el.getAttribute('data-desktop-temp-marker-index'),dot=chart.querySelector('circle[data-desktop-temp-marker-dot][data-desktop-temp-marker-index="'+i+'"]');
-        return dot&&Math.round(Number(g.T[Number(i)]))===Number((el.textContent||'').trim().replace('°',''))&&Math.abs(Number(dot.getAttribute('cx'))-Number(el.getAttribute('x')))<=Number(g.cw)*1.2;
+        const px=g.x(Number(i)),opAs=uurTijden.some(t=>t.textContent.trim()===String(g.TI[Number(i)]).slice(11,16)&&Math.abs(Number(t.getAttribute('x'))-px)<Number(g.cw));
+        return Math.round(Number(g.T[Number(i)]))===Number((el.textContent||'').trim().replace('°',''))&&Math.abs(px-Number(el.getAttribute('x')))<=Number(g.cw)*1.2
+          &&(opAs?!!dot&&Math.abs(Number(dot.getAttribute('cx'))-px)<1:!dot);
       });
       /* Geen cijfer zweeft los van zijn punt (derde laag = 82px). */
-      const stippen=[...chart.querySelectorAll('circle[data-temp-index]')].map(c=>({x:Number(c.getAttribute('cx')),y:Number(c.getAttribute('cy'))}));
+      const stippen=[...chart.querySelectorAll('circle[data-temp-index]')].map(c=>({x:Number(c.getAttribute('cx')),y:Number(c.getAttribute('cy'))}))
+        .concat(markers.map(el=>{const i=Number(el.getAttribute('data-desktop-temp-marker-index'));return {x:g.x(i),y:Number(g.y(Number(g.T[i])))};}));
       const zwevend=alleLabels.filter(el=>{
         const x=Number(el.getAttribute('x')),y=Number(el.getAttribute('y'));let best=null;
         stippen.forEach(d=>{if(!best||Math.abs(d.x-x)<Math.abs(best.x-x))best=d;});
