@@ -37,6 +37,10 @@ const CSS=`
   html body #app #aq.stats${NIET}{max-width:none!important;width:auto!important;margin-left:0!important;margin-right:0!important}
   html body #app footer .bron${NIET}{white-space:normal!important}
   html body #nights .row.night${NIET}{grid-template-columns:112px minmax(150px,190px) 100px minmax(120px,150px) minmax(0,1fr) max-content!important;justify-content:stretch!important}
+  /* De uurtabel naast de grafiek tekent nooit buiten het grafiekvak: steekt er
+     door een onvolledige hoogtemeting toch een rij uit, dan valt die weg in
+     plaats van over Zeven dagen heen te vallen. */
+  html body .wiw-chart-layout:not([data-hour-paired="0"]) #wiw-hour-panel${NIET}{overflow:hidden!important;overflow:clip!important}
 
   /* Labels in hoofdletters */
   html body #app .stat .eyebrow${NIET},html body #app h2>span${NIET},
@@ -97,6 +101,20 @@ const CSS=`
   /* Zeven dagen: de temperatuurbalk krijgt de ruimte, niet een lege strook
      achter de korte verwachtingstekst. */
   html body #days .row.day${NIET}{grid-template-columns:150px 28px minmax(200px,1fr) minmax(84px,.35fr) 52px minmax(200px,1.25fr) 52px 96px!important;column-gap:16px!important}
+  /* De kopregel krijgt rechts dezelfde ruimte als de dagrijen (die houden
+     plaats voor het pijltje): anders krijgen de kolommen in de kop een andere
+     breedte en staan Wind max, Min en Max 7 tot 16px naast hun waarden. De
+     balk spreekt voor zich; het woord "Temp.bereik" vervalt, min en max staan
+     er al naast. */
+  html body #days .row.day.kop${NIET}{padding-right:24px!important}
+  html body #days .row.day.kop>.bar${NIET}{visibility:hidden!important}
+  html body #days .row.day>.dwind${NIET},html body #days .row.day>.dmin${NIET},html body #days .row.day>.dmax${NIET}{text-align:center!important;justify-self:stretch!important}
+
+  /* Uurtabel: Wind gecentreerd, kop en waarden, zoals Temperatuur. */
+  html body #wiw-hour-table thead th:nth-child(5)${NIET},html body #wiw-hour-table td.wiw-hour-wind${NIET}{text-align:center!important}
+
+  /* Nachtzicht: de kop Zichtscore staat gecentreerd boven score en balkje. */
+  html body #nights .row.night.kop>.score${NIET}{text-align:center!important}
 
   /* Nachtzicht: Beste zichtperiode en Maan staan gecentreerd, kop en tekst,
      net als Bewolking. */

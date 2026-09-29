@@ -101,11 +101,11 @@ function dagHoeveelheidStatus(kans,mm){const k=num(kans),m=num(mm);if(m!==null&&
 
 function modelRisicos(input={}){
   const uit=[],voeg=(id,ernst,tekst,waarde)=>uit.push({id,ernst,tekst,waarde});const t=num(input.maxTemperatuur),g=num(input.maxGevoel),uv=num(input.maxUv),gust=num(input.maxWindstoot),vis=num(input.minZicht),aqi=num(input.aqi),schaal=String(input.aqiSchaal||"");
-  if(t!==null&&t>=40)voeg("hitte",3,"Extreme hitte in de modelverwachting ("+Math.round(t)+"\u00a0°C).",t);else if(g!==null&&g>=40)voeg("gevoel-hitte",3,"Zeer hoge gevoelstemperatuur in de modelverwachting ("+Math.round(g)+" °C).",g);
+  if(t!==null&&t>=40)voeg("hitte",3,"Extreme hitte in de verwachting ("+Math.round(t)+"\u00a0°C).",t);else if(g!==null&&g>=40)voeg("gevoel-hitte",3,"Zeer hoge gevoelstemperatuur in de verwachting ("+Math.round(g)+" °C).",g);
   if(aqi!==null&&schaal==="US"&&aqi>=151)voeg("luchtkwaliteit",3,"Luchtkwaliteit volgens het model is ongezond (AQI VS "+Math.round(aqi)+").",aqi);
   if(aqi!==null&&schaal==="EU"&&aqi>80)voeg("luchtkwaliteit",3,"Luchtkwaliteit volgens het model is "+(aqi>100?"extreem slecht":"zeer slecht")+" (Europese AQI "+Math.round(aqi)+").",aqi);
-  if(uv!==null&&uv>=11)voeg("uv",3,"Extreme UV-index in de modelverwachting ("+Math.round(uv)+").",uv);else if(uv!==null&&uv>=8)voeg("uv",2,"Zeer hoge UV-index in de modelverwachting ("+Math.round(uv)+").",uv);
-  if(gust!==null&&gust>=90)voeg("windstoten",2,"Zware windstoten in de modelverwachting (tot "+Math.round(gust)+" km/u).",gust);if(vis!==null&&vis>=0&&vis<1000)voeg("zicht",2,"Zeer slecht zicht in de modelverwachting (minder dan 1 km).",vis);
+  if(uv!==null&&uv>=11)voeg("uv",3,"Extreme UV-index in de verwachting ("+Math.round(uv)+").",uv);else if(uv!==null&&uv>=8)voeg("uv",2,"Zeer hoge UV-index in de verwachting ("+Math.round(uv)+").",uv);
+  if(gust!==null&&gust>=90)voeg("windstoten",2,"Zware windstoten in de verwachting (tot "+Math.round(gust)+" km/u).",gust);if(vis!==null&&vis>=0&&vis<1000)voeg("zicht",2,"Zeer slecht zicht in de verwachting (minder dan 1 km).",vis);
   return uit.sort((a,b)=>b.ernst-a.ernst).slice(0,2);
 }
 function nachtAdvies(score,reden){

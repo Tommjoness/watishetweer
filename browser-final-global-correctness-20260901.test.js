@@ -29,7 +29,7 @@ setTimeout(()=>{
   const G=window.WeatherNowFinalGlobalCorrectness;
   zet('policy',G&&G.nachtVensterTijdsvorm('Beste periode: 20:00–23:00.',{horizonDagen:0,nuDatumTijd:'2026-09-01T05:49',nachtDatum:'2026-09-01',tijdzone:'Asia/Singapore'})==='Beste periode: 20:00–23:00.'?'ok':'fout');
   const p=[...document.querySelectorAll('.eyebrow')].find(x=>/Luchtdruk/.test(x.textContent||''));zet('pressure',p&&p.textContent.trim()==='Luchtdruk op zeeniveau'?'ok':'fout');
-  const risk=document.getElementById('modelrisico');if(risk){risk.hidden=false;risk.innerHTML='<div class="modelrisico-kop"><span class="modelrisico-label">Modelsignaal</span><span class="modelrisico-note">Modelgegevens, geen officiële waarschuwing.</span></div><div class="modelrisico-items"><span>Extreme hitte in de modelverwachting (43 °C).</span><span>Luchtkwaliteit volgens het model is ongezond (AQI VS 151).</span></div>';}
+  const risk=document.getElementById('modelrisico');if(risk){risk.hidden=false;risk.innerHTML='<div class="modelrisico-kop"><span class="modelrisico-label">Opvallend</span><span class="modelrisico-note">Geen officiële waarschuwing.</span></div><div class="modelrisico-items"><span>Extreme hitte in de modelverwachting (43 °C).</span><span>Luchtkwaliteit volgens het model is ongezond (AQI VS 151).</span></div>';}
   const days=document.getElementById('days');if(days){days.innerHTML='<div class="row day"><div>Vandaag</div><div>22° / 14°</div><div class="drain" aria-label="Neerslagkans 61 procent; hoeveelheid onzeker">61%<small class="wiw-dag-onzeker">hoeveelheid onzeker</small></div><div>4 Bft</div></div>';}
   /* getBoundingClientRect()/scrollWidth forceren zelf een actuele style/layout-
      berekening. Een dubbele requestAnimationFrame maakte deze statische audit
