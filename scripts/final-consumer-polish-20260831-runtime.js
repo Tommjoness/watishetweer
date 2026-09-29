@@ -22,11 +22,15 @@ function zonPresentatie(data,nuMs=Date.now()){const d=data||{},event=volgendZonm
    relatieve vochtigheid niet meer als uitsluitend 'droog' gepresenteerd: de
    tekst benoemt dan expliciet dat koude lucht ondanks een hoog percentage maar
    weinig waterdamp kan bevatten. Extreem lage dauwpunten houden voorrang, zodat
-   poollucht meteorologisch correct als extreem droog blijft worden benoemd. */
+   poollucht meteorologisch correct als extreem droog blijft worden benoemd.
+   Vanaf 80% heet de lucht nooit aangenaam of droog: naast een groot "87 %"
+   leest dat als een tegenspraak. Vanaf 90% is de lucht bijna verzadigd en heet
+   ze zeer vochtig; een hoog dauwpunt (benauwd, klam) blijft daarbij zichtbaar. */
 function vochtigheidPresentatie(current){
   const c=current||{},rh=getal(c.relative_humidity_2m),dp=getal(c.dew_point_2m),t=getal(c.temperature_2m);
   if(rh===null||rh<0||rh>100)return "Luchtvochtigheid niet beschikbaar.";
   if(dp===null){
+    if(rh>=90)return "Zeer hoge relatieve luchtvochtigheid.";
     if(rh>=80)return "Hoge relatieve luchtvochtigheid.";
     if(rh>=65)return "Relatief hoge luchtvochtigheid.";
     if(rh<35)return "Lage relatieve luchtvochtigheid.";
@@ -34,7 +38,7 @@ function vochtigheidPresentatie(current){
     return "Gemiddelde relatieve luchtvochtigheid.";
   }
   if(dp<-15)return "Extreem droge lucht. Dauwpunt circa "+Math.round(dp)+"\u00a0°C.";
-  if(t!==null&&t<=7&&rh>=70)return "Hoge relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa "+Math.round(dp)+"\u00a0°C.";
+  if(t!==null&&t<=7&&rh>=70)return (rh>=90?"Zeer hoge":"Hoge")+" relatieve luchtvochtigheid; koude lucht bevat weinig waterdamp. Dauwpunt circa "+Math.round(dp)+"\u00a0°C.";
   let basis;
   if(dp>=24)basis="Zeer benauwde lucht.";
   else if(dp>=21)basis="Benauwde lucht.";
@@ -44,6 +48,8 @@ function vochtigheidPresentatie(current){
   else if(dp>=5)basis="Vrij droge lucht.";
   else if(dp>=0)basis="Droge lucht.";
   else basis="Zeer droge lucht.";
+  if(rh>=90&&dp<21)basis=/klam/i.test(basis)?"Zeer vochtige, klamme lucht.":"Zeer vochtige lucht.";
+  else if(rh>=80&&/droge|Aangename/.test(basis))basis="Vochtige lucht.";
   return basis+" Dauwpunt circa "+Math.round(dp)+"\u00a0°C.";
 }
 const api={parseLokaleIso,datumPlus,zoneDelen,lokaleIsoNaarUtcMs,lokaleDatumNu,volgendZonmoment,zonPresentatie,vochtigheidPresentatie};if(typeof module!=="undefined"&&module.exports)module.exports=api;root.WeatherNowFinalConsumerPolish20260831=api;
