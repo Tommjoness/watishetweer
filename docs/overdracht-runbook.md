@@ -55,6 +55,7 @@ Belangrijkste onderdelen:
 | plaats zoeken | Open-Meteo Geocoding | geen |
 | reverse geocoding | BigDataCloud, daarna Nominatim-compatible fallback | geen; optionele basis-URL |
 | korte neerslag NL/BE | KNMI-dataplatform via de serverlaag | geen geheime waarde in de repository |
+| modelverificatie tegen weerstations (alleen de handmatige workflow) | KNMI EDR API (10-minutenwaarnemingen) en Open-Meteo Historical Forecast API | `KNMI_EDR_API_KEY` alleen als GitHub Actions-secret |
 | waarschuwingen Europa | MeteoAlarm | geen |
 | waarschuwingen VS en ondersteunde gebieden | National Weather Service | geen |
 | bezoek- en prestatietrends | Cloudflare Web Analytics | geen clientsecret; setup via Cloudflare-accounttoken |
@@ -70,6 +71,14 @@ GitHub Actions heeft exact deze twee geheime waarden nodig:
 |---|---|---|
 | `CLOUDFLARE_API_TOKEN` | Pages deployen, projectinstellingen lezen, custom domains controleren, de bedoelde zone-rate-limit beheren en de aparte Web Analytics-setup uitvoeren | GitHub repository Actions secrets |
 | `CLOUDFLARE_ACCOUNT_ID` | het juiste Cloudflare-account selecteren | GitHub repository Actions secrets |
+
+Optioneel, alleen voor de handmatige modelverificatie (`.github/workflows/knmi-modelverificatie.yml`, script `scripts/knmi-modelverificatie.js`):
+
+| Naam | Doel | Waar instellen |
+|---|---|---|
+| `KNMI_EDR_API_KEY` | geregistreerde sleutel voor de KNMI EDR API; vergelijkt de modelverwachting per heel uur met de metingen van de KNMI-weerstations | GitHub repository Actions secrets |
+
+Zonder deze sleutel slaat de workflow de vergelijking over; de site zelf gebruikt hem niet.
 
 De runtime heeft daarnaast één providersecret nodig:
 
