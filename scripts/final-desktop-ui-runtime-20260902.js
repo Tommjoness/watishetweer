@@ -4,6 +4,9 @@
 const MARKER="final-desktop-ui-20260902";
 const interpretatie=typeof module!=="undefined"&&module.exports?require("../interpretatie-engine.js"):root.WeatherNowInterpretatie;
 const MAX_DESKTOP_UREN=10;
+/* De uurtabel naast de grafiek vult de grafiekhoogte met zoveel volledige uren
+   als passen (syncHoogte haalt de rest weg), tot het hele grafiekvenster. */
+const MAX_TABEL_UREN=24;
 const num=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 const esc=t=>String(t==null?"":t).replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#39;"}[c]));
 const formatTemp=v=>{const n=num(v);if(n===null)return "–";const s=(Math.round(n*10)/10).toFixed(1).replace(".",",").replace(/,0$/,"");return s+" °C";};
@@ -72,7 +75,7 @@ function regenVelden(a,isNat){
   return velden;
 }
 
-if(typeof module!=="undefined"&&module.exports)module.exports={uurRijenUitGeo,komendeUurRijen,MAX_DESKTOP_UREN,regenVelden,formatTemp,formatPct,formatMm,hhmm,dagLabel};
+if(typeof module!=="undefined"&&module.exports)module.exports={uurRijenUitGeo,komendeUurRijen,MAX_DESKTOP_UREN,MAX_TABEL_UREN,regenVelden,formatTemp,formatPct,formatMm,hhmm,dagLabel};
 if(typeof document==="undefined")return;
 
 function voegStijlToe(){
@@ -213,11 +216,11 @@ function vindVolledigeGrafiekTabel(){
 let basisGrafiek=null,desktopGrafiek=false;
 function desktopUurRijen(){
   const nu=S.klokInstantOverride&&typeof S.klokInstantOverride.getTime==="function"?S.klokInstantOverride.getTime():Date.now();
-  if(S.dag==null)return komendeUurRijen(S.d,nu);
+  if(S.dag==null)return komendeUurRijen(S.d,nu,MAX_TABEL_UREN);
   const h=S.d&&S.d.hourly,dag=S.d&&S.d.daily&&S.d.daily.time[S.dag];
   const start=h&&h.time.find(t=>datum(t)===dag);
   const minuut=start&&interpretatie.providerNaarMinuten(start,S.d.utc_offset_seconds);
-  return Number.isFinite(minuut)?komendeUurRijen(S.d,minuut*60000).filter(r=>datum(r.tijd)===dag):[];
+  return Number.isFinite(minuut)?komendeUurRijen(S.d,minuut*60000,MAX_TABEL_UREN).filter(r=>datum(r.tijd)===dag):[];
 }
 function werkUurTabelBij(){
   const paneel=maakUurPaneel(),table=document.getElementById("wiw-hour-table"),tbody=table&&table.querySelector("tbody");if(!paneel||!table||!tbody||typeof S==="undefined")return;
@@ -351,6 +354,6 @@ function installeer(){
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(werkUurTabelBij);
 }
 
-root.WeatherNowFinalDesktopUI20260902={MAX_DESKTOP_UREN,uurRijenUitGeo,komendeUurRijen,regenVelden,werkUurTabelBij,werkRegenSamenvattingBij,centraliseerKorteTeksten,herstelVerborgenDruk,render:()=>{werkUurTabelBij();werkRegenSamenvattingBij();centraliseerKorteTeksten();vindVolledigeGrafiekTabel();syncHoogte();planHoogteSync();}};
+root.WeatherNowFinalDesktopUI20260902={MAX_DESKTOP_UREN,MAX_TABEL_UREN,uurRijenUitGeo,komendeUurRijen,regenVelden,werkUurTabelBij,werkRegenSamenvattingBij,centraliseerKorteTeksten,herstelVerborgenDruk,render:()=>{werkUurTabelBij();werkRegenSamenvattingBij();centraliseerKorteTeksten();vindVolledigeGrafiekTabel();syncHoogte();planHoogteSync();}};
 installeer();
 })(typeof globalThis!=="undefined"?globalThis:this);

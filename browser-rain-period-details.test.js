@@ -61,6 +61,10 @@ async function controleer(type,naam){
       await page.evaluate(()=>document.fonts&&document.fonts.ready);
 
       await page.evaluate(()=>{S.dag=null;S.bereik=24;etmaal(S.i0,24);});
+      /* Wacht op de laatste labelronde van de grafiek (twee frames na het
+         tekenen en uiterlijk na 350 ms). Eerder meten gaf een tussenstand en
+         liet de test afhangen van hoe druk de machine was. */
+      await page.evaluate(()=>new Promise(r=>setTimeout(()=>requestAnimationFrame(()=>requestAnimationFrame(r)),400)));
       if(breedte<760)await page.waitForFunction(()=>document.querySelectorAll('#chart text[data-mobile-hour-axis="1"]').length>0,null,{timeout:2500});
       const uur24=await page.evaluate(()=>{
         const svg=document.getElementById("chart"),groep=svg.querySelector('g[data-q4-rain-periods="1"]'),g=S.geo;
@@ -70,6 +74,7 @@ async function controleer(type,naam){
              oorspronkelijke hoogte in data-desktop-base-y. */
           .filter(el=>Math.abs(Number(el.getAttribute("data-desktop-base-y")||el.getAttribute("y"))-asY)<0.1&&/^\d{2}:00$/.test((el.textContent||"").trim()));
         const asTijden=asEls.map(el=>(el.textContent||"").trim());
+        const asPiekDal=asEls.map(el=>el.hasAttribute("data-temp-time"));
         const asX=asEls.map(el=>Number(el.getAttribute("x"))).filter(Number.isFinite);
         const startEls=groep?[...groep.querySelectorAll('text[data-q4-rain-period-start]')]:[];
         const endEls=groep?[...groep.querySelectorAll('text[data-q4-rain-period-end]')]:[];
@@ -107,7 +112,7 @@ async function controleer(type,naam){
           details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
           samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0,
           totalen:bedragenEls.map(el=>(el.textContent||"").trim()),
-          tijdBinnen,splitLayouts,bedragOnderTijd,kansLabels,asTijden,asX,
+          tijdBinnen,splitLayouts,bedragOnderTijd,kansLabels,asTijden,asPiekDal,asX,
           asIndices:asEls.map(el=>Number(el.getAttribute("data-mobile-hour-index"))).filter(Number.isInteger),
           asBronTijden:asEls.map(el=>{const i=Number(el.getAttribute("data-mobile-hour-index"));return Number.isInteger(i)&&g.TI&&g.TI[i]?String(g.TI[i]).slice(11,16):"";}),
           verwachtAsIndices:g&&g.M&&globalThis.WeatherNowMobileGraphUX20260828?globalThis.WeatherNowMobileGraphUX20260828.kiesKalenderUurLabelIndices(g.TI,3,24):[],
@@ -144,9 +149,11 @@ async function controleer(type,naam){
         assert.ok(uur24.asTijden.every(t=>/^\d{2}:00$/.test(t)),`${naam} ${breedte}: mobiele uuras bevat geen expliciete lokale kloktijd: ${JSON.stringify(uur24.asTijden)}`);
         assert.deepEqual(uur24.asTijden,uur24.asBronTijden,`${naam} ${breedte}: mobiele uuras hoort niet bij de echte forecastpunten`);
       }else{
-        /* Desktopgrafiek over 24 uur: een rustige as om de drie uur vanaf het eerste uur. */
+        /* Desktopgrafiek over 24 uur: een rustige as om de drie uur vanaf het
+           eerste uur, in de eindtoestand. Piek en dal krijgen geen extra tijd
+           op de as (verzoek van de eigenaar, 29 september). */
         const uren=uur24.asTijden.map(t=>Number(t.slice(0,2)));
-        assert.ok(uur24.asTijden.length>=8&&uur24.asTijden[0]==="15:00"&&uur24.asTijden.every(t=>/^\d{2}:00$/.test(t))&&uren.slice(1).every((u,i)=>(u-uren[i]+24)%24===3),`${naam} ${breedte}: desktopuuras loopt niet om de drie uur vanaf 15:00; kreeg ${JSON.stringify(uur24.asTijden)}`);
+        assert.ok(uur24.asTijden.length>=8&&uur24.asTijden[0]==="15:00"&&uur24.asTijden.every(t=>/^\d{2}:00$/.test(t))&&uren.slice(1).every((u,i)=>(u-uren[i]+24)%24===3)&&!uur24.asPiekDal.some(Boolean),`${naam} ${breedte}: desktopuuras loopt niet om de drie uur vanaf 15:00; kreeg ${JSON.stringify(uur24.asTijden)}`);
       }
 
       const langer=await page.evaluate(()=>{

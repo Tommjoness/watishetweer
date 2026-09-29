@@ -223,15 +223,15 @@ const reporter=`<script>
       return !Number.isFinite(cy)||!Number.isFinite(y)||y>=cy-2;
     }).map(el=>(el.textContent||'').trim());
 
-    /* Iedere temperatuur in de grafiek heeft een uurtijd onder haar punt. Op de
-       telefoon staat piek of dal op het echte punt, ook tussen twee
-       drie-uursankers; de uuras houdt dan haar ritme en de tijd staat bij
-       aantikken en in de samenvatting. */
+    /* Iedere temperatuur in de grafiek heeft een uurtijd onder haar punt,
+       behalve piek en dal: die staan op iedere breedte op het echte punt, ook
+       tussen twee vaste uurtijden; de uuras houdt dan haar ritme en de tijd
+       staat bij aantikken, in de uurtabel en in de samenvatting (29 september). */
     const zonderTijd=(()=>{
       const g=S.geo;if(!g||Number(g.n)>25)return [];
       const tijden=[...chart.querySelectorAll('text')].filter(el=>!el.closest('#scrub')&&!el.closest('g[data-q4-rain-periods]')&&/^\\d{2}:00$/.test((el.textContent||'').trim()));
       const heeftTijd=i=>tijden.some(t=>Number(t.getAttribute('data-mobile-hour-index'))===i||Math.abs(Number(t.getAttribute('x'))-g.x(i))<3);
-      return alleLabels.filter(el=>!(compactMobile&&el.hasAttribute('data-mobile-temp-marker'))).map(el=>{
+      return alleLabels.filter(el=>!el.hasAttribute('data-mobile-temp-marker')&&!el.hasAttribute('data-desktop-temp-marker')).map(el=>{
         let i=null;
         for(const a of ['data-mobile-temp-marker-index','data-desktop-temp-marker-index','data-mobile-temp-index']){const v=el.getAttribute(a);if(v!==null&&v!==''){i=Number(v);break;}}
         if(i===null){

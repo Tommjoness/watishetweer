@@ -43,8 +43,8 @@ async function wachtKlaar(page,naam,timeout=26000){
       // Volledige brondekking blijft hierboven verplicht. Het 8–12-regelscontract
       // geldt vanaf 1366px; smallere desktopviewports bewijzen apart fit/overflow.
       const urenKlaar=contractDesktop
-        ?uren>=8&&uren<=WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN
-        :desktop?uren>=1&&uren<=WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN:uren>=23;
+        ?uren>=8&&uren<=(WeatherNowFinalDesktopUI20260902.MAX_TABEL_UREN||WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN)
+        :desktop?uren>=1&&uren<=(WeatherNowFinalDesktopUI20260902.MAX_TABEL_UREN||WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN):uren>=23;
       return app&&getComputedStyle(app).display!=="none"&&!app.hasAttribute("data-zonder-data")&&label&&bronKlaar&&dagen>=7&&urenKlaar;
     },null,{timeout});
   }catch(e){
@@ -148,7 +148,7 @@ async function lees(page){return page.evaluate(()=>{
     wind:document.getElementById("wind")?.textContent||"",
     humidity:document.getElementById("hum")?.textContent||"",
     dagen:document.querySelectorAll("#days .row.day:not(.kop)").length,
-    maxHours:WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN,
+    maxHours:(WeatherNowFinalDesktopUI20260902.MAX_TABEL_UREN||WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN),
     graphTimes:S.geo&&S.geo.TI,
     tableSourceTimes:hour?[...hour.querySelectorAll("tbody tr")].map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]):[],
     hourRows:hour?hour.querySelectorAll("tbody tr").length:0,

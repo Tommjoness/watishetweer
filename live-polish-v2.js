@@ -320,9 +320,8 @@ function positioneerNuLabel(svg){
     String(el.getAttribute("fill")||"")===String(CARMINE)
     &&Math.abs((eindig(el.getAttribute("r"))||0)-3)<0.2);
   if(!tekst||!punt) return;
-  // Desktop toont de huidige temperatuur al in de hero en bij het eerste
-  // grafiekpunt. De rode tijdlijn en stip blijven als aanwijzer zichtbaar.
-  if(!S.geo.M){tekst.remove();return;}
+  // Ook op desktop staat "nu 18°" bij de rode stip: zonder label is de rode
+  // lijn een aanwijzer zonder waarde (verzoek van de eigenaar, 29 september).
   const px=eindig(punt.getAttribute("cx")),py=eindig(punt.getAttribute("cy"));
   const top=eindig(S.geo.pt),bottom=top===null||!Number.isFinite(S.geo.ih)?null:top+S.geo.ih;
   const pos=nuLabelPositie(py,top,bottom,!!S.geo.M);
@@ -338,6 +337,13 @@ function positioneerNuLabel(svg){
     if(nuLabelConcurreert({x:px,y:py},label,S.geo.cw,!!S.geo.M)) verwijderTemperatuurMarkering(svg,el);
   });
 
+  /* Op desktop even goed leesbaar als de temperatuurcijfers ernaast. */
+  if(!S.geo.M){
+    const ref=gewoneLabels.find(el=>el.isConnected&&Number(el.getAttribute("font-size"))>0);
+    const fs=ref?Number(ref.getAttribute("font-size")):null;
+    if(fs&&fs*0.82>(Number(tekst.getAttribute("font-size"))||0))tekst.setAttribute("font-size",String(Math.round(fs*0.82*10)/10));
+    tekst.setAttribute("font-weight","500");
+  }
   tekst.setAttribute("stroke",SHEET);
   tekst.setAttribute("stroke-width",S.geo.M?"2.5":"3");
   tekst.setAttribute("paint-order","stroke");

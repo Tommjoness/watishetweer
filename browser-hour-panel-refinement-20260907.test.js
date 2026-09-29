@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded',async()=>{const zet=(k,v)=>document
  if(main)main.style.height='';WeatherNowFinalDesktopUI20260902.render();await wacht();
  const finalPlace=document.getElementById('place'),placeStyle=finalPlace?getComputedStyle(finalPlace):null;
  const finalSeoInner=document.querySelector('.seo-plaatsnav-inner'),seoInnerStyle=finalSeoInner?getComputedStyle(finalSeoInner):null,seoKop=finalSeoInner?.querySelector('.seo-plaatsnav-kop'),seoLinks=finalSeoInner?.querySelector('.seo-plaatsnav-links'),sir=finalSeoInner?.getBoundingClientRect(),skr=seoKop?.getBoundingClientRect(),slr=seoLinks?.getBoundingClientRect(),wide=document.querySelector('#nights .row.night .nmeta.wide'),advies=document.querySelector('#nights .nachtadvies'),maan=document.querySelector('#nights .nachtmaan'),wr=wide?.getBoundingClientRect(),ar=advies?.getBoundingClientRect(),moonr=maan?.getBoundingClientRect();
- zet('candidates',kandidaten.length);zet('candidate-first',kandidaten[0]?String(kandidaten[0].tijd).slice(11,16):'');zet('candidate-last',kandidaten.at(-1)?String(kandidaten.at(-1).tijd).slice(11,16):'');
+ zet('max-tabel',WeatherNowFinalDesktopUI20260902.MAX_TABEL_UREN||11);zet('candidates',kandidaten.length);zet('candidate-first',kandidaten[0]?String(kandidaten[0].tijd).slice(11,16):'');zet('candidate-last',kandidaten.at(-1)?String(kandidaten.at(-1).tijd).slice(11,16):'');
  for(const [prefix,m] of [['base',basis],['grown',groter]]){zet(prefix+'-rows',m.count);zet(prefix+'-first',m.first);zet(prefix+'-last',m.last);zet(prefix+'-panel-height',m.panelHeight.toFixed(1));zet(prefix+'-main-height',m.mainHeight.toFixed(1));zet(prefix+'-layout-width',m.layoutWidth.toFixed(1));zet(prefix+'-main-width',m.mainWidth.toFixed(1));zet(prefix+'-panel-width',m.panelWidth.toFixed(1));zet(prefix+'-fits',m.lastBottom<=m.panelBottom+1?'ok':'fout');zet(prefix+'-table-tight',Math.abs(m.tableBottom-m.lastBottom)<=2?'ok':'fout');zet(prefix+'-panel-fill',Math.abs(m.panelBottom-m.tableBottom)<=3?'ok':'fout');zet(prefix+'-row-min',m.rowHeights.length?Math.min(...m.rowHeights).toFixed(1):'0');zet(prefix+'-row-max',m.rowHeights.length?Math.max(...m.rowHeights).toFixed(1):'0');zet(prefix+'-overflow',m.overflow);zet(prefix+'-panel-title',m.panelTitle);zet(prefix+'-panel-visibility',m.panelVisibility);zet(prefix+'-layout-columns',m.layoutColumns);zet(prefix+'-chart-title',m.chartTitle);zet(prefix+'-headers',m.headers);zet(prefix+'-row-shape',m.rowShape?'ok':'fout');zet(prefix+'-icons',m.icons);zet(prefix+'-rich',m.rich?'ok':'fout');zet(prefix+'-graph-count',m.graphCount);zet(prefix+'-graph-first',m.graphFirst||'');}
  zet('zero-first',basis.mm[0]||'');zet('missing-second',basis.mm[1]||'');
  zet('place-left-inset',placeStyle?parseFloat(placeStyle.paddingLeft)||0:0);zet('place-right-inset',placeStyle?parseFloat(placeStyle.paddingRight)||0:0);zet('seo-left-padding',seoInnerStyle?parseFloat(seoInnerStyle.paddingLeft)||0:0);zet('seo-right-padding',seoInnerStyle?parseFloat(seoInnerStyle.paddingRight)||0:0);zet('seo-content-left-gap',sir&&skr?(skr.left-sir.left).toFixed(1):'0');zet('seo-content-right-gap',sir&&slr?(sir.right-slr.right).toFixed(1):'0');
@@ -56,10 +56,14 @@ try{
   const dom=r.stdout||"",v=k=>{const m=new RegExp('data-hour-refine-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
   if(v('candidates')!=='11'||v('candidate-first')!=='14:00'||v('candidate-last')!=='00:00')throw new Error(`11-uurs kandidaatvenster fout: count=${v('candidates')} first=${v('candidate-first')} last=${v('candidate-last')}`);
-  const basis=Number(v('base-rows')),groter=Number(v('grown-rows')),kandidaten=Number(v('candidates'));
-  if(!(basis>=8&&basis<=11))throw new Error(`natuurlijke grafiekhoogte levert geen comfortabele 8–11 uurregels: rows=${basis}`);
-  if(!(groter>=basis&&groter<=kandidaten))throw new Error(`uurbron reageert onjuist op extra grafiekhoogte: basis=${basis} groter=${groter}`);
-  if(basis<kandidaten&&groter<=basis)throw new Error(`extra beschikbare grafiekhoogte levert geen extra volledig uur terwijl kandidaten over zijn: basis=${basis} groter=${groter}`);
+  /* Sinds 29 september (verzoek van de eigenaar: "kan de uurtabel naast de
+     grafiek niet meer uren tonen?") toont de tabel zoveel volledige uren als
+     naast de grafiek passen, tot het hele grafiekvenster (MAX_TABEL_UREN). */
+  const basis=Number(v('base-rows')),groter=Number(v('grown-rows')),maxTabel=Number(v('max-tabel'));
+  if(!(maxTabel>=11))throw new Error(`tabelvenster is kleiner dan 11 uur: ${v('max-tabel')}`);
+  if(!(basis>=8&&basis<=24))throw new Error(`natuurlijke grafiekhoogte levert geen 8–24 uurregels: rows=${basis}`);
+  if(!(groter>=basis&&groter<=Math.min(maxTabel,24)))throw new Error(`uurbron reageert onjuist op extra grafiekhoogte: basis=${basis} groter=${groter}`);
+  if(basis<Math.min(maxTabel,24)&&groter<=basis)throw new Error(`extra beschikbare grafiekhoogte levert geen extra volledig uur terwijl er uren over zijn: basis=${basis} groter=${groter}`);
   for(const prefix of ['base','grown']){
     if(v(prefix+'-first')!=='14:00')throw new Error(`${prefix}: eerste uur verschoof onverwacht naar ${v(prefix+'-first')}`);
     if(v(prefix+'-fits')!=='ok'||v(prefix+'-table-tight')!=='ok'||v(prefix+'-panel-fill')!=='ok')throw new Error(`${prefix}: uurpaneel bevat een halve/lege onderste rij of loos ondervlak`);
@@ -110,7 +114,7 @@ try{
     if(Number(v('overflow'))>2)throw new Error(`${w}px: ${v('overflow')}px horizontale overflow`);
     if(v('marker')!=='absent')throw new Error(`${w}px: EERSTVOLGEND is nog zichtbaar`);
     if(w>=1100){
-      const n=Number(v('rows'));if(!(n>=8&&n<=11))throw new Error(`${w}px: ${n} volledige desktopregels, verwacht 8–11`);
+      const n=Number(v('rows'));if(!(n>=8&&n<=24))throw new Error(`${w}px: ${n} volledige desktopregels, verwacht 8–24`);
       if(v('first')!=='14:00')throw new Error(`${w}px: eerste tabeluur ${v('first')} i.p.v. 14:00`);
       if(v('internal-overflow')!=='visible')throw new Error(`${w}px: interne desktopscrollbar niet uitgeschakeld (${v('internal-overflow')})`);
       if(v('fits')!=='ok')throw new Error(`${w}px: onderste uurregel valt buiten het paneel`);

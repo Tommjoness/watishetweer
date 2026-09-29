@@ -34,11 +34,15 @@ const SENIOR_NACHT_END='\n\n/* Verstreken uurwaarden zijn forecast/modelwaarden'
 const SENIOR_NACHT_SIGNATURE='const basisNachten=nachten;\nnachten=function(){\n  basisNachten();\n  const rijen=[...document.querySelectorAll("#nights .row.night:not(.kop)")]';
 
 const GRAFIEK_MOBIEL_OUD='  const W=grafiekW, H=M?292:296, pr=M?10:20; let pl=M?34:44, iw=W-pl-pr;\n  const by=M?20:22, bh=M?11:16;\n  const pt=M?72:76, ih=M?166:160, pb=pt+ih;';
-const GRAFIEK_MOBIEL_NIEUW='  const W=grafiekW, H=M?250:296, pr=M?10:20; let pl=M?34:44, iw=W-pl-pr;\n  const by=M?18:22, bh=M?10:16;\n  const pt=M?59:76, ih=M?145:160, pb=pt+ih;';
+/* Breed scherm (vanaf 1440px, 29 september): het plotvlak is 60 eenheden
+   hoger, zodat de lijn minder plat is en de uurtabel ernaast meer uren toont. */
+const GRAFIEK_MOBIEL_NIEUW='  const breedDesktop=!M&&typeof window!=="undefined"&&window.innerWidth>=1440;\n  const W=grafiekW, H=M?250:(breedDesktop?356:296), pr=M?10:20; let pl=M?34:44, iw=W-pl-pr;\n  const by=M?18:22, bh=M?10:16;\n  const pt=M?59:76, ih=M?145:(breedDesktop?220:160), pb=pt+ih;';
 const GRAFIEK_LABEL_PAST_OUD='      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val<=pb-3;';
 const GRAFIEK_LABEL_PAST_NIEUW='      const past=(val,bv)=> bv ? val-F.temp>=by+bh+6 : val+labelHoogte/2+4<=pb;';
 const GRAFIEK_TICK_OUD='    if(toonAs){\n      ticks+=';
-const GRAFIEK_TICK_NIEUW='    if(toonAs){\n      const tijdLabelVrij=nuX==null||Math.abs(x(i)-nuX)>Math.max(18,F.uur*2.2);\n      if(tijdLabelVrij) ticks+=';
+/* Alleen op de telefoon wijkt een uurtijd vlak naast de nu-lijn. Op desktop
+   eindigt de nu-lijn boven de tijden en begint de as bij het eerste uur. */
+const GRAFIEK_TICK_NIEUW='    if(toonAs){\n      const tijdLabelVrij=nuX==null||!M||Math.abs(x(i)-nuX)>Math.max(18,F.uur*2.2);\n      if(tijdLabelVrij) ticks+=';
 /* Op mobiel waren alleen minimum en maximum te karig, maar alle drie-uurslabels
    tegelijk zijn onnodig druk. Houd daarom de vaste zes-uursreferenties én alle
    echte lokale/globale extrema. Ligt een echt extremum direct naast zo'n vaste
@@ -154,7 +158,7 @@ for(const vereist of [
   "WeatherNowQ1","q1-dag-mm","weerbriefing.plaatscache.q1","neerslagkans",
   "temperatuurTrend","q1-pop-hidden","normaliseerNachtDagdata","nachtIsActiefNu","corrigeerNachtVensterBron","verbeterNachtzicht",
   "nachtzichtCompactAantal","Meer nachten bekijken","nacht-meer",
-  "H=M?250:296","pt=M?59:76, ih=M?145:160","tijdLabelVrij=nuX==null",
+  "H=M?250:(breedDesktop?356:296)","pt=M?59:76, ih=M?145:(breedDesktop?220:160)","tijdLabelVrij=nuX==null",
   "M?kandidatenRuw.filter(k=>k.rang>1||(k.i%6===0&&!kandidatenRuw.some(g=>g.rang>1&&Math.abs(g.i-k.i)<=1))):kandidatenRuw",
   "k.rang>=2||(n<=24&&!M)","mm!==null&&mm>=0",
   "val+labelHoogte/2+4<=pb","ruimBotsendeAslabelsOp","if(!M)return;","geschatteTekstBox"

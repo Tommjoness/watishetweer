@@ -73,7 +73,9 @@ try{
   if(r.status!==0)throw new Error("browser exit "+r.status+": "+String(r.stderr||"").slice(-1200));
   const dom=r.stdout||"",v=k=>{const m=new RegExp('data-live-chart-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
-  if(v('current')!=='nee'||v('marker')!=='ja')throw new Error("desktop herhaalt de actuele temperatuur of mist de rode tijdlijn/stip");
+  /* Sinds 29 september staat "nu 20°" ook op desktop bij de rode stip (verzoek
+     van de eigenaar); de botsingscontrole hieronder neemt het label mee. */
+  if(v('current')!=='ja'||v('marker')!=='ja')throw new Error("desktop mist het nu-label met de actuele temperatuur of de rode tijdlijn/stip");
   if(Number(v('idx18'))<0)throw new Error("18:00 ontbreekt uit de zichtbare provider-as; geo.TI0="+v('geoti0'));
   if(v('dot17')!=='nee')throw new Error("17:00-modeluur wordt niet als redundante actuele waarde onderdrukt");
   if(v('missing')!=='geen')throw new Error("niet ieder toekomstig desktopuur heeft een temperatuurpunt/label; ontbrekende indices="+v('missing')+", aanwezig="+v('indices'));
@@ -84,7 +86,9 @@ try{
   const zon=v('sun-copy')||'';
   if(/\b\d+ uur(?: en \d+ minu(?:ut|ten))? daglicht\b/i.test(zon))throw new Error("gewone numerieke daglengte staat nog boven de grafiek: "+zon);
   if(!/zon onder 20:01/i.test(zon)||!/zon op 07:07/i.test(zon))throw new Error("relevante zonsopkomst/-ondergangcopy is bij daglengtecleanup verloren gegaan: "+zon);
-  const h=Number(v('height'));if(!(h>=296&&h<=310))throw new Error("desktopgrafiek reserveert nog te veel/te weinig onderruimte: viewBox-hoogte="+h);
+  /* Op 1660px (breed scherm, vanaf 1440px) is het plotvlak 60 eenheden hoger:
+     basis 296 wordt 356 (29 september). */
+  const h=Number(v('height'));if(!(h>=356&&h<=370))throw new Error("desktopgrafiek reserveert nog te veel/te weinig onderruimte: viewBox-hoogte="+h);
   if(v('rain')!=='ja')throw new Error("Q4-regenannotatie ontbreekt in de regenfixture");
   if(Number(v('overflow'))>2)throw new Error("pre-cleanup desktopfixture heeft horizontale overflow: "+v('overflow')+"px");
   console.log("Live chart/layout browserregressie groen vóór bundling: nu-markering houdt de actuele temperatuur, gewone daglengte is uit de grafiekkop en ieder volledig toekomstig desktopuur houdt exact één gekoppeld temperatuurcijfer; chart viewBox="+h+".");
