@@ -8,10 +8,17 @@
    Het model wordt bevraagd op de coördinaten van ieder station, zodat de
    vergelijking eerlijk is: zelfde plek, zelfde uur.
 
-   Uitkomst per station en over alle stations samen: gemiddelde afwijking
-   (model min meting), gemiddelde absolute afwijking en het 95e percentiel,
-   voor temperatuur, relatieve luchtvochtigheid en dauwpunt. Alleen
+   Uitkomst per station en per groep: gemiddelde afwijking (model min
+   meting), gemiddelde absolute afwijking en het 95e percentiel, voor
+   temperatuur, relatieve luchtvochtigheid en dauwpunt. Alleen
    geaggregeerde weerdata; geen bezoekersgegevens.
+   - Dag en nacht apart, op basis van is_day van het model voor dat uur en
+     die plek (zon op of onder), niet op vaste klokuren.
+   - Land en zee apart. Er is geen betrouwbaar veld voor, en stationsnamen
+     vastleggen is plaatsgebonden; daarom natuurkundig: een station waarvan de
+     gemeten temperatuur per dag mediaan minder dan ZEE_DAGGANG graden
+     schommelt, heeft zeeklimaat (platforms, lichteilanden). De indeling staat
+     in de samenvatting, zodat ze te controleren is.
 
    Omgeving:
    - KNMI_EDR_API_KEY (verplicht): als GitHub Actions-secret, nooit in code.
@@ -29,6 +36,7 @@ const MODEL_BASIS = "https://historical-forecast-api.open-meteo.com/v1/forecast"
 const NL = { latMin: 50.6, latMax: 53.8, lonMin: 3.0, lonMax: 7.4 };
 const STATIONS_PER_VERZOEK = 10;
 const DAGEN_PER_VERZOEK = 7;
+const ZEE_DAGGANG = 2.5; /* °C: mediane dagelijkse temperatuurgang van een zeestation */
 
 const wacht = ms => new Promise(r => setTimeout(r, ms));
 const getal = v => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v))) ? null : Number(v);
@@ -106,7 +114,7 @@ function modelUitOpenMeteo(json, stations) {
     if (!s || !Array.isArray(h.time)) return;
     const perUur = new Map();
     h.time.forEach((t, i) => perUur.set(String(t).slice(0, 13), {
-      ta: getal((h.temperature_2m || [])[i]), rh: getal((h.relative_humidity_2m || [])[i]), td: getal((h.dew_point_2m || [])[i])
+      ta: getal((h.temperature_2m || [])[i]), rh: getal((h.relative_humidity_2m || [])[i]), td: getal((h.dew_point_2m || [])[i]), dag: getal((h.is_day || [])[i])
     }));
     uit.set(s.id, perUur);
   });
@@ -127,11 +135,11 @@ function statistiek(verschillen) {
 
 /* Paren per uur: model min meting. Het dauwpunt van de meting volgt uit
    temperatuur en luchtvochtigheid met dezelfde formule als de site (Magnus). */
-function vergelijk(model, meting) {
+function vergelijk(model, meting, past = () => true) {
   const dT = [], dRH = [], dTd = [];
   for (const [uur, g] of meting) {
     const m = model.get(uur);
-    if (!m) continue;
+    if (!m || !past(m)) continue;
     if (m.ta !== null && g.ta !== null) dT.push(m.ta - g.ta);
     if (m.rh !== null && g.rh !== null) dRH.push(m.rh - g.rh);
     const tdMeting = (g.ta !== null && g.rh !== null) ? dauwpuntUit(g.ta, g.rh) : null;
@@ -139,6 +147,46 @@ function vergelijk(model, meting) {
     if (tdMeting !== null && tdModel !== null) dTd.push(tdModel - tdMeting);
   }
   return { temperatuur: statistiek(dT), vochtigheid: statistiek(dRH), dauwpunt: statistiek(dTd) };
+}
+
+const overdag = m => m.dag === 1, snachts = m => m.dag === 0;
+
+/* Mediane dagelijkse temperatuurgang (max min min per UTC-dag) van de
+   meting; alleen dagen met minstens 20 uurwaarden tellen mee. */
+function daggang(meting) {
+  const perDag = new Map();
+  for (const [uur, g] of meting) {
+    if (g.ta === null) continue;
+    const dag = uur.slice(0, 10), l = perDag.get(dag) || [];
+    l.push(g.ta); perDag.set(dag, l);
+  }
+  const gangen = [...perDag.values()].filter(l => l.length >= 20).map(l => Math.max(...l) - Math.min(...l)).sort((a, b) => a - b);
+  if (!gangen.length) return null;
+  const m = Math.floor(gangen.length / 2);
+  return gangen.length % 2 ? gangen[m] : (gangen[m - 1] + gangen[m]) / 2;
+}
+function soort(meting) { const g = daggang(meting); return g !== null && g < ZEE_DAGGANG ? "zee" : "land"; }
+
+/* Model en meting van een groep stations samenvoegen tot één reeks. */
+function samen(stations, model, metingen) {
+  const m = new Map(), g = new Map();
+  stations.forEach(s => {
+    (model.get(s.id) || new Map()).forEach((v, k) => m.set(s.id + "|" + k, v));
+    (metingen.get(s.id) || new Map()).forEach((v, k) => g.set(s.id + "|" + k, v));
+  });
+  return [m, g];
+}
+
+function stationsgroepen(stationsMetSoort, model, metingen) {
+  const land = stationsMetSoort.filter(s => s.soort === "land"), zee = stationsMetSoort.filter(s => s.soort === "zee");
+  const [ma, ga] = samen(stationsMetSoort, model, metingen), [ml, gl] = samen(land, model, metingen), [mz, gz] = samen(zee, model, metingen);
+  return [
+    { naam: "Alle stations", stations: stationsMetSoort.length, ...vergelijk(ma, ga) },
+    { naam: "Land", stations: land.length, ...vergelijk(ml, gl) },
+    { naam: "Land, overdag", stations: land.length, ...vergelijk(ml, gl, overdag) },
+    { naam: "Land, 's nachts", stations: land.length, ...vergelijk(ml, gl, snachts) },
+    { naam: "Zee", stations: zee.length, ...vergelijk(mz, gz) }
+  ];
 }
 
 function periode(dagen, nu = Date.now()) {
@@ -155,31 +203,33 @@ function blokken(start, einde) {
   return uit;
 }
 
-function groepen(lijst, n) { const uit = []; for (let i = 0; i < lijst.length; i += n) uit.push(lijst.slice(i, i + n)); return uit; }
+function inDelen(lijst, n) { const uit = []; for (let i = 0; i < lijst.length; i += n) uit.push(lijst.slice(i, i + n)); return uit; }
 
 function fmt(v, eenheid) { return v === null ? "–" : (v > 0 ? "+" : "") + String(rond(v)).replace(".", ",") + eenheid; }
 function fmtAbs(v, eenheid) { return v === null ? "–" : String(rond(v)).replace(".", ",") + eenheid; }
 
 function markdown(resultaat) {
-  const { periode: p, totaal, stations } = resultaat;
+  const { periode: p, groepen: gr, stations } = resultaat;
   const r = [];
   r.push("## Modelverificatie tegen KNMI-stations");
   r.push("");
-  r.push(`Periode ${p.start.slice(0, 10)} t/m ${p.eindeInclusief} (UTC), ${stations.length} stations, ieder heel uur. Afwijking = model min meting.`);
+  r.push(`Periode ${p.start.slice(0, 10)} t/m ${p.eindeInclusief} (UTC), ${stations.length} stations, ieder heel uur. Afwijking = model min meting; "abs." = gemiddelde absolute afwijking; "95%" = 95% van de uren valt binnen dit verschil.`);
   r.push("");
-  r.push("| Grootheid | Uren | Gemiddelde afwijking | Gemiddelde absolute afwijking | 95% van de uren binnen |");
-  r.push("|---|---:|---:|---:|---:|");
-  for (const [naam, k, e] of [["Temperatuur", "temperatuur", " °C"], ["Luchtvochtigheid", "vochtigheid", " %-punt"], ["Dauwpunt", "dauwpunt", " °C"]]) {
-    const s = totaal[k];
-    r.push(`| ${naam} | ${s.n} | ${fmt(s.bias, e)} | ${fmtAbs(s.mae, e)} | ${fmtAbs(s.p95, e)} |`);
+  r.push("| Groep | Stations | Uren | Temp. afwijking | Temp. abs. | Temp. 95% | Vocht afwijking | Vocht abs. | Vocht 95% | Dauwpunt afwijking | Dauwpunt abs. |");
+  r.push("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+  for (const g of gr) {
+    const t = g.temperatuur, v = g.vochtigheid, d = g.dauwpunt;
+    r.push(`| ${g.naam} | ${g.stations} | ${t.n} | ${fmt(t.bias, " °C")} | ${fmtAbs(t.mae, " °C")} | ${fmtAbs(t.p95, " °C")} | ${fmt(v.bias, " %")} | ${fmtAbs(v.mae, " %")} | ${fmtAbs(v.p95, " %")} | ${fmt(d.bias, " °C")} | ${fmtAbs(d.mae, " °C")} |`);
   }
+  r.push("");
+  r.push(`Dag en nacht volgen uit is_day van het model (zon op of onder). Zee = gemeten temperatuur schommelt per dag mediaan minder dan ${String(ZEE_DAGGANG).replace(".", ",")} °C.`);
   r.push("");
   r.push("Per station (gesorteerd op gemiddelde absolute temperatuurafwijking):");
   r.push("");
-  r.push("| Station | Uren | Temp. afwijking | Temp. abs. | Vocht afwijking | Vocht abs. | Dauwpunt afwijking | Dauwpunt abs. |");
-  r.push("|---|---:|---:|---:|---:|---:|---:|---:|");
+  r.push("| Station | Soort | Daggang | Uren | Temp. overdag | Temp. 's nachts | Temp. abs. | Vocht overdag | Vocht 's nachts | Dauwpunt afwijking |");
+  r.push("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|");
   for (const s of stations) {
-    r.push(`| ${s.naam} | ${s.temperatuur.n} | ${fmt(s.temperatuur.bias, " °C")} | ${fmtAbs(s.temperatuur.mae, " °C")} | ${fmt(s.vochtigheid.bias, " %")} | ${fmtAbs(s.vochtigheid.mae, " %")} | ${fmt(s.dauwpunt.bias, " °C")} | ${fmtAbs(s.dauwpunt.mae, " °C")} |`);
+    r.push(`| ${s.naam} | ${s.soort} | ${fmtAbs(s.daggang, " °C")} | ${s.temperatuur.n} | ${fmt(s.overdag.temperatuur.bias, " °C")} | ${fmt(s.snachts.temperatuur.bias, " °C")} | ${fmtAbs(s.temperatuur.mae, " °C")} | ${fmt(s.overdag.vochtigheid.bias, " %")} | ${fmt(s.snachts.vochtigheid.bias, " %")} | ${fmt(s.dauwpunt.bias, " °C")} |`);
   }
   r.push("");
   r.push("Bronnen: model via Open-Meteo Historical Forecast API (best_match); metingen KNMI, CC BY 4.0.");
@@ -198,7 +248,7 @@ async function main() {
   console.log(`${stations.length} KNMI-stations in Nederland; periode ${start.toISOString().slice(0, 10)} tot ${einde.toISOString().slice(0, 10)} (UTC).`);
 
   const metingen = new Map(), model = new Map();
-  for (const groep of groepen(stations, STATIONS_PER_VERZOEK)) {
+  for (const groep of inDelen(stations, STATIONS_PER_VERZOEK)) {
     for (const [a, b] of blokken(start, einde)) {
       const url = `${EDR_BASIS}/locations/${groep.map(s => encodeURIComponent(s.id)).join(",")}?datetime=${a.toISOString().slice(0, 19)}Z/${new Date(b.getTime() - 60000).toISOString().slice(0, 19)}Z&parameter-name=ta,rh`;
       try {
@@ -210,23 +260,22 @@ async function main() {
     }
     const modelUrl = `${MODEL_BASIS}?latitude=${groep.map(s => s.lat.toFixed(4)).join(",")}&longitude=${groep.map(s => s.lon.toFixed(4)).join(",")}`
       + `&start_date=${start.toISOString().slice(0, 10)}&end_date=${new Date(einde.getTime() - 86400000).toISOString().slice(0, 10)}`
-      + "&hourly=temperature_2m,relative_humidity_2m,dew_point_2m&timezone=UTC";
+      + "&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,is_day&timezone=UTC";
     modelUitOpenMeteo(await haalJson(modelUrl), groep).forEach((v, k) => model.set(k, v));
   }
 
-  const perStation = stations.map(s => ({ id: s.id, naam: s.naam, lat: s.lat, lon: s.lon, ...vergelijk(model.get(s.id) || new Map(), metingen.get(s.id) || new Map()) }))
+  const perStation = stations.map(s => {
+    const m = model.get(s.id) || new Map(), g = metingen.get(s.id) || new Map();
+    return { id: s.id, naam: s.naam, lat: s.lat, lon: s.lon, soort: soort(g), daggang: daggang(g), ...vergelijk(m, g), overdag: vergelijk(m, g, overdag), snachts: vergelijk(m, g, snachts) };
+  })
     .filter(s => s.temperatuur.n + s.vochtigheid.n > 0)
     .sort((a, b) => (a.temperatuur.mae ?? 99) - (b.temperatuur.mae ?? 99));
   if (!perStation.length) throw new Error("Geen enkel uur kon worden vergeleken: controleer de sleutel en de beschikbaarheid van de KNMI-dataset.");
 
-  const alleModel = new Map(), alleMeting = new Map();
-  perStation.forEach(s => {
-    (model.get(s.id) || new Map()).forEach((v, k) => alleModel.set(s.id + "|" + k, v));
-    (metingen.get(s.id) || new Map()).forEach((v, k) => alleMeting.set(s.id + "|" + k, v));
-  });
   const resultaat = {
     periode: { start: start.toISOString(), einde: einde.toISOString(), eindeInclusief: new Date(einde.getTime() - 86400000).toISOString().slice(0, 10) },
-    totaal: vergelijk(alleModel, alleMeting),
+    zeeDaggang: ZEE_DAGGANG,
+    groepen: stationsgroepen(perStation, model, metingen),
     stations: perStation
   };
   const md = markdown(resultaat);
@@ -236,5 +285,5 @@ async function main() {
   return resultaat;
 }
 
-module.exports = { stationsUitLocaties, metingenUitCoverage, modelUitOpenMeteo, statistiek, vergelijk, periode, blokken, markdown };
+module.exports = { stationsUitLocaties, metingenUitCoverage, modelUitOpenMeteo, statistiek, vergelijk, daggang, soort, stationsgroepen, periode, blokken, markdown, ZEE_DAGGANG };
 if (require.main === module) main().catch(e => { console.error("Modelverificatie mislukt: " + e.message); process.exit(1); });

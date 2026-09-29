@@ -2,8 +2,9 @@
 
 /* Rekenkern van de KNMI-modelverificatie, zonder netwerk: stationslijst,
    CoverageJSON (één Coverage en een CoverageCollection), Open-Meteo met één
-   en meerdere plekken, alleen hele uren, dauwpunt via Magnus en de
-   statistiek (afwijking, absolute afwijking, 95e percentiel). */
+   en meerdere plekken, alleen hele uren, dauwpunt via Magnus, de
+   statistiek (afwijking, absolute afwijking, 95e percentiel), dag en nacht
+   via is_day, en land of zee via de dagelijkse temperatuurgang. */
 
 const assert = require("assert");
 const v = require("./knmi-modelverificatie.js");
@@ -32,7 +33,7 @@ assert(enkel.has("0-20000-0-06260") && !enkel.has("0-20000-0-06240"), "één Cov
 assert.equal(v.metingenUitCoverage(coverage(6.5, 53.2, ["2026-09-28T10:00:00Z"], [19], [70]), stations).size, 0, "geen koppeling met een station ver weg");
 
 const omMeer = [
-  { hourly: { time: ["2026-09-28T10:00", "2026-09-28T11:00"], temperature_2m: [21.0, 21.5], relative_humidity_2m: [55, 50], dew_point_2m: [11.6, 10.6] } },
+  { hourly: { time: ["2026-09-28T10:00", "2026-09-28T11:00"], temperature_2m: [21.0, 21.5], relative_humidity_2m: [55, 50], dew_point_2m: [11.6, 10.6], is_day: [0, 1] } },
   { hourly: { time: ["2026-09-28T10:00"], temperature_2m: [18.0], relative_humidity_2m: [75], dew_point_2m: [null] } }
 ];
 const model = v.modelUitOpenMeteo(omMeer, stations);
@@ -59,7 +60,30 @@ assert.equal(p.start.toISOString(), "2026-09-15T00:00:00.000Z");
 assert.equal(p.einde.toISOString(), "2026-09-29T00:00:00.000Z");
 assert.deepEqual(v.blokken(p.start, p.einde).map(([a, b]) => a.toISOString().slice(0, 10) + "/" + b.toISOString().slice(0, 10)), ["2026-09-15/2026-09-22", "2026-09-22/2026-09-29"]);
 
-const md = v.markdown({ periode: { start: p.start.toISOString(), eindeInclusief: "2026-09-28" }, totaal: r, stations: [{ naam: "Schiphol", ...r }] });
-assert(md.includes("| Temperatuur | 2 | +0,8 °C |") && md.includes("| Schiphol |") && md.includes("CC BY 4.0"), "samenvatting met Nederlandse notatie en bronvermelding");
+/* Dag en nacht volgen is_day van het model voor dat uur. */
+const dag = v.vergelijk(model.get("0-20000-0-06240"), meting.get("0-20000-0-06240"), m => m.dag === 1);
+const nacht = v.vergelijk(model.get("0-20000-0-06240"), meting.get("0-20000-0-06240"), m => m.dag === 0);
+assert(dag.temperatuur.n === 1 && Math.abs(dag.temperatuur.bias - 0.5) < 1e-9, "overdag: alleen het uur met is_day 1");
+assert(nacht.temperatuur.n === 1 && Math.abs(nacht.temperatuur.bias - 1.0) < 1e-9, "'s nachts: alleen het uur met is_day 0");
 
-console.log("KNMI-modelverificatie rekenkern groen: stations, CoverageJSON, Open-Meteo, hele uren, dauwpunt en statistiek.");
+/* Land of zee: mediane dagelijkse temperatuurgang uit de meting. */
+const reeks = (dagen, gang) => { const m = new Map(); dagen.forEach((d, k) => { for (let u = 0; u < 24; u++) m.set(d + "T" + String(u).padStart(2, "0"), { ta: 15 + gang[k] * Math.sin(Math.PI * u / 23), rh: 80 }); }); return m; };
+const zeeReeks = reeks(["2026-09-20", "2026-09-21", "2026-09-22"], [0.8, 1.2, 1.0]);
+const landReeks = reeks(["2026-09-20", "2026-09-21", "2026-09-22"], [6, 8, 7]);
+assert(Math.abs(v.daggang(zeeReeks) - 1.0) < 0.05 && v.soort(zeeReeks) === "zee", "kleine dagelijkse gang: zeeklimaat");
+assert(Math.abs(v.daggang(landReeks) - 7) < 0.1 && v.soort(landReeks) === "land", "grote dagelijkse gang: land");
+const kort = new Map([...landReeks].slice(0, 10));
+assert.equal(v.daggang(kort), null, "dagen met te weinig uren tellen niet mee");
+assert.equal(v.soort(kort), "land", "zonder daggang geen zee-indeling");
+
+const gr = v.stationsgroepen([{ id: "0-20000-0-06240", naam: "Schiphol", soort: "land" }, { id: "0-20000-0-06260", naam: "De Bilt", soort: "zee" }], model, meting);
+assert.deepEqual(gr.map(g => g.naam), ["Alle stations", "Land", "Land, overdag", "Land, 's nachts", "Zee"]);
+assert.equal(gr[0].temperatuur.n, 3, "alle stations samen");
+assert.equal(gr[1].temperatuur.n, 2, "alleen landstations");
+assert.equal(gr[4].temperatuur.n, 1, "alleen zeestations");
+
+const st = { naam: "Schiphol", soort: "land", daggang: 7.2, ...r, overdag: dag, snachts: nacht };
+const md = v.markdown({ periode: { start: p.start.toISOString(), eindeInclusief: "2026-09-28" }, groepen: gr, stations: [st] });
+assert(md.includes("| Alle stations | 2 | 3 |") && md.includes("| Schiphol | land | 7,2 °C | 2 | +0,5 °C | +1 °C |") && md.includes("CC BY 4.0") && md.includes("mediaan minder dan 2,5 °C"), "samenvatting met groepen, dag/nacht, Nederlandse notatie en bronvermelding");
+
+console.log("KNMI-modelverificatie rekenkern groen: stations, CoverageJSON, Open-Meteo, hele uren, dauwpunt, statistiek, dag/nacht en land/zee.");
