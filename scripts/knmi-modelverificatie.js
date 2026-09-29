@@ -24,7 +24,9 @@
    - KNMI_EDR_API_KEY (verplicht): als GitHub Actions-secret, nooit in code.
    - DAGEN (standaard 14): hoeveel volledige dagen terug.
    - UITVOER (optioneel): pad voor het JSON-resultaat.
-   - GITHUB_STEP_SUMMARY (in GitHub Actions): de tabel komt in de samenvatting. */
+   - GITHUB_STEP_SUMMARY (in GitHub Actions): de tabel komt in de samenvatting.
+   - SAMENVATTING (optioneel): pad voor dezelfde tabel als Markdown-bestand,
+     voor de reactie in het resultatenissue. */
 
 const fs = require("fs");
 const path = require("path");
@@ -36,7 +38,7 @@ const MODEL_BASIS = "https://historical-forecast-api.open-meteo.com/v1/forecast"
 const NL = { latMin: 50.6, latMax: 53.8, lonMin: 3.0, lonMax: 7.4 };
 const STATIONS_PER_VERZOEK = 10;
 const DAGEN_PER_VERZOEK = 7;
-const ZEE_DAGGANG = 3.0; /* °C: mediane dagelijkse temperatuurgang van een zeestation. Eerste meting (15-28 september 2026): zeeplatforms 2,1-2,5 °C, landstations vanaf 3,6 °C (Vlieland) */
+const ZEE_DAGGANG = 3.3; /* °C: mediane dagelijkse temperatuurgang van een zeestation. Gemeten september 2026: zeeplatforms 2,0-3,0 °C (AWG-1 bij Ameland het hoogst), landstations vanaf 3,6 °C (Vlieland). Een benadering: rond de grens verschuift hooguit één platform, met nauwelijks invloed op de groepscijfers. */
 
 const wacht = ms => new Promise(r => setTimeout(r, ms));
 const getal = v => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v))) ? null : Number(v);
@@ -281,6 +283,7 @@ async function main() {
   const md = markdown(resultaat);
   console.log(md);
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + "\n");
+  if (process.env.SAMENVATTING) { fs.mkdirSync(path.dirname(process.env.SAMENVATTING), { recursive: true }); fs.writeFileSync(process.env.SAMENVATTING, md + "\n"); }
   if (process.env.UITVOER) { fs.mkdirSync(path.dirname(process.env.UITVOER), { recursive: true }); fs.writeFileSync(process.env.UITVOER, JSON.stringify(resultaat, null, 2)); }
   return resultaat;
 }

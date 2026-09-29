@@ -78,7 +78,7 @@ Optioneel, alleen voor de handmatige modelverificatie (`.github/workflows/knmi-m
 |---|---|---|
 | `KNMI_EDR_API_KEY` | geregistreerde sleutel voor de KNMI EDR API; vergelijkt de modelverwachting per heel uur met de metingen van de KNMI-weerstations | GitHub repository Actions secrets |
 
-Zonder deze sleutel slaat de workflow de vergelijking over; de site zelf gebruikt hem niet.
+Zonder deze sleutel slaat de workflow de vergelijking over; de site zelf gebruikt hem niet. De workflow draait vier keer per jaar vanzelf (de 5e van januari, april, juli en oktober, over de afgelopen 28 dagen) en zet de uitkomst als reactie in het issue "KNMI modelverificatie: resultaten". GitHub schakelt geplande workflows in een openbare repository uit na 60 dagen zonder activiteit; zet hem dan weer aan onder Actions > KNMI modelverificatie.
 
 De runtime heeft daarnaast één providersecret nodig:
 

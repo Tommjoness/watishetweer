@@ -1,11 +1,18 @@
 name: KNMI modelverificatie
 
 # Vergelijkt de modelverwachting (Open-Meteo, best_match) per heel uur met de
-# metingen van de KNMI-weerstations. Handmatig te starten; draait ook op een
-# pull request dat het script of deze workflow wijzigt. Alleen geaggregeerde
-# weerdata, geen bezoekersgegevens.
+# metingen van de KNMI-weerstations. Draait vier keer per jaar vanzelf (de 5e
+# van januari, april, juli en oktober, over de afgelopen 28 dagen), handmatig
+# te starten, en op een pull request dat het script of deze workflow wijzigt.
+# Bij de geplande en handmatige runs komt de uitkomst als reactie in het issue
+# "KNMI modelverificatie: resultaten", zodat de eigenaar een melding krijgt en
+# de uitkomst zonder inloggen leesbaar is. Alleen geaggregeerde weerdata, geen
+# bezoekersgegevens.
 
 on:
+  schedule:
+    # 04:47 UTC: 06:47 in de zomer, 05:47 in de winter (Nederlandse tijd).
+    - cron: "47 4 5 1,4,7,10 *"
   workflow_dispatch:
     inputs:
       dagen:
@@ -28,6 +35,9 @@ jobs:
   verificatie:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
     env:
       HEEFT_SLEUTEL: ${{ secrets.KNMI_EDR_API_KEY != '' }}
     steps:
@@ -41,11 +51,13 @@ jobs:
         if: env.HEEFT_SLEUTEL != 'true'
         run: echo "::notice::KNMI_EDR_API_KEY is nog niet ingesteld als Actions-secret; de vergelijking met de stations is overgeslagen."
       - name: Model tegen KNMI-stations
+        id: meting
         if: env.HEEFT_SLEUTEL == 'true'
         env:
           KNMI_EDR_API_KEY: ${{ secrets.KNMI_EDR_API_KEY }}
-          DAGEN: ${{ inputs.dagen || '14' }}
+          DAGEN: ${{ inputs.dagen || '28' }}
           UITVOER: knmi-verificatie/resultaat.json
+          SAMENVATTING: knmi-verificatie/samenvatting.md
         run: node scripts/knmi-modelverificatie.js
       - name: Resultaat bewaren
         if: env.HEEFT_SLEUTEL == 'true' && always()
@@ -55,3 +67,26 @@ jobs:
           path: knmi-verificatie/
           retention-days: 30
           if-no-files-found: warn
+      - name: Uitkomst in het resultatenissue
+        # Niet bij pull requests: alleen geplande en handmatige runs melden.
+        if: always() && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          UITKOMST: ${{ env.HEEFT_SLEUTEL == 'true' && steps.meting.outcome || 'geen-sleutel' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          titel="KNMI modelverificatie: resultaten"
+          nr=$(gh issue list --state open --limit 100 --json number,title --jq ".[] | select(.title == \"$titel\") | .number" | head -n 1)
+          if [ -z "$nr" ]; then
+            url=$(gh issue create --title "$titel" --body "Hier komt vier keer per jaar (de 5e van januari, april, juli en oktober) en bij iedere handmatige run de uitkomst van de modelverificatie tegen de KNMI-weerstations. Workflow: .github/workflows/knmi-modelverificatie.yml.")
+            nr="${url##*/}"
+          fi
+          if [ "$UITKOMST" = "success" ] && [ -s knmi-verificatie/samenvatting.md ]; then
+            { cat knmi-verificatie/samenvatting.md; echo; echo "Run: $RUN_URL"; } > reactie.md
+          elif [ "$UITKOMST" = "geen-sleutel" ]; then
+            printf 'De modelverificatie is overgeslagen: het Actions-secret KNMI_EDR_API_KEY ontbreekt.\n\nRun: %s\n' "$RUN_URL" > reactie.md
+          else
+            printf 'De modelverificatie is mislukt (%s). Zie de log voor de oorzaak.\n\nRun: %s\n' "$UITKOMST" "$RUN_URL" > reactie.md
+          fi
+          gh issue comment "$nr" --body-file reactie.md
