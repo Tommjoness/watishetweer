@@ -285,7 +285,10 @@ function beperkTegels(){
     wolkSub.querySelectorAll(".wiw-zicht-regel").forEach(el=>el.remove());
     if(zichtNuttig){
       const regel=document.createElement("span");regel.className="wiw-zicht-regel";regel.style.display="block";
-      regel.textContent=(visKm<1?"Slecht zicht: ":"Beperkt zicht: ")+String(Math.round(visKm*10)/10).replace(".",",")+"\u00a0km.";
+      /* De spatie vooraan valt aan het begin van de regel weg, maar houdt de
+         zinnen voor voorleessoftware gescheiden ("Geheel bewolkt. Slecht zicht"). */
+      const waarde=visKm<0.1?"minder dan 100\u00a0m":String(Math.round(visKm*10)/10).replace(".",",")+"\u00a0km";
+      regel.textContent=" "+(visKm<1?"Slecht zicht: ":"Beperkt zicht: ")+waarde+".";
       wolkSub.appendChild(regel);
     }
   }
