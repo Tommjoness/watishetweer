@@ -590,40 +590,9 @@ function bouwMobieleTemperatuurRij(){
     vast.push(cel(pos.box));return el;
   };
 
-  /* Tijd bij piek of dal. Valt het echte hoogste of laagste punt tussen twee
-     drie-uursankers, dan leest de stip zonder tijd als het anker ernaast. De
-     tijd staat dan klein boven het cijfer, in de stijl van de uuras: recht
-     erboven, of iets opzij of hoger als daar tekst, de lijn of een regenstaaf
-     staat; anders onder de stip. De tijd komt na de ankercijfers: die houden
-     hun plek dicht bij hun punt en geen anker verliest zijn cijfer. Past de
-     tijd nergens dicht bij de stip, dan vervalt ze; ze staat ook bij
-     aantikken. */
-  const fsTijd=leesbareGrootte(svg,9),tijdKleur="var(--ink-45)";
-  const zoekTijdPlek=(i,px,py,pos)=>{
-    if(ankers.includes(i))return null;
-    const tekst=uurAsLabelTekst(String(uurUitIso(g.TI[i])));if(!tekst)return null;
-    const boven=pos.y-fs*1.1-fsTijd*.26-2,onder=py+fsTijd+4,kandidaten=[];
-    for(const dy of [0,5,10])for(const dx of [0,8,-8,16,-16,24,-24])kandidaten.push([pos.x+dx,boven-dy,pos.anker]);
-    for(const dx of [0,10,-10])kandidaten.push([px+dx,onder,"middle"]);
-    for(const [x0,y,anker] of kandidaten){
-      if(y-fsTijd<plafond||y>bottom-2)continue;
-      let x=x0,box=geschatteSvgTekstBox(tekst,x,y,anker,fsTijd);if(!box)continue;
-      if(box.x<marge)x+=marge-box.x;else if(box.x+box.width>W-marge)x-=box.x+box.width-(W-marge);
-      box=geschatteSvgTekstBox(tekst,x,y,anker,fsTijd);
-      if(!box||box.x<asKolom)continue;
-      if(vast.some(b=>rechthoekenBotsen(b,box,1.5))||staven.some(b=>rechthoekenBotsen(b,box,1))||lijnen.some(punten=>lijnRaaktTekstBox(punten,box,1)))continue;
-      return {tekst,x,y,anker,box};
-    }
-    return null;
-  };
-  const zetTijd=(i,plek)=>{
-    const el=document.createElementNS(SVG_NS,"text");el.textContent=plek.tekst;
-    el.setAttribute("x",String(plek.x));el.setAttribute("y",String(plek.y));el.setAttribute("text-anchor",plek.anker);
-    el.setAttribute("fill",tijdKleur);el.setAttribute("font-size",String(fsTijd));stileerUurAsLabel(el);
-    el.setAttribute("stroke",sheet);el.setAttribute("stroke-width","3");el.setAttribute("paint-order","stroke");el.setAttribute("stroke-linejoin","round");
-    el.setAttribute("data-mobile-temp-marker-time",String(i));
-    vast.push(plek.box);voorScrub(el);return el;
-  };
+  /* Piek en dal krijgen geen eigen tijd boven het cijfer: een losse "17:00"
+     boven "27°" oogde onrustig. De stip en het vette cijfer tonen het hoogste
+     en laagste punt; de tijd staat op de uuras eronder en bij aantikken. */
 
   /* 1. Piek en dal gaan voor. Iedere temperatuur staat BOVEN haar punt, ook het
      dal: onder de lijn leest een getal als de temperatuur van het vlak eronder,
@@ -634,8 +603,8 @@ function bouwMobieleTemperatuurRij(){
   /* De stip en het vette cijfer staan op het echte hoogste en laagste punt, ook
      tussen twee drie-uursankers in. De uuras houdt haar vaste drie-uursritme;
      het anker binnen een uur ernaast krijgt geen eigen cijfer (hieronder). Valt
-     piek of dal niet op een anker, dan staat de tijd erbij (zoekTijdPlek,
-     na stap 2). */
+     piek of dal niet op een anker, dan leest de tijd af van de uuras eronder
+     en bij aantikken. */
   mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null},grafiekRandWaarden(g,Math.min(24,g.T.length))).forEach(m=>{
     const px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
     const verticaal=y=>[[px,y,"middle"],[px+14,y,"middle"],[px-14,y,"middle"]];
@@ -703,7 +672,6 @@ function bouwMobieleTemperatuurRij(){
     voorScrub(el);gelabeld.push(i);
   });
   puntPerIndex.forEach((el,i)=>{if(el.isConnected&&!gelabeld.includes(i))el.remove();});
-  markeringen.forEach(m=>{const plek=zoekTijdPlek(m.i,m.px,m.py,m.pos);if(plek)zetTijd(m.i,plek);});
 
   svg.setAttribute("data-mobile-temp-line-labels","1");
   svg.setAttribute("data-mobile-temp-anchor-count",String(ankers.length));

@@ -12,9 +12,8 @@
      en dal een eigen uurtijd, zonder een tweede uurtijd binnen anderhalf uur
      ernaast als de grafiek niet ieder uur een cijfer heeft (900 en 1024px).
    - Het cijfer van piek en dal staat direct bij zijn stip, ook als er regen
-     onder het dal valt. Op de telefoon staat bij piek of dal tussen twee
-     drie-uursankers de tijd erbij, zonder andere grafiektekst te raken, en
-     staat ieder ankercijfer binnen 22px van zijn punt.
+     onder het dal valt. Op de telefoon staat er geen losse tijd boven piek of
+     dal, en staat ieder ankercijfer binnen 22px van zijn punt.
    - Op iedere breedte: geen grafiektekst op een neerslagstaaf, ook niet bij
      zware regen onder een laag dal.
    - Op iedere breedte: geen grafiektekst kleiner dan 11px.
@@ -231,19 +230,10 @@ function verwacht(m){
             /* Afgerond op honderdsten: 12,000001 is 12 (afronding van de browser). */
             assert(c.afstand!==null&&Math.round(c.afstand*100)/100<=12,label+": het "+p.type+"-cijfer staat "+c.afstand+" van zijn stip");
             if(!m.compact)assert(m.tijden.some(x=>Math.abs(x-m.x[s.i])<3),label+": de "+p.type+" heeft geen eigen uurtijd");
-            /* Telefoon: valt piek of dal tussen twee drie-uursankers, dan staat de
-               tijd erbij als er dicht bij de stip plek is (anders leest de stip
-               als het anker ernaast); op een anker noemt de uuras de tijd al.
-               De middagpiek (15:00 tussen 14:00 en 17:00) heeft altijd plek. */
-            if(m.compact&&m.asIdx.length){
-              const t=m.markerTijden.find(x=>x.i===s.i);
-              if(m.asIdx.includes(s.i))assert(!t,label+": de "+p.type+" staat op de uuras en krijgt toch een extra tijd");
-              else if(naam==="middagpiek"&&p.type==="max")assert(t,label+": de "+p.type+" om "+String(m.TI[s.i]).slice(11,16)+" valt tussen twee asuren en heeft geen tijd bij de stip");
-              if(t){
-                assert.equal(t.tekst,String(m.TI[s.i]).slice(11,16),label+": verkeerde tijd bij de "+p.type);
-                assert(Math.abs(t.x-m.x[s.i])<=30,label+": de tijd van de "+p.type+" staat niet bij de stip");
-              }
-            }
+            /* Telefoon: piek en dal krijgen geen losse tijd boven het cijfer (op
+               verzoek van de eigenaar: "17:00" boven "27°" oogde onrustig); de tijd
+               staat op de uuras en bij aantikken. */
+            if(m.compact)assert(!m.markerTijden.some(x=>x.i===s.i),label+": de "+p.type+" om "+String(m.TI[s.i]).slice(11,16)+" heeft nog een losse tijd boven het cijfer");
             if(!m.M&&!m.iederUur){
               const buren=m.tijden.filter(x=>Math.abs(x-m.x[s.i])>=3&&Math.abs(x-m.x[s.i])<m.cw*1.5);
               assert.deepEqual(buren,[],label+": naast de uurtijd van de "+p.type+" staat binnen anderhalf uur nog een uurtijd");

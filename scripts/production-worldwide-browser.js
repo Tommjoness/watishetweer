@@ -92,7 +92,7 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
       const nachten=document.querySelectorAll("#nights .row.night:not(.kop)").length;
       const nachtTekst=(document.getElementById("nights")?.textContent||"").trim();
       const nachtKlaar=nachten>0||/geen nachtdata beschikbaar/i.test(nachtTekst);
-      return !!app&&getComputedStyle(app).display!=="none"&&volledig&&(vrij?!!label:label===naam)&&document.querySelectorAll("#days .row.day:not(.kop)").length===7&&nachtKlaar;
+      return !!app&&getComputedStyle(app).display!=="none"&&!app.hasAttribute("data-zonder-data")&&volledig&&(vrij?!!label:label===naam)&&document.querySelectorAll("#days .row.day:not(.kop)").length===7&&nachtKlaar;
     },{naam:locatie.naam,vrij:!!locatie.plaatsnaamVrij},{timeout});
   }catch(e){
     const diagnose=await page.evaluate(()=>({
@@ -101,7 +101,7 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
       title:document.title,
       state:(document.getElementById("state")?.textContent||"").trim(),
       stamp:document.getElementById("stamp")?.textContent||"",
-      appVisible:!!document.getElementById("app")&&getComputedStyle(document.getElementById("app")).display!=="none",
+      appVisible:!!document.getElementById("app")&&getComputedStyle(document.getElementById("app")).display!=="none"&&!document.getElementById("app").hasAttribute("data-zonder-data"),
       dataCurrent:!!(typeof S!=="undefined"&&S.d&&S.d.current),
       hourly:typeof S!=="undefined"&&S.d&&S.d.hourly&&Array.isArray(S.d.hourly.time)?S.d.hourly.time.length:0,
       daily:typeof S!=="undefined"&&S.d&&S.d.daily&&Array.isArray(S.d.daily.time)?S.d.daily.time.length:0,

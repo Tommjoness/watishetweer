@@ -16,11 +16,21 @@
 <!-- Pas een expliciete thema-keuze toe vóór CSS, zodat directe subpagina-loads niet eerst in het verkeerde thema renderen. -->
 <script>
 (()=>{try{
-  const raw=localStorage.getItem("weerbriefing.thema");
-  const keuze=raw?JSON.parse(raw):"auto";
-  if(!["licht","donker"].includes(keuze))return;
-  document.documentElement.setAttribute("data-thema",keuze);
-  document.querySelector('meta[name="theme-color"]').setAttribute("content",keuze==="donker"?"#0B120F":"#F4F5F3");
+  /* Hetzelfde themacontract als de weerpagina's: eerst de keuze van deze
+     browsersessie, dan de (compatibele) opgeslagen keuze, anders Auto: dan volgt
+     de pagina de donkere of lichte stand van het systeem, ook als die wisselt. */
+  const lees=(opslag,sleutel)=>{try{const raw=opslag.getItem(sleutel);return raw==null?null:JSON.parse(raw);}catch(e){return null;}};
+  const sessie=lees(sessionStorage,"weerbriefing.thema.sessie"),opgeslagen=lees(localStorage,"weerbriefing.thema");
+  const keuze=["auto","licht","donker"].includes(sessie)?sessie:["licht","donker"].includes(opgeslagen)?opgeslagen:"auto";
+  const systeem=typeof matchMedia==="function"?matchMedia("(prefers-color-scheme: dark)"):null;
+  const pas=()=>{
+    const donker=keuze==="donker"||(keuze==="auto"&&!!(systeem&&systeem.matches));
+    if(keuze!=="auto"||donker)document.documentElement.setAttribute("data-thema",donker?"donker":"licht");
+    else document.documentElement.removeAttribute("data-thema");
+    const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.setAttribute("content",donker?"#0B120F":"#F4F5F3");
+  };
+  pas();
+  if(keuze==="auto"&&systeem){if(typeof systeem.addEventListener==="function")systeem.addEventListener("change",pas);else if(typeof systeem.addListener==="function")systeem.addListener(pas);}
 }catch(e){}})();
 </script>
 <style>

@@ -31,7 +31,7 @@ async function snapshot(page){
   return page.evaluate(()=>{
     const app=document.getElementById("app"),temp=document.getElementById("t"),state=document.getElementById("state"),compact=document.getElementById("locatie-laadstatus"),q=document.getElementById("q"),place=document.getElementById("place");
     const tempText=temp&&String(temp.textContent||"").trim();
-    const appVisible=!!(app&&getComputedStyle(app).display!=="none");
+    const appVisible=!!(app&&getComputedStyle(app).display!=="none"&&!app.hasAttribute("data-zonder-data"));
     const heeftData=!!(appVisible&&tempText&&!/^(?:--|–)$/.test(tempText));
     let s=null;
     try{s={lat:S.lat,lon:S.lon,label:S.label,land:S.land,hasData:!!S.d,timezone:S.d&&S.d.timezone||null,verversMislukt:!!S.verversMislukt,op:S.op||0};}catch(_){ }

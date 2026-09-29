@@ -43,7 +43,7 @@ async function read(page){return page.evaluate(()=>{
   const label=document.getElementById("place")?.getAttribute("aria-label")||"";
   const q=document.getElementById("q")?.value||"";
   const temp=(document.getElementById("t")?.textContent||"").trim();
-  const appVisible=!!app&&getComputedStyle(app).display!=="none";
+  const appVisible=!!app&&getComputedStyle(app).display!=="none"&&!app.hasAttribute("data-zonder-data");
   const data=!!(appVisible&&s&&s.data&&temp&&!/^(?:--|–)$/.test(temp));
   const error=!!((state&&state.className.includes("err")&&getComputedStyle(state).display!=="none")||(compact&&compact.hidden===false&&compact.classList.contains("fout")));
   let localDate="";try{localDate=typeof plaatsVandaag==="function"?plaatsVandaag():"";}catch(_){ }
@@ -200,7 +200,7 @@ async function historyFlowAttempt(profile,browser){
       if(error)return true;
       if(!target)return false;
       const app=document.getElementById("app"),temp=(document.getElementById("t")?.textContent||"").trim();
-      const data=!!(app&&getComputedStyle(app).display!=="none"&&temp&&!/^(?:--|–)$/.test(temp));
+      const data=!!(app&&getComputedStyle(app).display!=="none"&&!app.hasAttribute("data-zonder-data")&&temp&&!/^(?:--|–)$/.test(temp));
       const brief=(document.getElementById("brief")?.textContent||"").trim();
       const chartTexts=document.querySelectorAll("#chart text").length;
       const days=document.querySelectorAll("#days .row.day:not(.kop)").length;
