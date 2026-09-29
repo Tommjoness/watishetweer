@@ -101,7 +101,7 @@ function dagHoeveelheidStatus(kans,mm){const k=num(kans),m=num(mm);if(m!==null&&
 
 function modelRisicos(input={}){
   const uit=[],voeg=(id,ernst,tekst,waarde)=>uit.push({id,ernst,tekst,waarde});const t=num(input.maxTemperatuur),g=num(input.maxGevoel),uv=num(input.maxUv),gust=num(input.maxWindstoot),vis=num(input.minZicht),aqi=num(input.aqi),schaal=String(input.aqiSchaal||"");
-  if(t!==null&&t>=40)voeg("hitte",3,"Extreme hitte in de modelverwachting ("+Math.round(t)+" °C).",t);else if(g!==null&&g>=40)voeg("gevoel-hitte",3,"Zeer hoge gevoelstemperatuur in de modelverwachting ("+Math.round(g)+" °C).",g);
+  if(t!==null&&t>=40)voeg("hitte",3,"Extreme hitte in de modelverwachting ("+Math.round(t)+"\u00a0°C).",t);else if(g!==null&&g>=40)voeg("gevoel-hitte",3,"Zeer hoge gevoelstemperatuur in de modelverwachting ("+Math.round(g)+" °C).",g);
   if(aqi!==null&&schaal==="US"&&aqi>=151)voeg("luchtkwaliteit",3,"Luchtkwaliteit volgens het model is ongezond (AQI VS "+Math.round(aqi)+").",aqi);
   if(aqi!==null&&schaal==="EU"&&aqi>80)voeg("luchtkwaliteit",3,"Luchtkwaliteit volgens het model is "+(aqi>100?"extreem slecht":"zeer slecht")+" (Europese AQI "+Math.round(aqi)+").",aqi);
   if(uv!==null&&uv>=11)voeg("uv",3,"Extreme UV-index in de modelverwachting ("+Math.round(uv)+").",uv);else if(uv!==null&&uv>=8)voeg("uv",2,"Zeer hoge UV-index in de modelverwachting ("+Math.round(uv)+").",uv);

@@ -1326,7 +1326,7 @@ function meters(){
     set("hum","--");
     zetTekst("humsub","Luchtvochtigheid niet beschikbaar.");
   }else{
-    set("hum",vocht+"<s>%</s>");
+    set("hum",Math.round(vocht)+"<s>%</s>");   // Visual Crossing levert decimalen
     zetTekst("humsub", vocht<40 ? "De lucht is vrij droog."
       : vocht<=60 ? "Comfortabele luchtvochtigheid."
       : "De lucht is vochtig.");

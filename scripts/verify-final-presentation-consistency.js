@@ -32,7 +32,7 @@ ok(html.includes('horizontaal.setAttribute("aria-label",q4PeriodeTijdvak(g,p)+" 
 
 ok(html.includes('if(t.richting==="gelijk"){'),"gelijke temperatuurtrend krijgt een eigen presentatieroute");
 ok(html.includes('waarde.innerHTML=String(t.van)+"<s>°C</s>";'),"gelijke temperatuurtrend toont één temperatuur zonder 17 naar 17-pijl");
-ok(html.includes('sub.textContent="De temperatuur blijft de komende uren rond "+String(t.van)+" °C.";'),"gelijke temperatuurtrend benoemt expliciet dat de temperatuur rond dezelfde waarde blijft");
+ok(html.includes('sub.textContent="De temperatuur blijft de komende uren rond "+String(t.van)+"\u00a0°C.";'),"gelijke temperatuurtrend benoemt expliciet dat de temperatuur rond dezelfde waarde blijft");
 ok(!html.includes('De temperatuur verandert de komende uren nauwelijks.'),"oude vage copy voor gelijke temperatuurtrend is verwijderd");
 ok(html.includes('waarde.innerHTML=String(t.van)+" → "+String(t.naar)+"<s>°C</s>";'),"stijgende en dalende temperatuurtrend houden de richtingpijl");
 

@@ -245,7 +245,12 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
       gust:num(h.wind_gusts_10m&&h.wind_gusts_10m[i]),moon:maanFactor(t)};
   }
   function actueleRij(){
-    const c=S.d.current||{},h=S.d.hourly||{},i=S.i0,temp=num(c.temperature_2m),dp=num(h.dew_point_2m&&h.dew_point_2m[i]);
+    /* Dauwpunt uit dezelfde actuele temperatuur en vochtigheid (Magnus): het
+       uurdauwpunt kan bij een snel stijgende temperatuur of een later klokuur
+       boven de actuele temperatuur liggen en dan valse mistkans geven. */
+    const c=S.d.current||{},h=S.d.hourly||{},i=S.i0,temp=num(c.temperature_2m),rhNu=num(c.relative_humidity_2m);
+    const g=temp!==null&&rhNu!==null&&rhNu>0&&rhNu<=100?Math.log(rhNu/100)+17.625*temp/(243.04+temp):null;
+    const dp=g!==null?243.04*g/(17.625-g):num(h.dew_point_2m&&h.dew_point_2m[i]);
     const t=weatherNowActueleLokaleTijd();
     return {tijd:t,ms:naarUTC(t),cloud:num(c.cloud_cover),visibility:num(c.visibility),precip:num(c.precipitation),code:num(c.weather_code),
       humidity:num(c.relative_humidity_2m),spread:temp!==null&&dp!==null?temp-dp:null,gust:num(c.wind_gusts_10m),moon:maanFactor(t)};
