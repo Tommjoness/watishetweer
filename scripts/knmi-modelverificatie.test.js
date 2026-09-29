@@ -73,7 +73,9 @@ const landReeks = reeks(["2026-09-20", "2026-09-21", "2026-09-22"], [6, 8, 7]);
 assert(Math.abs(v.daggang(zeeReeks) - 1.0) < 0.05 && v.soort(zeeReeks) === "zee", "kleine dagelijkse gang: zeeklimaat");
 assert(Math.abs(v.daggang(landReeks) - 7) < 0.1 && v.soort(landReeks) === "land", "grote dagelijkse gang: land");
 const randReeks = reeks(["2026-09-20", "2026-09-21", "2026-09-22"], [2.4, 2.6, 2.5]);
-assert.equal(v.soort(randReeks), "zee", "platform met 2,5 °C daggang is zee (grens 3 °C)");
+assert.equal(v.soort(randReeks), "zee", "platform met 2,5 °C daggang is zee");
+assert.equal(v.soort(reeks(["2026-09-20", "2026-09-21", "2026-09-22"], [3.0, 3.0, 3.0])), "zee", "platform met 3,0 °C daggang is zee (grens 3,3 °C)");
+assert.equal(v.soort(reeks(["2026-09-20", "2026-09-21", "2026-09-22"], [3.6, 3.6, 3.6])), "land", "kuststation met 3,6 °C daggang is land");
 const kort = new Map([...landReeks].slice(0, 10));
 assert.equal(v.daggang(kort), null, "dagen met te weinig uren tellen niet mee");
 assert.equal(v.soort(kort), "land", "zonder daggang geen zee-indeling");
@@ -86,6 +88,6 @@ assert.equal(gr[4].temperatuur.n, 1, "alleen zeestations");
 
 const st = { naam: "Schiphol", soort: "land", daggang: 7.2, ...r, overdag: dag, snachts: nacht };
 const md = v.markdown({ periode: { start: p.start.toISOString(), eindeInclusief: "2026-09-28" }, groepen: gr, stations: [st] });
-assert(md.includes("| Alle stations | 2 | 3 |") && md.includes("| Schiphol | land | 7,2 °C | 2 | +0,5 °C | +1 °C |") && md.includes("CC BY 4.0") && md.includes("mediaan minder dan 3 °C"), "samenvatting met groepen, dag/nacht, Nederlandse notatie en bronvermelding");
+assert(md.includes("| Alle stations | 2 | 3 |") && md.includes("| Schiphol | land | 7,2 °C | 2 | +0,5 °C | +1 °C |") && md.includes("CC BY 4.0") && md.includes("mediaan minder dan 3,3 °C"), "samenvatting met groepen, dag/nacht, Nederlandse notatie en bronvermelding");
 
 console.log("KNMI-modelverificatie rekenkern groen: stations, CoverageJSON, Open-Meteo, hele uren, dauwpunt, statistiek, dag/nacht en land/zee.");
