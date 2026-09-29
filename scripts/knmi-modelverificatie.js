@@ -36,7 +36,7 @@ const MODEL_BASIS = "https://historical-forecast-api.open-meteo.com/v1/forecast"
 const NL = { latMin: 50.6, latMax: 53.8, lonMin: 3.0, lonMax: 7.4 };
 const STATIONS_PER_VERZOEK = 10;
 const DAGEN_PER_VERZOEK = 7;
-const ZEE_DAGGANG = 2.5; /* °C: mediane dagelijkse temperatuurgang van een zeestation */
+const ZEE_DAGGANG = 3.0; /* °C: mediane dagelijkse temperatuurgang van een zeestation. Eerste meting (15-28 september 2026): zeeplatforms 2,1-2,5 °C, landstations vanaf 3,6 °C (Vlieland) */
 
 const wacht = ms => new Promise(r => setTimeout(r, ms));
 const getal = v => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v))) ? null : Number(v);
