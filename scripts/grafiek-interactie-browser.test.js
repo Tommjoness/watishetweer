@@ -8,17 +8,17 @@
    - Piek en dal: de volle stip staat op het echte hoogste en laagste punt van
      het venster, ook tussen twee drie-uursankers (telefoon) of tussen twee
      uurcijfers (tablet). Een rand van het venster is geen piek of dal als de
-     reeks daarbuiten verder stijgt of daalt. Op tablet en desktop heeft piek
-     en dal een eigen uurtijd, zonder een tweede uurtijd binnen anderhalf uur
-     ernaast als de grafiek niet ieder uur een cijfer heeft (900 en 1024px).
+     reeks daarbuiten verder stijgt of daalt. Op iedere breedte houdt de uuras
+     haar vaste ritme: piek en dal krijgen geen extra uurtijd ertussen (verzoek
+     van de eigenaar, 29 september: "07:00 08:00" oogde rommelig).
    - Het cijfer van piek en dal staat direct bij zijn stip, ook als er regen
      onder het dal valt. Op de telefoon staat er geen losse tijd boven piek of
      dal, en staat ieder ankercijfer binnen 22px van zijn punt.
    - Op iedere breedte: geen grafiektekst op een neerslagstaaf, ook niet bij
      zware regen onder een laag dal.
    - Op iedere breedte: geen grafiektekst kleiner dan 11px.
-   - Telefoon: ieder drie-uursanker heeft een temperatuur en "nu" staat bij
-     de rode stip (binnen twee regels).
+   - Telefoon: ieder drie-uursanker heeft een temperatuur. Op iedere breedte
+     staat "nu" met de temperatuur bij de rode stip (binnen twee regels).
    - Neerslag alleen als staafjes, zonder getallen in de grafiek: de
      hoeveelheid staat in de uurtabel, de regel eronder en bij aantikken.
 
@@ -229,15 +229,10 @@ function verwacht(m){
             assert(Math.abs(c.x-m.x[s.i])<=14,label+": het "+p.type+"-cijfer staat niet boven zijn stip");
             /* Afgerond op honderdsten: 12,000001 is 12 (afronding van de browser). */
             assert(c.afstand!==null&&Math.round(c.afstand*100)/100<=12,label+": het "+p.type+"-cijfer staat "+c.afstand+" van zijn stip");
-            if(!m.compact)assert(m.tijden.some(x=>Math.abs(x-m.x[s.i])<3),label+": de "+p.type+" heeft geen eigen uurtijd");
             /* Telefoon: piek en dal krijgen geen losse tijd boven het cijfer (op
                verzoek van de eigenaar: "17:00" boven "27°" oogde onrustig); de tijd
                staat op de uuras en bij aantikken. */
             if(m.compact)assert(!m.markerTijden.some(x=>x.i===s.i),label+": de "+p.type+" om "+String(m.TI[s.i]).slice(11,16)+" heeft nog een losse tijd boven het cijfer");
-            if(!m.M&&!m.iederUur){
-              const buren=m.tijden.filter(x=>Math.abs(x-m.x[s.i])>=3&&Math.abs(x-m.x[s.i])<m.cw*1.5);
-              assert.deepEqual(buren,[],label+": naast de uurtijd van de "+p.type+" staat binnen anderhalf uur nog een uurtijd");
-            }
           }
           assert.deepEqual(m.klein,[],label+": grafiektekst kleiner dan 11px");
           assert.deepEqual(m.tijdBotst,[],label+": de tijd bij piek of dal overlapt andere grafiektekst");
@@ -245,9 +240,13 @@ function verwacht(m){
              buurcijfer schuin zijn plek innam (360px: 13° stond 36px hoog). */
           assert.deepEqual(m.opStaaf,[],label+": grafiektekst staat op een neerslagstaaf");
           if(m.compact){const ver=m.ankerAfstand.filter(a=>a.px>22);assert.deepEqual(ver,[],label+": ankercijfer staat meer dan 22px van zijn punt");}
-          if(w<760){
-            assert.equal(m.missing,"",label+": drie-uursanker zonder temperatuur ("+m.missing+")");
-            assert(m.nuAfstand!==null&&m.nuAfstand<=26,label+": het nu-label staat "+m.nuAfstand+" van de rode stip");
+          if(w<760)assert.equal(m.missing,"",label+": drie-uursanker zonder temperatuur ("+m.missing+")");
+          assert(m.nuAfstand!==null&&m.nuAfstand<=26,label+": het nu-label staat "+m.nuAfstand+" van de rode stip");
+          /* Tablet en desktop: de uuras loopt om de drie uur, zonder extra tijd
+             bij piek of dal. */
+          if(!m.compact&&!m.iederUur){
+            const d=m.tijden.slice().sort((a,b)=>a-b),stappen=d.slice(1).map((x,k)=>Math.round((x-d[k])*10)/10);
+            assert(stappen.length>=4&&stappen.every(v=>Math.abs(v-3*m.cw)<2),label+": de uuras loopt niet om de drie uur (stappen "+stappen.join(", ")+", uur "+Math.round(m.cw)+")");
           }
           assert(m.staven>0,label+": geen neerslagstaafjes");
           assert.deepEqual(m.regen,[],label+": neerslaggetallen in de grafiek: "+JSON.stringify(m.regen));

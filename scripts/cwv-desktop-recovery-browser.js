@@ -136,7 +136,7 @@ async function run(){
           }:null;
           return {
             ...window.__cwv,
-            maxHours:WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN,
+            maxHours:(WeatherNowFinalDesktopUI20260902.MAX_TABEL_UREN||WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN),
             graphTimes:S.geo.TI,
             placeLayout:{justify:getComputedStyle(document.getElementById("place")).justifyContent,gap:parseFloat(getComputedStyle(document.getElementById("place")).gap)},
             sourceTimes:rows.map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]),
@@ -230,7 +230,7 @@ async function run(){
           assert.equal(Date.parse(result.graphTimes.at(-1)+"Z")-Date.parse(result.graphTimes.at(-2)+"Z"),3600000,"opeenvolgende grafiekpunten moeten exact één uur verschillen");
           assert.equal(result.placeLayout.justify,"flex-start","plaats en tijd staan als compacte kopgroep op de linkerlijn van de h1");
           assert(result.placeLayout.gap>=12&&result.placeLayout.gap<=24,"afstand plaats/tijd buiten compacte band");
-          if(width>=1366)assert(result.rows>=8&&result.rows<=11,"desktop toont geen comfortabele 8–11 volledige hoogtegestuurde uurregels");
+          if(width>=1366)assert(result.rows>=8&&result.rows<=24,"desktop toont geen 8–24 volledige hoogtegestuurde uurregels");
           if(width>=1366){
             const grafiekAandeel=g.main.width/(g.main.width+g.hours.width);
             assert(grafiekAandeel>=.65&&grafiekAandeel<=.72,"grafiek/tabelverhouding valt buiten 65–72% / 28–35%");

@@ -900,7 +900,7 @@ function bouwDesktopGrafiekAccenten(){
       }else{
         const sjabloon=temperatuurLabels[0];if(!sjabloon)return;
         label=sjabloon.cloneNode(false);label.textContent=tekst;
-        [...label.attributes].filter(a=>/^data-/.test(a.name)).forEach(a=>label.removeAttribute(a.name));
+        [...label.attributes].filter(a=>/^data-/.test(a.name)&&a.name!=="data-basis-font-size").forEach(a=>label.removeAttribute(a.name));
         const fs=Number(label.getAttribute("font-size"))||12;
         label.setAttribute("x",String(px));label.setAttribute("y",String(m.type==="min"&&py-fs-4<top?py+fs+4:py-8));
         label.setAttribute("text-anchor","middle");label.setAttribute("data-desktop-temp-added","1");
@@ -963,14 +963,16 @@ function bouwDesktopGrafiekAccenten(){
   svg.setAttribute("data-desktop-chart-accents","1");
 }
 
-/* Iedere temperatuur in de grafiek krijgt een tijd onder haar punt. Een piek of
-   dal op een plateau (gelijke waarden) schuift eerst naar het plateaupunt dat
-   al een tijd heeft. Past een tijd niet naast de bestaande uurtijden, dan
-   vervalt liever het cijfer dan dat er een temperatuur zonder tijd staat. Alleen
-   piek en dal mogen een uurtijd zonder eigen cijfer verdringen. Geldt voor alle
-   breedtes, tot 25 uur. Uitzondering: op de telefoon houdt de uuras haar vaste
-   drie-uursritme en staan piek en dal op hun echte punt; hun tijd staat bij
-   aantikken en in de samenvatting. */
+/* De uuras houdt op iedere breedte haar vaste ritme (op de telefoon en de
+   desktop om de drie uur): geen extra tijd tussen de vaste tijden, want "07:00
+   08:00" vlak naast elkaar oogt rommelig en breekt het ritme (verzoek van de
+   eigenaar, 29 september). Piek en dal staan met stip en vet cijfer op hun
+   echte punt, ook tussen twee vaste tijden; hun tijd staat bij aantikken, in de
+   uurtabel en in de samenvatting. Een piek of dal op een plateau (gelijke
+   waarden) schuift eerst naar het plateaupunt dat al een tijd heeft. Een gewoon
+   tussencijfer zonder eigen tijd op de as vervalt: het staat dan los tussen de
+   vaste tijden. Tot 25 uur. Buiten de vaste as (het oude gedrag, alleen nog als
+   er geen as met ritme is) krijgt iedere temperatuur een tijd onder haar punt. */
 function koppelTijdAanTemperatuur(){
   const svg=document.getElementById("chart"),g=S.geo;
   if(!svg||!g||!Array.isArray(g.T)||!Array.isArray(g.TI)||typeof g.x!=="function"||typeof g.y!=="function"||Number(g.n)>25)return;
@@ -996,7 +998,10 @@ function koppelTijdAanTemperatuur(){
   };
   const isMarker=el=>el.hasAttribute("data-mobile-temp-marker")||el.hasAttribute("data-desktop-temp-marker");
   const vasteMobieleAs=ticks.some(el=>el.hasAttribute("data-mobile-hour-axis"));
-  const vrijVanTijd=els=>vasteMobieleAs&&els.every(el=>el.hasAttribute("data-mobile-temp-marker"));
+  /* Ook de desktop- en tabletas heeft een vast ritme zolang ieder uur niet
+     een eigen cijfer draagt (dat is alleen zo bij hooguit 12 uur). */
+  const vasteAs=vasteMobieleAs||(!g.M&&n>12);
+  const vrijVanTijd=els=>vasteAs&&els.every(isMarker);
   const markerStip=i=>[...svg.querySelectorAll("circle[data-mobile-temp-marker-dot],circle[data-desktop-temp-marker-dot]")].filter(c=>Math.abs(Number(c.getAttribute("cx"))-x(i))<1);
   const metTijd=new Map();ticks.forEach(el=>metTijd.set(tickIndex(el),el));
   const perIndex=new Map();
@@ -1033,6 +1038,7 @@ function koppelTijdAanTemperatuur(){
     const ma=perIndex.get(a).some(isMarker),mb=perIndex.get(b).some(isMarker);return ma!==mb?(ma?-1:1):a-b;
   });
   nodig.forEach(i=>{
+    if(vasteAs){verwijder(i);return;}
     const tijd=uurAsLabelTekst(String(uurUitIso(g.TI[i])));if(!tijd){verwijder(i);return;}
     const el=sjabloon.cloneNode(false);el.textContent=tijd;
     ["data-mobile-edge-adjusted","data-mobile-hour-index"].forEach(a=>el.removeAttribute(a));
@@ -1055,12 +1061,45 @@ function koppelTijdAanTemperatuur(){
   /* 3. Een uurtijd zonder eigen cijfer binnen een uur van piek of dal wijkt:
      twee tijden vlak naast elkaar ("02:00 03:00") lezen als ruis. De vaste
      telefoonas houdt haar drie-uursritme. */
-  if(!vasteMobieleAs)[...perIndex.entries()].filter(([i,els])=>metTijd.has(i)&&els.some(isMarker)).forEach(([i])=>{
+  if(!vasteAs)[...perIndex.entries()].filter(([i,els])=>metTijd.has(i)&&els.some(isMarker)).forEach(([i])=>{
     [i-1,i+1].forEach(j=>{
       if(perIndex.has(j)||!metTijd.has(j))return;
       metTijd.get(j).remove();metTijd.delete(j);
     });
   });
+  /* 4. Desktop en tablet met een vaste as: iedere tijd op de as heeft een
+     temperatuur, zoals de drie-uursankers op de telefoon. Staat piek of dal
+     binnen een uur ernaast, dan noemt dat cijfer de waarde al. Past het cijfer
+     boven noch onder het punt vrij, dan blijft het weg. */
+  if(vasteAs&&!vasteMobieleAs){
+    const sjabloonCijfer=labels.find(el=>!isMarker(el)&&el.isConnected)||labels.find(el=>el.isConnected);
+    const puntSjabloon=svg.querySelector("circle[data-temp-index]");
+    const lijnPunten=[...svg.querySelectorAll("polyline")].filter(el=>!el.closest("#scrub")).map(l=>String(l.getAttribute("points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
+    const markerBij=i=>[...perIndex.entries()].some(([j,els])=>Math.abs(j-i)<=1&&els.some(isMarker));
+    /* Vlak bij de rode nu-lijn noemt "nu 18°" de temperatuur al. */
+    const nuLijn=[...svg.querySelectorAll("line")].find(l=>!l.closest("#scrub")&&!l.hasAttribute("data-nu-aanloop")&&/carmine/i.test(String(l.getAttribute("stroke")||"")));
+    const nuX=nuLijn?Number(nuLijn.getAttribute("x1")):NaN;
+    if(sjabloonCijfer)[...metTijd.keys()].sort((a,b)=>a-b).forEach(i=>{
+      const w=rond(i);if(perIndex.has(i)||w===null||markerBij(i))return;
+      if(Number.isFinite(nuX)&&Math.abs(x(i)-nuX)<cw*1.5)return;
+      const px=x(i),py=Number(g.y(Number(g.T[i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
+      const el=sjabloonCijfer.cloneNode(false);el.textContent=w+"°";
+      [...el.attributes].filter(a=>/^data-/.test(a.name)&&a.name!=="data-basis-font-size").forEach(a=>el.removeAttribute(a.name));
+      el.removeAttribute("display");el.setAttribute("text-anchor","middle");el.setAttribute("x",String(px));el.setAttribute("data-desktop-temp-anker",String(i));
+      const fs=Number(el.getAttribute("font-size"))||12;
+      const anderen=[...svg.querySelectorAll("text")].filter(t=>!t.closest("#scrub")&&t.getAttribute("display")!=="none").map(svgTekstBoxUitElement).filter(Boolean);
+      const vrij=y=>{el.setAttribute("y",String(y));const b=svgTekstBoxUitElement(el);return !!b&&b.y>=1&&!anderen.some(a=>rechthoekenBotsen(a,b,2))&&!lijnPunten.some(p=>lijnRaaktTekstBox(p,b,1));};
+      sjabloonCijfer.parentNode.insertBefore(el,sjabloonCijfer.nextSibling);
+      if(![py-9,py+fs+5].some(vrij)){el.remove();return;}
+      perIndex.set(i,[el]);
+      if(puntSjabloon){
+        const punt=puntSjabloon.cloneNode(false);
+        punt.setAttribute("cx",String(px));punt.setAttribute("cy",String(py));punt.setAttribute("data-temp-index",String(i));
+        ["display","data-desktop-temp-moved","data-desktop-temp-yield","data-desktop-temp-added"].forEach(a=>punt.removeAttribute(a));
+        punt.setAttribute("data-desktop-temp-anker",String(i));puntSjabloon.parentNode.insertBefore(punt,puntSjabloon.nextSibling);
+      }
+    });
+  }
   svg.setAttribute("data-temp-time-complete",[...perIndex.keys()].every(i=>metTijd.has(i)||vrijVanTijd(perIndex.get(i)))?"1":"0");
 }
 
@@ -1068,12 +1107,22 @@ function koppelTijdAanTemperatuur(){
    telefoongrafiek wordt verkleind getekend, de desktop- en tabletgrafiek op
    ware grootte met uurtijden van 9,2px. Draait vóór het plaatsen van labels,
    zodat de botsingscontroles met de echte maat rekenen. */
+/* Op een breed scherm (vanaf 1440px) staat de grafiek naast de uurtabel in een
+   kolom waarin de rest van de pagina groter is gezet: daar is grafiektekst 15%
+   groter en minimaal 13 css-pixels. Rekent vanaf de oorspronkelijke grootte,
+   zodat herhaalde rondes niet steeds verder vergroten. */
+const GRAFIEK_BREED_PX=1440,GRAFIEK_BREED_MIN_PX=13,GRAFIEK_BREED_FACTOR=1.15;
 function maakGrafiekTekstLeesbaar(){
   const svg=document.getElementById("chart");if(!svg)return;
+  const breed=typeof window!=="undefined"&&window.innerWidth>=GRAFIEK_BREED_PX&&!(S.geo&&S.geo.M);
+  const vb=svg.viewBox&&svg.viewBox.baseVal,schaal=vb&&vb.width&&svg.getBoundingClientRect().width?svg.getBoundingClientRect().width/vb.width:1;
   svg.querySelectorAll("text[font-size]").forEach(el=>{
     if(el.closest("#scrub"))return;
-    const fs=Number(el.getAttribute("font-size"));if(!Number.isFinite(fs)||fs<=0)return;
-    const doel=leesbareGrootte(svg,fs);if(doel>fs)el.setAttribute("font-size",String(doel));
+    if(!el.hasAttribute("data-basis-font-size"))el.setAttribute("data-basis-font-size",el.getAttribute("font-size"));
+    const basis=Number(el.getAttribute("data-basis-font-size")),fs=Number(el.getAttribute("font-size"));if(!Number.isFinite(fs)||fs<=0||!Number.isFinite(basis)||basis<=0)return;
+    let doel=leesbareGrootte(svg,basis);
+    if(breed)doel=Math.max(doel,Math.round(basis*GRAFIEK_BREED_FACTOR*10)/10,Math.ceil(GRAFIEK_BREED_MIN_PX/schaal*10)/10);
+    if(doel>fs)el.setAttribute("font-size",String(doel));
   });
 }
 

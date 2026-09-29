@@ -44,7 +44,7 @@ module.exports=async function clockChecks(browser,root,fixture,reportDir){
     const url=root+"/?"+new URLSearchParams({lat:location.lat,lon:location.lon,plaats:location.name,land:location.land});
     await page.goto(url,{waitUntil:"load"});
     await page.waitForSelector("#wiw-hour-table tbody tr",{state:"attached",timeout:10000});
-    const read=()=>page.evaluate(()=>({maxHours:WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN,graphTimes:S.geo.TI,defaultGraphStart:S.d.hourly.time[S.i0],sourceTimes:[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]),now:Date.now(),rows:[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(r=>({instant:r.querySelector("time").dateTime,label:r.querySelector("time").textContent})),place:document.getElementById("place").getAttribute("aria-label")}));
+    const read=()=>page.evaluate(()=>({maxHours:(WeatherNowFinalDesktopUI20260902.MAX_TABEL_UREN||WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN),graphTimes:S.geo.TI,defaultGraphStart:S.d.hourly.time[S.i0],sourceTimes:[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]),now:Date.now(),rows:[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(r=>({instant:r.querySelector("time").dateTime,label:r.querySelector("time").textContent})),place:document.getElementById("place").getAttribute("aria-label")}));
     const check=(s,minRows=8)=>{
       assert.equal(s.place,location.name);assert(s.rows.length>=minRows&&s.rows.length<=s.maxHours);
       assert.equal(s.sourceTimes.length,s.rows.length,"tabelbron en zichtbare uurregels moeten dezelfde range hebben");
