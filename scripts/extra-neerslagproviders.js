@@ -93,17 +93,30 @@ function plan(gen,payload){
   },volgendeWachttijd(payload));
 }
 
-async function vraag(lat,lon,gen,force){
+function neerslagUrl(lat,lon,land){return "/api/neerslag?lat="+encodeURIComponent(lat)+"&lon="+encodeURIComponent(lon)+"&land="+encodeURIComponent(land);}
+/* Vroege request tegelijk met de forecast; alleen gebruikt voor exact dezelfde
+   coördinaten en hetzelfde land, en pas na de forecastcommit. */
+function startVroeg(lat,lon,land){
+  const y=Number(lat),x=Number(lon);
+  if(!Number.isFinite(y)||!Number.isFinite(x)||!ondersteund(land))return null;
+  const c=new AbortController();
+  const belofte=j(neerslagUrl(y,x,landcode(land)),{timeoutMs:7500,signal:c.signal});
+  belofte.catch(()=>{});
+  return {lat:y,lon:x,land:landcode(land),controller:c,belofte};
+}
+async function vraag(lat,lon,gen,force,vroeg){
   const land=landcode(S.land);
-  if(gen!==generatie||!ondersteund(land))return;
+  if(gen!==generatie||!ondersteund(land)){if(vroeg)vroeg.controller.abort();return;}
   const sleutel=land+":"+Number(lat).toFixed(4)+","+Number(lon).toFixed(4);
-  if(!force&&sleutel===laatsteSleutel&&S.d&&S.d.__knmiNeerslag)return;
+  if(!force&&sleutel===laatsteSleutel&&S.d&&S.d.__knmiNeerslag){if(vroeg)vroeg.controller.abort();return;}
   laatsteSleutel=sleutel;
-  if(controller)controller.abort();
-  const c=new AbortController();controller=c;
+  const hergebruik=vroeg&&!vroeg.controller.signal.aborted&&vroeg.land===land&&vroeg.lat===Number(lat)&&vroeg.lon===Number(lon)?vroeg:null;
+  if(vroeg&&!hergebruik)vroeg.controller.abort();
+  if(controller&&(!hergebruik||controller!==hergebruik.controller))controller.abort();
+  const c=hergebruik?hergebruik.controller:new AbortController();controller=c;
   let planPayload=null;
   try{
-    const payload=await j("/api/neerslag?lat="+encodeURIComponent(lat)+"&lon="+encodeURIComponent(lon)+"&land="+encodeURIComponent(land),{timeoutMs:7500,signal:c.signal});
+    const payload=await(hergebruik?hergebruik.belofte:j(neerslagUrl(lat,lon,land),{timeoutMs:7500,signal:c.signal}));
     if(gen!==generatie||c.signal.aborted||landcode(S.land)!==land||Number(S.lat)!==Number(lat)||Number(S.lon)!==Number(lon))return;
     if(payload&&payload.beschikbaar===true&&zetPayload(payload)){
       planPayload=payload;
@@ -133,9 +146,15 @@ const basisLoad=load;
 load=async function(lat,lon,label,stil,opslaan,land){
   stop();
   const gen=generatie;
-  const resultaat=await basisLoad(lat,lon,label,stil,opslaan,land);
-  if(gen!==generatie)return resultaat;
-  if(ondersteund(S.land)&&S.lat!=null&&S.lon!=null&&S.d)void vraag(S.lat,S.lon,gen,false);
+  const zelfdePlek=S.lat===Number(lat)&&S.lon===Number(lon);
+  const vroeg=startVroeg(lat,lon,land!==undefined?land:(zelfdePlek?S.land:null));
+  if(vroeg)controller=vroeg.controller;
+  let resultaat;
+  try{resultaat=await basisLoad(lat,lon,label,stil,opslaan,land);}
+  catch(e){if(vroeg)vroeg.controller.abort();throw e;}
+  if(gen!==generatie){if(vroeg)vroeg.controller.abort();return resultaat;}
+  if(ondersteund(S.land)&&S.lat!=null&&S.lon!=null&&S.d)void vraag(S.lat,S.lon,gen,false,vroeg);
+  else if(vroeg)vroeg.controller.abort();
   return resultaat;
 };
 

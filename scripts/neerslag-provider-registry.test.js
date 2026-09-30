@@ -3,6 +3,7 @@
 const assert = require("assert");
 const {
   kiesProvider,
+  canoniekNeerslagPunt,
   haalNeerslagVoorLocatie,
   providerCapabilitiesVoorLand
 } = require("../lib/neerslag-provider-registry.cjs");
@@ -116,6 +117,75 @@ test("een kapotte actuele KNMI-call blijft fail-closed, ook als de nowcast niet 
   assert.equal(uit.beschikbaar, false);
   assert.equal(uit.provider, "knmi");
   assert.equal(requests.length,2,requests.join("\n"));
+});
+
+test("KNMI-verzoeken gaan naar het midden van het radarvak van de locatie", async () => {
+  const knmi = require("../lib/knmi-neerslag.cjs")._intern;
+  const vak = knmi.radarVak(52.3702, 4.8952);
+  const hoek = knmi.radarLatLon(vak.kolom + 0.03, -3650 - (vak.rij + 0.97));
+  assert.deepEqual(knmi.radarVak(hoek.lat, hoek.lon), vak, "punt in de hoek van het vak valt in hetzelfde vak");
+  assert.deepEqual(knmi.radarVak(vak.lat, vak.lon), vak, "het vakmidden is stabiel (idempotent)");
+  assert.equal(knmi.radarVak(40.7, -74), null, "buiten het KNMI-raster geen vak");
+  assert.deepEqual(canoniekNeerslagPunt({ lat: hoek.lat, lon: hoek.lon, land: "NL" }), { lat: vak.lat, lon: vak.lon });
+  assert.deepEqual(canoniekNeerslagPunt({ lat: 50.1109, lon: 8.6821, land: "DE" }), { lat: 50.1109, lon: 8.6821 });
+  const requests = [];
+  await haalNeerslagVoorLocatie({
+    lat: hoek.lat, lon: hoek.lon, land: "NL",
+    fetchImpl: async url => { requests.push(new URL(String(url))); return fakeKnmiFetch(url); },
+    nuMs: NU
+  });
+  const punt = requests.find(u => u.searchParams.get("REQUEST") === "GetPointValue");
+  assert.equal(punt.searchParams.get("X"), vak.lon.toFixed(5));
+  assert.equal(punt.searchParams.get("Y"), vak.lat.toFixed(5));
+  for (const u of requests.filter(u => u.searchParams.get("REQUEST") === "GetCoverage")) {
+    const [x1, y1, x2, y2] = u.searchParams.get("BBOX").split(",").map(Number);
+    assert(Math.abs((x1 + x2) / 2 - vak.lon) < 1e-5 && Math.abs((y1 + y2) / 2 - vak.lat) < 1e-5, "WCS-bbox rond het vakmidden");
+  }
+});
+
+test("een trage nowcast vervalt na de deadline; de actuele KNMI-waarde gaat wel mee", async () => {
+  const { haalKnmi } = require("../lib/neerslag-provider-registry.cjs")._intern;
+  let coverageNaDeadline = 0, deadlineVoorbij = false;
+  const start = Date.now();
+  const uit = await haalKnmi({
+    lat: 52.09, lon: 5.12, nuMs: NU, nowcastDeadlineMs: 150,
+    fetchImpl: async url => {
+      if (String(url).includes("REQUEST=GetCoverage")) {
+        if (deadlineVoorbij) coverageNaDeadline++;
+        await new Promise(r => setTimeout(r, 60));
+      }
+      return fakeKnmiFetch(url);
+    }
+  });
+  deadlineVoorbij = true;
+  const duur = Date.now() - start;
+  assert.equal(uit.beschikbaar, true);
+  assert.equal(uit.actueel.waarde, 0.18);
+  assert.equal(uit.nowcast, null, "een onvolledige reeks wordt nooit gepubliceerd");
+  assert.equal(uit.capabilities.nowcast, false);
+  assert(duur < 400, "antwoord komt kort na de deadline, niet pas na alle WCS-stappen: " + duur + " ms");
+  await new Promise(r => setTimeout(r, 200));
+  assert(coverageNaDeadline <= 5, "na de deadline starten geen nieuwe WCS-stappen meer (hooguit de lopende): " + coverageNaDeadline);
+});
+
+test("zonder nowcast blijft de neerslagresponse maar kort in de edge-cache", async () => {
+  const registry = require("../lib/neerslag-provider-registry.cjs");
+  const origineel = registry.haalNeerslagVoorLocatie;
+  const headers = {};
+  const res = { setHeader(k, v) { headers[k] = v; }, status() { return res; }, json() { return res; } };
+  try {
+    registry.haalNeerslagVoorLocatie = async () => ({ beschikbaar: true, provider: "knmi", actueel: { waarde: 0 }, nowcast: null });
+    delete require.cache[require.resolve("../lib/neerslag.cjs")];
+    await require("../lib/neerslag.cjs")({ query: { lat: "52.1", lon: "5.1" } }, res);
+    assert.equal(headers["Cache-Control"], "s-maxage=15, stale-while-revalidate=15");
+    registry.haalNeerslagVoorLocatie = async () => ({ beschikbaar: true, provider: "knmi", actueel: { waarde: 0 }, nowcast: { punten: [] } });
+    delete require.cache[require.resolve("../lib/neerslag.cjs")];
+    await require("../lib/neerslag.cjs")({ query: { lat: "52.1", lon: "5.1" } }, res);
+    assert.equal(headers["Cache-Control"], "s-maxage=120, stale-while-revalidate=180");
+  } finally {
+    registry.haalNeerslagVoorLocatie = origineel;
+    delete require.cache[require.resolve("../lib/neerslag.cjs")];
+  }
 });
 
 test("onondersteunde landen doen geen externe providerrequest", async () => {

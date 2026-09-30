@@ -50,7 +50,10 @@ function controleer(bron,bestand){
     throw new Error(`${bestand}: Q1 mag de briefing pas na basisLoad en zonder KNMI-pending vrijgeven.`);
   }
   const knmiStartPos=bron.indexOf('const dataBijStart=S.d,briefingToken=knmiBriefingBegin(dataBijStart);');
-  const knmiRequestPos=bron.indexOf('const payload=await j("/api/neerslag?',knmiStartPos);
+  /* De KNMI-request mag al tegelijk met de forecast starten (vroege request),
+     maar het wachten op en toepassen van de payload gebeurt pas nadat de
+     briefing voorlopig verborgen is. */
+  const knmiRequestPos=bron.indexOf('const payload=await(hergebruik?hergebruik.belofte:j(knmiUrl(lat,lon),',knmiStartPos);
   const knmiRenderPos=bron.indexOf('hertekenNeerslagdelen();',knmiRequestPos);
   const knmiEindPos=bron.indexOf('knmiBriefingEinde(dataBijStart,briefingToken);',knmiRequestPos);
   if(!(knmiStartPos>=0&&knmiRequestPos>knmiStartPos&&knmiRenderPos>knmiRequestPos&&knmiEindPos>knmiRenderPos)){
