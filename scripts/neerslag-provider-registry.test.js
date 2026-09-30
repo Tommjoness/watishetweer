@@ -188,6 +188,45 @@ test("zonder nowcast blijft de neerslagresponse maar kort in de edge-cache", asy
   }
 });
 
+test("met een eigen KNMI-sleutel gaat ieder verzoek geregistreerd; zonder sleutel anoniem", async () => {
+  const { KNMI_ANONIEM_BASIS, KNMI_SLEUTEL_BASIS } = require("../lib/neerslag-provider-registry.cjs")._intern;
+  for (const sleutel of ["test-sleutel-123", ""]) {
+    const verzoeken = [];
+    const uit = await haalNeerslagVoorLocatie({
+      lat: 52.09, lon: 5.12, land: "NL", nuMs: NU, knmiSleutel: sleutel,
+      fetchImpl: async (url, opties = {}) => {
+        verzoeken.push({ url: String(url), auth: (opties.headers || {}).Authorization });
+        return fakeKnmiFetch(String(url).replace(KNMI_SLEUTEL_BASIS, KNMI_ANONIEM_BASIS));
+      }
+    });
+    assert.equal(uit.beschikbaar, true);
+    assert.equal(verzoeken.length, 27, "zelfde aantal verzoeken met en zonder sleutel");
+    if (sleutel) {
+      assert(verzoeken.every(v => v.url.startsWith(KNMI_SLEUTEL_BASIS) && v.auth === sleutel), "met sleutel: geregistreerd endpoint en Authorization-header");
+    } else {
+      assert(verzoeken.every(v => v.url.startsWith(KNMI_ANONIEM_BASIS) && v.auth === undefined), "zonder sleutel: anoniem en geen Authorization-header");
+    }
+  }
+});
+
+test("de route geeft KNMI_WMS_API_KEY uit de Cloudflare-omgeving door, zonder hem te lekken", async () => {
+  const registry = require("../lib/neerslag-provider-registry.cjs");
+  const origineel = registry.haalNeerslagVoorLocatie;
+  let ontvangen = null;
+  try {
+    registry.haalNeerslagVoorLocatie = async args => { ontvangen = args.knmiSleutel; return { beschikbaar: true, provider: "knmi", actueel: { waarde: 0 }, nowcast: { punten: [] } }; };
+    delete require.cache[require.resolve("../lib/neerslag.cjs")];
+    let body = null;
+    const res = { setHeader() {}, status() { return res; }, json(v) { body = v; return res; } };
+    await require("../lib/neerslag.cjs")({ query: { lat: "52.1", lon: "5.1" }, env: { KNMI_WMS_API_KEY: "geheim-xyz" } }, res);
+    assert.equal(ontvangen, "geheim-xyz");
+    assert(!JSON.stringify(body).includes("geheim-xyz"), "de sleutel mag nooit in de response staan");
+  } finally {
+    registry.haalNeerslagVoorLocatie = origineel;
+    delete require.cache[require.resolve("../lib/neerslag.cjs")];
+  }
+});
+
 test("onondersteunde landen doen geen externe providerrequest", async () => {
   let aangeroepen = false;
   const uit = await haalNeerslagVoorLocatie({

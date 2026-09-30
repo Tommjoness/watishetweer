@@ -29,9 +29,10 @@ for (const naam of ["forecast", "neerslag", "plaatsnaam", "luchtkwaliteit", "waa
   assert.ok(!bron.includes("Vercel-CDN-Cache-Control"), `${naam} bevat nog Vercel-cachelogica`);
   assert.ok(wrapper.includes(`../../api/${naam}.mjs`));
   if (naam === "forecast") assert.ok(wrapper.includes("context.env"), "WeatherAPI-key moet uitsluitend via de Cloudflare-secretbinding lopen");
+  if (naam === "neerslag") assert.ok(wrapper.includes("context.env"), "KNMI_WMS_API_KEY moet uitsluitend via de Cloudflare-secretbinding lopen");
   assert.ok(wrapper.includes("../../lib/cloudflare-edge-cache.mjs"));
   assert.ok(wrapper.includes("export async function onRequest(context)"));
-  const aanroep=naam==="forecast"
+  const aanroep=naam==="forecast"||naam==="neerslag"
     ? `metEdgeCache(context, "${naam}", () => worker.fetch(context.request, context.env))`
     : `metEdgeCache(context, "${naam}", () => worker.fetch(context.request))`;
   assert.ok(wrapper.includes(aanroep), `${naam}-wrapper omzeilt de veilige edge-cache of de bestaande handler`);

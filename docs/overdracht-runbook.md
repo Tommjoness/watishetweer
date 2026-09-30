@@ -55,7 +55,7 @@ Belangrijkste onderdelen:
 | luchtkwaliteit en pollen | Open-Meteo Air Quality / CAMS | geen |
 | plaats zoeken | Open-Meteo Geocoding | geen |
 | reverse geocoding | BigDataCloud, daarna Nominatim-compatible fallback | geen; optionele basis-URL |
-| korte neerslag NL/BE | KNMI-dataplatform via de serverlaag | geen geheime waarde in de repository |
+| korte neerslag NL/BE | KNMI-dataplatform (WMS/WCS) via de serverlaag | optioneel `KNMI_WMS_API_KEY` als Cloudflare Pages-secret; zonder sleutel de anonieme, wereldwijd gedeelde KNMI-pot (1.000 verzoeken per uur voor iedereen samen) |
 | modelverificatie tegen weerstations (alleen de handmatige workflow) | KNMI EDR API (10-minutenwaarnemingen) en Open-Meteo Historical Forecast API | `KNMI_EDR_API_KEY` alleen als GitHub Actions-secret |
 | waarschuwingen Europa | MeteoAlarm | geen |
 | waarschuwingen VS en ondersteunde gebieden | National Weather Service | geen |
@@ -81,11 +81,12 @@ Optioneel, alleen voor de handmatige modelverificatie (`.github/workflows/knmi-m
 
 Zonder deze sleutel slaat de workflow de vergelijking over; de site zelf gebruikt hem niet. De workflow draait vier keer per jaar vanzelf (de 5e van januari, april, juli en oktober, over de afgelopen 28 dagen) en zet de uitkomst als reactie in het issue "KNMI modelverificatie: resultaten". GitHub schakelt geplande workflows in een openbare repository uit na 60 dagen zonder activiteit; zet hem dan weer aan onder Actions > KNMI modelverificatie.
 
-De runtime heeft daarnaast één providersecret nodig:
+De runtime gebruikt daarnaast deze providersecrets:
 
 | Naam | Doel | Waar instellen |
 |---|---|---|
 | `WEATHERAPI_KEY` | beschermde zevendaagse forecastfallback wanneer Open-Meteo faalt of te traag is | Cloudflare Pages > Settings > Variables and Secrets, versleuteld in zowel Preview als Production |
+| `KNMI_WMS_API_KEY` (aanbevolen) | eigen KNMI-quotum voor de radar per plaats (/api/neerslag); aanvragen op developer.dataplatform.knmi.nl bij de WMS API. Zonder deze sleutel valt de radar weg zodra de gedeelde anonieme KNMI-pot op is ("Quota exceeded"); de site toont dan de gewone neerslagverwachting | Cloudflare Pages > Settings > Variables and Secrets, versleuteld in zowel Preview als Production |
 
 De huidige zeven-dageninterface vereist WeatherAPI Starter of hoger. De Free-respons met drie forecastdagen faalt bewust gesloten. De key hoort niet als GitHub Actions-secret naar de build te gaan: alleen de Pages Function leest `context.env.WEATHERAPI_KEY` tijdens runtime.
 

@@ -17,7 +17,9 @@ concurrency:
 jobs:
   production-contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    # De productiebuild met ~170 plaatspagina's duurt ~9 min; de SHA-wacht
+    # hieronder mag tot 15 min duren, plus de contractcontroles zelf.
+    timeout-minutes: 22
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -27,7 +29,7 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.sha }}
           SMOKE_POLL_MS: 10000
-          SMOKE_ATTEMPTS: 36
+          SMOKE_ATTEMPTS: 90
           SMOKE_REQUEST_TIMEOUT_MS: 10000
         run: node scripts/production-smoke.js
       - name: Controleer exact live sitemapcontract

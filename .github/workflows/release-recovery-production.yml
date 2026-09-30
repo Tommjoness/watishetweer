@@ -15,7 +15,8 @@ concurrency:
 jobs:
   static-production-contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    # SHA-wacht tot 15 min (productiebuild ~9 min) plus de serviceworkerwacht.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -24,7 +25,7 @@ jobs:
       - name: Wacht op exacte productie-SHA en controleer routebundles
         env:
           EXPECTED_SHA: ${{ github.sha }}
-          RECOVERY_SMOKE_ATTEMPTS: 60
+          RECOVERY_SMOKE_ATTEMPTS: 180
           RECOVERY_SMOKE_POLL_MS: 5000
         run: node scripts/production-release-recovery.js
 

@@ -13,7 +13,7 @@ function methodeNietToegestaan(method) {
 }
 
 export default {
-  async fetch(request) {
+  async fetch(request, env = {}) {
     const method = String(request.method || "GET").toUpperCase();
     if (method !== "GET" && method !== "HEAD") return methodeNietToegestaan(method);
 
@@ -30,7 +30,7 @@ export default {
     };
 
     try {
-      await providerHandler({ query }, response);
+      await providerHandler({ query, env }, response);
     } catch (error) {
       console.error("[api/neerslag] onverwachte serverfout", error);
       statusCode = 503;
