@@ -773,6 +773,22 @@ function icon(code,isDay,size){
 /** De lokale kalenderdag bij de plaats, als "YYYY-MM-DD". Gebruikt dezelfde
     verschoven-klok-truc als plaatsNu(), dus geen new Date().toISOString() dat
     rond een daggrens de datum van de verkeerde tijdzone kan pakken. */
+/** Eén Intl.DateTimeFormat per IANA-zone. Een formatter aanmaken is duur en
+    gebeurt anders bij iedere tijdconversie opnieuw: bij het opbouwen van de
+    desktopweergave honderden keren. De uitkomst is identiek; alleen het
+    aanmaken wordt hergebruikt. Opgeslagen op de functie zelf, zodat de cache
+    ook bestaat als deze helper vóór de rest van het script wordt aangeroepen. */
+function weatherNowZoneFormatter(tz){
+  const cache=weatherNowZoneFormatter.cache||(weatherNowZoneFormatter.cache=new Map());
+  const sleutel=String(tz);
+  let formatter=cache.get(sleutel);
+  if(!formatter){
+    formatter=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"});
+    cache.set(sleutel,formatter);
+    if(cache.size>24)cache.delete(cache.keys().next().value);
+  }
+  return formatter;
+}
 function plaatsTijdDelen(){
   if(S.klokOverride&&typeof S.klokOverride.getTime==="function"){
     const eigen=-new Date().getTimezoneOffset()*60;
@@ -784,7 +800,7 @@ function plaatsTijdDelen(){
   const tz=S.d&&S.d.timezone;
   if(tz&&typeof Intl!=="undefined"&&Intl.DateTimeFormat){
     try{
-      const delen=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(new Date(basis));
+      const delen=weatherNowZoneFormatter(tz).formatToParts(new Date(basis));
       const p={}; delen.forEach(x=>{if(x.type!=="literal")p[x.type]=Number(x.value);});
       if([p.year,p.month,p.day,p.hour,p.minute,p.second].every(Number.isFinite))return p;
     }catch(e){}
@@ -914,7 +930,7 @@ function opOnder(welk,startUTC,lat,lon){
 // lokale tijdstring naar UTC-milliseconden, met de offset die de API meegeeft
 function weatherNowZoneDelen(ms,tz){
   try{
-    const delen=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(new Date(ms));
+    const delen=weatherNowZoneFormatter(tz).formatToParts(new Date(ms));
     const p={}; delen.forEach(x=>{if(x.type!=="literal")p[x.type]=Number(x.value);});
     return [p.year,p.month,p.day,p.hour,p.minute,p.second].every(Number.isFinite)?p:null;
   }catch(e){return null;}

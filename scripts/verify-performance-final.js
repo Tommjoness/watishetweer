@@ -101,6 +101,40 @@ const naarUtc=html.slice(naarUtcStart,naarUtcEind);
 if(!naarUtc.includes("zoneGeldig=false")||!naarUtc.includes("utc_offset_seconds"))throw new Error("naarUTC mist de veilige numerieke offsetfallback.");
 if((naarUtc.match(/return doel-off;/g)||[]).length!==1)throw new Error("naarUTC numerieke fallback is niet eenduidig.");
 
+/* De app-eigen tijdhelpers (plaatsklok, zonedelen, naarUTC/naarLokaal) maken
+   niet bij iedere conversie een nieuwe Intl.DateTimeFormat: dat kostte bij het
+   opbouwen van de desktopweergave het meeste rekenwerk. Eén formatter per zone. */
+exact("function weatherNowZoneFormatter(tz){","app-timezone-formattercache");
+if((html.match(/weatherNowZoneFormatter\(tz\)\.formatToParts\(/g)||[]).length!==2)throw new Error("plaatsTijdDelen en weatherNowZoneDelen horen allebei de gecachte formatter te gebruiken.");
+if(html.includes('new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts('))throw new Error("Een app-tijdhelper maakt nog per aanroep een nieuwe formatter.");
+{
+  const blok=(start,eind)=>{const a=html.indexOf(start),b=html.indexOf(eind,a);if(a<0||b<=a)throw new Error("Tijdhelper niet gevonden: "+start);return html.slice(a,b);};
+  const bron=blok("function weatherNowZoneFormatter(tz){","function plaatsTijdDelen(){")
+    +blok("function weatherNowZoneDelen(ms,tz){","function naarLokaal(msUTC){");
+  let aangemaakt=0;
+  const TelIntl={DateTimeFormat:function(...a){aangemaakt++;return new Intl.DateTimeFormat(...a);}};
+  const ctx={S:{d:{timezone:"Europe/Amsterdam",utc_offset_seconds:7200}},Intl:TelIntl,Date,Number,String,Math,Map};
+  vm.runInNewContext(bron+"\nthis.naarUTC=naarUTC;this.weatherNowZoneDelen=weatherNowZoneDelen;",ctx);
+  const gevallen=[
+    ["2026-07-22T10:00",Date.UTC(2026,6,22,8,0),"zomertijd"],
+    ["2026-01-15T10:00",Date.UTC(2026,0,15,9,0),"wintertijd"],
+    ["2026-03-29T03:00",Date.UTC(2026,2,29,1,0),"eerste uur na de overgang naar zomertijd"],
+    ["2026-10-25T04:00",Date.UTC(2026,9,25,3,0),"na de overgang naar wintertijd"]
+  ];
+  for(const [lokaal,verwacht,naam] of gevallen){
+    const uit=ctx.naarUTC(lokaal);
+    if(uit!==verwacht)throw new Error("naarUTC met formattercache wijkt af ("+naam+"): "+new Date(uit).toISOString()+" in plaats van "+new Date(verwacht).toISOString());
+  }
+  for(let u=0;u<200;u++)ctx.naarUTC("2026-07-22T"+String(u%24).padStart(2,"0")+":00");
+  if(aangemaakt!==1)throw new Error("Tijdhelpers maakten "+aangemaakt+" formatters voor één zone; verwacht precies 1.");
+  ctx.S.d.timezone="America/New_York";
+  if(ctx.naarUTC("2026-07-22T10:00")!==Date.UTC(2026,6,22,14,0))throw new Error("naarUTC voor een tweede zone klopt niet met de formattercache.");
+  if(aangemaakt!==2)throw new Error("Een tweede zone hoort precies één extra formatter te krijgen; totaal "+aangemaakt+".");
+  ctx.S.d.timezone="Geen/Zone";
+  if(ctx.weatherNowZoneDelen(Date.UTC(2026,6,22),"Geen/Zone")!==null)throw new Error("Een ongeldige zone hoort null te geven, zoals voorheen.");
+  if(ctx.naarUTC("2026-07-22T10:00")!==Date.UTC(2026,6,22,8,0))throw new Error("Ongeldige zone hoort op utc_offset_seconds terug te vallen.");
+}
+
 const scripts=[...html.matchAll(/<script(?![^>]* src=)[^>]*>([^]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime gevonden.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:performance-verify-"+(i+1)}));
