@@ -37,6 +37,7 @@ Belangrijkste onderdelen:
 | interpretatie en consumententaal | `interpretatie-engine.js`, `interpretatie.js`, `nederlandse-weergrammatica.js` |
 | productie-assemblage | `build-weather.js`, `scripts/postbuild-pipeline.js` |
 | plaatsroutes, canonicals en sitemap | `scripts/seo-locations.config.js`, `scripts/generate-seo-location-pages.js` |
+| klimaatblok per plaatspagina (KNMI 1991–2020) | `scripts/klimaat-plaatsen.js`, data `scripts/data/knmi-klimaatnormalen-1991-2020.json`, opnieuw berekenen met `node scripts/genereer-knmi-klimaatnormalen.js` |
 | Cloudflare Pages Functions | `functions/`, gedeelde logica in `api/` en `lib/` |
 | statische headers en Function-routing | `cloudflare/_headers`, `cloudflare/_routes.json`, `functions/_middleware.js` |
 | serviceworker en offline shell | `sw.js`, met een buildgebonden cacheversie in het artifact |
@@ -191,7 +192,7 @@ Controleer eerst welke bron faalt. De hoofdforecast heeft een begrensde fallback
 
 | Gewenste wijziging | Route |
 |---|---|
-| plaats toevoegen of verwijderen | pas `scripts/seo-locations.config.js` aan; draai de SEO-tests, build en live sitemapcontrole |
+| plaats toevoegen of verwijderen | pas `scripts/seo-locations.config.js` aan (woonplaatsen vanaf ~20.000 inwoners, geen stadswijken; maximaal 200 zonder nieuwe bewuste keuze); iedere plaats krijgt automatisch het klimaatblok van het dichtstbijzijnde KNMI-station binnen 60 km; draai de SEO-tests, build en live sitemapcontrole |
 | metadata of structured data wijzigen | pas de SEO-config/generator aan; controleer root, `/weer/`, plaatsroute, canonical, JSON-LD en sitemap als één geheel |
 | weeruitleg of briefing wijzigen | wijzig de canonieke interpretatie-/copy-owner vóór de postbuild; voeg scenario- en browserregressies toe |
 | grafiek of weekverwachting wijzigen | wijzig de bestaande eigenaar, niet alleen gegenereerde HTML; test 320–430 px, desktop, Chromium en WebKit |
