@@ -70,6 +70,7 @@ for(const loc of LOCATIES){
   assert(html.includes('data-knmi-station="260"'),"punt bij De Bilt krijgt station De Bilt");
   assert(html.includes("(KNMI-station De Bilt)"),"binnen 2 km geen afstand noemen");
   assert.equal((html.match(/<th scope="row">/g)||[]).length,12);
+  assert(html.includes('<details class="seo-klimaat-details" open>')&&html.includes("<summary>Bekijk per maand</summary>"),"maandtabel staat in de HTML open achter een inklapbare kop");
   assert(!/NaN|undefined/.test(html),"klimaatblok bevat geen ongeldige waarden");
   const s=samenvatting(debilt,dichtstbijzijndStation(debilt));
   assert.equal(s.warmste,6,"juli is de warmste maand in De Bilt");

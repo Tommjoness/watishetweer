@@ -3263,6 +3263,13 @@ function weatherNowUurWaardeOp(veld,doelMin){
   return links.v+(rechts.v-links.v)*f;
 }
 
+/* Klimaatblok op plaatspagina's: de maandtabel staat in de HTML open (voor
+   zoekmachines en zonder JavaScript) en klapt op smalle schermen dicht. */
+(function(){
+  const d=document.querySelector(".seo-klimaat-details");
+  if(d&&window.matchMedia&&!window.matchMedia("(min-width: 900px)").matches)d.open=false;
+})();
+
 /* ---------- start ---------- */
 (function(){
   const p=new URLSearchParams(location.search);
