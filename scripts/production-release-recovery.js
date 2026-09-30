@@ -43,6 +43,35 @@ async function wachtOpSha(){
   throw new Error(`Productie bereikte verwachte SHA niet: verwacht ${EXPECTED_SHA||"(niet opgegeven)"}, laatst ${laatste}`);
 }
 
+// Cloudflare Pages zet een deployment niet voor ieder bestand tegelijk op iedere edge live:
+// vlak na de cutover kan de HTML al de nieuwe SHA tonen terwijl /sw.js nog de vorige release
+// levert. Wacht daarom tot de serviceworker dezelfde bundles noemt als de HTML; blijft dat
+// uit binnen het pollbudget, dan faalt de smoke met de oorspronkelijke controle.
+async function leesServiceWorker(){
+  const swResponse=await fetch(ROOT+"/sw.js",{headers:{"cache-control":"no-cache","pragma":"no-cache"}});
+  assert(swResponse.ok,`productie-serviceworker is niet bereikbaar: HTTP ${swResponse.status}`);
+  assert.equal(swResponse.headers.get("cache-control"),"public, no-store, max-age=0, must-revalidate","productie-serviceworker moet de zonecache omzeilen en bij ieder bezoek hervalideren");
+  return await swResponse.text();
+}
+function controleerServiceWorker(sw,gedeeldeBundle,gedeeldeBootstrap){
+  const swApps=[...sw.matchAll(/app-[0-9a-f]{12}\.min\.js/g)].map(m=>m[0]);
+  const swBoots=[...sw.matchAll(/bootstrap-[0-9a-f]{12}\.min\.js/g)].map(m=>m[0]);
+  assert.equal(swApps.length,1,"productie-serviceworker moet exact één app-bundlereferentie bevatten");
+  assert.equal(swBoots.length,1,"productie-serviceworker moet exact één bootstrap-bundlereferentie bevatten");
+  assert.equal("/"+swApps[0],gedeeldeBundle,"productie-serviceworker moet de actieve gedeelde app-bundle precachen");
+  assert.equal("/"+swBoots[0],gedeeldeBootstrap,"productie-serviceworker moet de actieve bootstrap-bundle precachen");
+}
+async function wachtOpServiceWorker(gedeeldeBundle,gedeeldeBootstrap){
+  let fout=null;
+  for(let poging=1;poging<=ATTEMPTS;poging++){
+    const sw=await leesServiceWorker();
+    try{controleerServiceWorker(sw,gedeeldeBundle,gedeeldeBootstrap);return sw;}
+    catch(e){fout=e;}
+    if(poging<ATTEMPTS)await slaap(POLL_MS);
+  }
+  throw fout;
+}
+
 (async()=>{
   await wachtOpSha();
   const rijen=[];let gedeeldeBundle=null,gedeeldeBootstrap=null,gedeeldeBuild=null;
@@ -70,16 +99,7 @@ async function wachtOpSha(){
   assert(bootstrapTekst.includes("12000"),"actieve productiebootstrap mist de 12s watchdogtimeout");
   assert(bootstrapTekst.includes("weathernow:app-ready"),"actieve productiebootstrap mist app-ready recovery");
 
-  const swResponse=await fetch(ROOT+"/sw.js",{headers:{"cache-control":"no-cache","pragma":"no-cache"}});
-  assert(swResponse.ok,`productie-serviceworker is niet bereikbaar: HTTP ${swResponse.status}`);
-  assert.equal(swResponse.headers.get("cache-control"),"public, no-store, max-age=0, must-revalidate","productie-serviceworker moet de zonecache omzeilen en bij ieder bezoek hervalideren");
-  const sw=await swResponse.text();
-  const swApps=[...sw.matchAll(/app-[0-9a-f]{12}\.min\.js/g)].map(m=>m[0]);
-  const swBoots=[...sw.matchAll(/bootstrap-[0-9a-f]{12}\.min\.js/g)].map(m=>m[0]);
-  assert.equal(swApps.length,1,"productie-serviceworker moet exact één app-bundlereferentie bevatten");
-  assert.equal(swBoots.length,1,"productie-serviceworker moet exact één bootstrap-bundlereferentie bevatten");
-  assert.equal("/"+swApps[0],gedeeldeBundle,"productie-serviceworker moet de actieve gedeelde app-bundle precachen");
-  assert.equal("/"+swBoots[0],gedeeldeBootstrap,"productie-serviceworker moet de actieve bootstrap-bundle precachen");
+  const sw=await wachtOpServiceWorker(gedeeldeBundle,gedeeldeBootstrap);
   assert(!sw.includes("app-a20fed4f8866.min.js")&&!sw.includes("app-5a8f2a31bd9d.min.js"),"oude baselinebundles mogen niet in de actuele serviceworker staan");
 
   console.log(JSON.stringify({ok:true,build:gedeeldeBuild,bundle:gedeeldeBundle,bootstrap:gedeeldeBootstrap,routes:rijen},null,2));
