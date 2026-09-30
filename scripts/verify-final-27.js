@@ -102,7 +102,7 @@ for(const tekst of [
   "let laadTeller=0,waarschuwingTeller=0,actieveWeerController=null,actieveLuchtController=null,actieveWaarschuwingController=null",
   "const luchtBelofte=luchtVerversen",
   "?j(a,{timeoutMs:7000,signal:luchtController.signal})",
-  "const WEER_HEDGE_MS=5000;",
+  "const WEER_HEDGE_MS=2500;",
   "const WEER_FALLBACK_TIMEOUT_MS=5000;",
   "const volledigeRequest=weatherNowChildRequest(weerController.signal);",
   "const volledigeBelofte=weatherNowEisGeldigeForecast(j(f,{timeoutMs:10000,signal:volledigeRequest.signal}))",

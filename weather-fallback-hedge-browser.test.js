@@ -33,10 +33,10 @@ function antwoord(payload,ok=true,status=200){
 const gevallen=[
   {naam:"snelle full start geen fallback",fullMode:"ok",fullMs:120,fallbackMode:"ok",fallbackMs:120,weatherApiMode:"ok",weatherApiMs:120,reportMs:5700,budget:7000,verwacht:{temp:11,openMeteoFallback:0,weatherApiFallback:0}},
   {naam:"directe fullfout start beide fallbacks direct",fullMode:"http",fullMs:50,fallbackMode:"ok",fallbackMs:150,weatherApiMode:"ok",weatherApiMs:350,reportMs:1400,budget:2600,verwacht:{temp:22,openMeteoFallback:1,weatherApiFallback:1,weatherApiAbort:1,maxFallbackStart:1000}},
-  {naam:"trage full krijgt hedge en WeatherAPI wint",fullMode:"hang",fullMs:0,fallbackMode:"hang",fallbackMs:0,weatherApiMode:"ok",weatherApiMs:180,reportMs:6200,budget:7500,verwacht:{temp:24,openMeteoFallback:1,weatherApiFallback:1,openMeteoAbort:1,minFallbackStart:4800,maxFallbackStart:5300}},
+  {naam:"trage full krijgt hedge en WeatherAPI wint",fullMode:"hang",fullMs:0,fallbackMode:"hang",fallbackMs:0,weatherApiMode:"ok",weatherApiMs:180,reportMs:6200,budget:7500,verwacht:{temp:24,openMeteoFallback:1,weatherApiFallback:1,openMeteoAbort:1,minFallbackStart:2300,maxFallbackStart:2800}},
   {naam:"onvolledige WeatherAPI-data mag niet winnen",fullMode:"http",fullMs:50,fallbackMode:"ok",fallbackMs:300,weatherApiMode:"invalid",weatherApiMs:50,reportMs:1500,budget:2700,verwacht:{temp:22,openMeteoFallback:1,weatherApiFallback:1,maxFallbackStart:1000}},
-  {naam:"trage full mag na hedge alsnog winnen",fullMode:"ok",fullMs:6000,fallbackMode:"ok",fallbackMs:4000,weatherApiMode:"hang",weatherApiMs:0,reportMs:6900,budget:8000,verwacht:{temp:11,openMeteoFallback:1,weatherApiFallback:1,openMeteoAbort:1,weatherApiAbort:1,minFallbackStart:4800,maxFallbackStart:5300}},
-  {naam:"drie providerrequests hangen maar eindigen voor oude twintigsecondenketen",fullMode:"hang",fullMs:0,fallbackMode:"hang",fallbackMs:0,weatherApiMode:"hang",weatherApiMs:0,reportMs:15800,budget:17000,verwacht:{error:"Het ophalen duurt te lang. Controleer je verbinding en probeer het opnieuw.",openMeteoFallback:1,weatherApiFallback:1,minFallbackStart:4800,maxFallbackStart:5300}},
+  {naam:"trage full mag na hedge alsnog winnen",fullMode:"ok",fullMs:6000,fallbackMode:"ok",fallbackMs:4000,weatherApiMode:"hang",weatherApiMs:0,reportMs:6900,budget:8000,verwacht:{temp:11,openMeteoFallback:1,weatherApiFallback:1,openMeteoAbort:1,weatherApiAbort:1,minFallbackStart:2300,maxFallbackStart:2800}},
+  {naam:"drie providerrequests hangen maar eindigen voor oude twintigsecondenketen",fullMode:"hang",fullMs:0,fallbackMode:"hang",fallbackMs:0,weatherApiMode:"hang",weatherApiMs:0,reportMs:15800,budget:17000,verwacht:{error:"Het ophalen duurt te lang. Controleer je verbinding en probeer het opnieuw.",openMeteoFallback:1,weatherApiFallback:1,minFallbackStart:2300,maxFallbackStart:2800}},
   {naam:"stale load start geen oude fallback",stale:true,fullMode:"hang",fullMs:0,fallbackMode:"ok",fallbackMs:150,weatherApiMode:"ok",weatherApiMs:150,reportMs:6500,budget:7800,verwacht:{temp:33,openMeteoFallback:0,weatherApiFallback:0,label:"New York"}}
 ];
 
@@ -158,4 +158,4 @@ for(const geval of gevallen){
   console.log(geval.naam+": OK — "+info());
 }
 
-console.log("Weather fallback hedge browser: snelle loads blijven enkelvoudig; na 5 s racen lichte Open-Meteo en WeatherAPI; alleen volledige geldige data wint, verliezers worden afgebroken en stale loads starten geen oude fallback.");
+console.log("Weather fallback hedge browser: snelle loads blijven enkelvoudig; na 2,5 s racen lichte Open-Meteo en WeatherAPI; alleen volledige geldige data wint, verliezers worden afgebroken en stale loads starten geen oude fallback.");

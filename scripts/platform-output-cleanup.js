@@ -8,6 +8,7 @@ const {minify}=require("terser");
 const CleanCSS=require("clean-css");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const {retirePressure,verifieerPressureRetired}=require("./pressure-retirement.js");
+const {vroegeForecastBron,VROEGE_FORECAST_MARKER}=require("./vroege-forecast.js");
 
 const ROOT=path.join(__dirname,"..");
 const PUBLIC=path.join(ROOT,"public");
@@ -182,6 +183,30 @@ async function vervangVroegeScripts(html,earlyScripts,cache){
   }
   return bron;
 }
+/* Vroege weeraanvraag in de bootstrap. Pas hier is de adresopbouw van de app
+   definitief (pressure-retirement en hardening zijn toegepast), dus pas hier
+   wordt die letterlijk uit de onverkleinde root-runtime overgenomen. De
+   bootstrap krijgt daarmee nieuwe inhoud en dus een nieuwe hashnaam; alle
+   HTML-verwijzingen en de serviceworker volgen die naam. */
+function voegVroegeForecastToe(bootstrapBundle,rootBron,bestanden){
+  const oudPad=path.join(PUBLIC,bootstrapBundle);
+  const bestaand=fs.readFileSync(oudPad,"utf8");
+  if(bestaand.includes(VROEGE_FORECAST_MARKER))return bootstrapBundle;
+  const bron=bestaand+vroegeForecastBron(rootBron);
+  const naam="bootstrap-"+hash12(bron)+".min.js";
+  fs.writeFileSync(path.join(PUBLIC,naam),bron,"utf8");
+  let verwijzingen=0;
+  for(const bestand of bestanden){
+    const html=fs.readFileSync(bestand,"utf8");
+    const aantal=html.split("/"+bootstrapBundle).length-1;
+    if(!aantal)continue;
+    verwijzingen+=aantal;
+    fs.writeFileSync(bestand,html.split("/"+bootstrapBundle).join("/"+naam),"utf8");
+  }
+  if(!verwijzingen)throw new Error("Vroege weeraanvraag: geen HTML verwijst naar de bootstrap "+bootstrapBundle+".");
+  if(naam!==bootstrapBundle)fs.rmSync(oudPad);
+  return naam;
+}
 function werkServiceworkerBij(rootBundle,bootstrapBundle){
   const swPad=path.join(PUBLIC,"sw.js");
   if(!fs.existsSync(swPad)||!rootBundle||!bootstrapBundle)return;
@@ -232,16 +257,17 @@ async function optimaliseerPublic(publicDir=PUBLIC){
   }
   if(!rootBundle||!rootBron)throw new Error("Homepage-runtime is niet verpakt.");
   if(appBundles.size!==1)throw new Error("Weather-app delivery moet exact één gedeelde app-bundle opleveren; gevonden "+appBundles.size+".");
-  werkServiceworkerBij(rootBundle,bootstrapBundle);
+  const bootstrapDefinitief=voegVroegeForecastToe(bootstrapBundle,rootBron,bestanden);
+  werkServiceworkerBij(rootBundle,bootstrapDefinitief);
   vernieuwServiceworkerCache(PUBLIC,"delivery-pressure-retired");
   const rootHtml=fs.readFileSync(path.join(PUBLIC,"index.html"),"utf8");
   if(/<script(?![^>]*\bsrc=)(?![^>]*\btype=["'](?:application\/ld\+json|application\/json)["'])[^>]*>[\s\S]*?<\/script>/i.test(rootHtml))throw new Error("Executable inline script bleef achter op homepage.");
   if(/http-equiv="Content-Security-Policy"/i.test(rootHtml))throw new Error("CSP-meta bleef achter na header-migratie.");
   if(rootHtml.includes('horizontaal.setAttribute("aria-label"'))throw new Error("Ongeldige line-ARIA bleef achter in delivery-runtime.");
-  if(!rootHtml.includes(`src="/${bootstrapBundle}" defer data-weather-bootstrap`))throw new Error("Deferred bootstrapasset ontbreekt na delivery.");
+  if(!rootHtml.includes(`src="/${bootstrapDefinitief}" defer data-weather-bootstrap`))throw new Error("Deferred bootstrapasset ontbreekt na delivery.");
   for(const bestand of bestanden)verifieerPressureRetired(fs.readFileSync(bestand,"utf8"),bestand);
   verifieerPressureRetired(rootBron,"delivery runtime snapshot");
-  return {htmlBestanden:bestanden.length,bundles:bundleCache.size,appBundles:appBundles.size,pageBundles:pageBundles.size,earlyBundles:earlyCache.size,rootBundle,bootstrapBundle};
+  return {htmlBestanden:bestanden.length,bundles:bundleCache.size,appBundles:appBundles.size,pageBundles:pageBundles.size,earlyBundles:earlyCache.size,rootBundle,bootstrapBundle:bootstrapDefinitief};
 }
 
 function voegPostHogNaDeliveryToe(){
