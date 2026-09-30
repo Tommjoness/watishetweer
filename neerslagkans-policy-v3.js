@@ -564,16 +564,36 @@ function planKnmiVerversing(gen,payload){
     vraagKnmiEnPasToe(S.lat,S.lon,gen,true);
   },wacht);
 }
-async function vraagKnmiEnPasToe(lat,lon,gen,force){
-  if(gen!==knmiGeneratie||S.land!=="NL")return;
+function knmiUrl(lat,lon){return "/api/neerslag?lat="+encodeURIComponent(lat)+"&lon="+encodeURIComponent(lon);}
+/* Een vroege KNMI-request start tegelijk met de forecast (zie load hieronder).
+   Het antwoord wordt pas na de forecastcommit en alleen voor exact dezelfde
+   coördinaten gebruikt; anders wordt de vroege request afgebroken. */
+function startVroegeKnmi(lat,lon){
+  const y=Number(lat),x=Number(lon);
+  if(!Number.isFinite(y)||!Number.isFinite(x))return null;
+  const controller=new AbortController();
+  const belofte=j(knmiUrl(y,x),{timeoutMs:7500,signal:controller.signal});
+  belofte.catch(()=>{});
+  return {lat:y,lon:x,controller,belofte};
+}
+function laatVroegeKnmiLos(vroeg){
+  if(!vroeg)return;
+  vroeg.controller.abort();
+  if(knmiController===vroeg.controller)knmiController=null;
+}
+async function vraagKnmiEnPasToe(lat,lon,gen,force,vroeg){
+  if(gen!==knmiGeneratie||S.land!=="NL"){laatVroegeKnmiLos(vroeg);return;}
+  if(vroeg&&!force&&Number(lat).toFixed(4)+","+Number(lon).toFixed(4)===laatsteKnmiSleutel&&S.d&&S.d.__knmiNeerslag)laatVroegeKnmiLos(vroeg);
   const sleutel=Number(lat).toFixed(4)+","+Number(lon).toFixed(4);
   if(!force&&sleutel===laatsteKnmiSleutel&&S.d&&S.d.__knmiNeerslag)return;
   laatsteKnmiSleutel=sleutel;
-  if(knmiController)knmiController.abort();
-  const controller=new AbortController();knmiController=controller;
+  const hergebruik=vroeg&&!vroeg.controller.signal.aborted&&vroeg.lat===Number(lat)&&vroeg.lon===Number(lon)?vroeg:null;
+  if(vroeg&&!hergebruik)vroeg.controller.abort();
+  if(knmiController&&(!hergebruik||knmiController!==hergebruik.controller))knmiController.abort();
+  const controller=hergebruik?hergebruik.controller:new AbortController();knmiController=controller;
   let planPayload=null;
   try{
-    const payload=await j("/api/neerslag?lat="+encodeURIComponent(lat)+"&lon="+encodeURIComponent(lon),{timeoutMs:7500,signal:controller.signal});
+    const payload=await(hergebruik?hergebruik.belofte:j(knmiUrl(lat,lon),{timeoutMs:7500,signal:controller.signal}));
     if(gen!==knmiGeneratie||controller.signal.aborted||S.land!=="NL"||Number(S.lat)!==Number(lat)||Number(S.lon)!==Number(lon))return;
     if(payload&&payload.beschikbaar===true&&zetKnmiOpData(payload)){
       planPayload=payload;
@@ -584,9 +604,9 @@ async function vraagKnmiEnPasToe(lat,lon,gen,force){
     if(gen===knmiGeneratie&&S.land==="NL")planKnmiVerversing(gen,planPayload);
   }
 }
-function startKnmiVoorHuidigePlaats(force){
-  if(S.land!=="NL"||S.lat==null||S.lon==null||!S.d)return;
-  vraagKnmiEnPasToe(S.lat,S.lon,knmiGeneratie,!!force);
+function startKnmiVoorHuidigePlaats(force,vroeg){
+  if(S.land!=="NL"||S.lat==null||S.lon==null||!S.d){laatVroegeKnmiLos(vroeg);return;}
+  vraagKnmiEnPasToe(S.lat,S.lon,knmiGeneratie,!!force,vroeg);
 }
 function verversKnmiBijTerugkeer(){
   if(document.visibilityState&&document.visibilityState!=="visible")return;
@@ -605,18 +625,27 @@ onthoudLand=function(v){
   else{verwijderKnmiVanData();werkBronvermeldingBij(false);}
 };
 
-/* Een KNMI-request start pas nadat de gewone forecast voor de gekozen plaats
-   is gecommit. Zo kan een snelle neerslagresponse nooit op S.d van de vorige
-   locatie terechtkomen tijdens een locatiewissel. De weather-load zelf blijft
-   wereldwijd volledig onafhankelijk van KNMI en houdt dus zijn fallback. */
+/* Voor een Nederlandse plaats start de KNMI-request tegelijk met de forecast,
+   zodat de radar niet pas na de forecast begint te laden. Het antwoord wordt
+   pas toegepast nadat de gewone forecast voor de gekozen plaats is gecommit en
+   alleen voor exact dezelfde coördinaten. Zo kan een snelle neerslagresponse
+   nooit op S.d van de vorige locatie terechtkomen tijdens een locatiewissel.
+   De weather-load zelf blijft wereldwijd volledig onafhankelijk van KNMI en
+   houdt dus zijn fallback. */
 const basisLoad=load;
 load=async function(lat,lon,label,stil,opslaan,land){
   stopKnmi();
   const gen=knmiGeneratie;
-  const resultaat=await basisLoad(lat,lon,label,stil,opslaan,land);
-  if(gen!==knmiGeneratie)return resultaat;
-  if(S.land==="NL")startKnmiVoorHuidigePlaats(false);
-  else{verwijderKnmiVanData();werkBronvermeldingBij(false);modelConditieHerstellen();}
+  const zelfdePlek=S.lat===Number(lat)&&S.lon===Number(lon);
+  const verwachtLand=land!==undefined?String(land||"").toUpperCase():(zelfdePlek?S.land:null);
+  const vroeg=verwachtLand==="NL"?startVroegeKnmi(lat,lon):null;
+  if(vroeg)knmiController=vroeg.controller;
+  let resultaat;
+  try{resultaat=await basisLoad(lat,lon,label,stil,opslaan,land);}
+  catch(e){laatVroegeKnmiLos(vroeg);throw e;}
+  if(gen!==knmiGeneratie){laatVroegeKnmiLos(vroeg);return resultaat;}
+  if(S.land==="NL")startKnmiVoorHuidigePlaats(false,vroeg);
+  else{laatVroegeKnmiLos(vroeg);verwijderKnmiVanData();werkBronvermeldingBij(false);modelConditieHerstellen();}
   return resultaat;
 };
 

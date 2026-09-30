@@ -37,6 +37,7 @@ window.__briefNu=Date.UTC(2026,6,22,12,17,0);
 Date.now=()=>window.__briefNu;
 window.__briefFase=1;window.__briefDelay=0;
 window.__knmiFase=0;window.__knmiDelay=0;
+window.__knmiStarts=[];window.__forecastEnds=[];
 const __briefCached=${JSON.stringify(cached)};
 const __briefTussen=${JSON.stringify(tussen)};
 const __briefVers=${JSON.stringify(vers)};
@@ -46,6 +47,7 @@ const __briefAntwoord=payload=>({ok:true,status:200,headers:{get:()=>null},json:
 window.fetch=async function(url,opt){
   const u=String(url||'');
   if(u.includes('/api/neerslag')){
+    window.__knmiStarts.push(performance.now());
     if(window.__knmiDelay)await new Promise(r=>setTimeout(r,window.__knmiDelay));
     return __briefAntwoord(window.__knmiFase===1?__knmiNat:{beschikbaar:false});
   }
@@ -53,6 +55,7 @@ window.fetch=async function(url,opt){
     await new Promise(r=>setTimeout(r,window.__briefDelay));
   }
   if(u.includes('api.open-meteo.com/v1/forecast')||u.includes('/api/forecast')){
+    window.__forecastEnds.push(performance.now());
     return __briefAntwoord(window.__briefFase===2?__briefVers:window.__briefFase===0?__briefTussen:__briefCached);
   }
   if(u.includes('air-quality-api.open-meteo.com'))return __briefAntwoord(__briefAir);
@@ -95,7 +98,10 @@ document.addEventListener('DOMContentLoaded',()=>{
 
       const hitsVoor=window.WeatherNowQ1Performance?WeatherNowQ1Performance.cacheHits:0;
       window.__briefFase=2;window.__briefDelay=700;
-      window.__knmiFase=1;window.__knmiDelay=700;
+      /* KNMI start tegelijk met de forecast en duurt hier langer, zodat de
+         voorlopige (verborgen) briefingtoestand na de forecast meetbaar is. */
+      window.__knmiFase=1;window.__knmiDelay=1400;
+      const knmiVoor=window.__knmiStarts.length,forecastVoor=window.__forecastEnds.length;
       const verversing=load(51.92,4.48,'Cache A',false,true,'NL');
       await new Promise(r=>setTimeout(r,100));
       const pendingOwner=brief&&brief.getAttribute('data-q1-briefing-pending');
@@ -109,6 +115,8 @@ document.addEventListener('DOMContentLoaded',()=>{
       zet('pending-cachehit',window.WeatherNowQ1Performance&&WeatherNowQ1Performance.cacheHits>hitsVoor?'ok':'fout');
 
       await verversing;
+      const knmiStart=window.__knmiStarts[knmiVoor],forecastEind=window.__forecastEnds[window.__forecastEnds.length-1];
+      zet('knmi-parallel',window.__forecastEnds.length>forecastVoor&&Number.isFinite(knmiStart)&&knmiStart<forecastEind?'ok':'fout:'+knmiStart+'/'+forecastEind);
       const voorKnmiTekst=(brief&&brief.textContent||'').replace(/\\s+/g,' ').trim();
       zet('knmi-pending-visibility',brief?getComputedStyle(brief).visibility:'missing');
       zet('knmi-pending-hidden',brief&&brief.getAttribute('aria-hidden'));
@@ -127,6 +135,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       zet('final-busy',brief&&brief.getAttribute('aria-busy'));
       zet('final-owner',brief&&brief.getAttribute('data-q1-briefing-pending'));
       zet('final-knmi-owner',brief&&brief.getAttribute('data-knmi-briefing-pending'));
+      zet('knmi-requests',window.__knmiStarts.length-knmiVoor);
       zet('done','ok');
     }catch(e){zet('error',e&&e.message||e);zet('done','fout');}
   },120);
@@ -137,11 +146,11 @@ html=html.replace("</body>",reporter+"</body>");
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-brief-stable-"));
 try{
   const bestand=path.join(dir,"index.html");fs.writeFileSync(bestand,html);
-  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1366,900","--virtual-time-budget=5000","--dump-dom","file://"+bestand],{encoding:"utf8",maxBuffer:30*1024*1024});
+  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1366,900","--virtual-time-budget=6000","--dump-dom","file://"+bestand],{encoding:"utf8",maxBuffer:30*1024*1024});
   if(r.status!==0)throw new Error("browser exit "+r.status+" "+String(r.stderr||"").slice(-1200));
   const dom=r.stdout||"";
   const waarde=k=>{const m=new RegExp('data-brief-stable-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
-  const fout=`done=${waarde('done')} error=${waarde('error')} firstTemp=${waarde('first-temp')} firstLen=${waarde('first-len')} tussenTemp=${waarde('tussen-temp')} seed=${waarde('seed-usable')} cache=${waarde('pending-cachehit')} pendingTemp=${waarde('pending-temp')} pendingVis=${waarde('pending-visibility')} pendingHidden=${waarde('pending-hidden')} pendingBusy=${waarde('pending-busy')} pendingOwner=${waarde('pending-owner')} knmiVis=${waarde('knmi-pending-visibility')} knmiHidden=${waarde('knmi-pending-hidden')} knmiBusy=${waarde('knmi-pending-busy')} knmiOwner=${waarde('knmi-pending-owner')} q1After=${waarde('q1-owner-after-load')} finalTemp=${waarde('final-temp')} finalLen=${waarde('final-len')} changed=${waarde('copy-changed')} knmiChanged=${waarde('knmi-copy-changed')} finalVis=${waarde('final-visibility')} finalHidden=${waarde('final-hidden')} finalBusy=${waarde('final-busy')} finalOwner=${waarde('final-owner')} finalKnmi=${waarde('final-knmi-owner')}`;
+  const fout=`done=${waarde('done')} error=${waarde('error')} firstTemp=${waarde('first-temp')} firstLen=${waarde('first-len')} tussenTemp=${waarde('tussen-temp')} seed=${waarde('seed-usable')} cache=${waarde('pending-cachehit')} pendingTemp=${waarde('pending-temp')} pendingVis=${waarde('pending-visibility')} pendingHidden=${waarde('pending-hidden')} pendingBusy=${waarde('pending-busy')} pendingOwner=${waarde('pending-owner')} knmiVis=${waarde('knmi-pending-visibility')} knmiHidden=${waarde('knmi-pending-hidden')} knmiBusy=${waarde('knmi-pending-busy')} knmiOwner=${waarde('knmi-pending-owner')} q1After=${waarde('q1-owner-after-load')} finalTemp=${waarde('final-temp')} finalLen=${waarde('final-len')} changed=${waarde('copy-changed')} knmiChanged=${waarde('knmi-copy-changed')} finalVis=${waarde('final-visibility')} finalHidden=${waarde('final-hidden')} finalBusy=${waarde('final-busy')} finalOwner=${waarde('final-owner')} finalKnmi=${waarde('final-knmi-owner')} knmiParallel=${waarde('knmi-parallel')} knmiRequests=${waarde('knmi-requests')}`;
   if(waarde('done')!=="ok")throw new Error("Briefing-stability browser niet afgerond: "+fout);
   if(waarde('first-temp')!=="12"||!Number(waarde('first-len')))throw new Error("Briefing-stability kon Cache A niet betrouwbaar opbouwen: "+fout);
   if(waarde('tussen-temp')!=="18")throw new Error("Briefing-stability kon tussenplaats B niet aantoonbaar tonen: "+fout);
@@ -150,8 +159,10 @@ try{
   if(waarde('pending-visibility')!=="hidden"||waarde('pending-hidden')!=="true"||waarde('pending-busy')!=="true"||!waarde('pending-owner'))throw new Error("Cached briefing was tijdens forecastrefresh nog zichtbaar/aankondigbaar: "+fout);
   if(waarde('q1-owner-after-load'))throw new Error("Q1-owner had na de verse forecast vrijgegeven moeten zijn: "+fout);
   if(waarde('knmi-pending-visibility')!=="hidden"||waarde('knmi-pending-hidden')!=="true"||waarde('knmi-pending-busy')!=="true"||!waarde('knmi-pending-owner'))throw new Error("Forecast-only briefing werd zichtbaar vóór de eerste KNMI-verrijking klaar was: "+fout);
+  if(waarde('knmi-parallel')!=="ok")throw new Error("KNMI-request startte niet tegelijk met de forecast: "+fout);
+  if(waarde('knmi-requests')!=="1")throw new Error("De vroege KNMI-request moet hergebruikt worden (exact één request per load): "+fout);
   if(waarde('final-temp')!=="31")throw new Error("Verse forecast heeft de zichtbare hero niet vervangen: "+fout);
   if(!Number(waarde('final-len'))||waarde('copy-changed')!=="ja"||waarde('knmi-copy-changed')!=="ja")throw new Error("Testscenario onderscheidt cached, forecast-only en KNMI-verrijkte briefing niet aantoonbaar: "+fout);
   if(waarde('final-visibility')==="hidden"||waarde('final-hidden')==="true"||waarde('final-busy')==="true"||waarde('final-owner')||waarde('final-knmi-owner'))throw new Error("Definitieve briefing bleef in voorlopige toestand hangen: "+fout);
-  console.log("Briefing-stability browser 1366px: cached hero blijft snel, forecast-only briefing blijft verborgen tijdens de eerste KNMI-verrijking en alleen de definitieve briefing wordt zichtbaar.");
+  console.log("Briefing-stability browser 1366px: cached hero blijft snel, KNMI start tegelijk met de forecast (één request), forecast-only briefing blijft verborgen tijdens de eerste KNMI-verrijking en alleen de definitieve briefing wordt zichtbaar.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}

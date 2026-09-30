@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { canoniekeCacheUrl, metEdgeCache, _intern } from "../lib/cloudflare-edge-cache.mjs";
+import knmiNeerslag from "../lib/knmi-neerslag.cjs";
+
+const knmiIntern = knmiNeerslag._intern;
 
 const BASE = "https://watishetweer.nl";
 
@@ -51,12 +54,25 @@ async function run(context,route,fn){
 }
 
 {
-  const a=canoniekeCacheUrl(new Request(BASE+"/api/neerslag?lat=52.370201&lon=4.895201&land=nl"),"neerslag");
-  const b=canoniekeCacheUrl(new Request(BASE+"/api/neerslag?lon=4.895204&land=NL&lat=52.370204"),"neerslag");
-  const c=canoniekeCacheUrl(new Request(BASE+"/api/neerslag?lat=52.370216&lon=4.895201&land=NL"),"neerslag");
-  assert.equal(a,b,"KNMI-equivalente vijfdecimalenpunten horen één cacheobject te delen");
-  assert.notEqual(a,c,"een ander KNMI-vijfdecimalenpunt mag niet botsen");
+  /* KNMI levert per radarvak van 1 km één waarde: punten in hetzelfde vak delen
+     één cacheobject op het vakmidden, een buurvak krijgt een eigen object. */
+  const { radarXY, radarLatLon, radarVak } = knmiIntern;
+  const vak=radarVak(52.3702,4.8952);
+  const punt=(fx,fy)=>radarLatLon(vak.kolom+fx,-3650-(vak.rij+fy));
+  const url=(p,land="NL")=>canoniekeCacheUrl(new Request(`${BASE}/api/neerslag?lat=${p.lat.toFixed(6)}&lon=${p.lon.toFixed(6)}&land=${land}`),"neerslag");
+  const a=url(punt(0.05,0.05)),b=url(punt(0.95,0.95),"nl"),c=url(punt(1.05,0.5)),d=url(punt(0.5,-0.05));
+  assert.equal(a,b,"punten in hetzelfde KNMI-radarvak horen één cacheobject te delen");
+  assert.notEqual(a,c,"het buurvak rechts mag niet botsen");
+  assert.notEqual(a,d,"het buurvak boven mag niet botsen");
   assert.match(a,/land=NL/);
+  const sleutel=new URL(a),xy=radarXY(Number(sleutel.searchParams.get("lat")),Number(sleutel.searchParams.get("lon")));
+  assert(Math.abs(xy.x-(vak.kolom+0.5))<0.01&&Math.abs(-3650-xy.y-(vak.rij+0.5))<0.01,"cachesleutel ligt op het midden van het radarvak");
+  const zonderLand=canoniekeCacheUrl(new Request(`${BASE}/api/neerslag?lat=52.370201&lon=4.895201`),"neerslag");
+  assert.equal(new URL(zonderLand).searchParams.get("lat"),sleutel.searchParams.get("lat"),"oude NL-client zonder landcode deelt hetzelfde radarvak");
+  const de1=canoniekeCacheUrl(new Request(BASE+"/api/neerslag?lat=52.370201&lon=4.895201&land=DE"),"neerslag");
+  const de2=canoniekeCacheUrl(new Request(BASE+"/api/neerslag?lat=52.370216&lon=4.895201&land=DE"),"neerslag");
+  assert.notEqual(de1,de2,"zonder KNMI-provider blijft de vijfdecimalensleutel ongewijzigd");
+  assert.match(de1,/lat=52\.37020&lon=4\.89520/);
 }
 
 {
