@@ -68,18 +68,21 @@ for(const loc of LOCATIES){
   const debilt={naam:"Testdorp",lat:52.1,lon:5.18};
   const html=klimaatHtml(debilt);
   assert(html.includes('data-knmi-station="260"'),"punt bij De Bilt krijgt station De Bilt");
-  assert(html.includes("(KNMI-station De Bilt)"),"binnen 2 km geen afstand noemen");
+  assert(/KNMI-station De Bilt\.<\/p>/.test(html),"binnen 2 km geen afstand noemen");
   assert.equal((html.match(/<th scope="row">/g)||[]).length,12);
-  assert(html.includes('<details class="seo-klimaat-details" open>')&&html.includes("<summary>Bekijk per maand</summary>"),"maandtabel staat in de HTML open achter een inklapbare kop");
+  assert(html.includes('<details class="seo-klimaat-details">')&&html.includes("<summary>Bekijk per maand</summary>"),"maandtabel staat ingeklapt achter 'Bekijk per maand'");
+  assert(!/Regen/.test(html),"geen technische regendagenkolom meer");
   assert(!/NaN|undefined/.test(html),"klimaatblok bevat geen ongeldige waarden");
   const s=samenvatting(debilt,dichtstbijzijndStation(debilt));
   assert.equal(s.warmste,6,"juli is de warmste maand in De Bilt");
-  assert(s.tekst.includes("juli")&&s.tekst.includes("°C")&&s.tekst.includes(" mm "),"samenvatting noemt maand, temperatuur en neerslag");
+  assert.equal(s.tekst,"In Testdorp is juli met gemiddeld 23 °C overdag de warmste maand; in februari is het 's nachts gemiddeld 1 °C. Per jaar valt er ongeveer 860 mm neerslag en schijnt de zon zo'n 1.700 uur.","samenvatting: twee korte zinnen met afgeronde getallen");
+  assert((s.tekst.match(/\. /g)||[]).length===1,"precies twee zinnen");
   const verweg=klimaatHtml({naam:"Buitenland",lat:40,lon:-3});
   assert.equal(verweg,"","zonder station binnen bereik geen klimaatblok");
   const oss=klimaatHtml(LOCATIES.find(x=>x.slug==="oss"));
-  assert(/KNMI-station Volkel, op \d+ km/.test(oss),"verder dan 2 km: stationsnaam met afstand");
-  assert(oss.includes("1993–2020"),"de werkelijke meetperiode staat in het bijschrift");
+  assert(/Gemiddelden 1993–2020, KNMI-station Volkel \(\d+ km\)\./.test(oss),"verder dan 2 km: stationsnaam met afstand en de werkelijke meetperiode");
+  const samenOss=samenvatting(LOCATIES.find(x=>x.slug==="oss"),dichtstbijzijndStation(LOCATIES.find(x=>x.slug==="oss")));
+  assert(/is het 's nachts gemiddeld (−?\d+) °C/.test(samenOss.tekst)&&!/−0 °C/.test(samenOss.tekst),"negatieve nul wordt 0");
 }
 
 console.log(`Klimaatplaatsen: ${NORMALEN.stations.length} KNMI-stations met plausibele normalen, generatorregels, De Bilt-referentie en ${LOCATIES.length} plaatsen met dichtstbijzijnd station geslaagd.`);
