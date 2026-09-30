@@ -6,6 +6,7 @@ const SEO=require("./seo-foundation.config.js");
 const {LOCATIES,POPULAIR,BASIS_URL,plaatsUrl,plaatsTitel,plaatsBeschrijving}=require("./seo-locations.config.js");
 const {MARKER_NAV,MARKER_ROUTE,gerelateerdePlaatsen}=require("./generate-seo-location-pages.js");
 const {verifieerServiceworkerCache}=require("./postbuild-cache.js");
+const {dichtstbijzijndStation}=require("./klimaat-plaatsen.js");
 
 const OUT=path.join(__dirname,"..","public");
 const tel=(tekst,zoek)=>String(tekst).split(zoek).length-1;
@@ -16,6 +17,7 @@ const root=fs.readFileSync(rootPath,"utf8");
 if(tel(root,'<div class="sheet" data-nosnippet>')!==1)throw new Error("Homepage moet de dynamische weerinterface exact één keer uit zoeksnippets houden.");
 if(tel(root,MARKER_NAV)!==1)throw new Error("Homepage moet exact één crawlbare plaatsnavigatie bevatten.");
 if(!root.includes('href="/weer/"'))throw new Error("Homepage linkt niet naar de volledige plaatsindex.");
+if(root.includes('<div class="seo-klimaat"'))throw new Error("Homepage mag geen plaatsgebonden klimaatblok bevatten.");
 if(!root.includes('href="/over/">Over deze site</a>'))throw new Error("Homepage mist de crawlbare verwijzing naar de Over-pagina.");
 for(const loc of POPULAIR){
   if(tel(root,`href="/weer/${loc.slug}/"`)!==1)throw new Error(`Homepage moet populaire plaats ${loc.slug} exact één keer linken.`);
@@ -55,6 +57,10 @@ for(const loc of LOCATIES){
   if(!html.includes("load(route.lat,route.lon,route.name,false,false,normLand(route.country));"))throw new Error(`${loc.slug}: runtime start niet via de bestaande load-keten.`);
   if(!html.includes(`<h2 id="seo-route-title">Weer in ${loc.naam}</h2>`))throw new Error(`${loc.slug}: zichtbare prerendercontext ontbreekt.`);
   if(/<link rel="canonical" href="https:\/\/watishetweer\.nl\/">/.test(html))throw new Error(`${loc.slug}: homepage-canonical lekt naar plaatsroute.`);
+  const klimaat=/<div class="seo-klimaat" data-knmi-station="(\d{3})">([\s\S]*?)<\/table>/.exec(html);
+  const station=dichtstbijzijndStation(loc);
+  if(!klimaat||!station||Number(klimaat[1])!==station.station.code)throw new Error(`${loc.slug}: eigen KNMI-klimaatblok ontbreekt of hoort bij een ander station.`);
+  if(tel(klimaat[2],'<th scope="row">')!==12||!klimaat[2].includes(`Klimaat in ${loc.naam}`))throw new Error(`${loc.slug}: klimaatblok mist de twaalf maandrijen of de plaatsnaam.`);
 
   const breadcrumb=/<nav class="seo-breadcrumb" aria-label="Broodkruimelnavigatie">([\s\S]*?)<\/nav>/.exec(html);
   if(!breadcrumb)throw new Error(`${loc.slug}: zichtbare breadcrumb ontbreekt.`);
