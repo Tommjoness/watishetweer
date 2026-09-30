@@ -20,6 +20,8 @@ const html=`<!doctype html>
   <button class="wiw-hour-toggle" type="button">Alle uren bekijken</button>
   <div id="nights"><button class="nacht-meer" type="button">Meer nachten bekijken</button></div>
 </main>
+<p><button type="button" data-analytics-device-toggle>Statistieken op dit apparaat uitzetten</button><span data-analytics-device-status></span></p>
+<p><button type="button" data-ga4-consent-toggle>Google Analytics instellen</button><span data-ga4-consent-status></span></p>
 <script src="/posthog-analytics.js"></script>
 <script>
 /* Net als de echte site: een klik op een dag tekent de dagenlijst opnieuw, zodat
@@ -78,7 +80,7 @@ async function maakPagina(browserType,opt={}){
     await route.fulfill({status:200,contentType:"application/javascript",body:""});
   });
   const page=await context.newPage();
-  await page.goto("https://watishetweer.nl/",{waitUntil:"load",referer:opt.referer});
+  await page.goto("https://watishetweer.nl/"+(opt.zoek||""),{waitUntil:"load",referer:opt.referer});
   return {browser,context,page,events,google};
 }
 
@@ -230,6 +232,31 @@ async function controleerGpc(){
   }finally{await browser.close();}
 }
 
+/* Afmelding per apparaat: ?analytics=uit en de knop op /privacy zetten alle
+   statistieken op dit apparaat uit (geen PostHog, geen GA4-vraag, geen GA4) en
+   de knop zet ze weer aan. */
+async function controleerAfmelding(){
+  const sessie=await maakPagina(chromium,{zoek:"?analytics=uit&plaats=x#y"});
+  const {browser,page,events,google}=sessie;
+  try{
+    await page.waitForTimeout(300);
+    assert.deepEqual(events,[],"na ?analytics=uit hoort PostHog niets te ontvangen");
+    assert.deepEqual(google,[],"na ?analytics=uit hoort Google Analytics niet te laden");
+    assert.equal(await page.locator("#analytics-toestemming").count(),0,"na ?analytics=uit hoort geen toestemmingsvraag te verschijnen");
+    assert.equal(await page.evaluate(()=>location.search+location.hash),"?plaats=x#y","de analytics-parameter hoort uit de adresbalk te verdwijnen, de rest niet");
+    assert.equal(await page.evaluate(()=>localStorage.getItem("weerbriefing.analytics.uit.v1")),"1","afmelding wordt niet bewaard");
+    assert.match(await page.locator("[data-analytics-device-status]").textContent(),/staan alle statistieken uit/,"status toont de afmelding niet");
+    assert.equal(await page.locator("[data-ga4-consent-toggle]").isHidden(),true,"GA4-knop hoort verborgen te zijn zolang alles uit staat");
+    await page.reload({waitUntil:"load"});
+    await page.waitForTimeout(300);
+    assert.deepEqual(events,[],"afmelding hoort ook na herladen te gelden");
+    await Promise.all([page.waitForEvent("load"),page.locator("[data-analytics-device-toggle]").click()]);
+    await wachtOpEvent(events,"$pageview");
+    assert.equal(await page.evaluate(()=>localStorage.getItem("weerbriefing.analytics.uit.v1")),null,"knop heft de afmelding niet op");
+    assert.match(await page.locator("[data-analytics-device-toggle]").textContent(),/uitzetten/,"knop hoort na opheffen weer uitzetten aan te bieden");
+  }finally{await browser.close();}
+}
+
 (async()=>{
   await meetBanner(chromium,"Chromium 320 licht",{width:320,height:844},"light");
   await meetBanner(chromium,"Chromium 390 donker",{width:390,height:844},"dark");
@@ -240,5 +267,6 @@ async function controleerGpc(){
   await controleerHerkomst();
   await controleerAutomatisering();
   await controleerGpc();
-  console.log("Analytics-consentbrowsercontract groen: compacte toegankelijke banner, gelijke keuzes, GPC, vooraf geblokkeerde GA4, privacyveilige taakuitkomsten, herkomstcategorie zonder verwijzer en uitsluiting van geautomatiseerde browsers in Chromium en WebKit.");
+  await controleerAfmelding();
+  console.log("Analytics-consentbrowsercontract groen: compacte toegankelijke banner, gelijke keuzes, GPC, afmelding per apparaat, vooraf geblokkeerde GA4, privacyveilige taakuitkomsten, herkomstcategorie zonder verwijzer en uitsluiting van geautomatiseerde browsers in Chromium en WebKit.");
 })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});

@@ -127,6 +127,10 @@ Web Analytics wordt niet door iedere productiedeploy aan- of uitgezet. De aparte
 
 De build laat uitsluitend de officiële Cloudflare-beaconbron toe in `script-src`; Web Analytics gebruikt de same-origin `/cdn-cgi/rum`-route. Er wordt geen handmatige analytics-snippet of analytics-token in de repository geplaatst. De commerciële nulmeting en meetcyclus worden bewust buiten deze publieke repository bijgehouden.
 
+### Eigen bezoeken buiten de statistieken houden
+
+Open op ieder eigen apparaat en in iedere eigen browser één keer `https://watishetweer.nl/?analytics=uit`. Dat apparaat stuurt daarna niets meer naar PostHog en toont geen Google Analytics-vraag. De knop op `/privacy` doet hetzelfde en zet het ook weer aan (of open `?analytics=aan`). De keuze staat per browser in `localStorage` onder `weerbriefing.analytics.uit.v1`. Sitegegevens wissen via de browser (niet via de knop "Wis lokale gegevens", die de keuze bewust bewaart) of een privévenster zet de meting dus weer aan. Een geïnstalleerde app op het beginscherm heeft op iPhone een eigen opslag: open daar de privacypagina in de app en gebruik de knop.
+
 ## Monitoring en alarmen
 
 `WeatherNow production smoke` draait na iedere push naar `main`, handmatig en ieder uur. De workflow bewaakt onder meer:
