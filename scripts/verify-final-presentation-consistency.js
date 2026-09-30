@@ -18,6 +18,7 @@ ok(html.includes('if(/^Pollen\\s+/i.test(kop.textContent)){'),"pollenpresentatie
 ok(html.includes('const geenVenster=/^Geen gunstig kijkvenster door (.+?)[.!?]*$/i.exec(t);'),"Nachtzicht gebruikt één genormaliseerde geen-vensterroute na weather truth");
 ok(html.includes('const kwalificatie=s>=9?"Uitstekende":s>=7?"Goede":"Redelijke";'),"Nachtzicht verbindt venstercopy aan dezelfde zichtbare scoreklasse");
 ok(html.includes('is er geen aaneengesloten gunstig kijkvenster.'),"middelmatige/goede score kan eerlijk uitleggen dat alleen een aaneengesloten venster ontbreekt");
+ok(html.includes('if(s!==null&&s>=4&&reden)return "Matige omstandigheden, maar door "+reden+" geen gunstig kijkvenster.";'),"score 4 (Matig) sluit met de omstandigheden aan op de beoordeling in plaats van alleen 'Geen gunstig kijkvenster'");
 ok(!html.includes('if(/^Geen gunstig kijkvenster door /i.test(t))return /[.!?]$/.test(t)?t:t+".";'),"oude kale Nachtzicht-return is uit de finale artifact verwijderd");
 ok(html.includes('function nachtzichtCompactAantal(totaal,mobiel){'),"Nachtzicht houdt één compacte presentatie-owner");
 ok(html.includes('return Math.min(mobiel?1:3,n);'),"Nachtzicht toont standaard vannacht op telefoon en tablet en drie nachten op desktop");
