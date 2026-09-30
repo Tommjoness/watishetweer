@@ -31,6 +31,11 @@ const STYLE=`<style id="weather-final-audit-20260901">
 .wiw-more-measurements-body{max-width:540px}
 .wiw-more-measurements-body>.stat{padding:10px 0 2px!important;border:0!important;min-width:0!important}
 .wiw-pressure-meaning{margin:4px 0 0;font-size:11px;line-height:1.4;color:var(--ink-45)}
+/* Dag- en nachtnamen beginnen in de lijsten altijd met een hoofdletter
+   ("Vandaag 30", "Donderdag 1", "Vannacht", "Do op vr"). Alleen visueel: de
+   tekst zelf en wat een schermlezer voorleest blijven gewone Nederlandse
+   kleine letters. */
+#days .row.day:not(.kop)>.dname::first-letter,#nights .row.night:not(.kop)>.dname::first-letter{text-transform:uppercase}
 @media(max-width:900px){
   .tools input,.tools button{min-height:44px}
   .results>div{min-height:44px;display:flex;align-items:center}

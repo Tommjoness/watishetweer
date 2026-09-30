@@ -8,6 +8,8 @@ const {
   neerslagKorteWeergave,
   dagHoeveelheidZin,
   hoeveelheidTekst,
+  laterVandaagNeerslag,
+  providerNaarMinuten,
   statusRang
 }=require("./interpretatie-engine.js");
 
@@ -242,6 +244,32 @@ test("daghoeveelheid gebruikt taal in plaats van droge nul",()=>{
   assert.equal(dagHoeveelheidZin(0),"Voor vandaag wordt er geen neerslag verwacht.");
   assert.equal(dagHoeveelheidZin(0.04),"Voor vandaag worden hooguit enkele druppels verwacht.");
   assert(!/0,0 mm/.test(dagHoeveelheidZin(0)));
+});
+
+/* "Later vandaag" in de briefing gebruikt dezelfde uurperiodes als uurtabel en
+   dagrij: de waarde met tijdstempel 00:00 van morgen is het uur 23:00-24:00
+   van vandaag. Eerder viel dat laatste uur weg en noemde de briefing 84% terwijl
+   uurtabel en de rij "Vandaag" 89% toonden (eigenaar, 30 september 2026). */
+test("later vandaag telt het uur 23:00-24:00 mee en gisteren niet",()=>{
+  const tijden=tijdenVanaf("2026-09-30",0,27); // 30-09 00:00 t/m 01-10 02:00
+  const kans=tijden.map(t=>{
+    if(t==="2026-09-30T00:00")return 99;   // hoort bij 29-09 23:00-24:00
+    if(t==="2026-09-30T23:00")return 84;   // 22:00-23:00
+    if(t==="2026-10-01T00:00")return 89;   // 23:00-24:00 van vandaag
+    if(t==="2026-10-01T01:00")return 98;   // morgen 00:00-01:00
+    return 10;
+  });
+  const data={timezone:"Europe/Amsterdam",utc_offset_seconds:7200,current:{time:"2026-09-30T12:00"},
+    hourly:{time:tijden,precipitation_probability:kans}};
+  const twee={genoeg:true,eindMin:providerNaarMinuten("2026-09-30T14:00",7200)};
+  assert.deepEqual(laterVandaagNeerslag(data,twee),{kans:89});
+  /* Staat het hoogste uur al binnen het twee-uursvenster, dan telt het niet. */
+  const vroeg=kans.map((k,i)=>tijden[i]==="2026-09-30T14:00"?100:k);
+  assert.deepEqual(laterVandaagNeerslag({...data,hourly:{time:tijden,precipitation_probability:vroeg}},twee),{kans:89});
+  /* Na 22:00 blijft er maar één uur over: te weinig voor een uitspraak. */
+  const laat={genoeg:true,eindMin:providerNaarMinuten("2026-09-30T23:00",7200)};
+  assert.equal(laterVandaagNeerslag(data,laat),null);
+  assert.equal(laterVandaagNeerslag(data,{genoeg:false,eindMin:0}),null);
 });
 
 if(process.exitCode){

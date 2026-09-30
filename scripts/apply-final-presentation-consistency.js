@@ -50,6 +50,9 @@ const NACHT_NIEUW=`  const geenVenster=/^Geen gunstig kijkvenster door (.+?)[.!?
       const kwalificatie=s>=9?"Uitstekende":s>=7?"Goede":"Redelijke";
       return kwalificatie+" omstandigheden, maar door "+reden+" is er geen aaneengesloten gunstig kijkvenster.";
     }
+    /* Score 4 heet "Matig". Dan past "Geen gunstig kijkvenster" als losse zin
+       slecht bij de beoordeling ernaast; noem daarom eerst de omstandigheden. */
+    if(s!==null&&s>=4&&reden)return "Matige omstandigheden, maar door "+reden+" geen gunstig kijkvenster.";
     return "Geen gunstig kijkvenster door "+reden+".";
   }`;
 

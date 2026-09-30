@@ -496,6 +496,27 @@ function statusRang(status){
   return STATUS_RANG[status]===undefined?-1:STATUS_RANG[status];
 }
 
+/* De eerste briefingzin heeft bewust een vaste horizon van twee uur, maar een
+   dagbriefing mag daarna niet abrupt stoppen. Vat daarom alleen de nog niet
+   verstreken uren ná dat venster samen, tot het einde van de kalenderdag.
+   Met dezelfde intervalbetekenis als grafiek, uurtabel en dagrij: de uurwaarde
+   met tijdstempel 00:00 van morgen hoort bij 23:00-24:00 van vandaag en telt
+   dus mee; de waarde met tijdstempel 00:00 van vandaag hoort bij gisteren.
+   Zo noemt de briefing dezelfde hoogste kans als de rij "Vandaag". */
+function laterVandaagNeerslag(data,twee){
+  if(!data||!twee||!twee.genoeg||!Number.isFinite(twee.eindMin))return null;
+  const huidig=parseLokaleTijd(data.current&&data.current.time);
+  if(!huidig)return null;
+  const tijdzone=data.timezone||null,utcOffsetSeconden=data.utc_offset_seconds;
+  const datum=String(huidig.jaar).padStart(4,"0")+"-"+String(huidig.maand).padStart(2,"0")+"-"+String(huidig.dag).padStart(2,"0");
+  const volgende=volgendeDatum(datum);
+  const dagEind=volgende?datumStartMinuten(volgende,tijdzone,utcOffsetSeconden):null;
+  if(dagEind===null||dagEind<=twee.eindMin)return null;
+  const uur=leesReeks(data.hourly,60,twee.eindMin,dagEind,["precipitation_probability"],tijdzone,utcOffsetSeconden);
+  const kansen=uur.items.map(x=>x.precipitation_probability).filter(k=>k!==null);
+  return kansen.length>=2?{kans:Math.round(Math.max(...kansen))}:null;
+}
+
 const publiekeApi={
   INTERPRETATIE_CONFIG,
   STATUS_RANG,
@@ -510,6 +531,7 @@ const publiekeApi={
   dagNeerslagUren,
   neerslagKorteWeergave,
   dagHoeveelheidZin,
+  laterVandaagNeerslag,
   neerslagZin,
   statusRang
 };
@@ -556,28 +578,6 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
     if(a.status==="MOGELIJKE_NEERSLAG") return "In de komende twee uur is neerslag mogelijk.";
     if(a.status==="GROTE_KANS_ZONDER_HOEVEELHEID") return "De komende twee uur is de neerslagkans groot, maar de hoeveelheid onzeker.";
     return neerslagZin(a);
-  }
-
-  /* De eerste zin heeft bewust een vaste horizon van twee uur, maar een
-     dagbriefing mag daarna niet abrupt stoppen. Vat daarom alleen de nog niet
-     verstreken modeluren ná dat venster samen. Zo blijft een droge middag
-     informatief en wordt een latere buienkans niet verstopt. */
-  function laterVandaagNeerslag(data,twee){
-    if(!data||!twee||!twee.genoeg||!Number.isFinite(twee.eindMin))return null;
-    const huidig=parseLokaleTijd(data.current&&data.current.time);
-    const uur=data.hourly, tijden=uur&&Array.isArray(uur.time)?uur.time:[];
-    const kansen=uur&&Array.isArray(uur.precipitation_probability)?uur.precipitation_probability:[];
-    if(!huidig||!tijden.length)return null;
-    const datum=String(huidig.jaar).padStart(4,"0")+"-"+String(huidig.maand).padStart(2,"0")+"-"+String(huidig.dag).padStart(2,"0");
-    let max=null,aantal=0;
-    for(let i=0;i<tijden.length;i++){
-      if(String(tijden[i]).slice(0,10)!==datum)continue;
-      const minuut=providerNaarMinuten(tijden[i],data.utc_offset_seconds);
-      const kans=veldGetal("precipitation_probability",kansen[i]);
-      if(minuut===null||minuut<=twee.eindMin||kans===null)continue;
-      aantal++;max=Math.max(max===null?0:max,kans);
-    }
-    return aantal>=2?{kans:Math.round(max)}:null;
   }
 
   function dagSamenvatting(a){

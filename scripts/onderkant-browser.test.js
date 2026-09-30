@@ -106,6 +106,7 @@ function meet(){
     doelen:doelen.map(e=>{const s=getComputedStyle(e);return {t:(e.textContent||"").trim().slice(0,28),h:e.getBoundingClientRect().height,l:e.getBoundingClientRect().left,deco:s.textDecorationLine,rand:s.borderBottomWidth,schaduw:s.boxShadow};}),
     seo:seo?{kruimel:tekstLinks(seo.querySelector(".seo-breadcrumb")),kop:tekstLinks(seo.querySelector("h2")),kopGrootte:parseFloat(getComputedStyle(seo.querySelector("h2")).fontSize),tekst:tekstLinks(seo.querySelector("p")),buurt:tekstLinks(seo.querySelector(".seo-route-nearby-kop"))}:null,
     plaatsen:nav?{kop:tekstLinks(nav.querySelector(".seo-plaatsnav-kop")),eerste:navLinks[0]?tekstLinks(navLinks[0]):null,aantal:navLinks.length,hoogte:Math.min(...navLinks.map(a=>a.getBoundingClientRect().height)),hoogteBlok:nav.getBoundingClientRect().height}:null,
+    namen:[...document.querySelectorAll("#days .row.day:not(.kop)>.dname,#nights .row.night:not(.kop)>.dname")].filter(zichtbaar).map(e=>({t:(e.textContent||"").trim().slice(0,20),tt:getComputedStyle(e,"::first-letter").textTransform})),
     overflow:document.documentElement.scrollWidth-innerWidth
   };
 }
@@ -122,6 +123,11 @@ function meet(){
         const m=await page.evaluate(meet);
         const touch=w<=900,minDoel=touch?43.5:23.5;
         assert(m.overflow<=1,label+": horizontale overflow "+m.overflow+"px");
+        /* Dag- en nachtnamen beginnen visueel met een hoofdletter ("Donderdag 1"
+           naast "Vandaag 30"); de tekst zelf blijft ongewijzigd (eigenaar, 30 september). */
+        assert(m.namen.length>=8,label+": te weinig dag- en nachtnamen gevonden: "+JSON.stringify(m.namen));
+        assert(m.namen.every(n=>n.tt==="uppercase"),label+": niet iedere dag- of nachtnaam begint met een hoofdletter: "+JSON.stringify(m.namen));
+        assert(m.namen.some(n=>/^(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag|ma|di|wo|do|vr|za|zo) /.test(n.t)),label+": weekdagnamen horen in de tekst klein te blijven: "+JSON.stringify(m.namen));
         /* Bronnen: doorlopende regel, alleen wat gebruikt is. */
         assert.equal(m.bronDisplay,"flex",label+": bronnen staan niet als doorlopende regel");
         const namen=m.bronnen.map(b=>b.t);
