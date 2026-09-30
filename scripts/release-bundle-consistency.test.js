@@ -132,5 +132,11 @@ assert(!bundel.includes("https://api.weatherapi.com"),"actieve hoofdclient mag W
 const bootstrapBron=fs.readFileSync(bootstrapPad,"utf8");
 assert(bootstrapBron.includes("12000"),"bootstrap-watchdog moet de afgesproken 12s timeout bevatten");
 assert(!bootstrapBron.includes("30000"),"oude 30s watchdogtimeout mag niet meer actief zijn");
+/* Vroege weeraanvraag: de bootstrap bevat de finale adresopbouw van de app
+   (inclusief de latere forecast_hours-bouwstap) en de app neemt hem over. */
+assert(bootstrapBron.includes("__WEATHERNOW_VROEGE_FORECAST__")&&bootstrapBron.includes("&forecast_days=7&forecast_hours=170&timezone=auto&wind_speed_unit=kmh"),"bootstrap mist de vroege weeraanvraag met de finale adresopbouw");
+assert(bootstrapBron.includes("cloud_cover_low,cloud_cover_mid,cloud_cover_high")&&!bootstrapBron.includes("pressure_msl"),"vroege weeraanvraag gebruikt niet de definitieve adresopbouw (na bewolkingslagen en pressure-retirement)");
+assert(/const standaard=\{"lat":-?\d/.test(bootstrapBron),"vroege weeraanvraag kent de standaardplaats voor een eerste bezoek niet");
+assert(fs.readFileSync(path.join(PUBLIC,appNaam),"utf8").includes("__WEATHERNOW_VROEGE_FORECAST__"),"app neemt de vroege weeraanvraag niet over");
 
 console.log(`Release-bundleconsistentie geslaagd: ${scenarios.length} weather-routes delen build ${verwachtBuild}, ${verwachtBundle} en ${verwachtBootstrap}; SW, BFCache-freshnessowner en hashed assets zijn generatieconsistent.`);

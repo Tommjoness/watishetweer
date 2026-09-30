@@ -22,7 +22,10 @@ const fallbackMs=Number(fallback[1]);
 const vcMs=Number(vcTimeout[1]);
 const weatherMs=Number(weatherTimeout[1]);
 const historyMs=Number(historyTimeout[1]);
-assert.equal(hedgeMs,5000,"trage volledige forecast start de lichte fallback na vijf seconden");
+/* 2,5 s: Open-Meteo antwoordt normaal binnen ~0,7 s (PostHog 30-09: 98% van de
+   weerweergaven binnen 2 s). Blijft het hangen, dan hoeft een bezoeker geen
+   5 s op de reservebron te wachten (eigenaar, 30 september 2026). */
+assert.equal(hedgeMs,2500,"trage volledige forecast start de lichte fallback na tweeënhalve seconde");
 assert.equal(fallbackMs,5000,"lichte fallback krijgt vijf seconden eigen budget");
 assert(hedgeMs+fallbackMs<=10000,"dubbele providerhang moet rond tien seconden beslissen");
 assert(12000-(hedgeMs+fallbackMs)>=2000,"acceptancetest moet minstens twee seconden browser-/UI-marge houden");

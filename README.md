@@ -40,7 +40,7 @@ Serverlogica staat in `lib/`. De `functions/api/*.js`-bestanden zijn alleen de C
 
 ### Forecastfallback (Visual Crossing en WeatherAPI)
 
-Open-Meteo blijft de primaire forecastbron. Alleen bij een fout of wanneer de volledige Open-Meteo-request na vijf seconden nog niet gereed is, starten de lichte Open-Meteo-fallback en de same-origin route `/api/forecast` binnen hetzelfde begrensde fallbackvenster. Die route probeert eerst Visual Crossing en valt daarna terug op WeatherAPI; geldige volledige antwoorden van beide providers worden tien minuten in de Cloudflare edge-cache bewaard. De eerste volledige, gevalideerde zevendaagse dataset wint; verliezende requests worden afgebroken.
+Open-Meteo blijft de primaire forecastbron. Alleen bij een fout of wanneer de volledige Open-Meteo-request na tweeënhalve seconde nog niet gereed is, starten de lichte Open-Meteo-fallback en de same-origin route `/api/forecast` binnen hetzelfde begrensde fallbackvenster. Die route probeert eerst Visual Crossing en valt daarna terug op WeatherAPI; geldige volledige antwoorden van beide providers worden tien minuten in de Cloudflare edge-cache bewaard. De eerste volledige, gevalideerde zevendaagse dataset wint; verliezende requests worden afgebroken.
 
 De providersleutels mogen uitsluitend als versleutelde Cloudflare Pages-secrets `VISUAL_CROSSING_API_KEY` en `WEATHERAPI_KEY` in zowel preview als production worden ingesteld. Zet een sleutel nooit in browsercode, GitHub Actions-output of een repositorybestand. Omdat de app zeven dagen toont, is een WeatherAPI Starter-abonnement of hoger vereist; een driedaagse Free-response faalt bewust gesloten.
 

@@ -11,7 +11,7 @@ const aantal=(tekst)=>html.split(tekst).length-1;
 if(aantal(BRON)!==0)throw new Error("Oud sequentieel weerfallbackblok staat nog in artifact.");
 if(aantal(PRODUCTIE)!==1)throw new Error("Hedged weerfallback ontbreekt of staat dubbel: "+aantal(PRODUCTIE));
 for(const invariant of [
-  "const WEER_HEDGE_MS=5000;",
+  "const WEER_HEDGE_MS=2500;",
   "const WEER_FALLBACK_TIMEOUT_MS=5000;",
   "const volledigeRequest=weatherNowChildRequest(weerController.signal);",
   "weatherNowEisGeldigeForecast(j(f,{timeoutMs:10000,signal:volledigeRequest.signal}))",
@@ -43,4 +43,4 @@ if((html.match(/Weather Data Provided by Visual Crossing/g)||[]).length<1)throw 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime in definitief artifact.");
 scripts.forEach((code,i)=>new vm.Script(code,{filename:"public/index.html:verify-weather-fallback-"+(i+1)}));
-console.log("Weather fallback artifact: normale Open-Meteo-load enkelvoudig, 5s hedge, lichte Open-Meteo/same-origin provider-race, Visual Crossing server-side vóór WeatherAPI, loser-abort, stale-load guards, keybescherming en verplichte bronvermelding aanwezig.");
+console.log("Weather fallback artifact: normale Open-Meteo-load enkelvoudig, 2,5s hedge, lichte Open-Meteo/same-origin provider-race, Visual Crossing server-side vóór WeatherAPI, loser-abort, stale-load guards, keybescherming en verplichte bronvermelding aanwezig.");

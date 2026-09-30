@@ -1001,6 +1001,17 @@ function onthoudLand(v){
   lijst.forEach(p=>{if(S.lat!=null&&Math.abs(Number(p.lat)-S.lat)<0.02&&Math.abs(Number(p.lon)-S.lon)<0.02&&p.land!==code){p.land=code;gewijzigd=true;}});
   if(gewijzigd) ls.set(KEY_L,lijst);
 }
+/* Het opstartscript (bootstrap) vraagt de volledige verwachting al aan terwijl
+   deze app nog wordt geladen, met exact dezelfde adresopbouw (de bouwstap
+   kopieert die letterlijk uit load()). Dat antwoord wordt hooguit één keer
+   gebruikt, alleen voor precies hetzelfde adres en alleen binnen een minuut;
+   in alle andere gevallen haalt j() de data gewoon zelf op. */
+function weatherNowNeemVroegeForecast(url){
+  const v=window.__WEATHERNOW_VROEGE_FORECAST__;
+  if(!v||v.gebruikt||v.url!==url||!(Date.now()-v.op<60000)||!v.respons)return null;
+  v.gebruikt=true;
+  return v.respons;
+}
 async function j(url,opt){
   opt=opt||{};
   const controller=new AbortController(),extern=opt.signal||null;
@@ -1009,7 +1020,17 @@ async function j(url,opt){
   if(extern){if(extern.aborted)controller.abort();else extern.addEventListener("abort",onAbort,{once:true});}
   timer=setTimeout(()=>controller.abort(),Number.isFinite(opt.timeoutMs)?opt.timeoutMs:10000);
   try{
-    const r=await fetch(url,{signal:controller.signal});
+    const vroeg=weatherNowNeemVroegeForecast(url);
+    let r=null;
+    if(vroeg){
+      r=await new Promise((resolve,reject)=>{
+        const stop=()=>reject(new DOMException("Aborted","AbortError"));
+        if(controller.signal.aborted){stop();return;}
+        controller.signal.addEventListener("abort",stop,{once:true});
+        vroeg.then(resolve,()=>resolve(null));
+      });
+    }
+    if(!r)r=await fetch(url,{signal:controller.signal});
     if(!r.ok)throw new Error("status "+r.status);
     return await r.json();
   }finally{

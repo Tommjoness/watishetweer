@@ -21,7 +21,7 @@ const BRON=`    let vol=null;
     }`;
 
 const PRODUCTIE=`    let vol=null;
-    const WEER_HEDGE_MS=5000;
+    const WEER_HEDGE_MS=2500;
     const WEER_FALLBACK_TIMEOUT_MS=5000;
     let hedgeTimer=null,fallbackBelofte=null,fallbackVerzoeken=null;
     const volledigeRequest=weatherNowChildRequest(weerController.signal);
