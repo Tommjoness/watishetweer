@@ -11,6 +11,49 @@
      lokale omgevingen sturen dus nooit per ongeluk ontwikkelverkeer naar analytics. */
   if(location.protocol!=="https:"||!PRODUCTIE_HOSTS.has(String(location.hostname||"").toLowerCase()))return;
 
+  /* AFMELDING PER APPARAAT. Wie zelf kiest om statistieken op dit apparaat uit
+     te zetten (knop op /privacy, of eenmalig ?analytics=uit), krijgt die keuze
+     als enige waarde in localStorage bewaard. Zolang die vlag staat, start
+     niets: geen PostHog, geen GA4-banner en geen GA4. ?analytics=aan of de knop
+     heft de afmelding weer op. De parameter wordt direct uit de adresbalk
+     gehaald, zodat een gedeelde link niemand anders afmeldt. */
+  const AFMELD_KEY="weerbriefing.analytics.uit.v1";
+  function afgemeld(){
+    try{return localStorage.getItem(AFMELD_KEY)==="1";}catch(e){return false;}
+  }
+  function zetAfmelding(uit){
+    try{if(uit)localStorage.setItem(AFMELD_KEY,"1");else localStorage.removeItem(AFMELD_KEY);}catch(e){}
+  }
+  try{
+    const adres=new URL(location.href);
+    const keuze=adres.searchParams.get("analytics");
+    if(keuze==="uit"||keuze==="aan"){
+      zetAfmelding(keuze==="uit");
+      adres.searchParams.delete("analytics");
+      if(window.history&&typeof history.replaceState==="function")history.replaceState(history.state,"",adres.pathname+adres.search+adres.hash);
+    }
+  }catch(e){}
+  function zetApparaatBediening(){
+    const knop=document.querySelector("[data-analytics-device-toggle]");
+    const status=document.querySelector("[data-analytics-device-status]");
+    const uit=afgemeld();
+    if(knop){
+      knop.textContent=uit?"Statistieken op dit apparaat weer toestaan":"Statistieken op dit apparaat uitzetten";
+      knop.onclick=()=>{zetAfmelding(!afgemeld());location.reload();};
+    }
+    if(status)status.textContent=uit?" Op dit apparaat staan alle statistieken uit.":" Op dit apparaat staan de statistieken aan.";
+    if(uit){
+      const ga4Knop=document.querySelector("[data-ga4-consent-toggle]");
+      const ga4Status=document.querySelector("[data-ga4-consent-status]");
+      if(ga4Knop)ga4Knop.hidden=true;
+      if(ga4Status)ga4Status.textContent=" Google Analytics staat op dit apparaat uit, omdat je alle statistieken hebt uitgezet.";
+    }
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",zetApparaatBediening,{once:true});
+  else zetApparaatBediening();
+  if(afgemeld())return;
+  /* EINDE AFMELDING PER APPARAAT */
+
   /* Respecteer expliciete browser-privacyseinen. Bij GPC/DNT start noch PostHog
      noch Google Analytics en wordt ook geen analytics-toestemming gevraagd. */
   if(navigator.globalPrivacyControl===true||navigator.doNotTrack==="1"||window.doNotTrack==="1")return;

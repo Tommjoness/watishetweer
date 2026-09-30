@@ -253,6 +253,7 @@ function meet(){
       try{
         await page.evaluate(()=>{
           localStorage.setItem("weerbriefing.ga4.consent.v1",JSON.stringify("geweigerd"));
+          localStorage.setItem("weerbriefing.analytics.uit.v1","1");
           localStorage.setItem("weerbriefing.plaats",JSON.stringify({naam:"Utrecht"}));
           localStorage.setItem("weerbriefing.actiefThema",JSON.stringify("donker"));
           sessionStorage.setItem("weerbriefing.thema.sessie",JSON.stringify("donker"));
@@ -262,12 +263,12 @@ function meet(){
         await page.waitForFunction(()=>/gewist/.test(document.getElementById("wisstatus").textContent||""),null,{timeout:5000});
         const r=await page.evaluate(()=>({lokaal:Object.keys(localStorage).sort(),sessie:Object.keys(sessionStorage),
           consent:localStorage.getItem("weerbriefing.ga4.consent.v1"),thema:document.documentElement.getAttribute("data-thema")}));
-        assert.deepEqual(r.lokaal,["weerbriefing.ga4.consent.v1"],"/privacy.html: wissen laat lokale gegevens staan: "+r.lokaal.join(", "));
+        assert.deepEqual(r.lokaal,["weerbriefing.analytics.uit.v1","weerbriefing.ga4.consent.v1"],"/privacy.html: wissen laat lokale gegevens staan of wist de GA4-keuze of statistiekenafmelding: "+r.lokaal.join(", "));
         assert.equal(r.consent,JSON.stringify("geweigerd"),"/privacy.html: wissen verandert de GA4-toestemmingskeuze");
         assert.deepEqual(r.sessie,[],"/privacy.html: wissen laat de weergavekeuze van deze sessie staan: "+r.sessie.join(", "));
         assert.equal(r.thema,null,"/privacy.html: na wissen blijft de pagina in de gekozen weergave staan");
         assert.deepEqual(fouten,[],"/privacy.html: runtimefouten "+fouten.join(" | "));
-        console.log("SAMENHANG /privacy.html: wissen haalt plaatsen, instellingen en sessiekeuze weg en houdt de GA4-keuze.");
+        console.log("SAMENHANG /privacy.html: wissen haalt plaatsen, instellingen en sessiekeuze weg en houdt de GA4-keuze en de statistiekenafmelding.");
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
