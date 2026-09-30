@@ -51,6 +51,28 @@ assert.equal(data.timezone, "Europe/Amsterdam");
 assert.equal(data.utc_offset_seconds, 7200);
 assert.equal(data.current.time, "2026-09-06T02:00");
 assert.equal(data.current.is_day, 0);
+/* "Nu" komt uit de uurverwachting, niet uit currentConditions (eigenaar,
+   30 september 2026: currentConditions gaf 0,3 km/u wind en 77% vocht terwijl
+   KNMI 15 km/u en 56% mat). Om 02:00 precies geldt het uur 02:00. */
+assert.equal(data.current.temperature_2m, 11.2, "temperatuur nu komt uit het uur 02:00, niet uit currentConditions (14,2)");
+assert.equal(data.current.apparent_temperature, 10.2);
+assert.equal(data.current.relative_humidity_2m, 72);
+assert.equal(data.current.wind_speed_10m, 18);
+assert.equal(data.current.wind_gusts_10m, 30);
+assert.equal(data.current.wind_direction_10m, 225);
+assert.equal(data.current.visibility, 12000);
+{
+  const p = vcPayload();
+  p.currentConditions = { ...p.currentConditions, datetimeEpoch: epoch(0, 0, 45), windspeed: 0.3, winddir: 360, windgust: 0.6, humidity: 77, temp: 9.9 };
+  p.days[0].hours[3] = { ...p.days[0].hours[3], windspeed: 22, winddir: 270, humidity: 60 };
+  const kwart = normaliseerVisualCrossing(p);
+  assert.equal(kwart.current.time, "2026-09-06T02:45");
+  assert.equal(kwart.current.wind_speed_10m, 21, "wind nu: 18 + (22-18)*0,75");
+  assert.equal(kwart.current.relative_humidity_2m, 63, "vocht nu: 72 + (60-72)*0,75");
+  assert.equal(kwart.current.temperature_2m, 11.3, "temperatuur nu: 11,2 + (11,3-11,2)*0,75 = 11,275, afgerond op 0,1");
+  assert.equal(kwart.current.wind_direction_10m, 270, "windrichting van het dichtstbijzijnde uur (03:00)");
+  assert.equal(kwart.current.precipitation, 0, "neerslag nu blijft uit currentConditions");
+}
 assert.equal(data.hourly.time.length, 168);
 assert.equal(data.daily.time.length, 7);
 assert.equal(data.daily.weather_code[2], 63);
