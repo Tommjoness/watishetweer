@@ -36,41 +36,42 @@ function getal(v,decimalen=0){
 }
 function esc(v){return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 
+/* Afgerond voor leesbaarheid: hele graden, neerslag op 10 mm, zon op 50 uur.
+   De tabel toont de exacte gemiddelden. */
+function heel(v){const n=Math.round(Number(v));return (Object.is(n,-0)?0:n);}
+function duizendtal(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,".");}
 function samenvatting(loc,ref){
   const m=ref.station.maanden;
   const warmste=m.reduce((b,x,i)=>x.tx>m[b].tx?i:b,0),koudste=m.reduce((b,x,i)=>x.tn<m[b].tn?i:b,0);
-  const natste=m.reduce((b,x,i)=>x.neerslag>m[b].neerslag?i:b,0),zonnigste=m.reduce((b,x,i)=>x.zon>m[b].zon?i:b,0);
-  const jaarNeerslag=m.reduce((s,x)=>s+x.neerslag,0),jaarZon=m.reduce((s,x)=>s+x.zon,0),jaarRegendagen=m.reduce((s,x)=>s+x.regendagen,0);
-  return {warmste,koudste,natste,zonnigste,jaarNeerslag,jaarZon,jaarRegendagen,
-    tekst:`In ${loc.naam} is ${MAANDEN[warmste]} gemiddeld de warmste maand, met overdag ${getal(m[warmste].tx,1)} °C. `
-      +`In ${MAANDEN[koudste]} zakt de temperatuur 's nachts gemiddeld naar ${getal(m[koudste].tn,1)} °C. `
-      +`Per jaar valt ongeveer ${getal(jaarNeerslag)} mm neerslag, verspreid over zo'n ${getal(jaarRegendagen)} dagen met minstens 1 mm; ${MAANDEN[natste]} is gemiddeld de natste maand. `
-      +`De zon schijnt ongeveer ${getal(jaarZon)} uur per jaar, het meest in ${MAANDEN[zonnigste]}.`};
+  const jaarNeerslag=m.reduce((s,x)=>s+x.neerslag,0),jaarZon=m.reduce((s,x)=>s+x.zon,0);
+  const neerslagRond=Math.round(jaarNeerslag/10)*10,zonRond=Math.round(jaarZon/50)*50;
+  return {warmste,koudste,jaarNeerslag,jaarZon,neerslagRond,zonRond,
+    tekst:`In ${loc.naam} is ${MAANDEN[warmste]} met gemiddeld ${getal(heel(m[warmste].tx))} °C overdag de warmste maand; `
+      +`in ${MAANDEN[koudste]} is het 's nachts gemiddeld ${getal(heel(m[koudste].tn))} °C. `
+      +`Per jaar valt er ongeveer ${duizendtal(neerslagRond)} mm neerslag en schijnt de zon zo'n ${duizendtal(zonRond)} uur.`};
 }
 
 function klimaatHtml(loc){
   const ref=dichtstbijzijndStation(loc);
   if(!ref)return "";
   const s=samenvatting(loc,ref),km=Math.round(ref.km);
-  const bron=km<=2?`KNMI-station ${ref.station.naam}`:`KNMI-station ${ref.station.naam}, op ${km} km`;
-  const rijen=ref.station.maanden.map((m,i)=>`<tr><th scope="row"><abbr title="${MAANDEN[i]}">${MAANDEN_KORT[i]}</abbr></th><td>${getal(m.tx,1)}</td><td>${getal(m.tn,1)}</td><td>${getal(m.neerslag)}</td><td>${getal(m.regendagen)}</td><td>${getal(m.zon)}</td></tr>`).join("");
+  const bron=`Gemiddelden ${ref.station.jaren.van}–${ref.station.jaren.tot}, KNMI-station ${ref.station.naam}${km<=2?"":` (${km} km)`}.`;
+  const rijen=ref.station.maanden.map((m,i)=>`<tr><th scope="row"><abbr title="${MAANDEN[i]}">${MAANDEN_KORT[i]}</abbr></th><td>${getal(m.tx,1)}</td><td>${getal(m.tn,1)}</td><td>${getal(m.neerslag)}</td><td>${getal(m.zon)}</td></tr>`).join("");
   return `<div class="seo-klimaat" data-knmi-station="${ref.station.code}">
     <h3 class="seo-klimaat-kop">Klimaat in ${esc(loc.naam)}</h3>
-    <div class="seo-klimaat-inhoud">
     <p class="seo-klimaat-samenvatting">${esc(s.tekst)}</p>
-    <details class="seo-klimaat-details" open>
+    <details class="seo-klimaat-details">
     <summary>Bekijk per maand</summary>
     <div class="seo-klimaat-tabel"><table>
-      <caption>Gemiddelden per maand, ${ref.station.jaren.van}–${ref.station.jaren.tot} (${esc(bron)})</caption>
-      <thead><tr><th scope="col">Maand</th><th scope="col"><abbr title="gemiddelde hoogste temperatuur per dag">Max °C</abbr></th><th scope="col"><abbr title="gemiddelde laagste temperatuur per dag">Min °C</abbr></th><th scope="col"><abbr title="neerslag per maand in millimeter">Neerslag (mm)</abbr></th><th scope="col"><abbr title="dagen met minstens 1 mm neerslag">Regen&shy;dagen</abbr></th><th scope="col"><abbr title="uren zonneschijn per maand">Zon (uur)</abbr></th></tr></thead>
+      <caption>Gemiddelden per maand</caption>
+      <thead><tr><th scope="col">Maand</th><th scope="col"><abbr title="gemiddelde hoogste temperatuur overdag">Overdag (°C)</abbr></th><th scope="col"><abbr title="gemiddelde laagste temperatuur 's nachts">'s Nachts (°C)</abbr></th><th scope="col"><abbr title="neerslag per maand in millimeter">Neerslag (mm)</abbr></th><th scope="col"><abbr title="uren zonneschijn per maand">Zon (uur)</abbr></th></tr></thead>
       <tbody>${rijen}</tbody>
     </table></div>
     </details>
-    </div>
-    <p class="seo-klimaat-bron">Berekend uit de daggegevens van het KNMI. Klimaatgemiddelden beschrijven het normale weer en zijn geen verwachting.</p>
+    <p class="seo-klimaat-bron">${esc(bron)}</p>
   </div>`;
 }
 
-const KLIMAAT_CSS=`.seo-klimaat{margin-top:16px}.seo-klimaat-kop{font-family:var(--serif);font-weight:500;font-size:16px;color:var(--ink);margin:0 0 6px}.seo-klimaat-tabel{overflow-x:auto;margin-top:10px;max-width:640px}.seo-klimaat table{border-collapse:collapse;width:100%;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-70)}.seo-klimaat caption{text-align:left;font-size:12px;color:var(--ink-70);padding-bottom:6px}.seo-klimaat th,.seo-klimaat td{padding:4px 5px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}.seo-klimaat thead th{white-space:normal;vertical-align:bottom;line-height:1.25}.seo-klimaat th[scope=row],.seo-klimaat thead th:first-child{text-align:left}.seo-klimaat thead th{font-weight:600;color:var(--ink)}.seo-klimaat abbr{text-decoration:none}.seo-klimaat p.seo-klimaat-bron{font-size:12px;margin-top:8px}.seo-klimaat-details>summary{display:inline-flex;align-items:center;gap:6px;min-height:44px;cursor:pointer;font-size:13px;color:var(--ink);list-style:none}.seo-klimaat-details>summary::-webkit-details-marker{display:none}.seo-klimaat-details>summary::after{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .15s}.seo-klimaat-details[open]>summary::after{transform:rotate(225deg) translateY(-1px)}.seo-klimaat-details>summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}.seo-klimaat-details .seo-klimaat-tabel{margin-top:4px}@media(min-width:900px){.seo-klimaat-inhoud{display:grid;grid-template-columns:minmax(0,58ch) minmax(0,560px);gap:32px;align-items:start}.seo-klimaat-details[open]>summary{display:none}.seo-klimaat-details .seo-klimaat-tabel{margin-top:0}}`;
+const KLIMAAT_CSS=`.seo-klimaat{margin-top:16px}.seo-klimaat-kop{font-family:var(--serif);font-weight:500;font-size:16px;color:var(--ink);margin:0 0 6px}.seo-klimaat-tabel{overflow-x:auto;margin-top:10px;max-width:640px}.seo-klimaat table{border-collapse:collapse;width:100%;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-70)}.seo-klimaat caption{text-align:left;font-size:12px;color:var(--ink-70);padding-bottom:6px}.seo-klimaat th,.seo-klimaat td{padding:4px 5px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}.seo-klimaat thead th{white-space:normal;vertical-align:bottom;line-height:1.25}.seo-klimaat th[scope=row],.seo-klimaat thead th:first-child{text-align:left}.seo-klimaat thead th{font-weight:600;color:var(--ink)}.seo-klimaat abbr{text-decoration:none}.seo-klimaat p.seo-klimaat-bron{font-size:12px;margin-top:8px}.seo-klimaat-details>summary{display:inline-flex;align-items:center;gap:6px;min-height:44px;cursor:pointer;font-size:13px;color:var(--ink);list-style:none}.seo-klimaat-details>summary::-webkit-details-marker{display:none}.seo-klimaat-details>summary::after{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .15s}.seo-klimaat-details[open]>summary::after{transform:rotate(225deg) translateY(-1px)}.seo-klimaat-details>summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}.seo-klimaat-details .seo-klimaat-tabel{margin-top:4px}.seo-klimaat caption{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.seo-klimaat p.seo-klimaat-bron{margin-top:2px}`;
 
 module.exports={NORMALEN,MAANDEN,MAX_STATION_KM,afstandKm,dichtstbijzijndStation,samenvatting,klimaatHtml,KLIMAAT_CSS};
