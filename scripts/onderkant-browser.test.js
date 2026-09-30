@@ -10,7 +10,10 @@
      veel uitlijning naar links") staan bronnen, disclaimer (hooguit 900px
      breed), links en de weergaveknop gecentreerd onder de pagina.
    - Nachtzicht vanaf 1100px: de kolommen Beste zichtperiode en Maan staan
-     gecentreerd, kop en tekst met hetzelfde midden (eigenaar, 29 september).
+     gecentreerd, kop en tekst met hetzelfde midden, en Zichtscore staat midden
+     boven score en balk (eigenaar, 29 september).
+   - Zeven dagen en uurtabel vanaf 1100px: de koppen Wind max, Min, Max en
+     Wind staan precies boven hun waarden; het woord Temp.bereik vervalt.
    - SEO-blok en populaire plaatsen beginnen op dezelfde lijn als de inhoud
      van het vel, op iedere breedte.
 
@@ -87,6 +90,16 @@ function meet(){
     bronMidden:midden([bron.querySelector(".bronlabel"),...bronLinks]),
     linksMidden:midden([footer.querySelector('a[href="/over/"]'),footer.querySelector('a[href="/privacy"]'),footer.querySelector("details.footer-details>summary"),footer.querySelector(".footer-contact")]),
     weergaveMidden:midden([...document.querySelectorAll(".wiw-weergave-voet>*")]),
+    kolommen:(()=>{
+      const m=e=>{if(!e||!zichtbaar(e))return null;const r=e.getBoundingClientRect();return (r.left+r.right)/2;};
+      const tm=e=>{if(!e||!zichtbaar(e))return null;const rg=document.createRange();rg.selectNodeContents(e);const rs=[...rg.getClientRects()].filter(x=>x.width>0);return rs.length?(Math.min(...rs.map(x=>x.left))+Math.max(...rs.map(x=>x.right)))/2:null;};
+      const kop=document.querySelector("#days .row.day.kop"),rij=document.querySelector("#days .row.day:not(.kop)");
+      const dagen={};for(const k of ["dwind","dmin","dmax"])dagen[k]=[tm(kop&&kop.querySelector("."+k)),tm(rij&&rij.querySelector("."+k))];
+      const th=document.querySelector("#wiw-hour-table thead th:nth-child(5)"),td=document.querySelector("#wiw-hour-table tbody td.wiw-hour-wind");
+      const nk=document.querySelector("#nights .row.night.kop>.score"),nr=[...document.querySelectorAll("#nights .row.night:not(.kop)")].find(zichtbaar);
+      const groep=nr?[nr.querySelector(".score"),nr.querySelector(".sbar")].filter(zichtbaar).map(e=>e.getBoundingClientRect()):[];
+      return {dagen,bereikZichtbaar:kop&&kop.querySelector(".bar")?getComputedStyle(kop.querySelector(".bar")).visibility:"",wind:[tm(th),tm(td)],zichtscore:[tm(nk),groep.length?(Math.min(...groep.map(r=>r.left))+Math.max(...groep.map(r=>r.right)))/2:null]};
+    })(),
     nacht:(()=>{const kop=document.querySelector("#nights .row.night.kop"),rij=[...document.querySelectorAll("#nights .row.night:not(.kop)")].find(zichtbaar);if(!kop||!rij)return null;
       const m=e=>{if(!zichtbaar(e))return null;const r=e.getBoundingClientRect();return {m:(r.left+r.right)/2,a:getComputedStyle(e).textAlign};};
       return {vensterKop:m(kop.querySelector(".nmeta.wide")),venster:m(rij.querySelector(".nachtvenster")),maanKop:m(kop.querySelector(".wiw-night-moon-head")),maan:m(rij.querySelector(".nachtmaan"))};})(),
@@ -126,6 +139,12 @@ function meet(){
         if(touch)assert(m.disclaimer&&Math.abs(m.disclaimer.l-m.appLinks)<=1.5&&m.disclaimer.align!=="center",label+": disclaimer staat niet links in de kolom: "+JSON.stringify(m.disclaimer));
         else assert(m.disclaimer&&m.disclaimer.align==="center"&&m.disclaimer.r-m.disclaimer.l<=901&&Math.abs((m.disclaimer.l+m.disclaimer.r)/2-m.voetMidden)<=3,label+": disclaimer staat niet gecentreerd in hooguit 900px: "+JSON.stringify(m.disclaimer)+" midden voet "+m.voetMidden);
         if(!touch){
+          /* Zeven dagen, uurtabel en Zichtscore: kop precies boven de inhoud (eigenaar, 29 september). */
+          const k=m.kolommen;
+          for(const [naam,[kop,waarde]] of Object.entries(k.dagen))assert(kop!==null&&waarde!==null&&Math.abs(kop-waarde)<=2,label+": Zeven dagen, kop "+naam+" staat niet boven de waarden ("+kop+" tegen "+waarde+")");
+          assert.equal(k.bereikZichtbaar,"hidden",label+": het woord Temp.bereik staat nog in de kop van Zeven dagen");
+          assert(k.wind[0]!==null&&k.wind[1]!==null&&Math.abs(k.wind[0]-k.wind[1])<=2,label+": uurtabel, kop Wind staat niet boven de windwaarden ("+k.wind.join(" tegen ")+")");
+          assert(k.zichtscore[0]!==null&&k.zichtscore[1]!==null&&Math.abs(k.zichtscore[0]-k.zichtscore[1])<=6,label+": Nachtzicht, kop Zichtscore staat niet midden boven score en balk ("+k.zichtscore.join(" tegen ")+")");
           const n=m.nacht;assert(n&&n.vensterKop&&n.venster,label+": Nachtzicht-kolommen niet gevonden: "+JSON.stringify(n));
           const paren=[["Beste zichtperiode",n.vensterKop,n.venster]];if(w>=1360)paren.push(["Maan",n.maanKop,n.maan]);
           for(const [naam,kop,tekst] of paren)

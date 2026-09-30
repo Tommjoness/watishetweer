@@ -319,7 +319,10 @@ function syncHoogte(){
   const main=document.querySelector(".wiw-chart-main"),aside=document.getElementById("wiw-hour-panel");if(!main||!aside)return;
   if(window.innerWidth<1100){aside.style.height="";return;}
   const h=main.getBoundingClientRect().height;
-  if(h<=180)return;
+  /* Grafiek nog niet op hoogte (bijvoorbeeld midden in een hertekening): later
+     opnieuw meten, zodat een volledige kandidaatset nooit ongefilterd blijft. */
+  if(h<=180){herplanHoogteSync();return;}
+  hoogteHerpogingen=0;
   aside.style.height="";
   // Alleen volledige rijen bestaan in de desktop-DOM. Niet verstoppen of
   // afknippen: verwijder de laatste rij zolang deze buiten de grafiekhoogte valt.
@@ -337,7 +340,27 @@ function syncHoogte(){
   const kop=document.getElementById("chartlab");
   if(kop&&S.dag==null&&rows.length)kop.textContent="De komende "+rows.length+" uur";
 }
-function planHoogteSync(){const t=++hoogteToken;const run=()=>{if(t===hoogteToken)syncHoogte();};if(typeof requestAnimationFrame==="function")requestAnimationFrame(run);else setTimeout(run,0);}
+/* requestAnimationFrame staat stil in een tabblad op de achtergrond; een timer
+   als reserve zorgt dat de tabel ook dan wordt ingekort. */
+function planHoogteSync(){const t=++hoogteToken;let klaar=false;const run=()=>{if(klaar||t!==hoogteToken)return;klaar=true;syncHoogte();};if(typeof requestAnimationFrame==="function")requestAnimationFrame(run);setTimeout(run,150);}
+let hoogteHerpogingen=0;
+function herplanHoogteSync(){if(hoogteHerpogingen>=20)return;hoogteHerpogingen++;setTimeout(planHoogteSync,250);}
+/* Steekt een uurrij onder de grafiek uit, ongeacht welke render hem toevoegde,
+   dan wordt opnieuw ingekort. De eigen inkorting laat niets uitsteken en
+   start dus geen nieuwe ronde. */
+function tabelSteektUit(){
+  if(window.innerWidth<1100)return false;
+  const main=document.querySelector(".wiw-chart-main"),last=document.querySelector("#wiw-hour-table tbody tr:last-child");
+  return !!(main&&last&&last.getBoundingClientRect().bottom>main.getBoundingClientRect().bottom+0.5);
+}
+function bewaakTabelRijen(){
+  const tbody=document.querySelector("#wiw-hour-table tbody");
+  if(tbody&&typeof MutationObserver==="function"&&!tbody.__wiwHoogteBewaking){
+    tbody.__wiwHoogteBewaking=true;
+    new MutationObserver(()=>{if(tabelSteektUit())planHoogteSync();}).observe(tbody,{childList:true});
+  }
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")planHoogteSync();});
+}
 
 function naRender(basis,fn){return function(){const r=basis.apply(this,arguments);fn();return r;};}
 function installeer(){
@@ -348,7 +371,7 @@ function installeer(){
   };w.__finalDesktop20260902=true;etmaal=w;}
   if(typeof nowcast==="function"&&!nowcast.__finalDesktop20260902){const w=naRender(nowcast,()=>{werkRegenSamenvattingBij();centraliseerKorteTeksten();});w.__finalDesktop20260902=true;nowcast=w;}
   if(typeof dagen==="function"&&!dagen.__finalDesktop20260902){const w=naRender(dagen,centraliseerKorteTeksten);w.__finalDesktop20260902=true;dagen=w;}
-  werkUurTabelBij();werkRegenSamenvattingBij();vindVolledigeGrafiekTabel();observeerGrafiekHoogte();planHoogteSync();
+  werkUurTabelBij();werkRegenSamenvattingBij();vindVolledigeGrafiekTabel();observeerGrafiekHoogte();bewaakTabelRijen();planHoogteSync();
   window.addEventListener("resize",werkUurTabelBij,{passive:true});
   window.addEventListener("pageshow",werkUurTabelBij,{passive:true});
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(werkUurTabelBij);

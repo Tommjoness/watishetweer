@@ -149,7 +149,8 @@ async function controleer(page,browserNaam,scenario,breedte){
     assert.equal(r.temp,"0",`${browserNaam} ${breedte}px: 0°C blijft een echte nul`);
     assert.equal(compact(r.hum),"0%",`${browserNaam} ${breedte}px: 0% luchtvochtigheid blijft geldige data`);
     assert.equal(compact(r.cloud),"100%",`${browserNaam} ${breedte}px: 100% bewolking blijft exact zichtbaar`);
-    assert.equal(r.cloudsub,"Geheel bewolkt.",`${browserNaam} ${breedte}px: 100% heet geheel bewolkt`);
+    /* Nul meter zicht is dichte mist: dat staat als regel in de tegel Bewolking (altijd zes tegels, eigenaar 29 september). */
+    assert.equal(r.cloudsub,"Geheel bewolkt. Slecht zicht: minder dan 100\u00a0m.",`${browserNaam} ${breedte}px: 100% heet geheel bewolkt, met het slechte zicht erbij`);
     assert.equal(compact(r.vis),"0,0km",`${browserNaam} ${breedte}px: nul meter zicht blijft geldige data met bestaande km-precisie`);
     assert.equal(r.uv,"0",`${browserNaam} ${breedte}px: UV nul blijft geldige data`);
     assert.equal(r.uvsub,"Nauwelijks UV verwacht vandaag.",`${browserNaam} ${breedte}px: nul-UV blijft expliciet een modelverwachting`);

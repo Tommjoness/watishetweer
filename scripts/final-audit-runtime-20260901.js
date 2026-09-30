@@ -266,10 +266,12 @@ function naLucht(){
   if(typeof requestAnimationFrame==="function"){cancelAnimationFrame(luchtFrame);luchtFrame=requestAnimationFrame(()=>{avondTegels();pollenNiveau();});}
 }
 
-/* Zes tegels in plaats van acht. "Tijd tot zonsondergang/-opkomst" staat al
-   boven de grafiek (zon op en onder); "Zicht" zegt alleen iets als het zicht
-   beperkt is (minder dan 4 km), bij mist of zware buien. Verborgen tegels
-   gaan achteraan, zodat de randen per rij kloppen. */
+/* Altijd zes tegels, dus altijd twee volle rijen. "Tijd tot zonsondergang/
+   -opkomst" staat al boven de grafiek (zon op en onder). "Zicht" zegt alleen
+   iets als het zicht beperkt is (minder dan 4 km, bij mist of zware buien);
+   dan staat het als tweede regel in de tegel Bewolking, in plaats van als
+   zevende tegel die een rij half leeg laat (eigenaar, 29 september 2026).
+   Verborgen tegels gaan achteraan, zodat de randen per rij kloppen. */
 function beperkTegels(){
   const stats=document.querySelector(".final-top-grid>.stats")||document.querySelector("#app .stats:not(#aq)");if(!stats)return;
   const zon=tegelMet(".stats","Tijd tot zonsondergang")||tegelMet(".stats","Tijd tot zonsopkomst");
@@ -277,7 +279,19 @@ function beperkTegels(){
   const visTekst=visEl?String(visEl.textContent||"").trim():"",visKm=parseFloat(visTekst.replace(",","."));
   const zichtNuttig=!!visTekst&&!/^10\+/.test(visTekst)&&Number.isFinite(visKm)&&visKm<4;
   const verberg=(t,ja)=>{if(!t)return;t.hidden=ja;if(ja)t.setAttribute("data-tegel-verborgen","1");else t.removeAttribute("data-tegel-verborgen");};
-  verberg(zon,true);verberg(zicht,!zichtNuttig);
+  verberg(zon,true);verberg(zicht,true);
+  const wolkSub=document.getElementById("cloudsub");
+  if(wolkSub){
+    wolkSub.querySelectorAll(".wiw-zicht-regel").forEach(el=>el.remove());
+    if(zichtNuttig){
+      const regel=document.createElement("span");regel.className="wiw-zicht-regel";regel.style.display="block";
+      /* De spatie vooraan valt aan het begin van de regel weg, maar houdt de
+         zinnen voor voorleessoftware gescheiden ("Geheel bewolkt. Slecht zicht"). */
+      const waarde=visKm<0.1?"minder dan 100\u00a0m":String(Math.round(visKm*10)/10).replace(".",",")+"\u00a0km";
+      regel.textContent=" "+(visKm<1?"Slecht zicht: ":"Beperkt zicht: ")+waarde+".";
+      wolkSub.appendChild(regel);
+    }
+  }
   [...stats.children].filter(t=>t.hidden&&t.classList.contains("stat")).forEach(t=>stats.appendChild(t));
   stats.setAttribute("data-tegels",String([...stats.children].filter(t=>t.classList.contains("stat")&&!t.hidden).length));
 }

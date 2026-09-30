@@ -31,7 +31,7 @@ for(const p of htmls(OUT)){
     [s.includes("horizonDagen:h,nuDatumTijd:opties.nuDatumTijd"),"fallback-wrapper bewaart datum-/tijdpolicy voor iedere Nachtzicht-horizon"],
     [s.includes("basisNachtVenster(tekst,1,score,{...opties,actief:false})"),"oude kloktijdowner kan via de fallback-wrapper geen toekomstige rijen markeren"],
     [s.includes("hoeveelheid onzeker"),"niet-lege hoeveelheidstoestand"],
-    [s.includes("Modelgegevens, geen officiële waarschuwing."),"brononderscheid modelsignaal"],
+    [s.includes('<span class="modelrisico-label">Opvallend</span><span class="modelrisico-note">Geen officiële waarschuwing.</span>'),"brononderscheid opvallend: geen officiële waarschuwing"],
     [s.includes("corrigeerTemperatuurDom"),"temperatuurgrammatica in zichtbare en toegankelijke tekst"]
   ];
   for(const [ok,naam] of eisen)if(!ok)throw new Error(rel+": ontbreekt: "+naam);
