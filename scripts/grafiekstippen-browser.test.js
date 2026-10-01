@@ -10,6 +10,12 @@
    tablet); piek en dal vallen op door hun cijfer, niet door een grotere stip.
    Iedere stip staat boven een tijd op de as (eigenaar, 29 september): valt
    piek of dal tussen twee astijden, dan staat het vette cijfer er zonder stip.
+   Iedere tijd op de as heeft een stip en haar eigen temperatuur, ook het
+   eerste uur naast "nu" en een uur vlak naast piek of dal (eigenaar,
+   1 oktober). Een tweede reeks bootst die situatie na (Almere, 1 oktober):
+   het dal valt tussen twee astijden en noemt afgerond dezelfde waarde als de
+   astijd ernaast; dan is dat astijdcijfer het vette cijfer, zonder los
+   tweede cijfer.
 
    Draait na: npm run build:cloudflare */
 
@@ -22,9 +28,18 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* Mobiel toont 24 uur vanaf 14:00, desktop de rest van vandaag: beide vensters
    bevatten het plateau en het dal. */
-const VANDAAG={14:20.2,15:20.9,16:21.4,17:21.6,18:20.3,19:16.4,20:16.4,21:16.8,22:15.6,23:15.8};
-const MORGEN={0:16.3,1:16.9,2:17.2,3:17.4,4:17.5,5:17.6,6:17.8,7:18.1,8:18.6,9:19.2,10:19.8,11:20.3,12:20.6,13:20.8};
+const REEKSEN={
+  plateau:{laagste:15.6,
+    vandaag:{14:20.2,15:20.9,16:21.4,17:21.6,18:20.3,19:16.4,20:16.4,21:16.8,22:15.6,23:15.8},
+    morgen:{0:16.3,1:16.9,2:17.2,3:17.4,4:17.5,5:17.6,6:17.8,7:18.1,8:18.6,9:19.2,10:19.8,11:20.3,12:20.6,13:20.8}},
+  /* Dal van 13,2° om 07:00, tussen de astijden; 06:00 en 05:00 tonen ook 13°. */
+  dalTussenAstijden:{laagste:13.2,metPiek:false,
+    vandaag:{14:19.4,15:19.3,16:18.9,17:18.2,18:17.4,19:16.6,20:15.9,21:15.4,22:15.0,23:14.6},
+    morgen:{0:14.3,1:14.0,2:13.8,3:13.6,4:13.5,5:13.4,6:13.4,7:13.2,8:13.6,9:14.4,10:15.5,11:16.6,12:17.5,13:18.2}}
+};
+let REEKS=REEKSEN.plateau;
 function fixture(){
+  const VANDAAG=REEKS.vandaag,MORGEN=REEKS.morgen;
   const d=bouw({temp:(u,dag)=>dag===0&&u in VANDAAG?VANDAAG[u]:dag===1&&u in MORGEN?MORGEN[u]:18,som:0});
   d.latitude=52.09;d.longitude=5.12;d.daily.sunshine_duration=d.daily.time.map(()=>21600);
   d.current.temperature_2m=18.4;
@@ -92,7 +107,19 @@ function meet(){
   const gelabeld=g.M
     ?[...svg.querySelectorAll("[data-mobile-temp-index]")].map(el=>Number(el.getAttribute("data-mobile-temp-index")))
     :[...svg.querySelectorAll("circle[data-temp-index]")].map(el=>Number(el.getAttribute("data-temp-index")));
-  return {M:!!g.M,zichtbaar,stippen,cijfers,asUren,gelabeld:[...new Set(gelabeld)].filter(i=>Number.isInteger(i)&&i<zichtbaar.length).sort((a,b)=>a-b),
+  /* Per astijd: een zichtbare stip op het punt en een zichtbaar cijfer dat bij
+     dat uur hoort (via zijn index) en de waarde van dat punt noemt. */
+  const zichtbaarEl=el=>el.getAttribute("display")!=="none"&&el.getClientRects().length>0;
+  const cirkels=[...svg.querySelectorAll("circle")].filter(c=>!c.closest("#scrub")&&zichtbaarEl(c)&&!/carmine/.test(c.getAttribute("fill")||""));
+  const tempTeksten=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&zichtbaarEl(el)&&/^-?\d+°$/.test(el.textContent.trim()));
+  const indexVan=el=>{for(const a of ["data-mobile-temp-index","data-mobile-temp-marker-index","data-desktop-temp-anker","data-desktop-temp-marker-index"]){const v=el.getAttribute(a);if(v!==null&&v!=="")return Number(v);}return null;};
+  const astijden=asUren.map(i=>{
+    const x=Number(g.x(i)),y=Number(g.y(T[i]));
+    const stip=cirkels.some(c=>Math.abs(Number(c.getAttribute("cx"))-x)<=1&&Math.abs(Number(c.getAttribute("cy"))-y)<=1);
+    const cijfer=tempTeksten.find(el=>indexVan(el)===i);
+    return {tijd:String(g.TI[i]).slice(11,16),i,stip,cijfer:cijfer?cijfer.textContent.trim():null,verwacht:Math.round(T[i])+"°"};
+  });
+  return {M:!!g.M,zichtbaar,stippen,cijfers,asUren,astijden,gelabeld:[...new Set(gelabeld)].filter(i=>Number.isInteger(i)&&i<zichtbaar.length).sort((a,b)=>a-b),
     tijden:g.TI.slice(0,zichtbaar.length)};
 }
 
@@ -101,17 +128,23 @@ function meet(){
   const root="http://127.0.0.1:"+server.address().port;
   const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
   try{
-    for(const [w,h] of [[390,844],[1366,900]]){
-      const label=w+"px";
+    for(const [naam,reeks] of Object.entries(REEKSEN))for(const [w,h] of [[390,844],[820,1180],[1366,900]]){
+      REEKS=reeks;
+      const label=naam+" "+w+"px";
       const {context,page,fouten}=await open(browser,root,w,h);
       try{
         const m=await page.evaluate(meet);
         const laagste=Math.min(...m.zichtbaar),hoogste=Math.max(...m.zichtbaar);
-        assert.equal(laagste,15.6,label+": de testreeks moet het dal van 15,6° in beeld hebben");
+        assert.equal(laagste,reeks.laagste,label+": de testreeks moet het dal van "+reeks.laagste+"° in beeld hebben");
+        /* Iedere astijd: stip en eigen temperatuur. */
+        const leeg=m.astijden.filter(a=>!a.stip||a.cijfer!==a.verwacht).map(a=>a.tijd+(a.stip?"":" zonder stip")+(a.cijfer===a.verwacht?"":" cijfer "+(a.cijfer||"ontbreekt")+" (verwacht "+a.verwacht+")"));
+        assert.deepEqual(leeg,[],label+": astijden zonder stip of eigen temperatuur");
         const min=m.cijfers.find(s=>s.type==="min"),max=m.cijfers.find(s=>s.type==="max");
         assert(min&&Number.isInteger(min.i),label+": geen cijfer voor het laagste punt");
-        assert(max&&Number.isInteger(max.i),label+": geen cijfer voor het hoogste punt");
-        for(const s of [min,max]){
+        /* In de tweede reeks begint het desktopvenster na het hoogste punt en
+           stijgt de reeks links buiten beeld: dan is er bewust geen piek. */
+        if(reeks.metPiek!==false)assert(max&&Number.isInteger(max.i),label+": geen cijfer voor het hoogste punt");
+        for(const s of [min,max].filter(Boolean)){
           const tijd=m.tijden[s.i].slice(11,16),stip=m.stippen.find(x=>x.type===s.type);
           assert.equal(s.tekst,Math.round(s.waarde)+"°",label+": het "+s.type+"-cijfer om "+tijd+" noemt niet de waarde van zijn punt");
           /* Een stip precies dan als er een tijd onder het punt staat. */
@@ -125,13 +158,16 @@ function meet(){
           const voorbij=m.gelabeld.filter(i=>s.type==="min"?m.zichtbaar[i]<s.waarde:m.zichtbaar[i]>s.waarde).map(i=>m.tijden[i].slice(11,16)+" "+m.zichtbaar[i]+"°");
           assert.deepEqual(voorbij,[],label+": de "+s.type+"-stip om "+tijd+" ("+s.waarde+"°) ligt "+(s.type==="min"?"hoger":"lager")+" dan deze punten met een cijfer");
         }
-        /* Desktop draagt ieder uur een cijfer: daar is de stip het echte extreem zelf. */
-        if(!m.M){
-          assert.equal(min.waarde,laagste,label+": de min-stip staat niet op het echte laagste punt");
-          assert.equal(max.waarde,hoogste,label+": de max-stip staat niet op het echte hoogste punt");
+        /* Het vette cijfer staat op het echte extreem, of (als dat tussen twee
+           astijden valt) op een astijd die afgerond dezelfde waarde noemt. */
+        for(const [s,echt] of [[min,laagste],[max,hoogste]].filter(([s])=>s)){
+          if(m.zichtbaar[s.i]!==echt)assert(m.asUren.includes(s.i)&&Math.round(m.zichtbaar[s.i])===Math.round(echt),label+": het "+s.type+"-cijfer staat niet op het echte extreem en ook niet op een astijd met dezelfde afgeronde waarde");
         }
+        /* Geen los tweede cijfer met dezelfde waarde vlak naast een astijd. */
+        const dubbel=m.cijfers.filter(s=>!m.asUren.includes(s.i)&&m.astijden.some(a=>Math.abs(a.i-s.i)<=1&&a.cijfer===s.tekst));
+        assert.deepEqual(dubbel,[],label+": piek of dal staat als los tweede cijfer naast een astijd met dezelfde waarde");
         /* Het eerdere plateau van 16,4° om 19-20 uur is niet het dal. */
-        assert(!["19:00","20:00"].includes(m.tijden[min.i].slice(11,16)),label+": de min-stip staat op het plateau van 16,4° in plaats van bij het dal van 15,6°");
+        if(naam==="plateau")assert(!["19:00","20:00"].includes(m.tijden[min.i].slice(11,16)),label+": de min-stip staat op het plateau van 16,4° in plaats van bij het dal van 15,6°");
         /* Elk temperatuurpunt heeft dezelfde volle stip; piek en dal vallen op door hun cijfer, niet door een grotere stip. */
         const stippen=await page.evaluate(()=>[...document.querySelectorAll("#chart circle")].filter(c=>!c.closest("#scrub")&&c.getClientRects().length&&c.getAttribute("fill")!=="var(--carmine)"
           &&(c.hasAttribute("data-temp-index")||c.hasAttribute("data-mobile-temp-marker-dot")||c.hasAttribute("data-desktop-temp-marker-dot")))
@@ -150,9 +186,9 @@ function meet(){
         assert.equal(new Set(stippen.map(s=>s.kleur)).size,1,label+": temperatuurstippen hebben niet dezelfde kleur");
         assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
         const metStip=s=>m.asUren.includes(s.i)?"stip":"zonder stip";
-        console.log("STIPPEN "+label+": "+stippen.length+" gelijke stippen (r "+stippen[0].r+"), alle boven een tijd; min "+m.tijden[min.i].slice(11,16)+" ("+min.waarde+"°, "+metStip(min)+"), max "+m.tijden[max.i].slice(11,16)+" ("+max.waarde+"°, "+metStip(max)+").");
+        console.log("STIPPEN "+label+": "+stippen.length+" gelijke stippen (r "+stippen[0].r+"), alle boven een tijd, "+m.astijden.length+" astijden met stip en eigen temperatuur; min "+m.tijden[min.i].slice(11,16)+" ("+min.waarde+"°, "+metStip(min)+")"+(max?", max "+m.tijden[max.i].slice(11,16)+" ("+max.waarde+"°, "+metStip(max)+")":", geen piek in beeld")+".");
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
-  console.log("Grafiekstippen OK: hoogste en laagste punt op 390 en 1366px.");
+  console.log("Grafiekstippen OK: hoogste en laagste punt en iedere astijd met stip en eigen temperatuur, op 390, 820 en 1366px, voor twee reeksen.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});
