@@ -9,7 +9,12 @@
       "mcp__github__list_commits",
       "mcp__github__get_commit",
       "mcp__github__merge_pull_request",
-      "Bash(curl -sS -m 20 https://api.github.com/repos/Tommjoness/watishetweer/*)"
+      "mcp__Claude_Code_Remote__send_later",
+      "Bash(curl -sS -m 20 https://api.github.com/repos/Tommjoness/watishetweer/*)",
+      "Bash(npm test)",
+      "Bash(CHROME_PATH=/opt/pw-browsers/chromium npm test)",
+      "Bash(npm run build:cloudflare)",
+      "Bash(git push -u origin claude/watishetweer-repo-review-9vgdrf)"
     ]
   }
 }
