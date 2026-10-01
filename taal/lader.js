@@ -74,6 +74,55 @@
 
   if (taal !== "en") return;
 
+  /* Vóór de app: de lader is het eerste deferred script, de vertaalbundel komt
+     later. Daarom zet de lader zelf de taal van de aanvragen om. */
+  /* Plaatsnamen in het Engels: zoekresultaten (Open-Meteo) en "Mijn locatie"
+     (BigDataCloud) worden in het Engels opgevraagd, zodat een Engelse bezoeker
+     "Paris", "Cologne" en "Ghent" ziet in plaats van "Parijs", "Keulen" en "Gent".
+     Alleen de taalparameter verandert; de rest van de aanvraag blijft gelijk. */
+  (function () {
+    "use strict";
+    var origineel = window.fetch;
+    if (typeof origineel !== "function") return;
+    /* Officiële Engelse brontekst (waarschuwingen): de vertaallaag laat die letterlijk staan. */
+    var bronEngels = window.__WIW_BRON_EN__ = window.__WIW_BRON_EN__ || new Set();
+    function schoon(s) { return String(s == null ? "" : s).replace(/\s+/g, " ").trim(); }
+    function onthoud(s) { s = schoon(s); if (!s) return; bronEngels.add(s); s.replace(/([.!?])\s+(?=[A-Z0-9ÀÉÖÜ"'(])/g, "$1\n").split("\n").forEach(function (z) { if (z) bronEngels.add(schoon(z)); }); }
+    function isWaarschuwingen(url) { return /\/api\/waarschuwingen(?:\?|$)/.test(url); }
+    function engels(url) {
+      /* Waarschuwingen: de officiële Engelse tekst van de weerdienst (MeteoAlarm en-GB). */
+      if (isWaarschuwingen(url) && !/[?&]taal=/.test(url)) return url + (url.indexOf("?") === -1 ? "?" : "&") + "taal=en";
+      if (url.indexOf("geocoding-api.open-meteo.com") !== -1) return url.replace(/([?&]language=)nl(?=&|$)/, "$1en");
+      if (url.indexOf("api.bigdatacloud.net") !== -1) return url.replace(/([?&]localityLanguage=)nl(?=&|$)/, "$1en");
+      return url;
+    }
+    window.fetch = function (invoer, opties) {
+      try {
+        var url = typeof invoer === "string" ? invoer : invoer && invoer.url ? String(invoer.url) : String(invoer || "");
+        var nieuw = engels(url);
+        if (nieuw !== url) invoer = typeof invoer === "string" || !invoer.url ? nieuw : new Request(nieuw, invoer);
+        if (isWaarschuwingen(nieuw)) {
+          /* Eerst onthouden, dan pas het antwoord aan de app geven: zo is de
+             Engelse tekst bekend voordat hij op het scherm komt. */
+          var registreer = function (d) {
+            [].concat(d && d.lijst || []).forEach(function (w) { if (w && /^en/i.test(String(w.taal || ""))) { onthoud(w.titel); onthoud(w.tekst); } });
+          };
+          return origineel.call(this, invoer, opties).then(function (antwoord) {
+            if (!antwoord) return antwoord;
+            if (typeof antwoord.clone === "function") {
+              return antwoord.clone().json().then(function (d) { registreer(d); return antwoord; }, function () { return antwoord; });
+            }
+            /* Antwoord zonder clone(): onthoud tijdens het lezen door de app. */
+            var lees = antwoord.json;
+            if (typeof lees === "function") antwoord.json = function () { return lees.call(antwoord).then(function (d) { registreer(d); return d; }); };
+            return antwoord;
+          });
+        }
+      } catch (e) { /* onbekende invoer: ongewijzigd doorgeven */ }
+      return origineel.call(this, invoer, opties);
+    };
+  })();
+
   var html = document.documentElement;
   html.setAttribute("lang", "en-GB");
   html.setAttribute("data-taal", "en");

@@ -25,7 +25,7 @@
   function start(opties) {
     const { kern, eenheden: E, woordenboek, taal } = opties;
     const doc = opties.document || document;
-    const vertaler = kern.maakVertaler(woordenboek);
+    const vertaler = kern.maakVertaler(woordenboek, { bronEngels: opties.bronEngels });
     const eigennamen = new Set(woordenboek.eigennamen || []);
     const gezet = new WeakMap();          // node of element → tekst die wij schreven
     const gezetAttr = new WeakMap();      // element → Map(attribuut → tekst die wij schreven)

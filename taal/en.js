@@ -752,11 +752,13 @@
     [/^Weergave kiezen\. Huidige stand: (automatisch|handmatig) \((Licht|Donker)\)\.$/, (m) => `Choose display. Current setting: ${m[1] === "automatisch" ? "automatic" : "manual"} (${m[2] === "Licht" ? "Light" : "Dark"}).`],
     [/^Weergave kiezen\. Huidige stand: (Licht|Donker)\.$/, (m) => `Choose display. Current setting: ${m[1] === "Licht" ? "Light" : "Dark"}.`],
     [/^(−?-?\d+\.\d+), (−?-?\d+\.\d+) · (\d+) m hoogte(?: · modelcel (−?-?\d+\.\d+), (−?-?\d+\.\d+))? · ([A-Za-z_]+\/[A-Za-z_\/-]+)$/, (m) => `${m[1]}, ${m[2]} · ${m[3]} m elevation${m[4] ? ` · model cell ${m[4]}, ${m[5]}` : ""} · ${m[6]}`],
-    [/^Officiële weerwaarschuwing(?: \((geel|oranje|rood)\))?: (.+)\.$/, (m) => {
+    [/^Officiële weerwaarschuwing(?: \((geel|oranje|rood)\))?: (.+)\.$/, (m, hulp) => {
       const kleur = m[1] ? ` (${({ geel: "yellow", oranje: "orange", rood: "red" })[m[1]]})` : "";
       const code = /^Code (geel|oranje|rood): (.+)$/.exec(m[2]);
       const titel = code ? (WAARSCHUWING[code[2].toLowerCase()] && `code ${({ geel: "yellow", oranje: "orange", rood: "red" })[code[1]]} for ${WAARSCHUWING[code[2].toLowerCase()]}`)
-        : (WAARSCHUWING[m[2].toLowerCase()] ? alsNl("X", WAARSCHUWING[m[2].toLowerCase()]) : (eigennamen.includes(m[2]) ? m[2] : null));
+        : (WAARSCHUWING[m[2].toLowerCase()] ? alsNl("X", WAARSCHUWING[m[2].toLowerCase()])
+          /* Officiële Engelse titel van de weerdienst (MeteoAlarm en-GB, NWS) blijft letterlijk. */
+          : (eigennamen.includes(m[2]) || (hulp && hulp.alEngels(m[2])) ? m[2] : null));
       return titel && `Official weather warning${kleur}: ${titel}.`;
     }],
 
@@ -775,6 +777,8 @@
     [/^De totale zichtscore is hoog, maar (.+) onderbreekt een langer optimaal kijkvenster\.$/, (m) => { const r = oorzaken(m[1]); return r && `The overall visibility score is high, but ${r} ${/ and |, /.test(r) ? "interrupt" : "interrupts"} a longer ideal viewing window.`; }],
     [/^Toon het weer voor (.+)$/, (m) => `Show the weather for ${plaats(m[1])}`],
     [/^Verwijder (.+) uit bewaarde plaatsen$/, (m) => `Remove ${plaats(m[1])} from saved places`],
+    /* Dagomschrijving "Mist; neerslag mogelijk" → "Fog; precipitation possible". */
+    [/^(.+); (.+) mogelijk$/, (m) => { const w = weer(m[1]), n = WEER[m[2].toLowerCase()]; return w && n ? `${w}; ${n} possible` : null; }],
     [/^(.+); (zeer kleine|kleine|grote|zeer grote) neerslagkans$/, (m) => { const w = weer(m[1]); return w && `${w}; ${({ "zeer kleine": "very low chance of precipitation", "kleine": "low chance of precipitation", "grote": "precipitation likely", "zeer grote": "precipitation very likely" })[m[2]]}`; }],
     [/^Er (valt|vallen) nu (.+)\.$/, (m) => { const w = WEER[m[2].toLowerCase()]; return w && `There ${isAre(w)} ${w} now.`; }],
     [/^(.+) mogelijk (in de (?:vroege ochtend|ochtend|middag|avond|nacht))$/, (m) => { const w = weer(m[1]); return w && `${w} possible ${DAGDEEL[m[2]]}`; }],

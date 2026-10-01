@@ -22,6 +22,7 @@ function stub(sc, taal) {
     forecast: d,
     lucht: sc.lucht || null,
     waarschuwingen: sc.waarschuwingen || GEEN_WAARSCHUWING,
+    waarschuwingenEn: sc.waarschuwingenEn || null,
     knmi: sc.knmi || { beschikbaar: false, provider: null, reden: "geen actuele neerslagprovider voor deze locatie" }
   };
   return `<script>
@@ -29,11 +30,11 @@ Date.now=()=>${sc.nu};
 try{localStorage.clear();sessionStorage.clear();${taal ? `localStorage.setItem("weerbriefing.taal.v1",${JSON.stringify(taal)});` : ""}}catch(e){}
 (function(){
 const A=${JSON.stringify(antwoorden)};
-const antwoord=p=>({ok:true,status:200,headers:{get:()=>"application/json"},json:async()=>p,text:async()=>JSON.stringify(p)});
+const antwoord=p=>({ok:true,status:200,headers:{get:()=>"application/json"},json:async()=>p,text:async()=>JSON.stringify(p),clone:()=>antwoord(p)});
 window.fetch=async function(url){
   const u=String(url&&url.url||url||"");
   if(u.includes("air-quality-api.open-meteo.com"))return A.lucht?antwoord(A.lucht):{ok:false,status:503,json:async()=>({}),text:async()=>""};
-  if(u.includes("/api/waarschuwingen"))return antwoord(A.waarschuwingen);
+  if(u.includes("/api/waarschuwingen"))return antwoord(/[?&]taal=en/.test(u)&&A.waarschuwingenEn?A.waarschuwingenEn:A.waarschuwingen);
   if(u.includes("/api/neerslag"))return antwoord(A.knmi);
   if(u.includes("/api/plaatsnaam"))return antwoord({naam:"Almere",land:"NL",bron:"test"});
   if(u.includes("geocoding-api.open-meteo.com"))return antwoord({results:[{name:"Utrecht",latitude:52.09,longitude:5.12,admin1:"Utrecht",country_code:"NL",country:"Nederland"},{name:"Utrecht",latitude:-28.1,longitude:30.3,admin1:"KwaZulu-Natal",country_code:"ZA",country:"Zuid-Afrika"}]});

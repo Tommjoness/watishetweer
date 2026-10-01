@@ -27,4 +27,13 @@ assert.equal(v.vertaal("It is raining now. Het regent nu. Windstoten tot 60 km/u
 assert.equal(v.vertaal("It is raining now. Gusts up to 60 km/h. Het regent nu. Windstoten tot 60 km/u."),"It is raining now. Gusts up to 60 km/h.","herhaald blok van twee zinnen: één keer");
 assert.equal(v.vertaal("Chance of rain. Onbekende zin."),null,"Engels erbij maakt een onbekende zin niet vertaald");
 assert.equal(v.vertaal("Some random English sentence. Het regent nu."),null,"alleen Engels dat de vertaler zelf maakte telt als vertaald");
-console.log("Vertaalkern: exact, patronen, meerzins-blokken, getalnotatie, neutrale teksten en veiligheidsregels geslaagd.");
+/* Officiële Engelse brontekst (MeteoAlarm en-GB) blijft letterlijk en telt als vertaald. */
+const echt=require("../taal/en.js");
+const bron=new Set(["Yellow warning for fog","Widespread fog is expected."]);
+const vb=maakVertaler(echt,{bronEngels:bron});
+assert.equal(vb.vertaal("Yellow warning for fog"),"Yellow warning for fog","officiële Engelse titel blijft staan");
+assert.equal(vb.vertaal("Widespread fog is expected. Geldig tot 18:00."),"Widespread fog is expected. Valid until 18:00.","officiële tekst plus eigen Nederlandse aanvulling");
+assert.equal(vb.vertaal("Officiële weerwaarschuwing (geel): Yellow warning for fog."),"Official weather warning (yellow): Yellow warning for fog.","briefing met officiële Engelse titel");
+assert.deepEqual(vb.onvertaald("Yellow warning for fog"),[],"bewaker telt officiële Engelse tekst niet als onvertaald");
+assert.equal(maakVertaler(echt).vertaal("Yellow warning for fog"),null,"zonder bron blijft onbekend Engels onbekend");
+console.log("Vertaalkern: exact, patronen, meerzins-blokken, getalnotatie, neutrale teksten, officiële Engelse brontekst en veiligheidsregels geslaagd.");

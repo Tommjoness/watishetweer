@@ -54,8 +54,10 @@ async function open(browser, { lader, bundelNaam, bundel }, url, voorbereiding) 
   /* In het Engels komen plaatsnamen in het Engels binnen (Paris, niet Parijs). */
   await t.page.evaluate(() => Promise.all([
     fetch("https://geocoding-api.open-meteo.com/v1/search?name=Parijs&count=6&language=nl&format=json").catch(() => null),
-    fetch("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=48.85&longitude=2.35&localityLanguage=nl").catch(() => null)
+    fetch("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=48.85&longitude=2.35&localityLanguage=nl").catch(() => null),
+    fetch("/api/waarschuwingen?lat=51.05&lon=3.72&land=BE").catch(() => null)
   ]));
+  assert(t.aangevraagd.some(u => u.includes("/api/waarschuwingen") && u.includes("taal=en")), "waarschuwingen in het Engels: officiële Engelse tekst");
   assert(t.aangevraagd.some(u => u.includes("geocoding-api.open-meteo.com") && u.includes("language=en") && !u.includes("language=nl")), "zoeken vraagt Engelse plaatsnamen");
   assert(t.aangevraagd.some(u => u.includes("bigdatacloud") && u.includes("localityLanguage=en")), "Mijn locatie vraagt een Engelse plaatsnaam");
   await t.page.goto("http://test.local/");

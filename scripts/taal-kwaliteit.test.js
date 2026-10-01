@@ -61,6 +61,7 @@ function oorzaakLijsten() {
 function* combinaties() {
   for (const w of weerNamen) { yield hoofd(w); yield hoofd(w) + "."; yield w; }
   for (const w of weerNamen) for (const k of ["zeer kleine", "kleine", "grote", "zeer grote"]) yield `${hoofd(w)}; ${k} neerslagkans`;
+  for (const w of weerNamen) for (const n of kansWeer) yield `${hoofd(w)}; ${n} mogelijk`;
   for (const k of kansen) for (const w of kansWeer) {
     yield `${hoofd(k)} kans op ${w}`;
     yield `${hoofd(k)} kans op ${w}.`;

@@ -27,8 +27,16 @@ const PLAATSEN = [
   { plaats: "Reykjavík", land: "IS", lat: 64.15, lon: -21.94, tz: "Atlantic/Reykjavik", offset: 0, waarsch: "meteoalarm" },
   { plaats: "Nairobi", land: "KE", lat: -1.29, lon: 36.82, tz: "Africa/Nairobi", offset: 10800, waarsch: null }
 ];
-/* Waarschuwingsteksten komen in het Engels uit de API (MeteoAlarm en-GB) als
-   de bezoeker Engels kiest; hier daarom zinnen die de app zelf kent. */
+/* Echte MeteoAlarm-vorm: per waarschuwing een Nederlandse en een officiële
+   Engelse tekst (en-GB). In het Engels vraagt de site ?taal=en en krijgt de
+   Engelse; de nagebootste API doet hetzelfde. */
+const METEOALARM_ECHT = [
+  ["Gele waarschuwing voor mist", "Er wordt verspreide mist met een zicht van maximaal 500 m verwacht, lokaal kan het zicht lager dan 200 m zijn.",
+    "Yellow warning for fog", "Widespread fog with a visibility of maximum 500 m is expected and visibility may locally be less than 200 m."],
+  ["Oranje waarschuwing voor onweer", "Er worden onweersbuien verwacht met lokaal hagel en zware windstoten.",
+    "Orange warning for thunderstorms", "Thunderstorms are expected with hail and severe gusts in places."]
+];
+/* Titels zoals de app ze in het Nederlands toont en die het woordenboek kent. */
 const METEOALARM = [
   ["Code geel: onweersbuien", "Lokaal zware onweersbuien met hagel."], ["Code oranje: zware windstoten", "Zware windstoten tot 100 km/u."],
   ["Code geel: gladheid", "Lokaal zware onweersbuien met hagel."], ["Code geel: hitte", "Zware windstoten tot 100 km/u."],
@@ -100,9 +108,17 @@ function willekeurigeScenarios(aantal = 24, zaad = 20260930) {
 
     const utcMs = Date.UTC(2026, 6, 22, uur, minuut) - p.offset * 1000;
     let waarschuwingen = { bron: null, dekking: false, lijst: [], land: p.land, reden: "geen waarschuwingsbron" };
+    let waarschuwingenEn = null;
     if (p.waarsch === "meteoalarm") {
       const lijst = r() < 0.5 ? [] : [kies(r, METEOALARM)].map(([titel, tekst]) => ({ titel, tekst, niveau: /rood/.test(titel) ? "rood" : /oranje/.test(titel) ? "oranje" : "geel", van: new Date(utcMs - 3600000).toISOString(), tot: new Date(utcMs + (2 + r() * 30) * 3600000).toISOString(), gebied: p.plaats, plaatsSpecifiek: r() < 0.7 }));
       waarschuwingen = { bron: "test", dekking: true, land: p.land, lijst };
+      /* Iedere tweede MeteoAlarm-situatie met echte feedteksten in twee talen. */
+      if (n % 2 === 0) {
+        const [nlT, nlX, enT, enX] = kies(r, METEOALARM_ECHT);
+        const basis = { niveau: /Oranje/.test(nlT) ? "oranje" : "geel", van: new Date(utcMs - 3600000).toISOString(), tot: new Date(utcMs + 6 * 3600000).toISOString(), gebied: p.plaats, plaatsSpecifiek: true };
+        waarschuwingen = { bron: "test", dekking: true, land: p.land, lijst: [{ ...basis, titel: nlT, tekst: nlX, taal: "nl-NL" }] };
+        waarschuwingenEn = { bron: "test", dekking: true, land: p.land, lijst: [{ ...basis, titel: enT, tekst: enX, taal: "en-GB" }] };
+      }
     } else if (p.waarsch === "nws") {
       const lijst = r() < 0.4 ? [] : [{ titel: kies(r, NWS), tekst: "Heavy rain may cause flooding.", niveau: "geel", plaatsSpecifiek: true, van: null, tot: null }];
       waarschuwingen = { bron: "NWS", dekking: true, land: "US", lijst };
@@ -120,7 +136,8 @@ function willekeurigeScenarios(aantal = 24, zaad = 20260930) {
         hourly: { time: [isoLokaal(uur)], alder_pollen: [Math.round(r() * r() * 150)], birch_pollen: [Math.round(r() * r() * 300)], grass_pollen: [Math.round(r() * r() * 200)], mugwort_pollen: [Math.round(r() * r() * 60)], ragweed_pollen: [Math.round(r() * r() * 60)], olive_pollen: [Math.round(r() * r() * 100)] }
       },
       knmi: knmiAntwoord,
-      waarschuwingen
+      waarschuwingen,
+      waarschuwingenEn
     });
   }
   return uit;

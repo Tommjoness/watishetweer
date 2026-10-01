@@ -35,7 +35,9 @@
     return s.replace(/(\d),(\d)/g, "$1.$2");
   }
 
-  function maakVertaler(woordenboek) {
+  /* opties.bronEngels: een Set met officiële Engelse brontekst (bijvoorbeeld de
+     Engelse waarschuwingstekst van MeteoAlarm). Die wordt nooit opnieuw vertaald. */
+  function maakVertaler(woordenboek, opties = {}) {
     const exact = new Map();
     for (const [nl, en] of Object.entries(woordenboek.exact || {})) exact.set(schoon(nl), en);
     const patronen = (woordenboek.patronen || []).map(([re, en], i) => {
@@ -78,6 +80,7 @@
       if (!s) return s;
       const direct = vertaalEen(s);
       if (direct != null) return direct;
+      if (isAlEngels(s)) return s;
       const delen = zinnen(s);
       if (delen.length < 2) return null;
       const uit = [];
@@ -102,7 +105,7 @@
     /* Welke zinnen van een tekst geen vertaling hebben (voor de taalbewaker). */
     function onvertaald(tekst) {
       const s = schoon(tekst);
-      if (!s || vertaalEen(s) != null) return [];
+      if (!s || vertaalEen(s) != null || isAlEngels(s)) return [];
       const delen = zinnen(s);
       if (delen.length < 2) return [s];
       return delen.filter(z => vertaalOfEngels(z) == null);
@@ -111,7 +114,8 @@
     /* Teksten die al Engels zijn (bijvoorbeeld een door de app gekopieerde,
        eerder vertaalde knoptekst) hoeven niet opnieuw vertaald te worden. */
     const engels = new Set([...exact.values()].map(schoon));
-    function isAlEngels(tekst) { const t = schoon(tekst); return engels.has(t) || gemaakt.has(t); }
+    const bron = opties.bronEngels || null;
+    function isAlEngels(tekst) { const t = schoon(tekst); return engels.has(t) || gemaakt.has(t) || !!(bron && bron.has(t)); }
     hulp.alEngels = isAlEngels;
     return { vertaal, vertaalEen, onvertaald, isAlEngels, schoon, getal, aantalExact: exact.size, aantalPatronen: patronen.length };
   }
