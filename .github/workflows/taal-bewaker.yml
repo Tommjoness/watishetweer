@@ -1,0 +1,36 @@
+name: Taalbewaker Engels
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  engels:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Playwright-pakket
+        run: npm ci --ignore-scripts
+      - name: Koppel Chromium
+        run: |
+          CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          test -x "$CHROME_PATH"
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+      - name: Bouw de definitieve site (inclusief taallader)
+        run: npm run build
+      - name: Iedere tekst in het Engels vertaald (vaste en willekeurige weersituaties)
+        run: node scripts/taal-bewaker.js
+      - name: Rapport bewaren bij een fout
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: taal-bewaker-rapport
+          path: taal-bewaker-rapport.json
+          if-no-files-found: ignore
