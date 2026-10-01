@@ -185,9 +185,12 @@ function plaatsUrl(loc){return `${BASIS_URL}/weer/${loc.slug}/`;}
 /* Titel en beschrijving volgen de zoekvragen waarop plaatspagina's al het
    dichtst bij pagina 1 staan (Search Console, aug–sep 2026): "vandaag",
    "per uur", "graden" en "temperatuur" scoorden ruim beter dan alleen
-   "weer <plaats>". De titel blijft ook voor de langste plaatsnaam binnen
-   ongeveer 64 tekens, zodat Google hem niet afkapt. */
-function plaatsTitel(loc){return `Weer ${loc.naam} vandaag en per uur | watishetweer.nl`;}
-function plaatsBeschrijving(loc){return `Actuele temperatuur en het weer per uur in ${loc.naam}: hoeveel graden het nu is, neerslag voor de komende uren en de 7-daagse verwachting.`;}
+   "weer <plaats>". Sinds oktober 2026 staat ook "morgen" erin: daar werd
+   veel op gezocht (281 vertoningen in drie maanden) en het ontbrak. De
+   merknaam staat niet meer in de titel; Google toont de sitenaam al apart
+   boven elk resultaat. Zo blijft de langste titel (54 tekens) binnen wat
+   Google toont. */
+function plaatsTitel(loc){return `Weer ${loc.naam} vandaag, morgen en per uur`;}
+function plaatsBeschrijving(loc){return `Actuele temperatuur en het weer in ${loc.naam} vandaag, morgen en per uur: hoeveel graden het nu is, regen in de komende uren en de 7-daagse verwachting.`;}
 
 module.exports={LOCATIES,POPULAIR,BASIS_URL,plaatsUrl,plaatsTitel,plaatsBeschrijving};
