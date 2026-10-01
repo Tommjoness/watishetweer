@@ -21,11 +21,28 @@ const DEKKING_BRON=`    if(!d||d.dekking!==true){
       if(S.d&&typeof briefing==="function") briefing();
       return;
     }`;
+/* Tussenstap tot waarschuwingen per regio te koppelen zijn: gelden er in het
+   land actieve waarschuwingen die niet aan deze plaats te koppelen zijn, dan
+   meldt de site dat eerlijk en kort, met kleur, soort en gebieden. Alle
+   brontekst (gebiedsnamen) wordt ge-escaped. */
+function weatherNowWaarschuwingElders(e,esc){
+  if(!e||!Array.isArray(e.groepen)||!e.groepen.length)return "";
+  const soort={wind:"wind","sneeuw-ijzel":"sneeuw en ijzel",onweer:"onweer",mist:"mist",hitte:"hitte",kou:"kou",kust:"kustgevaar",
+    bosbrand:"bosbrandgevaar",lawine:"lawinegevaar",regen:"regen",overstroming:"overstromingen","regen-overstroming":"regen en overstromingen"};
+  const delen=e.groepen.filter(g=>g&&soort[g.type]&&/^(geel|oranje|rood)$/.test(g.kleur)).map(g=>{
+    const gebieden=Array.isArray(g.gebieden)?g.gebieden.filter(Boolean).map(x=>esc(String(x))):[];
+    const meer=Number(g.meer)>0?" en "+Number(g.meer)+" "+(Number(g.meer)===1?"ander gebied":"andere gebieden"):"";
+    return "code "+g.kleur+" voor "+soort[g.type]+(gebieden.length?" ("+gebieden.join(", ")+meer+")":"");
+  });
+  if(!delen.length)return "";
+  return "In "+esc(String(e.landNaam||"dit land"))+" geldt nu "+delen.join("; ")+". Of dit ook voor deze plaats geldt, kunnen we nog niet bepalen.";
+}
 const DEKKING_PRODUCTIE=`    if(!d||d.dekking!==true){
+      const elders=d&&d.reden!=="bron onbereikbaar"?(${weatherNowWaarschuwingElders.toString()})(d.elders,esc):"";
       const melding=d&&d.reden==="bron onbereikbaar"
         ?"Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald."
-        :"Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.";
-      el.innerHTML='<div class="msg">'+melding+'</div>';
+        :(elders||"Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.");
+      el.innerHTML='<div class="msg"'+(elders?' data-ui-warning-elders="1"':'')+'>'+melding+'</div>';
       return;
     }`;
 
@@ -122,6 +139,7 @@ function pasWarningRenderStateToe(html){
 }
 
 module.exports=Object.freeze({
+  weatherNowWaarschuwingElders,
   START_BRON,START_PRODUCTIE,DEKKING_BRON,DEKKING_PRODUCTIE,
   EIND_BRON,EIND_PRODUCTIE,FOUT_BRON,FOUT_PRODUCTIE,
   BRIEFING_EIND_BRON,BRIEFING_EIND_PRODUCTIE,

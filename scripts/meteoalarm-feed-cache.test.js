@@ -76,5 +76,18 @@ function vraag(lat,lon){
     globalThis.fetch=origineleFetch;
     if(origineleCaches===undefined)delete globalThis.caches;else globalThis.caches=origineleCaches;
   }
-  console.log("MeteoAlarm-landfeedcache: één download per landfeed, per-punttoetsing behouden, storing niet gecachet en cachefout faalt veilig.");
+  /* Atom-fallback: verlopen items tellen niet; kleur, soort en gebied komen uit het item. */
+{
+  const {uitAtom,eldersSamenvatting}=handler._intern;
+  const nu=Date.parse("2026-10-01T12:00:00Z");
+  const item=(titel,gebied,eind)=>`<entry><cap:areaDesc>${gebied}</cap:areaDesc><cap:expires>${eind}</cap:expires><title>${titel}</title><summary>x</summary></entry>`;
+  const xml="<feed>"+item("Red Flooding Warning issued for France - Gard","Gard","2026-10-01T22:00:00+00:00")
+    +item("Orange Thunderstorm Warning issued for France - Var","Var","2026-10-01T08:00:00+00:00")+"</feed>";
+  const lijst=uitAtom(xml,nu);
+  assert.equal(lijst.length,1,"verlopen Atom-item valt weg");
+  assert.deepEqual([lijst[0].kleur,lijst[0].type,lijst[0].gebied],["rood","overstroming","Gard"]);
+  assert.deepEqual(eldersSamenvatting(lijst,"FR"),{land:"FR",landNaam:"Frankrijk",groepen:[{kleur:"rood",type:"overstroming",gebieden:["Gard"],meer:0}]});
+}
+
+console.log("MeteoAlarm-landfeedcache: één download per landfeed, per-punttoetsing behouden, storing niet gecachet en cachefout faalt veilig.");
 })().catch(error=>{console.error(error);process.exit(1);});

@@ -56,7 +56,7 @@ try {
      claimen, maar eerlijk "geen plaats-specifieke dekking". */
   const nuIso=offset=>new Date(Date.now()+offset*3600000).toISOString();
   const capBlok=(taal,event,niveau,start,eind,gebied)=>({language:taal,event,severity:niveau.startsWith("4")?"Extreme":"Moderate",onset:start,expires:eind,
-    parameter:[{valueName:"awareness_level",value:niveau}],area:[{areaDesc:gebied,geocode:[{valueName:"EMMA_ID",value:"FR030"}]}],description:"Officiële tekst"});
+    parameter:[{valueName:"awareness_level",value:niveau},{valueName:"awareness_type",value:"13; rain-flood"}],area:[{areaDesc:gebied,geocode:[{valueName:"EMMA_ID",value:"FR030"}]}],description:"Officiële tekst"});
   const groen={alert:{info:[capBlok("fr-FR","Aucune vigilance","1; green; Minor",nuIso(-1),nuIso(5),"Paris"),capBlok("en-GB","No warnings","1; green; Minor",nuIso(-1),nuIso(5),"Paris")]}};
   const verlopen={alert:{info:[capBlok("fr-FR","Vigilance orange orages","3; orange; Severe",nuIso(-10),nuIso(-2),"Gard")]}};
   const rood={alert:{info:[capBlok("fr-FR","Vigilance rouge pluie-inondation","4; red; Extreme",nuIso(-2),nuIso(10),"Gard"),capBlok("en-GB","Red flood warning","4; red; Extreme",nuIso(-2),nuIso(10),"Gard")]}};
@@ -71,10 +71,13 @@ try {
   assert.equal(fr.dekking,false,"actieve rode waarschuwing zonder polygoon: nooit 'geen waarschuwingen'");
   assert.equal(fr.reden,"geen plaats-specifieke dekking");
   assert.deepEqual(fr.lijst,[]);
+  assert.deepEqual(fr.elders,{land:"FR",landNaam:"Frankrijk",groepen:[{kleur:"rood",type:"regen-overstroming",gebieden:["Gard"],meer:0}]},
+    "landelijke samenvatting: alleen de actieve rode waarschuwing, niet de groene of verlopen");
   globalThis.fetch=meteoFeed([groen,verlopen]);
   const frRustig=await (await api.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=43.85&lon=4.37&land=FR"))).json();
   assert.equal(frRustig.dekking,true,"alleen groene en verlopen berichten: bewezen geen actieve waarschuwing");
   assert.deepEqual(frRustig.lijst,[]);
+  assert.equal(frRustig.elders,undefined,"zonder actieve waarschuwing geen landelijke melding");
 
   /* De grove CONUS-rechthoek overlapt Canada en Mexico. Een expliciete landcode
      moet daar zwaarder wegen dan alleen de rechthoek: Toronto en Monterrey mogen

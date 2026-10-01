@@ -4,6 +4,7 @@ const assert=require("assert");
 const fs=require("fs");
 const path=require("path");
 const {
+  weatherNowWaarschuwingElders,
   START_BRON,START_PRODUCTIE,DEKKING_BRON,DEKKING_PRODUCTIE,
   EIND_BRON,EIND_PRODUCTIE,FOUT_BRON,FOUT_PRODUCTIE,
   BRIEFING_EIND_BRON,BRIEFING_EIND_PRODUCTIE,
@@ -96,5 +97,19 @@ assert(!uit.includes('.waarsch{border-left:3px solid var(--carmine);padding:10px
 
 /* De owner mag niet stil nogmaals op een reeds gemigreerd artifact muteren. */
 assert.throws(()=>pasWarningRenderStateToe(uit),/bronanker ontbreekt of is dubbel/);
+
+/* Tussenstap C: landelijke melding, eerlijk en ge-escaped. */
+{
+  const esc=t=>String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
+  assert.equal(weatherNowWaarschuwingElders(null,esc),"","zonder samenvatting geen landelijke melding");
+  assert.equal(
+    weatherNowWaarschuwingElders({landNaam:"Frankrijk",groepen:[{kleur:"rood",type:"overstroming",gebieden:["Hérault"],meer:0},{kleur:"oranje",type:"regen-overstroming",gebieden:["Gard","Var","Var2"],meer:2}]},esc),
+    "In Frankrijk geldt nu code rood voor overstromingen (Hérault); code oranje voor regen en overstromingen (Gard, Var, Var2 en 2 andere gebieden). Of dit ook voor deze plaats geldt, kunnen we nog niet bepalen."
+  );
+  assert.equal(weatherNowWaarschuwingElders({landNaam:"Spanje",groepen:[{kleur:"geel",type:"onbekend",gebieden:["X"]}]},esc),"","onbekende soort: geen half bericht");
+  assert(!weatherNowWaarschuwingElders({landNaam:"<b>",groepen:[{kleur:"geel",type:"wind",gebieden:["<img src=x>"],meer:1}]},esc).includes("<"),"gebiedsnamen en landnaam worden ge-escaped");
+  assert(DEKKING_PRODUCTIE.includes("function weatherNowWaarschuwingElders(e,esc)"),"productiecode bevat de landelijke melding");
+  assert(DEKKING_PRODUCTIE.includes('"Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen."'),"zonder samenvatting blijft de bestaande eerlijke melding");
+}
 
 console.log("Warning-render contract groen: requeststates, kaartpresentatie, stabiele briefing en finale CSS hebben één base-build owner; bron, scope, filtering en sortering blijven ongewijzigd.");
