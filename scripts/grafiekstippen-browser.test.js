@@ -119,7 +119,11 @@ function meet(){
     const cijfer=tempTeksten.find(el=>indexVan(el)===i);
     return {tijd:String(g.TI[i]).slice(11,16),i,stip,cijfer:cijfer?cijfer.textContent.trim():null,verwacht:Math.round(T[i])+"°"};
   });
-  return {M:!!g.M,zichtbaar,stippen,cijfers,asUren,astijden,gelabeld:[...new Set(gelabeld)].filter(i=>Number.isInteger(i)&&i<zichtbaar.length).sort((a,b)=>a-b),
+  /* Telefoon: past het cijfer van het eerste uur nergens naast de nu-lijn,
+     dan noemt "nu 18°" de temperatuur van dat uur. */
+  const nuTekst=[...svg.querySelectorAll("text")].find(el=>/^nu(\s|$)/.test(el.textContent.trim()));
+  const nuAnker=nuTekst&&nuTekst.hasAttribute("data-mobile-temp-anchor-index")?Number(nuTekst.getAttribute("data-mobile-temp-anchor-index")):null;
+  return {M:!!g.M,zichtbaar,stippen,cijfers,asUren,astijden,nuAnker,gelabeld:[...new Set(gelabeld)].filter(i=>Number.isInteger(i)&&i<zichtbaar.length).sort((a,b)=>a-b),
     tijden:g.TI.slice(0,zichtbaar.length)};
 }
 
@@ -137,8 +141,9 @@ function meet(){
         const laagste=Math.min(...m.zichtbaar),hoogste=Math.max(...m.zichtbaar);
         assert.equal(laagste,reeks.laagste,label+": de testreeks moet het dal van "+reeks.laagste+"° in beeld hebben");
         /* Iedere astijd: stip en eigen temperatuur. */
-        const leeg=m.astijden.filter(a=>!a.stip||a.cijfer!==a.verwacht).map(a=>a.tijd+(a.stip?"":" zonder stip")+(a.cijfer===a.verwacht?"":" cijfer "+(a.cijfer||"ontbreekt")+" (verwacht "+a.verwacht+")"));
-        assert.deepEqual(leeg,[],label+": astijden zonder stip of eigen temperatuur");
+        if(m.nuAnker!==null)assert(m.M&&m.nuAnker===m.asUren[0],label+": alleen op de telefoon en alleen het eerste uur mag zijn temperatuur aan het nu-label overlaten");
+        const leeg=m.astijden.filter(a=>a.i!==m.nuAnker&&(!a.stip||a.cijfer!==a.verwacht)).map(a=>a.tijd+(a.stip?"":" zonder stip")+(a.cijfer===a.verwacht?"":" cijfer "+(a.cijfer||"ontbreekt")+" (verwacht "+a.verwacht+")"));
+        assert.deepEqual(leeg,[],label+": astijden zonder stip of eigen temperatuur: "+leeg.join(", "));
         const min=m.cijfers.find(s=>s.type==="min"),max=m.cijfers.find(s=>s.type==="max");
         assert(min&&Number.isInteger(min.i),label+": geen cijfer voor het laagste punt");
         /* In de tweede reeks begint het desktopvenster na het hoogste punt en

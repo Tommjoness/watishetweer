@@ -579,6 +579,17 @@ function bouwMobieleTemperatuurRij(){
   const plafond=(bandOnderkanten.length?Math.max(...bandOnderkanten):0)+3;
   const nuLijnVak=Number.isFinite(nuX)?{x:nuX-3,y:plafond,width:6,height:bottom-plafond}:null;
   if(nuLijnVak)vast.push(nuLijnVak);
+  /* De rode nu-stip blijft vrij. Het cijfer van het eerste uur laat ook de
+     vaste plek van "nu 18°" vlak rechtsboven die stip vrij (nuPlek): het
+     nu-label wijkt daarna wel, maar alleen dicht bij zijn stip is het
+     duidelijk de nu-waarde. */
+  const nuY=nuPunt?Number(nuPunt.getAttribute("cy")):NaN;
+  let nuPlek=null;
+  if(Number.isFinite(nuX)&&Number.isFinite(nuY)){
+    vast.push({x:nuX-4,y:nuY-4,width:8,height:8});
+    const nuFs=nuTekst&&Number(nuTekst.getAttribute("font-size"))||11;
+    nuPlek=nuTekst&&geschatteSvgTekstBox(nuTekst.textContent,nuX+4,nuY-5,"start",nuFs)||null;
+  }
   /* Links van het eerste uur staan de asgetallen; een label daar leest als asgetal. */
   const asKolom=Number(g.x(0))-4;
   const lijnen=[...svg.querySelectorAll("path[data-mobile-line-points]")]
@@ -709,20 +720,31 @@ function bouwMobieleTemperatuurRij(){
     /* Piek of dal staat hier zelf, met eigen stip en cijfer: geen tweede stip. */
     if(markering){gedekt.push(i);const p=puntPerIndex.get(i);if(p&&p.isConnected)p.remove();vast.push({x:x-3,y:y-3,width:6,height:6});return;}
     const tekst=Math.round(Number(g.T[i]))+"°",kandidaten=ankerKandidaten(x,y),buur=buurPlek(i);
+    const bijNu=nuPlek&&Number.isFinite(nuIndex)&&Math.abs(i-nuIndex)<1.5;
+    if(bijNu)vast.push(nuPlek);
     let pos=null;
     if(buur){vast.push(cel(buur.box));pos=plaats(tekst,kandidaten,true);vast.pop();if(pos&&pos.y<y-21)pos=null;}
     if(!pos)pos=plaats(tekst,kandidaten,true);
-    /* Het eerste uur ligt soms zo dicht bij de nu-lijn dat er tussen de
-       asgetallen en die lijn geen cijfer past. Dan mag het cijfer over de dunne
-       lijn heen staan; de rand in papierkleur onderbreekt haar daar even. */
-    let overNuLijn=false;
-    if(!pos&&nuLijnVak){vast.splice(vast.indexOf(nuLijnVak),1);pos=plaats(tekst,kandidaten,true);vast.push(nuLijnVak);overNuLijn=!!pos;}
+    /* Het eerste uur ligt vlak voor de nu-lijn: tussen de asgetallen en die
+       lijn past geen cijfer, en op de lijn staat nooit tekst. Dan staat het
+       cijfer direct naast de nu-lijn, eerst rechts, anders links. */
+    if(!pos&&nuLijnVak&&Math.abs(nuX-x)<uurBreedte*1.5){
+      const r=nuLijnVak.x+nuLijnVak.width+3,l=nuLijnVak.x-3;
+      pos=plaats(tekst,[[r,y-9,"start"],[r,y-15,"start"],[r,y-3,"start"],[r,y-21,"start"],[l,y-9,"end"],[l,y-15,"end"],[r,y+fs+4,"start"]],false);
+    }
+    /* Past ook dat niet (smal scherm: links de asgetallen, rechts de nu-stip
+       en "nu 18°"), dan noemt het nu-label de temperatuur van dit eerste uur,
+       zoals vroeger. Alleen op de telefoon en alleen voor het uur van nu. */
+    if(bijNu)vast.splice(vast.indexOf(nuPlek),1);
+    if(!pos&&nuTekst&&Number.isFinite(nuIndex)&&Math.abs(i-nuIndex)<1.5){
+      nuTekst.setAttribute("data-mobile-temp-anchor-index",String(i));gedekt.push(i);
+      const p=puntPerIndex.get(i);if(p&&p.isConnected)p.remove();return;
+    }
     if(!pos){ontbrekend.push(i);const p=puntPerIndex.get(i);if(p&&p.isConnected)p.remove();return;}
     ankerPunt(i,x,y);
     const el=label(tekst,pos);
     el.setAttribute("data-mobile-temp-index",String(i));el.setAttribute("data-mobile-temp-label","1");el.setAttribute("data-mobile-temp-priority","anchor");
     if(pos.x!==x)el.setAttribute("data-mobile-edge-adjusted","1");
-    if(overNuLijn)el.setAttribute("data-over-nu-lijn","1");
     voorScrub(el);gelabeld.push(i);ankerLabels.set(i,el);
   });
   puntPerIndex.forEach((el,i)=>{if(el.isConnected&&!gelabeld.includes(i))el.remove();});
@@ -1197,7 +1219,8 @@ function koppelTijdAanTemperatuur(){
       const anderen=[...svg.querySelectorAll("text")].filter(t=>t!==nuLabel&&!t.closest("#scrub")&&t.getAttribute("display")!=="none").map(svgTekstBoxUitElement).filter(Boolean);
       const vrij=([dx,y])=>{el.setAttribute("x",String(px+dx));el.setAttribute("y",String(y));const b=svgTekstBoxUitElement(el);return !!b&&b.y>=1&&!anderen.some(a=>rechthoekenBotsen(a,b,2))&&!lijnPunten.some(p=>lijnRaaktTekstBox(p,b,1));};
       sjabloonCijfer.parentNode.insertBefore(el,sjabloonCijfer.nextSibling);
-      if(![[0,py-9],[0,py-15],[8,py-9],[-8,py-9],[0,py+fs+5],[0,py-21]].some(vrij)){el.setAttribute("x",String(px));el.setAttribute("y",String(py-9));}
+      /* Liever geen cijfer dan een cijfer op de lijn of op andere tekst. */
+      if(![[0,py-9],[0,py-15],[8,py-9],[-8,py-9],[0,py+fs+5],[0,py-21],[10,py-15],[-10,py-15],[8,py+fs+5],[-8,py+fs+5],[0,py-27]].some(vrij)){el.remove();return;}
       perIndex.set(i,[el]);
       if(puntSjabloon){
         const punt=puntSjabloon.cloneNode(false);
@@ -1417,7 +1440,7 @@ function bewaakGrafiekLabels(){
     if(stipVakken.some(s=>rechthoekenBotsen(box,s,0.5)))return true;
     if(staven.some(s=>rechthoekenBotsen(box,s,1)))return true;
     if(iconen.some(s=>rechthoekenBotsen(box,s,1)))return true;
-    if(!isNu(el)&&!el.hasAttribute("data-over-nu-lijn")&&nuLijnen.some(s=>rechthoekenBotsen(box,s,1)))return true;
+    if(!isNu(el)&&nuLijnen.some(s=>rechthoekenBotsen(box,s,1)))return true;
     for(const [ander,b] of vakken){if(groep.includes(ander)||!b||negeerNu&&isNu(ander))continue;if(rechthoekenBotsen(box,b,1))return true;}
     return false;
   };
@@ -1447,10 +1470,12 @@ function bewaakGrafiekLabels(){
     }
     /* Een gewoon tussencijfer zonder vrije plek vervalt, zoals in de basisgrafiek:
        de waarde blijft in de lijn, het aantikken en de uurtabel. Het nu-label,
-       piek en dal en de cijfers op de astijden blijven altijd. */
+       piek en dal en de drie-uursankers op de telefoon blijven altijd. Een
+       astijdcijfer op desktop of tablet zonder vrije plek vervalt liever dan
+       dat het op de lijn of andere tekst staat. */
     if(!zet&&!raakt)return;
     if(!zet){
-      const vast=isNu(el)||isAnker(el)||isMarkering(el);
+      const vast=isNu(el)||isMarkering(el)||el.hasAttribute("data-mobile-temp-label");
       if(!vast){groep.forEach(t=>{t.setAttribute("display","none");t.setAttribute("data-label-verborgen","botsing");vakken.set(t,null);});}
       return;
     }
