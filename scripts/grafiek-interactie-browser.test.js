@@ -244,7 +244,11 @@ function verwacht(m){
           for(const p of plan){
             const c=m.cijfers.find(x=>x.type===p.type),s=m.stippen.find(x=>x.type===p.type);
             assert(c&&Number.isInteger(c.i),label+": geen "+p.type+"-cijfer");
-            assert(p.idx.includes(c.i),label+": het "+p.type+"-cijfer staat op index "+c.i+" en niet op het echte "+(p.type==="max"?"hoogste":"laagste")+" punt ("+p.idx.join("/")+")");
+            /* Op het echte extreem, of (eigenaar, 1 oktober) op een astijd met
+               dezelfde afgeronde waarde als het extreem tussen twee astijden valt:
+               een astijd houdt dan haar eigen cijfer en dat wordt het vette cijfer. */
+            const opAstijd=m.asUren.includes(c.i)&&Math.round(m.zicht[c.i])===p.waarde&&p.idx.some(k=>Math.abs(k-c.i)<=3);
+            assert(p.idx.includes(c.i)||opAstijd,label+": het "+p.type+"-cijfer staat op index "+c.i+" en niet op het echte "+(p.type==="max"?"hoogste":"laagste")+" punt ("+p.idx.join("/")+") of een astijd met dezelfde afgeronde waarde");
             assert(c.tekst===p.waarde+"°",label+": het "+p.type+"-cijfer is "+c.tekst+", verwacht "+p.waarde+"°");
             assert(Math.abs(c.x-m.x[c.i])<=14,label+": het "+p.type+"-cijfer staat niet boven zijn punt");
             /* Afgerond op honderdsten: 12,000001 is 12 (afronding van de browser). */

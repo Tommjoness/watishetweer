@@ -345,6 +345,26 @@ function bestaandeUurLabels(svg,g){
     return isUurAsLabel(el.textContent,el.getAttribute("y"),plotOnder,el.getAttribute("font-family"));
   }):[];
 }
+/* Het uur onder iedere zichtbare tijd op de as: de mobiele as noemt haar
+   index; elders het uur van de tekst (een venster van 25 uur noemt een uur
+   twee keer: neem het dichtste), anders het dichtste punt. */
+function asTijdIndices(svg,g){
+  const uit=new Map();
+  if(!svg||!g||!Array.isArray(g.TI)||typeof g.x!=="function")return uit;
+  const n=g.TI.length,x=i=>Number(g.x(i));
+  const dichtst=(px,past)=>{let b=null;for(let i=0;i<n;i++){if(past&&!past(i))continue;if(b===null||Math.abs(x(i)-px)<Math.abs(x(b)-px))b=i;}return b;};
+  bestaandeUurLabels(svg,g).filter(el=>!el.closest("#scrub")&&el.getAttribute("display")!=="none").forEach(el=>{
+    let i;
+    if(el.hasAttribute("data-mobile-hour-index"))i=Number(el.getAttribute("data-mobile-hour-index"));
+    else{
+      const t=String(el.textContent||"").trim(),px=Number(el.getAttribute("x"));
+      const opTekst=dichtst(px,k=>String(g.TI[k]).slice(11,16)===t);
+      i=opTekst!==null?opTekst:dichtst(px);
+    }
+    if(Number.isInteger(i))uit.set(i,el);
+  });
+  return uit;
+}
 function stileerUurAsLabel(el){
   if(!el)return;
   el.setAttribute("font-family","Instrument Sans,ui-sans-serif,system-ui,sans-serif");
@@ -547,7 +567,8 @@ function bouwMobieleTemperatuurRij(){
      bovenaan. Een positie telt alleen als ze vrij is van de lijn, de nu-lijn en
      alle bestaande tekst (nu-label, asgetallen, regenperiodes); past ze nergens,
      dan vervalt het label liever dan te botsen. */
-  const vast=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")).map(svgTekstBoxUitElement).filter(Boolean);
+  /* Het nu-label telt hier niet mee: het wijkt zelf voor de cijfers (polishNuLabel). */
+  const vast=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&el!==nuTekst).map(svgTekstBoxUitElement).filter(Boolean);
   /* Plafond: een label mag boven de plotrand uitsteken tot net onder de dag/
      nachtband. Anders valt de temperatuur bij een piek vlak onder de bovenste
      asgrens onder de lijn, waar ze niet meer bij haar punt hoort. Alleen wat
@@ -556,7 +577,19 @@ function bouwMobieleTemperatuurRij(){
     ?Number(el.getAttribute("y"))+Number(el.getAttribute("height"))
     :Math.max(Number(el.getAttribute("y1")),Number(el.getAttribute("y2")))).filter(b=>Number.isFinite(b)&&b<top-4);
   const plafond=(bandOnderkanten.length?Math.max(...bandOnderkanten):0)+3;
-  if(Number.isFinite(nuX))vast.push({x:nuX-3,y:plafond,width:6,height:bottom-plafond});
+  const nuLijnVak=Number.isFinite(nuX)?{x:nuX-3,y:plafond,width:6,height:bottom-plafond}:null;
+  if(nuLijnVak)vast.push(nuLijnVak);
+  /* De rode nu-stip blijft vrij. Het cijfer van het eerste uur laat ook de
+     vaste plek van "nu 18°" vlak rechtsboven die stip vrij (nuPlek): het
+     nu-label wijkt daarna wel, maar alleen dicht bij zijn stip is het
+     duidelijk de nu-waarde. */
+  const nuY=nuPunt?Number(nuPunt.getAttribute("cy")):NaN;
+  let nuPlek=null;
+  if(Number.isFinite(nuX)&&Number.isFinite(nuY)){
+    vast.push({x:nuX-4,y:nuY-4,width:8,height:8});
+    const nuFs=nuTekst&&Number(nuTekst.getAttribute("font-size"))||11;
+    nuPlek=nuTekst&&geschatteSvgTekstBox(nuTekst.textContent,nuX+4,nuY-5,"start",nuFs)||null;
+  }
   /* Links van het eerste uur staan de asgetallen; een label daar leest als asgetal. */
   const asKolom=Number(g.x(0))-4;
   const lijnen=[...svg.querySelectorAll("path[data-mobile-line-points]")]
@@ -594,43 +627,64 @@ function bouwMobieleTemperatuurRij(){
      boven "27°" oogde onrustig. De stip en het vette cijfer tonen het hoogste
      en laagste punt; de tijd staat op de uuras eronder en bij aantikken. */
 
-  /* 1. Piek en dal gaan voor. Iedere temperatuur staat BOVEN haar punt, ook het
-     dal: onder de lijn leest een getal als de temperatuur van het vlak eronder,
-     niet van dat punt. Eerst recht erboven, dan licht verschoven, dan schuin
-     erboven, dan hoger (een smal dal wordt naar boven toe breder). Alleen de
-     waarde: "min 3°" leest als min 3 graden (-3°); de stip zegt al wat het is. */
+  /* Iedere tijd op de uuras houdt haar stip en temperatuur, ook het eerste uur
+     naast "nu" en een uur vlak naast piek of dal (verzoek van de eigenaar,
+     1 oktober: "waarom mist 12:00 een stip met temperatuur?"). Volgorde:
+     1. piek of dal precies op een astijd: het vette cijfer is dan het cijfer
+        van die astijd;
+     2. de overige drie-uursankers;
+     3. piek of dal tussen twee astijden: noemt de astijd ernaast afgerond
+        dezelfde waarde, dan wordt dat cijfer het vette cijfer (geen tweede
+        "13°" vlak naast "13°"). Anders een eigen cijfer vlak bij het punt, als
+        dat past zonder een astijdcijfer of -stip te raken. Past het niet, dan
+        wordt het cijfer van de dichtstbijzijnde astijd met dezelfde afgeronde
+        waarde het vette cijfer: een cijfer noemt altijd de waarde van zijn
+        eigen punt.
+     Iedere temperatuur staat BOVEN haar punt, ook het dal: onder de lijn leest
+     een getal als de temperatuur van het vlak eronder. Eerst recht erboven, dan
+     licht verschoven, dan schuin erboven, dan hoger. Alleen de waarde: "min 3°"
+     leest als min 3 graden (-3°); de stip zegt al wat het is. Het nu-label
+     zoekt daarna zelf een vrije plek (polishNuLabel). */
   const getoond=[],vervallen=[],markeringen=[];
-  /* De stip en het vette cijfer staan op het echte hoogste en laagste punt, ook
-     tussen twee drie-uursankers in. De uuras houdt haar vaste drie-uursritme;
-     het anker binnen een uur ernaast krijgt geen eigen cijfer (hieronder). Valt
-     piek of dal niet op een anker, dan leest de tijd af van de uuras eronder
-     en bij aantikken. */
-  mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null},grafiekRandWaarden(g,Math.min(24,g.T.length))).forEach(m=>{
-    const px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
-    const verticaal=y=>[[px,y,"middle"],[px+14,y,"middle"],[px-14,y,"middle"]];
-    const dichtbij=[...verticaal(py-9),...verticaal(py-15),[px+7,py-5,"start"],[px-7,py-5,"end"],...verticaal(py-21),...verticaal(py-27),
-      [px,py-33,"middle"],[px,py-39,"middle"],[px,py-45,"middle"]];
-    const pos=plaats(m.waarde+"°",dichtbij,false);
-    if(!pos){vervallen.push(m.type);return;}
+  const markeringDot=(m,px,py)=>{
     const dot=document.createElementNS(SVG_NS,"circle");
     dot.setAttribute("cx",String(px));dot.setAttribute("cy",String(py));dot.setAttribute("r","2.2");dot.setAttribute("fill",ink);
     dot.setAttribute("data-mobile-temp-marker-dot",m.type);voorScrub(dot);
+  };
+  const plaatsMarkering=(m,alleenVlakBij)=>{
+    const px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return false;
+    const verticaal=y=>[[px,y,"middle"],[px+14,y,"middle"],[px-14,y,"middle"]];
+    /* Tussen twee astijden alleen vlak bij het eigen punt: hoger of opzij
+       leest het cijfer als een ander uur. */
+    const dichtbij=alleenVlakBij?[[px,py-9,"middle"],[px,py-15,"middle"],[px+7,py-5,"start"],[px-7,py-5,"end"]]
+      :[...verticaal(py-9),...verticaal(py-15),[px+7,py-5,"start"],[px-7,py-5,"end"],...verticaal(py-21),...verticaal(py-27),
+      [px,py-33,"middle"],[px,py-39,"middle"],[px,py-45,"middle"]];
+    const pos=plaats(m.waarde+"°",dichtbij,false);
+    if(!pos)return false;
+    markeringDot(m,px,py);
     const el=label(m.waarde+"°",pos);
     el.setAttribute("data-mobile-temp-marker",m.type);el.setAttribute("data-mobile-temp-marker-index",String(m.i));
+    if(ankers.includes(m.i))el.setAttribute("data-mobile-temp-covers-anchor",String(m.i));
     voorScrub(el);getoond.push(m.type+":"+m.i);markeringen.push({i:m.i,el,px,py,pos});
-  });
+    return true;
+  };
+  const alleMarkeringen=mobieleGrafiekMarkeringen(g.T,24,{index:nuIndex,waarde:actueelGeldig?Number(actueel):null},grafiekRandWaarden(g,Math.min(24,g.T.length)));
+  /* Past het vette cijfer niet, dan krijgt de astijd hieronder gewoon haar
+     cijfer en wordt dat daarna het vette cijfer. */
+  const uitgesteld=alleMarkeringen.filter(m=>ankers.includes(m.i)&&!plaatsMarkering(m));
 
-  /* 2. Temperatuur per drie-uursanker, boven het punt op de lijn. Een anker
-     binnen een uur van piek of dal, of binnen anderhalf uur van "nu", heeft
-     daar al een temperatuur staan en krijgt geen tweede label. */
-  const gelabeld=[],gedekt=[],ontbrekend=[];
+  /* 2. Temperatuur per drie-uursanker, boven het punt op de lijn. Alleen een
+     anker waar piek of dal zelf staat, heeft zijn cijfer al. */
+  const gelabeld=[],gedekt=[],ontbrekend=[],ankerLabels=new Map();
   /* Altijd boven het punt. Loopt de lijn daar steil, dan schuin erboven aan de
      open kant (stijgend: linksboven, dalend: rechtsboven), en anders hoger: in
-     een smal, steil dal is er pas ruimte waar het dal naar boven breder wordt. */
+     een smal, steil dal is er pas ruimte waar het dal naar boven breder wordt.
+     Pas als er boven het punt nergens plek is, staat het cijfer eronder: een
+     astijd blijft nooit zonder temperatuur. */
   const ankerKandidaten=(x,y)=>[[x,y-9,"middle"],[x,y-15,"middle"],[x+6,y-5,"start"],[x-6,y-5,"end"],[x+8,y-9,"middle"],[x-8,y-9,"middle"],
-    [x,y-21,"middle"],[x+10,y-14,"start"],[x-10,y-14,"end"],[x,y-27,"middle"],[x,y-33,"middle"],[x,y-39,"middle"],[x,y-45,"middle"]];
-  const gedektDoorMarkering=i=>markeringen.find(m=>Math.abs(m.i-i)<=1);
-  const gedektDoorNu=i=>nuTekst&&Number.isFinite(nuIndex)&&Math.abs(i-nuIndex)<1.5;
+    [x,y-21,"middle"],[x+10,y-14,"start"],[x-10,y-14,"end"],[x,y-27,"middle"],[x,y-33,"middle"],[x,y-39,"middle"],[x,y-45,"middle"],
+    [x,y+fs+4,"middle"],[x+8,y+fs+4,"middle"],[x-8,y+fs+4,"middle"]];
+  const gedektDoorMarkering=i=>markeringen.find(m=>m.i===i);
   /* Op een smal scherm liggen twee drie-uursankers maar anderhalve
      cijferbreedte uit elkaar. Een cijfer dat schuin naast zijn punt uitwijkt,
      kan dan de plek van het volgende anker innemen, dat daardoor tot 36px
@@ -639,39 +693,87 @@ function bouwMobieleTemperatuurRij(){
      dit cijfer dan niet binnen 21px van zijn eigen punt past, geldt de
      gewone volgorde. */
   const buurPlek=i=>{
-    const j=ankers[ankers.indexOf(i)+1];if(j===undefined||gedektDoorMarkering(j)||gedektDoorNu(j))return null;
+    const j=ankers[ankers.indexOf(i)+1];if(j===undefined||gedektDoorMarkering(j))return null;
     const x=Number(g.x(j)),y=Number(g.y(Number(g.T[j])));if(!Number.isFinite(x)||!Number.isFinite(y))return null;
     const p=plaats(Math.round(Number(g.T[j]))+"°",ankerKandidaten(x,y),true);
     return p&&p.y>=y-21?p:null;
   };
-  ankers.forEach(i=>{
-    const x=Number(g.x(i)),y=Number(g.y(Number(g.T[i])));
+  const ankerPunt=(i,x,y)=>{
     let punt=puntPerIndex.get(i);
-    const zonderPunt=()=>{if(punt&&punt.isConnected)punt.remove();};
-    if(!Number.isFinite(x)||!Number.isFinite(y)){zonderPunt();return;}
-    const markering=gedektDoorMarkering(i);
-    if(markering){markering.el.setAttribute("data-mobile-temp-covers-anchor",String(i));gedekt.push(i);zonderPunt();return;}
-    if(gedektDoorNu(i)){nuTekst.setAttribute("data-mobile-temp-anchor-index",String(i));gedekt.push(i);zonderPunt();return;}
-    const tekst=Math.round(Number(g.T[i]))+"°",kandidaten=ankerKandidaten(x,y),buur=buurPlek(i);
-    let pos=null;
-    if(buur){vast.push(cel(buur.box));pos=plaats(tekst,kandidaten,true);vast.pop();if(pos&&pos.y<y-21)pos=null;}
-    if(!pos)pos=plaats(tekst,kandidaten,true);
-    if(!pos){ontbrekend.push(i);zonderPunt();return;}
     if(!punt||!punt.isConnected){
-      punt=puntSjabloon?puntSjabloon.cloneNode(false):document.createElementNS(SVG_NS,"circle");
-      voorScrub(punt);
+      punt=puntSjabloon&&puntSjabloon.isConnected?puntSjabloon.cloneNode(false):document.createElementNS(SVG_NS,"circle");
+      voorScrub(punt);puntPerIndex.set(i,punt);
     }
     punt.setAttribute("data-temp-index",String(i));punt.setAttribute("data-mobile-temp-point","1");
     punt.setAttribute("cx",String(x));punt.setAttribute("cy",String(y));
     /* Elk temperatuurpunt dezelfde volle stip als piek en dal (2,2 op de telefoon);
-       piek en dal onderscheiden zich met hun vette cijfer en eigen tijd. */
+       piek en dal onderscheiden zich met hun vette cijfer. */
     punt.setAttribute("r","2.2");punt.setAttribute("fill",ink);punt.removeAttribute("opacity");
+    /* Een stip is ook bezet: een later cijfer (piek of dal ertussen) mag er niet op staan. */
+    vast.push({x:x-3,y:y-3,width:6,height:6});
+    return punt;
+  };
+  ankers.forEach(i=>{
+    const x=Number(g.x(i)),y=Number(g.y(Number(g.T[i])));
+    if(!Number.isFinite(x)||!Number.isFinite(y)){const p=puntPerIndex.get(i);if(p&&p.isConnected)p.remove();return;}
+    const markering=gedektDoorMarkering(i);
+    /* Piek of dal staat hier zelf, met eigen stip en cijfer: geen tweede stip. */
+    if(markering){gedekt.push(i);const p=puntPerIndex.get(i);if(p&&p.isConnected)p.remove();vast.push({x:x-3,y:y-3,width:6,height:6});return;}
+    const tekst=Math.round(Number(g.T[i]))+"°",kandidaten=ankerKandidaten(x,y),buur=buurPlek(i);
+    const bijNu=nuPlek&&Number.isFinite(nuIndex)&&Math.abs(i-nuIndex)<1.5;
+    if(bijNu)vast.push(nuPlek);
+    let pos=null;
+    if(buur){vast.push(cel(buur.box));pos=plaats(tekst,kandidaten,true);vast.pop();if(pos&&pos.y<y-21)pos=null;}
+    if(!pos)pos=plaats(tekst,kandidaten,true);
+    /* Het eerste uur ligt vlak voor de nu-lijn: tussen de asgetallen en die
+       lijn past geen cijfer, en op de lijn staat nooit tekst. Dan staat het
+       cijfer direct naast de nu-lijn, eerst rechts, anders links. */
+    if(!pos&&nuLijnVak&&Math.abs(nuX-x)<uurBreedte*1.5){
+      const r=nuLijnVak.x+nuLijnVak.width+3,l=nuLijnVak.x-3;
+      pos=plaats(tekst,[[r,y-9,"start"],[r,y-15,"start"],[r,y-3,"start"],[r,y-21,"start"],[l,y-9,"end"],[l,y-15,"end"],[r,y+fs+4,"start"]],false);
+    }
+    /* Past ook dat niet (smal scherm: links de asgetallen, rechts de nu-stip
+       en "nu 18°"), dan noemt het nu-label de temperatuur van dit eerste uur,
+       zoals vroeger. Alleen op de telefoon en alleen voor het uur van nu. */
+    if(bijNu)vast.splice(vast.indexOf(nuPlek),1);
+    if(!pos&&nuTekst&&Number.isFinite(nuIndex)&&Math.abs(i-nuIndex)<1.5){
+      nuTekst.setAttribute("data-mobile-temp-anchor-index",String(i));gedekt.push(i);
+      const p=puntPerIndex.get(i);if(p&&p.isConnected)p.remove();return;
+    }
+    if(!pos){ontbrekend.push(i);const p=puntPerIndex.get(i);if(p&&p.isConnected)p.remove();return;}
+    ankerPunt(i,x,y);
     const el=label(tekst,pos);
     el.setAttribute("data-mobile-temp-index",String(i));el.setAttribute("data-mobile-temp-label","1");el.setAttribute("data-mobile-temp-priority","anchor");
     if(pos.x!==x)el.setAttribute("data-mobile-edge-adjusted","1");
-    voorScrub(el);gelabeld.push(i);
+    voorScrub(el);gelabeld.push(i);ankerLabels.set(i,el);
   });
   puntPerIndex.forEach((el,i)=>{if(el.isConnected&&!gelabeld.includes(i))el.remove();});
+
+  /* 3. Piek of dal tussen twee astijden: een eigen cijfer als het past (de
+     astijdcijfers en hun stippen zijn nu bezet). Anders neemt het cijfer van
+     de dichtstbijzijnde astijd met dezelfde afgeronde waarde de rol over. */
+  const maakAnkerMarkering=(m,j)=>{
+    const el=ankerLabels.get(j);
+    ["data-mobile-temp-index","data-mobile-temp-label","data-mobile-temp-priority"].forEach(a=>el.removeAttribute(a));
+    el.setAttribute("data-mobile-temp-marker",m.type);el.setAttribute("data-mobile-temp-marker-index",String(j));el.setAttribute("data-mobile-temp-covers-anchor",String(j));
+    markeringDot(m,Number(g.x(j)),Number(g.y(Number(g.T[j]))));
+    const p=puntPerIndex.get(j);if(p&&p.isConnected)p.remove();
+    ankerLabels.delete(j);gedekt.push(j);getoond.push(m.type+":"+j);
+    markeringen.push({i:j,el});
+  };
+  uitgesteld.forEach(m=>{if(ankerLabels.has(m.i))maakAnkerMarkering(m,m.i);else vervallen.push(m.type);});
+  const ankerMetWaarde=(m,max)=>[...ankerLabels.keys()].filter(j=>Math.round(Number(g.T[j]))===m.waarde&&!gedektDoorMarkering(j)&&Math.abs(j-m.i)<=max)
+    .sort((a,b)=>Math.abs(a-m.i)-Math.abs(b-m.i))[0];
+  alleMarkeringen.filter(m=>!ankers.includes(m.i)).forEach(m=>{
+    const naast=ankers.reduce((b,j)=>b===null||Math.abs(j-m.i)<Math.abs(b-m.i)?j:b,null);
+    let kandidaat=naast!==null&&Math.abs(naast-m.i)<=1.5?ankerMetWaarde(m,1.5):undefined;
+    if(kandidaat===undefined){
+      if(plaatsMarkering(m,true))return;
+      kandidaat=ankerMetWaarde(m,3);
+    }
+    if(kandidaat===undefined){vervallen.push(m.type);return;}
+    maakAnkerMarkering(m,kandidaat);
+  });
 
   svg.setAttribute("data-mobile-temp-line-labels","1");
   svg.setAttribute("data-mobile-temp-anchor-count",String(ankers.length));
@@ -859,10 +961,14 @@ function bouwDesktopGrafiekAccenten(){
   if(regenZichtbaar)svg.setAttribute("data-desktop-weather-icons-skip","regen");else svg.removeAttribute("data-desktop-weather-icons-skip");
 
   /* 3. Hoogste en laagste punt: een volle stip op het echte punt en het cijfer
-     daarboven iets zwaarder en volledig dekkend. Heeft dat uur geen eigen cijfer
-     (drie-uursritme op tablet), dan verhuist het dichtstbijzijnde gelijke cijfer
-     mee met zijn puntje, of komt er een cijfer bij. Een ander cijfer dat het
-     dan raakt, wijkt. Dezelfde keuze als mobiel: een plateau krijgt één
+     daarboven iets zwaarder en volledig dekkend. Heeft dat uur geen eigen
+     cijfer (piek of dal tussen twee astijden), dan komt er een cijfer bij,
+     maar alleen als dat past zonder een astijdcijfer of astijdstip te raken:
+     een astijd houdt altijd haar eigen stip en temperatuur (eigenaar,
+     1 oktober). Past het niet, dan wordt het cijfer van de dichtstbijzijnde
+     astijd met dezelfde afgeronde waarde het vette cijfer; een cijfer noemt
+     altijd de waarde van zijn eigen punt. Een gewoon tussencijfer dat het
+     raakt, wijkt. Dezelfde keuze als mobiel: een plateau krijgt één
      markering, naast "nu" met dezelfde waarde vervalt ze, en een rand van het
      venster telt niet als de reeks daarbuiten verder stijgt of daalt. */
   const actueel=S.d&&S.d.current&&S.d.current.temperature_2m;
@@ -881,60 +987,82 @@ function bouwDesktopGrafiekAccenten(){
   /* Zelfde contract als de basisgrafiek (desktopUurLabels): tot 24 uur en
      minstens 36px per uur krijgt ieder uur een eigen cijfer. */
   const iederUurEenCijfer=g.T.length<=24&&cw>=36;
+  const isAnker=el=>el.hasAttribute("data-desktop-temp-anker");
+  const lijnPuntenAccent=[...svg.querySelectorAll("polyline")].filter(el=>!el.closest("#scrub")).map(l=>String(l.getAttribute("points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
   mobieleGrafiekMarkeringen(g.T,g.T.length,{index:nuIndex,waarde:actueel!==null&&actueel!==undefined&&Number.isFinite(Number(actueel))?Number(actueel):null},grafiekRandWaarden(g,g.T.length)).forEach(m=>{
-    const px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
+    let idx=m.i,px=Number(g.x(m.i)),py=Number(g.y(Number(g.T[m.i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
     const tekst=m.waarde+"°",temperatuurLabels=[...svg.querySelectorAll("text")].filter(isTempLabel);
     let label=null,afstand=Infinity;
     temperatuurLabels.forEach(el=>{
       if(String(el.textContent).trim()!==tekst)return;
       const d=Math.abs(Number(el.getAttribute("x"))-px);if(d<afstand){afstand=d;label=el;}
     });
+    /* Een astijdcijfer met dezelfde afgeronde waarde, hooguit max uur ernaast. */
+    const ankerMetWaarde=max=>temperatuurLabels.filter(el=>isAnker(el)&&String(el.textContent).trim()===tekst)
+      .map(el=>({el,i:Number(el.getAttribute("data-desktop-temp-anker"))})).filter(a=>Number.isInteger(a.i)&&Math.abs(a.i-m.i)<=max)
+      .sort((a,b)=>Math.abs(a.i-m.i)-Math.abs(b.i-m.i))[0];
+    const naarAnker=a=>{label=a.el;idx=a.i;px=Number(g.x(idx));py=Number(g.y(Number(g.T[idx])));};
     if(!label||afstand>cw*.35){
-      if(label&&afstand<=cw*1.2){
-        const lx=Number(label.getAttribute("x")),oud=puntBij(lx,m.waarde);
-        const oudY=oud?Number(oud.getAttribute("cy")):py;
-        bewaar(label,["x","y"]);
-        label.setAttribute("x",String(lx+px-(oud?Number(oud.getAttribute("cx")):lx)));
-        label.setAttribute("y",String(Number(label.getAttribute("y"))+py-oudY));
-        if(oud){bewaar(oud,["cx","cy","data-temp-index"]);oud.setAttribute("cx",String(px));oud.setAttribute("cy",String(py));oud.setAttribute("data-temp-index",String(m.i));}
-      }else{
-        const sjabloon=temperatuurLabels[0];if(!sjabloon)return;
-        label=sjabloon.cloneNode(false);label.textContent=tekst;
-        [...label.attributes].filter(a=>/^data-/.test(a.name)&&a.name!=="data-basis-font-size").forEach(a=>label.removeAttribute(a.name));
-        const fs=Number(label.getAttribute("font-size"))||12;
-        label.setAttribute("x",String(px));label.setAttribute("y",String(m.type==="min"&&py-fs-4<top?py+fs+4:py-8));
-        label.setAttribute("text-anchor","middle");label.setAttribute("data-desktop-temp-added","1");
-        voorScrub(label);
+      label=null;
+      /* Noemt de astijd ernaast al dezelfde waarde, dan wordt dat het vette
+         cijfer: geen tweede "13°" vlak naast "13°". */
+      const ankerIdx=[...temperatuurLabels].filter(isAnker).map(el=>Number(el.getAttribute("data-desktop-temp-anker"))).filter(Number.isInteger);
+      const naast=ankerIdx.reduce((b,j)=>b===null||Math.abs(j-m.i)<Math.abs(b-m.i)?j:b,null);
+      const buur=naast!==null&&Math.abs(naast-m.i)<=1.5?ankerMetWaarde(1.5):null;
+      if(buur)naarAnker(buur);
+    }
+    if(!label){
+      const sjabloon=temperatuurLabels[0];if(!sjabloon)return;
+      const nieuw=sjabloon.cloneNode(false);nieuw.textContent=tekst;
+      [...nieuw.attributes].filter(a=>/^data-/.test(a.name)&&a.name!=="data-basis-font-size").forEach(a=>nieuw.removeAttribute(a.name));
+      nieuw.removeAttribute("display");
+      const fs=Number(nieuw.getAttribute("font-size"))||12;
+      nieuw.setAttribute("x",String(px));nieuw.setAttribute("text-anchor","middle");nieuw.setAttribute("data-desktop-temp-added","1");
+      /* Bezet: alle zichtbare tekst behalve het nu-label (dat wijkt zelf), de
+         stippen op de astijden en de lijn. */
+      const bezet=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&el.getAttribute("display")!=="none"&&!/^nu(?:\s|$)/i.test(String(el.textContent||"").trim())).map(svgTekstBoxUitElement).filter(Boolean)
+        .concat([...svg.querySelectorAll("circle[data-temp-index]")].filter(c=>!c.closest("#scrub")&&c.getAttribute("display")!=="none").map(c=>({x:Number(c.getAttribute("cx"))-4,y:Number(c.getAttribute("cy"))-4,width:8,height:8})));
+      voorScrub(nieuw);
+      const vrij=y=>{
+        if(y-fs<top-2)return false;
+        nieuw.setAttribute("y",String(y));const b=svgTekstBoxUitElement(nieuw);
+        return !!b&&!bezet.some(a=>rechthoekenBotsen(a,b,2))&&!lijnPuntenAccent.some(p=>lijnRaaktTekstBox(p,b,1));
+      };
+      if([py-8,py-14,py+fs+4,py-20].some(vrij)){
+        label=nieuw;
         /* Net als ieder ander uurcijfer een klein puntje op de lijn. */
         const puntSjabloon=svg.querySelector("circle[data-temp-index]");
         if(puntSjabloon){
           const punt=puntSjabloon.cloneNode(false);
           punt.setAttribute("cx",String(px));punt.setAttribute("cy",String(py));punt.setAttribute("data-temp-index",String(m.i));
-          punt.removeAttribute("display");punt.removeAttribute("data-desktop-temp-moved");punt.removeAttribute("data-desktop-temp-yield");
+          ["display","data-desktop-temp-moved","data-desktop-temp-yield","data-desktop-temp-anker"].forEach(a=>punt.removeAttribute(a));
           punt.setAttribute("data-desktop-temp-added","1");puntSjabloon.parentNode.insertBefore(punt,puntSjabloon.nextSibling);
         }
+      }else{
+        nieuw.remove();
+        const anker=ankerMetWaarde(3);
+        if(!anker)return;
+        naarAnker(anker);
       }
     }
-    /* Net als mobiel: het cijfer binnen een uur ernaast wijkt, zodat piek of
-       dal ruimte heeft voor een eigen uurtijd. Een ander cijfer dat het raakt
-       wijkt ook. Dat geldt ook als het cijfer al op het extreem stond (tablet
-       en dagweergave, drie-uursritme); alleen de desktopgrafiek met een cijfer
-       bij ieder uur houdt haar buren. */
-    const verplaatstOfNieuw=label.hasAttribute("data-desktop-temp-moved")||label.hasAttribute("data-desktop-temp-added");
+    /* Een gewoon tussencijfer binnen een uur ernaast of dat het cijfer raakt,
+       wijkt, zodat piek of dal ruimte heeft. Een astijdcijfer wijkt nooit; de
+       desktopgrafiek met een cijfer bij ieder uur houdt al haar buren. */
+    const nieuwCijfer=label.hasAttribute("data-desktop-temp-added");
     const box=svgTekstBoxUitElement(label),uurVan=el=>Math.round((Number(el.getAttribute("x"))-Number(g.x(0)))/cw);
-    if(box&&(verplaatstOfNieuw||!iederUurEenCijfer))[...svg.querySelectorAll("text")].filter(el=>el!==label&&isTempLabel(el)).forEach(el=>{
-      const b=svgTekstBoxUitElement(el);if(Math.abs(uurVan(el)-m.i)>1&&(!b||!rechthoekenBotsen(box,b,2)))return;
+    if(box&&(nieuwCijfer||!iederUurEenCijfer))[...svg.querySelectorAll("text")].filter(el=>el!==label&&isTempLabel(el)&&!isAnker(el)).forEach(el=>{
+      const b=svgTekstBoxUitElement(el);if(Math.abs(uurVan(el)-idx)>1&&(!b||!rechthoekenBotsen(box,b,2)))return;
       el.setAttribute("display","none");el.setAttribute("data-desktop-temp-yield","1");
       const p=puntBij(Number(el.getAttribute("x")),Number(String(el.textContent).trim().replace("°","")));
-      if(p&&Number(p.getAttribute("data-temp-index"))!==m.i){p.setAttribute("display","none");p.setAttribute("data-desktop-temp-yield","1");}
+      if(p&&Number(p.getAttribute("data-temp-index"))!==idx&&!p.hasAttribute("data-desktop-temp-anker")){p.setAttribute("display","none");p.setAttribute("data-desktop-temp-yield","1");}
     });
     label.setAttribute("data-desktop-base-opacity",label.getAttribute("opacity")||"1");
     label.setAttribute("opacity","1");label.setAttribute("font-weight","500");label.setAttribute("data-desktop-temp-marker",m.type);
     const dot=document.createElementNS(SVG_NS,"circle");
     dot.setAttribute("cx",String(px));dot.setAttribute("cy",String(py));dot.setAttribute("r","3");dot.setAttribute("fill",ink);
-    dot.setAttribute("data-desktop-temp-marker-dot",m.type);dot.setAttribute("data-desktop-temp-marker-index",String(m.i));voorScrub(dot);
-    label.setAttribute("data-desktop-temp-marker-index",String(m.i));
-    getoond.push(m.type+":"+m.i);
+    dot.setAttribute("data-desktop-temp-marker-dot",m.type);dot.setAttribute("data-desktop-temp-marker-index",String(idx));voorScrub(dot);
+    label.setAttribute("data-desktop-temp-marker-index",String(idx));
+    getoond.push(m.type+":"+idx);
   });
   /* Geen temperatuurcijfer op een neerslagstaaf: zo'n cijfer leest als een
      getal bij de regen. Een cijfer dat een staaf raakt, schuift in kleine
@@ -1068,29 +1196,31 @@ function koppelTijdAanTemperatuur(){
     });
   });
   /* 4. Desktop en tablet met een vaste as: iedere tijd op de as heeft een
-     temperatuur, zoals de drie-uursankers op de telefoon. Staat piek of dal
-     binnen een uur ernaast, dan noemt dat cijfer de waarde al. Past het cijfer
-     boven noch onder het punt vrij, dan blijft het weg. */
+     stip en een temperatuur, zoals de drie-uursankers op de telefoon. Ook het
+     eerste uur naast "nu" en een uur vlak naast piek of dal (verzoek van de
+     eigenaar, 1 oktober): het nu-label en piek of dal wijken voor dit cijfer,
+     niet andersom. Ieder astijdcijfer krijgt data-desktop-temp-anker, zodat
+     de latere lagen het nooit laten wijken of verplaatsen. Het cijfer staat
+     liefst boven het punt, anders schuin erboven of eronder; is nergens een
+     vrije plek, dan zoekt de laatste botsingscontrole er een. */
   if(vasteAs&&!vasteMobieleAs){
     const sjabloonCijfer=labels.find(el=>!isMarker(el)&&el.isConnected)||labels.find(el=>el.isConnected);
     const puntSjabloon=svg.querySelector("circle[data-temp-index]");
     const lijnPunten=[...svg.querySelectorAll("polyline")].filter(el=>!el.closest("#scrub")).map(l=>String(l.getAttribute("points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
-    const markerBij=i=>[...perIndex.entries()].some(([j,els])=>Math.abs(j-i)<=1&&els.some(isMarker));
-    /* Vlak bij de rode nu-lijn noemt "nu 18°" de temperatuur al. */
-    const nuLijn=[...svg.querySelectorAll("line")].find(l=>!l.closest("#scrub")&&!l.hasAttribute("data-nu-aanloop")&&/carmine/i.test(String(l.getAttribute("stroke")||"")));
-    const nuX=nuLijn?Number(nuLijn.getAttribute("x1")):NaN;
+    const nuLabel=[...svg.querySelectorAll("text")].find(el=>/^nu(?:\s|$)/i.test(String(el.textContent||"").trim()));
     if(sjabloonCijfer)[...metTijd.keys()].sort((a,b)=>a-b).forEach(i=>{
-      const w=rond(i);if(perIndex.has(i)||w===null||markerBij(i))return;
-      if(Number.isFinite(nuX)&&Math.abs(x(i)-nuX)<cw*1.5)return;
+      const w=rond(i);if(w===null)return;
+      if(perIndex.has(i)){perIndex.get(i).forEach(el=>el.setAttribute("data-desktop-temp-anker",String(i)));return;}
       const px=x(i),py=Number(g.y(Number(g.T[i])));if(!Number.isFinite(px)||!Number.isFinite(py))return;
       const el=sjabloonCijfer.cloneNode(false);el.textContent=w+"°";
       [...el.attributes].filter(a=>/^data-/.test(a.name)&&a.name!=="data-basis-font-size").forEach(a=>el.removeAttribute(a.name));
       el.removeAttribute("display");el.setAttribute("text-anchor","middle");el.setAttribute("x",String(px));el.setAttribute("data-desktop-temp-anker",String(i));
       const fs=Number(el.getAttribute("font-size"))||12;
-      const anderen=[...svg.querySelectorAll("text")].filter(t=>!t.closest("#scrub")&&t.getAttribute("display")!=="none").map(svgTekstBoxUitElement).filter(Boolean);
-      const vrij=y=>{el.setAttribute("y",String(y));const b=svgTekstBoxUitElement(el);return !!b&&b.y>=1&&!anderen.some(a=>rechthoekenBotsen(a,b,2))&&!lijnPunten.some(p=>lijnRaaktTekstBox(p,b,1));};
+      const anderen=[...svg.querySelectorAll("text")].filter(t=>t!==nuLabel&&!t.closest("#scrub")&&t.getAttribute("display")!=="none").map(svgTekstBoxUitElement).filter(Boolean);
+      const vrij=([dx,y])=>{el.setAttribute("x",String(px+dx));el.setAttribute("y",String(y));const b=svgTekstBoxUitElement(el);return !!b&&b.y>=1&&!anderen.some(a=>rechthoekenBotsen(a,b,2))&&!lijnPunten.some(p=>lijnRaaktTekstBox(p,b,1));};
       sjabloonCijfer.parentNode.insertBefore(el,sjabloonCijfer.nextSibling);
-      if(![py-9,py+fs+5].some(vrij)){el.remove();return;}
+      /* Liever geen cijfer dan een cijfer op de lijn of op andere tekst. */
+      if(![[0,py-9],[0,py-15],[8,py-9],[-8,py-9],[0,py+fs+5],[0,py-21],[10,py-15],[-10,py-15],[8,py+fs+5],[-8,py+fs+5],[0,py-27]].some(vrij)){el.remove();return;}
       perIndex.set(i,[el]);
       if(puntSjabloon){
         const punt=puntSjabloon.cloneNode(false);
@@ -1239,18 +1369,9 @@ function stippenAlleenBovenTijd(){
   const svg=document.getElementById("chart"),g=S.geo;
   if(!svg||!g||!Array.isArray(g.TI)||typeof g.x!=="function")return;
   const n=g.TI.length,x=i=>Number(g.x(i));
-  const ticks=bestaandeUurLabels(svg,g).filter(el=>!el.closest("#scrub")&&el.getAttribute("display")!=="none");
-  if(!ticks.length)return;
-  const dichtst=(px,past)=>{let b=null;for(let i=0;i<n;i++){if(past&&!past(i))continue;if(b===null||Math.abs(x(i)-px)<Math.abs(x(b)-px))b=i;}return b;};
-  /* Uur onder iedere astijd: de mobiele as noemt haar index; elders het uur van
-     de tekst (een venster van 25 uur noemt een uur twee keer: neem het dichtste),
-     anders het dichtste punt. */
-  const metTijd=new Set(ticks.map(el=>{
-    if(el.hasAttribute("data-mobile-hour-index"))return Number(el.getAttribute("data-mobile-hour-index"));
-    const t=String(el.textContent||"").trim(),px=Number(el.getAttribute("x"));
-    const opTekst=dichtst(px,i=>String(g.TI[i]).slice(11,16)===t);
-    return opTekst!==null?opTekst:dichtst(px);
-  }).filter(i=>Number.isInteger(i)));
+  const metTijd=new Set(asTijdIndices(svg,g).keys());
+  if(!metTijd.size)return;
+  const dichtst=px=>{let b=null;for(let i=0;i<n;i++)if(b===null||Math.abs(x(i)-px)<Math.abs(x(b)-px))b=i;return b;};
   svg.querySelectorAll("circle[data-temp-index],circle[data-mobile-temp-marker-dot],circle[data-desktop-temp-marker-dot]").forEach(c=>{
     if(c.closest("#scrub"))return;
     const i=dichtst(Number(c.getAttribute("cx")));
@@ -1307,19 +1428,24 @@ function bewaakGrafiekLabels(){
     return beste;
   };
   const verschoven=(b,dx,dy)=>b&&{x:b.x+dx,y:b.y+dy,width:b.width,height:b.height};
+  /* Astijdcijfers en piek of dal gaan voor het nu-label: dat wijkt zelf, als
+     laatste. Daarom kijken zij niet naar waar "nu" nu staat. */
+  const isAnker=el=>el.hasAttribute("data-desktop-temp-anker")||el.hasAttribute("data-mobile-temp-label")||el.hasAttribute("data-mobile-temp-covers-anchor");
+  const isMarkering=el=>el.hasAttribute("data-mobile-temp-marker")||el.hasAttribute("data-desktop-temp-marker");
   const botst=(el,box,groep)=>{
     if(!box)return false;
+    const negeerNu=!isNu(el)&&(isAnker(el)||isMarkering(el));
     if(box.x<1||box.x+box.width>W-1||box.y<1||box.y+box.height>H-1)return true;
     if(lijnen.some(p=>lijnRaaktTekstBox(p,box,1)))return true;
     if(stipVakken.some(s=>rechthoekenBotsen(box,s,0.5)))return true;
     if(staven.some(s=>rechthoekenBotsen(box,s,1)))return true;
     if(iconen.some(s=>rechthoekenBotsen(box,s,1)))return true;
     if(!isNu(el)&&nuLijnen.some(s=>rechthoekenBotsen(box,s,1)))return true;
-    for(const [ander,b] of vakken){if(groep.includes(ander)||!b)continue;if(rechthoekenBotsen(box,b,1))return true;}
+    for(const [ander,b] of vakken){if(groep.includes(ander)||!b||negeerNu&&isNu(ander))continue;if(rechthoekenBotsen(box,b,1))return true;}
     return false;
   };
-  /* Eerst het nu-label, dan piek en dal, dan de overige cijfers. */
-  const rang=el=>isNu(el)?0:(el.hasAttribute("data-mobile-temp-marker")||el.hasAttribute("data-desktop-temp-marker"))?1:2;
+  /* Eerst de astijdcijfers, dan piek en dal, dan het nu-label, dan de overige cijfers. */
+  const rang=el=>isNu(el)?2:isAnker(el)?0:isMarkering(el)?1:3;
   beweegbaar.sort((a,b)=>rang(a)-rang(b)).forEach(el=>{
     const tijd=tijdBij.get(el)||null,groep=tijd?[el,tijd]:[el];
     const box=vakken.get(el),tbox=tijd?vakken.get(tijd):null;
@@ -1344,10 +1470,12 @@ function bewaakGrafiekLabels(){
     }
     /* Een gewoon tussencijfer zonder vrije plek vervalt, zoals in de basisgrafiek:
        de waarde blijft in de lijn, het aantikken en de uurtabel. Het nu-label,
-       piek en dal en de vaste drie-uursankers op de telefoon blijven altijd. */
+       piek en dal en de drie-uursankers op de telefoon blijven altijd. Een
+       astijdcijfer op desktop of tablet zonder vrije plek vervalt liever dan
+       dat het op de lijn of andere tekst staat. */
     if(!zet&&!raakt)return;
     if(!zet){
-      const vast=isNu(el)||rang(el)===1||el.hasAttribute("data-mobile-temp-label");
+      const vast=isNu(el)||isMarkering(el)||el.hasAttribute("data-mobile-temp-label");
       if(!vast){groep.forEach(t=>{t.setAttribute("display","none");t.setAttribute("data-label-verborgen","botsing");vakken.set(t,null);});}
       return;
     }
