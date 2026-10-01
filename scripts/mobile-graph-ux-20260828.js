@@ -1447,6 +1447,8 @@ function bewaakGrafiekLabels(){
   /* Eerst de astijdcijfers, dan piek en dal, dan het nu-label, dan de overige cijfers. */
   const rang=el=>isNu(el)?2:isAnker(el)?0:isMarkering(el)?1:3;
   beweegbaar.sort((a,b)=>rang(a)-rang(b)).forEach(el=>{
+    /* "nu 20°" links van de nu-lijn is al vrij geplaatst (polishNuLabel). */
+    if(isNu(el)&&el.hasAttribute("data-now-left"))return;
     const tijd=tijdBij.get(el)||null,groep=tijd?[el,tijd]:[el];
     const box=vakken.get(el),tbox=tijd?vakken.get(tijd):null;
     if(!box)return;
@@ -1515,6 +1517,38 @@ function polishNuLabel(){
   if(!nu)return;
   nu.removeAttribute("data-now-collision-adjusted");nu.removeAttribute("dy");
   if(!mobiel()||window.innerWidth>430){
+    /* Desktop en tablet: "nu 20°" staat links van de rode nu-lijn, naast de
+       nu-stip (verzoek van de eigenaar, 1 oktober): rechts van de lijn staan de
+       uurcijfers, links alleen de asgetallen. Het label is rood en begint met
+       "nu", dus het leest niet als asgetal; het schuift verticaal weg van een
+       asgetal. Past het links nergens vrij, dan blijft het rechts van de lijn. */
+    if(!nu.hasAttribute("data-now-base-x")){
+      nu.setAttribute("data-now-base-x",nu.getAttribute("x"));nu.setAttribute("data-now-base-y",nu.getAttribute("y"));
+      nu.setAttribute("data-now-base-anchor",nu.getAttribute("text-anchor")||"start");
+    }
+    nu.setAttribute("x",nu.getAttribute("data-now-base-x"));nu.setAttribute("y",nu.getAttribute("data-now-base-y"));
+    nu.setAttribute("text-anchor",nu.getAttribute("data-now-base-anchor"));nu.removeAttribute("data-now-left");
+    const nuLijn=[...svg.querySelectorAll("line")].find(l=>!l.closest("#scrub")&&!l.hasAttribute("data-nu-aanloop")&&/carmine/i.test(String(l.getAttribute("stroke")||"")));
+    const nuStip=svg.querySelector('circle[fill="var(--carmine)"][r="3"]');
+    const lx=nuLijn?Number(nuLijn.getAttribute("x1")):NaN,sy=nuStip?Number(nuStip.getAttribute("cy")):NaN;
+    if(Number.isFinite(lx)&&Number.isFinite(sy)){
+      const anderen=teksten.filter(el=>el!==nu&&!el.closest("#scrub")&&el.getAttribute("display")!=="none").map(svgTekstBoxUitElement).filter(Boolean);
+      const stippen=[...svg.querySelectorAll("circle")].filter(c=>!c.closest("#scrub")&&c!==nuStip&&c.getAttribute("display")!=="none")
+        .map(c=>{const cx=Number(c.getAttribute("cx")),cy=Number(c.getAttribute("cy")),r=Number(c.getAttribute("r"))||2;return {x:cx-r-1,y:cy-r-1,width:2*r+2,height:2*r+2};});
+      const lijnen=getekendeLijnPunten(svg);
+      /* De ruimte links van de lijn is smal (de lijn staat vlak naast de
+         asgetallen). Het label is DM Mono: iedere letter is hooguit 0,52 em
+         breed; de algemene schatting (0,66 em) zou het hier onterecht
+         afwijzen. */
+      nu.setAttribute("text-anchor","end");nu.setAttribute("x",String(lx-3));
+      const fs=Number(nu.getAttribute("font-size"))||11,breed=String(nu.textContent).trim().length*fs*.52;
+      const plek=[0,-10,10,-18,18,-26,26].map(d=>sy+fs*.35+d).find(y=>{
+        nu.setAttribute("y",String(y));const b={x:lx-3-breed,y:y-fs*.92,width:breed,height:fs*1.18};
+        return b.x>=1&&!anderen.some(a=>rechthoekenBotsen(a,b,3))&&!stippen.some(s=>rechthoekenBotsen(s,b,1))&&!lijnen.some(p=>lijnRaaktTekstBox(p,b,1));
+      });
+      if(plek!==undefined){nu.setAttribute("data-now-left","1");return;}
+      nu.setAttribute("x",nu.getAttribute("data-now-base-x"));nu.setAttribute("y",nu.getAttribute("data-now-base-y"));nu.setAttribute("text-anchor",nu.getAttribute("data-now-base-anchor"));
+    }
     const vak=svgTekstBoxUitElement(nu);
     if(vak&&teksten.some(el=>el!==nu&&/^-?\d+(?:[.,]\d+)?°$/.test(String(el.textContent||"").trim())&&rechthoekenBotsen(vak,svgTekstBoxUitElement(el),3))){
       nu.setAttribute("dy","12");nu.setAttribute("data-now-collision-adjusted","1");

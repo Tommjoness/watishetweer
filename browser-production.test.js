@@ -89,7 +89,9 @@ const reporter=`<script>
       nuBotst=alleLabels.some(el=>{const r=el.getBoundingClientRect();return nr.width&&r.width&&nr.left<r.right&&nr.right>r.left&&nr.top<r.bottom&&nr.bottom>r.top;});
       nuAfstand=Number.isFinite(ny)&&Number.isFinite(cy)?Math.abs(ny-cy):null;
       nuHalo=nuLabel.getAttribute('paint-order')==='stroke';
-      nuRustig=nuAfstand!==null&&nuAfstand>=12&&!nuBotst&&nuHalo;
+      /* Links van de nu-lijn (desktop, eigenaar 1 oktober) staat het label op de hoogte van de stip, er direct naast: dan moet het de stip niet raken. */
+      const pr=nuPunt.getBoundingClientRect(),nuLinks=nuLabel.getAttribute('data-now-left')==='1'&&nr.right<=pr.left;
+      nuRustig=nuAfstand!==null&&(nuAfstand>=12||nuLinks)&&!nuBotst&&nuHalo;
     }
 
     const hit=document.getElementById('hit'),scrub=document.getElementById('scrub');

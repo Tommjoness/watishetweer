@@ -2,12 +2,25 @@
 
 Deze afspraken zijn vastgelegd door de eigenaar en gelden voor iedere sessie.
 
-## Pull requests: volgen tot mergebaar, nooit zelf mergen zonder akkoord
+## Pull requests: volgen tot mergebaar, daarna zelf mergen
 
 - Volg iedere pull request die je opent of beheert totdat hij gemerged kan worden: alle checks groen op de laatste commit, geen mergeconflict en geen openstaand reviewcommentaar.
 - Faalt er een check, zoek dan de oorzaak, los die op en push een fix. Herhaal dat tot alles groen is. Zet nooit een test uit en sla er ook geen over om groen te worden.
 - Verwerk reviewcommentaar of leg uit waarom niet.
-- **Vraag altijd eerst toestemming aan de eigenaar voordat je merget.** Merge nooit zelfstandig. Een merge naar `main` zet de wijziging direct live via de Cloudflare-productiedeploy.
+- **Je mag zelfstandig mergen** (eigenaar, 1 oktober 2026). Een merge naar `main` zet de wijziging direct live via de Cloudflare-productiedeploy. Merge daarom alleen als al deze voorwaarden gelden:
+  - `npm test` (Node 22) is lokaal groen op de laatste commit;
+  - alle checks op GitHub zijn groen op die commit;
+  - er is geen mergeconflict en er staat geen reviewcommentaar open;
+  - de wijziging doet wat de eigenaar vroeg of goedkeurde, en niet meer.
+- **Vraag wél eerst akkoord** bij:
+  - een zichtbare ontwerpwijziging of een nieuw onderdeel dat de eigenaar nog niet heeft gezien of goedgekeurd;
+  - het verwijderen van functionaliteit;
+  - wijzigingen aan geheimen, sleutels, analytics of privacy;
+  - wijzigingen aan deze werkafspraken zelf.
+- **Na iedere merge:**
+  - controleer de productiedeploy en de productiesmokes;
+  - meld de eigenaar wat er live is gegaan en hoe de deploy verliep;
+  - gaat er iets mis, zet dan direct een herstel klaar (bij voorkeur een revert-PR) en meld het.
 
 ## Werkwijze in deze codebase
 
