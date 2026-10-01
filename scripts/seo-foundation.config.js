@@ -2,8 +2,8 @@
 
 module.exports=Object.freeze({
   canonical:"https://watishetweer.nl/",
-  title:"Weer vandaag en 7-daagse verwachting | watishetweer.nl",
-  description:"Bekijk het actuele weer, neerslag voor de komende uren, de 7-daagse verwachting, luchtkwaliteit en nachtzicht voor plaatsen wereldwijd.",
+  title:"Het weer vandaag, morgen en per uur | watishetweer.nl",
+  description:"Het actuele weer voor elke plek, in Nederland en wereldwijd: hoeveel graden het nu is, regen in de komende uren, het weer per uur, morgen en de 7-daagse verwachting.",
   siteName:"watishetweer.nl",
   alternateNames:Object.freeze(["watishetweer"]),
   organizationId:"https://watishetweer.nl/#organization",

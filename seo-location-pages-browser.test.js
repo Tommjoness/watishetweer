@@ -82,7 +82,7 @@ async function controleer(type,naam){
     assert.equal(staat.search,"",`${naam}: plaatsroute lekt terug naar query-URL`);
     assert.equal(staat.canonical,"https://watishetweer.nl/weer/almere/",`${naam}: canonical wijkt af`);
     assert.equal(staat.base,basis+"/weer/almere/",`${naam}: zonder CSP-verboden base-element moet baseURI de canonieke route blijven`);
-    assert.equal(staat.title,"Weer Almere vandaag en per uur | watishetweer.nl",`${naam}: unieke titel ontbreekt`);
+    assert.equal(staat.title,"Weer Almere vandaag, morgen en per uur",`${naam}: unieke titel ontbreekt`);
     assert(staat.context.includes("Weer in Almere")&&staat.context.includes("Flevoland")&&staat.context.includes("Plaatsen in de buurt"),`${naam}: zichtbare prerendercontext ontbreekt`);
     assert.deepEqual(staat.breadcrumb,[
       {text:"watishetweer.nl",href:"/",current:null},
@@ -131,8 +131,8 @@ async function controleer(type,naam){
     assert(gedeeldeParams.has("plaats"),`${naam}: fallback-deel-URL mist plaatsparameter`);
     assert.equal(gedeeld.title,"Amsterdam · watishetweer.nl",`${naam}: title blijft ten onrechte in de Almere-routecontext hangen`);
     assert.equal(gedeeld.canonical,"https://watishetweer.nl/",`${naam}: canonical blijft ten onrechte de Almere-route claimen`);
-    assert.equal(gedeeld.description,"Bekijk het actuele weer, neerslag voor de komende uren, de 7-daagse verwachting, luchtkwaliteit en nachtzicht voor plaatsen wereldwijd.",`${naam}: route-description wordt niet naar het algemene productcontract hersteld`);
-    assert.equal(gedeeld.ogTitle,"Weer vandaag en 7-daagse verwachting | watishetweer.nl",`${naam}: og:title blijft routegebonden`);
+    assert.equal(gedeeld.description,"Het actuele weer voor elke plek, in Nederland en wereldwijd: hoeveel graden het nu is, regen in de komende uren, het weer per uur, morgen en de 7-daagse verwachting.",`${naam}: route-description wordt niet naar het algemene productcontract hersteld`);
+    assert.equal(gedeeld.ogTitle,"Het weer vandaag, morgen en per uur | watishetweer.nl",`${naam}: og:title blijft routegebonden`);
     assert.equal(gedeeld.ogDescription,gedeeld.description,`${naam}: og:description wijkt na route-exit af van de algemene description`);
     assert.equal(gedeeld.ogUrl,"https://watishetweer.nl/",`${naam}: og:url blijft routegebonden`);
     assert.deepEqual(gedeeld.structured,{"@context":"https://schema.org","@type":"WebSite",name:"watishetweer.nl",url:"https://watishetweer.nl/"},`${naam}: route-structured-data blijft na plaatswissel bestaan`);

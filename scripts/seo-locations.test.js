@@ -23,6 +23,7 @@ for(const loc of LOCATIES){
   assert(titel.startsWith(`Weer ${loc.naam} vandaag`),`${loc.slug}: titel mist plaats/intentie`);
   assert(titel.length<=65,`${loc.slug}: titel te lang voor weergave in Google (${titel.length})`);
   assert(titel.includes("per uur"),`${loc.slug}: titel mist de zoekintentie "per uur"`);
+  assert(titel.includes("morgen")&&desc.includes("morgen"),`${loc.slug}: titel of description mist de zoekintentie "morgen"`);
   assert(desc.includes(loc.naam)&&desc.includes("7-daagse verwachting")&&desc.includes("temperatuur")&&desc.includes("graden"),`${loc.slug}: description mist kerninhoud of zoekintentie`);
   assert(desc.length>=100&&desc.length<=170,`${loc.slug}: description ongeschikte lengte (${desc.length})`);
 
