@@ -109,7 +109,7 @@ async function meetBanner(browserType,naam,viewport,colorScheme){
         rect:{left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height},
         viewport:{width:innerWidth,height:innerHeight},
         overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,
-        role:banner.getAttribute("role"),modal:banner.getAttribute("aria-modal"),labelledby:banner.getAttribute("aria-labelledby"),describedby:banner.getAttribute("aria-describedby"),
+        tag:banner.tagName.toLowerCase(),role:banner.getAttribute("role"),modal:banner.getAttribute("aria-modal"),labelledby:banner.getAttribute("aria-labelledby"),describedby:banner.getAttribute("aria-describedby"),
         titel:document.getElementById("analytics-toestemming-titel")?.textContent||"",
         uitleg:document.getElementById("analytics-toestemming-uitleg")?.textContent||"",
         privacy:banner.querySelector("a")?.getAttribute("href")||"",
@@ -117,6 +117,8 @@ async function meetBanner(browserType,naam,viewport,colorScheme){
       };
     });
     assert.equal(meting.role,"dialog",`${naam}: banner mist dialogsemantiek`);
+    /* role="dialog" is niet toegestaan op <aside> (ARIA in HTML); Lighthouse keurt dat af. */
+    assert.equal(meting.tag,"div",`${naam}: dialoogbanner moet een <div> zijn, geen <${meting.tag}>`);
     assert.equal(meting.modal,"false",`${naam}: niet-blokkerende keuze is ten onrechte modaal`);
     assert.equal(meting.labelledby,"analytics-toestemming-titel",`${naam}: titelrelatie ontbreekt`);
     assert.equal(meting.describedby,"analytics-toestemming-uitleg",`${naam}: uitlegrelatie ontbreekt`);

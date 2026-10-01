@@ -7,7 +7,9 @@ const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const OUT=path.join(__dirname,"..","public");
 const STYLE_ID="wiw-ui-ux-audit-polish-20260913";
 const OWNER_ID="wiw-live-screenshot-polish-20260912";
-const SUPPORT_CONTACT='<p class="footer-contact"><span class="footer-contact-question">Vragen of feedback?</span> <span class="footer-contact-mail">Mail naar <a href="mailto:support@watishetweer.nl">support@watishetweer.nl</a></span></p>';
+/* email_off: Cloudflare laat dit adres dan ongemoeid en voegt geen
+   renderblokkerend email-decode-script aan de pagina toe. */
+const SUPPORT_CONTACT='<p class="footer-contact"><span class="footer-contact-question">Vragen of feedback?</span> <span class="footer-contact-mail">Mail naar <!--email_off--><a href="mailto:support@watishetweer.nl">support@watishetweer.nl</a><!--/email_off--></span></p>';
 
 /* Deze laatste presentatielaag draait na delivery-cleanup. De selectors raken
    alleen leesbaarheid en interactie-affordance; data, grafiekgeometrie, runtime,
