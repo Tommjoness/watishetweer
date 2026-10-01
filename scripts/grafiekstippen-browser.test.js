@@ -132,7 +132,7 @@ function meet(){
   const root="http://127.0.0.1:"+server.address().port;
   const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
   try{
-    for(const [naam,reeks] of Object.entries(REEKSEN))for(const [w,h] of [[390,844],[820,1180],[1366,900]]){
+    for(const [naam,reeks] of Object.entries(REEKSEN))for(const [w,h] of [[390,844],[820,1180],[1366,900],[1920,1080]]){
       REEKS=reeks;
       const label=naam+" "+w+"px";
       const {context,page,fouten}=await open(browser,root,w,h);
@@ -141,6 +141,18 @@ function meet(){
         const laagste=Math.min(...m.zichtbaar),hoogste=Math.max(...m.zichtbaar);
         assert.equal(laagste,reeks.laagste,label+": de testreeks moet het dal van "+reeks.laagste+"° in beeld hebben");
         /* Iedere astijd: stip en eigen temperatuur. */
+        /* Desktop: "nu 18°" staat links van de rode nu-lijn (eigenaar, 1 oktober)
+           en raakt geen andere tekst. */
+        if(w>=1100){
+          const nu=await page.evaluate(()=>{const svg=document.getElementById("chart"),t=[...svg.querySelectorAll("text")].filter(e=>!e.closest("#scrub")&&e.getAttribute("display")!=="none"&&e.getClientRects().length);
+            const nu=t.find(e=>/^nu /.test(e.textContent.trim())),lijn=[...svg.querySelectorAll("line")].find(l=>/carmine/.test(l.getAttribute("stroke")||"")&&!l.hasAttribute("data-nu-aanloop"));
+            if(!nu||!lijn)return null;const r=nu.getBoundingClientRect(),lr=lijn.getBoundingClientRect();
+            const raakt=t.filter(e=>e!==nu).filter(e=>{const b=e.getBoundingClientRect();return b.left<r.right&&b.right>r.left&&b.top<r.bottom&&b.bottom>r.top;}).map(e=>e.textContent.trim());
+            return {links:r.right<=lr.left+0.5,raakt,svgLinks:r.left>=svg.getBoundingClientRect().left-0.5};});
+          assert(nu&&nu.links,label+": het nu-label staat niet links van de rode nu-lijn");
+          assert(nu.svgLinks,label+": het nu-label valt links buiten de grafiek");
+          assert.deepEqual(nu.raakt,[],label+": het nu-label raakt andere tekst");
+        }
         if(m.nuAnker!==null)assert(m.M&&m.nuAnker===m.asUren[0],label+": alleen op de telefoon en alleen het eerste uur mag zijn temperatuur aan het nu-label overlaten");
         const leeg=m.astijden.filter(a=>a.i!==m.nuAnker&&(!a.stip||a.cijfer!==a.verwacht)).map(a=>a.tijd+(a.stip?"":" zonder stip")+(a.cijfer===a.verwacht?"":" cijfer "+(a.cijfer||"ontbreekt")+" (verwacht "+a.verwacht+")"));
         assert.deepEqual(leeg,[],label+": astijden zonder stip of eigen temperatuur: "+leeg.join(", "));
@@ -195,5 +207,5 @@ function meet(){
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
-  console.log("Grafiekstippen OK: hoogste en laagste punt en iedere astijd met stip en eigen temperatuur, op 390, 820 en 1366px, voor twee reeksen.");
+  console.log("Grafiekstippen OK: hoogste en laagste punt en iedere astijd met stip en eigen temperatuur, op 390, 820, 1366 en 1920px, voor twee reeksen; op desktop staat het nu-label links van de nu-lijn.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});
