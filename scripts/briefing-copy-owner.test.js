@@ -15,6 +15,15 @@ assert.equal(briefingGraden(1),"1 graad");
 assert.equal(briefingGraden(-1),"-1 graad");
 assert.equal(briefingGraden(2),"2 graden");
 assert.equal(briefingNachtzin(null,"2026-08-20T02:00",18),"");
+/* Dezelfde regels in de browserhelper die in de app terechtkomt: een
+   ontbrekend minimum (pooldag) geeft geen zin, ook niet om 23:30. */
+{
+  const vm=require("vm");
+  const ctx={eindigGetal:v=>v===null||v===undefined||v===""||!Number.isFinite(Number(v))?null:Number(v),globalThis:{}};
+  vm.runInNewContext(HELPER_PRODUCTIE.replace("function briefing(){\n",""),ctx);
+  for(const leeg of [null,undefined,"","geen"])assert.equal(ctx.weatherNowBriefingNachtzin(leeg,"2026-07-22T23:30",18),"",`browserhelper maakt geen nachtzin zonder minimum (${leeg})`);
+  assert.equal(ctx.weatherNowBriefingNachtzin(0,"2026-07-22T23:30",4),"Vannacht koelt het af naar ongeveer <b>0 graden</b>.","0 graden blijft een geldige waarde");
+}
 assert.equal(briefingNachtzin(16,"2026-08-20T23:30",19),"Vannacht koelt het af naar ongeveer <b>16 graden</b>.");
 assert.equal(briefingNachtzin(1,"2026-08-20T23:30",4),"Vannacht koelt het af naar ongeveer <b>1 graad</b>.");
 assert.equal(briefingNachtzin(-1,"2026-08-20T23:30",3),"Vannacht koelt het af naar ongeveer <b>-1 graad</b>.");

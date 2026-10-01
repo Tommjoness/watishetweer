@@ -49,6 +49,33 @@ try {
   assert.deepEqual(itBody.lijst,[]);
   assert.equal(itBody.reden,"geen plaats-specifieke dekking");
 
+  /* De huidige MeteoAlarm-feed: { warnings: [{ alert: { info: [per taal] } }] }.
+     Groene awareness-1-blokken ("No warnings") en verlopen berichten zijn geen
+     waarschuwing. Een actieve rode waarschuwing met alleen regiocodes (geen
+     polygoon) is niet aan een punt te koppelen: dan nooit "geen waarschuwingen"
+     claimen, maar eerlijk "geen plaats-specifieke dekking". */
+  const nuIso=offset=>new Date(Date.now()+offset*3600000).toISOString();
+  const capBlok=(taal,event,niveau,start,eind,gebied)=>({language:taal,event,severity:niveau.startsWith("4")?"Extreme":"Moderate",onset:start,expires:eind,
+    parameter:[{valueName:"awareness_level",value:niveau}],area:[{areaDesc:gebied,geocode:[{valueName:"EMMA_ID",value:"FR030"}]}],description:"Officiële tekst"});
+  const groen={alert:{info:[capBlok("fr-FR","Aucune vigilance","1; green; Minor",nuIso(-1),nuIso(5),"Paris"),capBlok("en-GB","No warnings","1; green; Minor",nuIso(-1),nuIso(5),"Paris")]}};
+  const verlopen={alert:{info:[capBlok("fr-FR","Vigilance orange orages","3; orange; Severe",nuIso(-10),nuIso(-2),"Gard")]}};
+  const rood={alert:{info:[capBlok("fr-FR","Vigilance rouge pluie-inondation","4; red; Extreme",nuIso(-2),nuIso(10),"Gard"),capBlok("en-GB","Red flood warning","4; red; Extreme",nuIso(-2),nuIso(10),"Gard")]}};
+  const meteoFeed=warnings=>async url=>{
+    const u=String(url);
+    if(u.includes("feeds.meteoalarm.org/api/v1/warnings/feeds-france"))return {ok:true,status:200,headers:{get:()=>null},text:async()=>JSON.stringify({warnings})};
+    if(u.includes("meteoalarm-legacy-atom-france"))return {ok:false,status:503};
+    throw new Error("onverwachte fetch in Frankrijk-test: "+u);
+  };
+  globalThis.fetch=meteoFeed([groen,verlopen,rood]);
+  const fr=await (await api.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=43.84&lon=4.36&land=FR"))).json();
+  assert.equal(fr.dekking,false,"actieve rode waarschuwing zonder polygoon: nooit 'geen waarschuwingen'");
+  assert.equal(fr.reden,"geen plaats-specifieke dekking");
+  assert.deepEqual(fr.lijst,[]);
+  globalThis.fetch=meteoFeed([groen,verlopen]);
+  const frRustig=await (await api.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=43.85&lon=4.37&land=FR"))).json();
+  assert.equal(frRustig.dekking,true,"alleen groene en verlopen berichten: bewezen geen actieve waarschuwing");
+  assert.deepEqual(frRustig.lijst,[]);
+
   /* De grove CONUS-rechthoek overlapt Canada en Mexico. Een expliciete landcode
      moet daar zwaarder wegen dan alleen de rechthoek: Toronto en Monterrey mogen
      nooit naar api.weather.gov worden gestuurd of NWS-dekking:true krijgen. */

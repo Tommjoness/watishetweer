@@ -10,8 +10,10 @@ const HELPER_PRODUCTIE=`function weatherNowBriefingGraden(waarde){
   return String(waarde)+" "+(Number.isFinite(n)&&Math.abs(n)===1?"graad":"graden");
 }
 function weatherNowBriefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){
-  const doel=Number(tmin);
-  if(!Number.isFinite(doel))return "";
+  /* Number(null) is 0: zonder eigen check werd een ontbrekend minimum
+     (pooldag, geen nacht in de verwachting) een zin zonder temperatuur. */
+  const doel=eindigGetal(tmin);
+  if(doel===null)return "";
   const waarde="<b>"+weatherNowBriefingGraden(tmin)+"</b>";
   const m=/T(\\d{2}):(\\d{2})/.exec(String(nuLokaal||""));
   const uur=m?Number(m[1]):null;

@@ -14,7 +14,8 @@ class MemoryCache{
 /* Eén CAP-waarschuwing met een polygoon rond Noord-Holland (lat,lon-paren). */
 const feed={warnings:[{info:[{
   event:"Zware windstoten",severity:"Moderate",description:"Windstoten tot 90 km/u.",
-  onset:"2026-09-23T10:00:00Z",expires:"2026-09-23T20:00:00Z",
+  /* Relatief aan nu: verlopen berichten tellen (terecht) niet als waarschuwing. */
+  onset:new Date(Date.now()-3600000).toISOString(),expires:new Date(Date.now()+6*3600000).toISOString(),
   area:[{areaDesc:"Noord-Holland",polygon:"52.0,4.4 53.0,4.4 53.0,5.3 52.0,5.3 52.0,4.4"}]
 }]}]};
 
