@@ -22,9 +22,10 @@ const PAGINA = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><titl
 async function open(browser, { lader, bundelNaam, bundel }, url, voorbereiding) {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
-  const geladen = [];
+  const geladen = [], aangevraagd = [];
   await ctx.route("**/*", route => {
     const u = new URL(route.request().url());
+    aangevraagd.push(u.href);
     if (u.pathname === "/LADER") return route.fulfill({ contentType: "application/javascript", body: lader });
     if (u.pathname === "/" + bundelNaam) { geladen.push(u.pathname); return route.fulfill({ contentType: "application/javascript", body: bundel }); }
     return route.fulfill({ contentType: "text/html", body: PAGINA });
@@ -32,7 +33,7 @@ async function open(browser, { lader, bundelNaam, bundel }, url, voorbereiding) 
   if (voorbereiding) await ctx.addInitScript(voorbereiding);
   await page.goto("http://test.local" + url);
   await page.waitForTimeout(150);
-  return { ctx, page, geladen };
+  return { ctx, page, geladen, aangevraagd };
 }
 
 (async () => {
@@ -50,6 +51,13 @@ async function open(browser, { lader, bundelNaam, bundel }, url, voorbereiding) 
   assert.deepEqual(t.geladen, ["/" + b.bundelNaam], "precies één vertaalbundel");
   assert.equal(await t.page.evaluate(() => localStorage.getItem("weerbriefing.taal.v1")), '"en"', "keuze bewaard");
   assert.equal(await t.page.evaluate(() => document.title), "Test", "onbekende tekst blijft staan");
+  /* In het Engels komen plaatsnamen in het Engels binnen (Paris, niet Parijs). */
+  await t.page.evaluate(() => Promise.all([
+    fetch("https://geocoding-api.open-meteo.com/v1/search?name=Parijs&count=6&language=nl&format=json").catch(() => null),
+    fetch("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=48.85&longitude=2.35&localityLanguage=nl").catch(() => null)
+  ]));
+  assert(t.aangevraagd.some(u => u.includes("geocoding-api.open-meteo.com") && u.includes("language=en") && !u.includes("language=nl")), "zoeken vraagt Engelse plaatsnamen");
+  assert(t.aangevraagd.some(u => u.includes("bigdatacloud") && u.includes("localityLanguage=en")), "Mijn locatie vraagt een Engelse plaatsnaam");
   await t.page.goto("http://test.local/");
   await t.page.waitForTimeout(150);
   assert.equal(await t.page.evaluate(() => document.documentElement.lang), "en-GB", "bewaarde keuze geldt bij volgend bezoek");
