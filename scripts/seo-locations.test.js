@@ -6,18 +6,11 @@ const {afstandKm,gerelateerdePlaatsen,routeIntro,voegPlaatsNavigatieToe,voegRout
 
 assert(LOCATIES.length>=30,"SEO-kernset moet minimaal 30 echte Nederlandse plaatsen bevatten");
 /* Bewuste uitbreiding (eigenaar, 30-09-2026): woonplaatsen vanaf ~20.000
-   inwoners, geen stadswijken. Tegen thin/doorway-pagina's krijgt iedere
-   plaatspagina een eigen, gemeten klimaatblok (KNMI 1991–2020); zie hieronder
-   en scripts/klimaat-plaatsen.test.js. Verder groeien vraagt weer een bewuste keuze. */
+   inwoners, geen stadswijken. Het klimaatblok (KNMI 1991–2020) is op 1 oktober
+   weer verwijderd: de eigenaar wil alleen actuele, relevante informatie; de
+   plaatspagina's blijven (eigenaar, 1 oktober). Verder groeien vraagt weer een
+   bewuste keuze. */
 assert(LOCATIES.length<=200,"SEO-kernset mag niet ongemerkt uitgroeien tot massale thin-page generatie");
-{
-  const {dichtstbijzijndStation,klimaatHtml,MAX_STATION_KM}=require("./klimaat-plaatsen.js");
-  for(const loc of LOCATIES){
-    const ref=dichtstbijzijndStation(loc);
-    assert(ref&&ref.km<=MAX_STATION_KM,`${loc.slug}: geen KNMI-klimaatstation binnen ${MAX_STATION_KM} km; de pagina zou alleen standaardtekst hebben`);
-    assert(klimaatHtml(loc).includes(`Klimaat in ${loc.naam.replace(/&/g,"&amp;")}`),`${loc.slug}: klimaatblok ontbreekt`);
-  }
-}
 assert(new Set(LOCATIES.map(x=>x.slug)).size===LOCATIES.length,"plaats-slugs moeten uniek zijn");
 assert(new Set(LOCATIES.map(x=>x.naam.toLowerCase())).size===LOCATIES.length,"plaatsnamen moeten uniek zijn");
 for(const loc of LOCATIES){
