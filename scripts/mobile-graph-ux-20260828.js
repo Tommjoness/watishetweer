@@ -1543,6 +1543,10 @@ function polishNuLabel(){
       teksten.forEach(el=>{
         if(el===nu||el.closest("#scrub")||el.getAttribute("display")==="none")return;
         if(!/^-?\d+°$/.test(String(el.textContent||"").trim()))return;
+        /* Alleen de vaste y-as (rechts uitgelijnd links van het plot), nooit
+           een temperatuurcijfer bij een uur: dat kan op tablet net links van
+           de nu-lijn staan en wordt later weer getoond. */
+        if(el.getAttribute("text-anchor")!=="end"||[...el.attributes].some(a=>/^data-(?:desktop-)?temp/.test(a.name)))return;
         const ax=Number(el.getAttribute("x")),ay=Number(el.getAttribute("y"));
         if(!Number.isFinite(ax)||!Number.isFinite(ay)||ax>=lx)return;
         if(Math.abs(ay-doelY)<fsNu*1.6){el.setAttribute("display","none");el.setAttribute("data-as-wijkt-voor-nu","1");}

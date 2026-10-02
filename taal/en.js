@@ -868,7 +868,7 @@
     [new RegExp(`^Hoogste neerslagkans in één uur (\\d+) procent; ${G} mm$`), (m) => `Highest hourly chance of precipitation ${m[1]} per cent; ${getal(m[2])} mm`],
     [/^(\d+(?:[,.]\d+)?) mm$/, (m) => `${getal(m[1])} mm`],
     [/^(\d+)% is de hoogste neerslagkans in één uur in de resterende uren van vandaag\.$/, (m) => `${m[1]}% is the highest hourly chance of precipitation in the remaining hours of today.`],
-    [new RegExp(`^(\\d+)% is de hoogste neerslagkans in één uur op ${D} (\\d{1,2})\\.$`), (m) => `${m[1]}% is the highest hourly chance of precipitation on ${dagKort(m[2])} ${m[3]}.`],
+    [new RegExp(`^(\\d+)% is de hoogste neerslagkans in één uur op ${D} (\\d{1,2})(?: (jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec))?\\.$`), (m) => `${m[1]}% is the highest hourly chance of precipitation on ${dagKort(m[2])} ${m[3]}${m[4] ? " " + maand(m[4]) : ""}.`],
     [new RegExp(`^Neerslag vandaag vanaf nu: (\\d+) procent; ${G} millimeter\\. Minimum en maximum gelden voor de volledige kalenderdag\\.$`), (m) => `Precipitation for the rest of today: ${m[1]} per cent; ${getal(m[2])} millimetres. Minimum and maximum apply to the full calendar day.`],
     [new RegExp(`^Voor vandaag is ${G} uur zon berekend\\.$`), (m) => `${getal(m[1])} ${meervoud(m[1], "hour", "hours")} of sunshine ${meervoud(m[1], "is", "are")} forecast for today.`],
     [new RegExp(`^Verwachte UV-piek (lag )?rond ${T} · (laag|matig|hoog|zeer hoog|extreem)\\.$`), (m) => `Expected UV peak ${m[1] ? "was " : ""}around ${m[2]} · ${UV[m[3]]}.`],
