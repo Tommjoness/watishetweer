@@ -165,10 +165,14 @@ const appPatroon=/^\/app-[0-9a-f]{12}\.min\.js$/;
 const earlyPatroon=/^\/early-[0-9a-f]{12}\.min\.js$/;
 const bootstrapPatroon=/^\/bootstrap-[0-9a-f]{12}(?:\.min)?\.js$/;
 const posthogPatroon=/^\/posthog-analytics\.js$/;
+/* Taallader (taal/lader.js): klein script dat na de delivery-cleanup wordt
+   toegevoegd; in het Nederlands laadt hij niets extra. */
+const taalPatroon=/^\/taal-[0-9a-f]{12}\.js$/;
 const posthogTag='<script src="/posthog-analytics.js" defer data-analytics="posthog"></script>';
 const hoofdBundles=externePaden.filter(src=>appPatroon.test(src));
 const bootstrapBundles=externePaden.filter(src=>bootstrapPatroon.test(src));
 const posthogBundles=externePaden.filter(src=>posthogPatroon.test(src));
+const taalBundles=externePaden.filter(src=>taalPatroon.test(src));
 if(bootstrapBundles.length>1)throw new Error("Homepage mag maximaal één onafhankelijke bootstrapbundle hebben; gevonden "+bootstrapBundles.length+".");
 if(deliveryActief){
   if(hoofdBundles.length!==1)throw new Error("Definitief homepage-artifact moet exact één app-hoofdbundle hebben; gevonden "+hoofdBundles.length+".");
@@ -176,6 +180,7 @@ if(deliveryActief){
   const posthogTags=paginaHtml.split(posthogTag).length-1;
   if(posthogTags!==1)throw new Error("Definitief delivery-artifact moet exact de verwachte privacygerichte PostHog-scripttag bevatten; gevonden "+posthogTags+".");
   if(inlineRuntime.length)throw new Error("Definitief delivery-artifact mag geen executable inline runtime meer bevatten.");
+  if(taalBundles.length!==1)throw new Error("Definitief delivery-artifact moet exact één taallader hebben; gevonden "+taalBundles.length+".");
 }else{
   if(hoofdBundles.length)throw new Error("App-hoofdbundle staat extern vóór de deliverymarker actief is.");
   if(posthogBundles.length)throw new Error("PostHog analytics mag pas na succesvolle delivery-cleanup worden toegevoegd.");
@@ -183,7 +188,7 @@ if(deliveryActief){
   if(onverwacht.length)throw new Error("Onverwachte externe pre-delivery runtime: "+onverwacht.join(", "));
   if(!inlineRuntime.length)throw new Error("Pre-delivery artifact mist de inline WeatherNow-runtime.");
 }
-const externeRuntimePaden=externePaden.filter(src=>!posthogPatroon.test(src));
+const externeRuntimePaden=externePaden.filter(src=>!posthogPatroon.test(src)&&!taalPatroon.test(src));
 const externeRuntime=externeRuntimePaden.map(src=>{
   if(!(appPatroon.test(src)||earlyPatroon.test(src)||bootstrapPatroon.test(src)))throw new Error("Onverwachte externe runtime in definitief artifact: "+src);
   const p=path.join(OUT,src.replace(/^\//,""));
@@ -197,6 +202,9 @@ if(deliveryActief){
   const posthogPad=path.join(OUT,"posthog-analytics.js");
   if(!fs.existsSync(posthogPad))throw new Error("Lokale PostHog-analyticsfile ontbreekt in definitief artifact.");
   new vm.Script(fs.readFileSync(posthogPad,"utf8"),{filename:"public/posthog-analytics.js"});
+  const taalPad=path.join(OUT,taalBundles[0].replace(/^\//,""));
+  if(!fs.existsSync(taalPad))throw new Error("Taallader ontbreekt in definitief artifact: "+taalBundles[0]);
+  new vm.Script(fs.readFileSync(taalPad,"utf8"),{filename:"public"+taalBundles[0]});
 }
 jsonLdScripts.forEach((bron,i)=>{try{JSON.parse(bron);}catch(e){throw new Error("Ongeldige JSON-LD in definitief artifact #"+(i+1)+": "+e.message);}});
 if(deliveryActief){

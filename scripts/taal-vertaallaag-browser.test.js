@@ -39,7 +39,7 @@ const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>
 </body></html>`;
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined });
+  const browser = await chromium.launch({ executablePath: require("./vind-browser.js").vindBrowser() || undefined });
   const page = await browser.newPage();
   const fouten = [];
   page.on("pageerror", e => fouten.push(e.message));

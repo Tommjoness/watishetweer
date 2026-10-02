@@ -55,11 +55,13 @@ async function bouwBundels() {
   return { bundel, bundelNaam, lader, laderNaam, schakelaarZichtbaar: schakelaarZichtbaar === true };
 }
 
-/* Eén ladertag, direct vóór het eerste externe script; anders vóór </body>. */
+/* Eén ladertag, direct vóór het eerste uitgestelde (defer) externe script, zodat
+   hij vóór de app draait; synchrone scripts (zoals het pre-paint themascript vóór
+   de CSS) blijven als eerste staan. Zonder deferred script: vóór </body>. */
 function pasHtmlAan(html, laderNaam) {
   const tag = `<script src="/${laderNaam}" defer data-taal-lader></script>`;
   let uit = String(html).replace(LADER_TAG, "");
-  const eerste = uit.search(/<script\b[^>]*\bsrc=/i);
+  const eerste = uit.search(/<script\b(?=[^>]*\bsrc=)(?=[^>]*\bdefer\b)[^>]*>/i);
   if (eerste >= 0) uit = uit.slice(0, eerste) + tag + "\n" + uit.slice(eerste);
   else if (/<\/body>/i.test(uit)) uit = uit.replace(/<\/body>/i, tag + "\n</body>");
   else throw new Error("Geen plek voor de taallader gevonden.");

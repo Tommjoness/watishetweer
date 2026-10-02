@@ -38,7 +38,7 @@ async function open(browser, { lader, bundelNaam, bundel }, url, voorbereiding) 
 
 (async () => {
   const b = await bouwBundels();
-  const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined });
+  const browser = await chromium.launch({ executablePath: require("./vind-browser.js").vindBrowser() || undefined });
 
   let t = await open(browser, b, "/");
   assert.equal(await t.page.evaluate(() => document.documentElement.lang), "nl", "standaard Nederlands");

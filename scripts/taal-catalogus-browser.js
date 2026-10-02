@@ -116,7 +116,7 @@ async function verzamelCatalogus({ taal = "", publicDir = PUBLIC, willekeurigAan
   });
   await new Promise(r => server.listen(0, "127.0.0.1", r));
   const basis = `http://127.0.0.1:${server.address().port}`;
-  const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined });
+  const browser = await chromium.launch({ executablePath: require("./vind-browser.js").vindBrowser() || undefined });
   const extra = [{ naam: "plaatspagina", url: "/weer/oss/", basis: SCENARIOS[0] }, { naam: "plaatsindex", url: "/weer/", basis: SCENARIOS[0] }, { naam: "over", url: "/over/", basis: SCENARIOS[0] }, { naam: "privacy", url: "/privacy.html", basis: SCENARIOS[0] }];
   const willekeurig = willekeurigAantal ? require("./taal-scenarios-willekeurig.js").willekeurigeScenarios(willekeurigAantal, zaad) : [];
   lijst = [...SCENARIOS.map(s => ({ ...s, basis: s })), ...willekeurig, ...extra.map(e => ({ ...e.basis, naam: e.naam, url: e.url }))];

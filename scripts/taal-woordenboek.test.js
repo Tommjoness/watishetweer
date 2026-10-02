@@ -54,5 +54,9 @@ const een = pasHtmlAan(html, "taal-0123456789ab.js");
 const twee = pasHtmlAan(een, "taal-ba9876543210.js");
 assert.equal((twee.match(/data-taal-lader/g) || []).length, 1, "herhaald toepassen geeft één ladertag");
 assert(twee.indexOf("taal-ba9876543210.js") < twee.indexOf("/app-aaaaaaaaaaaa.min.js"), "lader staat vóór de app");
+/* Subpagina: het synchrone pre-paint themascript blijft vóór de CSS en vóór de lader. */
+const sub = pasHtmlAan('<html><head><script src="/early-1.min.js"></script><style>b{}</style><script src="/page-1.min.js" defer></script></head><body></body></html>', "taal-0123456789ab.js");
+assert(sub.indexOf("/early-1.min.js") < sub.indexOf("<style>") && sub.indexOf("<style>") < sub.indexOf("taal-0123456789ab.js"), "themascript blijft eerst, lader na de CSS");
+assert(sub.indexOf("taal-0123456789ab.js") < sub.indexOf("/page-1.min.js"), "lader vóór het eerste deferred script");
 
 console.log(`Woordenboek Engels: ${v.aantalExact} vaste teksten en ${v.aantalPatronen} zinspatronen; ${Object.keys(verwacht).length} vaste voorbeelden, geen halve vertalingen, Brits Engels en ladertag geslaagd.`);
