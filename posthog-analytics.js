@@ -18,11 +18,13 @@
      heft de afmelding weer op. De parameter wordt direct uit de adresbalk
      gehaald, zodat een gedeelde link niemand anders afmeldt. */
   const AFMELD_KEY="weerbriefing.analytics.uit.v1";
+  const BEZOEKER_KEY="weerbriefing.analytics.id.v1";
   function afgemeld(){
     try{return localStorage.getItem(AFMELD_KEY)==="1";}catch(e){return false;}
   }
   function zetAfmelding(uit){
-    try{if(uit)localStorage.setItem(AFMELD_KEY,"1");else localStorage.removeItem(AFMELD_KEY);}catch(e){}
+    /* Afmelden wist ook de anonieme bezoekers-ID (zie BEZOEKERS-ID hieronder). */
+    try{if(uit){localStorage.setItem(AFMELD_KEY,"1");localStorage.removeItem(BEZOEKER_KEY);}else localStorage.removeItem(AFMELD_KEY);}catch(e){}
   }
   try{
     const adres=new URL(location.href);
@@ -76,6 +78,27 @@
     return "anon_"+Date.now().toString(36)+Math.random().toString(36).slice(2);
   }
 
+  /* BEZOEKERS-ID OP DIT APPARAAT. Eén willekeurige, anonieme identifier in
+     localStorage, zodat te tellen is hoeveel bezoekers terugkomen (eigenaar,
+     2 oktober). Hij zegt niets over de persoon, het apparaat of de plaats, er
+     wordt nog steeds geen PostHog-personenprofiel aangemaakt, en hij wordt na
+     90 dagen vervangen. Afmelden (hierboven) en "Wis lokale gegevens" op de
+     privacypagina wissen hem. Zonder bruikbare opslag (privévenster, geblokkeerde
+     opslag) valt de meting terug op een tijdelijke identifier per pagina. */
+  const BEZOEKER_GELDIG_MS=90*24*60*60*1000;
+  function bezoekersId(){
+    try{
+      const nu=Date.now();
+      let bewaard=null;
+      try{bewaard=JSON.parse(localStorage.getItem(BEZOEKER_KEY)||"null");}catch(e){bewaard=null;}
+      if(bewaard&&typeof bewaard.id==="string"&&/^anon_[0-9a-z-]{8,64}$/i.test(bewaard.id)&&Number.isFinite(bewaard.sinds)&&nu>=bewaard.sinds&&nu-bewaard.sinds<BEZOEKER_GELDIG_MS)return bewaard.id;
+      const id=tijdelijkId();
+      localStorage.setItem(BEZOEKER_KEY,JSON.stringify({id,sinds:nu}));
+      return id;
+    }catch(e){return tijdelijkId();}
+  }
+  /* EINDE BEZOEKERS-ID */
+
   /* Plaatsnamen, coördinaten, querystrings en hashes mogen nooit PostHog-data
      worden. Weerroutes worden daarom bewust tot één generieke route samengevat. */
   function veiligPad(pad){
@@ -119,7 +142,10 @@
     return navigator.standalone===true?"app":"browser";
   }
 
-  const distinctId=tijdelijkId();
+  const distinctId=bezoekersId();
+  /* Taal van de weergave (nl of en). De taallader zet lang="en-GB" vóórdat dit
+     script draait; zo is ook de eerste paginaweergave juist ingedeeld. */
+  const taalNu=()=>/^en\b/i.test(String(document.documentElement&&document.documentElement.lang||""))?"en":"nl";
   const entrySource=herkomstCategorie(document.referrer);
   const launchMode=startmodus();
 
@@ -134,6 +160,7 @@
       "viewport_group":schermgroep(),
       "entry_source":entrySource,
       "launch_mode":launchMode,
+      "taal":taalNu(),
       "analytics_contract":"privacy-safe-v1"
     },extra||{});
     const payload={api_key:PROJECT_TOKEN,event,distinct_id:distinctId,properties};
@@ -221,7 +248,9 @@
       const temperatuur=String(temp.textContent||"").trim();
       const stempel=String(stamp.textContent||"");
       const zichtbaar=getComputedStyle(app).display!=="none"&&getComputedStyle(app).visibility!=="hidden";
-      if(zichtbaar&&!/^(?:--|–)$/.test(temperatuur)&&/^Gegevens opgehaald om \d{2}:\d{2}/.test(stempel)){
+      /* Taalonafhankelijk (audit F11): een tijdstip in de stempel, niet de
+         Nederlandse zin "Gegevens opgehaald om …" (Engels: "Updated at …"). */
+      if(zichtbaar&&!/^(?:--|–)$/.test(temperatuur)&&/\b\d{2}:\d{2}\b/.test(stempel)){
         klaar=true;stop();
         const nu=globalThis.performance&&typeof globalThis.performance.now==="function"?globalThis.performance.now():Date.now();
         /* Alleen ja/nee: zijn er bewaarde plaatsen zichtbaar. Afgelezen uit de
@@ -233,7 +262,7 @@
       if(state.classList.contains("err")){
         klaar=true;stop();
         const tekst=String(state.textContent||"").toLocaleLowerCase("nl-NL");
-        const foutsoort=tekst.includes("internet")?"offline":tekst.includes("duurde te lang")?"timeout":"fetch";
+        const foutsoort=navigator.onLine===false||tekst.includes("internet")?"offline":/duurde te lang|took too long|timed out/.test(tekst)?"timeout":"fetch";
         stuur("weather_view_failed",{failure_type:foutsoort});
       }
     };
