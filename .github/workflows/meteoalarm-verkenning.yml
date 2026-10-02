@@ -1,0 +1,39 @@
+name: MeteoAlarm EDR-verkenning
+
+# Test de MeteoAlarm-API-sleutel (GitHub-secret METEOALARM_API_TOKEN) en legt de
+# structuur van een echt antwoord vast voor de koppeling "waarschuwingen per
+# plaats". Handmatig te starten en op een pull request dat het script of deze
+# workflow wijzigt. De sleutel gaat alleen als Authorization-header mee; het log
+# en de steekproef bevatten geen sleutel en geen ondertekende opslaglinks.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "scripts/meteoalarm-edr-verken.js"
+      - ".github/workflows/meteoalarm-verkenning.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verken:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Steekproef NL, BE en DE (sleutel als header)
+        env:
+          METEOALARM_API_TOKEN: ${{ secrets.METEOALARM_API_TOKEN }}
+        run: node scripts/meteoalarm-edr-verken.js NL BE DE
+      - name: Bewaar geschoonde steekproef
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: meteoalarm-edr-steekproef
+          path: meteoalarm-edr-steekproef.json
+          if-no-files-found: ignore
+          retention-days: 7
