@@ -1531,7 +1531,22 @@ function polishNuLabel(){
     const nuLijn=[...svg.querySelectorAll("line")].find(l=>!l.closest("#scrub")&&!l.hasAttribute("data-nu-aanloop")&&/carmine/i.test(String(l.getAttribute("stroke")||"")));
     const nuStip=svg.querySelector('circle[fill="var(--carmine)"][r="3"]');
     const lx=nuLijn?Number(nuLijn.getAttribute("x1")):NaN,sy=nuStip?Number(nuStip.getAttribute("cy")):NaN;
+    /* Een asgetal dat eerder voor het nu-label wegging, komt bij iedere
+       nieuwe plaatsing eerst terug. */
+    svg.querySelectorAll("text[data-as-wijkt-voor-nu]").forEach(el=>{el.removeAttribute("display");el.removeAttribute("data-as-wijkt-voor-nu");});
     if(Number.isFinite(lx)&&Number.isFinite(sy)){
+      /* Een asgetal op (bijna) dezelfde hoogte als de nu-stip maakt plaats voor
+         het nu-label, in plaats van dat het label wegschuift: "nu 16°" direct
+         boven "16°" leest als een dubbeling (eigenaar, 2 oktober). Het label
+         staat zo precies naast de stip; de as houdt zijn andere getallen. */
+      const fsNu=Number(nu.getAttribute("font-size"))||11,doelY=sy+fsNu*.35;
+      teksten.forEach(el=>{
+        if(el===nu||el.closest("#scrub")||el.getAttribute("display")==="none")return;
+        if(!/^-?\d+°$/.test(String(el.textContent||"").trim()))return;
+        const ax=Number(el.getAttribute("x")),ay=Number(el.getAttribute("y"));
+        if(!Number.isFinite(ax)||!Number.isFinite(ay)||ax>=lx)return;
+        if(Math.abs(ay-doelY)<fsNu*1.6){el.setAttribute("display","none");el.setAttribute("data-as-wijkt-voor-nu","1");}
+      });
       const anderen=teksten.filter(el=>el!==nu&&!el.closest("#scrub")&&el.getAttribute("display")!=="none").map(svgTekstBoxUitElement).filter(Boolean);
       const stippen=[...svg.querySelectorAll("circle")].filter(c=>!c.closest("#scrub")&&c!==nuStip&&c.getAttribute("display")!=="none")
         .map(c=>{const cx=Number(c.getAttribute("cx")),cy=Number(c.getAttribute("cy")),r=Number(c.getAttribute("r"))||2;return {x:cx-r-1,y:cy-r-1,width:2*r+2,height:2*r+2};});

@@ -806,6 +806,8 @@
     [new RegExp(`^${D} (\\d{1,2}) (jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec)$`), (m) => `${dagKort(m[1])} ${m[2]} ${maand(m[3])}`],
     [new RegExp(`^${D} (\\d{1,2}) (jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec) ${T}$`), (m) => `${dagKort(m[1])} ${m[2]} ${maand(m[3])} ${m[4]}`],
     [/^Vandaag (\d{1,2})$/, (m) => `Today ${m[1]}`],
+    [/^Vandaag (\d{1,2}) (jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec)$/, (m) => `Today ${m[1]} ${maand(m[2])}`],
+    [/^(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec)$/i, (m) => `${dagVol(m[1])} ${m[2]} ${maand(m[3])}`],
     [/^(ma|di|wo|do|vr|za|zo) op (ma|di|wo|do|vr|za|zo)$/i, (m) => `${dagKort(m[1].toLowerCase())} night`],
     [new RegExp(`^${D}–${D}$`), (m) => `${dagKort(m[1])}–${dagKort(m[2])}`],
     [/^(Vandaag|Morgen) om (\d{1,2}:\d{2})\.$/, (m) => `${m[1] === "Vandaag" ? "Today" : "Tomorrow"} at ${m[2]}.`],
