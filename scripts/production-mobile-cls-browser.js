@@ -3,6 +3,7 @@
 const assert=require("assert");
 const {chromium}=require("playwright");
 const {isAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
+const {isProviderStoringBericht,beschrijf}=require("./provider-storing.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const verwacht=String(process.env.EXPECTED_SHA||"").trim();
@@ -29,9 +30,15 @@ function clsUit(entries){
   try{
     for(let ronde=0;ronde<RONDEN;ronde++){
       const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2,locale:"nl-NL",serviceWorkers:"block"});
-      const page=await context.newPage(),pageErrors=[],consoleErrors=[];
+      const page=await context.newPage(),pageErrors=[],consoleErrors=[],providerStoringen=[];
       page.on("pageerror",e=>pageErrors.push(String(e)));
-      page.on("console",m=>{if(m.type()==="error"&&!isAlleenGemeld(m.text()))consoleErrors.push(m.text());});
+      page.on("console",m=>{
+        if(m.type()!=="error"||isAlleenGemeld(m.text()))return;
+        /* Een tijdelijke 429/5xx van Open-Meteo vangt de app zelf op; die telt
+           alleen als de pagina daarna geen weerdata toont (zie onder). */
+        if(isProviderStoringBericht(m))providerStoringen.push(beschrijf(m));
+        else consoleErrors.push(m.text());
+      });
       await page.addInitScript(()=>{
         window.__weatherClsEntries=[];
         window.__weatherInitialScrollY=window.scrollY;
@@ -83,8 +90,9 @@ function clsUit(entries){
         assert.equal(meting.finalScrollY,meting.initialScrollY,`ronde ${ronde+1}: scrollY veranderde zonder gebruikersinput van ${meting.initialScrollY} naar ${meting.finalScrollY}`);
         assert.deepEqual(pageErrors,[],`ronde ${ronde+1}: pageerrors ${pageErrors.join(" | ")}`);
         assert.deepEqual(consoleErrors,[],`ronde ${ronde+1}: console-errors ${consoleErrors.join(" | ")}`);
+        assert(!providerStoringen.length||meting.uitkomst==="data",`ronde ${ronde+1}: Open-Meteo-storing ${JSON.stringify(providerStoringen)} en de app herstelde niet (${meting.uitkomst}: ${meting.stateTekst})`);
         resultaten.push({cls,bronnen,uitkomst:meting.uitkomst});
-        console.log(JSON.stringify({ronde:ronde+1,sha:meting.sha,uitkomst:meting.uitkomst,cls:Number(cls.toFixed(4)),scrollY:meting.finalScrollY,grootsteShifts:bronnen}));
+        console.log(JSON.stringify({ronde:ronde+1,sha:meting.sha,uitkomst:meting.uitkomst,cls:Number(cls.toFixed(4)),scrollY:meting.finalScrollY,grootsteShifts:bronnen,...(providerStoringen.length?{opgevangenOpenMeteoStoringen:providerStoringen}:{})}));
       }finally{await context.close();}
     }
   }finally{await browser.close();}
