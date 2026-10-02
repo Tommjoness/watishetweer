@@ -5,7 +5,7 @@
    - Zes tegels: "Tijd tot zonsondergang" en (bij goed zicht) "Zicht" staan
      verborgen; vanaf 600px drie kolommen.
    - Na zonsondergang: "UV-piek morgen" en "Zonuren morgen" met de waarden
-     voor morgen.
+     voor morgen; na een wissel naar een plaats overdag weer "vandaag".
    - Pollen: niveau per soort volgens het National Allergy Bureau (160
      graspollen = veel), met bronvermelding.
    - Nachtzicht: telefoon toont alleen vannacht, desktop drie nachten.
@@ -20,6 +20,8 @@
      direct, in beide richtingen, op telefoon en desktop.
    - Privacy: "Wis lokale gegevens" wist ook de weergavekeuze van de sessie
      en houdt de GA4-toestemmingskeuze.
+   - Engels (audit 2 oktober): UV-kop na plaatswissel, klikbare e-mail,
+     grafiekvenster, themalabels, Maan-kolom en "The Hague" in de lijst.
 
    Draait na: npm run build:cloudflare */
 
@@ -53,6 +55,15 @@ function fixture(sc){
   d.current.time=sc.meting;d.current.temperature_2m=h.temperature_2m[nu];d.current.apparent_temperature=h.temperature_2m[nu]-1;
   return d;
 }
+/* Hetzelfde moment in New York: 16:30 plaatselijke tijd, ruim voor zonsondergang. */
+function fixtureNewYork(sc){
+  const d=fixture(sc);
+  d.latitude=40.7143;d.longitude=-74.006;d.timezone="America/New_York";d.utc_offset_seconds=-14400;
+  const meting=new Date(Date.parse(sc.meting+"Z")-6*3600000).toISOString().slice(0,16);
+  const nu=d.hourly.time.indexOf(meting.slice(0,14)+"00");
+  d.current.time=meting;d.current.is_day=1;d.current.temperature_2m=d.hourly.temperature_2m[nu];d.current.apparent_temperature=d.hourly.temperature_2m[nu]-1;
+  return d;
+}
 const types={".html":"text/html; charset=utf-8",".js":"application/javascript",".css":"text/css",".woff2":"font/woff2",".svg":"image/svg+xml",".json":"application/json",".png":"image/png"};
 const server=http.createServer((req,res)=>{
   let p=new URL(req.url,"http://localhost").pathname;if(p.endsWith("/"))p+="index.html";
@@ -61,15 +72,20 @@ const server=http.createServer((req,res)=>{
   res.writeHead(200,{"content-type":types[path.extname(f)]||"application/octet-stream","cache-control":"no-store"});fs.createReadStream(f).pipe(res);
 });
 
-async function open(browser,root,sc,w,h,pad="/weer/utrecht/"){
+async function open(browser,root,sc,w,h,pad="/weer/utrecht/",taal){
   const mobiel=w<700;
   const context=await browser.newContext({viewport:{width:w,height:h},locale:"nl-NL",timezoneId:"Europe/Amsterdam",serviceWorkers:"block",isMobile:mobiel,hasTouch:mobiel});
   const page=await context.newPage(),fouten=[];
   page.on("pageerror",e=>fouten.push(String(e)));
+  if(taal)await page.addInitScript(t=>{try{localStorage.setItem("weerbriefing.taal.v1",JSON.stringify(t));}catch(_){}},taal);
   if(sc)await page.addInitScript(k=>{const N=Date,s=N.now(),e=N.parse(k);class F extends N{constructor(...a){super(...(a.length?a:[e+N.now()-s]));}static now(){return e+N.now()-s;}}window.Date=F;},sc.klok);
   await page.route("**/*",async r=>{
     const u=new URL(r.request().url());
-    if(sc&&(u.hostname==="api.open-meteo.com"||u.pathname==="/api/forecast"))return r.fulfill({json:fixture(sc)});
+    if(sc&&u.hostname==="geocoding-api.open-meteo.com")return r.fulfill({json:{results:/new york/i.test(u.searchParams.get("name")||"")?[{name:"New York",latitude:40.7143,longitude:-74.006,admin1:"New York",country_code:"US"}]:[]}});
+    if(sc&&(u.hostname==="api.open-meteo.com"||u.pathname==="/api/forecast")){
+      const lat=Number(u.searchParams.get("latitude")||u.searchParams.get("lat"));
+      return r.fulfill({json:Math.abs(lat-40.7143)<0.01?fixtureNewYork(sc):fixture(sc)});
+    }
     if(sc&&u.hostname==="air-quality-api.open-meteo.com")return r.fulfill({json:{current:{european_aqi:30,uv_index:2},hourly:{time:[sc.meting.slice(0,14)+"00"],grass_pollen:[sc.gras],birch_pollen:[0],alder_pollen:[0],mugwort_pollen:[1],ragweed_pollen:[0],olive_pollen:[0]}}});
     if(u.pathname==="/api/waarschuwingen")return r.fulfill({json:{bron:"test",dekking:true,land:"NL",lijst:[]}});
     if(u.pathname.startsWith("/api/"))return r.fulfill({json:{beschikbaar:false}});
@@ -145,6 +161,60 @@ function meet(){
         console.log("SAMENHANG "+label+": "+m.tegels.length+" tegels in "+m.kolommen+" kolom(men), "+m.uvKop+", "+m.nachten+" nacht(en) open"+(w>=1100?", grafiek "+(m.grafiekUren-1)+" uur":"")+".");
       }finally{await context.close();}
     }
+    /* Plaatswissel van avond naar dag, zonder herladen: Utrecht 22:40 (UV-piek
+       morgen) naar New York 16:40. De kop moet terug naar vandaag; eerder bleef
+       "UV-piek morgen" boven de waarde van vandaag staan (audit F01). */
+    for(const [w,h] of [[390,844],[1366,768]]){
+      const label="avond→dag "+w+"px";
+      const {context,page,fouten}=await open(browser,root,SCENARIO.avond,w,h);
+      try{
+        assert.equal((await page.evaluate(meet)).uvKop,"UV-piek morgen",label+": uitgangssituatie is niet de avond");
+        await page.fill("#q","New York");
+        await page.waitForSelector("#res.on div[data-lat]",{timeout:5000});
+        await page.locator("#res div[data-lat]").first().click();
+        await page.waitForFunction(()=>typeof S!=="undefined"&&S.d&&S.d.timezone==="America/New_York"&&document.querySelectorAll("#chart circle").length>0,null,{timeout:15000});
+        await sleep(1500);
+        const m=await page.evaluate(meet);
+        assert.equal(m.uvKop,"UV-piek vandaag",label+": UV-kop bleef na de wissel naar een plaats overdag op morgen staan");
+        assert(!/morgen/.test(m.uvSub),label+": UV-regel gaat overdag over morgen: "+m.uvSub);
+        const zon=m.aq.find(t=>/^Zonuren/.test(t.kop));
+        assert(zon&&zon.kop==="Zonuren",label+": zonurentegel bleef op morgen staan: "+JSON.stringify(zon));
+        assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
+        console.log("SAMENHANG "+label+": na de wissel naar New York staat er weer "+m.uvKop+" en "+zon.kop+".");
+      }finally{await context.close();}
+    }
+    /* Engelse weergave (audit F03–F08): contactlink, grafiekvenster,
+       themalabels en de Maan-kolom zonder extra zichtregel. */
+    {
+      const label="Engels 1440px";
+      const {context,page,fouten}=await open(browser,root,SCENARIO.middag,1440,900,"/weer/utrecht/","en");
+      try{
+        await page.waitForFunction(()=>document.documentElement.lang==="en-GB",null,{timeout:10000});await sleep(800);
+        const r=await page.evaluate(()=>{
+          const zichtbaar=el=>!!el&&el.getClientRects().length>0&&getComputedStyle(el).display!=="none"&&getComputedStyle(el).visibility!=="hidden";
+          const maan=[...document.querySelectorAll("#nights .nachtmaan")].filter(zichtbaar).map(el=>[...el.querySelectorAll("*")].filter(k=>zichtbaar(k)&&!k.children.length).map(k=>k.textContent.trim()).join(" "));
+          const na=sel=>{const el=document.querySelector(sel);return el?getComputedStyle(el,"::after").content:null;};
+          return {mailto:[...document.querySelectorAll('.footer-contact a[href="mailto:support@watishetweer.nl"]')].length,
+            maan,licht:na("#thema .wiw-theme-sun"),donker:na("#thema .wiw-theme-moon")};
+        });
+        assert(r.mailto>=1,label+": de e-mail in de footer is geen klikbare link meer (F03)");
+        assert(r.maan.length&&r.maan.every(t=>!/visibility|zicht/i.test(t)),label+": de Maan-kolom toont een zichtregel: "+JSON.stringify(r.maan.slice(0,2))+" (F08)");
+        if(r.licht!==null)assert.deepEqual([r.licht,r.donker],['"Light"','"Dark"'],label+": themalabels blijven Nederlands (F05)");
+        /* Grafiekvenster bij een gekozen uur. */
+        const hit=await page.$("#hit");await hit.scrollIntoViewIfNeeded();
+        const box=await hit.boundingBox();await page.mouse.move(box.x+box.width*0.35,box.y+box.height*0.5);await sleep(400);
+        const venster=await page.evaluate(()=>[...document.querySelectorAll("#scrub text")].map(t=>t.textContent.trim()));
+        assert(venster.length>=6,label+": het grafiekvenster verschijnt niet ("+venster.length+" teksten)");
+        const nl=venster.filter(t=>/temperatuur|voelt als|bewolking|windstoten|km\/u|neerslag|kans \d|WZW|ZZW|OZO|NNO|ONO/.test(t));
+        assert.deepEqual(nl,[],label+": grafiekvenster bevat Nederlandse tekst (F04): "+JSON.stringify(venster));
+        /* Handmatig donker: de naam van de schakelaar is Engels. */
+        await page.evaluate(()=>document.getElementById("thema-switch").click());await sleep(300);
+        const naam=await page.evaluate(()=>document.getElementById("thema-switch").getAttribute("aria-label")||"");
+        assert(!/Handmatig|Licht|Donker|browsersessie/.test(naam),label+": schakelaarnaam blijft Nederlands (F05): "+naam);
+        assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
+        console.log("SAMENHANG "+label+": mailto blijft, Maan-kolom zonder zichtregel, venster "+JSON.stringify(venster.slice(0,4))+", schakelaar '"+naam+"'.");
+      }finally{await context.close();}
+    }
     /* Plaatsindex. */
     for(const [w,h] of [[390,844],[1366,768]]){
       const {context,page,fouten}=await open(browser,root,null,w,h,"/weer/");
@@ -194,6 +264,20 @@ function meet(){
         assert(!z.leeg,w+"px /weer/: melding 'niet in de lijst' blijft staan bij een leeg zoekveld");
         assert.deepEqual(fouten,[],w+"px /weer/: runtimefouten "+fouten.join(" | "));
         console.log("SAMENHANG /weer/ "+w+"px: Licht | Auto | Donker, terug bovenaan, zoeken filtert.");
+      }finally{await context.close();}
+    }
+    /* Engelse plaatsenlijst: de getoonde naam ("The Hague") en de
+       oorspronkelijke naam ("Den Haag") vinden allebei de plaats (audit F07). */
+    {
+      const {context,page,fouten}=await open(browser,root,null,1366,768,"/weer/","en");
+      try{
+        await page.waitForFunction(()=>document.documentElement.lang==="en-GB",null,{timeout:10000});await sleep(500);
+        const zoekEn=async q=>{await page.fill("#hub-zoek",q);await sleep(150);
+          return page.evaluate(()=>[...document.querySelectorAll(".plaatsen li")].filter(li=>!li.hidden&&li.getClientRects().length).map(li=>li.querySelector("a").textContent.trim()));};
+        assert.deepEqual(await zoekEn("The Hague"),["The Hague"],"/weer/ EN: zoeken op 'The Hague' vindt de plaats niet");
+        assert.deepEqual(await zoekEn("den haag"),["The Hague"],"/weer/ EN: zoeken op 'den haag' vindt de plaats niet meer");
+        assert.deepEqual(fouten,[],"/weer/ EN: runtimefouten "+fouten.join(" | "));
+        console.log("SAMENHANG /weer/ EN: 'The Hague' en 'Den Haag' vinden allebei The Hague.");
       }finally{await context.close();}
     }
     /* Uurtabel naast de desktopgrafiek: ook "WZW 10 Bft" past, zonder

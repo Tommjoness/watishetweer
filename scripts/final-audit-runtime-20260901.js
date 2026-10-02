@@ -207,7 +207,15 @@ function indexMorgenNaZonsondergang(){
 }
 function tegelMet(houder,kop){return [...document.querySelectorAll(houder+" .stat")].find(t=>{const e=t.querySelector(".eyebrow");return e&&e.textContent.trim()===kop;})||null;}
 function uvMorgen(){
-  const uvEl=document.getElementById("uv"),m=indexMorgenNaZonsondergang(),tegel=uvEl&&uvEl.closest(".stat");if(m===null||!tegel)return;
+  const uvEl=document.getElementById("uv"),m=indexMorgenNaZonsondergang(),tegel=uvEl&&uvEl.closest(".stat");if(!tegel)return;
+  /* De UV-tegel staat vast in de pagina: de kop "UV-piek morgen" blijft dus
+     staan tot hij hier wordt teruggezet. Zonder terugzetten hield een wissel
+     van een plaats in de avond naar een plaats overdag (bijv. Amsterdam naar
+     New York) "morgen" boven de waarde van vandaag. */
+  if(m===null){
+    if(tegel.dataset.uvMorgen==="1"){tegel.querySelector(".eyebrow").textContent="UV-piek vandaag";delete tegel.dataset.uvMorgen;}
+    return;
+  }
   const day=S.d.daily,uren=S.d.hourly,datum=day.time[m];
   let piek=null;
   if(uren&&Array.isArray(uren.time)&&Array.isArray(uren.uv_index))uren.time.forEach((t,k)=>{const v=Number(uren.uv_index[k]);if(String(t).slice(0,10)===datum&&Number.isFinite(v)&&(!piek||v>piek.v))piek={v,t};});
@@ -215,7 +223,7 @@ function uvMorgen(){
   if(!piek)return;
   /* WHO-indeling van de UV-index, zoals op de dagtegel. */
   const w=Math.round(Math.max(0,piek.v)),oordeel=typeof uvOordeelGetoond==="function"?uvOordeelGetoond(w):w<=2?"laag":w<=5?"matig":w<=7?"hoog":w<=10?"zeer hoog":"extreem";
-  tegel.querySelector(".eyebrow").textContent="UV-piek morgen";
+  tegel.querySelector(".eyebrow").textContent="UV-piek morgen";tegel.dataset.uvMorgen="1";
   const val=tegel.querySelector(".sval"),sub=tegel.querySelector(".ssub");
   if(val)val.textContent=String(w);
   if(sub)sub.textContent=piek.v<0.5?"Nauwelijks UV verwacht morgen."

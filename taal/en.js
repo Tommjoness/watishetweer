@@ -154,6 +154,8 @@
   const exact = {
     /* Navigatie, kop en bediening */
     "Ga naar hoofdinhoud": "Skip to main content",
+    /* Grafiekvenster bij een gekozen uur (SVG-tekst, audit F04). */
+    "temperatuur": "temperature", "voelt als": "feels like", "wind": "wind", "windstoten": "gusts", "bewolking": "cloud cover", "kans komend uur": "chance next hour", "neerslagkans": "precip. chance",
     "Snel naar weersinformatie": "Jump to weather information",
     "Broodkruimelnavigatie": "Breadcrumb",
     "← Terug naar het weer": "← Back to the weather",
@@ -718,6 +720,8 @@
     /* Losse eenheden en symbolen */
     "km/u": "km/h",
     "korrels/m³": "grains/m³",
+    /* Enkelvoud bij 1 en bij <1: als concentratie-eenheid blijft het Engels "grains/m³". */
+    "korrel/m³": "grains/m³",
     "uur": "hours",
     "u": "h",
     "min": "min",
@@ -752,6 +756,8 @@
     [/^(.+), (.+)$/, (m) => { const l = land(m[2]); return l && !/[.!?]/.test(m[1]) && m[1].length < 60 && !/\b(de|het|een|en|van|voor|niet)\b/.test(m[1]) ? `${m[1]}, ${l}` : null; }],
     [/^Weergave kiezen\. Huidige stand: (automatisch|handmatig) \((Licht|Donker)\)\.$/, (m) => `Choose display. Current setting: ${m[1] === "automatisch" ? "automatic" : "manual"} (${m[2] === "Licht" ? "Light" : "Dark"}).`],
     [/^Weergave kiezen\. Huidige stand: (Licht|Donker)\.$/, (m) => `Choose display. Current setting: ${m[1] === "Licht" ? "Light" : "Dark"}.`],
+    [/^Handmatig (Licht|Donker) voor deze browsersessie\. Klik om (Licht|Donker) te kiezen\.$/, (m) => `Manually ${m[1] === "Licht" ? "Light" : "Dark"} for this browser session. Click to choose ${m[2] === "Licht" ? "Light" : "Dark"}.`],
+    [/^Huidige handmatige keuze: (Licht|Donker) \(deze browsersessie\)\.$/, (m) => `Current manual choice: ${m[1] === "Licht" ? "Light" : "Dark"} (this browser session).`],
     /* Technische locatiegegevens; de hoogte ontbreekt als de bron hem niet levert. */
     [/^(−?-?\d+\.\d+), (−?-?\d+\.\d+)(?: · (\d+) m hoogte)?(?: · modelcel (−?-?\d+\.\d+), (−?-?\d+\.\d+))? · ([A-Za-z_]+\/[A-Za-z_\/-]+)$/, (m) => `${m[1]}, ${m[2]}${m[3] ? ` · ${m[3]} m elevation` : ""}${m[4] ? ` · model cell ${m[4]}, ${m[5]}` : ""} · ${m[6]}`],
     [/^Officiële weerwaarschuwing(?: \((geel|oranje|rood)\))?: (.+)\.$/, (m, hulp) => {
@@ -833,6 +839,11 @@
     [new RegExp(`^${G} km/u$`), (m) => `${getal(m[1])} km/h`],
     [/^(\d+) Bft$/, (m) => `${m[1]} Bft`],
     [/^(N|NNO|NO|ONO|O|OZO|ZO|ZZO|Z|ZZW|ZW|WZW|W|WNW|NW|NNW) (\d+) Bft$/, (m) => `${RICHTING_KORT[m[1]]} ${m[2]} Bft`],
+    /* Grafiekvenster: "16:00 · bewolkt", "kans 16:00–17:00", "12 km/u WZW, 3 Bft". */
+    [/^(\d{2}:\d{2}) · (.+)$/, (m) => weer(m[2]) && `${m[1]} · ${weer(m[2])}`],
+    [/^kans (\d{2}:\d{2})–(\d{2}:\d{2})$/, (m) => `chance ${m[1]}–${m[2]}`],
+    [/^(\d{2}:\d{2}, )?neerslagkans (\d+%)(?:, verwacht (.+))?$/, (m) => `${m[1] || ""}chance of precipitation ${m[2]}${m[3] ? ", expected " + m[3].replace(/(\d),(\d)/g, "$1.$2") : ""}`],
+    [/^(\d+) km\/u(?: (N|NNO|NO|ONO|O|OZO|ZO|ZZO|Z|ZZW|ZW|WZW|W|WNW|NW|NNW))?, (\d+) Bft$/, (m) => `${m[1]} km/h${m[2] ? " " + RICHTING_KORT[m[2]] : ""}, ${m[3]} Bft`],
     [/^(Zwakke|Matige|Vrij krachtige|Krachtige|Harde|Stormachtige) wind uit het ([a-z]+) \((\d+) Bft\)\.$/, (m) => richting(m[2]) && `${alsNl("X", WINDKRACHT[m[1].toLowerCase() + " wind"])} from the ${richting(m[2])} (${m[3]} Bft).`],
     [/^(Storm|Zware storm|Zeer zware storm|Orkaan) uit het ([a-z]+) \((\d+) Bft\)\.$/, (m) => richting(m[2]) && `${alsNl("X", WINDKRACHT[m[1].toLowerCase()])} from the ${richting(m[2])} (${m[3]} Bft).`],
     [/^Windstil\.$/, () => "Calm."],
@@ -873,7 +884,7 @@
     [new RegExp(`^Verwachte UV-piek vandaag: ${G} \\((laag|matig|hoog|zeer hoog|extreem)\\)(\\.?)$`), (m) => `Expected UV peak today: ${getal(m[1])} (${UV[m[2]]})${m[3]}`],
     [/^Gegevens opgehaald om (\d{1,2}:\d{2}) · minder dan 1 min geleden$/, (m) => `Updated at ${m[1]} · less than a minute ago`],
     [/^Gegevens opgehaald om (\d{1,2}:\d{2}) · (\d+) min geleden$/, (m) => `Updated at ${m[1]} · ${m[2]} min ago`],
-    [/^(\d+) ?korrels\/m³$/, (m) => `${m[1]} grains/m³`],
+    [/^(<?\d+) ?korrels?\/m³$/, (m) => `${m[1]} grains/m³`],
     [/^Gemiddeld zicht: (\d+)\+ km$/, (m) => `Average visibility: ${m[1]}+ km`],
     [new RegExp(`^Gemiddeld zicht: ${G} km$`), (m) => `Average visibility: ${getal(m[1])} km`],
     [new RegExp(`^(Slecht|Beperkt) zicht: ${G} km\\.$`), (m) => `${m[1] === "Slecht" ? "Poor" : "Reduced"} visibility: ${getal(m[2])} km.`],

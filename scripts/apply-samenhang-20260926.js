@@ -95,11 +95,13 @@ const HUB_RUNTIME=`(()=>{"use strict";
     const veld=document.getElementById("hub-zoek"),leeg=document.getElementById("hub-leeg");
     if(!veld)return;
     const plat=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
-    /* Zoeken op de plaatsnaam; de provincie eronder telt niet mee. */
-    const items=[...document.querySelectorAll(".plaatsen li")].map(li=>({li,tekst:plat((li.querySelector("a")||li).textContent)}));
+    /* Zoeken op de plaatsnaam; de provincie eronder telt niet mee. Zowel de
+       oorspronkelijke naam als de naam die nu op het scherm staat telt: in het
+       Engels heet Den Haag "The Hague" en moet ook zo vindbaar zijn (audit F07). */
+    const items=[...document.querySelectorAll(".plaatsen li")].map(li=>{const el=li.querySelector("a")||li;return {li,el,origineel:plat(el.textContent)};});
     veld.addEventListener("input",()=>{
       const q=plat(veld.value);let zichtbaar=0;
-      items.forEach(({li,tekst})=>{const ja=!q||tekst.includes(q);li.hidden=!ja;if(ja)zichtbaar++;});
+      items.forEach(({li,el,origineel})=>{const ja=!q||origineel.includes(q)||plat(el.textContent).includes(q);li.hidden=!ja;if(ja)zichtbaar++;});
       if(leeg)leeg.hidden=zichtbaar>0;
     });
   },{once:true});
