@@ -135,6 +135,16 @@ async function open(browser, { lader, bundelNaam, bundel }, url, voorbereiding, 
     assert.deepEqual({ tekst: s.info.tekst, ouder: s.info.ouder }, { tekst: "EN", ouder: "taal-keuze-rij" }, "subpagina: naast de terug-link");
     await s.t.ctx.close();
 
+    /* Engelse subpagina: de knop "NL" blijft Nederlands en telt niet als
+       onvertaalde tekst (hij hoort niet in het zinsblok van de terug-link). */
+    s = await schakelaar(SUBPAGINA, { width: 390, height: 844 }, "/?taal=en");
+    await s.t.page.waitForFunction(() => document.documentElement.hasAttribute("data-taal-klaar"), null, { timeout: 5000 });
+    await s.t.page.waitForTimeout(200);
+    const ontbreekt = await s.t.page.evaluate(() => [...(window.__WIW_TAAL_ONTBREEKT__ || [])]);
+    assert.deepEqual(ontbreekt.filter(x => x === "NL" || x === "Nederlands"), [], "NL-knop telt niet als onvertaald: " + ontbreekt.join(" | "));
+    assert.deepEqual(await s.t.page.evaluate(() => { const a = document.querySelector("[data-taal-keuze]"); return [a.textContent, a.getAttribute("aria-label")]; }), ["NL", "Nederlands"], "NL-knop blijft Nederlands");
+    await s.t.ctx.close();
+
     s = await schakelaar(PAGINA, { width: 390, height: 844 });
     assert.deepEqual({ tekst: s.info.tekst, ouder: s.info.ouder }, { tekst: "EN", ouder: "taal-keuze-boven" }, "andere pagina: bovenaan de inhoud");
     assert.equal(await s.t.page.evaluate(() => document.querySelector("main").firstElementChild.className), "taal-keuze-boven");

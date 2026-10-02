@@ -55,7 +55,7 @@
     ".taal-keuze-hoek{position:absolute;top:0;right:0}" +
     ".mast.taal-keuze-ruimte h1{padding-right:48px}" +
     ".tools>.taal-keuze{border-left:none;padding:0 14px;min-height:0}" +
-    ".taal-keuze-rij{display:flex;justify-content:space-between;align-items:center;gap:12px}" +
+    ".taal-keuze-rij{display:flex;justify-content:space-between;align-items:baseline;gap:12px}" +
     ".taal-keuze-boven{display:flex;justify-content:flex-end;margin:0 0 12px}";
   function zetSchakelaar() {
     if (!SCHAKELAAR || document.querySelector("[data-taal-keuze]")) return;
@@ -99,8 +99,13 @@
       return /^\s*←/.test(l.textContent);
     })[0];
     if (terug) {
-      terug.parentElement.classList.add("taal-keuze-rij");
-      terug.parentElement.appendChild(a);
+      /* Naast de alinea, niet erin: de vertaallaag vertaalt een alinea als één
+         zinsblok, en de knop hoort in zijn eigen taal te blijven. */
+      var alinea = terug.parentElement, rij = document.createElement("div");
+      rij.className = "taal-keuze-rij";
+      alinea.parentNode.insertBefore(rij, alinea);
+      rij.appendChild(alinea);
+      rij.appendChild(a);
       return;
     }
     var houder = document.querySelector("main") || document.body;
