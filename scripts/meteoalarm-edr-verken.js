@@ -51,42 +51,56 @@ async function haal(url, metToken) {
 
 (async () => {
   const nu = new Date();
-  const week = new Date(nu.getTime() - 7 * 864e5);
   const steekproef = { opgehaald: nu.toISOString(), landen: {} };
   const lijst = await haal(ROOT + "/collections/warnings/locations", true);
   steekproef.locaties = { status: lijst.status, ms: lijst.ms, lengte: lijst.lengte, voorbeeld: lijst.status === 200 ? schoon(JSON.parse(lijst.tekst)) : lijst.tekst.slice(0, 300) };
+  /* MeteoAlarm-regels die niet in de documentatie staan (gemeten):
+     - active heeft een eind nodig ("invalid active: invalid to date");
+     - datetime (verzonden tussen) mag hooguit 24 uur beslaan.
+     Daarom eerst: werkt het zonder datetime? Daarna per venster van net
+     onder 24 uur over de afgelopen drie dagen, zodat zichtbaar wordt hoe oud
+     de nog geldende waarschuwingen zijn. */
+  const straks = new Date(nu.getTime() + 7 * 864e5);
+  const actief = nu.toISOString() + "/" + straks.toISOString();
+  const VENSTER = 24 * 3600e3 - 60e3;
   for (const land of LANDEN) {
-    /* MeteoAlarm weigert een open eind ("invalid active: invalid to date"),
-       ook al noemt de documentatie het toegestaan: geef een vast venster. */
-    const straks = new Date(nu.getTime() + 7 * 864e5);
-    const q = new URLSearchParams({ datetime: week.toISOString() + "/" + nu.toISOString(), active: nu.toISOString() + "/" + straks.toISOString() });
-    const r = await haal(ROOT + "/collections/warnings/locations/" + land + "?" + q, true);
-    const uit = { status: r.status, ms: r.ms, type: r.type, lengte: r.lengte, headers: r.ratelimit };
-    if (r.status === 200) {
-      const d = JSON.parse(r.tekst);
-      uit.topniveau = Object.keys(d);
-      uit.numberMatched = d.numberMatched; uit.numberReturned = d.numberReturned;
-      uit.links = schoon(d.links);
-      const f = d.features || [];
-      uit.aantalFeatures = f.length;
-      uit.propertySleutels = [...new Set(f.flatMap(x => Object.keys(x.properties || {})))].sort();
-      uit.featureTypes = [...new Set(f.map(x => x.properties && x.properties.featureType))];
-      uit.geometrieTypes = [...new Set(f.map(x => x.geometry && x.geometry.type))];
-      uit.talen = [...new Set(f.map(x => x.properties && (x.properties.language || x.properties.hubLanguage)))];
-      uit.voorbeeldFeatures = schoon(f.slice(0, 3));
-      /* Eén exacte vorm en één CAP-bericht, om hun structuur te kennen. */
-      const eerste = f.find(x => Array.isArray(x.links) && x.links.length);
-      if (eerste) {
-        for (const l of eerste.links) {
-          const s = await haal(l.href, false);
-          let inhoud = s.tekst.slice(0, 200);
-          try { inhoud = schoon(JSON.parse(s.tekst)); } catch (e) {}
-          uit["gekoppeld_" + (l.rel || l.type)] = { status: s.status, ms: s.ms, type: s.type, lengte: s.lengte, inhoud };
-        }
+    const uit = { varianten: {}, vensters: [] };
+    const zonder = await haal(ROOT + "/collections/warnings/locations/" + land + "?" + new URLSearchParams({ active: actief }), true);
+    uit.varianten.zonderDatetime = { status: zonder.status, ms: zonder.ms, lengte: zonder.lengte, fout: zonder.status === 200 ? null : zonder.tekst.slice(0, 200) };
+    let gekozen = zonder.status === 200 ? JSON.parse(zonder.tekst) : null;
+    const alle = [];
+    for (let i = 0; i < 3; i++) {
+      const tot = new Date(nu.getTime() - i * VENSTER), van = new Date(tot.getTime() - VENSTER);
+      const r = await haal(ROOT + "/collections/warnings/locations/" + land + "?" + new URLSearchParams({ datetime: van.toISOString() + "/" + tot.toISOString(), active: actief }), true);
+      const v = { venster: van.toISOString() + "/" + tot.toISOString(), status: r.status, ms: r.ms, lengte: r.lengte, headers: r.ratelimit };
+      if (r.status === 200) {
+        const d = JSON.parse(r.tekst);
+        v.numberMatched = d.numberMatched; v.numberReturned = d.numberReturned; v.features = (d.features || []).length;
+        v.alertIds = new Set((d.features || []).map(x => x.properties && x.properties.alertId)).size;
+        alle.push(...(d.features || []));
+        if (!gekozen && (d.features || []).length) gekozen = d;
+      } else v.fout = r.tekst.slice(0, 200);
+      uit.vensters.push(v);
+    }
+    const f = gekozen ? (gekozen.features || []) : alle;
+    if (gekozen) { uit.topniveau = Object.keys(gekozen); uit.links = schoon(gekozen.links); }
+    uit.aantalFeatures = f.length;
+    uit.propertySleutels = [...new Set(f.flatMap(x => Object.keys(x.properties || {})))].sort();
+    uit.featureTypes = [...new Set(f.map(x => x.properties && x.properties.featureType))];
+    uit.geometrieTypes = [...new Set(f.map(x => x.geometry && x.geometry.type))];
+    uit.voorbeeldFeatures = schoon(f.slice(0, 3));
+    const eerste = f.find(x => Array.isArray(x.links) && x.links.length);
+    if (eerste) {
+      for (const l of eerste.links) {
+        const s = await haal(l.href, false);
+        let inhoud = s.tekst.slice(0, 200);
+        try { inhoud = schoon(JSON.parse(s.tekst)); } catch (e) {}
+        uit["gekoppeld_" + (l.rel || l.type)] = { status: s.status, ms: s.ms, type: s.type, lengte: s.lengte, inhoud };
       }
-    } else uit.fout = r.tekst.slice(0, 300);
+    }
+    uit.status = zonder.status === 200 || uit.vensters.some(v => v.status === 200) ? 200 : uit.vensters[0].status;
     steekproef.landen[land] = uit;
-    console.log(`${land}: HTTP ${r.status}, ${r.ms} ms, ${r.lengte} bytes, ${uit.aantalFeatures ?? "?"} features (numberMatched ${uit.numberMatched ?? "?"})`);
+    console.log(`${land}: zonder datetime HTTP ${zonder.status}; vensters ${uit.vensters.map(v => v.status + (v.features != null ? "/" + v.features + "f" : "")).join(", ")}`);
   }
   const json = JSON.stringify(steekproef, null, 1);
   if (json.includes(TOKEN)) throw new Error("Token zou in de steekproef komen; afgebroken.");
