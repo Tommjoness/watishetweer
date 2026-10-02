@@ -42,32 +42,72 @@
       location.reload();
     }
   });
-  /* De schakelaar: één tekstlink onderaan, in de andere taal geschreven.
-     Op de weerpagina naast "Over deze site" en "Privacy"; elders onderaan de inhoud. */
+  /* De schakelaar: een kleine "EN"/"NL"-knop rechtsboven, in de andere taal.
+     Weerpagina: op een smal scherm in de hoek naast de merknaam, op een breed
+     scherm als laatste vakje in de zoekbalk. Subpagina's: rechts naast
+     "← Terug naar het weer". Anders bovenaan de inhoud, rechts uitgelijnd. */
+  var STIJL = ".taal-keuze{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;" +
+    "min-width:32px;min-height:28px;padding:0 9px;border:1px solid var(--rule,#DCE1DE);color:var(--ink-70,inherit);" +
+    "font-family:var(--sans,inherit);font-weight:500;font-size:11px;line-height:1;letter-spacing:.12em;text-decoration:none}" +
+    ".taal-keuze:hover{border-color:var(--ink,currentColor);color:var(--ink,inherit)}" +
+    ".taal-keuze:focus-visible{outline:1px solid var(--ink,currentColor);outline-offset:2px}" +
+    ".mast.taal-keuze-plek{position:relative}" +
+    ".taal-keuze-hoek{position:absolute;top:0;right:0}" +
+    ".mast.taal-keuze-ruimte h1{padding-right:48px}" +
+    ".tools>.taal-keuze{border-left:none;padding:0 14px;min-height:0}" +
+    ".taal-keuze-rij{display:flex;justify-content:space-between;align-items:center;gap:12px}" +
+    ".taal-keuze-boven{display:flex;justify-content:flex-end;margin:0 0 12px}";
   function zetSchakelaar() {
     if (!SCHAKELAAR || document.querySelector("[data-taal-keuze]")) return;
     var doel = taal === "en" ? "nl" : "en";
     var a = document.createElement("a");
     a.href = "?taal=" + doel;
-    a.textContent = doel === "en" ? "English" : "Nederlands";
+    a.className = "taal-keuze";
+    a.textContent = doel.toUpperCase();
+    a.setAttribute("aria-label", doel === "en" ? "English" : "Nederlands");
     a.setAttribute("lang", doel === "en" ? "en-GB" : "nl");
     a.setAttribute("hreflang", doel === "en" ? "en-GB" : "nl");
     a.setAttribute("translate", "no");
     a.setAttribute("data-taal-keuze", doel);
     a.addEventListener("click", function (e) { e.preventDefault(); window.WeatherNowTaal.kies(doel); });
-    var privacy = document.querySelector('footer a[href="/privacy"]');
-    if (privacy && privacy.parentElement) {
-      var span = document.createElement("span");
-      span.className = privacy.parentElement.className || "bron";
-      span.appendChild(a);
-      privacy.parentElement.parentElement.insertBefore(span, privacy.parentElement.nextSibling);
+    var stijl = document.createElement("style");
+    stijl.textContent = STIJL;
+    (document.head || document.documentElement).appendChild(stijl);
+
+    var mast = document.querySelector(".mast");
+    var tools = mast && mast.querySelector(".tools");
+    if (mast) {
+      mast.classList.add("taal-keuze-plek");
+      var breed = window.matchMedia ? window.matchMedia("(min-width: 901px)") : null;
+      var plaats = function () {
+        var hoek = !(tools && breed && breed.matches);
+        /* In de hoek houdt een lange kop ("Weer in Capelle aan den IJssel
+           vandaag") ruimte vrij voor de knop. */
+        a.classList.toggle("taal-keuze-hoek", hoek);
+        mast.classList.toggle("taal-keuze-ruimte", hoek);
+        if (hoek) mast.appendChild(a);
+        else tools.insertBefore(a, tools.querySelector(".results"));
+      };
+      plaats();
+      if (breed) {
+        if (breed.addEventListener) breed.addEventListener("change", plaats);
+        else if (breed.addListener) breed.addListener(plaats);
+      }
       return;
     }
-    var main = document.querySelector("main") || document.body;
+    var terug = [].filter.call(document.querySelectorAll('p > a[href="/"]'), function (l) {
+      return /^\s*←/.test(l.textContent);
+    })[0];
+    if (terug) {
+      terug.parentElement.classList.add("taal-keuze-rij");
+      terug.parentElement.appendChild(a);
+      return;
+    }
+    var houder = document.querySelector("main") || document.body;
     var p = document.createElement("p");
-    p.className = "taal-keuze";
+    p.className = "taal-keuze-boven";
     p.appendChild(a);
-    main.appendChild(p);
+    houder.insertBefore(p, houder.firstChild);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", zetSchakelaar, { once: true });
   else zetSchakelaar();
