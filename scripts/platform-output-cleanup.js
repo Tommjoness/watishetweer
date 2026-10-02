@@ -279,11 +279,21 @@ function voegPostHogNaDeliveryToe(){
   return {...resultaat,cache};
 }
 
+async function voegTaalNaDeliveryToe(){
+  /* De taallader komt, net als analytics, pas na de deliveryguards: de
+     WeatherNow-runtime zelf blijft ongewijzigd en de Nederlandse pagina laadt
+     alleen deze kleine lader. */
+  const resultaat=await require("./apply-taal.js").pasArtifactAan(PUBLIC);
+  const cache=vernieuwServiceworkerCache(PUBLIC,"delivery-taal");
+  return {...resultaat,cache};
+}
+
 if(require.main===module){
-  optimaliseerPublic().then(r=>{
+  optimaliseerPublic().then(async r=>{
     const posthog=voegPostHogNaDeliveryToe();
-    console.log(`Platform/delivery cleanup: ${r.htmlBestanden} HTML-bestanden, ${r.appBundles} gedeelde app-bundle, ${r.pageBundles} page-bundles, ${r.earlyBundles} vroege bundles; bootstrap ${r.bootstrapBundle}; pressure-retired; homepage ${r.rootBundle}; PostHog na delivery op ${posthog.scripts} HTML-bestanden; cache ${posthog.cache}.`);
+    const taal=await voegTaalNaDeliveryToe();
+    console.log(`Platform/delivery cleanup: ${r.htmlBestanden} HTML-bestanden, ${r.appBundles} gedeelde app-bundle, ${r.pageBundles} page-bundles, ${r.earlyBundles} vroege bundles; bootstrap ${r.bootstrapBundle}; pressure-retired; homepage ${r.rootBundle}; PostHog na delivery op ${posthog.scripts} HTML-bestanden; taallader ${taal.lader} op ${taal.bestanden} HTML-bestanden; cache ${taal.cache}.`);
   }).catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
 }
 
-module.exports={hardenRuntime,cssMinify,verzamelRuntime,minifyRuntime,hash12,isWeatherAppBestand,bootstrapUitRoot,migreerCspNaarHeader,optimaliseerPublic,voegPostHogNaDeliveryToe,BRON_SNAPSHOT};
+module.exports={hardenRuntime,cssMinify,verzamelRuntime,minifyRuntime,hash12,isWeatherAppBestand,bootstrapUitRoot,migreerCspNaarHeader,optimaliseerPublic,voegPostHogNaDeliveryToe,voegTaalNaDeliveryToe,BRON_SNAPSHOT};
