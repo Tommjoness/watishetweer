@@ -98,13 +98,29 @@ async function haal(url, metToken) {
         uit["gekoppeld_" + (l.rel || l.type)] = { status: s.status, ms: s.ms, type: s.type, lengte: s.lengte, inhoud };
       }
     }
-    uit.status = zonder.status === 200 || uit.vensters.some(v => v.status === 200) ? 200 : uit.vensters[0].status;
+    uit.status = uit.vensters.some(v => v.status === 200) ? 200 : uit.vensters.every(v => v.status === 204) ? 204 : uit.vensters[0].status;
+    /* Alleen geel/oranje/rood (awareness_level 2|3|4) en pagina 2 van het
+       nieuwste venster: nodig voor de echte koppeling. */
+    const tot0 = nu, van0 = new Date(nu.getTime() - VENSTER);
+    for (const [naam, extra] of [["alleenGeelOranjeRood", { awareness_level: "2|3|4" }], ["pagina2", { page: "2" }]]) {
+      const r = await haal(ROOT + "/collections/warnings/locations/" + land + "?" + new URLSearchParams(Object.assign({ datetime: van0.toISOString() + "/" + tot0.toISOString(), active: actief }, extra)), true);
+      const v = { status: r.status, ms: r.ms, lengte: r.lengte };
+      if (r.status === 200) {
+        const d = JSON.parse(r.tekst);
+        v.features = (d.features || []).length;
+        v.alertIds = new Set((d.features || []).map(x => x.properties && x.properties.alertId)).size;
+        v.metadata = schoon(d.metadata);
+      } else if (r.status !== 204) v.fout = r.tekst.slice(0, 200);
+      uit.varianten[naam] = v;
+    }
+    if (gekozen) uit.metadata = schoon(gekozen.metadata);
     steekproef.landen[land] = uit;
     console.log(`${land}: zonder datetime HTTP ${zonder.status}; vensters ${uit.vensters.map(v => v.status + (v.features != null ? "/" + v.features + "f" : "")).join(", ")}`);
   }
   const json = JSON.stringify(steekproef, null, 1);
   if (json.includes(TOKEN)) throw new Error("Token zou in de steekproef komen; afgebroken.");
-  const mislukt = Object.entries(steekproef.landen).filter(([, v]) => v.status !== 200).map(([k, v]) => k + " " + v.status);
+  /* 204 = geen waarschuwingen in dat venster: een geldig antwoord. */
+  const mislukt = Object.entries(steekproef.landen).filter(([, v]) => v.status !== 200 && v.status !== 204).map(([k, v]) => k + " " + v.status);
   fs.writeFileSync("meteoalarm-edr-steekproef.json", json);
   /* Ook in het log, zodat de structuur zonder artifact-download leesbaar is. */
   console.log("STEEKPROEF\n" + json);
