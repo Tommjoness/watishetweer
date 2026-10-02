@@ -56,7 +56,10 @@ async function haal(url, metToken) {
   const lijst = await haal(ROOT + "/collections/warnings/locations", true);
   steekproef.locaties = { status: lijst.status, ms: lijst.ms, lengte: lijst.lengte, voorbeeld: lijst.status === 200 ? schoon(JSON.parse(lijst.tekst)) : lijst.tekst.slice(0, 300) };
   for (const land of LANDEN) {
-    const q = new URLSearchParams({ datetime: week.toISOString() + "/" + nu.toISOString(), active: nu.toISOString() + "/" });
+    /* MeteoAlarm weigert een open eind ("invalid active: invalid to date"),
+       ook al noemt de documentatie het toegestaan: geef een vast venster. */
+    const straks = new Date(nu.getTime() + 7 * 864e5);
+    const q = new URLSearchParams({ datetime: week.toISOString() + "/" + nu.toISOString(), active: nu.toISOString() + "/" + straks.toISOString() });
     const r = await haal(ROOT + "/collections/warnings/locations/" + land + "?" + q, true);
     const uit = { status: r.status, ms: r.ms, type: r.type, lengte: r.lengte, headers: r.ratelimit };
     if (r.status === 200) {
