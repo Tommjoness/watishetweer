@@ -180,7 +180,7 @@
     "Fryslân": "Friesland",
     "Den Haag": "The Hague",
     "De komende twee uur is de kans op neerslag zeer groot.": "The chance of precipitation in the next two hours is very high.",
-    "De totale zichtscore is hoog; maanlicht maakt de hemel minder donker.": "The overall visibility score is high; moonlight makes the sky less dark.",
+    "De totale zichtscore is hoog; maanlicht maakt de hemel minder donker.": "The overall stargazing score is high; moonlight makes the sky less dark.",
     "Gemiddeld zicht: onbekend": "Average visibility: unknown",
     "Bewaarde plaatsen": "Saved places",
     "Verwijderen": "Remove",
@@ -243,7 +243,7 @@
     "Deze gedeelde locatie is ongeldig. Zoek een plaats of gebruik Mijn locatie.": "This shared location is invalid. Search for a place or use My location.",
     "Deze locatie is ongeldig. Zoek een plaats of gebruik Mijn locatie.": "This location is invalid. Search for a place or use My location.",
     "Weergegevens konden niet worden opgehaald.": "The weather data could not be fetched.",
-    "Verwachting wordt aangevuld.": "The forecast is being completed.",
+    "Verwachting wordt aangevuld.": "Loading the rest of the forecast.",
     "Verwachting niet beschikbaar": "Forecast unavailable",
     "Weerbeeld niet beschikbaar": "Weather overview unavailable",
     "Niet beschikbaar.": "Not available.",
@@ -297,11 +297,11 @@
     "Poolnacht": "Polar night",
     "Zon gaat niet onder": "Sun does not set",
     "Zon komt niet op": "Sun does not rise",
-    "Nachtzicht": "Night sky",
+    "Nachtzicht": "Stargazing",
     "Maan": "Moon",
-    "Zichtscore": "Visibility score",
+    "Zichtscore": "Stargazing score",
     "Beoordeling": "Rating",
-    "Indicatie": "Indication",
+    "Indicatie": "Estimate",
     "Beste zichtperiode": "Best viewing window",
     "Volgende volledige nacht": "Next full night",
     "Pollen": "Pollen",
@@ -325,7 +325,7 @@
     "Neerslag komend uur": "Precipitation next hour",
     "Neerslagkans komend uur": "Chance of precipitation next hour",
     "Neerslag komende twee uur": "Precipitation next two hours",
-    "Neerslag per kwartier": "Precipitation per quarter of an hour",
+    "Neerslag per kwartier": "Precipitation per 15 minutes",
     "Neerslag nu": "Precipitation now",
     "Samenvatting neerslag komende twee uur": "Summary of precipitation over the next two hours",
     "Verwachte neerslag komend uur": "Expected precipitation next hour",
@@ -334,7 +334,7 @@
     "Neerslagtype": "Type of precipitation",
     "Verwacht begin rond": "Expected to start around",
     "Verwacht droog rond": "Expected to turn dry around",
-    "Kwartierwaarden": "Quarter-hour values",
+    "Kwartierwaarden": "15-minute values",
     "kans · verwacht totaal": "chance · expected total",
     "kans · verwachte hoeveelheid": "chance · expected amount",
     "kans · hoeveelheid onzeker": "chance · amount uncertain",
@@ -394,9 +394,10 @@
     "Bewolking niet beschikbaar.": "Cloud cover unavailable.",
     "Luchtvochtigheid niet beschikbaar.": "Humidity unavailable.",
     "Gevoelstemperatuur niet beschikbaar": "Feels-like temperature unavailable",
-    "Zoninformatie niet beschikbaar": "Sun information unavailable",
-    "Zoninformatie niet beschikbaar.": "Sun information unavailable.",
+    "Zoninformatie niet beschikbaar": "Sunrise and sunset times unavailable",
+    "Zoninformatie niet beschikbaar.": "Sunrise and sunset times unavailable.",
     "Zonuren niet beschikbaar.": "Sunshine hours unavailable.",
+    "Zonuren niet beschikbaar": "Sunshine hours unavailable",
     "UV-gegevens voor vandaag niet beschikbaar.": "UV data for today unavailable.",
     "UV-gegevens voor vandaag worden bijgewerkt.": "UV data for today is being updated.",
     "Nauwelijks UV vandaag.": "Hardly any UV today.",
@@ -488,21 +489,21 @@
     "Voor vandaag worden hooguit enkele druppels verwacht.": "At most a few drops are expected today.",
     "Actueel gemeten neerslagintensiteit.": "Currently measured precipitation rate.",
     "Actuele neerslagintensiteit.": "Current precipitation rate.",
-    "Kwartierverwachting op basis van weermodellen.": "Quarter-hourly forecast based on weather models.",
-    "Kwartierwaarden tonen de verwachting per voorafgaand kwartier.": "Quarter-hour values show the forecast for each preceding quarter of an hour.",
-    "Kwartierdata is voor deze locatie niet beschikbaar.": "Quarter-hour data is not available for this location.",
+    "Kwartierverwachting op basis van weermodellen.": "15-minute forecast based on weather models.",
+    "Kwartierwaarden tonen de verwachting per voorafgaand kwartier.": "15-minute values show the forecast for each preceding 15 minutes.",
+    "Kwartierdata is voor deze locatie niet beschikbaar.": "15-minute data is not available for this location.",
     "KNMI-neerslagdata voor nu en de komende twee uur.": "KNMI precipitation data for now and the next two hours.",
     "De bronresolutie verschilt per regio. Buiten gebieden met echte 15-minutenmodeldata kan Open-Meteo uurdata interpoleren.": "Source resolution varies by region. Outside areas with true 15-minute model data, Open-Meteo may interpolate hourly data.",
     "Voor Nederlandse locaties gebruikt deze neerslagweergave actuele KNMI-puntdata en de KNMI-nowcast. Temperatuur, wind en de langere verwachting blijven uit de gewone weermodellen komen.": "For locations in the Netherlands, this precipitation view uses current KNMI point data and the KNMI nowcast. Temperature, wind and the longer forecast still come from the usual weather models.",
-    "Voor Belgische locaties wordt actuele neerslag aangevuld met KNMI-puntdata. De komende uren volgen de beschikbare kwartier- en modelverwachting.": "For locations in Belgium, current precipitation is supplemented with KNMI point data. The coming hours follow the available quarter-hourly and model forecast.",
-    "De balken tonen neerslag per kwartier, opgebouwd uit KNMI-stappen van vijf minuten.": "The bars show precipitation per quarter of an hour, built from five-minute KNMI steps.",
-    "Kwartierwaarden zijn sommen over het voorafgaande kwartier en kunnen afhankelijk van de locatie uit uurdata zijn geïnterpoleerd.": "Quarter-hour values are totals over the preceding quarter of an hour and, depending on the location, may be interpolated from hourly data.",
+    "Voor Belgische locaties wordt actuele neerslag aangevuld met KNMI-puntdata. De komende uren volgen de beschikbare kwartier- en modelverwachting.": "For locations in Belgium, current precipitation is supplemented with KNMI point data. The coming hours follow the available 15-minute and model forecast.",
+    "De balken tonen neerslag per kwartier, opgebouwd uit KNMI-stappen van vijf minuten.": "The bars show precipitation per 15 minutes, built from five-minute KNMI steps.",
+    "Kwartierwaarden zijn sommen over het voorafgaande kwartier en kunnen afhankelijk van de locatie uit uurdata zijn geïnterpoleerd.": "15-minute values are totals over the preceding 15 minutes and, depending on the location, may be interpolated from hourly data.",
     "Eerst de neerslagkans, daarna het verwachte totaal in het komende uur.": "First the chance of precipitation, then the expected total for the next hour.",
     "Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve.": "Measurable precipitation is shown as continuous periods below the temperature curve.",
     "Bij iedere regenperiode staat het tijdvak en de verwachte hoeveelheid.": "Each rain period shows its time span and expected amount.",
     "De belangrijkste regenperioden zijn gelabeld; de overige blijven via de grafiekdetails beschikbaar.": "The main rain periods are labelled; the others remain available in the chart details.",
     "Neerslagkansen blijven via de details beschikbaar.": "Chances of precipitation remain available in the details.",
-    "Neerslagpercentages gelden voor het voorafgaande uur; waarden links van de nu-lijn zijn verlopen.": "Precipitation percentages apply to the preceding hour; values left of the now line have passed.",
+    "Neerslagpercentages gelden voor het voorafgaande uur; waarden links van de nu-lijn zijn verlopen.": "Precipitation percentages apply to the preceding hour; values left of the “now” line are in the past.",
 
     /* Neerslagzinnen (volledig) */
     "De komende twee uur wordt er geen neerslag verwacht.": "No precipitation is expected in the next two hours.",
@@ -547,10 +548,10 @@
 
     /* Nachtzicht */
     "Hoe goed je 's nachts de sterren kunt zien, hangt af van bewolking, zicht, mist, neerslag, vocht, wind en maanlicht.": "How well you can see the stars at night depends on cloud, visibility, fog, precipitation, humidity, wind and moonlight.",
-    "Globale zichtscore op basis van de huidige verwachting": "Approximate visibility score based on the current forecast",
-    "Voorlopige zichtscore op basis van de huidige verwachting": "Provisional visibility score based on the current forecast",
-    "Zichtscore op basis van de huidige verwachting": "Visibility score based on the current forecast",
-    "Geen betrouwbare zichtscore": "No reliable visibility score",
+    "Globale zichtscore op basis van de huidige verwachting": "Approximate stargazing score based on the current forecast",
+    "Voorlopige zichtscore op basis van de huidige verwachting": "Provisional stargazing score based on the current forecast",
+    "Zichtscore op basis van de huidige verwachting": "Stargazing score based on the current forecast",
+    "Geen betrouwbare zichtscore": "No reliable stargazing score",
     "Geen nachtdata beschikbaar.": "No night data available.",
     "Geen gunstig kijkvenster.": "No favourable viewing window.",
     "Geen gunstig kijkvenster in deze periode.": "No favourable viewing window in this period.",
@@ -564,7 +565,7 @@
     "Relatief beste periode": "Best available period",
     "Relatief beste periode.": "Best available period.",
     "De omstandigheden zijn redelijk.": "Conditions are fair.",
-    "De totale zichtscore is hoog.": "The overall visibility score is high.",
+    "De totale zichtscore is hoog.": "The overall stargazing score is high.",
     "Maan blijft onder de horizon.": "The moon stays below the horizon.",
     "Maan blijft boven de horizon.": "The moon stays above the horizon.",
     "maan blijft onder de horizon": "moon stays below the horizon",
@@ -584,7 +585,7 @@
     "Bekijk deze waarschuwing bij de officiële bron": "View this warning at the official source",
     "Officiële tekst van de National Weather Service": "Official text from the National Weather Service",
     "Officiële titel hierboven ongewijzigd. Bron: National Weather Service.": "Official title above unchanged. Source: National Weather Service.",
-    "De Amerikaanse weerdienst heeft voor deze locatie een officiële waarschuwing uitgegeven.": "The US weather service has issued an official warning for this location.",
+    "De Amerikaanse weerdienst heeft voor deze locatie een officiële waarschuwing uitgegeven.": "The US National Weather Service has issued an official warning for this location.",
     "Waakzaamheid voor overstromingen": "Flood watch",
     "Waakzaamheid voor tornado's": "Tornado watch",
     "Waakzaamheid voor zwaar onweer": "Severe thunderstorm watch",
@@ -606,7 +607,7 @@
     /* Laden en fouten */
     "Weer vandaag en 7-daagse verwachting | watishetweer.nl": "Weather today and 7-day forecast | watishetweer.nl",
     "Het weer vandaag, morgen en per uur | watishetweer.nl": "The weather today, tomorrow and by the hour | watishetweer.nl",
-    "Bekijk het actuele weer, neerslag voor de komende uren, de 7-daagse verwachting, luchtkwaliteit en nachtzicht voor plaatsen wereldwijd.": "See the current weather, precipitation for the coming hours, the 7-day forecast, air quality and night-sky conditions for places worldwide.",
+    "Bekijk het actuele weer, neerslag voor de komende uren, de 7-daagse verwachting, luchtkwaliteit en nachtzicht voor plaatsen wereldwijd.": "See the current weather, precipitation for the coming hours, the 7-day forecast, air quality and stargazing conditions for places worldwide.",
     "Op een later moment": "At a later time",
     "op een later moment": "at a later time",
 
@@ -636,7 +637,7 @@
     "watishetweer.nl brengt actuele weersinformatie en modelverwachtingen voor plaatsen wereldwijd overzichtelijk samen: in één oogopslag wat het weer nu doet en wat er de komende uren en dagen komt.":
       "watishetweer.nl brings current weather information and model forecasts for places worldwide together in one clear view: at a glance, what the weather is doing now and what is coming over the next hours and days.",
     "De site toont onder meer het actuele weer, neerslag voor de komende uren, een 7-daagse verwachting, wind en windstoten, luchtkwaliteit, zonuren en een indicatie voor nachtzicht. De weergave gebruikt lokale tijd voor de gekozen plaats.":
-      "The site shows, among other things, the current weather, precipitation for the coming hours, a 7-day forecast, wind and gusts, air quality, sunshine hours and an indication of night-sky conditions. All times are local to the chosen place.",
+      "The site shows, among other things, the current weather, precipitation for the coming hours, a 7-day forecast, wind and gusts, air quality, sunshine hours and an indication of stargazing conditions. All times are local to the chosen place.",
     "De concrete bronvermelding staat bij de weerweergave en kan per locatie verschillen. De verwachting komt in de eerste plaats van Open-Meteo; bij een storing daar valt de site terug op Visual Crossing of WeatherAPI.com. Luchtkwaliteit en pollen komen van Open-Meteo, op basis van CAMS-modelgegevens. Voor Nederland en België komt de neerslag voor de komende uren van het KNMI, en voor Nederland de luchtkwaliteitsindex van RIVM/Luchtmeetnet. Officiële waarschuwingen komen van MeteoAlarm of, in de Verenigde Staten, van de National Weather Service. Plaatsnamen komen van Open-Meteo, BigDataCloud en OpenStreetMap.":
       "The exact sources are listed with the weather view and can differ by location. The forecast comes primarily from Open-Meteo; if that service fails, the site falls back to Visual Crossing or WeatherAPI.com. Air quality and pollen come from Open-Meteo, based on CAMS model data. For the Netherlands and Belgium, precipitation for the coming hours comes from the KNMI, and for the Netherlands the air quality index comes from RIVM/Luchtmeetnet. Official warnings come from MeteoAlarm or, in the United States, from the National Weather Service. Place names come from Open-Meteo, BigDataCloud and OpenStreetMap.",
     "Een weersverwachting is geen meting van de toekomst. Modeluitkomsten veranderen wanneer nieuwe waarnemingen en berekeningen beschikbaar komen. Daarom kunnen temperaturen, neerslagkansen, wind en andere verwachtingen bij een volgende verversing wijzigen.":
@@ -710,7 +711,7 @@
 
     /* Plaatsenoverzicht */
     "Weer per plaats in Nederland | watishetweer.nl": "Weather by place in the Netherlands | watishetweer.nl",
-    "Bekijk direct het actuele weer en de verwachting voor populaire plaatsen in Nederland.": "See the current weather and forecast for popular places in the Netherlands straight away.",
+    "Bekijk direct het actuele weer en de verwachting voor populaire plaatsen in Nederland.": "See the current weather and forecast for popular places in the Netherlands.",
     "Kies een plaats voor het actuele weer, neerslag in de komende uren en de 7-daagse verwachting.": "Choose a place for the current weather, precipitation over the coming hours and the 7-day forecast.",
     "Deze plaats staat niet in de lijst. Zoek haar op de weerpagina; daar vind je elke plaats ter wereld.": "This place is not in the list. Search for it on the weather page, where you can find any place in the world.",
 
@@ -751,11 +752,12 @@
     [/^(.+), (.+)$/, (m) => { const l = land(m[2]); return l && !/[.!?]/.test(m[1]) && m[1].length < 60 && !/\b(de|het|een|en|van|voor|niet)\b/.test(m[1]) ? `${m[1]}, ${l}` : null; }],
     [/^Weergave kiezen\. Huidige stand: (automatisch|handmatig) \((Licht|Donker)\)\.$/, (m) => `Choose display. Current setting: ${m[1] === "automatisch" ? "automatic" : "manual"} (${m[2] === "Licht" ? "Light" : "Dark"}).`],
     [/^Weergave kiezen\. Huidige stand: (Licht|Donker)\.$/, (m) => `Choose display. Current setting: ${m[1] === "Licht" ? "Light" : "Dark"}.`],
-    [/^(−?-?\d+\.\d+), (−?-?\d+\.\d+) · (\d+) m hoogte(?: · modelcel (−?-?\d+\.\d+), (−?-?\d+\.\d+))? · ([A-Za-z_]+\/[A-Za-z_\/-]+)$/, (m) => `${m[1]}, ${m[2]} · ${m[3]} m elevation${m[4] ? ` · model cell ${m[4]}, ${m[5]}` : ""} · ${m[6]}`],
+    /* Technische locatiegegevens; de hoogte ontbreekt als de bron hem niet levert. */
+    [/^(−?-?\d+\.\d+), (−?-?\d+\.\d+)(?: · (\d+) m hoogte)?(?: · modelcel (−?-?\d+\.\d+), (−?-?\d+\.\d+))? · ([A-Za-z_]+\/[A-Za-z_\/-]+)$/, (m) => `${m[1]}, ${m[2]}${m[3] ? ` · ${m[3]} m elevation` : ""}${m[4] ? ` · model cell ${m[4]}, ${m[5]}` : ""} · ${m[6]}`],
     [/^Officiële weerwaarschuwing(?: \((geel|oranje|rood)\))?: (.+)\.$/, (m, hulp) => {
       const kleur = m[1] ? ` (${({ geel: "yellow", oranje: "orange", rood: "red" })[m[1]]})` : "";
       const code = /^Code (geel|oranje|rood): (.+)$/.exec(m[2]);
-      const titel = code ? (WAARSCHUWING[code[2].toLowerCase()] && `code ${({ geel: "yellow", oranje: "orange", rood: "red" })[code[1]]} for ${WAARSCHUWING[code[2].toLowerCase()]}`)
+      const titel = code ? (WAARSCHUWING[code[2].toLowerCase()] && `${({ geel: "yellow", oranje: "orange", rood: "red" })[code[1]]} warning for ${WAARSCHUWING[code[2].toLowerCase()]}`)
         : (WAARSCHUWING[m[2].toLowerCase()] ? alsNl("X", WAARSCHUWING[m[2].toLowerCase()])
           /* Officiële Engelse titel van de weerdienst (MeteoAlarm en-GB, NWS) blijft letterlijk. */
           : (eigennamen.includes(m[2]) || (hulp && hulp.alEngels(m[2])) ? m[2] : null));
@@ -771,10 +773,10 @@
     [/^De Amerikaanse hitte-index loopt op tot (\d+) °F, ongeveer (−?-?\d+) °C\.$/, (m) => `The US heat index rises to ${m[1]} °F, about ${getal(m[2])} °C.`],
     [/^Gemiddeld zicht: onbekend$/, () => "Average visibility: unknown"],
     [/^Hoogste neerslagkans in één uur (\d+) procent; (?:hoeveelheid onzeker|amount uncertain)$/, (m) => `Highest hourly chance of precipitation ${m[1]} per cent; amount uncertain`],
-    [/^Neerslag vandaag vanaf nu: (\d+) procent\.(?: Minimum en maximum gelden voor de volledige kalenderdag\.)?$/, (m) => `Precipitation today from now: ${m[1]} per cent.${/Minimum/.test(m[0]) ? " Minimum and maximum apply to the full calendar day." : ""}`],
+    [/^Neerslag vandaag vanaf nu: (\d+) procent\.(?: Minimum en maximum gelden voor de volledige kalenderdag\.)?$/, (m) => `Precipitation for the rest of today: ${m[1]} per cent.${/Minimum/.test(m[0]) ? " Minimum and maximum apply to the full calendar day." : ""}`],
     [/^(Uitstekende|Goede|Redelijke) omstandigheden, maar door (.+) is er geen aaneengesloten gunstig kijkvenster\.$/, (m) => { const r = oorzaken(m[2]); return r && `${({ Uitstekende: "Excellent", Goede: "Good", Redelijke: "Fair" })[m[1]]} conditions, but ${r} ${/ and |, /.test(r) ? "break" : "breaks"} up any continuous favourable viewing window.`; }],
     [/^De omstandigheden zijn redelijk, maar (.+) onderbreekt een langer gunstig kijkvenster\.$/, (m) => { const r = oorzaken(m[1]); return r && `Conditions are fair, but ${r} ${/ and |, /.test(r) ? "interrupt" : "interrupts"} a longer favourable viewing window.`; }],
-    [/^De totale zichtscore is hoog, maar (.+) onderbreekt een langer optimaal kijkvenster\.$/, (m) => { const r = oorzaken(m[1]); return r && `The overall visibility score is high, but ${r} ${/ and |, /.test(r) ? "interrupt" : "interrupts"} a longer ideal viewing window.`; }],
+    [/^De totale zichtscore is hoog, maar (.+) onderbreekt een langer optimaal kijkvenster\.$/, (m) => { const r = oorzaken(m[1]); return r && `The overall stargazing score is high, but ${r} ${/ and |, /.test(r) ? "interrupt" : "interrupts"} a longer ideal viewing window.`; }],
     [/^Toon het weer voor (.+)$/, (m) => `Show the weather for ${plaats(m[1])}`],
     [/^Verwijder (.+) uit bewaarde plaatsen$/, (m) => `Remove ${plaats(m[1])} from saved places`],
     /* Dagomschrijving "Mist; neerslag mogelijk" → "Fog; precipitation possible". */
@@ -865,10 +867,10 @@
     [/^(\d+(?:[,.]\d+)?) mm$/, (m) => `${getal(m[1])} mm`],
     [/^(\d+)% is de hoogste neerslagkans in één uur in de resterende uren van vandaag\.$/, (m) => `${m[1]}% is the highest hourly chance of precipitation in the remaining hours of today.`],
     [new RegExp(`^(\\d+)% is de hoogste neerslagkans in één uur op ${D} (\\d{1,2})\\.$`), (m) => `${m[1]}% is the highest hourly chance of precipitation on ${dagKort(m[2])} ${m[3]}.`],
-    [new RegExp(`^Neerslag vandaag vanaf nu: (\\d+) procent; ${G} millimeter\\. Minimum en maximum gelden voor de volledige kalenderdag\\.$`), (m) => `Precipitation today from now: ${m[1]} per cent; ${getal(m[2])} millimetres. Minimum and maximum apply to the full calendar day.`],
+    [new RegExp(`^Neerslag vandaag vanaf nu: (\\d+) procent; ${G} millimeter\\. Minimum en maximum gelden voor de volledige kalenderdag\\.$`), (m) => `Precipitation for the rest of today: ${m[1]} per cent; ${getal(m[2])} millimetres. Minimum and maximum apply to the full calendar day.`],
     [new RegExp(`^Voor vandaag is ${G} uur zon berekend\\.$`), (m) => `${getal(m[1])} ${meervoud(m[1], "hour", "hours")} of sunshine ${meervoud(m[1], "is", "are")} forecast for today.`],
     [new RegExp(`^Verwachte UV-piek (lag )?rond ${T} · (laag|matig|hoog|zeer hoog|extreem)\\.$`), (m) => `Expected UV peak ${m[1] ? "was " : ""}around ${m[2]} · ${UV[m[3]]}.`],
-    [new RegExp(`^Verwachte UV-piek vandaag: ${G} \\((laag|matig|hoog|zeer hoog|extreem)\\)\\.?$`), (m) => `Expected UV peak today: ${getal(m[1])} (${UV[m[2]]})`],
+    [new RegExp(`^Verwachte UV-piek vandaag: ${G} \\((laag|matig|hoog|zeer hoog|extreem)\\)(\\.?)$`), (m) => `Expected UV peak today: ${getal(m[1])} (${UV[m[2]]})${m[3]}`],
     [/^Gegevens opgehaald om (\d{1,2}:\d{2}) · minder dan 1 min geleden$/, (m) => `Updated at ${m[1]} · less than a minute ago`],
     [/^Gegevens opgehaald om (\d{1,2}:\d{2}) · (\d+) min geleden$/, (m) => `Updated at ${m[1]} · ${m[2]} min ago`],
     [/^(\d+) ?korrels\/m³$/, (m) => `${m[1]} grains/m³`],
@@ -943,7 +945,7 @@
     [new RegExp(`^De temperatuur blijft de komende uren rond ${G} (graden|graad)\\.$`), (m) => `The temperature stays around ${graden(m[1])} over the coming hours.`],
 
     /* Waarschuwingen */
-    [/^Code (geel|oranje|rood): (.+)$/, (m) => { const w = WAARSCHUWING[m[2].toLowerCase()]; return w && `Code ${({ geel: "yellow", oranje: "orange", rood: "red" })[m[1]]}: ${w}`; }],
+    [/^Code (geel|oranje|rood): (.+)$/, (m) => { const w = WAARSCHUWING[m[2].toLowerCase()]; return w && `${({ geel: "Yellow", oranje: "Orange", rood: "Red" })[m[1]]} warning: ${w}`; }],
     [/^Officiële weerwaarschuwing(?: \((geel|oranje|rood)\))?:$/, (m) => `Official weather warning${m[1] ? ` (${({ geel: "yellow", oranje: "orange", rood: "red" })[m[1]]})` : ""}:`],
     [/^Officiële titel:$/, () => "Official title:"],
     [/^Uitleg van watishetweer\.nl:$/, () => "Explanation from watishetweer.nl:"],
@@ -956,7 +958,7 @@
     [/^Extreme UV-index in de verwachting \((\d+(?:,\d+)?)\)\.$/, (m) => `Extreme UV index in the forecast (${getal(m[1])}).`],
     [/^Luchtkwaliteit volgens het model is (zeer slecht|slecht|extreem slecht) \(Europese AQI (\d+)\)\.$/, (m) => `Modelled air quality is ${LUCHT[m[1]]} (European AQI ${m[2]}).`],
     [/^Luchtkwaliteit volgens het model is ongezond \(AQI VS (\d+)\)\.$/, (m) => `Modelled air quality is unhealthy (US AQI ${m[1]}).`],
-    [/^De Amerikaanse weerdienst heeft voor deze locatie een (.+) uitgegeven\.$/, (m) => { const w = WAARSCHUWING[m[1].toLowerCase()]; return w && `The US weather service has issued ${/^[aeiou]/i.test(w) ? "an" : "a"} ${w.toLowerCase()} for this location.`; }],
+    [/^De Amerikaanse weerdienst heeft voor deze locatie een (.+) uitgegeven\.$/, (m) => { const w = WAARSCHUWING[m[1].toLowerCase()]; return w && `The US National Weather Service has issued ${/^[aeiou]/i.test(w) ? "an" : "a"} ${w.toLowerCase()} for this location.`; }],
     [/^Matig veel graspollen verwacht voor dit uur\.$/, () => "Moderate grass pollen expected for this hour."],
     [/^(Weinig|Matig veel|Veel|Zeer veel) (.+) verwacht voor dit uur\.$/, (m) => { const s = POLLENSOORT[m[2].toLowerCase()]; return s && `${alsNl("X", POLLENNIVEAU[m[1].toLowerCase()])} ${s} expected for this hour.`; }],
 
