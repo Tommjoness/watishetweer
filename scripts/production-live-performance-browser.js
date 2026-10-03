@@ -3,6 +3,7 @@
 const assert=require("assert");
 const {chromium,webkit,devices}=require("playwright");
 const {isAlleenGemeld,logAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
+const {isProviderStoringBericht,beschrijf,beoordeelForecastHerkomst}=require("./provider-storing.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const verwacht=String(process.env.EXPECTED_SHA||"").trim();
@@ -25,6 +26,9 @@ function isSnellePreview(url){
   const u=new URL(url);
   return !u.searchParams.has("forecast_hours")&&!u.searchParams.has("hourly")&&!u.searchParams.has("daily")&&u.searchParams.has("current");
 }
+/* De eigen reserveroute: Visual Crossing/WeatherAPI via onze server, ingezet
+   als Open-Meteo faalt of te traag is. */
+function isReserveForecast(url){try{const u=new URL(url);return u.origin===ROOT&&u.pathname==="/api/forecast";}catch(e){return false;}}
 function isAnalyticsScript(url){
   try{const u=new URL(url);return u.origin==="https://static.cloudflareinsights.com"&&u.pathname==="/beacon.min.js";}catch(e){return false;}
 }
@@ -38,12 +42,12 @@ function isCloudflareAnalytics(url){return isAnalyticsScript(url)||isEigenRum(ur
     const browser=await profiel.type.launch({headless:true});
     try{
       const context=await browser.newContext({...profiel.opties,locale:"nl-NL",serviceWorkers:"block"});
-      const page=await context.newPage(),requests=[],responses=[],mislukt=[],consoleErrors=[],pageErrors=[];
+      const page=await context.newPage(),requests=[],responses=[],mislukt=[],consoleErrors=[],pageErrors=[],providerStoringen=[];
       let alleenGemeld=0;
       page.on("request",r=>requests.push(r.url()));
       page.on("response",r=>responses.push({url:r.url(),status:r.status()}));
       page.on("requestfailed",r=>mislukt.push({url:r.url(),fout:r.failure()?.errorText||"mislukt"}));
-      page.on("console",m=>{if(m.type()!=="error")return;if(isAlleenGemeld(m.text()))alleenGemeld++;else consoleErrors.push(m.text());});
+      page.on("console",m=>{if(m.type()!=="error")return;if(isAlleenGemeld(m.text()))alleenGemeld++;else if(isProviderStoringBericht(m))providerStoringen.push(beschrijf(m));else consoleErrors.push(m.text());});
       page.on("pageerror",e=>pageErrors.push(String(e)));
 
       const params=new URLSearchParams({lat:"52.3508",lon:"5.2647",plaats:"Almere",land:"NL"});
@@ -72,12 +76,27 @@ function isCloudflareAnalytics(url){return isAnalyticsScript(url)||isEigenRum(ur
       const volledigeForecasts=succesvolleForecasts.filter(r=>isVolledigeForecast(r.url));
       const previewForecasts=succesvolleForecasts.filter(r=>isSnellePreview(r.url));
       const onbekendeForecasts=succesvolleForecasts.filter(r=>!isVolledigeForecast(r.url)&&!isSnellePreview(r.url));
-      assert.equal(volledigeForecasts.length,1,`${profiel.naam}: verwacht één volledige Open-Meteo-forecast, kreeg ${volledigeForecasts.length}`);
+      /* Normaal komt de verwachting uit precies één volledige Open-Meteo-
+         aanvraag. Hapert Open-Meteo (429/5xx, of zo traag dat de app de
+         aanvraag afbreekt), dan zet de app de eigen reserveroute in; dat is
+         correct gedrag en geen sitefout, mits die route precies één keer
+         slaagde en de pagina hierboven al weerdata en een grafiek toonde
+         (gemeten 3 oktober 2026, 02:29 en 14:00: "kreeg 0"). */
+      const herkomst=beoordeelForecastHerkomst({
+        volledigOk:volledigeForecasts.length,
+        volledigStoring:responses.filter(r=>isVolledigeForecast(r.url)&&(r.status===429||r.status>=500)).length,
+        volledigAfgebroken:mislukt.filter(x=>isVolledigeForecast(x.url)).length,
+        reserveOk:responses.filter(r=>isReserveForecast(r.url)&&r.status>=200&&r.status<300).length
+      });
+      assert(herkomst.ok,`${profiel.naam}: geen eenduidige bron voor de verwachting (${herkomst.reden})`);
       assert(previewForecasts.length<=1,`${profiel.naam}: current-only preview werd ${previewForecasts.length} keer opgevraagd`);
       assert.equal(onbekendeForecasts.length,0,`${profiel.naam}: onverwachte forecastaanvragen: ${onbekendeForecasts.map(r=>r.url).join(" | ")}`);
-      const forecastUrl=new URL(volledigeForecasts[0].url);
-      assert.equal(forecastUrl.searchParams.get("forecast_hours"),"170",`${profiel.naam}: forecast_hours wijkt af`);
-      assert.equal(forecastUrl.searchParams.get("past_hours"),"24",`${profiel.naam}: past_hours wijkt af`);
+      assert(herkomst.bron==="reserve"||!providerStoringen.length,`${profiel.naam}: Open-Meteo-storing ${JSON.stringify(providerStoringen)} zonder dat de reserveroute de verwachting leverde`);
+      if(herkomst.bron==="open-meteo"){
+        const forecastUrl=new URL(volledigeForecasts[0].url);
+        assert.equal(forecastUrl.searchParams.get("forecast_hours"),"170",`${profiel.naam}: forecast_hours wijkt af`);
+        assert.equal(forecastUrl.searchParams.get("past_hours"),"24",`${profiel.naam}: past_hours wijkt af`);
+      }else console.log(`${profiel.naam}: Open-Meteo haperde (${JSON.stringify(providerStoringen)}; afgebroken ${mislukt.filter(x=>isVolledigeForecast(x.url)).length}); de app toonde de verwachting via de reserveroute /api/forecast.`);
 
       /* Web Analytics mag tijdens de account-cutover nog afwezig zijn. Zodra
          Cloudflare injecteert, accepteren we uitsluitend het officiële script
@@ -113,15 +132,15 @@ function isCloudflareAnalytics(url){return isAnalyticsScript(url)||isEigenRum(ur
       assert.deepEqual(pageErrors,[],`${profiel.naam}: pageerrors ${pageErrors.join(" | ")}`);
       logAlleenGemeld(profiel.naam,alleenGemeld);
       assert.deepEqual(consoleErrors,[],`${profiel.naam}: console-errors ${consoleErrors.join(" | ")}`);
-      const mislukteVolledige=mislukt.filter(x=>isVolledigeForecast(x.url));
+      const mislukteVolledige=herkomst.bron==="reserve"?[]:mislukt.filter(x=>isVolledigeForecast(x.url));
       const mislukteOnbekende=mislukt.filter(x=>isForecast(x.url)&&!isVolledigeForecast(x.url)&&!isSnellePreview(x.url));
       assert.equal(mislukteVolledige.length,0,`${profiel.naam}: mislukte volledige forecast ${mislukteVolledige.map(x=>x.url+": "+x.fout).join(" | ")}`);
       assert.equal(mislukteOnbekende.length,0,`${profiel.naam}: mislukte onbekende forecastvariant ${mislukteOnbekende.map(x=>x.url+": "+x.fout).join(" | ")}`);
 
       const herkomsten={};for(const url of requests){try{const o=new URL(url).origin;herkomsten[o]=(herkomsten[o]||0)+1;}catch(e){}}
-      console.log(JSON.stringify({profiel:profiel.naam,sha,domMs,weerMs,grafiekMs,volledigeForecasts:volledigeForecasts.length,previewForecasts:previewForecasts.length,analyticsScript:scripts.length,rumRequests:eigenRum.length,totaalRequests:requests.length,herkomsten,overflow:ui.overflow}));
+      console.log(JSON.stringify({profiel:profiel.naam,sha,domMs,weerMs,grafiekMs,bron:herkomst.bron,volledigeForecasts:volledigeForecasts.length,previewForecasts:previewForecasts.length,analyticsScript:scripts.length,rumRequests:eigenRum.length,totaalRequests:requests.length,herkomsten,overflow:ui.overflow}));
       await context.close();
     }finally{await browser.close();}
   }
-  console.log(`LIVE PERFORMANCE GESLAAGD: ${verwacht}; Chromium desktop en WebKit iPhone, één forecastaanvraag, gecontroleerde Cloudflare Web Analytics, grafiekinteractie en volledige scroll.`);
+  console.log(`LIVE PERFORMANCE GESLAAGD: ${verwacht}; Chromium desktop en WebKit iPhone, één forecastbron (Open-Meteo, of de reserveroute na een Open-Meteo-storing), gecontroleerde Cloudflare Web Analytics, grafiekinteractie en volledige scroll.`);
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
