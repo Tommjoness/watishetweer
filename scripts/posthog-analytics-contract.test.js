@@ -208,7 +208,9 @@ let r=draai("https://www.watishetweer.nl/weer/almere/?analytics=uit&x=1#top",ops
 assert.equal(opslag.get("weerbriefing.analytics.uit.v1"),"1","?analytics=uit hoort de afmelding te bewaren");
 assert.deepEqual(r.verzonden,[],"na ?analytics=uit gaat er niets naar PostHog, ook geen paginaweergave");
 assert.deepEqual(r.vervangen,["/weer/almere/?x=1#top"],"de analytics-parameter verdwijnt uit de adresbalk; de rest blijft");
-assert(r.knop.textContent.includes("weer toestaan")&&r.status.textContent.includes("staan alle statistieken uit"),"privacyknop toont de afgemelde toestand");
+assert.equal(r.knop.textContent,"PostHog en Google Analytics weer toestaan","privacyknop toont de afgemelde toestand");
+assert.equal(r.status.textContent.trim(),"PostHog en Google Analytics staan uit. Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies.","afmeldstatus noemt precies wat uit staat en dat Cloudflare cookieloos blijft meten");
+assert(!/alle statistieken/i.test(r.status.textContent),"afmeldstatus mag niet 'alle statistieken' beloven");
 assert(r.ga4Knop.hidden&&r.ga4Status.textContent.includes("Google Analytics staat op dit apparaat uit"),"GA4-knop verdwijnt zolang alles uit staat");
 r=draai("https://www.watishetweer.nl/",opslag);
 assert.deepEqual(r.verzonden,[],"afmelding blijft bij een volgend bezoek gelden");
@@ -250,6 +252,8 @@ assert(/^anon_/.test(r.payloads[0].distinct_id)&&idOpslag.size===0,"zonder bruik
 const privacy=fs.readFileSync(path.join(root,"privacy.html"),"utf8");
 assert(privacy.includes("data-analytics-device-toggle")&&privacy.includes("data-analytics-device-status"),"privacypagina mist de knop om statistieken per apparaat uit te zetten");
 assert(privacy.includes("?analytics=uit")&&privacy.includes("weerbriefing.analytics.uit.v1"),"privacyverklaring moet de afmelding en de bewaarde sleutel noemen");
+assert(privacy.includes("<b>PostHog en Google Analytics uitzetten.</b>")&&privacy.includes("Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies."),"privacyverklaring moet zeggen dat de afmelding PostHog en Google Analytics betreft en Cloudflare cookieloos blijft meten");
+assert(!/alle statistieken uit/i.test(privacy),"privacyverklaring mag niet beloven dat de knop alle statistieken uitzet");
 for(const tekst of ["PostHog Cloud EU","geen PostHog-SDK","querystring","URL-hash","IP-anonimisering","grove laadduurgroep","generieke taakuitkomsten","concrete weerwaarden","Google Analytics 4 (GA4) is optioneel","pas geladen nadat je daar expliciet toestemming voor geeft","Advertentieopslag","data-ga4-consent-toggle","Je kunt toestemming hier altijd weer intrekken"]){
   assert(privacy.includes(tekst),"privacyverklaring mist analytics-uitleg: "+tekst);
 }

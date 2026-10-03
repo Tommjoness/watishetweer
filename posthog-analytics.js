@@ -40,15 +40,18 @@
     const status=document.querySelector("[data-analytics-device-status]");
     const uit=afgemeld();
     if(knop){
-      knop.textContent=uit?"Statistieken op dit apparaat weer toestaan":"Statistieken op dit apparaat uitzetten";
+      knop.textContent=uit?"PostHog en Google Analytics weer toestaan":"PostHog en Google Analytics uitzetten";
       knop.onclick=()=>{zetAfmelding(!afgemeld());location.reload();};
     }
-    if(status)status.textContent=uit?" Op dit apparaat staan alle statistieken uit.":" Op dit apparaat staan de statistieken aan.";
+    /* De afmelding geldt voor PostHog en Google Analytics. Cloudflare Web
+       Analytics staat daar los van en blijft cookieloos meten; de status
+       belooft dus niet "alle statistieken uit" (hercontrole 2 oktober). */
+    if(status)status.textContent=uit?" PostHog en Google Analytics staan uit. Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies.":" Op dit apparaat staan de statistieken aan.";
     if(uit){
       const ga4Knop=document.querySelector("[data-ga4-consent-toggle]");
       const ga4Status=document.querySelector("[data-ga4-consent-status]");
       if(ga4Knop)ga4Knop.hidden=true;
-      if(ga4Status)ga4Status.textContent=" Google Analytics staat op dit apparaat uit, omdat je alle statistieken hebt uitgezet.";
+      if(ga4Status)ga4Status.textContent=" Google Analytics staat op dit apparaat uit, omdat je PostHog en Google Analytics hebt uitgezet.";
     }
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",zetApparaatBediening,{once:true});
