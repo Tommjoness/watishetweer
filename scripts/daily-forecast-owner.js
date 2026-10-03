@@ -35,12 +35,16 @@ function weatherNowLokaleDatumSleutel(){
   if(!(nu instanceof Date)||!Number.isFinite(nu.getTime()))return null;
   return nu.getFullYear()+"-"+String(nu.getMonth()+1).padStart(2,"0")+"-"+String(nu.getDate()).padStart(2,"0");
 }
+/* Dag plus datum mét maand ("Vandaag 2 okt", "zaterdag 3 okt", kort "za 3 okt"):
+   alleen een dagnummer ("Vandaag 2") is vaag (eigenaar, 2 oktober). Kort
+   "Vandaag" blijft zonder datum: dat is ondubbelzinnig. */
+const WEATHERNOW_MAANDEN_KORT=["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
 function weatherNowDagNaam(datum,volledig){
   const sleutel=String(datum||"").slice(0,10),dt=new Date(sleutel+"T12:00:00");
   if(!sleutel||!Number.isFinite(dt.getTime()))return "–";
-  const nr=dt.getDate();
-  if(sleutel===weatherNowLokaleDatumSleutel())return volledig?"Vandaag "+nr:"Vandaag";
-  return (volledig?DAGENVOL[dt.getDay()]:DAGEN[dt.getDay()])+" "+nr;
+  const datumTekst=dt.getDate()+" "+WEATHERNOW_MAANDEN_KORT[dt.getMonth()];
+  if(sleutel===weatherNowLokaleDatumSleutel())return volledig?"Vandaag "+datumTekst:"Vandaag";
+  return (volledig?DAGENVOL[dt.getDay()]:DAGEN[dt.getDay()])+" "+datumTekst;
 }
 function weatherNowGeselecteerdeDagKop(datum){
   const sleutel=String(datum||"").slice(0,10),dt=new Date(sleutel+"T12:00:00");
@@ -109,10 +113,11 @@ function dagNeerslagMmTekst(som,spoorMm=DAG_SPOOR_MM){
 function dagNaam(datum,volledig,vandaagSleutel){
   const sleutel=String(datum||"").slice(0,10),dt=new Date(sleutel+"T12:00:00");
   if(!sleutel||!Number.isFinite(dt.getTime()))return "–";
-  const nr=dt.getDate();
-  if(sleutel===String(vandaagSleutel||""))return volledig?"Vandaag "+nr:"Vandaag";
+  const maanden=["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
+  const datumTekst=dt.getDate()+" "+maanden[dt.getMonth()];
+  if(sleutel===String(vandaagSleutel||""))return volledig?"Vandaag "+datumTekst:"Vandaag";
   const kort=["zo","ma","di","wo","do","vr","za"],lang=["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
-  return (volledig?lang[dt.getDay()]:kort[dt.getDay()])+" "+nr;
+  return (volledig?lang[dt.getDay()]:kort[dt.getDay()])+" "+datumTekst;
 }
 
 function vervangEen(html,bron,productie,label){

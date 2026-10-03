@@ -148,10 +148,15 @@ function meet(){
             const nu=t.find(e=>/^nu /.test(e.textContent.trim())),lijn=[...svg.querySelectorAll("line")].find(l=>/carmine/.test(l.getAttribute("stroke")||"")&&!l.hasAttribute("data-nu-aanloop"));
             if(!nu||!lijn)return null;const r=nu.getBoundingClientRect(),lr=lijn.getBoundingClientRect();
             const raakt=t.filter(e=>e!==nu).filter(e=>{const b=e.getBoundingClientRect();return b.left<r.right&&b.right>r.left&&b.top<r.bottom&&b.bottom>r.top;}).map(e=>e.textContent.trim());
-            return {links:r.right<=lr.left+0.5,raakt,svgLinks:r.left>=svg.getBoundingClientRect().left-0.5};});
+            /* Geen asgetal direct boven of onder het nu-label: "nu 16°" boven
+               "16°" leest als een dubbeling (eigenaar, 2 oktober). */
+            const hoogte=r.height||14,midden=(r.top+r.bottom)/2;
+            const stapel=t.filter(e=>e!==nu&&/^-?\d+°$/.test(e.textContent.trim())).filter(e=>{const b=e.getBoundingClientRect();return b.right<=lr.left+0.5&&Math.abs((b.top+b.bottom)/2-midden)<hoogte*1.6;}).map(e=>e.textContent.trim());
+            return {links:r.right<=lr.left+0.5,raakt,stapel,svgLinks:r.left>=svg.getBoundingClientRect().left-0.5};});
           assert(nu&&nu.links,label+": het nu-label staat niet links van de rode nu-lijn");
           assert(nu.svgLinks,label+": het nu-label valt links buiten de grafiek");
           assert.deepEqual(nu.raakt,[],label+": het nu-label raakt andere tekst");
+          assert.deepEqual(nu.stapel,[],label+": asgetal direct boven of onder het nu-label: "+nu.stapel.join(", "));
         }
         if(m.nuAnker!==null)assert(m.M&&m.nuAnker===m.asUren[0],label+": alleen op de telefoon en alleen het eerste uur mag zijn temperatuur aan het nu-label overlaten");
         const leeg=m.astijden.filter(a=>a.i!==m.nuAnker&&(!a.stip||a.cijfer!==a.verwacht)).map(a=>a.tijd+(a.stip?"":" zonder stip")+(a.cijfer===a.verwacht?"":" cijfer "+(a.cijfer||"ontbreekt")+" (verwacht "+a.verwacht+")"));

@@ -157,6 +157,7 @@ function* combinaties() {
     yield `16:00, ${n} graden, ${n} procent neerslagkans`;
     yield `${n}% is de hoogste neerslagkans in één uur in de resterende uren van vandaag.`;
     for (const d of dagenKort) yield `${n}% is de hoogste neerslagkans in één uur op ${d} 2.`;
+    for (const d of dagenKort) yield `${n}% is de hoogste neerslagkans in één uur op ${d} 2 okt.`;
   }
   for (const t of tijden) {
     yield `Rond ${t} wordt het naar verwachting droog.`;
