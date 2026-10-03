@@ -61,7 +61,7 @@ const verwacht = {
   "De verwachte neerslag in de rest van vandaag is alleen een spoor.": "Only a trace of precipitation is expected for the rest of today.",
   "De verwachte neerslag over de hele dag is 3,0 mm.": "Expected precipitation for the whole day is 3.0 mm.",
   "Officiële weerwaarschuwing (oranje): Code oranje: mist.": "Official orange weather warning: fog.",
-  "Er is een kleine kans op regen in de komende twee uur (maximaal 20%).": "There is a low chance of rain in the next two hours (highest hourly chance 20%).",
+  "Er is een kleine kans op regen in de komende twee uur (hoogste uurkans 20%).": "There is a low chance of rain in the next two hours (highest hourly chance 20%).",
   "Geen officiële waarschuwing.": "Not an official warning."
 };
 for (const [nl, en] of Object.entries(verwacht)) assert.equal(v.vertaal(nl), en, nl);

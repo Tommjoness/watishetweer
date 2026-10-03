@@ -368,7 +368,7 @@ function neerslagZin(analyse){
   const kans=a.kans===null?null:Math.round(Math.max(0,Math.min(100,a.kans)));
   const kansTussen=kans===null?"":(a.duurMin===60&&a.kansTijdvak
     ?" (hoogste modelkans in de overlappende uurvakken: "+kans+"%)"
-    :" (maximaal "+kans+"%)");
+    :" (hoogste uurkans "+kans+"%)");
   if(a.status==="GEEN_KANS"){
     return "Voor "+venster+" wordt er geen neerslag verwacht.";
   }

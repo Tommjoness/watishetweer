@@ -17,6 +17,7 @@
 const assert = require("assert");
 const fs = require("fs");
 const kern = require("../taal/vertaalkern.js");
+const grammatica = require("../nederlandse-weergrammatica.js");
 const woordenboek = require("../taal/en.js");
 
 const v = kern.maakVertaler(woordenboek);
@@ -73,8 +74,11 @@ function* combinaties() {
     yield `Volgens het weermodel valt er nu ${w}.`;
     for (const k of kansen) {
       yield `De komende twee uur is er een ${k} kans op ${w}.`;
-      yield `Er is een ${k} kans op ${w} in de komende twee uur (maximaal 40%).`;
+      yield `Er is een ${k} kans op ${w} in de komende twee uur (hoogste uurkans 40%).`;
     }
+    /* De twee-uurszin van neerslagkans-policy-v3 in alle vijf kansniveaus. */
+    yield `De kans op ${w} in de komende twee uur is zeer klein (hoogste uurkans 4%).`;
+    yield `${grammatica.soortIsMogelijk(w)} in de komende twee uur (hoogste uurkans 40%).`;
   }
   for (const w of ["buien", "regenbuien", "sneeuwbuien"]) yield `Er vallen nu ${w}.`;
   for (let b = 0; b < bftNamen.length; b++) {

@@ -78,7 +78,7 @@ test("verlopen 23% telt niet mee voor de komende twee uur",()=>{
 test("optie 1 wordt exact en zonder absolute droogclaim gevormd",()=>{
   const a=analyseerNeerslagData(basis(),120);
   assert.equal(neerslagZin(a),
-    "De kans op neerslag in de komende twee uur is zeer klein (maximaal 4%).");
+    "De kans op neerslag in de komende twee uur is zeer klein (hoogste uurkans 4%).");
   assert(!/blijft.*droog/i.test(neerslagZin(a)));
 });
 
