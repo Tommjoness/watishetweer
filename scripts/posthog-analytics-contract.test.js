@@ -58,9 +58,10 @@ assert(analytics.includes('navigator.doNotTrack==="1"'),"Do Not Track moet analy
 const ga4Marker="/* Google Analytics draait in basic consent mode";
 const markerPos=analytics.indexOf(ga4Marker);
 assert(markerPos>0,"GA4-laag moet expliciet van de cookie-vrije PostHog-laag zijn gescheiden");
-/* De enige toegestane opslag in de PostHog-laag is de afmelding per apparaat:
-   één vaste sleutel, alleen gezet op uitdrukkelijk verzoek. Buiten dat blok
-   blijven localStorage, cookies, querystring en hash verboden. */
+/* Toegestane opslag in de PostHog-laag: de afmelding per apparaat (één vaste
+   sleutel, alleen op uitdrukkelijk verzoek) en de anonieme bezoekers-ID (één
+   vaste sleutel, 90 dagen geldig, pas na alle uitsluitingen). Buiten die twee
+   blokken blijven localStorage, cookies, querystring en hash verboden. */
 const afmeldStart=analytics.indexOf("/* AFMELDING PER APPARAAT.");
 const afmeldEinde=analytics.indexOf("/* EINDE AFMELDING PER APPARAAT */");
 assert(afmeldStart>0&&afmeldEinde>afmeldStart,"afmeldblok per apparaat ontbreekt");
@@ -68,9 +69,20 @@ assert(afmeldEinde<analytics.indexOf("function stuur("),"afmelding moet vóór i
 assert(afmeldEinde<analytics.indexOf("GEAUTOMATISEERD.test"),"afmelding hoort direct na de hostcontrole");
 const afmeldDeel=analytics.slice(afmeldStart,afmeldEinde);
 assert(afmeldDeel.includes('const AFMELD_KEY="weerbriefing.analytics.uit.v1";'),"afmelding gebruikt één vaste sleutel");
-assert.deepEqual([...new Set(afmeldDeel.match(/localStorage\.\w+\([^)]*\)/g))].sort(),['localStorage.getItem(AFMELD_KEY)','localStorage.removeItem(AFMELD_KEY)','localStorage.setItem(AFMELD_KEY,"1")'],"afmelding leest en schrijft uitsluitend de eigen sleutel");
+assert.deepEqual([...new Set(afmeldDeel.match(/localStorage\.\w+\([^)]*\)/g))].sort(),['localStorage.getItem(AFMELD_KEY)','localStorage.removeItem(AFMELD_KEY)','localStorage.removeItem(BEZOEKER_KEY)','localStorage.setItem(AFMELD_KEY,"1")'],"afmelding leest en schrijft alleen de eigen sleutel en wist de bezoekers-ID");
+assert(afmeldDeel.includes('const BEZOEKER_KEY="weerbriefing.analytics.id.v1";'),"bezoekers-ID gebruikt één vaste sleutel");
+const idStart=analytics.indexOf("/* BEZOEKERS-ID OP DIT APPARAAT.");
+const idEinde=analytics.indexOf("/* EINDE BEZOEKERS-ID */");
+assert(idStart>0&&idEinde>idStart,"bezoekers-ID-blok ontbreekt");
+for(const uitsluiting of ["if(afgemeld())return;","navigator.globalPrivacyControl===true","GEAUTOMATISEERD.test"])
+  assert(analytics.indexOf(uitsluiting)<idStart,"bezoekers-ID mag pas na de uitsluiting bestaan: "+uitsluiting);
+const idDeel=analytics.slice(idStart,idEinde);
+assert.deepEqual([...new Set(idDeel.match(/localStorage\.\w+\([^)]*\)/g))].sort(),['localStorage.getItem(BEZOEKER_KEY)','localStorage.setItem(BEZOEKER_KEY,JSON.stringify({id,sinds:nu})'],"bezoekers-ID leest en schrijft uitsluitend de eigen sleutel");
+assert(idDeel.includes("const BEZOEKER_GELDIG_MS=90*24*60*60*1000;"),"bezoekers-ID vervalt na 90 dagen");
+assert(idDeel.includes("catch(e){return tijdelijkId();}"),"zonder opslag valt de meting terug op een tijdelijke identifier");
+assert(analytics.includes('"$process_person_profile":false'),"er komt nooit een PostHog-personenprofiel");
 assert(afmeldDeel.includes("if(afgemeld())return;"),"na afmelding mag niets meer starten");
-const posthogDeel=analytics.slice(0,afmeldStart)+analytics.slice(afmeldEinde,markerPos);
+const posthogDeel=analytics.slice(0,afmeldStart)+analytics.slice(afmeldEinde,idStart)+analytics.slice(idEinde,markerPos);
 for(const [label,patroon] of [
   ["localStorage-gebruik",/\blocalStorage\s*(?:\.|\[)/],
   ["sessionStorage-gebruik",/\bsessionStorage\s*(?:\.|\[)/],
@@ -171,31 +183,34 @@ const posthogPos=deliveryCleanup.indexOf("voegPostHogNaDeliveryToe();",optimalis
 assert(optimaliseerPos>=0&&posthogPos>optimaliseerPos,"analytics moet aantoonbaar pas na succesvolle delivery-optimalisatie worden toegepast");
 
 /* Gedrag van de afmelding, uitgevoerd in een nagebootste productiebrowser. */
-function draai(href,opslag){
-  const verzonden=[],vervangen=[];
+function draai(href,opslag,opties={}){
+  const verzonden=[],vervangen=[],payloads=[];
   const url=new URL(href);
   const knop={textContent:"",hidden:false,onclick:null},status={textContent:""},ga4Knop={textContent:"",hidden:false},ga4Status={textContent:""};
   const selectors={"[data-analytics-device-toggle]":knop,"[data-analytics-device-status]":status,"[data-ga4-consent-toggle]":ga4Knop,"[data-ga4-consent-status]":ga4Status};
-  const localStorage={getItem:k=>opslag.has(k)?opslag.get(k):null,setItem:(k,v)=>opslag.set(k,String(v)),removeItem:k=>opslag.delete(k)};
-  const document={readyState:"complete",referrer:"",title:"t",cookie:"",head:{appendChild(){}},body:{appendChild(){}},
+  const fout=()=>{throw new Error("opslag geblokkeerd");};
+  const localStorage=opties.opslagFout?{getItem:fout,setItem:fout,removeItem:fout}:{getItem:k=>opslag.has(k)?opslag.get(k):null,setItem:(k,v)=>opslag.set(k,String(v)),removeItem:k=>opslag.delete(k)};
+  const document={readyState:"complete",referrer:"",title:"t",cookie:"",documentElement:{lang:opties.lang||"nl"},head:{appendChild(){}},body:{appendChild(){}},
     getElementById:()=>null,querySelector:s=>selectors[s]||null,createElement:()=>({setAttribute(){},addEventListener(){},dataset:{},style:{}}),addEventListener(){}};
   const window={innerWidth:1200,matchMedia:()=>({matches:false}),addEventListener(){}};
   const context={window,document,localStorage,URL,JSON,Object,Set,Math,Number,String,Array,Date,Uint32Array,
     navigator:{userAgent:"Mozilla/5.0 (Macintosh) Safari/605.1.15",webdriver:false},
     location:{protocol:url.protocol,hostname:url.hostname,href:url.href,origin:url.origin,pathname:url.pathname,reload(){}},
     history:{state:null,replaceState:(st,t,u)=>vervangen.push(u)},
-    fetch:(u,o)=>{verzonden.push(JSON.parse(o.body).event);return {catch(){}};},
+    fetch:(u,o)=>{const b=JSON.parse(o.body);verzonden.push(b.event);payloads.push(b);return {catch(){}};},
     setTimeout:()=>0,globalThis:{}};
   window.history=context.history;
   vm.runInNewContext(analytics,context);
-  return {verzonden,vervangen,knop,status,ga4Knop,ga4Status};
+  return {verzonden,vervangen,payloads,knop,status,ga4Knop,ga4Status};
 }
 const opslag=new Map();
 let r=draai("https://www.watishetweer.nl/weer/almere/?analytics=uit&x=1#top",opslag);
 assert.equal(opslag.get("weerbriefing.analytics.uit.v1"),"1","?analytics=uit hoort de afmelding te bewaren");
 assert.deepEqual(r.verzonden,[],"na ?analytics=uit gaat er niets naar PostHog, ook geen paginaweergave");
 assert.deepEqual(r.vervangen,["/weer/almere/?x=1#top"],"de analytics-parameter verdwijnt uit de adresbalk; de rest blijft");
-assert(r.knop.textContent.includes("weer toestaan")&&r.status.textContent.includes("staan alle statistieken uit"),"privacyknop toont de afgemelde toestand");
+assert.equal(r.knop.textContent,"PostHog en Google Analytics weer toestaan","privacyknop toont de afgemelde toestand");
+assert.equal(r.status.textContent.trim(),"PostHog en Google Analytics staan uit. Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies.","afmeldstatus noemt precies wat uit staat en dat Cloudflare cookieloos blijft meten");
+assert(!/alle statistieken/i.test(r.status.textContent),"afmeldstatus mag niet 'alle statistieken' beloven");
 assert(r.ga4Knop.hidden&&r.ga4Status.textContent.includes("Google Analytics staat op dit apparaat uit"),"GA4-knop verdwijnt zolang alles uit staat");
 r=draai("https://www.watishetweer.nl/",opslag);
 assert.deepEqual(r.verzonden,[],"afmelding blijft bij een volgend bezoek gelden");
@@ -208,9 +223,37 @@ r=draai("https://www.watishetweer.nl/?analytics=iets",opslag);
 assert.deepEqual(r.vervangen,[],"onbekende waarden laten adres en keuze ongemoeid");
 assert.deepEqual(r.verzonden,["$pageview"]);
 
+/* Anonieme bezoekers-ID en taal (eigenaar, 2 oktober). */
+const ID_KEY="weerbriefing.analytics.id.v1";
+const idOpslag=new Map();
+r=draai("https://watishetweer.nl/weer/almere/",idOpslag);
+const eerste=r.payloads[0];
+assert(/^anon_/.test(eerste.distinct_id),"de bezoekers-ID is anoniem");
+assert.equal(JSON.parse(idOpslag.get(ID_KEY)).id,eerste.distinct_id,"de bezoekers-ID wordt op het apparaat bewaard");
+assert.equal(eerste.properties.taal,"nl","Nederlandse weergave telt als nl");
+assert.equal(eerste.properties.$process_person_profile,false,"geen personenprofiel");
+assert(!JSON.stringify(eerste).includes("almere"),"de plaats gaat nooit mee");
+r=draai("https://watishetweer.nl/",idOpslag,{lang:"en-GB"});
+assert.equal(r.payloads[0].distinct_id,eerste.distinct_id,"een volgend bezoek gebruikt dezelfde ID, zodat terugkeer telbaar is");
+assert.equal(r.payloads[0].properties.taal,"en","Engelse weergave telt als en");
+idOpslag.set(ID_KEY,JSON.stringify({id:eerste.distinct_id,sinds:Date.now()-91*24*60*60*1000}));
+r=draai("https://watishetweer.nl/",idOpslag);
+assert.notEqual(r.payloads[0].distinct_id,eerste.distinct_id,"na 90 dagen komt er een nieuwe ID");
+idOpslag.set(ID_KEY,JSON.stringify({id:"iets anders",sinds:Date.now()}));
+r=draai("https://watishetweer.nl/",idOpslag);
+assert(/^anon_/.test(r.payloads[0].distinct_id)&&r.payloads[0].distinct_id!=="iets anders","een ongeldige bewaarde waarde wordt vervangen");
+r=draai("https://watishetweer.nl/?analytics=uit",idOpslag);
+assert(!idOpslag.has(ID_KEY),"afmelden wist de bezoekers-ID");
+assert.deepEqual(r.verzonden,[],"na afmelden gaat er niets naar PostHog");
+idOpslag.clear();
+r=draai("https://watishetweer.nl/",idOpslag,{opslagFout:true});
+assert(/^anon_/.test(r.payloads[0].distinct_id)&&idOpslag.size===0,"zonder bruikbare opslag een tijdelijke ID, zonder fout");
+
 const privacy=fs.readFileSync(path.join(root,"privacy.html"),"utf8");
 assert(privacy.includes("data-analytics-device-toggle")&&privacy.includes("data-analytics-device-status"),"privacypagina mist de knop om statistieken per apparaat uit te zetten");
 assert(privacy.includes("?analytics=uit")&&privacy.includes("weerbriefing.analytics.uit.v1"),"privacyverklaring moet de afmelding en de bewaarde sleutel noemen");
+assert(privacy.includes("<b>PostHog en Google Analytics uitzetten.</b>")&&privacy.includes("Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies."),"privacyverklaring moet zeggen dat de afmelding PostHog en Google Analytics betreft en Cloudflare cookieloos blijft meten");
+assert(!/alle statistieken uit/i.test(privacy),"privacyverklaring mag niet beloven dat de knop alle statistieken uitzet");
 for(const tekst of ["PostHog Cloud EU","geen PostHog-SDK","querystring","URL-hash","IP-anonimisering","grove laadduurgroep","generieke taakuitkomsten","concrete weerwaarden","Google Analytics 4 (GA4) is optioneel","pas geladen nadat je daar expliciet toestemming voor geeft","Advertentieopslag","data-ga4-consent-toggle","Je kunt toestemming hier altijd weer intrekken"]){
   assert(privacy.includes(tekst),"privacyverklaring mist analytics-uitleg: "+tekst);
 }

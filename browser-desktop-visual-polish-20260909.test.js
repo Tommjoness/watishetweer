@@ -66,8 +66,10 @@ window.Date=PolishFixtureDate;
 window.__POLISH_ERRORS=[];
 window.addEventListener('error',e=>window.__POLISH_ERRORS.push(String(e.error&&e.error.stack||e.message)));
 window.addEventListener('unhandledrejection',e=>window.__POLISH_ERRORS.push(String(e.reason&&e.reason.stack||e.reason)));
+window.__POLISH_LKI_URLS=[];
 window.fetch=async function(url){
   const u=String(url);
+  if(u.includes('/api/luchtkwaliteit'))window.__POLISH_LKI_URLS.push(u);
   const payload=u.includes('/api/waarschuwingen')?${JSON.stringify({bron:"test",dekking:true,lijst:[],land:"NL"})}
     :u.includes('air-quality-api.open-meteo.com')?${JSON.stringify(air)}
     :u.includes('/api/luchtkwaliteit')?${JSON.stringify({beschikbaar:true,provider:"luchtmeetnet",type:"actuele_lki",lki:4,bron:"RIVM / Luchtmeetnet"})}
@@ -134,7 +136,7 @@ function meet(){
     zet("hero-family",C(document.getElementById("t")).fontFamily);zet("mini-family",C(document.getElementById("minitemp")).fontFamily);
     zet("footer-font",parseFloat(C(footer).fontSize));zet("footer-margin",parseFloat(C(footer).marginTop)||0);zet("footer-padding",parseFloat(C(footer).paddingTop)||0);zet("aq-footer-gap",R(footer).top-R(aq).bottom);
     zet("sheet-padding-bottom",parseFloat(C(sheet).paddingBottom)||0);zet("footer-nav-gap",R(nav).top-R(footer).bottom);zet("nav-margin",parseFloat(C(nav).marginTop)||0);zet("nav-padding",parseFloat(C(nav).paddingTop)||0);zet("nav-height",R(nav).height);
-    zet("aq-label",aq.querySelector(".stat .eyebrow")?.textContent.trim()||"");zet("nav-label",nav.querySelector(".seo-plaatsnav-kop")?.textContent.trim()||"");zet("lki-copy",document.querySelector(".luchtmeetnet-lki")?"aanwezig":"afwezig");zet("theme",document.documentElement.getAttribute("data-thema")||"");
+    zet("aq-label",aq.querySelector(".stat .eyebrow")?.textContent.trim()||"");zet("nav-label",nav.querySelector(".seo-plaatsnav-kop")?.textContent.trim()||"");zet("lki-copy",document.querySelector(".luchtmeetnet-lki")?"aanwezig":"afwezig");zet("lki-requests",String((window.__POLISH_LKI_URLS||[]).length));zet("theme",document.documentElement.getAttribute("data-thema")||"");
     zet("assessment-visible",C(nHead.querySelector(".wiw-night-assessment-head")).display!=="none"?1:0);
     zet("done","ok");
   }catch(e){zet("exception",e&&e.stack||e);zet("done","fout");}
@@ -158,6 +160,8 @@ try{
     if(v("done")!=="ok")throw new Error(`${w}px reporter: ${v("exception")}; injected=${v("injected")}`);
     if(n("overflow")>2)throw new Error(`${w}px: ${n("overflow")}px horizontale overflow`);
     if(v("lki-copy")!=="afwezig")throw new Error(`${w}px ${land}: verwijderde Nederlandse LKI-subcopy staat nog in de AQI-tegel`);
+    /* De zichtbare AQI komt van Open-Meteo/CAMS; de ongebruikte RIVM/Luchtmeetnet-aanvraag is verwijderd (hercontrole 2 oktober, punt 7). */
+    if(v("lki-requests")!=="0")throw new Error(`${w}px ${land}: de client vraagt nog ${v("lki-requests")}× /api/luchtkwaliteit op, terwijl die waarde nergens wordt getoond`);
     if(v("nav-label")!=="Populaire plaatsen in Nederland")throw new Error(`${w}px ${land}: vaste Nederlandse plaatsnavigatie is onbedoeld gewijzigd (${v("nav-label")})`);
     if(v("aq-label")!==(land==="US"?"AQI (VS-schaal)":"Europese AQI"))throw new Error(`${w}px ${land}: inhoudelijk AQI-schaallabel onjuist (${v("aq-label")})`);
     if(modus==="donker"&&v("theme")!=="donker")throw new Error(`${w}px ${land}: donkere productcontrole activeerde het donkere thema niet`);
