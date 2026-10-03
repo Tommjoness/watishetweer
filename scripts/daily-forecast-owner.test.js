@@ -37,10 +37,12 @@ assert.equal(dagNeerslagMmTekst(8.14),"8,1 mm");
 assert.equal(dagNeerslagMmTekst(0.02,0.03),"spoor","formatter kan een expliciete centrale spoorgrens volgen");
 
 assert.equal(dagNaam("2026-08-26",false,"2026-08-26"),"Vandaag");
-assert.equal(dagNaam("2026-08-26",true,"2026-08-26"),"Vandaag 26");
-assert.equal(dagNaam("2026-08-27",false,"2026-08-26"),"do 27");
-assert.equal(dagNaam("2026-08-31",true,"2026-08-26"),"maandag 31");
-assert.equal(dagNaam("2026-09-01",false,"2026-08-26"),"di 1","dagnaam rolt correct over maandgrens");
+assert.equal(dagNaam("2026-08-26",true,"2026-08-26"),"Vandaag 26 aug","vandaag krijgt de maand erbij");
+assert.equal(dagNaam("2026-08-27",false,"2026-08-26"),"do 27 aug");
+assert.equal(dagNaam("2026-08-31",true,"2026-08-26"),"maandag 31 aug");
+assert.equal(dagNaam("2026-09-01",false,"2026-08-26"),"di 1 sep","dagnaam rolt correct over maandgrens, mét de nieuwe maand");
+assert.equal(dagNaam("2026-12-31",true,"2026-12-30"),"donderdag 31 dec");
+assert.equal(dagNaam("2027-01-01",false,"2026-12-30"),"vr 1 jan","jaargrens");
 
 /* Deze migratie mag inhoudelijk exact één bestaande CSS-declaratie verplaatsen:
    dezelfde selector en dezelfde waarde. Zo kan een latere refactor niet stil
@@ -78,7 +80,7 @@ assert(uit.includes('if(mm<=weatherNowDagSpoorMm())return "spoor";'),"spoorhoeve
 assert(uit.includes('if(mm<0.05)return "<0,05 mm";'),"kleine maar boven-spoorhoeveelheid krijgt de precieze <0,05-weergave");
 assert(uit.includes('if(mm<0.1)return "<0,1 mm";'),"0,05 tot 0,1 mm behoudt de bredere <0,1-weergave");
 assert(uit.includes('globalThis.WeatherNowInterpretatie.INTERPRETATIE_CONFIG'),"browserformatter leest de centrale spoorgrens wanneer beschikbaar");
-assert(uit.includes('if(sleutel===weatherNowLokaleDatumSleutel())return volledig?"Vandaag "+nr:"Vandaag";'),"weekrij gebruikt lokale kalenderdag voor Vandaag");
+assert(uit.includes('if(sleutel===weatherNowLokaleDatumSleutel())return volledig?"Vandaag "+datumTekst:"Vandaag";'),"weekrij gebruikt lokale kalenderdag voor Vandaag, mét maand");
 assert(uit.includes('neerslagMmTekst?`<small>${neerslagMmTekst}</small>`:""'),"weekcel gebruikt de null-veilige hoeveelheid niet");
 for(const fragment of [DCOND_BRON,DRAIN_BRON,DAGNAAM_BRON,KOP_BRON])assert(!uit.includes(fragment),"oude daily-presentatie bleef in base-build staan");
 
