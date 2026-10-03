@@ -1,7 +1,7 @@
 "use strict";
 
 const assert=require("assert");
-const {isProviderStoring,isProviderStoringBericht,beschrijf}=require("./provider-storing.js");
+const {isProviderStoring,isProviderStoringBericht,beschrijf,beoordeelForecastHerkomst}=require("./provider-storing.js");
 
 const FOUT503="Failed to load resource: the server responded with a status of 503 (Service Unavailable)";
 const FOUT429="Failed to load resource: the server responded with a status of 429 (Too Many Requests)";
@@ -30,4 +30,18 @@ assert.equal(isProviderStoringBericht(bericht(FOUT503,"https://watishetweer.nl/a
 assert.equal(isProviderStoringBericht({text:()=>FOUT503,location:()=>{throw new Error("x");}}),false);
 assert.deepEqual(beschrijf(bericht(FOUT503,OM)),{status:503,url:"https://api.open-meteo.com/v1/forecast"});
 
-console.log("Provider-storing: alleen 429/5xx van Open-Meteo-hosts is een opvangbare storing; eigen 5xx, 4xx, scriptfouten en andere hosts blijven fouten.");
+/* Herkomst van de verwachting (live-performance-smoke, 3 oktober 2026). */
+const h=beoordeelForecastHerkomst;
+assert.deepEqual(h({volledigOk:1}),{ok:true,bron:"open-meteo",reden:""},"normaal: één volledige Open-Meteo-forecast");
+assert.equal(h({volledigStoring:1,reserveOk:1}).bron,"reserve","503 van Open-Meteo, reserveroute leverde");
+assert.equal(h({volledigAfgebroken:1,reserveOk:1}).bron,"reserve","trage Open-Meteo afgebroken, reserveroute leverde");
+assert.equal(h({}).ok,false,"zonder enige bron is het een fout");
+assert.equal(h({volledigOk:2}).ok,false,"dubbele volledige forecast blijft een fout");
+assert.equal(h({volledigOk:1,reserveOk:1}).ok,false,"reserveroute terwijl Open-Meteo slaagde is een dubbele aanvraag");
+assert.equal(h({volledigOk:1,volledigAfgebroken:1}).ok,false,"een afgebroken én een geslaagde volledige forecast is een dubbele aanvraag");
+assert.equal(h({reserveOk:1}).ok,false,"reserveroute zonder Open-Meteo-poging verbergt een fout in de app");
+assert.equal(h({volledigStoring:1}).ok,false,"Open-Meteo faalde en de reserveroute leverde niets");
+assert.equal(h({volledigStoring:1,reserveOk:2}).ok,false,"de reserveroute maar één keer");
+assert.match(h({volledigStoring:2}).reden,/429\/5xx 2/);
+
+console.log("Provider-storing: alleen 429/5xx van Open-Meteo-hosts is een opvangbare storing; eigen 5xx, 4xx, scriptfouten en andere hosts blijven fouten; herkomst van de verwachting: Open-Meteo of, alleen na een Open-Meteo-storing, precies één keer de reserveroute.");
