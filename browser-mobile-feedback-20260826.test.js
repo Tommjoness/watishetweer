@@ -124,6 +124,7 @@ async function controleer(browserType,naam){
         describedBy:rijen.map(r=>r.getAttribute("aria-describedby")),
         todayDesc:todayDesc?(todayDesc.textContent||"").replace(/\s+/g," ").trim():"",
         todayAriaLabel:eerste.getAttribute("aria-label"),
+        todayDrainLabel:(eerste.querySelector(".drain")||{getAttribute:()=>null}).getAttribute("aria-label"),
         pressed:rijen.map(r=>r.getAttribute("aria-pressed")),
         tempLabels:tempLabels.length,
         overflow:document.documentElement.scrollWidth-window.innerWidth
@@ -142,8 +143,11 @@ async function controleer(browserType,naam){
     assert(!!voor.describedBy[0],`${naam}: Vandaag heeft aanvullende aria-describedby-uitleg`);
     assert(voor.describedBy.slice(1).every(v=>v===null),`${naam}: toekomstige dagen behouden hun bestaande toegankelijke naam zonder nieuwe beschrijving`);
     assert.equal(voor.todayAriaLabel,null,`${naam}: Vandaag krijgt geen vervangend aria-label`);
-    assert(/6 procent; 0,0 millimeter/i.test(voor.todayDesc),`${naam}: kans en hoeveelheid worden gescheiden uitgesproken (${voor.todayDesc})`);
-    assert(/minimum en maximum gelden voor de volledige kalenderdag/i.test(voor.todayDesc),`${naam}: aanvullende kalenderdaguitleg ontbreekt (${voor.todayDesc})`);
+    /* Afspraak 3 oktober: de neerslag (resterende uren) staat in de naam van de
+       Vandaag-regel; de beschrijving zegt alleen dat minimum en maximum de hele
+       kalenderdag beschrijven, zonder de neerslag te herhalen. */
+    assert.equal(voor.todayDrainLabel,"Hoogste neerslagkans in één uur in de rest van vandaag 6 procent; verwachte neerslag in de rest van vandaag 0,0 mm",`${naam}: Vandaag-neerslag noemt de resterende uren niet (${voor.todayDrainLabel})`);
+    assert.equal(voor.todayDesc,"Minimum en maximum gelden voor de volledige kalenderdag.",`${naam}: Vandaag-beschrijving herhaalt de neerslag of mist de kalenderdaguitleg (${voor.todayDesc})`);
     for(const technisch of ["hoogste neerslagkans in één uur","berekende dagsom","verschillende modelwaarden","één op één samen te vallen"]){
       assert(!voor.dagenTekst.toLowerCase().includes(technisch.toLowerCase()),`${naam}: technische weekuitleg blijft verborgen: ${technisch}`);
     }
@@ -168,7 +172,7 @@ async function controleer(browserType,naam){
       beschreven:document.querySelector("#days .row.day.on")?.getAttribute("aria-describedby")||""
     }));
     assert(/^Vandaag 26 augustus, per uur$/i.test(na.kop),`${naam}: gekozen lokale dag wordt als Vandaag benoemd (${na.kop})`);
-    assert(/Kans op neerslag:\s*6%/i.test(na.hint)&&/verwachte hoeveelheid:\s*0,0 mm/i.test(na.hint),`${naam}: aangeklikte dag toont kans én hoeveelheid (${na.hint})`);
+    assert(/Hoogste kans op neerslag in één uur:\s*6%/i.test(na.hint)&&/Verwachte neerslag over de hele dag:\s*0,0 mm/i.test(na.hint),`${naam}: aangeklikte dag toont kans én hoeveelheid (${na.hint})`);
     assert(na.geselecteerd,`${naam}: aangeklikte dag blijft geselecteerd`);
     assert.equal(na.pressed,"true",`${naam}: geselecteerde dag wordt ook semantisch als actief aangekondigd`);
     assert.equal(na.beschreven,voor.describedBy[0],`${naam}: geselecteerde Vandaag-rij behoudt uitsluitend zijn nieuwe aanvullende aria-beschrijving`);

@@ -5,7 +5,7 @@
    - Zes tegels: "Tijd tot zonsondergang" en (bij goed zicht) "Zicht" staan
      verborgen; vanaf 600px drie kolommen.
    - Na zonsondergang: "UV-piek morgen" en "Zonuren morgen" met de waarden
-     voor morgen.
+     voor morgen; na een wissel naar een plaats overdag weer "vandaag".
    - Pollen: niveau per soort volgens het National Allergy Bureau (160
      graspollen = veel), met bronvermelding.
    - Nachtzicht: telefoon toont alleen vannacht, desktop drie nachten.
@@ -20,6 +20,8 @@
      direct, in beide richtingen, op telefoon en desktop.
    - Privacy: "Wis lokale gegevens" wist ook de weergavekeuze van de sessie
      en houdt de GA4-toestemmingskeuze.
+   - Engels (audit 2 oktober): UV-kop na plaatswissel, klikbare e-mail,
+     grafiekvenster, themalabels, Maan-kolom en "The Hague" in de lijst.
 
    Draait na: npm run build:cloudflare */
 
@@ -39,6 +41,17 @@ const SCENARIO={
   /* 22:40, na zonsondergang. */
   avond:{klok:"2026-07-22T20:40:00Z",meting:"2026-07-22T22:30",gras:12,
     temp:(u,dag)=>+(14+3.8*Math.sin((u-9)/24*Math.PI*2)-dag*0.2).toFixed(1),pp:()=>8,pr:()=>0},
+  /* 14:15, het regende vanochtend (05-10 uur), daarna droog: de rest van vandaag
+     is 0,0 mm, de hele kalenderdag niet (eigenaar, 2 oktober). */
+  ochtendregen:{klok:"2026-07-22T12:15:00Z",meting:"2026-07-22T14:00",gras:4,
+    temp:(u,dag)=>+(15+3*Math.sin((u-9)/24*Math.PI*2)-dag*0.2).toFixed(1),
+    pp:(u,dag)=>dag===0&&u>=5&&u<=9?85:3,pr:(u,dag)=>dag===0&&u>=5&&u<=9?1.2:0},
+  /* Als ochtendregen, maar 26 juli zonder wind- en neerslaggegevens. */
+  onbekend:{klok:"2026-07-22T12:15:00Z",meting:"2026-07-22T14:00",gras:4,
+    temp:(u,dag)=>+(15+3*Math.sin((u-9)/24*Math.PI*2)-dag*0.2).toFixed(1),
+    pp:(u,dag)=>dag===0&&u>=5&&u<=9?85:3,pr:(u,dag)=>dag===0&&u>=5&&u<=9?1.2:0,
+    pas:d=>{const i=d.daily.time.indexOf("2026-07-26");d.daily.wind_speed_10m_max[i]=null;d.daily.precipitation_probability_max[i]=null;d.daily.precipitation_sum[i]=null;
+      d.hourly.time.forEach((t,k)=>{if(t.startsWith("2026-07-26")){d.hourly.precipitation_probability[k]=null;d.hourly.precipitation[k]=null;d.hourly.rain[k]=null;}});}},
   /* Storm: windkracht 10 uit het westzuidwesten ("WZW 10 Bft"), veel regen. */
   storm:{klok:"2026-07-22T07:10:00Z",meting:"2026-07-22T09:00",gras:4,ws:95,wd:247.5,
     temp:(u,dag)=>+(13+3*Math.sin((u-9)/24*Math.PI*2)-dag*0.2).toFixed(1),pp:()=>100,pr:()=>12.4}
@@ -51,6 +64,16 @@ function fixture(sc){
   while(h.time.length<194){const i=h.time.length,v=h.time[i-1];for(const k of Object.keys(h))if(k!=="time"&&Array.isArray(h[k]))h[k].push(h[k][i%24]);h.time.push(new Date(Date.parse(v+"Z")+3600000).toISOString().slice(0,16));}
   const nu=h.time.indexOf(sc.meting.slice(0,14)+"00");
   d.current.time=sc.meting;d.current.temperature_2m=h.temperature_2m[nu];d.current.apparent_temperature=h.temperature_2m[nu]-1;
+  if(sc.pas)sc.pas(d);
+  return d;
+}
+/* Hetzelfde moment in New York: 16:30 plaatselijke tijd, ruim voor zonsondergang. */
+function fixtureNewYork(sc){
+  const d=fixture(sc);
+  d.latitude=40.7143;d.longitude=-74.006;d.timezone="America/New_York";d.utc_offset_seconds=-14400;
+  const meting=new Date(Date.parse(sc.meting+"Z")-6*3600000).toISOString().slice(0,16);
+  const nu=d.hourly.time.indexOf(meting.slice(0,14)+"00");
+  d.current.time=meting;d.current.is_day=1;d.current.temperature_2m=d.hourly.temperature_2m[nu];d.current.apparent_temperature=d.hourly.temperature_2m[nu]-1;
   return d;
 }
 const types={".html":"text/html; charset=utf-8",".js":"application/javascript",".css":"text/css",".woff2":"font/woff2",".svg":"image/svg+xml",".json":"application/json",".png":"image/png"};
@@ -61,15 +84,20 @@ const server=http.createServer((req,res)=>{
   res.writeHead(200,{"content-type":types[path.extname(f)]||"application/octet-stream","cache-control":"no-store"});fs.createReadStream(f).pipe(res);
 });
 
-async function open(browser,root,sc,w,h,pad="/weer/utrecht/"){
+async function open(browser,root,sc,w,h,pad="/weer/utrecht/",taal){
   const mobiel=w<700;
   const context=await browser.newContext({viewport:{width:w,height:h},locale:"nl-NL",timezoneId:"Europe/Amsterdam",serviceWorkers:"block",isMobile:mobiel,hasTouch:mobiel});
   const page=await context.newPage(),fouten=[];
   page.on("pageerror",e=>fouten.push(String(e)));
+  if(taal)await page.addInitScript(t=>{try{localStorage.setItem("weerbriefing.taal.v1",JSON.stringify(t));}catch(_){}},taal);
   if(sc)await page.addInitScript(k=>{const N=Date,s=N.now(),e=N.parse(k);class F extends N{constructor(...a){super(...(a.length?a:[e+N.now()-s]));}static now(){return e+N.now()-s;}}window.Date=F;},sc.klok);
   await page.route("**/*",async r=>{
     const u=new URL(r.request().url());
-    if(sc&&(u.hostname==="api.open-meteo.com"||u.pathname==="/api/forecast"))return r.fulfill({json:fixture(sc)});
+    if(sc&&u.hostname==="geocoding-api.open-meteo.com")return r.fulfill({json:{results:/new york/i.test(u.searchParams.get("name")||"")?[{name:"New York",latitude:40.7143,longitude:-74.006,admin1:"New York",country_code:"US"}]:[]}});
+    if(sc&&(u.hostname==="api.open-meteo.com"||u.pathname==="/api/forecast")){
+      const lat=Number(u.searchParams.get("latitude")||u.searchParams.get("lat"));
+      return r.fulfill({json:Math.abs(lat-40.7143)<0.01?fixtureNewYork(sc):fixture(sc)});
+    }
     if(sc&&u.hostname==="air-quality-api.open-meteo.com")return r.fulfill({json:{current:{european_aqi:30,uv_index:2},hourly:{time:[sc.meting.slice(0,14)+"00"],grass_pollen:[sc.gras],birch_pollen:[0],alder_pollen:[0],mugwort_pollen:[1],ragweed_pollen:[0],olive_pollen:[0]}}});
     if(u.pathname==="/api/waarschuwingen")return r.fulfill({json:{bron:"test",dekking:true,land:"NL",lijst:[]}});
     if(u.pathname.startsWith("/api/"))return r.fulfill({json:{beschikbaar:false}});
@@ -145,6 +173,142 @@ function meet(){
         console.log("SAMENHANG "+label+": "+m.tegels.length+" tegels in "+m.kolommen+" kolom(men), "+m.uvKop+", "+m.nachten+" nacht(en) open"+(w>=1100?", grafiek "+(m.grafiekUren-1)+" uur":"")+".");
       }finally{await context.close();}
     }
+    /* Plaatswissel van avond naar dag, zonder herladen: Utrecht 22:40 (UV-piek
+       morgen) naar New York 16:40. De kop moet terug naar vandaag; eerder bleef
+       "UV-piek morgen" boven de waarde van vandaag staan (audit F01). */
+    for(const [w,h] of [[390,844],[1366,768]]){
+      const label="avond→dag "+w+"px";
+      const {context,page,fouten}=await open(browser,root,SCENARIO.avond,w,h);
+      try{
+        assert.equal((await page.evaluate(meet)).uvKop,"UV-piek morgen",label+": uitgangssituatie is niet de avond");
+        await page.fill("#q","New York");
+        await page.waitForSelector("#res.on div[data-lat]",{timeout:5000});
+        await page.locator("#res div[data-lat]").first().click();
+        await page.waitForFunction(()=>typeof S!=="undefined"&&S.d&&S.d.timezone==="America/New_York"&&document.querySelectorAll("#chart circle").length>0,null,{timeout:15000});
+        await sleep(1500);
+        const m=await page.evaluate(meet);
+        assert.equal(m.uvKop,"UV-piek vandaag",label+": UV-kop bleef na de wissel naar een plaats overdag op morgen staan");
+        assert(!/morgen/.test(m.uvSub),label+": UV-regel gaat overdag over morgen: "+m.uvSub);
+        const zon=m.aq.find(t=>/^Zonuren/.test(t.kop));
+        assert(zon&&zon.kop==="Zonuren",label+": zonurentegel bleef op morgen staan: "+JSON.stringify(zon));
+        assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
+        console.log("SAMENHANG "+label+": na de wissel naar New York staat er weer "+m.uvKop+" en "+zon.kop+".");
+      }finally{await context.close();}
+    }
+    /* Engelse weergave (audit F03–F08): contactlink, grafiekvenster,
+       themalabels en de Maan-kolom zonder extra zichtregel. */
+    {
+      const label="Engels 1440px";
+      const {context,page,fouten}=await open(browser,root,SCENARIO.middag,1440,900,"/weer/utrecht/","en");
+      try{
+        await page.waitForFunction(()=>document.documentElement.lang==="en-GB",null,{timeout:10000});await sleep(800);
+        const r=await page.evaluate(()=>{
+          const zichtbaar=el=>!!el&&el.getClientRects().length>0&&getComputedStyle(el).display!=="none"&&getComputedStyle(el).visibility!=="hidden";
+          const maan=[...document.querySelectorAll("#nights .nachtmaan")].filter(zichtbaar).map(el=>[...el.querySelectorAll("*")].filter(k=>zichtbaar(k)&&!k.children.length).map(k=>k.textContent.trim()).join(" "));
+          const na=sel=>{const el=document.querySelector(sel);return el?getComputedStyle(el,"::after").content:null;};
+          return {mailto:[...document.querySelectorAll('.footer-contact a[href="mailto:support@watishetweer.nl"]')].length,
+            maan,licht:na("#thema .wiw-theme-sun"),donker:na("#thema .wiw-theme-moon")};
+        });
+        assert(r.mailto>=1,label+": de e-mail in de footer is geen klikbare link meer (F03)");
+        assert(r.maan.length&&r.maan.every(t=>!/visibility|zicht/i.test(t)),label+": de Maan-kolom toont een zichtregel: "+JSON.stringify(r.maan.slice(0,2))+" (F08)");
+        if(r.licht!==null)assert.deepEqual([r.licht,r.donker],['"Light"','"Dark"'],label+": themalabels blijven Nederlands (F05)");
+        /* Grafiekvenster bij een gekozen uur. */
+        const hit=await page.$("#hit");await hit.scrollIntoViewIfNeeded();
+        const box=await hit.boundingBox();await page.mouse.move(box.x+box.width*0.35,box.y+box.height*0.5);await sleep(400);
+        const venster=await page.evaluate(()=>[...document.querySelectorAll("#scrub text")].map(t=>t.textContent.trim()));
+        assert(venster.length>=6,label+": het grafiekvenster verschijnt niet ("+venster.length+" teksten)");
+        const nl=venster.filter(t=>/temperatuur|voelt als|bewolking|windstoten|km\/u|neerslag|kans \d|WZW|ZZW|OZO|NNO|ONO/.test(t));
+        assert.deepEqual(nl,[],label+": grafiekvenster bevat Nederlandse tekst (F04): "+JSON.stringify(venster));
+        /* Handmatig donker: de naam van de schakelaar is Engels. */
+        await page.evaluate(()=>document.getElementById("thema-switch").click());await sleep(300);
+        const naam=await page.evaluate(()=>document.getElementById("thema-switch").getAttribute("aria-label")||"");
+        assert(!/Handmatig|Licht|Donker|browsersessie/.test(naam),label+": schakelaarnaam blijft Nederlands (F05): "+naam);
+        /* Gekozen dag: de neerslag blijft in de Engelse hint staan (auditronde 2, E07). */
+        await page.evaluate(()=>document.querySelectorAll("#days .row.day:not(.kop)")[2].click());await sleep(800);
+        const dagHint=await page.evaluate(()=>(document.getElementById("charthint")||{}).textContent||"");
+        assert(/^This calendar day by the hour\. Highest chance of precipitation in any one hour: \d+%\. Expected precipitation for the whole day: (?:trace|<?\d+\.\d+ mm)\. Select a time in the chart/.test(dagHint),label+": Engelse daghint zonder (volledige) neerslag: "+dagHint);
+        assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
+        console.log("SAMENHANG "+label+": mailto blijft, Maan-kolom zonder zichtregel, venster "+JSON.stringify(venster.slice(0,4))+", schakelaar '"+naam+"'.");
+      }finally{await context.close();}
+    }
+    /* Vandaag na ochtendregen, in beide talen: de Vandaag-regel beschrijft de rest
+       van vandaag (0,0 mm), de gekozen kalenderdag de hele dag (6,0 mm). */
+    for(const taal of ["nl","en"]){
+      const label="ochtendregen "+taal;
+      const {context,page,fouten}=await open(browser,root,SCENARIO.ochtendregen,1366,768,"/weer/utrecht/",taal);
+      try{
+        if(taal==="en")await page.waitForFunction(()=>document.documentElement.lang==="en-GB",null,{timeout:10000});
+        await sleep(600);
+        const r=await page.evaluate(()=>{
+          const rij=document.querySelector("#days .row.day:not(.kop)");
+          const drain=rij&&rij.querySelector(".drain");
+          return {drain:drain?drain.textContent.replace(/\s+/g," ").trim():"",naam:drain?drain.getAttribute("aria-label")||"":""};
+        });
+        assert(/0[,.]0 mm|^(?:Droog|Dry)$/i.test(r.drain)&&!/6[,.]0/.test(r.drain),label+": Vandaag-regel toont niet de rest van vandaag: "+r.drain);
+        assert(taal==="nl"?/in de rest van vandaag .*verwachte neerslag in de rest van vandaag 0,0 mm$/.test(r.naam):/for the rest of today .*expected precipitation for the rest of today 0\.0 mm$/.test(r.naam),label+": Vandaag-neerslagnaam noemt de resterende uren niet: "+r.naam);
+        await page.evaluate(()=>document.querySelector("#days .row.day:not(.kop)").click());await sleep(800);
+        const hint=await page.evaluate(()=>(document.getElementById("charthint")||{}).textContent||"");
+        const verwacht=taal==="nl"?/Verwachte neerslag over de hele dag: 6,0 mm\./:/Expected precipitation for the whole day: 6\.0 mm\./;
+        assert(verwacht.test(hint)&&!/rest van vandaag|rest of today/i.test(hint),label+": gekozen dag noemt niet de hele dag: "+hint);
+        assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
+        console.log("SAMENHANG "+label+": Vandaag-regel '"+r.drain+"', gekozen dag: "+hint.slice(0,120));
+      }finally{await context.close();}
+    }
+    /* Toegankelijke dagregels (afspraak 3 oktober), gelezen uit de echte
+       accessibility-boom van Chromium: naam en beschrijving samen. */
+    for(const taal of ["nl","en"]){
+      const label="dagregels "+taal;
+      const {context,page,fouten}=await open(browser,root,SCENARIO.onbekend,1366,768,"/weer/utrecht/",taal);
+      try{
+        if(taal==="en")await page.waitForFunction(()=>document.documentElement.lang==="en-GB",null,{timeout:10000});
+        await sleep(600);
+        const cdp=await context.newCDPSession(page);
+        const lees=async()=>{
+          await cdp.send("Accessibility.enable");
+          const {root:doc}=await cdp.send("DOM.getDocument",{depth:-1});
+          const {nodeIds}=await cdp.send("DOM.querySelectorAll",{nodeId:doc.nodeId,selector:"#days .row.day:not(.kop)"});
+          const uit=[];
+          for(const id of nodeIds){
+            const {nodes}=await cdp.send("Accessibility.getPartialAXTree",{nodeId:id,fetchRelatives:false});
+            const n=nodes.find(x=>x.role&&x.role.value==="button")||nodes[0];
+            uit.push({naam:String(n&&n.name&&n.name.value||"").replace(/\s+/g," ").trim(),beschrijving:String(n&&n.description&&n.description.value||"").trim()});
+          }
+          const pressed=await page.evaluate(()=>[...document.querySelectorAll("#days .row.day:not(.kop)")].map(r=>r.getAttribute("aria-pressed")));
+          return uit.map((r,i)=>Object.assign(r,{pressed:pressed[i]}));
+        };
+        const T=taal==="nl"
+          ?{wind:"Maximale wind",min:"Minimum",max:"Maximum",rest:"in de rest van vandaag",dag:"over de hele dag",onbekendWind:"Maximale wind onbekend",onbekendNeerslag:"Neerslaggegevens onbekend",kans:"Hoogste neerslagkans in één uur",desc:"Minimum en maximum gelden voor de volledige kalenderdag."}
+          :{wind:"Maximum wind",min:"Minimum",max:"Maximum",rest:"for the rest of today",dag:"for the whole day",onbekendWind:"Maximum wind unknown",onbekendNeerslag:"Precipitation data unknown",kans:"Highest hourly chance of precipitation",desc:"Minimum and maximum apply to the full calendar day."};
+        const controleer=(rijen,fase)=>{
+          assert.equal(rijen.length,7,label+" "+fase+": verwacht zeven dagregels");
+          rijen.forEach((r,i)=>{
+            for(const woord of [T.min,T.max])assert(r.naam.includes(woord),label+" "+fase+" rij "+i+": "+woord+" niet benoemd: "+r.naam);
+            assert(r.naam.includes(T.wind),label+" "+fase+" rij "+i+": wind niet benoemd: "+r.naam);
+          });
+          const vandaag=rijen[0];
+          assert(vandaag.naam.includes(T.kans)&&vandaag.naam.split(T.rest).length===3,label+" "+fase+": Vandaag noemt kans én hoeveelheid niet voor de resterende uren: "+vandaag.naam);
+          assert(!vandaag.naam.includes(T.dag),label+" "+fase+": Vandaag-neerslag zegt ten onrechte 'hele dag': "+vandaag.naam);
+          assert.equal(vandaag.beschrijving,T.desc,label+" "+fase+": Vandaag-beschrijving herhaalt neerslag of mist de kalenderdaguitleg");
+          assert(!/procent|per cent|mm\b/.test(vandaag.beschrijving),label+" "+fase+": beschrijving herhaalt de neerslag uit de naam");
+          rijen.slice(1).forEach((r,i)=>{
+            assert(!r.naam.includes(T.rest),label+" "+fase+" rij "+(i+1)+": toekomstige dag noemt 'rest van vandaag': "+r.naam);
+            assert.equal(r.beschrijving,"",label+" "+fase+" rij "+(i+1)+": onverwachte extra beschrijving: "+r.beschrijving);
+          });
+          const leeg=rijen[4];
+          assert(leeg.naam.includes(T.onbekendWind)&&leeg.naam.includes(T.onbekendNeerslag),label+" "+fase+": onbekende wind/neerslag niet herkenbaar: "+leeg.naam);
+          assert(rijen.filter((r,i)=>i!==4).every(r=>r.naam.includes(T.kans)&&(r.naam.includes(T.dag)||r.naam.includes(T.rest)||/uncertain|onzeker/.test(r.naam))),label+" "+fase+": een dag mist tijdvak bij de neerslag: "+JSON.stringify(rijen.map(r=>r.naam)));
+        };
+        let rijen=await lees();
+        controleer(rijen,"start");
+        assert(rijen.every(r=>r.pressed==="false"),label+": vóór selectie is een dag als actief gemarkeerd");
+        await page.evaluate(()=>document.querySelectorAll("#days .row.day:not(.kop)")[2].click());await sleep(800);
+        rijen=await lees();
+        controleer(rijen,"na selectie");
+        assert.deepEqual(rijen.map(r=>r.pressed),["false","false","true","false","false","false","false"],label+": aria-pressed volgt de gekozen dag niet");
+        assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
+        console.log("SAMENHANG "+label+": "+rijen[0].naam+" || "+rijen[0].beschrijving+" || "+rijen[4].naam);
+      }finally{await context.close();}
+    }
     /* Plaatsindex. */
     for(const [w,h] of [[390,844],[1366,768]]){
       const {context,page,fouten}=await open(browser,root,null,w,h,"/weer/");
@@ -194,6 +358,20 @@ function meet(){
         assert(!z.leeg,w+"px /weer/: melding 'niet in de lijst' blijft staan bij een leeg zoekveld");
         assert.deepEqual(fouten,[],w+"px /weer/: runtimefouten "+fouten.join(" | "));
         console.log("SAMENHANG /weer/ "+w+"px: Licht | Auto | Donker, terug bovenaan, zoeken filtert.");
+      }finally{await context.close();}
+    }
+    /* Engelse plaatsenlijst: de getoonde naam ("The Hague") en de
+       oorspronkelijke naam ("Den Haag") vinden allebei de plaats (audit F07). */
+    {
+      const {context,page,fouten}=await open(browser,root,null,1366,768,"/weer/","en");
+      try{
+        await page.waitForFunction(()=>document.documentElement.lang==="en-GB",null,{timeout:10000});await sleep(500);
+        const zoekEn=async q=>{await page.fill("#hub-zoek",q);await sleep(150);
+          return page.evaluate(()=>[...document.querySelectorAll(".plaatsen li")].filter(li=>!li.hidden&&li.getClientRects().length).map(li=>li.querySelector("a").textContent.trim()));};
+        assert.deepEqual(await zoekEn("The Hague"),["The Hague"],"/weer/ EN: zoeken op 'The Hague' vindt de plaats niet");
+        assert.deepEqual(await zoekEn("den haag"),["The Hague"],"/weer/ EN: zoeken op 'den haag' vindt de plaats niet meer");
+        assert.deepEqual(fouten,[],"/weer/ EN: runtimefouten "+fouten.join(" | "));
+        console.log("SAMENHANG /weer/ EN: 'The Hague' en 'Den Haag' vinden allebei The Hague.");
       }finally{await context.close();}
     }
     /* Uurtabel naast de desktopgrafiek: ook "WZW 10 Bft" past, zonder

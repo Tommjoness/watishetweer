@@ -116,6 +116,12 @@ function* combinaties() {
     yield `Als er neerslag valt, berekent het model ongeveer ${g} mm.`;
     yield `Gemiddeld zicht: ${g} km`;
   }
+  /* Grafiekvenster bij een gekozen uur (audit F04). */
+  for (const l of ["temperatuur", "voelt als", "wind", "windstoten", "bewolking", "neerslag", "kans komend uur", "kans 16:00–17:00", "geen neerslag verwacht", "16:00 · bewolkt", "03:00 · lichte regen", "12 km/u WZW, 3 Bft", "4 km/u, 1 Bft", "48 km/u", "30 km/u NNO, 5 Bft", "02:00, neerslagkans 8%", "14:00, neerslagkans 65%, verwacht 1,4 mm"]) yield l;
+  for (const [a, b] of [["Licht", "Donker"], ["Donker", "Licht"]]) {
+    yield `Handmatig ${a} voor deze browsersessie. Klik om ${b} te kiezen.`;
+    yield `Huidige handmatige keuze: ${a} (deze browsersessie).`;
+  }
   for (const n of gehelen) {
     yield `Zonsondergang over ${n} ${n === "1" ? "minuut" : "minuten"}, vandaag om 19:15.`;
     yield `Zonsopkomst over ${n} ${n === "1" ? "minuut" : "minuten"}, morgen om 07:43.`;
@@ -133,8 +139,20 @@ function* combinaties() {
     yield `${n}% kans`;
     yield `Neerslag vandaag vanaf nu: ${n} procent.`;
     yield `${n} korrels/m³`;
+    yield `${n} korrel/m³`;
+    yield `<${n} korrel/m³`;
     yield `Hoogste neerslagkans in één uur ${n} procent; 1,5 mm`;
-    yield `Kans op neerslag: ${n}% · verwachte hoeveelheid: 0,4 mm.`;
+    for (const vandaag of ["", " in de rest van vandaag"]) {
+      yield `Hoogste neerslagkans in één uur${vandaag} ${n} procent`;
+      yield `Hoogste neerslagkans in één uur${vandaag} ${n} procent; hoeveelheid onzeker`;
+      for (const mm of ["0,0 mm", "spoor", "<0,05 mm", "<0,1 mm", "2,4 mm"]) yield `Hoogste neerslagkans in één uur${vandaag} ${n} procent; verwachte neerslag ${vandaag ? "in de rest van vandaag" : "over de hele dag"} ${mm}`;
+    }
+    for (const mm of ["0,0 mm", "spoor", "<0,05 mm", "<0,1 mm", "12,3 mm"]) {
+      yield `Deze kalenderdag per uur. Hoogste kans op neerslag in één uur: ${n}%. Verwachte neerslag over de hele dag: ${mm}. Kies een tijdstip in de grafiek voor uurdetails.`;
+      yield `Deze kalenderdag per uur. Verwachte neerslag over de hele dag: ${mm}. Kies een tijdstip in de grafiek voor uurdetails.`;
+    }
+    yield `Deze kalenderdag per uur. Hoogste kans op neerslag in één uur: ${n}%. Kies een tijdstip in de grafiek voor uurdetails.`;
+    for (const bereik of ["over de hele dag", "in de rest van vandaag"]) for (const mm of ["0,0 mm", "alleen een spoor", "<0,05 mm"]) yield `De verwachte neerslag ${bereik} is ${mm}.`;
     yield `16:00, 1 graad, ${n} procent neerslagkans`;
     yield `16:00, ${n} graden, ${n} procent neerslagkans`;
     yield `${n}% is de hoogste neerslagkans in één uur in de resterende uren van vandaag.`;

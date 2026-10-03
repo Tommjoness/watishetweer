@@ -28,7 +28,7 @@ for(const onderdeel of [
   "## Overdrachtschecklist"
 ])assert(runbook.includes(onderdeel),`overdrachtsrunbook mist ${onderdeel}`);
 
-for(const naam of ["CLOUDFLARE_API_TOKEN","CLOUDFLARE_ACCOUNT_ID","WEATHERAPI_KEY","NOMINATIM_BASE_URL"]){
+for(const naam of ["CLOUDFLARE_API_TOKEN","CLOUDFLARE_ACCOUNT_ID","WEATHERAPI_KEY","VISUAL_CROSSING_API_KEY","KNMI_WMS_API_KEY","METEOALARM_API_TOKEN","NOMINATIM_BASE_URL"]){
   assert(runbook.includes(`\`${naam}\``),`overdrachtsrunbook mist configuratienaam ${naam}`);
 }
 assert(!/Authorization:\s*Bearer\s+[^<\s`]+/i.test(runbook),"overdrachtsrunbook mag geen Bearer-token bevatten");

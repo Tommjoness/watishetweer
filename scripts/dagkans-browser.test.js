@@ -70,9 +70,9 @@ const pct=t=>{const m=/(\d{1,3})\s*%/.exec(String(t||""));return m?Number(m[1]):
         assert.equal(pct(rij(2).tekst),10,w+"px: weekrij 24 juli telt het uur 23-24 van 23 juli mee: "+rij(2).tekst);
         /* Dag kiezen: daghint en grafiekbeschrijving zeggen hetzelfde als de rij. */
         await page.click('#days .row.day[data-i="1"]');
-        await page.waitForFunction(()=>S.dag===1&&/Kans op neerslag/.test((document.getElementById("charthint")||{}).textContent||""),null,{timeout:5000});
+        await page.waitForFunction(()=>S.dag===1&&/Hoogste kans op neerslag in één uur/.test((document.getElementById("charthint")||{}).textContent||""),null,{timeout:5000});
         const dag=await page.evaluate(()=>({hint:document.getElementById("charthint").textContent,aria:document.getElementById("chart").getAttribute("aria-label")||""}));
-        assert(/Kans op neerslag:\s*77%/.test(dag.hint),w+"px: daghint 23 juli wijkt af: "+dag.hint);
+        assert(/Hoogste kans op neerslag in één uur:\s*77%/.test(dag.hint),w+"px: daghint 23 juli wijkt af: "+dag.hint);
         assert(/hoogste neerslagkans in één uur op deze dag 77 procent/.test(dag.aria),w+"px: grafiekbeschrijving 23 juli wijkt af: "+dag.aria);
         assert.deepEqual(fouten,[],w+"px: runtimefouten "+fouten.join(" | "));
         console.log("DAGKANS "+w+"px: vandaag "+pct(rij(0).tekst)+"%, 23 juli rij/tooltip/hint/grafiek 77%, 24 juli "+pct(rij(2).tekst)+"%.");

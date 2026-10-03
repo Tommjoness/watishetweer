@@ -60,8 +60,15 @@ function weatherNowGeselecteerdeDagHint(day,index){
   const kans=dn?eindigGetal(dn.kans):eindigGetal(day&&day.precipitation_probability_max&&day.precipitation_probability_max[i]);
   const som=dn?eindigGetal(dn.hoeveelheid):eindigGetal(day&&day.precipitation_sum&&day.precipitation_sum[i]);
   const kansTekst=weatherNowDagNeerslagTekst(kans,som),mmTekst=weatherNowDagNeerslagMmTekst(som);
-  if(kansTekst==="–"&& !mmTekst)return "Kies een tijdstip in de grafiek voor uurdetails.";
-  return "Kans op neerslag: "+kansTekst+(mmTekst?" · verwachte hoeveelheid: "+mmTekst:"")+". Kies een tijdstip in de grafiek voor uurdetails.";
+  /* De cijfers beschrijven altijd de uren 00-24 van de gekozen kalenderdag
+     (dagNeerslagUren, ook voor vandaag), dus "over de hele dag". "In de rest van
+     vandaag" hoort alleen bij cijfers over resterende uren (dagregel vandaag).
+     De kans is de hoogste kans in één uur, geen kans voor de hele dag. */
+  const delen=[];
+  if(kansTekst!=="–")delen.push("Hoogste kans op neerslag in één uur: "+kansTekst+".");
+  if(mmTekst)delen.push("Verwachte neerslag over de hele dag: "+mmTekst+".");
+  delen.push("Kies een tijdstip in de grafiek voor uurdetails.");
+  return delen.join(" ");
 }
 function dagen(){
 `;

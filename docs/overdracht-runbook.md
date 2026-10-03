@@ -26,7 +26,7 @@ flowchart TD
   D --> E[watishetweer.nl]
   E --> F[Open-Meteo en publieke databronnen]
   E --> G[Pages Functions onder /api]
-  G --> H[WeatherAPI, KNMI, MeteoAlarm, NWS en geocoding]
+  G --> H[Visual Crossing, WeatherAPI, KNMI, MeteoAlarm, NWS en geocoding]
 ```
 
 Belangrijkste onderdelen:
@@ -50,13 +50,13 @@ Belangrijkste onderdelen:
 
 | Functie | Bron | Sleutel in deze repository |
 |---|---|---|
-| actueel weer, uur- en dagverwachting | Open-Meteo primair; WeatherAPI fallback | `WEATHERAPI_KEY` alleen als Cloudflare Pages-secret |
+| actueel weer, uur- en dagverwachting | Open-Meteo primair; via `/api/forecast` eerst Visual Crossing, daarna WeatherAPI als noodfallback | `VISUAL_CROSSING_API_KEY` en `WEATHERAPI_KEY` alleen als Cloudflare Pages-secrets |
 | luchtkwaliteit en pollen | Open-Meteo Air Quality / CAMS | geen |
 | plaats zoeken | Open-Meteo Geocoding | geen |
 | reverse geocoding | BigDataCloud, daarna Nominatim-compatible fallback | geen; optionele basis-URL |
 | korte neerslag NL/BE | KNMI-dataplatform (WMS/WCS) via de serverlaag | optioneel `KNMI_WMS_API_KEY` als Cloudflare Pages-secret; zonder sleutel de anonieme, wereldwijd gedeelde KNMI-pot (1.000 verzoeken per uur voor iedereen samen) |
 | modelverificatie tegen weerstations (alleen de handmatige workflow) | KNMI EDR API (10-minutenwaarnemingen) en Open-Meteo Historical Forecast API | `KNMI_EDR_API_KEY` alleen als GitHub Actions-secret |
-| waarschuwingen Europa | MeteoAlarm | geen |
+| waarschuwingen Europa | MeteoAlarm, openbare feed per land | geen voor de site; de beschermde MeteoAlarm-API (`METEOALARM_API_TOKEN`) heeft een vaste limiet van 100 aanvragen per dag en wordt niet per bezoeker aangeroepen |
 | waarschuwingen VS en ondersteunde gebieden | National Weather Service | geen |
 | bezoek- en prestatietrends | Cloudflare Web Analytics | geen clientsecret; setup via Cloudflare-accounttoken |
 | kaartondergrond en plaatscontext | CARTO / OpenStreetMap-attributie | geen |
@@ -78,13 +78,20 @@ Optioneel, alleen voor de handmatige modelverificatie (`.github/workflows/knmi-m
 |---|---|---|
 | `KNMI_EDR_API_KEY` | geregistreerde sleutel voor de KNMI EDR API; vergelijkt de modelverwachting per heel uur met de metingen van de KNMI-weerstations | GitHub repository Actions secrets |
 
-Zonder deze sleutel slaat de workflow de vergelijking over; de site zelf gebruikt hem niet. De workflow draait vier keer per jaar vanzelf (de 5e van januari, april, juli en oktober, over de afgelopen 28 dagen) en zet de uitkomst als reactie in het issue "KNMI modelverificatie: resultaten". GitHub schakelt geplande workflows in een openbare repository uit na 60 dagen zonder activiteit; zet hem dan weer aan onder Actions > KNMI modelverificatie.
+Zonder deze sleutel slaat de workflow de vergelijking over; de site zelf gebruikt hem niet.
+
+Optioneel, voor de MeteoAlarm-verkenning (`.github/workflows/meteoalarm-verkenning.yml`) en het periodiek verversen van regiovormen:
+
+| Naam | Doel | Waar instellen |
+|---|---|---|
+| `METEOALARM_API_TOKEN` | token voor de beschermde MeteoAlarm EDR- en Metadata-API; alleen als `Authorization: Bearer`-header, nooit in een URL of log. Vaste limiet: 100 aanvragen per dag per token (changelog v0.9, 14 mei 2025); hogere limieten alleen via meteoalarm@geosphere.at | GitHub repository Actions secrets, en als Cloudflare Pages-secret in Preview en Production | De workflow draait vier keer per jaar vanzelf (de 5e van januari, april, juli en oktober, over de afgelopen 28 dagen) en zet de uitkomst als reactie in het issue "KNMI modelverificatie: resultaten". GitHub schakelt geplande workflows in een openbare repository uit na 60 dagen zonder activiteit; zet hem dan weer aan onder Actions > KNMI modelverificatie.
 
 De runtime gebruikt daarnaast deze providersecrets:
 
 | Naam | Doel | Waar instellen |
 |---|---|---|
-| `WEATHERAPI_KEY` | beschermde zevendaagse forecastfallback wanneer Open-Meteo faalt of te traag is | Cloudflare Pages > Settings > Variables and Secrets, versleuteld in zowel Preview als Production |
+| `VISUAL_CROSSING_API_KEY` | eerste server-side forecastfallback via `/api/forecast` wanneer Open-Meteo faalt of te traag is | Cloudflare Pages > Settings > Variables and Secrets, versleuteld in zowel Preview als Production |
+| `WEATHERAPI_KEY` | noodfallback voor de zevendaagse forecast als ook Visual Crossing faalt | Cloudflare Pages > Settings > Variables and Secrets, versleuteld in zowel Preview als Production |
 | `KNMI_WMS_API_KEY` (aanbevolen) | eigen KNMI-quotum voor de radar per plaats (/api/neerslag); aanvragen op developer.dataplatform.knmi.nl bij de WMS API. Zonder deze sleutel valt de radar weg zodra de gedeelde anonieme KNMI-pot op is ("Quota exceeded"); de site toont dan de gewone neerslagverwachting | Cloudflare Pages > Settings > Variables and Secrets, versleuteld in zowel Preview als Production |
 
 De huidige zeven-dageninterface vereist WeatherAPI Starter of hoger. De Free-respons met drie forecastdagen faalt bewust gesloten. De key hoort niet als GitHub Actions-secret naar de build te gaan: alleen de Pages Function leest `context.env.WEATHERAPI_KEY` tijdens runtime.
@@ -154,7 +161,9 @@ De repository bevat geen facturen en bewijst daarom geen exact maandbedrag. Leg 
 - domeinregistrar: eigenaar, verlengdatum, jaarlijkse prijs en autorisatiecodeprocedure;
 - GitHub: Actions-verbruik en eventueel betaald plan;
 - databronnen: actuele commerciële voorwaarden, fair use en eventuele toekomstige sleutel- of betaalplicht;
+- Visual Crossing: abonnement of gratis tier, maandverbruik en limietmeldingen;
 - WeatherAPI: Starter-of-hoger abonnement, maandverbruik, limietmeldingen, factuur en betaalmethode;
+- MeteoAlarm: geregistreerd API-account (gratis, CC BY 4.0, 100 aanvragen per dag);
 - Search Console of andere externe SEO-tools: eigenaar en toegang, niet kosten uit de repository afleiden.
 
 De rate-limitimplementatie gebruikt bewust één Free-planregel-slot: 60 requests per 10 seconden per IP voor `/api/*`, met een blokkade van 10 seconden. Voeg niet stil een tweede zone-rate-limitregel toe; het deployscript weigert een vreemde regel te overschrijven.
@@ -210,7 +219,9 @@ Controleer eerst welke bron faalt. De hoofdforecast heeft een begrensde fallback
 - [ ] Cloudflare-account/zone/Pages-project en facturatie overgedragen.
 - [ ] Nieuwe minimale Cloudflare-token geplaatst; oude token ingetrokken.
 - [ ] Cloudflare Web Analytics-site en de afwezigheid van de historische eigen `disable_rum`-regel via de setupworkflow geverifieerd.
+- [ ] Visual Crossing-account en versleutelde `VISUAL_CROSSING_API_KEY` voor Cloudflare Preview en Production overgedragen en live getest.
 - [ ] WeatherAPI Starter-of-hoger account, facturatie en versleutelde `WEATHERAPI_KEY` voor Cloudflare Preview en Production overgedragen en live getest.
+- [ ] MeteoAlarm-API-account en `METEOALARM_API_TOKEN` (GitHub Actions en Cloudflare) overgedragen of door de nieuwe eigenaar opnieuw aangevraagd.
 - [ ] Registrar-eigendom, contactgegevens, DNSSEC, verlengdatum en betaalmethode gecontroleerd.
 - [ ] `watishetweer.nl` en `www.watishetweer.nl` actief en TLS geldig.
 - [ ] Google Search Console-eigendom en sitemap onder de nieuwe eigenaar gecontroleerd.

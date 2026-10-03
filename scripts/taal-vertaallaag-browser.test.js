@@ -15,7 +15,7 @@ const TAAL = path.join(__dirname, "..", "taal");
 const bron = ["vertaalkern.js", "eenheden.js", "vertaallaag.js"].map(f => fs.readFileSync(path.join(TAAL, f), "utf8")).join("\n;\n");
 
 const woordenboek = `window.WeatherNowWoordenboekEn = {
-  exact: { "Neerslag": "Precipitation", "Droog": "Dry", "Zoek een plaats": "Search for a place", "Weer vandaag": "Weather today", "Morgen": "Tomorrow" },
+  exact: { "Neerslag": "Precipitation", "Droog": "Dry", "Zoek een plaats": "Search for a place", "Weer vandaag": "Weather today", "Morgen": "Tomorrow", "Vragen of feedback?": "Questions or feedback?", "Mail naar": "Email", "Mail naar support@watishetweer.nl": "Email support@watishetweer.nl" },
   patronen: [
     [/^Vannacht koelt het af naar ongeveer (\\d+) graden\\.$/, (m) => "Tonight it cools to about " + m[1] + " degrees."],
     [/^Deel het weer voor (.+)$/, (m) => "Share the weather for " + m[1]],
@@ -36,6 +36,7 @@ const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>
 <p id="later">Droog</p>
 <p id="officieel">Officiële titel: <span lang="en" id="titel">Flood Watch</span> · Bron: National Weather Service</p>
 <p id="bron" lang="en">Heavy rain may cause flooding.</p>
+<p id="contact"><span>Vragen of feedback?</span> <span id="mail">Mail naar <a id="mailto" href="mailto:support@watishetweer.nl">support@watishetweer.nl</a></span></p>
 </body></html>`;
 
 (async () => {
@@ -65,6 +66,8 @@ const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>
     officieel: document.getElementById("officieel").textContent,
     titelBlijftEn: document.getElementById("titel") && document.getElementById("titel").getAttribute("lang") === "en" && document.getElementById("titel").parentElement.id === "officieel",
     bron: document.getElementById("bron").textContent,
+    contact: document.getElementById("contact").textContent,
+    mailtoInZin: !!document.querySelector("#contact #mail > a#mailto[href='mailto:support@watishetweer.nl']"),
     ontbreekt: [...window.__WIW_TAAL_ONTBREEKT__]
   }));
 
@@ -84,6 +87,8 @@ const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>
   assert.equal(r.officieel, "Official title: Flood Watch · Source: National Weather Service", "zin rond officiële Engelse titel wordt vertaald");
   assert(r.titelBlijftEn, "de officiële titel (lang=en) blijft hetzelfde element");
   assert.equal(r.bron, "Heavy rain may cause flooding.", "officiële Engelse brontekst blijft onaangeroerd en wordt niet gemeld");
+  assert.equal(r.contact, "Questions or feedback? Email support@watishetweer.nl", "contactregel wordt vertaald");
+  assert(r.mailtoInZin, "de mailto-link blijft een klikbare link na het vertalen (audit F03)");
 
   /* Latere updates door de app. */
   await page.evaluate(() => {
