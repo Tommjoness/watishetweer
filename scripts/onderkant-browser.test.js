@@ -92,7 +92,10 @@ function meet(){
     weergaveMidden:midden([...document.querySelectorAll(".wiw-weergave-voet>*")]),
     kolommen:(()=>{
       const m=e=>{if(!e||!zichtbaar(e))return null;const r=e.getBoundingClientRect();return (r.left+r.right)/2;};
-      const tm=e=>{if(!e||!zichtbaar(e))return null;const rg=document.createRange();rg.selectNodeContents(e);const rs=[...rg.getClientRects()].filter(x=>x.width>0);return rs.length?(Math.min(...rs.map(x=>x.left))+Math.max(...rs.map(x=>x.right)))/2:null;};
+      /* Midden van de zichtbare tekst. Tekst in .sr-only (bijvoorbeeld het
+         verborgen label "Maximale wind" voor schermlezers) is weggeknipt en
+         telt niet mee. */
+      const tm=e=>{if(!e||!zichtbaar(e))return null;const rs=[];for(const n of e.childNodes){if(n.nodeType===1&&n.matches(".sr-only"))continue;const rg=document.createRange();rg.selectNodeContents(n);rs.push(...[...rg.getClientRects()].filter(x=>x.width>0));if(n.nodeType===1&&n.namespaceURI==="http://www.w3.org/2000/svg")rs.push(n.getBoundingClientRect());}return rs.length?(Math.min(...rs.map(x=>x.left))+Math.max(...rs.map(x=>x.right)))/2:null;};
       const kop=document.querySelector("#days .row.day.kop"),rij=document.querySelector("#days .row.day:not(.kop)");
       const dagen={};for(const k of ["dwind","dmin","dmax"])dagen[k]=[tm(kop&&kop.querySelector("."+k)),tm(rij&&rij.querySelector("."+k))];
       const th=document.querySelector("#wiw-hour-table thead th:nth-child(5)"),td=document.querySelector("#wiw-hour-table tbody td.wiw-hour-wind");
