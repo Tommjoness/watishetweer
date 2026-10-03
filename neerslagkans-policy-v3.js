@@ -325,11 +325,11 @@ function kansZin(a,venster,opties){
     if(tegenstrijdigDroogSignaal(a)) return "De neerslagverwachting is onzeker; kans en hoeveelheid spreken elkaar tegen.";
     return opties.kort?"Geen neerslag verwacht.":"Voor "+venster+" wordt er geen neerslag verwacht.";
   }
-  if(niveau==="ZEER_KLEIN") return (opties.kort?"Zeer kleine kans op neerslag.":"De kans op "+soort+" in "+venster+" is zeer klein (maximaal "+pct+"%).")+detail;
-  if(niveau==="KLEIN") return (opties.kort?"Kleine kans op neerslag.":"Er is een kleine kans op "+soort+" in "+venster+" (maximaal "+pct+"%).")+detail;
-  if(niveau==="MOGELIJK") return (opties.kort?"Neerslag is mogelijk.":grammatica.soortIsMogelijk(soort)+" in "+venster+" (maximaal "+pct+"%).")+detail;
-  if(niveau==="GROOT") return (opties.kort?"Grote kans op neerslag.":"Er is een grote kans op "+soort+" in "+venster+" (maximaal "+pct+"%).")+detail;
-  return (opties.kort?"Zeer grote kans op neerslag.":"Er is een zeer grote kans op "+soort+" in "+venster+" (maximaal "+pct+"%).")+detail;
+  if(niveau==="ZEER_KLEIN") return (opties.kort?"Zeer kleine kans op neerslag.":"De kans op "+soort+" in "+venster+" is zeer klein (hoogste uurkans "+pct+"%).")+detail;
+  if(niveau==="KLEIN") return (opties.kort?"Kleine kans op neerslag.":"Er is een kleine kans op "+soort+" in "+venster+" (hoogste uurkans "+pct+"%).")+detail;
+  if(niveau==="MOGELIJK") return (opties.kort?"Neerslag is mogelijk.":grammatica.soortIsMogelijk(soort)+" in "+venster+" (hoogste uurkans "+pct+"%).")+detail;
+  if(niveau==="GROOT") return (opties.kort?"Grote kans op neerslag.":"Er is een grote kans op "+soort+" in "+venster+" (hoogste uurkans "+pct+"%).")+detail;
+  return (opties.kort?"Zeer grote kans op neerslag.":"Er is een zeer grote kans op "+soort+" in "+venster+" (hoogste uurkans "+pct+"%).")+detail;
 }
 
 function komendUurTekst(a){
