@@ -1,7 +1,7 @@
 "use strict";
 /*
  * Lichtvervuiling in Nachtzicht, in de echte build:
- *   - Nederlandse plaats: één regel onder de uitleg, met klasse, uitleg, korte bron
+ *   - Nederlandse plaats: één regel onder de uitleg ("Lichtvervuiling in <plaats>"), met klasse, uitleg, korte bron
  *     zonder jaartal en een link naar /over/#lichtvervuiling;
  *   - Engels: volledig vertaald, geen onvertaalde tekst;
  *   - plaats buiten Nederland: geen regel en het databestand wordt niet geladen;
@@ -120,8 +120,8 @@ const lees=page=>page.evaluate(()=>{const el=document.getElementById("lichtvervu
       assert.equal(r.vet,klasse,`${label}: vet woord is de klasse`);
       assert.equal(r.href,"/over/#lichtvervuiling",`${label}: link naar de bronverantwoording`);
       assert(!/2015/.test(r.tekst),`${label}: geen jaartal in de regel`);
-      if(taal==="nl")assert.equal(r.tekst,`Lichtvervuiling hier: ${klasse} (geschat). ${{"laag":"Weinig kunstlicht: de Melkweg is goed te zien.","hoog":"Veel kunstlicht: alleen heldere sterren en planeten zijn te zien.","matig tot hoog":"De Melkweg is waarschijnlijk niet te zien; heldere sterren wel."}[klasse]} Geschat op basis van de RIVM-kaart, voor een heldere, maanloze nacht. Bron`,`${label}: volledige regel`);
-      else{assert(/^Light pollution here: moderate to high \(estimated\)\. .+ Estimated from the RIVM map, for a clear, moonless night\. Source$/.test(r.tekst),`${label}: Engelse regel; kreeg ${r.tekst}`);assert.deepEqual(r.ontbreekt,[],`${label}: niets onvertaald`);}
+      if(taal==="nl")assert.equal(r.tekst,`Lichtvervuiling in ${plaats}: ${klasse} (geschat). ${{"laag":"Weinig kunstlicht: de Melkweg is goed te zien.","hoog":"Veel kunstlicht: alleen heldere sterren en planeten zijn te zien.","matig tot hoog":"De Melkweg is waarschijnlijk niet te zien; heldere sterren wel."}[klasse]} Geschat op basis van de RIVM-kaart, voor een heldere, maanloze nacht. Bron`,`${label}: volledige regel`);
+      else{assert(/^Light pollution in Utrecht: moderate to high \(estimated\)\. .+ Estimated from the RIVM map, for a clear, moonless night\. Source$/.test(r.tekst),`${label}: Engelse regel; kreeg ${r.tekst}`);assert.deepEqual(r.ontbreekt,[],`${label}: niets onvertaald`);}
       assert(r.scroll<=1,`${label}: geen horizontaal scrollen (${r.scroll}px)`);
       assert.deepEqual(fouten,[],`${label}: geen paginafouten`);
       await context.close();

@@ -66,13 +66,16 @@ for (const [plaats, la, lo, k] of verwacht) assert.equal(naam(la, lo), k, `${pla
 const kern = require("../taal/vertaalkern.js");
 const v = kern.maakVertaler(require("../taal/en.js"));
 for (const [k, uitleg] of ctx.T.slice(1)) {
-  const blok = `Lichtvervuiling hier: ${k} (geschat). ${uitleg} Geschat op basis van de RIVM-kaart, voor een heldere, maanloze nacht. Bron`;
-  const en = v.vertaal(blok);
-  assert(en && /^Light pollution here: .+ \(estimated\)\. .+ Estimated from the RIVM map, for a clear, moonless night\. Source$/.test(en), `Engelse regel voor ${k}; kreeg ${en}`);
+  for (const [waar, waarEn] of [["in Den Haag", "in The Hague"], ["in Vlieland", "in Vlieland"], ["hier", "here"]]) {
+    const blok = `Lichtvervuiling ${waar}: ${k} (geschat). ${uitleg} Geschat op basis van de RIVM-kaart, voor een heldere, maanloze nacht. Bron`;
+    const en = v.vertaal(blok);
+    assert(en && en.startsWith(`Light pollution ${waarEn}: `) && /\(estimated\)\. .+ Estimated from the RIVM map, for a clear, moonless night\. Source$/.test(en), `Engelse regel voor ${k} (${waar}); kreeg ${en}`);
+  }
   assert(v.vertaal(k), `losse klasse ${k} vertaald (vet woord blijft staan)`);
 }
 assert(!/2015/.test(html.match(/Geschat op basis van de RIVM-kaart[^<]*/)[0]), "de korte regel noemt geen jaartal (staat achter Bron)");
 assert(html.includes('<a href="/over/#lichtvervuiling">Bron</a>'), "regel linkt naar de bronverantwoording");
+assert(/\(\?:huidige\|mijn\) locatie/.test(html) && html.includes('"hier"'), "zonder bruikbare plaatsnaam staat er \"hier\"");
 const over = fs.readFileSync(path.join(ROOT, "over", "index.html"), "utf8");
 assert(over.includes('<h2 id="lichtvervuiling">'), "Over-pagina heeft de sectie lichtvervuiling");
 assert(/uit 2015/.test(over) && /niet actueel en niet landelijk gevalideerd/.test(over), "Over-pagina noemt het bronjaar en de beperking");
