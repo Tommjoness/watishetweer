@@ -41,4 +41,18 @@ function beschrijf(msg){
   return {status:m?Number(m[1]):null,url:url.split("?")[0]};
 }
 
-module.exports={isProviderStoring,isProviderStoringBericht,logProviderStoringen,beschrijf};
+/* Herkomst van de verwachting bij één paginabezoek (live-performance-smoke).
+   Normaal: precies één geslaagde volledige Open-Meteo-forecast en geen
+   mislukte. Uitzondering, de reserveroute: de volledige Open-Meteo-aanvraag
+   gaf een 429/5xx of werd afgebroken (de app wacht niet eindeloos en zet de
+   eigen bron in), en /api/forecast leverde precies één geslaagd antwoord.
+   Elk ander patroon is een fout: geen bron, dubbele aanvragen, of de
+   reserveroute zonder dat Open-Meteo faalde.
+   Invoer: aantallen per soort. Uitvoer: {ok, bron, reden}. */
+function beoordeelForecastHerkomst({volledigOk=0,volledigStoring=0,volledigAfgebroken=0,reserveOk=0}={}){
+  if(volledigOk===1&&volledigStoring===0&&volledigAfgebroken===0&&reserveOk===0)return {ok:true,bron:"open-meteo",reden:""};
+  if(volledigOk===0&&(volledigStoring+volledigAfgebroken)>=1&&reserveOk===1)return {ok:true,bron:"reserve",reden:""};
+  return {ok:false,bron:null,reden:`volledige Open-Meteo-forecast geslaagd ${volledigOk}, met 429/5xx ${volledigStoring}, afgebroken ${volledigAfgebroken}; reserveroute geslaagd ${reserveOk}`};
+}
+
+module.exports={isProviderStoring,isProviderStoringBericht,logProviderStoringen,beschrijf,beoordeelForecastHerkomst};

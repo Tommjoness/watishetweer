@@ -89,7 +89,10 @@ assert(wereldwijd.includes('retired pressure_msl')&&wereldwijd.includes('pressur
 assert(wereldwijd.includes('toekomstige Nachtzicht-rij gebruikt verleden tijd'),"wereldwijde browsermonitor moet toekomstige Nachtzicht-copy bewaken");
 assert(wereldwijd.includes('heeft leeg neerslagveld'),"wereldwijde browsermonitor moet lege dagneerslagvelden blokkeren");
 assert(performance.includes('const {chromium,webkit,devices}=require("playwright")'),"live performancemonitor moet Chromium en WebKit gebruiken");
-assert(performance.includes("volledigeForecasts.length,1"),"live performancemonitor bewaakt dubbele volledige forecastaanvragen niet");
+/* Dubbele aanvragen bewaakt beoordeelForecastHerkomst (unit-getest in provider-storing.test.js):
+   precies één volledige Open-Meteo-forecast, of na een Open-Meteo-storing precies één keer de reserveroute. */
+assert(performance.includes("beoordeelForecastHerkomst({")&&performance.includes("volledigOk:volledigeForecasts.length")&&performance.includes("assert(herkomst.ok,"),"live performancemonitor bewaakt dubbele volledige forecastaanvragen niet");
+assert(performance.includes('herkomst.bron==="reserve"||!providerStoringen.length'),"live performancemonitor accepteert een Open-Meteo-storing alleen als de reserveroute de verwachting leverde");
 assert(performance.includes("previewForecasts.length<=1"),"live performancemonitor begrenst de current-only preview niet");
 assert(performance.includes("mislukteVolledige.length,0"),"live performancemonitor onderscheidt een afgebroken preview niet van een mislukte volledige forecast");
 assert(performance.includes("scripts.length<=1"),"live performancemonitor begrenst de Cloudflare analytics-scriptinjectie niet");
