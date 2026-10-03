@@ -32,8 +32,8 @@
   const RICHTING_KORT = { N: "N", NNO: "NNE", NO: "NE", ONO: "ENE", O: "E", OZO: "ESE", ZO: "SE", ZZO: "SSE", Z: "S", ZZW: "SSW", ZW: "SW", WZW: "WSW", W: "W", WNW: "WNW", NW: "NW", NNW: "NNW" };
   /* Beaufort-namen van de app (BFTNAAM) in natuurlijk Engels. */
   const WINDKRACHT = {
-    "windstil": "calm", "zwakke wind": "light wind", "matige wind": "moderate wind", "vrij krachtige wind": "fresh wind",
-    "krachtige wind": "strong wind", "harde wind": "near gale", "stormachtige wind": "gale",
+    "windstil": "calm", "zwakke wind": "light wind", "matige wind": "moderate wind", "vrij krachtige wind": "fresh breeze",
+    "krachtige wind": "strong breeze", "harde wind": "near gale", "stormachtige wind": "gale",
     "storm": "severe gale", "zware storm": "storm", "zeer zware storm": "violent storm", "orkaan": "hurricane-force wind",
     "vrij krachtig": "fresh", "zeer stormachtig": "very stormy"
   };
@@ -41,7 +41,7 @@
   const WEER = {
     "onbewolkt": "clear", "vrijwel onbewolkt": "mostly clear", "overwegend zonnig": "mainly sunny", "half bewolkt": "partly cloudy",
     "bewolkt": "cloudy", "geheel bewolkt": "overcast", "vrijwel geheel bewolkt": "nearly overcast", "zwaar bewolkt": "mostly cloudy",
-    "veel bewolking": "plenty of cloud", "hoge bewolking": "high cloud", "veel hoge bewolking": "plenty of high cloud",
+    "veel bewolking": "cloudy", "hoge bewolking": "high cloud", "veel hoge bewolking": "plenty of high cloud",
     "vrijwel helder": "mostly clear", "overwegend helder": "mainly clear", "helder": "clear",
     "mist": "fog", "aanvriezende mist": "freezing fog", "rijpmist": "freezing fog",
     "lichte motregen": "light drizzle", "motregen": "drizzle", "dichte motregen": "heavy drizzle",
@@ -61,7 +61,7 @@
     "mist of zeer slecht zicht": "fog or very poor visibility", "tijdelijk slechter zicht": "temporarily poorer visibility"
   };
   const DAGDEEL = { "in de ochtend": "in the morning", "in de middag": "in the afternoon", "in de avond": "in the evening", "in de nacht": "overnight", "in de vroege ochtend": "in the early morning" };
-  const PERIODE = { "Beste": "Best period", "Relatief beste": "Best available period", "Waarschijnlijk beste": "Probably the best period" };
+  const PERIODE = { "Beste": "Best period", "Relatief beste": "Best available period", "Waarschijnlijk beste": "Likely best period" };
   const DAGNAAM = { "avond": "evening", "nacht": "night", "ochtend": "morning", "vroege ochtend": "early morning" };
   const KANS = { "zeer kleine": "very low", "kleine": "low", "grote": "high", "zeer grote": "very high" };
   const UV = { "laag": "low", "matig": "moderate", "hoog": "high", "zeer hoog": "very high", "extreem": "extreme" };
@@ -155,7 +155,7 @@
     /* Navigatie, kop en bediening */
     "Ga naar hoofdinhoud": "Skip to main content",
     /* Grafiekvenster bij een gekozen uur (SVG-tekst, audit F04). */
-    "temperatuur": "temperature", "voelt als": "feels like", "wind": "wind", "windstoten": "gusts", "bewolking": "cloud cover", "kans komend uur": "chance next hour", "neerslagkans": "precip. chance",
+    "temperatuur": "temperature", "voelt als": "feels like", "wind": "wind", "windstoten": "gusts", "bewolking": "cloud cover", "kans komend uur": "next-hour chance", "neerslagkans": "precip. chance",
     "Snel naar weersinformatie": "Jump to weather information",
     "Broodkruimelnavigatie": "Breadcrumb",
     "← Terug naar het weer": "← Back to the weather",
@@ -234,10 +234,10 @@
     "Uitleg meetwaarden": "About these measurements",
     "Over deze gegevens": "About this data",
     "De weerapp kon niet worden gestart. Controleer je verbinding en laad de pagina opnieuw.": "The weather app could not start. Check your connection and reload the page.",
-    "Deze browser deelt geen locatie.": "This browser does not share a location.",
+    "Deze browser deelt geen locatie.": "This browser cannot share your location.",
     "Zoeken is niet gelukt. Probeer het opnieuw.": "Search failed. Please try again.",
     "Probeer het opnieuw zodra je weer online bent.": "Please try again once you are back online.",
-    "Locatie geweigerd. Zoek hierboven een plaats.": "Location denied. Search for a place above.",
+    "Locatie geweigerd. Zoek hierboven een plaats.": "Location access denied. Search for a place above.",
     "Locatie niet beschikbaar. Zoek hierboven een plaats.": "Location unavailable. Search for a place above.",
     "Het bepalen van de locatie duurde te lang. Probeer opnieuw of zoek hierboven een plaats.": "Finding your location took too long. Try again or search for a place above.",
     "Gps geeft niets terug, grovere meting proberen.": "GPS returned nothing; trying a less precise location.",
@@ -323,9 +323,9 @@
     "Uur in de temperatuurgrafiek": "Hour in the temperature chart",
     "Alternatieve gegevensweergave van de huidige weergrafiek.": "Alternative data view of the current weather chart.",
     "Dag- en nachtverloop met temperatuur, spreiding en neerslagkans": "Day and night overview with temperature, range and chance of precipitation",
-    "Komende uren met weer, temperatuur, gevoelstemperatuur, neerslagkans, neerslaghoeveelheid en wind in de lokale tijd van de geselecteerde plaats": "The next few hours with weather, temperature, feels-like temperature, chance of precipitation, amount and wind in the local time of the selected place",
-    "Temperatuur, neerslagkans en neerslaghoeveelheid per uur voor de uren in de grafiek": "Temperature, chance of precipitation and amount by hour for the hours in the chart",
-    "Temperatuur per uur, verticaal scrollbaar": "Temperature by hour, scrolls vertically",
+    "Komende uren met weer, temperatuur, gevoelstemperatuur, neerslagkans, neerslaghoeveelheid en wind in de lokale tijd van de geselecteerde plaats": "Forecast for the next few hours: weather conditions, temperature, feels-like temperature, chance and amount of precipitation, and wind. Times are local to the selected place.",
+    "Temperatuur, neerslagkans en neerslaghoeveelheid per uur voor de uren in de grafiek": "Hourly temperature, precipitation chance and amount for the period shown in the chart",
+    "Temperatuur per uur, verticaal scrollbaar": "Hourly temperature, vertically scrollable",
     "Neerslag komend uur": "Precipitation next hour",
     "Neerslagkans komend uur": "Chance of precipitation next hour",
     "Neerslag komende twee uur": "Precipitation next two hours",
@@ -361,12 +361,12 @@
     "Populaire plaatsen in Nederland": "Popular places in the Netherlands",
     "Zoek een plaats in de lijst": "Search for a place in the list",
     "Gemiddelden per maand": "Monthly averages",
-    "Bekijk per maand": "See by month",
+    "Bekijk per maand": "View by month",
     "Maand": "Month",
     "Overdag (°C)": "Daytime (°C)",
     "'s Nachts (°C)": "Night-time (°C)",
     "Neerslag (mm)": "Precipitation (mm)",
-    "Zon (uur)": "Sun (hours)",
+    "Zon (uur)": "Sunshine (hours)",
     "gemiddelde hoogste temperatuur overdag": "average daytime high",
     "gemiddelde laagste temperatuur 's nachts": "average night-time low",
     "neerslag per maand in millimeter": "precipitation per month in millimetres",
@@ -425,9 +425,9 @@
     "0 uur daglicht": "0 hours of daylight",
     "24 uur daglicht": "24 hours of daylight",
     "Geen pollen verwacht voor dit uur.": "No pollen expected for this hour.",
-    "Weinig pollen verwacht voor dit uur.": "Low pollen expected for this hour.",
+    "Weinig pollen verwacht voor dit uur.": "Low pollen levels expected for this hour.",
     "Pollen verwacht voor dit uur.": "Pollen expected for this hour.",
-    "Veel pollen verwacht voor dit uur.": "High pollen expected for this hour.",
+    "Veel pollen verwacht voor dit uur.": "High pollen levels expected for this hour.",
     "Pollendata voor het huidige uur niet beschikbaar": "Pollen data for the current hour unavailable",
     "Geen pollendata voor deze locatie": "No pollen data for this location",
     "Geen noemenswaardige concentraties": "No significant concentrations",
@@ -486,7 +486,7 @@
     "geen meetbare hoeveelheid": "no measurable amount",
     "Geen betrouwbare kans beschikbaar": "No reliable chance available",
     "Kans en hoeveelheid spreken elkaar tegen": "Chance and amount contradict each other",
-    "Kans en dagsom zijn verschillende modelwaarden en hoeven daarom niet één op één samen te vallen.": "The chance and the daily total are separate model values, so they need not match one to one.",
+    "Kans en dagsom zijn verschillende modelwaarden en hoeven daarom niet één op één samen te vallen.": "The chance and the daily total are separate model values, so they do not have to match exactly.",
     "Minimum en maximum gelden voor de volledige kalenderdag.": "Minimum and maximum apply to the full calendar day.",
     /* Verborgen labels in de dagregel (toegankelijke naam). */
     "Maximale wind": "Maximum wind", "Maximale wind onbekend": "Maximum wind unknown", "Minimum onbekend": "Minimum unknown", "Maximum onbekend": "Maximum unknown",
@@ -497,20 +497,20 @@
     "Actueel gemeten neerslagintensiteit.": "Currently measured precipitation rate.",
     "Actuele neerslagintensiteit.": "Current precipitation rate.",
     "Kwartierverwachting op basis van weermodellen.": "15-minute forecast based on weather models.",
-    "Kwartierwaarden tonen de verwachting per voorafgaand kwartier.": "15-minute values show the forecast for each preceding 15 minutes.",
+    "Kwartierwaarden tonen de verwachting per voorafgaand kwartier.": "Each 15-minute value shows the forecast for the preceding 15-minute interval.",
     "Kwartierdata is voor deze locatie niet beschikbaar.": "15-minute data is not available for this location.",
     "KNMI-neerslagdata voor nu en de komende twee uur.": "KNMI precipitation data for now and the next two hours.",
     "De bronresolutie verschilt per regio. Buiten gebieden met echte 15-minutenmodeldata kan Open-Meteo uurdata interpoleren.": "Source resolution varies by region. Outside areas with true 15-minute model data, Open-Meteo may interpolate hourly data.",
     "Voor Nederlandse locaties gebruikt deze neerslagweergave actuele KNMI-puntdata en de KNMI-nowcast. Temperatuur, wind en de langere verwachting blijven uit de gewone weermodellen komen.": "For locations in the Netherlands, this precipitation view uses current KNMI point data and the KNMI nowcast. Temperature, wind and the longer forecast still come from the usual weather models.",
     "Voor Belgische locaties wordt actuele neerslag aangevuld met KNMI-puntdata. De komende uren volgen de beschikbare kwartier- en modelverwachting.": "For locations in Belgium, current precipitation is supplemented with KNMI point data. The coming hours follow the available 15-minute and model forecast.",
-    "De balken tonen neerslag per kwartier, opgebouwd uit KNMI-stappen van vijf minuten.": "The bars show precipitation per 15 minutes, built from five-minute KNMI steps.",
+    "De balken tonen neerslag per kwartier, opgebouwd uit KNMI-stappen van vijf minuten.": "The bars show 15-minute precipitation totals, calculated from five-minute KNMI intervals.",
     "Kwartierwaarden zijn sommen over het voorafgaande kwartier en kunnen afhankelijk van de locatie uit uurdata zijn geïnterpoleerd.": "15-minute values are totals over the preceding 15 minutes and, depending on the location, may be interpolated from hourly data.",
     "Eerst de neerslagkans, daarna het verwachte totaal in het komende uur.": "First the chance of precipitation, then the expected total for the next hour.",
     "Meetbare neerslag staat als aaneengesloten perioden onder de temperatuurcurve.": "Measurable precipitation is shown as continuous periods below the temperature curve.",
     "Bij iedere regenperiode staat het tijdvak en de verwachte hoeveelheid.": "Each rain period shows its time span and expected amount.",
     "De belangrijkste regenperioden zijn gelabeld; de overige blijven via de grafiekdetails beschikbaar.": "The main rain periods are labelled; the others remain available in the chart details.",
     "Neerslagkansen blijven via de details beschikbaar.": "Chances of precipitation remain available in the details.",
-    "Neerslagpercentages gelden voor het voorafgaande uur; waarden links van de nu-lijn zijn verlopen.": "Precipitation percentages apply to the preceding hour; values left of the “now” line are in the past.",
+    "Neerslagpercentages gelden voor het voorafgaande uur; waarden links van de nu-lijn zijn verlopen.": "Precipitation probabilities apply to the preceding hour; values to the left of the “now” line are in the past.",
 
     /* Neerslagzinnen (volledig) */
     "De komende twee uur wordt er geen neerslag verwacht.": "No precipitation is expected in the next two hours.",
@@ -563,10 +563,10 @@
     "Geen gunstig kijkvenster.": "No favourable viewing window.",
     "Geen gunstig kijkvenster in deze periode.": "No favourable viewing window in this period.",
     "Geen aaneengesloten gunstig modelvenster": "No continuous favourable window in the model",
-    "Beste periode van de avond tot de vroege ochtend.": "Best period: evening to early morning.",
-    "Beste periode van de nacht tot de vroege ochtend.": "Best period: night to early morning.",
-    "Waarschijnlijk beste periode van de nacht tot de vroege ochtend.": "Probably the best period: night to early morning.",
-    "Waarschijnlijk beste periode van de avond tot de vroege ochtend.": "Probably the best period: evening to early morning.",
+    "Beste periode van de avond tot de vroege ochtend.": "Best period: from the evening into the early morning.",
+    "Beste periode van de nacht tot de vroege ochtend.": "Best period: overnight into the early morning.",
+    "Waarschijnlijk beste periode van de nacht tot de vroege ochtend.": "Likely best period: overnight into the early morning.",
+    "Waarschijnlijk beste periode van de avond tot de vroege ochtend.": "Likely best period: from the evening into the early morning.",
     "Beste periode": "Best period",
     "Beste periode.": "Best period.",
     "Relatief beste periode": "Best available period",
@@ -628,7 +628,7 @@
     "Google Analytics is uitgeschakeld.": "Google Analytics is turned off.",
     "Google Analytics staat op dit apparaat uit, omdat je PostHog en Google Analytics hebt uitgezet.": "Google Analytics is off on this device because you have turned off PostHog and Google Analytics.",
     "PostHog en Google Analytics staan uit. Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies.": "PostHog and Google Analytics are off. Cloudflare continues to measure visits and loading performance without cookies.",
-    "Op dit apparaat staan de statistieken aan.": "Statistics are on for this device.",
+    "Op dit apparaat staan de statistieken aan.": "Analytics are enabled on this device.",
     "Er is nog geen keuze opgeslagen.": "No choice has been saved yet.",
     "Lokale gegevens gewist.": "Local data cleared.",
     "Wis lokale gegevens": "Clear local data",
@@ -642,7 +642,7 @@
     "Waarschuwingen en veiligheid": "Warnings and safety",
     "Privacy en transparantie": "Privacy and transparency",
     "watishetweer.nl brengt actuele weersinformatie en modelverwachtingen voor plaatsen wereldwijd overzichtelijk samen: in één oogopslag wat het weer nu doet en wat er de komende uren en dagen komt.":
-      "watishetweer.nl brings current weather information and model forecasts for places worldwide together in one clear view: at a glance, what the weather is doing now and what is coming over the next hours and days.",
+      "watishetweer.nl brings together current weather information and model forecasts for places worldwide in one clear view, so you can see at a glance what the weather is doing now and what to expect over the coming hours and days.",
     "De site toont onder meer het actuele weer, neerslag voor de komende uren, een 7-daagse verwachting, wind en windstoten, luchtkwaliteit, zonuren en een indicatie voor nachtzicht. De weergave gebruikt lokale tijd voor de gekozen plaats.":
       "The site shows, among other things, the current weather, precipitation for the coming hours, a 7-day forecast, wind and gusts, air quality, sunshine hours and an indication of stargazing conditions. All times are local to the chosen place.",
     "De concrete bronvermelding staat bij de weerweergave en kan per locatie verschillen. De verwachting komt in de eerste plaats van Open-Meteo; bij een storing daar valt de site terug op Visual Crossing of WeatherAPI.com. Luchtkwaliteit en pollen komen van Open-Meteo, op basis van CAMS-modelgegevens. Voor Nederland en België komt de neerslag voor de komende uren van het KNMI. Officiële waarschuwingen komen van MeteoAlarm of, in de Verenigde Staten, van de National Weather Service. Plaatsnamen komen van Open-Meteo, BigDataCloud en OpenStreetMap.":
@@ -670,7 +670,7 @@
     "watishetweer.nl is een persoonlijke website van Maitri Polwatte Gedera, die verantwoordelijk is voor de verwerking van gegevens op deze site. Vragen over privacy of een verzoek over je gegevens stuur je naar support@watishetweer.nl.":
       "watishetweer.nl is the personal website of Maitri Polwatte Gedera, who is responsible for the processing of data on this site. Send questions about privacy or a request about your data to support@watishetweer.nl.",
     "Je actuele locatie wordt alleen gebruikt als je zelf op Mijn locatie kiest. In je browser en in een deellink staat je positie afgerond op ongeveer honderd meter.":
-      "Your current location is only used when you choose My location yourself. In your browser and in a share link, your position is rounded to about a hundred metres.",
+      "Your current location is only used when you select My location. In your browser and in a share link, your position is rounded to about a hundred metres.",
     "De statistieken die zonder toestemming draaien, werken zonder cookies. Onze productstatistieken (PostHog, EU) krijgen geen zoektermen, plaatsnamen of coördinaten; om terugkerende bezoeken te tellen bewaart je browser alleen een willekeurige, anonieme code die na 90 dagen vervalt.":
       "The statistics that run without consent work without cookies. Our product statistics (PostHog, EU) receive no search terms, place names or coordinates; to count returning visits, your browser only stores a random, anonymous code that expires after 90 days.",
     "Google Analytics staat alleen aan als je daar zelf toestemming voor geeft. Dan kan het cookies plaatsen en ziet het welke plaatspagina je opent. Je zet het hieronder altijd weer uit.":
@@ -686,7 +686,7 @@
     "Je eigen browser: plaatsen, instellingen en een weersnapshot blijven op je apparaat tot je ze hieronder of via je browser wist.":
       "Your own browser: places, settings and a weather snapshot stay on your device until you clear them below or through your browser.",
     "Je browser vraagt pas om je actuele locatie nadat je zelf op Mijn locatie kiest. De coördinaten worden gebruikt voor weerdata, een plaatsnaam en, waar beschikbaar, officiële weerwaarschuwingen. In lokale opslag en in de deel-URL wordt de positie afgerond op drie decimalen (ongeveer honderd meter); tijdens de actuele aanvraag kan de browser nauwkeuriger coördinaten gebruiken.":
-      "Your browser only asks for your current location after you choose My location yourself. The coordinates are used for weather data, a place name and, where available, official weather warnings. In local storage and in the share URL, the position is rounded to three decimal places (about a hundred metres); during the request itself, the browser may use more precise coordinates.",
+      "Your browser only asks for your current location after you select My location. The coordinates are used for weather data, a place name and, where available, official weather warnings. In local storage and in the share URL, the position is rounded to three decimal places (about a hundred metres); during the request itself, the browser may use more precise coordinates.",
     "De laatst gekozen plaats, bewaarde plaatsen, thema-instelling en een recente weersnapshot worden lokaal in je browser opgeslagen zodat de site sneller en ook bij een korte storing bruikbaar blijft. Er is geen eigen gebruikersdatabase waarin deze voorkeuren aan een account worden gekoppeld. De PostHog-koppeling plaatst geen cookie; ze bewaart alleen de anonieme bezoekerscode van hierboven, die na 90 dagen vervalt. Je GA4-toestemmingskeuze wordt lokaal opgeslagen; alleen na toestemming kan Google Analytics eigen meetcookies plaatsen.":
       "The last chosen place, saved places, theme setting and a recent weather snapshot are stored locally in your browser so the site is faster and stays usable during a brief outage. There is no user database of our own that links these preferences to an account. The PostHog integration sets no cookie; it only stores the anonymous visitor code described above, which expires after 90 days. Your GA4 consent choice is stored locally; only after consent can Google Analytics set its own measurement cookies.",
     "Als Cloudflare Web Analytics voor de site actief is, meet het onder meer paginaweergaven en technische laadprestaties. De Web Analytics-beacon gebruikt voor deze gebruiksmeting geen cookies of localStorage en Cloudflare geeft aan individuele bezoekers niet over websites van klanten heen te volgen. Bij automatische Cloudflare-injectie wordt de meting geladen via de officiële beacon en verstuurd via de eigen /cdn-cgi/rum-route.":
@@ -694,13 +694,13 @@
     "Daarnaast gebruikt de site PostHog Cloud EU voor een beperkte set productstatistieken. Deze koppeling gebruikt geen PostHog-SDK, cookies of sessionStorage. Om te kunnen tellen hoeveel bezoekers terugkomen, bewaart je browser in localStorage onder de sleutel weerbriefing.analytics.id.v1 een willekeurige, anonieme code. Die code zegt niets over jou, je apparaat of je plaats, wordt na 90 dagen vervangen en wordt gewist als je PostHog en Google Analytics hieronder uitzet of je lokale gegevens wist. Er wordt geen PostHog-personenprofiel aangemaakt. Het PostHog-project staat in de EU-regio en IP-anonimisering is ingeschakeld. PostHog bewaart deze statistieken één jaar.":
       "The site also uses PostHog Cloud EU for a limited set of product statistics. This integration uses no PostHog SDK, cookies or sessionStorage. To count how many visitors return, your browser stores a random, anonymous code in localStorage under the key weerbriefing.analytics.id.v1. That code says nothing about you, your device or your place, is replaced after 90 days and is deleted if you turn off PostHog and Google Analytics below or clear your local data. No PostHog person profile is created. The PostHog project is in the EU region and IP anonymisation is switched on. PostHog keeps these statistics for one year.",
     "PostHog ontvangt een geschoonde paginaweergave, een globale schermgroep (mobiel, tablet of desktop), een grove laadduurgroep en alleen generieke taakuitkomsten. Voorbeelden zijn het laden van de weerweergave, het starten van een plaatszoekactie, het kiezen van een zoekresultaat, het aanklikken van Mijn locatie, het bewaren of openen van een bewaarde plaats, op Delen tikken, het selecteren van een verwachtingsdag, het openen van uren of nachten en het installeren van de site als app. De ingetypte zoekterm, gekozen plaatsnaam, coördinaten, concrete weerwaarden, querystring en URL-hash worden niet meegestuurd. Weerroutes worden vóór verzending samengevat tot de generieke route /weer/:location. De analyticscall stuurt bovendien geen browser-Referer mee.":
-      "PostHog receives a cleaned page view, a broad screen group (mobile, tablet or desktop), a rough loading-time group and only generic task outcomes. Examples are loading the weather view, starting a place search, choosing a search result, clicking My location, saving or opening a saved place, tapping Share, selecting a forecast day, opening hours or nights and installing the site as an app. The search term you type, the chosen place name, coordinates, specific weather values, query string and URL hash are not sent. Weather routes are reduced to the generic route /weer/:location before sending. The analytics call also sends no browser Referer.",
+      "PostHog receives a sanitised page-view event, a device category (mobile, tablet or desktop), an approximate load-time category and only generic task outcomes. Examples are loading the weather view, starting a place search, choosing a search result, clicking My location, saving or opening a saved place, tapping Share, selecting a forecast day, opening hours or nights and installing the site as an app. The search term you type, the chosen place name, coordinates, specific weather values, query string and URL hash are not sent. Weather routes are reduced to the generic route /weer/:location before sending. The analytics request also omits the browser’s Referer header.",
     "Daarnaast gaan vier grove kenmerken mee: de taal van de weergave (Nederlands of Engels), de herkomstcategorie van het bezoek (zoekmachine, AI-assistent, deze site, een andere site of geen), of de site als app of in de browser is geopend, en bij het laden van het weer of er bewaarde plaatsen zichtbaar zijn (ja of nee). De herkomstcategorie wordt in je browser afgeleid uit het verwijzende adres; dat adres zelf, de domeinnaam en eventuele zoektermen worden niet verstuurd. Welke plaatsen je hebt bewaard, gaat nooit mee. Als de browser Global Privacy Control of Do Not Track actief doorgeeft, wordt deze PostHog-meting niet gestart.":
-      "Four broad characteristics are also sent: the language of the display (Dutch or English), the referral category of the visit (search engine, AI assistant, this site, another site or none), whether the site was opened as an app or in the browser, and, when the weather loads, whether saved places are visible (yes or no). The referral category is derived in your browser from the referring address; that address itself, the domain name and any search terms are not sent. Which places you have saved is never sent. If the browser actively signals Global Privacy Control or Do Not Track, this PostHog measurement is not started.",
+      "Four broad characteristics are also sent: the language of the display (Dutch or English), the referral category of the visit (search engine, AI assistant, this site, another site or none), whether the site was opened as an app or in the browser, and, when the weather loads, whether saved places are visible (yes or no). The referral category is derived in your browser from the referring address; that address itself, the domain name and any search terms are not sent. The specific places you have saved are never sent. If the browser actively signals Global Privacy Control or Do Not Track, this PostHog measurement is not started.",
     "Google Analytics 4 (GA4) is optioneel. De Google-tag wordt pas geladen nadat je daar expliciet toestemming voor geeft. Voor die toestemming verstuurt deze site geen GA4-request, cookieless ping of toestemmingsstatus naar Google. Bij weigeren blijft de tag geblokkeerd.":
       "Google Analytics 4 (GA4) is optional. The Google tag is only loaded after you explicitly give consent. Before that consent, this site sends no GA4 request, cookieless ping or consent status to Google. If you decline, the tag stays blocked.",
     "Na toestemming meet GA4 onder meer paginaweergaven, herkomst, apparaatcategorie, sessies, engagement en de automatisch ingeschakelde verbeterde metingen zoals scrolls en uitgaande klikken. De site stuurt de paginaroute zonder querystring of URL-hash, en de paginatitel. Op een plaatspagina staat de plaatsnaam in allebei (bijvoorbeeld /weer/utrecht/ en een titel die met „Utrecht” begint). Anders dan PostHog ontvangt Google Analytics dus wel voor welke plaats een pagina is geopend. Advertentieopslag, advertentiepersonalisatie en Google-signals worden door deze implementatie niet ingeschakeld.":
-      "After consent, GA4 measures page views, referral, device category, sessions, engagement and the automatically enabled enhanced measurements such as scrolls and outbound clicks, among other things. The site sends the page route without query string or URL hash, and the page title. On a place page, both contain the place name (for example /weer/utrecht/ and a title that starts with “Utrecht”). Unlike PostHog, Google Analytics therefore does receive which place a page was opened for. Ad storage, ad personalisation and Google signals are not enabled by this implementation.",
+      "After consent, GA4 measures page views, referral, device category, sessions, engagement and the automatically enabled enhanced measurement features, such as scrolls and outbound clicks, among other things. The site sends the page route without query string or URL hash, and the page title. On a place page, both contain the place name (for example /weer/utrecht/ and a title that starts with “Utrecht”). Unlike PostHog, Google Analytics therefore receives the name of the place whose page you open. Ad storage, ad personalisation and Google signals are not enabled by this implementation.",
     "Na toestemming kan Google Analytics cookies plaatsen om bezoeken en sessies te meten. Google kan bij het ontvangen van een meting ook technische gegevens zoals het IP-adres verwerken volgens de eigen voorwaarden, ook buiten de EU (onder meer in de Verenigde Staten). Gegevens op gebruikers- en eventniveau bewaart Google Analytics hoogstens 14 maanden. Je keuze wordt lokaal in deze browser bewaard zodat de site die bij een volgend bezoek kan respecteren.":
       "After consent, Google Analytics can set cookies to measure visits and sessions. When it receives a measurement, Google may also process technical data such as the IP address under its own terms, including outside the EU (for example in the United States). Google Analytics keeps user-level and event-level data for at most 14 months. Your choice is stored locally in this browser so the site can respect it on your next visit.",
     "Je kunt toestemming hier altijd weer intrekken en Google Analytics uitschakelen. Bij uitschakelen verwijdert de site waar mogelijk de bekende GA-cookies op dit domein. Je kunt sitegegevens daarnaast via je browserinstellingen wissen.":
@@ -708,13 +708,13 @@
     "PostHog en Google Analytics uitzetten. Met de knop hieronder zet je op dit apparaat PostHog, de vraag om Google Analytics en Google Analytics zelf uit. Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies. Hetzelfde gebeurt als je de site één keer opent met ?analytics=uit achter het adres; met ?analytics=aan of dezelfde knop zet je ze weer aan. Alleen deze keuze wordt in je browser bewaard, onder de sleutel weerbriefing.analytics.uit.v1, zodat de site haar bij een volgend bezoek respecteert. Er gaat daarbij niets naar PostHog of Google.":
       "Turn off PostHog and Google Analytics. The button below turns off PostHog, the Google Analytics prompt and Google Analytics itself on this device. Cloudflare continues to measure visits and loading performance without cookies. The same happens if you open the site once with ?analytics=uit after the address; ?analytics=aan or the same button turns them back on. Only this choice is stored in your browser, under the key weerbriefing.analytics.uit.v1, so the site respects it on your next visit. Nothing is sent to PostHog or Google in the process.",
     "Voor weer, luchtkwaliteit, pollen en plaatszoeken gebruikt de site Open-Meteo. Als Open-Meteo niet op tijd antwoordt, vraagt onze server de verwachting op bij Visual Crossing of WeatherAPI.com. Voor Nederland en België haalt onze server de neerslag voor de komende uren op bij het KNMI. Bij die aanvragen van onze server krijgen deze diensten hooguit de gekozen positie, niet je IP-adres. Voor een actuele GPS-locatie vraagt je browser de plaatsnaam rechtstreeks op bij BigDataCloud; die gratis dienst wordt niet via onze server aangeroepen. Als dat niet lukt, gebruikt de server OpenStreetMap Nominatim als beperkte fallback. Officiële waarschuwingen komen, afhankelijk van de locatie, van MeteoAlarm of de Amerikaanse National Weather Service. Cloudflare verzorgt hosting en beveiliging en, wanneer Web Analytics actief is, de geaggregeerde gebruiksmeting. PostHog verwerkt de hierboven beschreven beperkte productstatistieken in de EU. Alleen na jouw toestemming kan Google Analytics de hierboven beschreven gebruiksmetingen ontvangen. Diensten die je browser rechtstreeks aanroept, zoals Open-Meteo en BigDataCloud, kunnen bij een aanvraag technische gegevens zoals je IP-adres verwerken volgens hun eigen voorwaarden; voor PostHog is in het project IP-anonimisering ingeschakeld.":
-      "For weather, air quality, pollen and place search, the site uses Open-Meteo. If Open-Meteo does not respond in time, our server requests the forecast from Visual Crossing or WeatherAPI.com. For the Netherlands and Belgium, our server fetches precipitation for the coming hours from the KNMI. For these requests from our server, these services receive at most the chosen position, not your IP address. For a current GPS location, your browser requests the place name directly from BigDataCloud; this free service is not called through our server. If that fails, the server uses OpenStreetMap Nominatim as a limited fallback. Depending on the location, official warnings come from MeteoAlarm or the US National Weather Service. Cloudflare provides hosting and security and, when Web Analytics is active, the aggregated usage measurement. PostHog processes the limited product statistics described above in the EU. Only with your consent can Google Analytics receive the usage measurements described above. Services that your browser calls directly, such as Open-Meteo and BigDataCloud, may process technical data such as your IP address under their own terms when you make a request; IP anonymisation is switched on in the PostHog project.",
+      "For weather, air quality, pollen and place search, the site uses Open-Meteo. If Open-Meteo does not respond in time, our server requests the forecast from Visual Crossing or WeatherAPI.com. For the Netherlands and Belgium, our server fetches precipitation for the coming hours from the KNMI. For these requests from our server, these services receive at most the chosen position, not your IP address. For a current GPS location, your browser requests the place name directly from BigDataCloud; this free service is not called through our server. If that fails, the server uses OpenStreetMap Nominatim as a limited fallback. Depending on the location, official warnings come from MeteoAlarm or the US National Weather Service. Cloudflare provides hosting and security and, when Web Analytics is active, collects aggregate usage statistics. PostHog processes the limited product statistics described above in the EU. Only with your consent can Google Analytics receive the usage measurements described above. Services that your browser calls directly, such as Open-Meteo and BigDataCloud, may process technical data such as your IP address under their own terms when you make a request; IP anonymisation is switched on in the PostHog project.",
     "Je hebt recht op inzage, correctie en verwijdering van gegevens over jou, op beperking van de verwerking en op bezwaar tegen verwerking op basis van gerechtvaardigd belang. Toestemming voor Google Analytics trek je hierboven zelf in. Omdat de site geen account en geen profiel heeft, kunnen wij gegevens meestal niet aan jou als persoon koppelen; wat in je eigen browser staat, wis je met de knop hierboven. Voor een verzoek of vraag mail je naar support@watishetweer.nl; je krijgt binnen een maand antwoord. Ben je het niet eens met hoe met je gegevens wordt omgegaan, dan kun je een klacht indienen bij de Autoriteit Persoonsgegevens.":
-      "You have the right to access, correct and delete data about you, to restrict processing and to object to processing based on legitimate interest. You withdraw consent for Google Analytics yourself above. Because the site has no accounts and no profiles, we usually cannot link data to you as a person; you clear what is stored in your own browser with the button above. For a request or question, email support@watishetweer.nl; you will receive a reply within a month. If you disagree with how your data is handled, you can lodge a complaint with the Autoriteit Persoonsgegevens (the Dutch Data Protection Authority).",
+      "You have the right to access, correct and delete data about you, to restrict processing and to object to processing based on legitimate interest. You can withdraw your consent for Google Analytics above. Because the site has no accounts and no profiles, we usually cannot link data to you as a person; you can clear data stored in your own browser using the button above. For a request or question, email support@watishetweer.nl; you will receive a reply within a month. If you disagree with how your data is handled, you can lodge a complaint with the Autoriteit Persoonsgegevens (the Dutch Data Protection Authority).",
     "Dit wist de lokaal opgeslagen plaatsen, instellingen (ook de weergavekeuze Licht of Donker voor deze sessie) en weersnapshot van deze site. Je keuze voor Google Analytics en een eventuele afmelding voor statistieken blijven behouden, zodat wissen niet onbedoeld als nieuwe toestemming, een nieuwe toestemmingsvraag of het weer aanzetten van statistieken werkt. Gebruik de aparte knop hierboven om GA4 toe te staan of uit te schakelen.":
-      "This clears the locally stored places, settings (including the Light or Dark display choice for this session) and weather snapshot of this site. Your choice for Google Analytics and any opt-out from statistics are kept, so clearing does not accidentally act as new consent, a new consent prompt or turning statistics back on. Use the separate button above to allow or turn off GA4.",
+      "This clears the locally stored places, settings (including the Light or Dark display choice for this session) and weather snapshot of this site. Your Google Analytics choice and any analytics opt-out are retained, so clearing local data does not accidentally grant consent, trigger a new consent prompt or re-enable analytics. Use the separate button above to allow or turn off GA4.",
     "Meer over de site en de manier waarop verwachtingen worden gepresenteerd staat op Over watishetweer.nl. Bronvermelding staat ook onderaan de weerpagina.":
-      "More about the site and how forecasts are presented is on About watishetweer.nl. Sources are also listed at the bottom of the weather page.",
+      "You can read more about the site and how forecasts are presented on About watishetweer.nl. Sources are also listed at the bottom of the weather page.",
 
     /* Plaatsenoverzicht */
     "Weer per plaats in Nederland | watishetweer.nl": "Weather by place in the Netherlands | watishetweer.nl",
@@ -761,18 +761,19 @@
     [/^(.+), (.+)$/, (m) => { const l = land(m[2]); return l && !/[.!?]/.test(m[1]) && m[1].length < 60 && !/\b(de|het|een|en|van|voor|niet)\b/.test(m[1]) ? `${m[1]}, ${l}` : null; }],
     [/^Weergave kiezen\. Huidige stand: (automatisch|handmatig) \((Licht|Donker)\)\.$/, (m) => `Choose display. Current setting: ${m[1] === "automatisch" ? "automatic" : "manual"} (${m[2] === "Licht" ? "Light" : "Dark"}).`],
     [/^Weergave kiezen\. Huidige stand: (Licht|Donker)\.$/, (m) => `Choose display. Current setting: ${m[1] === "Licht" ? "Light" : "Dark"}.`],
-    [/^Handmatig (Licht|Donker) voor deze browsersessie\. Klik om (Licht|Donker) te kiezen\.$/, (m) => `Manually ${m[1] === "Licht" ? "Light" : "Dark"} for this browser session. Click to choose ${m[2] === "Licht" ? "Light" : "Dark"}.`],
+    [/^Handmatig (Licht|Donker) voor deze browsersessie\. Klik om (Licht|Donker) te kiezen\.$/, (m) => `${m[1] === "Licht" ? "Light" : "Dark"} selected for this browser session. Click to choose ${m[2] === "Licht" ? "Light" : "Dark"}.`],
     [/^Huidige handmatige keuze: (Licht|Donker) \(deze browsersessie\)\.$/, (m) => `Current manual choice: ${m[1] === "Licht" ? "Light" : "Dark"} (this browser session).`],
     /* Technische locatiegegevens; de hoogte ontbreekt als de bron hem niet levert. */
     [/^(−?-?\d+\.\d+), (−?-?\d+\.\d+)(?: · (\d+) m hoogte)?(?: · modelcel (−?-?\d+\.\d+), (−?-?\d+\.\d+))? · ([A-Za-z_]+\/[A-Za-z_\/-]+)$/, (m) => `${m[1]}, ${m[2]}${m[3] ? ` · ${m[3]} m elevation` : ""}${m[4] ? ` · model cell ${m[4]}, ${m[5]}` : ""} · ${m[6]}`],
     [/^Officiële weerwaarschuwing(?: \((geel|oranje|rood)\))?: (.+)\.$/, (m, hulp) => {
-      const kleur = m[1] ? ` (${({ geel: "yellow", oranje: "orange", rood: "red" })[m[1]]})` : "";
       const code = /^Code (geel|oranje|rood): (.+)$/.exec(m[2]);
-      const titel = code ? (WAARSCHUWING[code[2].toLowerCase()] && `${({ geel: "yellow", oranje: "orange", rood: "red" })[code[1]]} warning for ${WAARSCHUWING[code[2].toLowerCase()]}`)
+      const kleurNl = code ? code[1] : m[1];
+      const kleur = kleurNl ? ` ${({ geel: "yellow", oranje: "orange", rood: "red" })[kleurNl]}` : "";
+      const titel = code ? WAARSCHUWING[code[2].toLowerCase()]
         : (WAARSCHUWING[m[2].toLowerCase()] ? alsNl("X", WAARSCHUWING[m[2].toLowerCase()])
           /* Officiële Engelse titel van de weerdienst (MeteoAlarm en-GB, NWS) blijft letterlijk. */
           : (eigennamen.includes(m[2]) || (hulp && hulp.alEngels(m[2])) ? m[2] : null));
-      return titel && `Official weather warning${kleur}: ${titel}.`;
+      return titel && `Official${kleur} weather warning: ${titel}.`;
     }],
 
     [new RegExp(`^Als er neerslag valt, berekent het model ongeveer ${G} mm\\.$`), (m) => `If precipitation falls, the model calculates about ${getal(m[1])} mm.`],
@@ -784,7 +785,7 @@
     [/^De Amerikaanse hitte-index loopt op tot (\d+) °F, ongeveer (−?-?\d+) °C\.$/, (m) => `The US heat index rises to ${m[1]} °F, about ${getal(m[2])} °C.`],
     [/^Gemiddeld zicht: onbekend$/, () => "Average visibility: unknown"],
     [/^Hoogste neerslagkans in één uur (\d+) procent; (?:hoeveelheid onzeker|amount uncertain)$/, (m) => `Highest hourly chance of precipitation ${m[1]} per cent; amount uncertain`],
-    [/^Neerslag vandaag vanaf nu: (\d+) procent\.(?: Minimum en maximum gelden voor de volledige kalenderdag\.)?$/, (m) => `Precipitation for the rest of today: ${m[1]} per cent.${/Minimum/.test(m[0]) ? " Minimum and maximum apply to the full calendar day." : ""}`],
+    [/^Neerslag vandaag vanaf nu: (\d+) procent\.(?: Minimum en maximum gelden voor de volledige kalenderdag\.)?$/, (m) => `Highest hourly chance of precipitation for the rest of today: ${m[1]} per cent.${/Minimum/.test(m[0]) ? " Minimum and maximum apply to the full calendar day." : ""}`],
     [/^(Uitstekende|Goede|Redelijke) omstandigheden, maar door (.+) is er geen aaneengesloten gunstig kijkvenster\.$/, (m) => { const r = oorzaken(m[2]); return r && `${({ Uitstekende: "Excellent", Goede: "Good", Redelijke: "Fair" })[m[1]]} conditions, but ${r} ${/ and |, /.test(r) ? "break" : "breaks"} up any continuous favourable viewing window.`; }],
     [/^De omstandigheden zijn redelijk, maar (.+) onderbreekt een langer gunstig kijkvenster\.$/, (m) => { const r = oorzaken(m[1]); return r && `Conditions are fair, but ${r} ${/ and |, /.test(r) ? "interrupt" : "interrupts"} a longer favourable viewing window.`; }],
     [/^De totale zichtscore is hoog, maar (.+) onderbreekt een langer optimaal kijkvenster\.$/, (m) => { const r = oorzaken(m[1]); return r && `The overall stargazing score is high, but ${r} ${/ and |, /.test(r) ? "interrupt" : "interrupts"} a longer ideal viewing window.`; }],
@@ -793,12 +794,12 @@
     /* Dagomschrijving "Mist; neerslag mogelijk" → "Fog; precipitation possible". */
     [/^(.+); (.+) mogelijk$/, (m) => { const w = weer(m[1]), n = WEER[m[2].toLowerCase()]; return w && n ? `${w}; ${n} possible` : null; }],
     [/^(.+); (zeer kleine|kleine|grote|zeer grote) neerslagkans$/, (m) => { const w = weer(m[1]); return w && `${w}; ${({ "zeer kleine": "very low chance of precipitation", "kleine": "low chance of precipitation", "grote": "precipitation likely", "zeer grote": "precipitation very likely" })[m[2]]}`; }],
-    [/^Er (valt|vallen) nu (.+)\.$/, (m) => { const w = WEER[m[2].toLowerCase()]; return w && `There ${isAre(w)} ${w} now.`; }],
+    [/^Er (valt|vallen) nu (.+)\.$/, (m) => { const w = WEER[m[2].toLowerCase()]; return w && (/thunder/.test(w) ? `There ${isAre(w)} ${w} now.` : `${w.charAt(0).toUpperCase() + w.slice(1)} ${isAre(w)} falling now.`); }],
     [/^(.+) mogelijk (in de (?:vroege ochtend|ochtend|middag|avond|nacht))$/, (m) => { const w = weer(m[1]); return w && `${w} possible ${DAGDEEL[m[2]]}`; }],
     [/^Naar verwachting (veel|weinig|enkele uren|meerdere uren) zon (vandaag|morgen)\.$/, (m) => `${({ veel: "Plenty of sunshine", weinig: "Little sunshine", "enkele uren": "A few hours of sunshine", "meerdere uren": "Several hours of sunshine" })[m[1]]} expected ${vandaagMorgen(m[2])}.`],
     [/^Naar verwachting bijna de hele dag zon (vandaag|morgen)\.$/, (m) => `Sunshine expected for almost the whole day ${vandaagMorgen(m[1])}.`],
     [/^(Beste|Relatief beste|Waarschijnlijk beste) periode (in de (?:vroege ochtend|ochtend|middag|avond|nacht))\.$/, (m) => `${PERIODE[m[1]]} ${DAGDEEL[m[2]] === "overnight" ? "during the night" : DAGDEEL[m[2]]}.`],
-    [/^(Beste|Relatief beste|Waarschijnlijk beste) periode van de (avond|nacht|vroege ochtend) tot de (nacht|ochtend|vroege ochtend)\.$/, (m) => `${PERIODE[m[1]]}: ${DAGNAAM[m[2]]} to ${DAGNAAM[m[3]]}.`],
+    [/^(Beste|Relatief beste|Waarschijnlijk beste) periode van de (avond|nacht|vroege ochtend) tot de (nacht|ochtend|vroege ochtend)\.$/, (m) => `${PERIODE[m[1]]}: ${m[2] === "nacht" ? "overnight" : `from the ${DAGNAAM[m[2]]}`} into the ${DAGNAAM[m[3]]}.`],
     [/^(Beste|Relatief beste|Waarschijnlijk beste) periode: (\d{1,2}:\d{2})–(\d{1,2}:\d{2})\.$/, (m) => `${PERIODE[m[1]]}: ${m[2]}–${m[3]}.`],
     [/^(Beste|Relatief beste|Waarschijnlijk beste) periode: nu tot (\d{1,2}:\d{2})\.$/, (m) => `${PERIODE[m[1]]}: now until ${m[2]}.`],
     [/^(Vandaag|Morgen|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december), per uur$/,
@@ -809,11 +810,11 @@
     [/^Hoogste kans op neerslag in één uur: (\d+%)\.$/, (m) => `Highest chance of precipitation in any one hour: ${m[1]}.`],
     /* Neerslagnaam in de dagregel, met tijdvak (vandaag: resterende uren). */
     [new RegExp(`^Hoogste neerslagkans in één uur( in de rest van vandaag)? (\\d+) procent(?:; (?:(hoeveelheid onzeker)|verwachte neerslag (over de hele dag|in de rest van vandaag) (spoor|<0,05 mm|<0,1 mm|${G} mm)))?$`), (m) => `Highest hourly chance of precipitation${m[1] ? " for the rest of today" : ""} ${m[2]} per cent${m[3] ? "; amount uncertain" : m[4] ? `; expected precipitation ${m[4] === "over de hele dag" ? "for the whole day" : "for the rest of today"} ${m[5] === "spoor" ? "trace" : m[5].replace(/(\d),(\d)/g, "$1.$2")}` : ""}`],
-    [new RegExp(`^De verwachte neerslag (over de hele dag|in de rest van vandaag) is (alleen een spoor|<0,05 mm|${G} mm)\\.$`), (m) => `Expected precipitation ${m[1] === "over de hele dag" ? "for the whole day" : "for the rest of today"} is ${m[2] === "alleen een spoor" ? "only a trace" : m[2].replace(/(\d),(\d)/g, "$1.$2")}.`],
+    [new RegExp(`^De verwachte neerslag (over de hele dag|in de rest van vandaag) is (alleen een spoor|<0,05 mm|${G} mm)\\.$`), (m) => { const tijdvak = m[1] === "over de hele dag" ? "for the whole day" : "for the rest of today"; return m[2] === "alleen een spoor" ? `Only a trace of precipitation is expected ${tijdvak}.` : `Expected precipitation ${tijdvak} is ${m[2].replace(/(\d),(\d)/g, "$1.$2")}.`; }],
     [new RegExp(`^Verwachte neerslag over de hele dag: (spoor|<0,05 mm|<0,1 mm|${G} mm)\\.$`), (m) => `Expected precipitation for the whole day: ${m[1] === "spoor" ? "trace" : m[1].replace(/(\d),(\d)/g, "$1.$2")}.`],
     [/^Later vandaag loopt de neerslagkans op tot (\d+)%\.$/, (m) => `Later today the chance of precipitation rises to ${m[1]}%.`],
     [/^De komende twee uur is er een (zeer kleine|kleine|grote|zeer grote) kans op (.+)\.$/, (m) => { const w = WEER[m[2].toLowerCase()]; return w && `There is a ${KANS[m[1]]} chance of ${w} in the next two hours.`; }],
-    [/^Er is een (zeer kleine|kleine|grote|zeer grote) kans op (.+) in de komende twee uur \(maximaal (\d+)%\)\.$/, (m) => { const w = WEER[m[2].toLowerCase()]; return w && `There is a ${KANS[m[1]]} chance of ${w} in the next two hours (at most ${m[3]}%).`; }],
+    [/^Er is een (zeer kleine|kleine|grote|zeer grote) kans op (.+) in de komende twee uur \(maximaal (\d+)%\)\.$/, (m) => { const w = WEER[m[2].toLowerCase()]; return w && `There is a ${KANS[m[1]]} chance of ${w} in the next two hours (highest hourly chance ${m[3]}%).`; }],
     [new RegExp(`^De temperatuur blijft de komende uren rond ${G}( ?)°C\\.$`), (m) => `The temperature stays around ${getal(m[1])}${m[2]}°C over the coming hours.`],
     [/^Zonsondergang over (\d+) (minuut|minuten), (vandaag|morgen) om (\d{1,2}:\d{2})\.$/, (m) => `Sunset in ${m[1]} ${meervoud(m[1], "minute", "minutes")}, ${vandaagMorgen(m[3])} at ${m[4]}.`],
     [/^Zonsopkomst over (\d+) (minuut|minuten), (vandaag|morgen) om (\d{1,2}:\d{2})\.$/, (m) => `Sunrise in ${m[1]} ${meervoud(m[1], "minute", "minutes")}, ${vandaagMorgen(m[3])} at ${m[4]}.`],
@@ -826,7 +827,7 @@
     [/^Vandaag (\d{1,2})$/, (m) => `Today ${m[1]}`],
     [/^Vandaag (\d{1,2}) (jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec)$/, (m) => `Today ${m[1]} ${maand(m[2])}`],
     [/^(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec)$/i, (m) => `${dagVol(m[1])} ${m[2]} ${maand(m[3])}`],
-    [/^(ma|di|wo|do|vr|za|zo) op (ma|di|wo|do|vr|za|zo)$/i, (m) => `${dagKort(m[1].toLowerCase())} night`],
+    [/^(ma|di|wo|do|vr|za|zo) op (ma|di|wo|do|vr|za|zo)$/i, (m) => `${dagKort(m[1].toLowerCase())}–${dagKort(m[2].toLowerCase())}`],
     [new RegExp(`^${D}–${D}$`), (m) => `${dagKort(m[1])}–${dagKort(m[2])}`],
     [/^(Vandaag|Morgen) om (\d{1,2}:\d{2})\.$/, (m) => `${m[1] === "Vandaag" ? "Today" : "Tomorrow"} at ${m[2]}.`],
     [/^zon (op|onder) (\d{1,2}:\d{2})$/, (m) => `${m[1] === "op" ? "sunrise" : "sunset"} ${m[2]}`],
@@ -846,7 +847,7 @@
     /* Temperatuur, gevoel, wind */
     [new RegExp(`^${G}°$`), (m) => getal(m[1]) + "°"],
     [new RegExp(`^nu ${G}°$`), (m) => `now ${getal(m[1])}°`],
-    [new RegExp(`^voelt ${G}°$`), (m) => `feels ${getal(m[1])}°`],
+    [new RegExp(`^voelt ${G}°$`), (m) => `feels like ${getal(m[1])}°`],
     [new RegExp(`^Gevoelstemperatuur ${G}( ?)°C$`), (m) => `Feels like ${getal(m[1])}${m[2]}°C`],
     [new RegExp(`^${G} graden$`), (m) => graden(m[1])],
     [new RegExp(`^${G} graad$`), (m) => graden(m[1])],
@@ -856,7 +857,7 @@
     /* Grafiekvenster: "16:00 · bewolkt", "kans 16:00–17:00", "12 km/u WZW, 3 Bft". */
     [/^(\d{2}:\d{2}) · (.+)$/, (m) => weer(m[2]) && `${m[1]} · ${weer(m[2])}`],
     [/^kans (\d{2}:\d{2})–(\d{2}:\d{2})$/, (m) => `chance ${m[1]}–${m[2]}`],
-    [/^(\d{2}:\d{2}, )?neerslagkans (\d+%)(?:, verwacht (.+))?$/, (m) => `${m[1] || ""}chance of precipitation ${m[2]}${m[3] ? ", expected " + m[3].replace(/(\d),(\d)/g, "$1.$2") : ""}`],
+    [/^(\d{2}:\d{2}, )?neerslagkans (\d+%)(?:, verwacht (.+))?$/, (m) => `${m[1] || ""}${m[2]} chance of precipitation${m[3] ? ", " + m[3].replace(/(\d),(\d)/g, "$1.$2") + " expected" : ""}`],
     [/^(\d+) km\/u(?: (N|NNO|NO|ONO|O|OZO|ZO|ZZO|Z|ZZW|ZW|WZW|W|WNW|NW|NNW))?, (\d+) Bft$/, (m) => `${m[1]} km/h${m[2] ? " " + RICHTING_KORT[m[2]] : ""}, ${m[3]} Bft`],
     [/^(Zwakke|Matige|Vrij krachtige|Krachtige|Harde|Stormachtige) wind uit het ([a-z]+) \((\d+) Bft\)\.$/, (m) => richting(m[2]) && `${alsNl("X", WINDKRACHT[m[1].toLowerCase() + " wind"])} from the ${richting(m[2])} (${m[3]} Bft).`],
     [/^(Storm|Zware storm|Zeer zware storm|Orkaan) uit het ([a-z]+) \((\d+) Bft\)\.$/, (m) => richting(m[2]) && `${alsNl("X", WINDKRACHT[m[1].toLowerCase()])} from the ${richting(m[2])} (${m[3]} Bft).`],
@@ -865,7 +866,7 @@
     [/^(Zwakke|Matige|Vrij krachtige|Krachtige|Harde|Stormachtige) wind \((\d+) Bft\)\.$/, (m) => `${alsNl("X", WINDKRACHT[m[1].toLowerCase() + " wind"])} (${m[2]} Bft).`],
     [/^(Storm|Zware storm|Zeer zware storm|Orkaan) \((\d+) Bft\)\.$/, (m) => `${alsNl("X", WINDKRACHT[m[1].toLowerCase()])} (${m[2]} Bft).`],
     [/^De wind komt uit het ([a-z]+)\.$/, (m) => richting(m[1]) && `The wind is from the ${richting(m[1])}.`],
-    [/^De wind komt uit het ([a-z]+) en draait naar het ([a-z]+)\.$/, (m) => richting(m[1]) && richting(m[2]) && `The wind is from the ${richting(m[1])}, turning ${richting(m[2])}.`],
+    [/^De wind komt uit het ([a-z]+) en draait naar het ([a-z]+)\.$/, (m) => richting(m[1]) && richting(m[2]) && `The wind is ${richting(m[1])}erly, becoming ${richting(m[2])}erly.`],
     [/^In de komende (\d+) uur is de wind het sterkst, met (\d+) Bft \(([a-z ]+)\)\.$/, (m) => WINDKRACHT[m[3]] && `Over the next ${m[1]} hours, the wind peaks at ${m[2]} Bft (${WINDKRACHT[m[3]]}).`],
     [new RegExp(`^Windstoten kunnen (vandaag|morgen) tussen ${T} en ${T} oplopen tot (\\d+) km/u\\.$`), (m) => `Gusts may reach ${m[4]} km/h ${vandaagMorgen(m[1])} between ${m[2]} and ${m[3]}.`],
     [new RegExp(`^De hoogste windstoot (werd|wordt) (vandaag|morgen|gisteren) tussen ${T} en ${T} (?:verwacht, )?(?:met )?(?:ongeveer )?(\\d+) km/u\\.$`), (m) => `The strongest gust ${m[1] === "werd" ? "was" : "is expected"} ${vandaagMorgen(m[2])} between ${m[3]} and ${m[4]}, at about ${m[5]} km/h.`],
@@ -892,12 +893,12 @@
     [/^(\d+(?:[,.]\d+)?) mm$/, (m) => `${getal(m[1])} mm`],
     [/^(\d+)% is de hoogste neerslagkans in één uur in de resterende uren van vandaag\.$/, (m) => `${m[1]}% is the highest hourly chance of precipitation in the remaining hours of today.`],
     [new RegExp(`^(\\d+)% is de hoogste neerslagkans in één uur op ${D} (\\d{1,2})(?: (jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec))?\\.$`), (m) => `${m[1]}% is the highest hourly chance of precipitation on ${dagKort(m[2])} ${m[3]}${m[4] ? " " + maand(m[4]) : ""}.`],
-    [new RegExp(`^Neerslag vandaag vanaf nu: (\\d+) procent; ${G} millimeter\\. Minimum en maximum gelden voor de volledige kalenderdag\\.$`), (m) => `Precipitation for the rest of today: ${m[1]} per cent; ${getal(m[2])} millimetres. Minimum and maximum apply to the full calendar day.`],
+    [new RegExp(`^Neerslag vandaag vanaf nu: (\\d+) procent; ${G} millimeter\\. Minimum en maximum gelden voor de volledige kalenderdag\\.$`), (m) => `Highest hourly chance of precipitation for the rest of today: ${m[1]} per cent; ${getal(m[2])} millimetres. Minimum and maximum apply to the full calendar day.`],
     [new RegExp(`^Voor vandaag is ${G} uur zon berekend\\.$`), (m) => `${getal(m[1])} ${meervoud(m[1], "hour", "hours")} of sunshine ${meervoud(m[1], "is", "are")} forecast for today.`],
     [new RegExp(`^Verwachte UV-piek (lag )?rond ${T} · (laag|matig|hoog|zeer hoog|extreem)\\.$`), (m) => `Expected UV peak ${m[1] ? "was " : ""}around ${m[2]} · ${UV[m[3]]}.`],
     [new RegExp(`^Verwachte UV-piek vandaag: ${G} \\((laag|matig|hoog|zeer hoog|extreem)\\)(\\.?)$`), (m) => `Expected UV peak today: ${getal(m[1])} (${UV[m[2]]})${m[3]}`],
-    [/^Gegevens opgehaald om (\d{1,2}:\d{2}) · minder dan 1 min geleden$/, (m) => `Updated at ${m[1]} · less than a minute ago`],
-    [/^Gegevens opgehaald om (\d{1,2}:\d{2}) · (\d+) min geleden$/, (m) => `Updated at ${m[1]} · ${m[2]} min ago`],
+    [/^Gegevens opgehaald om (\d{1,2}:\d{2}) · minder dan 1 min geleden$/, (m) => `Loaded at ${m[1]} · less than a minute ago`],
+    [/^Gegevens opgehaald om (\d{1,2}:\d{2}) · (\d+) min geleden$/, (m) => `Loaded at ${m[1]} · ${m[2]} min ago`],
     [/^(<?\d+) ?korrels?\/m³$/, (m) => `${m[1]} grains/m³`],
     [/^Gemiddeld zicht: (\d+)\+ km$/, (m) => `Average visibility: ${m[1]}+ km`],
     [new RegExp(`^Gemiddeld zicht: ${G} km$`), (m) => `Average visibility: ${getal(m[1])} km`],
@@ -945,20 +946,20 @@
     [new RegExp(`^Rond ${T} wordt het naar verwachting droog\\.$`), (m) => `It is expected to turn dry around ${m[1]}.`],
     [new RegExp(`^Rond ${T} wordt het droog\\.$`), (m) => `It will turn dry around ${m[1]}.`],
     [new RegExp(`^Er valt nu neerslag\\. Rond ${T} wordt het naar verwachting droog\\.$`), (m) => `There is precipitation now. It is expected to turn dry around ${m[1]}.`],
-    [new RegExp(`^In de komende twee uur wordt daarna ongeveer ${G} mm verwacht\\.$`), (m) => `After that, about ${getal(m[1])} mm is expected over the next two hours.`],
+    [new RegExp(`^In de komende twee uur wordt daarna ongeveer ${G} mm verwacht\\.$`), (m) => `About ${getal(m[1])} mm is expected over the next two hours.`],
     [new RegExp(`^Vanaf ongeveer ${T} wordt neerslag verwacht\\.$`), (m) => `Precipitation is expected from about ${m[1]}.`],
     [new RegExp(`^Verwachte hoeveelheid: ongeveer ${G} mm\\.$`), (m) => `Expected amount: about ${getal(m[1])} mm.`],
     [new RegExp(`^In totaal ongeveer ${G} mm\\.$`), (m) => `About ${getal(m[1])} mm in total.`],
     [/^Het is nu droog\.$/, () => "It is dry now."],
-    [/^De kans op neerslag in de komende twee uur is zeer klein \(maximaal (\d+)%\)\.$/, (m) => `The chance of precipitation in the next two hours is very low (at most ${m[1]}%).`],
-    [/^Er is een (zeer kleine|kleine|grote|zeer grote) kans op neerslag in de komende twee uur \(maximaal (\d+)%\)\.$/, (m) => `There is a ${KANS[m[1]]} chance of precipitation in the next two hours (at most ${m[2]}%).`],
+    [/^De kans op neerslag in de komende twee uur is zeer klein \(maximaal (\d+)%\)\.$/, (m) => `The chance of precipitation in the next two hours is very low (highest hourly chance ${m[1]}%).`],
+    [/^Er is een (zeer kleine|kleine|grote|zeer grote) kans op neerslag in de komende twee uur \(maximaal (\d+)%\)\.$/, (m) => `There is a ${KANS[m[1]]} chance of precipitation in the next two hours (highest hourly chance ${m[2]}%).`],
     [/^De komende twee uur is er een (grote|zeer grote) kans op neerslag, maar de (?:verwachte )?hoeveelheid is onzeker\.$/, (m) => `There is a ${KANS[m[1]]} chance of precipitation in the next two hours, but the amount is uncertain.`],
     [/^De komende twee uur is de kans op neerslag zeer groot, maar de (?:verwachte )?hoeveelheid is onzeker\.$/, () => "The chance of precipitation in the next two hours is very high, but the amount is uncertain."],
-    [/^Volgens het weermodel valt er nu (.+)\.$/, (m) => { const w = WEER[m[1].toLowerCase()]; return w && `According to the weather model, there ${isAre(w)} ${w} now.`; }],
+    [/^Volgens het weermodel valt er nu (.+)\.$/, (m) => { const w = WEER[m[1].toLowerCase()]; return w && (/thunder/.test(w) ? `According to the weather model, there ${isAre(w)} ${w} now.` : `According to the weather model, ${w} ${isAre(w)} falling now.`); }],
 
     /* Briefing: temperatuur */
-    [new RegExp(`^Het verwachte maximum (lag|ligt) (vandaag|morgen) rond ${T} op ${G} (graden|graad)\\.$`), (m) => `${m[2] === "morgen" ? "Tomorrow" : "Today"}'s expected high ${m[1] === "lag" ? "was" : "is"} ${graden(m[4])}, around ${m[3]}.`],
-    [new RegExp(`^Het verwachte maximum voor morgen is ${G} (graden|graad)\\.$`), (m) => `The expected high for tomorrow is ${graden(m[1])}.`],
+    [new RegExp(`^Het verwachte maximum (lag|ligt) (vandaag|morgen) rond ${T} op ${G} (graden|graad)\\.$`), (m) => `${m[2] === "morgen" ? "Tomorrow" : "Today"}'s forecast high ${m[1] === "lag" ? "was" : "is"} ${graden(m[4])} at around ${m[3]}.`],
+    [new RegExp(`^Het verwachte maximum voor morgen is ${G} (graden|graad)\\.$`), (m) => `The forecast high for tomorrow is ${graden(m[1])}.`],
     [new RegExp(`^De maximumtemperatuur van vandaag ligt rond ${G} (graden|graad)\\.$`), (m) => `Today's high is around ${graden(m[1])}.`],
     [new RegExp(`^Morgen wordt het ongeveer ${G} (graden|graad)\\.$`), (m) => `Tomorrow it will be about ${graden(m[1])}.`],
     [new RegExp(`^Vannacht koelt het af naar ongeveer ${G} (graden|graad)\\.$`), (m) => `Tonight it cools to about ${graden(m[1])}.`],
@@ -971,7 +972,7 @@
 
     /* Waarschuwingen */
     [/^Code (geel|oranje|rood): (.+)$/, (m) => { const w = WAARSCHUWING[m[2].toLowerCase()]; return w && `${({ geel: "Yellow", oranje: "Orange", rood: "Red" })[m[1]]} warning: ${w}`; }],
-    [/^Officiële weerwaarschuwing(?: \((geel|oranje|rood)\))?:$/, (m) => `Official weather warning${m[1] ? ` (${({ geel: "yellow", oranje: "orange", rood: "red" })[m[1]]})` : ""}:`],
+    [/^Officiële weerwaarschuwing(?: \((geel|oranje|rood)\))?:$/, (m) => `Official${m[1] ? ` ${({ geel: "yellow", oranje: "orange", rood: "red" })[m[1]]}` : ""} weather warning:`],
     [/^Officiële titel:$/, () => "Official title:"],
     [/^Uitleg van watishetweer\.nl:$/, () => "Explanation from watishetweer.nl:"],
     [/^Officiële titel: (.+?)[.·]? ?·? Bron: (.+?)\.?$/, (m) => `Official title: ${m[1]} · Source: ${m[2]}`],
@@ -984,7 +985,7 @@
     [/^Luchtkwaliteit volgens het model is (zeer slecht|slecht|extreem slecht) \(Europese AQI (\d+)\)\.$/, (m) => `Modelled air quality is ${LUCHT[m[1]]} (European AQI ${m[2]}).`],
     [/^Luchtkwaliteit volgens het model is ongezond \(AQI VS (\d+)\)\.$/, (m) => `Modelled air quality is unhealthy (US AQI ${m[1]}).`],
     [/^De Amerikaanse weerdienst heeft voor deze locatie een (.+) uitgegeven\.$/, (m) => { const w = WAARSCHUWING[m[1].toLowerCase()]; return w && `The US National Weather Service has issued ${/^[aeiou]/i.test(w) ? "an" : "a"} ${w.toLowerCase()} for this location.`; }],
-    [/^Matig veel graspollen verwacht voor dit uur\.$/, () => "Moderate grass pollen expected for this hour."],
+    [/^Matig veel graspollen verwacht voor dit uur\.$/, () => "Moderate grass pollen levels expected for this hour."],
     [/^(Weinig|Matig veel|Veel|Zeer veel) (.+) verwacht voor dit uur\.$/, (m) => { const s = POLLENSOORT[m[2].toLowerCase()]; return s && `${alsNl("X", POLLENNIVEAU[m[1].toLowerCase()])} ${s} expected for this hour.`; }],
 
     /* Grafiekbeschrijving (schermlezer) */

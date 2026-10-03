@@ -252,7 +252,7 @@
       const stempel=String(stamp.textContent||"");
       const zichtbaar=getComputedStyle(app).display!=="none"&&getComputedStyle(app).visibility!=="hidden";
       /* Taalonafhankelijk (audit F11): een tijdstip in de stempel, niet de
-         Nederlandse zin "Gegevens opgehaald om …" (Engels: "Updated at …"). */
+         Nederlandse zin "Gegevens opgehaald om …" (Engels: "Loaded at …"). */
       if(zichtbaar&&!/^(?:--|–)$/.test(temperatuur)&&/\b\d{2}:\d{2}\b/.test(stempel)){
         klaar=true;stop();
         const nu=globalThis.performance&&typeof globalThis.performance.now==="function"?globalThis.performance.now():Date.now();

@@ -33,7 +33,7 @@ const bron=new Set(["Yellow warning for fog","Widespread fog is expected."]);
 const vb=maakVertaler(echt,{bronEngels:bron});
 assert.equal(vb.vertaal("Yellow warning for fog"),"Yellow warning for fog","officiële Engelse titel blijft staan");
 assert.equal(vb.vertaal("Widespread fog is expected. Geldig tot 18:00."),"Widespread fog is expected. Valid until 18:00.","officiële tekst plus eigen Nederlandse aanvulling");
-assert.equal(vb.vertaal("Officiële weerwaarschuwing (geel): Yellow warning for fog."),"Official weather warning (yellow): Yellow warning for fog.","briefing met officiële Engelse titel");
+assert.equal(vb.vertaal("Officiële weerwaarschuwing (geel): Yellow warning for fog."),"Official yellow weather warning: Yellow warning for fog.","briefing met officiële Engelse titel");
 assert.deepEqual(vb.onvertaald("Yellow warning for fog"),[],"bewaker telt officiële Engelse tekst niet als onvertaald");
 assert.equal(maakVertaler(echt).vertaal("Yellow warning for fog"),null,"zonder bron blijft onbekend Engels onbekend");
 console.log("Vertaalkern: exact, patronen, meerzins-blokken, getalnotatie, neutrale teksten, officiële Engelse brontekst en veiligheidsregels geslaagd.");
