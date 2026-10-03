@@ -20,7 +20,7 @@ const html=`<!doctype html>
   <button class="wiw-hour-toggle" type="button">Alle uren bekijken</button>
   <div id="nights"><button class="nacht-meer" type="button">Meer nachten bekijken</button></div>
 </main>
-<p><button type="button" data-analytics-device-toggle>Statistieken op dit apparaat uitzetten</button><span data-analytics-device-status></span></p>
+<p><button type="button" data-analytics-device-toggle>PostHog en Google Analytics uitzetten</button><span data-analytics-device-status></span></p>
 <p><button type="button" data-ga4-consent-toggle>Google Analytics instellen</button><span data-ga4-consent-status></span></p>
 <script src="/posthog-analytics.js"></script>
 <script>
@@ -247,7 +247,9 @@ async function controleerAfmelding(){
     assert.equal(await page.locator("#analytics-toestemming").count(),0,"na ?analytics=uit hoort geen toestemmingsvraag te verschijnen");
     assert.equal(await page.evaluate(()=>location.search+location.hash),"?plaats=x#y","de analytics-parameter hoort uit de adresbalk te verdwijnen, de rest niet");
     assert.equal(await page.evaluate(()=>localStorage.getItem("weerbriefing.analytics.uit.v1")),"1","afmelding wordt niet bewaard");
-    assert.match(await page.locator("[data-analytics-device-status]").textContent(),/staan alle statistieken uit/,"status toont de afmelding niet");
+    const afmeldStatus=await page.locator("[data-analytics-device-status]").textContent();
+    assert.match(afmeldStatus,/PostHog en Google Analytics staan uit\. Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies\./,"status toont de afmelding niet");
+    assert.doesNotMatch(afmeldStatus,/alle statistieken/i,"status belooft meer dan de afmelding doet: Cloudflare blijft meten (hercontrole 2 oktober)");
     assert.equal(await page.locator("[data-ga4-consent-toggle]").isHidden(),true,"GA4-knop hoort verborgen te zijn zolang alles uit staat");
     await page.reload({waitUntil:"load"});
     await page.waitForTimeout(300);

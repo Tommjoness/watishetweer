@@ -2,6 +2,8 @@
 
 Datum: 31 augustus 2026
 
+> **Vervallen op 3 oktober 2026.** De LKI werd wel opgehaald maar nergens getoond. De client-aanvraag en de serverroute `/api/luchtkwaliteit` zijn verwijderd (hercontrole 2 oktober, punt 7). De zichtbare luchtkwaliteit is de Europese AQI van Open-Meteo/CAMS. Dit document blijft als achtergrond bewaard.
+
 ## Correctie op de provider-shortlist
 
 De eerste Nederlandse luchtkwaliteitskoppeling gebruikt **niet** een rauwe waarde van het dichtstbijzijnde meetstation. De Luchtmeetnet-route `concentrations?formula=lki&latitude=...&longitude=...` levert een lokale Nederlandse LKI. Die wordt als eigen index behandeld en mag niet als stationsmeting worden gelabeld.
