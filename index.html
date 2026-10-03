@@ -244,6 +244,7 @@
   /* Aanwijzingen mogen er zijn zonder de aandacht te trekken: ze horen op te
      vallen als je zoekt, en te verdwijnen zodra je de app kent. */
   .hint{font-size:12px;color:var(--ink-45);margin:-2px 0 10px;font-style:italic}
+  #lichtvervuiling a{color:inherit;text-decoration:underline;text-underline-offset:2px}
   /* v70, punt 8: uitsluitend de hint bij Zeven dagen stond te dicht tegen de
      horizontale lijn onder de sectiekop. De gedeelde .hint-regel hierboven
      (ook gebruikt door #charthint bij de grafiek) blijft ongewijzigd; alleen
@@ -649,6 +650,7 @@
       <span class="r" id="moonlab" role="note"></span>
     </div>
     <p class="hint" id="nachthint">Hoe goed je 's nachts de sterren kunt zien, hangt af van bewolking, zicht, mist, neerslag, vocht, wind en maanlicht.</p>
+    <p class="hint" id="lichtvervuiling" hidden></p>
     <div id="nights"></div>
     </div>
     </div>
@@ -995,6 +997,7 @@ const normLand=v=>/^[A-Z]{2}$/.test(String(v||"").toUpperCase())?String(v).toUpp
 function onthoudLand(v){
   const code=normLand(v); if(!code) return;
   S.land=code;
+  if(typeof toonLichtvervuiling==="function")toonLichtvervuiling();
   const p=ls.get(KEY_P,null);
   if(p&&S.lat!=null&&Math.abs(Number(p.lat)-S.lat)<0.02&&Math.abs(Number(p.lon)-S.lon)<0.02){p.land=code;ls.set(KEY_P,p);}
   const lijst=ls.get(KEY_L,[]);let gewijzigd=false;
@@ -1131,6 +1134,9 @@ async function load(lat,lon,label,stil,opslaan,land){
   const st=document.getElementById("state");
   if(!stil){st.style.display="block";st.className="msg";st.textContent="Gegevens ophalen.";}
   S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;
+  /* Lichtvervuiling hangt alleen af van plaats en land, niet van de weerdata;
+     latere Nachtzicht-renderlagen hoeven hem daarom niet aan te roepen. */
+  toonLichtvervuiling();
 
   const basis="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon
     +"&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,precipitation,"
@@ -1203,7 +1209,7 @@ async function load(lat,lon,label,stil,opslaan,land){
     if(mijnBeurt!==laadTeller) return;
     const oud=ls.get(KEY_D,null);
     if(oud&&oud.d){
-      S.d=oud.d;S.air=oud.air;S.label=oud.label;S.lat=oud.lat;S.lon=oud.lon;S.op=oud.op;S.luchtOp=Number(oud.airOp)||0;S.land=normLand(oud.land)||S.land;
+      S.d=oud.d;S.air=oud.air;S.label=oud.label;S.lat=oud.lat;S.lon=oud.lon;S.op=oud.op;S.luchtOp=Number(oud.airOp)||0;S.land=normLand(oud.land)||S.land;toonLichtvervuiling();
       S.verversMislukt=true;
       tekenAlles();
       document.getElementById("app").style.display="block";
@@ -2637,7 +2643,54 @@ function nachten(){
      lege vlakte in plaats van een gevulde schijf, zichtbaar als een zwarte stip.
      De kop gebruikt daarom dezelfde Unicode-maanfase als de nachtrijen. */
   document.getElementById("moonlab").innerHTML=maanUnicode(m.fase)+"<span>"+m.naam+", "+Math.round(m.ill*100)+" procent verlicht</span>";
+  toonLichtvervuiling();
 }
+
+/* ---------- lichtvervuiling (alleen Nederland) ----------
+   Grove schatting uit de RIVM-kaart "Berekende hemelhelderheid in de nacht,
+   zonder bewolking" (peildatum 2015), voorbewerkt tot een raster van ~1 km met
+   per vak laag/matig/hoog of, bij twijfel, twee buurklassen. Herkomst, grenzen
+   en onzekerheidsregel staan in docs/lichtvervuiling.md en op /over/. */
+const LICHTVERVUILING_URL="/lichtvervuiling-nl.json";
+const LICHTVERVUILING_TEKST=[null,
+  ["laag","Weinig kunstlicht: de Melkweg is goed te zien."],
+  ["matig","De Melkweg is zwak of niet te zien."],
+  ["hoog","Veel kunstlicht: alleen heldere sterren en planeten zijn te zien."],
+  ["laag tot matig","De Melkweg is zwak tot goed te zien."],
+  ["matig tot hoog","De Melkweg is waarschijnlijk niet te zien; heldere sterren wel."]];
+let lichtvervuilingData=null;
+function lichtvervuilingKlasse(d,lat,lon){
+  const R=d&&d.raster;if(!R||typeof d.klassen!=="string"||!Number.isFinite(lat)||!Number.isFinite(lon))return 0;
+  const r=Math.floor((lat-R.lat0)/R.dlat),k=Math.floor((lon-R.lon0)/R.dlon);
+  if(r<0||k<0||r>=R.rijen||k>=R.kolommen)return 0;
+  if(!d._bytes){const b=atob(d.klassen),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);d._bytes=u;}
+  const i=r*R.kolommen+k,c=(d._bytes[i>>1]>>((i&1)*4))&15;
+  return c>=1&&c<=5?c:0;
+}
+function toonLichtvervuiling(){
+  const el=document.getElementById("lichtvervuiling");if(!el)return;
+  const lat=S.lat,lon=S.lon;
+  if(S.land!=="NL"||lat==null||lon==null){el.hidden=true;el.textContent="";return;}
+  if(!lichtvervuilingData)lichtvervuilingData=fetch(LICHTVERVUILING_URL).then(r=>r.ok?r.json():null).catch(()=>null);
+  lichtvervuilingData.then(d=>{
+    /* Alleen tonen als de plaats intussen niet is gewisseld. */
+    if(S.lat!==lat||S.lon!==lon||S.land!=="NL")return;
+    const t=LICHTVERVUILING_TEKST[lichtvervuilingKlasse(d,Number(lat),Number(lon))];
+    if(!t){el.hidden=true;el.textContent="";return;}
+    /* "Lichtvervuiling in Vlieland"; zonder bruikbare plaatsnaam (bijv. "Huidige locatie") blijft het "hier". */
+    const plaats=String(S.label||"").split(",")[0].trim();
+    const waar=plaats&&!/^(?:huidige|mijn) locatie$/i.test(plaats)?"in "+plaats.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[c]):"hier";
+    el.innerHTML='<span>Lichtvervuiling '+waar+': <b>'+t[0]+'</b> (geschat).</span> <span>'+t[1]+'</span> <span>Geschat op basis van de RIVM-kaart, voor een heldere, maanloze nacht.</span> <a href="/over/#lichtvervuiling">Bron</a>';
+    el.hidden=false;
+  });
+}
+/* Meerdere renderlagen tekenen Nachtzicht opnieuw (en een plaatswissel wordt pas
+   bij binnenkomst van de nieuwe data definitief). Iedere nieuwe nachtlijst is
+   daarom het moment om de regel opnieuw te beoordelen, ongeacht welke laag tekent. */
+(function(){
+  const nachtlijst=document.getElementById("nights");
+  if(nachtlijst&&typeof MutationObserver==="function")new MutationObserver(()=>toonLichtvervuiling()).observe(nachtlijst,{childList:true});
+})();
 
 /* ---------- luchtkwaliteit ---------- */
 /** De zonurentegel op de plek waar eerder fijnstof PM2,5 stond. Dezelfde
