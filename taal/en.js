@@ -40,7 +40,7 @@
   /* Weertypen (WMO-codes, dag en nacht, dagverwachting). Sleutel in kleine letters. */
   const WEER = {
     "onbewolkt": "clear", "vrijwel onbewolkt": "mostly clear", "overwegend zonnig": "mainly sunny", "half bewolkt": "partly cloudy",
-    "bewolkt": "cloudy", "geheel bewolkt": "overcast", "vrijwel geheel bewolkt": "nearly overcast", "zwaar bewolkt": "heavy cloud",
+    "bewolkt": "cloudy", "geheel bewolkt": "overcast", "vrijwel geheel bewolkt": "nearly overcast", "zwaar bewolkt": "mostly cloudy",
     "veel bewolking": "plenty of cloud", "hoge bewolking": "high cloud", "veel hoge bewolking": "plenty of high cloud",
     "vrijwel helder": "mostly clear", "overwegend helder": "mainly clear", "helder": "clear",
     "mist": "fog", "aanvriezende mist": "freezing fog", "rijpmist": "freezing fog",

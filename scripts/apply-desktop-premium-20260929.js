@@ -34,6 +34,11 @@ const CSS=`
   html body .seo-plaatsnav-inner${NIET}{max-width:1600px!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important}
   html body .seo-route-context${NIET}{max-width:1600px!important;margin-left:auto!important;margin-right:auto!important}
   html body .seo-plaatsnav-links${NIET}{justify-content:flex-start!important}
+  /* De kop "Populaire plaatsen in Nederland" kreeg een vaste kolom van 275px;
+     de langere Engelse kop ("Popular places in the Netherlands") liep daardoor
+     over de eerste plaatsnaam heen (3 oktober). De kolom is nu zo breed als de
+     kop zelf, in iedere taal, met vaste ruimte tot de eerste link. */
+  html body>.seo-plaatsnav .seo-plaatsnav-inner${NIET}{grid-template-columns:max-content minmax(0,1fr)!important;column-gap:24px!important}
   html body #app #aq.stats${NIET}{max-width:none!important;width:auto!important;margin-left:0!important;margin-right:0!important}
   html body #app footer .bron${NIET}{white-space:normal!important}
   html body #nights .row.night${NIET}{grid-template-columns:112px minmax(150px,190px) 100px minmax(120px,150px) minmax(0,1fr) max-content!important;justify-content:stretch!important}

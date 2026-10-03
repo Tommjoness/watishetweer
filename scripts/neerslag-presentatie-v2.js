@@ -161,7 +161,16 @@ function synchroniseerHero(){
     code=modelCode!==null&&modelCode>=51&&modelCode<=99?modelCode:61;
   }else{
     code=drogeHeroCode(a);
-    if(code!==null&&typeof txt==="function"&&S.d&&S.d.current)tekst=txt(code,S.d.current.is_day!==0);
+    /* Alleen bewolking (code 0-3): dezelfde omschrijving als de bewolkingslaag
+       (bewolking per hoogte, bijvoorbeeld "Zwaar bewolkt"). Met de ruwe
+       modeltekst ("Bewolkt") wisselden kop en balk bovenin afhankelijk van
+       welke laag het laatst schreef (3 oktober). */
+    const waarheid=root.WeatherNowFinalProductTruth,c=S.d&&S.d.current;
+    if(code!==null&&code>=0&&code<=3&&c&&waarheid&&typeof waarheid.bewolkingMetLagen==="function"){
+      const oordeel=waarheid.bewolkingMetLagen(c.cloud_cover,c.cloud_cover_low,c.cloud_cover_mid,c.cloud_cover_high,c.is_day!==0);
+      if(oordeel){tekst=oordeel.tekst;code=oordeel.code;}
+    }
+    if(!tekst&&code!==null&&typeof txt==="function"&&c)tekst=txt(code,c.is_day!==0);
   }
   if(!tekst)return;
   zetTekst(cond,tekst);zetTekst(mini,tekst);

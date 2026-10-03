@@ -449,6 +449,21 @@ function meet(){
         console.log("SAMENHANG /privacy.html: wissen haalt plaatsen, instellingen en sessiekeuze weg en houdt de GA4-keuze en de statistiekenafmelding.");
       }finally{await context.close();}
     }
+    /* Plaatsenbalk onderaan (3 oktober): de Engelse kop "Popular places in the
+       Netherlands" liep over de eerste plaatsnaam heen. In beide talen en op
+       iedere desktopbreedte staat de kop vrij van de eerste link. */
+    for(const taal of ["nl","en"])for(const w of [1100,1440,1920]){
+      const label="plaatsenbalk "+taal+" "+w;
+      const {context,page}=await open(browser,root,SCENARIO.middag,w,900,"/weer/utrecht/",taal);
+      try{
+        if(taal==="en")await page.waitForFunction(()=>document.documentElement.lang==="en-GB",null,{timeout:10000});
+        const r=await page.evaluate(()=>{const kop=document.querySelector(".seo-plaatsnav-kop"),a=document.querySelector(".seo-plaatsnav-links a");
+          const rg=document.createRange();rg.selectNodeContents(kop);const t=rg.getBoundingClientRect(),l=a.getBoundingClientRect();
+          return {tekst:kop.textContent.trim(),rechts:t.right,links:l.left,zelfdeRegel:t.bottom>l.top&&t.top<l.bottom};});
+        assert(!r.zelfdeRegel||r.links-r.rechts>=12,label+": kop '"+r.tekst+"' eindigt op "+Math.round(r.rechts)+"px, eerste plaatsnaam begint op "+Math.round(r.links)+"px");
+        console.log("SAMENHANG "+label+": '"+r.tekst+"' vrij van de eerste plaatsnaam ("+Math.round(r.links-r.rechts)+"px).");
+      }finally{await context.close();}
+    }
   }finally{await browser.close();server.close();}
   console.log("Samenhang OK: zes tegels, avondtegels voor morgen, pollenschaal per soort, Nachtzicht compact, dagkop, desktopgrafiek 24 uur, plaatsindex en subpagina's.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});

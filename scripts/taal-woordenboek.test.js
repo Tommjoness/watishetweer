@@ -27,6 +27,9 @@ const verwacht = {
   "do 23 jul 14:00": "Thu 23 Jul 14:00",
   "Vrijwel onbewolkt": "Mostly clear",
   "Geheel bewolkt.": "Overcast.",
+  /* KNMI "zwaar bewolkt" = 6-7/8 bedekt; Engels "mostly cloudy" (5-7/8), niet "heavy cloud" (3 okt). */
+  "Zwaar bewolkt": "Mostly cloudy",
+  "Zwaar bewolkt.": "Mostly cloudy.",
   "Mist": "Fog",
   /* Live gevonden (2 okt): toestanden die alleen met echte data voorkomen. */
   "Zonuren niet beschikbaar": "Sunshine hours unavailable",
