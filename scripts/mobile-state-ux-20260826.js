@@ -27,7 +27,13 @@ function terugNaarBereikLabel(bereik){
   const n=Number(bereik);
   return n===48?"Komende 48 uur":n>48?"Komende zeven dagen":"Komende 24 uur";
 }
-function dagNeerslagNuance(kans,hoeveelheid,dagLabel,spoorMm){
+/* restVandaag: de cijfers beschrijven alleen de resterende uren van vandaag
+   (dagNeerslagNuanceVoorRij voor de Vandaag-regel). Anders gaan ze over de hele
+   kalenderdag. Beide formuleringen op verzoek van de eigenaar, 2 oktober. */
+function neerslagBereikZin(mmTekst,restVandaag){
+  return (restVandaag?"De verwachte neerslag in de rest van vandaag is ":"De verwachte neerslag over de hele dag is ")+mmTekst+".";
+}
+function dagNeerslagNuance(kans,hoeveelheid,dagLabel,spoorMm,restVandaag){
   const k=getal(kans),mm=getal(hoeveelheid);
   if(k===null||k<=0||mm===null||mm<0)return null;
   const spoor=getal(spoorMm),spoorgrens=spoor===null?0.005:Math.max(0,spoor);
@@ -35,15 +41,15 @@ function dagNeerslagNuance(kans,hoeveelheid,dagLabel,spoorMm){
   const dag=String(dagLabel||"Deze dag").trim()||"Deze dag";
   if(mm===0)return {
     mmTekst:"0,0 mm",
-    tekst:dag+" · "+pct+" kans met 0,0 mm. "+pct+" is de hoogste neerslagkans in één uur; de berekende dagsom is 0,0 mm en wordt op één decimaal weergegeven."
+    tekst:dag+" · "+pct+" kans met 0,0 mm. "+pct+" is de hoogste neerslagkans in één uur. "+neerslagBereikZin("0,0 mm",restVandaag)
   };
   if(mm<=spoorgrens)return {
     mmTekst:"spoor",
-    tekst:dag+" · "+pct+" is de hoogste neerslagkans in één uur; het model geeft alleen een spoorhoeveelheid aan."
+    tekst:dag+" · "+pct+" is de hoogste neerslagkans in één uur. "+neerslagBereikZin("alleen een spoor",restVandaag)
   };
   if(mm<0.05)return {
     mmTekst:"<0,05 mm",
-    tekst:dag+" · "+pct+" is de hoogste neerslagkans in één uur; de berekende dagsom is <0,05 mm."
+    tekst:dag+" · "+pct+" is de hoogste neerslagkans in één uur. "+neerslagBereikZin("<0,05 mm",restVandaag)
   };
   return null;
 }
@@ -53,7 +59,7 @@ function dagNeerslagNuanceVoorRij(kans,hoeveelheid,dagLabel,spoorMm,isVandaag,re
      hier niet opnieuw overschrijven. */
   if(!isVandaag)return dagNeerslagNuance(kans,hoeveelheid,dagLabel,spoorMm);
   if(!resterendVandaag||!resterendVandaag.genoeg)return null;
-  return dagNeerslagNuance(resterendVandaag.kans,resterendVandaag.hoeveelheid,dagLabel,spoorMm);
+  return dagNeerslagNuance(resterendVandaag.kans,resterendVandaag.hoeveelheid,dagLabel,spoorMm,true);
 }
 function dagNeerslagTitel(kans,zichtbareTekst,dagLabel,isVandaag){
   const dag=String(dagLabel||"Deze dag").trim()||"Deze dag";
@@ -94,7 +100,11 @@ function pasEtmaalContextToe(){
   if(!hint)return;
   const huidige=tekstVan(hint);
   if(S.dag!=null){
-    const detail=/Kans op neerslag:|verwachte hoeveelheid:/i.test(huidige)
+    /* Het detail komt uit de data, niet uit de schermtekst: in het Engels staat
+       die al vertaald, en dan viel de neerslag uit de hint (auditronde 2, E07). */
+    const uitData=typeof weatherNowGeselecteerdeDagHint==="function"&&S.d&&S.d.daily?String(weatherNowGeselecteerdeDagHint(S.d.daily,S.dag)||""):"";
+    const detail=/^(?:Hoogste kans op neerslag in één uur|Verwachte neerslag over de hele dag):/.test(uitData)?uitData
+      :/Hoogste kans op neerslag in één uur:|Verwachte neerslag over de hele dag:/i.test(huidige)
       ?huidige.replace(/^Deze kalenderdag per uur\.\s*/i,"")
       :"Kies een tijdstip in de grafiek voor de details van dat uur.";
     hint.textContent="Deze kalenderdag per uur. "+detail;

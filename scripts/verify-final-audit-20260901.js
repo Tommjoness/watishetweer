@@ -16,7 +16,9 @@ eis(html.includes("Kies een dag om die verwachting in de grafiek te bekijken."),
 eis(!html.includes("Vandaag: neerslag geldt vanaf nu; minimum en maximum gelden voor de volledige dag."),"verwijderde zichtbare Vandaag-copy is teruggekeerd");
 eis(html.includes('rij.setAttribute("aria-describedby"'),"Vandaag-horizon is niet via aria-describedby aan de rij gekoppeld");
 eis(!html.includes('rij.setAttribute("aria-label",bestaand?bestaand+". "+uitleg:uitleg)'),"oude Vandaag aria-label-regressie staat nog in artifact");
-eis(html.includes("Neerslag vandaag vanaf nu:"),"gestructureerde schermlezeruitleg voor Vandaag ontbreekt");
+eis(html.includes('zetVerborgenLabel(rij.querySelector(".dwind"),"Maximale wind")')&&html.includes('zetVerborgenLabel(rij.querySelector(".dmin"),"Minimum")')&&html.includes('zetVerborgenLabel(rij.querySelector(".dmax"),"Maximum")'),"wind, minimum en maximum zijn niet benoemd in de dagregel");
+eis(html.includes('"in de rest van vandaag":"over de hele dag"'),"neerslag in de dagregel noemt haar tijdvak niet");
+eis(html.includes('beschrijving.textContent="Minimum en maximum gelden voor de volledige kalenderdag."'),"Vandaag-beschrijving herhaalt de neerslag of mist de kalenderdaguitleg");
 eis(html.includes("Officiële weerwaarschuwingen controleren; dit kan even duren."),"trage waarschuwingstatus ontbreekt");
 eis(html.includes("Uitleg van watishetweer.nl:"),"Nederlandse waarschuwinguitleg ontbreekt");
 eis(html.includes("Officiële tekst van de National Weather Service"),"officiële NWS-tekst is niet expliciet gelabeld");

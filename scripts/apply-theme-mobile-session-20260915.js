@@ -150,6 +150,9 @@ const CSS=`
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:8px}
   #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:8px}
+  /* CSS-tekst valt buiten de vertaallaag: in het Engels eigen woorden (audit F05). */
+  :root:lang(en) #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Light"}
+  :root:lang(en) #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Dark"}
   /* De track blijft meetbaar voor het bestaande switch-/a11y-contract, maar is
      visueel niet meer nodig zodra de twee expliciete segmenten zichtbaar zijn. */
   #thema.wiw-theme-segmented-20260915 .wiw-theme-track{
@@ -277,6 +280,9 @@ const CSS=`
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:8px}
   #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:8px}
+  /* CSS-tekst valt buiten de vertaallaag: in het Engels eigen woorden (audit F05). */
+  :root:lang(en) #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Light"}
+  :root:lang(en) #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Dark"}
   /* De track blijft meetbaar voor het bestaande switch-/a11y-contract, maar is
      visueel niet meer nodig zodra de twee expliciete segmenten zichtbaar zijn. */
   #thema.wiw-theme-segmented-20260915 .wiw-theme-track{

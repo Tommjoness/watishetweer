@@ -116,6 +116,9 @@
         const nodes = tekstnodes(d.kind);
         if (E.isAndereTaal(d.kind)) { /* brontekst in andere taal blijft letterlijk */ }
         else if (nodes.length === 1) zetTekst(nodes[0], d.tekst);
+        /* Een kind met eigen inline elementen ("Mail naar <a>…</a>") wordt
+           op dezelfde manier herbouwd; textContent zou de link wissen. */
+        else if (d.kind.children.length) herbouwBlok(d.kind, d.tekst);
         else d.kind.textContent = d.tekst;
         frag.appendChild(d.kind);
       }

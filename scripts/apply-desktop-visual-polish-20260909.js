@@ -240,6 +240,11 @@ function synchroniseerNachtkop(){
 function markeerDubbelZichtInMaan(){
   for(const maan of document.querySelectorAll("#nights .nachtmaan")){
     if(maan.querySelector(".wiw-night-visibility-detail"))continue;
+    /* Herken de zichtregel aan zijn class, niet aan de Nederlandse woorden:
+       in het Engels ("Average visibility:") bleef hij anders in de
+       Maan-kolom staan (audit F08). */
+    const regel=maan.querySelector(":scope > .nachtzichtregel");
+    if(regel){regel.classList.add("wiw-night-visibility-detail");continue;}
     let gemarkeerd=false;
     for(const kind of Array.from(maan.children)){
       const tekst=String(kind.textContent||"").replace(/\\s+/g," ").trim();
