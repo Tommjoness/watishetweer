@@ -168,4 +168,25 @@ els.nctext.textContent="Er valt nu neerslag.";
 context.nowcast();
 assert.equal(els.nctext.textContent,"Er valt nu neerslag: 0,2 mm/u.","zonder nowcast mag geen droogtijd of hoeveelheid worden verzonnen");
 
+/* Alleen bewolking bij een officiële droge meting (3 oktober): de hero en de
+   balk bovenin gebruiken dezelfde omschrijving als de bewolkingslaag
+   (bewolking per hoogte), niet de ruwe modeltekst. Anders stond er in de kop
+   "Zwaar bewolkt" en in de balk "Bewolkt", afhankelijk van wie het laatst schreef. */
+{
+  const kopie={...context.S.d.current};
+  Object.assign(context.S.d.current,{weather_code:3,is_day:1,cloud_cover:82,cloud_cover_low:75,cloud_cover_mid:20,cloud_cover_high:10,precipitation:0});
+  context.S.d.__knmiNeerslag={beschikbaar:true,opgehaaldOp:new Date(nu).toISOString(),actueel:{waarde:0,tijd:new Date(nu-2*60*1000).toISOString()},nowcast:null};
+  basisAnalyse={genoeg:true,status:"GEEN_KANS",rang:engine.STATUS_RANG.GEEN_KANS,kans:2,kansDekking:1,hoeveelheid:0,bronHoeveelheid:"uurdata",currentWet:false,currentHoeveelheid:0};
+  context.WeatherNowFinalProductTruth=require("./final-product-truth-20260828.js");
+  context.minibarBij();
+  assert.equal(els.minicond.textContent,"Zwaar bewolkt","balk bovenin volgt de bewolkingslaag");
+  assert.equal(els.cond.textContent,"Zwaar bewolkt","kop volgt de bewolkingslaag");
+  assert.match(els.nowicon.innerHTML,/data-code="3"/);
+  /* Zonder bewolkingslaag blijft het gedrag als voorheen: de modeltekst. */
+  delete context.WeatherNowFinalProductTruth;
+  context.minibarBij();
+  assert.equal(els.minicond.textContent,"Bewolkt");
+  context.S.d.current=kopie;
+}
+
 console.log("Neerslagpresentatie v2: echte KNMI-verrijking, nat/droog, kanslabel, briefing, hero, minibalk en twee-uurscijfers geslaagd.");
