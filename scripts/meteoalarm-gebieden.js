@@ -107,7 +107,10 @@ async function main() {
         const geo = f.geometry || (f.features && f.features[0] && f.features[0].geometry);
         const vorm = compacteVorm(geo);
         if (!vorm) throw new Error("geen bruikbare geometrie");
-        gebieden[g.code] = { naam: g.name, type: g.type, bijgewerkt: g.updated_at, vorm };
+        /* Een code kan meer dan eens voorkomen; de laatst bijgewerkte vorm telt. */
+        const oud = gebieden[g.code];
+        if (!oud || String(g.updated_at || "") >= String(oud.bijgewerkt || ""))
+          gebieden[g.code] = { naam: g.name, type: g.type, bijgewerkt: g.updated_at, vorm };
       } catch (e) {
         mislukt.push({ code: g.code, fout: String(e && e.message || e).replace(/https?:\/\/\S+/g, "(link)") });
       }
@@ -135,5 +138,32 @@ async function main() {
   if (mislukt.length) { console.error(mislukt.length + " vormen ontbreken."); process.exit(1); }
 }
 
-module.exports = { vereenvoudig, compacteVorm };
-if (require.main === module) main().catch(e => { console.error(String(e && e.message || e).replace(/https?:\/\/\S+\?\S+/g, "(link)")); process.exit(1); });
+/* Zet meteoalarm-gebieden.json (uit de workflow) om naar de servermodule
+   lib/meteoalarm-gebieden-data.cjs: per land één JSON-tekst, zodat de server
+   alleen het land parseert dat hij nodig heeft. Per regio blijven naam en vorm. */
+function naarModule(invoer) {
+  const d = JSON.parse(fs.readFileSync(invoer, "utf8"));
+  if (!d || !d.gebieden || !/CC BY 4\.0/.test(d.licentie || "")) throw new Error("Geen geldig gebiedenbestand: " + invoer);
+  const landen = {};
+  for (const code of Object.keys(d.gebieden).sort()) {
+    const g = d.gebieden[code];
+    if (!/^[A-Z]{2}[A-Z0-9]+$/.test(code) || !Array.isArray(g.vorm)) throw new Error("Ongeldige regio " + code);
+    (landen[code.slice(0, 2)] = landen[code.slice(0, 2)] || {})[code] = { n: g.naam, v: g.vorm };
+  }
+  const uit = {
+    bron: d.bron, licentie: d.licentie, opgehaald: d.opgehaald, methode: d.methode, aantal: Object.keys(d.gebieden).length,
+    landen: Object.fromEntries(Object.entries(landen).map(([k, v]) => [k, JSON.stringify(v)]))
+  };
+  return "\"use strict\";\n/* GEGENEREERD door: node scripts/meteoalarm-gebieden.js --module meteoalarm-gebieden.json\n"
+    + "   Niet met de hand bewerken. Bron: MeteoAlarm (EUMETNET), CC BY 4.0. */\n"
+    + "module.exports = " + JSON.stringify(uit) + ";\n";
+}
+
+module.exports = { vereenvoudig, compacteVorm, naarModule };
+if (require.main === module) {
+  if (process.argv[2] === "--module") {
+    const pad = require("path").join(__dirname, "..", "lib", "meteoalarm-gebieden-data.cjs");
+    fs.writeFileSync(pad, naarModule(process.argv[3] || "meteoalarm-gebieden.json"));
+    console.log("Geschreven: " + pad);
+  } else main().catch(e => { console.error(String(e && e.message || e).replace(/https?:\/\/\S+\?\S+/g, "(link)")); process.exit(1); });
+}

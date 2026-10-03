@@ -148,6 +148,30 @@
     }
     return LANDEN.get(String(nl).toLowerCase()) || null;
   }
+  /* Landnaam na "in": "het Verenigd Koninkrijk" en "Nederland" krijgen "the". */
+  function landIn(nl) {
+    if (nl === "dit land") return "this country";
+    const e = land(String(nl).replace(/^het /, ""));
+    return e ? (/^(Netherlands|United Kingdom)$/.test(e) ? "the " + e : e) : null;
+  }
+  /* "code geel voor wind (Zeeland, Texel en 2 andere gebieden); code oranje voor regen"
+     → "yellow warning for wind (Zeeland, Texel and 2 other areas); orange warning for rain".
+     Gebiedsnamen blijven de officiële namen. */
+  const WAARSCHUWING_SOORT = { wind: "wind", "sneeuw en ijzel": "snow and ice", onweer: "thunderstorms", mist: "fog", hitte: "heat", kou: "cold",
+    kustgevaar: "coastal hazards", bosbrandgevaar: "forest fire danger", lawinegevaar: "avalanche danger", regen: "rain", overstromingen: "flooding",
+    "regen en overstromingen": "rain and flooding" };
+  function waarschuwingsDelen(s) {
+    const delen = String(s).split("; ").map(deel => {
+      const m = /^code (geel|oranje|rood) voor (.+?)(?: \((.+)\))?$/.exec(deel);
+      const soort = m && WAARSCHUWING_SOORT[m[2]];
+      if (!soort) return null;
+      let gebieden = m[3] || "";
+      const meer = / en (\d+) (ander gebied|andere gebieden)$/.exec(gebieden);
+      if (meer) gebieden = gebieden.slice(0, meer.index) + ` and ${meer[1]} other ${meer[1] === "1" ? "area" : "areas"}`;
+      return `${({ geel: "yellow", oranje: "orange", rood: "red" })[m[1]]} warning for ${soort}${gebieden ? ` (${gebieden})` : ""}`;
+    });
+    return delen.every(Boolean) ? delen.join("; ") : null;
+  }
 
   /* ---------- Vaste teksten ---------- */
 
@@ -993,7 +1017,12 @@
     [/^Verloop van (\d{1,2}) ([a-z]+) (\d{4}) om (\d{1,2}:\d{2}) tot (\d{1,2}) ([a-z]+) (\d{4}) om (\d{1,2}:\d{2}), temperatuur tussen (−?-?\d+) en (−?-?\d+) (?:graad|graden), hoogste neerslagkans( in één uur op deze dag)? (\d+) procent\.$/,
       (m) => datum(m[1], m[2], m[3]) && datum(m[5], m[6], m[7]) && `Chart from ${datum(m[1], m[2], m[3])} at ${m[4]} to ${datum(m[5], m[6], m[7])} at ${m[8]}, temperature between ${getal(m[9])} and ${getal(m[10])} degrees, highest ${m[11] ? "hourly chance of precipitation on this day" : "chance of precipitation"} ${m[12]} per cent.`],
     [/^Neerslagperioden: (.+)\.$/, (m) => { const p = perioden(m[1]); return p && `Precipitation periods: ${p}.`; }],
-    [/^Verwachte meetbare neerslag: (.+)\.$/, (m) => { const p = perioden(m[1]); return p && `Expected measurable precipitation: ${p}.`; }]
+    [/^Verwachte meetbare neerslag: (.+)\.$/, (m) => { const p = perioden(m[1]); return p && `Expected measurable precipitation: ${p}.`; }],
+
+    /* Officiële waarschuwingen elders in het land (warning-render-state). */
+    [/^Elders in (.+?) geldt nu (code .+)\.$/, (m) => { const l = landIn(m[1]), d = waarschuwingsDelen(m[2]); return l && d && `Elsewhere in ${l}: ${d}.`; }],
+    [/^In (.+?) geldt nu (code .+)\. Of dit ook voor deze plaats geldt, kunnen we nog niet bepalen\.$/,
+      (m) => { const l = landIn(m[1]), d = waarschuwingsDelen(m[2]); return l && d && `In ${l}: ${d}. We cannot yet tell whether this applies to this place.`; }]
   ];
 
   /* Officiële waarschuwingen: titels (MeteoAlarm NL-teksten en NWS-vertalingen van de app). */
