@@ -280,6 +280,8 @@
     "Windstoot": "Gust",
     "Min": "Min",
     "Max": "Max",
+    "Minimum": "Minimum",
+    "Maximum": "Maximum",
     "Temp.bereik": "Temp. range",
     "Bewolking": "Cloud cover",
     "Luchtvochtigheid": "Humidity",
@@ -486,6 +488,9 @@
     "Kans en hoeveelheid spreken elkaar tegen": "Chance and amount contradict each other",
     "Kans en dagsom zijn verschillende modelwaarden en hoeven daarom niet één op één samen te vallen.": "The chance and the daily total are separate model values, so they need not match one to one.",
     "Minimum en maximum gelden voor de volledige kalenderdag.": "Minimum and maximum apply to the full calendar day.",
+    /* Verborgen labels in de dagregel (toegankelijke naam). */
+    "Maximale wind": "Maximum wind", "Maximale wind onbekend": "Maximum wind unknown", "Minimum onbekend": "Minimum unknown", "Maximum onbekend": "Maximum unknown",
+    "Neerslaggegevens onbekend": "Precipitation data unknown", "Droog over de hele dag": "Dry for the whole day", "Droog in de rest van vandaag": "Dry for the rest of today",
     "De totale neerslagverwachting voor vandaag is niet beschikbaar.": "The total precipitation forecast for today is not available.",
     "Voor vandaag wordt er geen neerslag verwacht.": "No precipitation is expected today.",
     "Voor vandaag worden hooguit enkele druppels verwacht.": "At most a few drops are expected today.",
@@ -798,7 +803,14 @@
     [/^(Beste|Relatief beste|Waarschijnlijk beste) periode: nu tot (\d{1,2}:\d{2})\.$/, (m) => `${PERIODE[m[1]]}: now until ${m[2]}.`],
     [/^(Vandaag|Morgen|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december), per uur$/,
       (m) => `${({ Vandaag: "Today", Morgen: "Tomorrow" })[m[1]] || dagVol(m[1])} ${m[2]} ${maand(m[3])}, by the hour`],
-    [new RegExp(`^Kans op neerslag: (\\d+)% · verwachte hoeveelheid: ${G} mm\\.$`), (m) => `Chance of precipitation: ${m[1]}% · expected amount: ${getal(m[2])} mm.`],
+    /* Daghint bij een gekozen dag (daily-forecast-owner): hoogste uurkans en de
+       verwachte neerslag over de hele kalenderdag, met alle hoeveelheidsvormen
+       (spoor, <0,05 mm, <0,1 mm, gewone mm). */
+    [/^Hoogste kans op neerslag in één uur: (\d+%)\.$/, (m) => `Highest chance of precipitation in any one hour: ${m[1]}.`],
+    /* Neerslagnaam in de dagregel, met tijdvak (vandaag: resterende uren). */
+    [new RegExp(`^Hoogste neerslagkans in één uur( in de rest van vandaag)? (\\d+) procent(?:; (?:(hoeveelheid onzeker)|verwachte neerslag (over de hele dag|in de rest van vandaag) (spoor|<0,05 mm|<0,1 mm|${G} mm)))?$`), (m) => `Highest hourly chance of precipitation${m[1] ? " for the rest of today" : ""} ${m[2]} per cent${m[3] ? "; amount uncertain" : m[4] ? `; expected precipitation ${m[4] === "over de hele dag" ? "for the whole day" : "for the rest of today"} ${m[5] === "spoor" ? "trace" : m[5].replace(/(\d),(\d)/g, "$1.$2")}` : ""}`],
+    [new RegExp(`^De verwachte neerslag (over de hele dag|in de rest van vandaag) is (alleen een spoor|<0,05 mm|${G} mm)\\.$`), (m) => `Expected precipitation ${m[1] === "over de hele dag" ? "for the whole day" : "for the rest of today"} is ${m[2] === "alleen een spoor" ? "only a trace" : m[2].replace(/(\d),(\d)/g, "$1.$2")}.`],
+    [new RegExp(`^Verwachte neerslag over de hele dag: (spoor|<0,05 mm|<0,1 mm|${G} mm)\\.$`), (m) => `Expected precipitation for the whole day: ${m[1] === "spoor" ? "trace" : m[1].replace(/(\d),(\d)/g, "$1.$2")}.`],
     [/^Later vandaag loopt de neerslagkans op tot (\d+)%\.$/, (m) => `Later today the chance of precipitation rises to ${m[1]}%.`],
     [/^De komende twee uur is er een (zeer kleine|kleine|grote|zeer grote) kans op (.+)\.$/, (m) => { const w = WEER[m[2].toLowerCase()]; return w && `There is a ${KANS[m[1]]} chance of ${w} in the next two hours.`; }],
     [/^Er is een (zeer kleine|kleine|grote|zeer grote) kans op (.+) in de komende twee uur \(maximaal (\d+)%\)\.$/, (m) => { const w = WEER[m[2].toLowerCase()]; return w && `There is a ${KANS[m[1]]} chance of ${w} in the next two hours (at most ${m[3]}%).`; }],

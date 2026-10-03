@@ -41,6 +41,17 @@ const SCENARIO={
   /* 22:40, na zonsondergang. */
   avond:{klok:"2026-07-22T20:40:00Z",meting:"2026-07-22T22:30",gras:12,
     temp:(u,dag)=>+(14+3.8*Math.sin((u-9)/24*Math.PI*2)-dag*0.2).toFixed(1),pp:()=>8,pr:()=>0},
+  /* 14:15, het regende vanochtend (05-10 uur), daarna droog: de rest van vandaag
+     is 0,0 mm, de hele kalenderdag niet (eigenaar, 2 oktober). */
+  ochtendregen:{klok:"2026-07-22T12:15:00Z",meting:"2026-07-22T14:00",gras:4,
+    temp:(u,dag)=>+(15+3*Math.sin((u-9)/24*Math.PI*2)-dag*0.2).toFixed(1),
+    pp:(u,dag)=>dag===0&&u>=5&&u<=9?85:3,pr:(u,dag)=>dag===0&&u>=5&&u<=9?1.2:0},
+  /* Als ochtendregen, maar 26 juli zonder wind- en neerslaggegevens. */
+  onbekend:{klok:"2026-07-22T12:15:00Z",meting:"2026-07-22T14:00",gras:4,
+    temp:(u,dag)=>+(15+3*Math.sin((u-9)/24*Math.PI*2)-dag*0.2).toFixed(1),
+    pp:(u,dag)=>dag===0&&u>=5&&u<=9?85:3,pr:(u,dag)=>dag===0&&u>=5&&u<=9?1.2:0,
+    pas:d=>{const i=d.daily.time.indexOf("2026-07-26");d.daily.wind_speed_10m_max[i]=null;d.daily.precipitation_probability_max[i]=null;d.daily.precipitation_sum[i]=null;
+      d.hourly.time.forEach((t,k)=>{if(t.startsWith("2026-07-26")){d.hourly.precipitation_probability[k]=null;d.hourly.precipitation[k]=null;d.hourly.rain[k]=null;}});}},
   /* Storm: windkracht 10 uit het westzuidwesten ("WZW 10 Bft"), veel regen. */
   storm:{klok:"2026-07-22T07:10:00Z",meting:"2026-07-22T09:00",gras:4,ws:95,wd:247.5,
     temp:(u,dag)=>+(13+3*Math.sin((u-9)/24*Math.PI*2)-dag*0.2).toFixed(1),pp:()=>100,pr:()=>12.4}
@@ -53,6 +64,7 @@ function fixture(sc){
   while(h.time.length<194){const i=h.time.length,v=h.time[i-1];for(const k of Object.keys(h))if(k!=="time"&&Array.isArray(h[k]))h[k].push(h[k][i%24]);h.time.push(new Date(Date.parse(v+"Z")+3600000).toISOString().slice(0,16));}
   const nu=h.time.indexOf(sc.meting.slice(0,14)+"00");
   d.current.time=sc.meting;d.current.temperature_2m=h.temperature_2m[nu];d.current.apparent_temperature=h.temperature_2m[nu]-1;
+  if(sc.pas)sc.pas(d);
   return d;
 }
 /* Hetzelfde moment in New York: 16:30 plaatselijke tijd, ruim voor zonsondergang. */
@@ -211,8 +223,90 @@ function meet(){
         await page.evaluate(()=>document.getElementById("thema-switch").click());await sleep(300);
         const naam=await page.evaluate(()=>document.getElementById("thema-switch").getAttribute("aria-label")||"");
         assert(!/Handmatig|Licht|Donker|browsersessie/.test(naam),label+": schakelaarnaam blijft Nederlands (F05): "+naam);
+        /* Gekozen dag: de neerslag blijft in de Engelse hint staan (auditronde 2, E07). */
+        await page.evaluate(()=>document.querySelectorAll("#days .row.day:not(.kop)")[2].click());await sleep(800);
+        const dagHint=await page.evaluate(()=>(document.getElementById("charthint")||{}).textContent||"");
+        assert(/^This calendar day by the hour\. Highest chance of precipitation in any one hour: \d+%\. Expected precipitation for the whole day: (?:trace|<?\d+\.\d+ mm)\. Select a time in the chart/.test(dagHint),label+": Engelse daghint zonder (volledige) neerslag: "+dagHint);
         assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
         console.log("SAMENHANG "+label+": mailto blijft, Maan-kolom zonder zichtregel, venster "+JSON.stringify(venster.slice(0,4))+", schakelaar '"+naam+"'.");
+      }finally{await context.close();}
+    }
+    /* Vandaag na ochtendregen, in beide talen: de Vandaag-regel beschrijft de rest
+       van vandaag (0,0 mm), de gekozen kalenderdag de hele dag (6,0 mm). */
+    for(const taal of ["nl","en"]){
+      const label="ochtendregen "+taal;
+      const {context,page,fouten}=await open(browser,root,SCENARIO.ochtendregen,1366,768,"/weer/utrecht/",taal);
+      try{
+        if(taal==="en")await page.waitForFunction(()=>document.documentElement.lang==="en-GB",null,{timeout:10000});
+        await sleep(600);
+        const r=await page.evaluate(()=>{
+          const rij=document.querySelector("#days .row.day:not(.kop)");
+          const drain=rij&&rij.querySelector(".drain");
+          return {drain:drain?drain.textContent.replace(/\s+/g," ").trim():"",naam:drain?drain.getAttribute("aria-label")||"":""};
+        });
+        assert(/0[,.]0 mm|^(?:Droog|Dry)$/i.test(r.drain)&&!/6[,.]0/.test(r.drain),label+": Vandaag-regel toont niet de rest van vandaag: "+r.drain);
+        assert(taal==="nl"?/in de rest van vandaag .*verwachte neerslag in de rest van vandaag 0,0 mm$/.test(r.naam):/for the rest of today .*expected precipitation for the rest of today 0\.0 mm$/.test(r.naam),label+": Vandaag-neerslagnaam noemt de resterende uren niet: "+r.naam);
+        await page.evaluate(()=>document.querySelector("#days .row.day:not(.kop)").click());await sleep(800);
+        const hint=await page.evaluate(()=>(document.getElementById("charthint")||{}).textContent||"");
+        const verwacht=taal==="nl"?/Verwachte neerslag over de hele dag: 6,0 mm\./:/Expected precipitation for the whole day: 6\.0 mm\./;
+        assert(verwacht.test(hint)&&!/rest van vandaag|rest of today/i.test(hint),label+": gekozen dag noemt niet de hele dag: "+hint);
+        assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
+        console.log("SAMENHANG "+label+": Vandaag-regel '"+r.drain+"', gekozen dag: "+hint.slice(0,120));
+      }finally{await context.close();}
+    }
+    /* Toegankelijke dagregels (afspraak 3 oktober), gelezen uit de echte
+       accessibility-boom van Chromium: naam en beschrijving samen. */
+    for(const taal of ["nl","en"]){
+      const label="dagregels "+taal;
+      const {context,page,fouten}=await open(browser,root,SCENARIO.onbekend,1366,768,"/weer/utrecht/",taal);
+      try{
+        if(taal==="en")await page.waitForFunction(()=>document.documentElement.lang==="en-GB",null,{timeout:10000});
+        await sleep(600);
+        const cdp=await context.newCDPSession(page);
+        const lees=async()=>{
+          await cdp.send("Accessibility.enable");
+          const {root:doc}=await cdp.send("DOM.getDocument",{depth:-1});
+          const {nodeIds}=await cdp.send("DOM.querySelectorAll",{nodeId:doc.nodeId,selector:"#days .row.day:not(.kop)"});
+          const uit=[];
+          for(const id of nodeIds){
+            const {nodes}=await cdp.send("Accessibility.getPartialAXTree",{nodeId:id,fetchRelatives:false});
+            const n=nodes.find(x=>x.role&&x.role.value==="button")||nodes[0];
+            uit.push({naam:String(n&&n.name&&n.name.value||"").replace(/\s+/g," ").trim(),beschrijving:String(n&&n.description&&n.description.value||"").trim()});
+          }
+          const pressed=await page.evaluate(()=>[...document.querySelectorAll("#days .row.day:not(.kop)")].map(r=>r.getAttribute("aria-pressed")));
+          return uit.map((r,i)=>Object.assign(r,{pressed:pressed[i]}));
+        };
+        const T=taal==="nl"
+          ?{wind:"Maximale wind",min:"Minimum",max:"Maximum",rest:"in de rest van vandaag",dag:"over de hele dag",onbekendWind:"Maximale wind onbekend",onbekendNeerslag:"Neerslaggegevens onbekend",kans:"Hoogste neerslagkans in één uur",desc:"Minimum en maximum gelden voor de volledige kalenderdag."}
+          :{wind:"Maximum wind",min:"Minimum",max:"Maximum",rest:"for the rest of today",dag:"for the whole day",onbekendWind:"Maximum wind unknown",onbekendNeerslag:"Precipitation data unknown",kans:"Highest hourly chance of precipitation",desc:"Minimum and maximum apply to the full calendar day."};
+        const controleer=(rijen,fase)=>{
+          assert.equal(rijen.length,7,label+" "+fase+": verwacht zeven dagregels");
+          rijen.forEach((r,i)=>{
+            for(const woord of [T.min,T.max])assert(r.naam.includes(woord),label+" "+fase+" rij "+i+": "+woord+" niet benoemd: "+r.naam);
+            assert(r.naam.includes(T.wind),label+" "+fase+" rij "+i+": wind niet benoemd: "+r.naam);
+          });
+          const vandaag=rijen[0];
+          assert(vandaag.naam.includes(T.kans)&&vandaag.naam.split(T.rest).length===3,label+" "+fase+": Vandaag noemt kans én hoeveelheid niet voor de resterende uren: "+vandaag.naam);
+          assert(!vandaag.naam.includes(T.dag),label+" "+fase+": Vandaag-neerslag zegt ten onrechte 'hele dag': "+vandaag.naam);
+          assert.equal(vandaag.beschrijving,T.desc,label+" "+fase+": Vandaag-beschrijving herhaalt neerslag of mist de kalenderdaguitleg");
+          assert(!/procent|per cent|mm\b/.test(vandaag.beschrijving),label+" "+fase+": beschrijving herhaalt de neerslag uit de naam");
+          rijen.slice(1).forEach((r,i)=>{
+            assert(!r.naam.includes(T.rest),label+" "+fase+" rij "+(i+1)+": toekomstige dag noemt 'rest van vandaag': "+r.naam);
+            assert.equal(r.beschrijving,"",label+" "+fase+" rij "+(i+1)+": onverwachte extra beschrijving: "+r.beschrijving);
+          });
+          const leeg=rijen[4];
+          assert(leeg.naam.includes(T.onbekendWind)&&leeg.naam.includes(T.onbekendNeerslag),label+" "+fase+": onbekende wind/neerslag niet herkenbaar: "+leeg.naam);
+          assert(rijen.filter((r,i)=>i!==4).every(r=>r.naam.includes(T.kans)&&(r.naam.includes(T.dag)||r.naam.includes(T.rest)||/uncertain|onzeker/.test(r.naam))),label+" "+fase+": een dag mist tijdvak bij de neerslag: "+JSON.stringify(rijen.map(r=>r.naam)));
+        };
+        let rijen=await lees();
+        controleer(rijen,"start");
+        assert(rijen.every(r=>r.pressed==="false"),label+": vóór selectie is een dag als actief gemarkeerd");
+        await page.evaluate(()=>document.querySelectorAll("#days .row.day:not(.kop)")[2].click());await sleep(800);
+        rijen=await lees();
+        controleer(rijen,"na selectie");
+        assert.deepEqual(rijen.map(r=>r.pressed),["false","false","true","false","false","false","false"],label+": aria-pressed volgt de gekozen dag niet");
+        assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
+        console.log("SAMENHANG "+label+": "+rijen[0].naam+" || "+rijen[0].beschrijving+" || "+rijen[4].naam);
       }finally{await context.close();}
     }
     /* Plaatsindex. */

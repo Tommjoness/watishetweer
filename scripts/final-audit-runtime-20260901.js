@@ -61,13 +61,6 @@ function regenSamenvattingBijwerken(){
   if(tekst)el.setAttribute("role","note");else el.removeAttribute("role");
 }
 
-function gesprokenNeerslag(zichtbaar){
-  const t=String(zichtbaar||"").replace(/\s+/g," ").trim(),delen=[];
-  const kans=/(\d{1,3})\s*%/.exec(t);if(kans)delen.push(kans[1]+" procent");
-  const mm=/([<>]?\s*\d+(?:[.,]\d+)?)\s*mm\b/i.exec(t);
-  if(mm){let v=mm[1].replace(/\s+/g,"").replace("<","minder dan ").replace(">","meer dan ");delen.push(v+" millimeter");}
-  return delen.join("; ");
-}
 
 /* De weektabel heeft historisch meerdere dagen()-wrappers. De finale globale
    correctheidslaag voegt bij een bekende kans zonder zichtbare hoeveelheid
@@ -75,9 +68,31 @@ function gesprokenNeerslag(zichtbaar){
    de inhoud van .drain opnieuw opbouwen. Deze audit-runtime is de laatste
    dagen()-owner en borgt daarom dezelfde eindstate na iedere weekrender. Er
    verandert niets aan providerdata, kans, dagsom of drempels. */
+function vandaagIndex(){
+  const day=typeof S!=="undefined"&&S.d&&S.d.daily,current=typeof S!=="undefined"&&S.d&&S.d.current;
+  if(!day||!current||!Array.isArray(day.time))return -1;
+  return day.time.indexOf(String(current.time||"").slice(0,10));
+}
+/* Toegankelijke dagregel (eigenaar, 3 oktober): wind, minimum en maximum
+   krijgen een onzichtbaar label, onbekende waarden heten "onbekend", en de
+   neerslag noemt haar tijdvak. Vandaag: kans en hoeveelheid over de resterende
+   uren; andere dagen: de hele kalenderdag. Zichtbaar verandert er niets. */
+function zetVerborgenLabel(cel,label){
+  if(!cel)return;
+  let span=cel.querySelector(":scope > .wiw-dag-label");
+  if(!span){span=document.createElement("span");span.className="sr-only wiw-dag-label";cel.insertBefore(span,cel.firstChild);}
+  const waarde=String(cel.textContent||"").replace(span.textContent,"").trim();
+  const onbekend=!waarde||/^[-–—]$/.test(waarde);
+  span.textContent=label+(onbekend?" onbekend":"")+" ";
+}
 function herstelWeekNeerslagEindstate(){
+  const vandaag=vandaagIndex();
   document.querySelectorAll("#days .row.day:not(.kop)").forEach(rij=>{
+    zetVerborgenLabel(rij.querySelector(".dwind"),"Maximale wind");
+    zetVerborgenLabel(rij.querySelector(".dmin"),"Minimum");
+    zetVerborgenLabel(rij.querySelector(".dmax"),"Maximum");
     const vak=rij.querySelector(".drain");if(!vak)return;
+    const isVandaag=Number(rij.dataset.i)===vandaag;
     const match=/(\d{1,3})%/.exec(vak.textContent||""),kans=match?Number(match[1]):null;
     let hoeveelheid=vak.querySelector("small,.q1-dag-mm");
     if(kans!==null&&kans>0&&!hoeveelheid){
@@ -86,15 +101,23 @@ function herstelWeekNeerslagEindstate(){
       hoeveelheid.textContent="hoeveelheid onzeker";
       vak.appendChild(hoeveelheid);
     }
+    const tijdvak=isVandaag?"in de rest van vandaag":"over de hele dag";
+    const mm=hoeveelheid?hoeveelheid.textContent.trim():"";
     const delen=[];
-    /* Zelfde betekenis als de tooltip en de grafiekbeschrijving: de hoogste
-       kans in één uur van die dag (vandaag: van de resterende uren). */
-    if(kans!==null)delen.push("Hoogste neerslagkans in één uur "+kans+" procent");
-    if(hoeveelheid&&hoeveelheid.textContent.trim())delen.push(hoeveelheid.textContent.trim());
-    if(!delen.length&&/^[-–—]$/.test(vak.textContent.trim()))delen.push("Neerslaggegevens niet beschikbaar");
-    if(delen.length)vak.setAttribute("aria-label",delen.join("; "));
+    /* Zelfde betekenis als de tooltip en de daghint: de hoogste kans in één
+       uur van die dag (vandaag: van de resterende uren). */
+    if(kans!==null)delen.push("Hoogste neerslagkans in één uur"+(isVandaag?" in de rest van vandaag":"")+" "+kans+" procent");
+    if(mm)delen.push(mm==="hoeveelheid onzeker"?"hoeveelheid onzeker":"verwachte neerslag "+tijdvak+" "+mm);
+    if(!delen.length&&/^[-–—]$/.test(vak.textContent.trim()))delen.push("Neerslaggegevens onbekend");
+    if(!delen.length&&/^Droog$/i.test(vak.textContent.trim()))delen.push("Droog "+tijdvak);
+    if(delen.length)vak.setAttribute("aria-label",delen.join("; "));else vak.removeAttribute("aria-label");
   });
 }
+
+/* Eén eigenaar voor het neerslaglabel van de dagregel: de globale
+   correctheidslaag schreef het na iedere render opnieuw (zonder tijdvak) en
+   roept nu deze functie aan. */
+root.WeatherNowWeekNeerslagLabel=herstelWeekNeerslagEindstate;
 
 function verduidelijkVandaag(){
   const hint=document.getElementById("dagenhint"),day=typeof S!=="undefined"&&S.d&&S.d.daily,current=typeof S!=="undefined"&&S.d&&S.d.current;
@@ -111,12 +134,14 @@ function verduidelijkVandaag(){
   // schermlezerbeschrijving en alle datum-/neerslagberekeningen blijven intact.
   let beschrijving=document.getElementById("final-today-row-description");
   if(!beschrijving){beschrijving=document.createElement("span");beschrijving.id="final-today-row-description";beschrijving.className="sr-only";rij.insertAdjacentElement("afterend",beschrijving);}
-  const neerslag=gesprokenNeerslag(drain.textContent);
-  beschrijving.textContent=(neerslag?"Neerslag vandaag vanaf nu: "+neerslag+". ":"")+"Minimum en maximum gelden voor de volledige kalenderdag.";
+  /* De neerslag (rest van vandaag) staat al in de naam van de regel; de
+     beschrijving voegt alleen toe wat de naam niet zegt, zodat niets dubbel of
+     tegenstrijdig wordt voorgelezen. */
+  beschrijving.textContent="Minimum en maximum gelden voor de volledige kalenderdag.";
   const bestaand=String(rij.getAttribute("aria-describedby")||"").trim().split(/\s+/).filter(Boolean).filter(x=>x!==beschrijving.id);
   bestaand.push(beschrijving.id);rij.setAttribute("aria-describedby",bestaand.join(" "));
-  /* Bewust géén aria-label op de rij: de bestaande rij-inhoud/naam blijft
-     daardoor verwachting, wind, minimum, maximum, kans en hoeveelheid bevatten. */
+  /* Bewust géén aria-label op de rij zelf: de naam volgt uit de inhoud, met de
+     verborgen labels en de neerslagnaam van herstelWeekNeerslagEindstate(). */
 }
 
 function finaliseerWeekNaRender(){herstelWeekNeerslagEindstate();verduidelijkVandaag();}

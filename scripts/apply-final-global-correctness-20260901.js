@@ -132,6 +132,8 @@ function corrigeerDrukSemantiek(){
   bezoekTekstNodes(scope,n=>{let t=n.nodeValue||"";t=t.replace(/\\bDe luchtdruk is\\b/g,"De luchtdruk op zeeniveau is").replace(/\\bDe luchtdruk blijft\\b/g,"De luchtdruk op zeeniveau blijft").replace(/\\bLuchtdruk:\\s*/g,"Luchtdruk op zeeniveau: ");n.nodeValue=t;});
 }
 function finaliseerDagNeerslag(){
+  /* De audit-runtime is eigenaar van het toegankelijke neerslaglabel (met tijdvak). */
+  if(typeof globalThis!=="undefined"&&typeof globalThis.WeatherNowWeekNeerslagLabel==="function"){globalThis.WeatherNowWeekNeerslagLabel();return;}
   document.querySelectorAll("#days .row.day:not(.kop)").forEach(r=>{
     const vak=r.querySelector(".drain");if(!vak)return;const m=/(\\d{1,3})%/.exec(vak.textContent||""),k=m?Number(m[1]):null,bekend=vak.querySelector("small,.q1-dag-mm");
     if(k!==null&&k>0&&!bekend){const small=document.createElement("small");small.className="wiw-dag-onzeker";small.textContent="hoeveelheid onzeker";vak.appendChild(small);}
