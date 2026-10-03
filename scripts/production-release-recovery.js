@@ -61,6 +61,19 @@ function controleerServiceWorker(sw,gedeeldeBundle,gedeeldeBootstrap){
   assert.equal("/"+swApps[0],gedeeldeBundle,"productie-serviceworker moet de actieve gedeelde app-bundle precachen");
   assert.equal("/"+swBoots[0],gedeeldeBootstrap,"productie-serviceworker moet de actieve bootstrap-bundle precachen");
 }
+/* Hetzelfde geldt voor de HTML per route: vlak na de cutover kan een edge nog
+   even de vorige release van een route leveren, ook nadat "/" al de nieuwe SHA
+   gaf (gemeten 3 oktober 2026, 11:44: "/" eerst nieuw, direct daarna oud).
+   Wacht daarom per route tot de verwachte SHA er staat; blijft dat uit binnen
+   het pollbudget, dan faalt de controle zoals voorheen. */
+async function wachtOpRouteHtml(route){
+  let html=await tekst(ROOT+route);
+  for(let poging=2;EXPECTED_SHA&&marker(html)!==EXPECTED_SHA&&poging<=ATTEMPTS;poging++){
+    await slaap(POLL_MS);
+    html=await tekst(ROOT+route);
+  }
+  return html;
+}
 async function wachtOpServiceWorker(gedeeldeBundle,gedeeldeBootstrap){
   let fout=null;
   for(let poging=1;poging<=ATTEMPTS;poging++){
@@ -76,7 +89,7 @@ async function wachtOpServiceWorker(gedeeldeBundle,gedeeldeBootstrap){
   await wachtOpSha();
   const rijen=[];let gedeeldeBundle=null,gedeeldeBootstrap=null,gedeeldeBuild=null;
   for(const route of ROUTES){
-    const html=await tekst(ROOT+route);
+    const html=await wachtOpRouteHtml(route);
     const build=marker(html),bundle=app(html,route),boot=bootstrap(html,route),canon=canonical(html);
     if(EXPECTED_SHA)assert.equal(build,EXPECTED_SHA,`${route}: buildmarker wijkt af van deployment-SHA`);
     if(gedeeldeBuild===null)gedeeldeBuild=build;else assert.equal(build,gedeeldeBuild,`${route}: buildmarker divergeert`);
