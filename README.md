@@ -33,7 +33,6 @@ De huidige publieke serverroutes zijn:
 - `api/plaatsnaam.mjs` — reverse geocoding voor `Mijn locatie` wanneer de directe BigDataCloud-resolutie niet genoeg oplevert.
 - `api/neerslag.mjs` — actuele en korte-termijnneerslag via de beschikbare providerlaag.
 - `api/waarschuwingen.mjs` — officiële weerwaarschuwingen op basis van de gekozen locatie.
-- `api/luchtkwaliteit.mjs` — actuele Nederlandse luchtkwaliteitsindex (LKI) van RIVM/Luchtmeetnet; buiten Nederland expliciet niet beschikbaar. De site zelf vraagt deze route niet meer op: de zichtbare luchtkwaliteit is de Europese AQI van Open-Meteo/CAMS.
 - `functions/api/admin/seo.js` — privé SEO-dashboard-API achter Cloudflare Access; zie `.github/SEO_DASHBOARD_SETUP.md`.
 
 Serverlogica staat in `lib/`. De `functions/api/*.js`-bestanden zijn alleen de Cloudflare-ingangen en horen geen tweede implementatie van de route te bevatten.

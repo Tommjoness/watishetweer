@@ -16,10 +16,10 @@ function antwoord(status,body){
 }
 
 (async()=>{
-  assert.deepStrictEqual(ROUTES.map(x=>x.naam),["plaatsnaam","forecast","neerslag","luchtkwaliteit","waarschuwingen"],"readiness moet alle vijf productie-API's afwachten");
+  assert.deepStrictEqual(ROUTES.map(x=>x.naam),["plaatsnaam","forecast","neerslag","waarschuwingen"],"readiness moet alle vier productie-API's afwachten");
   assert(ROUTES.some(x=>x.pad.startsWith("/api/forecast?")),"WeatherAPI-forecastroute ontbreekt uit readiness");
   assert(ROUTES.some(x=>x.pad.startsWith("/api/neerslag?")),"neerslagroute ontbreekt uit readiness");
-  assert(ROUTES.some(x=>x.pad.startsWith("/api/luchtkwaliteit?")),"luchtkwaliteitroute ontbreekt uit readiness");
+  assert(!ROUTES.some(x=>x.pad.startsWith("/api/luchtkwaliteit?")),"de verwijderde luchtkwaliteitsroute hoort niet in readiness");
   assert(ROUTES.some(x=>x.pad.startsWith("/api/waarschuwingen?")),"waarschuwingenroute ontbreekt uit readiness");
   assert.equal(vereisteOpeenvolgendeSuccessen,3,"één toevallige groene propagatiemeting mag productie niet vrijgeven");
 
@@ -36,13 +36,13 @@ function antwoord(status,body){
     gezien.push(url);
     return antwoord(200,{ok:true});
   });
-  assert.equal(allesGroen,true,"alle vijf geldige routes moeten één readinessmeting groen maken");
-  assert.equal(gezien.length,5,"iedere poging moet alle vijf routes controleren");
+  assert.equal(allesGroen,true,"alle vier geldige routes moeten één readinessmeting groen maken");
+  assert.equal(gezien.length,4,"iedere poging moet alle vier routes controleren");
   assert(gezien.some(url=>url.includes("/api/neerslag?")),"neerslag moet live worden gecontroleerd");
-  assert(gezien.some(url=>url.includes("/api/luchtkwaliteit?")),"luchtkwaliteit moet live worden gecontroleerd");
+  assert(gezien.some(url=>url.includes("/api/waarschuwingen?")),"waarschuwingen moet live worden gecontroleerd");
 
   const een404=await probeer("https://test.watishetweer.pages.dev",2,async url=>{
-    return url.includes("/api/luchtkwaliteit?")?antwoord(404,{error:"not found"}):antwoord(200,{ok:true});
+    return url.includes("/api/waarschuwingen?")?antwoord(404,{error:"not found"}):antwoord(200,{ok:true});
   });
   assert.equal(een404,false,"één ontbrekende Function moet de deployment tegenhouden");
 
@@ -71,11 +71,11 @@ function antwoord(status,body){
       ()=>klok,
       async ms=>{klok+=ms;}
     ),
-    /niet stabiel alle 5 gereed/,
+    /niet stabiel alle 4 gereed/,
     "readiness moet begrensd falen als een route niet stabiel actief wordt"
   );
   assert.equal(klok,readinessTimeoutMs,"timeout moet exact binnen het afgesproken 90s-venster blijven");
   assert(pogingen>=4,"readiness moet opnieuw proberen vóór hij opgeeft");
 
-  console.log("Cloudflare Functions-readiness: vijf routes inclusief WeatherAPI-fallback, stabiele propagatie, 404-blokkade, degradatie en timeout geslaagd.");
+  console.log("Cloudflare Functions-readiness: vier routes inclusief WeatherAPI-fallback, stabiele propagatie, 404-blokkade, degradatie en timeout geslaagd.");
 })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});
