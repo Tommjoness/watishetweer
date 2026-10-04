@@ -65,6 +65,8 @@ jobs:
         run: node scripts/grafiekbreedte-browser.test.js
       - name: Kleur, karmijn alleen voor nu en let op
         run: node scripts/kleur-browser.test.js
+      - name: Privacykeuze in een ander tabblad stopt meten direct; toestemmingsbanner Engels
+        run: node scripts/analytics-tabs-browser.test.js
       - name: Releasebewijs, eindtoestanden van briefing en waarschuwingen
         run: node scripts/release-eindtoestand-browser.test.js
       - name: Eén neerslagkans per dag in weekrij, daghint en grafiekbeschrijving (uren 00-24)

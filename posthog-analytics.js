@@ -153,6 +153,9 @@
   const launchMode=startmodus();
 
   function stuur(event,extra){
+    /* Afmelden in een ander tabblad geldt direct, ook voor dit al geopende
+       tabblad (hercontrole 4 oktober, R01). */
+    if(afgemeld())return;
     const pathname=veiligPad(location.pathname);
     const properties=Object.assign({
       "$geoip_disable":true,
@@ -312,7 +315,7 @@
   }
 
   function startGa4(){
-    if(window.__weatherNowGa4Started||/^\/admin(?:\/|$)/i.test(location.pathname))return;
+    if(afgemeld()||window.__weatherNowGa4Started||/^\/admin(?:\/|$)/i.test(location.pathname))return;
     window.__weatherNowGa4Started=true;
     window.dataLayer=window.dataLayer||[];
     window.gtag=gtag;
@@ -397,6 +400,26 @@
     });
     document.body.appendChild(banner);
   }
+
+  /* Een keuze in een ander tabblad geldt ook hier (hercontrole 4 oktober, R01):
+     afmelden per apparaat of Google Analytics weigeren stopt een al gestarte
+     Google-tag direct (Googles eigen uitschakelvlag, consent denied, cookies
+     gewist); een gemaakte keuze haalt de banner weg. */
+  function stopGa4(){
+    window["ga-disable-"+GA4_MEASUREMENT_ID]=true;
+    if(window.__weatherNowGa4Started&&typeof window.gtag==="function")window.gtag("consent","update",{analytics_storage:"denied"});
+    wisGa4Cookies();
+    verwijderBanner();
+  }
+  if(typeof window.addEventListener==="function")window.addEventListener("storage",event=>{
+    if(!event)return;
+    if(event.key===AFMELD_KEY&&event.newValue==="1"){stopGa4();zetApparaatBediening();return;}
+    if(event.key===GA4_CONSENT_KEY){
+      if(event.newValue==="denied")stopGa4();
+      else if(event.newValue==="granted"){verwijderBanner();if(!afgemeld())startGa4();}
+      zetPrivacyBediening();
+    }
+  });
 
   window.WeatherNowGA4Consent=Object.freeze({
     status:leesGa4Keuze,
