@@ -21,8 +21,8 @@ const verwacht = {
   "Zeer grote kans op regen": "Rain very likely",
   "Kleine kans op lichte regen": "Low chance of light rain",
   "Matige wind uit het noordwesten (3 Bft).": "Moderate wind from the north-west (3 Bft).",
-  "Code oranje: zware windstoten": "Orange warning: severe gusts",
-  "Officiële weerwaarschuwing: Code oranje: zware windstoten.": "Official orange weather warning: severe gusts.",
+  "Code oranje: zware windstoten": "Orange warning for severe gusts",
+  "Officiële weerwaarschuwing: Code oranje: zware windstoten.": "Official weather warning: orange warning for severe gusts.",
   "NW 3 Bft": "NW 3 Bft",
   "do 23 jul 14:00": "Thu 23 Jul 14:00",
   "Vrijwel onbewolkt": "Mostly clear",
@@ -60,7 +60,7 @@ const verwacht = {
   "14:00, neerslagkans 65%, verwacht 1,4 mm": "14:00, 65% chance of precipitation, 1.4 mm expected",
   "De verwachte neerslag in de rest van vandaag is alleen een spoor.": "Only a trace of precipitation is expected for the rest of today.",
   "De verwachte neerslag over de hele dag is 3,0 mm.": "Expected precipitation for the whole day is 3.0 mm.",
-  "Officiële weerwaarschuwing (oranje): Code oranje: mist.": "Official orange weather warning: fog.",
+  "Officiële weerwaarschuwing (oranje): Code oranje: mist.": "Official weather warning: orange warning for fog.",
   "Er is een kleine kans op regen in de komende twee uur (hoogste uurkans 20%).": "There is a low chance of rain in the next two hours (highest hourly chance 20%).",
   "Geen officiële waarschuwing.": "Not an official warning."
 };

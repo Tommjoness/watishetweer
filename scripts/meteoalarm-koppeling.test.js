@@ -111,4 +111,29 @@ function voor(plaats) {
     "In France: red warning for flooding (Hérault); orange warning for rain and flooding (Gard, Var, Var2 and 2 other areas). We cannot yet tell whether this applies to this place."
   );
 }
+/* 6. Alle MeteoAlarm-soorten (awareness_type 1–13) in geel, oranje en rood:
+      koppeling werkt, en de regel elders bestaat in het Nederlands en Engels. */
+{
+  const v = require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
+  const SOORTEN = { 1: ["Wind", "wind", "wind"], 2: ["snow-ice", "sneeuw en ijzel", "snow and ice"], 3: ["Thunderstorm", "onweer", "thunderstorms"],
+    4: ["Fog", "mist", "fog"], 5: ["high-temperature", "hitte", "heat"], 6: ["low-temperature", "kou", "cold"], 7: ["coastalevent", "kustgevaar", "coastal hazards"],
+    8: ["forest-fire", "bosbrandgevaar", "forest fire danger"], 9: ["avalanches", "lawinegevaar", "avalanche danger"], 10: ["Rain", "regen", "rain"],
+    12: ["flooding", "overstromingen", "flooding"], 13: ["rain-flood", "regen en overstromingen", "rain and flooding"] };
+  const KLEUR = { 2: ["yellow", "geel", "yellow"], 3: ["orange", "oranje", "orange"], 4: ["red", "rood", "red"] };
+  for (const [n, [api, nl, en]] of Object.entries(SOORTEN)) for (const [lvl, [k, kNl, kEn]] of Object.entries(KLEUR)) {
+    const blok = { language: "nl-NL", event: "X", description: "Y", expires: morgen,
+      parameter: [{ valueName: "awareness_level", value: `${lvl}; ${k}; Moderate` }, { valueName: "awareness_type", value: `${n}; ${api}` }],
+      area: [{ areaDesc: "Zeeland", geocode: [{ valueName: "EMMA_ID", value: "NL010" }] }] };
+    const zeeland = uitCap({ warnings: [{ alert: { info: [blok] } }] }, ...PLAATS.Vlissingen, Date.now(), "nl");
+    assert.equal(zeeland.filter(w => w.plaatsSpecifiek).length, 1, `${api} ${k}: geldt in Vlissingen`);
+    assert.equal(zeeland[0].titel, `Code ${kNl}: ${nl}`, `${api} ${k}: kop uit niveau en soort`);
+    assert.equal(v.vertaal(zeeland[0].titel), `${kEn[0].toUpperCase() + kEn.slice(1)} warning for ${en}`, `${api} ${k}: Engelse kop`);
+    assert.equal(v.vertaal(`Officiële weerwaarschuwing: Code ${kNl}: ${nl}.`), `Official weather warning: ${kEn} warning for ${en}.`, `${api} ${k}: briefing in het Engels`);
+    const elders = [];
+    uitCap({ warnings: [{ alert: { info: [blok] } }] }, ...PLAATS.Utrecht, Date.now(), "nl", elders);
+    const regel = weatherNowWaarschuwingElders(eldersSamenvatting(elders, "NL"), t => t, true);
+    assert.equal(regel, `Elders in Nederland geldt nu code ${kNl} voor ${nl} (Zeeland).`, `${api} ${k}: regel elders`);
+    assert.equal(v.vertaal(regel), `Elsewhere in the Netherlands: ${kEn} warning for ${en} (Zeeland).`, `${api} ${k}: Engels`);
+  }
+}
 console.log("MeteoAlarm-koppeling: regiovormen (CC BY 4.0), plaatsen in de juiste regio, waarschuwing per regiocode, kustwater telt mee, regel elders in Nederlands en Engels geslaagd.");

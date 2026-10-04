@@ -28,10 +28,12 @@ function fixture(lat,lon){
 }
 const morgen="2026-07-23T21:59:59+02:00";
 const ELDERS={land:"NL",landNaam:"Nederland",groepen:[{kleur:"oranje",type:"wind",gebieden:["Zeeland","Zierikzee"],meer:0},{kleur:"geel",type:"mist",gebieden:["IJsselmeer","Waddenzee","Zuid-Holland"],meer:2}]};
-const DRENTHE={titel:"Code geel: zware windstoten",tekst:"Er worden zware windstoten verwacht van 75-90 km/u.",kleur:"geel",type:"wind",niveau:"geel",niveauIsOfficieel:true,
+const DRENTHE={titel:"Code geel: wind",tekst:"Er worden zware windstoten verwacht van 75-90 km/u.",kleur:"geel",type:"wind",niveau:"geel",niveauIsOfficieel:true,
   van:"2026-07-22T12:00:00+02:00",tot:morgen,gebied:"Drenthe",plaatsSpecifiek:true,landelijk:false,scope:"gebied"};
+const DRENTHE_EN=Object.assign({},DRENTHE,{tekst:"Severe gusts of 75-90 km/h are expected.",taal:"en-GB"});
 const PLAATSEN={
-  assen:{pad:"/?lat=52.993&lon=6.562&plaats=Assen&land=NL",lat:52.993,lon:6.562,antwoord:{bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:true,land:"NL",lijst:[DRENTHE],elders:ELDERS}},
+  assen:{pad:"/?lat=52.993&lon=6.562&plaats=Assen&land=NL",lat:52.993,lon:6.562,antwoord:{bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:true,land:"NL",lijst:[DRENTHE],elders:ELDERS},
+    antwoordEn:{bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:true,land:"NL",lijst:[DRENTHE_EN],elders:ELDERS}},
   utrecht:{pad:"/?lat=52.091&lon=5.122&plaats=Utrecht&land=NL",lat:52.091,lon:5.122,antwoord:{bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:true,land:"NL",lijst:[],elders:ELDERS}},
   escape:{pad:"/?lat=52.091&lon=5.122&plaats=Utrecht&land=NL",lat:52.091,lon:5.122,antwoord:{bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:true,land:"NL",lijst:[],
     elders:{land:"NL",landNaam:"Nederland",groepen:[{kleur:"geel",type:"wind",gebieden:["<img src=x onerror=alert(1)>"],meer:0}]}}}
@@ -57,7 +59,8 @@ async function open(browser,root,plaats,w,h,{taal,thema}={}){
     const u=new URL(r.request().url());
     if(u.hostname==="api.open-meteo.com"||u.pathname==="/api/forecast")return r.fulfill({json:fixture(plaats.lat,plaats.lon)});
     if(u.hostname==="air-quality-api.open-meteo.com")return r.fulfill({json:{current:{european_aqi:30,uv_index:2},hourly:{time:[METING.slice(0,14)+"00"],grass_pollen:[4],birch_pollen:[0],alder_pollen:[0],mugwort_pollen:[1],ragweed_pollen:[0],olive_pollen:[0]}}});
-    if(u.pathname==="/api/waarschuwingen")return r.fulfill({json:plaats.antwoord});
+    /* Zoals de echte API: met taal=en de officiële Engelse tekst van de weerdienst. */
+    if(u.pathname==="/api/waarschuwingen")return r.fulfill({json:u.searchParams.get("taal")==="en"&&plaats.antwoordEn?plaats.antwoordEn:plaats.antwoord});
     if(u.pathname.startsWith("/api/"))return r.fulfill({json:{beschikbaar:false}});
     if(u.origin!==root)return r.fulfill({status:204,body:""});
     return r.continue();
@@ -72,6 +75,7 @@ const lees=page=>page.evaluate(()=>{
   const el=document.getElementById("waarschuwingen");
   const elders=el.querySelector('[data-ui-warning-elders="1"]');
   return {kaarten:[...el.querySelectorAll(".waarsch h3")].map(h=>h.textContent.trim()),
+    kaartTekst:[...el.querySelectorAll(".waarsch p")].map(p=>p.textContent.replace(/\s+/g," ").trim()),
     msg:[...el.querySelectorAll(":scope>.msg:not([data-ui-warning-elders])")].map(m=>m.textContent.trim()),
     elders:elders?elders.textContent.replace(/\s+/g," ").trim():null,eldersHtml:elders?elders.innerHTML:"",
     laatste:el.lastElementChild===elders,scroll:document.documentElement.scrollWidth-innerWidth,
@@ -98,7 +102,7 @@ async function scherm(page,naam){
         {
           const {context,page,fouten}=await open(browser,root,PLAATSEN.assen,w,h,{thema});
           const r=await lees(page);
-          assert.deepEqual(r.kaarten,["Code geel: zware windstoten"],`Assen ${w}: eigen waarschuwing voor Drenthe`);
+          assert.deepEqual(r.kaarten,["Code geel: wind"],`Assen ${w}: eigen waarschuwing voor Drenthe`);
           assert.equal(r.elders,ELDERS_NL,`Assen ${w}: regel elders`);
           assert(r.laatste,`Assen ${w}: de regel elders staat onder de eigen waarschuwing`);
           assert(r.scroll<=1,`Assen ${w}: geen horizontaal scrollen (${r.scroll}px)`);
@@ -124,6 +128,9 @@ async function scherm(page,naam){
       const r=await lees(page);
       assert.equal(r.elders,"Elsewhere in the Netherlands: orange warning for wind (Zeeland, Zierikzee); yellow warning for fog (IJsselmeer, Waddenzee, Zuid-Holland and 2 other areas).","Engels: regel elders vertaald");
       assert.deepEqual(r.ontbreekt,[],"Engels: niets onvertaald");
+      assert.deepEqual(r.kaarten,["Yellow warning for wind"],"Engels: kop vertaald, tekst officieel Engels");
+      assert(r.kaartTekst.length===1&&/^Severe gusts of 75-90 km\/h are expected\./.test(r.kaartTekst[0]),"Engels: officiële Engelse tekst van de weerdienst");
+      assert(!/Geldig|morgen|vandaag/.test(r.kaartTekst[0]),"Engels: geldigheid vertaald ("+r.kaartTekst[0]+")");
       await scherm(page,"assen-390-engels");
       await context.close();
     }

@@ -797,6 +797,8 @@
         : (WAARSCHUWING[m[2].toLowerCase()] ? alsNl("X", WAARSCHUWING[m[2].toLowerCase()])
           /* Officiële Engelse titel van de weerdienst (MeteoAlarm en-GB, NWS) blijft letterlijk. */
           : (eigennamen.includes(m[2]) || (hulp && hulp.alEngels(m[2])) ? m[2] : null));
+      /* "Code geel: wind" → "Official weather warning: yellow warning for wind." (eigenaar 4 okt: vorm A). */
+      if (code) return titel && `Official weather warning:${kleur} warning for ${titel}.`;
       return titel && `Official${kleur} weather warning: ${titel}.`;
     }],
 
@@ -996,7 +998,7 @@
     [new RegExp(`^De temperatuur blijft de komende uren rond ${G} (graden|graad)\\.$`), (m) => `The temperature stays around ${graden(m[1])} over the coming hours.`],
 
     /* Waarschuwingen */
-    [/^Code (geel|oranje|rood): (.+)$/, (m) => { const w = WAARSCHUWING[m[2].toLowerCase()]; return w && `${({ geel: "Yellow", oranje: "Orange", rood: "Red" })[m[1]]} warning: ${w}`; }],
+    [/^Code (geel|oranje|rood): (.+)$/, (m) => { const w = WAARSCHUWING[m[2].toLowerCase()]; return w && `${({ geel: "Yellow", oranje: "Orange", rood: "Red" })[m[1]]} warning for ${w}`; }],
     [/^Officiële weerwaarschuwing(?: \((geel|oranje|rood)\))?:$/, (m) => `Official${m[1] ? ` ${({ geel: "yellow", oranje: "orange", rood: "red" })[m[1]]}` : ""} weather warning:`],
     [/^Officiële titel:$/, () => "Official title:"],
     [/^Uitleg van watishetweer\.nl:$/, () => "Explanation from watishetweer.nl:"],
@@ -1036,7 +1038,10 @@
     "waarschuwing voor zeer harde wind": "high wind warning", "waarschuwing voor zwaar winterweer": "winter storm warning",
     "officiële waarschuwing": "official warning",
     "hitteadvies": "heat advisory", "mistadvies": "fog advisory", "windadvies": "wind advisory", "winterweeradvies": "winter weather advisory",
-    "luchtkwaliteitsadvies": "air quality advisory", "luchtkwaliteitswaarschuwing": "air quality warning", "tornadowaarschuwing": "tornado warning"
+    "luchtkwaliteitsadvies": "air quality advisory", "luchtkwaliteitswaarschuwing": "air quality warning", "tornadowaarschuwing": "tornado warning",
+    /* MeteoAlarm-koppen uit de officiële indeling ("Code geel: wind"). */
+    "wind": "wind", "sneeuw en ijzel": "snow and ice", "onweer": "thunderstorms", "kou": "cold", "kustgevaar": "coastal hazards",
+    "bosbrandgevaar": "forest fire danger", "lawinegevaar": "avalanche danger", "overstromingen": "flooding", "regen en overstromingen": "rain and flooding"
   };
 
   /* "neerslag, bewolking en maanlicht" → "precipitation, cloud and moonlight". */
