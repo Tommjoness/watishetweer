@@ -51,12 +51,14 @@ try {
 
   /* De huidige MeteoAlarm-feed: { warnings: [{ alert: { info: [per taal] } }] }.
      Groene awareness-1-blokken ("No warnings") en verlopen berichten zijn geen
-     waarschuwing. Een actieve rode waarschuwing met alleen regiocodes (geen
-     polygoon) is niet aan een punt te koppelen: dan nooit "geen waarschuwingen"
-     claimen, maar eerlijk "geen plaats-specifieke dekking". */
+     waarschuwing. Een actieve rode waarschuwing met alleen een ONBEKENDE
+     regiocode (geen polygoon, geen bekende regiovorm) is niet aan een punt te
+     koppelen: dan nooit "geen waarschuwingen" claimen, maar eerlijk "geen
+     plaats-specifieke dekking". Een bekende regiocode (MeteoAlarm-regiovormen)
+     koppelt wel: zie de gevallen hierna. */
   const nuIso=offset=>new Date(Date.now()+offset*3600000).toISOString();
-  const capBlok=(taal,event,niveau,start,eind,gebied)=>({language:taal,event,severity:niveau.startsWith("4")?"Extreme":"Moderate",onset:start,expires:eind,
-    parameter:[{valueName:"awareness_level",value:niveau},{valueName:"awareness_type",value:"13; rain-flood"}],area:[{areaDesc:gebied,geocode:[{valueName:"EMMA_ID",value:"FR030"}]}],description:"Officiële tekst"});
+  const capBlok=(taal,event,niveau,start,eind,gebied,code="FR999")=>({language:taal,event,severity:niveau.startsWith("4")?"Extreme":"Moderate",onset:start,expires:eind,
+    parameter:[{valueName:"awareness_level",value:niveau},{valueName:"awareness_type",value:"13; rain-flood"}],area:[{areaDesc:gebied,geocode:[{valueName:"EMMA_ID",value:code}]}],description:"Officiële tekst"});
   const groen={alert:{info:[capBlok("fr-FR","Aucune vigilance","1; green; Minor",nuIso(-1),nuIso(5),"Paris"),capBlok("en-GB","No warnings","1; green; Minor",nuIso(-1),nuIso(5),"Paris")]}};
   const verlopen={alert:{info:[capBlok("fr-FR","Vigilance orange orages","3; orange; Severe",nuIso(-10),nuIso(-2),"Gard")]}};
   const rood={alert:{info:[capBlok("fr-FR","Vigilance rouge pluie-inondation","4; red; Extreme",nuIso(-2),nuIso(10),"Gard"),capBlok("en-GB","Red flood warning","4; red; Extreme",nuIso(-2),nuIso(10),"Gard")]}};
@@ -73,6 +75,22 @@ try {
   assert.deepEqual(fr.lijst,[]);
   assert.deepEqual(fr.elders,{land:"FR",landNaam:"Frankrijk",groepen:[{kleur:"rood",type:"regen-overstroming",gebieden:["Gard"],meer:0}]},
     "landelijke samenvatting: alleen de actieve rode waarschuwing, niet de groene of verlopen");
+  /* Bekende regiocode: FR022 is Gard, waarin Nîmes ligt; FR030 is Vaucluse. */
+  const roodIn=(code,gebied)=>({alert:{info:[capBlok("fr-FR","Vigilance rouge pluie-inondation","4; red; Extreme",nuIso(-2),nuIso(10),gebied,code)]}});
+  globalThis.fetch=meteoFeed([groen,roodIn("FR022","Gard")]);
+  const frGard=await (await api.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=43.84&lon=4.36&land=FR"))).json();
+  assert.equal(frGard.dekking,true,"Nîmes ligt in Gard: de rode waarschuwing geldt hier");
+  assert.deepEqual(frGard.lijst.map(w=>[w.gebied,w.kleur,w.plaatsSpecifiek]),[["Gard","rood",true]]);
+  /* Eigen bewezen waarschuwing plus een met onbekende code: alleen de eigen kaart. */
+  globalThis.fetch=meteoFeed([groen,roodIn("FR022","Gard"),roodIn("FR999","Onbekend")]);
+  const frGardOnbekend=await (await api.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=43.84&lon=4.36&land=FR"))).json();
+  assert.equal(frGardOnbekend.dekking,true);
+  assert.deepEqual(frGardOnbekend.lijst.map(w=>w.gebied),["Gard"],"alleen de bewezen eigen waarschuwing");
+  globalThis.fetch=meteoFeed([groen,roodIn("FR030","Vaucluse")]);
+  const frElders=await (await api.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=43.84&lon=4.36&land=FR"))).json();
+  assert.equal(frElders.dekking,true,"Nîmes ligt aantoonbaar buiten Vaucluse: bewezen geen eigen waarschuwing");
+  assert.deepEqual(frElders.lijst,[]);
+  assert.equal(frElders.elders,undefined,"een waarschuwing die aantoonbaar elders geldt, wordt niet gemeld (eigenaar 4 okt)");
   globalThis.fetch=meteoFeed([groen,verlopen]);
   const frRustig=await (await api.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=43.85&lon=4.37&land=FR"))).json();
   assert.equal(frRustig.dekking,true,"alleen groene en verlopen berichten: bewezen geen actieve waarschuwing");

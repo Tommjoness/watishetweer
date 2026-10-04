@@ -1,0 +1,46 @@
+name: MeteoAlarm-gebieden
+
+# Bouwt meteoalarm-gebieden.json (regiocode naar vereenvoudigde gebiedsvorm) met
+# de Metadata-API van MeteoAlarm. De sleutel (GitHub-secret METEOALARM_API_TOKEN)
+# gaat alleen als Authorization-header mee; log en artifact bevatten geen sleutel
+# en geen ondertekende opslaglinks. De API heeft een daglimiet (ongeveer 50
+# aanvragen per 24 uur); deze workflow gebruikt er ongeveer 21. Daarom alleen
+# handmatig te starten en op een pull request dat het script of deze workflow wijzigt.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "scripts/meteoalarm-gebieden.js"
+      - ".github/workflows/meteoalarm-gebieden.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: meteoalarm-api
+  cancel-in-progress: false
+
+jobs:
+  bouw:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Gebiedsvormen ophalen (sleutel als header)
+        env:
+          METEOALARM_API_TOKEN: ${{ secrets.METEOALARM_API_TOKEN }}
+        run: node scripts/meteoalarm-gebieden.js
+      - name: Bewaar gebiedsvormen en verslag
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: meteoalarm-gebieden
+          path: |
+            meteoalarm-gebieden.json
+            meteoalarm-gebieden-verslag.json
+          if-no-files-found: ignore
+          retention-days: 7

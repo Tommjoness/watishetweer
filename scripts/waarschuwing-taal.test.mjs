@@ -4,6 +4,8 @@
  *     de server Nederlands, met ?taal=en de officiële Engelse tekst (en-GB);
  *   - ontbreekt de voorkeurstaal, dan de andere van die twee, anders het eerste;
  *   - iedere waarschuwing telt één keer en draagt haar taal mee;
+ *   - de kop komt uit de officiële indeling ("Code geel: mist"), in elke taal
+ *     gelijk; de app vertaalt die kop, nooit de officiële tekst (eigenaar 4 okt);
  *   - de edge-cache houdt Nederlands en Engels gescheiden.
  */
 import assert from "node:assert";
@@ -32,13 +34,19 @@ const feed = { warnings: [{ alert: { info: [
 /* Standaard Nederlands, met voorkeur Engels de officiële Engelse tekst. */
 let lijst = uitCap(feed, 51.05, 3.72);
 assert.equal(lijst.length, 1, "één waarschuwing, niet één per taal");
-assert.equal(lijst[0].titel, "Gele waarschuwing voor mist");
+assert.equal(lijst[0].titel, "Code geel: mist", "kop uit niveau en soort");
+assert.equal(lijst[0].tekst, "Er wordt verspreide mist verwacht.");
 assert.equal(lijst[0].taal, "nl-BE");
 lijst = uitCap(feed, 51.05, 3.72, Date.now(), "en");
 assert.equal(lijst.length, 1);
-assert.equal(lijst[0].titel, "Yellow warning for fog", "Engelse bezoeker krijgt de officiële Engelse titel");
+assert.equal(lijst[0].titel, "Code geel: mist", "kop uit niveau en soort; de app toont die als \"Yellow warning for fog\"");
 assert.equal(lijst[0].tekst, "Widespread fog is expected.");
 assert.equal(lijst[0].taal, "en-GB");
+
+/* Zonder bekend niveau of bekende soort blijft de officiële titel. */
+const zonderSoort = { warnings: [{ alert: { info: [Object.assign(blok("nl-BE", "Gele waarschuwing voor iets", "x"),
+  { parameter: [{ valueName: "awareness_level", value: "2; yellow; Moderate" }, { valueName: "awareness_type", value: "99; onbekend" }] })] } }] };
+assert.equal(uitCap(zonderSoort, 51.05, 3.72)[0].titel, "Gele waarschuwing voor iets", "onbekende soort: officiële titel");
 
 /* Terugval: zonder Engels het Nederlands, zonder beide het eerste blok. */
 assert.equal(kiesInfo([blok("nl-NL", "A", ""), blok("de-DE", "B", "")], "en").event, "A");
@@ -55,4 +63,4 @@ assert.equal(nl, raar, "alleen taal=en krijgt een eigen entry");
 assert.equal(canoniekeCacheUrl(new Request("https://watishetweer.nl/api/forecast?lat=51.05&lon=3.72&taal=en"), "forecast"),
   canoniekeCacheUrl(new Request("https://watishetweer.nl/api/forecast?lat=51.05&lon=3.72"), "forecast"), "taal raakt de forecastcache niet");
 
-console.log("Waarschuwingstaal: Nederlands standaard, officiële Engelse tekst bij ?taal=en, terugval per taal, één waarschuwing per alert en gescheiden edge-cache geslaagd.");
+console.log("Waarschuwingstaal: kop uit officiële indeling, Nederlands standaard, officiële Engelse tekst bij ?taal=en, terugval per taal, één waarschuwing per alert en gescheiden edge-cache geslaagd.");
