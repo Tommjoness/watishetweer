@@ -277,8 +277,8 @@ function meet(){
           return uit.map((r,i)=>Object.assign(r,{pressed:pressed[i]}));
         };
         const T=taal==="nl"
-          ?{wind:"Maximale wind",min:"Minimum",max:"Maximum",rest:"in de rest van vandaag",dag:"over de hele dag",onbekendWind:"Maximale wind onbekend",onbekendNeerslag:"Neerslaggegevens onbekend",kans:"Hoogste neerslagkans in één uur",desc:"Minimum en maximum gelden voor de volledige kalenderdag."}
-          :{wind:"Maximum wind",min:"Minimum",max:"Maximum",rest:"for the rest of today",dag:"for the whole day",onbekendWind:"Maximum wind unknown",onbekendNeerslag:"Precipitation data unknown",kans:"Highest hourly chance of precipitation",desc:"Minimum and maximum apply to the full calendar day."};
+          ?{wind:"Maximale wind",min:"Minimumtemperatuur",max:"Maximumtemperatuur",rest:"in de rest van vandaag",dag:"over de hele dag",onbekendWind:"Maximale wind onbekend",onbekendNeerslag:"Neerslaggegevens onbekend",kans:"Hoogste neerslagkans in één uur",desc:"Minimum en maximum gelden voor de volledige kalenderdag."}
+          :{wind:"Maximum wind",min:"Minimum temperature",max:"Maximum temperature",rest:"for the rest of today",dag:"for the whole day",onbekendWind:"Maximum wind unknown",onbekendNeerslag:"Precipitation data unknown",kans:"Highest hourly chance of precipitation",desc:"Minimum and maximum apply to the full calendar day."};
         const controleer=(rijen,fase)=>{
           assert.equal(rijen.length,7,label+" "+fase+": verwacht zeven dagregels");
           rijen.forEach((r,i)=>{

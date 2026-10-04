@@ -64,6 +64,11 @@ function vakKlasse(waarde, lat, lon) {
   const lo = Math.min(klasse(mcd(m + RESIDU_P90)), klasse(Math.min(...sub) + NATUURLIJK));
   const hi = Math.max(klasse(mcd(m + RESIDU_P10)), klasse(Math.max(...sub) + NATUURLIJK));
   if (lo === hi) return lo;
+  /* Twee klassen tonen alleen buren. Kan een vak zowel laag als hoog zijn, dan
+     past geen bestaand label; dat komt op het RIVM-raster van 2015 nergens voor
+     (gemeten 4 oktober: 0 van 44 011 vakken). Bij een nieuwe bron faalt de bouw
+     dan liever dan "matig tot hoog" te tonen (hercontrole 4 oktober, R04). */
+  if (lo === 1 && hi === 3) throw new Error(`Vak ${lat.toFixed(3)}, ${lon.toFixed(3)} kan zowel laag als hoog zijn; geen passend label.`);
   return lo === 1 && hi === 2 ? 4 : 5;
 }
 

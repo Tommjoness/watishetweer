@@ -39,6 +39,8 @@ assert.equal(vakKlasse(veld(() => 2.0), lat, lon), 5, "totaal 2,25: matig tot ho
 assert.equal(vakKlasse(veld(() => 5.0), lat, lon), 3, "totaal 5,25: zeker hoog");
 assert.equal(vakKlasse(veld(() => null), lat, lon), 0, "geen gegevens: geen klasse");
 assert.equal(vakKlasse(veld((x) => (Math.floor(x / 250) % 2 ? 0.05 : 1.2)), lat, lon), 4, "gemengde cellen binnen het vak: twee klassen");
+assert.throws(() => vakKlasse(veld((x) => (Math.floor(x / 250) % 2 ? 0.05 : 5.0)), lat, lon), /zowel laag als hoog/,
+  "laag én hoog binnen één vak: de bouw faalt in plaats van \"matig tot hoog\" te tonen (R04)");
 
 /* 3. Opzoekfunctie uit index.html */
 const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");

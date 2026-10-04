@@ -23,6 +23,19 @@ const drieSamenvatting=a.regenSamenvatting(driePerioden,2);
 assert.equal(drieSamenvatting,"Verwachte meetbare neerslag: di 21:00–wo 00:00 · 0,3 mm; 02:00–04:00 · 2,1 mm; daarna 10:00–13:00 · 3,8 mm.");
 assert(!/plus 1 latere periode/.test(drieSamenvatting),"Een bekende derde periode mag niet als vage resttelling worden verborgen.");
 
+/* Hercontrole 4 oktober (R03): een periode die niet vandaag valt, krijgt
+   "morgen" of de dag, zodat "19:00–20:00" nooit als vanavond wordt gelezen. */
+const vandaag="2026-10-04";
+assert.equal(a.regenSamenvatting([{van:"2026-10-04T19:00",tot:"2026-10-04T20:00",som:0.7}],2,vandaag),"Verwachte meetbare neerslag: 19:00–20:00 · 0,7 mm.","vandaag: geen dag");
+assert.equal(a.regenSamenvatting([{van:"2026-10-05T19:00",tot:"2026-10-05T20:00",som:0.7}],2,vandaag),"Verwachte meetbare neerslag: morgen 19:00–20:00 · 0,7 mm.","morgen");
+assert.equal(a.regenSamenvatting([{van:"2026-10-06T07:00",tot:"2026-10-06T09:00",som:1.2}],2,vandaag),"Verwachte meetbare neerslag: di 07:00–09:00 · 1,2 mm.","overmorgen: dag");
+assert.equal(a.regenSamenvatting([{van:"2026-10-04T22:00",tot:"2026-10-05T01:00",som:2}],2,vandaag),"Verwachte meetbare neerslag: zo 22:00–ma 01:00 · 2,0 mm.","over middernacht: beide dagen");
+assert.equal(a.regenSamenvatting([{van:"2026-12-31T19:00",tot:"2026-12-31T20:00",som:0.7}],2,"2026-12-30"),"Verwachte meetbare neerslag: morgen 19:00–20:00 · 0,7 mm.","morgen over de jaargrens");
+{
+  const v=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
+  assert.equal(v.vertaal("Verwachte meetbare neerslag: morgen 19:00–20:00 · 0,7 mm."),"Expected measurable precipitation: tomorrow 19:00–20:00 · 0.7 mm.","Engels: tomorrow");
+}
+
 /* Verstreken uurwaarden horen niet in de standaard vooruitkijkende grafiektekst. */
 p=a.regenperiodenVoorGrafiek({grafiekTijden:tijden,bronTijden:tijden,neerslag:[0,0.7,0.8,0,0],bronStart:0,actueelBronIndex:2});
 assert.equal(p.length,0);
