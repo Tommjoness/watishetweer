@@ -57,6 +57,8 @@ jobs:
         run: node scripts/indeling-browser.test.js
       - name: Samenhang (zes tegels, avondtegels, pollenschaal, Nachtzicht, 24 uur desktop, plaatsindex, subpagina's)
         run: node scripts/samenhang-browser.test.js
+      - name: Lichtvervuiling in Nachtzicht (alleen Nederland, bronlink, Engels, plaatswissel)
+        run: node scripts/lichtvervuiling-browser.test.js
       - name: Huidig uur rond het hele uur volgt de klok
         run: node scripts/uurgrens-browser.test.js
       - name: Grafiek op haar werkelijke breedte, leesbaar op tablet en desktop

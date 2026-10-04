@@ -664,6 +664,20 @@
     "Waar de gegevens vandaan komen": "Where the data comes from",
     "Hoe je verwachtingen moet lezen": "How to read forecasts",
     "Waarschuwingen en veiligheid": "Warnings and safety",
+    "Lichtvervuiling bij Nachtzicht": "Light pollution in Stargazing",
+    "Voor plaatsen in Nederland toont Nachtzicht een grove schatting van de lichtvervuiling: laag, matig of hoog. De schatting komt uit de RIVM-kaart \"Berekende hemelhelderheid in de nacht, zonder bewolking\" uit 2015, plus een vaste natuurlijke achtergrond van 0,25 mcd/m². Laag betekent tot 0,5 mcd/m² en hoog meer dan 2 mcd/m². Die grenzen zijn een keuze van watishetweer.nl, geen officiële indeling. De schatting geldt voor een heldere nacht zonder maan.":
+      "For places in the Netherlands, Stargazing shows a rough estimate of light pollution: low, moderate or high. The estimate comes from the 2015 RIVM map of calculated night-sky brightness without cloud, plus a fixed natural background of 0.25 mcd/m². Low means up to 0.5 mcd/m² and high means more than 2 mcd/m². These thresholds are a choice made by watishetweer.nl, not an official classification. The estimate applies to a clear night without moonlight.",
+    "Ligt de kaartwaarde dicht bij een grens, dan tonen we twee klassen, zoals \"laag tot matig\". Die marge volgt uit de verschillen tussen de kaart en 246 metingen in Drenthe uit 2015 en 2016. Op 24 Nederlandse meetlocaties van de Rijksuniversiteit Groningen, met metingen uit januari 2020, gaf de kaart op 20 locaties dezelfde klasse als de meting. Die locaties liggen vooral in Noord-Nederland. De kaart is niet actueel en niet landelijk gevalideerd: de werkelijke hemelhelderheid kan sinds 2015 zijn veranderd.":
+      "If the map value is close to a threshold, we show two classes, such as \"low to moderate\". That margin is based on the differences between the map and 246 measurements in Drenthe from 2015 and 2016. At 24 Dutch measurement sites of the University of Groningen, measured in January 2020, the map gave the same class as the measurement at 20 sites. Those sites are mostly in the north of the Netherlands. The map is not current and has not been validated nationwide: the actual sky brightness may have changed since 2015.",
+    /* Nachtzicht: lichtvervuiling (alleen Nederland) */
+    "laag tot matig": "low to moderate", "matig tot hoog": "moderate to high",
+    "Weinig kunstlicht: de Melkweg is goed te zien.": "Little artificial light: the Milky Way is easy to see.",
+    "De Melkweg is zwak of niet te zien.": "The Milky Way is faint or not visible.",
+    "Veel kunstlicht: alleen heldere sterren en planeten zijn te zien.": "A lot of artificial light: only bright stars and planets are visible.",
+    "De Melkweg is zwak tot goed te zien.": "The Milky Way is faint to easy to see.",
+    "De Melkweg is waarschijnlijk niet te zien; heldere sterren wel.": "The Milky Way is probably not visible, but bright stars are.",
+    "Geschat op basis van de RIVM-kaart, voor een heldere, maanloze nacht.": "Estimated from the RIVM map, for a clear, moonless night.",
+    "Bron": "Source",
     "Privacy en transparantie": "Privacy and transparency",
     "watishetweer.nl brengt actuele weersinformatie en modelverwachtingen voor plaatsen wereldwijd overzichtelijk samen: in één oogopslag wat het weer nu doet en wat er de komende uren en dagen komt.":
       "watishetweer.nl brings together current weather information and model forecasts for places worldwide in one clear view, so you can see at a glance what the weather is doing now and what to expect over the coming hours and days.",
@@ -883,6 +897,8 @@
     /* Grafiekvenster: "16:00 · bewolkt", "kans 16:00–17:00", "12 km/u WZW, 3 Bft". */
     [/^(\d{2}:\d{2}) · (.+)$/, (m) => weer(m[2]) && `${m[1]} · ${weer(m[2])}`],
     [/^kans (\d{2}:\d{2})–(\d{2}:\d{2})$/, (m) => `chance ${m[1]}–${m[2]}`],
+    /* Nachtzicht: "Lichtvervuiling in Vlieland: laag tot matig (geschat)." of "…hier: …" */
+    [/^Lichtvervuiling (?:in (.+)|hier): (laag|matig|hoog|laag tot matig|matig tot hoog) \(geschat\)\.$/, (m) => `Light pollution ${m[1] ? "in " + plaats(m[1]) : "here"}: ${({ laag: "low", matig: "moderate", hoog: "high", "laag tot matig": "low to moderate", "matig tot hoog": "moderate to high" })[m[2]]} (estimated).`],
     [/^(\d{2}:\d{2}, )?neerslagkans (\d+%)(?:, verwacht (.+))?$/, (m) => `${m[1] || ""}${m[2]} chance of precipitation${m[3] ? ", " + m[3].replace(/(\d),(\d)/g, "$1.$2") + " expected" : ""}`],
     [/^(\d+) km\/u(?: (N|NNO|NO|ONO|O|OZO|ZO|ZZO|Z|ZZW|ZW|WZW|W|WNW|NW|NNW))?, (\d+) Bft$/, (m) => `${m[1]} km/h${m[2] ? " " + RICHTING_KORT[m[2]] : ""}, ${m[3]} Bft`],
     [/^(Zwakke|Matige|Vrij krachtige|Krachtige|Harde|Stormachtige) wind uit het ([a-z]+) \((\d+) Bft\)\.$/, (m) => richting(m[2]) && `${alsNl("X", WINDKRACHT[m[1].toLowerCase() + " wind"])} from the ${richting(m[2])} (${m[3]} Bft).`],
