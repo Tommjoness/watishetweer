@@ -81,18 +81,16 @@ try {
   const frGard=await (await api.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=43.84&lon=4.36&land=FR"))).json();
   assert.equal(frGard.dekking,true,"Nîmes ligt in Gard: de rode waarschuwing geldt hier");
   assert.deepEqual(frGard.lijst.map(w=>[w.gebied,w.kleur,w.plaatsSpecifiek]),[["Gard","rood",true]]);
-  /* Eigen bewezen waarschuwing plus een met onbekende code: de onbekende mag
-     niet als "elders" worden gemeld (niet bewezen dat hij elders geldt). */
+  /* Eigen bewezen waarschuwing plus een met onbekende code: alleen de eigen kaart. */
   globalThis.fetch=meteoFeed([groen,roodIn("FR022","Gard"),roodIn("FR999","Onbekend")]);
   const frGardOnbekend=await (await api.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=43.84&lon=4.36&land=FR"))).json();
+  assert.equal(frGardOnbekend.dekking,true);
   assert.deepEqual(frGardOnbekend.lijst.map(w=>w.gebied),["Gard"],"alleen de bewezen eigen waarschuwing");
-  assert.equal(frGardOnbekend.elders,undefined,"een niet te koppelen waarschuwing heet nooit 'elders'");
   globalThis.fetch=meteoFeed([groen,roodIn("FR030","Vaucluse")]);
   const frElders=await (await api.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=43.84&lon=4.36&land=FR"))).json();
   assert.equal(frElders.dekking,true,"Nîmes ligt aantoonbaar buiten Vaucluse: bewezen geen eigen waarschuwing");
   assert.deepEqual(frElders.lijst,[]);
-  assert.deepEqual(frElders.elders,{land:"FR",landNaam:"Frankrijk",groepen:[{kleur:"rood",type:"regen-overstroming",gebieden:["Vaucluse"],meer:0}]},
-    "de waarschuwing elders blijft zichtbaar als korte regel");
+  assert.equal(frElders.elders,undefined,"een waarschuwing die aantoonbaar elders geldt, wordt niet gemeld (eigenaar 4 okt)");
   globalThis.fetch=meteoFeed([groen,verlopen]);
   const frRustig=await (await api.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=43.85&lon=4.37&land=FR"))).json();
   assert.equal(frRustig.dekking,true,"alleen groene en verlopen berichten: bewezen geen actieve waarschuwing");

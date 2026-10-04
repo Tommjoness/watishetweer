@@ -1,11 +1,14 @@
 "use strict";
 /*
- * Waarschuwingen per plaats met de regel "Elders in …", in de echte build:
- *   - eigen waarschuwing (Assen, Drenthe): de kaart, met daaronder de regel elders;
- *   - geen eigen waarschuwing (Utrecht): "Geen officiële weerwaarschuwingen voor
- *     deze locatie." met daaronder de regel elders;
- *   - Engels: beide volledig vertaald;
- *   - geen horizontaal scrollen; gebiedsnamen worden ge-escaped.
+ * Waarschuwingen per plaats, in de echte build (eigenaar 4 oktober):
+ *   - eigen waarschuwing (Assen, Drenthe): de kaart "Code geel: wind" met de
+ *     officiële tekst, en niets over waarschuwingen elders;
+ *   - geen eigen waarschuwing (Utrecht): alleen "Geen officiële
+ *     weerwaarschuwingen voor deze locatie.", ook als er elders iets geldt;
+ *   - niet te koppelen waarschuwing: de eerlijke melding "In Nederland geldt nu …
+ *     kunnen we nog niet bepalen", ook in het Engels;
+ *   - Engels: kop vertaald ("Yellow warning for wind"), tekst officieel Engels;
+ *   - geen horizontaal scrollen, geen paginafouten, gebiedsnamen ge-escaped.
  * Met SCHERMEN=<map> worden schermafbeeldingen bewaard (licht en donker).
  */
 const fs=require("fs"),path=require("path"),http=require("http"),assert=require("assert");
@@ -27,16 +30,19 @@ function fixture(lat,lon){
   return d;
 }
 const morgen="2026-07-23T21:59:59+02:00";
-const ELDERS={land:"NL",landNaam:"Nederland",groepen:[{kleur:"oranje",type:"wind",gebieden:["Zeeland","Zierikzee"],meer:0},{kleur:"geel",type:"mist",gebieden:["IJsselmeer","Waddenzee","Zuid-Holland"],meer:2}]};
+/* Een samenvatting van niet te koppelen waarschuwingen. Bij dekking mag de app
+   die nooit tonen; zonder dekking wordt het de eerlijke melding. */
+const SAMENVATTING={land:"NL",landNaam:"Nederland",groepen:[{kleur:"oranje",type:"wind",gebieden:["Zeeland","Zierikzee"],meer:0},{kleur:"geel",type:"mist",gebieden:["IJsselmeer","Waddenzee","Zuid-Holland"],meer:2}]};
 const DRENTHE={titel:"Code geel: wind",tekst:"Er worden zware windstoten verwacht van 75-90 km/u.",kleur:"geel",type:"wind",niveau:"geel",niveauIsOfficieel:true,
   van:"2026-07-22T12:00:00+02:00",tot:morgen,gebied:"Drenthe",plaatsSpecifiek:true,landelijk:false,scope:"gebied"};
 const DRENTHE_EN=Object.assign({},DRENTHE,{tekst:"Severe gusts of 75-90 km/h are expected.",taal:"en-GB"});
+const ASSEN="/?lat=52.993&lon=6.562&plaats=Assen&land=NL",UTRECHT="/?lat=52.091&lon=5.122&plaats=Utrecht&land=NL";
 const PLAATSEN={
-  assen:{pad:"/?lat=52.993&lon=6.562&plaats=Assen&land=NL",lat:52.993,lon:6.562,antwoord:{bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:true,land:"NL",lijst:[DRENTHE],elders:ELDERS},
-    antwoordEn:{bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:true,land:"NL",lijst:[DRENTHE_EN],elders:ELDERS}},
-  utrecht:{pad:"/?lat=52.091&lon=5.122&plaats=Utrecht&land=NL",lat:52.091,lon:5.122,antwoord:{bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:true,land:"NL",lijst:[],elders:ELDERS}},
-  escape:{pad:"/?lat=52.091&lon=5.122&plaats=Utrecht&land=NL",lat:52.091,lon:5.122,antwoord:{bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:true,land:"NL",lijst:[],
-    elders:{land:"NL",landNaam:"Nederland",groepen:[{kleur:"geel",type:"wind",gebieden:["<img src=x onerror=alert(1)>"],meer:0}]}}}
+  assen:{pad:ASSEN,lat:52.993,lon:6.562,antwoord:{bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:true,land:"NL",lijst:[DRENTHE],elders:SAMENVATTING},
+    antwoordEn:{bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:true,land:"NL",lijst:[DRENTHE_EN],elders:SAMENVATTING}},
+  utrecht:{pad:UTRECHT,lat:52.091,lon:5.122,antwoord:{bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:true,land:"NL",lijst:[],elders:SAMENVATTING}},
+  onbekend:{pad:UTRECHT,lat:52.091,lon:5.122,antwoord:{bron:"MeteoAlarm netherlands",dekking:false,plaatsSpecifiek:false,land:"NL",lijst:[],reden:"geen plaats-specifieke dekking",
+    elders:{land:"NL",landNaam:"Nederland",groepen:[{kleur:"geel",type:"wind",gebieden:["Drenthe","<img src=x onerror=alert(1)>"],meer:0}]}}}
 };
 
 const types={".html":"text/html; charset=utf-8",".js":"application/javascript",".css":"text/css",".woff2":"font/woff2",".svg":"image/svg+xml",".json":"application/json",".png":"image/png"};
@@ -73,13 +79,11 @@ async function open(browser,root,plaats,w,h,{taal,thema}={}){
 }
 const lees=page=>page.evaluate(()=>{
   const el=document.getElementById("waarschuwingen");
-  const elders=el.querySelector('[data-ui-warning-elders="1"]');
   return {kaarten:[...el.querySelectorAll(".waarsch h3")].map(h=>h.textContent.trim()),
     kaartTekst:[...el.querySelectorAll(".waarsch p")].map(p=>p.textContent.replace(/\s+/g," ").trim()),
-    msg:[...el.querySelectorAll(":scope>.msg:not([data-ui-warning-elders])")].map(m=>m.textContent.trim()),
-    elders:elders?elders.textContent.replace(/\s+/g," ").trim():null,eldersHtml:elders?elders.innerHTML:"",
-    laatste:el.lastElementChild===elders,scroll:document.documentElement.scrollWidth-innerWidth,
-    ontbreekt:[...(window.__WIW_TAAL_ONTBREEKT__||[])].filter(s=>/Elders|geldt nu|code (geel|oranje|rood)/.test(s))};
+    tekst:el.textContent.replace(/\s+/g," ").trim(),html:el.innerHTML,
+    scroll:document.documentElement.scrollWidth-innerWidth,
+    ontbreekt:[...(window.__WIW_TAAL_ONTBREEKT__||[])].filter(s=>/geldt nu|Code (geel|oranje|rood)|weerwaarschuwing/.test(s))};
 });
 async function scherm(page,naam){
   if(!SCHERMEN)return;
@@ -96,15 +100,14 @@ async function scherm(page,naam){
   const root="http://127.0.0.1:"+server.address().port;
   const browser=await chromium.launch();
   try{
-    const ELDERS_NL="Elders in Nederland geldt nu code oranje voor wind (Zeeland, Zierikzee); code geel voor mist (IJsselmeer, Waddenzee, Zuid-Holland en 2 andere gebieden).";
     for(const [w,h] of [[390,844],[1440,900]]){
       for(const thema of ["licht","donker"]){
         {
           const {context,page,fouten}=await open(browser,root,PLAATSEN.assen,w,h,{thema});
           const r=await lees(page);
           assert.deepEqual(r.kaarten,["Code geel: wind"],`Assen ${w}: eigen waarschuwing voor Drenthe`);
-          assert.equal(r.elders,ELDERS_NL,`Assen ${w}: regel elders`);
-          assert(r.laatste,`Assen ${w}: de regel elders staat onder de eigen waarschuwing`);
+          assert(/^Er worden zware windstoten verwacht van 75-90 km\/u\. Geldig tot morgen 21:59\.$/.test(r.kaartTekst[0]),`Assen ${w}: officiële tekst (${r.kaartTekst[0]})`);
+          assert(!/Elders|Zeeland|geldt nu/.test(r.tekst),`Assen ${w}: niets over waarschuwingen elders (${r.tekst})`);
           assert(r.scroll<=1,`Assen ${w}: geen horizontaal scrollen (${r.scroll}px)`);
           assert.deepEqual(fouten,[],`Assen ${w}: geen paginafouten`);
           await scherm(page,`assen-${w}-${thema}`);
@@ -113,10 +116,7 @@ async function scherm(page,naam){
         {
           const {context,page,fouten}=await open(browser,root,PLAATSEN.utrecht,w,h,{thema});
           const r=await lees(page);
-          assert.deepEqual(r.kaarten,[],`Utrecht ${w}: geen eigen waarschuwing`);
-          assert.deepEqual(r.msg,["Geen officiële weerwaarschuwingen voor deze locatie."],`Utrecht ${w}: eerlijke eigen status`);
-          assert.equal(r.elders,ELDERS_NL,`Utrecht ${w}: regel elders`);
-          assert(r.laatste,`Utrecht ${w}: de regel elders staat onder de eigen status`);
+          assert.equal(r.tekst,"Geen officiële weerwaarschuwingen voor deze locatie.",`Utrecht ${w}: alleen de eigen status, niets van elders`);
           assert.deepEqual(fouten,[],`Utrecht ${w}: geen paginafouten`);
           await scherm(page,`utrecht-${w}-${thema}`);
           await context.close();
@@ -126,21 +126,27 @@ async function scherm(page,naam){
     {
       const {context,page}=await open(browser,root,PLAATSEN.assen,390,844,{taal:"en"});
       const r=await lees(page);
-      assert.equal(r.elders,"Elsewhere in the Netherlands: orange warning for wind (Zeeland, Zierikzee); yellow warning for fog (IJsselmeer, Waddenzee, Zuid-Holland and 2 other areas).","Engels: regel elders vertaald");
       assert.deepEqual(r.ontbreekt,[],"Engels: niets onvertaald");
-      assert.deepEqual(r.kaarten,["Yellow warning for wind"],"Engels: kop vertaald, tekst officieel Engels");
+      assert.deepEqual(r.kaarten,["Yellow warning for wind"],"Engels: kop vertaald");
       assert(r.kaartTekst.length===1&&/^Severe gusts of 75-90 km\/h are expected\./.test(r.kaartTekst[0]),"Engels: officiële Engelse tekst van de weerdienst");
       assert(!/Geldig|morgen|vandaag/.test(r.kaartTekst[0]),"Engels: geldigheid vertaald ("+r.kaartTekst[0]+")");
       await scherm(page,"assen-390-engels");
       await context.close();
     }
     {
-      const {context,page,fouten}=await open(browser,root,PLAATSEN.escape,390,844);
+      const {context,page,fouten}=await open(browser,root,PLAATSEN.onbekend,390,844);
       const r=await lees(page);
-      assert(!/<img/i.test(r.eldersHtml)&&/&lt;img/.test(r.eldersHtml),"gebiedsnamen worden ge-escaped");
+      assert(/^In Nederland geldt nu code geel voor wind \(Drenthe, .+\)\. Of dit ook voor deze plaats geldt, kunnen we nog niet bepalen\.$/.test(r.tekst),"niet te koppelen: eerlijke melding ("+r.tekst+")");
+      assert(!/<img/i.test(r.html)&&/&lt;img/.test(r.html),"gebiedsnamen worden ge-escaped");
       assert.deepEqual(fouten,[],"geen script uit gebiedsnamen");
       await context.close();
     }
-    console.log("Waarschuwing elders (browser): eigen waarschuwing met regel elders, geen eigen waarschuwing met regel elders, licht en donker, 390 en 1440 px, Engels en escaping geslaagd.");
+    {
+      const {context,page}=await open(browser,root,PLAATSEN.onbekend,390,844,{taal:"en"});
+      const r=await lees(page);
+      assert(/^In the Netherlands: yellow warning for wind \(Drenthe, .+\)\. We cannot yet tell whether this applies to this place\.$/.test(r.tekst),"niet te koppelen, Engels ("+r.tekst+")");
+      await context.close();
+    }
+    console.log("Waarschuwing per plaats (browser): eigen waarschuwing zonder regel elders, geen eigen waarschuwing alleen eigen status, eerlijke melding bij niet te koppelen (Nederlands en Engels), licht en donker, 390 en 1440 px, escaping geslaagd.");
   }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);process.exit(1);});

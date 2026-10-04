@@ -1021,8 +1021,7 @@
     [/^Neerslagperioden: (.+)\.$/, (m) => { const p = perioden(m[1]); return p && `Precipitation periods: ${p}.`; }],
     [/^Verwachte meetbare neerslag: (.+)\.$/, (m) => { const p = perioden(m[1]); return p && `Expected measurable precipitation: ${p}.`; }],
 
-    /* Officiële waarschuwingen elders in het land (warning-render-state). */
-    [/^Elders in (.+?) geldt nu (code .+)\.$/, (m) => { const l = landIn(m[1]), d = waarschuwingsDelen(m[2]); return l && d && `Elsewhere in ${l}: ${d}.`; }],
+    /* Officiële waarschuwingen die niet aan de plaats te koppelen zijn (warning-render-state). */
     [/^In (.+?) geldt nu (code .+)\. Of dit ook voor deze plaats geldt, kunnen we nog niet bepalen\.$/,
       (m) => { const l = landIn(m[1]), d = waarschuwingsDelen(m[2]); return l && d && `In ${l}: ${d}. We cannot yet tell whether this applies to this place.`; }]
   ];

@@ -21,12 +21,11 @@ const DEKKING_BRON=`    if(!d||d.dekking!==true){
       if(S.d&&typeof briefing==="function") briefing();
       return;
     }`;
-/* Korte regel over actieve waarschuwingen elders in het land, met kleur, soort
-   en gebieden. Alle brontekst (gebiedsnamen) wordt ge-escaped.
-   - plaatsBekend: de bron kon de waarschuwingen aan gebieden koppelen; deze
-     gelden aantoonbaar elders ("Elders in Nederland geldt nu …").
-   - anders: ze zijn niet aan deze plaats te koppelen; dat zegt de regel eerlijk. */
-function weatherNowWaarschuwingElders(e,esc,plaatsBekend){
+/* Tussenstap tot waarschuwingen per regio te koppelen zijn: gelden er in het
+   land actieve waarschuwingen die niet aan deze plaats te koppelen zijn, dan
+   meldt de site dat eerlijk en kort, met kleur, soort en gebieden. Alle
+   brontekst (gebiedsnamen) wordt ge-escaped. */
+function weatherNowWaarschuwingElders(e,esc){
   if(!e||!Array.isArray(e.groepen)||!e.groepen.length)return "";
   const soort={wind:"wind","sneeuw-ijzel":"sneeuw en ijzel",onweer:"onweer",mist:"mist",hitte:"hitte",kou:"kou",kust:"kustgevaar",
     bosbrand:"bosbrandgevaar",lawine:"lawinegevaar",regen:"regen",overstroming:"overstromingen","regen-overstroming":"regen en overstromingen"};
@@ -36,7 +35,6 @@ function weatherNowWaarschuwingElders(e,esc,plaatsBekend){
     return "code "+g.kleur+" voor "+soort[g.type]+(gebieden.length?" ("+gebieden.join(", ")+meer+")":"");
   });
   if(!delen.length)return "";
-  if(plaatsBekend)return "Elders in "+esc(String(e.landNaam||"dit land"))+" geldt nu "+delen.join("; ")+".";
   return "In "+esc(String(e.landNaam||"dit land"))+" geldt nu "+delen.join("; ")+". Of dit ook voor deze plaats geldt, kunnen we nog niet bepalen.";
 }
 const DEKKING_PRODUCTIE=`    if(!d||d.dekking!==true){
@@ -69,9 +67,7 @@ const EIND_PRODUCTIE=`    el.innerHTML=lijst.slice(0,3).map(w=>{
       }
       return \`<div class="waarsch" data-ui-severity="\${ernst}"><h3>\${esc(w.titel)}</h3><p>\${esc(tekst)}\${meta?" "+meta:""}</p></div>\`;
     }).join("");
-    if(lijst.length===0) el.innerHTML='<div class="msg">Geen officiële weerwaarschuwingen voor deze locatie.</div>';
-    const eldersRegel=(${weatherNowWaarschuwingElders.toString()})(d.elders,esc,true);
-    if(eldersRegel) el.insertAdjacentHTML("beforeend",'<div class="msg" data-ui-warning-elders="1">'+eldersRegel+'</div>');`;
+    if(lijst.length===0) el.innerHTML='<div class="msg">Geen officiële weerwaarschuwingen voor deze locatie.</div>';`;
 
 const FOUT_BRON=`    el.innerHTML='<div class="msg">Officiële weerwaarschuwingen konden niet worden gecontroleerd.</div>';`;
 const FOUT_PRODUCTIE=`    el.innerHTML='<div class="msg">Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald.</div>';`;

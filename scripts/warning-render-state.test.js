@@ -108,15 +108,7 @@ assert.throws(()=>pasWarningRenderStateToe(uit),/bronanker ontbreekt of is dubbe
   );
   assert.equal(weatherNowWaarschuwingElders({landNaam:"Spanje",groepen:[{kleur:"geel",type:"onbekend",gebieden:["X"]}]},esc),"","onbekende soort: geen half bericht");
   assert(!weatherNowWaarschuwingElders({landNaam:"<b>",groepen:[{kleur:"geel",type:"wind",gebieden:["<img src=x>"],meer:1}]},esc).includes("<"),"gebiedsnamen en landnaam worden ge-escaped");
-  assert(DEKKING_PRODUCTIE.includes("function weatherNowWaarschuwingElders(e,esc,plaatsBekend)"),"productiecode bevat de landelijke melding");
-  /* Waarschuwingen per regio: gelden ze aantoonbaar elders, dan een korte regel
-     onder de eigen waarschuwingen (of onder "Geen officiële weerwaarschuwingen"). */
-  assert.equal(
-    weatherNowWaarschuwingElders({landNaam:"Nederland",groepen:[{kleur:"geel",type:"wind",gebieden:["Zeeland"],meer:0}]},esc,true),
-    "Elders in Nederland geldt nu code geel voor wind (Zeeland)."
-  );
-  assert(EIND_PRODUCTIE.includes('(d.elders,esc,true)')&&EIND_PRODUCTIE.includes('data-ui-warning-elders="1"'),"eindpresentatie toont de regel elders bij dekking");
-  assert(EIND_PRODUCTIE.indexOf("Geen officiële weerwaarschuwingen voor deze locatie.")<EIND_PRODUCTIE.indexOf("(d.elders,esc,true)"),"de regel elders komt na de eigen status");
+  assert(DEKKING_PRODUCTIE.includes("function weatherNowWaarschuwingElders(e,esc)"),"productiecode bevat de landelijke melding");
   assert(DEKKING_PRODUCTIE.includes('"Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen."'),"zonder samenvatting blijft de bestaande eerlijke melding");
 }
 

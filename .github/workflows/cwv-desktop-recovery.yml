@@ -71,8 +71,8 @@ jobs:
         run: node scripts/ga4-url-privacy-browser.test.js
       - name: Open-Meteo-dagwaarden, over welk uurvenster (providercontract)
         run: node scripts/openmeteo-daggrens-contract.js
-      - name: Waarschuwingen per plaats met de regel elders (licht, donker, Engels)
-        run: node scripts/waarschuwing-elders-browser.test.js
+      - name: Waarschuwingen per plaats (eigen regio, geen melding van elders, Engels)
+        run: node scripts/waarschuwing-plaats-browser.test.js
       - name: Bewaar reproduceerbare CWV-metingen
         if: always()
         uses: actions/upload-artifact@v6
