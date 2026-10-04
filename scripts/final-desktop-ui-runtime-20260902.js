@@ -236,7 +236,7 @@ function werkUurTabelBij(){
   if(kop)kop.textContent=desktop?"Komende uren":"Temperatuur en neerslag per uur";
   if(desktop&&scroll){scroll.removeAttribute("tabindex");scroll.removeAttribute("role");scroll.removeAttribute("aria-label");}
   if(!desktop&&scroll){scroll.tabIndex=0;scroll.setAttribute("role","region");scroll.setAttribute("aria-label","Temperatuur en neerslag per uur");}
-  if(caption)caption.textContent=desktop?"Komende uren met weer, temperatuur, gevoelstemperatuur, neerslagkans, neerslaghoeveelheid en wind in de lokale tijd van de geselecteerde plaats":"Temperatuur, neerslagkans en neerslaghoeveelheid per uur voor de uren in de grafiek";
+  if(caption)caption.textContent=desktop?"Komende uren met weer, temperatuur, neerslagkans, neerslaghoeveelheid en wind in de lokale tijd van de geselecteerde plaats":"Temperatuur, neerslagkans en neerslaghoeveelheid per uur voor de uren in de grafiek";
   for(const r of rijen){
     const tr=document.createElement("tr");if(r.marker){tr.dataset.current="1";tr.setAttribute("aria-current","time");}
     const tijd=document.createElement("td"),tm=document.createElement("time");tm.dateTime=r.instant||r.tijd;tm.textContent=hhmm(r.tijd);tijd.appendChild(tm);

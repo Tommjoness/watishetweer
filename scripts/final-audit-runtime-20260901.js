@@ -56,7 +56,9 @@ function regenSamenvattingBijwerken(){
     actueelBronIndex:Number.isInteger(S.i0)?S.i0:null,
     toonVerstreken:S.dag!=null,meetbaarMm:0.1
   });
-  const tekst=A.regenSamenvatting(perioden,2);
+  /* Lokale datum van de plaats nu: een periode op een andere dag krijgt "morgen" of de dag. */
+  const nu=S.d&&S.d.current&&String(S.d.current.time||"");
+  const tekst=A.regenSamenvatting(perioden,2,/^\d{4}-\d{2}-\d{2}T/.test(nu)?nu.slice(0,10):undefined);
   el.textContent=tekst;el.hidden=!tekst;
   if(tekst)el.setAttribute("role","note");else el.removeAttribute("role");
 }
@@ -73,8 +75,8 @@ function vandaagIndex(){
   if(!day||!current||!Array.isArray(day.time))return -1;
   return day.time.indexOf(String(current.time||"").slice(0,10));
 }
-/* Toegankelijke dagregel (eigenaar, 3 oktober): wind, minimum en maximum
-   krijgen een onzichtbaar label, onbekende waarden heten "onbekend", en de
+/* Toegankelijke dagregel (eigenaar, 3 oktober): wind, minimum- en
+   maximumtemperatuur krijgen een onzichtbaar label (hercontrole 4 oktober, T03), onbekende waarden heten "onbekend", en de
    neerslag noemt haar tijdvak. Vandaag: kans en hoeveelheid over de resterende
    uren; andere dagen: de hele kalenderdag. Zichtbaar verandert er niets. */
 function zetVerborgenLabel(cel,label){
@@ -89,8 +91,8 @@ function herstelWeekNeerslagEindstate(){
   const vandaag=vandaagIndex();
   document.querySelectorAll("#days .row.day:not(.kop)").forEach(rij=>{
     zetVerborgenLabel(rij.querySelector(".dwind"),"Maximale wind");
-    zetVerborgenLabel(rij.querySelector(".dmin"),"Minimum");
-    zetVerborgenLabel(rij.querySelector(".dmax"),"Maximum");
+    zetVerborgenLabel(rij.querySelector(".dmin"),"Minimumtemperatuur");
+    zetVerborgenLabel(rij.querySelector(".dmax"),"Maximumtemperatuur");
     const vak=rij.querySelector(".drain");if(!vak)return;
     const isVandaag=Number(rij.dataset.i)===vandaag;
     const match=/(\d{1,3})%/.exec(vak.textContent||""),kans=match?Number(match[1]):null;

@@ -109,13 +109,13 @@
   const plaats = n => PLAATS[n] || n;
   /* "do 12:00" of "12:00" → "Thu 12:00" of "12:00". */
   function tijdstip(s) {
-    const m = /^(?:(ma|di|wo|do|vr|za|zo) )?(\d{1,2}:\d{2})$/.exec(s);
+    const m = /^(?:(ma|di|wo|do|vr|za|zo|morgen) )?(\d{1,2}:\d{2})$/.exec(s);
     if (!m) return null;
-    return m[1] ? dagKort(m[1]) + " " + m[2] : m[2];
+    return m[1] ? (m[1] === "morgen" ? "tomorrow" : dagKort(m[1])) + " " + m[2] : m[2];
   }
   /* "16:00–18:00 · 4,8 mm" (ook met dagen) → Engels. */
   function periode(s) {
-    const m = /^((?:(?:ma|di|wo|do|vr|za|zo) )?\d{1,2}:\d{2})–((?:(?:ma|di|wo|do|vr|za|zo) )?\d{1,2}:\d{2}) · ([\d,.]+) mm$/.exec(s);
+    const m = /^((?:(?:ma|di|wo|do|vr|za|zo|morgen) )?\d{1,2}:\d{2})–((?:(?:ma|di|wo|do|vr|za|zo) )?\d{1,2}:\d{2}) · ([\d,.]+) mm$/.exec(s);
     if (!m) return null;
     return tijdstip(m[1]) + "–" + tijdstip(m[2]) + " · " + getal(m[3]) + " mm";
   }
@@ -347,7 +347,7 @@
     "Uur in de temperatuurgrafiek": "Hour in the temperature chart",
     "Alternatieve gegevensweergave van de huidige weergrafiek.": "Alternative data view of the current weather chart.",
     "Dag- en nachtverloop met temperatuur, spreiding en neerslagkans": "Day and night overview with temperature, range and chance of precipitation",
-    "Komende uren met weer, temperatuur, gevoelstemperatuur, neerslagkans, neerslaghoeveelheid en wind in de lokale tijd van de geselecteerde plaats": "Forecast for the next few hours: weather conditions, temperature, feels-like temperature, chance and amount of precipitation, and wind. Times are local to the selected place.",
+    "Komende uren met weer, temperatuur, neerslagkans, neerslaghoeveelheid en wind in de lokale tijd van de geselecteerde plaats": "Forecast for the next few hours: weather conditions, temperature, chance and amount of precipitation, and wind. Times are local to the selected place.",
     "Temperatuur, neerslagkans en neerslaghoeveelheid per uur voor de uren in de grafiek": "Hourly temperature, precipitation chance and amount for the period shown in the chart",
     "Temperatuur per uur, verticaal scrollbaar": "Hourly temperature, vertically scrollable",
     "Neerslag komend uur": "Precipitation next hour",
@@ -514,6 +514,7 @@
     "Minimum en maximum gelden voor de volledige kalenderdag.": "Minimum and maximum apply to the full calendar day.",
     /* Verborgen labels in de dagregel (toegankelijke naam). */
     "Maximale wind": "Maximum wind", "Maximale wind onbekend": "Maximum wind unknown", "Minimum onbekend": "Minimum unknown", "Maximum onbekend": "Maximum unknown",
+    "Minimumtemperatuur": "Minimum temperature", "Maximumtemperatuur": "Maximum temperature", "Minimumtemperatuur onbekend": "Minimum temperature unknown", "Maximumtemperatuur onbekend": "Maximum temperature unknown",
     "Neerslaggegevens onbekend": "Precipitation data unknown", "Droog over de hele dag": "Dry for the whole day", "Droog in de rest van vandaag": "Dry for the rest of today",
     "De totale neerslagverwachting voor vandaag is niet beschikbaar.": "The total precipitation forecast for today is not available.",
     "Voor vandaag wordt er geen neerslag verwacht.": "No precipitation is expected today.",
@@ -681,7 +682,7 @@
     "laag tot matig": "low to moderate", "matig tot hoog": "moderate to high",
     "Weinig kunstlicht: de Melkweg is goed te zien.": "Little artificial light: the Milky Way is easy to see.",
     "De Melkweg is zwak of niet te zien.": "The Milky Way is faint or not visible.",
-    "Veel kunstlicht: alleen heldere sterren en planeten zijn te zien.": "A lot of artificial light: only bright stars and planets are visible.",
+    "Veel kunstlicht: vooral heldere sterren en planeten zijn te zien.": "A lot of artificial light: mainly bright stars and planets are visible.",
     "De Melkweg is zwak tot goed te zien.": "The Milky Way is faint to easy to see.",
     "De Melkweg is waarschijnlijk niet te zien; heldere sterren wel.": "The Milky Way is probably not visible, but bright stars are.",
     "Geschat op basis van de RIVM-kaart, voor een heldere, maanloze nacht.": "Estimated from the RIVM map, for a clear, moonless night.",

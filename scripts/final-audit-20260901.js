@@ -43,19 +43,26 @@ function regenperiodenVoorGrafiek(input={}){
   if(lopend)uit.push(lopend);
   return uit;
 }
-function regenPeriodeTijdvak(p){
+/* vandaag (optioneel, "JJJJ-MM-DD" in de lokale tijd van de plaats): een
+   periode die niet vandaag valt, krijgt "morgen" of de dag erbij, zodat
+   "19:00–20:00" nooit als vanavond wordt gelezen (hercontrole 4 oktober, R03). */
+function volgendeDatum(d){const x=new Date(d+"T12:00:00Z");if(Number.isNaN(x.getTime()))return "";x.setUTCDate(x.getUTCDate()+1);return x.toISOString().slice(0,10);}
+function regenPeriodeTijdvak(p,vandaag){
   if(!p)return "";const a=String(p.van||""),b=String(p.tot||"");
   if(!tijd(a)||!tijd(b))return "";
-  if(datum(a)===datum(b))return tijd(a)+"–"+tijd(b);
+  if(datum(a)===datum(b)){
+    const dag=!vandaag||datum(a)===vandaag?"":datum(a)===volgendeDatum(vandaag)?"morgen ":dagKort(a)+" ";
+    return dag+tijd(a)+"–"+tijd(b);
+  }
   return dagKort(a)+" "+tijd(a)+"–"+dagKort(b)+" "+tijd(b);
 }
-function regenSamenvatting(perioden,max=2){
+function regenSamenvatting(perioden,max=2,vandaag){
   const p=Array.isArray(perioden)?perioden:[];if(!p.length)return "";
   const limiet=Math.max(1,Math.floor(num(max)||2));
-  const delen=p.slice(0,limiet).map(x=>regenPeriodeTijdvak(x)+" · "+mmTekst(x.som));
+  const delen=p.slice(0,limiet).map(x=>regenPeriodeTijdvak(x,vandaag)+" · "+mmTekst(x.som));
   const rest=p.length-delen.length;
   if(rest===1){
-    const volgende=p[delen.length],detail=regenPeriodeTijdvak(volgende)+" · "+mmTekst(volgende&&volgende.som);
+    const volgende=p[delen.length],detail=regenPeriodeTijdvak(volgende,vandaag)+" · "+mmTekst(volgende&&volgende.som);
     if(!/^\s*·\s*$/.test(detail))return "Verwachte meetbare neerslag: "+delen.join("; ")+"; daarna "+detail+".";
   }
   return "Verwachte meetbare neerslag: "+delen.join("; ")+(rest>0?"; plus "+rest+" latere "+(rest===1?"periode":"perioden"):"")+".";
