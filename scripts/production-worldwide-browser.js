@@ -62,21 +62,41 @@ async function ontdekVolledigeForecastUrl(browser,locatie){
   }finally{clearTimeout(timer);await context.close();}
 }
 
-async function haalLiveForecast(url,naam){
+async function haalJson(url){
+  const response=await fetch(url,{headers:{accept:"application/json","user-agent":"watishetweer-worldwide-monitor/1.0"},signal:AbortSignal.timeout(15000)});
+  if(!response.ok)throw new Error(`HTTP ${response.status}`);
+  const bron=await response.json();
+  if(!isVolledigeBron(bron))throw new Error("onvolledige forecastrespons");
+  return bron;
+}
+/* Open-Meteo knijpt de gedeelde IP-adressen van GitHub-runners geregeld af
+   (3 oktober 2026, 19:57: Punta Arenas na drie pogingen niet bereikbaar). Dan
+   halen we dezelfde live verwachting via de eigen reserveroute van de site
+   (/api/forecast), die hetzelfde Open-Meteo-contract levert en die de app zelf
+   ook gebruikt als Open-Meteo hapert. Er wordt niets overgeslagen: alle
+   controles hieronder draaien op die live data. Faalt ook de reserveroute, dan
+   blijft de monitor rood. */
+async function haalLiveForecast(url,naam,locatie){
   let laatsteFout=null;
   for(let poging=1;poging<=3;poging++){
     try{
-      const response=await fetch(url,{headers:{accept:"application/json","user-agent":"watishetweer-worldwide-monitor/1.0"},signal:AbortSignal.timeout(15000)});
-      if(!response.ok)throw new Error(`HTTP ${response.status}`);
-      const bron=await response.json();
-      if(!isVolledigeBron(bron))throw new Error("onvolledige forecastrespons");
-      return {bron,poging};
+      return {bron:await haalJson(url),poging,via:"Open-Meteo"};
     }catch(e){
       laatsteFout=String(e&&e.message||e);
       if(poging<3)await slaap(BRON_RETRY_BACKOFF_MS*poging);
     }
   }
-  throw new Error(`${naam}: live Open-Meteo-bron niet bereikbaar na drie begrensde pogingen: ${laatsteFout}`);
+  const reserve=ROOT+"/api/forecast?"+new URLSearchParams({lat:String(locatie.lat),lon:String(locatie.lon)});
+  let reserveFout=null;
+  for(let poging=1;poging<=2;poging++){
+    try{
+      return {bron:await haalJson(reserve),poging,via:"reserveroute /api/forecast (Open-Meteo: "+laatsteFout+")"};
+    }catch(e){
+      reserveFout=String(e&&e.message||e);
+      if(poging<2)await slaap(BRON_RETRY_BACKOFF_MS);
+    }
+  }
+  throw new Error(`${naam}: live bron niet bereikbaar: Open-Meteo na drie begrensde pogingen (${laatsteFout}) en de reserveroute na twee (${reserveFout})`);
 }
 
 async function installeerForecastFixture(page,bron){
@@ -125,9 +145,11 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
       if(index>0)await slaap(BRON_PACING_MS);
       const sourceUrl=await ontdekVolledigeForecastUrl(browser,locatie);
       verifieerGeenPressureQuery(sourceUrl,locatie.naam);
-      const live=await haalLiveForecast(sourceUrl,locatie.naam);
+      const live=await haalLiveForecast(sourceUrl,locatie.naam,locatie);
       liveBronnen.set(locatie.naam,live.bron);
-      console.log(`BRON LIVE ${locatie.naam}: exacte pressure-vrije productie-URL opgehaald (poging ${live.poging}).`);
+      console.log(live.via==="Open-Meteo"
+        ?`BRON LIVE ${locatie.naam}: exacte pressure-vrije productie-URL opgehaald (poging ${live.poging}).`
+        :`BRON LIVE ${locatie.naam}: via ${live.via} (poging ${live.poging}).`);
     }
 
     for(const scherm of schermen){
