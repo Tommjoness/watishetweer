@@ -12,6 +12,13 @@ function uurUitIso(tijd){
   const m=/T(\d{2}):/.exec(String(tijd||""));
   return m?Number(m[1]):null;
 }
+/* g.TI staat op de Open-Meteo-as (vaste afwijking). Een zichtbaar uurlabel
+   volgt de echte lokale tijd van de plaats, ook rond een klokwissel
+   (weatherNowLokaleTijd in de hoofdpagina; zonder die functie ongewijzigd). */
+function zichtbaarUur(tijd){
+  const lokaal=typeof root.weatherNowLokaleTijd==="function"?root.weatherNowLokaleTijd(tijd):tijd;
+  return uurUitIso(lokaal);
+}
 function uurAsLabelTekst(tekst){
   const m=/^([01]?\d|2[0-3])(?::00)?$/.exec(String(tekst||"").trim());
   return m?String(Number(m[1])).padStart(2,"0")+":00":"";
@@ -358,7 +365,7 @@ function asTijdIndices(svg,g){
     if(el.hasAttribute("data-mobile-hour-index"))i=Number(el.getAttribute("data-mobile-hour-index"));
     else{
       const t=String(el.textContent||"").trim(),px=Number(el.getAttribute("x"));
-      const opTekst=dichtst(px,k=>String(g.TI[k]).slice(11,16)===t);
+      const opTekst=dichtst(px,k=>uurAsLabelTekst(String(zichtbaarUur(g.TI[k])))===t);
       i=opTekst!==null?opTekst:dichtst(px);
     }
     if(Number.isInteger(i))uit.set(i,el);
@@ -389,7 +396,7 @@ function herstelUurAs(){
     if(!Number.isFinite(y))return;
     const kleur="var(--ink-45)";
     indices.forEach(i=>{
-      const x=Number(g.x(i)),uur=uurUitIso(g.TI[i]);if(!Number.isFinite(x)||!Number.isInteger(uur))return;
+      const x=Number(g.x(i)),uur=zichtbaarUur(g.TI[i]);if(!Number.isFinite(x)||!Number.isInteger(uur))return;
       const el=document.createElementNS(SVG_NS,"text");
       el.setAttribute("x",String(x));el.setAttribute("y",String(y));
       el.setAttribute("text-anchor","middle");
@@ -415,7 +422,7 @@ function herstelUurAs(){
   const kleur="var(--ink-45)";
   for(const i of kiesUurLabelIndices(g.TI,minimum,cadans,rand)){
     if(bestaandeUurLabels(svg,g).length>=minimum)break;
-    const x=Number(g.x(i)),uur=uurUitIso(g.TI[i]);
+    const x=Number(g.x(i)),uur=zichtbaarUur(g.TI[i]);
     if(!Number.isFinite(x)||!Number.isInteger(uur)||posities.some(p=>Math.abs(p-x)<18))continue;
     const el=document.createElementNS(SVG_NS,"text");
     el.setAttribute("x",String(x));el.setAttribute("y",String(y));
@@ -1167,7 +1174,7 @@ function koppelTijdAanTemperatuur(){
   });
   nodig.forEach(i=>{
     if(vasteAs){verwijder(i);return;}
-    const tijd=uurAsLabelTekst(String(uurUitIso(g.TI[i])));if(!tijd){verwijder(i);return;}
+    const tijd=uurAsLabelTekst(String(zichtbaarUur(g.TI[i])));if(!tijd){verwijder(i);return;}
     const el=sjabloon.cloneNode(false);el.textContent=tijd;
     ["data-mobile-edge-adjusted","data-mobile-hour-index"].forEach(a=>el.removeAttribute(a));
     el.setAttribute("x",String(x(i)));el.setAttribute("text-anchor","middle");el.setAttribute("data-temp-time","1");

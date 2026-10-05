@@ -423,7 +423,7 @@ function verrijkTooltip(ev){
   const p=tooltipNeerslag(G.P&&G.P[i],G.Q1MM&&G.Q1MM[i]);
   teksten[5].textContent="neerslagkans";
   teksten[6].textContent=p.waarde;
-  g.setAttribute("aria-label",(G.TI&&G.TI[i]?G.TI[i].slice(11,16)+", ":"")+"neerslagkans "+p.kans+(p.hoeveelheid?", verwacht "+p.hoeveelheid:""));
+  g.setAttribute("aria-label",(G.TI&&G.TI[i]?(typeof hhmm==="function"?hhmm(G.TI[i]):G.TI[i].slice(11,16))+", ":"")+"neerslagkans "+p.kans+(p.hoeveelheid?", verwacht "+p.hoeveelheid:""));
 }
 
 if(typeof etmaal==="function"){
