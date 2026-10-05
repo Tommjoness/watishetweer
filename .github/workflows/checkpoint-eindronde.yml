@@ -55,6 +55,8 @@ jobs:
             echo "::error file=seo-location-pages-browser.test.js,line=1::$msg"
             exit "$code"
           fi
+      - name: Seizoenspagina witte kerst in Chromium en WebKit
+        run: node scripts/seizoenspagina-browser.test.js
       - name: Accessibility-landmark en mobiele footerdoelen in Chromium en WebKit
         shell: bash
         run: |

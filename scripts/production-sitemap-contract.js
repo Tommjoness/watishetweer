@@ -2,6 +2,7 @@
 
 const assert=require("assert");
 const {LOCATIES,BASIS_URL,plaatsUrl}=require("./seo-locations.config.js");
+const {SEIZOENSPAGINAS,seizoenUrl}=require("./seizoenspagina.config.js");
 
 const ROOT=BASIS_URL;
 const VERWACHTE_URLS=Object.freeze([
@@ -9,7 +10,8 @@ const VERWACHTE_URLS=Object.freeze([
   `${ROOT}/weer/`,
   `${ROOT}/over/`,
   `${ROOT}/privacy`,
-  ...LOCATIES.map(plaatsUrl)
+  ...LOCATIES.map(plaatsUrl),
+  ...SEIZOENSPAGINAS.map(seizoenUrl)
 ]);
 
 function leesLocs(xml){
