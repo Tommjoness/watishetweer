@@ -118,8 +118,20 @@ const CSS=`
   /* Uurtabel: Wind gecentreerd, kop en waarden, zoals Temperatuur. */
   html body #wiw-hour-table thead th:nth-child(5)${NIET},html body #wiw-hour-table td.wiw-hour-wind${NIET}{text-align:center!important}
 
-  /* Nachtzicht: de kop Zichtscore staat gecentreerd boven score en balkje. */
+  /* Nachtzicht: de kop Zichtscore staat gecentreerd; het scorecijfer staat
+     precies onder dat midden en het balkje direct rechts ernaast. Een leeg
+     balkje (score 0) is bijna onzichtbaar; met de groep als midden leek het
+     cijfer dan links van de kop te staan (eigenaar, 5 oktober). */
   html body #nights .row.night.kop>.score${NIET}{text-align:center!important}
+  html body #nights .row.night.kop>.score${NIET}{padding-left:0!important;padding-right:0!important}
+  html body #nights .row.night:not(.kop)>.score${NIET}{justify-self:stretch!important;text-align:center!important;padding-left:0!important;padding-right:0!important}
+  html body #nights .row.night:not(.kop)>.sbar${NIET}{width:calc(50% - 34px)!important;margin-right:0!important}
+
+  /* Nachtzicht: Beoordeling gecentreerd, kop en oordeel, zoals de kolommen
+     eromheen. De kop Bewolking past zonder binnenmarge precies in zijn kolom;
+     met marge liep hij rechts over en stond hij 4px uit het midden. */
+  html body #nights .row.night.kop>.sbar${NIET},html body #nights .row.night:not(.kop)>.nachtadvies${NIET}{text-align:center!important}
+  html body #nights .row.night.kop>.nmeta:not(.wide)${NIET}{padding-left:0!important;padding-right:0!important}
 
   /* Nachtzicht: Beste zichtperiode en Maan staan gecentreerd, kop en tekst,
      net als Bewolking. */
