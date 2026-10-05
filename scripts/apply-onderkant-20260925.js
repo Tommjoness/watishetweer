@@ -40,6 +40,14 @@ html body footer:not(#wiw-onderkant)>.footer-contact{flex-wrap:wrap!important;co
 html body footer:not(#wiw-onderkant)>.footer-contact .footer-contact-question,html body footer:not(#wiw-onderkant)>.footer-contact .footer-contact-mail{display:inline!important;width:auto!important}
 html body footer:not(#wiw-onderkant)>details.footer-details[open]{flex:0 0 100%!important;flex-wrap:wrap}
 html body footer:not(#wiw-onderkant)>details.footer-details #coords{display:block;width:100%;font-size:12px!important}
+/* Seizoenslinks op mobiel: in de bron staan ze vóór Over en Privacy, maar in
+   beeld vullen ze de rijen van Over/Privacy en Technische locatiegegevens aan.
+   Zo blijft de 2+1-indeling van de hulplinks staan en wordt de voet niet hoger. */
+@media(max-width:430px){
+  html body footer:not(#wiw-onderkant)>span.bron.seizoen-link{order:1!important}
+  html body footer:not(#wiw-onderkant)>details.footer-details{order:2!important}
+  html body footer:not(#wiw-onderkant)>.footer-contact{order:3!important}
+}
 /* Weergave: op dezelfde lijn als de voet */
 html body .wiw-weergave-voet:not(#wiw-onderkant){justify-content:flex-start!important;margin-top:6px!important;padding-top:10px!important;padding-bottom:0!important}
 @media (pointer:coarse),(max-width:900px){

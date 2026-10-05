@@ -32,14 +32,18 @@ function klein(label){return String(label).charAt(0).toLowerCase()+String(label)
 
 /* Welk jaar, welke dagen al binnen het venster vallen en vanaf wanneer de
    verwachting er is. Na de laatste evenementdag schuift de pagina door naar
-   volgend jaar. */
+   volgend jaar. cfg.extraDagen: zoveel dagen ná een evenementdag zijn ook
+   nodig (de nacht van oud en nieuw loopt door tot 1 januari 02:00); een dag
+   telt pas als zichtbaar wanneer ook die volgende dag(en) in het venster
+   vallen. */
 function toestand(vandaag,cfg){
   const laatste=cfg.dagen[cfg.dagen.length-1];
+  const extra=cfg.extraDagen||0;
   const jaarNu=Number(vandaag.slice(0,4));
   const jaar=dagenTussen(vandaag,datumISO(jaarNu,laatste.maand,laatste.dag))>=0?jaarNu:jaarNu+1;
   const dagen=cfg.dagen.map(d=>{
     const iso=datumISO(jaar,d.maand,d.dag),over=dagenTussen(vandaag,iso);
-    return {label:d.label,iso,over,zichtbaar:over>=0&&over<=cfg.vensterDagen-1,vanaf:plusDagen(iso,-(cfg.vensterDagen-1))};
+    return {label:d.label,iso,over,zichtbaar:over>=0&&over+extra<=cfg.vensterDagen-1,vanaf:plusDagen(iso,-(cfg.vensterDagen-1-extra))};
   });
   return {vandaag,jaar,dagen,vanaf:dagen[0].vanaf,fase:dagen.some(d=>d.zichtbaar)?"verwachting":"ver"};
 }
@@ -101,10 +105,65 @@ function samenvatting(t,resultaten,cfg){
   return vul(cfg.teksten.totNuToe,{plaats,dag:zichtbaar.map(d=>klein(d.label)).join(" en "),volgende:volgende?klein(volgende.label):"",datum:volgende?datumTekst(volgende.vanaf,false):""});
 }
 
+/* ---------- Soort "middernacht": één nacht, uur voor uur ---------- */
+const RICHTINGEN=["N","NO","O","ZO","Z","ZW","W","NW"];
+function richting(graad){return graad==null?"":RICHTINGEN[Math.round((((graad%360)+360)%360)/45)%8];}
+/* cfg.uren zijn uren vanaf middernacht aan het begin van de evenementdag:
+   22, 23, 24 (= 00:00 de dag erna), 25, 26. */
+function uurStempel(iso,uur){return `${plusDagen(iso,Math.floor(uur/24))}T${pad(uur%24)}:00`;}
+function nachtWaarden(data,iso,cfg){
+  const h=data&&data.hourly;
+  if(!h||!Array.isArray(h.time))return null;
+  const reeks=k=>cfg.uren.map(u=>{const i=h.time.indexOf(uurStempel(iso,u));return i>=0&&Array.isArray(h[k])?getal(h[k][i]):null;});
+  const echt=a=>a.filter(v=>v!=null);
+  const neerslag=echt(reeks("precipitation")),kans=echt(reeks("precipitation_probability"));
+  const wind=echt(reeks("wind_speed_10m")),stoot=echt(reeks("wind_gusts_10m")),zicht=echt(reeks("visibility"));
+  const midIdx=cfg.uren.indexOf(cfg.middernachtUur);
+  const temp=midIdx>=0?reeks("temperature_2m")[midIdx]:null,dir=midIdx>=0?reeks("wind_direction_10m")[midIdx]:null;
+  if(!neerslag.length&&!wind.length&&temp==null)return null;
+  return {
+    neerslag:neerslag.length?neerslag.reduce((a,b)=>a+b,0):null,
+    kans:kans.length?Math.max(...kans):null,
+    wind:wind.length?wind.reduce((a,b)=>a+b,0)/wind.length:null,
+    stoot:stoot.length?Math.max(...stoot):null,
+    richting:richting(dir),
+    zicht:zicht.length?Math.min(...zicht):null,
+    temp
+  };
+}
+function neerslagTekst(w){
+  if(!w||w.neerslag==null)return "Geen gegevens";
+  const kans=w.kans==null?"":` · kans ${Math.round(w.kans)}%`;
+  return w.neerslag>=0.1?`${komma(w.neerslag,1)} mm${kans}`:`Droog${kans}`;
+}
+function windTekst(w){
+  if(!w||w.wind==null)return "Geen gegevens";
+  const basis=`${w.richting?w.richting+" ":""}${Math.round(w.wind)} km/u`;
+  return w.stoot==null?basis:`${basis} · stoten ${Math.round(w.stoot)}`;
+}
+function heeftMist(w,cfg){return !!(w&&w.zicht!=null&&w.zicht<cfg.mistZicht);}
+function lijstTekst(namen){return namen.length<2?namen.join(""):namen.slice(0,-1).join(", ")+" en "+namen[namen.length-1];}
+function nachtSamenvatting(t,resultaten,cfg){
+  const dag=t.dagen.find(d=>d.zichtbaar);
+  if(!dag)return [];
+  const w=r=>r.dagen[dag.iso];
+  const metData=resultaten.filter(r=>w(r));
+  if(!metData.length)return [];
+  const nat=metData.filter(r=>w(r).neerslag!=null&&w(r).neerslag>=0.1).map(r=>r.plaats.naam);
+  const stoten=metData.filter(r=>w(r).stoot!=null&&w(r).stoot>=cfg.stootDrempel).map(r=>r.plaats.naam);
+  const mist=metData.filter(r=>heeftMist(w(r),cfg)).map(r=>r.plaats.naam);
+  const zinnen=[nat.length?vul(cfg.teksten.neerslagIn,{plaatsen:lijstTekst(nat)}):cfg.teksten.droogOveral];
+  if(stoten.length)zinnen.push(vul(cfg.teksten.stotenIn,{kmh:cfg.stootDrempel,plaatsen:lijstTekst(stoten)}));
+  if(mist.length)zinnen.push(vul(cfg.teksten.mistIn,{plaatsen:lijstTekst(mist)}));
+  return zinnen;
+}
+
 function verwachtingUrl(cfg){
   const lat=cfg.plaatsen.map(p=>p.lat).join(","),lon=cfg.plaatsen.map(p=>p.lon).join(",");
-  return "https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+
-    "&daily=temperature_2m_max,temperature_2m_min,snowfall_sum,precipitation_sum&hourly=snow_depth"+
+  const velden=cfg.soort==="middernacht"
+    ?"&hourly=temperature_2m,precipitation,precipitation_probability,wind_speed_10m,wind_gusts_10m,wind_direction_10m,visibility"
+    :"&daily=temperature_2m_max,temperature_2m_min,snowfall_sum,precipitation_sum&hourly=snow_depth";
+  return "https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+velden+
     "&timezone="+encodeURIComponent(cfg.tijdzone)+"&forecast_days="+cfg.vensterDagen;
 }
 function verwerkAntwoord(json,t,cfg){
@@ -112,7 +171,7 @@ function verwerkAntwoord(json,t,cfg){
   if(lijst.length!==cfg.plaatsen.length)throw new Error("Onverwacht aantal plaatsen in de verwachting");
   return cfg.plaatsen.map((plaats,i)=>{
     const dagen={};
-    for(const d of t.dagen)if(d.zichtbaar)dagen[d.iso]=dagWaarden(lijst[i],d.iso,cfg.ochtendUur);
+    for(const d of t.dagen)if(d.zichtbaar)dagen[d.iso]=cfg.soort==="middernacht"?nachtWaarden(lijst[i],d.iso,cfg):dagWaarden(lijst[i],d.iso,cfg.ochtendUur);
     return {plaats,dagen};
   });
 }
@@ -146,12 +205,34 @@ function dagTabel(dag,resultaten){
   sectie.append(tabel);
   return sectie;
 }
+/* "Droog · kans 10%": op mobiel komt het tweede deel op een eigen, kleinere regel. */
+function tweedelig(tekst,attrs){
+  const i=tekst.indexOf(" · ");
+  return i<0?el("td",attrs||{},tekst):el("td",attrs||{},[tekst.slice(0,i),el("span",{class:"sep"}," · "),el("span",{class:"sub"},tekst.slice(i+3))]);
+}
+function nachtTabel(dag,resultaten,cfg){
+  const sectie=el("section",{class:"seizoen-dag","data-datum":dag.iso});
+  const eerste=cfg.uren[0],laatste=cfg.uren[cfg.uren.length-1];
+  const van=uurStempel(dag.iso,eerste),tot=uurStempel(dag.iso,laatste);
+  sectie.append(el("h3",{},[cfg.teksten.nachtKop+" ",el("span",{},`${datumTekst(van.slice(0,10),false)} ${van.slice(11)} – ${datumTekst(tot.slice(0,10),false)} ${tot.slice(11)}`)]));
+  const tabel=el("table",{class:"seizoen-nacht"});
+  tabel.append(el("thead",{},el("tr",{},[el("th",{scope:"col"},"Plaats"),el("th",{scope:"col"},"Neerslag"),el("th",{scope:"col"},"Wind"),el("th",{scope:"col"},"Temp.")])));
+  const body=el("tbody",{});
+  for(const r of resultaten){
+    const w=r.dagen[dag.iso];
+    body.append(el("tr",{},[plaatsCel(r.plaats),tweedelig(neerslagTekst(w)),tweedelig(windTekst(w)),el("td",{class:"temp"},w?graden(w.temp):"–")]));
+  }
+  tabel.append(body);
+  sectie.append(tabel);
+  return sectie;
+}
 function toon(doel,t,resultaten,cfg){
   doel.replaceChildren();
-  const tekst=samenvatting(t,resultaten,cfg);
-  if(tekst)doel.append(el("p",{class:"seizoen-samenvatting"},tekst));
+  const nacht=cfg.soort==="middernacht";
+  const zinnen=nacht?nachtSamenvatting(t,resultaten,cfg):[samenvatting(t,resultaten,cfg)].filter(Boolean);
+  for(const z of zinnen)doel.append(el("p",{class:"seizoen-samenvatting"},z));
   for(const dag of t.dagen){
-    if(dag.zichtbaar)doel.append(dagTabel(dag,resultaten));
+    if(dag.zichtbaar)doel.append(nacht?nachtTabel(dag,resultaten,cfg):dagTabel(dag,resultaten));
     else if(dag.over>0)doel.append(el("p",{class:"seizoen-later"},vul(cfg.teksten.dagLater,{dag:dag.label,datum:datumTekst(dag.vanaf,true)})));
   }
   doel.append(el("p",{class:"klein"},cfg.teksten.toelichting));
@@ -185,7 +266,7 @@ async function start(){
   }
 }
 
-const api={datumISO,dagenTussen,plusDagen,datumTekst,vandaagIn,vul,toestand,aftelTekst,meldingTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,verwachtingUrl,verwerkAntwoord};
+const api={datumISO,dagenTussen,plusDagen,datumTekst,vandaagIn,vul,toestand,aftelTekst,meldingTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 else if(typeof document!=="undefined"){
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();

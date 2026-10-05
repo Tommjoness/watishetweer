@@ -106,7 +106,9 @@
   const PROVINCIE = { "Noord-Holland": "North Holland", "Zuid-Holland": "South Holland", "Noord-Brabant": "North Brabant", "Fryslân": "Friesland" };
   /* Plaatsen met een eigen Engelse naam. Plaatsnamen uit het zoeken komen al in het Engels binnen (start-en.js). */
   const PLAATS = { "Den Haag": "The Hague" };
-  const KERSTDAG = { "eerste kerstdag": "Christmas Day", "tweede kerstdag": "Boxing Day" };
+  const KERSTDAG = { "eerste kerstdag": "Christmas Day", "tweede kerstdag": "Boxing Day", "oudejaarsdag": "New Year's Eve" };
+  /* Plaatsnamen in een opsomming blijven staan; alleen het voegwoord wordt Engels. */
+  const opsomming = nl => String(nl).replace(/ en /g, " and ");
   const plaats = n => PLAATS[n] || n;
   /* "do 12:00" of "12:00" → "Thu 12:00" of "12:00". */
   function tijdstip(s) {
@@ -691,6 +693,18 @@
     "De verwachting is op dit moment niet beschikbaar. Probeer het later opnieuw, of bekijk het weer voor je eigen plaats.":
       "The forecast is not available at the moment. Please try again later, or check the weather for your own location.",
 
+    /* Seizoenspagina oud en nieuw (vaste teksten) */
+    "Oud en nieuw": "New Year's Eve",
+    "Hoe wordt het weer met oud en nieuw? Zodra de nacht binnen de 7-daagse verwachting valt, staat hier per plaats de verwachting van 22:00 tot 02:00: neerslag, wind, temperatuur en mist, voor zeven grote plaatsen verspreid over Nederland.":
+      "What will the weather be like on New Year's Eve? Once the night falls within the 7-day forecast, this page shows the forecast from 22:00 to 02:00 for each place: precipitation, wind, temperature and fog, for seven large places across the Netherlands.",
+    "Waar let je op rond middernacht?": "What matters around midnight?",
+    "Rond de jaarwisseling zijn vooral neerslag, wind en zicht van belang. Bij harde windstoten waait vuurwerk sneller af. Bij weinig wind en mist blijft vuurwerkrook langer hangen, waardoor je minder ver kunt zien.":
+      "Around the turn of the year, precipitation, wind and visibility matter most. In strong gusts, fireworks drift off course more easily. With little wind and fog, firework smoke lingers for longer, so you cannot see as far.",
+    "Rond middernacht blijft het volgens de huidige verwachting overal droog.": "According to the current forecast, it will stay dry everywhere around midnight.",
+    "Temp.": "Temp.",
+    "Neerslag is opgeteld over 22:00 tot 02:00, met de hoogste kans in één uur. Wind is het gemiddelde met de hoogste windstoot; temperatuur en windrichting gelden voor middernacht. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.":
+      "Precipitation is the total from 22:00 to 02:00, with the highest chance in any one hour. Wind is the average with the strongest gust; temperature and wind direction apply at midnight. A forecast a week ahead can still change considerably; this page always shows the latest. Source: Open-Meteo.",
+
     /* Over-pagina */
     "Over watishetweer.nl": "About watishetweer.nl",
     "Wat je hier vindt": "What you will find here",
@@ -897,9 +911,9 @@
     [/^Witte kerst (\d{4}): kans op sneeuw met kerst \| watishetweer\.nl$/, (m) => `White Christmas ${m[1]}: chance of snow at Christmas | watishetweer.nl`],
     [/^De verwachting voor eerste en tweede kerstdag verschijnt hier op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december), zeven dagen van tevoren\.$/,
       (m) => `The forecast for Christmas Day and Boxing Day will appear here on ${dagVol(m[1])} ${m[2]} ${maand(m[3])}, seven days in advance.`],
-    [/^Nog (\d+) dagen tot (eerste kerstdag|tweede kerstdag)\.$/, (m) => `${m[1]} days to go until ${KERSTDAG[m[2]]}.`],
-    [/^Morgen is het (eerste kerstdag|tweede kerstdag)\.$/, (m) => `Tomorrow is ${KERSTDAG[m[1]]}.`],
-    [/^Vandaag is het (eerste kerstdag|tweede kerstdag)\.$/, (m) => `Today is ${KERSTDAG[m[1]]}.`],
+    [/^Nog (\d+) dagen tot (eerste kerstdag|tweede kerstdag|oudejaarsdag)\.$/, (m) => `${m[1]} days to go until ${KERSTDAG[m[2]]}.`],
+    [/^Morgen is het (eerste kerstdag|tweede kerstdag|oudejaarsdag)\.$/, (m) => `Tomorrow is ${KERSTDAG[m[1]]}.`],
+    [/^Vandaag is het (eerste kerstdag|tweede kerstdag|oudejaarsdag)\.$/, (m) => `Today is ${KERSTDAG[m[1]]}.`],
     [/^Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in (.+)\. Blijft dat zo, dan is het officieel een witte kerst\.$/,
       (m) => `According to the current forecast, there will be snow on the ground in ${plaats(m[1])} on both Christmas Day and Boxing Day. If that holds, it will officially be a white Christmas.`],
     [/^Volgens de huidige verwachting wordt het geen officiële witte kerst: in (.+) ligt op (eerste kerstdag|tweede kerstdag) geen sneeuwdek\.$/,
@@ -916,6 +930,22 @@
     [/^Wat sneeuw \((\d+) cm\), geen sneeuwdek$/, (m) => `Some snow (${m[1]} cm), no snow cover`],
     [/^Wat sneeuw \(minder dan 1 cm\), geen sneeuwdek$/, () => "Some snow (less than 1 cm), no snow cover"],
     [new RegExp(`^Geen sneeuw, ${G} mm regen$`), (m) => `No snow, ${getal(m[1])} mm of rain`],
+
+    /* Seizoenspagina oud en nieuw */
+    [/^Oud en nieuw (\d{4})$/, (m) => `New Year's Eve ${m[1]}`],
+    [/^Weer oud en nieuw (\d{4}): neerslag, wind en mist rond middernacht \| watishetweer\.nl$/, (m) => `New Year's Eve weather ${m[1]}: precipitation, wind and fog around midnight | watishetweer.nl`],
+    [/^De verwachting voor de nacht van oud en nieuw verschijnt hier op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december), zodra die binnen de 7-daagse verwachting valt\.$/,
+      (m) => `The forecast for New Year's Eve night will appear here on ${dagVol(m[1])} ${m[2]} ${maand(m[3])}, once it falls within the 7-day forecast.`],
+    [/^(\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) (\d{2}:\d{2}) – (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) (\d{2}:\d{2})$/, (m) => `${m[1]} ${maand(m[2])} ${m[3]} – ${m[4]} ${maand(m[5])} ${m[6]}`],
+    [/^Rond middernacht (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) (\d{2}:\d{2}) – (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) (\d{2}:\d{2})$/, (m) => `Around midnight ${m[1]} ${maand(m[2])} ${m[3]} – ${m[4]} ${maand(m[5])} ${m[6]}`],
+    [/^Droog · kans (\d+)%$/, (m) => `Dry · chance ${m[1]}%`],
+    [/^kans (\d+)%$/, (m) => `chance ${m[1]}%`],
+    [/^stoten (\d+)$/, (m) => `gusts ${m[1]}`],
+    [new RegExp(`^${G} mm · kans (\\d+)%$`), (m) => `${getal(m[1])} mm · chance ${m[2]}%`],
+    [/^(?:(N|NO|O|ZO|Z|ZW|W|NW) )?(\d+) km\/u · stoten (\d+)$/, (m) => `${m[1] ? RICHTING_KORT[m[1]] + " " : ""}${m[2]} km/h · gusts ${m[3]}`],
+    [/^Rond middernacht valt er volgens de huidige verwachting neerslag in (.+)\.$/, (m) => `According to the current forecast, there will be precipitation around midnight in ${opsomming(m[1])}.`],
+    [/^Windstoten van (\d+) km\/u of meer in (.+)\.$/, (m) => `Gusts of ${m[1]} km/h or more in ${opsomming(m[2])}.`],
+    [/^Kans op mist \(zicht onder 1 km\) in (.+)\.$/, (m) => `Chance of fog (visibility below 1 km) in ${opsomming(m[1])}.`],
 
     /* Dagen en datums */
     [new RegExp(`^${D} (\\d{1,2})$`), (m) => `${dagKort(m[1])} ${m[2]}`],

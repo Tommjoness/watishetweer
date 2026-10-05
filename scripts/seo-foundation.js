@@ -98,10 +98,11 @@ function pasSeoFoundationToe(html){
   const privacyAnker='<span class="bron"><a href="/privacy.html">Privacy &amp; gegevens</a></span>';
   if(tel(bron,privacyAnker)!==1)throw new Error("SEO verwacht exact één privacyregel als veilig footeranker voor de merkverwijzing.");
   const brandLink=`${BRAND_LINK_MARKER}\n      <span class="bron"><a href="/over/">Over deze site</a></span>`;
-  /* Seizoenspagina's (witte kerst) staan als eigen footerregel vóór Over en
-     Privacy, zodat ze vanaf iedere weerpagina crawlbaar zijn. De laatste twee
-     span.bron-items blijven Over en Privacy: daarop rust de footerindeling. */
-  const seizoenLinks=SEIZOENSPAGINAS.map(p=>`<span class="bron"><a href="/${p.slug}/">${p.naam}</a></span>\n      `).join("");
+  /* Seizoenspagina's staan als eigen footerregel vóór Over en Privacy, zodat ze
+     vanaf iedere weerpagina crawlbaar zijn. De laatste twee span.bron-items
+     blijven Over en Privacy: daarop rust de footerindeling. Op mobiel zet de
+     onderkantlaag ze via .seizoen-link in beeld achter Privacy. */
+  const seizoenLinks=SEIZOENSPAGINAS.map(p=>`<span class="bron seizoen-link"><a href="/${p.slug}/">${p.naam}</a></span>\n      `).join("");
   bron=bron.replace(privacyAnker,brandLink.replace(BRAND_LINK_MARKER+"\n      ",BRAND_LINK_MARKER+"\n      "+seizoenLinks)+"\n      "+privacyAnker);
 
   return bron;
