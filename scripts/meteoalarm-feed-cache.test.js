@@ -53,8 +53,9 @@ function vraag(lat,lon){
     assert.equal(maastricht.body.dekking,true);
     assert.equal(maastricht.body.lijst.length,0,"de gecachte feed wordt per coördinaat opnieuw tegen het gebied getoetst");
     for(const [sleutel,response] of cache.map){
-      assert.ok(sleutel.startsWith(COMPAT+"?__wiw_feed_cache=v1"),"feedcache gebruikt een eigen, geversioneerde sleutel");
-      assert.match(response.headers.get("cache-control")||"",/max-age=300/,"feedcache bewaart maximaal vijf minuten");
+      assert.ok(sleutel.startsWith(COMPAT+"?__wiw_feed_cache=v2"),"feedcache gebruikt een eigen, geversioneerde sleutel");
+      assert.match(response.headers.get("cache-control")||"",/max-age=900/,"feedcache bewaart maximaal een kwartier (vers: vijf minuten)");
+      assert.ok(Number(response.headers.get("x-wiw-feed-opgeslagen"))>0,"feedcache bewaart het moment van opslaan");
     }
 
     /* Een ongeldige (niet-JSON) compatibiliteitsrespons wordt nooit gecachet. */

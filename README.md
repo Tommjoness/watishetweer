@@ -63,6 +63,8 @@ Zonder deze variabele blijft `https://nominatim.openstreetmap.org` de standaard.
 
 Een waarschuwing wordt alleen als plaatsgebonden kaart doorgegeven wanneer de server expliciet bewijs voor die plaatsdekking heeft. Landbrede of onbekende scope wordt niet als lokale waarschuwing gepresenteerd.
 
+De MeteoAlarm-feed per land kan groot zijn (Spanje: 3,5 MB, ruim 7 seconden). De route wacht hooguit 4 seconden en geeft anders het landbrede Atom-antwoord; de download loopt dan via `waitUntil` door. In `caches.default` komt een compacte kopie (alleen lopende waarschuwingen en de gebruikte velden; Spanje ongeveer 0,2 MB) die vijf minuten vers is en tot een kwartier bruikbaar blijft terwijl op de achtergrond een nieuwe wordt opgehaald. Die cache is per Cloudflare-datacenter.
+
 ## Belangrijkste externe bronnen
 
 | Onderdeel | Bron |

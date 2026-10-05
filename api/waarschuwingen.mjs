@@ -16,7 +16,9 @@ function methodeNietToegestaan() {
 }
 
 export default {
-  async fetch(request) {
+  /* ctx (Cloudflare) geeft waitUntil: een grote MeteoAlarm-landfeed mag dan na
+     het antwoord verder downloaden en in de cache komen. */
+  async fetch(request, env, ctx) {
     const method = String(request.method || "GET").toUpperCase();
     if (method !== "GET" && method !== "HEAD") return methodeNietToegestaan();
 
@@ -33,7 +35,8 @@ export default {
     };
 
     try {
-      await legacyHandler({ query }, response);
+      const waitUntil = ctx && typeof ctx.waitUntil === "function" ? belofte => ctx.waitUntil(belofte) : undefined;
+      await legacyHandler({ query, waitUntil }, response);
       body = alleenPlaatsgebonden(body);
     } catch (error) {
       console.error("[api/waarschuwingen] onverwachte serverfout", error);
