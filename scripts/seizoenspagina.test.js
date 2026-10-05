@@ -141,6 +141,27 @@ assert.equal(R.aftelTekst(R.toestand("2026-12-31",oud),oud),"Vandaag is het oude
 t=R.toestand("2027-01-01",oud);
 assert.equal(t.jaar,2027,"na oudejaarsdag schuift de pagina door naar volgend jaar");
 assert.equal(t.vanaf,"2027-12-26");
+/* De nacht loopt door tot 1 januari 02:00: tot dat uur blijft de pagina bij
+   deze jaarwisseling, met de verwachting en past_days=1 voor gisteravond. */
+assert.equal(R.eindUur(oud),26);assert.equal(R.eindUur(kerst),24);
+t=R.toestand("2027-01-01",oud,1);
+assert.equal(t.jaar,2026,"om 01:00 op 1 januari loopt de nacht nog");
+assert.equal(t.fase,"verwachting");
+assert.deepEqual(t.dagen.map(d=>[d.iso,d.over,d.bezig,d.zichtbaar]),[["2026-12-31",-1,true,true]]);
+assert.equal(R.aftelTekst(t,oud),"De nacht van oud en nieuw is nu bezig.");
+assert(R.verwachtingUrl(oud,t).endsWith("&forecast_days=7&past_days=1"),"lopende nacht haalt gisteravond erbij");
+assert(!R.verwachtingUrl(oud,R.toestand("2026-12-31",oud,23)).includes("past_days"),"op oudejaarsavond zelf geen past_days");
+t=R.toestand("2027-01-01",oud,2);
+assert.equal(t.jaar,2027,"om 02:00 is de nacht voorbij en schuift de pagina door");
+assert.equal(R.aftelTekst(t,oud),"Nog 364 dagen tot oudejaarsdag.");
+assert.equal(R.toestand("2026-12-31",oud,23).jaar,2026);
+assert.equal(R.aftelTekst(R.toestand("2026-12-31",oud,23),oud),"Vandaag is het oudejaarsdag.");
+assert.equal(R.toestand("2027-01-02",oud,1).jaar,2027,"de dag erna is de nacht nooit meer bezig");
+assert.equal(R.toestand("2026-12-27",kerst,0).jaar,2027,"witte kerst (zonder uren) schuift om middernacht door");
+assert.equal(R.toestand("2026-12-26",kerst,23).jaar,2026);
+const nu=R.nuIn("Europe/Amsterdam",new Date("2026-12-31T23:30:00Z"));
+assert.deepEqual(nu,{datum:"2027-01-01",uur:0},"nuIn geeft datum en uur in Nederlandse tijd (CET, UTC+1)");
+assert.deepEqual(R.nuIn("Europe/Amsterdam",new Date("2026-10-25T00:30:00Z")),{datum:"2026-10-25",uur:2},"zomertijd: 00:30 UTC = 02:30 CEST");
 assert.equal(R.uurStempel("2026-12-31",22),"2026-12-31T22:00");
 assert.equal(R.uurStempel("2026-12-31",24),"2027-01-01T00:00","uur 24 is middernacht op 1 januari, over de jaargrens");
 assert.equal(R.uurStempel("2026-12-31",26),"2027-01-01T02:00");

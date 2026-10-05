@@ -165,13 +165,33 @@ function controleerTimerOwners(owners,fase){
       const context=await browser.newContext({serviceWorkers:"block"});
       const page=await context.newPage();
       const errors=[];page.on("pageerror",e=>errors.push(String(e)));
-      await page.route(/\/app-[0-9a-f]{12}\.min\.js$/,r=>r.abort("failed"));
+      let appRequests=0;
+      await page.route(/\/app-[0-9a-f]{12}\.min\.js$/,r=>{appRequests++;return r.abort("failed");});
       await page.goto(base+route,{waitUntil:"load"});
-      await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="failed",null,{timeout:5000});
+      await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="failed",null,{timeout:8000});
+      assert.equal(appRequests,2,`${route}: na een mislukte appdownload volgt precies één automatische herlaadpoging`);
+      assert.equal(await page.evaluate(()=>performance.getEntriesByType("navigation")[0]?.type),"reload",`${route}: de foutmelding staat pas na de herlaadpoging`);
       assert(await page.locator("#bootstrap-failure").isVisible(),`${route}: geblokkeerde hoofdapp moet duidelijke herstelstate tonen`);
       assert.equal(await page.locator("#state").isVisible(),false,`${route}: oude eindeloze laadstate moet bij appstartfout verdwijnen`);
       for(const id of ["q","here","ververs","thema-auto","thema-switch"])assert.equal(await page.locator("#"+id).isDisabled(),true,`${route}: ${id} moet bij appstartfout disabled zijn`);
       assert.deepEqual(errors,[],`${route}: blocked-main-pad mag geen pageerror veroorzaken`);
+      await context.close();
+    }
+
+    /* Deploy-wissel: de eerste appdownload mislukt, de automatische herlaadpoging
+       slaagt. De bezoeker ziet geen foutmelding en hoeft niets te doen. */
+    {
+      const context=await browser.newContext({serviceWorkers:"block"});
+      const page=await context.newPage(),errors=[];page.on("pageerror",e=>errors.push(String(e)));
+      let appRequests=0;
+      await page.route(/\/app-[0-9a-f]{12}\.min\.js$/,r=>{appRequests++;return appRequests===1?r.abort("failed"):r.continue();});
+      await page.goto(base+"/",{waitUntil:"load"});
+      await wachtReady(page,15000);
+      assert.equal(appRequests,2,"eenmalige herlaadpoging haalt de app opnieuw op");
+      assert.equal(await page.locator("#bootstrap-failure").isVisible(),false,"geslaagde herlaadpoging toont geen foutmelding");
+      for(const id of ["q","here","ververs","thema-auto","thema-switch"])assert.equal(await page.locator("#"+id).isDisabled(),false,`herlaadpoging: ${id} moet actief zijn`);
+      assert.equal(await page.evaluate(()=>{try{return sessionStorage.getItem("weathernow:herstartpoging");}catch(e){return "fout";}}),null,"na een geslaagde start is de herlaadmarkering opgeruimd");
+      assert.deepEqual(errors,[],"herlaadpoging mag geen pageerror veroorzaken");
       await context.close();
     }
 
@@ -251,7 +271,7 @@ function controleerTimerOwners(owners,fase){
       await context.close();
     }
 
-    console.log("Release-herstel-E2E geslaagd: no-JS, blocked-main op root/Amsterdam, echte 12s→13s late success zonder reload, route-refresh-determinisme en BFCache-freshness/intervalownerstabiliteit.");
+    console.log("Release-herstel-E2E geslaagd: no-JS, blocked-main op root/Amsterdam (na één automatische herlaadpoging), deploy-wissel hersteld door die herlaadpoging, echte 12s→13s late success zonder reload, route-refresh-determinisme en BFCache-freshness/intervalownerstabiliteit.");
   }finally{
     await browser.close().catch(()=>{});
     await new Promise(resolve=>server.close(resolve));

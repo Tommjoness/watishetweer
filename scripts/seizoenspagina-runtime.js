@@ -21,29 +21,41 @@ function datumTekst(iso,metDagnaam){
   const kort=`${t.getUTCDate()} ${MAANDEN[t.getUTCMonth()]}`;
   return metDagnaam?`${DAGNAMEN[t.getUTCDay()]} ${kort}`:kort;
 }
-/* De kalenderdag in de tijdzone van het evenement, niet die van de bezoeker. */
-function vandaagIn(tijdzone,nu){
-  const delen=new Intl.DateTimeFormat("en-CA",{timeZone:tijdzone,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(nu);
+/* De kalenderdag en het uur in de tijdzone van het evenement, niet die van de
+   bezoeker. */
+function nuIn(tijdzone,nu){
+  const delen=new Intl.DateTimeFormat("en-CA",{timeZone:tijdzone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",hourCycle:"h23"}).formatToParts(nu);
   const deel=type=>delen.find(d=>d.type===type).value;
-  return `${deel("year")}-${deel("month")}-${deel("day")}`;
+  return {datum:`${deel("year")}-${deel("month")}-${deel("day")}`,uur:Number(deel("hour"))%24};
 }
+function vandaagIn(tijdzone,nu){return nuIn(tijdzone,nu).datum;}
 function vul(sjabloon,waarden){return String(sjabloon).replace(/\{(\w+)\}/g,(m,k)=>Object.prototype.hasOwnProperty.call(waarden,k)?String(waarden[k]):m);}
 function klein(label){return String(label).charAt(0).toLowerCase()+String(label).slice(1);}
 
+/* Tot welk uur (vanaf middernacht aan het begin van de evenementdag) een
+   evenementdag loopt: het laatste uur uit cfg.uren (26 = 02:00 de dag erna),
+   anders het einde van de dag. */
+function eindUur(cfg){return Array.isArray(cfg.uren)&&cfg.uren.length?Math.max(...cfg.uren):24;}
+/* Een evenementdag van gisteren is nog "bezig" zolang zijn uren doorlopen,
+   zoals de nacht van oud en nieuw tot 1 januari 02:00. Zonder uur (unit-tests
+   op alleen een datum) is een voorbije dag nooit bezig. */
+function bezig(over,uur,cfg){return over<0&&uur!=null&&-over*24+uur<eindUur(cfg);}
+
 /* Welk jaar, welke dagen al binnen het venster vallen en vanaf wanneer de
    verwachting er is. Na de laatste evenementdag schuift de pagina door naar
-   volgend jaar. cfg.extraDagen: zoveel dagen ná een evenementdag zijn ook
-   nodig (de nacht van oud en nieuw loopt door tot 1 januari 02:00); een dag
-   telt pas als zichtbaar wanneer ook die volgende dag(en) in het venster
-   vallen. */
-function toestand(vandaag,cfg){
+   volgend jaar, maar pas als die dag niet meer bezig is. cfg.extraDagen:
+   zoveel dagen ná een evenementdag zijn ook nodig (de nacht van oud en nieuw
+   loopt door tot 1 januari 02:00); een dag telt pas als zichtbaar wanneer ook
+   die volgende dag(en) in het venster vallen. */
+function toestand(vandaag,cfg,uur){
   const laatste=cfg.dagen[cfg.dagen.length-1];
   const extra=cfg.extraDagen||0;
   const jaarNu=Number(vandaag.slice(0,4));
-  const jaar=dagenTussen(vandaag,datumISO(jaarNu,laatste.maand,laatste.dag))>=0?jaarNu:jaarNu+1;
+  const voorbij=j=>{const over=dagenTussen(vandaag,datumISO(j,laatste.maand,laatste.dag));return over<0&&!bezig(over,uur,cfg);};
+  const jaar=[jaarNu-1,jaarNu].find(j=>!voorbij(j))||jaarNu+1;
   const dagen=cfg.dagen.map(d=>{
-    const iso=datumISO(jaar,d.maand,d.dag),over=dagenTussen(vandaag,iso);
-    return {label:d.label,iso,over,zichtbaar:over>=0&&over+extra<=cfg.vensterDagen-1,vanaf:plusDagen(iso,-(cfg.vensterDagen-1-extra))};
+    const iso=datumISO(jaar,d.maand,d.dag),over=dagenTussen(vandaag,iso),loopt=bezig(over,uur,cfg);
+    return {label:d.label,iso,over,bezig:loopt,zichtbaar:(over>=0||loopt)&&over+extra<=cfg.vensterDagen-1,vanaf:plusDagen(iso,-(cfg.vensterDagen-1-extra))};
   });
   return {vandaag,jaar,dagen,vanaf:dagen[0].vanaf,fase:dagen.some(d=>d.zichtbaar)?"verwachting":"ver"};
 }
@@ -51,6 +63,8 @@ function toestand(vandaag,cfg){
 function aftelTekst(t,cfg){
   const vandaagDag=t.dagen.find(d=>d.over===0);
   if(vandaagDag)return vul(cfg.teksten.aftellenVandaag,{dag:klein(vandaagDag.label)});
+  const lopend=t.dagen.find(d=>d.bezig);
+  if(lopend)return vul(cfg.teksten.aftellenBezig||cfg.teksten.aftellenVandaag,{dag:klein(lopend.label)});
   const eerste=t.dagen[0];
   if(eerste.over===1)return vul(cfg.teksten.aftellenMorgen,{dag:klein(eerste.label)});
   return vul(cfg.teksten.aftellenMeer,{n:eerste.over,dag:klein(eerste.label)});
@@ -158,13 +172,16 @@ function nachtSamenvatting(t,resultaten,cfg){
   return zinnen;
 }
 
-function verwachtingUrl(cfg){
+/* Loopt de nacht nog (1 januari 01:00), dan begint de verwachting van vandaag
+   pas om 00:00: past_days=1 haalt de uren van gisteravond erbij. */
+function verwachtingUrl(cfg,t){
   const lat=cfg.plaatsen.map(p=>p.lat).join(","),lon=cfg.plaatsen.map(p=>p.lon).join(",");
   const velden=cfg.soort==="middernacht"
     ?"&hourly=temperature_2m,precipitation,precipitation_probability,wind_speed_10m,wind_gusts_10m,wind_direction_10m,visibility"
     :"&daily=temperature_2m_max,temperature_2m_min,snowfall_sum,precipitation_sum&hourly=snow_depth";
   return "https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+velden+
-    "&timezone="+encodeURIComponent(cfg.tijdzone)+"&forecast_days="+cfg.vensterDagen;
+    "&timezone="+encodeURIComponent(cfg.tijdzone)+"&forecast_days="+cfg.vensterDagen+
+    (t&&t.dagen.some(d=>d.bezig)?"&past_days=1":"");
 }
 function verwerkAntwoord(json,t,cfg){
   const lijst=Array.isArray(json)?json:[json];
@@ -237,11 +254,26 @@ function toon(doel,t,resultaten,cfg){
   }
   doel.append(el("p",{class:"klein"},cfg.teksten.toelichting));
 }
+/* Wat de pagina toont hangt alleen af van deze sleutel: verandert hij (na
+   middernacht, of als de nacht van oud en nieuw om 02:00 voorbij is), dan
+   bouwt de pagina zichzelf opnieuw op, ook als hij al die tijd openstond. */
+function sleutel(t){return t.jaar+"|"+t.dagen.map(d=>d.over+(d.bezig?"b":"")).join(",");}
+function huidigeToestand(cfg){const n=nuIn(cfg.tijdzone,new Date());return toestand(n.datum,cfg,n.uur);}
+let getoond="",bewaakt=false;
+function bewaak(cfg){
+  if(bewaakt)return;
+  bewaakt=true;
+  const kijk=()=>{if(sleutel(huidigeToestand(cfg))!==getoond)start();};
+  setInterval(kijk,60000);
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")kijk();});
+}
 async function start(){
   const bron=document.getElementById("seizoen-config");
   if(!bron)return;
   const cfg=JSON.parse(bron.textContent);
-  const t=toestand(vandaagIn(cfg.tijdzone,new Date()),cfg);
+  const t=huidigeToestand(cfg);
+  getoond=sleutel(t);
+  bewaak(cfg);
   const kop=document.getElementById("seizoen-kop");
   if(kop)kop.textContent=`${cfg.naam} ${t.jaar}`;
   document.title=vul(cfg.titel,{jaar:t.jaar})+" | watishetweer.nl";
@@ -250,12 +282,13 @@ async function start(){
   const melding=document.getElementById("seizoen-melding");
   if(melding){melding.textContent=meldingTekst(t,cfg);melding.hidden=!melding.textContent;}
   const doel=document.getElementById("seizoen-verwachting");
-  if(!doel||t.fase!=="verwachting")return;
+  if(!doel)return;
+  if(t.fase!=="verwachting"){doel.replaceChildren();return;}
   doel.setAttribute("aria-busy","true");
   doel.replaceChildren(el("p",{class:"klein"},"Verwachting laden…"));
   try{
     const stop=new AbortController(),timer=setTimeout(()=>stop.abort(),10000);
-    const res=await fetch(verwachtingUrl(cfg),{signal:stop.signal});
+    const res=await fetch(verwachtingUrl(cfg,t),{signal:stop.signal});
     clearTimeout(timer);
     if(!res.ok)throw new Error("HTTP "+res.status);
     toon(doel,t,verwerkAntwoord(await res.json(),t,cfg),cfg);
@@ -266,7 +299,7 @@ async function start(){
   }
 }
 
-const api={datumISO,dagenTussen,plusDagen,datumTekst,vandaagIn,vul,toestand,aftelTekst,meldingTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord};
+const api={datumISO,dagenTussen,plusDagen,datumTekst,nuIn,vandaagIn,vul,eindUur,toestand,aftelTekst,meldingTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 else if(typeof document!=="undefined"){
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
