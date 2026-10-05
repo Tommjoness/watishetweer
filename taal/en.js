@@ -106,6 +106,7 @@
   const PROVINCIE = { "Noord-Holland": "North Holland", "Zuid-Holland": "South Holland", "Noord-Brabant": "North Brabant", "Fryslân": "Friesland" };
   /* Plaatsen met een eigen Engelse naam. Plaatsnamen uit het zoeken komen al in het Engels binnen (start-en.js). */
   const PLAATS = { "Den Haag": "The Hague" };
+  const KERSTDAG = { "eerste kerstdag": "Christmas Day", "tweede kerstdag": "Boxing Day" };
   const plaats = n => PLAATS[n] || n;
   /* "do 12:00" of "12:00" → "Thu 12:00" of "12:00". */
   function tijdstip(s) {
@@ -667,6 +668,29 @@
     "Wis lokale gegevens": "Clear local data",
     "Zelf wissen": "Clear it yourself",
 
+    /* Seizoenspagina witte kerst (vaste teksten) */
+    "Witte kerst": "White Christmas",
+    "Wordt het een witte kerst? Zeven dagen voor kerst staat hier de verwachting voor sneeuw op eerste en tweede kerstdag, voor De Bilt en zes grote plaatsen verspreid over Nederland.":
+      "Will it be a white Christmas? Seven days before Christmas, the snow forecast for Christmas Day and Boxing Day appears here, for De Bilt and six large places across the Netherlands.",
+    "Wanneer is het een witte kerst?": "When is it a white Christmas?",
+    "Er is officieel sprake van een witte kerst wanneer er in De Bilt op beide kerstdagen een gesloten sneeuwdek wordt gemeten. Sinds 1901 gebeurde dat acht keer; de laatste keer was in 2010.":
+      "Officially, it is a white Christmas when a continuous snow cover is measured in De Bilt on both Christmas Day and Boxing Day. Since 1901 this has happened eight times; the last time was in 2010.",
+    "Bron: KNMI": "Source: KNMI",
+    "Het weer voor jouw plaats": "The weather for your location",
+    "jouw plaats": "your location",
+    "Bekijk het actuele weer en de 7-daagse verwachting voor jouw plaats, of kies een plaats bij Weer per plaats.":
+      "See the current weather and 7-day forecast for your location, or choose a place under Weather by place.",
+    "Sneeuw": "Snow",
+    "Min / max": "Min / max",
+    "Verwachting laden…": "Loading forecast…",
+    "Geen sneeuw, droog": "No snow, dry",
+    "Geen gegevens": "No data",
+    "officiële meetplaats": "official measuring site",
+    "Sneeuwdek is de verwachte sneeuwhoogte in de ochtend. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.":
+      "Snow cover is the expected snow depth in the morning. A forecast a week ahead can still change considerably; this page always shows the latest. Source: Open-Meteo.",
+    "De verwachting is op dit moment niet beschikbaar. Probeer het later opnieuw, of bekijk het weer voor je eigen plaats.":
+      "The forecast is not available at the moment. Please try again later, or check the weather for your own location.",
+
     /* Over-pagina */
     "Over watishetweer.nl": "About watishetweer.nl",
     "Wat je hier vindt": "What you will find here",
@@ -867,6 +891,31 @@
     [new RegExp(`^De temperatuur blijft de komende uren rond ${G}( ?)°C\\.$`), (m) => `The temperature stays around ${getal(m[1])}${m[2]}°C over the coming hours.`],
     [/^Zonsondergang over (\d+) (minuut|minuten), (vandaag|morgen) om (\d{1,2}:\d{2})\.$/, (m) => `Sunset in ${m[1]} ${meervoud(m[1], "minute", "minutes")}, ${vandaagMorgen(m[3])} at ${m[4]}.`],
     [/^Zonsopkomst over (\d+) (minuut|minuten), (vandaag|morgen) om (\d{1,2}:\d{2})\.$/, (m) => `Sunrise in ${m[1]} ${meervoud(m[1], "minute", "minutes")}, ${vandaagMorgen(m[3])} at ${m[4]}.`],
+
+    /* Seizoenspagina witte kerst (teksten met jaar, datum, plaats of aantal) */
+    [/^Witte kerst (\d{4})$/, (m) => `White Christmas ${m[1]}`],
+    [/^Witte kerst (\d{4}): kans op sneeuw met kerst \| watishetweer\.nl$/, (m) => `White Christmas ${m[1]}: chance of snow at Christmas | watishetweer.nl`],
+    [/^De verwachting voor eerste en tweede kerstdag verschijnt hier op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december), zeven dagen van tevoren\.$/,
+      (m) => `The forecast for Christmas Day and Boxing Day will appear here on ${dagVol(m[1])} ${m[2]} ${maand(m[3])}, seven days in advance.`],
+    [/^Nog (\d+) dagen tot (eerste kerstdag|tweede kerstdag)\.$/, (m) => `${m[1]} days to go until ${KERSTDAG[m[2]]}.`],
+    [/^Morgen is het (eerste kerstdag|tweede kerstdag)\.$/, (m) => `Tomorrow is ${KERSTDAG[m[1]]}.`],
+    [/^Vandaag is het (eerste kerstdag|tweede kerstdag)\.$/, (m) => `Today is ${KERSTDAG[m[1]]}.`],
+    [/^Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in (.+)\. Blijft dat zo, dan is het officieel een witte kerst\.$/,
+      (m) => `According to the current forecast, there will be snow on the ground in ${plaats(m[1])} on both Christmas Day and Boxing Day. If that holds, it will officially be a white Christmas.`],
+    [/^Volgens de huidige verwachting wordt het geen officiële witte kerst: in (.+) ligt op (eerste kerstdag|tweede kerstdag) geen sneeuwdek\.$/,
+      (m) => `According to the current forecast, it will not be an official white Christmas: there is no snow cover in ${plaats(m[1])} on ${KERSTDAG[m[2]]}.`],
+    [/^Volgens de huidige verwachting ligt er op (eerste kerstdag|tweede kerstdag) sneeuw in (.+)\. De verwachting voor (eerste kerstdag|tweede kerstdag) verschijnt op (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.$/,
+      (m) => `According to the current forecast, there will be snow on the ground in ${plaats(m[2])} on ${KERSTDAG[m[1]]}. The forecast for ${KERSTDAG[m[3]]} will appear on ${m[4]} ${maand(m[5])}.`],
+    [/^(Eerste kerstdag|Tweede kerstdag): de verwachting verschijnt op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.$/,
+      (m) => `${KERSTDAG[m[1].toLowerCase()]}: the forecast will appear on ${dagVol(m[2])} ${m[3]} ${maand(m[4])}.`],
+    [/^(Eerste kerstdag|Tweede kerstdag) (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)$/,
+      (m) => `${KERSTDAG[m[1].toLowerCase()]} ${dagVol(m[2])} ${m[3]} ${maand(m[4])}`],
+    [/^(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)$/i, (m) => `${dagVol(m[1])} ${m[2]} ${maand(m[3])}`],
+    [/^(.+) officiële meetplaats$/, (m) => `${plaats(m[1])} official measuring site`],
+    [/^Sneeuwdek, (\d+) cm$/, (m) => `Snow cover, ${m[1]} cm`],
+    [/^Wat sneeuw \((\d+) cm\), geen sneeuwdek$/, (m) => `Some snow (${m[1]} cm), no snow cover`],
+    [/^Wat sneeuw \(minder dan 1 cm\), geen sneeuwdek$/, () => "Some snow (less than 1 cm), no snow cover"],
+    [new RegExp(`^Geen sneeuw, ${G} mm regen$`), (m) => `No snow, ${getal(m[1])} mm of rain`],
 
     /* Dagen en datums */
     [new RegExp(`^${D} (\\d{1,2})$`), (m) => `${dagKort(m[1])} ${m[2]}`],

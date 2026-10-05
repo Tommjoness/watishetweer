@@ -65,6 +65,10 @@ Een waarschuwing wordt alleen als plaatsgebonden kaart doorgegeven wanneer de se
 
 De MeteoAlarm-feed per land kan groot zijn (Spanje: 3,5 MB, ruim 7 seconden). De route wacht hooguit 4 seconden en geeft anders het landbrede Atom-antwoord; de download loopt dan via `waitUntil` door. In `caches.default` komt een compacte kopie (alleen lopende waarschuwingen en de gebruikte velden; Spanje ongeveer 0,2 MB) die vijf minuten vers is en tot een kwartier bruikbaar blijft terwijl op de achtergrond een nieuwe wordt opgehaald. Die cache is per Cloudflare-datacenter.
 
+## Seizoenspagina's
+
+Seizoenspagina's zoals `/witte-kerst/` hebben een vaste URL die ieder jaar terugkomt. Iedere pagina is alleen configuratie in `scripts/seizoenspagina.config.js` (datums, plaatsen, teksten); het sjabloon (`scripts/generate-seizoenspaginas.js`) en de browserlogica (`scripts/seizoenspagina-runtime.js`) zijn gedeeld. Buiten de 7-daagse verwachting toont de pagina alleen wanneer de verwachting verschijnt; daarbinnen haalt hij de echte Open-Meteo-verwachting op. Er is geen lange-termijnverwachting en geen klimaatstatistiek. De pagina's staan in de sitemap en als footerlink op iedere weerpagina.
+
 ## Belangrijkste externe bronnen
 
 | Onderdeel | Bron |
