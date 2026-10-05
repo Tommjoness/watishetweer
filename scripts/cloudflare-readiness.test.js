@@ -32,9 +32,13 @@ for (const naam of ["forecast", "neerslag", "plaatsnaam", "waarschuwingen"]) {
   if (naam === "neerslag") assert.ok(wrapper.includes("context.env"), "KNMI_WMS_API_KEY moet uitsluitend via de Cloudflare-secretbinding lopen");
   assert.ok(wrapper.includes("../../lib/cloudflare-edge-cache.mjs"));
   assert.ok(wrapper.includes("export async function onRequest(context)"));
+  /* waarschuwingen krijgt de hele context mee: waitUntil laat een grote
+     MeteoAlarm-landfeed na het antwoord verder downloaden. */
   const aanroep=naam==="forecast"||naam==="neerslag"
     ? `metEdgeCache(context, "${naam}", () => worker.fetch(context.request, context.env))`
-    : `metEdgeCache(context, "${naam}", () => worker.fetch(context.request))`;
+    : naam==="waarschuwingen"
+      ? `metEdgeCache(context, "${naam}", () => worker.fetch(context.request, context.env, context))`
+      : `metEdgeCache(context, "${naam}", () => worker.fetch(context.request))`;
   assert.ok(wrapper.includes(aanroep), `${naam}-wrapper omzeilt de veilige edge-cache of de bestaande handler`);
   assert.ok(!wrapper.includes("Vercel-CDN-Cache-Control"), `${naam}-wrapper bevat nog Vercel-vertaling`);
 }
