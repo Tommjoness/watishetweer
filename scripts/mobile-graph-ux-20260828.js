@@ -1648,7 +1648,9 @@ function werkBronnenBij(){
   if(typeof structureer==="function")structureer();
   const bron=document.querySelector("footer .bron-bronnen");if(!bron)return;
   const label=bron.querySelector(".bronlabel");if(label)label.textContent="Bronnen voor deze weergave";
-  const gebruik=bronGebruikUitResources(resourceEntries(),S.land,{forecastBeschikbaar:!!S.d,airBeschikbaar:false,forecastProvider:S.d&&S.d.provider||""});
+  /* CAMS hoort erbij zodra de luchtkwaliteit in beeld is, ook als die uit de
+     cache komt of de resource-timingbuffer van een lang open tab vol is. */
+  const gebruik=bronGebruikUitResources(resourceEntries(),S.land,{forecastBeschikbaar:!!S.d,airBeschikbaar:!!(S.air&&S.air.current),forecastProvider:S.d&&S.d.provider||""});
   const items=[...bron.querySelectorAll(".bronitem")];
   items.forEach(item=>{
     const naam=String(item.textContent||"").replace(/\s+/g," ").trim();
