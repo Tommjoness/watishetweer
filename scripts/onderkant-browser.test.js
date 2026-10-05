@@ -101,12 +101,12 @@ function meet(){
       const dagen={};for(const k of ["dwind","dmin","dmax"])dagen[k]=[tm(kop&&kop.querySelector("."+k)),tm(rij&&rij.querySelector("."+k))];
       const th=document.querySelector("#wiw-hour-table thead th:nth-child(5)"),td=document.querySelector("#wiw-hour-table tbody td.wiw-hour-wind");
       const nk=document.querySelector("#nights .row.night.kop>.score"),nr=[...document.querySelectorAll("#nights .row.night:not(.kop)")].find(zichtbaar);
-      const groep=nr?[nr.querySelector(".score"),nr.querySelector(".sbar")].filter(zichtbaar).map(e=>e.getBoundingClientRect()):[];
-      return {dagen,bereikZichtbaar:kop&&kop.querySelector(".bar")?getComputedStyle(kop.querySelector(".bar")).visibility:"",wind:[tm(th),tm(td)],zichtscore:[tm(nk),groep.length?(Math.min(...groep.map(r=>r.left))+Math.max(...groep.map(r=>r.right)))/2:null]};
+      const wolk=[tm(document.querySelector("#nights .row.night.kop>.nmeta:not(.wide)")),tm(nr&&nr.querySelector(".nmeta:not(.wide)"))];
+      return {dagen,bereikZichtbaar:kop&&kop.querySelector(".bar")?getComputedStyle(kop.querySelector(".bar")).visibility:"",wind:[tm(th),tm(td)],zichtscore:[tm(nk),tm(nr&&nr.querySelector(".score"))],bewolking:wolk};
     })(),
     nacht:(()=>{const kop=document.querySelector("#nights .row.night.kop"),rij=[...document.querySelectorAll("#nights .row.night:not(.kop)")].find(zichtbaar);if(!kop||!rij)return null;
       const m=e=>{if(!zichtbaar(e))return null;const r=e.getBoundingClientRect();return {m:(r.left+r.right)/2,a:getComputedStyle(e).textAlign};};
-      return {vensterKop:m(kop.querySelector(".nmeta.wide")),venster:m(rij.querySelector(".nachtvenster")),maanKop:m(kop.querySelector(".wiw-night-moon-head")),maan:m(rij.querySelector(".nachtmaan"))};})(),
+      return {oordeelKop:m(kop.querySelector(".sbar")),oordeel:m(rij.querySelector(".nachtadvies")),vensterKop:m(kop.querySelector(".nmeta.wide")),venster:m(rij.querySelector(".nachtvenster")),maanKop:m(kop.querySelector(".wiw-night-moon-head")),maan:m(rij.querySelector(".nachtmaan"))};})(),
     doelen:doelen.map(e=>{const s=getComputedStyle(e);return {t:(e.textContent||"").trim().slice(0,28),h:e.getBoundingClientRect().height,l:e.getBoundingClientRect().left,deco:s.textDecorationLine,rand:s.borderBottomWidth,schaduw:s.boxShadow};}),
     seo:seo?{kruimel:tekstLinks(seo.querySelector(".seo-breadcrumb")),kop:tekstLinks(seo.querySelector("h2")),kopGrootte:parseFloat(getComputedStyle(seo.querySelector("h2")).fontSize),tekst:tekstLinks(seo.querySelector("p")),buurt:tekstLinks(seo.querySelector(".seo-route-nearby-kop"))}:null,
     plaatsen:nav?{kop:tekstLinks(nav.querySelector(".seo-plaatsnav-kop")),eerste:navLinks[0]?tekstLinks(navLinks[0]):null,aantal:navLinks.length,hoogte:Math.min(...navLinks.map(a=>a.getBoundingClientRect().height)),hoogteBlok:nav.getBoundingClientRect().height}:null,
@@ -154,9 +154,12 @@ function meet(){
           for(const [naam,[kop,waarde]] of Object.entries(k.dagen))assert(kop!==null&&waarde!==null&&Math.abs(kop-waarde)<=2,label+": Zeven dagen, kop "+naam+" staat niet boven de waarden ("+kop+" tegen "+waarde+")");
           assert.equal(k.bereikZichtbaar,"hidden",label+": het woord Temp.bereik staat nog in de kop van Zeven dagen");
           assert(k.wind[0]!==null&&k.wind[1]!==null&&Math.abs(k.wind[0]-k.wind[1])<=2,label+": uurtabel, kop Wind staat niet boven de windwaarden ("+k.wind.join(" tegen ")+")");
-          assert(k.zichtscore[0]!==null&&k.zichtscore[1]!==null&&Math.abs(k.zichtscore[0]-k.zichtscore[1])<=6,label+": Nachtzicht, kop Zichtscore staat niet midden boven score en balk ("+k.zichtscore.join(" tegen ")+")");
+          /* Zichtscore: het cijfer staat onder het midden van de kop, het balkje
+             ernaast; Bewolking: kop en percentage op hetzelfde midden (eigenaar, 5 oktober). */
+          assert(k.zichtscore[0]!==null&&k.zichtscore[1]!==null&&Math.abs(k.zichtscore[0]-k.zichtscore[1])<=2,label+": Nachtzicht, scorecijfer staat niet onder het midden van de kop Zichtscore ("+k.zichtscore.join(" tegen ")+")");
+          assert(k.bewolking[0]!==null&&k.bewolking[1]!==null&&Math.abs(k.bewolking[0]-k.bewolking[1])<=2,label+": Nachtzicht, kop Bewolking staat niet boven het percentage ("+k.bewolking.join(" tegen ")+")");
           const n=m.nacht;assert(n&&n.vensterKop&&n.venster,label+": Nachtzicht-kolommen niet gevonden: "+JSON.stringify(n));
-          const paren=[["Beste zichtperiode",n.vensterKop,n.venster]];if(w>=1360)paren.push(["Maan",n.maanKop,n.maan]);
+          const paren=[["Beoordeling",n.oordeelKop,n.oordeel],["Beste zichtperiode",n.vensterKop,n.venster]];if(w>=1360)paren.push(["Maan",n.maanKop,n.maan]);
           for(const [naam,kop,tekst] of paren)
             assert(kop&&tekst&&kop.a==="center"&&tekst.a==="center"&&Math.abs(kop.m-tekst.m)<=2,label+": Nachtzicht-kolom "+naam+" staat niet gecentreerd onder zijn kop: "+JSON.stringify({kop,tekst}));
         }
