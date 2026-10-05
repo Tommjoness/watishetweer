@@ -30,6 +30,9 @@ const zonderTiming=ux.bronGebruikUitResources([],"NL");
 assert.equal(zonderTiming.openmeteo,true,"Open-Meteo blijft als kernbron geattribueerd wanneer resource timing nog leeg is");
 assert.equal(zonderTiming.cams,false,"optionele CAMS-bron blijft zonder request verborgen");
 assert.equal(zonderTiming.knmi,false,"optionele KNMI-bron blijft zonder request verborgen");
+const luchtUitCache=ux.bronGebruikUitResources([],"NL",{airBeschikbaar:true});
+assert.equal(luchtUitCache.cams,true,"CAMS blijft vermeld als de getoonde luchtkwaliteit zonder nieuw request (cache, volle timingbuffer) in beeld is");
+assert(js.includes("airBeschikbaar:!!(S.air&&S.air.current)"),"footer leidt CAMS af uit de getoonde luchtkwaliteit, niet alleen uit resource timing");
 
 const bronnen=ux.bronGebruikUitResources([
   {name:"https://api.open-meteo.com/v1/forecast?x=1"},
