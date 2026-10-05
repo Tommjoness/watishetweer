@@ -21,7 +21,13 @@
 const WAARSCHUWING_TEKST={
   geen:"Geen officiële weerwaarschuwingen voor deze locatie.",
   nietBeschikbaar:"Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.",
-  fout:"Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald."
+  fout:"Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald.",
+  /* Waarschuwingen elders in het land die niet aan deze plaats te koppelen zijn
+     (warning-render-state.js): ook een eindtoestand. Als bronpatroon, omdat
+     de functie hieronder in de pagina draait. 4 oktober 2026, 02:39: "In
+     Nederland geldt nu code geel voor mist (…). Of dit ook voor deze plaats
+     geldt, kunnen we nog niet bepalen." gaf een time-out. */
+  elders:"^In .+ geldt nu code (?:geel|oranje|rood) .+\\. Of dit ook voor deze plaats geldt, kunnen we nog niet bepalen\\.$"
 };
 
 /* Draait in de pagina. Alles staat in één functie die Playwright als functie
@@ -43,11 +49,12 @@ function toestandInPagina({teksten,stabiel}){
     :wTekst===teksten.geen?"volledig"
     :wTekst===teksten.nietBeschikbaar?"niet-beschikbaar"
     :wTekst===teksten.fout?"fout"
+    :new RegExp(teksten.elders).test(wTekst)?"elders"
     :wTekst?"onbekend":"leeg";
   const t={briefing,briefingTekst:briefTekst.slice(0,200),waarschuwingen,waarschuwingenTekst:wTekst.slice(0,200),aantalWaarschuwingen:kaarten,
     fonts:document.fonts?document.fonts.status:"onbekend"};
   if(!stabiel)return t;
-  if(t.briefing!=="klaar"||!["volledig","niet-beschikbaar","fout"].includes(t.waarschuwingen)||t.fonts==="loading")return false;
+  if(t.briefing!=="klaar"||!["volledig","niet-beschikbaar","fout","elders"].includes(t.waarschuwingen)||t.fonts==="loading")return false;
   const maat=s=>{const e=document.querySelector(s);if(!e)return "-";const r=e.getBoundingClientRect();return Math.round(r.top+scrollY)+":"+Math.round(r.height);};
   const sig=[document.documentElement.scrollHeight,maat("#chart"),maat("#brief"),maat("#waarschuwingen"),maat("#days")].join("|");
   const st=window.__releaseEindtoestand||(window.__releaseEindtoestand={sig:"",n:0});

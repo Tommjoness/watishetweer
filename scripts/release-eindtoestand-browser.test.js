@@ -43,6 +43,8 @@ const SCENARIOS=[
   {naam:"volledig, geen waarschuwing",w:{json:{bron:"test",dekking:true,land:"NL",lijst:[]}},verwacht:"volledig",aantal:0},
   {naam:"volledig, één waarschuwing",w:{json:{bron:"test",dekking:true,land:"NL",lijst:[WAARSCHUWING]}},verwacht:"volledig",aantal:1},
   {naam:"niet beschikbaar",w:{json:{bron:"test",dekking:false,land:"NL"}},verwacht:"niet-beschikbaar"},
+  {naam:"elders in het land, niet te koppelen",w:{json:{bron:"MeteoAlarm netherlands",dekking:false,land:"NL",lijst:[],reden:"geen plaats-specifieke dekking",
+    elders:{land:"NL",landNaam:"Nederland",groepen:[{kleur:"geel",type:"mist",gebieden:["Gelderland","Utrecht","Zuid-Holland"],meer:0}]}}},verwacht:"elders"},
   {naam:"fout 503",w:{status:503,json:{error:true}},verwacht:"fout"},
   {naam:"fout, bron antwoordt nooit",w:{nooit:true},verwacht:"fout"},
   {naam:"trage waarschuwingen en KNMI",w:{json:{bron:"test",dekking:true,land:"NL",lijst:[]},vertraging:2500},knmiVertraging:2500,verwacht:"volledig",aantal:0}
@@ -98,5 +100,5 @@ const SCENARIOS=[
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
-  console.log("Releasebewijs-eindtoestanden OK: volledig, niet beschikbaar en fout, ook bij trage en hangende bronnen.");
+  console.log("Releasebewijs-eindtoestanden OK: volledig, niet beschikbaar, elders in het land en fout, ook bij trage en hangende bronnen.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});
