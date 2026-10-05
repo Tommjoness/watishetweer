@@ -57,6 +57,8 @@ jobs:
           fi
       - name: Seizoenspagina witte kerst in Chromium en WebKit
         run: node scripts/seizoenspagina-browser.test.js
+      - name: Seizoenspagina oud en nieuw in Chromium en WebKit
+        run: node scripts/seizoenspagina-oudnieuw-browser.test.js
       - name: Accessibility-landmark en mobiele footerdoelen in Chromium en WebKit
         shell: bash
         run: |

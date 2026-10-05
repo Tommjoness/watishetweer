@@ -18,7 +18,7 @@ for(const cfg of SEIZOENSPAGINAS){
     assert(b.maand*100+b.dag>a.maand*100+a.dag,`${cfg.slug}: dagen staan oplopend binnen één kalenderjaar`);
   }
   assert.equal(cfg.vensterDagen,7,`${cfg.slug}: venster gelijk aan de 7-daagse verwachting van de site`);
-  assert.equal(cfg.plaatsen.filter(p=>p.officieel).length,1,`${cfg.slug}: precies één officiële meetplaats`);
+  assert(cfg.plaatsen.filter(p=>p.officieel).length<=1,`${cfg.slug}: hoogstens één officiële meetplaats`);
   for(const p of cfg.plaatsen)assert(Number.isFinite(p.lat)&&Number.isFinite(p.lon)&&p.naam,`${cfg.slug}: plaats ${p.naam} heeft coördinaten`);
 }
 
@@ -125,4 +125,76 @@ assert(cfgJson,"runtimeconfig staat als data in de pagina");
 assert.equal(JSON.parse(cfgJson[1]).plaatsen.length,kerst.plaatsen.length);
 assert.equal(pagina(kerst,"2026-12-28").match(/<h1[^>]*>([^<]+)</)[1],"Witte kerst 2027","build na kerst toont volgend jaar");
 
-console.log("Seizoenspagina's: datumlogica (venster, aftelling, jaarwissel, tijdzone), sneeuwduiding, samenvatting en statische pagina OK.");
+/* ---------- Oud en nieuw: één nacht van 22:00 tot 02:00 ---------- */
+const oud=SEIZOENSPAGINAS.find(p=>p.slug==="oud-en-nieuw");
+assert(oud,"oud en nieuw staat in de config");
+assert.equal(oud.soort,"middernacht");
+assert.equal(new Set(SEIZOENSPAGINAS.map(p=>p.slug)).size,SEIZOENSPAGINAS.length,"slugs zijn uniek");
+t=R.toestand("2026-10-05",oud);
+assert.equal(t.fase,"ver");
+assert.equal(t.vanaf,"2026-12-26","de nacht loopt tot 1 januari: zichtbaar vanaf 26 december");
+assert.equal(R.aftelTekst(t,oud),"Nog 87 dagen tot oudejaarsdag.");
+assert.equal(R.meldingTekst(t,oud),"De verwachting voor de nacht van oud en nieuw verschijnt hier op zaterdag 26 december, zodra die binnen de 7-daagse verwachting valt.");
+assert.equal(R.toestand("2026-12-25",oud).fase,"ver","op 25 december valt 1 januari 02:00 nog buiten het venster");
+assert.equal(R.toestand("2026-12-26",oud).fase,"verwachting");
+assert.equal(R.aftelTekst(R.toestand("2026-12-31",oud),oud),"Vandaag is het oudejaarsdag.");
+t=R.toestand("2027-01-01",oud);
+assert.equal(t.jaar,2027,"na oudejaarsdag schuift de pagina door naar volgend jaar");
+assert.equal(t.vanaf,"2027-12-26");
+assert.equal(R.uurStempel("2026-12-31",22),"2026-12-31T22:00");
+assert.equal(R.uurStempel("2026-12-31",24),"2027-01-01T00:00","uur 24 is middernacht op 1 januari, over de jaargrens");
+assert.equal(R.uurStempel("2026-12-31",26),"2027-01-01T02:00");
+assert.deepEqual([0,44,90,180,225,350].map(R.richting),["N","NO","O","Z","ZW","N"]);
+assert.equal(R.richting(null),"");
+assert.equal(R.lijstTekst(["Amsterdam"]),"Amsterdam");
+assert.equal(R.lijstTekst(["Amsterdam","Utrecht"]),"Amsterdam en Utrecht");
+assert.equal(R.lijstTekst(["Amsterdam","Den Haag","Utrecht"]),"Amsterdam, Den Haag en Utrecht");
+
+function nachtData(waarden){
+  const uren=[],v={temperature_2m:[],precipitation:[],precipitation_probability:[],wind_speed_10m:[],wind_gusts_10m:[],wind_direction_10m:[],visibility:[]};
+  for(const dag of ["2026-12-31","2027-01-01"])for(let u=0;u<24;u++){
+    const stempel=`${dag}T${String(u).padStart(2,"0")}:00`;uren.push(stempel);
+    const w=waarden[stempel]||{};
+    v.temperature_2m.push(w.temp??4);v.precipitation.push(w.nat??0);v.precipitation_probability.push(w.kans??10);
+    v.wind_speed_10m.push(w.wind??12);v.wind_gusts_10m.push(w.stoot??25);v.wind_direction_10m.push(w.dir??225);v.visibility.push(w.zicht??20000);
+  }
+  return {hourly:{time:uren,...v}};
+}
+const rustig=nachtData({"2027-01-01T00:00":{temp:3.4}});
+let n=R.nachtWaarden(rustig,"2026-12-31",oud);
+assert.equal(n.temp,3.4,"temperatuur op middernacht = 1 januari 00:00");
+assert.equal(n.neerslag,0);assert.equal(n.kans,10);assert.equal(n.wind,12);assert.equal(n.stoot,25);assert.equal(n.richting,"ZW");
+assert.equal(R.neerslagTekst(n),"Droog · kans 10%");
+assert.equal(R.windTekst(n),"ZW 12 km/u · stoten 25");
+const ruig=nachtData({"2026-12-31T23:00":{nat:0.8,kans:70,stoot:62},"2027-01-01T00:00":{nat:0.5,kans:60,zicht:600},"2027-01-01T03:00":{nat:9,stoot:99}});
+n=R.nachtWaarden(ruig,"2026-12-31",oud);
+assert.equal(Math.round(n.neerslag*10)/10,1.3,"alleen 22:00–02:00 telt mee, 03:00 niet");
+assert.equal(n.stoot,62);
+assert.equal(R.neerslagTekst(n),"1,3 mm · kans 70%");
+assert.equal(R.neerslagTekst(null),"Geen gegevens");
+assert.equal(R.windTekst({wind:null}),"Geen gegevens");
+assert.equal(R.nachtWaarden({hourly:{time:[]}},"2026-12-31",oud),null,"geen uren: geen waarden, niet stil droog");
+
+t=R.toestand("2026-12-27",oud);
+res=R.verwerkAntwoord(oud.plaatsen.map(()=>rustig),t,oud);
+assert.deepEqual(R.nachtSamenvatting(t,res,oud),["Rond middernacht blijft het volgens de huidige verwachting overal droog."]);
+res=R.verwerkAntwoord(oud.plaatsen.map((p,i)=>i===1||i===2?ruig:rustig),t,oud);
+assert.deepEqual(R.nachtSamenvatting(t,res,oud),[
+  "Rond middernacht valt er volgens de huidige verwachting neerslag in Rotterdam en Den Haag.",
+  "Windstoten van 50 km/u of meer in Rotterdam en Den Haag.",
+  "Kans op mist (zicht onder 1 km) in Rotterdam en Den Haag."
+]);
+assert(R.verwachtingUrl(oud).includes("&hourly=temperature_2m,precipitation,precipitation_probability,wind_speed_10m,wind_gusts_10m,wind_direction_10m,visibility"));
+assert(!R.verwachtingUrl(oud).includes("daily="),"oud en nieuw vraagt alleen uurdata");
+
+const htmlOud=pagina(oud,"2026-10-05");
+assert(htmlOud.includes("<title>Weer oud en nieuw 2026: neerslag, wind en mist rond middernacht | watishetweer.nl</title>"));
+assert(htmlOud.includes('<link rel="canonical" href="https://watishetweer.nl/oud-en-nieuw/">'));
+assert(htmlOud.includes('<h1 id="seizoen-kop">Oud en nieuw 2026</h1>'));
+assert(!htmlOud.includes("Bron: <a"),"zonder bron in de config geen bronregel");
+assert(!/undefined|\{\w+\}|NaN/.test(htmlOud.split('<script type="application/json" id="seizoen-config">')[0]),"geen lege plaatshouders");
+const oudCfg=JSON.parse(htmlOud.match(/<script type="application\/json" id="seizoen-config">([\s\S]*?)<\/script>/)[1]);
+assert.equal(oudCfg.soort,"middernacht");assert.deepEqual(oudCfg.uren,[22,23,24,25,26]);assert.equal(oudCfg.extraDagen,1);
+assert(!("intro" in oudCfg)&&!("uitleg" in oudCfg),"alleen runtimevelden in de pagina-config");
+
+console.log("Seizoenspagina's: datumlogica (venster, aftelling, jaarwissel, tijdzone), sneeuwduiding, samenvatting, oud en nieuw (nacht over de jaargrens, neerslag/wind/mist) en statische pagina's OK.");

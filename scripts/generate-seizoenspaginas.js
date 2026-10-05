@@ -47,7 +47,8 @@ html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70
 .seizoen-samenvatting{color:var(--ink);font-weight:500}
 .seizoen-dag{margin:22px 0 0}
 .seizoen-dag h3{font-size:15px;font-weight:500;margin:0 0 6px;color:var(--ink)}
-.seizoen-dag h3 span{font-weight:400;color:var(--muted)}
+.seizoen-dag h3 span{font-weight:400;color:var(--muted);white-space:nowrap}
+.seizoen-dag .sub{color:var(--muted)}
 .seizoen-dag table{width:100%;border-collapse:collapse;font-size:15px}
 .seizoen-dag th,.seizoen-dag td{text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 .seizoen-dag thead th{font-size:12px;font-weight:500;color:var(--muted);padding-top:0}
@@ -58,7 +59,7 @@ html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70
 .seizoen-dag .officieel{display:block;font-size:12px;font-weight:400;color:var(--muted)}
 .seizoen-dag a{text-decoration:none;border-bottom:1px solid var(--rule)}
 .seizoen-dag a:hover,.seizoen-dag a:focus-visible{border-bottom-color:var(--ink)}
-@media(max-width:600px){body{padding:14px}.kaart{padding:26px 22px}h1{font-size:32px}.seizoen-dag table{font-size:14px}}
+@media(max-width:600px){body{padding:14px}.kaart{padding:26px 22px}h1{font-size:32px}.seizoen-dag table{font-size:14px}.seizoen-dag .sep{display:none}.seizoen-dag .sub{display:block;font-size:13px}}
 </style>`;
 
 function pagina(cfg,buildDag){
@@ -70,7 +71,7 @@ function pagina(cfg,buildDag){
     {"@context":"https://schema.org","@type":"WebSite",name:SEO.siteName,url:SEO.canonical},
     {"@context":"https://schema.org","@type":"WebPage",name:titel,url:canonical,isPartOf:{"@type":"WebSite",name:SEO.siteName,url:SEO.canonical}}
   ];
-  const runtimeCfg={naam:cfg.naam,titel:cfg.titel,tijdzone:cfg.tijdzone,vensterDagen:cfg.vensterDagen,ochtendUur:cfg.ochtendUur,dagen:cfg.dagen,teksten:cfg.teksten,plaatsen:cfg.plaatsen};
+  const {slug,beschrijving,intro,uitleg:_uitleg,...runtimeCfg}=cfg;
   const uitleg=cfg.uitleg.alineas.map(a=>`<p>${esc(a)}</p>`).join("\n");
   return `<!DOCTYPE html>
 <html lang="nl">
@@ -108,8 +109,7 @@ ${STIJL}
 </section>
 <h2>${esc(cfg.uitleg.kop)}</h2>
 ${uitleg}
-<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>
-<h2>Het weer voor jouw plaats</h2>
+${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>\n`:""}<h2>Het weer voor jouw plaats</h2>
 <p>Bekijk het actuele weer en de 7-daagse verwachting voor <a href="/">jouw plaats</a>, of kies een plaats bij <a href="/weer/">Weer per plaats</a>.</p>
 </main>
 <script type="application/json" id="seizoen-config">${jsonInHtml(runtimeCfg)}</script>

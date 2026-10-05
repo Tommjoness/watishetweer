@@ -52,6 +52,52 @@ const SEIZOENSPAGINAS=Object.freeze([
       plaatsroute("eindhoven"),
       plaatsroute("maastricht")
     ]
+  }),
+  Object.freeze({
+    slug:"oud-en-nieuw",
+    naam:"Oud en nieuw",
+    soort:"middernacht",
+    tijdzone:"Europe/Amsterdam",
+    vensterDagen:7,
+    /* De nacht loopt door tot 1 januari 02:00: die dag moet ook in het venster vallen. */
+    extraDagen:1,
+    uren:[22,23,24,25,26],
+    middernachtUur:24,
+    stootDrempel:50,
+    mistZicht:1000,
+    dagen:[{maand:12,dag:31,label:"Oudejaarsdag"}],
+    titel:"Weer oud en nieuw {jaar}: neerslag, wind en mist rond middernacht",
+    beschrijving:"Hoe wordt het weer met oud en nieuw {jaar}? Vanaf {datum} staat hier de verwachting voor neerslag, wind en mist rond middernacht in zeven grote plaatsen in Nederland.",
+    intro:"Hoe wordt het weer met oud en nieuw? Zodra de nacht binnen de 7-daagse verwachting valt, staat hier per plaats de verwachting van 22:00 tot 02:00: neerslag, wind, temperatuur en mist, voor zeven grote plaatsen verspreid over Nederland.",
+    uitleg:{
+      kop:"Waar let je op rond middernacht?",
+      alineas:[
+        "Rond de jaarwisseling zijn vooral neerslag, wind en zicht van belang. Bij harde windstoten waait vuurwerk sneller af. Bij weinig wind en mist blijft vuurwerkrook langer hangen, waardoor je minder ver kunt zien."
+      ]
+    },
+    teksten:{
+      ver:"De verwachting voor de nacht van oud en nieuw verschijnt hier op {datum}, zodra die binnen de 7-daagse verwachting valt.",
+      aftellenMeer:"Nog {n} dagen tot {dag}.",
+      aftellenMorgen:"Morgen is het {dag}.",
+      aftellenVandaag:"Vandaag is het {dag}.",
+      nachtKop:"Rond middernacht",
+      droogOveral:"Rond middernacht blijft het volgens de huidige verwachting overal droog.",
+      neerslagIn:"Rond middernacht valt er volgens de huidige verwachting neerslag in {plaatsen}.",
+      stotenIn:"Windstoten van {kmh} km/u of meer in {plaatsen}.",
+      mistIn:"Kans op mist (zicht onder 1 km) in {plaatsen}.",
+      dagLater:"{dag}: de verwachting verschijnt op {datum}.",
+      toelichting:"Neerslag is opgeteld over 22:00 tot 02:00, met de hoogste kans in één uur. Wind is het gemiddelde met de hoogste windstoot; temperatuur en windrichting gelden voor middernacht. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.",
+      fout:"De verwachting is op dit moment niet beschikbaar. Probeer het later opnieuw, of bekijk het weer voor je eigen plaats."
+    },
+    plaatsen:[
+      plaatsroute("amsterdam"),
+      plaatsroute("rotterdam"),
+      plaatsroute("den-haag"),
+      plaatsroute("utrecht"),
+      plaatsroute("groningen"),
+      plaatsroute("eindhoven"),
+      plaatsroute("maastricht")
+    ]
   })
 ]);
 

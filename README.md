@@ -67,7 +67,7 @@ De MeteoAlarm-feed per land kan groot zijn (Spanje: 3,5 MB, ruim 7 seconden). De
 
 ## Seizoenspagina's
 
-Seizoenspagina's zoals `/witte-kerst/` hebben een vaste URL die ieder jaar terugkomt. Iedere pagina is alleen configuratie in `scripts/seizoenspagina.config.js` (datums, plaatsen, teksten); het sjabloon (`scripts/generate-seizoenspaginas.js`) en de browserlogica (`scripts/seizoenspagina-runtime.js`) zijn gedeeld. Buiten de 7-daagse verwachting toont de pagina alleen wanneer de verwachting verschijnt; daarbinnen haalt hij de echte Open-Meteo-verwachting op. Er is geen lange-termijnverwachting en geen klimaatstatistiek. De pagina's staan in de sitemap en als footerlink op iedere weerpagina.
+Seizoenspagina's zoals `/witte-kerst/` en `/oud-en-nieuw/` hebben een vaste URL die ieder jaar terugkomt. Iedere pagina is alleen configuratie in `scripts/seizoenspagina.config.js` (datums, plaatsen, teksten); het sjabloon (`scripts/generate-seizoenspaginas.js`) en de browserlogica (`scripts/seizoenspagina-runtime.js`) zijn gedeeld. Buiten de 7-daagse verwachting toont de pagina alleen wanneer de verwachting verschijnt; daarbinnen haalt hij de echte Open-Meteo-verwachting op. Er is geen lange-termijnverwachting en geen klimaatstatistiek. De pagina's staan in de sitemap en als footerlink op iedere weerpagina.
 
 ## Belangrijkste externe bronnen
 
