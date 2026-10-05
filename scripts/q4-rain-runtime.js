@@ -6,7 +6,7 @@ const q4Mm=v=>{const n=q4Getal(v);return n===null?"–":n.toFixed(1).replace("."
 /* g.TI staat op de Open-Meteo-as (vaste afwijking): labels in de echte lokale tijd. */
 const q4Lokaal=t=>typeof weatherNowLokaleTijd==="function"?weatherNowLokaleTijd(t):String(t||"");
 const q4Tijd=t=>q4Lokaal(t).slice(11,16);
-const q4DagKort=t=>{try{const d=new Date(q4Lokaal(t).slice(0,10)+"T12:00:00");return Number.isNaN(d.getTime())?"":(DAGEN[d.getDay()]||"");}catch(e){return "";}};
+const q4DagKort=t=>{try{const s=typeof weatherNowLokaleTijd==="function"?weatherNowLokaleTijd(t):String(t);const d=new Date(String(s).slice(0,10)+"T12:00:00");return Number.isNaN(d.getTime())?"":(DAGEN[d.getDay()]||"");}catch(e){return "";}};
 const Q4_SVG_NS="http://www.w3.org/2000/svg";
 
 /* De grafiekhint hoort bij de interactieve Q4-presentatielaag. Een tekstuele
