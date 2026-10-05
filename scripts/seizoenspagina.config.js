@@ -80,6 +80,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       aftellenMeer:"Nog {n} dagen tot {dag}.",
       aftellenMorgen:"Morgen is het {dag}.",
       aftellenVandaag:"Vandaag is het {dag}.",
+      aftellenBezig:"De nacht van oud en nieuw is nu bezig.",
       nachtKop:"Rond middernacht",
       droogOveral:"Rond middernacht blijft het volgens de huidige verwachting overal droog.",
       neerslagIn:"Rond middernacht valt er volgens de huidige verwachting neerslag in {plaatsen}.",

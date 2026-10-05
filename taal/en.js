@@ -701,6 +701,7 @@
     "Rond de jaarwisseling zijn vooral neerslag, wind en zicht van belang. Bij harde windstoten waait vuurwerk sneller af. Bij weinig wind en mist blijft vuurwerkrook langer hangen, waardoor je minder ver kunt zien.":
       "Around the turn of the year, precipitation, wind and visibility matter most. In strong gusts, fireworks drift off course more easily. With little wind and fog, firework smoke lingers for longer, so you cannot see as far.",
     "Rond middernacht blijft het volgens de huidige verwachting overal droog.": "According to the current forecast, it will stay dry everywhere around midnight.",
+    "De nacht van oud en nieuw is nu bezig.": "New Year's Eve night is under way.",
     "Temp.": "Temp.",
     "Neerslag is opgeteld over 22:00 tot 02:00, met de hoogste kans in één uur. Wind is het gemiddelde met de hoogste windstoot; temperatuur en windrichting gelden voor middernacht. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.":
       "Precipitation is the total from 22:00 to 02:00, with the highest chance in any one hour. Wind is the average with the strongest gust; temperature and wind direction apply at midnight. A forecast a week ahead can still change considerably; this page always shows the latest. Source: Open-Meteo.",

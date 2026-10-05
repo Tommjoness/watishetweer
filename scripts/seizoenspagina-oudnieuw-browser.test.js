@@ -59,20 +59,24 @@ const SCENARIOS=[
     cellen:["1,1 mm · kans 65%","W 14 km/u · stoten 61","Droog · kans 10%","ZW 14 km/u · stoten 31","4°"],kop3:"Rond middernacht 31 december 22:00 – 1 januari 02:00"}},
   {naam:"rustig",nu:"2026-12-31T09:00:00Z",data:antwoord("2026-12-31",()=>null),verwacht:{aftellen:"Vandaag is het oudejaarsdag.",tabellen:1,fetch:1,samenvatting:["Rond middernacht blijft het volgens de huidige verwachting overal droog."]}},
   {naam:"fout",nu:"2026-12-28T09:00:00Z",status:503,verwacht:{tabellen:0,fetch:1,fout:true}},
+  /* 1 januari 01:30: de nacht loopt nog tot 02:00, dus de pagina blijft bij
+     deze jaarwisseling en haalt met past_days=1 ook gisteravond op. */
+  {naam:"lopend",nu:"2027-01-01T00:30:00Z",data:gemengd("2026-12-31"),verwacht:{kop:"Oud en nieuw 2026",aftellen:"De nacht van oud en nieuw is nu bezig.",tabellen:1,fetch:1,pastDays:"1",
+    cellen:["1,1 mm · kans 65%","W 14 km/u · stoten 61"],kop3:"Rond middernacht 31 december 22:00 – 1 januari 02:00"}},
   {naam:"na",nu:"2027-01-01T10:00:00Z",verwacht:{kop:"Oud en nieuw 2027",aftellen:"Nog 364 dagen tot oudejaarsdag.",tabellen:0,fetch:0}}
 ];
 
-async function open(browser,base,sc,breedte,schema,taal){
+async function open(browser,base,sc,breedte,schema,taal,lopendeKlok){
   const context=await browser.newContext({viewport:{width:breedte,height:breedte<700?844:900},colorScheme:schema});
   if(taal)await context.addInitScript(t=>{try{localStorage.setItem("weerbriefing.taal.v1",JSON.stringify(t));}catch(e){}},taal);
   const page=await context.newPage();
-  const fouten=[];let fetches=0;
+  const fouten=[],urls=[];let fetches=0;
   page.on("pageerror",e=>fouten.push(e.message));
   page.on("console",m=>{if(m.type()==="error"&&!/Failed to load resource/.test(m.text()))fouten.push(m.text());});
-  await page.clock.setFixedTime(new Date(sc.nu));
+  if(lopendeKlok)await page.clock.install({time:new Date(sc.nu)});else await page.clock.setFixedTime(new Date(sc.nu));
   await page.route("https://api.open-meteo.com/**",route=>{
     fetches++;
-    const url=new URL(route.request().url());
+    const url=new URL(route.request().url());urls.push(url);
     assert.equal(url.searchParams.get("forecast_days"),"7");
     assert.equal(url.searchParams.get("latitude").split(",").length,oud.plaatsen.length);
     assert(url.searchParams.get("hourly").includes("visibility")&&!url.searchParams.has("daily"));
@@ -82,7 +86,7 @@ async function open(browser,base,sc,breedte,schema,taal){
   await page.route(/posthog|googletagmanager|google-analytics|cloudflareinsights/,route=>route.abort());
   await page.goto(base+PAD,{waitUntil:"networkidle"});
   await page.waitForFunction(()=>!document.querySelector("#seizoen-verwachting[aria-busy]"));
-  return {context,page,fouten,fetches:()=>fetches};
+  return {context,page,fouten,fetches:()=>fetches,urls};
 }
 const meet=()=>({
   kop:document.querySelector("h1").textContent.trim(),
@@ -109,11 +113,12 @@ async function controleer(browserType,label,base){
   try{
     for(const sc of SCENARIOS)for(const breedte of [390,1366])for(const schema of ["light","dark"]){
       if(schema==="dark"&&sc.naam!=="venster"&&sc.naam!=="ver")continue;
-      const {context,page,fouten,fetches}=await open(browser,base,sc,breedte,schema,null);
+      const {context,page,fouten,fetches,urls}=await open(browser,base,sc,breedte,schema,null);
       const v=sc.verwacht,id=`${label} ${sc.naam} ${breedte}px ${schema}`;
       const r=await page.evaluate(meet);
       assert.deepEqual(fouten,[],`${id}: geen browserfouten`);
       assert.equal(fetches(),v.fetch,`${id}: aantal verwachtingsverzoeken`);
+      for(const u of urls)assert.equal(u.searchParams.get("past_days"),v.pastDays||null,`${id}: past_days alleen als de nacht al loopt`);
       if(v.kop){assert.equal(r.kop,v.kop,`${id}: kop`);assert(r.titel.startsWith("Weer "+v.kop.toLowerCase()+":"),`${id}: titel (${r.titel})`);}
       if(v.aftellen)assert.equal(r.aftellen,v.aftellen,`${id}: aftelling`);
       if(v.melding)assert.match(r.melding,v.melding,`${id}: melding`);
@@ -139,6 +144,7 @@ async function controleer(browserType,label,base){
     /* Engels: volledig vertaald, plaatsnamen en links blijven staan. */
     for(const [naam,zinnen] of [
       ["ver",["87 days to go until New Year's Eve.","The forecast for New Year's Eve night will appear here on Saturday 26 December, once it falls within the 7-day forecast."]],
+      ["lopend",["New Year's Eve night is under way.","1.1 mm · chance 65%","Around midnight 31 December 22:00 – 1 January 02:00"]],
       ["venster",["3 days to go until New Year's Eve.","According to the current forecast, there will be precipitation around midnight in Rotterdam and Den Haag.","Gusts of 50 km/h or more in Rotterdam and Den Haag.","Chance of fog (visibility below 1 km) in Utrecht.","1.1 mm · chance 65%","W 14 km/h · gusts 61","Around midnight 31 December 22:00 – 1 January 02:00"]]
     ])for(const breedte of [390,1366]){
       const sc=SCENARIOS.find(s=>s.naam===naam);
@@ -161,6 +167,35 @@ async function controleer(browserType,label,base){
       }
       await context.close();
     }
+    /* Een pagina die over middernacht en over 02:00 openstaat, werkt zichzelf
+       bij: oudejaarsdag → nacht bezig → volgend jaar. */
+    for(const breedte of [390,1366]){
+      const sc={naam:"klok",nu:"2026-12-31T22:59:00Z",data:gemengd("2026-12-31")};
+      const {context,page,fouten,fetches,urls}=await open(browser,base,sc,breedte,"light",null,true);
+      const id=`${label} doorlopende klok ${breedte}px`;
+      const stand=()=>page.evaluate(meet);
+      let r=await stand();
+      assert.equal(r.aftellen,"Vandaag is het oudejaarsdag.",`${id}: 23:59`);
+      assert.equal(r.tabellen,1,`${id}: 23:59 tabel`);
+      /* Tot net over middernacht: de minuutcontrole ziet de nieuwe dag en haalt
+         de verwachting opnieuw op (de tijdslimiet van 10s loopt dan nog niet af). */
+      await page.clock.runFor(61000);
+      await page.waitForFunction(()=>!document.querySelector("#seizoen-verwachting[aria-busy]"));
+      r=await stand();
+      assert.equal(r.aftellen,"De nacht van oud en nieuw is nu bezig.",`${id}: 00:00:30`);
+      assert.equal(r.kop,"Oud en nieuw 2026",`${id}: kop blijft bij deze jaarwisseling`);
+      assert.equal(r.tabellen,1,`${id}: tabel blijft na middernacht`);
+      assert.equal(fetches(),2,`${id}: na middernacht opnieuw opgehaald`);
+      assert.equal(urls[1].searchParams.get("past_days"),"1",`${id}: met de uren van gisteravond`);
+      await page.clock.runFor(2*3600*1000);
+      r=await stand();
+      assert.equal(r.kop,"Oud en nieuw 2027",`${id}: na 02:00 door naar volgend jaar`);
+      assert.equal(r.aftellen,"Nog 364 dagen tot oudejaarsdag.",`${id}: aftelling na 02:00`);
+      assert.equal(r.tabellen,0,`${id}: verwachting weg na 02:00`);
+      assert.equal(fetches(),2,`${id}: buiten het venster geen nieuw verzoek`);
+      assert.deepEqual(fouten,[],`${id}: geen browserfouten`);
+      await context.close();
+    }
   }finally{await browser.close();}
 }
 
@@ -171,5 +206,5 @@ async function controleer(browserType,label,base){
     await controleer(chromium,"Chromium",base);
     await controleer(webkit,"WebKit",base);
   }finally{server.close();}
-  console.log("Oud en nieuw: ver, vlak voor het venster, venster over de jaargrens (neerslag, stoten, mist), rustige nacht, storing en doorschuiven in Chromium en WebKit, mobiel en desktop, licht en donker; Engels volledig vertaald.");
+  console.log("Oud en nieuw: ver, vlak voor het venster, venster over de jaargrens (neerslag, stoten, mist), rustige nacht, lopende nacht na middernacht, storing, doorschuiven en een pagina die over middernacht openstaat in Chromium en WebKit, mobiel en desktop, licht en donker; Engels volledig vertaald.");
 })().catch(e=>{console.error(e);process.exit(1);});
