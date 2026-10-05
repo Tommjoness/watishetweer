@@ -88,7 +88,8 @@ function meet(){
     disclaimer:disclaimer?{l:tekstLinks(disclaimer),r:tekstRechts(disclaimer),align:getComputedStyle(disclaimer).textAlign}:null,
     voetMidden:(footer.getBoundingClientRect().left+footer.getBoundingClientRect().right)/2,
     bronMidden:midden([bron.querySelector(".bronlabel"),...bronLinks]),
-    linksMidden:midden([footer.querySelector('a[href="/over/"]'),footer.querySelector('a[href="/privacy"]'),footer.querySelector("details.footer-details>summary"),footer.querySelector(".footer-contact")]),
+    /* De linkrij: iedere interne footerlink (seizoenspagina's, Over, Privacy), technische details en contact. */
+    linksMidden:midden([...footer.querySelectorAll('span.bron > a[href^="/"]'),footer.querySelector("details.footer-details>summary"),footer.querySelector(".footer-contact")]),
     weergaveMidden:midden([...document.querySelectorAll(".wiw-weergave-voet>*")]),
     kolommen:(()=>{
       const m=e=>{if(!e||!zichtbaar(e))return null;const r=e.getBoundingClientRect();return (r.left+r.right)/2;};
