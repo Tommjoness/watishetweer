@@ -30,3 +30,8 @@ Deze afspraken zijn vastgelegd door de eigenaar en gelden voor iedere sessie.
 - Bewerk nooit handmatig bestanden in `public/`. Die map wordt bij iedere build opnieuw opgebouwd.
 - Draai vóór iedere push `npm test` (Node 22). Voor de productie-artifact: `npm run build:cloudflare`.
 - Houd oplossingen generiek. Maak geen plaats-specifieke uitzonderingen of screenshotpatches (zie de README).
+
+## E-mail namens de eigenaar
+
+- Vraag altijd eerst toestemming voordat je een mail verstuurt, verwijdert of doorstuurt. Stel een mail op als concept, zodat de eigenaar hem kan nalezen.
+- Onderteken iedere mail met de naam van de eigenaar: Maitri Polwatte Gedera.
