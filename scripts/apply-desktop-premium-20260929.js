@@ -124,7 +124,7 @@ const CSS=`
      cijfer dan links van de kop te staan (eigenaar, 5 oktober). */
   html body #nights .row.night.kop>.score${NIET}{text-align:center!important}
   html body #nights .row.night.kop>.score${NIET}{padding-left:0!important;padding-right:0!important}
-  html body #nights .row.night:not(.kop)>.score${NIET}{justify-self:stretch!important;text-align:center!important;padding-left:0!important;padding-right:0!important}
+  html body #nights .row.night:not(.kop)>.score${NIET}{justify-self:center!important;text-align:center!important;padding-left:0!important;padding-right:0!important}
   html body #nights .row.night:not(.kop)>.sbar${NIET}{width:calc(50% - 34px)!important;margin-right:0!important}
 
   /* Nachtzicht: Beoordeling gecentreerd, kop en oordeel, zoals de kolommen
