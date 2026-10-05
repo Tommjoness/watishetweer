@@ -25,6 +25,7 @@ Deze afspraken zijn vastgelegd door de eigenaar en gelden voor iedere sessie.
 ## Werkwijze in deze codebase
 
 - Communiceer met de eigenaar in het Nederlands: gedetailleerd, duidelijk, feitelijk en goed gestructureerd.
+- Spreek de eigenaar aan met je en jij, niet met u. Houd de toon informeel en niet te formeel (eigenaar, 5 oktober 2026).
 - Noem tijden altijd in Nederlandse tijd (Europe/Amsterdam: CEST in de zomer, CET in de winter), ook voor CI-runs, deploys en geplande controles. GitHub en de sandbox rapporteren in UTC: reken dat om.
 - Lees eerst `README.md` en `docs/overdracht-runbook.md` voor architectuur, deploy en beheer.
 - Bewerk nooit handmatig bestanden in `public/`. Die map wordt bij iedere build opnieuw opgebouwd.
