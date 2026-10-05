@@ -26,6 +26,9 @@ function uurRijenUitGeo(g,currentTime,dagGeselecteerd,hourly){
   if(!dagGeselecteerd&&currentTime&&tijden.length){mark=tijden.findIndex(t=>String(t)>=String(currentTime));if(mark<0&&String(currentTime)<=String(tijden[tijden.length-1]))mark=tijden.length-1;}
   for(let i=0;i<n;i++){
     const tijd=tijden[i],temp=num(T[i]),gevoel=num(A[i]);
+    /* Zichtbaar label in de echte lokale tijd (zie weatherNowLokaleTijd);
+       de bron-as blijft de sleutel voor index en markering. */
+    const label=typeof root.weatherNowLokaleTijd==="function"?root.weatherNowLokaleTijd(tijd):tijd;
     if(!tijd||temp===null||gevoel===null)continue;
     const bronIndex=hourlyTijden?hourlyTijden.indexOf(tijd):-1;
     const fallbackIndex=bronIndex>=0?bronIndex:i;
@@ -34,9 +37,10 @@ function uurRijenUitGeo(g,currentTime,dagGeselecteerd,hourly){
        eind van het uur). */
     const kans=P.length?num(P[i]):num(hourly&&hourly.precipitation_probability&&hourly.precipitation_probability[fallbackIndex+1]);
     const hoeveelheid=MM.length?num(MM[i]):num(hourly&&hourly.precipitation&&hourly.precipitation[fallbackIndex+1]);
-    const vorige=i>0?datum(tijden[i-1]):null,nieuweDag=i>0&&datum(tijd)!==vorige;
+    const vorigeLabel=i>0&&typeof root.weatherNowLokaleTijd==="function"?root.weatherNowLokaleTijd(tijden[i-1]):tijden[i-1];
+    const vorige=i>0?datum(vorigeLabel):null,nieuweDag=i>0&&datum(label)!==vorige;
     const zelfdeUur=mark===i&&String(currentTime||"").slice(0,13)===String(tijd).slice(0,13);
-    rijen.push({tijd,temp,gevoel,kans,hoeveelheid,code:num(D[i]),isDag:num(ND[i]),wind:num(W[i]),windrichting:num(WD[i]),datumLabel:nieuweDag?dagLabel(tijd):"",marker:mark===i?(zelfdeUur?"Nu":"Eerstvolgend"):""});
+    rijen.push({tijd:label,temp,gevoel,kans,hoeveelheid,code:num(D[i]),isDag:num(ND[i]),wind:num(W[i]),windrichting:num(WD[i]),datumLabel:nieuweDag?dagLabel(label):"",marker:mark===i?(zelfdeUur?"Nu":"Eerstvolgend"):""});
   }
   return rijen;
 }

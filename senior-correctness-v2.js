@@ -327,8 +327,10 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
         if(a.beste){
           const bs=a.beste[0],be=a.beste[a.beste.length-1];
           const eindIndex=h.time.indexOf(be.tijd),volgende=eindIndex>=0&&h.time[eindIndex+1]?h.time[eindIndex+1]:null;
-          venster="Beste periode "+(actueel&&bs===eerste?weatherNowActueleLokaleTijd().slice(11,16):bs.tijd.slice(11,16))
-            +"–"+(volgende?volgende.slice(11,16):be.tijd.slice(11,16));
+          /* bs.tijd en volgende staan op de Open-Meteo-as: zichtbaar in de echte lokale tijd. */
+          const lok=(typeof weatherNowLokaleTijd==="function"?weatherNowLokaleTijd:String);
+          venster="Beste periode "+(actueel&&bs===eerste?weatherNowActueleLokaleTijd().slice(11,16):lok(bs.tijd).slice(11,16))
+            +"–"+(volgende?lok(volgende).slice(11,16):lok(be.tijd).slice(11,16));
         }else venster=redenTekst(a.redenen);
       }
       const score=a.genoeg?Math.round(a.score)+"/10":"–",breed=a.genoeg?a.score*10:0;

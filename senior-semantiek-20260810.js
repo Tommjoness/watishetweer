@@ -437,7 +437,12 @@ lucht=function(){
 function renderZonInfo(){
   const el=document.getElementById("suntimes"); if(!el||!S.d||!S.d.daily)return;
   const nu=weatherNowActueleLokaleTijd(),geselecteerd=Number.isInteger(S.dag)?S.dag:null;
-  const rijen=zonInfoRijen(S.d.daily,nu,geselecteerd,daglengte,datum=>dagAanduiding(datum,true));
+  /* sunrise/sunset staan op de Open-Meteo-as (vaste afwijking): zichtbaar in de
+     echte lokale tijd, ook rond een klokwissel. */
+  const lok=t=>t&&typeof weatherNowLokaleTijd==="function"?weatherNowLokaleTijd(t):t;
+  const dag=S.d.daily||{};
+  const dagelijks=Object.assign({},dag,{sunrise:Array.isArray(dag.sunrise)?dag.sunrise.map(lok):dag.sunrise,sunset:Array.isArray(dag.sunset)?dag.sunset.map(lok):dag.sunset});
+  const rijen=zonInfoRijen(dagelijks,nu,geselecteerd,daglengte,datum=>dagAanduiding(datum,true));
   el.classList.add("senior-zoninfo");
   el.innerHTML=rijen.map(r=>'<span class="zonregel"><span class="zondag">'+escapeHtml(r.label)+'</span>'
     +r.items.map(x=>'<span>'+escapeHtml(x)+'</span>').join("")+'</span>').join("");

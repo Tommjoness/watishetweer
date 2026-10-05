@@ -77,6 +77,8 @@ jobs:
         run: node scripts/openmeteo-daggrens-contract.js
       - name: Waarschuwingen per plaats (eigen regio, geen melding van elders, Engels)
         run: node scripts/waarschuwing-plaats-browser.test.js
+      - name: Wintertijd 25 oktober (uurtabel, grafiekas, regen en zon in echte lokale tijd)
+        run: node scripts/wintertijd-browser.test.js
       - name: Bewaar reproduceerbare CWV-metingen
         if: always()
         uses: actions/upload-artifact@v6

@@ -57,8 +57,12 @@ function regenSamenvattingBijwerken(){
     toonVerstreken:S.dag!=null,meetbaarMm:0.1
   });
   /* Lokale datum van de plaats nu: een periode op een andere dag krijgt "morgen" of de dag. */
-  const nu=S.d&&S.d.current&&String(S.d.current.time||"");
-  const tekst=A.regenSamenvatting(perioden,2,/^\d{4}-\d{2}-\d{2}T/.test(nu)?nu.slice(0,10):undefined);
+  /* Perioden en current.time staan op de Open-Meteo-as (vaste afwijking): tonen
+     en vergelijken in de echte lokale tijd, ook rond een klokwissel. */
+  const lok=(typeof weatherNowLokaleTijd==="function"?weatherNowLokaleTijd:String);
+  const zichtbaar=perioden.map(p=>Object.assign({},p,{van:lok(p.van),tot:lok(p.tot)}));
+  const nu=S.d&&S.d.current&&lok(String(S.d.current.time||""));
+  const tekst=A.regenSamenvatting(zichtbaar,2,/^\d{4}-\d{2}-\d{2}T/.test(nu)?nu.slice(0,10):undefined);
   el.textContent=tekst;el.hidden=!tekst;
   if(tekst)el.setAttribute("role","note");else el.removeAttribute("role");
 }
@@ -254,7 +258,7 @@ function uvMorgen(){
   const val=tegel.querySelector(".sval"),sub=tegel.querySelector(".ssub");
   if(val)val.textContent=String(w);
   if(sub)sub.textContent=piek.v<0.5?"Nauwelijks UV verwacht morgen."
-    :"Verwachte UV-piek"+(piek.t?" rond "+String(piek.t).slice(11,16):"")+(oordeel?" · "+oordeel:"")+".";
+    :"Verwachte UV-piek"+(piek.t?" rond "+(typeof weatherNowLokaleTijd==="function"?weatherNowLokaleTijd:String)(piek.t).slice(11,16):"")+(oordeel?" · "+oordeel:"")+".";
 }
 function zonurenMorgen(){
   const m=indexMorgenNaZonsondergang(),tegel=document.querySelector("#aq .stat.zon");if(m===null||!tegel)return;

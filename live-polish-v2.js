@@ -118,7 +118,9 @@ function temperatuurProminentie(temperaturen,index){
 function grafiekPuntBeschrijving(geo,index){
   const G=geo&&typeof geo==="object"?geo:null,i=Number(index);
   if(!G||!Number.isInteger(i)||i<0||i>=Number(G.n)||!Array.isArray(G.TI)||!G.TI[i])return "";
-  const tijd=String(G.TI[i]).slice(11,16),temp=Array.isArray(G.T)?eindig(G.T[i]):null;
+  /* G.TI staat op de Open-Meteo-as: voorlezen in de echte lokale tijd. */
+  const lokaal=typeof globalThis.weatherNowLokaleTijd==="function"?globalThis.weatherNowLokaleTijd(G.TI[i]):G.TI[i];
+  const tijd=String(lokaal).slice(11,16),temp=Array.isArray(G.T)?eindig(G.T[i]):null;
   const kans=Array.isArray(G.P)?eindig(G.P[i]):null;
   return tijd+(temp===null?"":", "+Math.round(temp)+" graden")+(kans===null?"":", "+Math.round(kans)+" procent neerslagkans");
 }
