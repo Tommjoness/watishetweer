@@ -124,6 +124,9 @@
   .mast{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s3);flex-wrap:wrap}
   .mast h1{font-family:var(--serif);font-weight:400;font-size:15px;letter-spacing:.02em;margin:0;color:var(--ink-45)}
   #place{font-family:var(--serif);font-weight:400;font-size:44px;line-height:1.05;margin:4px 0 0;letter-spacing:-.01em}
+  /* Vaste regel van één regel hoog, ook zolang hij nog leeg is: zo schuift er
+     niets op als regio en land na het laden verschijnen (geen CLS). */
+  #plaatsregio{font-family:var(--sans);font-size:13px;line-height:1.35;min-height:1.35em;color:var(--ink-45);margin:4px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   .mastright{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:9px}
   .tools{display:flex;gap:0;align-items:stretch;position:relative}
   input[type=text]{background:transparent;border:1px solid var(--rule);border-right:none;color:var(--ink);
@@ -554,6 +557,7 @@
     <div>
       <h1>Wat is het weer?</h1>
       <h2 id="place" aria-label="Plaats">&nbsp;<span id="plaatstijd" aria-hidden="true"></span></h2>
+      <p id="plaatsregio" translate="no"></p>
     </div>
     <div class="mastright">
       <div class="tools">
@@ -1027,7 +1031,64 @@ function onthoudLand(v){
   const lijst=ls.get(KEY_L,[]);let gewijzigd=false;
   lijst.forEach(p=>{if(S.lat!=null&&Math.abs(Number(p.lat)-S.lat)<0.02&&Math.abs(Number(p.lon)-S.lon)<0.02&&p.land!==code){p.land=code;gewijzigd=true;}});
   if(gewijzigd) ls.set(KEY_L,lijst);
+  if(typeof toonPlaatsRegio==="function")toonPlaatsRegio();
 }
+/* Regio en land onder de plaatsnaam, zodat gelijknamige plaatsen (Bergen in
+   Noorwegen, België of Nederland) na het kiezen herkenbaar blijven. De regio
+   komt uit het gekozen zoekresultaat of de GPS-plaatsbepaling en wordt per
+   plaats (drie decimalen, net als de andere opslag) lokaal onthouden, zodat
+   ook een bewaarde plaats of een volgend bezoek hem toont. Het land volgt uit
+   de bestaande landcode, in de taal van de pagina. De regio komt al in de
+   juiste taal van de geocoder; de vertaallaag laat deze regel daarom staan. */
+const KEY_R="weerbriefing.regio";
+const regioSleutel=(lat,lon)=>coordOpslag(lat).toFixed(3)+","+coordOpslag(lon).toFixed(3);
+function onthoudRegio(lat,lon,regio){
+  if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lon)))return;
+  const r=String(regio||"").replace(/\s+/g," ").trim().slice(0,80);
+  const kaart=ls.get(KEY_R,{}),sleutel=regioSleutel(lat,lon);
+  if(!r){if(sleutel in kaart){delete kaart[sleutel];ls.set(KEY_R,kaart);}return;}
+  kaart[sleutel]=r;
+  /* Geen zoekgeschiedenis: alleen de zojuist gekozen plaats, de plaats in
+     beeld, de laatst gebruikte plaats en de bewaarde plaatsen houden hun regio. */
+  const dichtbij=(k,p)=>{const [a,b]=k.split(",").map(Number);return p&&Math.abs(a-Number(p.lat))<0.02&&Math.abs(b-Number(p.lon))<0.02;};
+  const houd=[S.lat!=null?{lat:S.lat,lon:S.lon}:null,ls.get(KEY_P,null),...ls.get(KEY_L,[])];
+  Object.keys(kaart).forEach(k=>{if(k!==sleutel&&!houd.some(p=>dichtbij(k,p)))delete kaart[k];});
+  ls.set(KEY_R,kaart);
+}
+function regioVoor(lat,lon,naam){
+  if(lat==null||lon==null)return "";
+  const kaart=ls.get(KEY_R,{});
+  let r=kaart[regioSleutel(lat,lon)]||"";
+  if(!r){
+    const k=Object.keys(kaart).find(k=>{const [a,b]=k.split(",").map(Number);return Math.abs(a-lat)<0.02&&Math.abs(b-lon)<0.02;});
+    r=k?kaart[k]:"";
+  }
+  return r&&r.toLocaleLowerCase("nl")!==String(naam||"").trim().toLocaleLowerCase("nl")?r:"";
+}
+function landNaam(code){
+  if(!code)return "";
+  try{
+    const taal=/^en\b/i.test(document.documentElement.getAttribute("lang")||"")?"en-GB":"nl";
+    return new Intl.DisplayNames([taal],{type:"region"}).of(code)||"";
+  }catch(e){return "";}
+}
+const plaatsRegioTekst=(lat,lon,naam,land)=>[regioVoor(lat,lon,naam),landNaam(normLand(land))].filter(Boolean).join(", ");
+function toonPlaatsRegio(){
+  const place=document.getElementById("place");if(!place)return;
+  let el=document.getElementById("plaatsregio");
+  if(!el){
+    el=document.createElement("p");el.id="plaatsregio";el.setAttribute("translate","no");
+    place.insertAdjacentElement("afterend",el);
+  }
+  const tekst=S.lat==null?"":plaatsRegioTekst(S.lat,S.lon,S.label,S.land);
+  if(el.textContent!==tekst)el.textContent=tekst;
+}
+/* Iedere renderlaag die de plaatskop opnieuw schrijft, werkt zo ook de regel
+   eronder bij; de klok in de kop wijzigt alleen een kind-element en telt niet mee. */
+(function(){
+  const place=document.getElementById("place");
+  if(place&&typeof MutationObserver==="function")new MutationObserver(toonPlaatsRegio).observe(place,{childList:true});
+})();
 /* Het opstartscript (bootstrap) vraagt de volledige verwachting al aan terwijl
    deze app nog wordt geladen, met exact dezelfde adresopbouw (de bouwstap
    kopieert die letterlijk uit load()). Dat antwoord wordt hooguit één keer
@@ -2896,7 +2957,9 @@ function maanUnicode(fase){
 function chips(){
   const lijst=ls.get(KEY_L,[]);
   const zelfde=p=>Math.abs(p.lat-S.lat)<0.02&&Math.abs(p.lon-S.lon)<0.02;
-  let rij=lijst.map((p,i)=>`<span class="chip${zelfde(p)?" on":""}"><button type="button" class="chipplaats" data-i="${i}" title="Toon het weer voor ${esc(p.label)}">${esc(p.label)}</button><button type="button" class="x" data-x="${i}" title="Verwijderen" aria-label="Verwijder ${esc(p.label)} uit bewaarde plaatsen">×</button></span>`).join("");
+  const naamTelling=lijst.reduce((m,p)=>m.set(p.label,(m.get(p.label)||0)+1),new Map());
+  const chipNaam=p=>{const extra=naamTelling.get(p.label)>1?plaatsRegioTekst(p.lat,p.lon,p.label,p.land):"";return extra?p.label+" ("+extra+")":p.label;};
+  let rij=lijst.map((p,i)=>`<span class="chip${zelfde(p)?" on":""}"><button type="button" class="chipplaats" data-i="${i}" title="Toon het weer voor ${esc(chipNaam(p))}">${esc(chipNaam(p))}</button><button type="button" class="x" data-x="${i}" title="Verwijderen" aria-label="Verwijder ${esc(p.label)} uit bewaarde plaatsen">×</button></span>`).join("");
   if(!lijst.some(zelfde)&&S.lat!=null) rij+=`<button type="button" class="chip add" id="chipadd" title="Voeg deze plaats toe aan je lijst">+ ${esc(S.label)} bewaren</button>`;
   if(S.lat!=null) rij+=`<button type="button" class="chip add deel" id="chipdeel" title="Deel het weer voor ${esc(S.label)}">Delen</button>`;
   const c=document.getElementById("chips");
@@ -3014,6 +3077,18 @@ document.getElementById("thema").addEventListener("click",()=>{
 themaToepassen();
 
 /* ---------- stempel en verversen ---------- */
+/* Een bronwissel staat direct bij de ophaaltijd. Normaal levert Open-Meteo
+   de hoofdverwachting (die staat al bij de bronnen in de footer) en blijft de
+   stempel kort, op één regel. Is Open-Meteo te traag of onbereikbaar, dan
+   neemt /api/forecast het over met Visual Crossing of WeatherAPI; dat wordt
+   hier zichtbaar gemeld, zodat een verschil tussen diensten niet aan iets
+   anders (zoals de taalkeuze) wordt toegeschreven. */
+function verwachtingsbron(d){
+  const p=String(d&&d.provider||"");
+  if(p==="visualcrossing")return " · reservebron Visual Crossing";
+  if(p==="weatherapi")return " · reservebron WeatherAPI";
+  return "";
+}
 function stempel(){
   const el=document.getElementById("stamp");
   if(!S.d){el.textContent="";return;}
@@ -3022,7 +3097,7 @@ function stempel(){
   try{tijd=new Intl.DateTimeFormat("nl-NL",{timeZone:S.d.timezone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(S.op));}
   catch(_){tijd=new Date(S.op).toTimeString().slice(0,5);}
   const geleden=m<1?"minder dan 1 min geleden":m===1?"1 min geleden":m+" min geleden";
-  el.textContent="Gegevens opgehaald om "+tijd+" · "+geleden;
+  el.textContent="Gegevens opgehaald om "+tijd+" · "+geleden+verwachtingsbron(S.d);
   el.className=m>45?"oud":"";
 }
 setInterval(stempel,30000);
@@ -3108,6 +3183,7 @@ function zoekMarkeer(n){
 function zoekKies(el){
   if(!el)return;
   ++zoekGeneratie;clearTimeout(timer);zoekPanelenSluit(true);zoekStatus.textContent="";
+  onthoudRegio(el.dataset.lat,el.dataset.lon,el.dataset.regio);
   q.value=el.dataset.nm;zoekIndex=-1;gpsGeneratie++;load(el.dataset.lat,el.dataset.lon,el.dataset.nm,false,true,el.dataset.land||null);
 }
 q.addEventListener("input",()=>{
@@ -3125,7 +3201,7 @@ q.addEventListener("input",()=>{
       if(!resultaten.length){zoekMeldingToon("Niets gevonden");return;}
       res.innerHTML=resultaten.map((r,i)=>{
         const detail=zoekResultaatDetail(r);
-        return `<div id="zoekopt-${i}" role="option" aria-selected="false" data-lat="${r.latitude}" data-lon="${r.longitude}" data-nm="${esc(r.name)}" data-land="${esc(normLand(r.country_code)||"")}"><span class="zoekresultaat-naam">${esc(r.name)}</span>${detail?`<span class="zoekresultaat-detail">${esc(detail)}</span>`:""}</div>`;
+        return `<div id="zoekopt-${i}" role="option" aria-selected="false" data-lat="${r.latitude}" data-lon="${r.longitude}" data-nm="${esc(r.name)}" data-land="${esc(normLand(r.country_code)||"")}" data-regio="${esc(String(r.admin1||"").trim())}"><span class="zoekresultaat-naam">${esc(r.name)}</span>${detail?`<span class="zoekresultaat-detail">${esc(detail)}</span>`:""}</div>`;
       }).join("");
       zoekStatus.textContent=resultaten.length===1?"1 plaats gevonden.":resultaten.length+" plaatsen gevonden.";
       q.setAttribute("aria-expanded","true");res.classList.add("on");
@@ -3233,7 +3309,7 @@ async function locatieNu(modus){
       if(mijnGen!==gpsGeneratie){ klaar(false); return; }        // ondertussen iets nieuwers gekozen
       const la=p.coords.latitude,lo=p.coords.longitude;
       const nauw=p.coords.accuracy;          // straal in meters waar de telefoon zeker van is
-      let nm=null,land=null;
+      let nm=null,land=null,regio=null;
       // De gratis BigDataCloud-endpoint is uitsluitend client-side toegestaan.
       // Dit is actuele GPS die de gebruiker zelf zojuist heeft gedeeld, dus precies
       // het toegestane gebruik. De server gebruikt deze endpoint nergens meer.
@@ -3241,6 +3317,7 @@ async function locatieNu(modus){
         const g=await j("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude="+la+"&longitude="+lo+"&localityLanguage=nl");
         nm=g.city||g.locality||g.principalSubdivision||null;
         land=normLand(g.countryCode);
+        regio=g.principalSubdivision||null;
       }catch(e){}
       if(!nm||!land){
         try{
@@ -3261,6 +3338,7 @@ async function locatieNu(modus){
         return;
       }
 
+      onthoudRegio(la,lo,regio);
       q.value=nm;
       await load(la,lo,nm,false,true,land);
       if(mijnGen!==gpsGeneratie){ klaar(false); return; }
