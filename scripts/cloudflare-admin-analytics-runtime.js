@@ -28,19 +28,42 @@ function deploymentEnv(value="production"){
   return cleaned;
 }
 
-async function cfJson(url,options={},fetchImpl=fetch){
-  const response=await fetchImpl(url,options);
+/* Een tijdelijke Cloudflare-storing (netwerkfout, HTTP 429 of 5xx) liet de
+   productiedeploy vastlopen (5 oktober, 01:12). Zulke fouten krijgen nog twee
+   pogingen, na 2 en na 5 seconden. Een 4xx (sleutel, rechten, payload) is
+   geen storing en faalt direct. Herhalen is veilig: GET leest alleen en de
+   PATCH zet steeds dezelfde waarden. */
+const WACHTTIJDEN_MS=[2000,5000];
+const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+class CloudflareApiFout extends Error{
+  constructor(message,tijdelijk){super(message);this.tijdelijk=tijdelijk;}
+}
+async function cfJsonEenmaal(url,options,fetchImpl){
+  let response;
+  try{response=await fetchImpl(url,options);}
+  catch(error){throw new CloudflareApiFout(`Cloudflare Pages API onbereikbaar: ${error&&error.message||error}.`,true);}
   const text=await response.text();
   let body=null;
   try{body=text?JSON.parse(text):null;}catch{}
   if(!response.ok||!body||body.success!==true){
     const detail=Array.isArray(body&&body.errors)&&body.errors[0]&&body.errors[0].message;
-    throw new Error(`Cloudflare Pages API faalde (HTTP ${response.status})${detail?`: ${detail}`:""}.`);
+    const tijdelijk=response.status===429||response.status>=500;
+    throw new CloudflareApiFout(`Cloudflare Pages API faalde (HTTP ${response.status})${detail?`: ${detail}`:""}.`,tijdelijk);
   }
   return body.result;
 }
+async function cfJson(url,options={},fetchImpl=fetch,{wachttijden=WACHTTIJDEN_MS,wacht=slaap,log=console.warn}={}){
+  for(let poging=0;;poging++){
+    try{return await cfJsonEenmaal(url,options,fetchImpl);}
+    catch(error){
+      if(!error.tijdelijk||poging>=wachttijden.length)throw error;
+      log(`${error.message} Nieuwe poging ${poging+2} van ${wachttijden.length+1} over ${wachttijden[poging]/1000}s.`);
+      await wacht(wachttijden[poging]);
+    }
+  }
+}
 
-async function syncRuntime({accountId,deployToken,analyticsToken,ga4PropertyId=GA4_PROPERTY_ID,project=PROJECT,environment="production",fetchImpl=fetch}){
+async function syncRuntime({accountId,deployToken,analyticsToken,ga4PropertyId=GA4_PROPERTY_ID,project=PROJECT,environment="production",fetchImpl=fetch,herhaal}){
   const account=id(accountId,"CLOUDFLARE_ACCOUNT_ID");
   const writer=token(deployToken,"CLOUDFLARE_API_TOKEN");
   const analytics=token(analyticsToken,"CLOUDFLARE_ANALYTICS_API_TOKEN");
@@ -49,7 +72,7 @@ async function syncRuntime({accountId,deployToken,analyticsToken,ga4PropertyId=G
   const endpoint=`${API_ROOT}/accounts/${account}/pages/projects/${encodeURIComponent(project)}`;
   const headers={Authorization:`Bearer ${writer}`,"Content-Type":"application/json"};
 
-  const before=await cfJson(endpoint,{method:"GET",headers},fetchImpl);
+  const before=await cfJson(endpoint,{method:"GET",headers},fetchImpl,herhaal);
   const beforeVars=before&&before.deployment_configs&&before.deployment_configs[target]&&before.deployment_configs[target].env_vars||{};
   const beforeKeys=Object.keys(beforeVars).sort();
 
@@ -59,8 +82,8 @@ async function syncRuntime({accountId,deployToken,analyticsToken,ga4PropertyId=G
     GA4_PROPERTY_ID:{type:"secret_text",value:ga4}
   };
   const payload={deployment_configs:{[target]:{env_vars:envVars}}};
-  await cfJson(endpoint,{method:"PATCH",headers,body:JSON.stringify(payload)},fetchImpl);
-  const after=await cfJson(endpoint,{method:"GET",headers},fetchImpl);
+  await cfJson(endpoint,{method:"PATCH",headers,body:JSON.stringify(payload)},fetchImpl,herhaal);
+  const after=await cfJson(endpoint,{method:"GET",headers},fetchImpl,herhaal);
   const afterVars=after&&after.deployment_configs&&after.deployment_configs[target]&&after.deployment_configs[target].env_vars||{};
   const afterKeys=Object.keys(afterVars).sort();
 
@@ -99,4 +122,4 @@ if(require.main===module){
   });
 }
 
-module.exports={API_ROOT,PROJECT,GA4_PROPERTY_ID,id,token,propertyId,deploymentEnv,cfJson,syncRuntime};
+module.exports={API_ROOT,PROJECT,GA4_PROPERTY_ID,WACHTTIJDEN_MS,id,token,propertyId,deploymentEnv,cfJson,syncRuntime};
