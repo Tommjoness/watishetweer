@@ -83,7 +83,7 @@ const EXTRA_STIJL = `
 .nz-tabel a{text-decoration:none;border-bottom:1px solid var(--rule)}.nz-tabel a:hover,.nz-tabel a:focus-visible{border-bottom-color:var(--ink)}
 #nz-nachten{margin-top:22px}
 .nz-maan{display:flex;gap:20px;align-items:center;margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--rule)}
-.nz-maan svg{width:72px;height:72px;flex:none}.nz-maan-rand{fill:var(--paper);stroke:var(--rule)}.nz-maan-licht{fill:var(--ink-70)}
+.nz-maan svg{width:72px;height:72px;flex:none}.nz-maan-rand{fill:#46524e;stroke:var(--rule)}.nz-maan-licht{fill:#f4f1e6}
 .nz-maan p{margin:4px 0}.nz-maan .groot{font:400 24px/1.25 "Bodoni Moda",Georgia,serif;color:var(--ink);margin:0 0 4px}
 #nz-maan-fasen{margin:10px 0 0;padding-left:20px;color:var(--ink-70)}#nz-maan-fasen b{color:var(--ink);font-weight:500}
 @media(max-width:600px){#nz-nachten thead{display:none}#nz-nachten tr{display:grid;grid-template-columns:auto 1fr;column-gap:12px;padding:9px 0;border-bottom:1px solid var(--rule)}#nz-nachten th,#nz-nachten td{border:0;padding:0}#nz-nachten td.nz-zin{grid-column:1/-1;margin-top:3px}.nz-tabel table{font-size:14px}.nz-tabel .nz-licht-kol{display:none}.nz-licht-mob{display:block}.nz-cijfer{font-size:38px}.nz-tijden span:nth-child(even){visibility:hidden}}
