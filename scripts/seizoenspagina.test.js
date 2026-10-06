@@ -31,7 +31,10 @@ let t=R.toestand("2026-10-05",kerst);
 assert.equal(t.jaar,2026);
 assert.equal(t.fase,"ver");
 assert.equal(t.vanaf,"2026-12-19");
-assert.equal(R.meldingTekst(t,kerst),"De verwachting voor eerste en tweede kerstdag verschijnt hier op zaterdag 19 december, zeven dagen van tevoren.");
+/* Audit 6 oktober (F03): eerste kerstdag verschijnt op 19, tweede op 20 december. */
+assert.equal(R.meldingTekst(t,kerst),"Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op zondag 20 december.");
+assert.deepEqual(R.toestand("2026-12-19",kerst).dagen.map(d=>d.zichtbaar),[true,false],"19 december: alleen eerste kerstdag");
+assert.deepEqual(R.toestand("2026-12-20",kerst).dagen.map(d=>d.zichtbaar),[true,true],"20 december: beide kerstdagen");
 assert.equal(R.meldingTekst(R.toestand("2026-12-21",kerst),kerst),"","binnen het venster geen aparte melding boven de tabel");
 assert.equal(R.aftelTekst(t,kerst),"Nog 81 dagen tot eerste kerstdag.");
 
@@ -115,7 +118,7 @@ const html=pagina(kerst,"2026-10-05");
 assert(html.includes("<title>Witte kerst 2026: kans op sneeuw met kerst | watishetweer.nl</title>"));
 assert(html.includes('<link rel="canonical" href="https://watishetweer.nl/witte-kerst/">'));
 assert(html.includes('<h1 id="seizoen-kop">Witte kerst 2026</h1>'));
-assert(html.includes("verschijnt hier op zaterdag 19 december"));
+assert(html.includes("Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op zondag 20 december."));
 assert(html.includes("Vanaf 19 december staat hier de verwachting"),"description noemt de startdatum");
 assert(html.includes("gesloten sneeuwdek")&&html.includes("https://www.knmi.nl/"),"definitie met KNMI-bron");
 const zichtbaar=html.split('<script type="application/json" id="seizoen-config">')[0];

@@ -22,8 +22,8 @@ const SEIZOENSPAGINAS=Object.freeze([
     ochtendUur:9,
     dagen:[{maand:12,dag:25,label:"Eerste kerstdag"},{maand:12,dag:26,label:"Tweede kerstdag"}],
     titel:"Witte kerst {jaar}: kans op sneeuw met kerst",
-    beschrijving:"Wordt het een witte kerst in {jaar}? Vanaf {datum} staat hier de verwachting voor sneeuw en temperatuur op eerste en tweede kerstdag, voor De Bilt en grote plaatsen in Nederland.",
-    intro:"Wordt het een witte kerst? Zeven dagen voor kerst staat hier de verwachting voor sneeuw op eerste en tweede kerstdag, voor De Bilt en zes grote plaatsen verspreid over Nederland.",
+    beschrijving:"Wordt het een witte kerst in {jaar}? Vanaf {datum} staat hier de verwachting voor sneeuw en temperatuur met kerst, voor De Bilt en grote plaatsen in Nederland.",
+    intro:"Wordt het een witte kerst? Zodra kerst binnen de 7-daagse verwachting valt, staat hier de verwachting voor sneeuw op eerste en tweede kerstdag, voor De Bilt en zes grote plaatsen verspreid over Nederland.",
     uitleg:{
       kop:"Wanneer is het een witte kerst?",
       alineas:[
@@ -32,7 +32,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       bron:{naam:"KNMI",url:"https://www.knmi.nl/over-het-knmi/nieuws/witte-kerst-steeds-zeldzamer"}
     },
     teksten:{
-      ver:"De verwachting voor eerste en tweede kerstdag verschijnt hier op {datum}, zeven dagen van tevoren.",
+      ver:"Vanaf {datum} verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op {datum2}.",
       aftellenMeer:"Nog {n} dagen tot {dag}.",
       aftellenMorgen:"Morgen is het {dag}.",
       aftellenVandaag:"Vandaag is het {dag}.",

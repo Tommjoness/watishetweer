@@ -57,7 +57,7 @@ const metSneeuw=start=>antwoord(start,(p,i)=>i===0||i===2?{
 }:null);
 
 const SCENARIOS=[
-  {naam:"ver",nu:"2026-10-05T10:00:00Z",verwacht:{kop:"Witte kerst 2026",aftellen:"Nog 81 dagen tot eerste kerstdag.",melding:/verschijnt hier op zaterdag 19 december/,tabellen:0,fetch:0}},
+  {naam:"ver",nu:"2026-10-05T10:00:00Z",verwacht:{kop:"Witte kerst 2026",aftellen:"Nog 81 dagen tot eerste kerstdag.",melding:/^Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag\. De verwachting voor tweede kerstdag volgt op zondag 20 december\.$/,tabellen:0,fetch:0}},
   {naam:"venster",nu:"2026-12-21T09:00:00Z",data:metSneeuw("2026-12-21"),verwacht:{kop:"Witte kerst 2026",aftellen:"Nog 4 dagen tot eerste kerstdag.",samenvatting:"Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in De Bilt. Blijft dat zo, dan is het officieel een witte kerst.",tabellen:2,fetch:1,cel:"Sneeuwdek, 4 cm"}},
   {naam:"half",nu:"2026-12-19T09:00:00Z",data:metSneeuw("2026-12-19"),verwacht:{tabellen:1,fetch:1,later:"Tweede kerstdag: de verwachting verschijnt op zondag 20 december."}},
   {naam:"fout",nu:"2026-12-21T09:00:00Z",status:503,verwacht:{tabellen:0,fetch:1,fout:true}},
@@ -127,7 +127,7 @@ async function controleer(browserType,label,base){
 
 /* Engels: alles vertaald, links en plaatsnamen blijven staan. */
 const ENGELS=[
-  {naam:"ver",nu:"2026-10-05T10:00:00Z",kop:"White Christmas 2026",zinnen:["81 days to go until Christmas Day.","The forecast for Christmas Day and Boxing Day will appear here on Saturday 19 December, seven days in advance."]},
+  {naam:"ver",nu:"2026-10-05T10:00:00Z",kop:"White Christmas 2026",zinnen:["81 days to go until Christmas Day.","The forecast for Christmas Day will appear here from Saturday 19 December.","The Boxing Day forecast follows on Sunday 20 December."]},
   {naam:"venster",nu:"2026-12-21T09:00:00Z",data:metSneeuw("2026-12-21"),kop:"White Christmas 2026",zinnen:["4 days to go until Christmas Day.","According to the current forecast, there will be snow on the ground in De Bilt on both Christmas Day and Boxing Day. If that holds, it will officially be a white Christmas.","Snow cover, 4 cm","No snow, 1.6 mm of rain","official measuring site"]},
   {naam:"half",nu:"2026-12-19T09:00:00Z",data:metSneeuw("2026-12-19"),kop:"White Christmas 2026",zinnen:["Boxing Day: the forecast will appear on Sunday 20 December."]}
 ];

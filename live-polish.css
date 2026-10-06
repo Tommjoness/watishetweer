@@ -105,6 +105,9 @@
   font-style:normal;
   letter-spacing:.01em;
 }
+/* De vertaallaag vertaalt geen CSS-content: in het Engels (html lang="en-GB")
+   staat de status hier in het Engels (audit 6 oktober, F08). */
+html[lang^="en"] #brief[data-q1-briefing-pending]::after,html[lang^="en"] #brief[data-knmi-briefing-pending]::after{content:"Updating the forecast…"}
 #chart:has(#hit:focus-visible){outline:2px solid var(--ink);outline-offset:3px}
 /* De grafiek zelf draagt de focusrand bij toetsenbordgebruik; het tikvlak niet. */
 #hit:focus{outline:none}

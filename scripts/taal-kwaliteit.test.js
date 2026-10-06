@@ -88,7 +88,11 @@ function* combinaties() {
     for (const r of richtingen) yield `${hoofd(naam)} uit het ${r} (${b} Bft).`;
     yield `${hoofd(naam)} (${b} Bft). Windrichting niet beschikbaar.`;
     if (naam !== "windstil") yield `In de komende 24 uur is de wind het sterkst, met ${b} Bft (${naam}).`;
+    /* Windpiek en windstoten zoals de briefing ze echt schrijft
+       (apply-final-presentation-consistency.js; audit 6 oktober, F01). */
+    if (naam !== "windstil") for (const dag of ["Vandaag", "Morgen", "Op zaterdag"]) yield `${dag} rond 05:00 is de wind het sterkst, met ${b} Bft (${naam}).`;
   }
+  for (const dag of ["", "vandaag ", "morgen ", "op zondag "]) yield `Windstoten kunnen ${dag}tussen 14:00 en 15:00 oplopen tot 62 km/u.`;
   for (const r of richtingen) { yield `De wind komt uit het ${r}.`; for (const r2 of ["noorden", "zuidwesten"]) yield `De wind komt uit het ${r} en draait naar het ${r2}.`; }
   for (const r of Object.keys(RICHTING_KORT)) for (const b of [0, 1, 7, 12]) yield `${r} ${b} Bft`;
   for (const g of getallen) {

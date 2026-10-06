@@ -135,6 +135,13 @@
     return delen.every(Boolean) ? delen.join("; ") + staart : null;
   }
   function datum(dag, mnd, jaar) { const m = maand(mnd); return m ? `${dag} ${m}${jaar ? " " + jaar : ""}` : null; }
+  /* "Vandaag" / "Morgen" / "Op maandag" aan het begin van een zin. */
+  function dagKop(nl) {
+    const k = { vandaag: "Today", morgen: "Tomorrow" }[String(nl).toLowerCase()];
+    if (k) return k;
+    const d = /^op (.+)$/i.exec(String(nl));
+    return d && dagVol(d[1]) ? "On " + dagVol(d[1]) : null;
+  }
   function vandaagMorgen(nl) { return { vandaag: "today", morgen: "tomorrow", gisteren: "yesterday", vannacht: "tonight", vanavond: "this evening" }[String(nl).toLowerCase()] || null; }
 
   /* Landnamen: Nederlandse naam → Brits-Engelse naam via de Unicode-landenlijst
@@ -677,8 +684,8 @@
 
     /* Seizoenspagina witte kerst (vaste teksten) */
     "Witte kerst": "White Christmas",
-    "Wordt het een witte kerst? Zeven dagen voor kerst staat hier de verwachting voor sneeuw op eerste en tweede kerstdag, voor De Bilt en zes grote plaatsen verspreid over Nederland.":
-      "Will it be a white Christmas? Seven days before Christmas, the snow forecast for Christmas Day and Boxing Day appears here, for De Bilt and six large places across the Netherlands.",
+    "Wordt het een witte kerst? Zodra kerst binnen de 7-daagse verwachting valt, staat hier de verwachting voor sneeuw op eerste en tweede kerstdag, voor De Bilt en zes grote plaatsen verspreid over Nederland.":
+      "Will it be a white Christmas? Once Christmas falls within the 7-day forecast, the snow forecast for Christmas Day and Boxing Day appears here, for De Bilt and six large places across the Netherlands.",
     "Wanneer is het een witte kerst?": "When is it a white Christmas?",
     "Er is officieel sprake van een witte kerst wanneer er in De Bilt op beide kerstdagen een gesloten sneeuwdek wordt gemeten. Sinds 1901 gebeurde dat acht keer; de laatste keer was in 2010.":
       "Officially, it is a white Christmas when a continuous snow cover is measured in De Bilt on both Christmas Day and Boxing Day. Since 1901 this has happened eight times; the last time was in 2010.",
@@ -915,8 +922,10 @@
     /* Seizoenspagina witte kerst (teksten met jaar, datum, plaats of aantal) */
     [/^Witte kerst (\d{4})$/, (m) => `White Christmas ${m[1]}`],
     [/^Witte kerst (\d{4}): kans op sneeuw met kerst \| watishetweer\.nl$/, (m) => `White Christmas ${m[1]}: chance of snow at Christmas | watishetweer.nl`],
-    [/^De verwachting voor eerste en tweede kerstdag verschijnt hier op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december), zeven dagen van tevoren\.$/,
-      (m) => `The forecast for Christmas Day and Boxing Day will appear here on ${dagVol(m[1])} ${m[2]} ${maand(m[3])}, seven days in advance.`],
+    [/^Vanaf (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) verschijnt hier de verwachting voor (eerste kerstdag|tweede kerstdag)\.$/,
+      (m) => `The forecast for ${KERSTDAG[m[4]]} will appear here from ${dagVol(m[1])} ${m[2]} ${maand(m[3])}.`],
+    [/^De verwachting voor (eerste kerstdag|tweede kerstdag) volgt op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.$/,
+      (m) => `The ${KERSTDAG[m[1]]} forecast follows on ${dagVol(m[2])} ${m[3]} ${maand(m[4])}.`],
     [/^Nog (\d+) dagen tot (eerste kerstdag|tweede kerstdag|oudejaarsdag)\.$/, (m) => `${m[1]} days to go until ${KERSTDAG[m[2]]}.`],
     [/^Morgen is het (eerste kerstdag|tweede kerstdag|oudejaarsdag)\.$/, (m) => `Tomorrow is ${KERSTDAG[m[1]]}.`],
     [/^Vandaag is het (eerste kerstdag|tweede kerstdag|oudejaarsdag)\.$/, (m) => `Today is ${KERSTDAG[m[1]]}.`],
@@ -1005,6 +1014,14 @@
     [/^De wind komt uit het ([a-z]+) en draait naar het ([a-z]+)\.$/, (m) => richting(m[1]) && richting(m[2]) && `The wind is ${richting(m[1])}erly, becoming ${richting(m[2])}erly.`],
     [/^In de komende (\d+) uur is de wind het sterkst, met (\d+) Bft \(([a-z ]+)\)\.$/, (m) => WINDKRACHT[m[3]] && `Over the next ${m[1]} hours, the wind peaks at ${m[2]} Bft (${windNaam(m[3], m[2])}).`],
     [new RegExp(`^Windstoten kunnen (vandaag|morgen) tussen ${T} en ${T} oplopen tot (\\d+) km/u\\.$`), (m) => `Gusts may reach ${m[4]} km/h ${vandaagMorgen(m[1])} between ${m[2]} and ${m[3]}.`],
+    /* Windpiek in de briefing (apply-final-presentation-consistency): "Morgen
+       rond 05:00 is de wind het sterkst, met 4 Bft (matige wind)." en de
+       windstoten daarna, met of zonder dagwoord ("Windstoten kunnen tussen
+       14:00 en 15:00 …" hoort dan bij de dag van de windpiek). */
+    [new RegExp(`^(Vandaag|Morgen|Op (?:maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag)) rond ${T} is de wind het sterkst, met (\\d+) Bft \\(([a-z ]+)\\)\\.$`),
+      (m) => WINDKRACHT[m[4]] && `${dagKop(m[1])}, the wind will be strongest at around ${m[2]}, reaching ${m[3]} Bft (${windNaam(m[4], m[3])}).`],
+    [new RegExp(`^Windstoten kunnen tussen ${T} en ${T} oplopen tot (\\d+) km/u\\.$`), (m) => `Gusts may reach ${m[3]} km/h between ${m[1]} and ${m[2]}.`],
+    [new RegExp(`^Windstoten kunnen op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) tussen ${T} en ${T} oplopen tot (\\d+) km/u\\.$`), (m) => `Gusts may reach ${m[4]} km/h on ${dagVol(m[1])} between ${m[2]} and ${m[3]}.`],
     [new RegExp(`^De hoogste windstoot (werd|wordt) (vandaag|morgen|gisteren) tussen ${T} en ${T} (?:verwacht, )?(?:met )?(?:ongeveer )?(\\d+) km/u\\.$`), (m) => `The strongest gust ${m[1] === "werd" ? "was" : "is expected"} ${vandaagMorgen(m[2])} between ${m[3]} and ${m[4]}, at about ${m[5]} km/h.`],
 
     /* Tegels en uurdetails */

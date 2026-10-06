@@ -25,6 +25,13 @@ const verwacht = {
   "Matige wind (3 Bft).": "Gentle breeze (3 Bft).",
   "In de komende 6 uur is de wind het sterkst, met 4 Bft (matige wind).": "Over the next 6 hours, the wind peaks at 4 Bft (moderate breeze).",
   "Ook later vandaag blijft neerslag onwaarschijnlijk.": "It should stay dry for the rest of today too.",
+  /* Echte briefing van Sydney uit de audit van 6 oktober (F01): het hele blok
+     bleef Nederlands omdat deze twee windzinnen ontbraken. */
+  "Morgen rond 05:00 is de wind het sterkst, met 4 Bft (matige wind).": "Tomorrow, the wind will be strongest at around 05:00, reaching 4 Bft (moderate breeze).",
+  "Windstoten kunnen tussen 14:00 en 15:00 oplopen tot 62 km/u.": "Gusts may reach 62 km/h between 14:00 and 15:00.",
+  "Vandaag rond 17:00 is de wind het sterkst, met 3 Bft (matige wind).": "Today, the wind will be strongest at around 17:00, reaching 3 Bft (gentle breeze).",
+  "Windstoten kunnen op zaterdag tussen 01:00 en 02:00 oplopen tot 80 km/u.": "Gusts may reach 80 km/h on Saturday between 01:00 and 02:00.",
+  "De komende twee uur wordt er geen neerslag verwacht. Morgen rond 05:00 is de wind het sterkst, met 4 Bft (matige wind). Windstoten kunnen tussen 14:00 en 15:00 oplopen tot 62 km/u.": "No precipitation is expected in the next two hours. Tomorrow, the wind will be strongest at around 05:00, reaching 4 Bft (moderate breeze). Gusts may reach 62 km/h between 14:00 and 15:00.",
   "Code oranje: zware windstoten": "Orange warning for severe gusts",
   "Officiële weerwaarschuwing: Code oranje: zware windstoten.": "Official weather warning: orange warning for severe gusts.",
   "NW 3 Bft": "NW 3 Bft",

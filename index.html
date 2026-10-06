@@ -1787,6 +1787,9 @@ function etmaal(start,n){
   if(!Tgeldig.length){ const elLeeg=document.getElementById("chart"); elLeeg.innerHTML=""; return; }
   if(actueleGrafiekTemp!==null) Tgeldig.push(actueleGrafiekTemp);
   let mn=Math.min(...Tgeldig),mx=Math.max(...Tgeldig);
+  /* De schermlezer krijgt de echte laagste en hoogste temperatuur, niet de
+     verruimde grenzen van de as hieronder (audit 6 oktober, F02). */
+  const dataMin=Math.round(mn),dataMax=Math.round(mx);
   mn=Math.floor(mn-1);mx=Math.ceil(mx+1);
   /* Regenstaven (q4-rain-runtime) staan in het onderste vijfde deel van de
      plot. In een uur met meetbare regen (0,1 mm of meer, dezelfde drempel als
@@ -2226,7 +2229,7 @@ function etmaal(start,n){
   const grafiekMoment=t=>{const l=weatherNowLokaleTijd(t);return new Date(l.slice(0,10)+"T12:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"})+" om "+l.slice(11,16);};
   svg.setAttribute("aria-label",
     "Verloop van "+grafiekMoment(TI[0])+" tot "+grafiekMoment(TI[TI.length-1])
-    +", temperatuur tussen "+mn+" en "+mx+" graden, "+kansVoorlezer+".");
+    +", temperatuur tussen "+dataMin+" en "+dataMax+" graden, "+kansVoorlezer+".");
   S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,H:H,M:M};
   scrubKoppel(); chartHint();
 
@@ -2942,15 +2945,18 @@ function deelUrl(){
   return u.href;
 }
 async function deelPlaats(knop){
-  const url=deelUrl(),titel="Weer in "+S.label+" | watishetweer.nl";
+  /* Het deelmenu en de kopieervraag staan buiten de pagina: de vertaallaag
+     bereikt ze niet, dus kiezen we de taal hier zelf (audit 6 oktober, F08). */
+  const engels=/^en\b/i.test(document.documentElement.getAttribute("lang")||"");
+  const url=deelUrl(),titel=(engels?"Weather in ":"Weer in ")+S.label+" | watishetweer.nl";
   if(navigator.share){
-    try{await navigator.share({title:titel,text:"Het weer in "+S.label+", per uur en voor 7 dagen.",url});}
+    try{await navigator.share({title:titel,text:engels?"The weather in "+S.label+", by the hour and for 7 days.":"Het weer in "+S.label+", per uur en voor 7 dagen.",url});}
     catch(e){/* annuleren in het deelmenu is geen fout */}
     return;
   }
   let gekopieerd=false;
   try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(url);gekopieerd=true;}}catch(e){}
-  if(!gekopieerd){window.prompt("Kopieer deze link:",url);return;}
+  if(!gekopieerd){window.prompt(engels?"Copy this link:":"Kopieer deze link:",url);return;}
   knop.textContent="Link gekopieerd";
   clearTimeout(deelPlaats.timer);
   deelPlaats.timer=setTimeout(()=>{if(knop.isConnected)knop.textContent="Delen";},2500);
