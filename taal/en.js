@@ -37,6 +37,11 @@
     "storm": "severe gale", "zware storm": "storm", "zeer zware storm": "violent storm", "orkaan": "hurricane-force wind",
     "vrij krachtig": "fresh", "zeer stormachtig": "very stormy"
   };
+  /* "Matige wind" beslaat 3 en 4 Bft; het Engels (Met Office) maakt daar twee
+     namen van: 3 = gentle breeze, 4 = moderate breeze. Zonder Bft-getal blijft
+     het "moderate wind". */
+  const windNaam = (nl, bft) => nl === "matige wind" && Number(bft) === 3 ? "gentle breeze"
+    : nl === "matige wind" && Number(bft) === 4 ? "moderate breeze" : WINDKRACHT[nl];
   /* Weertypen (WMO-codes, dag en nacht, dagverwachting). Sleutel in kleine letters. */
   const WEER = {
     "onbewolkt": "clear", "vrijwel onbewolkt": "mostly clear", "overwegend zonnig": "mainly sunny", "half bewolkt": "partly cloudy",
@@ -575,7 +580,7 @@
     "Ook later vandaag blijft de neerslagkans groot.": "The chance of precipitation stays high later today too.",
     "Ook later vandaag blijft de neerslagkans zeer groot.": "The chance of precipitation stays very high later today too.",
     "Ook later vandaag blijft neerslag mogelijk.": "Precipitation remains possible later today too.",
-    "Ook later vandaag blijft neerslag onwaarschijnlijk.": "Precipitation remains unlikely later today too.",
+    "Ook later vandaag blijft neerslag onwaarschijnlijk.": "It should stay dry for the rest of today too.",
     "De verwachte hoeveelheid is onzeker.": "The expected amount is uncertain.",
     "Geen betrouwbare aanvullende samenvatting beschikbaar.": "No reliable additional summary available.",
     "Onvoldoende gegevens voor een betrouwbare beoordeling.": "Not enough data for a reliable assessment.",
@@ -990,15 +995,15 @@
     [/^Lichtvervuiling (?:in (.+)|hier): (laag|matig|hoog|laag tot matig|matig tot hoog) \(geschat\)\.$/, (m) => `Light pollution ${m[1] ? "in " + plaats(m[1]) : "here"}: ${({ laag: "low", matig: "moderate", hoog: "high", "laag tot matig": "low to moderate", "matig tot hoog": "moderate to high" })[m[2]]} (estimated).`],
     [/^(\d{2}:\d{2}, )?neerslagkans (\d+%)(?:, verwacht (.+))?$/, (m) => `${m[1] || ""}${m[2]} chance of precipitation${m[3] ? ", " + m[3].replace(/(\d),(\d)/g, "$1.$2") + " expected" : ""}`],
     [/^(\d+) km\/u(?: (N|NNO|NO|ONO|O|OZO|ZO|ZZO|Z|ZZW|ZW|WZW|W|WNW|NW|NNW))?, (\d+) Bft$/, (m) => `${m[1]} km/h${m[2] ? " " + RICHTING_KORT[m[2]] : ""}, ${m[3]} Bft`],
-    [/^(Zwakke|Matige|Vrij krachtige|Krachtige|Harde|Stormachtige) wind uit het ([a-z]+) \((\d+) Bft\)\.$/, (m) => richting(m[2]) && `${alsNl("X", WINDKRACHT[m[1].toLowerCase() + " wind"])} from the ${richting(m[2])} (${m[3]} Bft).`],
+    [/^(Zwakke|Matige|Vrij krachtige|Krachtige|Harde|Stormachtige) wind uit het ([a-z]+) \((\d+) Bft\)\.$/, (m) => richting(m[2]) && `${alsNl("X", windNaam(m[1].toLowerCase() + " wind", m[3]))} from the ${richting(m[2])} (${m[3]} Bft).`],
     [/^(Storm|Zware storm|Zeer zware storm|Orkaan) uit het ([a-z]+) \((\d+) Bft\)\.$/, (m) => richting(m[2]) && `${alsNl("X", WINDKRACHT[m[1].toLowerCase()])} from the ${richting(m[2])} (${m[3]} Bft).`],
     [/^Windstil\.$/, () => "Calm."],
     /* Windtegel zonder bekende richting: "Zwakke wind (2 Bft). Windrichting niet beschikbaar." */
-    [/^(Zwakke|Matige|Vrij krachtige|Krachtige|Harde|Stormachtige) wind \((\d+) Bft\)\.$/, (m) => `${alsNl("X", WINDKRACHT[m[1].toLowerCase() + " wind"])} (${m[2]} Bft).`],
+    [/^(Zwakke|Matige|Vrij krachtige|Krachtige|Harde|Stormachtige) wind \((\d+) Bft\)\.$/, (m) => `${alsNl("X", windNaam(m[1].toLowerCase() + " wind", m[2]))} (${m[2]} Bft).`],
     [/^(Storm|Zware storm|Zeer zware storm|Orkaan) \((\d+) Bft\)\.$/, (m) => `${alsNl("X", WINDKRACHT[m[1].toLowerCase()])} (${m[2]} Bft).`],
     [/^De wind komt uit het ([a-z]+)\.$/, (m) => richting(m[1]) && `The wind is from the ${richting(m[1])}.`],
     [/^De wind komt uit het ([a-z]+) en draait naar het ([a-z]+)\.$/, (m) => richting(m[1]) && richting(m[2]) && `The wind is ${richting(m[1])}erly, becoming ${richting(m[2])}erly.`],
-    [/^In de komende (\d+) uur is de wind het sterkst, met (\d+) Bft \(([a-z ]+)\)\.$/, (m) => WINDKRACHT[m[3]] && `Over the next ${m[1]} hours, the wind peaks at ${m[2]} Bft (${WINDKRACHT[m[3]]}).`],
+    [/^In de komende (\d+) uur is de wind het sterkst, met (\d+) Bft \(([a-z ]+)\)\.$/, (m) => WINDKRACHT[m[3]] && `Over the next ${m[1]} hours, the wind peaks at ${m[2]} Bft (${windNaam(m[3], m[2])}).`],
     [new RegExp(`^Windstoten kunnen (vandaag|morgen) tussen ${T} en ${T} oplopen tot (\\d+) km/u\\.$`), (m) => `Gusts may reach ${m[4]} km/h ${vandaagMorgen(m[1])} between ${m[2]} and ${m[3]}.`],
     [new RegExp(`^De hoogste windstoot (werd|wordt) (vandaag|morgen|gisteren) tussen ${T} en ${T} (?:verwacht, )?(?:met )?(?:ongeveer )?(\\d+) km/u\\.$`), (m) => `The strongest gust ${m[1] === "werd" ? "was" : "is expected"} ${vandaagMorgen(m[2])} between ${m[3]} and ${m[4]}, at about ${m[5]} km/h.`],
 

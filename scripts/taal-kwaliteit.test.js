@@ -227,7 +227,7 @@ const regels = [
   [/\b(storm|severe storm) from the\b.*\(9 Bft\)|\bvery strong wind\b.*\(7 Bft\)/i, "Beaufortnaam"],
   [/\bundefined\b|\bnull\b|NaN|\$\{/, "lege waarde"]
 ];
-const BEAUFORT_EN = ["calm", "light wind", "light wind", "moderate wind", "moderate wind", "fresh breeze", "strong breeze", "near gale", "gale", "severe gale", "storm", "violent storm", "hurricane-force wind"];
+const BEAUFORT_EN = ["calm", "light wind", "light wind", "gentle breeze", "moderate breeze", "fresh breeze", "strong breeze", "near gale", "gale", "severe gale", "storm", "violent storm", "hurricane-force wind"];
 
 const lijst = [];
 const fouten = [];
