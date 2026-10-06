@@ -70,7 +70,9 @@ function aftelTekst(t,cfg){
   return vul(cfg.teksten.aftellenMeer,{n:eerste.over,dag:klein(eerste.label)});
 }
 function meldingTekst(t,cfg){
-  if(t.fase==="ver")return vul(cfg.teksten.ver,{datum:datumTekst(t.vanaf,true),dagen:cfg.vensterDagen});
+  /* {datum} is de dag waarop de eerste evenementdag verschijnt, {datum2} die
+     van de tweede (tweede kerstdag komt een dag later in beeld dan eerste). */
+  if(t.fase==="ver")return vul(cfg.teksten.ver,{datum:datumTekst(t.vanaf,true),datum2:t.dagen[1]?datumTekst(t.dagen[1].vanaf,true):"",dagen:cfg.vensterDagen});
   return "";
 }
 
