@@ -69,6 +69,10 @@ De MeteoAlarm-feed per land kan groot zijn (Spanje: 3,5 MB, ruim 7 seconden). De
 
 Seizoenspagina's zoals `/witte-kerst/` en `/oud-en-nieuw/` hebben een vaste URL die ieder jaar terugkomt. Iedere pagina is alleen configuratie in `scripts/seizoenspagina.config.js` (datums, plaatsen, teksten); het sjabloon (`scripts/generate-seizoenspaginas.js`) en de browserlogica (`scripts/seizoenspagina-runtime.js`) zijn gedeeld. Buiten de 7-daagse verwachting toont de pagina alleen wanneer de verwachting verschijnt; daarbinnen haalt hij de echte Open-Meteo-verwachting op. Er is geen lange-termijnverwachting en geen klimaatstatistiek. De pagina's staan in de sitemap en als footerlink op iedere weerpagina.
 
+## Nachtzicht-pagina's
+
+`/nachtzicht/` zet de Nationale Parken op een rij (donkerste eerst), `/nachtzicht/<park>/` toont per park de komende nachten en `/maan/` de maanfase en de komende hoofdfasen. De parken en hun coördinaten staan in `scripts/nachtzicht.config.js` (Wikidata); een park doet alleen mee als de RIVM-lichtkaart (`lichtvervuiling-nl.json`) rond het park volledig is, waardoor parken aan de landsgrens ontbreken. De pagina's tonen exact de nachtscore, het oordeel en het kijkvenster van het blok Nachtzicht: `scripts/nachtzicht-bron.js` neemt bij de build de rekenfuncties en teksten letterlijk over uit de app (`index.html`, `senior-correctness-v2.js`, `scripts/mobile-screenshot-polish.js`, `scripts/final-global-correctness-20260901.js`, `nederlandse-weergrammatica.js`) en faalt als een anker verdwijnt. `scripts/nachtzicht-pariteit-browser.test.js` legt de pagina's naast de echte app; verander je Nachtzicht in de app, dan faalt die test tot de pagina's meegaan. De maanfasen op `/maan/` volgen Meeus (Astronomical Algorithms).
+
 ## Belangrijkste externe bronnen
 
 | Onderdeel | Bron |

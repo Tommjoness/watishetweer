@@ -44,6 +44,7 @@ const verwacht=[
   "verify-seo-location-h1.js",
   "verify-seo-location-pages.js",
   "generate-seizoenspaginas.js",
+  "generate-nachtzicht.js",
   "verify-staff-audit-20260826.js",
   "apply-lcp-final-mile-20260828.js",
   "verify-moon-a11y-template.js",
