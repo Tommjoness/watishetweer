@@ -1082,7 +1082,6 @@ function toonPlaatsRegio(){
   }
   const tekst=S.lat==null?"":plaatsRegioTekst(S.lat,S.lon,S.label,S.land);
   if(el.textContent!==tekst)el.textContent=tekst;
-  if(el.title!==tekst)el.title=tekst;
 }
 /* Iedere renderlaag die de plaatskop opnieuw schrijft, werkt zo ook de regel
    eronder bij; de klok in de kop wijzigt alleen een kind-element en telt niet mee. */
