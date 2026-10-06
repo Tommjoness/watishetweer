@@ -4,8 +4,8 @@
  * Audit 6 oktober, zichtbare punten, gemeten op het definitieve artifact:
  * - F09: regio en land onder de plaatsnaam (ook in het Engels), en
  *   gelijknamige bewaarde plaatsen krijgen hun regio erachter;
- * - F04: de bron van de hoofdverwachting staat bij de ophaaltijd, inclusief
- *   een zichtbare reservebron;
+ * - F04: een reservebron voor de hoofdverwachting staat zichtbaar bij de
+ *   ophaaltijd; met Open-Meteo blijft de stempel kort;
  * - F10: de grafiektabel heeft een zichtbare, klikbare link en blijft dicht
  *   tot iemand hem opent.
  */
@@ -96,7 +96,7 @@ server.listen(0, async () => {
 
       /* F04: bron bij de ophaaltijd, ook bij de reservebron. */
       const stempel = await page.evaluate(() => document.getElementById("stamp").textContent);
-      assert(/^Gegevens opgehaald om \d{2}:\d{2} · .+ · Open-Meteo$/.test(stempel), "bron ontbreekt bij de ophaaltijd: " + stempel);
+      assert(/^Gegevens opgehaald om \d{2}:\d{2} · (?:minder dan 1 min|\d+ min) geleden$/.test(stempel), "normale bron houdt de stempel kort: " + stempel);
       const reserve = await page.evaluate(() => { S.d.provider = "visualcrossing"; stempel(); const t = document.getElementById("stamp").textContent; S.d.provider = "weatherapi"; stempel(); return [t, document.getElementById("stamp").textContent]; });
       assert(reserve[0].endsWith(" · reservebron Visual Crossing") && reserve[1].endsWith(" · reservebron WeatherAPI"), "reservebron niet zichtbaar: " + reserve);
 
@@ -124,12 +124,14 @@ server.listen(0, async () => {
     await page.waitForTimeout(300);
     const en = await page.evaluate(() => ({ regio: document.getElementById("plaatsregio").textContent, stempel: document.getElementById("stamp").textContent, link: document.querySelector("#chartdata > summary").textContent.trim() }));
     assert.strictEqual(en.regio, "North Holland, Netherlands");
-    assert(/^Loaded at \d{2}:\d{2} · .+ · Open-Meteo$/.test(en.stempel), "Engelse stempel: " + en.stempel);
+    assert(/^Loaded at \d{2}:\d{2} · (?:less than a minute|\d+ min) ago$/.test(en.stempel), "Engelse stempel: " + en.stempel);
+    const enReserve = await page.evaluate(() => { S.d.provider = "visualcrossing"; stempel(); return new Promise(r => setTimeout(() => r(document.getElementById("stamp").textContent), 300)); });
+    assert(/^Loaded at \d{2}:\d{2} · .+ ago · backup source Visual Crossing$/.test(enReserve), "Engelse reservebron: " + enReserve);
     assert.strictEqual(en.link, "Chart data as a table");
     assert.deepStrictEqual(fouten, [], "paginafouten (en): " + fouten.join(" | "));
     await ctx.close();
 
-    console.log("Audit-zichtbaarheid groen (390 en 1366px, NL en EN): regio en land onder de plaatsnaam, onderscheidbare gelijknamige bewaarde plaatsen, verwachtingsbron en reservebron bij de ophaaltijd, zichtbare en klikbare link naar de grafiektabel.");
+    console.log("Audit-zichtbaarheid groen (390 en 1366px, NL en EN): regio en land onder de plaatsnaam, onderscheidbare gelijknamige bewaarde plaatsen, reservebron zichtbaar bij de ophaaltijd, zichtbare en klikbare link naar de grafiektabel.");
   } finally {
     await browser.close();
     server.close();

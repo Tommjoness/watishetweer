@@ -140,7 +140,6 @@ function* combinaties() {
     yield `${n} uur daglicht`;
     yield n === "1" ? "1 plaats gevonden." : `${n} plaatsen gevonden.`;
     yield `Gegevens opgehaald om 22:01 · ${n} min geleden`;
-    yield `Gegevens opgehaald om 22:01 · ${n} min geleden · Open-Meteo`;
     yield `Gegevens opgehaald om 22:01 · ${n} min geleden · reservebron Visual Crossing`;
     yield `Gegevens opgehaald om 22:01 · ${n} min geleden · reservebron WeatherAPI`;
     yield `Komend uur: ${n}% kans.`;

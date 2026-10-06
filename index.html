@@ -124,7 +124,9 @@
   .mast{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s3);flex-wrap:wrap}
   .mast h1{font-family:var(--serif);font-weight:400;font-size:15px;letter-spacing:.02em;margin:0;color:var(--ink-45)}
   #place{font-family:var(--serif);font-weight:400;font-size:44px;line-height:1.05;margin:4px 0 0;letter-spacing:-.01em}
-  #plaatsregio{font-family:var(--sans);font-size:13px;line-height:1.35;color:var(--ink-45);margin:4px 0 0;overflow-wrap:anywhere}
+  /* Vaste regel van één regel hoog, ook zolang hij nog leeg is: zo schuift er
+     niets op als regio en land na het laden verschijnen (geen CLS). */
+  #plaatsregio{font-family:var(--sans);font-size:13px;line-height:1.35;min-height:1.35em;color:var(--ink-45);margin:4px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   .mastright{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:9px}
   .tools{display:flex;gap:0;align-items:stretch;position:relative}
   input[type=text]{background:transparent;border:1px solid var(--rule);border-right:none;color:var(--ink);
@@ -555,6 +557,7 @@
     <div>
       <h1>Wat is het weer?</h1>
       <h2 id="place" aria-label="Plaats">&nbsp;<span id="plaatstijd" aria-hidden="true"></span></h2>
+      <p id="plaatsregio" translate="no"></p>
     </div>
     <div class="mastright">
       <div class="tools">
@@ -1079,7 +1082,7 @@ function toonPlaatsRegio(){
   }
   const tekst=S.lat==null?"":plaatsRegioTekst(S.lat,S.lon,S.label,S.land);
   if(el.textContent!==tekst)el.textContent=tekst;
-  el.hidden=!tekst;
+  if(el.title!==tekst)el.title=tekst;
 }
 /* Iedere renderlaag die de plaatskop opnieuw schrijft, werkt zo ook de regel
    eronder bij; de klok in de kop wijzigt alleen een kind-element en telt niet mee. */
@@ -3075,17 +3078,17 @@ document.getElementById("thema").addEventListener("click",()=>{
 themaToepassen();
 
 /* ---------- stempel en verversen ---------- */
-/* Welke dienst de hoofdverwachting leverde, staat direct bij de ophaaltijd.
-   Normaal is dat Open-Meteo; is die te traag of onbereikbaar, dan neemt
-   /api/forecast het over met Visual Crossing of WeatherAPI. Zo is een
-   bronwissel zichtbaar en wordt een verschil tussen diensten niet aan iets
-   anders (zoals de taalkeuze) toegeschreven. De overige bronnen blijven in
-   de footer onder "Bronnen voor deze weergave". */
+/* Een bronwissel staat direct bij de ophaaltijd. Normaal levert Open-Meteo
+   de hoofdverwachting (die staat al bij de bronnen in de footer) en blijft de
+   stempel kort, op één regel. Is Open-Meteo te traag of onbereikbaar, dan
+   neemt /api/forecast het over met Visual Crossing of WeatherAPI; dat wordt
+   hier zichtbaar gemeld, zodat een verschil tussen diensten niet aan iets
+   anders (zoals de taalkeuze) wordt toegeschreven. */
 function verwachtingsbron(d){
   const p=String(d&&d.provider||"");
-  if(p==="visualcrossing")return "reservebron Visual Crossing";
-  if(p==="weatherapi")return "reservebron WeatherAPI";
-  return "Open-Meteo";
+  if(p==="visualcrossing")return " · reservebron Visual Crossing";
+  if(p==="weatherapi")return " · reservebron WeatherAPI";
+  return "";
 }
 function stempel(){
   const el=document.getElementById("stamp");
@@ -3095,7 +3098,7 @@ function stempel(){
   try{tijd=new Intl.DateTimeFormat("nl-NL",{timeZone:S.d.timezone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(S.op));}
   catch(_){tijd=new Date(S.op).toTimeString().slice(0,5);}
   const geleden=m<1?"minder dan 1 min geleden":m===1?"1 min geleden":m+" min geleden";
-  el.textContent="Gegevens opgehaald om "+tijd+" · "+geleden+" · "+verwachtingsbron(S.d);
+  el.textContent="Gegevens opgehaald om "+tijd+" · "+geleden+verwachtingsbron(S.d);
   el.className=m>45?"oud":"";
 }
 setInterval(stempel,30000);
