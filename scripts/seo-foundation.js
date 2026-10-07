@@ -103,8 +103,7 @@ function pasSeoFoundationToe(html){
      vanaf iedere weerpagina crawlbaar zijn. De laatste twee span.bron-items
      blijven Over en Privacy: daarop rust de footerindeling. Op mobiel zet de
      onderkantlaag ze via .seizoen-link in beeld achter Privacy. */
-  const seizoenLinks=SEIZOENSPAGINAS.map(p=>`<span class="bron seizoen-link"><a href="/${p.slug}/">${p.naam}</a></span>\n      `).join("")
-    +`<span class="bron seizoen-link"><a href="${NACHTZICHT.BASIS}">Sterren kijken</a></span>\n      `;
+  const seizoenLinks=SEIZOENSPAGINAS.map(p=>`<span class="bron seizoen-link"><a href="/${p.slug}/">${p.naam}</a></span>\n      `).join("");
   bron=bron.replace(privacyAnker,brandLink.replace(BRAND_LINK_MARKER+"\n      ",BRAND_LINK_MARKER+"\n      "+seizoenLinks)+"\n      "+privacyAnker);
 
   /* In Nachtzicht, onder de regel over lichtvervuiling, verwijst een regel naar de Nachtzicht-pagina's.
