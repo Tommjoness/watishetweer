@@ -1244,7 +1244,7 @@ async function load(lat,lon,label,stil,opslaan,land){
     +"uv_index,pressure_msl,is_day";
   const fmin=basis+"&past_hours=24&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,"
     +"precipitation_probability,precipitation,rain,showers,snowfall,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,"
-    +"wind_gusts_10m,uv_index,pressure_msl,is_day";
+    +"wind_gusts_10m,visibility,uv_index,pressure_msl,is_day";
   const w="/api/forecast?lat="+encodeURIComponent(nieuweLat)+"&lon="+encodeURIComponent(nieuweLon);
   const a="https://air-quality-api.open-meteo.com/v1/air-quality?latitude="+lat+"&longitude="+lon
     +"&current=european_aqi,us_aqi&hourly=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,"

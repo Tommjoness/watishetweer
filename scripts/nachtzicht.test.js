@@ -66,6 +66,11 @@ const appNu = lijst(INDEX.replace(/"\s*\n\s*\+"/g, ""), /&current=([a-z0-9_,]+)/
 for (const v of lijst(RUNTIME, /const UURVELDEN = "([^"]+)"/, "UURVELDEN")) assert(appUur.includes(v), `uurveld ${v} vraagt de app niet op`);
 for (const v of lijst(RUNTIME, /const NUVELDEN = "([^"]+)"/, "NUVELDEN")) assert(appNu.includes(v), `actueel veld ${v} vraagt de app niet op`);
 for (const deel of ["past_hours=24", "wind_speed_unit=kmh", "daily=sunrise,sunset"]) assert(RUNTIME.includes(deel), `aanvraag mist ${deel}`);
+/* Ook de lichtere reserve-aanvraag van de app (fmin, bij een trage volledige
+   aanvraag) moet alle velden hebben waarmee Nachtzicht rekent; zonder zicht
+   toonde Nachtzicht anders "Onvoldoende data". */
+const appReserve = lijst(INDEX.replace(/"\s*\n\s*\+"/g, ""), /const fmin=basis\+"[^"]*&hourly=([a-z0-9_,]+)/, "uurvelden van de reserve-aanvraag");
+for (const v of lijst(RUNTIME, /const UURVELDEN = "([^"]+)"/, "UURVELDEN")) assert(appReserve.includes(v), `uurveld ${v} ontbreekt in de reserve-aanvraag van de app`);
 
 /* ---------- pagina's ---------- */
 const kern = kernBron(INDEX);
