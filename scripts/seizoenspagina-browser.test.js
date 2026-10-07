@@ -57,11 +57,11 @@ const metSneeuw=start=>antwoord(start,(p,i)=>i===0||i===2?{
 }:null);
 
 const SCENARIOS=[
-  {naam:"ver",nu:"2026-10-05T10:00:00Z",verwacht:{kop:"Witte kerst 2026",aftellen:"Nog 81 dagen tot eerste kerstdag.",melding:/^Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag\. De verwachting voor tweede kerstdag volgt op zondag 20 december\.$/,tabellen:0,fetch:0}},
-  {naam:"venster",nu:"2026-12-21T09:00:00Z",data:metSneeuw("2026-12-21"),verwacht:{kop:"Witte kerst 2026",aftellen:"Nog 4 dagen tot eerste kerstdag.",samenvatting:"Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in De Bilt. Blijft dat zo, dan is het officieel een witte kerst.",tabellen:2,fetch:1,cel:"Sneeuwdek, 4 cm"}},
+  {naam:"ver",nu:"2026-10-05T10:00:00Z",verwacht:{kop:"Witte kerst 2026",aftellen:"81 dagen tot eerste kerstdag",melding:/^Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag\. De verwachting voor tweede kerstdag volgt op zondag 20 december\.$/,tabellen:0,fetch:0}},
+  {naam:"venster",nu:"2026-12-21T09:00:00Z",data:metSneeuw("2026-12-21"),verwacht:{kop:"Witte kerst 2026",aftellen:"4 dagen tot eerste kerstdag",samenvatting:"Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in De Bilt. Blijft dat zo, dan is het officieel een witte kerst.",tabellen:2,fetch:1,cel:"Sneeuwdek, 4 cm"}},
   {naam:"half",nu:"2026-12-19T09:00:00Z",data:metSneeuw("2026-12-19"),verwacht:{tabellen:1,fetch:1,later:"Tweede kerstdag: de verwachting verschijnt op zondag 20 december."}},
   {naam:"fout",nu:"2026-12-21T09:00:00Z",status:503,verwacht:{tabellen:0,fetch:1,fout:true}},
-  {naam:"na-kerst",nu:"2026-12-27T09:00:00Z",verwacht:{kop:"Witte kerst 2027",aftellen:"Nog 363 dagen tot eerste kerstdag.",tabellen:0,fetch:0}}
+  {naam:"na-kerst",nu:"2026-12-27T09:00:00Z",verwacht:{kop:"Witte kerst 2027",aftellen:"363 dagen tot eerste kerstdag",tabellen:0,fetch:0}}
 ];
 
 async function controleer(browserType,label,base){
@@ -91,6 +91,7 @@ async function controleer(browserType,label,base){
         kop:document.querySelector("h1").textContent.trim(),
         titel:document.title,
         aftellen:(()=>{const e=document.getElementById("seizoen-aftellen");return e&&!e.hidden?e.textContent.trim():"";})(),
+        getal:(()=>{const e=document.querySelector("#seizoen-aftellen .aftel-getal");return e?parseFloat(getComputedStyle(e).fontSize):0;})(),
         melding:document.getElementById("seizoen-melding").textContent.trim(),
         samenvatting:(document.querySelector(".seizoen-samenvatting")||{}).textContent||"",
         tabellen:document.querySelectorAll(".seizoen-dag table").length,
@@ -106,6 +107,7 @@ async function controleer(browserType,label,base){
       assert.equal(fetches,v.fetch,`${id}: aantal verwachtingsverzoeken`);
       if(v.kop){assert.equal(r.kop,v.kop,`${id}: kop`);assert(r.titel.startsWith(v.kop+":"),`${id}: titel volgt het jaar (${r.titel})`);}
       if(v.aftellen)assert.equal(r.aftellen,v.aftellen,`${id}: aftelling`);
+      if(/^\d/.test(v.aftellen||""))assert.equal(r.getal,76,`${id}: aftelgetal staat niet groot (${r.getal}px)`);
       if(v.melding)assert.match(r.melding,v.melding,`${id}: melding`);
       if(v.samenvatting)assert.equal(r.samenvatting.trim(),v.samenvatting,`${id}: samenvatting`);
       assert.equal(r.tabellen,v.tabellen,`${id}: aantal dagtabellen`);
@@ -127,8 +129,8 @@ async function controleer(browserType,label,base){
 
 /* Engels: alles vertaald, links en plaatsnamen blijven staan. */
 const ENGELS=[
-  {naam:"ver",nu:"2026-10-05T10:00:00Z",kop:"White Christmas 2026",zinnen:["81 days to go until Christmas Day.","The forecast for Christmas Day will appear here from Saturday 19 December.","The Boxing Day forecast follows on Sunday 20 December."]},
-  {naam:"venster",nu:"2026-12-21T09:00:00Z",data:metSneeuw("2026-12-21"),kop:"White Christmas 2026",zinnen:["4 days to go until Christmas Day.","According to the current forecast, there will be snow on the ground in De Bilt on both Christmas Day and Boxing Day. If that holds, it will officially be a white Christmas.","Snow cover, 4 cm","No snow, 1.6 mm of rain","official measuring site"]},
+  {naam:"ver",nu:"2026-10-05T10:00:00Z",kop:"White Christmas 2026",zinnen:["81 days to go until Christmas Day","The forecast for Christmas Day will appear here from Saturday 19 December.","The Boxing Day forecast follows on Sunday 20 December."]},
+  {naam:"venster",nu:"2026-12-21T09:00:00Z",data:metSneeuw("2026-12-21"),kop:"White Christmas 2026",zinnen:["4 days to go until Christmas Day","According to the current forecast, there will be snow on the ground in De Bilt on both Christmas Day and Boxing Day. If that holds, it will officially be a white Christmas.","Snow cover, 4 cm","No snow, 1.6 mm of rain","official measuring site"]},
   {naam:"half",nu:"2026-12-19T09:00:00Z",data:metSneeuw("2026-12-19"),kop:"White Christmas 2026",zinnen:["Boxing Day: the forecast will appear on Sunday 20 December."]}
 ];
 async function engels(browserType,label,base){
@@ -147,7 +149,8 @@ async function engels(browserType,label,base){
       await page.waitForFunction(k=>document.querySelector("h1")&&document.querySelector("h1").textContent.trim()===k,sc.kop,{timeout:10000});
       await page.waitForTimeout(400);
       const r=await page.evaluate(()=>({
-        tekst:document.body.innerText,
+        /* Witruimte samengevoegd: het grote aftelgetal staat in een eigen blok. */
+        tekst:document.body.innerText.replace(/\s+/g," "),
         titel:document.title,
         ontbreekt:[...(window.__WIW_TAAL_ONTBREEKT__||[])],
         links:[...document.querySelectorAll(".seizoen-dag a")].map(a=>a.getAttribute("href")),

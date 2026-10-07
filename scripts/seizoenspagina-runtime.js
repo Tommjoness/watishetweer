@@ -69,6 +69,15 @@ function aftelTekst(t,cfg){
   if(eerste.over===1)return vul(cfg.teksten.aftellenMorgen,{dag:klein(eerste.label)});
   return vul(cfg.teksten.aftellenMeer,{n:eerste.over,dag:klein(eerste.label)});
 }
+/* Aftellen als groot getal met de rest ernaast ("81" + "dagen tot eerste
+   kerstdag"); alleen als er nog meer dan een dag te gaan is en de pagina
+   daar een tekst voor heeft. Anders null en blijft de gewone zin staan. */
+function aftelGetal(t,cfg){
+  if(!cfg.teksten.aftellenGetal||t.dagen.some(d=>d.over===0||d.bezig))return null;
+  const eerste=t.dagen[0];
+  if(!(eerste.over>1))return null;
+  return {n:eerste.over,tekst:vul(cfg.teksten.aftellenGetal,{dag:klein(eerste.label)})};
+}
 function meldingTekst(t,cfg){
   /* {datum} is de dag waarop de eerste evenementdag verschijnt, {datum2} die
      van de tweede (tweede kerstdag komt een dag later in beeld dan eerste). */
@@ -280,7 +289,13 @@ async function start(){
   if(kop)kop.textContent=`${cfg.naam} ${t.jaar}`;
   document.title=vul(cfg.titel,{jaar:t.jaar})+" | watishetweer.nl";
   const aftellen=document.getElementById("seizoen-aftellen");
-  if(aftellen){aftellen.textContent=aftelTekst(t,cfg);aftellen.hidden=false;}
+  if(aftellen){
+    const groot=aftelGetal(t,cfg);
+    aftellen.classList.toggle("groot",!!groot);
+    if(groot)aftellen.replaceChildren(el("b",{class:"aftel-getal"},String(groot.n))," ",el("span",{},groot.tekst));
+    else aftellen.textContent=aftelTekst(t,cfg);
+    aftellen.hidden=false;
+  }
   const melding=document.getElementById("seizoen-melding");
   if(melding){melding.textContent=meldingTekst(t,cfg);melding.hidden=!melding.textContent;}
   const doel=document.getElementById("seizoen-verwachting");
@@ -301,7 +316,7 @@ async function start(){
   }
 }
 
-const api={datumISO,dagenTussen,plusDagen,datumTekst,nuIn,vandaagIn,vul,eindUur,toestand,aftelTekst,meldingTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord};
+const api={datumISO,dagenTussen,plusDagen,datumTekst,nuIn,vandaagIn,vul,eindUur,toestand,aftelTekst,aftelGetal,meldingTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 else if(typeof document!=="undefined"){
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
