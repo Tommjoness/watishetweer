@@ -37,15 +37,15 @@ const server=http.createServer((req,res)=>{
 });
 
 const gevallen=[
-  {keuze:"donker",thema:"donker",achtergrond:"rgb(10, 10, 10)",kaart:"rgb(20, 20, 20)"},
+  {keuze:"donker",thema:"donker",achtergrond:"rgb(12, 15, 14)",kaart:"rgb(19, 23, 22)"},
   {keuze:"licht",thema:"licht",achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"},
   {keuze:"auto",thema:null,achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"},
   {keuze:"rood",thema:null,achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"},
   /* Auto volgt het systeem: donker toestel, donkere pagina. */
-  {keuze:"auto",schema:"dark",thema:"donker",achtergrond:"rgb(10, 10, 10)",kaart:"rgb(20, 20, 20)"},
-  {keuze:null,schema:"dark",thema:"donker",achtergrond:"rgb(10, 10, 10)",kaart:"rgb(20, 20, 20)"},
+  {keuze:"auto",schema:"dark",thema:"donker",achtergrond:"rgb(12, 15, 14)",kaart:"rgb(19, 23, 22)"},
+  {keuze:null,schema:"dark",thema:"donker",achtergrond:"rgb(12, 15, 14)",kaart:"rgb(19, 23, 22)"},
   /* De keuze van deze browsersessie (de weerpagina bewaart die in sessionStorage) gaat voor. */
-  {keuze:null,sessie:"donker",thema:"donker",achtergrond:"rgb(10, 10, 10)",kaart:"rgb(20, 20, 20)"},
+  {keuze:null,sessie:"donker",thema:"donker",achtergrond:"rgb(12, 15, 14)",kaart:"rgb(19, 23, 22)"},
   {keuze:"donker",sessie:"licht",thema:"licht",achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"},
   {keuze:null,sessie:"licht",schema:"dark",thema:"licht",achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"}
 ];

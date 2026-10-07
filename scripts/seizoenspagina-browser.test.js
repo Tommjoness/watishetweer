@@ -117,7 +117,7 @@ async function controleer(browserType,label,base){
       assert.equal(r.fout,!!v.fout,`${id}: foutmelding alleen bij een mislukte verwachting`);
       assert(!r.cellen.some(c=>/undefined|NaN|null/.test(c)),`${id}: geen lege waarden`);
       assert(r.breed<=breedte,`${id}: geen horizontale overflow (${r.breed}px)`);
-      if(schema==="dark"){assert.equal(r.thema,"donker",`${id}: donker thema`);assert.equal(r.achtergrond,"rgb(10, 10, 10)",`${id}: donkere achtergrond`);}
+      if(schema==="dark"){assert.equal(r.thema,"donker",`${id}: donker thema`);assert.equal(r.achtergrond,"rgb(12, 15, 14)",`${id}: donkere achtergrond`);}
       if(SCHERMEN&&label==="Chromium"&&(sc.naam==="ver"||sc.naam==="venster")){
         fs.mkdirSync(SCHERMEN,{recursive:true});
         await page.screenshot({path:path.join(SCHERMEN,`witte-kerst-${sc.naam}-${breedte<700?"mobiel":"desktop"}-${schema==="dark"?"donker":"licht"}.png`),fullPage:true});
