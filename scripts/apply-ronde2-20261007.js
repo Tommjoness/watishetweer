@@ -11,7 +11,9 @@ const STYLE_ID="wiw-ronde2-20261007";
    1. Donkere modus: geen puur zwart en grijs meer, maar een iets warmere,
       licht groengetinte ondergrond die past bij de inkt van het lichte thema
       (en bij de theme-color #0B120F die de app al gebruikte), met gebroken wit
-      als tekst. Geldt voor iedere pagina met een donker thema; alleen de
+      als tekst. De secundaire grijzen blijven minstens zo licht als na de
+      leesbaarheidsronde (#A8A8A8/#959595), zodat het contrast niet daalt.
+      Geldt voor iedere pagina met een donker thema; alleen de
       themavariabelen veranderen, dus elke pagina behoudt haar eigen opbouw.
    2. De stip van nu op de dagbalk van vandaag (de dagrenderer zet hem als
       .nu-stip in de balk), in karmijn zoals de nu-lijn in de grafiek.
@@ -21,7 +23,7 @@ const STYLE_ID="wiw-ronde2-20261007";
       apparaat minder beweging heeft ingesteld, krijgt geen overgangen.
    De nieuwe iconenset staat in de iconfunctie van de app zelf. */
 const CSS=`
-html[data-thema=donker]{--paper:#0C0F0E;--sheet:#131716;--ink:#E9E7E2;--ink-70:#BDBCB7;--ink-45:#9DA19E;--ink-25:#8C918E;--muted:#9DA19E;--rule:#262C2A;--rule-soft:#1A1F1D;--night:#1A1F1E;--teal:#A3AFAA;--carmine:#E07A86}
+html[data-thema=donker]{--paper:#0C0F0E;--sheet:#131716;--ink:#E9E7E2;--ink-70:#BDBCB7;--ink-45:#A9ADAA;--ink-25:#969B98;--muted:#A9ADAA;--rule:#262C2A;--rule-soft:#1A1F1D;--night:#1A1F1E;--teal:#A3AFAA;--carmine:#E07A86}
 #days .row.day:not(.kop) .bar .nu-stip{position:absolute;top:50%;left:0;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--carmine);box-shadow:0 0 0 2px var(--sheet);z-index:1;pointer-events:none}
 @media (prefers-reduced-motion:no-preference){
   #days .row.day,#nights .row.night,#hours .row,.sheet button,.sheet a{transition:background-color .18s ease,color .18s ease,border-color .18s ease}

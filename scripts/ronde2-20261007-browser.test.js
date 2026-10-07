@@ -63,7 +63,8 @@ server.listen(0, async () => {
           aantal: stippen.length, rijIndex: [...document.querySelectorAll("#days .row.day:not(.kop)")].indexOf(rij),
           fractie: (s.left + s.width / 2 - b.left) / b.width, kleur: getComputedStyle(stip).backgroundColor,
           achtergrond: getComputedStyle(document.body).backgroundColor, inkt: getComputedStyle(document.body).color,
-          wolk, animatie: getComputedStyle(document.querySelector("#days .row.day:not(.kop) .bar i")).animationName
+          wolk, animatie: getComputedStyle(document.querySelector("#days .row.day:not(.kop) .bar i")).animationName,
+          ink45: getComputedStyle(document.documentElement).getPropertyValue("--ink-45").trim(), ink25: getComputedStyle(document.documentElement).getPropertyValue("--ink-25").trim()
         };
       });
       const v = `${breedte}px ${thema} ${beweging}`;
@@ -76,6 +77,9 @@ server.listen(0, async () => {
         assert.strictEqual(m.achtergrond, "rgb(12, 15, 14)", `${v}: donkere achtergrond niet vernieuwd`);
         assert.strictEqual(m.inkt, "rgb(233, 231, 226)", `${v}: donkere inkt niet vernieuwd`);
         assert.strictEqual(m.kleur, "rgb(224, 122, 134)", `${v}: nu-stip niet in karmijn`);
+        /* Secundaire grijzen niet donkerder dan na de leesbaarheidsronde (#A8A8A8 en #959595). */
+        const lum = hex => { const c = hex.replace("#", "").match(/../g).map(x => parseInt(x, 16) / 255).map(x => x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+        assert(lum(m.ink45) >= lum("#A8A8A8") && lum(m.ink25) >= lum("#959595"), `${v}: secundair contrast lager dan na de leesbaarheidsronde: ${m.ink45} ${m.ink25}`);
       }
       assert.strictEqual(m.animatie, beweging === "reduce" ? "none" : "wiw-verschijn", `${v}: balkovergang klopt niet bij ${beweging}`);
       assert.deepStrictEqual(fouten, [], `${v}: scriptfouten`);
