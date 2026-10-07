@@ -37,6 +37,8 @@ assert.deepEqual(R.toestand("2026-12-19",kerst).dagen.map(d=>d.zichtbaar),[true,
 assert.deepEqual(R.toestand("2026-12-20",kerst).dagen.map(d=>d.zichtbaar),[true,true],"20 december: beide kerstdagen");
 assert.equal(R.meldingTekst(R.toestand("2026-12-21",kerst),kerst),"","binnen het venster geen aparte melding boven de tabel");
 assert.equal(R.aftelTekst(t,kerst),"Nog 81 dagen tot eerste kerstdag.");
+/* Op de pagina staat het getal groot met de rest ernaast. */
+assert.deepEqual(R.aftelGetal(t,kerst),{n:81,tekst:"dagen tot eerste kerstdag"});
 
 /* Dag vóór het venster: nog niets zichtbaar. */
 t=R.toestand("2026-12-18",kerst);
@@ -53,12 +55,14 @@ assert.deepEqual(t.dagen.map(d=>d.zichtbaar),[true,true]);
 
 t=R.toestand("2026-12-24",kerst);
 assert.equal(R.aftelTekst(t,kerst),"Morgen is het eerste kerstdag.");
+assert.equal(R.aftelGetal(t,kerst),null,"morgen: de gewone zin, geen groot getal");
 t=R.toestand("2026-12-25",kerst);
 assert.equal(R.aftelTekst(t,kerst),"Vandaag is het eerste kerstdag.");
 t=R.toestand("2026-12-26",kerst);
 assert.equal(t.jaar,2026);
 assert.deepEqual(t.dagen.map(d=>d.zichtbaar),[false,true],"op tweede kerstdag is eerste kerstdag voorbij");
 assert.equal(R.aftelTekst(t,kerst),"Vandaag is het tweede kerstdag.");
+assert.equal(R.aftelGetal(t,kerst),null,"vandaag: de gewone zin, geen groot getal");
 
 /* Na kerst schuift de pagina door naar volgend jaar. */
 t=R.toestand("2026-12-27",kerst);
@@ -152,11 +156,13 @@ assert.equal(t.jaar,2026,"om 01:00 op 1 januari loopt de nacht nog");
 assert.equal(t.fase,"verwachting");
 assert.deepEqual(t.dagen.map(d=>[d.iso,d.over,d.bezig,d.zichtbaar]),[["2026-12-31",-1,true,true]]);
 assert.equal(R.aftelTekst(t,oud),"De nacht van oud en nieuw is nu bezig.");
+assert.equal(R.aftelGetal(t,oud),null,"lopende nacht: de gewone zin, geen groot getal");
 assert(R.verwachtingUrl(oud,t).endsWith("&forecast_days=7&past_days=1"),"lopende nacht haalt gisteravond erbij");
 assert(!R.verwachtingUrl(oud,R.toestand("2026-12-31",oud,23)).includes("past_days"),"op oudejaarsavond zelf geen past_days");
 t=R.toestand("2027-01-01",oud,2);
 assert.equal(t.jaar,2027,"om 02:00 is de nacht voorbij en schuift de pagina door");
 assert.equal(R.aftelTekst(t,oud),"Nog 364 dagen tot oudejaarsdag.");
+assert.deepEqual(R.aftelGetal(t,oud),{n:364,tekst:"dagen tot oudejaarsdag"});
 assert.equal(R.toestand("2026-12-31",oud,23).jaar,2026);
 assert.equal(R.aftelTekst(R.toestand("2026-12-31",oud,23),oud),"Vandaag is het oudejaarsdag.");
 assert.equal(R.toestand("2027-01-02",oud,1).jaar,2027,"de dag erna is de nacht nooit meer bezig");

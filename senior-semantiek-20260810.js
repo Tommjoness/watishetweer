@@ -377,7 +377,7 @@ meters=function(){
       if(omschrijving&&alleenBewolking){
         const conditie=document.getElementById("cond"),mini=document.getElementById("minicond");
         if(conditie)conditie.textContent=omschrijving;
-        if(mini){mini.textContent=omschrijving.toLowerCase();mini.title=omschrijving.toLowerCase();}
+        if(mini){mini.textContent=omschrijving;mini.title=omschrijving;}
         const effectieveCode=bewolkingscodeUitPercentage(cc),icoon=document.getElementById("nowicon");
         if(icoon&&effectieveCode!==null&&typeof icon==="function")icoon.innerHTML=icon(effectieveCode,c.is_day===1,46);
       }

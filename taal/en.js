@@ -401,6 +401,7 @@
     "Weer per plaats": "Weather by place",
     "Populaire plaatsen in Nederland": "Popular places in the Netherlands",
     "Zoek een plaats in de lijst": "Search for a place in the list",
+    "Plaatsen per beginletter": "Places by first letter",
     "Gemiddelden per maand": "Monthly averages",
     "Bekijk per maand": "View by month",
     "Maand": "Month",
@@ -930,6 +931,9 @@
     [/^De verwachting voor (eerste kerstdag|tweede kerstdag) volgt op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.$/,
       (m) => `The ${KERSTDAG[m[1]]} forecast follows on ${dagVol(m[2])} ${m[3]} ${maand(m[4])}.`],
     [/^Nog (\d+) dagen tot (eerste kerstdag|tweede kerstdag|oudejaarsdag)\.$/, (m) => `${m[1]} days to go until ${KERSTDAG[m[2]]}.`],
+    /* Groot aftelgetal: het getal staat los, de rest ernaast (ontwerpronde 7 oktober). */
+    [/^(\d+) dagen tot (eerste kerstdag|tweede kerstdag|oudejaarsdag)$/, (m) => `${m[1]} days to go until ${KERSTDAG[m[2]]}`],
+    [/^dagen tot (eerste kerstdag|tweede kerstdag|oudejaarsdag)$/, (m) => `days to go until ${KERSTDAG[m[1]]}`],
     [/^Morgen is het (eerste kerstdag|tweede kerstdag|oudejaarsdag)\.$/, (m) => `Tomorrow is ${KERSTDAG[m[1]]}.`],
     [/^Vandaag is het (eerste kerstdag|tweede kerstdag|oudejaarsdag)\.$/, (m) => `Today is ${KERSTDAG[m[1]]}.`],
     [/^Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in (.+)\. Blijft dat zo, dan is het officieel een witte kerst\.$/,

@@ -3051,7 +3051,8 @@ function minibarBij(){
   document.getElementById("minitemp").textContent=temperatuur===null?"–":temperatuur+"°C";
   const cond=document.getElementById("minicond");
   if(cond){
-    const tekst=txt(S.d.current.weather_code,S.d.current.is_day!==0).toLowerCase();
+    /* Zelfde schrijfwijze als de hoofdweergave ("Geheel bewolkt"), niet in kleine letters. */
+    const tekst=txt(S.d.current.weather_code,S.d.current.is_day!==0);
     cond.textContent=tekst; cond.title=tekst;
   }
   // dezelfde klok als naast de plaatsnaam, zodat hij bij het scrollen blijft staan

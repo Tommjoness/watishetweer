@@ -52,9 +52,9 @@ const gemengd=start=>antwoord(start,i=>i===1||i===2?{
 }:i===3?{"2027-01-01T00:00":{zicht:400},"2027-01-01T01:00":{zicht:300}}:null);
 
 const SCENARIOS=[
-  {naam:"ver",nu:"2026-10-05T10:00:00Z",verwacht:{kop:"Oud en nieuw 2026",aftellen:"Nog 87 dagen tot oudejaarsdag.",melding:/verschijnt hier op zaterdag 26 december/,tabellen:0,fetch:0}},
-  {naam:"voor-venster",nu:"2026-12-25T10:00:00Z",verwacht:{aftellen:"Nog 6 dagen tot oudejaarsdag.",tabellen:0,fetch:0}},
-  {naam:"venster",nu:"2026-12-28T09:00:00Z",data:gemengd("2026-12-28"),verwacht:{kop:"Oud en nieuw 2026",aftellen:"Nog 3 dagen tot oudejaarsdag.",tabellen:1,fetch:1,
+  {naam:"ver",nu:"2026-10-05T10:00:00Z",verwacht:{kop:"Oud en nieuw 2026",aftellen:"87 dagen tot oudejaarsdag",melding:/verschijnt hier op zaterdag 26 december/,tabellen:0,fetch:0}},
+  {naam:"voor-venster",nu:"2026-12-25T10:00:00Z",verwacht:{aftellen:"6 dagen tot oudejaarsdag",tabellen:0,fetch:0}},
+  {naam:"venster",nu:"2026-12-28T09:00:00Z",data:gemengd("2026-12-28"),verwacht:{kop:"Oud en nieuw 2026",aftellen:"3 dagen tot oudejaarsdag",tabellen:1,fetch:1,
     samenvatting:["Rond middernacht valt er volgens de huidige verwachting neerslag in Rotterdam en Den Haag.","Windstoten van 50 km/u of meer in Rotterdam en Den Haag.","Kans op mist (zicht onder 1 km) in Utrecht."],
     cellen:["1,1 mm · kans 65%","W 14 km/u · stoten 61","Droog · kans 10%","ZW 14 km/u · stoten 31","4°"],kop3:"Rond middernacht 31 december 22:00 – 1 januari 02:00"}},
   {naam:"rustig",nu:"2026-12-31T09:00:00Z",data:antwoord("2026-12-31",()=>null),verwacht:{aftellen:"Vandaag is het oudejaarsdag.",tabellen:1,fetch:1,samenvatting:["Rond middernacht blijft het volgens de huidige verwachting overal droog."]}},
@@ -63,7 +63,7 @@ const SCENARIOS=[
      deze jaarwisseling en haalt met past_days=1 ook gisteravond op. */
   {naam:"lopend",nu:"2027-01-01T00:30:00Z",data:gemengd("2026-12-31"),verwacht:{kop:"Oud en nieuw 2026",aftellen:"De nacht van oud en nieuw is nu bezig.",tabellen:1,fetch:1,pastDays:"1",
     cellen:["1,1 mm · kans 65%","W 14 km/u · stoten 61"],kop3:"Rond middernacht 31 december 22:00 – 1 januari 02:00"}},
-  {naam:"na",nu:"2027-01-01T10:00:00Z",verwacht:{kop:"Oud en nieuw 2027",aftellen:"Nog 364 dagen tot oudejaarsdag.",tabellen:0,fetch:0}}
+  {naam:"na",nu:"2027-01-01T10:00:00Z",verwacht:{kop:"Oud en nieuw 2027",aftellen:"364 dagen tot oudejaarsdag",tabellen:0,fetch:0}}
 ];
 
 async function open(browser,base,sc,breedte,schema,taal,lopendeKlok){
@@ -101,7 +101,8 @@ const meet=()=>({
   plaatsen:[...document.querySelectorAll(".seizoen-dag .plaats")].map(e=>e.textContent.trim()),
   links:[...document.querySelectorAll(".seizoen-dag a")].map(a=>a.getAttribute("href")),
   fout:!!document.querySelector(".seizoen-fout"),
-  tekst:document.body.innerText,
+  /* Witruimte samengevoegd: het grote aftelgetal staat in een eigen blok. */
+  tekst:document.body.innerText.replace(/\s+/g," "),
   ontbreekt:[...(window.__WIW_TAAL_ONTBREEKT__||[])],
   breed:document.documentElement.scrollWidth,
   thema:document.documentElement.getAttribute("data-thema"),
@@ -143,9 +144,9 @@ async function controleer(browserType,label,base){
     }
     /* Engels: volledig vertaald, plaatsnamen en links blijven staan. */
     for(const [naam,zinnen] of [
-      ["ver",["87 days to go until New Year's Eve.","The forecast for New Year's Eve night will appear here on Saturday 26 December, once it falls within the 7-day forecast."]],
+      ["ver",["87 days to go until New Year's Eve","The forecast for New Year's Eve night will appear here on Saturday 26 December, once it falls within the 7-day forecast."]],
       ["lopend",["New Year's Eve night is under way.","1.1 mm · chance 65%","Around midnight 31 December 22:00 – 1 January 02:00"]],
-      ["venster",["3 days to go until New Year's Eve.","According to the current forecast, there will be precipitation around midnight in Rotterdam and Den Haag.","Gusts of 50 km/h or more in Rotterdam and Den Haag.","Chance of fog (visibility below 1 km) in Utrecht.","1.1 mm · chance 65%","W 14 km/h · gusts 61","Around midnight 31 December 22:00 – 1 January 02:00"]]
+      ["venster",["3 days to go until New Year's Eve","According to the current forecast, there will be precipitation around midnight in Rotterdam and Den Haag.","Gusts of 50 km/h or more in Rotterdam and Den Haag.","Chance of fog (visibility below 1 km) in Utrecht.","1.1 mm · chance 65%","W 14 km/h · gusts 61","Around midnight 31 December 22:00 – 1 January 02:00"]]
     ])for(const breedte of [390,1366]){
       const sc=SCENARIOS.find(s=>s.naam===naam);
       const {context,page,fouten}=await open(browser,base,sc,breedte,"light","en");
@@ -190,7 +191,7 @@ async function controleer(browserType,label,base){
       await page.clock.runFor(2*3600*1000);
       r=await stand();
       assert.equal(r.kop,"Oud en nieuw 2027",`${id}: na 02:00 door naar volgend jaar`);
-      assert.equal(r.aftellen,"Nog 364 dagen tot oudejaarsdag.",`${id}: aftelling na 02:00`);
+      assert.equal(r.aftellen,"364 dagen tot oudejaarsdag",`${id}: aftelling na 02:00`);
       assert.equal(r.tabellen,0,`${id}: verwachting weg na 02:00`);
       assert.equal(fetches(),2,`${id}: buiten het venster geen nieuw verzoek`);
       assert.deepEqual(fouten,[],`${id}: geen browserfouten`);

@@ -336,10 +336,15 @@ function meet(){
             const li=[...document.querySelectorAll(".plaatsen li")];
             const verborgenFocus=li.filter(e=>!zichtbaar(e)).map(e=>e.querySelector("a")).filter(a=>{a.focus();const ja=document.activeElement===a;a.blur();return ja;}).length;
             const leeg=document.getElementById("hub-leeg");
-            return {namen:li.filter(zichtbaar).map(e=>e.querySelector("a").textContent.trim()),verborgenFocus,leeg:zichtbaar(leeg),leegTekst:leeg?leeg.textContent.trim():""};
+            return {namen:li.filter(zichtbaar).map(e=>e.querySelector("a").textContent.trim()),groepen:[...document.querySelectorAll(".groep")].filter(zichtbaar).map(g=>g.id),verborgenFocus,leeg:zichtbaar(leeg),leegTekst:leeg?leeg.textContent.trim():""};
           });
         };
+        /* A–Z: iedere letter in de balk springt naar een bestaande lettergroep met een kop. */
+        const az=await page.evaluate(()=>({links:[...document.querySelectorAll("nav.az a")].map(a=>a.getAttribute("href")),groepen:[...document.querySelectorAll(".groep")].map(g=>({id:g.id,kop:(g.querySelector("h2")||{}).textContent,eerste:g.querySelector(".plaatsen li a").textContent.trim().charAt(0).toUpperCase()}))}));
+        assert(az.groepen.length>=15&&az.groepen.every(g=>g.id==="letter-"+g.kop&&g.eerste===g.kop),w+"px /weer/: lettergroepen kloppen niet: "+JSON.stringify(az.groepen.slice(0,3)));
+        assert.deepEqual(az.links,az.groepen.map(g=>"#"+g.id),w+"px /weer/: letterbalk wijst niet naar alle lettergroepen");
         let z=await zoek("Almere",1);
+        assert.deepEqual(z.groepen,["letter-A"],w+"px /weer/: lege lettergroepen blijven staan bij 'Almere': "+z.groepen.join(","));
         assert.deepEqual(z.namen,["Almere"],w+"px /weer/: 'Almere' toont niet precies één resultaat: "+z.namen.length+" zichtbaar");
         assert.equal(z.verborgenFocus,0,w+"px /weer/: "+z.verborgenFocus+" weggefilterde links zijn nog focusbaar");
         assert(!z.leeg,w+"px /weer/: melding 'niet in de lijst' staat er bij een treffer");
@@ -355,6 +360,7 @@ function meet(){
         assert(z.leeg&&/niet in de lijst/.test(z.leegTekst),w+"px /weer/: hulptekst bij geen resultaat ontbreekt of is niet zichtbaar");
         z=await zoek("",totaal);
         assert.equal(z.namen.length,totaal,w+"px /weer/: leeg zoekveld toont niet de volledige lijst ("+z.namen.length+" van "+totaal+")");
+        assert.equal(z.groepen.length,az.groepen.length,w+"px /weer/: leeg zoekveld toont niet alle lettergroepen");
         assert(!z.leeg,w+"px /weer/: melding 'niet in de lijst' blijft staan bij een leeg zoekveld");
         assert.deepEqual(fouten,[],w+"px /weer/: runtimefouten "+fouten.join(" | "));
         console.log("SAMENHANG /weer/ "+w+"px: Licht | Auto | Donker, terug bovenaan, zoeken filtert.");
@@ -370,6 +376,11 @@ function meet(){
           return page.evaluate(()=>[...document.querySelectorAll(".plaatsen li")].filter(li=>!li.hidden&&li.getClientRects().length).map(li=>li.querySelector("a").textContent.trim()));};
         assert.deepEqual(await zoekEn("The Hague"),["The Hague"],"/weer/ EN: zoeken op 'The Hague' vindt de plaats niet");
         assert.deepEqual(await zoekEn("den haag"),["The Hague"],"/weer/ EN: zoeken op 'den haag' vindt de plaats niet meer");
+        await zoekEn("");
+        /* De letters A–Z blijven letterlijk staan, ook O en Z (geen windrichting). */
+        const letters=await page.evaluate(()=>({koppen:[...document.querySelectorAll(".groep h2")].map(h=>[h.textContent.trim(),h.closest(".groep").id]),balk:[...document.querySelectorAll("nav.az a")].map(a=>[a.textContent.trim(),a.getAttribute("href")])}));
+        assert(letters.koppen.length>=15&&letters.koppen.every(([t,id])=>id==="letter-"+t),"/weer/ EN: letterkoppen vertaald: "+JSON.stringify(letters.koppen.filter(([t,id])=>id!=="letter-"+t)));
+        assert(letters.balk.length===letters.koppen.length&&letters.balk.every(([t,href])=>href==="#letter-"+t),"/weer/ EN: letters in de balk vertaald: "+JSON.stringify(letters.balk.filter(([t,href])=>href!=="#letter-"+t)));
         assert.deepEqual(fouten,[],"/weer/ EN: runtimefouten "+fouten.join(" | "));
         console.log("SAMENHANG /weer/ EN: 'The Hague' en 'Den Haag' vinden allebei The Hague.");
       }finally{await context.close();}

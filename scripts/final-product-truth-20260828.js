@@ -104,7 +104,7 @@ function pasBewolkingToe(){
   if(!alleenBewolking)return;
   const cond=document.getElementById("cond"),mini=document.getElementById("minicond"),icoon=document.getElementById("nowicon");
   if(cond)cond.textContent=oordeel.tekst;
-  if(mini){mini.textContent=oordeel.tekst.toLowerCase();mini.title=oordeel.tekst.toLowerCase();}
+  if(mini){mini.textContent=oordeel.tekst;mini.title=oordeel.tekst;}
   if(icoon&&typeof icon==="function")icoon.innerHTML=icon(oordeel.code,c.is_day===1,46);
 }
 

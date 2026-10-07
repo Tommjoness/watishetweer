@@ -44,6 +44,8 @@ html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 "Instrument Sans",system-ui,-apple-system,sans-serif;padding:32px 20px}.kaart{max-width:760px;margin:auto;background:var(--sheet);border:1px solid var(--rule);padding:32px}h1{font:400 36px/1.15 "Bodoni Moda",Georgia,serif;margin:0 0 18px}h2{font-size:17px;margin:30px 0 8px}p{margin:10px 0;color:var(--ink-70)}a{color:inherit}.klein{color:var(--muted);font-size:14px}
 .seizoen-status{margin:22px 0 0;padding:18px 0 4px;border-top:1px solid var(--rule)}
 .seizoen-aftellen{font:400 24px/1.25 "Bodoni Moda",Georgia,serif;color:var(--ink);margin:0 0 6px}
+.seizoen-aftellen.groot{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 14px}
+.seizoen-aftellen .aftel-getal{font:400 76px/1 "Bodoni Moda",Georgia,serif;letter-spacing:-.02em}
 .seizoen-samenvatting{color:var(--ink);font-weight:500}
 .seizoen-dag{margin:22px 0 0}
 .seizoen-dag h3{font-size:15px;font-weight:500;margin:0 0 6px;color:var(--ink)}

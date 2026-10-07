@@ -34,6 +34,7 @@ const SEIZOENSPAGINAS=Object.freeze([
     teksten:{
       ver:"Vanaf {datum} verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op {datum2}.",
       aftellenMeer:"Nog {n} dagen tot {dag}.",
+      aftellenGetal:"dagen tot {dag}",
       aftellenMorgen:"Morgen is het {dag}.",
       aftellenVandaag:"Vandaag is het {dag}.",
       allemaal:"Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in {plaats}. Blijft dat zo, dan is het officieel een witte kerst.",
@@ -78,6 +79,7 @@ const SEIZOENSPAGINAS=Object.freeze([
     teksten:{
       ver:"De verwachting voor de nacht van oud en nieuw verschijnt hier op {datum}, zodra die binnen de 7-daagse verwachting valt.",
       aftellenMeer:"Nog {n} dagen tot {dag}.",
+      aftellenGetal:"dagen tot {dag}",
       aftellenMorgen:"Morgen is het {dag}.",
       aftellenVandaag:"Vandaag is het {dag}.",
       aftellenBezig:"De nacht van oud en nieuw is nu bezig.",
