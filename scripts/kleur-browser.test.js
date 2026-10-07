@@ -59,8 +59,9 @@ function meet(){
   const karmijn=getComputedStyle(probe).color;probe.style.color="var(--ink)";const inkt=getComputedStyle(probe).color;probe.remove();
   const dag=document.querySelector("#days .day.on");
   const aq=[...document.querySelectorAll("#aq .sval")].map(el=>({tekst:(el.textContent||"").trim().slice(0,16),kleur:getComputedStyle(el).color,gewicht:Number(getComputedStyle(el).fontWeight),karmijnGemarkeerd:/--carmine/.test(el.getAttribute("style")||"")}));
-  /* Toegestane plaatsen voor karmijn: nu-markering in de grafiek en "let op". */
-  const toegestaan=el=>!!el.closest("#chart,#minigrafiek,.waarsch[data-ui-severity=rood],#stamp.oud,.msg.err,.locatie-laadstatus.fout");
+  /* Toegestane plaatsen voor karmijn: nu-markering in de grafiek en op de
+     dagbalk van vandaag (de nu-stip, ronde 2) en "let op". */
+  const toegestaan=el=>!!el.closest("#chart,#minigrafiek,#days .nu-stip,.waarsch[data-ui-severity=rood],#stamp.oud,.msg.err,.locatie-laadstatus.fout");
   const zichtbaar=el=>{const r=el.getBoundingClientRect();const cs=getComputedStyle(el);return r.width>0&&r.height>0&&cs.visibility!=="hidden"&&cs.display!=="none";};
   const buiten=[];
   for(const el of document.querySelectorAll("body *")){

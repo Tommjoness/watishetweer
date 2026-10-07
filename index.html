@@ -745,27 +745,34 @@ function bft(k){let n=0;for(let i=0;i<BFT.length;i++) if(k>=BFT[i]) n=i+1;return
 /* ---------- haarlijn-iconen ---------- */
 function icon(code,isDay,size){
   const f=fam(code),s=size||24;
+  /* Eigen iconenset (ronde 2): één lijndikte, ronde uiteinden, wolken met een
+     zachte vulling van 8% en wisselende lengtes voor regen en stralen, zodat
+     de set als één familie leest. Alles in currentColor: werkt in licht,
+     donker en de nachtstand. */
   const o=`stroke="currentColor" stroke-width="1.15" fill="none" stroke-linecap="round" stroke-linejoin="round"`;
-  const zon=`<circle cx="12" cy="12" r="4.1" ${o}/>`+[0,45,90,135,180,225,270,315].map(a=>{
-    const d=a*Math.PI/180,r1=6.4,r2=8.6;
-    return `<line x1="${(12+r1*Math.cos(d)).toFixed(2)}" y1="${(12+r1*Math.sin(d)).toFixed(2)}" x2="${(12+r2*Math.cos(d)).toFixed(2)}" y2="${(12+r2*Math.sin(d)).toFixed(2)}" ${o}/>`;}).join("");
-  const maantje=`<path d="M16.5 13.6A6 6 0 0 1 9.4 6.5a6.2 6.2 0 1 0 7.1 7.1z" ${o}/>`;
-  const wolk=`<path d="M6.6 17.4h9.9a3.4 3.4 0 0 0 .3-6.8 5.1 5.1 0 0 0-9.6 1.5 2.9 2.9 0 0 0-.6 5.3z" ${o}/>`;
-  const wolkhoog=`<path d="M6.6 14.4h9.9a3.4 3.4 0 0 0 .3-6.8 5.1 5.1 0 0 0-9.6 1.5 2.9 2.9 0 0 0-.6 5.3z" ${o}/>`;
-  const druppels=`<line x1="9" y1="17.6" x2="7.9" y2="20.6" ${o}/><line x1="12.4" y1="17.6" x2="11.3" y2="20.6" ${o}/><line x1="15.8" y1="17.6" x2="14.7" y2="20.6" ${o}/>`;
-  const vlokken=`<line x1="9" y1="17.8" x2="9" y2="20.6" ${o}/><line x1="12.4" y1="17.8" x2="12.4" y2="20.6" ${o}/><line x1="15.8" y1="17.8" x2="15.8" y2="20.6" ${o}/>`;
-  const bliksem=`<path d="M13.2 16.6l-2.9 3.6h2.6l-1 2.6 3.6-4h-2.5z" ${o}/>`;
-  const mist=`<line x1="4.5" y1="9.5" x2="19.5" y2="9.5" ${o}/><line x1="3" y1="13" x2="21" y2="13" ${o}/><line x1="6" y1="16.5" x2="18" y2="16.5" ${o}/>`;
-  const halfz=`<circle cx="8.6" cy="8" r="3.1" ${o}/>`+[200,245,290,335].map(a=>{const d=a*Math.PI/180;
-    return `<line x1="${(8.6+4.5*Math.cos(d)).toFixed(2)}" y1="${(8+4.5*Math.sin(d)).toFixed(2)}" x2="${(8.6+6.3*Math.cos(d)).toFixed(2)}" y2="${(8+6.3*Math.sin(d)).toFixed(2)}" ${o}/>`;}).join("");
-  const halfm=`<path d="M11.4 8.6A4 4 0 0 1 6.7 3.9a4.2 4.2 0 1 0 4.7 4.7z" ${o}/>`;
-  /* Zon en wolk zijn allebei lijnwerk zonder vulling, dus de onderkant van de zon
-     liep dwars door de wolk heen. De wolk dekt nu af wat erachter ligt, met een
-     masker in plaats van een vulling: zo werkt het op elke achtergrond, ook in
-     donkere modus en op de rode nachtstand. */
+  const zacht=`stroke="currentColor" stroke-width="1.15" fill="currentColor" fill-opacity=".08" stroke-linecap="round" stroke-linejoin="round"`;
+  const straal=(cx,cy,hoeken,r1,lang,kort)=>hoeken.map((a,k)=>{const d=a*Math.PI/180,r2=k%2?kort:lang;
+    return `<line x1="${(cx+r1*Math.cos(d)).toFixed(2)}" y1="${(cy+r1*Math.sin(d)).toFixed(2)}" x2="${(cx+r2*Math.cos(d)).toFixed(2)}" y2="${(cy+r2*Math.sin(d)).toFixed(2)}" ${o}/>`;}).join("");
+  const zon=`<circle cx="12" cy="12" r="4" ${zacht}/>`+straal(12,12,[0,45,90,135,180,225,270,315],6.6,9.4,8.4);
+  /* Twee sterretjes bij de maan, alleen waar het icoon groot genoeg is om ze
+     als sterren te lezen (niet in de smalle uurrij van de grafiek). */
+  const sterren=s>=20?`<circle cx="17.4" cy="5.6" r=".85" fill="currentColor"/><circle cx="20.2" cy="9.2" r=".55" fill="currentColor"/>`:"";
+  const maantje=`<path d="M17.8 14.9A6.7 6.7 0 1 1 9.6 6.7a5.3 5.3 0 0 0 8.2 8.2z" ${zacht}/>${sterren}`;
+  const wolk=`<path d="M7.6 18.6h8.9a4 4 0 0 0 .5-7.97 5.4 5.4 0 0 0-10.3 1.2 3.4 3.4 0 0 0 .9 6.77z" ${zacht}/>`;
+  const wolkhoog=`<path d="M7.6 15.4h8.9a4 4 0 0 0 .5-7.97 5.4 5.4 0 0 0-10.3 1.2 3.4 3.4 0 0 0 .9 6.77z" ${zacht}/>`;
+  const druppels=`<line x1="9" y1="18" x2="8.2" y2="20.2" ${o}/><line x1="12.6" y1="18.2" x2="11.5" y2="21.4" ${o}/><line x1="16.2" y1="18" x2="15.4" y2="20.2" ${o}/>`;
+  const vlok=(x,y)=>`<path d="M${x} ${y-1.7}v3.4M${x-1.47} ${y-.85}l2.94 1.7M${x-1.47} ${y+.85}l2.94-1.7" stroke="currentColor" stroke-width=".9" fill="none" stroke-linecap="round"/>`;
+  const vlokken=vlok(8.2,19.6)+vlok(12.4,21.2)+vlok(16.6,19.6);
+  const bliksem=`<path d="M13.3 15.6l-2.9 3.9h2.5l-1.1 3 3.7-4.4h-2.5l1.2-2.5z" fill="currentColor" stroke="currentColor" stroke-width=".6" stroke-linejoin="round"/>`;
+  const mist=`<line x1="5" y1="8.5" x2="15.5" y2="8.5" ${o}/><line x1="18.2" y1="8.5" x2="19" y2="8.5" ${o}/><line x1="3.5" y1="12" x2="20.5" y2="12" ${o}/><line x1="5" y1="15.5" x2="6" y2="15.5" ${o}/><line x1="8.6" y1="15.5" x2="19" y2="15.5" ${o}/>`;
+  const halfz=`<circle cx="8.8" cy="8.2" r="3" ${zacht}/>`+straal(8.8,8.2,[180,225,270,315],4.6,6.6,5.8);
+  const halfm=`<path d="M12 8.9A4.6 4.6 0 1 1 6.2 3.1a3.7 3.7 0 0 0 5.8 5.8z" ${zacht}/>`;
+  /* De wolk dekt af wat erachter ligt met een masker, niet met een vulling:
+     zo werkt het op elke achtergrond, ook in donkere modus en de nachtstand. */
   const dek=(achter,voor)=>{
     const id="mk"+(icon.teller=(icon.teller||0)+1);
     const stempel=voor.replace(/fill="none"/g,'fill="black"')
+                      .replace(/fill="currentColor" fill-opacity="\.08"/g,'fill="black"')
                       .replace(/stroke="currentColor"/g,'stroke="black"')
                       .replace(/stroke-width="1.15"/g,'stroke-width="2.6"');
     return `<defs><mask id="${id}"><rect width="24" height="24" fill="white"/>${stempel}</mask></defs>`
@@ -778,7 +785,7 @@ function icon(code,isDay,size){
   else if(f==="mist") b=mist;
   else if(f==="regen") b=wolkhoog+druppels;
   else if(f==="sneeuw") b=wolkhoog+vlokken;
-  else if(f==="ijzel") b=wolkhoog+`<line x1="9" y1="17.4" x2="8" y2="20" ${o}/><line x1="15" y1="17.4" x2="14" y2="20" ${o}/>`+
+  else if(f==="ijzel") b=wolkhoog+`<line x1="9" y1="17.6" x2="8.2" y2="19.8" ${o}/><line x1="15" y1="17.6" x2="14.2" y2="19.8" ${o}/>`+
     `<path d="M5.5 21.8q2-1.6 4 0t4 0t4 0" ${o}/>`;
   else b=wolkhoog+bliksem;
   return `<svg class="ico" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${b}</svg>`;
@@ -2587,12 +2594,15 @@ function dagen(){
     const balk=l===null||hh===null
       ?""
       :`<i style="left:${(l-lo)/sp*100}%;width:${Math.max(3,(hh-l)/sp*100)}%;--temp-verloop:linear-gradient(90deg,${tempKleur(l)},${tempKleur(hh)})"></i>`;
+    /* Vandaag: een stip op de balk bij de temperatuur van nu. */
+    const nuT=t===plaatsVandaag()?eindigGetal(S.d.current&&S.d.current.temperature_2m):null;
+    const nuStip=balk&&nuT!==null?`<b class="nu-stip" style="left:${(clamp(nuT,lo,hi)-lo)/sp*100}%" aria-hidden="true"></b>`:"";
     out+=`<div class="row day${S.dag===i?" on":""}" data-i="${i}" role="button" tabindex="0">
       <div class="dname">${nm}</div><div class="dico">${code===null?"":icon(code,true,22)}</div>
       <div class="dcond">${code===null?"Verwachting niet beschikbaar":txt(code)}${som!==null&&som>0.5?", "+nl(som)+" mm":""}</div>
       <div class="dwind">${wind===null?"–":bft(wind)+" Bft"}${wind!==null&&richting!==null?" "+pijl(richting,11):""}</div>
       <div class="dmin">${l===null?"–":Math.round(l)+"°"}</div>
-      <div class="bar">${balk}</div>
+      <div class="bar">${balk}${nuStip}</div>
       <div class="dmax">${hh===null?"–":Math.round(hh)+"°"}</div>
       <div class="drain">${kans===null?"–":Math.round(clamp(kans,0,100))+"%"}${
         som!==null&&som>0.5?`<small>${nl(som)} mm</small>`:""}</div></div>`;
