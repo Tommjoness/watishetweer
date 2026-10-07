@@ -83,9 +83,9 @@ const EXTRA_STIJL = `
 .nz-tabel a{text-decoration:none;border-bottom:1px solid var(--rule)}.nz-tabel a:hover,.nz-tabel a:focus-visible{border-bottom-color:var(--ink)}
 #nz-nachten{margin-top:22px}
 .nz-maan{display:flex;gap:20px;align-items:center;margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--rule)}
-.nz-maan svg{width:72px;height:72px;flex:none}.nz-maan-rand{fill:#46524e;stroke:var(--rule)}.nz-maan-licht{fill:#f4f1e6}
+.nz-maan .nz-maan-svg{width:120px;height:120px;flex:none;display:block}#nz-maan-schijf{flex:none;width:120px;height:120px}
 .nz-maan p{margin:4px 0}.nz-maan .groot{font:400 24px/1.25 "Bodoni Moda",Georgia,serif;color:var(--ink);margin:0 0 4px}
-#nz-maan-fasen{margin:10px 0 0;padding-left:20px;color:var(--ink-70)}#nz-maan-fasen b{color:var(--ink);font-weight:500}
+#nz-maan-fasen{margin:10px 0 0;padding:0;list-style:none;color:var(--ink-70)}#nz-maan-fasen li{display:flex;gap:12px;align-items:center;padding:6px 0}#nz-maan-fasen .nz-maan-svg{flex:none}#nz-maan-fasen b{color:var(--ink);font-weight:500}
 @media(max-width:600px){#nz-nachten thead{display:none}#nz-nachten tr{display:grid;grid-template-columns:auto 1fr;column-gap:12px;padding:9px 0;border-bottom:1px solid var(--rule)}#nz-nachten th,#nz-nachten td{border:0;padding:0}#nz-nachten td.nz-zin{grid-column:1/-1;margin-top:3px}.nz-tabel table{font-size:14px}.nz-tabel .nz-licht-kol{display:none}.nz-licht-mob{display:block}.nz-cijfer{font-size:38px}.nz-tijden span:nth-child(even){visibility:hidden}}
 `;
 
@@ -189,7 +189,7 @@ function maanPagina(kern, nuMs) {
   return kop({ titel, beschrijving, canonical }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>De maan vandaag</h1>
 <p>Hoe vol de maan is en hoe hoog hij staat, bepaalt hoeveel sterren je ziet. Bij een volle maan verdwijnt de Melkweg; rond nieuwe maan is de hemel het donkerst.</p>
-<div class="nz-maan" aria-live="polite"><span id="nz-maan-schijf" aria-hidden="true"></span><div>
+<div class="nz-maan" aria-live="polite"><span id="nz-maan-schijf"></span><div>
 <p class="groot" id="nz-maan-naam">${esc(naam)}</p>
 <p id="nz-maan-tijden">De op- en ondergangstijden worden geladen.</p>
 </div></div>

@@ -104,18 +104,39 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
     const tijden = [m.op ? "op " + m.op : null, m.onder ? "onder " + m.onder : null].filter(Boolean).join(", ");
     set("nz-maan-tijden", tijden ? "Vandaag in " + r.naam + ": " + tijden + "." : "Vandaag komt de maan in " + r.naam + " niet op of niet onder.");
     const lijst = document.getElementById("nz-maan-fasen");
-    if (lijst) lijst.innerHTML = m.fasen.map(f => `<li><b>${esc(hoofdletter(f.naam))}</b> ${esc(datumTekst(f.datum))}, ${esc(f.tijd)}</li>`).join("");
+    if (lijst) lijst.innerHTML = m.fasen.map((f, i) => `<li>${maanSvg(FASE_STAND[f.naam].ill, FASE_STAND[f.naam].fase, 26, "f" + i)}<span><b>${esc(hoofdletter(f.naam))}</b> ${esc(datumTekst(f.datum))}, ${esc(f.tijd)}</span></li>`).join("");
     const schijf = document.getElementById("nz-maan-schijf");
-    if (schijf) schijf.innerHTML = `<svg viewBox="0 0 72 72" width="72" height="72" role="img" aria-label="${esc(hoofdletter(m.naam))}">${maanSvg(m.ill, m.fase)}</svg>`;
+    if (schijf) schijf.innerHTML = maanSvg(m.ill, m.fase, 120, "nu");
   }
-  /* Verlicht deel van de schijf: rechts bij wassende, links bij afnemende maan (noordelijk halfrond). */
-  function maanSvg(ill, fase) {
-    const r = 30, rx = r * Math.abs(1 - 2 * ill), wassend = fase < 0.5;
-    const rand = `<circle cx="36" cy="36" r="${r}" class="nz-maan-rand"/>`;
-    if (ill < 0.02) return rand;
-    if (ill > 0.98) return rand + `<circle cx="36" cy="36" r="${r}" class="nz-maan-licht"/>`;
-    const buiten = wassend ? 1 : 0, binnen = (ill > 0.5) === wassend ? 1 : 0;
-    return rand + `<path class="nz-maan-licht" d="M36 ${36 - r} A${r} ${r} 0 0 ${buiten} 36 ${36 + r} A${rx.toFixed(2)} ${r} 0 0 ${binnen} 36 ${36 - r}Z"/>`;
+
+  /* De maan als tekening: verlichte kant met randverduistering, de grote
+     maanzeeën op hun echte plek, een zachte schaduwgrens en een vaag zichtbare
+     donkere kant (aardschijn). Op het noordelijk halfrond staat het licht bij
+     een wassende maan rechts en bij een afnemende maan links. */
+  const FASE_STAND = { "nieuwe maan": { ill: 0, fase: 0 }, "eerste kwartier": { ill: 0.5, fase: 0.25 }, "volle maan": { ill: 1, fase: 0.5 }, "laatste kwartier": { ill: 0.5, fase: 0.75 } };
+  /* Maanzeeën in eenheden van de straal (x naar rechts, y naar beneden), zoals vanaf het noordelijk halfrond gezien. */
+  const ZEEEN = [[-0.62, 0.02, 0.22, 0.38], [-0.52, -0.22, 0.14, 0.14], [-0.33, -0.36, 0.26, 0.2], [-0.12, -0.2, 0.1, 0.08], [0.13, -0.4, 0.15, 0.13], [0.3, -0.1, 0.18, 0.15], [0.17, 0.06, 0.09, 0.07], [0.66, -0.3, 0.09, 0.08], [0.55, 0.16, 0.11, 0.16], [0.34, 0.31, 0.08, 0.07], [-0.15, 0.36, 0.16, 0.12], [-0.42, 0.42, 0.09, 0.08], [-0.3, 0.16, 0.1, 0.09]];
+  function maanSvg(ill, fase, maat, sleutel) {
+    const c = 50, r = 44, id = "nzm-" + sleutel, wassend = fase < 0.5;
+    const zeeen = ZEEEN.map(([x, y, rx, ry]) => `<ellipse cx="${(c + x * r).toFixed(1)}" cy="${(c + y * r).toFixed(1)}" rx="${(rx * r).toFixed(1)}" ry="${(ry * r).toFixed(1)}"/>`).join("");
+    let licht = "";
+    if (ill >= 0.02) {
+      let vorm;
+      if (ill > 0.98) vorm = `<circle cx="${c}" cy="${c}" r="${r}" fill="#fff"/>`;
+      else {
+        const rx = r * Math.abs(1 - 2 * ill), buiten = wassend ? 1 : 0, binnen = (ill > 0.5) === wassend ? 1 : 0;
+        vorm = `<path fill="#fff" filter="url(#${id}-zacht)" d="M${c} ${c - r} A${r} ${r} 0 0 ${buiten} ${c} ${c + r} A${rx.toFixed(2)} ${r} 0 0 ${binnen} ${c} ${c - r}Z"/>`;
+      }
+      licht = `<mask id="${id}-licht">${vorm}</mask><g mask="url(#${id}-licht)"><circle cx="${c}" cy="${c}" r="${r}" fill="url(#${id}-dag)"/><g fill="#a99f86" opacity=".38" filter="url(#${id}-vaag)">${zeeen}</g></g>`;
+    }
+    return `<svg class="nz-maan-svg" viewBox="0 0 100 100" width="${maat}" height="${maat}" aria-hidden="true" focusable="false"><defs>`
+      + `<radialGradient id="${id}-dag" cx="${wassend ? 58 : 42}%" cy="42%" r="62%"><stop offset="0" stop-color="#fbf8ee"/><stop offset=".7" stop-color="#ece5d2"/><stop offset="1" stop-color="#d3cab3"/></radialGradient>`
+      + `<radialGradient id="${id}-nacht" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#3a4541"/><stop offset="1" stop-color="#262e2b"/></radialGradient>`
+      + `<filter id="${id}-zacht" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${maat < 40 ? 0.4 : 1.1}"/></filter>`
+      + `<filter id="${id}-vaag" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${maat < 40 ? 1.2 : 2.2}"/></filter>`
+      + `<clipPath id="${id}-schijf"><circle cx="${c}" cy="${c}" r="${r}"/></clipPath></defs>`
+      + `<g clip-path="url(#${id}-schijf)"><circle cx="${c}" cy="${c}" r="${r}" fill="url(#${id}-nacht)"/><g fill="#1b211f" opacity=".3" filter="url(#${id}-vaag)">${zeeen}</g>${licht}</g>`
+      + `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="rgba(127,127,127,.35)" stroke-width="${maat < 40 ? 1.6 : 0.6}"/></svg>`;
   }
 
   if (cfg.soort === "park") park();
