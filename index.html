@@ -2576,9 +2576,17 @@ function dagen(){
     const somRuw=eindigGetal(day.precipitation_sum&&day.precipitation_sum[i]);
     const som=somRuw!==null&&somRuw>=0?somRuw:null;
     const kans=eindigGetal(day.precipitation_probability_max&&day.precipitation_probability_max[i]);
+    /* De balk loopt in kleur van de minimum- naar de maximumtemperatuur: koel
+       blauwgrijs, via groen en oker, naar warm terracotta. Gedempte tinten, zodat
+       ze in het lichte en donkere thema rustig blijven. */
+    const tempKleur=t=>{
+      const stops=[[-10,[93,121,160]],[0,[110,148,176]],[8,[126,166,160]],[14,[196,176,112]],[20,[214,146,92]],[28,[190,96,72]],[35,[160,60,60]]];
+      for(let k=1;k<stops.length;k++)if(t<=stops[k][0]){const [t0,c0]=stops[k-1],[t1,c1]=stops[k],f=clamp((t-t0)/(t1-t0),0,1);return "rgb("+c0.map((v,j)=>Math.round(v+(c1[j]-v)*f)).join(",")+")";}
+      return "rgb("+stops[stops.length-1][1].join(",")+")";
+    };
     const balk=l===null||hh===null
       ?""
-      :`<i style="left:${(l-lo)/sp*100}%;width:${Math.max(3,(hh-l)/sp*100)}%"></i>`;
+      :`<i style="left:${(l-lo)/sp*100}%;width:${Math.max(3,(hh-l)/sp*100)}%;--temp-verloop:linear-gradient(90deg,${tempKleur(l)},${tempKleur(hh)})"></i>`;
     out+=`<div class="row day${S.dag===i?" on":""}" data-i="${i}" role="button" tabindex="0">
       <div class="dname">${nm}</div><div class="dico">${code===null?"":icon(code,true,22)}</div>
       <div class="dcond">${code===null?"Verwachting niet beschikbaar":txt(code)}${som!==null&&som>0.5?", "+nl(som)+" mm":""}</div>
