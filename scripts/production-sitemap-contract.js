@@ -3,6 +3,8 @@
 const assert=require("assert");
 const {LOCATIES,BASIS_URL,plaatsUrl}=require("./seo-locations.config.js");
 const {SEIZOENSPAGINAS,seizoenUrl}=require("./seizoenspagina.config.js");
+const {BASIS:NACHTZICHT,MAAN,parkUrl}=require("./nachtzicht.config.js");
+const {parkenMetLicht}=require("./generate-nachtzicht.js");
 
 const ROOT=BASIS_URL;
 const VERWACHTE_URLS=Object.freeze([
@@ -11,7 +13,10 @@ const VERWACHTE_URLS=Object.freeze([
   `${ROOT}/over/`,
   `${ROOT}/privacy`,
   ...LOCATIES.map(plaatsUrl),
-  ...SEIZOENSPAGINAS.map(seizoenUrl)
+  ...SEIZOENSPAGINAS.map(seizoenUrl),
+  `${ROOT}${NACHTZICHT}`,
+  ...parkenMetLicht().map(parkUrl),
+  `${ROOT}${MAAN}`
 ]);
 
 function leesLocs(xml){

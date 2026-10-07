@@ -686,6 +686,8 @@
 
     /* Seizoenspagina witte kerst (vaste teksten) */
     "Witte kerst": "White Christmas",
+    "Sterren kijken": "Stargazing",
+    "Sterren kijken in de Nationale Parken ›": "Stargazing in the Dutch national parks ›",
     "Wordt het een witte kerst? Zodra kerst binnen de 7-daagse verwachting valt, staat hier de verwachting voor sneeuw op eerste en tweede kerstdag, voor De Bilt en zes grote plaatsen verspreid over Nederland.":
       "Will it be a white Christmas? Once Christmas falls within the 7-day forecast, the snow forecast for Christmas Day and Boxing Day appears here, for De Bilt and six large places across the Netherlands.",
     "Wanneer is het een witte kerst?": "When is it a white Christmas?",
