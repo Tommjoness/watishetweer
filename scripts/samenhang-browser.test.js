@@ -376,6 +376,11 @@ function meet(){
           return page.evaluate(()=>[...document.querySelectorAll(".plaatsen li")].filter(li=>!li.hidden&&li.getClientRects().length).map(li=>li.querySelector("a").textContent.trim()));};
         assert.deepEqual(await zoekEn("The Hague"),["The Hague"],"/weer/ EN: zoeken op 'The Hague' vindt de plaats niet");
         assert.deepEqual(await zoekEn("den haag"),["The Hague"],"/weer/ EN: zoeken op 'den haag' vindt de plaats niet meer");
+        await zoekEn("");
+        /* De letters A–Z blijven letterlijk staan, ook O en Z (geen windrichting). */
+        const letters=await page.evaluate(()=>({koppen:[...document.querySelectorAll(".groep h2")].map(h=>[h.textContent.trim(),h.closest(".groep").id]),balk:[...document.querySelectorAll("nav.az a")].map(a=>[a.textContent.trim(),a.getAttribute("href")])}));
+        assert(letters.koppen.length>=15&&letters.koppen.every(([t,id])=>id==="letter-"+t),"/weer/ EN: letterkoppen vertaald: "+JSON.stringify(letters.koppen.filter(([t,id])=>id!=="letter-"+t)));
+        assert(letters.balk.length===letters.koppen.length&&letters.balk.every(([t,href])=>href==="#letter-"+t),"/weer/ EN: letters in de balk vertaald: "+JSON.stringify(letters.balk.filter(([t,href])=>href!=="#letter-"+t)));
         assert.deepEqual(fouten,[],"/weer/ EN: runtimefouten "+fouten.join(" | "));
         console.log("SAMENHANG /weer/ EN: 'The Hague' en 'Den Haag' vinden allebei The Hague.");
       }finally{await context.close();}
