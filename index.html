@@ -247,7 +247,7 @@
   /* Aanwijzingen mogen er zijn zonder de aandacht te trekken: ze horen op te
      vallen als je zoekt, en te verdwijnen zodra je de app kent. */
   .hint{font-size:12px;color:var(--ink-45);margin:-2px 0 10px;font-style:italic}
-  #lichtvervuiling a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+  #lichtvervuiling a,#nachtzicht-parken a{color:inherit;text-decoration:underline;text-underline-offset:2px}
   /* v70, punt 8: uitsluitend de hint bij Zeven dagen stond te dicht tegen de
      horizontale lijn onder de sectiekop. De gedeelde .hint-regel hierboven
      (ook gebruikt door #charthint bij de grafiek) blijft ongewijzigd; alleen
@@ -2756,6 +2756,8 @@ function lichtvervuilingKlasse(d,lat,lon){
   return c>=1&&c<=5?c:0;
 }
 function toonLichtvervuiling(){
+  /* De Nachtzicht-pagina's gaan over de Nationale Parken; de verwijzing hoort dus alleen bij plaatsen in Nederland. */
+  const parken=document.getElementById("nachtzicht-parken");if(parken)parken.hidden=S.land!=="NL";
   const el=document.getElementById("lichtvervuiling");if(!el)return;
   const lat=S.lat,lon=S.lon;
   if(S.land!=="NL"||lat==null||lon==null){el.hidden=true;el.textContent="";return;}

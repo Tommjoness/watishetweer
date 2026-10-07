@@ -106,6 +106,9 @@ server.listen(0, async () => {
       assert(app.length >= 3, `${s.naam}: de app toont te weinig nachten (${app.length})`);
       assert.deepStrictEqual(kern, app, `${s.naam}: Nachtzicht-pagina wijkt af van de app`);
       assert.deepStrictEqual(fouten, [], `${s.naam}: scriptfouten in de app`);
+      /* Vanuit Nachtzicht in de app is er een verwijzing naar deze pagina's (alleen in Nederland). */
+      const link = await page.evaluate(() => { const p = document.getElementById("nachtzicht-parken"), a = p && p.querySelector("a"); return p && a ? { zichtbaar: !p.hidden && p.getBoundingClientRect().height > 0, href: a.getAttribute("href") } : null; });
+      assert.deepStrictEqual(link, { zichtbaar: true, href: BASIS }, `${s.naam}: verwijzing naar de Nachtzicht-pagina's ontbreekt in de app`);
       rijen += app.length;
       await ctx.close();
     }

@@ -15,7 +15,7 @@ const finalRelease=fs.readFileSync(path.join(root,"scripts","production-final-re
 const sitemapContract=require("./production-sitemap-contract.js");
 const {LOCATIES}=require("./seo-locations.config.js");
 const {SEIZOENSPAGINAS}=require("./seizoenspagina.config.js");
-const verwachtSitemapAantal=LOCATIES.length+4+SEIZOENSPAGINAS.length;
+const verwachtSitemapAantal=LOCATIES.length+4+SEIZOENSPAGINAS.length+require("./generate-nachtzicht.js").parkenMetLicht().length+2;
 
 assert(/push:\s*\n\s*branches:\s*\[main\]/.test(workflow),"production-smoke moet na merges/pushes naar main draaien");
 assert(/schedule:\s*\n\s*- cron: ["']\d+ \* \* \* \*["']/.test(workflow),"production-smoke moet ieder uur gepland staan");
@@ -69,6 +69,7 @@ assert.equal(new Set(sitemapContract.VERWACHTE_URLS).size,sitemapContract.VERWAC
 assert(sitemapContract.VERWACHTE_URLS.includes("https://watishetweer.nl/over/"),"verwacht sitemapcontract moet /over/ bevatten");
 assert(sitemapContract.VERWACHTE_URLS.includes("https://watishetweer.nl/privacy"),"verwacht sitemapcontract moet de canonieke /privacy-route bevatten");
 assert(sitemapContract.VERWACHTE_URLS.includes("https://watishetweer.nl/witte-kerst/"),"verwacht sitemapcontract moet de seizoenspagina /witte-kerst/ bevatten");
+for(const pad of ["/nachtzicht/","/nachtzicht/maasduinen/","/maan/"])assert(sitemapContract.VERWACHTE_URLS.includes("https://watishetweer.nl"+pad),`verwacht sitemapcontract moet de Nachtzicht-pagina ${pad} bevatten`);
 const testXml=`<?xml version="1.0"?><urlset>${sitemapContract.VERWACHTE_URLS.map(url=>`<url><loc>${url}</loc></url>`).join("")}</urlset>`;
 assert.deepEqual(sitemapContract.controleerSitemap(testXml),sitemapContract.VERWACHTE_URLS,"sitemapcontract moet de huidige canonieke set accepteren");
 const omgekeerd=[...sitemapContract.VERWACHTE_URLS].reverse();

@@ -2,6 +2,7 @@
 
 const SEO=require("./seo-foundation.config.js");
 const {SEIZOENSPAGINAS}=require("./seizoenspagina.config.js");
+const NACHTZICHT=require("./nachtzicht.config.js");
 const MARKER="<!-- WEATHER NOW SEO FOUNDATION -->";
 const BRAND_LINK_MARKER="<!-- WEATHER NOW BRAND LINK -->";
 /* Deelkaart 1200×630 (scripts/generate-share-card.js). Plaatsroutes erven deze
@@ -104,6 +105,14 @@ function pasSeoFoundationToe(html){
      onderkantlaag ze via .seizoen-link in beeld achter Privacy. */
   const seizoenLinks=SEIZOENSPAGINAS.map(p=>`<span class="bron seizoen-link"><a href="/${p.slug}/">${p.naam}</a></span>\n      `).join("");
   bron=bron.replace(privacyAnker,brandLink.replace(BRAND_LINK_MARKER+"\n      ",BRAND_LINK_MARKER+"\n      "+seizoenLinks)+"\n      "+privacyAnker);
+
+  /* In Nachtzicht, onder de regel over lichtvervuiling, verwijst een regel naar de Nachtzicht-pagina's.
+     Die route ontstaat pas bij de build, net als de seizoenspagina's, dus de link
+     wordt hier ingevoegd. Hij blijft verborgen tot de app weet dat de plaats in
+     Nederland ligt (toonLichtvervuiling in index.html). */
+  const lichtAnker='<p class="hint" id="lichtvervuiling" hidden></p>';
+  if(tel(bron,lichtAnker)!==1)throw new Error("SEO verwacht exact één lichtvervuilingsregel als anker voor de verwijzing naar de Nachtzicht-pagina's.");
+  bron=bron.replace(lichtAnker,lichtAnker+`\n    <p class="hint" id="nachtzicht-parken" hidden><a href="${NACHTZICHT.BASIS}">Sterren kijken in de Nationale Parken ›</a></p>`);
 
   return bron;
 }
