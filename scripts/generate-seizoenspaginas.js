@@ -148,4 +148,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={pagina,voegToeAanSitemap};
+module.exports={pagina,voegToeAanSitemap,THEMA_SCRIPT,STIJL};
