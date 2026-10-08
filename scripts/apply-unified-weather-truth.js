@@ -146,9 +146,15 @@ const HERO_NIEUW=[
   '  const cc=num(c.cloud_cover);',
   '  const currentHeroCode=radarDroog&&modelCode!==null&&modelCode>=51&&modelCode<=99&&cc!==null',
   '    ?(cc>=95?3:cc>=40?2:cc>=15?1:0):modelCode;',
-  '  if(cond&&typeof txt==="function")cond.textContent=txt(currentHeroCode,c.is_day!==0);',
-  '  if(ico&&typeof icon==="function")ico.innerHTML=icon(currentHeroCode,c.is_day===1,46);',
-  '  if(mini&&typeof txt==="function")mini.textContent=txt(currentHeroCode,c.is_day!==0);',
+  /* Alleen bewolking (code 0-3): dezelfde laagtekst als de bewolkingslaag en de
+     neerslagpresentatie ("Veel hoge bewolking"), niet de ruwe modeltekst
+     ("Bewolkt"); anders hing de kop af van welke laag het laatst schreef. */
+  '  const waarheid=window.WeatherNowFinalProductTruth;',
+  '  const lagen=currentHeroCode!==null&&currentHeroCode>=0&&currentHeroCode<=3&&waarheid&&typeof waarheid.bewolkingMetLagen==="function"?waarheid.bewolkingMetLagen(c.cloud_cover,c.cloud_cover_low,c.cloud_cover_mid,c.cloud_cover_high,c.is_day!==0):null;',
+  '  const heroCode=lagen?lagen.code:currentHeroCode,heroTekst=lagen?lagen.tekst:(typeof txt==="function"?txt(currentHeroCode,c.is_day!==0):"");',
+  '  if(cond&&heroTekst)cond.textContent=heroTekst;',
+  '  if(ico&&typeof icon==="function")ico.innerHTML=icon(heroCode,c.is_day===1,46);',
+  '  if(mini&&heroTekst)mini.textContent=heroTekst;',
   '}'
 ].join("\n");
 if((html.split(HERO_OUD).length-1)!==1)throw new Error("Actuele hero-anchor ontbreekt of is dubbel.");
