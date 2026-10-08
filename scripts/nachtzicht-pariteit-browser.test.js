@@ -25,7 +25,7 @@ const { bouw } = require("../data.js");
 const { stub } = require("./taal-catalogus-browser.js");
 const { laadKern } = require("./nachtzicht-bron.js");
 const { parkenMetLicht } = require("./generate-nachtzicht.js");
-const { BASIS } = require("./nachtzicht.config.js");
+const { BASIS, MAAN } = require("./nachtzicht.config.js");
 
 const PUBLIC = path.join(__dirname, "..", "public");
 const TYPES = { ".js": "application/javascript", ".css": "text/css", ".json": "application/json", ".woff2": "font/woff2", ".svg": "image/svg+xml", ".png": "image/png" };
@@ -107,8 +107,8 @@ server.listen(0, async () => {
       assert.deepStrictEqual(kern, app, `${s.naam}: Nachtzicht-pagina wijkt af van de app`);
       assert.deepStrictEqual(fouten, [], `${s.naam}: scriptfouten in de app`);
       /* Vanuit Nachtzicht in de app is er een verwijzing naar deze pagina's (alleen in Nederland). */
-      const link = await page.evaluate(() => { const p = document.getElementById("nachtzicht-parken"), a = p && p.querySelector("a"); return p && a ? { zichtbaar: !p.hidden && p.getBoundingClientRect().height > 0, href: a.getAttribute("href") } : null; });
-      assert.deepStrictEqual(link, { zichtbaar: true, href: BASIS }, `${s.naam}: verwijzing naar de Nachtzicht-pagina's ontbreekt in de app`);
+      const link = await page.evaluate(() => { const p = document.getElementById("nachtzicht-parken"); return p ? { zichtbaar: !p.hidden && p.getBoundingClientRect().height > 0, hrefs: [...p.querySelectorAll("a")].map(a => a.getAttribute("href")) } : null; });
+      assert.deepStrictEqual(link, { zichtbaar: true, hrefs: [BASIS, MAAN] }, `${s.naam}: verwijzing naar de Nachtzicht-pagina's en De maan vandaag ontbreekt in de app`);
       rijen += app.length;
       await ctx.close();
     }

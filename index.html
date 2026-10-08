@@ -248,6 +248,8 @@
      vallen als je zoekt, en te verdwijnen zodra je de app kent. */
   .hint{font-size:12px;color:var(--ink-45);margin:-2px 0 10px;font-style:italic}
   #lichtvervuiling a,#nachtzicht-parken a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+  /* Sterren kijken en De maan vandaag naast elkaar; op smalle schermen loopt de tweede link door naar de volgende regel. */
+  #nachtzicht-parken:not([hidden]){display:flex;flex-wrap:wrap;column-gap:16px;row-gap:4px}
   /* v70, punt 8: uitsluitend de hint bij Zeven dagen stond te dicht tegen de
      horizontale lijn onder de sectiekop. De gedeelde .hint-regel hierboven
      (ook gebruikt door #charthint bij de grafiek) blijft ongewijzigd; alleen
