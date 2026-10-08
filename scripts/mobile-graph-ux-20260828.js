@@ -1439,15 +1439,23 @@ function bewaakGrafiekLabels(){
      laatste. Daarom kijken zij niet naar waar "nu" nu staat. */
   const isAnker=el=>el.hasAttribute("data-desktop-temp-anker")||el.hasAttribute("data-mobile-temp-label")||el.hasAttribute("data-mobile-temp-covers-anchor");
   const isMarkering=el=>el.hasAttribute("data-mobile-temp-marker")||el.hasAttribute("data-desktop-temp-marker");
+  /* Op de telefoon staan links van het eerste uur de asgetallen; een
+     temperatuurcijfer daar leest als asgetal (zelfde grens als bij het plaatsen).
+     Alleen het rode nu-label mag daar als uitwijkplek staan. Desktop en tablet
+     hebben een eigen, ruimere linkermarge waarin het eerste cijfer gecentreerd
+     op zijn punt hoort. */
+  const asKolom=g.M&&typeof g.x==="function"&&Number.isFinite(Number(g.x(0)))?Number(g.x(0))-4:null;
   const botst=(el,box,groep)=>{
     if(!box)return false;
     const negeerNu=!isNu(el)&&(isAnker(el)||isMarkering(el));
     if(box.x<1||box.x+box.width>W-1||box.y<1||box.y+box.height>H-1)return true;
+    if(asKolom!==null&&!isNu(el)&&box.x<asKolom)return true;
     if(lijnen.some(p=>lijnRaaktTekstBox(p,box,1)))return true;
     if(stipVakken.some(s=>rechthoekenBotsen(box,s,0.5)))return true;
     if(staven.some(s=>rechthoekenBotsen(box,s,1)))return true;
     if(iconen.some(s=>rechthoekenBotsen(box,s,1)))return true;
-    if(!isNu(el)&&nuLijnen.some(s=>rechthoekenBotsen(box,s,1)))return true;
+    /* Ook het nu-label zelf staat nooit op de rode nu-lijn. */
+    if(nuLijnen.some(s=>rechthoekenBotsen(box,s,1)))return true;
     for(const [ander,b] of vakken){if(groep.includes(ander)||!b||negeerNu&&isNu(ander))continue;if(rechthoekenBotsen(box,b,1))return true;}
     return false;
   };
@@ -1594,10 +1602,14 @@ function polishNuLabel(){
     .map(el=>String(el.getAttribute("points")||el.getAttribute("data-mobile-line-points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
   const puntX=punt?Number(punt.getAttribute("cx")):NaN;
   const stipVak=Number.isFinite(puntX)&&Number.isFinite(puntY)?{x:puntX-4,y:puntY-4,width:8,height:8}:null;
+  /* Op de rode nu-lijn zelf staat nooit tekst: een uitwijkplek die het label
+     over de lijn legt, leest als "nu" en "13°" aan weerszijden van de lijn. */
+  const kruistNuLijn=box=>Number.isFinite(puntX)&&box.x<puntX+1.5&&box.x+box.width>puntX-1.5;
   const vrij=(x,y)=>{
     const box=geschatteSvgTekstBox(nu.textContent,x,y,"start",Number(nu.getAttribute("font-size"))||10);
     return box&&box.x>=g.pl-2&&box.x+box.width<=breed-g.pr+3
       &&box.y>=g.pt-18&&box.y+box.height<=g.pt+g.ih-3
+      &&!kruistNuLijn(box)
       &&(!stipVak||!rechthoekenBotsen(box,stipVak,1))
       &&!vast.some(b=>rechthoekenBotsen(box,b,3))
       &&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box));

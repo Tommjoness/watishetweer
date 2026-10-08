@@ -371,14 +371,23 @@ meters=function(){
 
     const cc=num(c.cloud_cover),huidigeCode=num(c.weather_code),cloudSub=document.getElementById("cloudsub");
     if(cloudSub&&cc!==null&&cc>=0&&cc<=100){
-      const oordeel=bewolkingOordeelGetoond(cc,c.is_day!==0);if(oordeel)cloudSub.textContent=oordeel+".";
       const alleenBewolking=bewolkingMagActueelWeerOverschrijven(huidigeCode);
-      const omschrijving=actueleBewolkingsomschrijving(huidigeCode,cc,c.is_day!==0,typeof txt==="function"?txt(huidigeCode,c.is_day!==0):"");
+      /* Noemt de hoofdweergave "(Veel) hoge bewolking", dan zegt de tegel waarom
+         het percentage toch hoog is: anders staat "Geheel bewolkt" naast een
+         maantje en "Veel hoge bewolking" en lijkt dat tegenstrijdig. */
+      const lagen=root.WeatherNowFinalProductTruth&&typeof root.WeatherNowFinalProductTruth.bewolkingMetLagen==="function"
+        ?root.WeatherNowFinalProductTruth.bewolkingMetLagen(cc,c.cloud_cover_low,c.cloud_cover_mid,c.cloud_cover_high,c.is_day!==0):null;
+      const vooralHoog=alleenBewolking&&!!lagen&&/hoge bewolking/i.test(lagen.tekst);
+      const oordeel=bewolkingOordeelGetoond(cc,c.is_day!==0);if(oordeel)cloudSub.textContent=oordeel+(vooralHoog?", vooral hoge bewolking":"")+".";
+      /* Bij vooral hoge bewolking houdt de kop dezelfde laagtekst als de
+         bewolkingslaag en de neerslagpresentatie ("Veel hoge bewolking"); anders
+         hing de kop af van welke laag het laatst schreef. */
+      const omschrijving=vooralHoog?lagen.tekst:actueleBewolkingsomschrijving(huidigeCode,cc,c.is_day!==0,typeof txt==="function"?txt(huidigeCode,c.is_day!==0):"");
       if(omschrijving&&alleenBewolking){
         const conditie=document.getElementById("cond"),mini=document.getElementById("minicond");
         if(conditie)conditie.textContent=omschrijving;
         if(mini){mini.textContent=omschrijving;mini.title=omschrijving;}
-        const effectieveCode=bewolkingscodeUitPercentage(cc),icoon=document.getElementById("nowicon");
+        const effectieveCode=vooralHoog?lagen.code:bewolkingscodeUitPercentage(cc),icoon=document.getElementById("nowicon");
         if(icoon&&effectieveCode!==null&&typeof icon==="function")icoon.innerHTML=icon(effectieveCode,c.is_day===1,46);
       }
     }
