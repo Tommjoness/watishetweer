@@ -40,6 +40,7 @@ if(tel(html,MARKER)!==1)throw new Error("SEO-marker moet exact één keer aanwez
 if(tel(html,BRAND_LINK_MARKER)!==1)throw new Error("Zichtbare Over-verwijzing moet exact één keer aanwezig zijn.");
 if(!html.includes('<a href="/over/">Over deze site</a>'))throw new Error("Homepage koppelt niet compact en zichtbaar aan de Over-pagina.");
 for(const p of require("./seizoenspagina.config.js").SEIZOENSPAGINAS)if(!html.includes(`<a href="/${p.slug}/">${p.naam}</a>`))throw new Error(`Homepage-footer mist de crawlbare link naar /${p.slug}/.`);
+{const NZ=require("./nachtzicht.config.js");for(const [href,naam] of [[NZ.BASIS,"Sterren kijken"],[NZ.MAAN,"De maan vandaag"]])if(!html.includes(`<span class="bron seizoen-link"><a href="${href}">${naam}</a></span>`))throw new Error(`Homepage-footer mist de crawlbare link naar ${href}.`);}
 if(html.includes(`<a href="/over/"><b>${SEO.siteName}</b> · Over deze site</a>`))throw new Error("Footer herhaalt de merknaam nog onnodig in de Over-link.");
 if(tel(html,MERK_H1)!==1||html.includes(BRON_H1))throw new Error("Homepage-H1 publiceert niet eenduidig de vaste merknaam.");
 if(tel(html,MERK_APP_TITLE)!==1||html.includes(BRON_APP_TITLE))throw new Error("Apple-webappmetadata publiceert niet eenduidig de vaste merknaam.");

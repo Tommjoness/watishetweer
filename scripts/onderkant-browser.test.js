@@ -179,7 +179,8 @@ function meet(){
           assert.equal(m.plaatsen.aantal,7,label+": verwacht zes plaatsen plus Meer plaatsen op touchbreedte");
         }
         if(w===390){
-          assert(m.footer.h<=330,label+": voet is "+Math.round(m.footer.h)+"px hoog, verwacht hooguit 330px");
+          /* Eén rij hoger dan voorheen: Sterren kijken en De maan vandaag (eigenaar akkoord 8 oktober 2026). */
+          assert(m.footer.h<=375,label+": voet is "+Math.round(m.footer.h)+"px hoog, verwacht hooguit 375px");
           assert(m.plaatsen.hoogteBlok<=150,label+": populaire plaatsen beslaan "+Math.round(m.plaatsen.hoogteBlok)+"px");
         }
         assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
