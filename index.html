@@ -266,6 +266,9 @@
   .waarsch{border-left:3px solid var(--carmine);padding:10px 0 10px 14px;margin-top:var(--s2)}
   .waarsch h3{font-family:var(--serif);font-weight:400;font-size:18px;margin:0 0 2px;color:var(--carmine)}
   .waarsch p{margin:0;font-size:14px;color:var(--ink-70)}
+  /* Eigen gladheidsregel en hoogtemelding: een modelsignaal, dus rustiger dan een officiële waarschuwing. */
+  .glad{border-left:3px solid var(--ink-45);padding:6px 0 6px 14px;margin:var(--s2) 0 0;font-size:15px;line-height:1.5;color:var(--ink);max-width:66ch}
+  .glad[hidden]{display:none}
 
   /* tabellen */
   .row{display:grid;align-items:center;border-bottom:1px solid var(--rule-soft);padding:11px 0}
@@ -582,6 +585,8 @@
   <div id="app" style="display:none">
 
     <p class="brief" id="brief"></p>
+    <p class="glad" id="gladheid" hidden></p>
+    <p class="glad" id="hoogtehint" hidden></p>
     <div id="waarschuwingen"></div>
 
     <nav class="mobile-section-nav" aria-label="Snel naar weersinformatie">
@@ -2292,10 +2297,15 @@ function etmaal(start,n){
       font-family="Bodoni Moda,serif" font-size="${F.temp}">${Math.round(g.v)}°</text>`;
   });
 
+  /* Vorstlijn: loopt de as door 0 °C, dan markeert een gestippelde lijn het
+     vriespunt, zodat je in één oogopslag ziet wanneer het gaat vriezen. */
+  const vorstlijn=mn<0&&mx>0
+    ?`<line class="vorstlijn" data-vorstlijn="0" x1="${pl}" y1="${y(0).toFixed(1)}" x2="${W-pr}" y2="${y(0).toFixed(1)}" stroke="${TEAL}" stroke-width="1" stroke-dasharray="4 4" stroke-opacity=".8" aria-hidden="true"/>`
+    :"";
   /* De aswaarde stond op x=0 en liep daardoor op een smal scherm onder de eerste
      rasterlijn door. Nu rechts uitgelijnd binnen de linkermarge, dus ook een
      waarde als -10 blijft vrij van de grafiek. */
-  const gitter=[mx,Math.round((mn+mx)/2),mn].map((v,k)=>
+  const gitter=vorstlijn+[mx,Math.round((mn+mx)/2),mn].map((v,k)=>
     `<line x1="${pl-5}" y1="${y(v)}" x2="${W-pr}" y2="${y(v)}" stroke="${k===2?RULE:RULES}" stroke-width="1"/>
      <text x="${pl-9}" y="${y(v)+3.5}" text-anchor="end" fill="${INK25}" font-family="DM Mono,monospace" font-size="${F.grid}">${v}°</text>`).join("");
 
@@ -3477,6 +3487,109 @@ function weatherNowUurWaardeOp(veld,doelMin){
   const f=(doelMin-links.m)/(rechts.m-links.m);
   return links.v+(rechts.v-links.v)*f;
 }
+
+/* ---------- winter: gladheid en sneeuw in centimeters ---------- */
+/* Eigen gladheidsregel (eigenaar, 8 oktober 2026). Kijkt twaalf uur vooruit, in
+   deze volgorde: ijzel (aanvriezende regen of motregen), sneeuw bij hooguit 1 °C,
+   en opvriezing: de luchttemperatuur zakt tot 0 °C of lager terwijl er in de zes
+   uur daarvoor minstens 0,2 mm boven nul viel. Geeft een officiële waarschuwing al
+   gladheid, ijzel of sneeuw aan, dan zwijgt deze regel: die heeft voorrang. */
+const WINTER_SNEEUW_CODES=new Set([71,73,75,77,85,86]),WINTER_IJZEL_CODES=new Set([56,57,66,67]);
+function gladheidSignaal(d,i0,waarschuwingen){
+  const h=d&&d.hourly;
+  if(!h||!Array.isArray(h.time)||!Number.isInteger(i0)||i0<0||i0>=h.time.length)return null;
+  if((Array.isArray(waarschuwingen)?waarschuwingen:[]).some(w=>/glad|ijzel|sneeuw|snow|ice|icy|freez/i.test(String(w&&w.titel||"")+" "+String(w&&w.tekst||""))))return null;
+  const g=(veld,j)=>{const a=h[veld];return Array.isArray(a)&&j>=0&&j<a.length?eindigGetal(a[j]):null;};
+  const eind=Math.min(i0+12,h.time.length-1);
+  for(let j=i0;j<=eind;j++){const c=g("weather_code",j);if(c!==null&&WINTER_IJZEL_CODES.has(c))return {soort:"ijzel",idx:j};}
+  for(let j=i0;j<=eind;j++){
+    const t=g("temperature_2m",j),c=g("weather_code",j),s=g("snowfall",j),p=g("precipitation",j);
+    if(t!==null&&t<=1&&((s!==null&&s>=0.1)||(c!==null&&WINTER_SNEEUW_CODES.has(c)&&p!==null&&p>=0.1)))return {soort:"sneeuw",idx:j};
+  }
+  for(let j=i0;j<=eind;j++){
+    const t=g("temperature_2m",j);if(t===null||t>0)continue;
+    let nat=0;
+    for(let k=Math.max(0,j-6);k<j;k++){const p=g("precipitation",k),tk=g("temperature_2m",k);if(p!==null&&p>0&&tk!==null&&tk>0)nat+=p;}
+    if(nat>=0.2)return {soort:"opvriezing",idx:j};
+  }
+  return null;
+}
+function gladheidTekst(signaal,tijd,nu){
+  if(!signaal)return "";
+  const vanaf=nu?"":" vanaf ongeveer "+tijd;
+  if(signaal.soort==="ijzel")return "Kans op gladheid door ijzel"+vanaf+".";
+  if(signaal.soort==="sneeuw")return "Kans op gladheid door sneeuw"+vanaf+".";
+  return nu?"Kans op gladheid: natte wegen kunnen opvriezen.":"Kans op gladheid: natte wegen kunnen"+vanaf+" opvriezen.";
+}
+/* Sneeuw in Zeven dagen: valt de neerslag van een dag vooral als sneeuw, dan staat
+   er "5 cm sneeuw" in plaats van millimeters smeltwater. Open-Meteo geeft sneeuw in
+   cm (ongeveer 0,7 cm per mm); vandaag telt, net als de mm, vanaf het huidige uur. */
+function sneeuwDagTekst(d,datum,vanafIdx){
+  const h=d&&d.hourly;if(!h||!Array.isArray(h.time)||!Array.isArray(h.snowfall))return "";
+  let cm=0,mm=0;
+  for(let j=0;j<h.time.length;j++){
+    if(String(h.time[j]).slice(0,10)!==datum||(vanafIdx!=null&&j<vanafIdx))continue;
+    const s=eindigGetal(h.snowfall[j]),p=eindigGetal(h.precipitation&&h.precipitation[j]);
+    if(s!==null&&s>0)cm+=s;if(p!==null&&p>0)mm+=p;
+  }
+  if(cm<0.5||cm/0.7<mm*0.5)return "";
+  return Math.max(1,Math.round(cm))+" cm sneeuw";
+}
+/* Reservebron en hoogte (eigenaar akkoord 8 oktober 2026): Visual Crossing en
+   WeatherAPI houden geen rekening met de hoogte van de plek zelf. Op een bergtop
+   van 3.571 m gaf de reservebron +2 °C terwijl het -4 °C was. Ligt de
+   plek op 800 m of hoger, dan meldt de app dat. De hoogte komt uit een eerdere
+   Open-Meteo-verwachting voor dezelfde plek of uit de Open-Meteo-hoogte-API. */
+const HOOGTE_GRENS_M=800,hoogteGeheugen=new Map();
+const hoogteSleutel=(lat,lon)=>Number(lat).toFixed(2)+","+Number(lon).toFixed(2);
+function hoogteHintTekst(m){
+  if(!Number.isFinite(m)||m<HOOGTE_GRENS_M)return "";
+  return "De reservebron houdt geen rekening met de hoogte van deze plek (ongeveer "+(Math.round(m/10)*10).toLocaleString("nl-NL")+" m). In de bergen is het daar vaak een stuk kouder dan hier staat.";
+}
+function hoogteHintBij(){
+  const el=document.getElementById("hoogtehint");if(!el||!S.d||!Number.isFinite(S.lat)||!Number.isFinite(S.lon))return;
+  const sleutel=hoogteSleutel(S.lat,S.lon),reserve=/^(visualcrossing|weatherapi)$/.test(String(S.d.provider||""));
+  if(!reserve&&Number.isFinite(Number(S.d.elevation))&&S.d.elevation!==null)hoogteGeheugen.set(sleutel,Number(S.d.elevation));
+  const zet=tekst=>{if(el.dataset.bron!==tekst){el.dataset.bron=tekst;el.textContent=tekst;}el.hidden=!tekst;};
+  if(!reserve){zet("");return;}
+  if(hoogteGeheugen.has(sleutel)){zet(hoogteHintTekst(hoogteGeheugen.get(sleutel)));return;}
+  zet("");
+  hoogteGeheugen.set(sleutel,NaN);
+  j("https://api.open-meteo.com/v1/elevation?latitude="+encodeURIComponent(S.lat)+"&longitude="+encodeURIComponent(S.lon),{timeoutMs:4000})
+    .then(r=>{const m=Number(r&&Array.isArray(r.elevation)?r.elevation[0]:NaN);hoogteGeheugen.set(sleutel,m);
+      if(hoogteSleutel(S.lat,S.lon)===sleutel&&S.d&&/^(visualcrossing|weatherapi)$/.test(String(S.d.provider||"")))zet(hoogteHintTekst(m));})
+    .catch(()=>{hoogteGeheugen.delete(sleutel);});
+}
+function winterBij(){
+  if(!S.d)return;
+  /* Opmaaklagen verplaatsen de briefing naar een eigen kolom; de winterregels horen er direct onder. */
+  const brief=document.getElementById("brief");
+  if(brief&&brief.parentElement)for(const id of ["hoogtehint","gladheid"]){const e=document.getElementById(id);if(e&&e.previousElementSibling!==brief&&!(id==="hoogtehint"&&e.previousElementSibling&&e.previousElementSibling.id==="gladheid"))brief.after(e);}
+  hoogteHintBij();
+  const el=document.getElementById("gladheid");
+  if(el){
+    const s=gladheidSignaal(S.d,S.i0,S.actieveWaarschuwingen);
+    const tekst=s?gladheidTekst(s,hhmm(S.d.hourly.time[s.idx]),s.idx===S.i0):"";
+    /* Alleen bij een andere brontekst schrijven: de vertaallaag zet de tekst daarna om. */
+    if(el.dataset.bron!==tekst){el.dataset.bron=tekst;el.textContent=tekst;}
+    el.hidden=!tekst;
+  }
+  const day=S.d.daily,vandaag=String(S.d.current&&S.d.current.time||"").slice(0,10);
+  if(!day||!Array.isArray(day.time))return;
+  document.querySelectorAll("#days .row.day:not(.kop)").forEach(rij=>{
+    const i=Number(rij.dataset.i),datum=day.time[i],small=rij.querySelector(".drain small");
+    if(!datum||!small)return;
+    const tekst=sneeuwDagTekst(S.d,datum,datum===vandaag?S.i0:null);
+    if(!tekst||small.dataset.sneeuw===tekst)return;
+    small.dataset.sneeuw=tekst;small.textContent=tekst;
+  });
+}
+/* Na iedere render van de briefing of de dagen, ongeacht welke laag als laatste schreef. */
+(function(){
+  if(typeof MutationObserver!=="function")return;
+  const obs=new MutationObserver(()=>{try{winterBij();}catch(e){}});
+  for(const id of ["brief","days"]){const el=document.getElementById(id);if(el)obs.observe(el,{childList:true,subtree:true,characterData:true});}
+})();
 
 /* ---------- start ---------- */
 (function(){

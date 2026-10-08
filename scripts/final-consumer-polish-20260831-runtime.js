@@ -26,8 +26,8 @@ function zonPresentatie(data,nuMs=Date.now()){const d=data||{},event=volgendZonm
    De zin spreekt het percentage nooit tegen: vanaf 80% heet de lucht vochtig,
    vanaf 90% zeer vochtig, en nooit droog, fris of aangenaam; onder 30% is
    lucht niet plakkerig, behalve bij echt benauwde hitte. Bij kou (7 °C of
-   lager) is plakkerigheid geen vraag en noemt de zin alleen koud en vochtig of
-   droog. */
+   lager) is plakkerigheid geen vraag en noemt de zin alleen koud, en vanaf 90%
+   vochtig of onder 50% droog. */
 function vochtigheidPresentatie(current){
   const c=current||{},rh=getal(c.relative_humidity_2m),t=getal(c.temperature_2m);
   if(rh===null||rh<0||rh>100)return "Luchtvochtigheid niet beschikbaar.";
@@ -38,7 +38,9 @@ function vochtigheidPresentatie(current){
     if(rh<40)return "Droge lucht.";
     return "Normale luchtvochtigheid.";
   }
-  if(t!==null&&t<=7){const koud=t<=-15?"IJskoude":"Koude";return rh>=70?koud+", vochtige lucht.":rh>=50?koud+" lucht.":koud+", droge lucht.";}
+  /* Bij kou is 70 tot 90% in Nederland de gewone toestand; pas vanaf 90% is "vochtig"
+     onderscheidend (winteranalyse, eigenaar akkoord 8 oktober 2026). */
+  if(t!==null&&t<=7){const koud=t<=-15?"IJskoude":"Koude";return rh>=90?koud+", vochtige lucht.":rh>=50?koud+" lucht.":koud+", droge lucht.";}
   if(dp>=24)return "Zeer benauwd en plakkerig.";
   if(dp>=21)return "Benauwd en plakkerig.";
   if(rh>=30){

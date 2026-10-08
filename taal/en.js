@@ -928,6 +928,11 @@
 
     /* Seizoenspagina witte kerst (teksten met jaar, datum, plaats of aantal) */
     [/^Witte kerst (\d{4})$/, (m) => `White Christmas ${m[1]}`],
+    [/^(\d+) cm sneeuw$/, (m) => `${m[1]} cm snow`],
+    [/^De reservebron houdt geen rekening met de hoogte van deze plek \(ongeveer ([\d.]+) m\)\. In de bergen is het daar vaak een stuk kouder dan hier staat\.$/, (m) => `The backup source does not account for the altitude of this location (about ${m[1].replace(/\./g, ",")} m). In the mountains it is often considerably colder than shown here.`],
+    [/^Kans op gladheid door ijzel(?: vanaf ongeveer (\d{2}:\d{2}))?\.$/, (m) => `Risk of icy roads from freezing rain${m[1] ? ` from about ${m[1]}` : ""}.`],
+    [/^Kans op gladheid door sneeuw(?: vanaf ongeveer (\d{2}:\d{2}))?\.$/, (m) => `Risk of slippery roads from snow${m[1] ? ` from about ${m[1]}` : ""}.`],
+    [/^Kans op gladheid: natte wegen kunnen(?: vanaf ongeveer (\d{2}:\d{2}))? opvriezen\.$/, (m) => `Risk of icy patches: wet roads may freeze${m[1] ? ` from about ${m[1]}` : ""}.`],
     [/^Witte kerst (\d{4}): kans op sneeuw met kerst \| watishetweer\.nl$/, (m) => `White Christmas ${m[1]}: chance of snow at Christmas | watishetweer.nl`],
     [/^Vanaf (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) verschijnt hier de verwachting voor (eerste kerstdag|tweede kerstdag)\.$/,
       (m) => `The forecast for ${KERSTDAG[m[4]]} will appear here from ${dagVol(m[1])} ${m[2]} ${maand(m[3])}.`],

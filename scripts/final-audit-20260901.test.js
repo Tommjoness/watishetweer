@@ -65,8 +65,9 @@ assert.match(a.nwsUitleg("Heat Advisory","100 to 110 degrees Fahrenheit").uitleg
 
 /* Wereldwijde vochtigheid: relatieve waarde blijft meetwaarde; de zin zegt in gewone taal of het plakkerig is. */
 assert.equal(vochtigheidPresentatie({temperature_2m:40,relative_humidity_2m:43,dew_point_2m:25}),"Zeer benauwd en plakkerig.");
-assert.equal(vochtigheidPresentatie({temperature_2m:5,relative_humidity_2m:84,dew_point_2m:3}),"Koude, vochtige lucht.");
-assert.equal(vochtigheidPresentatie({temperature_2m:2,relative_humidity_2m:78,dew_point_2m:-1}),"Koude, vochtige lucht.");
+assert.equal(vochtigheidPresentatie({temperature_2m:5,relative_humidity_2m:84,dew_point_2m:3}),"Koude lucht.");
+assert.equal(vochtigheidPresentatie({temperature_2m:2,relative_humidity_2m:78,dew_point_2m:-1}),"Koude lucht.");
+assert.equal(vochtigheidPresentatie({temperature_2m:2,relative_humidity_2m:93,dew_point_2m:1}),"Koude, vochtige lucht.");
 assert.equal(vochtigheidPresentatie({temperature_2m:-49,relative_humidity_2m:67,dew_point_2m:-52}),"IJskoude lucht.");
 assert.equal(vochtigheidPresentatie({temperature_2m:20,relative_humidity_2m:87}),"Voelt wat plakkerig aan.");
 assert(!/droog/i.test(vochtigheidPresentatie({temperature_2m:40,relative_humidity_2m:43,dew_point_2m:25})),"Dubai mag nooit droog heten");
