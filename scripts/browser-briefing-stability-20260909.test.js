@@ -136,6 +136,22 @@ document.addEventListener('DOMContentLoaded',()=>{
       zet('final-owner',brief&&brief.getAttribute('data-q1-briefing-pending'));
       zet('final-knmi-owner',brief&&brief.getAttribute('data-knmi-briefing-pending'));
       zet('knmi-requests',window.__knmiStarts.length-knmiVoor);
+
+      /* Trage radar: de briefing wacht hooguit 1 s en staat daarna met de
+         modeltekst in beeld; het late radarantwoord werkt hem alleen nog bij. */
+      window.__briefFase=0;window.__briefDelay=0;
+      window.__knmiFase=1;window.__knmiDelay=4000;
+      const traagVoor=window.__knmiStarts.length;
+      await load(52.35,5.26,'Tussen B',false,true,'NL');
+      await new Promise(r=>setTimeout(r,1300));
+      zet('traag-visibility',brief?getComputedStyle(brief).visibility:'missing');
+      zet('traag-hidden',brief&&brief.getAttribute('aria-hidden'));
+      zet('traag-owner',brief&&brief.getAttribute('data-knmi-briefing-pending'));
+      zet('traag-len',(brief&&brief.textContent||'').replace(/\s+/g,' ').trim().length);
+      await new Promise(r=>setTimeout(r,4000));
+      zet('traag-requests',window.__knmiStarts.length-traagVoor);
+      zet('traag-eind-visibility',brief?getComputedStyle(brief).visibility:'missing');
+      zet('traag-eind-owner',brief&&brief.getAttribute('data-knmi-briefing-pending'));
       zet('done','ok');
     }catch(e){zet('error',e&&e.message||e);zet('done','fout');}
   },120);
@@ -146,7 +162,7 @@ html=html.replace("</body>",reporter+"</body>");
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-brief-stable-"));
 try{
   const bestand=path.join(dir,"index.html");fs.writeFileSync(bestand,html);
-  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1366,900","--virtual-time-budget=6000","--dump-dom","file://"+bestand],{encoding:"utf8",maxBuffer:30*1024*1024});
+  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files","--window-size=1366,900","--virtual-time-budget=14000","--dump-dom","file://"+bestand],{encoding:"utf8",maxBuffer:30*1024*1024});
   if(r.status!==0)throw new Error("browser exit "+r.status+" "+String(r.stderr||"").slice(-1200));
   const dom=r.stdout||"";
   const waarde=k=>{const m=new RegExp('data-brief-stable-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
@@ -164,5 +180,8 @@ try{
   if(waarde('final-temp')!=="31")throw new Error("Verse forecast heeft de zichtbare hero niet vervangen: "+fout);
   if(!Number(waarde('final-len'))||waarde('copy-changed')!=="ja"||waarde('knmi-copy-changed')!=="ja")throw new Error("Testscenario onderscheidt cached, forecast-only en KNMI-verrijkte briefing niet aantoonbaar: "+fout);
   if(waarde('final-visibility')==="hidden"||waarde('final-hidden')==="true"||waarde('final-busy')==="true"||waarde('final-owner')||waarde('final-knmi-owner'))throw new Error("Definitieve briefing bleef in voorlopige toestand hangen: "+fout);
+  if(waarde('traag-visibility')!=="visible"||waarde('traag-hidden')==="true"||waarde('traag-owner')||!Number(waarde('traag-len')))throw new Error("Bij een trage radar bleef de briefing langer dan 1 s verborgen: "+fout+` traagVis=${waarde('traag-visibility')} traagHidden=${waarde('traag-hidden')} traagOwner=${waarde('traag-owner')} traagLen=${waarde('traag-len')}`);
+  if(waarde('traag-requests')!=="1"||waarde('traag-eind-visibility')!=="visible"||waarde('traag-eind-owner'))throw new Error("Late radar verborg de al getoonde briefing opnieuw of liep niet af: "+fout+` traagRequests=${waarde('traag-requests')} traagEindVis=${waarde('traag-eind-visibility')} traagEindOwner=${waarde('traag-eind-owner')}`);
+  console.log("Briefing-stability browser 1366px: trage radar houdt de briefing hooguit 1 s verborgen.");
   console.log("Briefing-stability browser 1366px: cached hero blijft snel, KNMI start tegelijk met de forecast (één request), forecast-only briefing blijft verborgen tijdens de eerste KNMI-verrijking en alleen de definitieve briefing wordt zichtbaar.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}

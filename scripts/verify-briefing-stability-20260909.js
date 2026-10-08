@@ -35,6 +35,8 @@ function controleer(bron,bestand){
     'function knmiBriefingBegin(data){',
     'el.setAttribute("data-knmi-briefing-pending",token);',
     'function knmiBriefingEinde(data,token){',
+    'const KNMI_BRIEFING_MAX_MS=1000;',
+    'setTimeout(()=>knmiBriefingEinde(null,token),KNMI_BRIEFING_MAX_MS);',
     'el.removeAttribute("data-knmi-briefing-pending");',
     '!el.hasAttribute("data-q1-briefing-pending")',
     'const dataBijStart=S.d,briefingToken=knmiBriefingBegin(dataBijStart);',
@@ -68,4 +70,4 @@ for(const p of htmlBestanden(OUT)){
   if(controleer(bron,path.relative(OUT,p)))n++;
 }
 if(!n)throw new Error("Geen Q1-weerartifacts gevonden voor briefing-stability-verificatie.");
-console.log(`Briefing-stability geverifieerd op ${n} weerpagina's: cached briefing én eerste Nederlandse KNMI-verrijking blijven verborgen tot de definitieve eerste briefing klaar is.`);
+console.log(`Briefing-stability geverifieerd op ${n} weerpagina's: cached briefing blijft verborgen tot de verse forecast er is; op de eerste KNMI-verrijking wacht de briefing hooguit 1 s.`);

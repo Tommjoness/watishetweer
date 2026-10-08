@@ -100,7 +100,7 @@ function verwachteOpenMeteo503(msg){
     }),EXPECTED_SHA);
     assert.equal(bewijs.build,EXPECTED_SHA,"pagina serveert niet de verwachte SHA");
     assert(bewijs.place,"geselecteerde locatie ontbreekt na Visual Crossing fallback");
-    assert(/^-?\d+/.test(bewijs.temp),"zichtbare temperatuur ontbreekt na Visual Crossing fallback");
+    assert(/^[-\u2212]?\d+/.test(bewijs.temp),"zichtbare temperatuur ontbreekt na Visual Crossing fallback");
     assert.equal(bewijs.days,7,"weekweergave bevat niet zeven dagen");
     assert(bewijs.chartNodes>=1,"uur-/etmaalgrafiek ontbreekt na Visual Crossing fallback");
     assert.equal(bewijs.attribution,true,"verplichte Visual Crossing-attributie ontbreekt in de live footer");
