@@ -9,7 +9,7 @@ const BFT=[1,6,12,20,29,39,50,62,75,89,103,117.000001];
 
 function getal(v){return v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;}
 function bft(k){const n=getal(k);if(n===null||n<0)return null;let uit=0;for(const grens of BFT)if(n>=grens)uit++;return uit;}
-function zichtbaarGetal(tekst){const m=/-?\d+(?:[.,]\d+)?/.exec(String(tekst||""));return m?Number(m[0].replace(",",".")):null;}
+function zichtbaarGetal(tekst){const m=/[-\u2212]?\d+(?:[.,]\d+)?/.exec(String(tekst||""));return m?Number(m[0].replace("\u2212","-").replace(",",".")):null;}
 function dagNeerslag(kans,mm){
   const k=getal(kans),hoeveelheid=getal(mm),genoeg=k!==null||hoeveelheid!==null;
   /* Volg exact de definitieve postbuild-presentatie:
