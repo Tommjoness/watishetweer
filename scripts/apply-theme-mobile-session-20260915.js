@@ -463,7 +463,7 @@ function patchWeatherHtml(bron,rel){
   html=html.replace(groep,'<div id="thema" class="wiw-theme-control wiw-theme-segmented-20260915" role="group" aria-label="Weergave kiezen">');
   const autoLabel='aria-label="Automatisch (dag/nacht)" title="Automatisch (dag/nacht)"';
   if(tel(html,autoLabel)>1)throw new Error(rel+": Auto-label is dubbel.");
-  html=html.replace(autoLabel,'aria-label="Automatisch (volgt je systeem)" title="Automatisch: volgt de licht/donker-instelling van je apparaat"');
+  html=html.replace(autoLabel,'aria-label="Auto (volgt je systeem)" title="Automatisch: volgt de licht/donker-instelling van je apparaat"');
   const s=html.indexOf(THEMA_START),e=html.indexOf(THEMA_EIND);
   if(s<0||e<=s)throw new Error(rel+": themaruntime-ankers ontbreken of staan in verkeerde volgorde.");
   if(html.indexOf(THEMA_START,s+1)!==-1||html.indexOf(THEMA_EIND,e+1)!==-1)throw new Error(rel+": themaruntime-ankers zijn dubbel.");

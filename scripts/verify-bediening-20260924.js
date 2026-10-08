@@ -14,7 +14,7 @@ for(const p of htmlBestanden(OUT)){
   assert.strictEqual(tel(html,`id="${STYLE_ID}"`),1,rel+": bedieningsstylesheet niet exact eenmaal aanwezig");
   assert(html.indexOf(`id="${STYLE_ID}"`)>html.indexOf(`id="${OWNER_ID}"`),rel+": bedieningslaag staat vóór de eerste-schermlaag");
   assert(html.includes("html body .results>div{flex-direction:column!important"),rel+": zoeksuggesties staan op mobiel niet onder elkaar");
-  assert(html.includes('aria-label="Automatisch (volgt je systeem)"'),rel+": Auto-knop legt het systeemgedrag niet uit");
+  assert(html.includes('aria-label="Auto (volgt je systeem)"'),rel+": Auto-knop legt het systeemgedrag niet uit");
   assert(!html.includes("Automatisch (dag/nacht)"),rel+": oud dag/nachtlabel keert terug");
   gezien++;
 }

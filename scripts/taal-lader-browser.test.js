@@ -109,7 +109,7 @@ async function open(browser, { lader, bundelNaam, bundel }, url, voorbereiding, 
   if (instellingen.schakelaarZichtbaar === true) {
     assert.deepEqual(
       { tekst: s.info.tekst, label: s.info.label, lang: s.info.lang, hoek: s.info.hoek, rechtsboven: s.info.rechtsboven, overlap: s.info.overlap },
-      { tekst: "EN", label: "English", lang: "en-GB", hoek: true, rechtsboven: true, overlap: false },
+      { tekst: "EN", label: "EN – English", lang: "en-GB", hoek: true, rechtsboven: true, overlap: false },
       "smal scherm: EN rechtsboven in de kop");
     assert(s.info.hoogte >= 24, "tikdoel minstens 24px hoog");
     /* Breder venster: de knop verhuist naar de zoekbalk, terug naar de hoek bij smal. */
@@ -128,7 +128,7 @@ async function open(browser, { lader, bundelNaam, bundel }, url, voorbereiding, 
 
     s = await schakelaar(WEERPAGINA, { width: 1366, height: 900 }, "/?taal=en");
     assert.deepEqual({ tekst: s.info.tekst, label: s.info.label, lang: s.info.lang, ouder: s.info.ouder },
-      { tekst: "NL", label: "Nederlands", lang: "nl", ouder: "tools" }, "Engelse site: NL in de zoekbalk");
+      { tekst: "NL", label: "NL – Nederlands", lang: "nl", ouder: "tools" }, "Engelse site: NL in de zoekbalk");
     await s.t.ctx.close();
 
     s = await schakelaar(SUBPAGINA, { width: 390, height: 844 });
@@ -141,8 +141,8 @@ async function open(browser, { lader, bundelNaam, bundel }, url, voorbereiding, 
     await s.t.page.waitForFunction(() => document.documentElement.hasAttribute("data-taal-klaar"), null, { timeout: 5000 });
     await s.t.page.waitForTimeout(200);
     const ontbreekt = await s.t.page.evaluate(() => [...(window.__WIW_TAAL_ONTBREEKT__ || [])]);
-    assert.deepEqual(ontbreekt.filter(x => x === "NL" || x === "Nederlands"), [], "NL-knop telt niet als onvertaald: " + ontbreekt.join(" | "));
-    assert.deepEqual(await s.t.page.evaluate(() => { const a = document.querySelector("[data-taal-keuze]"); return [a.textContent, a.getAttribute("aria-label")]; }), ["NL", "Nederlands"], "NL-knop blijft Nederlands");
+    assert.deepEqual(ontbreekt.filter(x => x === "NL" || x === "Nederlands" || x === "NL – Nederlands"), [], "NL-knop telt niet als onvertaald: " + ontbreekt.join(" | "));
+    assert.deepEqual(await s.t.page.evaluate(() => { const a = document.querySelector("[data-taal-keuze]"); return [a.textContent, a.getAttribute("aria-label")]; }), ["NL", "NL – Nederlands"], "NL-knop blijft Nederlands");
     await s.t.ctx.close();
 
     s = await schakelaar(PAGINA, { width: 390, height: 844 });

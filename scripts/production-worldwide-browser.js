@@ -186,7 +186,7 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
           overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth,
           titel:document.title,
           bronLinks:[...document.querySelectorAll('a[href*="open-meteo"],a[href*="knmi"]')].length,
-          temperatuur:Number((document.getElementById("t")?.textContent||"").replace(",",".")),
+          temperatuur:Number((document.getElementById("t")?.textContent||"").replace("\u2212","-").replace(",",".")),
           wind:(document.getElementById("wind")?.textContent||""),
           uv:Number((document.getElementById("uv")?.textContent||"").replace(",",".")),
           thema:document.documentElement.getAttribute("data-thema")||"",

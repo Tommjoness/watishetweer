@@ -64,7 +64,8 @@
     a.href = "?taal=" + doel;
     a.className = "taal-keuze";
     a.textContent = doel.toUpperCase();
-    a.setAttribute("aria-label", doel === "en" ? "English" : "Nederlands");
+    /* De zichtbare tekst (EN/NL) staat vooraan in de naam, zodat spraakbediening "EN" herkent (WCAG 2.5.3). */
+    a.setAttribute("aria-label", doel === "en" ? "EN – English" : "NL – Nederlands");
     a.setAttribute("lang", doel === "en" ? "en-GB" : "nl");
     a.setAttribute("hreflang", doel === "en" ? "en-GB" : "nl");
     a.setAttribute("translate", "no");

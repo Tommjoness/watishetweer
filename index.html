@@ -742,6 +742,9 @@ const nl=(v,d)=>(v==null?"–":Number(v).toFixed(d==null?1:d).replace(".",","));
    mag daardoor nooit rechtstreeks een reken- of formatteringsfunctie in. */
 const eindigGetal=v=>v===null||v===undefined||v===""||!Number.isFinite(Number(v))?null:Number(v);
 const rondGetal=v=>{const n=eindigGetal(v);return n===null?null:Math.round(n);};
+/* Grote temperatuurcijfers (hoofdweergave en vaste balk) krijgen een echt minteken:
+   het koppelteken is in Bodoni zo kort en laag dat "-2" op het oog als "2" leest. */
+const metMinteken=n=>n<0?"\u2212"+Math.abs(n):String(n);
 function bft(k){let n=0;for(let i=0;i<BFT.length;i++) if(k>=BFT[i]) n=i+1;return n;}
 
 /* ---------- haarlijn-iconen ---------- */
@@ -1381,7 +1384,7 @@ function tekenAlles(){
   document.title=S.label+" · Wat is het weer?";
   const huidigeTemperatuur=rondGetal(c.temperature_2m);
   const gevoelstemperatuur=rondGetal(c.apparent_temperature);
-  document.getElementById("t").textContent=huidigeTemperatuur===null?"–":huidigeTemperatuur;
+  document.getElementById("t").textContent=huidigeTemperatuur===null?"–":metMinteken(huidigeTemperatuur);
   document.getElementById("cond").textContent=txt(c.weather_code,c.is_day!==0);
   document.getElementById("feels").textContent=gevoelstemperatuur===null
     ?"Gevoelstemperatuur niet beschikbaar"
@@ -3086,7 +3089,7 @@ function minibarBij(){
   pl.title=S.label; pl.setAttribute("aria-label",S.label);
 
   const temperatuur=rondGetal(S.d.current.temperature_2m);
-  document.getElementById("minitemp").textContent=temperatuur===null?"–":temperatuur+"°C";
+  document.getElementById("minitemp").textContent=temperatuur===null?"–":metMinteken(temperatuur)+"°C";
   const cond=document.getElementById("minicond");
   if(cond){
     /* Zelfde schrijfwijze als de hoofdweergave ("Geheel bewolkt"), niet in kleine letters. */

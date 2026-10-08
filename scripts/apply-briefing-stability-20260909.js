@@ -45,6 +45,10 @@ const KNMI_STATE_OUD='let knmiGeneratie=0,knmiController=null,knmiTimer=null,laa
 const KNMI_STATE_NIEUW=`let knmiGeneratie=0,knmiController=null,knmiTimer=null,laatsteKnmiSleutel="";
 ${KNMI_MARKER}
 let knmiBriefingData=null,knmiBriefingToken=0;
+/* De briefing wacht hooguit zo lang op de KNMI-radar. Antwoordt de radar later,
+   dan staat de modeltekst al in beeld en werkt de radar hem daarna bij; anders
+   bleef het tekstvak bij een trage radar (4 tot 7,5 s) leeg. */
+const KNMI_BRIEFING_MAX_MS=1000;
 function knmiBriefingBegin(data){
   if(!data||knmiBriefingData===data)return null;
   const token=String(++knmiBriefingToken),el=document.getElementById("brief");
@@ -54,6 +58,7 @@ function knmiBriefingBegin(data){
     el.setAttribute("aria-busy","true");
     el.setAttribute("data-knmi-briefing-pending",token);
   }
+  setTimeout(()=>knmiBriefingEinde(null,token),KNMI_BRIEFING_MAX_MS);
   return token;
 }
 function knmiBriefingEinde(data,token){

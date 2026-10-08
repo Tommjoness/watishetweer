@@ -84,7 +84,7 @@ async function check(type,naam,breedte){
     await page.emulateMedia({colorScheme:"light"});
     const systeemLicht=await page.waitForFunction(()=>document.documentElement.dataset.thema==="licht",null,{timeout:3000}).then(()=>true,()=>false);
     assert.equal(systeemLicht,true,naam+": Auto schakelt live mee als het systeem van donker naar licht gaat");
-    assert.equal(await page.evaluate(()=>document.getElementById("thema-auto").getAttribute("aria-label")),"Automatisch (volgt je systeem)",naam+": Auto-knop legt uit dat hij het systeem volgt");
+    assert.equal(await page.evaluate(()=>document.getElementById("thema-auto").getAttribute("aria-label")),"Auto (volgt je systeem)",naam+": Auto-knop legt uit dat hij het systeem volgt");
     assert.deepEqual(errors,[],naam+": geen page errors");
   }finally{await browser.close();}
 }

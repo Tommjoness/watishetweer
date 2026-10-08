@@ -109,7 +109,7 @@ async function open(browser,root,w,h,colorScheme){
         });
         for(const l of m.links)assert(l.h>=24,"1440px: link '"+l.t+"' is lager dan 24px ("+l.h+")");
         assert(m.meer&&m.meer.w<m.meer.container/2&&m.meer.rand!=="0px"&&m.meer.transform==="none"&&m.meer.midden!==null&&m.meer.midden<=2,"1440px: Meer nachten bekijken ziet er niet uit als knop: "+JSON.stringify(m.meer));
-        assert.equal(m.auto,"Automatisch (volgt je systeem)","1440px: Auto-knop legt het systeemgedrag niet uit");
+        assert.equal(m.auto,"Auto (volgt je systeem)","1440px: Auto-knop legt het systeemgedrag niet uit");
         assert.deepEqual(fouten,[],"1440px: runtimefouten "+fouten.join(" | "));
         console.log("BEDIENING 1440px: "+m.links.length+" links van minstens 24px, Meer nachten als knop, Auto licht na zonsondergang bij een licht systeem.");
       }finally{await context.close();}

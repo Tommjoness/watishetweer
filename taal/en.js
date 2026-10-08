@@ -249,7 +249,7 @@
     "Donker": "Dark",
     "Auto": "Auto",
     "Licht of donker": "Light or dark",
-    "Automatisch (volgt je systeem)": "Automatic (follows your system)",
+    "Auto (volgt je systeem)": "Auto (follows your system)",
     "Automatisch: volgt de licht/donker-instelling van je apparaat": "Automatic: follows your device's light/dark setting",
     "Schakel donkere weergave in": "Switch to dark mode",
     "Uren": "Hours",

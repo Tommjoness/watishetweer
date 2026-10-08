@@ -216,7 +216,7 @@ function cacheKernRender(wissel){
   }
   document.title=S.label+" · Wat is het weer?";
   const t=getal(c.temperature_2m),gevoel=getal(c.apparent_temperature);
-  const tempEl=document.getElementById("t");if(tempEl)tempEl.textContent=t===null?"–":Math.round(t);
+  const tempEl=document.getElementById("t");if(tempEl){const r=t===null?null:Math.round(t);tempEl.textContent=r===null?"–":r<0?"\u2212"+Math.abs(r):String(r);}
   const condEl=document.getElementById("cond");if(condEl)condEl.textContent=txt(c.weather_code,c.is_day!==0);
   const feels=document.getElementById("feels");if(feels)feels.textContent=gevoel===null?"Gevoelstemperatuur niet beschikbaar":"Gevoelstemperatuur "+Math.round(gevoel)+"°C";
   const ico=document.getElementById("nowicon");if(ico)ico.innerHTML=icon(c.weather_code,c.is_day===1,46);
