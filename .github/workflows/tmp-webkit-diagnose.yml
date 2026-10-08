@@ -1,0 +1,16 @@
+name: Tijdelijke WebKit-diagnose nu-label
+on:
+  push:
+    branches: [claude/watishetweer-repo-review-9vgdrf]
+    paths: [scripts/tmp-webkit-nu-diagnose.js, .github/workflows/tmp-webkit-diagnose.yml]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+    steps:
+      - uses: actions/checkout@v6
+      - run: npm ci --ignore-scripts
+      - run: node scripts/tmp-webkit-nu-diagnose.js
