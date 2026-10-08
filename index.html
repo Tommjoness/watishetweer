@@ -1004,16 +1004,42 @@ function naarLokaal(msUTC){
 
 /* ---------- maanfase ---------- */
 function maan(d){
-  const syn=29.530588853;
-  const jd=d.getTime()/86400000+2440587.5;
-  let f=((jd-2451550.1)/syn)%1; if(f<0)f+=1;
+  /* De fase volgt de echte hoofdfasen (nieuwe maan, kwartieren, volle maan)
+     volgens Meeus, Astronomical Algorithms (hoofdstuk 49), dezelfde momenten als
+     op /maan/. Een gemiddelde maanmaand van 29,53 dagen miste die momenten tot
+     17 uur en de verlichting tot 7 procentpunt. Tussen twee hoofdfasen loopt de
+     fase gelijkmatig door; de verlichting volgt daaruit. */
+  const moment=k=>{
+    const T=k/1236.85,R=Math.PI/180,s=x=>Math.sin(x*R),c=x=>Math.cos(x*R);
+    let jde=2451550.09766+29.530588861*k+0.00015437*T*T-0.000000150*T**3+0.00000000073*T**4;
+    const E=1-0.002516*T-0.0000074*T*T;
+    const M=2.5534+29.10535670*k-0.0000014*T*T-0.00000011*T**3;
+    const Mp=201.5643+385.81693528*k+0.0107582*T*T+0.00001238*T**3-0.000000058*T**4;
+    const F=160.7108+390.67050284*k-0.0016118*T*T-0.00000227*T**3+0.000000011*T**4;
+    const O=124.7746-1.56375588*k+0.0020672*T*T+0.00000215*T**3;
+    const q=Math.round((((k%1)+1)%1)*4)/4;
+    if(q===0) jde+=-0.40720*s(Mp)+0.17241*E*s(M)+0.01608*s(2*Mp)+0.01039*s(2*F)+0.00739*E*s(Mp-M)-0.00514*E*s(Mp+M)+0.00208*E*E*s(2*M)-0.00111*s(Mp-2*F)-0.00057*s(Mp+2*F)+0.00056*E*s(2*Mp+M)-0.00042*s(3*Mp)+0.00042*E*s(M+2*F)+0.00038*E*s(M-2*F)-0.00024*E*s(2*Mp-M)-0.00017*s(O);
+    else if(q===0.5) jde+=-0.40614*s(Mp)+0.17302*E*s(M)+0.01614*s(2*Mp)+0.01043*s(2*F)+0.00734*E*s(Mp-M)-0.00515*E*s(Mp+M)+0.00209*E*E*s(2*M)-0.00111*s(Mp-2*F)-0.00057*s(Mp+2*F)+0.00056*E*s(2*Mp+M)-0.00042*s(3*Mp)+0.00042*E*s(M+2*F)+0.00038*E*s(M-2*F)-0.00024*E*s(2*Mp-M)-0.00017*s(O);
+    else{
+      jde+=-0.62801*s(Mp)+0.17172*E*s(M)-0.01183*E*s(Mp+M)+0.00862*s(2*Mp)+0.00804*s(2*F)+0.00454*E*s(Mp-M)+0.00204*E*E*s(2*M)-0.00180*s(Mp-2*F)-0.00070*s(Mp+2*F)-0.00040*s(3*Mp)-0.00034*E*s(2*Mp-M)+0.00032*E*s(M+2*F)+0.00032*E*s(M-2*F)-0.00028*E*E*s(Mp+2*M)+0.00027*E*s(2*Mp+M)-0.00017*s(O);
+      const W=0.00306-0.00038*E*c(M)+0.00026*c(Mp)-0.00002*c(Mp-M)+0.00002*c(Mp+M)+0.00002*c(2*F);
+      jde+=q===0.25?W:-W;
+    }
+    return (jde-2440587.5)*86400000-69000;
+  };
+  const ms=d.getTime(),jd=ms/86400000+2440587.5;
+  let k=Math.floor((jd-2451550.09766)/29.530588861*4)/4;
+  let v=moment(k);
+  while(v>ms){k-=0.25;v=moment(k);}
+  let n=moment(k+0.25);
+  while(n<=ms){k+=0.25;v=n;n=moment(k+0.25);}
+  let f=(((k+(ms-v)/(n-v)*0.25)%1)+1)%1;
   const ill=(1-Math.cos(2*Math.PI*f))/2;
-  /* Nieuwe maan, eerste kwartier, volle maan en laatste kwartier zijn momenten.
-     Acht gelijke vakken noemden alles vanaf 96% al "volle maan", bijna twee
-     dagen te vroeg. Een hoofdfase heet daarom alleen zo binnen een dag van dat
-     moment; daartussen is de maan wassend of afnemend. */
-  const dag=1/syn,afstand=x=>{const a=Math.abs(f-x);return Math.min(a,1-a);};
-  const naam=afstand(0)<=dag?"nieuwe maan":afstand(0.5)<=dag?"volle maan":afstand(0.25)<=dag?"eerste kwartier":afstand(0.75)<=dag?"laatste kwartier"
+  /* Een hoofdfase heet alleen zo binnen een dag van dat moment; daartussen is
+     de maan wassend of afnemend. */
+  const NAMEN=["nieuwe maan","eerste kwartier","volle maan","laatste kwartier"];
+  const kwart=x=>Math.round((((x%1)+1)%1)*4)%4,dag=86400000;
+  const naam=ms-v<=dag&&ms-v<=n-ms?NAMEN[kwart(k)]:n-ms<=dag?NAMEN[kwart(k+0.25)]
     :f<0.25?"wassende sikkel":f<0.5?"wassende maan":f<0.75?"afnemende maan":"afnemende sikkel";
   return {fase:f,ill:ill,naam:naam};
 }

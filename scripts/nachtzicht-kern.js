@@ -223,9 +223,8 @@
 
   /* Momenten van de hoofdfasen volgens Meeus, Astronomical Algorithms (2e druk,
      hoofdstuk 49), zonder de kleine planeetcorrecties: nauwkeurig tot op enkele
-     minuten. Het eenvoudige maanmodel van de app (gemiddelde fase) is goed voor de
-     verlichting per nacht, maar kan het moment van nieuwe of volle maan ruim een
-     halve dag missen; voor datums gebruikt deze pagina daarom Meeus. */
+     minuten. De maanfase van de app (maan() in index.html) rekent met dezelfde
+     momenten, zodat app, Nachtzicht en /maan/ altijd dezelfde fase noemen. */
   function faseMoment(k) {
     const T = k / 1236.85, R = Math.PI / 180, s = x => Math.sin(x * R), c = x => Math.cos(x * R);
     let jde = 2451550.09766 + 29.530588861 * k + 0.00015437 * T * T - 0.000000150 * T ** 3 + 0.00000000073 * T ** 4;
@@ -256,7 +255,7 @@
     return uit;
   }
 
-  /* Maan nu (zelfde model als de app) en de komende hoofdfasen (Meeus). */
+  /* Maan nu (de maan() van de app) en de komende hoofdfasen (Meeus). */
   function maanOverzicht(nuMs, lat, lon, tz) {
     const nu = maan(new Date(nuMs));
     const datum = lokaleDatum(nuMs, tz);

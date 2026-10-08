@@ -51,6 +51,35 @@ assert.deepStrictEqual(fasen.map(f => f.naam + " " + f.datum + " " + f.tijd), [
   "nieuwe maan 2026-10-10 17:50", "eerste kwartier 2026-10-18 18:12", "volle maan 2026-10-26 05:11", "laatste kwartier 2026-11-01 21:28"
 ], "fasen in Nederlandse tijd, ook na de overgang naar wintertijd");
 
+/* ---------- maanfase van de app volgt dezelfde hoofdfasen ----------
+   Een jaar lang, ieder uur: de naam die de app geeft (maan() uit index.html,
+   via de kern) is de naam van de dichtstbijzijnde hoofdfase als die binnen een
+   dag ligt, en anders wassend of afnemend; gemeten tegen de losse
+   Meeus-berekening van /maan/. Met de oude gemiddelde maanmaand week de naam
+   ongeveer 800 uur per jaar af. */
+{
+  const start = Date.UTC(2026, 9, 1), eind = start + 366 * 86400000, dag = 86400000;
+  const momenten = gewoon(K.hoofdfasen(start - 10 * dag, 60, "UTC"));
+  const TUSSEN = { "nieuwe maan": "wassende sikkel", "eerste kwartier": "wassende maan", "volle maan": "afnemende maan", "laatste kwartier": "afnemende sikkel" };
+  let afwijkend = 0, eerste = null;
+  for (let t = start; t < eind; t += 3600000) {
+    let dichtst = null;
+    for (const m of momenten) if (!dichtst || Math.abs(m.ms - t) < Math.abs(dichtst.ms - t)) dichtst = m;
+    const vorige = momenten.filter(m => m.ms <= t).pop();
+    const verwacht = Math.abs(dichtst.ms - t) <= dag ? dichtst.naam : TUSSEN[vorige.naam];
+    const app = gewoon(K.maanOverzicht(t, 52.1, 5.18, "UTC")).naam;
+    if (app !== verwacht) { afwijkend++; if (!eerste) eerste = new Date(t).toISOString() + " app=" + app + " verwacht=" + verwacht; }
+  }
+  assert.strictEqual(afwijkend, 0, "maanfase van de app wijkt af van de hoofdfasen, eerste: " + eerste);
+  const op = (naam, ms) => gewoon(K.maanOverzicht(ms, 52.1, 5.18, "UTC"));
+  const nieuw = momenten.find(m => m.naam === "nieuwe maan" && m.ms > start), vol = momenten.find(m => m.naam === "volle maan" && m.ms > start);
+  assert(op("nieuw", nieuw.ms).ill < 0.001 && op("vol", vol.ms).ill > 0.999, "verlichting niet 0 bij nieuwe en 1 bij volle maan");
+  /* 9 oktober 2026, 18:00 UTC: de nieuwe maan (10 oktober 15:50 UTC) is minder dan een dag weg. */
+  assert.strictEqual(op("", Date.UTC(2026, 9, 9, 18)).naam, "nieuwe maan");
+  /* 7 oktober 2026, 22:00 UTC: ongeveer 9 procent verlicht (de oude berekening gaf 12). */
+  assert(Math.abs(op("", Date.UTC(2026, 9, 7, 22)).ill - 0.09) < 0.015, "verlichting op 7 oktober");
+}
+
 /* ---------- samenstelling van de kern ---------- */
 assert.throws(() => zonMaanBron(INDEX.replace("/* ---------- stand van zon en maan ---------- */", "")), /stand van zon en maan/, "ontbrekend anker in index.html moet de build laten falen");
 const presentatie = presentatieBron();
