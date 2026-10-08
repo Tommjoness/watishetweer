@@ -194,8 +194,11 @@ async function run(){
           assert(Math.abs(f.disclaimerWidth-f.rect.width)<=1&&f.disclaimerLines<=4&&f.disclaimerLineHeight<=18,"live disclaimer benut niet rustig de footerbreedte: "+JSON.stringify(f));
           assert(f.contactWidth<=f.rect.width+1&&f.contactRowDelta<=1,"live contactvraag en mail delen geen compacte rij: "+JSON.stringify(f));
           assert(f.contactHitHeight>=43.5,"live contactmail verliest 44px tapdoel: "+f.contactHitHeight);
-          assert(f.utilityRows===2&&f.utilityPairDelta<=1&&f.utilityDetailsDelta>=43&&f.utilityDetailsDelta<=53&&f.utilityHitHeight>=43.5,"live utilitylinks volgen niet de bedoelde 2+1-indeling/tapdoelen: "+JSON.stringify(f));
-          assert(f.rect.height<=330,"live 390px-footer overschrijdt de compacte mobiele hoogteband: "+f.rect.height);
+          /* Over en Privacy delen een rij; Technische locatiegegevens volgt één of twee
+             rijen lager. Sinds Sterren kijken en De maan vandaag in de footer staan
+             (eigenaar akkoord 8 oktober 2026) vullen de paginalinks één rij extra. */
+          assert(f.utilityRows===2&&f.utilityPairDelta<=1&&f.utilityDetailsDelta>=43&&f.utilityDetailsDelta<=97&&f.utilityHitHeight>=43.5,"live utilitylinks volgen niet de bedoelde indeling/tapdoelen: "+JSON.stringify(f));
+          assert(f.rect.height<=375,"live 390px-footer overschrijdt de compacte mobiele hoogteband: "+f.rect.height);
           console.log("FOOTER_390 "+JSON.stringify({scenario,height:f.rect.height,sourceWidth:f.sourceWidth,sourceVisible:f.sourceVisible,sourceRows:f.sourceRows,disclaimerWidth:f.disclaimerWidth,disclaimerLines:f.disclaimerLines,disclaimerLineHeight:f.disclaimerLineHeight,contactWidth:f.contactWidth,contactRowDelta:f.contactRowDelta,sourceHitHeight:f.sourceHitHeight,contactHitHeight:f.contactHitHeight,utilityRows:f.utilityRows,utilityPairDelta:f.utilityPairDelta,utilityDetailsDelta:f.utilityDetailsDelta,utilityHitHeight:f.utilityHitHeight}));
         }
         assert(result.tijdCompleet!=="0","Grafiek toont een temperatuur zonder uurtijd: "+JSON.stringify({route,width,scenario}));
