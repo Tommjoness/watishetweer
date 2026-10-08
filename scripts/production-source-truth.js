@@ -107,6 +107,20 @@ function zonVerwachting(bron,nuOverride){
   }
   return {rijen,op,onder};
 }
+/* Zelfde regel als sneeuwDagTekst() in index.html: valt de neerslag van een dag
+   vooral als sneeuw (>= 0,5 cm en sneeuwwater >= de helft van de neerslag), dan
+   toont Zeven dagen "N cm sneeuw". Vandaag telt vanaf het huidige uur. */
+function verwachteSneeuwTekst(bron,datum,vanafIdx){
+  const h=bron&&bron.hourly;if(!h||!Array.isArray(h.time)||!Array.isArray(h.snowfall))return "";
+  let cm=0,mm=0;
+  for(let j=0;j<h.time.length;j++){
+    if(String(h.time[j]).slice(0,10)!==datum||(vanafIdx!=null&&j<vanafIdx))continue;
+    const s=getal(h.snowfall[j]),p=getal(h.precipitation&&h.precipitation[j]);
+    if(s!==null&&s>0)cm+=s;if(p!==null&&p>0)mm+=p;
+  }
+  if(cm<0.5||cm/0.7<mm*0.5)return "";
+  return Math.max(1,Math.round(cm))+" cm sneeuw";
+}
 function verwachtDagRijen(bron,nuOverride){
   const d=bron?.daily||{},a=[];
   const horizon=String(nuOverride||bron?.current?.time||"");
@@ -124,6 +138,12 @@ function verwachtDagRijen(bron,nuOverride){
       wind:bft(d.wind_speed_10m_max?.[i]),
       neerslag:resterend&&!resterend.genoeg?{hoofd:"–",hoeveelheid:""}:dagNeerslag(kans,hoeveelheid)
     });
+    const rij=a[a.length-1];
+    if(rij.neerslag.hoeveelheid){
+      const uurNu=(bron.hourly&&Array.isArray(bron.hourly.time))?bron.hourly.time.indexOf(horizon.slice(0,13)+":00"):-1;
+      const sneeuw=verwachteSneeuwTekst(bron,rij.datum,resterend&&uurNu>=0?uurNu:null);
+      if(sneeuw)rij.neerslag={...rij.neerslag,hoeveelheid:sneeuw};
+    }
   }
   return a;
 }
