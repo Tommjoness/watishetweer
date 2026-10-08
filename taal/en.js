@@ -916,7 +916,7 @@
        (spoor, <0,05 mm, <0,1 mm, gewone mm). */
     [/^Hoogste kans op neerslag in één uur: (\d+%)\.$/, (m) => `Highest chance of precipitation in any one hour: ${m[1]}.`],
     /* Neerslagnaam in de dagregel, met tijdvak (vandaag: resterende uren). */
-    [new RegExp(`^Hoogste neerslagkans in één uur( in de rest van vandaag)? (\\d+) procent(?:; (?:(hoeveelheid onzeker)|verwachte neerslag (over de hele dag|in de rest van vandaag) (spoor|<0,05 mm|<0,1 mm|${G} mm)))?$`), (m) => `Highest hourly chance of precipitation${m[1] ? " for the rest of today" : ""} ${m[2]} per cent${m[3] ? "; amount uncertain" : m[4] ? `; expected precipitation ${m[4] === "over de hele dag" ? "for the whole day" : "for the rest of today"} ${m[5] === "spoor" ? "trace" : m[5].replace(/(\d),(\d)/g, "$1.$2")}` : ""}`],
+    [new RegExp(`^Hoogste neerslagkans in één uur( in de rest van vandaag)? (\\d+) procent(?:; (?:(hoeveelheid onzeker)|verwachte neerslag (over de hele dag|in de rest van vandaag) (spoor|<0,05 mm|<0,1 mm|${G} mm|\\d+ cm (?:sneeuw|snow))))?$`), (m) => `Highest hourly chance of precipitation${m[1] ? " for the rest of today" : ""} ${m[2]} per cent${m[3] ? "; amount uncertain" : m[4] ? `; expected precipitation ${m[4] === "over de hele dag" ? "for the whole day" : "for the rest of today"} ${m[5] === "spoor" ? "trace" : m[5].replace(/(\d),(\d)/g, "$1.$2").replace(" cm sneeuw", " cm snow")}` : ""}`],
     [new RegExp(`^De verwachte neerslag (over de hele dag|in de rest van vandaag) is (alleen een spoor|<0,05 mm|${G} mm)\\.$`), (m) => { const tijdvak = m[1] === "over de hele dag" ? "for the whole day" : "for the rest of today"; return m[2] === "alleen een spoor" ? `Only a trace of precipitation is expected ${tijdvak}.` : `Expected precipitation ${tijdvak} is ${m[2].replace(/(\d),(\d)/g, "$1.$2")}.`; }],
     [new RegExp(`^Verwachte neerslag over de hele dag: (spoor|<0,05 mm|<0,1 mm|${G} mm)\\.$`), (m) => `Expected precipitation for the whole day: ${m[1] === "spoor" ? "trace" : m[1].replace(/(\d),(\d)/g, "$1.$2")}.`],
     [/^Later vandaag loopt de neerslagkans op tot (\d+)%\.$/, (m) => `Later today the chance of precipitation rises to ${m[1]}%.`],
@@ -928,6 +928,11 @@
 
     /* Seizoenspagina witte kerst (teksten met jaar, datum, plaats of aantal) */
     [/^Witte kerst (\d{4})$/, (m) => `White Christmas ${m[1]}`],
+    [/^(\d+) cm sneeuw$/, (m) => `${m[1]} cm snow`],
+    [/^De reservebron houdt geen rekening met de hoogte van deze plek \(ongeveer ([\d.]+) m\)\. In de bergen is het daar vaak een stuk kouder dan hier staat\.$/, (m) => `The backup source does not account for the altitude of this location (about ${m[1].replace(/\./g, ",")} m). In the mountains it is often considerably colder than shown here.`],
+    [/^Kans op gladheid door ijzel(?: vanaf ongeveer (\d{2}:\d{2}))?\.$/, (m) => `Risk of icy roads from freezing rain${m[1] ? ` from about ${m[1]}` : ""}.`],
+    [/^Kans op gladheid door sneeuw(?: vanaf ongeveer (\d{2}:\d{2}))?\.$/, (m) => `Risk of slippery roads from snow${m[1] ? ` from about ${m[1]}` : ""}.`],
+    [/^Kans op gladheid: natte wegen kunnen(?: vanaf ongeveer (\d{2}:\d{2}))? opvriezen\.$/, (m) => `Risk of icy patches: wet roads may freeze${m[1] ? ` from about ${m[1]}` : ""}.`],
     [/^Witte kerst (\d{4}): kans op sneeuw met kerst \| watishetweer\.nl$/, (m) => `White Christmas ${m[1]}: chance of snow at Christmas | watishetweer.nl`],
     [/^Vanaf (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) verschijnt hier de verwachting voor (eerste kerstdag|tweede kerstdag)\.$/,
       (m) => `The forecast for ${KERSTDAG[m[4]]} will appear here from ${dagVol(m[1])} ${m[2]} ${maand(m[3])}.`],

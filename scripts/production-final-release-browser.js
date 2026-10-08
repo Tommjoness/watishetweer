@@ -28,7 +28,8 @@ function isVolledigeBron(bron){return !!(bron&&bron.timezone&&bron.current&&bron
 function coordPast(a,b){return Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a)-Number(b))<=COORD_TOL;}
 function urlPastBijLocatie(url,l){try{const u=new URL(url),lat=u.searchParams.get("lat"),lon=u.searchParams.get("lon"),land=u.searchParams.get("land");return lat!==null&&lon!==null&&coordPast(lat,l.lat)&&coordPast(lon,l.lon)&&(!land||land===l.land);}catch(e){return false;}}
 function forecastUrlPastBijLocatie(url,l){try{const u=new URL(url),lat=u.searchParams.get("latitude"),lon=u.searchParams.get("longitude");return lat!==null&&lon!==null&&coordPast(lat,l.lat)&&coordPast(lon,l.lon);}catch(e){return false;}}
-function getal(t){const m=/-?\d+(?:[.,]\d+)?/.exec(String(t||""));return m?Number(m[0].replace(",",".")):null;}
+/* De app toont vorst met een echt minteken (U+2212); lees dat als gewoon minteken. */
+function getal(t){const m=/[-\u2212]?\d+(?:[.,]\d+)?/.exec(String(t||""));return m?Number(m[0].replace("\u2212","-").replace(",",".")):null;}
 const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 async function wachtKlaar(page,naam,timeout=26000){
