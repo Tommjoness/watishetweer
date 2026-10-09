@@ -861,6 +861,8 @@
     [/^(ma|di|wo|do|vr|za|zo)$/, (m) => dagKort(m[1])],
     [/^(N|NNO|NO|ONO|O|OZO|ZO|ZZO|Z|ZZW|ZW|WZW|W|WNW|NW|NNW)$/, (m) => RICHTING_KORT[m[1]]],
 
+    /* Bewolkingstegel bij vooral hoge bewolking: "Geheel bewolkt, vooral hoge bewolking." */
+    [/^(.+), vooral hoge bewolking\.$/, (m) => { const w = weer(m[1]); return w && `${w}, mostly high cloud.`; }],
     [/^(.+)\.$/, (m) => { const w = weer(m[1]); return w && w + "."; }],
     [/^(.+)$/, (m) => land(m[1])],
     [/^(.+), (.+)$/, (m) => { const l = land(m[2]); return l && !/[.!?]/.test(m[1]) && m[1].length < 60 && !/\b(de|het|een|en|van|voor|niet)\b/.test(m[1]) ? `${m[1]}, ${l}` : null; }],
