@@ -1473,12 +1473,34 @@ function bewaakGrafiekLabels(){
     const teVer=!!punt&&afstandVakTotPunt(box,punt.x,punt.y)>maxAfstand;
     const raakt=botst(el,box,groep)||!!(tbox&&botst(tijd,tbox,groep));
     if(!raakt&&!teVer)return;
-    const keuze=kiesVrijeVerschuiving((dx,dy)=>{
+    const vrijeVerschuiving=()=>kiesVrijeVerschuiving((dx,dy)=>{
       const nb=verschoven(box,dx,dy);
       if(punt&&afstandVakTotPunt(nb,punt.x,punt.y)>maxAfstand)return false;
       return !botst(el,nb,groep)&&!(tbox&&botst(tijd,verschoven(tbox,dx,dy),groep));
     },bewakingsKandidaten(box,punt));
-    let zet=keuze;
+    let zet=vrijeVerschuiving();
+    /* Op de telefoon staat het cijfer van het eerste uur (binnen anderhalf uur
+       van nu) soms precies waar "nu 18°" naast de stip hoort, terwijl links van
+       de nu-lijn de asgetallen staan. Dan noemt het nu-label die temperatuur,
+       zoals bij het plaatsen: liever dat dan "nu" over de lijn of ver erboven. */
+    if(!zet&&isNu(el)&&g.M&&nuStip&&Number.isFinite(Number(g.cw))){
+      const buur=beweegbaar.find(a=>{
+        if(a===el||!a.hasAttribute("data-mobile-temp-label")||!vakken.get(a))return false;
+        const p=puntVan(a);return !!p&&Math.abs(p.x-nuStip.x)<Number(g.cw)*1.5;
+      });
+      if(buur){
+        const bewaard=vakken.get(buur);vakken.set(buur,null);
+        zet=vrijeVerschuiving();
+        if(zet){
+          buur.setAttribute("display","none");buur.setAttribute("data-label-verborgen","nu-dekt");
+          const i=buur.getAttribute("data-mobile-temp-index");
+          if(i!==null){
+            el.setAttribute("data-mobile-temp-anchor-index",i);
+            const stip=svg.querySelector('circle[data-temp-index="'+i+'"]');if(stip)stip.remove();
+          }
+        }else vakken.set(buur,bewaard);
+      }
+    }
     /* Het nu-label mag als laatste uitwijkplek bovenaan de rode nu-lijn staan,
        net boven de plot: daar is het nog steeds duidelijk de nu-waarde. */
     if(!zet&&isNu(el)&&nuLijnen.length&&Number.isFinite(Number(g.pt))){
