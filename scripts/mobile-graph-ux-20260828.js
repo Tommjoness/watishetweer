@@ -1492,12 +1492,14 @@ function bewaakGrafiekLabels(){
         const bewaard=vakken.get(buur);vakken.set(buur,null);
         zet=vrijeVerschuiving();
         if(zet){
-          buur.setAttribute("display","none");buur.setAttribute("data-label-verborgen","nu-dekt");
+          /* Net als bij het plaatsen verdwijnt het cijfer helemaal (geen
+             verborgen element dat metingen als tekst buiten beeld zien). */
           const i=buur.getAttribute("data-mobile-temp-index");
           if(i!==null){
             el.setAttribute("data-mobile-temp-anchor-index",i);
             const stip=svg.querySelector('circle[data-temp-index="'+i+'"]');if(stip)stip.remove();
           }
+          vakken.delete(buur);buur.remove();
         }else vakken.set(buur,bewaard);
       }
     }
