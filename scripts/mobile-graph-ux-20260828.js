@@ -1501,6 +1501,14 @@ function bewaakGrafiekLabels(){
         }else vakken.set(buur,bewaard);
       }
     }
+    /* Valt de curve na nu steil, dan is vlak bij de stip alles bezet; iets
+       dieper onder of boven de stip, rechts van de nu-lijn, is het vlak vaak
+       nog vrij. Dat gaat vóór de plek bovenaan de lijn. */
+    if(!zet&&isNu(el)&&nuLijnen.length&&punt){
+      const rechts=nuLijnen[0].x+0.75+3-box.x;
+      const dieper=[22,28,34,40,46].map(o=>punt.y+o-box.y).concat([22,28,34,40].map(o=>punt.y-o-box.height-box.y));
+      zet=dieper.map(dy=>[rechts,dy]).find(([dx,dy])=>!botst(el,verschoven(box,dx,dy),groep))||null;
+    }
     /* Het nu-label mag als laatste uitwijkplek bovenaan de rode nu-lijn staan,
        net boven de plot: daar is het nog steeds duidelijk de nu-waarde. */
     if(!zet&&isNu(el)&&nuLijnen.length&&Number.isFinite(Number(g.pt))){
