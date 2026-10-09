@@ -1619,7 +1619,12 @@ function polishNuLabel(){
   /* Eerst vlak naast de rode stip (rechts van de nu-lijn, erboven of eronder),
      zodat "nu 19°" leest als de waarde van die stip; pas daarna verder weg. */
   const bijStip=Number.isFinite(puntY)?[-5,11,-12,17,-19,23,-26,29].map(dy=>[0,puntY+dy-oorspronkelijkY]):[];
-  const posities=[...bijStip,[0,0],[0,-16],[0,16],[0,-24],[0,24],[12,-16],[12,16],[-12,-16],[-12,16],[0,-30],[0,30],[0,Number(g.pt)-4-oorspronkelijkY]];
+  /* Is rechts naast de stip alles bezet, dan liever direct links van de
+     nu-lijn naast de stip dan ver weg of over de lijn heen. */
+  const nuVak=geschatteSvgTekstBox(nu.textContent,0,0,"start",Number(nu.getAttribute("font-size"))||10);
+  const linksDx=Number.isFinite(puntX)&&nuVak?puntX-7-nuVak.width-oorspronkelijkX:NaN;
+  const linksVanLijn=Number.isFinite(linksDx)?bijStip.map(([,dy])=>[linksDx,dy]):[];
+  const posities=[...bijStip,...linksVanLijn,[0,0],[0,-16],[0,16],[0,-24],[0,24],[12,-16],[12,16],[-12,-16],[-12,16],[0,-30],[0,30],[0,Number(g.pt)-4-oorspronkelijkY]];
   const gevonden=posities.find(([dx,dy])=>vrij(oorspronkelijkX+dx,oorspronkelijkY+dy));
   if(gevonden){
     nu.setAttribute("x",String(oorspronkelijkX+gevonden[0]));nu.setAttribute("y",String(oorspronkelijkY+gevonden[1]));
