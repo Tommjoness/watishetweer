@@ -1646,7 +1646,11 @@ function polishNuLabel(){
   const nuVak=geschatteSvgTekstBox(nu.textContent,0,0,"start",Number(nu.getAttribute("font-size"))||10);
   const linksDx=Number.isFinite(puntX)&&nuVak?puntX-7-nuVak.width-oorspronkelijkX:NaN;
   const linksVanLijn=Number.isFinite(linksDx)?bijStip.map(([,dy])=>[linksDx,dy]):[];
-  const posities=[...bijStip,...linksVanLijn,[0,0],[0,-16],[0,16],[0,-24],[0,24],[12,-16],[12,16],[-12,-16],[-12,16],[0,-30],[0,30],[0,Number(g.pt)-4-oorspronkelijkY]];
+  /* Valt de curve na nu steil, dan raakt iedere plek vlak naast de stip de
+     lijn of een stip; iets dieper in het vrije vlak onder (of boven) de curve
+     blijft "nu" dan toch rechts van de nu-lijn en bij de stip. */
+  const dieper=Number.isFinite(puntY)?[35,41,47,-33,-39].map(dy=>[0,puntY+dy-oorspronkelijkY]):[];
+  const posities=[...bijStip,...linksVanLijn,[0,0],[0,-16],[0,16],[0,-24],[0,24],[12,-16],[12,16],[-12,-16],[-12,16],[0,-30],[0,30],...dieper,[0,Number(g.pt)-4-oorspronkelijkY]];
   const gevonden=posities.find(([dx,dy])=>vrij(oorspronkelijkX+dx,oorspronkelijkY+dy));
   if(gevonden){
     nu.setAttribute("x",String(oorspronkelijkX+gevonden[0]));nu.setAttribute("y",String(oorspronkelijkY+gevonden[1]));
