@@ -85,7 +85,7 @@ const EXTRA_STIJL = `
 .nz-maan{display:flex;gap:20px;align-items:center;margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--rule)}
 .nz-maan .nz-maan-svg{width:120px;height:120px;flex:none;display:block}#nz-maan-schijf{flex:none;width:120px;height:120px}
 .nz-maan p{margin:4px 0}.nz-maan .groot{font:400 24px/1.25 "Bodoni Moda",Georgia,serif;color:var(--ink);margin:0 0 4px}
-#nz-maan-fasen{margin:10px 0 0;padding:0;list-style:none;color:var(--ink-70)}#nz-maan-fasen li{display:flex;gap:12px;align-items:center;padding:6px 0}#nz-maan-fasen .nz-maan-svg{flex:none}#nz-maan-fasen b{color:var(--ink);font-weight:500}
+#nz-maan-fasen{margin:10px 0 0;padding:0;list-style:none;color:var(--ink-70)}#nz-maan-fasen li{display:flex;gap:12px;align-items:center;padding:6px 0}#nz-maan-fasen .nz-maan-svg{flex:none}.nz-maan-beeld{flex:none;display:block;width:26px;height:26px}canvas.nz-maan-svg{display:block}#nz-maan-fasen b{color:var(--ink);font-weight:500}
 @media(max-width:600px){#nz-nachten thead{display:none}#nz-nachten tr{display:grid;grid-template-columns:auto 1fr;column-gap:12px;padding:9px 0;border-bottom:1px solid var(--rule)}#nz-nachten th,#nz-nachten td{border:0;padding:0}#nz-nachten td.nz-zin{grid-column:1/-1;margin-top:3px}.nz-tabel table{font-size:14px}.nz-tabel .nz-licht-kol{display:none}.nz-licht-mob{display:block}.nz-cijfer{font-size:38px}.nz-tijden span:nth-child(even){visibility:hidden}}
 `;
 
@@ -195,7 +195,7 @@ function maanPagina(kern, nuMs) {
 </div></div>
 <h2>De komende fasen</h2>
 <ul id="nz-maan-fasen"></ul>
-<p class="klein">Tijden in Nederlandse tijd. Op- en ondergang gelden voor ${esc(MAAN_REFERENTIE.naam)}; elders in Nederland scheelt het hooguit enkele minuten. De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms).</p>
+<p class="klein">Tijden in Nederlandse tijd. Op- en ondergang gelden voor ${esc(MAAN_REFERENTIE.naam)}; elders in Nederland scheelt het hooguit enkele minuten. De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem op zijn hoogste punt boven ${esc(MAAN_REFERENTIE.naam)} ziet; op het zuidelijk halfrond staat hij ondersteboven, met het licht van een wassende maan links. Maanfoto: NASA's Scientific Visualization Studio.</p>
 <h2>Sterren kijken</h2>
 <p>Waar het donker is en hoe de komende nachten worden, staat op <a href="${BASIS}">Sterren kijken in Nederland</a>.</p>
 ` + staart({ soort: "maan", tz: TIJDZONE, referentie: MAAN_REFERENTIE }, kern);
