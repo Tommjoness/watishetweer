@@ -362,4 +362,13 @@ assert.equal(zieOok("witte-kerst"),'<span>Zie ook</span> <a href="/kerstvakantie
 assert.equal(zieOok("oud-en-nieuw"),'<span>Zie ook</span> <a href="/witte-kerst/">Witte kerst</a> · <a href="/kerstvakantie/">Kerstvakantie</a>');
 assert.equal(zieOok("herfstvakantie"),"","geen zie-ook waar het niet is ingesteld");
 assert.throws(()=>pagina({...vak("kerstvakantie"),zieOok:["bestaat-niet"]},"2026-10-12"),/onbekende seizoenspagina/);
+/* Voet: op 12 oktober staan herfst, kerst en witte kerst ook op mobiel in beeld,
+   oud en nieuw en voorjaar alleen op brede schermen, mei en zomer nergens in
+   beeld (wel in de HTML). */
+{
+  const {voetKlasse}=require("./seo-foundation.js");
+  const klasse=Object.fromEntries(SEIZOENSPAGINAS.map(p=>[p.slug,voetKlasse(p,"2026-10-12").trim()]));
+  assert.deepEqual(klasse,{"witte-kerst":"","oud-en-nieuw":"voet-later","herfstvakantie":"","kerstvakantie":"","voorjaarsvakantie":"voet-later","meivakantie":"voet-ver","zomervakantie":"voet-ver"});
+  assert.equal(voetKlasse(SEIZOENSPAGINAS.find(p=>p.slug==="zomervakantie"),"2027-07-01").trim(),"","in juli staat de zomervakantie vooraan");
+}
 console.log("Seizoenspagina's voorjaars-, mei- en zomervakantie: data, aftellen per regio, venster en doorschuiven kloppen; zie-ook-links tussen de kerstpagina's.");

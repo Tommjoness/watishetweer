@@ -17,19 +17,23 @@ const MERK_H1=`<h1>${SEO.siteName}</h1>`;
 const BRON_APP_TITLE='<meta name="apple-mobile-web-app-title" content="Wat is het weer?">';
 const MERK_APP_TITLE=`<meta name="apple-mobile-web-app-title" content="${SEO.siteName}">`;
 
-/* Op mobiel past maar een beperkt aantal seizoenslinks in de compacte voet. Alle
-   links blijven in de HTML (crawlbaar, en op desktop zichtbaar); op mobiel tonen
-   alleen de SEIZOEN_MOBIEL pagina's die op de builddag het eerst aan de beurt
-   zijn (lopend of eerstvolgend). De rest krijgt .seizoen-later en verdwijnt daar
-   via de onderkantlaag. */
-const SEIZOEN_MOBIEL=3;
-function seizoenNabij(cfg,vandaag){
+/* In de voet past maar een beperkt aantal seizoenslinks. Alle links blijven in
+   de HTML (crawlbaar); in beeld staan alleen de pagina's die op de builddag het
+   eerst aan de beurt zijn (lopend of eerstvolgend): SEIZOEN_DESKTOP op brede
+   schermen en SEIZOEN_MOBIEL op mobiel. Verder weg krijgt .voet-ver (overal uit
+   beeld, regel in index.html); daarna .voet-later (alleen op mobiel uit beeld,
+   via de onderkantlaag). */
+const SEIZOEN_MOBIEL=3,SEIZOEN_DESKTOP=5;
+function seizoenRang(cfg,vandaag){
   const R=require("./seizoenspagina-runtime.js");
   const dag=vandaag||R.vandaagIn(cfg.tijdzone||"Europe/Amsterdam");
   const afstand=c=>{const t=R.toestand(dag,c),d=(t.dagen||[]).find(x=>x.over>=0);return d?d.over:Infinity;};
+  if(afstand(cfg)===Infinity)return Infinity;
   const volgorde=[...SEIZOENSPAGINAS].sort((a,b)=>afstand(a)-afstand(b)||SEIZOENSPAGINAS.indexOf(a)-SEIZOENSPAGINAS.indexOf(b));
-  return volgorde.indexOf(cfg)<SEIZOEN_MOBIEL&&afstand(cfg)<Infinity;
+  return volgorde.indexOf(cfg);
 }
+function seizoenNabij(cfg,vandaag,aantal){return seizoenRang(cfg,vandaag)<(aantal||SEIZOEN_MOBIEL);}
+function voetKlasse(cfg,vandaag){const r=seizoenRang(cfg,vandaag);return r>=SEIZOEN_DESKTOP?" voet-ver":r>=SEIZOEN_MOBIEL?" voet-later":"";}
 function attr(v){return String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function tel(tekst,zoek){return String(tekst).split(zoek).length-1;}
 
@@ -119,8 +123,8 @@ function pasSeoFoundationToe(html){
      vanaf iedere weerpagina crawlbaar zijn. De laatste twee span.bron-items
      blijven Over en Privacy: daarop rust de footerindeling. Op mobiel zet de
      onderkantlaag ze via .seizoen-link in beeld achter Privacy. */
-  const seizoenLinks=[...SEIZOENSPAGINAS.map(p=>({href:`/${p.slug}/`,naam:p.naam,later:!seizoenNabij(p)})),...NACHTZICHT_FOOTER]
-    .map(p=>`<span class="bron seizoen-link${p.later?" seizoen-later":""}"><a href="${p.href}">${p.naam}</a></span>\n      `).join("");
+  const seizoenLinks=[...SEIZOENSPAGINAS.map(p=>({href:`/${p.slug}/`,naam:p.naam,klasse:voetKlasse(p)})),...NACHTZICHT_FOOTER]
+    .map(p=>`<span class="bron seizoen-link${p.klasse||""}"><a href="${p.href}">${p.naam}</a></span>\n      `).join("");
   bron=bron.replace(privacyAnker,brandLink.replace(BRAND_LINK_MARKER+"\n      ",BRAND_LINK_MARKER+"\n      "+seizoenLinks)+"\n      "+privacyAnker);
 
   /* In Nachtzicht, onder de regel over lichtvervuiling, verwijst een regel naar de Nachtzicht-pagina's.
@@ -134,4 +138,4 @@ function pasSeoFoundationToe(html){
   return bron;
 }
 
-module.exports={seizoenNabij,SEIZOEN_MOBIEL,MARKER,BRAND_LINK_MARKER,SHARE_IMAGE,SHARE_IMAGE_ALT,BRON_H1,MERK_H1,BRON_APP_TITLE,MERK_APP_TITLE,maakBrandStructuredData,pasSeoFoundationToe};
+module.exports={seizoenRang,seizoenNabij,voetKlasse,SEIZOEN_MOBIEL,SEIZOEN_DESKTOP,MARKER,BRAND_LINK_MARKER,SHARE_IMAGE,SHARE_IMAGE_ALT,BRON_H1,MERK_H1,BRON_APP_TITLE,MERK_APP_TITLE,maakBrandStructuredData,pasSeoFoundationToe};
