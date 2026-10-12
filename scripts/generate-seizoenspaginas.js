@@ -61,20 +61,36 @@ html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70
 .seizoen-dag .officieel{display:block;font-size:12px;font-weight:400;color:var(--muted)}
 .seizoen-dag a{text-decoration:none;border-bottom:1px solid var(--rule)}
 .seizoen-dag a:hover,.seizoen-dag a:focus-visible{border-bottom-color:var(--ink)}
+.seizoen-perioden td{text-align:right;padding-right:0;white-space:nowrap}
+.seizoen-vakantie{table-layout:fixed}.seizoen-vakantie thead th:first-child{width:34%}.seizoen-vakantie thead th:last-child{width:24%}
 @media(max-width:600px){body{padding:14px}.kaart{padding:26px 22px}h1{font-size:32px}.seizoen-dag table{font-size:14px}.seizoen-dag .sep{display:none}.seizoen-dag .sub{display:block;font-size:13px}}
 </style>`;
+
+/* Vakantiepagina's: de data per regio staan vast in de HTML, voor ieder jaar
+   waarvan de vakantie nog niet voorbij is. */
+function periodenHtml(cfg,buildDag){
+  if(!cfg.perioden)return "";
+  const jaren=Object.keys(cfg.perioden).map(Number).sort((a,b)=>a-b).filter(j=>cfg.perioden[j].some(p=>p.tot>=buildDag));
+  return jaren.map(j=>`
+<div class="seizoen-dag seizoen-perioden" data-jaar="${j}">
+<h3>${esc(cfg.naam)} ${j}</h3>
+<table><thead><tr><th scope="col">Regio</th><th scope="col">Vakantie</th></tr></thead><tbody>
+${cfg.perioden[j].map(p=>`<tr><th scope="row">Regio ${esc(p.regio)}</th><td>${esc(runtime.periodeTekst(p.van,p.tot))}</td></tr>`).join("\n")}
+</tbody></table>
+</div>`).join("");
+}
 
 function pagina(cfg,buildDag){
   const t=runtime.toestand(buildDag,cfg);
   const canonical=seizoenUrl(cfg);
   const titel=runtime.vul(cfg.titel,{jaar:t.jaar});
-  const description=runtime.vul(cfg.beschrijving,{jaar:t.jaar,datum:runtime.datumTekst(t.vanaf,false)});
+  const description=runtime.vul(cfg.beschrijving,{jaar:t.jaar,datum:t.vanaf?runtime.datumTekst(t.vanaf,false):""});
   const structured=[
     {"@context":"https://schema.org","@type":"WebSite",name:SEO.siteName,url:SEO.canonical},
     {"@context":"https://schema.org","@type":"WebPage",name:titel,url:canonical,isPartOf:{"@type":"WebSite",name:SEO.siteName,url:SEO.canonical}}
   ];
   const {slug,beschrijving,intro,uitleg:_uitleg,...runtimeCfg}=cfg;
-  const uitleg=cfg.uitleg.alineas.map(a=>`<p>${esc(a)}</p>`).join("\n");
+  const uitleg=cfg.uitleg.alineas.map(a=>`<p>${esc(a)}</p>`).join("\n")+periodenHtml(cfg,buildDag);
   return `<!DOCTYPE html>
 <html lang="nl">
 <head>

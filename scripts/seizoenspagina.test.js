@@ -12,10 +12,20 @@ assert(kerst,"witte kerst staat in de config");
 for(const cfg of SEIZOENSPAGINAS){
   assert(/^[a-z0-9-]+$/.test(cfg.slug),`${cfg.slug}: slug is een nette URL`);
   assert.equal(seizoenUrl(cfg),`https://watishetweer.nl/${cfg.slug}/`);
-  assert(cfg.dagen.length>=1,`${cfg.slug}: minstens één dag`);
-  for(let i=1;i<cfg.dagen.length;i++){
-    const a=cfg.dagen[i-1],b=cfg.dagen[i];
-    assert(b.maand*100+b.dag>a.maand*100+a.dag,`${cfg.slug}: dagen staan oplopend binnen één kalenderjaar`);
+  if(cfg.soort==="vakantie"){
+    const jaren=Object.keys(cfg.perioden);
+    assert(jaren.length>=1,`${cfg.slug}: minstens één vakantiejaar`);
+    for(const j of jaren)for(const p of cfg.perioden[j]){
+      assert(/^\d{4}-\d{2}-\d{2}$/.test(p.van)&&/^\d{4}-\d{2}-\d{2}$/.test(p.tot)&&p.van<=p.tot,`${cfg.slug} ${j}: periode ${p.regio} is een geldige reeks datums`);
+      assert(["noord","midden","zuid"].includes(p.regio),`${cfg.slug} ${j}: regio ${p.regio}`);
+      assert(R.dagenTussen(p.van,p.tot)<=20,`${cfg.slug} ${j}: periode ${p.regio} is een schoolvakantie, geen seizoen`);
+    }
+  }else{
+    assert(cfg.dagen.length>=1,`${cfg.slug}: minstens één dag`);
+    for(let i=1;i<cfg.dagen.length;i++){
+      const a=cfg.dagen[i-1],b=cfg.dagen[i];
+      assert(b.maand*100+b.dag>a.maand*100+a.dag,`${cfg.slug}: dagen staan oplopend binnen één kalenderjaar`);
+    }
   }
   assert.equal(cfg.vensterDagen,7,`${cfg.slug}: venster gelijk aan de 7-daagse verwachting van de site`);
   assert(cfg.plaatsen.filter(p=>p.officieel).length<=1,`${cfg.slug}: hoogstens één officiële meetplaats`);
@@ -228,3 +238,63 @@ assert.equal(oudCfg.soort,"middernacht");assert.deepEqual(oudCfg.uren,[22,23,24,
 assert(!("intro" in oudCfg)&&!("uitleg" in oudCfg),"alleen runtimevelden in de pagina-config");
 
 console.log("Seizoenspagina's: datumlogica (venster, aftelling, jaarwissel, tijdzone), sneeuwduiding, samenvatting, oud en nieuw (nacht over de jaargrens, neerslag/wind/mist) en statische pagina's OK.");
+
+/* ---------- Herfstvakantie (soort "vakantie"): periode per regio, per jaar ---------- */
+const herfst=SEIZOENSPAGINAS.find(p=>p.slug==="herfstvakantie");
+assert(herfst&&herfst.soort==="vakantie","herfstvakantie staat in de config");
+/* Adviesdata OCW (rijksoverheid.nl), gecontroleerd 12 oktober 2026. */
+assert.deepEqual(herfst.perioden[2026].map(p=>[p.regio,p.van,p.tot]),[["noord","2026-10-10","2026-10-18"],["midden","2026-10-17","2026-10-25"],["zuid","2026-10-17","2026-10-25"]]);
+assert.deepEqual(herfst.perioden[2027].map(p=>[p.regio,p.van,p.tot]),[["noord","2027-10-16","2027-10-24"],["midden","2027-10-16","2027-10-24"],["zuid","2027-10-23","2027-10-31"]]);
+const hv=(d)=>{const t=R.toestand(d,herfst);return {t,a:R.aftelTekst(t,herfst),g:R.aftelGetal(t,herfst),m:R.meldingTekst(t,herfst),zicht:t.dagen.filter(x=>x.zichtbaar).map(x=>x.iso)};};
+let h=hv("2026-09-20");
+assert.equal(h.t.jaar,2026);assert.equal(h.t.fase,"ver");
+assert.equal(h.a,"Nog 20 dagen tot de herfstvakantie in regio noord.");
+assert.deepEqual(h.g,{n:20,tekst:"dagen tot de herfstvakantie in regio noord"});
+assert.equal(h.m,"Vanaf zondag 4 oktober staat hier de verwachting voor de eerste vakantiedag.");
+h=hv("2026-10-04");
+assert.equal(h.t.fase,"verwachting");assert.deepEqual(h.zicht,["2026-10-10"],"4 oktober: alleen de eerste vakantiedag valt in het venster");
+assert.equal(h.m,"");
+assert.equal(hv("2026-10-09").a,"Morgen begint de herfstvakantie in regio noord.");
+assert.equal(hv("2026-10-09").g,null,"morgen: geen groot getal");
+assert.equal(hv("2026-10-10").a,"Vandaag begint de herfstvakantie in regio noord. In regio midden en zuid begint de vakantie op zaterdag 17 oktober.");
+h=hv("2026-10-12");
+assert.equal(h.a,"Het is herfstvakantie in regio noord. In regio midden en zuid begint de vakantie op zaterdag 17 oktober.");
+assert.deepEqual(h.zicht,["2026-10-12","2026-10-13","2026-10-14","2026-10-15","2026-10-16","2026-10-17","2026-10-18"],"voorbije vakantiedagen vallen weg; zeven dagen vooruit");
+assert.deepEqual(h.t.dagen.find(d=>d.iso==="2026-10-17").regios,["noord","midden","zuid"]);
+assert.deepEqual(h.t.dagen.find(d=>d.iso==="2026-10-12").regios,["noord"]);
+assert.equal(hv("2026-10-17").a,"Het is overal herfstvakantie.");
+assert.equal(hv("2026-10-19").a,"Het is herfstvakantie in regio midden en zuid.");
+assert.deepEqual(hv("2026-10-25").zicht,["2026-10-25"]);
+h=hv("2026-10-26");
+assert.equal(h.t.jaar,2027,"na de laatste vakantiedag schuift de pagina door naar volgend jaar");
+assert.equal(h.a,"Nog 355 dagen tot de herfstvakantie in regio noord en midden.");
+assert.equal(hv("2027-10-16").a,"Vandaag begint de herfstvakantie in regio noord en midden. In regio zuid begint de vakantie op zaterdag 23 oktober.");
+h=hv("2027-11-01");
+assert.equal(h.t.fase,"onbekend");assert.equal(h.t.jaar,2028);
+assert.equal(h.a,"","onbekend jaar: geen aftelling");assert.equal(h.g,null);
+assert.equal(h.m,"De data van de herfstvakantie 2028 zijn nog niet bekend.");
+assert.equal(R.periodeTekst("2026-10-10","2026-10-18"),"10 t/m 18 oktober");
+assert.equal(R.periodeTekst("2027-10-23","2027-11-01"),"23 oktober t/m 1 november");
+
+/* Weerwaarden en samenvatting. */
+assert(R.verwachtingUrl(herfst,R.toestand("2026-10-12",herfst)).includes("&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunshine_duration"));
+assert.equal(R.vakantieWeerTekst({neerslag:1.46,kans:42,zon:3*3600/3600}),"1,5 mm regen · kans 42%");
+assert.equal(R.vakantieWeerTekst({neerslag:0.1,kans:20,zon:9.4}),"Droog · 9 uur zon","0,1 mm telt als droog");
+assert.equal(R.vakantieWeerTekst({neerslag:0,kans:5,zon:0.3}),"Droog · weinig zon");
+assert.equal(R.vakantieWeerTekst(null),"Geen gegevens");
+const dagdata=(iso,mm)=>({daily:{time:[iso],temperature_2m_max:[15],temperature_2m_min:[8],precipitation_sum:[mm],precipitation_probability_max:[50],sunshine_duration:[18000]}});
+assert.deepEqual(R.vakantieWaarden(dagdata("2026-10-12",2),"2026-10-12"),{tmin:8,tmax:15,neerslag:2,kans:50,zon:5});
+const vakRes=(regenPerPlaats)=>regenPerPlaats.map((mm,i)=>({plaats:herfst.plaatsen[i],dagen:{"2026-10-24":{neerslag:mm},"2026-10-25":{neerslag:0}}}));
+const tLaat=R.toestand("2026-10-24",herfst);
+assert.equal(R.vakantieSamenvatting(tLaat,vakRes([0,0,0,2,2,2,0]),herfst),"Volgens de huidige verwachting blijft het op alle 2 vakantiedagen in de verwachting overwegend droog.","3 van 7 plaatsen nat is nog overwegend droog");
+assert.equal(R.vakantieSamenvatting(tLaat,vakRes([2,2,2,2,0,0,0]),herfst),"Volgens de huidige verwachting is 1 van de 2 vakantiedagen in de verwachting overwegend droog.");
+assert.equal(R.vakantieSamenvatting(R.toestand("2026-10-25",herfst),vakRes([2,2,2,2,0,0,0]).map(r=>({...r,dagen:{"2026-10-25":{neerslag:3}}})),herfst),"Volgens de huidige verwachting valt er op zondag 25 oktober in een groot deel van het land regen.");
+
+/* Statische HTML: vakantiedata per regio staan vast in de pagina. */
+const htmlHerfst=pagina(herfst,"2026-10-12");
+assert(htmlHerfst.includes("<title>Weer herfstvakantie 2026: regen, zon en temperatuur per dag | watishetweer.nl</title>"));
+assert(htmlHerfst.includes('<link rel="canonical" href="https://watishetweer.nl/herfstvakantie/">'));
+assert(htmlHerfst.includes('<tr><th scope="row">Regio noord</th><td>10 t/m 18 oktober</td></tr>')&&htmlHerfst.includes('<tr><th scope="row">Regio zuid</th><td>23 t/m 31 oktober</td></tr>'),"data 2026 en 2027 staan in de HTML");
+assert(!pagina(herfst,"2026-10-26").includes('data-jaar="2026"'),"na de vakantie verdwijnt het voorbije jaar uit de tabel");
+assert(pagina(herfst,"2027-11-01").includes("<h1 id=\"seizoen-kop\">Herfstvakantie 2028</h1>"),"onbekend jaar bouwt zonder fout");
+console.log("Seizoenspagina herfstvakantie: perioden per regio, aftellen, venster, doorschuiven en samenvatting kloppen.");

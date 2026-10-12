@@ -101,6 +101,58 @@ const SEIZOENSPAGINAS=Object.freeze([
       plaatsroute("eindhoven"),
       plaatsroute("maastricht")
     ]
+  }),
+  Object.freeze({
+    slug:"herfstvakantie",
+    naam:"Herfstvakantie",
+    soort:"vakantie",
+    tijdzone:"Europe/Amsterdam",
+    vensterDagen:7,
+    /* Adviesdata van het ministerie van OCW per regio (rijksoverheid.nl). Ieder
+       jaar een regel erbij; ontbreekt het volgende jaar, dan zegt de pagina dat
+       de data nog niet bekend zijn. */
+    perioden:{
+      2026:[{regio:"noord",van:"2026-10-10",tot:"2026-10-18"},{regio:"midden",van:"2026-10-17",tot:"2026-10-25"},{regio:"zuid",van:"2026-10-17",tot:"2026-10-25"}],
+      2027:[{regio:"noord",van:"2027-10-16",tot:"2027-10-24"},{regio:"midden",van:"2027-10-16",tot:"2027-10-24"},{regio:"zuid",van:"2027-10-23",tot:"2027-10-31"}]
+    },
+    titel:"Weer herfstvakantie {jaar}: regen, zon en temperatuur per dag",
+    beschrijving:"Hoe wordt het weer in de herfstvakantie {jaar}? Per dag regen, zon en temperatuur in zeven grote plaatsen, met de vakantiedata voor regio noord, midden en zuid.",
+    intro:"Hoe wordt het weer in de herfstvakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.",
+    uitleg:{
+      kop:"Wanneer is de herfstvakantie?",
+      alineas:[
+        "De herfstvakantie valt niet overal tegelijk: Nederland is voor de schoolvakanties ingedeeld in regio noord, midden en zuid. Dit zijn de adviesdata van het ministerie van OCW; scholen mogen daarvan afwijken. Kijk bij twijfel in de schoolgids."
+      ],
+      bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
+    },
+    teksten:{
+      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      onbekend:"De data van de herfstvakantie {jaar} zijn nog niet bekend.",
+      aftellenMeer:"Nog {n} dagen tot de herfstvakantie{regio}.",
+      aftellenGetal:"dagen tot de herfstvakantie{regio}",
+      aftellenMorgen:"Morgen begint de herfstvakantie{regio}.",
+      aftellenVandaag:"Vandaag begint de herfstvakantie{regio}.",
+      bezig:"Het is herfstvakantie in regio {regios}.",
+      overal:"Het is overal herfstvakantie.",
+      begintNog:"In regio {regios} begint de vakantie op {datum}.",
+      allesDroog:"Volgens de huidige verwachting blijft het op alle {m} vakantiedagen in de verwachting overwegend droog.",
+      deelsDroog:"Volgens de huidige verwachting {zijn} {n} van de {m} vakantiedagen in de verwachting overwegend droog.",
+      nietsDroog:"Volgens de huidige verwachting valt er op alle {m} vakantiedagen in de verwachting in een groot deel van het land regen.",
+      dagDroog:"Volgens de huidige verwachting blijft het op {dag} overwegend droog.",
+      dagNat:"Volgens de huidige verwachting valt er op {dag} in een groot deel van het land regen.",
+      later:"De vakantiedagen tot en met {tot} verschijnen hier vanzelf zodra ze binnen de 7-daagse verwachting vallen.",
+      toelichting:"Overwegend droog: in minder dan de helft van de plaatsen valt 1 mm regen of meer. Zon is het verwachte aantal uren zonneschijn. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.",
+      fout:"De verwachting is op dit moment niet beschikbaar. Probeer het later opnieuw, of bekijk het weer voor je eigen plaats."
+    },
+    plaatsen:[
+      plaatsroute("groningen"),
+      plaatsroute("zwolle"),
+      plaatsroute("amsterdam"),
+      plaatsroute("den-haag"),
+      plaatsroute("utrecht"),
+      plaatsroute("eindhoven"),
+      plaatsroute("maastricht")
+    ]
   })
 ]);
 
