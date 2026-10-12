@@ -123,7 +123,8 @@ const meet=()=>{
   const rijen=[...document.querySelectorAll("#wiw-hour-table tbody tr")].map(tr=>{
     const tijd=tekst(tr.querySelector("time")).slice(0,5);
     const t=tekst(tr.querySelector(".wiw-hour-temp .wiw-hour-primary")||tr.cells[1]);
-    const m=/(-?\d+)\s*°/.exec(t);return {tijd,temp:m?Number(m[1]):null};
+    /* De uurtabel toont één decimaal ("21,0 °C"); het hele getal is het uur. */
+    const m=/(-?\d+)(?:[.,]\d)?\s*°/.exec(t);return {tijd,temp:m?Number(m[1]):null};
   });
   /* Ieder uurlabel op de as met het uur op zijn positie (S.geo.x). */
   const g=S.geo||{},n=Array.isArray(g.TI)?g.TI.length:0;

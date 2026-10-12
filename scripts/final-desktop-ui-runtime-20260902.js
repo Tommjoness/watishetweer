@@ -9,7 +9,9 @@ const MAX_DESKTOP_UREN=10;
 const MAX_TABEL_UREN=24;
 const num=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 const esc=t=>String(t==null?"":t).replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#39;"}[c]));
-const formatTemp=v=>{const n=num(v);if(n===null)return "–";const s=(Math.round(n*10)/10).toFixed(1).replace(".",",").replace(/,0$/,"");return s+" °C";};
+/* Altijd één decimaal ("9,0 °C"), zodat de cijfers in de uurtabel onder
+   elkaar uitlijnen naast "9,5 °C" en "10,6 °C". */
+const formatTemp=v=>{const n=num(v);if(n===null)return "–";const s=(Math.round(n*10)/10).toFixed(1).replace(".",",");return s+" °C";};
 const formatPct=v=>{const n=num(v);return n===null?null:Math.round(Math.max(0,Math.min(100,n)))+"%";};
 const formatMm=v=>{const n=num(v);if(n===null||n<0)return null;if(n>0&&n<0.1)return "<0,1 mm";return n.toFixed(1).replace(".",",")+" mm";};
 const hhmm=t=>{const m=/T(\d{2}):(\d{2})/.exec(String(t||""));return m?m[1]+":"+m[2]:"–";};

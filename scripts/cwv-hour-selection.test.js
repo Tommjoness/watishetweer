@@ -21,7 +21,7 @@ for(const [zone,offset,start,first,next] of [
   assert.equal(after[0].temp,null,"ontbrekende temperatuur blijft null zonder uur over te slaan");
   assert.equal(after[1].gevoel,null,"ontbrekend gevoel blijft null");
   assert.equal(formatTemp(after[0].temp),"–");
-  assert.equal(formatTemp(0),"0 °C");
+  assert.equal(formatTemp(0),"0,0 °C");
   assert.equal(JSON.stringify(d),original,"selectie mag providerdata niet veranderen");
   for(let i=1;i<after.length;i++)assert.equal(Date.parse(after[i].instant)-Date.parse(after[i-1].instant),3600000);
 }

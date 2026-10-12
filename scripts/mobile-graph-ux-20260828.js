@@ -1439,15 +1439,23 @@ function bewaakGrafiekLabels(){
      laatste. Daarom kijken zij niet naar waar "nu" nu staat. */
   const isAnker=el=>el.hasAttribute("data-desktop-temp-anker")||el.hasAttribute("data-mobile-temp-label")||el.hasAttribute("data-mobile-temp-covers-anchor");
   const isMarkering=el=>el.hasAttribute("data-mobile-temp-marker")||el.hasAttribute("data-desktop-temp-marker");
+  /* Op de telefoon staan links van het eerste uur de asgetallen; een
+     temperatuurcijfer daar leest als asgetal (zelfde grens als bij het plaatsen).
+     Alleen het rode nu-label mag daar als uitwijkplek staan. Desktop en tablet
+     hebben een eigen, ruimere linkermarge waarin het eerste cijfer gecentreerd
+     op zijn punt hoort. */
+  const asKolom=g.M&&typeof g.x==="function"&&Number.isFinite(Number(g.x(0)))?Number(g.x(0))-4:null;
   const botst=(el,box,groep)=>{
     if(!box)return false;
     const negeerNu=!isNu(el)&&(isAnker(el)||isMarkering(el));
     if(box.x<1||box.x+box.width>W-1||box.y<1||box.y+box.height>H-1)return true;
+    if(asKolom!==null&&!isNu(el)&&box.x<asKolom)return true;
     if(lijnen.some(p=>lijnRaaktTekstBox(p,box,1)))return true;
     if(stipVakken.some(s=>rechthoekenBotsen(box,s,0.5)))return true;
     if(staven.some(s=>rechthoekenBotsen(box,s,1)))return true;
     if(iconen.some(s=>rechthoekenBotsen(box,s,1)))return true;
-    if(!isNu(el)&&nuLijnen.some(s=>rechthoekenBotsen(box,s,1)))return true;
+    /* Ook het nu-label zelf staat nooit op de rode nu-lijn. */
+    if(nuLijnen.some(s=>rechthoekenBotsen(box,s,1)))return true;
     for(const [ander,b] of vakken){if(groep.includes(ander)||!b||negeerNu&&isNu(ander))continue;if(rechthoekenBotsen(box,b,1))return true;}
     return false;
   };
@@ -1465,12 +1473,44 @@ function bewaakGrafiekLabels(){
     const teVer=!!punt&&afstandVakTotPunt(box,punt.x,punt.y)>maxAfstand;
     const raakt=botst(el,box,groep)||!!(tbox&&botst(tijd,tbox,groep));
     if(!raakt&&!teVer)return;
-    const keuze=kiesVrijeVerschuiving((dx,dy)=>{
+    const vrijeVerschuiving=()=>kiesVrijeVerschuiving((dx,dy)=>{
       const nb=verschoven(box,dx,dy);
       if(punt&&afstandVakTotPunt(nb,punt.x,punt.y)>maxAfstand)return false;
       return !botst(el,nb,groep)&&!(tbox&&botst(tijd,verschoven(tbox,dx,dy),groep));
     },bewakingsKandidaten(box,punt));
-    let zet=keuze;
+    let zet=vrijeVerschuiving();
+    /* Op de telefoon staat het cijfer van het eerste uur (binnen anderhalf uur
+       van nu) soms precies waar "nu 18°" naast de stip hoort, terwijl links van
+       de nu-lijn de asgetallen staan. Dan noemt het nu-label die temperatuur,
+       zoals bij het plaatsen: liever dat dan "nu" over de lijn of ver erboven. */
+    if(!zet&&isNu(el)&&g.M&&nuStip&&Number.isFinite(Number(g.cw))){
+      const buur=beweegbaar.find(a=>{
+        if(a===el||!a.hasAttribute("data-mobile-temp-label")||!vakken.get(a))return false;
+        const p=puntVan(a);return !!p&&Math.abs(p.x-nuStip.x)<Number(g.cw)*1.5;
+      });
+      if(buur){
+        const bewaard=vakken.get(buur);vakken.set(buur,null);
+        zet=vrijeVerschuiving();
+        if(zet){
+          /* Net als bij het plaatsen verdwijnt het cijfer helemaal (geen
+             verborgen element dat metingen als tekst buiten beeld zien). */
+          const i=buur.getAttribute("data-mobile-temp-index");
+          if(i!==null){
+            el.setAttribute("data-mobile-temp-anchor-index",i);
+            const stip=svg.querySelector('circle[data-temp-index="'+i+'"]');if(stip)stip.remove();
+          }
+          vakken.delete(buur);buur.remove();
+        }else vakken.set(buur,bewaard);
+      }
+    }
+    /* Valt de curve na nu steil, dan is vlak bij de stip alles bezet; iets
+       dieper onder of boven de stip, rechts van de nu-lijn, is het vlak vaak
+       nog vrij. Dat gaat vóór de plek bovenaan de lijn. */
+    if(!zet&&isNu(el)&&nuLijnen.length&&punt){
+      const rechts=nuLijnen[0].x+0.75+3-box.x;
+      const dieper=[22,28,34,40,46].map(o=>punt.y+o-box.y).concat([22,28,34,40].map(o=>punt.y-o-box.height-box.y));
+      zet=dieper.map(dy=>[rechts,dy]).find(([dx,dy])=>!botst(el,verschoven(box,dx,dy),groep))||null;
+    }
     /* Het nu-label mag als laatste uitwijkplek bovenaan de rode nu-lijn staan,
        net boven de plot: daar is het nog steeds duidelijk de nu-waarde. */
     if(!zet&&isNu(el)&&nuLijnen.length&&Number.isFinite(Number(g.pt))){
@@ -1594,10 +1634,14 @@ function polishNuLabel(){
     .map(el=>String(el.getAttribute("points")||el.getAttribute("data-mobile-line-points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)));
   const puntX=punt?Number(punt.getAttribute("cx")):NaN;
   const stipVak=Number.isFinite(puntX)&&Number.isFinite(puntY)?{x:puntX-4,y:puntY-4,width:8,height:8}:null;
+  /* Op de rode nu-lijn zelf staat nooit tekst: een uitwijkplek die het label
+     over de lijn legt, leest als "nu" en "13°" aan weerszijden van de lijn. */
+  const kruistNuLijn=box=>Number.isFinite(puntX)&&box.x<puntX+1.5&&box.x+box.width>puntX-1.5;
   const vrij=(x,y)=>{
     const box=geschatteSvgTekstBox(nu.textContent,x,y,"start",Number(nu.getAttribute("font-size"))||10);
     return box&&box.x>=g.pl-2&&box.x+box.width<=breed-g.pr+3
       &&box.y>=g.pt-18&&box.y+box.height<=g.pt+g.ih-3
+      &&!kruistNuLijn(box)
       &&(!stipVak||!rechthoekenBotsen(box,stipVak,1))
       &&!vast.some(b=>rechthoekenBotsen(box,b,3))
       &&!lijnen.some(punten=>lijnRaaktTekstBox(punten,box));
@@ -1607,7 +1651,16 @@ function polishNuLabel(){
   /* Eerst vlak naast de rode stip (rechts van de nu-lijn, erboven of eronder),
      zodat "nu 19°" leest als de waarde van die stip; pas daarna verder weg. */
   const bijStip=Number.isFinite(puntY)?[-5,11,-12,17,-19,23,-26,29].map(dy=>[0,puntY+dy-oorspronkelijkY]):[];
-  const posities=[...bijStip,[0,0],[0,-16],[0,16],[0,-24],[0,24],[12,-16],[12,16],[-12,-16],[-12,16],[0,-30],[0,30],[0,Number(g.pt)-4-oorspronkelijkY]];
+  /* Is rechts naast de stip alles bezet, dan liever direct links van de
+     nu-lijn naast de stip dan ver weg of over de lijn heen. */
+  const nuVak=geschatteSvgTekstBox(nu.textContent,0,0,"start",Number(nu.getAttribute("font-size"))||10);
+  const linksDx=Number.isFinite(puntX)&&nuVak?puntX-7-nuVak.width-oorspronkelijkX:NaN;
+  const linksVanLijn=Number.isFinite(linksDx)?bijStip.map(([,dy])=>[linksDx,dy]):[];
+  /* Valt de curve na nu steil, dan raakt iedere plek vlak naast de stip de
+     lijn of een stip; iets dieper in het vrije vlak onder (of boven) de curve
+     blijft "nu" dan toch rechts van de nu-lijn en bij de stip. */
+  const dieper=Number.isFinite(puntY)?[35,41,47,-33,-39].map(dy=>[0,puntY+dy-oorspronkelijkY]):[];
+  const posities=[...bijStip,...linksVanLijn,[0,0],[0,-16],[0,16],[0,-24],[0,24],[12,-16],[12,16],[-12,-16],[-12,16],[0,-30],[0,30],...dieper,[0,Number(g.pt)-4-oorspronkelijkY]];
   const gevonden=posities.find(([dx,dy])=>vrij(oorspronkelijkX+dx,oorspronkelijkY+dy));
   if(gevonden){
     nu.setAttribute("x",String(oorspronkelijkX+gevonden[0]));nu.setAttribute("y",String(oorspronkelijkY+gevonden[1]));
