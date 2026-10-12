@@ -42,9 +42,12 @@ html body footer:not(#wiw-onderkant)>details.footer-details[open]{flex:0 0 100%!
 html body footer:not(#wiw-onderkant)>details.footer-details #coords{display:block;width:100%;font-size:12px!important}
 /* Seizoenslinks op mobiel: in de bron staan ze vóór Over en Privacy, maar in
    beeld vullen ze de rijen van Over/Privacy en Technische locatiegegevens aan.
-   Zo blijft de 2+1-indeling van de hulplinks staan en wordt de voet niet hoger. */
+   Zo blijft de 2+1-indeling van de hulplinks staan en wordt de voet niet hoger.
+   Alleen de seizoenspagina's die het eerst aan de beurt zijn, staan op mobiel in
+   beeld (.seizoen-later verdwijnt; zie seo-foundation.js). */
 @media(max-width:430px){
   html body footer:not(#wiw-onderkant)>span.bron.seizoen-link{order:1!important}
+  html body footer:not(#wiw-onderkant)>span.bron.seizoen-link.seizoen-later{display:none!important}
   html body footer:not(#wiw-onderkant)>details.footer-details{order:2!important}
   html body footer:not(#wiw-onderkant)>.footer-contact{order:3!important}
 }
