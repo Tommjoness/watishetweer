@@ -56,7 +56,11 @@ server.listen(0, async () => {
         };
       });
       const v = `${breedte}px ${thema}`;
-      assert(/linear-gradient\(90deg, rgb\(\d+, \d+, \d+\), rgb\(\d+, \d+, \d+\)\)/.test(m.verloop), `${v}: dagbalk heeft geen kleurverloop: ${m.verloop}`);
+      /* Sinds de kleurronde van 12 oktober volgt het verloop de temperatuurschaal
+         met tussenstops (rgb met percentage); het blijft een verloop van ten
+         minste twee verschillende kleuren. */
+      const balkKleuren = m.verloop.startsWith("linear-gradient(90deg,") ? [...m.verloop.matchAll(/rgb\(\d+, \d+, \d+\)/g)].map(x => x[0]) : [];
+      assert(balkKleuren.length >= 2 && new Set(balkKleuren).size >= 2, `${v}: dagbalk heeft geen kleurverloop: ${m.verloop}`);
       assert.strictEqual(m.balkHoogte, "6px", `${v}: dagbalk is geen 6px`);
       assert(Math.abs(m.sbarHoogte - 5) < 0.5 && m.sbarRond === "3px", `${v}: zichtscorebalk niet 5px en afgerond: ${JSON.stringify(m)}`);
       assert(m.letter && /^"?Instrument Sans/.test(m.letter), `${v}: grafiekcijfers niet in de gewone letter: ${m.letter}`);
