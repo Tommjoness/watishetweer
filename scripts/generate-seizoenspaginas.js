@@ -60,6 +60,7 @@ html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70
 .seizoen-dag thead th:last-child{text-align:right;padding-right:0;white-space:nowrap}
 .seizoen-dag .officieel{display:block;font-size:12px;font-weight:400;color:var(--muted)}
 .seizoen-dag a{text-decoration:none;border-bottom:1px solid var(--rule)}
+.seizoen-zieook span{color:var(--muted);margin-right:6px}
 .seizoen-dag a:hover,.seizoen-dag a:focus-visible{border-bottom-color:var(--ink)}
 .seizoen-perioden td{text-align:right;padding-right:0;white-space:nowrap}.seizoen-perioden td.jaargrens{white-space:normal;text-wrap:balance}
 .seizoen-vakantie{table-layout:fixed}.seizoen-vakantie thead th:first-child{width:34%}.seizoen-vakantie thead th:last-child{width:24%}
@@ -89,6 +90,17 @@ ${rijen(cfg.perioden[j])}
 </div>`).join("");
 }
 
+/* Verwante seizoenspagina's voor dezelfde weken, als korte verwijzing onder de
+   uitleg. Een slug die niet (meer) bestaat, breekt de build. */
+function zieOokHtml(cfg){
+  if(!cfg.zieOok||!cfg.zieOok.length)return "";
+  const links=cfg.zieOok.map(slug=>{
+    const doel=SEIZOENSPAGINAS.find(p=>p.slug===slug);
+    if(!doel)throw new Error(`${cfg.slug}: zieOok verwijst naar onbekende seizoenspagina ${slug}`);
+    return `<a href="/${esc(doel.slug)}/">${esc(doel.naam)}</a>`;
+  });
+  return `<p class="seizoen-zieook"><span>Zie ook</span> ${links.join(" · ")}</p>\n`;
+}
 function pagina(cfg,buildDag){
   const t=runtime.toestand(buildDag,cfg);
   const canonical=seizoenUrl(cfg);
@@ -136,7 +148,7 @@ ${STIJL}
 </section>
 <h2>${esc(cfg.uitleg.kop)}</h2>
 ${uitleg}
-${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>\n`:""}<h2>Het weer voor jouw plaats</h2>
+${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>\n`:""}${zieOokHtml(cfg)}<h2>Het weer voor jouw plaats</h2>
 <p>Bekijk het actuele weer en de 7-daagse verwachting voor <a href="/">jouw plaats</a>, of kies een plaats bij <a href="/weer/">Weer per plaats</a>.</p>
 </main>
 <script type="application/json" id="seizoen-config">${jsonInHtml(runtimeCfg)}</script>

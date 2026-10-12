@@ -16,6 +16,8 @@ function plaatsroute(slug){
 const SEIZOENSPAGINAS=Object.freeze([
   Object.freeze({
     slug:"witte-kerst",
+    /* Verwante pagina's voor dezelfde weken (eigenaar, 12 oktober). */
+    zieOok:["kerstvakantie","oud-en-nieuw"],
     naam:"Witte kerst",
     tijdzone:"Europe/Amsterdam",
     vensterDagen:7,
@@ -56,6 +58,8 @@ const SEIZOENSPAGINAS=Object.freeze([
   }),
   Object.freeze({
     slug:"oud-en-nieuw",
+    /* Verwante pagina's voor dezelfde weken (eigenaar, 12 oktober). */
+    zieOok:["witte-kerst","kerstvakantie"],
     naam:"Oud en nieuw",
     soort:"middernacht",
     tijdzone:"Europe/Amsterdam",
@@ -156,6 +160,8 @@ const SEIZOENSPAGINAS=Object.freeze([
   }),
   Object.freeze({
     slug:"kerstvakantie",
+    /* Verwante pagina's voor dezelfde weken (eigenaar, 12 oktober). */
+    zieOok:["witte-kerst","oud-en-nieuw"],
     naam:"Kerstvakantie",
     soort:"vakantie",
     tijdzone:"Europe/Amsterdam",
@@ -193,6 +199,156 @@ const SEIZOENSPAGINAS=Object.freeze([
       dagNat:"Volgens de huidige verwachting valt er op {dag} in een groot deel van het land neerslag.",
       later:"De vakantiedagen tot en met {tot} verschijnen hier vanzelf zodra ze binnen de 7-daagse verwachting vallen.",
       toelichting:"Overwegend droog: in minder dan de helft van de plaatsen valt 1 mm neerslag of meer. Sneeuw is de verwachte hoeveelheid verse sneeuw op die dag. Zon is het verwachte aantal uren zonneschijn. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.",
+      fout:"De verwachting is op dit moment niet beschikbaar. Probeer het later opnieuw, of bekijk het weer voor je eigen plaats."
+    },
+    plaatsen:[
+      plaatsroute("groningen"),
+      plaatsroute("zwolle"),
+      plaatsroute("amsterdam"),
+      plaatsroute("den-haag"),
+      plaatsroute("utrecht"),
+      plaatsroute("eindhoven"),
+      plaatsroute("maastricht")
+    ]
+  }),
+  Object.freeze({
+    slug:"voorjaarsvakantie",
+    naam:"Voorjaarsvakantie",
+    soort:"vakantie",
+    tijdzone:"Europe/Amsterdam",
+    vensterDagen:7,
+    /* Adviesdata van het ministerie van OCW per regio (rijksoverheid.nl), per schooljaar onder het kalenderjaar van de vakantie. */
+    perioden:{
+      2027:[{regio:"noord",van:"2027-02-20",tot:"2027-02-28"},{regio:"midden",van:"2027-02-20",tot:"2027-02-28"},{regio:"zuid",van:"2027-02-13",tot:"2027-02-21"}],
+      2028:[{regio:"noord",van:"2028-02-19",tot:"2028-02-27"},{regio:"midden",van:"2028-02-26",tot:"2028-03-05"},{regio:"zuid",van:"2028-02-26",tot:"2028-03-05"}]
+    },
+    titel:"Weer voorjaarsvakantie {jaar}: regen, sneeuw en temperatuur per dag",
+    beschrijving:"Hoe wordt het weer in de voorjaarsvakantie {jaar}? Per dag regen, sneeuw, zon en temperatuur in zeven grote plaatsen, met de vakantiedata voor regio noord, midden en zuid.",
+    intro:"Hoe wordt het weer in de voorjaarsvakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, sneeuw, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.",
+    uitleg:{
+      kop:"Wanneer is de voorjaarsvakantie?",
+      alineas:[
+        "De voorjaarsvakantie valt niet overal tegelijk: Nederland is voor de schoolvakanties ingedeeld in regio noord, midden en zuid. Dit zijn de adviesdata van het ministerie van OCW; scholen mogen daarvan afwijken. Kijk bij twijfel in de schoolgids."
+      ],
+      bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
+    },
+    teksten:{
+      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      onbekend:"De data van de voorjaarsvakantie {jaar} zijn nog niet bekend.",
+      aftellenMeer:"Nog {n} dagen tot de voorjaarsvakantie{regio}.",
+      aftellenGetal:"dagen tot de voorjaarsvakantie{regio}",
+      aftellenMorgen:"Morgen begint de voorjaarsvakantie{regio}.",
+      aftellenVandaag:"Vandaag begint de voorjaarsvakantie{regio}.",
+      bezig:"Het is voorjaarsvakantie in regio {regios}.",
+      overal:"Het is overal voorjaarsvakantie.",
+      begintNog:"In regio {regios} begint de vakantie op {datum}.",
+      allesDroog:"Volgens de huidige verwachting blijft het op alle {m} vakantiedagen in de verwachting overwegend droog.",
+      deelsDroog:"Volgens de huidige verwachting {zijn} {n} van de {m} vakantiedagen in de verwachting overwegend droog.",
+      nietsDroog:"Volgens de huidige verwachting valt er op alle {m} vakantiedagen in de verwachting in een groot deel van het land neerslag.",
+      dagDroog:"Volgens de huidige verwachting blijft het op {dag} overwegend droog.",
+      dagNat:"Volgens de huidige verwachting valt er op {dag} in een groot deel van het land neerslag.",
+      later:"De vakantiedagen tot en met {tot} verschijnen hier vanzelf zodra ze binnen de 7-daagse verwachting vallen.",
+      toelichting:"Overwegend droog: in minder dan de helft van de plaatsen valt 1 mm neerslag of meer. Sneeuw is de verwachte hoeveelheid verse sneeuw op die dag. Zon is het verwachte aantal uren zonneschijn. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.",
+      fout:"De verwachting is op dit moment niet beschikbaar. Probeer het later opnieuw, of bekijk het weer voor je eigen plaats."
+    },
+    plaatsen:[
+      plaatsroute("groningen"),
+      plaatsroute("zwolle"),
+      plaatsroute("amsterdam"),
+      plaatsroute("den-haag"),
+      plaatsroute("utrecht"),
+      plaatsroute("eindhoven"),
+      plaatsroute("maastricht")
+    ]
+  }),
+  Object.freeze({
+    slug:"meivakantie",
+    naam:"Meivakantie",
+    soort:"vakantie",
+    tijdzone:"Europe/Amsterdam",
+    vensterDagen:7,
+    /* Data van de Rijksoverheid; de meivakantie valt in alle regio's tegelijk. */
+    perioden:{
+      2027:[{regio:"noord",van:"2027-04-24",tot:"2027-05-02"},{regio:"midden",van:"2027-04-24",tot:"2027-05-02"},{regio:"zuid",van:"2027-04-24",tot:"2027-05-02"}],
+      2028:[{regio:"noord",van:"2028-04-29",tot:"2028-05-07"},{regio:"midden",van:"2028-04-29",tot:"2028-05-07"},{regio:"zuid",van:"2028-04-29",tot:"2028-05-07"}]
+    },
+    titel:"Weer meivakantie {jaar}: regen, zon en temperatuur per dag",
+    beschrijving:"Hoe wordt het weer in de meivakantie {jaar}? Per dag regen, zon en temperatuur in zeven grote plaatsen, met de vakantiedata.",
+    intro:"Hoe wordt het weer in de meivakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.",
+    uitleg:{
+      kop:"Wanneer is de meivakantie?",
+      alineas:[
+        "De meivakantie valt in regio noord, midden en zuid tegelijk. Dit zijn de data van de Rijksoverheid; scholen kunnen ervan afwijken en sommige scholen hebben een week extra vrij. Kijk bij twijfel in de schoolgids."
+      ],
+      bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
+    },
+    teksten:{
+      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      onbekend:"De data van de meivakantie {jaar} zijn nog niet bekend.",
+      aftellenMeer:"Nog {n} dagen tot de meivakantie{regio}.",
+      aftellenGetal:"dagen tot de meivakantie{regio}",
+      aftellenMorgen:"Morgen begint de meivakantie{regio}.",
+      aftellenVandaag:"Vandaag begint de meivakantie{regio}.",
+      bezig:"Het is meivakantie in regio {regios}.",
+      overal:"Het is meivakantie.",
+      begintNog:"In regio {regios} begint de vakantie op {datum}.",
+      allesDroog:"Volgens de huidige verwachting blijft het op alle {m} vakantiedagen in de verwachting overwegend droog.",
+      deelsDroog:"Volgens de huidige verwachting {zijn} {n} van de {m} vakantiedagen in de verwachting overwegend droog.",
+      nietsDroog:"Volgens de huidige verwachting valt er op alle {m} vakantiedagen in de verwachting in een groot deel van het land regen.",
+      dagDroog:"Volgens de huidige verwachting blijft het op {dag} overwegend droog.",
+      dagNat:"Volgens de huidige verwachting valt er op {dag} in een groot deel van het land regen.",
+      later:"De vakantiedagen tot en met {tot} verschijnen hier vanzelf zodra ze binnen de 7-daagse verwachting vallen.",
+      toelichting:"Overwegend droog: in minder dan de helft van de plaatsen valt 1 mm regen of meer. Zon is het verwachte aantal uren zonneschijn. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.",
+      fout:"De verwachting is op dit moment niet beschikbaar. Probeer het later opnieuw, of bekijk het weer voor je eigen plaats."
+    },
+    plaatsen:[
+      plaatsroute("groningen"),
+      plaatsroute("zwolle"),
+      plaatsroute("amsterdam"),
+      plaatsroute("den-haag"),
+      plaatsroute("utrecht"),
+      plaatsroute("eindhoven"),
+      plaatsroute("maastricht")
+    ]
+  }),
+  Object.freeze({
+    slug:"zomervakantie",
+    naam:"Zomervakantie",
+    soort:"vakantie",
+    tijdzone:"Europe/Amsterdam",
+    vensterDagen:7,
+    /* Data van de Rijksoverheid per regio. De zomervakantie duurt zes weken; de pagina toont steeds de vakantiedagen binnen de 7-daagse verwachting. */
+    perioden:{
+      2027:[{regio:"noord",van:"2027-07-10",tot:"2027-08-22"},{regio:"midden",van:"2027-07-17",tot:"2027-08-29"},{regio:"zuid",van:"2027-07-24",tot:"2027-09-05"}],
+      2028:[{regio:"noord",van:"2028-07-15",tot:"2028-08-27"},{regio:"midden",van:"2028-07-08",tot:"2028-08-20"},{regio:"zuid",van:"2028-07-22",tot:"2028-09-03"}]
+    },
+    titel:"Weer zomervakantie {jaar}: regen, zon en temperatuur per dag",
+    beschrijving:"Hoe wordt het weer in de zomervakantie {jaar}? Per dag regen, zon en temperatuur in zeven grote plaatsen, met de vakantiedata voor regio noord, midden en zuid.",
+    intro:"Hoe wordt het weer in de zomervakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.",
+    uitleg:{
+      kop:"Wanneer is de zomervakantie?",
+      alineas:[
+        "De zomervakantie begint niet overal tegelijk: regio noord, midden en zuid beginnen ieder jaar in een andere volgorde. Dit zijn de data van de Rijksoverheid. Kijk bij twijfel in de schoolgids."
+      ],
+      bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
+    },
+    teksten:{
+      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      onbekend:"De data van de zomervakantie {jaar} zijn nog niet bekend.",
+      aftellenMeer:"Nog {n} dagen tot de zomervakantie{regio}.",
+      aftellenGetal:"dagen tot de zomervakantie{regio}",
+      aftellenMorgen:"Morgen begint de zomervakantie{regio}.",
+      aftellenVandaag:"Vandaag begint de zomervakantie{regio}.",
+      bezig:"Het is zomervakantie in regio {regios}.",
+      overal:"Het is overal zomervakantie.",
+      begintNog:"In regio {regios} begint de vakantie op {datum}.",
+      allesDroog:"Volgens de huidige verwachting blijft het op alle {m} vakantiedagen in de verwachting overwegend droog.",
+      deelsDroog:"Volgens de huidige verwachting {zijn} {n} van de {m} vakantiedagen in de verwachting overwegend droog.",
+      nietsDroog:"Volgens de huidige verwachting valt er op alle {m} vakantiedagen in de verwachting in een groot deel van het land regen.",
+      dagDroog:"Volgens de huidige verwachting blijft het op {dag} overwegend droog.",
+      dagNat:"Volgens de huidige verwachting valt er op {dag} in een groot deel van het land regen.",
+      later:"De vakantiedagen tot en met {tot} verschijnen hier vanzelf zodra ze binnen de 7-daagse verwachting vallen.",
+      toelichting:"Overwegend droog: in minder dan de helft van de plaatsen valt 1 mm regen of meer. Zon is het verwachte aantal uren zonneschijn. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.",
       fout:"De verwachting is op dit moment niet beschikbaar. Probeer het later opnieuw, of bekijk het weer voor je eigen plaats."
     },
     plaatsen:[

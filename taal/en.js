@@ -124,8 +124,8 @@
   }
   const inRegio = nl => { if (!nl) return ""; const r = regios(nl); return r ? ` in the ${r}` : null; };
   /* Schoolvakanties op de seizoenspagina's. */
-  const VAKANTIE = { herfst: "autumn school holiday", kerst: "Christmas school holiday" };
-  const VakantieKop = { herfst: "Autumn school holiday", kerst: "Christmas school holiday" };
+  const VAKANTIE = { herfst: "autumn school holiday", kerst: "Christmas school holiday", voorjaars: "spring school holiday", mei: "May school holiday", zomer: "summer school holiday" };
+  const VakantieKop = { herfst: "Autumn school holiday", kerst: "Christmas school holiday", voorjaars: "Spring school holiday", mei: "May school holiday", zomer: "Summer school holiday" };
   /* Plaatsnamen in een opsomming blijven staan; alleen het voegwoord wordt Engels. */
   const opsomming = nl => String(nl).replace(/ en /g, " and ");
   const plaats = n => PLAATS[n] || n;
@@ -757,6 +757,30 @@
     "De kerstvakantie valt in regio noord, midden en zuid tegelijk. Dit zijn de data van de Rijksoverheid; scholen kunnen ervan afwijken. Kijk bij twijfel in de schoolgids.":
       "The Christmas school holiday falls at the same time in the northern, central and southern regions. These are the dates published by the Dutch government; schools may deviate from them. If in doubt, check your school's guide.",
     "Het is kerstvakantie.": "It is the Christmas school holiday.",
+
+    /* Seizoenspagina's voorjaars-, mei- en zomervakantie (vaste teksten) */
+    "Voorjaarsvakantie": "Spring school holiday",
+    "Meivakantie": "May school holiday",
+    "Zomervakantie": "Summer school holiday",
+    "Hoe wordt het weer in de voorjaarsvakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, sneeuw, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.":
+      "What will the weather be like during the spring school holiday? Once holiday days fall within the 7-day forecast, this page shows the forecast for rain, snow, sunshine and temperature for each day, for seven large places across the Netherlands.",
+    "Hoe wordt het weer in de meivakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.":
+      "What will the weather be like during the May school holiday? Once holiday days fall within the 7-day forecast, this page shows the forecast for rain, sunshine and temperature for each day, for seven large places across the Netherlands.",
+    "Hoe wordt het weer in de zomervakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.":
+      "What will the weather be like during the summer school holiday? Once holiday days fall within the 7-day forecast, this page shows the forecast for rain, sunshine and temperature for each day, for seven large places across the Netherlands.",
+    "Wanneer is de voorjaarsvakantie?": "When is the spring school holiday?",
+    "Wanneer is de meivakantie?": "When is the May school holiday?",
+    "Wanneer is de zomervakantie?": "When is the summer school holiday?",
+    "De voorjaarsvakantie valt niet overal tegelijk: Nederland is voor de schoolvakanties ingedeeld in regio noord, midden en zuid. Dit zijn de adviesdata van het ministerie van OCW; scholen mogen daarvan afwijken. Kijk bij twijfel in de schoolgids.":
+      "The spring school holiday does not fall at the same time everywhere: for school holidays, the Netherlands is divided into a northern, central and southern region. These are the dates recommended by the Dutch Ministry of Education; schools may deviate from them. If in doubt, check your school's guide.",
+    "De meivakantie valt in regio noord, midden en zuid tegelijk. Dit zijn de data van de Rijksoverheid; scholen kunnen ervan afwijken en sommige scholen hebben een week extra vrij. Kijk bij twijfel in de schoolgids.":
+      "The May school holiday falls at the same time in the northern, central and southern regions. These are the dates published by the Dutch government; schools may deviate from them and some schools have an extra week off. If in doubt, check your school's guide.",
+    "De zomervakantie begint niet overal tegelijk: regio noord, midden en zuid beginnen ieder jaar in een andere volgorde. Dit zijn de data van de Rijksoverheid. Kijk bij twijfel in de schoolgids.":
+      "The summer school holiday does not start at the same time everywhere: the northern, central and southern regions take turns starting first each year. These are the dates published by the Dutch government. If in doubt, check your school's guide.",
+    "Het is overal voorjaarsvakantie.": "It is the spring school holiday everywhere.",
+    "Het is meivakantie.": "It is the May school holiday.",
+    "Het is overal zomervakantie.": "It is the summer school holiday everywhere.",
+    "Zie ook": "See also",
     "Alle regio's": "All regions",
     "alle regio's": "all regions",
     "Overwegend droog: in minder dan de helft van de plaatsen valt 1 mm neerslag of meer. Sneeuw is de verwachte hoeveelheid verse sneeuw op die dag. Zon is het verwachte aantal uren zonneschijn. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.":
@@ -1021,20 +1045,19 @@
     [/^Kans op mist \(zicht onder 1 km\) in (.+)\.$/, (m) => `Chance of fog (visibility below 1 km) in ${opsomming(m[1])}.`],
 
     /* Seizoenspagina herfstvakantie */
-    [/^(Herfst|Kerst)vakantie (\d{4})$/, (m) => `${VakantieKop[m[1].toLowerCase()]} ${m[2]}`],
-    [/^Weer herfstvakantie (\d{4}): regen, zon en temperatuur per dag \| watishetweer\.nl$/, (m) => `Autumn school holiday weather ${m[1]}: rain, sunshine and temperature per day | watishetweer.nl`],
-    [/^Weer kerstvakantie (\d{4}): regen, sneeuw en temperatuur per dag \| watishetweer\.nl$/, (m) => `Christmas school holiday weather ${m[1]}: rain, snow and temperature per day | watishetweer.nl`],
-    [/^Nog (\d+) dagen tot de (herfst|kerst)vakantie(?: in regio (.+))?\.$/, (m) => { const r = inRegio(m[3]); return r === null ? null : `${m[1]} days to go until the ${VAKANTIE[m[2]]}${r}.`; }],
-    [/^(?:(\d+) )?dagen tot de (herfst|kerst)vakantie(?: in regio (.+))?$/, (m) => { const r = inRegio(m[3]); return r === null ? null : `${m[1] ? m[1] + " " : ""}days to go until the ${VAKANTIE[m[2]]}${r}`; }],
-    [/^Morgen begint de (herfst|kerst)vakantie(?: in regio (.+))?\.$/, (m) => { const r = inRegio(m[2]); return r === null ? null : `The ${VAKANTIE[m[1]]} starts tomorrow${r}.`; }],
-    [/^(Vandaag begint de (herfst|kerst)vakantie(?: in regio ([^.]+))?|Het is (herfst|kerst)vakantie in regio ([^.]+))\.(?: In regio (.+) begint de vakantie op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.)?$/, (m) => {
+    [/^(Herfst|Kerst|Voorjaars|Mei|Zomer)vakantie (\d{4})$/, (m) => `${VakantieKop[m[1].toLowerCase()]} ${m[2]}`],
+    [/^Weer (herfst|kerst|voorjaars|mei|zomer)vakantie (\d{4}): regen, (zon|sneeuw) en temperatuur per dag \| watishetweer\.nl$/, (m) => `${VakantieKop[m[1]]} weather ${m[2]}: rain, ${m[3] === "zon" ? "sunshine" : "snow"} and temperature per day | watishetweer.nl`],
+    [/^Nog (\d+) dagen tot de (herfst|kerst|voorjaars|mei|zomer)vakantie(?: in regio (.+))?\.$/, (m) => { const r = inRegio(m[3]); return r === null ? null : `${m[1]} days to go until the ${VAKANTIE[m[2]]}${r}.`; }],
+    [/^(?:(\d+) )?dagen tot de (herfst|kerst|voorjaars|mei|zomer)vakantie(?: in regio (.+))?$/, (m) => { const r = inRegio(m[3]); return r === null ? null : `${m[1] ? m[1] + " " : ""}days to go until the ${VAKANTIE[m[2]]}${r}`; }],
+    [/^Morgen begint de (herfst|kerst|voorjaars|mei|zomer)vakantie(?: in regio (.+))?\.$/, (m) => { const r = inRegio(m[2]); return r === null ? null : `The ${VAKANTIE[m[1]]} starts tomorrow${r}.`; }],
+    [/^(Vandaag begint de (herfst|kerst|voorjaars|mei|zomer)vakantie(?: in regio ([^.]+))?|Het is (herfst|kerst|voorjaars|mei|zomer)vakantie in regio ([^.]+))\.(?: In regio (.+) begint de vakantie op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.)?$/, (m) => {
       const eerst = m[1].startsWith("Vandaag") ? (inRegio(m[3]) === null ? null : `The ${VAKANTIE[m[2]]} starts today${inRegio(m[3])}.`) : (regios(m[5]) && `It is the ${VAKANTIE[m[4]]} in the ${regios(m[5])}.`);
       if (!eerst) return null;
       return m[6] ? (regios(m[6]) && `${eerst} In the ${regios(m[6])}, the holiday starts on ${dagVol(m[7])} ${m[8]} ${maand(m[9])}.`) : eerst;
     }],
     [/^In regio (.+) begint de vakantie op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.$/, (m) => regios(m[1]) && `In the ${regios(m[1])}, the holiday starts on ${dagVol(m[2])} ${m[3]} ${maand(m[4])}.`],
     [/^Vanaf (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) staat hier de verwachting voor de eerste vakantiedag\.$/, (m) => `The forecast for the first day of the holiday will appear here from ${dagVol(m[1])} ${m[2]} ${maand(m[3])}.`],
-    [/^De data van de (herfst|kerst)vakantie (\d{4}) zijn nog niet bekend\.$/, (m) => `The dates of the ${m[2]} ${VAKANTIE[m[1]]} are not yet known.`],
+    [/^De data van de (herfst|kerst|voorjaars|mei|zomer)vakantie (\d{4}) zijn nog niet bekend\.$/, (m) => `The dates of the ${m[2]} ${VAKANTIE[m[1]]} are not yet known.`],
     [/^Volgens de huidige verwachting blijft het op alle (\d+) vakantiedagen in de verwachting overwegend droog\.$/, (m) => `According to the current forecast, it will stay mostly dry on all ${m[1]} holiday days in the forecast.`],
     [/^Volgens de huidige verwachting (?:zijn|is) (\d+) van de (\d+) vakantiedagen in de verwachting overwegend droog\.$/, (m) => `According to the current forecast, ${m[1]} of the ${m[2]} holiday days in the forecast will be mostly dry.`],
     [/^Volgens de huidige verwachting valt er op alle (\d+) vakantiedagen in de verwachting in een groot deel van het land regen\.$/, (m) => `According to the current forecast, rain will fall across much of the country on all ${m[1]} holiday days in the forecast.`],

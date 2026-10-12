@@ -18,7 +18,7 @@ for(const cfg of SEIZOENSPAGINAS){
     for(const j of jaren)for(const p of cfg.perioden[j]){
       assert(/^\d{4}-\d{2}-\d{2}$/.test(p.van)&&/^\d{4}-\d{2}-\d{2}$/.test(p.tot)&&p.van<=p.tot,`${cfg.slug} ${j}: periode ${p.regio} is een geldige reeks datums`);
       assert(["noord","midden","zuid"].includes(p.regio),`${cfg.slug} ${j}: regio ${p.regio}`);
-      assert(R.dagenTussen(p.van,p.tot)<=20,`${cfg.slug} ${j}: periode ${p.regio} is een schoolvakantie, geen seizoen`);
+      assert(R.dagenTussen(p.van,p.tot)<=48,`${cfg.slug} ${j}: periode ${p.regio} is een schoolvakantie (hooguit zeven weken), geen seizoen`);
     }
   }else{
     assert(cfg.dagen.length>=1,`${cfg.slug}: minstens één dag`);
@@ -330,3 +330,45 @@ assert(htmlKerst.includes('<tr><th scope="row">Alle regio\'s</th><td class="jaar
 assert(!htmlKerst.includes('<th scope="row">Regio noord</th>'),"geen drie gelijke regels");
 assert(htmlHerfst.includes('<th scope="row">Regio noord</th>'),"verschillende data blijven per regio");
 console.log("Seizoenspagina kerstvakantie: overal tegelijk, aftellen zonder regio, jaargrens, sneeuw en vakantiedata kloppen.");
+
+/* ---------- Voorjaars-, mei- en zomervakantie (Rijksoverheid) en zie-ook-links ---------- */
+const vak=slug=>SEIZOENSPAGINAS.find(p=>p.slug===slug);
+const voorjaar=vak("voorjaarsvakantie"),mei=vak("meivakantie"),zomer=vak("zomervakantie");
+assert(voorjaar&&mei&&zomer,"drie nieuwe vakantiepagina's staan in de config");
+assert.deepEqual(voorjaar.perioden[2027].map(p=>[p.regio,p.van,p.tot]),[["noord","2027-02-20","2027-02-28"],["midden","2027-02-20","2027-02-28"],["zuid","2027-02-13","2027-02-21"]]);
+assert.deepEqual(voorjaar.perioden[2028].map(p=>[p.regio,p.van,p.tot]),[["noord","2028-02-19","2028-02-27"],["midden","2028-02-26","2028-03-05"],["zuid","2028-02-26","2028-03-05"]]);
+assert.deepEqual([...new Set(mei.perioden[2027].map(p=>p.van+"/"+p.tot))],["2027-04-24/2027-05-02"]);
+assert.deepEqual([...new Set(mei.perioden[2028].map(p=>p.van+"/"+p.tot))],["2028-04-29/2028-05-07"]);
+assert.deepEqual(zomer.perioden[2027].map(p=>[p.regio,p.van,p.tot]),[["noord","2027-07-10","2027-08-22"],["midden","2027-07-17","2027-08-29"],["zuid","2027-07-24","2027-09-05"]]);
+assert.deepEqual(zomer.perioden[2028].map(p=>[p.regio,p.van,p.tot]),[["noord","2028-07-15","2028-08-27"],["midden","2028-07-08","2028-08-20"],["zuid","2028-07-22","2028-09-03"]]);
+const at=(d,c)=>R.aftelTekst(R.toestand(d,c),c);
+assert.equal(at("2026-10-12",voorjaar),"Nog 124 dagen tot de voorjaarsvakantie in regio zuid.","zuid begint in 2027 een week eerder");
+assert.equal(at("2027-02-13",voorjaar),"Vandaag begint de voorjaarsvakantie in regio zuid. In regio noord en midden begint de vakantie op zaterdag 20 februari.");
+assert.equal(at("2027-02-20",voorjaar),"Het is overal voorjaarsvakantie.");
+assert.equal(at("2027-02-22",voorjaar),"Het is voorjaarsvakantie in regio noord en midden.");
+assert.equal(at("2026-10-12",mei),"Nog 194 dagen tot de meivakantie.","overal tegelijk: geen regio");
+assert.equal(at("2027-04-27",mei),"Het is meivakantie.");
+assert.equal(at("2027-07-10",zomer),"Vandaag begint de zomervakantie in regio noord. In regio midden begint de vakantie op zaterdag 17 juli.");
+assert.equal(at("2027-07-24",zomer),"Het is overal zomervakantie.");
+assert.equal(at("2027-08-25",zomer),"Het is zomervakantie in regio midden en zuid.");
+let tz=R.toestand("2027-08-01",zomer);
+assert.equal(tz.dagen.filter(d=>d.zichtbaar).length,7,"zes weken vakantie: alleen de zeven dagen binnen de verwachting");
+assert.equal(R.toestand("2027-09-06",zomer).jaar,2028,"na de laatste vakantiedag schuift de pagina door");
+assert(R.verwachtingUrl(voorjaar,R.toestand("2027-02-15",voorjaar)).includes("snowfall_sum"),"voorjaar vraagt sneeuw op");
+/* Zie-ook-links tussen de kerstpagina's (eigenaar, 12 oktober). */
+const zieOok=slug=>{const m=pagina(vak(slug),"2026-10-12").match(/<p class="seizoen-zieook">([\s\S]*?)<\/p>/);return m?m[1]:"";};
+assert.equal(zieOok("kerstvakantie"),'<span>Zie ook</span> <a href="/witte-kerst/">Witte kerst</a> · <a href="/oud-en-nieuw/">Oud en nieuw</a>');
+assert.equal(zieOok("witte-kerst"),'<span>Zie ook</span> <a href="/kerstvakantie/">Kerstvakantie</a> · <a href="/oud-en-nieuw/">Oud en nieuw</a>');
+assert.equal(zieOok("oud-en-nieuw"),'<span>Zie ook</span> <a href="/witte-kerst/">Witte kerst</a> · <a href="/kerstvakantie/">Kerstvakantie</a>');
+assert.equal(zieOok("herfstvakantie"),"","geen zie-ook waar het niet is ingesteld");
+assert.throws(()=>pagina({...vak("kerstvakantie"),zieOok:["bestaat-niet"]},"2026-10-12"),/onbekende seizoenspagina/);
+/* Voet: op 12 oktober staan herfst, kerst en witte kerst ook op mobiel in beeld,
+   oud en nieuw en voorjaar alleen op brede schermen, mei en zomer nergens in
+   beeld (wel in de HTML). */
+{
+  const {voetKlasse}=require("./seo-foundation.js");
+  const klasse=Object.fromEntries(SEIZOENSPAGINAS.map(p=>[p.slug,voetKlasse(p,"2026-10-12").trim()]));
+  assert.deepEqual(klasse,{"witte-kerst":"","oud-en-nieuw":"voet-later","herfstvakantie":"","kerstvakantie":"","voorjaarsvakantie":"voet-later","meivakantie":"voet-ver","zomervakantie":"voet-ver"});
+  assert.equal(voetKlasse(SEIZOENSPAGINAS.find(p=>p.slug==="zomervakantie"),"2027-07-01").trim(),"","in juli staat de zomervakantie vooraan");
+}
+console.log("Seizoenspagina's voorjaars-, mei- en zomervakantie: data, aftellen per regio, venster en doorschuiven kloppen; zie-ook-links tussen de kerstpagina's.");
