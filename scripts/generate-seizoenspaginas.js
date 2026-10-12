@@ -68,6 +68,13 @@ html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70
 
 /* Vakantiepagina's: de data per regio staan vast in de HTML, voor ieder jaar
    waarvan de vakantie nog niet voorbij is. */
+/* Valt de vakantie in alle regio's op dezelfde data (zoals de kerstvakantie),
+   dan één regel "Alle regio's" in plaats van drie gelijke. */
+function rijen(lijst){
+  const gelijk=lijst.every(p=>p.van===lijst[0].van&&p.tot===lijst[0].tot);
+  const regels=gelijk?[{kop:"Alle regio's",p:lijst[0]}]:lijst.map(p=>({kop:"Regio "+p.regio,p}));
+  return regels.map(({kop,p})=>`<tr><th scope="row">${esc(kop)}</th><td>${esc(runtime.periodeTekst(p.van,p.tot))}</td></tr>`).join("\n");
+}
 function periodenHtml(cfg,buildDag){
   if(!cfg.perioden)return "";
   const jaren=Object.keys(cfg.perioden).map(Number).sort((a,b)=>a-b).filter(j=>cfg.perioden[j].some(p=>p.tot>=buildDag));
@@ -75,7 +82,7 @@ function periodenHtml(cfg,buildDag){
 <div class="seizoen-dag seizoen-perioden" data-jaar="${j}">
 <h3>${esc(cfg.naam)} ${j}</h3>
 <table><thead><tr><th scope="col">Regio</th><th scope="col">Vakantie</th></tr></thead><tbody>
-${cfg.perioden[j].map(p=>`<tr><th scope="row">Regio ${esc(p.regio)}</th><td>${esc(runtime.periodeTekst(p.van,p.tot))}</td></tr>`).join("\n")}
+${rijen(cfg.perioden[j])}
 </tbody></table>
 </div>`).join("");
 }
