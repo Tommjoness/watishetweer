@@ -255,14 +255,30 @@
     return uit;
   }
 
+  /* Hoe de maan aan de hemel staat, voor de tekening op /maan/, overal op aarde:
+     - rand: positiehoek van de verlichte rand, gemeten vanaf het noorden via het
+       oosten (Meeus, Astronomical Algorithms, 48.5): rond 270° bij een wassende
+       maan (licht aan de westkant), rond 90° bij een afnemende;
+     - draai: 0 als de maan op zijn hoogste punt ten zuiden van het zenit staat
+       (noorden boven, zoals in Nederland), 180 als hij ten noorden ervan staat
+       (zuidelijk halfrond en een deel van de tropen): dan staat hij ondersteboven.
+     De tekening toont de maan zoals hij op zijn hoogste punt boven de
+     referentieplaats staat, met het zenit boven. */
+  function maanStand(nuMs, lat) {
+    const R = Math.PI / 180, D = nuMs / 86400000 + 2440587.5 - 2451545.0;
+    const z = zonPositie(D), m = maanPositie(D), dA = (z.ra - m.ra) * R;
+    const rand = (Math.atan2(Math.cos(z.dec * R) * Math.sin(dA), Math.sin(z.dec * R) * Math.cos(m.dec * R) - Math.cos(z.dec * R) * Math.sin(m.dec * R) * Math.cos(dA)) / R + 360) % 360;
+    return { rand, draai: lat >= m.dec ? 0 : 180 };
+  }
+
   /* Maan nu (de maan() van de app) en de komende hoofdfasen (Meeus). */
   function maanOverzicht(nuMs, lat, lon, tz) {
-    const nu = maan(new Date(nuMs));
+    const nu = maan(new Date(nuMs)), stand = maanStand(nuMs, lat);
     const datum = lokaleDatum(nuMs, tz);
     const middernacht = naarUTC(datum + "T00:00", tz);
     const vandaag = opOnder("maan", middernacht, lat, lon);
     return {
-      naam: nu.naam, ill: nu.ill, fase: nu.fase, datum,
+      naam: nu.naam, ill: nu.ill, fase: nu.fase, datum, rand: stand.rand, draai: stand.draai,
       op: vandaag.op != null ? naarLokaal(vandaag.op, tz) : null,
       onder: vandaag.onder != null ? naarLokaal(vandaag.onder, tz) : null,
       opMs: vandaag.op, onderMs: vandaag.onder,
@@ -270,7 +286,7 @@
     };
   }
 
-  const kern = { nachten, maanOverzicht, hoofdfasen, faseMoment, naarUTC, naarLokaal, lokaleDatum, lokaleTijd, DAGEN };
+  const kern = { nachten, maanOverzicht, maanStand, hoofdfasen, faseMoment, naarUTC, naarLokaal, lokaleDatum, lokaleTijd, DAGEN };
   if (typeof module === "object" && module.exports) module.exports = kern;
   wereld.WeatherNowNachtzichtKern = kern;
 })(typeof globalThis !== "undefined" ? globalThis : this);

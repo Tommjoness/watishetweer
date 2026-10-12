@@ -104,33 +104,97 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
     const tijden = [m.op ? "op " + m.op : null, m.onder ? "onder " + m.onder : null].filter(Boolean).join(", ");
     set("nz-maan-tijden", tijden ? "Vandaag in " + r.naam + ": " + tijden + "." : "Vandaag komt de maan in " + r.naam + " niet op of niet onder.");
     const lijst = document.getElementById("nz-maan-fasen");
-    if (lijst) lijst.innerHTML = m.fasen.map((f, i) => `<li>${maanSvg(FASE_STAND[f.naam].ill, FASE_STAND[f.naam].fase, 26, "f" + i)}<span><b>${esc(hoofdletter(f.naam))}</b> ${esc(datumTekst(f.datum))}, ${esc(f.tijd)}</span></li>`).join("");
+    if (lijst) {
+      lijst.innerHTML = m.fasen.map(f => `<li><span class="nz-maan-beeld"></span><span><b>${esc(hoofdletter(f.naam))}</b> ${esc(datumTekst(f.datum))}, ${esc(f.tijd)}</span></li>`).join("");
+      /* De fase-icoontjes: licht recht aan de westkant (wassend) of oostkant
+         (afnemend), in dezelfde stand als de grote maan. */
+      lijst.querySelectorAll(".nz-maan-beeld").forEach((el, i) => { const f = FASE_STAND[m.fasen[i].naam]; maanBeeld(el, f.ill, f.fase < 0.5 ? 270 : 90, m.draai, 26, "f" + i); });
+    }
     const schijf = document.getElementById("nz-maan-schijf");
-    if (schijf) schijf.innerHTML = maanSvg(m.ill, m.fase, 120, "nu");
+    if (schijf) maanBeeld(schijf, m.ill, m.rand, m.draai, 120, "nu");
+  }
+
+  /* De maan als foto (NASA, volle maan) met de echte belichting erover: per
+     beeldpunt de stand van de zon op de bolle maan, met de helderheidswet van
+     Lommel-Seeliger. Zo blijft de maan tot vlak bij de schaduwgrens helder en
+     is een smalle sikkel even smal als aan de hemel. De donkere kant krijgt een
+     vage, koele aardschijn. Lukt dat niet (geen canvas, foto niet geladen), dan
+     blijft de tekening hieronder staan. */
+  let foto = null;
+  function laadFoto() {
+    if (!foto) foto = new Promise((ok, mis) => { const img = new Image(); img.onload = () => ok(img); img.onerror = mis; img.src = "/maan.webp"; });
+    return foto;
+  }
+  /* rand: positiehoek van de verlichte rand met het noorden boven (270° = rechts,
+     90° = links); draai: 0 met het noorden boven, 180 ondersteboven (zie
+     maanStand in de kern). */
+  function maanBeeld(el, ill, rand, draai, maat, sleutel) {
+    const canvas = document.createElement("canvas"), ctx = canvas.getContext && canvas.getContext("2d");
+    const tekening = () => { el.innerHTML = maanSvg(ill, rand, draai, maat, sleutel); };
+    if (!ctx) { tekening(); return; }
+    const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1)), n = Math.round(maat * dpr);
+    canvas.width = canvas.height = n;
+    canvas.className = "nz-maan-svg";
+    canvas.style.width = canvas.style.height = maat + "px";
+    canvas.setAttribute("aria-hidden", "true");
+    canvas.setAttribute("data-rand", Math.round(rand));
+    canvas.setAttribute("data-draai", draai);
+    el.replaceChildren(canvas);
+    laadFoto().then(img => {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      /* De foto staat met het noorden boven; ondersteboven draait de hele maan. */
+      ctx.save(); ctx.translate(n / 2, n / 2); ctx.rotate(draai * Math.PI / 180); ctx.drawImage(img, -n / 2, -n / 2, n, n); ctx.restore();
+      const beeld = ctx.getImageData(0, 0, n, n), d = beeld.data;
+      /* Zonrichting: z naar de kijker, x naar rechts, y naar beneden. De verlichte
+         rand staat op positiehoek rand - draai (tegen de klok in vanaf boven). */
+      const e = Math.acos(Math.max(-1, Math.min(1, 1 - 2 * ill))), p = (rand - draai) * Math.PI / 180;
+      const sx = -Math.sin(p) * Math.sin(e), sy = -Math.cos(p) * Math.sin(e), sz = -Math.cos(e);
+      /* Aardschijn: sterker rond nieuwe maan. Op een lichte achtergrond en in de
+         kleine fase-icoontjes iets lichter, zodat de schijf geen zwarte vlek wordt. */
+      const inkt = (getComputedStyle(el).color.match(/\d+(\.\d+)?/g) || [0, 0, 0]).slice(0, 3).map(Number);
+      const lichtThema = (0.2126 * inkt[0] + 0.7152 * inkt[1] + 0.0722 * inkt[2]) / 255 < 0.5;
+      const aarde = (lichtThema ? 0.2 : maat < 40 ? 0.24 : 0.07) + 0.1 * (1 - ill) * (1 - ill), r = n / 2, rk = 1 / r;
+      for (let py = 0; py < n; py++) for (let px = 0; px < n; px++) {
+        const x = (px + 0.5 - r) / r, y = (py + 0.5 - r) / r, rr = x * x + y * y, i = (py * n + px) * 4;
+        if (rr >= 1 + rk) { d[i + 3] = 0; continue; }
+        const nz = Math.sqrt(Math.max(0, 1 - rr)), mu0 = x * sx + y * sy + nz * sz;
+        /* Lommel-Seeliger, met een zachte overgang van één beeldpunt breed. */
+        const dag = mu0 > 0 ? Math.min(1, 2 * mu0 / (mu0 + Math.max(nz, 0.02))) : 0;
+        const zacht = Math.max(0, Math.min(1, (mu0 + rk) / (2 * rk)));
+        const licht = Math.pow(dag, 0.75) * zacht, a = (1 - licht) * aarde, l = licht * 1.12;
+        d[i] = d[i] * (l + a * 0.92);
+        d[i + 1] = d[i + 1] * (l * 0.99 + a * 0.98);
+        d[i + 2] = d[i + 2] * (l * 0.95 + a * 1.08);
+        d[i + 3] = 255 * Math.max(0, Math.min(1, (1 - Math.sqrt(rr)) / rk + 0.5));
+      }
+      ctx.putImageData(beeld, 0, 0);
+    }).catch(tekening);
   }
 
   /* De maan als tekening: verlichte kant met randverduistering, de grote
      maanzeeën op hun echte plek, een zachte schaduwgrens en een vaag zichtbare
-     donkere kant (aardschijn). Op het noordelijk halfrond staat het licht bij
-     een wassende maan rechts en bij een afnemende maan links. */
+     donkere kant (aardschijn). Alleen nog als vangnet als de foto niet laadt. */
   const FASE_STAND = { "nieuwe maan": { ill: 0, fase: 0 }, "eerste kwartier": { ill: 0.5, fase: 0.25 }, "volle maan": { ill: 1, fase: 0.5 }, "laatste kwartier": { ill: 0.5, fase: 0.75 } };
   /* Maanzeeën in eenheden van de straal (x naar rechts, y naar beneden), zoals vanaf het noordelijk halfrond gezien. */
   const ZEEEN = [[-0.62, 0.02, 0.22, 0.38], [-0.52, -0.22, 0.14, 0.14], [-0.33, -0.36, 0.26, 0.2], [-0.12, -0.2, 0.1, 0.08], [0.13, -0.4, 0.15, 0.13], [0.3, -0.1, 0.18, 0.15], [0.17, 0.06, 0.09, 0.07], [0.66, -0.3, 0.09, 0.08], [0.55, 0.16, 0.11, 0.16], [0.34, 0.31, 0.08, 0.07], [-0.15, 0.36, 0.16, 0.12], [-0.42, 0.42, 0.09, 0.08], [-0.3, 0.16, 0.1, 0.09]];
-  function maanSvg(ill, fase, maat, sleutel) {
-    const c = 50, r = 44, id = "nzm-" + sleutel, wassend = fase < 0.5;
-    const zeeen = ZEEEN.map(([x, y, rx, ry]) => `<ellipse cx="${(c + x * r).toFixed(1)}" cy="${(c + y * r).toFixed(1)}" rx="${(rx * r).toFixed(1)}" ry="${(ry * r).toFixed(1)}"/>`).join("");
+  function maanSvg(ill, rand, draai, maat, sleutel) {
+    const c = 50, r = 44, id = "nzm-" + sleutel;
+    /* De verlichte vorm wordt rechts getekend (positiehoek 270°) en dan naar zijn
+       echte stand gedraaid; de maanzeeën draaien mee met de hele maan. */
+    const zeeen = `<g transform="rotate(${draai} ${c} ${c})">` + ZEEEN.map(([x, y, rx, ry]) => `<ellipse cx="${(c + x * r).toFixed(1)}" cy="${(c + y * r).toFixed(1)}" rx="${(rx * r).toFixed(1)}" ry="${(ry * r).toFixed(1)}"/>`).join("") + "</g>";
     let licht = "";
     if (ill >= 0.02) {
       let vorm;
       if (ill > 0.98) vorm = `<circle cx="${c}" cy="${c}" r="${r}" fill="#fff"/>`;
       else {
-        const rx = r * Math.abs(1 - 2 * ill), buiten = wassend ? 1 : 0, binnen = (ill > 0.5) === wassend ? 1 : 0;
-        vorm = `<path fill="#fff" filter="url(#${id}-zacht)" d="M${c} ${c - r} A${r} ${r} 0 0 ${buiten} ${c} ${c + r} A${rx.toFixed(2)} ${r} 0 0 ${binnen} ${c} ${c - r}Z"/>`;
+        const rx = r * Math.abs(1 - 2 * ill), binnen = ill > 0.5 ? 1 : 0, stand = (((270 - (rand - draai)) % 360) + 360) % 360;
+        vorm = `<path fill="#fff" filter="url(#${id}-zacht)" transform="rotate(${Math.round(stand)} ${c} ${c})" d="M${c} ${c - r} A${r} ${r} 0 0 1 ${c} ${c + r} A${rx.toFixed(2)} ${r} 0 0 ${binnen} ${c} ${c - r}Z"/>`;
       }
       licht = `<mask id="${id}-licht">${vorm}</mask><g mask="url(#${id}-licht)"><circle cx="${c}" cy="${c}" r="${r}" fill="url(#${id}-dag)"/><g fill="#a99f86" opacity=".38" filter="url(#${id}-vaag)">${zeeen}</g></g>`;
     }
     return `<svg class="nz-maan-svg" viewBox="0 0 100 100" width="${maat}" height="${maat}" aria-hidden="true" focusable="false"><defs>`
-      + `<radialGradient id="${id}-dag" cx="${wassend ? 58 : 42}%" cy="42%" r="62%"><stop offset="0" stop-color="#fbf8ee"/><stop offset=".7" stop-color="#ece5d2"/><stop offset="1" stop-color="#d3cab3"/></radialGradient>`
+      + `<radialGradient id="${id}-dag" cx="50%" cy="42%" r="62%"><stop offset="0" stop-color="#fbf8ee"/><stop offset=".7" stop-color="#ece5d2"/><stop offset="1" stop-color="#d3cab3"/></radialGradient>`
       + `<radialGradient id="${id}-nacht" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#3a4541"/><stop offset="1" stop-color="#262e2b"/></radialGradient>`
       + `<filter id="${id}-zacht" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${maat < 40 ? 0.4 : 1.1}"/></filter>`
       + `<filter id="${id}-vaag" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${maat < 40 ? 1.2 : 2.2}"/></filter>`

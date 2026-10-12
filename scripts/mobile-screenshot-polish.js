@@ -64,7 +64,9 @@ function maanFaseUitBeschrijving(tekst){
   const hoek=Math.acos(begrens(1-2*ill,-1,1))/(2*Math.PI);
   return /afnemende|laatste/.test(naam)?1-hoek:hoek;
 }
-function maanFaseSvgV2(fase,size){
+/* Op het zuidelijk halfrond staat de maan ondersteboven: daar zit het licht van
+   een wassende maan links. zuid draait het icoon daarom een halve slag. */
+function maanFaseSvgV2(fase,size,zuid){
   const f=getal(fase),s=Math.max(8,Math.round(getal(size)||12));
   if(f===null)return "";
   const p=((f%1)+1)%1,r=9,boven=12-r,onder=12+r,cos=Math.cos(2*Math.PI*p),ill=(1-cos)/2;
@@ -80,7 +82,8 @@ function maanFaseSvgV2(fase,size){
       vorm='<path class="maan-licht" d="M 12 '+boven+' A '+r+' '+r+' 0 0 '+buiten+' 12 '+onder+' A '+rx+' '+r+' 0 0 '+binnen+' 12 '+boven+' Z" fill="currentColor"/>';
     }
   }
-  return '<svg class="maan-fase-svg maan-fase-svg-v2" data-fase="'+p.toFixed(4)+'" viewBox="0 0 24 24" width="'+s+'" height="'+s+'" aria-hidden="true" focusable="false">'+schaduw+vorm+'</svg>';
+  if(zuid&&vorm)vorm='<g transform="rotate(180 12 12)">'+vorm+'</g>';
+  return '<svg class="maan-fase-svg maan-fase-svg-v2" data-fase="'+p.toFixed(4)+'"'+(zuid?' data-halfrond="zuid"':'')+' viewBox="0 0 24 24" width="'+s+'" height="'+s+'" aria-hidden="true" focusable="false">'+schaduw+vorm+'</svg>';
 }
 function verbeterMaanElement(el,size,beschrijving){
   if(!el)return false;
@@ -88,7 +91,8 @@ function verbeterMaanElement(el,size,beschrijving){
   const dataFase=getal(el.getAttribute("data-maan-fase"));
   const fase=dataFase!==null&&dataFase>=0&&dataFase<=1?dataFase:maanFaseUitBeschrijving(tekst);
   if(fase===null)return false;
-  const svg=maanFaseSvgV2(fase,size);if(!svg)return false;
+  const lat=typeof S!=="undefined"&&S?getal(S.lat):null;
+  const svg=maanFaseSvgV2(fase,size,lat!==null&&lat<0);if(!svg)return false;
   const bestaand=el.querySelector(".maan-fase-svg");
   if(bestaand)bestaand.outerHTML=svg;
   else{
