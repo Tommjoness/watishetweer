@@ -132,6 +132,31 @@ function leesbareGrootte(svg,grootte){
 /* Vloeiende lijn door exact dezelfde datapunten (monotone kubische interpolatie,
    Fritsch-Carlson). Tussen twee punten blijft de curve binnen hun waarden: er
    ontstaan geen verzonnen pieken of dalen, en een vlak stuk blijft vlak. */
+/* Kleurronde (akkoord eigenaar 12 oktober): het vlak onder de lijn kleurt per
+   hoogte mee met de temperatuur die daar op de as staat, op de gedeelde
+   temperatuurschaal van de app, en valt naar onderen weg. De kleur voor licht
+   en donker staat als variabele op iedere stop; CSS kiest, zodat een
+   themawissel direct doorwerkt. Zonder schaal of bruikbare as blijft het
+   bekende inktverloop. */
+function vulTemperatuurVerloop(verloop,g,top,bottom){
+  const ya=Number(g&&typeof g.y==="function"?g.y(0):NaN),yb=Number(g&&typeof g.y==="function"?g.y(10):NaN);
+  const schaal=typeof temperatuurKleur==="function"?temperatuurKleur:null;
+  if(!schaal||!Number.isFinite(ya)||!Number.isFinite(yb)||ya===yb||!(bottom>top)){
+    [["0",".13"],["1","0"]].forEach(([offset,dekking])=>{const stop=document.createElementNS(SVG_NS,"stop");stop.setAttribute("offset",offset);stop.setAttribute("stop-color","var(--ink)");stop.setAttribute("stop-opacity",dekking);verloop.appendChild(stop);});
+    return false;
+  }
+  verloop.setAttribute("gradientUnits","userSpaceOnUse");
+  verloop.setAttribute("x1","0");verloop.setAttribute("x2","0");verloop.setAttribute("y1",String(top));verloop.setAttribute("y2",String(bottom));
+  for(let k=0;k<=10;k++){
+    const f=k/10,y=top+f*(bottom-top),t=(y-ya)*10/(yb-ya);
+    const stop=document.createElementNS(SVG_NS,"stop");
+    stop.setAttribute("offset",String(f));stop.setAttribute("data-temp-stop",String(Math.round(t*10)/10));
+    stop.setAttribute("style",`--licht:${schaal(t,"licht")};--donker:${schaal(t,"donker")};--dekking:${(0.36*(1-f)+0.04).toFixed(3)}`);
+    verloop.appendChild(stop);
+  }
+  return true;
+}
+
 function monotoonPad(punten){
   const P=(Array.isArray(punten)?punten:[]).filter(p=>Array.isArray(p)&&Number.isFinite(p[0])&&Number.isFinite(p[1]));
   if(P.length<2)return "";
@@ -526,8 +551,8 @@ function bouwMobieleTemperatuurRij(){
     lijn.replaceWith(pad);
   });
 
-  /* Zacht vlak onder de lijn: inktkleur die naar onderen wegvalt. Zo werkt het
-     in licht, donker en rood nachtlicht zonder eigen kleur. */
+  /* Zacht vlak onder de lijn in temperatuurkleur, dat naar onderen wegvalt
+     (zie vulTemperatuurVerloop). */
   const hoofdlijn=svg.querySelector("path[data-mobile-smooth-line]");
   if(hoofdlijn){
     const punten=String(hoofdlijn.getAttribute("data-mobile-line-points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)).filter(p=>p.length===2&&p.every(Number.isFinite));
@@ -535,7 +560,7 @@ function bouwMobieleTemperatuurRij(){
       const defs=document.createElementNS(SVG_NS,"defs");defs.setAttribute("data-mobile-temp-area","defs");
       const verloop=document.createElementNS(SVG_NS,"linearGradient");
       verloop.setAttribute("id","mobielTempVlak");verloop.setAttribute("x1","0");verloop.setAttribute("y1","0");verloop.setAttribute("x2","0");verloop.setAttribute("y2","1");
-      [["0",".13"],["1","0"]].forEach(([offset,dekking])=>{const stop=document.createElementNS(SVG_NS,"stop");stop.setAttribute("offset",offset);stop.setAttribute("stop-color",ink);stop.setAttribute("stop-opacity",dekking);verloop.appendChild(stop);});
+      vulTemperatuurVerloop(verloop,g,top,bottom);
       defs.appendChild(verloop);svg.insertBefore(defs,svg.firstChild);
       const vlak=document.createElementNS(SVG_NS,"path");
       vlak.setAttribute("d",hoofdlijn.getAttribute("d")+` L${punten[punten.length-1][0]},${bottom} L${punten[0][0]},${bottom} Z`);
@@ -906,13 +931,13 @@ function bouwDesktopGrafiekAccenten(){
   });
   svg.querySelectorAll("text[data-desktop-base-y]").forEach(el=>{el.setAttribute("y",el.getAttribute("data-desktop-base-y"));el.removeAttribute("data-desktop-base-y");});
 
-  /* 1. Zacht vlak onder ieder lijnstuk, in inktkleur die naar onderen wegvalt. */
+  /* 1. Zacht vlak onder ieder lijnstuk, in temperatuurkleur die naar onderen wegvalt. */
   const lijnen=[...svg.querySelectorAll("polyline")].filter(el=>!el.closest("#scrub"));
   if(lijnen.length){
     const defs=document.createElementNS(SVG_NS,"defs");defs.setAttribute("data-desktop-temp-area","defs");
     const verloop=document.createElementNS(SVG_NS,"linearGradient");
     verloop.setAttribute("id","desktopTempVlak");verloop.setAttribute("x1","0");verloop.setAttribute("y1","0");verloop.setAttribute("x2","0");verloop.setAttribute("y2","1");
-    [["0",".13"],["1","0"]].forEach(([offset,dekking])=>{const stop=document.createElementNS(SVG_NS,"stop");stop.setAttribute("offset",offset);stop.setAttribute("stop-color",ink);stop.setAttribute("stop-opacity",dekking);verloop.appendChild(stop);});
+    vulTemperatuurVerloop(verloop,g,top,bottom);
     defs.appendChild(verloop);svg.insertBefore(defs,svg.firstChild);
     lijnen.forEach(lijn=>{
       const punten=String(lijn.getAttribute("points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)).filter(p=>p.length===2&&p.every(Number.isFinite));
