@@ -9,7 +9,9 @@
    4. de stand volgt de breedte: rond de evenaar (Quito) draait hij mee met de
       maan die ten noorden of ten zuiden van het zenit staat;
    5. laadt de foto niet, dan blijft er een tekening staan;
-   6. het maanicoon van de app staat op het zuidelijk halfrond ondersteboven. */
+   6. het maanicoon van de app staat op het zuidelijk halfrond ondersteboven;
+   7. op- en ondergang gelden voor de eigen plaats uit de app (alleen
+      Nederland), anders voor De Bilt. */
 
 const assert = require("assert");
 const fs = require("fs");
@@ -125,6 +127,33 @@ server.listen(0, async () => {
     assert(zuidIcoon.includes('<g transform="rotate(180 12 12)">') && zuidIcoon.includes('data-halfrond="zuid"'), "zuidelijk icoon een halve slag gedraaid");
     assert(volZuid.includes("rotate(180"), "ook de volle maan krijgt dezelfde stand");
     console.log("Maanbeeld: app-icoon staat op het zuidelijk halfrond ondersteboven.");
+
+    /* Eigen plaats (eigenaar, 12 oktober): de plaats uit de app (zelfde
+       browseropslag) bepaalt op- en ondergang, alleen in Nederland; anders De Bilt. */
+    const iso = "2026-10-12T17:30:00+02:00";
+    for (const [label, plaats, naam, lat, lon] of [
+      ["Almere uit de app", { lat: 52.351, lon: 5.265, label: "Almere", land: "NL" }, "Almere", 52.351, 5.265],
+      ["plaats met provincie", { lat: 50.851, lon: 5.691, label: "Maastricht, Limburg", land: "NL" }, "Maastricht", 50.851, 5.691],
+      ["buitenland", { lat: -33.87, lon: 151.21, label: "Sydney", land: "AU" }, "De Bilt", 52.1009, 5.1801],
+      ["geen plaats", null, "De Bilt", 52.1009, 5.1801],
+      ["kapotte opslag", "{kapot", "De Bilt", 52.1009, 5.1801]
+    ]) {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      const fouten = []; page.on("pageerror", e => fouten.push(e.message));
+      await page.addInitScript(p => { try { localStorage.clear(); if (p !== null) localStorage.setItem("weerbriefing.plaats", typeof p === "string" ? p : JSON.stringify(p)); } catch (e) { } }, plaats);
+      await page.clock.setFixedTime(new Date(iso));
+      await page.goto(`http://127.0.0.1:${port}/maan/`, { waitUntil: "load" });
+      await page.waitForFunction(() => /Vandaag/.test((document.getElementById("nz-maan-tijden") || {}).textContent || ""), null, { timeout: 15000 });
+      const m = await page.evaluate(() => ({ tijden: document.getElementById("nz-maan-tijden").textContent, plaats: document.getElementById("nz-maan-plaats").textContent }));
+      const ref = K.maanOverzicht(Date.parse(iso), lat, lon, "Europe/Amsterdam");
+      const verwacht = `Vandaag in ${naam}: ` + [ref.op ? "op " + ref.op : null, ref.onder ? "onder " + ref.onder : null].filter(Boolean).join(", ") + ".";
+      assert.strictEqual(m.tijden, verwacht, `${label}: maantijden`);
+      assert.strictEqual(m.plaats, naam, `${label}: kleine letters noemen de plaats`);
+      assert.deepStrictEqual(fouten, [], `${label}: scriptfouten`);
+      await ctx.close();
+    }
+    console.log("Maanbeeld: op- en ondergang voor de eigen plaats uit de app (alleen Nederland), anders De Bilt.");
   } finally {
     await browser.close();
     server.close();

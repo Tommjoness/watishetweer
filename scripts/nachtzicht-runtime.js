@@ -97,12 +97,26 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
   }
 
   /* ---------- maan ---------- */
+  /* Eigen plaats (eigenaar, 12 oktober): heeft de bezoeker in de app een plaats
+     in Nederland gekozen, dan gelden op- en ondergang voor die plaats; anders
+     voor het referentiepunt De Bilt. De plaats staat al in de eigen browser
+     (dezelfde sleutel als de app); er gaat niets naar een server. Alleen
+     Nederland, omdat de tijden op deze pagina in Nederlandse tijd staan. */
+  function eigenPlaats() {
+    try {
+      const p = JSON.parse(localStorage.getItem("weerbriefing.plaats") || "null");
+      const lat = Number(p && p.lat), lon = Number(p && p.lon), naam = String((p && p.label) || "").split(",")[0].trim();
+      if (!p || p.land !== "NL" || !naam || !(lat > 50.7 && lat < 53.7 && lon > 3.3 && lon < 7.3)) return null;
+      return { naam, lat, lon };
+    } catch (e) { return null; }
+  }
   function maanPagina() {
-    const r = cfg.referentie, m = K.maanOverzicht(Date.now(), r.lat, r.lon, TZ);
+    const r = eigenPlaats() || cfg.referentie, m = K.maanOverzicht(Date.now(), r.lat, r.lon, TZ);
     const set = (id, tekst) => { const el = document.getElementById(id); if (el) el.textContent = tekst; };
     set("nz-maan-naam", hoofdletter(m.naam) + ", " + procent(m.ill * 100) + " verlicht");
     const tijden = [m.op ? "op " + m.op : null, m.onder ? "onder " + m.onder : null].filter(Boolean).join(", ");
     set("nz-maan-tijden", tijden ? "Vandaag in " + r.naam + ": " + tijden + "." : "Vandaag komt de maan in " + r.naam + " niet op of niet onder.");
+    set("nz-maan-plaats", r.naam);
     const lijst = document.getElementById("nz-maan-fasen");
     if (lijst) {
       lijst.innerHTML = m.fasen.map(f => `<li><span class="nz-maan-beeld"></span><span><b>${esc(hoofdletter(f.naam))}</b> ${esc(datumTekst(f.datum))}, ${esc(f.tijd)}</span></li>`).join("");

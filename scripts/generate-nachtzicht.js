@@ -195,7 +195,7 @@ function maanPagina(kern, nuMs) {
 </div></div>
 <h2>De komende fasen</h2>
 <ul id="nz-maan-fasen"></ul>
-<p class="klein">Tijden in Nederlandse tijd. Op- en ondergang gelden voor ${esc(MAAN_REFERENTIE.naam)}; elders in Nederland scheelt het hooguit enkele minuten. De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem op zijn hoogste punt boven ${esc(MAAN_REFERENTIE.naam)} ziet; op het zuidelijk halfrond staat hij ondersteboven, met het licht van een wassende maan links. Maanfoto: NASA's Scientific Visualization Studio.</p>
+<p class="klein">Tijden in Nederlandse tijd. Op- en ondergang gelden voor <span id="nz-maan-plaats">${esc(MAAN_REFERENTIE.naam)}</span>; elders in Nederland scheelt het hooguit enkele minuten. De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem op zijn hoogste punt boven ${esc(MAAN_REFERENTIE.naam)} ziet; op het zuidelijk halfrond staat hij ondersteboven, met het licht van een wassende maan links. Maanfoto: NASA's Scientific Visualization Studio.</p>
 <h2>Sterren kijken</h2>
 <p>Waar het donker is en hoe de komende nachten worden, staat op <a href="${BASIS}">Sterren kijken in Nederland</a>.</p>
 ` + staart({ soort: "maan", tz: TIJDZONE, referentie: MAAN_REFERENTIE }, kern);
