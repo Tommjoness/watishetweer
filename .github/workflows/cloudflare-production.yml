@@ -3,6 +3,11 @@ name: Cloudflare production
 on:
   push:
     branches: [main]
+  # Iedere nacht dezelfde main opnieuw bouwen: seizoenspagina's (jaartal in titel
+  # en kop), de seizoenslinks in de voet en de eerste weergave van /maan/ worden
+  # op de bouwdag vastgezet. 02:45 UTC = 04:45 CEST / 03:45 CET.
+  schedule:
+    - cron: "45 2 * * *"
   workflow_dispatch:
 
 permissions:

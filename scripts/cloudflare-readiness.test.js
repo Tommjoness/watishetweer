@@ -108,6 +108,10 @@ assert.ok(kandidaatDeploy < kandidaatReady && kandidaatReady < kandidaatSmoke &&
   "releasekandidaat moet volledig gesmoked zijn vóórdat production wordt gedeployed");
 assert.ok(/--branch=release-candidate\b/.test(productie), "releasekandidaat gaat naar een vaste preview-branch, nooit naar main");
 assert.equal((productie.match(/--branch=main\b/g) || []).length, 1, "er is precies één productiedeploy");
+/* Nachtelijke herbouw van dezelfde main: datumafhankelijke HTML (seizoenspagina's,
+   voetlinks, /maan/) mag niet achterlopen als er een tijd niets wordt gemerged. */
+assert.match(productie, /\n  schedule:\n    - cron: "45 2 \* \* \*"\n/, "productiedeploy draait iedere nacht om 02:45 UTC");
+assert.match(productie, /\n  push:\n    branches: \[main\]\n/, "productiedeploy blijft ook na iedere merge naar main draaien");
 
 for (const script of ["scripts/platform-output-cleanup.js", "scripts/cloudflare-output.js", "scripts/cloudflare-preview-smoke.js", "scripts/cloudflare-edge-cache-smoke.js"]) {
   assert.ok(fs.existsSync(path.join(root, script)), `${script} ontbreekt`);

@@ -14,6 +14,14 @@ const analyticsWorkflow=lees(".github/workflows/cloudflare-web-analytics.yml");
 const production=lees(".github/workflows/cloudflare-production.yml");
 const packageJson=JSON.parse(lees("package.json"));
 
+/* node_modules hoort nooit in git, ook niet als symbolische link: "node_modules/"
+   in .gitignore negeert alleen mappen, waardoor een link ooit wél meeging. */
+assert(lees(".gitignore").split(/\r?\n/).includes("node_modules"),".gitignore moet node_modules zonder schuine streep negeren (map én link)");
+{
+  const r=require("child_process").spawnSync("git",["ls-files","--","node_modules"],{cwd:root,encoding:"utf8"});
+  if(r.status===0)assert.equal(r.stdout.trim(),"","node_modules staat in git");
+}
+
 assert(readme.includes("docs/overdracht-runbook.md"),"README moet naar het overdrachtsrunbook verwijzen");
 for(const onderdeel of [
   "## Product en eigendom",

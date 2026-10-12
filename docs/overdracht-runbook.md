@@ -127,6 +127,8 @@ Werk via een branch en pull request. De normale route is:
 6. na merge bouwt `Cloudflare production` exact de `main`-SHA, rolt die eerst uit als releasekandidaat (Pages-preview, branch `release-candidate`) en zet hetzelfde artifact pas na een groene readiness en smoke op production;
 7. `WeatherNow production smoke` moet de exacte live SHA, routes, API's en wereldmatrix groen bevestigen.
 
+Daarnaast draait `Cloudflare production` iedere nacht om 02:45 UTC (04:45 CEST, 03:45 CET) op de huidige `main`. Er gaat dan geen nieuwe code live; de nachtelijke run bouwt alleen de datumafhankelijke HTML opnieuw (jaartal in titel en kop van de seizoenspagina's, de eerstvolgende seizoenslinks in de voet, de eerste weergave van `/maan/`). Dezelfde releasekandidaat-, readiness- en smokestappen gelden; faalt er een, dan blijft de vorige productieversie staan. GitHub mailt een mislukte geplande run naar het account dat de planning het laatst heeft gewijzigd. De uurlijkse `WeatherNow production smoke` (minuut 17) controleert het resultaat.
+
 Een lokaal ontbrekende Chromium/WebKit-installatie is geen productfout. Gebruik in dat geval de vaste Playwright-container uit de GitHub-workflows; merge nooit op basis van alleen een lokaal overgeslagen browserdeel.
 
 ### Cloudflare Web Analytics
