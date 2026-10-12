@@ -97,26 +97,37 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
   }
 
   /* ---------- maan ---------- */
-  /* Eigen plaats (eigenaar, 12 oktober): heeft de bezoeker in de app een plaats
-     in Nederland gekozen, dan gelden op- en ondergang voor die plaats; anders
-     voor het referentiepunt De Bilt. De plaats staat al in de eigen browser
-     (dezelfde sleutel als de app); er gaat niets naar een server. Alleen
-     Nederland, omdat de tijden op deze pagina in Nederlandse tijd staan. */
+  /* Eigen plaats (eigenaar, 12 oktober, wereldwijd): heeft de bezoeker in de app
+     een plaats gekozen, dan gelden stand, op- en ondergang en tijden voor die
+     plaats; anders voor het referentiepunt De Bilt. De plaats en de tijdzone
+     staan al in de eigen browser (dezelfde opslag als de app); er gaat niets
+     naar een server. Buiten Nederland is de tijdzone nodig: die komt uit de
+     bewaarde verwachting van dezelfde plaats; ontbreekt die, dan De Bilt. */
+  function geldigeZone(tz) { try { new Intl.DateTimeFormat("nl-NL", { timeZone: tz }); return true; } catch (e) { return false; } }
   function eigenPlaats() {
     try {
       const p = JSON.parse(localStorage.getItem("weerbriefing.plaats") || "null");
       const lat = Number(p && p.lat), lon = Number(p && p.lon), naam = String((p && p.label) || "").split(",")[0].trim();
-      if (!p || p.land !== "NL" || !naam || !(lat > 50.7 && lat < 53.7 && lon > 3.3 && lon < 7.3)) return null;
-      return { naam, lat, lon };
+      if (!p || !naam || !(Math.abs(lat) <= 90 && Math.abs(lon) <= 180)) return null;
+      if (p.land === "NL") return { naam, lat, lon, tz: "Europe/Amsterdam", nl: true };
+      const d = JSON.parse(localStorage.getItem("weerbriefing.data") || "null");
+      const tz = d && d.d && d.d.timezone;
+      if (!d || Math.abs(Number(d.lat) - lat) > 0.02 || Math.abs(Number(d.lon) - lon) > 0.02 || typeof tz !== "string" || !geldigeZone(tz)) return null;
+      return { naam, lat, lon, tz, nl: false };
     } catch (e) { return null; }
   }
   function maanPagina() {
-    const r = eigenPlaats() || cfg.referentie, m = K.maanOverzicht(Date.now(), r.lat, r.lon, TZ);
+    const eigen = eigenPlaats(), r = eigen || { ...cfg.referentie, tz: TZ, nl: true };
+    const m = K.maanOverzicht(Date.now(), r.lat, r.lon, r.tz);
     const set = (id, tekst) => { const el = document.getElementById(id); if (el) el.textContent = tekst; };
     set("nz-maan-naam", hoofdletter(m.naam) + ", " + procent(m.ill * 100) + " verlicht");
     const tijden = [m.op ? "op " + m.op : null, m.onder ? "onder " + m.onder : null].filter(Boolean).join(", ");
     set("nz-maan-tijden", tijden ? "Vandaag in " + r.naam + ": " + tijden + "." : "Vandaag komt de maan in " + r.naam + " niet op of niet onder.");
     set("nz-maan-plaats", r.naam);
+    set("nz-maan-standplaats", r.naam);
+    set("nz-maan-tijdzone", r.nl ? "Nederlandse tijd" : "plaatselijke tijd van " + r.naam);
+    const elders = document.getElementById("nz-maan-elders");
+    if (elders) elders.hidden = !r.nl;
     const lijst = document.getElementById("nz-maan-fasen");
     if (lijst) {
       lijst.innerHTML = m.fasen.map(f => `<li><span class="nz-maan-beeld"></span><span><b>${esc(hoofdletter(f.naam))}</b> ${esc(datumTekst(f.datum))}, ${esc(f.tijd)}</span></li>`).join("");

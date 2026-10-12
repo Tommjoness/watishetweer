@@ -259,26 +259,46 @@
      - rand: positiehoek van de verlichte rand, gemeten vanaf het noorden via het
        oosten (Meeus, Astronomical Algorithms, 48.5): rond 270° bij een wassende
        maan (licht aan de westkant), rond 90° bij een afnemende;
-     - draai: 0 als de maan op zijn hoogste punt ten zuiden van het zenit staat
-       (noorden boven, zoals in Nederland), 180 als hij ten noorden ervan staat
-       (zuidelijk halfrond en een deel van de tropen): dan staat hij ondersteboven.
-     De tekening toont de maan zoals hij op zijn hoogste punt boven de
-     referentieplaats staat, met het zenit boven. */
-  function maanStand(nuMs, lat) {
-    const R = Math.PI / 180, D = nuMs / 86400000 + 2440587.5 - 2451545.0;
+     - draai: de parallactische hoek q (Meeus 14.1): hoe ver het noorden van de
+       maan van "boven" (het zenit) af gedraaid staat. In Nederland is die klein
+       rond het hoogste punt; op het zuidelijk halfrond rond 180° (ondersteboven);
+       rond de evenaar ligt een sikkel na zonsondergang op zijn kant.
+     Met lon rekent de stand op het moment dat je de maan ziet: nu als hij boven
+     de horizon staat, anders het eerstvolgende moment binnen een etmaal dat hij
+     in het donker (zon onder -6°) minstens 10° (of anders 3°) hoog staat, en
+     anders zijn hoogste punt in dat etmaal. Zonder lon: de stand op zijn hoogste punt
+     (alleen 0 of 180). */
+  function hemelHoogte(tMs, welk, lat, lon) {
+    const D = tMs / 86400000 + 2440587.5 - 2451545.0;
+    return hoogteVan(welk === "maan" ? maanPositie(D) : zonPositie(D), D, lat, lon);
+  }
+  function zichtMoment(nuMs, lat, lon) {
+    if (hemelHoogte(nuMs, "maan", lat, lon) >= 5) return nuMs;
+    const stap = 600000, eind = nuMs + 86400000;
+    for (const minimum of [10, 3]) for (let t = nuMs; t <= eind; t += stap) if (hemelHoogte(t, "maan", lat, lon) >= minimum && hemelHoogte(t, "zon", lat, lon) <= -6) return t;
+    let best = nuMs, hoogste = -91;
+    for (let t = nuMs; t <= eind; t += stap) { const h = hemelHoogte(t, "maan", lat, lon); if (h > hoogste) { hoogste = h; best = t; } }
+    return best;
+  }
+  function maanStand(nuMs, lat, lon) {
+    const R = Math.PI / 180, moment = lon == null ? nuMs : zichtMoment(nuMs, lat, lon);
+    const D = moment / 86400000 + 2440587.5 - 2451545.0;
     const z = zonPositie(D), m = maanPositie(D), dA = (z.ra - m.ra) * R;
     const rand = (Math.atan2(Math.cos(z.dec * R) * Math.sin(dA), Math.sin(z.dec * R) * Math.cos(m.dec * R) - Math.cos(z.dec * R) * Math.sin(m.dec * R) * Math.cos(dA)) / R + 360) % 360;
-    return { rand, draai: lat >= m.dec ? 0 : 180 };
+    if (lon == null) return { rand, draai: lat >= m.dec ? 0 : 180, moment };
+    const H = ((gmstVan(D) + lon - m.ra) % 360 + 360) % 360 * R;
+    const q = Math.atan2(Math.sin(H), Math.tan(lat * R) * Math.cos(m.dec * R) - Math.sin(m.dec * R) * Math.cos(H)) / R;
+    return { rand, draai: Math.round(((q % 360) + 360) % 360 * 10) / 10, moment };
   }
 
   /* Maan nu (de maan() van de app) en de komende hoofdfasen (Meeus). */
   function maanOverzicht(nuMs, lat, lon, tz) {
-    const nu = maan(new Date(nuMs)), stand = maanStand(nuMs, lat);
+    const nu = maan(new Date(nuMs)), stand = maanStand(nuMs, lat, lon);
     const datum = lokaleDatum(nuMs, tz);
     const middernacht = naarUTC(datum + "T00:00", tz);
     const vandaag = opOnder("maan", middernacht, lat, lon);
     return {
-      naam: nu.naam, ill: nu.ill, fase: nu.fase, datum, rand: stand.rand, draai: stand.draai,
+      naam: nu.naam, ill: nu.ill, fase: nu.fase, datum, rand: stand.rand, draai: stand.draai, standMoment: stand.moment,
       op: vandaag.op != null ? naarLokaal(vandaag.op, tz) : null,
       onder: vandaag.onder != null ? naarLokaal(vandaag.onder, tz) : null,
       opMs: vandaag.op, onderMs: vandaag.onder,
