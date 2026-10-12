@@ -2,8 +2,8 @@
 
 /* Kleurronde 12 oktober, gemeten op het definitieve artifact: temperatuurschaal
    op dagbalken en grafiekvlak (licht en donker), richting van de trendbalk,
-   metertjes in de tegels, tweekleurige iconen en de luchttint achter de
-   hoofdweergave. Mobiel en desktop, licht en donker, Nederlands en Engels;
+   metertjes in de tegels, tweekleurige iconen en géén luchttint achter de
+   hoofdweergave (weggehaald op verzoek van de eigenaar). Mobiel en desktop, licht en donker, Nederlands en Engels;
    zonder scriptfouten, zonder horizontale overloop en zonder extra tekst. */
 
 const assert = require("assert");
@@ -48,11 +48,11 @@ const server = http.createServer((req, res) => {
 });
 
 const GEVALLEN = [
-  { naam: "hitte-uv", lucht: "zon", accent: "ico-zon" },
-  { naam: "regen-nu", lucht: "regen", accent: "ico-regen" },
-  { naam: "vorst-sneeuw", lucht: "sneeuw", accent: "ico-sneeuw" },
-  { naam: "onweer-storm", lucht: "onweer", accent: "ico-flits" },
-  { naam: "nacht-helder", lucht: "nacht", accent: null }
+  { naam: "hitte-uv", accent: "ico-zon" },
+  { naam: "regen-nu", accent: "ico-regen" },
+  { naam: "vorst-sneeuw", accent: "ico-sneeuw" },
+  { naam: "onweer-storm", accent: "ico-flits" },
+  { naam: "nacht-helder", accent: null }
 ];
 
 server.listen(0, async () => {
@@ -85,7 +85,6 @@ server.listen(0, async () => {
           stops: stops.map(s => ({ t: Number(s.getAttribute("data-temp-stop")), kleur: getComputedStyle(s).stopColor, verwacht: typeof temperatuurKleur === "function" ? temperatuurKleur(Number(s.getAttribute("data-temp-stop")), donker ? "donker" : "licht") : null })),
           balk: balk && getComputedStyle(balk).display !== "none" && balk.offsetWidth > 0 ? { beeld: getComputedStyle(balk).backgroundImage, licht: balk.style.getPropertyValue("--temp-verloop"), donker: balk.style.getPropertyValue("--temp-verloop-donker") } : null,
           meters: Object.fromEntries(["wind", "prec", "pop", "hum", "cloud", "uv"].map(id => [id, meter(id)])),
-          lucht: held && held.getAttribute("data-lucht"),
           gloed: held ? getComputedStyle(held, "::before").backgroundImage : "",
           accenten: [...document.querySelectorAll("#nowicon svg.ico .ico-zon, #nowicon svg.ico .ico-regen, #nowicon svg.ico .ico-sneeuw, #nowicon svg.ico .ico-flits")].map(e => ({ klasse: e.getAttribute("class"), streep: getComputedStyle(e).stroke })),
           inkt: getComputedStyle(document.getElementById("nowicon")).color,
@@ -129,9 +128,8 @@ server.listen(0, async () => {
         if (naar > van) assert(warmte(kl[0]) < warmte(kl[kl.length - 1]), `${label}: warmer moet van koud naar warm lopen`);
       }
 
-      /* Luchttint en iconaccent. */
-      assert.strictEqual(m.lucht, geval.lucht, `${label}: luchttint`);
-      assert(/radial-gradient/.test(m.gloed), `${label}: geen gloed achter de hoofdweergave`);
+      /* Geen luchttint meer; wel het iconaccent. */
+      assert(!/gradient/.test(m.gloed), `${label}: nog een gloed achter de hoofdweergave: ${m.gloed}`);
       if (geval.accent) {
         const accent = m.accenten.find(a => a.klasse === geval.accent);
         assert(accent, `${label}: accent ${geval.accent} ontbreekt in het hoofdicoon`);
@@ -140,7 +138,7 @@ server.listen(0, async () => {
       gemeten++;
       await ctx.close();
     }
-    console.log(`Kleurronde: ${gemeten} weergaven kloppen (temperatuurschaal, trendrichting, metertjes, iconaccenten, luchttint; licht/donker, NL/EN, mobiel/desktop).`);
+    console.log(`Kleurronde: ${gemeten} weergaven kloppen (temperatuurschaal, trendrichting, metertjes, iconaccenten, geen luchttint; licht/donker, NL/EN, mobiel/desktop).`);
   } finally {
     await browser.close();
     server.close();

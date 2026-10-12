@@ -32,24 +32,3 @@ svg.ico circle.ico-zon{fill:var(--wiw-zon);fill-opacity:.22}
 svg.ico .ico-regen{stroke:var(--wiw-regen)}
 svg.ico .ico-sneeuw{stroke:var(--wiw-sneeuw)}
 svg.ico .ico-flits{stroke:var(--wiw-flits);fill:var(--wiw-flits)}
-
-/* 5. Zachte luchttint achter de hoofdweergave, naar de soort weer. De gloed
-   loopt binnen het blok naar nul, dus zonder rand en zonder overloop. */
-.hero{position:relative;isolation:isolate}
-.hero[data-lucht]::before{content:"";position:absolute;inset:-10px 0;border-radius:16px;background:radial-gradient(closest-side at 62% 45%,var(--wiw-lucht,transparent),transparent);z-index:-1;pointer-events:none}
-.hero[data-lucht=zon]{--wiw-lucht:rgba(240,170,50,.16)}
-.hero[data-lucht=halfzon]{--wiw-lucht:rgba(240,170,50,.11)}
-.hero[data-lucht=wolk],.hero[data-lucht=mist]{--wiw-lucht:rgba(120,135,150,.10)}
-.hero[data-lucht=regen],.hero[data-lucht=ijzel]{--wiw-lucht:rgba(47,120,196,.11)}
-.hero[data-lucht=sneeuw]{--wiw-lucht:rgba(91,152,210,.11)}
-.hero[data-lucht=onweer]{--wiw-lucht:rgba(80,70,140,.13)}
-.hero[data-lucht=nacht]{--wiw-lucht:rgba(40,60,140,.11)}
-.hero[data-lucht=halfnacht]{--wiw-lucht:rgba(40,60,140,.08)}
-html[data-thema=donker] .hero[data-lucht=zon]{--wiw-lucht:rgba(240,179,74,.16)}
-html[data-thema=donker] .hero[data-lucht=halfzon]{--wiw-lucht:rgba(240,179,74,.11)}
-html[data-thema=donker] .hero[data-lucht=wolk],html[data-thema=donker] .hero[data-lucht=mist]{--wiw-lucht:rgba(150,160,170,.12)}
-html[data-thema=donker] .hero[data-lucht=regen],html[data-thema=donker] .hero[data-lucht=ijzel]{--wiw-lucht:rgba(106,166,232,.15)}
-html[data-thema=donker] .hero[data-lucht=sneeuw]{--wiw-lucht:rgba(169,209,245,.14)}
-html[data-thema=donker] .hero[data-lucht=onweer]{--wiw-lucht:rgba(120,110,170,.18)}
-html[data-thema=donker] .hero[data-lucht=nacht]{--wiw-lucht:rgba(90,110,190,.18)}
-html[data-thema=donker] .hero[data-lucht=halfnacht]{--wiw-lucht:rgba(90,110,190,.13)}
