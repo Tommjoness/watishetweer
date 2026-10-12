@@ -88,7 +88,7 @@ server.listen(0, async () => {
         cellen: [...document.querySelectorAll("#seizoen-verwachting td:nth-child(2)")].map(td => td.textContent.replace(/\s+/g, " ").trim()),
         later: (document.querySelector(".seizoen-later") || {}).textContent || "",
         fout: !!document.querySelector(".seizoen-fout"),
-        periodeRijen: [...document.querySelectorAll(".seizoen-perioden tbody tr")].map(tr => tr.textContent.replace(/\s+/g, " ").trim()),
+        periodeRijen: [...document.querySelectorAll(".seizoen-perioden tbody tr")].map(tr => [...tr.children].map(c => c.textContent.trim()).join(" ")),
         overloop: document.documentElement.scrollWidth - innerWidth,
         ontbreekt: window.__WIW_TAAL_ONTBREEKT__ ? [...window.__WIW_TAAL_ONTBREEKT__] : null
       }));
