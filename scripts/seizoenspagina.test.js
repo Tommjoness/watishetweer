@@ -326,7 +326,7 @@ const kerstRes=(mm)=>mm.map((n,i)=>({plaats:kerstVak.plaatsen[i],dagen:{"2027-01
 assert.equal(R.vakantieSamenvatting(R.toestand("2027-01-03",kerstVak),kerstRes([2,2,2,2,0,0,0]),kerstVak),"Volgens de huidige verwachting valt er op zondag 3 januari in een groot deel van het land neerslag.");
 const htmlKerst=pagina(kerstVak,"2026-10-12");
 assert(htmlKerst.includes("<title>Weer kerstvakantie 2026: regen, sneeuw en temperatuur per dag | watishetweer.nl</title>"));
-assert(htmlKerst.includes('<tr><th scope="row">Alle regio\'s</th><td>19 december 2026 t/m 3 januari 2027</td></tr>'),"gelijke data: één regel voor alle regio's");
+assert(htmlKerst.includes('<tr><th scope="row">Alle regio\'s</th><td class="jaargrens">19 december 2026 t/m 3 januari 2027</td></tr>'),"gelijke data: één regel voor alle regio's");
 assert(!htmlKerst.includes('<th scope="row">Regio noord</th>'),"geen drie gelijke regels");
 assert(htmlHerfst.includes('<th scope="row">Regio noord</th>'),"verschillende data blijven per regio");
 console.log("Seizoenspagina kerstvakantie: overal tegelijk, aftellen zonder regio, jaargrens, sneeuw en vakantiedata kloppen.");

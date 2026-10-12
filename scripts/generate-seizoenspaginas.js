@@ -61,7 +61,7 @@ html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70
 .seizoen-dag .officieel{display:block;font-size:12px;font-weight:400;color:var(--muted)}
 .seizoen-dag a{text-decoration:none;border-bottom:1px solid var(--rule)}
 .seizoen-dag a:hover,.seizoen-dag a:focus-visible{border-bottom-color:var(--ink)}
-.seizoen-perioden td{text-align:right;padding-right:0;white-space:nowrap}
+.seizoen-perioden td{text-align:right;padding-right:0;white-space:nowrap}.seizoen-perioden td.jaargrens{white-space:normal;text-wrap:balance}
 .seizoen-vakantie{table-layout:fixed}.seizoen-vakantie thead th:first-child{width:34%}.seizoen-vakantie thead th:last-child{width:24%}
 @media(max-width:600px){body{padding:14px}.kaart{padding:26px 22px}h1{font-size:32px}.seizoen-dag table{font-size:14px}.seizoen-dag .sep{display:none}.seizoen-dag .sub{display:block;font-size:13px}}
 </style>`;
@@ -73,7 +73,9 @@ html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70
 function rijen(lijst){
   const gelijk=lijst.every(p=>p.van===lijst[0].van&&p.tot===lijst[0].tot);
   const regels=gelijk?[{kop:"Alle regio's",p:lijst[0]}]:lijst.map(p=>({kop:"Regio "+p.regio,p}));
-  return regels.map(({kop,p})=>`<tr><th scope="row">${esc(kop)}</th><td>${esc(runtime.periodeTekst(p.van,p.tot))}</td></tr>`).join("\n");
+  /* Een periode over de jaargrens is lang (met jaartallen) en mag op een smal
+     scherm over twee regels. */
+  return regels.map(({kop,p})=>`<tr><th scope="row">${esc(kop)}</th><td${p.van.slice(0,4)!==p.tot.slice(0,4)?' class="jaargrens"':""}>${esc(runtime.periodeTekst(p.van,p.tot))}</td></tr>`).join("\n");
 }
 function periodenHtml(cfg,buildDag){
   if(!cfg.perioden)return "";
