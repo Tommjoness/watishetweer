@@ -48,6 +48,7 @@ function bezig(over,uur,cfg){return over<0&&uur!=null&&-over*24+uur<eindUur(cfg)
    loopt door tot 1 januari 02:00); een dag telt pas als zichtbaar wanneer ook
    die volgende dag(en) in het venster vallen. */
 function toestand(vandaag,cfg,uur){
+  if(cfg.soort==="vakantie")return toestandVakantie(vandaag,cfg);
   const laatste=cfg.dagen[cfg.dagen.length-1];
   const extra=cfg.extraDagen||0;
   const jaarNu=Number(vandaag.slice(0,4));
@@ -61,6 +62,7 @@ function toestand(vandaag,cfg,uur){
 }
 
 function aftelTekst(t,cfg){
+  if(cfg.soort==="vakantie")return vakantieAftellen(t,cfg).tekst;
   const vandaagDag=t.dagen.find(d=>d.over===0);
   if(vandaagDag)return vul(cfg.teksten.aftellenVandaag,{dag:klein(vandaagDag.label)});
   const lopend=t.dagen.find(d=>d.bezig);
@@ -73,12 +75,14 @@ function aftelTekst(t,cfg){
    kerstdag"); alleen als er nog meer dan een dag te gaan is en de pagina
    daar een tekst voor heeft. Anders null en blijft de gewone zin staan. */
 function aftelGetal(t,cfg){
+  if(cfg.soort==="vakantie")return vakantieAftellen(t,cfg).groot;
   if(!cfg.teksten.aftellenGetal||t.dagen.some(d=>d.over===0||d.bezig))return null;
   const eerste=t.dagen[0];
   if(!(eerste.over>1))return null;
   return {n:eerste.over,tekst:vul(cfg.teksten.aftellenGetal,{dag:klein(eerste.label)})};
 }
 function meldingTekst(t,cfg){
+  if(t.fase==="onbekend")return vul(cfg.teksten.onbekend,{jaar:t.jaar});
   /* {datum} is de dag waarop de eerste evenementdag verschijnt, {datum2} die
      van de tweede (tweede kerstdag komt een dag later in beeld dan eerste). */
   if(t.fase==="ver")return vul(cfg.teksten.ver,{datum:datumTekst(t.vanaf,true),datum2:t.dagen[1]?datumTekst(t.dagen[1].vanaf,true):"",dagen:cfg.vensterDagen});
@@ -183,13 +187,88 @@ function nachtSamenvatting(t,resultaten,cfg){
   return zinnen;
 }
 
+/* ---------- Soort "vakantie": een periode per regio, met data per jaar ---------- */
+/* cfg.perioden: {jaar: [{regio, van, tot}]}, met ISO-datums (tot en met). De
+   pagina toont het eerste jaar waarvan de vakantie nog niet voorbij is; staat
+   het volgende jaar nog niet in de config, dan is de fase "onbekend". */
+function vakantieJaren(cfg){return Object.keys(cfg.perioden||{}).map(Number).sort((a,b)=>a-b);}
+function eersteVan(lijst){return lijst.reduce((m,p)=>p.van<m?p.van:m,lijst[0].van);}
+function laatsteTot(lijst){return lijst.reduce((m,p)=>p.tot>m?p.tot:m,lijst[0].tot);}
+function toestandVakantie(vandaag,cfg){
+  const jaren=vakantieJaren(cfg);
+  const jaar=jaren.find(j=>dagenTussen(vandaag,laatsteTot(cfg.perioden[j]))>=0);
+  if(jaar==null)return {vandaag,jaar:Math.max(Number(vandaag.slice(0,4)),jaren.length?jaren[jaren.length-1]+1:0),dagen:[],perioden:[],vanaf:null,tot:null,fase:"onbekend"};
+  const perioden=cfg.perioden[jaar],tot=laatsteTot(perioden),dagen=[];
+  for(let iso=eersteVan(perioden);dagenTussen(iso,tot)>=0;iso=plusDagen(iso,1)){
+    const over=dagenTussen(vandaag,iso);
+    dagen.push({iso,label:datumTekst(iso,true),over,bezig:false,
+      regios:perioden.filter(p=>p.van<=iso&&iso<=p.tot).map(p=>p.regio),
+      zichtbaar:over>=0&&over<=cfg.vensterDagen-1,vanaf:plusDagen(iso,-(cfg.vensterDagen-1))});
+  }
+  const komend=dagen.find(d=>d.over>=0);
+  return {vandaag,jaar,dagen,perioden,tot,vanaf:komend.vanaf,fase:dagen.some(d=>d.zichtbaar)?"verwachting":"ver"};
+}
+/* Aftellen per regio: "Het is herfstvakantie in regio noord. In regio midden en
+   zuid begint de vakantie op zaterdag 17 oktober." Begint de vakantie overal
+   op dezelfde dag, dan zonder regio. */
+function vakantieAftellen(t,cfg){
+  if(t.fase==="onbekend")return {tekst:"",groot:null};
+  const T=cfg.teksten,v=t.vandaag;
+  const regio=lijst=>lijst.length===t.perioden.length?"":` in regio ${lijstTekst(lijst)}`;
+  const bezigNu=t.perioden.filter(p=>p.van<=v&&v<=p.tot).map(p=>p.regio);
+  const later=t.perioden.filter(p=>p.van>v);
+  const eerste=later.length?eersteVan(later):null,eersteRegios=later.filter(p=>p.van===eerste).map(p=>p.regio);
+  if(bezigNu.length){
+    const vandaagBegonnen=t.perioden.filter(p=>p.van===v).map(p=>p.regio);
+    const zin=vandaagBegonnen.length===bezigNu.length?vul(T.aftellenVandaag,{regio:regio(bezigNu)}):bezigNu.length===t.perioden.length?T.overal:vul(T.bezig,{regios:lijstTekst(bezigNu)});
+    return {tekst:eerste?zin+" "+vul(T.begintNog,{regios:lijstTekst(eersteRegios),datum:datumTekst(eerste,true)}):zin,groot:null};
+  }
+  const n=dagenTussen(v,eerste);
+  if(n===1)return {tekst:vul(T.aftellenMorgen,{regio:regio(eersteRegios)}),groot:null};
+  return {tekst:vul(T.aftellenMeer,{n,regio:regio(eersteRegios)}),groot:{n,tekst:vul(T.aftellenGetal,{regio:regio(eersteRegios)})}};
+}
+/* "10 t/m 18 oktober" of "31 oktober t/m 1 november". */
+function periodeTekst(van,tot){
+  const a=datumTekst(van,false),b=datumTekst(tot,false);
+  return a.split(" ")[1]===b.split(" ")[1]?`${a.split(" ")[0]} t/m ${b}`:`${a} t/m ${b}`;
+}
+function vakantieWaarden(data,iso){
+  const d=data&&data.daily;
+  if(!d||!Array.isArray(d.time))return null;
+  const i=d.time.indexOf(iso);
+  if(i<0)return null;
+  const reeks=k=>Array.isArray(d[k])?getal(d[k][i]):null,zon=reeks("sunshine_duration");
+  return {tmin:reeks("temperature_2m_min"),tmax:reeks("temperature_2m_max"),neerslag:reeks("precipitation_sum"),kans:reeks("precipitation_probability_max"),zon:zon==null?null:zon/3600};
+}
+function vakantieWeerTekst(w){
+  if(!w||(w.neerslag==null&&w.zon==null))return "Geen gegevens";
+  if(w.neerslag!=null&&w.neerslag>=0.2)return `${komma(w.neerslag,1)} mm regen${w.kans==null?"":` · kans ${Math.round(w.kans)}%`}`;
+  if(w.zon==null)return "Droog";
+  const uren=Math.round(w.zon);
+  return uren<1?"Droog · weinig zon":`Droog · ${uren} uur zon`;
+}
+/* Overwegend droog: in minder dan de helft van de plaatsen 1 mm regen of meer. */
+function overwegendDroog(resultaten,iso){
+  const metData=resultaten.map(r=>r.dagen[iso]).filter(w=>w&&w.neerslag!=null);
+  return metData.length?metData.filter(w=>w.neerslag>=1).length*2<metData.length:null;
+}
+function vakantieSamenvatting(t,resultaten,cfg){
+  const T=cfg.teksten,oordeel=t.dagen.filter(d=>d.zichtbaar).map(d=>({d,droog:overwegendDroog(resultaten,d.iso)})).filter(x=>x.droog!=null);
+  const m=oordeel.length,n=oordeel.filter(x=>x.droog).length;
+  if(!m)return "";
+  if(m===1)return vul(n?T.dagDroog:T.dagNat,{dag:oordeel[0].d.label});
+  return n===m?vul(T.allesDroog,{m}):n===0?vul(T.nietsDroog,{m}):vul(T.deelsDroog,{n,m,zijn:n===1?"is":"zijn"});
+}
+
 /* Loopt de nacht nog (1 januari 01:00), dan begint de verwachting van vandaag
    pas om 00:00: past_days=1 haalt de uren van gisteravond erbij. */
 function verwachtingUrl(cfg,t){
   const lat=cfg.plaatsen.map(p=>p.lat).join(","),lon=cfg.plaatsen.map(p=>p.lon).join(",");
   const velden=cfg.soort==="middernacht"
     ?"&hourly=temperature_2m,precipitation,precipitation_probability,wind_speed_10m,wind_gusts_10m,wind_direction_10m,visibility"
-    :"&daily=temperature_2m_max,temperature_2m_min,snowfall_sum,precipitation_sum&hourly=snow_depth";
+    :cfg.soort==="vakantie"
+      ?"&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunshine_duration"
+      :"&daily=temperature_2m_max,temperature_2m_min,snowfall_sum,precipitation_sum&hourly=snow_depth";
   return "https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon+velden+
     "&timezone="+encodeURIComponent(cfg.tijdzone)+"&forecast_days="+cfg.vensterDagen+
     (t&&t.dagen.some(d=>d.bezig)?"&past_days=1":"");
@@ -199,7 +278,7 @@ function verwerkAntwoord(json,t,cfg){
   if(lijst.length!==cfg.plaatsen.length)throw new Error("Onverwacht aantal plaatsen in de verwachting");
   return cfg.plaatsen.map((plaats,i)=>{
     const dagen={};
-    for(const d of t.dagen)if(d.zichtbaar)dagen[d.iso]=cfg.soort==="middernacht"?nachtWaarden(lijst[i],d.iso,cfg):dagWaarden(lijst[i],d.iso,cfg.ochtendUur);
+    for(const d of t.dagen)if(d.zichtbaar)dagen[d.iso]=cfg.soort==="middernacht"?nachtWaarden(lijst[i],d.iso,cfg):cfg.soort==="vakantie"?vakantieWaarden(lijst[i],d.iso):dagWaarden(lijst[i],d.iso,cfg.ochtendUur);
     return {plaats,dagen};
   });
 }
@@ -254,7 +333,30 @@ function nachtTabel(dag,resultaten,cfg){
   sectie.append(tabel);
   return sectie;
 }
+function vakantieTabel(dag,resultaten){
+  const sectie=el("section",{class:"seizoen-dag","data-datum":dag.iso});
+  sectie.append(el("h3",{},[dag.label.charAt(0).toUpperCase()+dag.label.slice(1)+" ",el("span",{},"regio "+lijstTekst(dag.regios))]));
+  const tabel=el("table",{class:"seizoen-vakantie"});
+  tabel.append(el("thead",{},el("tr",{},[el("th",{scope:"col"},"Plaats"),el("th",{scope:"col"},"Weer"),el("th",{scope:"col"},"Min / max")])));
+  const body=el("tbody",{});
+  for(const r of resultaten){
+    const w=r.dagen[dag.iso];
+    body.append(el("tr",{},[plaatsCel(r.plaats),tweedelig(vakantieWeerTekst(w)),el("td",{class:"temp"},w?`${graden(w.tmin)} / ${graden(w.tmax)}`:"–")]));
+  }
+  tabel.append(body);
+  sectie.append(tabel);
+  return sectie;
+}
+function toonVakantie(doel,t,resultaten,cfg){
+  doel.replaceChildren();
+  const zin=vakantieSamenvatting(t,resultaten,cfg);
+  if(zin)doel.append(el("p",{class:"seizoen-samenvatting"},zin));
+  for(const dag of t.dagen)if(dag.zichtbaar)doel.append(vakantieTabel(dag,resultaten));
+  if(t.dagen.some(d=>!d.zichtbaar&&d.over>0))doel.append(el("p",{class:"seizoen-later"},vul(cfg.teksten.later,{tot:datumTekst(t.tot,true)})));
+  doel.append(el("p",{class:"klein"},cfg.teksten.toelichting));
+}
 function toon(doel,t,resultaten,cfg){
+  if(cfg.soort==="vakantie")return toonVakantie(doel,t,resultaten,cfg);
   doel.replaceChildren();
   const nacht=cfg.soort==="middernacht";
   const zinnen=nacht?nachtSamenvatting(t,resultaten,cfg):[samenvatting(t,resultaten,cfg)].filter(Boolean);
@@ -294,7 +396,7 @@ async function start(){
     aftellen.classList.toggle("groot",!!groot);
     if(groot)aftellen.replaceChildren(el("b",{class:"aftel-getal"},String(groot.n))," ",el("span",{},groot.tekst));
     else aftellen.textContent=aftelTekst(t,cfg);
-    aftellen.hidden=false;
+    aftellen.hidden=!aftellen.textContent;
   }
   const melding=document.getElementById("seizoen-melding");
   if(melding){melding.textContent=meldingTekst(t,cfg);melding.hidden=!melding.textContent;}
@@ -316,7 +418,7 @@ async function start(){
   }
 }
 
-const api={datumISO,dagenTussen,plusDagen,datumTekst,nuIn,vandaagIn,vul,eindUur,toestand,aftelTekst,aftelGetal,meldingTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord};
+const api={toestandVakantie,periodeTekst,vakantieAftellen,vakantieWaarden,vakantieWeerTekst,overwegendDroog,vakantieSamenvatting,datumISO,dagenTussen,plusDagen,datumTekst,nuIn,vandaagIn,vul,eindUur,toestand,aftelTekst,aftelGetal,meldingTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 else if(typeof document!=="undefined"){
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
