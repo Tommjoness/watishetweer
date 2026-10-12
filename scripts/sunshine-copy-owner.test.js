@@ -11,6 +11,9 @@ const {
 assert.equal(zonurenWoord(13.8,14.83),"Naar verwachting bijna de hele dag zon.");
 assert.equal(zonurenWoord(8,14),"Naar verwachting meerdere uren zon vandaag.");
 assert.equal(zonurenWoord(2,14),"Naar verwachting weinig zon vandaag.");
+assert.equal(zonurenWoord(0,10.9),"Naar verwachting geen zon vandaag.","0,0 uur is geen zon");
+assert.equal(zonurenWoord(0.04,null),"Naar verwachting geen zon vandaag.","afgerond 0,0 uur is geen zon");
+assert.equal(zonurenWoord(0.05,10.9),"Naar verwachting weinig zon vandaag.","0,1 uur is weinig zon");
 assert.equal(zonurenWoord(8,null),"Naar verwachting veel zon vandaag.");
 assert.equal(zonurenWoord(null,14),"Zonuren niet beschikbaar.");
 
