@@ -1,0 +1,52 @@
+/* Kleurronde 2026-10-12 (akkoord eigenaar 12 oktober). Accentkleuren per thema;
+   tekst blijft altijd in de inktkleuren. Rood blijft voor nu en waarschuwingen. */
+:root{--wiw-zon:#c47d0e;--wiw-regen:#2f78c4;--wiw-sneeuw:#5b98d2;--wiw-flits:#d48a06;--wiw-spoor:rgba(20,24,22,.09);--wiw-neutraal:rgba(20,24,22,.42)}
+html[data-thema=donker]{--wiw-zon:#f0b34a;--wiw-regen:#6aa6e8;--wiw-sneeuw:#a9d1f5;--wiw-flits:#f5c04a;--wiw-spoor:rgba(233,231,226,.14);--wiw-neutraal:rgba(233,231,226,.5)}
+
+/* 1. Dagbalken: het donkere thema krijgt zijn eigen verloop van de dagrenderer. */
+html[data-thema=donker] #days .row.day:not(.kop) .bar i{background:var(--temp-verloop-donker,var(--temp-verloop,var(--ink)))!important}
+
+/* 2. Grafiek: vlak in temperatuurkleur (stops van de grafiekrenderer) en
+   iets vollere regenstaafjes. */
+svg stop[data-temp-stop]{stop-color:var(--licht);stop-opacity:var(--dekking)}
+html[data-thema=donker] svg stop[data-temp-stop]{stop-color:var(--donker);stop-opacity:calc(var(--dekking) * 1.17)}
+html body #chart .regenstaaf{fill:var(--wiw-regen);fill-opacity:.62}
+html[data-thema=donker] body #chart .regenstaaf{fill:var(--wiw-regen);fill-opacity:.68}
+
+/* 3. Metertjes onder de tegelwaarde. */
+.stats .wiw-meter{position:relative;display:block;width:min(132px,86%);height:4px;margin:5px auto 4px;border-radius:2px;background:var(--wiw-spoor);overflow:hidden}
+.stats .wiw-meter>i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--wiw-neutraal)}
+.stats .wiw-meter[data-meter=regen]>i{background:var(--wiw-regen)}
+.stats .wiw-meter[data-meter=trend]>i{background:var(--licht)}
+html[data-thema=donker] .stats .wiw-meter[data-meter=trend]>i{background:var(--donker)}
+.stats .wiw-meter-uv{display:grid;grid-template-columns:repeat(11,1fr);gap:2px;background:none;overflow:visible}
+.stats .wiw-meter-uv>i{position:static;border-radius:1px;background:var(--wiw-spoor)}
+.stats #wind svg{width:18px!important;height:18px!important;margin-left:3px;vertical-align:-4px!important;border-radius:50%;box-shadow:inset 0 0 0 1px var(--wiw-neutraal)}
+
+/* 4. Iconen in twee kleuren: omtrek in inkt, één accent per soort weer. */
+svg.ico .ico-zon{stroke:var(--wiw-zon)}
+svg.ico circle.ico-zon{fill:var(--wiw-zon);fill-opacity:.22}
+svg.ico .ico-regen{stroke:var(--wiw-regen)}
+svg.ico .ico-sneeuw{stroke:var(--wiw-sneeuw)}
+svg.ico .ico-flits{stroke:var(--wiw-flits);fill:var(--wiw-flits)}
+
+/* 5. Zachte luchttint achter de hoofdweergave, naar de soort weer. De gloed
+   loopt binnen het blok naar nul, dus zonder rand en zonder overloop. */
+.hero{position:relative;isolation:isolate}
+.hero[data-lucht]::before{content:"";position:absolute;inset:-10px 0;border-radius:16px;background:radial-gradient(closest-side at 62% 45%,var(--wiw-lucht,transparent),transparent);z-index:-1;pointer-events:none}
+.hero[data-lucht=zon]{--wiw-lucht:rgba(240,170,50,.16)}
+.hero[data-lucht=halfzon]{--wiw-lucht:rgba(240,170,50,.11)}
+.hero[data-lucht=wolk],.hero[data-lucht=mist]{--wiw-lucht:rgba(120,135,150,.10)}
+.hero[data-lucht=regen],.hero[data-lucht=ijzel]{--wiw-lucht:rgba(47,120,196,.11)}
+.hero[data-lucht=sneeuw]{--wiw-lucht:rgba(91,152,210,.11)}
+.hero[data-lucht=onweer]{--wiw-lucht:rgba(80,70,140,.13)}
+.hero[data-lucht=nacht]{--wiw-lucht:rgba(40,60,140,.11)}
+.hero[data-lucht=halfnacht]{--wiw-lucht:rgba(40,60,140,.08)}
+html[data-thema=donker] .hero[data-lucht=zon]{--wiw-lucht:rgba(240,179,74,.16)}
+html[data-thema=donker] .hero[data-lucht=halfzon]{--wiw-lucht:rgba(240,179,74,.11)}
+html[data-thema=donker] .hero[data-lucht=wolk],html[data-thema=donker] .hero[data-lucht=mist]{--wiw-lucht:rgba(150,160,170,.12)}
+html[data-thema=donker] .hero[data-lucht=regen],html[data-thema=donker] .hero[data-lucht=ijzel]{--wiw-lucht:rgba(106,166,232,.15)}
+html[data-thema=donker] .hero[data-lucht=sneeuw]{--wiw-lucht:rgba(169,209,245,.14)}
+html[data-thema=donker] .hero[data-lucht=onweer]{--wiw-lucht:rgba(120,110,170,.18)}
+html[data-thema=donker] .hero[data-lucht=nacht]{--wiw-lucht:rgba(90,110,190,.18)}
+html[data-thema=donker] .hero[data-lucht=halfnacht]{--wiw-lucht:rgba(90,110,190,.13)}

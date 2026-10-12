@@ -752,6 +752,39 @@ const rondGetal=v=>{const n=eindigGetal(v);return n===null?null:Math.round(n);};
 const metMinteken=n=>n<0?"\u2212"+Math.abs(n):String(n);
 function bft(k){let n=0;for(let i=0;i<BFT.length;i++) if(k>=BFT[i]) n=i+1;return n;}
 
+/* ---------- temperatuurkleur ---------- */
+/* Eén schaal voor dagbalken, grafiekvlak en trendbalk (kleurronde, akkoord
+   eigenaar 12 oktober): koud is blauw, mild weer (13 tot 17 graden) neutraal
+   grijs, en pas boven de 20 graden amber, oranje en roestbruin. Zo oogt een
+   gewone dag niet zonniger dan hij is. Iedere arm is één tint met gelijke
+   lichtheidsstappen; licht en donker hebben eigen stappen, beide getoetst op
+   kleurenblindheid en contrast tegen hun ondergrond. Rood blijft voor nu en
+   waarschuwingen. */
+const TEMP_SCHAAL={
+  licht:[[-10,"#254582"],[-4,"#295ca5"],[2,"#367ac1"],[8,"#5e97cd"],[13,"#afaca4"],[17,"#afaca4"],[21,"#c78829"],[26,"#bd6706"],[31,"#ad4600"],[36,"#8f331a"]],
+  donker:[[-10,"#bbddf6"],[-4,"#92c4ee"],[2,"#73a9e1"],[8,"#5e91c0"],[13,"#77746d"],[17,"#77746d"],[21,"#bf8032"],[26,"#e28e3a"],[31,"#f0ab55"],[36,"#f7cd87"]]
+};
+const hexRgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+function temperatuurKleur(t,thema){
+  const stops=TEMP_SCHAAL[thema==="donker"?"donker":"licht"],v=Number(t);
+  if(!Number.isFinite(v)||v<=stops[0][0])return "rgb("+hexRgb(stops[0][1]).join(",")+")";
+  for(let k=1;k<stops.length;k++)if(v<=stops[k][0]){
+    const [t0,c0]=stops[k-1],[t1,c1]=stops[k],f=(v-t0)/(t1-t0),a=hexRgb(c0),b=hexRgb(c1);
+    return "rgb("+a.map((x,j)=>Math.round(x+(b[j]-x)*f)).join(",")+")";
+  }
+  return "rgb("+hexRgb(stops[stops.length-1][1]).join(",")+")";
+}
+/* Verloop van lo naar hi graden, met een tussenstop bij iedere schaalstap die
+   erbinnen valt, zodat ook een lange balk de schaal precies volgt. */
+function temperatuurVerloop(lo,hi,thema){
+  const a=Number(lo),b=Number(hi);
+  if(!(b>a))return `linear-gradient(90deg,${temperatuurKleur(a,thema)},${temperatuurKleur(b,thema)})`;
+  const punten=[[a,0]];
+  for(const [t] of TEMP_SCHAAL[thema==="donker"?"donker":"licht"])if(t>a&&t<b)punten.push([t,(t-a)/(b-a)]);
+  punten.push([b,1]);
+  return "linear-gradient(90deg,"+punten.map(([t,f])=>`${temperatuurKleur(t,thema)} ${(f*100).toFixed(1)}%`).join(",")+")";
+}
+
 /* ---------- haarlijn-iconen ---------- */
 function icon(code,isDay,size){
   const f=fam(code),s=size||24;
@@ -761,21 +794,24 @@ function icon(code,isDay,size){
      donker en de nachtstand. */
   const o=`stroke="currentColor" stroke-width="1.15" fill="none" stroke-linecap="round" stroke-linejoin="round"`;
   const zacht=`stroke="currentColor" stroke-width="1.15" fill="currentColor" fill-opacity=".08" stroke-linecap="round" stroke-linejoin="round"`;
+  /* Kleurronde (12 oktober): de omtrek blijft inkt, één accent per soort
+     weer via een klasse (zon en bliksem amber, regen blauw, sneeuw lichtblauw).
+     De kleur zelf staat in CSS, zodat licht en donker hun eigen tint hebben. */
   const straal=(cx,cy,hoeken,r1,lang,kort)=>hoeken.map((a,k)=>{const d=a*Math.PI/180,r2=k%2?kort:lang;
-    return `<line x1="${(cx+r1*Math.cos(d)).toFixed(2)}" y1="${(cy+r1*Math.sin(d)).toFixed(2)}" x2="${(cx+r2*Math.cos(d)).toFixed(2)}" y2="${(cy+r2*Math.sin(d)).toFixed(2)}" ${o}/>`;}).join("");
-  const zon=`<circle cx="12" cy="12" r="4" ${zacht}/>`+straal(12,12,[0,45,90,135,180,225,270,315],6.6,9.4,8.4);
+    return `<line class="ico-zon" x1="${(cx+r1*Math.cos(d)).toFixed(2)}" y1="${(cy+r1*Math.sin(d)).toFixed(2)}" x2="${(cx+r2*Math.cos(d)).toFixed(2)}" y2="${(cy+r2*Math.sin(d)).toFixed(2)}" ${o}/>`;}).join("");
+  const zon=`<circle class="ico-zon" cx="12" cy="12" r="4" ${zacht}/>`+straal(12,12,[0,45,90,135,180,225,270,315],6.6,9.4,8.4);
   /* Twee sterretjes bij de maan, alleen waar het icoon groot genoeg is om ze
      als sterren te lezen (niet in de smalle uurrij van de grafiek). */
   const sterren=s>=20?`<circle cx="17.4" cy="5.6" r=".85" fill="currentColor"/><circle cx="20.2" cy="9.2" r=".55" fill="currentColor"/>`:"";
   const maantje=`<path d="M17.8 14.9A6.7 6.7 0 1 1 9.6 6.7a5.3 5.3 0 0 0 8.2 8.2z" ${zacht}/>${sterren}`;
   const wolk=`<path d="M7.6 18.6h8.9a4 4 0 0 0 .5-7.97 5.4 5.4 0 0 0-10.3 1.2 3.4 3.4 0 0 0 .9 6.77z" ${zacht}/>`;
   const wolkhoog=`<path d="M7.6 15.4h8.9a4 4 0 0 0 .5-7.97 5.4 5.4 0 0 0-10.3 1.2 3.4 3.4 0 0 0 .9 6.77z" ${zacht}/>`;
-  const druppels=`<line x1="9" y1="18" x2="8.2" y2="20.2" ${o}/><line x1="12.6" y1="18.2" x2="11.5" y2="21.4" ${o}/><line x1="16.2" y1="18" x2="15.4" y2="20.2" ${o}/>`;
-  const vlok=(x,y)=>`<path d="M${x} ${y-1.7}v3.4M${x-1.47} ${y-.85}l2.94 1.7M${x-1.47} ${y+.85}l2.94-1.7" stroke="currentColor" stroke-width=".9" fill="none" stroke-linecap="round"/>`;
+  const druppels=`<line class="ico-regen" x1="9" y1="18" x2="8.2" y2="20.2" ${o}/><line class="ico-regen" x1="12.6" y1="18.2" x2="11.5" y2="21.4" ${o}/><line class="ico-regen" x1="16.2" y1="18" x2="15.4" y2="20.2" ${o}/>`;
+  const vlok=(x,y)=>`<path class="ico-sneeuw" d="M${x} ${y-1.7}v3.4M${x-1.47} ${y-.85}l2.94 1.7M${x-1.47} ${y+.85}l2.94-1.7" stroke="currentColor" stroke-width=".9" fill="none" stroke-linecap="round"/>`;
   const vlokken=vlok(8.2,19.6)+vlok(12.4,21.2)+vlok(16.6,19.6);
-  const bliksem=`<path d="M13.3 15.6l-2.9 3.9h2.5l-1.1 3 3.7-4.4h-2.5l1.2-2.5z" fill="currentColor" stroke="currentColor" stroke-width=".6" stroke-linejoin="round"/>`;
+  const bliksem=`<path class="ico-flits" d="M13.3 15.6l-2.9 3.9h2.5l-1.1 3 3.7-4.4h-2.5l1.2-2.5z" fill="currentColor" stroke="currentColor" stroke-width=".6" stroke-linejoin="round"/>`;
   const mist=`<line x1="5" y1="8.5" x2="15.5" y2="8.5" ${o}/><line x1="18.2" y1="8.5" x2="19" y2="8.5" ${o}/><line x1="3.5" y1="12" x2="20.5" y2="12" ${o}/><line x1="5" y1="15.5" x2="6" y2="15.5" ${o}/><line x1="8.6" y1="15.5" x2="19" y2="15.5" ${o}/>`;
-  const halfz=`<circle cx="8.8" cy="8.2" r="3" ${zacht}/>`+straal(8.8,8.2,[180,225,270,315],4.6,6.6,5.8);
+  const halfz=`<circle class="ico-zon" cx="8.8" cy="8.2" r="3" ${zacht}/>`+straal(8.8,8.2,[180,225,270,315],4.6,6.6,5.8);
   const halfm=`<path d="M12 8.9A4.6 4.6 0 1 1 6.2 3.1a3.7 3.7 0 0 0 5.8 5.8z" ${zacht}/>`;
   /* De wolk dekt af wat erachter ligt met een masker, niet met een vulling:
      zo werkt het op elke achtergrond, ook in donkere modus en de nachtstand. */
@@ -795,10 +831,13 @@ function icon(code,isDay,size){
   else if(f==="mist") b=mist;
   else if(f==="regen") b=wolkhoog+druppels;
   else if(f==="sneeuw") b=wolkhoog+vlokken;
-  else if(f==="ijzel") b=wolkhoog+`<line x1="9" y1="17.6" x2="8.2" y2="19.8" ${o}/><line x1="15" y1="17.6" x2="14.2" y2="19.8" ${o}/>`+
+  else if(f==="ijzel") b=wolkhoog+`<line class="ico-regen" x1="9" y1="17.6" x2="8.2" y2="19.8" ${o}/><line class="ico-regen" x1="15" y1="17.6" x2="14.2" y2="19.8" ${o}/>`+
     `<path d="M5.5 21.8q2-1.6 4 0t4 0t4 0" ${o}/>`;
   else b=wolkhoog+bliksem;
-  return `<svg class="ico" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${b}</svg>`;
+  /* De soort weer als attribuut: daaraan hangt de luchttint achter de
+     hoofdweergave. Dag of nacht telt alleen waar zon of maan te zien is. */
+  const soort=f==="zon"||f==="halfbewolkt"?(f==="zon"?"":"half")+(isDay?"zon":"nacht"):f==="wolk"||f==="mist"||f==="regen"||f==="sneeuw"||f==="ijzel"?f:"onweer";
+  return `<svg class="ico" data-weer="${soort}" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${b}</svg>`;
 }
 /** De klok van de plaats zelf. Alle uren in de app staan in die tijd, dus deze
     hoort daarbij en niet de tijd van degene die kijkt. */
@@ -2624,17 +2663,12 @@ function dagen(){
     const somRuw=eindigGetal(day.precipitation_sum&&day.precipitation_sum[i]);
     const som=somRuw!==null&&somRuw>=0?somRuw:null;
     const kans=eindigGetal(day.precipitation_probability_max&&day.precipitation_probability_max[i]);
-    /* De balk loopt in kleur van de minimum- naar de maximumtemperatuur: koel
-       blauwgrijs, via groen en oker, naar warm terracotta. Gedempte tinten, zodat
-       ze in het lichte en donkere thema rustig blijven. */
-    const tempKleur=t=>{
-      const stops=[[-10,[93,121,160]],[0,[110,148,176]],[8,[126,166,160]],[14,[196,176,112]],[20,[214,146,92]],[28,[190,96,72]],[35,[160,60,60]]];
-      for(let k=1;k<stops.length;k++)if(t<=stops[k][0]){const [t0,c0]=stops[k-1],[t1,c1]=stops[k],f=clamp((t-t0)/(t1-t0),0,1);return "rgb("+c0.map((v,j)=>Math.round(v+(c1[j]-v)*f)).join(",")+")";}
-      return "rgb("+stops[stops.length-1][1].join(",")+")";
-    };
+    /* De balk loopt in kleur van de minimum- naar de maximumtemperatuur, op de
+       gedeelde temperatuurschaal; het donkere thema kiest via CSS zijn eigen
+       verloop. */
     const balk=l===null||hh===null
       ?""
-      :`<i style="left:${(l-lo)/sp*100}%;width:${Math.max(3,(hh-l)/sp*100)}%;--temp-verloop:linear-gradient(90deg,${tempKleur(l)},${tempKleur(hh)})"></i>`;
+      :`<i style="left:${(l-lo)/sp*100}%;width:${Math.max(3,(hh-l)/sp*100)}%;--temp-verloop:${temperatuurVerloop(l,hh,"licht")};--temp-verloop-donker:${temperatuurVerloop(l,hh,"donker")}"></i>`;
     /* Vandaag: een stip op de balk bij de temperatuur van nu. */
     const nuT=t===plaatsVandaag()?eindigGetal(S.d.current&&S.d.current.temperature_2m):null;
     const nuStip=balk&&nuT!==null?`<b class="nu-stip" style="left:${(clamp(nuT,lo,hi)-lo)/sp*100}%" aria-hidden="true"></b>`:"";
