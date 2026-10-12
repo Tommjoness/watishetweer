@@ -834,10 +834,7 @@ function icon(code,isDay,size){
   else if(f==="ijzel") b=wolkhoog+`<line class="ico-regen" x1="9" y1="17.6" x2="8.2" y2="19.8" ${o}/><line class="ico-regen" x1="15" y1="17.6" x2="14.2" y2="19.8" ${o}/>`+
     `<path d="M5.5 21.8q2-1.6 4 0t4 0t4 0" ${o}/>`;
   else b=wolkhoog+bliksem;
-  /* De soort weer als attribuut: daaraan hangt de luchttint achter de
-     hoofdweergave. Dag of nacht telt alleen waar zon of maan te zien is. */
-  const soort=f==="zon"||f==="halfbewolkt"?(f==="zon"?"":"half")+(isDay?"zon":"nacht"):f==="wolk"||f==="mist"||f==="regen"||f==="sneeuw"||f==="ijzel"?f:"onweer";
-  return `<svg class="ico" data-weer="${soort}" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${b}</svg>`;
+  return `<svg class="ico" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${b}</svg>`;
 }
 /** De klok van de plaats zelf. Alle uren in de app staan in die tijd, dus deze
     hoort daarbij en niet de tijd van degene die kijkt. */

@@ -4,8 +4,9 @@
      temperatuurtrend, neerslagkans, luchtvochtigheid, bewolking, UV);
    - de trendbalk toont de richting: koeler loopt van warm naar koud, warmer
      van koud naar warm, voller naarmate het verschil groter is (5 graden of
-     meer is vol); gelijk blijven is neutraal grijs;
-   - de luchttint achter de hoofdweergave, naar de soort weer van het icoon.
+     meer is vol); gelijk blijven is neutraal grijs.
+   De luchttint achter de hoofdweergave is op verzoek van de eigenaar weer
+   weggehaald (12 oktober): die oogde als een gele waas.
    Waarden komen uit de getoonde tegeltekst zelf (alleen de cijfers, dus
    taalonafhankelijk), zodat meter en cijfer nooit uiteenlopen. Iedere tekenpass
    is idempotent en volgt elke latere render via één MutationObserver. */
@@ -70,13 +71,7 @@ function tekenMeters(doc){
     if(html)sval.insertAdjacentHTML("afterend",html);
   }
 }
-function tekenLucht(doc){
-  const held=doc.querySelector(".hero"),ico=doc.querySelector("#nowicon svg.ico[data-weer]");
-  if(!held)return;
-  const soort=ico?ico.getAttribute("data-weer"):"";
-  if((held.getAttribute("data-lucht")||"")!==soort){if(soort)held.setAttribute("data-lucht",soort);else held.removeAttribute("data-lucht");}
-}
-function teken(doc){tekenMeters(doc);tekenLucht(doc);}
+function teken(doc){tekenMeters(doc);}
 
 function start(){
   const doc=root.document;if(!doc||!doc.body)return;

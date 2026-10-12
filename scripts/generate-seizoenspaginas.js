@@ -61,13 +61,22 @@ html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70
 .seizoen-dag .officieel{display:block;font-size:12px;font-weight:400;color:var(--muted)}
 .seizoen-dag a{text-decoration:none;border-bottom:1px solid var(--rule)}
 .seizoen-dag a:hover,.seizoen-dag a:focus-visible{border-bottom-color:var(--ink)}
-.seizoen-perioden td{text-align:right;padding-right:0;white-space:nowrap}
+.seizoen-perioden td{text-align:right;padding-right:0;white-space:nowrap}.seizoen-perioden td.jaargrens{white-space:normal;text-wrap:balance}
 .seizoen-vakantie{table-layout:fixed}.seizoen-vakantie thead th:first-child{width:34%}.seizoen-vakantie thead th:last-child{width:24%}
 @media(max-width:600px){body{padding:14px}.kaart{padding:26px 22px}h1{font-size:32px}.seizoen-dag table{font-size:14px}.seizoen-dag .sep{display:none}.seizoen-dag .sub{display:block;font-size:13px}}
 </style>`;
 
 /* Vakantiepagina's: de data per regio staan vast in de HTML, voor ieder jaar
    waarvan de vakantie nog niet voorbij is. */
+/* Valt de vakantie in alle regio's op dezelfde data (zoals de kerstvakantie),
+   dan één regel "Alle regio's" in plaats van drie gelijke. */
+function rijen(lijst){
+  const gelijk=lijst.every(p=>p.van===lijst[0].van&&p.tot===lijst[0].tot);
+  const regels=gelijk?[{kop:"Alle regio's",p:lijst[0]}]:lijst.map(p=>({kop:"Regio "+p.regio,p}));
+  /* Een periode over de jaargrens is lang (met jaartallen) en mag op een smal
+     scherm over twee regels. */
+  return regels.map(({kop,p})=>`<tr><th scope="row">${esc(kop)}</th><td${p.van.slice(0,4)!==p.tot.slice(0,4)?' class="jaargrens"':""}>${esc(runtime.periodeTekst(p.van,p.tot))}</td></tr>`).join("\n");
+}
 function periodenHtml(cfg,buildDag){
   if(!cfg.perioden)return "";
   const jaren=Object.keys(cfg.perioden).map(Number).sort((a,b)=>a-b).filter(j=>cfg.perioden[j].some(p=>p.tot>=buildDag));
@@ -75,7 +84,7 @@ function periodenHtml(cfg,buildDag){
 <div class="seizoen-dag seizoen-perioden" data-jaar="${j}">
 <h3>${esc(cfg.naam)} ${j}</h3>
 <table><thead><tr><th scope="col">Regio</th><th scope="col">Vakantie</th></tr></thead><tbody>
-${cfg.perioden[j].map(p=>`<tr><th scope="row">Regio ${esc(p.regio)}</th><td>${esc(runtime.periodeTekst(p.van,p.tot))}</td></tr>`).join("\n")}
+${rijen(cfg.perioden[j])}
 </tbody></table>
 </div>`).join("");
 }

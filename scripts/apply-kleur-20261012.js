@@ -12,8 +12,8 @@ const STYLE_ID="wiw-kleur-20261012";
 const CSS=fs.readFileSync(path.join(__dirname,"kleur-20261012.css"),"utf8");
 const RUNTIME=fs.readFileSync(path.join(__dirname,"kleur-20261012.js"),"utf8");
 
-/* Kleurronde (akkoord eigenaar 12 oktober): metertjes in de tegels, luchttint
-   achter de hoofdweergave en de accentkleuren van iconen, grafiek en dagbalken.
+/* Kleurronde (akkoord eigenaar 12 oktober): metertjes in de tegels en de
+   accentkleuren van iconen, grafiek en dagbalken.
    De temperatuurschaal en de iconklassen staan in de app zelf, het
    temperatuurvlak in de grafiekrenderer; deze stap voegt in twee fasen toe:
    - "runtime": de tegelruntime, vóór platform-output-cleanup (daarna is de
@@ -59,9 +59,9 @@ function main(fase){
     geraakt++;
   }
   if(!geraakt)throw new Error("Geen weerpagina geraakt door de kleurlaag ("+fase+").");
-  if(fase==="runtime"){console.log("Kleurruntime toegevoegd aan "+geraakt+" weerpagina's (metertjes en luchttint).");return {geraakt};}
+  if(fase==="runtime"){console.log("Kleurruntime toegevoegd aan "+geraakt+" weerpagina's (metertjes).");return {geraakt};}
   const cache=vernieuwServiceworkerCache(OUT,"kleur-20261012");
-  console.log("Kleurstijl toegepast op "+geraakt+" weerpagina's: metertjes, luchttint, iconaccenten, grafiekvlak en dagbalken; cache "+cache+".");
+  console.log("Kleurstijl toegepast op "+geraakt+" weerpagina's: metertjes, iconaccenten, grafiekvlak en dagbalken; cache "+cache+".");
   return {geraakt,cache};
 }
 

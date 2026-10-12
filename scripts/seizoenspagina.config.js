@@ -153,6 +153,57 @@ const SEIZOENSPAGINAS=Object.freeze([
       plaatsroute("eindhoven"),
       plaatsroute("maastricht")
     ]
+  }),
+  Object.freeze({
+    slug:"kerstvakantie",
+    naam:"Kerstvakantie",
+    soort:"vakantie",
+    tijdzone:"Europe/Amsterdam",
+    vensterDagen:7,
+    /* Data van de Rijksoverheid (overzicht schoolvakanties per schooljaar); de
+       kerstvakantie valt in alle regio's tegelijk. Ieder jaar een regel erbij. */
+    perioden:{
+      2026:[{regio:"noord",van:"2026-12-19",tot:"2027-01-03"},{regio:"midden",van:"2026-12-19",tot:"2027-01-03"},{regio:"zuid",van:"2026-12-19",tot:"2027-01-03"}],
+      2027:[{regio:"noord",van:"2027-12-25",tot:"2028-01-09"},{regio:"midden",van:"2027-12-25",tot:"2028-01-09"},{regio:"zuid",van:"2027-12-25",tot:"2028-01-09"}]
+    },
+    titel:"Weer kerstvakantie {jaar}: regen, sneeuw en temperatuur per dag",
+    beschrijving:"Hoe wordt het weer in de kerstvakantie {jaar}? Per dag regen, sneeuw, zon en temperatuur in zeven grote plaatsen, met de vakantiedata.",
+    intro:"Hoe wordt het weer in de kerstvakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, sneeuw, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.",
+    uitleg:{
+      kop:"Wanneer is de kerstvakantie?",
+      alineas:[
+        "De kerstvakantie valt in regio noord, midden en zuid tegelijk. Dit zijn de data van de Rijksoverheid; scholen kunnen ervan afwijken. Kijk bij twijfel in de schoolgids."
+      ],
+      bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
+    },
+    teksten:{
+      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      onbekend:"De data van de kerstvakantie {jaar} zijn nog niet bekend.",
+      aftellenMeer:"Nog {n} dagen tot de kerstvakantie{regio}.",
+      aftellenGetal:"dagen tot de kerstvakantie{regio}",
+      aftellenMorgen:"Morgen begint de kerstvakantie{regio}.",
+      aftellenVandaag:"Vandaag begint de kerstvakantie{regio}.",
+      bezig:"Het is kerstvakantie in regio {regios}.",
+      overal:"Het is kerstvakantie.",
+      begintNog:"In regio {regios} begint de vakantie op {datum}.",
+      allesDroog:"Volgens de huidige verwachting blijft het op alle {m} vakantiedagen in de verwachting overwegend droog.",
+      deelsDroog:"Volgens de huidige verwachting {zijn} {n} van de {m} vakantiedagen in de verwachting overwegend droog.",
+      nietsDroog:"Volgens de huidige verwachting valt er op alle {m} vakantiedagen in de verwachting in een groot deel van het land neerslag.",
+      dagDroog:"Volgens de huidige verwachting blijft het op {dag} overwegend droog.",
+      dagNat:"Volgens de huidige verwachting valt er op {dag} in een groot deel van het land neerslag.",
+      later:"De vakantiedagen tot en met {tot} verschijnen hier vanzelf zodra ze binnen de 7-daagse verwachting vallen.",
+      toelichting:"Overwegend droog: in minder dan de helft van de plaatsen valt 1 mm neerslag of meer. Sneeuw is de verwachte hoeveelheid verse sneeuw op die dag. Zon is het verwachte aantal uren zonneschijn. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.",
+      fout:"De verwachting is op dit moment niet beschikbaar. Probeer het later opnieuw, of bekijk het weer voor je eigen plaats."
+    },
+    plaatsen:[
+      plaatsroute("groningen"),
+      plaatsroute("zwolle"),
+      plaatsroute("amsterdam"),
+      plaatsroute("den-haag"),
+      plaatsroute("utrecht"),
+      plaatsroute("eindhoven"),
+      plaatsroute("maastricht")
+    ]
   })
 ]);
 
