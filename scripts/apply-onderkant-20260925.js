@@ -44,10 +44,9 @@ html body footer:not(#wiw-onderkant)>details.footer-details #coords{display:bloc
    beeld vullen ze de rijen van Over/Privacy en Technische locatiegegevens aan.
    Zo blijft de 2+1-indeling van de hulplinks staan en wordt de voet niet hoger.
    Alleen de seizoenspagina's die het eerst aan de beurt zijn, staan op mobiel in
-   beeld (.voet-later verdwijnt; zie seo-foundation.js). */
+   beeld (.voet-later verdwijnt via scripts/voet.css; zie seo-foundation.js). */
 @media(max-width:430px){
   html body footer:not(#wiw-onderkant)>span.bron.seizoen-link{order:1!important}
-  html body footer:not(#wiw-onderkant)>span.bron.seizoen-link.voet-later{display:none!important}
   html body footer:not(#wiw-onderkant)>details.footer-details{order:2!important}
   html body footer:not(#wiw-onderkant)>.footer-contact{order:3!important}
 }
