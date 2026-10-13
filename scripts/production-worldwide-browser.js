@@ -34,7 +34,16 @@ function verifieerGeenPressureQuery(url,naam){
   const u=new URL(url),velden=[u.searchParams.get("current")||"",u.searchParams.get("hourly")||""];
   assert(!velden.some(v=>v.split(",").includes("pressure_msl")),`${naam}: retired pressure_msl staat nog in productiequery ${url}`);
 }
-function isVolledigeBron(bron){return !!(bron&&bron.timezone&&bron.current&&bron.hourly&&bron.daily);}
+/* Een bron telt alleen als hij echte meetwaarden heeft. Visual Crossing gaf op
+   de geografische Zuidpool een verwachting met alleen null-waarden; die mag
+   niet als live fixture dienen, want dan wacht de browsertest op data die er
+   niet is. Een lege bron telt als mislukte poging. */
+const ingevuld=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
+function isVolledigeBron(bron){
+  if(!(bron&&bron.timezone&&bron.current&&bron.hourly&&bron.daily))return false;
+  const uren=Array.isArray(bron.hourly.temperature_2m)?bron.hourly.temperature_2m:[];
+  return ingevuld(bron.current.temperature_2m)&&uren.filter(ingevuld).length>=24;
+}
 const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const begrensdeMs=(naam,standaard,min,max)=>{
   const waarde=Number(process.env[naam]||standaard);

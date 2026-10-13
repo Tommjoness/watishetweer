@@ -135,4 +135,47 @@ assert.match(routeIntern.visualCrossingUrl("test-key", 52.370234, 4.895234), /ic
   }
 }
 
+/* Lege verwachting (zoals Visual Crossing op de geografische Zuidpool, 13 oktober):
+   alle meetwaarden null. Number(null) is 0, dus zonder strikte controle ging dit
+   door als "0 graden, onbewolkt" en probeerde de route WeatherAPI niet meer. */
+function leegPayload() {
+  const p = vcPayload();
+  const leeg = rij => Object.fromEntries(Object.entries(rij).map(([k, v]) =>
+    [k, typeof v === "number" && !/^(datetimeEpoch|sunriseEpoch|sunsetEpoch|tzoffset)$/.test(k) ? null : v]));
+  p.currentConditions = leeg(p.currentConditions);
+  p.days = p.days.map(dag => ({ ...leeg(dag), hours: (dag.hours || []).map(leeg) }));
+  return p;
+}
+assert.throws(() => normaliseerVisualCrossing(leegPayload()), /onvolledige weerdata/, "een verwachting zonder meetwaarden is geen geldige verwachting");
+{
+  const nullData = JSON.parse(JSON.stringify(data));
+  nullData.current.temperature_2m = null;
+  assert.equal(geldigeVisualCrossingForecast(nullData), false, "null als actuele temperatuur telt niet als 0 graden");
+  const legeUren = JSON.parse(JSON.stringify(data));
+  legeUren.hourly.temperature_2m = legeUren.hourly.temperature_2m.map(() => null);
+  assert.equal(geldigeVisualCrossingForecast(legeUren), false, "lege uurtemperaturen tellen niet als 0 graden");
+  const legeDagen = JSON.parse(JSON.stringify(data));
+  legeDagen.daily.weather_code = legeDagen.daily.weather_code.map(() => "");
+  assert.equal(geldigeVisualCrossingForecast(legeDagen), false, "een lege weercode telt niet als code 0 (onbewolkt)");
+}
+{
+  const origineel = globalThis.fetch;
+  const urls = [];
+  globalThis.fetch = async url => {
+    urls.push(String(url));
+    if (String(url).includes("visualcrossing.com")) return new Response(JSON.stringify(leegPayload()), { status: 200, headers: { "Content-Type": "application/json" } });
+    return new Response("{}", { status: 503, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    const response = await worker.fetch(
+      new Request("https://watishetweer.nl/api/forecast?lat=52.37&lon=4.9"),
+      { VISUAL_CROSSING_API_KEY: "test-key", WEATHERAPI_KEY: "emergency-test-key" }
+    );
+    assert(urls.some(u => u.includes("api.weatherapi.com")), "na een lege Visual Crossing-verwachting probeert de route WeatherAPI: " + urls.join(" | "));
+    assert.equal(response.status, 503, "zonder bruikbare bron geeft de route 503 en geen lege verwachting");
+  } finally {
+    globalThis.fetch = origineel;
+  }
+}
+
 console.log("Visual Crossing forecast-adapter: contract, zeven dagen, lokale tijd, DST, WMO-mapping, servervolgorde en fail-closed gedrag groen.");
