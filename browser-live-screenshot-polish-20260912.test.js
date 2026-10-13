@@ -21,7 +21,7 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
   if(!over||!privacy||!technisch)throw new Error('footerhulplinks ontbreken');
   const midden=el=>{const r=el.getBoundingClientRect();return r.top+r.height/2;},rij=[midden(over),midden(privacy),midden(technisch)];
   const ns='http://www.w3.org/2000/svg',rain=document.createElementNS(ns,'g');rain.setAttribute('data-q4-rain-periods','1');svg.appendChild(rain);
-  zet('chips-margin',chips?parseFloat(getComputedStyle(chips).marginTop):0);zet('brief-margin',brief?parseFloat(getComputedStyle(brief).marginTop):0);zet('brief-padding',brief?parseFloat(getComputedStyle(brief).paddingTop):0);zet('footer-font',parseFloat(getComputedStyle(footer).fontSize)||0);zet('footer-line',parseFloat(getComputedStyle(footer).lineHeight)||0);zet('footer-row-spread',Math.max(...rij)-Math.min(...rij));zet('technical-shadow',getComputedStyle(technisch).boxShadow||'none');zet('nav-margin',parseFloat(getComputedStyle(nav).marginTop)||0);zet('aq-pad',aq?parseFloat(getComputedStyle(aq).paddingLeft):0);zet('rain-transform',getComputedStyle(rain).transform);zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
+  zet('chips-margin',chips?parseFloat(getComputedStyle(chips).marginTop):0);zet('brief-margin',brief?parseFloat(getComputedStyle(brief).marginTop):0);zet('brief-padding',brief?parseFloat(getComputedStyle(brief).paddingTop):0);zet('footer-font',parseFloat(getComputedStyle(footer).fontSize)||0);zet('footer-line',parseFloat(getComputedStyle(footer).lineHeight)||0);zet('footer-row-spread',Math.max(...rij)-Math.min(...rij));zet('technical-shadow',getComputedStyle(technisch).boxShadow||'none');zet('technical-deco',getComputedStyle(technisch).textDecorationLine||'');zet('helper-visible',[over,privacy,technisch].every(el=>el.getClientRects().length&&el.getBoundingClientRect().height>0));zet('nav-margin',parseFloat(getComputedStyle(nav).marginTop)||0);zet('aq-pad',aq?parseFloat(getComputedStyle(aq).paddingLeft):0);zet('rain-transform',getComputedStyle(rain).transform);zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);zet('done','ok');
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}}, {once:true});
 </script>`;
 html=html.replace("</body>",reporter+"</body>");
@@ -32,14 +32,20 @@ try{
   if(r.status!==0)throw new Error("browser exit "+r.status+": "+String(r.stderr||"").slice(-1200));
   const dom=r.stdout||"",v=k=>{const m=new RegExp('data-live-shot-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
   if(v('done')!=='ok')throw new Error("reporter: "+v('exception'));
-  if(Math.abs(Number(v('chips-margin'))-12)>.6)throw new Error("bewaarde-plaatsen/topritme is niet 12px: "+v('chips-margin'));
+  /* Huidige eisen, die de screenshotronde van 12 september vervangen:
+     - topritme boven de bewaarde plaatsen is 8px (desktopkop, wiw-kop-20260925);
+     - voetlinks zijn onderstreept direct onder de tekst, zonder schaduwlijn (onderkant, 25 september);
+     - sinds de seizoenslinks in de linkrij staan, hoeven Over, Privacy en Technische
+       locatiegegevens niet meer op één regel; centreren meet onderkant-browser.test.js;
+     - luchttegels staan zonder inspringing (indeling, 25 september). */
+  if(Math.abs(Number(v('chips-margin'))-8)>.6)throw new Error("bewaarde-plaatsen/topritme is niet 8px: "+v('chips-margin'));
   if(Math.abs(Number(v('brief-margin'))-18)>.6||Math.abs(Number(v('brief-padding'))-18)>.6)throw new Error("bovenste desktopruimte is niet 18/18px: "+v('brief-margin')+"/"+v('brief-padding'));
   if(Number(v('footer-font'))<12.9||Number(v('footer-line'))<19)throw new Error("footer is nog te klein/dicht: "+v('footer-font')+"px / "+v('footer-line')+"px");
-  if(Number(v('footer-row-spread'))>4)throw new Error("Over, Privacy en Technische locatiegegevens staan niet op één footerregel: spread="+v('footer-row-spread')+"px");
-  if(!v('technical-shadow')||v('technical-shadow')==='none')throw new Error("Technische locatiegegevens mist de linkachtige onderstreping");
+  if(v('helper-visible')!=='true')throw new Error("Over, Privacy of Technische locatiegegevens staat niet zichtbaar in de voet");
+  if(!/underline/.test(v('technical-deco')||'')||v('technical-shadow')!=='none')throw new Error("Technische locatiegegevens is niet onderstreept direct onder de tekst: "+v('technical-deco')+" / "+v('technical-shadow'));
   if(Math.abs(Number(v('nav-margin'))-10)>.6)throw new Error("zachte plaatsnav-overgang is niet 10px: "+v('nav-margin'));
-  if(Math.abs(Number(v('aq-pad'))-18)>.6)throw new Error("AQI/pollenrij is onbedoeld opnieuw gewijzigd: padding="+v('aq-pad'));
+  if(Math.abs(Number(v('aq-pad')))>.6)throw new Error("AQI/pollenrij springt in: padding="+v('aq-pad'));
   if(v('rain-transform')!=='none')throw new Error("oude visuele regen-transform is nog actief: "+v('rain-transform'));
   if(Number(v('overflow'))>2)throw new Error("finale statische desktop-DOM heeft horizontale overflow: "+v('overflow')+"px");
-  console.log("Late screenshot browserregressie groen ná bundling: top/footer/plaatsnav gemeten, footerhulplinks delen één regel, technische details zijn onderstreept, AQI ongemoeid en regen-transform geneutraliseerd.");
+  console.log("Late screenshot browserregressie groen ná bundling: top/footer/plaatsnav gemeten, footerhulplinks zichtbaar, technische details onderstreept zonder schaduw, AQI zonder inspringing en regen-transform geneutraliseerd.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
