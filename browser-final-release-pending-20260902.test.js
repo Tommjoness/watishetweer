@@ -21,7 +21,7 @@ function antwoord(payload,ok,status){
   return `{ok:${ok!==false},status:${status||200},json:async()=>(${JSON.stringify(payload)}),text:async()=>JSON.stringify(${JSON.stringify(payload)})}`;
 }
 
-let html=fs.readFileSync(productie,"utf8");
+let html=require(path.join(__dirname,"scripts","lokale-artifact-html.js")).metLokaleScripts(fs.readFileSync(productie,"utf8"),path.dirname(productie));
 const stub=`<script>
 (function(){
   try{localStorage.clear();sessionStorage.clear();}catch(e){}

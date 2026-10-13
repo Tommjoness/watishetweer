@@ -7,7 +7,7 @@ if(!browser){if(process.env.CI){console.error("FOUT primaire metriekgridbrowsert
 
 const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
-let html=fs.readFileSync(productie,"utf8");
+let html=require(path.join(__dirname,"scripts","lokale-artifact-html.js")).metLokaleScripts(fs.readFileSync(productie,"utf8"),path.dirname(productie));
 const stub=`<script>
 try{localStorage.clear();sessionStorage.clear();}catch(e){}
 window.fetch=()=>new Promise(()=>{});

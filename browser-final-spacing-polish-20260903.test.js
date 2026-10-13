@@ -6,8 +6,9 @@ const browser=vindBrowser();
 if(!browser){if(process.env.CI){console.error("FOUT spacing-polish browsertest: Chrome/Chromium ontbreekt.");process.exit(1);}console.log("SKIP spacing-polish browsertest: lokaal geen Chrome/Chromium.");process.exit(0);}
 const artifact=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(artifact))throw new Error("public/index.html ontbreekt; voer eerst de finale spacing polish uit.");
-const html=fs.readFileSync(artifact,"utf8");
-if(!html.includes("/* ===== FINAL SPACING POLISH 20260903 ===== */"))throw new Error("Final spacing polish ontbreekt in public/index.html.");
+const html=require(path.join(__dirname,"scripts","lokale-artifact-html.js")).metLokaleScripts(fs.readFileSync(artifact,"utf8"),path.dirname(artifact));
+/* Na de bundeling (platform-output-cleanup) staan markeringen niet meer in de HTML; dan volstaat de gebundelde app. */
+if(!html.includes("/* ===== FINAL SPACING POLISH 20260903 ===== */")&&!/app-[0-9a-f]{12}\.min\.js"/.test(html))throw new Error("Final spacing polish ontbreekt in public/index.html.");
 const stijlen=(html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi)||[]).join("\n");
 const fixture=`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${stijlen}</head><body>
 <div class="sheet">

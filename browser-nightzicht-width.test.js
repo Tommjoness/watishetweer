@@ -9,7 +9,7 @@ const browser=require("./scripts/vind-browser.js").vindBrowser()||"google-chrome
 const artifact=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(artifact))throw new Error("public/index.html ontbreekt; voer eerst de postbuild uit");
 
-const html=fs.readFileSync(artifact,"utf8");
+const html=require(path.join(__dirname,"scripts","lokale-artifact-html.js")).metLokaleScripts(fs.readFileSync(artifact,"utf8"),path.dirname(artifact));
 const stijlen=(html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi)||[]).join("\n");
 if(!stijlen.includes("weather-now-desktop-refinement-20260829"))throw new Error("Desktopverfijningsstijl ontbreekt in de finale artifact.");
 

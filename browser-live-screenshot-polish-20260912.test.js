@@ -6,7 +6,7 @@ const browser=vindBrowser();
 if(!browser){if(process.env.CI){console.error("FOUT late live-screenshot browsertest: Chrome/Chromium ontbreekt.");process.exit(1);}console.log("SKIP late live-screenshot browsertest: lokaal geen Chrome/Chromium.");process.exit(0);}
 const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
-let html=fs.readFileSync(productie,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
+let html=require(path.join(__dirname,"scripts","lokale-artifact-html.js")).metLokaleScripts(fs.readFileSync(productie,"utf8"),path.dirname(productie)).replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
 if(!html.includes('id="wiw-live-screenshot-polish-20260912"'))throw new Error("late live-screenshot stylesheet ontbreekt in finale artifact");
 /* Deze test zit expres ná delivery-cleanup. De app-runtime is daar gebundeld en
    niet global; verwijder scripts zodat dit uitsluitend de geleverde DOM/CSS meet. */

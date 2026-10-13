@@ -6,8 +6,9 @@ const browser=vindBrowser();
 if(!browser){if(process.env.CI){console.error("FOUT live-chart-layout browsertest: Chrome/Chromium ontbreekt.");process.exit(1);}console.log("SKIP live-chart-layout browsertest: lokaal geen Chrome/Chromium.");process.exit(0);}
 const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
-let html=fs.readFileSync(productie,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
-if(!html.includes("LIVE CHART LABEL FIX 20260912")||!html.includes("LIVE Q4 CHART COMPACTION 20260912")||!html.includes("LIVE CHART COPY CLEANUP 20260916"))throw new Error("pre-cleanup chart/layout-copy-fix ontbreekt in het te testen artifact");
+let html=require(path.join(__dirname,"scripts","lokale-artifact-html.js")).metLokaleScripts(fs.readFileSync(productie,"utf8"),path.dirname(productie)).replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
+/* Na de bundeling (platform-output-cleanup) staan markeringen niet meer in de HTML; dan volstaat de gebundelde app. */
+if((!html.includes("LIVE CHART LABEL FIX 20260912")||!html.includes("LIVE Q4 CHART COMPACTION 20260912")||!html.includes("LIVE CHART COPY CLEANUP 20260916"))&&!/app-[0-9a-f]{12}\.min\.js"/.test(html))throw new Error("pre-cleanup chart/layout-copy-fix ontbreekt in het te testen artifact");
 const stub=`<script>try{localStorage.clear();sessionStorage.clear();}catch(e){}window.fetch=()=>new Promise(()=>{});window.requestAnimationFrame=cb=>setTimeout(()=>cb(performance.now()),16);try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}</script>`;
 html=html.replace("</head>",stub+"</head>");
 const reporter=`<script>
@@ -99,7 +100,7 @@ try{
    nooit los van zijn eigen datapunt komen te zweven. We forceren beide slechte
    geometrieën direct na etmaal(); de bestaande async mobiele polish moet ze
    daarna zelfstandig herstellen. */
-let mobielHtml=fs.readFileSync(productie,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
+let mobielHtml=require(path.join(__dirname,"scripts","lokale-artifact-html.js")).metLokaleScripts(fs.readFileSync(productie,"utf8"),path.dirname(productie)).replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
 mobielHtml=mobielHtml.replace("</head>",stub+"</head>");
 const mobielReporter=`<script>
 window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-mobile-edge-'+k,String(v));try{
