@@ -7,8 +7,9 @@ if(!browser){if(process.env.CI){console.error("FOUT mobile-axis-rhythm: Chrome/C
 
 const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
-let html=fs.readFileSync(productie,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
-if(!html.includes("WeatherNowMobileGraphUX20260828"))throw new Error("Mobiele grafiek-UX ontbreekt in finale artifact.");
+let html=require(path.join(__dirname,"scripts","lokale-artifact-html.js")).metLokaleScripts(fs.readFileSync(productie,"utf8"),path.dirname(productie)).replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
+/* Na de bundeling (platform-output-cleanup) staan markeringen niet meer in de HTML; dan volstaat de gebundelde app. */
+if(!html.includes("WeatherNowMobileGraphUX20260828")&&!/app-[0-9a-f]{12}\.min\.js"/.test(html))throw new Error("Mobiele grafiek-UX ontbreekt in finale artifact.");
 /* Headless Chromium houdt een minimale CSS-windowbreedte van circa 500 px aan,
    ook bij --window-size=402. De productiecode gebruikt innerWidth alleen om de
    smalle <=430px-axispolish te kiezen. We zetten hier daarom uitsluitend die

@@ -11,7 +11,7 @@ if(!browser){
 }
 const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
-const basisHtml=fs.readFileSync(productie,"utf8");
+const basisHtml=require(path.join(__dirname,"scripts","lokale-artifact-html.js")).metLokaleScripts(fs.readFileSync(productie,"utf8"),path.dirname(productie));
 const fixture=bouw({geenKwartier:true});
 fixture.latitude=52.3676;fixture.longitude=4.9041;
 fixture.daily.sunshine_duration=fixture.daily.time.map(()=>6*3600);

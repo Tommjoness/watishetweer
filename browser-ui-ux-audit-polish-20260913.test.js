@@ -6,7 +6,7 @@ const browser=vindBrowser();
 if(!browser){if(process.env.CI){console.error("FOUT UI/UX-auditbrowsertest: Chrome/Chromium ontbreekt.");process.exit(1);}console.log("SKIP UI/UX-auditbrowsertest: lokaal geen Chrome/Chromium.");process.exit(0);}
 const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
-let basis=fs.readFileSync(productie,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
+let basis=require(path.join(__dirname,"scripts","lokale-artifact-html.js")).metLokaleScripts(fs.readFileSync(productie,"utf8"),path.dirname(productie)).replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
 if(!basis.includes('id="wiw-ui-ux-audit-polish-20260913"'))throw new Error("UI/UX-auditstylesheet ontbreekt in finale artifact");
 basis=basis.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,"").replace(/<script\b[^>]*\/>/gi,"");
 /* De productieruntime voegt na DOMContentLoaded een footerregel met

@@ -14,7 +14,7 @@ if(!browser){
 
 const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
-let html=fs.readFileSync(productie,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
+let html=require(path.join(__dirname,"scripts","lokale-artifact-html.js")).metLokaleScripts(fs.readFileSync(productie,"utf8"),path.dirname(productie)).replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
 const stub=`<script>try{localStorage.clear();sessionStorage.clear();}catch(e){}window.fetch=()=>new Promise(()=>{});window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()),16);window.cancelAnimationFrame=clearTimeout;try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}</script>`;
 html=html.replace("</head>",stub+"</head>");
 const reporter=`<script>

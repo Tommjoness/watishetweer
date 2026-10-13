@@ -50,8 +50,9 @@ const air={current:{european_aqi:24,us_aqi:33},hourly:{
 
 const productie=path.join(__dirname,"public","index.html");
 if(!fs.existsSync(productie))throw new Error("public/index.html ontbreekt.");
-let html=fs.readFileSync(productie,"utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
-if(!html.includes("DESKTOP VISUAL POLISH 20260909"))throw new Error("Desktop-polish ontbreekt in artifact.");
+let html=require(path.join(__dirname,"scripts","lokale-artifact-html.js")).metLokaleScripts(fs.readFileSync(productie,"utf8"),path.dirname(productie)).replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi,"");
+/* Na de bundeling (platform-output-cleanup) staan markeringen niet meer in de HTML; dan volstaat de gebundelde app. */
+if(!html.includes("DESKTOP VISUAL POLISH 20260909")&&!/app-[0-9a-f]{12}\.min\.js"/.test(html))throw new Error("Desktop-polish ontbreekt in artifact.");
 html=html.replace('function set(id,html){document.getElementById(id).innerHTML=nbsp(html);}','function set(id,html){const el=document.getElementById(id);if(!el)throw new Error("ontbrekend renderdoel: "+id);el.innerHTML=nbsp(html);}')
 html=html.replace(/<body([^>]*)>/i,'<body$1><div hidden aria-hidden="true"><span id="pres"></span><span id="pressub"></span></div>');
 const fixedNow=Date.UTC(2026,6,22,12,17);
