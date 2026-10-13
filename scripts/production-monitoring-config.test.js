@@ -81,6 +81,17 @@ assert.throws(()=>sitemapContract.controleerSitemap(testXml.replace("<url><loc>h
 const verplichteWereldmatrix=["Amsterdam","Singapore","Ushuaia","La Paz","Longyearbyen","Zuidpool","Dubai","Reykjavik","Punta Arenas","Miami","Tokio"];
 for(const plek of verplichteWereldmatrix)assert(wereldwijd.includes(`naam:\"${plek}\"`),`wereldwijde monitor mist ${plek}`);
 assert(wereldwijd.includes('locaties.length} locaties × mobiel/desktop'),"wereldwijde monitor moet het actuele aantal locaties rapporteren");
+/* Een live bron zonder meetwaarden (Visual Crossing op de geografische Zuidpool, 13 oktober) telt als mislukte poging, niet als fixture. */
+{
+  const m=/const ingevuld=[\s\S]*?\nfunction isVolledigeBron\(bron\)\{[\s\S]*?\n\}/.exec(wereldwijd);
+  assert(m,"wereldwijde monitor mist de strikte bronkeuring");
+  const isVolledigeBron=new Function(m[0]+";return isVolledigeBron;")();
+  const uren=Array.from({length:48},(_,i)=>i);
+  const vol={timezone:"UTC",current:{temperature_2m:-48.2},hourly:{temperature_2m:uren.map(()=>-48)},daily:{}};
+  assert.equal(isVolledigeBron(vol),true,"een bron met meetwaarden is bruikbaar");
+  assert.equal(isVolledigeBron({...vol,current:{temperature_2m:null}}),false,"null als actuele temperatuur is geen meetwaarde");
+  assert.equal(isVolledigeBron({...vol,hourly:{temperature_2m:uren.map(()=>null)}}),false,"lege uurtemperaturen zijn geen bruikbare bron");
+}
 assert(wereldwijd.includes('{naam:"mobiel",width:390,height:844}'),"wereldwijde monitor mist mobiel 390px");
 assert(wereldwijd.includes('{naam:"desktop",width:1440,height:1000}'),"wereldwijde monitor mist desktop");
 assert(wereldwijd.includes('uit.overflow<=1'),"wereldwijde monitor bewaakt horizontale overflow niet");
