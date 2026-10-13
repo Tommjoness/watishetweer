@@ -73,12 +73,16 @@ function scenarioHtml(code){
   const zet=(k,v)=>document.body.setAttribute('data-case-'+k,String(v));
   const slaap=ms=>new Promise(r=>window.__wiwEchteSetTimeout(r,ms));
   const app=document.getElementById('app'),st=document.getElementById('state'),q=document.getElementById('q');
-  const status=document.getElementById('locatie-laadstatus');
+  /* De app maakt het meldingsvak #locatie-laadstatus pas aan bij de eerste
+     locatiewissel; zoek het daarom bij iedere meting opnieuw op in plaats van
+     één keer bij de start (dan blijft de verwijzing leeg). */
   const statusTekst=()=>{
+    const status=document.getElementById('locatie-laadstatus');
     const tekst=status&&status.querySelector('.locatie-status-tekst');
     return String(status&&status.hidden===false&&tekst?tekst.textContent:(st&&st.textContent)||'');
   };
   const retryAanwezig=()=>{
+    const status=document.getElementById('locatie-laadstatus');
     const compact=status&&status.querySelector('.locatie-status-retry');
     return !!((compact&&!compact.hidden)||(st&&st.querySelector('.wiw-location-retry')));
   };
