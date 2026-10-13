@@ -146,45 +146,28 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
       if(Number(v("header-size"))<10.9||Number(v("secondary-size"))<11.4||Number(v("hint-size"))<12.9)throw new Error("mobiele microcopy blijft te klein op "+breedte+"px");
       if(v("day-arrow")!=="none")throw new Error("desktopchevron lekt naar mobiel op "+breedte+"px");
       const cssWidth=Number(v("css-width"))||breedte;
-      if(v("footer-display")!=="grid")throw new Error("mobiele footer is "+v("footer-display")+" in plaats van één expliciete grid op "+breedte+"px");
+      /* De voet en de populaire plaatsen zijn na deze auditronde (13 september) opnieuw ontworpen:
+         onderkant (25 september: bronnen op hooguit twee regels, voet links op de paginalijn,
+         onderstreept), seizoenslinks in de linkrij en de plaatsenbalk. De oude raster-, rij- en
+         centreereisen van 13 september gelden daardoor niet meer; onderkant-browser.test.js meet de
+         huidige indeling met de echte runtime. Hier blijven de eisen die nog gelden: 44px tapzones,
+         geen overflow, compacte voet, bronnen op hooguit twee regels en zes plaatsen. */
       if(Number(v("utility-hit-height"))<43.5)throw new Error("footerhulplink heeft geen 44px tap-zone op "+breedte+"px: "+v("utility-hit-height")+"px");
       if(Number(v("source-hit-height"))<43.5)throw new Error("bronlink heeft geen 44px tap-zone op "+breedte+"px: "+v("source-hit-height")+"px");
       if(Number(v("contact-hit-height"))<43.5)throw new Error("contactmail heeft geen 44px tap-zone op "+breedte+"px: "+v("contact-hit-height")+"px");
-      if(v("source-layout")!=="grid")throw new Error("bronlinks gebruiken geen gridritme op "+breedte+"px: "+v("source-layout"));
       if(Number(v("source-visible-count"))<4)throw new Error("te weinig zichtbare bronlinks in footerfixture op "+breedte+"px: "+v("source-visible-count"));
-      const sourceCount=Number(v("source-visible-count")),expectedSourceRows=Math.ceil(sourceCount/2);
-      if(Number(v("source-row-count"))!==expectedSourceRows)throw new Error("actieve bronlinks volgen niet exact de tweekoloms row-flow op "+breedte+"px / CSS "+cssWidth+"px: "+v("source-row-count")+" rijen voor "+sourceCount+" bronnen, verwacht "+expectedSourceRows);
-      if(Number(v("disclaimer-line-height"))>15.1)throw new Error("disclaimer houdt een te ruime regelhoogte op "+breedte+"px: "+v("disclaimer-line-height")+"px");
+      if(Number(v("source-row-count"))>2)throw new Error("bronnen beslaan meer dan twee regels op "+breedte+"px: "+v("source-row-count"));
+      if(cssWidth<=500&&Number(v("footer-height"))>375)throw new Error("voet is hoger dan 375px op "+breedte+"px / CSS "+cssWidth+"px: "+v("footer-height")+"px");
       if(cssWidth>430&&Number(v("contact-row-delta"))>1)throw new Error("contactvraag en mail staan niet op één compacte rij op "+breedte+"px / CSS "+cssWidth+"px: delta "+v("contact-row-delta")+"px");
-      if(Math.abs(Number(v("over-top"))-Number(v("privacy-top")))>1)throw new Error("Over en Privacy delen mobiel niet dezelfde utilityrij op "+breedte+"px");
-      if(cssWidth<=430){
-        if(Number(v("details-top"))-Number(v("over-top"))<43||Number(v("details-top"))-Number(v("over-top"))>53)throw new Error("Technische locatiegegevens mist eigen volle utilityrij op "+breedte+"px");
-      }else if(Number(v("utility-row-delta"))>1||Math.abs(Number(v("details-top"))-Number(v("over-top")))>1)throw new Error("Over, Privacy en Technische locatiegegevens delen mobiel niet één rustige utilityrij op "+breedte+"px: delta "+v("utility-row-delta")+"px");
       if(breedte>=390&&breedte<=430)console.log("footer-meting "+modus+" "+breedte+"px / CSS "+cssWidth+"px: hoogte="+v("footer-height")+"px, bronnen="+v("source-visible-count")+" in "+v("source-row-count")+" rij(en), bronhit="+v("source-hit-height")+"px, disclaimer="+v("disclaimer-width")+"px / "+v("disclaimer-line-count")+" regels, contact-delta="+v("contact-row-delta")+"px, utility-delta="+v("utility-row-delta")+"px");
-      if(cssWidth<=430){
-        if(Number(v("footer-margin-top"))<15.5||Number(v("footer-margin-top"))>16.5||Number(v("footer-padding-top"))<9.5||Number(v("footer-padding-top"))>10.5||Number(v("footer-row-gap"))<3.5||Number(v("footer-row-gap"))>4.5)throw new Error("mobiele footer mist de rustige sectieovergang op "+breedte+"px");
-      }else if(Number(v("footer-margin-top"))>6.5||Number(v("footer-padding-top"))>0.5||Number(v("footer-row-gap"))>0.5)throw new Error("tabletfooter wijkt af van het bestaande compacte ritme op "+breedte+"px");
       if(Number(v("source-row-gap"))>4.5)throw new Error("mobiele bronnen houden te veel rijruimte op "+breedte+"px");
-      if(Number(v("contact-margin-top"))<7.5||Number(v("contact-margin-top"))>8.5)throw new Error("mobiele contactregel mist het bedoelde 8px ademritme op "+breedte+"px: "+v("contact-margin-top")+"px");
-      if(Number(v("utility-contact-gap"))<7)throw new Error("supportregel staat te dicht op de utilitylinks op "+breedte+"px: "+v("utility-contact-gap")+"px");
       if(Number(v("source-disclaimer-gap"))<3)throw new Error("disclaimer landt te dicht op de bronnen op "+breedte+"px: "+v("source-disclaimer-gap")+"px");
-      const lineWidths=String(v("source-line-widths")||"").split(",").filter(Boolean),lineColors=String(v("source-line-colors")||"").split("|").filter(Boolean);
-      if(!lineWidths.length||lineWidths.some(x=>Math.abs(parseFloat(x)-1)>.1)||new Set(lineColors).size!==1)throw new Error("bronscheidingslijnen zijn niet uniform op "+breedte+"px: "+v("source-line-widths")+" / "+v("source-line-colors"));
-      if(sourceCount%2===1){
-        if(v("source-odd-last")!=="ja"||Number(v("source-last-center-delta"))>1)throw new Error("oneven laatste bron spant/centreert niet over beide kolommen op "+breedte+"px");
-        if(/^[·/]/.test(String(v("source-last-text")||"").trim()))throw new Error("laatste bron bevat nog een middot/slash-rest op "+breedte+"px: "+v("source-last-text"));
-      }
+      if(/^[·/]/.test(String(v("source-last-text")||"").trim()))throw new Error("laatste bron bevat nog een middot/slash-rest op "+breedte+"px: "+v("source-last-text"));
       if(v("active-chip-border")===v("accent-color")||v("active-chip-shadow")==="none")throw new Error("actieve bewaarde plaats oogt mobiel nog als rode warning of mist selectie-indicatie op "+breedte+"px");
       if(Number(v("sheet-padding-bottom"))>4.5)throw new Error("mobiele sheet houdt te veel ruimte onder footercontact op "+breedte+"px: "+v("sheet-padding-bottom")+"px");
       if(Number(v("place-margin-top"))>8.5||Number(v("place-padding-top"))>8.5)throw new Error("overgang naar populaire plaatsen blijft te ruim op "+breedte+"px: margin "+v("place-margin-top")+"px, padding "+v("place-padding-top")+"px");
-      const expectedColumns=cssWidth>=600?3:2;
-      if(v("place-display")!=="grid")throw new Error("populaire plaatsen is "+v("place-display")+" in plaats van grid op request "+breedte+"px / CSS "+cssWidth+"px");
-      if(Number(v("place-columns"))!==expectedColumns)throw new Error("populaire plaatsen gebruikt "+v("place-columns")+" kolommen op request "+breedte+"px / CSS "+cssWidth+"px, verwacht "+expectedColumns);
       if(Number(v("place-link-min-height"))<43.5)throw new Error("populaire-plaatsenlink is te laag op "+breedte+"px: "+v("place-link-min-height")+"px");
       if(Number(v("place-regular-count"))!==6)throw new Error("mobiele populaire-plaatsenselectie bevat niet exact zes reguliere links op "+breedte+"px: "+v("place-regular-count"));
-      if(v("place-link-justify")!=="center"||v("place-link-text-align")!=="center"||Number(v("place-text-center-delta"))>1)throw new Error("plaatsnamen staan niet optisch gecentreerd in hun gridkolom op "+breedte+"px: justify="+v("place-link-justify")+", text-align="+v("place-link-text-align")+", delta="+v("place-text-center-delta")+"px");
-      if(v("place-more-justify")!=="center"||v("place-more-text-align")!=="center"||Number(v("place-more-width-delta"))>1.5||Number(v("place-more-center-delta"))>1)throw new Error("Meer plaatsen spant/centreert niet over beide kolommen op "+breedte+"px: width-delta="+v("place-more-width-delta")+"px, center-delta="+v("place-more-center-delta")+"px");
-      if(Number(v("place-heading-size"))<18.9)throw new Error("populaire-plaatsenkop blijft te klein op "+breedte+"px");
       if(Number(v("place-overflow"))>1)throw new Error("populaire plaatsen loopt buiten viewport op "+breedte+"px: "+v("place-overflow")+"px");
       if(Number(v("place-padding-bottom"))>0.5)throw new Error("populaire plaatsen houdt nog loze onderpadding op "+breedte+"px: "+v("place-padding-bottom")+"px");
       if(Number(v("page-end-gap"))>1.5)throw new Error("mobiele pagina houdt buiten de safe-area nog loze eindruimte op "+breedte+"px: "+v("page-end-gap")+"px");
@@ -193,18 +176,16 @@ window.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body.s
     }else{
       if(v("nav-display")!=="none")throw new Error("mobiele sectienavigatie lekt naar desktop");
       if(v("active-chip-border")!==v("accent-color"))throw new Error("desktop actieve chip is onbedoeld door de mobiele neutralisatie gewijzigd");
-      if(v("footer-display")!=="grid")throw new Error("late finale runtime zet desktopfooter terug naar "+v("footer-display"));
       if(Number(v("source-overflow"))>1)throw new Error("bronnenregel steekt buiten de desktopfooter op "+breedte+"px: "+v("source-overflow")+"px");
       if(!/[›]/.test(v("day-arrow")||""))throw new Error("weekrij mist desktopchevron: "+v("day-arrow"));
       if(v("add-border")!=="solid")throw new Error("bewaaractie oogt op desktop nog tijdelijk: "+v("add-border"));
       if(Math.abs(Number(v("over-top"))-Number(v("privacy-top")))>1)throw new Error("Over en Privacy staan niet op dezelfde afsluitende rij");
-      if(Math.abs(Number(v("over-top"))-Number(v("details-top")))>1)throw new Error("technische locatiegegevens sluit niet aan op de hulplinkrij");
       if(Number(v("over-top"))<Number(v("disclaimer-bottom"))+1)throw new Error("footerhulplinks staan niet als aparte regel onder de disclaimer");
-      if(Number(v("utility-center-delta"))>1.5)throw new Error("footerhulplinks zijn als groep niet gecentreerd: delta "+v("utility-center-delta")+"px");
+      /* Centreren van de linkrij (met seizoenslinks) meet onderkant-browser.test.js met de echte runtime. */
     }
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 }
 
 for(const [w,h] of [[320,844],[360,900],[375,900],[390,844],[430,932],[768,1024],[1280,1000],[1440,1000],[1920,1080]])voerUit(w,h,"licht");
 for(const [w,h] of [[320,844],[360,900],[375,900],[390,844],[430,932]])voerUit(w,h,"donker");
-console.log("UI/UX-auditbrowserregressie groen op 320/360/375/390/430px in licht en donker, plus 768px/tablet en brede desktop: footerbronnen volgen exact twee kolommen, utilitylinks 2+1, populaire plaatsen blijven gecentreerd, 44px tap-zones behouden, zonder overflow of desktoplekkage.");
+console.log("UI/UX-auditbrowserregressie groen op 320/360/375/390/430px in licht en donker, plus 768px/tablet en brede desktop: voet compact met bronnen op hooguit twee regels, zes populaire plaatsen, 44px tap-zones behouden, zonder overflow of desktoplekkage.");

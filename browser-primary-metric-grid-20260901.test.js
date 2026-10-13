@@ -28,7 +28,8 @@ setTimeout(()=>{
     const labels=stats.map(el=>(el.querySelector('.eyebrow')?.textContent||'').trim());
     zet('count',stats.length);
     zet('pressure-grid',!!(grid&&pres&&grid.contains(pres)));
-    zet('pressure-hidden',!!(diag&&diag.hidden&&diag.getAttribute('aria-hidden')==='true'&&getComputedStyle(diag).display==='none'));
+    /* Luchtdruk is inmiddels volledig uit het artifact gehaald (pressure-retirement.js): geen tegel, geen verborgen diagnostiek. */
+    zet('pressure-retired',!pres&&!diag);
     zet('pressure-label-visible',labels.some(x=>/Luchtdruk/i.test(x)));
     zet('uv-breed',!!(uvStat&&uvStat.classList.contains('breed')));
     zet('uv-width',gr&&ur&&ur.width<=gr.width*0.56?'ok':'fout');
@@ -49,12 +50,13 @@ try{
     if(r.status!==0)throw new Error(`${w}px: browser exit ${r.status}: `+String(r.stderr||"").slice(-800));
     const dom=r.stdout||"",veld=k=>{const m=new RegExp('data-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
     if(veld('done')!=='ok')throw new Error(`${w}px: reporter faalde: ${veld('exception')||'onbekend'}`);
-    if(veld('count')!=='8')throw new Error(`${w}px: verwacht 8 zichtbare hoofdtegels, kreeg ${veld('count')}`);
-    if(veld('pressure-grid')!=='false'||veld('pressure-label-visible')!=='false'||veld('pressure-hidden')!=='true')throw new Error(`${w}px: luchtdruk is niet correct uit het zichtbare raster gehaald`);
+    /* Sinds 29 september altijd zes hoofdtegels (eigenaar); het oorspronkelijke achttegelraster van 1 september is daardoor vervangen. */
+    if(veld('count')!=='6')throw new Error(`${w}px: verwacht 6 zichtbare hoofdtegels, kreeg ${veld('count')}`);
+    if(veld('pressure-grid')!=='false'||veld('pressure-label-visible')!=='false'||veld('pressure-retired')!=='true')throw new Error(`${w}px: luchtdruk is niet volledig uit de pagina gehaald`);
     if(veld('uv-breed')!=='false'||veld('uv-width')!=='ok')throw new Error(`${w}px: UV-tegel is nog breed of beslaat meer dan één kolom`);
     if(veld('copy-day')!=='ok'||veld('copy-night')!=='ok')throw new Error(`${w}px: genuanceerde heldercopy ontbreekt`);
     if(Number(veld('overflow'))>2)throw new Error(`${w}px: ${veld('overflow')}px horizontale overflow`);
-    console.log(`${w}px: 8-tegelraster groen; luchtdruk verborgen, UV één kolom, heldercopy genuanceerd, overflow ${veld('overflow')}px.`);
+    console.log(`${w}px: 6-tegelraster groen; luchtdruk volledig weg, UV één kolom, heldercopy genuanceerd, overflow ${veld('overflow')}px.`);
   }
   console.log("Primaire metriekgridbrowsertest geslaagd op 320, 390 en 1440 px.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
