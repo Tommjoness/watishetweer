@@ -19,6 +19,9 @@ const fs=require("fs"),path=require("path"),http=require("http"),assert=require(
 const {chromium}=require("playwright");
 const {bouw}=require("./data.js");
 
+/* Dezelfde browser als de andere browsertests (CHROME_PATH, anders Chrome/Chromium op PATH, anders die van Playwright). */
+const browserPad=require("./scripts/vind-browser.js").vindBrowser();
+if(!browserPad){if(process.env.CI){console.error("FOUT spacing-browsertest: Chrome/Chromium ontbreekt.");process.exit(1);}console.log("SKIP spacing-browsertest: lokaal geen Chrome/Chromium.");process.exit(0);}
 const OUT=path.join(__dirname,"public");
 if(!fs.existsSync(path.join(OUT,"index.html")))throw new Error("public/index.html ontbreekt; voer eerst de build uit.");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -86,7 +89,7 @@ function meet(){
 (async()=>{
   await new Promise(r=>server.listen(0,"127.0.0.1",r));
   const root="http://127.0.0.1:"+server.address().port;
-  const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
+  const browser=await chromium.launch({headless:true,executablePath:browserPad});
   try{
     for(const [w,h] of [[390,844],[1366,900],[1600,900],[1680,900],[1920,1080]]){
       const {context,page,fouten}=await open(browser,root,w,h);
