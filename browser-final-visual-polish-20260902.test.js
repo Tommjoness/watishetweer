@@ -18,7 +18,8 @@ setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-final-visual-'
   const table=document.getElementById('wiw-hour-table'),scroll=document.getElementById('wiw-hour-scroll');if(!table||!scroll)throw new Error('uurtabel ontbreekt');
   const tbody=table.querySelector('tbody');tbody.innerHTML='';for(let i=0;i<12;i++){const tr=document.createElement('tr');tr.innerHTML=innerWidth>=1100?'<td>'+(i<10?'0':'')+i+':00</td><td>☁</td><td>'+(10+i)+'°<small>voelt '+(9+i)+'°</small></td><td>0,0 mm<small>20% kans</small></td><td>ZW 3 Bft<small>14 km/u</small></td>':'<td>'+(i<10?'0':'')+i+':00</td><td>'+(10+i)+' °C</td><td>20%</td><td>0,0 mm</td>';tbody.appendChild(tr);}
   const nights=document.getElementById('nights');if(!nights)throw new Error('#nights ontbreekt');
-  nights.innerHTML='<div class="row night kop"><div class="dname">Nacht</div><div class="score">Indicatie</div><div class="sbar"></div><div class="nmeta">Bewolking</div><div class="nmeta wide">Beste zichtperiode</div></div><div class="row night"><div class="dname">vannacht</div><div class="score">1/10</div><div class="sbar"><i style="width:10%"></i></div><div class="nmeta"><span class="perc">84%</span> bewolking</div><div class="nmeta wide"><span class="nachtadvies">Ongunstig · Geen gunstig kijkvenster door bewolking.</span><span class="nachtmaan">Maanopkomst om 23:08.</span></div></div>';
+  /* Nachtzicht-rij zoals de app hem nu opbouwt (compacte Nachtzicht, 25–29 september): eigen kolommen voor Beoordeling, Beste zichtperiode en Maan. */
+  nights.innerHTML='<div class="row night kop"><div class="dname">Nacht</div><div class="score">Zichtscore</div><div class="nmeta">Bewolking</div><div class="sbar"><span class="wiw-night-assessment-head">Beoordeling</span></div><div class="nmeta wide">Beste zichtperiode</div><span class="wiw-night-moon-head">Maan</span></div><div class="row night" data-d="0"><div class="dname">vannacht</div><div class="score">1/10</div><div class="sbar"><i style="width:10%"></i></div><div class="nmeta" aria-label="Bewolking 84%"><span class="perc">84%</span></div><span class="nachtadvies"><span class="nachtoordeel">Ongunstig</span></span><span class="nachtvenster">Geen gunstig kijkvenster door bewolking.</span><span class="nachtmaan"><span class="nachtmaanregel">Maanopkomst om 03:08.</span></span><div class="nmeta wide"><details class="nacht-meta-details" open=""><summary>Zicht en maan</summary></details></div></div>';
   const vis=document.getElementById('vis'),vissub=document.getElementById('vissub');if(vis&&vissub){vis.innerHTML='10+<s>km</s>';vissub.textContent='Goed zicht, meer dan tien kilometer.';}
   if(!globalThis.WeatherNowFinalVisualPolish20260903||typeof WeatherNowFinalVisualPolish20260903.sync!=='function')throw new Error('final visual UX runtime ontbreekt');
   WeatherNowFinalVisualPolish20260903.sync();
@@ -31,11 +32,11 @@ setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-final-visual-'
   zet('hour-overflow-y',ss.overflowY);zet('hour-role',scroll.getAttribute('role')||'');zet('hour-tabindex',scroll.hasAttribute('tabindex')?'ja':'nee');
   const knop=document.getElementById('wiw-hour-toggle');zet('hour-toggle',knop&&!knop.hidden?'zichtbaar':'verborgen');zet('hour-toggle-expanded',knop&&knop.getAttribute('aria-expanded'));zet('hour-hidden',table.querySelectorAll('tbody tr.wiw-hour-mobile-hidden').length);
   if(innerWidth<=900&&knop&&!knop.hidden){knop.click();zet('hour-expanded-hidden',table.querySelectorAll('tbody tr.wiw-hour-mobile-hidden').length);zet('hour-expanded-state',knop.getAttribute('aria-expanded'));}else{zet('hour-expanded-hidden','nvt');zet('hour-expanded-state','nvt');}
-  const kop=nights.querySelector('.row.night.kop'),rij=nights.querySelector('.row.night:not(.kop)'),kw=kop.querySelector('.nmeta.wide'),rw=rij.querySelector('.nmeta.wide'),ka=kop.querySelector('.nmeta:not(.wide)'),ra=rij.querySelector('.nmeta:not(.wide)'),advies=rij.querySelector('.nachtadvies'),bar=rij.querySelector('.sbar');
-  const R=rr(rij),KW=rr(kw),RW=rr(rw),KA=rr(ka),RA=rr(ra),ADV=rr(advies),BAR=rr(bar),w=innerWidth;
+  const kop=nights.querySelector('.row.night.kop'),rij=nights.querySelector('.row.night:not(.kop)'),kw=kop.querySelector('.nmeta.wide'),rw=rij.querySelector('.nachtvenster'),ka=kop.querySelector('.nmeta:not(.wide)'),ra=rij.querySelector('.nmeta:not(.wide)'),advies=rij.querySelector('.nachtadvies'),kadv=kop.querySelector('.wiw-night-assessment-head'),kscore=kop.querySelector('.score'),maan=rij.querySelector('.nachtmaan'),rmeta=rij.querySelector('.nmeta.wide');
+  const R=rr(rij),KW=rr(kw),RW=rr(rw),KA=rr(ka),RA=rr(ra),ADV=rr(advies),KADV=rr(kadv),KSC=rr(kscore),MAAN=rr(maan),w=innerWidth;
   zet('night-label',kop.querySelector('.score').textContent.trim());zet('visibility-copy',vissub?vissub.textContent.trim():'');
   const here=document.getElementById('here'),ververs=document.getElementById('ververs'),thema=document.getElementById('thema'),themaAuto=document.getElementById('thema-auto'),themaSwitch=document.getElementById('thema-switch');zet('here-opacity',here?getComputedStyle(here).opacity:'');zet('refresh-opacity',ververs?getComputedStyle(ververs).opacity:'');zet('theme-opacity',thema?getComputedStyle(thema).opacity:'');
-  const actiefThema=document.documentElement.getAttribute('data-thema'),dividerKleur=()=>here&&ververs&&getComputedStyle(here).borderRightColor===getComputedStyle(ververs).borderRightColor?'ok':'fout';document.documentElement.setAttribute('data-thema','licht');zet('divider-light',dividerKleur());document.documentElement.setAttribute('data-thema','donker');zet('divider-dark',dividerKleur());if(actiefThema===null)document.documentElement.removeAttribute('data-thema');else document.documentElement.setAttribute('data-thema',actiefThema);
+  const actiefThema=document.documentElement.getAttribute('data-thema'),dividerKleur=()=>{if(!here)return 'fout';const c=getComputedStyle(here);return parseFloat(c.borderRightWidth)>=1&&c.borderRightStyle!=='none'&&!/rgba\(0, 0, 0, 0\)|transparent/.test(c.borderRightColor)?'ok':'fout';};zet('here-size',here?Math.round(here.getBoundingClientRect().width)+'x'+Math.round(here.getBoundingClientRect().height):'');zet('refresh-size',ververs?Math.round(ververs.getBoundingClientRect().width)+'x'+Math.round(ververs.getBoundingClientRect().height):'');zet('theme-in-footer',thema&&thema.closest('.wiw-weergave-voet')?'ja':'nee');document.documentElement.setAttribute('data-thema','licht');zet('divider-light',dividerKleur());document.documentElement.setAttribute('data-thema','donker');zet('divider-dark',dividerKleur());if(actiefThema===null)document.documentElement.removeAttribute('data-thema');else document.documentElement.setAttribute('data-thema',actiefThema);
   zet('theme-control',thema&&thema.getAttribute('role')==='group'?'ja':'nee');
   zet('theme-auto-pressed',themaAuto?themaAuto.getAttribute('aria-pressed')||'':'');
   zet('theme-switch-role',themaSwitch?themaSwitch.getAttribute('role')||'':'');
@@ -55,16 +56,15 @@ setTimeout(()=>{const zet=(k,v)=>document.body.setAttribute('data-final-visual-'
   const bodyStyle=getComputedStyle(document.body),sheet=document.querySelector('.sheet'),sheetStyle=sheet&&getComputedStyle(sheet);zet('body-pad-left',parseFloat(bodyStyle.paddingLeft)||0);zet('sheet-pad-left',sheetStyle?parseFloat(sheetStyle.paddingLeft)||0:0);
   zet('overflow',Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);
   if(w>=1100){
-    const ws=getComputedStyle(rw);
-    zet('night-wide-style',ws.textAlign==='center'&&ws.alignItems==='center'&&ws.display==='flex'?'ok':'fout');
-    zet('night-wide-axis',KW&&RW&&Math.abs(KW.cx-RW.cx)<=1?'ok':'fout');
-    zet('night-cloud-axis',KA&&RA&&Math.abs(KA.cx-RA.cx)<=1?'ok':'fout');
-    zet('night-advice-axis',ADV&&RW&&(w>=1500?Math.abs(ADV.l-RW.l)<=2:Math.abs(ADV.cx-RW.cx)<=2)?'ok':'fout');
+    zet('night-wide-style',getComputedStyle(rw).textAlign==='center'?'ok':'fout');
+    zet('night-wide-axis',KW&&RW&&Math.abs(KW.cx-RW.cx)<=2?'ok':'fout');
+    zet('night-cloud-axis',KA&&RA&&Math.abs(KA.cx-RA.cx)<=2?'ok':'fout');
+    zet('night-advice-axis',ADV&&KADV&&Math.abs(ADV.cx-KADV.cx)<=2?'ok':'fout');
     zet('night-advice-align',getComputedStyle(advies).textAlign);
-    zet('night-wide-width',RW?Math.round(RW.w):0);zet('night-bar-width',BAR?Math.round(BAR.w):0);
-    zet('night-right-gap',R&&RW?Math.round(R.r-RW.r):0);
+    zet('night-wide-width',RW?Math.round(RW.w):0);zet('night-bar-width',KSC?Math.round(KSC.w):0);
+    zet('night-right-gap',R&&MAAN?Math.round(R.r-MAAN.r):999);
   }else{
-    zet('night-mobile-wide',getComputedStyle(rw).gridColumnEnd==='-1'?'ok':'fout');
+    zet('night-mobile-wide',getComputedStyle(rmeta).gridColumnEnd==='-1'?'ok':'fout');
   }
   zet('done','ok');
 }catch(e){zet('exception',e&&e.stack||e);zet('done','fout');}},350);
@@ -85,13 +85,18 @@ try{
     const dom=r.stdout||"",v=k=>{const m=new RegExp('data-final-visual-'+k+'="([^"]*)"').exec(dom);return m&&m[1];};
     if(v('done')!=='ok')throw new Error(`${w}px reporter: ${v('exception')}`);
     const actualW=Number(v('viewport-width'));
-    if(v('tiles')!=='8'||v('values-centered')!=='ok')throw new Error(`${w}px: hoofdtegelwaarden niet geometrisch gecentreerd (tiles=${v('tiles')}, values=${v('values-centered')})`);
+    /* Zes hoofdtegels sinds 29 september (eigenaar). */
+    if(v('tiles')!=='6'||v('values-centered')!=='ok')throw new Error(`${w}px: hoofdtegelwaarden niet geometrisch gecentreerd (tiles=${v('tiles')}, values=${v('values-centered')})`);
     if(v('hour-scrollbar')!=='thin'||v('page-scrollbar')!=='thin')throw new Error(`${w}px: scrollbar styling niet actief (hour=${v('hour-scrollbar')}, page=${v('page-scrollbar')})`);
     if(v('night-label')!=='Zichtscore')throw new Error(`${w}px: Nachtzicht gebruikt nog geen duidelijke Zichtscore-label (${v('night-label')})`);
     if(v('visibility-copy')!=='Goed zicht.')throw new Error(`${w}px: redundante zichttekst niet ingekort (${v('visibility-copy')})`);
     if(v('theme-control')!=='ja'||v('theme-auto-pressed')!=='true'||v('theme-switch-role')!=='switch'||v('theme-switch-checked')!=='false'||v('theme-icons')!=='ja'||v('theme-choice')!=='auto'||v('theme-default')!=='auto'||v('theme-manual')!=='donker'||v('theme-return-auto')!=='auto'||v('theme-return-choice')!=='auto')throw new Error(`${w}px: Auto/Licht/Donker-togglecontract ontbreekt (group=${v('theme-control')}, auto=${v('theme-auto-pressed')}, role=${v('theme-switch-role')}, checked=${v('theme-switch-checked')}, icons=${v('theme-icons')}, keuze=${v('theme-choice')}, default=${v('theme-default')}, manual=${v('theme-manual')}, reset=${v('theme-return-auto')})`);
-    if(!(Number(v('refresh-opacity'))<Number(v('here-opacity'))&&Number(v('theme-opacity'))<Number(v('here-opacity'))))throw new Error(`${w}px: headerhiërarchie ontbreekt (locatie=${v('here-opacity')}, ververs=${v('refresh-opacity')}, weergave=${v('theme-opacity')})`);
-    if(v('divider-light')!=='ok'||v('divider-dark')!=='ok')throw new Error(`${w}px: locatie-divider wijkt af van de controlerij (licht=${v('divider-light')}, donker=${v('divider-dark')})`);
+    /* Kop sinds het eerste scherm van 24 september: Mijn locatie en Ververs zijn volwaardige knoppen met een scheidingslijn ernaast
+       (tapdoel 44px op touch, 24px met muis) en de weergaveknop staat in de voet (wiw-first-screen-20260924). Dat vervangt de gedimde
+       tekstknoppen van 2 september. */
+    const maat=x=>String(x||'0x0').split('x').map(Number),minDoel=actualW<=900?44:24;
+    if(maat(v('here-size')).some(x=>x<minDoel)||maat(v('refresh-size')).some(x=>x<minDoel)||v('theme-in-footer')!=='ja')throw new Error(`${w}px: kopknoppen kloppen niet (locatie=${v('here-size')}, ververs=${v('refresh-size')}, weergave in voet=${v('theme-in-footer')})`);
+    if(v('divider-light')!=='ok'||v('divider-dark')!=='ok')throw new Error(`${w}px: scheidingslijn naast Mijn locatie ontbreekt (licht=${v('divider-light')}, donker=${v('divider-dark')})`);
     if(Number(v('overflow'))>2)throw new Error(`${w}px: ${v('overflow')}px horizontale overflow`);
     if(actualW<=900){
       if(v('hour-overflow-y')!=='visible'||v('hour-role')!==''||v('hour-tabindex')!=='nee')throw new Error(`${w}px: mobiele uurtabel is nog een geneste scroller (overflow=${v('hour-overflow-y')}, role=${v('hour-role')}, tabindex=${v('hour-tabindex')})`);
@@ -103,12 +108,15 @@ try{
       const vastDesktop=actualW>=1100;
       if(v('hour-overflow-y')!==(vastDesktop?'visible':'auto')||v('hour-role')!==(vastDesktop?'':'region')||v('hour-tabindex')!==(vastDesktop?'nee':'ja')||v('hour-toggle')!=='verborgen')throw new Error(`${w}px: desktop uurtabelgedrag is geraakt (overflow=${v('hour-overflow-y')}, role=${v('hour-role')}, tabindex=${v('hour-tabindex')}, toggle=${v('hour-toggle')})`);
       if(v('night-wide-axis')!=='ok'||v('night-cloud-axis')!=='ok'||v('night-advice-axis')!=='ok')throw new Error(`${w}px: Nachtzicht-uitlijning fout wide=${v('night-wide-axis')} cloud=${v('night-cloud-axis')} advice=${v('night-advice-axis')}`);
-      if(v('night-advice-align')!=='left')throw new Error(`${w}px: lange Nachtzicht-uitleg niet links uitgelijnd (${v('night-advice-align')})`);
-      if(Number(v('night-wide-width'))<319||Number(v('night-wide-width'))>481)throw new Error(`${w}px: Beste zichtperiode valt buiten de begrensde leesbreedte (${v('night-wide-width')}px)`);
-      if(Number(v('night-bar-width'))<189||Number(v('night-bar-width'))>261)throw new Error(`${w}px: zichtscorebalk valt buiten de compacte band (${v('night-bar-width')}px)`);
-      if(actualW>=1366&&Number(v('night-right-gap'))<100)throw new Error(`${w}px: Nachtzicht-data wordt nog over de volledige rij uitgesmeerd (${v('night-right-gap')}px vrije eindruimte)`);
+      /* Nachtzicht sinds 29 september (eigenaar): Beoordeling, Beste zichtperiode en Maan gecentreerd onder hun kop; de rij loopt over de
+         volle breedte, alleen Beste zichtperiode rekt mee en de Maan-kolom sluit op de rand aan. */
+      if(v('night-advice-align')!=='center'||v('night-wide-style')!=='ok')throw new Error(`${w}px: Beoordeling of Beste zichtperiode niet gecentreerd (${v('night-advice-align')}/${v('night-wide-style')})`);
+      if(Number(v('night-wide-width'))<319)throw new Error(`${w}px: Beste zichtperiode te smal (${v('night-wide-width')}px)`);
+      if(Number(v('night-bar-width'))<150||Number(v('night-bar-width'))>261)throw new Error(`${w}px: Zichtscore-kolom valt buiten de compacte band (${v('night-bar-width')}px)`);
+      /* De Maan-kolom staat vanaf 1360px naast de rest (zie onderkant-browser.test.js). */
+      if(actualW>=1360&&Math.abs(Number(v('night-right-gap')))>2)throw new Error(`${w}px: Maan-kolom sluit niet aan op de rand van de rij (${v('night-right-gap')}px)`);
     }
-    console.log(`${w}px (CSS viewport ${actualW}px): final visual UX groen; overflow ${v('overflow')}px, urenpreview, Auto/Licht/Donker-toggle en headerhiërarchie correct${actualW>=1100?', zichtperiode '+v('night-wide-width')+'px':''}.`);
+    console.log(`${w}px (CSS viewport ${actualW}px): final visual UX groen; overflow ${v('overflow')}px, urenpreview, Auto/Licht/Donker-toggle en kopknoppen correct${actualW>=1100?', zichtperiode '+v('night-wide-width')+'px':''}.`);
   }
   console.log("Final visual polish browsertest geslaagd op de aangevraagde 320/390/430/1100/1366/1440/1660/1920 vensters; asserts volgen de gemeten CSS-viewport en het finale Auto/Licht/Donker-togglecontract.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}

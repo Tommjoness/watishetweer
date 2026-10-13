@@ -1,80 +1,125 @@
 "use strict";
 
-const fs=require("fs"),path=require("path"),os=require("os"),{spawnSync}=require("child_process");
-function vindBrowser(){return require("./scripts/vind-browser.js").vindBrowser();}
-const browser=vindBrowser();
-if(!browser){if(process.env.CI){console.error("FOUT spacing-polish browsertest: Chrome/Chromium ontbreekt.");process.exit(1);}console.log("SKIP spacing-polish browsertest: lokaal geen Chrome/Chromium.");process.exit(0);}
-const artifact=path.join(__dirname,"public","index.html");
-if(!fs.existsSync(artifact))throw new Error("public/index.html ontbreekt; voer eerst de finale spacing polish uit.");
-const html=require(path.join(__dirname,"scripts","lokale-artifact-html.js")).metLokaleScripts(fs.readFileSync(artifact,"utf8"),path.dirname(artifact));
-/* Na de bundeling (platform-output-cleanup) staan markeringen niet meer in de HTML; dan volstaat de gebundelde app. */
-if(!html.includes("/* ===== FINAL SPACING POLISH 20260903 ===== */")&&!/app-[0-9a-f]{12}\.min\.js"/.test(html))throw new Error("Final spacing polish ontbreekt in public/index.html.");
-const stijlen=(html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi)||[]).join("\n");
-const fixture=`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${stijlen}</head><body>
-<div class="sheet">
-  <div class="mast" id="test-mast"><div><h1>watishetweer.nl</h1><h2 id="place">Amsterdam</h2></div><div class="mastright" id="test-mastright"><div class="tools"><input type="text" value="Amsterdam"><button id="here">Mijn locatie</button><button id="ververs">Ververs</button><button id="thema">Weergave</button></div><div id="stamp">Gegevens opgehaald om 17:35</div></div></div>
-  <div class="final-top-grid"><div class="final-top-left"><p class="brief">Korte briefing</p><div class="hero">21 °C</div></div><div class="stats" id="test-topstats"><div class="stat">Wind</div><div class="stat">Zon</div><div class="stat">Neerslag</div><div class="stat">Vocht</div></div></div>
-  <div class="dashrow dashrow-days">
-    <div class="dashcol"><h2 id="dagen-kop"><span>Zeven dagen</span></h2><p class="hint" id="dagenhint">Kies een dag.</p><div id="days"><div class="row day">Voorbeeld</div></div></div>
-    <div class="dashcol"><h2 id="nacht-kop"><span>Nachtzicht</span></h2><p class="hint" id="nachthint">Indicatie voor de nacht.</p><div id="nights">
-      <div class="row night kop"><div class="dname">Nacht</div><div class="score">Zichtscore</div><div class="sbar"></div><div class="nmeta">Bewolking</div><div class="nmeta wide">Beste zichtperiode</div></div>
-      <div class="row night"><div class="dname">vannacht</div><div class="score">4/10</div><div class="sbar"><i style="width:40%"></i></div><div class="nmeta"><span class="perc">44%</span></div><div class="nmeta wide"><span class="nachtadvies">Matig · Geen gunstig kijkvenster door bewolking, neerslag en maanlicht.</span><span>Gemiddeld zicht: 10+ km</span><span class="nachtmaan">◐ Maanopkomst om 23:08.</span></div></div>
-    </div></div>
-  </div>
-  <h2 id="aq-kop"><span>Luchtkwaliteit en pollen</span></h2><p class="hint" id="pollenhint">Pollen is modelinformatie.</p>
-  <div class="stats" id="aq"><div class="stat"><div class="eyebrow">Europese AQI</div><div class="sval">20</div></div><div class="stat"><div class="eyebrow">Zonuren</div><div class="sval">2,4</div></div></div>
-  <footer id="test-footer"><span class="bron" id="test-source"><b>Bronnen voor deze weergave</b> <a href="#">Open-Meteo</a> <a href="#">CAMS</a> <a href="#">MeteoAlarm</a> <a href="#">© OpenStreetMap-bijdragers</a> · <a href="#">KNMI</a></span><span class="bron"><a href="#">watishetweer.nl · Over deze site</a></span><span class="bron"><a href="#">Privacy &amp; gegevens</a></span><details class="bron footer-details"><summary>Technische locatiegegevens</summary></details></footer>
-</div>
-<nav class="seo-plaatsnav" id="test-nav"><div class="seo-plaatsnav-inner"><div class="seo-plaatsnav-kop" id="test-nav-title">Populaire plaatsen in Nederland</div><div class="seo-plaatsnav-links"><a href="#">Almere</a><a href="#">Amersfoort</a><a href="#">Amsterdam</a><a href="#">Arnhem</a><a href="#">Breda</a><a href="#">Den Haag</a><a href="#">Eindhoven</a><a href="#">Groningen</a><a href="#">Haarlem</a><a href="#">Maastricht</a><a href="#">Nijmegen</a><a href="#">Rotterdam</a><a href="#">Utrecht</a><a href="#">Zwolle</a><a href="#">Meer plaatsen</a></div></div></nav>
-<script>
-(function(){
- const out={};const cs=e=>getComputedStyle(e),rr=e=>e.getBoundingClientRect();
- const wide=document.querySelector('#nights .row.night:not(.kop) .nmeta.wide'),advies=wide.querySelector('.nachtadvies'),maan=wide.querySelector('.nachtmaan'),bar=document.querySelector('#nights .row.night:not(.kop) .sbar');
- const footer=document.getElementById('test-footer'),aq=document.getElementById('aq'),nav=document.getElementById('test-nav'),source=document.getElementById('test-source'),navTitle=document.getElementById('test-nav-title');
- const bron=document.querySelector('#test-footer .bron'),navlink=document.querySelector('#test-nav a'),mastRight=document.getElementById('test-mastright'),topStats=document.getElementById('test-topstats'),search=document.querySelector('#test-mastright input');
- out.wideAlign=cs(wide).textAlign;out.wideItems=cs(wide).alignItems;out.adviesAlign=cs(advies).textAlign;out.maanAlign=cs(maan).textAlign;
- out.barWidth=rr(bar).width;out.bestWidth=rr(wide).width;
- out.mastAxis=Math.abs(rr(mastRight).left-rr(topStats).left);out.mastWidthDelta=Math.abs(rr(mastRight).width-rr(topStats).width);out.searchWidth=rr(search).width;
- out.dagenMargin=parseFloat(cs(document.getElementById('dagen-kop')).marginTop)||0;out.nachtMargin=parseFloat(cs(document.getElementById('nacht-kop')).marginTop)||0;out.aqMargin=parseFloat(cs(document.getElementById('aq-kop')).marginTop)||0;
- out.sectionToken=parseFloat(cs(document.documentElement).getPropertyValue('--s3'));out.smallToken=parseFloat(cs(document.documentElement).getPropertyValue('--s1'));
- out.dagenBottom=parseFloat(cs(document.getElementById('dagen-kop')).marginBottom);out.dagenHintBottom=parseFloat(cs(document.getElementById('dagenhint')).marginBottom);
- out.hintTop=parseFloat(cs(document.getElementById('nachthint')).marginTop)||0;out.hintBottom=parseFloat(cs(document.getElementById('nachthint')).marginBottom)||0;
- out.footerMargin=parseFloat(cs(footer).marginTop)||0;out.footerPadding=parseFloat(cs(footer).paddingTop)||0;out.footerHeight=rr(footer).height;out.aqFooterGap=rr(footer).top-rr(aq).bottom;
- out.sourceWhite=cs(source).whiteSpace;out.sourceHeight=rr(source).height;
- out.navMargin=parseFloat(cs(nav).marginTop)||0;out.navHeight=rr(nav).height;out.navBorder=parseFloat(cs(nav).borderTopWidth)||0;out.navTitleHeight=rr(navTitle).height;out.bronHeight=rr(bron).height;out.navLinkHeight=rr(navlink).height;
- out.overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth;
- for(const [k,v] of Object.entries(out))document.body.setAttribute('data-spacing-'+k.replace(/[A-Z]/g,m=>'-'+m.toLowerCase()),String(v));
-})();
-</script></body></html>`;
-const dir=fs.mkdtempSync(path.join(os.tmpdir(),"wiw-spacing-polish-"));
-try{
- const pad=path.join(dir,"index.html");fs.writeFileSync(pad,fixture,"utf8");
- for(const [w,h] of [[390,900],[1366,900],[1600,900],[1680,900],[1920,1080]]){
-  const r=spawnSync(browser,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--allow-file-access-from-files",`--window-size=${w},${h}`,"--virtual-time-budget=500","--dump-dom","file://"+pad],{encoding:"utf8",maxBuffer:20*1024*1024});
-  if(r.status!==0)throw new Error(`${w}px browser exit ${r.status}: `+String(r.stderr||"").slice(-800));
-  const dom=r.stdout||"",v=k=>{const m=new RegExp('data-spacing-'+k+'="([^"]*)"').exec(dom);return m&&m[1];},n=k=>Number(v(k));
-  if(n('overflow')>2)throw new Error(`${w}px: ${n('overflow')}px horizontale overflow`);
-  if(w>=1100){
-    if(n('mast-axis')>2||n('mast-width-delta')>2)throw new Error(`${w}px: masthead en metriekgrid delen niet dezelfde rechterkolom (as ${n('mast-axis')}px, breedteverschil ${n('mast-width-delta')}px)`);
-    if(n('search-width')<200)throw new Error(`${w}px: zoekveld blijft onnodig smal (${n('search-width')}px)`);
-    if(v('wide-align')!=="left"||v('wide-items')!=="flex-start"||v('advies-align')!=="left"||v('maan-align')!=="left")throw new Error(`${w}px: Beste zichtperiode niet op één linkeras (${v('wide-align')}/${v('wide-items')}/${v('advies-align')}/${v('maan-align')})`);
-    if(n('bar-width')>625)throw new Error(`${w}px: Nachtzicht-scorebalk nog te breed (${n('bar-width')}px)`);
-    if(n('best-width')<330)throw new Error(`${w}px: Beste zichtperiode te smal (${n('best-width')}px)`);
-    if(!(n('section-token')>0&&Math.abs(n('dagen-margin')-n('section-token'))<.1))throw new Error(`${w}px: Zeven dagen moet de bestaande sectieafstandtoken gebruiken`);
-    if(!(n('small-token')>0&&Math.abs(n('dagen-bottom')-n('small-token'))<.1&&Math.abs(n('dagen-hint-bottom')-n('small-token'))<.1))throw new Error(`${w}px: weekkop, instructie en tabel sluiten niet compact aan`);
-    for(const k of ['nacht-margin','aq-margin'])if(!(n(k)>=26&&n(k)<=30))throw new Error(`${w}px: sectieritme ${k}=${n(k)}px, verwacht circa 28px`);
-    if(!(n('hint-top')>=5&&n('hint-top')<=7&&n('hint-bottom')>=7&&n('hint-bottom')<=9))throw new Error(`${w}px: hintmarges niet compact (${n('hint-top')}/${n('hint-bottom')}px)`);
-    if(n('footer-margin')>11||n('footer-padding')>8||n('aq-footer-gap')>12)throw new Error(`${w}px: footer staat nog te los (margin ${n('footer-margin')}, padding ${n('footer-padding')}, gap ${n('aq-footer-gap')})`);
-    if(n('footer-height')>58)throw new Error(`${w}px: footer nog te hoog (${n('footer-height')}px)`);
-    if(v('source-white')!=="nowrap"||n('source-height')>30)throw new Error(`${w}px: bronregel kan intern afbreken (${v('source-white')}, ${n('source-height')}px)`);
-    if(n('nav-margin')>1||n('nav-height')>66||n('nav-border')>1.2)throw new Error(`${w}px: populaire-plaatsenstrook nog te ruim/sterk gescheiden (margin ${n('nav-margin')}, hoogte ${n('nav-height')}, border ${n('nav-border')})`);
-    if(w>=1300&&n('nav-title-height')>30)throw new Error(`${w}px: SEO-footerkop breekt nog onnodig over meerdere regels (${n('nav-title-height')}px)`);
-  }else{
-    if(n('bron-height')<43.5)throw new Error(`390px: footertouchdoel te klein (${n('bron-height')}px)`);
-    if(n('nav-link-height')<43.5)throw new Error(`390px: plaatstouchdoel te klein (${n('nav-link-height')}px)`);
-    if(v('source-white')==="nowrap")throw new Error('390px: desktop-nowrap lekt naar mobiel');
-  }
-  console.log(`${w}px spacing-polish groen: mast-as ${n('mast-axis').toFixed(1)}px, Nachtzichtbalk ${n('bar-width').toFixed(1)}px, footer ${n('footer-height').toFixed(1)}px, SEO-nav ${n('nav-height').toFixed(1)}px, overflow ${n('overflow').toFixed(1)}px.`);
- }
- console.log("Final spacing polish browsertest geslaagd op 390/1366/1600/1680/1920 px.");
-}finally{fs.rmSync(dir,{recursive:true,force:true});}
+/* Spacing van de pagina op het finale artifact, met de echte runtime.
+   Deze test begon op 3 september met een nagebouwde pagina; die leek niet meer
+   op de site (kop, Nachtzicht en voet zijn later opnieuw ingedeeld). Hij meet
+   nu de echte pagina, met de eisen die nog gelden en de latere eisen waar
+   een ontwerpronde de oude verving:
+   - desktop: zoekbalk en tegels delen dezelfde rechterkolom; zoekveld breed;
+   - Nachtzicht: Beste zichtperiode en Maan gecentreerd onder hun kop
+     (eigenaar, 29 september), Beste zichtperiode breed genoeg, scorebalk compact;
+   - sectieritme: koppen 24–30px boven de sectie, kop en instructie compact;
+   - voet: compact (opnieuw ingedeeld op 25 september), bronnen op één regel;
+   - populaire plaatsen: zachte overgang van 10px (12 september), compact;
+   - telefoon: tapdoelen van 44px in voet en plaatsen.
+
+   Draait na: npm run build:cloudflare */
+
+const fs=require("fs"),path=require("path"),http=require("http"),assert=require("assert");
+const {chromium}=require("playwright");
+const {bouw}=require("./data.js");
+
+/* Dezelfde browser als de andere browsertests (CHROME_PATH, anders Chrome/Chromium op PATH, anders die van Playwright). */
+const browserPad=require("./scripts/vind-browser.js").vindBrowser();
+if(!browserPad){if(process.env.CI){console.error("FOUT spacing-browsertest: Chrome/Chromium ontbreekt.");process.exit(1);}console.log("SKIP spacing-browsertest: lokaal geen Chrome/Chromium.");process.exit(0);}
+const OUT=path.join(__dirname,"public");
+if(!fs.existsSync(path.join(OUT,"index.html")))throw new Error("public/index.html ontbreekt; voer eerst de build uit.");
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+function fixture(){
+  const d=bouw({som:0});
+  d.latitude=52.09;d.longitude=5.12;d.daily.sunshine_duration=d.daily.time.map(()=>21600);
+  const h=d.hourly;
+  while(h.time.length<194){const i=h.time.length,v=h.time[i-1];for(const k of Object.keys(h))if(k!=="time"&&Array.isArray(h[k]))h[k].push(h[k][i%24]);h.time.push(new Date(Date.parse(v+"Z")+3600000).toISOString().slice(0,16));}
+  return d;
+}
+const types={".html":"text/html; charset=utf-8",".js":"application/javascript",".css":"text/css",".woff2":"font/woff2",".svg":"image/svg+xml",".json":"application/json",".png":"image/png"};
+const server=http.createServer((req,res)=>{
+  let p=new URL(req.url,"http://localhost").pathname;if(p.endsWith("/"))p+="index.html";
+  const f=path.join(OUT,p);
+  if(!f.startsWith(OUT+path.sep)||!fs.existsSync(f)||!fs.statSync(f).isFile()){res.writeHead(404);res.end();return;}
+  res.writeHead(200,{"content-type":types[path.extname(f)]||"application/octet-stream","cache-control":"no-store"});fs.createReadStream(f).pipe(res);
+});
+
+async function open(browser,root,w,h){
+  const context=await browser.newContext({viewport:{width:w,height:h},locale:"nl-NL",timezoneId:"Europe/Amsterdam",serviceWorkers:"block",isMobile:w<700,hasTouch:w<700});
+  const page=await context.newPage(),fouten=[];
+  page.on("pageerror",e=>fouten.push(String(e)));
+  await page.addInitScript(()=>{const N=Date,s=N.now(),e=N.parse("2026-07-22T15:39:00Z");class F extends N{constructor(...a){super(...(a.length?a:[e+N.now()-s]));}static now(){return e+N.now()-s;}}window.Date=F;});
+  await page.route("**/*",async r=>{
+    const u=new URL(r.request().url());
+    if(u.hostname==="api.open-meteo.com"||u.pathname==="/api/forecast")return r.fulfill({json:fixture()});
+    if(u.hostname==="air-quality-api.open-meteo.com")return r.fulfill({json:{current:{european_aqi:22},hourly:{time:["2026-07-22T17:00"],grass_pollen:[0],birch_pollen:[0],alder_pollen:[0],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}}});
+    if(u.pathname==="/api/waarschuwingen")return r.fulfill({json:{bron:"test",dekking:true,land:"NL",lijst:[]}});
+    if(u.pathname==="/api/neerslag")return r.fulfill({json:{nowcast:null,actueel:null,bron:"test"}});
+    if(u.pathname.startsWith("/api/"))return r.fulfill({json:{beschikbaar:false}});
+    if(u.origin!==root)return r.fulfill({status:204,body:""});
+    return r.continue();
+  });
+  await page.goto(root+"/weer/utrecht/",{waitUntil:"domcontentloaded"});
+  await page.waitForSelector("#app",{state:"visible",timeout:15000});
+  await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length===7&&document.querySelectorAll("#nights .row.night:not(.kop)").length>0,null,{timeout:15000});
+  await sleep(1200);
+  return {context,page,fouten};
+}
+
+function meet(){
+  const cs=e=>getComputedStyle(e),rr=e=>e.getBoundingClientRect(),px=v=>parseFloat(v)||0,o={};
+  const mr=document.querySelector(".mastright"),ts=document.querySelector(".final-top-grid>.stats"),q=document.getElementById("q");
+  o.mastAxis=mr&&ts?Math.abs(rr(mr).left-rr(ts).left):999;o.mastWidthDelta=mr&&ts?Math.abs(rr(mr).width-rr(ts).width):999;o.search=q?rr(q).width:0;
+  const rij=[...document.querySelectorAll("#nights .row.night:not(.kop)")].find(e=>e.getClientRects().length);
+  const ven=rij&&rij.querySelector(".nachtvenster"),maan=rij&&rij.querySelector(".nachtmaan"),bar=rij&&rij.querySelector(".sbar");
+  o.venAlign=ven?cs(ven).textAlign:"";o.maanAlign=maan?cs(maan).textAlign:"";o.venW=ven?rr(ven).width:0;o.barW=bar?rr(bar).width:999;
+  /* Sectiekoppen: de kop vóór de instructieregel van Zeven dagen, Nachtzicht en Lucht. */
+  const kop=id=>{const h=document.getElementById(id);return h&&h.previousElementSibling;};
+  o.koppen={};for(const [n,id] of [["dagen","dagenhint"],["nacht","nachthint"],["lucht","pollenhint"]]){const k=kop(id),h=document.getElementById(id);o.koppen[n]={top:k?px(cs(k).marginTop):-1,onder:k?px(cs(k).marginBottom):-1,hintTop:h?px(cs(h).marginTop):-1,hintOnder:h?px(cs(h).marginBottom):-1};}
+  const f=document.querySelector("footer"),aq=document.getElementById("aq"),nav=document.querySelector(".seo-plaatsnav"),bron=f.querySelector(".bron-bronnen");
+  o.voet={top:px(cs(f).marginTop),pad:px(cs(f).paddingTop),hoogte:rr(f).height,gat:aq?rr(f).top-rr(aq).bottom:999};
+  const bronLinks=bron?[...bron.querySelectorAll(".bronitem a")].filter(a=>a.getClientRects().length):[];
+  o.bronRegels=new Set(bronLinks.map(a=>Math.round(rr(a).top))).size;
+  o.nav=nav?{top:px(cs(nav).marginTop),hoogte:rr(nav).height,rand:px(cs(nav).borderTopWidth)}:null;
+  const navKop=nav&&nav.querySelector(".seo-plaatsnav-kop");o.navKop=navKop?rr(navKop).height:0;
+  const zichtbaar=e=>e&&e.getClientRects().length>0;
+  o.voetDoelen=[f.querySelector('a[href="/over/"]'),f.querySelector('a[href="/privacy"]'),...bronLinks].filter(zichtbaar).map(e=>rr(e).height);
+  o.plaatsDoelen=nav?[...nav.querySelectorAll("a")].filter(zichtbaar).map(e=>rr(e).height):[];
+  o.overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth;
+  return o;
+}
+
+(async()=>{
+  await new Promise(r=>server.listen(0,"127.0.0.1",r));
+  const root="http://127.0.0.1:"+server.address().port;
+  const browser=await chromium.launch({headless:true,executablePath:browserPad});
+  try{
+    for(const [w,h] of [[390,844],[1366,900],[1600,900],[1680,900],[1920,1080]]){
+      const {context,page,fouten}=await open(browser,root,w,h);
+      try{
+        const m=await page.evaluate(meet),label=w+"px";
+        assert(m.overflow<=2,label+": "+m.overflow+"px horizontale overflow");
+        if(w>=1100){
+          assert(m.mastAxis<=2&&m.mastWidthDelta<=2,label+": zoekbalk en tegels delen niet dezelfde rechterkolom (as "+m.mastAxis+"px, breedteverschil "+m.mastWidthDelta+"px)");
+          assert(m.search>=200,label+": zoekveld blijft onnodig smal ("+m.search+"px)");
+          assert(m.venAlign==="center"&&m.maanAlign==="center",label+": Beste zichtperiode/Maan staan niet gecentreerd ("+m.venAlign+"/"+m.maanAlign+")");
+          assert(m.venW>=330,label+": Beste zichtperiode te smal ("+m.venW+"px)");
+          assert(m.barW<=625,label+": Nachtzicht-scorebalk te breed ("+m.barW+"px)");
+          for(const [n,k] of Object.entries(m.koppen)){
+            assert(k.top>=24&&k.top<=30,label+": sectiekop "+n+" heeft "+k.top+"px ruimte erboven, verwacht 24–30px");
+            assert(k.hintOnder>=7&&k.hintOnder<=9,label+": instructie onder "+n+" sluit niet compact aan ("+k.hintOnder+"px)");
+          }
+          assert(m.voet.top<=20&&m.voet.pad<=16&&m.voet.gat<=20,label+": voet staat te los (marge "+m.voet.top+", padding "+m.voet.pad+", gat "+m.voet.gat+")");
+          assert(m.voet.hoogte<=160,label+": voet te hoog ("+m.voet.hoogte+"px)");
+          assert(m.bronRegels===1,label+": bronnen beslaan "+m.bronRegels+" regels in plaats van één");
+          assert(m.nav&&Math.abs(m.nav.top-10)<=.6&&m.nav.hoogte<=66&&m.nav.rand<=1.2,label+": populaire-plaatsenstrook niet compact met zachte overgang: "+JSON.stringify(m.nav));
+          if(w>=1300)assert(m.navKop<=30,label+": kop van de populaire plaatsen breekt over meerdere regels ("+m.navKop+"px)");
+        }else{
+          assert(m.voetDoelen.length>=3&&m.voetDoelen.every(x=>x>=43.5),label+": voetlink lager dan 44px: "+JSON.stringify(m.voetDoelen));
+          assert(m.plaatsDoelen.length>=6&&m.plaatsDoelen.every(x=>x>=43.5),label+": plaatslink lager dan 44px: "+JSON.stringify(m.plaatsDoelen));
+          assert(m.bronRegels<=2,label+": bronnen beslaan "+m.bronRegels+" regels");
+        }
+        assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
+        console.log(`${label} spacing groen: zoekveld ${Math.round(m.search)}px, Beste zichtperiode ${Math.round(m.venW)}px, voet ${Math.round(m.voet.hoogte)}px, plaatsen ${m.nav?Math.round(m.nav.hoogte):0}px, overflow ${m.overflow}px.`);
+      }finally{await context.close();}
+    }
+  }finally{await browser.close();server.close();}
+  console.log("Spacing-browsertest geslaagd op 390/1366/1600/1680/1920 px met de echte runtime.");
+})().catch(e=>{console.error(e);server.close();process.exit(1);});
