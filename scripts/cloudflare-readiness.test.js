@@ -110,7 +110,12 @@ assert.ok(/--branch=release-candidate\b/.test(productie), "releasekandidaat gaat
 assert.equal((productie.match(/--branch=main\b/g) || []).length, 1, "er is precies één productiedeploy");
 /* Nachtelijke herbouw van dezelfde main: datumafhankelijke HTML (seizoenspagina's,
    voetlinks, /maan/) mag niet achterlopen als er een tijd niets wordt gemerged. */
-assert.match(productie, /\n  schedule:\n    - cron: "45 2 \* \* \*"\n/, "productiedeploy draait iedere nacht om 02:45 UTC");
+assert.match(productie, /\n  schedule:\n    - cron: "15 23 \* \* \*"\n    - cron: "45 2 \* \* \*"\n    - cron: "45 5 \* \* \*"\n    - cron: "45 11 \* \* \*"\n/, "productiedeploy heeft vier geplande momenten per dag (GitHub slaat er soms een over)");
+/* Van die vier deployt alleen de eerste per Nederlandse dag; push en handmatig altijd. */
+assert.match(productie, /\n  deploy-production:\n    needs: herbouw\n    if: needs\.herbouw\.outputs\.nodig == 'true'\n/, "deploy-production wacht op de herbouwcontrole");
+assert.ok(productie.includes('if [ "$EVENT" != schedule ]; then echo "nodig=true"'), "push en handmatig starten deployen altijd");
+assert.ok(productie.includes("TZ=Europe/Amsterdam date +%F"), "de dag telt in Nederlandse tijd");
+assert.ok(/\npermissions:\n  actions: read\n/.test(productie), "herbouwcontrole mag eerdere runs lezen");
 assert.match(productie, /\n  push:\n    branches: \[main\]\n/, "productiedeploy blijft ook na iedere merge naar main draaien");
 
 for (const script of ["scripts/platform-output-cleanup.js", "scripts/cloudflare-output.js", "scripts/cloudflare-preview-smoke.js", "scripts/cloudflare-edge-cache-smoke.js"]) {
