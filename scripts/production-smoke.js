@@ -58,21 +58,28 @@ function controleerCloudflare(response,label,opt={}){
   if(hsts)assert.equal(response.headers.get("strict-transport-security"),"max-age=31536000",`${label}: HSTS-contract ontbreekt of wijkt af`);
 }
 
+/* Alle routes die hieronder op build-SHA worden vergeleken. Een nieuwe deployment
+   verschijnt niet op iedere route op exact hetzelfde moment; de smoke begint pas
+   te vergelijken als ze allemaal de verwachte build tonen. Blijft een route oud,
+   dan faalt de smoke na het wachtbudget alsnog. */
+const BUILD_ROUTES=[ROOT+"/",ROOT+"/weer/",ROOT+"/weer/almere/",WWW+"/"];
+
 async function wachtOpExacteDeployment(){
-  let laatst=null,lastStatus=null,lastError=null;
+  let laatst="",lastError=null;
   for(let i=1;i<=pogingen;i++){
     try{
-      const {response,text}=await haal(ROOT+"/",{retry:false,timeoutMs:Math.min(requestTimeoutMs,4000)});
-      lastStatus=response.status;laatst=buildSha(text);lastError=null;
-      if(response.ok&&laatst===verwacht){
-        console.log(`Production deployment zichtbaar na poging ${i}: ${verwacht}.`);
-        return {response,text};
+      const resultaten=await Promise.all(BUILD_ROUTES.map(url=>haal(url,{retry:false,timeoutMs:Math.min(requestTimeoutMs,4000)})));
+      lastError=null;
+      laatst=resultaten.map((r,j)=>`${BUILD_ROUTES[j].replace(/^https:\/\//,"")}=${r.response.status}/${buildSha(r.text)||"geen"}`).join(", ");
+      if(resultaten.every(r=>r.response.ok&&buildSha(r.text)===verwacht)){
+        console.log(`Production deployment zichtbaar op alle ${BUILD_ROUTES.length} buildroutes na poging ${i}: ${verwacht}.`);
+        return resultaten[0];
       }
-      console.log(`Wacht op production ${verwacht}: poging ${i}/${pogingen}, status=${response.status}, zichtbaar=${laatst||"geen"}.`);
+      console.log(`Wacht op production ${verwacht}: poging ${i}/${pogingen}, ${laatst}.`);
     }catch(e){lastError=e;console.log(`Wacht op production ${verwacht}: poging ${i}/${pogingen}, fetchfout=${e.message}.`);}
     if(i<pogingen)await slaap(wachtMs);
   }
-  throw new Error(`Production bereikte verwachte SHA niet: verwacht=${verwacht}, zichtbaar=${laatst}, status=${lastStatus}, fout=${lastError&&lastError.message}`);
+  throw new Error(`Production bereikte verwachte SHA niet op alle buildroutes: verwacht=${verwacht}, zichtbaar=${laatst||"onbekend"}, fout=${lastError&&lastError.message}`);
 }
 
 (async()=>{

@@ -58,6 +58,17 @@ assert(!finalRelease.includes("assert.equal(uit.label,l.naam"),"finale releasebr
 assert(smoke.includes("AbortSignal.timeout(timeoutMs)"),"production-smoke requests moeten een harde timeout hebben");
 assert(smoke.includes("const maxPogingen=opt.retry===false?1:2"),"production-smoke mag per request maximaal één retry doen");
 assert(smoke.includes('redirect:"manual"'),"production-smoke moet de www-redirect zelf controleren");
+{
+  /* Iedere route die de smoke op build-SHA vergelijkt, moet in de wachtlus zitten;
+     anders vergelijkt hij tijdens het uitrollen een route die nog oud is. */
+  const routes=/const BUILD_ROUTES=\[([^\]]+)\]/.exec(smoke);
+  assert(routes,"production-smoke mist de lijst met buildroutes voor de wachtlus");
+  const gewacht=routes[1].split(",").map(s=>s.trim());
+  const vergeleken=[...smoke.matchAll(/const (\w+)=await haal\(([^,)]+)\)[^]*?assert\.equal\(buildSha\(\1\.text\),verwacht/g)].map(m=>m[2].trim());
+  assert(vergeleken.length>=3,"production-smoke vergelijkt onverwacht weinig routes op build-SHA");
+  for(const route of vergeleken)assert(gewacht.includes(route),`production-smoke vergelijkt ${route} op build-SHA zonder erop te wachten`);
+  assert(/resultaten\.every\(r=>r\.response\.ok&&buildSha\(r\.text\)===verwacht\)/.test(smoke),"wachtlus moet op alle buildroutes de exacte SHA eisen");
+}
 assert(smoke.includes("/weer/dit-bestaat-niet/"),"production-smoke moet echte 404-semantiek bewaken");
 assert(smoke.includes("/api/plaatsnaam?lat=52.3508&lon=5.2647"),"production-smoke mist plaatsnaam-API-contract");
 assert(smoke.includes("/api/neerslag?lat=52.3508&lon=5.2647&land=NL"),"production-smoke mist neerslag-API-contract");
