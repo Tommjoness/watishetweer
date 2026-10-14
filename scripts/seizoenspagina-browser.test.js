@@ -60,7 +60,9 @@ const SCENARIOS=[
   {naam:"ver",nu:"2026-10-05T10:00:00Z",verwacht:{kop:"Witte kerst 2026",aftellen:"81 dagen tot eerste kerstdag",melding:/^Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag\. De verwachting voor tweede kerstdag volgt op zondag 20 december\.$/,tabellen:0,fetch:0}},
   {naam:"venster",nu:"2026-12-21T09:00:00Z",data:metSneeuw("2026-12-21"),verwacht:{kop:"Witte kerst 2026",aftellen:"4 dagen tot eerste kerstdag",samenvatting:"Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in De Bilt. Blijft dat zo, dan is het officieel een witte kerst.",tabellen:2,fetch:1,cel:"Sneeuwdek, 4 cm"}},
   {naam:"half",nu:"2026-12-19T09:00:00Z",data:metSneeuw("2026-12-19"),verwacht:{tabellen:1,fetch:1,later:"Tweede kerstdag: de verwachting verschijnt op zondag 20 december."}},
-  {naam:"fout",nu:"2026-12-21T09:00:00Z",status:503,verwacht:{tabellen:0,fetch:1,fout:true}},
+  {naam:"fout",nu:"2026-12-21T09:00:00Z",status:503,verwacht:{tabellen:0,fetch:2,fout:true}},
+  /* Eén nieuwe poging na een korte hapering van Open-Meteo (14 oktober). */
+  {naam:"herstel",nu:"2026-12-21T09:00:00Z",eersteStatus:503,data:metSneeuw("2026-12-21"),verwacht:{tabellen:2,fetch:2,cel:"Sneeuwdek, 4 cm"}},
   {naam:"na-kerst",nu:"2026-12-27T09:00:00Z",verwacht:{kop:"Witte kerst 2027",aftellen:"363 dagen tot eerste kerstdag",tabellen:0,fetch:0}}
 ];
 
@@ -81,6 +83,7 @@ async function controleer(browserType,label,base){
         assert.equal(url.searchParams.get("forecast_days"),"7");
         assert.equal(url.searchParams.get("latitude").split(",").length,kerst.plaatsen.length);
         if(sc.status)return route.fulfill({status:sc.status,body:"{}"});
+        if(sc.eersteStatus&&fetches===1)return route.fulfill({status:sc.eersteStatus,body:"{}"});
         return route.fulfill({status:200,contentType:"application/json",headers:{"access-control-allow-origin":"*"},body:JSON.stringify(sc.data)});
       });
       await page.route(/posthog|googletagmanager|google-analytics|cloudflareinsights/,route=>route.abort());

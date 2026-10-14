@@ -381,6 +381,25 @@ function toon(doel,t,resultaten,cfg){
    bouwt de pagina zichzelf opnieuw op, ook als hij al die tijd openstond. */
 function sleutel(t){return t.jaar+"|"+t.dagen.map(d=>d.over+(d.bezig?"b":"")).join(",");}
 function huidigeToestand(cfg){const n=nuIn(cfg.tijdzone,new Date());return toestand(n.datum,cfg,n.uur);}
+/* Open-Meteo hapert soms kort (429, 5xx of een time-out). Eén nieuwe poging na
+   twee seconden vangt dat op; mislukt die ook, dan volgt de gewone foutmelding
+   (akkoord eigenaar, 14 oktober). */
+const NIEUWE_POGING_MS=2000;
+async function haalVerwachting(url){
+  for(let poging=1;;poging++){
+    const stop=new AbortController(),timer=setTimeout(()=>stop.abort(),10000);
+    try{
+      const res=await fetch(url,{signal:stop.signal});
+      if(!res.ok)throw new Error("HTTP "+res.status);
+      return await res.json();
+    }catch(e){
+      if(poging>=2)throw e;
+    }finally{
+      clearTimeout(timer);
+    }
+    await new Promise(r=>setTimeout(r,NIEUWE_POGING_MS));
+  }
+}
 let getoond="",bewaakt=false;
 function bewaak(cfg){
   if(bewaakt)return;
@@ -415,11 +434,7 @@ async function start(){
   doel.setAttribute("aria-busy","true");
   doel.replaceChildren(el("p",{class:"klein"},"Verwachting laden…"));
   try{
-    const stop=new AbortController(),timer=setTimeout(()=>stop.abort(),10000);
-    const res=await fetch(verwachtingUrl(cfg,t),{signal:stop.signal});
-    clearTimeout(timer);
-    if(!res.ok)throw new Error("HTTP "+res.status);
-    toon(doel,t,verwerkAntwoord(await res.json(),t,cfg),cfg);
+    toon(doel,t,verwerkAntwoord(await haalVerwachting(verwachtingUrl(cfg,t)),t,cfg),cfg);
   }catch(e){
     doel.replaceChildren(el("p",{class:"seizoen-fout"},cfg.teksten.fout));
   }finally{

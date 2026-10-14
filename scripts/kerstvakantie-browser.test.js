@@ -54,7 +54,7 @@ const SCENARIOS = [
   { naam: "eerste dag", nu: "2026-12-19T09:00:00Z", data: antwoord("2026-12-19"), nl: { aftellen: "Vandaag begint de kerstvakantie.", tabellen: 7, fetch: 1, koppen: ["Zaterdag 19 december alle regio's", "Vrijdag 25 december alle regio's"], cellen: ["1,8 cm sneeuw · kans 75%", "Droog · 2 uur zon"], later: "De vakantiedagen tot en met zondag 3 januari verschijnen hier vanzelf zodra ze binnen de 7-daagse verwachting vallen." }, en: { aftellen: "The Christmas school holiday starts today." } },
   { naam: "jaargrens", nu: "2027-01-01T10:00:00Z", data: antwoord("2027-01-01"), nl: { aftellen: "Het is kerstvakantie.", tabellen: 3, fetch: 1, koppen: ["Vrijdag 1 januari alle regio's", "Zondag 3 januari alle regio's"], cellen: ["3,1 mm regen · kans 75%"] }, en: { aftellen: "It is the Christmas school holiday." } },
   { naam: "na", nu: "2027-01-04T10:00:00Z", nl: { kop: "Kerstvakantie 2027", aftellen: "355 dagen tot de kerstvakantie", tabellen: 0, fetch: 0 }, en: { kop: "Christmas school holiday 2027" } },
-  { naam: "fout", nu: "2026-12-21T10:00:00Z", status: 503, nl: { tabellen: 0, fetch: 1, fout: true }, en: {} }
+  { naam: "fout", nu: "2026-12-21T10:00:00Z", status: 503, nl: { tabellen: 0, fetch: 2, fout: true }, en: {} }
 ];
 
 server.listen(0, async () => {
@@ -78,6 +78,8 @@ server.listen(0, async () => {
         route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(sc.data) });
       });
       await page.goto(base + "/kerstvakantie/", { waitUntil: "load" });
+      /* Wacht tot de verwachting klaar is, ook na de nieuwe poging bij een fout. */
+      await page.waitForFunction(() => !document.querySelector("#seizoen-verwachting[aria-busy]"), null, { timeout: 30000 });
       await page.waitForTimeout(900);
       const m = await page.evaluate(() => ({
         kop: document.getElementById("seizoen-kop").textContent.trim(),

@@ -58,7 +58,7 @@ const SCENARIOS=[
     samenvatting:["Rond middernacht valt er volgens de huidige verwachting neerslag in Rotterdam en Den Haag.","Windstoten van 50 km/u of meer in Rotterdam en Den Haag.","Kans op mist (zicht onder 1 km) in Utrecht."],
     cellen:["1,1 mm · kans 65%","W 14 km/u · stoten 61","Droog · kans 10%","ZW 14 km/u · stoten 31","4°"],kop3:"Rond middernacht 31 december 22:00 – 1 januari 02:00"}},
   {naam:"rustig",nu:"2026-12-31T09:00:00Z",data:antwoord("2026-12-31",()=>null),verwacht:{aftellen:"Vandaag is het oudejaarsdag.",tabellen:1,fetch:1,samenvatting:["Rond middernacht blijft het volgens de huidige verwachting overal droog."]}},
-  {naam:"fout",nu:"2026-12-28T09:00:00Z",status:503,verwacht:{tabellen:0,fetch:1,fout:true}},
+  {naam:"fout",nu:"2026-12-28T09:00:00Z",status:503,verwacht:{tabellen:0,fetch:2,fout:true}},
   /* 1 januari 01:30: de nacht loopt nog tot 02:00, dus de pagina blijft bij
      deze jaarwisseling en haalt met past_days=1 ook gisteravond op. */
   {naam:"lopend",nu:"2027-01-01T00:30:00Z",data:gemengd("2026-12-31"),verwacht:{kop:"Oud en nieuw 2026",aftellen:"De nacht van oud en nieuw is nu bezig.",tabellen:1,fetch:1,pastDays:"1",
