@@ -12,6 +12,7 @@ const http=require("http");
 const assert=require("assert");
 const {chromium,webkit}=require("playwright");
 const {SEIZOENSPAGINAS}=require("./seizoenspagina.config.js");
+const {meetUitlijning,controleerUitlijning}=require("./seizoen-uitlijning-meting.js");
 
 const PUBLIC=path.join(__dirname,"..","public");
 const PAD="/witte-kerst/";
@@ -107,6 +108,7 @@ async function controleer(browserType,label,base){
         achtergrond:getComputedStyle(document.body).backgroundColor
       }));
       assert.deepEqual(fouten,[],`${id}: geen browserfouten`);
+      controleerUitlijning(assert,await page.evaluate(meetUitlijning),breedte,id);
       assert.equal(fetches,v.fetch,`${id}: aantal verwachtingsverzoeken`);
       if(v.kop){assert.equal(r.kop,v.kop,`${id}: kop`);assert(r.titel.startsWith(v.kop+":"),`${id}: titel volgt het jaar (${r.titel})`);}
       if(v.aftellen)assert.equal(r.aftellen,v.aftellen,`${id}: aftelling`);

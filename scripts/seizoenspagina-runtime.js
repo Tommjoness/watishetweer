@@ -298,6 +298,45 @@ function el(tag,attrs,kinderen){
 }
 /* De plaatsnaam is een eigennaam en wordt niet vertaald (translate="no"); de
    toevoeging "officiële meetplaats" staat in een eigen blok en wel. */
+/* Temperatuurbalkje (akkoord eigenaar, 14 oktober): dezelfde kleurschaal als de
+   zevendagenweergave van de app (TEMP_SCHAAL in index.html; seizoenspagina.test.js
+   bewaakt dat beide gelijk blijven). Alle plaatsen van één dag delen één schaal.
+   Het balkje is een aanvulling op de cijfers en daarom aria-hidden. */
+const TEMP_SCHAAL={
+  licht:[[-10,"#254582"],[-4,"#295ca5"],[2,"#367ac1"],[8,"#5e97cd"],[13,"#afaca4"],[17,"#afaca4"],[21,"#c78829"],[26,"#bd6706"],[31,"#ad4600"],[36,"#8f331a"]],
+  donker:[[-10,"#bbddf6"],[-4,"#92c4ee"],[2,"#73a9e1"],[8,"#5e91c0"],[13,"#77746d"],[17,"#77746d"],[21,"#bf8032"],[26,"#e28e3a"],[31,"#f0ab55"],[36,"#f7cd87"]]
+};
+function temperatuurKleur(t,thema){
+  const stops=TEMP_SCHAAL[thema==="donker"?"donker":"licht"],rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+  if(!(t>stops[0][0]))return "rgb("+rgb(stops[0][1]).join(",")+")";
+  for(let k=1;k<stops.length;k++)if(t<=stops[k][0]){
+    const [t0,c0]=stops[k-1],[t1,c1]=stops[k],f=(t-t0)/(t1-t0),a=rgb(c0),b=rgb(c1);
+    return "rgb("+a.map((v,i)=>Math.round(v+(b[i]-v)*f)).join(",")+")";
+  }
+  return "rgb("+rgb(stops[stops.length-1][1]).join(",")+")";
+}
+/* Laagste minimum en hoogste maximum van één dag, over alle plaatsen. */
+function dagBereik(dag,resultaten){
+  const w=resultaten.map(r=>r.dagen[dag.iso]).filter(x=>x&&Number.isFinite(x.tmin)&&Number.isFinite(x.tmax));
+  return w.length?{lo:Math.min(...w.map(x=>x.tmin)),hi:Math.max(...w.map(x=>x.tmax))}:null;
+}
+function tempBalk(w,bereik){
+  if(!bereik||!w||!Number.isFinite(w.tmin)||!Number.isFinite(w.tmax))return null;
+  const span=Math.max(1,bereik.hi-bereik.lo),links=(w.tmin-bereik.lo)/span*100,breed=Math.max(8,(w.tmax-w.tmin)/span*100);
+  const verloop=thema=>`linear-gradient(90deg,${temperatuurKleur(w.tmin,thema)},${temperatuurKleur(w.tmax,thema)})`;
+  return el("span",{class:"tbalk","aria-hidden":"true"},el("i",{style:`left:${links.toFixed(1)}%;width:${Math.min(breed,100-links).toFixed(1)}%;--licht:${verloop("licht")};--donker:${verloop("donker")}`}));
+}
+/* Kop en rij voor tabellen met min/max: op desktop staat het balkje in een eigen
+   kolom (zodat "Min / max" recht boven de cijfers staat), op een telefoon onder
+   de cijfers. */
+function minMaxKop(kolommen){
+  return el("thead",{},el("tr",{},[...kolommen.map(k=>el("th",{scope:"col"},k)),el("td",{class:"tbalkkop","aria-hidden":"true"}),el("th",{scope:"col"},"Min / max")]));
+}
+function minMaxCellen(w,bereik){
+  const balk=tempBalk(w,bereik),cijfers=el("td",{class:"temp"},w?`${graden(w.tmin)} / ${graden(w.tmax)}`:"–");
+  if(balk)cijfers.append(balk.cloneNode(true));
+  return [el("td",{class:"tbalkcel","aria-hidden":"true"},balk||[]),cijfers];
+}
 function plaatsCel(plaats){
   const inhoud=plaats.href?el("a",{href:plaats.href},plaats.naam):plaats.naam;
   const cel=el("th",{scope:"row"},el("div",{class:"plaats",translate:"no"},inhoud));
@@ -308,11 +347,11 @@ function dagTabel(dag,resultaten){
   const sectie=el("section",{class:"seizoen-dag","data-datum":dag.iso});
   sectie.append(el("h3",{},[dag.label+" ",el("span",{},datumTekst(dag.iso,true))]));
   const tabel=el("table",{});
-  tabel.append(el("thead",{},el("tr",{},[el("th",{scope:"col"},"Plaats"),el("th",{scope:"col"},"Sneeuw"),el("th",{scope:"col"},"Min / max")])));
-  const body=el("tbody",{});
+  tabel.append(minMaxKop(["Plaats","Sneeuw"]));
+  const body=el("tbody",{}),bereik=dagBereik(dag,resultaten);
   for(const r of resultaten){
     const w=r.dagen[dag.iso];
-    body.append(el("tr",{},[plaatsCel(r.plaats),el("td",{},sneeuwTekst(w)),el("td",{class:"temp"},w?`${graden(w.tmin)} / ${graden(w.tmax)}`:"–")]));
+    body.append(el("tr",{},[plaatsCel(r.plaats),el("td",{},sneeuwTekst(w)),...minMaxCellen(w,bereik)]));
   }
   tabel.append(body);
   sectie.append(tabel);
@@ -346,11 +385,11 @@ function vakantieTabel(dag,resultaten,aantal){
   const sectie=el("section",{class:"seizoen-dag","data-datum":dag.iso});
   sectie.append(el("h3",{},[dag.label.charAt(0).toUpperCase()+dag.label.slice(1)+" ",el("span",{},regioKop(dag,aantal))]));
   const tabel=el("table",{class:"seizoen-vakantie"});
-  tabel.append(el("thead",{},el("tr",{},[el("th",{scope:"col"},"Plaats"),el("th",{scope:"col"},"Weer"),el("th",{scope:"col"},"Min / max")])));
-  const body=el("tbody",{});
+  tabel.append(minMaxKop(["Plaats","Weer"]));
+  const body=el("tbody",{}),bereik=dagBereik(dag,resultaten);
   for(const r of resultaten){
     const w=r.dagen[dag.iso];
-    body.append(el("tr",{},[plaatsCel(r.plaats),tweedelig(vakantieWeerTekst(w)),el("td",{class:"temp"},w?`${graden(w.tmin)} / ${graden(w.tmax)}`:"–")]));
+    body.append(el("tr",{},[plaatsCel(r.plaats),tweedelig(vakantieWeerTekst(w)),...minMaxCellen(w,bereik)]));
   }
   tabel.append(body);
   sectie.append(tabel);
@@ -442,7 +481,7 @@ async function start(){
   }
 }
 
-const api={toestandVakantie,periodeTekst,regioKop,vakantieAftellen,vakantieWaarden,vakantieWeerTekst,overwegendDroog,vakantieSamenvatting,datumISO,dagenTussen,plusDagen,datumTekst,nuIn,vandaagIn,vul,eindUur,toestand,aftelTekst,aftelGetal,meldingTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord};
+const api={TEMP_SCHAAL,temperatuurKleur,dagBereik,toestandVakantie,periodeTekst,regioKop,vakantieAftellen,vakantieWaarden,vakantieWeerTekst,overwegendDroog,vakantieSamenvatting,datumISO,dagenTussen,plusDagen,datumTekst,nuIn,vandaagIn,vul,eindUur,toestand,aftelTekst,aftelGetal,meldingTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 else if(typeof document!=="undefined"){
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
