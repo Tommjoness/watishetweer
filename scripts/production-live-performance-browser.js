@@ -111,11 +111,14 @@ function isCloudflareAnalytics(url){return isAnalyticsScript(url)||isEigenRum(ur
       assert(scripts.length<=1,`${profiel.naam}: Cloudflare analytics-script werd ${scripts.length} keer geladen`);
       assert.equal(vreemd.length,0,`${profiel.naam}: onverwachte Cloudflare analytics-origin: ${vreemd.join(" | ")}`);
 
-      const voorKlik=responses.filter(r=>isForecast(r.url)).length;
+      /* Tel aanvragen, geen antwoorden: hapert Open-Meteo, dan kan het antwoord op
+         een aanvraag van vóór de klik pas ná de klik binnenkomen (14 oktober 2026,
+         WebKit iPhone via de reserveroute). Dat is geen nieuwe aanvraag. */
+      const voorKlik=requests.filter(isForecast).length;
       await page.locator("#days .row.day:not(.kop)").nth(1).click();
       await page.waitForFunction(()=>document.querySelector("#days .row.day.on")?.getAttribute("data-i")==="1",null,{timeout:5000});
       await page.waitForTimeout(300);
-      assert.equal(responses.filter(r=>isForecast(r.url)).length,voorKlik,`${profiel.naam}: dagselectie veroorzaakte een dubbele forecastaanvraag`);
+      assert.equal(requests.filter(isForecast).length,voorKlik,`${profiel.naam}: dagselectie veroorzaakte een dubbele forecastaanvraag`);
 
       await page.evaluate(async()=>{
         const wacht=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
