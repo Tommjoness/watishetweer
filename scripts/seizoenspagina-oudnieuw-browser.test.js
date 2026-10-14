@@ -12,6 +12,7 @@ const http=require("http");
 const assert=require("assert");
 const {chromium,webkit}=require("playwright");
 const {SEIZOENSPAGINAS}=require("./seizoenspagina.config.js");
+const {meetUitlijning,controleerUitlijning}=require("./seizoen-uitlijning-meting.js");
 
 const PUBLIC=path.join(__dirname,"..","public");
 const PAD="/oud-en-nieuw/";
@@ -118,6 +119,7 @@ async function controleer(browserType,label,base){
       const v=sc.verwacht,id=`${label} ${sc.naam} ${breedte}px ${schema}`;
       const r=await page.evaluate(meet);
       assert.deepEqual(fouten,[],`${id}: geen browserfouten`);
+      controleerUitlijning(assert,await page.evaluate(meetUitlijning),breedte,id);
       assert.equal(fetches(),v.fetch,`${id}: aantal verwachtingsverzoeken`);
       for(const u of urls)assert.equal(u.searchParams.get("past_days"),v.pastDays||null,`${id}: past_days alleen als de nacht al loopt`);
       if(v.kop){assert.equal(r.kop,v.kop,`${id}: kop`);assert(r.titel.startsWith("Weer "+v.kop.toLowerCase()+":"),`${id}: titel (${r.titel})`);}

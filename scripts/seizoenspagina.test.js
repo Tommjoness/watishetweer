@@ -372,3 +372,18 @@ assert.throws(()=>pagina({...vak("kerstvakantie"),zieOok:["bestaat-niet"]},"2026
   assert.equal(voetKlasse(SEIZOENSPAGINAS.find(p=>p.slug==="zomervakantie"),"2027-07-01").trim(),"","in juli staat de zomervakantie vooraan");
 }
 console.log("Seizoenspagina's voorjaars-, mei- en zomervakantie: data, aftellen per regio, venster en doorschuiven kloppen; zie-ook-links tussen de kerstpagina's.");
+
+/* Temperatuurbalkje (14 oktober): dezelfde kleurschaal als de app en één schaal per dag. */
+{
+  const fs=require("fs"),path=require("path");
+  const html=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
+  const blok=html.match(/const TEMP_SCHAAL=\{\s*licht:(\[[^\n]*\]),\s*donker:(\[[^\n]*\])\s*\};/);
+  assert(blok,"TEMP_SCHAAL staat in index.html");
+  assert.deepEqual(R.TEMP_SCHAAL,{licht:JSON.parse(blok[1]),donker:JSON.parse(blok[2])},"seizoenspagina's gebruiken dezelfde temperatuurschaal als de app");
+  assert.equal(R.temperatuurKleur(15,"licht"),"rgb(175,172,164)","13–17 graden is neutraal");
+  assert.equal(R.temperatuurKleur(-30,"donker"),"rgb(187,221,246)","onder de schaal: de koudste kleur");
+  const dag={iso:"2026-10-14"},res=[{dagen:{"2026-10-14":{tmin:9,tmax:16}}},{dagen:{"2026-10-14":{tmin:14,tmax:19}}},{dagen:{"2026-10-14":null}},{dagen:{"2026-10-14":{tmin:null,tmax:20}}}];
+  assert.deepEqual(R.dagBereik(dag,res),{lo:9,hi:19},"bereik over alle plaatsen met beide waarden");
+  assert.equal(R.dagBereik(dag,[{dagen:{}}]),null,"zonder waarden geen bereik");
+}
+console.log("Seizoenspagina's temperatuurbalkje: zelfde schaal als de app, één bereik per dag.");

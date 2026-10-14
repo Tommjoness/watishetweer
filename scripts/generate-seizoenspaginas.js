@@ -64,6 +64,22 @@ html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70
 .seizoen-dag a:hover,.seizoen-dag a:focus-visible{border-bottom-color:var(--ink)}
 .seizoen-perioden td{text-align:right;padding-right:0;white-space:nowrap}.seizoen-perioden td.jaargrens{white-space:normal;text-wrap:balance}
 .seizoen-vakantie{table-layout:fixed}.seizoen-vakantie thead th:first-child{width:34%}.seizoen-vakantie thead th:last-child{width:24%}
+/* Temperatuurbalkje: op een telefoon onder de cijfers, op desktop in een eigen kolom. */
+.seizoen-dag .tbalkcel,.seizoen-dag .tbalkkop{display:none}
+.seizoen-dag .tbalk{display:block;position:relative;width:72px;height:4px;margin:6px 0 2px auto;border-radius:2px;background:var(--rule)}
+.seizoen-dag .tbalk i{position:absolute;top:0;bottom:0;border-radius:2px;background:var(--licht)}
+html[data-thema=donker] .seizoen-dag .tbalk i{background:var(--donker)}
+/* Desktop (akkoord eigenaar, 14 oktober): de eerste kolom blijft links, de andere
+   kolommen staan met kop en inhoud gecentreerd op dezelfde as. */
+@media(min-width:601px){
+.seizoen-dag thead th:not(:first-child),.seizoen-dag td,.seizoen-perioden td{text-align:center;padding-left:6px;padding-right:6px}
+.seizoen-dag thead th:last-child,.seizoen-dag td:last-child{padding-left:0;padding-right:0}
+.seizoen-dag td.tbalkcel,.seizoen-dag td.tbalkkop{display:table-cell;width:120px}
+.seizoen-dag td.tbalkcel .tbalk{display:inline-block;width:96px;margin:0;vertical-align:middle}
+.seizoen-dag td.temp .tbalk{display:none}
+.seizoen-dag td.temp{width:110px;text-align:center}
+.seizoen-vakantie thead th:first-child{width:28%}.seizoen-vakantie thead th:last-child{width:110px}
+}
 @media(max-width:600px){body{padding:14px}.kaart{padding:26px 22px}h1{font-size:32px}.seizoen-dag table{font-size:14px}.seizoen-dag .sep{display:none}.seizoen-dag .sub{display:block;font-size:13px}}
 </style>`;
 

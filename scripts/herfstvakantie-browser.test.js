@@ -12,6 +12,7 @@ const http = require("http");
 const assert = require("assert");
 const { chromium } = require("playwright");
 const { SEIZOENSPAGINAS } = require("./seizoenspagina.config.js");
+const { meetUitlijning, controleerUitlijning } = require("./seizoen-uitlijning-meting.js");
 
 const PUBLIC = path.join(__dirname, "..", "public");
 const bestand = path.join(PUBLIC, "herfstvakantie", "index.html");
@@ -92,6 +93,7 @@ server.listen(0, async () => {
         overloop: document.documentElement.scrollWidth - innerWidth,
         ontbreekt: window.__WIW_TAAL_ONTBREEKT__ ? [...window.__WIW_TAAL_ONTBREEKT__] : null
       }));
+      const uitlijning = await page.evaluate(meetUitlijning);
       const label = `${sc.naam} ${taal} ${breedte}px`;
       assert.deepEqual(fouten, [], `${label}: scriptfouten`);
       assert(m.overloop <= 0, `${label}: horizontale overloop ${m.overloop}px`);
@@ -108,6 +110,7 @@ server.listen(0, async () => {
         if (v.later) assert.equal(m.later, v.later, `${label}: later`);
         assert.equal(m.fout, !!v.fout, `${label}: foutmelding`);
         assert(m.perioden.length >= 1, `${label}: vakantiedata per regio staan op de pagina`);
+        controleerUitlijning(assert, uitlijning, breedte, label);
       } else {
         assert.deepEqual(m.ontbreekt, [], `${label}: onvertaalde teksten`);
         if (v.kop) assert.equal(m.kop, v.kop, `${label}: kop`);
