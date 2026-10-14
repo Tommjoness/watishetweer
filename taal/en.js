@@ -109,8 +109,6 @@
   function meervoud(n, een, veel) { return Number(n) === 1 ? een : veel; }
   /* "There is light rain" maar "There are showers". */
   function isAre(w) { return /(showers|thunderstorms|grains)$/.test(w) ? "are" : "is"; }
-  /* Provincienamen die in het Engels een eigen vorm hebben. */
-  const PROVINCIE = { "Noord-Holland": "North Holland", "Zuid-Holland": "South Holland", "Noord-Brabant": "North Brabant", "Fryslân": "Friesland" };
   /* Plaatsen met een eigen Engelse naam. Plaatsnamen uit het zoeken komen al in het Engels binnen (start-en.js). */
   const PLAATS = { "Den Haag": "The Hague" };
   const KERSTDAG = { "eerste kerstdag": "Christmas Day", "tweede kerstdag": "Boxing Day", "oudejaarsdag": "New Year's Eve" };
@@ -889,6 +887,20 @@
     /* Plaatsenoverzicht */
     "Weer per plaats in Nederland | watishetweer.nl": "Weather by place in the Netherlands | watishetweer.nl",
     "Bekijk direct het actuele weer en de verwachting voor populaire plaatsen in Nederland.": "See the current weather and forecast for popular places in the Netherlands.",
+    /* Eigen introteksten van plaatspagina's (seoIntro in scripts/seo-locations.config.js). */
+    "Bekijk voor Apeldoorn de actuele temperatuur en het weer per uur, wanneer er de komende uren neerslag wordt verwacht en hoe de komende zeven dagen eruitzien.":
+      "See the current temperature and the hourly weather for Apeldoorn, when precipitation is expected over the coming hours and what the next seven days look like.",
+    "Lokale tijden, luchtkwaliteit en Nachtzicht vullen het overzicht aan.": "Local times, air quality and Stargazing complete the overview.",
+    "Het weer in Leeuwarden per uur staat hier samen met de huidige temperatuur, neerslag voor de komende uren en de 7-daagse verwachting.":
+      "The hourly weather in Leeuwarden is shown here together with the current temperature, precipitation for the coming hours and the 7-day forecast.",
+    "Je vindt er daarnaast lokale tijden, luchtkwaliteit en Nachtzicht voor dezelfde plaats.": "You will also find local times, air quality and Stargazing for the same place.",
+    "Voor Tilburg zie je hier het weer per uur en de huidige temperatuur, gevolgd door neerslag voor de komende uren en de 7-daagse verwachting.":
+      "For Tilburg you can see the hourly weather and the current temperature here, followed by precipitation for the coming hours and the 7-day forecast.",
+    "Lokale tijden, luchtkwaliteit en Nachtzicht staan op dezelfde pagina, zodat je niet tussen losse weerkaarten hoeft te schakelen.":
+      "Local times, air quality and Stargazing are on the same page, so you do not have to switch between separate weather maps.",
+    "Deze weerpagina voor Utrecht combineert de actuele temperatuur en het weer per uur met neerslag voor de komende uren en de 7-daagse verwachting.":
+      "This weather page for Utrecht combines the current temperature and the hourly weather with precipitation for the coming hours and the 7-day forecast.",
+    "Ook lokale tijden, luchtkwaliteit en Nachtzicht zijn direct beschikbaar in hetzelfde overzicht.": "Local times, air quality and Stargazing are also available directly in the same overview.",
     "Kies een plaats voor het actuele weer, neerslag in de komende uren en de 7-daagse verwachting.": "Choose a place for the current weather, precipitation over the coming hours and the 7-day forecast.",
     "Deze plaats staat niet in de lijst. Zoek haar op de weerpagina; daar vind je elke plaats ter wereld.": "This place is not in the list. Search for it on the weather page, where you can find any place in the world.",
 
@@ -1209,7 +1221,7 @@
     [/^In (.+) is (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) met gemiddeld (−?-?\d+) °C overdag de warmste maand; in (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) is het 's nachts gemiddeld (−?-?\d+) °C\.$/,
       (m) => `In ${m[1]}, ${maand(m[2])} is the warmest month, with an average daytime high of ${getal(m[3])} °C; in ${maand(m[4])}, the average night-time low is ${getal(m[5])} °C.`],
     [/^Per jaar valt er ongeveer ([\d.]+) mm neerslag en schijnt de zon zo'n ([\d.]+) uur\.$/, (m) => `Each year brings about ${getal(m[1])} mm of precipitation and roughly ${getal(m[2])} hours of sunshine.`],
-    [/^Bekijk het actuele weer in (.+?), (.+?), met neerslag voor de komende uren en de 7-daagse verwachting\.$/, (m) => `See the current weather in ${plaats(m[1])}, ${PROVINCIE[m[2]] || m[2]}, with precipitation for the coming hours and the 7-day forecast.`],
+    [/^Bekijk het weer in (.+?) per uur voor vandaag en morgen, met neerslag voor de komende uren en de 7-daagse verwachting\.$/, (m) => `See the hourly weather in ${plaats(m[1])} for today and tomorrow, with precipitation for the coming hours and the 7-day forecast.`],
     [/^Alle tijden volgen de lokale tijd van de gekozen plaats\.$/, () => "All times are local to the chosen place."],
 
     /* Briefing: neerslag nu en straks */
