@@ -122,7 +122,7 @@ function voegRouteToe(html,loc){
 }
 
 function routeIntro(loc){
-  return loc.seoIntro||`Bekijk het weer in ${loc.naam} per uur voor vandaag en morgen, met neerslag voor de komende uren en de 7-daagse verwachting. Alle tijden volgen de lokale tijd van de gekozen plaats.`;
+  return loc.seoIntro||`Bekijk het weer in ${loc.naam} per uur voor vandaag en morgen, met neerslag voor de komende uren en de 7-daagse verwachting. ${loc.naam} ligt in de provincie ${loc.provincie}. Alle tijden volgen de lokale tijd van de gekozen plaats.`;
 }
 
 function voegRouteContextToe(html,loc){

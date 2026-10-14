@@ -60,6 +60,7 @@ for(const loc of LOCATIES){
   const intro=routeIntro(loc);
   assert(/\bper uur\b/.test(intro),`${loc.slug}: introtekst noemt het weer per uur niet`);
   assert(!intro.includes(`${loc.naam}, ${loc.naam}`),`${loc.slug}: introtekst herhaalt de plaatsnaam`);
+  if(!loc.seoIntro)assert(intro.includes(`ligt in de provincie ${loc.provincie}.`),`${loc.slug}: introtekst noemt de provincie niet`);
 }
 
 const plaatsNav=voegPlaatsNavigatieToe("<html><head></head><body></body></html>");

@@ -109,6 +109,8 @@
   function meervoud(n, een, veel) { return Number(n) === 1 ? een : veel; }
   /* "There is light rain" maar "There are showers". */
   function isAre(w) { return /(showers|thunderstorms|grains)$/.test(w) ? "are" : "is"; }
+  /* Provincienamen die in het Engels een eigen vorm hebben. */
+  const PROVINCIE = { "Noord-Holland": "North Holland", "Zuid-Holland": "South Holland", "Noord-Brabant": "North Brabant", "Fryslân": "Friesland" };
   /* Plaatsen met een eigen Engelse naam. Plaatsnamen uit het zoeken komen al in het Engels binnen (start-en.js). */
   const PLAATS = { "Den Haag": "The Hague" };
   const KERSTDAG = { "eerste kerstdag": "Christmas Day", "tweede kerstdag": "Boxing Day", "oudejaarsdag": "New Year's Eve" };
@@ -1222,6 +1224,7 @@
       (m) => `In ${m[1]}, ${maand(m[2])} is the warmest month, with an average daytime high of ${getal(m[3])} °C; in ${maand(m[4])}, the average night-time low is ${getal(m[5])} °C.`],
     [/^Per jaar valt er ongeveer ([\d.]+) mm neerslag en schijnt de zon zo'n ([\d.]+) uur\.$/, (m) => `Each year brings about ${getal(m[1])} mm of precipitation and roughly ${getal(m[2])} hours of sunshine.`],
     [/^Bekijk het weer in (.+?) per uur voor vandaag en morgen, met neerslag voor de komende uren en de 7-daagse verwachting\.$/, (m) => `See the hourly weather in ${plaats(m[1])} for today and tomorrow, with precipitation for the coming hours and the 7-day forecast.`],
+    [/^([^.]+) ligt in de provincie ([^.]+)\.$/, (m) => `${plaats(m[1])} is in the province of ${PROVINCIE[m[2]] || m[2]}.`],
     [/^Alle tijden volgen de lokale tijd van de gekozen plaats\.$/, () => "All times are local to the chosen place."],
 
     /* Briefing: neerslag nu en straks */
