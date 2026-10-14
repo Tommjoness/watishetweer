@@ -1,7 +1,9 @@
 /* Kleurronde 2026-10-12 (akkoord eigenaar 12 oktober). Accentkleuren per thema;
    tekst blijft altijd in de inktkleuren. Rood blijft voor nu en waarschuwingen. */
-:root{--wiw-zon:#c47d0e;--wiw-regen:#2f78c4;--wiw-sneeuw:#5b98d2;--wiw-flits:#d48a06;--wiw-spoor:rgba(20,24,22,.09);--wiw-neutraal:rgba(20,24,22,.42)}
-html[data-thema=donker]{--wiw-zon:#f0b34a;--wiw-regen:#6aa6e8;--wiw-sneeuw:#a9d1f5;--wiw-flits:#f5c04a;--wiw-spoor:rgba(233,231,226,.14);--wiw-neutraal:rgba(233,231,226,.5)}
+/* Contrast 3:1 voor iconen en balkjes (akkoord eigenaar 14 oktober): flits in het
+   lichte thema donkerder, UV 11+ in het donkere thema lichter. */
+:root{--wiw-zon:#c47d0e;--wiw-regen:#2f78c4;--wiw-sneeuw:#5b98d2;--wiw-flits:#a66a00;--wiw-uv-extreem:#6B49C8;--wiw-spoor:rgba(20,24,22,.09);--wiw-neutraal:rgba(20,24,22,.42)}
+html[data-thema=donker]{--wiw-zon:#f0b34a;--wiw-regen:#6aa6e8;--wiw-sneeuw:#a9d1f5;--wiw-flits:#f5c04a;--wiw-uv-extreem:#8466dc;--wiw-spoor:rgba(233,231,226,.14);--wiw-neutraal:rgba(233,231,226,.5)}
 
 /* 1. Dagbalken: het donkere thema krijgt zijn eigen verloop van de dagrenderer. */
 html[data-thema=donker] #days .row.day:not(.kop) .bar i{background:var(--temp-verloop-donker,var(--temp-verloop,var(--ink)))!important}

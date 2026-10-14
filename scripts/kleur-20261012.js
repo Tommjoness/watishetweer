@@ -14,7 +14,10 @@
 "use strict";
 
 const UV_WHO=[[2,"#289500"],[5,"#F7E400"],[7,"#F85900"],[10,"#D8001D"],[Infinity,"#6B49C8"]];
-const TREND={licht:{neutraal:"#afaca4",warm:"#ad4600",koud:"#367ac1"},donker:{neutraal:"#77746d",warm:"#e28e3a",koud:"#73a9e1"}};
+/* UV 11+ volgt het thema: het WHO-violet is op donker te zwak (CSS --wiw-uv-extreem). */
+const UV_EXTREEM="#6B49C8";
+const uvVulling=n=>{const k=uvKleur(n);return k===UV_EXTREEM?`var(--wiw-uv-extreem,${k})`:k;};
+const TREND={licht:{neutraal:"#8a8780",warm:"#ad4600",koud:"#367ac1"},donker:{neutraal:"#77746d",warm:"#e28e3a",koud:"#73a9e1"}};
 const TREND_VOL_BIJ=5;
 
 function getallen(tekst){
@@ -55,7 +58,7 @@ function meterVoor(id,tekst){
 
 function meterHtml(m){
   if(m.soort==="uv")return `<div class="wiw-meter wiw-meter-uv" data-meter="uv" data-waarde="${m.waarde}" aria-hidden="true">`+
-    Array.from({length:11},(_,k)=>`<i${k<m.waarde?` style="background:${uvKleur(k+1)}"`:""}></i>`).join("")+`</div>`;
+    Array.from({length:11},(_,k)=>`<i${k<m.waarde?` style="background:${uvVulling(k+1)}"`:""}></i>`).join("")+`</div>`;
   if(m.soort==="trend")return `<div class="wiw-meter" data-meter="trend" data-van="${m.van}" data-naar="${m.naar}" aria-hidden="true"><i style="width:100%;--licht:${m.licht};--donker:${m.donker}"></i></div>`;
   return `<div class="wiw-meter" data-meter="${m.soort}" data-waarde="${Math.round(m.procent)}" aria-hidden="true"><i style="width:${m.procent.toFixed(1)}%"></i></div>`;
 }
