@@ -211,7 +211,7 @@ function* combinaties() {
   yield "Weer Almere vandaag, morgen en per uur";
   yield "Weer Capelle aan den IJssel vandaag, morgen en per uur";
   yield "Het weer vandaag, morgen en per uur | watishetweer.nl";
-  for (const p of ["Haarlem", "Den Haag", "'s-Hertogenbosch", "Groningen"]) yield `Bekijk het weer in ${p} per uur voor vandaag en morgen, met neerslag voor de komende uren en de 7-daagse verwachting.`;
+  for (const p of ["Haarlem", "Den Haag", "'s-Hertogenbosch", "Groningen"]) yield `Bekijk het weer in ${p} per uur voor vandaag en morgen, met neerslag in de komende uren en de 7-daagse verwachting.`;
   for (const p of ["Noord-Holland", "Zuid-Holland", "Noord-Brabant", "Utrecht", "Fryslân"]) yield `Haarlem ligt in de provincie ${p}.`;
 }
 
