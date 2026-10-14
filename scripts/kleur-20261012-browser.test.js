@@ -24,7 +24,11 @@ assert.deepStrictEqual(kleur.meterVoor("pop", "Droog"), null, "zonder cijfer gee
 assert.strictEqual(kleur.meterVoor("uv", "14").waarde, 11, "UV-schaal begrensd op 11+");
 assert.strictEqual(kleur.meterVoor("wind", "14 km/u NW").procent, 3 / 12 * 100, "wind 14 km/u is 3 Bft");
 const gelijk = kleur.trendVerloop(18, 18, "licht");
-assert(/#afaca4,#afaca4/.test(gelijk), "gelijke temperatuur is neutraal: " + gelijk);
+assert(/#8a8780,#8a8780/.test(gelijk), "gelijke temperatuur is neutraal (3:1 op de tegel, 14 oktober): " + gelijk);
+/* UV 11+ krijgt een themakleur (donker lichter violet); de andere blokjes houden hun WHO-kleur. */
+const uv11 = kleur.meterHtml(kleur.meterVoor("uv", "11"));
+assert(/background:var\(--wiw-uv-extreem,#6B49C8\)/.test(uv11), "UV 11+ gebruikt de themakleur: " + uv11);
+assert(/background:#F7E400/.test(uv11) && !/var\(--wiw-uv-extreem,#F7E400/.test(uv11), "UV-geel blijft het WHO-geel");
 const rgb = s => [...s.matchAll(/rgb\((\d+),(\d+),(\d+)\)/g)].map(m => m.slice(1, 4).map(Number));
 const [kWarm, kKoud] = rgb(kleur.trendVerloop(18, 13, "licht"));
 assert(kWarm[0] > kWarm[2] && kKoud[2] > kKoud[0], "koeler loopt van warm naar koud");
@@ -134,6 +138,8 @@ server.listen(0, async () => {
         const accent = m.accenten.find(a => a.klasse === geval.accent);
         assert(accent, `${label}: accent ${geval.accent} ontbreekt in het hoofdicoon`);
         assert.notStrictEqual(accent.streep, m.inkt, `${label}: accent ${geval.accent} staat nog in inkt`);
+        /* Flits in het lichte thema minstens 3:1 op de achtergrond (14 oktober). */
+        if (geval.accent === "ico-flits" && !m.donker) assert.strictEqual(accent.streep.replace(/ /g, ""), "rgb(166,106,0)", `${label}: flits heeft niet de donkerdere lichte accentkleur`);
       }
       gemeten++;
       await ctx.close();
