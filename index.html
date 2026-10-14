@@ -355,20 +355,15 @@
 
   .msg{padding:var(--s2) 0;color:var(--ink-45);border-top:1px solid var(--rule);margin-top:var(--s3)}
   .msg.err{color:var(--carmine);border-color:var(--carmine)}
-  footer a{color:inherit;text-decoration:none;box-shadow:inset 0 -1px 0 var(--rule)}
   footer a:hover{color:var(--ink);box-shadow:inset 0 -1px 0 var(--ink)}
   /* De bronnen stonden als een lopend tekstblok naast de coordinaten. Onder elkaar
      is elke bron los te lezen en te klikken, wat op een aanraakscherm ook scheelt. */
-  footer{margin-top:var(--s3);padding-top:0;display:flex;flex-direction:column;
+  footer{padding-top:0;display:flex;flex-direction:column;
          gap:3px;font-size:11.5px;color:var(--ink-25);line-height:1.6}
-  footer .bron{display:block}
   /* Seizoenslinks buiten de vijf eerstvolgende: wel in de HTML, nergens in beeld
      (seo-foundation.js). Zelfde selectorgewicht als de latere voetlagen. */
   html body footer:not(#wiw-onderkant)>span.bron.seizoen-link.voet-ver{display:none!important}
-  footer .bron b{font-weight:500;color:var(--ink-45)}
-  footer .mono{font-size:11.5px}
-  footer details summary{cursor:pointer;display:inline;color:var(--ink-45)}
-  footer details #coords{display:block;margin-top:3px;font-family:var(--sans);font-variant-numeric:tabular-nums}
+  footer details #coords{font-variant-numeric:tabular-nums}
   #hit{touch-action:pan-y}
   svg,canvas{display:block;touch-action:pan-y;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
