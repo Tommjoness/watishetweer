@@ -52,7 +52,16 @@ for(const loc of focusRoutes){
   assert.equal(routeIntro(loc),loc.seoIntro,`${loc.slug}: generator gebruikt niet de expliciete routecontext`);
 }
 const gewoneRoute=LOCATIES.find(x=>!x.seoFocus);
-assert(gewoneRoute&&routeIntro(gewoneRoute).includes(`actuele weer in ${gewoneRoute.naam}`),"niet-geselecteerde routes moeten de bestaande generieke context behouden");
+assert(gewoneRoute&&routeIntro(gewoneRoute).startsWith(`Bekijk het weer in ${gewoneRoute.naam} per uur voor vandaag en morgen,`),"niet-geselecteerde routes moeten de generieke context (weer per uur) gebruiken");
+/* Zoekgedrag (Search Console, oktober 2026): "weer <plaats> per uur" is de grootste
+   zoekterm. Iedere plaatspagina noemt dat daarom ook in de zichtbare introtekst,
+   en geen intro herhaalt de plaatsnaam als provincie ("Groningen, Groningen"). */
+for(const loc of LOCATIES){
+  const intro=routeIntro(loc);
+  assert(/\bper uur\b/.test(intro),`${loc.slug}: introtekst noemt het weer per uur niet`);
+  assert(!intro.includes(`${loc.naam}, ${loc.naam}`),`${loc.slug}: introtekst herhaalt de plaatsnaam`);
+  if(!loc.seoIntro)assert(intro.includes(`ligt in de provincie ${loc.provincie}.`),`${loc.slug}: introtekst noemt de provincie niet`);
+}
 
 const plaatsNav=voegPlaatsNavigatieToe("<html><head></head><body></body></html>");
 assert(plaatsNav.includes('<a class="seo-plaatsnav-alles" href="/weer/">Meer plaatsen</a>'),"homepage moet de aanvullende plaatsindex eerlijk als Meer plaatsen labelen");
