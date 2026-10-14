@@ -51,7 +51,7 @@ const SCENARIOS = [
   { naam: "noord", nu: "2026-10-12T10:00:00Z", data: antwoord("2026-10-12"), nl: { aftellen: "Het is herfstvakantie in regio noord. In regio midden en zuid begint de vakantie op zaterdag 17 oktober.", samenvatting: "Volgens de huidige verwachting zijn 6 van de 7 vakantiedagen in de verwachting overwegend droog.", tabellen: 7, fetch: 1, koppen: ["Maandag 12 oktober regio noord", "Zaterdag 17 oktober alle regio's"], cellen: ["Droog · 7 uur zon", "4,2 mm regen · kans 70%", "Droog · weinig zon"], later: "De vakantiedagen tot en met zondag 25 oktober verschijnen hier vanzelf zodra ze binnen de 7-daagse verwachting vallen." }, en: { aftellen: "It is the autumn school holiday in the northern region. In the central and southern regions, the holiday starts on Saturday 17 October." } },
   { naam: "overal", nu: "2026-10-17T10:00:00Z", data: antwoord("2026-10-17"), nl: { aftellen: "Het is overal herfstvakantie.", tabellen: 7, fetch: 1 }, en: { aftellen: "It is the autumn school holiday everywhere." } },
   { naam: "na", nu: "2026-10-26T10:00:00Z", nl: { kop: "Herfstvakantie 2027", aftellen: "355 dagen tot de herfstvakantie in regio noord en midden", tabellen: 0, fetch: 0 }, en: { kop: "Autumn school holiday 2027" } },
-  { naam: "fout", nu: "2026-10-12T10:00:00Z", status: 503, nl: { tabellen: 0, fetch: 1, fout: true }, en: {} }
+  { naam: "fout", nu: "2026-10-12T10:00:00Z", status: 503, nl: { tabellen: 0, fetch: 2, fout: true }, en: {} }
 ];
 
 server.listen(0, async () => {
@@ -75,6 +75,8 @@ server.listen(0, async () => {
         route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(sc.data) });
       });
       await page.goto(base + "/herfstvakantie/", { waitUntil: "load" });
+      /* Wacht tot de verwachting klaar is, ook na de nieuwe poging bij een fout. */
+      await page.waitForFunction(() => !document.querySelector("#seizoen-verwachting[aria-busy]"), null, { timeout: 30000 });
       await page.waitForTimeout(900);
       const m = await page.evaluate(() => ({
         kop: document.getElementById("seizoen-kop").textContent.trim(),
