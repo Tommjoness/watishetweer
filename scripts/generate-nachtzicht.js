@@ -161,7 +161,7 @@ function overzichtPagina(parken, kern) {
   const canonical = `https://watishetweer.nl${BASIS}`;
   const titel = "Sterren kijken in Nederland: de donkerste plekken";
   const beschrijving = "De Nationale Parken van Nederland op een rij, de donkerste eerst: lichtvervuiling per park en de kans op een heldere sterrenhemel vannacht.";
-  const rijen = parken.map(p => `<tr data-park="${p.slug}"><th scope="row"><a href="${BASIS}${p.slug}/">${esc(p.kort)}</a><span class="nz-licht-mob">Lichtvervuiling ${esc(p.licht.naam)}</span></th><td class="nz-licht-kol">${esc(p.licht.naam)}</td><td class="nz-n">…</td><td class="nz-venster">…</td></tr>`).join("\n");
+  const rijen = parken.map(p => `<tr data-park="${p.slug}"><th scope="row"><a href="${BASIS}${p.slug}/" translate="no">${esc(p.kort)}</a><span class="nz-licht-mob">Lichtvervuiling ${esc(p.licht.naam)}</span></th><td class="nz-licht-kol">${esc(p.licht.naam)}</td><td class="nz-n">…</td><td class="nz-venster">…</td></tr>`).join("\n");
   return kop({ titel, beschrijving, canonical }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>Sterren kijken in Nederland</h1>
 <p>De Nationale Parken behoren tot de donkerste plekken van Nederland. Hieronder staan ze op een rij, de donkerste eerst, met de indicatie voor vannacht. Kies een park voor de komende nachten en de bewolking per uur.</p>
@@ -195,7 +195,7 @@ function maanPagina(kern, nuMs) {
 </div></div>
 <h2>De komende fasen</h2>
 <ul id="nz-maan-fasen"></ul>
-<p class="klein">Tijden in <span id="nz-maan-tijdzone">Nederlandse tijd</span>. Op- en ondergang gelden voor <span id="nz-maan-plaats">${esc(MAAN_REFERENTIE.naam)}</span><span id="nz-maan-elders">; elders in Nederland scheelt het hooguit enkele minuten</span>. Kies je in de app een plaats, dan gelden ze voor die plaats. De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem vanuit <span id="nz-maan-standplaats">${esc(MAAN_REFERENTIE.naam)}</span> ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat. Op het zuidelijk halfrond staat hij ondersteboven en rond de evenaar ligt een sikkel op zijn kant. Maanfoto: NASA's Scientific Visualization Studio.</p>
+<p class="klein">Tijden in <span id="nz-maan-tijdzone">Nederlandse tijd</span>. Op- en ondergang gelden voor <span id="nz-maan-plaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span><span id="nz-maan-elders">; elders in Nederland scheelt het hooguit enkele minuten</span>. Kies je in de app een plaats, dan gelden ze voor die plaats. De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem vanuit <span id="nz-maan-standplaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span> ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat. Op het zuidelijk halfrond staat hij ondersteboven en rond de evenaar ligt een sikkel op zijn kant. Maanfoto: NASA's Scientific Visualization Studio.</p>
 <h2>Sterren kijken</h2>
 <p>Waar het donker is en hoe de komende nachten worden, staat op <a href="${BASIS}">Sterren kijken in Nederland</a>.</p>
 ` + staart({ soort: "maan", tz: TIJDZONE, referentie: MAAN_REFERENTIE }, kern);

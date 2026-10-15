@@ -105,6 +105,20 @@
   /* Bron van de hoofdverwachting achter de ophaaltijd (" · Open-Meteo" of " · reservebron …"). */
   const bronEn = s => !s ? "" : s.replace(/^ · reservebron /, " · backup source ");
   const maand = nl => MAAND_KORT[String(nl).toLowerCase()] || MAAND_VOL[String(nl).toLowerCase()] || null;
+  /* Verdiepingspagina's maan/nachtzicht/park. */
+  const hoofd = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  const LICHTKLASSE = { laag: "low", matig: "moderate", hoog: "high", "laag tot matig": "low to moderate", "matig tot hoog": "moderate to high" };
+  /* "op 16:00 · onder 00:13" (maan of zon) → "rises 16:00 · sets 00:13". */
+  function opOnder(s) {
+    const delen = String(s).split(" · ");
+    if (!delen.every(d => /^(op|onder) \d{2}:\d{2}$/.test(d))) return null;
+    return delen.map(d => d.replace(/^op /, "rises ").replace(/^onder /, "sets ")).join(" · ");
+  }
+  /* "Nationaal Park De Hoge Veluwe" en "Van Gogh Nationaal Park" → "… National Park". */
+  function parkEn(nl) {
+    const m = /^Nationaal Park (.+)$/.exec(nl) || /^(.+) Nationaal Park$/.exec(nl);
+    return m ? `${m[1]} National Park` : null;
+  }
   function graden(n) { return getal(n) + (Math.abs(Number(String(n).replace(",", ".").replace("−", "-"))) === 1 ? " degree" : " degrees"); }
   function meervoud(n, een, veel) { return Number(n) === 1 ? een : veel; }
   /* "There is light rain" maar "There are showers". */
@@ -803,6 +817,68 @@
       "For places in the Netherlands, Stargazing shows a rough estimate of light pollution: low, moderate or high. The estimate comes from the 2015 RIVM map of calculated night-sky brightness without cloud, plus a fixed natural background of 0.25 mcd/m². Low means up to 0.5 mcd/m² and high means more than 2 mcd/m². These thresholds are a choice made by watishetweer.nl, not an official classification. The estimate applies to a clear night without moonlight.",
     "Ligt de kaartwaarde dicht bij een grens, dan tonen we twee klassen, zoals \"laag tot matig\". Die marge volgt uit de verschillen tussen de kaart en 246 metingen in Drenthe uit 2015 en 2016. Op 24 Nederlandse meetlocaties van de Rijksuniversiteit Groningen, met metingen uit januari 2020, gaf de kaart op 20 locaties dezelfde klasse als de meting. Die locaties liggen vooral in Noord-Nederland. De kaart is niet actueel en niet landelijk gevalideerd: de werkelijke hemelhelderheid kan sinds 2015 zijn veranderd.":
       "If the map value is close to a threshold, we show two classes, such as \"low to moderate\". That margin is based on the differences between the map and 246 measurements in Drenthe from 2015 and 2016. At 24 Dutch measurement sites of the University of Groningen, measured in January 2020, the map gave the same class as the measurement at 20 sites. Those sites are mostly in the north of the Netherlands. The map is not current and has not been validated nationwide: the actual sky brightness may have changed since 2015.",
+    /* Verdiepingspagina's /maan/, /nachtzicht/ en de parkpagina's (audit 15 oktober). */
+    "De maan vandaag": "The moon today",
+    "De maan vandaag: fase, opkomst en ondergang | watishetweer.nl": "The moon today: phase, moonrise and moonset | watishetweer.nl",
+    "Hoe vol de maan is en hoe hoog hij staat, bepaalt hoeveel sterren je ziet.": "How full the moon is and how high it stands determine how many stars you can see.",
+    "Bij een volle maan verdwijnt de Melkweg; rond nieuwe maan is de hemel het donkerst.": "At full moon the Milky Way disappears; around new moon the sky is at its darkest.",
+    "De op- en ondergangstijden worden geladen.": "Loading moonrise and moonset times.",
+    "De komende fasen": "The coming phases",
+    "Nederlandse tijd": "Dutch time",
+    "; elders in Nederland scheelt het hooguit enkele minuten": "; elsewhere in the Netherlands they differ by a few minutes at most",
+    "Kies je in de app een plaats, dan gelden ze voor die plaats.": "If you choose a place in the app, they apply to that place.",
+    "De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms).": "The times of the phases are calculated according to Meeus (Astronomical Algorithms).",
+    "Het percentage en de fasen gelden overal op aarde.": "The percentage and the phases are the same everywhere on Earth.",
+    "Op het zuidelijk halfrond staat hij ondersteboven en rond de evenaar ligt een sikkel op zijn kant.": "In the southern hemisphere it appears upside down, and near the equator a crescent lies on its side.",
+    "Maanfoto: NASA's Scientific Visualization Studio.": "Moon photo: NASA's Scientific Visualization Studio.",
+    "Sterren kijken": "Stargazing",
+    "Sterren kijken in Nederland": "Stargazing in the Netherlands",
+    "Sterren kijken in Nederland: de donkerste plekken | watishetweer.nl": "Stargazing in the Netherlands: the darkest places | watishetweer.nl",
+    "Waar het donker is en hoe de komende nachten worden, staat op Sterren kijken in Nederland.": "Where it is dark and what the coming nights will be like is on Stargazing in the Netherlands.",
+    "De Nationale Parken behoren tot de donkerste plekken van Nederland.": "The National Parks are among the darkest places in the Netherlands.",
+    "Hieronder staan ze op een rij, de donkerste eerst, met de indicatie voor vannacht.": "They are listed below, darkest first, with the indication for tonight.",
+    "Kies een park voor de komende nachten en de bewolking per uur.": "Choose a park for the coming nights and the hourly cloud cover.",
+    "De verwachting voor vannacht wordt geladen.": "Loading tonight's forecast.",
+    "De verwachting voor vannacht kon niet worden geladen.": "Tonight's forecast could not be loaded.",
+    "De verwachting wordt geladen.": "Loading the forecast.",
+    "De verwachting kon niet worden geladen.": "The forecast could not be loaded.",
+    "Probeer het later opnieuw.": "Please try again later.",
+    "Park": "Park",
+    "Lichtvervuiling": "Light pollution",
+    "De maan bepaalt mee hoeveel sterren je ziet.": "The moon helps determine how many stars you can see.",
+    "Fase, op- en ondergang en de volgende volle maan staan op De maan vandaag.": "Phase, moonrise, moonset and the next full moon are on The moon today.",
+    "Hoe donker is het?": "How dark is it?",
+    "De lichtvervuiling is een grove schatting voor een heldere, maanloze nacht, uit de RIVM-kaart van de hemelhelderheid.": "The light pollution is a rough estimate for a clear, moonless night, based on the RIVM map of sky brightness.",
+    "Laag: weinig kunstlicht, de Melkweg is goed te zien.": "Low: little artificial light, the Milky Way is easy to see.",
+    "Matig: de Melkweg is zwak of niet te zien.": "Moderate: the Milky Way is faint or not visible.",
+    "Bij twijfel tussen twee klassen staan ze allebei genoemd.": "When it is unclear which of two classes applies, both are given.",
+    "Parken aan de landsgrens ontbreken in dit overzicht: de kaart kent het licht uit het buitenland niet, waardoor de schatting daar te donker zou uitvallen.":
+      "Parks on the national border are not included in this overview: the map does not include light from abroad, so the estimate there would be too dark.",
+    "Hoe de indicatie werkt": "How the indication works",
+    "De indicatie van 0 tot 10 is precies die van het blok Nachtzicht op watishetweer.nl, voor de rest van de nacht vanaf nu.": "The indication from 0 to 10 is exactly the one in the Stargazing block on watishetweer.nl, for the rest of the night from now.",
+    "Ze telt vooral de bewolking, en trekt er punten af voor slecht zicht, mist, neerslag, hoge luchtvochtigheid, kans op dauw, harde windstoten en maanlicht.":
+      "It is mainly based on cloud cover, and deducts points for poor visibility, fog, precipitation, high humidity, a chance of dew, strong gusts and moonlight.",
+    "Hoe hoger de maan staat en hoe voller hij is, hoe meer hij meetelt.": "The higher and fuller the moon, the more it counts.",
+    "Het kijkvenster is het langste aaneengesloten stuk van minstens twee uur met weinig bewolking (minder dan 35%), goed zicht, geen neerslag of mist en weinig maanlicht.":
+      "The viewing window is the longest continuous period of at least two hours with little cloud cover (less than 35%), good visibility, no precipitation or fog and little moonlight.",
+    "Voor nachten verder vooruit staat er een dagdeel in plaats van kloktijden, omdat die verwachting nog onzeker is.": "For nights further ahead, a part of the night is shown instead of clock times, because that forecast is still uncertain.",
+    "Lichtvervuiling zit niet in de indicatie, want die verandert niet per nacht.": "Light pollution is not part of the indication, because it does not change from night to night.",
+    "Bronnen: de verwachting komt van het weermodel via Open-Meteo; de lichtvervuiling is geschat uit de RIVM-kaart \"Berekende hemelhelderheid in de nacht, zonder bewolking\" (2015); de ligging van de parken komt uit Wikidata.":
+      "Sources: the forecast comes from the weather model via Open-Meteo; the light pollution is estimated from the 2015 RIVM map of calculated night-sky brightness without cloud; the locations of the parks come from Wikidata.",
+    "Meer over de schatting staat op Over deze site.": "More about the estimate is on About this site.",
+    "← Alle Nationale Parken": "← All National Parks",
+    "Hieronder staat per nacht hoe goed het zicht op de sterrenhemel naar verwachting is, met de beste periode om te kijken.": "Below you can see, night by night, how good the view of the starry sky is expected to be, with the best time to look.",
+    "Voor een heldere, maanloze nacht, rond het midden van het park; waar je precies staat maakt uit.": "For a clear, moonless night, around the centre of the park; exactly where you stand makes a difference.",
+    "Zon": "Sun",
+    "Bewolking per uur": "Cloud cover per hour",
+    "goed om te kijken": "good for stargazing",
+    "te bewolkt, slecht zicht of te veel maanlicht": "too cloudy, poor visibility or too much moonlight",
+    "maan op": "moon up",
+    "Komende nachten": "Coming nights",
+    "Kijkvenster": "Viewing window",
+    "Het weer per uur voor deze plek": "The hourly weather for this spot",
+    "de hele nacht boven de horizon": "above the horizon all night",
+    "de hele nacht onder de horizon": "below the horizon all night",
     /* Nachtzicht: lichtvervuiling (alleen Nederland) */
     "laag tot matig": "low to moderate", "matig tot hoog": "moderate to high",
     "Weinig kunstlicht: de Melkweg is goed te zien.": "Little artificial light: the Milky Way is easy to see.",
@@ -1134,6 +1210,29 @@
     /* Grafiekvenster: "16:00 · bewolkt", "kans 16:00–17:00", "12 km/u WZW, 3 Bft". */
     [/^(\d{2}:\d{2}) · (.+)$/, (m) => weer(m[2]) && `${m[1]} · ${weer(m[2])}`],
     [/^kans (\d{2}:\d{2})–(\d{2}:\d{2})$/, (m) => `chance ${m[1]}–${m[2]}`],
+    /* Verdiepingspagina's maan/nachtzicht/park (audit 15 oktober). */
+    [/^(Nieuwe maan|Wassende sikkel|Eerste kwartier|Wassende maan|Volle maan|Afnemende maan|Laatste kwartier|Afnemende sikkel), (\d+)% verlicht$/, (m) => `${hoofd(MAANFASE[m[1].toLowerCase()])}, ${m[2]}% illuminated`],
+    [/^(Nieuwe maan|Wassende sikkel|Eerste kwartier|Wassende maan|Volle maan|Afnemende maan|Laatste kwartier|Afnemende sikkel), (\d+)% verlicht · (.+)$/, (m, hulp) => { const r = opOnder(m[3]) || hulp.t(m[3]); return r && `${hoofd(MAANFASE[m[1].toLowerCase()])}, ${m[2]}% illuminated · ${r}`; }],
+    [/^((?:op|onder) \d{2}:\d{2})((?: · (?:op|onder) \d{2}:\d{2})*)$/, (m) => opOnder(m[0])],
+    [/^(Nieuwe maan|Eerste kwartier|Volle maan|Laatste kwartier) (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december), (\d{2}:\d{2})$/,
+      (m) => `${hoofd(MAANFASE[m[1].toLowerCase()])} ${dagVol(m[2])} ${m[3]} ${maand(m[4])}, ${m[5]}`],
+    [/^(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december), (\d{2}:\d{2})$/,
+      (m) => `${dagVol(m[1])} ${m[2]} ${maand(m[3])}, ${m[4]}`],
+    [/^Vandaag in ([^:]+): ((?:op|onder) \d{2}:\d{2}(?:, (?:op|onder) \d{2}:\d{2})?)\.$/, (m) => `Today in ${m[1]}: ${m[2].split(", ").map(x => x.replace(/^op /, "moonrise ").replace(/^onder /, "moonset ")).join(", ")}.`],
+    [/^Vandaag komt de maan in ([^.]+) niet op of niet onder\.$/, (m) => `Today the moon does not rise or set in ${m[1]}.`],
+    [/^Tijden in (Nederlandse tijd|plaatselijke tijd van [^.]+)\.$/, (m) => `Times are in ${m[1] === "Nederlandse tijd" ? "Dutch time" : "local time in " + m[1].slice("plaatselijke tijd van ".length)}.`],
+    [/^plaatselijke tijd van (.+)$/, (m) => `local time in ${m[1]}`],
+    [/^Op- en ondergang gelden voor ([^;.]+)(; elders in Nederland scheelt het hooguit enkele minuten)?\.$/, (m) => `Moonrise and moonset are for ${m[1]}${m[2] ? "; elsewhere in the Netherlands they differ by a few minutes at most" : ""}.`],
+    [/^De maan staat getekend zoals je hem vanuit ([^:]+) ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat\.$/,
+      (m) => `The moon is drawn as you see it from ${m[1]}: now, or otherwise at the next moment it is above the horizon in the dark.`],
+    [/^Lichtvervuiling (laag|matig|hoog|laag tot matig|matig tot hoog)$/, (m) => `Light pollution ${LICHTKLASSE[m[1]]}`],
+    [/^Lichtvervuiling: (laag|matig|hoog|laag tot matig|matig tot hoog) \(geschat\)\.$/, (m) => `Light pollution: ${LICHTKLASSE[m[1]]} (estimated).`],
+    [/^Sterren kijken in (Nationaal Park [^|]+|[^|]+ Nationaal Park)$/, (m) => `Stargazing in ${parkEn(m[1])}`],
+    [/^Sterren kijken in (Nationaal Park [^|]+|[^|]+ Nationaal Park) \| watishetweer\.nl$/, (m) => `Stargazing in ${parkEn(m[1])} | watishetweer.nl`],
+    [/^Kun je vannacht sterren zien in (Nationaal Park [^?]+|[^?]+ Nationaal Park)\?$/, (m) => `Can you see the stars in ${parkEn(m[1])} tonight?`],
+    [/^gemiddeld (\d+%|\d+\+? km|\d+,\d km|onbekend)$/, (m) => `average ${m[1] === "onbekend" ? "unknown" : m[1].replace(",", ".")}`],
+    [/^Bewolking per uur, (\d{2}:\d{2}) tot (\d{2}:\d{2})$/, (m) => `Cloud cover per hour, ${m[1]} to ${m[2]}`],
+    [/^(\d{2}:\d{2}): (?:(\d+%) bewolking|bewolking onbekend)(, maan op)?$/, (m) => `${m[1]}: ${m[2] ? m[2] + " cloud cover" : "cloud cover unknown"}${m[3] ? ", moon up" : ""}`],
     /* Nachtzicht: "Lichtvervuiling in Vlieland: laag tot matig (geschat)." of "…hier: …" */
     [/^Lichtvervuiling (?:in (.+)|hier): (laag|matig|hoog|laag tot matig|matig tot hoog) \(geschat\)\.$/, (m) => `Light pollution ${m[1] ? "in " + plaats(m[1]) : "here"}: ${({ laag: "low", matig: "moderate", hoog: "high", "laag tot matig": "low to moderate", "matig tot hoog": "moderate to high" })[m[2]]} (estimated).`],
     [/^(\d{2}:\d{2}, )?neerslagkans (\d+%)(?:, verwacht (.+))?$/, (m) => `${m[1] || ""}${m[2]} chance of precipitation${m[3] ? ", " + m[3].replace(/(\d),(\d)/g, "$1.$2") + " expected" : ""}`],
@@ -1317,7 +1416,7 @@
   /* Namen die in iedere taal gelijk blijven (bronnen, merken, diensten). */
   const eigennamen = [
     "Open-Meteo", "Weather Data Provided by Visual Crossing", "WeatherAPI.com", "CAMS", "MeteoAlarm", "National Weather Service",
-    "BigDataCloud", "KNMI", "PostHog Cloud EU", "Google Analytics", "Cloudflare", "watishetweer.nl", "Autoriteit Persoonsgegevens",
+    "BigDataCloud", "KNMI", "Wikidata", "NL", "NL – Nederlands", "PostHog Cloud EU", "Google Analytics", "Cloudflare", "watishetweer.nl", "Autoriteit Persoonsgegevens",
     "Maitri Polwatte Gedera", "Heavy rain may cause flooding.", "Weather alert", "Official warning text unavailable.",
     /* Officiële NWS-gebeurtenisnamen: de site toont ze bewust in het origineel. */
     ...["Flood Watch", "Flood Warning", "Flood Advisory", "Flash Flood Watch", "Flash Flood Warning", "Flash Flood Emergency", "Coastal Flood Watch", "Coastal Flood Warning", "Coastal Flood Advisory",
