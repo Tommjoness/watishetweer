@@ -110,10 +110,6 @@ const STIJL=`<style id="${MARKER}">
   }
 
   footer{
-    display:grid;
-    grid-template-columns:minmax(0,1fr) max-content max-content;
-    gap:8px 32px;
-    align-items:start;
     border-top:1px solid var(--rule-soft);
     padding-top:16px
   }

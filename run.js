@@ -2003,8 +2003,14 @@ groep("Opmaak en uitlijning");
     /\.day\{[^}]*touch-action:pan-y;[^}]*-webkit-tap-highlight-color:transparent;[^}]*user-select:none/.test(css)
       && /@media\(hover:hover\) and \(pointer:fine\)\{\.day:hover\{background:var\(--rule-soft\)\}\}/.test(css));
 
-  /* De voettekst: elke bron op een eigen regel. */
-  check("de voettekst staat onder elkaar",/footer\{[^}]*flex-direction:column/.test(css));
+  /* De voettekst: de indeling komt uit de voetlaag van de build (een vast grid op
+     mobiel en desktop); de basisregel in index.html houdt alleen de typografie. */
+  const voetLaag=fsL2.readFileSync(pathL2.join(__dirname,"scripts","apply-ui-ux-audit-polish-20260913.js"),"utf8");
+  check("de voet heeft een vaste gridindeling op mobiel en desktop",
+    voetLaag.includes("html body footer:nth-of-type(n){display:grid!important;grid-template-columns:minmax(0,1fr) max-content max-content max-content minmax(0,1fr)!important")
+      && voetLaag.includes("html body footer:nth-of-type(n){margin-top:6px!important;padding-top:0!important;padding-bottom:0!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important"));
+  check("de basisregel van de voet legt geen eigen indeling vast",
+    /\bfooter\{padding-top:0;font-size:11\.5px;/.test(css) && !/(^|[\s}])footer\{[^}]*\b(display|flex-direction|gap):/.test(css));
   const bronnen=(css.match(/<span class="bron"/g)||[]).length;
   check("elke bron heeft een eigen regel",bronnen>=1,bronnen+" regels");
   check("de bronnen staan niet meer als een lopend blok",

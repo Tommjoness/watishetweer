@@ -356,10 +356,9 @@
   .msg{padding:var(--s2) 0;color:var(--ink-45);border-top:1px solid var(--rule);margin-top:var(--s3)}
   .msg.err{color:var(--carmine);border-color:var(--carmine)}
   footer a:hover{color:var(--ink);box-shadow:inset 0 -1px 0 var(--ink)}
-  /* De bronnen stonden als een lopend tekstblok naast de coordinaten. Onder elkaar
-     is elke bron los te lezen en te klikken, wat op een aanraakscherm ook scheelt. */
-  footer{padding-top:0;display:flex;flex-direction:column;
-         gap:3px;font-size:11.5px;color:var(--ink-25);line-height:1.6}
+  /* Basistypografie van de voet. De indeling (bronnen, links, contact) komt
+     uit de voetlagen van de build (apply-ui-ux-audit-polish-20260913.js). */
+  footer{padding-top:0;font-size:11.5px;color:var(--ink-25);line-height:1.6}
   /* Seizoenslinks buiten de vijf eerstvolgende: wel in de HTML, nergens in beeld
      (seo-foundation.js). Zelfde selectorgewicht als de latere voetlagen. */
   html body footer:not(#wiw-onderkant)>span.bron.seizoen-link.voet-ver{display:none!important}

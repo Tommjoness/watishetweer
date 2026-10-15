@@ -32,7 +32,7 @@ assert.ok(STIJL.includes(".dashrow-chart>.dashcol,.dashrow-days>.dashcol,#days,#
 assert.ok(STIJL.includes("#days .row.day")&&STIJL.includes("minmax(260px,1.4fr)"),"weekverwachting moet extra breedte over meerdere informatiekolommen verdelen");
 assert.ok(STIJL.includes("#nights .row.night")&&STIJL.includes("minmax(220px,320px)")&&STIJL.includes("minmax(360px,520px)"),"Nachtzicht moet zijn data in begrensde leesbare desktopkolommen groeperen");
 assert.ok(STIJL.includes(".data-uitleg p{max-width:min(110ch,100%)}"),"bronuitleg mag niet in de oude halve-kolombreedte blijven steken");
-assert.ok(STIJL.includes("footer{")&&STIJL.includes("grid-template-columns:minmax(0,1fr) max-content max-content"),"desktopfooter moet de breedte als drie rustige kolommen benutten");
+assert.ok(/footer\{\s*border-top:1px solid var\(--rule-soft\);\s*padding-top:16px\s*\}/.test(STIJL)&&!/footer\{[^}]*(display|grid-template-columns|gap|align-items):/.test(STIJL),"desktopfooter houdt hier alleen scheidingslijn en ruimte; de kolomindeling komt uit de latere voetlaag (apply-ui-ux-audit-polish-20260913)");
 assert.ok(STIJL.includes(".dashrow-hero>.hero")&&STIJL.includes("align-self:start!important"),"hero mag niet onnodig laag naast de metriekentabel hangen");
 assert.ok(STIJL.includes("#minibar{")&&STIJL.includes("left:0!important")&&STIJL.includes("right:0!important"),"desktop-minibalk moet exact aan beide viewportranden worden verankerd");
 assert.ok(RUNTIME.includes("verfijnGrafiekTypografie")&&RUNTIME.includes("0.80")&&RUNTIME.includes("0.88"),"desktopgrafiek moet zijn tekst subtieler schalen zonder dataplot te herschrijven");
