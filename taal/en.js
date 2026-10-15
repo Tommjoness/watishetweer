@@ -217,6 +217,8 @@
     "Plaatsen zoeken…": "Search places…",
     "Zoekresultaten": "Search results",
     "Niets gevonden": "Nothing found",
+    /* Soort locatie in een zoekresultaat, alleen bij gelijke naam en regio (Singapore stad/land). */
+    "hoofdstad": "capital", "land": "country", "eiland": "island", "luchthaven": "airport", "regio": "region", "plaats": "place",
     "Mijn locatie": "My location",
     "Mijn Locatie": "My Location",
     "Mijn": "My",
