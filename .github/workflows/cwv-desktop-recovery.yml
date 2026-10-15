@@ -33,6 +33,8 @@ jobs:
         run: node scripts/font-swap-cls-browser.test.js
       - name: Eerste scherm mobiel en desktop
         run: node scripts/first-screen-browser.test.js
+      - name: Mobiel eerste scherm, temperatuur boven de briefing; vanaf nu bij Vandaag
+        run: node scripts/eerste-scherm-mobiel-browser.test.js
       - name: Bediening, tapdoelen en Auto-thema
         run: node scripts/bediening-browser.test.js
       - name: Leesbaarheid, minimale lettergroottes
