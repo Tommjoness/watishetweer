@@ -45,6 +45,8 @@ jobs:
         run: node scripts/kop-browser.test.js
       - name: Nachtzicht, twee regels per nacht op mobiel
         run: node scripts/nachtzicht-browser.test.js
+      - name: Nachtzicht, maan en parkpagina's volledig in het Engels
+        run: node scripts/nachtzicht-engels-browser.test.js
       - name: Typografie, geen monospace en rustige hints
         run: node scripts/typografie-browser.test.js
       - name: Hoogste en laagste punt in de grafiek op het echte extreem

@@ -95,6 +95,17 @@
       return uit;
     }
 
+    /* Een kind dat letterlijk moet blijven: brontekst in een andere taal of
+       expliciet translate="no"/data-taal-vast (bijvoorbeeld een plaats- of
+       parknaam midden in een zin). Binnen een blok blijft het staan zoals het is. */
+    function blijftLetterlijk(kind, blok) {
+      for (let e = kind.nodeType === 1 ? kind : kind.parentElement; e && e !== blok; e = e.parentElement) {
+        if (E.isAndereTaal(e)) return true;
+        if (e.getAttribute && (e.getAttribute("translate") === "no" || e.hasAttribute("data-taal-vast"))) return true;
+      }
+      return false;
+    }
+
     /* Zet een Engelse zin terug in een blok en houdt inline kinderen waar mogelijk. */
     function herbouwBlok(el, en) {
       const kinderen = [...el.children].filter(k => /\S/.test(k.textContent || ""));
@@ -102,7 +113,7 @@
       let rest = en, gelukt = true;
       for (const kind of kinderen) {
         const eigen = schoon(kind.textContent);
-        const kindEn = E.isAndereTaal(kind) ? eigen : neutraal(eigen) ? neutraalEn(eigen) : vertaler.vertaal(eigen);
+        const kindEn = blijftLetterlijk(kind, el) ? eigen : neutraal(eigen) ? neutraalEn(eigen) : vertaler.vertaal(eigen);
         const pos = kindEn == null ? -1 : rest.indexOf(kindEn);
         if (pos < 0) { gelukt = false; break; }
         delen.push(rest.slice(0, pos), { kind, tekst: kindEn });
@@ -114,7 +125,7 @@
       for (const d of delen) {
         if (typeof d === "string") { if (d) frag.appendChild(doc.createTextNode(d)); continue; }
         const nodes = tekstnodes(d.kind);
-        if (E.isAndereTaal(d.kind)) { /* brontekst in andere taal blijft letterlijk */ }
+        if (blijftLetterlijk(d.kind, el)) { /* brontekst in andere taal of translate="no" blijft letterlijk */ }
         else if (nodes.length === 1) zetTekst(nodes[0], d.tekst);
         /* Een kind met eigen inline elementen ("Mail naar <a>…</a>") wordt
            op dezelfde manier herbouwd; textContent zou de link wissen. */
@@ -148,7 +159,7 @@
          heeft; anders blijft lopende tekst heel en Nederlands en worden de
          ontbrekende zinnen gemeld. Losse labels zonder zinsbouw mogen wel
          gedeeltelijk (bijv. plaatsnaam + provincie). */
-      const perNode = nodes.map(n => (gezet.get(n) === n.textContent ? n.textContent : vertaalStil(n.textContent, n.parentElement)));
+      const perNode = nodes.map(n => (gezet.get(n) === n.textContent || blijftLetterlijk(n, el) ? n.textContent : vertaalStil(n.textContent, n.parentElement)));
       if (perNode.every(v => v != null)) {
         nodes.forEach((n, i) => zetTekst(n, perNode[i]));
         gezet.set(el, schoon(el.textContent));
@@ -159,7 +170,7 @@
         return;
       }
       for (const n of nodes) {
-        if (gezet.get(n) === n.textContent) continue;
+        if (gezet.get(n) === n.textContent || blijftLetterlijk(n, el)) continue;
         const v = vertaalTekst(n.textContent, n.parentElement);
         if (v != null) zetTekst(n, v);
       }
