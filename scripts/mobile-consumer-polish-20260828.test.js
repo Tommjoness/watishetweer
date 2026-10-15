@@ -58,6 +58,25 @@ const viaWeatherApi=ux.bronGebruikUitResources([],"NL",{forecastProvider:"weathe
 assert.equal(viaWeatherApi.weatherapi,true,"WeatherAPI.com wordt vermeld zodra de getoonde verwachting van WeatherAPI komt");
 assert.equal(viaWeatherApi.visualcrossing,false,"Visual Crossing blijft weg als WeatherAPI de data leverde");
 
+/* Plaatswissel Amsterdam → Singapore: de aanvragen van Amsterdam staan nog in de
+   resource-timingbuffer, maar horen niet bij de getoonde plaats (audit 15 oktober). */
+const naWissel=ux.bronGebruikUitResources([
+  {name:"https://watishetweer.nl/api/neerslag?lat=52.37403&lon=4.88969&land=NL"},
+  {name:"https://watishetweer.nl/api/waarschuwingen?lat=52.37403&lon=4.88969"},
+  {name:"https://watishetweer.nl/api/plaatsnaam?lat=52.3740&lon=4.8897"},
+  {name:"https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=52.37403&longitude=4.88969&localityLanguage=nl"},
+  {name:"https://air-quality-api.open-meteo.com/v1/air-quality?latitude=1.28967&longitude=103.85007"}
+],"SG",{lat:1.28967,lon:103.85007});
+assert.equal(naWissel.knmi,false,"KNMI van de vorige plaats blijft na een plaatswissel niet staan");
+assert.equal(naWissel.meteoalarm,false,"MeteoAlarm van de vorige plaats blijft na een plaatswissel niet staan");
+assert.equal(naWissel.osm,false,"OSM-plaatsnaam van de vorige plaats blijft na een plaatswissel niet staan");
+assert.equal(naWissel.bigdatacloud,false,"BigDataCloud van de vorige plaats blijft na een plaatswissel niet staan");
+assert.equal(naWissel.cams,true,"aanvragen voor de getoonde plaats tellen wel");
+const terugNaarAmsterdam=ux.bronGebruikUitResources([{name:"https://watishetweer.nl/api/neerslag?lat=52.37403&lon=4.88969&land=NL"}],"NL",{lat:52.374,lon:4.8897});
+assert.equal(terugNaarAmsterdam.knmi,true,"KNMI telt voor dezelfde plaats, ook met andere afronding van de coördinaten");
+assert(js.includes("lat:S.lat,lon:S.lon"),"footer filtert de bronnen op de coördinaten van de getoonde plaats");
+assert(/new PerformanceObserver\(planBronnen\)\.observe\(\{type:"resource"\}\)/.test(js),"na een plaatswissel worden de bronnen opnieuw bepaald zodra aanvragen voor de nieuwe plaats binnenkomen");
+
 const us=ux.bronGebruikUitResources([{name:"https://watishetweer.nl/api/waarschuwingen?lat=40&lon=-74"}],"US");
 assert.equal(us.nws,true,"NWS wordt in de VS aan de waarschuwingroute gekoppeld");
 assert.equal(us.meteoalarm,false,"MeteoAlarm wordt in de VS niet foutief getoond");

@@ -195,8 +195,23 @@ function neerslagSleutelTekst(waarde,subtekst){
   return "kans";
 }
 function resourceNaam(r){return String(r&&typeof r==="object"?r.name:r||"");}
+/* Een aanvraag met coördinaten hoort alleen bij de bronvermelding als die
+   coördinaten bij de getoonde plaats horen. De resource-timingbuffer bevat ook
+   de aanvragen van eerder bekeken plaatsen (Amsterdam → Singapore hield anders
+   KNMI vast). Aanvragen zonder coördinaten blijven tellen zoals voorheen. */
+function resourceCoordinaat(naam,sleutels){
+  for(const k of sleutels){const m=new RegExp("[?&]"+k+"=(-?\\d+(?:\\.\\d+)?)").exec(naam);if(m)return Number(m[1]);}
+  return null;
+}
+function resourceHoortBijPlaats(naam,lat,lon){
+  if(!Number.isFinite(lat)||!Number.isFinite(lon))return true;
+  const la=resourceCoordinaat(naam,["lat","latitude"]),lo=resourceCoordinaat(naam,["lon","longitude"]);
+  if(la===null||lo===null)return true;
+  return Math.abs(la-lat)<=0.02&&Math.abs(lo-lon)<=0.02;
+}
 function bronGebruikUitResources(resources,land,opties={}){
-  const namen=(Array.isArray(resources)?resources:[]).map(resourceNaam),waarschuwing=waarschuwingBronnenVoorLand(land);
+  const lat=opties.lat==null?NaN:Number(opties.lat),lon=opties.lon==null?NaN:Number(opties.lon);
+  const namen=(Array.isArray(resources)?resources:[]).map(resourceNaam).filter(n=>resourceHoortBijPlaats(n,lat,lon)),waarschuwing=waarschuwingBronnenVoorLand(land);
   const heeft=patroon=>namen.some(n=>patroon.test(n));
   const waarschuwingen=heeft(/\/api\/waarschuwingen(?:[?#]|$)/i);
   return {
@@ -1728,7 +1743,7 @@ function werkBronnenBij(){
   const label=bron.querySelector(".bronlabel");if(label)label.textContent="Bronnen voor deze weergave";
   /* CAMS hoort erbij zodra de luchtkwaliteit in beeld is, ook als die uit de
      cache komt of de resource-timingbuffer van een lang open tab vol is. */
-  const gebruik=bronGebruikUitResources(resourceEntries(),S.land,{forecastBeschikbaar:!!S.d,airBeschikbaar:!!(S.air&&S.air.current),forecastProvider:S.d&&S.d.provider||""});
+  const gebruik=bronGebruikUitResources(resourceEntries(),S.land,{forecastBeschikbaar:!!S.d,airBeschikbaar:!!(S.air&&S.air.current),forecastProvider:S.d&&S.d.provider||"",lat:S.lat,lon:S.lon});
   const items=[...bron.querySelectorAll(".bronitem")];
   items.forEach(item=>{
     const naam=String(item.textContent||"").replace(/\s+/g," ").trim();
@@ -1766,6 +1781,15 @@ if(typeof lucht==="function"){
 }
 werkContextBij();planUurAsHerstel();planNuLabelPolish();
 setTimeout(werkBronnenBij,450);setTimeout(werkBronnenBij,1400);
+/* Na een plaatswissel moet de bronlijst opnieuw worden bepaald. De wrappers om
+   meters/lucht hierboven bereiken niet iedere latere renderlaag, dus volgen we
+   ook de netwerkaanvragen zelf: zodra een aanvraag voor de nieuwe plaats
+   binnenkomt, rekenen we de bronnen opnieuw uit (hooguit één keer per frame). */
+if(typeof PerformanceObserver!=="undefined"){
+  let bronFrame=0;
+  const planBronnen=()=>{if(bronFrame)return;bronFrame=1;const voer=()=>{bronFrame=0;werkBronnenBij();};if(typeof requestAnimationFrame==="function")requestAnimationFrame(voer);else setTimeout(voer,0);};
+  try{new PerformanceObserver(planBronnen).observe({type:"resource"});}catch(_){}
+}
 /* De KNMI-attributie komt soms pas na deze timers vanuit de providerlaag. */
 const bronFooter=document.querySelector("footer .bron-bronnen");
 if(bronFooter&&typeof MutationObserver!=="undefined"){
