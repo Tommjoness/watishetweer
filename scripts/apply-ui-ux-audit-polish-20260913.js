@@ -116,9 +116,6 @@ button:focus-visible,input:focus-visible,a:focus-visible,[role="button"]:focus-v
   .stats .eyebrow{font-size:9.5px!important;letter-spacing:.075em!important;line-height:1.15!important;min-height:2.3em!important}
 }
 @media(max-width:370px){
-  html body footer:nth-of-type(n) > span.bron.bron-bronnen{column-gap:12px!important}
-  .footer-contact{flex-wrap:wrap}
-  .footer-contact-mail{margin-top:-10px}
   .mobile-section-nav{grid-template-columns:repeat(2,minmax(0,1fr))}
   .mobile-section-nav a:nth-child(3),.mobile-section-nav a:nth-child(4){border-top:1px solid var(--rule)}
   .mobile-section-nav a:nth-child(3){border-left:0}

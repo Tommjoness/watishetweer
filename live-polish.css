@@ -356,8 +356,6 @@ html[lang^="en"] #brief[data-q1-briefing-pending]::after,html[lang^="en"] #brief
   #nights .row.night:not(.kop)>.nachtvenster{font-size:13.5px!important}
   #nights .row.night:not(.kop)>.nachtmaan{font-size:12.25px!important}
 
-  html body footer{font-size:13px!important;line-height:1.35!important}
-  html body footer .bron,html body footer .footer-details{min-height:24px!important}
   body > .seo-plaatsnav{font-size:13.5px!important}
 }
 

@@ -56,7 +56,11 @@ for(const p of htmlBestanden(OUT)){
   eis(html.includes('#suntimes .zondag + span,')&&html.includes('#suntimes > span:first-child:nth-last-child(3)'),rel+": redundante zonsopkomst/-ondergangcopy naast de grafiek wordt niet veilig verborgen");
   eis(html.includes('.wiw-hour-date{font-size:11px!important;color:var(--ink-70)!important'),rel+": datumlabel in de uurtabel blijft te klein");
   eis(html.includes('.wiw-hour-table{font-size:13.25px!important}')&&html.includes('#days .dcond{font-size:14px!important}'),rel+": kerngegevens op desktop hebben geen leesbaarheidspass gekregen");
-  eis(html.includes('html body footer{font-size:13px!important;line-height:1.35!important}')&&html.includes('html body footer .bron,html body footer .footer-details{min-height:24px!important}'),rel+": footer is niet tegelijk groter en compact genoeg voor het hoogtebudget");
+  /* Lettergrootte en regelhoogte van de desktopvoet komen uit de latere voetlaag
+     (apply-live-screenshot-polish-20260912, geëist in verify-live-screenshot-polish-20260912
+     en gemeten in browser-desktop-visual-polish-20260909.test.js). De oude regels hier
+     werden overal overschreven en zijn uit live-polish.css gehaald. */
+  eis(!html.includes('html body footer{font-size:13px!important;line-height:1.35!important}')&&!html.includes('html body footer .bron,html body footer .footer-details{min-height:24px!important}'),rel+": overschreven voetregels zonder effect staan weer in de bron");
 
   const scripts=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).filter(Boolean);
   scripts.forEach((bron,i)=>new vm.Script(bron,{filename:rel+":desktop-polish-"+(i+1)}));
