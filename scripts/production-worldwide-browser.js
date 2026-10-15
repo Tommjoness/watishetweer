@@ -205,7 +205,12 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
           pressureRest:!!document.getElementById("pres")||!!document.getElementById("pressub")||/luchtdruk/i.test(document.body.textContent||""),
           appTekst:document.getElementById("app")?.textContent||"",
           rijen:[...document.querySelectorAll("#days .row.day:not(.kop)")].map(rij=>{
-            const hoofd=rij.querySelector(".drain")?.cloneNode(true),small=hoofd?.querySelector("small");
+            /* Alleen de gegevens vergelijken: decoratieve, voor schermlezers
+               verborgen toelichting (zoals "vanaf nu" bij Vandaag) hoort niet
+               bij de waarde. */
+            const hoofd=rij.querySelector(".drain")?.cloneNode(true);
+            hoofd?.querySelectorAll('[aria-hidden="true"]').forEach(e=>e.remove());
+            const small=hoofd?.querySelector("small");
             const hoeveelheid=(small?.textContent||"").trim();if(small)small.remove();
             return {
               min:rij.querySelector(".dmin")?.textContent||"",
