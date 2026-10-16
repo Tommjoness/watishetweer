@@ -302,7 +302,9 @@ if(typeof document!=="undefined"&&typeof S!=="undefined"){
       if(events.length){
         tijden=events.map(e=>e.type==="op"?"maan op "+naarLokaal(e.ms):"maan onder "+naarLokaal(e.ms)).join(" · ");
       }else{
-        tijden=maanHoogte(midden,S.lat,S.lon)>0?"maan blijft boven de horizon":"maan blijft onder de horizon";
+        /* Voor de lopende nacht begint het venster bij nu: dat is "de rest van de nacht" (verslag 16 okt). */
+        const rest=Number.isFinite(vanafMs)?"de rest van de nacht ":"";
+        tijden=maanHoogte(midden,S.lat,S.lon)>0?"maan blijft "+rest+"boven de horizon":"maan blijft "+rest+"onder de horizon";
       }
       return {icoon:maanUnicode(mn.fase),titel:mn.naam+", "+Math.round(mn.ill*100)+" procent verlicht",tijden,fase:mn.fase};
     }catch(e){return {icoon:"",titel:"",tijden:"",fase:null};}
