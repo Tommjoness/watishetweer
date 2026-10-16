@@ -32,7 +32,7 @@
     if (!m) return "onbekend";
     const delen = [hoofdletter(m.naam) + ", " + procent(m.ill * 100) + " verlicht"];
     if (m.momenten.length) delen.push(m.momenten.map(x => (x.type === "op" ? "op " : "onder ") + x.tijd).join(" · "));
-    else delen.push(m.boven ? "de hele nacht boven de horizon" : "de hele nacht onder de horizon");
+    else delen.push((m.rest ? "de rest van de nacht " : "de hele nacht ") + (m.boven ? "boven" : "onder") + " de horizon");
     return delen.join(" · ");
   }
   function haal(url, ms) {

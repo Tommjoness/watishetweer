@@ -152,7 +152,7 @@
       const events = S.maanEventsBinnenVenster(mt.op, mt.onder, grens.start, grens.eind);
       const midden = (grens.start + grens.eind) / 2, mn = maan(new Date(midden));
       return { naam: mn.naam, ill: mn.ill, fase: mn.fase, momenten: events.map(e => ({ type: e.type, tijd: naarLokaal(e.ms, tz) })),
-        boven: events.length ? null : maanHoogte(midden, lat, lon) > 0 };
+        boven: events.length ? null : maanHoogte(midden, lat, lon) > 0, rest: Number.isFinite(vanafMs) };
     }
     /* De zichtbare vensterzin, met dezelfde stappen als de app na het tekenen
        van de rij (presentatielaag, finale correctheidslaag). */
