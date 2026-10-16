@@ -34,7 +34,11 @@ for (const naam of ["forecast", "neerslag", "plaatsnaam", "waarschuwingen"]) {
   assert.ok(wrapper.includes("export async function onRequest(context)"));
   /* waarschuwingen krijgt de hele context mee: waitUntil laat een grote
      MeteoAlarm-landfeed na het antwoord verder downloaden. */
-  const aanroep=naam==="forecast"||naam==="neerslag"
+  /* forecast krijgt het request-ID mee, zodat een providerfout in het log aan
+     de API-regel van hetzelfde verzoek hangt (verslag B4). */
+  const aanroep=naam==="forecast"
+    ? `metEdgeCache(context, "${naam}", (requestId) => worker.fetch(context.request, context.env, { requestId }))`
+    : naam==="neerslag"
     ? `metEdgeCache(context, "${naam}", () => worker.fetch(context.request, context.env))`
     : naam==="waarschuwingen"
       ? `metEdgeCache(context, "${naam}", () => worker.fetch(context.request, context.env, context))`
