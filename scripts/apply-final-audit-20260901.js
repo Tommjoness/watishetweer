@@ -19,6 +19,8 @@ const STYLE=`<style id="weather-final-audit-20260901">
 .final-rain-summary{font-family:var(--sans);font-size:12px;line-height:1.45;color:var(--ink-70);margin:8px 0 0;max-width:90ch}
 .final-rain-summary[hidden]{display:none!important}
 .final-today-window-note{font-family:var(--sans);font-size:11px;line-height:1.4;color:var(--ink-45);margin:5px 0 0;max-width:72ch}
+/* "vanaf nu" onder de neerslag van Vandaag: die telt alleen de resterende uren. */
+#days .drain .wiw-vanaf-nu{display:block;font-family:var(--sans);font-size:11px;font-weight:400;line-height:1.3;letter-spacing:0;color:var(--ink-45);margin-top:1px;white-space:nowrap}
 .final-warning-explanation{margin:6px 0!important;color:var(--ink-70)!important}
 .final-warning-explanation strong{font-weight:600;color:var(--ink)}
 .final-warning-official-meta{margin-top:8px!important}

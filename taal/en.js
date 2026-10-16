@@ -446,6 +446,7 @@
 
     /* Weer nu en tegels */
     "nu": "now",
+    "vanaf nu": "from now",
     "Droog": "Dry",
     "DROOG": "DRY",
     "Geen neerslag verwacht.": "No precipitation expected.",

@@ -21,6 +21,27 @@ function bouwTopGrid(){
   if(dash.parentNode)dash.remove();
 }
 
+/* Eerste scherm op de telefoon (eigenaar 15 oktober, variant A): de actuele
+   temperatuur staat direct onder de kop, vóór de briefing en de
+   waarschuwingen. Vanaf tabletbreedte blijft de volgorde briefing,
+   waarschuwingen, temperatuur. De DOM-volgorde verschuift mee, zodat een
+   schermlezer voorleest wat je ziet. */
+const EERSTE_SCHERM_MOBIEL="(max-width:759px)";
+let eersteSchermGebonden=false;
+function ordenEersteScherm(){
+  const left=document.querySelector(".final-top-left");if(!left)return;
+  const brief=left.querySelector(":scope > #brief"),warnings=left.querySelector(":scope > #waarschuwingen"),hero=left.querySelector(":scope > .hero");
+  if(!brief||!warnings||!hero)return;
+  const mq=typeof root.matchMedia==="function"?root.matchMedia(EERSTE_SCHERM_MOBIEL):null;
+  if(mq&&mq.matches){if(left.firstElementChild!==hero)left.insertBefore(hero,left.firstElementChild);}
+  else if(warnings.nextElementSibling!==hero)warnings.insertAdjacentElement("afterend",hero);
+  if(mq&&!eersteSchermGebonden){
+    eersteSchermGebonden=true;
+    if(typeof mq.addEventListener==="function")mq.addEventListener("change",ordenEersteScherm);
+    else if(typeof mq.addListener==="function")mq.addListener(ordenEersteScherm);
+  }
+}
+
 /* Tegels in één rij: labels van gelijke hoogte (de langste bepaalt), zodat
    labels en getallen op één lijn staan, ook als één label afbreekt. */
 let tegelResizeGebonden=false,tegelFrame=0;
@@ -99,6 +120,9 @@ function herstelWeekNeerslagEindstate(){
     zetVerborgenLabel(rij.querySelector(".dmax"),"Maximumtemperatuur");
     const vak=rij.querySelector(".drain");if(!vak)return;
     const isVandaag=Number(rij.dataset.i)===vandaag;
+    /* Het tijdvaklabel van een vorige ronde telt niet mee bij het lezen van
+       de cel; het komt hieronder zo nodig opnieuw. */
+    const oudTijdvak=vak.querySelector(".wiw-vanaf-nu");if(oudTijdvak)oudTijdvak.remove();
     const match=/(\d{1,3})%/.exec(vak.textContent||""),kans=match?Number(match[1]):null;
     let hoeveelheid=vak.querySelector("small,.q1-dag-mm");
     if(kans!==null&&kans>0&&!hoeveelheid){
@@ -117,6 +141,15 @@ function herstelWeekNeerslagEindstate(){
     if(!delen.length&&/^[-–—]$/.test(vak.textContent.trim()))delen.push("Neerslaggegevens onbekend");
     if(!delen.length&&/^Droog$/i.test(vak.textContent.trim()))delen.push("Droog "+tijdvak);
     if(delen.length)vak.setAttribute("aria-label",delen.join("; "));else vak.removeAttribute("aria-label");
+    /* Vandaag telt alleen de resterende uren (eigenaar 15 oktober): een klein
+       grijs label maakt dat zichtbaar. De schermlezernaam zegt het al ("in de
+       rest van vandaag"), dus het label zelf wordt niet voorgelezen. Bij
+       onbekende gegevens staat er niets om toe te lichten. */
+    if(isVandaag&&delen.length&&!/^Neerslaggegevens onbekend$/.test(delen[0])){
+      const label=document.createElement("span");
+      label.className="wiw-vanaf-nu";label.setAttribute("aria-hidden","true");label.textContent="vanaf nu";
+      vak.appendChild(label);
+    }
   });
 }
 
@@ -335,7 +368,7 @@ function beperkTegels(){
   stats.setAttribute("data-tegels",String([...stats.children].filter(t=>t.classList.contains("stat")&&!t.hidden).length));
 }
 
-bouwTopGrid();bouwMeetgegevens();wrapWaarschuwingen();planTegelUitlijning();
+bouwTopGrid();ordenEersteScherm();bouwMeetgegevens();wrapWaarschuwingen();planTegelUitlijning();
 if(typeof meters==="function")meters=naRender(meters,()=>{avondTegels();beperkTegels();planTegelUitlijning();});
 if(typeof lucht==="function")lucht=naRender(lucht,naLucht);
 if(typeof etmaal==="function")etmaal=naRender(etmaal,regenSamenvattingBijwerken);
