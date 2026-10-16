@@ -50,6 +50,29 @@
      betaalde bronnen. Ontbrekende velden blijven onbekend (nooit 0). */
   const metReserve = (lat, lon, uren) => haal(aanvraag(lat, lon, uren), 8000)
     .catch(() => haal(RESERVE + "?lat=" + encodeURIComponent(lat) + "&lon=" + encodeURIComponent(lon), 8000));
+  /* Eén parkrij in het overzicht: wachtstand, geen gegevens of een gevulde nacht. De uitleg
+     staat één keer boven de tabel; in de rij staat alleen "Niet beschikbaar"
+     onder Vannacht en een streepje onder Beste periode (met een toegankelijke
+     omschrijving, zodat een schermlezer niet alleen "streepje" hoort). */
+  function rijStatus(rij, status) {
+    if (!rij) return;
+    const n = rij.querySelector(".nz-n"), v = rij.querySelector(".nz-venster");
+    rij.classList.toggle("nz-niet", status === "niet");
+    const tabel = rij.closest(".nz-tabel");
+    if (tabel) tabel.classList.toggle("nz-leeg", status === "niet" || !!tabel.querySelector("tr.nz-niet"));
+    if (status === "niet") {
+      n.textContent = "Niet beschikbaar";
+      const streep = document.createElement("span");
+      streep.setAttribute("aria-hidden", "true");
+      streep.textContent = "—";
+      const omschrijving = document.createElement("span");
+      omschrijving.className = "nz-sr";
+      omschrijving.textContent = "Beste periode niet beschikbaar";
+      v.replaceChildren(streep, omschrijving);
+    } else {
+      n.textContent = v.textContent = "…";
+    }
+  }
   /* Eindfout: melding met een knop om het opnieuw te proberen. */
   function melding(el, tekst, opnieuw) {
     if (!el) return;
@@ -58,7 +81,7 @@
     knop.type = "button";
     knop.className = "nz-opnieuw";
     knop.textContent = "Opnieuw proberen";
-    knop.addEventListener("click", () => { el.textContent = el.dataset.laden; opnieuw(); });
+    knop.addEventListener("click", () => { knop.disabled = true; el.textContent = el.dataset.laden; opnieuw(); });
     const zin = document.createElement("span");
     zin.textContent = tekst;
     el.replaceChildren(zin, knop);
@@ -100,10 +123,7 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
   function overzicht() {
     const parken = cfg.parken || [], status = document.getElementById("nz-status");
     if (!parken.length) return;
-    parken.forEach(p => {
-      const rij = document.querySelector(`tr[data-park="${p.slug}"]`);
-      if (rij) rij.querySelector(".nz-n").textContent = rij.querySelector(".nz-venster").textContent = "…";
-    });
+    parken.forEach(p => rijStatus(document.querySelector(`tr[data-park="${p.slug}"]`), "laden"));
     haal(aanvraag(parken.map(p => p.lat).join(","), parken.map(p => p.lon).join(","), 48), 15000).then(data => {
       const lijst = Array.isArray(data) ? data : [data];
       if (lijst.length !== parken.length) throw new Error("onvolledig");
@@ -112,7 +132,7 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
         const rij = document.querySelector(`tr[data-park="${p.slug}"]`);
         const n = K.nachten(lijst[i], p.lat, p.lon, TZ, 1)[0];
         if (!rij) return;
-        if (!n) { rij.querySelector(".nz-n").textContent = rij.querySelector(".nz-venster").textContent = "Niet beschikbaar"; return; }
+        if (!n) { rijStatus(rij, "niet"); return; }
         rij.querySelector(".nz-n").innerHTML = `${esc(n.scoreTekst)} <span>${esc(n.oordeel)}</span>`;
         rij.querySelector(".nz-venster").textContent = kortVenster(n);
         gevuld++;
@@ -120,12 +140,7 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
       if (!gevuld) throw new Error("leeg");
       if (status) status.hidden = true;
     }).catch(() => {
-      parken.forEach(p => {
-        const rij = document.querySelector(`tr[data-park="${p.slug}"]`);
-        if (!rij) return;
-        rij.querySelector(".nz-n").textContent = "Niet beschikbaar";
-        rij.querySelector(".nz-venster").textContent = "Niet beschikbaar";
-      });
+      parken.forEach(p => rijStatus(document.querySelector(`tr[data-park="${p.slug}"]`), "niet"));
       melding(status, "De verwachting voor vannacht kon niet worden geladen. Probeer het later opnieuw.", overzicht);
     });
   }

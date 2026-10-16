@@ -57,6 +57,7 @@ const EXTRA_STIJL = `
 .nz-licht{margin:18px 0 0;padding:14px 16px;border:1px solid var(--rule);background:var(--paper)}
 .nz-licht b{color:var(--ink)}
 #nz-vannacht{margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--rule)}
+.nz-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}tr.nz-niet td.nz-n{padding-right:20px}/* Smalle schermen (tot 369 px): zonder gegevens past een lange parknaam ("Schiermonnikoog") plus twee kolommen niet naast elkaar zonder kleinere tekst. De rij krijgt dan twee regels: naam, en daaronder "Niet beschikbaar" met het streepje. */@media(max-width:369px){.nz-tabel.nz-leeg thead{display:none}.nz-tabel.nz-leeg table,.nz-tabel.nz-leeg tbody{display:block}.nz-tabel.nz-leeg tr{display:grid;grid-template-columns:auto 1fr;column-gap:16px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--rule)}.nz-tabel.nz-leeg th{grid-column:1/-1;border:0;padding:0}.nz-tabel.nz-leeg td{border:0;padding:4px 0 0}.nz-tabel.nz-leeg td.nz-licht-kol{display:none}.nz-tabel.nz-leeg tr.nz-niet td.nz-n{padding-right:0}}.nz-park-kop{font-size:clamp(26px,7.2vw,32px);line-height:1.15}
 .nz-opnieuw{display:block;margin-top:8px;min-height:44px;padding:8px 16px;font:inherit;color:var(--ink);background:transparent;border:1px solid var(--ink);cursor:pointer}
 .nz-score{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
 .nz-cijfer{font:500 44px/1 "Instrument Sans",system-ui,sans-serif;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
@@ -146,7 +147,7 @@ function parkPagina(p, kern) {
   const beschrijving = `Kun je vannacht sterren zien in ${p.naam}? Indicatie per nacht met de beste periode, bewolking per uur, de maan en de lichtvervuiling.`;
   const weerUrl = "/?" + new URLSearchParams({ lat: p.lat.toFixed(3), lon: p.lon.toFixed(3), plaats: p.kort, land: "NL" }).toString();
   return kop({ titel, beschrijving, canonical }) + `<p class="nz-terug"><a href="${BASIS}">← Alle Nationale Parken</a></p>
-<h1>${esc(titel)}</h1>
+<h1 class="nz-park-kop">${esc(titel)}</h1>
 <p>Kun je vannacht sterren zien in ${esc(p.naam)}? Hieronder staat per nacht hoe goed het zicht op de sterrenhemel naar verwachting is, met de beste periode om te kijken.</p>
 <p class="nz-licht">Lichtvervuiling: <b>${esc(p.licht.naam)}</b> (geschat). <span class="klein">Voor een heldere, maanloze nacht, rond het midden van het park; waar je precies staat maakt uit.</span> ${esc(p.licht.tekst)}</p>
 <section id="nz-vannacht" aria-live="polite" hidden></section>
