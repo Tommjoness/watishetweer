@@ -55,8 +55,8 @@ function weatherNowBriefingMorgenRegen(h,datum){
   const soort=codes.length&&codes.every(regen)?"regen":codes.length&&codes.every(sneeuw)?"sneeuw":"neerslag";
   const mm=(Math.round(hoofd.som*10)/10).toFixed(1).replace(".",",");
   return kans!==null&&kans>=70
-    ?"Morgen wordt tussen "+van+" en "+tot+" "+soort+" verwacht (ongeveer "+mm+" mm)."
-    :"Morgen kan tussen "+van+" en "+tot+" "+soort+" vallen (ongeveer "+mm+" mm).";
+    ?"Tussen "+van+" en "+tot+" wordt morgen "+soort+" verwacht (ongeveer "+mm+" mm)."
+    :"Tussen "+van+" en "+tot+" kan morgen "+soort+" vallen (ongeveer "+mm+" mm).";
 }
 function briefing(){
 `;

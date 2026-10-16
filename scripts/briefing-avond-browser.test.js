@@ -37,7 +37,7 @@ const server=http.createServer((req,res)=>{
     const context=await browser.newContext({viewport:{width:390,height:844},locale:"nl-NL",timezoneId:"Europe/Amsterdam",serviceWorkers:"block",isMobile:true,hasTouch:true});
     const page=await context.newPage(),fouten=[];
     page.on("pageerror",e=>fouten.push(String(e)));
-    await page.addInitScript(()=>{const N=Date,s=N.now(),e=N.parse("2026-07-22T03:50:00Z");class F extends N{constructor(...a){super(...(a.length?a:[e+N.now()-s]));}static now(){return e+N.now()-s;}}window.Date=F;});
+    await page.addInitScript(()=>{const N=Date,s=N.now(),e=N.parse("2026-07-22T21:43:00Z");class F extends N{constructor(...a){super(...(a.length?a:[e+N.now()-s]));}static now(){return e+N.now()-s;}}window.Date=F;});
     await page.route("**/*",async r=>{
       const u=new URL(r.request().url());
       if(u.hostname==="api.open-meteo.com"||u.pathname==="/api/forecast")return r.fulfill({json:fixture()});
@@ -57,7 +57,7 @@ const server=http.createServer((req,res)=>{
       return page.evaluate(()=>document.getElementById("brief").innerText.replace(/\s+/g," ").trim());
     }
     const nl=await lees("nl");
-    const iNacht=nl.indexOf("Vannacht"),iMax=nl.indexOf("Het verwachte maximum ligt morgen"),iRegen=nl.indexOf("Morgen wordt tussen 17:00 en 21:00 regen verwacht (ongeveer 3,1 mm).");
+    const iNacht=nl.indexOf("Vannacht"),iMax=nl.search(/(Het verwachte maximum ligt morgen|Morgen wordt het )/),iRegen=nl.indexOf("Tussen 17:00 en 21:00 wordt morgen regen verwacht (ongeveer 3,1 mm).");
     assert(iNacht>=0&&iMax>=0&&iRegen>=0,"briefing mist vannacht, maximum of regen van morgen: "+nl);
     assert(iNacht<iMax&&iMax<iRegen,"volgorde moet nu → vannacht → morgen (maximum, regen) zijn: "+nl);
     const en=await lees("en");
