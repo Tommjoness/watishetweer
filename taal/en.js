@@ -1356,6 +1356,9 @@
     /* Briefing: temperatuur */
     [new RegExp(`^Het verwachte maximum (lag|ligt) (vandaag|morgen) rond ${T} op ${G} (graden|graad)\\.$`), (m) => `${m[2] === "morgen" ? "Tomorrow" : "Today"}'s forecast high ${m[1] === "lag" ? "was" : "is"} ${graden(m[4])} at around ${m[3]}.`],
     [new RegExp(`^Het verwachte maximum voor morgen is ${G} (graden|graad)\\.$`), (m) => `The forecast high for tomorrow is ${graden(m[1])}.`],
+    /* Regen van morgen in de avondsamenvatting (briefing-copy-owner.js). */
+    [new RegExp(`^Tussen (\\d{1,2}:\\d{2}) en (\\d{1,2}:\\d{2}) wordt morgen (regen|sneeuw|neerslag) verwacht \\(ongeveer ${G} mm\\)\\.$`), (m) => `${{ regen: "Rain", sneeuw: "Snow", neerslag: "Precipitation" }[m[3]]} is expected tomorrow between ${m[1]} and ${m[2]} (about ${getal(m[4])} mm).`],
+    [new RegExp(`^Tussen (\\d{1,2}:\\d{2}) en (\\d{1,2}:\\d{2}) kan morgen (regen|sneeuw|neerslag) vallen \\(ongeveer ${G} mm\\)\\.$`), (m) => `Tomorrow, ${{ regen: "rain", sneeuw: "snow", neerslag: "precipitation" }[m[3]]} may fall between ${m[1]} and ${m[2]} (about ${getal(m[4])} mm).`],
     [new RegExp(`^De maximumtemperatuur van vandaag ligt rond ${G} (graden|graad)\\.$`), (m) => `Today's high is around ${graden(m[1])}.`],
     [new RegExp(`^Morgen wordt het ongeveer ${G} (graden|graad)\\.$`), (m) => `Tomorrow it will be about ${graden(m[1])}.`],
     [new RegExp(`^Vannacht koelt het af naar ongeveer ${G} (graden|graad)\\.$`), (m) => `Tonight it cools to about ${graden(m[1])}.`],
