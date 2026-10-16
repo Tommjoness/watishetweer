@@ -75,6 +75,13 @@ assert(isNeutraal("04:00–06:00"),"een tijdspanne is taalneutraal");
 assert.equal(en.vertaal("geen (onbekende reden)"),null,"onbekende reden blijft onvertaald in plaats van half vertaald");
 assert(/"geen \(" \+ \(n\.reden \|\| "korter dan twee uur"\) \+ "\)"/.test(lees("scripts/nachtzicht-runtime.js")),"overzicht: een lege reden toont 'korter dan twee uur'");
 
+/* De Nachtzicht-pagina's nemen de rekenlaag letterlijk over (nachtzicht-bron.js):
+   de grens moet daar meekomen, anders breekt de pagina bij het rekenen. */
+const vm=require("vm");
+const paginaRekenlaag=vm.runInNewContext(require("./nachtzicht-bron.js").seniorBron());
+assert.equal(paginaRekenlaag.nachtzichtScore(reeks(start,"sssggsss")).beste,null,"pagina-rekenlaag: twee uurpunten zijn geen venster");
+assert.equal(paginaRekenlaag.nachtzichtScore(reeks(start,"sssgggss")).beste.length,3,"pagina-rekenlaag: drie uurpunten zijn een venster");
+
 /* Eén grens in alle lagen. */
 const html=lees("index.html");
 assert(/const MIN_VENSTER_RIJEN=3;/.test(html),"index.html: MIN_VENSTER_RIJEN is 3");
