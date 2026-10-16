@@ -69,9 +69,9 @@ const kern = require("../taal/vertaalkern.js");
 const v = kern.maakVertaler(require("../taal/en.js"));
 for (const [k, uitleg] of ctx.T.slice(1)) {
   for (const [waar, waarEn] of [["in Den Haag", "in The Hague"], ["in Vlieland", "in Vlieland"], ["hier", "here"]]) {
-    const blok = `Lichtvervuiling ${waar}: ${k} (geschat). ${uitleg} Geschat op basis van de RIVM-kaart, voor een heldere, maanloze nacht. Bron`;
+    const blok = `Lichtvervuiling ${waar}: ${k} (geschat). Geschat op basis van de RIVM-kaart, voor een heldere, maanloze nacht. ${uitleg} Bron`;
     const en = v.vertaal(blok);
-    assert(en && en.startsWith(`Light pollution ${waarEn}: `) && /\(estimated\)\. .+ Estimated from the RIVM map, for a clear, moonless night\. Source$/.test(en), `Engelse regel voor ${k} (${waar}); kreeg ${en}`);
+    assert(en && en.startsWith(`Light pollution ${waarEn}: `) && /\(estimated\)\. Estimated from the RIVM map, for a clear, moonless night\. .+ Source$/.test(en), `Engelse regel voor ${k} (${waar}); kreeg ${en}`);
   }
   assert(v.vertaal(k), `losse klasse ${k} vertaald (vet woord blijft staan)`);
 }
