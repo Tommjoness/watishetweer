@@ -2889,7 +2889,8 @@ function toonLichtvervuiling(){
     /* "Lichtvervuiling in Vlieland"; zonder bruikbare plaatsnaam (bijv. "Huidige locatie") blijft het "hier". */
     const plaats=String(S.label||"").split(",")[0].trim();
     const waar=plaats&&!/^(?:huidige|mijn) locatie$/i.test(plaats)?"in "+plaats.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[c]):"hier";
-    el.innerHTML='<span>Lichtvervuiling '+waar+': <b>'+t[0]+'</b> (geschat).</span> <span>'+t[1]+'</span> <span>Geschat op basis van de RIVM-kaart, voor een heldere, maanloze nacht.</span> <a href="/over/#lichtvervuiling">Bron</a>';
+    /* De voorwaarde ("voor een heldere, maanloze nacht") staat vóór de sterrenzin: bij een bewolkte nacht leest "heldere sterren wel" anders als een belofte. */
+    el.innerHTML='<span>Lichtvervuiling '+waar+': <b>'+t[0]+'</b> (geschat).</span> <span>Geschat op basis van de RIVM-kaart, voor een heldere, maanloze nacht.</span> <span>'+t[1]+'</span> <a href="/over/#lichtvervuiling">Bron</a>';
     el.hidden=false;
   });
 }
