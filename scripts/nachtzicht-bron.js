@@ -87,7 +87,7 @@ function zonMaanBron(indexHtml) {
    (die S en het DOM gebruikt) wordt bewust niet overgenomen. */
 function seniorBron() {
   const tekst = lees(BESTAND.senior), mod = require(BESTAND.senior);
-  const helpers = ["const num=", "const clampNum=", "const natCode=", "const mistCode="].map(b => regel(tekst, b, "senior " + b));
+  const helpers = ["const num=", "const clampNum=", "const natCode=", "const mistCode=", "const MIN_VENSTER_RIJEN="].map(b => regel(tekst, b, "senior " + b));
   const fns = ["nachtzichtScore", "nachtSegmentHorizon", "maanEventsBinnenVenster"].map(n => functie(mod, n, "senior"));
   return `(function(){\n"use strict";\n${helpers.join("\n")}\n${fns.join("\n")}\nreturn {nachtzichtScore,nachtSegmentHorizon,maanEventsBinnenVenster};\n})()`;
 }

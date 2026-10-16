@@ -2731,6 +2731,8 @@ document.querySelectorAll(".bereik button").forEach(b=>b.addEventListener("click
 }));
 
 /* ---------- nachtzicht ---------- */
+/* Nachtvenster: minstens twee uur getoond = minstens drie opeenvolgende uurpunten (zie senior-correctness-v2.js). */
+const MIN_VENSTER_RIJEN=3;
 function nachten(){
   const h=S.d.hourly,day=S.d.daily,idx={};
   h.time.forEach((t,i)=>idx[t]=i);
@@ -2797,13 +2799,13 @@ function nachten(){
        weet dat de maan de hele nacht op staat. Daarom apart nagaan welke van de twee
        voorwaarden het venster tegenhoudt. */
     let venster=null;
-    if(br>=2&&bstart>=0){
+    if(br>=MIN_VENSTER_RIJEN&&bstart>=0){
       const eind = (bstart+br<TT.length) ? hhmm(TT[bstart+br]) : hhmm(sr2);
       venster="Beste periode "+hhmm(TT[bstart])+"–"+eind;
     }else{
       const langsteRun=test=>{let r=0,b=0;for(let i=0;i<C.length;i++){ if(test(i)){r++;if(r>b)b=r;} else r=0; } return b;};
-      const wolkOk=langsteRun(i=>C[i]<35)>=2;               // zonder de maan was er een venster geweest
-      const maanOk=langsteRun(i=>maanWeging[i]*mn.ill<0.2)>=2;  // zonder de wolken was er een venster geweest
+      const wolkOk=langsteRun(i=>C[i]<35)>=MIN_VENSTER_RIJEN;               // zonder de maan was er een venster geweest
+      const maanOk=langsteRun(i=>maanWeging[i]*mn.ill<0.2)>=MIN_VENSTER_RIJEN;  // zonder de wolken was er een venster geweest
       venster = wolkOk ? "Geen goed zichtvenster door maanlicht"
               : maanOk ? "Geen goed zichtvenster door bewolking"
               : "Geen goed zichtvenster door bewolking en maanlicht";
