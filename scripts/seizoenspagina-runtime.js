@@ -395,16 +395,22 @@ function vakantieTabel(dag,resultaten,aantal){
   sectie.append(tabel);
   return sectie;
 }
-function toonVakantie(doel,t,resultaten,cfg){
+function toonVakantie(doel,t,resultaten,cfg,bronZin){
   doel.replaceChildren();
   const zin=vakantieSamenvatting(t,resultaten,cfg);
   if(zin)doel.append(el("p",{class:"seizoen-samenvatting"},zin));
   for(const dag of t.dagen)if(dag.zichtbaar)doel.append(vakantieTabel(dag,resultaten,t.perioden.length));
   if(t.dagen.some(d=>!d.zichtbaar&&d.over>0))doel.append(el("p",{class:"seizoen-later"},vul(cfg.teksten.later,{tot:datumTekst(t.tot,true)})));
-  doel.append(el("p",{class:"klein"},cfg.teksten.toelichting));
+  /* Met een reservebron staat er één bronzin met de echte bron, niet ook nog
+     "Bron: Open-Meteo". */
+  if(bronZin){
+    const zonderBron=cfg.teksten.toelichting.replace(/\s*Bron: Open-Meteo\.\s*$/,"");
+    if(zonderBron)doel.append(el("p",{class:"klein"},zonderBron));
+    doel.append(el("p",{class:"klein seizoen-bron"},bronZin));
+  }else doel.append(el("p",{class:"klein"},cfg.teksten.toelichting));
 }
-function toon(doel,t,resultaten,cfg){
-  if(cfg.soort==="vakantie")return toonVakantie(doel,t,resultaten,cfg);
+function toon(doel,t,resultaten,cfg,bronZin){
+  if(cfg.soort==="vakantie")return toonVakantie(doel,t,resultaten,cfg,bronZin);
   doel.replaceChildren();
   const nacht=cfg.soort==="middernacht";
   const zinnen=nacht?nachtSamenvatting(t,resultaten,cfg):[samenvatting(t,resultaten,cfg)].filter(Boolean);
@@ -424,22 +430,72 @@ function huidigeToestand(cfg){const n=nuIn(cfg.tijdzone,new Date());return toest
    twee seconden vangt dat op; mislukt die ook, dan volgt de gewone foutmelding
    (akkoord eigenaar, 14 oktober). */
 const NIEUWE_POGING_MS=2000;
+async function haalEenmaal(url,ms,metBron){
+  const stop=new AbortController(),timer=setTimeout(()=>stop.abort(),ms);
+  try{
+    const res=await fetch(url,{signal:stop.signal});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    const json=await res.json();
+    return metBron?{json,bron:res.headers.get("X-WIW-Weather-Source")||""}:json;
+  }finally{
+    clearTimeout(timer);
+  }
+}
 async function haalVerwachting(url){
   for(let poging=1;;poging++){
-    const stop=new AbortController(),timer=setTimeout(()=>stop.abort(),10000);
     try{
-      const res=await fetch(url,{signal:stop.signal});
-      if(!res.ok)throw new Error("HTTP "+res.status);
-      return await res.json();
+      return await haalEenmaal(url,10000);
     }catch(e){
       if(poging>=2)throw e;
-    }finally{
-      clearTimeout(timer);
     }
     await new Promise(r=>setTimeout(r,NIEUWE_POGING_MS));
   }
 }
-let getoond="",bewaakt=false;
+/* Reserve voor de vakantiepagina's (verslag L1/B1): na twee mislukte pogingen bij
+   Open-Meteo vraagt de pagina per plaats de eigen reserveroute (/api/forecast:
+   Visual Crossing, daarna WeatherAPI; zelfde vorm als Open-Meteo, elke antwoord
+   10 minuten in de edge-cache). Een plaats die ook daar ontbreekt blijft
+   onbekend ("Geen gegevens"); pas als geen enkele plaats antwoordt volgt de
+   foutmelding. Velden die de reserve niet kent (zonuren) blijven onbekend. */
+async function haalReserve(cfg){
+  const uit=await Promise.all(cfg.plaatsen.map(p=>
+    haalEenmaal("/api/forecast?lat="+encodeURIComponent(p.lat)+"&lon="+encodeURIComponent(p.lon),8000,true).catch(()=>null)));
+  const antwoorden=uit.map(u=>u&&u.json&&u.json.daily?u.json:null);
+  if(!antwoorden.some(Boolean))throw new Error("Geen reserveverwachting");
+  /* De bron per plaats komt uit de kop X-WIW-Weather-Source van de reserveroute. */
+  return {antwoorden,bronnen:uit.map((u,i)=>antwoorden[i]?u.bron:null)};
+}
+const RESERVEBRON={visualcrossing:"Visual Crossing",weatherapi:"WeatherAPI"};
+/* De bronzin als een reservebron is gebruikt: de werkelijk gebruikte bron(nen),
+   per bron de plaatsen als ze verschillen. Plaatsen zonder gegevens komen er
+   niet in voor (die tonen "Geen gegevens"). Null als geen enkele plaats data heeft. */
+function reserveBronTekst(plaatsen,bronnen){
+  const groepen=new Map();
+  plaatsen.forEach((p,i)=>{
+    if(bronnen[i]==null)return;
+    const naam=RESERVEBRON[bronnen[i]]||"een reservebron";
+    if(!groepen.has(naam))groepen.set(naam,[]);
+    groepen.get(naam).push(p.naam);
+  });
+  if(!groepen.size)return null;
+  const delen=[...groepen].map(([naam,namen])=>groepen.size>1?`${naam} (${lijstTekst(namen)})`:naam);
+  return `Bron: ${lijstTekst(delen)}, omdat Open-Meteo niet bereikbaar was.`;
+}
+let getoond="",bewaakt=false,lopend=0;
+/* De foutmelding met een werkende link naar het weer voor de eigen plaats (de
+   zoekbalk op de startpagina) en de knop om opnieuw te proberen. */
+const EIGEN_PLAATS="bekijk het weer voor je eigen plaats";
+function foutBlok(cfg){
+  const tekst=cfg.teksten.fout,i=tekst.indexOf(EIGEN_PLAATS);
+  const alinea=el("p",{class:"seizoen-fout"});
+  if(i<0)alinea.append(tekst);
+  else alinea.append(tekst.slice(0,i),el("a",{href:"/"},EIGEN_PLAATS),tekst.slice(i+EIGEN_PLAATS.length));
+  const knop=el("button",{type:"button",class:"seizoen-opnieuw"},"Opnieuw proberen");
+  knop.addEventListener("click",()=>{knop.disabled=true;start();});
+  const blok=el("div",{class:"seizoen-fout-blok"});
+  blok.append(alinea,knop);
+  return blok;
+}
 function bewaak(cfg){
   if(bewaakt)return;
   bewaakt=true;
@@ -464,24 +520,46 @@ async function start(){
     if(groot)aftellen.replaceChildren(el("b",{class:"aftel-getal"},String(groot.n))," ",el("span",{},groot.tekst));
     else aftellen.textContent=aftelTekst(t,cfg);
     aftellen.hidden=!aftellen.textContent;
+    /* Vakantiepagina's: de zin over wie wanneer vakantie heeft staat als gewone
+       tekst onder een korte tussenkop, niet als grote seriftekst. Het grote
+       aftelgetal blijft zoals het was. */
+    const tekstvorm=cfg.soort==="vakantie"&&!groot&&!aftellen.hidden;
+    aftellen.classList.toggle("tekst",tekstvorm);
+    let tussenkop=document.getElementById("seizoen-aftel-kop");
+    if(tekstvorm&&!tussenkop){tussenkop=el("h2",{id:"seizoen-aftel-kop",class:"seizoen-aftel-kop"});aftellen.before(tussenkop);}
+    if(tussenkop){tussenkop.textContent=`${cfg.naam} per regio`;tussenkop.hidden=!tekstvorm;}
   }
   const melding=document.getElementById("seizoen-melding");
   if(melding){melding.textContent=meldingTekst(t,cfg);melding.hidden=!melding.textContent;}
   const doel=document.getElementById("seizoen-verwachting");
   if(!doel)return;
-  if(t.fase!=="verwachting"){doel.replaceChildren();return;}
+  if(t.fase!=="verwachting"){lopend++;doel.replaceChildren();doel.removeAttribute("aria-busy");return;}
+  /* Alleen het laatste ophalen telt: een oudere, trage aanvraag (of een
+     tweede klik op "Opnieuw proberen") mag het scherm niet meer overschrijven. */
+  const volgnummer=++lopend;
   doel.setAttribute("aria-busy","true");
   doel.replaceChildren(el("p",{class:"klein"},"Verwachting laden…"));
   try{
-    toon(doel,t,verwerkAntwoord(await haalVerwachting(verwachtingUrl(cfg,t)),t,cfg),cfg);
+    let antwoord,bronZin=null;
+    try{
+      antwoord=await haalVerwachting(verwachtingUrl(cfg,t));
+    }catch(e){
+      if(cfg.soort!=="vakantie")throw e;
+      const reserve=await haalReserve(cfg);
+      antwoord=reserve.antwoorden;
+      bronZin=reserveBronTekst(cfg.plaatsen,reserve.bronnen);
+    }
+    if(volgnummer!==lopend)return;
+    toon(doel,t,verwerkAntwoord(antwoord,t,cfg),cfg,bronZin);
   }catch(e){
-    doel.replaceChildren(el("p",{class:"seizoen-fout"},cfg.teksten.fout));
+    if(volgnummer!==lopend)return;
+    doel.replaceChildren(foutBlok(cfg));
   }finally{
-    doel.removeAttribute("aria-busy");
+    if(volgnummer===lopend)doel.removeAttribute("aria-busy");
   }
 }
 
-const api={TEMP_SCHAAL,temperatuurKleur,dagBereik,toestandVakantie,periodeTekst,regioKop,vakantieAftellen,vakantieWaarden,vakantieWeerTekst,overwegendDroog,vakantieSamenvatting,datumISO,dagenTussen,plusDagen,datumTekst,nuIn,vandaagIn,vul,eindUur,toestand,aftelTekst,aftelGetal,meldingTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord};
+const api={TEMP_SCHAAL,temperatuurKleur,dagBereik,toestandVakantie,periodeTekst,regioKop,vakantieAftellen,vakantieWaarden,vakantieWeerTekst,overwegendDroog,vakantieSamenvatting,datumISO,dagenTussen,plusDagen,datumTekst,nuIn,vandaagIn,vul,eindUur,toestand,aftelTekst,aftelGetal,meldingTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord,reserveBronTekst};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 else if(typeof document!=="undefined"){
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();

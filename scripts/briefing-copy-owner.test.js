@@ -24,6 +24,42 @@ assert.equal(briefingNachtzin(null,"2026-08-20T02:00",18),"");
   for(const leeg of [null,undefined,"","geen"])assert.equal(ctx.weatherNowBriefingNachtzin(leeg,"2026-07-22T23:30",18),"",`browserhelper maakt geen nachtzin zonder minimum (${leeg})`);
   assert.equal(ctx.weatherNowBriefingNachtzin(0,"2026-07-22T23:30",4),"Vannacht koelt het af naar ongeveer <b>0 graden</b>.","0 graden blijft een geldige waarde");
 }
+/* De regen van morgen in de avondsamenvatting: tijdvak en hoeveelheid uit dezelfde
+   periodefunctie als de grafiektekst (uurwaarde hoort bij het voorafgaande uur). */
+{
+  const vm=require("vm");
+  const ctx={eindigGetal:v=>v===null||v===undefined||v===""||!Number.isFinite(Number(v))?null:Number(v),globalThis:{WeatherNowFinalAudit20260901:require("./final-audit-20260901.js")}};
+  vm.runInNewContext(HELPER_PRODUCTIE.replace("function briefing(){\n",""),ctx);
+  const dagen=(d1,d2)=>{const t=[];for(const d of [d1,d2])for(let u=0;u<24;u++)t.push(d+"T"+String(u).padStart(2,"0")+":00");t.push("2026-10-18T00:00");return t;};
+  const bouw=(waarden,kans,code)=>{const tijd=dagen("2026-10-16","2026-10-17");const neerslag=tijd.map(()=>0),pk=tijd.map(()=>5),wc=tijd.map(()=>3);
+    for(const [uur,mm] of Object.entries(waarden)){const i=tijd.indexOf("2026-10-17T"+String(uur).padStart(2,"0")+":00");neerslag[i]=mm;pk[i]=kans;wc[i]=code;}
+    return {time:tijd,precipitation:neerslag,precipitation_probability:pk,weather_code:wc};};
+  const regen={18:1.0,19:1.2,20:0.6,21:0.3};
+  assert.equal(ctx.weatherNowBriefingMorgenRegen(bouw(regen,90,61),"2026-10-17"),"Tussen 17:00 en 21:00 wordt morgen regen verwacht (ongeveer 3,1 mm).","verwachte regen met tijdvak en hoeveelheid");
+  assert.equal(ctx.weatherNowBriefingMorgenRegen(bouw(regen,50,61),"2026-10-17"),"Tussen 17:00 en 21:00 kan morgen regen vallen (ongeveer 3,1 mm).","middelhoge kans: kan vallen");
+  assert.equal(ctx.weatherNowBriefingMorgenRegen(bouw(regen,20,61),"2026-10-17"),"","lage kans: geen zin");
+  assert.equal(ctx.weatherNowBriefingMorgenRegen(bouw({},0,3),"2026-10-17"),"","droog: geen zin");
+  assert.equal(ctx.weatherNowBriefingMorgenRegen(bouw({18:0.1,19:0.1},90,61),"2026-10-17"),"","minder dan 0,3 mm: geen zin");
+  assert.equal(ctx.weatherNowBriefingMorgenRegen(bouw(regen,90,73),"2026-10-17"),"Tussen 17:00 en 21:00 wordt morgen sneeuw verwacht (ongeveer 3,1 mm).","sneeuwcodes: sneeuw");
+  assert.equal(ctx.weatherNowBriefingMorgenRegen(bouw(regen,90,95),"2026-10-17"),"Tussen 17:00 en 21:00 wordt morgen neerslag verwacht (ongeveer 3,1 mm).","andere codes: neutraal 'neerslag'");
+  assert.equal(ctx.weatherNowBriefingMorgenRegen(bouw(regen,90,61),"2026-10-19"),"","datum zonder uurdata: geen zin");
+  assert.equal(ctx.weatherNowBriefingMorgenRegen(null,"2026-10-17"),"","geen data: geen zin");
+  /* Wintertijddag (25 oktober 2026, 25 uur): het dubbele uur 02:00 verstoort de periode niet. */
+  const winter=[];for(let u=0;u<24;u++){winter.push("2026-10-25T"+String(u).padStart(2,"0")+":00");if(u===2)winter.push("2026-10-25T02:00");}
+  winter.push("2026-10-26T00:00");
+  const wn=winter.map(()=>0),wk=winter.map(()=>5),wc=winter.map(()=>3);
+  for(const u of [19,20,21]){const i=winter.lastIndexOf("2026-10-25T"+u+":00");wn[i]=1;wk[i]=95;wc[i]=63;}
+  assert.equal(ctx.weatherNowBriefingMorgenRegen({time:winter,precipitation:wn,precipitation_probability:wk,weather_code:wc},"2026-10-25"),"Tussen 18:00 en 21:00 wordt morgen regen verwacht (ongeveer 3,0 mm).","wintertijddag: de regenperiode klopt");
+  /* Engels: dezelfde zinnen, vertaald. */
+  const {maakVertaler}=require("../taal/vertaalkern.js");
+  const en=maakVertaler(require("../taal/en.js"));
+  assert.equal(en.vertaal("Tussen 17:00 en 21:00 wordt morgen regen verwacht (ongeveer 3,1 mm)."),"Rain is expected tomorrow between 17:00 and 21:00 (about 3.1 mm).");
+  assert.equal(en.vertaal("Tussen 17:00 en 21:00 kan morgen sneeuw vallen (ongeveer 3,1 mm)."),"Tomorrow, snow may fall between 17:00 and 21:00 (about 3.1 mm).");
+  assert.equal(en.vertaal("Tussen 06:00 en 08:00 wordt morgen neerslag verwacht (ongeveer 0,4 mm)."),"Precipitation is expected tomorrow between 06:00 and 08:00 (about 0.4 mm).");
+  /* Avondvolgorde: vannacht eerst, dan het maximum van morgen, dan de regen van morgen. */
+  assert(MORGEN_PRODUCTIE.indexOf("nachtZin?nachtZin+")<MORGEN_PRODUCTIE.indexOf("Het verwachte maximum ligt morgen"),"vannacht staat vóór morgen");
+  assert(MORGEN_PRODUCTIE.indexOf("Het verwachte maximum")<MORGEN_PRODUCTIE.indexOf("weatherNowBriefingMorgenRegen(h,morgenDatum)"),"de regen van morgen staat na het maximum");
+}
 assert.equal(briefingNachtzin(16,"2026-08-20T23:30",19),"Vannacht koelt het af naar ongeveer <b>16 graden</b>.");
 assert.equal(briefingNachtzin(1,"2026-08-20T23:30",4),"Vannacht koelt het af naar ongeveer <b>1 graad</b>.");
 assert.equal(briefingNachtzin(-1,"2026-08-20T23:30",3),"Vannacht koelt het af naar ongeveer <b>-1 graad</b>.");
