@@ -33,6 +33,11 @@ assert(workflow.includes("node scripts/production-live-performance-browser.js"),
 assert(workflow.includes("node scripts/production-mobile-cls-browser.js"),"workflow mist de mobiele CLS-productiemonitor");
 assert(workflow.includes("node scripts/production-final-release-browser.js"),"workflow mist de finale release-evidencebrowser");
 assert(workflow.includes("node scripts/production-sitemap-contract.js"),"workflow mist het exacte live sitemapcontract");
+/* Verslag B6: groen betekent ook dat park, vakantiepagina en de forecast-reserveroute
+   gecontroleerd zijn; een providerstoring is een waarschuwing (bronstoring). */
+assert(smoke.includes('"/nachtzicht/alde-feanen/"')&&smoke.includes('"/herfstvakantie/"'),"smoke mist de park- en vakantiepagina");
+assert(smoke.includes("/api/forecast?lat=52.3508&lon=5.2647"),"smoke mist de forecast-reserveroute");
+assert(smoke.includes("::warning::Bronstoring"),"een providerstoring van de reserveroute hoort een bronstoring-waarschuwing te zijn, geen regressie");
 
 /* Iedere browsermonitor start pas nadat exact dezelfde SHA aantoonbaar live is.
    De CLS-monitor is bewust een eigen job: vijf koude loads mogen niet worden

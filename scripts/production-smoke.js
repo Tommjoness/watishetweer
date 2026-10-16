@@ -195,5 +195,32 @@ async function wachtOpExacteDeployment(){
   assert(Array.isArray(waarschuwing.lijst),"waarschuwingen-API lijst moet een array zijn");
   assert(waarschuwing.lijst.every(item=>item&&item.plaatsSpecifiek===true),"waarschuwingen-API mag alleen plaatsgebonden waarschuwingen publiceren");
 
-  console.log(`PRODUCTION-SMOKE GESLAAGD: ${verwacht}; exacte Cloudflare-build, HSTS op statische/API-routes, homepage/www-redirect, robots, sitemap, kernroutes, share-canonical, 404 en alle drie API-contracten zijn publiek coherent.`);
+  /* Park- en vakantiepagina's (verslag B6): de statische pagina moet bereikbaar zijn en de
+     runtime-configuratie bevatten. Hun dynamische
+     verwachting hangt aan Open-Meteo en de eigen reserveroute; een
+     providerstoring melden we als bronstoring (waarschuwing), een kapot
+     contract als fout. */
+  for(const [pad,marker] of [["/nachtzicht/alde-feanen/",'id="nz-config"'],["/herfstvakantie/",'id="seizoen-config"']]){
+    const pagina=await haal(ROOT+pad);
+    assert(pagina.response.ok,`${pad} is niet 2xx`);
+    assert(pagina.text.includes(marker),`${pad} mist de runtime-configuratie (${marker})`);
+  }
+  const reserve=await haal(ROOT+"/api/forecast?lat=52.3508&lon=5.2647",{accept:"application/json"});
+  controleerCloudflare(reserve.response,"forecast-reserveroute");
+  const reserveJson=leesJson(reserve,"forecast-reserveroute");
+  assert(reserveJson&&typeof reserveJson==="object"&&!Array.isArray(reserveJson),"forecast-reserveroute moet een JSON-object teruggeven");
+  let reserveTekst;
+  if(reserve.response.status===200){
+    assert(["visualcrossing","weatherapi"].includes(reserve.response.headers.get("x-wiw-weather-source")),"forecast-reserveroute noemt geen bekende bron");
+    assert(reserveJson.hourly&&Array.isArray(reserveJson.hourly.time)&&reserveJson.hourly.time.length>=24,"forecast-reserveroute mist uurdata");
+    assert(reserveJson.daily&&Array.isArray(reserveJson.daily.time)&&reserveJson.daily.time.length>=7,"forecast-reserveroute mist zeven dagen");
+    reserveTekst="forecast-reserveroute levert ("+reserve.response.headers.get("x-wiw-weather-source")+")";
+  }else{
+    assert.equal(reserve.response.status,503,"forecast-reserveroute geeft ongeldige status "+reserve.response.status);
+    assert.equal(reserveJson.beschikbaar,false,"gedegradeerde forecast-reserveroute moet beschikbaar:false melden");
+    console.log("::warning::Bronstoring: de forecast-reserveroute (Visual Crossing en WeatherAPI) levert nu niets; geen regressie van de site zelf.");
+    reserveTekst="forecast-reserveroute meldt een nette bronstoring";
+  }
+
+  console.log(`PRODUCTION-SMOKE GESLAAGD: ${verwacht}; exacte Cloudflare-build, HSTS op statische/API-routes, homepage/www-redirect, robots, sitemap, kernroutes, park- en vakantiepagina, ${reserveTekst}, share-canonical, 404 en alle drie API-contracten zijn publiek coherent.`);
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
