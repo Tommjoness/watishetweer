@@ -1755,13 +1755,89 @@ groep("Iconen en balk");
   check("elk icoon krijgt een eigen masker-id",new Set(ids).size===ids.length,ids.join(", "));
 
   // waar niets achter de wolk ligt hoort ook geen masker te staan
-  for(const [naam,code] of [["onweer",95],["regen",61],["sneeuw",71],["mist",45],["bewolkt",3],["onbewolkt",0]]){
+  for(const [naam,code] of [["onweer",95],["regen",61],["sneeuw",71],["mist",45],["onbewolkt",0]]){
     check(naam+" heeft geen masker nodig",!/<mask/.test(api.icon(code,true,24)));
   }
+  /* Iconenset stijl A (akkoord eigenaar 15 oktober): bewolkt is nu twee
+     wolken, en de voorste dekt de achterste af. */
+  check("bewolkt: de voorste wolk dekt de achterste af",
+    /<mask id="mk\d+">/.test(api.icon(3,true,24))&&(api.icon(3,true,24).match(/<path d="M/g)||[]).length===3);
 
   // het masker moet dikker zijn dan de lijn zelf, anders blijft er een randje staan
   const m=api.icon(2,true,24).match(/<mask[\s\S]*?stroke-width="([\d.]+)"/);
-  check("het masker is ruimer dan de lijndikte",!!m&&parseFloat(m[1])>1.15,m?m[1]:"niet gevonden");
+  const lijnI=api.icon(2,true,24).match(/<\/mask>[\s\S]*?stroke-width="([\d.]+)"/);
+  check("het masker is ruimer dan de lijndikte",!!m&&!!lijnI&&parseFloat(m[1])>parseFloat(lijnI[1])*2,m?m[1]+" tegen "+(lijnI&&lijnI[1]):"niet gevonden");
+
+  /* Iconenset stijl A (akkoord eigenaar 15 oktober): één eigen icoon per
+     weercode. Elke code heeft een herkenbaar eigen beeld, intensiteit is
+     zichtbaar (aantal strepen, stippen, vlokken), dag en nacht krijgen de
+     juiste variant en een onbekende code valt terug op bewolkt. */
+  {
+    const zonderId=h=>h.replace(/mk\d+/g,"mk");
+    const codes=Object.keys(api.CODES).map(Number);
+    check("iconen: alle 28 weercodes uit CODES",codes.length===28,codes.join(","));
+    const dag=new Map(codes.map(c=>[c,zonderId(api.icon(c,true,24))]));
+    const nacht=new Map(codes.map(c=>[c,zonderId(api.icon(c,false,24))]));
+    const geldig=h=>/^<svg class="ico" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">[\s\S]+<\/svg>$/.test(h);
+    const fout=codes.filter(c=>!geldig(dag.get(c))||!geldig(nacht.get(c)));
+    check("iconen: iedere code geeft een geldig, voor schermlezers verborgen icoon",fout.length===0,fout.join(","));
+    const dubbel=codes.filter(c=>codes.some(d=>d<c&&dag.get(d)===dag.get(c)));
+    check("iconen: iedere weercode heeft overdag een eigen icoon",dubbel.length===0,dubbel.join(","));
+    const metZon=[0,1,2,80,81,82,85,86];
+    const zonFout=codes.filter(c=>metZon.includes(c)
+      ? !(/class="ico-zon"/.test(dag.get(c))&&!/class="ico-zon"/.test(nacht.get(c))&&dag.get(c)!==nacht.get(c))
+      : (dag.get(c)!==nacht.get(c)||/class="ico-zon"/.test(dag.get(c))));
+    check("iconen: zon alleen overdag, 's nachts de maan; codes zonder zon gelijk",zonFout.length===0,zonFout.join(","));
+    const tel=(h,re)=>(h.match(re)||[]).length;
+    const regenStreep=/<line class="ico-regen"/g,stip=/<circle class="ico-regen"/g,vlok=/<path class="ico-sneeuw" d="M[\d.]+ [\d.]+v3\.4/g,golf=/<path d="M5\.5 22q/g,korrel=/<circle class="ico-sneeuw"/g;
+    const verwacht=[[51,stip,2],[53,stip,3],[55,stip,5],[56,stip,3],[57,stip,5],
+      [61,regenStreep,2],[63,regenStreep,3],[65,regenStreep,4],[66,regenStreep,3],[67,regenStreep,4],
+      [80,regenStreep,2],[81,regenStreep,3],[82,regenStreep,4],
+      [71,vlok,2],[73,vlok,3],[75,vlok,4],[85,vlok,3],[86,vlok,4],[48,vlok,1],
+      [95,korrel,0],[96,korrel,2],[99,korrel,4]];
+    const intensiteit=verwacht.filter(([c,re,n])=>tel(dag.get(c),re)!==n).map(([c,re,n])=>c+": "+tel(dag.get(c),re)+" i.p.v. "+n);
+    check("iconen: intensiteit zichtbaar (strepen, stippen, vlokken, hagel)",intensiteit.length===0,intensiteit.join("; "));
+    const glad=codes.filter(c=>(tel(dag.get(c),golf)===1)!==[56,57,66,67].includes(c));
+    check("iconen: golfje alleen bij aanvriezende neerslag",glad.length===0,glad.join(","));
+    const flits=codes.filter(c=>/class="ico-flits"/.test(dag.get(c))!==[95,96,99].includes(c));
+    check("iconen: bliksem alleen bij onweer",flits.length===0,flits.join(","));
+    check("iconen: onbekende code valt terug op bewolkt",
+      zonderId(api.icon(4,true,24))===dag.get(3)&&zonderId(api.icon(undefined,true,24))===dag.get(3)&&zonderId(api.icon(null,true,24))===dag.get(3)&&zonderId(api.icon("",true,24))===dag.get(3)&&zonderId(api.icon("61",true,24))===dag.get(61));
+    check("iconen: sterren bij de maan alleen vanaf 20px",
+      tel(api.icon(0,false,24),/<circle cx="(?:17\.4|20\.2)"/g)===2&&tel(api.icon(0,false,18),/<circle cx="(?:17\.4|20\.2)"/g)===0);
+    const lijnen=[...new Set([...api.icon(63,true,24).matchAll(/<(?:line|circle|path)(?![^>]*class="ico-(?:sneeuw|flits)")[^>]*stroke-width="([\d.]+)"/g)].map(x=>x[1]))];
+    check("iconen: één dunne lijndikte (stijl A, 1)",lijnen.length===1&&lijnen[0]==="1",lijnen.join(","));
+
+    /* Iedere omschrijving bij een icoon bestaat ook in het Engels: CODES,
+       de nachtvormen en de dagnamen van de weekrij. */
+    const WEER=require(pathI.join(__dirname,"taal","en.js")).lijsten.WEER;
+    const nachtM=bronI.match(/const CODESNACHT=\{([^}]*)\}/);
+    const nachtLabels=nachtM?[...nachtM[1].matchAll(/"([^"]+)"/g)].map(x=>x[1]):[];
+    const wmoBron=fsI.readFileSync(pathI.join(__dirname,"scripts","final-global-correctness-20260901.js"),"utf8").match(/const WMO=\{([^}]*)\}/);
+    const wmoLabels=wmoBron?[...wmoBron[1].matchAll(/"([^"]+)"/g)].map(x=>x[1]):[];
+    const labels=[...new Set([...codes.map(c=>api.CODES[c][0]),...nachtLabels,...wmoLabels])];
+    const zonderEn=labels.filter(l=>!WEER[l.toLowerCase()]);
+    check("iconen: iedere weeromschrijving heeft een Engelse vertaling",nachtLabels.length===3&&wmoLabels.length===28&&zonderEn.length===0,zonderEn.join(", "));
+
+    /* Contrast van de icoonaccenten (WCAG 1.4.11, minstens 3:1) op de kaart
+       en op de geselecteerde dagrij, in licht en donker. De achtergronden
+       komen uit index.html (licht) en de donkere laag van ronde 2. */
+    {
+      const kleurCss=fsI.readFileSync(pathI.join(__dirname,"scripts","kleur-20261012.css"),"utf8");
+      const ronde2=fsI.readFileSync(pathI.join(__dirname,"scripts","apply-ronde2-20261007.js"),"utf8");
+      const blok=(bron,sel)=>{const i=bron.indexOf(sel+"{");return i<0?"":bron.slice(i,bron.indexOf("}",i));};
+      const tok=(b,n)=>{const m=b.match(new RegExp("--"+n+":\\s*(#[0-9a-fA-F]{6})"));return m?m[1]:null;};
+      const lum=h=>{const c=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255).map(v=>v<=.03928?v/12.92:((v+.055)/1.055)**2.4);return .2126*c[0]+.7152*c[1]+.0722*c[2];};
+      const ratio=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
+      const thema=[["licht",blok(kleurCss,":root"),[tok(bronI,"sheet"),tok(bronI,"rule-soft")]],
+                   ["donker",blok(kleurCss,"html[data-thema=donker]"),[tok(blok(ronde2,"html[data-thema=donker]"),"sheet"),tok(blok(ronde2,"html[data-thema=donker]"),"rule-soft")]]];
+      const te=[];
+      for(const [naam,accenten,vlakken] of thema)for(const a of ["zon","regen","sneeuw","flits"])for(const v of vlakken){
+        const k=tok(accenten,"wiw-"+a);if(!k||!v){te.push(naam+" "+a+": kleur niet gevonden");continue;}
+        const r=ratio(k,v);if(r<3)te.push(naam+" "+a+" "+k+" op "+v+": "+r.toFixed(2));}
+      check("iconen: accentkleuren minstens 3:1 op kaart en geselecteerde rij, licht en donker",te.length===0,te.join("; "));
+    }
+  }
 
   /* Er staat een globale regel svg,canvas{display:block}. Elke SVG die middenin
      een tekstregel staat moet die overrulen, anders breekt de regel eromheen.

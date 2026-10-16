@@ -256,7 +256,10 @@ function werkUurTabelBij(){
       const code=num(r.code),dag=num(r.isDag)!==0;
       if(code!==null&&typeof icon==="function"){
         const beeld=document.createElement("span");beeld.className="wiw-hour-weather-icon";beeld.setAttribute("aria-hidden","true");beeld.innerHTML=icon(code,dag,22);weer.appendChild(beeld);
-        if(typeof txt==="function")weer.setAttribute("aria-label",txt(code,dag));
+        /* Omschrijving als label én als tooltip bij de muis: de betekenis hangt
+           niet alleen van het icoon af (iconenset stijl A, 15 oktober). Gelijke
+           tekst in title en aria-label wordt maar één keer voorgelezen. */
+        if(typeof txt==="function"){const oms=txt(code,dag);weer.setAttribute("aria-label",oms);weer.title=oms;}
       }else weer.textContent="–";
       const temp=document.createElement("td");temp.className="wiw-hour-value wiw-hour-temp";
       const tempHoofd=document.createElement("span");tempHoofd.className="wiw-hour-primary";tempHoofd.textContent=formatTemp(r.temp).replace(" °C","°");

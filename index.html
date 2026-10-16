@@ -783,54 +783,75 @@ function temperatuurVerloop(lo,hi,thema){
 }
 
 /* ---------- haarlijn-iconen ---------- */
+/* Eén eigen icoon per weercode (iconenset stijl A, akkoord eigenaar 15 oktober
+   2026). Zelfde familie als voorheen: ronde uiteinden, wolken met 8% vulling,
+   alles in currentColor en één accentklasse per soort weer (kleur in CSS).
+   Nieuw is dat soort en intensiteit in het icoon zelf zichtbaar zijn: twee,
+   drie of vier strepen regen, stippen voor motregen, een golfje voor
+   aanvriezend, hagelkorrels bij onweer. De betekenis hangt nooit alleen van het
+   symbool af: overal staat de omschrijving ernaast of in het label. */
+const ICOON_LIJN="1",ICOON_MASKER="2.5";
 function icon(code,isDay,size){
-  const f=fam(code),s=size||24;
-  /* Eigen iconenset (ronde 2): één lijndikte, ronde uiteinden, wolken met een
-     zachte vulling van 8% en wisselende lengtes voor regen en stralen, zodat
-     de set als één familie leest. Alles in currentColor: werkt in licht,
-     donker en de nachtstand. */
-  const o=`stroke="currentColor" stroke-width="1.15" fill="none" stroke-linecap="round" stroke-linejoin="round"`;
-  const zacht=`stroke="currentColor" stroke-width="1.15" fill="currentColor" fill-opacity=".08" stroke-linecap="round" stroke-linejoin="round"`;
-  /* Kleurronde (12 oktober): de omtrek blijft inkt, één accent per soort
-     weer via een klasse (zon en bliksem amber, regen blauw, sneeuw lichtblauw).
-     De kleur zelf staat in CSS, zodat licht en donker hun eigen tint hebben. */
+  const s=size||24,n=code===null||code===""?NaN:Number(code),c=CODES[n]?n:3; /* onbekende of ontbrekende code: bewolkt, net als txt() en fam() */
+  const o=`stroke="currentColor" stroke-width="${ICOON_LIJN}" fill="none" stroke-linecap="round" stroke-linejoin="round"`;
+  const zacht=`stroke="currentColor" stroke-width="${ICOON_LIJN}" fill="currentColor" fill-opacity=".08" stroke-linecap="round" stroke-linejoin="round"`;
   const straal=(cx,cy,hoeken,r1,lang,kort)=>hoeken.map((a,k)=>{const d=a*Math.PI/180,r2=k%2?kort:lang;
     return `<line class="ico-zon" x1="${(cx+r1*Math.cos(d)).toFixed(2)}" y1="${(cy+r1*Math.sin(d)).toFixed(2)}" x2="${(cx+r2*Math.cos(d)).toFixed(2)}" y2="${(cy+r2*Math.sin(d)).toFixed(2)}" ${o}/>`;}).join("");
-  const zon=`<circle class="ico-zon" cx="12" cy="12" r="4" ${zacht}/>`+straal(12,12,[0,45,90,135,180,225,270,315],6.6,9.4,8.4);
+  const zonOp=(cx,cy,r,hoeken,r1,lang,kort)=>`<circle class="ico-zon" cx="${cx}" cy="${cy}" r="${r}" ${zacht}/>`+straal(cx,cy,hoeken,r1,lang,kort);
   /* Twee sterretjes bij de maan, alleen waar het icoon groot genoeg is om ze
      als sterren te lezen (niet in de smalle uurrij van de grafiek). */
   const sterren=s>=20?`<circle cx="17.4" cy="5.6" r=".85" fill="currentColor"/><circle cx="20.2" cy="9.2" r=".55" fill="currentColor"/>`:"";
-  const maantje=`<path d="M17.8 14.9A6.7 6.7 0 1 1 9.6 6.7a5.3 5.3 0 0 0 8.2 8.2z" ${zacht}/>${sterren}`;
-  const wolk=`<path d="M7.6 18.6h8.9a4 4 0 0 0 .5-7.97 5.4 5.4 0 0 0-10.3 1.2 3.4 3.4 0 0 0 .9 6.77z" ${zacht}/>`;
-  const wolkhoog=`<path d="M7.6 15.4h8.9a4 4 0 0 0 .5-7.97 5.4 5.4 0 0 0-10.3 1.2 3.4 3.4 0 0 0 .9 6.77z" ${zacht}/>`;
-  const druppels=`<line class="ico-regen" x1="9" y1="18" x2="8.2" y2="20.2" ${o}/><line class="ico-regen" x1="12.6" y1="18.2" x2="11.5" y2="21.4" ${o}/><line class="ico-regen" x1="16.2" y1="18" x2="15.4" y2="20.2" ${o}/>`;
-  const vlok=(x,y)=>`<path class="ico-sneeuw" d="M${x} ${y-1.7}v3.4M${x-1.47} ${y-.85}l2.94 1.7M${x-1.47} ${y+.85}l2.94-1.7" stroke="currentColor" stroke-width=".9" fill="none" stroke-linecap="round"/>`;
-  const vlokken=vlok(8.2,19.6)+vlok(12.4,21.2)+vlok(16.6,19.6);
-  const bliksem=`<path class="ico-flits" d="M13.3 15.6l-2.9 3.9h2.5l-1.1 3 3.7-4.4h-2.5l1.2-2.5z" fill="currentColor" stroke="currentColor" stroke-width=".6" stroke-linejoin="round"/>`;
-  const mist=`<line x1="5" y1="8.5" x2="15.5" y2="8.5" ${o}/><line x1="18.2" y1="8.5" x2="19" y2="8.5" ${o}/><line x1="3.5" y1="12" x2="20.5" y2="12" ${o}/><line x1="5" y1="15.5" x2="6" y2="15.5" ${o}/><line x1="8.6" y1="15.5" x2="19" y2="15.5" ${o}/>`;
-  const halfz=`<circle class="ico-zon" cx="8.8" cy="8.2" r="3" ${zacht}/>`+straal(8.8,8.2,[180,225,270,315],4.6,6.6,5.8);
+  const maanVol=`<path d="M17.8 14.9A6.7 6.7 0 1 1 9.6 6.7a5.3 5.3 0 0 0 8.2 8.2z" ${zacht}/>${sterren}`;
+  const maanKlein=`<path d="M14.6 12.4A5.4 5.4 0 1 1 8 5.8a4.3 4.3 0 0 0 6.6 6.6z" ${zacht}/>`;
+  const wolkOp=(x,y)=>`<path d="M${x} ${y}h8.9a4 4 0 0 0 .5-7.97 5.4 5.4 0 0 0-10.3 1.2 3.4 3.4 0 0 0 .9 6.77z" ${zacht}/>`;
+  const wolkje=`<path d="M13.9 19.6h5.6a2.5 2.5 0 0 0 .3-4.98 3.4 3.4 0 0 0-6.5.75 2.15 2.15 0 0 0 .6 4.23z" ${zacht}/>`;
+  const hoog=wolkOp(7.6,15.4);
+  const halfz=zonOp(8.8,8.2,3,[180,225,270,315],4.6,6.6,5.8);
   const halfm=`<path d="M12 8.9A4.6 4.6 0 1 1 6.2 3.1a3.7 3.7 0 0 0 5.8 5.8z" ${zacht}/>`;
-  /* De wolk dekt af wat erachter ligt met een masker, niet met een vulling:
-     zo werkt het op elke achtergrond, ook in donkere modus en de nachtstand. */
+  /* De voorste vorm dekt af wat erachter ligt met een masker, niet met een
+     vulling: zo werkt het op elke achtergrond, ook in donkere modus en de
+     nachtstand. Het masker is ruimer dan de lijn, anders blijft er een randje. */
   const dek=(achter,voor)=>{
     const id="mk"+(icon.teller=(icon.teller||0)+1);
     const stempel=voor.replace(/fill="none"/g,'fill="black"')
                       .replace(/fill="currentColor" fill-opacity="\.08"/g,'fill="black"')
                       .replace(/stroke="currentColor"/g,'stroke="black"')
-                      .replace(/stroke-width="1.15"/g,'stroke-width="2.6"');
+                      .replace(/stroke-width="[\d.]+"/g,`stroke-width="${ICOON_MASKER}"`);
     return `<defs><mask id="${id}"><rect width="24" height="24" fill="white"/>${stempel}</mask></defs>`
       +`<g mask="url(#${id})">${achter}</g>${voor}`;
   };
-  let b;
-  if(f==="zon") b=isDay?zon:maantje;
-  else if(f==="halfbewolkt") b=dek(isDay?halfz:halfm, wolkhoog);
-  else if(f==="wolk") b=wolk;
-  else if(f==="mist") b=mist;
-  else if(f==="regen") b=wolkhoog+druppels;
-  else if(f==="sneeuw") b=wolkhoog+vlokken;
-  else if(f==="ijzel") b=wolkhoog+`<line class="ico-regen" x1="9" y1="17.6" x2="8.2" y2="19.8" ${o}/><line class="ico-regen" x1="15" y1="17.6" x2="14.2" y2="19.8" ${o}/>`+
-    `<path d="M5.5 21.8q2-1.6 4 0t4 0t4 0" ${o}/>`;
-  else b=wolkhoog+bliksem;
+  const lijn=(x1,y1,x2,y2)=>`<line class="ico-regen" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${o}/>`;
+  const regen=k=>({2:[[10.2,17.8,9.4,20],[14.2,17.8,13.4,20]],3:[[9,18,8.2,20.2],[12.6,18.2,11.5,21.4],[16.2,18,15.4,20.2]],
+    4:[[7.9,17.6,6.9,21.2],[10.9,17.6,9.9,21.8],[13.9,17.6,12.9,21.8],[16.9,17.6,15.9,21.2]]})[k].map(a=>lijn(...a)).join("");
+  const stip=(x,y)=>`<circle class="ico-regen" cx="${x}" cy="${y}" r=".35" ${o}/>`;
+  const motregen=k=>({2:[[10,18.6],[14.2,18.6]],3:[[8.6,18.6],[12.2,19.4],[15.8,18.6]],5:[[8.6,18.2],[12.2,18.6],[15.8,18.2],[10.4,21],[14,21]]})[k].map(p=>stip(...p)).join("");
+  const vlok=(x,y)=>`<path class="ico-sneeuw" d="M${x} ${y-1.7}v3.4M${x-1.47} ${y-.85}l2.94 1.7M${x-1.47} ${y+.85}l2.94-1.7" stroke="currentColor" stroke-width=".9" fill="none" stroke-linecap="round"/>`;
+  const sneeuw=k=>({2:[[9.4,19.4],[15,20.6]],3:[[8.2,19.6],[12.4,21.2],[16.6,19.6]],4:[[6.6,19.2],[10.4,21.4],[14.2,19.2],[18,21.4]]})[k].map(p=>vlok(...p)).join("");
+  const korrels=[[8.4,18.8],[12.2,19.6],[16,18.8],[10.3,21.8],[14.1,21.8]].map(([x,y])=>`<path class="ico-sneeuw" d="M${x} ${y-.95}l.9 1.6h-1.8z" ${o}/>`).join("");
+  const glad=`<path d="M5.5 22q2-1.6 4 0t4 0t4 0" ${o}/>`;
+  const ijsregen=k=>({3:[[8.2,17.6,7.4,19.6],[12,17.6,11.2,19.6],[15.8,17.6,15,19.6]],4:[[7.4,17.4,6.6,19.6],[10.4,17.4,9.6,19.6],[13.4,17.4,12.6,19.6],[16.4,17.4,15.6,19.6]]})[k].map(a=>lijn(...a)).join("");
+  const ijsmotregen=k=>({3:[[8.6,18.2],[12.2,19],[15.8,18.2]],5:[[7.2,18.2],[10,19],[12.8,18.2],[15.6,19],[18.4,18.2]]})[k].map(p=>stip(...p)).join("");
+  const flits=`<path class="ico-flits" d="M13.3 15.6l-2.9 3.9h2.5l-1.1 3 3.7-4.4h-2.5l1.2-2.5z" fill="currentColor" stroke="currentColor" stroke-width=".6" stroke-linejoin="round"/>`;
+  const hagel=pts=>pts.map(([x,y])=>`<circle class="ico-sneeuw" cx="${x}" cy="${y}" r=".95" ${o}/>`).join("");
+  const mist=`<line x1="5" y1="8.5" x2="15.5" y2="8.5" ${o}/><line x1="18.2" y1="8.5" x2="19" y2="8.5" ${o}/><line x1="3.5" y1="12" x2="20.5" y2="12" ${o}/><line x1="5" y1="15.5" x2="6" y2="15.5" ${o}/><line x1="8.6" y1="15.5" x2="19" y2="15.5" ${o}/>`;
+  const mistIjs=`<line x1="3.5" y1="9.5" x2="14" y2="9.5" ${o}/><line x1="3.5" y1="13" x2="20.5" y2="13" ${o}/><line x1="5" y1="16.5" x2="6" y2="16.5" ${o}/><line x1="8.6" y1="16.5" x2="19" y2="16.5" ${o}/>`+vlok(18.4,8.4);
+  const bui=extra=>dek(isDay?halfz:halfm,hoog)+extra;
+  const b={
+    0:()=>isDay?zonOp(12,12,4,[0,45,90,135,180,225,270,315],6.6,9.4,8.4):maanVol,
+    1:()=>dek(isDay?zonOp(10.4,10.2,3.6,[180,225,270,315,0,45,90],5.8,8.2,7.3):maanKlein,wolkje),
+    2:()=>dek(isDay?halfz:halfm,hoog),
+    3:()=>dek(wolkOp(10.8,13.4),wolkOp(6.4,19.4)),
+    45:()=>mist,48:()=>mistIjs,
+    51:()=>hoog+motregen(2),53:()=>hoog+motregen(3),55:()=>hoog+motregen(5),
+    56:()=>hoog+ijsmotregen(3)+glad,57:()=>hoog+ijsmotregen(5)+glad,
+    61:()=>hoog+regen(2),63:()=>hoog+regen(3),65:()=>hoog+regen(4),
+    66:()=>hoog+ijsregen(3)+glad,67:()=>hoog+ijsregen(4)+glad,
+    71:()=>hoog+sneeuw(2),73:()=>hoog+sneeuw(3),75:()=>hoog+sneeuw(4),77:()=>hoog+korrels,
+    80:()=>bui(regen(2)),81:()=>bui(regen(3)),82:()=>bui(regen(4)),
+    85:()=>bui(sneeuw(3)),86:()=>bui(sneeuw(4)),
+    95:()=>hoog+flits,96:()=>hoog+flits+hagel([[8.2,19.2],[17,19.2]]),
+    99:()=>hoog+flits+hagel([[7.6,18.6],[9.4,21.6],[17.4,18.6],[15.8,21.6]])
+  }[c]();
   return `<svg class="ico" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${b}</svg>`;
 }
 /** De klok van de plaats zelf. Alle uren in de app staan in die tijd, dus deze

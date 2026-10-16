@@ -35,6 +35,8 @@ jobs:
         run: node scripts/first-screen-browser.test.js
       - name: Mobiel eerste scherm, temperatuur boven de briefing; vanaf nu bij Vandaag
         run: node scripts/eerste-scherm-mobiel-browser.test.js
+      - name: Iconen, zichtbare weeromschrijving onder de dagnaam en tooltip in de uurtabel
+        run: node scripts/iconen-omschrijving-browser.test.js
       - name: Bediening, tapdoelen en Auto-thema
         run: node scripts/bediening-browser.test.js
       - name: Leesbaarheid, minimale lettergroottes
