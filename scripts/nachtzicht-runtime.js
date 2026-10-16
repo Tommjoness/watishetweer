@@ -26,7 +26,7 @@
   const datumTekst = iso => { const p = iso.split("-").map(Number), d = new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)); return DAGVOL[d.getUTCDay()] + " " + p[2] + " " + MAANDEN[p[1] - 1]; };
   const hoofdletter = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
-  const kortVenster = n => n.venster ? (n.venster.nu ? "nu tot " + n.venster.tot : n.venster.van + "–" + n.venster.tot) : "geen" + (n.reden ? " (" + n.reden + ")" : "");
+  const kortVenster = n => n.venster ? (n.venster.nu ? "nu tot " + n.venster.tot : n.venster.van + "–" + n.venster.tot) : "geen (" + (n.reden || "korter dan twee uur") + ")";
   const zichtTekst = m => m == null ? "onbekend" : m >= 10000 ? "10+ km" : (Math.round(m / 100) / 10).toString().replace(".", ",") + " km";
   function maanZin(m) {
     if (!m) return "onbekend";

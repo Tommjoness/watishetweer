@@ -1294,6 +1294,9 @@
     [/^(nieuwe maan|wassende sikkel|eerste kwartier|wassende maan|volle maan|afnemende maan|laatste kwartier|afnemende sikkel), (\d+) procent verlicht$/, (m) => `${MAANFASE[m[1]]}, ${m[2]} per cent illuminated`],
     [/^Beste periode: (\d{1,2}:\d{2})–(\d{1,2}:\d{2})\.$/, (m) => `Best period: ${m[1]}–${m[2]}.`],
     [/^Beste periode: nu tot (\d{1,2}:\d{2})\.$/, (m) => `Best period: now until ${m[1]}.`],
+    /* Korte venstertekst in het Nachtzicht-overzicht (kortVenster in scripts/nachtzicht-runtime.js). */
+    [/^nu tot (\d{1,2}:\d{2})$/, (m) => `now until ${m[1]}`],
+    [/^geen \((.+)\)$/, (m) => { const r = m[1] === "onvoldoende data" ? "insufficient data" : m[1] === "korter dan twee uur" ? "shorter than two hours" : oorzaken(m[1]); return r && `none (${r})`; }],
     [/^Geen gunstig kijkvenster door (.+)\.$/, (m) => { const r = oorzaken(m[1]); return r && `No favourable viewing window because of ${r}.`; }],
     [/^Matige omstandigheden, maar door (.+) geen gunstig kijkvenster\.$/, (m) => { const r = oorzaken(m[1]); return r && `Moderate conditions, but no favourable viewing window because of ${r}.`; }],
 
