@@ -195,32 +195,48 @@ async function wachtOpExacteDeployment(){
   assert(Array.isArray(waarschuwing.lijst),"waarschuwingen-API lijst moet een array zijn");
   assert(waarschuwing.lijst.every(item=>item&&item.plaatsSpecifiek===true),"waarschuwingen-API mag alleen plaatsgebonden waarschuwingen publiceren");
 
-  /* Park- en vakantiepagina's (verslag B6): de statische pagina moet bereikbaar zijn en de
-     runtime-configuratie bevatten. Hun dynamische
-     verwachting hangt aan Open-Meteo en de eigen reserveroute; een
-     providerstoring melden we als bronstoring (waarschuwing), een kapot
-     contract als fout. */
+  /* Park- en vakantiepagina's (verslag B6). De statische pagina's moeten bereikbaar
+     zijn en de runtime-configuratie bevatten (anders faalt de smoke). Voor de
+     dynamische verwachting scheiden we drie uitkomsten die nooit samenvloeien tot
+     "geslaagd": datalevering bewezen, alleen het foutcontract bewezen en een
+     controle die niet kon worden uitgevoerd (zie bronbeschikbaarheid.js). Een
+     providerstoring laat de smoke niet falen, maar wordt altijd zichtbaar
+     gemeld (waarschuwing, stapoverzicht en de eindregel); een kapot contract wel. */
   for(const [pad,marker] of [["/nachtzicht/alde-feanen/",'id="nz-config"'],["/herfstvakantie/",'id="seizoen-config"']]){
     const pagina=await haal(ROOT+pad);
     assert(pagina.response.ok,`${pad} is niet 2xx`);
     assert(pagina.text.includes(marker),`${pad} mist de runtime-configuratie (${marker})`);
   }
-  const reserve=await haal(ROOT+"/api/forecast?lat=52.3508&lon=5.2647",{accept:"application/json"});
-  controleerCloudflare(reserve.response,"forecast-reserveroute");
-  const reserveJson=leesJson(reserve,"forecast-reserveroute");
-  assert(reserveJson&&typeof reserveJson==="object"&&!Array.isArray(reserveJson),"forecast-reserveroute moet een JSON-object teruggeven");
-  let reserveTekst;
-  if(reserve.response.status===200){
-    assert(["visualcrossing","weatherapi"].includes(reserve.response.headers.get("x-wiw-weather-source")),"forecast-reserveroute noemt geen bekende bron");
-    assert(reserveJson.hourly&&Array.isArray(reserveJson.hourly.time)&&reserveJson.hourly.time.length>=24,"forecast-reserveroute mist uurdata");
-    assert(reserveJson.daily&&Array.isArray(reserveJson.daily.time)&&reserveJson.daily.time.length>=7,"forecast-reserveroute mist zeven dagen");
-    reserveTekst="forecast-reserveroute levert ("+reserve.response.headers.get("x-wiw-weather-source")+")";
-  }else{
-    assert.equal(reserve.response.status,503,"forecast-reserveroute geeft ongeldige status "+reserve.response.status);
-    assert.equal(reserveJson.beschikbaar,false,"gedegradeerde forecast-reserveroute moet beschikbaar:false melden");
-    console.log("::warning::Bronstoring: de forecast-reserveroute (Visual Crossing en WeatherAPI) levert nu niets; geen regressie van de site zelf.");
-    reserveTekst="forecast-reserveroute meldt een nette bronstoring";
+  const bron=require("./bronbeschikbaarheid.js");
+  let reserveRuw;
+  try{
+    const reserve=await haal(ROOT+"/api/forecast?lat=52.3508&lon=5.2647",{accept:"application/json"});
+    controleerCloudflare(reserve.response,"forecast-reserveroute");
+    let json=null;
+    try{json=JSON.parse(reserve.text);}catch(e){json=null;}
+    assert(json&&typeof json==="object"&&!Array.isArray(json),"forecast-reserveroute moet een JSON-object teruggeven");
+    reserveRuw={status:reserve.response.status,bron:reserve.response.headers.get("x-wiw-weather-source"),json};
+  }catch(e){
+    if(e&&e.name==="AssertionError")throw e;
+    reserveRuw={fout:String(e&&e.message||e)};
   }
+  let openMeteoRuw;
+  try{
+    const om=await haal("https://api.open-meteo.com/v1/forecast?latitude=53.1244&longitude=5.9233&hourly=cloud_cover&forecast_days=1&timezone=Europe%2FAmsterdam",{accept:"application/json"});
+    let json=null;
+    try{json=JSON.parse(om.text);}catch(e){json=null;}
+    openMeteoRuw={status:om.response.status,json};
+  }catch(e){
+    openMeteoRuw={fout:String(e&&e.message||e)};
+  }
+  const reserveUitkomst=bron.beoordeelReserve(reserveRuw),openMeteoUitkomst=bron.beoordeelOpenMeteo(openMeteoRuw);
+  const bronOordeel=bron.samenvatting(openMeteoUitkomst,reserveUitkomst);
+  console.log(`BRONBESCHIKBAARHEID PARK/VAKANTIE: ${bronOordeel.tekst}`);
+  if(!bronOordeel.volledig)console.log(`::warning::Beperkte acceptatie: ${bronOordeel.tekst}`);
+  if(process.env.GITHUB_STEP_SUMMARY){
+    require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY,`### Bronbeschikbaarheid park- en vakantiepagina's\n\n- Open-Meteo: **${openMeteoUitkomst.uitkomst}** (${openMeteoUitkomst.reden})\n- Reserveroute: **${reserveUitkomst.uitkomst}** (${reserveUitkomst.reden})\n- Oordeel: ${bronOordeel.volledig?"volledig":"**beperkt**"}. ${bronOordeel.tekst}\n`);
+  }
+  const reserveTekst=bronOordeel.volledig?"datalevering park/vakantie bewezen":"MET BEPERKING: "+bronOordeel.tekst;
 
   console.log(`PRODUCTION-SMOKE GESLAAGD: ${verwacht}; exacte Cloudflare-build, HSTS op statische/API-routes, homepage/www-redirect, robots, sitemap, kernroutes, park- en vakantiepagina, ${reserveTekst}, share-canonical, 404 en alle drie API-contracten zijn publiek coherent.`);
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
