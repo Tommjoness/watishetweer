@@ -27,6 +27,37 @@ function weatherNowBriefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){
   }
   return "Vannacht koelt het af naar ongeveer "+waarde+".";
 }
+/* De regen van morgen (verslag 16 okt, onderdeel 1): na 18:00 noemt de samenvatting het
+   regenvenster van morgen met tijdvak en hoeveelheid. De perioden komen uit dezelfde
+   functie als de grafiektekst (intervalbetekenis: de uurwaarde hoort bij het voorafgaande uur),
+   dus de samenvatting en "Verwachte meetbare neerslag" zijn gelijk. Zonder zekere kans of bij
+   minder dan 0,3 mm in de hoofdperiode geen zin. */
+function weatherNowBriefingMorgenRegen(h,datum){
+  const api=globalThis.WeatherNowFinalAudit20260901;
+  if(!api||typeof api.regenperiodenVoorGrafiek!=="function"||!h||!Array.isArray(h.time)||!Array.isArray(h.precipitation)||!datum)return "";
+  const start=h.time.indexOf(datum+"T00:00");
+  const volgende=h.time.findIndex(t=>String(t).slice(0,10)>datum);
+  if(start<0||volgende<0||volgende<=start)return "";
+  const perioden=api.regenperiodenVoorGrafiek({grafiekTijden:h.time.slice(start,volgende+1),bronTijden:h.time,bronStart:start,neerslag:h.precipitation,actueelBronIndex:null,toonVerstreken:true,meetbaarMm:0.1});
+  if(!perioden.length)return "";
+  const hoofd=perioden.reduce((a,b)=>b.som>a.som?b:a);
+  if(!(hoofd.som>=0.3))return "";
+  const van=String(hoofd.van).slice(11,16),tot=String(hoofd.tot).slice(11,16);
+  let kans=null;
+  for(let k=hoofd.eersteBronIndex;k<=hoofd.laatsteBronIndex;k++){
+    const v=eindigGetal(h.precipitation_probability&&h.precipitation_probability[k]);
+    if(v!==null&&(kans===null||v>kans))kans=v;
+  }
+  if(kans!==null&&kans<40)return "";
+  const codes=[];
+  for(let k=hoofd.eersteBronIndex;k<=hoofd.laatsteBronIndex;k++){const c=eindigGetal(h.weather_code&&h.weather_code[k]);if(c!==null)codes.push(c);}
+  const regen=c=>(c>=51&&c<=65)||(c>=80&&c<=82),sneeuw=c=>(c>=71&&c<=77)||c===85||c===86;
+  const soort=codes.length&&codes.every(regen)?"regen":codes.length&&codes.every(sneeuw)?"sneeuw":"neerslag";
+  const mm=(Math.round(hoofd.som*10)/10).toFixed(1).replace(".",",");
+  return kans!==null&&kans>=70
+    ?"Morgen wordt tussen "+van+" en "+tot+" "+soort+" verwacht (ongeveer "+mm+" mm)."
+    :"Morgen kan tussen "+van+" en "+tot+" "+soort+" vallen (ongeveer "+mm+" mm).";
+}
 function briefing(){
 `;
 
@@ -37,7 +68,7 @@ const VANDAAG_PIEK_BRON='    zin2="Vandaag wordt het rond "+hhmm(volledigePiekVa
 const VANDAAG_PIEK_PRODUCTIE='    zin2="Het verwachte maximum ligt vandaag rond "+hhmm(volledigePiekVandaag.t)+" op <b>"\n      +weatherNowBriefingGraden(Math.round(volledigePiekVandaag.v))+"</b>."+(nachtZin?" "+nachtZin:"");\n';
 
 const MORGEN_BRON='    zin2=morgenUurPiek\n      ?"Morgen wordt het rond "+hhmm(morgenUurPiek.t)+" het warmst, met maximaal <b>"+Math.round(morgenDagMax)+" graden</b>."+nachtZin\n      :"Morgen wordt het maximaal <b>"+Math.round(morgenDagMax)+" graden</b>."+nachtZin;\n';
-const MORGEN_PRODUCTIE='    zin2=morgenUurPiek\n      ?"Het verwachte maximum ligt morgen rond "+hhmm(morgenUurPiek.t)+" op <b>"+weatherNowBriefingGraden(Math.round(morgenDagMax))+"</b>."+(nachtZin?" "+nachtZin:"")\n      :"Het verwachte maximum voor morgen is <b>"+weatherNowBriefingGraden(Math.round(morgenDagMax))+"</b>."+(nachtZin?" "+nachtZin:"");\n';
+const MORGEN_PRODUCTIE='    zin2=(nachtZin?nachtZin+" ":"")+(morgenUurPiek\n      ?"Het verwachte maximum ligt morgen rond "+hhmm(morgenUurPiek.t)+" op <b>"+weatherNowBriefingGraden(Math.round(morgenDagMax))+"</b>."\n      :"Het verwachte maximum voor morgen is <b>"+weatherNowBriefingGraden(Math.round(morgenDagMax))+"</b>.")+(weatherNowBriefingMorgenRegen(h,morgenDatum)?" "+weatherNowBriefingMorgenRegen(h,morgenDatum):"");\n';
 
 const VANDAAG_VERLEDEN_BRON='    zin2="Vandaag was het rond "+hhmm(volledigePiekVandaag.t)+" het warmst, met <b>"+Math.round(volledigePiekVandaag.v)+" graden</b>."+nachtZin;\n';
 const VANDAAG_VERLEDEN_PRODUCTIE='    zin2="Het verwachte maximum lag vandaag rond "+hhmm(volledigePiekVandaag.t)+" op <b>"+weatherNowBriefingGraden(Math.round(volledigePiekVandaag.v))+"</b>."+(nachtZin?" "+nachtZin:"");\n';
