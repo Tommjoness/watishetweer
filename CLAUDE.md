@@ -26,6 +26,7 @@ Deze afspraken zijn vastgelegd door de eigenaar en gelden voor iedere sessie.
 
 - Communiceer met de eigenaar in het Nederlands: gedetailleerd, duidelijk, feitelijk en goed gestructureerd.
 - Spreek de eigenaar aan met je en jij, niet met u. Houd de toon informeel en niet te formeel (eigenaar, 5 oktober 2026).
+- **Inspanningsniveau** (eigenaar, 16 oktober 2026): begin iedere nieuwe taak met één regel advies: gemiddeld of hoog, met de reden. Gemiddeld voor controles, kleine fixes, mails en duidelijke CI-fouten; hoog voor nieuwe onderdelen, onduidelijke bugs, audits, bron-, privacy- of beveiligingswerk en tijdzones. Meld het direct als een taak lastiger blijkt dan gedacht.
 - Noem tijden altijd in Nederlandse tijd (Europe/Amsterdam: CEST in de zomer, CET in de winter), ook voor CI-runs, deploys en geplande controles. GitHub en de sandbox rapporteren in UTC: reken dat om.
 - Lees eerst `README.md` en `docs/overdracht-runbook.md` voor architectuur, deploy en beheer.
 - Bewerk nooit handmatig bestanden in `public/`. Die map wordt bij iedere build opnieuw opgebouwd.
