@@ -23,8 +23,8 @@ const NACHTEN_HAAK="function nachten(){\n";
 const HELPER_PRODUCTIE=weatherNowMaanGeschiktVoorNachtvenster.toString()+"\n\nfunction nachten(){\n";
 const VENSTER_BRON="      const goed = C[i]<35 && (maanWeging[i]*mn.ill < 0.2);";
 const VENSTER_PRODUCTIE="      const goed = C[i]<35 && weatherNowMaanGeschiktVoorNachtvenster(maanOp[i],mn.ill);";
-const REDEN_BRON="      const maanOk=langsteRun(i=>maanWeging[i]*mn.ill<0.2)>=2;  // zonder de wolken was er een venster geweest";
-const REDEN_PRODUCTIE="      const maanOk=langsteRun(i=>weatherNowMaanGeschiktVoorNachtvenster(maanOp[i],mn.ill))>=2;  // zonder de wolken was er een venster geweest";
+const REDEN_BRON="      const maanOk=langsteRun(i=>maanWeging[i]*mn.ill<0.2)>=MIN_VENSTER_RIJEN;  // zonder de wolken was er een venster geweest";
+const REDEN_PRODUCTIE="      const maanOk=langsteRun(i=>weatherNowMaanGeschiktVoorNachtvenster(maanOp[i],mn.ill))>=MIN_VENSTER_RIJEN;  // zonder de wolken was er een venster geweest";
 
 function vervangExact(bron,van,naar,label){
   const n=bron.split(van).length-1;

@@ -150,7 +150,15 @@ function corrigeerNachtVensterBron(tekst,horizonDagen,score,opties={}){
   let eind=rawEind===zon?rawEind:tijdVanMinuut(rawEindMin-60);
   let eindLijn=opTijdlijn(minuutVanTijd(eind),startMin);
   const zonLijn=opTijdlijn(zonMin,startMin);
-  if(zonLijn!==null&&eindLijn!==null&&eindLijn>zonLijn){eind=zon;eindLijn=zonLijn;}
+  /* Contract nachtvenster: het getoonde venster duurt minstens twee uur. De detectie
+     (MIN_VENSTER_RIJEN, drie uurpunten) telt echte uurpunten en is daarom
+     wintertijd-veilig. Hier vangen we alleen af dat het afkappen op de zonsopkomst
+     een venster onder de twee uur laat. De klok-minuten zelf zijn geen maat in de
+     herhaalde nacht-uur van de wintertijd, dus er is geen algemene klokcontrole. */
+  if(zonLijn!==null&&eindLijn!==null&&eindLijn>zonLijn){
+    eind=zon;eindLijn=zonLijn;
+    if(!(h===0&&opties.actief)&&eindLijn-startMin<120)return "Geen gunstig kijkvenster.";
+  }
   if(eindLijn===null||eindLijn<=startMin)return "Geen gunstig kijkvenster.";
 
   if(h!==null&&h>=3){

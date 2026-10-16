@@ -62,6 +62,7 @@ function zonDaglichtInfo(sunrise,sunset,isDagWaarden){
   return {status:"normaal",minuten,tekst,daglichtTekst:tekst,zontekst:null};
 }
 
+const MIN_VENSTER_RIJEN=3;
 function nachtzichtScore(rijen){
   const alle=Array.isArray(rijen)?rijen:[];
   const geldig=alle.filter(r=>num(r.cloud)!==null&&num(r.visibility)!==null);
@@ -104,7 +105,11 @@ function nachtzichtScore(rijen){
     run.push(r);
     if(run.length>beste.length) beste=run.slice();
   }
-  const besteVenster=beste.length>=2?beste:null;
+  /* Contract nachtvenster: de getoonde tijdspanne loopt van het eerste tot het
+     laatste goede uurpunt en is minstens twee uur (dus minstens drie opeenvolgende
+     uurpunten). Twee punten leveren één uur op en tellen daarom niet. Dezelfde
+     grens geldt in index.html (MIN_VENSTER_RIJEN) en in corrigeerNachtVensterBron. */
+  const besteVenster=beste.length>=MIN_VENSTER_RIJEN?beste:null;
 
   const redenen=[],fogAandeel=fog/geldig.length;
   if(gemVis<8000||fog){
