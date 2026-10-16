@@ -1753,8 +1753,17 @@ function briefing(){
      horen en toch als nachttemperatuur worden aangekondigd. */
   const nachtWaarden=[];
   let nachtBegonnen=false;
+  /* Het uur waarin de zon opkomt heeft nog is_day 0, ook als de zon al op is
+     (07:15 bij zonsopkomst 07:12). Dan hoort dat uur bij de nacht die net voorbij
+     is, niet bij "vannacht": sla de resterende nachtuurtjes over tot het eerste
+     dagvak. Het actuele is_day-veld is minutenscherp en beslist. */
+  let wachtOpDag=eindigGetal(c.is_day)===1&&eindigGetal(h.is_day&&h.is_day[i])===0;
   for(let k=i;k<eind;k++){
     const isDag=eindigGetal(h.is_day&&h.is_day[k]);
+    if(wachtOpDag){
+      if(isDag===1) wachtOpDag=false;
+      continue;
+    }
     if(!nachtBegonnen){
       if(isDag!==0) continue;
       nachtBegonnen=true;

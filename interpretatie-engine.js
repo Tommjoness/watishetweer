@@ -414,9 +414,17 @@ function weerCodeRang(code){
   code=Number(code);
   if(code>=95) return 8;
   if([56,57,66,67].includes(code)) return 7;
-  if([55,65,75,82,86].includes(code)) return 6;
+  if([65,75,82,86].includes(code)) return 6;
   if([71,73,77,85].includes(code)) return 5;
-  if((code>=51&&code<=67)||(code>=80&&code<=82)) return 4;
+  /* Motregen is altijd lichter dan gewone regen: dichte motregen (55) hoort onder
+     matige regen (63) en hoogstens gelijk aan lichte regen, niet bij zware regen. De
+     gebroken rangen houden de volgorde binnen deze klasse (motregen < regen < buien). */
+  if(code===51) return 4;
+  if(code===53) return 4.1;
+  if(code===55) return 4.3;
+  if(code===61||code===80) return 4.4;
+  if(code===63||code===81) return 4.6;
+  if(code>=51&&code<=67) return 4;
   if(code===45||code===48) return 3;
   if(code===3) return 2;
   if(code===2) return 1;
