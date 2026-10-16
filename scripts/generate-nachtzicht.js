@@ -57,6 +57,7 @@ const EXTRA_STIJL = `
 .nz-licht{margin:18px 0 0;padding:14px 16px;border:1px solid var(--rule);background:var(--paper)}
 .nz-licht b{color:var(--ink)}
 #nz-vannacht{margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--rule)}
+.nz-opnieuw{display:block;margin-top:8px;min-height:44px;padding:8px 16px;font:inherit;color:var(--ink);background:transparent;border:1px solid var(--ink);cursor:pointer}
 .nz-score{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
 .nz-cijfer{font:500 44px/1 "Instrument Sans",system-ui,sans-serif;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
 .nz-oordeel{display:grid;gap:2px}.nz-oordeel b{font-size:18px;font-weight:600;color:var(--ink)}.nz-oordeel span{color:var(--ink-70)}

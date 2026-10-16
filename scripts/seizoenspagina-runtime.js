@@ -424,20 +424,37 @@ function huidigeToestand(cfg){const n=nuIn(cfg.tijdzone,new Date());return toest
    twee seconden vangt dat op; mislukt die ook, dan volgt de gewone foutmelding
    (akkoord eigenaar, 14 oktober). */
 const NIEUWE_POGING_MS=2000;
+async function haalEenmaal(url,ms){
+  const stop=new AbortController(),timer=setTimeout(()=>stop.abort(),ms);
+  try{
+    const res=await fetch(url,{signal:stop.signal});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    return await res.json();
+  }finally{
+    clearTimeout(timer);
+  }
+}
 async function haalVerwachting(url){
   for(let poging=1;;poging++){
-    const stop=new AbortController(),timer=setTimeout(()=>stop.abort(),10000);
     try{
-      const res=await fetch(url,{signal:stop.signal});
-      if(!res.ok)throw new Error("HTTP "+res.status);
-      return await res.json();
+      return await haalEenmaal(url,10000);
     }catch(e){
       if(poging>=2)throw e;
-    }finally{
-      clearTimeout(timer);
     }
     await new Promise(r=>setTimeout(r,NIEUWE_POGING_MS));
   }
+}
+/* Reserve voor de vakantiepagina's (verslag L1/B1): na twee mislukte pogingen bij
+   Open-Meteo vraagt de pagina per plaats de eigen reserveroute (/api/forecast:
+   Visual Crossing, daarna WeatherAPI; zelfde vorm als Open-Meteo, elke antwoord
+   10 minuten in de edge-cache). Een plaats die ook daar ontbreekt blijft
+   onbekend ("Geen gegevens"); pas als geen enkele plaats antwoordt volgt de
+   foutmelding. Velden die de reserve niet kent (zonuren) blijven onbekend. */
+async function haalReserve(cfg){
+  const antwoorden=await Promise.all(cfg.plaatsen.map(p=>
+    haalEenmaal("/api/forecast?lat="+encodeURIComponent(p.lat)+"&lon="+encodeURIComponent(p.lon),8000).catch(()=>null)));
+  if(!antwoorden.some(a=>a&&a.daily))throw new Error("Geen reserveverwachting");
+  return antwoorden;
 }
 let getoond="",bewaakt=false;
 function bewaak(cfg){
@@ -473,9 +490,20 @@ async function start(){
   doel.setAttribute("aria-busy","true");
   doel.replaceChildren(el("p",{class:"klein"},"Verwachting laden…"));
   try{
-    toon(doel,t,verwerkAntwoord(await haalVerwachting(verwachtingUrl(cfg,t)),t,cfg),cfg);
+    let antwoord,reserve=false;
+    try{
+      antwoord=await haalVerwachting(verwachtingUrl(cfg,t));
+    }catch(e){
+      if(cfg.soort!=="vakantie")throw e;
+      antwoord=await haalReserve(cfg);
+      reserve=true;
+    }
+    toon(doel,t,verwerkAntwoord(antwoord,t,cfg),cfg);
+    if(reserve)doel.append(el("p",{class:"klein"},"De gebruikelijke weerbron was niet bereikbaar. Deze verwachting komt van een reservebron."));
   }catch(e){
-    doel.replaceChildren(el("p",{class:"seizoen-fout"},cfg.teksten.fout));
+    const knop=el("button",{type:"button",class:"seizoen-opnieuw"},"Opnieuw proberen");
+    knop.addEventListener("click",start);
+    doel.replaceChildren(el("p",{class:"seizoen-fout"},cfg.teksten.fout),knop);
   }finally{
     doel.removeAttribute("aria-busy");
   }
