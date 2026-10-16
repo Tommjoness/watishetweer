@@ -147,7 +147,7 @@ function parkPagina(p, kern) {
   return kop({ titel, beschrijving, canonical }) + `<p class="nz-terug"><a href="${BASIS}">← Alle Nationale Parken</a></p>
 <h1>${esc(titel)}</h1>
 <p>Kun je vannacht sterren zien in ${esc(p.naam)}? Hieronder staat per nacht hoe goed het zicht op de sterrenhemel naar verwachting is, met de beste periode om te kijken.</p>
-<p class="nz-licht">Lichtvervuiling: <b>${esc(p.licht.naam)}</b> (geschat). ${esc(p.licht.tekst)} <span class="klein">Voor een heldere, maanloze nacht, rond het midden van het park; waar je precies staat maakt uit.</span></p>
+<p class="nz-licht">Lichtvervuiling: <b>${esc(p.licht.naam)}</b> (geschat). <span class="klein">Voor een heldere, maanloze nacht, rond het midden van het park; waar je precies staat maakt uit.</span> ${esc(p.licht.tekst)}</p>
 <section id="nz-vannacht" aria-live="polite" hidden></section>
 <p id="nz-status" class="klein">De verwachting wordt geladen.</p>
 <section id="nz-nachten" aria-label="Komende nachten" hidden></section>

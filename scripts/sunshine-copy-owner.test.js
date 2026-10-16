@@ -11,8 +11,9 @@ const {
 assert.equal(zonurenWoord(13.8,14.83),"Naar verwachting bijna de hele dag zon.");
 assert.equal(zonurenWoord(8,14),"Naar verwachting meerdere uren zon vandaag.");
 assert.equal(zonurenWoord(2,14),"Naar verwachting weinig zon vandaag.");
-assert.equal(zonurenWoord(0,10.9),"Naar verwachting geen zon vandaag.","0,0 uur is geen zon");
-assert.equal(zonurenWoord(0.04,null),"Naar verwachting geen zon vandaag.","afgerond 0,0 uur is geen zon");
+assert.equal(zonurenWoord(0,10.9),"Naar verwachting geen zon vandaag.","echt nul uur is geen zon");
+assert.equal(zonurenWoord(0.04,null),"Naar verwachting weinig zon vandaag.","groter dan nul maar onder 0,05 uur is weinig zon, geen 'geen zon'");
+assert.equal(zonurenWoord(0.001,10.9),"Naar verwachting weinig zon vandaag.","één paar seconden zon is weinig zon");
 assert.equal(zonurenWoord(0.05,10.9),"Naar verwachting weinig zon vandaag.","0,1 uur is weinig zon");
 assert.equal(zonurenWoord(8,null),"Naar verwachting veel zon vandaag.");
 assert.equal(zonurenWoord(null,14),"Zonuren niet beschikbaar.");
@@ -21,6 +22,7 @@ const bron=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
 assert.equal(bron.split(ZONUREN_BRON).length-1,1,"ontwikkeltemplate mist exact de oude zonurentegel");
 assert(!bron.includes("function weatherNowZonurenWoord(uur,daglichtUur){"),"ontwikkeltemplate bevat de productiehelper al");
 
+assert(ZONUREN_PRODUCTIE.includes('uur>0&&uur<0.05?"&lt;0,1":nl(uur)'),"tegel toont <0,1 uur voor een positieve waarde onder 0,05 uur, nooit 0,0 bij weinig zon");
 const uit=pasSunshineCopyToe(bron);
 assert(!uit.includes(ZONUREN_BRON),"oude zonurentegel bleef in de base-build staan");
 assert.equal(uit.split(ZONUREN_PRODUCTIE).length-1,1,"finale zonurentegel ontbreekt of is dubbel");

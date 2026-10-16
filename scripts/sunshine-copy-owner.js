@@ -8,8 +8,9 @@ function weatherNowZonurenWoord(uur,daglichtUur){
   const zon=uur!==null&&uur!==undefined&&uur!==""&&Number.isFinite(Number(uur))?Number(uur):null;
   const daglicht=daglichtUur!==null&&daglichtUur!==undefined&&daglichtUur!==""&&Number.isFinite(Number(daglichtUur))?Number(daglichtUur):null;
   if(zon===null)return "Zonuren niet beschikbaar.";
-  /* Wat als 0,0 uur in beeld staat, is geen zon en geen "weinig zon" (eigenaar, 12 oktober). */
-  if(zon<0.05)return "Naar verwachting geen zon vandaag.";
+  /* "Geen zon" alleen bij echt nul (eigenaar, 16 oktober). Wat groter is dan nul maar onder 0,05 uur
+     duurt, staat als "<0,1" in beeld (niet als "0,0", dat 12 oktober met "weinig zon" botste) en is "weinig zon". */
+  if(zon===0)return "Naar verwachting geen zon vandaag.";
   if(daglicht!==null&&daglicht>0){
     const aandeel=Math.max(0,Math.min(1,zon/daglicht));
     if(aandeel>=0.8)return "Naar verwachting bijna de hele dag zon.";
@@ -58,7 +59,7 @@ const ZONUREN_PRODUCTIE=`function zonurenTegel(){
   }
   const woord=weatherNowZonurenWoord(uur,daglichtUur);
   return \`<div class="stat zon"><div class="eyebrow">Zonuren</div>
-      <div class="sval">\${nl(uur)}<s>uur</s></div><div class="ssub">\${woord}</div></div>\`;
+      <div class="sval">\${uur>0&&uur<0.05?"&lt;0,1":nl(uur)}<s>uur</s></div><div class="ssub">\${woord}</div></div>\`;
 }`;
 
 function pasSunshineCopyToe(html){
