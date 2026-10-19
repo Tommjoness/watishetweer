@@ -66,6 +66,13 @@ server.listen(0, async () => {
       assert(m.letter && /^"?Instrument Sans/.test(m.letter), `${v}: grafiekcijfers niet in de gewone letter: ${m.letter}`);
       assert(Math.abs(m.maan - 18) < 0.5, `${v}: maantje niet 18px: ${m.maan}`);
       assert(Math.abs(m.icoon - 58) < 0.5, `${v}: weericoon niet 58px: ${m.icoon}`);
+      // Toetsenbordselectie van een dag herbouwt #days: focus moet naar de uurgrafiek gaan.
+      const dagRij = page.locator('#days .row.day[role="button"]').nth(1);
+      await dagRij.focus();
+      await page.keyboard.press("Enter");
+      await page.waitForFunction(() => document.activeElement?.id === "hit", null, { timeout: 5000 });
+      assert.strictEqual(await page.locator('#days .row.day[data-i="1"]').getAttribute("aria-pressed"), "true",
+        `${v}: gekozen dag niet als geselecteerd gemarkeerd`);
       assert.deepStrictEqual(fouten, [], `${v}: scriptfouten`);
       await ctx.close();
     }
