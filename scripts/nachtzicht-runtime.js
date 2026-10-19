@@ -56,10 +56,8 @@
      omschrijving, zodat een schermlezer niet alleen "streepje" hoort). */
   function rijStatus(rij, status) {
     if (!rij) return;
-    const n = rij.querySelector(".nz-n"), v = rij.querySelector(".nz-venster");
+    const n = rij.querySelector(".nz-n .nz-w"), v = rij.querySelector(".nz-venster .nz-w");
     rij.classList.toggle("nz-niet", status === "niet");
-    const tabel = rij.closest(".nz-tabel");
-    if (tabel) tabel.classList.toggle("nz-leeg", status === "niet" || !!tabel.querySelector("tr.nz-niet"));
     if (status === "niet") {
       n.textContent = "Niet beschikbaar";
       const streep = document.createElement("span");
@@ -133,8 +131,9 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
         const n = K.nachten(lijst[i], p.lat, p.lon, TZ, 1)[0];
         if (!rij) return;
         if (!n) { rijStatus(rij, "niet"); return; }
-        rij.querySelector(".nz-n").innerHTML = `${esc(n.scoreTekst)} <span>${esc(n.oordeel)}</span>`;
-        rij.querySelector(".nz-venster").textContent = kortVenster(n);
+        rij.classList.remove("nz-niet");
+        rij.querySelector(".nz-n .nz-w").innerHTML = `${esc(n.scoreTekst)} <span>${esc(n.oordeel)}</span>`;
+        rij.querySelector(".nz-venster .nz-w").textContent = kortVenster(n);
         gevuld++;
       });
       if (!gevuld) throw new Error("leeg");

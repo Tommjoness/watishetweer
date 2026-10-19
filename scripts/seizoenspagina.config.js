@@ -121,7 +121,7 @@ const SEIZOENSPAGINAS=Object.freeze([
     },
     titel:"Weer herfstvakantie {jaar}: regen, zon en temperatuur per dag",
     beschrijving:"Hoe wordt het weer in de herfstvakantie {jaar}? Per dag regen, zon en temperatuur in zeven grote plaatsen, met de vakantiedata voor regio noord, midden en zuid.",
-    intro:"Hoe wordt het weer in de herfstvakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.",
+    intro:"Per dag de verwachting voor regen, zon en temperatuur in zeven grote plaatsen.",
     uitleg:{
       kop:"Wanneer is de herfstvakantie?",
       alineas:[
@@ -174,7 +174,7 @@ const SEIZOENSPAGINAS=Object.freeze([
     },
     titel:"Weer kerstvakantie {jaar}: regen, sneeuw en temperatuur per dag",
     beschrijving:"Hoe wordt het weer in de kerstvakantie {jaar}? Per dag regen, sneeuw, zon en temperatuur in zeven grote plaatsen, met de vakantiedata.",
-    intro:"Hoe wordt het weer in de kerstvakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, sneeuw, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.",
+    intro:"Per dag de verwachting voor regen, sneeuw, zon en temperatuur in zeven grote plaatsen.",
     uitleg:{
       kop:"Wanneer is de kerstvakantie?",
       alineas:[
@@ -224,7 +224,7 @@ const SEIZOENSPAGINAS=Object.freeze([
     },
     titel:"Weer voorjaarsvakantie {jaar}: regen, sneeuw en temperatuur per dag",
     beschrijving:"Hoe wordt het weer in de voorjaarsvakantie {jaar}? Per dag regen, sneeuw, zon en temperatuur in zeven grote plaatsen, met de vakantiedata voor regio noord, midden en zuid.",
-    intro:"Hoe wordt het weer in de voorjaarsvakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, sneeuw, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.",
+    intro:"Per dag de verwachting voor regen, sneeuw, zon en temperatuur in zeven grote plaatsen.",
     uitleg:{
       kop:"Wanneer is de voorjaarsvakantie?",
       alineas:[
@@ -274,7 +274,7 @@ const SEIZOENSPAGINAS=Object.freeze([
     },
     titel:"Weer meivakantie {jaar}: regen, zon en temperatuur per dag",
     beschrijving:"Hoe wordt het weer in de meivakantie {jaar}? Per dag regen, zon en temperatuur in zeven grote plaatsen, met de vakantiedata.",
-    intro:"Hoe wordt het weer in de meivakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.",
+    intro:"Per dag de verwachting voor regen, zon en temperatuur in zeven grote plaatsen.",
     uitleg:{
       kop:"Wanneer is de meivakantie?",
       alineas:[
@@ -324,7 +324,7 @@ const SEIZOENSPAGINAS=Object.freeze([
     },
     titel:"Weer zomervakantie {jaar}: regen, zon en temperatuur per dag",
     beschrijving:"Hoe wordt het weer in de zomervakantie {jaar}? Per dag regen, zon en temperatuur in zeven grote plaatsen, met de vakantiedata voor regio noord, midden en zuid.",
-    intro:"Hoe wordt het weer in de zomervakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.",
+    intro:"Per dag de verwachting voor regen, zon en temperatuur in zeven grote plaatsen.",
     uitleg:{
       kop:"Wanneer is de zomervakantie?",
       alineas:[

@@ -57,14 +57,14 @@ const EXTRA_STIJL = `
 .nz-licht{margin:18px 0 0;padding:14px 16px;border:1px solid var(--rule);background:var(--paper)}
 .nz-licht b{color:var(--ink)}
 #nz-vannacht{margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--rule)}
-.nz-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}tr.nz-niet td.nz-n{padding-right:20px}/* Smalle schermen (tot 369 px): zonder gegevens past een lange parknaam ("Schiermonnikoog") plus twee kolommen niet naast elkaar zonder kleinere tekst. De rij krijgt dan twee regels: naam, en daaronder "Niet beschikbaar" met het streepje. */@media(max-width:369px){.nz-tabel.nz-leeg thead{display:none}.nz-tabel.nz-leeg table,.nz-tabel.nz-leeg tbody{display:block}.nz-tabel.nz-leeg tr{display:grid;grid-template-columns:auto 1fr;column-gap:16px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--rule)}.nz-tabel.nz-leeg th{grid-column:1/-1;border:0;padding:0}.nz-tabel.nz-leeg td{border:0;padding:4px 0 0}.nz-tabel.nz-leeg td.nz-licht-kol{display:none}.nz-tabel.nz-leeg tr.nz-niet td.nz-n{padding-right:0}}.nz-park-kop{font-size:clamp(26px,7.2vw,32px);line-height:1.15}
+.nz-n .nz-w{color:var(--ink)}.nz-lbl{display:none}.nz-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}tr.nz-niet td.nz-n{padding-right:20px}/* Smalle schermen (tot 369 px): een lange parknaam ("Schiermonnikoog") plus twee kolommen past niet naast elkaar zonder kleinere tekst. Iedere rij krijgt dan drie regels: naam, Vannacht en Beste periode, elk met een eigen label (de kolomkoppen vervallen). */@media(max-width:369px){.nz-tabel thead{display:none}.nz-tabel table,.nz-tabel tbody{display:block}.nz-tabel tr{display:grid;grid-template-columns:1fr;padding:9px 0;border-bottom:1px solid var(--rule)}.nz-tabel tbody th{grid-column:1/-1;border:0;padding:0}.nz-tabel tbody td{display:flex;align-items:baseline;gap:12px;border:0;padding:4px 0 0}.nz-tabel tbody td.nz-licht-kol{display:none}.nz-tabel tbody td.nz-n,.nz-tabel tbody tr.nz-niet td.nz-n{padding-right:0}.nz-tabel .nz-lbl{display:inline-block;flex:none;min-width:100px;font-size:13px;color:var(--muted)}}@media(max-width:600px){.nz-park-kop{font-size:30px;line-height:1.15}}
 .nz-opnieuw{display:block;margin-top:8px;min-height:44px;padding:8px 16px;font:inherit;color:var(--ink);background:transparent;border:1px solid var(--ink);cursor:pointer}
 .nz-score{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
 .nz-cijfer{font:500 44px/1 "Instrument Sans",system-ui,sans-serif;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
 .nz-oordeel{display:grid;gap:2px}.nz-oordeel b{font-size:18px;font-weight:600;color:var(--ink)}.nz-oordeel span{color:var(--ink-70)}
 .nz-feiten{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:10px;margin:18px 0 0}
 .nz-feiten div{border:1px solid var(--rule);padding:10px 12px}
-.nz-feiten dt{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.nz-feiten dt{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .nz-feiten dd{margin:2px 0 0;color:var(--ink);font-variant-numeric:tabular-nums}
 .nz-grafiek{margin:20px 0 0}
 .nz-grafiek figcaption{display:flex;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-bottom:6px}
@@ -77,7 +77,7 @@ const EXTRA_STIJL = `
 .nz-tijden{margin-top:4px;font-size:11px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
 .nz-tabel table,#nz-nachten table{width:100%;border-collapse:collapse;font-size:15px}
 .nz-tabel th,.nz-tabel td,#nz-nachten th,#nz-nachten td{text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
-.nz-tabel thead th,#nz-nachten thead th{font-size:12px;font-weight:500;color:var(--muted);padding-top:0}
+.nz-tabel thead th,#nz-nachten thead th{font-size:13px;font-weight:500;color:var(--muted);padding-top:0}
 .nz-tabel tbody th,#nz-nachten tbody th{font-weight:500;color:var(--ink)}
 .nz-tabel td,#nz-nachten td{color:var(--ink-70)}
 .nz-licht-mob{display:none;font-size:13px;font-weight:400;color:var(--muted)}
@@ -149,9 +149,9 @@ function parkPagina(p, kern) {
   return kop({ titel, beschrijving, canonical }) + `<p class="nz-terug"><a href="${BASIS}">← Alle Nationale Parken</a></p>
 <h1 class="nz-park-kop">${esc(titel)}</h1>
 <p>Kun je vannacht sterren zien in ${esc(p.naam)}? Hieronder staat per nacht hoe goed het zicht op de sterrenhemel naar verwachting is, met de beste periode om te kijken.</p>
-<p class="nz-licht">Lichtvervuiling: <b>${esc(p.licht.naam)}</b> (geschat). <span class="klein">Voor een heldere, maanloze nacht, rond het midden van het park; waar je precies staat maakt uit.</span> ${esc(p.licht.tekst)}</p>
 <section id="nz-vannacht" aria-live="polite" hidden></section>
 <p id="nz-status" class="klein">De verwachting wordt geladen.</p>
+<p class="nz-licht">Lichtvervuiling: <b>${esc(p.licht.naam)}</b> (geschat). <span class="klein">Voor een heldere, maanloze nacht, rond het midden van het park; waar je precies staat maakt uit.</span> ${esc(p.licht.tekst)}</p>
 <section id="nz-nachten" aria-label="Komende nachten" hidden></section>
 <p><a href="${esc(weerUrl)}">Het weer per uur voor deze plek</a></p>
 ${SCORE_UITLEG}
@@ -163,7 +163,7 @@ function overzichtPagina(parken, kern) {
   const canonical = `https://watishetweer.nl${BASIS}`;
   const titel = "Sterren kijken in Nederland: de donkerste plekken";
   const beschrijving = "De Nationale Parken van Nederland op een rij, de donkerste eerst: lichtvervuiling per park en de kans op een heldere sterrenhemel vannacht.";
-  const rijen = parken.map(p => `<tr data-park="${p.slug}"><th scope="row"><a href="${BASIS}${p.slug}/" translate="no">${esc(p.kort)}</a><span class="nz-licht-mob">Lichtvervuiling ${esc(p.licht.naam)}</span></th><td class="nz-licht-kol">${esc(p.licht.naam)}</td><td class="nz-n">…</td><td class="nz-venster">…</td></tr>`).join("\n");
+  const rijen = parken.map(p => `<tr data-park="${p.slug}"><th scope="row"><a href="${BASIS}${p.slug}/" translate="no">${esc(p.kort)}</a><span class="nz-licht-mob">Lichtvervuiling ${esc(p.licht.naam)}</span></th><td class="nz-licht-kol">${esc(p.licht.naam)}</td><td class="nz-n"><span class="nz-lbl">Vannacht</span><span class="nz-w">…</span></td><td class="nz-venster"><span class="nz-lbl" aria-hidden="true">Beste periode</span><span class="nz-w">…</span></td></tr>`).join("\n");
   return kop({ titel, beschrijving, canonical }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>Sterren kijken in Nederland</h1>
 <p>De Nationale Parken behoren tot de donkerste plekken van Nederland. Hieronder staan ze op een rij, de donkerste eerst, met de indicatie voor vannacht. Kies een park voor de komende nachten en de bewolking per uur.</p>

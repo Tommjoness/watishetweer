@@ -760,8 +760,8 @@
 
     /* Seizoenspagina herfstvakantie (vaste teksten) */
     "Herfstvakantie": "Autumn school holiday",
-    "Hoe wordt het weer in de herfstvakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.":
-      "What will the weather be like during the autumn school holiday? Once holiday days fall within the 7-day forecast, this page shows the forecast for rain, sunshine and temperature for each day, for seven large places across the Netherlands.",
+    "Per dag de verwachting voor regen, zon en temperatuur in zeven grote plaatsen.":
+      "For each day, the forecast for rain, sunshine and temperature in seven large places.",
     "Wanneer is de herfstvakantie?": "When is the autumn school holiday?",
     "De herfstvakantie valt niet overal tegelijk: Nederland is voor de schoolvakanties ingedeeld in regio noord, midden en zuid. Dit zijn de adviesdata van het ministerie van OCW; scholen mogen daarvan afwijken. Kijk bij twijfel in de schoolgids.":
       "The autumn school holiday does not fall at the same time everywhere: for school holidays, the Netherlands is divided into a northern, central and southern region. These are the dates recommended by the Dutch Ministry of Education; schools may deviate from them. If in doubt, check your school's guide.",
@@ -772,8 +772,8 @@
 
     /* Seizoenspagina kerstvakantie (vaste teksten) */
     "Kerstvakantie": "Christmas school holiday",
-    "Hoe wordt het weer in de kerstvakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, sneeuw, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.":
-      "What will the weather be like during the Christmas school holiday? Once holiday days fall within the 7-day forecast, this page shows the forecast for rain, snow, sunshine and temperature for each day, for seven large places across the Netherlands.",
+    "Per dag de verwachting voor regen, sneeuw, zon en temperatuur in zeven grote plaatsen.":
+      "For each day, the forecast for rain, snow, sunshine and temperature in seven large places.",
     "Wanneer is de kerstvakantie?": "When is the Christmas school holiday?",
     "De kerstvakantie valt in regio noord, midden en zuid tegelijk. Dit zijn de data van de Rijksoverheid; scholen kunnen ervan afwijken. Kijk bij twijfel in de schoolgids.":
       "The Christmas school holiday falls at the same time in the northern, central and southern regions. These are the dates published by the Dutch government; schools may deviate from them. If in doubt, check your school's guide.",
@@ -783,12 +783,12 @@
     "Voorjaarsvakantie": "Spring school holiday",
     "Meivakantie": "May school holiday",
     "Zomervakantie": "Summer school holiday",
-    "Hoe wordt het weer in de voorjaarsvakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, sneeuw, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.":
-      "What will the weather be like during the spring school holiday? Once holiday days fall within the 7-day forecast, this page shows the forecast for rain, snow, sunshine and temperature for each day, for seven large places across the Netherlands.",
-    "Hoe wordt het weer in de meivakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.":
-      "What will the weather be like during the May school holiday? Once holiday days fall within the 7-day forecast, this page shows the forecast for rain, sunshine and temperature for each day, for seven large places across the Netherlands.",
-    "Hoe wordt het weer in de zomervakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.":
-      "What will the weather be like during the summer school holiday? Once holiday days fall within the 7-day forecast, this page shows the forecast for rain, sunshine and temperature for each day, for seven large places across the Netherlands.",
+    "Per dag de verwachting voor regen, sneeuw, zon en temperatuur in zeven grote plaatsen.":
+      "For each day, the forecast for rain, snow, sunshine and temperature in seven large places.",
+    "Per dag de verwachting voor regen, zon en temperatuur in zeven grote plaatsen.":
+      "For each day, the forecast for rain, sunshine and temperature in seven large places.",
+    "Per dag de verwachting voor regen, zon en temperatuur in zeven grote plaatsen.":
+      "For each day, the forecast for rain, sunshine and temperature in seven large places.",
     "Wanneer is de voorjaarsvakantie?": "When is the spring school holiday?",
     "Wanneer is de meivakantie?": "When is the May school holiday?",
     "Wanneer is de zomervakantie?": "When is the summer school holiday?",
