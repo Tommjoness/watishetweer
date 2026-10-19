@@ -91,6 +91,22 @@ async function nieuwePagina(browser,modus,pad,klok,opt={}){
   });
   return {context,page,fouten,tel,modus};
 }
+/* De daadwerkelijke toegankelijkheidsboom (Chromium, CDP): rolnamen van de cellen en kolomkoppen van één parkrij. */
+async function axRij(context,page,slug){
+  const cdp=await context.newCDPSession(page);
+  await cdp.send("DOM.enable");await cdp.send("Accessibility.enable");
+  const doc=await cdp.send("DOM.getDocument",{depth:0});
+  const q=await cdp.send("DOM.querySelector",{nodeId:doc.root.nodeId,selector:`tr[data-park="${slug}"]`});
+  const d=await cdp.send("DOM.describeNode",{nodeId:q.nodeId,depth:-1,pierce:true});
+  const ids=new Set();(function walk(n){ids.add(n.backendNodeId);(n.children||[]).forEach(walk);})(d.node);
+  const ax=await cdp.send("Accessibility.getFullAXTree");
+  const zichtbaar=ax.nodes.filter(n=>!n.ignored);
+  const uit={cellen:zichtbaar.filter(n=>ids.has(n.backendDOMNodeId)&&n.role.value==="cell").map(n=>n.name.value),
+    kopjes:zichtbaar.filter(n=>n.role.value==="columnheader").map(n=>n.name.value),
+    tekst:zichtbaar.filter(n=>ids.has(n.backendDOMNodeId)&&n.role.value==="StaticText").map(n=>n.name.value)};
+  await cdp.detach();
+  return uit;
+}
 const klaarVakantie=page=>page.waitForFunction(()=>!document.querySelector("#seizoen-verwachting[aria-busy]"),null,{timeout:45000});
 const tekstVan=(page,sel)=>page.locator(sel).innerText();
 
@@ -200,6 +216,13 @@ const tekstVan=(page,sel)=>page.locator(sel).innerText();
         if(breedte<370)assert(m.labels.every(l=>l.every(x=>x.zichtbaar))&&!m.theadZichtbaar,`${L} overzicht: smalle rij toont geen labels bij de waarden`);
         else assert(m.labels.every(l=>l.every(x=>!x.zichtbaar))&&m.theadZichtbaar,`${L} overzicht: brede tabel toont dubbele labels`);
         assert.equal(m.thead,"13px",`${L} overzicht: tabelkop ${m.thead}`);
+        /* Toegankelijkheidsboom bij ontbrekende gegevens: de betekenis staat één keer in de boom, op elke breedte. */
+        {
+          const ax=await axRij(context,page,"alde-feanen"),nv=T("Niet beschikbaar","Not available"),bp=T("Beste periode niet beschikbaar","Best period not available");
+          assert.deepEqual(ax.cellen.slice(-2),[breedte<370?`${lblN} ${nv}`:nv,bp],`${L} overzicht-AX (fout): celnamen ${JSON.stringify(ax.cellen)}`);
+          assert.equal(ax.tekst.filter(t=>t===lblV).length,0,`${L} overzicht-AX (fout): label "${lblV}" wordt dubbel voorgelezen`);
+          assert.equal(ax.kopjes.includes(lblV),breedte>=370,`${L} overzicht-AX (fout): kolomkoppen ${JSON.stringify(ax.kopjes)}`);
+        }
         const voor=tel.primair;
         await page.evaluate(()=>{const b=document.querySelector("#nz-status .nz-opnieuw");b.click();b.click();});
         await page.waitForSelector("#nz-status .nz-opnieuw",{timeout:20000});
@@ -209,6 +232,19 @@ const tekstVan=(page,sel)=>page.locator(sel).innerText();
         await page.waitForFunction(()=>[...document.querySelectorAll("tr[data-park] td.nz-n")].every(t=>!/Niet beschikbaar|Not available|…/.test(t.textContent)),null,{timeout:15000});
         assert.equal(await page.locator("#nz-status").isHidden(),true,`${L} overzicht-herstel: foutmelding weg`);
         assert.equal(await page.locator("tr.nz-niet").count(),0,`${L} overzicht-herstel: geen rij meer 'niet beschikbaar'`);
+        /* Geldige gegevens: op smalle schermen (geen kolomkoppen) hebben beide waarden hun label in de boom; breed zorgen de kolomkoppen ervoor. */
+        {
+          const ax=await axRij(context,page,"alde-feanen");
+          const [c1,c2]=ax.cellen.slice(-2);
+          if(breedte<370){
+            assert(c1.startsWith(lblN+" ")&&c2.startsWith(lblV+" ")&&/\d{2}:\d{2}/.test(c2),`${L} overzicht-AX (data): waarden hebben geen label in de boom: ${JSON.stringify([c1,c2])}`);
+            assert.equal(ax.kopjes.length,0,`${L} overzicht-AX (data): kolomkoppen horen te vervallen`);
+          }else{
+            assert(!c1.startsWith(lblN)&&!c2.startsWith(lblV)&&/^\d{2}:\d{2}/.test(c2),`${L} overzicht-AX (data): breed geen dubbele labels in celnamen: ${JSON.stringify([c1,c2])}`);
+            assert(ax.kopjes.includes(lblN)&&ax.kopjes.includes(lblV),`${L} overzicht-AX (data): kolomkoppen ontbreken ${JSON.stringify(ax.kopjes)}`);
+          }
+          assert.equal(ax.tekst.filter(t=>t===lblV).length,breedte<370?1:0,`${L} overzicht-AX (data): label "${lblV}" ${breedte<370?"ontbreekt in":"staat ten onrechte in"} de boom`);
+        }
         assert((await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth))<=0,`${L} overzicht-herstel: horizontale overloop met gegevens`);
         assert.equal(await page.locator("tr[data-park] .nz-lbl").evaluateAll(l=>l.every(x=>(getComputedStyle(x).display!=="none")===(innerWidth<370))),true,`${L} overzicht-herstel: labels alleen zichtbaar op smalle schermen`);
         assert.equal(await page.locator("tr[data-park] .nz-sr").count(),0,`${L} overzicht-herstel: geen omschrijving meer`);

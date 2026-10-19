@@ -58,6 +58,13 @@
     if (!rij) return;
     const n = rij.querySelector(".nz-n .nz-w"), v = rij.querySelector(".nz-venster .nz-w");
     rij.classList.toggle("nz-niet", status === "niet");
+    /* Het label "Beste periode" is op smalle schermen het enige dat de waarde duidelijk maakt (de
+       kolomkoppen vervallen) en hoort dan voor schermlezers te bestaan, alleen bij geldige
+       gegevens (zie de gegevenstak hieronder). Bij "niet beschikbaar" en tijdens laden draagt de omschrijving
+       "Beste periode niet beschikbaar" de volledige betekenis; het label blijft dan verborgen om
+       dubbel voorlezen te voorkomen. */
+    const lbl = rij.querySelector(".nz-venster .nz-lbl");
+    if (lbl) lbl.setAttribute("aria-hidden", "true");
     if (status === "niet") {
       n.textContent = "Niet beschikbaar";
       const streep = document.createElement("span");
@@ -132,6 +139,8 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
         if (!rij) return;
         if (!n) { rijStatus(rij, "niet"); return; }
         rij.classList.remove("nz-niet");
+        const periodeLabel = rij.querySelector(".nz-venster .nz-lbl");
+        if (periodeLabel) periodeLabel.removeAttribute("aria-hidden");
         rij.querySelector(".nz-n .nz-w").innerHTML = `${esc(n.scoreTekst)} <span>${esc(n.oordeel)}</span>`;
         rij.querySelector(".nz-venster .nz-w").textContent = kortVenster(n);
         gevuld++;
