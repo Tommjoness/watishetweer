@@ -33,6 +33,15 @@ assert(workflow.includes("node scripts/production-live-performance-browser.js"),
 assert(workflow.includes("node scripts/production-mobile-cls-browser.js"),"workflow mist de mobiele CLS-productiemonitor");
 assert(workflow.includes("node scripts/production-final-release-browser.js"),"workflow mist de finale release-evidencebrowser");
 assert(workflow.includes("node scripts/production-sitemap-contract.js"),"workflow mist het exacte live sitemapcontract");
+/* Verslag B6: groen betekent ook dat park, vakantiepagina en de forecast-reserveroute
+   gecontroleerd zijn; een providerstoring is een waarschuwing (bronstoring). */
+assert(smoke.includes('"/nachtzicht/alde-feanen/"')&&smoke.includes('"/herfstvakantie/"'),"smoke mist de park- en vakantiepagina");
+assert(smoke.includes("/api/forecast?lat=52.3508&lon=5.2647"),"smoke mist de forecast-reserveroute");
+const bronModule=fs.readFileSync(path.join(root,"scripts","bronbeschikbaarheid.js"),"utf8");
+assert(smoke.includes('require("./bronbeschikbaarheid.js")')&&smoke.includes("bron.samenvatting(")&&smoke.includes("::warning::Beperkte acceptatie"),"smoke moet datalevering, foutcontract en niet-uitgevoerde controle gescheiden beoordelen en een beperkte uitkomst melden");
+assert(smoke.includes("GITHUB_STEP_SUMMARY")&&smoke.includes("MET BEPERKING"),"een beperkte bronuitkomst mag niet stilzwijgend als volledig geslaagd gelden");
+assert(smoke.includes("e.name===\"AssertionError\")throw e")&&/throw new Error\("forecast-reserveroute/.test(bronModule),"een kapot contract van de reserveroute moet de smoke laten falen, ook al is een providerstoring toegestaan");
+for(const label of ["datalevering bewezen","alleen foutcontract bewezen, geen datalevering","controle niet uitgevoerd"])assert(bronModule.includes(label),`bronbeschikbaarheid mist de uitkomst "${label}"`);
 
 /* Iedere browsermonitor start pas nadat exact dezelfde SHA aantoonbaar live is.
    De CLS-monitor is bewust een eigen job: vijf koude loads mogen niet worden

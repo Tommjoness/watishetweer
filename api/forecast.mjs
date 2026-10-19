@@ -51,6 +51,51 @@ function json(body, status = 200, extraHeaders = {}, head = false) {
   return new Response(head ? null : JSON.stringify(body), { status, headers });
 }
 
+/* Foutcategorie per provider voor het log (verslag B4). Bewust een gesloten
+   lijst: nooit foutteksten, URL's, sleutels of coördinaten loggen. */
+function foutCategorie(error) {
+  const naam = String(error && error.name || "");
+  const tekst = String(error && error.message || "");
+  if (naam === "AbortError" || naam === "TimeoutError") return "timeout";
+  const status = /^upstream status (\d{3})$/.exec(tekst);
+  if (status) {
+    const code = Number(status[1]);
+    if (code === 429) return "http_429";
+    if (code === 401 || code === 403) return "http_toegang";
+    if (code >= 500) return "http_5xx";
+    return "http_4xx";
+  }
+  if (tekst.includes("locatie wijkt af")) return "locatie_afwijking";
+  if (tekst.includes("geen volledige zevendaagse") || tekst.includes("onvolledige weerdata") || tekst.includes("geen locatie-timezone")) return "dekking_afgewezen";
+  if (naam === "SyntaxError") return "ongeldige_json";
+  if (naam === "TypeError") return "netwerk";
+  return "onbekend";
+}
+
+/* Grof paginatype uit de Referer (alleen het pad, nooit de volledige URL). */
+function paginaType(request) {
+  try {
+    const pad = new URL(request.headers.get("referer") || "").pathname;
+    if (pad.startsWith("/nachtzicht/") && pad !== "/nachtzicht/") return "park";
+    if (/vakantie\/?$/.test(pad)) return "vakantie";
+    if (pad === "/" || pad.startsWith("/weer/")) return "app";
+  } catch {}
+  return "onbekend";
+}
+
+function logProviderFout(provider, error, gestartOp, request, opties) {
+  try {
+    console.warn({
+      event: "wiw_forecast_provider_error",
+      provider,
+      categorie: foutCategorie(error),
+      duration_ms: Math.max(0, Math.round(Date.now() - gestartOp)),
+      pagina: paginaType(request),
+      request_id: String(opties && opties.requestId || "")
+    });
+  } catch {}
+}
+
 function methodeNietToegestaan(head = false) {
   return json({ beschikbaar: false, provider: "weatherapi", reden: "methode niet toegestaan" }, 405, { Allow: "GET, HEAD" }, head);
 }
@@ -161,7 +206,7 @@ async function haalWeatherApiForecast(key, lat, lon, signal, emergency = false) 
 }
 
 export default {
-  async fetch(request, env = {}) {
+  async fetch(request, env = {}, opties = {}) {
     const method = String(request && request.method || "GET").toUpperCase();
     const head = method === "HEAD";
     if (method !== "GET" && !head) return methodeNietToegestaan(false);
@@ -182,20 +227,24 @@ export default {
     }
 
     if (visualCrossingKey) {
+      const gestartOp = Date.now();
       try {
         const body = await haalVisualCrossingForecast(visualCrossingKey, lat, lon, request.signal);
         return json(body, 200, { "X-WIW-Weather-Source": "visualcrossing" }, head);
       } catch (error) {
         if (request.signal && request.signal.aborted) throw error;
+        logProviderFout("visualcrossing", error, gestartOp, request, opties);
       }
     }
 
     if (weatherApiKey) {
+      const gestartOp = Date.now();
       try {
         const body = await haalWeatherApiForecast(weatherApiKey, lat, lon, request.signal, Boolean(visualCrossingKey));
         return json(body, 200, { "X-WIW-Weather-Source": "weatherapi" }, head);
       } catch (error) {
         if (request.signal && request.signal.aborted) throw error;
+        logProviderFout("weatherapi", error, gestartOp, request, opties);
       }
     }
 
@@ -220,5 +269,7 @@ export const _intern = Object.freeze({
   visualCrossingUrl,
   haalJson,
   haalVisualCrossingForecast,
-  haalWeatherApiForecast
+  haalWeatherApiForecast,
+  foutCategorie,
+  paginaType
 });
