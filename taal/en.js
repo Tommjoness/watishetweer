@@ -760,8 +760,8 @@
 
     /* Seizoenspagina herfstvakantie (vaste teksten) */
     "Herfstvakantie": "Autumn school holiday",
-    "Hoe wordt het weer in de herfstvakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.":
-      "What will the weather be like during the autumn school holiday? Once holiday days fall within the 7-day forecast, this page shows the forecast for rain, sunshine and temperature for each day, for seven large places across the Netherlands.",
+    "Per dag de verwachting voor regen, zon en temperatuur in zeven grote plaatsen.":
+      "For each day, the forecast for rain, sunshine and temperature in seven large places.",
     "Wanneer is de herfstvakantie?": "When is the autumn school holiday?",
     "De herfstvakantie valt niet overal tegelijk: Nederland is voor de schoolvakanties ingedeeld in regio noord, midden en zuid. Dit zijn de adviesdata van het ministerie van OCW; scholen mogen daarvan afwijken. Kijk bij twijfel in de schoolgids.":
       "The autumn school holiday does not fall at the same time everywhere: for school holidays, the Netherlands is divided into a northern, central and southern region. These are the dates recommended by the Dutch Ministry of Education; schools may deviate from them. If in doubt, check your school's guide.",
@@ -772,8 +772,8 @@
 
     /* Seizoenspagina kerstvakantie (vaste teksten) */
     "Kerstvakantie": "Christmas school holiday",
-    "Hoe wordt het weer in de kerstvakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, sneeuw, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.":
-      "What will the weather be like during the Christmas school holiday? Once holiday days fall within the 7-day forecast, this page shows the forecast for rain, snow, sunshine and temperature for each day, for seven large places across the Netherlands.",
+    "Per dag de verwachting voor regen, sneeuw, zon en temperatuur in zeven grote plaatsen.":
+      "For each day, the forecast for rain, snow, sunshine and temperature in seven large places.",
     "Wanneer is de kerstvakantie?": "When is the Christmas school holiday?",
     "De kerstvakantie valt in regio noord, midden en zuid tegelijk. Dit zijn de data van de Rijksoverheid; scholen kunnen ervan afwijken. Kijk bij twijfel in de schoolgids.":
       "The Christmas school holiday falls at the same time in the northern, central and southern regions. These are the dates published by the Dutch government; schools may deviate from them. If in doubt, check your school's guide.",
@@ -783,12 +783,12 @@
     "Voorjaarsvakantie": "Spring school holiday",
     "Meivakantie": "May school holiday",
     "Zomervakantie": "Summer school holiday",
-    "Hoe wordt het weer in de voorjaarsvakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, sneeuw, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.":
-      "What will the weather be like during the spring school holiday? Once holiday days fall within the 7-day forecast, this page shows the forecast for rain, snow, sunshine and temperature for each day, for seven large places across the Netherlands.",
-    "Hoe wordt het weer in de meivakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.":
-      "What will the weather be like during the May school holiday? Once holiday days fall within the 7-day forecast, this page shows the forecast for rain, sunshine and temperature for each day, for seven large places across the Netherlands.",
-    "Hoe wordt het weer in de zomervakantie? Zodra vakantiedagen binnen de 7-daagse verwachting vallen, staat hier per dag de verwachting voor regen, zon en temperatuur, voor zeven grote plaatsen verspreid over Nederland.":
-      "What will the weather be like during the summer school holiday? Once holiday days fall within the 7-day forecast, this page shows the forecast for rain, sunshine and temperature for each day, for seven large places across the Netherlands.",
+    "Per dag de verwachting voor regen, sneeuw, zon en temperatuur in zeven grote plaatsen.":
+      "For each day, the forecast for rain, snow, sunshine and temperature in seven large places.",
+    "Per dag de verwachting voor regen, zon en temperatuur in zeven grote plaatsen.":
+      "For each day, the forecast for rain, sunshine and temperature in seven large places.",
+    "Per dag de verwachting voor regen, zon en temperatuur in zeven grote plaatsen.":
+      "For each day, the forecast for rain, sunshine and temperature in seven large places.",
     "Wanneer is de voorjaarsvakantie?": "When is the spring school holiday?",
     "Wanneer is de meivakantie?": "When is the May school holiday?",
     "Wanneer is de zomervakantie?": "When is the summer school holiday?",
@@ -848,6 +848,14 @@
     "De verwachting wordt geladen.": "Loading the forecast.",
     "De verwachting kon niet worden geladen.": "The forecast could not be loaded.",
     "Probeer het later opnieuw.": "Please try again later.",
+    "Niet beschikbaar": "Not available",
+    "Beste periode niet beschikbaar": "Best period not available",
+    "bekijk het weer voor je eigen plaats": "check the weather for your own location",
+    "Herfstvakantie per regio": "Autumn school holiday by region",
+    "Kerstvakantie per regio": "Christmas school holiday by region",
+    "Voorjaarsvakantie per regio": "Spring school holiday by region",
+    "Meivakantie per regio": "May school holiday by region",
+    "Zomervakantie per regio": "Summer school holiday by region",
     "Park": "Park",
     "Lichtvervuiling": "Light pollution",
     "De maan bepaalt mee hoeveel sterren je ziet.": "The moon helps determine how many stars you can see.",
@@ -1138,6 +1146,13 @@
     [new RegExp(`^${G} mm · kans (\\d+)%$`), (m) => `${getal(m[1])} mm · chance ${m[2]}%`],
     [/^(?:(N|NO|O|ZO|Z|ZW|W|NW) )?(\d+) km\/u · stoten (\d+)$/, (m) => `${m[1] ? RICHTING_KORT[m[1]] + " " : ""}${m[2]} km/h · gusts ${m[3]}`],
     [/^Rond middernacht valt er volgens de huidige verwachting neerslag in (.+)\.$/, (m) => `According to the current forecast, there will be precipitation around midnight in ${opsomming(m[1])}.`],
+    /* Vakantiepagina met reservebron: de toelichting staat dan zonder de bronzin en
+       de echte bron(nen) staan in een eigen alinea. */
+    [/^(.+ deze pagina toont steeds de nieuwste\.)$/, (m) => {
+      const vol = exact[m[1] + " Bron: Open-Meteo."];
+      return vol ? vol.replace(/ Source: Open-Meteo\.$/, "") : null;
+    }],
+    [/^Bron: (.+), omdat Open-Meteo niet bereikbaar was\.$/, (m) => `Source: ${m[1].replace(/ en (?=Visual Crossing|WeatherAPI|een reservebron)/g, " and ").replace(/\(([^)]+)\)/g, (_, namen) => `(${opsomming(namen)})`)}, because Open-Meteo could not be reached.`],
     [/^Windstoten van (\d+) km\/u of meer in (.+)\.$/, (m) => `Gusts of ${m[1]} km/h or more in ${opsomming(m[2])}.`],
     [/^Kans op mist \(zicht onder 1 km\) in (.+)\.$/, (m) => `Chance of fog (visibility below 1 km) in ${opsomming(m[1])}.`],
 
@@ -1356,6 +1371,9 @@
     /* Briefing: temperatuur */
     [new RegExp(`^Het verwachte maximum (lag|ligt) (vandaag|morgen) rond ${T} op ${G} (graden|graad)\\.$`), (m) => `${m[2] === "morgen" ? "Tomorrow" : "Today"}'s forecast high ${m[1] === "lag" ? "was" : "is"} ${graden(m[4])} at around ${m[3]}.`],
     [new RegExp(`^Het verwachte maximum voor morgen is ${G} (graden|graad)\\.$`), (m) => `The forecast high for tomorrow is ${graden(m[1])}.`],
+    /* Regen van morgen in de avondsamenvatting (briefing-copy-owner.js). */
+    [new RegExp(`^Tussen (\\d{1,2}:\\d{2}) en (\\d{1,2}:\\d{2}) wordt morgen (regen|sneeuw|neerslag) verwacht \\(ongeveer ${G} mm\\)\\.$`), (m) => `${{ regen: "Rain", sneeuw: "Snow", neerslag: "Precipitation" }[m[3]]} is expected tomorrow between ${m[1]} and ${m[2]} (about ${getal(m[4])} mm).`],
+    [new RegExp(`^Tussen (\\d{1,2}:\\d{2}) en (\\d{1,2}:\\d{2}) kan morgen (regen|sneeuw|neerslag) vallen \\(ongeveer ${G} mm\\)\\.$`), (m) => `Tomorrow, ${{ regen: "rain", sneeuw: "snow", neerslag: "precipitation" }[m[3]]} may fall between ${m[1]} and ${m[2]} (about ${getal(m[4])} mm).`],
     [new RegExp(`^De maximumtemperatuur van vandaag ligt rond ${G} (graden|graad)\\.$`), (m) => `Today's high is around ${graden(m[1])}.`],
     [new RegExp(`^Morgen wordt het ongeveer ${G} (graden|graad)\\.$`), (m) => `Tomorrow it will be about ${graden(m[1])}.`],
     [new RegExp(`^Vannacht koelt het af naar ongeveer ${G} (graden|graad)\\.$`), (m) => `Tonight it cools to about ${graden(m[1])}.`],

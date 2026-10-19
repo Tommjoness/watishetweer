@@ -134,7 +134,7 @@ server.listen(0, async () => {
 
       await page.goto(`http://127.0.0.1:${port}${BASIS}`, { waitUntil: "load" });
       await page.waitForFunction(() => document.getElementById("nz-status").hidden, null, { timeout: 10000 });
-      const overzicht = await page.evaluate(() => [...document.querySelectorAll("tr[data-park]")].map(r => [r.dataset.park, r.querySelector(".nz-n").textContent, r.querySelector(".nz-venster").textContent]));
+      const overzicht = await page.evaluate(() => [...document.querySelectorAll("tr[data-park]")].map(r => [r.dataset.park, r.querySelector(".nz-n .nz-w").textContent, r.querySelector(".nz-venster .nz-w").textContent]));
       assert.strictEqual(overzicht.length, PARKEN.length, "overzicht toont niet alle parken");
       for (const [slug, n, venster] of overzicht) {
         const p = PARKEN.find(x => x.slug === slug), v = gewoon(K.nachten(gewoon(s.d), p.lat, p.lon, "Europe/Amsterdam", 1, s.nu))[0];
