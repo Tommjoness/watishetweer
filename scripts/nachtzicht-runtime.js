@@ -11,6 +11,8 @@
   try { cfg = JSON.parse(cfgEl.textContent); } catch (e) { return; }
   const TZ = cfg.tz || "Europe/Amsterdam";
   const API = "https://api.open-meteo.com/v1/forecast";
+  /* Eigen reserveroute (Visual Crossing, daarna WeatherAPI), zelfde vorm als Open-Meteo. */
+  const RESERVE = "/api/forecast";
   /* Dezelfde velden, eenheden en uren als de aanvraag van de app (voor zover
      Nachtzicht ze gebruikt), zodat beide op dezelfde modeluitvoer rekenen. */
   const UURVELDEN = "temperature_2m,relative_humidity_2m,dew_point_2m,precipitation,weather_code,cloud_cover,wind_gusts_10m,visibility,is_day";
@@ -42,12 +44,59 @@
       .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
       .finally(() => { if (t) clearTimeout(t); });
   }
-  function melding(el, tekst) { if (el) { el.textContent = tekst; el.hidden = false; } }
+  /* Open-Meteo is primair. Faalt die (bijv. 503 "overloaded" of een time-out), dan
+     probeert de losse parkpagina de reserveroute voor dit ene punt. Het overzicht
+     van alle parken heeft bewust geen reserve: dat kost negentien aanvragen bij de
+     betaalde bronnen. Ontbrekende velden blijven onbekend (nooit 0). */
+  const metReserve = (lat, lon, uren) => haal(aanvraag(lat, lon, uren), 8000)
+    .catch(() => haal(RESERVE + "?lat=" + encodeURIComponent(lat) + "&lon=" + encodeURIComponent(lon), 8000));
+  /* Eén parkrij in het overzicht: wachtstand, geen gegevens of een gevulde nacht. De uitleg
+     staat één keer boven de tabel; in de rij staat alleen "Niet beschikbaar"
+     onder Vannacht en een streepje onder Beste periode (met een toegankelijke
+     omschrijving, zodat een schermlezer niet alleen "streepje" hoort). */
+  function rijStatus(rij, status) {
+    if (!rij) return;
+    const n = rij.querySelector(".nz-n .nz-w"), v = rij.querySelector(".nz-venster .nz-w");
+    rij.classList.toggle("nz-niet", status === "niet");
+    /* Het label "Beste periode" is op smalle schermen het enige dat de waarde duidelijk maakt (de
+       kolomkoppen vervallen) en hoort dan voor schermlezers te bestaan, alleen bij geldige
+       gegevens (zie de gegevenstak hieronder). Bij "niet beschikbaar" en tijdens laden draagt de omschrijving
+       "Beste periode niet beschikbaar" de volledige betekenis; het label blijft dan verborgen om
+       dubbel voorlezen te voorkomen. */
+    const lbl = rij.querySelector(".nz-venster .nz-lbl");
+    if (lbl) lbl.setAttribute("aria-hidden", "true");
+    if (status === "niet") {
+      n.textContent = "Niet beschikbaar";
+      const streep = document.createElement("span");
+      streep.setAttribute("aria-hidden", "true");
+      streep.textContent = "—";
+      const omschrijving = document.createElement("span");
+      omschrijving.className = "nz-sr";
+      omschrijving.textContent = "Beste periode niet beschikbaar";
+      v.replaceChildren(streep, omschrijving);
+    } else {
+      n.textContent = v.textContent = "…";
+    }
+  }
+  /* Eindfout: melding met een knop om het opnieuw te proberen. */
+  function melding(el, tekst, opnieuw) {
+    if (!el) return;
+    if (!el.dataset.laden) el.dataset.laden = el.textContent;
+    const knop = document.createElement("button");
+    knop.type = "button";
+    knop.className = "nz-opnieuw";
+    knop.textContent = "Opnieuw proberen";
+    knop.addEventListener("click", () => { knop.disabled = true; el.textContent = el.dataset.laden; opnieuw(); });
+    const zin = document.createElement("span");
+    zin.textContent = tekst;
+    el.replaceChildren(zin, knop);
+    el.hidden = false;
+  }
 
   /* ---------- één park ---------- */
   function park() {
     const p = cfg.park, uit = document.getElementById("nz-vannacht"), lijst = document.getElementById("nz-nachten"), status = document.getElementById("nz-status");
-    haal(aanvraag(p.lat, p.lon, 170)).then(d => {
+    metReserve(p.lat, p.lon, 170).then(d => {
       const nachten = K.nachten(d, p.lat, p.lon, TZ, 6);
       if (!nachten.length) throw new Error("geen nachten");
       const n = nachten[0];
@@ -72,13 +121,14 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
       lijst.innerHTML = `<table><thead><tr><th scope="col">Nacht</th><th scope="col">Indicatie</th><th scope="col">Kijkvenster</th></tr></thead><tbody>${nachten.map(x => `<tr><th scope="row">${esc(x.label)}</th><td class="nz-n">${esc(x.scoreTekst)} <span>${esc(x.oordeel)}</span></td><td class="nz-zin">${esc(x.zin)}</td></tr>`).join("")}</tbody></table>`;
       lijst.hidden = false;
       if (status) status.hidden = true;
-    }).catch(() => melding(status, "De verwachting kon niet worden geladen. Probeer het later opnieuw."));
+    }).catch(() => melding(status, "De verwachting kon niet worden geladen. Probeer het later opnieuw.", park));
   }
 
   /* ---------- overzicht van alle parken ---------- */
   function overzicht() {
     const parken = cfg.parken || [], status = document.getElementById("nz-status");
     if (!parken.length) return;
+    parken.forEach(p => rijStatus(document.querySelector(`tr[data-park="${p.slug}"]`), "laden"));
     haal(aanvraag(parken.map(p => p.lat).join(","), parken.map(p => p.lon).join(","), 48), 15000).then(data => {
       const lijst = Array.isArray(data) ? data : [data];
       if (lijst.length !== parken.length) throw new Error("onvolledig");
@@ -86,14 +136,21 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
       parken.forEach((p, i) => {
         const rij = document.querySelector(`tr[data-park="${p.slug}"]`);
         const n = K.nachten(lijst[i], p.lat, p.lon, TZ, 1)[0];
-        if (!rij || !n) return;
-        rij.querySelector(".nz-n").innerHTML = `${esc(n.scoreTekst)} <span>${esc(n.oordeel)}</span>`;
-        rij.querySelector(".nz-venster").textContent = kortVenster(n);
+        if (!rij) return;
+        if (!n) { rijStatus(rij, "niet"); return; }
+        rij.classList.remove("nz-niet");
+        const periodeLabel = rij.querySelector(".nz-venster .nz-lbl");
+        if (periodeLabel) periodeLabel.removeAttribute("aria-hidden");
+        rij.querySelector(".nz-n .nz-w").innerHTML = `${esc(n.scoreTekst)} <span>${esc(n.oordeel)}</span>`;
+        rij.querySelector(".nz-venster .nz-w").textContent = kortVenster(n);
         gevuld++;
       });
       if (!gevuld) throw new Error("leeg");
       if (status) status.hidden = true;
-    }).catch(() => melding(status, "De verwachting voor vannacht kon niet worden geladen. Probeer het later opnieuw."));
+    }).catch(() => {
+      parken.forEach(p => rijStatus(document.querySelector(`tr[data-park="${p.slug}"]`), "niet"));
+      melding(status, "De verwachting voor vannacht kon niet worden geladen. Probeer het later opnieuw.", overzicht);
+    });
   }
 
   /* ---------- maan ---------- */

@@ -105,7 +105,7 @@ for (const v of lijst(RUNTIME, /const UURVELDEN = "([^"]+)"/, "UURVELDEN")) asse
 const kern = kernBron(INDEX);
 const park = parken[0], html = parkPagina(park, kern);
 assert(html.includes(`<link rel="canonical" href="${parkUrl(park)}">`), "canonical van de parkpagina");
-assert(html.includes(`<h1>Sterren kijken in ${park.naam}</h1>`), "kop van de parkpagina");
+assert(html.includes(`<h1 class="nz-park-kop">Sterren kijken in ${park.naam}</h1>`), "kop van de parkpagina");
 assert(/connect-src 'self' https:\/\/api\.open-meteo\.com;/.test(html), "CSP staat alleen Open-Meteo toe");
 assert(!/<script[^>]+src=/.test(html), "geen externe scripts");
 const config = JSON.parse(/<script type="application\/json" id="nz-config">([^<]*)<\/script>/.exec(html)[1]);

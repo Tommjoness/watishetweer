@@ -96,7 +96,7 @@
       }
       return;
     }
-    var terug = [].filter.call(document.querySelectorAll('p > a[href="/"]'), function (l) {
+    var terug = [].filter.call(document.querySelectorAll('p > a[href^="/"]'), function (l) {
       return /^\s*←/.test(l.textContent);
     })[0];
     if (terug) {
