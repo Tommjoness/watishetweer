@@ -2712,15 +2712,17 @@ function dagen(){
       <div class="drain">Kans</div></div>`;
   const c=document.getElementById("days");c.innerHTML=kop+out;
   c.querySelectorAll(".day:not(.kop)").forEach(el=>{
-    const kies=()=>{
+    const kies=(viaToetsenbord=false)=>{
       const i=+el.dataset.i;S.dag=i;
       let st=S.d.hourly.time.findIndex(t=>t.slice(0,10)===S.d.daily.time[i]);
       if(st<0)st=S.i0;
       etmaal(st,24);dagen();
+      // dagen() vervangt de dagrij: verplaats toetsenbordfocus naar de geopende grafiek.
+      if(viaToetsenbord)document.getElementById("hit")?.focus({preventScroll:true});
       document.getElementById("chart").scrollIntoView({behavior:"smooth",block:"center"});
     };
-    el.addEventListener("click",kies);
-    el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();kies();}});
+    el.addEventListener("click",()=>kies(false));
+    el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();kies(true);}});
   });
 }
 document.getElementById("back").addEventListener("click",()=>{S.dag=null;etmaal(S.i0,S.bereik);dagen();});
