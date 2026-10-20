@@ -295,7 +295,17 @@ function uvMorgen(){
 }
 function zonurenMorgen(){
   const m=indexMorgenNaZonsondergang(),tegel=document.querySelector("#aq .stat.zon");if(m===null||!tegel)return;
-  const day=S.d.daily,sec=Array.isArray(day.sunshine_duration)?Number(day.sunshine_duration[m]):NaN;if(!Number.isFinite(sec)||sec<0)return;
+  const day=S.d.daily,ruw=Array.isArray(day.sunshine_duration)?day.sunshine_duration[m]:null;
+  /* Number(null) is 0: een ontbrekende waarde (de reserveproviders leveren geen zonuren)
+     werd "0,0 uur, geen zon morgen". Ontbrekend is niet beschikbaar, geen nul. */
+  const sec=ruw!==null&&ruw!==undefined&&ruw!==""&&Number.isFinite(Number(ruw))?Number(ruw):null;
+  if(sec===null||sec<0){
+    tegel.querySelector(".eyebrow").textContent="Zonuren morgen";
+    const leeg=tegel.querySelector(".sval"),uitleg=tegel.querySelector(".ssub");
+    if(leeg)leeg.textContent="–";
+    if(uitleg)uitleg.textContent="Zonuren niet beschikbaar";
+    return;
+  }
   const uur=sec/3600,sr=Array.isArray(day.sunrise)?day.sunrise[m]:null,ss=Array.isArray(day.sunset)?day.sunset[m]:null;
   const minuten=sr&&ss&&typeof mins==="function"?mins(ss)-mins(sr):NaN,daglicht=Number.isFinite(minuten)&&minuten>0?minuten/60:null;
   const woord=typeof weatherNowZonurenWoord==="function"?weatherNowZonurenWoord(uur,daglicht):"";
