@@ -142,7 +142,29 @@ function meet(){
     zet("done","ok");
   }catch(e){zet("exception",e&&e.stack||e);zet("done","fout");}
 }
-setTimeout(meet,500);
+/* De runtime rendert in fasen over meerdere taken (dagen, nachten, lucht, uurtabel). Een vaste
+   meting op 500 ms liep daardoor een race met de laatste fase: bij belasting stond de nachtrij
+   of de luchtkaart er op 500 ms nog niet, en meet() brak af op een ontbrekend element. Meet
+   daarom op 500 ms zoals voorheen, maar alleen als alles waar meet() op leest er staat en de
+   inhoud het laatste venster niet meer is veranderd; anders opnieuw na 50 ms, tot WACHT_MAX
+   (ruim onder het virtual-time-budget). Daarna meet() toch, zodat een echt ontbrekend element
+   nog steeds faalt met dezelfde melding. */
+const WACHT_MAX=7500;
+function gereed(){
+  return !!(document.querySelector("#days .row.kop")&&document.querySelector("#days .row:not(.kop)")
+    &&document.querySelector("#nights .row.kop")&&document.querySelector("#nights .row:not(.kop) .nachtvenster")
+    &&document.querySelector("#nights .row:not(.kop) .nachtmaan")&&document.querySelector("#aq .stat .eyebrow")
+    &&document.querySelector("#wiw-hour-table tbody tr")&&typeof S!=="undefined"&&S.geo&&S.geo.TI&&S.geo.TI.length);
+}
+let wijzigingen=0,stand=0,gewacht=0;
+new MutationObserver(()=>{wijzigingen++;}).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+setTimeout(()=>{stand=wijzigingen;},450);
+function wachtOpRender(){
+  if((gereed()&&wijzigingen===stand)||gewacht>=WACHT_MAX){meet();return;}
+  stand=wijzigingen;gewacht+=50;
+  setTimeout(wachtOpRender,50);
+}
+setTimeout(wachtOpRender,500);
 })();
 </script>`;
 const bodyEinde=/<\/body>\s*<\/html>\s*$/i;
