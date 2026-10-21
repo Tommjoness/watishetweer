@@ -92,17 +92,18 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .breed .seizoen-dag .officieel{font-size:13px}
 .breed .seizoen-later,.breed .klein{font-size:14px;line-height:1.55}
 .breed .seizoen-dag thead th{letter-spacing:.02em}
-/* Vanaf een brede kaart staan meerdere dagen naast elkaar; het temperatuurbalkje gaat dan onder de
-   cijfers (zoals op de telefoon), zodat de weertekst op één regel past. */
+/* Vakantiepagina's: vanaf een brede kaart staan de dagen in twee kolommen naast elkaar (het balkje
+   blijft in zijn eigen kolom, afspraak eigenaar 14 oktober). Andere pagina's tonen de dagen onder elkaar. */
 @media(min-width:1180px){
-.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag)>.seizoen-dagnav{display:none}
-.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 44px;align-items:start}
-.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag)>:not(.seizoen-dag){grid-column:1/-1}
-.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag) .seizoen-dag td.tbalkcel,.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag) .seizoen-dag td.tbalkkop{display:none}
-.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag) .seizoen-dag td.temp .tbalk{display:block;width:56px;margin:6px auto 2px}
-.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag) .seizoen-dag td.temp{width:96px}
-.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag) .seizoen-vakantie thead th:first-child{width:26%}
-.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag) .seizoen-vakantie thead th:last-child{width:96px}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie)>.seizoen-dagnav{display:none}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 44px;align-items:start}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie)>:not(.seizoen-dag){grid-column:1/-1}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-dag td.tbalkcel,.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-dag td.tbalkkop{width:72px}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-dag td.tbalkcel .tbalk{width:56px}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-dag td.temp{width:88px}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie thead th:first-child{width:26%}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie thead th:last-child{width:88px}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie td:nth-child(2){white-space:nowrap}
 }
 </style>`;
 
