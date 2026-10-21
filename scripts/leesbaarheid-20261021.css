@@ -8,7 +8,6 @@ html body .drain .wiw-vanaf-nu:not(#wiw-leesbaarheid){font-size:12px!important}
 html body #final-rain-summary:not(#wiw-leesbaarheid){font-size:13px!important;line-height:1.45!important}
 html body #chartdata summary.wiw-chartdata-summary:not(#wiw-leesbaarheid){font-size:13px!important}
 html body #chartdata p.chartdata-scrollhint:not(#wiw-leesbaarheid){font-size:13px!important}
-html body #stamp:not(#wiw-leesbaarheid){font-size:13px!important}
 html body .nmeta .nachtvenster:not(#wiw-leesbaarheid),html body .nachtmaan .nachtzichtregel:not(#wiw-leesbaarheid),html body .nachtmaan .nachtmaanregel:not(#wiw-leesbaarheid){font-size:13px!important;line-height:1.4!important}
 @media(max-width:759px){
   html body #days .row.day .dcond:not(#wiw-leesbaarheid){font-size:13px!important;line-height:1.35!important}
