@@ -52,7 +52,7 @@ for(const p of htmlBestanden(OUT)){
   /* Laatste desktop-readability pass: borg precies de visuele klachten uit
      de live screenshots zonder mobiele layout of weerdata te muteren. */
   eis(html.includes('body{font-size:16px!important;padding-bottom:0!important}'),rel+": loze desktop-bodyruimte of leesbaarheidsoverride ontbreekt");
-  eis(html.includes('.final-top-grid #t{font-size:60px!important;line-height:.86!important}'),rel+": huidige temperatuur staat niet vast op de bedoelde compacte desktopmaat");
+  eis(html.includes('.final-top-grid #t{font-size:clamp(72px,6.2vw,96px)!important;line-height:.86!important}'),rel+": huidige temperatuur heeft niet de bedoelde geschaalde desktopmaat");
   eis(html.includes('#suntimes .zondag + span,')&&html.includes('#suntimes > span:first-child:nth-last-child(3)'),rel+": redundante zonsopkomst/-ondergangcopy naast de grafiek wordt niet veilig verborgen");
   eis(html.includes('.wiw-hour-date{font-size:11px!important;color:var(--ink-70)!important'),rel+": datumlabel in de uurtabel blijft te klein");
   eis(html.includes('.wiw-hour-table{font-size:13.25px!important}')&&html.includes('#days .dcond{font-size:14px!important}'),rel+": kerngegevens op desktop hebben geen leesbaarheidspass gekregen");

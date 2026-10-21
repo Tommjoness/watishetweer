@@ -1,0 +1,16 @@
+/* Leesbaarheid van kleine teksten (UX-opdracht oktober 2026). Alleen secundaire waarden,
+   uitleg bij de grafiek en bronnen gaan omhoog; kolomkoppen en tegellabels in hoofdletters
+   blijven op hun maat. De voettekst staat in voet.css (enige eigenaar van voetstijl).
+   Ondergrens voor betekenisdragende tekst: 12px (secundaire waarden) en 13px (zinnen). */
+html body .wiw-hour-value .wiw-hour-secondary:not(#wiw-leesbaarheid){font-size:12px!important;line-height:1.25!important}
+html body .wiw-hour-time .wiw-hour-date:not(#wiw-leesbaarheid){font-size:12px!important}
+html body .drain .wiw-vanaf-nu:not(#wiw-leesbaarheid){font-size:12px!important}
+html body #final-rain-summary:not(#wiw-leesbaarheid){font-size:13px!important;line-height:1.45!important}
+html body #chartdata summary.wiw-chartdata-summary:not(#wiw-leesbaarheid){font-size:13px!important}
+html body #chartdata p.chartdata-scrollhint:not(#wiw-leesbaarheid){font-size:13px!important}
+html body #stamp:not(#wiw-leesbaarheid){font-size:13px!important}
+html body .nmeta .nachtvenster:not(#wiw-leesbaarheid),html body .nachtmaan .nachtzichtregel:not(#wiw-leesbaarheid),html body .nachtmaan .nachtmaanregel:not(#wiw-leesbaarheid){font-size:13px!important;line-height:1.4!important}
+@media(max-width:759px){
+  html body #days .row.day .dcond:not(#wiw-leesbaarheid){font-size:13px!important;line-height:1.35!important}
+  html body #days .drain small.q1-dag-mm:not(#wiw-leesbaarheid){font-size:12px!important}
+}

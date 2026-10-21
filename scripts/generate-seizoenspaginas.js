@@ -61,6 +61,8 @@ html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70
 .seizoen-dag .officieel{display:block;font-size:12px;font-weight:400;color:var(--muted)}
 .seizoen-dag a{text-decoration:none;border-bottom:1px solid var(--rule)}
 .seizoen-zieook span{color:var(--muted);margin-right:6px}
+.seizoen-dag{scroll-margin-top:16px}
+.seizoen-dagnav{margin:14px 0 0;line-height:1.9}
 .seizoen-dag a:hover,.seizoen-dag a:focus-visible{border-bottom-color:var(--ink)}
 .seizoen-perioden td{text-align:right;padding-right:0;white-space:nowrap}.seizoen-perioden td.jaargrens{white-space:normal;text-wrap:balance}
 .seizoen-vakantie{table-layout:fixed}.seizoen-vakantie thead th:first-child{width:34%}.seizoen-vakantie thead th:last-child{width:24%}
@@ -81,6 +83,27 @@ html[data-thema=donker] .seizoen-dag .tbalk i{background:var(--donker)}
 .seizoen-vakantie thead th:first-child{width:28%}.seizoen-vakantie thead th:last-child{width:110px}
 }
 @media(max-width:600px){body{padding:14px}.kaart{padding:26px 22px}h1{font-size:32px}.seizoen-dag table{font-size:14px}.seizoen-dag .sep{display:none}.seizoen-dag .sub{display:block;font-size:13px}}
+/* Zichtbare focus op alle bedienbare onderdelen, in dezelfde inktkleur als de hoofdpagina (ook in donker). */
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+/* Informatiepagina's met tabellen (class "breed"): lopende tekst houdt een prettige regellengte,
+   tabellen en overzichten krijgen de volle kaartbreedte. Pagina's zonder zo'n overzicht blijven smal. */
+.kaart.breed{max-width:1080px;padding:36px clamp(22px,4.5vw,48px)}
+.breed p,.breed h2,.breed .seizoen-perioden{max-width:46rem}
+.breed .seizoen-dag .officieel{font-size:13px}
+.breed .seizoen-later,.breed .klein{font-size:14px;line-height:1.55}
+.breed .seizoen-dag thead th{letter-spacing:.02em}
+/* Vanaf een brede kaart staan meerdere dagen naast elkaar; het temperatuurbalkje gaat dan onder de
+   cijfers (zoals op de telefoon), zodat de weertekst op één regel past. */
+@media(min-width:1180px){
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag)>.seizoen-dagnav{display:none}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 44px;align-items:start}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag)>:not(.seizoen-dag){grid-column:1/-1}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag) .seizoen-dag td.tbalkcel,.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag) .seizoen-dag td.tbalkkop{display:none}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag) .seizoen-dag td.temp .tbalk{display:block;width:56px;margin:6px auto 2px}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag) .seizoen-dag td.temp{width:96px}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag) .seizoen-vakantie thead th:first-child{width:26%}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag) .seizoen-vakantie thead th:last-child{width:96px}
+}
 </style>`;
 
 /* Vakantiepagina's: de data per regio staan vast in de HTML, voor ieder jaar
@@ -153,7 +176,7 @@ function pagina(cfg,buildDag){
 ${THEMA_SCRIPT}
 ${STIJL}
 </head>
-<body><main class="kaart">
+<body><main class="kaart breed">
 <p><a href="/">← Terug naar het weer</a></p>
 <h1 id="seizoen-kop">${esc(cfg.naam)} ${t.jaar}</h1>
 <p>${esc(cfg.intro)}</p>

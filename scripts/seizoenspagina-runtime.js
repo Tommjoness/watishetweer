@@ -381,8 +381,19 @@ function nachtTabel(dag,resultaten,cfg){
 /* Is de dag in alle regio's vakantie, dan "alle regio's" in plaats van de
    volledige opsomming. */
 function regioKop(dag,aantal){return dag.regios.length===aantal?"alle regio's":"regio "+lijstTekst(dag.regios);}
+/* Snelkoppelingen naar de dagen van een vakantie (vanaf drie zichtbare dagen): de tekst is dezelfde als
+   de dagkop, zodat de vertaling hem herkent. Op een brede kaart staan de dagen naast elkaar en
+   verbergt de stijl de regel. */
+function dagKoppelingen(dagen){
+  const p=el("p",{class:"seizoen-zieook seizoen-dagnav"},[el("span",{},"Naar dag")," "]);
+  dagen.forEach((dag,i)=>{
+    if(i)p.append(" · ");
+    p.append(el("a",{href:"#dag-"+dag.iso},dag.label.charAt(0).toUpperCase()+dag.label.slice(1)));
+  });
+  return p;
+}
 function vakantieTabel(dag,resultaten,aantal){
-  const sectie=el("section",{class:"seizoen-dag","data-datum":dag.iso});
+  const sectie=el("section",{class:"seizoen-dag","data-datum":dag.iso,id:"dag-"+dag.iso});
   sectie.append(el("h3",{},[dag.label.charAt(0).toUpperCase()+dag.label.slice(1)+" ",el("span",{},regioKop(dag,aantal))]));
   const tabel=el("table",{class:"seizoen-vakantie"});
   tabel.append(minMaxKop(["Plaats","Weer"]));
@@ -399,7 +410,9 @@ function toonVakantie(doel,t,resultaten,cfg,bronZin){
   doel.replaceChildren();
   const zin=vakantieSamenvatting(t,resultaten,cfg);
   if(zin)doel.append(el("p",{class:"seizoen-samenvatting"},zin));
-  for(const dag of t.dagen)if(dag.zichtbaar)doel.append(vakantieTabel(dag,resultaten,t.perioden.length));
+  const zichtbaar=t.dagen.filter(d=>d.zichtbaar);
+  if(zichtbaar.length>=3)doel.append(dagKoppelingen(zichtbaar));
+  for(const dag of zichtbaar)doel.append(vakantieTabel(dag,resultaten,t.perioden.length));
   if(t.dagen.some(d=>!d.zichtbaar&&d.over>0))doel.append(el("p",{class:"seizoen-later"},vul(cfg.teksten.later,{tot:datumTekst(t.tot,true)})));
   /* Met een reservebron staat er één bronzin met de echte bron, niet ook nog
      "Bron: Open-Meteo". */
