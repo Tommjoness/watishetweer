@@ -3,7 +3,8 @@
 /* Kop op het finale artifact, met de echte runtime.
    - Bewaren, Delen en bewaarde plaatsen staan in de kop onder de zoekbalk, vóór
      de inhoud; op mobiel in dezelfde volgorde als voorheen.
-   - Desktop: briefing en tegels beginnen op dezelfde lijn; vanaf 1360px staan
+   - Desktop: de hero (actuele temperatuur, bovenaan de linkerkolom) en de tegels beginnen op dezelfde
+     lijn (voorheen de briefing; zie UX-opdracht oktober 2026); vanaf 1360px staan
      knoppen en ophaaltijd op één regel en begint de inhoud hoger in beeld.
    - Met drie bewaarde plaatsen blijft alles binnen de kolom zonder overlap.
 
@@ -62,7 +63,7 @@ function meet(){
   return {
     chipsInKop:!!chips.closest(".mast .mastright"),
     q:r("#q"),stamp:r("#stamp"),chips:r("#chips"),deel:r("#chipdeel"),mastright:r(".mastright"),
-    brief:r("#brief"),stats:r(".stats"),grid:r(".final-top-grid"),chart:r(".dashrow-chart .chartkop")||r(".chartkop"),
+    hero:r(".final-top-left > .hero"),brief:r("#brief"),stats:r(".stats"),grid:r(".final-top-grid"),chart:r(".dashrow-chart .chartkop")||r(".chartkop"),
     overflow:document.documentElement.scrollWidth-innerWidth
   };
 }
@@ -87,7 +88,8 @@ const raakt=(a,b)=>a.l<b.r-0.5&&a.r>b.l+0.5&&a.t<b.b-0.5&&a.b>b.t+0.5;
         if(w<=900){
           assert(m.stamp.t>=m.q.b-0.5&&m.chips.t>=m.stamp.b-0.5,label+": mobiele volgorde zoekbalk, tijd, knoppen is veranderd");
         }else{
-          assert(Math.abs(m.brief.t-m.stats.t)<=1,label+": briefing ("+m.brief.t+") en tegels ("+m.stats.t+") beginnen niet op dezelfde lijn");
+          assert(Math.abs(m.hero.t-m.stats.t)<=1,label+": hero ("+m.hero.t+") en tegels ("+m.stats.t+") beginnen niet op dezelfde lijn");
+          assert(m.hero.b<=m.brief.t,label+": de briefing begint niet onder de hero ("+m.hero.b+" / "+m.brief.t+")");
           if(w>=1360&&!bewaard){
             const midden=x=>(x.t+x.b)/2;
             assert(Math.abs(midden(m.deel)-midden(m.stamp))<=4,label+": knoppen en ophaaltijd staan niet op één regel");

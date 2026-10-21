@@ -28,7 +28,8 @@ ${MARKER}
      72px bij 1100px tot 96px vanaf circa 1550px (UX-opdracht oktober 2026; voorheen 60px). */
   .final-top-grid #t{font-size:clamp(72px,6.2vw,96px)!important;line-height:.86!important}
   .final-top-grid .deg{font-size:clamp(20px,1.8vw,28px)!important;margin-top:6px!important}
-  .final-top-grid .final-top-left>.hero{margin-bottom:14px;column-gap:clamp(18px,2vw,32px)}
+  /* De hero opent de linkerkolom op dezelfde lijn als de tegels rechts (voorheen deed dat de briefing). */
+  .final-top-grid .final-top-left>.hero{margin-top:0;margin-bottom:14px;column-gap:clamp(18px,2vw,32px)}
 
   /* De dagcontext zit al in de lokale tijden en grafiek. Het losse Vandaag/Morgen-
      label boven de grafiek voegt daar op desktop geen bruikbare context meer toe. */
