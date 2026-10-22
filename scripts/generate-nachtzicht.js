@@ -74,7 +74,7 @@ const EXTRA_STIJL = `
 .nz-staven{height:96px;align-items:end;border-bottom:1px solid var(--rule)}
 .nz-uur{height:var(--h);background:var(--rule)}.nz-uur.goed{background:var(--ink)}
 .nz-maanrij{margin-top:4px}.nz-maanrij i{height:3px}.nz-maanrij i.op{background:var(--muted)}
-.nz-tijden{margin-top:4px;font-size:11px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.nz-tijden{margin-top:4px;font-size:12px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
 .nz-tabel table,#nz-nachten table{width:100%;border-collapse:collapse;font-size:15px}
 .nz-tabel th,.nz-tabel td,#nz-nachten th,#nz-nachten td{text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 .nz-tabel thead th,#nz-nachten thead th{font-size:13px;font-weight:500;color:var(--muted);padding-top:0}
@@ -83,6 +83,20 @@ const EXTRA_STIJL = `
 .nz-licht-mob{display:none;font-size:13px;font-weight:400;color:var(--muted)}
 .nz-n{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink)!important}.nz-n span{color:var(--muted)}
 .nz-tabel a{text-decoration:none;border-bottom:1px solid var(--rule)}.nz-tabel a:hover,.nz-tabel a:focus-visible{border-bottom-color:var(--ink)}
+/* Score: een korte meter (alleen sieraad, de score staat ook als tekst) naast cijfer en oordeel, en een lichte scheiding waar de lichtvervuilingsklasse wisselt. */
+.nz-n .nz-w{display:flex;align-items:center;gap:0 8px;font-weight:500}.nz-n .nz-w span{order:2;font-weight:400}.nz-n .nz-w .nz-meter{order:1}
+.nz-meter{display:block;position:relative;flex:none;width:52px;height:4px;background:var(--rule)}
+.nz-meter::after{content:"";position:absolute;top:0;bottom:0;left:0;width:calc(var(--s,0)*100%);background:var(--ink)}
+.nz-meter.mid::after{background:var(--ink-70)}.nz-meter.laag::after{background:var(--muted)}
+.nz-venster{font-variant-numeric:tabular-nums;color:var(--ink)!important}.nz-venster.nz-geen{color:var(--muted)!important}
+.nz-tabel tr.nz-groep th,.nz-tabel tr.nz-groep td{border-top:2px solid var(--muted)}
+@media(min-width:601px){.nz-tabel thead th:first-child{width:32%}.nz-tabel thead th.nz-licht-kol{width:20%}.nz-venster:not(.nz-geen){white-space:nowrap}}
+/* Smal (tot 600 px): de meter komt onder score en oordeel, in de ruimte naast de twee regels van de beste periode. */
+@media(max-width:600px){.nz-n .nz-w{display:block}.nz-n .nz-w .nz-meter{width:100%;margin-top:5px}}
+/* Maanpagina: de maan van vandaag en de komende fasen staan op een brede kaart naast elkaar. */
+.nz-maan-raster{margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--rule)}
+.nz-maan-raster .nz-maan{margin:0;padding:0;border-top:0}
+@media(min-width:1000px){.nz-maan-raster{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:0 56px;align-items:start}.nz-maan-raster h2{margin-top:0}}
 #nz-nachten{margin-top:22px}
 .nz-maan{display:flex;gap:20px;align-items:center;margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--rule)}
 .nz-maan .nz-maan-svg{width:120px;height:120px;flex:none;display:block}#nz-maan-schijf{flex:none;width:120px;height:120px}
@@ -91,7 +105,7 @@ const EXTRA_STIJL = `
 @media(max-width:600px){#nz-nachten thead{display:none}#nz-nachten tr{display:grid;grid-template-columns:auto 1fr;column-gap:12px;padding:9px 0;border-bottom:1px solid var(--rule)}#nz-nachten th,#nz-nachten td{border:0;padding:0}#nz-nachten td.nz-zin{grid-column:1/-1;margin-top:3px}.nz-tabel table{font-size:14px}.nz-tabel .nz-licht-kol{display:none}.nz-licht-mob{display:block}.nz-cijfer{font-size:38px}.nz-tijden span:nth-child(even){visibility:hidden}}
 `;
 
-function kop({ titel, beschrijving, canonical, extra = "" }) {
+function kop({ titel, beschrijving, canonical, extra = "", breed = false }) {
   const structured = [
     { "@context": "https://schema.org", "@type": "WebSite", name: SEO.siteName, url: SEO.canonical },
     { "@context": "https://schema.org", "@type": "WebPage", name: titel, url: canonical, isPartOf: { "@type": "WebSite", name: SEO.siteName, url: SEO.canonical } }
@@ -121,7 +135,7 @@ function kop({ titel, beschrijving, canonical, extra = "" }) {
 ${THEMA_SCRIPT}
 ${STIJL.replace("</style>", EXTRA_STIJL + "</style>")}
 ${extra}</head>
-<body><main class="kaart">
+<body><main class="kaart${breed ? " breed" : ""}">
 `;
 }
 function staart(config, kern) {
@@ -163,8 +177,8 @@ function overzichtPagina(parken, kern) {
   const canonical = `https://watishetweer.nl${BASIS}`;
   const titel = "Sterren kijken in Nederland: de donkerste plekken";
   const beschrijving = "De Nationale Parken van Nederland op een rij, de donkerste eerst: lichtvervuiling per park en de kans op een heldere sterrenhemel vannacht.";
-  const rijen = parken.map(p => `<tr data-park="${p.slug}"><th scope="row"><a href="${BASIS}${p.slug}/" translate="no">${esc(p.kort)}</a><span class="nz-licht-mob">Lichtvervuiling ${esc(p.licht.naam)}</span></th><td class="nz-licht-kol">${esc(p.licht.naam)}</td><td class="nz-n"><span class="nz-lbl">Vannacht</span><span class="nz-w">…</span></td><td class="nz-venster"><span class="nz-lbl" aria-hidden="true">Beste periode</span><span class="nz-w">…</span></td></tr>`).join("\n");
-  return kop({ titel, beschrijving, canonical }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
+  const rijen = parken.map((p, i) => `<tr data-park="${p.slug}"${i > 0 && parken[i - 1].licht.naam !== p.licht.naam ? ' class="nz-groep"' : ""}><th scope="row"><a href="${BASIS}${p.slug}/" translate="no">${esc(p.kort)}</a><span class="nz-licht-mob">Lichtvervuiling ${esc(p.licht.naam)}</span></th><td class="nz-licht-kol">${esc(p.licht.naam)}</td><td class="nz-n"><span class="nz-lbl">Vannacht</span><span class="nz-w">…</span></td><td class="nz-venster"><span class="nz-lbl" aria-hidden="true">Beste periode</span><span class="nz-w">…</span></td></tr>`).join("\n");
+  return kop({ titel, beschrijving, canonical, breed: true }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>Sterren kijken in Nederland</h1>
 <p>De Nationale Parken behoren tot de donkerste plekken van Nederland. Hieronder staan ze op een rij, de donkerste eerst, met de indicatie voor vannacht. Kies een park voor de komende nachten en de bewolking per uur.</p>
 <p id="nz-status" class="klein">De verwachting voor vannacht wordt geladen.</p>
@@ -188,15 +202,19 @@ function maanPagina(kern, nuMs) {
   const K = laadKern();
   const m = K.maanOverzicht(nuMs, MAAN_REFERENTIE.lat, MAAN_REFERENTIE.lon, TIJDZONE);
   const naam = m.naam.charAt(0).toUpperCase() + m.naam.slice(1) + ", " + Math.round(m.ill * 100) + "% verlicht";
-  return kop({ titel, beschrijving, canonical }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
+  return kop({ titel, beschrijving, canonical, breed: true }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>De maan vandaag</h1>
 <p>Hoe vol de maan is en hoe hoog hij staat, bepaalt hoeveel sterren je ziet. Bij een volle maan verdwijnt de Melkweg; rond nieuwe maan is de hemel het donkerst.</p>
+<div class="nz-maan-raster">
 <div class="nz-maan" aria-live="polite"><span id="nz-maan-schijf"></span><div>
 <p class="groot" id="nz-maan-naam">${esc(naam)}</p>
 <p id="nz-maan-tijden">De op- en ondergangstijden worden geladen.</p>
 </div></div>
+<div>
 <h2>De komende fasen</h2>
 <ul id="nz-maan-fasen"></ul>
+</div>
+</div>
 <p class="klein">Tijden in <span id="nz-maan-tijdzone">Nederlandse tijd</span>. Op- en ondergang gelden voor <span id="nz-maan-plaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span><span id="nz-maan-elders">; elders in Nederland scheelt het hooguit enkele minuten</span>. Kies je in de app een plaats, dan gelden ze voor die plaats. De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem vanuit <span id="nz-maan-standplaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span> ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat. Op het zuidelijk halfrond staat hij ondersteboven en rond de evenaar ligt een sikkel op zijn kant. Maanfoto: NASA's Scientific Visualization Studio.</p>
 <h2>Sterren kijken</h2>
 <p>Waar het donker is en hoe de komende nachten worden, staat op <a href="${BASIS}">Sterren kijken in Nederland</a>.</p>

@@ -23,10 +23,13 @@ ${MARKER}
   .wiw-hour-temp .wiw-hour-secondary{display:none!important}
 
   /* De eerdere readability-regel wees nog naar de verwijderde .dashrow-hero-
-     structuur. Richt de maat nu op de actuele final-top-grid hero en houd het
-     hoofdgegeven bewust compact naast de briefing en metriekblokken. */
-  .final-top-grid #t{font-size:60px!important;line-height:.86!important}
-  .final-top-grid .deg{font-size:18px!important;margin-top:4px!important}
+     structuur. Richt de maat op de actuele final-top-grid hero. De actuele temperatuur
+     staat bovenaan de linkerkolom (zie ordenEersteScherm) en schaalt met de breedte van
+     72px bij 1100px tot 96px vanaf circa 1550px (UX-opdracht oktober 2026; voorheen 60px). */
+  .final-top-grid #t{font-size:clamp(72px,6.2vw,96px)!important;line-height:.86!important}
+  .final-top-grid .deg{font-size:clamp(20px,1.8vw,28px)!important;margin-top:6px!important}
+  /* De hero opent de linkerkolom op dezelfde lijn als de tegels rechts (voorheen deed dat de briefing). */
+  .final-top-grid .final-top-left>.hero{margin-top:0;margin-bottom:14px;column-gap:clamp(18px,2vw,32px)}
 
   /* De dagcontext zit al in de lokale tijden en grafiek. Het losse Vandaag/Morgen-
      label boven de grafiek voegt daar op desktop geen bruikbare context meer toe. */

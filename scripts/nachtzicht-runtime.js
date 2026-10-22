@@ -25,6 +25,14 @@
   const esc = v => String(v).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" })[c]);
   const procent = v => Math.round(v) + "%";
   const scoreTekst = sc => Math.round(sc) + "/10";
+  /* Korte meter bij een score als "9/10": de lengte volgt het cijfer, de tint volgt de grenzen van het oordeel
+     (goed vanaf 7, matig vanaf 4). De meter is sieraad (aria-hidden, geen tekst); score en oordeel blijven tekst. */
+  const scoreMeter = tekst => {
+    const m = /^(\d{1,2})\/10$/.exec(String(tekst).trim());
+    if (!m) return "";
+    const s = Math.min(10, Number(m[1]));
+    return `<i class="nz-meter ${s >= 7 ? "goed" : s >= 4 ? "mid" : "laag"}" style="--s:${s / 10}" aria-hidden="true"></i>`;
+  };
   const datumTekst = iso => { const p = iso.split("-").map(Number), d = new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)); return DAGVOL[d.getUTCDay()] + " " + p[2] + " " + MAANDEN[p[1] - 1]; };
   const hoofdletter = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
@@ -141,8 +149,9 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
         rij.classList.remove("nz-niet");
         const periodeLabel = rij.querySelector(".nz-venster .nz-lbl");
         if (periodeLabel) periodeLabel.removeAttribute("aria-hidden");
-        rij.querySelector(".nz-n .nz-w").innerHTML = `${esc(n.scoreTekst)} <span>${esc(n.oordeel)}</span>`;
+        rij.querySelector(".nz-n .nz-w").innerHTML = `${esc(n.scoreTekst)} <span>${esc(n.oordeel)}</span>${scoreMeter(n.scoreTekst)}`;
         rij.querySelector(".nz-venster .nz-w").textContent = kortVenster(n);
+        rij.querySelector(".nz-venster").classList.toggle("nz-geen", !n.venster);
         gevuld++;
       });
       if (!gevuld) throw new Error("leeg");

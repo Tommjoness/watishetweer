@@ -21,25 +21,16 @@ function bouwTopGrid(){
   if(dash.parentNode)dash.remove();
 }
 
-/* Eerste scherm op de telefoon (eigenaar 15 oktober, variant A): de actuele
-   temperatuur staat direct onder de kop, vóór de briefing en de
-   waarschuwingen. Vanaf tabletbreedte blijft de volgorde briefing,
-   waarschuwingen, temperatuur. De DOM-volgorde verschuift mee, zodat een
-   schermlezer voorleest wat je ziet. */
-const EERSTE_SCHERM_MOBIEL="(max-width:759px)";
-let eersteSchermGebonden=false;
+/* Eerste scherm op alle breedtes (UX-opdracht oktober 2026, voortbouwend op variant A van de
+   eigenaar van 15 oktober voor de telefoon): de actuele temperatuur en weersituatie staan direct
+   onder de kop, vóór de briefing en de waarschuwingen. Voorheen bleef de volgorde vanaf
+   tabletbreedte briefing, waarschuwingen, temperatuur. De DOM-volgorde is gelijk aan wat je ziet,
+   zodat een schermlezer hetzelfde voorleest. */
 function ordenEersteScherm(){
   const left=document.querySelector(".final-top-left");if(!left)return;
   const brief=left.querySelector(":scope > #brief"),warnings=left.querySelector(":scope > #waarschuwingen"),hero=left.querySelector(":scope > .hero");
   if(!brief||!warnings||!hero)return;
-  const mq=typeof root.matchMedia==="function"?root.matchMedia(EERSTE_SCHERM_MOBIEL):null;
-  if(mq&&mq.matches){if(left.firstElementChild!==hero)left.insertBefore(hero,left.firstElementChild);}
-  else if(warnings.nextElementSibling!==hero)warnings.insertAdjacentElement("afterend",hero);
-  if(mq&&!eersteSchermGebonden){
-    eersteSchermGebonden=true;
-    if(typeof mq.addEventListener==="function")mq.addEventListener("change",ordenEersteScherm);
-    else if(typeof mq.addListener==="function")mq.addListener(ordenEersteScherm);
-  }
+  if(left.firstElementChild!==hero)left.insertBefore(hero,left.firstElementChild);
 }
 
 /* Tegels in één rij: labels van gelijke hoogte (de langste bepaalt), zodat

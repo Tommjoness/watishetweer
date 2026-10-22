@@ -802,6 +802,7 @@
     "Het is meivakantie.": "It is the May school holiday.",
     "Het is overal zomervakantie.": "It is the summer school holiday everywhere.",
     "Zie ook": "See also",
+    "Naar dag": "Go to day",
     "Alle regio's": "All regions",
     "alle regio's": "all regions",
     "Overwegend droog: in minder dan de helft van de plaatsen valt 1 mm neerslag of meer. Sneeuw is de verwachte hoeveelheid verse sneeuw op die dag. Zon is het verwachte aantal uren zonneschijn. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.":

@@ -1,11 +1,11 @@
 "use strict";
 
-/* Mobiel eerste scherm (eigenaar 15 oktober, variant A) en "vanaf nu" bij
-   Vandaag, op het finale artifact met de echte runtime.
-   - Telefoon (<760px): de temperatuur staat vóór de briefing en de
-     waarschuwingen, in de DOM én op het scherm.
-   - Tablet en desktop: volgorde briefing, waarschuwingen, temperatuur blijft.
-   - Wissel van breedte (draaien, venster) zet de volgorde mee om.
+/* Eerste scherm (eigenaar 15 oktober, variant A voor de telefoon; UX-opdracht oktober 2026 voor
+   alle breedtes) en "vanaf nu" bij Vandaag, op het finale artifact met de echte runtime.
+   - Alle breedtes: de temperatuur staat vóór de briefing en de waarschuwingen, in de DOM én op
+     het scherm. Voorheen bleef vanaf tabletbreedte de volgorde briefing, waarschuwingen,
+     temperatuur; die volgorde is bewust vervangen om de actuele weersituatie prominenter te maken.
+   - Wissel van breedte (draaien, venster) houdt de volgorde gelijk.
    - Vandaag toont onder de neerslag een grijs "vanaf nu" (EN "from now"),
      verborgen voor schermlezers; de andere dagen niet.
 
@@ -76,12 +76,9 @@ const meet=page=>page.evaluate(()=>{
       const {context,page,fouten}=await open(browser,root,w,h,"nl");
       try{
         const m=await meet(page);
-        const mobiel=w<760;
-        assert.deepEqual(m.kinderen,mobiel?["hero","brief","waarschuwingen"]:["brief","waarschuwingen","hero"],`${label}: volgorde in het eerste scherm ${m.kinderen.join(" > ")}`);
-        if(mobiel){
-          assert(m.hero.top<m.brief.top&&m.brief.top<m.warn.top,`${label}: temperatuur (${Math.round(m.hero.top)}) staat niet zichtbaar boven briefing (${Math.round(m.brief.top)}) en waarschuwingen (${Math.round(m.warn.top)})`);
-          assert(m.hero.top<=320,`${label}: temperatuur begint pas op ${Math.round(m.hero.top)}px`);
-        }
+        assert.deepEqual(m.kinderen,["hero","brief","waarschuwingen"],`${label}: volgorde in het eerste scherm ${m.kinderen.join(" > ")}`);
+        assert(m.hero.top<m.brief.top&&m.brief.top<m.warn.top,`${label}: temperatuur (${Math.round(m.hero.top)}) staat niet zichtbaar boven briefing (${Math.round(m.brief.top)}) en waarschuwingen (${Math.round(m.warn.top)})`);
+        assert(m.hero.top<=320,`${label}: temperatuur begint pas op ${Math.round(m.hero.top)}px`);
         const [vandaag,...rest]=m.rijen;
         assert.equal(vandaag.label,"vanaf nu",`${label}: Vandaag mist "vanaf nu" onder de neerslag`);
         assert(vandaag.zichtbaar,`${label}: "vanaf nu" is niet zichtbaar`);
@@ -92,7 +89,7 @@ const meet=page=>page.evaluate(()=>{
         assert(rest.length&&rest.every(x=>x.label===null),`${label}: een andere dag dan Vandaag toont "vanaf nu"`);
         assert(m.overflow<=1,`${label}: horizontale overflow ${m.overflow}px`);
         assert.deepEqual(fouten,[],`${label}: runtimefouten ${fouten.join(" | ")}`);
-        console.log(`EERSTE SCHERM MOBIEL ${label}: ${m.kinderen.join(" > ")}${mobiel?", temperatuur op "+Math.round(m.hero.top)+"px":""}; Vandaag "vanaf nu".`);
+        console.log(`EERSTE SCHERM ${label}: ${m.kinderen.join(" > ")}, temperatuur op ${Math.round(m.hero.top)}px; Vandaag "vanaf nu".`);
       }finally{await context.close();}
     }
 
@@ -101,11 +98,11 @@ const meet=page=>page.evaluate(()=>{
       const {context,page,fouten}=await open(browser,root,390,844,"nl");
       try{
         await page.setViewportSize({width:1366,height:768});await sleep(300);
-        assert.deepEqual((await meet(page)).kinderen,["brief","waarschuwingen","hero"],"390→1366: desktopvolgorde niet hersteld");
+        assert.deepEqual((await meet(page)).kinderen,["hero","brief","waarschuwingen"],"390→1366: volgorde niet gelijk gebleven");
         await page.setViewportSize({width:390,height:844});await sleep(300);
-        assert.deepEqual((await meet(page)).kinderen,["hero","brief","waarschuwingen"],"1366→390: mobiele volgorde niet terug");
+        assert.deepEqual((await meet(page)).kinderen,["hero","brief","waarschuwingen"],"1366→390: volgorde niet gelijk gebleven");
         assert.deepEqual(fouten,[],`wissel: runtimefouten ${fouten.join(" | ")}`);
-        console.log("EERSTE SCHERM MOBIEL wissel 390 → 1366 → 390: volgorde gaat mee.");
+        console.log("EERSTE SCHERM wissel 390 → 1366 → 390: volgorde blijft gelijk.");
       }finally{await context.close();}
     }
 

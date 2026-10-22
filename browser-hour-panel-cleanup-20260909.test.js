@@ -55,10 +55,11 @@ try{
     if(Number(v('temp-axis-offset'))>1.5)throw new Error(`${breedte}px: temperatuurheader en waarde liggen niet op dezelfde verticale as (offset ${v('temp-axis-offset')}px)`);
     if(v('feels-display')!=='none'||v('feels-visible')!=='no')throw new Error(`${breedte}px: gevoelstemperatuur is nog zichtbaar (${v('feels-display')}/${v('feels-visible')})`);
     if(!v('temp-primary')||v('rain-secondary')==='none'||v('wind-secondary')==='none')throw new Error(`${breedte}px: primaire temperatuur, neerslagkans of winddetail is onbedoeld geraakt`);
-    const verwachteHero=60;
+    /* De hero schaalt met de breedte: clamp(72px,6.2vw,96px) voor de temperatuur en clamp(20px,1.8vw,28px) voor de eenheid. */
+    const verwachteHero=Math.min(96,Math.max(72,breedte*.062)),verwachteEenheid=Math.min(28,Math.max(20,breedte*.018));
     if(Math.abs(Number(v('hero-size'))-verwachteHero)>.75)throw new Error(`${breedte}px: hero-temperatuur heeft onverwachte maat ${v('hero-size')}px; verwacht circa ${verwachteHero.toFixed(2)}px`);
-    if(Math.abs(Number(v('hero-deg-size'))-18)>.25)throw new Error(`${breedte}px: hero-eenheid heeft onverwachte maat ${v('hero-deg-size')}px`);
+    if(Math.abs(Number(v('hero-deg-size'))-verwachteEenheid)>.25)throw new Error(`${breedte}px: hero-eenheid heeft onverwachte maat ${v('hero-deg-size')}px; verwacht circa ${verwachteEenheid.toFixed(2)}px`);
     if(Number(v('overflow'))>1)throw new Error(`${breedte}px: horizontale overflow ${v('overflow')}px`);
   }
-  console.log("Uurpaneelcleanup browsergroen op 1366, 1440 en 1920px: hero vast op 60px, kop Komende uren boven grafiek en tabel, Temperatuur exact gecentreerd boven de waarden, vaste kolommen tot 1600px en daarboven kolommen op inhoud, geen overflow en overige detaildata intact.");
+  console.log("Uurpaneelcleanup browsergroen op 1366, 1440 en 1920px: hero geschaald (72–96px), kop Komende uren boven grafiek en tabel, Temperatuur exact gecentreerd boven de waarden, vaste kolommen tot 1600px en daarboven kolommen op inhoud, geen overflow en overige detaildata intact.");
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
