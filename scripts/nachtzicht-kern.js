@@ -292,11 +292,26 @@
   }
 
   /* Maan nu (de maan() van de app) en de komende hoofdfasen (Meeus). */
+  /* Opkomst en ondergang van de maan op één lokale kalenderdag. Zo'n dag duurt 23, 24 of 25 uur
+     (klokwissel), terwijl opOnder() vast 24 uur vanaf het startmoment scant: bij 25 uur ging een
+     gebeurtenis in het laatste uur verloren (o.a. 30-10-2033, 28-10-2040, 25-10-2043), bij 23 uur
+     kwam er een uit de volgende dag bij. */
+  function opOnderLokaleDag(begin, eind, lat, lon) {
+    const eerste = opOnder("maan", begin, lat, lon);
+    let op = eerste.op, onder = eerste.onder;
+    if (eind - begin > 86400000) {
+      const rest = opOnder("maan", eind - 86400000, lat, lon), grens = begin + 86400000;
+      if (op == null && rest.op != null && rest.op >= grens) op = rest.op;
+      if (onder == null && rest.onder != null && rest.onder >= grens) onder = rest.onder;
+    }
+    return { op: op != null && op < eind ? op : null, onder: onder != null && onder < eind ? onder : null };
+  }
   function maanOverzicht(nuMs, lat, lon, tz) {
     const nu = maan(new Date(nuMs)), stand = maanStand(nuMs, lat, lon);
     const datum = lokaleDatum(nuMs, tz);
     const middernacht = naarUTC(datum + "T00:00", tz);
-    const vandaag = opOnder("maan", middernacht, lat, lon);
+    const morgen = new Date(datum + "T12:00:00Z"); morgen.setUTCDate(morgen.getUTCDate() + 1);
+    const vandaag = opOnderLokaleDag(middernacht, naarUTC(morgen.toISOString().slice(0, 10) + "T00:00", tz), lat, lon);
     return {
       naam: nu.naam, ill: nu.ill, fase: nu.fase, datum, rand: stand.rand, draai: stand.draai, standMoment: stand.moment,
       op: vandaag.op != null ? naarLokaal(vandaag.op, tz) : null,

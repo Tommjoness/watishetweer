@@ -97,7 +97,10 @@ async function controleer(browser,root,route,w){
       assert.equal(maan.title,"The moon today: phase, moonrise and moonset | watishetweer.nl",`/maan/ ${w}px: titel`);
       assert.equal(maan.h1,"The moon today",`/maan/ ${w}px: kop`);
       assert(/\b(Waxing|Waning|Full|New|First|Last) [a-z ]*, \d+% illuminated\b/i.test(maan.tekst),`/maan/ ${w}px: maanfase en verlichting niet in het Engels`);
-      assert(/Today in De Bilt: moonrise \d{2}:\d{2}/.test(maan.tekst),`/maan/ ${w}px: op- en ondergang niet in het Engels`);
+      /* De tijden staan in volgorde van de dag ("moonset 06:12, moonrise 17:30"), elk met het Engelse woord. */
+      const tijdenEn=/Today in De Bilt: (moonrise|moonset) (\d{2}:\d{2})(?:, (moonrise|moonset) (\d{2}:\d{2}))?\./.exec(maan.tekst);
+      assert(tijdenEn,`/maan/ ${w}px: op- en ondergang niet in het Engels`);
+      assert(!tijdenEn[4]||(tijdenEn[1]!==tijdenEn[3]&&tijdenEn[2]<=tijdenEn[4]),`/maan/ ${w}px: op- en ondergang niet in volgorde van de dag: ${tijdenEn[0]}`);
       assert(/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) \d{1,2} (July|August), \d{2}:\d{2}/.test(maan.tekst),`/maan/ ${w}px: datums van de fasen niet in het Engels`);
       assert.deepEqual(maan.spans,["nz-maan-plaats","nz-maan-standplaats","nz-maan-tijdzone","nz-maan-elders"],`/maan/ ${w}px: de vertaling heeft de spans van plaats en tijdzone weggehaald`);
       assert.equal(overzicht.title,"Stargazing in the Netherlands: the darkest places | watishetweer.nl",`/nachtzicht/ ${w}px: titel`);

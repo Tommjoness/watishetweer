@@ -207,21 +207,21 @@ const tekstVan=(page,sel)=>page.locator(sel).innerText();
         assert(m.vZichtbaar.every(t=>t==="—"),`${L} overzicht: Beste periode toont geen streepje`);
         assert(m.vOmschrijving.every(t=>t===T("Beste periode niet beschikbaar","Best period not available")),`${L} overzicht: toegankelijke omschrijving ${[...new Set(m.vOmschrijving)]}`);
         assert(m.vVolledig.every(t=>!/Niet beschikbaar|Not available/.test(t.replace(/Beste periode niet beschikbaar|Best period not available/,""))),`${L} overzicht: de uitleg staat tweemaal per park`);
-        assert(breedte<370||m.ruimte.every(x=>x>=15),`${L} overzicht: te weinig ruimte tussen de kolommen (${Math.min(...m.ruimte)}px)`);
+        assert(breedte<768||m.ruimte.every(x=>x>=15),`${L} overzicht: te weinig ruimte tussen de kolommen (${Math.min(...m.ruimte)}px)`);
         assert(m.maatN>=14,`${L} overzicht: tekst is verkleind (${m.maatN}px)`);
         assert(m.overloop<=0,`${L} overzicht: horizontale overloop ${m.overloop}`);
         /* Smal scherm: zonder kolomkoppen staat het label bij iedere waarde; breed: de tabelkoppen. */
         const lblN=T("Vannacht","Tonight"),lblV=T("Beste periode","Best period");
         assert(m.labels.every(l=>l.length===2&&l[0].t===lblN&&l[1].t===lblV&&l[1].hidden&&!l[0].hidden),`${L} overzicht: labels ontbreken of zijn niet correct verborgen voor schermlezers`);
-        if(breedte<370)assert(m.labels.every(l=>l.every(x=>x.zichtbaar))&&!m.theadZichtbaar,`${L} overzicht: smalle rij toont geen labels bij de waarden`);
+        if(breedte<768)assert(m.labels.every(l=>l.every(x=>x.zichtbaar))&&!m.theadZichtbaar,`${L} overzicht: smalle rij toont geen labels bij de waarden`);
         else assert(m.labels.every(l=>l.every(x=>!x.zichtbaar))&&m.theadZichtbaar,`${L} overzicht: brede tabel toont dubbele labels`);
         assert.equal(m.thead,"13px",`${L} overzicht: tabelkop ${m.thead}`);
         /* Toegankelijkheidsboom bij ontbrekende gegevens: de betekenis staat één keer in de boom, op elke breedte. */
         {
           const ax=await axRij(context,page,"alde-feanen"),nv=T("Niet beschikbaar","Not available"),bp=T("Beste periode niet beschikbaar","Best period not available");
-          assert.deepEqual(ax.cellen.slice(-2),[breedte<370?`${lblN} ${nv}`:nv,bp],`${L} overzicht-AX (fout): celnamen ${JSON.stringify(ax.cellen)}`);
+          assert.deepEqual(ax.cellen.slice(-2),[breedte<768?`${lblN} ${nv}`:nv,bp],`${L} overzicht-AX (fout): celnamen ${JSON.stringify(ax.cellen)}`);
           assert.equal(ax.tekst.filter(t=>t===lblV).length,0,`${L} overzicht-AX (fout): label "${lblV}" wordt dubbel voorgelezen`);
-          assert.equal(ax.kopjes.includes(lblV),breedte>=370,`${L} overzicht-AX (fout): kolomkoppen ${JSON.stringify(ax.kopjes)}`);
+          assert.equal(ax.kopjes.includes(lblV),breedte>=768,`${L} overzicht-AX (fout): kolomkoppen ${JSON.stringify(ax.kopjes)}`);
         }
         const voor=tel.primair;
         await page.evaluate(()=>{const b=document.querySelector("#nz-status .nz-opnieuw");b.click();b.click();});
@@ -236,17 +236,17 @@ const tekstVan=(page,sel)=>page.locator(sel).innerText();
         {
           const ax=await axRij(context,page,"alde-feanen");
           const [c1,c2]=ax.cellen.slice(-2);
-          if(breedte<370){
+          if(breedte<768){
             assert(c1.startsWith(lblN+" ")&&c2.startsWith(lblV+" ")&&/\d{2}:\d{2}/.test(c2),`${L} overzicht-AX (data): waarden hebben geen label in de boom: ${JSON.stringify([c1,c2])}`);
             assert.equal(ax.kopjes.length,0,`${L} overzicht-AX (data): kolomkoppen horen te vervallen`);
           }else{
             assert(!c1.startsWith(lblN)&&!c2.startsWith(lblV)&&/^\d{2}:\d{2}/.test(c2),`${L} overzicht-AX (data): breed geen dubbele labels in celnamen: ${JSON.stringify([c1,c2])}`);
             assert(ax.kopjes.includes(lblN)&&ax.kopjes.includes(lblV),`${L} overzicht-AX (data): kolomkoppen ontbreken ${JSON.stringify(ax.kopjes)}`);
           }
-          assert.equal(ax.tekst.filter(t=>t===lblV).length,breedte<370?1:0,`${L} overzicht-AX (data): label "${lblV}" ${breedte<370?"ontbreekt in":"staat ten onrechte in"} de boom`);
+          assert.equal(ax.tekst.filter(t=>t===lblV).length,breedte<768?1:0,`${L} overzicht-AX (data): label "${lblV}" ${breedte<768?"ontbreekt in":"staat ten onrechte in"} de boom`);
         }
         assert((await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth))<=0,`${L} overzicht-herstel: horizontale overloop met gegevens`);
-        assert.equal(await page.locator("tr[data-park] .nz-lbl").evaluateAll(l=>l.every(x=>(getComputedStyle(x).display!=="none")===(innerWidth<370))),true,`${L} overzicht-herstel: labels alleen zichtbaar op smalle schermen`);
+        assert.equal(await page.locator("tr[data-park] .nz-lbl").evaluateAll(l=>l.every(x=>(getComputedStyle(x).display!=="none")===(innerWidth<768))),true,`${L} overzicht-herstel: labels alleen zichtbaar op smalle schermen`);
         assert.equal(await page.locator("tr[data-park] .nz-sr").count(),0,`${L} overzicht-herstel: geen omschrijving meer`);
         assert.deepEqual(fouten,[],`${L} overzicht: scriptfouten`);
         await context.close();gemeten++;

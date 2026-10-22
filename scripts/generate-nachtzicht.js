@@ -57,7 +57,7 @@ const EXTRA_STIJL = `
 .nz-licht{margin:18px 0 0;padding:14px 16px;border:1px solid var(--rule);background:var(--paper)}
 .nz-licht b{color:var(--ink)}
 #nz-vannacht{margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--rule)}
-.nz-n .nz-w{color:var(--ink)}.nz-lbl{display:none}.nz-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}tr.nz-niet td.nz-n{padding-right:20px}/* Smalle schermen (tot 369 px): een lange parknaam ("Schiermonnikoog") plus twee kolommen past niet naast elkaar zonder kleinere tekst. Iedere rij krijgt dan drie regels: naam, Vannacht en Beste periode, elk met een eigen label (de kolomkoppen vervallen). */@media(max-width:369px){.nz-tabel thead{display:none}.nz-tabel table,.nz-tabel tbody{display:block}.nz-tabel tr{display:grid;grid-template-columns:1fr;padding:9px 0;border-bottom:1px solid var(--rule)}.nz-tabel tbody th{grid-column:1/-1;border:0;padding:0}.nz-tabel tbody td{display:flex;align-items:baseline;gap:12px;border:0;padding:4px 0 0}.nz-tabel tbody td.nz-licht-kol{display:none}.nz-tabel tbody td.nz-n,.nz-tabel tbody tr.nz-niet td.nz-n{padding-right:0}.nz-tabel .nz-lbl{display:inline-block;flex:none;min-width:100px;font-size:13px;color:var(--muted)}}@media(max-width:600px){.nz-park-kop{font-size:30px;line-height:1.15}}
+.nz-n .nz-w{color:var(--ink)}.nz-lbl{display:none}.nz-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}tr.nz-niet td.nz-n{padding-right:20px}@media(max-width:600px){.nz-park-kop{font-size:30px;line-height:1.15}}
 .nz-opnieuw{display:block;margin-top:8px;min-height:44px;padding:8px 16px;font:inherit;color:var(--ink);background:transparent;border:1px solid var(--ink);cursor:pointer}
 .nz-score{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
 .nz-cijfer{font:500 44px/1 "Instrument Sans",system-ui,sans-serif;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
@@ -90,19 +90,27 @@ const EXTRA_STIJL = `
 .nz-meter.mid::after{background:var(--ink-70)}.nz-meter.laag::after{background:var(--muted)}
 .nz-venster{font-variant-numeric:tabular-nums;color:var(--ink)!important}.nz-venster.nz-geen{color:var(--muted)!important}
 .nz-tabel tr.nz-groep th,.nz-tabel tr.nz-groep td{border-top:2px solid var(--muted)}
-@media(min-width:601px){.nz-tabel thead th:first-child{width:32%}.nz-tabel thead th.nz-licht-kol{width:20%}.nz-venster:not(.nz-geen){white-space:nowrap}}
-/* Smal (tot 600 px): de meter komt onder score en oordeel, in de ruimte naast de twee regels van de beste periode. */
-@media(max-width:600px){.nz-n .nz-w{display:block}.nz-n .nz-w .nz-meter{width:100%;margin-top:5px}}
+@media(min-width:768px){.nz-tabel thead th:first-child{width:26%}.nz-tabel thead th.nz-licht-kol{width:17%}.nz-venster:not(.nz-geen){white-space:nowrap}.nz-venster.nz-geen .nz-w{text-wrap:balance}}
+/* Smal (tot 767 px): de meter komt onder score en oordeel. */
+@media(max-width:767px){.nz-n .nz-w{display:block}.nz-n .nz-w .nz-meter{width:100%;margin-top:5px}}
+/* Telefoons en kleine tablets (tot 767 px): vier kolommen passen niet naast elkaar, zeker niet met een lange reden ("geen (beperkt zicht, neerslag en bewolking)") in de kolom Beste periode: die werd dan een smalle strook van tien regels. Iedere rij is daarom een kaartje: parknaam met lichtvervuiling links, score rechts en daaronder de beste periode over de volle breedte. De kolomkoppen vervallen; het label bij de periode neemt die rol over (bij Vannacht is de score zelf duidelijk en blijft het label alleen voor schermlezers). */
+@media(max-width:767px){.nz-licht-mob{display:block}.nz-tabel thead{display:none}.nz-tabel table,.nz-tabel tbody{display:block}.nz-tabel tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:9px 0;border-bottom:1px solid var(--rule)}.nz-tabel tbody th{grid-column:1;grid-row:1;border:0;padding:0}.nz-tabel tbody td{border:0;padding:0}.nz-tabel tbody td.nz-licht-kol{display:none}.nz-tabel tbody td.nz-n,.nz-tabel tbody tr.nz-niet td.nz-n{grid-column:2;grid-row:1;padding-right:0}.nz-tabel tbody td.nz-venster{grid-column:1/-1;grid-row:2;display:flex;align-items:baseline;gap:12px}.nz-tabel .nz-lbl{display:inline-block;flex:none;min-width:92px;font-size:13px;color:var(--muted)}.nz-tabel td.nz-n .nz-lbl{position:absolute;width:1px;height:1px;min-width:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.nz-tabel tr.nz-groep th,.nz-tabel tr.nz-groep td{border-top:0}.nz-tabel tr.nz-groep{border-top:2px solid var(--muted)}}
 /* Maanpagina: de maan van vandaag en de komende fasen staan op een brede kaart naast elkaar. */
 .nz-maan-raster{margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--rule)}
 .nz-maan-raster .nz-maan{margin:0;padding:0;border-top:0}
 @media(min-width:1000px){.nz-maan-raster{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:0 56px;align-items:start}.nz-maan-raster h2{margin-top:0}}
+/* Direct antwoord boven het overzicht: zelfde plek als de laadmelding, zodat de tabel niet verschuift. */
+.nz-antwoordkader{min-height:5.6rem}
+.nz-antwoord{margin:10px 0 0;color:var(--ink);line-height:1.55;max-width:43rem}
+.nz-antwoord a{text-decoration:none;border-bottom:1px solid var(--muted)}.nz-antwoord a:hover,.nz-antwoord a:focus-visible{border-bottom-color:var(--ink)}
+@media(max-width:600px){.nz-antwoordkader{min-height:9.4rem}}
+@media(max-width:340px){.nz-antwoordkader{min-height:12.6rem}}
 #nz-nachten{margin-top:22px}
 .nz-maan{display:flex;gap:20px;align-items:center;margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--rule)}
 .nz-maan .nz-maan-svg{width:120px;height:120px;flex:none;display:block}#nz-maan-schijf{flex:none;width:120px;height:120px}
 .nz-maan p{margin:4px 0}.nz-maan .groot{font:400 24px/1.25 "Bodoni Moda",Georgia,serif;color:var(--ink);margin:0 0 4px}
 #nz-maan-fasen{margin:10px 0 0;padding:0;list-style:none;color:var(--ink-70)}#nz-maan-fasen li{display:flex;gap:12px;align-items:center;padding:6px 0}#nz-maan-fasen .nz-maan-svg{flex:none}.nz-maan-beeld{flex:none;display:block;width:26px;height:26px}canvas.nz-maan-svg{display:block}#nz-maan-fasen b{color:var(--ink);font-weight:500}
-@media(max-width:600px){#nz-nachten thead{display:none}#nz-nachten tr{display:grid;grid-template-columns:auto 1fr;column-gap:12px;padding:9px 0;border-bottom:1px solid var(--rule)}#nz-nachten th,#nz-nachten td{border:0;padding:0}#nz-nachten td.nz-zin{grid-column:1/-1;margin-top:3px}.nz-tabel table{font-size:14px}.nz-tabel .nz-licht-kol{display:none}.nz-licht-mob{display:block}.nz-cijfer{font-size:38px}.nz-tijden span:nth-child(even){visibility:hidden}}
+@media(max-width:600px){#nz-nachten thead{display:none}#nz-nachten tr{display:grid;grid-template-columns:auto 1fr;column-gap:12px;padding:9px 0;border-bottom:1px solid var(--rule)}#nz-nachten th,#nz-nachten td{border:0;padding:0}#nz-nachten td.nz-zin{grid-column:1/-1;margin-top:3px}.nz-tabel table{font-size:14px}.nz-cijfer{font-size:38px}.nz-tijden span:nth-child(even){visibility:hidden}}
 `;
 
 function kop({ titel, beschrijving, canonical, extra = "", breed = false }) {
@@ -181,7 +189,10 @@ function overzichtPagina(parken, kern) {
   return kop({ titel, beschrijving, canonical, breed: true }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>Sterren kijken in Nederland</h1>
 <p>De Nationale Parken behoren tot de donkerste plekken van Nederland. Hieronder staan ze op een rij, de donkerste eerst, met de indicatie voor vannacht. Kies een park voor de komende nachten en de bewolking per uur.</p>
+<div class="nz-antwoordkader">
+<p id="nz-antwoord" class="nz-antwoord" aria-live="polite" hidden></p>
 <p id="nz-status" class="klein">De verwachting voor vannacht wordt geladen.</p>
+</div>
 <div class="nz-tabel"><table>
 <thead><tr><th scope="col">Park</th><th scope="col" class="nz-licht-kol">Lichtvervuiling</th><th scope="col">Vannacht</th><th scope="col">Beste periode</th></tr></thead>
 <tbody>

@@ -1317,6 +1317,14 @@
     /* Korte venstertekst in het Nachtzicht-overzicht (kortVenster in scripts/nachtzicht-runtime.js). */
     [/^nu tot (\d{1,2}:\d{2})$/, (m) => `now until ${m[1]}`],
     [/^geen \((.+)\)$/, (m) => { const r = m[1] === "onvoldoende data" ? "insufficient data" : m[1] === "korter dan twee uur" ? "shorter than two hours" : oorzaken(m[1]); return r && `none (${r})`; }],
+    /* Direct antwoord boven het Nachtzicht-overzicht (antwoordHtml in scripts/nachtzicht-runtime.js); parkennamen blijven staan. */
+    [/^Vannacht zijn de omstandigheden in (\d+) van de (\d+) parken gunstig \(7\/10 of hoger\)\.$/, (m) => `Tonight conditions are favourable in ${m[1]} of ${m[2]} parks (7/10 or higher).`],
+    [/^Het best \((\d+)\/10\): (.+)\.$/, (m) => `Best (${m[1]}/10): ${parkenEn(m[2])}.`],
+    [/^Elders beperkend: (.+)\.$/, (m) => { const r = oorzaken(m[1]); return r && `Limiting elsewhere: ${r}.`; }],
+    [/^Vannacht is er geen park met gunstige omstandigheden\.$/, () => "Tonight no park has favourable conditions."],
+    [/^Hoogste indicatie: (\d+)\/10 \(([^)]+)\) in (.+)\.$/, (m) => { const o = ZICHTSCORE[m[2].toLowerCase()]; return o && `Highest rating: ${m[1]}/10 (${o}) in ${parkenEn(m[3])}.`; }],
+    [/^Beperkend in de meeste parken: (.+)\.$/, (m) => { const r = oorzaken(m[1]); return r && `Limiting in most parks: ${r}.`; }],
+    [/^Voor (\d+) (park|parken) ontbreken gegevens\.$/, (m) => `No data for ${m[1]} ${m[1] === "1" ? "park" : "parks"}.`],
     [/^Geen gunstig kijkvenster door (.+)\.$/, (m) => { const r = oorzaken(m[1]); return r && `No favourable viewing window because of ${r}.`; }],
     [/^Matige omstandigheden, maar door (.+) geen gunstig kijkvenster\.$/, (m) => { const r = oorzaken(m[1]); return r && `Moderate conditions, but no favourable viewing window because of ${r}.`; }],
 
@@ -1431,6 +1439,7 @@
     "bosbrandgevaar": "forest fire danger", "lawinegevaar": "avalanche danger", "overstromingen": "flooding", "regen en overstromingen": "rain and flooding"
   };
 
+  const parkenEn = s => s.replace(/^alle (\d+) parken$/, "all $1 parks");
   /* "neerslag, bewolking en maanlicht" → "precipitation, cloud and moonlight". */
   const OORZAAK = { "neerslag": "precipitation", "bewolking": "cloud", "maanlicht": "moonlight", "mist of zeer slecht zicht": "fog or very poor visibility", "wind": "wind", "vocht": "humidity", "zicht": "visibility", "beperkt zicht": "reduced visibility", "tijdelijk slechter zicht": "temporarily poorer visibility" };
   function oorzaken(s) {

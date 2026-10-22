@@ -504,7 +504,12 @@ function foutBlok(cfg){
   if(i<0)alinea.append(tekst);
   else alinea.append(tekst.slice(0,i),el("a",{href:"/"},EIGEN_PLAATS),tekst.slice(i+EIGEN_PLAATS.length));
   const knop=el("button",{type:"button",class:"seizoen-opnieuw"},"Opnieuw proberen");
-  knop.addEventListener("click",()=>{knop.disabled=true;start();});
+  knop.addEventListener("click",()=>{
+    /* De knop verdwijnt bij het opnieuw opbouwen: houd de focus op de blijvende verwachtingsregio. */
+    const regio=document.getElementById("seizoen-verwachting");
+    if(regio&&document.activeElement===knop){regio.tabIndex=-1;regio.dataset.focus="1";regio.focus({preventScroll:true});}
+    knop.disabled=true;start();
+  });
   const blok=el("div",{class:"seizoen-fout-blok"});
   blok.append(alinea,knop);
   return blok;
@@ -546,7 +551,7 @@ async function start(){
   if(melding){melding.textContent=meldingTekst(t,cfg);melding.hidden=!melding.textContent;}
   const doel=document.getElementById("seizoen-verwachting");
   if(!doel)return;
-  if(t.fase!=="verwachting"){lopend++;doel.replaceChildren();doel.removeAttribute("aria-busy");return;}
+  if(t.fase!=="verwachting"){lopend++;doel.replaceChildren();doel.removeAttribute("aria-busy");delete doel.dataset.focus;return;}
   /* Alleen het laatste ophalen telt: een oudere, trage aanvraag (of een
      tweede klik op "Opnieuw proberen") mag het scherm niet meer overschrijven. */
   const volgnummer=++lopend;
@@ -564,9 +569,12 @@ async function start(){
     }
     if(volgnummer!==lopend)return;
     toon(doel,t,verwerkAntwoord(antwoord,t,cfg),cfg,bronZin);
+    delete doel.dataset.focus;
   }catch(e){
     if(volgnummer!==lopend)return;
     doel.replaceChildren(foutBlok(cfg));
+    /* Mislukt ook een nieuwe poging, dan krijgt de nieuwe knop de focus. */
+    if(doel.dataset.focus){delete doel.dataset.focus;const nieuw=doel.querySelector(".seizoen-opnieuw");if(nieuw)nieuw.focus({preventScroll:true});}
   }finally{
     if(volgnummer===lopend)doel.removeAttribute("aria-busy");
   }

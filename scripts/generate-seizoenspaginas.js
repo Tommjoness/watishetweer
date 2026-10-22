@@ -85,10 +85,11 @@ html[data-thema=donker] .seizoen-dag .tbalk i{background:var(--donker)}
 @media(max-width:600px){body{padding:14px}.kaart{padding:26px 22px}h1{font-size:32px}.seizoen-dag table{font-size:14px}.seizoen-dag .sep{display:none}.seizoen-dag .sub{display:block;font-size:13px}}
 /* Zichtbare focus op alle bedienbare onderdelen, in dezelfde inktkleur als de hoofdpagina (ook in donker). */
 a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+[tabindex="-1"]:focus{outline:none}
 /* Informatiepagina's met tabellen (class "breed"): lopende tekst houdt een prettige regellengte,
    tabellen en overzichten krijgen de volle kaartbreedte. Pagina's zonder zo'n overzicht blijven smal. */
 .kaart.breed{max-width:1080px;padding:36px clamp(22px,4.5vw,48px)}
-.breed p,.breed h2,.breed .seizoen-perioden{max-width:46rem}
+.breed p,.breed h2,.breed .seizoen-perioden{max-width:43rem}
 .breed .seizoen-dag .officieel{font-size:13px}
 .breed .seizoen-later,.breed .klein{font-size:14px;line-height:1.55}
 .breed .seizoen-dag thead th{letter-spacing:.02em}
