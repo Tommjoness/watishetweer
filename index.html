@@ -3079,6 +3079,10 @@ function maanUnicode(fase){
 
 /* ---------- plaatsen ---------- */
 function chips(){
+  /* De chips worden bij elke wijziging opnieuw opgebouwd; een gefocuste knop daarin zou dan de focus
+     verliezen. Onthoud welke het was en zet de focus na het opbouwen op de opvolger. */
+  const actief=document.activeElement,focusSleutel=actief&&actief.closest&&actief.closest("#chips")
+    ?(actief.id||(actief.classList.contains("x")?"x"+actief.dataset.x:actief.classList.contains("chipplaats")?"p"+actief.dataset.i:"")):"";
   const lijst=ls.get(KEY_L,[]);
   const zelfde=p=>Math.abs(p.lat-S.lat)<0.02&&Math.abs(p.lon-S.lon)<0.02;
   const naamTelling=lijst.reduce((m,p)=>m.set(p.label,(m.get(p.label)||0)+1),new Map());
@@ -3113,6 +3117,15 @@ function chips(){
   }
   const deel=document.getElementById("chipdeel");
   if(deel) deel.addEventListener("click",()=>deelPlaats(deel));
+  if(focusSleutel){
+    const kies=sel=>c.querySelector(sel);
+    const opvolger=focusSleutel==="chipadd"?kies(".chip.on .chipplaats")
+      :focusSleutel==="chipdeel"?kies("#chipdeel")
+      :focusSleutel[0]==="p"?kies('.chipplaats[data-i="'+focusSleutel.slice(1)+'"]')
+      :kies('.x[data-x="'+focusSleutel.slice(1)+'"]')||kies(".chipplaats");
+    const doel=opvolger||kies("#chipadd")||kies("#chipdeel");
+    if(doel)doel.focus({preventScroll:true});
+  }
 }
 
 /* ---------- delen ---------- */
@@ -3374,10 +3387,13 @@ document.addEventListener("click",e=>{if(!e.target.closest(".tools"))zoekPanelen
 
 document.getElementById("ververs").addEventListener("click",async()=>{
   if(S.lat==null) return;
-  const b=document.getElementById("ververs"),oud=b.textContent;
+  const b=document.getElementById("ververs"),oud=b.textContent,hadFocus=document.activeElement===b;
   b.disabled=true;b.textContent="Bezig";
   await load(S.lat,S.lon,S.label,true);
   b.disabled=false;b.textContent=oud;
+  /* Een uitgeschakelde knop verliest de focus; wie met het toetsenbord bedient, krijgt hem terug
+     (alleen als de focus nergens anders naartoe is gegaan). */
+  if(hadFocus&&document.activeElement===document.body)b.focus({preventScroll:true});
 });
 
 /* ---------- actuele locatie ---------- */

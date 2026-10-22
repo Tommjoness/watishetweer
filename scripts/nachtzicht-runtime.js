@@ -94,11 +94,29 @@
     knop.type = "button";
     knop.className = "nz-opnieuw";
     knop.textContent = "Opnieuw proberen";
-    knop.addEventListener("click", () => { knop.disabled = true; el.textContent = el.dataset.laden; opnieuw(); });
+    knop.addEventListener("click", () => {
+      /* De knop verdwijnt zodra opnieuw wordt geladen: houd de focus op de statusregel (die blijft staan)
+         en geef hem na het laden aan de inhoud (zie klaar()), zodat toetsenbordgebruikers hun plek houden. */
+      if (document.activeElement === knop) { el.tabIndex = -1; el.dataset.focus = "1"; }
+      knop.disabled = true; el.textContent = el.dataset.laden;
+      if (el.dataset.focus) el.focus({ preventScroll: true });
+      opnieuw();
+    });
     const zin = document.createElement("span");
     zin.textContent = tekst;
     el.replaceChildren(zin, knop);
     el.hidden = false;
+    /* Mislukt ook de nieuwe poging, dan krijgt de nieuwe knop de focus. */
+    if (el.dataset.focus) { delete el.dataset.focus; knop.focus({ preventScroll: true }); }
+  }
+  /* De statusregel verdwijnt na het laden; had hij de focus (na "Opnieuw proberen"), dan gaat die naar de inhoud. */
+  function klaar(status, inhoud) {
+    if (!status) return;
+    if (status.dataset.focus) {
+      delete status.dataset.focus;
+      if (inhoud) { inhoud.tabIndex = -1; inhoud.focus({ preventScroll: true }); }
+    }
+    status.hidden = true;
   }
 
   /* ---------- één park ---------- */
@@ -128,11 +146,49 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
       uit.hidden = false;
       lijst.innerHTML = `<table><thead><tr><th scope="col">Nacht</th><th scope="col">Indicatie</th><th scope="col">Kijkvenster</th></tr></thead><tbody>${nachten.map(x => `<tr><th scope="row">${esc(x.label)}</th><td class="nz-n">${esc(x.scoreTekst)} <span>${esc(x.oordeel)}</span></td><td class="nz-zin">${esc(x.zin)}</td></tr>`).join("")}</tbody></table>`;
       lijst.hidden = false;
-      if (status) status.hidden = true;
+      klaar(status, uit);
     }).catch(() => melding(status, "De verwachting kon niet worden geladen. Probeer het later opnieuw.", park));
   }
 
   /* ---------- overzicht van alle parken ---------- */
+  /* ---------- direct antwoord boven het overzicht ---------- */
+  /* Alleen wat al berekend is: de afgeronde score (7/10 of hoger heet in de hele site "Goed") en de
+     redenen van de score. Een relatief beste park telt nooit als gunstig als alle parken slecht scoren. */
+  const FACTOREN = ["neerslag", "bewolking", "maanlicht", "mist of zeer slecht zicht", "tijdelijk slechter zicht", "beperkt zicht"];
+  const opsomming = lijst => lijst.length < 2 ? lijst.join("") : lijst.slice(0, -1).join(", ") + " en " + lijst[lijst.length - 1];
+  function parkLinks(rijen, totaal) {
+    if (rijen.length === totaal && totaal > 1) return "alle " + totaal + " parken";
+    const link = r => `<a href="${esc(r.href)}" translate="no">${esc(r.naam)}</a>`;
+    return rijen.slice(0, 3).map(link).join(", ") + (rijen.length > 3 ? " +" + (rijen.length - 3) : "");
+  }
+  function antwoordHtml(rijen) {
+    const geldig = rijen.filter(r => r.n && r.n.score != null && /^\d+\/10$/.test(r.n.scoreTekst));
+    if (!geldig.length) return "";
+    const punt = r => Number(r.n.scoreTekst.split("/")[0]);
+    const top = Math.max(...geldig.map(punt)), besten = geldig.filter(r => punt(r) === top);
+    const gunstig = geldig.filter(r => punt(r) >= 7), rest = geldig.filter(r => punt(r) < 7);
+    const factoren = groep => {
+      const aantal = {};
+      groep.forEach(r => (r.n.redenen || []).forEach(f => { aantal[f] = (aantal[f] || 0) + 1; }));
+      return Object.keys(aantal).filter(f => aantal[f] * 2 >= groep.length)
+        .sort((a, b) => aantal[b] - aantal[a] || FACTOREN.indexOf(a) - FACTOREN.indexOf(b)).slice(0, 3);
+    };
+    const zinnen = [];
+    if (gunstig.length) {
+      zinnen.push(`Vannacht zijn de omstandigheden in ${gunstig.length} van de ${geldig.length} parken gunstig (7/10 of hoger).`);
+      zinnen.push(`Het best (${top}/10): ${parkLinks(besten, geldig.length)}.`);
+      const f = rest.length ? factoren(rest) : [];
+      if (f.length) zinnen.push(`Elders beperkend: ${opsomming(f)}.`);
+    } else {
+      zinnen.push("Vannacht is er geen park met gunstige omstandigheden.");
+      zinnen.push(`Hoogste indicatie: ${top}/10 (${esc(besten[0].n.oordeel)}) in ${parkLinks(besten, geldig.length)}.`);
+      const f = factoren(geldig);
+      if (f.length) zinnen.push(`Beperkend in de meeste parken: ${opsomming(f)}.`);
+    }
+    if (geldig.length < rijen.length) { const n = rijen.length - geldig.length; zinnen.push(`Voor ${n} ${n === 1 ? "park" : "parken"} ontbreken gegevens.`); }
+    return zinnen.join(" ");
+  }
+
   function overzicht() {
     const parken = cfg.parken || [], status = document.getElementById("nz-status");
     if (!parken.length) return;
@@ -141,6 +197,7 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
       const lijst = Array.isArray(data) ? data : [data];
       if (lijst.length !== parken.length) throw new Error("onvolledig");
       let gevuld = 0;
+      const antwoordRijen = [];
       parken.forEach((p, i) => {
         const rij = document.querySelector(`tr[data-park="${p.slug}"]`);
         const n = K.nachten(lijst[i], p.lat, p.lon, TZ, 1)[0];
@@ -152,10 +209,14 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
         rij.querySelector(".nz-n .nz-w").innerHTML = `${esc(n.scoreTekst)} <span>${esc(n.oordeel)}</span>${scoreMeter(n.scoreTekst)}`;
         rij.querySelector(".nz-venster .nz-w").textContent = kortVenster(n);
         rij.querySelector(".nz-venster").classList.toggle("nz-geen", !n.venster);
+        const koppeling = rij.querySelector("th a");
+        antwoordRijen.push({ naam: koppeling ? koppeling.textContent : p.slug, href: koppeling ? koppeling.getAttribute("href") : "", n });
         gevuld++;
       });
       if (!gevuld) throw new Error("leeg");
-      if (status) status.hidden = true;
+      const antwoord = document.getElementById("nz-antwoord"), html = antwoordHtml(antwoordRijen);
+      if (antwoord && html) { antwoord.innerHTML = html; antwoord.hidden = false; }
+      klaar(status, antwoord && !antwoord.hidden ? antwoord : document.querySelector(".nz-tabel"));
     }).catch(() => {
       parken.forEach(p => rijStatus(document.querySelector(`tr[data-park="${p.slug}"]`), "niet"));
       melding(status, "De verwachting voor vannacht kon niet worden geladen. Probeer het later opnieuw.", overzicht);
@@ -187,7 +248,8 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
     const m = K.maanOverzicht(Date.now(), r.lat, r.lon, r.tz);
     const set = (id, tekst) => { const el = document.getElementById(id); if (el) el.textContent = tekst; };
     set("nz-maan-naam", hoofdletter(m.naam) + ", " + procent(m.ill * 100) + " verlicht");
-    const tijden = [m.op ? "op " + m.op : null, m.onder ? "onder " + m.onder : null].filter(Boolean).join(", ");
+    /* In volgorde van de dag: wie eerst "onder 06:12" en dan "op 17:30" leest, ziet de maan ook in die volgorde. */
+    const tijden = [["op", m.op], ["onder", m.onder]].filter(x => x[1]).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(x => x[0] + " " + x[1]).join(", ");
     set("nz-maan-tijden", tijden ? "Vandaag in " + r.naam + ": " + tijden + "." : "Vandaag komt de maan in " + r.naam + " niet op of niet onder.");
     set("nz-maan-plaats", r.naam);
     set("nz-maan-standplaats", r.naam);

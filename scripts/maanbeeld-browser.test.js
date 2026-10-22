@@ -179,7 +179,7 @@ server.listen(0, async () => {
       await page.waitForFunction(() => /Vandaag/.test((document.getElementById("nz-maan-tijden") || {}).textContent || "") && document.querySelector("#nz-maan-schijf canvas"), null, { timeout: 15000 });
       const m = await page.evaluate(() => ({ tijden: document.getElementById("nz-maan-tijden").textContent, plaats: document.getElementById("nz-maan-plaats").textContent, stand: document.getElementById("nz-maan-standplaats").textContent, zone: document.getElementById("nz-maan-tijdzone").textContent, elders: document.getElementById("nz-maan-elders").hidden, draai: Number(document.querySelector("#nz-maan-schijf canvas").getAttribute("data-draai")) }));
       const ref = K.maanOverzicht(Date.parse(iso), lat, lon, tz);
-      const verwacht = `Vandaag in ${naam}: ` + [ref.op ? "op " + ref.op : null, ref.onder ? "onder " + ref.onder : null].filter(Boolean).join(", ") + ".";
+      const verwacht = `Vandaag in ${naam}: ` + [["op", ref.op], ["onder", ref.onder]].filter(x => x[1]).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(x => x[0] + " " + x[1]).join(", ") + ".";
       assert.strictEqual(m.tijden, verwacht, `${label}: maantijden`);
       assert.strictEqual(m.plaats, naam, `${label}: kleine letters noemen de plaats`);
       assert.strictEqual(m.stand, naam, `${label}: stand vanuit de plaats`);
