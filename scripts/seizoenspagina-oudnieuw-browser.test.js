@@ -190,12 +190,24 @@ async function controleer(browserType,label,base){
       assert.equal(r.tabellen,1,`${id}: tabel blijft na middernacht`);
       assert.equal(fetches(),2,`${id}: na middernacht opnieuw opgehaald`);
       assert.equal(urls[1].searchParams.get("past_days"),"1",`${id}: met de uren van gisteravond`);
-      await page.clock.runFor(2*3600*1000);
+      /* Verversingsbeleid: binnen een uur na het ophalen geen nieuw verzoek; daarna precies één stille verversing
+         (de getoonde nacht blijft staan). De sprongen zijn bewust fastForward: runFor laat ook de afbreektimer van
+         een lopend verzoek in één klap aflopen. */
+      await page.clock.runFor(58*60*1000);
+      assert.equal(fetches(),2,`${id}: binnen een uur na het ophalen geen nieuw verzoek`);
+      await page.clock.fastForward(5*60*1000);
+      await new Promise(res=>setTimeout(res,500));
+      assert.equal(fetches(),3,`${id}: na een uur één stille verversing`);
+      r=await stand();
+      assert.equal(r.tabellen,1,`${id}: de getoonde nacht blijft tijdens en na het verversen staan`);
+      await page.clock.fastForward(60*60*1000);
       r=await stand();
       assert.equal(r.kop,"Oud en nieuw 2027",`${id}: na 02:00 door naar volgend jaar`);
       assert.equal(r.aftellen,"364 dagen tot oudejaarsdag",`${id}: aftelling na 02:00`);
       assert.equal(r.tabellen,0,`${id}: verwachting weg na 02:00`);
-      assert.equal(fetches(),2,`${id}: buiten het venster geen nieuw verzoek`);
+      assert.equal(fetches(),3,`${id}: buiten het venster geen nieuw verzoek`);
+      await page.clock.runFor(3*3600*1000);
+      assert.equal(fetches(),3,`${id}: ook uren later buiten het venster geen nieuw verzoek`);
       assert.deepEqual(fouten,[],`${id}: geen browserfouten`);
       await context.close();
     }

@@ -105,6 +105,10 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie thead th:first-child{width:26%}
 .breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie thead th:last-child{width:88px}
 .breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie td:nth-child(2){white-space:normal;text-wrap:balance}
+/* Engels is langer dan Nederlands ("9.0 mm of rain · chance 100%" past niet in deze smalle cel): daar krijgt het
+   tweede deel een eigen regel, zoals op een telefoon, in plaats van een afbreekpunt dat een losse punt achterlaat. */
+html:lang(en) .breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie td:nth-child(2) .sep{display:none}
+html:lang(en) .breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie td:nth-child(2) .sub{display:block;font-size:13px}
 }
 </style>`;
 
