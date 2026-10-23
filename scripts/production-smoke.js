@@ -62,7 +62,10 @@ function controleerCloudflare(response,label,opt={}){
    verschijnt niet op iedere route op exact hetzelfde moment; de smoke begint pas
    te vergelijken als ze allemaal de verwachte build tonen. Blijft een route oud,
    dan faalt de smoke na het wachtbudget alsnog. */
-const BUILD_ROUTES=[ROOT+"/",ROOT+"/weer/",ROOT+"/weer/almere/",WWW+"/"];
+/* Naast de weerpagina's één informatiepagina per type (Over, privacy, seizoen, Nachtzicht, park, Maan):
+   ook die dragen de build-SHA van deze deployment. */
+const INFO_ROUTES=["/over/","/privacy","/herfstvakantie/","/nachtzicht/","/nachtzicht/alde-feanen/","/maan/"].map(pad=>ROOT+pad);
+const BUILD_ROUTES=[ROOT+"/",ROOT+"/weer/",ROOT+"/weer/almere/",WWW+"/",...INFO_ROUTES];
 
 async function wachtOpExacteDeployment(){
   let laatst="",lastError=null;
@@ -238,5 +241,5 @@ async function wachtOpExacteDeployment(){
   }
   const reserveTekst=bronOordeel.volledig?"datalevering park/vakantie bewezen":"MET BEPERKING: "+bronOordeel.tekst;
 
-  console.log(`PRODUCTION-SMOKE GESLAAGD: ${verwacht}; exacte Cloudflare-build, HSTS op statische/API-routes, homepage/www-redirect, robots, sitemap, kernroutes, park- en vakantiepagina, ${reserveTekst}, share-canonical, 404 en alle drie API-contracten zijn publiek coherent.`);
+  console.log(`PRODUCTION-SMOKE GESLAAGD: ${verwacht}; exacte Cloudflare-build, HSTS op statische/API-routes, homepage/www-redirect, robots, sitemap, kernroutes, build-SHA op weer- en informatiepagina's, park- en vakantiepagina, ${reserveTekst}, share-canonical, 404 en alle drie API-contracten zijn publiek coherent.`);
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});

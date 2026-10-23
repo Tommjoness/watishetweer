@@ -68,7 +68,7 @@ html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70
 .seizoen-vakantie{table-layout:fixed}.seizoen-vakantie thead th:first-child{width:34%}.seizoen-vakantie thead th:last-child{width:24%}
 /* Temperatuurbalkje: op een telefoon onder de cijfers, op desktop in een eigen kolom. */
 .seizoen-dag .tbalkcel,.seizoen-dag .tbalkkop{display:none}
-.seizoen-dag .tbalk{display:block;position:relative;width:72px;height:4px;margin:6px 0 2px auto;border-radius:2px;background:var(--rule)}
+.seizoen-dag .tbalk{display:block;position:relative;width:72px;max-width:100%;height:4px;margin:6px 0 2px auto;border-radius:2px;background:var(--rule)}
 .seizoen-dag .tbalk i{position:absolute;top:0;bottom:0;border-radius:2px;background:var(--licht)}
 html[data-thema=donker] .seizoen-dag .tbalk i{background:var(--donker)}
 /* Desktop (akkoord eigenaar, 14 oktober): de eerste kolom blijft links, de andere
@@ -104,7 +104,11 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-dag td.temp{width:88px}
 .breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie thead th:first-child{width:26%}
 .breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie thead th:last-child{width:88px}
-.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie td:nth-child(2){white-space:nowrap}
+.breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie td:nth-child(2){white-space:normal;text-wrap:balance}
+/* Engels is langer dan Nederlands ("9.0 mm of rain · chance 100%" past niet in deze smalle cel): daar krijgt het
+   tweede deel een eigen regel, zoals op een telefoon, in plaats van een afbreekpunt dat een losse punt achterlaat. */
+html:lang(en) .breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie td:nth-child(2) .sep{display:none}
+html:lang(en) .breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.seizoen-vakantie) .seizoen-vakantie td:nth-child(2) .sub{display:block;font-size:13px}
 }
 </style>`;
 

@@ -58,6 +58,56 @@
      betaalde bronnen. Ontbrekende velden blijven onbekend (nooit 0). */
   const metReserve = (lat, lon, uren) => haal(aanvraag(lat, lon, uren), 8000)
     .catch(() => haal(RESERVE + "?lat=" + encodeURIComponent(lat) + "&lon=" + encodeURIComponent(lon), 8000));
+  /* ---------- verversingsbeleid ----------
+     Een pagina die lang openstaat blijft kloppen. Het oordeel gaat over de rest van de nacht vanaf nu, dus:
+     - iedere minuut wordt de uitkomst lokaal opnieuw berekend uit de opgehaalde verwachting (geen netwerk), alleen
+       als de pagina zichtbaar is en bij terugkeer naar het tabblad of vanuit de terug-cache;
+     - de opgehaalde verwachting wordt hoogstens een uur oud: daarna volgt één gewone aanvraag (zonder betaalde
+       reserve), bij mislukken met toenemende wachttijd; er loopt nooit meer dan één aanvraag tegelijk;
+     - werkende gegevens blijven staan als verversen mislukt; de regel "Verwachting van HH:MM" laat zien hoe oud ze zijn;
+     - de DOM wordt alleen aangeraakt als de uitkomst verandert (open tabel, focus en voorgelezen tekst blijven). */
+  const HERREKEN_MS = 60000, MAX_LEEFTIJD_MS = 3600000, WACHT_NA_FOUT_MS = [300000, 900000, 1800000];
+  const st = { d: null, opgehaald: 0, laden: false, mislukt: 0, volgende: 0, timer: 0, uur: "", html: {}, tekst: "" };
+  function bijgewerkt() {
+    const el = document.getElementById("nz-bijgewerkt");
+    if (!el || !st.opgehaald) return;
+    const oud = st.mislukt > 0 && Date.now() - st.opgehaald >= MAX_LEEFTIJD_MS;
+    const tekst = "Verwachting van " + K.naarLokaal(st.opgehaald, TZ) + "." + (oud ? " Verversen lukt nu niet." : "");
+    if (tekst !== st.tekst) { st.tekst = tekst; el.textContent = tekst; }
+    el.hidden = false;
+  }
+  /* herreken(): lokaal opnieuw tonen; false als er met deze gegevens niets meer te tonen is. ververs(): nieuwe
+     gegevens ophalen en tonen (belofte); een fout laat het getoonde staan. */
+  function houdBij(herreken, ververs, elkeMinuut) {
+    if (st.timer) return;
+    /* Het oordeel verandert per uur (de verwachting is uurdata): daar herberekenen we alleen bij een nieuw uur of bij
+       terugkeer naar de pagina; de maan verandert doorlopend en wordt iedere minuut bijgewerkt. */
+    const tik = e => {
+      if (document.hidden) return;
+      const uur = K.lokaleTijd(Date.now(), TZ).slice(0, 13);
+      let bruikbaar = true;
+      if (elkeMinuut || e || uur !== st.uur) { st.uur = uur; bruikbaar = herreken() !== false; }
+      if (ververs && !st.laden && (!bruikbaar || Date.now() - st.opgehaald >= MAX_LEEFTIJD_MS) && Date.now() >= st.volgende) {
+        st.laden = true;
+        ververs().then(() => { st.mislukt = 0; st.volgende = 0; })
+          .catch(() => { st.mislukt++; st.volgende = Date.now() + WACHT_NA_FOUT_MS[Math.min(st.mislukt, WACHT_NA_FOUT_MS.length) - 1]; })
+          .finally(() => { st.laden = false; bijgewerkt(); });
+      }
+      bijgewerkt();
+    };
+    st.timer = setInterval(() => tik(false), HERREKEN_MS);
+    document.addEventListener("visibilitychange", () => tik(true));
+    window.addEventListener("pageshow", e => { if (e.persisted) tik(true); });
+    window.addEventListener("online", () => tik(true));
+  }
+  /* Zet nieuwe HTML in een element, maar alleen als die van de vorige keer verschilt (de DOM kan al vertaald zijn). */
+  function zetHtml(el, sleutel, html) {
+    if (st.html[sleutel] === html) return false;
+    st.html[sleutel] = html;
+    el.innerHTML = html;
+    return true;
+  }
+
   /* Eén parkrij in het overzicht: wachtstand, geen gegevens of een gevulde nacht. De uitleg
      staat één keer boven de tabel; in de rij staat alleen "Niet beschikbaar"
      onder Vannacht en een streepje onder Beste periode (met een toegankelijke
@@ -66,6 +116,7 @@
     if (!rij) return;
     const n = rij.querySelector(".nz-n .nz-w"), v = rij.querySelector(".nz-venster .nz-w");
     rij.classList.toggle("nz-niet", status === "niet");
+    delete rij.dataset.nzSig;
     /* Het label "Beste periode" is op smalle schermen het enige dat de waarde duidelijk maakt (de
        kolomkoppen vervallen) en hoort dan voor schermlezers te bestaan, alleen bij geldige
        gegevens (zie de gegevenstak hieronder). Bij "niet beschikbaar" en tijdens laden draagt de omschrijving
@@ -119,17 +170,26 @@
     status.hidden = true;
   }
 
+  /* De uurwaarden van de grafiek als tekst voor toetsenbord en schermlezer: een uitklapbare tabel (zelfde
+     patroon als "Grafiekgegevens als tabel" op de hoofdpagina). De balkjes zelf zijn niet focusbaar; de tabel
+     heeft één tabstop (de samenvatting) en bevat tijd, bewolking, maanstand en de beoordeling per uur. */
+  function urenTabel(uren) {
+    const rijen = uren.map(u => `<tr><th scope="row">${esc(u.tijd)}</th><td>${u.bewolking == null ? "onbekend" : esc(procent(u.bewolking))}</td><td>${u.maanOp ? "maan op" : "maan niet op"}</td><td>${u.goed ? "goed om te kijken" : "te bewolkt, slecht zicht of te veel maanlicht"}</td></tr>`).join("");
+    return `<details class="nz-gegevens"><summary>Bewolking per uur als tabel</summary><table><caption class="nz-sr">${esc("Bewolking per uur, " + uren[0].tijd + " tot " + uren[uren.length - 1].tijd)}</caption><thead><tr><th scope="col">Tijd</th><th scope="col">Bewolking</th><th scope="col">Maan</th><th scope="col">Beoordeling</th></tr></thead><tbody>${rijen}</tbody></table></details>`;
+  }
+
   /* ---------- één park ---------- */
   function park() {
     const p = cfg.park, uit = document.getElementById("nz-vannacht"), lijst = document.getElementById("nz-nachten"), status = document.getElementById("nz-status");
-    metReserve(p.lat, p.lon, 170).then(d => {
+    /* Toont de nachten uit d op dit moment; gooit als er geen nacht meer is. Ongewijzigde uitkomst raakt de DOM niet. */
+    function toon(d) {
       const nachten = K.nachten(d, p.lat, p.lon, TZ, 6);
       if (!nachten.length) throw new Error("geen nachten");
       const n = nachten[0];
       const staven = n.uren.map(u => `<div class="nz-uur${u.goed ? " goed" : ""}" style="--h:${Math.max(2, Math.round(u.bewolking || 0))}%" title="${esc(u.tijd + ": " + (u.bewolking == null ? "bewolking onbekend" : procent(u.bewolking) + " bewolking") + (u.maanOp ? ", maan op" : ""))}"></div>`).join("");
       const tijden = n.uren.map(u => `<span>${esc(u.tijd.slice(0, 2))}</span>`).join("");
       const maanRij = n.uren.map(u => `<i class="${u.maanOp ? "op" : ""}"></i>`).join("");
-      uit.innerHTML = `
+      const html = `
 <div class="nz-score"><span class="nz-cijfer">${esc(n.scoreTekst)}</span><span class="nz-oordeel"><b>${esc(n.oordeel)}</b><span>${esc(n.zin)}</span></span></div>
 <dl class="nz-feiten">
 <div><dt>Bewolking</dt><dd>gemiddeld ${n.bewolking == null ? "onbekend" : esc(procent(n.bewolking))}</dd></div>
@@ -139,14 +199,29 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
 </dl>
 <figure class="nz-grafiek" aria-label="${esc("Bewolking per uur, " + n.uren[0].tijd + " tot " + n.uren[n.uren.length - 1].tijd)}">
 <figcaption>Bewolking per uur <span class="nz-legenda"><span><i class="goed"></i>goed om te kijken</span><span><i></i>te bewolkt, slecht zicht of te veel maanlicht</span><span><i class="maan"></i>maan op</span></span></figcaption>
-<div class="nz-staven" style="--n:${n.uren.length}">${staven}</div>
+<div class="nz-staven" style="--n:${n.uren.length}" aria-hidden="true">${staven}</div>
 <div class="nz-maanrij" style="--n:${n.uren.length}" aria-hidden="true">${maanRij}</div>
 <div class="nz-tijden" style="--n:${n.uren.length}" aria-hidden="true">${tijden}</div>
-</figure>`;
+</figure>
+${urenTabel(n.uren)}`;
+      const oud = uit.querySelector("details.nz-gegevens"), open = !!(oud && oud.open), focus = !!(oud && document.activeElement === oud.querySelector("summary"));
+      if (zetHtml(uit, "uit", html)) {
+        /* Een opnieuw opgebouwde grafiek houdt de uitklaptabel open en de focus waar die stond. */
+        const nieuw = uit.querySelector("details.nz-gegevens");
+        if (nieuw && open) nieuw.open = true;
+        if (nieuw && focus) nieuw.querySelector("summary").focus({ preventScroll: true });
+      }
       uit.hidden = false;
-      lijst.innerHTML = `<table><thead><tr><th scope="col">Nacht</th><th scope="col">Indicatie</th><th scope="col">Kijkvenster</th></tr></thead><tbody>${nachten.map(x => `<tr><th scope="row">${esc(x.label)}</th><td class="nz-n">${esc(x.scoreTekst)} <span>${esc(x.oordeel)}</span></td><td class="nz-zin">${esc(x.zin)}</td></tr>`).join("")}</tbody></table>`;
+      zetHtml(lijst, "lijst", `<table><thead><tr><th scope="col">Nacht</th><th scope="col">Indicatie</th><th scope="col">Kijkvenster</th></tr></thead><tbody>${nachten.map(x => `<tr><th scope="row">${esc(x.label)}</th><td class="nz-n">${esc(x.scoreTekst)} <span>${esc(x.oordeel)}</span></td><td class="nz-zin">${esc(x.zin)}</td></tr>`).join("")}</tbody></table>`);
       lijst.hidden = false;
+    }
+    metReserve(p.lat, p.lon, 170).then(d => {
+      toon(d);
+      st.d = d; st.opgehaald = Date.now(); st.uur = K.lokaleTijd(st.opgehaald, TZ).slice(0, 13);
+      bijgewerkt();
       klaar(status, uit);
+      houdBij(() => { try { toon(st.d); return true; } catch (e) { return false; } },
+        () => haal(aanvraag(p.lat, p.lon, 170), 8000).then(nieuw => { toon(nieuw); st.d = nieuw; st.opgehaald = Date.now(); }));
     }).catch(() => melding(status, "De verwachting kon niet worden geladen. Probeer het later opnieuw.", park));
   }
 
@@ -192,35 +267,49 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
   function overzicht() {
     const parken = cfg.parken || [], status = document.getElementById("nz-status");
     if (!parken.length) return;
-    parken.forEach(p => rijStatus(document.querySelector(`tr[data-park="${p.slug}"]`), "laden"));
-    haal(aanvraag(parken.map(p => p.lat).join(","), parken.map(p => p.lon).join(","), 48), 15000).then(data => {
-      const lijst = Array.isArray(data) ? data : [data];
+    /* Toont de uitkomst van lijst (één verwachting per park) op dit moment. Alle berekeningen gaan vóór de eerste
+       DOM-wijziging; gooit als er voor geen enkel park een nacht is. Ongewijzigde rijen en antwoord blijven met rust. */
+    function toon(lijst) {
       if (lijst.length !== parken.length) throw new Error("onvolledig");
-      let gevuld = 0;
+      const uitkomst = parken.map((p, i) => ({ p, rij: document.querySelector(`tr[data-park="${p.slug}"]`), n: K.nachten(lijst[i], p.lat, p.lon, TZ, 1)[0] }));
+      if (!uitkomst.some(x => x.rij && x.n)) throw new Error("leeg");
       const antwoordRijen = [];
-      parken.forEach((p, i) => {
-        const rij = document.querySelector(`tr[data-park="${p.slug}"]`);
-        const n = K.nachten(lijst[i], p.lat, p.lon, TZ, 1)[0];
-        if (!rij) return;
-        if (!n) { rijStatus(rij, "niet"); return; }
+      for (const { p, rij, n } of uitkomst) {
+        if (!rij) continue;
+        if (!n) { rijStatus(rij, "niet"); continue; }
+        const koppeling = rij.querySelector("th a");
+        antwoordRijen.push({ naam: koppeling ? koppeling.textContent : p.slug, href: koppeling ? koppeling.getAttribute("href") : "", n });
+        const sig = n.scoreTekst + "|" + n.oordeel + "|" + kortVenster(n);
+        if (rij.dataset.nzSig === sig && !rij.classList.contains("nz-niet")) continue;
+        rij.dataset.nzSig = sig;
         rij.classList.remove("nz-niet");
         const periodeLabel = rij.querySelector(".nz-venster .nz-lbl");
         if (periodeLabel) periodeLabel.removeAttribute("aria-hidden");
         rij.querySelector(".nz-n .nz-w").innerHTML = `${esc(n.scoreTekst)} <span>${esc(n.oordeel)}</span>${scoreMeter(n.scoreTekst)}`;
         rij.querySelector(".nz-venster .nz-w").textContent = kortVenster(n);
         rij.querySelector(".nz-venster").classList.toggle("nz-geen", !n.venster);
-        const koppeling = rij.querySelector("th a");
-        antwoordRijen.push({ naam: koppeling ? koppeling.textContent : p.slug, href: koppeling ? koppeling.getAttribute("href") : "", n });
-        gevuld++;
-      });
-      if (!gevuld) throw new Error("leeg");
+      }
       const antwoord = document.getElementById("nz-antwoord"), html = antwoordHtml(antwoordRijen);
-      if (antwoord && html) { antwoord.innerHTML = html; antwoord.hidden = false; }
-      klaar(status, antwoord && !antwoord.hidden ? antwoord : document.querySelector(".nz-tabel"));
-    }).catch(() => {
-      parken.forEach(p => rijStatus(document.querySelector(`tr[data-park="${p.slug}"]`), "niet"));
-      melding(status, "De verwachting voor vannacht kon niet worden geladen. Probeer het later opnieuw.", overzicht);
-    });
+      if (antwoord && html) { zetHtml(antwoord, "antwoord", html); antwoord.hidden = false; }
+      return antwoord && !antwoord.hidden ? antwoord : document.querySelector(".nz-tabel");
+    }
+    const lijstVan = data => Array.isArray(data) ? data : [data];
+    const vraag = () => haal(aanvraag(parken.map(p => p.lat).join(","), parken.map(p => p.lon).join(","), 48), 15000).then(lijstVan);
+    function laad() {
+      parken.forEach(p => rijStatus(document.querySelector(`tr[data-park="${p.slug}"]`), "laden"));
+      vraag().then(lijst => {
+        const inhoud = toon(lijst);
+        st.d = lijst; st.opgehaald = Date.now(); st.uur = K.lokaleTijd(st.opgehaald, TZ).slice(0, 13);
+        bijgewerkt();
+        klaar(status, inhoud);
+        houdBij(() => { try { toon(st.d); return true; } catch (e) { return false; } },
+          () => vraag().then(nieuw => { toon(nieuw); st.d = nieuw; st.opgehaald = Date.now(); }));
+      }).catch(() => {
+        parken.forEach(p => rijStatus(document.querySelector(`tr[data-park="${p.slug}"]`), "niet"));
+        melding(status, "De verwachting voor vannacht kon niet worden geladen. Probeer het later opnieuw.", laad);
+      });
+    }
+    laad();
   }
 
   /* ---------- maan ---------- */
@@ -246,6 +335,10 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
   function maanPagina() {
     const eigen = eigenPlaats(), r = eigen || { ...cfg.referentie, tz: TZ, nl: true };
     const m = K.maanOverzicht(Date.now(), r.lat, r.lon, r.tz);
+    /* Ongewijzigde uitkomst (de pagina wordt iedere minuut opnieuw berekend) raakt de DOM en de maanfoto niet. */
+    const handtekening = JSON.stringify([r.naam, r.tz, r.nl, m.naam, Math.round(m.ill * 100), m.op, m.onder, Math.round(m.rand), m.draai, m.fasen.map(f => f.datum + f.tijd)]);
+    if (handtekening === st.html.maan) return;
+    st.html.maan = handtekening;
     const set = (id, tekst) => { const el = document.getElementById(id); if (el) el.textContent = tekst; };
     set("nz-maan-naam", hoofdletter(m.naam) + ", " + procent(m.ill * 100) + " verlicht");
     /* In volgorde van de dag: wie eerst "onder 06:12" en dan "op 17:30" leest, ziet de maan ook in die volgorde. */
@@ -358,5 +451,5 @@ ${n.zonOnder && n.zonOp ? `<div><dt>Zon</dt><dd>onder ${esc(n.zonOnder)} · op $
 
   if (cfg.soort === "park") park();
   else if (cfg.soort === "overzicht") overzicht();
-  else if (cfg.soort === "maan") maanPagina();
+  else if (cfg.soort === "maan") { maanPagina(); houdBij(() => { maanPagina(); return true; }, null, true); }
 })();

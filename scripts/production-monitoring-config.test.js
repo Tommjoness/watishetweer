@@ -77,6 +77,10 @@ assert(smoke.includes('redirect:"manual"'),"production-smoke moet de www-redirec
   assert(vergeleken.length>=3,"production-smoke vergelijkt onverwacht weinig routes op build-SHA");
   for(const route of vergeleken)assert(gewacht.includes(route),`production-smoke vergelijkt ${route} op build-SHA zonder erop te wachten`);
   assert(/resultaten\.every\(r=>r\.response\.ok&&buildSha\(r\.text\)===verwacht\)/.test(smoke),"wachtlus moet op alle buildroutes de exacte SHA eisen");
+  /* Ook de informatiepagina's (één per type) horen op de verwachte SHA te staan. */
+  assert(/const INFO_ROUTES=\[([^\]]+)\]\.map\(pad=>ROOT\+pad\);\s*const BUILD_ROUTES=\[[^\]]*\.\.\.INFO_ROUTES\]/.test(smoke),"buildroutes bevatten de informatiepagina's niet");
+  const info=/const INFO_ROUTES=\[([^\]]+)\]/.exec(smoke)[1];
+  for(const pad of ["/over/","/privacy","/herfstvakantie/","/nachtzicht/","/nachtzicht/alde-feanen/","/maan/"])assert(info.includes(`"${pad}"`),`de buildcontrole mist de informatiepagina ${pad}`);
 }
 assert(smoke.includes("/weer/dit-bestaat-niet/"),"production-smoke moet echte 404-semantiek bewaken");
 assert(smoke.includes("/api/plaatsnaam?lat=52.3508&lon=5.2647"),"production-smoke mist plaatsnaam-API-contract");

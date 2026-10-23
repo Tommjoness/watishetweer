@@ -641,7 +641,10 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
       const scheiding="<!--brief-rest-->",idx=bestaand.indexOf(scheiding);
       const rest=idx>=0?bestaand.slice(idx+scheiding.length):bestaand;
       const twee=analyse(120);
-      let voor=esc(briefingNeerslagZin(twee));
+      /* De actuele neerslagzin is afgebakend met onzichtbare markeringen (zelfde patroon als brief-rest).
+         De presentatielaag (scripts/neerslag-presentatie-v2.js) vervangt alleen wat daartussen staat,
+         ook als een officiële waarschuwing er vooraf gaat; de markeringen staan daar identiek. */
+      let voor="<!--brief-neerslag-->"+esc(briefingNeerslagZin(twee))+"<!--/brief-neerslag-->";
       const later=laterVandaagNeerslag(S.d,twee);
       if(later&&later.kans>=25){
         const korteKans=getal(twee.kans);

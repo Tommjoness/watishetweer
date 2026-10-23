@@ -200,6 +200,12 @@ function actueleNeerslagZin(a,metCijfer){
   return a&&a.droogVanafTijd?basis+" Rond "+a.droogVanafTijd+" wordt het naar verwachting droog.":basis;
 }
 
+/* De neerslagzin van de briefing is door de interpretatielaag afgebakend met onzichtbare markeringen
+   (interpretatie-engine.js, zelfde tekens). Alleen wat daartussen staat wordt vervangen: een officiële
+   waarschuwing ervoor, de latere zinnen (temperatuur, wind) en alle opmaak blijven onaangeroerd. Ontbreken
+   de markeringen, dan doen we niets in plaats van willekeurige HTML te herschrijven. */
+const NEERSLAGZIN_BEGIN="<!--brief-neerslag-->",NEERSLAGZIN_EINDE="<!--/brief-neerslag-->";
+
 function vervangEersteNeerslagzinInBriefing(a){
   const nat=meetbareNeerslagNu(a),droog=officieleDrogeMeting(a),beleid=beleidNu();
   if(!nat&&!droog)return;
@@ -210,12 +216,11 @@ function vervangEersteNeerslagzinInBriefing(a){
     :(beleid&&typeof beleid.briefingZin==="function"?beleid.briefingZin(a):"");
   if(!nieuw)return;
 
-  /* De neerslagzin staat bewust als eerste, onopgemaakte zin in de briefing.
-     Vervang alleen dat voorste tekstdeel en laat temperatuur/windmarkup erna
-     onaangeraakt. Als de structuur ooit verandert, doen we niets in plaats van
-     willekeurige HTML te herschrijven. */
-  const re=/^(?:(?:In|De|Er|Het)\s[^<]*?(?:neerslag|regen|buien)[^<]*?\.\s*)/i;
-  if(re.test(el.innerHTML))el.innerHTML=el.innerHTML.replace(re,esc(nieuw)+" ");
+  const html=el.innerHTML,van=html.indexOf(NEERSLAGZIN_BEGIN);
+  if(van<0)return;
+  const tot=html.indexOf(NEERSLAGZIN_EINDE,van+NEERSLAGZIN_BEGIN.length);
+  if(tot<0)return;
+  el.innerHTML=html.slice(0,van+NEERSLAGZIN_BEGIN.length)+esc(nieuw)+html.slice(tot);
 }
 
 function tweeUurTekst(a,bestaand){
