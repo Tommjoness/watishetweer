@@ -1,12 +1,12 @@
 "use strict";
 
 /* Kleine tekst op de weerpagina. De desktoplaag van 29 september bepaalt dat labels vanaf 1100px minimaal 12px zijn,
-   maar drie onderdelen bleven op 11px staan (gemeten op het finale artifact):
+   maar twee onderdelen bleven op 11px staan (gemeten op het finale artifact):
    - de kop van de uurtabel (Tijd, Temperatuur, Neerslag, Wind) tussen 1100 en 1599px, terwijl de cellen eronder 12 en
      13,5px zijn (vanaf 1600px stond hij al op 12,5px);
-   - de knop Auto van de weergavekeuze: de leesbaarheidslaag zette hem met een id-selector op 11px, sterker dan de
-     desktoplaag die hem op 12 (12,5px vanaf 1440px) bedoelde;
    - de taalschakelaar EN/NL, op alle pagina's en breedtes 11px.
+   De driewegkeuze Auto | Licht | Donker blijft bewust op 11px: de drie segmenten delen één typografische basis (bewaakt
+   door preview-responsive-visual-browser.js) en vallen binnen de richtwaarde voor kleine labels.
    Deze test legt die ondergrens vast en bewaakt dat de grotere tekst niets laat overlopen of overlappen: geen
    horizontale paginascroll, de tabelkop wordt niet afgeknipt, de uurtabel houdt haar uren en de schakelaar blijft naast
    de merknaam binnen het scherm, in Nederlands en Engels. */
@@ -54,7 +54,7 @@ function meet(page){
       kopHoogte:kopjes.map(th=>Math.round(th.getBoundingClientRect().height)),
       cellPx:px(document.querySelector("#wiw-hour-table tbody td .wiw-hour-secondary")||document.querySelector("#wiw-hour-table tbody td")),
       rijen:[...document.querySelectorAll("#wiw-hour-table tbody tr")].filter(zichtbaar).length,
-      autoPx:px(auto),taalPx:px(taal),taalTekst:taal&&taal.textContent.trim(),
+      autoPx:px(auto),lichtPx:px(document.querySelector('[data-thema-handmatig="licht"]')),donkerPx:px(document.querySelector('[data-thema-handmatig="donker"]')),taalPx:px(taal),taalTekst:taal&&taal.textContent.trim(),
       taalBinnenScherm:!!tr&&tr.left>=0&&tr.right<=innerWidth,
       taalOverMerk:!!(tr&&mr)&&tr.left<mr.right&&tr.right>mr.left&&tr.top<mr.bottom&&tr.bottom>mr.top,
       paginaOverloop:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,
@@ -95,18 +95,18 @@ function meet(page){
           r.kopAfgeknipt.forEach((w,i)=>assert.ok(w<=1,`${L}: kop "${r.kopTekst[i]}" wordt ${w}px afgeknipt`));
           /* Eén regel per kop: de grotere tekst maakt de tabelkop niet hoger. */
           assert.ok(Math.max(...r.kopHoogte)<=30,`${L}: tabelkop te hoog (${r.kopHoogte})`);
-          assert.ok(r.autoPx>=12,`${L}: knop Auto ${r.autoPx}px`);
-          if(breedte>=1440)assert.ok(r.autoPx>=12.5,`${L}: knop Auto ${r.autoPx}px (12,5px vanaf 1440px)`);
         }else{
           /* Onder 1100px verandert er niets aan de labelmaat van de rest (minimaal 11px). */
           r.kopPx.forEach((px,i)=>assert.ok(px>=11,`${L}: kop "${r.kopTekst[i]}" is ${px}px`));
-          assert.ok(r.autoPx>=11,`${L}: knop Auto ${r.autoPx}px`);
         }
+        /* De drie segmenten van de weergavekeuze delen één lettergrootte (en die blijft minimaal 11px). */
+        assert.ok(r.autoPx>=11,`${L}: knop Auto ${r.autoPx}px`);
+        assert.deepEqual([r.lichtPx,r.donkerPx],[r.autoPx,r.autoPx],`${L}: Auto/Licht/Donker delen één lettergrootte (${r.autoPx}/${r.lichtPx}/${r.donkerPx})`);
         assert.deepEqual(fouten,[],`${L}: scriptfouten`);
         GEVALLEN.push(`${L}: kop ${[...new Set(r.kopPx)].join("/")}px, Auto ${r.autoPx}px, ${r.taalTekst} ${r.taalPx}px, ${r.rijen} uren`);
         n++;
       }finally{await context.close();}
     }
-    console.log(`Tekstgrootte bureaublad: ${n} situaties (NL/EN, 320 tot 1920px): uurtabelkop, knop Auto en taalschakelaar minimaal 12px vanaf 1100px (schakelaar overal), zonder afgeknipte kop, overlap, extra tabelhoogte of horizontale scroll.`);
+    console.log(`Tekstgrootte bureaublad: ${n} situaties (NL/EN, 320 tot 1920px): uurtabelkop minimaal 12px vanaf 1100px en taalschakelaar minimaal 12px (overal), Auto/Licht/Donker één lettergrootte, zonder afgeknipte kop, overlap, extra tabelhoogte of horizontale scroll.`);
   }finally{srv.close();await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1);});

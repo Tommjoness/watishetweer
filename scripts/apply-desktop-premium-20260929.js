@@ -51,7 +51,7 @@ const CSS=`
   html body #app .stat .eyebrow${NIET},html body #app h2>span${NIET},
   html body #chartlab${NIET},html body #days .row.kop>div${NIET},html body #nights .row.kop>*${NIET},html body #nights .row.kop span${NIET},
   html body footer .bronlabel${NIET},html body .wiw-weergave-label${NIET},html body .seo-plaatsnav-kop${NIET},
-  html body #here${NIET},html body #here span${NIET},html body #ververs${NIET},html body .wiw-theme-auto${NIET},html body #thema.wiw-theme-segmented-20260915 .wiw-theme-auto${NIET}{font-size:12px!important}
+  html body #here${NIET},html body #here span${NIET},html body #ververs${NIET},html body .wiw-theme-auto${NIET}{font-size:12px!important}
   /* De kop van de uurtabel stond tot 1600px op 11px, kleiner dan de cellen eronder (12 en 13,5px). */
   html body #wiw-hour-table thead th${NIET}{font-size:12px!important}
   /* Tweede regels en eenheden */
@@ -75,7 +75,7 @@ const CSS=`
   html body #app .stat .eyebrow${NIET},html body #app h2>span${NIET},
   html body #chartlab${NIET},html body #days .row.kop>div${NIET},html body #nights .row.kop>*${NIET},html body #nights .row.kop span${NIET},
   html body footer .bronlabel${NIET},html body .wiw-weergave-label${NIET},html body .seo-plaatsnav-kop${NIET},
-  html body #here${NIET},html body #here span${NIET},html body #ververs${NIET},html body .wiw-theme-auto${NIET},html body #thema.wiw-theme-segmented-20260915 .wiw-theme-auto${NIET}{font-size:12.5px!important}
+  html body #here${NIET},html body #here span${NIET},html body #ververs${NIET},html body .wiw-theme-auto${NIET}{font-size:12.5px!important}
   html body #stamp${NIET},html body #plaatstijd${NIET},html body #app .sval>s${NIET},
   html body #moonlab${NIET},html body #moonlab span${NIET},html body #nights .nachtmaanregel${NIET},html body #days .row:not(.kop) small${NIET}{font-size:13.5px!important}
   html body #app .stat .ssub${NIET},html body #app p.hint${NIET},html body #waarschuwingen .msg${NIET},
