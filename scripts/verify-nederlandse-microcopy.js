@@ -121,7 +121,7 @@ for(const invariant of [
   "function weatherNowBriefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){",
   "Het verwachte maximum ligt vandaag rond ",
   "Het verwachte maximum ligt morgen rond ",
-  "Het verwachte maximum lag vandaag rond ",
+  "Volgens de verwachting was het vandaag rond ",
   "Het verwachte maximum voor morgen is ",
   ...briefingNachtvarianten,
   "function pasBriefingCopyToe(html){"
@@ -132,7 +132,7 @@ for(const tekst of [
   "function weatherNowBriefingNachtzin(tmin,nuLokaal,huidigeTemperatuur){",
   "Het verwachte maximum ligt vandaag rond ",
   "Het verwachte maximum ligt morgen rond ",
-  "Het verwachte maximum lag vandaag rond ",
+  "Volgens de verwachting was het vandaag rond ",
   "Het verwachte maximum voor morgen is ",
   ...briefingNachtvarianten
 ]){

@@ -224,7 +224,7 @@ const vereist=[
   "weatherNowMaanGeschiktVoorNachtvenster","sc-=2.2*mn.ill*maanDeel*(1-cw/140)",
   "weatherNowZonurenWoord","Naar verwachting bijna de hele dag zon.","Naar verwachting veel zon vandaag.",
   "weatherNowDagNeerslagTekst","weatherNowDagNeerslagMmTekst","<div class=\"bar\">Bereik</div>","<div class=\"drain\">Neerslag</div>",
-  "weatherNowBriefingNachtzin","Het verwachte maximum ligt vandaag rond ","Het verwachte maximum ligt morgen rond ","Het verwachte maximum lag vandaag rond ","Het verwachte maximum voor morgen is ",
+  "weatherNowBriefingNachtzin","Het verwachte maximum ligt vandaag rond ","Het verwachte maximum ligt morgen rond ","Volgens de verwachting was het vandaag rond ","Het verwachte maximum voor morgen is ",
   "load(52.3676,4.9041,\"Amsterdam\",false,true,\"NL\")"
 ];
 for(const x of vereist)if(!html.includes(x))throw new Error("Canonieke broninvariant ontbreekt: "+x);

@@ -106,7 +106,7 @@ function* combinaties() {
       yield `De maximumtemperatuur van vandaag ligt rond ${g} ${m}.`;
       yield `Het verwachte maximum voor morgen is ${g} ${m}.`;
       for (const t of tijden.slice(1, 3)) {
-        yield `Het verwachte maximum lag vandaag rond ${t} op ${g} ${m}.`;
+        yield `Volgens de verwachting was het vandaag rond ${t} het warmst, met ${g} ${m}.`;
         yield `Het verwachte maximum ligt morgen rond ${t} op ${g} ${m}.`;
         yield `De temperatuur blijft tot rond ${t} ongeveer ${g} ${m}.`;
       }

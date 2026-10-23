@@ -63,6 +63,8 @@ Zonder deze variabele blijft `https://nominatim.openstreetmap.org` de standaard.
 
 Een waarschuwing wordt alleen als plaatsgebonden kaart doorgegeven wanneer de server expliciet bewijs voor die plaatsdekking heeft. Landbrede of onbekende scope wordt niet als lokale waarschuwing gepresenteerd.
 
+Amerikaanse meldingen (NWS) krijgen een Nederlandse titel waar die bekend is (`scripts/final-audit-20260901.js` voor de kaarten en `scripts/staff-audit-20260826.js` voor de briefing; houd beide tabellen gelijk), anders de algemene kop "Officiële weerwaarschuwing". Zijn er meerdere meldingen zonder eigen titel, dan staat de officiële Engelse titel in de kop zodat ze uit elkaar te houden zijn. Verschillende meldingen worden nooit samengevoegd: ook als de bron er één gedeelde tekst bij geeft (Miami: Rip Current Statement en Coastal Flood Advisory), blijft elke kaart met haar volledige officiële tekst staan. Alleen een identiek object (zelfde titel, einde en gebied) wordt één kaart.
+
 De MeteoAlarm-feed per land kan groot zijn (Spanje: 3,5 MB, ruim 7 seconden). De route wacht hooguit 4 seconden en geeft anders het landbrede Atom-antwoord; de download loopt dan via `waitUntil` door. In `caches.default` komt een compacte kopie (alleen lopende waarschuwingen en de gebruikte velden; Spanje ongeveer 0,2 MB) die vijf minuten vers is en tot een kwartier bruikbaar blijft terwijl op de achtergrond een nieuwe wordt opgehaald. Die cache is per Cloudflare-datacenter.
 
 ## Seizoenspagina's

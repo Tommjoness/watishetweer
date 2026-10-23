@@ -18,6 +18,12 @@ assert.deepEqual(waarschuwingTitelNl("Air Quality Alert"),{origineel:"Air Qualit
 assert.deepEqual(waarschuwingTitelNl("Unknown Marine Statement"),{origineel:"Unknown Marine Statement",nederlands:"Unknown Marine Statement",vertaald:false});
 assert.equal(waarschuwingTitelVoorBriefing("Flood Watch","US"),"Waakzaamheid voor overstromingen");
 assert.equal(waarschuwingTitelVoorBriefing("Flood Watch","NL"),"Flood Watch");
+/* Miami: twee verschillende meldingen van NWS Miami (Rip Current Statement en Coastal Flood Advisory) kregen
+   geen eigen Nederlandse titel en dus allebei de algemene kop. Nu hebben ze twee onderscheidbare titels. */
+assert.deepEqual(waarschuwingTitelNl("Rip Current Statement"),{origineel:"Rip Current Statement",nederlands:"Melding over gevaarlijke stromingen (rip currents)",vertaald:true});
+assert.deepEqual(waarschuwingTitelNl("Coastal Flood Advisory"),{origineel:"Coastal Flood Advisory",nederlands:"Advies voor overstroming aan de kust",vertaald:true});
+assert.equal(waarschuwingTitelVoorBriefing("Rip Current Statement","US"),"Melding over gevaarlijke stromingen (rip currents)");
+assert.equal(waarschuwingTitelVoorBriefing("Rip Current Statement","NL"),"Rip Current Statement","buiten NWS-gebieden blijft de officiële titel ongewijzigd");
 
 assert.equal(locatieSleutel("52.3676",4.9041,"Amsterdam"),"52.36760|4.90410|amsterdam");
 assert.equal(locatieSleutel(null,4.9,"Amsterdam"),null);

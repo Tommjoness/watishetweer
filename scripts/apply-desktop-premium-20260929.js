@@ -52,6 +52,8 @@ const CSS=`
   html body #chartlab${NIET},html body #days .row.kop>div${NIET},html body #nights .row.kop>*${NIET},html body #nights .row.kop span${NIET},
   html body footer .bronlabel${NIET},html body .wiw-weergave-label${NIET},html body .seo-plaatsnav-kop${NIET},
   html body #here${NIET},html body #here span${NIET},html body #ververs${NIET},html body .wiw-theme-auto${NIET}{font-size:12px!important}
+  /* De kop van de uurtabel stond tot 1600px op 11px, kleiner dan de cellen eronder (12 en 13,5px). */
+  html body #wiw-hour-table thead th${NIET}{font-size:12px!important}
   /* Tweede regels en eenheden */
   html body #stamp${NIET},html body #plaatstijd${NIET},html body #app .sval>s${NIET},
   html body #moonlab${NIET},html body #moonlab span${NIET},html body #nights .nachtmaanregel${NIET},html body #days .row:not(.kop) small${NIET}{font-size:13px!important}
@@ -63,6 +65,11 @@ const CSS=`
   html body #nights .nachtoordeel${NIET},html body #nights .nachtvenster${NIET},
   html body #days .dlang${NIET},html body #nights .nachtlabel-lang${NIET},html body #feels${NIET},
   html body #days .row:not(.kop)>.dcond${NIET},html body #days .row:not(.kop)>.dwind${NIET},html body #days .row:not(.kop)>.dmin${NIET},html body #days .row:not(.kop)>.dmax${NIET},html body #days .row:not(.kop)>.drain${NIET}{font-size:15px!important}
+}
+@media (min-width:1100px) and (max-width:1599px){
+  /* Tot 1600px houdt de uurtabel haar smalle kolom (99px voor Temperatuur op 1100px): "TEMPERATUUR" blijft op 12px
+     binnen zijn cel met iets minder letterspatiëring (vanaf 1600px staat de kop op 12,5px in een bredere kolom). */
+  html body #wiw-hour-table thead th${NIET}{letter-spacing:.02em!important}
 }
 @media (min-width:1440px){
   html body #app .stat .eyebrow${NIET},html body #app h2>span${NIET},

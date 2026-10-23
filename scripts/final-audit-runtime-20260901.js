@@ -186,10 +186,16 @@ function officiëleNwsUrl(waarde){
 function verrijkNwsWaarschuwingen(){
   if(typeof S==="undefined"||!Array.isArray(S.actieveWaarschuwingen))return;
   const cards=[...document.querySelectorAll("#waarschuwingen .waarsch")],items=S.actieveWaarschuwingen.slice(0,3);
+  /* Twee verschillende officiële meldingen zonder eigen Nederlandse titel kregen beide de algemene kop en
+     waren dan niet uit elkaar te houden (Miami: Rip Current Statement en Coastal Flood Advisory). Komt de
+     algemene kop meer dan eens voor, dan staat de officiële titel er ook zichtbaar bij. */
+  const ALGEMEEN="Officiële weerwaarschuwing";
+  const kopVan=w=>{const t=String(w.titel||"").trim(),u=A.nwsUitleg(t,String(w.tekst||"").trim());return u.titel&&u.titel!==t?u.titel:ALGEMEEN;};
+  const algemeneKoppen=items.filter(w=>w&&isNwsWaarschuwing(w)&&kopVan(w)===ALGEMEEN).length;
   cards.forEach((card,i)=>{
     const w=items[i];if(!w||!isNwsWaarschuwing(w))return;
     const tekst=String(w.tekst||"").trim(),titel=String(w.titel||"").trim(),u=A.nwsUitleg(titel,tekst);
-    const nlTitel=u.titel&&u.titel!==titel?u.titel:"Officiële weerwaarschuwing";
+    const basisKop=kopVan(w),nlTitel=basisKop===ALGEMEEN&&algemeneKoppen>1&&titel?ALGEMEEN+": "+titel:basisKop;
     const geldig=w.tot&&typeof waarschuwingGeldigTot==="function"?waarschuwingGeldigTot(w.tot):null;
     const niveau=card.getAttribute("data-ui-severity");card.replaceChildren();if(niveau)card.setAttribute("data-ui-severity",niveau);
     const h3=document.createElement("h3");h3.textContent=nlTitel;card.appendChild(h3);

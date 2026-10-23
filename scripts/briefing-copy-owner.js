@@ -71,7 +71,10 @@ const MORGEN_BRON='    zin2=morgenUurPiek\n      ?"Morgen wordt het rond "+hhmm(
 const MORGEN_PRODUCTIE='    zin2=(nachtZin?nachtZin+" ":"")+(morgenUurPiek\n      ?"Het verwachte maximum ligt morgen rond "+hhmm(morgenUurPiek.t)+" op <b>"+weatherNowBriefingGraden(Math.round(morgenDagMax))+"</b>."\n      :"Het verwachte maximum voor morgen is <b>"+weatherNowBriefingGraden(Math.round(morgenDagMax))+"</b>.")+(weatherNowBriefingMorgenRegen(h,morgenDatum)?" "+weatherNowBriefingMorgenRegen(h,morgenDatum):"");\n';
 
 const VANDAAG_VERLEDEN_BRON='    zin2="Vandaag was het rond "+hhmm(volledigePiekVandaag.t)+" het warmst, met <b>"+Math.round(volledigePiekVandaag.v)+" graden</b>."+nachtZin;\n';
-const VANDAAG_VERLEDEN_PRODUCTIE='    zin2="Het verwachte maximum lag vandaag rond "+hhmm(volledigePiekVandaag.t)+" op <b>"+weatherNowBriefingGraden(Math.round(volledigePiekVandaag.v))+"</b>."+(nachtZin?" "+nachtZin:"");\n';
+/* Het uur van het maximum is voorbij, maar de uurwaarde blijft een modelwaarde en geen meting. De zin blijft
+   daarom aan de verwachting toegeschreven ("volgens de verwachting"), zonder de onnatuurlijke combinatie
+   "verwachte maximum lag" en zonder het als waarneming te presenteren. */
+const VANDAAG_VERLEDEN_PRODUCTIE='    zin2="Volgens de verwachting was het vandaag rond "+hhmm(volledigePiekVandaag.t)+" het warmst, met <b>"+weatherNowBriefingGraden(Math.round(volledigePiekVandaag.v))+"</b>."+(nachtZin?" "+nachtZin:"");\n';
 
 const VANDAAG_MAX_BRON='    zin2="De maximumtemperatuur van vandaag ligt rond <b>"+Math.round(vandaagMax)+" graden</b>."+nachtZin;\n';
 const VANDAAG_MAX_PRODUCTIE='    zin2="De maximumtemperatuur van vandaag ligt rond <b>"+weatherNowBriefingGraden(Math.round(vandaagMax))+"</b>."+(nachtZin?" "+nachtZin:"");\n';
