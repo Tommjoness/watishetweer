@@ -48,7 +48,7 @@
      "← Terug naar het weer". Anders bovenaan de inhoud, rechts uitgelijnd. */
   var STIJL = ".taal-keuze{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;" +
     "min-width:32px;min-height:28px;padding:0 9px;border:1px solid var(--rule,#DCE1DE);color:var(--ink-70,inherit);" +
-    "font-family:var(--sans,inherit);font-weight:500;font-size:11px;line-height:1;letter-spacing:.12em;text-decoration:none}" +
+    "font-family:var(--sans,inherit);font-weight:500;font-size:12px;line-height:1;letter-spacing:.12em;text-decoration:none}" +
     ".taal-keuze:hover{border-color:var(--ink,currentColor);color:var(--ink,inherit)}" +
     ".taal-keuze:focus-visible{outline:1px solid var(--ink,currentColor);outline-offset:2px}" +
     ".mast.taal-keuze-plek{position:relative}" +

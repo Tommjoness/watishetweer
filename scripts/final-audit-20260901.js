@@ -90,7 +90,9 @@ function nwsTitelNl(titel){
     [/^flood watch\b/,"Waakzaamheid voor overstromingen"],
     [/^wind advisory\b/,"Windadvies"],
     [/^high wind warning\b/,"Waarschuwing voor zeer harde wind"],
-    [/^dense fog advisory\b/,"Mistadvies"]
+    [/^dense fog advisory\b/,"Mistadvies"],
+    [/^rip current statement\b/,"Melding over gevaarlijke stromingen (rip currents)"],
+    [/^coastal flood advisory\b/,"Advies voor overstroming aan de kust"]
   ];
   for(const [re,nl] of map)if(re.test(k))return nl;
   return t;
@@ -117,12 +119,20 @@ function fahrenheitContext(titel,tekst){
   }
   return "";
 }
+/* Korte uitleg van een Amerikaans vakwoord dat een Nederlander niet kent. Alleen
+   een algemene omschrijving van het verschijnsel; de officiële tekst blijft
+   ongewijzigd in het uitklapbare origineel. */
+function nwsToelichting(titel){
+  return /^rip current statement\b/i.test(String(titel||"").trim())
+    ?"Een rip current is een sterke, smalle stroming die van de kust af loopt en zwemmers snel verder het water in kan trekken."
+    :"";
+}
 function nwsUitleg(titel,tekst){
   const nl=nwsTitelNl(titel),basis=nl&&nl!==String(titel||"").trim()
     ?"De Amerikaanse weerdienst heeft voor deze locatie een "+nl.toLocaleLowerCase("nl-NL")+" uitgegeven."
     :"De Amerikaanse weerdienst heeft voor deze locatie een officiële waarschuwing uitgegeven.";
-  const metrisch=fahrenheitContext(titel,tekst);
-  return {titel:nl,uitleg:basis+(metrisch?" "+metrisch:""),metrisch};
+  const metrisch=fahrenheitContext(titel,tekst),toelichting=nwsToelichting(titel);
+  return {titel:nl,uitleg:basis+(metrisch?" "+metrisch:"")+(toelichting?" "+toelichting:""),metrisch,toelichting};
 }
 
 return {regenperiodenVoorGrafiek,regenPeriodeTijdvak,regenSamenvatting,mmTekst,fahrenheitNaarCelsius,nwsTitelNl,isNwsHitteTitel,fahrenheitContext,nwsUitleg};

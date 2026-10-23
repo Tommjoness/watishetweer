@@ -80,7 +80,7 @@ for(const tekst of [
   "Naar verwachting bijna de hele dag zon.","Naar verwachting veel zon vandaag.",
   '<div class="bar">Bereik</div>','<div class="drain">Neerslag</div>',
   "Het verwachte maximum ligt vandaag rond ","Het verwachte maximum ligt morgen rond ",
-  "Het verwachte maximum lag vandaag rond ","Het verwachte maximum voor morgen is ",
+  "Volgens de verwachting was het vandaag rond ","Het verwachte maximum voor morgen is ",
   "De komende twee uur wordt er geen neerslag verwacht."
 ])vereist(tekst,"copy-eigenaar "+tekst);
 verboden("uiWindstootTekst","late UI-polish windstootcopy-owner");

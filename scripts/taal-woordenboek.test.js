@@ -13,8 +13,8 @@ const { pasHtmlAan } = require("./apply-taal.js");
 
 const v = kern.maakVertaler(woordenboek);
 const verwacht = {
-  "Er valt nu neerslag: 8,0 mm/u. Rond 16:45 wordt het naar verwachting droog. Het verwachte maximum lag vandaag rond 10:00 op 20 graden. Vannacht koelt het af naar ongeveer 12 graden. De wind komt uit het noordwesten. In de komende 24 uur is de wind het sterkst, met 6 Bft (krachtige wind). Windstoten kunnen vandaag tussen 15:00 en 16:00 oplopen tot 95 km/u.":
-    "Precipitation is falling now: 8.0 mm/h. It is expected to turn dry around 16:45. Today's forecast high was 20 degrees at around 10:00. Tonight it cools to about 12 degrees. The wind is from the north-west. Over the next 24 hours, the wind peaks at 6 Bft (strong breeze). Gusts may reach 95 km/h today between 15:00 and 16:00.",
+  "Er valt nu neerslag: 8,0 mm/u. Rond 16:45 wordt het naar verwachting droog. Volgens de verwachting was het vandaag rond 10:00 het warmst, met 20 graden. Vannacht koelt het af naar ongeveer 12 graden. De wind komt uit het noordwesten. In de komende 24 uur is de wind het sterkst, met 6 Bft (krachtige wind). Windstoten kunnen vandaag tussen 15:00 en 16:00 oplopen tot 95 km/u.":
+    "Precipitation is falling now: 8.0 mm/h. It is expected to turn dry around 16:45. According to the forecast, today's high was 20 degrees, reached at around 10:00. Tonight it cools to about 12 degrees. The wind is from the north-west. Over the next 24 hours, the wind peaks at 6 Bft (strong breeze). Gusts may reach 95 km/h today between 15:00 and 16:00.",
   "Vannacht koelt het af naar ongeveer 1 graad.": "Tonight it cools to about 1 degree.",
   "Vannacht koelt het af naar ongeveer -1 graad.": "Tonight it cools to about -1 degree.",
   "Grote kans op lichte regen in de middag": "Light rain likely in the afternoon",

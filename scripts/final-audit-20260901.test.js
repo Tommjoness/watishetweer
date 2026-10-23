@@ -55,6 +55,18 @@ assert.equal(a.nwsTitelNl("Severe Thunderstorm Watch"),"Waakzaamheid voor zwaar 
 assert.equal(a.nwsTitelNl("Tornado Watch"),"Waakzaamheid voor tornado's");
 assert.equal(a.nwsTitelNl("Winter Storm Warning"),"Waarschuwing voor zwaar winterweer");
 assert.equal(a.nwsTitelNl("High Wind Warning"),"Waarschuwing voor zeer harde wind");
+assert.equal(a.nwsTitelNl("Rip Current Statement"),"Melding over gevaarlijke stromingen (rip currents)");
+assert.equal(a.nwsTitelNl("Coastal Flood Advisory"),"Advies voor overstroming aan de kust");
+assert.equal(a.nwsTitelNl("Beach Hazards Statement"),"Beach Hazards Statement","een onbekende titel blijft de officiële titel (de kaart valt dan terug op de algemene kop)");
+{
+  /* Rip current: de uitleg noemt het type melding en legt het vakwoord kort uit; de officiële tekst blijft ongemoeid. */
+  const rip=a.nwsUitleg("Rip Current Statement","* WHAT...For the High Rip Current Risk, dangerous rip currents.");
+  assert.equal(rip.uitleg,"De Amerikaanse weerdienst heeft voor deze locatie een melding over gevaarlijke stromingen (rip currents) uitgegeven. Een rip current is een sterke, smalle stroming die van de kust af loopt en zwemmers snel verder het water in kan trekken.");
+  const kust=a.nwsUitleg("Coastal Flood Advisory","* WHAT...Minor coastal flooding.");
+  assert.equal(kust.uitleg,"De Amerikaanse weerdienst heeft voor deze locatie een advies voor overstroming aan de kust uitgegeven.","geen vakwoord, dus ook geen extra uitleg");
+  assert.equal(kust.toelichting,"");
+  assert.equal(a.nwsUitleg("Beach Hazards Statement","x").uitleg,"De Amerikaanse weerdienst heeft voor deze locatie een officiële waarschuwing uitgegeven.","onbekende titel: bestaande algemene uitleg");
+}
 assert.equal(a.fahrenheitContext("Heat Advisory","Heat index values of 100 to 110 degrees Fahrenheit."),"100–110 °F is ongeveer 38–43 °C.");
 assert.equal(a.fahrenheitContext("Heat Advisory","Temperatures near 104 °F."),"104 °F is ongeveer 40 °C.");
 assert.equal(a.fahrenheitContext("Heat Advisory","Heat index values up to 105."),"De Amerikaanse hitte-index loopt op tot 105 °F, ongeveer 41 °C.");

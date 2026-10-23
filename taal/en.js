@@ -686,6 +686,9 @@
     "Winterweeradvies": "Winter weather advisory",
     "Luchtkwaliteitsadvies": "Air quality advisory",
     "Luchtkwaliteitswaarschuwing": "Air quality warning",
+    "Melding over gevaarlijke stromingen (rip currents)": "Rip current statement",
+    "Advies voor overstroming aan de kust": "Coastal flood advisory",
+    "Een rip current is een sterke, smalle stroming die van de kust af loopt en zwemmers snel verder het water in kan trekken.": "A rip current is a strong, narrow current that flows away from the shore and can quickly pull swimmers further out into the water.",
 
     /* Laden en fouten */
     "Weer vandaag en 7-daagse verwachting | watishetweer.nl": "Weather today and 7-day forecast | watishetweer.nl",
@@ -1383,7 +1386,9 @@
     [/^Volgens het weermodel valt er nu (.+)\.$/, (m) => { const w = WEER[m[1].toLowerCase()]; return w && (/thunder/.test(w) ? `According to the weather model, there ${isAre(w)} ${w} now.` : `According to the weather model, ${w} ${isAre(w)} falling now.`); }],
 
     /* Briefing: temperatuur */
-    [new RegExp(`^Het verwachte maximum (lag|ligt) (vandaag|morgen) rond ${T} op ${G} (graden|graad)\\.$`), (m) => `${m[2] === "morgen" ? "Tomorrow" : "Today"}'s forecast high ${m[1] === "lag" ? "was" : "is"} ${graden(m[4])} at around ${m[3]}.`],
+    [new RegExp(`^Het verwachte maximum ligt (vandaag|morgen) rond ${T} op ${G} (graden|graad)\\.$`), (m) => `${m[1] === "morgen" ? "Tomorrow" : "Today"}'s forecast high is ${graden(m[3])} at around ${m[2]}.`],
+    /* Het uur van het maximum is voorbij; de waarde blijft een modelwaarde, dus ook in het Engels aan de verwachting toegeschreven. */
+    [new RegExp(`^Volgens de verwachting was het vandaag rond ${T} het warmst, met ${G} (graden|graad)\\.$`), (m) => `According to the forecast, today's high was ${graden(m[2])}, reached at around ${m[1]}.`],
     [new RegExp(`^Het verwachte maximum voor morgen is ${G} (graden|graad)\\.$`), (m) => `The forecast high for tomorrow is ${graden(m[1])}.`],
     /* Regen van morgen in de avondsamenvatting (briefing-copy-owner.js). */
     [new RegExp(`^Tussen (\\d{1,2}:\\d{2}) en (\\d{1,2}:\\d{2}) wordt morgen (regen|sneeuw|neerslag) verwacht \\(ongeveer ${G} mm\\)\\.$`), (m) => `${{ regen: "Rain", sneeuw: "Snow", neerslag: "Precipitation" }[m[3]]} is expected tomorrow between ${m[1]} and ${m[2]} (about ${getal(m[4])} mm).`],
@@ -1401,6 +1406,9 @@
     /* Waarschuwingen */
     [/^Code (geel|oranje|rood): (.+)$/, (m) => { const w = WAARSCHUWING[m[2].toLowerCase()]; return w && `${({ geel: "Yellow", oranje: "Orange", rood: "Red" })[m[1]]} warning for ${w}`; }],
     [/^Officiële weerwaarschuwing(?: \((geel|oranje|rood)\))?:$/, (m) => `Official${m[1] ? ` ${({ geel: "yellow", oranje: "orange", rood: "red" })[m[1]]}` : ""} weather warning:`],
+    /* Kop van een Amerikaanse melding zonder eigen Nederlandse titel als er meer van zulke meldingen zijn: de
+       officiële Engelse titel van de weerdienst staat erbij en blijft letterlijk (zonder punt, dus geen briefingzin). */
+    [/^Officiële weerwaarschuwing: ([A-Za-z][A-Za-z '\/-]+)$/, (m) => `Official weather warning: ${m[1]}`],
     [/^Officiële titel:$/, () => "Official title:"],
     [/^Uitleg van watishetweer\.nl:$/, () => "Explanation from watishetweer.nl:"],
     [/^Officiële titel: (.+?)[.·]? ?·? Bron: (.+?)\.?$/, (m) => `Official title: ${m[1]} · Source: ${m[2]}`],
@@ -1439,6 +1447,7 @@
     "officiële waarschuwing": "official warning",
     "hitteadvies": "heat advisory", "mistadvies": "fog advisory", "windadvies": "wind advisory", "winterweeradvies": "winter weather advisory",
     "luchtkwaliteitsadvies": "air quality advisory", "luchtkwaliteitswaarschuwing": "air quality warning", "tornadowaarschuwing": "tornado warning",
+    "melding over gevaarlijke stromingen (rip currents)": "rip current statement", "advies voor overstroming aan de kust": "coastal flood advisory",
     /* MeteoAlarm-koppen uit de officiële indeling ("Code geel: wind"). */
     "wind": "wind", "sneeuw en ijzel": "snow and ice", "onweer": "thunderstorms", "kou": "cold", "kustgevaar": "coastal hazards",
     "bosbrandgevaar": "forest fire danger", "lawinegevaar": "avalanche danger", "overstromingen": "flooding", "regen en overstromingen": "rain and flooding"

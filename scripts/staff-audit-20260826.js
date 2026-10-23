@@ -17,7 +17,9 @@ const WAARSCHUWING_TITELS=Object.freeze({
   "tornado watch":"Waakzaamheid voor tornado's",
   "winter storm warning":"Waarschuwing voor zwaar winterweer",
   "high wind warning":"Waarschuwing voor zeer harde wind",
-  "wind advisory":"Windadvies"
+  "wind advisory":"Windadvies",
+  "rip current statement":"Melding over gevaarlijke stromingen (rip currents)",
+  "coastal flood advisory":"Advies voor overstroming aan de kust"
 });
 const schoon=v=>String(v==null?"":v).trim().replace(/\s+/g," ");
 const eindig=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
