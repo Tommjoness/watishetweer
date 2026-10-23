@@ -495,6 +495,12 @@ function reserveBronTekst(plaatsen,bronnen){
   return `Bron: ${lijstTekst(delen)}, omdat Open-Meteo niet bereikbaar was.`;
 }
 let getoond="",bewaakt=false,lopend=0;
+/* Verversingsbeleid binnen dezelfde toestand: de opgehaalde verwachting is hoogstens een uur oud. Daarna volgt, bij
+   het eerstvolgende controlemoment (iedere minuut, bij terugkeer naar het tabblad of vanuit de terug-cache, bij weer
+   online) één stille aanvraag: de getoonde verwachting blijft staan en wordt alleen vervangen als de uitkomst
+   verandert. Mislukt verversen, dan blijft het getoonde staan en wordt de wachttijd steeds langer. */
+const MAX_LEEFTIJD_MS=3600000,WACHT_NA_FOUT_MS=[300000,900000,1800000];
+let opgehaald=0,mislukt=0,volgende=0,verversend=false,handtekening="";
 /* De foutmelding met een werkende link naar het weer voor de eigen plaats (de
    zoekbalk op de startpagina) en de knop om opnieuw te proberen. */
 const EIGEN_PLAATS="bekijk het weer voor je eigen plaats";
@@ -517,17 +523,46 @@ function foutBlok(cfg){
 function bewaak(cfg){
   if(bewaakt)return;
   bewaakt=true;
-  const kijk=()=>{if(sleutel(huidigeToestand(cfg))!==getoond)start();};
+  const kijk=()=>{
+    const t=huidigeToestand(cfg);
+    if(sleutel(t)!==getoond){start();return;}
+    const nu=Date.now();
+    if(t.fase==="verwachting"&&!verversend&&opgehaald&&!document.hidden&&nu-opgehaald>=MAX_LEEFTIJD_MS&&nu>=volgende)start({verversing:true});
+  };
   setInterval(kijk,60000);
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")kijk();});
+  window.addEventListener("pageshow",e=>{if(e.persisted)kijk();});
+  window.addEventListener("online",kijk);
 }
-async function start(){
+/* Stille verversing binnen dezelfde toestand (zie MAX_LEEFTIJD_MS): geen "laden"-melding, geen foutblok. */
+async function ververs(cfg,t){
+  const doel=document.getElementById("seizoen-verwachting");
+  if(!doel||t.fase!=="verwachting"||verversend)return;
+  verversend=true;
+  const volgnummer=++lopend;
+  try{
+    /* Alleen de gewone bron, zonder reserve: werkende gegevens blijven bij een fout gewoon staan. */
+    const antwoord=await haalVerwachting(verwachtingUrl(cfg,t));
+    if(volgnummer!==lopend)return;
+    const resultaten=verwerkAntwoord(antwoord,t,cfg),nieuw=JSON.stringify([resultaten,null]);
+    if(nieuw!==handtekening){toon(doel,t,resultaten,cfg,null);handtekening=nieuw;}
+    opgehaald=Date.now();mislukt=0;volgende=0;
+  }catch(e){
+    if(volgnummer!==lopend)return;
+    mislukt++;volgende=Date.now()+WACHT_NA_FOUT_MS[Math.min(mislukt,WACHT_NA_FOUT_MS.length)-1];
+  }finally{
+    verversend=false;
+  }
+}
+async function start(opt){
   const bron=document.getElementById("seizoen-config");
   if(!bron)return;
+  const stil=!!(opt&&opt.verversing);
   const cfg=JSON.parse(bron.textContent);
   const t=huidigeToestand(cfg);
   getoond=sleutel(t);
   bewaak(cfg);
+  if(stil){await ververs(cfg,t);return;}
   const kop=document.getElementById("seizoen-kop");
   if(kop)kop.textContent=`${cfg.naam} ${t.jaar}`;
   document.title=vul(cfg.titel,{jaar:t.jaar})+" | watishetweer.nl";
@@ -568,7 +603,9 @@ async function start(){
       bronZin=reserveBronTekst(cfg.plaatsen,reserve.bronnen);
     }
     if(volgnummer!==lopend)return;
-    toon(doel,t,verwerkAntwoord(antwoord,t,cfg),cfg,bronZin);
+    const resultaten=verwerkAntwoord(antwoord,t,cfg);
+    toon(doel,t,resultaten,cfg,bronZin);
+    opgehaald=Date.now();mislukt=0;volgende=0;handtekening=JSON.stringify([resultaten,bronZin]);
     delete doel.dataset.focus;
   }catch(e){
     if(volgnummer!==lopend)return;

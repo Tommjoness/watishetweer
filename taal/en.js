@@ -888,6 +888,9 @@
     "goed om te kijken": "good for stargazing",
     "te bewolkt, slecht zicht of te veel maanlicht": "too cloudy, poor visibility or too much moonlight",
     "maan op": "moon up",
+    "maan niet op": "moon down",
+    "Bewolking per uur als tabel": "Cloud cover per hour as a table",
+    "onbekend": "unknown",
     "Komende nachten": "Coming nights",
     "Kijkvenster": "Viewing window",
     "Het weer per uur voor deze plek": "The hourly weather for this spot",
@@ -1317,6 +1320,8 @@
     /* Korte venstertekst in het Nachtzicht-overzicht (kortVenster in scripts/nachtzicht-runtime.js). */
     [/^nu tot (\d{1,2}:\d{2})$/, (m) => `now until ${m[1]}`],
     [/^geen \((.+)\)$/, (m) => { const r = m[1] === "onvoldoende data" ? "insufficient data" : m[1] === "korter dan twee uur" ? "shorter than two hours" : oorzaken(m[1]); return r && `none (${r})`; }],
+    /* Ophaalmoment van de verwachting op de Nachtzicht-pagina's (verversingsbeleid in nachtzicht-runtime.js). */
+    [/^Verwachting van (\d{2}:\d{2})\.( Verversen lukt nu niet\.)?$/, (m) => `Forecast from ${m[1]}.${m[2] ? " Refreshing is not working right now." : ""}`],
     /* Direct antwoord boven het Nachtzicht-overzicht (antwoordHtml in scripts/nachtzicht-runtime.js); parkennamen blijven staan. */
     [/^Vannacht zijn de omstandigheden in (\d+) van de (\d+) parken gunstig \(7\/10 of hoger\)\.$/, (m) => `Tonight conditions are favourable in ${m[1]} of ${m[2]} parks (7/10 or higher).`],
     [/^Het best \((\d+)\/10\): (.+)\.$/, (m) => `Best (${m[1]}/10): ${parkenEn(m[2])}.`],

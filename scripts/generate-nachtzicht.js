@@ -74,6 +74,13 @@ const EXTRA_STIJL = `
 .nz-staven{height:96px;align-items:end;border-bottom:1px solid var(--rule)}
 .nz-uur{height:var(--h);background:var(--rule)}.nz-uur.goed{background:var(--ink)}
 .nz-maanrij{margin-top:4px}.nz-maanrij i{height:3px}.nz-maanrij i.op{background:var(--muted)}
+.nz-gegevens{margin:6px 0 0}
+.nz-gegevens summary{cursor:pointer;padding:10px 0;color:var(--ink-70);font-size:14px}
+.nz-gegevens summary:hover{color:var(--ink)}
+.nz-gegevens table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.nz-gegevens th,.nz-gegevens td{text-align:left;padding:7px 12px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top;color:var(--ink-70)}
+.nz-gegevens thead th{font-size:13px;font-weight:500;color:var(--muted);padding-top:0}
+.nz-gegevens tbody th{font-weight:500;color:var(--ink)}
 .nz-tijden{margin-top:4px;font-size:12px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
 .nz-tabel table,#nz-nachten table{width:100%;border-collapse:collapse;font-size:15px}
 .nz-tabel th,.nz-tabel td,#nz-nachten th,#nz-nachten td{text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
@@ -175,6 +182,7 @@ function parkPagina(p, kern) {
 <p id="nz-status" class="klein">De verwachting wordt geladen.</p>
 <p class="nz-licht">Lichtvervuiling: <b>${esc(p.licht.naam)}</b> (geschat). <span class="klein">Voor een heldere, maanloze nacht, rond het midden van het park; waar je precies staat maakt uit.</span> ${esc(p.licht.tekst)}</p>
 <section id="nz-nachten" aria-label="Komende nachten" hidden></section>
+<p id="nz-bijgewerkt" class="klein" hidden></p>
 <p><a href="${esc(weerUrl)}">Het weer per uur voor deze plek</a></p>
 ${SCORE_UITLEG}
 ${BRONNEN}
@@ -198,6 +206,7 @@ function overzichtPagina(parken, kern) {
 <tbody>
 ${rijen}
 </tbody></table></div>
+<p id="nz-bijgewerkt" class="klein" hidden></p>
 <p>De maan bepaalt mee hoeveel sterren je ziet. Fase, op- en ondergang en de volgende volle maan staan op <a href="${MAAN}">De maan vandaag</a>.</p>
 <h2>Hoe donker is het?</h2>
 <p>De lichtvervuiling is een grove schatting voor een heldere, maanloze nacht, uit de RIVM-kaart van de hemelhelderheid. <b>Laag</b>: weinig kunstlicht, de Melkweg is goed te zien. <b>Matig</b>: de Melkweg is zwak of niet te zien. Bij twijfel tussen twee klassen staan ze allebei genoemd. Parken aan de landsgrens ontbreken in dit overzicht: de kaart kent het licht uit het buitenland niet, waardoor de schatting daar te donker zou uitvallen.</p>

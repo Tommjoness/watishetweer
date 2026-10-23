@@ -37,6 +37,30 @@ async function metFetchMock(mock, fn) {
   assert.equal(r.headers.get("cloudflare-cdn-cache-control"), null);
 }
 
+/* Onmogelijke coördinaten zijn een foute aanvraag (400, nooit cachebaar), geen "geen provider voor deze locatie". */
+for (const query of ["lat=999&lon=5", "lat=52.37&lon=999", "lat=-90.0001&lon=0", "lat=0&lon=180.0001", "lat=&lon=5", "lat=5", "lat=Infinity&lon=5"]) {
+  let upstream = 0;
+  await metFetchMock(async () => { upstream++; throw new Error("mag niet"); }, async () => {
+    const r = await neerslagRoute.fetch(new Request(BASE + "/api/neerslag?" + query + "&land=NL"));
+    const body = await json(r);
+    assert.equal(r.status, 400, query);
+    assert.deepEqual(body, { beschikbaar: false, provider: null, reden: "ongeldige coördinaten" }, query);
+    assert.match(r.headers.get("cache-control") || "", /no-store/i, query);
+    assert.equal(r.headers.get("cloudflare-cdn-cache-control"), null, query);
+  });
+  assert.equal(upstream, 0, query + ": geen upstreamaanvraag");
+}
+
+/* Geldige grenzen en 0,0 blijven een gewone, cachebare uitkomst zonder provider. */
+for (const query of ["lat=0&lon=0", "lat=90&lon=180", "lat=-90&lon=-180"]) {
+  await metFetchMock(async () => { throw new Error("mag niet"); }, async () => {
+    const r = await neerslagRoute.fetch(new Request(BASE + "/api/neerslag?" + query));
+    const body = await json(r);
+    assert.equal(r.status, 200, query);
+    assert.equal(body?.reden, "geen actuele neerslagprovider voor deze locatie", query);
+  });
+}
+
 {
   const r = await plaatsnaamRoute.fetch(new Request(BASE + "/api/plaatsnaam?lat=&lon=4.90"));
   const body = await json(r);

@@ -2,6 +2,7 @@
 
 const assert = require("assert");
 const {
+  geldigePositie,
   kiesProvider,
   canoniekNeerslagPunt,
   haalNeerslagVoorLocatie,
@@ -239,6 +240,40 @@ test("onondersteunde landen doen geen externe providerrequest", async () => {
   assert.equal(uit.beschikbaar, false);
   assert.equal(uit.provider, null);
   assert.equal(aangeroepen, false);
+});
+
+test("positie: alleen eindige getallen binnen het geografische bereik zijn geldig", () => {
+  for (const [lat, lon] of [[0, 0], [90, 180], [-90, -180], [52.37, 4.9], [-0.0001, 0.0001]]) {
+    assert.equal(geldigePositie(lat, lon), true, `${lat},${lon} hoort geldig te zijn`);
+  }
+  for (const [lat, lon] of [[999, 5], [5, 999], [90.0001, 0], [-90.0001, 0], [0, 180.0001], [0, -180.0001], [NaN, 5], [5, Infinity], [-Infinity, 5]]) {
+    assert.equal(geldigePositie(lat, lon), false, `${lat},${lon} hoort ongeldig te zijn`);
+  }
+});
+
+test("onmogelijke coördinaten: ongeldig, geen provider, geen canoniek punt en geen externe aanvraag", async () => {
+  let aangeroepen = 0;
+  const fetchImpl = async () => { aangeroepen++; throw new Error("mag niet"); };
+  for (const [lat, lon] of [[999, 5], [52.37, 999], [-90.0001, 0], [0, -180.0001]]) {
+    const uit = await haalNeerslagVoorLocatie({ lat, lon, land: "NL", fetchImpl, nuMs: NU });
+    assert.deepEqual(uit, { beschikbaar: false, provider: null, reden: "ongeldige coördinaten" }, `${lat},${lon}`);
+    assert.equal(kiesProvider({ lat, lon, land: "NL" }), null, `${lat},${lon}: geen provider`);
+    assert.equal(canoniekNeerslagPunt({ lat, lon, land: "NL" }), null, `${lat},${lon}: geen canoniek punt`);
+  }
+  assert.equal(aangeroepen, 0);
+});
+
+test("ontbrekende of lege waarden worden nooit nul, en 0,0 blijft een geldige locatie zonder provider", async () => {
+  let aangeroepen = 0;
+  const fetchImpl = async () => { aangeroepen++; throw new Error("mag niet"); };
+  for (const [lat, lon] of [[undefined, 5], [5, undefined], ["", 5], [5, "  "], [null, null]]) {
+    const uit = await haalNeerslagVoorLocatie({ lat, lon, fetchImpl, nuMs: NU });
+    assert.equal(uit.reden, "ongeldige coördinaten", `${JSON.stringify([lat, lon])}`);
+  }
+  const nul = await haalNeerslagVoorLocatie({ lat: "0", lon: "0", fetchImpl, nuMs: NU });
+  assert.deepEqual(nul, { beschikbaar: false, provider: null, reden: "geen actuele neerslagprovider voor deze locatie" });
+  assert.deepEqual(canoniekNeerslagPunt({ lat: 0, lon: 0 }), { lat: 0, lon: 0 });
+  assert.equal(aangeroepen, 0);
 });
 
 process.on("beforeExit", () => {

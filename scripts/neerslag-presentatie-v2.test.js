@@ -31,11 +31,17 @@ stat.querySelector=sel=>sel===".eyebrow"?kop:null;
 els.pop.closest=sel=>sel===".stat"?stat:null;
 
 let basisAnalyse={};
+/* Zoals interpretatie-engine.js de briefing schrijft: de actuele neerslagzin staat tussen onzichtbare markeringen. */
+const M1="<!--brief-neerslag-->",M2="<!--/brief-neerslag-->";
+const REST=" Ook later vandaag blijft neerslag mogelijk. Vandaag was het rond 13:00 het warmst, met <b>24 graden</b>. De wind komt uit het <b>zuidwesten</b>.";
+const STANDAARD=M1+"In de komende twee uur is neerslag mogelijk."+M2+REST;
+const MET_WAARSCHUWING="<b>Officiële weerwaarschuwing (geel):</b> Code geel: windstoten. "+M1+"Het motregent nu."+M2+REST+" De officiële waarschuwing heeft voorrang op de modelverwachting.";
 const engine={
   STATUS_RANG:{ONVOLDOENDE_DATA:0,GEEN_KANS:1,ZEER_KLEINE_KANS:2,KLEINE_KANS:3,MOGELIJKE_NEERSLAG:4,GROTE_KANS_ZONDER_HOEVEELHEID:5,SPOORHOEVEELHEID:6,NEERSLAG_VERWACHT:7,NEERSLAG_NU:8},
   analyseerNeerslagData:()=>({...basisAnalyse})
 };
 const context={
+  briefingHtml:"",
   console,
   S:{land:"NL",lat:52.259,lon:5.606,d:{current:{weather_code:3,is_day:1,cloud_cover:55,precipitation:0}}},
   document:{getElementById:id=>els[id]||null},
@@ -54,7 +60,7 @@ const context={
     els.popsub.textContent="Komend uur is de neerslagkans 49%.";
   },
   briefing(){
-    els.brief.innerHTML="In de komende twee uur is neerslag mogelijk. Ook later vandaag blijft neerslag mogelijk. Vandaag was het rond 13:00 het warmst, met <b>24 graden</b>.";
+    els.brief.innerHTML=context.briefingHtml;
   },
   nowcast(){els.nctext.textContent="Er valt nu neerslag.";}
 };
@@ -81,12 +87,13 @@ assert.equal(els.cond.textContent,"Neerslag");
 assert.equal(els.minicond.textContent,"Neerslag");
 assert.match(els.nowicon.innerHTML,/data-code="61"/);
 
+context.briefingHtml=STANDAARD;
 context.briefing();
-assert.match(els.brief.innerHTML,/^Er valt nu neerslag: 0,2 mm\/u\./);
+assert.match(els.brief.innerHTML,/^<!--brief-neerslag-->Er valt nu neerslag: 0,2 mm\/u\./);
 assert.match(els.brief.innerHTML,/Rond 15:50 wordt het naar verwachting droog\./);
 assert.match(els.brief.innerHTML,/Vandaag was het rond 13:00/);
 assert.match(els.brief.innerHTML,/<b>24 graden<\/b>/,"latere briefingmarkup moet intact blijven");
-assert(!/^In de komende twee uur is neerslag mogelijk/.test(els.brief.innerHTML));
+assert(!/In de komende twee uur is neerslag mogelijk/.test(els.brief.innerHTML));
 
 context.nowcast();
 assert.equal(els.nctext.textContent,"Er valt nu neerslag: 0,2 mm/u. Rond 15:50 wordt het naar verwachting droog.");
@@ -131,8 +138,9 @@ assert.match(els.nowicon.innerHTML,/data-code="2"/);
 assert.equal(kop.textContent,"Neerslagkans komend uur");
 assert.equal(els.pop.innerHTML,"12<s>%</s>");
 assert.equal(els.popsub.textContent,"Het komende uur is er een kleine kans op neerslag.");
+context.briefingHtml=STANDAARD;
 context.briefing();
-assert.match(els.brief.innerHTML,/^De komende twee uur is er een kleine kans op neerslag\./);
+assert.match(els.brief.innerHTML,/^<!--brief-neerslag-->De komende twee uur is er een kleine kans op neerslag\./);
 assert.doesNotMatch(els.brief.innerHTML,/(valt|regent) nu/i);
 assert.match(els.brief.innerHTML,/<b>24 graden<\/b>/,"droge correctie bewaart latere briefingmarkup");
 
@@ -187,6 +195,69 @@ assert.equal(els.nctext.textContent,"Er valt nu neerslag: 0,2 mm/u.","zonder now
   context.minibarBij();
   assert.equal(els.minicond.textContent,"Bewolkt");
   context.S.d.current=kopie;
+}
+
+/* Bevinding 1: een officiële waarschuwing vóór de neerslagzin mag de correctie niet blokkeren.
+   Natte en droge officiële meting, met en zonder waarschuwing; alle overige tekst en opmaak blijft staan. */
+{
+  const nu2=Date.now();
+  const droogKnmi={beschikbaar:true,opgehaaldOp:new Date(nu2).toISOString(),actueel:{waarde:0,tijd:new Date(nu2-2*60*1000).toISOString()},nowcast:null};
+  const modelRegen={genoeg:true,status:"NEERSLAG_NU",rang:engine.STATUS_RANG.NEERSLAG_NU,kans:12,kansDekking:1,hoeveelheid:0,bronHoeveelheid:"uurdata",currentWet:true,currentHoeveelheid:0.2,soort:"motregen",startMin:nu2/60000,duurMin:120};
+  const natteMeting={genoeg:true,bronActueel:"knmi-rtcor",currentIntensiteit:0.24,currentRadarWet:true,currentWet:true,status:"NEERSLAG_NU",soort:"neerslag",droogVanafTijd:"15:50",bronHoeveelheid:"knmi-nowcast",hoeveelheid:0,kans:49};
+  const bewaar={...context.S.d.current};
+  Object.assign(context.S.d.current,{weather_code:53,cloud_cover:97,precipitation:0.2});
+
+  for(const [naam,html] of [["zonder waarschuwing",STANDAARD],["met waarschuwing",MET_WAARSCHUWING]]){
+    /* Droge officiële meting: het model zegt motregen, de radar 0 mm/u. */
+    context.S.d.__knmiNeerslag=droogKnmi;basisAnalyse=modelRegen;
+    context.briefingHtml=html;context.briefing();
+    let h=els.brief.innerHTML;
+    assert.doesNotMatch(h,/motregent|Er valt nu/i,naam+": droge meting laat de regenclaim niet staan: "+h);
+    assert.match(h,new RegExp(M1.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"De komende twee uur is er een kleine kans op neerslag\\."),naam+": droge meting zet de kanszin op de afgebakende plek: "+h);
+    assert.equal(h.split(M1).length-1,1,naam+": één begin-markering");assert.equal(h.split(M2).length-1,1,naam+": één eind-markering");
+    assert.match(h,/Ook later vandaag blijft neerslag mogelijk\. Vandaag was het rond 13:00 het warmst, met <b>24 graden<\/b>\. De wind komt uit het <b>zuidwesten<\/b>\./,naam+": temperatuur-, windtekst en opmaak blijven staan");
+    if(html===MET_WAARSCHUWING){
+      assert.match(h,/^<b>Officiële weerwaarschuwing \(geel\):<\/b> Code geel: windstoten\. /,"de waarschuwing blijft vooraan staan");
+      assert.match(h,/De officiële waarschuwing heeft voorrang op de modelverwachting\.$/,"de voorrangszin blijft achteraan staan");
+    }
+    /* Opnieuw renderen en nogmaals corrigeren (async radarverrijking) geeft hetzelfde resultaat. */
+    const eerste=els.brief.innerHTML;
+    context.briefing();
+    assert.equal(els.brief.innerHTML,eerste,naam+": herhaalde render is idempotent");
+
+    /* Natte officiële meting: de regenclaim wordt de gemeten intensiteit, ook achter een waarschuwing. */
+    delete context.S.d.__knmiNeerslag;basisAnalyse=natteMeting;
+    context.briefingHtml=html;context.briefing();
+    h=els.brief.innerHTML;
+    assert.match(h,/<!--brief-neerslag-->Er valt nu neerslag: 0,2 mm\/u\. Rond 15:50 wordt het naar verwachting droog\.<!--\/brief-neerslag-->/,naam+": natte meting: "+h);
+    assert.doesNotMatch(h,/motregent|In de komende twee uur is neerslag mogelijk/,naam+": natte meting vervangt de modelzin");
+    assert.match(h,/<b>24 graden<\/b>\. De wind komt uit het <b>zuidwesten<\/b>\./,naam+": opmaak na de neerslagzin blijft staan");
+  }
+
+  /* Zonder officiële meting (wereldwijd, of radar niet beschikbaar) blijft de modelzin onaangeroerd. */
+  delete context.S.d.__knmiNeerslag;
+  basisAnalyse={...modelRegen,bronActueel:null};
+  context.briefingHtml=MET_WAARSCHUWING;context.briefing();
+  assert.equal(els.brief.innerHTML,MET_WAARSCHUWING,"zonder officiële meting verandert de briefing niet");
+
+  /* Zonder markeringen (andere structuur) wordt niets herschreven. */
+  context.S.d.__knmiNeerslag=droogKnmi;basisAnalyse=modelRegen;
+  const zonderMarkering="Het motregent nu. Vandaag was het rond 13:00 het warmst, met <b>24 graden</b>.";
+  context.briefingHtml=zonderMarkering;context.briefing();
+  assert.equal(els.brief.innerHTML,zonderMarkering,"zonder markeringen herschrijft de laag geen HTML");
+  context.briefingHtml=M1+"Het motregent nu.";context.briefing();
+  assert.equal(els.brief.innerHTML,M1+"Het motregent nu.","een niet afgesloten markering wordt genegeerd");
+
+  Object.keys(bewaar).forEach(k=>{context.S.d.current[k]=bewaar[k];});
+  delete context.S.d.__knmiNeerslag;
+}
+
+/* De markeringen staan identiek in de schrijver (engine) en de lezer (presentatielaag). */
+{
+  const engineBron=fs.readFileSync(path.join(__dirname,"..","interpretatie-engine.js"),"utf8");
+  assert(engineBron.includes('"<!--brief-neerslag-->"+esc(briefingNeerslagZin(twee))+"<!--/brief-neerslag-->"'),"engine moet de neerslagzin afbakenen");
+  assert(bron.includes('NEERSLAGZIN_BEGIN="<!--brief-neerslag-->"')&&bron.includes('NEERSLAGZIN_EINDE="<!--/brief-neerslag-->"'),"presentatielaag leest dezelfde markeringen");
+  assert(!/\^\(\?:\(\?:In\|De\|Er\|Het\)/.test(bron),"geen breed zoekpatroon meer op de briefing-HTML");
 }
 
 console.log("Neerslagpresentatie v2: echte KNMI-verrijking, nat/droog, kanslabel, briefing, hero, minibalk en twee-uurscijfers geslaagd.");

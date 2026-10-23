@@ -174,7 +174,7 @@ De rate-limitimplementatie gebruikt bewust één Free-planregel-slot: 60 request
 
 ### Productie toont een verkeerde of oude versie
 
-1. Lees `weather-build-sha` uit de live HTML.
+1. Lees `weather-build-sha` uit de live HTML. Alle publieke pagina's dragen de markering (ook Over, privacy, de seizoenspagina's, Nachtzicht met parken en Maan); `scripts/verify-build-provenance.js` bewaakt dat in de build en `scripts/production-smoke.js` controleert er één per paginatype.
 2. Vergelijk die waarde met de bedoelde `main`-SHA en de laatste `Cloudflare production`-run.
 3. Controleer of zowel `watishetweer.nl` als `www.watishetweer.nl` actief aan Pages gekoppeld zijn.
 4. Start de productie-workflow alleen opnieuw als dezelfde huidige `main`-SHA nog leidend is; de workflow blokkeert een verouderde deploy.
