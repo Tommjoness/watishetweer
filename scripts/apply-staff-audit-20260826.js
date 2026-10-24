@@ -26,10 +26,16 @@ if(!html.includes("WeatherNowGlobalLocationHardening"))throw new Error("Wereldwi
 
 /* Landmarks + skiplink. UI-polish heeft #app al naar de enige semantische
    <main> omgezet; deze laag voegt alleen een focusdoel voor de skiplink toe en
-   maakt de bestaande mast expliciet het banner-landmark. */
+   maakt de bestaande mast expliciet het banner-landmark.
+   De skiplink staat buiten .sheet[data-nosnippet]. Zonder eigen bescherming is
+   "Ga naar hoofdinhoud" de eerste snippet-geschikte tekst van de pagina en
+   toonde Google die als beschrijving (mobiele zoekopdracht, 24 oktober 2026).
+   data-nosnippet werkt niet op <a>, wel op span, div en section: de span laat
+   opmaak (de link is position:fixed), focusvolgorde en toegankelijkheid gelijk. */
+const SKIPLINK='<span data-nosnippet><a class="skiplink" href="#app">Ga naar hoofdinhoud</a></span>';
 html=vervangExact(html,
   '<body>\n<div class="sheet" data-nosnippet>',
-  '<body>\n<a class="skiplink" href="#app">Ga naar hoofdinhoud</a>\n<div class="sheet" data-nosnippet>',
+  '<body>\n'+SKIPLINK+'\n<div class="sheet" data-nosnippet>',
   "skiplink");
 html=vervangExact(html,'  <div class="mast">','  <div class="mast" role="banner">',"header-landmark");
 html=vervangExact(html,'<main id="app" style="display:none">','<main id="app" tabindex="-1" style="display:none">',"main-focusdoel");
@@ -110,7 +116,7 @@ if(!scripts.length)throw new Error("Geen inline scripts na staff-audit.");
 scripts.forEach((bron,i)=>new vm.Script(bron,{filename:"public/index.html:staff-audit-"+(i+1)}));
 
 for(const vereist of [
-  'class="skiplink"','role="banner"','<main id="app" tabindex="-1"','id="chartdata"',
+  SKIPLINK,'role="banner"','<main id="app" tabindex="-1"','id="chartdata"',
   'WeatherNowStaffAudit.markeerNavigatie("push")','window.addEventListener("popstate"',
   'Deze gedeelde locatie is ongeldig','Officiële melding','National Weather Service',
   'Kans en dagsom zijn verschillende modelwaarden'
