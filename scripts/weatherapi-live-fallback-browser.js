@@ -23,6 +23,14 @@ function volledigeForecastDekking(payload){
   });
 }
 
+/* Echte UTC-afwijking van een IANA-zone op een moment, in seconden. */
+function echteOffset(timezone,ms){
+  const naam=new Intl.DateTimeFormat("en-US",{timeZone:timezone,timeZoneName:"longOffset"}).formatToParts(new Date(ms)).find(deel=>deel.type==="timeZoneName").value;
+  if(naam==="GMT")return 0;
+  const m=/^GMT([+-])(\d{2}):(\d{2})$/.exec(naam);
+  return m?(m[1]==="-"?-1:1)*(Number(m[2])*3600+Number(m[3])*60):null;
+}
+
 function verwachteOpenMeteo503(msg){
   if(!msg||msg.type()!=="error")return false;
   const tekst=String(msg.text()||"");
@@ -78,6 +86,16 @@ function verwachteOpenMeteo503(msg){
     assert.equal(payload&&payload.provider,"visualcrossing","fallbackpayload mist Visual Crossing-providerbewijs");
     assert.equal(payload&&payload.daily&&payload.daily.time&&payload.daily.time.length,7,"fallbackpayload mist zeven volledige dagen");
     assert(volledigeForecastDekking(payload),"fallbackpayload mist volledige uurdekking voor een of meer kalenderdagen");
+
+    /* Tijdas: één vaste afwijking, die van het moment van opvragen (zoals Open-Meteo), en de
+       tijden in het antwoord zijn daarop gezet. Op 25 oktober 2026 meldde de route 7200 bij
+       tijden in wintertijd. Het antwoord kan door de edge-cache tot een kwartier oud zijn,
+       dus ook de afwijking van twintig minuten geleden is geldig. */
+    const nuMs=Date.now();
+    const toegestaan=[echteOffset(payload.timezone,nuMs),echteOffset(payload.timezone,nuMs-20*60000)];
+    assert(toegestaan.includes(payload.utc_offset_seconds),"fallbackpayload: utc_offset_seconds "+payload.utc_offset_seconds+" is niet de echte afwijking van "+payload.timezone+" ("+toegestaan.join(" of ")+")");
+    const huidigMs=Date.parse(String(payload.current&&payload.current.time)+":00Z")-payload.utc_offset_seconds*1000;
+    assert(Math.abs(nuMs-huidigMs)<=3*3600000,"fallbackpayload: current.time "+(payload.current&&payload.current.time)+" ligt niet bij het huidige moment");
 
     await page.waitForFunction(()=>{
       const app=document.getElementById("app"),temp=document.getElementById("t"),brief=document.getElementById("brief");
