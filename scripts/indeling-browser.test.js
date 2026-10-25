@@ -127,7 +127,8 @@ function meet(){
         }
         if(naam==="avond"&&w===1366)assert(m.chart.y<=660,label+": de grafiek begint pas op y="+Math.round(m.chart.y));
         if(SCENARIO[naam].waarschuwing){
-          assert(/Officiële weerwaarschuwing: Code geel/.test(m.brief)&&!/\(geel\)/.test(m.brief),label+": de samenvatting herhaalt het niveau: "+m.brief.slice(0,80));
+          /* Fase 1 (25 oktober 2026): "code geel voor …" in plaats van "Code geel: …", zodat de zin één dubbele punt heeft. */
+          assert(/Officiële weerwaarschuwing: code geel voor /.test(m.brief)&&!/\(geel\)/.test(m.brief)&&!/Officiële weerwaarschuwing: Code /.test(m.brief),label+": de samenvatting herhaalt het niveau: "+m.brief.slice(0,80));
         }
         /* Een omlijnde zonneband alleen als er nacht in het venster valt. */
         assert(!(m.band>0&&m.nacht===0),label+": lege zonneband zonder nacht in het venster");

@@ -180,9 +180,13 @@ if(typeof briefing==="function"){
   const basisBriefingWaarschuwingNl=briefing;
   briefing=function(){
     const origineel=S.actieveWaarschuwingen,land=schoon(S.land).toUpperCase();
-    if(!Array.isArray(origineel)||!NWS_LANDEN.has(land))return basisBriefingWaarschuwingNl.apply(this,arguments);
+    /* Engelstalige bezoekers krijgen de officiële Engelse gebeurtenisnaam; de vertaallaag laat die staan. */
+    const engels=typeof document!=="undefined"&&document.documentElement&&document.documentElement.getAttribute("data-taal")==="en";
+    if(!Array.isArray(origineel)||!NWS_LANDEN.has(land)||engels)return basisBriefingWaarschuwingNl.apply(this,arguments);
+    /* De server levert de Nederlandse titel (`titelNl`) bij een zekere vertaling; de oudere tabel is alleen de terugval
+       voor een antwoord zonder dat veld. Zonder zekere vertaling blijft de officiële naam staan. */
     const vertaald=origineel.map(w=>{
-      if(!w)return w;const titel=waarschuwingTitelVoorBriefing(w.titel,land);
+      if(!w)return w;const titel=schoon(w.titelNl)||waarschuwingTitelVoorBriefing(w.titel,land);
       return titel&&titel!==w.titel?Object.assign({},w,{titel}):w;
     });
     S.actieveWaarschuwingen=vertaald;

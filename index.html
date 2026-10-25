@@ -3047,7 +3047,11 @@ async function waarschuwingen(){
       const sleutel=[w.titel||"",w.tot||"",w.gebied||""].join("|").toLowerCase();
       if(!uniek.has(sleutel)) uniek.set(sleutel,w);
     }
-    const lijst=[...uniek.values()].sort((a,b)=>(rang[b.niveau]||0)-(rang[a.niveau]||0)
+    /* Dringendste eerst. NWS-meldingen dragen een `prioriteit` (ernst van de bron, dan soort melding): de kleur
+       alleen kent geen onderscheid tussen "gering" en "matig". MeteoAlarm heeft alleen de kleur. Bij gelijke
+       prioriteit staat wat het eerst begon (of al geldt) bovenaan. */
+    const prio=w=>Number.isFinite(w.prioriteit)?w.prioriteit:(rang[w.niveau]||0)*10;
+    const lijst=[...uniek.values()].sort((a,b)=>prio(b)-prio(a)
       ||((Date.parse(a.van)||Infinity)-(Date.parse(b.van)||Infinity)));
     S.actieveWaarschuwingen=lijst;
     el.innerHTML=lijst.slice(0,3).map(w=>{

@@ -208,6 +208,7 @@ Controleer eerst welke bron faalt. De hoofdforecast heeft een begrensde fallback
 | weeruitleg of briefing wijzigen | wijzig de canonieke interpretatie-/copy-owner vóór de postbuild; voeg scenario- en browserregressies toe |
 | grafiek of weekverwachting wijzigen | wijzig de bestaande eigenaar, niet alleen gegenereerde HTML; test 320–430 px, desktop, Chromium en WebKit |
 | Nachtzicht wijzigen | behoud de score-, maan-, pooldag/poolnacht- en kalendergrenscontracten |
+| Amerikaanse waarschuwing vertalen of prioriteren | pas `lib/nws-gebeurtenissen.cjs` aan (Nederlandse titel alleen bij een zekere vertaling, anders `null`); een nieuwe officiële naam ook in de namenlijst van `taal/en.js`; draai `scripts/nws-gebeurtenissen.test.js` en `scripts/waarschuwingen-onderscheid-browser.test.js` |
 | API-provider wijzigen | wijzig gedeelde logica in `lib/`/`api/`; houd de Function-wrapper dun en bewaak timeout, cache, privacy en fail-closed gedrag |
 | securityheader wijzigen | houd `cloudflare/_headers` en `functions/_middleware.js` inhoudelijk gelijk en draai `scripts/security-headers.test.js` |
 | Web Analytics opnieuw borgen | start `.github/workflows/cloudflare-web-analytics.yml`; verruim de CSP niet verder dan de officiële beaconbron en verwijder geen onbekende Configuration Rules |

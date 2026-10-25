@@ -82,8 +82,8 @@ const VANDAAG_MAX_PRODUCTIE='    zin2="De maximumtemperatuur van vandaag ligt ro
 const NACHT_STANDALONE_BRON='    zin2="Vannacht koelt het af naar <b>"+tmin+" graden</b>.";\n';
 const NACHT_STANDALONE_PRODUCTIE='    zin2=weatherNowBriefingNachtzin(tmin,nuLokaal,huidige);\n';
 
-const WAARSCHUWING_VOORRANG_BRON='        voor="<b>"+waarschKop+":</b> "+esc(w.titel)+". "+voor\n          +" De officiële waarschuwing heeft voorrang op de modelverwachting.";\n';
-const WAARSCHUWING_VOORRANG_PRODUCTIE='        voor="<b>"+waarschKop+":</b> "+esc(w.titel)+". "+voor;\n';
+const WAARSCHUWING_VOORRANG_BRON='        voor="<b>"+waarschKop+":</b> "+genoemd+". "+voor\n          +" De officiële waarschuwing heeft voorrang op de modelverwachting.";\n';
+const WAARSCHUWING_VOORRANG_PRODUCTIE='        voor="<b>"+waarschKop+":</b> "+genoemd+". "+voor;\n';
 
 function briefingGraden(waarde){
   const g=require("../nederlandse-weergrammatica.js");

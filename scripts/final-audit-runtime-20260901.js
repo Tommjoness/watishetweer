@@ -185,21 +185,22 @@ function officiëleNwsUrl(waarde){
 }
 function verrijkNwsWaarschuwingen(){
   if(typeof S==="undefined"||!Array.isArray(S.actieveWaarschuwingen))return;
-  const cards=[...document.querySelectorAll("#waarschuwingen .waarsch")],items=S.actieveWaarschuwingen.slice(0,3);
-  /* Twee verschillende officiële meldingen zonder eigen Nederlandse titel kregen beide de algemene kop en
-     waren dan niet uit elkaar te houden (Miami: Rip Current Statement en Coastal Flood Advisory). Komt de
-     algemene kop meer dan eens voor, dan staat de officiële titel er ook zichtbaar bij. */
-  const ALGEMEEN="Officiële weerwaarschuwing";
-  const kopVan=w=>{const t=String(w.titel||"").trim(),u=A.nwsUitleg(t,String(w.tekst||"").trim());return u.titel&&u.titel!==t?u.titel:ALGEMEEN;};
-  const algemeneKoppen=items.filter(w=>w&&isNwsWaarschuwing(w)&&kopVan(w)===ALGEMEEN).length;
+  /* Alle kaarten, ook die in de uitklap "+ N andere waarschuwingen": de volgorde in de pagina is de volgorde van de lijst. */
+  const cards=[...document.querySelectorAll("#waarschuwingen .waarsch")],items=S.actieveWaarschuwingen;
+  const engels=document.documentElement.getAttribute("data-taal")==="en";
   cards.forEach((card,i)=>{
     const w=items[i];if(!w||!isNwsWaarschuwing(w))return;
-    const tekst=String(w.tekst||"").trim(),titel=String(w.titel||"").trim(),u=A.nwsUitleg(titel,tekst);
-    const basisKop=kopVan(w),nlTitel=basisKop===ALGEMEEN&&algemeneKoppen>1&&titel?ALGEMEEN+": "+titel:basisKop;
+    const tekst=String(w.tekst||"").trim(),titel=String(w.titel||"").trim(),kop=A.nwsKop(w),u=A.nwsUitleg(titel,tekst,w);
     const geldig=w.tot&&typeof waarschuwingGeldigTot==="function"?waarschuwingGeldigTot(w.tot):null;
     const niveau=card.getAttribute("data-ui-severity");card.replaceChildren();if(niveau)card.setAttribute("data-ui-severity",niveau);
-    const h3=document.createElement("h3");h3.textContent=nlTitel;card.appendChild(h3);
-    const meta=[];if(geldig)meta.push("Geldig tot "+geldig+".");if(w.landelijk)meta.push("Geldt voor een groter gebied, niet per se voor deze plaats.");
+    /* De kop is altijd de specifieke gebeurtenis: Nederlands bij een zekere vertaling, anders (en voor Engelstalige
+       bezoekers altijd) de officiële Engelse naam. Nooit een algemene kop die de gebeurtenis verbergt. */
+    const h3=document.createElement("h3");
+    if(kop.nl&&!engels)h3.textContent=kop.nl;
+    else{const naam=document.createElement("span");naam.lang="en";naam.textContent=kop.officieel||"Weather alert";h3.appendChild(naam);}
+    card.appendChild(h3);
+    const meta=[],ernstZin=A.nwsErnstZin(w);if(ernstZin)meta.push(ernstZin);
+    if(geldig)meta.push("Geldig tot "+geldig+".");if(w.landelijk)meta.push("Geldt voor een groter gebied, niet per se voor deze plaats.");
     if(meta.length){const p=document.createElement("p");p.className="waarsch-meta";p.textContent=meta.join(" ");card.appendChild(p);}
     const uitleg=document.createElement("p");uitleg.className="final-warning-explanation";
     const strong=document.createElement("strong");strong.textContent="Uitleg van watishetweer.nl: ";uitleg.appendChild(strong);uitleg.appendChild(document.createTextNode(u.uitleg));card.appendChild(uitleg);

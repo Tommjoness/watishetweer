@@ -120,7 +120,9 @@ assert.equal(v.vertaal("In Nederland geldt nu code geel voor wind (Drenthe). Of 
     assert.equal(zeeland.filter(w => w.plaatsSpecifiek).length, 1, `${api} ${k}: geldt in Vlissingen`);
     assert.equal(zeeland[0].titel, `Code ${kNl}: ${nl}`, `${api} ${k}: kop uit niveau en soort`);
     assert.equal(v.vertaal(zeeland[0].titel), `${kEn[0].toUpperCase() + kEn.slice(1)} warning for ${en}`, `${api} ${k}: Engelse kop`);
-    assert.equal(v.vertaal(`Officiële weerwaarschuwing: Code ${kNl}: ${nl}.`), `Official weather warning: ${kEn} warning for ${en}.`, `${api} ${k}: briefing in het Engels`);
+    /* De briefing noemt de kaart "code oranje voor wind" (één dubbele punt); de oudere vorm met "Code oranje: wind" blijft vertaalbaar. */
+    assert.equal(v.vertaal(`Officiële weerwaarschuwing: code ${kNl} voor ${nl}.`), `Official weather warning: ${kEn} warning for ${en}.`, `${api} ${k}: briefing in het Engels`);
+    assert.equal(v.vertaal(`Officiële weerwaarschuwing: Code ${kNl}: ${nl}.`), `Official weather warning: ${kEn} warning for ${en}.`, `${api} ${k}: oudere briefingvorm in het Engels`);
     assert.deepEqual(uitCap({ warnings: [{ alert: { info: [blok] } }] }, ...PLAATS.Utrecht, Date.now(), "nl"), [], `${api} ${k}: niet in Utrecht`);
     const melding = `In Nederland geldt nu code ${kNl} voor ${nl}. Of dit ook voor deze plaats geldt, kunnen we nog niet bepalen.`;
     assert.equal(v.vertaal(melding), `In the Netherlands: ${kEn} warning for ${en}. We cannot yet tell whether this applies to this place.`, `${api} ${k}: eerlijke melding Engels`);

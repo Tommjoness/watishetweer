@@ -43,6 +43,17 @@ const METEOALARM = [
   ["Code geel: mist", "Lokaal zware onweersbuien met hagel."], ["Code rood: zware windstoten", "Zware windstoten tot 100 km/u."]
 ];
 const NWS = ["Flood Watch", "Flood Warning", "Flash Flood Warning", "Tornado Watch", "Tornado Warning", "Severe Thunderstorm Watch", "Severe Thunderstorm Warning", "Heat Advisory", "Excessive Heat Warning", "Wind Advisory", "High Wind Warning", "Winter Storm Warning", "Winter Weather Advisory", "Dense Fog Advisory", "Air Quality Alert"];
+/* Antwoorden van de server hebben sinds 25 oktober 2026 extra velden (titelNl, klasse, ernstNl, prioriteit, taal). Om en om
+   gebruikt de bewaker die vorm met een willekeurig officieel NWS-type en willekeurige bronernst; de andere helft blijft de oude vorm. */
+const { nwsGebeurtenis, nwsErnst, nwsPrioriteit } = require("../lib/nws-gebeurtenissen.cjs");
+const NWS_OFFICIEEL = require("./fixtures/nws-gebeurtenistypen.json").eventTypes.filter(n => n !== "Test");
+const NWS_ERNST = ["Minor", "Moderate", "Severe", "Extreme", "Unknown"];
+const NWS_NIVEAU = { Minor: "geel", Moderate: "geel", Severe: "oranje", Extreme: "rood" };
+function nwsServerItem(titel, ernst) {
+  const g = nwsGebeurtenis(titel), e = nwsErnst(ernst);
+  return { titel, taal: "en-US", titelNl: g.titelNl, klasse: g.klasse, ernstNl: e.nl, prioriteit: nwsPrioriteit(e, g.klasse), niveau: NWS_NIVEAU[ernst] || null,
+    niveauIsOfficieel: false, bronErnst: ernst, tekst: "Heavy rain may cause flooding.", plaatsSpecifiek: true, van: null, tot: null };
+}
 
 function kies(r, lijst) { return lijst[Math.floor(r() * lijst.length)]; }
 
@@ -120,7 +131,10 @@ function willekeurigeScenarios(aantal = 24, zaad = 20260930) {
         waarschuwingenEn = { bron: "test", dekking: true, land: p.land, lijst: [{ ...basis, titel: enT, tekst: enX, taal: "en-GB" }] };
       }
     } else if (p.waarsch === "nws") {
-      const lijst = r() < 0.4 ? [] : [{ titel: kies(r, NWS), tekst: "Heavy rain may cause flooding.", niveau: "geel", plaatsSpecifiek: true, van: null, tot: null }];
+      const nieuweVorm = n % 2 === 1;
+      const lijst = r() < 0.4 ? [] : nieuweVorm
+        ? (t => [nwsServerItem(t, NWS_ERNST[(n + t.length) % NWS_ERNST.length])])(kies(r, NWS_OFFICIEEL))
+        : [{ titel: kies(r, NWS), tekst: "Heavy rain may cause flooding.", niveau: "geel", plaatsSpecifiek: true, van: null, tot: null }];
       waarschuwingen = { bron: "NWS", dekking: true, land: "US", lijst };
     }
     const refIso = new Date(utcMs - 5 * 60000).toISOString().replace(".000Z", "Z");

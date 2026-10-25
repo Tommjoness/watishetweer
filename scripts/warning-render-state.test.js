@@ -37,9 +37,12 @@ for(const invariant of [
   'if(mijnBeurt!==waarschuwingTeller||S.lat!==lat||S.lon!==lon) return;',
   'const nu=Date.now(),rang={rood:3,oranje:2,geel:1},uniek=new Map();',
   'const sleutel=[w.titel||"",w.tot||"",w.gebied||""].join("|").toLowerCase();',
-  'const lijst=[...uniek.values()].sort((a,b)=>(rang[b.niveau]||0)-(rang[a.niveau]||0)',
+  /* Prioritering (fase 1, 25 oktober 2026): de lijst staat op `prioriteit` van de bron (NWS: ernst, dan soort melding),
+     met de kleur als terugval. De oude sortering op alleen de kleur zette een matige melding gelijk aan een geringe. */
+  'const prio=w=>Number.isFinite(w.prioriteit)?w.prioriteit:(rang[w.niveau]||0)*10;',
+  'const lijst=[...uniek.values()].sort((a,b)=>prio(b)-prio(a)',
   'S.actieveWaarschuwingen=lijst;',
-  'lijst.slice(0,3).map(w=>',
+  'lijst.slice(0,3).map(',
   'waarschuwingGeldigTot(w.tot)'
 ])assert(uit.includes(invariant),"waarschuwingowner veranderde bestaand request/selectiecontract: "+invariant);
 
@@ -62,7 +65,13 @@ for(const zichtbaar of [
   'class="waarsch-details"',
   "Details van de waarschuwing",
   '<p lang="en">${esc(nwsTekst)}</p>',
-  '/\\*\\s*(?:WHAT|WHERE|WHEN|IMPACTS)\\.\\.\\./i.test(nwsTekst)'
+  '/\\*\\s*(?:WHAT|WHERE|WHEN|IMPACTS)\\.\\.\\./i.test(nwsTekst)',
+  /* Elke actieve waarschuwing blijft bereikbaar: de dringendste drie direct, de rest in een uitklap met het aantal. */
+  'lijst.slice(0,3).map(kaartHtml).join("")',
+  'const overig=lijst.slice(3);',
+  '<details class="waarsch-meer"',
+  "<summary>+ '+overig.length+' andere waarschuwing'+(overig.length===1?\"\":\"en\")+'</summary>'+overig.map(kaartHtml).join(\"\")",
+  'const meerGeopend=!!(el.querySelector&&el.querySelector(".waarsch-meer[open]"));'
 ])assert(uit.includes(zichtbaar),"finale waarschuwingpresentatie ontbreekt: "+zichtbaar);
 
 /* De CSS-owner bewaakt zowel de rustige basiskaart als het zichtbare onderscheid
@@ -112,4 +121,4 @@ assert.throws(()=>pasWarningRenderStateToe(uit),/bronanker ontbreekt of is dubbe
   assert(DEKKING_PRODUCTIE.includes('"Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen."'),"zonder samenvatting blijft de bestaande eerlijke melding");
 }
 
-console.log("Warning-render contract groen: requeststates, kaartpresentatie, stabiele briefing en finale CSS hebben één base-build owner; bron, scope, filtering en sortering blijven ongewijzigd.");
+console.log("Warning-render contract groen: requeststates, kaartpresentatie, stabiele briefing en finale CSS hebben één base-build owner; bron, scope en filtering blijven ongewijzigd; de sortering volgt de bronprioriteit en elke waarschuwing blijft bereikbaar.");
