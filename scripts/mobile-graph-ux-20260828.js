@@ -121,12 +121,20 @@ function grafiekRandWaarden(g,n){
   }
   return {links,rechts};
 }
-/* Kleinste leesbare grafiektekst: 11 css-pixels na schaling van de viewBox. */
-const GRAFIEK_MIN_PX=11;
+/* Kleinste leesbare grafiektekst na schaling van de viewBox: 12 css-pixels, en 11 op de smalste telefoons (grafiek
+   smaller dan 350px, dus een scherm tot ongeveer 365px). Twee metingen leggen die grens:
+   - de acht uurlabels liggen op 12px op 320 en 340px nog maar 1 tot 3px uit elkaar (op 11px 3 tot 5px) en lezen als
+     "20:0023:00"; vanaf een scherm van 360px blijft die ruimte op 12px minstens 6px;
+   - de strengste botsingsfixture van de preview-test (stijgende lijn: het nu-label naast het eerste anker) houdt op 360px
+     al op 11px maar 1,3px over, terwijl de test minstens 1px eist; op 12px is dat 0,5px. Op 375, 390 en 430px is die ruimte
+     11 tot 27px, dus daar is 12px veilig.
+   De assenruimte in index.html rekent met dezelfde ondergrens (grafiekMinPx). */
+const GRAFIEK_MIN_PX=11,GRAFIEK_RUIM_MIN_PX=12,GRAFIEK_RUIM_VANAF_PX=350;
+function grafiekMinPx(breed){return Number(breed)>=GRAFIEK_RUIM_VANAF_PX?GRAFIEK_RUIM_MIN_PX:GRAFIEK_MIN_PX;}
 function leesbareGrootte(svg,grootte){
   const vb=svg&&svg.viewBox&&svg.viewBox.baseVal,breed=svg&&typeof svg.getBoundingClientRect==="function"?svg.getBoundingClientRect().width:0;
   const schaal=vb&&vb.width&&breed?breed/vb.width:1;
-  return Math.max(Number(grootte)||0,Math.ceil(GRAFIEK_MIN_PX/schaal*10)/10);
+  return Math.max(Number(grootte)||0,Math.ceil(grafiekMinPx(breed)/schaal*10)/10);
 }
 
 /* Vloeiende lijn door exact dezelfde datapunten (monotone kubische interpolatie,
@@ -1280,7 +1288,7 @@ function koppelTijdAanTemperatuur(){
   svg.setAttribute("data-temp-time-complete",[...perIndex.keys()].every(i=>metTijd.has(i)||vrijVanTijd(perIndex.get(i)))?"1":"0");
 }
 
-/* Geen grafiektekst kleiner dan 11px op het scherm, op iedere breedte: de
+/* Geen grafiektekst kleiner dan 12px op het scherm (11px op de smalste telefoons, zie grafiekMinPx), op iedere breedte: de
    telefoongrafiek wordt verkleind getekend, de desktop- en tabletgrafiek op
    ware grootte met uurtijden van 9,2px. Draait vóór het plaatsen van labels,
    zodat de botsingscontroles met de echte maat rekenen. */

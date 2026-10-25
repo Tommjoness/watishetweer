@@ -5,8 +5,9 @@
    - de kop van de uurtabel (Tijd, Temperatuur, Neerslag, Wind) tussen 1100 en 1599px, terwijl de cellen eronder 12 en
      13,5px zijn (vanaf 1600px stond hij al op 12,5px);
    - de taalschakelaar EN/NL, op alle pagina's en breedtes 11px.
-   De driewegkeuze Auto | Licht | Donker blijft bewust op 11px: de drie segmenten delen één typografische basis (bewaakt
-   door preview-responsive-visual-browser.js) en vallen binnen de richtwaarde voor kleine labels.
+   De driewegkeuze Auto | Licht | Donker stond hier eerst bewust op 11px; sinds fase 2a (25 oktober 2026, zie
+   leesbaarheid-fase2a-browser.test.js) is ook die 12px. De drie segmenten delen één typografische basis (bewaakt door
+   preview-responsive-visual-browser.js).
    Deze test legt die ondergrens vast en bewaakt dat de grotere tekst niets laat overlopen of overlappen: geen
    horizontale paginascroll, de tabelkop wordt niet afgeknipt, de uurtabel houdt haar uren en de schakelaar blijft naast
    de merknaam binnen het scherm, in Nederlands en Engels. */
@@ -96,17 +97,17 @@ function meet(page){
           /* Eén regel per kop: de grotere tekst maakt de tabelkop niet hoger. */
           assert.ok(Math.max(...r.kopHoogte)<=30,`${L}: tabelkop te hoog (${r.kopHoogte})`);
         }else{
-          /* Onder 1100px verandert er niets aan de labelmaat van de rest (minimaal 11px). */
-          r.kopPx.forEach((px,i)=>assert.ok(px>=11,`${L}: kop "${r.kopTekst[i]}" is ${px}px`));
+          /* Onder 1100px is de kop sinds fase 2a (25 oktober 2026) ook minimaal 12px (eerder 11px). */
+          r.kopPx.forEach((px,i)=>assert.ok(px>=12,`${L}: kop "${r.kopTekst[i]}" is ${px}px`));
         }
-        /* De drie segmenten van de weergavekeuze delen één lettergrootte (en die blijft minimaal 11px). */
-        assert.ok(r.autoPx>=11,`${L}: knop Auto ${r.autoPx}px`);
+        /* De drie segmenten van de weergavekeuze delen één lettergrootte, sinds fase 2a minimaal 12px (eerder 11px). */
+        assert.ok(r.autoPx>=12,`${L}: knop Auto ${r.autoPx}px`);
         assert.deepEqual([r.lichtPx,r.donkerPx],[r.autoPx,r.autoPx],`${L}: Auto/Licht/Donker delen één lettergrootte (${r.autoPx}/${r.lichtPx}/${r.donkerPx})`);
         assert.deepEqual(fouten,[],`${L}: scriptfouten`);
         GEVALLEN.push(`${L}: kop ${[...new Set(r.kopPx)].join("/")}px, Auto ${r.autoPx}px, ${r.taalTekst} ${r.taalPx}px, ${r.rijen} uren`);
         n++;
       }finally{await context.close();}
     }
-    console.log(`Tekstgrootte bureaublad: ${n} situaties (NL/EN, 320 tot 1920px): uurtabelkop minimaal 12px vanaf 1100px en taalschakelaar minimaal 12px (overal), Auto/Licht/Donker één lettergrootte, zonder afgeknipte kop, overlap, extra tabelhoogte of horizontale scroll.`);
+    console.log(`Tekstgrootte bureaublad: ${n} situaties (NL/EN, 320 tot 1920px): uurtabelkop minimaal 12px op iedere breedte en taalschakelaar en Auto/Licht/Donker minimaal 12px (overal, één lettergrootte), zonder afgeknipte kop, overlap, extra tabelhoogte of horizontale scroll.`);
   }finally{srv.close();await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1);});
