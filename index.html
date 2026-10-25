@@ -1976,11 +1976,11 @@ function etmaal(start,n){
   }
   /* Ruimte links voor de aswaarden: breed genoeg voor de langste waarde, ook
      met minteken (-16°), op de lettergrootte waarmee ze op het scherm staan
-     (minstens 12px, op een grafiek smaller dan 340px 11px; zie grafiekMinPx in
+     (minstens 12px, op een grafiek smaller dan 350px 11px; zie grafiekMinPx in
      mobile-graph-ux, dezelfde ondergrens). Met een vaste marge viel op een
      smalle telefoon het minteken buiten beeld en las -16° als 16°. */
   const asSchaal=grafiekBreedte>0?grafiekBreedte/W:1;
-  const asLetter=Math.max(F.grid,Math.ceil((grafiekBreedte>=340?12:11)/asSchaal*10)/10);
+  const asLetter=Math.max(F.grid,Math.ceil((grafiekBreedte>=350?12:11)/asSchaal*10)/10);
   const asTekens=Math.max(...[mx,Math.round((mn+mx)/2),mn].map(v=>String(v).length+1));
   const plNodig=Math.ceil(9+asTekens*asLetter*0.56+2);
   if(plNodig>pl){ pl=plNodig; iw=W-pl-pr; }

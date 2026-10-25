@@ -122,10 +122,14 @@ function grafiekRandWaarden(g,n){
   return {links,rechts};
 }
 /* Kleinste leesbare grafiektekst na schaling van de viewBox: 12 css-pixels, en 11 op de smalste telefoons (grafiek
-   smaller dan 340px, dus een scherm tot ongeveer 355px). Daar liggen de acht uurlabels op 12px nog maar 1 tot 3px uit
-   elkaar (gemeten op 320 en 340px; op 11px 3 tot 5px) en leest "20:0023:00" als één tijd. Vanaf een scherm van 360px blijft
-   de ruimte op 12px minstens 6px. De assenruimte in index.html rekent met dezelfde ondergrens (grafiekMinPx). */
-const GRAFIEK_MIN_PX=11,GRAFIEK_RUIM_MIN_PX=12,GRAFIEK_RUIM_VANAF_PX=340;
+   smaller dan 350px, dus een scherm tot ongeveer 365px). Twee metingen leggen die grens:
+   - de acht uurlabels liggen op 12px op 320 en 340px nog maar 1 tot 3px uit elkaar (op 11px 3 tot 5px) en lezen als
+     "20:0023:00"; vanaf een scherm van 360px blijft die ruimte op 12px minstens 6px;
+   - de strengste botsingsfixture van de preview-test (stijgende lijn: het nu-label naast het eerste anker) houdt op 360px
+     al op 11px maar 1,3px over, terwijl de test minstens 1px eist; op 12px is dat 0,5px. Op 375, 390 en 430px is die ruimte
+     11 tot 27px, dus daar is 12px veilig.
+   De assenruimte in index.html rekent met dezelfde ondergrens (grafiekMinPx). */
+const GRAFIEK_MIN_PX=11,GRAFIEK_RUIM_MIN_PX=12,GRAFIEK_RUIM_VANAF_PX=350;
 function grafiekMinPx(breed){return Number(breed)>=GRAFIEK_RUIM_VANAF_PX?GRAFIEK_RUIM_MIN_PX:GRAFIEK_MIN_PX;}
 function leesbareGrootte(svg,grootte){
   const vb=svg&&svg.viewBox&&svg.viewBox.baseVal,breed=svg&&typeof svg.getBoundingClientRect==="function"?svg.getBoundingClientRect().width:0;

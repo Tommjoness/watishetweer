@@ -5,8 +5,8 @@
    - geen zichtbare HTML-tekst onder 12px (alleen de tekst binnen de grafiek-SVG heeft een eigen ondergrens, zie hieronder);
    - de waarden van de uurtabel zijn nooit kleiner dan de kolomkop erboven, en op de telefoon 14px;
    - alle zichtbare HTML-tekst met een bepaalbare achtergrondkleur haalt WCAG-contrast (4,5:1; 3:1 voor grote tekst);
-   - grafiektekst minimaal 12px (11px alleen op een grafiek smaller dan 340px: op 320 en 340px staan de uurlabels dan 1 tot 3px
-     uit elkaar), de as- en tijdlabels staan op volle dekking en halen WCAG-contrast 4,5:1;
+   - grafiektekst minimaal 12px (11px alleen op een grafiek smaller dan 350px: op 320 en 340px staan de uurlabels dan 1 tot 3px
+     uit elkaar en houdt het nu-label op 360px te weinig ruimte over), de as- en tijdlabels staan op volle dekking en halen WCAG-contrast 4,5:1;
    - geen horizontale paginascroll, geen kolomkop of waarde in de uurtabel die over twee regels breekt;
    - ieder tegellabel valt binnen zijn tegel (ook "Luchtvochtigheid" op 320px);
    - Auto | Licht | Donker delen één lettergrootte van minstens 12px en passen op één regel.
@@ -201,10 +201,11 @@ function meet(){
 
         /* Grafiektekst: leesbare maat, volle dekking, voldoende contrast. */
         assert.ok(r.grafiek.length>=8,`${L}: te weinig grafiekteksten (${r.grafiek.length})`);
-        /* Ondergrens grafiektekst: 12px, en 11px alleen op de smalste telefoons (grafiek smaller dan 340px), waar de acht
-           uurlabels op 12px nog maar 1 tot 3px uit elkaar zouden staan. */
-        const grafiekMin=r.svgBreedte>=340?12:11;
-        assert.ok(grafiekMin===12||breedte<360,`${L}: grafiek van ${r.svgBreedte}px blijft op 11px terwijl het scherm breed genoeg is`);
+        /* Ondergrens grafiektekst: 12px, en 11px alleen op de smalste telefoons (grafiek smaller dan 350px): daar staan de acht
+           uurlabels op 12px 1 tot 3px uit elkaar (320/340px) en houdt het nu-label op 360px 0,5px over in plaats van de
+           vereiste 1px (zie grafiekMinPx). */
+        const grafiekMin=r.svgBreedte>=350?12:11;
+        assert.ok(grafiekMin===12||breedte<375,`${L}: grafiek van ${r.svgBreedte}px blijft op 11px terwijl het scherm breed genoeg is`);
         r.grafiek.forEach(t=>{
           assert.ok(t.px>=grafiekMin-0.05,`${L}: grafiektekst “${t.tekst}” is ${t.px}px (ondergrens ${grafiekMin}px bij een grafiek van ${r.svgBreedte}px)`);
           assert.equal(t.dekking,1,`${L}: grafiektekst “${t.tekst}” staat op dekking ${t.dekking}`);
