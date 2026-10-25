@@ -85,6 +85,8 @@ jobs:
         run: node scripts/waarschuwing-plaats-browser.test.js
       - name: Wintertijd 25 oktober (uurtabel, grafiekas, regen en zon in echte lokale tijd)
         run: node scripts/wintertijd-browser.test.js
+      - name: Reserveroute /api/forecast rond klokwissels (Visual Crossing, lokale tijd van de plaats)
+        run: node scripts/reserveroute-klokwissel-browser.test.js
       - name: Bewaar reproduceerbare CWV-metingen
         if: always()
         uses: actions/upload-artifact@v6
