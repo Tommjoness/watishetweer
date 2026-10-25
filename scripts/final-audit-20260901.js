@@ -127,13 +127,36 @@ function nwsToelichting(titel){
     ?"Een rip current is een sterke, smalle stroming die van de kust af loopt en zwemmers snel verder het water in kan trekken."
     :"";
 }
-function nwsUitleg(titel,tekst){
-  const nl=nwsTitelNl(titel),basis=nl&&nl!==String(titel||"").trim()
-    ?"De Amerikaanse weerdienst heeft voor deze locatie een "+nl.toLocaleLowerCase("nl-NL")+" uitgegeven."
-    :"De Amerikaanse weerdienst heeft voor deze locatie een officiële waarschuwing uitgegeven.";
+/* Soort melding volgens het einde van de officiële naam (gelijk aan lib/nws-gebeurtenissen.cjs; de test
+   scripts/nws-gebeurtenissen.test.js bewaakt dat ze gelijk blijven). De server geeft `klasse` mee; dit is de terugval
+   voor een antwoord zonder dat veld. */
+function nwsKlasse(titel){
+  const n=String(titel||"").toLowerCase();
+  if(/\b(warning|emergency|evacuation)\b/.test(n))return "waarschuwing";
+  if(/\bwatch\b/.test(n))return "waakzaamheid";
+  if(/\b(advisory|alert)\b/.test(n))return "advies";
+  return "melding";
+}
+const NWS_KLASSE_ZIN={waarschuwing:"een waarschuwing",waakzaamheid:"een waakzaamheidsmelding (watch)",advies:"een advies",melding:"een officiële melding"};
+/* Kop van een NWS-kaart: nooit een algemene kop. `nl` is de Nederlandse titel als de vertaling zeker is (server:
+   `titelNl`; terugval: de oudere tabel hierboven), anders leeg en toont de kaart de officiële Engelse naam. */
+function nwsKop(w){
+  const officieel=String(w&&w.titel||"").trim(),server=String(w&&w.titelNl||"").trim(),oud=nwsTitelNl(officieel);
+  return {officieel,nl:server||(oud&&oud!==officieel?oud:"")};
+}
+/* Ernst zoals de Amerikaanse weerdienst die zelf opgeeft (CAP severity), met bronvermelding: dit is geen
+   KNMI- of MeteoAlarm-kleurcode. Zonder veld in het antwoord staat er niets. */
+function nwsErnstZin(w){
+  const ernst=String(w&&w.ernstNl||"").trim();
+  return ernst?"Ernst volgens de Amerikaanse weerdienst: "+ernst+".":"";
+}
+function nwsUitleg(titel,tekst,melding){
+  const nl=nwsTitelNl(titel),klasse=melding&&NWS_KLASSE_ZIN[melding.klasse]?melding.klasse:nwsKlasse(titel);
+  /* Wat de melding is, staat in de kop; deze zin noemt alleen de soort en de uitgever. */
+  const basis="De Amerikaanse weerdienst heeft voor deze locatie "+NWS_KLASSE_ZIN[klasse]+" uitgegeven.";
   const metrisch=fahrenheitContext(titel,tekst),toelichting=nwsToelichting(titel);
   return {titel:nl,uitleg:basis+(metrisch?" "+metrisch:"")+(toelichting?" "+toelichting:""),metrisch,toelichting};
 }
 
-return {regenperiodenVoorGrafiek,regenPeriodeTijdvak,regenSamenvatting,mmTekst,fahrenheitNaarCelsius,nwsTitelNl,isNwsHitteTitel,fahrenheitContext,nwsUitleg};
+return {regenperiodenVoorGrafiek,regenPeriodeTijdvak,regenSamenvatting,mmTekst,fahrenheitNaarCelsius,nwsTitelNl,isNwsHitteTitel,fahrenheitContext,nwsUitleg,nwsKlasse,nwsKop,nwsErnstZin};
 });

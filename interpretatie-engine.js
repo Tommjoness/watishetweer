@@ -673,7 +673,11 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
         const waarschKop=w.niveauIsOfficieel===false||titelNoemtNiveau
           ?"Officiële weerwaarschuwing"
           :"Officiële weerwaarschuwing"+(w.niveau?" ("+esc(w.niveau)+")":"");
-        voor="<b>"+waarschKop+":</b> "+esc(w.titel)+". "+voor
+        // De kaart heet "Code oranje: wind". In de zin erachter zou dat een tweede dubbele punt geven
+        // ("Officiële weerwaarschuwing: Code oranje: wind."); daar staat het als "code oranje voor wind".
+        const codeKop=/^Code (geel|oranje|rood): (.+)$/.exec(String(w.titel||"").trim());
+        const genoemd=codeKop?"code "+codeKop[1]+" voor "+esc(codeKop[2]):esc(w.titel);
+        voor="<b>"+waarschKop+":</b> "+genoemd+". "+voor
           +" De officiële waarschuwing heeft voorrang op de modelverwachting.";
       }
       el.innerHTML=nbsp(voor+" "+rest);

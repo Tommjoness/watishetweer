@@ -10,6 +10,7 @@ const START_BRON=`  S.actieveWaarschuwingen=[];
   el.innerHTML="";
   try{`;
 const START_PRODUCTIE=`  S.actieveWaarschuwingen=[];
+  const meerGeopend=!!(el.querySelector&&el.querySelector(".waarsch-meer[open]"));
   el.innerHTML='<div class="msg" data-ui-warning-loading="1">Officiële weerwaarschuwingen controleren…</div>';
   try{`;
 
@@ -53,7 +54,12 @@ const EIND_BRON=`    el.innerHTML=lijst.slice(0,3).map(w=>{
         +(w.landelijk?" Geldt voor een groter gebied, niet per se voor deze plaats.":"")
         +\`</p></div>\`;
     }).join("");`;
-const EIND_PRODUCTIE=`    el.innerHTML=lijst.slice(0,3).map(w=>{
+/* Elke actieve waarschuwing blijft bereikbaar. De dringendste drie staan direct zichtbaar (de lijst is al op
+   prioriteit gesorteerd); de rest staat in een uitklapbare <details> met het aantal in de samenvatting.
+   <details> is toetsenbord- en schermlezerbediening zonder eigen script. Is de uitklap geopend en ververst de pagina
+   de waarschuwingen, dan blijft hij geopend. */
+const ZICHTBARE_WAARSCHUWINGEN=3;
+const EIND_PRODUCTIE=`    const kaartHtml=w=>{
       const geldig=w.tot?waarschuwingGeldigTot(w.tot):null;
       const tekst=String(w.tekst||""),nwsTekst=tekst.trim();
       const metaDelen=[];
@@ -66,7 +72,10 @@ const EIND_PRODUCTIE=`    el.innerHTML=lijst.slice(0,3).map(w=>{
           +\`<details class="waarsch-details"><summary>Details van de waarschuwing</summary><p lang="en">\${esc(nwsTekst)}</p></details></div>\`;
       }
       return \`<div class="waarsch" data-ui-severity="\${ernst}"><h3>\${esc(w.titel)}</h3><p>\${esc(tekst)}\${meta?" "+meta:""}</p></div>\`;
-    }).join("");
+    };
+    const overig=lijst.slice(${ZICHTBARE_WAARSCHUWINGEN});
+    el.innerHTML=lijst.slice(0,${ZICHTBARE_WAARSCHUWINGEN}).map(kaartHtml).join("")
+      +(overig.length?'<details class="waarsch-meer"'+(meerGeopend?" open":"")+'><summary>+ '+overig.length+' andere waarschuwing'+(overig.length===1?"":"en")+'</summary>'+overig.map(kaartHtml).join("")+'</details>':"");
     if(lijst.length===0) el.innerHTML='<div class="msg">Geen officiële weerwaarschuwingen voor deze locatie.</div>';`;
 
 const FOUT_BRON=`    el.innerHTML='<div class="msg">Officiële weerwaarschuwingen konden niet worden gecontroleerd.</div>';`;
@@ -109,7 +118,12 @@ const CSS_PRODUCTIE=`  /* waarschuwingen */
   .waarsch-details{margin-top:6px;font-size:12px;color:var(--ink-45)}
   .waarsch-details summary{display:inline;cursor:pointer;color:var(--ink-45);box-shadow:inset 0 -1px 0 var(--rule)}
   .waarsch-details summary:hover{color:var(--ink)}
-  .waarsch-details p{margin-top:7px;font-size:12px;color:var(--ink-45);max-width:92ch}`;
+  .waarsch-details p{margin-top:7px;font-size:12px;color:var(--ink-45);max-width:92ch}
+  .waarsch[data-ui-severity=""]{padding-left:14px}
+  .waarsch-meer{margin-top:var(--s2)}
+  .waarsch-meer>summary{display:inline-flex;align-items:center;min-height:44px;padding:0 12px 0 15px;cursor:pointer;font-size:13px;color:var(--ink-70);text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px}
+  .waarsch-meer>summary:hover{color:var(--ink)}
+  .waarsch-meer[open]>summary{min-height:32px}`;
 
 function pasWarningRenderStateToe(html){
   let bron=String(html||"");

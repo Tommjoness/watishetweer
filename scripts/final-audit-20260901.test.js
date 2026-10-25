@@ -57,15 +57,36 @@ assert.equal(a.nwsTitelNl("Winter Storm Warning"),"Waarschuwing voor zwaar winte
 assert.equal(a.nwsTitelNl("High Wind Warning"),"Waarschuwing voor zeer harde wind");
 assert.equal(a.nwsTitelNl("Rip Current Statement"),"Melding over gevaarlijke stromingen (rip currents)");
 assert.equal(a.nwsTitelNl("Coastal Flood Advisory"),"Advies voor overstroming aan de kust");
-assert.equal(a.nwsTitelNl("Beach Hazards Statement"),"Beach Hazards Statement","een onbekende titel blijft de officiële titel (de kaart valt dan terug op de algemene kop)");
+assert.equal(a.nwsTitelNl("Beach Hazards Statement"),"Beach Hazards Statement","de oudere tabel kent deze titel niet en geeft de officiële titel terug; de kaart toont dan zelf de specifieke gebeurtenis (nwsKop), nooit een algemene kop");
 {
-  /* Rip current: de uitleg noemt het type melding en legt het vakwoord kort uit; de officiële tekst blijft ongemoeid. */
+  /* De uitleg noemt alleen de soort melding en de uitgever: de gebeurtenis zelf staat in de kop. Een rip current krijgt
+     daarnaast een korte uitleg van het vakwoord; de officiële tekst blijft ongemoeid. */
   const rip=a.nwsUitleg("Rip Current Statement","* WHAT...For the High Rip Current Risk, dangerous rip currents.");
-  assert.equal(rip.uitleg,"De Amerikaanse weerdienst heeft voor deze locatie een melding over gevaarlijke stromingen (rip currents) uitgegeven. Een rip current is een sterke, smalle stroming die van de kust af loopt en zwemmers snel verder het water in kan trekken.");
+  assert.equal(rip.uitleg,"De Amerikaanse weerdienst heeft voor deze locatie een officiële melding uitgegeven. Een rip current is een sterke, smalle stroming die van de kust af loopt en zwemmers snel verder het water in kan trekken.");
   const kust=a.nwsUitleg("Coastal Flood Advisory","* WHAT...Minor coastal flooding.");
-  assert.equal(kust.uitleg,"De Amerikaanse weerdienst heeft voor deze locatie een advies voor overstroming aan de kust uitgegeven.","geen vakwoord, dus ook geen extra uitleg");
+  assert.equal(kust.uitleg,"De Amerikaanse weerdienst heeft voor deze locatie een advies uitgegeven.","geen vakwoord, dus ook geen extra uitleg");
   assert.equal(kust.toelichting,"");
-  assert.equal(a.nwsUitleg("Beach Hazards Statement","x").uitleg,"De Amerikaanse weerdienst heeft voor deze locatie een officiële waarschuwing uitgegeven.","onbekende titel: bestaande algemene uitleg");
+  /* Fase 1 (25 oktober 2026): de algemene zin "een officiële waarschuwing" is weg. Ze noemde ook een statement of outlook een
+     waarschuwing en verborg wat er werkelijk was uitgegeven. De soort volgt de officiële naam of het veld `klasse` van de server. */
+  const zin=(t,melding)=>a.nwsUitleg(t,"x",melding).uitleg;
+  assert.equal(zin("Beach Hazards Statement"),"De Amerikaanse weerdienst heeft voor deze locatie een officiële melding uitgegeven.");
+  assert.equal(zin("Coastal Flood Warning"),"De Amerikaanse weerdienst heeft voor deze locatie een waarschuwing uitgegeven.");
+  assert.equal(zin("Flood Watch"),"De Amerikaanse weerdienst heeft voor deze locatie een waakzaamheidsmelding (watch) uitgegeven.");
+  assert.equal(zin("Small Craft Advisory"),"De Amerikaanse weerdienst heeft voor deze locatie een advies uitgegeven.");
+  assert.equal(zin("Volcanic Fog Warning"),"De Amerikaanse weerdienst heeft voor deze locatie een waarschuwing uitgegeven.","onbekend type: soort volgt de naam");
+  assert.equal(zin("Air Quality Alert",{klasse:"waarschuwing"}),"De Amerikaanse weerdienst heeft voor deze locatie een waarschuwing uitgegeven.","`klasse` van de server wint");
+  for(const u of ["Beach Hazards Statement","Coastal Flood Warning","Hydrologic Outlook","x"])assert.doesNotMatch(zin(u),/officiële waarschuwing/,"geen algemene zin: "+u);
+  /* Kop: Nederlands bij een zekere vertaling van de server, anders de oudere tabel, anders de officiële naam; nooit leeg of algemeen. */
+  assert.deepEqual(a.nwsKop({titel:"Coastal Flood Warning",titelNl:"Waarschuwing voor overstroming aan de kust"}),{officieel:"Coastal Flood Warning",nl:"Waarschuwing voor overstroming aan de kust"});
+  assert.deepEqual(a.nwsKop({titel:"Heat Advisory"}),{officieel:"Heat Advisory",nl:"Hitteadvies"},"antwoord zonder titelNl: oudere tabel als terugval");
+  assert.deepEqual(a.nwsKop({titel:"Hydrologic Outlook",titelNl:null}),{officieel:"Hydrologic Outlook",nl:""},"onzekere vertaling: officiële naam");
+  assert.deepEqual(a.nwsKop({titel:"Volcanic Fog Warning"}),{officieel:"Volcanic Fog Warning",nl:""});
+  assert.deepEqual(a.nwsKop(null),{officieel:"",nl:""});
+  /* Ernstregel: alleen wat de bron zegt, met bronvermelding; geen KNMI-kleurcode. */
+  assert.equal(a.nwsErnstZin({ernstNl:"ernstig"}),"Ernst volgens de Amerikaanse weerdienst: ernstig.");
+  assert.equal(a.nwsErnstZin({ernstNl:"niet opgegeven"}),"Ernst volgens de Amerikaanse weerdienst: niet opgegeven.");
+  assert.equal(a.nwsErnstZin({}),"","antwoord zonder ernst: geen verzonnen label");
+  assert.doesNotMatch(a.nwsErnstZin({ernstNl:"extreem"}),/code|geel|oranje|rood|KNMI/i);
 }
 assert.equal(a.fahrenheitContext("Heat Advisory","Heat index values of 100 to 110 degrees Fahrenheit."),"100–110 °F is ongeveer 38–43 °C.");
 assert.equal(a.fahrenheitContext("Heat Advisory","Temperatures near 104 °F."),"104 °F is ongeveer 40 °C.");

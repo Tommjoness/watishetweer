@@ -669,6 +669,18 @@
     "Officiële tekst van de National Weather Service": "Official text from the National Weather Service",
     "Officiële titel hierboven ongewijzigd. Bron: National Weather Service.": "Official title above unchanged. Source: National Weather Service.",
     "De Amerikaanse weerdienst heeft voor deze locatie een officiële waarschuwing uitgegeven.": "The US National Weather Service has issued an official warning for this location.",
+    /* Soort melding van de Amerikaanse weerdienst; de kop noemt de gebeurtenis zelf. */
+    "De Amerikaanse weerdienst heeft voor deze locatie een waarschuwing uitgegeven.": "The US National Weather Service has issued a warning for this location.",
+    "De Amerikaanse weerdienst heeft voor deze locatie een waakzaamheidsmelding (watch) uitgegeven.": "The US National Weather Service has issued a watch for this location.",
+    "De Amerikaanse weerdienst heeft voor deze locatie een advies uitgegeven.": "The US National Weather Service has issued an advisory for this location.",
+    "De Amerikaanse weerdienst heeft voor deze locatie een officiële melding uitgegeven.": "The US National Weather Service has issued an official notice for this location.",
+    /* Ernst zoals de Amerikaanse weerdienst die opgeeft; geen KNMI- of MeteoAlarm-kleurcode. */
+    "Ernst volgens de Amerikaanse weerdienst: gering.": "Severity according to the US National Weather Service: minor.",
+    "Ernst volgens de Amerikaanse weerdienst: matig.": "Severity according to the US National Weather Service: moderate.",
+    "Ernst volgens de Amerikaanse weerdienst: ernstig.": "Severity according to the US National Weather Service: severe.",
+    "Ernst volgens de Amerikaanse weerdienst: extreem.": "Severity according to the US National Weather Service: extreme.",
+    "Ernst volgens de Amerikaanse weerdienst: niet opgegeven.": "Severity according to the US National Weather Service: not stated.",
+    "+ 1 andere waarschuwing": "+ 1 other warning",
     "Waakzaamheid voor overstromingen": "Flood watch",
     "Waakzaamheid voor tornado's": "Tornado watch",
     "Waakzaamheid voor zwaar onweer": "Severe thunderstorm watch",
@@ -1050,7 +1062,8 @@
     /* Technische locatiegegevens; de hoogte ontbreekt als de bron hem niet levert. */
     [/^(−?-?\d+\.\d+), (−?-?\d+\.\d+)(?: · (\d+) m hoogte)?(?: · modelcel (−?-?\d+\.\d+), (−?-?\d+\.\d+))? · ([A-Za-z_]+\/[A-Za-z_\/-]+)$/, (m) => `${m[1]}, ${m[2]}${m[3] ? ` · ${m[3]} m elevation` : ""}${m[4] ? ` · model cell ${m[4]}, ${m[5]}` : ""} · ${m[6]}`],
     [/^Officiële weerwaarschuwing(?: \((geel|oranje|rood)\))?: (.+)\.$/, (m, hulp) => {
-      const code = /^Code (geel|oranje|rood): (.+)$/.exec(m[2]);
+      /* De briefing noemt een MeteoAlarm-kaart als "code oranje voor wind" (één dubbele punt); oudere vorm "Code oranje: wind" blijft vertaalbaar. */
+      const code = /^Code (geel|oranje|rood): (.+)$/.exec(m[2]) || /^code (geel|oranje|rood) voor (.+)$/.exec(m[2]);
       const kleurNl = code ? code[1] : m[1];
       const kleur = kleurNl ? ` ${({ geel: "yellow", oranje: "orange", rood: "red" })[kleurNl]}` : "";
       const titel = code ? WAARSCHUWING[code[2].toLowerCase()]
@@ -1409,10 +1422,13 @@
     /* Kop van een Amerikaanse melding zonder eigen Nederlandse titel als er meer van zulke meldingen zijn: de
        officiële Engelse titel van de weerdienst staat erbij en blijft letterlijk (zonder punt, dus geen briefingzin). */
     [/^Officiële weerwaarschuwing: ([A-Za-z][A-Za-z '\/-]+)$/, (m) => `Official weather warning: ${m[1]}`],
+    [/^\+ (\d+) andere waarschuwingen$/, (m) => `+ ${m[1]} other warnings`],
     [/^Officiële titel:$/, () => "Official title:"],
     [/^Uitleg van watishetweer\.nl:$/, () => "Explanation from watishetweer.nl:"],
     [/^Officiële titel: (.+?)[.·]? ?·? Bron: (.+?)\.?$/, (m) => `Official title: ${m[1]} · Source: ${m[2]}`],
     [/^Geldig tot (morgen |vandaag )?(\d{1,2}:\d{2})\.$/, (m) => `Valid until ${m[1] ? vandaagMorgen(m[1].trim()) + " " : ""}${m[2]}.`],
+    /* Een einde na morgen toont de app als "za 25 jul, 22:00" (nl-NL, korte weekdag en maand). Zonder dit patroon bleef de hele alinea Nederlands. */
+    [/^Geldig tot (ma|di|wo|do|vr|za|zo) (\d{1,2}) (jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec), (\d{1,2}:\d{2})\.$/, (m) => `Valid until ${dagKort(m[1])} ${m[2]} ${maand(m[3])}, ${m[4]}.`],
     [/^Zware windstoten tot (\d+) km\/u\.$/, (m) => `Severe gusts up to ${m[1]} km/h.`],
     [/^Lokaal zware onweersbuien met hagel\.$/, () => "Severe thunderstorms with hail in places."],
     [/^Zware windstoten in de verwachting \(tot (\d+) km\/u\)\.$/, (m) => `Severe gusts in the forecast (up to ${m[1]} km/h).`],
@@ -1476,7 +1492,9 @@
       "Cold Weather Advisory", "Extreme Cold Watch", "Extreme Cold Warning", "Wind Chill Advisory", "Wind Chill Warning", "Dense Fog Advisory", "Dense Smoke Advisory",
       "Air Quality Alert", "Red Flag Warning", "Fire Weather Watch", "Hurricane Watch", "Hurricane Warning", "Tropical Storm Watch", "Tropical Storm Warning",
       "Storm Surge Watch", "Storm Surge Warning", "Gale Warning", "Storm Warning", "Small Craft Advisory", "Beach Hazards Statement", "Rip Current Statement",
-      "High Surf Advisory", "High Surf Warning", "Lake Effect Snow Warning", "Hard Freeze Warning", "Dust Storm Warning", "Blowing Dust Advisory"]
+      "High Surf Advisory", "High Surf Warning", "Lake Effect Snow Warning", "Hard Freeze Warning", "Dust Storm Warning", "Blowing Dust Advisory",
+      /* De rest van de officiële lijst van api.weather.gov/alerts/types; scripts/nws-gebeurtenissen.test.js bewaakt dat alle namen erin staan. */
+      "911 Telephone Outage", "Administrative Message", "Air Stagnation Advisory", "Ashfall Advisory", "Ashfall Warning", "Avalanche Advisory", "Avalanche Warning", "Avalanche Watch", "Blowing Dust Warning", "Blue Alert", "Brisk Wind Advisory", "Child Abduction Emergency", "Civil Danger Warning", "Civil Emergency Message", "Coastal Flood Statement", "Dust Advisory", "Earthquake Warning", "Evacuation Immediate", "Extreme Fire Danger", "Extreme Wind Warning", "Fire Warning", "Flash Flood Statement", "Flood Statement", "Freezing Fog Advisory", "Freezing Spray Advisory", "Gale Watch", "Hazardous Materials Warning", "Hazardous Seas Warning", "Hazardous Seas Watch", "Hazardous Weather Outlook", "Heavy Freezing Spray Warning", "Heavy Freezing Spray Watch", "Hurricane Force Wind Warning", "Hurricane Force Wind Watch", "Hydrologic Outlook", "Lake Wind Advisory", "Lakeshore Flood Advisory", "Lakeshore Flood Statement", "Lakeshore Flood Warning", "Lakeshore Flood Watch", "Law Enforcement Warning", "Local Area Emergency", "Low Water Advisory", "Marine Weather Statement", "Nuclear Power Plant Warning", "Radiological Hazard Warning", "Shelter In Place Warning", "Short Term Forecast", "Snow Squall Warning", "Special Marine Warning", "Storm Watch", "Tropical Cyclone Local Statement", "Tsunami Advisory", "Tsunami Warning", "Tsunami Watch", "Typhoon Warning", "Typhoon Watch", "Volcano Warning"]
   ];
 
   /* Korte vormen voor smalle kolomkoppen (tabellen, Zeven dagen, Nachtzicht). */

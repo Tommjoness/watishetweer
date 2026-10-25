@@ -109,7 +109,7 @@ for(const invariant of [
   "const plaatsDelen=plaatsTijdDelen(),vandaag=plaatsVandaag();",
   "document.getElementById(\"brief\").innerHTML=nbsp(zin1+\"<!--brief-rest--> \"+zin2+\" \"+zin3);",
   "const waars=(S.actieveWaarschuwingen||[]).filter(w=>w&&w.plaatsSpecifiek!==false);",
-  "voor=\"<b>\"+waarschKop+\":</b> \"+esc(w.titel)+\". \"+voor;"
+  "voor=\"<b>\"+waarschKop+\":</b> \"+genoemd+\". \"+voor;"
 ])assert(uit.includes(invariant),"briefing invariant is onbedoeld geraakt: "+invariant);
 
 assert.throws(()=>pasBriefingCopyToe(uit),/staat al in het aangeleverde artifact/,
