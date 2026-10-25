@@ -1,12 +1,14 @@
 "use strict";
 
 /* Fase 2a (25 oktober 2026): leesbaarheid van labels, waarden en grafiekteksten op het gebouwde artifact.
-   Vastgelegd en bewaakt, op 320, 390, 768, 1440 en 1920px, in Nederlands en Engels, licht en donker:
-   - geen zichtbare HTML-tekst onder 12px (alleen de tekst binnen de grafiek-SVG mag, tot een ondergrens van 11px);
+   Vastgelegd en bewaakt, op 320, 340, 360, 375, 390, 768, 1440 en 1920px, in Nederlands en Engels, licht en donker:
+   - geen zichtbare HTML-tekst onder 12px (alleen de tekst binnen de grafiek-SVG heeft een eigen ondergrens, zie hieronder);
    - de waarden van de uurtabel zijn nooit kleiner dan de kolomkop erboven, en op de telefoon 14px;
    - alle zichtbare HTML-tekst met een bepaalbare achtergrondkleur haalt WCAG-contrast (4,5:1; 3:1 voor grote tekst);
-   - de as- en tijdlabels van de grafiek staan op volle dekking en halen WCAG-contrast 4,5:1;
+   - grafiektekst minimaal 12px (11px alleen op een grafiek smaller dan 340px: op 320 en 340px staan de uurlabels dan 1 tot 3px
+     uit elkaar), de as- en tijdlabels staan op volle dekking en halen WCAG-contrast 4,5:1;
    - geen horizontale paginascroll, geen kolomkop of waarde in de uurtabel die over twee regels breekt;
+   - ieder tegellabel valt binnen zijn tegel (ook "Luchtvochtigheid" op 320px);
    - Auto | Licht | Donker delen één lettergrootte van minstens 12px en passen op één regel.
    Het schema wordt aantoonbaar toegepast (achtergrond donker of licht), zodat de test niet stilzwijgend alleen het
    lichte thema meet. */
@@ -121,11 +123,23 @@ function meet(){
   const knoppen=["thema-auto"].map(id=>document.getElementById(id)).concat([...document.querySelectorAll("[data-thema-handmatig]")]).filter(Boolean);
   const thema=knoppen.map(k=>({px:parseFloat(getComputedStyle(k).fontSize),regels:regels(k),binnen:k.getBoundingClientRect().right<=innerWidth+0.5&&k.getBoundingClientRect().left>=-0.5,tekst:k.textContent.trim()}));
 
+  /* Past ieder tegellabel binnen zijn tegel? Gemeten aan de echte tekstregels (Range), niet aan de scrollbreedte, omdat een
+     gecentreerd label aan beide kanten uitsteekt. */
+  let tegelOverschrijding=0,tegelOverschrijdingLabel="";
+  for(const s of document.querySelectorAll(".stat")){
+    const e=s.querySelector(".eyebrow");if(!e||!zichtbaar(e))continue;
+    const r=document.createRange();r.selectNodeContents(e);
+    const regelRects=[...r.getClientRects()].filter(x=>x.width>0);if(!regelRects.length)continue;
+    const sr=s.getBoundingClientRect(),o=Math.max(0,sr.left-Math.min(...regelRects.map(x=>x.left)),Math.max(...regelRects.map(x=>x.right))-sr.right);
+    if(o>tegelOverschrijding){tegelOverschrijding=+o.toFixed(1);tegelOverschrijdingLabel=e.textContent.trim();}
+  }
+
   /* Kleine hulpteksten onder de tegels. */
   const tegel=document.querySelector(".stat .eyebrow"),sub=document.querySelector(".stat .ssub");
 
   return {
-    klein,laagContrast,beoordeeld,tekstknopen,grafiek,kopPx,waardePx,kopRegels,waardeRegels,thema,
+    svgBreedte:Math.round(document.querySelector("#chart").getBoundingClientRect().width*10)/10,
+    tegelOverschrijding,tegelOverschrijdingLabel,klein,laagContrast,beoordeeld,tekstknopen,grafiek,kopPx,waardePx,kopRegels,waardeRegels,thema,
     eyebrowPx:tegel?parseFloat(getComputedStyle(tegel).fontSize):null,subPx:sub?parseFloat(getComputedStyle(sub).fontSize):null,
     overloop:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,
     achtergrondLuminantie:lum(effBg(document.body).b),
@@ -140,7 +154,7 @@ function meet(){
   const srv=bouwServer();await new Promise(r=>srv.listen(0,"127.0.0.1",r));
   try{
     const GEVALLEN=[];
-    for(const taal of ["nl","en"])for(const schema of ["light","dark"])for(const breedte of [320,390,768,1440,1920]){
+    for(const taal of ["nl","en"])for(const schema of ["light","dark"])for(const breedte of [320,340,360,375,390,768,1440,1920]){
       const L=`${taal} ${schema} ${breedte}px`,telefoon=breedte<=759;
       const context=await browser.newContext({viewport:{width:breedte,height:1000},locale:taal==="en"?"en-GB":"nl-NL",timezoneId:"Europe/Amsterdam",colorScheme:schema,serviceWorkers:"block"});
       try{
@@ -187,8 +201,12 @@ function meet(){
 
         /* Grafiektekst: leesbare maat, volle dekking, voldoende contrast. */
         assert.ok(r.grafiek.length>=8,`${L}: te weinig grafiekteksten (${r.grafiek.length})`);
+        /* Ondergrens grafiektekst: 12px, en 11px alleen op de smalste telefoons (grafiek smaller dan 340px), waar de acht
+           uurlabels op 12px nog maar 1 tot 3px uit elkaar zouden staan. */
+        const grafiekMin=r.svgBreedte>=340?12:11;
+        assert.ok(grafiekMin===12||breedte<360,`${L}: grafiek van ${r.svgBreedte}px blijft op 11px terwijl het scherm breed genoeg is`);
         r.grafiek.forEach(t=>{
-          assert.ok(t.px>=11,`${L}: grafiektekst “${t.tekst}” is ${t.px}px (ondergrens 11px)`);
+          assert.ok(t.px>=grafiekMin-0.05,`${L}: grafiektekst “${t.tekst}” is ${t.px}px (ondergrens ${grafiekMin}px bij een grafiek van ${r.svgBreedte}px)`);
           assert.equal(t.dekking,1,`${L}: grafiektekst “${t.tekst}” staat op dekking ${t.dekking}`);
           assert.ok(t.contrast>=4.5,`${L}: grafiektekst “${t.tekst}” heeft contrast ${t.contrast}:1 (minimaal 4,5:1)`);
         });
@@ -202,6 +220,9 @@ function meet(){
         });
         assert.equal(new Set(r.thema.map(k=>k.px)).size,1,`${L}: de drie knoppen delen geen lettergrootte (${r.thema.map(k=>k.px)})`);
 
+        /* Tegellabels vallen binnen hun tegel (vóór fase 2a stak "Luchtvochtigheid" op 320px 7px buiten de tegel). */
+        assert.ok(r.tegelOverschrijding<=1,`${L}: tegellabel "${r.tegelOverschrijdingLabel}" steekt ${r.tegelOverschrijding}px buiten zijn tegel`);
+
         /* Geen horizontale paginascroll en geen scriptfouten. */
         assert.ok(r.overloop<=0,`${L}: horizontale overloop ${r.overloop}px`);
         assert.deepEqual(fouten,[],`${L}: scriptfouten`);
@@ -209,6 +230,6 @@ function meet(){
         n++;
       }finally{await context.close();}
     }
-    console.log(`Leesbaarheid fase 2a: ${n} situaties (NL/EN, licht/donker, 320/390/768/1440/1920px): geen HTML-tekst onder 12px, AA-contrast van alle HTML-tekst met bepaalbare achtergrond, uurtabelwaarden minstens zo groot als de kop (telefoon 14px), grafiektekst op volle dekking met contrast ≥ 4,5:1, geen afgebroken kop of waarde, weergavekeuze op één regel, geen horizontale scroll.`);
+    console.log(`Leesbaarheid fase 2a: ${n} situaties (NL/EN, licht/donker, 320/340/360/375/390/768/1440/1920px): geen HTML-tekst onder 12px, AA-contrast van alle HTML-tekst met bepaalbare achtergrond, uurtabelwaarden minstens zo groot als de kop (telefoon 14px), grafiektekst op volle dekking met contrast ≥ 4,5:1, geen afgebroken kop of waarde, tegellabels binnen hun tegel, weergavekeuze op één regel, geen horizontale scroll.`);
   }finally{srv.close();await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1);});

@@ -121,12 +121,16 @@ function grafiekRandWaarden(g,n){
   }
   return {links,rechts};
 }
-/* Kleinste leesbare grafiektekst: 11 css-pixels na schaling van de viewBox. */
-const GRAFIEK_MIN_PX=11;
+/* Kleinste leesbare grafiektekst na schaling van de viewBox: 12 css-pixels, en 11 op de smalste telefoons (grafiek
+   smaller dan 340px, dus een scherm tot ongeveer 355px). Daar liggen de acht uurlabels op 12px nog maar 1 tot 3px uit
+   elkaar (gemeten op 320 en 340px; op 11px 3 tot 5px) en leest "20:0023:00" als één tijd. Vanaf een scherm van 360px blijft
+   de ruimte op 12px minstens 6px. De assenruimte in index.html rekent met dezelfde ondergrens (grafiekMinPx). */
+const GRAFIEK_MIN_PX=11,GRAFIEK_RUIM_MIN_PX=12,GRAFIEK_RUIM_VANAF_PX=340;
+function grafiekMinPx(breed){return Number(breed)>=GRAFIEK_RUIM_VANAF_PX?GRAFIEK_RUIM_MIN_PX:GRAFIEK_MIN_PX;}
 function leesbareGrootte(svg,grootte){
   const vb=svg&&svg.viewBox&&svg.viewBox.baseVal,breed=svg&&typeof svg.getBoundingClientRect==="function"?svg.getBoundingClientRect().width:0;
   const schaal=vb&&vb.width&&breed?breed/vb.width:1;
-  return Math.max(Number(grootte)||0,Math.ceil(GRAFIEK_MIN_PX/schaal*10)/10);
+  return Math.max(Number(grootte)||0,Math.ceil(grafiekMinPx(breed)/schaal*10)/10);
 }
 
 /* Vloeiende lijn door exact dezelfde datapunten (monotone kubische interpolatie,
@@ -1280,7 +1284,7 @@ function koppelTijdAanTemperatuur(){
   svg.setAttribute("data-temp-time-complete",[...perIndex.keys()].every(i=>metTijd.has(i)||vrijVanTijd(perIndex.get(i)))?"1":"0");
 }
 
-/* Geen grafiektekst kleiner dan 11px op het scherm, op iedere breedte: de
+/* Geen grafiektekst kleiner dan 12px op het scherm (11px op de smalste telefoons, zie grafiekMinPx), op iedere breedte: de
    telefoongrafiek wordt verkleind getekend, de desktop- en tabletgrafiek op
    ware grootte met uurtijden van 9,2px. Draait vóór het plaatsen van labels,
    zodat de botsingscontroles met de echte maat rekenen. */

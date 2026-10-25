@@ -35,12 +35,18 @@ html body .nmeta .nachtvenster:not(#wiw-leesbaarheid),html body .nachtmaan .nach
   html body .seo-plaatsnav-kop:not(#wiw-leesbaarheid){font-size:12px!important}
   html body .stat .ssub:not(#wiw-leesbaarheid){font-size:13px!important}
 }
-/* Op de smalste telefoons is "Luchtvochtigheid" op 12px breder dan het labelvak (113px bij 320px); iets minder
-   letterspatiëring houdt de overschrijding op het niveau van vóór deze wijziging (320px: 121 tegen 120px) en lost haar op
-   vanaf 350px. */
-@media(max-width:359px){
+/* Tegellabels op smalle telefoons. "LUCHTVOCHTIGHEID" is op 12px met de ontwerpletterspatiëring 139px breed en past op 320px
+   niet eens in de hele tegel (135px); vóór deze wijziging stak het label op 11px al 7px buiten de tegel. Twee stappen, beide
+   zonder de letters kleiner te maken: de letterspatiëring gaat tot 379px van .075em naar .02em (128px), en de goot naast de
+   scheidingslijn van de zes bovenste tegels (22px per kant) krimpt tussen 320 en 352px mee met de schermbreedte (320px: 6px,
+   vanaf 352px de bestaande 22px), zodat het label steeds binnen de tegel valt. */
+@media(max-width:379px){
   html body .stat .eyebrow:not(#wiw-leesbaarheid),
   html body #aq .eyebrow:not(#wiw-leesbaarheid){letter-spacing:.02em!important}
+}
+@media(max-width:359px){
+  html body .final-top-grid>.stats .stat:nth-child(odd):not(#wiw-leesbaarheid){padding-right:clamp(6px,calc(50vw - 154px),22px)!important}
+  html body .final-top-grid>.stats .stat:nth-child(even):not(#wiw-leesbaarheid){padding-left:clamp(6px,calc(50vw - 154px),22px)!important}
 }
 html body .seo-route-context h2:not(#wiw-leesbaarheid),
 html body #thema button:not(#wiw-leesbaarheid),
