@@ -13,3 +13,71 @@ html body .nmeta .nachtvenster:not(#wiw-leesbaarheid),html body .nachtmaan .nach
   html body #days .row.day .dcond:not(#wiw-leesbaarheid){font-size:13px!important;line-height:1.35!important}
   html body #days .drain small.q1-dag-mm:not(#wiw-leesbaarheid){font-size:12px!important}
 }
+
+/* Fase 2a (25 oktober 2026): labels en functionele tekst minimaal 12px, hoofdinhoud groter dan de labels, en
+   leesbare grafiekteksten. Eerder stonden labels op telefoon en tablet op 11px (vanaf 1100px zijn ze al 12px),
+   de waarden van de uurtabel op 12,5px en "hoeveelheid onzeker" op 10px (9px bij 320px). De waarde is steeds
+   minimaal de maat van het label ervoor, dus de hiërarchie blijft: label 12px, secundair 13px, hoofdwaarden 14px. */
+@media(max-width:1099px){
+  html body .stat .eyebrow:not(#wiw-leesbaarheid),
+  html body #aq .eyebrow:not(#wiw-leesbaarheid),
+  html body .chartkop h2>span:not(#wiw-leesbaarheid),
+  html body .dashcol h2>span:not(#wiw-leesbaarheid),
+  html body main#app>h2>span:not(#wiw-leesbaarheid),
+  html body #suntimes .zondag:not(#wiw-leesbaarheid),
+  html body thead th:not(#wiw-leesbaarheid),
+  html body #days .row.kop>.dname:not(#wiw-leesbaarheid),
+  html body #days .row.kop>.dmin:not(#wiw-leesbaarheid),
+  html body #days .row.kop>.dmax:not(#wiw-leesbaarheid),
+  html body #days .row.kop>.drain:not(#wiw-leesbaarheid),
+  html body #nights .row.kop>*:not(#wiw-leesbaarheid),
+  html body .wiw-weergave-label:not(#wiw-leesbaarheid),
+  html body .seo-plaatsnav-kop:not(#wiw-leesbaarheid){font-size:12px!important}
+  html body .stat .ssub:not(#wiw-leesbaarheid){font-size:13px!important}
+}
+/* Op de smalste telefoons is "Luchtvochtigheid" op 12px breder dan het labelvak (113px bij 320px); iets minder
+   letterspatiëring houdt de overschrijding op het niveau van vóór deze wijziging (320px: 121 tegen 120px) en lost haar op
+   vanaf 350px. */
+@media(max-width:359px){
+  html body .stat .eyebrow:not(#wiw-leesbaarheid),
+  html body #aq .eyebrow:not(#wiw-leesbaarheid){letter-spacing:.02em!important}
+}
+html body .seo-route-context h2:not(#wiw-leesbaarheid),
+html body #thema button:not(#wiw-leesbaarheid),
+html body #thema .wiw-theme-icon:not(#wiw-leesbaarheid){font-size:12px!important}
+html body small.wiw-dag-onzeker:not(#wiw-leesbaarheid){font-size:12px!important;line-height:1.25!important}
+@media(max-width:759px){
+  html body #wiw-hour-table tbody td:not(#wiw-leesbaarheid),
+  html body #wiw-hour-table tbody time:not(#wiw-leesbaarheid){font-size:14px!important}
+}
+/* Smalle telefoons: de kolomkoppen van de uurtabel zijn nu 12px en braken bij 320px midden in het woord
+   ("TEMPERATU/UR", Engels "CHANC/E"). Iets minder letterspatiëring en celvulling en kolombreedtes die op de langste kop
+   en waarde per kolom zijn afgestemd houden elke kop op één regel van 320 tot 389px, in Nederlands én Engels
+   (gemeten: de smalste kolom heeft 1 tot 2px over). */
+@media(max-width:389px){
+  html body #wiw-hour-table thead th:not(#wiw-leesbaarheid){letter-spacing:.02em!important;padding-left:3px!important;padding-right:3px!important}
+  html body #wiw-hour-table tbody td:not(#wiw-leesbaarheid){padding-left:3px!important;padding-right:3px!important}
+}
+@media(max-width:339px){
+  html body #wiw-hour-table thead th:not(#wiw-leesbaarheid){letter-spacing:.01em!important;padding-left:2px!important;padding-right:2px!important}
+  html body #wiw-hour-table tbody td:not(#wiw-leesbaarheid){padding-left:2px!important;padding-right:2px!important}
+  html body #wiw-hour-table th:nth-child(1):not(#wiw-leesbaarheid),html body #wiw-hour-table td:nth-child(1):not(#wiw-leesbaarheid){width:16%!important}
+  html body #wiw-hour-table th:nth-child(2):not(#wiw-leesbaarheid),html body #wiw-hour-table td:nth-child(2):not(#wiw-leesbaarheid){width:36%!important}
+  html body #wiw-hour-table th:nth-child(3):not(#wiw-leesbaarheid),html body #wiw-hour-table td:nth-child(3):not(#wiw-leesbaarheid){width:22%!important}
+  html body #wiw-hour-table th:nth-child(4):not(#wiw-leesbaarheid),html body #wiw-hour-table td:nth-child(4):not(#wiw-leesbaarheid){width:26%!important}
+}
+@media(min-width:340px) and (max-width:389px){
+  html body #wiw-hour-table th:nth-child(1):not(#wiw-leesbaarheid),html body #wiw-hour-table td:nth-child(1):not(#wiw-leesbaarheid){width:16%!important}
+  html body #wiw-hour-table th:nth-child(2):not(#wiw-leesbaarheid),html body #wiw-hour-table td:nth-child(2):not(#wiw-leesbaarheid){width:35%!important}
+  html body #wiw-hour-table th:nth-child(3):not(#wiw-leesbaarheid),html body #wiw-hour-table td:nth-child(3):not(#wiw-leesbaarheid){width:21%!important}
+  html body #wiw-hour-table th:nth-child(4):not(#wiw-leesbaarheid),html body #wiw-hour-table td:nth-child(4):not(#wiw-leesbaarheid){width:28%!important}
+}
+@media(min-width:760px) and (max-width:1099px){
+  html body #wiw-hour-table tbody td:not(#wiw-leesbaarheid),
+  html body #wiw-hour-table tbody time:not(#wiw-leesbaarheid){font-size:13.5px!important}
+  html body #days .row.day .dcond:not(#wiw-leesbaarheid){font-size:13px!important}
+}
+/* Grafiekteksten: de as- en tijdlabels stonden met een doorzichtigheid van 0,76 en 0,82 op 3,3:1 (licht) en 4,1:1 (donker);
+   op volle dekking is het contrast 5,1:1 (licht) en 8:1 (donker). De kleur zelf blijft ongewijzigd. */
+html body #chart text:not(#wiw-leesbaarheid){opacity:1!important}
+
