@@ -9,11 +9,14 @@ const {verifieerServiceworkerCache}=require("./postbuild-cache.js");
 
 const OUT=path.join(__dirname,"..","public");
 const tel=(tekst,zoek)=>String(tekst).split(zoek).length-1;
+/* De skiplink staat buiten .sheet en hoort zelf uit snippets te blijven (data-nosnippet werkt niet op <a>, wel op span). */
+const SKIPLINK='<span data-nosnippet><a class="skiplink" href="#app">Ga naar hoofdinhoud</a></span>';
 const rootPath=path.join(OUT,"index.html"),hubPath=path.join(OUT,"weer","index.html"),sitemapPath=path.join(OUT,"sitemap.xml");
 for(const p of [rootPath,hubPath,sitemapPath])if(!fs.existsSync(p))throw new Error("SEO-plaatsartifact ontbreekt: "+p);
 
 const root=fs.readFileSync(rootPath,"utf8");
 if(tel(root,'<div class="sheet" data-nosnippet>')!==1)throw new Error("Homepage moet de dynamische weerinterface exact één keer uit zoeksnippets houden.");
+if(tel(root,SKIPLINK)!==1||tel(root,'class="skiplink"')!==1)throw new Error("Homepage moet de skiplink exact één keer in een data-nosnippet-omhulsel houden.");
 if(tel(root,MARKER_NAV)!==1)throw new Error("Homepage moet exact één crawlbare plaatsnavigatie bevatten.");
 if(!root.includes('href="/weer/"'))throw new Error("Homepage linkt niet naar de volledige plaatsindex.");
 if(root.includes("seo-klimaat"))throw new Error("Homepage mag geen klimaatblok bevatten.");
@@ -41,6 +44,7 @@ for(const loc of LOCATIES){
   if(!fs.existsSync(p))throw new Error(`${loc.slug}: gegenereerde route ontbreekt.`);
   const html=fs.readFileSync(p,"utf8"),canonical=plaatsUrl(loc),titel=plaatsTitel(loc),desc=plaatsBeschrijving(loc);
   if(tel(html,'<div class="sheet" data-nosnippet>')!==1)throw new Error(`${loc.slug}: dynamische weerinterface mist data-nosnippet.`);
+  if(tel(html,SKIPLINK)!==1||tel(html,'class="skiplink"')!==1)throw new Error(`${loc.slug}: skiplink staat niet exact één keer in een data-nosnippet-omhulsel.`);
   if(tel(html,MARKER_ROUTE)!==1)throw new Error(`${loc.slug}: route-marker ontbreekt of is dubbel.`);
   if(tel(html,MARKER_NAV)!==1)throw new Error(`${loc.slug}: plaatsnavigatie ontbreekt of is dubbel.`);
   if(tel(html,`<link rel="canonical" href="${canonical}">`)!==1)throw new Error(`${loc.slug}: canonical ontbreekt of is dubbel.`);

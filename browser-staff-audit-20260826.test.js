@@ -122,12 +122,14 @@ async function controleer(browserType,naam){
       uur:[...document.querySelectorAll("#chart text")].filter(el=>/^(?:[01]\d|2[0-3]):00$/.test((el.textContent||"").trim())).length,
       tabel:document.querySelectorAll("#chartdata tbody tr").length,
       main:document.querySelectorAll("main#app").length,
-      skip:!!document.querySelector('.skiplink[href="#app"]')
+      skip:!!document.querySelector('.skiplink[href="#app"]'),
+      skipOmhulsel:!!document.querySelector('.skiplink[href="#app"]')?.parentElement?.matches("span[data-nosnippet]")
     }));
     assert(init.uur>0,`${naam}: expliciete HH:00-uurlabels ontbreken op eerste mobiele render`);
     assert(init.tabel>0,`${naam}: alternatieve grafiektabel is leeg`);
     assert.equal(init.main,1,`${naam}: exact één main-landmark`);
     assert(init.skip,`${naam}: skiplink ontbreekt`);
+    assert(init.skipOmhulsel,`${naam}: skiplink staat niet in een span met data-nosnippet (Google toont anders "Ga naar hoofdinhoud" als snippet)`);
 
     const samenvatting=page.locator("#chartdata > summary");
     await samenvatting.focus();
