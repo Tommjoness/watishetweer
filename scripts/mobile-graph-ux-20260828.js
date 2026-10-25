@@ -1305,7 +1305,12 @@ function maakGrafiekTekstLeesbaar(){
     if(el.closest("#scrub"))return;
     if(!el.hasAttribute("data-basis-font-size"))el.setAttribute("data-basis-font-size",el.getAttribute("font-size"));
     const basis=Number(el.getAttribute("data-basis-font-size")),fs=Number(el.getAttribute("font-size"));if(!Number.isFinite(fs)||fs<=0||!Number.isFinite(basis)||basis<=0)return;
-    let doel=leesbareGrootte(svg,basis);
+    /* De zon-op- en zon-onder-labels staan aan weerszijden van een korte winterdag naar elkaar toe gericht (zon op rechts van
+       zijn markering, zon onder links van de zijne). Op 12px overlappen ze in het Engels ("sunrise 07:25" en "sunset 17:22")
+       op 375 en 390px meer dan op 11px en op 430px, waar ze op 11px nog 9,5px vrij staan, voor het eerst. Ze houden daarom de
+       oude ondergrens van 11px; vanaf 1440px geldt de brede maat zoals voor alle grafiektekst. */
+    const zonLabel=/^(?:sunrise|sunset|zon op|zon onder)\b/i.test(String(el.textContent||"").trim());
+    let doel=zonLabel?Math.max(basis,Math.ceil(GRAFIEK_MIN_PX/schaal*10)/10):leesbareGrootte(svg,basis);
     if(breed)doel=Math.max(doel,Math.round(basis*GRAFIEK_BREED_FACTOR*10)/10,Math.ceil(GRAFIEK_BREED_MIN_PX/schaal*10)/10);
     if(doel>fs)el.setAttribute("font-size",String(doel));
   });
