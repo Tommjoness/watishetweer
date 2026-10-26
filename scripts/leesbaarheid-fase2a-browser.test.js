@@ -7,6 +7,7 @@
    - alle zichtbare HTML-tekst met een bepaalbare achtergrondkleur haalt WCAG-contrast (4,5:1; 3:1 voor grote tekst);
    - grafiektekst minimaal 12px (11px alleen op een grafiek smaller dan 350px: op 320 en 340px staan de uurlabels dan 1 tot 3px
      uit elkaar en houdt het nu-label op 360px te weinig ruimte over), de as- en tijdlabels staan op volle dekking en halen WCAG-contrast 4,5:1;
+     de twee zonlabels (op/onder) houden hun 11px (zie zonlabels-winter-browser.test.js: op 12px overlappen ze op een korte winterdag);
    - geen horizontale paginascroll, geen kolomkop of waarde in de uurtabel die over twee regels breekt;
    - ieder tegellabel valt binnen zijn tegel (ook "Luchtvochtigheid" op 320px);
    - Auto | Licht | Donker delen één lettergrootte van minstens 12px en passen op één regel.
@@ -106,7 +107,7 @@ function meet(){
     const c=getComputedStyle(t),svg=t.closest("svg"),sr=svg.getBoundingClientRect(),vb=svg.viewBox&&svg.viewBox.baseVal&&svg.viewBox.baseVal.width,schaal=vb?sr.width/vb:1;
     const bg=effBg(svg).b,f=rgb(c.fill),fg=over([f[0],f[1],f[2],f[3]*(+c.fillOpacity||1)*effOpacity(t)],bg);
     const L1=lum(fg),L2=lum(bg);
-    return {tekst:t.textContent.trim().slice(0,20),px:+(parseFloat(c.fontSize)*schaal).toFixed(2),dekking:+effOpacity(t).toFixed(2),contrast:+((Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05)).toFixed(2)};
+    return {zon:/^(?:sunrise|sunset|zon op|zon onder)\b/i.test(t.textContent.trim()),tekst:t.textContent.trim().slice(0,20),px:+(parseFloat(c.fontSize)*schaal).toFixed(2),dekking:+effOpacity(t).toFixed(2),contrast:+((Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05)).toFixed(2)};
   });
 
   /* De uurtabel. Een cel met een tweede regel eronder (.wiw-hour-secondary, bijvoorbeeld de kans naast de hoeveelheid
@@ -207,7 +208,9 @@ function meet(){
         const grafiekMin=r.svgBreedte>=350?12:11;
         assert.ok(grafiekMin===12||breedte<375,`${L}: grafiek van ${r.svgBreedte}px blijft op 11px terwijl het scherm breed genoeg is`);
         r.grafiek.forEach(t=>{
-          assert.ok(t.px>=grafiekMin-0.05,`${L}: grafiektekst “${t.tekst}” is ${t.px}px (ondergrens ${grafiekMin}px bij een grafiek van ${r.svgBreedte}px)`);
+          /* De zonlabels (zon op/onder) houden 11px; alle andere grafiektekst volgt de ondergrens hierboven. */
+          const min=t.zon?11:grafiekMin;
+          assert.ok(t.px>=min-0.05,`${L}: grafiektekst “${t.tekst}” is ${t.px}px (ondergrens ${min}px bij een grafiek van ${r.svgBreedte}px)`);
           assert.equal(t.dekking,1,`${L}: grafiektekst “${t.tekst}” staat op dekking ${t.dekking}`);
           assert.ok(t.contrast>=4.5,`${L}: grafiektekst “${t.tekst}” heeft contrast ${t.contrast}:1 (minimaal 4,5:1)`);
         });
