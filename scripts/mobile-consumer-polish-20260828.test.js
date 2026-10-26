@@ -104,7 +104,7 @@ assert(js.includes('data-mobile-weather-icon')&&js.includes('icon(Number(code),d
 assert(js.includes('data-mobile-temp-markers')&&js.includes('data-mobile-temp-dropped-markers'),"getoonde en bij ruimtegebrek vervallen max/min-markeringen zijn traceerbaar");
 assert(js.includes('nuTekst.textContent="nu "+Math.round(Number(actueel))+"°"'),"de rode huidige markering houdt zijn actuele temperatuurwaarde");
 assert(js.includes('kiesKalenderUurLabelIndices(g.TI,3,24)')&&js.includes('data-mobile-hour-rhythm')&&js.includes('three-hour'),"smalle mobiele uuras wordt vanuit één deterministische lokale drie-uursowner opgebouwd");
-assert(js.includes('data-mobile-sun-band-compact')&&js.includes('^zon (?:op|onder)'),"dubbele zonsopkomst/-ondergangtekst wordt alleen binnen de mobiele SVG opgeruimd");
+assert(js.includes('data-mobile-sun-band-compact')&&js.includes('text[data-zon-label]')&&!js.includes('^zon (?:op|onder)'),"dubbele zonsopkomst/-ondergangtekst wordt alleen binnen de mobiele SVG opgeruimd, taalonafhankelijk via data-zon-label (niet via Nederlandse tekst)");
 assert(js.includes('data-mobile-compact-height'),"mobiele grafiekhoogte krijgt een expliciete post-render compactiemarker");
 assert(js.includes('WeatherNowMobileScreenshotPolish.structureerBronnen')&&js.includes('wiw-source-last-odd'),"dynamische bronnen worden na providerupdates genormaliseerd en oneven gecentreerd");
 
