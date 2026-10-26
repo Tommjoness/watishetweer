@@ -15,7 +15,7 @@ const grammatica=typeof module!=="undefined"&&module.exports
 const num=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(v):null;
 const clamp=v=>Math.max(0,Math.min(100,v));
 const hoofdletter=t=>{t=String(t||"");return t?t.charAt(0).toUpperCase()+t.slice(1):t;};
-const kleineStart=t=>{t=String(t||"");return t?t.charAt(0).toLowerCase()+t.slice(1):t;};
+const kleineStart=t=>{t=String(t||"");return t?(/^IJ/.test(t)?"ij"+t.slice(2):t.charAt(0).toLowerCase()+t.slice(1)):t;};
 const SPOOR_MM=0.005;
 const KNMI_ACTUEEL_DREMPEL_MMU=0.1;
 const KNMI_TOEKOMST_DREMPEL_MMU=0.05;

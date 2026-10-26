@@ -421,8 +421,11 @@ function verrijkTooltip(ev){
   const i=clamp(Math.round((((ev.clientX-r.left)*sc)-(typeof G.x==="function"?G.x(0):G.pl))/G.cw),0,G.n-1);
   const teksten=[...g.querySelectorAll("text")];if(teksten.length<7)return;
   const p=tooltipNeerslag(G.P&&G.P[i],G.Q1MM&&G.Q1MM[i]);
-  teksten[5].textContent="neerslagkans";
-  teksten[6].textContent=p.waarde;
+  /* De neerslagregel is de derde rij. Met data-tip-rij gevonden, niet op volgorde: met een omschrijvingsregel onder de tijd
+     schuift elke index een plek op. */
+  const label=g.querySelector('text[data-tip-rij="3"][data-tip-kol="label"]')||teksten[5],waarde=g.querySelector('text[data-tip-rij="3"][data-tip-kol="waarde"]')||teksten[6];
+  label.textContent="neerslagkans";
+  waarde.textContent=p.waarde;
   g.setAttribute("aria-label",(G.TI&&G.TI[i]?(typeof hhmm==="function"?hhmm(G.TI[i]):G.TI[i].slice(11,16))+", ":"")+"neerslagkans "+p.kans+(p.hoeveelheid?", verwacht "+p.hoeveelheid:""));
 }
 

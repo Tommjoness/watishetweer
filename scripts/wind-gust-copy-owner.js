@@ -31,7 +31,7 @@ function weatherNowWindstootTekst(pg,nu,dag,vak){
     :`De hoogste windstoot werd vandaag tussen ${tussen} verwacht: ${waarde} km/u.`;
   if(/^Morgen$/i.test(dagNaam))return `De hoogste windstoot wordt morgen tussen ${tussen} verwacht: ${waarde} km/u.`;
   if(/^Gisteren$/i.test(dagNaam))return `De hoogste windstoot werd gisteren tussen ${tussen} verwacht: ${waarde} km/u.`;
-  const dagInZin=dagNaam?dagNaam.charAt(0).toLowerCase()+dagNaam.slice(1):"op dat moment";
+  const dagInZin=dagNaam?(/^IJ/.test(dagNaam)?"ij"+dagNaam.slice(2):dagNaam.charAt(0).toLowerCase()+dagNaam.slice(1)):"op dat moment";
   return toekomstOfGaand
     ?`De hoogste windstoot wordt ${dagInZin} tussen ${tussen} verwacht: ${waarde} km/u.`
     :`De hoogste windstoot werd ${dagInZin} tussen ${tussen} verwacht: ${waarde} km/u.`;

@@ -115,14 +115,29 @@ function temperatuurProminentie(temperaturen,index){
   return p;
 }
 
-function grafiekPuntBeschrijving(geo,index){
+/* Dagcontext bij een punt in de grafiek. Na middernacht staat in de grafiek en in de gesproken waarde alleen "00:00", zonder dat
+   duidelijk is dat dit morgen is. Leeg voor vandaag, "morgen " of "gisteren " voor de dag ernaast en daarna de korte dagnaam
+   ("wo "). Beide tijden zijn lokale tijden van de plaats ("YYYY-MM-DDTHH:MM"); zonder tweede tijd geen voorvoegsel. */
+const DAGEN_KORT=["zo","ma","di","wo","do","vr","za"];
+function grafiekDagVoorvoegsel(lokaleTijd,nuLokaleTijd){
+  const dag=t=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(t||""));return m?Date.UTC(+m[1],+m[2]-1,+m[3]):null;};
+  const a=dag(lokaleTijd),b=dag(nuLokaleTijd);
+  if(a===null||b===null)return "";
+  const verschil=Math.round((a-b)/86400000);
+  if(verschil===0)return "";
+  if(verschil===1)return "morgen ";
+  if(verschil===-1)return "gisteren ";
+  return DAGEN_KORT[new Date(a).getUTCDay()]+" ";
+}
+
+function grafiekPuntBeschrijving(geo,index,nuLokaleTijd){
   const G=geo&&typeof geo==="object"?geo:null,i=Number(index);
   if(!G||!Number.isInteger(i)||i<0||i>=Number(G.n)||!Array.isArray(G.TI)||!G.TI[i])return "";
   /* G.TI staat op de Open-Meteo-as: voorlezen in de echte lokale tijd. */
   const lokaal=typeof globalThis.weatherNowLokaleTijd==="function"?globalThis.weatherNowLokaleTijd(G.TI[i]):G.TI[i];
   const tijd=String(lokaal).slice(11,16),temp=Array.isArray(G.T)?eindig(G.T[i]):null;
   const kans=Array.isArray(G.P)?eindig(G.P[i]):null;
-  return tijd+(temp===null?"":", "+Math.round(temp)+" graden")+(kans===null?"":", "+Math.round(kans)+" procent neerslagkans");
+  return grafiekDagVoorvoegsel(lokaal,nuLokaleTijd)+tijd+(temp===null?"":", "+Math.round(temp)+" graden")+(kans===null?"":", "+Math.round(kans)+" procent neerslagkans");
 }
 
 /* Desktop houdt alle vaste drie-uursreferenties. Extra extrema zijn bonuscontext
@@ -146,12 +161,21 @@ function etmaalExtraTemperaturenWeg(temperaturen,gelabeldeIndices,rasterStap){
 
 const api={
   tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan,
-  dauwpuntCelsius,luchtvochtigheidDuiding,temperatuurProminentie,etmaalExtraTemperaturenWeg,grafiekPuntBeschrijving
+  dauwpuntCelsius,luchtvochtigheidDuiding,temperatuurProminentie,etmaalExtraTemperaturenWeg,grafiekPuntBeschrijving,grafiekDagVoorvoegsel
 };
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowPolishV2=api;
 
 if(typeof document==="undefined"||typeof S==="undefined") return;
+
+/* Lokale datum en tijd van de plaats nu ("YYYY-MM-DDTHH:MM"), uit dezelfde plaatsklok als de nu-lijn in de grafiek. */
+function plaatsNuLokaal(){
+  try{
+    if(typeof plaatsNu!=="function")return "";
+    const t=plaatsNu(),p=n=>String(n).padStart(2,"0");
+    return Number.isFinite(t.getTime())?t.getFullYear()+"-"+p(t.getMonth()+1)+"-"+p(t.getDate())+"T"+p(t.getHours())+":"+p(t.getMinutes()):"";
+  }catch(e){return "";}
+}
 
 /* De bestaande plaatsklok in de kernruntime is bewust minuutprecies en wordt
    exact op de minuutgrens bijgewerkt. Een eerdere polishlaag verving die door
@@ -200,7 +224,7 @@ scrubKoppel=function(){
   hit.setAttribute("aria-valuemin","1");
   hit.setAttribute("aria-valuemax",String(Math.max(1,S.geo&&S.geo.n||1)));
   hit.setAttribute("aria-valuenow","1");
-  hit.setAttribute("aria-valuetext",grafiekPuntBeschrijving(S.geo,0));
+  hit.setAttribute("aria-valuetext",grafiekPuntBeschrijving(S.geo,0,plaatsNuLokaal()));
   if(svg){svg.setAttribute("role","group");svg.setAttribute("aria-describedby","charthint");}
   const wijsIndexAan=index=>{
     const G=S.geo;if(!G||!svg||!Number.isFinite(G.n)||G.n<1)return;
@@ -208,7 +232,7 @@ scrubKoppel=function(){
     if(!r.width)return;
     hit.dataset.keyboardIndex=String(i);
     hit.setAttribute("aria-valuenow",String(i+1));
-    hit.setAttribute("aria-valuetext",grafiekPuntBeschrijving(G,i));
+    hit.setAttribute("aria-valuetext",grafiekPuntBeschrijving(G,i,plaatsNuLokaal()));
     const schaal=r.width/(G.W||900),clientX=r.left+G.x(i)*schaal,clientY=r.top+G.y(G.T[i])*schaal;
     hit.dispatchEvent(new PointerEvent("pointerdown",{clientX,clientY,pointerType:"mouse"}));
   };
@@ -225,7 +249,7 @@ scrubKoppel=function(){
     let beste=0;for(let k=1;k<G.n;k++)if(Math.abs(G.x(k)-vx)<Math.abs(G.x(beste)-vx))beste=k;
     hit.dataset.keyboardIndex=String(beste);
     hit.setAttribute("aria-valuenow",String(beste+1));
-    hit.setAttribute("aria-valuetext",grafiekPuntBeschrijving(G,beste));
+    hit.setAttribute("aria-valuetext",grafiekPuntBeschrijving(G,beste,plaatsNuLokaal()));
   };
   hit.addEventListener("pointerdown",onthoudPointer);
   hit.addEventListener("pointerup",ev=>{if(ev.isTrusted)laatstePointer=Date.now();});
