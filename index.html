@@ -2095,7 +2095,7 @@ function etmaal(start,n){
       let anker=g.op?"start":"end", tx=xx+(g.op?4:-4);
       if(anker==="end"&&tx-breed<2){anker="start";tx=xx+4;}
       if(anker==="start"&&tx+breed>W-2){anker="end";tx=xx-4;}
-      balk+=`<text x="${tx}" y="${by-9}" text-anchor="${anker}" fill="${INK45}"
+      balk+=`<text x="${tx}" y="${by-9}" text-anchor="${anker}" fill="${INK45}" data-zon-label="${g.op?"op":"onder"}" data-zon-x="${xx}"
         font-family="DM Mono,monospace" font-size="${F.zon}">${tekst}</text>`;
     }
   });
