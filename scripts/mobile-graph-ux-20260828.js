@@ -302,6 +302,39 @@ function svgTekstBoxUitElement(el){
   return geschatteSvgTekstBox(el.textContent,x,y,anker,Number.isFinite(font)&&font>0?font:12);
 }
 
+/* Plaatsing van de zon-op- en zon-onder-labels boven de nachtband. Ieder label hangt aan zijn eigen lijn en staat aan de kant die
+   index.html koos (zon op rechts van zijn lijn, zon onder links; bij de rand klapt het om). Op een korte of een zeer lange dag
+   raken twee labels elkaar. De tekst gaat dan niet kleiner en er verdwijnt geen tijd: eerst zoekt dit een andere combinatie van
+   kanten waarin geen label een ander of de rand raakt (zo min mogelijk labels omklappen); past er geen enkele, dan worden de
+   labels tot één label samengevoegd ("zon op 10:30 · zon onder 13:30"). Raken ze elkaar niet, dan verandert er niets.
+   labels: [{lijn,anker,breed}] in viewBox-eenheden; opties.scheiding is de breedte van het scheidingsteken bij samenvoegen. */
+function kiesZonlabelPlaatsing(labels,breedte,opties){
+  const o=Object.assign({afstand:4,marge:2,tussen:4,scheiding:0},opties||{});
+  const W=Number(breedte);
+  const lijst=(Array.isArray(labels)?labels:[]).map((l,index)=>({index,lijn:Number(l&&l.lijn),anker:l&&l.anker==="end"?"end":"start",breed:Number(l&&l.breed)}));
+  if(lijst.length<2||lijst.length>6||!Number.isFinite(W)||W<=0||lijst.some(l=>!Number.isFinite(l.lijn)||!Number.isFinite(l.breed)||l.breed<=0))return {actie:"geen"};
+  lijst.sort((a,b)=>a.lijn-b.lijn||a.index-b.index);
+  const vak=(l,anker)=>anker==="end"?{van:l.lijn-o.afstand-l.breed,tot:l.lijn-o.afstand}:{van:l.lijn+o.afstand,tot:l.lijn+o.afstand+l.breed};
+  const botst=(a,b)=>a.van<b.tot+o.tussen&&b.van<a.tot+o.tussen;
+  const raken=vakken=>vakken.some((a,i)=>vakken.slice(i+1).some(b=>botst(a,b)));
+  const binnen=vakken=>vakken.every(v=>v.van>=o.marge-1e-6&&v.tot<=W-o.marge+1e-6);
+  const start=lijst.map(l=>l.anker);
+  if(!raken(lijst.map((l,i)=>vak(l,start[i]))))return {actie:"geen"};
+  const maskers=[...Array(1<<lijst.length).keys()].sort((a,b)=>{const pa=a.toString(2).replace(/0/g,"").length,pb=b.toString(2).replace(/0/g,"").length;return pa-pb||a-b;});
+  for(const m of maskers){
+    if(!m)continue;
+    const ankers=start.map((a,i)=>m&(1<<i)?(a==="end"?"start":"end"):a),vakken=lijst.map((l,i)=>vak(l,ankers[i]));
+    if(!binnen(vakken)||raken(vakken))continue;
+    return {actie:"omklappen",labels:lijst.map((l,i)=>({index:l.index,anker:ankers[i],x:ankers[i]==="end"?vakken[i].tot:vakken[i].van})).filter((l,i)=>l.anker!==start[i])};
+  }
+  const totaal=lijst.reduce((t,l)=>t+l.breed,0)+o.scheiding*(lijst.length-1),eerste=lijst[0],laatste=lijst[lijst.length-1];
+  const volgorde=lijst.map(l=>l.index);
+  const opStart={van:eerste.lijn+o.afstand,tot:eerste.lijn+o.afstand+totaal},opEinde={van:laatste.lijn-o.afstand-totaal,tot:laatste.lijn-o.afstand};
+  if(binnen([opStart]))return {actie:"samenvoegen",volgorde,anker:"start",x:opStart.van};
+  if(binnen([opEinde]))return {actie:"samenvoegen",volgorde,anker:"end",x:opEinde.tot};
+  const midden=totaal>W-2*o.marge?W/2:Math.min(W-o.marge-totaal/2,Math.max(o.marge+totaal/2,(eerste.lijn+laatste.lijn)/2));
+  return {actie:"samenvoegen",volgorde,anker:"middle",x:midden};
+}
 /* Mobiele SVG-tekst mag nooit buiten de eigen viewBox vallen. Vooral het laatste
    HH:00-label stond op het laatste datapunt gecentreerd en liep daardoor rechts
    uit de grafiek. Deze pure helper geeft alleen bij echte randoverschrijding een
@@ -386,7 +419,7 @@ function mobieleGrafiekCompactHoogte(plotBottom,huidigeHoogte,zichtbareOnderkant
   return Math.min(h,doel);
 }
 
-const api={bewakingsKandidaten,padBox,padPunten,bewakingsTekstBox,afstandVakTotPunt,kiesVrijeVerschuiving,uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,lokaleForecastMinuten,mobieleGrafiekMarkeringen,monotoonPad,MOBIEL_ICOON_Y,MOBIEL_ICOON_GROOTTE,MOBIEL_LIJNLABEL_GROOTTE,MOBIELE_UURAS_Y,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,lijnRaaktTekstBox,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,mobieleTemperatuurLabelLimiet,kiesMobieleTemperatuurLabelIndices,prioriteerMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
+const api={bewakingsKandidaten,padBox,padPunten,bewakingsTekstBox,afstandVakTotPunt,kiesVrijeVerschuiving,kiesZonlabelPlaatsing,uurUitIso,uurAsLabelTekst,kiesUurLabelIndices,kiesKalenderUurLabelIndices,lokaleForecastMinuten,mobieleGrafiekMarkeringen,monotoonPad,MOBIEL_ICOON_Y,MOBIEL_ICOON_GROOTTE,MOBIEL_LIJNLABEL_GROOTTE,MOBIELE_UURAS_Y,isUurAsLabel,waarschuwingBronnenVoorLand,neerslagSleutelTekst,bronGebruikUitResources,rechthoekenBotsen,lijnRaaktTekstBox,geschatteSvgTekstBox,randCorrectieVoorTekstBox,begrensTemperatuurLabelY,mobieleTemperatuurLabelLimiet,kiesMobieleTemperatuurLabelIndices,prioriteerMobieleTemperatuurLabelIndices,mobieleGrafiekCompactHoogte};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowMobileGraphUX20260828=api;
 
@@ -850,6 +883,29 @@ function vereenvoudigMobieleZonband(){
   svg.setAttribute("data-mobile-sun-band-compact","1");
 }
 
+/* Zon-op- en zon-onder-labels die elkaar raken (zie kiesZonlabelPlaatsing). Draait na vereenvoudigMobieleZonband, dus niet voor
+   Nederlandse labels op de telefoon: die zijn daar al weggehaald omdat #suntimes dezelfde tijden noemt. Idempotent: een
+   opgelost stel raakt elkaar niet meer en blijft daarna ongemoeid. */
+function ontwarZonlabels(){
+  const svg=document.getElementById("chart");if(!svg)return;
+  const vb=svg.viewBox&&svg.viewBox.baseVal,W=vb&&vb.width;if(!Number.isFinite(W)||W<=0)return;
+  const els=[...svg.querySelectorAll("text[data-zon-label]")].filter(el=>el.isConnected&&!el.closest("#scrub"));
+  if(els.length<2)return;
+  const meet=el=>{try{const b=el.getComputedTextLength();return Number.isFinite(b)&&b>0?b:0;}catch(e){return 0;}};
+  const labels=els.map(el=>({lijn:Number(el.getAttribute("data-zon-x")),anker:el.getAttribute("text-anchor")==="end"?"end":"start",breed:meet(el)}));
+  const fs=Number(els[0].getAttribute("font-size"));
+  const keuze=kiesZonlabelPlaatsing(labels,W,{scheiding:Number.isFinite(fs)&&fs>0?fs:10});
+  const zet=(el,anker,x)=>{el.setAttribute("text-anchor",anker);el.setAttribute("x",String(Math.round(x*10)/10));};
+  if(keuze.actie==="omklappen"){
+    keuze.labels.forEach(l=>{zet(els[l.index],l.anker,l.x);els[l.index].setAttribute("data-zon-plaatsing","omgeklapt");});
+  }else if(keuze.actie==="samenvoegen"){
+    const eerste=els[keuze.volgorde[0]];
+    eerste.textContent=keuze.volgorde.map(i=>String(els[i].textContent||"").trim()).join(" \u00b7 ");
+    zet(eerste,keuze.anker,keuze.x);eerste.setAttribute("data-zon-plaatsing","samengevoegd");
+    keuze.volgorde.slice(1).forEach(i=>els[i].remove());
+  }
+}
+
 function compactMobieleGrafiekHoogte(){
   if(!mobiel()||window.innerWidth>430)return;
   const svg=document.getElementById("chart"),g=S.geo;
@@ -1305,12 +1361,7 @@ function maakGrafiekTekstLeesbaar(){
     if(el.closest("#scrub"))return;
     if(!el.hasAttribute("data-basis-font-size"))el.setAttribute("data-basis-font-size",el.getAttribute("font-size"));
     const basis=Number(el.getAttribute("data-basis-font-size")),fs=Number(el.getAttribute("font-size"));if(!Number.isFinite(fs)||fs<=0||!Number.isFinite(basis)||basis<=0)return;
-    /* De zon-op- en zon-onder-labels staan aan weerszijden van een korte winterdag naar elkaar toe gericht (zon op rechts van
-       zijn markering, zon onder links van de zijne). Op 12px overlappen ze in het Engels ("sunrise 07:25" en "sunset 17:22")
-       op 375 en 390px meer dan op 11px en op 430px, waar ze op 11px nog 9,5px vrij staan, voor het eerst. Ze houden daarom de
-       oude ondergrens van 11px; vanaf 1440px geldt de brede maat zoals voor alle grafiektekst. */
-    const zonLabel=/^(?:sunrise|sunset|zon op|zon onder)\b/i.test(String(el.textContent||"").trim());
-    let doel=zonLabel?Math.max(basis,Math.ceil(GRAFIEK_MIN_PX/schaal*10)/10):leesbareGrootte(svg,basis);
+    let doel=leesbareGrootte(svg,basis);
     if(breed)doel=Math.max(doel,Math.round(basis*GRAFIEK_BREED_FACTOR*10)/10,Math.ceil(GRAFIEK_BREED_MIN_PX/schaal*10)/10);
     if(doel>fs)el.setAttribute("font-size",String(doel));
   });
@@ -1596,7 +1647,7 @@ function bewaakGrafiekLabels(){
 let uurAsToken=0;
 function planUurAsHerstel(){
   const token=++uurAsToken;
-  const voer=()=>{if(token===uurAsToken){maakGrafiekTekstLeesbaar();herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();bouwMobieleTemperatuurRij();polishNuLabel();compactMobieleGrafiekHoogte();koppelTijdAanTemperatuur();bouwDesktopGrafiekAccenten();stippenAlleenBovenTijd();bewaakGrafiekLabels();}};
+  const voer=()=>{if(token===uurAsToken){maakGrafiekTekstLeesbaar();herstelUurAs();polishMobieleGrafiekRanden();vereenvoudigMobieleZonband();bouwMobieleTemperatuurRij();polishNuLabel();ontwarZonlabels();compactMobieleGrafiekHoogte();koppelTijdAanTemperatuur();bouwDesktopGrafiekAccenten();stippenAlleenBovenTijd();bewaakGrafiekLabels();}};
   const start=()=>{
     const r1=()=>{const r2=()=>voer();if(typeof requestAnimationFrame==="function")requestAnimationFrame(r2);else setTimeout(r2,0);};
     if(typeof requestAnimationFrame==="function")requestAnimationFrame(r1);else setTimeout(r1,0);
