@@ -30,7 +30,7 @@ function nuIn(tijdzone,nu){
 }
 function vandaagIn(tijdzone,nu){return nuIn(tijdzone,nu).datum;}
 function vul(sjabloon,waarden){return String(sjabloon).replace(/\{(\w+)\}/g,(m,k)=>Object.prototype.hasOwnProperty.call(waarden,k)?String(waarden[k]):m);}
-function klein(label){return String(label).charAt(0).toLowerCase()+String(label).slice(1);}
+function klein(label){const t=String(label);return /^IJ/.test(t)?"ij"+t.slice(2):t.charAt(0).toLowerCase()+t.slice(1);}
 
 /* Tot welk uur (vanaf middernacht aan het begin van de evenementdag) een
    evenementdag loopt: het laatste uur uit cfg.uren (26 = 02:00 de dag erna),

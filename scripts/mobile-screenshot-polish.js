@@ -124,7 +124,7 @@ function nachtLabelVarianten(label){
 }
 function nachtAdviesMetHorizon(advies,horizonDagen){
   const t=String(advies||"").trim(),h=getal(horizonDagen);if(!t||h===null||h<3)return t;
-  return "Voorlopig "+t.charAt(0).toLowerCase()+t.slice(1);
+  return "Voorlopig "+(/^IJ/.test(t)?"ij"+t.slice(2):t.charAt(0).toLowerCase()+t.slice(1));
 }
 function dagdeelVanUur(tijd){
   const m=/^(\d{2}):(\d{2})$/.exec(String(tijd||""));if(!m)return null;
@@ -185,7 +185,7 @@ function formatteerMaanTekst(tekst){
   m=/^maan blijft de rest van de nacht (onder|boven) de horizon$/i.exec(t);if(m)return "De rest van de nacht blijft de maan "+m[1].toLowerCase()+" de horizon.";
   if(/^maan blijft onder de horizon$/i.test(t))return "Maan blijft onder de horizon.";
   if(/^maan blijft boven de horizon$/i.test(t))return "Maan blijft boven de horizon.";
-  return t?(/^[Mm]aan:/.test(t)?t:"Maan: "+t.charAt(0).toLowerCase()+t.slice(1)):"";
+  return t?(/^[Mm]aan:/.test(t)?t:"Maan: "+(/^IJ/.test(t)?"ij"+t.slice(2):t.charAt(0).toLowerCase()+t.slice(1))):"";
 }
 function nachtMetaDelen(tekst){
   const t=String(tekst||"").replace(/[🌑🌒🌓🌔🌕🌖🌗🌘]\uFE0F?/gu,"").trim();

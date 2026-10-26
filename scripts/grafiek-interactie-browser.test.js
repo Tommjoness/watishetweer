@@ -202,17 +202,21 @@ function verwacht(m){
             const svg=document.getElementById("chart"),g=S.geo,rb=svg.getBoundingClientRect(),vx=(cx-rb.left)/(rb.width/(g.W||900));
             let beste=0;for(let k=1;k<g.n;k++)if(Math.abs(g.x(k)-vx)<Math.abs(g.x(beste)-vx))beste=k;
             const scrub=document.getElementById("scrub"),kop=scrub&&scrub.querySelector("text");
-            return {verwacht:g.TI[beste].slice(11,16),kop:kop?kop.textContent.slice(0,5):"",zichtbaar:!!scrub&&scrub.style.display!=="none",outline:getComputedStyle(document.getElementById("hit")).outlineStyle};
+            const kopTijd=k=>{const m=k&&k.textContent.trim().match(/^(?:(morgen|gisteren|ma|di|wo|do|vr|za|zo) )?(\d{2}:\d{2})/);return m?{dag:m[1]||"",tijd:m[2]}:{dag:"",tijd:k?k.textContent.slice(0,5):""};};
+            const nu=plaatsNu(),p2=n=>String(n).padStart(2,"0"),vandaag=nu.getFullYear()+"-"+p2(nu.getMonth()+1)+"-"+p2(nu.getDate()),morgen=new Date(nu.getFullYear(),nu.getMonth(),nu.getDate()+1),morgenIso=morgen.getFullYear()+"-"+p2(morgen.getMonth()+1)+"-"+p2(morgen.getDate()),pdag=g.TI[beste].slice(0,10);
+            return {verwacht:g.TI[beste].slice(11,16),kop:kopTijd(kop).tijd,dag:kopTijd(kop).dag,verwachtDag:pdag===vandaag?"":pdag===morgenIso?"morgen":"?",zichtbaar:!!scrub&&scrub.style.display!=="none",outline:getComputedStyle(document.getElementById("hit")).outlineStyle};
           },[x]);
           assert(r.zichtbaar,"390px: na een tik op "+Math.round(f*100)+"% is het detailvenster na 1 seconde al weg");
           assert.equal(r.kop,r.verwacht,"390px: tik op "+Math.round(f*100)+"% toont "+r.kop+" in plaats van het aangetikte uur "+r.verwacht);
+          /* Fase 2b-2: een uur na middernacht noemt zijn dag ("morgen 07:00"); een uur van vandaag blijft kaal. */
+          if(r.verwachtDag!=="?")assert.equal(r.dag,r.verwachtDag,"390px: tik op "+Math.round(f*100)+"% toont de dagaanduiding \""+r.dag+"\" bij het uur "+r.verwacht+" (verwacht \""+r.verwachtDag+"\")");
           assert.equal(r.outline,"none","390px: het tikvlak krijgt een focusrand bij aantikken");
           await sleep(900);
         }
         /* Pijltje rechts gaat verder vanaf het laatst aangetikte uur. */
         const voor=await page.evaluate(()=>S.geo.TI[Number(document.getElementById("hit").dataset.keyboardIndex||0)].slice(11,16));
         await page.keyboard.press("ArrowRight");await sleep(300);
-        const na=await page.evaluate(()=>{const kop=document.querySelector("#scrub text");return {kop:kop?kop.textContent.slice(0,5):"",uur:S.geo.TI[Number(document.getElementById("hit").dataset.keyboardIndex||0)].slice(11,16)};});
+        const na=await page.evaluate(()=>{const kop=document.querySelector("#scrub text");const kopTijd=k=>{const m=k&&k.textContent.trim().match(/^(?:(morgen|gisteren|ma|di|wo|do|vr|za|zo) )?(\d{2}:\d{2})/);return m?{dag:m[1]||"",tijd:m[2]}:{dag:"",tijd:k?k.textContent.slice(0,5):""};};return {kop:kopTijd(kop).tijd,uur:S.geo.TI[Number(document.getElementById("hit").dataset.keyboardIndex||0)].slice(11,16)};});
         assert.notEqual(na.uur,voor,"390px: pijltje rechts blijft op hetzelfde uur");
         assert.equal(na.kop,na.uur,"390px: pijltje rechts toont "+na.kop+" in plaats van "+na.uur);
         assert.deepEqual(fouten,[],"390px: runtimefouten "+fouten.join(" | "));
@@ -224,7 +228,7 @@ function verwacht(m){
       const {context,page,fouten}=await open(browser,root,SCENARIO.avondregen,1366,900);
       try{
         await page.evaluate(()=>document.getElementById("hit").focus());await sleep(300);
-        const r=await page.evaluate(()=>{const kop=document.querySelector("#scrub text");return {kop:kop?kop.textContent.slice(0,5):"",zichtbaar:document.getElementById("scrub").style.display!=="none",eerste:S.geo.TI[0].slice(11,16)};});
+        const r=await page.evaluate(()=>{const kop=document.querySelector("#scrub text");const kopTijd=k=>{const m=k&&k.textContent.trim().match(/^(?:(morgen|gisteren|ma|di|wo|do|vr|za|zo) )?(\d{2}:\d{2})/);return m?{dag:m[1]||"",tijd:m[2]}:{dag:"",tijd:k?k.textContent.slice(0,5):""};};return {kop:kopTijd(kop).tijd,zichtbaar:document.getElementById("scrub").style.display!=="none",eerste:S.geo.TI[0].slice(11,16)};});
         assert(r.zichtbaar&&r.kop===r.eerste,"1366px: toetsenbordfocus op de grafiek toont niet het eerste uur ("+JSON.stringify(r)+")");
         await page.mouse.move(2,2);
         assert.deepEqual(fouten,[],"1366px: runtimefouten "+fouten.join(" | "));

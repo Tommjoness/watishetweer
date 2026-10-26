@@ -2497,7 +2497,20 @@ function scrubKoppel(){
        precies af wat je wilt lezen. Bij aanraking gaat de doos daarom naar de
        andere helft dan waar je vinger zit. Met een muis blijft hij bovenaan,
        want een muisaanwijzer dekt niets af. */
-    const bh=(G.M?20:28)+6*rijH+(G.M?6:10);
+    /* Kop in twee regels: de tijd (met "morgen" of de dagnaam na middernacht of op een andere dag dan vandaag) en daaronder de
+       weersomschrijving. Samen op één regel liep een lange omschrijving ("Zware aanvriezende regen", "Severe thunderstorms with
+       hail") buiten de doos. De tweede regel past in de doos: de langste omschrijving is 164px breed op 11,5px, de doos laat 172px. */
+    const dagVoor=(()=>{
+      try{
+        const api=globalThis.WeatherNowPolishV2;
+        if(!api||typeof api.grafiekDagVoorvoegsel!=="function")return "";
+        const t=plaatsNu(),p2=n=>String(n).padStart(2,"0");
+        return api.grafiekDagVoorvoegsel(weatherNowLokaleTijd(G.TI[i]),t.getFullYear()+"-"+p2(t.getMonth()+1)+"-"+p2(t.getDate())+"T00:00");
+      }catch(e){return "";}
+    })();
+    const omschrijving=G.D&&G.D[i]!=null?txt(G.D[i],G.ND?G.ND[i]!==0:true):"";
+    const extra=omschrijving?rijH:0;
+    const bh=(G.M?20:28)+6*rijH+(G.M?6:10)+extra;
     const raak = ev.pointerType && ev.pointerType!=="mouse";
     const yv = ev.clientY!=null ? (ev.clientY-r.top)*sc : Y;
     let by = raak ? (yv < G.pt+G.ih/2 ? G.pt+G.ih-bh+6 : G.pt-6) : G.pt-6;
@@ -2513,10 +2526,13 @@ function scrubKoppel(){
       g.style.display="none"; return;
     }
     let n=0;
-    const rij=(l,v,c)=>{n++;const yy=by+(G.M?17:22)+n*rijH;
-      return `<text x="${bx+inzet}" y="${yy}" fill="${INK45}" font-family="Instrument Sans,sans-serif" font-size="${fLabel}">${l}</text>`
-           +`<text x="${bx+bw-inzet}" y="${yy}" text-anchor="end" fill="${c||INK}" font-family="DM Mono,monospace" font-size="${fWaarde}">${v}</text>`;};
-    const kop=`<text x="${bx+inzet}" y="${by+(G.M?14:18)}" fill="${INK}" font-family="Bodoni Moda,serif" font-size="${fKop}">${hhmm(G.TI[i])}${G.D&&G.D[i]!=null?" · "+txt(G.D[i],G.ND?G.ND[i]!==0:true):""}</text>`;
+    const rij=(l,v,c)=>{n++;const yy=by+(G.M?17:22)+extra+n*rijH;
+      /* data-tip-rij/-kol: latere lagen (compacte desktoptooltip, neerslagregel) zoeken hun tekst hierop en niet op volgorde, zodat een
+         extra regel in de kop ze niet meer laat verschuiven. */
+      return `<text x="${bx+inzet}" y="${yy}" data-tip-rij="${n}" data-tip-kol="label" fill="${INK45}" font-family="Instrument Sans,sans-serif" font-size="${fLabel}">${l}</text>`
+           +`<text x="${bx+bw-inzet}" y="${yy}" data-tip-rij="${n}" data-tip-kol="waarde" text-anchor="end" fill="${c||INK}" font-family="DM Mono,monospace" font-size="${fWaarde}">${v}</text>`;};
+    const kop=`<text x="${bx+inzet}" y="${by+(G.M?14:18)}" data-tip="kop" fill="${INK}" font-family="Bodoni Moda,serif" font-size="${fKop}">${dagVoor}${hhmm(G.TI[i])}</text>`
+      +(omschrijving?`<text x="${bx+inzet}" y="${by+(G.M?14:18)+rijH-1}" data-tip="omschrijving" fill="${INK45}" font-family="Instrument Sans,sans-serif" font-size="${fWaarde}">${omschrijving}</text>`:"");
     /* Elk veld apart uitlezen, met een streepje voor wat ontbreekt. Zo kan een
        los gat in de reeks (bijvoorbeeld alleen de windstoten missen) nooit
        "NaN km/u" of "undefined%" in de doos laten staan. */
@@ -2532,7 +2548,7 @@ function scrubKoppel(){
       +rij("wind",windTekst)
       +rij("windstoten",heel(G.G&&G.G[i])?Math.round(G.G[i])+" km/u":"–")
       +rij("bewolking",(heel(G.C&&G.C[i])?G.C[i]:"–")+"%");
-    const sepY=by+(G.M?19:28);
+    const sepY=by+(G.M?19:28)+extra;
     g.innerHTML=
       `<line x1="${X}" y1="${G.pt}" x2="${X}" y2="${G.pt+G.ih}" stroke="${INK}" stroke-width="1"/>
        <circle cx="${X}" cy="${Y}" r="3.4" fill="${SHEET}" stroke="${INK}" stroke-width="1.4"/>

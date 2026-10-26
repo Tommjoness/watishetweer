@@ -63,7 +63,7 @@ function nachtLabelVarianten(label){
 
 function nachtAdviesMetHorizon(advies,horizonDagen){
   const t=String(advies||"").trim(),h=num(horizonDagen); if(!t||h===null||h<3)return t;
-  const klein=t.charAt(0).toLowerCase()+t.slice(1);
+  const klein=/^IJ/.test(t)?"ij"+t.slice(2):t.charAt(0).toLowerCase()+t.slice(1);
   return h>=5?"Globale indicatie: "+klein:"Voorlopige indicatie: "+klein;
 }
 
@@ -476,10 +476,14 @@ function compactDesktopTooltip(){
   let nx=isLinksVanPunt?oudRechts-maten.breedte:x;
   nx=Math.max(2,Math.min(nx,(num(S.geo.W)||900)-maten.breedte-2));
   rect.setAttribute("x",String(nx));rect.setAttribute("width",String(maten.breedte));rect.setAttribute("height",String(maten.hoogte));rect.setAttribute("stroke-width","0.8");
-  const kop=teksten[0];kop.setAttribute("x",String(nx+maten.inzet));kop.setAttribute("y",String(y+16));kop.setAttribute("font-size","14.5");
-  if(lijn){lijn.setAttribute("x1",String(nx));lijn.setAttribute("x2",String(nx+maten.breedte));lijn.setAttribute("y1",String(y+24));lijn.setAttribute("y2",String(y+24));}
+  /* Met een weersomschrijving (tweede tekst, onder de tijd) staan er 14 teksten in plaats van 13 en schuift alles een rij op. */
+  const metOmschrijving=teksten.length>=14,extra=metOmschrijving?maten.rijHoogte:0,eerste=metOmschrijving?2:1;
+  const kop=g.querySelector('text[data-tip="kop"]')||teksten[0];kop.setAttribute("x",String(nx+maten.inzet));kop.setAttribute("y",String(y+16));kop.setAttribute("font-size","14.5");
+  const omschr=g.querySelector('text[data-tip="omschrijving"]')||(metOmschrijving?teksten[1]:null);
+  if(omschr){omschr.setAttribute("x",String(nx+maten.inzet));omschr.setAttribute("y",String(y+16+maten.rijHoogte-1));}
+  if(lijn){lijn.setAttribute("x1",String(nx));lijn.setAttribute("x2",String(nx+maten.breedte));lijn.setAttribute("y1",String(y+24+extra));lijn.setAttribute("y2",String(y+24+extra));}
   for(let r=0;r<6;r++){
-    const yy=y+38+r*maten.rijHoogte,label=teksten[1+r*2],waarde=teksten[2+r*2];
+    const yy=y+38+extra+r*maten.rijHoogte,label=g.querySelector(`text[data-tip-rij="${r+1}"][data-tip-kol="label"]`)||teksten[eerste+r*2],waarde=g.querySelector(`text[data-tip-rij="${r+1}"][data-tip-kol="waarde"]`)||teksten[eerste+1+r*2];
     if(label){label.setAttribute("x",String(nx+maten.inzet));label.setAttribute("y",String(yy));}
     if(waarde){waarde.setAttribute("x",String(nx+maten.breedte-maten.inzet));waarde.setAttribute("y",String(yy));}
   }

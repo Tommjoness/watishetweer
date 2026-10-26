@@ -101,6 +101,7 @@
   const weer = nl => uitLijst(WEER, nl);
   const richting = nl => RICHTING_VOL[String(nl).toLowerCase()] || null;
   const dagKort = nl => DAG_KORT[nl] || null;
+  const dagContext = nl => nl === "morgen" ? "Tomorrow" : nl === "gisteren" ? "Yesterday" : (DAG_KORT[nl] || nl);
   const dagVol = nl => DAG_VOL[String(nl).toLowerCase()] || null;
   /* Bron van de hoofdverwachting achter de ophaaltijd (" · Open-Meteo" of " · reservebron …"). */
   const bronEn = s => !s ? "" : s.replace(/^ · reservebron /, " · backup source ");
@@ -1250,6 +1251,8 @@
     /* Grafiekvenster: "16:00 · bewolkt", "kans 16:00–17:00", "12 km/u WZW, 3 Bft". */
     [/^(\d{2}:\d{2}) · (.+)$/, (m) => weer(m[2]) && `${m[1]} · ${weer(m[2])}`],
     [/^kans (\d{2}:\d{2})–(\d{2}:\d{2})$/, (m) => `chance ${m[1]}–${m[2]}`],
+    /* Dagcontext in de tooltip en bij de grafiekschuif: "morgen 00:00", "wo 14:00". */
+    [/^(morgen|gisteren|ma|di|wo|do|vr|za|zo) (\d{2}:\d{2})$/, (m) => `${dagContext(m[1])} ${m[2]}`],
     /* Verdiepingspagina's maan/nachtzicht/park (audit 15 oktober). */
     [/^(Nieuwe maan|Wassende sikkel|Eerste kwartier|Wassende maan|Volle maan|Afnemende maan|Laatste kwartier|Afnemende sikkel), (\d+)% verlicht$/, (m) => `${hoofd(MAANFASE[m[1].toLowerCase()])}, ${m[2]}% illuminated`],
     [/^(Nieuwe maan|Wassende sikkel|Eerste kwartier|Wassende maan|Volle maan|Afnemende maan|Laatste kwartier|Afnemende sikkel), (\d+)% verlicht · (.+)$/, (m, hulp) => { const r = opOnder(m[3]) || hulp.t(m[3]); return r && `${hoofd(MAANFASE[m[1].toLowerCase()])}, ${m[2]}% illuminated · ${r}`; }],
@@ -1307,6 +1310,8 @@
     [/^De komende (\d+) uur$/, (m) => `The next ${m[1]} hours`],
     [/^Komende (\d+) uur$/, (m) => `Next ${m[1]} hours`],
     [new RegExp(`^${T}, ${G} graden, (\\d+) procent neerslagkans$`), (m) => `${m[1]}, ${graden(m[2])}, ${m[3]} per cent chance of precipitation`],
+    [new RegExp(`^(morgen|gisteren|ma|di|wo|do|vr|za|zo) ${T}, ${G} graden, (\\d+) procent neerslagkans$`), (m) => `${dagContext(m[1]).toLowerCase()} ${m[2]}, ${graden(m[3])}, ${m[4]} per cent chance of precipitation`],
+    [new RegExp(`^(morgen|gisteren|ma|di|wo|do|vr|za|zo) ${T}, ${G} graad, (\\d+) procent neerslagkans$`), (m) => `${dagContext(m[1]).toLowerCase()} ${m[2]}, ${graden(m[3])}, ${m[4]} per cent chance of precipitation`],
     [new RegExp(`^${T}, ${G} graad, (\\d+) procent neerslagkans$`), (m) => `${m[1]}, ${graden(m[2])}, ${m[3]} per cent chance of precipitation`],
     [/^Komend uur: (\d+)% kans\.$/, (m) => `Next hour: ${m[1]}% chance.`],
     [/^Komend uur: Droog\.$/, () => "Next hour: dry."],

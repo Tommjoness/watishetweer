@@ -87,3 +87,11 @@ html body small.wiw-dag-onzeker:not(#wiw-leesbaarheid){font-size:12px!important;
    op volle dekking is het contrast 5,1:1 (licht) en 8:1 (donker). De kleur zelf blijft ongewijzigd. */
 html body #chart text:not(#wiw-leesbaarheid){opacity:1!important}
 
+/* Fase 2b-2 (26 oktober 2026): weersomschrijvingen in de zevendaagse lijst worden niet meer afgekapt. Vanaf 1100px stond de
+   omschrijving op één regel met een ellips in een kolom van 200px; Engelse omschrijvingen als "Freezing fog; precipitation
+   possible" (240px) werden daardoor met een ellips ingekort (gemeten tussen 1100 en ongeveer 1200px). Ze breken nu op een spatie naar een
+   tweede regel. */
+@media(min-width:1100px){
+  html body #days .row.day:not(.kop)>.dcond:not(#wiw-leesbaarheid){white-space:normal!important;overflow:visible!important;text-overflow:clip!important}
+}
+
