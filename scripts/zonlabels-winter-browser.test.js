@@ -9,8 +9,8 @@
    er verdwijnt geen tijd.
    Deze test loopt daglengtes van vrijwel een etmaal tot twee uur af, in Nederlands en Engels, van 320 tot 1920px, en eist:
    - geen enkel tekstpaar in de grafiek overlapt (ook niet met andere teksten);
-   - zowel de zon-op- als de zon-onder-tijd staat nog in de grafiek, of in #suntimes erboven (Nederlands op de telefoon: daar
-     staan ze bewust alleen in #suntimes, zie vereenvoudigMobieleZonband);
+   - zowel de zon-op- als de zon-onder-tijd staat nog in de grafiek, of in #suntimes erboven (op de telefoon, tot en met 430px,
+     in beide talen: daar staan ze bewust alleen in #suntimes, zie vereenvoudigMobieleZonband en zonlabels-telefoon-browser.test.js);
    - de lettergrootte van de labels blijft 11px (op 1440px en breder 13px, zoals alle grafiektekst), nooit kleiner;
    - samengevoegde labels staan binnen de grafiek;
    - een dag zonder botsing blijft ongemoeid: de labels staan op hun getekende plek. */
@@ -80,9 +80,10 @@ function meet(){
             const r=await page.evaluate(meet);
             /* Geen enkel tekstpaar overlapt. */
             assert.deepEqual(r.paren,[],`${L}: overlappende teksten in de grafiek`);
-            const telefoonNl=taal==="nl"&&breedte<=430;
-            if(telefoonNl){
-              assert.equal(r.zon.length,0,`${L}: Nederlandse zon-labels staan op de telefoon bewust niet in de SVG`);
+            const telefoon=breedte<=430;
+            if(telefoon){
+              assert.equal(r.zon.length,0,`${L}: zon-labels staan op de telefoon bewust niet in de SVG (beide talen)`);
+              [zon[0],zon[1]].forEach(t=>assert.ok(r.suntimesZichtbaar&&r.suntimes.includes(t),`${L}: tijd ${t} staat niet in #suntimes (${r.suntimes})`));
             }else{
               /* Beide tijden blijven zichtbaar: elk in een eigen label, of samen in één label. */
               const tekst=r.zon.map(z=>z.t).join(" | ");

@@ -872,19 +872,40 @@ function bouwMobieleTemperatuurRij(){
   if(ontbrekend.length)svg.setAttribute("data-mobile-temp-missing-anchors",ontbrekend.join(","));else svg.removeAttribute("data-mobile-temp-missing-anchors");
   ["data-mobile-temp-row","data-mobile-temp-dropped-extrema","data-mobile-temp-extrema-count"].forEach(a=>svg.removeAttribute(a));
 }
+/* #suntimes boven de grafiek noemt zowel zonsopkomst als zonsondergang, in beide talen ("Zonsopkomst 07:25" / "Sunrise 07:25"). */
+function zonTijdenBovenGrafiek(){
+  const st=document.getElementById("suntimes");
+  if(!st||st.getBoundingClientRect().height<=0)return false;
+  return (String(st.textContent||"").match(/\d{1,2}:\d{2}/g)||[]).length>=2;
+}
+let zonBandWacht=null;
 function vereenvoudigMobieleZonband(){
   if(!mobiel()||window.innerWidth>430)return;
   const svg=document.getElementById("chart"),g=S.geo;
   if(!svg||!g||!g.M||Number(g.n)>25)return;
   /* #suntimes boven de grafiek noemt opkomst/ondergang al volledig. De tweede
      tekstlaag ín de SVG voegde vooral drukte toe; de nachtband en exacte
-     overgangslijnen blijven gewoon zichtbaar. */
-  [...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&!el.closest('g[data-q4-rain-periods]')&&/^zon (?:op|onder) \d{2}:\d{2}$/i.test(String(el.textContent||"").trim())).forEach(el=>el.remove());
+     overgangslijnen blijven gewoon zichtbaar. De labels worden herkend aan
+     data-zon-label (index.html), niet aan hun tekst: de vertaling naar het
+     Engels loopt later dan deze opruiming en liet daar eerder de labels staan
+     (race NL/EN). Pas als #suntimes zelf beide tijden toont gaan de labels weg:
+     staat die er nog niet (vertraagd renderen), dan blijven ze staan en komt
+     deze opruiming terug zodra #suntimes verandert. */
+  if(!zonTijdenBovenGrafiek()){
+    const st=document.getElementById("suntimes");
+    if(st&&!zonBandWacht&&typeof MutationObserver==="function"){
+      zonBandWacht=new MutationObserver(()=>{if(zonTijdenBovenGrafiek()){zonBandWacht.disconnect();zonBandWacht=null;vereenvoudigMobieleZonband();}});
+      zonBandWacht.observe(st,{childList:true,subtree:true,characterData:true});
+    }
+    return;
+  }
+  if(zonBandWacht){zonBandWacht.disconnect();zonBandWacht=null;}
+  [...svg.querySelectorAll("text[data-zon-label]")].filter(el=>!el.closest("#scrub")&&!el.closest('g[data-q4-rain-periods]')).forEach(el=>el.remove());
   svg.setAttribute("data-mobile-sun-band-compact","1");
 }
 
 /* Zon-op- en zon-onder-labels die elkaar raken (zie kiesZonlabelPlaatsing). Draait na vereenvoudigMobieleZonband, dus niet voor
-   Nederlandse labels op de telefoon: die zijn daar al weggehaald omdat #suntimes dezelfde tijden noemt. Idempotent: een
+   labels op de telefoon (beide talen): die zijn daar al weggehaald omdat #suntimes dezelfde tijden noemt. Idempotent: een
    opgelost stel raakt elkaar niet meer en blijft daarna ongemoeid. */
 function ontwarZonlabels(){
   const svg=document.getElementById("chart");if(!svg)return;
