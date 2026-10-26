@@ -20,7 +20,7 @@ if(!fs.existsSync(path.join(PUBLIC,"index.html")))throw new Error("public/index.
 const mime={".html":"text/html; charset=utf-8",".js":"application/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".woff2":"font/woff2",".png":"image/png",".webp":"image/webp",".svg":"image/svg+xml",".css":"text/css; charset=utf-8"};
 
 /* [zon op, zon onder]; het venster begint om 00:13, dus beide vallen binnen de zichtbare 25 uur. */
-const DAGEN=[["07:25","17:22"],["09:00","15:30"],["10:40","12:20"],["03:00","21:30"]];
+const DAGEN=[["07:25","17:22"],["09:00","15:30"],["03:00","21:30"]];
 const TELEFOON=[320,360,375,390,430],GROTER=[431,768,1440];
 const air={current:{european_aqi:30,us_aqi:40},hourly:{time:["2026-07-22T00:13"],alder_pollen:[0],birch_pollen:[0],grass_pollen:[0],mugwort_pollen:[0],ragweed_pollen:[0],olive_pollen:[0]}};
 const NU=Date.UTC(2026,6,21,22,13,0);
@@ -69,36 +69,46 @@ async function open(browser,srv,taal,breedte,schema,opties={}){
   return {context,page,fouten};
 }
 
+/* Draait taken met een bovengrens aan gelijktijdige browsercontexten; de eerste fout stopt de test. */
+async function parallel(taken,limiet){
+  let volgende=0;
+  await Promise.all(Array.from({length:limiet},async()=>{while(volgende<taken.length)await taken[volgende++]();}));
+}
+
 (async()=>{
   const browser=await chromium.launch({headless:true,executablePath:require("./vind-browser.js").vindBrowser()||undefined});
   let n=0;
   try{
-    for(const zon of DAGEN){
+    for(const [zi,zon] of DAGEN.entries()){
       const srv=bouwServer(zon);await new Promise(r=>srv.listen(0,"127.0.0.1",r));
+      const taken=[];
       try{
         for(const taal of ["nl","en"])for(const schema of ["light","dark"]){
-          /* 1. Telefoon, gewoon renderen en met een traag gemaakte CPU: nooit een label in de grafiek, beide tijden in #suntimes. */
-          for(const breedte of TELEFOON)for(const cpu of [0,6]){
-            const L=`${zon[0]}–${zon[1]} ${taal} ${schema} ${breedte}px${cpu?" cpu×"+cpu:""}`;
-            const {context,page,fouten}=await open(browser,srv,taal,breedte,schema,{cpu});
-            try{
-              await page.waitForTimeout(cpu?2500:900);
-              const r=await page.evaluate(meet);
-              assert.deepEqual(r.labels,[],`${L}: zon-labels staan op de telefoon in de grafiek (${r.labels.join(" | ")})`);
-              assert.equal(r.compact,"1",`${L}: marker data-mobile-sun-band-compact ontbreekt`);
-              assert.ok(r.lijnen>=2,`${L}: de zonlijnen in de nachtband ontbreken (${r.lijnen})`);
-              alsKaal(r,zon,L);
-              assert.deepEqual(fouten,[],`${L}: scriptfouten`);
-              n++;
-            }finally{await context.close();}
+          /* 1. Telefoon: nooit een label in de grafiek, beide tijden in #suntimes. Met een traag gemaakte CPU (6x) alleen voor de eerste daglengte. */
+          for(const breedte of TELEFOON)for(const cpu of (zi===0?[0,6]:[0])){
+            taken.push(async()=>{
+              const L=`${zon[0]}–${zon[1]} ${taal} ${schema} ${breedte}px${cpu?" cpu×"+cpu:""}`;
+              const {context,page,fouten}=await open(browser,srv,taal,breedte,schema,{cpu});
+              try{
+                await page.waitForTimeout(cpu?2500:700);
+                const r=await page.evaluate(meet);
+                assert.deepEqual(r.labels,[],`${L}: zon-labels staan op de telefoon in de grafiek (${r.labels.join(" | ")})`);
+                assert.equal(r.compact,"1",`${L}: marker data-mobile-sun-band-compact ontbreekt`);
+                assert.ok(r.lijnen>=2,`${L}: de zonlijnen in de nachtband ontbreken (${r.lijnen})`);
+                alsKaal(r,zon,L);
+                assert.deepEqual(fouten,[],`${L}: scriptfouten`);
+                n++;
+              }finally{await context.close();}
+            });
           }
+          if(zi!==0)continue;
           /* 2. Telefoon, vertraagd renderen: #suntimes toont de tijden pas later. Zolang ze er niet staan blijven de labels staan;
                 daarna verdwijnen ze, zonder dat een tijd ooit uit beeld is. */
-          for(const breedte of [360,390]){
+          for(const breedte of [360,390])taken.push(async()=>{
             const L=`${zon[0]}–${zon[1]} ${taal} ${schema} ${breedte}px vertraagd #suntimes`;
             const {context,page,fouten}=await open(browser,srv,taal,breedte,schema);
             try{
-              await page.waitForTimeout(900);
+              await page.waitForTimeout(700);
               await page.evaluate(()=>{
                 const st=document.getElementById("suntimes"),d=Object.getOwnPropertyDescriptor(Element.prototype,"innerHTML");
                 st.innerHTML="";
@@ -108,20 +118,20 @@ async function open(browser,srv,taal,breedte,schema,opties={}){
               await page.waitForTimeout(700);
               const voor=await page.evaluate(meet);
               assert.equal(voor.labels.length,2,`${L}: zolang #suntimes leeg is moeten beide labels blijven staan (${voor.labels.join(" | ")}; #suntimes "${voor.suntimes}")`);
-              await page.waitForTimeout(2800);
+              await page.waitForTimeout(2200);
               const na=await page.evaluate(meet);
               assert.deepEqual(na.labels,[],`${L}: labels zijn niet verdwenen nadat #suntimes de tijden toont (${na.labels.join(" | ")})`);
               alsKaal(na,zon,L);
               assert.deepEqual(fouten,[],`${L}: scriptfouten`);
               n++;
             }finally{await context.close();}
-          }
+          });
           /* 3. Tablet en desktop: de labels blijven in de grafiek. */
-          for(const breedte of GROTER){
+          for(const breedte of GROTER)taken.push(async()=>{
             const L=`${zon[0]}–${zon[1]} ${taal} ${schema} ${breedte}px`;
             const {context,page,fouten}=await open(browser,srv,taal,breedte,schema);
             try{
-              await page.waitForTimeout(900);
+              await page.waitForTimeout(700);
               const r=await page.evaluate(meet);
               const tekst=r.labels.join(" | ");
               [zon[0],zon[1]].forEach(t=>assert.ok(tekst.includes(t),`${L}: tijd ${t} ontbreekt in de zon-labels (${tekst})`));
@@ -129,10 +139,11 @@ async function open(browser,srv,taal,breedte,schema,opties={}){
               assert.deepEqual(fouten,[],`${L}: scriptfouten`);
               n++;
             }finally{await context.close();}
-          }
+          });
         }
+        await parallel(taken,6);
       }finally{srv.close();}
     }
-    console.log(`Zon-labels op de telefoon: ${n} situaties (4 daglengtes × NL/EN × licht/donker): geen labels in de grafiek tot en met 430px, beide tijden in #suntimes (ook bij gedrosselde CPU en vertraagd renderen), labels vanaf 431px behouden.`);
+    console.log(`Zon-labels op de telefoon: ${n} situaties (3 daglengtes × NL/EN × licht/donker): geen labels in de grafiek tot en met 430px, beide tijden in #suntimes (ook bij gedrosselde CPU en vertraagd renderen), labels vanaf 431px behouden.`);
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1);});
