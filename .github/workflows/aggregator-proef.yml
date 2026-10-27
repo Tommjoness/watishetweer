@@ -1,0 +1,198 @@
+# TIJDELIJKE PROEF (wordt niet gemerged): bewijst op GitHub zelf dat de samenvattende
+# check alleen slaagt als beide jobs "success" zijn. Dezelfde stappen als in checkpoint-eindronde.yml.
+name: Proef aggregator checkpoint
+
+on:
+  push:
+    branches: [claude/aggregator-proef-20261027]
+
+jobs:
+  a-ok:
+    name: a-ok
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 0
+
+  b-ok:
+    name: b-ok
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 0
+
+  agg-ok:
+    name: agg-ok
+    needs: [a-ok, b-ok]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Beide checkpoint-jobs moeten volledig geslaagd zijn
+        env:
+          NPM_TEST: ${{ needs.a-ok.result }}
+          BROWSERS: ${{ needs.b-ok.result }}
+        run: |
+          echo "checkpoint-npm-test: $NPM_TEST"
+          echo "checkpoint-browsers: $BROWSERS"
+          if [ "$NPM_TEST" != "success" ] || [ "$BROWSERS" != "success" ]; then
+            echo "::error::checkpoint is alleen groen als beide jobs success zijn (npm-test=$NPM_TEST, browsers=$BROWSERS); geannuleerd of overgeslagen telt niet als geslaagd."
+            exit 1
+          fi
+
+  a-mislukt:
+    name: a-mislukt
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 1
+
+  b-mislukt:
+    name: b-mislukt
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 0
+
+  agg-mislukt:
+    name: agg-mislukt
+    needs: [a-mislukt, b-mislukt]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Beide checkpoint-jobs moeten volledig geslaagd zijn
+        env:
+          NPM_TEST: ${{ needs.a-mislukt.result }}
+          BROWSERS: ${{ needs.b-mislukt.result }}
+        run: |
+          echo "checkpoint-npm-test: $NPM_TEST"
+          echo "checkpoint-browsers: $BROWSERS"
+          if [ "$NPM_TEST" != "success" ] || [ "$BROWSERS" != "success" ]; then
+            echo "::error::checkpoint is alleen groen als beide jobs success zijn (npm-test=$NPM_TEST, browsers=$BROWSERS); geannuleerd of overgeslagen telt niet als geslaagd."
+            exit 1
+          fi
+
+  a-timeout:
+    name: a-timeout
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - run: sleep 150
+
+  b-timeout:
+    name: b-timeout
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 0
+
+  agg-timeout:
+    name: agg-timeout
+    needs: [a-timeout, b-timeout]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Beide checkpoint-jobs moeten volledig geslaagd zijn
+        env:
+          NPM_TEST: ${{ needs.a-timeout.result }}
+          BROWSERS: ${{ needs.b-timeout.result }}
+        run: |
+          echo "checkpoint-npm-test: $NPM_TEST"
+          echo "checkpoint-browsers: $BROWSERS"
+          if [ "$NPM_TEST" != "success" ] || [ "$BROWSERS" != "success" ]; then
+            echo "::error::checkpoint is alleen groen als beide jobs success zijn (npm-test=$NPM_TEST, browsers=$BROWSERS); geannuleerd of overgeslagen telt niet als geslaagd."
+            exit 1
+          fi
+
+  a-overgeslagen:
+    name: a-overgeslagen
+    runs-on: ubuntu-latest
+    if: ${{ false }}
+    steps:
+      - run: exit 0
+
+  b-overgeslagen:
+    name: b-overgeslagen
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 0
+
+  agg-overgeslagen:
+    name: agg-overgeslagen
+    needs: [a-overgeslagen, b-overgeslagen]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Beide checkpoint-jobs moeten volledig geslaagd zijn
+        env:
+          NPM_TEST: ${{ needs.a-overgeslagen.result }}
+          BROWSERS: ${{ needs.b-overgeslagen.result }}
+        run: |
+          echo "checkpoint-npm-test: $NPM_TEST"
+          echo "checkpoint-browsers: $BROWSERS"
+          if [ "$NPM_TEST" != "success" ] || [ "$BROWSERS" != "success" ]; then
+            echo "::error::checkpoint is alleen groen als beide jobs success zijn (npm-test=$NPM_TEST, browsers=$BROWSERS); geannuleerd of overgeslagen telt niet als geslaagd."
+            exit 1
+          fi
+
+  a-handmatig:
+    name: a-handmatig
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep 600
+
+  b-handmatig:
+    name: b-handmatig
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 0
+
+  agg-handmatig:
+    name: agg-handmatig
+    needs: [a-handmatig, b-handmatig]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Beide checkpoint-jobs moeten volledig geslaagd zijn
+        env:
+          NPM_TEST: ${{ needs.a-handmatig.result }}
+          BROWSERS: ${{ needs.b-handmatig.result }}
+        run: |
+          echo "checkpoint-npm-test: $NPM_TEST"
+          echo "checkpoint-browsers: $BROWSERS"
+          if [ "$NPM_TEST" != "success" ] || [ "$BROWSERS" != "success" ]; then
+            echo "::error::checkpoint is alleen groen als beide jobs success zijn (npm-test=$NPM_TEST, browsers=$BROWSERS); geannuleerd of overgeslagen telt niet als geslaagd."
+            exit 1
+          fi
+
+  # Controlescenario: dezelfde aggregator ZONDER "if: always()". Bij een mislukte job
+  # wordt hij overgeslagen, en een overgeslagen verplichte check telt bij GitHub als geslaagd.
+  a-zonderalways:
+    name: a-zonderalways
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 1
+
+  b-zonderalways:
+    name: b-zonderalways
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 0
+
+  agg-zonderalways:
+    name: agg-zonderalways
+    needs: [a-zonderalways, b-zonderalways]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Beide checkpoint-jobs moeten volledig geslaagd zijn
+        env:
+          NPM_TEST: ${{ needs.a-zonderalways.result }}
+          BROWSERS: ${{ needs.b-zonderalways.result }}
+        run: |
+          if [ "$NPM_TEST" != "success" ] || [ "$BROWSERS" != "success" ]; then exit 1; fi
