@@ -259,6 +259,13 @@ scrubKoppel=function(){
   });
   hit.addEventListener("keydown",ev=>{
     const G=S.geo;if(!G||!G.n)return;
+    /* Escape sluit de tooltip zonder dat de focus of het gekozen uur verdwijnt (WCAG 1.4.13, sluitbaar). Een volgende
+       pijltoets, Enter of spatie opent hem weer bij dat uur; een tooltip die al dicht is laat Escape ongemoeid. */
+    if(ev.key==="Escape"){
+      const g=document.getElementById("scrub");
+      if(g&&g.style.display!=="none"){g.style.display="none";ev.preventDefault();}
+      return;
+    }
     let i=clamp(Number(hit.dataset.keyboardIndex||0),0,G.n-1),volgende=null;
     if(ev.key==="ArrowRight"||ev.key==="ArrowUp")volgende=i+1;
     else if(ev.key==="ArrowLeft"||ev.key==="ArrowDown")volgende=i-1;

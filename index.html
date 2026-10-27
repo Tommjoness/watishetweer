@@ -3359,6 +3359,7 @@ function zoekMarkeer(n){
 }
 function zoekKies(el){
   if(!el)return;
+  zoekVeldEigenInvoer=false;
   ++zoekGeneratie;clearTimeout(timer);zoekPanelenSluit(true);zoekStatus.textContent="";
   onthoudRegio(el.dataset.lat,el.dataset.lon,el.dataset.regio);
   q.value=el.dataset.nm;zoekIndex=-1;gpsGeneratie++;load(el.dataset.lat,el.dataset.lon,el.dataset.nm,false,true,el.dataset.land||null);
@@ -3403,6 +3404,17 @@ const zoekVeldSelecteer=()=>{if(document.activeElement!==q)return;try{q.setSelec
 q.addEventListener("focus",()=>{zoekVeldNetGefocust=true;zoekVeldSelecteer();});
 q.addEventListener("click",()=>{if(!zoekVeldNetGefocust)return;zoekVeldNetGefocust=false;zoekVeldSelecteer();});
 q.addEventListener("blur",()=>{zoekVeldNetGefocust=false;});
+/* De plaatsnaam in het zoekveld hoort bij de getoonde gegevens, en load() zet haar terug als een ronde klaar of mislukt is.
+   Typt de bezoeker op dat moment zelf (veld heeft focus en er is sindsdien getypt), dan blijft die invoer staan: anders
+   verdwijnt de zoekterm terwijl de suggesties er nog bij horen. Een gekozen suggestie, verlaten van het veld of een andere
+   actie zet de plaatsnaam gewoon weer terug. */
+let zoekVeldEigenInvoer=false;
+q.addEventListener("input",()=>{zoekVeldEigenInvoer=true;});
+q.addEventListener("blur",()=>{zoekVeldEigenInvoer=false;});
+function zoekveldZetPlaats(naam){
+  if(zoekVeldEigenInvoer&&document.activeElement===q)return;
+  q.value=naam;
+}
 res.addEventListener("click",e=>zoekKies(e.target.closest("div[data-lat]")));
 document.addEventListener("click",e=>{if(!e.target.closest(".tools"))zoekPanelenSluit();});
 

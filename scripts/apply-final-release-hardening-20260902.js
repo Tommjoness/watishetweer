@@ -134,13 +134,13 @@ function hardenLoad(html){
   bron=bron.replace(snapshotOud,snapshotNieuw);
 
   const identiteitOud='  if(land!==undefined) S.land=normLand(land);\n  else if(plaatsWijzigt) S.land=null;\n  const st=document.getElementById("state");\n  if(!stil){st.style.display="block";st.className="msg";st.textContent="Gegevens ophalen.";}\n  S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;';
-  const identiteitNieuw='  const st=document.getElementById("state");\n  const vorigeBlijftZichtbaar=!!(plaatsWijzigt&&vorigeLocatie&&vorigeLocatie.d&&vorigeLocatie.label);\n  if(!stil){st.style.display="block";st.className="msg";st.textContent=vorigeBlijftZichtbaar\n    ?"Gegevens voor "+label+" ophalen. Tot die klaar zijn, zie je nog de gegevens voor "+vorigeLocatie.label+"."\n    :"Gegevens ophalen.";}\n  if(vorigeBlijftZichtbaar){\n    weatherNowHerstelLocatie(vorigeLocatie);\n    document.getElementById("q").value=String(vorigeLocatie.label||"");\n  }else{\n    S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;S.land=aangevraagdeLand;\n  }';
+  const identiteitNieuw='  const st=document.getElementById("state");\n  const vorigeBlijftZichtbaar=!!(plaatsWijzigt&&vorigeLocatie&&vorigeLocatie.d&&vorigeLocatie.label);\n  if(!stil){st.style.display="block";st.className="msg";st.textContent=vorigeBlijftZichtbaar\n    ?"Gegevens voor "+label+" ophalen. Tot die klaar zijn, zie je nog de gegevens voor "+vorigeLocatie.label+"."\n    :"Gegevens ophalen.";}\n  if(vorigeBlijftZichtbaar){\n    weatherNowHerstelLocatie(vorigeLocatie);\n    zoekveldZetPlaats(String(vorigeLocatie.label||""));\n  }else{\n    S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;S.land=aangevraagdeLand;\n  }';
   const nIdentiteit=bron.split(identiteitOud).length-1;
   if(nIdentiteit!==1)throw new Error("Locatie-identiteitsanker verwacht exact één keer; gevonden "+nIdentiteit);
   bron=bron.replace(identiteitOud,identiteitNieuw);
 
   const succesOud='    if(mijnBeurt!==laadTeller) return;   // er is inmiddels een nieuwere plaats gekozen\n    S.d=vol;if(luchtVerversen)S.air=null;';
-  const succesNieuw='    if(mijnBeurt!==laadTeller) return;   // er is inmiddels een nieuwere plaats gekozen\n    document.getElementById("app").removeAttribute("data-zonder-data");\n    S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;S.land=aangevraagdeLand;\n    document.getElementById("q").value=label;\n    S.d=vol;if(luchtVerversen)S.air=null;';
+  const succesNieuw='    if(mijnBeurt!==laadTeller) return;   // er is inmiddels een nieuwere plaats gekozen\n    document.getElementById("app").removeAttribute("data-zonder-data");\n    S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;S.land=aangevraagdeLand;\n    zoekveldZetPlaats(label);\n    S.d=vol;if(luchtVerversen)S.air=null;';
   const nSucces=bron.split(succesOud).length-1;
   if(nSucces!==1)throw new Error("Succes-identiteitsanker verwacht exact één keer; gevonden "+nSucces);
   bron=bron.replace(succesOud,succesNieuw);
@@ -162,7 +162,7 @@ function hardenLoad(html){
     if(oud&&oud.d&&weatherNowCachePastBij(oud,nieuweLat,nieuweLon)){
       S.d=oud.d;S.air=oud.air;S.label=label;S.lat=nieuweLat;S.lon=nieuweLon;S.op=oud.op;
       S.luchtOp=Number(oud.airOp)||0;S.land=normLand(oud.land)||aangevraagdeLand;S.verversMislukt=true;
-      document.getElementById("q").value=label;
+      zoekveldZetPlaats(label);
       tekenAlles();
       document.getElementById("app").removeAttribute("data-zonder-data");
       document.getElementById("app").style.display="block";
@@ -172,7 +172,7 @@ function hardenLoad(html){
       st.classList.remove("err");
     }else if(vorigeLocatie&&vorigeLocatie.d&&Number.isFinite(Number(vorigeLocatie.lat))&&Number.isFinite(Number(vorigeLocatie.lon))){
       weatherNowHerstelLocatie(vorigeLocatie);
-      document.getElementById("q").value=String(vorigeLocatie.label||"");
+      zoekveldZetPlaats(String(vorigeLocatie.label||""));
       tekenAlles();
       document.getElementById("app").removeAttribute("data-zonder-data");
       document.getElementById("app").style.display="block";
@@ -186,7 +186,7 @@ function hardenLoad(html){
     }else{
       S.d=null;S.air=null;S.label=label;S.lat=nieuweLat;S.lon=nieuweLon;S.land=aangevraagdeLand;
       S.verversMislukt=true;S.dag=null;S.actieveWaarschuwingen=[];
-      document.getElementById("q").value=label;
+      zoekveldZetPlaats(label);
       /* Geen gegevens voor deze plaats: geen lege, gereserveerde weerpagina
          (die liep enkele schermen door zonder inhoud, ook zonder voettekst),
          maar een compacte foutpagina. Alle weersecties verdwijnen, dus ook

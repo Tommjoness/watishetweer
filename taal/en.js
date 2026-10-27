@@ -791,8 +791,8 @@
     "Per dag de verwachting voor regen, sneeuw, zon en temperatuur in zeven grote plaatsen.":
       "For each day, the forecast for rain, snow, sunshine and temperature in seven large places.",
     "Wanneer is de kerstvakantie?": "When is the Christmas school holiday?",
-    "De kerstvakantie valt in regio noord, midden en zuid tegelijk. Dit zijn de data van de Rijksoverheid; scholen kunnen ervan afwijken. Kijk bij twijfel in de schoolgids.":
-      "The Christmas school holiday falls at the same time in the northern, central and southern regions. These are the dates published by the Dutch government; schools may deviate from them. If in doubt, check your school's guide.",
+    "De kerstvakantie valt in regio noord, midden en zuid tegelijk. Dit zijn de vastgestelde data van de Rijksoverheid. Scholen in het basisonderwijs en voortgezet onderwijs mogen hier alleen in bijzondere situaties met toestemming van het ministerie van OCW van afwijken. Mbo-instellingen, hogescholen en universiteiten bepalen hun vakantiedata zelf. Kijk bij twijfel in de schoolgids.":
+      "The Christmas school holiday falls at the same time in the northern, central and southern regions. These are the fixed dates set by the Dutch government. Schools in primary and secondary education may only deviate from them in special circumstances, with permission from the Dutch Ministry of Education (OCW). Vocational colleges (mbo), universities of applied sciences and universities set their own holiday dates. If in doubt, check your school's guide.",
     "Het is kerstvakantie.": "It is the Christmas school holiday.",
 
     /* Seizoenspagina's voorjaars-, mei- en zomervakantie (vaste teksten) */
@@ -1487,7 +1487,7 @@
   /* Namen die in iedere taal gelijk blijven (bronnen, merken, diensten). */
   const eigennamen = [
     "Open-Meteo", "Weather Data Provided by Visual Crossing", "WeatherAPI.com", "CAMS", "MeteoAlarm", "National Weather Service",
-    "BigDataCloud", "KNMI", "Wikidata", "NL", "NL – Nederlands", "PostHog Cloud EU", "Google Analytics", "Cloudflare", "watishetweer.nl", "Autoriteit Persoonsgegevens",
+    "BigDataCloud", "KNMI", "Rijksoverheid", "Wikidata", "NL", "NL – Nederlands", "PostHog Cloud EU", "Google Analytics", "Cloudflare", "watishetweer.nl", "Autoriteit Persoonsgegevens",
     "Maitri Polwatte Gedera", "Heavy rain may cause flooding.", "Weather alert", "Official warning text unavailable.",
     /* Officiële NWS-gebeurtenisnamen: de site toont ze bewust in het origineel. */
     ...["Flood Watch", "Flood Warning", "Flood Advisory", "Flash Flood Watch", "Flash Flood Warning", "Flash Flood Emergency", "Coastal Flood Watch", "Coastal Flood Warning", "Coastal Flood Advisory",
