@@ -144,9 +144,9 @@ async function testVakantiebron(browser,root){
           const p=[...document.querySelectorAll("p.klein")].find(x=>x.querySelector("a[href^='https://www.rijksoverheid.nl/']"));
           const a=p&&p.querySelector("a[href^='https://www.rijksoverheid.nl/']");
           if(a)a.focus();
-          /* De uitleg: de alinea's tussen de kop "Wanneer is de …?" en de bronregel. */
-          const uitleg=[];
-          for(let e=p&&p.previousElementSibling;e&&e.tagName==="P";e=e.previousElementSibling)uitleg.unshift(e.textContent.trim().replace(/\s+/g," "));
+          /* De uitleg: de alinea's direct na de kop "Wanneer is de …?" (Engels: "When is the …?"). */
+          const uitleg=[],kop=[...document.querySelectorAll("h2")].find(x=>/^(Wanneer is|When is)/.test(x.textContent.trim()));
+          for(let e=kop&&kop.nextElementSibling;e&&e.tagName==="P";e=e.nextElementSibling)uitleg.push(e.textContent.trim().replace(/\s+/g," "));
           return {lang:document.documentElement.lang,bron:p?p.textContent.trim().replace(/\s+/g," "):"",href:a?a.getAttribute("href"):null,tekst:a?a.textContent.trim():"",focus:!!a&&document.activeElement===a,zichtbaar:!!a&&a.getClientRects().length>0,uitleg,
             ontbreekt:[...(window.__WIW_TAAL_ONTBREEKT__||[])].filter(t=>/vakantie|Mbo|hogescholen|Rijksoverheid/i.test(t))};
         });
