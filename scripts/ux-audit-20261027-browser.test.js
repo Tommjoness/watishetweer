@@ -47,6 +47,11 @@ async function open(browser,root,pad,{w=1363,h=936,taal="nl",schema="light",vert
   const context=await browser.newContext({viewport:{width:w,height:h},deviceScaleFactor:mobiel?2:1,locale:taal==="en"?"en-GB":"nl-NL",timezoneId:"Europe/Amsterdam",colorScheme:schema,serviceWorkers:"block",isMobile:mobiel,hasTouch:mobiel});
   const page=await context.newPage(),fouten=[];
   page.on("pageerror",e=>fouten.push(String(e)));
+  /* Alle schrijfacties van de app op #q.value, om ook tussentijdse waarden te kunnen toetsen. */
+  await page.addInitScript(()=>{
+    window.__qw=[];const d=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value");
+    Object.defineProperty(HTMLInputElement.prototype,"value",{configurable:true,get:d.get,set(v){if(this.id==="q")window.__qw.push(String(v));d.set.call(this,v);}});
+  });
   await page.addInitScript(([k,t])=>{
     const N=Date,s=N.now(),e=N.parse(k);class F extends N{constructor(...a){super(...(a.length?a:[e+N.now()-s]));}static now(){return e+N.now()-s;}}window.Date=F;
     if(t==="en")try{localStorage.setItem("weerbriefing.taal.v1","en");}catch(x){}
@@ -186,7 +191,14 @@ async function testVakantiebron(browser,root){
 /* F4: eigen invoer tijdens een lopende laadronde blijft staan. */
 async function testZoekinvoer(browser,root){
   const PAD="/?lat=40.714&lon=-74.006&plaats=New+York&land=US";
-  const lees=page=>page.evaluate(()=>({q:document.getElementById("q").value,opties:[...document.querySelectorAll("#res [role=option]")].map(e=>e.dataset.nm),open:document.getElementById("res").classList.contains("on"),focus:document.activeElement.id,plaats:(document.getElementById("place")||{}).textContent||""}));
+  const lees=page=>page.evaluate(()=>({q:document.getElementById("q").value,opties:[...document.querySelectorAll("#res [role=option]")].map(e=>e.dataset.nm),open:document.getElementById("res").classList.contains("on"),focus:document.activeElement.id,plaats:(document.getElementById("place")||{}).textContent||"",schrijf:window.__qw.slice()}));
+  /* Typ "Tokyo" terwijl de plaats nog laadt, en wacht tot de laadronde klaar is terwijl het veld focus houdt. */
+  const typTijdensLaden=async(page,vertraging)=>{
+    await sleep(400);
+    await page.click("#q");await page.keyboard.press("Control+A");await page.keyboard.type("Tokyo",{delay:25});
+    await page.waitForSelector("#res.on",{timeout:8000});
+    await wachtOpWeer(page);await sleep(vertraging+300);
+  };
   for(const taal of ["nl","en"]){
     const L="zoekveld "+taal;
     /* 1. Typen terwijl de plaats nog laadt: de term blijft, de suggesties horen erbij. */
@@ -235,8 +247,57 @@ async function testZoekinvoer(browser,root){
         assert.equal(r.q,"New York",L+": zonder eigen invoer staat er niet de plaatsnaam ("+JSON.stringify(r)+")");
       }finally{await context.close();}
     }
+    /* 4. Omgekeerde volgorde: de laadronde is klaar terwijl het veld nog focus heeft (de term blijft), daarna wordt het veld
+          verlaten zonder suggestie te kiezen. Veld en getoonde plaats zijn dan weer consistent, de suggesties zijn weg. */
+    for(const [naam,verlaat] of [["Tab",p=>p.keyboard.press("Tab")],["klik naast het veld",p=>p.mouse.click(700,900)],["blur",p=>p.evaluate(()=>document.getElementById("q").blur())]]){
+      const {context,page,fouten}=await open(browser,root,PAD,{taal,vertraging:2500});
+      try{
+        await typTijdensLaden(page,2500);
+        const voor=await lees(page);
+        assert.equal(voor.q,"Tokyo",L+" ("+naam+"): de term blijft staan zolang het veld focus heeft ("+JSON.stringify(voor)+")");
+        assert(voor.focus==="q"&&voor.open&&/New York/.test(voor.plaats),L+" ("+naam+"): focus, suggesties of getoonde plaats vóór het verlaten kloppen niet");
+        await verlaat(page);await sleep(500);
+        const na=await lees(page);
+        assert.equal(na.q,"New York",L+" ("+naam+"): na het verlaten staat het veld niet op de getoonde plaats ("+JSON.stringify(na)+")");
+        assert(/New York/.test(na.plaats),L+" ("+naam+"): de getoonde plaats is veranderd ("+na.plaats+")");
+        assert(!na.open&&na.opties.length===0,L+" ("+naam+"): de suggesties bij de oude invoer staan er nog ("+JSON.stringify(na)+")");
+        await sleep(800);
+        assert.equal((await lees(page)).q,"New York",L+" ("+naam+"): het veld verandert later nog");
+        assert.deepEqual(fouten,[],L+": runtimefouten "+fouten.join(" | "));
+      }finally{await context.close();}
+    }
+    /* 5. Muisklik op een suggestie nadat de laadronde klaar is: het veld toont nooit tussendoor de oude plaats. */
+    {
+      const {context,page,fouten}=await open(browser,root,PAD,{taal,vertraging:2500});
+      try{
+        await typTijdensLaden(page,2500);
+        const voor=await lees(page);
+        await page.click("#res [role=option]");
+        await page.waitForFunction(()=>/Tokio/.test((document.getElementById("place")||{}).textContent||""),null,{timeout:20000});
+        await sleep(3000);
+        const na=await lees(page);
+        assert.equal(na.q,"Tokio",L+": na een muisklik op een suggestie staat er niet de plaatsnaam ("+JSON.stringify(na)+")");
+        assert(/Tokio/.test(na.plaats),L+": de getoonde plaats is niet de gekozen plaats");
+        assert(!na.schrijf.slice(voor.schrijf.length).includes("New York")||na.schrijf.slice(voor.schrijf.length).indexOf("Tokio")<na.schrijf.slice(voor.schrijf.length).indexOf("New York"),L+": het veld toonde na de klik eerst de oude plaats ("+JSON.stringify(na.schrijf.slice(voor.schrijf.length))+")");
+        assert.deepEqual(fouten,[],L+": runtimefouten "+fouten.join(" | "));
+      }finally{await context.close();}
+    }
+    /* 6. Gewoon typen over het einde van een laadronde heen: geen teken gaat verloren of wordt vervangen. */
+    {
+      const {context,page,fouten}=await open(browser,root,PAD,{taal,vertraging:1200});
+      try{
+        await sleep(300);
+        await page.click("#q");await page.keyboard.press("Control+A");
+        await page.keyboard.type("Amsterdam",{delay:220});
+        const r=await lees(page);
+        assert.equal(r.q,"Amsterdam",L+": tijdens het typen over het einde van een laadronde ging invoer verloren ("+JSON.stringify(r)+")");
+        await wachtOpWeer(page);await sleep(1500);
+        assert.equal((await lees(page)).q,"Amsterdam",L+": invoer veranderde nadat de laadronde klaar was");
+        assert.deepEqual(fouten,[],L+": runtimefouten "+fouten.join(" | "));
+      }finally{await context.close();}
+    }
   }
-  console.log("F4 zoekveld: eigen invoer tijdens het laden blijft staan, suggestie kiezen en het veld verlaten zetten de plaatsnaam weer (NL en EN).");
+  console.log("F4 zoekveld: eigen invoer tijdens het laden blijft staan; daarna het veld verlaten (Tab, klik, blur) herstelt veld en suggesties; suggestie kiezen (toetsenbord en muis) en normaal typen blijven ongestoord (NL en EN).");
 }
 
 server.listen(0,"127.0.0.1",async()=>{
