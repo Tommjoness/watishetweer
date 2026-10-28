@@ -278,7 +278,7 @@ const SEIZOENSPAGINAS=Object.freeze([
     uitleg:{
       kop:"Wanneer is de meivakantie?",
       alineas:[
-        "De meivakantie valt in regio noord, midden en zuid tegelijk. Dit zijn de data van de Rijksoverheid; scholen kunnen ervan afwijken en sommige scholen hebben een week extra vrij. Kijk bij twijfel in de schoolgids."
+        "De meivakantie valt in regio noord, midden en zuid tegelijk. Dit zijn de vastgestelde data van de Rijksoverheid voor de eerste, verplichte week. Scholen in het basisonderwijs en voortgezet onderwijs mogen hier alleen in bijzondere situaties met toestemming van het ministerie van OCW van afwijken. Scholen kunnen de meivakantie zelf uitbreiden, bijvoorbeeld tot twee weken; zo'n tweede week is aanvullend en niet landelijk vastgesteld. Mbo-instellingen, hogescholen en universiteiten bepalen hun vakantiedata zelf. Kijk bij twijfel in de schoolgids."
       ],
       bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
     },

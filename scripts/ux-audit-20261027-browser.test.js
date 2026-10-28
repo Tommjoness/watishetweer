@@ -7,7 +7,7 @@
      tabelalternatief blijft aanwezig. Nederlands en Engels, licht en donker.
    - F2: de Rijksoverheid-bron op iedere vakantiepagina blijft in het Engels een
      echte, focusbare link met dezelfde bestemming als in het Nederlands.
-   - F3: de kerstvakantietekst noemt de data vastgesteld (basis- en voortgezet
+   - F3: de kerst- en meivakantietekst noemen de data vastgesteld (basis- en voortgezet
      onderwijs mogen alleen in bijzondere situaties afwijken; mbo en hoger
      onderwijs bepalen zelf), de voorjaarsvakantie blijft adviesdata.
    - F4: een zoekterm die de bezoeker typt terwijl een plaats nog laadt, wordt
@@ -192,6 +192,16 @@ async function testVakantiebron(browser,root){
             assert(/fixed dates/.test(tekst)&&/primary and secondary education/.test(tekst)&&/only deviate from them in special circumstances/.test(tekst)&&/Vocational colleges \(mbo\), universities of applied sciences and universities set their own holiday dates/.test(tekst),L+": de Engelse kerstvakantietekst mist de vastgestelde data of de schooltypen ("+tekst+")");
           }
         }
+        if(cfg.slug==="meivakantie"){
+          const tekst=r.uitleg.join(" ");
+          if(taal==="nl"){
+            assert(!/kunnen ervan afwijken|sommige scholen hebben een week extra vrij/.test(tekst),L+": de meivakantietekst suggereert vrijblijvende data of een vaste extra week");
+            assert(/vastgestelde data/.test(tekst)&&/eerste, verplichte week/.test(tekst)&&/basisonderwijs en voortgezet onderwijs/.test(tekst)&&/alleen in bijzondere situaties/.test(tekst)&&/tweede week is aanvullend en niet landelijk vastgesteld/.test(tekst)&&/Mbo-instellingen, hogescholen en universiteiten bepalen hun vakantiedata zelf/.test(tekst),L+": de meivakantietekst mist de verplichte eerste week, de aanvullende tweede week of de schooltypen ("+tekst+")");
+          }else{
+            assert(!/schools may deviate from them and some|extra week off/.test(tekst),L+": de Engelse meivakantietekst suggereert vrijblijvende data of een vaste extra week");
+            assert(/fixed dates/.test(tekst)&&/first, mandatory week/.test(tekst)&&/primary and secondary education/.test(tekst)&&/only deviate from them in special circumstances/.test(tekst)&&/second week is optional and not set nationally/.test(tekst)&&/Vocational colleges \(mbo\), universities of applied sciences and universities set their own holiday dates/.test(tekst),L+": de Engelse meivakantietekst mist de verplichte eerste week, de optionele tweede week of de schooltypen ("+tekst+")");
+          }
+        }
         if(cfg.slug==="voorjaarsvakantie"||cfg.slug==="herfstvakantie"){
           const tekst=r.uitleg.join(" ");
           assert(taal==="nl"?/adviesdata/.test(tekst)&&/mogen daarvan afwijken/.test(tekst):/recommended|advice/i.test(tekst),L+": de adviesdata-uitleg is veranderd ("+tekst+")");
@@ -201,7 +211,7 @@ async function testVakantiebron(browser,root){
       }finally{await context.close();}
     }
   }
-  console.log("F2/F3 vakantiepagina's: Rijksoverheid-bron blijft een focusbare link met dezelfde bestemming in NL en EN; kerst vastgesteld, voorjaar en herfst adviesdata ("+n+" combinaties).");
+  console.log("F2/F3 vakantiepagina's: Rijksoverheid-bron blijft een focusbare link met dezelfde bestemming in NL en EN; kerst en mei vastgesteld (mei: tweede week aanvullend), voorjaar en herfst adviesdata ("+n+" combinaties).");
 }
 
 /* F4: eigen invoer tijdens een lopende laadronde blijft staan. */
