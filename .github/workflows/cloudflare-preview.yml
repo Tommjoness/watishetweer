@@ -158,6 +158,14 @@ jobs:
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
           NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/cloudflare-preview-smoke.js
+      - name: Netwerkdiagnostiek bij mislukking
+        if: failure() && steps.preview_url.outputs.url != ''
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          NETWERK_ROOT: ${{ steps.preview_url.outputs.url }}
+          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+        run: node scripts/netwerkdiagnostiek.js
 
   preview-worldwide:
     needs: preview
@@ -231,6 +239,14 @@ jobs:
           HISTORY_SOURCE_RETRY_BACKOFF_MS: 10000
           NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/run-production-pre-sale-acceptance-browser.js
+      - name: Netwerkdiagnostiek bij mislukking
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          NETWERK_ROOT: ${{ env.PREVIEW_ROOT }}
+          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+        run: node scripts/netwerkdiagnostiek.js
 
   preview-release-navigation:
     needs: preview
@@ -269,6 +285,14 @@ jobs:
           NATIVE_BROWSER_RELOAD: "true"
           NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
         run: xvfb-run --auto-servernum node scripts/production-release-recovery-navigation.js
+      - name: Netwerkdiagnostiek bij mislukking
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          NETWERK_ROOT: ${{ env.PREVIEW_ROOT }}
+          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+        run: node scripts/netwerkdiagnostiek.js
 
   preview-cwv:
     needs: preview
@@ -294,6 +318,14 @@ jobs:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/cwv-desktop-recovery-browser.js
+      - name: Netwerkdiagnostiek bij mislukking
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          NETWERK_ROOT: ${{ needs.preview.outputs.preview_url }}
+          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+        run: node scripts/netwerkdiagnostiek.js
       - name: Bewaar deployed CWV-bewijs
         if: always()
         uses: actions/upload-artifact@v6

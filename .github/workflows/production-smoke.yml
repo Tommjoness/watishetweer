@@ -53,6 +53,11 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/run-production-worldwide-browser.js
+      - name: Netwerkdiagnostiek bij mislukking
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node scripts/netwerkdiagnostiek.js https://watishetweer.nl
 
   staff-audit-browser:
     needs: production-contract
@@ -76,6 +81,11 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/production-week-forecast-compact-browser.js
+      - name: Netwerkdiagnostiek bij mislukking
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node scripts/netwerkdiagnostiek.js https://watishetweer.nl
 
   live-performance-browser:
     needs: production-contract
@@ -95,6 +105,11 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/production-live-performance-browser.js
+      - name: Netwerkdiagnostiek bij mislukking
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node scripts/netwerkdiagnostiek.js https://watishetweer.nl
 
   mobile-cls-browser:
     needs: production-contract
@@ -114,6 +129,11 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/production-mobile-cls-browser.js
+      - name: Netwerkdiagnostiek bij mislukking
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node scripts/netwerkdiagnostiek.js https://watishetweer.nl
 
   final-release-browser:
     needs: production-contract
@@ -143,6 +163,11 @@ jobs:
           COLD_LOAD_ATTEMPTS: 3
           COLD_LOAD_PROFILE_COOLDOWN_MS: 45000
         run: node scripts/run-production-pre-sale-acceptance-browser.js
+      - name: Netwerkdiagnostiek bij mislukking
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node scripts/netwerkdiagnostiek.js https://watishetweer.nl
       - name: Bewaar screenshots en bewijsrapport
         if: always()
         uses: actions/upload-artifact@v6
@@ -172,6 +197,11 @@ jobs:
           CWV_ROOT: https://watishetweer.nl
           EXPECTED_SHA: ${{ github.sha }}
         run: node scripts/cwv-desktop-recovery-browser.js
+      - name: Netwerkdiagnostiek bij mislukking
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node scripts/netwerkdiagnostiek.js https://watishetweer.nl
       - name: Bewaar productie-CWV-bewijs
         if: always()
         uses: actions/upload-artifact@v6
