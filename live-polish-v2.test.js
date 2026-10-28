@@ -66,7 +66,7 @@ test("tooltipstrook: statische markup, CSS vanaf de eerste render en koppeling n
   assert.equal(html.split('id="tip-strook"').length-1,1);
   assert(css.includes("@media (max-width:429px){")&&css.includes("min-height:140px")&&css.includes(".tip-strook:empty::before"));
   assert(css.includes("Kies een uur in de grafiek om de details te bekijken.")&&css.includes("Select an hour on the chart to see the details."));
-  assert(css.includes('html[lang="en"] .tip-strook:empty::before'));
+  assert(css.includes('html[lang^="en"] .tip-strook:empty::before'));
   assert(css.includes("#chart #scrub [data-tip-verberg]{visibility:hidden;pointer-events:none}"));
   assert(js.includes("requestAnimationFrame(synchroniseerTooltipWeergave)")&&js.includes("koppelTooltipWeergave();"));
   assert(!/strook\.innerHTML|innerHTML\s*=/.test(js.slice(js.indexOf("function tooltipTekstLezen"),js.indexOf("function koppelTooltipWeergave"))),"strook mag alleen met textContent worden gevuld");
