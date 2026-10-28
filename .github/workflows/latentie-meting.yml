@@ -29,6 +29,8 @@ jobs:
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: bash scripts/tijdelijk/meet-preview.sh preview.csv 20 2 github-runner
+      - name: Bereikbaarheid weerbron per locatie (Open-Meteo en eigen reserveroute)
+        run: bash scripts/tijdelijk/meet-bron.sh | tee bron.csv
       - name: Toon resultaat
         if: always()
         run: |
@@ -41,4 +43,5 @@ jobs:
           path: |
             meting.csv
             preview.csv
+            bron.csv
           retention-days: 7
