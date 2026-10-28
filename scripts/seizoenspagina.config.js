@@ -178,7 +178,7 @@ const SEIZOENSPAGINAS=Object.freeze([
     uitleg:{
       kop:"Wanneer is de kerstvakantie?",
       alineas:[
-        "De kerstvakantie valt in regio noord, midden en zuid tegelijk. Dit zijn de data van de Rijksoverheid; scholen kunnen ervan afwijken. Kijk bij twijfel in de schoolgids."
+        "De kerstvakantie valt in regio noord, midden en zuid tegelijk. Dit zijn de vastgestelde data van de Rijksoverheid. Scholen in het basisonderwijs en voortgezet onderwijs mogen hier alleen in bijzondere situaties met toestemming van het ministerie van OCW van afwijken. Mbo-instellingen, hogescholen en universiteiten bepalen hun vakantiedata zelf. Kijk bij twijfel in de schoolgids."
       ],
       bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
     },

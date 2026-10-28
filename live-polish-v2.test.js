@@ -24,6 +24,7 @@ test("toetsenbordpunt krijgt een compacte volledige gesproken waarde",()=>{
   assert(js.includes('hit.setAttribute("role","slider")'));
   assert(js.includes('hit.setAttribute("aria-valuenow","1")'));
   assert(js.includes('ev.key==="ArrowRight"'));
+  assert(js.includes('ev.key==="Escape"'));
 });
 
 test("verwijderd temperatuurcijfer koppelt aan het juiste zwarte datapunt",()=>{

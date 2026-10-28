@@ -27,8 +27,8 @@ for(const p of weer){
   eis(html.includes("weatherNowCachePastBij(oud,nieuweLat,nieuweLon)"),rel+": cache wordt niet aan aanvraagcoördinaten gekoppeld");
   eis(html.includes("weatherNowLocatieSnapshot()"),rel+": vorige succesvolle locatie wordt niet vastgelegd");
   eis(html.includes("const vorigeBlijftZichtbaar=!!(plaatsWijzigt&&vorigeLocatie&&vorigeLocatie.d&&vorigeLocatie.label);"),rel+": trage locatiewissel borgt vorige identiteit niet");
-  eis(html.includes('document.getElementById("q").value=String(vorigeLocatie.label||"");'),rel+": zoekveld blijft tijdens trage locatiewissel niet bij vorige locatie");
-  eis(html.includes('S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;S.land=aangevraagdeLand;\n    document.getElementById("q").value=label;\n    S.d=vol'),rel+": nieuwe identiteit wordt niet atomair bij succesvolle forecast geactiveerd");
+  eis(html.includes('zoekveldZetPlaats(String(vorigeLocatie.label||""));'),rel+": zoekveld blijft tijdens trage locatiewissel niet bij vorige locatie");
+  eis(html.includes('S.lat=nieuweLat;S.lon=nieuweLon;S.label=label;S.land=aangevraagdeLand;\n    zoekveldZetPlaats(label);\n    S.d=vol'),rel+": nieuwe identiteit wordt niet atomair bij succesvolle forecast geactiveerd");
   eis(html.includes("function progressievePreviewToegestaan(stil,wissel,dataVoorLoad){\n  /* Finale locatie-identiteit:"),rel+": finale previewblokkade ontbreekt");
   eis(!html.includes("return !stil&&!!wissel&&!!dataVoorLoad;"),rel+": gedeeltelijke current-only locatiewisselpreview is nog actief");
   eis(html.includes("Er worden geen weergegevens van een andere locatie getoond."),rel+": veilige mismatch-state ontbreekt");

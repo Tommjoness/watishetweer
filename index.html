@@ -3359,6 +3359,7 @@ function zoekMarkeer(n){
 }
 function zoekKies(el){
   if(!el)return;
+  zoekVeldEigenInvoer=false;zoekVeldUitgesteld=null;
   ++zoekGeneratie;clearTimeout(timer);zoekPanelenSluit(true);zoekStatus.textContent="";
   onthoudRegio(el.dataset.lat,el.dataset.lon,el.dataset.regio);
   q.value=el.dataset.nm;zoekIndex=-1;gpsGeneratie++;load(el.dataset.lat,el.dataset.lon,el.dataset.nm,false,true,el.dataset.land||null);
@@ -3403,6 +3404,26 @@ const zoekVeldSelecteer=()=>{if(document.activeElement!==q)return;try{q.setSelec
 q.addEventListener("focus",()=>{zoekVeldNetGefocust=true;zoekVeldSelecteer();});
 q.addEventListener("click",()=>{if(!zoekVeldNetGefocust)return;zoekVeldNetGefocust=false;zoekVeldSelecteer();});
 q.addEventListener("blur",()=>{zoekVeldNetGefocust=false;});
+/* De plaatsnaam in het zoekveld hoort bij de getoonde gegevens, en load() zet haar terug als een ronde klaar of mislukt is.
+   Typt de bezoeker op dat moment zelf (veld heeft focus en er is sindsdien getypt), dan blijft die invoer staan: anders
+   verdwijnt de zoekterm terwijl de suggesties er nog bij horen. De overgeslagen plaatsnaam wordt onthouden en alsnog gezet
+   zodra het veld zonder gekozen suggestie wordt verlaten (dan sluiten ook de suggesties, die bij de oude invoer horen). Een
+   gekozen suggestie start zelf een nieuwe ronde; een aanraking of klik in de suggesties telt niet als het verlaten van het veld. */
+let zoekVeldEigenInvoer=false,zoekVeldUitgesteld=null,zoekResAangeraakt=false;
+q.addEventListener("input",()=>{zoekVeldEigenInvoer=true;});
+function zoekveldZetPlaats(naam){
+  if(zoekVeldEigenInvoer&&document.activeElement===q){zoekVeldUitgesteld=naam;return;}
+  zoekVeldUitgesteld=null;q.value=naam;
+}
+function zoekveldHerstel(){
+  if(zoekVeldUitgesteld===null||zoekResAangeraakt||document.activeElement===q)return;
+  const naam=zoekVeldUitgesteld;zoekVeldUitgesteld=null;
+  ++zoekGeneratie;clearTimeout(timer);zoekPanelenSluit(true);zoekStatus.textContent="";
+  q.value=naam;
+}
+q.addEventListener("blur",()=>{zoekVeldEigenInvoer=false;zoekveldHerstel();});
+res.addEventListener("pointerdown",()=>{zoekResAangeraakt=true;});
+document.addEventListener("click",()=>{zoekResAangeraakt=false;zoekveldHerstel();});
 res.addEventListener("click",e=>zoekKies(e.target.closest("div[data-lat]")));
 document.addEventListener("click",e=>{if(!e.target.closest(".tools"))zoekPanelenSluit();});
 
