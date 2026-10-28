@@ -23,12 +23,22 @@ jobs:
           echo "runner-edge (1.1.1.1/cdn-cgi/trace):"; curl -sS -m 20 https://1.1.1.1/cdn-cgi/trace | grep -E "^(colo|loc|ip)=" || true
       - name: Meet (30 rondes, 9 doelen)
         run: bash scripts/tijdelijk/meet.sh meting.csv 30 2 github-runner
+      - name: Meet preview (Access) en productie
+        env:
+          PREVIEW_ROOT: https://54e7df73.watishetweer.pages.dev
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: bash scripts/tijdelijk/meet-preview.sh preview.csv 20 2 github-runner
       - name: Toon resultaat
         if: always()
-        run: cat meting.csv
+        run: |
+          echo "=== meting.csv ==="; cat meting.csv
+          echo "=== preview.csv ==="; cat preview.csv
       - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: latentie-meting-${{ github.run_attempt }}
-          path: meting.csv
+          path: |
+            meting.csv
+            preview.csv
           retention-days: 7
