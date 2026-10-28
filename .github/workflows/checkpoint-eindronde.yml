@@ -1,3 +1,19 @@
+# Eindronde checkpoint: twee parallelle jobs en één samenvattende check.
+#
+# Voorheen liep alles in één seriële job met een limiet van 45 minuten. Dat
+# werkte op een snelle runner (circa 39 minuten) maar niet op een trage
+# (circa 47 minuten). Nu lopen dezelfde stappen, in dezelfde volgorde per job,
+# op twee runners tegelijk:
+#   checkpoint-npm-test  npm test, daarna de CLS-controle en de staff-audit op
+#                        het postbuild-artifact dat npm test achterlaat.
+#   checkpoint-browsers  npm run build (maakt public/ zelf leeg en bouwt opnieuw,
+#                        dus onafhankelijk van een eerdere stap), daarna alle
+#                        afzonderlijke browsercontroles.
+#
+# De verplichte statuscheck van de branchregels heet "checkpoint" en is de job
+# onderaan. Die slaagt alleen als beide jobs "success" zijn. Hij draait altijd
+# (if: always()): zonder dat zou een mislukte of geannuleerde job de samenvatting
+# "skipped" maken, en een overgeslagen verplichte check telt bij GitHub als geslaagd.
 name: WeatherNow eindronde checkpoint
 
 on:
@@ -5,7 +21,9 @@ on:
     branches: [main]
 
 jobs:
-  checkpoint:
+  # Job A: npm test, CLS-budget en staff-audit.
+  checkpoint-npm-test:
+    name: checkpoint-npm-test
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
@@ -41,6 +59,29 @@ jobs:
             echo "::error file=browser-staff-audit-20260826.test.js,line=1::$msg"
             exit "$code"
           fi
+
+  # Job B: npm run build en alle afzonderlijke browsercontroles.
+  checkpoint-browsers:
+    name: checkpoint-browsers
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Playwright-pakket
+        run: npm ci --ignore-scripts
+      - name: Koppel Chromium voor directe browsertests
+        run: |
+          CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          test -x "$CHROME_PATH"
+          ln -sf "$CHROME_PATH" /usr/local/bin/google-chrome
+          test -x /usr/local/bin/google-chrome
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
       - name: Bouw definitieve artifact
         run: npm run build
       - name: SEO-plaatsroutes in Chromium en WebKit
@@ -150,4 +191,25 @@ jobs:
             msg="$(tail -n 20 /tmp/sw-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
             echo "::error file=browser-serviceworker-upgrade.test.js,line=1::$msg"
             exit "$code"
+          fi
+
+  # Samenvattende, verplichte check. Geen checkout of container nodig.
+  checkpoint:
+    name: checkpoint
+    needs: [checkpoint-npm-test, checkpoint-browsers]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Beide checkpoint-jobs moeten volledig geslaagd zijn
+        env:
+          NPM_TEST: ${{ needs.checkpoint-npm-test.result }}
+          BROWSERS: ${{ needs.checkpoint-browsers.result }}
+        run: |
+          echo "checkpoint-npm-test: $NPM_TEST"
+          echo "checkpoint-browsers: $BROWSERS"
+          if [ "$NPM_TEST" != "success" ] || [ "$BROWSERS" != "success" ]; then
+            echo "::error::checkpoint is alleen groen als beide jobs success zijn (npm-test=$NPM_TEST, browsers=$BROWSERS); geannuleerd of overgeslagen telt niet als geslaagd."
+            exit 1
           fi
