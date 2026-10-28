@@ -61,7 +61,7 @@ function regenSamenvattingBijwerken(){
   const svg=document.getElementById("chart"),g=typeof S!=="undefined"&&S.geo,h=typeof S!=="undefined"&&S.d&&S.d.hourly;
   if(!svg||!g||!h||!Array.isArray(g.TI))return;
   let el=document.getElementById("final-rain-summary");
-  if(!el){el=document.createElement("p");el.id="final-rain-summary";el.className="final-rain-summary";svg.insertAdjacentElement("afterend",el);}
+  if(!el){el=document.createElement("p");el.id="final-rain-summary";el.className="final-rain-summary";(document.getElementById("tip-strook")||svg).insertAdjacentElement("afterend",el);}
   const perioden=A.regenperiodenVoorGrafiek({
     grafiekTijden:g.TI,bronTijden:h.time,neerslag:h.precipitation,
     bronStart:Number.isInteger(S.chartStart)?S.chartStart:null,

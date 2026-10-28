@@ -44,7 +44,8 @@ html=vervangExact(html,'<main id="app" style="display:none">','<main id="app" ta
    dezelfde kerngegevens via toetsenbord/screenreader zonder ieder SVG-punt
    focusbaar te maken. */
 const CHART_BRON=`      <svg id="chart" viewBox="0 0 900 296" width="100%" role="img"
-           aria-label="Dag- en nachtverloop met temperatuur, spreiding en neerslagkans"></svg>`;
+           aria-label="Dag- en nachtverloop met temperatuur, spreiding en neerslagkans"></svg>
+      <div id="tip-strook" class="tip-strook" aria-hidden="true"></div>`;
 const CHART_NIEUW=CHART_BRON+`
       <details id="chartdata" class="chartdata">
         <summary>Grafiekgegevens als tabel</summary>

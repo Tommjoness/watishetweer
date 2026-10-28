@@ -159,9 +159,35 @@ function etmaalExtraTemperaturenWeg(temperaturen,gelabeldeIndices,rasterStap){
   return [...weg].sort((a,b)=>a-b);
 }
 
+/* De SVG-tooltip moet minimaal 12 px effectief leesbaar zijn. De tekens staan in SVG-eenheden en worden met
+   de breedte van de grafiek geschaald; de factor maakt de hele doos (rechthoek, teksten, scheidingslijn)
+   precies groot genoeg. Naar boven afgerond op drie decimalen, zodat de uitkomst nooit net onder de grens valt. */
+const TOOLTIP_MIN_PX=12;
+function tooltipSchaalFactor(kleinsteFont,pxPerEenheid,minPx){
+  const f=eindig(kleinsteFont),p=eindig(pxPerEenheid),m=eindig(minPx);
+  if(f===null||p===null||m===null||f<=0||p<=0||m<=0) return 1;
+  const k=m/(f*p);
+  return k>1.0005?Math.ceil(k*1000)/1000:1;
+}
+
+/* Plaatsing van de opgeschaalde doos: dezelfde kant van het punt als de basis (rechts, tenzij die niet past),
+   dezelfde verticale verankering (boven of onder), en altijd binnen de tekening. */
+function tooltipDoosPlaatsing(doos,punt,veld,k){
+  const nw=doos.w*k,nh=doos.h*k,W=veld.W,H=veld.H,pr=eindig(veld.pr)||0;
+  const links=doos.x+doos.w<=punt.x+1;
+  let nx=links?doos.x+doos.w-nw:doos.x;
+  if(!links&&punt.x+10+nw>W-pr) nx=punt.x-nw-10;
+  nx=Math.max(2,Math.min(nx,W-nw-2));
+  const onder=doos.y+doos.h/2>veld.pt+veld.ih/2;
+  let ny=onder?doos.y+doos.h-nh:doos.y;
+  ny=Math.max(2,Math.min(ny,H-nh-2));
+  return {nx,ny,nw,nh};
+}
+
 const api={
   tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan,
-  dauwpuntCelsius,luchtvochtigheidDuiding,temperatuurProminentie,etmaalExtraTemperaturenWeg,grafiekPuntBeschrijving,grafiekDagVoorvoegsel
+  dauwpuntCelsius,luchtvochtigheidDuiding,temperatuurProminentie,etmaalExtraTemperaturenWeg,grafiekPuntBeschrijving,grafiekDagVoorvoegsel,
+  tooltipSchaalFactor,tooltipDoosPlaatsing,TOOLTIP_MIN_PX
 };
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowPolishV2=api;
@@ -276,7 +302,115 @@ scrubKoppel=function(){
     ev.preventDefault();wijsIndexAan(clamp(volgende,0,G.n-1));
   });
   hit.addEventListener("blur",()=>{const g=document.getElementById("scrub");if(g)g.style.display="none";});
+  koppelTooltipWeergave();
 };
+
+/* ---------- tooltipweergave: informatiestrook (tot en met 429 px, via CSS) en minimaal 12 px ----------
+   De SVG-groep #scrub blijft de enige bron van waarheid; alle lagen die haar vullen of verplaatsen
+   (basis, compactie, neerslagregel) draaien ongewijzigd. Deze laag leest het eindresultaat pas in het
+   volgende frame (requestAnimationFrame), dus de volgorde van de lagen doet er niet toe:
+   - de zes rijen worden in de HTML-strook #tip-strook gezet (CSS toont die alleen op smalle schermen);
+   - bij >= 430 px wordt de doos zo opgeschaald dat de kleinste tekst minimaal 12 px effectief is. */
+const SVG_NS="http://www.w3.org/2000/svg";
+let tooltipObserver=null,tooltipRaf=0,tooltipTimer=0,tooltipBezig=false;
+
+function tooltipTekstLezen(g){
+  const kop=g.querySelector('text[data-tip="kop"]'),oms=g.querySelector('text[data-tip="omschrijving"]');
+  const rij=n=>{
+    const l=g.querySelector('text[data-tip-rij="'+n+'"][data-tip-kol="label"]'),w=g.querySelector('text[data-tip-rij="'+n+'"][data-tip-kol="waarde"]');
+    return l&&w?{label:l.textContent.trim(),waarde:w.textContent.trim(),kleur:w.getAttribute("fill")}:null;
+  };
+  const rijen=[1,2,3,4,5,6].map(rij);
+  if(!kop||rijen.some(r=>!r)) return null;
+  return {kop:kop.textContent.trim(),omschrijving:oms?oms.textContent.trim():"",rijen,kopKleur:kop.getAttribute("fill")};
+}
+
+function vulTooltipStrook(strook,g){
+  const d=g.style.display!=="none"?tooltipTekstLezen(g):null;
+  if(!d){
+    if(strook.firstChild){strook.replaceChildren();delete strook.dataset.sig;}
+    return;
+  }
+  const sig=JSON.stringify(d);
+  if(strook.dataset.sig===sig) return;
+  const el=(tag,klasse,tekst)=>{const e=document.createElement(tag);if(klasse)e.className=klasse;if(tekst!=null)e.textContent=tekst;return e;};
+  const item=r=>{
+    const x=el("div","tip-rij");x.appendChild(el("dt",null,r.label));
+    const dd=el("dd",null,r.waarde);if(r.kleur&&r.kleur!==d.kopKleur) dd.style.color=r.kleur;
+    x.appendChild(dd);return x;
+  };
+  const duo=(a,b)=>{const x=el("div","tip-duo");x.appendChild(item(a));x.appendChild(item(b));return x;};
+  const dl=el("dl","tip-rijen"),r=d.rijen;
+  dl.appendChild(duo(r[0],r[1]));dl.appendChild(item(r[2]));dl.appendChild(item(r[3]));dl.appendChild(duo(r[4],r[5]));
+  strook.replaceChildren(el("div","tip-kop",d.kop),el("div","tip-oms",d.omschrijving||"\u00a0"),dl);
+  strook.dataset.sig=sig;
+}
+
+/* De SVG-tekstvakdelen krijgen een markering; de CSS verbergt ze alleen tot en met 429 px (visibility, geen
+   display: geometrie en tekst blijven voor tests en hulptechnologie beschikbaar). */
+function markeerTooltipSvg(g){
+  g.querySelectorAll("rect,text,line").forEach(e=>{
+    const tag=e.tagName.toLowerCase();
+    if(tag==="line"&&e.getAttribute("y1")!==e.getAttribute("y2")) return;
+    e.setAttribute("data-tip-verberg","");
+  });
+}
+
+function schaalSvgTooltip(g,svg){
+  const oud=g.querySelector(":scope > g[data-tip-schaal]");
+  if(oud){while(oud.firstChild)g.insertBefore(oud.firstChild,oud);oud.remove();}
+  if(g.style.display==="none"||!globalThis.matchMedia||!globalThis.matchMedia("(min-width:430px)").matches) return;
+  const rect=g.querySelector("rect"),teksten=[...g.querySelectorAll("text")],vb=svg.viewBox&&svg.viewBox.baseVal,br=svg.getBoundingClientRect();
+  if(!rect||!teksten.length||!vb||!vb.width||!br.width) return;
+  const fonts=teksten.map(e=>eindig(e.getAttribute("font-size"))).filter(v=>v!==null&&v>0);
+  if(!fonts.length) return;
+  const k=tooltipSchaalFactor(Math.min(...fonts),br.width/vb.width,TOOLTIP_MIN_PX);
+  if(k===1) return;
+  const lijnen=[...g.querySelectorAll("line")],sep=lijnen.find(l=>l.getAttribute("y1")===l.getAttribute("y2")),kruis=lijnen.find(l=>l!==sep);
+  const doos={x:eindig(rect.getAttribute("x")),y:eindig(rect.getAttribute("y")),w:eindig(rect.getAttribute("width")),h:eindig(rect.getAttribute("height"))};
+  const puntX=kruis?eindig(kruis.getAttribute("x1")):null,G=S.geo||{};
+  if(Object.values(doos).some(v=>v===null)||puntX===null) return;
+  const pl=tooltipDoosPlaatsing(doos,{x:puntX},{W:vb.width,H:vb.height,pr:G.pr,pt:eindig(G.pt)||0,ih:eindig(G.ih)||vb.height},k);
+  if(![pl.nx,pl.ny].every(Number.isFinite)) return;
+  const wrap=document.createElementNS(SVG_NS,"g");
+  wrap.setAttribute("data-tip-schaal",String(k));
+  wrap.setAttribute("transform","translate("+(pl.nx-k*doos.x)+" "+(pl.ny-k*doos.y)+") scale("+k+")");
+  const leden=new Set([rect,...teksten,...(sep?[sep]:[])]);
+  g.insertBefore(wrap,rect);
+  [...g.children].forEach(c=>{if(leden.has(c))wrap.appendChild(c);});
+  rect.setAttribute("vector-effect","non-scaling-stroke");
+  if(sep) sep.setAttribute("vector-effect","non-scaling-stroke");
+}
+
+function synchroniseerTooltipWeergave(){
+  tooltipRaf=0;clearTimeout(tooltipTimer);
+  const g=document.getElementById("scrub"),svg=document.getElementById("chart"),strook=document.getElementById("tip-strook");
+  if(!g||!svg) return;
+  tooltipBezig=true;
+  try{
+    markeerTooltipSvg(g);
+    if(strook) vulTooltipStrook(strook,g);
+    schaalSvgTooltip(g,svg);
+  }finally{
+    tooltipBezig=false;
+    if(tooltipObserver) tooltipObserver.takeRecords();
+  }
+}
+
+function planTooltipWeergave(){
+  if(tooltipBezig||tooltipRaf) return;
+  tooltipRaf=requestAnimationFrame(synchroniseerTooltipWeergave);
+  /* Reserve voor een pagina die geen frames tekent (verborgen tabblad): dan staat de tooltip er ook niet. */
+  tooltipTimer=setTimeout(()=>{if(tooltipRaf){cancelAnimationFrame(tooltipRaf);synchroniseerTooltipWeergave();}},120);
+}
+
+function koppelTooltipWeergave(){
+  const g=document.getElementById("scrub");
+  if(!g||typeof MutationObserver==="undefined") return;
+  if(tooltipObserver) tooltipObserver.disconnect();
+  tooltipObserver=new MutationObserver(planTooltipWeergave);
+  tooltipObserver.observe(g,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:["style"]});
+}
 
 function verwijderTemperatuurMarkering(svg,el){
   if(!svg||!el) return;
