@@ -368,3 +368,25 @@ html[lang^="en"] #brief[data-q1-briefing-pending]::after,html[lang^="en"] #brief
   .mast>.mastright .tools input[type=text]{flex:1 1 180px;min-width:140px;width:auto}
   .tools #ververs{font-size:10.5px!important;letter-spacing:.075em!important}
 }
+
+/* ===== Tooltip als informatiestrook op smalle telefoons (tot en met 429 px) =====
+   Op smalle schermen haalt de SVG-tooltip de 12 px niet en bedekt een grotere doos het gemeten
+   punt. Daar toont een HTML-strook direct onder de grafiek dezelfde zes rijen. De ruimte staat
+   vanaf de eerste render vast in de CSS (140 px + marge): kiezen van een uur, laden of sluiten
+   verschuift de pagina niet. De rustregel staat in CSS (::before) zodat er geen nieuwe tekst in
+   de HTML van elke pagina komt. De SVG-tooltip blijft in de DOM (tests, tabelalternatief) en
+   wordt hier alleen visueel verborgen; kruisdraad en meetpunt blijven zichtbaar. */
+.tip-strook{display:none}
+@media (max-width:429px){
+  .tip-strook{display:block;box-sizing:border-box;margin:8px 0 4px;padding:8px 10px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);font:12px/1.45 "Instrument Sans",sans-serif;min-height:140px}
+  .tip-strook:empty::before{content:"Kies een uur in de grafiek om de details te bekijken.";color:var(--ink-70);font-style:italic}
+  html[lang^="en"] .tip-strook:empty::before{content:"Select an hour on the chart to see the details."}
+  .tip-strook .tip-kop{font:15px/1.3 "Bodoni Moda",serif;color:var(--ink)}
+  .tip-strook .tip-oms{color:var(--ink-70);min-height:1.45em}
+  .tip-strook .tip-rijen{margin:6px 0 0;padding-top:5px;border-top:1px solid var(--rule)}
+  .tip-strook .tip-duo{display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
+  .tip-strook .tip-rij{display:flex;justify-content:space-between;align-items:baseline;gap:8px;min-width:0}
+  .tip-strook dt{margin:0;color:var(--ink-70);white-space:nowrap}
+  .tip-strook dd{margin:0;font:12.5px/1.45 "DM Mono",monospace;text-align:right;white-space:nowrap}
+  #chart #scrub [data-tip-verberg]{visibility:hidden;pointer-events:none}
+}

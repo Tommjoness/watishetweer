@@ -2,7 +2,8 @@
 const assert=require("assert"),fs=require("fs"),path=require("path");
 const {
   tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan,
-  dauwpuntCelsius,luchtvochtigheidDuiding,etmaalExtraTemperaturenWeg,grafiekPuntBeschrijving
+  dauwpuntCelsius,luchtvochtigheidDuiding,etmaalExtraTemperaturenWeg,grafiekPuntBeschrijving,
+  tooltipSchaalFactor,tooltipDoosPlaatsing,TOOLTIP_MIN_PX
 }=require("./live-polish-v2.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 
@@ -25,6 +26,50 @@ test("toetsenbordpunt krijgt een compacte volledige gesproken waarde",()=>{
   assert(js.includes('hit.setAttribute("aria-valuenow","1")'));
   assert(js.includes('ev.key==="ArrowRight"'));
   assert(js.includes('ev.key==="Escape"'));
+});
+
+test("tooltip wordt zo opgeschaald dat de kleinste tekst minimaal 12 px effectief is",()=>{
+  assert.equal(TOOLTIP_MIN_PX,12);
+  /* Gemeten schalen van de grafiek: 1,09 (430 px), 1,0 (480 tot 1440 px), 1,047 (1920 px). */
+  assert.equal(tooltipSchaalFactor(11,1,12),1.091);
+  assert.equal(tooltipSchaalFactor(11,1.087,12),1.004);
+  assert.equal(tooltipSchaalFactor(11,1.047,12),1.042);
+  assert.equal(tooltipSchaalFactor(11,1.092,12),1);
+  assert.equal(tooltipSchaalFactor(14,1,12),1);
+  for(const [f,p] of [[11,1],[11,1.001],[11,0.97],[10.5,1.03],[11,1.087]]){
+    const k=tooltipSchaalFactor(f,p,12);assert(f*p*k>=12-1e-9,"kleinste tekst blijft onder 12 px bij "+f+"x"+p);
+  }
+  assert.equal(tooltipSchaalFactor(null,1,12),1);assert.equal(tooltipSchaalFactor(11,0,12),1);assert.equal(tooltipSchaalFactor(11,"x",12),1);
+});
+
+test("opgeschaalde tooltip blijft aan dezelfde kant van het punt en binnen de tekening",()=>{
+  const veld={W:736,H:296,pr:20,pt:36,ih:220};
+  /* Doos rechts van het punt: linkerrand blijft staan, breedte groeit. */
+  let p=tooltipDoosPlaatsing({x:210,y:30,w:200,h:130},{x:200},veld,1.1);
+  assert.equal(p.nx,210);assert.equal(Math.round(p.nw),220);assert.equal(p.ny,30);
+  /* Past rechts niet meer door de groei: doos klapt naar links van het punt. */
+  p=tooltipDoosPlaatsing({x:500,y:30,w:200,h:130},{x:490},veld,1.1);
+  assert(p.nx+p.nw<=490-10+1e-9,"doos hoort links van het punt te staan");assert(p.nx>=2);
+  /* Doos stond links van het punt: rechterrand blijft staan. */
+  p=tooltipDoosPlaatsing({x:100,y:30,w:200,h:130},{x:320},veld,1.1);
+  assert.equal(Math.round(p.nx+p.nw),300);
+  /* Onder verankerd (aanraking): onderrand blijft staan; nooit buiten de tekening. */
+  p=tooltipDoosPlaatsing({x:10,y:170,w:200,h:120},{x:300},veld,1.1);
+  assert(p.ny+p.nh<=veld.H-2+1e-9&&p.ny>=2);assert(Math.abs((p.ny+p.nh)-(170+120))<1e-6||p.ny+p.nh<=veld.H-2);
+  p=tooltipDoosPlaatsing({x:2,y:2,w:300,h:290},{x:400},veld,1.3);
+  assert(p.nx>=2&&p.nx+p.nw<=veld.W-2+1e-9&&p.ny>=2);
+});
+
+test("tooltipstrook: statische markup, CSS vanaf de eerste render en koppeling na alle tooltiplagen",()=>{
+  const js=fs.readFileSync(path.join(__dirname,"live-polish-v2.js"),"utf8"),css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8"),html=fs.readFileSync(path.join(__dirname,"index.html"),"utf8");
+  assert(html.includes('<div id="tip-strook" class="tip-strook" aria-hidden="true"></div>'));
+  assert.equal(html.split('id="tip-strook"').length-1,1);
+  assert(css.includes("@media (max-width:429px){")&&css.includes("min-height:140px")&&css.includes(".tip-strook:empty::before"));
+  assert(css.includes("Kies een uur in de grafiek om de details te bekijken.")&&css.includes("Select an hour on the chart to see the details."));
+  assert(css.includes('html[lang^="en"] .tip-strook:empty::before'));
+  assert(css.includes("#chart #scrub [data-tip-verberg]{visibility:hidden;pointer-events:none}"));
+  assert(js.includes("requestAnimationFrame(synchroniseerTooltipWeergave)")&&js.includes("koppelTooltipWeergave();"));
+  assert(!/strook\.innerHTML|innerHTML\s*=/.test(js.slice(js.indexOf("function tooltipTekstLezen"),js.indexOf("function koppelTooltipWeergave"))),"strook mag alleen met textContent worden gevuld");
 });
 
 test("verwijderd temperatuurcijfer koppelt aan het juiste zwarte datapunt",()=>{
