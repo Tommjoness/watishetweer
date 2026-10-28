@@ -1,0 +1,34 @@
+# TIJDELIJK (niet mergen): alleen-lezen meting van responstijden vanaf een GitHub-runner.
+# Doet uitsluitend GET-verzoeken naar publieke URL's van de eigen site; geen secrets, geen schrijfrechten.
+name: Latentieonderzoek (tijdelijk)
+
+on:
+  push:
+    branches: [claude/latentie-meting-20261028]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  meet:
+    name: meet-vanaf-runner
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - name: Vantagepunt van de runner
+        run: |
+          echo "runner-edge (watishetweer.nl/cdn-cgi/trace):"; curl -sS -m 20 https://watishetweer.nl/cdn-cgi/trace | grep -E "^(colo|loc|ip|http)=" || true
+          echo "runner-edge (1.1.1.1/cdn-cgi/trace):"; curl -sS -m 20 https://1.1.1.1/cdn-cgi/trace | grep -E "^(colo|loc|ip)=" || true
+      - name: Meet (30 rondes, 9 doelen)
+        run: bash scripts/tijdelijk/meet.sh meting.csv 30 2 github-runner
+      - name: Toon resultaat
+        if: always()
+        run: cat meting.csv
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: latentie-meting-${{ github.run_attempt }}
+          path: meting.csv
+          retention-days: 7
