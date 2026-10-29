@@ -140,7 +140,7 @@ const tekstVan=(page,sel)=>page.locator(sel).innerText();
         });
         assert(t.score!=null&&t.licht!=null&&t.score<t.feiten&&t.feiten<t.licht,`${L} park: volgorde score → gegevens → lichtvervuiling klopt niet (${t.score}/${t.feiten}/${t.licht})`);
         assert(t.score<t.hoogte,`${L} park: score staat niet in het eerste scherm (${t.score}px)`);
-        assert.equal(t.h2,18,`${L} park: sectiekop ${t.h2}px`);assert.equal(t.feitkop,13,`${L} park: feitkop ${t.feitkop}px`);
+        assert.equal(t.h2,18,`${L} park: sectiekop ${t.h2}px`);assert.equal(t.feitkop,14,`${L} park: feitkop ${t.feitkop}px`); /* 14px sinds de typografie-ronde van 29 oktober 2026 (eerder 13px) */
         assert(breedte>600?t.h1===36:t.h1===30,`${L} park: hoofdtitel ${t.h1}px`);
         assert(Math.abs(m.knopMid-m.terugMid)<=8,`${L} park: taalknop staat niet op de rij van de terugknop (${m.knopMid} vs ${m.terugMid})`);
         assert(m.h1Maat<=36,`${L} park: parktitel (${m.h1Maat}px)`);
@@ -215,7 +215,7 @@ const tekstVan=(page,sel)=>page.locator(sel).innerText();
         assert(m.labels.every(l=>l.length===2&&l[0].t===lblN&&l[1].t===lblV&&l[1].hidden&&!l[0].hidden),`${L} overzicht: labels ontbreken of zijn niet correct verborgen voor schermlezers`);
         if(breedte<768)assert(m.labels.every(l=>l.every(x=>x.zichtbaar))&&!m.theadZichtbaar,`${L} overzicht: smalle rij toont geen labels bij de waarden`);
         else assert(m.labels.every(l=>l.every(x=>!x.zichtbaar))&&m.theadZichtbaar,`${L} overzicht: brede tabel toont dubbele labels`);
-        assert.equal(m.thead,"13px",`${L} overzicht: tabelkop ${m.thead}`);
+        assert.equal(m.thead,"14px",`${L} overzicht: tabelkop ${m.thead}`); /* 14px sinds de typografie-ronde van 29 oktober 2026 (eerder 13px) */
         /* Toegankelijkheidsboom bij ontbrekende gegevens: de betekenis staat één keer in de boom, op elke breedte. */
         {
           const ax=await axRij(context,page,"alde-feanen"),nv=T("Niet beschikbaar","Not available"),bp=T("Beste periode niet beschikbaar","Best period not available");
@@ -273,7 +273,8 @@ const tekstVan=(page,sel)=>page.locator(sel).innerText();
           return {h1:fs("h1"),tussen:fs(".seizoen-aftel-kop"),sectie:fs("main>h2:not(.seizoen-aftel-kop)"),dag:fs(".seizoen-dag h3"),kop:fs(".seizoen-dag thead th"),klein:fs(".seizoen-bron"),introRegels:Math.round(intro.getBoundingClientRect().height/parseFloat(getComputedStyle(intro).lineHeight)),
             eerste:document.querySelector(".seizoen-dag").getBoundingClientRect().top+scrollY,breed:innerWidth};});
         assert.equal(ty.tussen,21,`${L} vakantie: tussenkop ${ty.tussen}px`);assert.equal(ty.sectie,18,`${L} vakantie: sectiekop ${ty.sectie}px`);
-        assert.equal(ty.dag,17,`${L} vakantie: dagkop ${ty.dag}px`);assert.equal(ty.kop,13,`${L} vakantie: tabelkop ${ty.kop}px`);assert.equal(ty.klein,14,`${L} vakantie: secundaire tekst ${ty.klein}px`);
+        /* Typografie-ronde 29 oktober 2026: dagkop 18px (eerder 17), tabelkop 14px (eerder 13), secundaire tekst 15px (eerder 14). */
+        assert.equal(ty.dag,18,`${L} vakantie: dagkop ${ty.dag}px`);assert.equal(ty.kop,14,`${L} vakantie: tabelkop ${ty.kop}px`);assert.equal(ty.klein,15,`${L} vakantie: secundaire tekst ${ty.klein}px`);
         assert(ty.h1===(breedte>600?36:32),`${L} vakantie: hoofdtitel ${ty.h1}px`);
         assert(ty.introRegels<=(breedte<=320?4:3),`${L} vakantie: introductie is niet compact (${ty.introRegels} regels)`);
         assert(kop.maat<=17&&!kop.serif,`${L} vakantie: toelichting is nog grote seriftekst (${kop.maat}px)`);

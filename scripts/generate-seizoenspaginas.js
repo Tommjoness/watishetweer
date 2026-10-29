@@ -41,7 +41,7 @@ const STIJL=`<style>
 @font-face{font-family:"Instrument Sans";src:url(/instrument-sans-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}@font-face{font-family:"Instrument Sans";src:url(/instrument-sans-latin-500-normal.woff2) format("woff2");font-weight:500 700;font-display:swap}@font-face{font-family:"Bodoni Moda";src:url(/bodoni-moda-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
 :root{--paper:#f4f5f3;--sheet:#fff;--ink:#12211c;--ink-70:#41514b;--muted:#65716c;--rule:#dce1de}
 html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70:#b8b8b8;--muted:#999;--rule:#2a2a2a}
-*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 "Instrument Sans",system-ui,-apple-system,sans-serif;padding:32px 20px}.kaart{max-width:760px;margin:auto;background:var(--sheet);border:1px solid var(--rule);padding:32px}h1{font:400 36px/1.15 "Bodoni Moda",Georgia,serif;margin:0 0 18px}h2{font-size:17px;margin:30px 0 8px}p{margin:10px 0;color:var(--ink-70)}a{color:inherit}.seizoen-aftel-kop{margin:0 0 6px;font-size:21px;line-height:1.25;font-weight:600}h2{font-size:18px;line-height:1.3}main .seizoen-dag h3{font-size:17px;line-height:1.35;font-weight:600}main .seizoen-dag thead th{font-size:13px}.seizoen-later{font-size:14px;color:var(--muted)}.seizoen-aftellen.tekst{font:inherit;color:var(--ink-70);margin:0 0 6px}.seizoen-fout-blok .seizoen-fout{margin-bottom:0}.seizoen-opnieuw{display:block;margin-top:8px;min-height:44px;padding:8px 16px;font:inherit;color:var(--ink);background:transparent;border:1px solid var(--ink);cursor:pointer}.klein{color:var(--muted);font-size:14px}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 "Instrument Sans",system-ui,-apple-system,sans-serif;padding:32px 20px}.kaart{max-width:760px;margin:auto;background:var(--sheet);border:1px solid var(--rule);padding:32px}h1{font:400 36px/1.15 "Bodoni Moda",Georgia,serif;margin:0 0 18px}h2{font-size:17px;margin:30px 0 8px}p{margin:10px 0;color:var(--ink-70)}a{color:inherit}.seizoen-aftel-kop{margin:0 0 6px;font-size:21px;line-height:1.25;font-weight:600}h2{font-size:18px;line-height:1.3}main .seizoen-dag h3{font-size:18px;line-height:1.35;font-weight:600}main .seizoen-dag thead th{font-size:14px;line-height:1.4}.seizoen-later{font-size:14px;color:var(--muted)}.seizoen-aftellen.tekst{font:inherit;color:var(--ink-70);margin:0 0 6px}.seizoen-fout-blok .seizoen-fout{margin-bottom:0}.seizoen-opnieuw{display:block;margin-top:8px;min-height:44px;padding:8px 16px;font:inherit;color:var(--ink);background:transparent;border:1px solid var(--ink);cursor:pointer}.klein{color:var(--muted);font-size:15px;line-height:1.5}
 .seizoen-status{margin:22px 0 0;padding:18px 0 4px;border-top:1px solid var(--rule)}
 .seizoen-aftellen{font:400 24px/1.25 "Bodoni Moda",Georgia,serif;color:var(--ink);margin:0 0 6px}
 .seizoen-aftellen.groot{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 14px}
@@ -51,7 +51,7 @@ html[data-thema="donker"]{--paper:#0a0a0a;--sheet:#141414;--ink:#ededed;--ink-70
 .seizoen-dag h3{font-size:15px;font-weight:500;margin:0 0 6px;color:var(--ink)}
 .seizoen-dag h3 span{font-weight:400;color:var(--muted);white-space:nowrap}
 .seizoen-dag .sub{color:var(--muted)}
-.seizoen-dag table{width:100%;border-collapse:collapse;font-size:15px}
+.seizoen-dag table{width:100%;border-collapse:collapse;font-size:16px;line-height:1.45}
 .seizoen-dag th,.seizoen-dag td{text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 .seizoen-dag thead th{font-size:12px;font-weight:500;color:var(--muted);padding-top:0}
 .seizoen-dag tbody th{font-weight:500;color:var(--ink)}
@@ -91,7 +91,8 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .kaart.breed{max-width:1080px;padding:36px clamp(22px,4.5vw,48px)}
 .breed p,.breed h2,.breed .seizoen-perioden{max-width:43rem}
 .breed .seizoen-dag .officieel{font-size:13px}
-.breed .seizoen-later,.breed .klein{font-size:14px;line-height:1.55}
+.breed .seizoen-later{font-size:14px;line-height:1.55}
+.breed .klein{font-size:15px;line-height:1.55}
 .breed .seizoen-dag thead th{letter-spacing:.02em}
 /* Vakantiepagina's: vanaf een brede kaart staan de dagen in twee kolommen naast elkaar (het balkje
    blijft in zijn eigen kolom, afspraak eigenaar 14 oktober). Andere pagina's tonen de dagen onder elkaar. */

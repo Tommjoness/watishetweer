@@ -21,7 +21,11 @@ for(const p of htmlBestanden(OUT)){
   const blok=html.slice(html.indexOf(`id="${STYLE_ID}"`),html.indexOf("</style>",html.indexOf(`id="${STYLE_ID}"`)));
   const maten=[...blok.matchAll(/font-size:([\d.]+)px/g)].map(m=>Number(m[1]));
   assert(maten.length>=8&&maten.every(m=>m>=12),rel+": leesbaarheidslaag bevat een maat onder 12px ("+maten.join(",")+")");
+  /* Typografie-ronde 29 oktober 2026: de rolmaten staan als tokens (--wiw-t-*), per schermklasse één keer; ook die zijn betekenisdragend. */
+  const tokens=[...blok.matchAll(/--wiw-t-[a-z]+:([\d.]+)px/g)].map(m=>Number(m[1]));
+  assert(tokens.length>=30&&tokens.every(m=>m>=12),rel+": rolmaten (--wiw-t-*) ontbreken of staan onder 12px ("+tokens.join(",")+")");
+  assert(!/--wiw-t-kop:(?!18px|20px)/.test(blok),rel+": sectiekop heeft een onverwachte maat");
   gezien++;
 }
 assert(gezien>=100,"te weinig weerpagina's met de leesbaarheidslaag: "+gezien);
-console.log(`Leesbaarheidslaag geverifieerd op ${gezien} weerpagina's: één keer, na de kleurlaag en vóór de voetlaag, geen maat onder 12px.`);
+console.log(`Leesbaarheidslaag geverifieerd op ${gezien} weerpagina's: één keer, na de kleurlaag en vóór de voetlaag, geen maat onder 12px en alle rolmaten (--wiw-t-*) minstens 12px.`);

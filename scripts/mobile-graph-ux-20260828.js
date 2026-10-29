@@ -1369,21 +1369,27 @@ function koppelTijdAanTemperatuur(){
    telefoongrafiek wordt verkleind getekend, de desktop- en tabletgrafiek op
    ware grootte met uurtijden van 9,2px. Draait vóór het plaatsen van labels,
    zodat de botsingscontroles met de echte maat rekenen. */
-/* Op een breed scherm (vanaf 1440px) staat de grafiek naast de uurtabel in een
-   kolom waarin de rest van de pagina groter is gezet: daar is grafiektekst 15%
-   groter en minimaal 13 css-pixels. Rekent vanaf de oorspronkelijke grootte,
-   zodat herhaalde rondes niet steeds verder vergroten. */
-const GRAFIEK_BREED_PX=1440,GRAFIEK_BREED_MIN_PX=13,GRAFIEK_BREED_FACTOR=1.15;
+/* Op een tablet (vanaf 760px) en breed scherm (vanaf 1100px) staat de grafiek in een kolom waarin de rest van de pagina groter
+   is gezet (typografie-ronde 29 oktober 2026, live-audit 646673f: standaardgrafiek stond effectief op 12,1px). Daar is
+   grafiektekst minimaal 13 (tablet) of 14 (desktop) css-pixels op het scherm, de temperaturen bij de punten 15% groter dan hun
+   basis maar niet groter dan 16 css-pixels, en alle tekst 15% groter dan zijn basis voor zover dat onder het maximum blijft.
+   Een grotere tekst die al groter was (zoals de waarden op een geselecteerde dag) blijft op zijn maat: er wordt alleen verhoogd.
+   Rekent vanaf de oorspronkelijke grootte, zodat herhaalde rondes niet steeds verder vergroten. */
+const GRAFIEK_BREED_PX=1100,GRAFIEK_BREED_MIN_PX=14,GRAFIEK_TABLET_PX=760,GRAFIEK_TABLET_MIN_PX=13,GRAFIEK_BREED_FACTOR=1.15,GRAFIEK_BREED_MAX_PX=16;
+function grafiekBreedMinPx(breedte){const w=Number(breedte);return w>=GRAFIEK_BREED_PX?GRAFIEK_BREED_MIN_PX:w>=GRAFIEK_TABLET_PX?GRAFIEK_TABLET_MIN_PX:0;}
 function maakGrafiekTekstLeesbaar(){
   const svg=document.getElementById("chart");if(!svg)return;
-  const breed=typeof window!=="undefined"&&window.innerWidth>=GRAFIEK_BREED_PX&&!(S.geo&&S.geo.M);
+  const minBreed=typeof window!=="undefined"&&!(S.geo&&S.geo.M)?grafiekBreedMinPx(window.innerWidth):0;
   const vb=svg.viewBox&&svg.viewBox.baseVal,schaal=vb&&vb.width&&svg.getBoundingClientRect().width?svg.getBoundingClientRect().width/vb.width:1;
   svg.querySelectorAll("text[font-size]").forEach(el=>{
     if(el.closest("#scrub"))return;
     if(!el.hasAttribute("data-basis-font-size"))el.setAttribute("data-basis-font-size",el.getAttribute("font-size"));
     const basis=Number(el.getAttribute("data-basis-font-size")),fs=Number(el.getAttribute("font-size"));if(!Number.isFinite(fs)||fs<=0||!Number.isFinite(basis)||basis<=0)return;
     let doel=leesbareGrootte(svg,basis);
-    if(breed)doel=Math.max(doel,Math.round(basis*GRAFIEK_BREED_FACTOR*10)/10,Math.ceil(GRAFIEK_BREED_MIN_PX/schaal*10)/10);
+    if(minBreed){
+      const vergroot=Math.min(Math.round(basis*GRAFIEK_BREED_FACTOR*10)/10,Math.floor(GRAFIEK_BREED_MAX_PX/schaal*10)/10);
+      doel=Math.max(doel,vergroot,Math.ceil(minBreed/schaal*10)/10);
+    }
     if(doel>fs)el.setAttribute("font-size",String(doel));
   });
 }

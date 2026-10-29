@@ -70,7 +70,8 @@ try{
     if(Math.abs(Number(v(prefix+'-panel-height'))-Number(v(prefix+'-main-height')))>1)throw new Error(`${prefix}: tabel en grafiekhoogte sluiten niet aan (${v(prefix+'-panel-height')} vs ${v(prefix+'-main-height')})`);
     const aandeel=Number(v(prefix+'-main-width'))/(Number(v(prefix+'-main-width'))+Number(v(prefix+'-panel-width')));
     if(!(aandeel>=.65&&aandeel<=.72))throw new Error(`${prefix}: grafiekaandeel ${aandeel.toFixed(3)} buiten 65–72%`);
-    if(Number(v(prefix+'-row-min'))<29||Number(v(prefix+'-row-max'))>46)throw new Error(`${prefix}: uurregels zijn te smal of te ruim (${v(prefix+'-row-min')}–${v(prefix+'-row-max')}px)`);
+    /* Bovengrens 50px (eerder 46px): sinds de typografie-ronde van 29 oktober 2026 staan de waarden op 16px en 14px, waardoor de hoogtegestuurde spreiding (+80px grafiekhoogte over maximaal 11 uren) rijen tot ruim 48px geeft. */
+    if(Number(v(prefix+'-row-min'))<29||Number(v(prefix+'-row-max'))>50)throw new Error(`${prefix}: uurregels zijn te smal of te ruim (${v(prefix+'-row-min')}–${v(prefix+'-row-max')}px)`);
     if(v(prefix+'-overflow')!=='visible')throw new Error(`${prefix}: interne desktopscrollbar is niet uitgeschakeld (${v(prefix+'-overflow')})`);
     if(v(prefix+'-panel-title')!=='Komende uren')throw new Error(`${prefix}: uurtitel is niet Komende uren`);
     if(v(prefix+'-panel-visibility')!=='visible')throw new Error(`${prefix}: rijke uurkolom is niet zichtbaar (${v(prefix+'-panel-visibility')})`);
@@ -118,7 +119,10 @@ try{
     if(Number(v('overflow'))>2)throw new Error(`${w}px: ${v('overflow')}px horizontale overflow`);
     if(v('marker')!=='absent')throw new Error(`${w}px: EERSTVOLGEND is nog zichtbaar`);
     if(w>=1100){
-      const n=Number(v('rows'));if(!(n>=8&&n<=24))throw new Error(`${w}px: ${n} volledige desktopregels, verwacht 8–24`);
+      /* Ondergrens 7 uren onder 1600px (eerder 8): de gestapelde regels hebben sinds de typografie-ronde van 29 oktober 2026 16px en 14px
+         tekst (circa 48px per uur); de tabel toont zoveel volledige uren als naast de grafiek passen, de rest blijft bereikbaar via de
+         grafiek en de alternatieve tabel. Vanaf 1600px staan de uren op één regel en blijven het er minstens 8. */
+      const n=Number(v('rows')),minRijen=w>=1600?8:7;if(!(n>=minRijen&&n<=24))throw new Error(`${w}px: ${n} volledige desktopregels, verwacht ${minRijen}–24`);
       if(v('first')!=='14:00')throw new Error(`${w}px: eerste tabeluur ${v('first')} i.p.v. 14:00`);
       if(v('internal-overflow')!=='visible')throw new Error(`${w}px: interne desktopscrollbar niet uitgeschakeld (${v('internal-overflow')})`);
       if(v('fits')!=='ok')throw new Error(`${w}px: onderste uurregel valt buiten het paneel`);

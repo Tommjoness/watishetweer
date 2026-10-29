@@ -90,7 +90,7 @@ function meet(){
               [zon[0],zon[1]].forEach(t=>assert.ok(tekst.includes(t),`${L}: tijd ${t} ontbreekt in de zon-labels (${tekst})`));
               assert.ok(r.zon.length>=1&&r.zon.length<=2,`${L}: ${r.zon.length} zon-labels`);
               r.zon.forEach(z=>{
-                const min=breedte>=1440?13:11;
+                const min=breedte>=1100?14:breedte>=760?13:11; /* typografie-ronde 29 oktober 2026: grafiektekst effectief 14px (desktop) en 13px (tablet) */
                 assert.ok(z.px>=min-0.2,`${L}: zon-label "${z.t}" is ${z.px.toFixed(2)}px (minimaal ${min}px)`);
                 assert.ok(z.l>=r.svgL-0.5&&z.r<=r.svgR+0.5,`${L}: zon-label "${z.t}" valt buiten de grafiek`);
               });
@@ -98,14 +98,17 @@ function meet(){
               else if(r.zon.some(z=>z.plaatsing==="omgeklapt"))omgeklapt++;
               else ongemoeid++;
             }
-            /* Een dag zonder botsing blijft zoals getekend: zon op 07:25 en zon onder 17:22 liggen vanaf 768px minstens 60px uit elkaar. */
-            if(zon[0]==="07:25"&&breedte>=768)assert.ok(r.zon.every(z=>!z.plaatsing),`${L}: labels zonder botsing zijn niet verplaatst`);
+            /* Een dag zonder botsing blijft zoals getekend. Zon op 07:25 en zon onder 17:22 liggen op een grafiek van minstens 640px breed
+               ruim uit elkaar, ook met de labels op 14px (op 768 en 1280px is de grafiek ruim 700px). Tussen 1100 en ongeveer 1200px staat de
+               grafiek naast een bredere uurtabel en is ze maar ruim 500px breed: daar botsen de grotere labels wel en klapt het eerste label om
+               (dat bewaakt hierboven de eis dat geen enkel tekstpaar overlapt). */
+            if(zon[0]==="07:25"&&breedte>=768&&(r.svgR-r.svgL)>=640)assert.ok(r.zon.every(z=>!z.plaatsing),`${L}: labels zonder botsing zijn niet verplaatst`);
             assert.deepEqual(fouten,[],`${L}: scriptfouten`);
             n++;
           }finally{await context.close();}
         }
       }finally{srv.close();}
     }
-    console.log(`Zon-labels: ${n} situaties (8 daglengtes × NL/EN × 320 tot 1920px): geen overlappende grafiekteksten, beide tijden zichtbaar, lettergrootte niet kleiner dan 11px (13px vanaf 1440px); ${omgeklapt} keer een label omgeklapt, ${samengevoegd} keer samengevoegd, ${ongemoeid} keer ongemoeid.`);
+    console.log(`Zon-labels: ${n} situaties (8 daglengtes × NL/EN × 320 tot 1920px): geen overlappende grafiekteksten, beide tijden zichtbaar, lettergrootte niet kleiner dan 11px (13px vanaf 760px en 14px vanaf 1100px); ${omgeklapt} keer een label omgeklapt, ${samengevoegd} keer samengevoegd, ${ongemoeid} keer ongemoeid.`);
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1);});

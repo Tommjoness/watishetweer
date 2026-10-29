@@ -163,6 +163,18 @@ function etmaalExtraTemperaturenWeg(temperaturen,gelabeldeIndices,rasterStap){
    de breedte van de grafiek geschaald; de factor maakt de hele doos (rechthoek, teksten, scheidingslijn)
    precies groot genoeg. Naar boven afgerond op drie decimalen, zodat de uitkomst nooit net onder de grens valt. */
 const TOOLTIP_MIN_PX=12;
+/* Typografie-ronde 29 oktober 2026 (live-audit 646673f: tooltip effectief 12,0 tot 12,6px): op een tablet (vanaf 760px) minimaal
+   13px en op desktop (vanaf 1100px) minimaal 14px, met de tijd bovenin op 15 respectievelijk 16px. Smaller dan 760px blijft
+   de ondergrens 12px en blijft de tijd zoals de tekening hem zet; tot en met 429px is er de informatiestrook. */
+const TOOLTIP_MIN_TABLET_PX=13,TOOLTIP_MIN_DESKTOP_PX=14,TOOLTIP_TIJD_TABLET_PX=15,TOOLTIP_TIJD_DESKTOP_PX=16;
+function tooltipMinPx(viewportBreedte){
+  const w=eindig(viewportBreedte);
+  return w!==null&&w>=1100?TOOLTIP_MIN_DESKTOP_PX:w!==null&&w>=760?TOOLTIP_MIN_TABLET_PX:TOOLTIP_MIN_PX;
+}
+function tooltipTijdPx(viewportBreedte){
+  const w=eindig(viewportBreedte);
+  return w!==null&&w>=1100?TOOLTIP_TIJD_DESKTOP_PX:w!==null&&w>=760?TOOLTIP_TIJD_TABLET_PX:null;
+}
 function tooltipSchaalFactor(kleinsteFont,pxPerEenheid,minPx){
   const f=eindig(kleinsteFont),p=eindig(pxPerEenheid),m=eindig(minPx);
   if(f===null||p===null||m===null||f<=0||p<=0||m<=0) return 1;
@@ -187,7 +199,7 @@ function tooltipDoosPlaatsing(doos,punt,veld,k){
 const api={
   tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan,
   dauwpuntCelsius,luchtvochtigheidDuiding,temperatuurProminentie,etmaalExtraTemperaturenWeg,grafiekPuntBeschrijving,grafiekDagVoorvoegsel,
-  tooltipSchaalFactor,tooltipDoosPlaatsing,TOOLTIP_MIN_PX
+  tooltipSchaalFactor,tooltipDoosPlaatsing,tooltipMinPx,tooltipTijdPx,TOOLTIP_MIN_PX
 };
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowPolishV2=api;
@@ -364,8 +376,12 @@ function schaalSvgTooltip(g,svg){
   if(!rect||!teksten.length||!vb||!vb.width||!br.width) return;
   const fonts=teksten.map(e=>eindig(e.getAttribute("font-size"))).filter(v=>v!==null&&v>0);
   if(!fonts.length) return;
-  const k=tooltipSchaalFactor(Math.min(...fonts),br.width/vb.width,TOOLTIP_MIN_PX);
+  const pxPerEenheid=br.width/vb.width;
+  const k=tooltipSchaalFactor(Math.min(...fonts),pxPerEenheid,tooltipMinPx(globalThis.innerWidth));
   if(k===1) return;
+  /* De tijd bovenin krijgt een eigen effectieve maat (tablet 15, desktop 16px), onafhankelijk van de rijtekst. */
+  const tijdPx=tooltipTijdPx(globalThis.innerWidth),kop=g.querySelector('text[data-tip="kop"]');
+  if(kop&&tijdPx!==null){const f=Math.round(tijdPx/(k*pxPerEenheid)*10)/10;if(Number.isFinite(f)&&f>0)kop.setAttribute("font-size",String(f));}
   const lijnen=[...g.querySelectorAll("line")],sep=lijnen.find(l=>l.getAttribute("y1")===l.getAttribute("y2")),kruis=lijnen.find(l=>l!==sep);
   const doos={x:eindig(rect.getAttribute("x")),y:eindig(rect.getAttribute("y")),w:eindig(rect.getAttribute("width")),h:eindig(rect.getAttribute("height"))};
   const puntX=kruis?eindig(kruis.getAttribute("x1")):null,G=S.geo||{};
