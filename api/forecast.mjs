@@ -7,6 +7,15 @@ const UPSTREAM_TIMEOUT_MS = 3000;
 const VISUAL_CROSSING_TIMEOUT_MS = 1600;
 const WEATHERAPI_EMERGENCY_TIMEOUT_MS = 2500;
 const WEATHERAPI_EMERGENCY_HISTORY_TIMEOUT_MS = 400;
+/* Eén gerichte tweede poging bij Visual Crossing: alleen nadat de standaardaanvraag (blended forecast) is afgewezen
+   omdat de verwachting niet volledig is (categorie dekking_afgewezen), met het globale model GFS. Voor locaties
+   waar de blend volledig is, verandert er niets. De uitkomst gaat door dezelfde validatie en 25 km-controle. */
+const VISUAL_CROSSING_FALLBACK_DATASET = "gfs_2";
+/* Totaalbudget van de route: precies de bestaande ongunstigste duur (1,6 s Visual Crossing + 2,5 s WeatherAPI + 0,4 s
+   historie), onder de 5 s die de browser op /api/forecast wacht. Een extra poging mag dat maximum nooit verlengen:
+   iedere volgende aanvraag krijgt hooguit de resterende tijd, en een aanvraag met te weinig tijd wordt overgeslagen. */
+const ROUTE_BUDGET_MS = VISUAL_CROSSING_TIMEOUT_MS + WEATHERAPI_EMERGENCY_TIMEOUT_MS + WEATHERAPI_EMERGENCY_HISTORY_TIMEOUT_MS;
+const MIN_RESTERENDE_TIJD_MS = 300;
 const VISUAL_CROSSING_ELEMENTS = Object.freeze([
   "datetime",
   "datetimeEpoch",
@@ -65,6 +74,7 @@ function foutCategorie(error) {
     if (code >= 500) return "http_5xx";
     return "http_4xx";
   }
+  if (tekst === "Routebudget is op") return "budget_op";
   if (tekst.includes("locatie wijkt af")) return "locatie_afwijking";
   if (tekst.includes("geen volledige zevendaagse") || tekst.includes("onvolledige weerdata") || tekst.includes("geen locatie-timezone")) return "dekking_afgewezen";
   if (naam === "SyntaxError") return "ongeldige_json";
@@ -83,7 +93,7 @@ function paginaType(request) {
   return "onbekend";
 }
 
-function logProviderFout(provider, error, gestartOp, request, opties) {
+function logProviderFout(provider, error, gestartOp, request, opties, dataset = null) {
   try {
     console.warn({
       event: "wiw_forecast_provider_error",
@@ -91,7 +101,8 @@ function logProviderFout(provider, error, gestartOp, request, opties) {
       categorie: foutCategorie(error),
       duration_ms: Math.max(0, Math.round(Date.now() - gestartOp)),
       pagina: paginaType(request),
-      request_id: String(opties && opties.requestId || "")
+      request_id: String(opties && opties.requestId || ""),
+      ...(dataset ? { dataset } : {})
     });
   } catch {}
 }
@@ -153,7 +164,7 @@ function upstreamUrl(pad, key, lat, lon, extra = {}) {
   return url.toString();
 }
 
-function visualCrossingUrl(key, lat, lon) {
+function visualCrossingUrl(key, lat, lon, dataset = null) {
   const locatie = encodeURIComponent(`${lat.toFixed(4)},${lon.toFixed(4)}`);
   const url = new URL(`${VISUAL_CROSSING_ROOT}/${locatie}`);
   url.searchParams.set("key", key);
@@ -163,18 +174,21 @@ function visualCrossingUrl(key, lat, lon) {
   url.searchParams.set("iconSet", "icons2");
   url.searchParams.set("lang", "nl");
   url.searchParams.set("contentType", "json");
+  if (dataset) url.searchParams.set("forecastDataset", dataset);
   return url.toString();
 }
 
-async function haalVisualCrossingForecast(key, lat, lon, signal) {
-  const payload = await haalJson(visualCrossingUrl(key, lat, lon), signal, VISUAL_CROSSING_TIMEOUT_MS);
+async function haalVisualCrossingForecast(key, lat, lon, signal, dataset = null, timeoutMs = VISUAL_CROSSING_TIMEOUT_MS) {
+  const payload = await haalJson(visualCrossingUrl(key, lat, lon, dataset), signal, timeoutMs);
   if (afstandKm(lat, lon, payload && payload.latitude, payload && payload.longitude) > 25) {
     throw new Error("Visual Crossing-locatie wijkt af van de aanvraag");
   }
   return normaliseerVisualCrossing(payload);
 }
 
-async function haalWeatherApiForecast(key, lat, lon, signal, emergency = false) {
+async function haalWeatherApiForecast(key, lat, lon, signal, emergency = false, deadline = null) {
+  const binnenBudget = ms => deadline === null ? ms : Math.min(ms, deadline - Date.now());
+  if (binnenBudget(Infinity) < MIN_RESTERENDE_TIJD_MS) throw new Error("Routebudget is op");
   const forecastUrl = upstreamUrl("/forecast.json", key, lat, lon, {
     days: 7,
     aqi: "no",
@@ -184,19 +198,19 @@ async function haalWeatherApiForecast(key, lat, lon, signal, emergency = false) 
   const forecast = await haalJson(
     forecastUrl,
     signal,
-    emergency ? WEATHERAPI_EMERGENCY_TIMEOUT_MS : UPSTREAM_TIMEOUT_MS
+    binnenBudget(emergency ? WEATHERAPI_EMERGENCY_TIMEOUT_MS : UPSTREAM_TIMEOUT_MS)
   );
   if (afstandKm(lat, lon, forecast && forecast.location && forecast.location.lat, forecast && forecast.location && forecast.location.lon) > 25) {
     throw new Error("WeatherAPI-locatie wijkt af van de aanvraag");
   }
   const gisteren = vorigeDatum(forecast && forecast.location && forecast.location.localtime);
   let history = null;
-  if (gisteren) {
+  if (gisteren && binnenBudget(emergency ? WEATHERAPI_EMERGENCY_HISTORY_TIMEOUT_MS : 1000) > 0) {
     try {
       history = await haalJson(
         upstreamUrl("/history.json", key, lat, lon, { dt: gisteren, lang: "nl" }),
         signal,
-        emergency ? WEATHERAPI_EMERGENCY_HISTORY_TIMEOUT_MS : 1000
+        binnenBudget(emergency ? WEATHERAPI_EMERGENCY_HISTORY_TIMEOUT_MS : 1000)
       );
     } catch (error) {
       if (signal && signal.aborted) throw error;
@@ -226,6 +240,7 @@ export default {
       }, head);
     }
 
+    const deadline = Date.now() + ROUTE_BUDGET_MS;
     if (visualCrossingKey) {
       const gestartOp = Date.now();
       try {
@@ -234,13 +249,27 @@ export default {
       } catch (error) {
         if (request.signal && request.signal.aborted) throw error;
         logProviderFout("visualcrossing", error, gestartOp, request, opties);
+        const gfsTimeout = Math.min(VISUAL_CROSSING_TIMEOUT_MS, deadline - Date.now());
+        if (foutCategorie(error) === "dekking_afgewezen" && gfsTimeout >= MIN_RESTERENDE_TIJD_MS) {
+          const gfsGestartOp = Date.now();
+          try {
+            const body = await haalVisualCrossingForecast(visualCrossingKey, lat, lon, request.signal, VISUAL_CROSSING_FALLBACK_DATASET, gfsTimeout);
+            return json(body, 200, {
+              "X-WIW-Weather-Source": "visualcrossing",
+              "X-WIW-Forecast-Dataset": VISUAL_CROSSING_FALLBACK_DATASET
+            }, head);
+          } catch (gfsError) {
+            if (request.signal && request.signal.aborted) throw gfsError;
+            logProviderFout("visualcrossing", gfsError, gfsGestartOp, request, opties, VISUAL_CROSSING_FALLBACK_DATASET);
+          }
+        }
       }
     }
 
     if (weatherApiKey) {
       const gestartOp = Date.now();
       try {
-        const body = await haalWeatherApiForecast(weatherApiKey, lat, lon, request.signal, Boolean(visualCrossingKey));
+        const body = await haalWeatherApiForecast(weatherApiKey, lat, lon, request.signal, Boolean(visualCrossingKey), visualCrossingKey ? deadline : null);
         return json(body, 200, { "X-WIW-Weather-Source": "weatherapi" }, head);
       } catch (error) {
         if (request.signal && request.signal.aborted) throw error;
@@ -262,6 +291,8 @@ export const _intern = Object.freeze({
   WEATHERAPI_EMERGENCY_TIMEOUT_MS,
   WEATHERAPI_EMERGENCY_HISTORY_TIMEOUT_MS,
   VISUAL_CROSSING_ELEMENTS,
+  VISUAL_CROSSING_FALLBACK_DATASET,
+  ROUTE_BUDGET_MS,
   coordinaat,
   vorigeDatum,
   afstandKm,
