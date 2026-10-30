@@ -182,6 +182,8 @@ html body .chartkop #back:not(#wiw-leesbaarheid){font-size:var(--wiw-t-terug)!im
 }
 @media(min-width:1366px) and (max-width:1599px){
   html body .wiw-chart-layout:not([data-hour-paired="0"]):not(#wiw-leesbaarheid){grid-template-columns:minmax(0,1.9fr) minmax(420px,1fr)!important}
+  /* In de kolom van 420px is de Temperatuur-kop (115px) net te smal voor 14px met .02em letterafstand: .01em houdt hem op de as van zijn waarden. */
+  html body #wiw-hour-table thead th:not(#wiw-leesbaarheid){letter-spacing:.01em!important}
 }
 /* Kolomkoppen van Zeven dagen en Nachtzicht: label, minder letterafstand (op een telefoon blijven ze op hun maat van 12px). */
 @media(min-width:760px){
