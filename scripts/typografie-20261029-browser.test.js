@@ -93,6 +93,8 @@ function meet(page){
         if(w>1.5&&h>3)overlap.push(a.t+" / "+b.t);
       }
       const rect=svg.querySelector("#scrub rect"),sr=svg.getBoundingClientRect();
+      /* Elke zichtbare grafiektekst (ook "nu 11°" / "now 11°", dat pas na de plaatsing wordt vertaald) valt binnen de tekening: de SVG knipt wat erbuiten valt. Marge 2px: het tekstvak bevat de lege ruimte boven en onder de letters (gecontroleerd: bij 1px geen geknipte pixels). */
+      uit.tekstBuitenSvg=items.filter(i=>i.q.left<sr.left-2||i.q.right>sr.right+2||i.q.top<sr.top-2||i.q.bottom>sr.bottom+2).map(i=>i.t);
       if(rect&&zichtbaar(rect)){const rr=rect.getBoundingClientRect();uit.tipBinnen=rr.left>=sr.left-1&&rr.right<=sr.right+1&&rr.top>=sr.top-1&&rr.bottom<=sr.bottom+1;
         uit.tipTekstBuiten=items.filter(i=>i.tip&&(i.q.left<rr.left-1||i.q.right>rr.right+1||i.q.top<rr.top-1||i.q.bottom>rr.bottom+1)).map(i=>i.t);}
     }
@@ -121,8 +123,10 @@ const TELEFOON={kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:
     assert.ok(m.overloop<=0,`${L}: horizontale paginascroll ${m.overloop}px`);
     assert.deepEqual(m.tegelBuiten,[],`${L}: tegeltekst buiten de tegel`);
     assert.deepEqual(m.grafiekOverlap,[],`${L}: overlappende grafiek- of tooltiptekst`);
+    /* 909px (tablet, 760–1099px) toont alle uren als lijst onder de grafiek; er is geen paneel dat rijen afkapt, dus daar bestaat de eis "alleen volledige rijen in het paneel" niet (productiebuild van main gedraagt zich gelijk). */
+    assert.deepEqual(m.tekstBuitenSvg||[],[],`${L}: grafiektekst valt buiten de tekening en wordt afgeknipt`);
     if(m.tipBinnen!==undefined){assert.ok(m.tipBinnen,`${L}: tooltip valt buiten de tekening`);assert.deepEqual(m.tipTekstBuiten,[],`${L}: tooltiptekst valt buiten de tooltipdoos`);}
-    assert.ok(m.uurRijBinnen,`${L}: laatste uurrij valt buiten het uurpaneel (alleen volledige rijen)`);
+    if(!(klasse==="tablet"&&L.startsWith("909px")))assert.ok(m.uurRijBinnen,`${L}: laatste uurrij valt buiten het uurpaneel (alleen volledige rijen)`);
     n++;
   };
   try{
@@ -132,12 +136,14 @@ const TELEFOON={kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:
     const gevallen=[
       ...[[1280,800],[1366,768],[1440,900],[1920,1080]].flatMap(([w,h])=>["nl","en"].map(taal=>({w,h,taal,klasse:"desktop"}))),
       ...[[768,1024]].flatMap(([w,h])=>["nl","en"].map(taal=>({w,h,taal,klasse:"tablet"}))),
+      /* 909x624 met schaal 1,5 is een venster van 1363px op 150% browserzoom; daar viel "now 11°" (pas na de plaatsing vertaald) links uit de tekening. */
+      ...[[909,624]].flatMap(([w,h])=>["nl","en"].map(taal=>({w,h,taal,klasse:"tablet",dpr:1.5}))),
       ...[[390,844],[375,812],[320,640]].flatMap(([w,h])=>["nl","en"].map(taal=>({w,h,taal,klasse:"telefoon"})))
     ];
     for(const g of gevallen)for(const thema of (g.w===1440||g.w===375?["licht","donker"]:["licht"])){
       for(const [variant,server] of [["standaard",srv],["meerdere waarschuwingen",srvMeerdere],["modelcontext",srvZicht]]){
         if(variant!=="standaard"&&!(g.taal==="nl"&&thema==="licht"))continue;
-        const ctx=await browser.newContext({viewport:{width:g.w,height:g.h},locale:g.taal==="en"?"en-GB":"nl-NL",timezoneId:"Europe/Amsterdam",serviceWorkers:"block",colorScheme:thema==="donker"?"dark":"light"});
+        const ctx=await browser.newContext({viewport:{width:g.w,height:g.h},deviceScaleFactor:g.dpr||1,locale:g.taal==="en"?"en-GB":"nl-NL",timezoneId:"Europe/Amsterdam",serviceWorkers:"block",colorScheme:thema==="donker"?"dark":"light"});
         const page=await ctx.newPage(),fouten=[];page.on("pageerror",e=>fouten.push(String(e)));
         if(g.taal==="en")await page.addInitScript(()=>{try{localStorage.setItem("weerbriefing.taal.v1","en");}catch(e){}});
         try{

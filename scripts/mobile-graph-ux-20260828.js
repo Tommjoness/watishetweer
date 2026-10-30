@@ -1736,9 +1736,10 @@ function polishNuLabel(){
       /* De ruimte links van de lijn is smal (de lijn staat vlak naast de
          asgetallen). Het label is DM Mono: iedere letter is hooguit 0,52 em
          breed; de algemene schatting (0,66 em) zou het hier onterecht
-         afwijzen. */
+         afwijzen. De taalvertaling zet "nu 11°" pas na deze plaatsing om in "now 11°" (één teken langer); bij een labelmaat
+         van 13 tot 14px viel dat label dan links buiten de grafiek. Er is dus één teken extra ruimte nodig. */
       nu.setAttribute("text-anchor","end");nu.setAttribute("x",String(lx-3));
-      const fs=Number(nu.getAttribute("font-size"))||11,breed=String(nu.textContent).trim().length*fs*.52;
+      const fs=Number(nu.getAttribute("font-size"))||11,breed=(String(nu.textContent).trim().length+1)*fs*.52;
       const plek=[0,-10,10,-18,18,-26,26].map(d=>sy+fs*.35+d).find(y=>{
         nu.setAttribute("y",String(y));const b={x:lx-3-breed,y:y-fs*.92,width:breed,height:fs*1.18};
         return b.x>=1&&!anderen.some(a=>rechthoekenBotsen(a,b,3))&&!stippen.some(s=>rechthoekenBotsen(s,b,1))&&!lijnen.some(p=>lijnRaaktTekstBox(p,b,1));
