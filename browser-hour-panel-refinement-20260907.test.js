@@ -119,10 +119,11 @@ try{
     if(Number(v('overflow'))>2)throw new Error(`${w}px: ${v('overflow')}px horizontale overflow`);
     if(v('marker')!=='absent')throw new Error(`${w}px: EERSTVOLGEND is nog zichtbaar`);
     if(w>=1100){
-      /* Ondergrens 7 uren onder 1600px (eerder 8): de gestapelde regels hebben sinds de typografie-ronde van 29 oktober 2026 16px en 14px
-         tekst (circa 48px per uur); de tabel toont zoveel volledige uren als naast de grafiek passen, de rest blijft bereikbaar via de
-         grafiek en de alternatieve tabel. Vanaf 1600px staan de uren op één regel en blijven het er minstens 8. */
-      const n=Number(v('rows')),minRijen=w>=1600?8:7;if(!(n>=minRijen&&n<=24))throw new Error(`${w}px: ${n} volledige desktopregels, verwacht ${minRijen}–24`);
+      /* Typografie-ronde 29 oktober 2026: de gestapelde regels hebben 16px en 14px tekst (circa 48px per uur), dus passen er minder
+         volledige uren naast de grafiek. Gemeten in dit Chrome-venster (viewport korter dan in Playwright): main 8 uur op 1366px, nu 7.
+         Alleen die ene breedte krijgt daarom 7; elke andere breedte houdt de oude eis van minstens 8. De werkelijke aantallen per
+         viewport (1100: 7, 1280 tot 1366: 8, 1440: 10, vanaf 1600: 14) borgt scripts/typografie-20261029-browser.test.js. */
+      const MIN_RIJEN={1366:7},n=Number(v('rows')),minRijen=MIN_RIJEN[w]||8;if(!(n>=minRijen&&n<=24))throw new Error(`${w}px: ${n} volledige desktopregels, verwacht ${minRijen}–24`);
       if(v('first')!=='14:00')throw new Error(`${w}px: eerste tabeluur ${v('first')} i.p.v. 14:00`);
       if(v('internal-overflow')!=='visible')throw new Error(`${w}px: interne desktopscrollbar niet uitgeschakeld (${v('internal-overflow')})`);
       if(v('fits')!=='ok')throw new Error(`${w}px: onderste uurregel valt buiten het paneel`);

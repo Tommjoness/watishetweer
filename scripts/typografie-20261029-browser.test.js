@@ -107,6 +107,14 @@ function meet(page){
 }
 
 /* Verwachte maten per schermklasse (computed voor HTML, effectief voor SVG). */
+/* Werkelijk aantal volledige uurrijen per desktopviewport en taal (Amsterdam, start, 29 oktober 2026). Main stond op nl/en: 1100: 9/8,
+   1280 tot 1366: 10/10, 1440: 12/12, 1920: 14/14. De tabel toont zoveel volledige uren als naast de grafiek passen; 1363x936 is de door de
+   eigenaar goedgekeurde situatie (8 volledige rijen). Op 1920px staan de uren op één regel; in het Engels past "0.6 mm 60% chance"
+   (55 + 90px) niet meer in zijn kolom van 145px (paneel 496px), zodat de regel afbreekt en er 9 rijen passen (bekende beperking).
+   Een lager aantal dan hier is een regressie. Eén keer op ongeveer twaalf keer laden is het paneel 24px lager en staat er een rij minder
+   (gemeten op 1440px: main 11 i.p.v. 12, nu 9 i.p.v. 10; bestaand en niet door de typografie veroorzaakt); daarom wordt een te laag aantal
+   maximaal twee keer opnieuw geladen en faalt de test pas als ook die keren onder het minimum blijven. */
+const MIN_UURRIJEN={1100:{nl:7,en:7},1280:{nl:8,en:8},1363:{nl:8,en:8},1366:{nl:8,en:8},1440:{nl:10,en:10},1920:{nl:14,en:9}};
 const DESKTOP={kop:20,label:14,uitleg:15,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:14,uurtijd:16,uurprim:16,uursec:14,uurdatum:14,dagkop:14,altth:14,alttd:15,terug:14};
 const TABLET={kop:18,label:13,uitleg:14,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:13,uurtijd:15,terug:14,altth:13,alttd:15};
 const TELEFOON={kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:14,terug:13};
@@ -134,7 +142,7 @@ const TELEFOON={kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:
     const srvMeerdere=bouwServer({waarschuwing:MEERDERE});await new Promise(r=>srvMeerdere.listen(0,"127.0.0.1",r));
     const srvZicht=bouwServer({bouw:{zicht:400,tempNu:-3,temp:()=>-3}});await new Promise(r=>srvZicht.listen(0,"127.0.0.1",r));
     const gevallen=[
-      ...[[1280,800],[1366,768],[1440,900],[1920,1080]].flatMap(([w,h])=>["nl","en"].map(taal=>({w,h,taal,klasse:"desktop"}))),
+      ...[[1100,800],[1280,800],[1363,936],[1366,768],[1440,900],[1920,1080]].flatMap(([w,h])=>["nl","en"].map(taal=>({w,h,taal,klasse:"desktop"}))),
       ...[[768,1024]].flatMap(([w,h])=>["nl","en"].map(taal=>({w,h,taal,klasse:"tablet"}))),
       /* 909x624 met schaal 1,5 is een venster van 1363px op 150% browserzoom; daar viel "now 11°" (pas na de plaatsing vertaald) links uit de tekening. */
       ...[[909,624]].flatMap(([w,h])=>["nl","en"].map(taal=>({w,h,taal,klasse:"tablet",dpr:1.5}))),
@@ -161,7 +169,13 @@ const TELEFOON={kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:
               const minGrafiek=g.klasse==="desktop"?14:13;
               assert.ok(m.maten.grafiek&&m.maten.grafiek.min>=minGrafiek-0.05,`${L}: grafiektekst effectief ${m.maten.grafiek&&m.maten.grafiek.min}px (minimaal ${minGrafiek}px)`);
             }
-            if(g.klasse==="desktop")assert.ok(m.uurRijen>=7,`${L}: de uurtabel toont ${m.uurRijen} volledige rijen`);
+            if(g.klasse==="desktop"){
+              for(let poging=0;poging<2&&m.uurRijen<MIN_UURRIJEN[g.w][g.taal];poging++){
+                await page.reload({waitUntil:"networkidle"});await page.waitForSelector("#wiw-hour-table tbody tr",{timeout:20000});await page.waitForTimeout(1200);
+                m=await meet(page);
+              }
+            }
+            if(g.klasse==="desktop")assert.ok(m.uurRijen>=MIN_UURRIJEN[g.w][g.taal],`${L}: de uurtabel toont ${m.uurRijen} volledige rijen (minimaal ${MIN_UURRIJEN[g.w][g.taal]} op deze viewport)`);
             for(const [naam,toets] of [["tooltip","ArrowRight"],["tooltip links","Home"],["tooltip rechts","End"]]){
               if(g.klasse==="telefoon")break; /* tot en met 429px is er de informatiestrook; de SVG-tooltip is daar verborgen */
               await page.evaluate(()=>{const h=document.getElementById("hit");if(h){h.scrollIntoView({block:"center"});h.focus();}});
@@ -186,5 +200,5 @@ const TELEFOON={kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:
     }
     srv.close();srvMeerdere.close();srvZicht.close();
   }finally{await browser.close();}
-  console.log(`Typografie 29 oktober 2026: ${n} situaties (desktop 1280 tot 1920px, tablet 768px, telefoon 375 en 320px; NL/EN; licht/donker; meerdere waarschuwingen en modelcontext): rolmaten (computed, voor SVG effectief), tooltip 14px en tijd 16px aan beide randen, geen paginascroll, geen tegeltekst buiten de tegel, geen overlappende grafiektekst en alleen volledige uurrijen.`);
+  console.log(`Typografie 29 oktober 2026: ${n} situaties (desktop 1100 tot 1920px, tablet 768px, telefoon 375 en 320px; NL/EN; licht/donker; meerdere waarschuwingen en modelcontext): rolmaten (computed, voor SVG effectief), tooltip 14px en tijd 16px aan beide randen, geen paginascroll, per viewport en taal minstens het gemeten aantal volledige uurrijen, geen tegeltekst buiten de tegel, geen overlappende grafiektekst en alleen volledige uurrijen.`);
 })().catch(e=>{console.error(e);process.exit(1);});
