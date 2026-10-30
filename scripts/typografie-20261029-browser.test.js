@@ -158,7 +158,8 @@ const TELEFOON={kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:
           await page.goto(`http://127.0.0.1:${server.address().port}/?lat=52.3676&lon=4.9041&plaats=Amsterdam&land=NL`,{waitUntil:"networkidle"});
           await page.waitForSelector("#wiw-hour-table tbody tr",{timeout:20000});await page.waitForTimeout(1200);
           /* Telefoon: tegellabels 13px vanaf 380px, daaronder 12px ("LUCHTVOCHTIGHEID" valt anders niet in zijn tegel). */
-          const verwacht=g.klasse==="desktop"?DESKTOP:g.klasse==="tablet"?TABLET:{...TELEFOON,label:g.w>=380?13:12};
+          /* Van 1100 tot 1200px staan de labels (tegels, uurtabel, kolomkoppen, alternatieve tabel) op 13px: op 14px stak "LUCHTVOCHTIGHEID" er 5px buiten zijn tegel. */
+          const verwacht=g.klasse==="desktop"?(g.w<1200?{...DESKTOP,label:13,uurkop:13,dagkop:13,altth:13}:DESKTOP):g.klasse==="tablet"?TABLET:{...TELEFOON,label:g.w>=380?13:12};
           const L=`${g.w}px ${g.taal} ${thema} ${variant}`;
           /* uitgangssituatie, daarna tooltip in het midden en aan beide randen, geopende alternatieve tabel, gekozen dag */
           let m=await meet(page);
@@ -189,7 +190,7 @@ const TELEFOON={kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:
             }
             if(g.klasse==="desktop"){
               await page.evaluate(()=>{const s=document.querySelector("#chartdata summary");if(s&&!s.parentElement.open)s.click();});await page.waitForTimeout(400);
-              m=await meet(page);controleer(`${L} [tabel]`,g.klasse,m,{altth:14,alttd:15});
+              m=await meet(page);controleer(`${L} [tabel]`,g.klasse,m,{altth:g.w<1200?13:14,alttd:15});
               await page.evaluate(()=>{const r=document.querySelector("#days .row.day:not(.kop)");if(r)(r.querySelector("button,[role=button]")||r).click();});await page.waitForTimeout(800);
               m=await meet(page);assert.ok(m.maten.terug,`${L}: terugknop ontbreekt na dagselectie`);controleer(`${L} [dag]`,g.klasse,m,{terug:14,kop:20});
             }
