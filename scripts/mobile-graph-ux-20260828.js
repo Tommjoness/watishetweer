@@ -1390,7 +1390,11 @@ function maakGrafiekTekstLeesbaar(){
       const vergroot=Math.min(Math.round(basis*GRAFIEK_BREED_FACTOR*10)/10,Math.floor(GRAFIEK_BREED_MAX_PX/schaal*10)/10);
       doel=Math.max(doel,vergroot,Math.ceil(minBreed/schaal*10)/10);
     }
-    if(doel>fs)el.setAttribute("font-size",String(doel));
+    if(doel>fs){
+      el.setAttribute("font-size",String(doel));
+      /* De zon-op/zon-onder-labels hangen met hun grondlijn boven de nachtband; een grotere letter steekt dan boven de tekening uit. De grondlijn zakt mee zodat de bovenkant gelijk blijft. */
+      if(el.hasAttribute("data-zon-label")&&el.hasAttribute("y")){const y=Number(el.getAttribute("y"));if(Number.isFinite(y))el.setAttribute("y",String(Math.round((y+(doel-fs)*.95)*10)/10));}
+    }
   });
 }
 

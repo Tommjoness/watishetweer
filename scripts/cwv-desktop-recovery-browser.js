@@ -233,7 +233,9 @@ async function run(){
           assert.equal(Date.parse(result.graphTimes.at(-1)+"Z")-Date.parse(result.graphTimes.at(-2)+"Z"),3600000,"opeenvolgende grafiekpunten moeten exact één uur verschillen");
           assert.equal(result.placeLayout.justify,"flex-start","plaats en tijd staan als compacte kopgroep op de linkerlijn van de h1");
           assert(result.placeLayout.gap>=12&&result.placeLayout.gap<=24,"afstand plaats/tijd buiten compacte band");
-          if(width>=1366)assert(result.rows>=8&&result.rows<=24,"desktop toont geen 8–24 volledige hoogtegestuurde uurregels");
+          /* Typografie-ronde 29 oktober 2026: 16px en 14px uurregels (circa 48px); vanaf 1440px blijven het er minstens 8, bij 1366px (viewport 1366x1000, zonder
+   waarschuwing) passen er 7 (main 9 tot 10; in de Amsterdam-fixture 8). */
+          if(width>=1366){const minRijen=width>=1440?8:7;assert(result.rows>=minRijen&&result.rows<=24,"desktop toont geen "+minRijen+"–24 volledige hoogtegestuurde uurregels");}
           if(width>=1366){
             const grafiekAandeel=g.main.width/(g.main.width+g.hours.width);
             assert(grafiekAandeel>=.65&&grafiekAandeel<=.72,"grafiek/tabelverhouding valt buiten 65–72% / 28–35%");
@@ -253,7 +255,10 @@ async function run(){
           assert.equal(result.rainVisible,false,"korte neerslagsectie is nog zichtbaar");
           assert.equal(result.chartDataVisible,false,"grafiektabelbediening is nog zichtbaar");
           assert.equal(result.hourOverflow,"visible");assert.equal(result.hourPanelVisibility,"visible","rijke uurkolom is niet zichtbaar");assert.equal(result.hourButtons,0,"geen extra uurbediening");
-          for(const r of result.hourRows){assert(r.visible);assert(r.rect.height>=29&&r.rect.height<=46,"uurregel valt buiten comfortabele hoogte: "+JSON.stringify({route,width,hoogte:r.rect.height,rijen:result.rows}));assert(r.rect.bottom<=g.hours.bottom+1,"geen afgesneden laatste uurregel");}
+          /* Typografie-ronde 29 oktober 2026: de uurregels hebben 16px en 14px tekst en de hoogtegestuurde spreiding verdeelt de paneelhoogte over
+             minder rijen. Gemeten (main eerder): 1100px 43px, 1280 tot 1366px 39px; nu 1100 px 57px (6 rijen), 1200px 55px, 1280 tot 1366px 48px, vanaf 1440px
+             44 tot 48px. De bovengrens staat daarom op 60px onder 1200px en op 50px daarboven (was overal 46px). */
+          for(const r of result.hourRows){assert(r.visible);assert(r.rect.height>=29&&r.rect.height<=(width<1200?60:50),"uurregel valt buiten comfortabele hoogte: "+JSON.stringify({route,width,hoogte:r.rect.height,rijen:result.rows}));assert(r.rect.bottom<=g.hours.bottom+1,"geen afgesneden laatste uurregel");}
           if(result.nightCells.length===5){assert(result.nightCells[2].width<=261,"Nachtzicht-scorebalk is nog onnodig breed");assert(result.nightCells[4].width<=481,"Nachtzicht-toelichting is niet leesbaar begrensd");}
           for(let i=1;i<result.hourRows.length;i++){
             assert.equal(Date.parse(result.hourRows[i].instant)-Date.parse(result.hourRows[i-1].instant),3600000,"unieke opeenvolgende instants, ook bij gelijke DST-labels");

@@ -272,7 +272,9 @@ function verwacht(m){
           assert.deepEqual(m.opStaaf,[],label+": grafiektekst staat op een neerslagstaaf");
           if(m.compact){const ver=m.ankerAfstand.filter(a=>a.px>22);assert.deepEqual(ver,[],label+": ankercijfer staat meer dan 22px van zijn punt");}
           if(w<760)assert.equal(m.missing,"",label+": drie-uursanker zonder temperatuur ("+m.missing+")");
-          assert(m.nuAfstand!==null&&m.nuAfstand<=26,label+": het nu-label staat "+m.nuAfstand+" van de rode stip");
+          /* Vanaf 1100px mag het nu-label, rechts van de nu-lijn geplaatst (grotere grafiektekst, akkoord eigenaar 30 oktober 2026), onder de stip hangen: maximaal 40px
+             (in het scenario avondregen 32px, naast de rode lijn en zonder andere tekst te raken). Op kleinere schermen blijft 26px de grens. */
+          assert(m.nuAfstand!==null&&m.nuAfstand<=(w>=1100?40:26),label+": het nu-label staat "+m.nuAfstand+" van de rode stip");
           /* Tablet en desktop: de uuras loopt om de drie uur, zonder extra tijd
              bij piek of dal. */
           if(!m.compact&&!m.iederUur){

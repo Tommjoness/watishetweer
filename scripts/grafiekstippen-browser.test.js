@@ -152,11 +152,14 @@ function meet(){
                "16°" leest als een dubbeling (eigenaar, 2 oktober). */
             const hoogte=r.height||14,midden=(r.top+r.bottom)/2;
             const stapel=t.filter(e=>e!==nu&&/^-?\d+°$/.test(e.textContent.trim())).filter(e=>{const b=e.getBoundingClientRect();return b.right<=lr.left+0.5&&Math.abs((b.top+b.bottom)/2-midden)<hoogte*1.6;}).map(e=>e.textContent.trim());
-            return {links:r.right<=lr.left+0.5,raakt,stapel,svgLinks:r.left>=svg.getBoundingClientRect().left-0.5};});
-          assert(nu&&nu.links,label+": het nu-label staat niet links van de rode nu-lijn");
-          assert(nu.svgLinks,label+": het nu-label valt links buiten de grafiek");
+            const sr=svg.getBoundingClientRect();return {links:r.right<=lr.left+0.5,rechts:r.left>=lr.right-0.5,raakt,stapel,svgLinks:r.left>=sr.left-0.5,svgBinnen:r.left>=sr.left-0.5&&r.right<=sr.right+0.5};});
+          /* Typografie-ronde 29 oktober 2026 (akkoord eigenaar): past het label op de grotere grafiektekst (14px) links van de nu-lijn niet meer, dan
+             staat het rechts van de lijn (bestaande plaatsingslogica). Het staat dan nog steeds naast de lijn en volledig binnen de grafiek. */
+          assert(nu&&(nu.links||nu.rechts),label+": het nu-label staat niet naast de rode nu-lijn (links of rechts)");
+          assert(nu.svgBinnen,label+": het nu-label valt buiten de grafiek");
           assert.deepEqual(nu.raakt,[],label+": het nu-label raakt andere tekst");
-          assert.deepEqual(nu.stapel,[],label+": asgetal direct boven of onder het nu-label: "+nu.stapel.join(", "));
+          /* De stapel-eis ("nu 16°" direct boven "16°") geldt voor een label links van de lijn, tussen de asgetallen; rechts van de lijn staat de lijn ertussen. */
+          if(nu.links)assert.deepEqual(nu.stapel,[],label+": asgetal direct boven of onder het nu-label: "+nu.stapel.join(", "));
         }
         if(m.nuAnker!==null)assert(m.M&&m.nuAnker===m.asUren[0],label+": alleen op de telefoon en alleen het eerste uur mag zijn temperatuur aan het nu-label overlaten");
         const leeg=m.astijden.filter(a=>a.i!==m.nuAnker&&(!a.stip||a.cijfer!==a.verwacht)).map(a=>a.tijd+(a.stip?"":" zonder stip")+(a.cijfer===a.verwacht?"":" cijfer "+(a.cijfer||"ontbreekt")+" (verwacht "+a.verwacht+")"));
@@ -212,5 +215,5 @@ function meet(){
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
-  console.log("Grafiekstippen OK: hoogste en laagste punt en iedere astijd met stip en eigen temperatuur, op 390, 820, 1366 en 1920px, voor twee reeksen; op desktop staat het nu-label links van de nu-lijn.");
+  console.log("Grafiekstippen OK: hoogste en laagste punt en iedere astijd met stip en eigen temperatuur, op 390, 820, 1366 en 1920px, voor twee reeksen; op desktop staat het nu-label naast de nu-lijn: links, en rechts als de grotere grafiektekst links niet past.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});
