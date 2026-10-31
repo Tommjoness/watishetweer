@@ -32,22 +32,28 @@ function forecastUrlPastBijLocatie(url,l){try{const u=new URL(url),lat=u.searchP
 function getal(t){const m=/[-\u2212]?\d+(?:[.,]\d+)?/.exec(String(t||""));return m?Number(m[0].replace("\u2212","-").replace(",",".")):null;}
 const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
+/* Minimum aantal volledige uurrijen in de desktopuurtabel (vanaf 1100px). Enige bron
+   voor wachtKlaar, de locatiecontrole en de viewportcontrole: 1366–1439px 7 rijen,
+   vanaf 1440px 8 rijen, 1100–1365px de bestaande ondergrens van 1 rij. */
+function minUurrijen(breedte){return breedte>=1440?8:breedte>=1366?7:1;}
+
 async function wachtKlaar(page,naam,timeout=26000){
+  const minUren=minUurrijen(await page.evaluate(()=>innerWidth));
   try{
-    await page.waitForFunction(()=>{
+    await page.waitForFunction(minUren=>{
       const app=document.getElementById("app"),label=document.getElementById("place")?.getAttribute("aria-label")||"";
       const d=typeof S!=="undefined"?S.d:null;
       const bronKlaar=!!(d&&d.current&&Array.isArray(d.hourly?.time)&&d.hourly.time.length>=23&&Array.isArray(d.daily?.time)&&d.daily.time.length>=7);
       const dagen=document.querySelectorAll("#days .row.day:not(.kop)").length;
       const uren=document.querySelectorAll("#wiw-hour-table tbody tr").length;
-      const desktop=innerWidth>=1100,contractDesktop=innerWidth>=1366;
-      // Volledige brondekking blijft hierboven verplicht. Het 8–12-regelscontract
-      // geldt vanaf 1366px; smallere desktopviewports bewijzen apart fit/overflow.
-      const urenKlaar=contractDesktop
-        ?uren>=8&&uren<=(WeatherNowFinalDesktopUI20260902.MAX_TABEL_UREN||WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN)
-        :desktop?uren>=1&&uren<=(WeatherNowFinalDesktopUI20260902.MAX_TABEL_UREN||WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN):uren>=23;
+      const desktop=innerWidth>=1100;
+      // Volledige brondekking blijft hierboven verplicht. De ondergrens voor het
+      // aantal desktopuurrijen komt uit minUurrijen (minUren); smallere
+      // desktopviewports bewijzen apart fit/overflow.
+      const urenKlaar=desktop
+        ?uren>=minUren&&uren<=(WeatherNowFinalDesktopUI20260902.MAX_TABEL_UREN||WeatherNowFinalDesktopUI20260902.MAX_DESKTOP_UREN):uren>=23;
       return app&&getComputedStyle(app).display!=="none"&&!app.hasAttribute("data-zonder-data")&&label&&bronKlaar&&dagen>=7&&urenKlaar;
-    },null,{timeout});
+    },minUren,{timeout});
   }catch(e){
     const diagnose=await page.evaluate(()=>{
       const compact=document.getElementById("locatie-laadstatus"),compactTekst=compact&&compact.querySelector(".locatie-status-tekst"),state=document.getElementById("state");
@@ -153,7 +159,7 @@ async function lees(page){return page.evaluate(()=>{
     graphTimes:S.geo&&S.geo.TI,
     tableSourceTimes:hour?[...hour.querySelectorAll("tbody tr")].map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]):[],
     hourRows:hour?hour.querySelectorAll("tbody tr").length:0,
-    boundedHours:innerWidth>=1100,
+    boundedHours:innerWidth>=1100,breedte:innerWidth,
     hourInstants:hour?[...hour.querySelectorAll("tbody time")].map(e=>e.dateTime):[],
     hourFits:hour&&scroll?[...hour.querySelectorAll("tbody tr")].every(e=>e.getClientRects().length>0&&e.getBoundingClientRect().bottom<=document.getElementById("wiw-hour-panel").getBoundingClientRect().bottom+1):false,
     hourHead:th?.textContent?.trim()||"",hourHeadAria:th?.getAttribute("aria-label")||"",
@@ -206,7 +212,7 @@ async function lees(page){return page.evaluate(()=>{
           assert.equal(uit.graphTimes.length,25,`${l.naam}: desktopgrafiek toont geen 24 uur (${uit.graphTimes.length} punten)`);
           assert.deepEqual(uit.graphTimes.slice(0,uit.tableSourceTimes.length),uit.tableSourceTimes,`${l.naam}: de uurtabel is niet het begin van de grafiekreeks`);
           assert.equal(Date.parse(uit.graphTimes.at(-1)+"Z")-Date.parse(uit.graphTimes.at(-2)+"Z"),3600000,`${l.naam}: gekoppelde desktopgrafiek eindigt niet met opeenvolgende uurpunten`);
-          assert(uit.hourRows>=8&&uit.hourRows<=uit.maxHours&&uit.hourFits,`${l.naam}: desktopuren zijn niet volledig binnen de grafiekhoogte begrensd (${uit.hourRows})`);
+          assert(uit.hourRows>=minUurrijen(uit.breedte)&&uit.hourRows<=uit.maxHours&&uit.hourFits,`${l.naam}: desktopuren zijn niet volledig binnen de grafiekhoogte begrensd (${uit.hourRows}, minimaal ${minUurrijen(uit.breedte)})`);
           for(let i=1;i<uit.hourInstants.length;i++)assert.equal(Date.parse(uit.hourInstants[i])-Date.parse(uit.hourInstants[i-1]),3600000,`${l.naam}: uurinstanties moeten uniek en opeenvolgend zijn`);
         }else assert(uit.hourRows>=23,`${l.naam}: mobiele bronuurtabel te kort (${uit.hourRows})`);
         const hourHeaders=await page.locator("#wiw-hour-table thead th").allTextContents();
@@ -236,7 +242,7 @@ async function lees(page){return page.evaluate(()=>{
       await installeerForecastFixture(page,amsterdamBron);
       await page.goto(ROOT+"/?"+params(locaties[0]),{waitUntil:"domcontentloaded",timeout:30000});await wachtKlaar(page,"Amsterdam");
       const u=await lees(page);assert.equal(u.sha,EXPECTED,`${w}px: verkeerde SHA`);assert(u.pageOverflow<=1,`${w}px: ${u.pageOverflow}px pagina-overflow`);assert(u.hourOverflow<=1&&u.hourClip,`${w}px: uurtabel overflow/clipping`);
-      if(w>=1100){assert(u.hourRows>=1&&u.hourRows<=u.maxHours&&u.hourFits,`${w}px: desktopuren passen niet volledig binnen het paneel (${u.hourRows})`);if(w>=1366)assert(u.hourRows>=8,`${w}px: 8–12-regelscontract niet gehaald (${u.hourRows})`);}
+      if(w>=1100){assert(u.hourRows>=1&&u.hourRows<=u.maxHours&&u.hourFits,`${w}px: desktopuren passen niet volledig binnen het paneel (${u.hourRows})`);if(w>=1366)assert(u.hourRows>=minUurrijen(u.breedte),`${w}px: uurrijencontract niet gehaald (${u.hourRows}, minimaal ${minUurrijen(u.breedte)})`);}
       /* Eerste scherm (#437): zes tegels in twee rijen van drie vanaf 600px. */if(w>=1100)assert.equal(u.tileRows,2,`${w}px: verwacht 2 tegelrijen, kreeg ${u.tileRows}`);
       rapport.viewports.push({width:w,height:h,tileRows:u.tileRows,pageOverflow:u.pageOverflow,hourOverflow:u.hourOverflow});await context.close();
       console.log(`FINAL VIEWPORT ${w}x${h}: ${u.tileRows} tegelrijen, overflow ${u.pageOverflow}px.`);
