@@ -267,7 +267,11 @@ function indexMorgenNaZonsondergang(){
   if(!ss||!nu||String(nu).slice(0,16)<String(ss).slice(0,16))return null;
   return i+1;
 }
-function tegelMet(houder,kop){return [...document.querySelectorAll(houder+" .stat")].find(t=>{const e=t.querySelector(".eyebrow");return e&&e.textContent.trim()===kop;})||null;}
+/* De zonsondergang-/zonsopkomsttegel is de tegel met het vaste (legacy) id #gust, hetzelfde
+   anker dat de eigenaarsmodules gebruiken. Zijn koptekst is taalafhankelijk (de vertaallaag
+   maakt er "Time until sunset" van, soms al vóór de eerste beperkTegels()-aanroep) en is dus
+   geen identificatie. */
+function zonTegel(){const el=document.getElementById("gust");return el?el.closest(".stat"):null;}
 function uvMorgen(){
   const uvEl=document.getElementById("uv"),m=indexMorgenNaZonsondergang(),tegel=uvEl&&uvEl.closest(".stat");if(!tegel)return;
   /* De UV-tegel staat vast in de pagina: de kop "UV-piek morgen" blijft dus
@@ -354,7 +358,7 @@ function naLucht(){
    Verborgen tegels gaan achteraan, zodat de randen per rij kloppen. */
 function beperkTegels(){
   const stats=document.querySelector(".final-top-grid>.stats")||document.querySelector("#app .stats:not(#aq)");if(!stats)return;
-  const zon=tegelMet(".stats","Tijd tot zonsondergang")||tegelMet(".stats","Tijd tot zonsopkomst");
+  const zon=zonTegel();
   const visEl=document.getElementById("vis"),zicht=visEl&&visEl.closest(".stat");
   const visTekst=visEl?String(visEl.textContent||"").trim():"",visKm=parseFloat(visTekst.replace(",","."));
   const zichtNuttig=!!visTekst&&!/^10\+/.test(visTekst)&&Number.isFinite(visKm)&&visKm<4;
