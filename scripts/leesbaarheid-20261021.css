@@ -191,6 +191,13 @@ html body .chartkop #back:not(#wiw-leesbaarheid){font-size:var(--wiw-t-terug)!im
   html body #nights .row.kop>*:not(#wiw-leesbaarheid),
   html body #nights .row.kop span:not(#wiw-leesbaarheid){font-size:var(--wiw-t-label)!important;line-height:1.35!important;letter-spacing:.04em!important}
 }
+/* Kop "Wind" van Zeven dagen op tablet (760 tot en met 900px): tot en met 900px verbergt senior-semantiek de tekst "Wind max"
+   (font-size:0) en zet "Wind" via ::after; de regel hierboven (vanaf 760px) gaf de verborgen tekst weer 13px, waardoor
+   "WIND MAXWIND" verscheen. Hier blijft de tekst verborgen en krijgt de ::after de rolmaat van de andere koppen. */
+@media(min-width:760px) and (max-width:900px){
+  html body #days .row.kop>.dwind:not(#wiw-leesbaarheid){font-size:0!important}
+  html body #days .row.kop>.dwind:not(#wiw-leesbaarheid)::after{font-size:var(--wiw-t-label)!important;letter-spacing:.04em!important}
+}
 @media(min-width:1100px){
   /* De weersomschrijving (mag afbreken) gaat naar 16px; wind, min, max en neerslag houden hun kolombreedte (96px voor de
      neerslagkolom: 16px laat "2,4 mm" onder 1440px tegen het pijltje lopen). */
