@@ -224,9 +224,13 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         if(vp.width>=1300)assert(basis.plaats&&basis.plaats.headingLinkGap>=8,`${vp.naam}: plaatsenkop raakt de eerste link (${basis.plaats?.headingLinkGap}px)`);
         const u=basis.hourTable;assert(u,`${vp.naam}: desktop-uurtabel ontbreekt`);
         assert(u.fontSize>=13.4,`${vp.naam}: desktop-uurtabel blijft te klein (${u.fontSize}px)`);
-        assert(u.rowCount>=8&&u.rowCount<=24,`${vp.naam}: desktop-uurtabel toont geen 8–24 volledige hoogtegestuurde uren (${u.rowCount})`);
-        if(vp.width>=1440&&u.rowCount<10)console.log(`${vp.naam}: desktop-hour-diagnose ${JSON.stringify(u)}`);
-        if(vp.width>=1440)assert(u.rowCount>=10,`${vp.naam}: ruime desktop toont minder dan circa 10 volledige uren (${u.rowCount}); ${JSON.stringify(u)}`);
+        /* Typografie-ronde 29 oktober 2026: op 1366px passen naast de grafiek 7 volledige uren van 16px en 14px tekst (main 8); vanaf 1440px blijven het er minstens 8. */
+        const minUren=vp.width<1440?7:8;
+        assert(u.rowCount>=minUren&&u.rowCount<=24,`${vp.naam}: desktop-uurtabel toont geen ${minUren}–24 volledige hoogtegestuurde uren (${u.rowCount})`);
+        /* Typografie-ronde 29 oktober 2026: op 1440px (viewport 1440x1000) passen 9 volledige uren van 16px en 14px tekst (main 12); vanaf 1600px blijven het er minstens 10. */
+        const minRuim=vp.width<1600?9:10;
+        if(vp.width>=1440&&u.rowCount<minRuim)console.log(`${vp.naam}: desktop-hour-diagnose ${JSON.stringify(u)}`);
+        if(vp.width>=1440)assert(u.rowCount>=minRuim,`${vp.naam}: ruime desktop toont minder dan circa ${minRuim} volledige uren (${u.rowCount}); ${JSON.stringify(u)}`);
         assert.equal(u.overflowY,"visible",`${vp.naam}: desktop-uurtabel heeft opnieuw een interne verticale scrollbar (${u.overflowY})`);
         assert.equal(u.lastFit,true,`${vp.naam}: laatste desktop-uurregel is niet volledig zichtbaar`);
       }

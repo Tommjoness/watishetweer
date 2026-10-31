@@ -68,7 +68,7 @@ module.exports=async function clockChecks(browser,root,fixture,reportDir){
     await page.clock.fastForward(3600000);await page.waitForTimeout(1000);
     const midnight=await read();check(midnight);assert.equal(midnight.rows[0].label,"01:00");
     assert.equal(Date.parse(midnight.rows[0].instant)-Date.parse(hour.rows[0].instant),3600000);
-    for(const width of [1099,1100,1366,1660]){await page.setViewportSize({width,height:1000});await page.waitForTimeout(150);const resized=await read();if(width>=1100)check(resized,width>=1366?8:4);else assert.equal(resized.graphTimes[0],resized.defaultGraphStart,"mobiele grafiek moet na desktopresize naar het bestaande startuur terugkeren");}
+    for(const width of [1099,1100,1366,1660]){await page.setViewportSize({width,height:1000});await page.waitForTimeout(150);const resized=await read();if(width>=1100)check(resized,width>=1440?8:width>=1366?7:4);else assert.equal(resized.graphTimes[0],resized.defaultGraphStart,"mobiele grafiek moet na desktopresize naar het bestaande startuur terugkeren");}
     assert.equal(fallback,0,"klok/layout mag geen extra WeatherAPI-fallback veroorzaken");assert.deepEqual(errors,[]);
     const result={location:location.name,timezone:location.zone,deviceTimezone:"America/Los_Angeles",before,hour,midnight,primary,fallback,errors,externalErrors};reports.push(result);
     console.log("CWV_CLOCK "+JSON.stringify(result));

@@ -64,10 +64,10 @@ const EXTRA_STIJL = `
 .nz-oordeel{display:grid;gap:2px}.nz-oordeel b{font-size:18px;font-weight:600;color:var(--ink)}.nz-oordeel span{color:var(--ink-70)}
 .nz-feiten{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:10px;margin:18px 0 0}
 .nz-feiten div{border:1px solid var(--rule);padding:10px 12px}
-.nz-feiten dt{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.nz-feiten dt{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .nz-feiten dd{margin:2px 0 0;color:var(--ink);font-variant-numeric:tabular-nums}
 .nz-grafiek{margin:20px 0 0}
-.nz-grafiek figcaption{display:flex;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-bottom:6px}
+.nz-grafiek figcaption{display:flex;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;font-size:14px;line-height:1.4;color:var(--muted);margin-bottom:6px}
 .nz-legenda{display:flex;gap:12px;flex-wrap:wrap}.nz-legenda i{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px;background:var(--rule)}
 .nz-legenda i.goed{background:var(--ink)}.nz-legenda i.maan{height:3px;vertical-align:2px;background:var(--muted)}
 .nz-staven,.nz-maanrij,.nz-tijden{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:3px}
@@ -79,15 +79,15 @@ const EXTRA_STIJL = `
 .nz-gegevens summary:hover{color:var(--ink)}
 .nz-gegevens table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
 .nz-gegevens th,.nz-gegevens td{text-align:left;padding:7px 12px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top;color:var(--ink-70)}
-.nz-gegevens thead th{font-size:13px;font-weight:500;color:var(--muted);padding-top:0}
+.nz-gegevens thead th{font-size:14px;font-weight:500;color:var(--muted);padding-top:0}
 .nz-gegevens tbody th{font-weight:500;color:var(--ink)}
-.nz-tijden{margin-top:4px;font-size:12px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.nz-tijden{margin-top:4px;font-size:13px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
 .nz-tabel table,#nz-nachten table{width:100%;border-collapse:collapse;font-size:15px}
 .nz-tabel th,.nz-tabel td,#nz-nachten th,#nz-nachten td{text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
-.nz-tabel thead th,#nz-nachten thead th{font-size:13px;font-weight:500;color:var(--muted);padding-top:0}
+.nz-tabel thead th,#nz-nachten thead th{font-size:14px;font-weight:500;color:var(--muted);padding-top:0}
 .nz-tabel tbody th,#nz-nachten tbody th{font-weight:500;color:var(--ink)}
 .nz-tabel td,#nz-nachten td{color:var(--ink-70)}
-.nz-licht-mob{display:none;font-size:13px;font-weight:400;color:var(--muted)}
+.nz-licht-mob{display:none;font-size:14px;font-weight:400;color:var(--muted)}
 .nz-n{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink)!important}.nz-n span{color:var(--muted)}
 .nz-tabel a{text-decoration:none;border-bottom:1px solid var(--rule)}.nz-tabel a:hover,.nz-tabel a:focus-visible{border-bottom-color:var(--ink)}
 /* Score: een korte meter (alleen sieraad, de score staat ook als tekst) naast cijfer en oordeel, en een lichte scheiding waar de lichtvervuilingsklasse wisselt. */

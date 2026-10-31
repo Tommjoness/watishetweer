@@ -141,7 +141,9 @@ const meet=()=>{
 /* Iedere uurrij: label = echte lokale tijd van het uur waarvan het UTC-uur de
    getoonde temperatuur is, en de rijen volgen elkaar per uur op. */
 function toetsRijen(label,rijen,nuMs){
-  assert.ok(rijen.length>=8,label+": te weinig uurrijen ("+rijen.length+")");
+  /* Typografie-ronde 29 oktober 2026: op 1366px passen naast de grafiek 7 volledige uurrijen van 16px en 14px tekst (main 8); op andere breedtes blijft het minimum 8. */
+  const minRijen=/@1366px/.test(label)?7:8;
+  assert.ok(rijen.length>=minRijen,label+": te weinig uurrijen ("+rijen.length+", minimaal "+minRijen+")");
   let vorige=nuMs-3*UUR;
   rijen.forEach((r,k)=>{
     assert.ok(Number.isInteger(r.temp),label+": rij "+k+" zonder temperatuur");

@@ -41,7 +41,10 @@ const GRAFIEK_SYNC_OUD='if(basisGrafiek&&S.geo&&typeof S.geo.x==="function"&&Num
    op een laptop keek de ochtend van morgen niet zag. */
 const GRAFIEK_SYNC_NIEUW='const grafiekUren=DESKTOP_GRAFIEK_UREN;\n  if(basisGrafiek&&S.geo&&typeof S.geo.x==="function"&&Number.isInteger(start)&&rows.length&&(S.chartStart!==start||S.chartBereik!==grafiekUren)){\n    basisGrafiek(start,grafiekUren);desktopGrafiek=true;\n  }';
 const HOOGTE_OUD='  if(window.innerWidth<1100){aside.style.height="";return;}';
-const HOOGTE_NIEUW=`  if(window.innerWidth<1100){aside.style.height="";aside.style.removeProperty("--wiw-hour-row-pad-extra");return;}
+const HOOGTE_NIEUW=`  /* Kolombreedtes die een vorige sync vastzette (zie hieronder) vervallen vóór iedere nieuwe meting. */
+  const kolomKoppen=()=>[...document.querySelectorAll("#wiw-hour-table thead th")];
+  kolomKoppen().forEach(kop=>kop.style.removeProperty("width"));
+  if(window.innerWidth<1100){aside.style.height="";aside.style.removeProperty("--wiw-hour-row-pad-extra");return;}
   /* Meet elke sync vanuit de vaste leesbare minimumrijhoogte. Resthoogte uit
      een vorige render mag dus nooit bepalen hoeveel nieuwe volledige rijen
      passen. */
@@ -67,10 +70,16 @@ const PANEL_HOOGTE_NIEUW=`  /* Hoogtefiltering is reversibel: de eerste meting b
      tabelcelinhoud kan hoger zijn dan een theoretische paddingvloer; daardoor
      mag de owner nooit meer rijen vasthouden dan fysiek volledig passen. */
   const basisRijen=tbody?[...tbody.children]:[];
+  /* Vanaf 1600px staan neerslag en wind op één regel per uur. De kolombreedtes volgen hun inhoud (table-layout auto), en de datumregel
+     van het middernachtuur ("Thu 23 Jul") maakt de tijdkolom breder. Met die rij erbij kunnen neerslag en wind afbreken (alle rijen hoger);
+     valt die rij door het inkorten weg, dan passen ze weer en staan de rijen lager dan gemeten, met leeg paneel eronder. De breedtes uit
+     de meting met alle kandidaten worden daarom vastgezet voor de rijen die blijven: wat gemeten is, is wat getoond wordt. */
+  const gemetenKolomBreedtes=window.innerWidth>=1600?kolomKoppen().map(kop=>kop.getBoundingClientRect().width):null;
   const basisMinimum=window.innerWidth>=1440?29.5:29;
   const gemetenRijvloer=basisRijen.length?Math.max(basisMinimum,Math.max(...basisRijen.map(r=>r.getBoundingClientRect().height))):basisMinimum;
   const gewensteMinimumUren=window.innerWidth>=1440?10:8;\n  const minimumUren=Math.min(gewensteMinimumUren,Math.floor((beschikbareRijhoogte+0.5)/gemetenRijvloer),tbody&&tbody.children.length||0);
   while(tbody&&tbody.lastElementChild&&tbody.children.length>minimumUren&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
+  if(gemetenKolomBreedtes&&gemetenKolomBreedtes.every(b=>b>0))kolomKoppen().forEach((kop,i)=>kop.style.setProperty("width",gemetenKolomBreedtes[i].toFixed(2)+"px","important"));
   let rijPadAanpassing=0;
   let zichtbareRijen=tbody?[...tbody.children]:[];
   if(zichtbareRijen.length&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01){

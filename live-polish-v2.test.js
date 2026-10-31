@@ -3,7 +3,7 @@ const assert=require("assert"),fs=require("fs"),path=require("path");
 const {
   tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan,
   dauwpuntCelsius,luchtvochtigheidDuiding,etmaalExtraTemperaturenWeg,grafiekPuntBeschrijving,
-  tooltipSchaalFactor,tooltipDoosPlaatsing,TOOLTIP_MIN_PX
+  tooltipSchaalFactor,tooltipDoosPlaatsing,tooltipMinPx,tooltipTijdPx,TOOLTIP_MIN_PX
 }=require("./live-polish-v2.js");
 let n=0;const test=(naam,fn)=>{try{fn();n++;console.log("OK  "+naam);}catch(e){console.error("FOUT "+naam+"\n  "+e.message);process.exitCode=1;}};
 
@@ -40,6 +40,24 @@ test("tooltip wordt zo opgeschaald dat de kleinste tekst minimaal 12 px effectie
     const k=tooltipSchaalFactor(f,p,12);assert(f*p*k>=12-1e-9,"kleinste tekst blijft onder 12 px bij "+f+"x"+p);
   }
   assert.equal(tooltipSchaalFactor(null,1,12),1);assert.equal(tooltipSchaalFactor(11,0,12),1);assert.equal(tooltipSchaalFactor(11,"x",12),1);
+});
+
+test("tooltip heeft een grotere effectieve ondergrens op tablet (13 px) en desktop (14 px), met een eigen maat voor de tijd",()=>{
+  /* Typografie-ronde 29 oktober 2026: effectief 14 px op desktop was 12,0 tot 12,6 px op het scherm (live-audit 646673f). */
+  assert.equal(tooltipMinPx(1100),14);assert.equal(tooltipMinPx(1920),14);assert.equal(tooltipMinPx(1099),13);assert.equal(tooltipMinPx(760),13);
+  assert.equal(tooltipMinPx(759),12);assert.equal(tooltipMinPx(430),12);assert.equal(tooltipMinPx(null),12);assert.equal(tooltipMinPx("x"),12);
+  assert.equal(tooltipTijdPx(1363),16);assert.equal(tooltipTijdPx(900),15);assert.equal(tooltipTijdPx(700),null);assert.equal(tooltipTijdPx(undefined),null);
+  /* Op de gemeten grafiekschaal (1,0) wordt de hele doos 1,273 keer groter op desktop: 11 px wordt 14,0 px en de tijd 16 px. */
+  assert.equal(tooltipSchaalFactor(11,1,tooltipMinPx(1363)),1.273);
+  for(const w of [760,1024,1100,1280,1363,1440,1920]){
+    for(const p of [0.97,1,1.047]){
+      const k=tooltipSchaalFactor(11,p,tooltipMinPx(w));
+      assert(11*p*k>=tooltipMinPx(w)-1e-9,"kleinste tooltiptekst onder de ondergrens bij "+w+"px, schaal "+p);
+    }
+  }
+  const js=fs.readFileSync(path.join(__dirname,"live-polish-v2.js"),"utf8");
+  assert(js.includes("tooltipSchaalFactor(Math.min(...fonts),pxPerEenheid,tooltipMinPx(globalThis.innerWidth))"),"schaalSvgTooltip gebruikt de breedte-afhankelijke ondergrens");
+  assert(js.includes('g.querySelector(\'text[data-tip="kop"]\')'),"de tijd bovenin houdt zijn data-tip-attribuut");
 });
 
 test("opgeschaalde tooltip blijft aan dezelfde kant van het punt en binnen de tekening",()=>{
