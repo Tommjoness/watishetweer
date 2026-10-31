@@ -214,7 +214,8 @@ function maakUurPaneel(){
 }
 
 function vindVolledigeGrafiekTabel(){
-  const details=[...document.querySelectorAll("details")].find(d=>{const s=d.querySelector(":scope > summary");return s&&/grafiekgegevens.*tabel|gegevens.*grafiek.*tabel/i.test(String(s.textContent||""));});
+  /* Structureel anker (details#chartdata): de tekst van de samenvatting is taalafhankelijk en soms al vertaald vóór deze aanroep. */
+  const details=document.querySelector("details#chartdata");
   if(details){details.classList.add("wiw-chartdata-accessible");const summary=details.querySelector(":scope > summary");if(summary)summary.classList.add("wiw-chartdata-summary");}
   const houder=document.getElementById("wiw-full-chart-data");if(houder)houder.remove();
   const knop=document.getElementById("wiw-all-data-button");if(knop)knop.remove();
