@@ -91,7 +91,13 @@ function meet(){
           const L=`${naam} ${taal} ${w}px`;
           try{
             const laad=async()=>{await page.goto(`http://127.0.0.1:${srv.address().port}/?lat=52.3676&lon=4.9041&plaats=Amsterdam&land=NL`,{waitUntil:"networkidle"});
-              await page.waitForSelector("#wiw-hour-table tbody tr",{timeout:20000});await page.waitForTimeout(1500);return page.evaluate(meet);};
+              await page.waitForSelector("#wiw-hour-table tbody tr",{timeout:20000});
+              /* Wacht tot lettertypen geladen zijn en de meting drie keer achter elkaar gelijk is: op een koude start (net herstarte machine) liep de eerste
+                 meting soms vooruit op de lettertypen en telde de tabel een rij te weinig. */
+              await page.evaluate(()=>document.fonts&&document.fonts.ready);
+              let laatste=null,vorige="",gelijk=0;
+              for(let i=0;i<30&&gelijk<3;i++){await page.waitForTimeout(400);laatste=await page.evaluate(meet);const sleutel=laatste.rijen+"/"+Math.round(laatste.gat);gelijk=sleutel===vorige?gelijk+1:0;vorige=sleutel;}
+              return laatste;};
             let m=await laad();
             /* Eén keer op ongeveer twaalf keer laden is het paneel 24px lager en staat er een rij minder (ook in main); dan maximaal twee keer opnieuw laden. */
             const minRijen=MIN_RIJEN[naam][w];
