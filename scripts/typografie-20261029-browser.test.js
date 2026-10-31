@@ -109,12 +109,13 @@ function meet(page){
 /* Verwachte maten per schermklasse (computed voor HTML, effectief voor SVG). */
 /* Werkelijk aantal volledige uurrijen per desktopviewport en taal (Amsterdam, start, 29 oktober 2026). Main stond op nl/en: 1100: 9/8,
    1280 tot 1366: 10/10, 1440: 12/12, 1920: 14/14. De tabel toont zoveel volledige uren als naast de grafiek passen; 1363x936 is de door de
-   eigenaar goedgekeurde situatie (8 volledige rijen). Op 1920px staan de uren op één regel; in het Engels past "0.6 mm 60% chance"
-   (55 + 90px) niet meer in zijn kolom van 145px (paneel 496px), zodat de regel afbreekt en er 9 rijen passen (bekende beperking).
+   eigenaar goedgekeurde situatie (8 volledige rijen). Op 1920px staan de uren op één regel. In het Engels brak "0.6 mm 60% chance" af (de datumregel
+   "Thu 23 Jul" van het middernachtuur maakte de tijdkolom 70px breed) en bleven er 9 rijen met 96px leeg paneel over; sinds 30 oktober 2026 houdt
+   het paneel daar minder marge links van de tabel en staan ook de Engelse rijen op één regel (14 rijen; zie uurtabel-ondervlak-browser.test.js).
    Een lager aantal dan hier is een regressie. Eén keer op ongeveer twaalf keer laden is het paneel 24px lager en staat er een rij minder
    (gemeten op 1440px: main 11 i.p.v. 12, nu 9 i.p.v. 10; bestaand en niet door de typografie veroorzaakt); daarom wordt een te laag aantal
    maximaal twee keer opnieuw geladen en faalt de test pas als ook die keren onder het minimum blijven. */
-const MIN_UURRIJEN={1100:{nl:7,en:7},1280:{nl:8,en:8},1363:{nl:8,en:8},1366:{nl:8,en:8},1440:{nl:10,en:10},1920:{nl:14,en:9}};
+const MIN_UURRIJEN={1100:{nl:7,en:7},1280:{nl:8,en:8},1363:{nl:8,en:8},1366:{nl:8,en:8},1440:{nl:10,en:10},1920:{nl:14,en:14}};
 const DESKTOP={kop:20,label:14,uitleg:15,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:14,uurtijd:16,uurprim:16,uursec:14,uurdatum:14,dagkop:14,altth:14,alttd:15,terug:14};
 const TABLET={kop:18,label:13,uitleg:14,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:13,uurtijd:15,terug:14,altth:13,alttd:15};
 const TELEFOON={kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:14,terug:13};

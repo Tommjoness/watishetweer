@@ -223,9 +223,17 @@ html body #nights .nachtmaanregel:not(#wiw-leesbaarheid){font-size:var(--wiw-t-m
 /* Vanaf 1600px staat de uurtabel op één regel per uur ("-16,0° voelt -17,0°", "0,4 mm 45% kans", "ZZW 4 Bft 25 km/u"). Met de
    waarden op 16px en de toevoegingen op 14px braken die in een kolom van 460px af en toonde de tabel minder uren (9 in plaats van
    13 bij brede waarden). De kolom is daarom minimaal 496px, met 2px in plaats van 4px celmarge links en rechts; de grafiek houdt
-   daarmee 65% van de breedte (de rustige verdeling van 7 september). */
+   daarmee 65% van de breedte (de rustige verdeling van 7 september).
+   Engelse uurtabel: met de datumregel van het middernachtuur ("Thu 23 Jul", 66px) is de tijdkolom 70px en past de rest (2 x 5 kolommen,
+   "0.6 mm 60% chance", "NW 3 Bft 14 km/h") niet meer in de 471px van de tabel; neerslag en wind braken dan af, alle rijen werden 49px, de
+   hoogtefilter hield 9 rijen over en na het wegvallen van de datumregel stonden de rijen weer op 31px met 96px leeg paneel eronder. Het
+   paneel houdt daarom 8px in plaats van 24px marge links van de tabel (de tabel wordt 487px in plaats van 471px; de grafiekkolom blijft gelijk) en
+   de cellen 1px in plaats van 2px marge links en rechts (10px minder nodig). Zo past ook "12.4 mm 100% chance" met "NW 9 Bft 88 km/h" (483px nodig,
+   487px beschikbaar; zie scripts/uurtabel-ondervlak-browser.test.js). Wat daarboven nog afbreekt, houdt dankzij de vastgezette kolombreedtes
+   (apply-hour-panel-refinement-20260907.js) gelijke rijen zonder leeg vlak. */
 @media(min-width:1600px){
   html body .wiw-chart-layout:not([data-hour-paired="0"]):not(#wiw-leesbaarheid){grid-template-columns:minmax(0,1.9fr) minmax(496px,1fr)!important}
+  html body #wiw-hour-panel:not(#wiw-leesbaarheid){padding-left:8px!important}
   html body #wiw-hour-table tbody td:not(#wiw-leesbaarheid),
-  html body #wiw-hour-table thead th:not(#wiw-leesbaarheid){padding-left:2px!important;padding-right:2px!important}
+  html body #wiw-hour-table thead th:not(#wiw-leesbaarheid){padding-left:1px!important;padding-right:1px!important}
 }
