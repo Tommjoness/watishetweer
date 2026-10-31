@@ -86,6 +86,28 @@ function poolDaglichtStatus(daily,index){
   if(dagen===1)return "24 uur daglicht";
   return "";
 }
+/* Open-Meteo zet alle ISO-tijden van één response (ook daily.sunrise/sunset) op één
+   vaste UTC-offset (utc_offset_seconds) en negeert klokwisselingen binnen de
+   forecastperiode. Voorbeeld (Miami, response van 31 oktober, utc_offset_seconds
+   -14400): daily.sunrise voor 1 november staat als "07:29", terwijl de klok die
+   nacht naar wintertijd gaat en de echte lokale tijd 06:29 EST is. Een zichtbare
+   tijd is daarom: ruwe tijd -> instant (min de vaste offset) -> wandkloktijd in
+   de IANA-tijdzone van de plaats. Dit staat los van de omzetting in de app
+   (weatherNowLokaleTijd) en gebruikt rechtstreeks Intl, zodat de monitor een
+   tweede, onafhankelijke mening blijft. Ontbreken tijdzone of offset, dan blijft
+   de ruwe tijd staan (zelfde terugval als de app). */
+function providerIsoNaarLokaleIso(iso,bron){
+  const ruw=String(iso==null?"":iso),m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(ruw);
+  const zone=bron&&bron.timezone,offset=bron&&bron.utc_offset_seconds;
+  if(!m||!zone||offset==null||offset===""||!Number.isFinite(Number(offset)))return ruw;
+  const instant=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5])-Number(offset)*1000;
+  let delen;
+  try{
+    delen=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"})
+      .formatToParts(new Date(instant)).filter(x=>x.type!=="literal").map(x=>[x.type,x.value]));
+  }catch(e){return ruw;}
+  return `${delen.year}-${delen.month}-${delen.day}T${delen.hour}:${delen.minute}`;
+}
 function zonVerwachting(bron,nuOverride){
   /* De productie rendert zoninfo tegen weatherNowActueleLokaleTijd(). Rond
      zonsopkomst/-ondergang kan de current.time uit dezelfde providerresponse
@@ -95,9 +117,18 @@ function zonVerwachting(bron,nuOverride){
      Open-Meteo kan rond de geografische polen 00:00/00:00 als sentinel leveren.
      De product-UI vertaalt die combinatie bewust naar poolnacht of pooldag. De
      bronmonitor moet daarom dezelfde semantiek gebruiken en mag 00:00 niet als
-     een echte zonsopkomst/-ondergang eisen. */
-  const horizon=String(nuOverride||bron?.current?.time||""),daily=bron?.daily||{};
-  const rijen=zonInfoRijen(daily,horizon,null,idx=>poolDaglichtStatus(daily,idx),datum=>datum);
+     een echte zonsopkomst/-ondergang eisen.
+
+     Zonsopkomst, zonsondergang en (zonder live override) de horizon staan op de
+     vaste provider-as en worden hier naar de echte lokale tijd omgezet (zie
+     providerIsoNaarLokaleIso); de live override is al lokale wandkloktijd. De
+     poolstatus blijft op de ruwe daily-waarden, zoals de UI. */
+  const lokaal=t=>providerIsoNaarLokaleIso(t,bron);
+  const horizon=String(nuOverride||lokaal(bron?.current?.time)||""),daily=bron?.daily||{};
+  const lokaleDaily={...daily,
+    sunrise:Array.isArray(daily.sunrise)?daily.sunrise.map(lokaal):daily.sunrise,
+    sunset:Array.isArray(daily.sunset)?daily.sunset.map(lokaal):daily.sunset};
+  const rijen=zonInfoRijen(lokaleDaily,horizon,null,idx=>poolDaglichtStatus(daily,idx),datum=>datum);
   const items=rijen.flatMap(r=>r.items||[]),op=[],onder=[];
   for(const item of items){
     const opMatch=/^zon op\s+(\d{2}:\d{2})$/i.exec(String(item));
@@ -181,4 +212,4 @@ function verifieerBronwaarheid(bron,ui,label,nuOverride,systeemThema="licht"){
   return {dagen:verwacht.length,zonRijen:zon.rijen.length};
 }
 
-module.exports={BFT,getal,bft,zichtbaarGetal,dagNeerslag,uvPiekVandaag,uvPiekVerwacht,verwachtThema,zonDagIndex,hhmm,datumDagenVerschil,poolDaglichtStatus,zonVerwachting,verwachtDagRijen,verifieerBronwaarheid};
+module.exports={BFT,getal,bft,zichtbaarGetal,dagNeerslag,uvPiekVandaag,uvPiekVerwacht,verwachtThema,zonDagIndex,hhmm,datumDagenVerschil,poolDaglichtStatus,providerIsoNaarLokaleIso,zonVerwachting,verwachtDagRijen,verifieerBronwaarheid};
