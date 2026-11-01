@@ -42,7 +42,7 @@ function uurRijenUitGeo(g,currentTime,dagGeselecteerd,hourly){
     const vorigeLabel=i>0&&typeof root.weatherNowLokaleTijd==="function"?root.weatherNowLokaleTijd(tijden[i-1]):tijden[i-1];
     const vorige=i>0?datum(vorigeLabel):null,nieuweDag=i>0&&datum(label)!==vorige;
     const zelfdeUur=mark===i&&String(currentTime||"").slice(0,13)===String(tijd).slice(0,13);
-    rijen.push({tijd:label,temp,gevoel,kans,hoeveelheid,code:num(D[i]),isDag:num(ND[i]),wind:num(W[i]),windrichting:num(WD[i]),datumLabel:nieuweDag?dagLabel(label):"",marker:mark===i?(zelfdeUur?"Nu":"Eerstvolgend"):""});
+    rijen.push({tijd:label,bron:tijd,temp,gevoel,kans,hoeveelheid,code:num(D[i]),isDag:num(ND[i]),wind:num(W[i]),windrichting:num(WD[i]),datumLabel:nieuweDag?dagLabel(label):"",marker:mark===i?(zelfdeUur?"Nu":"Eerstvolgend"):""});
   }
   return rijen;
 }
@@ -107,7 +107,15 @@ function voegStijlToe(){
 .wiw-hour-table th,.wiw-hour-table td{padding:8px 7px;border-bottom:1px solid var(--rule-soft);text-align:right;vertical-align:middle}
 .wiw-hour-table th:first-child,.wiw-hour-table td:first-child{text-align:left}
 .wiw-hour-table thead th{position:sticky;top:0;z-index:2;background:var(--sheet);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-45);border-bottom:1px solid var(--ink)}
-.wiw-hour-table tbody tr[data-current="1"]{font-weight:600;box-shadow:inset 3px 0 0 var(--ink)}
+.wiw-hour-table tbody tr[data-instant]{cursor:pointer}
+.wiw-hour-table tbody tr[data-selected="1"]{font-weight:600;box-shadow:inset 3px 0 0 var(--ink);background:var(--rule-soft)}
+.wiw-hour-table tbody tr[data-current="1"]:not([data-selected="1"]){box-shadow:inset 2px 0 0 var(--rule)}
+.wiw-hour-pick{appearance:none;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer;display:inline}
+.wiw-hour-pick:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.wiw-hour-tijdzone{display:block;margin-top:2px;font-size:12px;line-height:1.25;color:var(--ink-45);font-weight:400}
+/* Verwijzing naar de plek waar een niet-zichtbaar gekozen uur wel staat: alleen een kleurmarkering (geen extra regel, dus geen
+   verschuiving van de pagina bij het langs de uren scrubben); de tekst staat verborgen in #wiw-uur-verwijzing voor schermlezers. */
+.wiw-hour-toggle[data-uur-verwijzing],#chartdata>summary.wiw-chartdata-summary[data-uur-verwijzing]{color:var(--ink);text-decoration-color:currentColor;border-bottom-color:var(--ink)}
 .wiw-hour-marker{display:inline-block;margin-left:6px;font-size:9px;line-height:1.4;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-70);font-weight:600}
 .wiw-hour-date{display:block;margin-top:2px;font-size:9.5px;color:var(--ink-45);font-weight:400}
 .wiw-all-data-button{appearance:none;background:none;border:0;border-bottom:1px solid var(--rule);padding:10px 0 5px;margin-top:8px;align-self:flex-start;color:var(--ink-70);font:500 11px/1.4 var(--sans);cursor:pointer;text-align:left}
@@ -230,6 +238,80 @@ function desktopUurRijen(){
   const minuut=start&&interpretatie.providerNaarMinuten(start,S.d.utc_offset_seconds);
   return Number.isFinite(minuut)?komendeUurRijen(S.d,minuut*60000,MAX_TABEL_UREN).filter(r=>datum(r.tijd)===dag):[];
 }
+/* ---------- uurselectie in de tabel ---------- */
+function rijInstant(r){
+  if(r&&r.instant){const ms=Date.parse(r.instant);return Number.isFinite(ms)?ms:null;}
+  const off=S.d&&S.d.utc_offset_seconds;
+  return interpretatie&&r&&r.bron&&off!=null?interpretatie.uurInstantMs(r.bron,off):null;
+}
+function rijLabel(r,aanduiding){
+  let dag="";
+  try{
+    const api=root.WeatherNowPolishV2,t=typeof plaatsNu==="function"?plaatsNu():null,p2=n=>String(n).padStart(2,"0");
+    if(api&&t)dag=api.grafiekDagVoorvoegsel(r.tijd,t.getFullYear()+"-"+p2(t.getMonth()+1)+"-"+p2(t.getDate())+"T00:00");
+  }catch(e){dag="";}
+  return dag+hhmm(r.tijd)+(aanduiding?" ("+aanduiding+")":"");
+}
+function koppelUurKlik(tbody){
+  if(!tbody||tbody.dataset.uurKlik)return;
+  tbody.dataset.uurKlik="1";
+  /* De knop 'Alle uren bekijken' (mobiel) maakt verborgen rijen zichtbaar zonder de tabel opnieuw op te bouwen: daarna de verwijzing bijwerken. */
+  if(!document.documentElement.dataset.uurToggleKoppeling){
+    document.documentElement.dataset.uurToggleKoppeling="1";
+    document.addEventListener("click",ev=>{if(ev.target&&ev.target.closest&&ev.target.closest("#wiw-hour-toggle"))markeerUur();});
+  }
+  /* De knop in de tijdcel is het toegankelijke doel; een klik of tik elders op de rij is een gemak voor muis en aanraking. */
+  tbody.addEventListener("click",ev=>{
+    const tr=ev.target&&ev.target.closest?ev.target.closest("tr"):null;
+    if(!tr||tr.dataset.instant==null||typeof uurKiesInstant!=="function")return;
+    uurKiesInstant(Number(tr.dataset.instant),true);
+  });
+}
+/* Markeert de rij van de selectie (nooit een andere) en toont, als die rij niet zichtbaar is, een verwijzing naar het overzicht
+   met alle uren. Geen automatisch scrollen of uitklappen. */
+function markeerUur(){
+  const tbody=document.querySelector("#wiw-hour-table tbody");
+  const sel=typeof UURSEL!=="undefined"?UURSEL.huidig:null,ms=sel&&Number.isFinite(sel.ms)?sel.ms:null;
+  let gevonden=null;
+  if(tbody)for(const tr of tbody.children){
+    const is=ms!==null&&tr.dataset.instant===String(ms);
+    if(is){if(tr.dataset.selected!=="1")tr.dataset.selected="1";gevonden=tr;}else if(tr.dataset.selected)delete tr.dataset.selected;
+    const kn=tr.querySelector(".wiw-hour-pick"),waarde=is?"true":"false";if(kn&&kn.getAttribute("aria-pressed")!==waarde)kn.setAttribute("aria-pressed",waarde);
+  }
+  werkVerwijzingBij(ms,gevonden,sel);
+}
+function werkVerwijzingBij(ms,tr,sel){
+  const details=document.querySelector("details#chartdata"),samenvatting=details&&details.querySelector(":scope > summary");
+  const toggle=document.getElementById("wiw-hour-toggle");
+  let el=document.getElementById("wiw-uur-verwijzing");
+  const zichtbaar=tr&&!tr.classList.contains("wiw-hour-mobile-hidden");
+  /* Doel: de verborgen rij zit achter 'Alle uren bekijken' (mobiel); een uur dat in geen enkele rij staat, zit in de tabel van
+     'Grafiekgegevens als tabel'. */
+  const doel=ms===null||zichtbaar||!sel||!S.geo||!S.geo.TI?null:(tr?toggle:samenvatting);
+  const actief=doel&&!doel.hidden?doel:null;
+  /* Idempotent: alleen schrijven als er iets verandert. Een herschreven tekst of attribuut laat de vertaallaag en de
+     waarnemers van andere lagen opnieuw lopen (schrijflus in de Engelse weergave). */
+  for(const x of document.querySelectorAll("[data-uur-verwijzing]")){
+    if(x===actief)continue;
+    x.removeAttribute("data-uur-verwijzing");
+    if(x.getAttribute("aria-describedby")==="wiw-uur-verwijzing")x.removeAttribute("aria-describedby");
+  }
+  let tekst="";
+  if(actief){
+    const tijd=S.geo.TI[sel.k],lokaal=typeof root.weatherNowLokaleTijd==="function"?root.weatherNowLokaleTijd(tijd):tijd;
+    const label=rijLabel({tijd:lokaal},typeof uurAanduiding==="function"?uurAanduiding(ms):"");
+    tekst=tr?label+" is geselecteerd; die rij staat in Alle uren bekijken.":label+" is geselecteerd, maar staat niet in dit overzicht; zie Grafiekgegevens als tabel.";
+  }
+  if(!el&&!tekst)return;
+  if(!el){el=document.createElement("p");el.id="wiw-uur-verwijzing";el.className="sr-only";}
+  const blok=document.getElementById("wiw-chart-layout");
+  if(blok&&el.previousElementSibling!==blok)blok.insertAdjacentElement("afterend",el);
+  if((el.dataset.bron||"")!==tekst){el.dataset.bron=tekst;el.textContent=tekst;}
+  if(actief){
+    if(actief.getAttribute("data-uur-verwijzing")!=="1")actief.setAttribute("data-uur-verwijzing","1");
+    if(actief.getAttribute("aria-describedby")!=="wiw-uur-verwijzing")actief.setAttribute("aria-describedby","wiw-uur-verwijzing");
+  }
+}
 function werkUurTabelBij(){
   const paneel=maakUurPaneel(),table=document.getElementById("wiw-hour-table"),tbody=table&&table.querySelector("tbody");if(!paneel||!table||!tbody||typeof S==="undefined")return;
   const desktop=window.innerWidth>=1100;
@@ -247,7 +329,22 @@ function werkUurTabelBij(){
   if(caption)caption.textContent=desktop?"Komende uren met weer, temperatuur, neerslagkans, neerslaghoeveelheid en wind in de lokale tijd van de geselecteerde plaats":"Temperatuur, neerslagkans en neerslaghoeveelheid per uur voor de uren in de grafiek";
   for(const r of rijen){
     const tr=document.createElement("tr");if(r.marker){tr.dataset.current="1";tr.setAttribute("aria-current","time");}
-    const tijd=document.createElement("td"),tm=document.createElement("time");tm.dateTime=r.instant||r.tijd;tm.textContent=hhmm(r.tijd);tijd.appendChild(tm);
+    const tijd=document.createElement("td"),tm=document.createElement("time");tm.dateTime=r.instant||r.tijd;tm.textContent=hhmm(r.tijd);
+    /* Een uur wordt gekozen op zijn instant (UTC-ms), nooit op zijn label: bij de najaarswissel staat 02:00 twee keer in de tabel. */
+    const ms=rijInstant(r),aanduiding=ms!==null&&typeof uurAanduiding==="function"?uurAanduiding(ms):"";
+    if(ms!==null){
+      tr.dataset.instant=String(ms);
+      /* Mobiel: een knop per rij (toegankelijk doel). Desktop: de uurkolom heeft bewust geen zichtbare knoppen (bewaker
+         cwv-desktop-recovery: "geen extra uurbediening"); daar is de rij klikbaar voor de muis en kiest het toetsenbord een uur
+         via de grafiekslider (pijltoetsen), die hetzelfde selectiemodel gebruikt. */
+      if(desktop)tijd.appendChild(tm);
+      else{
+        const kn=document.createElement("button");kn.type="button";kn.className="wiw-hour-pick";kn.setAttribute("aria-pressed","false");
+        kn.setAttribute("aria-label","Toon "+rijLabel(r,aanduiding)+" in de grafiek"+(r.marker?", eerstvolgend uur":""));
+        kn.appendChild(tm);tijd.appendChild(kn);
+      }
+      if(aanduiding){const z=document.createElement("span");z.className="wiw-hour-tijdzone";z.textContent="("+aanduiding+")";tijd.appendChild(z);}
+    }else tijd.appendChild(tm);
     if(desktop)tr.dataset.sourceIndex=String(r.bronIndex);
     if(r.marker){const m=document.createElement("span");m.className="wiw-hour-marker";m.textContent=r.marker;tijd.appendChild(m);}
     if(r.datumLabel){const d=document.createElement("span");d.className="wiw-hour-date";d.textContent=r.datumLabel;tijd.appendChild(d);}
@@ -279,6 +376,7 @@ function werkUurTabelBij(){
     tbody.appendChild(tr);
   }
   vindVolledigeGrafiekTabel();syncHoogte();planHoogteSync();
+  koppelUurKlik(tbody);markeerUur();
 }
 
 function verbergNeerslagSectie(){
@@ -350,6 +448,7 @@ function syncHoogte(){
   }
   const kop=document.getElementById("chartlab");
   if(kop&&S.dag==null&&rows.length)kop.textContent="De komende "+rows.length+" uur";
+  markeerUur();
 }
 /* requestAnimationFrame staat stil in een tabblad op de achtergrond; een timer
    als reserve zorgt dat de tabel ook dan wordt ingekort. */
@@ -388,6 +487,6 @@ function installeer(){
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(werkUurTabelBij);
 }
 
-root.WeatherNowFinalDesktopUI20260902={MAX_DESKTOP_UREN,MAX_TABEL_UREN,uurRijenUitGeo,komendeUurRijen,regenVelden,werkUurTabelBij,werkRegenSamenvattingBij,centraliseerKorteTeksten,herstelVerborgenDruk,render:()=>{werkUurTabelBij();werkRegenSamenvattingBij();centraliseerKorteTeksten();vindVolledigeGrafiekTabel();syncHoogte();planHoogteSync();}};
+root.WeatherNowFinalDesktopUI20260902={MAX_DESKTOP_UREN,MAX_TABEL_UREN,uurRijenUitGeo,komendeUurRijen,regenVelden,werkUurTabelBij,werkRegenSamenvattingBij,centraliseerKorteTeksten,herstelVerborgenDruk,markeerUur,render:()=>{werkUurTabelBij();werkRegenSamenvattingBij();centraliseerKorteTeksten();vindVolledigeGrafiekTabel();syncHoogte();planHoogteSync();}};
 installeer();
 })(typeof globalThis!=="undefined"?globalThis:this);

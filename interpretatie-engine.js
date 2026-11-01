@@ -127,6 +127,64 @@ function tijdLabel(minuten,tijdzone,utcOffsetSeconden){
   return t?t.slice(11,16):"–";
 }
 
+/* ---------- uurselectie (sleutel = UTC-instant) ----------
+   Een uurpunt wordt overal gesleuteld op het echte moment (ms sinds epoch), niet op index of tekstlabel: bij een
+   verversing die de provider-offset wijzigt, verschuift de index van hetzelfde moment, en bij de najaarswissel
+   bestaat een label (02:00) twee keer. De uurreeks zelf blijft uniform (vaste offset per antwoord). */
+function uurInstantMs(tijd,utcOffsetSeconden){
+  const m=providerNaarMinuten(tijd,utcOffsetSeconden);
+  return Number.isFinite(m)?m*60000:null;
+}
+
+/* Index van het uurpunt met dit instant, of -1. */
+function indexVoorInstant(tijden,utcOffsetSeconden,ms){
+  if(!Array.isArray(tijden)||!Number.isFinite(ms)) return -1;
+  for(let i=0;i<tijden.length;i++) if(uurInstantMs(tijden[i],utcOffsetSeconden)===ms) return i;
+  return -1;
+}
+
+/* Standaard geselecteerd uur: het eerste punt met een eindige temperatuur. Met alleenToekomst telt alleen een punt waarvan
+   het instant niet vóór nuMs ligt (dezelfde grens als de uurtabel: een punt op het huidige hele uur is al voorbij zodra
+   er één milliseconde van dat uur verstreken is). Geen geldig punt: -1 (de aanroeper toont een lege toestand). */
+function kiesStandaardUurIndex(tijden,temperaturen,utcOffsetSeconden,nuMs,opties){
+  if(!Array.isArray(tijden)) return -1;
+  const toekomst=!!(opties&&opties.alleenToekomst);
+  for(let i=0;i<tijden.length;i++){
+    const t=Array.isArray(temperaturen)?temperaturen[i]:null;
+    if(typeof t!=="number"||!Number.isFinite(t)) continue;
+    if(toekomst){
+      const ms=uurInstantMs(tijden[i],utcOffsetSeconden);
+      if(!Number.isFinite(ms)||ms<nuMs) continue;
+    }
+    return i;
+  }
+  return -1;
+}
+
+/* Bij de najaarswissel komt één klokuur twee keer voor (bijv. 02:00 en 02:00). Geeft per instant van zo'n uur
+   "zomertijd" (eerste keer) of "wintertijd" (tweede keer); alle andere uren staan er niet in. Berekend over de hele reeks,
+   zodat een uur in elk onderdeel (grafiek, kaart, tabel) hetzelfde label krijgt, ook als zijn tweelinguur niet zichtbaar is. */
+function dubbeleUurAanduidingen(tijden,tijdzone,utcOffsetSeconden){
+  const uit=new Map();
+  if(!Array.isArray(tijden)||!tijdzone) return uit;
+  const perLabel=new Map();
+  for(const tijd of tijden){
+    const ms=uurInstantMs(tijd,utcOffsetSeconden);
+    if(!Number.isFinite(ms)) continue;
+    const label=minutenNaarLokaal(ms/60000,tijdzone,utcOffsetSeconden);
+    if(!label) continue;
+    if(!perLabel.has(label)) perLabel.set(label,[]);
+    perLabel.get(label).push(ms);
+  }
+  for(const lijst of perLabel.values()){
+    if(lijst.length!==2) continue;
+    const gesorteerd=lijst.slice().sort((a,b)=>a-b);
+    uit.set(gesorteerd[0],"zomertijd");
+    uit.set(gesorteerd[1],"wintertijd");
+  }
+  return uit;
+}
+
 function datumStartMinuten(datum,tijdzone,utcOffsetSeconden){
   return lokaalNaarMinuten(String(datum||"")+"T00:00",tijdzone,utcOffsetSeconden);
 }
@@ -531,6 +589,10 @@ const publiekeApi={
   lokaalNaarMinuten,
   providerNaarMinuten,
   minutenNaarLokaal,
+  uurInstantMs,
+  indexVoorInstant,
+  kiesStandaardUurIndex,
+  dubbeleUurAanduidingen,
   hoeveelheidTekst,
   kansTekst,
   neerslagSoortUitCode,

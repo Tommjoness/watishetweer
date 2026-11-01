@@ -1116,6 +1116,10 @@ const ls={
   get(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f;}catch(e){return f;}},
   set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 };
+/* Uurselectie (zie het blok "uurselectie" bij scrubKoppel): staat hier, bij S, zodat ook een vroege etmaal-aanroep tijdens het opstarten hem kent. */
+const UURSEL={handmatig:null,plaats:null,programmatisch:false,alleenWeergave:false,gepland:false,huidig:null};
+const UUR_AANDUIDINGEN=new WeakMap();
+
 // Lokale opslag en deel-URL's hebben geen GPS-precisie nodig. Drie decimalen
 // is ongeveer honderd meter en beperkt onnodige locatieprecisie in blijvende data.
 const coordOpslag=v=>Number(Number(v).toFixed(3));
@@ -2405,7 +2409,7 @@ function etmaal(start,n){
     "Verloop van "+grafiekMoment(TI[0])+" tot "+grafiekMoment(TI[TI.length-1])
     +", temperatuur tussen "+dataMin+" en "+dataMax+" graden, "+kansVoorlezer+".");
   S.geo={x:x,y:y,pl:pl,pr:pr,pt:pt,ih:ih,cw:cw,n:T.length,T:T,A:A,P:P,W_:W_,G:G,C:C,D:D,ND:ND,TI:TI,WD:WD,W:W,H:H,M:M};
-  scrubKoppel(); chartHint();
+  scrubKoppel(); chartHint(); uurPlan();
 
   const dg=S.dag;
   document.getElementById("chartlab").textContent = dg==null ? (S.bereik===24?"De komende 24 uur":S.bereik===48?"De komende 48 uur":"De komende zeven dagen")
@@ -2456,6 +2460,137 @@ function chartHint(){
   if(!el2) return;
   // een vaste tekst, ongeacht muis- of touchbediening
   el2.textContent="Houd de grafiek vast voor details.";
+}
+
+/* ---------- uurselectie ----------
+   Eén selectie voor grafiek, detailkaart (strook), slider en uurtabel, gesleuteld op het UTC-instant van het uur: bij een
+   verversing die de provider-offset wijzigt verschuift de index van hetzelfde moment met één, en bij de najaarswissel komt
+   een klokuur twee keer voor. Onderscheid:
+   - handmatig: wat de bezoeker koos (klik, tik, toetsenbord, tabelrij); blijft staan tot een andere keuze of een andere plaats/dag;
+   - standaard: het eerstvolgende uur met geldige data (geen keuze gemaakt); schuift mee met de klok;
+   - voorvertoning: hover; tekent alleen de tijdelijke doos en raakt de selectie niet. */
+function uurNuMs(){
+  /* Zelfde klokbronnen als plaatsTijdDelen: klokOverride (testhaak, lokale wandtijd van de plaats) of klokInstantOverride, anders de echte klok. */
+  if(S.klokOverride&&typeof S.klokOverride.getTime==="function"){
+    const eigen=-new Date().getTimezoneOffset()*60,daar=(S.d&&S.d.utc_offset_seconds!=null)?S.d.utc_offset_seconds:eigen;
+    const t=new Date(S.klokOverride.getTime()+(daar-eigen)*1000);
+    return Date.UTC(t.getFullYear(),t.getMonth(),t.getDate(),t.getHours(),t.getMinutes(),t.getSeconds())-daar*1000;
+  }
+  return(S.klokInstantOverride&&typeof S.klokInstantOverride.getTime==="function")?S.klokInstantOverride.getTime():Date.now();
+}
+function uurInstant(tijd){
+  const api=globalThis.WeatherNowInterpretatie,off=S.d&&S.d.utc_offset_seconds;
+  return api&&off!=null?api.uurInstantMs(tijd,off):null;
+}
+/* "zomertijd" of "wintertijd" voor het eerste resp. tweede van twee uren met hetzelfde klokuur; anders "". */
+function uurAanduiding(ms){
+  const api=globalThis.WeatherNowInterpretatie,d=S.d,t=d&&d.hourly&&d.hourly.time;
+  if(!api||!Array.isArray(t)||!Number.isFinite(ms))return "";
+  let kaart=UUR_AANDUIDINGEN.get(t);
+  if(!kaart){kaart=api.dubbeleUurAanduidingen(t,d.timezone,d.utc_offset_seconds);UUR_AANDUIDINGEN.set(t,kaart);}
+  return kaart.get(ms)||"";
+}
+function uurAanduidingTekst(tijd){const a=uurAanduiding(uurInstant(tijd));return a?" ("+a+")":"";}
+function uurStandaardIndex(G){
+  const api=globalThis.WeatherNowInterpretatie,off=S.d&&S.d.utc_offset_seconds;
+  if(!api||off==null||!G||!Array.isArray(G.TI))return -1;
+  /* "Vandaag" is de werkelijke kalenderdatum in de tijdzone van de plaats (plaatsVandaag), niet de datum op de provider-as. */
+  const toekomst=S.dag==null||dagVerschil(S.d.daily.time[S.dag])===0;
+  const k=api.kiesStandaardUurIndex(G.TI,G.T,off,uurNuMs(),{alleenToekomst:toekomst});
+  /* Het dagvenster eindigt met 00:00 van de volgende dag als sluitpunt van de grafiek; dat uur hoort niet bij de gekozen dag
+     (de uurtabel filtert ook op de dagdatum), dus daar valt geen standaardkeuze. */
+  if(k>=0&&S.dag!=null){const dag=S.d.daily.time[S.dag];if(String(G.TI[k]).slice(0,10)!==dag)return -1;}
+  return k;
+}
+function uurPlan(){
+  if(UURSEL.gepland)return;
+  UURSEL.gepland=true;
+  /* Pas na alle omhullende etmaal-lagen: die vullen o.a. de neerslagregel van de tooltip. */
+  queueMicrotask(uurToepassen);
+}
+function uurMarkeerTabel(){
+  const api=globalThis.WeatherNowFinalDesktopUI20260902;
+  if(api&&typeof api.markeerUur==="function")api.markeerUur();
+}
+function uurZetSlider(k){
+  const api=globalThis.WeatherNowPolishV2;
+  if(api&&typeof api.zetSlider==="function")api.zetSlider(k);
+}
+function uurLegeToestand(strook,toekomstLeeg){
+  if(!strook)return;
+  const el=(t,k,x)=>{const e=document.createElement(t);if(k)e.className=k;e.textContent=x;return e;};
+  strook.dataset.leeg="1";delete strook.dataset.sig;
+  while(strook.firstChild)strook.removeChild(strook.firstChild);
+  [el("div","tip-kop","Geen uurgegevens"),el("div","tip-oms",toekomstLeeg?"Geen komende uren meer vandaag.":"Voor dit venster zijn geen geldige uurwaarden beschikbaar. Probeer te verversen of kies een andere dag.")].forEach(k=>strook.appendChild(k));
+}
+function uurToepassen(){
+  UURSEL.gepland=false;
+  const hit=document.getElementById("hit"),svg=document.getElementById("chart"),g=document.getElementById("scrub"),G=S.geo,strook=document.getElementById("tip-strook");
+  const api=globalThis.WeatherNowInterpretatie;
+  if(!hit||!svg||!g||!G||!G.n||!S.d||!api)return;
+  /* Een andere plaats is een nieuwe keuze; een verversing van dezelfde plaats niet. */
+  const plaats=String(S.lat)+","+String(S.lon);
+  if(UURSEL.plaats!==plaats){UURSEL.plaats=plaats;UURSEL.handmatig=null;}
+  let k=-1,handmatig=false;
+  if(UURSEL.handmatig!=null){
+    const j=api.indexVoorInstant(G.TI,S.d.utc_offset_seconds,UURSEL.handmatig);
+    if(j>=0&&Number.isFinite(G.T[j])){k=j;handmatig=true;}else UURSEL.handmatig=null;
+  }
+  if(k<0)k=uurStandaardIndex(G);
+  if(k<0){
+    UURSEL.huidig=null;g.style.display="none";g.dataset.modus="";
+    uurLegeToestand(strook,S.dag==null||dagVerschil(S.d.daily.time[S.dag])===0);
+    uurMarkeerTabel();return;
+  }
+  const r=svg.getBoundingClientRect();
+  UURSEL.huidig={ms:uurInstant(G.TI[k]),k:k,handmatig:handmatig};
+  if(!r.width){uurMarkeerTabel();return;}
+  const sc=r.width/(G.W||900);
+  UURSEL.programmatisch=true;
+  try{
+    const eig={clientX:r.left+G.x(k)*sc,clientY:r.top+G.y(G.T[k])*sc,pointerType:"mouse"};
+    hit.dispatchEvent(typeof PointerEvent==="function"?new PointerEvent("pointerdown",eig):Object.assign({type:"pointerdown"},eig));
+  }
+  finally{UURSEL.programmatisch=false;}
+  g.dataset.modus="selectie";
+  uurZetSlider(k);
+  uurMarkeerTabel();
+}
+/* Een uur kiezen op zijn instant (bijv. een tabelrij). Geeft false als het uur niet in de getoonde reeks staat. */
+function uurKiesInstant(ms,meld){
+  const G=S.geo,api=globalThis.WeatherNowInterpretatie;
+  if(!G||!api||!S.d||!Number.isFinite(ms))return false;
+  const k=api.indexVoorInstant(G.TI,S.d.utc_offset_seconds,ms);
+  if(k<0||!Number.isFinite(G.T[k]))return false;
+  UURSEL.handmatig=ms;uurToepassen();
+  if(meld)uurMeld(k);
+  return true;
+}
+/* Een echte keuze op de grafiek (klik, tik of het toetsenbord dat dezelfde pointerpositie simuleert). */
+function uurKiesUitEvent(ev){
+  /* Hover (muis zonder knop) is een voorvertoning; aanraking en slepen met een ingedrukte knop kiezen wel. alleenWeergave: de
+     focus op de slider toont de doos maar maakt van de standaardkeuze nog geen handmatige keuze. */
+  if(UURSEL.programmatisch||UURSEL.alleenWeergave||!S.geo||!S.d)return;
+  if(ev.type==="pointermove"&&!(ev.buttons&1))return;
+  const G=S.geo,svg=document.getElementById("chart");if(!G||!svg||!G.n)return;
+  const r=svg.getBoundingClientRect();if(!r.width)return;
+  const sc=(G.W||900)/r.width;
+  const i=clamp(Math.round(((ev.clientX-r.left)*sc-G.x(0))/G.cw),0,G.n-1);
+  if(!Number.isFinite(i)||!G.TI||!G.TI[i]||!Number.isFinite(G.T[i]))return;
+  const ms=uurInstant(G.TI[i]);if(!Number.isFinite(ms))return;
+  UURSEL.handmatig=ms;UURSEL.huidig={ms:ms,k:i,handmatig:true};
+  uurMarkeerTabel();
+  if(ev.isTrusted&&ev.type==="pointerdown")uurMeld(i);
+}
+/* Gesproken bevestiging (aria-live) alleen na een handeling van de bezoeker; nooit bij laden, standaardkeuze of verversing. */
+function uurMeld(i){
+  const G=S.geo;if(!G)return;
+  const api=globalThis.WeatherNowPolishV2;if(!api||typeof api.grafiekPuntBeschrijving!=="function")return;
+  let el=document.getElementById("wiw-uur-status");
+  if(!el){el=document.createElement("div");el.id="wiw-uur-status";el.className="sr-only";el.setAttribute("role","status");el.setAttribute("aria-live","polite");el.setAttribute("aria-atomic","true");document.body.appendChild(el);}
+  const t=plaatsNu(),p2=n=>String(n).padStart(2,"0");
+  const tekst=api.grafiekPuntBeschrijving(G,i,t.getFullYear()+"-"+p2(t.getMonth()+1)+"-"+p2(t.getDate())+"T"+p2(t.getHours())+":"+p2(t.getMinutes()));
+  if(tekst)el.textContent="Geselecteerd: "+tekst;
 }
 
 function scrubKoppel(){
@@ -2530,10 +2665,10 @@ function scrubKoppel(){
     const rij=(l,v,c)=>{n++;const yy=by+(G.M?17:22)+extra+n*rijH;
       /* data-tip-rij/-kol: latere lagen (compacte desktoptooltip, neerslagregel) zoeken hun tekst hierop en niet op volgorde, zodat een
          extra regel in de kop ze niet meer laat verschuiven. */
-      return `<text x="${bx+inzet}" y="${yy}" data-tip-rij="${n}" data-tip-kol="label" fill="${INK45}" font-family="Instrument Sans,sans-serif" font-size="${fLabel}">${l}</text>`
-           +`<text x="${bx+bw-inzet}" y="${yy}" data-tip-rij="${n}" data-tip-kol="waarde" text-anchor="end" fill="${c||INK}" font-family="DM Mono,monospace" font-size="${fWaarde}">${v}</text>`;};
-    const kop=`<text x="${bx+inzet}" y="${by+(G.M?14:18)}" data-tip="kop" fill="${INK}" font-family="Bodoni Moda,serif" font-size="${fKop}">${dagVoor}${hhmm(G.TI[i])}</text>`
-      +(omschrijving?`<text x="${bx+inzet}" y="${by+(G.M?14:18)+rijH-1}" data-tip="omschrijving" fill="${INK45}" font-family="Instrument Sans,sans-serif" font-size="${fWaarde}">${omschrijving}</text>`:"");
+      return `<text class="tip-doos" x="${bx+inzet}" y="${yy}" data-tip-rij="${n}" data-tip-kol="label" fill="${INK45}" font-family="Instrument Sans,sans-serif" font-size="${fLabel}">${l}</text>`
+           +`<text class="tip-doos" x="${bx+bw-inzet}" y="${yy}" data-tip-rij="${n}" data-tip-kol="waarde" text-anchor="end" fill="${c||INK}" font-family="DM Mono,monospace" font-size="${fWaarde}">${v}</text>`;};
+    const kop=`<text x="${bx+inzet}" y="${by+(G.M?14:18)}" class="tip-doos" data-tip="kop" fill="${INK}" font-family="Bodoni Moda,serif" font-size="${fKop}">${dagVoor}${hhmm(G.TI[i])}${uurAanduidingTekst(G.TI[i])}</text>`
+      +(omschrijving?`<text x="${bx+inzet}" y="${by+(G.M?14:18)+rijH-1}" class="tip-doos" data-tip="omschrijving" fill="${INK45}" font-family="Instrument Sans,sans-serif" font-size="${fWaarde}">${omschrijving}</text>`:"");
     /* Elk veld apart uitlezen, met een streepje voor wat ontbreekt. Zo kan een
        los gat in de reeks (bijvoorbeeld alleen de windstoten missen) nooit
        "NaN km/u" of "undefined%" in de doos laten staan. */
@@ -2553,17 +2688,20 @@ function scrubKoppel(){
     g.innerHTML=
       `<line x1="${X}" y1="${G.pt}" x2="${X}" y2="${G.pt+G.ih}" stroke="${INK}" stroke-width="1"/>
        <circle cx="${X}" cy="${Y}" r="3.4" fill="${SHEET}" stroke="${INK}" stroke-width="1.4"/>
-       <rect x="${bx}" y="${by}" width="${bw}" height="${bh-4}" fill="${SHEET}" stroke="${INK}" stroke-width="1"/>
-       ${kop}<line x1="${bx}" y1="${sepY}" x2="${bx+bw}" y2="${sepY}" stroke="${RULE}"/>${body}`;
+       <rect class="tip-doos" x="${bx}" y="${by}" width="${bw}" height="${bh-4}" fill="${SHEET}" stroke="${INK}" stroke-width="1"/>
+       ${kop}<line class="tip-doos" x1="${bx}" y1="${sepY}" x2="${bx+bw}" y2="${sepY}" stroke="${RULE}"/>${body}`;
     g.style.display="block";
+    g.dataset.modus=UURSEL.programmatisch?"selectie":"voorvertoning";
   };
   hit.addEventListener("pointermove",toon);
   hit.addEventListener("pointerdown",toon);
+  hit.addEventListener("pointerdown",uurKiesUitEvent);
+  hit.addEventListener("pointermove",uurKiesUitEvent);
   /* Een vinger verlaat het vlak zodra hij loslaat: de browser stuurt dan meteen
-     pointerleave. Alleen de muis verbergt het venster bij verlaten; na een tik
-     blijft het staan tot de volgende tik, een tik ernaast of na enkele seconden. */
+     pointerleave. De tijdelijke doos verdwijnt bij verlaten (muis) of na enkele seconden (aanraking); de geselecteerde
+     uur blijft staan (kruisdraad, punt, kaart, tabel) en wordt opnieuw getekend. */
   let verbergTimer=null;
-  const verberg=()=>{clearTimeout(verbergTimer);g.style.display="none";};
+  const verberg=()=>{clearTimeout(verbergTimer);uurToepassen();if(!UURSEL.huidig)g.style.display="none";};
   hit.addEventListener("pointerdown",()=>clearTimeout(verbergTimer));
   hit.addEventListener("pointerleave",e=>{ if(e.pointerType==="mouse") verberg(); });
   hit.addEventListener("pointercancel",verberg);
@@ -2731,7 +2869,7 @@ function dagen(){
   const c=document.getElementById("days");c.innerHTML=kop+out;
   c.querySelectorAll(".day:not(.kop)").forEach(el=>{
     const kies=(viaToetsenbord=false)=>{
-      const i=+el.dataset.i;S.dag=i;
+      const i=+el.dataset.i;S.dag=i;UURSEL.handmatig=null;
       let st=S.d.hourly.time.findIndex(t=>t.slice(0,10)===S.d.daily.time[i]);
       if(st<0)st=S.i0;
       etmaal(st,24);dagen();
@@ -2743,9 +2881,9 @@ function dagen(){
     el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();kies(true);}});
   });
 }
-document.getElementById("back").addEventListener("click",()=>{S.dag=null;etmaal(S.i0,S.bereik);dagen();});
+document.getElementById("back").addEventListener("click",()=>{S.dag=null;UURSEL.handmatig=null;etmaal(S.i0,S.bereik);dagen();});
 document.querySelectorAll(".bereik button").forEach(b=>b.addEventListener("click",()=>{
-  S.bereik=+b.dataset.n; S.dag=null;
+  S.bereik=+b.dataset.n; S.dag=null; UURSEL.handmatig=null;
   document.querySelectorAll(".bereik button").forEach(x=>x.classList.toggle("aan",x===b));
   etmaal(S.i0,S.bereik); dagen();
 }));
