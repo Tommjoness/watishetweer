@@ -289,6 +289,11 @@
     "Komende zeven dagen": "Next seven days",
     "De komende zeven dagen": "The next seven days",
     "Alle uren bekijken": "See all hours",
+    "(zomertijd)": "(summer time)",
+    "(wintertijd)": "(winter time)",
+    "Geen uurgegevens": "No hourly data",
+    "Geen komende uren meer vandaag.": "No more upcoming hours today.",
+    "Voor dit venster zijn geen geldige uurwaarden beschikbaar. Probeer te verversen of kies een andere dag.": "No valid hourly values are available for this period. Try refreshing or choose another day.",
     "Minder uren tonen": "Show fewer hours",
     "Meer nachten bekijken": "See more nights",
     "Minder nachten tonen": "Show fewer nights",
@@ -1035,6 +1040,27 @@
   const D = "(ma|di|wo|do|vr|za|zo)";       // dag kort
 
   const patronen = [
+    /* Uurselectie. Bij de najaarswissel komt één klokuur twee keer voor: "02:00 (zomertijd)" en "02:00 (wintertijd)". Het
+       achtervoegsel staat direct achter de tijd in iedere zinsvorm (tooltipkop, schuifwaarde, knoplabel, melding); de zin
+       zonder achtervoegsel wordt vertaald en het Engelse achtervoegsel komt weer achter de tijd. */
+    [/^(.*?\d{1,2}:\d{2}) \((zomertijd|wintertijd)\)(.*)$/, (m, h) => {
+      const rest = m[1] + m[3];
+      const tijd = /\d{1,2}:\d{2}$/.exec(m[1])[0];
+      let en = h.t(rest);
+      if (en == null && /^\d{1,2}:\d{2}$/.test(rest)) en = rest;
+      if (en == null) return null;
+      const i = en.indexOf(tijd);
+      if (i < 0) return null;
+      const stuk = ` (${m[2] === "zomertijd" ? "summer time" : "winter time"})`;
+      return en.slice(0, i + tijd.length) + stuk + en.slice(i + tijd.length);
+    }],
+    [/^Geselecteerd: (.+)$/, (m, h) => { const en = h.t(m[1]); return en == null ? null : `Selected: ${en}`; }],
+    [/^Toon (.+) in de grafiek(, eerstvolgend uur)?$/, (m, h) => {
+      const t = (h.t(m[1]) || m[1]).replace(/^(Tomorrow|Yesterday)\b/, x => x.toLowerCase());
+      return `Show ${t} in the chart${m[2] ? ", next hour" : ""}`;
+    }],
+    [/^(.+) is geselecteerd; die rij staat in Alle uren bekijken\.$/, (m, h) => `${h.t(m[1]) || m[1]} is selected; that row is under ‘See all hours’.`],
+    [/^(.+) is geselecteerd, maar staat niet in dit overzicht; zie Grafiekgegevens als tabel\.$/, (m, h) => `${h.t(m[1]) || m[1]} is selected but is not in this overview; see ‘Chart data as a table’.`],
     /* Weertypen, windkracht, fasen, niveaus: los label */
     [/^(.+)$/, (m) => weer(m[1])],
     [/^(.+)$/, (m) => uitLijst(WINDKRACHT, m[1])],

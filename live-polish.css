@@ -390,3 +390,6 @@ html[lang^="en"] #brief[data-q1-briefing-pending]::after,html[lang^="en"] #brief
   .tip-strook dd{margin:0;font:12.5px/1.45 "DM Mono",monospace;text-align:right;white-space:nowrap}
   #chart #scrub [data-tip-verberg]{visibility:hidden;pointer-events:none}
 }
+/* Geselecteerd uur zonder tijdelijke doos: kruisdraad en meetpunt blijven staan, de doos (rect, tekst, scheidslijn) is alleen
+   zichtbaar bij een voorvertoning (hover, aanraking, toetsenbord). Zo bedekt een permanente selectie geen grafiekwaarden. */
+#chart #scrub[data-modus="selectie"] .tip-doos{visibility:hidden;pointer-events:none}

@@ -67,10 +67,19 @@ async function doorklikken(page, verzamelaar) {
      eenmaal gevonden element kan verdwenen zijn terwijl zijn opvolger er is. */
   const KLIKBAAR = "button:not([disabled]), [role=button], .row.day, [data-modus]";
   const aantal = await page.$$eval(KLIKBAAR, els => els.length);
+  /* Uurknoppen in de tabel kiezen een uur: #scrub en #hit krijgen dan een nieuwe Nederlandse tekst die de vertaallaag vertaalt.
+     Die laag remt na 20 schrijfacties per element binnen 2 s (lusbeveiliging), maar de stub hieronder zet Date.now vast, dus
+     in deze crawler telt de rem cumulatief per pagina. Alle rij-teksten (labels, tijdzone) zijn al verzameld bij het laden; hier
+     volstaat een representatieve selectie (eerste, tweede derde, laatste) om de selectieteksten te dekken zonder zelf de rem
+     te raken en een lus te melden die er niet is. */
+  const uurKnoppen = await page.$$eval(".wiw-hour-pick", els => els.length);
+  const uurKeuze = new Set(uurKnoppen ? [0, Math.floor(uurKnoppen / 3), Math.floor((2 * uurKnoppen) / 3), uurKnoppen - 1] : []);
+  let uurTeller = 0;
   for (let i = 0; i < Math.min(aantal, 80); i++) {
     try {
       const el = (await page.$$(KLIKBAAR))[i];
       if (!el || !(await el.isVisible())) continue;
+      if (await el.evaluate(e => e.classList.contains("wiw-hour-pick"))) { if (!uurKeuze.has(uurTeller++)) continue; }
       log("klik", i);
       await el.click({ timeout: 1500, noWaitAfter: true });
       await page.waitForTimeout(120);

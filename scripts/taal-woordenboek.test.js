@@ -81,7 +81,20 @@ const verwacht = {
   "De verwachte neerslag over de hele dag is 3,0 mm.": "Expected precipitation for the whole day is 3.0 mm.",
   "Officiële weerwaarschuwing (oranje): Code oranje: mist.": "Official weather warning: orange warning for fog.",
   "Er is een kleine kans op regen in de komende twee uur (hoogste uurkans 20%).": "There is a low chance of rain in the next two hours (highest hourly chance 20%).",
-  "Geen officiële waarschuwing.": "Not an official warning."
+  "Geen officiële waarschuwing.": "Not an official warning.",
+  /* Uurselectie (Fase 1): aanduiding bij het dubbele uur van de najaarswissel en de bijbehorende meldingen. */
+  "02:00 (zomertijd)": "02:00 (summer time)",
+  "morgen 02:00 (wintertijd)": "Tomorrow 02:00 (winter time)",
+  "02:00 (wintertijd), 5 graden, 40 procent neerslagkans": "02:00 (winter time), 5 degrees, 40 per cent chance of precipitation",
+  "Geselecteerd: 02:00 (wintertijd), 5 graden, 40 procent neerslagkans": "Selected: 02:00 (winter time), 5 degrees, 40 per cent chance of precipitation",
+  "Geselecteerd: 17:00, 12 graden, 80 procent neerslagkans": "Selected: 17:00, 12 degrees, 80 per cent chance of precipitation",
+  "Toon 02:00 (zomertijd) in de grafiek, eerstvolgend uur": "Show 02:00 (summer time) in the chart, next hour",
+  "Toon morgen 00:00 in de grafiek": "Show tomorrow 00:00 in the chart",
+  "17:00 is geselecteerd; die rij staat in Alle uren bekijken.": "17:00 is selected; that row is under ‘See all hours’.",
+  "02:00 (wintertijd) is geselecteerd, maar staat niet in dit overzicht; zie Grafiekgegevens als tabel.": "02:00 (winter time) is selected but is not in this overview; see ‘Chart data as a table’.",
+  "Geen uurgegevens": "No hourly data",
+  "Geen komende uren meer vandaag.": "No more upcoming hours today.",
+  "Voor dit venster zijn geen geldige uurwaarden beschikbaar. Probeer te verversen of kies een andere dag.": "No valid hourly values are available for this period. Try refreshing or choose another day."
 };
 for (const [nl, en] of Object.entries(verwacht)) assert.equal(v.vertaal(nl), en, nl);
 
