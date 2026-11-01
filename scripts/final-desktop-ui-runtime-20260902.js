@@ -334,9 +334,15 @@ function werkUurTabelBij(){
     const ms=rijInstant(r),aanduiding=ms!==null&&typeof uurAanduiding==="function"?uurAanduiding(ms):"";
     if(ms!==null){
       tr.dataset.instant=String(ms);
-      const kn=document.createElement("button");kn.type="button";kn.className="wiw-hour-pick";kn.setAttribute("aria-pressed","false");
-      kn.setAttribute("aria-label","Toon "+rijLabel(r,aanduiding)+" in de grafiek"+(r.marker?", eerstvolgend uur":""));
-      kn.appendChild(tm);tijd.appendChild(kn);
+      /* Mobiel: een knop per rij (toegankelijk doel). Desktop: de uurkolom heeft bewust geen zichtbare knoppen (bewaker
+         cwv-desktop-recovery: "geen extra uurbediening"); daar is de rij klikbaar voor de muis en kiest het toetsenbord een uur
+         via de grafiekslider (pijltoetsen), die hetzelfde selectiemodel gebruikt. */
+      if(desktop)tijd.appendChild(tm);
+      else{
+        const kn=document.createElement("button");kn.type="button";kn.className="wiw-hour-pick";kn.setAttribute("aria-pressed","false");
+        kn.setAttribute("aria-label","Toon "+rijLabel(r,aanduiding)+" in de grafiek"+(r.marker?", eerstvolgend uur":""));
+        kn.appendChild(tm);tijd.appendChild(kn);
+      }
       if(aanduiding){const z=document.createElement("span");z.className="wiw-hour-tijdzone";z.textContent="("+aanduiding+")";tijd.appendChild(z);}
     }else tijd.appendChild(tm);
     if(desktop)tr.dataset.sourceIndex=String(r.bronIndex);

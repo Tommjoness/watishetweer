@@ -103,7 +103,7 @@ async function controleer(type,naam){
           ].filter(Boolean);
           return tijden.length>0&&tijden.every(t=>y>Number(t.getAttribute("y")));
         });
-        const kansLabels=[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).map(el=>(el.textContent||"").trim());
+        const kansLabels=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&/^\d+%$/.test((el.textContent||"").trim())).map(el=>(el.textContent||"").trim());
         return {
           n:g&&g.n,mobiel:g&&g.M,W:g&&g.W,cw:g&&g.cw,chartStart:S.chartStart,chartBereik:S.chartBereik,
           starts:startEls.map(el=>(el.textContent||"").trim()),
@@ -167,7 +167,7 @@ async function controleer(type,naam){
           details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
           samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0,
           bedragen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(el=>(el.textContent||"").trim()):[],
-          kansen:[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).length
+          kansen:[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&/^\d+%$/.test((el.textContent||"").trim())).length
         };
       });
       assert.ok(langer.n>25,`${naam} ${breedte}: tweede controle gebruikt een langere grafiek`);

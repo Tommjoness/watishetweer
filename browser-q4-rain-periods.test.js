@@ -102,7 +102,9 @@ async function controleer(type,naam,breedte){
       const teksten=[...regen.querySelectorAll("text")].map(el=>(el.textContent||"").trim());
       const samenvattingen=[...regen.querySelectorAll('text[data-q4-rain-summary]')].map(el=>(el.textContent||"").trim());
       const periodeBedragen=[...regen.querySelectorAll('text[data-q4-rain-period-amount]')].map(el=>(el.textContent||"").trim());
-      const kansLabels=[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).map(el=>(el.textContent||"").trim());
+      /* De tooltip (#scrub) staat sinds de uurselectie altijd in de DOM (visueel verborgen buiten een voorvertoning) en bevat bewust
+         waarden als "1%"; de controle gaat over statische percentages in de tijdlijn zelf. */
+      const kansLabels=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&/^\d+%$/.test((el.textContent||"").trim())).map(el=>(el.textContent||"").trim());
       const pop=document.getElementById("pop"),popStat=pop&&pop.parentElement,popKop=popStat&&popStat.querySelector(".eyebrow");
       return {
         oudeStaven:[...svg.querySelectorAll("rect")].filter(el=>el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".16").length,
@@ -290,7 +292,7 @@ async function controleer(type,naam,breedte){
       return {
         groep:!!svg.querySelector('g[data-q4-rain-periods]'),
         staven:[...svg.querySelectorAll("rect")].filter(el=>el.getAttribute("fill")===TEAL&&el.getAttribute("fill-opacity")===".16").length,
-        kansen:[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).length,
+        kansen:[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&/^\d+%$/.test((el.textContent||"").trim())).length,
         zelfdeArray:S.geo&&S.geo.MM===S.geo.Q1MM
       };
     });

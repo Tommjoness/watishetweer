@@ -203,6 +203,11 @@ let n=0;const ok=(c,m)=>{assert(c,m);n++;};const gelijk=(a,b,m)=>{assert.deepStr
         await page.mouse.move(3,3);await sleep(300);
         m=await lees(page);gelijk(m.scrub.modus,"selectie","E: doos weg na verlaten, selectie blijft");
         await page.mouse.move(p.x,p.y,{steps:2});await sleep(150);await page.keyboard.press("Escape");
+        /* Desktop: geen knoppen in de uurkolom (bewaker cwv-desktop-recovery), wel een klikbare rij voor de muis. */
+        gelijk(await page.evaluate(()=>[...document.querySelectorAll("#wiw-hour-panel button")].filter(e=>e.getClientRects().length>0).length),0,"E: de desktop-uurkolom heeft geen zichtbare knoppen");
+        const rij3=await page.evaluate(()=>document.querySelectorAll("#wiw-hour-table tbody tr")[2].dataset.instant);
+        await page.click('#wiw-hour-table tbody tr:nth-child(3) td:nth-child(3)');await sleep(250);
+        m=await lees(page);gelijk(m.gekozen,[rij3],"E: een klik op een rij kiest dat uur");
         /* Escape op een niet-gefocust vlak doet niets met de selectie. */
         const ver=Date.parse("2026-07-23T06:00:00Z"),pv=await geoXY(page,ver);ok(pv,"E: uur ligt in de grafiek");
         const y0=await page.evaluate(()=>Math.round(window.scrollY)),h0=(await lees(page)).docH;
