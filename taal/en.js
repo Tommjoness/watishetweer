@@ -1532,8 +1532,10 @@
   ];
 
   /* Korte vormen voor smalle kolomkoppen (tabellen, Zeven dagen, Nachtzicht). */
-  const koppen = { "Neerslag": "Precip.", "Zichtscore": "Score", "Bewolking": "Cloud", "Windstoot": "Gust", "Gevoel": "Feels" };
-  const kopSelector = "th, .row.kop > *";
+  const koppen = { "Neerslag": "Precip.", "Zichtscore": "Score", "Bewolking": "Cloud", "Windstoot": "Gust", "Gevoel": "Feels",
+    /* Labels van de mobiele detailkaart (.tip-strook dt): "neerslag" is daar "precip." en blijft overal elders "precipitation". */
+    "kans": "chance", "neerslag": "precip." };
+  const kopSelector = "th, .row.kop > *, .tip-strook dt";
 
   return { exact, patronen, lijsten: { WEER, WINDKRACHT, RICHTING_VOL, RICHTING_KORT }, eigennamen, koppen, kopSelector };
 });

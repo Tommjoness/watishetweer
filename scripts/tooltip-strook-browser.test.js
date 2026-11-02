@@ -1,7 +1,7 @@
 "use strict";
 
 /* Tooltip van de temperatuurgrafiek, minimaal 12 px effectief leesbaar op iedere breedte:
-   - tot en met 429 px: de zes rijen staan in een HTML-strook direct onder de grafiek (ruimte vanaf de eerste
+   - tot en met 429 px: de rijen (kans en hoeveelheid apart) staan in een HTML-strook direct onder de grafiek (ruimte vanaf de eerste
      render gereserveerd, ook zonder JavaScript); de SVG-tooltip is dan alleen visueel verborgen en kruisdraad en
      meetpunt blijven zichtbaar;
    - vanaf 430 px: de SVG-tooltip blijft, maar wordt zo opgeschaald dat de kleinste tekst minimaal 12 px is.
@@ -96,6 +96,8 @@ const meet=page=>page.evaluate(()=>{
     minFont:fonts.length?Math.min(...fonts):null,buiten,overflowX:st.scrollWidth>st.clientWidth+0.5,
     svgTekstZichtbaar:svgTekst.filter(zichtbaar).length,kruisZichtbaar:zichtbaar(kruis),puntZichtbaar:zichtbaar(punt),
     kop:(st.querySelector(".tip-kop")||{}).textContent||"",rijen,svgRijen:[1,2,3,4,5,6].map(rij),
+    kansModel:(()=>{const k=S.geo.TI.indexOf(g.dataset.uur),v=S.geo.P&&S.geo.P[k];return Number.isFinite(v)?Math.round(Math.min(100,Math.max(0,v)))+"%":"–";})(),
+    oms:(st.querySelector(".tip-oms")||{}).textContent||"",svgOms:(g.querySelector('text[data-tip="omschrijving"]')||{}).textContent||"",
     svgKop:(g.querySelector('text[data-tip="kop"]')||{}).textContent||"",
     ariaHidden:st.getAttribute("aria-hidden"),valuenow:hit.getAttribute("aria-valuenow"),valuetext:hit.getAttribute("aria-valuetext")||"",focus:document.activeElement&&document.activeElement.id,gDisplay:g.style.display,
     placeholder:getComputedStyle(st,"::before").content};
@@ -137,8 +139,17 @@ async function testStrook(browser,root){
         await kies(page,i);const m=await meet(page);metingen++;
         assert.equal(m.staat,"vol",`${L} uur ${i}: strook niet gevuld`);
         assert.equal(m.kop,m.svgKop,`${L} uur ${i}: kop wijkt af van de SVG-tooltip`);
-        assert.equal(m.rijen.length,6,`${L} uur ${i}: ${m.rijen.length} rijen`);
-        m.rijen.forEach((r,k)=>{assert(r[0]&&r[1],`${L} uur ${i}: lege rij ${k+1}`);assert.deepEqual(r,m.svgRijen[k],`${L} uur ${i}: rij ${k+1} wijkt af van de SVG-tooltip`);});
+        /* De kaart toont zeven waarden uit de weerreeksen (kans en hoeveelheid apart); de SVG-tooltip heeft er zes (neerslagregel gecombineerd). */
+        assert.equal(m.rijen.length,7,`${L} uur ${i}: ${m.rijen.length} waarden in de kaart`);
+        m.rijen.forEach((r,k)=>assert(r[0]&&r[1],`${L} uur ${i}: lege waarde ${k+1}`));
+        assert.equal(m.oms.replace(/\u00a0/g,""),m.svgOms,`${L} uur ${i}: omschrijving wijkt af van de SVG-tooltip`);
+        const kaartVoorSvg=[0,1,4,5,6],svgVoorKaart=[0,1,3,4,5];
+        kaartVoorSvg.forEach((kk,n)=>assert.deepEqual(m.rijen[kk],m.svgRijen[svgVoorKaart[n]],`${L} uur ${i}: kaartwaarde ${kk+1} wijkt af van SVG-rij ${svgVoorKaart[n]+1}`));
+        assert.deepEqual([m.rijen[2][0],m.rijen[3][0]],taal==="en"?["chance","precip."]:["kans","neerslag"],`${L} uur ${i}: labels van kans en neerslag`);
+        const [svgKans,svgMm]=m.svgRijen[2][1].split(" · ");
+        assert.equal(m.rijen[2][1],svgKans,`${L} uur ${i}: kans wijkt af van de SVG-neerslagregel`);assert.equal(m.rijen[2][1],m.kansModel,`${L} uur ${i}: kans wijkt af van de weerreeks`);
+        if(svgMm)assert.equal(m.rijen[3][1],svgMm,`${L} uur ${i}: hoeveelheid wijkt af van de SVG-neerslagregel`);
+        else assert(["0,0 mm","<0,1 mm","–","0.0 mm","<0.1 mm"].includes(m.rijen[3][1]),`${L} uur ${i}: zonder meetbare hoeveelheid in de SVG moet de kaart 0,0, <0,1 of een streepje tonen, kreeg ${m.rijen[3][1]}`);
         assert(m.minFont>=12,`${L} uur ${i}: kleinste tekst ${m.minFont}px`);
         assert.deepEqual(m.buiten,[],`${L} uur ${i}: tekst buiten de strook ${m.buiten}`);assert(!m.overflowX,`${L} uur ${i}: horizontale overflow in strook`);
         assert.equal(m.svgTekstZichtbaar,0,`${L} uur ${i}: SVG-tooltip nog zichtbaar`);
@@ -178,7 +189,7 @@ async function testTouch(browser,root){
       for(const f of [0.15,0.5,0.85]){
         await page.touchscreen.tap(box.x+box.w*f,box.y+box.h*0.5);await page.waitForTimeout(200);
         const m=await meet(page);assert.equal(m.staat,"vol",`${L} f=${f}: strook niet gevuld na tik`);assert.equal(m.svgTekstZichtbaar,0,`${L}: SVG-tooltip zichtbaar na tik`);
-        assert(m.kruisZichtbaar&&m.puntZichtbaar,`${L}: kruisdraad/punt weg na tik`);assert(m.minFont>=12);assert.equal(m.rijen.length,6);laatsteKop=m.kop;hoogtes.add(m.h);volgend.add(m.volgendTop);
+        assert(m.kruisZichtbaar&&m.puntZichtbaar,`${L}: kruisdraad/punt weg na tik`);assert(m.minFont>=12);assert.equal(m.rijen.length,7);laatsteKop=m.kop;hoogtes.add(m.h);volgend.add(m.volgendTop);
       }
       assert.equal(hoogtes.size,1,`${L}: hoogte wisselt bij tikken`);assert.equal(volgend.size,1,`${L}: pagina verschuift bij tikken`);
       await page.waitForTimeout(4500);const idle=await meet(page);

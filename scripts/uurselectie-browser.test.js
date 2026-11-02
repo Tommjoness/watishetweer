@@ -128,7 +128,7 @@ let n=0;const ok=(c,m)=>{assert(c,m);n++;};const gelijk=(a,b,m)=>{assert.deepStr
         let m=await lees(page);
         gelijk(m.scrub,{display:"block",modus:"selectie"},"A: kruisdraad staat, tijdelijke doos is verborgen");
         gelijk(m.kop,"15:00","A: standaard = eerstvolgend uur (15:00)");
-        ok(m.stH===140,"A: kaart is 140 px ("+m.stH+")");ok(m.rijenInStrook>=6,"A: kaart gevuld met de zes rijen");
+        ok(m.stH===140,"A: kaart is 140 px ("+m.stH+")");ok(m.rijenInStrook>=7,"A: kaart gevuld met zeven waarden");
         ok(/^15:00/.test(m.valuetext)&&Number(m.valuenow)>=1,"A: slider volgt de selectie ("+m.valuetext+")");
         gelijk(m.gekozen,[eerst],"A: één tabelrij gemarkeerd: 15:00");gelijk(m.ingedrukt,[eerst],"A: aria-pressed op dezelfde rij");gelijk(m.eerstvolgend,[eerst],"A: eerstvolgend uur apart herkenbaar (aria-current=time)");
         gelijk(m.status,"","A: niets aangekondigd bij laden");

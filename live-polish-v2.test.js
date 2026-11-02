@@ -87,7 +87,33 @@ test("tooltipstrook: statische markup, CSS vanaf de eerste render en koppeling n
   assert(css.includes('html[lang^="en"] .tip-strook:empty::before'));
   assert(css.includes("#chart #scrub [data-tip-verberg]{visibility:hidden;pointer-events:none}"));
   assert(js.includes("requestAnimationFrame(synchroniseerTooltipWeergave)")&&js.includes("koppelTooltipWeergave();"));
-  assert(!/strook\.innerHTML|innerHTML\s*=/.test(js.slice(js.indexOf("function tooltipTekstLezen"),js.indexOf("function koppelTooltipWeergave"))),"strook mag alleen met textContent worden gevuld");
+  assert(!/strook\.innerHTML|innerHTML\s*=/.test(js.slice(js.indexOf("function kaartGegevens"),js.indexOf("function koppelTooltipWeergave"))),"strook mag alleen met textContent worden gevuld");
+  /* De kaart leest de weerreeksen (S.geo via #scrub[data-uur]) en nooit de tekst van de SVG-tooltip. */
+  const kaartCode=js.slice(js.indexOf("function kaartMmTekst"),js.indexOf("/* De SVG-tekstvakdelen krijgen een markering"));
+  assert(kaartCode.includes("function kaartGegevens")&&kaartCode.includes("function vulTooltipStrook"),"de kaartfuncties staan in het getoetste bereik");
+  assert(!/data-tip|querySelector\(['"]text|tooltipTekstLezen/.test(kaartCode),"de kaart mag de SVG-tooltiptekst niet lezen");
+  assert(html.includes("g.dataset.uur=G.TI[i]"),"toon() moet het getoonde uur op #scrub zetten");
+});
+
+test("mobiele detailkaart: waarden uit de weerreeksen, ontbrekend is nooit nul",()=>{
+  const A=require("./live-polish-v2.js");
+  const G={TI:["2026-07-22T14:00","2026-07-22T15:00","2026-07-22T16:00"],T:[-12.4,0.4,null],A:[-15.6,-0.4,null],P:[100,0,null],Q1MM:[123.46,0,null],W_:[250.4,5,null],WD:[250,10,null],G:[300.2,8,null],C:[100,0,null],D:[null,null,null]};
+  const d0=A.kaartGegevens(G,"2026-07-22T14:00"),r0=Object.fromEntries(d0.rijen.map(r=>[r.label,r.waarde]));
+  assert.deepEqual(r0,{temperatuur:"-12°C","voelt als":"-16°C",kans:"100%",neerslag:"123,5 mm",wind:"250 km/u",windstoten:"300 km/u",bewolking:"100%"},"hoge wind, negatieve temperatuur en 100% kans");
+  const r1=Object.fromEntries(A.kaartGegevens(G,"2026-07-22T15:00").rijen.map(r=>[r.label,r.waarde]));
+  assert.equal(r1.neerslag,"0,0 mm","een echte nulwaarde van de bron blijft 0,0 mm");assert.equal(r1.kans,"0%");assert.equal(r1.temperatuur,"0°C");
+  /* Ontbrekende waarden worden nooit stilzwijgend nul. */
+  const r2=Object.fromEntries(A.kaartGegevens(G,"2026-07-22T16:00").rijen.map(r=>[r.label,r.waarde]));
+  assert.deepEqual(r2,{temperatuur:"–","voelt als":"–",kans:"–",neerslag:"–",wind:"–",windstoten:"–",bewolking:"–"},"alles ontbreekt: overal een streepje");
+  /* Hoeveelheid: nul alleen bij een echte nul; kleine positieve waarde is <0,1; ongeldig is een streepje. */
+  assert.equal(A.kaartMmTekst(0),"0,0 mm");assert.equal(A.kaartMmTekst(0.04),"<0,1 mm");assert.equal(A.kaartMmTekst(0.1),"0,1 mm");assert.equal(A.kaartMmTekst(1.45),"1,4 mm".replace("1,4","1,4"));
+  for(const slecht of [null,undefined,"",NaN,"abc",-1])assert.equal(A.kaartMmTekst(slecht),"–","ongeldige hoeveelheid ("+slecht+") is een streepje");
+  /* De kans is begrensd en geeft de afgeronde bronwaarde; de koppeling volgt het uur, niet de index. */
+  const G2={TI:["a","b"],P:[104.6,-3],Q1MM:[1,2]};
+  assert.equal(A.kaartGegevens(G2,"a").rijen[2].waarde,"100%");assert.equal(A.kaartGegevens(G2,"b").rijen[2].waarde,"0%");
+  assert.equal(A.kaartGegevens(G2,"b").rijen[3].waarde,"2,0 mm","hoeveelheid hoort bij hetzelfde uur als de kans");
+  assert.equal(A.kaartGegevens(G2,"onbekend"),null,"een uur dat niet in de reeks staat geeft geen kaart");assert.equal(A.kaartGegevens(null,"a"),null);assert.equal(A.kaartGegevens(G2,""),null);
+  assert.equal(A.kaartGegevens({TI:["a"],P:[50]},"a").rijen[3].waarde,"–","zonder hoeveelheidsreeks een streepje");
 });
 
 test("verwijderd temperatuurcijfer koppelt aan het juiste zwarte datapunt",()=>{

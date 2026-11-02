@@ -2692,6 +2692,7 @@ function scrubKoppel(){
        ${kop}<line class="tip-doos" x1="${bx}" y1="${sepY}" x2="${bx+bw}" y2="${sepY}" stroke="${RULE}"/>${body}`;
     g.style.display="block";
     g.dataset.modus=UURSEL.programmatisch?"selectie":"voorvertoning";
+    g.dataset.uur=G.TI[i];   // het uur dat de tooltip toont (provider-tijd): de mobiele kaart leest daarmee de weerreeksen, niet de tooltiptekst
   };
   hit.addEventListener("pointermove",toon);
   hit.addEventListener("pointerdown",toon);

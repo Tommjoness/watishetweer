@@ -201,7 +201,7 @@ function tooltipDoosPlaatsing(doos,punt,veld,k){
 const api={
   tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan,
   dauwpuntCelsius,luchtvochtigheidDuiding,temperatuurProminentie,etmaalExtraTemperaturenWeg,grafiekPuntBeschrijving,grafiekDagVoorvoegsel,
-  tooltipSchaalFactor,tooltipDoosPlaatsing,tooltipMinPx,tooltipTijdPx,TOOLTIP_MIN_PX
+  tooltipSchaalFactor,tooltipDoosPlaatsing,tooltipMinPx,tooltipTijdPx,TOOLTIP_MIN_PX,kaartGegevens,kaartMmTekst
 };
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowPolishV2=api;
@@ -331,27 +331,59 @@ scrubKoppel=function(){
 };
 
 /* ---------- tooltipweergave: informatiestrook (tot en met 429 px, via CSS) en minimaal 12 px ----------
-   De SVG-groep #scrub blijft de enige bron van waarheid; alle lagen die haar vullen of verplaatsen
-   (basis, compactie, neerslagregel) draaien ongewijzigd. Deze laag leest het eindresultaat pas in het
-   volgende frame (requestAnimationFrame), dus de volgorde van de lagen doet er niet toe:
-   - de zes rijen worden in de HTML-strook #tip-strook gezet (CSS toont die alleen op smalle schermen);
-   - bij >= 430 px wordt de doos zo opgeschaald dat de kleinste tekst minimaal 12 px effectief is. */
+   Twee onafhankelijke weergaven van hetzelfde uur; alle lagen die de SVG-groep #scrub vullen of verplaatsen
+   (basis, compactie, neerslagregel) draaien ongewijzigd:
+   - de HTML-strook #tip-strook (de mobiele detailkaart, CSS toont die alleen op smalle schermen) wordt gevuld uit de
+     weerreeksen (S.geo) voor het uur dat de tooltip toont (#scrub[data-uur], de provider-tijd van dat uur). De kaart leest dus
+     nooit de samengestelde, vertaalde tekst van de SVG-tooltip;
+   - bij >= 430 px wordt de SVG-doos zo opgeschaald dat de kleinste tekst minimaal 12 px effectief is. */
 const SVG_NS="http://www.w3.org/2000/svg";
 let tooltipObserver=null,tooltipRaf=0,tooltipTimer=0,tooltipBezig=false;
 
-function tooltipTekstLezen(g){
-  const kop=g.querySelector('text[data-tip="kop"]'),oms=g.querySelector('text[data-tip="omschrijving"]');
-  const rij=n=>{
-    const l=g.querySelector('text[data-tip-rij="'+n+'"][data-tip-kol="label"]'),w=g.querySelector('text[data-tip-rij="'+n+'"][data-tip-kol="waarde"]');
-    return l&&w?{label:l.textContent.trim(),waarde:w.textContent.trim(),kleur:w.getAttribute("fill")}:null;
+/* Neerslaghoeveelheid van het uur. Een ontbrekende of ongeldige waarde is "–", nooit stilzwijgend 0: "0,0 mm" staat er alleen als
+   de bron zelf nul levert, en een kleine positieve waarde wordt "<0,1 mm" (zelfde beleid als mmTekst in de neerslaglaag). */
+function kaartMmTekst(mm){
+  const m=eindig(mm);
+  if(m===null||m<0) return "–";
+  if(m===0) return "0,0 mm";
+  if(m<0.1) return "<0,1 mm";
+  return m.toFixed(1).replace(".",",")+" mm";
+}
+
+/* Alle waarden van de mobiele detailkaart voor het uur met provider-tijd `uur`, uit de weerreeksen van `G` (S.geo). Een ontbrekende
+   waarde is "–". Geeft null als het uur niet (meer) in de getoonde reeks staat. */
+function kaartGegevens(G,uur){
+  if(!G||!Array.isArray(G.TI)||!uur) return null;
+  const i=G.TI.indexOf(uur);
+  if(i<0) return null;
+  const waarde=reeks=>eindig(Array.isArray(reeks)?reeks[i]:null);
+  const graden=v=>v===null?"–":Math.round(v)+"°C";
+  const kans=waarde(G.P),snel=waarde(G.W_),richting=waarde(G.WD),stoot=waarde(G.G),bewolking=waarde(G.C);
+  const kompas=richting!==null&&typeof kompasKort==="function"?kompasKort(richting):null;
+  const kracht=snel!==null&&typeof bft==="function"?bft(snel):null;
+  const wind=snel===null?"–":Math.round(snel)+" km/u"+(kompas?" "+kompas:"")+(kracht!==null?", "+kracht+" Bft":"");
+  const lokaal=typeof weatherNowLokaleTijd==="function"?weatherNowLokaleTijd(uur):uur;
+  const tijd=typeof hhmm==="function"?hhmm(uur):String(lokaal).slice(11,16);
+  const aanduiding=typeof uurAanduidingTekst==="function"?uurAanduidingTekst(uur):"";
+  const code=G.D&&G.D[i]!=null?G.D[i]:null;
+  const omschrijving=code!==null&&typeof txt==="function"?txt(code,G.ND?G.ND[i]!==0:true):"";
+  return {
+    kop:grafiekDagVoorvoegsel(lokaal,plaatsNuLokaal())+tijd+aanduiding,
+    omschrijving,
+    rijen:[
+      {label:"temperatuur",waarde:graden(waarde(G.T))},
+      {label:"voelt als",waarde:graden(waarde(G.A))},
+      {label:"kans",waarde:kans===null?"–":Math.round(Math.min(100,Math.max(0,kans)))+"%",kleur:"var(--teal)"},
+      {label:"neerslag",waarde:kaartMmTekst(Array.isArray(G.Q1MM)?G.Q1MM[i]:null),kleur:"var(--teal)"},
+      {label:"wind",waarde:wind},
+      {label:"windstoten",waarde:stoot===null?"–":Math.round(stoot)+" km/u"},
+      {label:"bewolking",waarde:bewolking===null?"–":bewolking+"%"}
+    ]
   };
-  const rijen=[1,2,3,4,5,6].map(rij);
-  if(!kop||rijen.some(r=>!r)) return null;
-  return {kop:kop.textContent.trim(),omschrijving:oms?oms.textContent.trim():"",rijen,kopKleur:kop.getAttribute("fill")};
 }
 
 function vulTooltipStrook(strook,g){
-  const d=g.style.display!=="none"?tooltipTekstLezen(g):null;
+  const d=g.style.display!=="none"?kaartGegevens(typeof S!=="undefined"?S.geo:null,g.dataset.uur):null;
   if(!d){
     /* De lege toestand (geen geldig uur) is een eigen bericht en wordt niet door de lege tooltip weggehaald. */
     if(strook.dataset.leeg==="1")return;
@@ -364,12 +396,13 @@ function vulTooltipStrook(strook,g){
   const el=(tag,klasse,tekst)=>{const e=document.createElement(tag);if(klasse)e.className=klasse;if(tekst!=null)e.textContent=tekst;return e;};
   const item=r=>{
     const x=el("div","tip-rij");x.appendChild(el("dt",null,r.label));
-    const dd=el("dd",null,r.waarde);if(r.kleur&&r.kleur!==d.kopKleur) dd.style.color=r.kleur;
+    const dd=el("dd",null,r.waarde);if(r.kleur) dd.style.color=r.kleur;
     x.appendChild(dd);return x;
   };
   const duo=(a,b)=>{const x=el("div","tip-duo");x.appendChild(item(a));x.appendChild(item(b));return x;};
   const dl=el("dl","tip-rijen"),r=d.rijen;
-  dl.appendChild(duo(r[0],r[1]));dl.appendChild(item(r[2]));dl.appendChild(item(r[3]));dl.appendChild(duo(r[4],r[5]));
+  /* Vier rijen: temperatuur | voelt als, kans | neerslag, wind (hele rij: de langste waarde), windstoten | bewolking. */
+  dl.appendChild(duo(r[0],r[1]));dl.appendChild(duo(r[2],r[3]));dl.appendChild(item(r[4]));dl.appendChild(duo(r[5],r[6]));
   strook.replaceChildren(el("div","tip-kop",d.kop),el("div","tip-oms",d.omschrijving||"\u00a0"),dl);
   strook.dataset.sig=sig;
 }
