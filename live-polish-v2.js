@@ -351,7 +351,8 @@ function kaartMmTekst(mm){
 }
 
 /* Alle waarden van de mobiele detailkaart voor het uur met provider-tijd `uur`, uit de weerreeksen van `G` (S.geo). Een ontbrekende
-   waarde is "–". Geeft null als het uur niet (meer) in de getoonde reeks staat. */
+   waarde is "–". Neerslagkans volgt het contract van de grafiek (index.html, `P`): 0 tot en met 100 is geldig, boven 100 wordt 100, een negatieve
+   waarde is ongeldig ("–"). Geeft null als het uur niet (meer) in de getoonde reeks staat. */
 function kaartGegevens(G,uur){
   if(!G||!Array.isArray(G.TI)||!uur) return null;
   const i=G.TI.indexOf(uur);
@@ -374,7 +375,7 @@ function kaartGegevens(G,uur){
     rijen:[
       {label:"temperatuur",waarde:graden(waarde(G.T))},
       {label:"voelt als",waarde:graden(waarde(G.A))},
-      {label:"neerslagkans",waarde:kans===null?"–":Math.round(Math.min(100,Math.max(0,kans)))+"%",kleur:"var(--teal)"},
+      {label:"neerslagkans",waarde:kans===null||kans<0?"–":Math.round(Math.min(100,kans))+"%",kleur:"var(--teal)"},
       {label:"neerslag",waarde:kaartMmTekst(Array.isArray(G.Q1MM)?G.Q1MM[i]:null),kleur:"var(--teal)"},
       {label:"wind",waarde:windkracht},
       {label:"richting",waarde:kompas||"–",graden:kompas?((richting%360)+360)%360:null},

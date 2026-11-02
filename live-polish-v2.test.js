@@ -126,7 +126,11 @@ test("mobiele detailkaart: acht waarden uit de weerreeksen, ontbrekend is nooit 
     for(const slecht of [null,undefined,"",NaN,"abc",-1])assert.equal(A.kaartMmTekst(slecht),"–","ongeldige hoeveelheid ("+slecht+") is een streepje");
     /* De kans is begrensd en geeft de afgeronde bronwaarde; de koppeling volgt het uur, niet de index. */
     const G2={TI:["a","b"],P:[104.6,-3],Q1MM:[1,2]};
-    assert.equal(A.kaartGegevens(G2,"a").rijen[2].waarde,"100%");assert.equal(A.kaartGegevens(G2,"b").rijen[2].waarde,"0%");
+    assert.equal(A.kaartGegevens(G2,"a").rijen[2].waarde,"100%","boven 100 wordt 100 (zelfde als de grafiek)");
+    assert.equal(A.kaartGegevens(G2,"b").rijen[2].waarde,"–","een negatieve kans is ongeldig en nooit stilzwijgend 0% (zelfde als de grafiek)");
+    /* Geldige grenswaarden: 0% en 100% blijven staan; kleine afrondingen aan de randen ook. */
+    const G3={TI:["a","b","c","d","e"],P:[0,100,0.4,99.6,NaN]};
+    assert.deepEqual([0,1,2,3,4].map(k=>A.kaartGegevens(G3,"abcde"[k]).rijen[2].waarde),["0%","100%","0%","100%","–"],"0% en 100% zijn geldig; een niet-eindige waarde is ongeldig");
     assert.equal(A.kaartGegevens(G2,"b").rijen[3].waarde,"2,0 mm","hoeveelheid hoort bij hetzelfde uur als de kans");
     assert.equal(A.kaartGegevens(G2,"onbekend"),null,"een uur dat niet in de reeks staat geeft geen kaart");assert.equal(A.kaartGegevens(null,"a"),null);assert.equal(A.kaartGegevens(G2,""),null);
     assert.equal(A.kaartGegevens({TI:["a"],P:[50]},"a").rijen[3].waarde,"–","zonder hoeveelheidsreeks een streepje");
