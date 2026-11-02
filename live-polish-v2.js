@@ -237,6 +237,7 @@ meters=function(){
 /* In de SVG-tooltip staan label en waarde als twee losse tekstnodes. Lange
    consumententeksten worden hier alleen typografisch ingekort; de betekenis
    en brondata blijven ongewijzigd. */
+let kaartMediaGekoppeld=false;
 const basisScrubKoppel=scrubKoppel;
 scrubKoppel=function(){
   basisScrubKoppel();
@@ -328,7 +329,24 @@ scrubKoppel=function(){
   });
   hit.addEventListener("blur",()=>{const g=document.getElementById("scrub");if(g&&g.style.display!=="none")g.dataset.modus="selectie";});
   koppelTooltipWeergave();
+  /* De slider is bij elke render een nieuw element: de verwijzing naar de kaart volgt de huidige toestand van de kaart. */
+  werkKaartKoppeling();
+  if(!kaartMediaGekoppeld&&globalThis.matchMedia){
+    kaartMediaGekoppeld=true;
+    /* Over de grens van 429/430 px verdwijnt of verschijnt de kaart (CSS): de verwijzing volgt mee. */
+    globalThis.matchMedia("(max-width:429px)").addEventListener("change",()=>werkKaartKoppeling());
+  }
 };
+
+/* De melding "Geen uurgegevens" (index.html) vervangt de inhoud van de kaart: daarna geen groep en geen verwijzing meer van de slider. */
+if(typeof uurLegeToestand==="function"){
+  const basisUurLegeToestand=uurLegeToestand;
+  uurLegeToestand=function(strook){
+    const r=basisUurLegeToestand.apply(this,arguments);
+    zetKaartToegankelijkheid(strook,false);
+    return r;
+  };
+}
 
 /* ---------- tooltipweergave: informatiestrook (tot en met 429 px, via CSS) en minimaal 12 px ----------
    Twee onafhankelijke weergaven van hetzelfde uur; alle lagen die de SVG-groep #scrub vullen of verplaatsen
@@ -363,7 +381,8 @@ function kaartGegevens(G,uur){
   /* Windkracht: snelheid en Beaufort samen ("19 km/u · 3 Bft"). Richting: kompastekst; de windroos krijgt dezelfde graden. */
   const kracht=snel!==null&&typeof bft==="function"?bft(snel):null;
   const windkracht=snel===null?"–":Math.round(snel)+" km/u"+(kracht!==null?" · "+kracht+" Bft":"");
-  const kompas=richting!==null&&typeof kompasKort==="function"?kompasKort(richting):null;
+  const richtingKort=richting!==null&&typeof kompasKort==="function"?kompasKort(richting):null;
+  const richtingVol=richting!==null&&typeof kompas==="function"?kompas(richting):null;
   const lokaal=typeof weatherNowLokaleTijd==="function"?weatherNowLokaleTijd(uur):uur;
   const tijd=typeof hhmm==="function"?hhmm(uur):String(lokaal).slice(11,16);
   const aanduiding=typeof uurAanduidingTekst==="function"?uurAanduidingTekst(uur):"";
@@ -378,10 +397,10 @@ function kaartGegevens(G,uur){
       {label:"neerslagkans",waarde:kans===null||kans<0?"–":Math.round(Math.min(100,kans))+"%",kleur:"var(--teal)"},
       {label:"neerslag",waarde:kaartMmTekst(Array.isArray(G.Q1MM)?G.Q1MM[i]:null),kleur:"var(--teal)"},
       {label:"wind",waarde:windkracht},
-      {label:"richting",waarde:kompas||"–",graden:kompas?((richting%360)+360)%360:null},
+      {label:"richting",waarde:richtingKort||"–",volledig:richtingKort&&richtingVol?richtingVol:null,graden:richtingKort?((richting%360)+360)%360:null},
       {label:"windstoten",waarde:stoot===null?"–":Math.round(stoot)+" km/u"},
       {label:"bewolking",waarde:bewolking===null?"–":bewolking+"%"}
-    ]
+    ].map(r=>r.waarde==="–"?Object.assign(r,{ontbreekt:true}):r)
   };
 }
 
@@ -399,30 +418,67 @@ function kaartWindroos(graden){
   return svg;
 }
 
+/* Toegankelijkheid van de kaart. Alleen een gevulde kaart is toegankelijk: een groep met als naam "Details voor <tijd>" (de tijd is
+   dezelfde volledige tijdcontext als de kop, dus met dagnaam, "morgen" en zomer-/wintertijd). Een lege kaart of de melding "Geen
+   uurgegevens" blijft voor hulptechnologie verborgen. Er is bewust geen aria-live: de korte slidertekst en de live-region van de
+   uurselectie blijven de enige automatische aankondiging. */
+function kaartToegankelijk(strook){
+  return !!strook&&strook.getAttribute("role")==="group"&&!strook.hasAttribute("aria-hidden")&&strook.childElementCount>0&&strook.dataset.leeg!=="1"
+    &&typeof getComputedStyle==="function"&&getComputedStyle(strook).display!=="none";
+}
+/* De slider verwijst alleen naar de kaart als die zichtbaar, gevuld en toegankelijk is (niet bij een lege kaart en niet bij >= 430 px,
+   waar de kaart met CSS verborgen is). */
+function werkKaartKoppeling(strook){
+  const hit=document.getElementById("hit");if(!hit) return;
+  if(kaartToegankelijk(strook||document.getElementById("tip-strook"))) hit.setAttribute("aria-details","tip-strook");
+  else hit.removeAttribute("aria-details");
+}
+function zetKaartToegankelijkheid(strook,gevuld){
+  if(!strook) return;
+  if(gevuld){strook.removeAttribute("aria-hidden");strook.setAttribute("role","group");strook.setAttribute("aria-labelledby","tip-titel tip-kop");}
+  else{strook.setAttribute("aria-hidden","true");strook.removeAttribute("role");strook.removeAttribute("aria-labelledby");}
+  werkKaartKoppeling(strook);
+}
+
 function vulTooltipStrook(strook,g){
   const d=g.style.display!=="none"?kaartGegevens(typeof S!=="undefined"?S.geo:null,g.dataset.uur):null;
   if(!d){
     /* De lege toestand (geen geldig uur) is een eigen bericht en wordt niet door de lege tooltip weggehaald. */
-    if(strook.dataset.leeg==="1")return;
+    if(strook.dataset.leeg==="1"){zetKaartToegankelijkheid(strook,false);return;}
     if(strook.firstChild){strook.replaceChildren();delete strook.dataset.sig;}
+    zetKaartToegankelijkheid(strook,false);
     return;
   }
   delete strook.dataset.leeg;
   const sig=JSON.stringify(d);
-  if(strook.dataset.sig===sig) return;
+  if(strook.dataset.sig===sig){zetKaartToegankelijkheid(strook,true);return;}
   const el=(tag,klasse,tekst)=>{const e=document.createElement(tag);if(klasse)e.className=klasse;if(tekst!=null)e.textContent=tekst;return e;};
+  const verborgen=e=>{e.setAttribute("aria-hidden","true");return e;};
   const item=r=>{
     const x=el("div","tip-rij");x.appendChild(el("dt",null,r.label));
-    const dd=el("dd",null,r.waarde);if(r.kleur) dd.style.color=r.kleur;
+    const dd=el("dd",null);if(r.kleur) dd.style.color=r.kleur;
+    if(r.ontbreekt){
+      /* Zichtbaar een streepje; hulptechnologie krijgt "niet beschikbaar". */
+      dd.appendChild(verborgen(el("span",null,r.waarde)));dd.appendChild(el("span","sr-only","niet beschikbaar"));
+    }else if(r.volledig){
+      /* Zichtbaar de afkorting (WZW); hulptechnologie krijgt alleen de volledige richting (westzuidwesten), dus niets dubbel. */
+      dd.appendChild(verborgen(el("span",null,r.waarde)));dd.appendChild(el("span","sr-only",r.volledig));
+    }else dd.textContent=r.waarde;
     if(typeof r.graden==="number"&&Number.isFinite(r.graden)) dd.appendChild(kaartWindroos(r.graden));
     x.appendChild(dd);return x;
   };
-  const duo=(a,b)=>{const x=el("div","tip-duo");x.appendChild(item(a));x.appendChild(item(b));return x;};
-  const dl=el("dl","tip-rijen"),r=d.rijen;
+  /* Een dl bevat alleen div-groepen met dt+dd (geldige HTML): vier dl's, elk met twee waarden, in één raster-wrapper. */
+  const duo=(a,b)=>{const x=el("dl","tip-duo");x.appendChild(item(a));x.appendChild(item(b));return x;};
+  const wrap=el("div","tip-rijen"),r=d.rijen;
   /* Vier rijen met telkens twee waarden: temperatuur | voelt als, neerslagkans | neerslag, wind | richting, windstoten | bewolking. */
-  dl.appendChild(duo(r[0],r[1]));dl.appendChild(duo(r[2],r[3]));dl.appendChild(duo(r[4],r[5]));dl.appendChild(duo(r[6],r[7]));
-  strook.replaceChildren(el("div","tip-kop",d.kop),el("div","tip-oms",d.omschrijving||"\u00a0"),dl);
+  wrap.appendChild(duo(r[0],r[1]));wrap.appendChild(duo(r[2],r[3]));wrap.appendChild(duo(r[4],r[5]));wrap.appendChild(duo(r[6],r[7]));
+  /* Naam van de groep: "Details voor" + de kop (tijd met dagnaam of "morgen" en zomer-/wintertijd). Beide verborgen voor lezers die
+     de groep doorlopen; ze zijn alleen de naam (aria-labelledby), zodat de tijd niet twee keer wordt uitgesproken. */
+  const titel=verborgen(el("span","sr-only","Details voor")),kop=verborgen(el("div","tip-kop",d.kop));
+  titel.id="tip-titel";kop.id="tip-kop";
+  strook.replaceChildren(titel,kop,el("div","tip-oms",d.omschrijving||"\u00a0"),wrap);
   strook.dataset.sig=sig;
+  zetKaartToegankelijkheid(strook,true);
 }
 
 /* De SVG-tekstvakdelen krijgen een markering; de CSS verbergt ze alleen tot en met 429 px (visibility, geen

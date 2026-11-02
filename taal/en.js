@@ -292,6 +292,8 @@
     "(zomertijd)": "(summer time)",
     "(wintertijd)": "(winter time)",
     "Geen uurgegevens": "No hourly data",
+    /* Toegankelijke tekst van de mobiele detailkaart (alleen voor hulptechnologie): groepsnaam en ontbrekende waarde. */
+    "Details voor": "Details for", "niet beschikbaar": "not available",
     "Geen komende uren meer vandaag.": "No more upcoming hours today.",
     "Voor dit venster zijn geen geldige uurwaarden beschikbaar. Probeer te verversen of kies een andere dag.": "No valid hourly values are available for this period. Try refreshing or choose another day.",
     "Minder uren tonen": "Show fewer hours",
@@ -1079,6 +1081,8 @@
     [/^(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag)$/i, (m) => dagVol(m[1])],
     [/^(ma|di|wo|do|vr|za|zo)$/, (m) => dagKort(m[1])],
     [/^(N|NNO|NO|ONO|O|OZO|ZO|ZZO|Z|ZZW|ZW|WZW|W|WNW|NW|NNW)$/, (m) => RICHTING_KORT[m[1]]],
+    /* Volledige kompasrichting als losse tekst (mobiele detailkaart, alleen voor hulptechnologie): "westzuidwesten" is "west-south-west". */
+    [/^(noorden|noordnoordoosten|noordoosten|oostnoordoosten|oosten|oostzuidoosten|zuidoosten|zuidzuidoosten|zuiden|zuidzuidwesten|zuidwesten|westzuidwesten|westen|westnoordwesten|noordwesten|noordnoordwesten)$/, (m) => richting(m[1])],
 
     /* Bewolkingstegel bij vooral hoge bewolking: "Geheel bewolkt, vooral hoge bewolking." */
     [/^(.+), vooral hoge bewolking\.$/, (m) => { const w = weer(m[1]); return w && `${w}, mostly high cloud.`; }],

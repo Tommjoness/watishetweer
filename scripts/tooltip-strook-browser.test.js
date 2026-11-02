@@ -6,7 +6,7 @@
      meetpunt blijven zichtbaar;
    - vanaf 430 px: de SVG-tooltip blijft, maar wordt zo opgeschaald dat de kleinste tekst minimaal 12 px is.
    Nederlands en Engels, licht en donker, toetsenbord (alle uren, Escape), touch, schermlezerinformatie
-   (slider met aria-valuetext, strook aria-hidden) en het wisselen van breekpunt tijdens gebruik.
+   (slider met aria-valuetext, gevulde strook als groep, lege strook aria-hidden) en het wisselen van breekpunt tijdens gebruik.
 
    Draait na: npm run build:cloudflare */
 
@@ -86,7 +86,9 @@ const meet=page=>page.evaluate(()=>{
   const zichtbaar=e=>!!e&&getComputedStyle(e).display!=="none"&&getComputedStyle(e).visibility!=="hidden"&&e.getBoundingClientRect().width+e.getBoundingClientRect().height>0;
   const svgTekst=[...g.querySelectorAll("rect,text")];
   const kruis=[...g.querySelectorAll("line")].find(l=>l.getAttribute("x1")===l.getAttribute("x2")),punt=g.querySelector("circle");
-  const rijen=[...st.querySelectorAll(".tip-rij")].map(r=>[r.querySelector("dt").textContent,r.querySelector("dd").textContent]);
+  /* Wat een gebruiker ziet: zonder de sr-only-tekst voor hulptechnologie en zonder windroos. */
+  const zichtbareTekst=e=>[...e.childNodes].map(n=>n.nodeType===3?n.textContent:(n.nodeType===1&&!n.classList.contains("sr-only")&&n.tagName.toLowerCase()!=="svg"?n.textContent:"")).join("");
+  const rijen=[...st.querySelectorAll(".tip-rij")].map(r=>[r.querySelector("dt").textContent,zichtbareTekst(r.querySelector("dd"))]);
   const dag=q(".dagmod").getBoundingClientRect().bottom+scrollY;
   const volgende=[...document.querySelectorAll("h2")].find(h=>{const r=h.getBoundingClientRect();return r.height>0&&r.top+scrollY>dag;});
   const rij=n=>{const l=g.querySelector(`text[data-tip-rij="${n}"][data-tip-kol="label"]`),w=g.querySelector(`text[data-tip-rij="${n}"][data-tip-kol="waarde"]`);return [l&&l.textContent.trim(),w&&w.textContent.trim()];};
@@ -99,7 +101,7 @@ const meet=page=>page.evaluate(()=>{
     kansModel:(()=>{const k=S.geo.TI.indexOf(g.dataset.uur),v=S.geo.P&&S.geo.P[k];return Number.isFinite(v)?Math.round(Math.min(100,Math.max(0,v)))+"%":"–";})(),
     oms:(st.querySelector(".tip-oms")||{}).textContent||"",svgOms:(g.querySelector('text[data-tip="omschrijving"]')||{}).textContent||"",
     svgKop:(g.querySelector('text[data-tip="kop"]')||{}).textContent||"",
-    ariaHidden:st.getAttribute("aria-hidden"),valuenow:hit.getAttribute("aria-valuenow"),valuetext:hit.getAttribute("aria-valuetext")||"",focus:document.activeElement&&document.activeElement.id,gDisplay:g.style.display,
+    ariaHidden:st.getAttribute("aria-hidden"),rol:st.getAttribute("role"),valuenow:hit.getAttribute("aria-valuenow"),valuetext:hit.getAttribute("aria-valuetext")||"",focus:document.activeElement&&document.activeElement.id,gDisplay:g.style.display,
     placeholder:getComputedStyle(st,"::before").content};
 });
 /* Effectieve grootte van de SVG-tooltip: lettergrootte in SVG-eenheden maal de werkelijke schermschaal (inclusief transform). */
@@ -132,7 +134,7 @@ async function testStrook(browser,root){
       assert.equal(m0.display,"block",L+": strook niet zichtbaar");assert.equal(m0.staat,"vol",L+": beginstaat niet gevuld met het geselecteerde uur");
       assert.equal(m0.placeholder,"none",`${L}: rustregel mag niet naast een gevulde kaart staan (${m0.placeholder})`);
       assert(m0.kop.length>=5,`${L}: geen kop bij het eerstvolgende uur`);assert(m0.kruisZichtbaar&&m0.puntZichtbaar,L+": kruisdraad en meetpunt van de selectie ontbreken");
-      assert(m0.h>=140,`${L}: gereserveerde hoogte ${m0.h}px < 140`);assert.equal(m0.ariaHidden,"true",L+": strook niet aria-hidden");
+      assert(m0.h>=140,`${L}: gereserveerde hoogte ${m0.h}px < 140`);assert.equal(m0.ariaHidden,null,L+": een gevulde strook mag niet aria-hidden zijn");assert.equal(m0.rol,"group",L+": een gevulde strook is een groep");
       const hoogtes=new Set([m0.h]),volgend=new Set([m0.volgendTop]),docs=new Set([m0.doc]);
       const uren=steekproef.includes(w)?[0,6,12,20,n-1]:[...Array(n).keys()];
       for(const i of uren){

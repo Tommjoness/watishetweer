@@ -390,7 +390,7 @@ html[lang^="en"] #brief[data-q1-briefing-pending]::after,html[lang^="en"] #brief
      Hairlines onder de rijen en in het midden tussen de twee helften; subtiel in licht (--rule-soft) en donker (--rule). */
   .tip-strook{--tip-gat:14px;--tip-lijn:var(--rule-soft)}
   html[data-thema="donker"] .tip-strook{--tip-lijn:var(--rule)}
-  .tip-strook .tip-duo{display:grid;grid-template-columns:minmax(max-content,1.15fr) minmax(max-content,1fr);column-gap:var(--tip-gat)}
+  .tip-strook .tip-duo{display:grid;margin:0;grid-template-columns:minmax(max-content,1.15fr) minmax(max-content,1fr);column-gap:var(--tip-gat)}
   @supports (grid-template-columns:subgrid){
     .tip-strook .tip-rijen{display:grid;grid-template-columns:minmax(max-content,1.15fr) minmax(max-content,1fr);column-gap:var(--tip-gat)}
     .tip-strook .tip-duo{grid-column:1/-1;grid-template-columns:subgrid}

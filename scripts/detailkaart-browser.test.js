@@ -12,7 +12,8 @@
    F. geen layoutverschuiving bij het wisselen van uren en talen (hoogte van de kaart en positie van de inhoud eronder constant);
    G. de kaart volgt de gegevens bij een verversing met hetzelfde geselecteerde uur;
    H. de SVG-tooltip en de desktopweergave blijven ongewijzigd (zes rijen, gecombineerde neerslagregel, kaart verborgen);
-   I. toegankelijkheid ongewijzigd: kaart aria-hidden, slidertekst met uur, temperatuur en neerslagkans.
+   I. toegankelijkheid: een gevulde kaart is een groep (niet aria-hidden), de slidertekst met uur, temperatuur en neerslagkans blijft ongewijzigd;
+      de volledige toegankelijkheidscontrole staat in detailkaart-toegankelijkheid-browser.test.js.
 
    Draait na: npm run build:cloudflare */
 
@@ -112,7 +113,16 @@ const meetKaart=page=>page.evaluate(()=>{
   const binnenL=sb.left+parseFloat(cs.borderLeftWidth)+parseFloat(cs.paddingLeft),binnenRechts=sb.right-parseFloat(cs.borderRightWidth)-parseFloat(cs.paddingRight);
   const duos=[...st.querySelectorAll(".tip-rijen>.tip-duo")],cellen=[...st.querySelectorAll(".tip-rij")];
   /* De werkelijke inkt (tekst en windroos) van een element, niet de doos eromheen. */
-  const inkt=e=>{const rg=document.createRange();rg.selectNodeContents(e);const b=rg.getBoundingClientRect();return {l:b.left,r:b.right};};
+  const inkt=e=>{
+    let l=1e9,r=-1e9;const voeg=b=>{if(b.width===0&&b.height===0)return;l=Math.min(l,b.left);r=Math.max(r,b.right);};
+    const loop=n=>{
+      if(n.nodeType===3){const rg=document.createRange();rg.selectNodeContents(n);voeg(rg.getBoundingClientRect());}
+      else if(n.nodeType===1&&!n.classList.contains("sr-only")){if(n.tagName.toLowerCase()==="svg")voeg(n.getBoundingClientRect());else n.childNodes.forEach(loop);}
+    };
+    e.childNodes.forEach(loop);return {l,r};
+  };
+  /* Wat een gebruiker ziet: tekst zonder de sr-only-tekst voor hulptechnologie en zonder windroos. */
+  const zichtbaar=e=>[...e.childNodes].map(n=>n.nodeType===3?n.textContent:(n.nodeType===1&&!n.classList.contains("sr-only")&&n.tagName.toLowerCase()!=="svg"?n.textContent:"")).join("");
   const regelH=e=>parseFloat(getComputedStyle(e).lineHeight);
   const kleurVan=v=>{const p=document.createElement("i");p.style.color=v;st.appendChild(p);const c=getComputedStyle(p).color;p.remove();return c;};
   const problemen=[];let minLabelWaarde=1e9;
@@ -138,7 +148,7 @@ const meetKaart=page=>page.evaluate(()=>{
   /* Windroos in de richtingscel: afstand tot de tekst, rechterrand, afmeting, gedrag voor hulptechnologie en de wijsrichting (graden, 0 = omhoog). */
   const rc=cellen.find(c=>c.querySelector("dt").textContent.match(/^(richting|direction)$/)),roos=rc.querySelector(".tip-roos");let r=null;
   if(roos){
-    const dd=rc.querySelector("dd"),tg=document.createRange();tg.selectNodeContents([...dd.childNodes].find(n=>n.nodeType===3));const tb=tg.getBoundingClientRect(),rb=roos.getBoundingClientRect();
+    const dd=rc.querySelector("dd"),tg=document.createRange();tg.selectNodeContents(dd.querySelector(':scope>span[aria-hidden="true"]'));const tb=tg.getBoundingClientRect(),rb=roos.getBoundingClientRect();
     const path=roos.querySelector("path"),pt=roos.createSVGPoint();pt.x=6;pt.y=1.6;const punt=pt.matrixTransform(path.getScreenCTM());
     const mid=roos.createSVGPoint();mid.x=6;mid.y=6;const m0=mid.matrixTransform(roos.getScreenCTM());
     r={links:R(rb.left-tb.right),tekstRechts:R(tb.right),roosRechts:R(rb.right),ddRechts:R(dd.getBoundingClientRect().right),breed:R(rb.width),hoog:R(rb.height),
@@ -147,13 +157,13 @@ const meetKaart=page=>page.evaluate(()=>{
   }
   const dag=document.querySelector(".dagmod").getBoundingClientRect().bottom+scrollY;
   const volgende=[...document.querySelectorAll("h2")].find(h=>{const q=h.getBoundingClientRect();return q.height>0&&q.top+scrollY>dag;});
-  return {rijen:cellen.map(c=>[c.querySelector("dt").textContent,c.querySelector("dd").textContent]),problemen,h:R(sb.height),minLabelWaarde:R(minLabelWaarde),
+  return {rijen:cellen.map(c=>[c.querySelector("dt").textContent,zichtbaar(c.querySelector("dd"))]),problemen,h:R(sb.height),minLabelWaarde:R(minLabelWaarde),
     minFont:Math.min(...fonts),docBreed:document.documentElement.scrollWidth,vw:innerWidth,x,binnenL:R(binnenL),binnenRechts:R(binnenRechts),lijnen,haarlijnen,roos:r,
     aantalDuo:duos.length,aantalRij:cellen.length,directeRijen:st.querySelectorAll(".tip-rijen>.tip-rij").length,padL:parseFloat(cs.paddingLeft),padR:parseFloat(cs.paddingRight),gat:parseFloat(getComputedStyle(duos[0]).columnGap),
     kleuren:{zacht:kleurVan("var(--rule-soft)"),rule:kleurVan("var(--rule)")},thema:document.documentElement.getAttribute("data-thema"),
     volgendTop:volgende?R(volgende.getBoundingClientRect().top+scrollY):null,docH:document.documentElement.scrollHeight,
     kaartTop:R(sb.top+scrollY),naKaartBottom:st.nextElementSibling?R(st.nextElementSibling.getBoundingClientRect().bottom+scrollY):null,
-    kop:kop.textContent,oms:oms.textContent.replace(/ /g,""),ariaHidden:st.getAttribute("aria-hidden"),
+    kop:kop.textContent,oms:oms.textContent.replace(/ /g,""),ariaHidden:st.getAttribute("aria-hidden"),rol:st.getAttribute("role"),
     svgWind:(document.querySelector('#scrub text[data-tip-rij="4"][data-tip-kol="waarde"]')||{}).textContent||"",
     svgStoot:(document.querySelector('#scrub text[data-tip-rij="5"][data-tip-kol="waarde"]')||{}).textContent||"",
     valuetext:(document.getElementById("hit")||{getAttribute:()=>""}).getAttribute("aria-valuetext")};
@@ -183,7 +193,7 @@ function toets(m,{L,u,sc,taal,w,donker}){
   if(sc!==4)gelijk(m.rijen[6][1],m.svgStoot,T+"windstoten gelijk aan de SVG-tooltip");
   ok(!m.rijen.some(r=>/NaN|undefined|null/.test(r[1])),T+"geen NaN of undefined");
   /* I. toegankelijkheid */
-  gelijk(m.ariaHidden,"true",T+"kaart is aria-hidden");
+  gelijk([m.ariaHidden,m.rol],[null,"group"],T+"een gevulde kaart is een toegankelijke groep (niet aria-hidden)");
   if(!donker)ok(taal==="en"||new RegExp("^"+String(u+2).padStart(2,"0")+":00, -?\\d+ graden, \\d+ procent neerslagkans$").test(m.valuetext||""),T+"slidertekst ("+m.valuetext+")");
   /* B. geen afkapping, overlap of afbreking; lettergrootte; geen horizontale scroll; vaste hoogte */
   gelijk(m.problemen,[],T+m.problemen.join("; "));
@@ -211,7 +221,7 @@ function toets(m,{L,u,sc,taal,w,donker}){
     gelijk([r.breed,r.hoog],[12,12],T+"windroos 12 px");ok(r.links>=3.5&&r.links<=4.5,T+"windroos staat op vaste afstand rechts van de tekst ("+r.links+")");
     ok(r.tekstRechts<r.roosRechts-12+0.5,T+"windroos staat rechts van de richtingstekst");ok(Math.abs(r.ddRechts-r.roosRechts)<=0.5,T+"tekst en windroos vormen één rechts uitgelijnde groep");
     ok(cirkelVerschil(r.bearing,SC[sc].WD)<=0.6,T+"windroos wijst naar de herkomst: "+r.bearing+"° tegen "+SC[sc].WD+"°");
-    gelijk([r.ariaHidden,r.focusable,r.tekstInRoos,r.titel,r.kinderen.join()],["true","false","",false,"svg"],T+"windroos is decoratief");
+    gelijk([r.ariaHidden,r.focusable,r.tekstInRoos,r.titel,r.kinderen.join()],["true","false","",false,"span,span,svg"],T+"windroos is decoratief (zichtbare afkorting, tekst voor hulptechnologie en windroos)");
   }
 }
 
