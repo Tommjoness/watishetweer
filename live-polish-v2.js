@@ -201,7 +201,7 @@ function tooltipDoosPlaatsing(doos,punt,veld,k){
 const api={
   tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan,
   dauwpuntCelsius,luchtvochtigheidDuiding,temperatuurProminentie,etmaalExtraTemperaturenWeg,grafiekPuntBeschrijving,grafiekDagVoorvoegsel,
-  tooltipSchaalFactor,tooltipDoosPlaatsing,tooltipMinPx,tooltipTijdPx,TOOLTIP_MIN_PX,kaartGegevens,kaartMmTekst
+  tooltipSchaalFactor,tooltipDoosPlaatsing,tooltipMinPx,tooltipTijdPx,TOOLTIP_MIN_PX,kaartGegevens,kaartMmTekst,kaartWindroos
 };
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowPolishV2=api;
@@ -359,9 +359,10 @@ function kaartGegevens(G,uur){
   const waarde=reeks=>eindig(Array.isArray(reeks)?reeks[i]:null);
   const graden=v=>v===null?"–":Math.round(v)+"°C";
   const kans=waarde(G.P),snel=waarde(G.W_),richting=waarde(G.WD),stoot=waarde(G.G),bewolking=waarde(G.C);
-  const kompas=richting!==null&&typeof kompasKort==="function"?kompasKort(richting):null;
+  /* Windkracht: snelheid en Beaufort samen ("19 km/u · 3 Bft"). Richting: kompastekst; de windroos krijgt dezelfde graden. */
   const kracht=snel!==null&&typeof bft==="function"?bft(snel):null;
-  const wind=snel===null?"–":Math.round(snel)+" km/u"+(kompas?" "+kompas:"")+(kracht!==null?", "+kracht+" Bft":"");
+  const windkracht=snel===null?"–":Math.round(snel)+" km/u"+(kracht!==null?" · "+kracht+" Bft":"");
+  const kompas=richting!==null&&typeof kompasKort==="function"?kompasKort(richting):null;
   const lokaal=typeof weatherNowLokaleTijd==="function"?weatherNowLokaleTijd(uur):uur;
   const tijd=typeof hhmm==="function"?hhmm(uur):String(lokaal).slice(11,16);
   const aanduiding=typeof uurAanduidingTekst==="function"?uurAanduidingTekst(uur):"";
@@ -373,13 +374,28 @@ function kaartGegevens(G,uur){
     rijen:[
       {label:"temperatuur",waarde:graden(waarde(G.T))},
       {label:"voelt als",waarde:graden(waarde(G.A))},
-      {label:"kans",waarde:kans===null?"–":Math.round(Math.min(100,Math.max(0,kans)))+"%",kleur:"var(--teal)"},
+      {label:"neerslagkans",waarde:kans===null?"–":Math.round(Math.min(100,Math.max(0,kans)))+"%",kleur:"var(--teal)"},
       {label:"neerslag",waarde:kaartMmTekst(Array.isArray(G.Q1MM)?G.Q1MM[i]:null),kleur:"var(--teal)"},
-      {label:"wind",waarde:wind},
+      {label:"wind",waarde:windkracht},
+      {label:"richting",waarde:kompas||"–",graden:kompas?((richting%360)+360)%360:null},
       {label:"windstoten",waarde:stoot===null?"–":Math.round(stoot)+" km/u"},
       {label:"bewolking",waarde:bewolking===null?"–":bewolking+"%"}
     ]
   };
+}
+
+/* Compacte windroos (12 px, decoratief): ring, vier streepjes (N/O/Z/W) en een naald die naar de HERKOMST van de wind wijst
+   (meteorologische windrichting: 0° = wind uit het noorden = naald omhoog). De graden zijn dezelfde waarde als de kompastekst ernaast.
+   Alleen vorm en `currentColor`; geen afbeelding, geen tekst en voor hulptechnologie verborgen. */
+function kaartWindroos(graden){
+  const ns="http://www.w3.org/2000/svg",mk=(naam,attr)=>{const e=document.createElementNS(ns,naam);for(const k in attr)e.setAttribute(k,attr[k]);return e;};
+  const svg=mk("svg",{viewBox:"0 0 12 12",width:"12",height:"12","aria-hidden":"true",focusable:"false","class":"tip-roos"});
+  svg.appendChild(mk("circle",{cx:"6",cy:"6",r:"5.2",fill:"none",stroke:"currentColor","stroke-width":"1","stroke-opacity":".4"}));
+  for(const hoek of [0,90,180,270])svg.appendChild(mk("line",{x1:"6",y1:"0.6",x2:"6",y2:"2",transform:"rotate("+hoek+" 6 6)",stroke:"currentColor","stroke-width":"1","stroke-opacity":".55"}));
+  const naald=mk("g",{transform:"rotate("+Math.round(graden*10)/10+" 6 6)"});
+  naald.appendChild(mk("path",{d:"M6 1.6 L8 5.4 H6.7 V9.4 H5.3 V5.4 H4 Z",fill:"currentColor"}));
+  svg.appendChild(naald);
+  return svg;
 }
 
 function vulTooltipStrook(strook,g){
@@ -397,12 +413,13 @@ function vulTooltipStrook(strook,g){
   const item=r=>{
     const x=el("div","tip-rij");x.appendChild(el("dt",null,r.label));
     const dd=el("dd",null,r.waarde);if(r.kleur) dd.style.color=r.kleur;
+    if(typeof r.graden==="number"&&Number.isFinite(r.graden)) dd.appendChild(kaartWindroos(r.graden));
     x.appendChild(dd);return x;
   };
   const duo=(a,b)=>{const x=el("div","tip-duo");x.appendChild(item(a));x.appendChild(item(b));return x;};
   const dl=el("dl","tip-rijen"),r=d.rijen;
-  /* Vier rijen: temperatuur | voelt als, kans | neerslag, wind (hele rij: de langste waarde), windstoten | bewolking. */
-  dl.appendChild(duo(r[0],r[1]));dl.appendChild(duo(r[2],r[3]));dl.appendChild(item(r[4]));dl.appendChild(duo(r[5],r[6]));
+  /* Vier rijen met telkens twee waarden: temperatuur | voelt als, neerslagkans | neerslag, wind | richting, windstoten | bewolking. */
+  dl.appendChild(duo(r[0],r[1]));dl.appendChild(duo(r[2],r[3]));dl.appendChild(duo(r[4],r[5]));dl.appendChild(duo(r[6],r[7]));
   strook.replaceChildren(el("div","tip-kop",d.kop),el("div","tip-oms",d.omschrijving||"\u00a0"),dl);
   strook.dataset.sig=sig;
 }

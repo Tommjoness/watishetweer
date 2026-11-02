@@ -1,15 +1,18 @@
 "use strict";
 
-/* Mobiele detailkaart (#tip-strook, tot en met 429 px): vier rijen met kans en neerslaghoeveelheid als aparte waarden.
-   Toetst, met de langste realistische waarden en op 320, 360, 390, 413, 420 en 429 px in NL en EN:
-   A. waarden: elke kaartwaarde komt uit de weerreeksen en klopt met het gekozen uur (kans, hoeveelheid, temperatuur, wind, bewolking;
-      "0,0 mm" alleen bij een echte nul, "<0,1 mm" bij een kleine positieve waarde, "–" bij een ontbrekende waarde, nooit stilzwijgend nul);
+/* Mobiele detailkaart (#tip-strook, tot en met 429 px): vier rijen met telkens twee waarden (acht gegevens) in een gedeeld editorial raster.
+   Toetst, met de langste realistische waarden en op 320, 360, 390, 413, 420 en 429 px in NL en EN (licht en donker):
+   A. waarden: elke kaartwaarde komt uit de weerreeksen en klopt met het gekozen uur (neerslagkans, hoeveelheid, temperatuur, windkracht met Beaufort,
+      kompasrichting, windstoten, bewolking; "0,0 mm" alleen bij een echte nul, "<0,1 mm" bij een kleine positieve waarde, "–" bij een ontbrekende waarde);
    B. geen afkapping, overlap, regelafbreking of horizontale scroll; kleinste tekst >= 12 px; vaste hoogte 140 px;
-   C. uitlijning: bij normale waarden staan de tweede kolommen van de drie dubbele rijen onder elkaar en eindigen alle waarden op de rechterrand;
-   D. geen layoutverschuiving bij het wisselen van uren en talen (hoogte van de kaart en positie van de inhoud eronder constant);
-   E. de kaart volgt de gegevens bij een verversing met hetzelfde geselecteerde uur;
-   F. de SVG-tooltip en de desktopweergave blijven ongewijzigd (zes rijen, gecombineerde neerslagregel, kaart verborgen);
-   G. toegankelijkheid ongewijzigd: kaart aria-hidden, slidertekst met uur, temperatuur en neerslagkans.
+   C. gedeeld raster, bij ALLE waarden (ook de extreme): de tweede kolom begint in elke rij op dezelfde x, de waarden eindigen per kolom op dezelfde x,
+      en die posities blijven gelijk tussen uren en talen; zijpadding 6 px (tot 339 px) of 10 px, tussenruimte 8 of 14 px;
+   D. scheidingslijnen: hairlines onder de rijen 1 t/m 3 en een verticale lijn tussen de helften, met voldoende ruimte tot tekst (en windroos), in --rule-soft (licht) en --rule (donker);
+   E. windroos: rechts van de richtingstekst op vaste afstand, wijst naar de herkomst (graden uit de weerreeks), ontbreekt bij een ontbrekende richting en is decoratief;
+   F. geen layoutverschuiving bij het wisselen van uren en talen (hoogte van de kaart en positie van de inhoud eronder constant);
+   G. de kaart volgt de gegevens bij een verversing met hetzelfde geselecteerde uur;
+   H. de SVG-tooltip en de desktopweergave blijven ongewijzigd (zes rijen, gecombineerde neerslagregel, kaart verborgen);
+   I. toegankelijkheid ongewijzigd: kaart aria-hidden, slidertekst met uur, temperatuur en neerslagkans.
 
    Draait na: npm run build:cloudflare */
 
@@ -27,9 +30,9 @@ const SC=[
   {T:-40.4,A:-45.2,P:100,MM:123.4,W:250.4,WD:250,G:250.2,C:100,code:99},
   {T:3.2,A:1.1,P:0,MM:0,W:8,WD:90,G:20,C:0,code:0},
   {T:7.6,A:5.9,P:30,MM:0.04,W:22,WD:180,G:48,C:55,code:3},
-  {T:9.4,A:7.4,P:40,MM:null,W:14,WD:315,G:null,C:80,code:61},
+  {T:9.4,A:7.4,P:40,MM:null,W:14,WD:null,G:null,C:80,code:61},
   {T:-5.4,A:-9.6,P:65,MM:1.46,W:105,WD:200,G:118.4,C:100,code:71}];
-/* Verwachte kaartwaarden per scenario (Nederlands): temperatuur, voelt als, kans, neerslag, windstoten, bewolking. */
+/* Verwachte kaartwaarden per scenario (Nederlands): temperatuur, voelt als, neerslagkans, neerslag, windstoten, bewolking. */
 const VERWACHT=[
   ["12°C","10°C","8%","0,2 mm","35 km/u","30%"],
   ["-40°C","-45°C","100%","123,4 mm","250 km/u","100%"],
@@ -37,6 +40,9 @@ const VERWACHT=[
   ["8°C","6°C","30%","<0,1 mm","48 km/u","55%"],
   ["9°C","7°C","40%","–","–","80%"],
   ["-5°C","-10°C","65%","1,5 mm","118 km/u","100%"]];
+/* Verwachte windkracht en kompasrichting (NL) per scenario; de windroos krijgt de graden uit SC (null: geen windroos). */
+const WIND=[["19 km/u · 3 Bft","N"],["250 km/u · 12 Bft","WZW"],["8 km/u · 2 Bft","O"],["22 km/u · 4 Bft","Z"],["14 km/u · 3 Bft","–"],["105 km/u · 11 Bft","ZZW"]];
+const RICHTING_EN={N:"N",WZW:"WSW",O:"E",Z:"S",ZZW:"SSW","–":"–"};
 /* Open-Meteo-vormig antwoord op één vaste offset, met scenario-gestuurde uurwaarden. */
 function antwoord(nuMs,offsetS,opties){
   const o=opties||{};
@@ -50,7 +56,7 @@ function antwoord(nuMs,offsetS,opties){
     /* Kans en hoeveelheid horen bij het uur dat op TI[k] begint: bronindex +1 (zie etmaal). */
     h.precipitation_probability.push(vorig.P);h.precipitation.push(vorig.MM);h.rain.push(vorig.MM);h.showers.push(0);h.snowfall.push(0);
     h.weather_code.push(s.code);h.cloud_cover.push(s.C);
-    h.wind_speed_10m.push(s.W);h.wind_direction_10m.push(s.WD);h.wind_gusts_10m.push(s.G);h.visibility.push(20000);h.uv_index.push(0);h.pressure_msl.push(1015);h.is_day.push(u>=6&&u<16?1:0);
+    h.wind_speed_10m.push(s.W);h.wind_direction_10m.push(o.wd?o.wd(u):s.WD);h.wind_gusts_10m.push(s.G);h.visibility.push(20000);h.uv_index.push(0);h.pressure_msl.push(1015);h.is_day.push(u>=6&&u<16?1:0);
   }
   const dagen=Array.from({length:7},(_,k)=>new Date(Date.parse(vandaag+"T00:00:00Z")+k*86400000).toISOString().slice(0,10));
   const uurIndex=h.time.indexOf(iso(Math.floor(nuMs/UUR)*UUR,offsetS)),kwartier=Math.floor(nuMs/900000)*900000;
@@ -102,32 +108,52 @@ const geoXY=(page,ms)=>page.evaluate(ms=>{
   const r=svg.getBoundingClientRect(),sc=r.width/(G.W||900);return {k,x:r.left+G.x(k)*sc,y:r.top+G.y(G.T[k])*sc};
 },ms);
 const meetKaart=page=>page.evaluate(()=>{
-  const st=document.getElementById("tip-strook"),cs=getComputedStyle(st),sb=st.getBoundingClientRect();
-  const binnenRechts=sb.right-parseFloat(cs.paddingRight)-1;
-  const cellen=[...st.querySelectorAll(".tip-rij")];
+  const st=document.getElementById("tip-strook"),cs=getComputedStyle(st),sb=st.getBoundingClientRect(),R=x=>Math.round(x*100)/100;
+  const binnenL=sb.left+parseFloat(cs.borderLeftWidth)+parseFloat(cs.paddingLeft),binnenRechts=sb.right-parseFloat(cs.borderRightWidth)-parseFloat(cs.paddingRight);
+  const duos=[...st.querySelectorAll(".tip-rijen>.tip-duo")],cellen=[...st.querySelectorAll(".tip-rij")];
+  /* De werkelijke inkt (tekst en windroos) van een element, niet de doos eromheen. */
+  const inkt=e=>{const rg=document.createRange();rg.selectNodeContents(e);const b=rg.getBoundingClientRect();return {l:b.left,r:b.right};};
   const regelH=e=>parseFloat(getComputedStyle(e).lineHeight);
-  const problemen=[];
+  const kleurVan=v=>{const p=document.createElement("i");p.style.color=v;st.appendChild(p);const c=getComputedStyle(p).color;p.remove();return c;};
+  const problemen=[];let minLabelWaarde=1e9;
   cellen.forEach(c=>{
-    const dt=c.querySelector("dt"),dd=c.querySelector("dd"),a=dt.getBoundingClientRect(),b=dd.getBoundingClientRect(),cr=c.getBoundingClientRect();
+    const dt=c.querySelector("dt"),dd=c.querySelector("dd"),a=inkt(dt),b=inkt(dd),cr=c.getBoundingClientRect();
     if(c.scrollWidth>c.clientWidth+0.5)problemen.push("overflow "+dt.textContent);
-    if(a.right>b.left-0.5)problemen.push("label raakt waarde "+dt.textContent);
-    if(a.height>regelH(dt)*1.4||b.height>regelH(dd)*1.4)problemen.push("regelafbreking "+dt.textContent);
-    if(b.right>cr.right+0.5||a.left<cr.left-0.5||b.right>binnenRechts+0.5)problemen.push("buiten de kaart "+dt.textContent);
+    minLabelWaarde=Math.min(minLabelWaarde,b.l-a.r);
+    if(b.l-a.r<7.5)problemen.push("label raakt waarde "+dt.textContent);
+    if(dt.getBoundingClientRect().height>regelH(dt)*1.4||dd.getBoundingClientRect().height>regelH(dd)*1.4)problemen.push("regelafbreking "+dt.textContent);
+    if(b.r>cr.right+0.5||a.l<cr.left-0.5||b.r>binnenRechts+0.5||a.l<binnenL-0.5)problemen.push("buiten de kaart "+dt.textContent);
   });
   const kop=st.querySelector(".tip-kop"),oms=st.querySelector(".tip-oms");
   if(kop.getBoundingClientRect().height>parseFloat(getComputedStyle(kop).lineHeight)*1.4)problemen.push("kop breekt af");
   if(oms.getBoundingClientRect().height>regelH(oms)*1.4)problemen.push("omschrijving breekt af");
   const fonts=[...st.querySelectorAll(".tip-kop,.tip-oms,dt,dd")].map(e=>parseFloat(getComputedStyle(e).fontSize));
-  const duos=[...st.querySelectorAll(".tip-duo")];
+  /* Raster: x van het eerste en tweede label, en van de rechterrand van de waarden (tekst of windroos) per kolom. */
+  const kol=k=>duos.map(d=>d.children[k]);
+  const x={label1:kol(0).map(c=>R(inkt(c.querySelector("dt")).l)),label2:kol(1).map(c=>R(inkt(c.querySelector("dt")).l)),waarde1:kol(0).map(c=>R(inkt(c.querySelector("dd")).r)),waarde2:kol(1).map(c=>R(inkt(c.querySelector("dd")).r))};
+  /* Verticale lijn: positie volgens de CSS en de ruimte tot de tekst links (waarde) en rechts (label). */
+  const lijnen=duos.map(d=>{const c2=d.children[1],ps=getComputedStyle(c2,"::before"),lx=c2.getBoundingClientRect().left+parseFloat(ps.left),br=parseFloat(ps.width);
+    return {links:R(lx-inkt(d.children[0].querySelector("dd")).r),rechts:R(inkt(c2.querySelector("dt")).l-(lx+br)),breedte:br,kleur:ps.backgroundColor,inhoud:ps.content,top:ps.top,bottom:ps.bottom,hoogte:ps.height};});
+  const haarlijnen=duos.map(d=>getComputedStyle(d).boxShadow);
+  /* Windroos in de richtingscel: afstand tot de tekst, rechterrand, afmeting, gedrag voor hulptechnologie en de wijsrichting (graden, 0 = omhoog). */
+  const rc=cellen.find(c=>c.querySelector("dt").textContent.match(/^(richting|direction)$/)),roos=rc.querySelector(".tip-roos");let r=null;
+  if(roos){
+    const dd=rc.querySelector("dd"),tg=document.createRange();tg.selectNodeContents([...dd.childNodes].find(n=>n.nodeType===3));const tb=tg.getBoundingClientRect(),rb=roos.getBoundingClientRect();
+    const path=roos.querySelector("path"),pt=roos.createSVGPoint();pt.x=6;pt.y=1.6;const punt=pt.matrixTransform(path.getScreenCTM());
+    const mid=roos.createSVGPoint();mid.x=6;mid.y=6;const m0=mid.matrixTransform(roos.getScreenCTM());
+    r={links:R(rb.left-tb.right),tekstRechts:R(tb.right),roosRechts:R(rb.right),ddRechts:R(dd.getBoundingClientRect().right),breed:R(rb.width),hoog:R(rb.height),
+       bearing:R(((Math.atan2(punt.x-m0.x,-(punt.y-m0.y))*180/Math.PI)+360)%360),ariaHidden:roos.getAttribute("aria-hidden"),focusable:roos.getAttribute("focusable"),
+       tekstInRoos:roos.textContent.trim(),titel:!!roos.querySelector("title,desc"),kinderen:[...dd.children].map(e=>e.tagName.toLowerCase())};
+  }
   const dag=document.querySelector(".dagmod").getBoundingClientRect().bottom+scrollY;
-  const volgende=[...document.querySelectorAll("h2")].find(h=>{const r=h.getBoundingClientRect();return r.height>0&&r.top+scrollY>dag;});
-  return {rijen:cellen.map(c=>[c.querySelector("dt").textContent,c.querySelector("dd").textContent]),problemen,h:Math.round(sb.height*100)/100,
-    minFont:Math.min(...fonts),docBreed:document.documentElement.scrollWidth,vw:innerWidth,
-    tweedeKolomX:duos.map(d=>Math.round(d.children[1].querySelector("dt").getBoundingClientRect().left*10)/10),
-    waardeRechts:cellen.filter((c,i)=>i%1===0).map(c=>Math.round(c.querySelector("dd").getBoundingClientRect().right*10)/10).filter((x,i)=>[1,3,4,6].includes(i)),binnenRechts:Math.round(binnenRechts*10)/10,
-    volgendTop:volgende?Math.round((volgende.getBoundingClientRect().top+scrollY)*10)/10:null,docH:document.documentElement.scrollHeight,
-    kaartTop:Math.round((sb.top+scrollY)*10)/10,naKaartBottom:st.nextElementSibling?Math.round((st.nextElementSibling.getBoundingClientRect().bottom+scrollY)*10)/10:null,
-    kop:kop.textContent,oms:oms.textContent.replace(/\u00a0/g,""),ariaHidden:st.getAttribute("aria-hidden"),
+  const volgende=[...document.querySelectorAll("h2")].find(h=>{const q=h.getBoundingClientRect();return q.height>0&&q.top+scrollY>dag;});
+  return {rijen:cellen.map(c=>[c.querySelector("dt").textContent,c.querySelector("dd").textContent]),problemen,h:R(sb.height),minLabelWaarde:R(minLabelWaarde),
+    minFont:Math.min(...fonts),docBreed:document.documentElement.scrollWidth,vw:innerWidth,x,binnenL:R(binnenL),binnenRechts:R(binnenRechts),lijnen,haarlijnen,roos:r,
+    aantalDuo:duos.length,aantalRij:cellen.length,directeRijen:st.querySelectorAll(".tip-rijen>.tip-rij").length,padL:parseFloat(cs.paddingLeft),padR:parseFloat(cs.paddingRight),gat:parseFloat(getComputedStyle(duos[0]).columnGap),
+    kleuren:{zacht:kleurVan("var(--rule-soft)"),rule:kleurVan("var(--rule)")},thema:document.documentElement.getAttribute("data-thema"),
+    volgendTop:volgende?R(volgende.getBoundingClientRect().top+scrollY):null,docH:document.documentElement.scrollHeight,
+    kaartTop:R(sb.top+scrollY),naKaartBottom:st.nextElementSibling?R(st.nextElementSibling.getBoundingClientRect().bottom+scrollY):null,
+    kop:kop.textContent,oms:oms.textContent.replace(/ /g,""),ariaHidden:st.getAttribute("aria-hidden"),
     svgWind:(document.querySelector('#scrub text[data-tip-rij="4"][data-tip-kol="waarde"]')||{}).textContent||"",
     svgStoot:(document.querySelector('#scrub text[data-tip-rij="5"][data-tip-kol="waarde"]')||{}).textContent||"",
     valuetext:(document.getElementById("hit")||{getAttribute:()=>""}).getAttribute("aria-valuetext")};
@@ -136,6 +162,58 @@ const sleutel=iso0=>String(Date.parse(iso0));
 const eerlijk=async (page,fouten,wat)=>{assert.deepEqual(fouten,[],wat+": scriptfouten "+fouten.join(" | "));};
 let n=0;const ok=(c,m)=>{assert(c,m);n++;};const gelijk=(a,b,m)=>{assert.deepStrictEqual(a,b,m);n++;};
 const enGetal=t=>t.replace(",",".").replace("km/u","km/h");
+
+
+const uniek=a=>Math.max(...a)-Math.min(...a);
+const cirkelVerschil=(a,b)=>Math.abs((((a-b)%360)+540)%360-180);
+/* Alle controles op één meting van de kaart (één uur, één taal, één breedte, één thema). */
+function toets(m,{L,u,sc,taal,w,donker}){
+  const T=L+" uur "+u+(donker?" donker":"")+": ";
+  /* A. structuur en waarden */
+  gelijk(m.aantalDuo,4,T+"vier rijen");gelijk(m.aantalRij,8,T+"acht gegevens");gelijk(m.directeRijen,0,T+"geen losse rij over de volle breedte meer");
+  const labels=taal==="en"?["temperature","feels like","precip. chance","precip.","wind","direction","gusts","cloud cover"]:["temperatuur","voelt als","neerslagkans","neerslag","wind","richting","windstoten","bewolking"];
+  gelijk(m.rijen.map(r=>r[0]),labels,T+"labels");
+  const v=VERWACHT[sc].map(x=>taal==="en"?enGetal(x):x);
+  gelijk([m.rijen[0][1],m.rijen[1][1],m.rijen[2][1],m.rijen[3][1],m.rijen[6][1],m.rijen[7][1]],v,T+"waarden voor scenario "+sc);
+  gelijk(m.rijen[4][1],taal==="en"?enGetal(WIND[sc][0]):WIND[sc][0],T+"windkracht");
+  gelijk(m.rijen[5][1],taal==="en"?RICHTING_EN[WIND[sc][1]]:WIND[sc][1],T+"windrichting (tekst)");
+  /* Wind en richting horen bij dezelfde meetwaarde als de SVG-tooltip ("19 km/u N, 3 Bft"). */
+  const sv=/^(\d+) km\/(u|h)(?: (\S+))?, (\d+) Bft$/.exec(m.svgWind);
+  if(sv){gelijk(m.rijen[4][1],sv[1]+" km/"+sv[2]+" · "+sv[4]+" Bft",T+"windkracht gelijk aan de SVG-tooltip");gelijk(m.rijen[5][1],sv[3]||"–",T+"richting gelijk aan de SVG-tooltip");}
+  if(sc!==4)gelijk(m.rijen[6][1],m.svgStoot,T+"windstoten gelijk aan de SVG-tooltip");
+  ok(!m.rijen.some(r=>/NaN|undefined|null/.test(r[1])),T+"geen NaN of undefined");
+  /* I. toegankelijkheid */
+  gelijk(m.ariaHidden,"true",T+"kaart is aria-hidden");
+  if(!donker)ok(taal==="en"||new RegExp("^"+String(u+2).padStart(2,"0")+":00, -?\\d+ graden, \\d+ procent neerslagkans$").test(m.valuetext||""),T+"slidertekst ("+m.valuetext+")");
+  /* B. geen afkapping, overlap of afbreking; lettergrootte; geen horizontale scroll; vaste hoogte */
+  gelijk(m.problemen,[],T+m.problemen.join("; "));
+  ok(m.minFont>=12,T+"kleinste tekst "+m.minFont+"px");ok(m.docBreed<=m.vw,T+"horizontale scroll");gelijk(m.h,140,T+"kaarthoogte");
+  /* C. gedeeld raster: bij alle waarden dezelfde x voor de tweede kolom en voor de rechterranden van de waarden */
+  ok(uniek(m.x.label1)<=0.1,T+"eerste kolom begint niet overal op dezelfde x ("+m.x.label1+")");
+  ok(uniek(m.x.label2)<=0.1,T+"tweede kolom begint niet overal op dezelfde x ("+m.x.label2+")");
+  ok(uniek(m.x.waarde1)<=0.1,T+"waarden van de eerste kolom eindigen niet op dezelfde x ("+m.x.waarde1+")");
+  ok(uniek(m.x.waarde2)<=0.1,T+"waarden van de tweede kolom eindigen niet op dezelfde x ("+m.x.waarde2+")");
+  ok(Math.abs(m.x.label1[0]-m.binnenL)<=0.5,T+"eerste kolom begint niet aan de linkerrand ("+m.x.label1[0]+" tegen "+m.binnenL+")");
+  ok(Math.abs(m.x.waarde2[0]-m.binnenRechts)<=0.5,T+"waarden eindigen niet op de rechterrand ("+m.x.waarde2[0]+" tegen "+m.binnenRechts+")");
+  gelijk([m.padL,m.padR],w<=339?[6,6]:[10,10],T+"zijpadding");gelijk(m.gat,w<=339?8:14,T+"tussenruimte tussen de helften");
+  /* D. scheidingslijnen: hairlines onder rij 1 t/m 3, verticale lijn tussen de helften, met ruimte tot de tekst; --rule-soft (licht) of --rule (donker) */
+  const kleur=donker?m.kleuren.rule:m.kleuren.zacht;
+  gelijk(m.thema==="donker",!!donker,T+"thema");
+  m.haarlijnen.forEach((b,i)=>{if(i<3)ok(b!=="none"&&b.includes(kleur)&&/inset/.test(b),T+"hairline onder rij "+(i+1)+" ("+b+" tegen "+kleur+")");else gelijk(b,"none",T+"geen lijn onder de laatste rij");});
+  const ruimte=w<=339?3.4:6.4;
+  m.lijnen.forEach((l,i)=>{gelijk([l.breedte,l.inhoud,l.kleur],[1,'""',kleur],T+"verticale lijn rij "+(i+1)+" (breedte, aanwezig, kleur)");
+    ok(l.links>=ruimte&&l.rechts>=ruimte,T+"ruimte tussen de verticale lijn en de tekst rij "+(i+1)+": links "+l.links+", rechts "+l.rechts+" (minimaal "+ruimte+")");});
+  /* E. windroos */
+  if(WIND[sc][1]==="–"){
+    gelijk(m.roos,null,T+"zonder windrichting geen windroos");gelijk(m.rijen[5][1],"–",T+"zonder windrichting uitsluitend een streepje");
+  }else{
+    const r=m.roos;ok(r,T+"windroos aanwezig");
+    gelijk([r.breed,r.hoog],[12,12],T+"windroos 12 px");ok(r.links>=3.5&&r.links<=4.5,T+"windroos staat op vaste afstand rechts van de tekst ("+r.links+")");
+    ok(r.tekstRechts<r.roosRechts-12+0.5,T+"windroos staat rechts van de richtingstekst");ok(Math.abs(r.ddRechts-r.roosRechts)<=0.5,T+"tekst en windroos vormen één rechts uitgelijnde groep");
+    ok(cirkelVerschil(r.bearing,SC[sc].WD)<=0.6,T+"windroos wijst naar de herkomst: "+r.bearing+"° tegen "+SC[sc].WD+"°");
+    gelijk([r.ariaHidden,r.focusable,r.tekstInRoos,r.titel,r.kinderen.join()],["true","false","",false,"svg"],T+"windroos is decoratief");
+  }
+}
 
 (async()=>{
   await new Promise(r=>server.listen(0,"127.0.0.1",r));
@@ -148,7 +226,7 @@ const enGetal=t=>t.replace(",",".").replace("km/u","km/h");
       const L=w+"px "+taal;
       const {context,page,fouten}=await open(browser,root,{w,nuIso:NU,offsetS:OFFSET,taal:taal==="en"?"en":undefined});
       try{
-        const hoogtes=new Set(),volgend=new Set(),tops=new Set();
+        const hoogtes=new Set(),volgend=new Set(),tops=new Set(),xs=new Set();
         /* Zes opeenvolgende uren: 13:00Z t/m 18:00Z = scenario 1 t/m 5 en 0 (u % 6). */
         for(const u of [13,14,15,16,17,18]){
           const sc=u%6,instant=Date.parse("2026-07-22T"+String(u).padStart(2,"0")+":00:00Z");
@@ -157,30 +235,21 @@ const enGetal=t=>t.replace(",",".").replace("km/u","km/h");
           await page.waitForFunction(lokaal=>(document.querySelector("#tip-strook .tip-kop")||{textContent:""}).textContent.endsWith(lokaal),String(u+2).padStart(2,"0")+":00",{timeout:8000});
           await sleep(250);
           const m=await meetKaart(page);
-          /* A. waarden */
-          gelijk(m.rijen.length,7,L+" uur "+u+": zeven waarden");
-          const v=VERWACHT[sc].map(x=>taal==="en"?enGetal(x):x);
-          const labels=taal==="en"?["temperature","feels like","chance","precip.","wind","gusts","cloud cover"]:["temperatuur","voelt als","kans","neerslag","wind","windstoten","bewolking"];
-          gelijk(m.rijen.map(r=>r[0]),labels,L+" uur "+u+": labels");
-          gelijk([m.rijen[0][1],m.rijen[1][1],m.rijen[2][1],m.rijen[3][1],m.rijen[5][1],m.rijen[6][1]],v,L+" uur "+u+": waarden voor scenario "+sc);
-          gelijk(m.rijen[4][1],m.svgWind,L+" uur "+u+": wind gelijk aan de SVG-tooltip");
-          if(sc!==4)gelijk(m.rijen[5][1],m.svgStoot,L+" uur "+u+": windstoten gelijk aan de SVG-tooltip");
-          if(sc===1)ok(/250 km\/(u|h) (WZW|WSW), 12 Bft/.test(m.rijen[4][1]),L+": wind met drie cijfers en richting ("+m.rijen[4][1]+")");
-          ok(!m.rijen.some(r=>/NaN|undefined|null/.test(r[1])),L+" uur "+u+": geen NaN of undefined");
-          /* G. toegankelijkheid */
-          gelijk(m.ariaHidden,"true",L+": kaart is aria-hidden");
-          ok(taal==="en"||new RegExp("^"+String(u+2).padStart(2,"0")+":00, -?\\d+ graden, \\d+ procent neerslagkans$").test(m.valuetext||""),L+" uur "+u+": slidertekst ("+m.valuetext+")");
-          /* B. geen afkapping, overlap of afbreking; lettergrootte; geen horizontale scroll */
-          gelijk(m.problemen,[],L+" uur "+u+": "+m.problemen.join("; "));
-          ok(m.minFont>=12,L+" uur "+u+": kleinste tekst "+m.minFont+"px");ok(m.docBreed<=m.vw,L+" uur "+u+": horizontale scroll");
-          gelijk(m.h,140,L+" uur "+u+": kaarthoogte");
-          /* C. uitlijning bij normale waarden (scenario 0, 2, 3, 5): tweede kolom en rechterrand lijnen uit */
-          if([0,2,3,5].includes(sc)){
-            ok(Math.max(...m.tweedeKolomX)-Math.min(...m.tweedeKolomX)<=1,L+" uur "+u+": tweede kolom lijnt niet uit ("+m.tweedeKolomX+")");
-            ok(m.waardeRechts.every(x=>Math.abs(x-m.binnenRechts)<=1),L+" uur "+u+": waarden eindigen niet op de rechterrand ("+m.waardeRechts+" vs "+m.binnenRechts+")");
-          }
+          toets(m,{L,u,sc,taal,w,donker:false});
+          xs.add(m.x.label2[0]);
           hoogtes.add(m.h);tops.add(m.kaartTop);volgend.add(Math.round((m.naKaartBottom-m.kaartTop)*10)/10);
         }
+        /* Donkere modus: dezelfde controles voor het extreme (scenario 1) en het normale uur (scenario 0); het raster blijft op dezelfde plek. */
+        await page.evaluate(()=>document.documentElement.setAttribute("data-thema","donker"));
+        for(const u of [13,18]){
+          const sc=u%6,pv=await geoXY(page,Date.parse("2026-07-22T"+String(u).padStart(2,"0")+":00:00Z"));
+          await page.touchscreen.tap(pv.x,pv.y);
+          await page.waitForFunction(lokaal=>(document.querySelector("#tip-strook .tip-kop")||{textContent:""}).textContent.endsWith(lokaal),String(u+2).padStart(2,"0")+":00",{timeout:8000});
+          await sleep(250);
+          const m=await meetKaart(page);toets(m,{L,u,sc,taal,w,donker:true});xs.add(m.x.label2[0]);hoogtes.add(m.h);tops.add(m.kaartTop);
+        }
+        ok(uniek([...xs])<=0.1,L+": de tweede kolom verspringt tussen uren of thema's ("+[...xs]+")");
+        if(!referentie[w+"x"])referentie[w+"x"]=[...xs][0];else ok(Math.abs([...xs][0]-referentie[w+"x"])<=0.1,w+"px: de tweede kolom begint in NL en EN niet op dezelfde x ("+[...xs][0]+" tegen "+referentie[w+"x"]+")");
         /* D. geen verschuiving tussen uren (en tussen talen): de kaart zelf (positie en hoogte) en het element direct eronder staan stil.
            Bewust niet de paginahoogte: de vetgedrukte geselecteerde rij van de uurtabel (PR 1, buiten deze PR) breekt bij de extreme
            waarden van scenario 1 op 320 px af (rij 59 i.p.v. 38 px); dat is een apart punt en geen eigenschap van de kaart. */
@@ -188,6 +257,32 @@ const enGetal=t=>t.replace(",",".").replace("km/u","km/h");
         if(!referentie[w])referentie[w]={h:[...hoogtes][0],v:[...volgend][0]};
         else{gelijk([...hoogtes][0],referentie[w].h,w+"px: kaarthoogte verschilt tussen NL en EN");ok(Math.abs([...volgend][0]-referentie[w].v)<=0.5,w+"px: afstand van de kaart tot het element eronder verschilt tussen NL en EN ("+[...volgend][0]+" tegen "+referentie[w].v+")");}
         await eerlijk(page,fouten,L);
+      }finally{await context.close();}
+    }
+
+    /* E (windroos). De wijsrichting van de windroos bij 24 verschillende windrichtingen (ook vlak om de vakgrenzen van 22,5°): de naaldpunt wijst
+       naar de meteorologische herkomst (0° = omhoog, 90° = rechts) en de kompastekst uit dezelfde graden valt in hetzelfde vak. */
+    {
+      const WD24=[0,11.2,11.3,22.5,45,67.5,90,112.5,135,157.5,180,202.5,225,247.5,250,270,292.5,315,337.5,348.7,348.8,359.9,5,100];
+      const DIRSKORT=["N","NNO","NO","ONO","O","OZO","ZO","ZZO","Z","ZZW","ZW","WZW","W","WNW","NW","NNW"];
+      const wd=u=>WD24[((u-13)%24+24)%24];
+      const {context,page,fouten}=await open(browser,root,{w:390,nuIso:NU,offsetS:OFFSET,opties:{wd}});
+      try{
+        const gezien=[];
+        for(let k=0;k<24;k++){
+          const instant=Date.parse("2026-07-22T13:00:00Z")+k*UUR,u=new Date(instant).getUTCHours(),deg=wd(u);
+          const pv=await geoXY(page,instant);ok(pv,"windroos: uur "+k+" staat in de grafiek");
+          await page.touchscreen.tap(pv.x,pv.y);
+          await page.waitForFunction(lokaal=>(document.querySelector("#tip-strook .tip-kop")||{textContent:""}).textContent.endsWith(lokaal),String((u+2)%24).padStart(2,"0")+":00",{timeout:8000});
+          await sleep(150);
+          const m=await meetKaart(page);
+          ok(m.roos,"windroos: aanwezig bij "+deg+"°");
+          ok(cirkelVerschil(m.roos.bearing,deg)<=0.1+0.05,"windroos "+deg+"°: de punt wijst naar "+m.roos.bearing+"°");
+          gelijk(m.rijen[5][1],DIRSKORT[((Math.round(deg/22.5)%16)+16)%16],"windroos "+deg+"°: kompastekst bij dezelfde graden");
+          gezien.push(m.roos.bearing);
+        }
+        ok(uniek(gezien.slice(0,1))===0&&Math.abs(gezien[WD24.indexOf(0)])<0.2&&Math.abs(gezien[WD24.indexOf(90)]-90)<0.2&&Math.abs(gezien[WD24.indexOf(180)]-180)<0.2&&Math.abs(gezien[WD24.indexOf(270)]-270)<0.2,"windroos: wind uit het noorden wijst omhoog, uit het oosten naar rechts, uit het zuiden omlaag en uit het westen naar links");
+        await eerlijk(page,fouten,"windroos");
       }finally{await context.close();}
     }
 
@@ -225,6 +320,6 @@ const enGetal=t=>t.replace(",",".").replace("km/u","km/h");
         await eerlijk(page,fouten,"desktop "+taal);
       }finally{await context.close();}
     }
-    console.log(`Detailkaart: ${n} controles geslaagd (waarden uit de weerreeksen, geen afkapping of overlap, uitlijning, vaste hoogte, NL/EN, 320 t/m 429 px, verversing, desktop ongewijzigd, toegankelijkheid).`);
+    console.log(`Detailkaart: ${n} controles geslaagd (acht waarden uit de weerreeksen, gedeeld raster en scheidingslijnen, windroos, geen afkapping of overlap, vaste hoogte, NL/EN, licht/donker, 320 t/m 429 px, verversing, desktop ongewijzigd, toegankelijkheid).`);
   }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);process.exit(1);});

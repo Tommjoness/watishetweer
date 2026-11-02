@@ -139,13 +139,17 @@ async function testStrook(browser,root){
         await kies(page,i);const m=await meet(page);metingen++;
         assert.equal(m.staat,"vol",`${L} uur ${i}: strook niet gevuld`);
         assert.equal(m.kop,m.svgKop,`${L} uur ${i}: kop wijkt af van de SVG-tooltip`);
-        /* De kaart toont zeven waarden uit de weerreeksen (kans en hoeveelheid apart); de SVG-tooltip heeft er zes (neerslagregel gecombineerd). */
-        assert.equal(m.rijen.length,7,`${L} uur ${i}: ${m.rijen.length} waarden in de kaart`);
+        /* De kaart toont acht waarden uit de weerreeksen (kans en hoeveelheid apart, windkracht en richting apart); de SVG-tooltip heeft er zes (neerslagregel en windregel gecombineerd). */
+        assert.equal(m.rijen.length,8,`${L} uur ${i}: ${m.rijen.length} waarden in de kaart`);
         m.rijen.forEach((r,k)=>assert(r[0]&&r[1],`${L} uur ${i}: lege waarde ${k+1}`));
         assert.equal(m.oms.replace(/\u00a0/g,""),m.svgOms,`${L} uur ${i}: omschrijving wijkt af van de SVG-tooltip`);
-        const kaartVoorSvg=[0,1,4,5,6],svgVoorKaart=[0,1,3,4,5];
+        const kaartVoorSvg=[0,1,6,7],svgVoorKaart=[0,1,4,5];
         kaartVoorSvg.forEach((kk,n)=>assert.deepEqual(m.rijen[kk],m.svgRijen[svgVoorKaart[n]],`${L} uur ${i}: kaartwaarde ${kk+1} wijkt af van SVG-rij ${svgVoorKaart[n]+1}`));
-        assert.deepEqual([m.rijen[2][0],m.rijen[3][0]],taal==="en"?["chance","precip."]:["kans","neerslag"],`${L} uur ${i}: labels van kans en neerslag`);
+        /* Windregel van de SVG ("19 km/u N, 3 Bft") = windkracht ("19 km/u · 3 Bft") en richting ("N") van de kaart. */
+        const sw=/^(\d+) km\/(u|h)(?: (\S+))?, (\d+) Bft$/.exec(m.svgRijen[3][1]);
+        if(sw){assert.equal(m.rijen[4][1],`${sw[1]} km/${sw[2]} · ${sw[4]} Bft`,`${L} uur ${i}: windkracht wijkt af van de SVG-windregel`);assert.equal(m.rijen[5][1],sw[3]||"–",`${L} uur ${i}: richting wijkt af van de SVG-windregel`);}
+        else assert.equal(m.rijen[4][1],"–",`${L} uur ${i}: zonder windsnelheid in de SVG-windregel een streepje voor de windkracht (${m.svgRijen[3][1]})`);
+        assert.deepEqual(m.rijen.map(r=>r[0]),taal==="en"?["temperature","feels like","precip. chance","precip.","wind","direction","gusts","cloud cover"]:["temperatuur","voelt als","neerslagkans","neerslag","wind","richting","windstoten","bewolking"],`${L} uur ${i}: labels`);
         const [svgKans,svgMm]=m.svgRijen[2][1].split(" · ");
         assert.equal(m.rijen[2][1],svgKans,`${L} uur ${i}: kans wijkt af van de SVG-neerslagregel`);assert.equal(m.rijen[2][1],m.kansModel,`${L} uur ${i}: kans wijkt af van de weerreeks`);
         if(svgMm)assert.equal(m.rijen[3][1],svgMm,`${L} uur ${i}: hoeveelheid wijkt af van de SVG-neerslagregel`);
@@ -172,7 +176,7 @@ async function testStrook(browser,root){
       combos++;
     }finally{await context.close();}
   }
-  console.log(`A. Strook tot en met 429 px (320/360/390/413/420/429, NL/EN, licht/donker): ${combos} combinaties, ${metingen} uurmetingen OK: zes rijen gelijk aan de SVG-tooltip, >=12px, geen overlap, overflow of verschuiving, kruisdraad en meetpunt zichtbaar, Escape en focus, slider-informatie.`);
+  console.log(`A. Strook tot en met 429 px (320/360/390/413/420/429, NL/EN, licht/donker): ${combos} combinaties, ${metingen} uurmetingen OK: acht waarden gelijk aan de SVG-tooltip, >=12px, geen overlap, overflow of verschuiving, kruisdraad en meetpunt zichtbaar, Escape en focus, slider-informatie.`);
 }
 
 /* B. Touch (touchscreen-simulatie). */
@@ -189,7 +193,7 @@ async function testTouch(browser,root){
       for(const f of [0.15,0.5,0.85]){
         await page.touchscreen.tap(box.x+box.w*f,box.y+box.h*0.5);await page.waitForTimeout(200);
         const m=await meet(page);assert.equal(m.staat,"vol",`${L} f=${f}: strook niet gevuld na tik`);assert.equal(m.svgTekstZichtbaar,0,`${L}: SVG-tooltip zichtbaar na tik`);
-        assert(m.kruisZichtbaar&&m.puntZichtbaar,`${L}: kruisdraad/punt weg na tik`);assert(m.minFont>=12);assert.equal(m.rijen.length,7);laatsteKop=m.kop;hoogtes.add(m.h);volgend.add(m.volgendTop);
+        assert(m.kruisZichtbaar&&m.puntZichtbaar,`${L}: kruisdraad/punt weg na tik`);assert(m.minFont>=12);assert.equal(m.rijen.length,8);laatsteKop=m.kop;hoogtes.add(m.h);volgend.add(m.volgendTop);
       }
       assert.equal(hoogtes.size,1,`${L}: hoogte wisselt bij tikken`);assert.equal(volgend.size,1,`${L}: pagina verschuift bij tikken`);
       await page.waitForTimeout(4500);const idle=await meet(page);

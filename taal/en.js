@@ -1308,6 +1308,8 @@
     /* Nachtzicht: "Lichtvervuiling in Vlieland: laag tot matig (geschat)." of "…hier: …" */
     [/^Lichtvervuiling (?:in (.+)|hier): (laag|matig|hoog|laag tot matig|matig tot hoog) \(geschat\)\.$/, (m) => `Light pollution ${m[1] ? "in " + plaats(m[1]) : "here"}: ${({ laag: "low", matig: "moderate", hoog: "high", "laag tot matig": "low to moderate", "matig tot hoog": "moderate to high" })[m[2]]} (estimated).`],
     [/^(\d{2}:\d{2}, )?neerslagkans (\d+%)(?:, verwacht (.+))?$/, (m) => `${m[1] || ""}${m[2]} chance of precipitation${m[3] ? ", " + m[3].replace(/(\d),(\d)/g, "$1.$2") + " expected" : ""}`],
+    /* Mobiele detailkaart: windkracht ("19 km/u · 3 Bft"); de kompasrichting staat los ("WZW") en volgt het patroon van de losse richting. */
+    [/^(\d+) km\/u · (\d+) Bft$/, (m) => `${m[1]} km/h · ${m[2]} Bft`],
     [/^(\d+) km\/u(?: (N|NNO|NO|ONO|O|OZO|ZO|ZZO|Z|ZZW|ZW|WZW|W|WNW|NW|NNW))?, (\d+) Bft$/, (m) => `${m[1]} km/h${m[2] ? " " + RICHTING_KORT[m[2]] : ""}, ${m[3]} Bft`],
     [/^(Zwakke|Matige|Vrij krachtige|Krachtige|Harde|Stormachtige) wind uit het ([a-z]+) \((\d+) Bft\)\.$/, (m) => richting(m[2]) && `${alsNl("X", windNaam(m[1].toLowerCase() + " wind", m[3]))} from the ${richting(m[2])} (${m[3]} Bft).`],
     [/^(Storm|Zware storm|Zeer zware storm|Orkaan) uit het ([a-z]+) \((\d+) Bft\)\.$/, (m) => richting(m[2]) && `${alsNl("X", WINDKRACHT[m[1].toLowerCase()])} from the ${richting(m[2])} (${m[3]} Bft).`],
@@ -1534,7 +1536,7 @@
   /* Korte vormen voor smalle kolomkoppen (tabellen, Zeven dagen, Nachtzicht). */
   const koppen = { "Neerslag": "Precip.", "Zichtscore": "Score", "Bewolking": "Cloud", "Windstoot": "Gust", "Gevoel": "Feels",
     /* Labels van de mobiele detailkaart (.tip-strook dt): "neerslag" is daar "precip." en blijft overal elders "precipitation". */
-    "kans": "chance", "neerslag": "precip." };
+    "richting": "direction", "neerslag": "precip." };
   const kopSelector = "th, .row.kop > *, .tip-strook dt";
 
   return { exact, patronen, lijsten: { WEER, WINDKRACHT, RICHTING_VOL, RICHTING_KORT }, eigennamen, koppen, kopSelector };
