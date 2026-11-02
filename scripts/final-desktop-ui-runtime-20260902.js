@@ -260,12 +260,49 @@ function koppelUurKlik(tbody){
     document.documentElement.dataset.uurToggleKoppeling="1";
     document.addEventListener("click",ev=>{if(ev.target&&ev.target.closest&&ev.target.closest("#wiw-hour-toggle"))markeerUur();});
   }
-  /* De knop in de tijdcel is het toegankelijke doel; een klik of tik elders op de rij is een gemak voor muis en aanraking. */
+  /* Desktop heeft geen <button>-elementen in de uurkolom (bewaker "geen extra uurbediening"): de bestaande tijdtekst is daar
+     zelf het bedieningsdoel (role="button", zelfde uiterlijk). Native knoppen (mobiel) regelen Enter en spatie zelf. Eén tabstop
+     (de gekozen rij of de eerste), pijltoetsen, Home en End verplaatsen binnen de kolom. */
+  tbody.addEventListener("keydown",ev=>{
+    const kn=ev.target&&ev.target.closest?ev.target.closest(".wiw-hour-pick"):null;
+    if(!kn||kn.tagName==="BUTTON"||ev.altKey||ev.ctrlKey||ev.metaKey)return;
+    const tr=kn.closest("tr");
+    if(ev.key==="Enter"||ev.key===" "){
+      ev.preventDefault();
+      if(tr&&tr.dataset.instant!=null&&typeof uurKiesInstant==="function")uurKiesInstant(Number(tr.dataset.instant),true);
+      return;
+    }
+    const knoppen=[...tbody.querySelectorAll(".wiw-hour-pick")],i=knoppen.indexOf(kn);let j=-1;
+    if(ev.key==="ArrowDown")j=Math.min(knoppen.length-1,i+1);
+    else if(ev.key==="ArrowUp")j=Math.max(0,i-1);
+    else if(ev.key==="Home")j=0;
+    else if(ev.key==="End")j=knoppen.length-1;
+    if(j<0)return;
+    ev.preventDefault();
+    for(const k of knoppen)k.setAttribute("tabindex",k===knoppen[j]?"0":"-1");
+    knoppen[j].focus();
+  });
+  /* Een klik of tik op de knop of elders op de rij kiest het uur. */
   tbody.addEventListener("click",ev=>{
     const tr=ev.target&&ev.target.closest?ev.target.closest("tr"):null;
     if(!tr||tr.dataset.instant==null||typeof uurKiesInstant!=="function")return;
     uurKiesInstant(Number(tr.dataset.instant),true);
   });
+}
+/* Focus van een toetsenbordgebruiker in de uurkolom: de tabel wordt regelmatig herbouwd of ingekort (minuutherteken, grootte,
+   hoogtesynchronisatie) en rijen worden daarbij losgehaald en teruggezet, waardoor de focus op <body> valt. Het laatst gefocuste uur
+   wordt onthouden en na elke markering teruggezet, tot de gebruiker bewust elders heen gaat (focus elders of klik buiten de tabel). */
+let fokusInstant=null;
+if(!document.documentElement.dataset.uurFocusBewaking){
+  document.documentElement.dataset.uurFocusBewaking="1";
+  document.addEventListener("focusin",ev=>{
+    const kn=ev.target&&ev.target.closest?ev.target.closest("#wiw-hour-table .wiw-hour-pick"):null;
+    fokusInstant=kn&&kn.closest("tr")?kn.closest("tr").dataset.instant||null:null;
+  });
+  document.addEventListener("pointerdown",ev=>{
+    /* Alleen een echte klik of tik telt: de uurselectie stuurt zelf een synthetische pointerdown naar de grafiek. */
+    if(ev.isTrusted&&!(ev.target&&ev.target.closest&&ev.target.closest("#wiw-hour-table")))fokusInstant=null;
+  },true);
 }
 /* Markeert de rij van de selectie (nooit een andere) en toont, als die rij niet zichtbaar is, een verwijzing naar het overzicht
    met alle uren. Geen automatisch scrollen of uitklappen. */
@@ -278,6 +315,16 @@ function markeerUur(){
     if(is){if(tr.dataset.selected!=="1")tr.dataset.selected="1";gevonden=tr;}else if(tr.dataset.selected)delete tr.dataset.selected;
     const kn=tr.querySelector(".wiw-hour-pick"),waarde=is?"true":"false";if(kn&&kn.getAttribute("aria-pressed")!==waarde)kn.setAttribute("aria-pressed",waarde);
   }
+  /* Desktop: één tabstop in de kolom (waar de focus al staat, anders de gekozen rij, anders de eerste). */
+  const spans=tbody?[...tbody.querySelectorAll("span.wiw-hour-pick")]:[];
+  if(spans.length){
+    const stop=spans.includes(document.activeElement)?document.activeElement:((gevonden&&gevonden.querySelector(".wiw-hour-pick"))||spans[0]);
+    for(const k of spans){const w=k===stop?"0":"-1";if(k.getAttribute("tabindex")!==w)k.setAttribute("tabindex",w);}
+  }
+  if(fokusInstant!==null&&tbody&&(!document.activeElement||document.activeElement===document.body)){
+    const k=tbody.querySelector('tr[data-instant="'+fokusInstant+'"] .wiw-hour-pick');
+    if(k)k.focus({preventScroll:true});
+  }
   werkVerwijzingBij(ms,gevonden,sel);
 }
 function werkVerwijzingBij(ms,tr,sel){
@@ -287,7 +334,9 @@ function werkVerwijzingBij(ms,tr,sel){
   const zichtbaar=tr&&!tr.classList.contains("wiw-hour-mobile-hidden");
   /* Doel: de verborgen rij zit achter 'Alle uren bekijken' (mobiel); een uur dat in geen enkele rij staat, zit in de tabel van
      'Grafiekgegevens als tabel'. */
-  const doel=ms===null||zichtbaar||!sel||!S.geo||!S.geo.TI?null:(tr?toggle:samenvatting);
+  /* Alleen bij een uur dat de bezoeker zelf koos: een standaardselectie is bij het laden het eerstvolgende uur en hoort niet te
+     melden dat er "iets gekozen" is. */
+  const doel=ms===null||zichtbaar||!sel||!sel.handmatig||!S.geo||!S.geo.TI?null:(tr?toggle:samenvatting);
   const actief=doel&&!doel.hidden?doel:null;
   /* Idempotent: alleen schrijven als er iets verandert. Een herschreven tekst of attribuut laat de vertaallaag en de
      waarnemers van andere lagen opnieuw lopen (schrijflus in de Engelse weergave). */
@@ -296,11 +345,30 @@ function werkVerwijzingBij(ms,tr,sel){
     x.removeAttribute("data-uur-verwijzing");
     if(x.getAttribute("aria-describedby")==="wiw-uur-verwijzing")x.removeAttribute("aria-describedby");
   }
-  let tekst="";
+  let tekst="",toevoeging="";
   if(actief){
     const tijd=S.geo.TI[sel.k],lokaal=typeof root.weatherNowLokaleTijd==="function"?root.weatherNowLokaleTijd(tijd):tijd;
     const label=rijLabel({tijd:lokaal},typeof uurAanduiding==="function"?uurAanduiding(ms):"");
     tekst=tr?label+" is geselecteerd; die rij staat in Alle uren bekijken.":label+" is geselecteerd, maar staat niet in dit overzicht; zie Grafiekgegevens als tabel.";
+    /* Compact (alleen het kloktijdstip) zodat de bediening op één regel blijft: de volledige dag en aanduiding staan op de kaart. */
+    toevoeging=hhmm(lokaal)+" gekozen";
+  }
+  /* Zichtbare tekst in de bestaande bediening, zonder extra regel: achter 'Alle uren bekijken' (mobiel) of achter 'Grafiekgegevens
+     als tabel'. Idempotent, om schrijflussen met de vertaallaag te voorkomen. */
+  if(toggle){
+    const wens=actief===toggle?toevoeging:"";
+    if((toggle.dataset.uurToevoeging||"")!==wens){
+      if(wens)toggle.dataset.uurToevoeging=wens;else delete toggle.dataset.uurToevoeging;
+      const sync=root.WeatherNowFinalVisualPolish20260903;if(sync&&typeof sync.sync==="function")sync.sync();
+    }
+  }
+  if(samenvatting){
+    let sp=samenvatting.querySelector(":scope > .wiw-uur-toevoeging");
+    const wens=actief===samenvatting?"· "+toevoeging:"";
+    if(wens){
+      if(!sp){sp=document.createElement("span");sp.className="wiw-uur-toevoeging";samenvatting.appendChild(sp);}
+      if((sp.dataset.bron||"")!==wens){sp.dataset.bron=wens;sp.textContent=" "+wens;}
+    }else if(sp)sp.remove();
   }
   if(!el&&!tekst)return;
   if(!el){el=document.createElement("p");el.id="wiw-uur-verwijzing";el.className="sr-only";}
@@ -334,15 +402,14 @@ function werkUurTabelBij(){
     const ms=rijInstant(r),aanduiding=ms!==null&&typeof uurAanduiding==="function"?uurAanduiding(ms):"";
     if(ms!==null){
       tr.dataset.instant=String(ms);
-      /* Mobiel: een knop per rij (toegankelijk doel). Desktop: de uurkolom heeft bewust geen zichtbare knoppen (bewaker
-         cwv-desktop-recovery: "geen extra uurbediening"); daar is de rij klikbaar voor de muis en kiest het toetsenbord een uur
-         via de grafiekslider (pijltoetsen), die hetzelfde selectiemodel gebruikt. */
-      if(desktop)tijd.appendChild(tm);
-      else{
-        const kn=document.createElement("button");kn.type="button";kn.className="wiw-hour-pick";kn.setAttribute("aria-pressed","false");
-        kn.setAttribute("aria-label","Toon "+rijLabel(r,aanduiding)+" in de grafiek"+(r.marker?", eerstvolgend uur":""));
-        kn.appendChild(tm);tijd.appendChild(kn);
-      }
+      /* Mobiel: een <button> per rij. Desktop: geen <button> in de uurkolom (bewaker cwv-desktop-recovery: "geen extra
+         uurbediening"); de bestaande tijdtekst is daar zelf het doel (role="button", geen ander uiterlijk) en bereikbaar met het
+         toetsenbord (zie koppelUurKlik). De grafiekslider blijft een tweede, ongewijzigde weg. */
+      const kn=document.createElement(desktop?"span":"button");kn.className="wiw-hour-pick";
+      if(desktop){kn.setAttribute("role","button");kn.setAttribute("tabindex","-1");}else kn.type="button";
+      kn.setAttribute("aria-pressed","false");
+      kn.setAttribute("aria-label","Toon "+rijLabel(r,aanduiding)+" in de grafiek"+(r.marker?", eerstvolgend uur":""));
+      kn.appendChild(tm);tijd.appendChild(kn);
       if(aanduiding){const z=document.createElement("span");z.className="wiw-hour-tijdzone";z.textContent="("+aanduiding+")";tijd.appendChild(z);}
     }else tijd.appendChild(tm);
     if(desktop)tr.dataset.sourceIndex=String(r.bronIndex);

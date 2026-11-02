@@ -1059,6 +1059,9 @@
       const t = (h.t(m[1]) || m[1]).replace(/^(Tomorrow|Yesterday)\b/, x => x.toLowerCase());
       return `Show ${t} in the chart${m[2] ? ", next hour" : ""}`;
     }],
+    [/^Alle uren bekijken · (.+) gekozen$/, (m) => `See all hours · ${m[1]} selected`],
+    [/^Grafiekgegevens als tabel · (.+) gekozen$/, (m) => `Chart data as a table · ${m[1]} selected`],
+    [/^· (.+) gekozen$/, (m) => `· ${m[1]} selected`],
     [/^(.+) is geselecteerd; die rij staat in Alle uren bekijken\.$/, (m, h) => `${h.t(m[1]) || m[1]} is selected; that row is under ‘See all hours’.`],
     [/^(.+) is geselecteerd, maar staat niet in dit overzicht; zie Grafiekgegevens als tabel\.$/, (m, h) => `${h.t(m[1]) || m[1]} is selected but is not in this overview; see ‘Chart data as a table’.`],
     /* Weertypen, windkracht, fasen, niveaus: los label */

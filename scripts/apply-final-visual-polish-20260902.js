@@ -85,7 +85,8 @@ function synchroniseerUren(){
     const heeftMeer=rijen.length>8;
     rijen.forEach(function(rij,i){rij.classList.toggle("wiw-hour-mobile-hidden",heeftMeer&&!urenUitgeklapt&&i>=8);});
     knop.hidden=!heeftMeer;knop.setAttribute("aria-expanded",urenUitgeklapt?"true":"false");
-    const label=urenUitgeklapt?"Minder uren tonen":"Alle uren bekijken";
+    /* uurToevoeging: de uurselectie zet hier het gekozen uur als dat achter deze knop staat ("Alle uren bekijken · 07:00 geselecteerd"). */
+    const label=urenUitgeklapt?"Minder uren tonen":"Alle uren bekijken"+(knop.dataset.uurToevoeging?" · "+knop.dataset.uurToevoeging:"");
     if(knop.textContent!==label)knop.textContent=label;
   }else{
     rijen.forEach(function(rij){rij.classList.remove("wiw-hour-mobile-hidden");});
