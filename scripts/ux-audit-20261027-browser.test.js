@@ -91,14 +91,15 @@ async function wachtOpWeer(page){
   await rustig(page,250);
 }
 
-/* F1: Escape sluit de tooltip, focus en gekozen uur blijven. */
+/* F1: Escape sluit de tijdelijke tooltip; focus en gekozen uur (kruisdraad, kaart) blijven. */
 /* Een voorwaarde die niet komt, geeft dezelfde beschrijvende assertiemelding (met de toestand erbij) als een directe controle. */
+/* "Open" is de tijdelijke doos (voorvertoning); het gekozen uur (kruisdraad, punt, kaart, tabel) blijft na Escape of Tab gewoon staan. */
 const eis=async(wacht,melding,staat)=>{try{await wacht();}catch(e){assert.fail(melding+" ("+JSON.stringify(await staat())+")");}};
-const tooltipOpen=(page,idx,melding)=>eis(()=>page.waitForFunction(i=>{const g=document.getElementById("scrub"),h=document.getElementById("hit");return !!g&&g.style.display!=="none"&&(i===undefined||h.dataset.keyboardIndex===String(i));},idx,{timeout:5000}),melding,()=>tooltipStaat(page));
-const tooltipDicht=(page,melding)=>eis(()=>page.waitForFunction(()=>{const g=document.getElementById("scrub");return !!g&&g.style.display==="none";},null,{timeout:5000}),melding,()=>tooltipStaat(page));
+const tooltipOpen=(page,idx,melding)=>eis(()=>page.waitForFunction(i=>{const g=document.getElementById("scrub"),h=document.getElementById("hit");return !!g&&g.style.display!=="none"&&g.dataset.modus!=="selectie"&&(i===undefined||h.dataset.keyboardIndex===String(i));},idx,{timeout:5000}),melding,()=>tooltipStaat(page));
+const tooltipDicht=(page,melding)=>eis(()=>page.waitForFunction(()=>{const g=document.getElementById("scrub");return !!g&&(g.style.display==="none"||g.dataset.modus==="selectie");},null,{timeout:5000}),melding,()=>tooltipStaat(page));
 const tooltipStaat=page=>page.evaluate(()=>{
   const g=document.getElementById("scrub"),hit=document.getElementById("hit"),kop=g&&g.querySelector("text");
-  return {open:!!g&&g.style.display!=="none"&&getComputedStyle(g).display!=="none",focus:document.activeElement===hit,idx:hit.dataset.keyboardIndex,nu:hit.getAttribute("aria-valuenow"),tekst:hit.getAttribute("aria-valuetext"),kop:kop?kop.textContent.trim().slice(0,5):""};
+  return {open:!!g&&g.style.display!=="none"&&getComputedStyle(g).display!=="none"&&g.dataset.modus!=="selectie",selectie:!!g&&g.style.display!=="none"&&g.dataset.modus==="selectie"&&getComputedStyle(g.querySelector("line")).display!=="none",doosZichtbaar:!!g&&Array.from(g.querySelectorAll(".tip-doos")).some(e=>getComputedStyle(e).visibility!=="hidden"),focus:document.activeElement===hit,idx:hit.dataset.keyboardIndex,nu:hit.getAttribute("aria-valuenow"),tekst:hit.getAttribute("aria-valuetext"),kop:kop?kop.textContent.trim().slice(0,5):""};
 });
 async function testTooltipEscape(browser,root){
   let n=0;
@@ -109,14 +110,15 @@ async function testTooltipEscape(browser,root){
       await wachtOpWeer(page);
       assert(await page.evaluate(()=>!!document.getElementById("wiw-hour-table")),L+": het tabelalternatief ontbreekt");
       await page.evaluate(()=>document.getElementById("hit").focus());await tooltipOpen(page,undefined,L+": de tooltip opent niet bij toetsenbordfocus");
-      const a=await tooltipStaat(page);
+      const a=await tooltipStaat(page);const i0=Number(a.idx||0);   /* het toetsenbord begint bij het geselecteerde uur, niet meer bij index 0 */
       assert(a.open&&a.focus,L+": de tooltip opent niet bij toetsenbordfocus ("+JSON.stringify(a)+")");
-      await page.keyboard.press("ArrowRight");await tooltipOpen(page,1,L+": ArrowRight kiest het volgende uur niet");
+      await page.keyboard.press("ArrowRight");await tooltipOpen(page,i0+1,L+": ArrowRight kiest het volgende uur niet");
       const b=await tooltipStaat(page);
-      assert(b.open&&b.idx==="1"&&b.nu==="2",L+": ArrowRight kiest het volgende uur niet ("+JSON.stringify(b)+")");
+      assert(b.open&&b.idx===String(i0+1)&&b.nu===String(i0+2),L+": ArrowRight kiest het volgende uur niet ("+JSON.stringify(b)+")");
       await page.keyboard.press("Escape");await tooltipDicht(page,L+": Escape sluit de tooltip niet");await naPaint(page);
       const c=await tooltipStaat(page);
       assert(!c.open,L+": Escape sluit de tooltip niet ("+JSON.stringify(c)+")");
+      assert(c.selectie&&!c.doosZichtbaar,L+": na Escape moet de doos weg zijn en het gekozen uur (kruisdraad) blijven ("+JSON.stringify(c)+")");
       assert(c.focus,L+": de focus verlaat de grafiek na Escape");
       assert.equal(c.idx,b.idx,L+": het gekozen uur verandert door Escape");
       assert.equal(c.nu,b.nu,L+": aria-valuenow verandert door Escape");
@@ -125,17 +127,17 @@ async function testTooltipEscape(browser,root){
       const d=await tooltipStaat(page);
       assert(!d.open&&d.focus&&d.idx===b.idx,L+": een tweede Escape verstoort de toestand ("+JSON.stringify(d)+")");
       /* Een bewuste volgende interactie opent hem weer, vanaf het gekozen uur. */
-      await page.keyboard.press("ArrowRight");await tooltipOpen(page,2,L+": ArrowRight na Escape opent de tooltip niet bij het volgende uur");
+      await page.keyboard.press("ArrowRight");await tooltipOpen(page,i0+2,L+": ArrowRight na Escape opent de tooltip niet bij het volgende uur");
       const e=await tooltipStaat(page);
-      assert(e.open&&e.idx==="2"&&e.nu==="3"&&e.focus,L+": ArrowRight na Escape opent de tooltip niet bij het volgende uur ("+JSON.stringify(e)+")");
+      assert(e.open&&e.idx===String(i0+2)&&e.nu===String(i0+3)&&e.focus,L+": ArrowRight na Escape opent de tooltip niet bij het volgende uur ("+JSON.stringify(e)+")");
       await page.keyboard.press("Escape");await tooltipDicht(page,L+": Escape sluit de tooltip niet (na ArrowRight)");
-      await page.keyboard.press("Enter");await tooltipOpen(page,2,L+": Enter na Escape opent de tooltip niet bij hetzelfde uur");
+      await page.keyboard.press("Enter");await tooltipOpen(page,i0+2,L+": Enter na Escape opent de tooltip niet bij hetzelfde uur");
       const f=await tooltipStaat(page);
-      assert(f.open&&f.idx==="2"&&f.focus,L+": Enter na Escape opent de tooltip niet bij hetzelfde uur ("+JSON.stringify(f)+")");
+      assert(f.open&&f.idx===String(i0+2)&&f.focus,L+": Enter na Escape opent de tooltip niet bij hetzelfde uur ("+JSON.stringify(f)+")");
       await page.keyboard.press("Escape");await tooltipDicht(page,L+": Escape sluit de tooltip niet (na Enter)");
-      await page.keyboard.press("End");await eis(()=>page.waitForFunction(()=>{const g=document.getElementById("scrub"),h=document.getElementById("hit");return g.style.display!=="none"&&Number(h.dataset.keyboardIndex)>2;},null,{timeout:5000}),L+": End na Escape opent de tooltip niet",()=>tooltipStaat(page));
+      await page.keyboard.press("End");await eis(()=>page.waitForFunction(i=>{const g=document.getElementById("scrub"),h=document.getElementById("hit");return g.style.display!=="none"&&g.dataset.modus!=="selectie"&&Number(h.dataset.keyboardIndex)>i+2;},i0,{timeout:5000}),L+": End na Escape opent de tooltip niet",()=>tooltipStaat(page));
       const g=await tooltipStaat(page);
-      assert(g.open&&Number(g.idx)>2&&g.focus,L+": End na Escape opent de tooltip niet ("+JSON.stringify(g)+")");
+      assert(g.open&&Number(g.idx)>i0+2&&g.focus,L+": End na Escape opent de tooltip niet ("+JSON.stringify(g)+")");
       /* Tab uit de grafiek sluit hem nog steeds. */
       await page.keyboard.press("Tab");await tooltipDicht(page,L+": Tab uit de grafiek laat de tooltip staan");
       assert(!(await tooltipStaat(page)).open,L+": Tab uit de grafiek laat de tooltip staan");

@@ -105,7 +105,7 @@ async function controleer(type,naam){
         svgAria:svg.getAttribute("aria-label")||"",
         details:groep?groep.querySelectorAll('text[data-q4-rain-period-detail]').length:0,
         samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0,
-        kansen:[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).length
+        kansen:[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&/^\d+%$/.test((el.textContent||"").trim())).length
       };
     });
     assert.deepEqual(meerdere.ranges,["15:00–17:00","22:00–02:00","03:00–10:00"],`${naam}: mobiel gebruikt voor iedere regenperiode één compacte klokrange, ook over middernacht`);
@@ -138,7 +138,7 @@ async function controleer(type,naam){
         ranges:groep?[...groep.querySelectorAll('text[data-q4-rain-period-range]')].map(x=>(x.textContent||"").trim()):[],
         bedragen:groep?[...groep.querySelectorAll('text[data-q4-rain-period-amount]')].map(x=>(x.textContent||"").trim()):[],
         samenvattingen:groep?groep.querySelectorAll('text[data-q4-rain-summary]').length:0,
-        kansen:[...svg.querySelectorAll("text")].filter(el=>/^\d+%$/.test((el.textContent||"").trim())).length
+        kansen:[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&/^\d+%$/.test((el.textContent||"").trim())).length
       };
     });
     assert.deepEqual(enkelVolgendeDag.starts,[],`${naam}: brede periode op mobiel krijgt geen los beginlabel`);

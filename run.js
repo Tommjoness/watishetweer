@@ -871,7 +871,7 @@ groep("Grafieklabel-prioriteit");
   check("geen enkel getekend attribuut in de tooltip bevat NaN, undefined of null",
     !/NaN|undefined|null/.test(bak.scrub.innerHTML),bak.scrub.innerHTML.slice(0,160));
 
-  const rectM=bak.scrub.innerHTML.match(/<rect x="([\d.-]+)" y="([\d.-]+)" width="([\d.-]+)" height="([\d.-]+)"/);
+  const rectM=bak.scrub.innerHTML.match(/<rect(?: class="tip-doos")? x="([\d.-]+)" y="([\d.-]+)" width="([\d.-]+)" height="([\d.-]+)"/);
   const vb=bak.chart.getAttribute("viewBox").split(" ").map(Number);
   check("de tooltiprechthoek valt volledig binnen de viewBox",
     !!rectM && +rectM[1]>=0 && +rectM[2]>=0 && +rectM[1]+ +rectM[3]<=vb[2] && +rectM[2]+ +rectM[4]<=vb[3],

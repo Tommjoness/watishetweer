@@ -137,7 +137,9 @@ function grafiekPuntBeschrijving(geo,index,nuLokaleTijd){
   const lokaal=typeof globalThis.weatherNowLokaleTijd==="function"?globalThis.weatherNowLokaleTijd(G.TI[i]):G.TI[i];
   const tijd=String(lokaal).slice(11,16),temp=Array.isArray(G.T)?eindig(G.T[i]):null;
   const kans=Array.isArray(G.P)?eindig(G.P[i]):null;
-  return grafiekDagVoorvoegsel(lokaal,nuLokaleTijd)+tijd+(temp===null?"":", "+Math.round(temp)+" graden")+(kans===null?"":", "+Math.round(kans)+" procent neerslagkans");
+  /* Bij de najaarswissel komt een klokuur twee keer voor: " (zomertijd)" of " (wintertijd)" maakt het uur eenduidig. */
+  const aanduiding=typeof globalThis.uurAanduidingTekst==="function"?globalThis.uurAanduidingTekst(G.TI[i]):"";
+  return grafiekDagVoorvoegsel(lokaal,nuLokaleTijd)+tijd+aanduiding+(temp===null?"":", "+Math.round(temp)+" graden")+(kans===null?"":", "+Math.round(kans)+" procent neerslagkans");
 }
 
 /* Desktop houdt alle vaste drie-uursreferenties. Extra extrema zijn bonuscontext
@@ -290,10 +292,20 @@ scrubKoppel=function(){
     hit.setAttribute("aria-valuetext",grafiekPuntBeschrijving(G,beste,plaatsNuLokaal()));
   };
   hit.addEventListener("pointerdown",onthoudPointer);
+  api.zetSlider=index=>{
+    const G2=S.geo,h=document.getElementById("hit");
+    if(!G2||!h||!Number.isInteger(index)||index<0||index>=G2.n)return;
+    h.dataset.keyboardIndex=String(index);
+    h.setAttribute("aria-valuenow",String(index+1));
+    h.setAttribute("aria-valuetext",grafiekPuntBeschrijving(G2,index,plaatsNuLokaal()));
+  };
   hit.addEventListener("pointerup",ev=>{if(ev.isTrusted)laatstePointer=Date.now();});
   hit.addEventListener("focus",()=>{
     if(Date.now()-laatstePointer<1000)return;
-    wijsIndexAan(Number(hit.dataset.keyboardIndex||0));
+    /* Alleen tonen: de focus alleen maakt van de standaardkeuze geen handmatige keuze. */
+    if(typeof UURSEL!=="undefined")UURSEL.alleenWeergave=true;
+    try{wijsIndexAan(Number(hit.dataset.keyboardIndex||0));}
+    finally{if(typeof UURSEL!=="undefined")UURSEL.alleenWeergave=false;}
   });
   hit.addEventListener("keydown",ev=>{
     const G=S.geo;if(!G||!G.n)return;
@@ -301,7 +313,8 @@ scrubKoppel=function(){
        pijltoets, Enter of spatie opent hem weer bij dat uur; een tooltip die al dicht is laat Escape ongemoeid. */
     if(ev.key==="Escape"){
       const g=document.getElementById("scrub");
-      if(g&&g.style.display!=="none"){g.style.display="none";ev.preventDefault();}
+      /* Sluit alleen de tijdelijke doos; de gekozen uur (kruisdraad, kaart, tabel) blijft staan. */
+      if(g&&g.style.display!=="none"&&g.dataset.modus==="voorvertoning"){g.dataset.modus="selectie";ev.preventDefault();}
       return;
     }
     let i=clamp(Number(hit.dataset.keyboardIndex||0),0,G.n-1),volgende=null;
@@ -313,7 +326,7 @@ scrubKoppel=function(){
     if(volgende===null)return;
     ev.preventDefault();wijsIndexAan(clamp(volgende,0,G.n-1));
   });
-  hit.addEventListener("blur",()=>{const g=document.getElementById("scrub");if(g)g.style.display="none";});
+  hit.addEventListener("blur",()=>{const g=document.getElementById("scrub");if(g&&g.style.display!=="none")g.dataset.modus="selectie";});
   koppelTooltipWeergave();
 };
 
@@ -340,9 +353,12 @@ function tooltipTekstLezen(g){
 function vulTooltipStrook(strook,g){
   const d=g.style.display!=="none"?tooltipTekstLezen(g):null;
   if(!d){
+    /* De lege toestand (geen geldig uur) is een eigen bericht en wordt niet door de lege tooltip weggehaald. */
+    if(strook.dataset.leeg==="1")return;
     if(strook.firstChild){strook.replaceChildren();delete strook.dataset.sig;}
     return;
   }
+  delete strook.dataset.leeg;
   const sig=JSON.stringify(d);
   if(strook.dataset.sig===sig) return;
   const el=(tag,klasse,tekst)=>{const e=document.createElement(tag);if(klasse)e.className=klasse;if(tekst!=null)e.textContent=tekst;return e;};

@@ -95,7 +95,7 @@ const meet=()=>{
     const m=/(-?\d+)(?:[.,]\d)?\s*°/.exec(t);return {tijd,temp:m?Number(m[1]):null};
   });
   const g=S.geo||{},n=Array.isArray(g.TI)?g.TI.length:0;
-  const as=[...document.querySelectorAll("#chart text")].filter(t=>/^\d{2}:00$/.test(t.textContent.trim())).map(t=>{
+  const as=[...document.querySelectorAll("#chart text")].filter(t=>!t.closest("#scrub")&&/^\d{2}:00$/.test(t.textContent.trim())).map(t=>{
     const x=Number(t.getAttribute("x"));let i=-1;
     if(typeof g.x==="function")for(let k=0;k<n;k++)if(Math.abs(g.x(k)-x)<0.5){i=k;break;}
     return {tekst:t.textContent.trim(),i};

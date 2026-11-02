@@ -387,6 +387,11 @@ html[lang^="en"] #brief[data-q1-briefing-pending]::after,html[lang^="en"] #brief
   .tip-strook .tip-duo{display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
   .tip-strook .tip-rij{display:flex;justify-content:space-between;align-items:baseline;gap:8px;min-width:0}
   .tip-strook dt{margin:0;color:var(--ink-70);white-space:nowrap}
-  .tip-strook dd{margin:0;font:12.5px/1.45 "DM Mono",monospace;text-align:right;white-space:nowrap}
+  .tip-strook dd{margin:0;font:12.5px/1.45 var(--sans);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
   #chart #scrub [data-tip-verberg]{visibility:hidden;pointer-events:none}
 }
+/* Geselecteerd uur zonder tijdelijke doos: kruisdraad en meetpunt blijven staan, de doos (rect, tekst, scheidslijn) is alleen
+   zichtbaar bij een voorvertoning (hover, aanraking, toetsenbord). Zo bedekt een permanente selectie geen grafiekwaarden. */
+#chart #scrub[data-modus="selectie"] .tip-doos{visibility:hidden;pointer-events:none;font-family:inherit!important}
+/* font-family:inherit: de verborgen doos gebruikt anders via zijn SVG-attribuut DM Mono en laat het font bij het laden alsnog ophalen
+   (data staat sinds de typografielaag in de gewone schreefloze letter). Bij een voorvertoning (hover) blijft alles zoals het was. */

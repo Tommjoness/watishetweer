@@ -125,8 +125,11 @@ async function testStrook(browser,root){
     try{
       const n=await page.evaluate(()=>S.geo.n);
       const m0=await meet(page);
-      assert.equal(m0.display,"block",L+": strook niet zichtbaar");assert.equal(m0.staat,"leeg",L+": beginstaat niet leeg");
-      assert(m0.placeholder.includes(TEKST[taal]),`${L}: rustregel ontbreekt of is niet ${taal} (${m0.placeholder})`);
+      /* Sinds de uurselectie (Fase 1) is er altijd een geselecteerd uur: de beginstaat is gevuld met het eerstvolgende uur. De
+         rustregel blijft alleen bestaan als CSS-inhoud voor een lege strook (zonder JavaScript, zie C) en is hier dus niet meer zichtbaar. */
+      assert.equal(m0.display,"block",L+": strook niet zichtbaar");assert.equal(m0.staat,"vol",L+": beginstaat niet gevuld met het geselecteerde uur");
+      assert.equal(m0.placeholder,"none",`${L}: rustregel mag niet naast een gevulde kaart staan (${m0.placeholder})`);
+      assert(m0.kop.length>=5,`${L}: geen kop bij het eerstvolgende uur`);assert(m0.kruisZichtbaar&&m0.puntZichtbaar,L+": kruisdraad en meetpunt van de selectie ontbreken");
       assert(m0.h>=140,`${L}: gereserveerde hoogte ${m0.h}px < 140`);assert.equal(m0.ariaHidden,"true",L+": strook niet aria-hidden");
       const hoogtes=new Set([m0.h]),volgend=new Set([m0.volgendTop]),docs=new Set([m0.doc]);
       const uren=steekproef.includes(w)?[0,6,12,20,n-1]:[...Array(n).keys()];
@@ -150,7 +153,8 @@ async function testStrook(browser,root){
       assert.equal(volgend.size,1,`${L}: inhoud onder de grafiek verschuift: ${[...volgend]}`);assert.equal(docs.size,1,`${L}: paginahoogte wisselt: ${[...docs]}`);
       await kies(page,Math.min(5,n-1));const voor=await meet(page);
       await page.keyboard.press("Escape");await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.waitForTimeout(40);const na=await meet(page);
-      assert.equal(na.staat,"leeg",`${L}: strook sluit niet bij Escape`);assert.equal(na.gDisplay,"none",`${L}: SVG-groep niet gesloten`);
+      /* Escape sluit alleen de tijdelijke doos; de gekozen uur (strook, kruisdraad) blijft staan en wijzigt niet. */
+      assert.equal(na.staat,"vol",`${L}: de selectie moet na Escape blijven staan`);assert.equal(na.kop,voor.kop,`${L}: kaart wijzigt bij Escape`);assert.equal(na.gDisplay,"block",`${L}: selectie (kruisdraad) verdwijnt bij Escape`);
       assert.equal(na.focus,"hit",`${L}: focus weg na Escape`);assert.equal(na.valuenow,voor.valuenow,`${L}: uur veranderd na Escape`);assert.equal(na.h,voor.h,`${L}: hoogte wisselt bij Escape`);assert.equal(na.volgendTop,voor.volgendTop,`${L}: pagina verschuift bij Escape`);
       await page.keyboard.press("ArrowRight");await page.waitForTimeout(80);assert.equal((await meet(page)).staat,"vol",`${L}: pijltoets opent na Escape niet`);
       assert.deepEqual(fouten,[],`${L}: runtimefouten ${fouten}`);
@@ -170,18 +174,22 @@ async function testTouch(browser,root){
       await page.evaluate(()=>{const r=document.getElementById("hit").getBoundingClientRect();window.scrollTo(0,r.top+scrollY-200);});await page.waitForTimeout(300);
       const box=await page.evaluate(()=>{const r=document.getElementById("hit").getBoundingClientRect();return {x:r.left,y:r.top,w:r.width,h:r.height};});
       assert(box.y>=0&&box.y+box.h<=844,L+": grafiek niet in beeld voor de tik");
-      const hoogtes=new Set([m00.h]),volgend=new Set([m00.volgendTop]);
+      const hoogtes=new Set([m00.h]),volgend=new Set([m00.volgendTop]);let laatsteKop="";
       for(const f of [0.15,0.5,0.85]){
         await page.touchscreen.tap(box.x+box.w*f,box.y+box.h*0.5);await page.waitForTimeout(200);
         const m=await meet(page);assert.equal(m.staat,"vol",`${L} f=${f}: strook niet gevuld na tik`);assert.equal(m.svgTekstZichtbaar,0,`${L}: SVG-tooltip zichtbaar na tik`);
-        assert(m.kruisZichtbaar&&m.puntZichtbaar,`${L}: kruisdraad/punt weg na tik`);assert(m.minFont>=12);assert.equal(m.rijen.length,6);hoogtes.add(m.h);volgend.add(m.volgendTop);
+        assert(m.kruisZichtbaar&&m.puntZichtbaar,`${L}: kruisdraad/punt weg na tik`);assert(m.minFont>=12);assert.equal(m.rijen.length,6);laatsteKop=m.kop;hoogtes.add(m.h);volgend.add(m.volgendTop);
       }
       assert.equal(hoogtes.size,1,`${L}: hoogte wisselt bij tikken`);assert.equal(volgend.size,1,`${L}: pagina verschuift bij tikken`);
-      await page.waitForTimeout(4500);const idle=await meet(page);assert.equal(idle.staat,"leeg",`${L}: strook sluit niet 4 s na loslaten`);assert.equal(idle.h,m00.h,`${L}: hoogte wisselt bij sluiten`);
+      await page.waitForTimeout(4500);const idle=await meet(page);
+      /* Sinds de uurselectie verdwijnt alleen de tijdelijke doos na 4 s; het getikte uur blijft gekozen (kaart, kruisdraad, punt). */
+      assert.equal(idle.staat,"vol",`${L}: de gekozen uur moet na 4 s blijven staan`);assert.equal(idle.kop,laatsteKop,`${L}: de kaart wisselt van uur na loslaten`);
+      assert.equal(idle.svgTekstZichtbaar,0,`${L}: de tijdelijke SVG-doos blijft staan na 4 s`);assert(idle.kruisZichtbaar&&idle.puntZichtbaar,`${L}: kruisdraad/punt van de selectie verdwijnen na 4 s`);
+      assert.equal(idle.h,m00.h,`${L}: hoogte wisselt na loslaten`);
       assert.deepEqual(fouten,[],`${L}: runtimefouten ${fouten}`);
     }finally{await context.close();}
   }
-  console.log("B. Touch (tik op 15/50/85 % van de grafiek, sluit na 4 s) op 320, 390 en 429 px, NL/EN: OK, hoogte en paginapositie stabiel.");
+  console.log("B. Touch (tik op 15/50/85 % van de grafiek, tijdelijke doos weg na 4 s, selectie blijft) op 320, 390 en 429 px, NL/EN: OK, hoogte en paginapositie stabiel.");
 }
 
 /* C. De ruimte komt uit de initiële HTML/CSS: ook zonder JavaScript staat de lege strook er, op iedere smalle breedte. */
