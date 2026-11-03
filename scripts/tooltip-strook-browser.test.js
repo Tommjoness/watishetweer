@@ -1,10 +1,10 @@
 "use strict";
 
-/* Tooltip van de temperatuurgrafiek, minimaal 12 px effectief leesbaar op iedere breedte:
-   - tot en met 429 px: de rijen (kans en hoeveelheid apart) staan in een HTML-strook direct onder de grafiek (ruimte vanaf de eerste
-     render gereserveerd, ook zonder JavaScript); de SVG-tooltip is dan alleen visueel verborgen en kruisdraad en
-     meetpunt blijven zichtbaar;
-   - vanaf 430 px: de SVG-tooltip blijft, maar wordt zo opgeschaald dat de kleinste tekst minimaal 12 px is.
+/* Leesweergave van de temperatuurgrafiek, minimaal 12 px effectief leesbaar op iedere breedte:
+   - op iedere breedte staan de gegevens (kans en hoeveelheid apart) in een HTML-strook direct onder de grafiek (ruimte vanaf de eerste
+     render gereserveerd, ook zonder JavaScript); de SVG-tooltip is alleen verborgen en kruisdraad en meetpunt blijven zichtbaar;
+   - vanaf 430 px (PR 3) is de strook ook op tablet en desktop de enige weergave; de SVG-tooltip blijft in de DOM en wordt nog steeds
+     zo opgeschaald dat de kleinste tekst minimaal 12 px is, maar is niet zichtbaar en staat niet in de toegankelijkheidsboom.
    Nederlands en Engels, licht en donker, toetsenbord (alle uren, Escape), touch, schermlezerinformatie
    (slider met aria-valuetext, gevulde strook als groep, lege strook aria-hidden) en het wisselen van breekpunt tijdens gebruik.
 
@@ -220,17 +220,24 @@ async function testStatischeRuimte(browser,root){
       assert.equal(r.display,"block",`${L}: strook niet zichtbaar in de initiële render`);assert(r.h>=140,`${L}: hoogte ${r.h}px in de initiële render`);assert.equal(r.ariaHidden,"true");
     }finally{await context.close();}
   }
-  for(const w of [430,768,1363]){
+  /* Vanaf 430 px (PR 3) geldt hetzelfde: de lege strook staat er al in de eerste render, met de gereserveerde hoogte (140 px, vanaf 1024 px 150 px). */
+  for(const w of [430,768,1024,1363,1920]){
     const {context,page}=await open(browser,root,{w,js:false});
-    try{assert.equal(await page.evaluate(()=>getComputedStyle(document.getElementById("tip-strook")).display),"none",`zonder JavaScript ${w}px: strook zichtbaar`);}finally{await context.close();}
+    try{
+      const r=await page.evaluate(()=>{const st=document.getElementById("tip-strook"),svg=document.getElementById("chart"),b=st.getBoundingClientRect();return {leeg:st.children.length===0&&st.textContent==="",display:getComputedStyle(st).display,h:b.height,volgtOpSvg:svg.nextElementSibling===st,ariaHidden:st.getAttribute("aria-hidden"),rol:st.getAttribute("role")};});
+      assert.equal(r.display,"block",`zonder JavaScript ${w}px: strook niet zichtbaar in de initiële render`);
+      assert(r.leeg&&r.volgtOpSvg,`zonder JavaScript ${w}px: strook niet leeg of niet direct na de grafiek`);
+      assert(r.h>=(w>=1024?150:140),`zonder JavaScript ${w}px: hoogte ${r.h}px in de initiële render`);
+      assert.equal(r.ariaHidden,"true",`zonder JavaScript ${w}px: een lege strook moet aria-hidden zijn`);assert.equal(r.rol,null,`zonder JavaScript ${w}px: een lege strook is geen groep`);
+    }finally{await context.close();}
   }
   const html=fs.readFileSync(path.join(OUT,"index.html"),"utf8");
   assert(/<div id="tip-strook" class="tip-strook" aria-hidden="true"><\/div>/.test(html),"initiële HTML mist de lege strook (en bevat geen rustregel als tekst)");
   assert(!html.includes("Kies een uur in de grafiek om de details te bekijken.")||/content:\s*"Kies een uur/.test(html),"rustregel staat als HTML-tekst in plaats van als CSS-inhoud");
-  console.log("C. Gereserveerde ruimte (>=140px) staat in de initiële HTML/CSS, zonder JavaScript, op 320/390/429 px (NL/EN); vanaf 430 px verborgen; rustregel alleen als CSS-inhoud.");
+  console.log("C. Gereserveerde ruimte (>=140px) staat in de initiële HTML/CSS, zonder JavaScript, op 320/390/429 px (NL/EN) en vanaf 430 px (430/768/1024/1363/1920: 140 px, vanaf 1024 px 150 px); rustregel alleen als CSS-inhoud.");
 }
 
-/* D. Vanaf 430 px: bestaande SVG-tooltip, minimaal 12 px effectief. */
+/* D. Vanaf 430 px: de strook is de leesweergave; de verborgen SVG-tooltip blijft geometrisch correct (minimaal 12 px effectief). */
 async function testSvgTooltip(browser,root){
   const breedtes=[430,431,440,480,520,600,700,767,768,820,1024,1280,1363,1440,1920];
   for(const w of breedtes)for(const [taal,schema] of [["nl","light"],["en","dark"]]){
@@ -238,17 +245,19 @@ async function testSvgTooltip(browser,root){
     const {context,page,fouten}=await open(browser,root,{w,taal,schema});
     try{
       const n=await page.evaluate(()=>S.geo.n);
-      const st=await meet(page);assert.equal(st.display,"none",L+": strook zichtbaar vanaf 430 px");
+      const st=await meet(page);assert.equal(st.display,"block",L+": strook niet zichtbaar vanaf 430 px");assert.equal(st.staat,"vol",L+": strook niet gevuld");
       for(const i of [0,4,9,14,19,n-1]){
         await kies(page,Math.min(i,n-1));const t=await svgTooltip(page);
-        assert(t.zichtbaar,`${L} uur ${i}: SVG-tooltip niet zichtbaar`);assert(t.aantal>=13,`${L} uur ${i}: ${t.aantal} teksten`);
+        const m=await meet(page);assert.equal(m.svgTekstZichtbaar,0,`${L} uur ${i}: SVG-tooltip is zichtbaar`);assert(!t.zichtbaar,`${L} uur ${i}: SVG-tooltip is niet verborgen`);
+        assert(m.kruisZichtbaar&&m.puntZichtbaar,`${L} uur ${i}: kruisdraad of meetpunt niet zichtbaar`);assert.equal(m.rijen.length,8,`${L} uur ${i}: ${m.rijen.length} rijen`);
+        assert(t.aantal>=13,`${L} uur ${i}: ${t.aantal} teksten`);
         assert(t.min>=12-1e-6,`${L} uur ${i}: kleinste tekst ${t.min.toFixed(3)}px effectief`);
         assert(t.doosBinnenGrafiek,`${L} uur ${i}: doos buiten de grafiek`);assert(t.tekstBinnenDoos,`${L} uur ${i}: tekst buiten de doos`);assert.equal(t.rijOverlap,0,`${L} uur ${i}: label en waarde overlappen`);
       }
       assert.deepEqual(fouten,[],`${L}: runtimefouten ${fouten}`);
     }finally{await context.close();}
   }
-  console.log(`D. SVG-tooltip vanaf 430 px (${breedtes.join("/")}, NL licht en EN donker): strook verborgen, kleinste tekst >=12px effectief, doos binnen de grafiek, tekst binnen de doos, geen overlap.`);
+  console.log(`D. SVG-tooltip vanaf 430 px (${breedtes.join("/")}, NL licht en EN donker): strook zichtbaar en gevuld, SVG-tooltip verborgen met kruisdraad en meetpunt zichtbaar, kleinste tekst van de verborgen tooltip >=12px effectief, doos binnen de grafiek, tekst binnen de doos, geen overlap.`);
 }
 
 /* E. Breekpunt tijdens gebruik (en de exacte grens 429/430). */
@@ -256,14 +265,16 @@ async function testBreekpunt(browser,root){
   const {context,page}=await open(browser,root,{w:429,taal:"nl",schema:"light"});
   try{
     await kies(page,6);let m=await meet(page);assert.equal(m.display,"block");assert.equal(m.staat,"vol");assert.equal(m.svgTekstZichtbaar,0);
-    for(const [w,sterk] of [[430,false],[429,true],[414,true],[413,true],[480,false],[390,true]]){
+    for(const w of [430,429,414,413,480,390,1024,429]){
       await page.setViewportSize({width:w,height:844});await page.waitForTimeout(1600);await kies(page,7);
       m=await meet(page);
-      if(sterk){assert.equal(m.display,"block",`${w}px: strook niet zichtbaar`);assert.equal(m.staat,"vol",`${w}px: strook niet gevuld`);assert.equal(m.svgTekstZichtbaar,0,`${w}px: SVG-tooltip zichtbaar`);}
-      else{assert.equal(m.display,"none",`${w}px: strook zichtbaar`);const t=await svgTooltip(page);assert(t.zichtbaar&&t.min>=12-1e-6,`${w}px: SVG-tooltip ${t.min}px`);}
+      assert.equal(m.display,"block",`${w}px: strook niet zichtbaar`);assert.equal(m.staat,"vol",`${w}px: strook niet gevuld`);assert.equal(m.svgTekstZichtbaar,0,`${w}px: SVG-tooltip zichtbaar`);
+      assert.equal(m.rol,"group",`${w}px: gevulde strook is geen groep`);assert.equal(m.ariaHidden,null,`${w}px: gevulde strook is aria-hidden`);
+      assert.equal(await page.evaluate(()=>document.getElementById("hit").getAttribute("aria-details")),"tip-strook",`${w}px: de slider verwijst niet naar de strook`);
+      assert(m.h>=(w>=1024?150:140),`${w}px: hoogte ${m.h}px`);
     }
   }finally{await context.close();}
-  console.log("E. Wisselen van breedte tijdens gebruik (429 -> 430 -> 429 -> 414 -> 413 -> 480 -> 390 px) zonder herladen: strook en SVG-tooltip wisselen correct.");
+  console.log("E. Wisselen van breedte tijdens gebruik (429 -> 430 -> 429 -> 414 -> 413 -> 480 -> 390 -> 1024 -> 429 px) zonder herladen: de strook blijft zichtbaar, gevuld en gekoppeld; de SVG-tooltip blijft verborgen.");
 }
 
 server.listen(0,"127.0.0.1",async()=>{

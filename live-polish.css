@@ -369,42 +369,74 @@ html[lang^="en"] #brief[data-q1-briefing-pending]::after,html[lang^="en"] #brief
   .tools #ververs{font-size:10.5px!important;letter-spacing:.075em!important}
 }
 
-/* ===== Tooltip als informatiestrook op smalle telefoons (tot en met 429 px) =====
-   Op smalle schermen haalt de SVG-tooltip de 12 px niet en bedekt een grotere doos het gemeten
-   punt. Daar toont een HTML-strook direct onder de grafiek dezelfde zes rijen. De ruimte staat
-   vanaf de eerste render vast in de CSS (140 px + marge): kiezen van een uur, laden of sluiten
-   verschuift de pagina niet. De rustregel staat in CSS (::before) zodat er geen nieuwe tekst in
-   de HTML van elke pagina komt. De SVG-tooltip blijft in de DOM (tests, tabelalternatief) en
-   wordt hier alleen visueel verborgen; kruisdraad en meetpunt blijven zichtbaar. */
-.tip-strook{display:none}
-@media (max-width:429px){
-  .tip-strook{display:block;box-sizing:border-box;margin:8px 0 4px;padding:8px 10px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);font:12px/1.45 "Instrument Sans",sans-serif;min-height:140px}
-  .tip-strook:empty::before{content:"Kies een uur in de grafiek om de details te bekijken.";color:var(--ink-70);font-style:italic}
-  html[lang^="en"] .tip-strook:empty::before{content:"Select an hour on the chart to see the details."}
-  .tip-strook .tip-kop{font:15px/1.3 "Bodoni Moda",serif;color:var(--ink)}
-  .tip-strook .tip-oms{color:var(--ink-70);min-height:1.45em}
-  .tip-strook .tip-rijen{margin:6px 0 0;padding-top:5px;border-top:1px solid var(--rule)}
-  /* Editorial raster: vier rijen met telkens twee waarden. Alle rijen delen dezelfde twee kolommen (subgrid), in vaste verhouding
-     1,15 : 1: de tweede kolom begint in elke rij op dezelfde plek en de waarden eindigen rechts op dezelfde plek, ook bij een ander
-     uur of een andere taal. Een kolom groeit alleen als zijn langste waarde dat vraagt (nooit bij de gemeten uiterste waarden).
-     Hairlines onder de rijen en in het midden tussen de twee helften; subtiel in licht (--rule-soft) en donker (--rule). */
-  .tip-strook{--tip-gat:14px;--tip-lijn:var(--rule-soft)}
-  html[data-thema="donker"] .tip-strook{--tip-lijn:var(--rule)}
-  .tip-strook .tip-duo{display:grid;margin:0;grid-template-columns:minmax(max-content,1.15fr) minmax(max-content,1fr);column-gap:var(--tip-gat)}
-  @supports (grid-template-columns:subgrid){
-    .tip-strook .tip-rijen{display:grid;grid-template-columns:minmax(max-content,1.15fr) minmax(max-content,1fr);column-gap:var(--tip-gat)}
-    .tip-strook .tip-duo{grid-column:1/-1;grid-template-columns:subgrid}
-  }
-  .tip-strook .tip-rijen>.tip-duo:not(:last-child){box-shadow:inset 0 -1px 0 var(--tip-lijn)}
-  .tip-strook .tip-rij{position:relative;display:flex;justify-content:space-between;align-items:baseline;gap:8px;min-width:0}
-  .tip-strook .tip-duo>.tip-rij:nth-child(2)::before{content:"";position:absolute;left:calc(var(--tip-gat)/-2 - .5px);top:3px;bottom:3px;width:1px;background:var(--tip-lijn)}
-  .tip-strook dt{margin:0;color:var(--ink-70);white-space:nowrap}
-  .tip-strook dd{margin:0;font:12.5px/1.45 var(--sans);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
-  .tip-strook .tip-roos{display:inline-block;width:12px;height:12px;margin-left:4px;vertical-align:-1.5px;flex:none}
-  #chart #scrub [data-tip-verberg]{visibility:hidden;pointer-events:none}
+/* ===== Informatiestrook onder de uurgrafiek (alle breedtes) =====
+   Een HTML-strook direct onder de grafiek toont de acht gegevens van het gekozen of aangewezen uur. Vanaf 430 px vervangt
+   zij de zwevende SVG-tooltip (die de 12 px niet haalt en meetpunten kan bedekken); tot en met 429 px is niets gewijzigd.
+   De ruimte staat vanaf de eerste render vast in de CSS (140 px, vanaf 1024 px 150 px, plus marge): kiezen van een uur,
+   laden of sluiten verschuift de pagina niet. De rustregel staat in CSS (::before) zodat er geen nieuwe tekst in de HTML
+   van elke pagina komt. De SVG-tooltip blijft in de DOM (tests, tabelalternatief) en wordt alleen verborgen
+   (visibility:hidden, dus ook uit de toegankelijkheidsboom); kruisdraad en meetpunt blijven zichtbaar. */
+.tip-strook{display:block;box-sizing:border-box;margin:8px 0 4px;padding:8px 10px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);font:12px/1.45 "Instrument Sans",sans-serif;min-height:140px}
+.tip-strook:empty::before{content:"Kies een uur in de grafiek om de details te bekijken.";color:var(--ink-70);font-style:italic}
+html[lang^="en"] .tip-strook:empty::before{content:"Select an hour on the chart to see the details."}
+.tip-strook .tip-kop{font:15px/1.3 "Bodoni Moda",serif;color:var(--ink)}
+.tip-strook .tip-oms{color:var(--ink-70);min-height:1.45em}
+.tip-strook .tip-rijen{margin:6px 0 0;padding-top:5px;border-top:1px solid var(--rule)}
+/* Editorial raster: vier rijen met telkens twee waarden. Alle rijen delen dezelfde twee kolommen (subgrid), in vaste verhouding
+   1,15 : 1: de tweede kolom begint in elke rij op dezelfde plek en de waarden eindigen rechts op dezelfde plek, ook bij een ander
+   uur of een andere taal. Een kolom groeit alleen als zijn langste waarde dat vraagt (nooit bij de gemeten uiterste waarden).
+   Hairlines onder de rijen en in het midden tussen de twee helften; subtiel in licht (--rule-soft) en donker (--rule). */
+.tip-strook{--tip-gat:14px;--tip-lijn:var(--rule-soft)}
+html[data-thema="donker"] .tip-strook{--tip-lijn:var(--rule)}
+.tip-strook .tip-duo{display:grid;margin:0;grid-template-columns:minmax(max-content,1.15fr) minmax(max-content,1fr);column-gap:var(--tip-gat)}
+@supports (grid-template-columns:subgrid){
+  .tip-strook .tip-rijen{display:grid;grid-template-columns:minmax(max-content,1.15fr) minmax(max-content,1fr);column-gap:var(--tip-gat)}
+  .tip-strook .tip-duo{grid-column:1/-1;grid-template-columns:subgrid}
 }
+.tip-strook .tip-rijen>.tip-duo:not(:last-child){box-shadow:inset 0 -1px 0 var(--tip-lijn)}
+.tip-strook .tip-rij{position:relative;display:flex;justify-content:space-between;align-items:baseline;gap:8px;min-width:0}
+.tip-strook .tip-duo>.tip-rij:nth-child(2)::before{content:"";position:absolute;left:calc(var(--tip-gat)/-2 - .5px);top:3px;bottom:3px;width:1px;background:var(--tip-lijn)}
+.tip-strook dt{margin:0;color:var(--ink-70);white-space:nowrap}
+.tip-strook dd{margin:0;font:12.5px/1.45 var(--sans);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.tip-strook .tip-roos{display:inline-block;width:12px;height:12px;margin-left:4px;vertical-align:-1.5px;flex:none}
+#chart #scrub [data-tip-verberg]{visibility:hidden;pointer-events:none}
 @media (max-width:339px){
   .tip-strook{padding-left:6px;padding-right:6px;--tip-gat:8px}
+}
+/* Vanaf 430 px past de strook zich aan haar eigen breedte aan (container queries; de strook is zelf de container, ze stijlt dus
+   alleen haar nakomelingen). Stripbreedte per viewport (gemeten): 430→380, 700→634, 768→702, 1024→882, 1100→564, 1280→706,
+   1366→799, 1920→942 px. Tot 440 px content-box (462 px stripbreedte) blijft de mobiele typografie (12/12,5 px) staan. */
+.tip-strook{container-type:inline-size}
+@container (min-width:440px){
+.tip-strook dt,.tip-strook dd{line-height:1.3}
+.tip-strook dt{font-size:13px}
+.tip-strook dd{font-size:13.5px}
+}
+/* Leesbaarheid gaat voor compactheid: vanaf 1024 px viewport 14 px labels en 15 px waarden, met 10 px meer gereserveerde hoogte. */
+@media (min-width:1024px){
+.tip-strook{min-height:150px}
+.tip-strook dt{font-size:14px}
+.tip-strook dd{font-size:15px}
+}
+/* Vier kolommen van twee gegevens pas vanaf 780 px echte stripbreedte (rand en padding meegeteld); daaronder twee kolommen
+   (nooit vier krappe kolommen). Een container query meet de content-box: 780 - 2x10 px padding - 2x1 px rand = 758 px. */
+@container (min-width:758px){
+.tip-strook .tip-kop,.tip-strook .tip-oms{display:inline-block}
+.tip-strook .tip-oms{padding-left:10px}
+.tip-strook .tip-rijen{grid-template-columns:repeat(4,minmax(0,1fr));column-gap:0}
+.tip-strook .tip-duo{grid-column:auto;grid-row:span 2;grid-template-columns:1fr;grid-template-rows:subgrid;row-gap:0}
+.tip-strook .tip-rijen>.tip-duo:not(:last-child){box-shadow:none}
+.tip-strook .tip-rijen>.tip-duo+.tip-duo{border-left:1px solid var(--tip-lijn)}
+.tip-strook .tip-duo>.tip-rij+.tip-rij{border-top:1px solid var(--tip-lijn)}
+.tip-strook .tip-duo>.tip-rij:nth-child(2)::before{display:none}
+.tip-strook .tip-rij{padding:0 14px;align-items:center}
+.tip-strook .tip-kop{padding-top:2px}
+/* Met twee rijen is de inhoud lager dan de gereserveerde hoogte (140 px, vanaf 1024 px 150 px): de rijen vullen die ruimte, zodat er
+   geen lege band onder de waarden staat. De strook zelf kan hier niet op haar eigen breedte reageren; de rijen wel. */
+.tip-strook .tip-rijen{grid-template-rows:repeat(2,minmax(43px,1fr))}
+@media (min-width:1024px){
+.tip-strook .tip-rijen{grid-template-rows:repeat(2,minmax(48px,1fr))}
+}
 }
 /* Geselecteerd uur zonder tijdelijke doos: kruisdraad en meetpunt blijven staan, de doos (rect, tekst, scheidslijn) is alleen
    zichtbaar bij een voorvertoning (hover, aanraking, toetsenbord). Zo bedekt een permanente selectie geen grafiekwaarden. */

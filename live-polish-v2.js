@@ -167,7 +167,7 @@ function etmaalExtraTemperaturenWeg(temperaturen,gelabeldeIndices,rasterStap){
 const TOOLTIP_MIN_PX=12;
 /* Typografie-ronde 29 oktober 2026 (live-audit 646673f: tooltip effectief 12,0 tot 12,6px): op een tablet (vanaf 760px) minimaal
    13px en op desktop (vanaf 1100px) minimaal 14px, met de tijd bovenin op 15 respectievelijk 16px. Smaller dan 760px blijft
-   de ondergrens 12px en blijft de tijd zoals de tekening hem zet; tot en met 429px is er de informatiestrook. */
+   de ondergrens 12px en blijft de tijd zoals de tekening hem zet. De SVG-doos is zelf op elk scherm verborgen: de informatiestrook is de weergave. */
 const TOOLTIP_MIN_TABLET_PX=13,TOOLTIP_MIN_DESKTOP_PX=14,TOOLTIP_TIJD_TABLET_PX=15,TOOLTIP_TIJD_DESKTOP_PX=16;
 function tooltipMinPx(viewportBreedte){
   const w=eindig(viewportBreedte);
@@ -237,7 +237,6 @@ meters=function(){
 /* In de SVG-tooltip staan label en waarde als twee losse tekstnodes. Lange
    consumententeksten worden hier alleen typografisch ingekort; de betekenis
    en brondata blijven ongewijzigd. */
-let kaartMediaGekoppeld=false;
 const basisScrubKoppel=scrubKoppel;
 scrubKoppel=function(){
   basisScrubKoppel();
@@ -331,11 +330,6 @@ scrubKoppel=function(){
   koppelTooltipWeergave();
   /* De slider is bij elke render een nieuw element: de verwijzing naar de kaart volgt de huidige toestand van de kaart. */
   werkKaartKoppeling();
-  if(!kaartMediaGekoppeld&&globalThis.matchMedia){
-    kaartMediaGekoppeld=true;
-    /* Over de grens van 429/430 px verdwijnt of verschijnt de kaart (CSS): de verwijzing volgt mee. */
-    globalThis.matchMedia("(max-width:429px)").addEventListener("change",()=>werkKaartKoppeling());
-  }
 };
 
 /* De melding "Geen uurgegevens" (index.html) vervangt de inhoud van de kaart: daarna geen groep en geen verwijzing meer van de slider. */
@@ -348,13 +342,14 @@ if(typeof uurLegeToestand==="function"){
   };
 }
 
-/* ---------- tooltipweergave: informatiestrook (tot en met 429 px, via CSS) en minimaal 12 px ----------
+/* ---------- tooltipweergave: informatiestrook (alle breedtes, via CSS) en minimaal 12 px ----------
    Twee onafhankelijke weergaven van hetzelfde uur; alle lagen die de SVG-groep #scrub vullen of verplaatsen
    (basis, compactie, neerslagregel) draaien ongewijzigd:
-   - de HTML-strook #tip-strook (de mobiele detailkaart, CSS toont die alleen op smalle schermen) wordt gevuld uit de
+   - de HTML-strook #tip-strook (de detailkaart: de enige leesweergave, ook op desktop) wordt gevuld uit de
      weerreeksen (S.geo) voor het uur dat de tooltip toont (#scrub[data-uur], de provider-tijd van dat uur). De kaart leest dus
      nooit de samengestelde, vertaalde tekst van de SVG-tooltip;
-   - bij >= 430 px wordt de SVG-doos zo opgeschaald dat de kleinste tekst minimaal 12 px effectief is. */
+   - bij >= 430 px wordt de SVG-doos zo opgeschaald dat de kleinste tekst minimaal 12 px effectief is (de doos zelf is verborgen;
+     geometrie en tekst blijven voor tests beschikbaar). */
 const SVG_NS="http://www.w3.org/2000/svg";
 let tooltipObserver=null,tooltipRaf=0,tooltipTimer=0,tooltipBezig=false;
 
@@ -426,8 +421,8 @@ function kaartToegankelijk(strook){
   return !!strook&&strook.getAttribute("role")==="group"&&!strook.hasAttribute("aria-hidden")&&strook.childElementCount>0&&strook.dataset.leeg!=="1"
     &&typeof getComputedStyle==="function"&&getComputedStyle(strook).display!=="none";
 }
-/* De slider verwijst alleen naar de kaart als die zichtbaar, gevuld en toegankelijk is (niet bij een lege kaart en niet bij >= 430 px,
-   waar de kaart met CSS verborgen is). */
+/* De slider verwijst alleen naar de kaart als die zichtbaar, gevuld en toegankelijk is (niet bij een lege kaart). De kaart is op
+   elke breedte zichtbaar, dus de verwijzing hangt niet meer van de schermbreedte af. */
 function werkKaartKoppeling(strook){
   const hit=document.getElementById("hit");if(!hit) return;
   if(kaartToegankelijk(strook||document.getElementById("tip-strook"))) hit.setAttribute("aria-details","tip-strook");
@@ -481,7 +476,7 @@ function vulTooltipStrook(strook,g){
   zetKaartToegankelijkheid(strook,true);
 }
 
-/* De SVG-tekstvakdelen krijgen een markering; de CSS verbergt ze alleen tot en met 429 px (visibility, geen
+/* De SVG-tekstvakdelen krijgen een markering; de CSS verbergt ze op elke breedte (visibility, dus ook uit de toegankelijkheidsboom; geen
    display: geometrie en tekst blijven voor tests en hulptechnologie beschikbaar). */
 function markeerTooltipSvg(g){
   g.querySelectorAll("rect,text,line").forEach(e=>{

@@ -107,6 +107,9 @@ async function run(){
         await page.waitForTimeout(1600);
         const result=await page.evaluate(()=>{
           const rect=s=>{const e=document.querySelector(s);return e?e.getBoundingClientRect().toJSON():null;};
+          /* PR 3: de informatiestrook onder de grafiek hoort niet bij de grafieksectie waaraan het uurpaneel zich spiegelt (zie syncHoogte):
+             de sectie wordt gemeten met de strook tijdelijk verborgen. */
+          const rectZonderStrook=s=>{const st=document.getElementById("tip-strook"),v=st?st.style.display:"";if(st)st.style.display="none";try{return rect(s);}finally{if(st)st.style.display=v;}};
           const rows=[...document.querySelectorAll("#wiw-hour-table tbody tr")],scroll=document.querySelector("#wiw-hour-scroll"),panel=document.querySelector("#wiw-hour-panel");
           const night=document.querySelector("#nights .row.night:not(.kop)"),nightCells=night?[...night.children].map(e=>e.getBoundingClientRect().toJSON()):[];
           const temp=document.getElementById("t"),tempHead=document.querySelector("#wiw-hour-table thead th:nth-child(3)"),sunDay=document.querySelector("#suntimes .zondag");
@@ -140,7 +143,7 @@ async function run(){
             graphTimes:S.geo.TI,
             placeLayout:{justify:getComputedStyle(document.getElementById("place")).justifyContent,gap:parseFloat(getComputedStyle(document.getElementById("place")).gap)},
             sourceTimes:rows.map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]),
-            geometry:{layout:rect("#wiw-chart-layout"),main:rect(".wiw-chart-main"),graph:rect("#chart"),hours:rect("#wiw-hour-panel"),table:rect("#wiw-hour-table"),rain:rect(".wiw-rain-section"),days:rect(".dashrow-days"),night:rect("#nights .row.night:not(.kop)")},
+            geometry:{layout:rect("#wiw-chart-layout"),main:rectZonderStrook(".wiw-chart-main"),graph:rect("#chart"),hours:rect("#wiw-hour-panel"),table:rect("#wiw-hour-table"),rain:rect(".wiw-rain-section"),days:rect(".dashrow-days"),night:rect("#nights .row.night:not(.kop)")},
             rows:rows.length,
             hourRows:rows.map(r=>({instant:r.querySelector("time")?.dateTime,time:r.querySelector("time")?.textContent,sourceIndex:Number(r.dataset.sourceIndex),rect:r.getBoundingClientRect().toJSON(),visible:getComputedStyle(r).display!=="none"})),
             hourHeaders:[...document.querySelectorAll("#wiw-hour-table thead th")].map(th=>th.textContent.trim()),

@@ -66,7 +66,9 @@ function bouwServer(opties){
 }
 
 function meet(){
-  const main=document.querySelector(".wiw-chart-main").getBoundingClientRect(),panel=document.getElementById("wiw-hour-panel").getBoundingClientRect();
+  /* PR 3: de informatiestrook onder de grafiek hoort niet bij de grafieksectie waaraan het uurpaneel zich spiegelt (zie syncHoogte): de strook wordt voor één meting verborgen. */
+  const sectieRect=el=>{const st=document.getElementById("tip-strook"),v=st?st.style.display:"";if(st)st.style.display="none";try{return el.getBoundingClientRect();}finally{if(st)st.style.display=v;}};
+  const main=sectieRect(document.querySelector(".wiw-chart-main")),panel=document.getElementById("wiw-hour-panel").getBoundingClientRect();
   const rijen=[...document.querySelectorAll("#wiw-hour-table tbody tr")].filter(r=>r.getBoundingClientRect().height>0);
   const laatste=rijen[rijen.length-1].getBoundingClientRect(),sc=document.getElementById("wiw-hour-scroll"),kop=document.querySelector("#wiw-hour-table thead th:nth-child(3)");
   /* Rijen met een datumregel (middernacht) zijn bewust hoger; alle andere rijen zijn vanaf 1600px één regel. */

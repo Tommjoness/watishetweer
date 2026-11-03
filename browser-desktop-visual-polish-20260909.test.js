@@ -108,7 +108,9 @@ function meet(){
     zet("overflow",Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth);
     zet("rows",rows.length);zet("all-rows",allRows.length);zet("first",rows[0]?.querySelector("time")?.textContent.trim()||"");
     zet("chart-count",typeof S!=="undefined"&&S.geo&&S.geo.TI?S.geo.TI.length:0);zet("chart-first",typeof S!=="undefined"&&S.geo&&S.geo.TI&&S.geo.TI[0]?S.geo.TI[0].slice(11,16):"");
-    zet("internal",C(scroll).overflowY);zet("panel-balance",Math.abs(R(main).height-R(panel).height));
+    zet("internal",C(scroll).overflowY);/* PR 3: de informatiestrook onder de grafiek hoort niet bij de grafieksectie waaraan het uurpaneel zich spiegelt (zie syncHoogte): de strook wordt voor één meting verborgen. */
+    const stripEl=document.getElementById("tip-strook"),stripWas=stripEl?stripEl.style.display:"";if(stripEl)stripEl.style.display="none";const sectieH=R(main).height;if(stripEl)stripEl.style.display=stripWas;
+    zet("panel-balance",Math.abs(sectieH-R(panel).height));
     zet("last-fit",rows.length&&R(rows.at(-1)).bottom<=R(panel).bottom+1?"ok":"fout");
     zet("panel-height",R(panel).height);zet("table-top",R(rows[0]).top-R(panel).top);zet("row-height",R(rows[0]).height);zet("candidate-hours",panel.dataset.candidateHours||"");
     zet("days-head-align",Math.max(...dPos.map((x,i)=>Math.abs(x-drPos[i]))));

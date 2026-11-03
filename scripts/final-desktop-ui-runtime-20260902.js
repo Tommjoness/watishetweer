@@ -491,10 +491,22 @@ function observeerGrafiekHoogte(){
   });
   hoogteObserver.observe(main);
 }
+/* De informatiestrook (#tip-strook, de leesweergave van het gekozen uur) staat onder de grafiek in .wiw-chart-main maar hoort niet
+   bij de grafieksectie waaraan de uurtabel zich spiegelt: zij mag niet bepalen hoeveel uren de tabel toont. De grens is daarom de
+   onderkant van .wiw-chart-main zoals die zonder strook zou zijn (inclusief de eigen min-height van de sectie en de regensamenvatting).
+   De strook wordt voor de duur van één meting weggehaald en direct hersteld, binnen dezelfde taak: er volgt geen paint en de
+   ResizeObserver ziet geen tussentoestand. De strook zelf heeft een vaste gereserveerde hoogte, dus dit levert geen sprong op. */
+function grafiekGrens(main){
+  const strook=document.getElementById("tip-strook");
+  if(!strook||!main.contains(strook))return main.getBoundingClientRect();
+  const vorig=strook.style.display;
+  try{strook.style.display="none";return main.getBoundingClientRect();}
+  finally{strook.style.display=vorig;}
+}
 function syncHoogte(){
   const main=document.querySelector(".wiw-chart-main"),aside=document.getElementById("wiw-hour-panel");if(!main||!aside)return;
   if(window.innerWidth<1100){aside.style.height="";return;}
-  const h=main.getBoundingClientRect().height;
+  const h=grafiekGrens(main).height;
   /* Grafiek nog niet op hoogte (bijvoorbeeld midden in een hertekening): later
      opnieuw meten, zodat een volledige kandidaatset nooit ongefilterd blijft. */
   if(h<=180){herplanHoogteSync();return;}
@@ -502,7 +514,7 @@ function syncHoogte(){
   aside.style.height="";
   // Alleen volledige rijen bestaan in de desktop-DOM. Niet verstoppen of
   // afknippen: verwijder de laatste rij zolang deze buiten de grafiekhoogte valt.
-  const tbody=document.querySelector("#wiw-hour-table tbody"),grens=main.getBoundingClientRect().bottom;
+  const tbody=document.querySelector("#wiw-hour-table tbody"),grens=grafiekGrens(main).bottom;
   const legeRij=rij=>[...rij.cells].every(cell=>!String(cell.textContent||"").trim());
   while(tbody&&tbody.lastElementChild&&legeRij(tbody.lastElementChild))tbody.lastElementChild.remove();
   while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
@@ -528,7 +540,7 @@ function herplanHoogteSync(){if(hoogteHerpogingen>=20)return;hoogteHerpogingen++
 function tabelSteektUit(){
   if(window.innerWidth<1100)return false;
   const main=document.querySelector(".wiw-chart-main"),last=document.querySelector("#wiw-hour-table tbody tr:last-child");
-  return !!(main&&last&&last.getBoundingClientRect().bottom>main.getBoundingClientRect().bottom+0.5);
+  return !!(main&&last&&last.getBoundingClientRect().bottom>grafiekGrens(main).bottom+0.5);
 }
 function bewaakTabelRijen(){
   const tbody=document.querySelector("#wiw-hour-table tbody");

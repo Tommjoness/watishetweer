@@ -1,6 +1,6 @@
 "use strict";
 
-/* Mobiele detailkaart (#tip-strook, tot en met 429 px): toegankelijkheid van alle acht gegevens.
+/* Detailkaart (#tip-strook, op iedere breedte; vanaf 430 px sinds PR 3 ook de leesweergave op tablet en desktop): toegankelijkheid van alle acht gegevens.
    Gecontroleerd op DOM, ARIA-attributen en de toegankelijkheidsboom van Playwright (ariaSnapshot; dat is een afgeleide boom en GEEN echte
    schermlezer; echte NVDA-, VoiceOver- of TalkBack-tests vallen hier buiten):
    A. een gevulde kaart is een groep met de naam "Details voor <kop>" (dezelfde tijdcontext als de kop: dagnaam, "morgen", zomer-/wintertijd) en
@@ -10,7 +10,8 @@
    C. geldige HTML: een dl bevat alleen div's met dt+dd, vier dl's, unieke id's voor de naam, geen aria-live in de kaart, de live-region en de
       aria-valuetext van de slider blijven de korte tekst (geen dubbele aankondiging);
    D. aria-details op de slider alleen als de kaart zichtbaar, gevuld en toegankelijk is: niet bij een lege kaart, niet bij de melding "Geen uurgegevens",
-      niet bij 430 px of breder, en het volgt een resize over de grens 429/430 px in beide richtingen;
+      en omdat de kaart op elke breedte zichtbaar is ook bij 430 px en breder (desktop); een resize over de oude grens 429/430 px en naar
+      desktop verandert niets aan de koppeling, de groep of het aantal gegevens;
    E. overgangen: een ander uur, een verversing met andere gegevens (ook andere plaats), en leeg naar gevuld en terug laten geen oude gegevens of attributen staan.
 
    Draait na: npm run build:cloudflare */
@@ -238,12 +239,22 @@ const termenVan=taal=>taal==="en"?["temperature","feels like","precip. chance","
       }finally{await w2.context.close();}
     }
 
-    /* D. desktop en resize over de grens 429/430 px */
+    /* D. desktop (PR 3: de kaart is de leesweergave) en resize over de oude grens 429/430 px */
     {
       const {context,page,fouten}=await open(browser,root,{w:1440,nuIso:NU,offsetS:OFFSET});
       try{
+        await sleep(500);
         const m=await lees(page),b=await boom(page,"#tip-strook");
-        gelijk([m.display,m.details],["none",null],"1440 px: kaart verborgen en geen aria-details");ok(b.leeg,"1440 px: de kaart staat niet in de toegankelijkheidsboom");
+        gelijk([m.display,m.rol,m.details,m.aria],["block","group","tip-strook",null],"1440 px: kaart zichtbaar, gevulde groep en aria-details");
+        gelijk([b.termen.length,m.dlAantal,m.live],[8,4,0],"1440 px: acht gegevens in de toegankelijkheidsboom, vier dl's en geen live-regio");
+        ok(/^Details voor /.test(b.groepNaam||""),"1440 px: de groep heeft een naam met de tijdcontext ("+b.groepNaam+")");
+        /* Geen dubbele informatie: de verborgen SVG-tooltip staat niet in de boom en de tekst van het uur staat maar in één groep. */
+        const cdp=await context.newCDPSession(page);
+        const axTelling=async sel=>{const {root}=await cdp.send("DOM.getDocument",{depth:0});const {nodeIds}=await cdp.send("DOM.querySelectorAll",{nodeId:root.nodeId,selector:sel});
+          let zichtbaar=0;for(const nodeId of nodeIds){const r=await cdp.send("Accessibility.getPartialAXTree",{nodeId,fetchRelatives:false});if(r.nodes[0]&&!r.nodes[0].ignored)zichtbaar++;}return {totaal:nodeIds.length,zichtbaar};};
+        const kaartAx=await axTelling("#tip-strook dd"),svgAx=await axTelling("#chart #scrub text, #chart #scrub rect");
+        ok(kaartAx.totaal===8&&kaartAx.zichtbaar===8,"1440 px: positieve controle, de acht waarden van de kaart zijn toegankelijk ("+JSON.stringify(kaartAx)+")");
+        ok(svgAx.totaal>0&&svgAx.zichtbaar===0,"1440 px: geen enkel onderdeel van de SVG-tooltip staat in de toegankelijkheidsboom ("+JSON.stringify(svgAx)+")");
         await eerlijk(page,fouten,"desktop");
       }finally{await context.close();}
     }
@@ -251,7 +262,7 @@ const termenVan=taal=>taal==="en"?["temperature","feels like","precip. chance","
       const {context,page,fouten}=await open(browser,root,{w:429,nuIso:NU,offsetS:OFFSET});
       try{
         await tik(page,"2026-07-22T15:00:00Z");
-        for(const [w,verwacht] of [[429,true],[430,false],[1000,false],[429,true],[320,true],[431,false],[390,true]]){
+        for(const [w,verwacht] of [[429,true],[430,true],[1000,true],[429,true],[320,true],[431,true],[1440,true],[390,true]]){
           await page.setViewportSize({width:w,height:900});await sleep(500);
           const m=await lees(page),b=await boom(page,"#tip-strook"),T="resize naar "+w+" px: ";
           gelijk(m.details,verwacht?"tip-strook":null,T+"aria-details alleen als de kaart zichtbaar is");
