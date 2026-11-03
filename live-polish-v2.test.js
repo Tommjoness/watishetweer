@@ -82,7 +82,14 @@ test("tooltipstrook: statische markup, CSS vanaf de eerste render en koppeling n
   const js=fs.readFileSync(path.join(__dirname,"live-polish-v2.js"),"utf8"),css=fs.readFileSync(path.join(__dirname,"live-polish.css"),"utf8"),html=fs.readFileSync(path.join(__dirname,"index.html"),"utf8");
   assert(html.includes('<div id="tip-strook" class="tip-strook" aria-hidden="true"></div>'));
   assert.equal(html.split('id="tip-strook"').length-1,1);
-  assert(css.includes("@media (max-width:429px){")&&css.includes("min-height:140px")&&css.includes(".tip-strook:empty::before"));
+  /* Contract sinds PR 3: de strook is op elke breedte zichtbaar (geen display:none-basis en geen 429px-wikkel), met gereserveerde
+     hoogte vanaf de eerste render (140 px, vanaf 1024 px 150 px) en een indeling op haar eigen breedte (container queries). */
+  assert(!css.includes(".tip-strook{display:none}")&&!css.includes("@media (max-width:429px){\n  .tip-strook"),"geen verborgen basis of 429px-wikkel meer");
+  assert(css.includes(".tip-strook{display:block;")&&css.includes("min-height:140px")&&css.includes(".tip-strook:empty::before"));
+  assert(css.includes(".tip-strook{container-type:inline-size}")&&css.includes("@container (min-width:440px)")&&css.includes("@container (min-width:758px)"));
+  assert(!css.includes("@container (min-width:680px)")&&!css.includes("@container (min-width:780px)"),"vier kolommen pas vanaf 780 px stripbreedte (758 px content-box)");
+  assert(/@media \(min-width:1024px\)\{\s*\.tip-strook\{min-height:150px\}\s*\.tip-strook dt\{font-size:14px\}\s*\.tip-strook dd\{font-size:15px\}/.test(css),"vanaf 1024 px 14/15 px en 150 px gereserveerd");
+  assert(!js.includes("max-width:429px")&&!js.includes("kaartMediaGekoppeld"),"de koppeling hangt niet meer van de schermbreedte af");
   assert(css.includes("Kies een uur in de grafiek om de details te bekijken.")&&css.includes("Select an hour on the chart to see the details."));
   assert(css.includes('html[lang^="en"] .tip-strook:empty::before'));
   assert(css.includes("#chart #scrub [data-tip-verberg]{visibility:hidden;pointer-events:none}"));

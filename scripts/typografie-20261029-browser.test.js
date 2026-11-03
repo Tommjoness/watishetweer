@@ -8,11 +8,12 @@
    Desktop (vanaf 1100px): sectiekoppen 20px; tegellabels 14px; toelichting 15px; eenheden 14px; waarschuwing titel 18px en
    uitleg 16px (zowel de lokale waarschuwing .waarsch als de melding .msg); modelcontext 14px; uurtabel kop 14px, primaire waarde
    en tijd 16px, secundaire waarde en datum 14px; alternatieve tabel kop 14px en cellen 15px; terugknop 14px; grafiektekst
-   effectief minimaal 14px; tooltip effectief minimaal 14px met de tijd op 16px.
+   effectief minimaal 14px; informatiestrook onder de grafiek (PR 3, de enige leesweergave van het gekozen uur) 14px labels en 15px waarden
+   vanaf 1024px viewport. De SVG-tooltip is op elke breedte verborgen en wordt dus niet meer als leesmaat getoetst.
    Tablet (760 tot 1099px): koppen 18px; labels 13px; toelichting 14px; waarschuwing 18/16px; tabelwaarden 15px; grafiek en
-   tooltip effectief minimaal 13px (tooltiptijd 15px).
+   tooltip effectief minimaal 13px; informatiestrook 13px labels en 13,5px waarden (tot 1023px, vanaf 440px stripbreedte).
    Telefoon (tot 759px): koppen 18px; tegellabels 13px vanaf 380px (daaronder 12px); toelichting 14px; waarschuwing 17/16px;
-   modelcontext 14px; terugknop 13px. Tabellen blijven daar op hun maat (12px en 14px): de kolombreedtes zijn op 320px afgestemd (zie leesbaarheid-fase2a-browser.test.js).
+   modelcontext 14px; terugknop 13px; informatiestrook ongewijzigd 12px labels en 12,5px waarden. Tabellen blijven daar op hun maat (12px en 14px): de kolombreedtes zijn op 320px afgestemd (zie leesbaarheid-fase2a-browser.test.js).
    Bewaakt wordt ook wat de grotere tekst niet mag veroorzaken: geen horizontale paginascroll, geen tegeltekst buiten zijn tegel,
    geen overlappende grafiek- of tooltiptekst, een tooltip die binnen de tekening blijft aan beide randen, en een uurtabel die
    alleen volledige rijen toont. Letterfamilies en kleuren worden niet getoetst: die zijn bewust ongewijzigd. */
@@ -59,7 +60,7 @@ const ROLLEN={
   wtitel:"#waarschuwingen .waarsch h3",wtekst:"#waarschuwingen .waarsch p",mlabel:"#modelrisico .modelrisico-label",mnote:"#modelrisico .modelrisico-note",
   uurkop:"#wiw-hour-table thead th",uurtijd:"#wiw-hour-table tbody time",uurprim:"#wiw-hour-table .wiw-hour-primary",uursec:"#wiw-hour-table .wiw-hour-secondary",
   uurdatum:"#wiw-hour-table .wiw-hour-date",dagkop:"#days .row.kop > div",altth:"#chartdata th",alttd:"#chartdata td",terug:"#back",
-  grafiek:"#chart > text",tooltip:"#chart #scrub text"
+  grafiek:"#chart > text",tooltip:"#chart #scrub text",stripdt:"#tip-strook dt",stripdd:"#tip-strook dd"
 };
 function meet(page){
   return page.evaluate(rollen=>{
@@ -116,9 +117,9 @@ function meet(page){
    (gemeten op 1440px: main 11 i.p.v. 12, nu 9 i.p.v. 10; bestaand en niet door de typografie veroorzaakt); daarom wordt een te laag aantal
    maximaal twee keer opnieuw geladen en faalt de test pas als ook die keren onder het minimum blijven. */
 const MIN_UURRIJEN={1100:{nl:7,en:7},1280:{nl:8,en:8},1363:{nl:8,en:8},1366:{nl:8,en:8},1440:{nl:10,en:10},1920:{nl:14,en:14}};
-const DESKTOP={kop:20,label:14,uitleg:15,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:14,uurtijd:16,uurprim:16,uursec:14,uurdatum:14,dagkop:14,altth:14,alttd:15,terug:14};
-const TABLET={kop:18,label:13,uitleg:14,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:13,uurtijd:15,terug:14,altth:13,alttd:15};
-const TELEFOON={kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:14,terug:13};
+const DESKTOP={stripdt:14,stripdd:15,kop:20,label:14,uitleg:15,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:14,uurtijd:16,uurprim:16,uursec:14,uurdatum:14,dagkop:14,altth:14,alttd:15,terug:14};
+const TABLET={stripdt:13,stripdd:13.5,kop:18,label:13,uitleg:14,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:13,uurtijd:15,terug:14,altth:13,alttd:15};
+const TELEFOON={stripdt:12,stripdd:12.5,kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:14,terug:13};
 
 (async()=>{
   const browser=await chromium.launch({headless:true,executablePath:require("./vind-browser.js").vindBrowser()||undefined});
@@ -178,16 +179,17 @@ const TELEFOON={kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:
               }
             }
             if(g.klasse==="desktop")assert.ok(m.uurRijen>=MIN_UURRIJEN[g.w][g.taal],`${L}: de uurtabel toont ${m.uurRijen} volledige rijen (minimaal ${MIN_UURRIJEN[g.w][g.taal]} op deze viewport)`);
-            for(const [naam,toets] of [["tooltip","ArrowRight"],["tooltip links","Home"],["tooltip rechts","End"]]){
-              if(g.klasse==="telefoon")break; /* tot en met 429px is er de informatiestrook; de SVG-tooltip is daar verborgen */
+            /* PR 3: de gegevens van het gekozen of aangewezen uur staan in de informatiestrook (de SVG-tooltip is op elke breedte verborgen):
+               geen zichtbare tooltiptekst meer, en de strook houdt zijn rolmaat bij elk uur, ook aan beide randen. */
+            for(const [naam,toets] of [["uur 2","ArrowRight"],["eerste uur","Home"],["laatste uur","End"]]){
+              if(g.klasse==="telefoon")break; /* tot en met 429px is dit gedrag al vastgelegd in tooltip-strook-browser.test.js */
               await page.evaluate(()=>{const h=document.getElementById("hit");if(h){h.scrollIntoView({block:"center"});h.focus();}});
-              await page.keyboard.press(toets);if(naam==="tooltip")await page.keyboard.press("ArrowRight");await page.waitForTimeout(500);
+              await page.keyboard.press(toets);if(naam==="uur 2")await page.keyboard.press("ArrowRight");await page.waitForTimeout(500);
               m=await meet(page);
-              assert.ok(m.maten.tooltip,`${L}: ${naam} niet zichtbaar`);
-              const minTip=g.klasse==="desktop"?14:13,tijd=g.klasse==="desktop"?16:15;
-              assert.ok(m.maten.tooltip.min>=minTip-0.05,`${L}: ${naam} effectief ${m.maten.tooltip.min}px (minimaal ${minTip}px)`);
-              assert.ok(m.maten.tooltip.max>=tijd-0.05&&m.maten.tooltip.max<=tijd+0.5,`${L}: ${naam}: de tijd staat effectief op ${m.maten.tooltip.max}px (verwacht ${tijd}px)`);
-              controleer(`${L} [${naam}]`,g.klasse,m,{});
+              assert.ok(!m.maten.tooltip,`${L}: ${naam}: de SVG-tooltip is zichtbaar (tekst ${m.maten.tooltip&&m.maten.tooltip.n}x)`);
+              assert.ok(m.maten.stripdt&&m.maten.stripdd,`${L}: ${naam}: de informatiestrook ontbreekt`);
+              assert.equal(m.maten.stripdt.n,8,`${L}: ${naam}: ${m.maten.stripdt.n} labels in de strook (verwacht 8)`);
+              controleer(`${L} [${naam}]`,g.klasse,m,{stripdt:verwacht.stripdt,stripdd:verwacht.stripdd});
             }
             if(g.klasse==="desktop"){
               await page.evaluate(()=>{const s=document.querySelector("#chartdata summary");if(s&&!s.parentElement.open)s.click();});await page.waitForTimeout(400);

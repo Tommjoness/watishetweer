@@ -1,6 +1,6 @@
 "use strict";
 
-/* Mobiele detailkaart (#tip-strook, tot en met 429 px): vier rijen met telkens twee waarden (acht gegevens) in een gedeeld editorial raster.
+/* Detailkaart (#tip-strook; dit bestand toetst 320 t/m 429 px en de datacontracten, de indeling vanaf 430 px staat in uitleesweergave-browser.test.js): vier rijen met telkens twee waarden (acht gegevens) in een gedeeld editorial raster.
    Toetst, met de langste realistische waarden en op 320, 360, 390, 413, 420 en 429 px in NL en EN (licht en donker):
    A. waarden: elke kaartwaarde komt uit de weerreeksen en klopt met het gekozen uur (neerslagkans, hoeveelheid, temperatuur, windkracht met Beaufort,
       kompasrichting, windstoten, bewolking; "0,0 mm" alleen bij een echte nul, "<0,1 mm" bij een kleine positieve waarde, "–" bij een ontbrekende waarde);
@@ -11,7 +11,7 @@
    E. windroos: rechts van de richtingstekst op vaste afstand, wijst naar de herkomst (graden uit de weerreeks), ontbreekt bij een ontbrekende richting en is decoratief;
    F. geen layoutverschuiving bij het wisselen van uren en talen (hoogte van de kaart en positie van de inhoud eronder constant);
    G. de kaart volgt de gegevens bij een verversing met hetzelfde geselecteerde uur;
-   H. de SVG-tooltip en de desktopweergave blijven ongewijzigd (zes rijen, gecombineerde neerslagregel, kaart verborgen);
+   H. de (verborgen) SVG-tooltip blijft in de DOM ongewijzigd (zes rijen, gecombineerde neerslagregel); op desktop (PR 3) toont de kaart het aangewezen uur en is de SVG-tooltip niet zichtbaar;
    I. toegankelijkheid: een gevulde kaart is een groep (niet aria-hidden), de slidertekst met uur, temperatuur en neerslagkans blijft ongewijzigd;
       de volledige toegankelijkheidscontrole staat in detailkaart-toegankelijkheid-browser.test.js.
 
@@ -313,16 +313,19 @@ function toets(m,{L,u,sc,taal,w,donker}){
       }finally{await context.close();}
     }
 
-    /* F. desktop en SVG-tooltip ongewijzigd */
+    /* F. desktop: de kaart is de leesweergave, de SVG-tooltip blijft ongewijzigd in de DOM maar is niet zichtbaar */
     for(const taal of ["nl","en"]){
       const {context,page,fouten}=await open(browser,root,{w:1440,nuIso:NU,offsetS:OFFSET,taal:taal==="en"?"en":undefined});
       try{
         const pv=await geoXY(page,Date.parse("2026-07-22T14:00:00Z"));
         await page.mouse.move(pv.x,pv.y,{steps:3});await sleep(500);
         const d=await page.evaluate(()=>{const g=document.getElementById("scrub"),st=document.getElementById("tip-strook");
+          const zichtbaar=e=>getComputedStyle(e).visibility!=="hidden"&&getComputedStyle(e).display!=="none";
           const rij=k=>[(g.querySelector('text[data-tip-rij="'+k+'"][data-tip-kol="label"]')||{}).textContent,(g.querySelector('text[data-tip-rij="'+k+'"][data-tip-kol="waarde"]')||{}).textContent];
-          return {kaart:getComputedStyle(st).display,modus:g.dataset.modus,rijen:[1,2,3,4,5,6].map(rij),teksten:g.querySelectorAll("text").length,uur:g.dataset.uur};});
-        gelijk(d.kaart,"none","F: de kaart is op desktop verborgen ("+taal+")");gelijk(d.modus,"voorvertoning","F: hover toont de SVG-tooltip");
+          return {kaart:getComputedStyle(st).display,kaartKop:(st.querySelector(".tip-kop")||{}).textContent||"",kaartRijen:st.querySelectorAll(".tip-rij").length,zichtbareSvgTekst:[...g.querySelectorAll("text")].filter(zichtbaar).length,modus:g.dataset.modus,rijen:[1,2,3,4,5,6].map(rij),teksten:g.querySelectorAll("text").length,uur:g.dataset.uur};});
+        gelijk(d.kaart,"block","F: de kaart is op desktop zichtbaar ("+taal+")");gelijk(d.modus,"voorvertoning","F: hover is een voorvertoning");
+        gelijk(d.kaartRijen,8,"F: de kaart toont op desktop acht gegevens ("+taal+")");ok(d.kaartKop.endsWith("16:00"),"F: de kaart toont het aangewezen uur 16:00 ("+d.kaartKop+")");
+        gelijk(d.zichtbareSvgTekst,0,"F: de SVG-tooltip is op desktop niet zichtbaar ("+taal+")");
         gelijk(d.rijen.every(r=>r[0]&&r[1]),true,"F: zes gevulde tooltiprijen ("+taal+")");
         ok(/^\d+%( · <?[\d.,]+ mm)?$/.test(d.rijen[2][1]),"F: gecombineerde neerslagregel in de SVG-tooltip ongewijzigd ("+d.rijen[2][1]+")");
         ok(taal==="en"?/precip/.test(d.rijen[2][0]):d.rijen[2][0]==="neerslagkans","F: label van de neerslagregel ongewijzigd ("+d.rijen[2][0]+")");
