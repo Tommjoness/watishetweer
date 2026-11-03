@@ -1,12 +1,12 @@
 "use strict";
 
 /* Tooltip van de temperatuurgrafiek, minimaal 12 px effectief leesbaar op iedere breedte:
-   - tot en met 429 px: de zes rijen staan in een HTML-strook direct onder de grafiek (ruimte vanaf de eerste
+   - tot en met 429 px: de rijen (kans en hoeveelheid apart) staan in een HTML-strook direct onder de grafiek (ruimte vanaf de eerste
      render gereserveerd, ook zonder JavaScript); de SVG-tooltip is dan alleen visueel verborgen en kruisdraad en
      meetpunt blijven zichtbaar;
    - vanaf 430 px: de SVG-tooltip blijft, maar wordt zo opgeschaald dat de kleinste tekst minimaal 12 px is.
    Nederlands en Engels, licht en donker, toetsenbord (alle uren, Escape), touch, schermlezerinformatie
-   (slider met aria-valuetext, strook aria-hidden) en het wisselen van breekpunt tijdens gebruik.
+   (slider met aria-valuetext, gevulde strook als groep, lege strook aria-hidden) en het wisselen van breekpunt tijdens gebruik.
 
    Draait na: npm run build:cloudflare */
 
@@ -86,7 +86,9 @@ const meet=page=>page.evaluate(()=>{
   const zichtbaar=e=>!!e&&getComputedStyle(e).display!=="none"&&getComputedStyle(e).visibility!=="hidden"&&e.getBoundingClientRect().width+e.getBoundingClientRect().height>0;
   const svgTekst=[...g.querySelectorAll("rect,text")];
   const kruis=[...g.querySelectorAll("line")].find(l=>l.getAttribute("x1")===l.getAttribute("x2")),punt=g.querySelector("circle");
-  const rijen=[...st.querySelectorAll(".tip-rij")].map(r=>[r.querySelector("dt").textContent,r.querySelector("dd").textContent]);
+  /* Wat een gebruiker ziet: zonder de sr-only-tekst voor hulptechnologie en zonder windroos. */
+  const zichtbareTekst=e=>[...e.childNodes].map(n=>n.nodeType===3?n.textContent:(n.nodeType===1&&!n.classList.contains("sr-only")&&n.tagName.toLowerCase()!=="svg"?n.textContent:"")).join("");
+  const rijen=[...st.querySelectorAll(".tip-rij")].map(r=>[r.querySelector("dt").textContent,zichtbareTekst(r.querySelector("dd"))]);
   const dag=q(".dagmod").getBoundingClientRect().bottom+scrollY;
   const volgende=[...document.querySelectorAll("h2")].find(h=>{const r=h.getBoundingClientRect();return r.height>0&&r.top+scrollY>dag;});
   const rij=n=>{const l=g.querySelector(`text[data-tip-rij="${n}"][data-tip-kol="label"]`),w=g.querySelector(`text[data-tip-rij="${n}"][data-tip-kol="waarde"]`);return [l&&l.textContent.trim(),w&&w.textContent.trim()];};
@@ -96,8 +98,10 @@ const meet=page=>page.evaluate(()=>{
     minFont:fonts.length?Math.min(...fonts):null,buiten,overflowX:st.scrollWidth>st.clientWidth+0.5,
     svgTekstZichtbaar:svgTekst.filter(zichtbaar).length,kruisZichtbaar:zichtbaar(kruis),puntZichtbaar:zichtbaar(punt),
     kop:(st.querySelector(".tip-kop")||{}).textContent||"",rijen,svgRijen:[1,2,3,4,5,6].map(rij),
+    kansModel:(()=>{const k=S.geo.TI.indexOf(g.dataset.uur),v=S.geo.P&&S.geo.P[k];return Number.isFinite(v)?Math.round(Math.min(100,Math.max(0,v)))+"%":"–";})(),
+    oms:(st.querySelector(".tip-oms")||{}).textContent||"",svgOms:(g.querySelector('text[data-tip="omschrijving"]')||{}).textContent||"",
     svgKop:(g.querySelector('text[data-tip="kop"]')||{}).textContent||"",
-    ariaHidden:st.getAttribute("aria-hidden"),valuenow:hit.getAttribute("aria-valuenow"),valuetext:hit.getAttribute("aria-valuetext")||"",focus:document.activeElement&&document.activeElement.id,gDisplay:g.style.display,
+    ariaHidden:st.getAttribute("aria-hidden"),rol:st.getAttribute("role"),valuenow:hit.getAttribute("aria-valuenow"),valuetext:hit.getAttribute("aria-valuetext")||"",focus:document.activeElement&&document.activeElement.id,gDisplay:g.style.display,
     placeholder:getComputedStyle(st,"::before").content};
 });
 /* Effectieve grootte van de SVG-tooltip: lettergrootte in SVG-eenheden maal de werkelijke schermschaal (inclusief transform). */
@@ -130,15 +134,28 @@ async function testStrook(browser,root){
       assert.equal(m0.display,"block",L+": strook niet zichtbaar");assert.equal(m0.staat,"vol",L+": beginstaat niet gevuld met het geselecteerde uur");
       assert.equal(m0.placeholder,"none",`${L}: rustregel mag niet naast een gevulde kaart staan (${m0.placeholder})`);
       assert(m0.kop.length>=5,`${L}: geen kop bij het eerstvolgende uur`);assert(m0.kruisZichtbaar&&m0.puntZichtbaar,L+": kruisdraad en meetpunt van de selectie ontbreken");
-      assert(m0.h>=140,`${L}: gereserveerde hoogte ${m0.h}px < 140`);assert.equal(m0.ariaHidden,"true",L+": strook niet aria-hidden");
+      assert(m0.h>=140,`${L}: gereserveerde hoogte ${m0.h}px < 140`);assert.equal(m0.ariaHidden,null,L+": een gevulde strook mag niet aria-hidden zijn");assert.equal(m0.rol,"group",L+": een gevulde strook is een groep");
       const hoogtes=new Set([m0.h]),volgend=new Set([m0.volgendTop]),docs=new Set([m0.doc]);
       const uren=steekproef.includes(w)?[0,6,12,20,n-1]:[...Array(n).keys()];
       for(const i of uren){
         await kies(page,i);const m=await meet(page);metingen++;
         assert.equal(m.staat,"vol",`${L} uur ${i}: strook niet gevuld`);
         assert.equal(m.kop,m.svgKop,`${L} uur ${i}: kop wijkt af van de SVG-tooltip`);
-        assert.equal(m.rijen.length,6,`${L} uur ${i}: ${m.rijen.length} rijen`);
-        m.rijen.forEach((r,k)=>{assert(r[0]&&r[1],`${L} uur ${i}: lege rij ${k+1}`);assert.deepEqual(r,m.svgRijen[k],`${L} uur ${i}: rij ${k+1} wijkt af van de SVG-tooltip`);});
+        /* De kaart toont acht waarden uit de weerreeksen (kans en hoeveelheid apart, windkracht en richting apart); de SVG-tooltip heeft er zes (neerslagregel en windregel gecombineerd). */
+        assert.equal(m.rijen.length,8,`${L} uur ${i}: ${m.rijen.length} waarden in de kaart`);
+        m.rijen.forEach((r,k)=>assert(r[0]&&r[1],`${L} uur ${i}: lege waarde ${k+1}`));
+        assert.equal(m.oms.replace(/\u00a0/g,""),m.svgOms,`${L} uur ${i}: omschrijving wijkt af van de SVG-tooltip`);
+        const kaartVoorSvg=[0,1,6,7],svgVoorKaart=[0,1,4,5];
+        kaartVoorSvg.forEach((kk,n)=>assert.deepEqual(m.rijen[kk],m.svgRijen[svgVoorKaart[n]],`${L} uur ${i}: kaartwaarde ${kk+1} wijkt af van SVG-rij ${svgVoorKaart[n]+1}`));
+        /* Windregel van de SVG ("19 km/u N, 3 Bft") = windkracht ("19 km/u · 3 Bft") en richting ("N") van de kaart. */
+        const sw=/^(\d+) km\/(u|h)(?: (\S+))?, (\d+) Bft$/.exec(m.svgRijen[3][1]);
+        if(sw){assert.equal(m.rijen[4][1],`${sw[1]} km/${sw[2]} · ${sw[4]} Bft`,`${L} uur ${i}: windkracht wijkt af van de SVG-windregel`);assert.equal(m.rijen[5][1],sw[3]||"–",`${L} uur ${i}: richting wijkt af van de SVG-windregel`);}
+        else assert.equal(m.rijen[4][1],"–",`${L} uur ${i}: zonder windsnelheid in de SVG-windregel een streepje voor de windkracht (${m.svgRijen[3][1]})`);
+        assert.deepEqual(m.rijen.map(r=>r[0]),taal==="en"?["temperature","feels like","precip. chance","precip.","wind","direction","gusts","cloud cover"]:["temperatuur","voelt als","neerslagkans","neerslag","wind","richting","windstoten","bewolking"],`${L} uur ${i}: labels`);
+        const [svgKans,svgMm]=m.svgRijen[2][1].split(" · ");
+        assert.equal(m.rijen[2][1],svgKans,`${L} uur ${i}: kans wijkt af van de SVG-neerslagregel`);assert.equal(m.rijen[2][1],m.kansModel,`${L} uur ${i}: kans wijkt af van de weerreeks`);
+        if(svgMm)assert.equal(m.rijen[3][1],svgMm,`${L} uur ${i}: hoeveelheid wijkt af van de SVG-neerslagregel`);
+        else assert(["0,0 mm","<0,1 mm","–","0.0 mm","<0.1 mm"].includes(m.rijen[3][1]),`${L} uur ${i}: zonder meetbare hoeveelheid in de SVG moet de kaart 0,0, <0,1 of een streepje tonen, kreeg ${m.rijen[3][1]}`);
         assert(m.minFont>=12,`${L} uur ${i}: kleinste tekst ${m.minFont}px`);
         assert.deepEqual(m.buiten,[],`${L} uur ${i}: tekst buiten de strook ${m.buiten}`);assert(!m.overflowX,`${L} uur ${i}: horizontale overflow in strook`);
         assert.equal(m.svgTekstZichtbaar,0,`${L} uur ${i}: SVG-tooltip nog zichtbaar`);
@@ -161,7 +178,7 @@ async function testStrook(browser,root){
       combos++;
     }finally{await context.close();}
   }
-  console.log(`A. Strook tot en met 429 px (320/360/390/413/420/429, NL/EN, licht/donker): ${combos} combinaties, ${metingen} uurmetingen OK: zes rijen gelijk aan de SVG-tooltip, >=12px, geen overlap, overflow of verschuiving, kruisdraad en meetpunt zichtbaar, Escape en focus, slider-informatie.`);
+  console.log(`A. Strook tot en met 429 px (320/360/390/413/420/429, NL/EN, licht/donker): ${combos} combinaties, ${metingen} uurmetingen OK: acht waarden gelijk aan de SVG-tooltip, >=12px, geen overlap, overflow of verschuiving, kruisdraad en meetpunt zichtbaar, Escape en focus, slider-informatie.`);
 }
 
 /* B. Touch (touchscreen-simulatie). */
@@ -178,7 +195,7 @@ async function testTouch(browser,root){
       for(const f of [0.15,0.5,0.85]){
         await page.touchscreen.tap(box.x+box.w*f,box.y+box.h*0.5);await page.waitForTimeout(200);
         const m=await meet(page);assert.equal(m.staat,"vol",`${L} f=${f}: strook niet gevuld na tik`);assert.equal(m.svgTekstZichtbaar,0,`${L}: SVG-tooltip zichtbaar na tik`);
-        assert(m.kruisZichtbaar&&m.puntZichtbaar,`${L}: kruisdraad/punt weg na tik`);assert(m.minFont>=12);assert.equal(m.rijen.length,6);laatsteKop=m.kop;hoogtes.add(m.h);volgend.add(m.volgendTop);
+        assert(m.kruisZichtbaar&&m.puntZichtbaar,`${L}: kruisdraad/punt weg na tik`);assert(m.minFont>=12);assert.equal(m.rijen.length,8);laatsteKop=m.kop;hoogtes.add(m.h);volgend.add(m.volgendTop);
       }
       assert.equal(hoogtes.size,1,`${L}: hoogte wisselt bij tikken`);assert.equal(volgend.size,1,`${L}: pagina verschuift bij tikken`);
       await page.waitForTimeout(4500);const idle=await meet(page);

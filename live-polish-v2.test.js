@@ -87,7 +87,63 @@ test("tooltipstrook: statische markup, CSS vanaf de eerste render en koppeling n
   assert(css.includes('html[lang^="en"] .tip-strook:empty::before'));
   assert(css.includes("#chart #scrub [data-tip-verberg]{visibility:hidden;pointer-events:none}"));
   assert(js.includes("requestAnimationFrame(synchroniseerTooltipWeergave)")&&js.includes("koppelTooltipWeergave();"));
-  assert(!/strook\.innerHTML|innerHTML\s*=/.test(js.slice(js.indexOf("function tooltipTekstLezen"),js.indexOf("function koppelTooltipWeergave"))),"strook mag alleen met textContent worden gevuld");
+  assert(!/strook\.innerHTML|innerHTML\s*=/.test(js.slice(js.indexOf("function kaartGegevens"),js.indexOf("function koppelTooltipWeergave"))),"strook mag alleen met textContent worden gevuld");
+  /* De kaart leest de weerreeksen (S.geo via #scrub[data-uur]) en nooit de tekst van de SVG-tooltip. */
+  const kaartCode=js.slice(js.indexOf("function kaartMmTekst"),js.indexOf("/* De SVG-tekstvakdelen krijgen een markering"));
+  assert(kaartCode.includes("function kaartGegevens")&&kaartCode.includes("function vulTooltipStrook"),"de kaartfuncties staan in het getoetste bereik");
+  assert(!/data-tip|querySelector\(['"]text|tooltipTekstLezen/.test(kaartCode),"de kaart mag de SVG-tooltiptekst niet lezen");
+  assert(html.includes("g.dataset.uur=G.TI[i]"),"toon() moet het getoonde uur op #scrub zetten");
+});
+
+test("mobiele detailkaart: acht waarden uit de weerreeksen, ontbrekend is nooit nul",()=>{
+  const A=require("./live-polish-v2.js");
+  /* In de pagina staan bft() en kompasKort() in index.html; hier worden ze met dezelfde uitkomst nagebootst. */
+  const DIR=["N","NNO","NO","ONO","O","OZO","ZO","ZZO","Z","ZZW","ZW","WZW","W","WNW","NW","NNW"];
+  const DIRVOL=["noorden","noordnoordoosten","noordoosten","oostnoordoosten","oosten","oostzuidoosten","zuidoosten","zuidzuidoosten","zuiden","zuidzuidwesten","zuidwesten","westzuidwesten","westen","westnoordwesten","noordwesten","noordnoordwesten"];
+  globalThis.kompasKort=d=>DIR[((Math.round(Number(d)/22.5)%16)+16)%16];
+  globalThis.kompas=d=>DIRVOL[((Math.round(Number(d)/22.5)%16)+16)%16];
+  globalThis.bft=v=>v<1?0:v<6?1:v<12?2:v<20?3:v<29?4:v<39?5:v<50?6:v<62?7:v<75?8:v<89?9:v<103?10:v<118?11:12;
+  try{
+    const G={TI:["2026-07-22T14:00","2026-07-22T15:00","2026-07-22T16:00"],T:[-12.4,0.4,null],A:[-15.6,-0.4,null],P:[100,0,null],Q1MM:[123.46,0,null],W_:[250.4,5,null],WD:[250,10,null],G:[300.2,8,null],C:[100,0,null],D:[null,null,null]};
+    const d0=A.kaartGegevens(G,"2026-07-22T14:00"),r0=Object.fromEntries(d0.rijen.map(r=>[r.label,r.waarde]));
+    assert.deepEqual(d0.rijen.map(r=>r.label),["temperatuur","voelt als","neerslagkans","neerslag","wind","richting","windstoten","bewolking"],"acht waarden in vier rijen van twee");
+    assert.deepEqual(r0,{temperatuur:"-12°C","voelt als":"-16°C",neerslagkans:"100%",neerslag:"123,5 mm",wind:"250 km/u · 12 Bft",richting:"WZW",windstoten:"300 km/u",bewolking:"100%"},"hoge wind, negatieve temperatuur en 100% kans");
+    assert.equal(d0.rijen[5].graden,250,"de windroos krijgt dezelfde graden als de kompastekst");
+    assert.equal(d0.rijen[5].volledig,"westzuidwesten","schermlezers krijgen de volledige richting naast de zichtbare afkorting");
+    assert.deepEqual(d0.rijen.filter(r=>r.volledig).map(r=>r.label),["richting"],"alleen de richting heeft een volledige tekst");
+    assert.equal(d0.rijen.some(r=>r.ontbreekt),false,"geen ontbrekende waarden bij volledige gegevens");
+    const r1=Object.fromEntries(A.kaartGegevens(G,"2026-07-22T15:00").rijen.map(r=>[r.label,r.waarde]));
+    assert.equal(r1.neerslag,"0,0 mm","een echte nulwaarde van de bron blijft 0,0 mm");assert.equal(r1.neerslagkans,"0%");assert.equal(r1.temperatuur,"0°C");
+    assert.equal(r1.wind,"5 km/u · 1 Bft");assert.equal(r1.richting,"N","10 graden valt in het vak N");
+    /* Ontbrekende waarden worden nooit stilzwijgend nul; zonder richting geen windroos. */
+    const d2=A.kaartGegevens(G,"2026-07-22T16:00"),r2=Object.fromEntries(d2.rijen.map(r=>[r.label,r.waarde]));
+    assert.deepEqual(r2,{temperatuur:"–","voelt als":"–",neerslagkans:"–",neerslag:"–",wind:"–",richting:"–",windstoten:"–",bewolking:"–"},"alles ontbreekt: overal een streepje");
+    assert.equal(d2.rijen[5].graden,null,"zonder richting geen windroos");
+    assert.deepEqual(d2.rijen.map(r=>r.ontbreekt===true),Array(8).fill(true),"alle ontbrekende waarden zijn gemarkeerd voor hulptechnologie (niet beschikbaar)");
+    assert.equal(d2.rijen[5].volledig,null,"zonder richting geen volledige tekst");
+    /* Alle zestien kompasvakken: de volledige naam hoort bij dezelfde graden als de afkorting. */
+    DIR.forEach((kort,k)=>{const r=A.kaartGegevens({TI:["a"],WD:[k*22.5]},"a").rijen[5];assert.equal(r.waarde,kort);assert.equal(r.volledig,DIRVOL[k]);assert.equal(r.graden,k*22.5);});
+    /* Windrichting en windsnelheid ontbreken onafhankelijk van elkaar. */
+    const rz=A.kaartGegevens({TI:["a"],W_:[20],WD:[null]},"a").rijen,ry=A.kaartGegevens({TI:["a"],W_:[null],WD:[90]},"a").rijen;
+    assert.equal(rz[4].waarde,"20 km/u · 4 Bft");assert.equal(rz[5].waarde,"–");assert.equal(rz[5].graden,null);
+    assert.equal(ry[4].waarde,"–");assert.equal(ry[5].waarde,"O");assert.equal(ry[5].graden,90);
+    /* De graden worden naar 0 tot 360 teruggebracht; de tekst gebruikt de zestien vakken (348,75 tot 11,25 is N). */
+    assert.equal(A.kaartGegevens({TI:["a"],WD:[360]},"a").rijen[5].graden,0);assert.equal(A.kaartGegevens({TI:["a"],WD:[-90]},"a").rijen[5].graden,270);
+    assert.equal(A.kaartGegevens({TI:["a"],WD:[348.74]},"a").rijen[5].waarde,"NNW");assert.equal(A.kaartGegevens({TI:["a"],WD:[348.75]},"a").rijen[5].waarde,"N");
+    /* Hoeveelheid: nul alleen bij een echte nul; kleine positieve waarde is <0,1; ongeldig is een streepje. */
+    assert.equal(A.kaartMmTekst(0),"0,0 mm");assert.equal(A.kaartMmTekst(0.04),"<0,1 mm");assert.equal(A.kaartMmTekst(0.1),"0,1 mm");assert.equal(A.kaartMmTekst(1.45),"1,4 mm");
+    for(const slecht of [null,undefined,"",NaN,"abc",-1])assert.equal(A.kaartMmTekst(slecht),"–","ongeldige hoeveelheid ("+slecht+") is een streepje");
+    /* De kans is begrensd en geeft de afgeronde bronwaarde; de koppeling volgt het uur, niet de index. */
+    const G2={TI:["a","b"],P:[104.6,-3],Q1MM:[1,2]};
+    assert.equal(A.kaartGegevens(G2,"a").rijen[2].waarde,"100%","boven 100 wordt 100 (zelfde als de grafiek)");
+    assert.equal(A.kaartGegevens(G2,"b").rijen[2].waarde,"–","een negatieve kans is ongeldig en nooit stilzwijgend 0% (zelfde als de grafiek)");
+    /* Geldige grenswaarden: 0% en 100% blijven staan; kleine afrondingen aan de randen ook. */
+    const G3={TI:["a","b","c","d","e"],P:[0,100,0.4,99.6,NaN]};
+    assert.deepEqual([0,1,2,3,4].map(k=>A.kaartGegevens(G3,"abcde"[k]).rijen[2].waarde),["0%","100%","0%","100%","–"],"0% en 100% zijn geldig; een niet-eindige waarde is ongeldig");
+    assert.equal(A.kaartGegevens(G2,"b").rijen[3].waarde,"2,0 mm","hoeveelheid hoort bij hetzelfde uur als de kans");
+    assert.equal(A.kaartGegevens(G2,"onbekend"),null,"een uur dat niet in de reeks staat geeft geen kaart");assert.equal(A.kaartGegevens(null,"a"),null);assert.equal(A.kaartGegevens(G2,""),null);
+    assert.equal(A.kaartGegevens({TI:["a"],P:[50]},"a").rijen[3].waarde,"–","zonder hoeveelheidsreeks een streepje");
+  }finally{delete globalThis.kompasKort;delete globalThis.kompas;delete globalThis.bft;}
 });
 
 test("verwijderd temperatuurcijfer koppelt aan het juiste zwarte datapunt",()=>{

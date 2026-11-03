@@ -201,7 +201,7 @@ function tooltipDoosPlaatsing(doos,punt,veld,k){
 const api={
   tooltipWaardeKort,temperatuurLabelsBotsen,temperatuurPuntIndex,nuLabelPositie,nuLabelConcurreert,temperatuurOntdubbelToegestaan,
   dauwpuntCelsius,luchtvochtigheidDuiding,temperatuurProminentie,etmaalExtraTemperaturenWeg,grafiekPuntBeschrijving,grafiekDagVoorvoegsel,
-  tooltipSchaalFactor,tooltipDoosPlaatsing,tooltipMinPx,tooltipTijdPx,TOOLTIP_MIN_PX
+  tooltipSchaalFactor,tooltipDoosPlaatsing,tooltipMinPx,tooltipTijdPx,TOOLTIP_MIN_PX,kaartGegevens,kaartMmTekst,kaartWindroos
 };
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowPolishV2=api;
@@ -237,6 +237,7 @@ meters=function(){
 /* In de SVG-tooltip staan label en waarde als twee losse tekstnodes. Lange
    consumententeksten worden hier alleen typografisch ingekort; de betekenis
    en brondata blijven ongewijzigd. */
+let kaartMediaGekoppeld=false;
 const basisScrubKoppel=scrubKoppel;
 scrubKoppel=function(){
   basisScrubKoppel();
@@ -328,50 +329,156 @@ scrubKoppel=function(){
   });
   hit.addEventListener("blur",()=>{const g=document.getElementById("scrub");if(g&&g.style.display!=="none")g.dataset.modus="selectie";});
   koppelTooltipWeergave();
+  /* De slider is bij elke render een nieuw element: de verwijzing naar de kaart volgt de huidige toestand van de kaart. */
+  werkKaartKoppeling();
+  if(!kaartMediaGekoppeld&&globalThis.matchMedia){
+    kaartMediaGekoppeld=true;
+    /* Over de grens van 429/430 px verdwijnt of verschijnt de kaart (CSS): de verwijzing volgt mee. */
+    globalThis.matchMedia("(max-width:429px)").addEventListener("change",()=>werkKaartKoppeling());
+  }
 };
 
+/* De melding "Geen uurgegevens" (index.html) vervangt de inhoud van de kaart: daarna geen groep en geen verwijzing meer van de slider. */
+if(typeof uurLegeToestand==="function"){
+  const basisUurLegeToestand=uurLegeToestand;
+  uurLegeToestand=function(strook){
+    const r=basisUurLegeToestand.apply(this,arguments);
+    zetKaartToegankelijkheid(strook,false);
+    return r;
+  };
+}
+
 /* ---------- tooltipweergave: informatiestrook (tot en met 429 px, via CSS) en minimaal 12 px ----------
-   De SVG-groep #scrub blijft de enige bron van waarheid; alle lagen die haar vullen of verplaatsen
-   (basis, compactie, neerslagregel) draaien ongewijzigd. Deze laag leest het eindresultaat pas in het
-   volgende frame (requestAnimationFrame), dus de volgorde van de lagen doet er niet toe:
-   - de zes rijen worden in de HTML-strook #tip-strook gezet (CSS toont die alleen op smalle schermen);
-   - bij >= 430 px wordt de doos zo opgeschaald dat de kleinste tekst minimaal 12 px effectief is. */
+   Twee onafhankelijke weergaven van hetzelfde uur; alle lagen die de SVG-groep #scrub vullen of verplaatsen
+   (basis, compactie, neerslagregel) draaien ongewijzigd:
+   - de HTML-strook #tip-strook (de mobiele detailkaart, CSS toont die alleen op smalle schermen) wordt gevuld uit de
+     weerreeksen (S.geo) voor het uur dat de tooltip toont (#scrub[data-uur], de provider-tijd van dat uur). De kaart leest dus
+     nooit de samengestelde, vertaalde tekst van de SVG-tooltip;
+   - bij >= 430 px wordt de SVG-doos zo opgeschaald dat de kleinste tekst minimaal 12 px effectief is. */
 const SVG_NS="http://www.w3.org/2000/svg";
 let tooltipObserver=null,tooltipRaf=0,tooltipTimer=0,tooltipBezig=false;
 
-function tooltipTekstLezen(g){
-  const kop=g.querySelector('text[data-tip="kop"]'),oms=g.querySelector('text[data-tip="omschrijving"]');
-  const rij=n=>{
-    const l=g.querySelector('text[data-tip-rij="'+n+'"][data-tip-kol="label"]'),w=g.querySelector('text[data-tip-rij="'+n+'"][data-tip-kol="waarde"]');
-    return l&&w?{label:l.textContent.trim(),waarde:w.textContent.trim(),kleur:w.getAttribute("fill")}:null;
+/* Neerslaghoeveelheid van het uur. Een ontbrekende of ongeldige waarde is "–", nooit stilzwijgend 0: "0,0 mm" staat er alleen als
+   de bron zelf nul levert, en een kleine positieve waarde wordt "<0,1 mm" (zelfde beleid als mmTekst in de neerslaglaag). */
+function kaartMmTekst(mm){
+  const m=eindig(mm);
+  if(m===null||m<0) return "–";
+  if(m===0) return "0,0 mm";
+  if(m<0.1) return "<0,1 mm";
+  return m.toFixed(1).replace(".",",")+" mm";
+}
+
+/* Alle waarden van de mobiele detailkaart voor het uur met provider-tijd `uur`, uit de weerreeksen van `G` (S.geo). Een ontbrekende
+   waarde is "–". Neerslagkans volgt het contract van de grafiek (index.html, `P`): 0 tot en met 100 is geldig, boven 100 wordt 100, een negatieve
+   waarde is ongeldig ("–"). Geeft null als het uur niet (meer) in de getoonde reeks staat. */
+function kaartGegevens(G,uur){
+  if(!G||!Array.isArray(G.TI)||!uur) return null;
+  const i=G.TI.indexOf(uur);
+  if(i<0) return null;
+  const waarde=reeks=>eindig(Array.isArray(reeks)?reeks[i]:null);
+  const graden=v=>v===null?"–":Math.round(v)+"°C";
+  const kans=waarde(G.P),snel=waarde(G.W_),richting=waarde(G.WD),stoot=waarde(G.G),bewolking=waarde(G.C);
+  /* Windkracht: snelheid en Beaufort samen ("19 km/u · 3 Bft"). Richting: kompastekst; de windroos krijgt dezelfde graden. */
+  const kracht=snel!==null&&typeof bft==="function"?bft(snel):null;
+  const windkracht=snel===null?"–":Math.round(snel)+" km/u"+(kracht!==null?" · "+kracht+" Bft":"");
+  const richtingKort=richting!==null&&typeof kompasKort==="function"?kompasKort(richting):null;
+  const richtingVol=richting!==null&&typeof kompas==="function"?kompas(richting):null;
+  const lokaal=typeof weatherNowLokaleTijd==="function"?weatherNowLokaleTijd(uur):uur;
+  const tijd=typeof hhmm==="function"?hhmm(uur):String(lokaal).slice(11,16);
+  const aanduiding=typeof uurAanduidingTekst==="function"?uurAanduidingTekst(uur):"";
+  const code=G.D&&G.D[i]!=null?G.D[i]:null;
+  const omschrijving=code!==null&&typeof txt==="function"?txt(code,G.ND?G.ND[i]!==0:true):"";
+  return {
+    kop:grafiekDagVoorvoegsel(lokaal,plaatsNuLokaal())+tijd+aanduiding,
+    omschrijving,
+    rijen:[
+      {label:"temperatuur",waarde:graden(waarde(G.T))},
+      {label:"voelt als",waarde:graden(waarde(G.A))},
+      {label:"neerslagkans",waarde:kans===null||kans<0?"–":Math.round(Math.min(100,kans))+"%",kleur:"var(--teal)"},
+      {label:"neerslag",waarde:kaartMmTekst(Array.isArray(G.Q1MM)?G.Q1MM[i]:null),kleur:"var(--teal)"},
+      {label:"wind",waarde:windkracht},
+      {label:"richting",waarde:richtingKort||"–",volledig:richtingKort&&richtingVol?richtingVol:null,graden:richtingKort?((richting%360)+360)%360:null},
+      {label:"windstoten",waarde:stoot===null?"–":Math.round(stoot)+" km/u"},
+      {label:"bewolking",waarde:bewolking===null?"–":bewolking+"%"}
+    ].map(r=>r.waarde==="–"?Object.assign(r,{ontbreekt:true}):r)
   };
-  const rijen=[1,2,3,4,5,6].map(rij);
-  if(!kop||rijen.some(r=>!r)) return null;
-  return {kop:kop.textContent.trim(),omschrijving:oms?oms.textContent.trim():"",rijen,kopKleur:kop.getAttribute("fill")};
+}
+
+/* Compacte windroos (12 px, decoratief): ring, vier streepjes (N/O/Z/W) en een naald die naar de HERKOMST van de wind wijst
+   (meteorologische windrichting: 0° = wind uit het noorden = naald omhoog). De graden zijn dezelfde waarde als de kompastekst ernaast.
+   Alleen vorm en `currentColor`; geen afbeelding, geen tekst en voor hulptechnologie verborgen. */
+function kaartWindroos(graden){
+  const ns="http://www.w3.org/2000/svg",mk=(naam,attr)=>{const e=document.createElementNS(ns,naam);for(const k in attr)e.setAttribute(k,attr[k]);return e;};
+  const svg=mk("svg",{viewBox:"0 0 12 12",width:"12",height:"12","aria-hidden":"true",focusable:"false","class":"tip-roos"});
+  svg.appendChild(mk("circle",{cx:"6",cy:"6",r:"5.2",fill:"none",stroke:"currentColor","stroke-width":"1","stroke-opacity":".4"}));
+  for(const hoek of [0,90,180,270])svg.appendChild(mk("line",{x1:"6",y1:"0.6",x2:"6",y2:"2",transform:"rotate("+hoek+" 6 6)",stroke:"currentColor","stroke-width":"1","stroke-opacity":".55"}));
+  const naald=mk("g",{transform:"rotate("+Math.round(graden*10)/10+" 6 6)"});
+  naald.appendChild(mk("path",{d:"M6 1.6 L8 5.4 H6.7 V9.4 H5.3 V5.4 H4 Z",fill:"currentColor"}));
+  svg.appendChild(naald);
+  return svg;
+}
+
+/* Toegankelijkheid van de kaart. Alleen een gevulde kaart is toegankelijk: een groep met als naam "Details voor <tijd>" (de tijd is
+   dezelfde volledige tijdcontext als de kop, dus met dagnaam, "morgen" en zomer-/wintertijd). Een lege kaart of de melding "Geen
+   uurgegevens" blijft voor hulptechnologie verborgen. Er is bewust geen aria-live: de korte slidertekst en de live-region van de
+   uurselectie blijven de enige automatische aankondiging. */
+function kaartToegankelijk(strook){
+  return !!strook&&strook.getAttribute("role")==="group"&&!strook.hasAttribute("aria-hidden")&&strook.childElementCount>0&&strook.dataset.leeg!=="1"
+    &&typeof getComputedStyle==="function"&&getComputedStyle(strook).display!=="none";
+}
+/* De slider verwijst alleen naar de kaart als die zichtbaar, gevuld en toegankelijk is (niet bij een lege kaart en niet bij >= 430 px,
+   waar de kaart met CSS verborgen is). */
+function werkKaartKoppeling(strook){
+  const hit=document.getElementById("hit");if(!hit) return;
+  if(kaartToegankelijk(strook||document.getElementById("tip-strook"))) hit.setAttribute("aria-details","tip-strook");
+  else hit.removeAttribute("aria-details");
+}
+function zetKaartToegankelijkheid(strook,gevuld){
+  if(!strook) return;
+  if(gevuld){strook.removeAttribute("aria-hidden");strook.setAttribute("role","group");strook.setAttribute("aria-labelledby","tip-titel tip-kop");}
+  else{strook.setAttribute("aria-hidden","true");strook.removeAttribute("role");strook.removeAttribute("aria-labelledby");}
+  werkKaartKoppeling(strook);
 }
 
 function vulTooltipStrook(strook,g){
-  const d=g.style.display!=="none"?tooltipTekstLezen(g):null;
+  const d=g.style.display!=="none"?kaartGegevens(typeof S!=="undefined"?S.geo:null,g.dataset.uur):null;
   if(!d){
     /* De lege toestand (geen geldig uur) is een eigen bericht en wordt niet door de lege tooltip weggehaald. */
-    if(strook.dataset.leeg==="1")return;
+    if(strook.dataset.leeg==="1"){zetKaartToegankelijkheid(strook,false);return;}
     if(strook.firstChild){strook.replaceChildren();delete strook.dataset.sig;}
+    zetKaartToegankelijkheid(strook,false);
     return;
   }
   delete strook.dataset.leeg;
   const sig=JSON.stringify(d);
-  if(strook.dataset.sig===sig) return;
+  if(strook.dataset.sig===sig){zetKaartToegankelijkheid(strook,true);return;}
   const el=(tag,klasse,tekst)=>{const e=document.createElement(tag);if(klasse)e.className=klasse;if(tekst!=null)e.textContent=tekst;return e;};
+  const verborgen=e=>{e.setAttribute("aria-hidden","true");return e;};
   const item=r=>{
     const x=el("div","tip-rij");x.appendChild(el("dt",null,r.label));
-    const dd=el("dd",null,r.waarde);if(r.kleur&&r.kleur!==d.kopKleur) dd.style.color=r.kleur;
+    const dd=el("dd",null);if(r.kleur) dd.style.color=r.kleur;
+    if(r.ontbreekt){
+      /* Zichtbaar een streepje; hulptechnologie krijgt "niet beschikbaar". */
+      dd.appendChild(verborgen(el("span",null,r.waarde)));dd.appendChild(el("span","sr-only","niet beschikbaar"));
+    }else if(r.volledig){
+      /* Zichtbaar de afkorting (WZW); hulptechnologie krijgt alleen de volledige richting (westzuidwesten), dus niets dubbel. */
+      dd.appendChild(verborgen(el("span",null,r.waarde)));dd.appendChild(el("span","sr-only",r.volledig));
+    }else dd.textContent=r.waarde;
+    if(typeof r.graden==="number"&&Number.isFinite(r.graden)) dd.appendChild(kaartWindroos(r.graden));
     x.appendChild(dd);return x;
   };
-  const duo=(a,b)=>{const x=el("div","tip-duo");x.appendChild(item(a));x.appendChild(item(b));return x;};
-  const dl=el("dl","tip-rijen"),r=d.rijen;
-  dl.appendChild(duo(r[0],r[1]));dl.appendChild(item(r[2]));dl.appendChild(item(r[3]));dl.appendChild(duo(r[4],r[5]));
-  strook.replaceChildren(el("div","tip-kop",d.kop),el("div","tip-oms",d.omschrijving||"\u00a0"),dl);
+  /* Een dl bevat alleen div-groepen met dt+dd (geldige HTML): vier dl's, elk met twee waarden, in één raster-wrapper. */
+  const duo=(a,b)=>{const x=el("dl","tip-duo");x.appendChild(item(a));x.appendChild(item(b));return x;};
+  const wrap=el("div","tip-rijen"),r=d.rijen;
+  /* Vier rijen met telkens twee waarden: temperatuur | voelt als, neerslagkans | neerslag, wind | richting, windstoten | bewolking. */
+  wrap.appendChild(duo(r[0],r[1]));wrap.appendChild(duo(r[2],r[3]));wrap.appendChild(duo(r[4],r[5]));wrap.appendChild(duo(r[6],r[7]));
+  /* Naam van de groep: "Details voor" + de kop (tijd met dagnaam of "morgen" en zomer-/wintertijd). Beide verborgen voor lezers die
+     de groep doorlopen; ze zijn alleen de naam (aria-labelledby), zodat de tijd niet twee keer wordt uitgesproken. */
+  const titel=verborgen(el("span","sr-only","Details voor")),kop=verborgen(el("div","tip-kop",d.kop));
+  titel.id="tip-titel";kop.id="tip-kop";
+  strook.replaceChildren(titel,kop,el("div","tip-oms",d.omschrijving||"\u00a0"),wrap);
   strook.dataset.sig=sig;
+  zetKaartToegankelijkheid(strook,true);
 }
 
 /* De SVG-tekstvakdelen krijgen een markering; de CSS verbergt ze alleen tot en met 429 px (visibility, geen

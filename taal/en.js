@@ -292,6 +292,8 @@
     "(zomertijd)": "(summer time)",
     "(wintertijd)": "(winter time)",
     "Geen uurgegevens": "No hourly data",
+    /* Toegankelijke tekst van de mobiele detailkaart (alleen voor hulptechnologie): groepsnaam en ontbrekende waarde. */
+    "Details voor": "Details for", "niet beschikbaar": "not available",
     "Geen komende uren meer vandaag.": "No more upcoming hours today.",
     "Voor dit venster zijn geen geldige uurwaarden beschikbaar. Probeer te verversen of kies een andere dag.": "No valid hourly values are available for this period. Try refreshing or choose another day.",
     "Minder uren tonen": "Show fewer hours",
@@ -1079,6 +1081,8 @@
     [/^(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag)$/i, (m) => dagVol(m[1])],
     [/^(ma|di|wo|do|vr|za|zo)$/, (m) => dagKort(m[1])],
     [/^(N|NNO|NO|ONO|O|OZO|ZO|ZZO|Z|ZZW|ZW|WZW|W|WNW|NW|NNW)$/, (m) => RICHTING_KORT[m[1]]],
+    /* Volledige kompasrichting als losse tekst (mobiele detailkaart, alleen voor hulptechnologie): "westzuidwesten" is "west-south-west". */
+    [/^(noorden|noordnoordoosten|noordoosten|oostnoordoosten|oosten|oostzuidoosten|zuidoosten|zuidzuidoosten|zuiden|zuidzuidwesten|zuidwesten|westzuidwesten|westen|westnoordwesten|noordwesten|noordnoordwesten)$/, (m) => richting(m[1])],
 
     /* Bewolkingstegel bij vooral hoge bewolking: "Geheel bewolkt, vooral hoge bewolking." */
     [/^(.+), vooral hoge bewolking\.$/, (m) => { const w = weer(m[1]); return w && `${w}, mostly high cloud.`; }],
@@ -1308,6 +1312,8 @@
     /* Nachtzicht: "Lichtvervuiling in Vlieland: laag tot matig (geschat)." of "…hier: …" */
     [/^Lichtvervuiling (?:in (.+)|hier): (laag|matig|hoog|laag tot matig|matig tot hoog) \(geschat\)\.$/, (m) => `Light pollution ${m[1] ? "in " + plaats(m[1]) : "here"}: ${({ laag: "low", matig: "moderate", hoog: "high", "laag tot matig": "low to moderate", "matig tot hoog": "moderate to high" })[m[2]]} (estimated).`],
     [/^(\d{2}:\d{2}, )?neerslagkans (\d+%)(?:, verwacht (.+))?$/, (m) => `${m[1] || ""}${m[2]} chance of precipitation${m[3] ? ", " + m[3].replace(/(\d),(\d)/g, "$1.$2") + " expected" : ""}`],
+    /* Mobiele detailkaart: windkracht ("19 km/u · 3 Bft"); de kompasrichting staat los ("WZW") en volgt het patroon van de losse richting. */
+    [/^(\d+) km\/u · (\d+) Bft$/, (m) => `${m[1]} km/h · ${m[2]} Bft`],
     [/^(\d+) km\/u(?: (N|NNO|NO|ONO|O|OZO|ZO|ZZO|Z|ZZW|ZW|WZW|W|WNW|NW|NNW))?, (\d+) Bft$/, (m) => `${m[1]} km/h${m[2] ? " " + RICHTING_KORT[m[2]] : ""}, ${m[3]} Bft`],
     [/^(Zwakke|Matige|Vrij krachtige|Krachtige|Harde|Stormachtige) wind uit het ([a-z]+) \((\d+) Bft\)\.$/, (m) => richting(m[2]) && `${alsNl("X", windNaam(m[1].toLowerCase() + " wind", m[3]))} from the ${richting(m[2])} (${m[3]} Bft).`],
     [/^(Storm|Zware storm|Zeer zware storm|Orkaan) uit het ([a-z]+) \((\d+) Bft\)\.$/, (m) => richting(m[2]) && `${alsNl("X", WINDKRACHT[m[1].toLowerCase()])} from the ${richting(m[2])} (${m[3]} Bft).`],
@@ -1532,8 +1538,10 @@
   ];
 
   /* Korte vormen voor smalle kolomkoppen (tabellen, Zeven dagen, Nachtzicht). */
-  const koppen = { "Neerslag": "Precip.", "Zichtscore": "Score", "Bewolking": "Cloud", "Windstoot": "Gust", "Gevoel": "Feels" };
-  const kopSelector = "th, .row.kop > *";
+  const koppen = { "Neerslag": "Precip.", "Zichtscore": "Score", "Bewolking": "Cloud", "Windstoot": "Gust", "Gevoel": "Feels",
+    /* Labels van de mobiele detailkaart (.tip-strook dt): "neerslag" is daar "precip." en blijft overal elders "precipitation". */
+    "richting": "direction", "neerslag": "precip." };
+  const kopSelector = "th, .row.kop > *, .tip-strook dt";
 
   return { exact, patronen, lijsten: { WEER, WINDKRACHT, RICHTING_VOL, RICHTING_KORT }, eigennamen, koppen, kopSelector };
 });
