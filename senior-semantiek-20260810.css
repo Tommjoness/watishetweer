@@ -180,10 +180,12 @@ footer .bron:first-child{max-width:72ch}
     letter-spacing:.12em;
   }
 
-  /* De briefing en de aparte twee-uurssectie geven de context al. In de tegel
-     volstaat daarom de actuele numerieke kans; de derde vrijwel identieke zin
-     maakte het eerste scherm onnodig repetitief. */
+  /* Zonder markering blijft de toelichting van de neerslagtegel verborgen (ook de &nbsp;-placeholder uit de eerste HTML). De markering
+     komt van renderNeerslagTegel (q1-precip-performance.js) in dezelfde taak als de tekst; vanaf dan toont de tegel in elke toestand
+     (droog, kans, hoeveelheid, nu nat, geen gegevens) zijn toelichting, net als de andere primaire tegels. De tegelhoogte volgt de inhoud. */
   #popsub{display:none}
+  /* Lange woorden ("Neerslagverwachting") breken op een smalle tegel af in plaats van buiten de tegel te lopen. */
+  .stat[data-pop-uitleg] #popsub{display:block;hyphens:auto;overflow-wrap:break-word}
   #nctext{font-size:15.5px;line-height:1.45}
 
   .data-uitleg{font-size:12px;line-height:1.5}

@@ -2497,8 +2497,9 @@ groep("Zonuren in plaats van fijnstof");
   const KLOK=new Date("2026-07-22T12:00:00Z");
 
   check("PM2,5 staat niet meer in de tegel",!/Fijnstof PM2,5/.test(bronZon));
-  check("de zonurentegel staat op dezelfde plek in de gridvolgorde",
-    /\$\{zonurenTegel\(\)\}`;/.test(bronZon));
+  /* Volgorde volgens de sectietitel "Lucht, pollen en zon": AQI, pollen, zonuren (de zonurentegel komt als laatste, na het pollenblok). */
+  check("de zonurentegel wordt als laatste aan de luchtsectie toegevoegd (AQI, pollen, zonuren)",
+    /out\+=zonurenTegel\(\);\s*el\.innerHTML=out;/.test(bronZon) && !/\$\{zonurenTegel\(\)\}/.test(bronZon));
   check("er komt geen tweede API-aanroep bij: sunshine_duration zit op de bestaande daily-lijst",
     /&daily=[\s\S]{0,400}sunshine_duration/.test(bronZon) && !/air-quality-api[\s\S]{0,200}sunshine_duration/.test(bronZon));
   check("pm2_5 en pm10 zijn ook uit de aanroep zelf verwijderd (nergens anders gebruikt)",
@@ -2523,6 +2524,28 @@ groep("Zonuren in plaats van fijnstof");
   check("precies 7 uur is nog 'een aantal'",/Een aantal zonuren vandaag/.test(metZon(7)),metZon(7));
   check("7,1 uur is 'redelijk wat zon'",/Vandaag redelijk wat zon/.test(metZon(7.1)),metZon(7.1));
   check("de weergave rondt af op een decimaal met een komma",/6,5<s>uur/.test(metZon(6.5)),metZon(6.5));
+
+  /* De DOM-volgorde van #aq: luchtkwaliteit eerst, pollen daarna, zonuren als laatste; ook zonder pollengegevens of buiten Europa. */
+  function volgordeAq(lat,lon,hourly){
+    const {api,bak}=laadKern(1280);
+    const d=bouw({});
+    Object.assign(api.S,{d:d,air:{current:{european_aqi:20,us_aqi:30},hourly:hourly===null?undefined:{time:d.hourly.time.slice(0,24),
+      grass_pollen:new Array(24).fill(hourly&&hourly.gras||0),birch_pollen:new Array(24).fill(hourly&&hourly.berk||0),alder_pollen:new Array(24).fill(0),
+      mugwort_pollen:new Array(24).fill(0),ragweed_pollen:new Array(24).fill(0),olive_pollen:new Array(24).fill(0)}},
+      i0:14,op:Date.now(),lat,lon,label:"T",dag:null,bereik:24,klokOverride:KLOK});
+    api.lucht();
+    return [...norm(bak.aq.innerHTML).matchAll(/<div class="eyebrow">([^<]*)<\/div>/g)].map(m=>m[1]);
+  }
+  for(const [naam,lat,lon,hourly,verwacht] of [
+    ["een pollensoort",52.35,5.26,{gras:5},["Luchtkwaliteit","Pollen gras","Zonuren"]],
+    ["twee pollensoorten",52.35,5.26,{gras:5,berk:20},["Luchtkwaliteit","Pollen berk","Pollen gras","Zonuren"]],
+    ["geen noemenswaardige pollen",52.35,5.26,{},["Luchtkwaliteit","Pollen","Zonuren"]],
+    ["buiten Europa (geen pollendata)",1.35,103.8,{gras:5},["Luchtkwaliteit","Pollen","Zonuren"]],
+    ["zonder uurreeks voor pollen",52.35,5.26,null,["Luchtkwaliteit","Zonuren"]]
+  ]){
+    const v=volgordeAq(lat,lon,hourly);
+    check("volgorde Lucht, pollen en zon: "+naam,JSON.stringify(v)===JSON.stringify(verwacht),JSON.stringify(v));
+  }
 
   // ontbrekende, niet-numerieke en negatieve data
   for(const [naam,zet] of [

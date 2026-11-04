@@ -3104,8 +3104,7 @@ function lucht(){
       :v<=200?["slecht",CARMINE]:v<=300?["zeer slecht",CARMINE]:["extreem slecht",CARMINE];
   const [nm,kl]=band(aqi);
   let out=`<div class="stat"><div class="eyebrow">${naamIndex}</div>
-      <div class="sval" style="color:${kl}">${aqi==null?"–":Math.round(aqi)}</div><div class="ssub">${nm} · ${schaalIndex}</div></div>
-    ${zonurenTegel()}`;
+      <div class="sval" style="color:${kl}">${aqi==null?"–":Math.round(aqi)}</div><div class="ssub">${nm} · ${schaalIndex}</div></div>`;
   /* Pollen komt alleen uit het Europese CAMS-model. Buiten Europa zijn alle
      soorten null en meldde de app "Geen noemenswaardige concentraties". Dat is
      een bewering over de lucht terwijl er simpelweg niet gemeten wordt. */
@@ -3134,6 +3133,9 @@ function lucht(){
          +(gemeten?"Geen noemenswaardige concentraties":"Geen pollendata voor deze locatie")+'</div></div>';
     }
   }
+  /* Volgorde volgens de sectietitel "Lucht, pollen en zon": luchtkwaliteit, pollen (een of twee soorten, of de melding dat er geen
+     pollendata is), en als laatste de zonuren. DOM-volgorde en visuele volgorde zijn gelijk (geen CSS order). */
+  out+=zonurenTegel();
   el.innerHTML=out;
   el.classList.remove("aq-cols-1","aq-cols-2","aq-cols-3","aq-cols-4");
   el.classList.add("aq-cols-"+Math.max(1,Math.min(4,el.children.length)));

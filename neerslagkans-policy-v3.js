@@ -382,7 +382,7 @@ function dagKansSamenvatting(a,basis){
   return basisHeeftSoort?"Zeer grote kans op "+kleineStart(type)+tijd:basis+"; zeer grote neerslagkans";
 }
 
-const api={kansNiveau,kansHoofd,hoeveelheidTekst,hoeveelheidConditioneel,kansZin,komendUurTekst,briefingZin,dagMomentZinsdeel,dagKansSamenvatting,knmiPayloadVers,knmiMeetpuntVers,knmiActueleKandidaat,volgendeKnmiVerversingMs,knmiPayloadMoetBijFocusVervers,verrijkAnalyseMetKnmi};
+const api={kansNiveau,kansHoofd,actueelNeerslagSignaal,hoeveelheidTekst,hoeveelheidConditioneel,kansZin,komendUurTekst,briefingZin,dagMomentZinsdeel,dagKansSamenvatting,knmiPayloadVers,knmiMeetpuntVers,knmiActueleKandidaat,volgendeKnmiVerversingMs,knmiPayloadMoetBijFocusVervers,verrijkAnalyseMetKnmi};
 if(typeof module!=="undefined"&&module.exports) module.exports=api;
 root.WeatherNowKansbeleidV3=api;
 

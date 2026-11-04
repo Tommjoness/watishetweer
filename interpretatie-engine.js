@@ -33,10 +33,23 @@ function getal(v){
   return v!==null && v!==undefined && v!=="" && Number.isFinite(Number(v)) ? Number(v) : null;
 }
 
+/* Een neerslagkans is alleen geldig als het een ruw getal is binnen 0 tot en met 100: een getal, of niet-lege tekst die uitsluitend uit
+   cijfers met een optionele punt-decimaal bestaat (dus niet "0x10", "1e1", "7%" of "-5"). Alles daarbuiten (negatief, boven 100, NaN,
+   oneindig, booleans, lijsten, lege tekst) is ongeldig en telt als ontbrekend. Zo wordt een ongeldige waarde nooit stilzwijgend 0%
+   ("Droog") of 100%. De afronding volgt pas ná deze controle. Bewust alleen voor kansvelden: getal() blijft ongewijzigd. */
+const KANS_TEKST=/^\d+(?:\.\d+)?$/;
+function kansGetal(v){
+  let n;
+  if(typeof v==="number") n=v;
+  else if(typeof v==="string"&&KANS_TEKST.test(v.trim())) n=Number(v.trim());
+  else return null;
+  return Number.isFinite(n)&&n>=0&&n<=100?n:null;
+}
+
 function veldGetal(veld,v){
+  if(veld==="precipitation_probability") return kansGetal(v);
   const n=getal(v);
   if(n===null) return null;
-  if(veld==="precipitation_probability") return Math.max(0,Math.min(100,n));
   if(["precipitation","rain","showers","snowfall"].includes(veld)) return n<0?null:n;
   return n;
 }
@@ -354,7 +367,8 @@ function analyseerNeerslagData(data,duurMin,nuOverride){
   // Als de status over 'nu' gaat, komt ook het neerslagtype uit de actuele code.
   // Een toekomstige sneeuwbui mag actuele regen nooit achteraf als sneeuw labelen.
   const soort=currentWet?neerslagSoortUitCode(current.weather_code):kiesNeerslagSoort(minLees.items,uurLees.items);
-  const status=bepaalStatus(kans.max,hoeveelheid,currentWet,genoeg);
+  /* Status en categorie komen uit dezelfde afgeronde kans als de getoonde waarde (anders is 9,49% status KLEINE_KANS bij een getoonde 9%). */
+  const status=bepaalStatus(kans.max===null?null:Math.round(kans.max),hoeveelheid,currentWet,genoeg);
   const eerste=eersteNeerslagMoment(minLees.items,uurLees.items);
 
   return {
@@ -526,7 +540,7 @@ function analyseerDagData(data,dagIndex,nuOverride){
   const eerste=eersteNeerslagMoment([],uur.items);
   const genoeg=!uur.dubbeleTijd && som.dekking>=0.75 && kans.dekking>=0.75;
   const hoeveelheid=som.som;
-  const status=bepaalStatus(kans.max,hoeveelheid,false,genoeg);
+  const status=bepaalStatus(kans.max===null?null:Math.round(kans.max),hoeveelheid,false,genoeg);
   return {
     datum,dagIndex,startMin:start,eindMin:dagEind,genoeg,status,
     kans:kans.max===null?null:Math.round(kans.max),
@@ -586,6 +600,7 @@ function laterVandaagNeerslag(data,twee){
 const publiekeApi={
   INTERPRETATIE_CONFIG,
   STATUS_RANG,
+  kansGetal,
   lokaalNaarMinuten,
   providerNaarMinuten,
   minutenNaarLokaal,

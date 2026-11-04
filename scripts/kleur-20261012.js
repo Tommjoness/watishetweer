@@ -51,7 +51,9 @@ function meterVoor(id,tekst){
   }
   if(!g.length)return null;
   if(id==="wind")return {soort:"wind",procent:begrens(beaufort(g[0])/12*100,0,100)};
-  if(id==="pop")return {soort:"regen",procent:begrens(g[0],0,100)};
+  /* Het metertje onder de neerslagtegel toont een kans: alleen bij een percentage. Een tegel met alleen een hoeveelheid ("1,5 mm") of een
+     woord heeft geen kans om af te beelden; het eerste getal (mm) mag nooit als percentage gelezen worden. */
+  if(id==="pop")return /%/.test(String(tekst))?{soort:"regen",procent:begrens(g[0],0,100)}:null;
   if(id==="hum"||id==="cloud")return {soort:"neutraal",procent:begrens(g[0],0,100)};
   return null;
 }

@@ -37,24 +37,13 @@ function neerslagUurBetekenis(){
   let sleutel=stat.querySelector(".mobile-neerslag-sleutel");
   if(!sleutel){sleutel=document.createElement("div");sleutel.className="mobile-neerslag-sleutel";waarde.insertAdjacentElement("afterend",sleutel);}
 
-  /* Q1 kan in een actuele natte situatie uit het centrale kansbeleid het woord
-     'Neerslag' krijgen, terwijl dezelfde 60-minutenanalyse wél een percentage
-     en/of hoeveelheid bevat. Presenteer dan de onderliggende getallen. Zo zegt
-     de tegel altijd wat de gebruiker daadwerkelijk bekijkt. */
+  /* De waarde in #pop komt volledig uit Q1 (neerslagTegelInhoud) en is daar al gelijk aan de toelichting eronder. Deze laag leest die waarde
+     alleen nog om kop, sleutel en toegankelijke naam daarbij te laten passen; ze voegt geen modelkans of hoeveelheid toe. */
   const presentatie=root.WeatherNowNeerslagPresentatieV2;
   let a=null;
   try{a=presentatie&&typeof presentatie.analyse==="function"?presentatie.analyse(60):null;}catch(e){}
-  const kans=presentatie&&typeof presentatie.kansKomendUur==="function"?presentatie.kansKomendUur(a):null;
-  const mm=a&&a.hoeveelheid!==null&&a.hoeveelheid!==undefined&&Number.isFinite(Number(a.hoeveelheid))&&Number(a.hoeveelheid)>=0.1?Number(a.hoeveelheid):null;
   const huidigNat=!!(a&&(a.currentWet||a.status==="NEERSLAG_NU"));
-  let tekst=(waarde.textContent||"").replace(/\\s+/g," ").trim();
-  if(/^(?:Neerslag|Nu)(?:\\s*·.*)?$/i.test(tekst)){
-    if(kans!==null&&mm!==null)waarde.innerHTML=String(Math.round(kans))+"<s>%</s><s> · "+mm.toFixed(1).replace(".",",")+" mm</s>";
-    else if(kans!==null)waarde.innerHTML=String(Math.round(kans))+"<s>%</s>";
-    else if(mm!==null)waarde.innerHTML=mm.toFixed(1).replace(".",",")+"<s> mm</s>";
-    else if(huidigNat)waarde.textContent="Nu";
-    tekst=(waarde.textContent||"").replace(/\\s+/g," ").trim();
-  }
+  const tekst=(waarde.textContent||"").replace(/\\s+/g," ").trim();
 
   const actueel=/\\bmm\\s*\\/\\s*u\\b/i.test(tekst);
   const heeftKans=/%/.test(tekst),heeftMm=!actueel&&/\\bmm\\b/i.test(tekst);
@@ -72,7 +61,7 @@ function neerslagUurBetekenis(){
       :heeftKans?" Dit is de neerslagkans voor het komende uur."
       :heeftMm?" Dit is het verwachte totaal in het komende uur.":"";
     waarde.setAttribute("aria-label",(actueel?"Nu: ":"Komend uur: ")+tekst+"."+uitleg);
-  }
+  }else waarde.removeAttribute("aria-label");
 }`;
 
 const GRAPH_SLEUTEL_OUD='  const zichtbareSleutel=tekst==="kans · verwachte hoeveelheid"?"kans · totaal komend uur":tekst;';

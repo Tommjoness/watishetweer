@@ -231,6 +231,7 @@ async function controleer(page, naam, modus) {
       locatieNaam: locatie ? locatie.getAttribute("aria-label") || "" : "",
       bewaarHoogte: document.querySelector(".chip.add") ? document.querySelector(".chip.add").getBoundingClientRect().height : 0,
       popSubDisplay: document.getElementById("popsub") ? getComputedStyle(document.getElementById("popsub")).display : "",
+      popSubTekst: document.getElementById("popsub") ? document.getElementById("popsub").textContent.replace(/\u00a0/g, " ").trim() : "",
       footerGrootte: footer ? parseFloat(getComputedStyle(footer).fontSize) : 0,
       topbar,
       nav,
@@ -297,7 +298,10 @@ async function controleer(page, naam, modus) {
     assert.equal(resultaat.locatieTekst.toLocaleLowerCase("nl-NL"),"mijn locatie",`${naam} ${modus}: volledig locatielabel hoort op 390px zichtbaar te blijven`);
     assert.equal(resultaat.locatieNaam,"Mijn locatie",`${naam} ${modus}: locatieknop mist een stabiele toegankelijke naam`);
     assert.ok(resultaat.bewaarHoogte>=35.5,`${naam} ${modus}: plaats bewaren heeft geen bruikbaar mobiel aanraakvlak`);
-    assert.equal(resultaat.popSubDisplay, "none", `${naam} ${modus}: derde neerslagzin wordt niet dubbel getoond`);
+    /* Contract sinds de neerslagtegel-correctie: de tegel toont in elke toestand zijn toelichting uit het neerslagbeleid (ook naast de sleutel
+       "kans"), zoals de andere primaire tegels; de tegelhoogte volgt de inhoud. */
+    assert.equal(resultaat.popSubDisplay, "block", `${naam} ${modus}: neerslagtegel toont zijn toelichting`);
+    assert.ok(resultaat.popSubTekst.length > 3, `${naam} ${modus}: de toelichting van de neerslagtegel is niet leeg`);
     assert.ok(resultaat.footerGrootte >= 10.5 && resultaat.footerGrootte <= 11.5, `${naam} ${modus}: bronfooter is compact maar leesbaar`);
 
     // Echte animatie-engine: de mobiele fixed balk verdwijnt tijdens neerwaarts

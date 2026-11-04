@@ -17,7 +17,9 @@ assert(uit.includes('"Neerslag komend uur"'),"forecasttegel benoemt zijn beteken
 assert(uit.includes('"Neerslagkans komend uur"'),"kans-only toestand heeft geen expliciete kop");
 assert(uit.includes('"Verwachte neerslag komend uur"'),"hoeveelheid-only toestand heeft geen expliciete kop");
 assert(uit.includes('"Neerslag nu"'),"actuele intensiteit behoudt een eigen scope");
-assert(uit.includes('if(kans!==null&&mm!==null)'),"bare Neerslag-waarde wordt niet naar beschikbare cijfers teruggebracht");
+assert(!uit.includes("kansKomendUur"),"clarity-laag mag geen modelkans of hoeveelheid meer in de waarde injecteren: Q1 bezit die waarde");
+assert(!uit.includes("waarde.innerHTML="),"clarity-laag mag de neerslagwaarde niet herschrijven");
+assert(uit.includes('waarde.removeAttribute("aria-label")'),"zonder waarde mag geen verouderde toegankelijke naam blijven staan");
 assert(uit.includes('"kans · verwacht totaal"'),"kans en hoeveelheid krijgen geen zichtbare legenda");
 assert(uit.includes(zonsondergang),"kortetermijn-clarity mag de zonsondergangtegel niet herschrijven");
 assert(!uit.includes('gustKop.textContent="Max. windstoot dit uur"'),"clarity-laag mag geen oude windstootkop terugzetten");
