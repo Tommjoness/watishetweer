@@ -183,16 +183,51 @@ test("exact dubbel provider-tijdstip buiten het onderzochte venster verlaagt de 
   assert.equal(a.reden,null);
 });
 
-test("ongeldige negatieve neerslag en kansen worden begrensd",()=>{
+test("ongeldige negatieve neerslag en kansen buiten 0-100 zijn ongeldig en worden nooit stil 0% of 100%",()=>{
   const d=basis();
   d.minutely_15.precipitation.fill(-2);
   d.hourly.precipitation.fill(-3);
   d.hourly.precipitation_probability.fill(180);
   const a=analyseerNeerslagData(d,120);
   assert.equal(a.hoeveelheid,0);
-  assert.equal(a.kans,100);
+  assert.equal(a.kans,null,"een kans van 180% is ongeldig, niet begrensd naar 100%");
   assert.equal(a.genoeg,false);
   assert.equal(a.status,"ONVOLDOENDE_DATA");
+});
+
+test("neerslagkans: alleen ruwe getallen binnen 0 tot en met 100 en veilig geparste cijfertekst zijn geldig",()=>{
+  const {kansGetal}=require("./interpretatie-engine.js");
+  for(const v of [0,0.4,9.49,9.5,99.9,100,"0","7","9.5","100"," 12 "])assert.notEqual(kansGetal(v),null,String(v)+" hoort geldig te zijn");
+  assert.equal(kansGetal(9.49),9.49,"geen afronding vóór de validatie");
+  for(const v of [-5,-0.4,-1e-9,100.4,101,150,NaN,Infinity,-Infinity,false,true,[],[7],{},"",
+    " ","x","7%","-5","1e1","0x10","0b1","Infinity","NaN",null,undefined,"7,5","1 2"])assert.equal(kansGetal(v),null,JSON.stringify(v)+" hoort ongeldig te zijn");
+});
+
+test("ongeldige kansen in de reeks tellen als ontbrekend en veranderen nooit een geldige kans",()=>{
+  for(const ongeldig of [-5,-0.4,100.4,150,false,true,[],"",NaN,Infinity]){
+    const d=basis();
+    d.hourly.precipitation_probability.fill(ongeldig);
+    const a=analyseerNeerslagData(d,60);
+    assert.equal(a.kans,null,JSON.stringify(ongeldig));
+    assert.equal(a.genoeg,false,JSON.stringify(ongeldig));
+    assert.equal(a.status,"ONVOLDOENDE_DATA",JSON.stringify(ongeldig));
+  }
+  const d=basis();
+  d.hourly.precipitation_probability.fill(40);
+  d.hourly.precipitation_probability[1]=-5;
+  assert.equal(analyseerNeerslagData(d,120).kans,40,"een ongeldig uur beïnvloedt het maximum van de geldige uren niet");
+});
+
+test("status en categorie volgen dezelfde afgeronde kans (decimale grenzen)",()=>{
+  const verwacht=[[0.49,0,"GEEN_KANS"],[0.5,1,"ZEER_KLEINE_KANS"],[9.49,9,"ZEER_KLEINE_KANS"],[9.5,10,"KLEINE_KANS"],[29.49,29,"KLEINE_KANS"],[29.5,30,"MOGELIJKE_NEERSLAG"],
+    [69.49,69,"MOGELIJKE_NEERSLAG"],[69.5,70,"GROTE_KANS_ZONDER_HOEVEELHEID"],[99.9,100,"GROTE_KANS_ZONDER_HOEVEELHEID"]];
+  for(const [ruw,kans,status] of verwacht){
+    const d=basis();
+    d.hourly.precipitation_probability.fill(ruw);d.hourly.precipitation.fill(0);d.minutely_15.precipitation.fill(0);
+    const a=analyseerNeerslagData(d,60);
+    assert.equal(a.kans,kans,ruw+"%");
+    assert.equal(a.status,status,ruw+"%: status volgt de afgeronde kans");
+  }
 });
 
 test("daganalyse van vandaag sluit verlopen dagpiek uit",()=>{

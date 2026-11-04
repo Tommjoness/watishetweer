@@ -25,7 +25,7 @@ for(const verboden of [
   if(html.includes(verboden))throw new Error("Kortetermijnlaag herintroduceert een oude windstoottegel-owner: "+verboden);
 }
 if(!/\.mobile-neerslag-sleutel\{[\s\S]*?display:block/.test(html))throw new Error("Kans/hoeveelheidsleutel is op desktop nog verborgen.");
-if(!html.includes('if(kans!==null&&mm!==null)'))throw new Error("Bare-Neerslag fallback gebruikt beschikbare kans/hoeveelheid niet.");
+if(html.includes('if(kans!==null&&mm!==null)')||html.includes("presentatie.kansKomendUur"))throw new Error("Clarity-laag injecteert nog een modelkans of hoeveelheid in de neerslagwaarde.");
 
 const scripts=[...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 if(!scripts.length)throw new Error("Geen inline runtime om te verifiëren.");

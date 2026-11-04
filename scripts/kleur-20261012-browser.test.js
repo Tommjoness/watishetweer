@@ -21,6 +21,11 @@ const TYPES = { ".js": "application/javascript", ".css": "text/css", ".json": "a
 /* Pure logica van de tegelruntime. */
 assert.deepStrictEqual(kleur.getallen("−1 → −2 °C"), [-1, -2], "minteken in de trendtekst");
 assert.deepStrictEqual(kleur.meterVoor("pop", "Droog"), null, "zonder cijfer geen meter");
+assert.deepStrictEqual(kleur.meterVoor("pop", "1,5 mm"), null, "een hoeveelheid zonder kans krijgt geen kansmeter");
+assert.deepStrictEqual(kleur.meterVoor("pop", "<0,1 mm"), null, "<0,1 mm is geen kans");
+assert.deepStrictEqual(kleur.meterVoor("pop", "Onzeker · 1,5 mm"), null, "tegenstrijdige waarde zonder percentage heeft geen kansmeter");
+assert.strictEqual(kleur.meterVoor("pop", "60% · 1,5 mm").procent, 60, "bij een percentage volgt de meter de kans, niet de hoeveelheid");
+assert.strictEqual(kleur.meterVoor("pop", "5%").procent, 5, "zeer kleine kans krijgt een meter");
 assert.strictEqual(kleur.meterVoor("uv", "14").waarde, 11, "UV-schaal begrensd op 11+");
 assert.strictEqual(kleur.meterVoor("wind", "14 km/u NW").procent, 3 / 12 * 100, "wind 14 km/u is 3 Bft");
 const gelijk = kleur.trendVerloop(18, 18, "licht");
@@ -120,8 +125,8 @@ server.listen(0, async () => {
       assert.strictEqual(mt.cloud.soort, "neutraal", `${label}: bewolkingsmeter ontbreekt`);
       const getal = t => Number(String(t).replace(/−/g, "-").match(/-?\d+/)[0]);
       assert.strictEqual(Number(mt.hum.waarde), getal(mt.hum.tekst), `${label}: vochtmeter wijkt af van ${mt.hum.tekst}`);
-      if (/\d/.test(mt.pop.tekst)) assert.strictEqual(Number(mt.pop.waarde), getal(mt.pop.tekst), `${label}: neerslagmeter wijkt af`);
-      else assert.strictEqual(mt.pop.soort, null, `${label}: meter bij neerslagtegel zonder cijfer`);
+      if (/%/.test(mt.pop.tekst)) assert.strictEqual(Number(mt.pop.waarde), getal(mt.pop.tekst), `${label}: neerslagmeter wijkt af`);
+      else assert.strictEqual(mt.pop.soort, null, `${label}: meter bij neerslagtegel zonder percentage (${mt.pop.tekst})`);
       if (/\d/.test(mt.uv.tekst)) assert.strictEqual(mt.uv.gevuld, Math.min(11, getal(mt.uv.tekst)), `${label}: UV-blokjes wijken af van ${mt.uv.tekst}`);
       if (mt.prec.soort === "trend") {
         const [van, naar] = String(mt.prec.tekst).replace(/−/g, "-").match(/-?\d+/g).map(Number);

@@ -1350,6 +1350,9 @@
     [new RegExp(`^${T}, ${G} graad, (\\d+) procent neerslagkans$`), (m) => `${m[1]}, ${graden(m[2])}, ${m[3]} per cent chance of precipitation`],
     [/^Komend uur: (\d+)% kans\.$/, (m) => `Next hour: ${m[1]}% chance.`],
     [/^Komend uur: Droog\.$/, () => "Next hour: dry."],
+    /* Neerslagtegel: tegenstrijdige of KNMI-toestanden met een hoeveelheid (zie neerslagTegelInhoud). */
+    [new RegExp(`^Komend uur: (Onzeker|Neerslag) · ${G} mm\\.$`), (m) => `Next hour: ${m[1] === "Onzeker" ? "uncertain" : "precipitation"} · ${getal(m[2])} mm.`],
+    [/^Komend uur: <0,1 mm\.$/, () => "Next hour: <0.1 mm."],
     /* De app plakt soms een al vertaalde waarde achter "Komend uur:". */
     [/^Komend uur: (.+)\.$/, (m, h) => { const binnen = h.t(m[1]) ?? (h.alEngels(m[1]) ? m[1] : null); return binnen == null ? null : `Next hour: ${binnen.charAt(0).toLowerCase() + binnen.slice(1)}.`; }],
     [new RegExp(`^Komend uur: (\\d+)% · ${G} mm\\. Eerst de neerslagkans, daarna het verwachte totaal in het komende uur\\.$`), (m) => `Next hour: ${m[1]}% · ${getal(m[2])} mm. First the chance of precipitation, then the expected total for the next hour.`],

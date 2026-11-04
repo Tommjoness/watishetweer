@@ -158,8 +158,45 @@ function neerslagTegelRelevant(analyse){
   return (k!==null&&k>=10)||(mm!==null&&mm>=MM_MEETBAAR);
 }
 
+const SPOOR_MM=0.005;
+const HTML_ESC=t=>String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+/* Inhoud van de tegel "Neerslag komend uur" voor één analyse. Zuivere functie: de hoofdwaarde (kansHoofd), de toelichting
+   (komendUurTekst) en de hoeveelheid komen uit het centrale neerslagbeleid en uit dezelfde analyse, zodat ze elkaar nooit tegenspreken.
+   Elke geldige toestand krijgt een toelichting; zonder bruikbare gegevens blijft het de beschikbaarheidstekst.
+   - 'Droog' alleen als het beleid DROOG oplevert; 1 tot en met 9% toont het percentage zelf.
+   - Een hoeveelheid staat erbij vanaf 0,1 mm. Een door KNMI verwachte hoeveelheid tussen 0,005 en 0,1 mm staat als '<0,1 mm'.
+   - Een modelkans wordt nooit gemengd met een KNMI-hoeveelheid of -meting (aparte bronnen en tijdvensters). */
+function neerslagTegelInhoud(analyse,beleid){
+  const onbekend={kop:"Neerslag komend uur",waarde:"–",html:"–",sub:"Neerslaggegevens niet beschikbaar."};
+  const a=analyse&&typeof analyse==="object"?analyse:null;
+  if(!a||!beleid||typeof beleid.kansHoofd!=="function"||typeof beleid.komendUurTekst!=="function")return onbekend;
+  const mm=getal(a.hoeveelheid);
+  const meetbaar=mm!==null&&mm>=MM_MEETBAAR?mmTekst(mm):"";
+  const actueel=typeof beleid.actueelNeerslagSignaal==="function"?!!beleid.actueelNeerslagSignaal(a):!!(a.currentWet||a.status==="NEERSLAG_NU");
+  const sub=String(beleid.komendUurTekst(a)||"");
+  const maak=(kop,waarde,html)=>({kop,waarde,html:html===undefined?HTML_ESC(waarde):html,sub});
+  if(!a.genoeg){
+    if(a.currentWet||a.status==="NEERSLAG_NU")return maak("Neerslag nu","Neerslag"+(meetbaar?" · "+meetbaar:""),"Neerslag"+(meetbaar?"<s> · "+HTML_ESC(meetbaar)+"</s>":""));
+    return onbekend;
+  }
+  const hoofd=String(beleid.kansHoofd(a)||"–");
+  if(hoofd==="–")return onbekend;
+  const kop=actueel?"Neerslag nu":"Neerslag komend uur";
+  if(hoofd==="Neerslag"){
+    /* Bare 'Neerslag' komt uit een KNMI-nowcast of een actuele natte situatie zonder kans. Toon dan de beschikbare hoeveelheid. */
+    const drupbaar=!actueel&&mm!==null&&mm>SPOOR_MM&&mm<MM_MEETBAAR?mmTekst(mm):"";
+    const detail=meetbaar||drupbaar;
+    return maak(kop,detail||"Neerslag",detail?HTML_ESC(detail.replace(/ mm$/,""))+"<s> mm</s>":undefined);
+  }
+  const pct=/^(\d+)%$/.exec(hoofd);
+  const detail=hoofd==="Droog"?"":meetbaar;
+  const kopHtml=pct?pct[1]+"<s>%</s>":HTML_ESC(hoofd);
+  return maak(kop,hoofd+(detail?" · "+detail:""),kopHtml+(detail?"<s> · "+HTML_ESC(detail)+"</s>":""));
+}
+
 const api={
-  mmTekst,tooltipNeerslag,dagNeerslagPresentatie,cacheSleutel,cacheIsVers,cacheIsDirectBruikbaar,cacheSnoei,
+  mmTekst,neerslagTegelInhoud,tooltipNeerslag,dagNeerslagPresentatie,cacheSleutel,cacheIsVers,cacheIsDirectBruikbaar,cacheSnoei,
   parseLokaleTijd,lokaleInstantKandidaten,uurInstants,temperatuurTrend,neerslagTegelRelevant,
   MM_MEETBAAR,CACHE_VERS_MS,CACHE_DIRECT_MS,TREND_UREN,TREND_MAX_AFWIJKING_MIN
 };
@@ -333,23 +370,16 @@ function renderNeerslagTegel(){
   const interpretatie=root.WeatherNowInterpretatie,beleid=root.WeatherNowKansbeleidV3;
   const a=interpretatie&&typeof interpretatie.analyseerNeerslagData==="function"
     ?interpretatie.analyseerNeerslagData(S.d,60,weatherNowActueleLokaleTijd()):null;
-  const relevant=neerslagTegelRelevant(a);
   stat.style.display="";
   stat.setAttribute("aria-hidden","false");
   stats.classList.remove("q1-pop-hidden");
-  if(!relevant){
-    kop.textContent="Neerslag komend uur";
-    waarde.textContent=a&&a.genoeg?"Droog":"–";
-    sub.textContent=a&&a.genoeg?"Geen neerslag verwacht.":"Neerslaggegevens niet beschikbaar.";
-    return;
-  }
-  kop.textContent=a&&a.currentWet?"Neerslag nu":"Neerslag komend uur";
-  const hoofd=beleid&&typeof beleid.kansHoofd==="function"?beleid.kansHoofd(a):"–";
-  const mm=getal(a&&a.hoeveelheid),detail=mm!==null&&mm>=MM_MEETBAAR?mmTekst(mm):"";
-  if(a&&a.currentWet&&hoofd==="–")waarde.textContent="Nu"+(detail?" · "+detail:"");
-  else if(/^\d+%$/.test(String(hoofd)))waarde.innerHTML=String(hoofd).replace("%","<s>%</s>")+(detail?"<s> · "+detail+"</s>":"");
-  else waarde.innerHTML=String(hoofd||"–")+(detail?"<s> · "+detail+"</s>":"");
-  sub.textContent=beleid&&typeof beleid.komendUurTekst==="function"?beleid.komendUurTekst(a):"";
+  const inhoud=neerslagTegelInhoud(a,beleid);
+  kop.textContent=inhoud.kop;
+  waarde.innerHTML=inhoud.html;
+  sub.textContent=inhoud.sub;
+  /* Markering voor de mobiele weergave (senior-semantiek-20260810.css): op smalle schermen toont de tegel zijn toelichting in elke toestand.
+     Ze staat in dezelfde taak als de tekst, zodat de &nbsp;-placeholder uit de eerste HTML en een tussentoestand nooit zichtbaar worden. */
+  stat.dataset.popUitleg="1";
 }
 
 /* De losse twee-uurssectie is alleen nuttig als daar relevante neerslag in zit.
