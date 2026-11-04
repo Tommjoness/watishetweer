@@ -28,8 +28,8 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
       options: --ipc=host
-    # npm test duurt 41-45 minuten op GitHub-runners; 60 geeft marge zonder tests of kwaliteitsgates te wijzigen.
-    timeout-minutes: 60
+    # npm test duurde 41-45 minuten op GitHub-runners, op 4 november 53,5 minuten; twee runs op de nieuwere keten (4 november) werden na circa 59,5 minuten door de limiet van 60 minuten geannuleerd zonder falende test. 75 geeft marge zonder tests of kwaliteitsgates te wijzigen.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
