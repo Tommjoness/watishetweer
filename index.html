@@ -3115,6 +3115,7 @@ function lucht(){
   }else if(h&&h.time){
     let i=h.time.findIndex(t=>t.slice(0,13)===S.d.current.time.slice(0,13));
     if(i<0)i=0;
+    /* De tweede waarde is de taalonafhankelijke soortcode; zij staat als data-pollen-soort op de tegel (pollenNiveau() leest die, niet de kop). */
     const soorten=[["grass_pollen","gras"],["birch_pollen","berk"],["alder_pollen","els"],
       ["mugwort_pollen","bijvoet"],["ragweed_pollen","ambrosia"],["olive_pollen","olijf"]];
     /* Alle soorten null betekent dat CAMS hier niets levert, niet dat er geen
@@ -3126,7 +3127,7 @@ function lucht(){
     if(lijst.length){
       const niv=v=>v<10?["laag",INK45]:v<50?["matig",INK]:v<200?["hoog",CARMINE]:["zeer hoog",CARMINE];
       lijst.forEach(o=>{const [t,k]=niv(o.v);
-        out+=`<div class="stat"><div class="eyebrow">Pollen ${o.n}</div>
+        out+=`<div class="stat" data-pollen-soort="${o.n}"><div class="eyebrow">Pollen ${o.n}</div>
           <div class="sval" style="color:${k}">${Math.round(o.v)}<s>korrels/m³</s></div><div class="ssub">${t}</div></div>`;});
     }else{
       out+='<div class="stat"><div class="eyebrow">Pollen</div><div class="sval">–</div><div class="ssub">'
