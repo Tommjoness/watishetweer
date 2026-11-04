@@ -831,7 +831,7 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
         const label=euro?"Europese AQI":"AQI (VS-schaal)";
         let oordeel;
         if(euro) oordeel=waarde<=20?"goed":waarde<=40?"redelijk":waarde<=60?"matig":waarde<=80?"slecht":waarde<=100?"zeer slecht":"extreem slecht";
-        else oordeel=waarde<=50?"goed":waarde<=100?"redelijk":waarde<=150?"ongezond voor gevoelige groepen":waarde<=200?"ongezond":waarde<=300?"zeer ongezond":"gevaarlijk";
+        else oordeel=waarde<=50?"goed":waarde<=100?"matig":waarde<=150?"ongezond voor gevoelige groepen":waarde<=200?"ongezond":waarde<=300?"zeer ongezond":"gevaarlijk";
         if(kop) kop.textContent=label;
         if(val) val.textContent=Math.round(waarde);
         if(sub) sub.textContent=oordeel;
