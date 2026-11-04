@@ -329,8 +329,10 @@ const POLLEN_BRON=" Het niveau (weinig tot zeer veel) volgt de pollenschaal van 
 function pollenNiveau(){
   try{
     document.querySelectorAll("#aq .stat").forEach(t=>{
-      const kop=t.querySelector(".eyebrow"),val=t.querySelector(".sval"),sub=t.querySelector(".ssub");if(!kop||!val||!sub)return;
-      const k=String(kop.textContent||"").trim().toLowerCase(),soort=Object.keys(POLLEN_SCHAAL).find(s=>k===s+"pollen"||k===POLLEN_WOORD[s]||k==="pollen "+s);if(!soort)return;
+      /* De soort komt uit data-pollen-soort (gezet door lucht()), niet uit de tegelkop: die is in het Engels al vertaald ("Grass pollen"),
+         waardoor de soort daar niet meer te herkennen was en de tegel zijn niveau en nadruk verloor. */
+      const val=t.querySelector(".sval"),sub=t.querySelector(".ssub"),soort=t.getAttribute("data-pollen-soort");
+      if(!val||!sub||!soort||!Object.prototype.hasOwnProperty.call(POLLEN_SCHAAL,soort))return;
       const ruw=String(val.textContent||"").replace(",","."),minder=/<\s*1/.test(ruw),m=ruw.match(/\d+(?:\.\d+)?/),v=minder?0.5:m?Number(m[0]):null;
       if(v===null||v<=0){val.removeAttribute("data-pollen-niveau");return;}
       const [matig,hoog,zeer]=POLLEN_SCHAAL[soort],niveau=v<matig?"laag":v<hoog?"matig":v<zeer?"hoog":"zeer hoog";
