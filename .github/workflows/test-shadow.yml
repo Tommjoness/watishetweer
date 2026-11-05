@@ -10,7 +10,8 @@
 # Performance-isolatie: iedere runner voert steeds één commando tegelijk uit, net als `npm test`; de tijdgevoelige CLS-budgetcontrole heeft een
 # eigen runner. De aggregatie is fail-closed: een job die niet `success` is (ook skipped of cancelled), een ontbrekend, onleesbaar, dubbel of
 # onafgerond resultaat of een niet precies één keer uitgevoerd commando maakt `shadow-aggregatie` rood.
-# Concurrency: een shadow-run tegelijk (de rest wacht), zodat de gedeelde grens van gelijktijdige jobs niet door deze extra controle wordt gehaald.
+# Concurrency: een shadow-run tegelijk (de rest wacht). Model: bestaande keten piek 8 gelijktijdige jobs, met één shadow-run piek 16 (docs/gesharde-testketen.md); daarom draait
+# deze workflow in fase 1 alleen bij wijzigingen aan de shadow-bestanden en via workflow_dispatch, niet bij elke PR.
 name: Shadow testketen (niet verplicht)
 
 on:
