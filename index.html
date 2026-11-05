@@ -3100,8 +3100,8 @@ function lucht(){
   const band = euro
     ? v=>v==null?["onbekend",INK45]:v<=20?["goed",TEAL]:v<=40?["redelijk",TEAL]:v<=60?["matig",INK]
       :v<=80?["slecht",CARMINE]:v<=100?["zeer slecht",CARMINE]:["extreem slecht",CARMINE]
-    : v=>v==null?["onbekend",INK45]:v<=50?["goed",TEAL]:v<=100?["redelijk",TEAL]:v<=150?["matig",INK]
-      :v<=200?["slecht",CARMINE]:v<=300?["zeer slecht",CARMINE]:["extreem slecht",CARMINE];
+    : v=>v==null?["onbekend",INK45]:v<=50?["goed",TEAL]:v<=100?["matig",TEAL]:v<=150?["ongezond voor gevoelige groepen",INK]
+      :v<=200?["ongezond",CARMINE]:v<=300?["zeer ongezond",CARMINE]:["gevaarlijk",CARMINE];
   const [nm,kl]=band(aqi);
   let out=`<div class="stat"><div class="eyebrow">${naamIndex}</div>
       <div class="sval" style="color:${kl}">${aqi==null?"–":Math.round(aqi)}</div><div class="ssub">${nm} · ${schaalIndex}</div></div>`;

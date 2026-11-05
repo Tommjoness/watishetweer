@@ -139,7 +139,7 @@ function aqiOordeelGetoond(waarde,europees){
     return {tekst:"extreem slecht",kleur:"carmine"};
   }
   if(n<=50)return {tekst:"goed",kleur:"teal"};
-  if(n<=100)return {tekst:"redelijk",kleur:"teal"};
+  if(n<=100)return {tekst:"matig",kleur:"teal"};
   if(n<=150)return {tekst:"ongezond voor gevoelige groepen",kleur:"ink"};
   if(n<=200)return {tekst:"ongezond",kleur:"carmine"};
   if(n<=300)return {tekst:"zeer ongezond",kleur:"carmine"};

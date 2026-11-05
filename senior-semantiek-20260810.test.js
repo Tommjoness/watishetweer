@@ -78,7 +78,13 @@ assert.deepEqual(s.aqiOordeelGetoond(21,true),{tekst:"redelijk",kleur:"teal"});
 assert.deepEqual(s.aqiOordeelGetoond(40,true),{tekst:"redelijk",kleur:"teal"});
 assert.deepEqual(s.aqiOordeelGetoond(41,true),{tekst:"matig",kleur:"ink"});
 assert.deepEqual(s.aqiOordeelGetoond(50,false),{tekst:"goed",kleur:"teal"});
-assert.deepEqual(s.aqiOordeelGetoond(51,false),{tekst:"redelijk",kleur:"teal"});
+/* Amerikaanse AQI (EPA): volledige indeling met de afgesproken Nederlandse namen. 51–100 heet "matig" (EPA: Moderate), niet "redelijk"; "redelijk" is uitsluitend een Europese categorie. De kleurtokens blijven ongewijzigd. */
+[[0,"goed","teal"],[50,"goed","teal"],[51,"matig","teal"],[100,"matig","teal"],[101,"ongezond voor gevoelige groepen","ink"],[150,"ongezond voor gevoelige groepen","ink"],
+ [151,"ongezond","carmine"],[200,"ongezond","carmine"],[201,"zeer ongezond","carmine"],[300,"zeer ongezond","carmine"],[301,"gevaarlijk","carmine"],[500,"gevaarlijk","carmine"]]
+  .forEach(([n,tekst,kleur])=>assert.deepEqual(s.aqiOordeelGetoond(n,false),{tekst,kleur},"VS-AQI "+n));
+/* Europese AQI blijft volledig ongewijzigd. */
+[[20,"goed"],[40,"redelijk"],[60,"matig"],[80,"slecht"],[100,"zeer slecht"],[101,"extreem slecht"]]
+  .forEach(([n,tekst])=>assert.equal(s.aqiOordeelGetoond(n,true).tekst,tekst,"EAQI "+n));
 assert.deepEqual(s.pollenOordeelGetoond(9),{tekst:"laag",kleur:"ink45"});
 assert.deepEqual(s.pollenOordeelGetoond(10),{tekst:"matig",kleur:"ink"});
 assert.deepEqual(s.pollenOordeelGetoond(49),{tekst:"matig",kleur:"ink"});

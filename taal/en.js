@@ -67,7 +67,7 @@
   };
   const DAGDEEL = { "in de ochtend": "in the morning", "in de middag": "in the afternoon", "in de avond": "in the evening", "in de nacht": "overnight", "in de vroege ochtend": "in the early morning" };
   const PERIODE = { "Beste": "Best period", "Relatief beste": "Best available period", "Waarschijnlijk beste": "Likely best period" };
-  const DAGNAAM = { "avond": "evening", "nacht": "night", "ochtend": "morning", "vroege ochtend": "early morning" };
+  const DAGNAAM = { "avond": "evening", "nacht": "night", "ochtend": "morning", "vroege ochtend": "early morning", "middag": "afternoon" };
   const KANS = { "zeer kleine": "very low", "kleine": "low", "grote": "high", "zeer grote": "very high" };
   const UV = { "laag": "low", "matig": "moderate", "hoog": "high", "zeer hoog": "very high", "extreem": "extreme" };
   const MAANFASE = {
@@ -1132,7 +1132,8 @@
     [/^Naar verwachting (veel|weinig|geen|enkele uren|meerdere uren) zon (vandaag|morgen)\.$/, (m) => `${({ veel: "Plenty of sunshine", weinig: "Little sunshine", geen: "No sunshine", "enkele uren": "A few hours of sunshine", "meerdere uren": "Several hours of sunshine" })[m[1]]} expected ${vandaagMorgen(m[2])}.`],
     [/^Naar verwachting bijna de hele dag zon (vandaag|morgen)\.$/, (m) => `Sunshine expected for almost the whole day ${vandaagMorgen(m[1])}.`],
     [/^(Beste|Relatief beste|Waarschijnlijk beste) periode (in de (?:vroege ochtend|ochtend|middag|avond|nacht))\.$/, (m) => `${PERIODE[m[1]]} ${DAGDEEL[m[2]] === "overnight" ? "during the night" : DAGDEEL[m[2]]}.`],
-    [/^(Beste|Relatief beste|Waarschijnlijk beste) periode van de (avond|nacht|vroege ochtend) tot de (nacht|ochtend|vroege ochtend)\.$/, (m) => `${PERIODE[m[1]]}: ${m[2] === "nacht" ? "overnight" : `from the ${DAGNAAM[m[2]]}`} into the ${DAGNAAM[m[3]]}.`],
+    /* Alle combinaties van twee verschillende dagdelen, ook buiten de gewone nacht (poolgebieden, lange vensters). Gelijke dagdelen komen als "in de …" voor en matchen hier niet. */
+    [/^(Beste|Relatief beste|Waarschijnlijk beste) periode van de (nacht|vroege ochtend|ochtend|middag|avond) tot de (nacht|vroege ochtend|ochtend|middag|avond)\.$/, (m) => m[2] === m[3] ? null : `${PERIODE[m[1]]}: ${m[2] === "nacht" ? "overnight" : `from the ${DAGNAAM[m[2]]}`} into the ${DAGNAAM[m[3]]}.`],
     [/^(Beste|Relatief beste|Waarschijnlijk beste) periode: (\d{1,2}:\d{2})–(\d{1,2}:\d{2})\.$/, (m) => `${PERIODE[m[1]]}: ${m[2]}–${m[3]}.`],
     [/^(Beste|Relatief beste|Waarschijnlijk beste) periode: nu tot (\d{1,2}:\d{2})\.$/, (m) => `${PERIODE[m[1]]}: now until ${m[2]}.`],
     [/^(Vandaag|Morgen|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december), per uur$/,
