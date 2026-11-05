@@ -412,11 +412,27 @@ html[data-thema="donker"] .tip-strook{--tip-lijn:var(--rule)}
 .tip-strook dt{font-size:13px}
 .tip-strook dd{font-size:13.5px}
 }
-/* Leesbaarheid gaat voor compactheid: vanaf 1024 px viewport 14 px labels en 15 px waarden, met 10 px meer gereserveerde hoogte. */
+/* Leesbaarheid gaat voor compactheid: vanaf 1024 px viewport minstens 15 px labels en 16 px waarden, met 164 px gereserveerde hoogte.
+   Per containerbreedte (de strook is zelf de container, content-box = stripbreedte - 22 px):
+   - tot 757 px (twee kolommen, ruime kolommen): 16 px labels en 18 px waarden;
+   - 758 t/m 859 px (vier smalle kolommen, viewport ruwweg 1340 t/m 1590 px): 15 px labels en 16 px waarden;
+   - vanaf 860 px (vier kolommen van minstens ca. 213 px, viewport 1600 px en breder, en 1024 px): 16 px labels en 17 px waarden.
+   Gemeten (NL en EN, 1024 t/m 2560 px, ook in stappen van 10-20 px rond de overgangen, met de scherpste testwaarden -40 °C, 250 km/u · 12 Bft,
+   123,4 mm en WZW): geen afkapping, regelafbreking of overlap, label en waarde houden minstens 7,5 px ruimte en blijven binnen hun cel; de natuurlijke
+   inhoudshoogte is maximaal 160 px (tweekolomsweergave) en 148 px (vierkolomsweergave). De gereserveerde hoogte blijft constant: de uurlijst rechts
+   leest haar onderkant van deze strook af (zie lijstOnderkant in final-desktop-ui-runtime-20260902.js). */
 @media (min-width:1024px){
-.tip-strook{min-height:150px}
-.tip-strook dt{font-size:14px}
-.tip-strook dd{font-size:15px}
+.tip-strook{min-height:164px}
+.tip-strook dt{font-size:15px}
+.tip-strook dd{font-size:16px}
+@container (max-width:757px){
+.tip-strook dt{font-size:16px}
+.tip-strook dd{font-size:18px}
+}
+@container (min-width:860px){
+.tip-strook dt{font-size:16px}
+.tip-strook dd{font-size:17px}
+}
 }
 /* Vier kolommen van twee gegevens pas vanaf 780 px echte stripbreedte (rand en padding meegeteld); daaronder twee kolommen
    (nooit vier krappe kolommen). Een container query meet de content-box: 780 - 2x10 px padding - 2x1 px rand = 758 px. */

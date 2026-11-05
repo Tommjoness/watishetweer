@@ -143,7 +143,7 @@ async function run(){
             graphTimes:S.geo.TI,
             placeLayout:{justify:getComputedStyle(document.getElementById("place")).justifyContent,gap:parseFloat(getComputedStyle(document.getElementById("place")).gap)},
             sourceTimes:rows.map(r=>S.d.hourly.time[Number(r.dataset.sourceIndex)]),
-            geometry:{layout:rect("#wiw-chart-layout"),main:rectZonderStrook(".wiw-chart-main"),graph:rect("#chart"),hours:rect("#wiw-hour-panel"),table:rect("#wiw-hour-table"),rain:rect(".wiw-rain-section"),days:rect(".dashrow-days"),night:rect("#nights .row.night:not(.kop)")},
+            geometry:{layout:rect("#wiw-chart-layout"),main:rectZonderStrook(".wiw-chart-main"),strook:rect("#tip-strook"),graph:rect("#chart"),hours:rect("#wiw-hour-panel"),table:rect("#wiw-hour-table"),rain:rect(".wiw-rain-section"),days:rect(".dashrow-days"),night:rect("#nights .row.night:not(.kop)")},
             rows:rows.length,
             hourRows:rows.map(r=>({instant:r.querySelector("time")?.dateTime,time:r.querySelector("time")?.textContent,sourceIndex:Number(r.dataset.sourceIndex),rect:r.getBoundingClientRect().toJSON(),visible:getComputedStyle(r).display!=="none"})),
             hourHeaders:[...document.querySelectorAll("#wiw-hour-table thead th")].map(th=>th.textContent.trim()),
@@ -224,7 +224,10 @@ async function run(){
             assert(nl.aanloop,"nu-stip is niet verbonden met het eerste uurpunt: "+JSON.stringify({route,width,nl}));
           }
           const g=result.geometry;
-          assert(Math.abs(g.hours.bottom-g.main.bottom)<=1,"uurpaneel en grafiekkolom eindigen niet gelijk");
+          /* Desktop-layoutronde (A+B+C): het uurpaneel eindigt op één lijn met de detailstrook onder de grafiek (lijstOnderkant in final-desktop-ui-runtime-20260902.js);
+             zonder zichtbare strook op de onderkant van de grafieksectie. */
+          const lijstGrens=g.strook&&g.strook.height>0?g.strook.bottom:g.main.bottom;
+          assert(Math.abs(g.hours.bottom-lijstGrens)<=1,"uurpaneel en detailstrook eindigen niet gelijk");
           assert(Math.abs(g.table.bottom-result.hourRows.at(-1).rect.bottom)<=2,"geen lege onderste tabelregel");
           assert(Math.abs(g.table.bottom-g.hours.bottom)<=2,"geen loos ondervlak onder de laatste uurregel: "+JSON.stringify({route,width,tabel:g.table.bottom,paneel:g.hours.bottom,rijen:result.rows}));
           /* De desktopgrafiek toont 24 uur; de uurtabel ernaast de eerstvolgende

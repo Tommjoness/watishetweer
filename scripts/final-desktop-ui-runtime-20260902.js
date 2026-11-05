@@ -128,6 +128,13 @@ function voegStijlToe(){
 #chartdata>summary.wiw-chartdata-summary{display:block;width:max-content;max-width:100%;margin:4px auto 0;padding:12px 2px 8px;list-style:none;cursor:pointer;font:500 12px/1.4 var(--sans);color:var(--ink-70);text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px}
 #chartdata>summary.wiw-chartdata-summary::-webkit-details-marker{display:none}
 #chartdata>summary.wiw-chartdata-summary:hover,#chartdata>summary.wiw-chartdata-summary:focus-visible{color:var(--ink);text-decoration-color:currentColor}
+/* Desktop (vanaf 1024 px): de tabellink is een rustig, secundair element: gewone letterdikte en een stippellijntje in plaats van een doorgetrokken streep;
+   bij hover en toetsenbordfocus volledig zichtbaar. Tekst, kleur, toegankelijke naam, toetsenbordbediening en focusring blijven gelijk; het doelgebied
+   blijft ruim boven de 24 px van WCAG 2.2 (2.5.8). */
+@media (min-width:1024px){
+#chartdata>summary.wiw-chartdata-summary{font-weight:400;padding:10px 2px 6px;text-decoration-style:dotted;text-decoration-thickness:1px}
+#chartdata>summary.wiw-chartdata-summary:hover,#chartdata>summary.wiw-chartdata-summary:focus-visible{text-decoration-style:solid}
+}
 .wiw-rain-section{margin-top:var(--s4)}.wiw-rain-section[hidden]{display:none!important}
 .wiw-rain-section>h2{margin-top:0}
 .wiw-rain-layout{display:grid;grid-template-columns:minmax(0,1.86fr) minmax(250px,1fr);gap:32px;align-items:stretch;min-width:0}
@@ -495,7 +502,9 @@ function observeerGrafiekHoogte(){
    bij de grafieksectie waaraan de uurtabel zich spiegelt: zij mag niet bepalen hoeveel uren de tabel toont. De grens is daarom de
    onderkant van .wiw-chart-main zoals die zonder strook zou zijn (inclusief de eigen min-height van de sectie en de regensamenvatting).
    De strook wordt voor de duur van één meting weggehaald en direct hersteld, binnen dezelfde taak: er volgt geen paint en de
-   ResizeObserver ziet geen tussentoestand. De strook zelf heeft een vaste gereserveerde hoogte, dus dit levert geen sprong op. */
+   ResizeObserver ziet geen tussentoestand. De strook zelf heeft een vaste gereserveerde hoogte, dus dit levert geen sprong op.
+   Sinds de desktop-layoutronde (A+B+C) bepaalt deze maat niet meer waar de uurlijst eindigt (zie lijstOnderkant: de onderkant van de strook),
+   maar zij blijft de gereedheidsmaat van de grafiek (h>180) en de terugval als er geen zichtbare strook is. */
 function grafiekGrens(main){
   const strook=document.getElementById("tip-strook");
   if(!strook||!main.contains(strook))return main.getBoundingClientRect();
@@ -503,18 +512,33 @@ function grafiekGrens(main){
   try{strook.style.display="none";return main.getBoundingClientRect();}
   finally{strook.style.display=vorig;}
 }
+/* De uurlijst loopt tot de onderkant van de detailstrook (#tip-strook): de twee kaders sluiten onderaan op één lijn af en de lijst benut de
+   ruimte naast de strook voor extra uren. De strook heeft een vaste gereserveerde hoogte (min-height in live-polish.css, ook als hij leeg is),
+   dus zijn onderkant hangt niet af van het gekozen uur; het aantal uren verandert daardoor niet bij het kiezen van een uur. Zonder zichtbare
+   strook valt de grens terug op de grafieksectie zelf. */
+function lijstOnderkant(main){
+  const strook=document.getElementById("tip-strook");
+  if(strook&&main.contains(strook)&&getComputedStyle(strook).display!=="none"){
+    const r=strook.getBoundingClientRect();
+    if(r.height>0)return r.bottom;
+  }
+  return grafiekGrens(main).bottom;
+}
 function syncHoogte(){
   const main=document.querySelector(".wiw-chart-main"),aside=document.getElementById("wiw-hour-panel");if(!main||!aside)return;
   if(window.innerWidth<1100){aside.style.height="";return;}
-  const h=grafiekGrens(main).height;
+  /* Gereedheid: de grafieksectie zelf (zonder strook) moet op hoogte zijn. */
+  const grafiekHoogte=grafiekGrens(main).height;
   /* Grafiek nog niet op hoogte (bijvoorbeeld midden in een hertekening): later
      opnieuw meten, zodat een volledige kandidaatset nooit ongefilterd blijft. */
-  if(h<=180){herplanHoogteSync();return;}
+  if(grafiekHoogte<=180){herplanHoogteSync();return;}
   hoogteHerpogingen=0;
   aside.style.height="";
+  /* Paneelhoogte: van de bovenkant van het paneel tot de onderkant van de strook (zie lijstOnderkant); het paneel sluit daar op één lijn af. */
+  const h=lijstOnderkant(main)-aside.getBoundingClientRect().top;
   // Alleen volledige rijen bestaan in de desktop-DOM. Niet verstoppen of
   // afknippen: verwijder de laatste rij zolang deze buiten de grafiekhoogte valt.
-  const tbody=document.querySelector("#wiw-hour-table tbody"),grens=grafiekGrens(main).bottom;
+  const tbody=document.querySelector("#wiw-hour-table tbody"),grens=lijstOnderkant(main);
   const legeRij=rij=>[...rij.cells].every(cell=>!String(cell.textContent||"").trim());
   while(tbody&&tbody.lastElementChild&&legeRij(tbody.lastElementChild))tbody.lastElementChild.remove();
   while(tbody&&tbody.lastElementChild&&tbody.lastElementChild.getBoundingClientRect().bottom>grens+0.01)tbody.lastElementChild.remove();
@@ -540,7 +564,7 @@ function herplanHoogteSync(){if(hoogteHerpogingen>=20)return;hoogteHerpogingen++
 function tabelSteektUit(){
   if(window.innerWidth<1100)return false;
   const main=document.querySelector(".wiw-chart-main"),last=document.querySelector("#wiw-hour-table tbody tr:last-child");
-  return !!(main&&last&&last.getBoundingClientRect().bottom>grafiekGrens(main).bottom+0.5);
+  return !!(main&&last&&last.getBoundingClientRect().bottom>lijstOnderkant(main)+0.5);
 }
 function bewaakTabelRijen(){
   const tbody=document.querySelector("#wiw-hour-table tbody");

@@ -4,8 +4,8 @@
    toegankelijkheid als de mobiele detailkaart) onder de uurgrafiek en vervangt de zwevende SVG-tooltip. Toetst, met de langste realistische
    waarden (-40 C, 250 km/u, 123,4 mm, WZW) en in NL en EN (licht en donker):
    A. indeling per breedte: twee kolommen onder 780 px stripbreedte, vier kolommen van twee gegevens vanaf 780 px (container query op de
-      eigen breedte, niet op de viewport); typografie 12/12,5 px (tot 462 px strip), 13/13,5 px, vanaf 1024 px viewport 14/15 px; hoogte
-      constant 140 px (vanaf 1024 px 150 px); geen afkapping, overlap, regelafbreking of horizontale scroll; gedeelde uitlijning, kader, horizontale en
+      eigen breedte, niet op de viewport); typografie 12/12,5 px (tot 462 px strip), 13/13,5 px, vanaf 1024 px viewport 15/16 px (16/18 px bij twee kolommen, 16/17 px vanaf 860 px
+      containerbreedte); hoogte constant 140 px (vanaf 1024 px 164 px); geen afkapping, overlap, regelafbreking of horizontale scroll; gedeelde uitlijning, kader, horizontale en
       verticale haarlijnen, windroos rechts van de richtingstekst;
    B. geen layoutverschuiving (CLS 0) en dezelfde positie van de inhoud eronder bij het wisselen van uren;
    C. interactie met de muis: hover toont tijdelijk het aangewezen uur, na het verlaten keert de strook terug naar het geselecteerde UTC-uur, klikken
@@ -14,7 +14,7 @@
    D. toegankelijkheid zonder dubbele informatie: de SVG-tooltip staat niet in de toegankelijkheidsboom (CDP), de acht waarden van de strook wel,
       de slider verwijst met aria-details naar de strook en er is geen extra live-regio;
    E. de lege toestand ("Geen uurgegevens", en de rustregel zonder JavaScript) is op desktop zichtbaar, niet toegankelijk als groep en zonder aria-details;
-   F. de uurtabel naast de grafiek (vanaf 1100 px) wordt niet bepaald door de strook: evenveel rijen met en zonder strook, en geen scrollsprong.
+   F. de uurtabel naast de grafiek (vanaf 1100 px) loopt tot de onderkant van de strook (aansluiting binnen een halve rij) en wordt niet bepaald door de strookinhoud: evenveel rijen met een leeg of gevuld strookje, en geen scrollsprong.
 
    Draait na: npm run build:cloudflare */
 
@@ -167,7 +167,7 @@ const meetIndeling=page=>page.evaluate(()=>{
     uitgelijndMetGrafiek:R(Math.abs(sb.left-svg.left)+Math.abs(sb.right-svg.right)),
     kop:(st.querySelector(".tip-kop")||{}).textContent||"",rol:st.getAttribute("role"),ariaHidden:st.getAttribute("aria-hidden")};
 });
-const verwachtIndeling=m=>({kolommen:m.W>=780?4:2,px:m.vw>=1024?[14,15]:(m.inhoud>=440?[13,13.5]:[12,12.5]),minH:m.vw>=1024?150:140});
+const verwachtIndeling=m=>({kolommen:m.W>=780?4:2,px:m.vw>=1024?(m.inhoud<758?[16,18]:(m.inhoud>=860?[16,17]:[15,16])):(m.inhoud>=440?[13,13.5]:[12,12.5]),minH:m.vw>=1024?164:140});
 
 function controleerIndeling(m,L,metRoos=true){
   const v=verwachtIndeling(m);
@@ -394,7 +394,7 @@ async function testLeeg(browser,root){
       const m=await page.evaluate(()=>{const st=document.getElementById("tip-strook"),r=st.querySelector(".tip-kop").getBoundingClientRect(),sb=st.getBoundingClientRect();
         return {kop:st.querySelector(".tip-kop").textContent,zichtbaar:getComputedStyle(st).display!=="none"&&r.width>0&&r.height>0&&r.top>=sb.top&&r.bottom<=sb.bottom,h:sb.height,aria:st.getAttribute("aria-hidden"),rol:st.getAttribute("role"),
           labelledby:st.getAttribute("aria-labelledby"),details:document.getElementById("hit").getAttribute("aria-details"),leeg:st.dataset.leeg};});
-      gelijk([m.kop,m.zichtbaar,m.h,m.aria,m.rol,m.labelledby,m.details,m.leeg],[taal==="en"?"No hourly data":"Geen uurgegevens",true,150,"true",null,null,null,"1"],`${taal}: lege toestand op desktop zichtbaar, geen groep, geen aria-details, vaste hoogte`);
+      gelijk([m.kop,m.zichtbaar,m.h,m.aria,m.rol,m.labelledby,m.details,m.leeg],[taal==="en"?"No hourly data":"Geen uurgegevens",true,164,"true",null,null,null,"1"],`${taal}: lege toestand op desktop zichtbaar, geen groep, geen aria-details, vaste hoogte`);
       const ax=await axTelling(page,"#tip-strook .tip-kop, #tip-strook .tip-oms");gelijk(ax.zichtbaar,0,`${taal}: de melding staat niet als gevulde groep in de toegankelijkheidsboom`);
       await kiesInstant(page,U("2026-07-22T14:00:00Z"));
       const t=await toestand(page);gelijk([t.rijen,t.details],[8,"tip-strook"],`${taal}: terug naar een uur herstelt de groep en de koppeling`);
@@ -406,14 +406,14 @@ async function testLeeg(browser,root){
       const p=await context2.newPage();await p.goto(root+"/weer/amsterdam/",{waitUntil:"domcontentloaded"});
       if(taal==="en")await p.evaluate(()=>0).catch(()=>{});
       const m=await p.evaluate(()=>{const st=document.getElementById("tip-strook");return {content:getComputedStyle(st,"::before").content,h:st.getBoundingClientRect().height,display:getComputedStyle(st).display};});
-      gelijk([m.display,m.h],["block",150],`zonder JavaScript ${taal}: de lege strook is zichtbaar met gereserveerde hoogte`);
+      gelijk([m.display,m.h],["block",164],`zonder JavaScript ${taal}: de lege strook is zichtbaar met gereserveerde hoogte`);
       ok(m.content==='"'+TEKST.nl+'"'||m.content==='"'+TEKST.en+'"',`zonder JavaScript ${taal}: de rustregel staat als CSS-inhoud (${m.content})`);
     }finally{await context2.close();}
   }
   console.log("E. Lege toestand op desktop (NL/EN): melding en rustregel zichtbaar, geen gevulde groep, geen aria-details, vaste hoogte, herstel bij een volgend uur.");
 }
 
-/* F. De uurtabel naast de grafiek wordt niet bepaald door de strook. */
+/* F. De uurtabel naast de grafiek loopt tot de onderkant van de strook (desktop-layoutronde A+B+C) en wordt niet bepaald door de strookinhoud. */
 async function testUurtabel(browser,root){
   for(const w of [1100,1280,1366,1440,1660,1920]){
     const {context,page,fouten}=await open(browser,root,{w,h:w>=1440?1000:900,nuIso:NU,offsetS:OFFSET});
@@ -421,24 +421,29 @@ async function testUurtabel(browser,root){
       await page.waitForFunction(()=>document.querySelectorAll("#wiw-hour-table tbody tr").length>0);await sleep(600);
       const tel=()=>page.evaluate(()=>document.querySelectorAll("#wiw-hour-table tbody tr").length);
       const rijenMet=await tel();
-      ok(rijenMet>=1&&rijenMet<=12,`${w}px: ${rijenMet} uurrijen (contract: 1 t/m 12)`);
+      ok(rijenMet>=6&&rijenMet<=24,`${w}px: ${rijenMet} uurrijen (contract: 6 t/m 24)`);
+      /* De onderkant van de laatste rij sluit aan op de onderkant van de strook: niet eronder, en met minder dan een halve rij ruimte (er past geen rij meer bij). */
+      const rand=()=>page.evaluate(()=>{const rijen=[...document.querySelectorAll("#wiw-hour-table tbody tr")],r=rijen[rijen.length-1].getBoundingClientRect(),st=document.getElementById("tip-strook").getBoundingClientRect();return {gat:st.bottom-r.bottom,rij:r.height};});
+      const r0=await rand();
+      ok(r0.gat>=-0.5,`${w}px: de laatste rij steekt ${(-r0.gat).toFixed(1)}px onder de strook uit`);
+      ok(r0.gat<=Math.max(12,r0.rij/2),`${w}px: ${r0.gat.toFixed(1)}px ongebruikt vlak onder de laatste rij (een rij is ${r0.rij.toFixed(1)}px hoog)`);
       /* scrolpositie: een nieuwe berekening mag de pagina niet laten springen */
       const y0=await page.evaluate(()=>{const st=document.getElementById("tip-strook");scrollTo(0,st.getBoundingClientRect().top+scrollY-300);return scrollY;});await sleep(200);
       const y1=await page.evaluate(()=>scrollY);
       await page.evaluate(()=>WeatherNowFinalDesktopUI20260902.render());await sleep(500);
       ok(Math.abs((await page.evaluate(()=>scrollY))-y1)<=1,`${w}px: de pagina verspringt bij een nieuwe berekening van de tabelhoogte (${y1} -> ${await page.evaluate(()=>scrollY)})`);
       gelijk(await tel(),rijenMet,`${w}px: een nieuwe berekening geeft hetzelfde aantal rijen`);
-      /* zonder strook (display:none) evenveel rijen: de strook bepaalt het aantal niet */
-      await page.evaluate(()=>{document.getElementById("tip-strook").style.display="none";WeatherNowFinalDesktopUI20260902.render();});await sleep(600);
-      gelijk(await tel(),rijenMet,`${w}px: met en zonder strook evenveel uurrijen`);
-      const grens=await page.evaluate(()=>{const r=[...document.querySelectorAll("#wiw-hour-table tbody tr")].pop(),m=document.querySelector(".wiw-chart-main");return r.getBoundingClientRect().bottom<=m.getBoundingClientRect().bottom+0.5;});
-      ok(grens,`${w}px: de laatste rij valt binnen de grafieksectie zonder strook`);
-      await page.evaluate(()=>{document.getElementById("tip-strook").style.display="";WeatherNowFinalDesktopUI20260902.render();});await sleep(600);
-      gelijk(await tel(),rijenMet,`${w}px: na terugplaatsen van de strook weer hetzelfde aantal rijen`);
+      /* de strookinhoud bepaalt het aantal niet: met een gekozen uur (gevulde strook) evenveel uurrijen en dezelfde onderkant */
+      await page.evaluate(()=>scrollTo(0,0));await page.focus("[role=slider]").catch(()=>{});
+      for(let i=0;i<4;i++){await page.keyboard.press("ArrowRight");await sleep(150);}
+      await sleep(400);
+      gelijk(await tel(),rijenMet,`${w}px: met een gevulde strook evenveel uurrijen`);
+      const r1=await rand();
+      ok(Math.abs(r1.gat-r0.gat)<=0.5,`${w}px: de onderkant van de strook en de laatste rij verschuiven bij het kiezen van een uur (${r0.gat.toFixed(1)} -> ${r1.gat.toFixed(1)})`);
       await eerlijk(page,fouten,"uurtabel "+w);
     }finally{await context.close();}
   }
-  console.log("F. Uurtabel op 1100/1280/1366/1440/1660/1920 px: evenveel rijen met en zonder strook (1 t/m 12), geen scrollsprong bij herberekening.");
+  console.log("F. Uurtabel op 1100/1280/1366/1440/1660/1920 px: tabel loopt tot de onderkant van de strook (6 t/m 24 rijen, aansluiting binnen een halve rij), evenveel rijen met een leeg en een gevuld strookje, geen scrollsprong bij herberekening.");
 }
 
 server.listen(0,"127.0.0.1",async()=>{
