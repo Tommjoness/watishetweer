@@ -31,15 +31,16 @@ const SCENARIOS={
   /* Zwaarder dan wat in de kolom past ("WNW 10 Bft 105 km/h", "112.4 mm"): de waarden breken af, maar de rijen blijven gelijk en vullen het paneel. */
   extreem:{tempNu:-12,wcNu:65,ccNu:100,rh:95,temp:u=>+(-16+2*Math.sin(u/24*2*Math.PI)).toFixed(1),pp:()=>100,pr:()=>112.4,wc:()=>65,cc:()=>100,ws:105,wg:()=>131,som:60,zicht:400,richting:292}
 };
-/* Minimum aantal volledige rijen per dataset en breedte: het laagste van Nederlands en Engels, gemeten op 30 oktober 2026 (Amsterdam, viewport 1440x900 en
-   vanaf 1600px 900 of 1080px hoog). Gewone en brede waarden staan vanaf 1600px op één regel; de extreme dataset breekt af (twee regels per waarde): het
-   paneel is dan vol met 9 rijen van 49px, het gaat daar om het ontbreken van leeg vlak en niet om het aantal. */
+/* Minimum aantal volledige rijen per dataset en breedte. Desktop-layoutronde (A+B+C, 5 november 2026): de uurlijst loopt tot de onderkant van de
+   detailstrook en telt daardoor meer rijen. Gemeten (NL en EN gelijk, viewport 1440x900 en vanaf 1600px 900 of 1080px hoog): standaard, breed en storm 12 rijen
+   op 1440px en 17 vanaf 1600px; normaal 12 en 16; extreem (de waarden breken af, twee regels per waarde) 12 en 11. Het minimum is steeds één rij lager dan gemeten
+   (marge voor subpixelverschillen tussen machines) en blijft ruim boven de aantallen van vóór deze ronde (10 en 13 voor standaard). */
 const MIN_RIJEN={
-  standaard:{1440:10,1600:13,1660:13,1920:13},
-  normaal:{1440:9,1600:11,1660:11,1920:11},
-  breed:{1440:10,1600:14,1660:14,1920:14},
-  storm:{1440:10,1600:13,1660:13,1920:13},
-  extreem:{1440:8,1600:9,1660:9,1920:9}
+  standaard:{1440:11,1600:16,1660:16,1920:16},
+  normaal:{1440:11,1600:15,1660:15,1920:15},
+  breed:{1440:11,1600:16,1660:16,1920:16},
+  storm:{1440:11,1600:16,1660:16,1920:16},
+  extreem:{1440:11,1600:10,1660:10,1920:10}
 };
 const MAX_GAT=12;
 
@@ -66,7 +67,7 @@ function bouwServer(opties){
 }
 
 function meet(){
-  /* PR 3: de informatiestrook onder de grafiek hoort niet bij de grafieksectie waaraan het uurpaneel zich spiegelt (zie syncHoogte): de strook wordt voor één meting verborgen. */
+  /* De breedte van de grafieksectie wordt gemeten zonder strook (de strook verandert de breedte niet, wel de hoogte). */
   const sectieRect=el=>{const st=document.getElementById("tip-strook"),v=st?st.style.display:"";if(st)st.style.display="none";try{return el.getBoundingClientRect();}finally{if(st)st.style.display=v;}};
   const main=sectieRect(document.querySelector(".wiw-chart-main")),panel=document.getElementById("wiw-hour-panel").getBoundingClientRect();
   const rijen=[...document.querySelectorAll("#wiw-hour-table tbody tr")].filter(r=>r.getBoundingClientRect().height>0);
@@ -74,7 +75,9 @@ function meet(){
   /* Rijen met een datumregel (middernacht) zijn bewust hoger; alle andere rijen zijn vanaf 1600px één regel. */
   const gewoneHoogtes=rijen.filter(r=>!r.querySelector(".wiw-hour-date")).map(r=>r.getBoundingClientRect().height);
   const eenRegel=rijen.slice(0,3).every(r=>[...r.querySelectorAll(".wiw-hour-rain,.wiw-hour-wind")].every(c=>{const p=c.querySelector(".wiw-hour-primary"),q=c.querySelector(".wiw-hour-secondary");if(!p||!q)return true;return Math.abs(p.getBoundingClientRect().top-q.getBoundingClientRect().top)<4;}));
-  return {rijen:rijen.length,gat:main.bottom-laatste.bottom,hoogsteGewoneRij:Math.max(...gewoneHoogtes),mainW:main.width,aandeel:main.width/(main.width+panel.width),
+  /* Desktop-layoutronde (A+B+C): de uurlijst loopt tot de onderkant van de detailstrook; het ongebruikte vlak wordt daar vanaf gemeten. */
+  const strookRect=document.getElementById("tip-strook").getBoundingClientRect();
+  return {rijen:rijen.length,gat:strookRect.bottom-laatste.bottom,hoogsteGewoneRij:Math.max(...gewoneHoogtes),mainW:main.width,aandeel:main.width/(main.width+panel.width),
     overloop:sc?sc.scrollWidth-sc.clientWidth:-1,thclip:kop?kop.scrollWidth-kop.clientWidth:-1,pagina:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,eenRegel,
     regen:(rijen[0].querySelector(".wiw-hour-rain")||{textContent:""}).textContent.replace(/\s+/g," ").trim()};
 }
@@ -106,7 +109,7 @@ function meet(){
             for(let poging=0;poging<2&&(m.rijen<minRijen||m.gat>MAX_GAT);poging++)m=await laad();
             assert.ok(m.rijen>=minRijen,`${L}: ${m.rijen} volledige uurrijen (minimaal ${minRijen})`);
             assert.ok(m.gat<=MAX_GAT,`${L}: ${Math.round(m.gat)}px ongebruikt vlak onder de laatste uurrij (maximaal ${MAX_GAT}px; ${m.rijen} rijen)`);
-            assert.ok(m.gat>=-1,`${L}: de laatste uurrij valt ${Math.round(-m.gat)}px buiten de grafiekhoogte`);
+            assert.ok(m.gat>=-1,`${L}: de laatste uurrij valt ${Math.round(-m.gat)}px buiten de detailstrook`);
             assert.ok(m.overloop<=1,`${L}: uurtabel loopt ${m.overloop}px buiten haar kolom (${m.regen})`);
             assert.ok(m.thclip<=1,`${L}: kolomkop Temperatuur afgeknipt (${m.thclip}px)`);
             assert.ok(m.pagina<=1,`${L}: ${m.pagina}px horizontale paginascroll`);
@@ -125,5 +128,6 @@ function meet(){
     }
     for(const [k,v] of Object.entries(rijenPerSituatie))assert.ok(Math.abs(v.nl-v.en)<=1,`${k}px: Nederlands ${v.nl} en Engels ${v.en} uurrijen met dezelfde data verschillen meer dan 1`);
   }finally{await browser.close();}
+  console.log("Rijen per situatie (NL/EN):",JSON.stringify(rijenPerSituatie));
   console.log(`Uurtabel zonder groot ongebruikt vlak: ${n} situaties (5 datasets, NL en EN, 1440/1600/1660/1920px): per dataset en breedte een minimum aan volledige rijen, hooguit ${MAX_GAT}px leeg onder de laatste rij, NL en EN gelijk aantal rijen, waarden op één regel vanaf 1600px, geen overloop, grafiekaandeel 65 tot 72%.`);
 })().catch(e=>{console.error(e);process.exit(1);});

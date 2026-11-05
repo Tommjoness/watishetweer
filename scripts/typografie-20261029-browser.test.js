@@ -8,7 +8,7 @@
    Desktop (vanaf 1100px): sectiekoppen 20px; tegellabels 14px; toelichting 15px; eenheden 14px; waarschuwing titel 18px en
    uitleg 16px (zowel de lokale waarschuwing .waarsch als de melding .msg); modelcontext 14px; uurtabel kop 14px, primaire waarde
    en tijd 16px, secundaire waarde en datum 14px; alternatieve tabel kop 14px en cellen 15px; terugknop 14px; grafiektekst
-   effectief minimaal 14px; informatiestrook onder de grafiek (PR 3, de enige leesweergave van het gekozen uur) 14px labels en 15px waarden
+   effectief minimaal 14px; informatiestrook onder de grafiek (PR 3, de enige leesweergave van het gekozen uur; desktop-layoutronde A+B+C: 16/18px bij twee kolommen, 15/16px bij vier smalle kolommen, 16/17px bij vier ruime kolommen)
    vanaf 1024px viewport. De SVG-tooltip is op elke breedte verborgen en wordt dus niet meer als leesmaat getoetst.
    Tablet (760 tot 1099px): koppen 18px; labels 13px; toelichting 14px; waarschuwing 18/16px; tabelwaarden 15px; grafiek en
    tooltip effectief minimaal 13px; informatiestrook 13px labels en 13,5px waarden (tot 1023px, vanaf 440px stripbreedte).
@@ -117,6 +117,9 @@ function meet(page){
    (gemeten op 1440px: main 11 i.p.v. 12, nu 9 i.p.v. 10; bestaand en niet door de typografie veroorzaakt); daarom wordt een te laag aantal
    maximaal twee keer opnieuw geladen en faalt de test pas als ook die keren onder het minimum blijven. */
 const MIN_UURRIJEN={1100:{nl:7,en:7},1280:{nl:8,en:8},1363:{nl:8,en:8},1366:{nl:8,en:8},1440:{nl:10,en:10},1920:{nl:14,en:14}};
+/* Strook-lettermaten per desktopbreedte (zie live-polish.css): twee kolommen (stripcontainer < 758px, viewport tot ca. 1350px) 16/18, vier smalle kolommen
+   (758 t/m 859px, viewport ca. 1351 t/m 1599px) 15/16, vier ruime kolommen (vanaf 860px, viewport 1600px en breder) 16/17. */
+const stripMaat=w=>w<=1350?{stripdt:16,stripdd:18}:w<1600?{stripdt:15,stripdd:16}:{stripdt:16,stripdd:17};
 const DESKTOP={stripdt:14,stripdd:15,kop:20,label:14,uitleg:15,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:14,uurtijd:16,uurprim:16,uursec:14,uurdatum:14,dagkop:14,altth:14,alttd:15,terug:14};
 const TABLET={stripdt:13,stripdd:13.5,kop:18,label:13,uitleg:14,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:13,uurtijd:15,terug:14,altth:13,alttd:15};
 const TELEFOON={stripdt:12,stripdd:12.5,kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:14,terug:13};
@@ -161,7 +164,7 @@ const TELEFOON={stripdt:12,stripdd:12.5,kop:18,uitleg:14,eenheid:13,wtitel:17,wt
           await page.waitForSelector("#wiw-hour-table tbody tr",{timeout:20000});await page.waitForTimeout(1200);
           /* Telefoon: tegellabels 13px vanaf 380px, daaronder 12px ("LUCHTVOCHTIGHEID" valt anders niet in zijn tegel). */
           /* Van 1100 tot 1200px staan de labels (tegels, uurtabel, kolomkoppen, alternatieve tabel) op 13px: op 14px stak "LUCHTVOCHTIGHEID" er 5px buiten zijn tegel. */
-          const verwacht=g.klasse==="desktop"?(g.w<1200?{...DESKTOP,label:13,uurkop:13,dagkop:13,altth:13}:DESKTOP):g.klasse==="tablet"?TABLET:{...TELEFOON,label:g.w>=380?13:12};
+          const verwacht=g.klasse==="desktop"?(g.w<1200?{...DESKTOP,...stripMaat(g.w),label:13,uurkop:13,dagkop:13,altth:13}:{...DESKTOP,...stripMaat(g.w)}):g.klasse==="tablet"?TABLET:{...TELEFOON,label:g.w>=380?13:12};
           const L=`${g.w}px ${g.taal} ${thema} ${variant}`;
           /* uitgangssituatie, daarna tooltip in het midden en aan beide randen, geopende alternatieve tabel, gekozen dag */
           let m=await meet(page);

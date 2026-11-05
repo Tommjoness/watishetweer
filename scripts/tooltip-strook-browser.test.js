@@ -220,21 +220,21 @@ async function testStatischeRuimte(browser,root){
       assert.equal(r.display,"block",`${L}: strook niet zichtbaar in de initiële render`);assert(r.h>=140,`${L}: hoogte ${r.h}px in de initiële render`);assert.equal(r.ariaHidden,"true");
     }finally{await context.close();}
   }
-  /* Vanaf 430 px (PR 3) geldt hetzelfde: de lege strook staat er al in de eerste render, met de gereserveerde hoogte (140 px, vanaf 1024 px 150 px). */
+  /* Vanaf 430 px (PR 3) geldt hetzelfde: de lege strook staat er al in de eerste render, met de gereserveerde hoogte (140 px, vanaf 1024 px 164 px). */
   for(const w of [430,768,1024,1363,1920]){
     const {context,page}=await open(browser,root,{w,js:false});
     try{
       const r=await page.evaluate(()=>{const st=document.getElementById("tip-strook"),svg=document.getElementById("chart"),b=st.getBoundingClientRect();return {leeg:st.children.length===0&&st.textContent==="",display:getComputedStyle(st).display,h:b.height,volgtOpSvg:svg.nextElementSibling===st,ariaHidden:st.getAttribute("aria-hidden"),rol:st.getAttribute("role")};});
       assert.equal(r.display,"block",`zonder JavaScript ${w}px: strook niet zichtbaar in de initiële render`);
       assert(r.leeg&&r.volgtOpSvg,`zonder JavaScript ${w}px: strook niet leeg of niet direct na de grafiek`);
-      assert(r.h>=(w>=1024?150:140),`zonder JavaScript ${w}px: hoogte ${r.h}px in de initiële render`);
+      assert(r.h>=(w>=1024?164:140),`zonder JavaScript ${w}px: hoogte ${r.h}px in de initiële render`);
       assert.equal(r.ariaHidden,"true",`zonder JavaScript ${w}px: een lege strook moet aria-hidden zijn`);assert.equal(r.rol,null,`zonder JavaScript ${w}px: een lege strook is geen groep`);
     }finally{await context.close();}
   }
   const html=fs.readFileSync(path.join(OUT,"index.html"),"utf8");
   assert(/<div id="tip-strook" class="tip-strook" aria-hidden="true"><\/div>/.test(html),"initiële HTML mist de lege strook (en bevat geen rustregel als tekst)");
   assert(!html.includes("Kies een uur in de grafiek om de details te bekijken.")||/content:\s*"Kies een uur/.test(html),"rustregel staat als HTML-tekst in plaats van als CSS-inhoud");
-  console.log("C. Gereserveerde ruimte (>=140px) staat in de initiële HTML/CSS, zonder JavaScript, op 320/390/429 px (NL/EN) en vanaf 430 px (430/768/1024/1363/1920: 140 px, vanaf 1024 px 150 px); rustregel alleen als CSS-inhoud.");
+  console.log("C. Gereserveerde ruimte (>=140px) staat in de initiële HTML/CSS, zonder JavaScript, op 320/390/429 px (NL/EN) en vanaf 430 px (430/768/1024/1363/1920: 140 px, vanaf 1024 px 164 px); rustregel alleen als CSS-inhoud.");
 }
 
 /* D. Vanaf 430 px: de strook is de leesweergave; de verborgen SVG-tooltip blijft geometrisch correct (minimaal 12 px effectief). */
@@ -271,7 +271,7 @@ async function testBreekpunt(browser,root){
       assert.equal(m.display,"block",`${w}px: strook niet zichtbaar`);assert.equal(m.staat,"vol",`${w}px: strook niet gevuld`);assert.equal(m.svgTekstZichtbaar,0,`${w}px: SVG-tooltip zichtbaar`);
       assert.equal(m.rol,"group",`${w}px: gevulde strook is geen groep`);assert.equal(m.ariaHidden,null,`${w}px: gevulde strook is aria-hidden`);
       assert.equal(await page.evaluate(()=>document.getElementById("hit").getAttribute("aria-details")),"tip-strook",`${w}px: de slider verwijst niet naar de strook`);
-      assert(m.h>=(w>=1024?150:140),`${w}px: hoogte ${m.h}px`);
+      assert(m.h>=(w>=1024?164:140),`${w}px: hoogte ${m.h}px`);
     }
   }finally{await context.close();}
   console.log("E. Wisselen van breedte tijdens gebruik (429 -> 430 -> 429 -> 414 -> 413 -> 480 -> 390 -> 1024 -> 429 px) zonder herladen: de strook blijft zichtbaar, gevuld en gekoppeld; de SVG-tooltip blijft verborgen.");
