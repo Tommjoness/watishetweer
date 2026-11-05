@@ -1,0 +1,293 @@
+# Shadow-testketen (P3-4, PR B): dezelfde 272 testcommando's als `npm test`, maar de bouwfase één keer per testfamily en de 68 tests ná de laatste
+# artifact-mutatie verdeeld over vier shards op eigen runners. Dit is een AANVULLENDE, NIET-VERPLICHTE controle naast de bestaande jobs:
+# `test` (ci-interpretatie-v2.yml) en `checkpoint-npm-test` (checkpoint-eindronde.yml) blijven ongewijzigd en blijven de vereiste checks.
+# De jobnamen hier beginnen bewust met `shadow-`, zodat ze nooit met een vereiste check verward worden.
+#
+# Twee testfamilies, elk met een eigen bouwjob zodat de runner- en browseromgevingen behouden blijven:
+#   test        gewone ubuntu-latest met de systeem-Chrome (zoals de job `test`)
+#   checkpoint  Playwright-container met gekoppelde Chromium (zoals `checkpoint-npm-test`), incl. CLS-budget en staff-audit in Chromium en WebKit
+# Per testfamily draait elke test precies één keer; verifieer-dekking.js bewijst dat vooraf (plan) en achteraf (de rapporten van alle jobs).
+# Performance-isolatie: iedere runner voert steeds één commando tegelijk uit, net als `npm test`; de tijdgevoelige CLS-budgetcontrole heeft een
+# eigen runner. De aggregatie is fail-closed: een job die niet `success` is (ook skipped of cancelled), een ontbrekend, onleesbaar, dubbel of
+# onafgerond resultaat of een niet precies één keer uitgevoerd commando maakt `shadow-aggregatie` rood.
+# Concurrency: een shadow-run tegelijk (de rest wacht), zodat de gedeelde grens van gelijktijdige jobs niet door deze extra controle wordt gehaald.
+name: Shadow testketen (niet verplicht)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/ci/**"
+      - ".github/workflows/test-shadow.yml"
+      - "docs/gesharde-testketen.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shadow-testketen
+  cancel-in-progress: false
+
+jobs:
+  shadow-plan:
+    name: shadow-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Eenheidstests van de shardlogica (fail-closed aggregatie, artifact, gevoelige gegevens)
+        run: node scripts/ci/testketen.test.js
+      - name: Dekkingsbewijs vooraf (272 commando's, precies één keer, volgorde)
+        run: node scripts/ci/verifieer-dekking.js plan
+
+  # ---------- Testfamily "test": gewone ubuntu-latest, systeem-Chrome ----------
+  shadow-test-bouw:
+    name: shadow-test-bouw
+    needs: shadow-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI_FAMILIE: test
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - name: Bouwfase (commando 0 t/m het laatste muterende commando van npm test, oorspronkelijke volgorde)
+        run: node scripts/ci/run-fase.js bouw
+      - name: Artifact vastleggen (manifest, scan op gevoelige gegevens)
+        run: node scripts/ci/run-fase.js pak
+      - name: Resultaat van de bouwfase bewaren
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultaat-test-bouw
+          path: ci-resultaat/test-bouw.json
+          if-no-files-found: error
+          retention-days: 3
+      - name: Artifact publiceren voor de shards
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-test
+          path: |
+            public
+            .weather-runtime-source.tmp
+            ci-resultaat/artifact-manifest.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  shadow-test-shards:
+    name: shadow-test-shard
+    needs: shadow-test-bouw
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      CI_FAMILIE: test
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@v4
+        with:
+          name: artifact-test
+          path: .
+      - name: Artifact controleren tegen het manifest van de bouwjob
+        run: node scripts/ci/run-fase.js controleer
+      - name: Shard ${{ matrix.shard }} van 4
+        run: node scripts/ci/run-fase.js shard ${{ matrix.shard }} 4
+      - name: Resultaat van de shard bewaren
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultaat-test-shard-${{ matrix.shard }}
+          path: ci-resultaat/test-shard-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 3
+
+  # ---------- Testfamily "checkpoint": Playwright-container, Chromium + WebKit ----------
+  shadow-checkpoint-bouw:
+    name: shadow-checkpoint-bouw
+    needs: shadow-plan
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    timeout-minutes: 45
+    env:
+      CI_FAMILIE: checkpoint
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Playwright-pakket
+        run: npm ci --ignore-scripts
+      - name: Koppel Chromium voor directe browsertests
+        run: |
+          CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          test -x "$CHROME_PATH"
+          ln -sf "$CHROME_PATH" /usr/local/bin/google-chrome
+          test -x /usr/local/bin/google-chrome
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+      - name: Bouwfase (commando 0 t/m het laatste muterende commando van npm test, oorspronkelijke volgorde)
+        run: node scripts/ci/run-fase.js bouw
+      - name: Artifact vastleggen (manifest, scan op gevoelige gegevens)
+        run: node scripts/ci/run-fase.js pak
+      - name: Resultaat van de bouwfase bewaren
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultaat-checkpoint-bouw
+          path: ci-resultaat/checkpoint-bouw.json
+          if-no-files-found: error
+          retention-days: 3
+      - name: Artifact publiceren voor de shards
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-checkpoint
+          path: |
+            public
+            .weather-runtime-source.tmp
+            ci-resultaat/artifact-manifest.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  shadow-checkpoint-shards:
+    name: shadow-checkpoint-shard
+    needs: shadow-checkpoint-bouw
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      CI_FAMILIE: checkpoint
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Playwright-pakket
+        run: npm ci --ignore-scripts
+      - name: Koppel Chromium voor directe browsertests
+        run: |
+          CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          test -x "$CHROME_PATH"
+          ln -sf "$CHROME_PATH" /usr/local/bin/google-chrome
+          test -x /usr/local/bin/google-chrome
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          name: artifact-checkpoint
+          path: .
+      - name: Artifact controleren tegen het manifest van de bouwjob
+        run: node scripts/ci/run-fase.js controleer
+      - name: Shard ${{ matrix.shard }} van 4
+        run: node scripts/ci/run-fase.js shard ${{ matrix.shard }} 4
+      - name: Resultaat van de shard bewaren
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultaat-checkpoint-shard-${{ matrix.shard }}
+          path: ci-resultaat/checkpoint-shard-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 3
+
+  # De twee extra stappen van `checkpoint-npm-test`, ongewijzigd, op een eigen runner (performance-isolatie) tegen het gedownloade artifact.
+  shadow-checkpoint-extra:
+    name: shadow-checkpoint-extra
+    needs: shadow-checkpoint-bouw
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    timeout-minutes: 30
+    env:
+      CI_FAMILIE: checkpoint
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Installeer Playwright-pakket
+        run: npm ci --ignore-scripts
+      - name: Koppel Chromium voor directe browsertests
+        run: |
+          CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          test -x "$CHROME_PATH"
+          ln -sf "$CHROME_PATH" /usr/local/bin/google-chrome
+          test -x /usr/local/bin/google-chrome
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          name: artifact-checkpoint
+          path: .
+      - name: Artifact controleren tegen het manifest van de bouwjob
+        run: node scripts/ci/run-fase.js controleer
+      - name: Mobiele cold-load CLS-budget op finale postbuild-artifact
+        run: node browser-mobile-cls-budget.test.js
+      - name: Staff-audit interacties in Chromium en WebKit
+        shell: bash
+        run: |
+          set +e
+          node browser-staff-audit-20260826.test.js > /tmp/staff-audit-e2e.log 2>&1
+          code=$?
+          cat /tmp/staff-audit-e2e.log
+          if [ "$code" -ne 0 ]; then
+            msg="$(tail -n 60 /tmp/staff-audit-e2e.log | tr '\n\r' '  ' | sed 's/%/%25/g; s/::/%3A%3A/g')"
+            echo "::error file=browser-staff-audit-20260826.test.js,line=1::$msg"
+            exit "$code"
+          fi
+
+  # Fail-closed aggregatie: draait altijd; alleen groen als ALLE jobs `success` zijn en alle 272 commando's per testfamily precies één keer zijn uitgevoerd.
+  shadow-aggregatie:
+    name: shadow-aggregatie
+    if: always()
+    needs:
+      - shadow-plan
+      - shadow-test-bouw
+      - shadow-test-shards
+      - shadow-checkpoint-bouw
+      - shadow-checkpoint-shards
+      - shadow-checkpoint-extra
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NEEDS_JSON: ${{ toJSON(needs) }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Resultaten van alle jobs ophalen
+        uses: actions/download-artifact@v4
+        with:
+          pattern: resultaat-*
+          path: ci-resultaat
+          merge-multiple: true
+      - name: Dekking en jobresultaten beoordelen (fail-closed)
+        run: |
+          JOBS="$(printf '%s' "$NEEDS_JSON" | jq -c 'with_entries(.value |= .result)')"
+          echo "Jobresultaten: $JOBS"
+          node scripts/ci/verifieer-dekking.js resultaten ci-resultaat --jobs "$JOBS"
