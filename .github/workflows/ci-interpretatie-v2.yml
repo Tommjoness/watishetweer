@@ -18,5 +18,9 @@ jobs:
           node-version: 22
           package-manager-cache: false
       - run: npm ci --ignore-scripts
+      # Eén keer volledig testen en bouwen. Hier stond na `npm test` nog `npm run build`; die herbouw (ca. 10,5 minuten op de Ubuntu-runner:
+      # prebuild-tests, artifact:base, test:built en de 73 stappen van het postbuild-script) herhaalde stappen die `npm test` zelf al uitvoert
+      # (`npm test` begint met `npm run build`-onderdelen en voert dezelfde postbuild-stappen uit; gecontroleerd: alle 193 commando's van
+      # `npm run build` staan, even vaak, in `npm test`). Kwaliteitsgates zijn daarmee niet verminderd: de build wordt nog in `npm test` gedaan en
+      # onafhankelijk opnieuw in checkpoint-browsers (schone checkout), de preview-, cwv-, quality- en taalbewaker-jobs.
       - run: npm test
-      - run: npm run build
