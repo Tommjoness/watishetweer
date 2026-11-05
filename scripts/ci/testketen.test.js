@@ -139,4 +139,23 @@ try {
   ok(cli("resultaten", path.join(map, "bestaat-niet"), "--jobs", alleSuccess).status === 1, "een niet-bestaande resultatenmap is rood");
 } finally { fs.rmSync(map, { recursive: true, force: true }); }
 
+/* ---------- run-fase schoon: schrijfacties buiten de verwachte plekken ---------- */
+{
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "wiw-ci-schoon-"));
+  try {
+    const g = (...a) => spawnSync("git", ["-c", "user.email=a@b.c", "-c", "user.name=x", ...a], { cwd: repo, encoding: "utf8" });
+    g("init", "-q"); fs.writeFileSync(path.join(repo, ".gitignore"), "public/\nci-resultaat/\n"); fs.writeFileSync(path.join(repo, "a.txt"), "1");
+    g("add", "-A"); g("commit", "-q", "-m", "x");
+    const schoon = () => spawnSync("git", ["-c", "safe.directory=*", "status", "--porcelain", "--untracked-files=all"], { cwd: repo, encoding: "utf8" }).stdout.trim();
+    fs.mkdirSync(path.join(repo, "public")); fs.writeFileSync(path.join(repo, "public", "x.html"), "g");
+    gelijk(schoon(), "", "genegeerde bestanden (public/) tellen niet als schrijfactie");
+    fs.writeFileSync(path.join(repo, "a.txt"), "2");
+    ok(schoon() !== "", "een gewijzigd gevolgd bestand wordt gezien");
+    fs.writeFileSync(path.join(repo, "a.txt"), "1"); fs.writeFileSync(path.join(repo, "nieuw.txt"), "n");
+    ok(schoon() !== "", "een nieuw niet-genegeerd bestand wordt gezien");
+  } finally { fs.rmSync(repo, { recursive: true, force: true }); }
+}
+const schoonCli = spawnSync("node", [path.join(__dirname, "run-fase.js"), "schoon"], { cwd: path.join(__dirname, "..", ".."), encoding: "utf8" });
+ok([0, 1].includes(schoonCli.status), "run-fase schoon draait (0 = schoon, 1 = er staan wijzigingen in de werkmap)");
+
 console.log(`Gesharde testketen: ${n} controles geslaagd (plan van 272 commando's, volgorde, verdeling, artifact, gevoelige gegevens, fail-closed aggregatie).`);

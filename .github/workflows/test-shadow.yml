@@ -65,6 +65,8 @@ jobs:
         run: node scripts/ci/run-fase.js bouw
       - name: Artifact vastleggen (manifest, scan op gevoelige gegevens)
         run: node scripts/ci/run-fase.js pak
+      - name: Geen schrijfacties buiten de verwachte plekken (gevolgde bestanden ongewijzigd, geen nieuwe bestanden)
+        run: node scripts/ci/run-fase.js schoon
       - name: Resultaat van de bouwfase bewaren
         if: always()
         uses: actions/upload-artifact@v4
@@ -111,6 +113,11 @@ jobs:
         run: node scripts/ci/run-fase.js controleer
       - name: Shard ${{ matrix.shard }} van 4
         run: node scripts/ci/run-fase.js shard ${{ matrix.shard }} 4
+      - name: Artifact na afloop ongewijzigd en geen schrijfacties buiten de verwachte plekken
+        if: always()
+        run: |
+          node scripts/ci/run-fase.js controleer
+          node scripts/ci/run-fase.js schoon
       - name: Resultaat van de shard bewaren
         if: always()
         uses: actions/upload-artifact@v4
@@ -149,6 +156,8 @@ jobs:
         run: node scripts/ci/run-fase.js bouw
       - name: Artifact vastleggen (manifest, scan op gevoelige gegevens)
         run: node scripts/ci/run-fase.js pak
+      - name: Geen schrijfacties buiten de verwachte plekken (gevolgde bestanden ongewijzigd, geen nieuwe bestanden)
+        run: node scripts/ci/run-fase.js schoon
       - name: Resultaat van de bouwfase bewaren
         if: always()
         uses: actions/upload-artifact@v4
@@ -205,6 +214,11 @@ jobs:
         run: node scripts/ci/run-fase.js controleer
       - name: Shard ${{ matrix.shard }} van 4
         run: node scripts/ci/run-fase.js shard ${{ matrix.shard }} 4
+      - name: Artifact na afloop ongewijzigd en geen schrijfacties buiten de verwachte plekken
+        if: always()
+        run: |
+          node scripts/ci/run-fase.js controleer
+          node scripts/ci/run-fase.js schoon
       - name: Resultaat van de shard bewaren
         if: always()
         uses: actions/upload-artifact@v4

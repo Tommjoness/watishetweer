@@ -6,6 +6,7 @@
      node scripts/ci/run-fase.js shard <n> <van>       de aan shard n (1..van) toegewezen commando's, één voor één
      node scripts/ci/run-fase.js pak                   manifest (SHA-256 per bestand) + scan op gevoelige gegevens van het artifact
      node scripts/ci/run-fase.js controleer            het artifact in de werkmap tegen het manifest (fail-closed)
+     node scripts/ci/run-fase.js schoon                geen schrijfacties buiten de verwachte plekken (git status leeg; artifact apart met `controleer`)
    Omgeving: CI_FAMILIE (test|checkpoint) en CI_RESULTAAT_MAP (standaard ci-resultaat). Er draait per runner steeds één commando tegelijk:
    geen parallelle tests binnen een runner (performance-isolatie, zoals bij `npm test`). */
 
@@ -96,7 +97,19 @@ if (opdracht === "bouw") {
     process.exit(1);
   }
   console.log(`Artifact gecontroleerd: ${manifest.aantal} bestanden, boomhash ${manifest.boomhash.slice(0, 16)} gelijk aan de bouwjob.`);
+} else if (opdracht === "schoon") {
+  /* Geen schrijfacties buiten de verwachte plekken: na afloop mag er geen gevolgd bestand gewijzigd en geen nieuw, niet-genegeerd bestand zijn
+     (public/, .weather-runtime-source.tmp, ci-resultaat/ en node_modules staan in .gitignore). Het artifact zelf wordt apart met `controleer` getoetst. */
+  const r = spawnSync("git", ["-c", "safe.directory=*", "status", "--porcelain", "--untracked-files=all"], { cwd: T.ROOT, encoding: "utf8" });
+  if (r.status !== 0) { console.error(`git status mislukte: ${r.stderr}`); process.exit(1); }
+  const regels = r.stdout.split("\n").filter(Boolean);
+  if (regels.length) {
+    console.error(`✗ ${regels.length} onverwachte wijziging(en) in de werkmap na afloop (tests schrijven buiten de verwachte plekken):`);
+    for (const x of regels.slice(0, 40)) console.error(`  ${x}`);
+    process.exit(1);
+  }
+  console.log("Werkmap schoon: geen gewijzigde gevolgde bestanden en geen nieuwe, niet-genegeerde bestanden.");
 } else {
-  console.error("gebruik: run-fase.js bouw | shard <n> <van> | pak | controleer");
+  console.error("gebruik: run-fase.js bouw | shard <n> <van> | pak | controleer | schoon");
   process.exit(2);
 }
