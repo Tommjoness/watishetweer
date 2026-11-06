@@ -13,9 +13,3 @@
 /* Leesbaarheid (UX-opdracht oktober 2026): bronnen, disclaimer en contactregel op 13px in plaats van 12px. */
 html body footer:not(#wiw-onderkant) .bron,html body footer:not(#wiw-onderkant) .bron a,html body footer:not(#wiw-onderkant) .bron summary,html body footer:not(#wiw-onderkant) .bron span#coords,html body footer:not(#wiw-onderkant) .footer-contact,html body footer:not(#wiw-onderkant) .footer-contact a,html body footer:not(#wiw-onderkant) .bronitem a{font-size:13px!important;line-height:1.5!important}
 html body footer:not(#wiw-onderkant) .bron .bronlabel{font-size:12px!important}
-/* Desktop (vanaf 1100px): het hoofdletterlabel "Bronnen voor deze weergave" 13px (typografie-PR 6 november 2026). De letterspatiëring gaat van
-   .12em naar .07em, zodat het label even breed blijft als op 12px (238,7px, nu 241,6px): onderkant-browser.test.js eist dat de eerste bron
-   binnen 260px na het begin van het label staat (254,7px vóór, 274,5px met 13px en .12em). */
-@media(min-width:1100px){
-  html body footer:not(#wiw-onderkant) .bron .bronlabel{font-size:13px!important;letter-spacing:.07em!important}
-}

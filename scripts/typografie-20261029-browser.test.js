@@ -16,7 +16,8 @@
    modelcontext 14px; terugknop 13px; informatiestrook ongewijzigd 12px labels en 12,5px waarden. Tabellen blijven daar op hun maat (12px en 14px): de kolombreedtes zijn op 320px afgestemd (zie leesbaarheid-fase2a-browser.test.js).
    Typografie-PR 6 november 2026 (alleen desktop vanaf 1100px, ook 1440px en breder): functionele koptoetsen (Mijn locatie, Ververs, taalschakelaar)
    en de themaknoppen 14px; plaatsmeta (tijd, regio, "Gegevens opgehaald"), de kansleutel van de neerslagtegel, de omschrijving in de informatiestrook,
-   de tabelknop, de neerslagwaarden van Zeven dagen ("0,0 mm", "vanaf nu") 14px; kleine hoofdletterlabels in de voet 13px. De 1024px-laag en de
+   de tabelknop, de neerslagwaarden van Zeven dagen ("0,0 mm", "vanaf nu") 14px; kleine hoofdletterlabels in de voet (Weergave, Populaire plaatsen) 13px; "Bronnen voor deze weergave" blijft 12px: op 13px staat de eerste bron
+   buiten de 260px van onderkant-browser.test.js (zie die test). De 1024px-laag en de
    SVG-grafiektekst vallen buiten deze ronde.
    Bewaakt wordt ook wat de grotere tekst niet mag veroorzaken: geen horizontale paginascroll, geen tegeltekst buiten zijn tegel,
    geen overlappende grafiek- of tooltiptekst, een tooltip die binnen de tekening blijft aan beide randen, en een uurtabel die
@@ -66,7 +67,7 @@ const ROLLEN={
   uurdatum:"#wiw-hour-table .wiw-hour-date",dagkop:"#days .row.kop > div",altth:"#chartdata th",alttd:"#chartdata td",terug:"#back",
   grafiek:"#chart > text",tooltip:"#chart #scrub text",stripdt:"#tip-strook dt",stripdd:"#tip-strook dd",
   kopknop:"#here,#ververs,.tools > a.taal-keuze",plaatsmeta:"#stamp,#plaatstijd,#plaatsregio",kans:".mobile-neerslag-sleutel",stripoms:"#tip-strook .tip-oms",
-  tabelknop:"#chartdata summary.wiw-chartdata-summary",dagmm:"#days small.q1-dag-mm",vanafnu:"#days .wiw-vanaf-nu",voetlabel:"footer .bronlabel,.wiw-weergave-label,.seo-plaatsnav-kop",themaknop:"#thema .wiw-theme-auto,#thema [data-thema-handmatig]"
+  tabelknop:"#chartdata summary.wiw-chartdata-summary",dagmm:"#days small.q1-dag-mm",vanafnu:"#days .wiw-vanaf-nu",voetlabel:".wiw-weergave-label,.seo-plaatsnav-kop",themaknop:"#thema .wiw-theme-auto,#thema [data-thema-handmatig]"
 };
 function meet(page){
   return page.evaluate(rollen=>{
